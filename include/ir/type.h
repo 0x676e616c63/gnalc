@@ -2,38 +2,46 @@
  * @brief 包含通用的Type, Name类
  */
 
+#ifndef GNALC_IR_TYPE_H
+#define GNALC_IR_TYPE_H
 #pragma once
 #include <string>
 
 namespace IR {
-enum _type { INT, FLOAT, VOID };
-typedef const std::string& NameParam;
 
-/**
- * @todo 使用模板？
- */
-class Type {
-private:
-    _type tp;
-public:
-    Type(_type t) : tp(t) {}
+    enum class _type { INT, FLOAT, VOID };
 
-    void setType(_type t) { tp = t; }
-    bool isVoid() { return tp==VOID; }
-    bool isFloat() { return tp==FLOAT; }
-    bool isInt() { return tp==INT; }
-    _type getType() { return tp; }
-};
+    using NameParam = std::string;
 
-class Name {
-private:
-    std::string _name;
-public:
-    Name() : _name("") {}
-    Name(NameParam name) : _name(name) {}
+    /**
+     * @todo 使用模板？
+     */
+    class Type {
+        _type tp;
 
-    void setName(NameParam name) { _name = name; }
-    bool isName(NameParam name) { return _name==name; }
-    std::string getName() { return _name; }
-};
+    public:
+        explicit Type(const _type t) : tp(t) {}
+
+        void setType(const _type t) { tp = t; }
+        bool isVoid() const { return tp == _type::VOID; }
+        bool isFloat() const { return tp == _type::FLOAT; }
+        bool isInt() const { return tp == _type::INT; }
+        _type getType() const { return tp; }
+    };
+
+    class Name {
+    private:
+        std::string _name;
+
+    public:
+        Name() = default;
+
+        explicit Name(NameParam name) : _name(std::move(name)) {}
+
+        void setName(NameParam name) { _name = std::move(name); }
+        bool isName(const NameParam& name) const { return _name == name; }
+        std::string getName() { return _name; }
+    };
 }
+
+#endif
