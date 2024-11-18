@@ -8,7 +8,9 @@ sudo docker pull ghcr.io/matteocarnelos/dockerpi:latest
 sudo docker run -itd -e QEMU_HOSTFWD="tcp::22-:22" -p 18279:22 ghcr.io/matteocarnelos/dockerpi pi2
 sudo docker attach <Container ID>
 ```
-Refer to [the original repo](https://github.com/matteocarnelos/dockerpi?tab=readme-ov-file#port-forwarding) for more information about port forwarding and other supported machines.  
+
+Refer to [the original repo](https://github.com/matteocarnelos/dockerpi?tab=readme-ov-file#port-forwarding) for more
+information about port forwarding and other supported machines.
 
 Note that the default username is `pi` and password is `raspberry`.
 
