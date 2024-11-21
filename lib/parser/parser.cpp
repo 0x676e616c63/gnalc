@@ -36,20 +36,21 @@
 
 
 
-// First part of user prologue.
-#line 1 "parser.y"
+
+
+#include "../../include/parser/parser.hpp"
+
+
+// Unqualified %code blocks.
+#line 7 "./lib/parser/parser.y"
 
 
 #include "../../include/parser/ast.hpp"
 extern "C" int yylex();
+using namespace AST;
 
 
-#line 48 "parser.cpp"
-
-
-#include "parser.hpp"
-
-
+#line 54 "./lib/parser/parser.cpp"
 
 
 #ifndef YY_
@@ -122,7 +123,7 @@ extern "C" int yylex();
 #define YYRECOVERING()  (!!yyerrstatus_)
 
 namespace yy {
-#line 126 "parser.cpp"
+#line 127 "./lib/parser/parser.cpp"
 
   /// Build a parser object.
   parser::parser ()
@@ -143,100 +144,6 @@ namespace yy {
   /*---------.
   | symbol.  |
   `---------*/
-
-  // basic_symbol.
-  template <typename Base>
-  parser::basic_symbol<Base>::basic_symbol (const basic_symbol& that)
-    : Base (that)
-    , value (that.value)
-  {}
-
-
-  /// Constructor for valueless symbols.
-  template <typename Base>
-  parser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t)
-    : Base (t)
-    , value ()
-  {}
-
-  template <typename Base>
-  parser::basic_symbol<Base>::basic_symbol (typename Base::kind_type t, YY_RVREF (value_type) v)
-    : Base (t)
-    , value (YY_MOVE (v))
-  {}
-
-
-  template <typename Base>
-  parser::symbol_kind_type
-  parser::basic_symbol<Base>::type_get () const YY_NOEXCEPT
-  {
-    return this->kind ();
-  }
-
-
-  template <typename Base>
-  bool
-  parser::basic_symbol<Base>::empty () const YY_NOEXCEPT
-  {
-    return this->kind () == symbol_kind::S_YYEMPTY;
-  }
-
-  template <typename Base>
-  void
-  parser::basic_symbol<Base>::move (basic_symbol& s)
-  {
-    super_type::move (s);
-    value = YY_MOVE (s.value);
-  }
-
-  // by_kind.
-  parser::by_kind::by_kind () YY_NOEXCEPT
-    : kind_ (symbol_kind::S_YYEMPTY)
-  {}
-
-#if 201103L <= YY_CPLUSPLUS
-  parser::by_kind::by_kind (by_kind&& that) YY_NOEXCEPT
-    : kind_ (that.kind_)
-  {
-    that.clear ();
-  }
-#endif
-
-  parser::by_kind::by_kind (const by_kind& that) YY_NOEXCEPT
-    : kind_ (that.kind_)
-  {}
-
-  parser::by_kind::by_kind (token_kind_type t) YY_NOEXCEPT
-    : kind_ (yytranslate_ (t))
-  {}
-
-
-
-  void
-  parser::by_kind::clear () YY_NOEXCEPT
-  {
-    kind_ = symbol_kind::S_YYEMPTY;
-  }
-
-  void
-  parser::by_kind::move (by_kind& that)
-  {
-    kind_ = that.kind_;
-    that.clear ();
-  }
-
-  parser::symbol_kind_type
-  parser::by_kind::kind () const YY_NOEXCEPT
-  {
-    return kind_;
-  }
-
-
-  parser::symbol_kind_type
-  parser::by_kind::type_get () const YY_NOEXCEPT
-  {
-    return this->kind ();
-  }
 
 
 
@@ -279,8 +186,66 @@ namespace yy {
   {}
 
   parser::stack_symbol_type::stack_symbol_type (YY_RVREF (stack_symbol_type) that)
-    : super_type (YY_MOVE (that.state), YY_MOVE (that.value))
+    : super_type (YY_MOVE (that.state))
   {
+    switch (that.kind ())
+    {
+      case symbol_kind::S_num_FLOAT: // num_FLOAT
+        value.YY_MOVE_OR_COPY< AST::float32 > (YY_MOVE (that.value));
+        break;
+
+      case symbol_kind::S_num_INT: // num_INT
+        value.YY_MOVE_OR_COPY< AST::int32 > (YY_MOVE (that.value));
+        break;
+
+      case symbol_kind::S_CompUnit: // CompUnit
+      case symbol_kind::S_Decl: // Decl
+      case symbol_kind::S_ConstDecl: // ConstDecl
+      case symbol_kind::S_ConstDefs: // ConstDefs
+      case symbol_kind::S_ConstDef: // ConstDef
+      case symbol_kind::S_ConstExps: // ConstExps
+      case symbol_kind::S_ConstInitVal: // ConstInitVal
+      case symbol_kind::S_ConstInitVals: // ConstInitVals
+      case symbol_kind::S_VarDecl: // VarDecl
+      case symbol_kind::S_VarDecls: // VarDecls
+      case symbol_kind::S_VarDef: // VarDef
+      case symbol_kind::S_InitVal: // InitVal
+      case symbol_kind::S_InitVals: // InitVals
+      case symbol_kind::S_FuncDef: // FuncDef
+      case symbol_kind::S_FuncParams: // FuncParams
+      case symbol_kind::S_FuncParam: // FuncParam
+      case symbol_kind::S_Block: // Block
+      case symbol_kind::S_BlockItems: // BlockItems
+      case symbol_kind::S_BlockItem: // BlockItem
+      case symbol_kind::S_Stmt: // Stmt
+      case symbol_kind::S_Exp: // Exp
+      case symbol_kind::S_LVal: // LVal
+      case symbol_kind::S_ArraySubscripts: // ArraySubscripts
+      case symbol_kind::S_PrimaryExp: // PrimaryExp
+      case symbol_kind::S_UnaryExp: // UnaryExp
+      case symbol_kind::S_CallParams: // CallParams
+      case symbol_kind::S_MulExp: // MulExp
+      case symbol_kind::S_AddExp: // AddExp
+      case symbol_kind::S_RelExp: // RelExp
+      case symbol_kind::S_EqExp: // EqExp
+      case symbol_kind::S_LAndExp: // LAndExp
+      case symbol_kind::S_LOrExp: // LOrExp
+      case symbol_kind::S_ConstExp: // ConstExp
+        value.YY_MOVE_OR_COPY< AST::past > (YY_MOVE (that.value));
+        break;
+
+      case symbol_kind::S_Y_ID: // Y_ID
+        value.YY_MOVE_OR_COPY< AST::string > (YY_MOVE (that.value));
+        break;
+
+      case symbol_kind::S_Type: // Type
+        value.YY_MOVE_OR_COPY< AST::token_type > (YY_MOVE (that.value));
+        break;
+
+      default:
+        break;
+    }
+
 #if 201103L <= YY_CPLUSPLUS
     // that is emptied.
     that.state = empty_state;
@@ -288,8 +253,66 @@ namespace yy {
   }
 
   parser::stack_symbol_type::stack_symbol_type (state_type s, YY_MOVE_REF (symbol_type) that)
-    : super_type (s, YY_MOVE (that.value))
+    : super_type (s)
   {
+    switch (that.kind ())
+    {
+      case symbol_kind::S_num_FLOAT: // num_FLOAT
+        value.move< AST::float32 > (YY_MOVE (that.value));
+        break;
+
+      case symbol_kind::S_num_INT: // num_INT
+        value.move< AST::int32 > (YY_MOVE (that.value));
+        break;
+
+      case symbol_kind::S_CompUnit: // CompUnit
+      case symbol_kind::S_Decl: // Decl
+      case symbol_kind::S_ConstDecl: // ConstDecl
+      case symbol_kind::S_ConstDefs: // ConstDefs
+      case symbol_kind::S_ConstDef: // ConstDef
+      case symbol_kind::S_ConstExps: // ConstExps
+      case symbol_kind::S_ConstInitVal: // ConstInitVal
+      case symbol_kind::S_ConstInitVals: // ConstInitVals
+      case symbol_kind::S_VarDecl: // VarDecl
+      case symbol_kind::S_VarDecls: // VarDecls
+      case symbol_kind::S_VarDef: // VarDef
+      case symbol_kind::S_InitVal: // InitVal
+      case symbol_kind::S_InitVals: // InitVals
+      case symbol_kind::S_FuncDef: // FuncDef
+      case symbol_kind::S_FuncParams: // FuncParams
+      case symbol_kind::S_FuncParam: // FuncParam
+      case symbol_kind::S_Block: // Block
+      case symbol_kind::S_BlockItems: // BlockItems
+      case symbol_kind::S_BlockItem: // BlockItem
+      case symbol_kind::S_Stmt: // Stmt
+      case symbol_kind::S_Exp: // Exp
+      case symbol_kind::S_LVal: // LVal
+      case symbol_kind::S_ArraySubscripts: // ArraySubscripts
+      case symbol_kind::S_PrimaryExp: // PrimaryExp
+      case symbol_kind::S_UnaryExp: // UnaryExp
+      case symbol_kind::S_CallParams: // CallParams
+      case symbol_kind::S_MulExp: // MulExp
+      case symbol_kind::S_AddExp: // AddExp
+      case symbol_kind::S_RelExp: // RelExp
+      case symbol_kind::S_EqExp: // EqExp
+      case symbol_kind::S_LAndExp: // LAndExp
+      case symbol_kind::S_LOrExp: // LOrExp
+      case symbol_kind::S_ConstExp: // ConstExp
+        value.move< AST::past > (YY_MOVE (that.value));
+        break;
+
+      case symbol_kind::S_Y_ID: // Y_ID
+        value.move< AST::string > (YY_MOVE (that.value));
+        break;
+
+      case symbol_kind::S_Type: // Type
+        value.move< AST::token_type > (YY_MOVE (that.value));
+        break;
+
+      default:
+        break;
+    }
+
     // that is emptied.
     that.kind_ = symbol_kind::S_YYEMPTY;
   }
@@ -299,7 +322,64 @@ namespace yy {
   parser::stack_symbol_type::operator= (const stack_symbol_type& that)
   {
     state = that.state;
-    value = that.value;
+    switch (that.kind ())
+    {
+      case symbol_kind::S_num_FLOAT: // num_FLOAT
+        value.copy< AST::float32 > (that.value);
+        break;
+
+      case symbol_kind::S_num_INT: // num_INT
+        value.copy< AST::int32 > (that.value);
+        break;
+
+      case symbol_kind::S_CompUnit: // CompUnit
+      case symbol_kind::S_Decl: // Decl
+      case symbol_kind::S_ConstDecl: // ConstDecl
+      case symbol_kind::S_ConstDefs: // ConstDefs
+      case symbol_kind::S_ConstDef: // ConstDef
+      case symbol_kind::S_ConstExps: // ConstExps
+      case symbol_kind::S_ConstInitVal: // ConstInitVal
+      case symbol_kind::S_ConstInitVals: // ConstInitVals
+      case symbol_kind::S_VarDecl: // VarDecl
+      case symbol_kind::S_VarDecls: // VarDecls
+      case symbol_kind::S_VarDef: // VarDef
+      case symbol_kind::S_InitVal: // InitVal
+      case symbol_kind::S_InitVals: // InitVals
+      case symbol_kind::S_FuncDef: // FuncDef
+      case symbol_kind::S_FuncParams: // FuncParams
+      case symbol_kind::S_FuncParam: // FuncParam
+      case symbol_kind::S_Block: // Block
+      case symbol_kind::S_BlockItems: // BlockItems
+      case symbol_kind::S_BlockItem: // BlockItem
+      case symbol_kind::S_Stmt: // Stmt
+      case symbol_kind::S_Exp: // Exp
+      case symbol_kind::S_LVal: // LVal
+      case symbol_kind::S_ArraySubscripts: // ArraySubscripts
+      case symbol_kind::S_PrimaryExp: // PrimaryExp
+      case symbol_kind::S_UnaryExp: // UnaryExp
+      case symbol_kind::S_CallParams: // CallParams
+      case symbol_kind::S_MulExp: // MulExp
+      case symbol_kind::S_AddExp: // AddExp
+      case symbol_kind::S_RelExp: // RelExp
+      case symbol_kind::S_EqExp: // EqExp
+      case symbol_kind::S_LAndExp: // LAndExp
+      case symbol_kind::S_LOrExp: // LOrExp
+      case symbol_kind::S_ConstExp: // ConstExp
+        value.copy< AST::past > (that.value);
+        break;
+
+      case symbol_kind::S_Y_ID: // Y_ID
+        value.copy< AST::string > (that.value);
+        break;
+
+      case symbol_kind::S_Type: // Type
+        value.copy< AST::token_type > (that.value);
+        break;
+
+      default:
+        break;
+    }
+
     return *this;
   }
 
@@ -307,7 +387,64 @@ namespace yy {
   parser::stack_symbol_type::operator= (stack_symbol_type& that)
   {
     state = that.state;
-    value = that.value;
+    switch (that.kind ())
+    {
+      case symbol_kind::S_num_FLOAT: // num_FLOAT
+        value.move< AST::float32 > (that.value);
+        break;
+
+      case symbol_kind::S_num_INT: // num_INT
+        value.move< AST::int32 > (that.value);
+        break;
+
+      case symbol_kind::S_CompUnit: // CompUnit
+      case symbol_kind::S_Decl: // Decl
+      case symbol_kind::S_ConstDecl: // ConstDecl
+      case symbol_kind::S_ConstDefs: // ConstDefs
+      case symbol_kind::S_ConstDef: // ConstDef
+      case symbol_kind::S_ConstExps: // ConstExps
+      case symbol_kind::S_ConstInitVal: // ConstInitVal
+      case symbol_kind::S_ConstInitVals: // ConstInitVals
+      case symbol_kind::S_VarDecl: // VarDecl
+      case symbol_kind::S_VarDecls: // VarDecls
+      case symbol_kind::S_VarDef: // VarDef
+      case symbol_kind::S_InitVal: // InitVal
+      case symbol_kind::S_InitVals: // InitVals
+      case symbol_kind::S_FuncDef: // FuncDef
+      case symbol_kind::S_FuncParams: // FuncParams
+      case symbol_kind::S_FuncParam: // FuncParam
+      case symbol_kind::S_Block: // Block
+      case symbol_kind::S_BlockItems: // BlockItems
+      case symbol_kind::S_BlockItem: // BlockItem
+      case symbol_kind::S_Stmt: // Stmt
+      case symbol_kind::S_Exp: // Exp
+      case symbol_kind::S_LVal: // LVal
+      case symbol_kind::S_ArraySubscripts: // ArraySubscripts
+      case symbol_kind::S_PrimaryExp: // PrimaryExp
+      case symbol_kind::S_UnaryExp: // UnaryExp
+      case symbol_kind::S_CallParams: // CallParams
+      case symbol_kind::S_MulExp: // MulExp
+      case symbol_kind::S_AddExp: // AddExp
+      case symbol_kind::S_RelExp: // RelExp
+      case symbol_kind::S_EqExp: // EqExp
+      case symbol_kind::S_LAndExp: // LAndExp
+      case symbol_kind::S_LOrExp: // LOrExp
+      case symbol_kind::S_ConstExp: // ConstExp
+        value.move< AST::past > (that.value);
+        break;
+
+      case symbol_kind::S_Y_ID: // Y_ID
+        value.move< AST::string > (that.value);
+        break;
+
+      case symbol_kind::S_Type: // Type
+        value.move< AST::token_type > (that.value);
+        break;
+
+      default:
+        break;
+    }
+
     // that is emptied.
     that.state = empty_state;
     return *this;
@@ -320,9 +457,6 @@ namespace yy {
   {
     if (yymsg)
       YY_SYMBOL_PRINT (yymsg, yysym);
-
-    // User destructor.
-    YY_USE (yysym.kind ());
   }
 
 #if YYDEBUG
@@ -487,7 +621,8 @@ namespace yy {
         try
 #endif // YY_EXCEPTIONS
           {
-            yyla.kind_ = yytranslate_ (yylex (&yyla.value));
+            symbol_type yylookahead (yylex ());
+            yyla.move (yylookahead);
           }
 #if YY_EXCEPTIONS
         catch (const syntax_error& yyexc)
@@ -555,16 +690,67 @@ namespace yy {
     {
       stack_symbol_type yylhs;
       yylhs.state = yy_lr_goto_state_ (yystack_[yylen].state, yyr1_[yyn]);
-      /* If YYLEN is nonzero, implement the default value of the
-         action: '$$ = $1'.  Otherwise, use the top of the stack.
+      /* Variants are always initialized to an empty instance of the
+         correct type. The default '$$ = $1' action is NOT applied
+         when using variants.  */
+      switch (yyr1_[yyn])
+    {
+      case symbol_kind::S_num_FLOAT: // num_FLOAT
+        yylhs.value.emplace< AST::float32 > ();
+        break;
 
-         Otherwise, the following line sets YYLHS.VALUE to garbage.
-         This behavior is undocumented and Bison users should not rely
-         upon it.  */
-      if (yylen)
-        yylhs.value = yystack_[yylen - 1].value;
-      else
-        yylhs.value = yystack_[0].value;
+      case symbol_kind::S_num_INT: // num_INT
+        yylhs.value.emplace< AST::int32 > ();
+        break;
+
+      case symbol_kind::S_CompUnit: // CompUnit
+      case symbol_kind::S_Decl: // Decl
+      case symbol_kind::S_ConstDecl: // ConstDecl
+      case symbol_kind::S_ConstDefs: // ConstDefs
+      case symbol_kind::S_ConstDef: // ConstDef
+      case symbol_kind::S_ConstExps: // ConstExps
+      case symbol_kind::S_ConstInitVal: // ConstInitVal
+      case symbol_kind::S_ConstInitVals: // ConstInitVals
+      case symbol_kind::S_VarDecl: // VarDecl
+      case symbol_kind::S_VarDecls: // VarDecls
+      case symbol_kind::S_VarDef: // VarDef
+      case symbol_kind::S_InitVal: // InitVal
+      case symbol_kind::S_InitVals: // InitVals
+      case symbol_kind::S_FuncDef: // FuncDef
+      case symbol_kind::S_FuncParams: // FuncParams
+      case symbol_kind::S_FuncParam: // FuncParam
+      case symbol_kind::S_Block: // Block
+      case symbol_kind::S_BlockItems: // BlockItems
+      case symbol_kind::S_BlockItem: // BlockItem
+      case symbol_kind::S_Stmt: // Stmt
+      case symbol_kind::S_Exp: // Exp
+      case symbol_kind::S_LVal: // LVal
+      case symbol_kind::S_ArraySubscripts: // ArraySubscripts
+      case symbol_kind::S_PrimaryExp: // PrimaryExp
+      case symbol_kind::S_UnaryExp: // UnaryExp
+      case symbol_kind::S_CallParams: // CallParams
+      case symbol_kind::S_MulExp: // MulExp
+      case symbol_kind::S_AddExp: // AddExp
+      case symbol_kind::S_RelExp: // RelExp
+      case symbol_kind::S_EqExp: // EqExp
+      case symbol_kind::S_LAndExp: // LAndExp
+      case symbol_kind::S_LOrExp: // LOrExp
+      case symbol_kind::S_ConstExp: // ConstExp
+        yylhs.value.emplace< AST::past > ();
+        break;
+
+      case symbol_kind::S_Y_ID: // Y_ID
+        yylhs.value.emplace< AST::string > ();
+        break;
+
+      case symbol_kind::S_Type: // Type
+        yylhs.value.emplace< AST::token_type > ();
+        break;
+
+      default:
+        break;
+    }
+
 
 
       // Perform the reduction.
@@ -576,607 +762,607 @@ namespace yy {
           switch (yyn)
             {
   case 2: // CompileUnit: CompUnit
-#line 27 "parser.y"
-                        { return (yystack_[0].value.pAst); }
-#line 582 "parser.cpp"
+#line 37 "./lib/parser/parser.y"
+                        { showAst(yystack_[0].value.as < AST::past > (), 0, true); }
+#line 768 "./lib/parser/parser.cpp"
     break;
 
   case 3: // CompUnit: Decl CompUnit
-#line 30 "parser.y"
-                                { (yylhs.value.pAst) = addNode((yystack_[1].value.pAst), (yystack_[0].value.pAst)); }
-#line 588 "parser.cpp"
+#line 40 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = addNode(yystack_[1].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 774 "./lib/parser/parser.cpp"
     break;
 
   case 4: // CompUnit: FuncDef CompUnit
-#line 31 "parser.y"
-                                { (yylhs.value.pAst) = addNode((yystack_[1].value.pAst), (yystack_[0].value.pAst)); }
-#line 594 "parser.cpp"
+#line 41 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = addNode(yystack_[1].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 780 "./lib/parser/parser.cpp"
     break;
 
   case 5: // CompUnit: Decl
-#line 32 "parser.y"
-                                { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 600 "parser.cpp"
+#line 42 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 786 "./lib/parser/parser.cpp"
     break;
 
   case 6: // CompUnit: FuncDef
-#line 33 "parser.y"
-                                { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 606 "parser.cpp"
+#line 43 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 792 "./lib/parser/parser.cpp"
     break;
 
   case 7: // Decl: ConstDecl
-#line 36 "parser.y"
-                    { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 612 "parser.cpp"
+#line 46 "./lib/parser/parser.y"
+                    { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 798 "./lib/parser/parser.cpp"
     break;
 
   case 8: // Decl: VarDecl
-#line 37 "parser.y"
-                    { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 618 "parser.cpp"
+#line 47 "./lib/parser/parser.y"
+                    { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 804 "./lib/parser/parser.cpp"
     break;
 
   case 9: // ConstDecl: Y_CONST Type ConstDef Y_SEMICOLON
-#line 40 "parser.y"
-                                                { SetDeclsType((yystack_[1].value.pAst), (yystack_[2].value.token)); (yylhs.value.pAst) = (yystack_[1].value.pAst); }
-#line 624 "parser.cpp"
+#line 50 "./lib/parser/parser.y"
+                                                { SetDeclsType(yystack_[1].value.as < AST::past > (), yystack_[2].value.as < AST::token_type > ()); yylhs.value.as < AST::past > () = yystack_[1].value.as < AST::past > (); }
+#line 810 "./lib/parser/parser.cpp"
     break;
 
   case 10: // ConstDecl: Y_CONST Type ConstDefs Y_SEMICOLON
-#line 41 "parser.y"
-                                                { SetDeclsType((yystack_[1].value.pAst), (yystack_[2].value.token)); (yylhs.value.pAst) = (yystack_[1].value.pAst); }
-#line 630 "parser.cpp"
+#line 51 "./lib/parser/parser.y"
+                                                { SetDeclsType(yystack_[1].value.as < AST::past > (), yystack_[2].value.as < AST::token_type > ()); yylhs.value.as < AST::past > () = yystack_[1].value.as < AST::past > (); }
+#line 816 "./lib/parser/parser.cpp"
     break;
 
   case 11: // ConstDefs: ConstDef Y_COMMA ConstDef
-#line 44 "parser.y"
-                                        { (yylhs.value.pAst) = addNode((yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 636 "parser.cpp"
+#line 54 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = addNode(yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 822 "./lib/parser/parser.cpp"
     break;
 
   case 12: // ConstDefs: ConstDefs Y_COMMA ConstDef
-#line 45 "parser.y"
-                                        { (yylhs.value.pAst) = addNode((yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 642 "parser.cpp"
+#line 55 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = addNode(yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 828 "./lib/parser/parser.cpp"
     break;
 
   case 13: // ConstDef: Y_ID Y_ASSIGN ConstInitVal
-#line 48 "parser.y"
-                                                { (yylhs.value.pAst) = newVarDecl(UNDEFINED, (yystack_[2].value.id_name), (yystack_[0].value.pAst), NULL); }
-#line 648 "parser.cpp"
+#line 58 "./lib/parser/parser.y"
+                                                { yylhs.value.as < AST::past > () = newVarDecl(UNDEFINED, yystack_[2].value.as < AST::string > (), yystack_[0].value.as < AST::past > (), NULL); }
+#line 834 "./lib/parser/parser.cpp"
     break;
 
   case 14: // ConstDef: Y_ID ConstExps Y_ASSIGN ConstInitVal
-#line 49 "parser.y"
-                                                { (yylhs.value.pAst) = newVarDecl(UNDEFINED, (yystack_[3].value.id_name), (yystack_[0].value.pAst), NULL); }
-#line 654 "parser.cpp"
+#line 59 "./lib/parser/parser.y"
+                                                { yylhs.value.as < AST::past > () = newVarDecl(UNDEFINED, yystack_[3].value.as < AST::string > (), yystack_[0].value.as < AST::past > (), NULL); }
+#line 840 "./lib/parser/parser.cpp"
     break;
 
   case 15: // ConstExps: Y_LSQUARE ConstExp Y_RSQUARE
-#line 52 "parser.y"
-                                                    { (yylhs.value.pAst) = (yystack_[1].value.pAst); }
-#line 660 "parser.cpp"
+#line 62 "./lib/parser/parser.y"
+                                                    { yylhs.value.as < AST::past > () = yystack_[1].value.as < AST::past > (); }
+#line 846 "./lib/parser/parser.cpp"
     break;
 
   case 16: // ConstExps: Y_LSQUARE ConstExp Y_RSQUARE ConstExps
-#line 53 "parser.y"
-                                                    { (yylhs.value.pAst) = addNode((yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 666 "parser.cpp"
+#line 63 "./lib/parser/parser.y"
+                                                    { yylhs.value.as < AST::past > () = addNode(yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 852 "./lib/parser/parser.cpp"
     break;
 
   case 17: // ConstInitVal: ConstExp
-#line 56 "parser.y"
-                                                                { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 672 "parser.cpp"
+#line 66 "./lib/parser/parser.y"
+                                                                { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 858 "./lib/parser/parser.cpp"
     break;
 
   case 18: // ConstInitVal: Y_LBRACKET Y_RBRACKET
-#line 57 "parser.y"
-                                                                { (yylhs.value.pAst) = newInitList(NULL, NULL); }
-#line 678 "parser.cpp"
+#line 67 "./lib/parser/parser.y"
+                                                                { yylhs.value.as < AST::past > () = newInitList(NULL, NULL); }
+#line 864 "./lib/parser/parser.cpp"
     break;
 
   case 19: // ConstInitVal: Y_LBRACKET ConstInitVal Y_RBRACKET
-#line 58 "parser.y"
-                                                                { (yylhs.value.pAst) = newInitList((yystack_[1].value.pAst), NULL); }
-#line 684 "parser.cpp"
+#line 68 "./lib/parser/parser.y"
+                                                                { yylhs.value.as < AST::past > () = newInitList(yystack_[1].value.as < AST::past > (), NULL); }
+#line 870 "./lib/parser/parser.cpp"
     break;
 
   case 20: // ConstInitVal: Y_LBRACKET ConstInitVal ConstInitVals Y_RBRACKET
-#line 59 "parser.y"
-                                                                { (yylhs.value.pAst) = newInitList((yystack_[2].value.pAst), (yystack_[1].value.pAst)); }
-#line 690 "parser.cpp"
+#line 69 "./lib/parser/parser.y"
+                                                                { yylhs.value.as < AST::past > () = newInitList(yystack_[2].value.as < AST::past > (), yystack_[1].value.as < AST::past > ()); }
+#line 876 "./lib/parser/parser.cpp"
     break;
 
   case 21: // ConstInitVals: Y_COMMA ConstInitVal
-#line 62 "parser.y"
-                                                    { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 696 "parser.cpp"
+#line 72 "./lib/parser/parser.y"
+                                                    { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 882 "./lib/parser/parser.cpp"
     break;
 
   case 22: // ConstInitVals: Y_COMMA ConstInitVal ConstInitVals
-#line 63 "parser.y"
-                                                    { (yylhs.value.pAst) = addNode((yystack_[1].value.pAst), (yystack_[0].value.pAst)); }
-#line 702 "parser.cpp"
+#line 73 "./lib/parser/parser.y"
+                                                    { yylhs.value.as < AST::past > () = addNode(yystack_[1].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 888 "./lib/parser/parser.cpp"
     break;
 
   case 23: // VarDecl: Type VarDef Y_SEMICOLON
-#line 66 "parser.y"
-                                            { SetDeclsType((yystack_[1].value.pAst), (yystack_[2].value.token)); (yylhs.value.pAst) = (yystack_[1].value.pAst); }
-#line 708 "parser.cpp"
+#line 76 "./lib/parser/parser.y"
+                                            { SetDeclsType(yystack_[1].value.as < AST::past > (), yystack_[2].value.as < AST::token_type > ()); yylhs.value.as < AST::past > () = yystack_[1].value.as < AST::past > (); }
+#line 894 "./lib/parser/parser.cpp"
     break;
 
   case 24: // VarDecl: Type VarDef VarDecls Y_SEMICOLON
-#line 67 "parser.y"
-                                            { addNode((yystack_[2].value.pAst), (yystack_[1].value.pAst)); SetDeclsType((yystack_[2].value.pAst), (yystack_[3].value.token)); (yylhs.value.pAst) = (yystack_[2].value.pAst); }
-#line 714 "parser.cpp"
+#line 77 "./lib/parser/parser.y"
+                                            { addNode(yystack_[2].value.as < AST::past > (), yystack_[1].value.as < AST::past > ()); SetDeclsType(yystack_[2].value.as < AST::past > (), yystack_[3].value.as < AST::token_type > ()); yylhs.value.as < AST::past > () = yystack_[2].value.as < AST::past > (); }
+#line 900 "./lib/parser/parser.cpp"
     break;
 
   case 25: // VarDecls: Y_COMMA VarDef
-#line 70 "parser.y"
-                                    { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 720 "parser.cpp"
+#line 80 "./lib/parser/parser.y"
+                                    { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 906 "./lib/parser/parser.cpp"
     break;
 
   case 26: // VarDecls: Y_COMMA VarDef VarDecls
-#line 71 "parser.y"
-                                    { (yylhs.value.pAst) = addNode((yystack_[1].value.pAst), (yystack_[0].value.pAst)); }
-#line 726 "parser.cpp"
+#line 81 "./lib/parser/parser.y"
+                                    { yylhs.value.as < AST::past > () = addNode(yystack_[1].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 912 "./lib/parser/parser.cpp"
     break;
 
   case 27: // VarDef: Y_ID
-#line 74 "parser.y"
-                                        { (yylhs.value.pAst) = newVarDecl(UNDEFINED, (yystack_[0].value.id_name), NULL, NULL); }
-#line 732 "parser.cpp"
+#line 84 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = newVarDecl(UNDEFINED, yystack_[0].value.as < AST::string > (), NULL, NULL); }
+#line 918 "./lib/parser/parser.cpp"
     break;
 
   case 28: // VarDef: Y_ID Y_ASSIGN InitVal
-#line 75 "parser.y"
-                                        { (yylhs.value.pAst) = newVarDecl(UNDEFINED, (yystack_[2].value.id_name), (yystack_[0].value.pAst), NULL); }
-#line 738 "parser.cpp"
+#line 85 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = newVarDecl(UNDEFINED, yystack_[2].value.as < AST::string > (), yystack_[0].value.as < AST::past > (), NULL); }
+#line 924 "./lib/parser/parser.cpp"
     break;
 
   case 29: // VarDef: Y_ID ConstExps
-#line 76 "parser.y"
-                                        { (yylhs.value.pAst) = newVarDecl(UNDEFINED, (yystack_[1].value.id_name), NULL, NULL); }
-#line 744 "parser.cpp"
+#line 86 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = newVarDecl(UNDEFINED, yystack_[1].value.as < AST::string > (), NULL, NULL); }
+#line 930 "./lib/parser/parser.cpp"
     break;
 
   case 30: // VarDef: Y_ID ConstExps Y_ASSIGN InitVal
-#line 77 "parser.y"
-                                        { (yylhs.value.pAst) = newVarDecl(UNDEFINED, (yystack_[3].value.id_name), (yystack_[0].value.pAst), NULL); }
-#line 750 "parser.cpp"
+#line 87 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = newVarDecl(UNDEFINED, yystack_[3].value.as < AST::string > (), yystack_[0].value.as < AST::past > (), NULL); }
+#line 936 "./lib/parser/parser.cpp"
     break;
 
   case 31: // InitVal: Exp
-#line 80 "parser.y"
-                                                { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 756 "parser.cpp"
+#line 90 "./lib/parser/parser.y"
+                                                { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 942 "./lib/parser/parser.cpp"
     break;
 
   case 32: // InitVal: Y_LBRACKET Y_RBRACKET
-#line 81 "parser.y"
-                                                { (yylhs.value.pAst) = newInitList(NULL, NULL); }
-#line 762 "parser.cpp"
+#line 91 "./lib/parser/parser.y"
+                                                { yylhs.value.as < AST::past > () = newInitList(NULL, NULL); }
+#line 948 "./lib/parser/parser.cpp"
     break;
 
   case 33: // InitVal: Y_LBRACKET InitVal Y_RBRACKET
-#line 82 "parser.y"
-                                                { (yylhs.value.pAst) = newInitList((yystack_[1].value.pAst), NULL); }
-#line 768 "parser.cpp"
+#line 92 "./lib/parser/parser.y"
+                                                { yylhs.value.as < AST::past > () = newInitList(yystack_[1].value.as < AST::past > (), NULL); }
+#line 954 "./lib/parser/parser.cpp"
     break;
 
   case 34: // InitVal: Y_LBRACKET InitVal InitVals Y_RBRACKET
-#line 83 "parser.y"
-                                                { (yylhs.value.pAst) = newInitList((yystack_[2].value.pAst), (yystack_[1].value.pAst)); }
-#line 774 "parser.cpp"
+#line 93 "./lib/parser/parser.y"
+                                                { yylhs.value.as < AST::past > () = newInitList(yystack_[2].value.as < AST::past > (), yystack_[1].value.as < AST::past > ()); }
+#line 960 "./lib/parser/parser.cpp"
     break;
 
   case 35: // InitVals: Y_COMMA InitVal
-#line 86 "parser.y"
-                                    { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 780 "parser.cpp"
+#line 96 "./lib/parser/parser.y"
+                                    { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 966 "./lib/parser/parser.cpp"
     break;
 
   case 36: // InitVals: Y_COMMA InitVal InitVals
-#line 87 "parser.y"
-                                    { (yylhs.value.pAst) = addNode((yystack_[1].value.pAst), (yystack_[0].value.pAst)); }
-#line 786 "parser.cpp"
+#line 97 "./lib/parser/parser.y"
+                                    { yylhs.value.as < AST::past > () = addNode(yystack_[1].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 972 "./lib/parser/parser.cpp"
     break;
 
   case 37: // FuncDef: Type Y_ID Y_LPAR Y_RPAR Block
-#line 90 "parser.y"
-                                                    { (yylhs.value.pAst) = newFuncDef((yystack_[4].value.token), (yystack_[3].value.id_name), NULL, (yystack_[0].value.pAst)); }
-#line 792 "parser.cpp"
+#line 100 "./lib/parser/parser.y"
+                                                    { yylhs.value.as < AST::past > () = newFuncDef(yystack_[4].value.as < AST::token_type > (), yystack_[3].value.as < AST::string > (), NULL, yystack_[0].value.as < AST::past > ()); }
+#line 978 "./lib/parser/parser.cpp"
     break;
 
   case 38: // FuncDef: Type Y_ID Y_LPAR FuncParams Y_RPAR Block
-#line 91 "parser.y"
-                                                    { (yylhs.value.pAst) = newFuncDef((yystack_[5].value.token), (yystack_[4].value.id_name), (yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 798 "parser.cpp"
+#line 101 "./lib/parser/parser.y"
+                                                    { yylhs.value.as < AST::past > () = newFuncDef(yystack_[5].value.as < AST::token_type > (), yystack_[4].value.as < AST::string > (), yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 984 "./lib/parser/parser.cpp"
     break;
 
   case 39: // FuncParams: FuncParam
-#line 94 "parser.y"
-                                            { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 804 "parser.cpp"
+#line 104 "./lib/parser/parser.y"
+                                            { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 990 "./lib/parser/parser.cpp"
     break;
 
   case 40: // FuncParams: FuncParams Y_COMMA FuncParam
-#line 95 "parser.y"
-                                            { (yylhs.value.pAst) = addNode((yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 810 "parser.cpp"
+#line 105 "./lib/parser/parser.y"
+                                            { yylhs.value.as < AST::past > () = addNode(yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 996 "./lib/parser/parser.cpp"
     break;
 
   case 41: // FuncParam: Type Y_ID
-#line 98 "parser.y"
-                                                                { (yylhs.value.pAst) = newFuncParam((yystack_[1].value.token), (yystack_[0].value.id_name), NULL, NULL); }
-#line 816 "parser.cpp"
+#line 108 "./lib/parser/parser.y"
+                                                                { yylhs.value.as < AST::past > () = newFuncParam(yystack_[1].value.as < AST::token_type > (), yystack_[0].value.as < AST::string > (), NULL, NULL); }
+#line 1002 "./lib/parser/parser.cpp"
     break;
 
   case 42: // FuncParam: Type Y_ID Y_LSQUARE Y_RSQUARE
-#line 99 "parser.y"
-                                                                { (yylhs.value.pAst) = newFuncParam((yystack_[3].value.token), (yystack_[2].value.id_name), NULL, NULL); }
-#line 822 "parser.cpp"
+#line 109 "./lib/parser/parser.y"
+                                                                { yylhs.value.as < AST::past > () = newFuncParam(yystack_[3].value.as < AST::token_type > (), yystack_[2].value.as < AST::string > (), NULL, NULL); }
+#line 1008 "./lib/parser/parser.cpp"
     break;
 
   case 43: // FuncParam: Type Y_ID ArraySubscripts
-#line 100 "parser.y"
-                                                                { (yylhs.value.pAst) = newFuncParam((yystack_[2].value.token), (yystack_[1].value.id_name), NULL, NULL); }
-#line 828 "parser.cpp"
+#line 110 "./lib/parser/parser.y"
+                                                                { yylhs.value.as < AST::past > () = newFuncParam(yystack_[2].value.as < AST::token_type > (), yystack_[1].value.as < AST::string > (), NULL, NULL); }
+#line 1014 "./lib/parser/parser.cpp"
     break;
 
   case 44: // FuncParam: Type Y_ID Y_LSQUARE Y_RSQUARE ArraySubscripts
-#line 101 "parser.y"
-                                                                { (yylhs.value.pAst) = newFuncParam((yystack_[4].value.token), (yystack_[3].value.id_name), NULL, NULL); }
-#line 834 "parser.cpp"
+#line 111 "./lib/parser/parser.y"
+                                                                { yylhs.value.as < AST::past > () = newFuncParam(yystack_[4].value.as < AST::token_type > (), yystack_[3].value.as < AST::string > (), NULL, NULL); }
+#line 1020 "./lib/parser/parser.cpp"
     break;
 
   case 45: // Block: Y_LBRACKET BlockItems Y_RBRACKET
-#line 104 "parser.y"
-                                        { (yylhs.value.pAst) = newBlock((yystack_[1].value.pAst)); }
-#line 840 "parser.cpp"
+#line 114 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = newBlock(yystack_[1].value.as < AST::past > ()); }
+#line 1026 "./lib/parser/parser.cpp"
     break;
 
   case 46: // Block: Y_LBRACKET Y_RBRACKET
-#line 105 "parser.y"
-                                        { (yylhs.value.pAst) = newBlock(NULL); }
-#line 846 "parser.cpp"
+#line 115 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = newBlock(NULL); }
+#line 1032 "./lib/parser/parser.cpp"
     break;
 
   case 47: // BlockItems: BlockItem
-#line 108 "parser.y"
-                                        { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 852 "parser.cpp"
+#line 118 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 1038 "./lib/parser/parser.cpp"
     break;
 
   case 48: // BlockItems: BlockItem BlockItems
-#line 109 "parser.y"
-                                        { (yylhs.value.pAst) = addNode((yystack_[1].value.pAst), (yystack_[0].value.pAst)); }
-#line 858 "parser.cpp"
+#line 119 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = addNode(yystack_[1].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 1044 "./lib/parser/parser.cpp"
     break;
 
   case 49: // BlockItem: Decl
-#line 112 "parser.y"
-                { (yylhs.value.pAst) = newDeclStmt((yystack_[0].value.pAst)); }
-#line 864 "parser.cpp"
+#line 122 "./lib/parser/parser.y"
+                { yylhs.value.as < AST::past > () = newDeclStmt(yystack_[0].value.as < AST::past > ()); }
+#line 1050 "./lib/parser/parser.cpp"
     break;
 
   case 50: // BlockItem: Stmt
-#line 113 "parser.y"
-                { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 870 "parser.cpp"
+#line 123 "./lib/parser/parser.y"
+                { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 1056 "./lib/parser/parser.cpp"
     break;
 
   case 51: // Stmt: LVal Y_ASSIGN Exp Y_SEMICOLON
-#line 116 "parser.y"
-                                                        { (yylhs.value.pAst) = newBinaryOp(Y_ASSIGN, (yystack_[3].value.pAst), (yystack_[1].value.pAst)); }
-#line 876 "parser.cpp"
+#line 126 "./lib/parser/parser.y"
+                                                        { yylhs.value.as < AST::past > () = newBinaryOp(Y_ASSIGN, yystack_[3].value.as < AST::past > (), yystack_[1].value.as < AST::past > ()); }
+#line 1062 "./lib/parser/parser.cpp"
     break;
 
   case 52: // Stmt: Y_SEMICOLON
-#line 117 "parser.y"
-                                                        { (yylhs.value.pAst) = newAstNode(NULL_STMT); }
-#line 882 "parser.cpp"
+#line 127 "./lib/parser/parser.y"
+                                                        { yylhs.value.as < AST::past > () = newAstNode(NULL_STMT); }
+#line 1068 "./lib/parser/parser.cpp"
     break;
 
   case 53: // Stmt: Exp Y_SEMICOLON
-#line 118 "parser.y"
-                                                        { (yylhs.value.pAst) = (yystack_[1].value.pAst); }
-#line 888 "parser.cpp"
+#line 128 "./lib/parser/parser.y"
+                                                        { yylhs.value.as < AST::past > () = yystack_[1].value.as < AST::past > (); }
+#line 1074 "./lib/parser/parser.cpp"
     break;
 
   case 54: // Stmt: Block
-#line 119 "parser.y"
-                                                        { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 894 "parser.cpp"
+#line 129 "./lib/parser/parser.y"
+                                                        { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 1080 "./lib/parser/parser.cpp"
     break;
 
   case 55: // Stmt: Y_WHILE Y_LPAR LOrExp Y_RPAR Stmt
-#line 120 "parser.y"
-                                                        { (yylhs.value.pAst) = newWhileStmt((yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 900 "parser.cpp"
+#line 130 "./lib/parser/parser.y"
+                                                        { yylhs.value.as < AST::past > () = newWhileStmt(yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 1086 "./lib/parser/parser.cpp"
     break;
 
   case 56: // Stmt: Y_IF Y_LPAR LOrExp Y_RPAR Stmt
-#line 121 "parser.y"
-                                                        { (yylhs.value.pAst) = newIfStmt((yystack_[2].value.pAst), (yystack_[0].value.pAst), NULL); }
-#line 906 "parser.cpp"
+#line 131 "./lib/parser/parser.y"
+                                                        { yylhs.value.as < AST::past > () = newIfStmt(yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > (), NULL); }
+#line 1092 "./lib/parser/parser.cpp"
     break;
 
   case 57: // Stmt: Y_IF Y_LPAR LOrExp Y_RPAR Stmt Y_ELSE Stmt
-#line 122 "parser.y"
-                                                        { (yylhs.value.pAst) = newIfStmt((yystack_[4].value.pAst), (yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 912 "parser.cpp"
+#line 132 "./lib/parser/parser.y"
+                                                        { yylhs.value.as < AST::past > () = newIfStmt(yystack_[4].value.as < AST::past > (), yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 1098 "./lib/parser/parser.cpp"
     break;
 
   case 58: // Stmt: Y_BREAK Y_SEMICOLON
-#line 123 "parser.y"
-                                                        { (yylhs.value.pAst) = newAstNode(BREAK_STMT); }
-#line 918 "parser.cpp"
+#line 133 "./lib/parser/parser.y"
+                                                        { yylhs.value.as < AST::past > () = newAstNode(BREAK_STMT); }
+#line 1104 "./lib/parser/parser.cpp"
     break;
 
   case 59: // Stmt: Y_CONTINUE Y_SEMICOLON
-#line 124 "parser.y"
-                                                        { (yylhs.value.pAst) = newAstNode(CONTINUE_STMT); }
-#line 924 "parser.cpp"
+#line 134 "./lib/parser/parser.y"
+                                                        { yylhs.value.as < AST::past > () = newAstNode(CONTINUE_STMT); }
+#line 1110 "./lib/parser/parser.cpp"
     break;
 
   case 60: // Stmt: Y_RETURN Exp Y_SEMICOLON
-#line 125 "parser.y"
-                                                        { (yylhs.value.pAst) = newReturnStmt((yystack_[1].value.pAst)); }
-#line 930 "parser.cpp"
+#line 135 "./lib/parser/parser.y"
+                                                        { yylhs.value.as < AST::past > () = newReturnStmt(yystack_[1].value.as < AST::past > ()); }
+#line 1116 "./lib/parser/parser.cpp"
     break;
 
   case 61: // Stmt: Y_RETURN Y_SEMICOLON
-#line 126 "parser.y"
-                                                        { (yylhs.value.pAst) = newReturnStmt(NULL); }
-#line 936 "parser.cpp"
+#line 136 "./lib/parser/parser.y"
+                                                        { yylhs.value.as < AST::past > () = newReturnStmt(NULL); }
+#line 1122 "./lib/parser/parser.cpp"
     break;
 
   case 62: // Exp: AddExp
-#line 129 "parser.y"
-                { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 942 "parser.cpp"
+#line 139 "./lib/parser/parser.y"
+                { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 1128 "./lib/parser/parser.cpp"
     break;
 
   case 63: // LVal: Y_ID
-#line 132 "parser.y"
-                                { (yylhs.value.pAst) = newDeclRef((yystack_[0].value.id_name), NULL); }
-#line 948 "parser.cpp"
+#line 142 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = newDeclRef(yystack_[0].value.as < AST::string > (), NULL); }
+#line 1134 "./lib/parser/parser.cpp"
     break;
 
   case 64: // LVal: Y_ID ArraySubscripts
-#line 133 "parser.y"
-                                { (yylhs.value.pAst) = newArraySubscripts(newDeclRef((yystack_[1].value.id_name), NULL), (yystack_[0].value.pAst)); }
-#line 954 "parser.cpp"
+#line 143 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = newArraySubscripts(newDeclRef(yystack_[1].value.as < AST::string > (), NULL), yystack_[0].value.as < AST::past > ()); }
+#line 1140 "./lib/parser/parser.cpp"
     break;
 
   case 65: // ArraySubscripts: Y_LSQUARE Exp Y_RSQUARE
-#line 136 "parser.y"
-                                                                { (yylhs.value.pAst) = (yystack_[1].value.pAst); }
-#line 960 "parser.cpp"
+#line 146 "./lib/parser/parser.y"
+                                                                { yylhs.value.as < AST::past > () = yystack_[1].value.as < AST::past > (); }
+#line 1146 "./lib/parser/parser.cpp"
     break;
 
   case 66: // ArraySubscripts: Y_LSQUARE Exp Y_RSQUARE ArraySubscripts
-#line 137 "parser.y"
-                                                                { (yylhs.value.pAst) = addNode((yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 966 "parser.cpp"
+#line 147 "./lib/parser/parser.y"
+                                                                { yylhs.value.as < AST::past > () = addNode(yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 1152 "./lib/parser/parser.cpp"
     break;
 
   case 67: // PrimaryExp: Y_LPAR Exp Y_RPAR
-#line 140 "parser.y"
-                                { (yylhs.value.pAst) = newParenExp((yystack_[1].value.pAst)); }
-#line 972 "parser.cpp"
+#line 150 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = newParenExp(yystack_[1].value.as < AST::past > ()); }
+#line 1158 "./lib/parser/parser.cpp"
     break;
 
   case 68: // PrimaryExp: LVal
-#line 141 "parser.y"
-                                { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 978 "parser.cpp"
+#line 151 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 1164 "./lib/parser/parser.cpp"
     break;
 
   case 69: // PrimaryExp: num_INT
-#line 142 "parser.y"
-                                { (yylhs.value.pAst) = newInt((yystack_[0].value.int_value)); }
-#line 984 "parser.cpp"
+#line 152 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = newInt(yystack_[0].value.as < AST::int32 > ()); }
+#line 1170 "./lib/parser/parser.cpp"
     break;
 
   case 70: // PrimaryExp: num_FLOAT
-#line 143 "parser.y"
-                                { (yylhs.value.pAst) = newInt((int)(yystack_[0].value.float_value)); }
-#line 990 "parser.cpp"
+#line 153 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = newInt((int)yystack_[0].value.as < AST::float32 > ()); }
+#line 1176 "./lib/parser/parser.cpp"
     break;
 
   case 71: // UnaryExp: PrimaryExp
-#line 146 "parser.y"
-                                        { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 996 "parser.cpp"
+#line 156 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 1182 "./lib/parser/parser.cpp"
     break;
 
   case 72: // UnaryExp: Y_ID Y_LPAR Y_RPAR
-#line 147 "parser.y"
-                                        { (yylhs.value.pAst) = newCallExp(newDeclRef((yystack_[2].value.id_name), NULL), NULL); }
-#line 1002 "parser.cpp"
+#line 157 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = newCallExp(newDeclRef(yystack_[2].value.as < AST::string > (), NULL), NULL); }
+#line 1188 "./lib/parser/parser.cpp"
     break;
 
   case 73: // UnaryExp: Y_ID Y_LPAR CallParams Y_RPAR
-#line 148 "parser.y"
-                                        { (yylhs.value.pAst) = newCallExp(newDeclRef((yystack_[3].value.id_name), NULL), (yystack_[1].value.pAst)); }
-#line 1008 "parser.cpp"
+#line 158 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = newCallExp(newDeclRef(yystack_[3].value.as < AST::string > (), NULL), yystack_[1].value.as < AST::past > ()); }
+#line 1194 "./lib/parser/parser.cpp"
     break;
 
   case 74: // UnaryExp: Y_ADD UnaryExp
-#line 149 "parser.y"
-                                        { (yylhs.value.pAst) = newUnaryOp(Y_ADD, (yystack_[0].value.pAst)); }
-#line 1014 "parser.cpp"
+#line 159 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = newUnaryOp(Y_ADD, yystack_[0].value.as < AST::past > ()); }
+#line 1200 "./lib/parser/parser.cpp"
     break;
 
   case 75: // UnaryExp: Y_SUB UnaryExp
-#line 150 "parser.y"
-                                        { (yylhs.value.pAst) = newUnaryOp(Y_SUB, (yystack_[0].value.pAst)); }
-#line 1020 "parser.cpp"
+#line 160 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = newUnaryOp(Y_SUB, yystack_[0].value.as < AST::past > ()); }
+#line 1206 "./lib/parser/parser.cpp"
     break;
 
   case 76: // UnaryExp: Y_NOT UnaryExp
-#line 151 "parser.y"
-                                        { (yylhs.value.pAst) = newUnaryOp(Y_NOT, (yystack_[0].value.pAst)); }
-#line 1026 "parser.cpp"
+#line 161 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = newUnaryOp(Y_NOT, yystack_[0].value.as < AST::past > ()); }
+#line 1212 "./lib/parser/parser.cpp"
     break;
 
   case 77: // CallParams: Exp
-#line 154 "parser.y"
-                                        { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 1032 "parser.cpp"
+#line 164 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 1218 "./lib/parser/parser.cpp"
     break;
 
   case 78: // CallParams: Exp Y_COMMA CallParams
-#line 155 "parser.y"
-                                        { (yylhs.value.pAst) = addNode((yystack_[2].value.pAst), (yystack_[0].value.pAst));; }
-#line 1038 "parser.cpp"
+#line 165 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = addNode(yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ());; }
+#line 1224 "./lib/parser/parser.cpp"
     break;
 
   case 79: // MulExp: UnaryExp
-#line 158 "parser.y"
-                                        { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 1044 "parser.cpp"
+#line 168 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 1230 "./lib/parser/parser.cpp"
     break;
 
   case 80: // MulExp: MulExp Y_MUL UnaryExp
-#line 159 "parser.y"
-                                        { (yylhs.value.pAst) = newBinaryOp(Y_MUL, (yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 1050 "parser.cpp"
+#line 169 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = newBinaryOp(Y_MUL, yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 1236 "./lib/parser/parser.cpp"
     break;
 
   case 81: // MulExp: MulExp Y_DIV UnaryExp
-#line 160 "parser.y"
-                                        { (yylhs.value.pAst) = newBinaryOp(Y_DIV, (yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 1056 "parser.cpp"
+#line 170 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = newBinaryOp(Y_DIV, yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 1242 "./lib/parser/parser.cpp"
     break;
 
   case 82: // MulExp: MulExp Y_MODULO UnaryExp
-#line 161 "parser.y"
-                                        { (yylhs.value.pAst) = newBinaryOp(Y_MODULO, (yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 1062 "parser.cpp"
+#line 171 "./lib/parser/parser.y"
+                                        { yylhs.value.as < AST::past > () = newBinaryOp(Y_MODULO, yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 1248 "./lib/parser/parser.cpp"
     break;
 
   case 83: // AddExp: MulExp
-#line 164 "parser.y"
-                                { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 1068 "parser.cpp"
+#line 174 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 1254 "./lib/parser/parser.cpp"
     break;
 
   case 84: // AddExp: AddExp Y_ADD MulExp
-#line 165 "parser.y"
-                                { (yylhs.value.pAst) = newBinaryOp(Y_ADD, (yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 1074 "parser.cpp"
+#line 175 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = newBinaryOp(Y_ADD, yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 1260 "./lib/parser/parser.cpp"
     break;
 
   case 85: // AddExp: AddExp Y_SUB MulExp
-#line 166 "parser.y"
-                                { (yylhs.value.pAst) = newBinaryOp(Y_SUB, (yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 1080 "parser.cpp"
+#line 176 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = newBinaryOp(Y_SUB, yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 1266 "./lib/parser/parser.cpp"
     break;
 
   case 86: // RelExp: AddExp
-#line 169 "parser.y"
-                                { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 1086 "parser.cpp"
+#line 179 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 1272 "./lib/parser/parser.cpp"
     break;
 
   case 87: // RelExp: AddExp Y_LESS RelExp
-#line 170 "parser.y"
-                                { (yylhs.value.pAst) = newBinaryOp(Y_LESS, (yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 1092 "parser.cpp"
+#line 180 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = newBinaryOp(Y_LESS, yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 1278 "./lib/parser/parser.cpp"
     break;
 
   case 88: // RelExp: AddExp Y_GREAT RelExp
-#line 171 "parser.y"
-                                { (yylhs.value.pAst) = newBinaryOp(Y_GREAT, (yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 1098 "parser.cpp"
+#line 181 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = newBinaryOp(Y_GREAT, yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 1284 "./lib/parser/parser.cpp"
     break;
 
   case 89: // RelExp: AddExp Y_LESSEQ RelExp
-#line 172 "parser.y"
-                                { (yylhs.value.pAst) = newBinaryOp(Y_LESSEQ, (yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 1104 "parser.cpp"
+#line 182 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = newBinaryOp(Y_LESSEQ, yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 1290 "./lib/parser/parser.cpp"
     break;
 
   case 90: // RelExp: AddExp Y_GREATEQ RelExp
-#line 173 "parser.y"
-                                { (yylhs.value.pAst) = newBinaryOp(Y_GREATEQ, (yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 1110 "parser.cpp"
+#line 183 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = newBinaryOp(Y_GREATEQ, yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 1296 "./lib/parser/parser.cpp"
     break;
 
   case 91: // EqExp: RelExp
-#line 176 "parser.y"
-                                { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 1116 "parser.cpp"
+#line 186 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 1302 "./lib/parser/parser.cpp"
     break;
 
   case 92: // EqExp: RelExp Y_EQ EqExp
-#line 177 "parser.y"
-                                { (yylhs.value.pAst) = newBinaryOp(Y_EQ, (yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 1122 "parser.cpp"
+#line 187 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = newBinaryOp(Y_EQ, yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 1308 "./lib/parser/parser.cpp"
     break;
 
   case 93: // EqExp: RelExp Y_NOTEQ EqExp
-#line 178 "parser.y"
-                                { (yylhs.value.pAst) = newBinaryOp(Y_NOTEQ, (yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 1128 "parser.cpp"
+#line 188 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = newBinaryOp(Y_NOTEQ, yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 1314 "./lib/parser/parser.cpp"
     break;
 
   case 94: // LAndExp: EqExp
-#line 181 "parser.y"
-                                { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 1134 "parser.cpp"
+#line 191 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 1320 "./lib/parser/parser.cpp"
     break;
 
   case 95: // LAndExp: EqExp Y_AND LAndExp
-#line 182 "parser.y"
-                                { (yylhs.value.pAst) = newBinaryOp(Y_AND, (yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 1140 "parser.cpp"
+#line 192 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = newBinaryOp(Y_AND, yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 1326 "./lib/parser/parser.cpp"
     break;
 
   case 96: // LOrExp: LAndExp
-#line 185 "parser.y"
-                                { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 1146 "parser.cpp"
+#line 195 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 1332 "./lib/parser/parser.cpp"
     break;
 
   case 97: // LOrExp: LAndExp Y_OR LOrExp
-#line 186 "parser.y"
-                                { (yylhs.value.pAst) = newBinaryOp(Y_OR, (yystack_[2].value.pAst), (yystack_[0].value.pAst)); }
-#line 1152 "parser.cpp"
+#line 196 "./lib/parser/parser.y"
+                                { yylhs.value.as < AST::past > () = newBinaryOp(Y_OR, yystack_[2].value.as < AST::past > (), yystack_[0].value.as < AST::past > ()); }
+#line 1338 "./lib/parser/parser.cpp"
     break;
 
   case 98: // ConstExp: AddExp
-#line 189 "parser.y"
-                        { (yylhs.value.pAst) = (yystack_[0].value.pAst); }
-#line 1158 "parser.cpp"
+#line 199 "./lib/parser/parser.y"
+                        { yylhs.value.as < AST::past > () = yystack_[0].value.as < AST::past > (); }
+#line 1344 "./lib/parser/parser.cpp"
     break;
 
   case 99: // Type: Y_INT
-#line 192 "parser.y"
-                { (yylhs.value.token) = Y_INT; }
-#line 1164 "parser.cpp"
+#line 202 "./lib/parser/parser.y"
+                { yylhs.value.as < AST::token_type > () = Y_INT; }
+#line 1350 "./lib/parser/parser.cpp"
     break;
 
   case 100: // Type: Y_FLOAT
-#line 193 "parser.y"
-                { (yylhs.value.token) = Y_FLOAT; }
-#line 1170 "parser.cpp"
+#line 203 "./lib/parser/parser.y"
+                { yylhs.value.as < AST::token_type > () = Y_FLOAT; }
+#line 1356 "./lib/parser/parser.cpp"
     break;
 
   case 101: // Type: Y_VOID
-#line 194 "parser.y"
-                { (yylhs.value.token) = Y_VOID; }
-#line 1176 "parser.cpp"
+#line 204 "./lib/parser/parser.y"
+                { yylhs.value.as < AST::token_type > () = Y_VOID; }
+#line 1362 "./lib/parser/parser.cpp"
     break;
 
 
-#line 1180 "parser.cpp"
+#line 1366 "./lib/parser/parser.cpp"
 
             default:
               break;
@@ -1586,17 +1772,17 @@ namespace yy {
   const unsigned char
   parser::yyrline_[] =
   {
-       0,    27,    27,    30,    31,    32,    33,    36,    37,    40,
-      41,    44,    45,    48,    49,    52,    53,    56,    57,    58,
-      59,    62,    63,    66,    67,    70,    71,    74,    75,    76,
-      77,    80,    81,    82,    83,    86,    87,    90,    91,    94,
-      95,    98,    99,   100,   101,   104,   105,   108,   109,   112,
-     113,   116,   117,   118,   119,   120,   121,   122,   123,   124,
-     125,   126,   129,   132,   133,   136,   137,   140,   141,   142,
-     143,   146,   147,   148,   149,   150,   151,   154,   155,   158,
-     159,   160,   161,   164,   165,   166,   169,   170,   171,   172,
-     173,   176,   177,   178,   181,   182,   185,   186,   189,   192,
-     193,   194
+       0,    37,    37,    40,    41,    42,    43,    46,    47,    50,
+      51,    54,    55,    58,    59,    62,    63,    66,    67,    68,
+      69,    72,    73,    76,    77,    80,    81,    84,    85,    86,
+      87,    90,    91,    92,    93,    96,    97,   100,   101,   104,
+     105,   108,   109,   110,   111,   114,   115,   118,   119,   122,
+     123,   126,   127,   128,   129,   130,   131,   132,   133,   134,
+     135,   136,   139,   142,   143,   146,   147,   150,   151,   152,
+     153,   156,   157,   158,   159,   160,   161,   164,   165,   168,
+     169,   170,   171,   174,   175,   176,   179,   180,   181,   182,
+     183,   186,   187,   188,   191,   192,   195,   196,   199,   202,
+     203,   204
   };
 
   void
@@ -1626,61 +1812,11 @@ namespace yy {
   }
 #endif // YYDEBUG
 
-  parser::symbol_kind_type
-  parser::yytranslate_ (int t) YY_NOEXCEPT
-  {
-    // YYTRANSLATE[TOKEN-NUM] -- Symbol number corresponding to
-    // TOKEN-NUM as returned by yylex.
-    static
-    const signed char
-    translate_table[] =
-    {
-       0,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     2,     2,     2,     2,     2,     1,     2,     3,     4,
-       5,     6,     7,     8,     9,    10,    11,    12,    13,    14,
-      15,    16,    17,    18,    19,    20,    21,    22,    23,    24,
-      25,    26,    27,    28,    29,    30,    31,    32,    33,    34,
-      35,    36,    37,    38
-    };
-    // Last valid token kind.
-    const int code_max = 293;
-
-    if (t <= 0)
-      return symbol_kind::S_YYEOF;
-    else if (t <= code_max)
-      return static_cast <symbol_kind_type> (translate_table[t]);
-    else
-      return symbol_kind::S_YYUNDEF;
-  }
 
 } // yy
-#line 1682 "parser.cpp"
+#line 1818 "./lib/parser/parser.cpp"
 
-#line 197 "parser.y"
+#line 207 "./lib/parser/parser.y"
 
 
 void yyerror(char *s)

@@ -1,3 +1,7 @@
+/**
+ * @todo use using enum to reference token type
+ */
+
 #include "../../include/parser/ast.hpp"
 
 namespace AST {

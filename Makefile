@@ -3,4 +3,4 @@ lexer:
 	gcc ./lib/lexer/lexer.c ./debug/lexerdbg.c -o ./build/lexer
 
 parser:
-	bison -d -o ./lib/parser.cpp ./lib/parser/parser.y
+	bison -o ./lib/parser/parser.cpp ./lib/parser/parser.y

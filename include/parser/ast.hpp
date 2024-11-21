@@ -35,8 +35,8 @@ using ast = struct _ast;
 using past = struct _ast*;
 using token_type = int; // yylex的返回值为int，故暂时将token_type定义为int
 using node_type = enum _node_type;
-// using int32 = int32_t;
-// using float32 = float;
+using int32 = int32_t;
+using float32 = float;
 using string = std::string;   
 
 

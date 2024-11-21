@@ -1,34 +1,36 @@
-%{
+/**
+ * @todo use variant to replace union
+ * @todo 使用完整类型代替数值型的yylex返回值
+ * @todo 使用变体时，必须正确构造和销毁符号。 assart
+ */
+
+%code {
 
 #include "../../include/parser/ast.hpp"
 extern "C" int yylex();
-
 using namespace AST;
 
-%}
+}
 
-%code requires{
+%code requires {
 #include "../../include/parser/ast.hpp"
-using namespace AST;
+// using namespace AST;
 }
 
 %language "C++"
-%require "3.2"
-
-%union {
-        int	token;
-        int32	int_value;
-        float32 float_value;
-        string	id_name;
-        past    pAst;
-};
+%require "3.8.1"
+%header "include/parser/parser.hpp"
+%define api.token.raw
+%define api.token.constructor
+%define api.value.type variant
+%define parse.assert
 
 %token Y_INT Y_VOID Y_CONST Y_IF Y_ELSE Y_WHILE Y_BREAK Y_CONTINUE Y_RETURN Y_ADD Y_SUB Y_MUL Y_DIV Y_MODULO Y_LESS Y_LESSEQ Y_GREAT Y_GREATEQ Y_NOTEQ Y_EQ Y_NOT Y_AND Y_OR Y_ASSIGN Y_LPAR Y_RPAR Y_LBRACKET Y_RBRACKET Y_LSQUARE Y_RSQUARE Y_COMMA Y_SEMICOLON Y_FLOAT
-%type <pAst> CompUnit Decl ConstDecl ConstDefs ConstDef ConstExps ConstInitVal ConstInitVals VarDecl VarDecls VarDef InitVal InitVals FuncDef FuncParams FuncParam Block BlockItems BlockItem Stmt Exp LVal ArraySubscripts PrimaryExp UnaryExp CallParams MulExp AddExp RelExp EqExp LAndExp LOrExp ConstExp
-%type <token> Type
-%token <int_value> num_INT
-%token <float_value> num_FLOAT
-%token <id_name> Y_ID
+%type <AST::past> CompUnit Decl ConstDecl ConstDefs ConstDef ConstExps ConstInitVal ConstInitVals VarDecl VarDecls VarDef InitVal InitVals FuncDef FuncParams FuncParam Block BlockItems BlockItem Stmt Exp LVal ArraySubscripts PrimaryExp UnaryExp CallParams MulExp AddExp RelExp EqExp LAndExp LOrExp ConstExp
+%type <AST::token_type> Type
+%token <AST::int32> num_INT
+%token <AST::float32> num_FLOAT
+%token <AST::string> Y_ID
 
 %%
 

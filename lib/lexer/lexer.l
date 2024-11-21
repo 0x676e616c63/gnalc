@@ -2,17 +2,19 @@
  * @brief c词法分析器
  * @todo mutiple comments' regular expression need to be completed
  * @attention no negative integers and floats, they are considered as unary expressions
+ * @todo .l文件中可以直接使用cpp语句，只需要使用cpp编译器即可
  */
 
 %{
 
+// 后续直接引用词法分析器头文件
 #include "../../include/lexer/token.h"
 
 _YYLVAL yylval;
 
 %}
 
-%option noyywrap
+%option noyywrap nounput noinput
 
 %%
 [0-9]+ { yylval.int_value = (int32)atoi(yytext); return num_INT; }
