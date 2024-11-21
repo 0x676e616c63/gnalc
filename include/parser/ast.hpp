@@ -12,13 +12,17 @@
 #include <cstdint>
 #include <string>
 #include <cstdlib>
-#include "basetype.h"
-#include "token.hpp"
+#include <cstring>
 #include "node_type.hpp"
 // #include <stdio.h>
 // #include <stdlib.h>
 // #include <string.h>
 // #include <stdint.h>
+
+extern "C" {
+#include "../lexer/datatype.h"
+// #include "token.h"
+}
 
 #define UNDEFINED 0
 
@@ -26,12 +30,15 @@
 namespace AST {
 #endif
 
-
 #ifdef __cplusplus
 using ast = struct _ast;
 using past = struct _ast*;
-using token_type = enum yytokentype;
+using token_type = int; // yylex的返回值为int，故暂时将token_type定义为int
 using node_type = enum _node_type;
+// using int32 = int32_t;
+// using float32 = float;
+using string = std::string;   
+
 
 struct _ast
 {
@@ -44,8 +51,6 @@ struct _ast
    past if_cond;
    past next;
    void *data; // for future use
-
-   void ASTprint();
 };
 
 #else
@@ -66,7 +71,7 @@ struct _ast{
 };
 #endif
 
-void yyerror(char* s);
+// void yyerror(char* s); // declared in token.h
 
 // #include "lrparser.tab.h"
 

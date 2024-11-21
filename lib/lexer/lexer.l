@@ -6,7 +6,7 @@
 
 %{
 
-#include "../../include/parser/token.h"
+#include "../../include/lexer/token.h"
 
 _YYLVAL yylval;
 
@@ -16,9 +16,12 @@ _YYLVAL yylval;
 
 %%
 [0-9]+ { yylval.int_value = (int32)atoi(yytext); return num_INT; }
-(([0-9]+\.[0-9]*)|([0-9]*\.[0-9]+))([eE]-?[0-9]+)? { yylval.float_value = (float32)atof(yytext); return num_FLOAT; }
-[0-9]+[eE]-?[0-9]+ { yylval.float_value = (float32)atof(yytext); return num_FLOAT; }
-0x[0-9a-fA-F]+ { yylval.int_value = (int32)strtol(yytext, NULL, 16); return num_INT; }
+0[0-7]+ { yylval.int_value = (int32)strtol(yytext, NULL, 8); return num_INT; }
+0[xX][0-9a-fA-F]+ { yylval.int_value = (int32)strtol(yytext, NULL, 16); return num_INT; }
+
+(([0-9]+\.[0-9]*)|([0-9]*\.[0-9]+))([eE][\+-]?[0-9]+)? { yylval.float_value = (float32)atof(yytext); return num_FLOAT; }
+[0-9]+[eE][\+-]?[0-9]+ { yylval.float_value = (float32)atof(yytext); return num_FLOAT; }
+0[xX](([0-9a-fA-F]+)|([0-9a-fA-F]+\.[0-9a-fA-F]*)|([0-9a-fA-F]*\.[0-9a-fA-F]+))[pP][\+-]?[0-9]+ { yylval.float_value = (float32)strtof(yytext, NULL); return num_FLOAT; }
 
 "int" { return Y_INT; }
 "void" { return Y_VOID; }

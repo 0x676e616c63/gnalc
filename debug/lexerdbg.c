@@ -1,4 +1,4 @@
-#include "../include/parser/token.h"
+#include "../include/lexer/token.h"
 #include <stdio.h>
 
 extern int yylex();
@@ -8,11 +8,11 @@ void yyerror(char *s)
 	fprintf(stderr, "error: %s\n", s);
 }
 
-void main(int argc, char **argv)
+int main(int argc, char **argv)
 {
     int tok;
 
-	while(tok = yylex()) 
+	while((tok = yylex())) 
 	{
 		printf("<%d, ", tok);
 
@@ -32,4 +32,5 @@ void main(int argc, char **argv)
 
         printf(">\n");
 	}
+    return 0;
 }

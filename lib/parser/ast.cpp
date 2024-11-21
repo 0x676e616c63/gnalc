@@ -1,4 +1,6 @@
-#include "../../include/praser/ast.hpp"
+#include "../../include/parser/ast.hpp"
+
+namespace AST {
 
 void showAst(past node, int nest, bool use_blank) {
 	if(node == NULL)
@@ -152,7 +154,7 @@ void showToken(int Token) {
 }
 
 past newAstNode(node_type type) {
-	past node = malloc(sizeof(ast));
+	past node = (past)malloc(sizeof(ast));
 	if(node == NULL)
 	{
 		printf("run out of memory.\n");
@@ -314,3 +316,4 @@ past newVarRef(char* id, past para) {
 	return node;
 }
 
+}

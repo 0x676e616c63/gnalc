@@ -1,15 +1,25 @@
 %{
 
-#include "ast.h"
-extern int yylex();
+#include "../../include/parser/ast.hpp"
+extern "C" int yylex();
+
+using namespace AST;
 
 %}
 
+%code requires{
+#include "../../include/parser/ast.hpp"
+using namespace AST;
+}
+
+%language "C++"
+%require "3.2"
+
 %union {
-	int		token;
-	int		int_value;
-	float   float_value;
-	char*	id_name;
+        int	token;
+        int32	int_value;
+        float32 float_value;
+        string	id_name;
         past    pAst;
 };
 
@@ -17,12 +27,12 @@ extern int yylex();
 %type <pAst> CompUnit Decl ConstDecl ConstDefs ConstDef ConstExps ConstInitVal ConstInitVals VarDecl VarDecls VarDef InitVal InitVals FuncDef FuncParams FuncParam Block BlockItems BlockItem Stmt Exp LVal ArraySubscripts PrimaryExp UnaryExp CallParams MulExp AddExp RelExp EqExp LAndExp LOrExp ConstExp
 %type <token> Type
 %token <int_value> num_INT
-%token <id_name> Y_ID
 %token <float_value> num_FLOAT
+%token <id_name> Y_ID
 
 %%
 
-CompileUnit: CompUnit   { showAst($1, 0, 0); }
+CompileUnit: CompUnit   { showAst($1, 0, true); }
            ;
 
 CompUnit: Decl CompUnit         { $$ = addNode($1, $2); }

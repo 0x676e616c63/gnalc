@@ -1,4 +1,6 @@
 /**
+ * @brief token, yylval等的定义，由于bison也会生成token enum，故该文件可能被弃用
+ * @attention 依赖关系：lexer.c->token.h->datatype.h
  * @attention yylex的返回值为int。
  * @todo yylval的位置
  * @todo yyerror的位置
@@ -10,9 +12,9 @@
 
 #include "datatype.h"
 
-#ifdef __cplusplus
-namespace AST {
-#endif
+// #ifdef __cplusplus
+// namespace AST {
+// #endif
 
 enum yytokentype {
 	num_INT = 258,
@@ -69,8 +71,8 @@ extern _YYLVAL yylval;
 
 void yyerror(char* s);
 
-#ifdef __cplusplus
-}
-#endif
+// #ifdef __cplusplus
+// }
+// #endif
 
 #endif //COMPILER_LAB_TOKEN_H
