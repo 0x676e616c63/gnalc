@@ -7,8 +7,10 @@
 %code {
 
 #include "../../include/parser/ast.hpp"
+#include "../../include/parser/parser.hpp"
 extern "C" int yylex();
 using namespace AST;
+// using enum yy::parser::token::token_kind_type;
 
 }
 
@@ -26,183 +28,188 @@ using namespace AST;
 %define parse.assert
 
 %token Y_INT Y_VOID Y_CONST Y_IF Y_ELSE Y_WHILE Y_BREAK Y_CONTINUE Y_RETURN Y_ADD Y_SUB Y_MUL Y_DIV Y_MODULO Y_LESS Y_LESSEQ Y_GREAT Y_GREATEQ Y_NOTEQ Y_EQ Y_NOT Y_AND Y_OR Y_ASSIGN Y_LPAR Y_RPAR Y_LBRACKET Y_RBRACKET Y_LSQUARE Y_RSQUARE Y_COMMA Y_SEMICOLON Y_FLOAT
-%type <AST::past> CompUnit Decl ConstDecl ConstDefs ConstDef ConstExps ConstInitVal ConstInitVals VarDecl VarDecls VarDef InitVal InitVals FuncDef FuncParams FuncParam Block BlockItems BlockItem Stmt Exp LVal ArraySubscripts PrimaryExp UnaryExp CallParams MulExp AddExp RelExp EqExp LAndExp LOrExp ConstExp
-%type <AST::token_type> Type
+// %type <AST::past> CompileUnit CompUnit Decl ConstDecl ConstDefs ConstDef ConstExp ConstExps ConstInitVal ConstInitVals VarDecl VarDefs VarDef InitVal InitVals FuncDef FuncFParams FuncFParam ArraySubscripts Block BlockItems BlockItem Stmt Exp LVal PrimaryExp UnaryExp FuncRParams MulExp AddExp RelExp EqExp LAndExp LOrExp
+%type <AST::dtype> Type
+%type <AST::num> Number
 %token <AST::int32> num_INT
 %token <AST::float32> num_FLOAT
 %token <AST::string> Y_ID
 
+%type <std::shared_ptr<VarDef>> VarDefs VarDef ConstDefs ConstDef
+
 %%
 
-CompileUnit: CompUnit   { showAst($1, 0, true); }
+CompileUnit: CompUnit   { return $1; }
            ;
 
-CompUnit: Decl CompUnit         { $$ = addNode($1, $2); }
-        | FuncDef CompUnit      { $$ = addNode($1, $2); }
-        | Decl                  { $$ = $1; }
-        | FuncDef               { $$ = $1; }
+CompUnit: Decl CompUnit         {  }
+        | FuncDef CompUnit      {  }
+        | Decl                  {  }
+        | FuncDef               {  }
         ;
 
-Decl: ConstDecl     { $$ = $1; }
-    | VarDecl       { $$ = $1; }
+
+Decl: ConstDecl     { return $1; }
+    | VarDecl       { return $1; }
     ;
 
-ConstDecl: Y_CONST Type ConstDef Y_SEMICOLON    { SetDeclsType($3, $2); $$ = $3; }
-         | Y_CONST Type ConstDefs Y_SEMICOLON   { SetDeclsType($3, $2); $$ = $3; }
+Type: Y_INT     { $$ = dtype::INT; }
+    | Y_FLOAT   { $$ = dtype::FLOAT; }
+    | Y_VOID    { $$ = dtype::VOID; }
+    ;
+
+
+ConstDecl: Y_CONST Type ConstDefs Y_SEMICOLON    {  }
          ;
 
-ConstDefs: ConstDef Y_COMMA ConstDef    { $$ = addNode($1, $3); }
-         | ConstDefs Y_COMMA ConstDef   { $$ = addNode($1, $3); }
+ConstDefs: ConstDef                     { $$ = $1; }
+         | ConstDef Y_COMMA ConstDefs   { $$ = $1->link($3); }
          ;
 
-ConstDef: Y_ID Y_ASSIGN ConstInitVal            { $$ = newVarDecl(UNDEFINED, $1, $3, NULL); }
-        | Y_ID ConstExps Y_ASSIGN ConstInitVal  { $$ = newVarDecl(UNDEFINED, $1, $4, NULL); }
+ConstDef: Y_ID Y_ASSIGN ConstInitVal            { $$ = std::make_shared<VariableNode>($1, $3); }
+        | Y_ID ConstExps Y_ASSIGN ConstInitVal  { $$ = std::make_shared<VariableNode>($1, $2, $4); }
         ;
 
-ConstExps: Y_LSQUARE ConstExp Y_RSQUARE             { $$ = $2; }
-         | Y_LSQUARE ConstExp Y_RSQUARE ConstExps   { $$ = addNode($2, $4); } // TODO
+ConstExps: Y_LSQUARE ConstExp Y_RSQUARE             {  }
+         | Y_LSQUARE ConstExp Y_RSQUARE ConstExps   {  }
          ;
 
-ConstInitVal: ConstExp                                          { $$ = $1; }
-            | Y_LBRACKET Y_RBRACKET                             { $$ = newInitList(NULL, NULL); }
-            | Y_LBRACKET ConstInitVal Y_RBRACKET                { $$ = newInitList($2, NULL); }
-            | Y_LBRACKET ConstInitVal ConstInitVals Y_RBRACKET  { $$ = newInitList($2, $3); }
+ConstExp: AddExp        {  }
+        ;
+
+ConstInitVal: ConstExp                                          {  }
+            | Y_LBRACKET Y_RBRACKET                             {  }
+            | Y_LBRACKET ConstInitVals Y_RBRACKET                {  }
             ;
 
-ConstInitVals: Y_COMMA ConstInitVal                 { $$ = $2; }
-             | Y_COMMA ConstInitVal ConstInitVals   { $$ = addNode($2, $3); }
+ConstInitVals: ConstInitVal                 {  }
+             | ConstInitVal Y_COMMA ConstInitVals   {  }
              ;
 
-VarDecl: Type VarDef Y_SEMICOLON            { SetDeclsType($2, $1); $$ = $2; }
-       | Type VarDef VarDecls Y_SEMICOLON   { addNode($2, $3); SetDeclsType($2, $1); $$ = $2; }
+
+VarDecl: Type VarDefs Y_SEMICOLON            {  }
        ;
 
-VarDecls: Y_COMMA VarDef            { $$ = $2; }
-        | Y_COMMA VarDef VarDecls   { $$ = addNode($2, $3); }
-        ;
+VarDefs: VarDef                         { $$ = $1; }
+       | VarDef Y_COMMA VarDefs         { $$ = $1->link($3); }
+       ;
 
-VarDef: Y_ID                            { $$ = newVarDecl(UNDEFINED, $1, NULL, NULL); }
-      | Y_ID Y_ASSIGN InitVal           { $$ = newVarDecl(UNDEFINED, $1, $3, NULL); }
-      | Y_ID ConstExps                  { $$ = newVarDecl(UNDEFINED, $1, NULL, NULL); }
-      | Y_ID ConstExps Y_ASSIGN InitVal { $$ = newVarDecl(UNDEFINED, $1, $4, NULL); }
+VarDef: Y_ID                            { $$ = std::make_shared<VariableNode>($1); }
+      | Y_ID ConstExps                  { $$ = std::make_shared<VariableNode>($1, $2); }
+      | Y_ID Y_ASSIGN InitVal           { $$ = std::make_shared<VariableNode>($1, $3); }
+      | Y_ID ConstExps Y_ASSIGN InitVal { $$ = std::make_shared<VariableNode>($1, $2, $4); }
       ;
 
-InitVal: Exp                                    { $$ = $1; }
-       | Y_LBRACKET Y_RBRACKET                  { $$ = newInitList(NULL, NULL); }
-       | Y_LBRACKET InitVal Y_RBRACKET          { $$ = newInitList($2, NULL); }
-       | Y_LBRACKET InitVal InitVals Y_RBRACKET { $$ = newInitList($2, $3); }
+InitVal: Exp                                    {  }
+       | Y_LBRACKET Y_RBRACKET                  {  }
+       | Y_LBRACKET InitVals Y_RBRACKET          {  }
        ;
 
-InitVals: Y_COMMA InitVal           { $$ = $2; }
-        | Y_COMMA InitVal InitVals  { $$ = addNode($2, $3); }
+InitVals: InitVal           {  }
+        | InitVal Y_COMMA InitVals  {  }
         ;
 
-FuncDef: Type Y_ID Y_LPAR Y_RPAR Block              { $$ = newFuncDef($1, $2, NULL, $5); }
-       | Type Y_ID Y_LPAR FuncParams Y_RPAR Block   { $$ = newFuncDef($1, $2, $4, $6); }
+
+FuncDef: Type Y_ID Y_LPAR Y_RPAR Block              {  }
+       | Type Y_ID Y_LPAR FuncFParams Y_RPAR Block   {  }
        ;
 
-FuncParams: FuncParam                       { $$ = $1; }
-          | FuncParams Y_COMMA FuncParam    { $$ = addNode($1, $3); }
+FuncFParams: FuncFParam                       {  }
+          | FuncFParam Y_COMMA FuncFParams    {  }
           ;
 
-FuncParam: Type Y_ID                                            { $$ = newFuncParam($1, $2, NULL, NULL); }
-         | Type Y_ID Y_LSQUARE Y_RSQUARE                        { $$ = newFuncParam($1, $2, NULL, NULL); }
-         | Type Y_ID ArraySubscripts                            { $$ = newFuncParam($1, $2, NULL, NULL); }
-         | Type Y_ID Y_LSQUARE Y_RSQUARE ArraySubscripts        { $$ = newFuncParam($1, $2, NULL, NULL); } //TODO
+FuncFParam: Type Y_ID                                            {  }
+         | Type Y_ID Y_LSQUARE Y_RSQUARE                        {  }
+         | Type Y_ID Y_LSQUARE Y_RSQUARE ArraySubscripts        {  }
          ;
 
-Block: Y_LBRACKET BlockItems Y_RBRACKET { $$ = newBlock($2); }
-     | Y_LBRACKET Y_RBRACKET            { $$ = newBlock(NULL); }
-     ;
-
-BlockItems: BlockItem                   { $$ = $1; }
-          | BlockItem BlockItems        { $$ = addNode($1, $2); }
-          ;
-
-BlockItem: Decl { $$ = newDeclStmt($1); }
-         | Stmt { $$ = $1; }
-         ;
-
-Stmt: LVal Y_ASSIGN Exp Y_SEMICOLON                     { $$ = newBinaryOp(Y_ASSIGN, $1, $3); }
-    | Y_SEMICOLON                                       { $$ = newAstNode(NULL_STMT); }
-    | Exp Y_SEMICOLON                                   { $$ = $1; }
-    | Block                                             { $$ = $1; }
-    | Y_WHILE Y_LPAR LOrExp Y_RPAR Stmt                 { $$ = newWhileStmt($3, $5); }
-    | Y_IF Y_LPAR LOrExp Y_RPAR Stmt                    { $$ = newIfStmt($3, $5, NULL); }
-    | Y_IF Y_LPAR LOrExp Y_RPAR Stmt Y_ELSE Stmt        { $$ = newIfStmt($3, $5, $7); }
-    | Y_BREAK Y_SEMICOLON                               { $$ = newAstNode(BREAK_STMT); }
-    | Y_CONTINUE Y_SEMICOLON                            { $$ = newAstNode(CONTINUE_STMT); }
-    | Y_RETURN Exp Y_SEMICOLON                          { $$ = newReturnStmt($2); }
-    | Y_RETURN Y_SEMICOLON                              { $$ = newReturnStmt(NULL); }
-    ;
-
-Exp: AddExp     { $$ = $1; }
-   ;
-
-LVal: Y_ID                      { $$ = newDeclRef($1, NULL); }
-    | Y_ID ArraySubscripts      { $$ = newArraySubscripts(newDeclRef($1, NULL), $2); }
-    ;
-
-ArraySubscripts: Y_LSQUARE Exp Y_RSQUARE                        { $$ = $2; }
-               | Y_LSQUARE Exp Y_RSQUARE ArraySubscripts        { $$ = addNode($2, $4); }
+ArraySubscripts: Y_LSQUARE Exp Y_RSQUARE                        {  }
+               | Y_LSQUARE Exp Y_RSQUARE ArraySubscripts        {  }
                ;
 
-PrimaryExp: Y_LPAR Exp Y_RPAR   { $$ = newParenExp($2); }
-          | LVal                { $$ = $1; }
-          | num_INT             { $$ = newInt($1); }
-          | num_FLOAT           { $$ = newInt((int)$1); }
-          ;
-
-UnaryExp: PrimaryExp                    { $$ = $1; }
-        | Y_ID Y_LPAR Y_RPAR            { $$ = newCallExp(newDeclRef($1, NULL), NULL); }
-        | Y_ID Y_LPAR CallParams Y_RPAR { $$ = newCallExp(newDeclRef($1, NULL), $3); }
-        | Y_ADD UnaryExp                { $$ = newUnaryOp(Y_ADD, $2); }
-        | Y_SUB UnaryExp                { $$ = newUnaryOp(Y_SUB, $2); }
-        | Y_NOT UnaryExp                { $$ = newUnaryOp(Y_NOT, $2); }
-        ;
-
-CallParams: Exp                         { $$ = $1; }
-          | Exp Y_COMMA CallParams      { $$ = addNode($1, $3);; }
-          ;
-
-MulExp: UnaryExp                        { $$ = $1; }
-      | MulExp Y_MUL UnaryExp           { $$ = newBinaryOp(Y_MUL, $1, $3); }
-      | MulExp Y_DIV UnaryExp           { $$ = newBinaryOp(Y_DIV, $1, $3); }
-      | MulExp Y_MODULO UnaryExp        { $$ = newBinaryOp(Y_MODULO, $1, $3); }
-      ;
-
-AddExp: MulExp                  { $$ = $1; }
-      | AddExp Y_ADD MulExp     { $$ = newBinaryOp(Y_ADD, $1, $3); }
-      | AddExp Y_SUB MulExp     { $$ = newBinaryOp(Y_SUB, $1, $3); }
-      ;
-
-RelExp: AddExp                  { $$ = $1; }
-      | AddExp Y_LESS RelExp    { $$ = newBinaryOp(Y_LESS, $1, $3); }
-      | AddExp Y_GREAT RelExp   { $$ = newBinaryOp(Y_GREAT, $1, $3); }
-      | AddExp Y_LESSEQ RelExp  { $$ = newBinaryOp(Y_LESSEQ, $1, $3); }
-      | AddExp Y_GREATEQ RelExp { $$ = newBinaryOp(Y_GREATEQ, $1, $3); }
-      ;
-
-EqExp: RelExp                   { $$ = $1; }
-     | RelExp Y_EQ EqExp        { $$ = newBinaryOp(Y_EQ, $1, $3); }
-     | RelExp Y_NOTEQ EqExp     { $$ = newBinaryOp(Y_NOTEQ, $1, $3); }
+Block: Y_LBRACKET Y_RBRACKET            {  }
+     | Y_LBRACKET BlockItems Y_RBRACKET {  }
      ;
 
-LAndExp: EqExp                  { $$ = $1; }
-       | EqExp Y_AND LAndExp    { $$ = newBinaryOp(Y_AND, $1, $3); }
-       ;
+BlockItems: BlockItem                   {  }
+          | BlockItem BlockItems        {  }
+          ;
 
-LOrExp: LAndExp                 { $$ = $1; }
-      | LAndExp Y_OR LOrExp     { $$ = newBinaryOp(Y_OR, $1, $3); }
+BlockItem: Decl {  }
+         | Stmt {  }
+         ;
+
+Stmt: LVal Y_ASSIGN Exp Y_SEMICOLON                     {  }
+    | Y_SEMICOLON                                       {  }
+    | Exp Y_SEMICOLON                                   {  }
+    | Block                                             {  }
+    | Y_IF Y_LPAR LOrExp Y_RPAR Stmt                    {  }
+    | Y_IF Y_LPAR LOrExp Y_RPAR Stmt Y_ELSE Stmt        {  }
+    | Y_WHILE Y_LPAR LOrExp Y_RPAR Stmt                 {  }
+    | Y_BREAK Y_SEMICOLON                               {  }
+    | Y_CONTINUE Y_SEMICOLON                            {  }
+    | Y_RETURN Y_SEMICOLON                              {  }
+    | Y_RETURN Exp Y_SEMICOLON                          {  }
+    ;
+
+Exp: AddExp     {  }
+   ;
+
+LVal: Y_ID                      {  }
+    | Y_ID ArraySubscripts      {  }
+    ;
+
+PrimaryExp: Y_LPAR Exp Y_RPAR   {  }
+          | LVal                {  }
+          | Number              {  }
+          ;
+
+Number: num_INT             {  }
+      | num_FLOAT           {  }
       ;
 
-ConstExp: AddExp        { $$ = $1; }
+UnaryExp: PrimaryExp                    {  }
+        | Y_ID Y_LPAR Y_RPAR            {  }
+        | Y_ID Y_LPAR FuncRParams Y_RPAR {  }
+        | Y_ADD UnaryExp                {  }
+        | Y_SUB UnaryExp                {  }
+        | Y_NOT UnaryExp                {  }
         ;
 
-Type: Y_INT     { $$ = Y_INT; }
-    | Y_FLOAT   { $$ = Y_FLOAT; }
-    | Y_VOID    { $$ = Y_VOID; }
-    ;
+FuncRParams: Exp                         {  }
+          | Exp Y_COMMA FuncRParams      {  }
+          ;
+
+MulExp: UnaryExp                        {  }
+      | MulExp Y_MUL UnaryExp           {  }
+      | MulExp Y_DIV UnaryExp           {  }
+      | MulExp Y_MODULO UnaryExp        {  }
+      ;
+
+AddExp: MulExp                  {  }
+      | AddExp Y_ADD MulExp     {  }
+      | AddExp Y_SUB MulExp     {  }
+      ;
+
+RelExp: AddExp                  {  }
+      | RelExp Y_LESS AddExp    {  }
+      | RelExp Y_GREAT AddExp   {  }
+      | RelExp Y_LESSEQ AddExp  {  }
+      | RelExp Y_GREATEQ AddExp {  }
+      ;
+
+EqExp: RelExp                   {  }
+     | EqExp Y_EQ RelExp        {  }
+     | EqExp Y_NOTEQ RelExp     {  }
+     ;
+
+LAndExp: EqExp                  {  }
+       | LAndExp Y_AND EqExp    {  }
+       ;
+
+LOrExp: LAndExp                 {  }
+      | LorExp Y_OR LAndExp     {  }
+      ;
 
 %%
 
