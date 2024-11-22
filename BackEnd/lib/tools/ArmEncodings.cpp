@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <string>
-#include "../../Arm.hpp"
 #include "../../include/tools/ArmTools.hpp"
 
 bool ArmTools::isImmCanBeEncodedInText(int imme){

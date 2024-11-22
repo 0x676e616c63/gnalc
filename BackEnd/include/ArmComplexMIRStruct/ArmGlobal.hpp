@@ -1,3 +1,5 @@
+#ifndef ARM_GLOBAL
+#define ARM_GLOBAL
 #pragma once
 #include <string>
 #include "../../Arm.hpp"
@@ -11,3 +13,4 @@ class ArmStruct::Global{
         std::string Label;
         std::string encoding;
 };
+#endif

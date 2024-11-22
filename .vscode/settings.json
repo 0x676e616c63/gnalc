@@ -1,5 +1,6 @@
 {
     "C_Cpp.errorSquiggles": "enabled",
+    "C_Cpp.codeAnalysis.clangTidy.enabled": true,
     "cmake.ignoreCMakeListsMissing": true,
     "files.associations": {
         "vector": "cpp",
@@ -47,6 +48,8 @@
         "ostream": "cpp",
         "stdexcept": "cpp",
         "streambuf": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "set": "cpp",
+        "unordered_set": "cpp"
     }
 }
