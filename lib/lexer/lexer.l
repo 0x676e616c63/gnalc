@@ -1,71 +1,69 @@
 /**
- * @brief c词法分析器
  * @todo mutiple comments' regular expression need to be completed
  * @attention no negative integers and floats, they are considered as unary expressions
- * @todo .l文件中可以直接使用cpp语句，只需要使用cpp编译器即可
+ * @todo 通配符的yyerror()未使用，yyerror在parser.y中随便定义的，需检查和应用(MAYBE)
  */
 
 %{
 
-// 后续直接引用词法分析器头文件
-#include "../../include/lexer/token.h"
-
-_YYLVAL yylval;
+#include "parser.hpp"
+#include <cstdlib> // just for atoi, atof, strtol, strtof
+#define YY_DECL yy::parser::symbol_type yylex ()
 
 %}
 
 %option noyywrap nounput noinput
 
 %%
-[0-9]+ { yylval.int_value = (int32)atoi(yytext); return num_INT; }
-0[0-7]+ { yylval.int_value = (int32)strtol(yytext, NULL, 8); return num_INT; }
-0[xX][0-9a-fA-F]+ { yylval.int_value = (int32)strtol(yytext, NULL, 16); return num_INT; }
+[0-9]+ { return yy::parser::make_num_INT((AST::int32)atoi(yytext)); }
+0[0-7]+ { return yy::parser::make_num_INT((AST::int32)strtol(yytext, NULL, 8)); }
+0[xX][0-9a-fA-F]+ { return yy::parser::make_num_INT((AST::int32)strtol(yytext, NULL, 16)); }
 
-(([0-9]+\.[0-9]*)|([0-9]*\.[0-9]+))([eE][\+-]?[0-9]+)? { yylval.float_value = (float32)atof(yytext); return num_FLOAT; }
-[0-9]+[eE][\+-]?[0-9]+ { yylval.float_value = (float32)atof(yytext); return num_FLOAT; }
-0[xX](([0-9a-fA-F]+)|([0-9a-fA-F]+\.[0-9a-fA-F]*)|([0-9a-fA-F]*\.[0-9a-fA-F]+))[pP][\+-]?[0-9]+ { yylval.float_value = (float32)strtof(yytext, NULL); return num_FLOAT; }
+(([0-9]+\.[0-9]*)|([0-9]*\.[0-9]+))([eE][\+-]?[0-9]+)? { return yy::parser::make_num_FLOAT((AST::float32)atof(yytext)); }
+[0-9]+[eE][\+-]?[0-9]+ { return yy::parser::make_num_FLOAT((AST::float32)atof(yytext)); }
+0[xX](([0-9a-fA-F]+)|([0-9a-fA-F]+\.[0-9a-fA-F]*)|([0-9a-fA-F]*\.[0-9a-fA-F]+))[pP][\+-]?[0-9]+ { return yy::parser::make_num_FLOAT((AST::float32)strtof(yytext, NULL)); }
 
-"int" { return Y_INT; }
-"void" { return Y_VOID; }
-"float" { return Y_FLOAT; }
-"const" { return Y_CONST; }
-"if" { return Y_IF; }
-"else" { return Y_ELSE; }
-"while" { return Y_WHILE; }
-"break" { return Y_BREAK; }
-"continue" { return Y_CONTINUE; }
-"return" { return Y_RETURN; }
+"int" { return yy::parser::make_Y_INT; }
+"void" { return yy::parser::make_Y_VOID; }
+"float" { return yy::parser::make_Y_FLOAT; }
+"const" { return yy::parser::make_Y_CONST; }
+"if" { return yy::parser::make_Y_IF; }
+"else" { return yy::parser::make_Y_ELSE; }
+"while" { return yy::parser::make_Y_WHILE; }
+"break" { return yy::parser::make_Y_BREAK; }
+"continue" { return yy::parser::make_Y_CONTINUE; }
+"return" { return yy::parser::make_Y_RETURN; }
 
-[a-zA-Z_][a-zA-Z0-9_]* { yylval.id_name = strdup(yytext); return Y_ID; }
+[a-zA-Z_][a-zA-Z0-9_]* { return yy::parser::make_Y_ID(yytext); }
 
-"+" { return Y_ADD; }
-"-" { return Y_SUB; }
-"*"	{ return Y_MUL; }
-"/"	{ return Y_DIV; }
-"<=" { return Y_LESSEQ; }
-"<"	{ return Y_LESS; }
-">=" { return Y_GREATEQ; }
-">"	{ return Y_GREAT; }
-"!=" { return Y_NOTEQ; }
-"!" { return Y_NOT; }
-"&&" { return Y_AND; }
-"||" { return Y_OR; }
-"%"	{ return Y_MODULO; }
-"==" { return Y_EQ; }
-"=" { return Y_ASSIGN; }
+"+" { return yy::parser::make_Y_ADD; }
+"-" { return yy::parser::make_Y_SUB; }
+"*"	{ return yy::parser::make_Y_MUL; }
+"/"	{ return yy::parser::make_Y_DIV; }
+"<=" { return yy::parser::make_Y_LESSEQ; }
+"<"	{ return yy::parser::make_Y_LESS; }
+">=" { return yy::parser::make_Y_GREATEQ; }
+">"	{ return yy::parser::make_Y_GREAT; }
+"!=" { return yy::parser::make_Y_NOTEQ; }
+"!" { return yy::parser::make_Y_NOT; }
+"&&" { return yy::parser::make_Y_AND; }
+"||" { return yy::parser::make_Y_OR; }
+"%"	{ return yy::parser::make_Y_MODULO; }
+"==" { return yy::parser::make_Y_EQ; }
+"=" { return yy::parser::make_Y_ASSIGN; }
 
-"(" { return Y_LPAR; }
-")" { return Y_RPAR; }
-"{" { return Y_LBRACKET; }
-"}" { return Y_RBRACKET; }
-"[" { return Y_LSQUARE; }
-"]" { return Y_RSQUARE; }
-"," { return Y_COMMA; }
-";" { return Y_SEMICOLON; }
+"(" { return yy::parser::make_Y_LPAR; }
+")" { return yy::parser::make_Y_RPAR; }
+"{" { return yy::parser::make_Y_LBRACKET; }
+"}" { return yy::parser::make_Y_RBRACKET; }
+"[" { return yy::parser::make_Y_LSQUARE; }
+"]" { return yy::parser::make_Y_RSQUARE; }
+"," { return yy::parser::make_Y_COMMA; }
+";" { return yy::parser::make_Y_SEMICOLON; }
 
 [ \t\n] { /* ignore whitespace */ }
 \/\/[^\n]*\n? { /* ignore comments */ }
 \/\*.*\*\/ { /* ignore comments */ }
-. { yyerror("invalid character"); }
+. { /* yyerror("invalid character"); */ }
 %%
 

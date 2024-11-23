@@ -1,23 +1,19 @@
 /**
- * @todo use variant to replace union
- * @todo 使用完整类型代替数值型的yylex返回值
- * @todo 使用变体时，必须正确构造和销毁符号。 assart
- * @todo  注：ConstExp使用的Ident必须是常量
+ * @todo 注：ConstExp使用的Ident必须是常量 (尚未实现检查) (语言定义中ConstExp和Exp的不同之处之一)
+ * @note 一些规则可以合并，看后续想法吧
  */
 
 %code {
-
-#include "../../include/parser/ast.hpp"
-#include "../../include/parser/parser.hpp"
-extern "C" int yylex();
+#include "ast2.hpp"
+#include "parser.hpp"
+extern std::shared_ptr<AST::DeclStmt> node;
 using namespace AST;
-// using enum yy::parser::token::token_kind_type;
-
+extern yy::parser::symbol_type yylex ();
 }
 
 %code requires {
-#include "../../include/parser/ast.hpp"
-// using namespace AST;
+#include "ast2.hpp"
+using namespace AST;
 }
 
 %language "C++"
@@ -29,12 +25,12 @@ using namespace AST;
 %define parse.assert
 
 %token Y_INT Y_VOID Y_CONST Y_IF Y_ELSE Y_WHILE Y_BREAK Y_CONTINUE Y_RETURN Y_ADD Y_SUB Y_MUL Y_DIV Y_MODULO Y_LESS Y_LESSEQ Y_GREAT Y_GREATEQ Y_NOTEQ Y_EQ Y_NOT Y_AND Y_OR Y_ASSIGN Y_LPAR Y_RPAR Y_LBRACKET Y_RBRACKET Y_LSQUARE Y_RSQUARE Y_COMMA Y_SEMICOLON Y_FLOAT
-// %type <AST::past> CompileUnit CompUnit Decl ConstDecl ConstDefs ConstDef ConstExp ConstAS ConstInitVal ConstInitVals VarDecl VarDefs VarDef InitVal InitVals FuncDef FuncFParams FuncFParam ArraySubscripts Block BlockItems BlockItem Stmt Exp LVal PrimaryExp UnaryExp FuncRParams MulExp AddExp RelExp EqExp LAndExp LOrExp
-%type <AST::dtype> Type
-%type <AST::num> Number
 %token <AST::int32> num_INT
 %token <AST::float32> num_FLOAT
 %token <AST::string> Y_ID
+
+%type <AST::dtype> Type
+%type <std::shared_ptr<AST::num>> Number
 
 %type <std::shared_ptr<VarDef>> VarDefs VarDef ConstDefs ConstDef
 %type <std::shared_ptr<DeclStmt>> VarDecl ConstDecl Decl
@@ -68,7 +64,7 @@ ConstDecl: Y_CONST Type ConstDefs Y_SEMICOLON    { $$ = std::make_shared<DeclStm
          ;
 
 ConstDefs: ConstDef                     { $$ = $1; }
-         | ConstDef Y_COMMA ConstDefs   { $$ = $1->link($3); }
+         | ConstDef Y_COMMA ConstDefs   { $1->next = $3; $$ = $1; }
          ;
 
 ConstDef: Y_ID Y_ASSIGN ConstInitVal            { $$ = std::make_shared<VarDef>($1, $3); }
@@ -76,7 +72,7 @@ ConstDef: Y_ID Y_ASSIGN ConstInitVal            { $$ = std::make_shared<VarDef>(
         ;
 
 ConstAS: Y_LSQUARE ConstExp Y_RSQUARE             { $$ = std::make_shared<ArraySubscript>($2); }
-         | Y_LSQUARE ConstExp Y_RSQUARE ConstAS   { $$ = std::make_shared<ArraySubscript>($2)->link($4); }
+         | Y_LSQUARE ConstExp Y_RSQUARE ConstAS   { auto p = std::make_shared<ArraySubscript>($2); p->next = $4; $$ = p; }
          ;
 
 ConstExp: AddExp        { $$ = $1; }
@@ -88,7 +84,7 @@ ConstInitVal: ConstExp                                          { $$ = std::make
             ;
 
 ConstInitVals: ConstInitVal                             { $$ = $1; }
-             | ConstInitVal Y_COMMA ConstInitVals       { $$ = $1->link($3); }
+             | ConstInitVal Y_COMMA ConstInitVals       { $1->next = $3; $$ = $1; }
              ;
 
 
@@ -96,7 +92,7 @@ VarDecl: Type VarDefs Y_SEMICOLON            { $$ = std::make_shared<DeclStmt>(f
        ;
 
 VarDefs: VarDef                         { $$ = $1; }
-       | VarDef Y_COMMA VarDefs         { $$ = $1->link($3); }
+       | VarDef Y_COMMA VarDefs         { $1->next = $3; $$ = $1; }
        ;
 
 VarDef: Y_ID                            { $$ = std::make_shared<VarDef>($1); }
@@ -111,7 +107,7 @@ InitVal: Exp                                    { $$ = std::make_shared<InitVal>
        ;
 
 InitVals: InitVal                       { $$ = $1; }
-        | InitVal Y_COMMA InitVals      { $$ = $1->link($3); }
+        | InitVal Y_COMMA InitVals      { $1->next = $3; $$ = $1; }
         ;
 
 
@@ -129,7 +125,7 @@ FuncFParam: Type Y_ID                                            {  }
          ;
 
 ArraySubscripts: Y_LSQUARE Exp Y_RSQUARE                        { $$ = std::make_shared<ArraySubscript>($2); }
-               | Y_LSQUARE Exp Y_RSQUARE ArraySubscripts        { $$ = std::make_shared<ArraySubscript>($2)->link($4); }
+               | Y_LSQUARE Exp Y_RSQUARE ArraySubscripts        { auto p = std::make_shared<ArraySubscript>($2); p->next = $4; $$ = p; }
                ;
 
 Block: Y_LBRACKET Y_RBRACKET            {  }
@@ -169,8 +165,8 @@ PrimaryExp: Y_LPAR Exp Y_RPAR   {  }
           | Number              {  }
           ;
 
-Number: num_INT             {  }
-      | num_FLOAT           {  }
+Number: num_INT             { $$ = std::make_shared<num>($1); }
+      | num_FLOAT           { $$ = std::make_shared<num>($1); }
       ;
 
 UnaryExp: PrimaryExp                    {  }

@@ -1,5 +1,7 @@
 /**
- * @ast中的数据类型等
+ * @brief ast中的数据类型等
+ * @todo dtype设计为类？考虑到诸如PrintType等可能封装起来更好些
+ * @todo num重新设计...总觉得用起来别扭
  */
 #pragma once
 #ifndef __PARSER_BASETYPE_HPP__
@@ -7,6 +9,7 @@
 
 #include <cstdint>
 #include <string>
+#include <iostream>
 
 
 namespace AST {
@@ -33,11 +36,9 @@ using dtype = enum dtype_type;
 //     bool _array;
 //     bool _func;
 //     dtype_type type;
-
 // public:
 //     dtype(dtype_type type, bool constvar = false, bool array = false, bool var = false, bool func = false)
 //         : type(type), _constvar(constvar), _var(var), _array(array), _func(func) {}
-
 //     dtype set_const() { _constvar = true; return *this; }
 //     dtype set_array() { _array = true; return *this; }
 //     dtype set_var() { _var = true; return *this; }
@@ -65,10 +66,18 @@ public:
     num(float32 f) : _value{.f = f}, _float(true) {}
     num(int32 i) : _value{.i = i}, _int(true) {}
 
-    bool isfloat() const { return _float; }
-    bool isint() const { return _int; }
+    bool isFloat() const { return _float; }
+    bool isInt() const { return _int; }
 
-    auto getValue() const {  return _value; }
+    auto getInt() const { return _value.i; }
+    auto getFloat() const { return _value.f; }
+
+    void printNum() const {
+        if (_float)
+            std::cout << _value.f;
+        else
+            std::cout << _value.i;
+    }
 
     ~num() = default;
 };

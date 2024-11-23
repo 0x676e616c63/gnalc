@@ -7,8 +7,6 @@
 #ifndef PARSER_AST_H
 #define PARSER_AST_H
 
-#include <cstdio>
-#include <cstdlib>
 #include <vector>
 #include <memory>
 #include "basetype.hpp"
@@ -18,15 +16,11 @@ namespace AST {
 class ASTNode;
 class ASTVisitor;
 
-class PrintVisitor;
-
 class VarDef; // int a; 中的 a
 class DeclStmt; // int a; 整个语句
 class InitVal; // 初始化列表，单个的
 class ArraySubscript; // int a[2]; void f(int a[]); a[2];等 单个的下标
 
-class FuncDef;
-class FuncFParam; // 形参
 
 class AddExp;
 
@@ -45,6 +39,7 @@ public:
     virtual void visit(DeclStmt& node) = 0;
     virtual void visit(InitVal& node) = 0;
     virtual void visit(ArraySubscript& node) = 0;
+    virtual void visit(AddExp& node) = 0;
 };
 
 
@@ -84,15 +79,19 @@ public:
     void setType(dtype t) { type = t; } // 仅对此vardef赋类型，整个链的在上级declstmt中赋
     void setConst() { _const = true; } // 和上面相同
 
-    // 添加至vardefs链
-    std::shared_ptr<VarDef> link(const std::shared_ptr<VarDef>& next) {
-        this->next = next;
-        return std::shared_ptr<VarDef>(this);
-    }
+    // // 添加至vardefs链
+    // std::shared_ptr<VarDef> link(const std::shared_ptr<VarDef>& next) {
+    //     this->next = next;
+    //     return std::shared_ptr<VarDef>(this);
+    // }
 
-    // 按理说，所有操作都在visitor中完成了，这些操作函数似乎没有必要...后续有需要再添加
-    string getId() const { return id; }
+    bool isConst() const { return _const; }
+    bool isArray() const { return _array; }
+    bool isInited() const { return _inited; }
     dtype getType() const { return type; }
+    string getId() const { return id; }
+    auto& getSubscripts() const { return subscripts; }
+    auto& getInitVals() const { return initvals; }
 
     void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };
@@ -110,6 +109,10 @@ public:
 
     void setAllType(dtype _t) { for (auto& v : vardefs) v->setType(_t); }
     void setAllConst() { for (auto& v : vardefs) v->setConst(); } // 设为true
+
+    bool isConst() const { return _const; }
+    dtype getType() const { return type; }
+    auto& getVardefs() const { return vardefs; }
 
     void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };
@@ -144,11 +147,19 @@ public:
     InitVal() : _list(true), _empty_list(true) {}
     InitVal(const std::shared_ptr<InitVal>& iv) : _list(true) { addNodesToVector(iv, inner); }
 
-    // 添加至InitVals链
-    std::shared_ptr<InitVal> link(const std::shared_ptr<InitVal>& next) {
-        this->next = next;
-        return std::shared_ptr<InitVal>(this);
-    }
+    /**
+     * @brief 添加至InitVals链
+     * @bug 返回std::shared_ptr<InitVal>(this)将创建一个新的shared_ptr，导致管理混乱。
+     * @brief 现在直接在parser.y中实现
+     */
+    // void link(const std::shared_ptr<InitVal>& next) {
+    //     this->next = next;
+    // }
+
+    bool isList() const { return _list; }
+    bool isEmpty() const { return _empty_list; }
+    auto& getExp() const { return exp; }
+    auto& getInner() const { return inner; }
 
     void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };
@@ -165,12 +176,26 @@ public:
 
     ArraySubscript(const std::shared_ptr<AddExp>& exp) : exp(exp) {}
 
-    // 添加至ArraySubscripts链
-    std::shared_ptr<ArraySubscript> link(const std::shared_ptr<ArraySubscript>& next) {
-        this->next = next;
-        return std::shared_ptr<ArraySubscript>(this);
-    }
+    // // 添加至ArraySubscripts链
+    // std::shared_ptr<ArraySubscript> link(const std::shared_ptr<ArraySubscript>& next) {
+    //     this->next = next;
+    //     return std::shared_ptr<ArraySubscript>(this);
+    // }
+
+    auto& getExp() const { return exp; }
     
+    void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
+};
+
+class AddExp : public ASTNode {
+private:
+    std::shared_ptr<num> n = nullptr;
+
+public:
+    AddExp(const std::shared_ptr<num>& n) : n(n) {}
+
+    auto& getNum() const { return n; }
+
     void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };
 
