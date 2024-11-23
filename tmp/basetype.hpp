@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <string>
+#include <iostream>
 
 
 namespace AST {
@@ -65,10 +66,18 @@ public:
     num(float32 f) : _value{.f = f}, _float(true) {}
     num(int32 i) : _value{.i = i}, _int(true) {}
 
-    bool isfloat() const { return _float; }
-    bool isint() const { return _int; }
+    bool isFloat() const { return _float; }
+    bool isInt() const { return _int; }
 
-    auto getValue() const {  return _value; }
+    auto getInt() const { return _value.i; }
+    auto getFloat() const { return _value.f; }
+
+    void printNum() const {
+        if (_float)
+            std::cout << _value.f;
+        else
+            std::cout << _value.i;
+    }
 
     ~num() = default;
 };
