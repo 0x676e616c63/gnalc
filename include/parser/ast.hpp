@@ -1,6 +1,8 @@
 /**
  * @brief 使用访问者模式重构的代码，将AST结构和操作解耦
  * @attention AST在构造后应该是不会被修改的
+ * @todo 考虑将一部分inline函数迁到ast.cpp中
+ * @todo 添加反向指针？
  */
 
 #pragma once
@@ -10,19 +12,47 @@
 #include <vector>
 #include <memory>
 #include "basetype.hpp"
+// #include <variant>
 
 namespace AST {
 
 class ASTNode;
 class ASTVisitor;
 
+// 编译单元
 class VarDef; // int a; 中的 a
 class DeclStmt; // int a; 整个语句
 class InitVal; // 初始化列表，单个的
 class ArraySubscript; // int a[2]; void f(int a[]); a[2];等 单个的下标
+class FuncDef;
+class FuncFParam; // 形参
 
+// 下列为具有值的Expression，相互引用时，统一用ASTNode（若满足不了需求再改为varient）
+using Exp = ASTNode;
+// 对exp类型的，是否需要再设计一个基类？用以储存例如value之类的？
+class DeclRef; //变量声明引用：VarRef, FuncRef(callexp), array;
+class ArrayExp;
+class CallExp;
+class FuncRParam; // 仅应用于CallExp, 具有链式结构，不太好抽象成Exp
+class BinaryOp; // 包含 ExpOp, CondOp
+class UnaryOp;
+class ParenExp;
+class IntLiteral; // 数值字面量，num包装了一下。之后可能直接替代num
+class FloatLiteral;
 
-class AddExp;
+// 语句，包括 Exp;
+class CompStmt; // 即block
+class IfStmt;
+class WhileStmt;
+class NullStmt;
+class BreakStmt;
+class ContinueStmt;
+class ReturnStmt;
+
+// 使用访问者函数或许已经足够，无需从外部调用派生类中的函数?
+// // 使用varient来管理不同类型但需要放在同一个容器中的节点
+// using CompUnitPtr = std::variant<std::shared_ptr<DeclStmt>, std::shared_ptr<FuncDef>>;
+// using BlockItemPtr = std::variant<std::shared_ptr<DeclStmt>, std::shared_ptr<Stmt>>;
 
 
 class ASTNode {
@@ -39,7 +69,24 @@ public:
     virtual void visit(DeclStmt& node) = 0;
     virtual void visit(InitVal& node) = 0;
     virtual void visit(ArraySubscript& node) = 0;
-    virtual void visit(AddExp& node) = 0;
+    virtual void visit(FuncDef& node) = 0;
+    virtual void visit(FuncFParam& node) = 0;
+    virtual void visit(DeclRef& node) = 0;
+    virtual void visit(ArrayExp& node) = 0;
+    virtual void visit(CallExp& node) = 0;
+    virtual void visit(FuncRParam& node) = 0;
+    virtual void visit(BinaryOp& node) = 0;
+    virtual void visit(UnaryOp& node) = 0;
+    virtual void visit(ParenExp& node) = 0;
+    virtual void visit(IntLiteral& node) = 0;
+    virtual void visit(FloatLiteral& node) = 0;
+    virtual void visit(CompStmt& node) = 0;
+    virtual void visit(IfStmt& node) = 0;
+    virtual void visit(WhileStmt& node) = 0;
+    virtual void visit(NullStmt& node) = 0;
+    virtual void visit(BreakStmt& node) = 0;
+    virtual void visit(ContinueStmt& node) = 0;
+    virtual void visit(ReturnStmt& node) = 0;
 };
 
 
@@ -137,13 +184,13 @@ class InitVal : public ASTNode {
 private:
     bool _list = false;
     bool _empty_list = false; // 为了简化，该项仅在_list启用时有效，即单exp时也为false
-    std::shared_ptr<AddExp> exp = nullptr;
+    std::shared_ptr<Exp> exp = nullptr;
     std::vector<std::shared_ptr<InitVal>> inner;
 
 public:
     std::shared_ptr<InitVal> next = nullptr; // 它的上级节点为VarDef，或者InitVal
 
-    InitVal(const std::shared_ptr<AddExp>& exp) : exp(exp) {}
+    InitVal(const std::shared_ptr<Exp>& exp) : exp(exp) {}
     InitVal() : _list(true), _empty_list(true) {}
     InitVal(const std::shared_ptr<InitVal>& iv) : _list(true) { addNodesToVector(iv, inner); }
 
@@ -169,12 +216,12 @@ public:
  */
 class ArraySubscript : public ASTNode {
 private:
-    std::shared_ptr<AddExp> exp = nullptr;
+    std::shared_ptr<Exp> exp = nullptr;
 
 public:
     std::shared_ptr<ArraySubscript> next = nullptr;
 
-    ArraySubscript(const std::shared_ptr<AddExp>& exp) : exp(exp) {}
+    ArraySubscript(const std::shared_ptr<Exp>& exp) : exp(exp) {}
 
     // // 添加至ArraySubscripts链
     // std::shared_ptr<ArraySubscript> link(const std::shared_ptr<ArraySubscript>& next) {
@@ -187,17 +234,259 @@ public:
     void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };
 
-class AddExp : public ASTNode {
+class FuncDef : public ASTNode {
 private:
-    std::shared_ptr<num> n = nullptr;
+    dtype type = dtype::UNDEFINED; // 包含int float void
+    string id;
+    bool _empty_param = false;
+    std::vector<std::shared_ptr<FuncFParam>> params;
+    std::shared_ptr<CompStmt> body = nullptr;
 
 public:
-    AddExp(const std::shared_ptr<num>& n) : n(n) {}
+    FuncDef(dtype t, string id, const std::shared_ptr<CompStmt>& body)
+        : type(t), id(id), body(body), _empty_param(true) {}
+    FuncDef(dtype t, string id, const std::shared_ptr<FuncFParam>& param, const std::shared_ptr<CompStmt>& body)
+        : type(t), id(id), body(body) { addNodesToVector(param, params); }
 
-    auto& getNum() const { return n; }
+    dtype getType() const { return type; }
+    string getId() const { return id; }
+    bool isEmptyParam() const { return _empty_param; }
+    auto& getParams() const { return params; }
+    auto& getBody() const { return body; }
+
+    void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
+};
+
+/**
+ * FuncFParam: int a, int b[], int c[][2]（根据语言定义，第一维一定为空）
+ * int a: _array=f
+ * int b[]: _array=t, _one_dim=t, subcripts.size()=0
+ * int c[][2]: _array=t, _one_dim=f, subcripts.size()=1
+ * 
+ * 处理时需注意第一维的问题!!!
+ */
+class FuncFParam : public ASTNode {
+private:
+    dtype type = dtype::UNDEFINED;
+    string id;
+    bool _array = false;
+    bool _one_dim = false;
+    std::vector<std::shared_ptr<ArraySubscript>> subscripts; // 为了简便，从有实际值的第二维算起
+
+public:
+    std::shared_ptr<FuncFParam> next = nullptr;
+
+    FuncFParam(dtype t, string id) : type(t), id(id) {}
+    FuncFParam(dtype t, string id, bool one_dim) // 必须为true
+        : type(t), id(id), _array(true), _one_dim(true) {}
+    FuncFParam(dtype t, string id, const std::shared_ptr<ArraySubscript>& subscript)
+        : type(t), id(id), _array(true) { addNodesToVector(subscript, subscripts); }
+
+    dtype getType() const { return type; }
+    string getId() const { return id; }
+    bool isArray() const { return _array; }
+    bool isOneDim() const { return _one_dim; }
+    auto& getSubscripts() const { return subscripts; }
+
+    void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
+};
+
+/**
+ * 变量名的引用
+ */
+class DeclRef : public ASTNode {
+private:
+    string id;
+
+public:
+    // 参考LVal
+    DeclRef(string id) : id(id) {}
+
+    string getId() const { return id; }
+
+    void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
+};
+
+// a[2]
+class ArrayExp : public ASTNode {
+private:
+    std::shared_ptr<DeclRef> ref = nullptr;
+    std::vector<std::shared_ptr<ArraySubscript>> indices;
+
+public:
+    ArrayExp(const std::shared_ptr<DeclRef>& ref, const std::shared_ptr<ArraySubscript>& index)
+        : ref(ref) { addNodesToVector(index, indices); }
+
+    string getId() const { return ref->getId(); }
+    auto& getRef() const { return ref; }
+    auto& getIndices() const { return indices; }
+
+    void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
+};
+
+// a(1,2,3)
+class CallExp : public ASTNode {
+private:
+    std::shared_ptr<DeclRef> ref = nullptr;
+    bool _empty_para = false;
+    std::vector<std::shared_ptr<FuncRParam>> paras;
+
+public:
+    CallExp(const std::shared_ptr<DeclRef>& ref) : ref(ref), _empty_para(true) {}
+    CallExp(const std::shared_ptr<DeclRef>& ref, const std::shared_ptr<FuncRParam>& para)
+        : ref(ref) { addNodesToVector(para, paras); }
+
+    string getId() const { return ref->getId(); }
+    auto& getRef() const { return ref; }
+    auto& getParas() const { return paras; }
+
+    void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
+};
+
+// 采用右递归的方式构建
+class FuncRParam : public ASTNode {
+private:
+    std::shared_ptr<Exp> exp = nullptr;
+
+public:
+    std::shared_ptr<FuncRParam> next = nullptr;
+
+    FuncRParam(const std::shared_ptr<Exp>& exp) : exp(exp) {}
+
+    auto& getExp() const { return exp; }
+
+    void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
+
+};
+
+class BinaryOp : public ASTNode {
+private:
+};
+
+class UnaryOp : public ASTNode {
+private:
+};
+
+class ParenExp : public ASTNode {
+private:
+    std::shared_ptr<Exp> exp = nullptr;
+
+public:
+    ParenExp(const std::shared_ptr<Exp>& exp) : exp(exp) {}
+
+    auto& getExp() const { return exp; }
+
+    void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
+};
+
+class IntLiteral : public ASTNode {
+private:
+};
+
+class FloatLiteral : public ASTNode {
+private:
+};
+
+/**
+ * Block: [Decl, Stmt]+
+ * items 最初我考虑了两种实现：1是使用variant容器，2是使用基类容器+dynamic_cast<>动态转换
+ * 但之后想到，似乎使用多态的访问者函数已经足够，故此处直接使用基类容器
+ * 后续如果有在ASTVisitor::visit之外访问成员函数的需求再考虑使用其他实现
+ * 其他需要使用混合类型的容器也同上述
+ * 
+ * 使用左递归的构造方式就不用使用next指针了...直接pushback就行，这样也可以避免定义一个stmt子类的需求
+ * （待检验的方法）
+ * 以下和上面的一些链式结构的构造方式不同，见parser.y:BlockItems.
+ */
+class CompStmt : public ASTNode {
+private:
+    bool _empty = false;
+    std::vector<std::shared_ptr<ASTNode>> items; // Decl, Stmt
+
+public:
+    CompStmt() : _empty(true) {}
+    CompStmt(const std::shared_ptr<ASTNode>& item) { items.push_back(item); }
+
+    void addItem(const std::shared_ptr<ASTNode>& item) { items.push_back(item); }
+
+    bool isEmpty() const { return _empty; }
+    auto& getItems() const { return items; }
+
+    void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
+};
+
+class IfStmt : public ASTNode {
+private:
+    std::shared_ptr<Exp> cond = nullptr;
+    std::shared_ptr<ASTNode> body = nullptr;
+    bool _else = false;
+    std::shared_ptr<ASTNode> else_body = nullptr;
+
+public:
+    IfStmt(const std::shared_ptr<Exp>& cond, const std::shared_ptr<ASTNode>& body)
+        : cond(cond), body(body) {}
+    IfStmt(const std::shared_ptr<Exp>& cond, const std::shared_ptr<ASTNode>& body, const std::shared_ptr<ASTNode>& else_body)
+        : cond(cond), body(body), else_body(else_body), _else(true) {}
+
+    bool hasElse() const { return _else; }
+    auto& getCond() const { return cond; }
+    auto& getBody() const { return body; }
+    auto& getElseBody() const { return else_body; }
+
+    void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
+};
+
+class WhileStmt : public ASTNode {
+private:
+    std::shared_ptr<Exp> cond = nullptr;
+    std::shared_ptr<ASTNode> body = nullptr;
+
+public:
+    WhileStmt(const std::shared_ptr<Exp>& cond, const std::shared_ptr<ASTNode>& body)
+        : cond(cond), body(body) {}
+
+    auto& getCond() const { return cond; }
+    auto& getBody() const { return body; }
+
+    void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
+};
+
+class NullStmt : public ASTNode {
+public:
+    NullStmt() {}
+
+    void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
+};
+
+class BreakStmt : public ASTNode {
+public:
+    BreakStmt() {}
+
+    void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
+};
+
+class ContinueStmt : public ASTNode {
+public:
+    ContinueStmt() {}
+
+    void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
+};
+
+class ReturnStmt : public ASTNode {
+private:
+    bool _void = false;
+    std::shared_ptr<Exp> return_val = nullptr;
+
+public:
+    ReturnStmt() : _void(true) {}
+    ReturnStmt(const std::shared_ptr<Exp>& return_val) : return_val(return_val) {}
+
+    bool isVoid() const { return _void; }
+    auto& getReturnVal() const { return return_val; }
 
     void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };
 
 }
+
 #endif

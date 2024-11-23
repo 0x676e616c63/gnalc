@@ -36,6 +36,8 @@ using namespace AST;
 %type <std::shared_ptr<DeclStmt>> VarDecl ConstDecl Decl
 %type <std::shared_ptr<InitVal>> ConstInitVal InitVal ConstInitVals InitVals
 %type <std::shared_ptr<ArraySubscript>> ConstAS ArraySubscripts
+%type <std::shared_ptr<FuncDef>> FuncDef
+%type <std::shared_ptr<FuncFParam>> FuncFParam FuncFParams
 %type <std::shared_ptr<AddExp>> AddExp Exp ConstExp
 
 %%
@@ -111,74 +113,74 @@ InitVals: InitVal                       { $$ = $1; }
         ;
 
 
-FuncDef: Type Y_ID Y_LPAR Y_RPAR Block              {  }
-       | Type Y_ID Y_LPAR FuncFParams Y_RPAR Block   {  }
+FuncDef: Type Y_ID Y_LPAR Y_RPAR Block                  { $$ = std::make_shared<FuncDef>($1, $2, $5); }
+       | Type Y_ID Y_LPAR FuncFParams Y_RPAR Block      { $$ = std::make_shared<FuncDef>($1, $2, $4, $6); }
        ;
 
-FuncFParams: FuncFParam                       {  }
-          | FuncFParam Y_COMMA FuncFParams    {  }
+FuncFParams: FuncFParam                       { $$ = $1; }
+          | FuncFParam Y_COMMA FuncFParams    { $1->next = $3; $$ = $1; }
           ;
 
-FuncFParam: Type Y_ID                                            {  }
-         | Type Y_ID Y_LSQUARE Y_RSQUARE                        {  }
-         | Type Y_ID Y_LSQUARE Y_RSQUARE ArraySubscripts        {  }
+FuncFParam: Type Y_ID                                           { $$ = std::make_shared<FuncFParam>($1, $2); }
+         | Type Y_ID Y_LSQUARE Y_RSQUARE                        { $$ = std::make_shared<FuncFParam>($1, $2, true); }
+         | Type Y_ID Y_LSQUARE Y_RSQUARE ArraySubscripts        { $$ = std::make_shared<FuncFParam>($1, $2, $5); }
          ;
 
 ArraySubscripts: Y_LSQUARE Exp Y_RSQUARE                        { $$ = std::make_shared<ArraySubscript>($2); }
                | Y_LSQUARE Exp Y_RSQUARE ArraySubscripts        { auto p = std::make_shared<ArraySubscript>($2); p->next = $4; $$ = p; }
                ;
 
-Block: Y_LBRACKET Y_RBRACKET            {  }
-     | Y_LBRACKET BlockItems Y_RBRACKET {  }
+Block: Y_LBRACKET Y_RBRACKET            { $$ = std::make_shared<CompStmt>(); }
+     | Y_LBRACKET BlockItems Y_RBRACKET { $$ = $2; }
      ;
 
-BlockItems: BlockItem                   {  }
-          | BlockItem BlockItems        {  }
+BlockItems: BlockItem                   { $$ = std::make_shared<CompStmt>($1); }
+          | BlockItems BlockItem        { $1->addItem($2); $$ = $1; }
           ;
 
-BlockItem: Decl {  }
-         | Stmt {  }
+BlockItem: Decl { $$ = $1; }
+         | Stmt { $$ = $1; }
          ;
 
 Stmt: LVal Y_ASSIGN Exp Y_SEMICOLON                     {  }
-    | Y_SEMICOLON                                       {  }
-    | Exp Y_SEMICOLON                                   {  }
-    | Block                                             {  }
-    | Y_IF Y_LPAR LOrExp Y_RPAR Stmt                    {  }
-    | Y_IF Y_LPAR LOrExp Y_RPAR Stmt Y_ELSE Stmt        {  }
-    | Y_WHILE Y_LPAR LOrExp Y_RPAR Stmt                 {  }
-    | Y_BREAK Y_SEMICOLON                               {  }
-    | Y_CONTINUE Y_SEMICOLON                            {  }
-    | Y_RETURN Y_SEMICOLON                              {  }
-    | Y_RETURN Exp Y_SEMICOLON                          {  }
+    | Y_SEMICOLON                                       { $$ = std::make_shared<NullStmt>(); }
+    | Exp Y_SEMICOLON                                   { $$ = $1; }
+    | Block                                             { $$ = $1; }
+    | Y_IF Y_LPAR LOrExp Y_RPAR Stmt                    { $$ = std::make_shared<IfStmt>($3, $5); }
+    | Y_IF Y_LPAR LOrExp Y_RPAR Stmt Y_ELSE Stmt        { $$ = std::make_shared<IfStmt>($3, $5, $7); }
+    | Y_WHILE Y_LPAR LOrExp Y_RPAR Stmt                 { $$ = std::make_shared<WhileStmt>($3, $5); }
+    | Y_BREAK Y_SEMICOLON                               { $$ = std::make_shared<BreakStmt>(); }
+    | Y_CONTINUE Y_SEMICOLON                            { $$ = std::make_shared<ContinueStmt>(); }
+    | Y_RETURN Y_SEMICOLON                              { $$ = std::make_shared<ReturnStmt>(); }
+    | Y_RETURN Exp Y_SEMICOLON                          { $$ = std::make_shared<ReturnStmt>($2); }
     ;
 
 Exp: AddExp     { $$ = $1; }
    ;
 
-LVal: Y_ID                      {  }
-    | Y_ID ArraySubscripts      {  }
+LVal: Y_ID                      { $$ = std::make_shared<DeclRef>($1); }
+    | Y_ID ArraySubscripts      { $$ = std::make_shared<ArrayExp>(std::make_shared<DeclRef>($1), $2); }
     ;
 
-PrimaryExp: Y_LPAR Exp Y_RPAR   {  }
-          | LVal                {  }
-          | Number              {  }
+PrimaryExp: Y_LPAR Exp Y_RPAR   { $$ = std::make_shared<ParenExp>($2); }
+          | LVal                { $$ = $1; }
+          | Number              { $$ = $1; }
           ;
 
 Number: num_INT             { $$ = std::make_shared<num>($1); }
       | num_FLOAT           { $$ = std::make_shared<num>($1); }
       ;
 
-UnaryExp: PrimaryExp                    {  }
-        | Y_ID Y_LPAR Y_RPAR            {  }
-        | Y_ID Y_LPAR FuncRParams Y_RPAR {  }
+UnaryExp: PrimaryExp                    { $$ = $1; }
+        | Y_ID Y_LPAR Y_RPAR            { $$ = std::make_shared<CallExp>(std::make_shared<DeclRef>($1)); }
+        | Y_ID Y_LPAR FuncRParams Y_RPAR { $$ = std::make_shared<CallExp>(std::make_shared<DeclRef>($1), $3); }
         | Y_ADD UnaryExp                {  }
         | Y_SUB UnaryExp                {  }
         | Y_NOT UnaryExp                {  }
         ;
 
-FuncRParams: Exp                         {  }
-          | Exp Y_COMMA FuncRParams      {  }
+FuncRParams: Exp                        { $$ = std::shared_ptr<FuncRParams>($1); }
+          | Exp Y_COMMA FuncRParams     { $1->next = $3; $$ = $1; }
           ;
 
 MulExp: UnaryExp                        {  }
