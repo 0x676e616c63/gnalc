@@ -79,11 +79,11 @@ public:
     void setType(dtype t) { type = t; } // 仅对此vardef赋类型，整个链的在上级declstmt中赋
     void setConst() { _const = true; } // 和上面相同
 
-    // 添加至vardefs链
-    std::shared_ptr<VarDef> link(const std::shared_ptr<VarDef>& next) {
-        this->next = next;
-        return std::shared_ptr<VarDef>(this);
-    }
+    // // 添加至vardefs链
+    // std::shared_ptr<VarDef> link(const std::shared_ptr<VarDef>& next) {
+    //     this->next = next;
+    //     return std::shared_ptr<VarDef>(this);
+    // }
 
     bool isConst() const { return _const; }
     bool isArray() const { return _array; }
@@ -147,11 +147,14 @@ public:
     InitVal() : _list(true), _empty_list(true) {}
     InitVal(const std::shared_ptr<InitVal>& iv) : _list(true) { addNodesToVector(iv, inner); }
 
-    // 添加至InitVals链
-    std::shared_ptr<InitVal> link(const std::shared_ptr<InitVal>& next) {
-        this->next = next;
-        return std::shared_ptr<InitVal>(this);
-    }
+    /**
+     * @brief 添加至InitVals链
+     * @bug 返回std::shared_ptr<InitVal>(this)将创建一个新的shared_ptr，导致管理混乱。
+     * @brief 现在直接在parser.y中实现
+     */
+    // void link(const std::shared_ptr<InitVal>& next) {
+    //     this->next = next;
+    // }
 
     bool isList() const { return _list; }
     bool isEmpty() const { return _empty_list; }
@@ -173,11 +176,11 @@ public:
 
     ArraySubscript(const std::shared_ptr<AddExp>& exp) : exp(exp) {}
 
-    // 添加至ArraySubscripts链
-    std::shared_ptr<ArraySubscript> link(const std::shared_ptr<ArraySubscript>& next) {
-        this->next = next;
-        return std::shared_ptr<ArraySubscript>(this);
-    }
+    // // 添加至ArraySubscripts链
+    // std::shared_ptr<ArraySubscript> link(const std::shared_ptr<ArraySubscript>& next) {
+    //     this->next = next;
+    //     return std::shared_ptr<ArraySubscript>(this);
+    // }
 
     auto& getExp() const { return exp; }
     

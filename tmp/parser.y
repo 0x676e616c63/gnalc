@@ -49,7 +49,7 @@ ConstDecl: Y_CONST Type ConstDefs Y_SEMICOLON    { $$ = std::make_shared<DeclStm
          ;
 
 ConstDefs: ConstDef                     { $$ = $1; }
-         | ConstDef Y_COMMA ConstDefs   { $$ = $1->link($3); }
+         | ConstDef Y_COMMA ConstDefs   { $1->next = $3; $$ = $1; }
          ;
 
 ConstDef: Y_ID Y_ASSIGN ConstInitVal            { $$ = std::make_shared<VarDef>($1, $3); }
@@ -57,7 +57,7 @@ ConstDef: Y_ID Y_ASSIGN ConstInitVal            { $$ = std::make_shared<VarDef>(
         ;
 
 ConstAS: Y_LSQUARE ConstExp Y_RSQUARE             { $$ = std::make_shared<ArraySubscript>($2); }
-         | Y_LSQUARE ConstExp Y_RSQUARE ConstAS   { $$ = std::make_shared<ArraySubscript>($2)->link($4); }
+         | Y_LSQUARE ConstExp Y_RSQUARE ConstAS   { auto p = std::make_shared<ArraySubscript>($2); p->next = $4; $$ = p; }
          ;
 
 ConstExp: AddExp        { $$ = $1; }
@@ -69,7 +69,7 @@ ConstInitVal: ConstExp                                          { $$ = std::make
             ;
 
 ConstInitVals: ConstInitVal                             { $$ = $1; }
-             | ConstInitVal Y_COMMA ConstInitVals       { $$ = $1->link($3); }
+             | ConstInitVal Y_COMMA ConstInitVals       { $1->next = $3; $$ = $1; }
              ;
 
 
@@ -77,7 +77,7 @@ VarDecl: Type VarDefs Y_SEMICOLON            { $$ = std::make_shared<DeclStmt>(f
        ;
 
 VarDefs: VarDef                         { $$ = $1; }
-       | VarDef Y_COMMA VarDefs         { $$ = $1->link($3); }
+       | VarDef Y_COMMA VarDefs         { $1->next = $3; $$ = $1; }
        ;
 
 VarDef: Y_ID                            { $$ = std::make_shared<VarDef>($1); }
@@ -92,7 +92,7 @@ InitVal: Exp                                    { $$ = std::make_shared<InitVal>
        ;
 
 InitVals: InitVal                       { $$ = $1; }
-        | InitVal Y_COMMA InitVals      { $$ = $1->link($3); }
+        | InitVal Y_COMMA InitVals      { $1->next = $3; $$ = $1; }
         ;
 
 Number: num_INT             { $$ = std::make_shared<num>($1); }

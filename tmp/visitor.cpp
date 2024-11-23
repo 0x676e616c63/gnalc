@@ -75,11 +75,12 @@ namespace AST {
     void Printer::visit(InitVal& node) {
         PrintBlank();
         if (node.isList()) {
-            std::cout << "InitList:" << std::endl;
+            std::cout << "InitList:";
 
             if (node.isEmpty()) {
-                std::cout << "EmptyList.." << std::endl;
+                std::cout << " EmptyList.." << std::endl;
             } else {
+                std::cout << std::endl;
                 nest++;
                 for (auto& iv : node.getInner()) {
                     iv->accept(*this);
@@ -88,6 +89,7 @@ namespace AST {
             }
         } else {
             node.getExp()->accept(*this);
+            std::cout << std::endl;
         }
     }
 

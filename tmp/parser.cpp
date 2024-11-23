@@ -795,7 +795,7 @@ namespace yy {
 
   case 9: // ConstDefs: ConstDef Y_COMMA ConstDefs
 #line 52 "./tmp/parser.y"
-                                        { yylhs.value.as < std::shared_ptr<VarDef> > () = yystack_[2].value.as < std::shared_ptr<VarDef> > ()->link(yystack_[0].value.as < std::shared_ptr<VarDef> > ()); }
+                                        { yystack_[2].value.as < std::shared_ptr<VarDef> > ()->next = yystack_[0].value.as < std::shared_ptr<VarDef> > (); yylhs.value.as < std::shared_ptr<VarDef> > () = yystack_[2].value.as < std::shared_ptr<VarDef> > (); }
 #line 800 "./tmp/parser.cpp"
     break;
 
@@ -819,7 +819,7 @@ namespace yy {
 
   case 13: // ConstAS: Y_LSQUARE ConstExp Y_RSQUARE ConstAS
 #line 60 "./tmp/parser.y"
-                                                  { yylhs.value.as < std::shared_ptr<ArraySubscript> > () = std::make_shared<ArraySubscript>(yystack_[2].value.as < std::shared_ptr<AddExp> > ())->link(yystack_[0].value.as < std::shared_ptr<ArraySubscript> > ()); }
+                                                  { auto p = std::make_shared<ArraySubscript>(yystack_[2].value.as < std::shared_ptr<AddExp> > ()); p->next = yystack_[0].value.as < std::shared_ptr<ArraySubscript> > (); yylhs.value.as < std::shared_ptr<ArraySubscript> > () = p; }
 #line 824 "./tmp/parser.cpp"
     break;
 
@@ -855,7 +855,7 @@ namespace yy {
 
   case 19: // ConstInitVals: ConstInitVal Y_COMMA ConstInitVals
 #line 72 "./tmp/parser.y"
-                                                        { yylhs.value.as < std::shared_ptr<InitVal> > () = yystack_[2].value.as < std::shared_ptr<InitVal> > ()->link(yystack_[0].value.as < std::shared_ptr<InitVal> > ()); }
+                                                        { yystack_[2].value.as < std::shared_ptr<InitVal> > ()->next = yystack_[0].value.as < std::shared_ptr<InitVal> > (); yylhs.value.as < std::shared_ptr<InitVal> > () = yystack_[2].value.as < std::shared_ptr<InitVal> > (); }
 #line 860 "./tmp/parser.cpp"
     break;
 
@@ -873,7 +873,7 @@ namespace yy {
 
   case 22: // VarDefs: VarDef Y_COMMA VarDefs
 #line 80 "./tmp/parser.y"
-                                        { yylhs.value.as < std::shared_ptr<VarDef> > () = yystack_[2].value.as < std::shared_ptr<VarDef> > ()->link(yystack_[0].value.as < std::shared_ptr<VarDef> > ()); }
+                                        { yystack_[2].value.as < std::shared_ptr<VarDef> > ()->next = yystack_[0].value.as < std::shared_ptr<VarDef> > (); yylhs.value.as < std::shared_ptr<VarDef> > () = yystack_[2].value.as < std::shared_ptr<VarDef> > (); }
 #line 878 "./tmp/parser.cpp"
     break;
 
@@ -927,7 +927,7 @@ namespace yy {
 
   case 31: // InitVals: InitVal Y_COMMA InitVals
 #line 95 "./tmp/parser.y"
-                                        { yylhs.value.as < std::shared_ptr<InitVal> > () = yystack_[2].value.as < std::shared_ptr<InitVal> > ()->link(yystack_[0].value.as < std::shared_ptr<InitVal> > ()); }
+                                        { yystack_[2].value.as < std::shared_ptr<InitVal> > ()->next = yystack_[0].value.as < std::shared_ptr<InitVal> > (); yylhs.value.as < std::shared_ptr<InitVal> > () = yystack_[2].value.as < std::shared_ptr<InitVal> > (); }
 #line 932 "./tmp/parser.cpp"
     break;
 

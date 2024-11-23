@@ -27,6 +27,10 @@
 
 "=" { return yy::parser::make_Y_ASSIGN(); }
 
+"(" { return yy::parser::make_Y_LPAR(); }
+")" { return yy::parser::make_Y_RPAR(); }
+"{" { return yy::parser::make_Y_LBRACKET(); }
+"}" { return yy::parser::make_Y_RBRACKET(); }
 "[" { return yy::parser::make_Y_LSQUARE(); }
 "]" { return yy::parser::make_Y_RSQUARE(); }
 "," { return yy::parser::make_Y_COMMA(); }
