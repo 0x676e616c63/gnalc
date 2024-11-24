@@ -1,5 +1,6 @@
 int main() {
-    if (1)
+    (a);
+    if ((a && b))
     {
         /* code */
     } else
@@ -7,7 +8,7 @@ int main() {
         /* code */
     }
     
-    while (1)
+    while (1+2+b[3][2]+(f(x)+a))
     {
         /* code */
     }

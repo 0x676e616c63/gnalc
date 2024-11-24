@@ -6,7 +6,11 @@ std::shared_ptr<AST::CompUnit> node = nullptr;
 
 int main(int argc, char **argv){
     yy::parser parser;
-    parser.parse();
+    parser.set_debug_level (1);
+    if (parser.parse()) {
+        std::cerr << "Parser Error" << std::endl;
+        return 1;
+    }
 
     // for (auto& i : node->getVardefs().front()->getInitVals().front()->getInner()) {
     //     std::cout << i << typeid(i).name() << std::endl;

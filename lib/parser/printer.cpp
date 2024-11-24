@@ -94,6 +94,7 @@ namespace AST {
         std::cout << "======================================" << std::endl;
         std::cout << "    Welcome to use gnalc compiler.    " << std::endl;
         std::cout << "           AST Printer v1.0           " << std::endl;
+        std::cout << "       MADE BY SH ZHAO 24/11/24       " << std::endl;
         std::cout << "======================================" << std::endl;
         std::cout << std::endl;
         PrintBlank();

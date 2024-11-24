@@ -916,577 +916,577 @@ namespace yy {
           switch (yyn)
             {
   case 2: // CompileUnit: CompUnit
-#line 47 "./lib/parser/parser.y"
+#line 50 "./lib/parser/parser.y"
                         { node = yystack_[0].value.as < std::shared_ptr<CompUnit> > (); }
 #line 922 "./lib/parser/parser.cpp"
     break;
 
   case 3: // CompUnit: CompUnit Decl
-#line 50 "./lib/parser/parser.y"
+#line 53 "./lib/parser/parser.y"
                                 { yystack_[1].value.as < std::shared_ptr<CompUnit> > ()->addNode(yystack_[0].value.as < std::shared_ptr<Stmt> > ()); yylhs.value.as < std::shared_ptr<CompUnit> > () = yystack_[1].value.as < std::shared_ptr<CompUnit> > (); }
 #line 928 "./lib/parser/parser.cpp"
     break;
 
   case 4: // CompUnit: CompUnit FuncDef
-#line 51 "./lib/parser/parser.y"
+#line 54 "./lib/parser/parser.y"
                                 { yystack_[1].value.as < std::shared_ptr<CompUnit> > ()->addNode(yystack_[0].value.as < std::shared_ptr<FuncDef> > ()); yylhs.value.as < std::shared_ptr<CompUnit> > () = yystack_[1].value.as < std::shared_ptr<CompUnit> > (); }
 #line 934 "./lib/parser/parser.cpp"
     break;
 
   case 5: // CompUnit: Decl
-#line 52 "./lib/parser/parser.y"
+#line 55 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<CompUnit> > () = std::make_shared<CompUnit>(yystack_[0].value.as < std::shared_ptr<Stmt> > ()); }
 #line 940 "./lib/parser/parser.cpp"
     break;
 
   case 6: // CompUnit: FuncDef
-#line 53 "./lib/parser/parser.y"
+#line 56 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<CompUnit> > () = std::make_shared<CompUnit>(yystack_[0].value.as < std::shared_ptr<FuncDef> > ()); }
 #line 946 "./lib/parser/parser.cpp"
     break;
 
   case 7: // Decl: ConstDecl
-#line 57 "./lib/parser/parser.y"
+#line 60 "./lib/parser/parser.y"
                     { yylhs.value.as < std::shared_ptr<Stmt> > () = yystack_[0].value.as < std::shared_ptr<DeclStmt> > (); }
 #line 952 "./lib/parser/parser.cpp"
     break;
 
   case 8: // Decl: VarDecl
-#line 58 "./lib/parser/parser.y"
+#line 61 "./lib/parser/parser.y"
                     { yylhs.value.as < std::shared_ptr<Stmt> > () = yystack_[0].value.as < std::shared_ptr<DeclStmt> > (); }
 #line 958 "./lib/parser/parser.cpp"
     break;
 
   case 9: // Type: Y_INT
-#line 61 "./lib/parser/parser.y"
+#line 64 "./lib/parser/parser.y"
                 { yylhs.value.as < AST::dtype > () = dtype::INT; }
 #line 964 "./lib/parser/parser.cpp"
     break;
 
   case 10: // Type: Y_FLOAT
-#line 62 "./lib/parser/parser.y"
+#line 65 "./lib/parser/parser.y"
                 { yylhs.value.as < AST::dtype > () = dtype::FLOAT; }
 #line 970 "./lib/parser/parser.cpp"
     break;
 
   case 11: // Type: Y_VOID
-#line 63 "./lib/parser/parser.y"
+#line 66 "./lib/parser/parser.y"
                 { yylhs.value.as < AST::dtype > () = dtype::VOID; }
 #line 976 "./lib/parser/parser.cpp"
     break;
 
   case 12: // ConstDecl: Y_CONST Type ConstDefs Y_SEMICOLON
-#line 67 "./lib/parser/parser.y"
+#line 70 "./lib/parser/parser.y"
                                                  { yylhs.value.as < std::shared_ptr<DeclStmt> > () = std::make_shared<DeclStmt>(true, yystack_[2].value.as < AST::dtype > (), yystack_[1].value.as < std::shared_ptr<VarDef> > ()); }
 #line 982 "./lib/parser/parser.cpp"
     break;
 
   case 13: // ConstDefs: ConstDef
-#line 70 "./lib/parser/parser.y"
+#line 73 "./lib/parser/parser.y"
                                         { yylhs.value.as < std::shared_ptr<VarDef> > () = yystack_[0].value.as < std::shared_ptr<VarDef> > (); }
 #line 988 "./lib/parser/parser.cpp"
     break;
 
   case 14: // ConstDefs: ConstDef Y_COMMA ConstDefs
-#line 71 "./lib/parser/parser.y"
+#line 74 "./lib/parser/parser.y"
                                         { yystack_[2].value.as < std::shared_ptr<VarDef> > ()->next = yystack_[0].value.as < std::shared_ptr<VarDef> > (); yylhs.value.as < std::shared_ptr<VarDef> > () = yystack_[2].value.as < std::shared_ptr<VarDef> > (); }
 #line 994 "./lib/parser/parser.cpp"
     break;
 
   case 15: // ConstDef: Y_ID Y_ASSIGN ConstInitVal
-#line 74 "./lib/parser/parser.y"
+#line 77 "./lib/parser/parser.y"
                                                 { yylhs.value.as < std::shared_ptr<VarDef> > () = std::make_shared<VarDef>(yystack_[2].value.as < AST::string > (), yystack_[0].value.as < std::shared_ptr<InitVal> > ()); }
 #line 1000 "./lib/parser/parser.cpp"
     break;
 
   case 16: // ConstDef: Y_ID ConstAS Y_ASSIGN ConstInitVal
-#line 75 "./lib/parser/parser.y"
+#line 78 "./lib/parser/parser.y"
                                                 { yylhs.value.as < std::shared_ptr<VarDef> > () = std::make_shared<VarDef>(yystack_[3].value.as < AST::string > (), yystack_[2].value.as < std::shared_ptr<ArraySubscript> > (), yystack_[0].value.as < std::shared_ptr<InitVal> > ()); }
 #line 1006 "./lib/parser/parser.cpp"
     break;
 
   case 17: // ConstAS: Y_LSQUARE ConstExp Y_RSQUARE
-#line 78 "./lib/parser/parser.y"
+#line 81 "./lib/parser/parser.y"
                                                   { yylhs.value.as < std::shared_ptr<ArraySubscript> > () = std::make_shared<ArraySubscript>(yystack_[1].value.as < std::shared_ptr<Exp> > ()); }
 #line 1012 "./lib/parser/parser.cpp"
     break;
 
   case 18: // ConstAS: Y_LSQUARE ConstExp Y_RSQUARE ConstAS
-#line 79 "./lib/parser/parser.y"
+#line 82 "./lib/parser/parser.y"
                                                   { auto p = std::make_shared<ArraySubscript>(yystack_[2].value.as < std::shared_ptr<Exp> > ()); p->next = yystack_[0].value.as < std::shared_ptr<ArraySubscript> > (); yylhs.value.as < std::shared_ptr<ArraySubscript> > () = p; }
 #line 1018 "./lib/parser/parser.cpp"
     break;
 
   case 19: // ConstExp: AddExp
-#line 82 "./lib/parser/parser.y"
+#line 85 "./lib/parser/parser.y"
                         { yylhs.value.as < std::shared_ptr<Exp> > () = yystack_[0].value.as < std::shared_ptr<Exp> > (); }
 #line 1024 "./lib/parser/parser.cpp"
     break;
 
   case 20: // ConstInitVal: ConstExp
-#line 85 "./lib/parser/parser.y"
+#line 88 "./lib/parser/parser.y"
                                                                 { yylhs.value.as < std::shared_ptr<InitVal> > () = std::make_shared<InitVal>(yystack_[0].value.as < std::shared_ptr<Exp> > ()); }
 #line 1030 "./lib/parser/parser.cpp"
     break;
 
   case 21: // ConstInitVal: Y_LBRACKET Y_RBRACKET
-#line 86 "./lib/parser/parser.y"
+#line 89 "./lib/parser/parser.y"
                                                                 { yylhs.value.as < std::shared_ptr<InitVal> > () = std::make_shared<InitVal>(); }
 #line 1036 "./lib/parser/parser.cpp"
     break;
 
   case 22: // ConstInitVal: Y_LBRACKET ConstInitVals Y_RBRACKET
-#line 87 "./lib/parser/parser.y"
+#line 90 "./lib/parser/parser.y"
                                                                 { yylhs.value.as < std::shared_ptr<InitVal> > () = std::make_shared<InitVal>(yystack_[1].value.as < std::shared_ptr<InitVal> > ()); }
 #line 1042 "./lib/parser/parser.cpp"
     break;
 
   case 23: // ConstInitVals: ConstInitVal
-#line 90 "./lib/parser/parser.y"
+#line 93 "./lib/parser/parser.y"
                                                         { yylhs.value.as < std::shared_ptr<InitVal> > () = yystack_[0].value.as < std::shared_ptr<InitVal> > (); }
 #line 1048 "./lib/parser/parser.cpp"
     break;
 
   case 24: // ConstInitVals: ConstInitVal Y_COMMA ConstInitVals
-#line 91 "./lib/parser/parser.y"
+#line 94 "./lib/parser/parser.y"
                                                         { yystack_[2].value.as < std::shared_ptr<InitVal> > ()->next = yystack_[0].value.as < std::shared_ptr<InitVal> > (); yylhs.value.as < std::shared_ptr<InitVal> > () = yystack_[2].value.as < std::shared_ptr<InitVal> > (); }
 #line 1054 "./lib/parser/parser.cpp"
     break;
 
   case 25: // VarDecl: Type VarDefs Y_SEMICOLON
-#line 95 "./lib/parser/parser.y"
+#line 98 "./lib/parser/parser.y"
                                              { yylhs.value.as < std::shared_ptr<DeclStmt> > () = std::make_shared<DeclStmt>(false, yystack_[2].value.as < AST::dtype > (), yystack_[1].value.as < std::shared_ptr<VarDef> > ()); }
 #line 1060 "./lib/parser/parser.cpp"
     break;
 
   case 26: // VarDefs: VarDef
-#line 98 "./lib/parser/parser.y"
+#line 101 "./lib/parser/parser.y"
                                         { yylhs.value.as < std::shared_ptr<VarDef> > () = yystack_[0].value.as < std::shared_ptr<VarDef> > (); }
 #line 1066 "./lib/parser/parser.cpp"
     break;
 
   case 27: // VarDefs: VarDef Y_COMMA VarDefs
-#line 99 "./lib/parser/parser.y"
+#line 102 "./lib/parser/parser.y"
                                         { yystack_[2].value.as < std::shared_ptr<VarDef> > ()->next = yystack_[0].value.as < std::shared_ptr<VarDef> > (); yylhs.value.as < std::shared_ptr<VarDef> > () = yystack_[2].value.as < std::shared_ptr<VarDef> > (); }
 #line 1072 "./lib/parser/parser.cpp"
     break;
 
   case 28: // VarDef: Y_ID
-#line 102 "./lib/parser/parser.y"
+#line 105 "./lib/parser/parser.y"
                                         { yylhs.value.as < std::shared_ptr<VarDef> > () = std::make_shared<VarDef>(yystack_[0].value.as < AST::string > ()); }
 #line 1078 "./lib/parser/parser.cpp"
     break;
 
   case 29: // VarDef: Y_ID ConstAS
-#line 103 "./lib/parser/parser.y"
+#line 106 "./lib/parser/parser.y"
                                         { yylhs.value.as < std::shared_ptr<VarDef> > () = std::make_shared<VarDef>(yystack_[1].value.as < AST::string > (), yystack_[0].value.as < std::shared_ptr<ArraySubscript> > ()); }
 #line 1084 "./lib/parser/parser.cpp"
     break;
 
   case 30: // VarDef: Y_ID Y_ASSIGN InitVal
-#line 104 "./lib/parser/parser.y"
+#line 107 "./lib/parser/parser.y"
                                         { yylhs.value.as < std::shared_ptr<VarDef> > () = std::make_shared<VarDef>(yystack_[2].value.as < AST::string > (), yystack_[0].value.as < std::shared_ptr<InitVal> > ()); }
 #line 1090 "./lib/parser/parser.cpp"
     break;
 
   case 31: // VarDef: Y_ID ConstAS Y_ASSIGN InitVal
-#line 105 "./lib/parser/parser.y"
+#line 108 "./lib/parser/parser.y"
                                         { yylhs.value.as < std::shared_ptr<VarDef> > () = std::make_shared<VarDef>(yystack_[3].value.as < AST::string > (), yystack_[2].value.as < std::shared_ptr<ArraySubscript> > (), yystack_[0].value.as < std::shared_ptr<InitVal> > ()); }
 #line 1096 "./lib/parser/parser.cpp"
     break;
 
   case 32: // InitVal: Exp
-#line 108 "./lib/parser/parser.y"
+#line 111 "./lib/parser/parser.y"
                                                 { yylhs.value.as < std::shared_ptr<InitVal> > () = std::make_shared<InitVal>(yystack_[0].value.as < std::shared_ptr<Exp> > ()); }
 #line 1102 "./lib/parser/parser.cpp"
     break;
 
   case 33: // InitVal: Y_LBRACKET Y_RBRACKET
-#line 109 "./lib/parser/parser.y"
+#line 112 "./lib/parser/parser.y"
                                                 { yylhs.value.as < std::shared_ptr<InitVal> > () = std::make_shared<InitVal>(); }
 #line 1108 "./lib/parser/parser.cpp"
     break;
 
   case 34: // InitVal: Y_LBRACKET InitVals Y_RBRACKET
-#line 110 "./lib/parser/parser.y"
+#line 113 "./lib/parser/parser.y"
                                                 { yylhs.value.as < std::shared_ptr<InitVal> > () = std::make_shared<InitVal>(yystack_[1].value.as < std::shared_ptr<InitVal> > ()); }
 #line 1114 "./lib/parser/parser.cpp"
     break;
 
   case 35: // InitVals: InitVal
-#line 113 "./lib/parser/parser.y"
+#line 116 "./lib/parser/parser.y"
                                         { yylhs.value.as < std::shared_ptr<InitVal> > () = yystack_[0].value.as < std::shared_ptr<InitVal> > (); }
 #line 1120 "./lib/parser/parser.cpp"
     break;
 
   case 36: // InitVals: InitVal Y_COMMA InitVals
-#line 114 "./lib/parser/parser.y"
+#line 117 "./lib/parser/parser.y"
                                         { yystack_[2].value.as < std::shared_ptr<InitVal> > ()->next = yystack_[0].value.as < std::shared_ptr<InitVal> > (); yylhs.value.as < std::shared_ptr<InitVal> > () = yystack_[2].value.as < std::shared_ptr<InitVal> > (); }
 #line 1126 "./lib/parser/parser.cpp"
     break;
 
   case 37: // FuncDef: Type Y_ID Y_LPAR Y_RPAR Block
-#line 118 "./lib/parser/parser.y"
+#line 121 "./lib/parser/parser.y"
                                                         { yylhs.value.as < std::shared_ptr<FuncDef> > () = std::make_shared<FuncDef>(yystack_[4].value.as < AST::dtype > (), yystack_[3].value.as < AST::string > (), yystack_[0].value.as < std::shared_ptr<CompStmt> > ()); }
 #line 1132 "./lib/parser/parser.cpp"
     break;
 
   case 38: // FuncDef: Type Y_ID Y_LPAR FuncFParams Y_RPAR Block
-#line 119 "./lib/parser/parser.y"
+#line 122 "./lib/parser/parser.y"
                                                         { yylhs.value.as < std::shared_ptr<FuncDef> > () = std::make_shared<FuncDef>(yystack_[5].value.as < AST::dtype > (), yystack_[4].value.as < AST::string > (), yystack_[2].value.as < std::shared_ptr<FuncFParam> > (), yystack_[0].value.as < std::shared_ptr<CompStmt> > ()); }
 #line 1138 "./lib/parser/parser.cpp"
     break;
 
   case 39: // FuncFParams: FuncFParam
-#line 122 "./lib/parser/parser.y"
+#line 125 "./lib/parser/parser.y"
                                               { yylhs.value.as < std::shared_ptr<FuncFParam> > () = yystack_[0].value.as < std::shared_ptr<FuncFParam> > (); }
 #line 1144 "./lib/parser/parser.cpp"
     break;
 
   case 40: // FuncFParams: FuncFParam Y_COMMA FuncFParams
-#line 123 "./lib/parser/parser.y"
+#line 126 "./lib/parser/parser.y"
                                               { yystack_[2].value.as < std::shared_ptr<FuncFParam> > ()->next = yystack_[0].value.as < std::shared_ptr<FuncFParam> > (); yylhs.value.as < std::shared_ptr<FuncFParam> > () = yystack_[2].value.as < std::shared_ptr<FuncFParam> > (); }
 #line 1150 "./lib/parser/parser.cpp"
     break;
 
   case 41: // FuncFParam: Type Y_ID
-#line 126 "./lib/parser/parser.y"
+#line 129 "./lib/parser/parser.y"
                                                                 { yylhs.value.as < std::shared_ptr<FuncFParam> > () = std::make_shared<FuncFParam>(yystack_[1].value.as < AST::dtype > (), yystack_[0].value.as < AST::string > ()); }
 #line 1156 "./lib/parser/parser.cpp"
     break;
 
   case 42: // FuncFParam: Type Y_ID Y_LSQUARE Y_RSQUARE
-#line 127 "./lib/parser/parser.y"
+#line 130 "./lib/parser/parser.y"
                                                                 { yylhs.value.as < std::shared_ptr<FuncFParam> > () = std::make_shared<FuncFParam>(yystack_[3].value.as < AST::dtype > (), yystack_[2].value.as < AST::string > (), true); }
 #line 1162 "./lib/parser/parser.cpp"
     break;
 
   case 43: // FuncFParam: Type Y_ID Y_LSQUARE Y_RSQUARE ArraySubscripts
-#line 128 "./lib/parser/parser.y"
+#line 131 "./lib/parser/parser.y"
                                                                 { yylhs.value.as < std::shared_ptr<FuncFParam> > () = std::make_shared<FuncFParam>(yystack_[4].value.as < AST::dtype > (), yystack_[3].value.as < AST::string > (), yystack_[0].value.as < std::shared_ptr<ArraySubscript> > ()); }
 #line 1168 "./lib/parser/parser.cpp"
     break;
 
   case 44: // ArraySubscripts: Y_LSQUARE Exp Y_RSQUARE
-#line 131 "./lib/parser/parser.y"
+#line 134 "./lib/parser/parser.y"
                                                                 { yylhs.value.as < std::shared_ptr<ArraySubscript> > () = std::make_shared<ArraySubscript>(yystack_[1].value.as < std::shared_ptr<Exp> > ()); }
 #line 1174 "./lib/parser/parser.cpp"
     break;
 
   case 45: // ArraySubscripts: Y_LSQUARE Exp Y_RSQUARE ArraySubscripts
-#line 132 "./lib/parser/parser.y"
+#line 135 "./lib/parser/parser.y"
                                                                 { auto p = std::make_shared<ArraySubscript>(yystack_[2].value.as < std::shared_ptr<Exp> > ()); p->next = yystack_[0].value.as < std::shared_ptr<ArraySubscript> > (); yylhs.value.as < std::shared_ptr<ArraySubscript> > () = p; }
 #line 1180 "./lib/parser/parser.cpp"
     break;
 
   case 46: // Block: Y_LBRACKET Y_RBRACKET
-#line 135 "./lib/parser/parser.y"
+#line 138 "./lib/parser/parser.y"
                                         { yylhs.value.as < std::shared_ptr<CompStmt> > () = std::make_shared<CompStmt>(); }
 #line 1186 "./lib/parser/parser.cpp"
     break;
 
   case 47: // Block: Y_LBRACKET BlockItems Y_RBRACKET
-#line 136 "./lib/parser/parser.y"
+#line 139 "./lib/parser/parser.y"
                                         { yylhs.value.as < std::shared_ptr<CompStmt> > () = yystack_[1].value.as < std::shared_ptr<CompStmt> > (); }
 #line 1192 "./lib/parser/parser.cpp"
     break;
 
   case 48: // BlockItems: BlockItem
-#line 139 "./lib/parser/parser.y"
+#line 142 "./lib/parser/parser.y"
                                         { yylhs.value.as < std::shared_ptr<CompStmt> > () = std::make_shared<CompStmt>(yystack_[0].value.as < std::shared_ptr<Stmt> > ()); }
 #line 1198 "./lib/parser/parser.cpp"
     break;
 
   case 49: // BlockItems: BlockItems BlockItem
-#line 140 "./lib/parser/parser.y"
+#line 143 "./lib/parser/parser.y"
                                         { yystack_[1].value.as < std::shared_ptr<CompStmt> > ()->addItem(yystack_[0].value.as < std::shared_ptr<Stmt> > ()); yylhs.value.as < std::shared_ptr<CompStmt> > () = yystack_[1].value.as < std::shared_ptr<CompStmt> > (); }
 #line 1204 "./lib/parser/parser.cpp"
     break;
 
   case 50: // BlockItem: Decl
-#line 143 "./lib/parser/parser.y"
+#line 146 "./lib/parser/parser.y"
                 { yylhs.value.as < std::shared_ptr<Stmt> > () = yystack_[0].value.as < std::shared_ptr<Stmt> > (); }
 #line 1210 "./lib/parser/parser.cpp"
     break;
 
   case 51: // BlockItem: Stmt
-#line 144 "./lib/parser/parser.y"
+#line 147 "./lib/parser/parser.y"
                 { yylhs.value.as < std::shared_ptr<Stmt> > () = yystack_[0].value.as < std::shared_ptr<Stmt> > (); }
 #line 1216 "./lib/parser/parser.cpp"
     break;
 
   case 52: // Stmt: LVal Y_ASSIGN Exp Y_SEMICOLON
-#line 147 "./lib/parser/parser.y"
+#line 150 "./lib/parser/parser.y"
                                                         { yylhs.value.as < std::shared_ptr<Stmt> > () = std::make_shared<BinaryOp>(BiOp::ASSIGN, yystack_[3].value.as < std::shared_ptr<Exp> > (), yystack_[1].value.as < std::shared_ptr<Exp> > ()); }
 #line 1222 "./lib/parser/parser.cpp"
     break;
 
   case 53: // Stmt: Y_SEMICOLON
-#line 148 "./lib/parser/parser.y"
+#line 151 "./lib/parser/parser.y"
                                                         { yylhs.value.as < std::shared_ptr<Stmt> > () = std::make_shared<NullStmt>(); }
 #line 1228 "./lib/parser/parser.cpp"
     break;
 
   case 54: // Stmt: Exp Y_SEMICOLON
-#line 149 "./lib/parser/parser.y"
+#line 152 "./lib/parser/parser.y"
                                                         { yylhs.value.as < std::shared_ptr<Stmt> > () = yystack_[1].value.as < std::shared_ptr<Exp> > (); }
 #line 1234 "./lib/parser/parser.cpp"
     break;
 
   case 55: // Stmt: Block
-#line 150 "./lib/parser/parser.y"
+#line 153 "./lib/parser/parser.y"
                                                         { yylhs.value.as < std::shared_ptr<Stmt> > () = yystack_[0].value.as < std::shared_ptr<CompStmt> > (); }
 #line 1240 "./lib/parser/parser.cpp"
     break;
 
   case 56: // Stmt: Y_IF Y_LPAR LOrExp Y_RPAR Stmt
-#line 151 "./lib/parser/parser.y"
+#line 154 "./lib/parser/parser.y"
                                                         { yylhs.value.as < std::shared_ptr<Stmt> > () = std::make_shared<IfStmt>(yystack_[2].value.as < std::shared_ptr<Exp> > (), yystack_[0].value.as < std::shared_ptr<Stmt> > ()); }
 #line 1246 "./lib/parser/parser.cpp"
     break;
 
   case 57: // Stmt: Y_IF Y_LPAR LOrExp Y_RPAR Stmt Y_ELSE Stmt
-#line 152 "./lib/parser/parser.y"
+#line 155 "./lib/parser/parser.y"
                                                         { yylhs.value.as < std::shared_ptr<Stmt> > () = std::make_shared<IfStmt>(yystack_[4].value.as < std::shared_ptr<Exp> > (), yystack_[2].value.as < std::shared_ptr<Stmt> > (), yystack_[0].value.as < std::shared_ptr<Stmt> > ()); }
 #line 1252 "./lib/parser/parser.cpp"
     break;
 
   case 58: // Stmt: Y_WHILE Y_LPAR LOrExp Y_RPAR Stmt
-#line 153 "./lib/parser/parser.y"
+#line 156 "./lib/parser/parser.y"
                                                         { yylhs.value.as < std::shared_ptr<Stmt> > () = std::make_shared<WhileStmt>(yystack_[2].value.as < std::shared_ptr<Exp> > (), yystack_[0].value.as < std::shared_ptr<Stmt> > ()); }
 #line 1258 "./lib/parser/parser.cpp"
     break;
 
   case 59: // Stmt: Y_BREAK Y_SEMICOLON
-#line 154 "./lib/parser/parser.y"
+#line 157 "./lib/parser/parser.y"
                                                         { yylhs.value.as < std::shared_ptr<Stmt> > () = std::make_shared<BreakStmt>(); }
 #line 1264 "./lib/parser/parser.cpp"
     break;
 
   case 60: // Stmt: Y_CONTINUE Y_SEMICOLON
-#line 155 "./lib/parser/parser.y"
+#line 158 "./lib/parser/parser.y"
                                                         { yylhs.value.as < std::shared_ptr<Stmt> > () = std::make_shared<ContinueStmt>(); }
 #line 1270 "./lib/parser/parser.cpp"
     break;
 
   case 61: // Stmt: Y_RETURN Y_SEMICOLON
-#line 156 "./lib/parser/parser.y"
+#line 159 "./lib/parser/parser.y"
                                                         { yylhs.value.as < std::shared_ptr<Stmt> > () = std::make_shared<ReturnStmt>(); }
 #line 1276 "./lib/parser/parser.cpp"
     break;
 
   case 62: // Stmt: Y_RETURN Exp Y_SEMICOLON
-#line 157 "./lib/parser/parser.y"
+#line 160 "./lib/parser/parser.y"
                                                         { yylhs.value.as < std::shared_ptr<Stmt> > () = std::make_shared<ReturnStmt>(yystack_[1].value.as < std::shared_ptr<Exp> > ()); }
 #line 1282 "./lib/parser/parser.cpp"
     break;
 
   case 63: // Exp: AddExp
-#line 160 "./lib/parser/parser.y"
+#line 163 "./lib/parser/parser.y"
                 { yylhs.value.as < std::shared_ptr<Exp> > () = yystack_[0].value.as < std::shared_ptr<Exp> > (); }
 #line 1288 "./lib/parser/parser.cpp"
     break;
 
   case 64: // LVal: Y_ID
-#line 163 "./lib/parser/parser.y"
+#line 166 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<DeclRef>(yystack_[0].value.as < AST::string > ()); }
 #line 1294 "./lib/parser/parser.cpp"
     break;
 
   case 65: // LVal: Y_ID ArraySubscripts
-#line 164 "./lib/parser/parser.y"
+#line 167 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<ArrayExp>(std::make_shared<DeclRef>(yystack_[1].value.as < AST::string > ()), yystack_[0].value.as < std::shared_ptr<ArraySubscript> > ()); }
 #line 1300 "./lib/parser/parser.cpp"
     break;
 
   case 66: // PrimaryExp: Y_LPAR Exp Y_RPAR
-#line 167 "./lib/parser/parser.y"
+#line 170 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<ParenExp>(yystack_[1].value.as < std::shared_ptr<Exp> > ()); }
 #line 1306 "./lib/parser/parser.cpp"
     break;
 
   case 67: // PrimaryExp: LVal
-#line 168 "./lib/parser/parser.y"
+#line 171 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<Exp> > () = yystack_[0].value.as < std::shared_ptr<Exp> > (); }
 #line 1312 "./lib/parser/parser.cpp"
     break;
 
   case 68: // PrimaryExp: Number
-#line 169 "./lib/parser/parser.y"
+#line 172 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<Exp> > () = yystack_[0].value.as < std::shared_ptr<Exp> > (); }
 #line 1318 "./lib/parser/parser.cpp"
     break;
 
   case 69: // Number: num_INT
-#line 172 "./lib/parser/parser.y"
+#line 175 "./lib/parser/parser.y"
                             { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<IntLiteral>(yystack_[0].value.as < AST::int32 > ()); }
 #line 1324 "./lib/parser/parser.cpp"
     break;
 
   case 70: // Number: num_FLOAT
-#line 173 "./lib/parser/parser.y"
+#line 176 "./lib/parser/parser.y"
                             { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<FloatLiteral>(yystack_[0].value.as < AST::float32 > ()); }
 #line 1330 "./lib/parser/parser.cpp"
     break;
 
   case 71: // UnaryExp: PrimaryExp
-#line 176 "./lib/parser/parser.y"
+#line 179 "./lib/parser/parser.y"
                                         { yylhs.value.as < std::shared_ptr<Exp> > () = yystack_[0].value.as < std::shared_ptr<Exp> > (); }
 #line 1336 "./lib/parser/parser.cpp"
     break;
 
   case 72: // UnaryExp: Y_ID Y_LPAR Y_RPAR
-#line 177 "./lib/parser/parser.y"
+#line 180 "./lib/parser/parser.y"
                                         { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<CallExp>(std::make_shared<DeclRef>(yystack_[2].value.as < AST::string > ())); }
 #line 1342 "./lib/parser/parser.cpp"
     break;
 
   case 73: // UnaryExp: Y_ID Y_LPAR FuncRParams Y_RPAR
-#line 178 "./lib/parser/parser.y"
+#line 181 "./lib/parser/parser.y"
                                          { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<CallExp>(std::make_shared<DeclRef>(yystack_[3].value.as < AST::string > ()), yystack_[1].value.as < std::shared_ptr<FuncRParam> > ()); }
 #line 1348 "./lib/parser/parser.cpp"
     break;
 
   case 74: // UnaryExp: Y_ADD UnaryExp
-#line 179 "./lib/parser/parser.y"
+#line 182 "./lib/parser/parser.y"
                                         { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<UnaryOp>(UnOp::ADD, yystack_[0].value.as < std::shared_ptr<Exp> > ()); }
 #line 1354 "./lib/parser/parser.cpp"
     break;
 
   case 75: // UnaryExp: Y_SUB UnaryExp
-#line 180 "./lib/parser/parser.y"
+#line 183 "./lib/parser/parser.y"
                                         { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<UnaryOp>(UnOp::SUB, yystack_[0].value.as < std::shared_ptr<Exp> > ()); }
 #line 1360 "./lib/parser/parser.cpp"
     break;
 
   case 76: // UnaryExp: Y_NOT UnaryExp
-#line 181 "./lib/parser/parser.y"
+#line 184 "./lib/parser/parser.y"
                                         { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<UnaryOp>(UnOp::NOT, yystack_[0].value.as < std::shared_ptr<Exp> > ()); }
 #line 1366 "./lib/parser/parser.cpp"
     break;
 
   case 77: // FuncRParams: Exp
-#line 184 "./lib/parser/parser.y"
+#line 187 "./lib/parser/parser.y"
                                         { yylhs.value.as < std::shared_ptr<FuncRParam> > () = std::make_shared<FuncRParam>(yystack_[0].value.as < std::shared_ptr<Exp> > ()); }
 #line 1372 "./lib/parser/parser.cpp"
     break;
 
   case 78: // FuncRParams: Exp Y_COMMA FuncRParams
-#line 185 "./lib/parser/parser.y"
+#line 188 "./lib/parser/parser.y"
                                         { auto p = std::make_shared<FuncRParam>(yystack_[2].value.as < std::shared_ptr<Exp> > ()); p->next = yystack_[0].value.as < std::shared_ptr<FuncRParam> > (); yylhs.value.as < std::shared_ptr<FuncRParam> > () = p; }
 #line 1378 "./lib/parser/parser.cpp"
     break;
 
   case 79: // MulExp: UnaryExp
-#line 188 "./lib/parser/parser.y"
+#line 191 "./lib/parser/parser.y"
                                         { yylhs.value.as < std::shared_ptr<Exp> > () = yystack_[0].value.as < std::shared_ptr<Exp> > (); }
 #line 1384 "./lib/parser/parser.cpp"
     break;
 
   case 80: // MulExp: MulExp Y_MUL UnaryExp
-#line 189 "./lib/parser/parser.y"
+#line 192 "./lib/parser/parser.y"
                                         { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<BinaryOp>(BiOp::MUL, yystack_[2].value.as < std::shared_ptr<Exp> > (), yystack_[0].value.as < std::shared_ptr<Exp> > ()); }
 #line 1390 "./lib/parser/parser.cpp"
     break;
 
   case 81: // MulExp: MulExp Y_DIV UnaryExp
-#line 190 "./lib/parser/parser.y"
+#line 193 "./lib/parser/parser.y"
                                         { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<BinaryOp>(BiOp::DIV, yystack_[2].value.as < std::shared_ptr<Exp> > (), yystack_[0].value.as < std::shared_ptr<Exp> > ()); }
 #line 1396 "./lib/parser/parser.cpp"
     break;
 
   case 82: // MulExp: MulExp Y_MODULO UnaryExp
-#line 191 "./lib/parser/parser.y"
+#line 194 "./lib/parser/parser.y"
                                         { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<BinaryOp>(BiOp::MOD, yystack_[2].value.as < std::shared_ptr<Exp> > (), yystack_[0].value.as < std::shared_ptr<Exp> > ()); }
 #line 1402 "./lib/parser/parser.cpp"
     break;
 
   case 83: // AddExp: MulExp
-#line 194 "./lib/parser/parser.y"
+#line 197 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<Exp> > () = yystack_[0].value.as < std::shared_ptr<Exp> > (); }
 #line 1408 "./lib/parser/parser.cpp"
     break;
 
   case 84: // AddExp: AddExp Y_ADD MulExp
-#line 195 "./lib/parser/parser.y"
+#line 198 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<BinaryOp>(BiOp::ADD, yystack_[2].value.as < std::shared_ptr<Exp> > (), yystack_[0].value.as < std::shared_ptr<Exp> > ()); }
 #line 1414 "./lib/parser/parser.cpp"
     break;
 
   case 85: // AddExp: AddExp Y_SUB MulExp
-#line 196 "./lib/parser/parser.y"
+#line 199 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<BinaryOp>(BiOp::SUB, yystack_[2].value.as < std::shared_ptr<Exp> > (), yystack_[0].value.as < std::shared_ptr<Exp> > ()); }
 #line 1420 "./lib/parser/parser.cpp"
     break;
 
   case 86: // RelExp: AddExp
-#line 199 "./lib/parser/parser.y"
+#line 202 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<Exp> > () = yystack_[0].value.as < std::shared_ptr<Exp> > (); }
 #line 1426 "./lib/parser/parser.cpp"
     break;
 
   case 87: // RelExp: RelExp Y_LESS AddExp
-#line 200 "./lib/parser/parser.y"
+#line 203 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<BinaryOp>(BiOp::LESS, yystack_[2].value.as < std::shared_ptr<Exp> > (), yystack_[0].value.as < std::shared_ptr<Exp> > ()); }
 #line 1432 "./lib/parser/parser.cpp"
     break;
 
   case 88: // RelExp: RelExp Y_GREAT AddExp
-#line 201 "./lib/parser/parser.y"
+#line 204 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<BinaryOp>(BiOp::GREAT, yystack_[2].value.as < std::shared_ptr<Exp> > (), yystack_[0].value.as < std::shared_ptr<Exp> > ()); }
 #line 1438 "./lib/parser/parser.cpp"
     break;
 
   case 89: // RelExp: RelExp Y_LESSEQ AddExp
-#line 202 "./lib/parser/parser.y"
+#line 205 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<BinaryOp>(BiOp::LESSEQ, yystack_[2].value.as < std::shared_ptr<Exp> > (), yystack_[0].value.as < std::shared_ptr<Exp> > ()); }
 #line 1444 "./lib/parser/parser.cpp"
     break;
 
   case 90: // RelExp: RelExp Y_GREATEQ AddExp
-#line 203 "./lib/parser/parser.y"
+#line 206 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<BinaryOp>(BiOp::GREATEQ, yystack_[2].value.as < std::shared_ptr<Exp> > (), yystack_[0].value.as < std::shared_ptr<Exp> > ()); }
 #line 1450 "./lib/parser/parser.cpp"
     break;
 
   case 91: // EqExp: RelExp
-#line 206 "./lib/parser/parser.y"
+#line 209 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<Exp> > () = yystack_[0].value.as < std::shared_ptr<Exp> > (); }
 #line 1456 "./lib/parser/parser.cpp"
     break;
 
   case 92: // EqExp: EqExp Y_EQ RelExp
-#line 207 "./lib/parser/parser.y"
+#line 210 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<BinaryOp>(BiOp::EQ, yystack_[2].value.as < std::shared_ptr<Exp> > (), yystack_[0].value.as < std::shared_ptr<Exp> > ()); }
 #line 1462 "./lib/parser/parser.cpp"
     break;
 
   case 93: // EqExp: EqExp Y_NOTEQ RelExp
-#line 208 "./lib/parser/parser.y"
+#line 211 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<BinaryOp>(BiOp::NOTEQ, yystack_[2].value.as < std::shared_ptr<Exp> > (), yystack_[0].value.as < std::shared_ptr<Exp> > ()); }
 #line 1468 "./lib/parser/parser.cpp"
     break;
 
   case 94: // LAndExp: EqExp
-#line 211 "./lib/parser/parser.y"
+#line 214 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<Exp> > () = yystack_[0].value.as < std::shared_ptr<Exp> > (); }
 #line 1474 "./lib/parser/parser.cpp"
     break;
 
   case 95: // LAndExp: LAndExp Y_AND EqExp
-#line 212 "./lib/parser/parser.y"
+#line 215 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<BinaryOp>(BiOp::AND, yystack_[2].value.as < std::shared_ptr<Exp> > (), yystack_[0].value.as < std::shared_ptr<Exp> > ()); }
 #line 1480 "./lib/parser/parser.cpp"
     break;
 
   case 96: // LOrExp: LAndExp
-#line 215 "./lib/parser/parser.y"
+#line 218 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<Exp> > () = yystack_[0].value.as < std::shared_ptr<Exp> > (); }
 #line 1486 "./lib/parser/parser.cpp"
     break;
 
   case 97: // LOrExp: LOrExp Y_OR LAndExp
-#line 216 "./lib/parser/parser.y"
+#line 219 "./lib/parser/parser.y"
                                 { yylhs.value.as < std::shared_ptr<Exp> > () = std::make_shared<BinaryOp>(BiOp::OR, yystack_[2].value.as < std::shared_ptr<Exp> > (), yystack_[0].value.as < std::shared_ptr<Exp> > ()); }
 #line 1492 "./lib/parser/parser.cpp"
     break;
@@ -1894,16 +1894,16 @@ namespace yy {
   const unsigned char
   parser::yyrline_[] =
   {
-       0,    47,    47,    50,    51,    52,    53,    57,    58,    61,
-      62,    63,    67,    70,    71,    74,    75,    78,    79,    82,
-      85,    86,    87,    90,    91,    95,    98,    99,   102,   103,
-     104,   105,   108,   109,   110,   113,   114,   118,   119,   122,
-     123,   126,   127,   128,   131,   132,   135,   136,   139,   140,
-     143,   144,   147,   148,   149,   150,   151,   152,   153,   154,
-     155,   156,   157,   160,   163,   164,   167,   168,   169,   172,
-     173,   176,   177,   178,   179,   180,   181,   184,   185,   188,
-     189,   190,   191,   194,   195,   196,   199,   200,   201,   202,
-     203,   206,   207,   208,   211,   212,   215,   216
+       0,    50,    50,    53,    54,    55,    56,    60,    61,    64,
+      65,    66,    70,    73,    74,    77,    78,    81,    82,    85,
+      88,    89,    90,    93,    94,    98,   101,   102,   105,   106,
+     107,   108,   111,   112,   113,   116,   117,   121,   122,   125,
+     126,   129,   130,   131,   134,   135,   138,   139,   142,   143,
+     146,   147,   150,   151,   152,   153,   154,   155,   156,   157,
+     158,   159,   160,   163,   166,   167,   170,   171,   172,   175,
+     176,   179,   180,   181,   182,   183,   184,   187,   188,   191,
+     192,   193,   194,   197,   198,   199,   202,   203,   204,   205,
+     206,   209,   210,   211,   214,   215,   218,   219
   };
 
   void
@@ -1937,7 +1937,7 @@ namespace yy {
 } // yy
 #line 1939 "./lib/parser/parser.cpp"
 
-#line 219 "./lib/parser/parser.y"
+#line 222 "./lib/parser/parser.y"
 
 
 void

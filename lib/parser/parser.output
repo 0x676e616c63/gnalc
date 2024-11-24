@@ -1,0 +1,2359 @@
+State 167 conflicts: 1 shift/reduce
+
+
+Grammar
+
+    0 $accept: CompileUnit $end
+
+    1 CompileUnit: CompUnit
+
+    2 CompUnit: CompUnit Decl
+    3         | CompUnit FuncDef
+    4         | Decl
+    5         | FuncDef
+
+    6 Decl: ConstDecl
+    7     | VarDecl
+
+    8 Type: Y_INT
+    9     | Y_FLOAT
+   10     | Y_VOID
+
+   11 ConstDecl: Y_CONST Type ConstDefs Y_SEMICOLON
+
+   12 ConstDefs: ConstDef
+   13          | ConstDef Y_COMMA ConstDefs
+
+   14 ConstDef: Y_ID Y_ASSIGN ConstInitVal
+   15         | Y_ID ConstAS Y_ASSIGN ConstInitVal
+
+   16 ConstAS: Y_LSQUARE ConstExp Y_RSQUARE
+   17        | Y_LSQUARE ConstExp Y_RSQUARE ConstAS
+
+   18 ConstExp: AddExp
+
+   19 ConstInitVal: ConstExp
+   20             | Y_LBRACKET Y_RBRACKET
+   21             | Y_LBRACKET ConstInitVals Y_RBRACKET
+
+   22 ConstInitVals: ConstInitVal
+   23              | ConstInitVal Y_COMMA ConstInitVals
+
+   24 VarDecl: Type VarDefs Y_SEMICOLON
+
+   25 VarDefs: VarDef
+   26        | VarDef Y_COMMA VarDefs
+
+   27 VarDef: Y_ID
+   28       | Y_ID ConstAS
+   29       | Y_ID Y_ASSIGN InitVal
+   30       | Y_ID ConstAS Y_ASSIGN InitVal
+
+   31 InitVal: Exp
+   32        | Y_LBRACKET Y_RBRACKET
+   33        | Y_LBRACKET InitVals Y_RBRACKET
+
+   34 InitVals: InitVal
+   35         | InitVal Y_COMMA InitVals
+
+   36 FuncDef: Type Y_ID Y_LPAR Y_RPAR Block
+   37        | Type Y_ID Y_LPAR FuncFParams Y_RPAR Block
+
+   38 FuncFParams: FuncFParam
+   39            | FuncFParam Y_COMMA FuncFParams
+
+   40 FuncFParam: Type Y_ID
+   41           | Type Y_ID Y_LSQUARE Y_RSQUARE
+   42           | Type Y_ID Y_LSQUARE Y_RSQUARE ArraySubscripts
+
+   43 ArraySubscripts: Y_LSQUARE Exp Y_RSQUARE
+   44                | Y_LSQUARE Exp Y_RSQUARE ArraySubscripts
+
+   45 Block: Y_LBRACKET Y_RBRACKET
+   46      | Y_LBRACKET BlockItems Y_RBRACKET
+
+   47 BlockItems: BlockItem
+   48           | BlockItems BlockItem
+
+   49 BlockItem: Decl
+   50          | Stmt
+
+   51 Stmt: LVal Y_ASSIGN Exp Y_SEMICOLON
+   52     | Y_SEMICOLON
+   53     | Exp Y_SEMICOLON
+   54     | Block
+   55     | Y_IF Y_LPAR LOrExp Y_RPAR Stmt
+   56     | Y_IF Y_LPAR LOrExp Y_RPAR Stmt Y_ELSE Stmt
+   57     | Y_WHILE Y_LPAR LOrExp Y_RPAR Stmt
+   58     | Y_BREAK Y_SEMICOLON
+   59     | Y_CONTINUE Y_SEMICOLON
+   60     | Y_RETURN Y_SEMICOLON
+   61     | Y_RETURN Exp Y_SEMICOLON
+
+   62 Exp: AddExp
+
+   63 LVal: Y_ID
+   64     | Y_ID ArraySubscripts
+
+   65 PrimaryExp: Y_LPAR Exp Y_RPAR
+   66           | LVal
+   67           | Number
+
+   68 Number: num_INT
+   69       | num_FLOAT
+
+   70 UnaryExp: PrimaryExp
+   71         | Y_ID Y_LPAR Y_RPAR
+   72         | Y_ID Y_LPAR FuncRParams Y_RPAR
+   73         | Y_ADD UnaryExp
+   74         | Y_SUB UnaryExp
+   75         | Y_NOT UnaryExp
+
+   76 FuncRParams: Exp
+   77            | Exp Y_COMMA FuncRParams
+
+   78 MulExp: UnaryExp
+   79       | MulExp Y_MUL UnaryExp
+   80       | MulExp Y_DIV UnaryExp
+   81       | MulExp Y_MODULO UnaryExp
+
+   82 AddExp: MulExp
+   83       | AddExp Y_ADD MulExp
+   84       | AddExp Y_SUB MulExp
+
+   85 RelExp: AddExp
+   86       | RelExp Y_LESS AddExp
+   87       | RelExp Y_GREAT AddExp
+   88       | RelExp Y_LESSEQ AddExp
+   89       | RelExp Y_GREATEQ AddExp
+
+   90 EqExp: RelExp
+   91      | EqExp Y_EQ RelExp
+   92      | EqExp Y_NOTEQ RelExp
+
+   93 LAndExp: EqExp
+   94        | LAndExp Y_AND EqExp
+
+   95 LOrExp: LAndExp
+   96       | LOrExp Y_OR LAndExp
+
+
+Terminals, with rules where they appear
+
+    $end (0) 0
+    error (256)
+    Y_INT (258) 8
+    Y_VOID (259) 10
+    Y_CONST (260) 11
+    Y_IF (261) 55 56
+    Y_ELSE (262) 56
+    Y_WHILE (263) 57
+    Y_BREAK (264) 58
+    Y_CONTINUE (265) 59
+    Y_RETURN (266) 60 61
+    Y_ADD (267) 73 83
+    Y_SUB (268) 74 84
+    Y_MUL (269) 79
+    Y_DIV (270) 80
+    Y_MODULO (271) 81
+    Y_LESS (272) 86
+    Y_LESSEQ (273) 88
+    Y_GREAT (274) 87
+    Y_GREATEQ (275) 89
+    Y_NOTEQ (276) 92
+    Y_EQ (277) 91
+    Y_NOT (278) 75
+    Y_AND (279) 94
+    Y_OR (280) 96
+    Y_ASSIGN (281) 14 15 29 30 51
+    Y_LPAR (282) 36 37 55 56 57 65 71 72
+    Y_RPAR (283) 36 37 55 56 57 65 71 72
+    Y_LBRACKET (284) 20 21 32 33 45 46
+    Y_RBRACKET (285) 20 21 32 33 45 46
+    Y_LSQUARE (286) 16 17 41 42 43 44
+    Y_RSQUARE (287) 16 17 41 42 43 44
+    Y_COMMA (288) 13 23 26 35 39 77
+    Y_SEMICOLON (289) 11 24 51 52 53 58 59 60 61
+    Y_FLOAT (290) 9
+    num_INT <AST::int32> (291) 68
+    num_FLOAT <AST::float32> (292) 69
+    Y_ID <AST::string> (293) 14 15 27 28 29 30 36 37 40 41 42 63 64 71 72
+
+
+Nonterminals, with rules where they appear
+
+    $accept (39)
+        on left: 0
+    CompileUnit (40)
+        on left: 1
+        on right: 0
+    CompUnit <std::shared_ptr<CompUnit>> (41)
+        on left: 2 3 4 5
+        on right: 1 2 3
+    Decl <std::shared_ptr<Stmt>> (42)
+        on left: 6 7
+        on right: 2 4 49
+    Type <AST::dtype> (43)
+        on left: 8 9 10
+        on right: 11 24 36 37 40 41 42
+    ConstDecl <std::shared_ptr<DeclStmt>> (44)
+        on left: 11
+        on right: 6
+    ConstDefs <std::shared_ptr<VarDef>> (45)
+        on left: 12 13
+        on right: 11 13
+    ConstDef <std::shared_ptr<VarDef>> (46)
+        on left: 14 15
+        on right: 12 13
+    ConstAS <std::shared_ptr<ArraySubscript>> (47)
+        on left: 16 17
+        on right: 15 17 28 30
+    ConstExp <std::shared_ptr<Exp>> (48)
+        on left: 18
+        on right: 16 17 19
+    ConstInitVal <std::shared_ptr<InitVal>> (49)
+        on left: 19 20 21
+        on right: 14 15 22 23
+    ConstInitVals <std::shared_ptr<InitVal>> (50)
+        on left: 22 23
+        on right: 21 23
+    VarDecl <std::shared_ptr<DeclStmt>> (51)
+        on left: 24
+        on right: 7
+    VarDefs <std::shared_ptr<VarDef>> (52)
+        on left: 25 26
+        on right: 24 26
+    VarDef <std::shared_ptr<VarDef>> (53)
+        on left: 27 28 29 30
+        on right: 25 26
+    InitVal <std::shared_ptr<InitVal>> (54)
+        on left: 31 32 33
+        on right: 29 30 34 35
+    InitVals <std::shared_ptr<InitVal>> (55)
+        on left: 34 35
+        on right: 33 35
+    FuncDef <std::shared_ptr<FuncDef>> (56)
+        on left: 36 37
+        on right: 3 5
+    FuncFParams <std::shared_ptr<FuncFParam>> (57)
+        on left: 38 39
+        on right: 37 39
+    FuncFParam <std::shared_ptr<FuncFParam>> (58)
+        on left: 40 41 42
+        on right: 38 39
+    ArraySubscripts <std::shared_ptr<ArraySubscript>> (59)
+        on left: 43 44
+        on right: 42 44 64
+    Block <std::shared_ptr<CompStmt>> (60)
+        on left: 45 46
+        on right: 36 37 54
+    BlockItems <std::shared_ptr<CompStmt>> (61)
+        on left: 47 48
+        on right: 46 48
+    BlockItem <std::shared_ptr<Stmt>> (62)
+        on left: 49 50
+        on right: 47 48
+    Stmt <std::shared_ptr<Stmt>> (63)
+        on left: 51 52 53 54 55 56 57 58 59 60 61
+        on right: 50 55 56 57
+    Exp <std::shared_ptr<Exp>> (64)
+        on left: 62
+        on right: 31 43 44 51 53 61 65 76 77
+    LVal <std::shared_ptr<Exp>> (65)
+        on left: 63 64
+        on right: 51 66
+    PrimaryExp <std::shared_ptr<Exp>> (66)
+        on left: 65 66 67
+        on right: 70
+    Number <std::shared_ptr<Exp>> (67)
+        on left: 68 69
+        on right: 67
+    UnaryExp <std::shared_ptr<Exp>> (68)
+        on left: 70 71 72 73 74 75
+        on right: 73 74 75 78 79 80 81
+    FuncRParams <std::shared_ptr<FuncRParam>> (69)
+        on left: 76 77
+        on right: 72 77
+    MulExp <std::shared_ptr<Exp>> (70)
+        on left: 78 79 80 81
+        on right: 79 80 81 82 83 84
+    AddExp <std::shared_ptr<Exp>> (71)
+        on left: 82 83 84
+        on right: 18 62 83 84 85 86 87 88 89
+    RelExp <std::shared_ptr<Exp>> (72)
+        on left: 85 86 87 88 89
+        on right: 86 87 88 89 90 91 92
+    EqExp <std::shared_ptr<Exp>> (73)
+        on left: 90 91 92
+        on right: 91 92 93 94
+    LAndExp <std::shared_ptr<Exp>> (74)
+        on left: 93 94
+        on right: 94 95 96
+    LOrExp <std::shared_ptr<Exp>> (75)
+        on left: 95 96
+        on right: 55 56 57 96
+
+
+State 0
+
+    0 $accept: • CompileUnit $end
+
+    Y_INT    shift, and go to state 1
+    Y_VOID   shift, and go to state 2
+    Y_CONST  shift, and go to state 3
+    Y_FLOAT  shift, and go to state 4
+
+    CompileUnit  go to state 5
+    CompUnit     go to state 6
+    Decl         go to state 7
+    Type         go to state 8
+    ConstDecl    go to state 9
+    VarDecl      go to state 10
+    FuncDef      go to state 11
+
+
+State 1
+
+    8 Type: Y_INT •
+
+    $default  reduce using rule 8 (Type)
+
+
+State 2
+
+   10 Type: Y_VOID •
+
+    $default  reduce using rule 10 (Type)
+
+
+State 3
+
+   11 ConstDecl: Y_CONST • Type ConstDefs Y_SEMICOLON
+
+    Y_INT    shift, and go to state 1
+    Y_VOID   shift, and go to state 2
+    Y_FLOAT  shift, and go to state 4
+
+    Type  go to state 12
+
+
+State 4
+
+    9 Type: Y_FLOAT •
+
+    $default  reduce using rule 9 (Type)
+
+
+State 5
+
+    0 $accept: CompileUnit • $end
+
+    $end  shift, and go to state 13
+
+
+State 6
+
+    1 CompileUnit: CompUnit •
+    2 CompUnit: CompUnit • Decl
+    3         | CompUnit • FuncDef
+
+    Y_INT    shift, and go to state 1
+    Y_VOID   shift, and go to state 2
+    Y_CONST  shift, and go to state 3
+    Y_FLOAT  shift, and go to state 4
+
+    $default  reduce using rule 1 (CompileUnit)
+
+    Decl       go to state 14
+    Type       go to state 8
+    ConstDecl  go to state 9
+    VarDecl    go to state 10
+    FuncDef    go to state 15
+
+
+State 7
+
+    4 CompUnit: Decl •
+
+    $default  reduce using rule 4 (CompUnit)
+
+
+State 8
+
+   24 VarDecl: Type • VarDefs Y_SEMICOLON
+   36 FuncDef: Type • Y_ID Y_LPAR Y_RPAR Block
+   37        | Type • Y_ID Y_LPAR FuncFParams Y_RPAR Block
+
+    Y_ID  shift, and go to state 16
+
+    VarDefs  go to state 17
+    VarDef   go to state 18
+
+
+State 9
+
+    6 Decl: ConstDecl •
+
+    $default  reduce using rule 6 (Decl)
+
+
+State 10
+
+    7 Decl: VarDecl •
+
+    $default  reduce using rule 7 (Decl)
+
+
+State 11
+
+    5 CompUnit: FuncDef •
+
+    $default  reduce using rule 5 (CompUnit)
+
+
+State 12
+
+   11 ConstDecl: Y_CONST Type • ConstDefs Y_SEMICOLON
+
+    Y_ID  shift, and go to state 19
+
+    ConstDefs  go to state 20
+    ConstDef   go to state 21
+
+
+State 13
+
+    0 $accept: CompileUnit $end •
+
+    $default  accept
+
+
+State 14
+
+    2 CompUnit: CompUnit Decl •
+
+    $default  reduce using rule 2 (CompUnit)
+
+
+State 15
+
+    3 CompUnit: CompUnit FuncDef •
+
+    $default  reduce using rule 3 (CompUnit)
+
+
+State 16
+
+   27 VarDef: Y_ID •
+   28       | Y_ID • ConstAS
+   29       | Y_ID • Y_ASSIGN InitVal
+   30       | Y_ID • ConstAS Y_ASSIGN InitVal
+   36 FuncDef: Type Y_ID • Y_LPAR Y_RPAR Block
+   37        | Type Y_ID • Y_LPAR FuncFParams Y_RPAR Block
+
+    Y_ASSIGN   shift, and go to state 22
+    Y_LPAR     shift, and go to state 23
+    Y_LSQUARE  shift, and go to state 24
+
+    $default  reduce using rule 27 (VarDef)
+
+    ConstAS  go to state 25
+
+
+State 17
+
+   24 VarDecl: Type VarDefs • Y_SEMICOLON
+
+    Y_SEMICOLON  shift, and go to state 26
+
+
+State 18
+
+   25 VarDefs: VarDef •
+   26        | VarDef • Y_COMMA VarDefs
+
+    Y_COMMA  shift, and go to state 27
+
+    $default  reduce using rule 25 (VarDefs)
+
+
+State 19
+
+   14 ConstDef: Y_ID • Y_ASSIGN ConstInitVal
+   15         | Y_ID • ConstAS Y_ASSIGN ConstInitVal
+
+    Y_ASSIGN   shift, and go to state 28
+    Y_LSQUARE  shift, and go to state 24
+
+    ConstAS  go to state 29
+
+
+State 20
+
+   11 ConstDecl: Y_CONST Type ConstDefs • Y_SEMICOLON
+
+    Y_SEMICOLON  shift, and go to state 30
+
+
+State 21
+
+   12 ConstDefs: ConstDef •
+   13          | ConstDef • Y_COMMA ConstDefs
+
+    Y_COMMA  shift, and go to state 31
+
+    $default  reduce using rule 12 (ConstDefs)
+
+
+State 22
+
+   29 VarDef: Y_ID Y_ASSIGN • InitVal
+
+    Y_ADD       shift, and go to state 32
+    Y_SUB       shift, and go to state 33
+    Y_NOT       shift, and go to state 34
+    Y_LPAR      shift, and go to state 35
+    Y_LBRACKET  shift, and go to state 36
+    num_INT     shift, and go to state 37
+    num_FLOAT   shift, and go to state 38
+    Y_ID        shift, and go to state 39
+
+    InitVal     go to state 40
+    Exp         go to state 41
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 47
+
+
+State 23
+
+   36 FuncDef: Type Y_ID Y_LPAR • Y_RPAR Block
+   37        | Type Y_ID Y_LPAR • FuncFParams Y_RPAR Block
+
+    Y_INT    shift, and go to state 1
+    Y_VOID   shift, and go to state 2
+    Y_RPAR   shift, and go to state 48
+    Y_FLOAT  shift, and go to state 4
+
+    Type         go to state 49
+    FuncFParams  go to state 50
+    FuncFParam   go to state 51
+
+
+State 24
+
+   16 ConstAS: Y_LSQUARE • ConstExp Y_RSQUARE
+   17        | Y_LSQUARE • ConstExp Y_RSQUARE ConstAS
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    ConstExp    go to state 52
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 53
+
+
+State 25
+
+   28 VarDef: Y_ID ConstAS •
+   30       | Y_ID ConstAS • Y_ASSIGN InitVal
+
+    Y_ASSIGN  shift, and go to state 54
+
+    $default  reduce using rule 28 (VarDef)
+
+
+State 26
+
+   24 VarDecl: Type VarDefs Y_SEMICOLON •
+
+    $default  reduce using rule 24 (VarDecl)
+
+
+State 27
+
+   26 VarDefs: VarDef Y_COMMA • VarDefs
+
+    Y_ID  shift, and go to state 55
+
+    VarDefs  go to state 56
+    VarDef   go to state 18
+
+
+State 28
+
+   14 ConstDef: Y_ID Y_ASSIGN • ConstInitVal
+
+    Y_ADD       shift, and go to state 32
+    Y_SUB       shift, and go to state 33
+    Y_NOT       shift, and go to state 34
+    Y_LPAR      shift, and go to state 35
+    Y_LBRACKET  shift, and go to state 57
+    num_INT     shift, and go to state 37
+    num_FLOAT   shift, and go to state 38
+    Y_ID        shift, and go to state 39
+
+    ConstExp      go to state 58
+    ConstInitVal  go to state 59
+    LVal          go to state 42
+    PrimaryExp    go to state 43
+    Number        go to state 44
+    UnaryExp      go to state 45
+    MulExp        go to state 46
+    AddExp        go to state 53
+
+
+State 29
+
+   15 ConstDef: Y_ID ConstAS • Y_ASSIGN ConstInitVal
+
+    Y_ASSIGN  shift, and go to state 60
+
+
+State 30
+
+   11 ConstDecl: Y_CONST Type ConstDefs Y_SEMICOLON •
+
+    $default  reduce using rule 11 (ConstDecl)
+
+
+State 31
+
+   13 ConstDefs: ConstDef Y_COMMA • ConstDefs
+
+    Y_ID  shift, and go to state 19
+
+    ConstDefs  go to state 61
+    ConstDef   go to state 21
+
+
+State 32
+
+   73 UnaryExp: Y_ADD • UnaryExp
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 62
+
+
+State 33
+
+   74 UnaryExp: Y_SUB • UnaryExp
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 63
+
+
+State 34
+
+   75 UnaryExp: Y_NOT • UnaryExp
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 64
+
+
+State 35
+
+   65 PrimaryExp: Y_LPAR • Exp Y_RPAR
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    Exp         go to state 65
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 47
+
+
+State 36
+
+   32 InitVal: Y_LBRACKET • Y_RBRACKET
+   33        | Y_LBRACKET • InitVals Y_RBRACKET
+
+    Y_ADD       shift, and go to state 32
+    Y_SUB       shift, and go to state 33
+    Y_NOT       shift, and go to state 34
+    Y_LPAR      shift, and go to state 35
+    Y_LBRACKET  shift, and go to state 36
+    Y_RBRACKET  shift, and go to state 66
+    num_INT     shift, and go to state 37
+    num_FLOAT   shift, and go to state 38
+    Y_ID        shift, and go to state 39
+
+    InitVal     go to state 67
+    InitVals    go to state 68
+    Exp         go to state 41
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 47
+
+
+State 37
+
+   68 Number: num_INT •
+
+    $default  reduce using rule 68 (Number)
+
+
+State 38
+
+   69 Number: num_FLOAT •
+
+    $default  reduce using rule 69 (Number)
+
+
+State 39
+
+   63 LVal: Y_ID •
+   64     | Y_ID • ArraySubscripts
+   71 UnaryExp: Y_ID • Y_LPAR Y_RPAR
+   72         | Y_ID • Y_LPAR FuncRParams Y_RPAR
+
+    Y_LPAR     shift, and go to state 69
+    Y_LSQUARE  shift, and go to state 70
+
+    $default  reduce using rule 63 (LVal)
+
+    ArraySubscripts  go to state 71
+
+
+State 40
+
+   29 VarDef: Y_ID Y_ASSIGN InitVal •
+
+    $default  reduce using rule 29 (VarDef)
+
+
+State 41
+
+   31 InitVal: Exp •
+
+    $default  reduce using rule 31 (InitVal)
+
+
+State 42
+
+   66 PrimaryExp: LVal •
+
+    $default  reduce using rule 66 (PrimaryExp)
+
+
+State 43
+
+   70 UnaryExp: PrimaryExp •
+
+    $default  reduce using rule 70 (UnaryExp)
+
+
+State 44
+
+   67 PrimaryExp: Number •
+
+    $default  reduce using rule 67 (PrimaryExp)
+
+
+State 45
+
+   78 MulExp: UnaryExp •
+
+    $default  reduce using rule 78 (MulExp)
+
+
+State 46
+
+   79 MulExp: MulExp • Y_MUL UnaryExp
+   80       | MulExp • Y_DIV UnaryExp
+   81       | MulExp • Y_MODULO UnaryExp
+   82 AddExp: MulExp •
+
+    Y_MUL     shift, and go to state 72
+    Y_DIV     shift, and go to state 73
+    Y_MODULO  shift, and go to state 74
+
+    $default  reduce using rule 82 (AddExp)
+
+
+State 47
+
+   62 Exp: AddExp •
+   83 AddExp: AddExp • Y_ADD MulExp
+   84       | AddExp • Y_SUB MulExp
+
+    Y_ADD  shift, and go to state 75
+    Y_SUB  shift, and go to state 76
+
+    $default  reduce using rule 62 (Exp)
+
+
+State 48
+
+   36 FuncDef: Type Y_ID Y_LPAR Y_RPAR • Block
+
+    Y_LBRACKET  shift, and go to state 77
+
+    Block  go to state 78
+
+
+State 49
+
+   40 FuncFParam: Type • Y_ID
+   41           | Type • Y_ID Y_LSQUARE Y_RSQUARE
+   42           | Type • Y_ID Y_LSQUARE Y_RSQUARE ArraySubscripts
+
+    Y_ID  shift, and go to state 79
+
+
+State 50
+
+   37 FuncDef: Type Y_ID Y_LPAR FuncFParams • Y_RPAR Block
+
+    Y_RPAR  shift, and go to state 80
+
+
+State 51
+
+   38 FuncFParams: FuncFParam •
+   39            | FuncFParam • Y_COMMA FuncFParams
+
+    Y_COMMA  shift, and go to state 81
+
+    $default  reduce using rule 38 (FuncFParams)
+
+
+State 52
+
+   16 ConstAS: Y_LSQUARE ConstExp • Y_RSQUARE
+   17        | Y_LSQUARE ConstExp • Y_RSQUARE ConstAS
+
+    Y_RSQUARE  shift, and go to state 82
+
+
+State 53
+
+   18 ConstExp: AddExp •
+   83 AddExp: AddExp • Y_ADD MulExp
+   84       | AddExp • Y_SUB MulExp
+
+    Y_ADD  shift, and go to state 75
+    Y_SUB  shift, and go to state 76
+
+    $default  reduce using rule 18 (ConstExp)
+
+
+State 54
+
+   30 VarDef: Y_ID ConstAS Y_ASSIGN • InitVal
+
+    Y_ADD       shift, and go to state 32
+    Y_SUB       shift, and go to state 33
+    Y_NOT       shift, and go to state 34
+    Y_LPAR      shift, and go to state 35
+    Y_LBRACKET  shift, and go to state 36
+    num_INT     shift, and go to state 37
+    num_FLOAT   shift, and go to state 38
+    Y_ID        shift, and go to state 39
+
+    InitVal     go to state 83
+    Exp         go to state 41
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 47
+
+
+State 55
+
+   27 VarDef: Y_ID •
+   28       | Y_ID • ConstAS
+   29       | Y_ID • Y_ASSIGN InitVal
+   30       | Y_ID • ConstAS Y_ASSIGN InitVal
+
+    Y_ASSIGN   shift, and go to state 22
+    Y_LSQUARE  shift, and go to state 24
+
+    $default  reduce using rule 27 (VarDef)
+
+    ConstAS  go to state 25
+
+
+State 56
+
+   26 VarDefs: VarDef Y_COMMA VarDefs •
+
+    $default  reduce using rule 26 (VarDefs)
+
+
+State 57
+
+   20 ConstInitVal: Y_LBRACKET • Y_RBRACKET
+   21             | Y_LBRACKET • ConstInitVals Y_RBRACKET
+
+    Y_ADD       shift, and go to state 32
+    Y_SUB       shift, and go to state 33
+    Y_NOT       shift, and go to state 34
+    Y_LPAR      shift, and go to state 35
+    Y_LBRACKET  shift, and go to state 57
+    Y_RBRACKET  shift, and go to state 84
+    num_INT     shift, and go to state 37
+    num_FLOAT   shift, and go to state 38
+    Y_ID        shift, and go to state 39
+
+    ConstExp       go to state 58
+    ConstInitVal   go to state 85
+    ConstInitVals  go to state 86
+    LVal           go to state 42
+    PrimaryExp     go to state 43
+    Number         go to state 44
+    UnaryExp       go to state 45
+    MulExp         go to state 46
+    AddExp         go to state 53
+
+
+State 58
+
+   19 ConstInitVal: ConstExp •
+
+    $default  reduce using rule 19 (ConstInitVal)
+
+
+State 59
+
+   14 ConstDef: Y_ID Y_ASSIGN ConstInitVal •
+
+    $default  reduce using rule 14 (ConstDef)
+
+
+State 60
+
+   15 ConstDef: Y_ID ConstAS Y_ASSIGN • ConstInitVal
+
+    Y_ADD       shift, and go to state 32
+    Y_SUB       shift, and go to state 33
+    Y_NOT       shift, and go to state 34
+    Y_LPAR      shift, and go to state 35
+    Y_LBRACKET  shift, and go to state 57
+    num_INT     shift, and go to state 37
+    num_FLOAT   shift, and go to state 38
+    Y_ID        shift, and go to state 39
+
+    ConstExp      go to state 58
+    ConstInitVal  go to state 87
+    LVal          go to state 42
+    PrimaryExp    go to state 43
+    Number        go to state 44
+    UnaryExp      go to state 45
+    MulExp        go to state 46
+    AddExp        go to state 53
+
+
+State 61
+
+   13 ConstDefs: ConstDef Y_COMMA ConstDefs •
+
+    $default  reduce using rule 13 (ConstDefs)
+
+
+State 62
+
+   73 UnaryExp: Y_ADD UnaryExp •
+
+    $default  reduce using rule 73 (UnaryExp)
+
+
+State 63
+
+   74 UnaryExp: Y_SUB UnaryExp •
+
+    $default  reduce using rule 74 (UnaryExp)
+
+
+State 64
+
+   75 UnaryExp: Y_NOT UnaryExp •
+
+    $default  reduce using rule 75 (UnaryExp)
+
+
+State 65
+
+   65 PrimaryExp: Y_LPAR Exp • Y_RPAR
+
+    Y_RPAR  shift, and go to state 88
+
+
+State 66
+
+   32 InitVal: Y_LBRACKET Y_RBRACKET •
+
+    $default  reduce using rule 32 (InitVal)
+
+
+State 67
+
+   34 InitVals: InitVal •
+   35         | InitVal • Y_COMMA InitVals
+
+    Y_COMMA  shift, and go to state 89
+
+    $default  reduce using rule 34 (InitVals)
+
+
+State 68
+
+   33 InitVal: Y_LBRACKET InitVals • Y_RBRACKET
+
+    Y_RBRACKET  shift, and go to state 90
+
+
+State 69
+
+   71 UnaryExp: Y_ID Y_LPAR • Y_RPAR
+   72         | Y_ID Y_LPAR • FuncRParams Y_RPAR
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    Y_RPAR     shift, and go to state 91
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    Exp          go to state 92
+    LVal         go to state 42
+    PrimaryExp   go to state 43
+    Number       go to state 44
+    UnaryExp     go to state 45
+    FuncRParams  go to state 93
+    MulExp       go to state 46
+    AddExp       go to state 47
+
+
+State 70
+
+   43 ArraySubscripts: Y_LSQUARE • Exp Y_RSQUARE
+   44                | Y_LSQUARE • Exp Y_RSQUARE ArraySubscripts
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    Exp         go to state 94
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 47
+
+
+State 71
+
+   64 LVal: Y_ID ArraySubscripts •
+
+    $default  reduce using rule 64 (LVal)
+
+
+State 72
+
+   79 MulExp: MulExp Y_MUL • UnaryExp
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 95
+
+
+State 73
+
+   80 MulExp: MulExp Y_DIV • UnaryExp
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 96
+
+
+State 74
+
+   81 MulExp: MulExp Y_MODULO • UnaryExp
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 97
+
+
+State 75
+
+   83 AddExp: AddExp Y_ADD • MulExp
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 98
+
+
+State 76
+
+   84 AddExp: AddExp Y_SUB • MulExp
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 99
+
+
+State 77
+
+   45 Block: Y_LBRACKET • Y_RBRACKET
+   46      | Y_LBRACKET • BlockItems Y_RBRACKET
+
+    Y_INT        shift, and go to state 1
+    Y_VOID       shift, and go to state 2
+    Y_CONST      shift, and go to state 3
+    Y_IF         shift, and go to state 100
+    Y_WHILE      shift, and go to state 101
+    Y_BREAK      shift, and go to state 102
+    Y_CONTINUE   shift, and go to state 103
+    Y_RETURN     shift, and go to state 104
+    Y_ADD        shift, and go to state 32
+    Y_SUB        shift, and go to state 33
+    Y_NOT        shift, and go to state 34
+    Y_LPAR       shift, and go to state 35
+    Y_LBRACKET   shift, and go to state 77
+    Y_RBRACKET   shift, and go to state 105
+    Y_SEMICOLON  shift, and go to state 106
+    Y_FLOAT      shift, and go to state 4
+    num_INT      shift, and go to state 37
+    num_FLOAT    shift, and go to state 38
+    Y_ID         shift, and go to state 39
+
+    Decl        go to state 107
+    Type        go to state 108
+    ConstDecl   go to state 9
+    VarDecl     go to state 10
+    Block       go to state 109
+    BlockItems  go to state 110
+    BlockItem   go to state 111
+    Stmt        go to state 112
+    Exp         go to state 113
+    LVal        go to state 114
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 47
+
+
+State 78
+
+   36 FuncDef: Type Y_ID Y_LPAR Y_RPAR Block •
+
+    $default  reduce using rule 36 (FuncDef)
+
+
+State 79
+
+   40 FuncFParam: Type Y_ID •
+   41           | Type Y_ID • Y_LSQUARE Y_RSQUARE
+   42           | Type Y_ID • Y_LSQUARE Y_RSQUARE ArraySubscripts
+
+    Y_LSQUARE  shift, and go to state 115
+
+    $default  reduce using rule 40 (FuncFParam)
+
+
+State 80
+
+   37 FuncDef: Type Y_ID Y_LPAR FuncFParams Y_RPAR • Block
+
+    Y_LBRACKET  shift, and go to state 77
+
+    Block  go to state 116
+
+
+State 81
+
+   39 FuncFParams: FuncFParam Y_COMMA • FuncFParams
+
+    Y_INT    shift, and go to state 1
+    Y_VOID   shift, and go to state 2
+    Y_FLOAT  shift, and go to state 4
+
+    Type         go to state 49
+    FuncFParams  go to state 117
+    FuncFParam   go to state 51
+
+
+State 82
+
+   16 ConstAS: Y_LSQUARE ConstExp Y_RSQUARE •
+   17        | Y_LSQUARE ConstExp Y_RSQUARE • ConstAS
+
+    Y_LSQUARE  shift, and go to state 24
+
+    $default  reduce using rule 16 (ConstAS)
+
+    ConstAS  go to state 118
+
+
+State 83
+
+   30 VarDef: Y_ID ConstAS Y_ASSIGN InitVal •
+
+    $default  reduce using rule 30 (VarDef)
+
+
+State 84
+
+   20 ConstInitVal: Y_LBRACKET Y_RBRACKET •
+
+    $default  reduce using rule 20 (ConstInitVal)
+
+
+State 85
+
+   22 ConstInitVals: ConstInitVal •
+   23              | ConstInitVal • Y_COMMA ConstInitVals
+
+    Y_COMMA  shift, and go to state 119
+
+    $default  reduce using rule 22 (ConstInitVals)
+
+
+State 86
+
+   21 ConstInitVal: Y_LBRACKET ConstInitVals • Y_RBRACKET
+
+    Y_RBRACKET  shift, and go to state 120
+
+
+State 87
+
+   15 ConstDef: Y_ID ConstAS Y_ASSIGN ConstInitVal •
+
+    $default  reduce using rule 15 (ConstDef)
+
+
+State 88
+
+   65 PrimaryExp: Y_LPAR Exp Y_RPAR •
+
+    $default  reduce using rule 65 (PrimaryExp)
+
+
+State 89
+
+   35 InitVals: InitVal Y_COMMA • InitVals
+
+    Y_ADD       shift, and go to state 32
+    Y_SUB       shift, and go to state 33
+    Y_NOT       shift, and go to state 34
+    Y_LPAR      shift, and go to state 35
+    Y_LBRACKET  shift, and go to state 36
+    num_INT     shift, and go to state 37
+    num_FLOAT   shift, and go to state 38
+    Y_ID        shift, and go to state 39
+
+    InitVal     go to state 67
+    InitVals    go to state 121
+    Exp         go to state 41
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 47
+
+
+State 90
+
+   33 InitVal: Y_LBRACKET InitVals Y_RBRACKET •
+
+    $default  reduce using rule 33 (InitVal)
+
+
+State 91
+
+   71 UnaryExp: Y_ID Y_LPAR Y_RPAR •
+
+    $default  reduce using rule 71 (UnaryExp)
+
+
+State 92
+
+   76 FuncRParams: Exp •
+   77            | Exp • Y_COMMA FuncRParams
+
+    Y_COMMA  shift, and go to state 122
+
+    $default  reduce using rule 76 (FuncRParams)
+
+
+State 93
+
+   72 UnaryExp: Y_ID Y_LPAR FuncRParams • Y_RPAR
+
+    Y_RPAR  shift, and go to state 123
+
+
+State 94
+
+   43 ArraySubscripts: Y_LSQUARE Exp • Y_RSQUARE
+   44                | Y_LSQUARE Exp • Y_RSQUARE ArraySubscripts
+
+    Y_RSQUARE  shift, and go to state 124
+
+
+State 95
+
+   79 MulExp: MulExp Y_MUL UnaryExp •
+
+    $default  reduce using rule 79 (MulExp)
+
+
+State 96
+
+   80 MulExp: MulExp Y_DIV UnaryExp •
+
+    $default  reduce using rule 80 (MulExp)
+
+
+State 97
+
+   81 MulExp: MulExp Y_MODULO UnaryExp •
+
+    $default  reduce using rule 81 (MulExp)
+
+
+State 98
+
+   79 MulExp: MulExp • Y_MUL UnaryExp
+   80       | MulExp • Y_DIV UnaryExp
+   81       | MulExp • Y_MODULO UnaryExp
+   83 AddExp: AddExp Y_ADD MulExp •
+
+    Y_MUL     shift, and go to state 72
+    Y_DIV     shift, and go to state 73
+    Y_MODULO  shift, and go to state 74
+
+    $default  reduce using rule 83 (AddExp)
+
+
+State 99
+
+   79 MulExp: MulExp • Y_MUL UnaryExp
+   80       | MulExp • Y_DIV UnaryExp
+   81       | MulExp • Y_MODULO UnaryExp
+   84 AddExp: AddExp Y_SUB MulExp •
+
+    Y_MUL     shift, and go to state 72
+    Y_DIV     shift, and go to state 73
+    Y_MODULO  shift, and go to state 74
+
+    $default  reduce using rule 84 (AddExp)
+
+
+State 100
+
+   55 Stmt: Y_IF • Y_LPAR LOrExp Y_RPAR Stmt
+   56     | Y_IF • Y_LPAR LOrExp Y_RPAR Stmt Y_ELSE Stmt
+
+    Y_LPAR  shift, and go to state 125
+
+
+State 101
+
+   57 Stmt: Y_WHILE • Y_LPAR LOrExp Y_RPAR Stmt
+
+    Y_LPAR  shift, and go to state 126
+
+
+State 102
+
+   58 Stmt: Y_BREAK • Y_SEMICOLON
+
+    Y_SEMICOLON  shift, and go to state 127
+
+
+State 103
+
+   59 Stmt: Y_CONTINUE • Y_SEMICOLON
+
+    Y_SEMICOLON  shift, and go to state 128
+
+
+State 104
+
+   60 Stmt: Y_RETURN • Y_SEMICOLON
+   61     | Y_RETURN • Exp Y_SEMICOLON
+
+    Y_ADD        shift, and go to state 32
+    Y_SUB        shift, and go to state 33
+    Y_NOT        shift, and go to state 34
+    Y_LPAR       shift, and go to state 35
+    Y_SEMICOLON  shift, and go to state 129
+    num_INT      shift, and go to state 37
+    num_FLOAT    shift, and go to state 38
+    Y_ID         shift, and go to state 39
+
+    Exp         go to state 130
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 47
+
+
+State 105
+
+   45 Block: Y_LBRACKET Y_RBRACKET •
+
+    $default  reduce using rule 45 (Block)
+
+
+State 106
+
+   52 Stmt: Y_SEMICOLON •
+
+    $default  reduce using rule 52 (Stmt)
+
+
+State 107
+
+   49 BlockItem: Decl •
+
+    $default  reduce using rule 49 (BlockItem)
+
+
+State 108
+
+   24 VarDecl: Type • VarDefs Y_SEMICOLON
+
+    Y_ID  shift, and go to state 55
+
+    VarDefs  go to state 17
+    VarDef   go to state 18
+
+
+State 109
+
+   54 Stmt: Block •
+
+    $default  reduce using rule 54 (Stmt)
+
+
+State 110
+
+   46 Block: Y_LBRACKET BlockItems • Y_RBRACKET
+   48 BlockItems: BlockItems • BlockItem
+
+    Y_INT        shift, and go to state 1
+    Y_VOID       shift, and go to state 2
+    Y_CONST      shift, and go to state 3
+    Y_IF         shift, and go to state 100
+    Y_WHILE      shift, and go to state 101
+    Y_BREAK      shift, and go to state 102
+    Y_CONTINUE   shift, and go to state 103
+    Y_RETURN     shift, and go to state 104
+    Y_ADD        shift, and go to state 32
+    Y_SUB        shift, and go to state 33
+    Y_NOT        shift, and go to state 34
+    Y_LPAR       shift, and go to state 35
+    Y_LBRACKET   shift, and go to state 77
+    Y_RBRACKET   shift, and go to state 131
+    Y_SEMICOLON  shift, and go to state 106
+    Y_FLOAT      shift, and go to state 4
+    num_INT      shift, and go to state 37
+    num_FLOAT    shift, and go to state 38
+    Y_ID         shift, and go to state 39
+
+    Decl        go to state 107
+    Type        go to state 108
+    ConstDecl   go to state 9
+    VarDecl     go to state 10
+    Block       go to state 109
+    BlockItem   go to state 132
+    Stmt        go to state 112
+    Exp         go to state 113
+    LVal        go to state 114
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 47
+
+
+State 111
+
+   47 BlockItems: BlockItem •
+
+    $default  reduce using rule 47 (BlockItems)
+
+
+State 112
+
+   50 BlockItem: Stmt •
+
+    $default  reduce using rule 50 (BlockItem)
+
+
+State 113
+
+   53 Stmt: Exp • Y_SEMICOLON
+
+    Y_SEMICOLON  shift, and go to state 133
+
+
+State 114
+
+   51 Stmt: LVal • Y_ASSIGN Exp Y_SEMICOLON
+   66 PrimaryExp: LVal •
+
+    Y_ASSIGN  shift, and go to state 134
+
+    $default  reduce using rule 66 (PrimaryExp)
+
+
+State 115
+
+   41 FuncFParam: Type Y_ID Y_LSQUARE • Y_RSQUARE
+   42           | Type Y_ID Y_LSQUARE • Y_RSQUARE ArraySubscripts
+
+    Y_RSQUARE  shift, and go to state 135
+
+
+State 116
+
+   37 FuncDef: Type Y_ID Y_LPAR FuncFParams Y_RPAR Block •
+
+    $default  reduce using rule 37 (FuncDef)
+
+
+State 117
+
+   39 FuncFParams: FuncFParam Y_COMMA FuncFParams •
+
+    $default  reduce using rule 39 (FuncFParams)
+
+
+State 118
+
+   17 ConstAS: Y_LSQUARE ConstExp Y_RSQUARE ConstAS •
+
+    $default  reduce using rule 17 (ConstAS)
+
+
+State 119
+
+   23 ConstInitVals: ConstInitVal Y_COMMA • ConstInitVals
+
+    Y_ADD       shift, and go to state 32
+    Y_SUB       shift, and go to state 33
+    Y_NOT       shift, and go to state 34
+    Y_LPAR      shift, and go to state 35
+    Y_LBRACKET  shift, and go to state 57
+    num_INT     shift, and go to state 37
+    num_FLOAT   shift, and go to state 38
+    Y_ID        shift, and go to state 39
+
+    ConstExp       go to state 58
+    ConstInitVal   go to state 85
+    ConstInitVals  go to state 136
+    LVal           go to state 42
+    PrimaryExp     go to state 43
+    Number         go to state 44
+    UnaryExp       go to state 45
+    MulExp         go to state 46
+    AddExp         go to state 53
+
+
+State 120
+
+   21 ConstInitVal: Y_LBRACKET ConstInitVals Y_RBRACKET •
+
+    $default  reduce using rule 21 (ConstInitVal)
+
+
+State 121
+
+   35 InitVals: InitVal Y_COMMA InitVals •
+
+    $default  reduce using rule 35 (InitVals)
+
+
+State 122
+
+   77 FuncRParams: Exp Y_COMMA • FuncRParams
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    Exp          go to state 92
+    LVal         go to state 42
+    PrimaryExp   go to state 43
+    Number       go to state 44
+    UnaryExp     go to state 45
+    FuncRParams  go to state 137
+    MulExp       go to state 46
+    AddExp       go to state 47
+
+
+State 123
+
+   72 UnaryExp: Y_ID Y_LPAR FuncRParams Y_RPAR •
+
+    $default  reduce using rule 72 (UnaryExp)
+
+
+State 124
+
+   43 ArraySubscripts: Y_LSQUARE Exp Y_RSQUARE •
+   44                | Y_LSQUARE Exp Y_RSQUARE • ArraySubscripts
+
+    Y_LSQUARE  shift, and go to state 70
+
+    $default  reduce using rule 43 (ArraySubscripts)
+
+    ArraySubscripts  go to state 138
+
+
+State 125
+
+   55 Stmt: Y_IF Y_LPAR • LOrExp Y_RPAR Stmt
+   56     | Y_IF Y_LPAR • LOrExp Y_RPAR Stmt Y_ELSE Stmt
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 139
+    RelExp      go to state 140
+    EqExp       go to state 141
+    LAndExp     go to state 142
+    LOrExp      go to state 143
+
+
+State 126
+
+   57 Stmt: Y_WHILE Y_LPAR • LOrExp Y_RPAR Stmt
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 139
+    RelExp      go to state 140
+    EqExp       go to state 141
+    LAndExp     go to state 142
+    LOrExp      go to state 144
+
+
+State 127
+
+   58 Stmt: Y_BREAK Y_SEMICOLON •
+
+    $default  reduce using rule 58 (Stmt)
+
+
+State 128
+
+   59 Stmt: Y_CONTINUE Y_SEMICOLON •
+
+    $default  reduce using rule 59 (Stmt)
+
+
+State 129
+
+   60 Stmt: Y_RETURN Y_SEMICOLON •
+
+    $default  reduce using rule 60 (Stmt)
+
+
+State 130
+
+   61 Stmt: Y_RETURN Exp • Y_SEMICOLON
+
+    Y_SEMICOLON  shift, and go to state 145
+
+
+State 131
+
+   46 Block: Y_LBRACKET BlockItems Y_RBRACKET •
+
+    $default  reduce using rule 46 (Block)
+
+
+State 132
+
+   48 BlockItems: BlockItems BlockItem •
+
+    $default  reduce using rule 48 (BlockItems)
+
+
+State 133
+
+   53 Stmt: Exp Y_SEMICOLON •
+
+    $default  reduce using rule 53 (Stmt)
+
+
+State 134
+
+   51 Stmt: LVal Y_ASSIGN • Exp Y_SEMICOLON
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    Exp         go to state 146
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 47
+
+
+State 135
+
+   41 FuncFParam: Type Y_ID Y_LSQUARE Y_RSQUARE •
+   42           | Type Y_ID Y_LSQUARE Y_RSQUARE • ArraySubscripts
+
+    Y_LSQUARE  shift, and go to state 70
+
+    $default  reduce using rule 41 (FuncFParam)
+
+    ArraySubscripts  go to state 147
+
+
+State 136
+
+   23 ConstInitVals: ConstInitVal Y_COMMA ConstInitVals •
+
+    $default  reduce using rule 23 (ConstInitVals)
+
+
+State 137
+
+   77 FuncRParams: Exp Y_COMMA FuncRParams •
+
+    $default  reduce using rule 77 (FuncRParams)
+
+
+State 138
+
+   44 ArraySubscripts: Y_LSQUARE Exp Y_RSQUARE ArraySubscripts •
+
+    $default  reduce using rule 44 (ArraySubscripts)
+
+
+State 139
+
+   83 AddExp: AddExp • Y_ADD MulExp
+   84       | AddExp • Y_SUB MulExp
+   85 RelExp: AddExp •
+
+    Y_ADD  shift, and go to state 75
+    Y_SUB  shift, and go to state 76
+
+    $default  reduce using rule 85 (RelExp)
+
+
+State 140
+
+   86 RelExp: RelExp • Y_LESS AddExp
+   87       | RelExp • Y_GREAT AddExp
+   88       | RelExp • Y_LESSEQ AddExp
+   89       | RelExp • Y_GREATEQ AddExp
+   90 EqExp: RelExp •
+
+    Y_LESS     shift, and go to state 148
+    Y_LESSEQ   shift, and go to state 149
+    Y_GREAT    shift, and go to state 150
+    Y_GREATEQ  shift, and go to state 151
+
+    $default  reduce using rule 90 (EqExp)
+
+
+State 141
+
+   91 EqExp: EqExp • Y_EQ RelExp
+   92      | EqExp • Y_NOTEQ RelExp
+   93 LAndExp: EqExp •
+
+    Y_NOTEQ  shift, and go to state 152
+    Y_EQ     shift, and go to state 153
+
+    $default  reduce using rule 93 (LAndExp)
+
+
+State 142
+
+   94 LAndExp: LAndExp • Y_AND EqExp
+   95 LOrExp: LAndExp •
+
+    Y_AND  shift, and go to state 154
+
+    $default  reduce using rule 95 (LOrExp)
+
+
+State 143
+
+   55 Stmt: Y_IF Y_LPAR LOrExp • Y_RPAR Stmt
+   56     | Y_IF Y_LPAR LOrExp • Y_RPAR Stmt Y_ELSE Stmt
+   96 LOrExp: LOrExp • Y_OR LAndExp
+
+    Y_OR    shift, and go to state 155
+    Y_RPAR  shift, and go to state 156
+
+
+State 144
+
+   57 Stmt: Y_WHILE Y_LPAR LOrExp • Y_RPAR Stmt
+   96 LOrExp: LOrExp • Y_OR LAndExp
+
+    Y_OR    shift, and go to state 155
+    Y_RPAR  shift, and go to state 157
+
+
+State 145
+
+   61 Stmt: Y_RETURN Exp Y_SEMICOLON •
+
+    $default  reduce using rule 61 (Stmt)
+
+
+State 146
+
+   51 Stmt: LVal Y_ASSIGN Exp • Y_SEMICOLON
+
+    Y_SEMICOLON  shift, and go to state 158
+
+
+State 147
+
+   42 FuncFParam: Type Y_ID Y_LSQUARE Y_RSQUARE ArraySubscripts •
+
+    $default  reduce using rule 42 (FuncFParam)
+
+
+State 148
+
+   86 RelExp: RelExp Y_LESS • AddExp
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 159
+
+
+State 149
+
+   88 RelExp: RelExp Y_LESSEQ • AddExp
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 160
+
+
+State 150
+
+   87 RelExp: RelExp Y_GREAT • AddExp
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 161
+
+
+State 151
+
+   89 RelExp: RelExp Y_GREATEQ • AddExp
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 162
+
+
+State 152
+
+   92 EqExp: EqExp Y_NOTEQ • RelExp
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 139
+    RelExp      go to state 163
+
+
+State 153
+
+   91 EqExp: EqExp Y_EQ • RelExp
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 139
+    RelExp      go to state 164
+
+
+State 154
+
+   94 LAndExp: LAndExp Y_AND • EqExp
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 139
+    RelExp      go to state 140
+    EqExp       go to state 165
+
+
+State 155
+
+   96 LOrExp: LOrExp Y_OR • LAndExp
+
+    Y_ADD      shift, and go to state 32
+    Y_SUB      shift, and go to state 33
+    Y_NOT      shift, and go to state 34
+    Y_LPAR     shift, and go to state 35
+    num_INT    shift, and go to state 37
+    num_FLOAT  shift, and go to state 38
+    Y_ID       shift, and go to state 39
+
+    LVal        go to state 42
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 139
+    RelExp      go to state 140
+    EqExp       go to state 141
+    LAndExp     go to state 166
+
+
+State 156
+
+   55 Stmt: Y_IF Y_LPAR LOrExp Y_RPAR • Stmt
+   56     | Y_IF Y_LPAR LOrExp Y_RPAR • Stmt Y_ELSE Stmt
+
+    Y_IF         shift, and go to state 100
+    Y_WHILE      shift, and go to state 101
+    Y_BREAK      shift, and go to state 102
+    Y_CONTINUE   shift, and go to state 103
+    Y_RETURN     shift, and go to state 104
+    Y_ADD        shift, and go to state 32
+    Y_SUB        shift, and go to state 33
+    Y_NOT        shift, and go to state 34
+    Y_LPAR       shift, and go to state 35
+    Y_LBRACKET   shift, and go to state 77
+    Y_SEMICOLON  shift, and go to state 106
+    num_INT      shift, and go to state 37
+    num_FLOAT    shift, and go to state 38
+    Y_ID         shift, and go to state 39
+
+    Block       go to state 109
+    Stmt        go to state 167
+    Exp         go to state 113
+    LVal        go to state 114
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 47
+
+
+State 157
+
+   57 Stmt: Y_WHILE Y_LPAR LOrExp Y_RPAR • Stmt
+
+    Y_IF         shift, and go to state 100
+    Y_WHILE      shift, and go to state 101
+    Y_BREAK      shift, and go to state 102
+    Y_CONTINUE   shift, and go to state 103
+    Y_RETURN     shift, and go to state 104
+    Y_ADD        shift, and go to state 32
+    Y_SUB        shift, and go to state 33
+    Y_NOT        shift, and go to state 34
+    Y_LPAR       shift, and go to state 35
+    Y_LBRACKET   shift, and go to state 77
+    Y_SEMICOLON  shift, and go to state 106
+    num_INT      shift, and go to state 37
+    num_FLOAT    shift, and go to state 38
+    Y_ID         shift, and go to state 39
+
+    Block       go to state 109
+    Stmt        go to state 168
+    Exp         go to state 113
+    LVal        go to state 114
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 47
+
+
+State 158
+
+   51 Stmt: LVal Y_ASSIGN Exp Y_SEMICOLON •
+
+    $default  reduce using rule 51 (Stmt)
+
+
+State 159
+
+   83 AddExp: AddExp • Y_ADD MulExp
+   84       | AddExp • Y_SUB MulExp
+   86 RelExp: RelExp Y_LESS AddExp •
+
+    Y_ADD  shift, and go to state 75
+    Y_SUB  shift, and go to state 76
+
+    $default  reduce using rule 86 (RelExp)
+
+
+State 160
+
+   83 AddExp: AddExp • Y_ADD MulExp
+   84       | AddExp • Y_SUB MulExp
+   88 RelExp: RelExp Y_LESSEQ AddExp •
+
+    Y_ADD  shift, and go to state 75
+    Y_SUB  shift, and go to state 76
+
+    $default  reduce using rule 88 (RelExp)
+
+
+State 161
+
+   83 AddExp: AddExp • Y_ADD MulExp
+   84       | AddExp • Y_SUB MulExp
+   87 RelExp: RelExp Y_GREAT AddExp •
+
+    Y_ADD  shift, and go to state 75
+    Y_SUB  shift, and go to state 76
+
+    $default  reduce using rule 87 (RelExp)
+
+
+State 162
+
+   83 AddExp: AddExp • Y_ADD MulExp
+   84       | AddExp • Y_SUB MulExp
+   89 RelExp: RelExp Y_GREATEQ AddExp •
+
+    Y_ADD  shift, and go to state 75
+    Y_SUB  shift, and go to state 76
+
+    $default  reduce using rule 89 (RelExp)
+
+
+State 163
+
+   86 RelExp: RelExp • Y_LESS AddExp
+   87       | RelExp • Y_GREAT AddExp
+   88       | RelExp • Y_LESSEQ AddExp
+   89       | RelExp • Y_GREATEQ AddExp
+   92 EqExp: EqExp Y_NOTEQ RelExp •
+
+    Y_LESS     shift, and go to state 148
+    Y_LESSEQ   shift, and go to state 149
+    Y_GREAT    shift, and go to state 150
+    Y_GREATEQ  shift, and go to state 151
+
+    $default  reduce using rule 92 (EqExp)
+
+
+State 164
+
+   86 RelExp: RelExp • Y_LESS AddExp
+   87       | RelExp • Y_GREAT AddExp
+   88       | RelExp • Y_LESSEQ AddExp
+   89       | RelExp • Y_GREATEQ AddExp
+   91 EqExp: EqExp Y_EQ RelExp •
+
+    Y_LESS     shift, and go to state 148
+    Y_LESSEQ   shift, and go to state 149
+    Y_GREAT    shift, and go to state 150
+    Y_GREATEQ  shift, and go to state 151
+
+    $default  reduce using rule 91 (EqExp)
+
+
+State 165
+
+   91 EqExp: EqExp • Y_EQ RelExp
+   92      | EqExp • Y_NOTEQ RelExp
+   94 LAndExp: LAndExp Y_AND EqExp •
+
+    Y_NOTEQ  shift, and go to state 152
+    Y_EQ     shift, and go to state 153
+
+    $default  reduce using rule 94 (LAndExp)
+
+
+State 166
+
+   94 LAndExp: LAndExp • Y_AND EqExp
+   96 LOrExp: LOrExp Y_OR LAndExp •
+
+    Y_AND  shift, and go to state 154
+
+    $default  reduce using rule 96 (LOrExp)
+
+
+State 167
+
+   55 Stmt: Y_IF Y_LPAR LOrExp Y_RPAR Stmt •
+   56     | Y_IF Y_LPAR LOrExp Y_RPAR Stmt • Y_ELSE Stmt
+
+    Y_ELSE  shift, and go to state 169
+
+    Y_ELSE    [reduce using rule 55 (Stmt)]
+    $default  reduce using rule 55 (Stmt)
+
+
+State 168
+
+   57 Stmt: Y_WHILE Y_LPAR LOrExp Y_RPAR Stmt •
+
+    $default  reduce using rule 57 (Stmt)
+
+
+State 169
+
+   56 Stmt: Y_IF Y_LPAR LOrExp Y_RPAR Stmt Y_ELSE • Stmt
+
+    Y_IF         shift, and go to state 100
+    Y_WHILE      shift, and go to state 101
+    Y_BREAK      shift, and go to state 102
+    Y_CONTINUE   shift, and go to state 103
+    Y_RETURN     shift, and go to state 104
+    Y_ADD        shift, and go to state 32
+    Y_SUB        shift, and go to state 33
+    Y_NOT        shift, and go to state 34
+    Y_LPAR       shift, and go to state 35
+    Y_LBRACKET   shift, and go to state 77
+    Y_SEMICOLON  shift, and go to state 106
+    num_INT      shift, and go to state 37
+    num_FLOAT    shift, and go to state 38
+    Y_ID         shift, and go to state 39
+
+    Block       go to state 109
+    Stmt        go to state 170
+    Exp         go to state 113
+    LVal        go to state 114
+    PrimaryExp  go to state 43
+    Number      go to state 44
+    UnaryExp    go to state 45
+    MulExp      go to state 46
+    AddExp      go to state 47
+
+
+State 170
+
+   56 Stmt: Y_IF Y_LPAR LOrExp Y_RPAR Stmt Y_ELSE Stmt •
+
+    $default  reduce using rule 56 (Stmt)
