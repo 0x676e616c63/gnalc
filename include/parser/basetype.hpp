@@ -27,32 +27,6 @@ enum class dtype_type {
 
 using dtype = enum dtype_type;
 
-// 弃用：内含到 vardecl, funcdef 中
-// (const) int, float; void; int[], float[]
-// class dtype {
-// private:
-//     bool _constvar;
-//     bool _var;
-//     bool _array;
-//     bool _func;
-//     dtype_type type;
-// public:
-//     dtype(dtype_type type, bool constvar = false, bool array = false, bool var = false, bool func = false)
-//         : type(type), _constvar(constvar), _var(var), _array(array), _func(func) {}
-//     dtype set_const() { _constvar = true; return *this; }
-//     dtype set_array() { _array = true; return *this; }
-//     dtype set_var() { _var = true; return *this; }
-//     dtype set_func() { _func = true; return *this; }
-//     bool isconst() const { return _constvar; }
-//     bool isarray() const { return _array; }
-//     bool isvar() const { return _var; }
-//     bool isfunc() const { return _func; }
-//     dtype_type getdtype() const { return type; }
-//     bool isvoid() const { return type == dtype_type::VOID; }
-//     bool isint() const { return type == dtype_type::INT; }
-//     bool isfloat() const { return type == dtype_type::FLOAT; }
-// };
-
 class num {
 private:
     union {
@@ -72,12 +46,13 @@ public:
     auto getInt() const { return _value.i; }
     auto getFloat() const { return _value.f; }
 
-    void printNum() const {
-        if (_float)
-            std::cout << _value.f;
-        else
-            std::cout << _value.i;
-    }
+    // 在功能函数中实现
+    // void printNum() const {
+    //     if (_float)
+    //         std::cout << _value.f;
+    //     else
+    //         std::cout << _value.i;
+    // }
 
     ~num() = default;
 };

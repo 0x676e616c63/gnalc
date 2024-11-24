@@ -30,25 +30,29 @@ using namespace AST;
 %token <AST::string> Y_ID
 
 %type <AST::dtype> Type
-%type <std::shared_ptr<AST::num>> Number
+%type <std::shared_ptr<AST::Exp>> Number
 
+%type <std::shared_ptr<CompUnit>> CompUnit
 %type <std::shared_ptr<VarDef>> VarDefs VarDef ConstDefs ConstDef
-%type <std::shared_ptr<DeclStmt>> VarDecl ConstDecl Decl
+%type <std::shared_ptr<DeclStmt>> VarDecl ConstDecl
 %type <std::shared_ptr<InitVal>> ConstInitVal InitVal ConstInitVals InitVals
 %type <std::shared_ptr<ArraySubscript>> ConstAS ArraySubscripts
 %type <std::shared_ptr<FuncDef>> FuncDef
 %type <std::shared_ptr<FuncFParam>> FuncFParam FuncFParams
-%type <std::shared_ptr<AddExp>> AddExp Exp ConstExp
+%type <std::shared_ptr<FuncRParam>> FuncRParam FuncRParams
+%type <std::shared_ptr<Exp>> Exp ConstExp LVal PrimaryExp UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp
+%type <std::shared_ptr<Stmt>> Decl Stmt BlockItem
+%type <std::shared_ptr<CompStmt>> Block BlockItems
 
 %%
 
 CompileUnit: CompUnit   { return $1; }
            ;
 
-CompUnit: Decl CompUnit         {  }
-        | FuncDef CompUnit      {  }
-        | Decl                  {  }
-        | FuncDef               {  }
+CompUnit: CompUnit Decl         { $1->addNode($2); $$ = $1; }
+        | CompUnit FuncDef      { $1->addNode($2); $$ = $1; }
+        | Decl                  { $$ = std::make_shared<CompUnit>($1); }
+        | FuncDef               { $$ = std::make_shared<CompUnit>($1); }
         ;
 
 
@@ -167,8 +171,8 @@ PrimaryExp: Y_LPAR Exp Y_RPAR   { $$ = std::make_shared<ParenExp>($2); }
           | Number              { $$ = $1; }
           ;
 
-Number: num_INT             { $$ = std::make_shared<num>($1); }
-      | num_FLOAT           { $$ = std::make_shared<num>($1); }
+Number: num_INT             { $$ = std::make_shared<IntLiteral>($1); }
+      | num_FLOAT           { $$ = std::make_shared<FloatLiteral>($1); }
       ;
 
 UnaryExp: PrimaryExp                    { $$ = $1; }

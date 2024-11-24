@@ -4,7 +4,7 @@
  * @todo 考虑将一部分inline函数迁到ast.cpp中
  * @todo 添加反向指针？
  * 
- * @todo 对exp类型的，是否需要再设计一个基类？用以储存例如value之类的？
+ * @bug 最初设计时考虑到AST不会被修改，所以全部使用const，但是现在设计的Exp类是可能被修改的，不知道会不会引发问题
  */
 
 #pragma once
@@ -22,6 +22,7 @@ class ASTNode;
 class ASTVisitor;
 
 // 编译单元
+class CompUnit; // 包含 Decl, FuncDef
 class VarDef; // int a; 中的 a
 class DeclStmt; // int a; 整个语句
 class InitVal; // 初始化列表，单个的
@@ -29,8 +30,8 @@ class ArraySubscript; // int a[2]; void f(int a[]); a[2];等 单个的下标
 class FuncDef;
 class FuncFParam; // 形参
 
-// 下列为具有值的Expression，相互引用时，统一用ASTNode（若满足不了需求再改为varient）
-using Exp = ASTNode;
+// 下列为具有值的Expression，相互引用时，统一用Exp（若满足不了需求再改为varient）
+class Exp; // 以下具有值的节点的基类，继承自ASTNode
 class DeclRef; //变量声明引用：VarRef, FuncRef(callexp), array;
 class ArrayExp;
 class CallExp;
@@ -43,18 +44,13 @@ class FloatLiteral;
 
 // 语句，包括 Exp;
 using Stmt = ASTNode;
-class CompStmt; // 即block
+class CompStmt; // 复合语句，即block
 class IfStmt;
 class WhileStmt;
 class NullStmt;
 class BreakStmt;
 class ContinueStmt;
 class ReturnStmt;
-
-// 使用访问者函数或许已经足够，无需从外部调用派生类中的函数?
-// // 使用varient来管理不同类型但需要放在同一个容器中的节点
-// using CompUnitPtr = std::variant<std::shared_ptr<DeclStmt>, std::shared_ptr<FuncDef>>;
-// using BlockItemPtr = std::variant<std::shared_ptr<DeclStmt>, std::shared_ptr<Stmt>>;
 
 
 class ASTNode {
@@ -67,6 +63,7 @@ class ASTVisitor {
 public:
     // 针对所有节点类型添加：
     // virtual void visit(example& node) = 0;
+    virtual void visit(CompUnit& node) = 0;
     virtual void visit(VarDef& node) = 0;
     virtual void visit(DeclStmt& node) = 0;
     virtual void visit(InitVal& node) = 0;
@@ -91,6 +88,19 @@ public:
     virtual void visit(ReturnStmt& node) = 0;
 };
 
+// 在parser.y中改为左递归构建
+class CompUnit : public ASTNode {
+private:
+    std::vector<std::shared_ptr<ASTNode>> nodes;
+
+public:
+    CompUnit(const std::shared_ptr<ASTNode>& node) { nodes.push_back(node); }
+
+    void addNode(const std::shared_ptr<ASTNode>& node) { nodes.push_back(node); }
+    auto& getNodes() const { return nodes; }
+
+    void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
+};
 
 // 此模板将 用next维护的节点链表 转化为 vector，例如：DeclStmt中的VarDef。因此，这种链表关系被两个对象维护：上一个节点和上级节点。
 template <typename T>
@@ -145,7 +155,7 @@ public:
     void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };
 
-class DeclStmt : public ASTNode {
+class DeclStmt : public Stmt {
 private:
     bool _const = false;
     dtype type = dtype::UNDEFINED;
@@ -293,10 +303,26 @@ public:
     void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };
 
+// num 是供后续求值使用，生成AST时没有赋值，除了数值字面量
+class Exp : public ASTNode {
+protected:
+    num _value;
+public:
+    Exp() : _value(0) {};
+    Exp(int32 i) : _value(i) {} // 仅用于int字面量
+    Exp(float32 f) : _value(f) {} // 仅用于float字面量
+
+
+    void setValue(num& n) { _value = n; }
+    const num& getValue() const { return _value; }
+    virtual void accept(ASTVisitor& visitor) = 0;
+    virtual ~Exp() = default;
+};
+
 /**
  * 变量名的引用
  */
-class DeclRef : public ASTNode {
+class DeclRef : public Exp {
 private:
     string id;
 
@@ -310,7 +336,7 @@ public:
 };
 
 // a[2]
-class ArrayExp : public ASTNode {
+class ArrayExp : public Exp {
 private:
     std::shared_ptr<DeclRef> ref = nullptr;
     std::vector<std::shared_ptr<ArraySubscript>> indices;
@@ -327,7 +353,7 @@ public:
 };
 
 // a(1,2,3)
-class CallExp : public ASTNode {
+class CallExp : public Exp {
 private:
     std::shared_ptr<DeclRef> ref = nullptr;
     bool _empty_para = false;
@@ -385,7 +411,7 @@ enum class UnOp {
     SUB // negative
 };
 
-class BinaryOp : public ASTNode {
+class BinaryOp : public Exp {
 private:
     BiOp op;
     std::shared_ptr<Exp> lhs = nullptr;
@@ -402,7 +428,7 @@ public:
     void accept(ASTVisitor& visitor) override{ visitor.visit(*this); }
 };
 
-class UnaryOp : public ASTNode {
+class UnaryOp : public Exp {
 private:
     UnOp op;
     std::shared_ptr<Exp> exp = nullptr;
@@ -416,7 +442,7 @@ public:
     void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };
 
-class ParenExp : public ASTNode {
+class ParenExp : public Exp {
 private:
     std::shared_ptr<Exp> exp = nullptr;
 
@@ -428,12 +454,22 @@ public:
     void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };
 
-class IntLiteral : public ASTNode {
-private:
+class IntLiteral : public Exp {
+public:
+    IntLiteral(int32 n) : Exp(n) {}
+
+    int32 getValue() const { return _value.getInt(); }
+
+    void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };
 
-class FloatLiteral : public ASTNode {
-private:
+class FloatLiteral : public Exp {
+public:
+    FloatLiteral(float32 f) : Exp(f) {}
+
+    float32 getValue() const { return _value.getInt(); }
+
+    void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };
 
 /**
@@ -447,16 +483,16 @@ private:
  * （待检验的方法）
  * 以下和上面的一些链式结构的构造方式不同，见parser.y:BlockItems.
  */
-class CompStmt : public ASTNode {
+class CompStmt : public Stmt {
 private:
     bool _empty = false;
-    std::vector<std::shared_ptr<ASTNode>> items; // Decl, Stmt
+    std::vector<std::shared_ptr<Stmt>> items; // Decl, Stmt
 
 public:
     CompStmt() : _empty(true) {}
-    CompStmt(const std::shared_ptr<ASTNode>& item) { items.push_back(item); }
+    CompStmt(const std::shared_ptr<Stmt>& item) { items.push_back(item); }
 
-    void addItem(const std::shared_ptr<ASTNode>& item) { items.push_back(item); }
+    void addItem(const std::shared_ptr<Stmt>& item) { items.push_back(item); }
 
     bool isEmpty() const { return _empty; }
     auto& getItems() const { return items; }
@@ -464,17 +500,17 @@ public:
     void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };
 
-class IfStmt : public ASTNode {
+class IfStmt : public Stmt {
 private:
     std::shared_ptr<Exp> cond = nullptr;
-    std::shared_ptr<ASTNode> body = nullptr;
+    std::shared_ptr<Stmt> body = nullptr;
     bool _else = false;
-    std::shared_ptr<ASTNode> else_body = nullptr;
+    std::shared_ptr<Stmt> else_body = nullptr;
 
 public:
-    IfStmt(const std::shared_ptr<Exp>& cond, const std::shared_ptr<ASTNode>& body)
+    IfStmt(const std::shared_ptr<Exp>& cond, const std::shared_ptr<Stmt>& body)
         : cond(cond), body(body) {}
-    IfStmt(const std::shared_ptr<Exp>& cond, const std::shared_ptr<ASTNode>& body, const std::shared_ptr<ASTNode>& else_body)
+    IfStmt(const std::shared_ptr<Exp>& cond, const std::shared_ptr<Stmt>& body, const std::shared_ptr<Stmt>& else_body)
         : cond(cond), body(body), else_body(else_body), _else(true) {}
 
     bool hasElse() const { return _else; }
@@ -485,13 +521,13 @@ public:
     void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };
 
-class WhileStmt : public ASTNode {
+class WhileStmt : public Stmt {
 private:
     std::shared_ptr<Exp> cond = nullptr;
-    std::shared_ptr<ASTNode> body = nullptr;
+    std::shared_ptr<Stmt> body = nullptr;
 
 public:
-    WhileStmt(const std::shared_ptr<Exp>& cond, const std::shared_ptr<ASTNode>& body)
+    WhileStmt(const std::shared_ptr<Exp>& cond, const std::shared_ptr<Stmt>& body)
         : cond(cond), body(body) {}
 
     auto& getCond() const { return cond; }
@@ -500,28 +536,28 @@ public:
     void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };
 
-class NullStmt : public ASTNode {
+class NullStmt : public Stmt {
 public:
     NullStmt() {}
 
     void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };
 
-class BreakStmt : public ASTNode {
+class BreakStmt : public Stmt {
 public:
     BreakStmt() {}
 
     void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };
 
-class ContinueStmt : public ASTNode {
+class ContinueStmt : public Stmt {
 public:
     ContinueStmt() {}
 
     void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };
 
-class ReturnStmt : public ASTNode {
+class ReturnStmt : public Stmt {
 private:
     bool _void = false;
     std::shared_ptr<Exp> return_val = nullptr;
