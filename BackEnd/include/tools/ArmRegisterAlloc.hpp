@@ -64,6 +64,7 @@ class RegisterAlloc{
         void EnableMoves(std::unordered_set<ArmStruct::Operand*>&);
     private:
         unsigned int availableColors;
+        bool isPreColoredAlready = false;
         ArmStruct::Function curFunc;
         /// @brief nodes sets
         /// @note precolored is in each operand (-1 == not precolored)

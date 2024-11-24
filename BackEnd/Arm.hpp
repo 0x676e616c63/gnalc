@@ -10,21 +10,28 @@ namespace ArmStruct{
     class BB;
     class Instruction;   // 指令选择
     class Operand;      // 操作数，较长立即量的插入
+    class Imm;
     class Global;       // 全局变量
+    ///@note MIR 子类
+    class CallInst;
+    class GetElementPtrInst;
+    class PhiInst;
+    class BrInst;
 };
 
 namespace ArmTools{
+    class MyUnOrderedSet;
+    class Edge;
+    struct EdgeEqual;
+    class LabelTable; // 用于查找标签
     bool isImmCanBeEncodedInText(int Imm);
     bool isImmCanBeEncodedInText(float Imm);
     bool isVLoadStoreOffsetLegal(int offset);
     class RegisterAlloc;    // 寄存器分配
-    class LiveInfo;         // 活跃信息
     class PhiEliminate;     // phi函数消除
-    class MInstructionSelector; // 指令选择
-    class AsmPrinter;       // 打印 ?
-    class MyUnOrderedSet;
-    class Edge;
-    struct EdgeEqual;
+    class LowerMIR2ASM;       // 打印
+    class LowerIR2MIR;    // 生成instruction
+    class TerminatorPredict;    // 用于预测下一个BB
 };
 
 namespace ArmOpt{

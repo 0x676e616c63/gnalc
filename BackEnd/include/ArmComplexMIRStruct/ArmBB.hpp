@@ -10,10 +10,10 @@ class ArmStruct::BB{
     public:
         BB();
         ~BB()=default;
-        std::list<Instruction*> InstList;
         BB* BBIn;
         BB* BBout;
         // std::list<ArmStruct::Operand*> LiveOut;
+        std::list<Instruction*> InstList;
         std::unordered_set<Operand*, std::hash<Operand*>> LiveOut;
     private:
 };

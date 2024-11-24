@@ -17,18 +17,25 @@ class ArmStruct::Operand{
     public:
         Operand(OperandType, std::string*);
         ~Operand()=default;
-        virtual void toString();
+        virtual std::string& toString();
         bool operator==(ArmStruct::Operand);
         bool operator!=(ArmStruct::Operand);
 
         std::unordered_set<ArmStruct::Operand*> adjList;
         std::unordered_set<ArmStruct::Instruction*> moveList; // the moveInst which use this ArmStruct::Operand
         ArmStruct::Operand* alias = nullptr;
-        unsigned int color = -1;
+        unsigned int VirReg; // VirReg passed from mid-end
+        unsigned int color = -1; // the register sequence
         unsigned int adjDegree = 0;
-        ArmTools::CoreRegisterName rx = ArmTools::vir;
-        // ExtensionRegisterName sx=Exvir;
         OperandType ValType;
         std::string *Indentifier = NULL;
+};
+
+class ArmStruct::Imm : public ArmStruct::Operand{
+    public:
+        Imm();
+        ~Imm()=default;
+        std::string data_begin;
+        std::string& toString() final;
 };
 #endif
