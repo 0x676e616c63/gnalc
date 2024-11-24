@@ -142,7 +142,7 @@ BlockItem: Decl { $$ = $1; }
          | Stmt { $$ = $1; }
          ;
 
-Stmt: LVal Y_ASSIGN Exp Y_SEMICOLON                     {  }
+Stmt: LVal Y_ASSIGN Exp Y_SEMICOLON                     { $$ = std::make_shared<BinaryOp>(BiOp::ASSIGN, $1, $3); }
     | Y_SEMICOLON                                       { $$ = std::make_shared<NullStmt>(); }
     | Exp Y_SEMICOLON                                   { $$ = $1; }
     | Block                                             { $$ = $1; }
@@ -174,44 +174,44 @@ Number: num_INT             { $$ = std::make_shared<num>($1); }
 UnaryExp: PrimaryExp                    { $$ = $1; }
         | Y_ID Y_LPAR Y_RPAR            { $$ = std::make_shared<CallExp>(std::make_shared<DeclRef>($1)); }
         | Y_ID Y_LPAR FuncRParams Y_RPAR { $$ = std::make_shared<CallExp>(std::make_shared<DeclRef>($1), $3); }
-        | Y_ADD UnaryExp                {  }
-        | Y_SUB UnaryExp                {  }
-        | Y_NOT UnaryExp                {  }
+        | Y_ADD UnaryExp                { $$ = std::make_shared<UnaryOp>(UnOp::ADD, $2); }
+        | Y_SUB UnaryExp                { $$ = std::make_shared<UnaryOp>(UnOp::SUB, $2); }
+        | Y_NOT UnaryExp                { $$ = std::make_shared<UnaryOp>(UnOp::NOT, $2); }
         ;
 
 FuncRParams: Exp                        { $$ = std::shared_ptr<FuncRParams>($1); }
           | Exp Y_COMMA FuncRParams     { $1->next = $3; $$ = $1; }
           ;
 
-MulExp: UnaryExp                        {  }
-      | MulExp Y_MUL UnaryExp           {  }
-      | MulExp Y_DIV UnaryExp           {  }
-      | MulExp Y_MODULO UnaryExp        {  }
+MulExp: UnaryExp                        { $$ = $1; }
+      | MulExp Y_MUL UnaryExp           { $$ = std::make_shared<BinaryOp>(BiOp::MUL, $1, $3); }
+      | MulExp Y_DIV UnaryExp           { $$ = std::make_shared<BinaryOp>(BiOp::DIV, $1, $3); }
+      | MulExp Y_MODULO UnaryExp        { $$ = std::make_shared<BinaryOp>(BiOp::MOD, $1, $3); }
       ;
 
-AddExp: MulExp                  {  }
-      | AddExp Y_ADD MulExp     {  }
-      | AddExp Y_SUB MulExp     {  }
+AddExp: MulExp                  { $$ = $1; }
+      | AddExp Y_ADD MulExp     { $$ = std::make_shared<BinaryOp>(BiOp::ADD, $1, $3); }
+      | AddExp Y_SUB MulExp     { $$ = std::make_shared<BinaryOp>(BiOp::SUB, $1, $3); }
       ;
 
-RelExp: AddExp                  {  }
-      | RelExp Y_LESS AddExp    {  }
-      | RelExp Y_GREAT AddExp   {  }
-      | RelExp Y_LESSEQ AddExp  {  }
-      | RelExp Y_GREATEQ AddExp {  }
+RelExp: AddExp                  { $$ = $1; }
+      | RelExp Y_LESS AddExp    { $$ = std::make_shared<BinaryOp>(BiOp::LESS, $1, $3); }
+      | RelExp Y_GREAT AddExp   { $$ = std::make_shared<BinaryOp>(BiOp::GREAT, $1, $3); }
+      | RelExp Y_LESSEQ AddExp  { $$ = std::make_shared<BinaryOp>(BiOp::LESSEQ, $1, $3); }
+      | RelExp Y_GREATEQ AddExp { $$ = std::make_shared<BinaryOp>(BiOp::GREATEQ, $1, $3); }
       ;
 
-EqExp: RelExp                   {  }
-     | EqExp Y_EQ RelExp        {  }
-     | EqExp Y_NOTEQ RelExp     {  }
+EqExp: RelExp                   { $$ = $1; }
+     | EqExp Y_EQ RelExp        { $$ = std::make_shared<BinaryOp>(BiOp::EQ, $1, $3); }
+     | EqExp Y_NOTEQ RelExp     { $$ = std::make_shared<BinaryOp>(BiOp::NOTEQ, $1, $3); }
      ;
 
-LAndExp: EqExp                  {  }
-       | LAndExp Y_AND EqExp    {  }
+LAndExp: EqExp                  { $$ = $1; }
+       | LAndExp Y_AND EqExp    { $$ = std::make_shared<BinaryOp>(BiOp::AND, $1, $3); }
        ;
 
-LOrExp: LAndExp                 {  }
-      | LorExp Y_OR LAndExp     {  }
+LOrExp: LAndExp                 { $$ = $1; }
+      | LorExp Y_OR LAndExp     { $$ = std::make_shared<BinaryOp>(BiOp::OR, $1, $3); }
       ;
 
 %%

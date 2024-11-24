@@ -3,6 +3,8 @@
  * @attention AST在构造后应该是不会被修改的
  * @todo 考虑将一部分inline函数迁到ast.cpp中
  * @todo 添加反向指针？
+ * 
+ * @todo 对exp类型的，是否需要再设计一个基类？用以储存例如value之类的？
  */
 
 #pragma once
@@ -29,7 +31,6 @@ class FuncFParam; // 形参
 
 // 下列为具有值的Expression，相互引用时，统一用ASTNode（若满足不了需求再改为varient）
 using Exp = ASTNode;
-// 对exp类型的，是否需要再设计一个基类？用以储存例如value之类的？
 class DeclRef; //变量声明引用：VarRef, FuncRef(callexp), array;
 class ArrayExp;
 class CallExp;
@@ -41,6 +42,7 @@ class IntLiteral; // 数值字面量，num包装了一下。之后可能直接�
 class FloatLiteral;
 
 // 语句，包括 Exp;
+using Stmt = ASTNode;
 class CompStmt; // 即block
 class IfStmt;
 class WhileStmt;
@@ -359,12 +361,59 @@ public:
 
 };
 
+// 二元运算符
+enum class BiOp {
+    ASSIGN,
+    ADD,
+    SUB,
+    MUL,
+    DIV,
+    MOD,
+    LESSEQ,
+    LESS,
+    GREATEQ,
+    GREAT,
+    NOTEQ,
+    EQ,
+    AND, // Cond
+    OR // Cond
+};
+
+enum class UnOp {
+    NOT, // Cond
+    ADD, // positive
+    SUB // negative
+};
+
 class BinaryOp : public ASTNode {
 private:
+    BiOp op;
+    std::shared_ptr<Exp> lhs = nullptr;
+    std::shared_ptr<Exp> rhs = nullptr;
+
+public:
+    BinaryOp(BiOp op, const std::shared_ptr<Exp>& lhs, const std::shared_ptr<Exp>& rhs)
+        : op(op), lhs(lhs), rhs(rhs) {}
+
+    BiOp getOp() const { return op; }
+    auto& getLHS() const { return lhs; }
+    auto& getRHS() const { return rhs; }
+
+    void accept(ASTVisitor& visitor) override{ visitor.visit(*this); }
 };
 
 class UnaryOp : public ASTNode {
 private:
+    UnOp op;
+    std::shared_ptr<Exp> exp = nullptr;
+
+public:
+    UnaryOp(UnOp op, const std::shared_ptr<Exp>& exp) : op(op), exp(exp) {}
+
+    UnOp getOp() const { return op; }
+    auto& getExp() const { return exp; }
+
+    void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };
 
 class ParenExp : public ASTNode {
