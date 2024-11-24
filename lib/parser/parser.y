@@ -4,15 +4,15 @@
  */
 
 %code {
-#include "ast2.hpp"
-#include "parser.hpp"
-extern std::shared_ptr<AST::DeclStmt> node;
+#include "../../include/parser/ast.hpp"
+#include "../../include/parser/parser.hpp"
+extern std::shared_ptr<AST::CompUnit> node;
 using namespace AST;
 extern yy::parser::symbol_type yylex ();
 }
 
 %code requires {
-#include "ast2.hpp"
+#include "ast.hpp"
 using namespace AST;
 }
 
@@ -39,14 +39,14 @@ using namespace AST;
 %type <std::shared_ptr<ArraySubscript>> ConstAS ArraySubscripts
 %type <std::shared_ptr<FuncDef>> FuncDef
 %type <std::shared_ptr<FuncFParam>> FuncFParam FuncFParams
-%type <std::shared_ptr<FuncRParam>> FuncRParam FuncRParams
+%type <std::shared_ptr<FuncRParam>> FuncRParams
 %type <std::shared_ptr<Exp>> Exp ConstExp LVal PrimaryExp UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp
 %type <std::shared_ptr<Stmt>> Decl Stmt BlockItem
 %type <std::shared_ptr<CompStmt>> Block BlockItems
 
 %%
 
-CompileUnit: CompUnit   { return $1; }
+CompileUnit: CompUnit   { node = $1; }
            ;
 
 CompUnit: CompUnit Decl         { $1->addNode($2); $$ = $1; }
@@ -215,7 +215,7 @@ LAndExp: EqExp                  { $$ = $1; }
        ;
 
 LOrExp: LAndExp                 { $$ = $1; }
-      | LorExp Y_OR LAndExp     { $$ = std::make_shared<BinaryOp>(BiOp::OR, $1, $3); }
+      | LOrExp Y_OR LAndExp     { $$ = std::make_shared<BinaryOp>(BiOp::OR, $1, $3); }
       ;
 
 %%

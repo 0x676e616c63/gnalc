@@ -1,10 +1,19 @@
 #include "../include/parser/ast.hpp"
+// #include "visitor.hpp"
+#include "../include/parser/parser.hpp"
 
-using namespace AST;
+std::shared_ptr<AST::CompUnit> node = nullptr;
 
-extern past yyparse();
+int main(int argc, char **argv){
+    yy::parser parser;
+    parser.parse();
 
-int main(int argc, char const *argv[]) {
-    showAst(yyparse(), 0, true);
+    // for (auto& i : node->getVardefs().front()->getInitVals().front()->getInner()) {
+    //     std::cout << i << typeid(i).name() << std::endl;
+    // }
+
+    // AST::Printer printer;
+    // printer.visit(*node);
+
     return 0;
 }

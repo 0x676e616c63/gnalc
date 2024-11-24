@@ -1,5 +1,5 @@
 /**
- * @brief ast中的数据类型等
+ * @brief dtype, num
  * @todo dtype设计为类？考虑到诸如PrintType等可能封装起来更好些
  * @todo num重新设计...总觉得用起来别扭
  */
@@ -9,7 +9,6 @@
 
 #include <cstdint>
 #include <string>
-#include <iostream>
 
 
 namespace AST {
@@ -45,14 +44,6 @@ public:
 
     auto getInt() const { return _value.i; }
     auto getFloat() const { return _value.f; }
-
-    // 在功能函数中实现
-    // void printNum() const {
-    //     if (_float)
-    //         std::cout << _value.f;
-    //     else
-    //         std::cout << _value.i;
-    // }
 
     ~num() = default;
 };

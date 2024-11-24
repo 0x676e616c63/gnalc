@@ -6,7 +6,7 @@
 
 %{
 
-#include "parser.hpp"
+#include "../../include/parser/parser.hpp"
 #include <cstdlib> // just for atoi, atof, strtol, strtof
 #define YY_DECL yy::parser::symbol_type yylex ()
 
