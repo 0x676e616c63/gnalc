@@ -45,7 +45,7 @@
 #ifndef YY_YY_INCLUDE_PARSER_PARSER_HPP_INCLUDED
 # define YY_YY_INCLUDE_PARSER_PARSER_HPP_INCLUDED
 // "%code requires" blocks.
-#line 14 "./lib/parser/parser.y"
+#line 13 "./lib/parser/parser.y"
 
 #include "ast.hpp"
 using namespace AST;
@@ -421,28 +421,26 @@ namespace yy {
       // Y_ID
       char dummy4[sizeof (AST::string)];
 
-      // Number
-      char dummy5[sizeof (std::shared_ptr<AST::Exp>)];
-
       // ConstAS
       // ArraySubscripts
-      char dummy6[sizeof (std::shared_ptr<ArraySubscript>)];
+      char dummy5[sizeof (std::shared_ptr<ArraySubscript>)];
 
       // Block
       // BlockItems
-      char dummy7[sizeof (std::shared_ptr<CompStmt>)];
+      char dummy6[sizeof (std::shared_ptr<CompStmt>)];
 
       // CompUnit
-      char dummy8[sizeof (std::shared_ptr<CompUnit>)];
+      char dummy7[sizeof (std::shared_ptr<CompUnit>)];
 
       // ConstDecl
       // VarDecl
-      char dummy9[sizeof (std::shared_ptr<DeclStmt>)];
+      char dummy8[sizeof (std::shared_ptr<DeclStmt>)];
 
       // ConstExp
       // Exp
       // LVal
       // PrimaryExp
+      // Number
       // UnaryExp
       // MulExp
       // AddExp
@@ -450,34 +448,34 @@ namespace yy {
       // EqExp
       // LAndExp
       // LOrExp
-      char dummy10[sizeof (std::shared_ptr<Exp>)];
+      char dummy9[sizeof (std::shared_ptr<Exp>)];
 
       // FuncDef
-      char dummy11[sizeof (std::shared_ptr<FuncDef>)];
+      char dummy10[sizeof (std::shared_ptr<FuncDef>)];
 
       // FuncFParams
       // FuncFParam
-      char dummy12[sizeof (std::shared_ptr<FuncFParam>)];
+      char dummy11[sizeof (std::shared_ptr<FuncFParam>)];
 
       // FuncRParams
-      char dummy13[sizeof (std::shared_ptr<FuncRParam>)];
+      char dummy12[sizeof (std::shared_ptr<FuncRParam>)];
 
       // ConstInitVal
       // ConstInitVals
       // InitVal
       // InitVals
-      char dummy14[sizeof (std::shared_ptr<InitVal>)];
+      char dummy13[sizeof (std::shared_ptr<InitVal>)];
 
       // Decl
       // BlockItem
       // Stmt
-      char dummy15[sizeof (std::shared_ptr<Stmt>)];
+      char dummy14[sizeof (std::shared_ptr<Stmt>)];
 
       // ConstDefs
       // ConstDef
       // VarDefs
       // VarDef
-      char dummy16[sizeof (std::shared_ptr<VarDef>)];
+      char dummy15[sizeof (std::shared_ptr<VarDef>)];
     };
 
     /// The size of the largest semantic type.
@@ -704,10 +702,6 @@ namespace yy {
         value.move< AST::string > (std::move (that.value));
         break;
 
-      case symbol_kind::S_Number: // Number
-        value.move< std::shared_ptr<AST::Exp> > (std::move (that.value));
-        break;
-
       case symbol_kind::S_ConstAS: // ConstAS
       case symbol_kind::S_ArraySubscripts: // ArraySubscripts
         value.move< std::shared_ptr<ArraySubscript> > (std::move (that.value));
@@ -731,6 +725,7 @@ namespace yy {
       case symbol_kind::S_Exp: // Exp
       case symbol_kind::S_LVal: // LVal
       case symbol_kind::S_PrimaryExp: // PrimaryExp
+      case symbol_kind::S_Number: // Number
       case symbol_kind::S_UnaryExp: // UnaryExp
       case symbol_kind::S_MulExp: // MulExp
       case symbol_kind::S_AddExp: // AddExp
@@ -838,18 +833,6 @@ namespace yy {
       {}
 #else
       basic_symbol (typename Base::kind_type t, const AST::string& v)
-        : Base (t)
-        , value (v)
-      {}
-#endif
-
-#if 201103L <= YY_CPLUSPLUS
-      basic_symbol (typename Base::kind_type t, std::shared_ptr<AST::Exp>&& v)
-        : Base (t)
-        , value (std::move (v))
-      {}
-#else
-      basic_symbol (typename Base::kind_type t, const std::shared_ptr<AST::Exp>& v)
         : Base (t)
         , value (v)
       {}
@@ -1027,10 +1010,6 @@ switch (yykind)
         value.template destroy< AST::string > ();
         break;
 
-      case symbol_kind::S_Number: // Number
-        value.template destroy< std::shared_ptr<AST::Exp> > ();
-        break;
-
       case symbol_kind::S_ConstAS: // ConstAS
       case symbol_kind::S_ArraySubscripts: // ArraySubscripts
         value.template destroy< std::shared_ptr<ArraySubscript> > ();
@@ -1054,6 +1033,7 @@ switch (yykind)
       case symbol_kind::S_Exp: // Exp
       case symbol_kind::S_LVal: // LVal
       case symbol_kind::S_PrimaryExp: // PrimaryExp
+      case symbol_kind::S_Number: // Number
       case symbol_kind::S_UnaryExp: // UnaryExp
       case symbol_kind::S_MulExp: // MulExp
       case symbol_kind::S_AddExp: // AddExp
@@ -2213,10 +2193,6 @@ switch (yykind)
         value.copy< AST::string > (YY_MOVE (that.value));
         break;
 
-      case symbol_kind::S_Number: // Number
-        value.copy< std::shared_ptr<AST::Exp> > (YY_MOVE (that.value));
-        break;
-
       case symbol_kind::S_ConstAS: // ConstAS
       case symbol_kind::S_ArraySubscripts: // ArraySubscripts
         value.copy< std::shared_ptr<ArraySubscript> > (YY_MOVE (that.value));
@@ -2240,6 +2216,7 @@ switch (yykind)
       case symbol_kind::S_Exp: // Exp
       case symbol_kind::S_LVal: // LVal
       case symbol_kind::S_PrimaryExp: // PrimaryExp
+      case symbol_kind::S_Number: // Number
       case symbol_kind::S_UnaryExp: // UnaryExp
       case symbol_kind::S_MulExp: // MulExp
       case symbol_kind::S_AddExp: // AddExp
@@ -2330,10 +2307,6 @@ switch (yykind)
         value.move< AST::string > (YY_MOVE (s.value));
         break;
 
-      case symbol_kind::S_Number: // Number
-        value.move< std::shared_ptr<AST::Exp> > (YY_MOVE (s.value));
-        break;
-
       case symbol_kind::S_ConstAS: // ConstAS
       case symbol_kind::S_ArraySubscripts: // ArraySubscripts
         value.move< std::shared_ptr<ArraySubscript> > (YY_MOVE (s.value));
@@ -2357,6 +2330,7 @@ switch (yykind)
       case symbol_kind::S_Exp: // Exp
       case symbol_kind::S_LVal: // LVal
       case symbol_kind::S_PrimaryExp: // PrimaryExp
+      case symbol_kind::S_Number: // Number
       case symbol_kind::S_UnaryExp: // UnaryExp
       case symbol_kind::S_MulExp: // MulExp
       case symbol_kind::S_AddExp: // AddExp
@@ -2465,7 +2439,7 @@ switch (yykind)
 
 
 } // yy
-#line 2469 "include/parser/parser.hpp"
+#line 2443 "include/parser/parser.hpp"
 
 
 

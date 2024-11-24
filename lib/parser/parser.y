@@ -5,7 +5,6 @@
 
 %code {
 #include "../../include/parser/ast.hpp"
-#include "../../include/parser/parser.hpp"
 extern std::shared_ptr<AST::CompUnit> node;
 using namespace AST;
 extern yy::parser::symbol_type yylex ();
@@ -30,7 +29,6 @@ using namespace AST;
 %token <AST::string> Y_ID
 
 %type <AST::dtype> Type
-%type <std::shared_ptr<AST::Exp>> Number
 
 %type <std::shared_ptr<CompUnit>> CompUnit
 %type <std::shared_ptr<VarDef>> VarDefs VarDef ConstDefs ConstDef
@@ -40,7 +38,7 @@ using namespace AST;
 %type <std::shared_ptr<FuncDef>> FuncDef
 %type <std::shared_ptr<FuncFParam>> FuncFParam FuncFParams
 %type <std::shared_ptr<FuncRParam>> FuncRParams
-%type <std::shared_ptr<Exp>> Exp ConstExp LVal PrimaryExp UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp
+%type <std::shared_ptr<Exp>> Exp ConstExp LVal PrimaryExp UnaryExp MulExp AddExp RelExp EqExp LAndExp LOrExp Number
 %type <std::shared_ptr<Stmt>> Decl Stmt BlockItem
 %type <std::shared_ptr<CompStmt>> Block BlockItems
 
@@ -183,8 +181,8 @@ UnaryExp: PrimaryExp                    { $$ = $1; }
         | Y_NOT UnaryExp                { $$ = std::make_shared<UnaryOp>(UnOp::NOT, $2); }
         ;
 
-FuncRParams: Exp                        { $$ = std::shared_ptr<FuncRParams>($1); }
-          | Exp Y_COMMA FuncRParams     { $1->next = $3; $$ = $1; }
+FuncRParams: Exp                        { $$ = std::make_shared<FuncRParam>($1); }
+          | Exp Y_COMMA FuncRParams     { auto p = std::make_shared<FuncRParam>($1); p->next = $3; $$ = p; }
           ;
 
 MulExp: UnaryExp                        { $$ = $1; }
@@ -220,7 +218,7 @@ LOrExp: LAndExp                 { $$ = $1; }
 
 %%
 
-void yyerror(char *s)
-{
-	fprintf(stderr, "error: %s\n", s);
+void
+yy::parser::error (const std::string& msg) { 
+      std::cerr << "Error: " << msg << std::endl; 
 }

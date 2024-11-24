@@ -854,52 +854,52 @@ YY_RULE_SETUP
 case 7:
 YY_RULE_SETUP
 #line 26 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_INT; }
+{ return yy::parser::make_Y_INT(); }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
 #line 27 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_VOID; }
+{ return yy::parser::make_Y_VOID(); }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
 #line 28 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_FLOAT; }
+{ return yy::parser::make_Y_FLOAT(); }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
 #line 29 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_CONST; }
+{ return yy::parser::make_Y_CONST(); }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
 #line 30 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_IF; }
+{ return yy::parser::make_Y_IF(); }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
 #line 31 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_ELSE; }
+{ return yy::parser::make_Y_ELSE(); }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
 #line 32 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_WHILE; }
+{ return yy::parser::make_Y_WHILE(); }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
 #line 33 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_BREAK; }
+{ return yy::parser::make_Y_BREAK(); }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
 #line 34 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_CONTINUE; }
+{ return yy::parser::make_Y_CONTINUE(); }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
 #line 35 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_RETURN; }
+{ return yy::parser::make_Y_RETURN(); }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
@@ -909,117 +909,117 @@ YY_RULE_SETUP
 case 18:
 YY_RULE_SETUP
 #line 39 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_ADD; }
+{ return yy::parser::make_Y_ADD(); }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
 #line 40 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_SUB; }
+{ return yy::parser::make_Y_SUB(); }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
 #line 41 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_MUL; }
+{ return yy::parser::make_Y_MUL(); }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
 #line 42 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_DIV; }
+{ return yy::parser::make_Y_DIV(); }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
 #line 43 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_LESSEQ; }
+{ return yy::parser::make_Y_LESSEQ(); }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
 #line 44 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_LESS; }
+{ return yy::parser::make_Y_LESS(); }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
 #line 45 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_GREATEQ; }
+{ return yy::parser::make_Y_GREATEQ(); }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
 #line 46 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_GREAT; }
+{ return yy::parser::make_Y_GREAT(); }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
 #line 47 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_NOTEQ; }
+{ return yy::parser::make_Y_NOTEQ(); }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
 #line 48 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_NOT; }
+{ return yy::parser::make_Y_NOT(); }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
 #line 49 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_AND; }
+{ return yy::parser::make_Y_AND(); }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
 #line 50 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_OR; }
+{ return yy::parser::make_Y_OR(); }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
 #line 51 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_MODULO; }
+{ return yy::parser::make_Y_MODULO(); }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
 #line 52 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_EQ; }
+{ return yy::parser::make_Y_EQ(); }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
 #line 53 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_ASSIGN; }
+{ return yy::parser::make_Y_ASSIGN(); }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
 #line 55 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_LPAR; }
+{ return yy::parser::make_Y_LPAR(); }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
 #line 56 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_RPAR; }
+{ return yy::parser::make_Y_RPAR(); }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
 #line 57 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_LBRACKET; }
+{ return yy::parser::make_Y_LBRACKET(); }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
 #line 58 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_RBRACKET; }
+{ return yy::parser::make_Y_RBRACKET(); }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
 #line 59 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_LSQUARE; }
+{ return yy::parser::make_Y_LSQUARE(); }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
 #line 60 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_RSQUARE; }
+{ return yy::parser::make_Y_RSQUARE(); }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
 #line 61 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_COMMA; }
+{ return yy::parser::make_Y_COMMA(); }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
 #line 62 "./lib/lexer/lexer.l"
-{ return yy::parser::make_Y_SEMICOLON; }
+{ return yy::parser::make_Y_SEMICOLON(); }
 	YY_BREAK
 case 41:
 /* rule 41 can match eol */
