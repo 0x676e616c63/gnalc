@@ -364,6 +364,7 @@ public:
     CallExp(const std::shared_ptr<DeclRef>& ref, const std::shared_ptr<FuncRParam>& para)
         : ref(ref) { addNodesToVector(para, paras); }
 
+    bool isEmptyPara() const { return _empty_para; }
     string getId() const { return ref->getId(); }
     auto& getRef() const { return ref; }
     auto& getParas() const { return paras; }
