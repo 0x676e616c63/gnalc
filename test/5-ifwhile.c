@@ -1,6 +1,6 @@
 int main() {
     (a);
-    if ((a && b))
+    if (a)
     {
         /* code */
     } else

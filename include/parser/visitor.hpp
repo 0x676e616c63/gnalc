@@ -1,3 +1,6 @@
+/**
+ * @brief AST Visitor
+ */
 #pragma once
 #ifndef __AST_VISITOR_HPP__
 #define __AST_VISITOR_HPP__
