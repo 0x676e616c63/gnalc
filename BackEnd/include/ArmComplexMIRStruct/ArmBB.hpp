@@ -10,9 +10,8 @@ class ArmStruct::BB{
     public:
         BB();
         ~BB()=default;
-        BB* BBIn;
-        BB* BBout;
-        // std::list<ArmStruct::Operand*> LiveOut;
+        void TerminatorPredict();
+        BB* Terminator;
         std::list<Instruction*> InstList;
         std::unordered_set<Operand*, std::hash<Operand*>> LiveOut;
     private:

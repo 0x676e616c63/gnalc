@@ -7,6 +7,8 @@
 namespace ArmStruct{
     class Module;       // 修改自中端传来的Module
     class Function;     // 各个Func的信息，包括指令链，开栈，需要维护冲突图
+    class SubFrame;
+    class FrameObj;
     class BB;
     class Instruction;   // 指令选择
     class Operand;      // 操作数，较长立即量的插入

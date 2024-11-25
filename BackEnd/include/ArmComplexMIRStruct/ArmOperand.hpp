@@ -11,6 +11,7 @@
 
 
 enum OperandType{
+    // 可拓展
     INT, FLOAT, VOID
 };
 class ArmStruct::Operand{
@@ -24,8 +25,8 @@ class ArmStruct::Operand{
         std::unordered_set<ArmStruct::Operand*> adjList;
         std::unordered_set<ArmStruct::Instruction*> moveList; // the moveInst which use this ArmStruct::Operand
         ArmStruct::Operand* alias = nullptr;
-        unsigned int VirReg; // VirReg passed from mid-end
-        unsigned int color = -1; // the register sequence
+        unsigned int VirReg;
+        unsigned int color = -1;
         unsigned int adjDegree = 0;
         OperandType ValType;
         std::string *Indentifier = NULL;
