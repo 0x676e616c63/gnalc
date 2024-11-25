@@ -26,28 +26,28 @@ class CompUnit; // 包含 Decl, FuncDef
 class VarDef; // int a; 中的 a
 class DeclStmt; // int a; 整个语句
 class InitVal; // 初始化列表，单个的
-class ArraySubscript; // int a[2]; void f(int a[]); a[2];等 单个的下标
-class FuncDef;
+class ArraySubscript; // int a[2]; void f(int a[]); a[2];中的[2]等 单个的数组下标
+class FuncDef; // 函数定义
 class FuncFParam; // 形参
 
 // 下列为具有值的Expression，相互引用时，统一用Exp（若满足不了需求再改为varient）
 class Exp; // 以下具有值的节点的基类，继承自ASTNode
-class DeclRef; //变量声明引用：VarRef, FuncRef(callexp), array;
-class ArrayExp;
-class CallExp;
+class DeclRef; // 变量声明引用：VarRef, FuncRef(callexp), array;
+class ArrayExp; // 数组表达式，例如a[2]
+class CallExp; // 函数调用表达式
 class FuncRParam; // 仅应用于CallExp, 具有链式结构，不太好抽象成Exp
 class BinaryOp; // 包含 ExpOp, CondOp
 class UnaryOp;
-class ParenExp;
+class ParenExp; // 括号表达式
 class IntLiteral; // 数值字面量，num包装了一下。之后可能直接替代num
 class FloatLiteral;
 
 // 语句，包括 Exp;
 using Stmt = ASTNode;
 class CompStmt; // 复合语句，即block
-class IfStmt;
+class IfStmt; 
 class WhileStmt;
-class NullStmt;
+class NullStmt; // 空语句“ ;”
 class BreakStmt;
 class ContinueStmt;
 class ReturnStmt;
@@ -339,7 +339,7 @@ public:
 class ArrayExp : public Exp {
 private:
     std::shared_ptr<DeclRef> ref = nullptr;
-    std::vector<std::shared_ptr<ArraySubscript>> indices;
+    std::vector<std::shared_ptr<ArraySubscript>> indices; // index
 
 public:
     ArrayExp(const std::shared_ptr<DeclRef>& ref, const std::shared_ptr<ArraySubscript>& index)

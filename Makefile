@@ -10,3 +10,6 @@ printast_regenerate:
 
 printast:
 	clang++ -std=c++17 -o ./build/printast ./debug/printast.cpp ./lib/parser/parser.cpp ./lib/lexer/lexer.cpp ./lib/parser/printer.cpp  -fsanitize=address
+
+clean:
+	rm -rf ./build/*
