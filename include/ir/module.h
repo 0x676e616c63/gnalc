@@ -1,6 +1,7 @@
 /**
  * @todo may need symbol table
  */
+#ifndef GNALC_IR_MODULE_H
 #pragma once
 
 #include <memory>
@@ -10,25 +11,33 @@
 
 
 namespace IR {
-class Module : public Name {
-private:
-    std::vector<std::unique_ptr<Function>> funcs;
-    std::vector<std::unique_ptr<GlobalVariable>> global_vars;
+    class Module : public Name {
+    private:
+        std::vector<std::unique_ptr<Function> > funcs;
+        std::vector<std::unique_ptr<GlobalVariable> > global_vars;
 
-public:
-    Module() {}
-    Module(NameParam name) : Name(name) {}
+    public:
+        Module() = default;
 
-    void addFunction(std::unique_ptr<Function> func);
-    Function* getFunction(NameParam name);
-    void delFunction(NameParam name);
-    const std::vector<std::unique_ptr<Function>>& getFunctions() const;
+        explicit Module(NameParam name) : Name(std::move(name)) { }
 
-    void addGlobalVar(std::unique_ptr<GlobalVariable> global_var);
-    GlobalVariable* getGlobalVar(NameParam name);
-    void delGlobalVar(NameParam name);
-    const std::vector<std::unique_ptr<GlobalVariable>>& getGlobalVars() const;
+        void addFunction(std::unique_ptr<Function> func);
 
-    ~Module();
-};
+        Function *getFunction(const NameParam& name) const;
+
+        void delFunction(const NameParam& name);
+
+        const std::vector<std::unique_ptr<Function> > &getFunctions() const;
+
+        void addGlobalVar(std::unique_ptr<GlobalVariable> global_var);
+
+        GlobalVariable *getGlobalVar(const NameParam& name);
+
+        void delGlobalVar(const NameParam& name);
+
+        const std::vector<std::unique_ptr<GlobalVariable> > &getGlobalVars() const;
+
+        ~Module();
+    };
 }
+#endif

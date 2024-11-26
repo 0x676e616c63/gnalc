@@ -1,6 +1,4 @@
-
-#include "../../include/ir/base.h"
+#include "ir/base.h"
 
 namespace IR {
-
 }
