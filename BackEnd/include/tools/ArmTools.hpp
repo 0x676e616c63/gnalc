@@ -1,8 +1,37 @@
+#ifndef ARMTOOLS
+#define ARMTOOLS
 #pragma once
 #include <map>
 #include <list>
+#include "../../Arm.hpp"
 
 namespace ArmTools{
+class Edge{
+    public:
+        Edge(ArmStruct::Operand& u, ArmStruct::Operand& v):u(u), v(v){};
+        ~Edge()=default;
+        ArmStruct::Operand& u;
+        ArmStruct::Operand& v;
+};
+struct HashEdge{
+    size_t operator()(const Edge& edge) const;
+};
+struct HashEdgeEqual{
+    bool operator()(const ArmTools::Edge& a, const ArmTools::Edge& b) const;
+};
+struct HashOperandReferWrap{
+    size_t operator()(const std::reference_wrapper<ArmStruct::Operand>& ref) const;
+};
+struct HashOperandReferWrapEqual{
+    bool operator()(const std::reference_wrapper<ArmStruct::Operand>& a, const std::reference_wrapper<ArmStruct::Operand>& b) const ;
+};
+struct HashInstReferWrap{
+    size_t operator()(const std::reference_wrapper<ArmStruct::Instruction>& ref) const;
+};
+struct HashInstReferWrapEqual{
+    bool operator()(const std::reference_wrapper<ArmStruct::Instruction>& a, const std::reference_wrapper<ArmStruct::Instruction>& b) const; 
+};
+
 enum CoreRegisterName{
     vir,
     r0, r1, r2, r3, // 由调用者保存
@@ -20,3 +49,4 @@ bool isImmCanBeEncodedInText(int imme);
 bool isImmCanBeEncodedInText(float imme);
 bool isVLoadStoreOffsetLegal(int offset);
 };
+#endif

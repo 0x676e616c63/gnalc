@@ -23,21 +23,28 @@ namespace ArmStruct{
 
 namespace ArmTools{
     class MyUnOrderedSet;
+
     class Edge;
-    struct EdgeEqual;
+    struct HashEdge;
+    struct EdgeEdgeEqual;
+
+    struct HashOperandReferWrap;
+    struct HashOperandReferWrapEqual;
+    struct HashInstReferWrap;
+    struct HashInstReferWrapEqual;
+
     class LabelTable; // 用于查找标签
     bool isImmCanBeEncodedInText(int Imm);
     bool isImmCanBeEncodedInText(float Imm);
     bool isVLoadStoreOffsetLegal(int offset);
     class RegisterAlloc;    // 寄存器分配
-    class PhiEliminate;     // phi函数消除
     class LowerMIR2ASM;       // 打印
     class LowerIR2MIR;    // 生成instruction
-    class TerminatorPredict;    // 用于预测下一个BB
 };
 
 namespace ArmOpt{
     class SIMDInstructions; // Noen指令集优化
     class PeepHole;         // 窥孔优化
 };
+
 #endif

@@ -4,8 +4,7 @@
 #include <list>
 #include <vector>
 #include <string>
-#include "../../include/tools/ArmTools.hpp"
-#include "./ArmOperand.hpp"
+#include <memory>
 #include "../../Arm.hpp"
 
 /// @note MIR 即 instruction
@@ -51,12 +50,14 @@ class ArmStruct::Instruction{
             PUSH,
 
         }opcode;
+        unsigned int id; // 用于查找以及映射
         /// @brief Def集一般只有一个元素, 但是不排除SIMD指令, 所以先放个表
         /// @brief Use集可能一个或是两个
-        std::vector<Operand*> DefOperandList;
-        std::vector<Operand*> UseOperandList;
+        std::vector<std::reference_wrapper<Operand>> DefOperandList;
+        std::vector<std::reference_wrapper<Operand>> UseOperandList;
         /// @brief 用于反向查找
         BB &BasicBlock;
-        virtual std::string* toString();
+        bool operator==(Instruction&);
+        virtual std::unique_ptr<std::string> toString();
 };
 #endif

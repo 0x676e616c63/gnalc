@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <list>
+#include <memory>
 #include "../tools/ArmTools.hpp"
 #include "./ArmOperand.hpp"
 #include "../../Arm.hpp"
@@ -23,7 +24,8 @@ class ArmStruct::SubFrame{
         unsigned int offset;
         unsigned int sizeTotal;
         unsigned int sizeRemain;
-        std::list<FrameObj*> ObjList;
+        std::list<std::unique_ptr<FrameObj>> ObjList;
+        void operator=(ArmStruct::SubFrame&) const;
 };
 class ArmStruct::Function{
     public:
@@ -39,8 +41,8 @@ class ArmStruct::Function{
         
         std::string& toString();
         // mid_end_func
-        std::list<BB*> BBList;
-        std::list<Operand*> GlobalList;
+        std::list<std::reference_wrapper<BB>> BBList;
+        std::list<std::reference_wrapper<Operand>> GlobalList;
     private:
         /// @brief 类似cache中的组相联映射
         SubFrame local;
