@@ -6,10 +6,14 @@
 
 #pragma once
 #include <vector>
-#include "type.h"
+#include "type.hpp"
 
 
 namespace IR {
+
+class Value;
+class User;
+class Use;
 
 /**
  * @todo replace function

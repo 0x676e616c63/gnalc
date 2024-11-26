@@ -1,8 +1,8 @@
 #pragma once
 
-#include "base.h"
-#include "basic_block.h"
-#include "instruction.h"
+#include "base.hpp"
+#include "basic_block.hpp"
+#include "instruction.hpp"
 #include <memory>
 
 namespace IR {

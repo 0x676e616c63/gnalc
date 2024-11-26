@@ -4,9 +4,9 @@
 #pragma once
 
 #include <memory>
-#include "base.h"
-#include "function.h"
-#include "global_var.h"
+#include "base.hpp"
+#include "function.hpp"
+#include "global_var.hpp"
 
 
 namespace IR {
