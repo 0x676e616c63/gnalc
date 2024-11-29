@@ -31,8 +31,8 @@ RegisterAlloc::RegisterAlloc(Function &func, unsigned int k){
    this->GraphColoring();
 }
 bool RegisterAlloc::isMoveInst(Instruction &inst){
-    if(inst.opcode > Instruction::OpCode::BRANCH_BEGIN
-    && inst.opcode < Instruction::OpCode::BRANCH_END) return false;
+    if(inst.opcode > OperCode::Branch_Begin
+    && inst.opcode < OperCode::Branch_End) return false;
     else return true;
 }
 
@@ -78,7 +78,10 @@ void RegisterAlloc::AddEdge(Operand &u, Operand &v){
     }
 }
 void RegisterAlloc::BuildGraph(){
-    for(BB& BasicBlock: curFunc.BBList){
+    BB* BBptr = curFunc.getTail();
+    while(BBptr){
+        BB BasicBlock = *BBptr;
+        BBptr = BasicBlock.nextBB;
         OperRefHash Live;
         /// @todo isPreColored = false时, 在coloredNodes中加入预着色结点
         Live = BasicBlock.LiveOut;
@@ -122,6 +125,10 @@ void RegisterAlloc::BuildGraph(){
                 Live.insert(std::ref(UseOper));
             }
         }
+        /// @note 解释一下为什么在计算完成live之后, live信息不用先前BB传播
+        /// @note 首先, 需要将live信息前传的变量一定是活跃区间跨块的变量
+        /// @note 这些变量是phi函数处理的对象
+        /// @note 在指令选择阶段phi函数被消除, 从而也不存在这种活跃区间跨块的变量
     }
     isPreColoredAlready = true;
 }

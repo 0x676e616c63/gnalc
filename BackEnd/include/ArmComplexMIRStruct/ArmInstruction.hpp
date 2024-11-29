@@ -6,6 +6,7 @@
 #include <string>
 #include <memory>
 #include "../../Arm.hpp"
+#include "../tools/ArmTools.hpp"
 
 /// @note MIR 即 instruction
 /// @note OpCode中不一定所有都会用到，尤其是只有有符号数时
@@ -16,48 +17,17 @@ class ArmStruct::Instruction{
     public:
         Instruction();
         ~Instruction()=default;
-        enum OpCode{
-            // simple binary
-            ADDS, SUBS, RSBS, MUL, MLA, DIV, SREM, ORR, AND, ASR, ASRS, LSL, LSR, ROR, RRX, EOR,
-            // 
-            NEG,
-            // branch
-            BRANCH_BEGIN,
-            BEQ, BNQ, BGT, BLT, BGE, BLE,
-            // function related
-            BX, BL,
-            BRANCH_END,
-            // compare
-            CMN, CMP, VCMP_F32, // 直接用vcmp比较向量还是太少见了
-            // mov instruction, 感觉movs没有必要
-            MOV, VMOV, VMOV_F32, VMOV_S32, MOVW, MOVT, MVN,
-            // SIMD inst
-            VADD_F32, VADD_S32,
-            VSUB_F32, VSUB_S32,
-            VMUL_S32, VMUL_F32,
-            VDIV_F32, VDIV_S32,
-            // type convertion
-            VCVT_F32_S32, VCVT_S32_F32,
-            // SIMD instruction
-            VSTR_32, VLDR_32,
-            // store load
-            LDR, STR,
-            // single long multiple
-            SMULL,
-            // syscall + Imm
-            SWI,
-            // push
-            PUSH,
-
-        }opcode;
+        ArmTools::OperCode opcode;
         unsigned int id; // 用于查找以及映射
         /// @brief Def集一般只有一个元素, 但是不排除SIMD指令, 所以先放个表
         /// @brief Use集可能一个或是两个
         std::vector<std::reference_wrapper<Operand>> DefOperandList;
         std::vector<std::reference_wrapper<Operand>> UseOperandList;
+        Imm& attach; // 当无法找到Def集或者Use集中的内容时, 启用attach
+                    // attach可能是立即数, 
         /// @brief 用于反向查找
         BB &BasicBlock;
-        bool operator==(Instruction&);
-        virtual std::unique_ptr<std::string> toString();
+        bool operator==(Instruction&) const;
+        virtual std::string &toString();
 };
 #endif

@@ -7,10 +7,11 @@
 #include <unordered_set>
 #include <type_traits>
 #include "../../Arm.hpp"
+#include "../tools/ArmTools.hpp"
 
 enum OperandType{
     // 可拓展
-    INT, FLOAT, VOID
+    INT, FLOAT, VOID, LABLE
 };
 class ArmStruct::Operand{
     public:
@@ -31,11 +32,23 @@ class ArmStruct::Operand{
         std::unique_ptr<std::string> Indentifier = NULL;
 };
 
-class ArmStruct::Imm : public ArmStruct::Operand{
+/// @note Imm是立即数或者是一个Label
+/// @note 一个Inst中最多一个Imm, 有的Inst不允许Imm
+/// @note 单独附加到inst的后面, 不放在def或者use集以避免分配寄存器
+class ArmStruct::Imm{
     public:
         Imm();
         ~Imm()=default;
-        std::string data_begin;
+        OperandType data_type;
+        std::string data; // data or label 在创建对象时处理
+        virtual std::string& toString();
+};
+class ArmStruct::ValOnStack : public ArmStruct::Imm{
+    public:
+        ValOnStack();
+        ~ValOnStack()=default;
+        /// @note data 在下面的方法中创建
+        FrameObj& space;
         std::string& toString() final;
 };
 #endif

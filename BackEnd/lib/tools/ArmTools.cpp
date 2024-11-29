@@ -58,4 +58,5 @@ size_t HashInstReferWrap::operator()(const std::reference_wrapper<ArmStruct::Ins
 bool HashInstReferWrapEqual::operator()(const std::reference_wrapper<ArmStruct::Instruction>& a, const std::reference_wrapper<ArmStruct::Instruction>& b) const {
     return a.get().id == b.get().id;
 }
+
 };
