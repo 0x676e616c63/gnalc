@@ -3,12 +3,12 @@
  * @todo 使用智能指针优化
  */
 
-#include "../../include/ir/base.h"
+#include "../../include/ir/base.hpp"
 
 
 namespace IR {
 
-const std::vector<Use*>& Value::getUseList() const {
+std::list<Use*>& Value::getUseList() {
     return use_list;
 }
 
@@ -18,19 +18,13 @@ void Value::addUse(Use* use) {
 
 /**
  * @todo null, not found process
- * @todo optimize (can use "erase" cpp20 feature)
  * @attention no repeat delete
  */
 void Value::delUse(Use* use) {
     if (use == nullptr) {
         return;
     }
-    for (auto u = use_list.begin(); u != use_list.end(); ++u) {
-        if (*u == use) {
-            use_list.erase(u);
-            return;
-        }
-    }
+    use_list.remove(use);
 }
 
 

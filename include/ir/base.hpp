@@ -6,6 +6,7 @@
 
 #pragma once
 #include <vector>
+#include <list>
 #include "type.hpp"
 
 
@@ -20,14 +21,14 @@ class Use;
  */
 class Value : public Type, public Name {
 protected:
-    std::vector<Use*> use_list;
+    std::list<Use*> use_list;
 
 public:
     Value(_type type, NameParam name = "") : Type(type), Name(name) {}
 
-    const std::vector<Use*>& getUseList() const;
+    std::list<Use*>& getUseList();
     void addUse(Use* use);
-    void delUse(Use* use);
+    void delUse(Use* use); // 删除所有匹配的use
 
     virtual ~Value();
 };
@@ -35,7 +36,7 @@ public:
 
 /**
  * @todo find, set by value, del function
- * @todo use "use" pointer?
+ * @todo use "use" pointer? 目前不用，因为USE隶属于USER
  */
 class User : public Value {
 protected:
