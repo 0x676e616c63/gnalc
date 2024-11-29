@@ -1,8 +1,8 @@
-#ifndef GNALC_IR_GLOBAL_VAR_H
-#define GNALC_IR_GLOBAL_VAR_H
+#ifndef GNALC_IR_GLOBAL_VAR_HPP
+#define GNALC_IR_GLOBAL_VAR_HPP
 #pragma once
 
-#include "base.h"
+#include "base.hpp"
 
 namespace IR {
     class GlobalVariable : public User {

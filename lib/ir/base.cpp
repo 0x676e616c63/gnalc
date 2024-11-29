@@ -3,7 +3,7 @@
  * @todo 使用智能指针优化
  */
 
-#include "ir/base.h"
+#include "../../include/ir/base.hpp"
 
 
 namespace IR {

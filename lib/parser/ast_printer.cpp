@@ -211,14 +211,14 @@ namespace AST {
 
         if (node.isArray()) {
             std::cout << "[]";
-            if (!(node.isOneDim())) { // not 1 dim
+            if (!node.isOneDim()) { // not 1 dim
                 for (auto& ss : node.getSubscripts()) {
                     ss->accept(*this);
                 }
             }
         }
         std::cout << std::endl;
-    };
+    }
 
     // DeclRefExp: 'a' \n
     void Printer::visit(DeclRef& node) {
@@ -260,8 +260,8 @@ namespace AST {
         if (fold_exp) {
             std::cout << node.getId();
             std::cout << "(";
-            if (!(node.isEmptyPara())) {
-                for (auto& p : node.getParas()) {
+            if (!(node.isEmptyParam())) {
+                for (auto& p : node.getParams()) {
                     p->accept(*this);
                     std::cout << ",";
                 }
@@ -274,8 +274,8 @@ namespace AST {
         std::cout << "CallExp: \'" << node.getId() << "\'";
 
         std::cout << " (";
-        if (!(node.isEmptyPara())) {
-            for (auto& p : node.getParas()) {
+        if (!(node.isEmptyParam())) {
+            for (auto& p : node.getParams()) {
                 p->accept(*this);
                 std::cout << ", ";
             }

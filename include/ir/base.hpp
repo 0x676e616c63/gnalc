@@ -1,14 +1,14 @@
 /**
- * @file base.h
+ * @file base.hpp
  * @brief IR base class: Value User Use...
  * @todo use std::list?
  */
 
-#ifndef GNALC_IR_BASE_H
-#define GNALC_IR_BASE_H
+#ifndef GNALC_IR_BASE_HPP
+#define GNALC_IR_BASE_HPP
 #pragma once
 #include <vector>
-#include "type.h"
+#include "type.hpp"
 
 
 namespace IR {
@@ -21,6 +21,7 @@ namespace IR {
         std::vector<Use *> use_list;
 
     public:
+        Value() = default;
         explicit Value(_type type, NameParam name = "") : Type(type), Name(std::move(name)) {}
 
         const std::vector<Use *> &getUseList() const;

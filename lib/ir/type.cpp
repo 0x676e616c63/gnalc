@@ -1,7 +1,7 @@
 /**
  * @brief maybe unused
  */
-#include "ir/type.h"
+#include "../../include/ir/type.hpp"
 
 using namespace IR;
 

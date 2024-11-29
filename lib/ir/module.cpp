@@ -1,4 +1,4 @@
-#include "ir/module.h"
+#include "../../include/ir/module.hpp"
 
 namespace IR {
     void Module::addFunction(std::unique_ptr<Function> func) {
@@ -58,6 +58,22 @@ namespace IR {
 
     const std::vector<std::unique_ptr<GlobalVariable> > &Module::getGlobalVars() const {
         return global_vars;
+    }
+
+    void Module::initScope() {
+        symbol_table.initScope();
+    }
+
+    void Module::finishScope() {
+        symbol_table.finishScope();
+    }
+
+    void Module::registerSymbol(const std::string &name, Value *value) {
+        symbol_table.insert(name, value);
+    }
+
+    Value *Module::lookupSymbol(const std::string &name) {
+        return symbol_table.lookup(name);
     }
 
     /**

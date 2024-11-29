@@ -7,9 +7,9 @@
  * @bug 最初设计时考虑到AST不会被修改，所以全部使用const，但是现在设计的Exp类是可能被修改的，不知道会不会引发问题
  */
 
+#ifndef GNALC_PARSER_AST_HPP
+#define GNALC_PARSER_AST_HPP
 #pragma once
-#ifndef PARSER_AST_H
-#define PARSER_AST_H
 
 #include <vector>
 #include <memory>
@@ -86,6 +86,8 @@ public:
     virtual void visit(BreakStmt& node) = 0;
     virtual void visit(ContinueStmt& node) = 0;
     virtual void visit(ReturnStmt& node) = 0;
+
+    virtual ~ASTVisitor() = default;
 };
 
 // 在parser.y中改为左递归构建
@@ -111,7 +113,6 @@ void addNodesToVector(const std::shared_ptr<T>& head, std::vector<std::shared_pt
         current = current->next;
     }
 }
-
 
 class VarDef : public ASTNode {
 private:
@@ -364,10 +365,10 @@ public:
     CallExp(const std::shared_ptr<DeclRef>& ref, const std::shared_ptr<FuncRParam>& para)
         : ref(ref) { addNodesToVector(para, paras); }
 
-    bool isEmptyPara() const { return _empty_para; }
+    bool isEmptyParam() const { return _empty_para; }
     string getId() const { return ref->getId(); }
     auto& getRef() const { return ref; }
-    auto& getParas() const { return paras; }
+    auto& getParams() const { return paras; }
 
     void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };

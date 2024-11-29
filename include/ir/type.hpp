@@ -2,14 +2,14 @@
  * @brief 包含通用的Type, Name类
  */
 
-#ifndef GNALC_IR_TYPE_H
-#define GNALC_IR_TYPE_H
+#ifndef GNALC_IR_TYPE_HPP
+#define GNALC_IR_TYPE_HPP
 #pragma once
 #include <string>
 
 namespace IR {
 
-    enum class _type { INT, FLOAT, VOID };
+    enum class _type { INT, FLOAT, VOID, UNEXPECTED };
 
     using NameParam = std::string;
 
@@ -20,6 +20,7 @@ namespace IR {
         _type tp;
 
     public:
+        Type() : tp(_type::UNEXPECTED) {}
         explicit Type(const _type t) : tp(t) {}
 
         void setType(const _type t) { tp = t; }
