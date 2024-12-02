@@ -1,13 +1,16 @@
 /**
  * @brief 包含通用的Type, Name类
+ * @todo 这部分后续可能会简化合并
  */
 
 #pragma once
 #include <string>
 
 namespace IR {
-enum _type { INT, FLOAT, VOID };
+enum _type { INT, FLOAT, VOID, UNDEFINED };
 typedef const std::string& NameParam;
+
+using i32 = int32_t;
 
 /**
  * @todo 使用模板？

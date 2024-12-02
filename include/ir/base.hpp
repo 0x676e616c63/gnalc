@@ -2,6 +2,16 @@
  * @file value.h
  * @brief IR base class: Value User Use...
  * @todo use std::list?
+ * 
+ * @attention 指针问题
+ */
+
+/**
+ * 目前设计的继承结构：
+ * Value -> User -> Instruction
+ *   |---> GlobalVariable
+ *   |--> BasicBlock
+ *   |--> Function
  */
 
 #pragma once
@@ -24,7 +34,7 @@ protected:
     std::list<Use*> use_list;
 
 public:
-    Value(_type type, NameParam name = "") : Type(type), Name(name) {}
+    Value(_type type = UNDEFINED, NameParam name = "") : Type(type), Name(name) {}
 
     std::list<Use*>& getUseList();
     void addUse(Use* use);
@@ -45,10 +55,9 @@ protected:
 public:
     User(_type type, NameParam name = "") : Value(type, name) {}
 
-    void addOperand(Value *v);
-    void setOperand(unsigned i, Value *v);
-    Value* getOperand(unsigned i) const;
-    unsigned getNumOperands() const;
+    void addOperand(Value *v); // 构造一个use
+    std::vector<Use>& getOperands();
+    void delOperand(Value *v);
 
     virtual ~User() {}
 };
@@ -59,6 +68,7 @@ public:
  */
 class Use {
 private:
+    // 以下两个值都不隶属于 Use，Use 隶属于 User
     Value *val;   // 指向被使用的 Value
     User *user;   // 指向所属的 User
 
