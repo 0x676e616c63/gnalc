@@ -5,6 +5,7 @@
 #include <string>
 #include <list>
 #include <memory>
+#include "../../../include/ir/function.hpp"
 #include "../tools/ArmTools.hpp"
 #include "./ArmOperand.hpp"
 #include "../../Arm.hpp"
@@ -36,7 +37,7 @@ class ArmStruct::SubFrame{
 };
 class ArmStruct::Function{
     public:
-        Function(); // waiting...
+        Function(IR::); // waiting...
         ~Function()=default;
         bool isStackInst(Instruction&);
         void MkFrame(); // 这里打算在寄存器分配完成之后, 遍历BB和inst,从而计算出每个Frame, 不想再进一步复杂寄存器分配算法
