@@ -146,9 +146,7 @@ namespace AST {
 
         if (node.isInited()) {
             nest++;
-            for (auto& iv : node.getInitVals()) {
-                iv->accept(*this);
-            }
+            node.getInitVal()->accept(*this);
             nest--;
         }
     }

@@ -122,7 +122,7 @@ private:
     bool _inited = false; // 是否被初始化，即 initvals 是否为空
     string id;
     std::vector<std::shared_ptr<ArraySubscript>> subscripts;
-    std::vector<std::shared_ptr<InitVal>> initvals;
+    std::shared_ptr<InitVal> initval;
 
 public:
     std::shared_ptr<VarDef> next = nullptr; // in parser.y:91:VarDefs: 由于自下而上的语法分析，先构建VarDef，再构建DeclStmt，故先使用next存储;
@@ -132,9 +132,9 @@ public:
     VarDef(string id, const std::shared_ptr<ArraySubscript>& ss)
         : id(id), _array(true) { addNodesToVector(ss, subscripts); }
     VarDef(string id, const std::shared_ptr<InitVal>& initval)
-        : id(id), _inited(true) { addNodesToVector(initval, initvals); }
+        : id(id), _inited(true), initval(initval) {}
     VarDef(string id, const std::shared_ptr<ArraySubscript>& ss, const std::shared_ptr<InitVal>& initval)
-        : id(id), _array(true), _inited(true) { addNodesToVector(ss, subscripts); addNodesToVector(initval, initvals); }
+        : id(id), _array(true), _inited(true), initval(initval) { addNodesToVector(ss, subscripts); }
 
     void setType(dtype t) { type = t; } // 仅对此vardef赋类型，整个链的在上级declstmt中赋
     void setConst() { _const = true; } // 和上面相同
@@ -151,7 +151,7 @@ public:
     dtype getType() const { return type; }
     string getId() const { return id; }
     auto& getSubscripts() const { return subscripts; }
-    auto& getInitVals() const { return initvals; }
+    auto& getInitVal() const { return initval; }
 
     void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };
