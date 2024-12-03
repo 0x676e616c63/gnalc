@@ -1,13 +1,12 @@
 /**
- * @file value.h
+ * @file base.hpp
  * @brief IR base class: Value User Use...
- * @todo use std::list?
  * 
  * @attention 指针问题
  */
 
 /**
- * 目前设计的继承结构：
+ * 目前的继承结构：
  * Value -> User -> Instruction
  *   |---> GlobalVariable
  *   |--> BasicBlock
@@ -15,7 +14,9 @@
  */
 
 #pragma once
-#include <vector>
+#ifndef IR_BASE_HPP
+#define IR_BASE_HPP
+
 #include <list>
 #include "type.hpp"
 
@@ -27,39 +28,45 @@ class User;
 class Use;
 
 /**
- * @todo replace function
+ * @todo replace use function
  */
-class Value : public Type, public Name {
+class Value : public TypeC, public NameC {
 protected:
-    std::list<Use*> use_list;
+    std::list<Use*> use_list; // Use隶属于User, 故暂时使用普通指针
 
 public:
-    Value(_type type = UNDEFINED, NameParam name = "") : Type(type), Name(name) {}
+    Value() = default;
+    Value(std::string _name, IRTYPE _type, int length = -1);
 
-    std::list<Use*>& getUseList();
     void addUse(Use* use);
-    void delUse(Use* use); // 删除所有匹配的use
+    std::list<Use*>& getUseList() const;
+    void delUseByUse(Use* use); // 根据Use删除所有匹配的use；由于Use归User所有，故理论上说通过User删除可以转换为通过Use删除
+    void delUseByName(NameRef name); // 根据name删除所有匹配的use
 
-    virtual ~Value();
+    ~Value();
 };
 
 
 /**
+ * @brief User是Use的所有者，User的Operands由Use中的val来保存
+ * 
  * @todo find, set by value, del function
  * @todo use "use" pointer? 目前不用，因为USE隶属于USER
  */
 class User : public Value {
 protected:
-    std::vector<Use> operands; // 操作数
+    std::list<Use> operands; // 操作数实际是Use中的val
 
 public:
-    User(_type type, NameParam name = "") : Value(type, name) {}
+    User() = default;
+    User(std::string _name, IRTYPE _type, int length = -1);
 
     void addOperand(Value *v); // 构造一个use
-    std::vector<Use>& getOperands();
-    void delOperand(Value *v);
+    std::list<Use>& getOperands() const;
+    void delOperandByValue(Value *v);
+    void delOperandByName(NameRef name);
 
-    virtual ~User() {}
+    ~User();
 };
 
 
@@ -68,7 +75,6 @@ public:
  */
 class Use {
 private:
-    // 以下两个值都不隶属于 Use，Use 隶属于 User
     Value *val;   // 指向被使用的 Value
     User *user;   // 指向所属的 User
 
@@ -83,3 +89,5 @@ public:
     ~Use();
 };
 }
+
+#endif
