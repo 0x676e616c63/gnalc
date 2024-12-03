@@ -13,6 +13,9 @@ class Edge{
         ArmStruct::Operand& u;
         ArmStruct::Operand& v;
 };
+
+/// @brief unordered_map/set 的hash和equal方法
+
 struct HashEdge{
     size_t operator()(const Edge& edge) const;
 };
@@ -31,6 +34,13 @@ struct HashInstReferWrap{
 struct HashInstReferWrapEqual{
     bool operator()(const std::reference_wrapper<ArmStruct::Instruction>& a, const std::reference_wrapper<ArmStruct::Instruction>& b) const; 
 };
+struct HashFrameObj{
+    size_t operator()(const std::reference_wrapper<ArmStruct::FrameObj>& ref) const;
+};
+struct HashFrameObjEqual{
+    bool operator()(const std::reference_wrapper<ArmStruct::FrameObj>& a, const std::reference_wrapper<ArmStruct::FrameObj>& b) const;
+};
+
 
 enum CoreRegisterName{
     vir = -1,
@@ -108,7 +118,8 @@ enum OperCode{
     /// @brief 并非Arm指令
     Addition_Oper_Begin,
         /// @brief 一个栈上的值, 必定要先分配再使用, 为创建Frame提供了便利
-        alloca, // local分配栈空间, 无操作数
+        alloca, // local分配栈空间, 操作数为分配栈空间的大小(一个Imm Operand)
+        free, // free栈上空间, 由中端插入
         spill,  // spill到temp上, 操作数为溢出的变量(use集)
         fetch, // 从栈上取, 操作数同上(def集)
         push_args, // 参数压栈, 操作数为虚拟寄存器(use集), 注意顺序, IR->MIR时生成

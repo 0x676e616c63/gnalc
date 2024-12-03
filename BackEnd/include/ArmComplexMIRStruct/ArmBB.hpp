@@ -32,7 +32,7 @@ class ArmStruct::BB{
         std::string& toString();
 
         Terminator& Terminator;
-        BB *nextBB = nullptr; // 描述的是汇编代码上的空间排列顺序
+        // std::unique_ptr<BB> nextBB = nullptr; // 描述的是汇编代码上的空间排列顺序
         std::string label;
         std::list<std::reference_wrapper<Instruction>> InstList;
         std::unordered_set<std::reference_wrapper<Operand>, ArmTools::HashOperandReferWrap, ArmTools::HashOperandReferWrapEqual> LiveOut;

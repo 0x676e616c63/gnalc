@@ -3,9 +3,8 @@
 #pragma once
 #include "../../Arm.hpp"
 #include "../../include/tools/LowerMIR2ASM.hpp"
-///@todo 指令合法化
-///@todo 指令调度
-
+///@todo 再次指令合法化
+///@todo 栈空间分配(调用MkFrame)
 
 class ArmTools::LowerMIR2ASM{
     public:

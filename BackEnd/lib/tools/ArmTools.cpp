@@ -4,6 +4,7 @@
 #include "../../Arm.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmOperand.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmInstruction.hpp"
+#include "../../include/ArmComplexMIRStruct/ArmFunction.hpp"
 #include "../../include/tools/ArmTools.hpp"
 
 namespace ArmTools{
@@ -59,4 +60,11 @@ bool HashInstReferWrapEqual::operator()(const std::reference_wrapper<ArmStruct::
     return a.get().id == b.get().id;
 }
 
+size_t HashFrameObj::operator()(const std::reference_wrapper<ArmStruct::FrameObj>& ref) const {
+    return std::hash<int>()(ref.get().offset);
+}
+
+bool HashFrameObjEqual::operator()(const std::reference_wrapper<ArmStruct::FrameObj>& a, const std::reference_wrapper<ArmStruct::FrameObj>& b) const {
+    return a.get().offset == b.get().offset;
+}
 };

@@ -17,12 +17,14 @@ namespace ArmStruct{
     std::map<std::string, BB&> BBLabelMap;
 
     class Instruction;   // 指令选择
-    
+    class MemInstruction; // load / store
+
     class Operand;      // 操作数，较长立即量的插入
     class Imm;
-    class ValOnStack;
-    
+    class MMptr;
     class Global;       // 全局变量
+    class Bss;
+
     ///@note MIR 子类
     class CallInst;
     class GetElementPtrInst;
@@ -37,10 +39,13 @@ namespace ArmTools{
     struct HashEdge;
     struct EdgeEdgeEqual;
 
+    /// @brief hash映射 + 比较方法
     struct HashOperandReferWrap;
     struct HashOperandReferWrapEqual;
     struct HashInstReferWrap;
     struct HashInstReferWrapEqual;
+    struct HashFrameObj;
+    struct HashFrameObjEqual;
 
     class LabelTable; // 用于查找标签
     bool isImmCanBeEncodedInText(int Imm);

@@ -58,7 +58,7 @@ class RegisterAlloc{
     private:
         unsigned int availableColors;
         bool isPreColoredAlready = false;
-        ArmStruct::Function curFunc;
+        ArmStruct::Function& curFunc;
         /// @brief nodes sets
         /// @note precolored is in each operand (-1 == not precolored)
         /// @note initial is the operand not be preassign a color and not be handle by algorithm

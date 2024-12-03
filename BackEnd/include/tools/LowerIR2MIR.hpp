@@ -3,7 +3,7 @@
 #pragma once
 #include "../../Arm.hpp"
 #include "../ArmComplexMIRStruct/ArmModule.hpp"
-#include "../../../include/ir/module.h"
+#include "../../../include/ir/module.hpp"
 /// @todo 消除phi函数
 /// @todo 插入寄存器保护指令
 /// @todo 生成MIR的Def集和Use集

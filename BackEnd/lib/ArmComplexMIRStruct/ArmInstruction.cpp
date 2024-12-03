@@ -12,6 +12,21 @@ using namespace ArmTools;
 // ::Instruction(){
 
 // }
+
+Instruction::Instruction(Instruction& inst, OperCode type, unsigned int cnt): BasicBlock(inst.BasicBlock), DefOperandList(), UseOperandList()
+{
+    this->id = cnt;
+    this->opcode = type;
+    if(type == OperCode::STR){
+        UseOperandList.push_back(inst.DefOperandList[0]);
+    }
+    else{
+        DefOperandList.push_back(inst.UseOperandList[0]);
+    }
+    /// @note 
+    this->attach = std::make_unique<MMptr>();
+}
+
 bool Instruction::operator==(Instruction& inst) const{
     return this->id == inst.id;
 };
@@ -27,7 +42,7 @@ std::string& Instruction::toString(){
     else if(this->opcode < OperCode::Branch_End){
         str += OperCodeMap[this->opcode] + ' ';
         if(UseOperandList.size()) str += this->UseOperandList[0].get().toString() + '\n'; // lr register
-        else str += this->attach.toString() + '\n'; // label 
+        else str += this->attach->toString() + '\n'; // label 
     }
     else if(this->opcode < OperCode::FlagInst_End){
         str += OperCodeMap[this->opcode] + ' ';
@@ -38,7 +53,7 @@ std::string& Instruction::toString(){
         str += OperCodeMap[this->opcode] + ' ';
         str += this->DefOperandList[0].get().toString() + ", ";
         if(UseOperandList.size()) str += this->UseOperandList[0].get().toString() + '\n';
-        else str += this->attach.toString() + '\n'; // most likely a Imm
+        else str += this->attach->toString() + '\n'; // most likely a Imm
     }
     else if(this->opcode < Type_Convert_End){
         str += OperCodeMap[this->opcode] + ' ';
@@ -48,12 +63,12 @@ std::string& Instruction::toString(){
     else if(this->opcode < LDR_End){
         str += OperCodeMap[this->opcode] + ' ';
         str += this->DefOperandList[0].get().toString() + ", ";
-        str += this->attach.toString() + '\n'; // an ValOnStack
+        str += this->attach->toString() + '\n'; // an MMptr
     }
     else if(this->opcode < STR_End){
         str += OperCodeMap[this->opcode] + ' ';
         str += this->UseOperandList[0].get().toString() + ", ";
-        str += this->attach.toString() + '\n';
+        str += this->attach->toString() + '\n';
     }
     else if(this->opcode == SMULL){
         str += "smull ";
@@ -64,7 +79,7 @@ std::string& Instruction::toString(){
     }
     else if(this->opcode == SWI){
         str += "swi ";
-        str += this->attach.toString() + '\n'; 
+        str += this->attach->toString() + '\n'; 
     }
     else{ // this->opcode == PUSH
         str += "push {";

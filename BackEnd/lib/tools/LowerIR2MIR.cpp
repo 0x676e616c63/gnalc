@@ -14,7 +14,8 @@ void ArmTools::LowerIR2MIR::run(IR::Module& midEnd_Module){
     
     auto midEnd_Funcs = midEnd_Module.getFunctions();
     for(auto it = midEnd_Funcs.begin(); it != midEnd_Funcs.end(); ++it){
-        auto Func = **it;
-        Module->AddFunction(std::make_unique<ArmStruct::Function>(Func));
+        auto midEnd_Func = **it;
+        auto Func = std::make_unique<ArmStruct::Function>(midEnd_Func);
+        Module->AddFunction(Func);
     }
 }

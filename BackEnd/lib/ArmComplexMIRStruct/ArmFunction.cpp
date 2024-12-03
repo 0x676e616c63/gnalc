@@ -1,6 +1,8 @@
 #include <memory>
 #include <cassert>
 #include "../../Arm.hpp"
+#include "../../include/tools/ArmTools.hpp"
+#include "../../include/ArmComplexMIRStruct/ArmOperand.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmBB.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmGlobal.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmInstruction.hpp"
@@ -8,15 +10,32 @@
 
 using namespace ArmStruct;
 using namespace ArmTools;
-
+using FrameObjRefHash = std::unordered_set<std::reference_wrapper<ArmStruct::FrameObj>&, ArmTools::HashFrameObj, ArmTools::HashFrameObjEqual>;
+using FrameObjRefHashPtr = std::unique_ptr<std::unordered_set<std::reference_wrapper<ArmStruct::FrameObj>&, ArmTools::HashFrameObj, ArmTools::HashFrameObjEqual>>;
 ///@todo 差构造函数
+
+FrameObj::FrameObj(Operand& oper, Imm& Imm): vitualReg(oper.VirReg){
+    // oper : defed ptr
+    // Imm : size
+    if(oper.ValType == OperandType::INTPTR){
+        val_size = 4;
+        valType = OperandType::INT;
+    }
+    else if(oper.ValType == OperandType::FLOATPTR){
+        val_size = 4;
+        valType = OperandType::FLOAT;
+    }
+    else{
+        ///@note 等待拓展
+        assert("ArmFunction.cpp FrameObj::FrameObj()");
+    }
+}
 
 SubFrame& SubFrame::operator=(SubFrame& other){
         if (this!= &other) {
             // 对基本类型成员进行赋值
             this->offset = other.offset;
             this->sizeTotal = other.sizeTotal;
-            this->sizeRemain = other.sizeRemain;
 
             // 先清空当前对象的ObjList
             this->ObjList.clear();
@@ -30,37 +49,55 @@ SubFrame& SubFrame::operator=(SubFrame& other){
         return *this;
 }
 
-void Function::MkFrame(){
-    ///@todo 遍历instruction序列, 找到alloca spill 等特殊的opcode
-    ///@todo 现在的问题在于只有类似alloc()的指令, 没有free()指令标识FrameObj的空闲
-    BB* BBptr = this->BBListHead;
+bool Function::isStackInst(Instruction& inst){
+    return inst.opcode > OperCode::Addition_Oper_Begin;
+}
 
-    while(BBptr){
-        BB& BasicBlock = *BBptr;
-        BBptr = BBptr->nextBB;
-        for(Instruction& inst: BasicBlock.InstList){
-            if(!isStackInst(inst)) continue;
-            switch(inst.opcode){
-                case OperCode::alloca:
+void SubFrame::addFrameObj(Operand& oper, ArmStruct::Imm& imm){
+    std::unique_ptr<FrameObj> newLocal = std::make_unique<FrameObj>(oper, imm);
+    ObjList.push_back(newLocal);
+    newLocal->offset = this->offset;
+    sizeTotal += newLocal->val_size;
+}
 
-                    break;
-                case OperCode::spill:
+void Function::MkFrameInit(){
+    /// @brief 寄存器分配前做, 只做开头的一个BasicBlock, 到alloca指令结束为止
+    /// @brief 目的是获取local区的大小
+    BB& BasicBlock = *BBList.begin();
+    for(auto it = BasicBlock.InstList.begin(); it != BasicBlock.InstList.end(); ++it){
+        auto &inst = it->get(); // 这里还必须指出推导的类型为引用, 但下边的又不用, 抽象
+        if(inst.opcode != OperCode::alloca) break;
+        local.addFrameObj(inst.DefOperandList[0], *(inst.attach));
+    }
 
-                    break;
-                case OperCode::fetch:
+    /// @brief 获取MemInstruction的Def或者Use, 通过虚拟寄存器, 找到FrameObj
+    /// @brief 将MMptr 与 找到的frameobj 绑定
+    for(auto it_BB = BBList.begin(); it_BB != BBList.end(); ++it_BB){
+        
+        auto BB = it_BB->get();
+        
+        for(auto it = BB.InstList.begin(); it != BB.InstList.end(); ++it){
+            
+            auto& inst = (*it).get();
+            
+            if(!(inst.opcode > LDR_Begin && inst.opcode < STR_End)) continue;
 
-                    break;
-                case OperCode::push_args:
+            auto& mem_inst = dynamic_cast<MemInstruction&>(inst);
+            
+            for(auto it_fobj = local.ObjList.begin(); it_fobj != local.ObjList.end(); ++it_fobj){
                 
-                    break;
-                case OperCode::fetch_args:
-
-                    break;
-                default:
-                    assert("you got me mad now!");
+                auto frameObj = **it_fobj;
+                
+                if(frameObj.vitualReg != mem_inst.MMptr->VirReg) continue;
+                mem_inst.MMptr->space = frameObj; // bindon
             }
         }
     }
+}
+
+void Function::MkFrameFinal(){
+    /// @brief 寄存器分配后做
+
 }
 
 void Function::TerminatorPredict(){
@@ -69,31 +106,18 @@ void Function::TerminatorPredict(){
     ///@todo 需要将这个图转换为普通链表
 }
 
-BB* Function::getTail(){
-    BB* tail = this->BBListHead;
-    while(tail){
-        tail = tail->nextBB;
-    }
-    return tail;
-}
 std::string& Function::toString(){
     std::unique_ptr<std::string> func = std::make_unique<std::string>();
     std::string& str = *func;
     
-    for(auto GlobalVal: this->GlobalList){
-        ///@todo 在Global内部做好缩进和换行, 以及伪指令
-        str += GlobalVal.get().toString();
-    }
-
-    BB* BasicBlock = this->BBListHead;
-    while(BasicBlock){
-        str += BasicBlock->toString() + ':' + '\n'; // BB的label
-        for(auto it_inst: BasicBlock->InstList){
+    for(auto it = BBList.begin(); it != BBList.end(); ++it){
+        auto BasicBlock = it->get();
+        str += BasicBlock.toString() + ':' + '\n'; // BB的label
+        for(auto it_inst: BasicBlock.InstList){
             Instruction& inst = it_inst.get();
             str += "    "; // 缩进
             str += inst.toString() + '\n';
         }
     }
-    
     return str;
 }

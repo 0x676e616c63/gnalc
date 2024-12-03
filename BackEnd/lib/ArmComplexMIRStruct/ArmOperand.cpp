@@ -8,6 +8,12 @@
 using namespace ArmStruct;
 using namespace ArmTools;
 ///@todo 还差三个类的构造函数
+Imm::Imm(OperandType type, std::string data): data_type(type), data(data){}
+
+MMptr::MMptr(){
+    this->space = nullptr;
+}
+
 Operand::Operand(Operand& other) :
     ValType(other.ValType),
     // 深拷贝字符串指针指向的内容
@@ -53,9 +59,14 @@ std::string& Imm::toString(){
     return this->data;
 }
 
-std::string& ValOnStack::toString() {
+std::string& MMptr::toString() {
     this->data += '[';
-    this->data += CoreRegisterMap[this->space.baseReg] + ", ";
-    this->data += "#" + std::to_string(this->space.offset) + "]";
+    this->data += CoreRegisterMap[this->space->baseReg] + ", ";
+    this->data += "#" + std::to_string(this->space->offset) + "]";
     return this->data;
+}
+
+std::string& Global::toString(){
+    this->data += '=';
+    this->data += GlobalId;
 }

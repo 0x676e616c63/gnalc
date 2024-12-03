@@ -25,10 +25,9 @@ using namespace ArmStruct;
 bool MyUnOrderedSet::find(const Edge &edge){
     return this->set.find(Edge(edge.u, edge.v)) != this->set.end(); 
 }
-RegisterAlloc::RegisterAlloc(Function &func, unsigned int k){
-   this->curFunc = func;
-   this->availableColors = k;
-   this->GraphColoring();
+RegisterAlloc::RegisterAlloc(Function &func, unsigned int k)
+    : curFunc(func), availableColors(k), isPreColoredAlready(false), adjSet(), simplifyWorkList(), freezeWorkList(), spilledNodes(), worklistMoves(), activeMoves(), coalescedMoves(), constrainedMoves(), frozenMoves(), coloredNodes(), coalescedNodes(), selectStack(), initial() {
+    this->GraphColoring();
 }
 bool RegisterAlloc::isMoveInst(Instruction &inst){
     if(inst.opcode > OperCode::Branch_Begin
@@ -78,10 +77,8 @@ void RegisterAlloc::AddEdge(Operand &u, Operand &v){
     }
 }
 void RegisterAlloc::BuildGraph(){
-    BB* BBptr = curFunc.getTail();
-    while(BBptr){
-        BB BasicBlock = *BBptr;
-        BBptr = BasicBlock.nextBB;
+        for(auto it = curFunc.BBList.begin(); it != curFunc.BBList.end(); ++it){
+        BB BasicBlock = it->get();
         OperRefHash Live;
         /// @todo isPreColored = false时, 在coloredNodes中加入预着色结点
         Live = BasicBlock.LiveOut;
@@ -382,12 +379,12 @@ void RegisterAlloc::ReWriteProgram(){
                 Instruction& targetInst = (*inst_it).get();
                 if(targetInst == inst){
                     if(flag){
-                        std::unique_ptr<Instruction> store_inst = std::make_unique<Instruction>();
-                        BasicBlock.InstList.insert(++inst_it, std::ref(*store_inst));
+                        std::unique_ptr<Instruction> store_inst = std::make_unique<Instruction>(targetInst, OperCode::STR, ++curFunc.InstCnt);
+                        BasicBlock.InstList.insert(++inst_it, std::ref(*store_inst)); // 
                     }
                     else{
-                        std::unique_ptr<Instruction> load_inst = std::make_unique<Instruction>();
-                        BasicBlock.InstList.insert(++inst_it, std::ref(*load_inst));
+                        std::unique_ptr<Instruction> load_inst = std::make_unique<Instruction>(targetInst, OperCode::LDR, ++curFunc.InstCnt);
+                        BasicBlock.InstList.insert(inst_it, std::ref(*load_inst)); // 
                     }
                     break;
                 }
