@@ -1,22 +1,23 @@
 /**
- * @brief 常量字面值
+ * @brief 常量字面值包装到Value
+ * @todo 实现方式优化
  */
 
+#pragma once
+#ifndef IR_CONSTANT_HPP
+#define IR_CONSTANT_HPP
 #include "base.hpp"
-#include <memory>
-
-
 
 namespace IR {
 
 
 class ConstantInt : public Value {
 private:
-    i32 val;
+    int val;
 public:
-    ConstantInt(i32 _val);
+    ConstantInt(int _val);
 
-    i32 getVal();
+    int getVal();
 };
 
 class ConstantFloat : public Value {
@@ -32,3 +33,5 @@ using CI32 = ConstantInt;
 using CF32 = ConstantFloat;
 
 }
+
+#endif

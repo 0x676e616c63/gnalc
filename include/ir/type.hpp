@@ -1,7 +1,8 @@
 /**
  * @brief 包含通用的TypeC, NameC类
- * 
  * @attention 只做了一些类型，其他类型尚未考虑
+ * 
+ * @note 删除掉了array类型，原因是目前似乎只有alloca能用到，以及[2 x [2 x i32]]这种实现复杂，后续看有无需求
  */
 
 #pragma once
@@ -17,7 +18,13 @@ namespace IR {
  * @todo 考虑BOOL, VECTOR? PTRARRAY?
  */
 enum class IRTYPE {
-    I32, FLOAT, VOID, PTR, I32ARRAY, FLOATARRAY, UNDEFINED
+    I32,
+    FLOAT,
+    VOID,
+    PTR,
+    // I32ARRAY,
+    // FLOATARRAY,
+    UNDEFINED
 };
 
 using NameRef = const std::string&; // 赋值名字时改为str::string, 用move传值；引用名字时使用该类型别名
@@ -30,17 +37,17 @@ using NameRef = const std::string&; // 赋值名字时改为str::string, 用move
 class TypeC {
 private:
     IRTYPE ty = IRTYPE::UNDEFINED;
-    int length = -1; // only for array type
+    // int length = -1; // only for array type
 public:
     TypeC() = default;
     TypeC(IRTYPE _ty) : ty(_ty) {}
-    TypeC(int _length, IRTYPE _ty) : length(_length), ty(_ty) {} // for [2 x i32]
+    // TypeC(int _length, IRTYPE _ty) : length(_length), ty(_ty) {} // for [2 x i32]
 
-    void setType(IRTYPE _ty) { length = -1; ty = _ty; }
-    void setType(int _length, IRTYPE _ty) { length = _length; ty = _ty; }
-    bool isArray() const { return length!=-1; }
+    void setType(IRTYPE _ty) { ty = _ty; }
+    // void setType(int _length, IRTYPE _ty) { length = _length; ty = _ty; }
+    // bool isArray() const { return length!=-1; }
     IRTYPE getType() const { return ty; }
-    int getLength() const { return length; }
+    // int getLength() const { return length; }
 };
 
 // move传值

@@ -3,6 +3,10 @@
  * @brief icmp fcmp
  */
 
+#pragma once
+#ifndef IR_INSTRUCTIONS_COMPARE_HPP
+#define IR_INSTRUCTIONS_COMPARE_HPP
+
 #include "../instruction.hpp"
 
 namespace IR {
@@ -30,7 +34,7 @@ private:
     ICMPOP cond;
 
 public:
-    ICMPInst(ICMPOP cond, Value* _LHS, Value* _RHS);
+    ICMPInst(NameRef name, ICMPOP cond, Value* lhs, Value* rhs);
 
     auto& GetLHS();
     auto& GetRHS();
@@ -65,12 +69,13 @@ enum class FCMPOP {
 };
 
 // <result> = fcmp [fast-math flags]* <cond> <ty> <op1>, <op2>
+// type默认为float
 class FCMPInst : public Instruction {
 private:
     FCMPOP cond;
 
 public:
-    FCMPInst(FCMPOP cond, Value* _LHS, Value* _RHS);
+    FCMPInst(NameRef name, FCMPOP cond, Value* lhs, Value* rhs);
 
     auto& GetLHS();
     auto& GetRHS();
@@ -78,3 +83,5 @@ public:
 };
 
 }
+
+#endif

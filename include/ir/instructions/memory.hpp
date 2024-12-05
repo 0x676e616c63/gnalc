@@ -3,31 +3,38 @@
  * @brief alloca, load, store, getelementptr(gep)
  * 
  * @todo 这之中的一些向量处理语法没有给出，例如<result> = getelementptr <ty>, <N x ptr> <ptrval>, <vector index type> <idx>
- * @todo 对于[2 x i32]这种类型的包装
+ * @todo 对于[2 x i32]这种类型的包装--目前弃用
  */
+
+#pragma once
+#ifndef IR_INSTRUCTION_MEMORY_HPP
+#define IR_INSTRUCTION_MEMORY_HPP
 
 #include "../instruction.hpp"
 
 namespace IR {
 
 // <result> = alloca [inalloca] <type> [, <ty> <NumElements>] [, align <alignment>] [, addrspace(<num>)]
-// %1 = alloca [2 x i32], align 4 先写一个这种形式的
-// %array2 = alloca i32, i32 2
+// ty 是 numelements 的类型
+//
+// 类型一：%1 = alloca [2 x i32], align 4 // 静态分配，先不实现，统一用2
+// 类型二：%array2 = alloca i32, i32 %1 // 动态分配，需保存栈帧？
 // 
 // result 的类型是ptr, <type>是基类型
 class ALLOCAInst : public Instruction {
 private:
-    _type basetype;
-    bool _array = false;
-    int num_elements = 0;
+    IRTYPE basetype;
+    // int num_elements = 0; // 保存在operands中
+    bool is_array = false;
     int align = 4;
 public:
-    ALLOCAInst(NameParam name, _type ty, int _align = 4);
-    ALLOCAInst(NameParam name, _type ty, int _num_elements, int _align = 4);
+    ALLOCAInst(NameRef name, IRTYPE btype, int _align = 4); // FOR NOTARRAY
+    // ALLOCAInst(NameRef name, int length, IRTYPE btype, int _align = 4); // FOR TYPE 1 ARRAY
+    ALLOCAInst(NameRef name, IRTYPE btype, Value* num_elements, int _align = 4); // FOR TYPE 2 ARRAY
 
-    _type getBaseType();
+    IRTYPE getBaseType() const;
     bool isArray() const;
-    int getNumElements() const;
+    Value* getNumElements() const; // 修改使用 User基类 的方法
     int getAlign() const;
 };
 
@@ -38,39 +45,43 @@ private:
     // Value* ptr; 添加到oprands中
     int align = 4;
 public:
-    LOADInst(NameParam name, _type ty, Value* _ptr, int _align = 4);
+    LOADInst(NameRef name, IRTYPE ty, Value* _ptr, int _align = 4);
 
     Value* getPtr() const;
     int getAlign() const;
 };
 
 // store [volatile] <ty> <value>, ptr <pointer>[, align <alignment>]......
-// store的type为undefined
+// storeinst的type为undefined, 因其没有Value
 class STOREInst : public Instruction {
 private:
-    _type basetype;
+    IRTYPE basetype;
+    int align = 4;
 
 public:
-    STOREInst(_type ty, Value* _value, Value* _ptr, int _align = 4);
+    STOREInst(IRTYPE btype, Value* _value, Value* _ptr, int _align = 4);
 
-    _type getBaseType();
+    IRTYPE getBaseType() const;
     Value* getValue() const;
     Value* getPtr() const;
+    int getAlign() const;
 };
 
 // <result> = getelementptr <ty>, ptr <ptrval>{, <ty> <idx>}*
-// inbonds, nsw等修饰符未给出，目前只考虑上述一种情况
+// inbounds(必须在边界之内), nsw等修饰符未给出，目前只考虑上述一种情况
 // result的类型为ptr；为了简便，默认索引值的类型均为i32
+// 目前先不考虑多维数组，用i*col+j的方式索引，或者先gep计算出行开头，再计算偏移
 class GEPInst : public Instruction {
 private:
-    _type basetype;
+    IRTYPE basetype;
 public:
-    GEPInst(NameParam name, _type ty, Value* _ptr, Value* idx_begin, Value* idx_end);
+    GEPInst(NameRef name, IRTYPE btype, Value* _ptr, Value* idx);
 
-    _type getBaseType();
+    IRTYPE getBaseType();
     Value* getPtr() const;
-    Value* getIdxBegin(int i) const;
-    Value* getIdxEnd() const;
+    Value* getIdx() const;
 };
 
 }
+
+#endif

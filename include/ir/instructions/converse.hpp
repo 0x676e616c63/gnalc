@@ -3,30 +3,42 @@
  * @brief fptosi, sitofp
  */
 
+
+#pragma once
+#ifndef IR_INSTRUCTIONS_CONVERSE_HPP
+#define IR_INSTRUCTIONS_CONVERSE_HPP
+
 #include "../instruction.hpp"
 #include "../constant.hpp"
 #include <memory>
 
 namespace IR {
 
-// %Y = fptosi float 1.0E-247 to i1
+// %Y = fptosi float 1.0E-247 to i32
+// 默认全为float to i32
 class FPTOSIInst : public Instruction {
+private:
+    IRTYPE origin_type = IRTYPE::FLOAT;
 public:
-    FPTOSIInst(Value* _val, NameParam _name = "", _type _ty = INT);
+    FPTOSIInst(NameRef name, Value* origin_val);
 
     Value* getOVal();
-    _type getOType(); // ORIGINAL TYPE FLOAT
-    _type getTType(); // TARGET TYPE INT
+    IRTYPE getOType(); // ORIGINAL TYPE FLOAT
+    IRTYPE getTType(); // TARGET TYPE I32
 };
 
 // <result> = sitofp <ty> <value> to <ty2>
 class SITOFPInst : public Instruction {
+private:
+    IRTYPE origin_type = IRTYPE::I32;
 public:
-    SITOFPInst(Value* _val, NameParam _name = "", _type _ty = FLOAT);
+    SITOFPInst(NameRef name, Value* origin_val);
 
     Value* getOVal();
-    _type getOType(); // ORIGINAL TYPE INT
-    _type getTType(); // TARGET TYPE FLOAT
+    IRTYPE getOType(); // ORIGINAL TYPE I32
+    IRTYPE getTType(); // TARGET TYPE FLOAT
 };
 
 }
+
+#endif
