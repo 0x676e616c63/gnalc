@@ -4,13 +4,11 @@
  */
 
 #pragma once
-#ifndef IR_CONSTANT_HPP
-#define IR_CONSTANT_HPP
+#ifndef GNALC_IR_CONSTANT_HPP
+#define GNALC_IR_CONSTANT_HPP
 #include "base.hpp"
 
 namespace IR {
-
-
 class ConstantInt : public Value {
 private:
     int val;

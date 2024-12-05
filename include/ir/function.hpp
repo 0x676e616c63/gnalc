@@ -1,6 +1,6 @@
 #pragma once
-#ifndef IR_FUNCTION_HPP
-#define IR_FUNCTION_HPP
+#ifndef GNALC_IR_FUNCTION_HPP
+#define GNALC_IR_FUNCTION_HPP
 
 #include "base.hpp"
 #include "basic_block.hpp"

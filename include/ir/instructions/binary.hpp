@@ -4,8 +4,8 @@
  */
 
 #pragma once
-#ifndef IR_INSTRUCTIONS_BINARY_HPP
-#define IR_INSTRUCTIONS_BINARY_HPP
+#ifndef GNALC_IR_INSTRUCTIONS_BINARY_HPP
+#define GNALC_IR_INSTRUCTIONS_BINARY_HPP
 
 #include "../instruction.hpp"
 
@@ -21,8 +21,8 @@ class BinaryInst : public Instruction {
 public:
     BinaryInst(NameRef name, OP opcode, Value* lhs, Value* rhs);
 
-    Value* GetLHS();
-    Value* GetRHS();
+    Value* GetLHS() const;
+    Value* GetRHS() const;
 };
 
 // OP = FNEG, type = f32
@@ -31,7 +31,7 @@ class FNEGInst : public Instruction {
 public:
     FNEGInst(NameRef name, Value* val);
 
-    Value* GetVal();
+    Value* GetVal() const;
 };
 
 }

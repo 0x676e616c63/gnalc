@@ -14,12 +14,11 @@
  */
 
 #pragma once
-#ifndef IR_BASE_HPP
-#define IR_BASE_HPP
+#ifndef GNALC_IR_BASE_HPP
+#define GNALC_IR_BASE_HPP
 
 #include <list>
 #include "type.hpp"
-
 
 namespace IR {
 
@@ -43,7 +42,7 @@ public:
     void delUseByUse(Use* use); // 根据Use删除所有匹配的use；由于Use归User所有，故理论上说通过User删除可以转换为通过Use删除
     void delUseByName(NameRef name); // 根据name删除所有匹配的use
 
-    ~Value();
+    virtual ~Value();
 };
 
 
@@ -66,7 +65,7 @@ public:
     void delOperandByValue(Value *v);
     void delOperandByName(NameRef name);
 
-    ~User();
+    ~User() override;
 };
 
 

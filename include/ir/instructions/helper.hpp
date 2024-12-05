@@ -3,8 +3,8 @@
  */
 
 #pragma once
-#ifndef IR_INSTRUCTIONS_HELPER_HPP
-#define IR_INSTRUCTIONS_HELPER_HPP
+#ifndef GNALC_IR_INSTRUCTIONS_HELPER_HPP
+#define GNALC_IR_INSTRUCTIONS_HELPER_HPP
 
 #include "../instruction.hpp"
 

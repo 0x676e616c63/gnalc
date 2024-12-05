@@ -4,8 +4,8 @@
  */
 
 #pragma once
-#ifndef IR_INSTRUCTION_HPP
-#define IR_INSTRUCTION_HPP
+#ifndef GNALC_IR_INSTRUCTION_HPP
+#define GNALC_IR_INSTRUCTION_HPP
 
 #include "base.hpp"
 #include "basic_block.hpp"

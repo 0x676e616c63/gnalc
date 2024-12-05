@@ -7,8 +7,8 @@
  */
 
 #pragma once
-#ifndef IR_INSTRUCTION_MEMORY_HPP
-#define IR_INSTRUCTION_MEMORY_HPP
+#ifndef GNALC_IR_INSTRUCTION_MEMORY_HPP
+#define GNALC_IR_INSTRUCTION_MEMORY_HPP
 
 #include "../instruction.hpp"
 

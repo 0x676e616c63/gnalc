@@ -3,7 +3,14 @@
  */
 
 #pragma once
+#ifndef GNALC_IR_BASIC_BLOCK_HPP
+#define GNALC_IR_BASIC_BLOCK_HPP
 
-class BasicBlock {
-public:
-};
+namespace IR
+{
+    class BasicBlock: public Value {
+    public:
+    };
+}
+
+#endif

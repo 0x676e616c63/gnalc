@@ -1,4 +1,4 @@
-#include "../../include/ir/module.h"
+#include "../../include/ir/module.hpp"
 
 namespace IR {
 void Module::addFunction(std::unique_ptr<Function> func) {

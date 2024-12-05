@@ -2,8 +2,8 @@
  * @todo may need symbol table
  */
 #pragma once
-#ifndef IR_MODULE_HPP
-#define IR_MODULE_HPP
+#ifndef GNALC_IR_MODULE_HPP
+#define GNALC_IR_MODULE_HPP
 
 #include <memory>
 #include "base.hpp"

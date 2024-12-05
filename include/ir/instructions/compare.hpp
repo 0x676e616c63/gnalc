@@ -4,8 +4,8 @@
  */
 
 #pragma once
-#ifndef IR_INSTRUCTIONS_COMPARE_HPP
-#define IR_INSTRUCTIONS_COMPARE_HPP
+#ifndef GNALC_IR_INSTRUCTIONS_COMPARE_HPP
+#define GNALC_IR_INSTRUCTIONS_COMPARE_HPP
 
 #include "../instruction.hpp"
 
@@ -36,9 +36,9 @@ private:
 public:
     ICMPInst(NameRef name, ICMPOP cond, Value* lhs, Value* rhs);
 
-    auto& GetLHS();
-    auto& GetRHS();
-    ICMPOP GetCond();
+    auto& GetLHS() const;
+    auto& GetRHS() const;
+    ICMPOP GetCond() const;
 };
 
 
@@ -77,9 +77,9 @@ private:
 public:
     FCMPInst(NameRef name, FCMPOP cond, Value* lhs, Value* rhs);
 
-    auto& GetLHS();
-    auto& GetRHS();
-    FCMPOP GetCond();
+    auto& GetLHS() const;
+    auto& GetRHS() const;
+    FCMPOP GetCond() const;
 };
 
 }

@@ -5,8 +5,8 @@
 
 
 #pragma once
-#ifndef IR_INSTRUCTIONS_CONVERSE_HPP
-#define IR_INSTRUCTIONS_CONVERSE_HPP
+#ifndef GNALC_IR_INSTRUCTIONS_CONVERSE_HPP
+#define GNALC_IR_INSTRUCTIONS_CONVERSE_HPP
 
 #include "../instruction.hpp"
 #include "../constant.hpp"
@@ -22,9 +22,9 @@ private:
 public:
     FPTOSIInst(NameRef name, Value* origin_val);
 
-    Value* getOVal();
-    IRTYPE getOType(); // ORIGINAL TYPE FLOAT
-    IRTYPE getTType(); // TARGET TYPE I32
+    Value* getOVal() const;
+    IRTYPE getOType() const; // ORIGINAL TYPE FLOAT
+    IRTYPE getTType() const; // TARGET TYPE I32
 };
 
 // <result> = sitofp <ty> <value> to <ty2>
@@ -34,9 +34,9 @@ private:
 public:
     SITOFPInst(NameRef name, Value* origin_val);
 
-    Value* getOVal();
-    IRTYPE getOType(); // ORIGINAL TYPE I32
-    IRTYPE getTType(); // TARGET TYPE FLOAT
+    Value* getOVal() const;
+    IRTYPE getOType() const; // ORIGINAL TYPE I32
+    IRTYPE getTType() const; // TARGET TYPE FLOAT
 };
 
 }

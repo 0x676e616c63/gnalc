@@ -1,5 +1,5 @@
-#include "../../include/ir/base.h"
-#include "../../include/ir/function.h"
+#include "../../include/ir/base.hpp"
+#include "../../include/ir/function.hpp"
 
 namespace IR {
     void Function::addParam(std::unique_ptr<Value> param) {

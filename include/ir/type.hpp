@@ -6,8 +6,8 @@
  */
 
 #pragma once
-#ifndef IR_TYPE_HPP
-#define IR_TYPE_HPP
+#ifndef GNALC_IR_TYPE_HPP
+#define GNALC_IR_TYPE_HPP
 
 #include <string>
 
@@ -35,7 +35,7 @@ using NameRef = const std::string&; // 赋值名字时改为str::string, 用move
  * @attention length若被赋值，其对应的类型必须为ARRAY
  */
 class TypeC {
-private:
+protected:
     IRTYPE ty = IRTYPE::UNDEFINED;
     // int length = -1; // only for array type
 public:

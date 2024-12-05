@@ -4,8 +4,8 @@
  */
 
 #pragma once
-#ifndef IR_INSTRUCTIONS_CONTROL_HPP
-#define IR_INSTRUCTIONS_CONTROL_HPP
+#ifndef GNALC_IR_INSTRUCTIONS_CONTROL_HPP
+#define GNALC_IR_INSTRUCTIONS_CONTROL_HPP
 
 #include "../instruction.hpp"
 #include "../function.hpp"
@@ -16,12 +16,14 @@ namespace IR {
 // ret <type> <value>       ; Return a value from a non-void function
 // ret void                 ; Return from void function
 class RETInst : public Instruction {
+    private:
+    IRTYPE ret_type;
 public:
     RETInst(); // for void
-    RETInst(IRTYPE ty, Value* ret_val);
+    RETInst(Value* ret_val);
 
-    bool isVoid();
-    Value* getRetVal();
+    bool isVoid() const;
+    Value* getRetVal() const;
 };
 
 
@@ -38,14 +40,14 @@ private:
     // std::vector<Value*> bbparams; // 基本块参数
 
 public:
-    BRInst(BasicBlock* _dest);
+    explicit BRInst(BasicBlock* _dest);
     BRInst(Value* cond, BasicBlock* _true_dest, BasicBlock* _false_dest);
 
-    bool isConditional();
-    Value* getCond();
-    BasicBlock* getDest();
-    BasicBlock* getTrueDest();
-    BasicBlock* getFalseDest();
+    bool isConditional() const;
+    Value* getCond() const;
+    BasicBlock* getDest() const;
+    BasicBlock* getTrueDest() const;
+    BasicBlock* getFalseDest() const;
 
     // void setBBParams(std::initializer_list<Value*> _bbparams);
     // void setBBparams(std::vector<Value*>& _bbparams);
@@ -57,17 +59,16 @@ public:
 // 
 // %retval = call i32 @test(i32 %argc)
 class CALLInst : public Instruction {
-    bool isvoid = false;
 public:
     // func, args储存到operands中
-    CALLInst(IRTYPE ty, Function* func, std::initializer_list<Value*> args); // for void (或不保存返回值？不知道LLVM IR支持不支持)
-    CALLInst(NameRef name, IRTYPE ty, Function* func, std::initializer_list<Value*> args);
+    CALLInst(Function* func, const std::list<Value*>& args); // for void
+    CALLInst(NameRef name, IRTYPE ty, Function* func, const std::list<Value*>& args);
 
-    bool isVoid();
+    bool isVoid() const;
     // bool isNoName();
-    std::string getFuncName();
-    Function* getFunc(); // Value*转换为Function*
-    std::vector<Value*>& getArgs();
+    std::string getFuncName() const;
+    Function* getFunc() const; // Value*转换为Function*
+    std::vector<Value*> getArgs() const;
 };
 
 }
