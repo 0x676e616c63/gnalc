@@ -82,7 +82,7 @@ namespace IR
 
     bool CALLInst::isVoid() const
     {
-        return ty == IRTYPE::UNDEFINED;
+        return ty == IRTYPE::VOID;
     }
 
     std::string CALLInst::getFuncName() const
