@@ -36,8 +36,8 @@ private:
 public:
     ICMPInst(NameRef name, ICMPOP cond, Value* lhs, Value* rhs);
 
-    auto& GetLHS() const;
-    auto& GetRHS() const;
+    Value* GetLHS() const;
+    Value* GetRHS() const;
     ICMPOP GetCond() const;
 };
 
@@ -77,8 +77,8 @@ private:
 public:
     FCMPInst(NameRef name, FCMPOP cond, Value* lhs, Value* rhs);
 
-    auto& GetLHS() const;
-    auto& GetRHS() const;
+    Value* GetLHS() const;
+    Value* GetRHS() const;
     FCMPOP GetCond() const;
 };
 
