@@ -6,11 +6,15 @@ namespace IR
 {
     ALLOCAInst::ALLOCAInst(NameRef name, IRTYPE btype, int _align)
         : Instruction(OP::ALLOCA, name, IRTYPE::PTR),
-            basetype(btype), align(_align), is_array(false) {}
+            basetype(btype), align(_align), is_array(false), is_static(true) {}
+
+    ALLOCAInst::ALLOCAInst(NameRef name, IRTYPE btype, const std::vector<int>& _array_size, int _align)
+        : Instruction(OP::ALLOCA, name, IRTYPE::PTR),
+            basetype(btype), align(_align), is_array(true), is_static(true), array_size(_array_size) {}
 
     ALLOCAInst::ALLOCAInst(NameRef name, IRTYPE btype, Value* num_elements, int _align)
         : Instruction(OP::ALLOCA, name, IRTYPE::PTR),
-            basetype(btype), align(_align), is_array(true)
+            basetype(btype), align(_align), is_array(true), is_static(false)
     {
         operands = { Use{num_elements, this} };
     }
@@ -79,10 +83,12 @@ namespace IR
         return align;
     }
 
-    GEPInst::GEPInst(NameRef name, IRTYPE btype, Value* _ptr, Value* idx)
+    GEPInst::GEPInst(NameRef name, IRTYPE btype, Value* _ptr, const std::list<Value*>& idxs)
         : Instruction(OP::GEP, name, IRTYPE::PTR), basetype(btype)
     {
-        operands = {Use{_ptr, this}, Use{idx, this}};
+        operands = {Use{_ptr, this}};
+        for (auto idx : idxs)
+            operands.emplace_back(Use{idx, this});
     }
 
     Value* GEPInst::getPtr() const
@@ -90,8 +96,11 @@ namespace IR
         return operands.begin()->getValue();
     }
 
-    Value* GEPInst::getIdx() const
+    std::vector<Value*> GEPInst::getIdxs() const
     {
-        return std::next(operands.begin())->getValue();
+        std::vector<Value*> ret;
+        for (auto it = std::next(operands.begin()); it != operands.end(); ++it)
+            ret.emplace_back(it->getValue());
+        return ret;
     }
 }
