@@ -26,7 +26,7 @@ class ALLOCAInst : public Instruction {
 private:
     IRTYPE basetype;
     bool is_static = true;
-    std::vector<int> array_size; // 只有静态分配的情况会用到，[3 x [4 x i32]] 就是 {3, 4} 和语言中的数组大小顺序一致
+    std::vector<int> static_array_size; // 只有静态分配的情况会用到，[3 x [4 x i32]] 就是 {3, 4} 和语言中的数组大小顺序一致
     bool is_array = false;
     int align = 4;
 public:
@@ -35,6 +35,8 @@ public:
     ALLOCAInst(NameRef name, IRTYPE btype, Value* num_elements, int _align = 4); // FOR DYNAMIC ARRAY ALLOCATION
 
     IRTYPE getBaseType() const;
+    bool isStatic() const;
+    std::vector<int> getStaticArraySize() const;
     bool isArray() const;
     Value* getNumElements() const; // 修改使用 User基类 的方法
     int getAlign() const;

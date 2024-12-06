@@ -10,7 +10,7 @@ namespace IR
 
     ALLOCAInst::ALLOCAInst(NameRef name, IRTYPE btype, const std::vector<int>& _array_size, int _align)
         : Instruction(OP::ALLOCA, name, IRTYPE::PTR),
-            basetype(btype), align(_align), is_array(true), is_static(true), array_size(_array_size) {}
+            basetype(btype), align(_align), is_array(true), is_static(true), static_array_size(_array_size) {}
 
     ALLOCAInst::ALLOCAInst(NameRef name, IRTYPE btype, Value* num_elements, int _align)
         : Instruction(OP::ALLOCA, name, IRTYPE::PTR),
@@ -22,6 +22,16 @@ namespace IR
     int ALLOCAInst::getAlign() const
     {
         return align;
+    }
+
+    bool ALLOCAInst::isStatic() const
+    {
+        return is_static;
+    }
+
+    std::vector<int> ALLOCAInst::getStaticArraySize() const
+    {
+        return static_array_size;
     }
 
     bool ALLOCAInst::isArray() const
