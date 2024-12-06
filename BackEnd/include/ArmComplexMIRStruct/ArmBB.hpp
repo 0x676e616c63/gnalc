@@ -16,9 +16,9 @@ class ArmStruct::Terminator{
     public:
         Terminator();
         ~Terminator()=default;
-        Instruction *branchInst = nullptr;
-        BB* trueBlock = nullptr;
-        BB* falseBlock = nullptr;
+        Instruction &branchInst;
+        BB& trueBlock;
+        BB& falseBlock;
         bool isImplicity = false; // 是否隐式出现
         void RotateCondition(); // to set condition for branchInst
         void MkFallThrough(); // to set isImplicity as true
@@ -32,9 +32,8 @@ class ArmStruct::BB{
         std::string& toString();
 
         Terminator& Terminator;
-        // std::unique_ptr<BB> nextBB = nullptr; // 描述的是汇编代码上的空间排列顺序
         std::string label;
-        std::list<std::reference_wrapper<Instruction>> InstList;
+        std::list<Instruction*> InstList;
         std::unordered_set<std::reference_wrapper<Operand>, ArmTools::HashOperandReferWrap, ArmTools::HashOperandReferWrapEqual> LiveOut;
     private:
 };

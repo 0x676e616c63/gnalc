@@ -23,10 +23,10 @@ class Instruction{
 
         /// @brief Def集一般只有一个元素, 但是不排除SIMD指令, 所以先放个表
         /// @brief Use集可能一个或是两个
-        std::vector<std::reference_wrapper<Operand&>> DefOperandList;
-        std::vector<std::reference_wrapper<Operand&>> UseOperandList;
+        std::vector<std::reference_wrapper<Operand>> DefOperandList;
+        std::vector<std::reference_wrapper<Operand>> UseOperandList;
         
-        std::unique_ptr<Imm> attach; // 当无法找到Def集或者Use集中的内容时, 启用attach
+        Imm* attach; // 当无法找到Def集或者Use集中的内容时, 启用attach
                     // attach可能是立即数, 或者一个label(用于branch指令)
         
         /// @brief 用于反向查找
@@ -36,11 +36,13 @@ class Instruction{
 };
 
 class MemInstruction : public Instruction{
+    ///@note 局部变量, callee寄存器保护指令, 变量溢出,
+    ///@note 不算push和pop
     public:
         MemInstruction();
         ~MemInstruction()=default;
 
-        std::unique_ptr<MMptr> MMptr;
+        MMptr* MMptr;
 };
 
 };

@@ -1,8 +1,8 @@
 #include <vector>
 #include "../../../include/ir/module.hpp"
+#include "../../include/ArmComplexMIRStruct/ArmBB.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmFunction.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmModule.hpp"
-#include "../../include/ArmComplexMIRStruct/ArmGlobal.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmOperand.hpp"
 #include "../../Arm.hpp"
 
@@ -13,25 +13,25 @@ Module::Module(IR::Module midEnd_Module){
 
 }
 
-void Module::AddFunction(std::unique_ptr<Function> func){
+void Module::AddFunction(Function* func){
     this->FunctionList.push_back(func);
 }
 
-void Module::AddDataVar(std::unique_ptr<Global> data){
+void Module::AddDataVar(Global* data){
     this->dataSection.push_back(data);
 }
 
-void Module::AddBssVar(std::unique_ptr<Bss> bss){
+void Module::AddBssVar(Bss* bss){
     this->bssSection.push_back(bss);
 }
 
-void Module::AddEquDef(std::unique_ptr<Global> equ){
+void Module::AddEquDef(Global* equ){
     this->equSection.push_back(equ);
 }
 
 std::string& Module::toString(){
     std::unique_ptr<std::string> Asm = std::make_unique<std::string>();
-    std::string str = *Asm;
+    std::string& str = *Asm;
     str += arch;
     /// @note .data
     if(!dataSection.empty()){

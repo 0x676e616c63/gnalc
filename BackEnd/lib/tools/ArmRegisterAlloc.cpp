@@ -78,12 +78,12 @@ void RegisterAlloc::AddEdge(Operand &u, Operand &v){
 }
 void RegisterAlloc::BuildGraph(){
         for(auto it = curFunc.BBList.begin(); it != curFunc.BBList.end(); ++it){
-        BB BasicBlock = it->get();
+        BB& BasicBlock = **it;
         OperRefHash Live;
         /// @todo isPreColored = false时, 在coloredNodes中加入预着色结点
         Live = BasicBlock.LiveOut;
         for(auto it = BasicBlock.InstList.rbegin(); it != BasicBlock.InstList.rend(); ++it){
-                Instruction& curInst = static_cast<Instruction&>(*it);
+                Instruction& curInst = static_cast<Instruction&>(**it);
             /// @note 这里是广义的MoveInst
             if(isMoveInst(curInst)){
                 /// @note live := live\use(I); forall
@@ -376,15 +376,15 @@ void RegisterAlloc::ReWriteProgram(){
             BB& BasicBlock = inst.BasicBlock;
             /// @note 因为不能std::referance_wrap<>重载操作符, 所以只能手动查找
             for(auto inst_it = BasicBlock.InstList.begin(); inst_it != BasicBlock.InstList.end(); ++inst_it){
-                Instruction& targetInst = (*inst_it).get();
+                Instruction& targetInst = **inst_it;
                 if(targetInst == inst){
                     if(flag){
                         std::unique_ptr<Instruction> store_inst = std::make_unique<Instruction>(targetInst, OperCode::STR, ++curFunc.InstCnt);
-                        BasicBlock.InstList.insert(++inst_it, std::ref(*store_inst)); // 
+                        BasicBlock.InstList.insert(++inst_it, store_inst.get()); // 
                     }
                     else{
                         std::unique_ptr<Instruction> load_inst = std::make_unique<Instruction>(targetInst, OperCode::LDR, ++curFunc.InstCnt);
-                        BasicBlock.InstList.insert(inst_it, std::ref(*load_inst)); // 
+                        BasicBlock.InstList.insert(inst_it, load_inst.get()); // 
                     }
                     break;
                 }

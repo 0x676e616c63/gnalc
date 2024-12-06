@@ -1,6 +1,6 @@
 {
     "C_Cpp.errorSquiggles": "enabled",
-    // "C_Cpp.codeAnalysis.clangTidy.enabled": true,
+    "C_Cpp.codeAnalysis.clangTidy.enabled": true,
     "cmake.ignoreCMakeListsMissing": true,
     "files.associations": {
         "vector": "cpp",
@@ -54,6 +54,8 @@
         "cinttypes": "cpp"
     },
     "C_Cpp.codeAnalysis.clangTidy.checks.disabled": [
+        "clang-diagnostic-error",
+        "clang-diagnostic-error",
         "clang-diagnostic-error"
     ]
 }

@@ -53,7 +53,8 @@ class ArmStruct::MMptr : public ArmStruct::Imm{
         MMptr();
         ~MMptr()=default;
         /// @note data 在下面的方法中创建通过FrameObj创建, 先不初始化
-        FrameObj& space;
+        OperandType ptrType;
+        FrameObj* space = nullptr;
         unsigned int VirReg;    // 有虚拟寄存器, 但是不参与寄存器分配
         std::string& toString() final;
 };

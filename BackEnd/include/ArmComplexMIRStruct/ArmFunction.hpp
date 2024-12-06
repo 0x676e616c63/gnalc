@@ -16,7 +16,7 @@
 
 class ArmStruct::FrameObj{
     public:
-        FrameObj(Operand&, Imm&);
+        FrameObj(MMptr&);
         // FrameObj(); // 用于加载非栈上的地址, 需要手动选定基址寄存器
 
         ~FrameObj()=default;
@@ -37,11 +37,12 @@ class ArmStruct::SubFrame{
         unsigned int sizeTotal;
         // 相对寻址应该不会是FPU寄存器
         ArmTools::CoreRegisterName baseReg = ArmTools::CoreRegisterName::r7;
-        std::list<std::unique_ptr<FrameObj>> ObjList;
+        std::list<FrameObj*> ObjList;
 
-        SubFrame& operator=(ArmStruct::SubFrame&);
-        void addFrameObj(ArmStruct::Operand&, ArmStruct::Imm&);
+        // SubFrame& operator=(ArmStruct::SubFrame&);
+        void addFrameObj(ArmStruct::MMptr&);
         // void bindOnFrameObj(ArmStruct::MMptr&);
+        bool findFrameObj(ArmStruct::MMptr&);
 
 };
 class ArmStruct::Function{
@@ -65,12 +66,14 @@ class ArmStruct::Function{
         
         std::string& toString();
         
-        std::list<std::reference_wrapper<ArmStruct::BB>> BBList;
+        std::list<BB*> BBList;
         
+        std::map<unsigned int, std::unique_ptr<Operand>> VirRegOperandMap; // 当前函数中虚拟寄存器的映射, 同时也是存放指针的空间
+
         unsigned int InstCnt = 0;
         std::string Identifier;
     private:
-        std::unordered_set<std::reference_wrapper<ArmStruct::FrameObj>&, ArmTools::HashFrameObj, ArmTools::HashFrameObjEqual> free_chunk;
+        // std::unordered_set<std::reference_wrapper<ArmStruct::FrameObj>&, ArmTools::HashFrameObj, ArmTools::HashFrameObjEqual> free_chunk;
         SubFrame local;
         SubFrame temp;
         SubFrame params;

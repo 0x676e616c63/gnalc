@@ -47,7 +47,7 @@ class RegisterAlloc{
         ArmStruct::Operand& GetAlias(ArmStruct::Operand&);
         void AddWorkList(ArmStruct::Operand&);
         bool OK(ArmStruct::Operand&, ArmStruct::Operand&);
-        bool Conservative(OperRefHash&); // 合并时使用的启发式算法, 计算合并之后的邻接数
+        bool Conservative(OperRefHash&);
         void Combine(ArmStruct::Operand&, ArmStruct::Operand&);
         void FreezeMoves(ArmStruct::Operand&);
 

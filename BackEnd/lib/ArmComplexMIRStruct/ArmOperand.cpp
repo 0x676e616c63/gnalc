@@ -69,4 +69,5 @@ std::string& MMptr::toString() {
 std::string& Global::toString(){
     this->data += '=';
     this->data += GlobalId;
+    return data;
 }
