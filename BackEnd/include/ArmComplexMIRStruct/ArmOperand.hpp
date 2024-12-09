@@ -32,7 +32,8 @@ class ArmStruct::Operand{
         unsigned int VirReg;
         unsigned int color = -1;
         unsigned int adjDegree = 0;
-
+    private:
+        std::string str;
 };
 
 /// @note Imm是立即数或者是一个Label
@@ -46,6 +47,7 @@ class ArmStruct::Imm{
         OperandType data_type;
         std::string data; // data or label 在创建对象时处理
         virtual std::string& toString();
+
 };
 class ArmStruct::MMptr : public ArmStruct::Imm{
     ///@note 关键在于能反向查找到对应的FrameObj, 同时能够被FrameObj寻址

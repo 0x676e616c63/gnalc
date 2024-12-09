@@ -26,7 +26,7 @@ class ArmStruct::Terminator{
 
 class ArmStruct::BB{
     public:
-        BB();
+        BB(IR::BasicBlock&);
         ~BB()=default;
         
         std::string& toString();

@@ -13,6 +13,7 @@ using namespace ArmTools;
 
 // }
 
+/// @brief reWrite Programme
 Instruction::Instruction(Instruction& inst, OperCode type, unsigned int cnt): BasicBlock(inst.BasicBlock), DefOperandList(), UseOperandList()
 {
     this->id = cnt;
@@ -24,7 +25,8 @@ Instruction::Instruction(Instruction& inst, OperCode type, unsigned int cnt): Ba
         DefOperandList.push_back(inst.UseOperandList[0]);
     }
     /// @note 
-    this->attach = std::make_unique<MMptr>();
+    this->attach = new MMptr();
+    
 }
 
 bool Instruction::operator==(Instruction& inst) const{

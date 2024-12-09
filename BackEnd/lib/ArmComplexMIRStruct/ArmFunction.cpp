@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cassert>
 #include "../../Arm.hpp"
+#include "../../../include/ir/function.hpp"
 #include "../../include/tools/ArmTools.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmOperand.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmBB.hpp"
@@ -14,6 +15,23 @@ using FrameObjRefHash = std::unordered_set<std::reference_wrapper<ArmStruct::Fra
 using FrameObjRefHashPtr = std::unique_ptr<std::unordered_set<std::reference_wrapper<ArmStruct::FrameObj>&, ArmTools::HashFrameObj, ArmTools::HashFrameObjEqual>>;
 ///@todo 差构造函数
 
+Function::Function(IR::Function& midEnd_function){
+    
+    this->Identifier = midEnd_function.getName();
+
+    ///@brief fill VirMap
+    auto& bbs = midEnd_function.getBlocks();
+    for(auto bb_it = bbs.begin(); bb_it != bbs.end(); ++bb_it){
+        auto &BasicBlock = **bb_it;
+
+        ///@todo 
+        auto &insts = BasicBlock.getUseList();
+    
+    }
+
+    // this->mkframeinit // after phi elimination
+
+}
 
 FrameObj::FrameObj(MMptr& oper): vitualReg(oper.VirReg){
     // oper : defed ptr
@@ -37,16 +55,16 @@ bool Function::isStackInst(Instruction& inst){
 }
 
 void SubFrame::addFrameObj(MMptr& ptr){
-    std::unique_ptr<FrameObj> newLocal = std::make_unique<FrameObj>(ptr);
+    FrameObj* newLocal = new FrameObj(ptr);
     
-    ObjList.push_back(newLocal.get());
+    ObjList.push_back(newLocal);
     
     newLocal->offset = this->offset;
     sizeTotal += newLocal->val_size;
     
     ///@note 双向绑定
     newLocal->vitualReg = ptr.VirReg;
-    ptr.space = newLocal.get();
+    ptr.space = newLocal;
 }
 
 bool SubFrame::findFrameObj(MMptr& ptr){
@@ -97,9 +115,6 @@ void Function::TerminatorPredict(){
 }
 
 std::string& Function::toString(){
-    std::unique_ptr<std::string> func = std::make_unique<std::string>();
-    std::string& str = *func;
-    
     for(auto it = BBList.begin(); it != BBList.end(); ++it){
         auto BasicBlock = **it;
         str += BasicBlock.toString() + ':' + '\n'; // BB的label

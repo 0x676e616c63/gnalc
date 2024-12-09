@@ -9,8 +9,34 @@
 using namespace ArmStruct;
 using namespace ArmTools;
 
-Module::Module(IR::Module midEnd_Module){
+Module::Module(IR::Module& midEnd_Module){
+    this->ModuleName = midEnd_Module.getName(); // pass by val
 
+    ///@todo get .bss and get .data and get .equ
+    ///@todo needed symbolTable
+
+    ///@brief get func
+    auto& funcs = midEnd_Module.getFunctions();
+
+    for(auto func_it = funcs.begin(); func_it != funcs.end(); ++func_it){
+        auto& func = **func_it;
+        Function* newFunc = new Function(func);
+        this->AddFunction(newFunc);
+        
+        
+    }
+}
+
+void Module::Legalize(){
+
+    /// @todo 
+
+    for(auto func_it = this->FunctionList.begin(); func_it != FunctionList.end(); ++func_it){
+        auto& func = **func_it;
+        
+
+        
+    }
 }
 
 void Module::AddFunction(Function* func){

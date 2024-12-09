@@ -43,8 +43,6 @@ bool Operand::operator!=(Operand& oper){
 }
 
 std::string& Operand::toString(){
-    std::unique_ptr<std::string> reg = std::make_unique<std::string>();
-    std::string& str = *reg;
     // 先这么写
     if(this->ValType == OperandType::INT){
         str += CoreRegisterMap[(CoreRegisterName)this->color];

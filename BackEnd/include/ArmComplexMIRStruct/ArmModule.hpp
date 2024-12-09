@@ -8,15 +8,19 @@
 
 class ArmStruct::Module{
     public:
-        std::string ModuleName;
-        Module(IR::Module);
-        ~Module() = default;
+        Module(IR::Module&);       // IR -> MIR
+        ~Module(); // 记得手动释放
         void AddFunction(Function*);
         void AddDataVar(Global*);
         void AddBssVar(Bss*);
         void AddEquDef(Global*);
-        std::string& toString();
+        
+        void Legalize(); // MIR -> close arm asm
+
+        std::string& toString(); // MIR -> asm string
+
     private:
+        std::string ModuleName;
         std::string include = "";   // 可能会结合调试使用
         std::string arch = ".arch armv7ve\n.fpu vfpv3-d16";
         

@@ -1,6 +1,6 @@
 {
     "C_Cpp.errorSquiggles": "enabled",
-    "C_Cpp.codeAnalysis.clangTidy.enabled": true,
+    // "C_Cpp.codeAnalysis.clangTidy.enabled": true,
     "cmake.ignoreCMakeListsMissing": true,
     "files.associations": {
         "vector": "cpp",

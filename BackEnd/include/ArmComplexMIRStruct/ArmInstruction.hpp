@@ -33,6 +33,8 @@ class Instruction{
         BB &BasicBlock;
         bool operator==(Instruction&) const;
         virtual std::string &toString();
+    private:
+        std::string str;
 };
 
 class MemInstruction : public Instruction{

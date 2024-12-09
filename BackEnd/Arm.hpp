@@ -52,8 +52,9 @@ namespace ArmTools{
     bool isImmCanBeEncodedInText(float Imm);
     bool isVLoadStoreOffsetLegal(int offset);
     class RegisterAlloc;    // 寄存器分配
-    class LowerMIR2ASM;       // 打印
-    class LowerIR2MIR;    // 生成instruction
+
+
+
     ///@warning ISO C++ forbids forward references to 'enum' types
     // enum CoreRegisterName;
     // std::map<CoreRegisterName, std::string> CoreRegisterMap;

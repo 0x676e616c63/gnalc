@@ -19,7 +19,7 @@ class ArmStruct::FrameObj{
         FrameObj(MMptr&);
         // FrameObj(); // 用于加载非栈上的地址, 需要手动选定基址寄存器
 
-        ~FrameObj()=default;
+        ~FrameObj();
         
         int offset; // in the subframe
         ArmTools::CoreRegisterName baseReg = ArmTools::CoreRegisterName::sp;
@@ -32,7 +32,7 @@ class ArmStruct::FrameObj{
 class ArmStruct::SubFrame{
     public:
         SubFrame();
-        ~SubFrame()=default;
+        ~SubFrame();
         unsigned int offset = 4; // 即 r7 + 4 的位置, 因为需要返回值
         unsigned int sizeTotal;
         // 相对寻址应该不会是FPU寄存器
@@ -47,8 +47,8 @@ class ArmStruct::SubFrame{
 };
 class ArmStruct::Function{
     public:
-        Function(IR::Function); // waiting...
-        ~Function()=default;
+        Function(IR::Function&); // waiting...
+        ~Function();
         bool isStackInst(Instruction&); // stack分配相关的指令
         
         ///@note 在寄存器分配之前存在, 由于虚拟寄存器无限, 栈空间只会被local使用, 也就是处理alloca指令, 由于alloca指令都在func的最前端, 并且带初始化, 所以其实很难去回收空间
@@ -68,15 +68,18 @@ class ArmStruct::Function{
         
         std::list<BB*> BBList;
         
-        std::map<unsigned int, std::unique_ptr<Operand>> VirRegOperandMap; // 当前函数中虚拟寄存器的映射, 同时也是存放指针的空间
+        std::map<unsigned int, Operand*> VirRegOperandMap; // 当前函数中虚拟寄存器的映射, 同时也是存放指针的空间
 
         unsigned int InstCnt = 0;
         std::string Identifier;
+    
     private:
         // std::unordered_set<std::reference_wrapper<ArmStruct::FrameObj>&, ArmTools::HashFrameObj, ArmTools::HashFrameObjEqual> free_chunk;
         SubFrame local;
         SubFrame temp;
         SubFrame params;
+        std::string str;
+
 };
 
 #endif
