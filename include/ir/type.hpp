@@ -1,48 +1,67 @@
 /**
- * @brief 包含通用的Type, Name类
+ * @brief 包含通用的TypeC, NameC类
+ * @attention 只做了一些类型，其他类型尚未考虑
+ * 
+ * @note 删除掉了array类型，原因是目前似乎只有alloca能用到，以及[2 x [2 x i32]]这种实现复杂，后续看有无需求
  */
 
+#pragma once
 #ifndef GNALC_IR_TYPE_HPP
 #define GNALC_IR_TYPE_HPP
-#pragma once
+
 #include <string>
 
 namespace IR {
+// enum _type { INT, FLOAT, VOID, UNDEFINED };
 
-    enum class _type { INT, FLOAT, VOID, UNEXPECTED };
+/**
+ * @todo 考虑BOOL, VECTOR? PTRARRAY?
+ */
+enum class IRTYPE {
+    I32,
+    FLOAT,
+    VOID,
+    PTR,
+    // I32ARRAY,
+    // FLOATARRAY,
+    UNDEFINED
+};
 
-    using NameParam = std::string;
+using NameRef = const std::string&; // 赋值名字时改为str::string, 用move传值；引用名字时使用该类型别名
 
-    /**
-     * @todo 使用模板？
-     */
-    class Type {
-        _type tp;
 
-    public:
-        Type() : tp(_type::UNEXPECTED) {}
-        explicit Type(const _type t) : tp(t) {}
+/**
+ * @brief C是class的意思，以便区分，添加了array类型以解决[2 x i32]的问题
+ * @attention length若被赋值，其对应的类型必须为ARRAY
+ */
+class TypeC {
+protected:
+    IRTYPE ty = IRTYPE::UNDEFINED;
+    // int length = -1; // only for array type
+public:
+    TypeC() = default;
+    TypeC(IRTYPE _ty) : ty(_ty) {}
+    // TypeC(int _length, IRTYPE _ty) : length(_length), ty(_ty) {} // for [2 x i32]
 
-        void setType(const _type t) { tp = t; }
-        bool isVoid() const { return tp == _type::VOID; }
-        bool isFloat() const { return tp == _type::FLOAT; }
-        bool isInt() const { return tp == _type::INT; }
-        _type getType() const { return tp; }
-    };
+    void setType(IRTYPE _ty) { ty = _ty; }
+    // void setType(int _length, IRTYPE _ty) { length = _length; ty = _ty; }
+    // bool isArray() const { return length!=-1; }
+    IRTYPE getType() const { return ty; }
+    // int getLength() const { return length; }
+};
 
-    class Name {
-    private:
-        std::string _name;
+// move传值
+class NameC {
+private:
+    std::string name;
+public:
+    NameC() = default;
+    NameC(std::string _name) : name(_name) {}
 
-    public:
-        Name() = default;
-
-        explicit Name(NameParam name) : _name(std::move(name)) {}
-
-        void setName(NameParam name) { _name = std::move(name); }
-        bool isName(const NameParam& name) const { return _name == name; }
-        std::string getName() { return _name; }
-    };
+    void setName(std::string _name) { name = _name; }
+    bool isName(NameRef _name) { return _name==name; }
+    std::string getName() const { return name; }
+};
 }
 
 #endif

@@ -7,30 +7,25 @@
 
 
 namespace IR {
-    const std::vector<Use *> &Value::getUseList() const {
-        return use_list;
-    }
+
+std::list<Use*>& Value::getUseList() {
+    return use_list;
+}
 
     void Value::addUse(Use *use) {
         use_list.push_back(use);
     }
 
-    /**
-     * @todo null, not found process
-     * @todo optimize (can use "erase" cpp20 feature)
-     * @attention no repeat delete
-     */
-    void Value::delUse(Use *use) {
-        if (use == nullptr) {
-            return;
-        }
-        for (auto u = use_list.begin(); u != use_list.end(); ++u) {
-            if (*u == use) {
-                use_list.erase(u);
-                return;
-            }
-        }
+/**
+ * @todo null, not found process
+ * @attention no repeat delete
+ */
+void Value::delUse(Use* use) {
+    if (use == nullptr) {
+        return;
     }
+    use_list.remove(use);
+}
 
 
     void User::addOperand(Value *v) {

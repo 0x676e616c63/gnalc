@@ -1,83 +1,92 @@
 /**
  * @file base.hpp
  * @brief IR base class: Value User Use...
- * @todo use std::list?
+ * 
+ * @attention 指针问题
  */
 
+/**
+ * 目前的继承结构：
+ * Value -> User -> Instruction
+ *   |---> GlobalVariable
+ *   |--> BasicBlock
+ *   |--> Function
+ */
+
+#pragma once
 #ifndef GNALC_IR_BASE_HPP
 #define GNALC_IR_BASE_HPP
-#pragma once
-#include <vector>
+
+#include <list>
 #include "type.hpp"
 
-
 namespace IR {
-    class Use;
-    /**
-     * @todo replace function
-     */
-    class Value : public Type, public Name {
-    protected:
-        std::vector<Use *> use_list;
 
-    public:
-        Value() = default;
-        explicit Value(_type type, NameParam name = "") : Type(type), Name(std::move(name)) {}
+class Value;
+class User;
+class Use;
 
-        const std::vector<Use *> &getUseList() const;
+/**
+ * @todo replace use function
+ */
+class Value : public TypeC, public NameC {
+protected:
+    std::list<Use*> use_list; // Use隶属于User, 故暂时使用普通指针
 
-        void addUse(Use *use);
+public:
+    Value() = default;
+    Value(std::string _name, IRTYPE _type, int length = -1);
 
-        void delUse(Use *use);
+    void addUse(Use* use);
+    std::list<Use*>& getUseList() const;
+    void delUseByUse(Use* use); // 根据Use删除所有匹配的use；由于Use归User所有，故理论上说通过User删除可以转换为通过Use删除
+    void delUseByName(NameRef name); // 根据name删除所有匹配的use
 
-        virtual ~Value();
-    };
-
-
-    /**
-     * @todo find, set by value, del function
-     * @todo use "use" pointer?
-     */
-    class User : public Value {
-    protected:
-        std::vector<Use> operands; // 操作数
-
-    public:
-        explicit User(_type type, NameParam name = "") : Value(type, std::move(name)) { }
-
-        void addOperand(Value *v);
-
-        void setOperand(unsigned i, Value *v);
-
-        Value *getOperand(unsigned i) const;
-
-        unsigned getNumOperands() const;
-
-        ~User() override;
-    };
+    virtual ~Value();
+};
 
 
-    /**
-     * @todo no empty warning
-     */
-    class Use {
-    private:
-        Value *val; // 指向被使用的 Value
-        User *user; // 指向所属的 User
+/**
+ * @brief User是Use的所有者，User的Operands由Use中的val来保存
+ * 
+ * @todo find, set by value, del function
+ * @todo use "use" pointer? 目前不用，因为USE隶属于USER
+ */
+class User : public Value {
+protected:
+    std::list<Use> operands; // 操作数实际是Use中的val
 
-    public:
-        Use(Value *v, User *u);
+public:
+    User() = default;
+    User(std::string _name, IRTYPE _type, int length = -1);
 
-        void setValue(Value *v);
+    void addOperand(Value *v); // 构造一个use
+    std::list<Use>& getOperands() const;
+    void delOperandByValue(Value *v);
+    void delOperandByName(NameRef name);
 
-        void setUser(User *u);
+    ~User() override;
+};
 
-        Value *getValue() const;
 
-        User *getUser() const;
+/**
+ * @todo no empty warning
+ */
+class Use {
+private:
+    Value *val;   // 指向被使用的 Value
+    User *user;   // 指向所属的 User
 
-        ~Use();
-    };
+public:
+    Use(Value *v, User *u);
+
+    void setValue(Value *v);
+    void setUser(User *u);
+    Value* getValue() const;
+    User* getUser() const;
+
+    ~Use();
+};
 }
 
 #endif

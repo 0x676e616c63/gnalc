@@ -1,86 +1,44 @@
 /**
  * @todo may need symbol table
  */
-#ifndef GNALC_IR_MODULE_HPP
 #pragma once
+#ifndef GNALC_IR_MODULE_HPP
+#define GNALC_IR_MODULE_HPP
 
-#include <list>
-#include <stack>
-#include <map>
-#include <string>
 #include <memory>
-#include "../utils/exception.hpp"
 #include "base.hpp"
 #include "function.hpp"
 #include "global_var.hpp"
 
+
 namespace IR {
 
-class SymbolTable {
-    std::vector<std::map<std::string, std::vector<Value*>>> table;
-    // Scope { name, {value or overloaded functions}}
-    // The most recent name is in the last one.
-
-public:
-    SymbolTable() = default;
-    void initScope() {
-        table.emplace_back();
-    }
-
-    void finishScope() {
-        table.pop_back();
-    }
-
-    void insert(const std::string &name, Value* value) {
-        table.back()[name].emplace_back(value);
-    }
-
-    Value* lookup(const std::string& name) const {
-        for(auto scope = table.rbegin(); scope != table.rend(); ++scope) {
-            if(auto it = scope->find(name); it != scope->end()) {
-                Err::assert(!it->second.empty());
-                return it->second.back();
-            }
-        }
-        return nullptr;
-    }
-};
-
-class Module : public Name {
+/**
+ * @brief 此处默认无需考虑全局变量与函数之间的相对位置
+ * 
+ * @todo 更改容器类型！
+ */
+class Module : public NameC {
 private:
-    std::vector<std::unique_ptr<Function> > funcs;
-    std::vector<std::unique_ptr<GlobalVariable> > global_vars;
-    SymbolTable symbol_table;
+    std::vector<std::unique_ptr<GlobalVariable>> global_vars;
+    std::vector<std::unique_ptr<Function>> funcs;
+
 public:
     Module() = default;
-
-    explicit Module(NameParam name) : Name(std::move(name)) { }
-
-    void addFunction(std::unique_ptr<Function> func);
-
-    Function *getFunction(const NameParam& name) const;
-
-    void delFunction(const NameParam& name);
-
-    const std::vector<std::unique_ptr<Function> > &getFunctions() const;
+    Module(std::string _name) : NameC(std::move(_name)) {}
 
     void addGlobalVar(std::unique_ptr<GlobalVariable> global_var);
+    GlobalVariable* getGlobalVar(NameRef name);
+    const std::vector<std::unique_ptr<GlobalVariable>>& getGlobalVars() const;
+    void delGlobalVar(NameRef name); // by name
 
-    GlobalVariable *getGlobalVar(const NameParam& name);
-
-    void delGlobalVar(const NameParam& name);
-
-    const std::vector<std::unique_ptr<GlobalVariable> > &getGlobalVars() const;
-
-    void initScope();
-
-    void finishScope();
-
-    void registerSymbol(const std::string &name, Value* value);
-
-    Value* lookupSymbol(const std::string &name);
+    void addFunction(std::unique_ptr<Function> func);
+    Function* getFunction(NameRef name);
+    const std::vector<std::unique_ptr<Function>>& getFunctions() const;
+    void delFunction(NameRef name); // by name
 
     ~Module();
 };
 }
+
 #endif
