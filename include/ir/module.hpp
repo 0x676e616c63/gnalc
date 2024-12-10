@@ -28,15 +28,14 @@ public:
     Module(std::string _name) : NameC(std::move(_name)) {}
 
     void addGlobalVar(std::unique_ptr<GlobalVariable> global_var);
-    GlobalVariable* getGlobalVar(NameRef name);
-    const std::vector<std::unique_ptr<GlobalVariable>>& getGlobalVars() const;
+    const auto& getGlobalVars() const;
     void delGlobalVar(NameRef name); // by name
 
     void addFunction(std::unique_ptr<Function> func);
-    Function* getFunction(NameRef name);
-    const std::vector<std::unique_ptr<Function>>& getFunctions() const;
+    const auto& getFunctions() const;
     void delFunction(NameRef name); // by name
 
+    void accept(IRVisitor& visitor) { visitor.visit(*this); }
     ~Module();
 };
 }

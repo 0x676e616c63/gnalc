@@ -8,7 +8,7 @@ namespace IR {
 
 // storage_class
 enum class STOCLASS {
-    GLOBLE,
+    GLOBAL,
     CONSTANT
 };
 
@@ -19,7 +19,8 @@ enum class STOCLASS {
 // int arrz[2][2] = {};
 // int arri[2][2] = {{1, 2}, {3, 4}};
 class GVIniter {
-    IRTYPE initer_ty;
+private:
+    IRTYPE initer_type;
     bool is_zero; // is zeroinitializer, 对于array就输出zeroinitializer, 不是array就输出0
     bool is_array;
     std::vector<int> array_size; // [3 x [4 x i32]] 就是 {3, 4} 和语言中的数组大小顺序一致
@@ -49,23 +50,26 @@ public:
  * @attention 全局变量的type为ptr
  * @attention 默认linkage 是dso_local
  */
-class GlobalVariable : public User {
+class GlobalVariable : public Value {
 private:
     STOCLASS storage_class;
     IRTYPE vtype; // 表示的variable的类型
     bool is_array;
     std::vector<int> array_size; // [3 x [4 x i32]] 就是 {3, 4} 和语言中的数组大小顺序一致
     GVIniter initer;
+    int align;
 public:
-    GlobalVariable(STOCLASS _sc, IRTYPE _ty, std::string _name, GVIniter _initer); // 对于无初始值的，使用第一种构造方式
-    GlobalVariable(STOCLASS _sc, IRTYPE _ty, std::string _name, std::vector<int> _array_size, GVIniter _initer);
+    GlobalVariable(STOCLASS _sc, IRTYPE _ty, std::string _name, GVIniter _initer, int _align = 4); // 对于无初始值的，使用第一种构造方式
+    GlobalVariable(STOCLASS _sc, IRTYPE _ty, std::string _name, std::vector<int> _array_size, GVIniter _initer, int _align = 4);
 
     STOCLASS getStorageClass() const;
     IRTYPE getVarType() const;
     bool isArray() const;
     std::vector<int> getArraySize() const;
     GVIniter& getIniter();
+    int getAlign() const;
 
+    void accept(IRVisitor& visitor) { visitor.visit(*this); }
     ~GlobalVariable();
 };
 }

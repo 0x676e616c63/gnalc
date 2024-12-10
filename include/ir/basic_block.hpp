@@ -31,6 +31,9 @@ public:
     std::list<BasicBlock*>& getNextBB();
     std::list<Instruction*>& getInsts();
     // ...
+
+    void accept(IRVisitor& visitor) { visitor.visit(*this); }
+    ~BasicBlock();
 };
 
 }

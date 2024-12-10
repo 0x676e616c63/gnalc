@@ -16,6 +16,8 @@ public:
     ConstantInt(int _val);
 
     int getVal();
+
+    void accept(IRVisitor& visitor) { visitor.visit(*this); }
 };
 
 class ConstantFloat : public Value {
@@ -25,6 +27,8 @@ public:
     ConstantFloat(float _val);
 
     float getVal();
+
+    void accept(IRVisitor& visitor) { visitor.visit(*this); }
 };
 
 using CI32 = ConstantInt;

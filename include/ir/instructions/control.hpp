@@ -24,6 +24,8 @@ public:
 
     bool isVoid() const;
     Value* getRetVal() const;
+
+    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
 };
 
 
@@ -52,6 +54,8 @@ public:
     // void setBBParams(std::initializer_list<Value*> _bbparams);
     // void setBBparams(std::vector<Value*>& _bbparams);
     // std::vector<Value*>& getBBParams();
+
+    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
 };
 
 //<result> = [tail | musttail | notail ] call [fast-math flags] [cconv] [ret attrs] [addrspace(<num>)]
@@ -69,6 +73,8 @@ public:
     std::string getFuncName() const;
     Function* getFunc() const; // Value*转换为Function*
     std::vector<Value*> getArgs() const;
+
+    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
 };
 
 }
