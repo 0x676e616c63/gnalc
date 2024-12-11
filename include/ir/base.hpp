@@ -32,7 +32,7 @@ class Use;
 class Value : public TypeC, public NameC {
 protected:
     std::list<Use*> use_list; // Use隶属于User, 故暂时使用普通指针
-    
+                            // 利用Use中的User*找到User
 public:
     Value() = default;
     Value(std::string _name, IRTYPE _type, int length = -1);

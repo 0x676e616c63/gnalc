@@ -19,17 +19,16 @@ Function::Function(IR::Function& midEnd_function){
     
     this->Identifier = midEnd_function.getName();
 
-    ///@brief fill VirMap
+    ///@brief fill VirMap while build instructions
     auto& bbs = midEnd_function.getBlocks();
     for(auto bb_it = bbs.begin(); bb_it != bbs.end(); ++bb_it){
-        auto &BasicBlock = **bb_it;
+        auto &midEnd_BB = **bb_it;
 
-        ///@todo 
-        auto &insts = BasicBlock.getUseList();
     
     }
 
-    // this->mkframeinit // after phi elimination
+    // bbinst->MkLiveOut()
+    // this->mkframeinit ?// after phi elimination
 
 }
 

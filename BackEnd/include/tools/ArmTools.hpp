@@ -76,18 +76,22 @@ std::map<ExtensionRegisterName, std::string> ExtensionRegisterMap = {
 };
 /// @warning 如果需要添加指令, 记得在OperCodeMap中添加对应的键值对
 enum OperCode{
-    Binary_Begin,
-        ADD, ADDS, SUB, SUBS, RSBS, MUL, MULS, MLA, DIV, DIVS,SREM, ORR, AND, ASR, ASRS, LSL, LSR, ROR, RRX, EOR,
+    NEG, VNEG_F32,
+    Unary_End,
+
+    Binary_Begin,   // 比较广义的Binary?
+        ADD, ADDS, SUB, SUBS, RSBS, MUL, MULS, MLA, DIV, DIVS, ORR, AND, ASR, ASRS, LSL, LSR, ROR, RRX, EOR,
         // SIMD
         VADD_F32, VADD_S32,
         VSUB_F32, VSUB_S32,
         VMUL_S32, VMUL_F32,
         VDIV_F32, VDIV_S32,
+        VNEG_F32,
     Binary_End,
-            // NEG, 使用别的指令取代
+            
     Branch_Begin,
         BEQ, BNQ, BGT, BLT, BGE, BLE,
-        BX, BL,
+        BX, BL, B, BCOND, // branch泛型
     Branch_End,
 
     FlagInst_Begin,
@@ -128,17 +132,19 @@ enum OperCode{
 
 };
 std::map<OperCode, std::string> OperCodeMap = {
+    {OperCode::NEG, "neg"}, {OperCode::VNEG_F32, "vneg.f32"},
     {OperCode::ADD, "add"}, {OperCode::SUB, "sub"},
     {OperCode::ADDS, "adds"},{OperCode::SUBS, "subs"},{OperCode::RSBS, "rsbs"},{OperCode::MUL, "mul"},{OperCode::MLA, "mla"},
     {OperCode::MULS, "muls"}, {OperCode::DIVS, "divs"},
-    {OperCode::DIV, "div"},{OperCode::SREM, "srem"},{OperCode::ORR, "orr"},{OperCode::AND, "and"},{OperCode::ASR, "asr"},
+    {OperCode::DIV, "div"}, {OperCode::ORR, "orr"},{OperCode::AND, "and"},{OperCode::ASR, "asr"},
     {OperCode::ASRS, "asrs"},{OperCode::LSL, "lsl"},{OperCode::LSR, "lsr"},{OperCode::ROR, "ror"},{OperCode::RRX, "rrx"},
-    {OperCode::EOR, "eor"},{OperCode::VADD_F32, "vadd_f32"},{OperCode::VADD_S32, "vadd_s32"},{OperCode::VSUB_F32, "vsub_f32"},
-    {OperCode::VSUB_S32, "vsub_s32"},{OperCode::VMUL_S32, "vmul_s32"},{OperCode::VMUL_F32, "vmul_f32"},{OperCode::VDIV_F32, "vdif_f32"},
-    {OperCode::VDIV_S32, "vdif_s32"},{OperCode::BEQ, "beq"},{OperCode::BNQ, "bnq"},{OperCode::BGT, "bgt"},{OperCode::BLT, "blt"},{OperCode::BGE, "bge"},{OperCode::BLE, "ble"},{OperCode::BX, "bx"},{OperCode::BL, "bl"},{OperCode::CMN, "cmn"},{OperCode::CMP, "cmp"},
-    {OperCode::VCMP_F32, "vcmp_f32"},{OperCode::MOV, "mov"},{OperCode::VMOV, "vmov"},{OperCode::VMOV_F32, "vmov_f32"},
-    {OperCode::VMOV_S32, "vmov_s32"},{OperCode::MOVW, "movw"},{OperCode::MOVT, "movt"},{OperCode::MVN, "mvn"},
-    {OperCode::VCVT_F32_S32, "vcvt_f32_s32"},{OperCode::VCVT_S32_F32, "vcvt_s32_f32"},{OperCode::VSTR_32, "vstr_32"},{OperCode::VLDR_32, "vldr_32"},
+    {OperCode::EOR, "eor"},{OperCode::VADD_F32, "vadd.f32"},{OperCode::VADD_S32, "vadd.s32"},{OperCode::VSUB_F32, "vsub.f32"},
+    {OperCode::VSUB_S32, "vsub.s32"},{OperCode::VMUL_S32, "vmul.s32"},{OperCode::VMUL_F32, "vmul.f32"},{OperCode::VDIV_F32, "vdif.f32"},
+    {OperCode::VDIV_S32, "vdif.s32"},{OperCode::VNEG_F32, "vneg.f32"},
+    {OperCode::BEQ, "beq"},{OperCode::BNQ, "bnq"},{OperCode::BGT, "bgt"},{OperCode::BLT, "blt"},{OperCode::BGE, "bge"},{OperCode::BLE, "ble"},{OperCode::BX, "bx"},{OperCode::BL, "bl"},{OperCode::CMN, "cmn"},{OperCode::CMP, "cmp"},
+    {OperCode::VCMP_F32, "vcmp.f32"},{OperCode::MOV, "mov"},{OperCode::VMOV, "vmov"},{OperCode::VMOV_F32, "vmov.f32"},
+    {OperCode::VMOV_S32, "vmov.s32"},{OperCode::MOVW, "movw"},{OperCode::MOVT, "movt"},{OperCode::MVN, "mvn"},
+    {OperCode::VCVT_F32_S32, "vcvt.f32.s32"},{OperCode::VCVT_S32_F32, "vcvt.s32.f32"},{OperCode::VSTR_32, "vstr.32"},{OperCode::VLDR_32, "vldr.32"},
     {OperCode::LDR, "ldr"},{OperCode::STR, "str"},{OperCode::SMULL, "smull"},{OperCode::SWI, "swi"},{OperCode::PUSH, "push"},
         // 将特殊缩进的枚举值映射为 "error_inst"
     {OperCode::Binary_Begin, "error_inst"},
@@ -157,8 +163,27 @@ std::map<OperCode, std::string> OperCodeMap = {
     {OperCode::STR_End, "error_inst"},
 
 };
-bool isImmCanBeEncodedInText(int imme);
-bool isImmCanBeEncodedInText(float imme);
-bool isVLoadStoreOffsetLegal(int offset);
+
+struct MapMid2BackOpC{
+    bool operator()(const std::vector<IR::OP>&, const std::vector<IR::OP>) const;
+};
+
+///@note 这个Mid2BackOpC实际上没多大价值, 主要是捋一下怎么映射的
+
+std::map<std::vector<IR::OP>, std::vector<OperCode>, MapMid2BackOpC> Mid2BackOpC = {
+    {std::vector<IR::OP>{IR::OP::RET}, 
+        std::vector<OperCode>{OperCode::MOV, OperCode::BX}}, // 注意预着色以及可能的DCE
+    {std::vector<IR::OP>{IR::OP::ICMP, IR::OP::BR},
+        std::vector<OperCode>{OperCode::CMP, OperCode::BCOND, OperCode::B}}, // 这里的跳转映射涉及到一个peephole
+    {std::vector<IR::OP>{IR::OP::FCMP, IR::OP::BR},
+        std::vector<OperCode>{OperCode::VCMP_F32, OperCode::BCOND, OperCode::B}},
+    {std::vector<IR::OP>{IR::OP::FNEG},
+        std::vector<OperCode>{OperCode::VNEG_F32}},
+    {std::vector<IR::OP>{IR::OP::ADD},
+        std::vector<OperCode>{OperCode::ADD}},
+    {std::vector<IR::OP>{IR::OP::FADD},
+        std::vector<OperCode>{OperCode::VADD_F32}},
+    // ....... 剩余的binary
+};
 };
 #endif

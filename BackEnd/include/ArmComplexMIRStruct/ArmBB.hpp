@@ -6,6 +6,9 @@
 #include <memory>
 #include <unordered_set>
 #include "../../Arm.hpp"
+#include "../../../include/ir/basic_block.hpp"
+#include "../../../include/ir/base.hpp"
+#include "../../../include/ir/instruction.hpp"
 #include "../tools/ArmTools.hpp"
 
 class ArmStruct::Terminator{
@@ -26,14 +29,21 @@ class ArmStruct::Terminator{
 
 class ArmStruct::BB{
     public:
-        BB(IR::BasicBlock&);
+        BB(IR::BasicBlock&, Function&);
         ~BB()=default;
         
         std::string& toString();
 
-        Terminator& Terminator;
+        void MkLiveOut(IR::BasicBlock&); // 查询func中的VirMap, 对照midEnd_BasicBlock
+        
+        typedef std::initializer_list<std::reference_wrapper<IR::Instruction>> InstArgs;
+        
+        void ParseInsts();// 差一个中端的参数(list or vector)
+
+        // Terminator& Terminator;
         std::string label;
         std::list<Instruction*> InstList;
+        Function& Func;
         std::unordered_set<std::reference_wrapper<Operand>, ArmTools::HashOperandReferWrap, ArmTools::HashOperandReferWrapEqual> LiveOut;
     private:
 };

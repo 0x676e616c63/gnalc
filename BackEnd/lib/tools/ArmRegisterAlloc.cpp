@@ -373,7 +373,7 @@ void RegisterAlloc::ReWriteProgram(){
             }
 
             /// @note 改写
-            BB& BasicBlock = inst.BasicBlock;
+            BB& BasicBlock = *(inst.BasicBlock);
             /// @note 因为不能std::referance_wrap<>重载操作符, 所以只能手动查找
             for(auto inst_it = BasicBlock.InstList.begin(); inst_it != BasicBlock.InstList.end(); ++inst_it){
                 Instruction& targetInst = **inst_it;

@@ -9,7 +9,7 @@
 
 namespace ArmTools{
 
-bool ArmTools::isImmCanBeEncodedInText(int imme){
+bool ArmTools::isImmCanBeEncodedInText(unsigned long long imme){
     for (int shift = 0; shift <= 32; shift += 2){
         if ((((imme << shift) | (imme >> (32 - shift))) & ~0xff) == 0){
             return true;
@@ -28,7 +28,41 @@ bool ArmTools::isImmCanBeEncodedInText(float imme){
                 return true;
         }
     }
-        return false;
+    return false;
+}
+
+std::string DecToHex(int dec){
+
+}
+
+std::string HexToDec(std::string hex){
+
+
+}
+
+std::string LiteralToIEEE(float lit){
+
+}
+
+
+std::pair<std::string, std::string> ArmTools::BreakInBit(float imme){ 
+    ///@brief say my name! 
+    std::string highBits;
+    std::string lowBits;
+    if(isImmCanBeEncodedInText(imme)){
+        // lowBits = std::;
+        // return std::make_pair<std::string, std::string>(highBits, );
+    }
+}
+
+std::pair<std::string, std::string> ArmTools::BreakInBit(int imme){
+    std::string highBits;
+    std::string lowBits;
+
+    
+    if(isImmCanBeEncodedInText(imme)){
+
+    }
 }
 
 bool ArmTools::isVLoadStoreOffsetLegal(int offset){

@@ -15,7 +15,9 @@ enum OperandType{
 };
 class ArmStruct::Operand{
     public:
-        Operand(OperandType, std::string*);
+        Operand(std::string);
+        Operand(IR::Value*);
+        Operand(OperandType, unsigned int);
         Operand(Operand&);
         ~Operand()=default;
         virtual std::string& toString();
@@ -23,13 +25,14 @@ class ArmStruct::Operand{
         bool operator!=(ArmStruct::Operand&);
 
         OperandType ValType;
-        std::unique_ptr<std::string> Indentifier = NULL;
+        // std::unique_ptr<std::string> Indentifier = NULL;
+        unsigned int VirReg;
+
 
         /// @brief 寄存器分配相关, 拓展性几乎为零, 但是不建议改
         std::unordered_set<std::reference_wrapper<ArmStruct::Operand>, ArmTools::HashOperandReferWrap, ArmTools::HashOperandReferWrapEqual> adjList;
         std::unordered_set<std::reference_wrapper<ArmStruct::Instruction>, ArmTools::HashInstReferWrap, ArmTools::HashInstReferWrapEqual> moveList; // the moveInst which use this ArmStruct::Operand
         std::unique_ptr<ArmStruct::Operand> alias = nullptr; // 别名, 在寄存器分配中活跃区间高度重叠的操作数
-        unsigned int VirReg;
         unsigned int color = -1;
         unsigned int adjDegree = 0;
     private:
