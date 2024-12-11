@@ -50,6 +50,7 @@ public:
 
     void replaceUseByUse(Use* old_use, Use* new_use);
 
+    virtual void accept(class IRVisitor& visitor) = 0;
     virtual ~Value();
 };
 
@@ -75,6 +76,7 @@ public:
     void delOperandByValue(Value *v);
     void delOperandByName(NameRef name);
 
+    virtual void accept(class IRVisitor& visitor) = 0;
     ~User() override;
 };
 

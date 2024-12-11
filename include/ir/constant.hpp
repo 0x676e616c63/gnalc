@@ -17,7 +17,7 @@ public:
 
     int getVal();
 
-    void accept(IRVisitor& visitor) { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
 };
 
 class ConstantFloat : public Value {
@@ -28,7 +28,7 @@ public:
 
     float getVal();
 
-    void accept(IRVisitor& visitor) { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
 };
 
 using CI32 = ConstantInt;

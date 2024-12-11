@@ -5,7 +5,7 @@ namespace IR {
 GVIniter::GVIniter(IRTYPE _ty)
     : initer_type(_ty), is_zero(true), is_array(false) {}
 
-GVIniter::GVIniter(IRTYPE _ty, Value _con)
+GVIniter::GVIniter(IRTYPE _ty, Value* _con)
     : initer_type(_ty), is_zero(false), is_array(false), constval(_con) {}
 
 GVIniter::GVIniter(IRTYPE _ty, std::vector<int> _array_size)
@@ -30,7 +30,7 @@ std::vector<int> GVIniter::getArraySize() const {
     return array_size;
 }
 
-Value& GVIniter::getConstVal() {
+Value* GVIniter::getConstVal() {
     return constval;
 }
 
