@@ -9,6 +9,7 @@
 #include "base.hpp"
 
 namespace IR {
+// const的name就是它的值toString
 class ConstantInt : public Value {
 private:
     int val;
