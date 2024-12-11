@@ -27,6 +27,14 @@ Module::Module(IR::Module& midEnd_Module){
     }
 }
 
+Module::~Module(){
+    for(auto bssPtr : this->bssSection) delete bssPtr;
+    for(auto dataPtr : this->dataSection) delete dataPtr;
+    for(auto equPtr : this->equSection) delete equPtr;
+    for(auto funcPtr : this->FunctionList) delete funcPtr;
+}
+
+
 void Module::Legalize(){
 
     /// @todo 

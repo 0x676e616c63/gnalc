@@ -3,19 +3,33 @@
 #include <map>
 #include "../../Arm.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmOperand.hpp"
+#include "../../include/ArmComplexMIRStruct/ArmFunction.hpp"
+#include "../../include/ArmComplexMIRStruct/ArmBB.hpp"
 #include "../../include/tools/ArmTools.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmInstruction.hpp"
 
 using namespace ArmStruct;
 using namespace ArmTools;
-///@todo 还差instruction的构造函数
-// ::Instruction(){
 
-// }
+/// @note to fill VirMap and add InstCnt
+Instruction::Instruction(OperCode opcode,Imm* attach, BB& BasicBlock,
+    std::initializer_list<std::reference_wrapper<Operand>> Defs, 
+    std::initializer_list<std::reference_wrapper<Operand>> Uses):
+    opcode(opcode), id(++BasicBlock.Func.InstCnt), attach(attach), BasicBlock(BasicBlock){
+        for(auto oper_it = Defs.begin(); oper_it != Defs.end(); ++oper_it){
+            auto &oper = oper_it->get();
+            this->DefOperandList.push_back(std::ref(oper)); 
+        }
+        for(auto oper_it = Uses.begin(); oper_it != Uses.end(); ++oper_it){
+            auto &oper = oper_it->get();
+            this->UseOperandList.push_back(std::ref(oper));
+        }
+}
 
-/// @brief reWrite Programme
-Instruction::Instruction(Instruction& inst, OperCode type, unsigned int cnt): BasicBlock(inst.BasicBlock), DefOperandList(), UseOperandList()
-{
+/// @brief reWrite Programme to add overflow vars
+Instruction::Instruction(Instruction& inst, OperCode type, unsigned int cnt):
+    BasicBlock(inst.BasicBlock), DefOperandList(), UseOperandList(){
+    /// @todo 这里实际上也可以用MemInstruction的构造, attach成员这个设计确实会造成太多歧义
     this->id = cnt;
     this->opcode = type;
     if(type == OperCode::STR){
@@ -24,7 +38,7 @@ Instruction::Instruction(Instruction& inst, OperCode type, unsigned int cnt): Ba
     else{
         DefOperandList.push_back(inst.UseOperandList[0]);
     }
-    /// @note 
+    /// @note MMptr 用于保存栈空间信息
     this->attach = new MMptr();
     
 }
