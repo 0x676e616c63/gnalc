@@ -67,9 +67,12 @@ public:
 
     // addOprand in User
 
-    void setParent(BasicBlock* p) { parent = p; }
-    OP getOpcode() const { return opcode; }
-    BasicBlock* getParent() const { return parent; }
+    void setParent(BasicBlock* p);
+    OP getOpcode() const;
+    BasicBlock* getParent() const;
+
+    virtual void accept(class IRVisitor& visitor) = 0;
+    ~Instruction();
 };
 
 }

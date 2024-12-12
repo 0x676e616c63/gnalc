@@ -19,6 +19,7 @@
 
 #include <list>
 #include "type.hpp"
+#include "visitor.hpp"
 
 namespace IR {
 
@@ -28,19 +29,26 @@ class Use;
 
 /**
  * @todo replace use function
+ * @attention use_list的添加在use的构造过程中完成!!!
  */
 class Value : public TypeC, public NameC {
 protected:
+    // use_list的顺序应该没有太大影响
     std::list<Use*> use_list; // Use隶属于User, 故暂时使用普通指针
                             // 利用Use中的User*找到User
 public:
     Value() = default;
-    Value(std::string _name, IRTYPE _type, int length = -1);
+    Value(std::string _name, IRTYPE _type);
 
     void addUse(Use* use);
-    std::list<Use*>& getUseList() const;
+    std::list<Use*>& getUseList(); // 暂时不用const，由其实现一些修改功能
+
+    /// @todo 可重载为一个函数名
     void delUseByUse(Use* use); // 根据Use删除所有匹配的use；由于Use归User所有，故理论上说通过User删除可以转换为通过Use删除
-    void delUseByName(NameRef name); // 根据name删除所有匹配的use
+    void delUseByUser(User* user);
+    void delUseByName(NameRef name); // 根据username删除匹配的第一个use
+
+    void replaceUseByUse(Use* old_use, Use* new_use);
 
     virtual ~Value();
 };
@@ -58,10 +66,12 @@ protected:
 
 public:
     User() = default;
-    User(std::string _name, IRTYPE _type, int length = -1);
+    User(std::string _name, IRTYPE _type);
 
     void addOperand(Value *v); // 构造一个use
-    std::list<Use>& getOperands() const;
+    std::list<Use>& getOperands();
+
+    /// @todo 可重载为一个函数名
     void delOperandByValue(Value *v);
     void delOperandByName(NameRef name);
 

@@ -39,6 +39,8 @@ public:
     Value* GetLHS() const;
     Value* GetRHS() const;
     ICMPOP GetCond() const;
+
+    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
 };
 
 
@@ -80,6 +82,8 @@ public:
     Value* GetLHS() const;
     Value* GetRHS() const;
     FCMPOP GetCond() const;
+
+    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
 };
 
 }

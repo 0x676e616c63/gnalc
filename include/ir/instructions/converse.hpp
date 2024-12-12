@@ -25,6 +25,8 @@ public:
     Value* getOVal() const;
     IRTYPE getOType() const; // ORIGINAL TYPE FLOAT
     IRTYPE getTType() const; // TARGET TYPE I32
+
+    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
 };
 
 // <result> = sitofp <ty> <value> to <ty2>
@@ -37,6 +39,8 @@ public:
     Value* getOVal() const;
     IRTYPE getOType() const; // ORIGINAL TYPE I32
     IRTYPE getTType() const; // TARGET TYPE FLOAT
+
+    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
 };
 
 }
