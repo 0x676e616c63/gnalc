@@ -57,11 +57,23 @@ class ArmStruct::Function{
         ///@note 在寄存器分配之后, 多出来了一些用于管理temp区的load/store指令
         void MkFrameFinal();
 
-        // auto mid_end_func 可能是用于标记那些特殊作为的函数入口的BB
-        /// @todo mid_end_func不如放在每个BB内部, 用于替换普通的label
-        /// @todo 具体如何去做需要进一步研究
-        
-        // void RenameLabel();
+        ///@note 插入寄存器保护指令, 希望寄存器分配阶段消除多余的指令
+
+        void LegalizeInit();
+
+        /// @note gcc armv7的栈空间管理很抽象, 但是这个优化只能之后再做
+        /* @todo
+            push {r7, lr}
+            sub sp, sp, #stack_size
+            add r7, sp, #0
+            ...
+            mov r0, %retval
+            add r7, r7, #stack_size
+            mov sp, r7
+            pop {r7, pc}
+        */
+        void LegalizeFinal();
+
         void TerminatorPredict();
         
         std::string& toString();

@@ -11,11 +11,15 @@
 using namespace ArmStruct;
 using namespace ArmTools;
 
+/// @note md这里还歧义了
+MemInstruction::MemInstruction(OperCode opcode, ArmStruct::MMptr* mmptr, BB& BasicBlock):
+    Instruction(opcode, nullptr, BasicBlock, {}, {}), MMptr(mmptr){}
+
 /// @note to fill VirMap and add InstCnt
 Instruction::Instruction(OperCode opcode,Imm* attach, BB& BasicBlock,
     std::initializer_list<std::reference_wrapper<Operand>> Defs, 
     std::initializer_list<std::reference_wrapper<Operand>> Uses):
-    opcode(opcode), id(++BasicBlock.Func.InstCnt), attach(attach), BasicBlock(BasicBlock){
+    opcode(opcode), id( ++BasicBlock.Func.InstCnt), attach(attach), BasicBlock(BasicBlock){
         for(auto oper_it = Defs.begin(); oper_it != Defs.end(); ++oper_it){
             auto &oper = oper_it->get();
             this->DefOperandList.push_back(std::ref(oper)); 

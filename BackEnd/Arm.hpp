@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include "../../../include/ir/base.hpp"
 #include "../../../include/ir/instruction.hpp"
 
 namespace ArmStruct{
@@ -54,7 +55,7 @@ namespace ArmTools{
     class LabelTable; // 用于查找标签
 
     /// @note arm指令合法化的一部分
-    bool isImmCanBeEncodedInText(int Imm);
+    bool isImmCanBeEncodedInText(unsigned long long imme);
     bool isImmCanBeEncodedInText(float Imm);
     bool isVLoadStoreOffsetLegal(int offset);
 
@@ -62,8 +63,8 @@ namespace ArmTools{
     std::string HexToDec(std::string);  // 理论上这个东西不要也行
     std::string LiteralToIEEE(float);
 
-    std::pair<std::string, std::string> BreakInBit(unsigned long long);
     std::pair<std::string, std::string> BreakInBit(float);
+    std::pair<std::string, std::string> BreakInBit(int);
 
     class RegisterAlloc;    // 寄存器分配
 

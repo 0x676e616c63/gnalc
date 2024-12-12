@@ -35,7 +35,9 @@ class ArmStruct::BB{
         std::string& toString();
 
         void MkLiveOut(IR::BasicBlock&); // 查询func中的VirMap, 对照midEnd_BasicBlock
-        
+
+        void PhiEliminate();
+
         typedef std::initializer_list<std::reference_wrapper<IR::Instruction>> InstArgs;
         
         void ParseInsts();// 差一个中端的参数(list or vector)

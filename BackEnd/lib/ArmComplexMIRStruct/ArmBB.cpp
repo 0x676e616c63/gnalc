@@ -15,10 +15,15 @@ BB::BB(IR::BasicBlock& midEnd_BasicBlock, Function& func): Func(Func){
    ///@todo 获取LiveOut信息,
 
    MkLiveOut(midEnd_BasicBlock);
+
+   this->label = 'L' + midEnd_BasicBlock.getName();
 }
 
 void BB::MkLiveOut(IR::BasicBlock& midEnd_BasicBlock){
-   /// @todo 遍历midEnd_BasicBlock, 按VirReg来查找this->Func.VirMap, 
+   /// @todo 遍历midEnd_BasicBlock的liveout, 按VirReg来查找this->Func.VirMap,
+
+
+
 }
 
 void BB::ParseInsts(){

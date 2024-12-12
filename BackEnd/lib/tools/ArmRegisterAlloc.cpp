@@ -43,7 +43,8 @@ void RegisterAlloc::GraphColoring(){
     ///@todo 对于caller func, caller需要在callinst前后保存和恢复
     ///@todo 具体做法和上面一模一样
     ///@todo 对于代表寄存器的Operand, 需要指定color的值无法更改, 也就是预着色操作
-    ///@todo 除此之外, 一些别的寄存器如sp, 
+    ///@todo 除此之外, 一些别的寄存器如sp, pc, lr, 这些寄存器实际上是固定死了, 根本不会参与寄存器分配
+    ///@todo 在最后的LeglizeFinal()插入即可 
     ///@todo 尝试：首先在Lower2MIR时将插入上述保护指令, 设置好Operand.color值为对应的寄存器序号, 然后将这些Operand直接划入coloredNode中
 
     BuildGraph();
@@ -373,7 +374,7 @@ void RegisterAlloc::ReWriteProgram(){
             }
 
             /// @note 改写
-            BB& BasicBlock = *(inst.BasicBlock);
+            BB& BasicBlock = inst.BasicBlock;
             /// @note 因为不能std::referance_wrap<>重载操作符, 所以只能手动查找
             for(auto inst_it = BasicBlock.InstList.begin(); inst_it != BasicBlock.InstList.end(); ++inst_it){
                 Instruction& targetInst = **inst_it;

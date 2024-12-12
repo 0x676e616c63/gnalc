@@ -11,7 +11,13 @@ using namespace ArmTools;
 Imm::Imm(OperandType type, std::string data): data_type(type), data(data){}
 
 MMptr::MMptr(){
-    this->space = nullptr;
+    this->space = nullptr; // 仅仅是一个表示需要溢出的标志, 具体的内存空间在FrameObj过程中指定
+    ///@warning space成员如果能重载成FPU寄存器, 结合FPU占用表, 即可实现溢出至FPU寄存器
+}
+
+
+Operand::Operand(IR::Value *midEnd_oper){
+
 }
 
 Operand::Operand(OperandType type, unsigned int VirReg): ValType(type), VirReg(VirReg){}

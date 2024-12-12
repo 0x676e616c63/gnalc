@@ -46,7 +46,7 @@ class MemInstruction : public Instruction{
     ///@note attach 已被占用, 所以新加一个MMptr
     ///@note 不算push和pop, str, ldr
     public:
-        MemInstruction();
+        MemInstruction(ArmTools::OperCode, MMptr*, BB&);
         ~MemInstruction()=default;
 
         MMptr* MMptr;

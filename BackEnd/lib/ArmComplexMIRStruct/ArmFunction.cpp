@@ -19,17 +19,32 @@ Function::Function(IR::Function& midEnd_function){
     
     this->Identifier = midEnd_function.getName();
 
-    ///@brief fill VirMap while build instructions
-    auto& bbs = midEnd_function.getBlocks();
+    ///@brief fill VirMap and link instructions
+    std::vector<std::unique_ptr<IR::BasicBlock>>& bbs = midEnd_function.getBlocks();
+
     for(auto bb_it = bbs.begin(); bb_it != bbs.end(); ++bb_it){
         auto &midEnd_BB = **bb_it;
+        
+        BB *backEnd_BB = new BB(midEnd_BB, *this);
 
-    
+        this->BBList.push_back(backEnd_BB);
+        
+        backEnd_BB->MkLiveOut(midEnd_BB); // 查表 IR::Value 到 Arm::Operand的转换
+
     }
 
-    // bbinst->MkLiveOut()
-    // this->mkframeinit ?// after phi elimination
 
+    /// @note 现在是保存了SSA形式的MIR, 在这里插入一些OPT
+
+
+    for(auto backEnd_BB : this->BBList){
+        backEnd_BB->PhiEliminate();
+    }
+    
+    /// @note 现在没有SSA了, 只能做窥孔优化
+
+
+    this->MkFrameInit();
 }
 
 FrameObj::FrameObj(MMptr& oper): vitualReg(oper.VirReg){

@@ -19,22 +19,28 @@ using namespace ArmTools;
 using namespace ArmStruct;
 
 struct UnaryMatch{
+    /// @note 仅Fneg使用
     void operator()(InstArgs insts, BB& BasicBlock) const{
         assert(insts.size() == 1);
 
         IR::FNEGInst &midEnd_inst = dynamic_cast<IR::FNEGInst&>(insts.begin()->get());
-
-        OperCode backEnd_opcode = OperCode::VNEG_F32;
         
         Operand *Def = new Operand(midEnd_inst.getName());
-        
+
+        BasicBlock.Func.VirRegOperandMap[Def->VirReg] = Def;
+
         if(typeid(midEnd_inst.GetVal()) != typeid(IR::ConstantFloat*)){
-            Operand *Use = new Operand(midEnd_inst.GetVal());
-            BasicBlock.Func.VirRegOperandMap[Use->VirReg] = Use;
+            
+            int midEnd_virReg = std::stoi(midEnd_inst.GetVal()->getName().substr(1)); // 去掉%
+
+            Operand *Use = BasicBlock.Func.VirRegOperandMap[midEnd_virReg];
+            
+            
             Instruction* backEnd_inst = new Instruction(
-                backEnd_opcode, nullptr, BasicBlock, {std::ref(*Def)}, {std::ref(*Use)});
+                OperCode::VNEG_F32, nullptr, BasicBlock, {std::ref(*Def)}, {std::ref(*Use)}
+                );
         }
-        else{
+        else {
             // 转化为movt和movw
             // Imm *newAttach = new Imm();
         }
@@ -47,12 +53,140 @@ struct BranchMatch{
         assert(insts.end()->get().getOpcode() == IR::OP::BR);
         
         if(insts.size() == 1){
-            // br label <dest> 
+            // br label <dest>
+            IR::BRInst &midEnd_Branch = dynamic_cast<IR::BRInst&>(insts.begin()->get());
+            IR::BasicBlock &destBlock = *midEnd_Branch.getDest();
+            
+            Imm *backEnd_label = new Imm(OperandType::LABEL, destBlock.getName());
+
+            Instruction *backEnd_b = new Instruction(
+                OperCode::B, backEnd_label, BasicBlock, {}, {}
+            );
+
+            BasicBlock.InstList.push_back(backEnd_b);
+
         }
         else{
             // <result> = icmp <cond> <ty> <op1>, <op2>
             // br i1 <cond>, label <iftrue>, label <iffalse>
+            
+            auto &midEnd_cmp = insts.begin()->get();
+            Instruction *backEnd_cmp = nullptr;
+            OperCode backEnd_branch_opcode;
+            
+            if(midEnd_cmp.getOpcode() == IR::OP::ICMP){
+                IR::ICMPInst &midEnd_icmp = dynamic_cast<IR::ICMPInst&>(midEnd_cmp);
+                
+                // set backEnd_branch_opcode
+                switch(midEnd_icmp.GetCond()){
+                    case IR::ICMPOP::eq:
+                        backEnd_branch_opcode = OperCode::BEQ;
+                        break;
+                    case IR::ICMPOP::ne:
+                        backEnd_branch_opcode = OperCode::BNQ;
+                        break;
+                    case IR::ICMPOP::sge:
+                        backEnd_branch_opcode = OperCode::BGE;
+                        break;
+                    case IR::ICMPOP::sgt:
+                        backEnd_branch_opcode = OperCode::BGT;
+                        break;
+                    case IR::ICMPOP::sle:
+                        backEnd_branch_opcode = OperCode::BLE;
+                        break;
+                    case IR::ICMPOP::slt:
+                        backEnd_branch_opcode = OperCode::BLT;
+                        break;
+                    default:
+                        assert(false);    
+                }
+
+                int midEnd_virReg1 = std::stoi(midEnd_icmp.GetLHS()->getName().substr(1));
+                int midEnd_virReg2 = std::stoi(midEnd_icmp.GetRHS()->getName().substr(1));
+
+                Operand *Use1 = BasicBlock.Func.VirRegOperandMap[midEnd_virReg1];
+                Operand *Use2 = BasicBlock.Func.VirRegOperandMap[midEnd_virReg2];
+
+                backEnd_cmp = new Instruction(
+                    OperCode::CMP, nullptr, BasicBlock, {}, {std::ref(*Use1), std::ref(*Use2)}
+                );
+
+            }
+            else{
+                IR::FCMPInst &midEnd_fcmp = dynamic_cast<IR::FCMPInst&>(midEnd_cmp);
+                
+                // set backend opcode
+                switch(midEnd_fcmp.GetCond()){
+                    case IR::FCMPOP::oeq:
+                        backEnd_branch_opcode = OperCode::BEQ;
+                        break;
+                    case IR::FCMPOP::one:
+                        backEnd_branch_opcode = OperCode::BNQ;
+                        break;
+                    case IR::FCMPOP::oge:
+                        backEnd_branch_opcode = OperCode::BGE;
+                        break;
+                    case IR::FCMPOP::ogt:
+                        backEnd_branch_opcode = OperCode::BGT;
+                        break;
+                    case IR::FCMPOP::ole:
+                        backEnd_branch_opcode = OperCode::BLE;
+                        break;
+                    case IR::FCMPOP::olt:
+                        backEnd_branch_opcode = OperCode::BLT;
+                        break;
+                    case IR::FCMPOP::ord: // not a NaN
+                        assert(false);
+                        /// @todo waiting
+                        break;
+                    default:
+                        assert(false);
+                        break;
+                }
+                
+                int midEnd_virReg1 = std::stoi(midEnd_fcmp.GetLHS()->getName().substr(1));
+                int midEnd_virReg2 = std::stoi(midEnd_fcmp.GetRHS()->getName().substr(1));
+
+                Operand *Use1 = BasicBlock.Func.VirRegOperandMap[midEnd_virReg1];
+                Operand *Use2 = BasicBlock.Func.VirRegOperandMap[midEnd_virReg2];
+
+                backEnd_cmp = new Instruction(
+                    OperCode::VCMP_F32, nullptr, BasicBlock, {}, {std::ref(*Use1), std::ref(*Use2)}
+                );
+            }
+            
+            BasicBlock.InstList.push_back(backEnd_cmp);
+
+            IR::BRInst &midEnd_Branch = dynamic_cast<IR::BRInst&>(insts.end()->get());
+            
+            Imm *TrueBlock = new Imm(OperandType::LABEL, "L" + midEnd_Branch.getTrueDest()->getName());
+            Imm *FalseBlock = new Imm(OperandType::LABEL, "L" + midEnd_Branch.getFalseDest()->getName());
+
+            Instruction *backEnd_BranchTrue = new Instruction(
+                backEnd_branch_opcode, TrueBlock, BasicBlock, {}, {}
+            );    // b<cond> %true
+            Instruction *backEnd_BranchFalse = new Instruction{
+                OperCode::B, nullptr, BasicBlock, {}, {}
+            };   // b ...
+            
+            BasicBlock.InstList.push_back(backEnd_BranchTrue);
+            BasicBlock.InstList.push_back(backEnd_BranchFalse);
         }
+
+    }
+};
+
+struct AllocaMatch{
+    /// @brief 注意结合Instruction::MkFrameInit 
+    void operator()(InstArgs insts, BB& BasicBlock) const{
+        assert(insts.size() == 1);
+        auto &midEnd_inst = insts.begin()->get();
+
+        MMptr *backEnd_mmptr = new MMptr();
+
+        Instruction *backEnd_inst = new MemInstruction(
+
+        );
 
     }
 };
@@ -95,12 +229,12 @@ struct BinaryMatch{
             && typeid(midEnd_inst.GetRHS()) != typeid(IR::ConstantFloat*)
             && typeid(midEnd_inst.GetRHS()) != typeid(IR::ConstantInt*)){
                 Operand* Def = new Operand(midEnd_inst.getName());
-                Operand* Use1 = new Operand(midEnd_inst.GetLHS());  // IR operand ptr
-                Operand* Use2 = new Operand(midEnd_inst.GetRHS());
-
                 BasicBlock.Func.VirRegOperandMap[Def->VirReg] = Def;
-                BasicBlock.Func.VirRegOperandMap[Use1->VirReg] = Use1;
-                BasicBlock.Func.VirRegOperandMap[Use2->VirReg] = Use2;
+                
+                int midEnd_virReg1 = std::stoi(midEnd_inst.GetLHS()->getName().substr(1));
+                int midEnd_virReg2 = std::stoi(midEnd_inst.GetRHS()->getName().substr(1));
+                Operand* Use1 = BasicBlock.Func.VirRegOperandMap[midEnd_virReg1];  // IR operand ptr
+                Operand* Use2 = BasicBlock.Func.VirRegOperandMap[midEnd_virReg2];
 
                 Instruction *backEnd_binary = new Instruction(
                     backEnd_opcode, nullptr, BasicBlock, {std::ref(*Def)}, {std::ref(*Use1), std::ref(*Use2)}

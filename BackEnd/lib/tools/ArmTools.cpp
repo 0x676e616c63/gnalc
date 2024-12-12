@@ -6,6 +6,7 @@
 #include "../../include/ArmComplexMIRStruct/ArmInstruction.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmFunction.hpp"
 #include "../../include/tools/ArmTools.hpp"
+#include "Arm.hpp"
 
 namespace ArmTools{
 
@@ -60,7 +61,7 @@ std::pair<std::string, std::string> ArmTools::BreakInBit(int imme){
     std::string lowBits;
 
     
-    if(isImmCanBeEncodedInText(imme)){
+    if(isImmCanBeEncodedInText((unsigned long long)imme)){
 
     }
 }
@@ -69,6 +70,8 @@ bool ArmTools::isVLoadStoreOffsetLegal(int offset){
     //  适用于一个单位量四字节的向量运算
     if(!(offset % 4) && offset >= 0 && offset < 1024 ) return true;
 }
+
+///@note hashes
 
 size_t HashEdge::operator()(const Edge& edge) const {
     return std::hash<int>()(edge.u.VirReg ^ edge.v.VirReg);
