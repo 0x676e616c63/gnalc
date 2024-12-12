@@ -2,11 +2,11 @@
 
 namespace IR {
 
-void Module::addGlobalVar(std::unique_ptr<GlobalVariable> global_var) {
-    global_vars.emplace_back(std::move(global_var));
+void Module::addGlobalVar(GlobalVariable* global_var) {
+    global_vars.emplace_back(global_var);
 }
 
-const auto& Module::getGlobalVars() const {
+const std::vector<GlobalVariable*>& Module::getGlobalVars() const {
     return global_vars;
 }
 
@@ -19,11 +19,11 @@ void Module::delGlobalVar(NameRef name) {
     }
 }
 
-void Module::addFunction(std::unique_ptr<Function> func) {
-    funcs.emplace_back(std::move(func));
+void Module::addFunction(Function* func) {
+    funcs.emplace_back(func);
 }
 
-const auto& Module::getFunctions() const {
+const std::vector<Function*>& Module::getFunctions() const {
     return funcs;
 }
 

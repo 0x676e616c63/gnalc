@@ -1,5 +1,9 @@
 #include "../../include/ir/global_var.hpp"
 
+#if ENABLE_GVINITER_TOSTRING
+#include "../../include/irvisitors/irprinter.hpp"
+#endif
+
 namespace IR {
 
 GVIniter::GVIniter(IRTYPE _ty)
@@ -72,5 +76,43 @@ int GlobalVariable::getAlign() const {
 }
 
 GlobalVariable::~GlobalVariable() {}
+
+std::string GVIniter::toString() {
+    std::string ret;
+
+    #if ENABLE_GVINITER_TOSTRING
+    if (isArray()) {
+        for (int size : getArraySize()) {
+            ret += "[" + std::to_string(size) + " x ";
+        }
+        ret += IRFormatter::formatIRTYPE(getIniterType());
+        for (int i = 0; i < getArraySize().size(); i++) {
+            ret += "]";
+        }
+        
+        if (isZero()) {
+            ret += " zeroinitializer";
+        } else {
+            ret += "[";
+            for (auto it = getInnerIniter().begin(); it != getInnerIniter().end(); it++) {
+                ret += it->toString();
+                if (std::next(it) != getInnerIniter().end()) {
+                    ret += ", ";
+                }
+            }
+            ret += "]";
+        }
+    } else {
+        if (isZero()) {
+            ret += IRFormatter::formatIRTYPE(getIniterType()) + " ";
+            ret += "0";
+        } else {
+            ret += IRFormatter::formatValue(*getConstVal());
+        }
+    }
+    #endif
+
+    return ret;
+}
 
 }
