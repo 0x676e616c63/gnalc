@@ -69,10 +69,17 @@ public:
     User() = default;
     User(std::string _name, IRTYPE _type);
 
-    template<typename ...Arg> // 构造一个use
-    void addOperands(Arg&& ...arg) {
-        operands.emplace_back({std::forward<Arg>(arg), this}...);
+    template<typename T, typename... Args>
+    void addOperands(T&& head, Args&&... rest) {
+        operands.emplace_back(std::forward<T>(head));
+        addOperands(std::forward<Args>(rest)...);
     }
+
+    template<typename T>
+    void addOperands(T&& head) {
+        operands.emplace_back(std::forward<T>(head));
+    }
+
     std::list<Use>& getOperands();
 
     const std::list<Use>& getOperands() const;
