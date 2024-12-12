@@ -13,7 +13,7 @@ namespace IR
         : Instruction(OP::RET, "__ret", IRTYPE::UNDEFINED),
             ret_type(ret_val->getType())
     {
-        operands = { Use{ret_val, this} };
+        addOperands(ret_val);
     }
 
     bool RETInst::isVoid() const
@@ -23,19 +23,19 @@ namespace IR
 
     Value* RETInst::getRetVal() const
     {
-        return operands.begin()->getValue();
+        return getOperands().begin()->getValue();
     }
 
     BRInst::BRInst(BasicBlock* _dest)
         : Instruction(OP::BR, "__br", IRTYPE::UNDEFINED), conditional(false)
     {
-        operands = { Use{_dest, this} };
+        addOperands(_dest);
     }
 
     BRInst::BRInst(Value* cond, BasicBlock* _true_dest, BasicBlock* _false_dest)
         : Instruction(OP::BR, "__br", IRTYPE::UNDEFINED), conditional(false)
     {
-        operands = { Use{cond, this}, Use{_true_dest, this}, Use{_false_dest, this} };
+        addOperands(cond, _true_dest, _false_dest);
     }
 
     bool BRInst::isConditional() const
@@ -48,23 +48,26 @@ namespace IR
         assert(conditional);
         return operands.begin()->getValue();
     }
-
+    BasicBlock* BRInst::getDest() const {
+        assert(!conditional);
+        return dynamic_cast<BasicBlock *>(getOperands().begin()->getValue());
+    }
     BasicBlock* BRInst::getTrueDest() const
     {
         assert(conditional);
-        return dynamic_cast<BasicBlock*>(std::next(operands.begin())->getValue());
+        return dynamic_cast<BasicBlock*>(std::next(getOperands().begin())->getValue());
     }
 
     BasicBlock* BRInst::getFalseDest() const
     {
         assert(conditional);
-        return dynamic_cast<BasicBlock*>(std::next(std::next(operands.begin()))->getValue());
+        return dynamic_cast<BasicBlock*>(std::next(std::next(getOperands().begin()))->getValue());
     }
 
     CALLInst::CALLInst(Function* func, const std::list<Value*>& args)
         : Instruction(OP::CALL, "__call", IRTYPE::VOID)
     {
-        operands = { Use{func, this} };
+        addOperands(func);
         for (auto valptr : args)
             operands.emplace_back(valptr, this);
         // Or something like this
@@ -75,7 +78,7 @@ namespace IR
         : Instruction(OP::CALL, name, ty)
     {
         assert(func->getType() == ty);
-        operands = { Use{func, this} };
+        addOperands(func);
         for (auto valptr : args)
             operands.emplace_back(valptr, this);
     }
@@ -87,18 +90,18 @@ namespace IR
 
     std::string CALLInst::getFuncName() const
     {
-        return operands.begin()->getValue()->getName();
+        return getOperands().begin()->getValue()->getName();
     }
 
     Function* CALLInst::getFunc() const
     {
-        return dynamic_cast<Function*>(operands.begin()->getValue());
+        return dynamic_cast<Function*>(getOperands().begin()->getValue());
     }
 
     std::vector<Value*> CALLInst::getArgs() const
     {
         std::vector<Value*> ret;
-        for (auto it = std::next(operands.begin()); it != operands.end(); ++it)
+        for (auto it = std::next(getOperands().begin()); it != getOperands().end(); ++it)
             ret.emplace_back(it->getValue());
         return ret;
     }

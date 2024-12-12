@@ -4,12 +4,12 @@ namespace IR {
     FPTOSIInst::FPTOSIInst(NameRef name, Value* origin_val)
         : Instruction(OP::FPTOSI, name, IRTYPE::I32)
     {
-        operands = {Use{origin_val, this}};
+        addOperands(origin_val);
     }
 
     Value* FPTOSIInst::getOVal() const
     {
-        return operands.begin()->getValue();
+        return getOperands().begin()->getValue();
     }
 
     IRTYPE FPTOSIInst::getOType() const
@@ -25,12 +25,12 @@ namespace IR {
     SITOFPInst::SITOFPInst(NameRef name, Value* origin_val)
         : Instruction(OP::SITOFP, name, IRTYPE::FLOAT)
     {
-        operands = {Use{origin_val, this}};
+        addOperands(origin_val);
     }
 
     Value* SITOFPInst::getOVal() const
     {
-        return operands.begin()->getValue();
+        return getOperands().begin()->getValue();
     }
 
     IRTYPE SITOFPInst::getOType() const

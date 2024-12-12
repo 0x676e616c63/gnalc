@@ -6,23 +6,23 @@
 namespace IR {
     BinaryInst::BinaryInst(NameRef name, OP opcode, Value *lhs, Value *rhs)
         : Instruction(OP::ADD, name, IRTYPE::I32) {
-        operands = {Use{lhs, this}, Use{rhs, this}};
+        addOperands(lhs, rhs);
     }
 
     Value *BinaryInst::GetLHS() const {
-        return operands.begin()->getValue();
+        return getOperands().begin()->getValue();
     }
 
     Value *BinaryInst::GetRHS() const {
-        return operands.rbegin()->getValue();
+        return getOperands().rbegin()->getValue();
     }
 
     FNEGInst::FNEGInst(NameRef name, Value *val)
         : Instruction(OP::FNEG, name, IRTYPE::FLOAT) {
-        operands = {Use{val, this}};
+        addOperands(val);
     }
 
     Value *FNEGInst::GetVal() const {
-        return operands.begin()->getValue();
+        return getOperands().begin()->getValue();
     }
 }

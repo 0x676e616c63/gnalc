@@ -69,8 +69,13 @@ public:
     User() = default;
     User(std::string _name, IRTYPE _type);
 
-    void addOperand(Value *v); // 构造一个use
+    template<typename ...Arg> // 构造一个use
+    void addOperands(Arg&& ...arg) {
+        operands.emplace_back({std::forward<Arg>(arg), this}...);
+    }
     std::list<Use>& getOperands();
+
+    const std::list<Use>& getOperands() const;
 
     /// @todo 可重载为一个函数名
     void delOperandByValue(Value *v);

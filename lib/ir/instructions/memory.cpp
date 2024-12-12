@@ -16,7 +16,7 @@ namespace IR
         : Instruction(OP::ALLOCA, name, IRTYPE::PTR),
             basetype(btype), align(_align), is_array(true), is_static(false)
     {
-        operands = { Use{num_elements, this} };
+        addOperands(num_elements);
     }
 
     int ALLOCAInst::getAlign() const
@@ -42,7 +42,7 @@ namespace IR
     Value* ALLOCAInst::getNumElements() const
     {
         assert(isArray());
-        return operands.begin()->getValue();
+        return getOperands().begin()->getValue();
     }
 
     IRTYPE ALLOCAInst::getBaseType() const
@@ -53,12 +53,12 @@ namespace IR
     LOADInst::LOADInst(NameRef name, IRTYPE ty, Value* _ptr, int _align)
         : Instruction(OP::LOAD, name, ty), align(_align)
     {
-        operands = {Use{_ptr, this}};
+        addOperands(_ptr);
     }
 
     Value* LOADInst::getPtr() const
     {
-        return operands.begin()->getValue();
+        return getOperands().begin()->getValue();
     }
 
     int LOADInst::getAlign() const
@@ -70,7 +70,7 @@ namespace IR
         : Instruction(OP::STORE, "__store", IRTYPE::UNDEFINED),
             basetype(btype), align(_align)
     {
-        operands = {Use{_value, this}, Use{_ptr, this}};
+        addOperands(_value,_ptr);
     }
 
     IRTYPE STOREInst::getBaseType() const
@@ -80,12 +80,12 @@ namespace IR
 
     Value* STOREInst::getValue() const
     {
-        return operands.begin()->getValue();
+        return getOperands().begin()->getValue();
     }
 
     Value* STOREInst::getPtr() const
     {
-        return std::next(operands.begin())->getValue();
+        return std::next(getOperands().begin())->getValue();
     }
 
     int STOREInst::getAlign() const
@@ -96,20 +96,20 @@ namespace IR
     GEPInst::GEPInst(NameRef name, IRTYPE btype, Value* _ptr, const std::list<Value*>& idxs)
         : Instruction(OP::GEP, name, IRTYPE::PTR), basetype(btype)
     {
-        operands = {Use{_ptr, this}};
+        addOperands(_ptr,idxs);
         for (auto idx : idxs)
             operands.emplace_back(Use{idx, this});
     }
 
     Value* GEPInst::getPtr() const
     {
-        return operands.begin()->getValue();
+        return getOperands().begin()->getValue();
     }
 
     std::vector<Value*> GEPInst::getIdxs() const
     {
         std::vector<Value*> ret;
-        for (auto it = std::next(operands.begin()); it != operands.end(); ++it)
+        for (auto it = std::next(getOperands().begin()); it != getOperands().end(); ++it)
             ret.emplace_back(it->getValue());
         return ret;
     }

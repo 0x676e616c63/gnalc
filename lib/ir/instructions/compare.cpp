@@ -7,15 +7,15 @@
 namespace IR {
     ICMPInst::ICMPInst(NameRef name, ICMPOP cond, Value *lhs, Value *rhs)
         : Instruction(OP::ICMP, name, IRTYPE::I32), cond(cond) {
-        operands = {Use{lhs, this}, Use{rhs, this}};
+        addOperands(lhs,rhs);
     }
 
     Value* ICMPInst::GetLHS() const {
-        return operands.begin()->getValue();
+        return getOperands().begin()->getValue();
     }
 
     Value* ICMPInst::GetRHS() const {
-        return operands.rbegin()->getValue();
+        return getOperands().rbegin()->getValue();
     }
 
     ICMPOP ICMPInst::GetCond() const {
@@ -24,15 +24,15 @@ namespace IR {
 
     FCMPInst::FCMPInst(NameRef name, FCMPOP cond, Value *lhs, Value *rhs)
         : Instruction(OP::FCMP, name, IRTYPE::FLOAT), cond(cond) {
-        operands = {Use{lhs, this}, Use{rhs, this}};
+        addOperands(lhs,rhs);
     }
 
     Value* FCMPInst::GetLHS() const {
-        return operands.begin()->getValue();
+        return getOperands().begin()->getValue();
     }
 
     Value* FCMPInst::GetRHS() const {
-        return operands.rbegin()->getValue();
+        return getOperands().rbegin()->getValue();
     }
 
     FCMPOP FCMPInst::GetCond() const {

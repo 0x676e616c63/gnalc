@@ -64,11 +64,11 @@ Value::~Value() {
 
 User::User(std::string _name, IRTYPE _type) : Value(std::move(_name), _type) {}
 
-void User::addOperand(Value *v) {
-    operands.emplace_back(v, this);
+std::list<Use>& User::getOperands() {
+    return operands;
 }
 
-std::list<Use>& User::getOperands() {
+const std::list<Use>& User::getOperands() const {
     return operands;
 }
 
