@@ -25,7 +25,10 @@ Operand::Operand(OperandType type, unsigned int VirReg): ValType(type), VirReg(V
 Operand::Operand(Operand& other) :
     ValType(other.ValType),
 
+
     // 深拷贝字符串指针指向的内容
+    // Indentifier(std::make_unique<std::string>(*other.Indentifier)),
+    
     // Indentifier(std::make_unique<std::string>(*other.Indentifier)),
     
     VirReg(other.VirReg),

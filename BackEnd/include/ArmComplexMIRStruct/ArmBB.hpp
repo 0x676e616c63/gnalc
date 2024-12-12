@@ -9,6 +9,9 @@
 #include "../../../include/ir/basic_block.hpp"
 #include "../../../include/ir/base.hpp"
 #include "../../../include/ir/instruction.hpp"
+#include "../../../include/ir/basic_block.hpp"
+#include "../../../include/ir/base.hpp"
+#include "../../../include/ir/instruction.hpp"
 #include "../tools/ArmTools.hpp"
 
 class ArmStruct::Terminator{
@@ -30,6 +33,7 @@ class ArmStruct::Terminator{
 class ArmStruct::BB{
     public:
         BB(IR::BasicBlock&, Function&);
+        BB(IR::BasicBlock&, Function&);
         ~BB()=default;
         
         std::string& toString();
@@ -45,6 +49,7 @@ class ArmStruct::BB{
         // Terminator& Terminator;
         std::string label;
         std::list<Instruction*> InstList;
+        Function& Func;
         Function& Func;
         std::unordered_set<std::reference_wrapper<Operand>, ArmTools::HashOperandReferWrap, ArmTools::HashOperandReferWrapEqual> LiveOut;
     private:

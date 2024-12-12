@@ -37,6 +37,9 @@ namespace ArmStruct{
 typedef std::initializer_list<std::reference_wrapper<IR::Instruction>> InstArgs;
 
 
+typedef std::initializer_list<std::reference_wrapper<IR::Instruction>> InstArgs;
+
+
 namespace ArmTools{
     class MyUnOrderedSet;
 
@@ -75,6 +78,57 @@ namespace ArmTools{
     // std::map<ExtensionRegisterName, std::string> ExtensionRegisterMap;
     // enum OpCode;
     // std::map<OpCode, std::string> OpCodeMap;
+
+    // std::map<IR::OP, OperCode>Mid2BackOpC;
+    
+    /// @note 模式匹配函数
+
+    struct BinaryMatch{
+        void operator()(InstArgs, ArmStruct::BB&) const;
+    };
+
+    struct UnaryMatch{
+        void operator()(InstArgs, ArmStruct::BB&) const;
+    };
+
+    struct BranchMatch{
+        void operator()(InstArgs, ArmStruct::BB&) const;
+    };
+
+    struct AllocaMatch{
+        void operator()(InstArgs, ArmStruct::BB&) const;
+    };
+
+    struct LoadMatch{
+        void operator()(InstArgs, ArmStruct::BB&) const;
+    };
+
+    struct StoreMatch{
+        void operator()(InstArgs, ArmStruct::BB&) const;
+    };
+    
+    struct GepMatch{
+        void operator()(InstArgs, ArmStruct::BB&) const;
+    };
+    
+    struct FPTOSIMatch{
+        void operator()(InstArgs, ArmStruct::BB&) const;
+    };
+
+    struct SITOFPMatch{
+        void operator()(InstArgs, ArmStruct::BB&) const;
+    };
+
+    // struct ICMP, FCMP ; in BranchMatch
+
+    struct CallMatch{
+        void operator()(InstArgs, ArmStruct::BB&) const;
+    };
+
+    struct PhiMatch{
+        void operator()(InstArgs, ArmStruct::BB&) const;
+    };
+
 
     // std::map<IR::OP, OperCode>Mid2BackOpC;
     

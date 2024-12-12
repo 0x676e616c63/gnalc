@@ -11,6 +11,7 @@
 namespace ArmTools{
 
 bool ArmTools::isImmCanBeEncodedInText(unsigned long long imme){
+bool ArmTools::isImmCanBeEncodedInText(unsigned long long imme){
     for (int shift = 0; shift <= 32; shift += 2){
         if ((((imme << shift) | (imme >> (32 - shift))) & ~0xff) == 0){
             return true;
@@ -29,6 +30,7 @@ bool ArmTools::isImmCanBeEncodedInText(float imme){
                 return true;
         }
     }
+    return false;
     return false;
 }
 

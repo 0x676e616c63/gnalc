@@ -1,6 +1,7 @@
 #include <string>
 #include "../Arm.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmInstruction.hpp"
+#include "../../include/ArmComplexMIRStruct/ArmInstruction.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmBB.hpp"
 
 using namespace ArmStruct;

@@ -5,6 +5,8 @@
 #include "../../include/ArmComplexMIRStruct/ArmOperand.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmFunction.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmBB.hpp"
+#include "../../include/ArmComplexMIRStruct/ArmFunction.hpp"
+#include "../../include/ArmComplexMIRStruct/ArmBB.hpp"
 #include "../../include/tools/ArmTools.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmInstruction.hpp"
 
@@ -34,6 +36,10 @@ Instruction::Instruction(OperCode opcode,Imm* attach, BB& BasicBlock,
 Instruction::Instruction(Instruction& inst, OperCode type, unsigned int cnt):
     BasicBlock(inst.BasicBlock), DefOperandList(), UseOperandList(){
     /// @todo 这里实际上也可以用MemInstruction的构造, attach成员这个设计确实会造成太多歧义
+/// @brief reWrite Programme to add overflow vars
+Instruction::Instruction(Instruction& inst, OperCode type, unsigned int cnt):
+    BasicBlock(inst.BasicBlock), DefOperandList(), UseOperandList(){
+    /// @todo 这里实际上也可以用MemInstruction的构造, attach成员这个设计确实会造成太多歧义
     this->id = cnt;
     this->opcode = type;
     if(type == OperCode::STR){
@@ -42,6 +48,7 @@ Instruction::Instruction(Instruction& inst, OperCode type, unsigned int cnt):
     else{
         DefOperandList.push_back(inst.UseOperandList[0]);
     }
+    /// @note MMptr 用于保存栈空间信息
     /// @note MMptr 用于保存栈空间信息
     this->attach = new MMptr();
     
