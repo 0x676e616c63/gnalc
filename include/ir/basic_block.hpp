@@ -19,6 +19,8 @@ class BasicBlock : public Value {
     std::list<BasicBlock*> pre_bb; // 前驱
     std::list<BasicBlock*> next_bb; // 后继
     std::list<Instruction*> insts; // 指令列表
+    std::list<Value*> livein;
+    std::list<Value*> liveout;
 public:
     BasicBlock(std::string _name);
     BasicBlock(std::string _name, std::list<Instruction*> _insts);
@@ -32,7 +34,10 @@ public:
     std::list<Instruction*>& getInsts();
     // ...
 
-    void accept(IRVisitor& visitor) { visitor.visit(*this); }
+    auto& getLiveIn() { return livein; }
+    auto& getLiveOut() { return liveout; }
+
+    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
     ~BasicBlock();
 };
 

@@ -24,12 +24,12 @@ private:
     bool is_zero; // is zeroinitializer, 对于array就输出zeroinitializer, 不是array就输出0
     bool is_array;
     std::vector<int> array_size; // [3 x [4 x i32]] 就是 {3, 4} 和语言中的数组大小顺序一致
-    Value constval; // 只针对非array的情况!!! 内容只能是ConstantInt or Float
+    Value* constval; // 只针对非array的情况!!! 内容只能是ConstantInt or Float
     std::vector<GVIniter> inner_initer; // isarray == true
 public:
     GVIniter() = delete;
     GVIniter(IRTYPE _ty); // zeroinit
-    GVIniter(IRTYPE _ty, Value _con); // i32 1
+    GVIniter(IRTYPE _ty, Value* _con); // i32 1
     GVIniter(IRTYPE _ty, std::vector<int> _array_size); // [2 x i32] zeroinit
     GVIniter(IRTYPE _ty, std::vector<int> _array_size, std::vector<GVIniter> _inner_initer); // [2 x [2 x i32]] [...]
 
@@ -37,7 +37,7 @@ public:
     bool isZero() const;
     bool isArray() const;
     std::vector<int> getArraySize() const;
-    Value& getConstVal(); // 此处暂时先用非const的引用传递
+    Value* getConstVal(); // 此处暂时先用非const的引用传递
     std::vector<GVIniter>& getInnerIniter(); // 此处暂时先用非const的引用传递
 
     friend class GlobalVariable;
@@ -69,7 +69,7 @@ public:
     GVIniter& getIniter();
     int getAlign() const;
 
-    void accept(IRVisitor& visitor) { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
     ~GlobalVariable();
 };
 }
