@@ -94,12 +94,22 @@ namespace IR
         return align;
     }
 
-    GEPInst::GEPInst(NameRef name, IRTYPE btype, Value* _ptr, const std::list<Value*>& idxs)
-        : Instruction(OP::GEP, name, IRTYPE::PTR), basetype(btype)
+    GEPInst::GEPInst(NameRef name, IRTYPE btype, std::vector<int> _array_size,  Value* _ptr, const std::list<Value*>& idxs)
+        : Instruction(OP::GEP, name, IRTYPE::PTR), basetype(btype), array_size(_array_size)
     {
         addOperand(_ptr,idxs);
         for (auto idx : idxs)
             addOperand(idx);
+    }
+
+    IRTYPE GEPInst::getBaseType() const
+    {
+        return basetype;
+    }
+
+    std::vector<int> GEPInst::getArraySize() const
+    {
+        return array_size;
     }
 
     Value* GEPInst::getPtr() const
