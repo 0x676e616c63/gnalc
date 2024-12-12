@@ -10,7 +10,6 @@
 #include "function.hpp"
 #include "global_var.hpp"
 
-
 namespace IR {
 
 /**
@@ -35,8 +34,8 @@ public:
     const auto& getFunctions() const;
     void delFunction(NameRef name); // by name
 
-    void accept(IRVisitor& visitor) { visitor.visit(*this); }
-    ~Module();
+    void accept(IRVisitor& visitor);
+    ~Module() = default;
 };
 }
 

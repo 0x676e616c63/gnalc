@@ -72,7 +72,7 @@ public:
     BasicBlock* getParent() const;
 
     virtual void accept(class IRVisitor& visitor) = 0;
-    ~Instruction();
+    ~Instruction() override;
 };
 
 }

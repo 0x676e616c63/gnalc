@@ -2,6 +2,7 @@
 // Created by BEE172 on 24-12-5.
 //
 #include "../../../include/ir/instructions/binary.hpp"
+#include "../../../include/ir/visitor.hpp"
 
 namespace IR {
     BinaryInst::BinaryInst(NameRef name, OP opcode, Value *lhs, Value *rhs)
@@ -26,4 +27,9 @@ namespace IR {
     Value *FNEGInst::GetVal() const {
         return getOperands().begin()->getValue();
     }
+
+
+    void BinaryInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+
+    void FNEGInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
 }

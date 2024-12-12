@@ -2,6 +2,7 @@
 // Created by BEE172 on 24-12-5.
 //
 #include "../../../include/ir/instructions/compare.hpp"
+#include "../../../include/ir/visitor.hpp"
 
 
 namespace IR {
@@ -40,4 +41,8 @@ namespace IR {
     FCMPOP FCMPInst::GetCond() const {
         return cond;
     }
+
+    void ICMPInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+
+    void FCMPInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
 }

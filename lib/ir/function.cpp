@@ -1,4 +1,5 @@
 #include "../../include/ir/function.hpp"
+#include "../../include/ir/visitor.hpp"
 
 namespace IR {
     Function::Function(std::string _name, IRTYPE _ty) : Value(std::move(_name), _ty) {}
@@ -26,6 +27,8 @@ namespace IR {
     auto& Function::getInsts() {
         return insts;
     }
+
+    void Function::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
     Function::~Function() {}
 }

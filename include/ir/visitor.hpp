@@ -21,8 +21,7 @@
 #include "instructions/phi.hpp"
 
 namespace IR {
-
-class IRVisitor {
+    class IRVisitor {
 public:
     // virtual void visit(example& node) {}
     virtual void visit(Module& node) {}
