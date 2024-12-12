@@ -19,7 +19,6 @@
 
 #include <list>
 #include "type.hpp"
-#include "visitor.hpp"
 
 namespace IR {
 
@@ -76,7 +75,7 @@ public:
     void delOperandByValue(Value *v);
     void delOperandByName(NameRef name);
 
-    virtual void accept(class IRVisitor& visitor) = 0;
+    virtual void accept(IRVisitor& visitor) = 0;
     ~User() override;
 };
 

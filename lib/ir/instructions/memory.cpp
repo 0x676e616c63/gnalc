@@ -1,4 +1,5 @@
 #include "../../../include/ir/instructions/memory.hpp"
+#include "../../../include/ir/visitor.hpp"
 #include <cassert>
 #include <stdexcept>
 
@@ -113,4 +114,9 @@ namespace IR
             ret.emplace_back(it->getValue());
         return ret;
     }
+
+    void ALLOCAInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void LOADInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void STOREInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void GEPInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
 }

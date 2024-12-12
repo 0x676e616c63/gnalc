@@ -7,10 +7,10 @@
 #define GNALC_IR_BASIC_BLOCK_HPP
 
 #include "base.hpp"
-#include "instruction.hpp"
 
 namespace IR {
-
+    class Instruction;
+    class IRVisitor;
 /**
  * @brief BB继承自value, 其被br指令'use', 'use'了它所包含的指令
  * @note next_bb包含的BB和最后一条br指令中的相同
@@ -34,11 +34,11 @@ public:
     std::list<Instruction*>& getInsts();
     // ...
 
-    auto& getLiveIn() { return livein; }
-    auto& getLiveOut() { return liveout; }
+    auto& getLiveIn();
+    auto& getLiveOut();
 
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
-    ~BasicBlock();
+    void accept(IRVisitor& visitor) override;
+    ~BasicBlock() override;
 };
 
 }

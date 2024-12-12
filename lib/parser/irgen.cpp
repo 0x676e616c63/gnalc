@@ -23,10 +23,9 @@ namespace AST {
             }
         }
 
-        if (node.isInited()) {
-            for (auto& iv : node.getInitVals()) {
-                iv->accept(*this);
-            }
+        if (node.isInited())
+        {
+            node.accept(*this);
             // module.registerSymbol(node.getId(), nullptr);
         }
         else {

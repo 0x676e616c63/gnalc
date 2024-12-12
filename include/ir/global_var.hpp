@@ -69,8 +69,8 @@ public:
     GVIniter& getIniter();
     int getAlign() const;
 
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
-    ~GlobalVariable();
+    void accept(IRVisitor& visitor) override;
+    ~GlobalVariable() override;
 };
 }
 
