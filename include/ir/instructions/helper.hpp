@@ -13,32 +13,32 @@ namespace IR {
 // IF Block Entry
 class IFBEntry : public Instruction {
 public:
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override;
 };
 
 class IFBEnd : public Instruction {
 public:
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override;
 };
 
 class ELSEBEntry : public Instruction {
 public:
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override;
 };
 
 class ELSEBEnd : public Instruction {
 public:
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override;
 };
 
 class WHILEBEntry : public Instruction {
 public:
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override;
 };
 
 class WHILEBEnd : public Instruction {
 public:
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override;
 };
 
 }

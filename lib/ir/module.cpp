@@ -1,4 +1,6 @@
 #include "../../include/ir/module.hpp"
+#include "../../include/ir/visitor.hpp"
+#include "../../include/symbol_table/symbol_table.hpp"
 
 namespace IR {
 
@@ -38,6 +40,9 @@ void Module::delFunction(NameRef name) {
         }
     }
 }
+
+
+void Module::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
 /**
  * @todo

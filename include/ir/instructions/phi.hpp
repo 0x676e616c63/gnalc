@@ -12,8 +12,7 @@ namespace IR {
 
 class PHIInst : public Instruction {
 public:
-
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override;
 };
 
 }

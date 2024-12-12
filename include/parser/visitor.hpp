@@ -48,8 +48,8 @@ public:
 };
 
 class IRGenerator : public ASTVisitor {
-    IR::Module module;
-    IR::Value curr_val;
+    IR::Module* module;
+    IR::Value* curr_val;
 public:
     IRGenerator() = default;
     void visit(CompUnit& node) override;

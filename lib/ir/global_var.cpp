@@ -1,4 +1,5 @@
 #include "../../include/ir/global_var.hpp"
+#include "../../include/ir/visitor.hpp"
 
 #if ENABLE_GVINITER_TOSTRING
 #include "../../include/irvisitors/irprinter.hpp"
@@ -89,7 +90,7 @@ std::string GVIniter::toString() {
         for (int i = 0; i < getArraySize().size(); i++) {
             ret += "]";
         }
-        
+
         if (isZero()) {
             ret += " zeroinitializer";
         } else {
@@ -114,5 +115,4 @@ std::string GVIniter::toString() {
 
     return ret;
 }
-
 }

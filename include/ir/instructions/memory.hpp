@@ -41,7 +41,7 @@ public:
     Value* getNumElements() const; // 修改使用 User基类 的方法
     int getAlign() const;
 
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override;
 };
 
 // <result> = load [volatile] <ty>, ptr <pointer>[, align <alignment>]......
@@ -56,7 +56,7 @@ public:
     Value* getPtr() const;
     int getAlign() const;
 
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override;
 };
 
 // store [volatile] <ty> <value>, ptr <pointer>[, align <alignment>]......
@@ -74,7 +74,7 @@ public:
     Value* getPtr() const;
     int getAlign() const;
 
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override;
 };
 
 // <result> = getelementptr <ty>, ptr <ptrval>{, <ty> <idx>}*
@@ -94,7 +94,7 @@ public:
     Value* getPtr() const;
     std::vector<Value*> getIdxs() const;
 
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override;
 };
 
 }

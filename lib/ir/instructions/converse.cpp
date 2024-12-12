@@ -1,4 +1,5 @@
 #include "../../../include/ir/instructions/converse.hpp"
+#include "../../../include/ir/visitor.hpp"
 
 namespace IR {
     FPTOSIInst::FPTOSIInst(NameRef name, Value* origin_val)
@@ -42,4 +43,8 @@ namespace IR {
     {
         return ty;
     }
+
+    void SITOFPInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+
+    void FPTOSIInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
 }

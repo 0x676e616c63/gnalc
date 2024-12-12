@@ -37,8 +37,8 @@ public:
     auto& getInsts();
     // ...
 
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
-    ~Function();
+    void accept(IRVisitor& visitor) override;
+    ~Function() override;
 };
 }
 

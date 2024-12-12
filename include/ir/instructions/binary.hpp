@@ -24,7 +24,7 @@ public:
     Value* GetLHS() const;
     Value* GetRHS() const;
 
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override;
 };
 
 // OP = FNEG, type = f32
@@ -35,7 +35,7 @@ public:
 
     Value* GetVal() const;
 
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override;
 };
 
 }
