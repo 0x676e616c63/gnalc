@@ -47,6 +47,10 @@ class IRFormatter {
 public:
     static std::string formatIRTYPE(IRTYPE type);
     static std::string formatSTOCLASS(STOCLASS cls);
+    static std::string formatOp(OP op);
+    static std::string formatCMPOP(ICMPOP cond);
+    static std::string formatCMPOP(FCMPOP cond);
+
     static std::string formatValue(Value& val); // -> i32 %a
     // static std::string formatBB(BasicBlock& bb);
     // static std::string formatConstInt(ConstantInt& ci); // 和formatValue重了
