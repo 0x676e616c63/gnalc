@@ -32,9 +32,9 @@ public:
     void addBlock(BasicBlock* blk);
     void addInst(Instruction* inst);
 
-    auto& getParams();
-    auto& getBlocks();
-    auto& getInsts();
+    std::vector<Value*>& getParams();
+    std::vector<BasicBlock*>& getBlocks();
+    std::vector<Instruction*>& getInsts();
     // ...
 
     void accept(IRVisitor& visitor) override;

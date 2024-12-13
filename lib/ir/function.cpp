@@ -16,15 +16,15 @@ namespace IR {
         insts.push_back(std::move(inst));
     }
 
-    auto& Function::getParams() {
+    std::vector<Value*>& Function::getParams() {
         return params;
     }
 
-    auto& Function::getBlocks() {
+    std::vector<BasicBlock*>& Function::getBlocks() {
         return blks;
     }
 
-    auto& Function::getInsts() {
+    std::vector<Instruction*>& Function::getInsts() {
         return insts;
     }
 
