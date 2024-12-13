@@ -6,7 +6,8 @@
 namespace IR {
     BinaryInst::BinaryInst(NameRef name, OP opcode, Value *lhs, Value *rhs)
         : Instruction(OP::ADD, name, IRTYPE::I32) {
-        addOperands(lhs, rhs);
+        addOperand(lhs)
+        addOperand(rhs);
     }
 
     Value *BinaryInst::GetLHS() const {
@@ -19,7 +20,7 @@ namespace IR {
 
     FNEGInst::FNEGInst(NameRef name, Value *val)
         : Instruction(OP::FNEG, name, IRTYPE::FLOAT) {
-        addOperands(val);
+        addOperand(val);
     }
 
     Value *FNEGInst::GetVal() const {

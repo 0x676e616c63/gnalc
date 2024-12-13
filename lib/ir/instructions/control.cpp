@@ -13,7 +13,7 @@ namespace IR
         : Instruction(OP::RET, "__ret", IRTYPE::UNDEFINED),
             ret_type(ret_val->getType())
     {
-        addOperands(ret_val);
+        addOperand(ret_val);
     }
 
     bool RETInst::isVoid() const
@@ -29,13 +29,15 @@ namespace IR
     BRInst::BRInst(BasicBlock* _dest)
         : Instruction(OP::BR, "__br", IRTYPE::UNDEFINED), conditional(false)
     {
-        addOperands(_dest);
+        addOperand(_dest);
     }
 
     BRInst::BRInst(Value* cond, BasicBlock* _true_dest, BasicBlock* _false_dest)
         : Instruction(OP::BR, "__br", IRTYPE::UNDEFINED), conditional(false)
     {
-        addOperands(cond, _true_dest, _false_dest);
+        addOperand(cond);
+        addOperand(_true_dest);
+        addOperand(_false_dest);
     }
 
     bool BRInst::isConditional() const
@@ -46,7 +48,7 @@ namespace IR
     Value* BRInst::getCond() const
     {
         assert(conditional);
-        return operands.begin()->getValue();
+        return getOperands().begin()->getValue();
     }
     BasicBlock* BRInst::getDest() const {
         assert(!conditional);
@@ -67,7 +69,7 @@ namespace IR
     CALLInst::CALLInst(Function* func, const std::list<Value*>& args)
         : Instruction(OP::CALL, "__call", IRTYPE::VOID)
     {
-        addOperands(func);
+        addOperand(func);
         for (auto valptr : args)
             operands.emplace_back(valptr, this);
         // Or something like this
@@ -78,9 +80,9 @@ namespace IR
         : Instruction(OP::CALL, name, ty)
     {
         assert(func->getType() == ty);
-        addOperands(func);
+        addOperand(func);
         for (auto valptr : args)
-            operands.emplace_back(valptr, this);
+            addOperand(valptr);
     }
 
     bool CALLInst::isVoid() const

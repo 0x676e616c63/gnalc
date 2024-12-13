@@ -4,7 +4,7 @@ namespace IR {
     FPTOSIInst::FPTOSIInst(NameRef name, Value* origin_val)
         : Instruction(OP::FPTOSI, name, IRTYPE::I32)
     {
-        addOperands(origin_val);
+        addOperand(origin_val);
     }
 
     Value* FPTOSIInst::getOVal() const
@@ -25,7 +25,7 @@ namespace IR {
     SITOFPInst::SITOFPInst(NameRef name, Value* origin_val)
         : Instruction(OP::SITOFP, name, IRTYPE::FLOAT)
     {
-        addOperands(origin_val);
+        addOperand(origin_val);
     }
 
     Value* SITOFPInst::getOVal() const

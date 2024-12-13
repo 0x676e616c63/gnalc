@@ -7,7 +7,8 @@
 namespace IR {
     ICMPInst::ICMPInst(NameRef name, ICMPOP cond, Value *lhs, Value *rhs)
         : Instruction(OP::ICMP, name, IRTYPE::I32), cond(cond) {
-        addOperands(lhs,rhs);
+        addOperand(lhs);
+        addOperand(rhs);
     }
 
     Value* ICMPInst::GetLHS() const {
@@ -24,7 +25,8 @@ namespace IR {
 
     FCMPInst::FCMPInst(NameRef name, FCMPOP cond, Value *lhs, Value *rhs)
         : Instruction(OP::FCMP, name, IRTYPE::FLOAT), cond(cond) {
-        addOperands(lhs,rhs);
+        addOperand(lhs);
+        addOperand(rhs);
     }
 
     Value* FCMPInst::GetLHS() const {

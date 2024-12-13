@@ -16,7 +16,7 @@ namespace IR
         : Instruction(OP::ALLOCA, name, IRTYPE::PTR),
             basetype(btype), align(_align), is_array(true), is_static(false)
     {
-        addOperands(num_elements);
+        addOperand(num_elements);
     }
 
     int ALLOCAInst::getAlign() const
@@ -53,7 +53,7 @@ namespace IR
     LOADInst::LOADInst(NameRef name, IRTYPE ty, Value* _ptr, int _align)
         : Instruction(OP::LOAD, name, ty), align(_align)
     {
-        addOperands(_ptr);
+        addOperand(_ptr);
     }
 
     Value* LOADInst::getPtr() const
@@ -70,7 +70,7 @@ namespace IR
         : Instruction(OP::STORE, "__store", IRTYPE::UNDEFINED),
             basetype(btype), align(_align)
     {
-        addOperands(_value,_ptr);
+        addOperand(_value,_ptr);
     }
 
     IRTYPE STOREInst::getBaseType() const
@@ -80,12 +80,12 @@ namespace IR
 
     Value* STOREInst::getValue() const
     {
-        return getOperands().begin()->getValue();
+        return getOperand().begin()->getValue();
     }
 
     Value* STOREInst::getPtr() const
     {
-        return std::next(getOperands().begin())->getValue();
+        return std::next(getOperand().begin())->getValue();
     }
 
     int STOREInst::getAlign() const
@@ -96,9 +96,9 @@ namespace IR
     GEPInst::GEPInst(NameRef name, IRTYPE btype, Value* _ptr, const std::list<Value*>& idxs)
         : Instruction(OP::GEP, name, IRTYPE::PTR), basetype(btype)
     {
-        addOperands(_ptr,idxs);
+        addOperand(_ptr,idxs);
         for (auto idx : idxs)
-            operands.emplace_back(Use{idx, this});
+            addOperand(idx);
     }
 
     Value* GEPInst::getPtr() const
