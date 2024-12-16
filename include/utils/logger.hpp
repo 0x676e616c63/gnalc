@@ -1,3 +1,7 @@
+#pragma once
+#ifndef GNALC_UTILS_LOGGER_HPP
+#define GNALC_UTILS_LOGGER_HPP
+
 #include <iostream>
 #include <string>
 
@@ -24,3 +28,5 @@ private:
 };
 
 LogLevel Logger::logLevel = LogLevel::NONE;
+
+#endif

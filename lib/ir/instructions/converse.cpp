@@ -1,10 +1,12 @@
 #include "../../../include/ir/instructions/converse.hpp"
 #include "../../../include/ir/visitor.hpp"
+#include <cassert>
 
 namespace IR {
     FPTOSIInst::FPTOSIInst(NameRef name, Value* origin_val)
         : Instruction(OP::FPTOSI, name, IRTYPE::I32)
     {
+        assert(origin_val->getType() == IRTYPE::FLOAT);
         operands = {Use{origin_val, this}};
     }
 
@@ -26,6 +28,7 @@ namespace IR {
     SITOFPInst::SITOFPInst(NameRef name, Value* origin_val)
         : Instruction(OP::SITOFP, name, IRTYPE::FLOAT)
     {
+        assert(origin_val->getType() == IRTYPE::I32);
         operands = {Use{origin_val, this}};
     }
 
@@ -44,7 +47,7 @@ namespace IR {
         return ty;
     }
 
-    void SITOFPInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void SITOFPInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
-    void FPTOSIInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void FPTOSIInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 }

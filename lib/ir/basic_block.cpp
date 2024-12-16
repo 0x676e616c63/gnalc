@@ -35,9 +35,9 @@ namespace IR {
         return insts;
     }
 
-    void BasicBlock::accept(IRVisitor& visitor) override
+    void BasicBlock::accept(IRVisitor& visitor)
     { visitor.visit(*this); }
 
-    BasicBlock::~BasicBlock() override {
+    BasicBlock::~BasicBlock() {
     }
 }

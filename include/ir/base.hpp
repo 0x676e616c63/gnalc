@@ -83,7 +83,7 @@ public:
     void delOperandByValue(Value *v);
     void delOperandByName(NameRef name);
 
-    virtual void accept(IRVisitor& visitor) = 0;
+    virtual void accept(IRVisitor& visitor) override = 0;
     ~User() override;
 };
 

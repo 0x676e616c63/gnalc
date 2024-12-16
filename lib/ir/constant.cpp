@@ -12,7 +12,7 @@ namespace IR {
     float ConstantFloat::getVal() { return val; }
 
 
-    void ConstantInt::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void ConstantInt::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
-    void ConstantFloat::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void ConstantFloat::accept(IRVisitor& visitor) { visitor.visit(*this); }
 }

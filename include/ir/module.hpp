@@ -35,7 +35,7 @@ public:
     void delFunction(NameRef name); // by name
 
     void accept(IRVisitor& visitor);
-    ~Module() = default;
+    ~Module();
 };
 }
 
