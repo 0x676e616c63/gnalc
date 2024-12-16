@@ -43,7 +43,9 @@ enum class OP {
 
     PHI,
 
-    CALL
+    CALL,
+
+    HELPER
 
 };
 
