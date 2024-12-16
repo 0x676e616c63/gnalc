@@ -132,6 +132,10 @@ std::string IRFormatter::formatOp(OP op) {
             return "frem";
         case OP::FNEG:
             return "fneg";
+        case OP::AND:
+            return "and";
+        case OP::OR:
+            return "or";
         case OP::ICMP:
             return "icmp";
         case OP::FCMP:
@@ -328,9 +332,9 @@ std::string IRFormatter::fBinaryInst(BinaryInst& inst) {
     ret += " = ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
     ret += IRFormatter::formatIRTYPE(inst.getType()) + " ";
-    ret += inst.GetLHS()->getName();
+    ret += inst.getLHS()->getName();
     ret += ", ";
-    ret += inst.GetRHS()->getName();
+    ret += inst.getRHS()->getName();
     return ret;
 }
 
@@ -340,7 +344,7 @@ std::string IRFormatter::fFNEGInst(FNEGInst& inst) {
     ret += " = ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
     ret += IRFormatter::formatIRTYPE(inst.getType()) + " ";
-    ret += inst.GetVal()->getName();
+    ret += inst.getVal()->getName();
     return ret;
 }
 
@@ -349,11 +353,11 @@ std::string IRFormatter::fICMPInst(ICMPInst& inst) {
     ret += inst.getName();
     ret += " = ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
-    ret += IRFormatter::formatCMPOP(inst.GetCond()) + " ";
-    ret += IRFormatter::formatIRTYPE(inst.getType()) + " ";
-    ret += inst.GetLHS()->getName();
+    ret += IRFormatter::formatCMPOP(inst.getCond()) + " ";
+    ret += IRFormatter::formatIRTYPE(inst.getLHS()->getType()) + " ";
+    ret += inst.getLHS()->getName();
     ret += ", ";
-    ret += inst.GetRHS()->getName();
+    ret += inst.getRHS()->getName();
     return ret;
 }
 
@@ -362,11 +366,11 @@ std::string IRFormatter::fFCMPInst(FCMPInst& inst) {
     ret += inst.getName();
     ret += " = ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
-    ret += IRFormatter::formatCMPOP(inst.GetCond()) + " ";
-    ret += IRFormatter::formatIRTYPE(inst.getType()) + " ";
-    ret += inst.GetLHS()->getName();
+    ret += IRFormatter::formatCMPOP(inst.getCond()) + " ";
+    ret += IRFormatter::formatIRTYPE(inst.getLHS()->getType()) + " ";
+    ret += inst.getLHS()->getName();
     ret += ", ";
-    ret += inst.GetRHS()->getName();
+    ret += inst.getRHS()->getName();
     return ret;
 }
 
@@ -376,8 +380,7 @@ std::string IRFormatter::fRETInst(RETInst& inst) {
     if (inst.isVoid()) {
         ret += "void";
     } else {
-        ret += IRFormatter::formatIRTYPE(inst.getRetVal()->getType()) + " "; // or getRetType()
-        ret += inst.getRetVal()->getName();
+        ret += IRFormatter::formatValue(*(inst.getRetVal()));
     }
     return ret;
 }

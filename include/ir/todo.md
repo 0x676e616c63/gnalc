@@ -4,16 +4,18 @@
 
 > BY SH ZHAO
 
-1. Get*()->get*() in binary.hpp, compare.hpp
+1. ~~Get*()->get*() in binary.hpp, compare.hpp~~
 
-2. fix wrong func in ircpp
+2. ~~fix wrong func in ircpp~~
 
-3. RETInst add getRetType()
+3. ~~RETInst add getRetType()~~
 
-4. BR COND TYPE Problem
+4. ~~BR COND TYPE Problem // add i1 type cmp return i1, br use i1~~
 
-5. CALLInst->getArgs return &
+5. ~~CALLInst->getArgs return &~~
 
-6. accept func's "override" location (in hpp or in cpp? ide warning)
+6. ~~accept func's "override" location (in hpp or in cpp? ide warning)~~
 
 7. Instruction 是否需要标记其父函数？
+
+8. USE可以重载一下操作符，便于快速获得*val (for 5)
