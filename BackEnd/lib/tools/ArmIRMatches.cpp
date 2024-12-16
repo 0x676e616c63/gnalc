@@ -176,21 +176,134 @@ struct BranchMatch{
     }
 };
 
-struct AllocaMatch{
-    /// @brief 注意结合Instruction::MkFrameInit 
-    void operator()(InstArgs insts, BB& BasicBlock) const{
-        assert(insts.size() == 1);
-        auto &midEnd_inst = insts.begin()->get();
+struct FPTOSIMatch{
+    void operator()(InstArgs InstArgs, BB& BasicBlock) const{
+        assert(InstArgs.size() == 1);
+        auto &midEnd_converse = dynamic_cast<IR::FPTOSIInst&>(InstArgs.begin()->get());
 
-        MMptr *backEnd_mmptr = new MMptr();
+        Operand *Def = new Operand(midEnd_converse.getName());
+        BasicBlock.Func.VirRegOperandMap[Def->VirReg] = Def;
 
-        Instruction *backEnd_inst = new MemInstruction(
+        unsigned long midEnd_VirReg = std::stoull(midEnd_converse.getOVal()->getName().substr(1));
 
+        Operand *Use = BasicBlock.Func.VirRegOperandMap[midEnd_VirReg];
+        
+        Instruction *backEnd_converse = new Instruction(
+            OperCode::VCVT_S32_F32, nullptr, BasicBlock, {std::ref(*Def)}, {std::ref(*Use)}
         );
+        
+        BasicBlock.InstList.push_back(backEnd_converse);
+    }   
+};
+
+struct SITOFPMatch{
+    void operator()(InstArgs InstArgs, BB& BasicBlock) const{
+        assert(InstArgs.size() == 1);
+        auto &midEnd_converse = dynamic_cast<IR::FPTOSIInst&>(InstArgs.begin()->get());
+
+        Operand *Def = new Operand(midEnd_converse.getName());
+        BasicBlock.Func.VirRegOperandMap[Def->VirReg] = Def;
+
+        unsigned long midEnd_VirReg = std::stoull(midEnd_converse.getOVal()->getName().substr(1));
+
+        Operand *Use = BasicBlock.Func.VirRegOperandMap[midEnd_VirReg];
+        
+        Instruction *backEnd_converse = new Instruction(
+            OperCode::VCVT_F32_S32, nullptr, BasicBlock, {std::ref(*Def)}, {std::ref(*Use)}
+        );
+        
+        BasicBlock.InstList.push_back(backEnd_converse);
+    }
+};
+
+struct CallMatch{
+    void operator()(InstArgs InstArgs, BB& BasicBlock) const{
+        assert(InstArgs.size() == 1);
+        auto &midEnd_call = dynamic_cast<IR::CALLInst&>(InstArgs.begin()->get());
+
+        ///@brief 生成可能冗余的mov保护指令(core)
+        ///@brief fpu得另想法子, 比较正常的办法是传参都用core寄存器或者栈空间(便于参数管理)
+        ///@brief Def为一个虚拟寄存器, Use则需要预着色为相应的寄存器
+        for(int i = 0; i < 4; ++i){
+            ///@brief new...
+        }
+
+        ///@brief 加载参数
+        auto argc_list = midEnd_call.getArgs();
+        unsigned int cnt = 0;
+        
+        for(auto midEnd_argc = argc_list.begin(); midEnd_argc != argc_list.end(); ++cnt, ++midEnd_argc){
+            unsigned long long midEnd_VirReg = std::stoull(argc_list[cnt]->getName().substr(1));
+
+            Operand *Use = BasicBlock.Func.VirRegOperandMap[midEnd_VirReg];
+
+            if(cnt > 4){
+                MMptr *backEnd_spillArgc = new MMptr(
+                    "[sp, #" + std::to_string((cnt - 5)*4) + "]"
+                );
+                
+                Instruction *backEnd_str_argx = new Instruction(
+                    OperCode::STR, backEnd_spillArgc, BasicBlock, {}, {std::ref(*Use)}
+                );
+
+                BasicBlock.InstList.push_back(backEnd_str_argx);
+            }
+            else{
+                Operand *backEnd_RegArgc = new Operand(cnt);
+                
+                Instruction *backEnd_str_rx = new Instruction(
+                    OperCode::MOV, nullptr, BasicBlock, {std::ref(*backEnd_RegArgc)}, {std::ref(*Use)}
+                );
+
+                BasicBlock.InstList.push_back(backEnd_str_rx);
+            }
+        }
+
+        BasicBlock.Func.setParamSize(std::max(BasicBlock.Func.getParamSize(), (cnt - 4)*4));
+
+        ///@brief arm后端bl语句
+        Imm *backEnd_callee = new Imm(
+            OperandType::LABEL, midEnd_call.getFuncName()
+        );
+
+        Instruction *backEnd_bl = new Instruction(
+            OperCode::BL, backEnd_callee, BasicBlock, {}, {}
+        );
+
+        ///@brief 寄存器恢复指令(冗余)
+        for(int i = 0; i < 4; ++i){
+            ///@brief new ...
+        }
+    }
+};
+
+struct PhiMatch{
+    ///@note 这个学期估计还用不到
+};
+
+///@note AllocMatch, LoadMatch以及StroeMatch需要能取代MkFrameInit, 因为后者无法查表和分发
+struct AllocaMatch{
+    ///@note 需要考虑数组以及多重数组的情况
+    void operator()(InstArgs insts, BB& BasicBlock) const{
+    }
+};
+
+struct GepMatch{
+
+};
+
+struct LoadMatch{
+    void operator()(InstArgs insts, BB& BasicBlock) const{
+    }
+};  
+
+struct StoreMatch{
+    void operator()(InstArgs insts, BB& BasicBlock) const{
 
     }
 };
 
+/// @note BinaryMatch需要考虑imm的encoding是否合理
 struct BinaryMatch{
     void operator()(InstArgs insts, BB& BasicBlock) const{
         assert(insts.size() == 1);
@@ -231,8 +344,8 @@ struct BinaryMatch{
                 Operand* Def = new Operand(midEnd_inst.getName());
                 BasicBlock.Func.VirRegOperandMap[Def->VirReg] = Def;
                 
-                int midEnd_virReg1 = std::stoi(midEnd_inst.GetLHS()->getName().substr(1));
-                int midEnd_virReg2 = std::stoi(midEnd_inst.GetRHS()->getName().substr(1));
+                unsigned long long midEnd_virReg1 = std::stoull(midEnd_inst.GetLHS()->getName().substr(1));
+                unsigned long long midEnd_virReg2 = std::stoull(midEnd_inst.GetRHS()->getName().substr(1));
                 Operand* Use1 = BasicBlock.Func.VirRegOperandMap[midEnd_virReg1];  // IR operand ptr
                 Operand* Use2 = BasicBlock.Func.VirRegOperandMap[midEnd_virReg2];
 

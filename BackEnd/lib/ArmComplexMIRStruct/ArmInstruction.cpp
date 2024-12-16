@@ -34,7 +34,7 @@ Instruction::Instruction(OperCode opcode,Imm* attach, BB& BasicBlock,
 
 /// @brief reWrite Programme to add overflow vars
 Instruction::Instruction(Instruction& inst, OperCode type, unsigned int cnt):
-    BasicBlock(inst.BasicBlock), DefOperandList(), UseOperandList(){
+    BasicBlock(inst.BasicBlock), DefOperandList(), UseOperandList(){}
     /// @todo 这里实际上也可以用MemInstruction的构造, attach成员这个设计确实会造成太多歧义
 /// @brief reWrite Programme to add overflow vars
 Instruction::Instruction(Instruction& inst, OperCode type, unsigned int cnt):
@@ -53,6 +53,7 @@ Instruction::Instruction(Instruction& inst, OperCode type, unsigned int cnt):
     this->attach = new MMptr();
     
 }
+
 
 bool Instruction::operator==(Instruction& inst) const{
     return this->id == inst.id;

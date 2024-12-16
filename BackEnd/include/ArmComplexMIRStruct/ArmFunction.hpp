@@ -75,21 +75,26 @@ class ArmStruct::Function{
         void LegalizeFinal();
 
         void TerminatorPredict();
-        
+
+        unsigned int getParamSize(){return params_size;}
+        void setParamSize(unsigned int size){params_size = size;}
+
+
         std::string& toString();
         
         std::list<BB*> BBList;
         
-        std::map<unsigned int, Operand*> VirRegOperandMap; // 当前函数中虚拟寄存器的映射, 同时也是存放指针的空间
+        std::map<unsigned long long, Operand*> VirRegOperandMap; // 当前函数中虚拟寄存器的映射, 同时也是存放指针的空间
 
         unsigned int InstCnt = 0;
         std::string Identifier;
     
+
     private:
-        // std::unordered_set<std::reference_wrapper<ArmStruct::FrameObj>&, ArmTools::HashFrameObj, ArmTools::HashFrameObjEqual> free_chunk;
         SubFrame local;
         SubFrame temp;
-        SubFrame params;
+        // SubFrame params; // 感觉没必要
+        unsigned int params_size = 0;
         std::string str;
 
 };

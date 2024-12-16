@@ -1,6 +1,7 @@
 #include <memory>
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include "../../Arm.hpp"
 #include "../../../include/ir/function.hpp"
 #include "../../include/tools/ArmTools.hpp"
@@ -20,7 +21,7 @@ Function::Function(IR::Function& midEnd_function){
     this->Identifier = midEnd_function.getName();
 
     ///@brief fill VirMap and link instructions
-    std::vector<std::unique_ptr<IR::BasicBlock>>& bbs = midEnd_function.getBlocks();
+    std::vector<IR::BasicBlock*>& bbs = midEnd_function.getBlocks();
 
     for(auto bb_it = bbs.begin(); bb_it != bbs.end(); ++bb_it){
         auto &midEnd_BB = **bb_it;
@@ -88,10 +89,11 @@ bool SubFrame::findFrameObj(MMptr& ptr){
 
 void Function::MkFrameInit(){
 
+    // 仅处理alloc区域
     BB& BasicBlock = **BBList.begin();
     for(auto it = BasicBlock.InstList.begin(); it != BasicBlock.InstList.end(); ++it){
         auto &inst = **it; 
-        if(inst.opcode != OperCode::alloca) break; // 预计callee保存寄存器将将在alloca指令的下方, 也就是在temp区, 所以这里先不考虑 
+        if(inst.opcode != OperCode::alloca) break;
         auto& mem_inst = dynamic_cast<MemInstruction&>(inst);
         local.addFrameObj(*(mem_inst.MMptr)); // new + 链入localFrame + 加size
     }
@@ -108,10 +110,11 @@ void Function::MkFrameFinal(){
             if(!isStackInst(inst) || inst.opcode == OperCode::alloca) continue;
             auto& mem_inst = dynamic_cast<MemInstruction&>(inst);
             
-            /// @note 检查, 发现是local区的
             auto& MMptr = mem_inst.MMptr;
             if(MMptr->space != nullptr && local.findFrameObj(*MMptr)) continue;
             else if(MMptr->space == nullptr){
+                /// @note 检查, 发现是local区的     
+                
                 temp.addFrameObj(*MMptr);
             }
             else continue;

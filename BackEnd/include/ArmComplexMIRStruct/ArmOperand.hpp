@@ -16,6 +16,9 @@ enum OperandType{
 class ArmStruct::Operand{
     public:
         Operand(std::string);
+        Operand(unsigned int);
+        
+        /// @brief 疑似没用的几个构造
         Operand(IR::Value*);
         Operand(OperandType, unsigned int);
         Operand(Operand&);
@@ -24,16 +27,16 @@ class ArmStruct::Operand{
         bool operator==(ArmStruct::Operand&);
         bool operator!=(ArmStruct::Operand&);
 
-        OperandType ValType;
+        OperandType ValType;    // 好像也没用?
         // std::unique_ptr<std::string> Indentifier = NULL;
-        unsigned int VirReg;
+        unsigned long long VirReg;
 
 
         /// @brief 寄存器分配相关, 拓展性几乎为零, 但是不建议改
         std::unordered_set<std::reference_wrapper<ArmStruct::Operand>, ArmTools::HashOperandReferWrap, ArmTools::HashOperandReferWrapEqual> adjList;
         std::unordered_set<std::reference_wrapper<ArmStruct::Instruction>, ArmTools::HashInstReferWrap, ArmTools::HashInstReferWrapEqual> moveList; // the moveInst which use this ArmStruct::Operand
         std::unique_ptr<ArmStruct::Operand> alias = nullptr; // 别名, 在寄存器分配中活跃区间高度重叠的操作数
-        unsigned int color = -1;
+        unsigned int color = -1;    //  预着色改这个
         unsigned int adjDegree = 0;
     private:
         std::string str;
@@ -56,12 +59,15 @@ class ArmStruct::MMptr : public ArmStruct::Imm{
     ///@note 关键在于能反向查找到对应的FrameObj, 同时能够被FrameObj寻址
     public:
         MMptr();
+        MMptr(std::string);
         ~MMptr()=default;
+
+        std::string& toString() final;
+
         /// @note data 在下面的方法中创建通过FrameObj创建, 先不初始化
         OperandType ptrType;
         FrameObj* space = nullptr;
-        unsigned int VirReg;    // 有虚拟寄存器, 但是不参与寄存器分配
-        std::string& toString() final;
+        unsigned long long VirReg;    // 有虚拟寄存器, 用于确定space
 };
 class ArmStruct::Global : public ArmStruct::Imm{
     public:
