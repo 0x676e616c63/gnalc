@@ -20,25 +20,25 @@ namespace IR {
  */
 class Function : public Value {
 private:
-    std::vector<std::unique_ptr<Value>> params;
-    std::vector<std::unique_ptr<BasicBlock>> blks;
-    std::vector<std::unique_ptr<Instruction>> insts; // 基本块划分前的过渡
+    std::vector<Value*> params;
+    std::vector<BasicBlock*> blks;
+    std::vector<Instruction*> insts; // 基本块划分前的过渡
 public:
     Function(std::string _name, IRTYPE _type);
 
     // bool isDecl() { return blks.empty() && insts.empty(); } // SySy中没有函数声明
 
-    void addParam(std::unique_ptr<Value> param);
-    void addBlock(std::unique_ptr<BasicBlock> blk);
-    void addInst(std::unique_ptr<Instruction> inst);
+    void addParam(Value* param);
+    void addBlock(BasicBlock* blk);
+    void addInst(Instruction* inst);
 
-    auto& getParams();
-    auto& getBlocks();
-    auto& getInsts();
+    std::vector<Value*>& getParams();
+    std::vector<BasicBlock*>& getBlocks();
+    std::vector<Instruction*>& getInsts();
     // ...
 
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
-    ~Function();
+    void accept(IRVisitor& visitor) override;
+    ~Function() override;
 };
 }
 

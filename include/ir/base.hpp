@@ -19,13 +19,20 @@
 
 #include <list>
 #include "type.hpp"
-#include "visitor.hpp"
 
 namespace IR {
 
 class Value;
 class User;
 class Use;
+
+// // Specific Value Type: 用于标识特殊类型的VALUE对象
+// enum class SVT {
+//     NORMAL,
+//     FUNCPARAM,
+//     CONSTANT
+//     // ...
+// };
 
 /**
  * @todo replace use function
@@ -35,7 +42,7 @@ class Value : public TypeC, public NameC {
 protected:
     // use_list的顺序应该没有太大影响
     std::list<Use*> use_list; // Use隶属于User, 故暂时使用普通指针
-                            // 利用Use中的User*找到User
+    // SVT svt;
 public:
     Value() = default;
     Value(std::string _name, IRTYPE _type);
@@ -76,7 +83,7 @@ public:
     void delOperandByValue(Value *v);
     void delOperandByName(NameRef name);
 
-    virtual void accept(class IRVisitor& visitor) = 0;
+    virtual void accept(IRVisitor& visitor) = 0;
     ~User() override;
 };
 

@@ -1,4 +1,5 @@
 #include "../../../include/ir/instructions/control.hpp"
+#include "../../../include/ir/visitor.hpp"
 
 #include <algorithm>
 #include <assert.h>
@@ -102,4 +103,10 @@ namespace IR
             ret.emplace_back(it->getValue());
         return ret;
     }
+
+    void RETInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+
+    void BRInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+
+    void CALLInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
 }

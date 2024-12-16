@@ -9,6 +9,7 @@
 #include "base.hpp"
 
 namespace IR {
+// const的name就是它的值toString
 class ConstantInt : public Value {
 private:
     int val;
@@ -17,7 +18,7 @@ public:
 
     int getVal();
 
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override;
 };
 
 class ConstantFloat : public Value {
@@ -28,7 +29,7 @@ public:
 
     float getVal();
 
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override;
 };
 
 using CI32 = ConstantInt;

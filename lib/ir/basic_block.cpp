@@ -1,4 +1,5 @@
 #include "../../include/ir/basic_block.hpp"
+#include "../../include/ir/visitor.hpp"
 
 namespace IR {
     BasicBlock::BasicBlock(std::string _name) 
@@ -34,6 +35,9 @@ namespace IR {
         return insts;
     }
 
-    BasicBlock::~BasicBlock() {
+    void BasicBlock::accept(IRVisitor& visitor) override
+    { visitor.visit(*this); }
+
+    BasicBlock::~BasicBlock() override {
     }
 }

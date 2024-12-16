@@ -41,7 +41,7 @@ public:
     Value* getNumElements() const; // 修改使用 User基类 的方法
     int getAlign() const;
 
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override;
 };
 
 // <result> = load [volatile] <ty>, ptr <pointer>[, align <alignment>]......
@@ -56,7 +56,7 @@ public:
     Value* getPtr() const;
     int getAlign() const;
 
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override;
 };
 
 // store [volatile] <ty> <value>, ptr <pointer>[, align <alignment>]......
@@ -74,7 +74,7 @@ public:
     Value* getPtr() const;
     int getAlign() const;
 
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override;
 };
 
 // <result> = getelementptr <ty>, ptr <ptrval>{, <ty> <idx>}*
@@ -85,14 +85,16 @@ public:
 class GEPInst : public Instruction {
 private:
     IRTYPE basetype;
+    std::vector<int> array_size; // [3 x [4 x i32]] 就是 {3, 4} 和语言中的数组大小顺序一致
 public:
-    GEPInst(NameRef name, IRTYPE btype, Value* _ptr, const std::list<Value*>& idxs);
+    GEPInst(NameRef name, IRTYPE btype, std::vector<int> _array_size,  Value* _ptr, const std::list<Value*>& idxs);
 
-    IRTYPE getBaseType();
+    IRTYPE getBaseType() const;
+    std::vector<int> getArraySize() const;
     Value* getPtr() const;
     std::vector<Value*> getIdxs() const;
 
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void accept(IRVisitor& visitor) override;
 };
 
 }

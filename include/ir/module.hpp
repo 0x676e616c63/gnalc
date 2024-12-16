@@ -10,7 +10,6 @@
 #include "function.hpp"
 #include "global_var.hpp"
 
-
 namespace IR {
 
 /**
@@ -20,23 +19,23 @@ namespace IR {
  */
 class Module : public NameC {
 private:
-    std::vector<std::unique_ptr<GlobalVariable>> global_vars;
-    std::vector<std::unique_ptr<Function>> funcs;
+    std::vector<GlobalVariable*> global_vars;
+    std::vector<Function*> funcs;
 
 public:
     Module() = default;
     Module(std::string _name) : NameC(std::move(_name)) {}
 
-    void addGlobalVar(std::unique_ptr<GlobalVariable> global_var);
-    const auto& getGlobalVars() const;
+    void addGlobalVar(GlobalVariable* global_var);
+    const std::vector<GlobalVariable*>& getGlobalVars() const;
     void delGlobalVar(NameRef name); // by name
 
-    void addFunction(std::unique_ptr<Function> func);
-    const auto& getFunctions() const;
+    void addFunction(Function* func);
+    const std::vector<Function*>& getFunctions() const;
     void delFunction(NameRef name); // by name
 
-    void accept(IRVisitor& visitor) { visitor.visit(*this); }
-    ~Module();
+    void accept(IRVisitor& visitor);
+    ~Module() = default;
 };
 }
 

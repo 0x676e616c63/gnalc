@@ -2,6 +2,9 @@
 #ifndef GNALC_IR_GLOBAL_VAR_H
 #define GNALC_IR_GLOBAL_VAR_H
 
+// 由于tostring需要使用IRFormatter的方法，visitor.hpp头文件存在交叉引用的问题，这里设一个宏以控制引用
+#define ENABLE_GVINITER_TOSTRING 1
+
 #include "base.hpp"
 
 namespace IR {
@@ -40,6 +43,8 @@ public:
     Value* getConstVal(); // 此处暂时先用非const的引用传递
     std::vector<GVIniter>& getInnerIniter(); // 此处暂时先用非const的引用传递
 
+    std::string toString(); // IR结构中唯一的toString方法 :)
+
     friend class GlobalVariable;
     ~GVIniter();
 };
@@ -69,8 +74,8 @@ public:
     GVIniter& getIniter();
     int getAlign() const;
 
-    void accept(IRVisitor& visitor) override { visitor.visit(*this); }
-    ~GlobalVariable();
+    void accept(IRVisitor& visitor) override;
+    ~GlobalVariable() override;
 };
 }
 

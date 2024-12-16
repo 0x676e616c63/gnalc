@@ -5,20 +5,12 @@ set(CMAKE_CXX_STANDARD 17)
 
 include_directories(include)
 
-add_executable(printast
-        debug/printast.cpp
-        lib/parser/parser.cpp
-        lib/lexer/lexer.cpp
-        lib/parser/ast_printer.cpp)
+aux_source_directory(lib/ir GNALC_IR_SRC)
+aux_source_directory(lib/ir/instructions GNALC_IR_SRC)
+aux_source_directory(lib/lexer GNALC_LEXER_SRC)
+aux_source_directory(lib/opt GNALC_OPT_SRC)
+aux_source_directory(lib/parser GNALC_PARSER_SRC)
 
-add_executable(irgen
-        debug/irgen.cpp
-        lib/parser/parser.cpp
-        lib/parser/irgen.cpp
-        lib/ir/base.cpp
-        lib/ir/function.cpp
-        lib/ir/module.cpp
-        lib/ir/type.cpp
-        lib/lexer/lexer.cpp
-)
+add_executable(printast debug/printast.cpp ${GNALC_PARSER_SRC} ${GNALC_LEXER_SRC})
 
+add_executable(irgen debug/irgen.cpp ${GNALC_PARSER_SRC} ${GNALC_IR_SRC} ${GNALC_LEXER_SRC})
