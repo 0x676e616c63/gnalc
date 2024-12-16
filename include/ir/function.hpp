@@ -37,6 +37,8 @@ public:
     std::vector<Instruction*>& getInsts();
     // ...
 
+    unsigned long long getVRegNum();
+
     void accept(IRVisitor& visitor) override;
     ~Function() override;
 };

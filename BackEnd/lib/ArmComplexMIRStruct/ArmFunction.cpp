@@ -19,6 +19,7 @@ using FrameObjRefHashPtr = std::unique_ptr<std::unordered_set<std::reference_wra
 Function::Function(IR::Function& midEnd_function){
     
     this->Identifier = midEnd_function.getName();
+    this->VRegNum = midEnd_function.getVRegNum();
 
     ///@brief fill VirMap and link instructions
     std::vector<IR::BasicBlock*>& bbs = midEnd_function.getBlocks();
