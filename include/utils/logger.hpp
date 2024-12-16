@@ -27,6 +27,4 @@ private:
     static LogLevel logLevel;
 };
 
-LogLevel Logger::logLevel = LogLevel::NONE;
-
 #endif
