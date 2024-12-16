@@ -50,6 +50,7 @@ public:
     static std::string formatOp(OP op);
     static std::string formatCMPOP(ICMPOP cond);
     static std::string formatCMPOP(FCMPOP cond);
+    static std::string formatHELPERTY(HELPERTY hlpty);
 
     static std::string formatValue(Value& val); // -> i32 %a
     // static std::string formatBB(BasicBlock& bb);
@@ -74,6 +75,8 @@ private:
     static std::string fSTOREInst(STOREInst& inst);
     static std::string fGEPInst(GEPInst& inst);
     static std::string fPHIInst(PHIInst& inst);
+
+    static std::string fHELPERInst(HELPERInst& inst);
 };
 
 

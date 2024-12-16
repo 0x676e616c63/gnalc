@@ -15,3 +15,5 @@
 5. CALLInst->getArgs return &
 
 6. accept func's "override" location (in hpp or in cpp? ide warning)
+
+7. Instruction 是否需要标记其父函数？
