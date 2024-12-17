@@ -35,9 +35,17 @@ namespace IR {
         return insts;
     }
 
-    void BasicBlock::accept(IRVisitor& visitor) override
+    auto& BasicBlock::getLiveIn() {
+        return livein;
+    }
+
+    auto& BasicBlock::getLiveOut() {
+        return liveout;
+    }
+
+    void BasicBlock::accept(IRVisitor& visitor)
     { visitor.visit(*this); }
 
-    BasicBlock::~BasicBlock() override {
+    BasicBlock::~BasicBlock() {
     }
 }

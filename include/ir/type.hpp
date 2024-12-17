@@ -19,6 +19,7 @@ namespace IR {
  * @todo 考虑BOOL, VECTOR? PTRARRAY?
  */
 enum class IRTYPE {
+    I1, // For br's cond, icmp and fcmp return
     I32,
     FLOAT,
     VOID,

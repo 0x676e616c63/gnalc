@@ -24,22 +24,59 @@ public:
     LIRPrinter(const std::string& filename);
     ~LIRPrinter();
 
-    void printModule(Module* module);
+    void printout(Module& module);
+
+    // virtual void visit(Module& node) override;
+    virtual void visit(GlobalVariable& node) override;
+    virtual void visit(Function& node) override;
+    virtual void visit(Instruction& node) override;
+    // virtual void visit(ConstantInt& node) override;
+    // virtual void visit(ConstantFloat& node) override;
 
 };
 
 class IRPrinter : public IRVisitor {
 };
 
-// 将IR输出为格式化文本，Printer的辅助类，亦可作调试用
+/**
+ * @brief 将IR输出为格式化文本，Printer的辅助类，亦可作调试用
+ * @attention 由于目前一些类中的get函数都是非const的，因此暂时未将下列函数的参数声明为const
+ * @todo 指针问题；const和非const函数；
+ */
 class IRFormatter {
 public:
     static std::string formatIRTYPE(IRTYPE type);
-    static std::string formatInst(const Instruction& inst);
-    static std::string formatGV(const GlobalVariable& gv);
-    static std::string formatFunc(const Function& func);
+    static std::string formatSTOCLASS(STOCLASS cls);
+    static std::string formatOp(OP op);
+    static std::string formatCMPOP(ICMPOP cond);
+    static std::string formatCMPOP(FCMPOP cond);
+    static std::string formatHELPERTY(HELPERTY hlpty);
+
+    static std::string formatValue(Value& val); // -> i32 %a
+    // static std::string formatBB(BasicBlock& bb);
+    // static std::string formatConstInt(ConstantInt& ci); // 和formatValue重了
+    // static std::string formatConstFloat(ConstantFloat& cf);
+    static std::string formatFunc(Function& func); // define dso_local void @fu(i32 noundef %a, i32 noundef %b)
+    static std::string formatGV(GlobalVariable& gv);
+    static std::string formatInst(Instruction& inst);
 private:
-    static std::string fBinaryInst(const BinaryInst& inst);
+    // 以下私有函数仅供formatInst调用
+    static std::string fBinaryInst(BinaryInst& inst);
+    static std::string fFNEGInst(FNEGInst& inst);
+    static std::string fICMPInst(ICMPInst& inst);
+    static std::string fFCMPInst(FCMPInst& inst);
+    static std::string fRETInst(RETInst& inst);
+    static std::string fBRInst(BRInst& inst);
+    static std::string fCALLInst(CALLInst& inst);
+    static std::string fFPTOSIInst(FPTOSIInst& inst);
+    static std::string fSITOFPInst(SITOFPInst& inst);
+    static std::string fALLOCAInst(ALLOCAInst& inst);
+    static std::string fLOADInst(LOADInst& inst);
+    static std::string fSTOREInst(STOREInst& inst);
+    static std::string fGEPInst(GEPInst& inst);
+    static std::string fPHIInst(PHIInst& inst);
+
+    static std::string fHELPERInst(HELPERInst& inst);
 };
 
 

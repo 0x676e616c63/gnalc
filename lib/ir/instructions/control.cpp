@@ -27,6 +27,11 @@ namespace IR
         return getOperands().begin()->getValue();
     }
 
+    IRTYPE RETInst::getRetType() const
+    {
+        return ret_type;
+    }
+
     BRInst::BRInst(BasicBlock* _dest)
         : Instruction(OP::BR, "__br", IRTYPE::UNDEFINED), conditional(false)
     {
@@ -34,7 +39,7 @@ namespace IR
     }
 
     BRInst::BRInst(Value* cond, BasicBlock* _true_dest, BasicBlock* _false_dest)
-        : Instruction(OP::BR, "__br", IRTYPE::UNDEFINED), conditional(false)
+        : Instruction(OP::BR, "__br", IRTYPE::UNDEFINED), conditional(true)
     {
         addOperand(cond);
         addOperand(_true_dest);
@@ -45,6 +50,12 @@ namespace IR
     {
         return conditional;
     }
+
+    // BasicBlock* BRInst::getDest() const
+    // {
+    //     assert(!conditional);
+    //     return dynamic_cast<BasicBlock*>(operands.begin()->getValue());
+    // }
 
     Value* BRInst::getCond() const
     {
@@ -109,9 +120,9 @@ namespace IR
         return ret;
     }
 
-    void RETInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void RETInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
-    void BRInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void BRInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
-    void CALLInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void CALLInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 }

@@ -24,6 +24,7 @@ public:
 
     bool isVoid() const;
     Value* getRetVal() const;
+    IRTYPE getRetType() const;
 
     void accept(IRVisitor& visitor) override;
 };

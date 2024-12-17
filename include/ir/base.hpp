@@ -26,6 +26,14 @@ class Value;
 class User;
 class Use;
 
+// // Specific Value Type: 用于标识特殊类型的VALUE对象
+// enum class SVT {
+//     NORMAL,
+//     FUNCPARAM,
+//     CONSTANT
+//     // ...
+// };
+
 /**
  * @todo replace use function
  * @attention use_list的添加在use的构造过程中完成!!!
@@ -34,7 +42,7 @@ class Value : public TypeC, public NameC {
 protected:
     // use_list的顺序应该没有太大影响
     std::list<Use*> use_list; // Use隶属于User, 故暂时使用普通指针
-
+    // SVT svt;
 public:
     Value() = default;
     Value(std::string _name, IRTYPE _type);
@@ -68,7 +76,7 @@ public:
     User() = default;
     User(std::string _name, IRTYPE _type);
 
-    void User::addOperand(Value *v);
+    void addOperand(Value *v);
 
     std::list<Use>& getOperands();
 
@@ -78,7 +86,7 @@ public:
     void delOperandByValue(Value *v);
     void delOperandByName(NameRef name);
 
-    virtual void accept(IRVisitor& visitor) = 0;
+    virtual void accept(IRVisitor& visitor) override = 0;
     ~User() override;
 };
 

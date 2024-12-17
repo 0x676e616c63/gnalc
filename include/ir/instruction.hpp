@@ -30,6 +30,9 @@ enum class OP {
     REM,
     FREM,
 
+    AND, // bitwise binary
+    OR,
+
     ALLOCA, // memory
     LOAD,
     STORE,
@@ -43,7 +46,9 @@ enum class OP {
 
     PHI,
 
-    CALL
+    CALL,
+
+    HELPER
 
 };
 
@@ -71,7 +76,7 @@ public:
     OP getOpcode() const;
     BasicBlock* getParent() const;
 
-    virtual void accept(class IRVisitor& visitor) = 0;
+    virtual void accept(class IRVisitor& visitor) override = 0;
     ~Instruction() override;
 };
 

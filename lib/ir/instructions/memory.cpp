@@ -71,7 +71,8 @@ namespace IR
         : Instruction(OP::STORE, "__store", IRTYPE::UNDEFINED),
             basetype(btype), align(_align)
     {
-        addOperand(_value,_ptr);
+        addOperand(_value);
+        addOperand(_ptr);
     }
 
     IRTYPE STOREInst::getBaseType() const
@@ -81,12 +82,12 @@ namespace IR
 
     Value* STOREInst::getValue() const
     {
-        return getOperand().begin()->getValue();
+        return getOperands().begin()->getValue();
     }
 
     Value* STOREInst::getPtr() const
     {
-        return std::next(getOperand().begin())->getValue();
+        return std::next(getOperands().begin())->getValue();
     }
 
     int STOREInst::getAlign() const
@@ -97,7 +98,7 @@ namespace IR
     GEPInst::GEPInst(NameRef name, IRTYPE btype, std::vector<int> _array_size,  Value* _ptr, const std::list<Value*>& idxs)
         : Instruction(OP::GEP, name, IRTYPE::PTR), basetype(btype), array_size(_array_size)
     {
-        addOperand(_ptr,idxs);
+        addOperand(_ptr);
         for (auto idx : idxs)
             addOperand(idx);
     }
@@ -125,8 +126,8 @@ namespace IR
         return ret;
     }
 
-    void ALLOCAInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
-    void LOADInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
-    void STOREInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
-    void GEPInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void ALLOCAInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
+    void LOADInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
+    void STOREInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
+    void GEPInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 }
