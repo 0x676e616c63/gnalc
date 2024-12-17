@@ -17,7 +17,7 @@ namespace IR
         : Instruction(OP::ALLOCA, name, IRTYPE::PTR),
             basetype(btype), align(_align), is_array(true), is_static(false)
     {
-        operands = { Use{num_elements, this} };
+        addOperand(num_elements);
     }
 
     int ALLOCAInst::getAlign() const
@@ -43,7 +43,7 @@ namespace IR
     Value* ALLOCAInst::getNumElements() const
     {
         assert(isArray());
-        return operands.begin()->getValue();
+        return getOperands().begin()->getValue();
     }
 
     IRTYPE ALLOCAInst::getBaseType() const
@@ -54,12 +54,12 @@ namespace IR
     LOADInst::LOADInst(NameRef name, IRTYPE ty, Value* _ptr, int _align)
         : Instruction(OP::LOAD, name, ty), align(_align)
     {
-        operands = {Use{_ptr, this}};
+        addOperand(_ptr);
     }
 
     Value* LOADInst::getPtr() const
     {
-        return operands.begin()->getValue();
+        return getOperands().begin()->getValue();
     }
 
     int LOADInst::getAlign() const
@@ -71,7 +71,8 @@ namespace IR
         : Instruction(OP::STORE, "__store", IRTYPE::UNDEFINED),
             basetype(btype), align(_align)
     {
-        operands = {Use{_value, this}, Use{_ptr, this}};
+        addOperand(_value);
+        addOperand(_ptr);
     }
 
     IRTYPE STOREInst::getBaseType() const
@@ -81,12 +82,12 @@ namespace IR
 
     Value* STOREInst::getValue() const
     {
-        return operands.begin()->getValue();
+        return getOperands().begin()->getValue();
     }
 
     Value* STOREInst::getPtr() const
     {
-        return std::next(operands.begin())->getValue();
+        return std::next(getOperands().begin())->getValue();
     }
 
     int STOREInst::getAlign() const
@@ -97,9 +98,9 @@ namespace IR
     GEPInst::GEPInst(NameRef name, IRTYPE btype, std::vector<int> _array_size,  Value* _ptr, const std::list<Value*>& idxs)
         : Instruction(OP::GEP, name, IRTYPE::PTR), basetype(btype), array_size(_array_size)
     {
-        operands = {Use{_ptr, this}};
+        addOperand(_ptr);
         for (auto idx : idxs)
-            operands.emplace_back(Use{idx, this});
+            addOperand(idx);
     }
 
     IRTYPE GEPInst::getBaseType() const
@@ -114,19 +115,19 @@ namespace IR
 
     Value* GEPInst::getPtr() const
     {
-        return operands.begin()->getValue();
+        return getOperands().begin()->getValue();
     }
 
     std::vector<Value*> GEPInst::getIdxs() const
     {
         std::vector<Value*> ret;
-        for (auto it = std::next(operands.begin()); it != operands.end(); ++it)
+        for (auto it = std::next(getOperands().begin()); it != getOperands().end(); ++it)
             ret.emplace_back(it->getValue());
         return ret;
     }
 
-    void ALLOCAInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
-    void LOADInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
-    void STOREInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
-    void GEPInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void ALLOCAInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
+    void LOADInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
+    void STOREInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
+    void GEPInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 }

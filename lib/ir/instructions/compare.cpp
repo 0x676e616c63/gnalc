@@ -7,40 +7,42 @@
 
 namespace IR {
     ICMPInst::ICMPInst(NameRef name, ICMPOP cond, Value *lhs, Value *rhs)
-        : Instruction(OP::ICMP, name, IRTYPE::I32), cond(cond) {
-        operands = {Use{lhs, this}, Use{rhs, this}};
+        : Instruction(OP::ICMP, name, IRTYPE::I1), cond(cond) {
+        addOperand(lhs);
+        addOperand(rhs);
     }
 
-    Value* ICMPInst::GetLHS() const {
-        return operands.begin()->getValue();
+    Value* ICMPInst::getLHS() const {
+        return getOperands().begin()->getValue();
     }
 
-    Value* ICMPInst::GetRHS() const {
-        return operands.rbegin()->getValue();
+    Value* ICMPInst::getRHS() const {
+        return getOperands().rbegin()->getValue();
     }
 
-    ICMPOP ICMPInst::GetCond() const {
+    ICMPOP ICMPInst::getCond() const {
         return cond;
     }
 
     FCMPInst::FCMPInst(NameRef name, FCMPOP cond, Value *lhs, Value *rhs)
-        : Instruction(OP::FCMP, name, IRTYPE::FLOAT), cond(cond) {
-        operands = {Use{lhs, this}, Use{rhs, this}};
+        : Instruction(OP::FCMP, name, IRTYPE::I1), cond(cond) {
+        addOperand(lhs);
+        addOperand(rhs);
     }
 
-    Value* FCMPInst::GetLHS() const {
-        return operands.begin()->getValue();
+    Value* FCMPInst::getLHS() const {
+        return getOperands().begin()->getValue();
     }
 
-    Value* FCMPInst::GetRHS() const {
-        return operands.rbegin()->getValue();
+    Value* FCMPInst::getRHS() const {
+        return getOperands().rbegin()->getValue();
     }
 
-    FCMPOP FCMPInst::GetCond() const {
+    FCMPOP FCMPInst::getCond() const {
         return cond;
     }
 
-    void ICMPInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void ICMPInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
-    void FCMPInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void FCMPInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 }

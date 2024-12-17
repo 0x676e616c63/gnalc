@@ -11,6 +11,8 @@ namespace IR {
 
 Value::Value(std::string _name, IRTYPE _type) : NameC(std::move(_name)), TypeC(_type) {}
 
+
+
 void Value::addUse(Use* use) {
     use_list.emplace_back(use);
 }
@@ -64,11 +66,16 @@ Value::~Value() {
 
 User::User(std::string _name, IRTYPE _type) : Value(std::move(_name), _type) {}
 
-void User::addOperand(Value *v) {
-    operands.emplace_back(v, this);
+void User::addOperand(Value* ope)
+{
+    operands.emplace_back(ope, this);
 }
 
 std::list<Use>& User::getOperands() {
+    return operands;
+}
+
+const std::list<Use>& User::getOperands() const {
     return operands;
 }
 

@@ -5,30 +5,54 @@
 #include "../../../include/ir/visitor.hpp"
 
 namespace IR {
+    IRTYPE OPtoTY(OP op) {
+        switch (op) {
+            case OP::ADD:
+            case OP::SUB:
+            case OP::MUL:
+            case OP::DIV:
+            case OP::REM:
+                return IRTYPE::I32;
+            case OP::FADD:
+            case OP::FSUB:
+            case OP::FMUL:
+            case OP::FDIV:
+            case OP::FREM:
+                return IRTYPE::FLOAT;
+            case OP::AND:
+            case OP::OR:
+                return IRTYPE::I1;
+            default:
+                return IRTYPE::UNDEFINED;
+        }
+    }
+
+    // TYPE 由 OP 决定
     BinaryInst::BinaryInst(NameRef name, OP opcode, Value *lhs, Value *rhs)
-        : Instruction(OP::ADD, name, IRTYPE::I32) {
-        operands = {Use{lhs, this}, Use{rhs, this}};
+        : Instruction(opcode, name, OPtoTY(opcode)) {
+        addOperand(lhs);
+        addOperand(rhs);
     }
 
-    Value *BinaryInst::GetLHS() const {
-        return operands.begin()->getValue();
+    Value *BinaryInst::getLHS() const {
+        return getOperands().begin()->getValue();
     }
 
-    Value *BinaryInst::GetRHS() const {
-        return operands.rbegin()->getValue();
+    Value *BinaryInst::getRHS() const {
+        return getOperands().rbegin()->getValue();
     }
 
     FNEGInst::FNEGInst(NameRef name, Value *val)
         : Instruction(OP::FNEG, name, IRTYPE::FLOAT) {
-        operands = {Use{val, this}};
+        addOperand(val);
     }
 
-    Value *FNEGInst::GetVal() const {
-        return operands.begin()->getValue();
+    Value *FNEGInst::getVal() const {
+        return getOperands().begin()->getValue();
     }
 
 
-    void BinaryInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void BinaryInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
-    void FNEGInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void FNEGInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 }
