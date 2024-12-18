@@ -469,7 +469,7 @@ class FloatLiteral : public Exp {
 public:
     FloatLiteral(float32 f) : Exp(f) {}
 
-    float32 getValue() const { return _value.getInt(); }
+    float32 getValue() const { return _value.getFloat(); }
 
     void accept(ASTVisitor& visitor) override { visitor.visit(*this); }
 };

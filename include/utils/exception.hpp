@@ -22,5 +22,26 @@ inline void assert(bool b, const std::string &detail_ = "Assertion failed.")
         throw GnalcException(detail_);
     }
 }
+
+inline void todo(const std::string &detail_ = "")
+{
+    throw GnalcException("TODO: " + detail_);
+}
+
+inline void not_implemented(const std::string &detail_ = "")
+{
+    throw GnalcException("Not implemented: " + detail_);
+}
+
+inline void unreachable(const std::string &detail_ = "")
+{
+    throw GnalcException("Unreachable: " + detail_);
+}
+
+
+inline void error(const std::string &detail_)
+{
+    throw GnalcException(detail_);
+}
 }
 #endif

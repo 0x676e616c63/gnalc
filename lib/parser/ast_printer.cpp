@@ -3,6 +3,7 @@
 
 namespace AST {
     void Printer::PrintType(dtype t) const {
+        std::cout << "\x1b[38;5;12m"; // Blue
         switch (t) {
             case dtype::INT:
                 std::cout << "int32";
@@ -16,11 +17,12 @@ namespace AST {
             default:
                 std::cout << "undefined";
         }
+        std::cout << "\x1b[0m";
     }
 
     void Printer::PrintBlank() const {
         for (int i = 0; i < nest; i++) {
-            std::cout << "|-";
+            std::cout << "| ";
         }
     }
 

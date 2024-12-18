@@ -80,12 +80,12 @@ namespace IR
         return basetype;
     }
 
-    Value* STOREInst::getValue() const
+    std::shared_ptr<Value> STOREInst::getValue() const
     {
         return getOperands().begin()->getValue();
     }
 
-    Value* STOREInst::getPtr() const
+    std::shared_ptr<Value> STOREInst::getPtr() const
     {
         return std::next(getOperands().begin())->getValue();
     }

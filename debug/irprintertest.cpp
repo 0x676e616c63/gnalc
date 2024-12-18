@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
 
 IR::Module irgenfortest() {
     IR::Module module("test");
-    module.addFunction(new IR::Function("@main", IR::IRTYPE::I32));
-    module.addGlobalVar(new IR::GlobalVariable(IR::STOCLASS::GLOBAL, IR::IRTYPE::I32, "@test", IR::GVIniter(IR::IRTYPE::I32, new IR::CI32(1)), 4));
+    module.addFunction(std::make_shared<IR::Function>("@main", IR::IRTYPE::I32));
+    module.addGlobalVar(std::make_shared<IR::GlobalVariable>(IR::STOCLASS::GLOBAL, IR::IRTYPE::I32, "@test", IR::GVIniter(IR::IRTYPE::I32, new IR::CI32(1)), 4));
     return module;
 }

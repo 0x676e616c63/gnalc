@@ -35,10 +35,10 @@ private:
     ICMPOP cond;
 
 public:
-    ICMPInst(NameRef name, ICMPOP cond, Value* lhs, Value* rhs);
+    ICMPInst(NameRef name, ICMPOP cond, std::shared_ptr<Value> lhs, std::shared_ptr<Value> rhs);
 
-    Value* getLHS() const;
-    Value* getRHS() const;
+    auto getLHS() const;
+    auto getRHS() const;
     ICMPOP getCond() const;
 
     void accept(IRVisitor& visitor) override;
@@ -78,10 +78,10 @@ private:
     FCMPOP cond;
 
 public:
-    FCMPInst(NameRef name, FCMPOP cond, Value* lhs, Value* rhs);
+    FCMPInst(NameRef name, FCMPOP cond, std::shared_ptr<Value> lhs, std::shared_ptr<Value> rhs);
 
-    Value* getLHS() const;
-    Value* getRHS() const;
+    auto getLHS() const;
+    auto getRHS() const;
     FCMPOP getCond() const;
 
     void accept(IRVisitor& visitor) override;

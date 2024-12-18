@@ -19,10 +19,10 @@ namespace IR {
 // operands = [%1, %2]
 class BinaryInst : public Instruction {
 public:
-    BinaryInst(NameRef name, OP opcode, Value* lhs, Value* rhs);
+    BinaryInst(NameRef name, OP opcode, std::shared_ptr<Value> lhs, std::shared_ptr<Value> rhs);
 
-    Value* getLHS() const;
-    Value* getRHS() const;
+    std::shared_ptr<Value> getLHS() const;
+    std::shared_ptr<Value> getRHS() const;
 
     void accept(IRVisitor& visitor) override;
 };

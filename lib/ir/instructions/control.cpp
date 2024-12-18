@@ -83,9 +83,7 @@ namespace IR
     {
         addOperand(func);
         for (auto valptr : args)
-            operands.emplace_back(valptr, this);
-        // Or something like this
-        // std::transform(args.begin(), args.end(), std::back_inserter(operands), [this](auto&& vptr){return Use{vptr, this};});
+            addOperand(valptr);
     }
 
     CALLInst::CALLInst(NameRef name, IRTYPE ty, Function* func, const std::list<Value*>& args)

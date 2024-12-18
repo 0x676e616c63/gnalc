@@ -9,9 +9,8 @@
 
 namespace IR {
 
-Value::Value(std::string _name, IRTYPE _type) : NameC(std::move(_name)), TypeC(_type) {}
-
-
+Value::Value(std::string _name, IRTYPE _type)
+    : NameC(std::move(_name)), TypeC(_type) {}
 
 void Value::addUse(Use* use) {
     use_list.emplace_back(use);

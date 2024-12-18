@@ -20,10 +20,10 @@ class RETInst : public Instruction {
     IRTYPE ret_type;
 public:
     RETInst(); // for void
-    RETInst(Value* ret_val);
+    RETInst(std::shared_ptr<Value> ret_val);
 
     bool isVoid() const;
-    Value* getRetVal() const;
+    std::shared_ptr<Value> getRetVal() const;
     IRTYPE getRetType() const;
 
     void accept(IRVisitor& visitor) override;
@@ -66,14 +66,14 @@ public:
 class CALLInst : public Instruction {
 public:
     // func, args储存到operands中
-    CALLInst(Function* func, const std::list<Value*>& args); // for void
-    CALLInst(NameRef name, IRTYPE ty, Function* func, const std::list<Value*>& args);
+    CALLInst(std::weak_ptr<Function> func, const std::vector<std::shared_ptr<Value>>& args); // for void
+    CALLInst(NameRef name, IRTYPE ty, std::weak_ptr<Function> func, const std::list<std::shared_ptr<Value>>& args);
 
     bool isVoid() const;
     // bool isNoName();
     std::string getFuncName() const;
-    Function* getFunc() const; // Value*转换为Function*
-    std::vector<Value*> getArgs() const;
+    std::weak_ptr<Function> getFunc() const; // Value*转换为Function*
+    std::vector<std::shared_ptr<Value>> getArgs() const;
 
     void accept(IRVisitor& visitor) override;
 };

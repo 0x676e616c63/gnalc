@@ -7,6 +7,7 @@
 
 
 #include "ast.hpp"
+#include "symbol_table/symbol_table.hpp"
 #include "ir/module.hpp"
 
 namespace AST {
@@ -48,8 +49,12 @@ public:
 };
 
 class IRGenerator : public ASTVisitor {
-    IR::Module* module;
-    IR::Value* curr_val;
+    IR::Module module;
+    std::vector<std::shared_ptr<IR::Value>> curr_init_val;
+    std::shared_ptr<IR::Value> curr_val;
+    std::shared_ptr<IR::Function> curr_func;
+    Sym::SymbolTable symbol_table;
+    size_t next_temp_id{0};
 public:
     IRGenerator() = default;
     void visit(CompUnit& node) override;
@@ -75,6 +80,10 @@ public:
     void visit(BreakStmt& node) override;
     void visit(ContinueStmt& node) override;
     void visit(ReturnStmt& node) override;
+
+    IR::Module& get_module() { return module; }
+private:
+    std::string get_temp_name();
 };
 
 }

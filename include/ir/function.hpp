@@ -20,22 +20,22 @@ namespace IR {
  */
 class Function : public Value {
 private:
-    std::vector<Value*> params;
-    std::vector<BasicBlock*> blks;
-    std::vector<Instruction*> insts; // 基本块划分前的过渡
+    std::vector<std::shared_ptr<Value>> params;
+    std::vector<std::shared_ptr<BasicBlock>> blks;
+    std::vector<std::shared_ptr<Instruction>> insts; // 基本块划分前的过渡
     int vreg_idx = 0;
 public:
     Function(std::string _name, IRTYPE _type);
 
     // bool isDecl() { return blks.empty() && insts.empty(); } // SySy中没有函数声明
 
-    void addParam(Value* param);
-    void addBlock(BasicBlock* blk);
-    void addInst(Instruction* inst);
+    void addParam(std::shared_ptr<Value> param);
+    void addBlock(std::shared_ptr<BasicBlock> blk);
+    void addInst(std::shared_ptr<Instruction> inst);
 
-    std::vector<Value*>& getParams();
-    std::vector<BasicBlock*>& getBlocks();
-    std::vector<Instruction*>& getInsts();
+    auto& getParams();
+    auto& getBlocks();
+    auto& getInsts();
     // ...
 
     int getVRegIdx() { return vreg_idx++; }; // 用于生成SSA时的虚拟寄存器计数，从0开始，GetIdx后++
