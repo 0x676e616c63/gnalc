@@ -80,7 +80,7 @@ enum OperCode{
     Unary_End,
 
     Binary_Begin,   // 比较广义的Binary?
-        ADD, ADDS, SUB, SUBS, RSBS, MUL, MULS, MLA, DIV, DIVS, ORR, AND, ASR, ASRS, LSL, LSR, ROR, RRX, EOR,
+        ADD, ADDS, SUB, SUBS, RSBS, MUL, MULS, MLA, DIV, SDIV, ORR, AND, ASR, ASRS, LSL, LSR, ROR, RRX, EOR,
         // SIMD
         VADD_F32, VADD_S32,
         VSUB_F32, VSUB_S32,
@@ -135,7 +135,7 @@ std::map<OperCode, std::string> OperCodeMap = {
     {OperCode::NEG, "neg"}, {OperCode::VNEG_F32, "vneg.f32"},
     {OperCode::ADD, "add"}, {OperCode::SUB, "sub"},
     {OperCode::ADDS, "adds"},{OperCode::SUBS, "subs"},{OperCode::RSBS, "rsbs"},{OperCode::MUL, "mul"},{OperCode::MLA, "mla"},
-    {OperCode::MULS, "muls"}, {OperCode::DIVS, "divs"},
+    {OperCode::MULS, "muls"}, {OperCode::SDIV, "sdiv"},
     {OperCode::DIV, "div"}, {OperCode::ORR, "orr"},{OperCode::AND, "and"},{OperCode::ASR, "asr"},
     {OperCode::ASRS, "asrs"},{OperCode::LSL, "lsl"},{OperCode::LSR, "lsr"},{OperCode::ROR, "ror"},{OperCode::RRX, "rrx"},
     {OperCode::EOR, "eor"},{OperCode::VADD_F32, "vadd.f32"},{OperCode::VADD_S32, "vadd.s32"},{OperCode::VSUB_F32, "vsub.f32"},

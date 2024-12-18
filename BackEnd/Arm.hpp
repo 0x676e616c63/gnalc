@@ -58,16 +58,8 @@ namespace ArmTools{
     class LabelTable; // 用于查找标签
 
     /// @note arm指令合法化的一部分
-    bool isImmCanBeEncodedInText(unsigned long long imme);
-    bool isImmCanBeEncodedInText(float Imm);
+
     bool isVLoadStoreOffsetLegal(int offset);
-
-    std::string DecToHex(int);
-    std::string HexToDec(std::string);  // 理论上这个东西不要也行
-    std::string LiteralToIEEE(float);
-
-    std::pair<std::string, std::string> BreakInBit(float);
-    std::pair<std::string, std::string> BreakInBit(int);
 
     class RegisterAlloc;    // 寄存器分配
 
@@ -83,103 +75,87 @@ namespace ArmTools{
     
     /// @note 模式匹配函数
 
+    struct MovtwMatch{
+        BB& BasicBlock;
+        void operator()(float, unsigned long long &temp_virReg) ;
+        void operator()(int, unsigned long long &temo_virReg) ;  
+        bool isImmCanBeEncodedInText(unsigned long long imme);
+        bool isImmCanBeEncodedInText(float imme);
+    };
+
     struct BinaryMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
+        BB& BlockBlock;
+
+        MovtwMatch immeMatch;
+
+        void operator()(InstArgs);
+        
+        void IntOrdinaryMatch(IR::BinaryInst&, OperCode);
+        void FloatOrdinaryMatch(IR::BinaryInst&, OperCode);
+        
+        void RegMatch(IR::BinaryInst&);
+        void FRegMatch(IR::BinaryInst&);
+
+        void immeIntercept(float, float, OperCode);
+        void immeIntercept(int, int, OperCode);
     };
 
     struct UnaryMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
+        BB& BasicBlock;
+        void operator()(InstArgs);
     };
 
     struct BranchMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
+        BB& BasicBlock;
+        void operator()(InstArgs) const;
     };
 
     struct AllocaMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
+        BB& BasicBlock;
+        void operator()(InstArgs) const;
     };
 
     struct LoadMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
+        BB& BasicBlock;
+        void operator()(InstArgs) const;
     };
 
     struct StoreMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
+        BB& BasicBlock;
+        void operator()(InstArgs) const;
     };
     
     struct GepMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
+        BB& BasicBlock;
+        void operator()(InstArgs) const;
     };
     
     struct FPTOSIMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
+        BB& BasicBlock;
+        void operator()(InstArgs) const;
     };
 
     struct SITOFPMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
+        BB& BasicBlock;
+        void operator()(InstArgs) const;
     };
 
     // struct ICMP, FCMP ; in BranchMatch
 
     struct CallMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
+        BB& BasicBlock;
+        void operator()(InstArgs) const;
     };
 
     struct PhiMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
+        BB& BasicBlock;
+        void operator()(InstArgs) const;
     };
 
 
     // std::map<IR::OP, OperCode>Mid2BackOpC;
     
     /// @note 模式匹配函数
-
-    struct BinaryMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
-    };
-
-    struct UnaryMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
-    };
-
-    struct BranchMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
-    };
-
-    struct AllocaMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
-    };
-
-    struct LoadMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
-    };
-
-    struct StoreMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
-    };
-    
-    struct GepMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
-    };
-    
-    struct FPTOSIMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
-    };
-
-    struct SITOFPMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
-    };
-
-    // struct ICMP, FCMP ; in BranchMatch
-
-    struct CallMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
-    };
-
-    struct PhiMatch{
-        void operator()(InstArgs, ArmStruct::BB&) const;
-    };
-
 };
 
 namespace ArmOpt{

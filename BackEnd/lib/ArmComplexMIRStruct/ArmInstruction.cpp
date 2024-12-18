@@ -22,10 +22,12 @@ Instruction::Instruction(OperCode opcode,Imm* attach, BB& BasicBlock,
     std::initializer_list<std::reference_wrapper<Operand>> Defs, 
     std::initializer_list<std::reference_wrapper<Operand>> Uses):
     opcode(opcode), id( ++BasicBlock.Func.InstCnt), attach(attach), BasicBlock(BasicBlock){
+        
         for(auto oper_it = Defs.begin(); oper_it != Defs.end(); ++oper_it){
             auto &oper = oper_it->get();
             this->DefOperandList.push_back(std::ref(oper)); 
         }
+        
         for(auto oper_it = Uses.begin(); oper_it != Uses.end(); ++oper_it){
             auto &oper = oper_it->get();
             this->UseOperandList.push_back(std::ref(oper));

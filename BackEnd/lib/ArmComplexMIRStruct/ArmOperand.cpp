@@ -20,13 +20,14 @@ MMptr::MMptr(std::string spBiase){
     this->data = spBiase;
 }
 
-Operand::Operand(std::string midEnd_VirReg){
+Operand::Operand(OperandType type, std::string midEnd_VirReg){
+    this->ValType = type;
     this->VirReg = std::stoull(midEnd_VirReg.substr(1)); // 去掉 '%'
     this->adjList = {};
     this->moveList = {};
 }
 
-Operand::Operand(IR::Value *midEnd_oper){} // 好像没用?
+Operand::Operand(OperandType type, unsigned int color): ValType(type), color(color){};
 
 Operand::Operand(OperandType type, unsigned int VirReg): ValType(type), VirReg(VirReg){} // 好像没用?
 

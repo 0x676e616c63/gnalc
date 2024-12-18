@@ -85,7 +85,7 @@ class ArmStruct::Function{
         
         std::map<unsigned long long, Operand*> VirRegOperandMap; // 当前函数中虚拟寄存器的映射, 同时也是存放指针的空间
 
-        unsigned long long VRegNum;
+        unsigned long long VRegNum; // 方便添加temp_VirReg
 
         unsigned int InstCnt = 0;
         std::string Identifier;
