@@ -21,8 +21,8 @@ class BinaryInst : public Instruction {
 public:
     BinaryInst(NameRef name, OP opcode, Value* lhs, Value* rhs);
 
-    Value* GetLHS() const;
-    Value* GetRHS() const;
+    Value* getLHS() const;
+    Value* getRHS() const;
 
     void accept(IRVisitor& visitor) override;
 };
@@ -33,7 +33,7 @@ class FNEGInst : public Instruction {
 public:
     FNEGInst(NameRef name, Value* val);
 
-    Value* GetVal() const;
+    Value* getVal() const;
 
     void accept(IRVisitor& visitor) override;
 };

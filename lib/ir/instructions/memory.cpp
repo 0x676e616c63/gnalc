@@ -125,8 +125,8 @@ namespace IR
         return ret;
     }
 
-    void ALLOCAInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
-    void LOADInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
-    void STOREInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
-    void GEPInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void ALLOCAInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
+    void LOADInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
+    void STOREInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
+    void GEPInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 }

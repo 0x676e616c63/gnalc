@@ -115,4 +115,8 @@ std::string GVIniter::toString() {
 
     return ret;
 }
+
+void GlobalVariable::accept(IRVisitor& visitor) {
+    visitor.visit(*this);
+}
 }

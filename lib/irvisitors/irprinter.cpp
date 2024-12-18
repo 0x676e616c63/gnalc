@@ -132,6 +132,10 @@ std::string IRFormatter::formatOp(OP op) {
             return "frem";
         case OP::FNEG:
             return "fneg";
+        case OP::AND:
+            return "and";
+        case OP::OR:
+            return "or";
         case OP::ICMP:
             return "icmp";
         case OP::FCMP:
@@ -201,6 +205,26 @@ std::string IRFormatter::formatCMPOP(FCMPOP cond) {
         default:
             Logger::logDebug("ERR: Unknown FCMPOP");
             return "UNKNOWNFCMPOP";
+    }
+}
+
+std::string IRFormatter::formatHELPERTY(HELPERTY hlpty) {
+    switch (hlpty) {
+        case HELPERTY::IFBEntry:
+            return "IFBEntry";
+        case HELPERTY::IFBEnd:
+            return "IFBEnd";
+        case HELPERTY::ELSEBEntry:
+            return "ELSEBEntry";
+        case HELPERTY::ELSEBEnd:
+            return "ELSEBEnd";
+        case HELPERTY::WHILEBEntry:
+            return "WHILEBEntry";
+        case HELPERTY::WHILEBEnd:
+            return "WHILEBEnd";
+        default:
+            Logger::logDebug("ERR: Unknown HELPERTY");
+            return "UNKNOWNHELPERTY";
     }
 }
 
@@ -293,6 +317,10 @@ std::string IRFormatter::formatInst(Instruction& inst) {
             return IRFormatter::fGEPInst(dynamic_cast<GEPInst&>(inst));
         case OP::PHI:
             return IRFormatter::fPHIInst(dynamic_cast<PHIInst&>(inst));
+
+        case OP::HELPER:
+            return IRFormatter::fHELPERInst(dynamic_cast<HELPERInst&>(inst));
+
         default:
             return "unknown instruction";
     }
@@ -304,9 +332,9 @@ std::string IRFormatter::fBinaryInst(BinaryInst& inst) {
     ret += " = ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
     ret += IRFormatter::formatIRTYPE(inst.getType()) + " ";
-    ret += inst.GetLHS()->getName();
+    ret += inst.getLHS()->getName();
     ret += ", ";
-    ret += inst.GetRHS()->getName();
+    ret += inst.getRHS()->getName();
     return ret;
 }
 
@@ -316,7 +344,7 @@ std::string IRFormatter::fFNEGInst(FNEGInst& inst) {
     ret += " = ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
     ret += IRFormatter::formatIRTYPE(inst.getType()) + " ";
-    ret += inst.GetVal()->getName();
+    ret += inst.getVal()->getName();
     return ret;
 }
 
@@ -325,11 +353,11 @@ std::string IRFormatter::fICMPInst(ICMPInst& inst) {
     ret += inst.getName();
     ret += " = ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
-    ret += IRFormatter::formatCMPOP(inst.GetCond()) + " ";
-    ret += IRFormatter::formatIRTYPE(inst.getType()) + " ";
-    ret += inst.GetLHS()->getName();
+    ret += IRFormatter::formatCMPOP(inst.getCond()) + " ";
+    ret += IRFormatter::formatIRTYPE(inst.getLHS()->getType()) + " ";
+    ret += inst.getLHS()->getName();
     ret += ", ";
-    ret += inst.GetRHS()->getName();
+    ret += inst.getRHS()->getName();
     return ret;
 }
 
@@ -338,11 +366,11 @@ std::string IRFormatter::fFCMPInst(FCMPInst& inst) {
     ret += inst.getName();
     ret += " = ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
-    ret += IRFormatter::formatCMPOP(inst.GetCond()) + " ";
-    ret += IRFormatter::formatIRTYPE(inst.getType()) + " ";
-    ret += inst.GetLHS()->getName();
+    ret += IRFormatter::formatCMPOP(inst.getCond()) + " ";
+    ret += IRFormatter::formatIRTYPE(inst.getLHS()->getType()) + " ";
+    ret += inst.getLHS()->getName();
     ret += ", ";
-    ret += inst.GetRHS()->getName();
+    ret += inst.getRHS()->getName();
     return ret;
 }
 
@@ -352,8 +380,7 @@ std::string IRFormatter::fRETInst(RETInst& inst) {
     if (inst.isVoid()) {
         ret += "void";
     } else {
-        ret += IRFormatter::formatIRTYPE(inst.getRetVal()->getType()) + " "; // or getRetType()
-        ret += inst.getRetVal()->getName();
+        ret += IRFormatter::formatValue(*(inst.getRetVal()));
     }
     return ret;
 }
@@ -382,8 +409,9 @@ std::string IRFormatter::fCALLInst(CALLInst& inst) {
     ret += IRFormatter::formatIRTYPE(inst.getType()) + " ";
     ret += inst.getFuncName();
     ret += "(";
+    auto args = inst.getArgs();
     if (!(inst.isVoid())) {
-        for (auto it = inst.getArgs().begin(); it != inst.getArgs().end(); it++) {
+        for (auto it = args.begin(); it != args.end(); it++) {
             ret += IRFormatter::formatValue(**it);
             if (std::next(it) != inst.getArgs().end()) {
                 ret += ", ";
@@ -418,6 +446,89 @@ std::string IRFormatter::fSITOFPInst(SITOFPInst& inst) {
     return ret;
 }
 
+std::string IRFormatter::fALLOCAInst(ALLOCAInst& inst) {
+    std::string ret;
+    ret += inst.getName();
+    ret += " = ";
+    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
+    if (inst.isStatic()) {
+        if (inst.isArray()) {
+            for (int size : inst.getStaticArraySize()) {
+                ret += "[" + std::to_string(size) + " x ";
+            }
+            ret += IRFormatter::formatIRTYPE(inst.getBaseType());
+            for (int i = 0; i < inst.getStaticArraySize().size(); i++) {
+                ret += "]";
+            }
+        } else {
+            ret += IRFormatter::formatIRTYPE(inst.getBaseType());
+        }
+    } else {
+        ret += IRFormatter::formatIRTYPE(inst.getBaseType());
+        ret += ", ";
+        ret += IRFormatter::formatValue(*(inst.getNumElements()));
+    }
+    ret += ", align ";
+    ret += std::to_string(inst.getAlign());
+    return ret;
+}
 
+std::string IRFormatter::fLOADInst(LOADInst& inst) {
+    std::string ret;
+    ret += inst.getName();
+    ret += " = ";
+    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
+    ret += IRFormatter::formatIRTYPE(inst.getType()) + ", ";
+    ret += IRFormatter::formatValue(*(inst.getPtr()));
+    ret += ", align ";
+    ret += std::to_string(inst.getAlign());
+    return ret;
+}
+
+std::string IRFormatter::fSTOREInst(STOREInst& inst) {
+    std::string ret;
+    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
+    ret += IRFormatter::formatValue(*(inst.getValue()));
+    ret += ", ";
+    ret += IRFormatter::formatValue(*(inst.getPtr()));
+    ret += ", align ";
+    ret += std::to_string(inst.getAlign());
+    return ret;
+}
+
+std::string IRFormatter::fGEPInst(GEPInst& inst) {
+    std::string ret;
+    ret += inst.getName();
+    ret += " = ";
+
+    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
+    for (int size : inst.getArraySize()) {
+        ret += "[" + std::to_string(size) + " x ";
+    }
+    ret += IRFormatter::formatIRTYPE(inst.getBaseType());
+    for (int i = 0; i < inst.getArraySize().size(); i++) {
+        ret += "]";
+    }
+
+    ret += ", ";
+    ret += IRFormatter::formatValue(*(inst.getPtr()));
+
+    for (auto idx : inst.getIdxs()) {
+        ret += ", ";
+        ret += IRFormatter::formatValue(*idx);
+    }
+
+    return ret;
+}
+
+std::string IRFormatter::fPHIInst(PHIInst& inst) {
+    std::string ret;
+
+    return ret;
+}
+
+std::string IRFormatter::fHELPERInst(HELPERInst& inst) {
+    return "; " + IRFormatter::formatHELPERTY(inst.getHlpType());
+}
 
 }

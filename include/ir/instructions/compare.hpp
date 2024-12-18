@@ -28,7 +28,8 @@ enum class ICMPOP {
 };
 
 // <result> = icmp <cond> <ty> <op1>, <op2>
-// 若无特殊情况，ty = i32，考虑bool值？
+// 1216修复：cmp指令的type(运算结果的type)应为i1, 操作数的type可用getLHS()->getType()获得，暂不设basetype
+// @attention ：默认op1和op2类型一致，均为i32
 class ICMPInst : public Instruction {
 private:
     ICMPOP cond;
@@ -36,9 +37,9 @@ private:
 public:
     ICMPInst(NameRef name, ICMPOP cond, Value* lhs, Value* rhs);
 
-    Value* GetLHS() const;
-    Value* GetRHS() const;
-    ICMPOP GetCond() const;
+    Value* getLHS() const;
+    Value* getRHS() const;
+    ICMPOP getCond() const;
 
     void accept(IRVisitor& visitor) override;
 };
@@ -79,9 +80,9 @@ private:
 public:
     FCMPInst(NameRef name, FCMPOP cond, Value* lhs, Value* rhs);
 
-    Value* GetLHS() const;
-    Value* GetRHS() const;
-    FCMPOP GetCond() const;
+    Value* getLHS() const;
+    Value* getRHS() const;
+    FCMPOP getCond() const;
 
     void accept(IRVisitor& visitor) override;
 };

@@ -23,6 +23,7 @@ private:
     std::vector<Value*> params;
     std::vector<BasicBlock*> blks;
     std::vector<Instruction*> insts; // 基本块划分前的过渡
+    int vreg_idx = 0;
 public:
     Function(std::string _name, IRTYPE _type);
 
@@ -37,7 +38,8 @@ public:
     std::vector<Instruction*>& getInsts();
     // ...
 
-    unsigned long long getVRegNum();
+    int getVRegIdx() { return vreg_idx++; }; // 用于生成SSA时的虚拟寄存器计数，从0开始，GetIdx后++
+    int getVRegNum() const { return vreg_idx; }; // 虚拟寄存器数量
 
     void accept(IRVisitor& visitor) override;
     ~Function() override;

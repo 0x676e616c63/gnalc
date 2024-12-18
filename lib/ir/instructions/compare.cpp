@@ -7,40 +7,40 @@
 
 namespace IR {
     ICMPInst::ICMPInst(NameRef name, ICMPOP cond, Value *lhs, Value *rhs)
-        : Instruction(OP::ICMP, name, IRTYPE::I32), cond(cond) {
+        : Instruction(OP::ICMP, name, IRTYPE::I1), cond(cond) {
         operands = {Use{lhs, this}, Use{rhs, this}};
     }
 
-    Value* ICMPInst::GetLHS() const {
+    Value* ICMPInst::getLHS() const {
         return operands.begin()->getValue();
     }
 
-    Value* ICMPInst::GetRHS() const {
+    Value* ICMPInst::getRHS() const {
         return operands.rbegin()->getValue();
     }
 
-    ICMPOP ICMPInst::GetCond() const {
+    ICMPOP ICMPInst::getCond() const {
         return cond;
     }
 
     FCMPInst::FCMPInst(NameRef name, FCMPOP cond, Value *lhs, Value *rhs)
-        : Instruction(OP::FCMP, name, IRTYPE::FLOAT), cond(cond) {
+        : Instruction(OP::FCMP, name, IRTYPE::I1), cond(cond) {
         operands = {Use{lhs, this}, Use{rhs, this}};
     }
 
-    Value* FCMPInst::GetLHS() const {
+    Value* FCMPInst::getLHS() const {
         return operands.begin()->getValue();
     }
 
-    Value* FCMPInst::GetRHS() const {
+    Value* FCMPInst::getRHS() const {
         return operands.rbegin()->getValue();
     }
 
-    FCMPOP FCMPInst::GetCond() const {
+    FCMPOP FCMPInst::getCond() const {
         return cond;
     }
 
-    void ICMPInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void ICMPInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
-    void FCMPInst::accept(IRVisitor& visitor) override { visitor.visit(*this); }
+    void FCMPInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 }
