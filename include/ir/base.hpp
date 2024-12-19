@@ -38,24 +38,27 @@ class Use;
  * @todo replace use function
  * @attention use_list的添加在use的构造过程中完成!!!
  */
-class Value : public TypeC, public NameC {
+class Value : public NameC {
 protected:
-    // use_list的顺序应该没有太大影响
-    std::list<Use*> use_list; // Use隶属于User, 故暂时使用普通指针
+    std::list<std::weak_ptr<Use>> use_list; // Use隶属于User
+    std::shared_ptr<Type> vtype; // value's type
     // SVT svt;
 public:
-    Value() = default;
-    Value(std::string _name, IRTYPE _type);
+    Value() = delete;
+    Value(std::string _name, std::shared_ptr<Type> _vtype);
 
-    void addUse(Use* use);
-    std::list<Use*>& getUseList(); // 暂时不用const，由其实现一些修改功能
+    IRBTYPE getType() const; // 为了和原来版本的兼容
+    std::shared_ptr<Type> getTypePtr() const;
 
-    /// @todo 可重载为一个函数名
-    void delUseByUse(Use* use); // 根据Use删除所有匹配的use；由于Use归User所有，故理论上说通过User删除可以转换为通过Use删除
-    void delUseByUser(User* user);
-    void delUseByName(NameRef name); // 根据username删除匹配的第一个use
+    void addUse(const std::shared_ptr<Use>& use);
+    std::list<std::shared_ptr<Use>> getUseList() const;
+    std::list<std::weak_ptr<Use>>& getRUseList(); // 直接返回use_list的引用，用于直接操作list
 
-    void replaceUseByUse(Use* old_use, Use* new_use);
+    void delUse(const std::shared_ptr<Use>& use); // 根据Use删除匹配的use
+    void delUse(const std::shared_ptr<User>& user);
+    void delUse(NameRef name); // 根据username删除匹配use
+
+    void replaceUse(const std::shared_ptr<Use>& old_use, const std::shared_ptr<Use>& new_use);
 
     virtual void accept(class IRVisitor& visitor) = 0;
     virtual ~Value();
@@ -64,48 +67,44 @@ public:
 
 /**
  * @brief User是Use的所有者，User的Operands由Use中的val来保存
- * 
  * @todo find, set by value, del function
- * @todo use "use" pointer? 目前不用，因为USE隶属于USER
  */
 class User : public Value {
 protected:
-    std::list<Use> operands; // 操作数实际是Use中的val
+    std::list<std::shared_ptr<Use>> operands; // 操作数实际是Use中的val
 
 public:
-    User() = default;
-    User(std::string _name, IRTYPE _type);
+    User() = delete;
+    User(std::string _name, std::shared_ptr<Type> _vtype);
 
-    void addOperand(Value *v);
+    void addOperand(const std::shared_ptr<Value>& v);
 
-    std::list<Use>& getOperands();
+    std::list<std::shared_ptr<Use>>& getOperands();
+    const std::list<std::shared_ptr<Use>>& getOperands() const;
 
-    const std::list<Use>& getOperands() const;
+    void delOperand(const std::shared_ptr<Value>& v);
+    void delOperand(NameRef name);
 
-    /// @todo 可重载为一个函数名
-    void delOperandByValue(Value *v);
-    void delOperandByName(NameRef name);
+    void replaceUse(const std::shared_ptr<Value>& old_val, const std::shared_ptr<Value>& new_val);
 
     virtual void accept(IRVisitor& visitor) override = 0;
     ~User() override;
 };
 
-
-/**
- * @todo no empty warning
- */
-class Use {
+class Use : public std::enable_shared_from_this<Use> {
 private:
-    Value *val;   // 指向被使用的 Value
-    User *user;   // 指向所属的 User
+    std::shared_ptr<Value> val; // 强引用Value
+    std::weak_ptr<User> user;   // 弱引用User
 
 public:
-    Use(Value *v, User *u);
+    Use(const std::shared_ptr<Value>& v, const std::shared_ptr<User>& u);
 
-    void setValue(Value *v);
-    void setUser(User *u);
-    Value* getValue() const;
-    User* getUser() const;
+    // Use 设计为一次赋值
+    // void setValue(const std::shared_ptr<Value>& v);
+    // void setUser(const std::shared_ptr<User>& u);
+
+    std::shared_ptr<Value> getValue() const;
+    std::shared_ptr<User> getUser() const;
 
     ~Use();
 };
