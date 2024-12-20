@@ -36,10 +36,6 @@ Instruction::Instruction(OperCode opcode,Imm* attach, BB& BasicBlock,
 
 /// @brief reWrite Programme to add overflow vars
 Instruction::Instruction(Instruction& inst, OperCode type, unsigned int cnt):
-    BasicBlock(inst.BasicBlock), DefOperandList(), UseOperandList(){}
-    /// @todo 这里实际上也可以用MemInstruction的构造, attach成员这个设计确实会造成太多歧义
-/// @brief reWrite Programme to add overflow vars
-Instruction::Instruction(Instruction& inst, OperCode type, unsigned int cnt):
     BasicBlock(inst.BasicBlock), DefOperandList(), UseOperandList(){
     /// @todo 这里实际上也可以用MemInstruction的构造, attach成员这个设计确实会造成太多歧义
     this->id = cnt;
@@ -60,6 +56,7 @@ Instruction::Instruction(Instruction& inst, OperCode type, unsigned int cnt):
 bool Instruction::operator==(Instruction& inst) const{
     return this->id == inst.id;
 };
+
 std::string& Instruction::toString(){
     std::unique_ptr<std::string> AsmInst = std::make_unique<std::string>();
     std::string &str = *AsmInst;

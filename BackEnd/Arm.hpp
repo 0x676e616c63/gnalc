@@ -5,6 +5,8 @@
 #include <vector>
 #include <map>
 #include "../../../include/ir/base.hpp"
+#include "../../../include/ir/instructions/memory.hpp"
+#include "../../../include/ir/instructions/binary.hpp"
 #include "../../../include/ir/instruction.hpp"
 
 namespace ArmStruct{
@@ -73,7 +75,7 @@ namespace ArmTools{
 
     // std::map<IR::OP, OperCode>Mid2BackOpC;
     
-    /// @note 模式匹配函数
+    /// @note 模式匹配仿函数
 
     struct MovtwMatch{
         BB& BasicBlock;
@@ -91,6 +93,10 @@ namespace ArmTools{
         void operator()(InstArgs);
         
         void IntOrdinaryMatch(IR::BinaryInst&, OperCode);
+        
+        void SMulMatch(IR::BinaryInst&);
+        void SDivMatch(IR::BinaryInst&);
+
         void FloatOrdinaryMatch(IR::BinaryInst&, OperCode);
         
         void RegMatch(IR::BinaryInst&);
@@ -112,7 +118,11 @@ namespace ArmTools{
 
     struct AllocaMatch{
         BB& BasicBlock;
-        void operator()(InstArgs) const;
+        /// 主要工作是添加FrameObj
+        void operator()(InstArgs) ;
+        
+        void staticMemory(IR::ALLOCAInst&);
+        void dynamicMemory(IR::ALLOCAInst&);
     };
 
     struct LoadMatch{
@@ -127,7 +137,7 @@ namespace ArmTools{
     
     struct GepMatch{
         BB& BasicBlock;
-        void operator()(InstArgs) const;
+        void operator()(InstArgs);
     };
     
     struct FPTOSIMatch{

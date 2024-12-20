@@ -16,85 +16,68 @@
 
 class ArmStruct::FrameObj{
     public:
-        FrameObj(MMptr&);
-        // FrameObj(); // 用于加载非栈上的地址, 需要手动选定基址寄存器
-
-        ~FrameObj();
+        FrameObj(SubFrame*, OperandType, unsigned int, unsigned long long); // 自动调用insert
+        ~FrameObj()=default;
+        OperandType getType(){return type;};
+    
+        SubFrame* getFather(){return father;};
         
-        int offset; // in the subframe
-        ArmTools::CoreRegisterName baseReg = ArmTools::CoreRegisterName::sp;
-       
-        unsigned int vitualReg; // 标记MIR中与之绑定的ptr
-        unsigned int val_size;
-        OperandType valType;
+        unsigned int getSize(){return ObjSize;};
+    private:
+        OperandType type;
+        SubFrame* father; // 指的是所属的SubFrame
+        unsigned int ObjSize;
+        unsigned long long VirPtr;
 };
 
 class ArmStruct::SubFrame{
     public:
         SubFrame();
-        ~SubFrame();
-        unsigned int offset = 4; // 即 r7 + 4 的位置, 因为需要返回值
-        unsigned int sizeTotal;
-        // 相对寻址应该不会是FPU寄存器
-        ArmTools::CoreRegisterName baseReg = ArmTools::CoreRegisterName::r7;
-        std::list<FrameObj*> ObjList;
+        ~SubFrame()=default;
 
-        // SubFrame& operator=(ArmStruct::SubFrame&);
-        void addFrameObj(ArmStruct::MMptr&);
-        // void bindOnFrameObj(ArmStruct::MMptr&);
-        bool findFrameObj(ArmStruct::MMptr&);
+        ///@warning will ret nulls
+        void insertObj(unsigned long long idx, FrameObj* Obj){VirPtrFrameObjMap[idx] = Obj;};
+        FrameObj* findObj(unsigned long long idx){return VirPtrFrameObjMap[idx];}
+        unsigned int getSize();
 
+    private:
+        std::map<unsigned long long, FrameObj*>VirPtrFrameObjMap; // 做一个对象池
 };
+
+
 class ArmStruct::Function{
     public:
         Function(IR::Function&); // waiting...
         ~Function();
         bool isStackInst(Instruction&); // stack分配相关的指令
         
-        ///@note 在寄存器分配之前存在, 由于虚拟寄存器无限, 栈空间只会被local使用, 也就是处理alloca指令, 由于alloca指令都在func的最前端, 并且带初始化, 所以其实很难去回收空间
-        ///@note 在处理完alloca之后, 遍历
-        void MkFrameInit(); 
         ///@note 在寄存器分配之后, 多出来了一些用于管理temp区的load/store指令
+        ///@note汇总之后, 分配栈空间
         void MkFrameFinal();
 
-        ///@note 插入寄存器保护指令, 希望寄存器分配阶段消除多余的指令
-
-        void LegalizeInit();
-
-        /// @note gcc armv7的栈空间管理很抽象, 但是这个优化只能之后再做
-        /* @todo
-            push {r7, lr}
-            sub sp, sp, #stack_size
-            add r7, sp, #0
-            ...
-            mov r0, %retval
-            add r7, r7, #stack_size
-            mov sp, r7
-            pop {r7, pc}
-        */
+        /// @brief 插入push bx等语句
         void LegalizeFinal();
 
         void TerminatorPredict();
-
-        unsigned int getParamSize(){return params_size;}
-        void setParamSize(unsigned int size){params_size = size;}
 
         std::string& toString();
         
         std::list<BB*> BBList;
         
-        std::map<unsigned long long, Operand*> VirRegOperandMap; // 当前函数中虚拟寄存器的映射, 同时也是存放指针的空间
-
-        unsigned long long VRegNum; // 方便添加temp_VirReg
+        std::map<unsigned long long, Operand*> VirRegOperandMap;
+        unsigned long long VRegNum;
 
         unsigned int InstCnt = 0;
         std::string Identifier;
-    
+
+        SubFrame* getLocal(){return local;}
+        SubFrame* getTemp(){return temp;}
+        unsigned int getParamSize(){return params_size;}
+        void setParamSize(unsigned int size){params_size = size;}
 
     private:
-        SubFrame local;
-        SubFrame temp;
-        // SubFrame params; // 感觉没必要
+        SubFrame *local;
+        SubFrame *temp;
         unsigned int params_size = 0;
         std::string str;
 

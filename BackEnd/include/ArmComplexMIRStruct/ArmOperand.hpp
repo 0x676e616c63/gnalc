@@ -12,7 +12,7 @@
 enum OperandType{
     // INT 和 FLOAT主要用于Operand区分使用什么寄存器
     // imm中主要区分是否是LABEL类
-    INT, FLOAT, PTR, VOID, LABEL, BYTE, ASCIZ,
+    INT, FLOAT, INTPTR, FLOATPTR, VOID, LABEL, BYTE, ASCIZ,
 };
 class ArmStruct::Operand{
     public:

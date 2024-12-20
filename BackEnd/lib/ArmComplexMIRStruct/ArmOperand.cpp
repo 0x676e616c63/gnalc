@@ -29,8 +29,6 @@ Operand::Operand(OperandType type, std::string midEnd_VirReg){
 
 Operand::Operand(OperandType type, unsigned int color): ValType(type), color(color){};
 
-Operand::Operand(OperandType type, unsigned int VirReg): ValType(type), VirReg(VirReg){} // 好像没用?
-
 Operand::Operand(Operand& other) :
     ValType(other.ValType),
 
