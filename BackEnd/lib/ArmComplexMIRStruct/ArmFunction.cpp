@@ -19,6 +19,9 @@ using FrameObjRefHashPtr = std::unique_ptr<std::unordered_set<std::reference_wra
 FrameObj::FrameObj(SubFrame *Father, OperandType type, unsigned int size, unsigned long long idx):
     father(Father), type(type), ObjSize(size), VirPtr(idx) {
         father->insertObj(VirPtr, this);
+        // idx不只是FrameObj的编号, 也是MMptr的编号
+        MMptr *ptr = new MMptr(type, idx);
+        father->insertMMptr(idx, ptr);
 }
 
 Function::Function(IR::Function& midEnd_function){

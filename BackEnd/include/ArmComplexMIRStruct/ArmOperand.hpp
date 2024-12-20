@@ -59,7 +59,7 @@ class ArmStruct::Imm{
 class ArmStruct::MMptr : public ArmStruct::Imm{
     ///@note 关键在于能反向查找到对应的FrameObj, 同时能够被FrameObj寻址
     public:
-        MMptr();
+        MMptr(OperandType type, unsigned long long idx): ptrType(type), VirReg(idx){};
         MMptr(std::string);
         ~MMptr()=default;
 

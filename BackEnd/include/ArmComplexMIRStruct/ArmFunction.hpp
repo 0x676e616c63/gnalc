@@ -27,7 +27,7 @@ class ArmStruct::FrameObj{
         OperandType type;
         SubFrame* father; // 指的是所属的SubFrame
         unsigned int ObjSize;
-        unsigned long long VirPtr;
+        unsigned long long VirPtr; // 编号
 };
 
 class ArmStruct::SubFrame{
@@ -36,12 +36,18 @@ class ArmStruct::SubFrame{
         ~SubFrame()=default;
 
         ///@warning will ret nulls
-        void insertObj(unsigned long long idx, FrameObj* Obj){VirPtrFrameObjMap[idx] = Obj;};
+        void insertObj(unsigned long long idx, FrameObj* Obj){VirPtrFrameObjMap[idx] = Obj;}
+
+        void insertMMptr(unsigned long long idx, MMptr* ptr){VirPtrOffsetMap[idx] =  ptr;};
+
         FrameObj* findObj(unsigned long long idx){return VirPtrFrameObjMap[idx];}
+
+        MMptr* findMMptr(unsigned long long idx){return VirPtrOffsetMap[idx];}
         unsigned int getSize();
 
     private:
-        std::map<unsigned long long, FrameObj*>VirPtrFrameObjMap; // 做一个对象池
+        std::map<unsigned long long, MMptr*>VirPtrOffsetMap; // 做一个对象池
+        std::map<unsigned long long, FrameObj*>VirPtrFrameObjMap; // 
 };
 
 

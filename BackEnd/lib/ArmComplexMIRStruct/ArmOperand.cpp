@@ -77,14 +77,14 @@ std::string& Imm::toString(){
     return this->data;
 }
 
-std::string& MMptr::toString() {
-    if(!data.empty()) return this->data; 
+// std::string& MMptr::toString() {
+//     if(!data.empty()) return this->data; 
     
-    this->data += '[';
-    this->data += CoreRegisterMap[this->space->baseReg] + ", ";
-    this->data += "#" + std::to_string(this->space->offset) + "]";
-    return this->data;
-}
+//     this->data += '[';
+//     this->data += CoreRegisterMap[this->space->baseReg] + ", ";
+//     this->data += "#" + std::to_string(this->space->offset) + "]";
+//     return this->data;
+// }
 
 std::string& Global::toString(){
     this->data += '=';

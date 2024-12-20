@@ -466,7 +466,7 @@ struct AllocaMatch{
         
         FrameObj *backEnd_stackVal = new FrameObj(
             BasicBlock.Func.getLocal(), OperandType::INT, ObjSize, VirPtr
-        );
+        );  // 开辟一个FrameObj, 同时保存alloca的name
         return;
     }
 
@@ -491,11 +491,13 @@ struct ArmTools::LoadMatch{
     void operator()(InstArgs insts) const{
         assert(insts.size() == 1);
         auto &midEnd_store = dynamic_cast<IR::STOREInst&>(insts.begin()->get());
+
+        // 局部变量 MMptr, 假设中端传来的是简单ptr(不带gep)
+        auto idx = std::stoull(midEnd_store.getPtr()->getName().substr(1));
+        MMptr *ptr = BasicBlock.Func.getLocal()->findMMptr(idx);
         
-        // 局部变量
 
-
-        // 全局变量
+        // 全局变量 Label
 
     }
 };  
