@@ -3,7 +3,6 @@
  * @brief alloca, load, store, getelementptr(gep)
  * 
  * @todo 这之中的一些向量处理语法没有给出，例如<result> = getelementptr <ty>, <N x ptr> <ptrval>, <vector index type> <idx>
- * @todo 对于[2 x i32]这种类型的包装--目前弃用
  */
 
 #pragma once
@@ -24,21 +23,18 @@ namespace IR {
 // result 的类型是ptr, <type>是基类型
 class ALLOCAInst : public Instruction {
 private:
-    IRTYPE basetype;
+    std::shared_ptr<Type> basetype;
     bool is_static = true;
-    std::vector<int> static_array_size; // 只有静态分配的情况会用到，[3 x [4 x i32]] 就是 {3, 4} 和语言中的数组大小顺序一致
-    bool is_array = false;
     int align = 4;
 public:
-    ALLOCAInst(NameRef name, IRTYPE btype, int _align = 4); // FOR NOTARRAY
-    ALLOCAInst(NameRef name, IRTYPE btype, const std::vector<int>& _array_size, int _align = 4); // FOR STATIC ARRAY ALLOCATION
-    ALLOCAInst(NameRef name, IRTYPE btype, Value* num_elements, int _align = 4); // FOR DYNAMIC ARRAY ALLOCATION
+    ALLOCAInst(NameRef name, std::shared_ptr<Type> btype, int _align = 4); // FOR STATIC
+    // ALLOCAInst(NameRef name, std::shared_ptr<Type> btype, std::shared_ptr<Value> num_elements, int _align = 4); // FOR DYNAMIC
 
-    IRTYPE getBaseType() const;
+    std::shared_ptr<Type> getBaseTypePtr() const;
     bool isStatic() const;
-    std::vector<int> getStaticArraySize() const;
+    // std::vector<int> getStaticArraySize() const;
     bool isArray() const;
-    Value* getNumElements() const; // 修改使用 User基类 的方法
+    // std::shared_ptr<Value> getNumElements() const; // 修改使用 User基类 的方法
     int getAlign() const;
 
     void accept(IRVisitor& visitor) override;
@@ -51,9 +47,10 @@ private:
     // Value* ptr; 添加到oprands中
     int align = 4;
 public:
-    LOADInst(NameRef name, IRTYPE ty, std::shared_ptr<Value> _ptr, int _align = 4);
+    // LOADInst(NameRef name, std::shared_ptr<Type> ty, std::shared_ptr<Value> _ptr, int _align = 4);
+    LOADInst(NameRef name, std::shared_ptr<Value> _ptr, int _align = 4);
 
-    Value* getPtr() const;
+    std::shared_ptr<Value> getPtr() const;
     int getAlign() const;
 
     void accept(IRVisitor& visitor) override;
@@ -63,13 +60,13 @@ public:
 // storeinst的type为undefined, 因其没有Value
 class STOREInst : public Instruction {
 private:
-    IRTYPE basetype;
+    // std::shared_ptr<Type> basetype; // value的类型
     int align = 4;
 
 public:
-    STOREInst(IRTYPE btype, std::shared_ptr<Value> _value, std::shared_ptr<Value> _ptr, int _align = 4);
+    STOREInst(std::shared_ptr<Value> _value, std::shared_ptr<Value> _ptr, int _align = 4);
 
-    IRTYPE getBaseType() const;
+    std::shared_ptr<Type> getBaseTypePtr() const;
     std::shared_ptr<Value> getValue() const;
     std::shared_ptr<Value> getPtr() const;
     int getAlign() const;
@@ -79,20 +76,19 @@ public:
 
 // <result> = getelementptr <ty>, ptr <ptrval>{, <ty> <idx>}*
 // inbounds(必须在边界之内), nsw等修饰符未给出，目前只考虑上述一种情况
-// result的类型为ptr；为了简便，默认索引值的类型均为i32
+// result的类型为ptr(makePtrType(getElm(getElm(_ptr->getTypePtr()))))
 // 目前先不考虑多维数组，用i*col+j的方式索引，或者先gep计算出行开头，再计算偏移
 // 12.6：多个index操作已加
 class GEPInst : public Instruction {
 private:
-    IRTYPE basetype;
-    std::vector<int> array_size; // [3 x [4 x i32]] 就是 {3, 4} 和语言中的数组大小顺序一致
+    // std::shared_ptr<Type> basetype; // _ptr的类型的element
 public:
-    GEPInst(NameRef name, IRTYPE btype, std::vector<int> _array_size, std::shared_ptr<Value> _ptr, const std::list<std::shared_ptr<Value>>& idxs);
+    GEPInst(NameRef name, std::shared_ptr<Value> _ptr, const std::list<std::shared_ptr<Value>>& idxs);
 
-    IRTYPE getBaseType() const;
-    std::vector<int> getArraySize() const;
+    std::shared_ptr<Type> getBaseTypePtr() const;
+    // std::vector<int> getArraySize() const;
     std::shared_ptr<Value> getPtr() const;
-    std::vector<Value*> getIdxs() const;
+    std::vector<std::shared_ptr<Value>> getIdxs() const;
 
     void accept(IRVisitor& visitor) override;
 };

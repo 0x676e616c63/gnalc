@@ -20,6 +20,8 @@
 #include <list>
 #include "type.hpp"
 
+#define ENABLE_WEAKUSE 1
+
 namespace IR {
 
 class Value;
@@ -54,11 +56,11 @@ public:
     std::list<std::shared_ptr<Use>> getUseList() const;
     std::list<std::weak_ptr<Use>>& getRUseList(); // 直接返回use_list的引用，用于直接操作list
 
-    void delUse(const std::shared_ptr<Use>& use); // 根据Use删除匹配的use
-    void delUse(const std::shared_ptr<User>& user);
-    void delUse(NameRef name); // 根据username删除匹配use
+    bool delUse(const std::shared_ptr<Use>& use); // 根据Use删除匹配的use
+    bool delUse(const std::shared_ptr<User>& user);
+    bool delUse(NameRef name); // 根据username删除匹配use
 
-    void replaceUse(const std::shared_ptr<Use>& old_use, const std::shared_ptr<Use>& new_use);
+    bool replaceUse(const std::shared_ptr<Use>& old_use, const std::shared_ptr<Use>& new_use);
 
     virtual void accept(class IRVisitor& visitor) = 0;
     virtual ~Value();
@@ -69,7 +71,7 @@ public:
  * @brief User是Use的所有者，User的Operands由Use中的val来保存
  * @todo find, set by value, del function
  */
-class User : public Value {
+class User : public Value, public std::enable_shared_from_this<User> {
 protected:
     std::list<std::shared_ptr<Use>> operands; // 操作数实际是Use中的val
 
@@ -82,22 +84,23 @@ public:
     std::list<std::shared_ptr<Use>>& getOperands();
     const std::list<std::shared_ptr<Use>>& getOperands() const;
 
-    void delOperand(const std::shared_ptr<Value>& v);
-    void delOperand(NameRef name);
+    bool delOperand(const std::shared_ptr<Value>& v);
+    bool delOperand(NameRef name);
 
-    void replaceUse(const std::shared_ptr<Value>& old_val, const std::shared_ptr<Value>& new_val);
+    bool replaceUse(const std::shared_ptr<Value>& old_val, const std::shared_ptr<Value>& new_val);
 
     virtual void accept(IRVisitor& visitor) override = 0;
     ~User() override;
 };
 
+#if !ENABLE_WEAKUSE
 class Use : public std::enable_shared_from_this<Use> {
 private:
     std::shared_ptr<Value> val; // 强引用Value
     std::weak_ptr<User> user;   // 弱引用User
 
 public:
-    Use(const std::shared_ptr<Value>& v, const std::shared_ptr<User>& u);
+    Use(std::shared_ptr<Value> v, std::shared_ptr<User> u);
 
     // Use 设计为一次赋值
     // void setValue(const std::shared_ptr<Value>& v);
@@ -108,6 +111,25 @@ public:
 
     ~Use();
 };
+
+#else
+
+// WeakUse 用于Value可能循环引用的场景，v, u均为弱引用
+class Use : public std::enable_shared_from_this<Use> {
+private:
+    std::weak_ptr<Value> val; // 弱引用Value
+    std::weak_ptr<User> user;   // 弱引用User
+
+public:
+    Use(std::shared_ptr<Value> v, std::shared_ptr<User> u);
+
+    std::shared_ptr<Value> getValue() const;
+    std::shared_ptr<User> getUser() const;
+
+    ~Use();
+};
+#endif
+
 }
 
 #endif

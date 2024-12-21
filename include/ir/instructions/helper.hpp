@@ -23,7 +23,7 @@ class HELPERInst : public Instruction {
 private:
     HELPERTY hlp_type;
 public:
-    HELPERInst(HELPERTY _hlp_ty) : Instruction(OP::HELPER, "__HELPER", IRTYPE::UNDEFINED), hlp_type(_hlp_ty) {}
+    HELPERInst(HELPERTY _hlp_ty) : Instruction(OP::HELPER, "__HELPER", makeBType(IRBTYPE::UNDEFINED)), hlp_type(_hlp_ty) {}
     HELPERTY getHlpType() { return hlp_type; }
     virtual void accept(IRVisitor& visitor) override = 0;
 };

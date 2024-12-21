@@ -36,14 +36,14 @@ void LIRPrinter::printout(Module& module) {
     writeln("");
 
     Logger::logDebug("LIRPrinter: Printing Global Variables");
-    for (GlobalVariable* gv : module.getGlobalVars()) {
+    for (auto& gv : module.getGlobalVars()) {
         gv->accept(*this);
     }
 
     writeln("");
 
     Logger::logDebug("LIRPrinter: Printing Functions");
-    for (Function* func : module.getFunctions()) {
+    for (auto& func : module.getFunctions()) {
         func->accept(*this);
         writeln("");
     }
@@ -64,7 +64,7 @@ void LIRPrinter::visit(Function& node) {
     write(IRFormatter::formatFunc(node));
     writeln(" {");
 
-    for (Instruction* inst : node.getInsts()) {
+    for (auto& inst : node.getInsts()) {
         inst->accept(*this);
     }
 
@@ -74,26 +74,6 @@ void LIRPrinter::visit(Function& node) {
 void LIRPrinter::visit(Instruction& node) {
     Logger::logDebug("LIRPrinter: Printing Instruction \"" + node.getName() + "\"");
     writeln(IRFormatter::formatInst(node));
-}
-
-
-std::string IRFormatter::formatIRTYPE(IRTYPE type) {
-    switch (type) {
-        case IRTYPE::I32:
-            return "i32";
-        case IRTYPE::FLOAT:
-            return "float";
-        case IRTYPE::VOID:
-            return "void";
-        case IRTYPE::PTR:
-            return "ptr";
-        case IRTYPE::UNDEFINED:
-            Logger::logDebug("ERR: Undefined IRTYPE");
-            return "UNDEFTYPE";
-        default:
-            Logger::logDebug("ERR: Unknown IRTYPE");
-            return "UNKNOWNTYPE";
-    }
 }
 
 std::string IRFormatter::formatSTOCLASS(STOCLASS cls) {
@@ -229,18 +209,18 @@ std::string IRFormatter::formatHELPERTY(HELPERTY hlpty) {
 }
 
 std::string IRFormatter::formatValue(Value& val) {
-    return IRFormatter::formatIRTYPE(val.getType()) + " " + val.getName();
+    return val.getTypePtr()->toString() + " " + val.getName();
 }
 
 std::string IRFormatter::formatFunc(Function& func) {
     std::string ret;
     ret += "define ";
     ret += "dso_local ";
-    ret += IRFormatter::formatIRTYPE(func.getType()) + " " + func.getName();
+    ret += func.getTypePtr()->toString() + " " + func.getName();
     ret += "(";
 
     for (auto it = func.getParams().begin(); it != func.getParams().end(); it++) {
-        ret += IRFormatter::formatIRTYPE((*it)->getType()) + " noundef " + (*it)->getName();
+        ret += (*it)->getTypePtr()->toString() + " noundef " + (*it)->getName();
         if (std::next(it) != func.getParams().end()) {
             ret += ", ";
         }
@@ -331,7 +311,7 @@ std::string IRFormatter::fBinaryInst(BinaryInst& inst) {
     ret += inst.getName();
     ret += " = ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
-    ret += IRFormatter::formatIRTYPE(inst.getType()) + " ";
+    ret += inst.getTypePtr()->toString() + " ";
     ret += inst.getLHS()->getName();
     ret += ", ";
     ret += inst.getRHS()->getName();
@@ -343,7 +323,7 @@ std::string IRFormatter::fFNEGInst(FNEGInst& inst) {
     ret += inst.getName();
     ret += " = ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
-    ret += IRFormatter::formatIRTYPE(inst.getType()) + " ";
+    ret += inst.getTypePtr()->toString() + " ";
     ret += inst.getVal()->getName();
     return ret;
 }
@@ -354,7 +334,7 @@ std::string IRFormatter::fICMPInst(ICMPInst& inst) {
     ret += " = ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
     ret += IRFormatter::formatCMPOP(inst.getCond()) + " ";
-    ret += IRFormatter::formatIRTYPE(inst.getLHS()->getType()) + " ";
+    ret += inst.getLHS()->getTypePtr()->toString() + " ";
     ret += inst.getLHS()->getName();
     ret += ", ";
     ret += inst.getRHS()->getName();
@@ -367,7 +347,7 @@ std::string IRFormatter::fFCMPInst(FCMPInst& inst) {
     ret += " = ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
     ret += IRFormatter::formatCMPOP(inst.getCond()) + " ";
-    ret += IRFormatter::formatIRTYPE(inst.getLHS()->getType()) + " ";
+    ret += inst.getLHS()->getTypePtr()->toString() + " ";
     ret += inst.getLHS()->getName();
     ret += ", ";
     ret += inst.getRHS()->getName();
@@ -406,7 +386,7 @@ std::string IRFormatter::fCALLInst(CALLInst& inst) {
     ret += inst.getName();
     ret += " = ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
-    ret += IRFormatter::formatIRTYPE(inst.getType()) + " ";
+    ret += inst.getTypePtr()->toString() + " ";
     ret += inst.getFuncName();
     ret += "(";
     auto args = inst.getArgs();
@@ -427,10 +407,10 @@ std::string IRFormatter::fFPTOSIInst(FPTOSIInst& inst) {
     ret += inst.getName();
     ret += " = ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
-    ret += IRFormatter::formatIRTYPE(inst.getOType()) + " ";
+    ret += inst.getOTypePtr()->toString() + " ";
     ret += inst.getOVal()->getName();
     ret += " to ";
-    ret += IRFormatter::formatIRTYPE(inst.getTType());
+    ret += inst.getTTypePtr()->toString();
     return ret;
 }
 
@@ -439,10 +419,10 @@ std::string IRFormatter::fSITOFPInst(SITOFPInst& inst) {
     ret += inst.getName();
     ret += " = ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
-    ret += IRFormatter::formatIRTYPE(inst.getOType()) + " ";
+    ret += inst.getOTypePtr()->toString() + " ";
     ret += inst.getOVal()->getName();
     ret += " to ";
-    ret += IRFormatter::formatIRTYPE(inst.getTType());
+    ret += inst.getTTypePtr()->toString();
     return ret;
 }
 
@@ -452,21 +432,11 @@ std::string IRFormatter::fALLOCAInst(ALLOCAInst& inst) {
     ret += " = ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
     if (inst.isStatic()) {
-        if (inst.isArray()) {
-            for (int size : inst.getStaticArraySize()) {
-                ret += "[" + std::to_string(size) + " x ";
-            }
-            ret += IRFormatter::formatIRTYPE(inst.getBaseType());
-            for (int i = 0; i < inst.getStaticArraySize().size(); i++) {
-                ret += "]";
-            }
-        } else {
-            ret += IRFormatter::formatIRTYPE(inst.getBaseType());
-        }
+            ret += inst.getBaseTypePtr()->toString();
     } else {
-        ret += IRFormatter::formatIRTYPE(inst.getBaseType());
-        ret += ", ";
-        ret += IRFormatter::formatValue(*(inst.getNumElements()));
+        // ret += IRFormatter::formatIRTYPE(inst.getBaseType());
+        // ret += ", ";
+        // ret += IRFormatter::formatValue(*(inst.getNumElements()));
     }
     ret += ", align ";
     ret += std::to_string(inst.getAlign());
@@ -478,7 +448,7 @@ std::string IRFormatter::fLOADInst(LOADInst& inst) {
     ret += inst.getName();
     ret += " = ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
-    ret += IRFormatter::formatIRTYPE(inst.getType()) + ", ";
+    ret += inst.getTypePtr()->toString() + ", ";
     ret += IRFormatter::formatValue(*(inst.getPtr()));
     ret += ", align ";
     ret += std::to_string(inst.getAlign());
@@ -502,13 +472,7 @@ std::string IRFormatter::fGEPInst(GEPInst& inst) {
     ret += " = ";
 
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
-    for (int size : inst.getArraySize()) {
-        ret += "[" + std::to_string(size) + " x ";
-    }
-    ret += IRFormatter::formatIRTYPE(inst.getBaseType());
-    for (int i = 0; i < inst.getArraySize().size(); i++) {
-        ret += "]";
-    }
+    ret += inst.getBaseTypePtr()->toString();
 
     ret += ", ";
     ret += IRFormatter::formatValue(*(inst.getPtr()));

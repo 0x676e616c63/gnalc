@@ -5,50 +5,50 @@
 #include "../../../include/ir/visitor.hpp"
 
 namespace IR {
-    IRTYPE OPtoTY(OP op) {
+    std::shared_ptr<Type> OPtoTY(OP op) {
         switch (op) {
             case OP::ADD:
             case OP::SUB:
             case OP::MUL:
             case OP::DIV:
             case OP::REM:
-                return IRTYPE::I32;
+                return makeBType(IRBTYPE::I32);
             case OP::FADD:
             case OP::FSUB:
             case OP::FMUL:
             case OP::FDIV:
             case OP::FREM:
-                return IRTYPE::FLOAT;
+                return makeBType(IRBTYPE::FLOAT);
             case OP::AND:
             case OP::OR:
-                return IRTYPE::I1;
+                return makeBType(IRBTYPE::I1);
             default:
-                return IRTYPE::UNDEFINED;
+                return makeBType(IRBTYPE::UNDEFINED);
         }
     }
 
     // TYPE 由 OP 决定
-    BinaryInst::BinaryInst(NameRef name, OP opcode, Value *lhs, Value *rhs)
+    BinaryInst::BinaryInst(NameRef name, OP opcode, std::shared_ptr<Value> lhs, std::shared_ptr<Value> rhs)
         : Instruction(opcode, name, OPtoTY(opcode)) {
         addOperand(lhs);
         addOperand(rhs);
     }
 
-    Value *BinaryInst::getLHS() const {
-        return getOperands().begin()->getValue();
+    std::shared_ptr<Value> BinaryInst::getLHS() const {
+        return (*(getOperands().begin()))->getValue();
     }
 
-    Value *BinaryInst::getRHS() const {
-        return getOperands().rbegin()->getValue();
+    std::shared_ptr<Value> BinaryInst::getRHS() const {
+        return (*(getOperands().rbegin()))->getValue();
     }
 
-    FNEGInst::FNEGInst(NameRef name, Value *val)
-        : Instruction(OP::FNEG, name, IRTYPE::FLOAT) {
+    FNEGInst::FNEGInst(NameRef name, std::shared_ptr<Value> val)
+        : Instruction(OP::FNEG, name, makeBType(IRBTYPE::FLOAT)) {
         addOperand(val);
     }
 
-    Value *FNEGInst::getVal() const {
-        return getOperands().begin()->getValue();
+    std::shared_ptr<Value> FNEGInst::getVal() const {
+        return (*(getOperands().begin()))->getValue();
     }
 
 

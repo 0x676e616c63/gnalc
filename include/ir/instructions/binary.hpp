@@ -31,9 +31,9 @@ public:
 // <result> = fneg [fast-math flags]* <ty> <op1>
 class FNEGInst : public Instruction {
 public:
-    FNEGInst(NameRef name, Value* val);
+    FNEGInst(NameRef name, std::shared_ptr<Value> val);
 
-    Value* getVal() const;
+    std::shared_ptr<Value> getVal() const;
 
     void accept(IRVisitor& visitor) override;
 };

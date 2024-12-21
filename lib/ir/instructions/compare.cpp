@@ -6,36 +6,36 @@
 
 
 namespace IR {
-    ICMPInst::ICMPInst(NameRef name, ICMPOP cond, Value *lhs, Value *rhs)
-        : Instruction(OP::ICMP, name, IRTYPE::I1), cond(cond) {
+    ICMPInst::ICMPInst(NameRef name, ICMPOP cond, std::shared_ptr<Value> lhs, std::shared_ptr<Value> rhs)
+        : Instruction(OP::ICMP, name, makeBType(IRBTYPE::I1)), cond(cond) {
         addOperand(lhs);
         addOperand(rhs);
     }
 
-    Value* ICMPInst::getLHS() const {
-        return getOperands().begin()->getValue();
+    std::shared_ptr<Value> ICMPInst::getLHS() const {
+        return (*(getOperands().begin()))->getValue();
     }
 
-    Value* ICMPInst::getRHS() const {
-        return getOperands().rbegin()->getValue();
+    std::shared_ptr<Value> ICMPInst::getRHS() const {
+        return (*(getOperands().rbegin()))->getValue();
     }
 
     ICMPOP ICMPInst::getCond() const {
         return cond;
     }
 
-    FCMPInst::FCMPInst(NameRef name, FCMPOP cond, Value *lhs, Value *rhs)
-        : Instruction(OP::FCMP, name, IRTYPE::I1), cond(cond) {
+    FCMPInst::FCMPInst(NameRef name, FCMPOP cond, std::shared_ptr<Value> lhs, std::shared_ptr<Value> rhs)
+        : Instruction(OP::FCMP, name, makeBType(IRBTYPE::I1)), cond(cond) {
         addOperand(lhs);
         addOperand(rhs);
     }
 
-    Value* FCMPInst::getLHS() const {
-        return getOperands().begin()->getValue();
+    std::shared_ptr<Value> FCMPInst::getLHS() const {
+        return (*(getOperands().begin()))->getValue();
     }
 
-    Value* FCMPInst::getRHS() const {
-        return getOperands().rbegin()->getValue();
+    std::shared_ptr<Value> FCMPInst::getRHS() const {
+        return (*(getOperands().rbegin()))->getValue();
     }
 
     FCMPOP FCMPInst::getCond() const {

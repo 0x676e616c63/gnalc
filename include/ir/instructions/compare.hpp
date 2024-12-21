@@ -37,8 +37,8 @@ private:
 public:
     ICMPInst(NameRef name, ICMPOP cond, std::shared_ptr<Value> lhs, std::shared_ptr<Value> rhs);
 
-    auto getLHS() const;
-    auto getRHS() const;
+    std::shared_ptr<Value> getLHS() const;
+    std::shared_ptr<Value> getRHS() const;
     ICMPOP getCond() const;
 
     void accept(IRVisitor& visitor) override;
@@ -80,8 +80,8 @@ private:
 public:
     FCMPInst(NameRef name, FCMPOP cond, std::shared_ptr<Value> lhs, std::shared_ptr<Value> rhs);
 
-    auto getLHS() const;
-    auto getRHS() const;
+    std::shared_ptr<Value> getLHS() const;
+    std::shared_ptr<Value> getRHS() const;
     FCMPOP getCond() const;
 
     void accept(IRVisitor& visitor) override;

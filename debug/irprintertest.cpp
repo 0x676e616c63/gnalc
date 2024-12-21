@@ -1,8 +1,13 @@
 #include "../include/utils/logger.hpp"
 #include "../include/irvisitors/irprinter.hpp"
+#include "../include/ir/constantpool.hpp"
 #include <string>
+#include <iostream>
 
 IR::Module irgenfortest();
+void testConstPool();
+
+IR::ConstantPool cp;
 
 int main(int argc, char* argv[]) {
     LogLevel level = LogLevel::NONE;
@@ -21,6 +26,8 @@ int main(int argc, char* argv[]) {
     }
     Logger::setLogLevel(level);
 
+    testConstPool();
+
     IR::LIRPrinter printer(output_file);
 
     IR::Module module = std::move(irgenfortest());
@@ -31,7 +38,27 @@ int main(int argc, char* argv[]) {
 
 IR::Module irgenfortest() {
     IR::Module module("test");
-    module.addFunction(std::make_shared<IR::Function>("@main", IR::IRTYPE::I32));
-    module.addGlobalVar(std::make_shared<IR::GlobalVariable>(IR::STOCLASS::GLOBAL, IR::IRTYPE::I32, "@test", IR::GVIniter(IR::IRTYPE::I32, new IR::CI32(1)), 4));
+    module.addFunction(std::make_shared<IR::Function>("@main", IR::makeBType(IR::IRBTYPE::VOID)));
+    module.addGlobalVar(std::make_shared<IR::GlobalVariable>(IR::STOCLASS::GLOBAL, IR::makeBType(IR::IRBTYPE::I32), "@test", IR::GVIniter(IR::makeBType(IR::IRBTYPE::I32), cp.getConst(1)), 4));
     return module;
+}
+
+void testConstPool() {
+    IR::ConstantPool cpt;
+    {
+    auto intConst1 = cpt.getConst(42);
+    auto intConst2 = cpt.getConst(42);
+
+    auto floatConst = cpt.getConst((float)3.14);
+
+    std::cout << "intConst1 address: " << intConst1.get() << std::endl;
+    std::cout << "intConst2 address: " << intConst2.get() << std::endl;
+    std::cout << "floatConst address: " << floatConst.get() << std::endl;
+
+    if (intConst1 == intConst2) {
+        std::cout << "intConst1 and intConst2 are the same instance." << std::endl;
+    }
+    std::cout << "clean pool count:" << cpt.cleanPool() << std::endl;
+    }
+    std::cout << "clean pool count:" << cpt.cleanPool() << std::endl;
 }

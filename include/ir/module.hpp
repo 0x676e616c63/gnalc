@@ -27,11 +27,11 @@ public:
     Module(std::string _name) : NameC(std::move(_name)) {}
 
     void addGlobalVar(std::shared_ptr<GlobalVariable> global_var);
-    const auto& getGlobalVars() const;
+    const std::vector<std::shared_ptr<GlobalVariable>>& getGlobalVars() const;
     void delGlobalVar(NameRef name); // by name
 
     void addFunction(std::shared_ptr<Function> func);
-    const auto& getFunctions() const;
+    const std::vector<std::shared_ptr<Function>>& getFunctions() const;
     void delFunction(NameRef name); // by name
 
     void accept(IRVisitor& visitor);

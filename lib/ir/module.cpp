@@ -4,11 +4,11 @@
 
 namespace IR {
 
-void Module::addGlobalVar(GlobalVariable* global_var) {
+void Module::addGlobalVar(std::shared_ptr<GlobalVariable> global_var) {
     global_vars.emplace_back(global_var);
 }
 
-const std::vector<GlobalVariable*>& Module::getGlobalVars() const {
+const std::vector<std::shared_ptr<GlobalVariable>>& Module::getGlobalVars() const {
     return global_vars;
 }
 
@@ -25,7 +25,7 @@ void Module::addFunction(std::shared_ptr<Function> func) {
     funcs.emplace_back(func);
 }
 
-const auto& Module::getFunctions() const {
+const std::vector<std::shared_ptr<Function>>& Module::getFunctions() const {
     return funcs;
 }
 

@@ -4,6 +4,21 @@
 #include "../../include/ir/type.hpp"
 
 namespace IR {
+
+    std::shared_ptr<BType> makeBType(IRBTYPE bty) {
+        return std::make_shared<BType>(bty);
+    }
+
+    std::shared_ptr<PtrType> makePtrType(std::shared_ptr<Type> ele_ty) {
+        Err::assert(ele_ty != nullptr, "makePtrType(): Element type is nullptr.");
+        return std::make_shared<PtrType>(ele_ty);
+    }
+
+    std::shared_ptr<ArrayType> makeArrayType(std::shared_ptr<Type> ele_ty, size_t size) {
+        Err::assert(ele_ty != nullptr, "makeArrayType(): Element type is nullptr.");
+        return std::make_shared<ArrayType>(ele_ty, size);
+    }
+
     std::shared_ptr<BType> toBType(std::shared_ptr<Type> ty) {
         if (ty->getTrait() != IRCTYPE::PTR) {
             Err::error("Type don't match BType.");
