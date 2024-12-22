@@ -32,8 +32,8 @@ public:
     void accept(IRVisitor& visitor) override;
 };
 
-using CI32 = ConstantInt;
-using CF32 = ConstantFloat;
+// using CI32 = ConstantInt;
+// using CF32 = ConstantFloat;
 
 }
 

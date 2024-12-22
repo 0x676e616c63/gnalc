@@ -41,7 +41,7 @@ std::list<std::weak_ptr<Use>>& Value::getRUseList() {
     return use_list;
 }
 
-void Value::delUse(const std::shared_ptr<Use>& use) {
+bool Value::delUse(const std::shared_ptr<Use>& use) {
     bool found = false;
     for (auto it = use_list.begin(); it != use_list.end();) {
         if (it->lock() == use) {
@@ -52,9 +52,10 @@ void Value::delUse(const std::shared_ptr<Use>& use) {
         }
     }
     Err::assert(found, "Value::delUse(): use not found.");
+    return found;
 }
 
-void Value::delUse(const std::shared_ptr<User>& user) {
+bool Value::delUse(const std::shared_ptr<User>& user) {
     bool found = false;
     for (auto it = use_list.begin(); it != use_list.end();) {
         if (it->lock()->getUser() == user) {
@@ -65,9 +66,10 @@ void Value::delUse(const std::shared_ptr<User>& user) {
         }
     }
     Err::assert(found, "Value::delUse(): user not found.");
+    return found;
 }
 
-void Value::delUse(NameRef name) {
+bool Value::delUse(NameRef name) {
     bool found = false;
     for (auto it = use_list.begin(); it != use_list.end();) {
         if (it->lock()->getUser()->isName(name)) {
@@ -78,9 +80,10 @@ void Value::delUse(NameRef name) {
         }
     }
     Err::assert(found, "Value::delUse(): name not found.");
+    return found;
 }
 
-void Value::replaceUse(const std::shared_ptr<Use>& old_use, const std::shared_ptr<Use>& new_use) {
+bool Value::replaceUse(const std::shared_ptr<Use>& old_use, const std::shared_ptr<Use>& new_use) {
     bool found = false;
     for (auto& use : use_list) {
         if (use.lock() == old_use) {
@@ -89,6 +92,7 @@ void Value::replaceUse(const std::shared_ptr<Use>& old_use, const std::shared_pt
         }
     }
     Err::assert(found, "Value::replaceUse(): old_use not found.");
+    return found;
 }
 
 Value::~Value() {
@@ -100,7 +104,7 @@ User::User(std::string _name, std::shared_ptr<Type> _vtype)
     : Value(std::move(_name), std::move(_vtype)) {}
 
 void User::addOperand(const std::shared_ptr<Value>& v) {
-    operands.emplace_back(v, this);
+    operands.emplace_back(std::make_shared<Use>(v, shared_from_this()));
 }
 
 std::list<std::shared_ptr<Use>>& User::getOperands() {
@@ -111,7 +115,7 @@ const std::list<std::shared_ptr<Use>>& User::getOperands() const {
     return operands;
 }
 
-void User::delOperand(const std::shared_ptr<Value>& v) {
+bool User::delOperand(const std::shared_ptr<Value>& v) {
     bool found = false;
     for (auto it = operands.begin(); it != operands.end();) {
         if ((*it)->getValue() == v) {
@@ -122,9 +126,10 @@ void User::delOperand(const std::shared_ptr<Value>& v) {
         }
     }
     Err::assert(found, "User::delOperand(): value not found.");
+    return found;
 }
 
-void User::delOperand(NameRef name) {
+bool User::delOperand(NameRef name) {
     bool found = false;
     for (auto it = operands.begin(); it != operands.end();) {
         if ((*it)->getValue()->isName(name)) {
@@ -135,9 +140,10 @@ void User::delOperand(NameRef name) {
         }
     }
     Err::assert(found, "User::delOperand(): name not found.");
+    return found;
 }
 
-void User::replaceUse(const std::shared_ptr<Value>& old_val, const std::shared_ptr<Value>& new_val) {
+bool User::replaceUse(const std::shared_ptr<Value>& old_val, const std::shared_ptr<Value>& new_val) {
     bool found = false;
     for (auto& use : operands) {
         if (use->getValue() == old_val) {
@@ -146,6 +152,7 @@ void User::replaceUse(const std::shared_ptr<Value>& old_val, const std::shared_p
         }
     }
     Err::assert(found, "User::replaceUse(): old_val notfound.");
+    return found;
 }
 
 User::~User() {
@@ -153,11 +160,15 @@ User::~User() {
 }
 
 
-Use::Use(const std::shared_ptr<Value>& v, const std::shared_ptr<User>& u) 
-    : val(v), user(u) { v->addUse(shared_from_this()); }
+Use::Use(std::shared_ptr<Value> v, std::shared_ptr<User> u) 
+    : val(std::move(v)), user(std::move(u)) { v->addUse(shared_from_this()); }
 
 std::shared_ptr<Value> Use::getValue() const {
-    return val;
+    return val
+    #if ENABLE_WEAKUSE
+        .lock()
+    #endif
+    ;
 }
 
 std::shared_ptr<User> Use::getUser() const {
@@ -165,6 +176,11 @@ std::shared_ptr<User> Use::getUser() const {
 }
 
 Use::~Use() {
-    val->delUse(shared_from_this());
+    val
+    #if ENABLE_WEAKUSE
+        .lock()
+    #endif
+    ->delUse(shared_from_this());
 }
+
 }

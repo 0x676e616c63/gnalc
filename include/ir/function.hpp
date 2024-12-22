@@ -25,7 +25,7 @@ private:
     std::vector<std::shared_ptr<Instruction>> insts; // 基本块划分前的过渡
     int vreg_idx = 0;
 public:
-    Function(std::string _name, IRTYPE _type);
+    Function(std::string _name, std::shared_ptr<Type> _vtype);
 
     // bool isDecl() { return blks.empty() && insts.empty(); } // SySy中没有函数声明
 
@@ -33,9 +33,12 @@ public:
     void addBlock(std::shared_ptr<BasicBlock> blk);
     void addInst(std::shared_ptr<Instruction> inst);
 
-    auto& getParams();
-    auto& getBlocks();
-    auto& getInsts();
+    const std::vector<std::shared_ptr<Value>>& getParams() const;
+    const std::vector<std::shared_ptr<BasicBlock>>& getBlocks() const;
+    const std::vector<std::shared_ptr<Instruction>>& getInsts() const;
+    std::vector<std::shared_ptr<Value>>& getParams();
+    std::vector<std::shared_ptr<BasicBlock>>& getBlocks();
+    std::vector<std::shared_ptr<Instruction>>& getInsts();
     // ...
 
     int getVRegIdx() { return vreg_idx++; }; // 用于生成SSA时的虚拟寄存器计数，从0开始，GetIdx后++

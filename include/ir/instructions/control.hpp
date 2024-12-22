@@ -17,14 +17,15 @@ namespace IR {
 // ret void                 ; Return from void function
 class RETInst : public Instruction {
     private:
-    IRTYPE ret_type;
+    std::shared_ptr<BType> ret_type; // 此处直接使用BType
 public:
     RETInst(); // for void
     RETInst(std::shared_ptr<Value> ret_val);
 
     bool isVoid() const;
     std::shared_ptr<Value> getRetVal() const;
-    IRTYPE getRetType() const;
+    IRBTYPE getRetType() const;
+    std::shared_ptr<BType> getRetTypePtr() const;
 
     void accept(IRVisitor& visitor) override;
 };
@@ -43,18 +44,18 @@ private:
     // std::vector<Value*> bbparams; // 基本块参数
 
 public:
-    explicit BRInst(BasicBlock* _dest);
-    BRInst(Value* cond, BasicBlock* _true_dest, BasicBlock* _false_dest);
+    explicit BRInst(std::shared_ptr<BasicBlock> _dest);
+    BRInst(std::shared_ptr<Value> cond, std::shared_ptr<BasicBlock> _true_dest, std::shared_ptr<BasicBlock> _false_dest);
 
     bool isConditional() const;
-    Value* getCond() const;
-    BasicBlock* getDest() const;
-    BasicBlock* getTrueDest() const;
-    BasicBlock* getFalseDest() const;
+    std::shared_ptr<Value> getCond() const;
+    std::shared_ptr<BasicBlock> getDest() const;
+    std::shared_ptr<BasicBlock> getTrueDest() const;
+    std::shared_ptr<BasicBlock> getFalseDest() const;
 
-    // void setBBParams(std::initializer_list<Value*> _bbparams);
-    // void setBBparams(std::vector<Value*>& _bbparams);
-    // std::vector<Value*>& getBBParams();
+    // void setBBParams(std::initializer_list<std::shared_ptr<Value>> _bbparams);
+    // void setBBparams(std::vector<std::shared_ptr<Value>>& _bbparams);
+    // std::vector<std::shared_ptr<Value>>& getBBParams();
 
     void accept(IRVisitor& visitor) override;
 };
@@ -64,15 +65,17 @@ public:
 // 
 // %retval = call i32 @test(i32 %argc)
 class CALLInst : public Instruction {
+private:
+    // std::shared_ptr<WeakUse> func;
 public:
-    // func, args储存到operands中
-    CALLInst(std::weak_ptr<Function> func, const std::vector<std::shared_ptr<Value>>& args); // for void
-    CALLInst(NameRef name, IRTYPE ty, std::weak_ptr<Function> func, const std::list<std::shared_ptr<Value>>& args);
+    // func储存到func, args储存到operands中
+    CALLInst(std::shared_ptr<Function> func, const std::vector<std::shared_ptr<Value>>& args); // for void
+    CALLInst(NameRef name, std::shared_ptr<BType> ty, std::shared_ptr<Function> func, const std::list<std::shared_ptr<Value>>& args);
 
     bool isVoid() const;
     // bool isNoName();
     std::string getFuncName() const;
-    std::weak_ptr<Function> getFunc() const; // Value*转换为Function*
+    std::shared_ptr<Function> getFunc() const; // WeakValue转换为SharedFunction
     std::vector<std::shared_ptr<Value>> getArgs() const;
 
     void accept(IRVisitor& visitor) override;

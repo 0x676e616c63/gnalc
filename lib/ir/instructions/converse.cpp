@@ -1,50 +1,66 @@
 #include "../../../include/ir/instructions/converse.hpp"
 #include "../../../include/ir/visitor.hpp"
-#include <cassert>
+#include "../../../include/utils/exception.hpp"
 
 namespace IR {
-    FPTOSIInst::FPTOSIInst(NameRef name, Value* origin_val)
-        : Instruction(OP::FPTOSI, name, IRTYPE::I32)
+    FPTOSIInst::FPTOSIInst(NameRef name, std::shared_ptr<Value> origin_val)
+        : Instruction(OP::FPTOSI, name, makeBType(IRBTYPE::I32))
     {
-        assert(origin_val->getType() == IRTYPE::FLOAT);
+        Err::assert(origin_val->getType() == IRBTYPE::FLOAT, "FPTOSIInst: origin_val is not IRBTYPE::FLOAT.");
         addOperand(origin_val);
     }
 
-    Value* FPTOSIInst::getOVal() const
+    std::shared_ptr<Value> FPTOSIInst::getOVal() const
     {
-        return getOperands().begin()->getValue();
+        return (*(getOperands().begin()))->getValue();
     }
 
-    IRTYPE FPTOSIInst::getOType() const
+    IRBTYPE FPTOSIInst::getOType() const
     {
-        return origin_type;
+        return getBTy(getOVal()->getTypePtr());
     }
 
-    IRTYPE FPTOSIInst::getTType() const
+    IRBTYPE FPTOSIInst::getTType() const
     {
-        return ty;
+        return getBTy(getTypePtr());
     }
 
-    SITOFPInst::SITOFPInst(NameRef name, Value* origin_val)
-        : Instruction(OP::SITOFP, name, IRTYPE::FLOAT)
+    std::shared_ptr<Type> FPTOSIInst::getOTypePtr() const {
+        return getOVal()->getTypePtr();
+    }
+
+    std::shared_ptr<Type> FPTOSIInst::getTTypePtr() const {
+        return getTypePtr();
+    }
+
+    SITOFPInst::SITOFPInst(NameRef name, std::shared_ptr<Value> origin_val)
+        : Instruction(OP::SITOFP, name, makeBType(IRBTYPE::FLOAT))
     {
-        assert(origin_val->getType() == IRTYPE::I32);
+        Err::assert(origin_val->getType() == IRBTYPE::I32, "SITOFPInst: origin_val is not IRBTYPE::I32.");
         addOperand(origin_val);
     }
 
-    Value* SITOFPInst::getOVal() const
+    std::shared_ptr<Value> SITOFPInst::getOVal() const
     {
-        return getOperands().begin()->getValue();
+        return (*(getOperands().begin()))->getValue();
     }
 
-    IRTYPE SITOFPInst::getOType() const
+    IRBTYPE SITOFPInst::getOType() const
     {
-        return origin_type;
+        return getBTy(getOVal()->getTypePtr());
     }
 
-    IRTYPE SITOFPInst::getTType() const
+    IRBTYPE SITOFPInst::getTType() const
     {
-        return ty;
+        return getBTy(getTypePtr());
+    }
+
+    std::shared_ptr<Type> SITOFPInst::getOTypePtr() const {
+        return getOVal()->getTypePtr();
+    }
+
+    std::shared_ptr<Type> SITOFPInst::getTTypePtr() const {
+        return getTypePtr();
     }
 
     void SITOFPInst::accept(IRVisitor& visitor) { visitor.visit(*this); }

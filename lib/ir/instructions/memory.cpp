@@ -5,20 +5,16 @@
 
 namespace IR
 {
-    ALLOCAInst::ALLOCAInst(NameRef name, IRTYPE btype, int _align)
-        : Instruction(OP::ALLOCA, name, IRTYPE::PTR),
-            basetype(btype), align(_align), is_array(false), is_static(true) {}
+    ALLOCAInst::ALLOCAInst(NameRef name, std::shared_ptr<Type> btype, int _align)
+        : Instruction(OP::ALLOCA, name, makePtrType(btype)),
+            basetype(std::move(btype)), align(_align), is_static(true) {}
 
-    ALLOCAInst::ALLOCAInst(NameRef name, IRTYPE btype, const std::vector<int>& _array_size, int _align)
-        : Instruction(OP::ALLOCA, name, IRTYPE::PTR),
-            basetype(btype), align(_align), is_array(true), is_static(true), static_array_size(_array_size) {}
-
-    ALLOCAInst::ALLOCAInst(NameRef name, IRTYPE btype, Value* num_elements, int _align)
-        : Instruction(OP::ALLOCA, name, IRTYPE::PTR),
-            basetype(btype), align(_align), is_array(true), is_static(false)
-    {
-        addOperand(num_elements);
-    }
+    // ALLOCAInst::ALLOCAInst(NameRef name, std::shared_ptr<Type> btype, std::shared_ptr<Value> num_elements, int _align)
+    //     : Instruction(OP::ALLOCA, name, makePtrType(makeArrayType(btype, num_elements->))),
+    //         basetype(std::move(btype)), align(_align), is_static(false)
+    // {
+    //     addOperand(num_elements);
+    // }
 
     int ALLOCAInst::getAlign() const
     {
@@ -30,36 +26,36 @@ namespace IR
         return is_static;
     }
 
-    std::vector<int> ALLOCAInst::getStaticArraySize() const
-    {
-        return static_array_size;
-    }
+    // std::vector<int> ALLOCAInst::getStaticArraySize() const
+    // {
+    //     return static_array_size;
+    // }
 
     bool ALLOCAInst::isArray() const
     {
-        return is_array;
+        return basetype->getTrait() == IRCTYPE::ARRAY;
     }
 
-    Value* ALLOCAInst::getNumElements() const
-    {
-        assert(isArray());
-        return getOperands().begin()->getValue();
-    }
+    // Value* ALLOCAInst::getNumElements() const
+    // {
+    //     assert(isArray());
+    //     return getOperands().begin()->getValue();
+    // }
 
-    IRTYPE ALLOCAInst::getBaseType() const
+    std::shared_ptr<Type> ALLOCAInst::getBaseTypePtr() const
     {
         return basetype;
     }
 
-    LOADInst::LOADInst(NameRef name, IRTYPE ty, Value* _ptr, int _align)
-        : Instruction(OP::LOAD, name, ty), align(_align)
+    LOADInst::LOADInst(NameRef name, std::shared_ptr<Value> _ptr, int _align)
+        : Instruction(OP::LOAD, name, getElm(_ptr->getTypePtr())), align(_align)
     {
         addOperand(_ptr);
     }
 
-    Value* LOADInst::getPtr() const
+    std::shared_ptr<Value> LOADInst::getPtr() const
     {
-        return getOperands().begin()->getValue();
+        return (*(getOperands().begin()))->getValue();
     }
 
     int LOADInst::getAlign() const
@@ -67,27 +63,27 @@ namespace IR
         return align;
     }
 
-    STOREInst::STOREInst(IRTYPE btype, Value* _value, Value* _ptr, int _align)
-        : Instruction(OP::STORE, "__store", IRTYPE::UNDEFINED),
-            basetype(btype), align(_align)
+    STOREInst::STOREInst(std::shared_ptr<Value> _value, std::shared_ptr<Value> _ptr, int _align)
+        : Instruction(OP::STORE, "__store", makeBType(IRBTYPE::UNDEFINED)),
+            align(_align)
     {
         addOperand(_value);
         addOperand(_ptr);
     }
 
-    IRTYPE STOREInst::getBaseType() const
+    std::shared_ptr<Type> STOREInst::getBaseTypePtr() const
     {
-        return basetype;
+        return /*(*(getOperands().begin()))->*/getValue()->getTypePtr();
     }
 
     std::shared_ptr<Value> STOREInst::getValue() const
     {
-        return getOperands().begin()->getValue();
+        return (*(getOperands().begin()))->getValue();
     }
 
     std::shared_ptr<Value> STOREInst::getPtr() const
     {
-        return std::next(getOperands().begin())->getValue();
+        return (*(std::next(getOperands().begin())))->getValue();
     }
 
     int STOREInst::getAlign() const
@@ -95,34 +91,34 @@ namespace IR
         return align;
     }
 
-    GEPInst::GEPInst(NameRef name, IRTYPE btype, std::vector<int> _array_size,  Value* _ptr, const std::list<Value*>& idxs)
-        : Instruction(OP::GEP, name, IRTYPE::PTR), basetype(btype), array_size(_array_size)
+    GEPInst::GEPInst(NameRef name, std::shared_ptr<Value> _ptr, const std::list<std::shared_ptr<Value>>& idxs)
+        : Instruction(OP::GEP, name, makePtrType(getElm(getElm(_ptr->getTypePtr()))))
     {
         addOperand(_ptr);
         for (auto idx : idxs)
             addOperand(idx);
     }
 
-    IRTYPE GEPInst::getBaseType() const
+    std::shared_ptr<Type> GEPInst::getBaseTypePtr() const
     {
-        return basetype;
+        return getElm(getPtr()->getTypePtr());
     }
 
-    std::vector<int> GEPInst::getArraySize() const
+    // std::vector<int> GEPInst::getArraySize() const
+    // {
+    //     return array_size;
+    // }
+
+    std::shared_ptr<Value> GEPInst::getPtr() const
     {
-        return array_size;
+        return (*(getOperands().begin()))->getValue();
     }
 
-    Value* GEPInst::getPtr() const
+    std::vector<std::shared_ptr<Value>> GEPInst::getIdxs() const
     {
-        return getOperands().begin()->getValue();
-    }
-
-    std::vector<Value*> GEPInst::getIdxs() const
-    {
-        std::vector<Value*> ret;
+        std::vector<std::shared_ptr<Value>> ret;
         for (auto it = std::next(getOperands().begin()); it != getOperands().end(); ++it)
-            ret.emplace_back(it->getValue());
+            ret.emplace_back((*it)->getValue());
         return ret;
     }
 

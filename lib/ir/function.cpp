@@ -2,7 +2,7 @@
 #include "../../include/ir/visitor.hpp"
 
 namespace IR {
-    Function::Function(std::string _name, IRTYPE _ty) : Value(std::move(_name), _ty) {}
+    Function::Function(std::string _name, std::shared_ptr<Type> _vtype) : Value(std::move(_name), std::move(_vtype)) {}
 
     void Function::addParam(std::shared_ptr<Value> param) {
         params.push_back(std::move(param));
@@ -16,15 +16,27 @@ namespace IR {
         insts.push_back(std::move(inst));
     }
 
-    auto& Function::getParams() {
+    const std::vector<std::shared_ptr<Value>>& Function::getParams() const {
         return params;
     }
 
-    auto& Function::getBlocks() {
+    const std::vector<std::shared_ptr<BasicBlock>>& Function::getBlocks() const {
         return blks;
     }
 
-    auto& Function::getInsts() {
+    const std::vector<std::shared_ptr<Instruction>>& Function::getInsts() const {
+        return insts;
+    }
+
+    std::vector<std::shared_ptr<Value>>& Function::getParams() {
+        return params;
+    }
+
+    std::vector<std::shared_ptr<BasicBlock>>& Function::getBlocks() {
+        return blks;
+    }
+
+    std::vector<std::shared_ptr<Instruction>>& Function::getInsts() {
         return insts;
     }
 

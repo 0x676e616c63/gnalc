@@ -45,7 +45,6 @@ class IRPrinter : public IRVisitor {
  */
 class IRFormatter {
 public:
-    static std::string formatIRTYPE(IRTYPE type);
     static std::string formatSTOCLASS(STOCLASS cls);
     static std::string formatOp(OP op);
     static std::string formatCMPOP(ICMPOP cond);

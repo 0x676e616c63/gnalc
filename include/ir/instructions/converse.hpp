@@ -18,13 +18,15 @@ namespace IR {
 // 默认全为float to i32
 class FPTOSIInst : public Instruction {
 private:
-    IRTYPE origin_type = IRTYPE::FLOAT;
+    // std::shared_ptr<BType> origin_type = makeBType(IRBTYPE::FLOAT);
 public:
-    FPTOSIInst(NameRef name, Value* origin_val);
+    FPTOSIInst(NameRef name, std::shared_ptr<Value> origin_val);
 
-    Value* getOVal() const;
-    IRTYPE getOType() const; // ORIGINAL TYPE FLOAT
-    IRTYPE getTType() const; // TARGET TYPE I32
+    std::shared_ptr<Value> getOVal() const;
+    IRBTYPE getOType() const; // ORIGINAL TYPE FLOAT
+    IRBTYPE getTType() const; // TARGET TYPE I32
+    std::shared_ptr<Type> getOTypePtr() const;
+    std::shared_ptr<Type> getTTypePtr() const;
 
     void accept(IRVisitor& visitor) override;
 };
@@ -32,13 +34,15 @@ public:
 // <result> = sitofp <ty> <value> to <ty2>
 class SITOFPInst : public Instruction {
 private:
-    IRTYPE origin_type = IRTYPE::I32;
+    // std::shared_ptr<BType> origin_type = makeBType(IRBTYPE::I32);
 public:
-    SITOFPInst(NameRef name, Value* origin_val);
+    SITOFPInst(NameRef name, std::shared_ptr<Value> origin_val);
 
-    Value* getOVal() const;
-    IRTYPE getOType() const; // ORIGINAL TYPE I32
-    IRTYPE getTType() const; // TARGET TYPE FLOAT
+    std::shared_ptr<Value> getOVal() const;
+    IRBTYPE getOType() const; // ORIGINAL TYPE I32
+    IRBTYPE getTType() const; // TARGET TYPE FLOAT
+    std::shared_ptr<Type> getOTypePtr() const;
+    std::shared_ptr<Type> getTTypePtr() const;
 
     void accept(IRVisitor& visitor) override;
 };

@@ -109,6 +109,10 @@ public:
 
 // 以下为一些辅助函数，类型不匹配会抛出exception
 
+std::shared_ptr<BType> makeBType(IRBTYPE bty);
+std::shared_ptr<PtrType> makePtrType(std::shared_ptr<Type> ele_ty);
+std::shared_ptr<ArrayType> makeArrayType(std::shared_ptr<Type> ele_ty, size_t size);
+
 // 若类型不正确会返回nullptr
 std::shared_ptr<BType> toBType(std::shared_ptr<Type> ty);
 std::shared_ptr<PtrType> toPtrType(std::shared_ptr<Type> ty);
