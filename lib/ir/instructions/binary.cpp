@@ -30,24 +30,25 @@ namespace IR {
     // TYPE 由 OP 决定
     BinaryInst::BinaryInst(NameRef name, OP opcode, Value *lhs, Value *rhs)
         : Instruction(opcode, name, OPtoTY(opcode)) {
-        operands = {Use{lhs, this}, Use{rhs, this}};
+        addOperand(lhs);
+        addOperand(rhs);
     }
 
     Value *BinaryInst::getLHS() const {
-        return operands.begin()->getValue();
+        return getOperands().begin()->getValue();
     }
 
     Value *BinaryInst::getRHS() const {
-        return operands.rbegin()->getValue();
+        return getOperands().rbegin()->getValue();
     }
 
     FNEGInst::FNEGInst(NameRef name, Value *val)
         : Instruction(OP::FNEG, name, IRTYPE::FLOAT) {
-        operands = {Use{val, this}};
+        addOperand(val);
     }
 
     Value *FNEGInst::getVal() const {
-        return operands.begin()->getValue();
+        return getOperands().begin()->getValue();
     }
 
 

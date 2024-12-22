@@ -2,9 +2,11 @@
 #include "../include/irvisitors/irprinter.hpp"
 #include <string>
 
+IR::Module irgenfortest();
+
 int main(int argc, char* argv[]) {
     LogLevel level = LogLevel::NONE;
-    std::string output_file;
+    std::string output_file = "fkir.ll";
     for (int i = 1; i < argc; ++i) {
         if (std::string(argv[i]) == "-v" || std::string(argv[i]) == "--verbose") {
             level = LogLevel::DEBUG;
@@ -21,9 +23,15 @@ int main(int argc, char* argv[]) {
 
     IR::LIRPrinter printer(output_file);
 
-    IR::Module module("test");
-
+    IR::Module module = std::move(irgenfortest());
     printer.printout(module);
 
     return 0;
+}
+
+IR::Module irgenfortest() {
+    IR::Module module("test");
+    module.addFunction(std::make_shared<IR::Function>("@main", IR::IRTYPE::I32));
+    module.addGlobalVar(std::make_shared<IR::GlobalVariable>(IR::STOCLASS::GLOBAL, IR::IRTYPE::I32, "@test", IR::GVIniter(IR::IRTYPE::I32, new IR::CI32(1)), 4));
+    return module;
 }

@@ -2,13 +2,13 @@
 #include "../../include/ir/visitor.hpp"
 
 namespace IR {
-    BasicBlock::BasicBlock(std::string _name) 
+    BasicBlock::BasicBlock(std::string _name)
         : Value(std::move(_name), IRTYPE::UNDEFINED) {}
 
-    BasicBlock::BasicBlock(std::string _name, std::list<Instruction*> _insts) 
+    BasicBlock::BasicBlock(std::string _name, std::list<std::shared_ptr<Instruction>> _insts)
         : Value(std::move(_name), IRTYPE::UNDEFINED), insts(_insts) {}
 
-    BasicBlock::BasicBlock(std::string _name, std::list<BasicBlock*> _pre_bb, std::list<BasicBlock*> _next_bb, std::list<Instruction*> _insts)
+    BasicBlock::BasicBlock(std::string _name, std::list<BasicBlock*> _pre_bb, std::list<BasicBlock*> _next_bb, std::list<std::shared_ptr<Instruction>> _insts)
         : Value(std::move(_name), IRTYPE::UNDEFINED), insts(_insts), pre_bb(_pre_bb), next_bb(_next_bb) {}
 
     void BasicBlock::addPreBB(BasicBlock* bb) {
@@ -19,8 +19,8 @@ namespace IR {
         next_bb.emplace_back(bb);
     }
 
-    void BasicBlock::addInst(Instruction* inst) {
-        insts.emplace_back(inst);
+    void BasicBlock::addInst(std::shared_ptr<Instruction> inst) {
+        insts.emplace_back(std::move(inst));
     }
 
     std::list<BasicBlock*>& BasicBlock::getPreBB() {
@@ -31,7 +31,7 @@ namespace IR {
         return next_bb;
     }
 
-    std::list<Instruction*>& BasicBlock::getInsts() {
+    auto& BasicBlock::getInsts() {
         return insts;
     }
 

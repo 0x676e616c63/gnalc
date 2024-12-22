@@ -13,8 +13,12 @@ aux_source_directory(lib/opt GNALC_OPT_SRC)
 aux_source_directory(lib/parser GNALC_PARSER_SRC)
 aux_source_directory(lib/utils GNALC_UTILS_SRC)
 
-add_executable(printast debug/printast.cpp ${GNALC_PARSER_SRC} ${GNALC_LEXER_SRC})
+add_executable(printast
+        debug/printast.cpp
+        lib/parser/parser.cpp
+        lib/lexer/lexer.cpp
+        lib/parser/ast_printer.cpp)
 
-add_executable(irgen debug/irgen.cpp ${GNALC_PARSER_SRC} ${GNALC_IR_SRC} ${GNALC_LEXER_SRC})
+add_executable(irgen debug/irgen.cpp ${GNALC_PARSER_SRC} ${GNALC_IR_SRC} ${GNALC_LEXER_SRC} ${GNALC_UTILS_SRC})
 
 add_executable(printir debug/irprintertest.cpp lib/irvisitors/irprinter.cpp ${GNALC_IR_SRC} ${GNALC_UTILS_SRC})

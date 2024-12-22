@@ -4,27 +4,27 @@
 namespace IR {
     Function::Function(std::string _name, IRTYPE _ty) : Value(std::move(_name), _ty) {}
 
-    void Function::addParam(Value* param) {
+    void Function::addParam(std::shared_ptr<Value> param) {
         params.push_back(std::move(param));
     }
 
-    void Function::addBlock(BasicBlock* blk) {
+    void Function::addBlock(std::shared_ptr<BasicBlock> blk) {
         blks.push_back(std::move(blk));
     }
 
-    void Function::addInst(Instruction* inst) {
+    void Function::addInst(std::shared_ptr<Instruction> inst) {
         insts.push_back(std::move(inst));
     }
 
-    std::vector<Value*>& Function::getParams() {
+    auto& Function::getParams() {
         return params;
     }
 
-    std::vector<BasicBlock*>& Function::getBlocks() {
+    auto& Function::getBlocks() {
         return blks;
     }
 
-    std::vector<Instruction*>& Function::getInsts() {
+    auto& Function::getInsts() {
         return insts;
     }
 

@@ -8,6 +8,8 @@
 
 #include "base.hpp"
 
+#include <memory>
+
 namespace IR {
     class Instruction;
     class IRVisitor;
@@ -18,20 +20,20 @@ namespace IR {
 class BasicBlock : public Value {
     std::list<BasicBlock*> pre_bb; // 前驱
     std::list<BasicBlock*> next_bb; // 后继
-    std::list<Instruction*> insts; // 指令列表
+    std::list<std::shared_ptr<Instruction>> insts; // 指令列表
     std::list<Value*> livein;
     std::list<Value*> liveout;
 public:
     BasicBlock(std::string _name);
-    BasicBlock(std::string _name, std::list<Instruction*> _insts);
-    BasicBlock(std::string _name, std::list<BasicBlock*> _pre_bb, std::list<BasicBlock*> _next_bb, std::list<Instruction*> _insts);
+    BasicBlock(std::string _name, std::list<std::shared_ptr<Instruction>> _insts);
+    BasicBlock(std::string _name, std::list<BasicBlock*> _pre_bb, std::list<BasicBlock*> _next_bb, std::list<std::shared_ptr<Instruction>> _insts);
 
     void addPreBB(BasicBlock* bb);
     void addNextBB(BasicBlock* bb);
-    void addInst(Instruction* inst);
+    void addInst(std::shared_ptr<Instruction> inst);
     std::list<BasicBlock*>& getPreBB();
     std::list<BasicBlock*>& getNextBB();
-    std::list<Instruction*>& getInsts();
+    auto& getInsts();
     // ...
 
     auto& getLiveIn();

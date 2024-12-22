@@ -1,8 +1,5 @@
 /**
- * @brief 包含通用的TypeC, NameC类
- * @attention 只做了一些类型，其他类型尚未考虑
- * 
- * @note 考虑到VALUE似乎没有ARRAY的情景，ARRAY只在ALLOCA和GLOBLEVAR中用到，还是暂时不用TYPEC来表示ARRAY
+ * @brief 包含通用的Type, Name类
  */
 
 #pragma once
@@ -10,51 +7,127 @@
 #define GNALC_IR_TYPE_HPP
 
 #include <string>
-#include <vector>
+#include <memory>
+#include "../utils/exception.hpp"
 
 namespace IR {
-// enum _type { INT, FLOAT, VOID, UNDEFINED };
 
 /**
- * @todo 考虑BOOL, VECTOR? PTRARRAY?
+ * @brief IR BASIC TYPE只包含简单Type类型，亦是Value的类型
  */
-enum class IRTYPE {
+enum class IRBTYPE {
     I1, // For br's cond, icmp and fcmp return
     I32,
     FLOAT,
     VOID,
-    PTR,
-    // I32ARRAY,
-    // FLOATARRAY,
+    PTR, // 此处仅为方便Value返回自己的类型，PTR类型实际上应当是IRCTYPE::PTR
     UNDEFINED
 };
 
-// 用于与IRTYPE结合判断是否为ARRAY，避免后续新加ARRAY类型改动地方过多
-// bool IRTypeIsArray(IRTYPE ty) { return ty==IRTYPE::I32ARRAY || ty==IRTYPE::FLOATARRAY; }
+/**
+ * @brief IR COMPOUND TYPE 包含复杂结构类型
+ */
+enum class IRCTYPE {
+    BASIC,
+    PTR,
+    ARRAY
+};
+
+class Type;
+class BType;
+class PtrType;
+class ArrayType;
+
+class Type {
+public:
+    virtual ~Type() = default;
+    virtual IRCTYPE getTrait() const = 0;
+    virtual std::string toString() const = 0;
+};
+
+/**
+ * @brief 简单结构Type，完全是函数的返回类型
+ * @attention bty 不应为 PTR
+ */
+class BType : public Type {
+protected:
+    IRBTYPE bty;
+public:
+    // BType() = default;
+    BType(IRBTYPE _bty) : bty(_bty) { Err::assert(_bty != IRBTYPE::PTR, "Ptr type defined in BType."); }
+
+    // void setBType(IRBTYPE _bty) { Err::assert(_bty != IRBTYPE::PTR, "Ptr type defined in BType."); bty = _bty; }
+    IRBTYPE getBType() const { return bty; }
+
+    IRCTYPE getTrait() const override { return IRCTYPE::BASIC; }
+    std::string toString() const override {
+        switch (bty)
+        {
+        case IRBTYPE::I1:
+            return "i1";
+        case IRBTYPE::I32:
+            return "i32";
+        case IRBTYPE::FLOAT:
+            return "float";
+        case IRBTYPE::VOID:
+            return "void";
+        case IRBTYPE::UNDEFINED:
+            return "UNDEFINEDTYPE";
+        default:
+            Err::error("In IR::BType::toString(): illegal type.");
+            return "ILLEGALTYPE";
+        }
+    }
+};
+
+class PtrType : public Type {
+protected:
+    std::shared_ptr<Type> element_type;
+public:
+    PtrType(std::shared_ptr<Type> _ele_ty) : element_type(_ele_ty) {}
+    auto& getElmType() const { return element_type; }
+
+    IRCTYPE getTrait() const override { return IRCTYPE::PTR; }
+    std::string toString() const override { return "ptr"; }
+};
+
+class ArrayType : public Type {
+protected:
+    std::shared_ptr<Type> element_type;
+    size_t size;
+public:
+    ArrayType(std::shared_ptr<Type> element_type, size_t size)
+        : element_type(element_type), size(size) {}
+    auto& getElmType() const { return element_type; }
+    size_t getSize() const { return size; }
+
+    IRCTYPE getTrait() const override { return IRCTYPE::ARRAY; }
+    std::string toString() const override {
+        return "[ " + std::to_string(size) + " x " + element_type->toString() + " ]";
+    }
+};
+
+// 以下为一些辅助函数，类型不匹配会抛出exception
+
+// 若类型不正确会返回nullptr
+std::shared_ptr<BType> toBType(std::shared_ptr<Type> ty);
+std::shared_ptr<PtrType> toPtrType(std::shared_ptr<Type> ty);
+std::shared_ptr<ArrayType> toArrayType(std::shared_ptr<Type> ty);
+
+// PtrType 亦会返回 IRBTYPE::PTR; BType 会返回其bty; 其他类型会返回 UNDEFIND
+IRBTYPE getBTy(std::shared_ptr<Type> ty);
+// 返回PTR, ARRAY的element_type; BType 会返回 nullptr
+std::shared_ptr<Type> getElm(std::shared_ptr<Type> ty);
+// 返回数组大小; 除arraytype之外的会返回0
+size_t getSize(std::shared_ptr<Type> ty);
+
+
+/***********下列内容为NameClass相关**********/
 
 using NameRef = const std::string&; // 赋值名字时改为str::string, 用move传值；引用名字时使用该类型别名
 
-/**
- * @brief C是class的意思，以便区分，添加了array类型以解决[2 x i32]的问题
- * @attention array_size若被赋值，其对应的类型必须为ARRAY
- */
-class TypeC {
-protected:
-    IRTYPE ty = IRTYPE::UNDEFINED;
-    // std::vector<int> array_size; // [3 x [4 x i32]] 就是 {3, 4} 和语言中的数组大小顺序一致
-public:
-    TypeC() = default;
-    TypeC(IRTYPE _ty) : ty(_ty) {}
-    // TypeC(IRTYPE _ty, const std::vector<int>& _array_size) : array_size(_array_size), ty(_ty) {} // for [2 x i32]
-
-    void setType(IRTYPE _ty) { ty = _ty; }
-    // void setType(IRTYPE _ty, const std::vector<int>& _array_size) { array_size = _array_size; ty = _ty; }
-    // bool isArray() const { return IRTypeIsArray(ty); }
-    IRTYPE getType() const { return ty; }
-    // std::vector<int> getArraySize() const { return array_size; };
-};
-
 // move传值
+// C means class
 class NameC {
 private:
     std::string name;

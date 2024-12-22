@@ -21,11 +21,11 @@ void Module::delGlobalVar(NameRef name) {
     }
 }
 
-void Module::addFunction(Function* func) {
+void Module::addFunction(std::shared_ptr<Function> func) {
     funcs.emplace_back(func);
 }
 
-const std::vector<Function*>& Module::getFunctions() const {
+const auto& Module::getFunctions() const {
     return funcs;
 }
 

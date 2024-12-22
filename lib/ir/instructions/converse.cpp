@@ -7,12 +7,12 @@ namespace IR {
         : Instruction(OP::FPTOSI, name, IRTYPE::I32)
     {
         assert(origin_val->getType() == IRTYPE::FLOAT);
-        operands = {Use{origin_val, this}};
+        addOperand(origin_val);
     }
 
     Value* FPTOSIInst::getOVal() const
     {
-        return operands.begin()->getValue();
+        return getOperands().begin()->getValue();
     }
 
     IRTYPE FPTOSIInst::getOType() const
@@ -29,12 +29,12 @@ namespace IR {
         : Instruction(OP::SITOFP, name, IRTYPE::FLOAT)
     {
         assert(origin_val->getType() == IRTYPE::I32);
-        operands = {Use{origin_val, this}};
+        addOperand(origin_val);
     }
 
     Value* SITOFPInst::getOVal() const
     {
-        return operands.begin()->getValue();
+        return getOperands().begin()->getValue();
     }
 
     IRTYPE SITOFPInst::getOType() const

@@ -51,7 +51,7 @@ private:
     // Value* ptr; 添加到oprands中
     int align = 4;
 public:
-    LOADInst(NameRef name, IRTYPE ty, Value* _ptr, int _align = 4);
+    LOADInst(NameRef name, IRTYPE ty, std::shared_ptr<Value> _ptr, int _align = 4);
 
     Value* getPtr() const;
     int getAlign() const;
@@ -67,11 +67,11 @@ private:
     int align = 4;
 
 public:
-    STOREInst(IRTYPE btype, Value* _value, Value* _ptr, int _align = 4);
+    STOREInst(IRTYPE btype, std::shared_ptr<Value> _value, std::shared_ptr<Value> _ptr, int _align = 4);
 
     IRTYPE getBaseType() const;
-    Value* getValue() const;
-    Value* getPtr() const;
+    std::shared_ptr<Value> getValue() const;
+    std::shared_ptr<Value> getPtr() const;
     int getAlign() const;
 
     void accept(IRVisitor& visitor) override;
@@ -87,11 +87,11 @@ private:
     IRTYPE basetype;
     std::vector<int> array_size; // [3 x [4 x i32]] 就是 {3, 4} 和语言中的数组大小顺序一致
 public:
-    GEPInst(NameRef name, IRTYPE btype, std::vector<int> _array_size,  Value* _ptr, const std::list<Value*>& idxs);
+    GEPInst(NameRef name, IRTYPE btype, std::vector<int> _array_size, std::shared_ptr<Value> _ptr, const std::list<std::shared_ptr<Value>>& idxs);
 
     IRTYPE getBaseType() const;
     std::vector<int> getArraySize() const;
-    Value* getPtr() const;
+    std::shared_ptr<Value> getPtr() const;
     std::vector<Value*> getIdxs() const;
 
     void accept(IRVisitor& visitor) override;

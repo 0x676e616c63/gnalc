@@ -1,9 +1,11 @@
+#include <utility>
+
 #include "../../include/ir/instruction.hpp"
 
 namespace IR {
 
 Instruction::Instruction(OP opcode, std::string _name, IRTYPE _type)
-    : opcode(opcode), User(_name, _type) {}
+    : opcode(opcode), User(std::move(_name), _type) {}
 
 void Instruction::setParent(BasicBlock* p) {
     parent = p;

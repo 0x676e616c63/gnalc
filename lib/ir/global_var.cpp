@@ -5,78 +5,78 @@
 #include "../../include/irvisitors/irprinter.hpp"
 #endif
 
-namespace IR {
+namespace IR
+{
+    GVIniter::GVIniter(IRTYPE _ty)
+        : initer_type(_ty), is_zero(true), is_array(false) {}
 
-GVIniter::GVIniter(IRTYPE _ty)
-    : initer_type(_ty), is_zero(true), is_array(false) {}
+    GVIniter::GVIniter(IRTYPE _ty, Value* _con)
+        : initer_type(_ty), is_zero(false), is_array(false), constval(_con) {}
 
-GVIniter::GVIniter(IRTYPE _ty, Value* _con)
-    : initer_type(_ty), is_zero(false), is_array(false), constval(_con) {}
+    GVIniter::GVIniter(IRTYPE _ty, std::vector<int> _array_size)
+        : initer_type(_ty), is_zero(true), is_array(true), array_size(_array_size) {}
 
-GVIniter::GVIniter(IRTYPE _ty, std::vector<int> _array_size)
-    : initer_type(_ty), is_zero(true), is_array(true), array_size(_array_size) {}
+    GVIniter::GVIniter(IRTYPE _ty, std::vector<int> _array_size, std::vector<GVIniter> _inner_initer)
+        : initer_type(_ty), is_zero(false), is_array(true), array_size(_array_size), inner_initer(_inner_initer) {}
 
-GVIniter::GVIniter(IRTYPE _ty, std::vector<int> _array_size, std::vector<GVIniter> _inner_initer)
-    : initer_type(_ty), is_zero(false), is_array(true), array_size(_array_size), inner_initer(_inner_initer) {}
+    IRTYPE GVIniter::getIniterType() const {
+        return initer_type;
+    }
 
-IRTYPE GVIniter::getIniterType() const {
-    return initer_type;
-}
+    bool GVIniter::isZero() const {
+        return is_zero;
+    }
 
-bool GVIniter::isZero() const {
-    return is_zero;
-}
+    bool GVIniter::isArray() const {
+        return is_array;
+    }
 
-bool GVIniter::isArray() const {
-    return is_array;
-}
+    std::vector<int> GVIniter::getArraySize() const {
+        return array_size;
+    }
 
-std::vector<int> GVIniter::getArraySize() const {
-    return array_size;
-}
+    Value* GVIniter::getConstVal() {
+        return constval;
+    }
 
-Value* GVIniter::getConstVal() {
-    return constval;
-}
+    std::vector<GVIniter>& GVIniter::getInnerIniter() {
+        return inner_initer;
+    }
 
-std::vector<GVIniter>& GVIniter::getInnerIniter() {
-    return inner_initer;
-}
-
-GVIniter::~GVIniter() {}
+    GVIniter::~GVIniter() {}
 
 
-GlobalVariable::GlobalVariable(STOCLASS _sc, IRTYPE _ty, std::string _name, GVIniter _initer, int _align)
-    : storage_class(_sc), vtype(_ty), is_array(false), Value(_name, IRTYPE::PTR), initer(_initer), align(_align) {}
+    GlobalVariable::GlobalVariable(STOCLASS _sc, IRTYPE _ty, std::string _name, GVIniter _initer, int _align)
+        : storage_class(_sc), vtype(_ty), is_array(false), Value(_name, IRTYPE::PTR), initer(_initer), align(_align) {}
 
-GlobalVariable::GlobalVariable(STOCLASS _sc, IRTYPE _ty, std::string _name, std::vector<int> _array_size, GVIniter _initer, int _align)
-    : storage_class(_sc), vtype(_ty), is_array(true), Value(_name, IRTYPE::PTR), initer(_initer), align(_align), array_size(_array_size) {}
+    GlobalVariable::GlobalVariable(STOCLASS _sc, IRTYPE _ty, std::string _name, std::vector<int> _array_size, GVIniter _initer, int _align)
+        : storage_class(_sc), vtype(_ty), is_array(true), Value(_name, IRTYPE::PTR), initer(_initer), align(_align), array_size(_array_size) {}
 
-STOCLASS GlobalVariable::getStorageClass() const {
-    return storage_class;
-}
+    STOCLASS GlobalVariable::getStorageClass() const {
+        return storage_class;
+    }
 
-IRTYPE GlobalVariable::getVarType() const {
-    return vtype;
-}
+    IRTYPE GlobalVariable::getVarType() const {
+        return vtype;
+    }
 
-bool GlobalVariable::isArray() const {
-    return is_array;
-}
+    bool GlobalVariable::isArray() const {
+        return is_array;
+    }
 
-std::vector<int> GlobalVariable::getArraySize() const {
-    return array_size;
-}
+    std::vector<int> GlobalVariable::getArraySize() const {
+        return array_size;
+    }
 
-GVIniter& GlobalVariable::getIniter() {
-    return initer;
-}
+    GVIniter& GlobalVariable::getIniter() {
+        return initer;
+    }
 
-int GlobalVariable::getAlign() const {
-    return align;
-}
+    int GlobalVariable::getAlign() const {
+        return align;
+    }
 
-GlobalVariable::~GlobalVariable() {}
+    // void GlobalVariable::accept(IRVisitor& visitor) override { visitor.visit(*this); }
 
 std::string GVIniter::toString() {
     std::string ret;
@@ -119,4 +119,7 @@ std::string GVIniter::toString() {
 void GlobalVariable::accept(IRVisitor& visitor) {
     visitor.visit(*this);
 }
+
+IR::GlobalVariable::~GlobalVariable() {}
+
 }
