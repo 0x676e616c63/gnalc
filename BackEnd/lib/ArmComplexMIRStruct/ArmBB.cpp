@@ -3,6 +3,8 @@
 #include "../../include/ArmComplexMIRStruct/ArmInstruction.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmInstruction.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmBB.hpp"
+#include "../../include/ArmComplexMIRStruct/ArmFunction.hpp"
+#include "../../../include/ir/basic_block.hpp"
 
 using namespace ArmStruct;
 using namespace ArmTools;
@@ -22,9 +24,15 @@ BB::BB(IR::BasicBlock& midEnd_BasicBlock, Function& func): Func(Func){
 
 void BB::MkLiveOut(IR::BasicBlock& midEnd_BasicBlock){
    /// @todo 遍历midEnd_BasicBlock的liveout, 按VirReg来查找this->Func.VirMap,
+   std::list<std::shared_ptr<IR::Value>> &midEnd_liveOut = midEnd_BasicBlock.getLiveOut();
 
+   for(auto it = midEnd_liveOut.begin(); it != midEnd_liveOut.end(); ++it){
+      auto &midEnd_value = **it;
+      unsigned long long idx = std::stoull(midEnd_value.getName().substr(1));
 
-
+      auto backEnd_value = this->Func.VirRegOperandMap[idx];
+      this->LiveOut.insert(std::ref(*backEnd_value));
+   }
 }
 
 void BB::ParseInsts(){

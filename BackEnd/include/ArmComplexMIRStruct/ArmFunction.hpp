@@ -16,7 +16,7 @@
 
 class ArmStruct::FrameObj{
     public:
-        FrameObj(SubFrame*, OperandType, unsigned int, unsigned long long); // 自动调用insert
+        FrameObj(SubFrame*, OperandType, unsigned int size, unsigned long long VirPtr); // 自动调用insert
         ~FrameObj()=default;
         OperandType getType(){return type;};
     
@@ -61,7 +61,9 @@ class ArmStruct::SubFrame{
         FrameObj* findObj(unsigned long long idx){return VirPtrFrameObjMap[idx];}
 
         MMptr* findMMptr(unsigned long long idx){return VirPtrOffsetMap[idx];}
-        unsigned int getSize();
+        
+        unsigned int getSize(); // bytes
+        unsigned int getObjCnt(){return VirPtrFrameObjMap.size();};
 
     private:
         std::map<unsigned long long, MMptr*>VirPtrOffsetMap; // 做一个对象池

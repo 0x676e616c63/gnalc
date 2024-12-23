@@ -50,7 +50,6 @@ class ArmStruct::BB{
         std::string label;
         std::list<Instruction*> InstList;
         Function& Func;
-        Function& Func;
         std::unordered_set<std::reference_wrapper<Operand>, ArmTools::HashOperandReferWrap, ArmTools::HashOperandReferWrapEqual> LiveOut;
     private:
 };

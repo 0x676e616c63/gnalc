@@ -18,6 +18,7 @@ using FrameObjRefHashPtr = std::unique_ptr<std::unordered_set<std::reference_wra
 
 FrameObj::FrameObj(SubFrame *Father, OperandType type, unsigned int size, unsigned long long idx):
     father(Father), type(type), ObjSize(size), VirPtr(idx) {
+        
         father->insertObj(VirPtr, this);
         // idx不只是FrameObj的编号, 也是MMptr的编号
         MMptr *ptr = new MMptr(this, type, idx);
@@ -57,18 +58,45 @@ Function::Function(IR::Function& midEnd_function){
         backEnd_BB->MkLiveOut(midEnd_BB); // 查表 IR::Value 到 Arm::Operand的转换
 
     }
+    
+    std::vector<unsigned long long> backEnd_temp_VReg;
+    /// @note 在首位BasicBlock插入mov %temp {r4,r5...r11}
+    auto &backEnd_BB_head = **BBList.begin();
+    for(int i = 4; i < 12; ++i){
+        Operand *Def = new Operand(OperandType::INT, "%" + std::to_string(backEnd_BB_head.Func.VRegNum));
+            backEnd_temp_VReg.push_back(backEnd_BB_head.Func.VRegNum);
+            backEnd_BB_head.Func.VirRegOperandMap[backEnd_BB_head.Func.VRegNum++] = Def; 
+            
+            Operand *Use = new Operand(OperandType::INT, i);
 
+            Instruction *backEnd_callee_rx = new Instruction(
+                OperCode::MOV, nullptr, backEnd_BB_head, {std::ref(*Def)}, {std::ref(*Use)}
+            );
+            backEnd_BB_head.InstList.push_back(backEnd_callee_rx);
+    }
+
+    /// @note 在最后BasicBlock插入mov {r4,r5...r11} %temp
+    auto &backEnd_BB_tail = *BBList.back();    
+    for(int i = 0; i < 8; ++i){
+        ///@brief mov rx, %temp
+        Operand *Def = new Operand(OperandType::INT, i);
+        Operand *Use = backEnd_BB_tail.Func.VirRegOperandMap[backEnd_temp_VReg[i]];
+
+        Instruction *backEnd_callee_rx = new Instruction(
+            OperCode::MOV, nullptr, backEnd_BB_tail, {std::ref(*Def)}, {std::ref(*Use)}
+        );
+
+        backEnd_BB_tail.InstList.push_back(backEnd_callee_rx);
+    }
 
     /// @note 现在是保存了SSA形式的MIR, 在这里插入一些OPT
 
-
-    for(auto backEnd_BB : this->BBList){
-        backEnd_BB->PhiEliminate();
-    }
+    /// @note phi函数消除, 待做
+    // for(auto backEnd_BB : this->BBList){
+    //     backEnd_BB->PhiEliminate();
+    // }
     
     /// @note 现在没有SSA了, 只能做窥孔优化
-
-    // this->MkFrameInit(); //  改在 IR->MIR
 }
 
 

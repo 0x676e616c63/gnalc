@@ -25,7 +25,7 @@ MemInstruction::MemInstruction(OperCode opcode, ArmStruct::MMptr* mmptr, BB& Bas
 Instruction::Instruction(OperCode opcode,Imm* attach, BB& BasicBlock,
     std::initializer_list<std::reference_wrapper<Operand>> Defs, 
     std::initializer_list<std::reference_wrapper<Operand>> Uses):
-    opcode(opcode), id( ++BasicBlock.Func.InstCnt), attach(attach), BasicBlock(BasicBlock){
+    opcode(opcode), id(++BasicBlock.Func.InstCnt), attach(attach), BasicBlock(BasicBlock){
         
         for(auto oper_it = Defs.begin(); oper_it != Defs.end(); ++oper_it){
             auto &oper = oper_it->get();
@@ -40,19 +40,27 @@ Instruction::Instruction(OperCode opcode,Imm* attach, BB& BasicBlock,
 
 /// @brief reWrite Programme to add overflow vars
 Instruction::Instruction(Instruction& inst, OperCode type, unsigned int cnt):
-    BasicBlock(inst.BasicBlock), DefOperandList(), UseOperandList(){
+    BasicBlock(inst.BasicBlock){
     /// @todo 这里实际上也可以用MemInstruction的构造, attach成员这个设计确实会造成太多歧义
     this->id = cnt;
     this->opcode = type;
-    if(type == OperCode::STR){
+    if(type == OperCode::STR || type == OperCode::VSTR_32){
         UseOperandList.push_back(inst.DefOperandList[0]);
     }
     else{
         DefOperandList.push_back(inst.UseOperandList[0]);
     }
     /// @note MMptr 用于保存栈空间信息
-    /// @note MMptr 用于保存栈空间信息
-    this->attach = new MMptr();
+    /// @note 分配临时变量
+    Function &func = this->BasicBlock.Func;
+    
+    OperandType valType;
+    if(type == OperCode::VLDR_32 || type == OperCode::VSTR_32) valType = OperandType::FLOAT;
+    else valType = OperandType::INT;
+
+    FrameObj *tempObj = new FrameObj(func.getTemp(), OperandType::FLOAT, 4,func.getTemp()->getObjCnt());
+
+    this->attach = func.getTemp()->findMMptr(func.getTemp()->getObjCnt() - 1);
     
 }
 

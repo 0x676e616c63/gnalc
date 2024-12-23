@@ -15,6 +15,8 @@ class ArmStruct::Module{
         void AddBssVar(Bss*);
         void AddEquDef(Global*);
         
+        void AllocRegister();
+
         void Legalize(); // MIR -> close arm asm
 
         std::string& toString(); // MIR -> asm string

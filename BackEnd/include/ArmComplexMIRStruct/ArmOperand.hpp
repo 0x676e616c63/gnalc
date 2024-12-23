@@ -15,10 +15,7 @@ enum OperandType{
     INT, FLOAT, PTR, VOID, LABEL, BYTE, ASCIZ,
 };
 class ArmStruct::Operand{
-    public:
-        Operand(std::string);
-        Operand(unsigned int);
-    
+    public:    
         Operand(OperandType, unsigned int color);
         Operand(OperandType, std::string);
         Operand(Operand&);

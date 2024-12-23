@@ -27,7 +27,7 @@ class MyUnOrderedSet{
 
 class RegisterAlloc{
     public:
-        RegisterAlloc(ArmStruct::Function&, unsigned int);
+        RegisterAlloc(ArmStruct::Function&, OperandType, unsigned int);
         ~RegisterAlloc()=default;
         
         void GraphColoring(); // main procedure
@@ -56,6 +56,8 @@ class RegisterAlloc{
         bool isMoveRelated(ArmStruct::Operand&);
         void EnableMoves(OperRefHash&);
     private:
+        OperandType RegType;
+        
         unsigned int availableColors;
         bool isPreColoredAlready = false;
         ArmStruct::Function& curFunc;

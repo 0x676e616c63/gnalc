@@ -4,6 +4,7 @@
 #include "../../include/ArmComplexMIRStruct/ArmFunction.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmModule.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmOperand.hpp"
+#include "../../include/tools/ArmRegisterAlloc.hpp"
 #include "../../Arm.hpp"
 
 using namespace ArmStruct;
@@ -20,10 +21,19 @@ Module::Module(IR::Module& midEnd_Module){
 
     for(auto func_it = funcs.begin(); func_it != funcs.end(); ++func_it){
         auto& func = **func_it;
-        Function* newFunc = new Function(func);
+        Function* newFunc = new Function(func); // IR->MIR, localFrame ...s
         this->AddFunction(newFunc);
-        
-        
+    }
+}
+
+void Module::AllocRegister(){
+
+    for(auto it = FunctionList.begin(); it != FunctionList.end(); ++it){
+        Function &func = **it;
+        RegisterAlloc *CoreReg = new RegisterAlloc(func, OperandType::INT, 12); // r0, r1, r2, r3, r4, r5, r6, r8, r9, r10, r11, r12
+        CoreReg->GraphColoring();
+        RegisterAlloc *FPUReg = new RegisterAlloc(func, OperandType::FLOAT, 32);
+        FPUReg->GraphColoring();
     }
 }
 

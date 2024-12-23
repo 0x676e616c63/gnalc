@@ -25,9 +25,9 @@ using namespace ArmStruct;
 bool MyUnOrderedSet::find(const Edge &edge){
     return this->set.find(Edge(edge.u, edge.v)) != this->set.end(); 
 }
-RegisterAlloc::RegisterAlloc(Function &func, unsigned int k)
-    : curFunc(func), availableColors(k), isPreColoredAlready(false), adjSet(), simplifyWorkList(), freezeWorkList(), spilledNodes(), worklistMoves(), activeMoves(), coalescedMoves(), constrainedMoves(), frozenMoves(), coloredNodes(), coalescedNodes(), selectStack(), initial() {
-    this->GraphColoring();
+RegisterAlloc::RegisterAlloc(Function &func, OperandType RegType, unsigned int k)
+    : curFunc(func), RegType(RegType), availableColors(k), isPreColoredAlready(false), adjSet(), simplifyWorkList(), freezeWorkList(), spilledNodes(), worklistMoves(), activeMoves(), coalescedMoves(), constrainedMoves(), frozenMoves(), coloredNodes(), coalescedNodes(), selectStack(), initial() {
+    // this->GraphColoring();
 }
 bool RegisterAlloc::isMoveInst(Instruction &inst){
     if(inst.opcode > OperCode::Branch_Begin
@@ -90,7 +90,7 @@ void RegisterAlloc::BuildGraph(){
                 /// @note live := live\use(I); forall
                 for(Operand& UseOper: curInst.UseOperandList){
                     if(!isPreColoredAlready && UseOper.color != -1){
-                        coloredNodes.insert(std::ref(UseOper)); // 预着色
+                        if(UseOper.ValType == RegType) coloredNodes.insert(std::ref(UseOper)); // 预着色
                     }
                     auto iterator = Live.find(std::ref(UseOper));
                     if(iterator != Live.end()) Live.erase(iterator);
@@ -99,7 +99,7 @@ void RegisterAlloc::BuildGraph(){
 
                 for(Operand& DefOper: curInst.DefOperandList){
                     if(!isPreColoredAlready && DefOper.color != -1){
-                        coloredNodes.insert(std::ref(DefOper)); /// 
+                        if(DefOper.ValType == RegType) coloredNodes.insert(std::ref(DefOper)); /// 
                     }
                     DefOper.moveList.insert(std::ref(curInst));
                 }
@@ -108,7 +108,9 @@ void RegisterAlloc::BuildGraph(){
                 worklistMoves.insert(std::ref(curInst));
             }
             /// @note  live := live U def(I); forall d in def(I).....
-            for(Operand& DefOper: curInst.DefOperandList) Live.insert(std::ref(DefOper));
+            for(Operand& DefOper: curInst.DefOperandList){
+                if(DefOper.ValType == RegType) Live.insert(std::ref(DefOper));
+            }
             for(Operand& DefOper: curInst.DefOperandList){
                 for(Operand& Oper: Live) AddEdge(Oper, DefOper);
             }
@@ -120,7 +122,7 @@ void RegisterAlloc::BuildGraph(){
             }
             /// @note step2: live := live U use(I)
             for(Operand &UseOper: curInst.UseOperandList){
-                Live.insert(std::ref(UseOper));
+                if(UseOper.ValType == RegType) Live.insert(std::ref(UseOper));
             }
         }
         /// @note 解释一下为什么在计算完成live之后, live信息不用先前BB传播
