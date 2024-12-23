@@ -41,14 +41,13 @@ class Instruction{
 };
 
 class MemInstruction : public Instruction{
-    ///@note alloca, free, fetch...
-    ///@note %1 = alloca i32 4 .align
-    ///@note attach 已被占用, 所以新加一个MMptr
-    ///@note 不算push和pop, str, ldr
+    /// @note 在构造时注意 MMptr->baseVirReg 是否为 nullptr
     public:
         MemInstruction(ArmTools::OperCode, MMptr*, BB&);
         ~MemInstruction()=default;
 
+
+    private:
         MMptr* MMptr;
 };
 

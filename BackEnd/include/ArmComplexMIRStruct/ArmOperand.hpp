@@ -12,7 +12,7 @@
 enum OperandType{
     // INT 和 FLOAT主要用于Operand区分使用什么寄存器
     // imm中主要区分是否是LABEL类
-    INT, FLOAT, INTPTR, FLOATPTR, VOID, LABEL, BYTE, ASCIZ,
+    INT, FLOAT, PTR, VOID, LABEL, BYTE, ASCIZ,
 };
 class ArmStruct::Operand{
     public:
@@ -21,7 +21,6 @@ class ArmStruct::Operand{
     
         Operand(OperandType, unsigned int color);
         Operand(OperandType, std::string);
-        Operand(OperandType, unsigned int);
         Operand(Operand&);
         ~Operand()=default;
         virtual std::string& toString();
@@ -59,17 +58,35 @@ class ArmStruct::Imm{
 class ArmStruct::MMptr : public ArmStruct::Imm{
     ///@note 关键在于能反向查找到对应的FrameObj, 同时能够被FrameObj寻址
     public:
-        MMptr(OperandType type, unsigned long long idx): ptrType(type), VirReg(idx){};
+        // for allocainst
+        MMptr(FrameObj* loc, OperandType type, unsigned long long idx): space(loc), ptrType(type), VirReg(idx){};
+        // for gepinst
+        MMptr(FrameObj* loc, OperandType type, unsigned long long idx, unsigned int off)
+            : space(loc), ptrType(type), VirReg(idx), offset(off){};
         MMptr(std::string);
         ~MMptr()=default;
 
+        OperandType getType(){return ptrType;}
+        FrameObj* getFrameObj(){return space;}
+        void setOffset(unsigned int newOffset){offset = newOffset;}
+        unsigned int getOffset(){return offset;}
+        unsigned long long getVirReg(){return VirReg;}
+
+        void setBase(Operand *base){baseVirReg = base;};        
+        Operand* getBase(){return baseVirReg;};        
+
+        bool isStatic(){return baseVirReg == nullptr;};
+
         std::string& toString() final;
 
-        /// @note data 在下面的方法中创建通过FrameObj创建, 先不初始化
-        OperandType ptrType;
-        FrameObj* space = nullptr;
-        unsigned long long VirReg;    // 有虚拟寄存器, 用于确定space
+    private:
+        OperandType ptrType;    // int bool float ...
+        FrameObj* space;
+        Operand *baseVirReg = nullptr;  // 为null表示它的基址为r7
+        unsigned int offset = 0;
+        unsigned long long VirReg;    // 有虚拟寄存器, 用于被寻找
 };
+
 class ArmStruct::Global : public ArmStruct::Imm{
     public:
         Global();

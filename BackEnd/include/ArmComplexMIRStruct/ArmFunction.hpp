@@ -22,12 +22,30 @@ class ArmStruct::FrameObj{
     
         SubFrame* getFather(){return father;};
         
-        unsigned int getSize(){return ObjSize;};
+        void setSize(unsigned int newSize){ObjSize = newSize;}
+        unsigned int getSize(){return ObjSize;}
+
+        void setOffset(unsigned int off){offset = off;}
     private:
+        unsigned int offset; // 和栈顶的偏移, 由SubFrame分配
+        
         OperandType type;
         SubFrame* father; // 指的是所属的SubFrame
         unsigned int ObjSize;
         unsigned long long VirPtr; // 编号
+};
+
+/// @brief 一块划给数组的栈空间, 和中端不同,这里非递归
+class ArmStruct::ArrayObj : FrameObj{
+    public:
+        /// @note 构造见cpp
+        ArrayObj(SubFrame* father, OperandType elementType, unsigned long long VirPtr, std::vector<unsigned long long> dims);
+        ~ArrayObj()=default;
+
+        std::vector<unsigned long long>& getDims(){return arrayDims;}
+
+    private:
+        std::vector<unsigned long long> arrayDims;
 };
 
 class ArmStruct::SubFrame{

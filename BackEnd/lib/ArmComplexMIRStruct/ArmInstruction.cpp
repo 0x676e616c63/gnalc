@@ -15,7 +15,11 @@ using namespace ArmTools;
 
 /// @note md这里还歧义了
 MemInstruction::MemInstruction(OperCode opcode, ArmStruct::MMptr* mmptr, BB& BasicBlock):
-    Instruction(opcode, nullptr, BasicBlock, {}, {}), MMptr(mmptr){}
+    Instruction(opcode, nullptr, BasicBlock, {}, {}), MMptr(mmptr){
+        if(MMptr->getBase() != nullptr){
+            this->UseOperandList.push_back(std::ref(*MMptr->getBase()));
+        }
+    }
 
 /// @note to fill VirMap and add InstCnt
 Instruction::Instruction(OperCode opcode,Imm* attach, BB& BasicBlock,

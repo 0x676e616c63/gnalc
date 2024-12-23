@@ -166,7 +166,7 @@ struct ArmTools::UnaryMatch{
             // vneg.f32 %x, %temp
             ///@brief 将float * 强制转化为 unsigned int *
             
-            float minEnd_FPimm = dynamic_cast<IR::ConstantFloat*>(midEnd_inst.getVal())->getVal();
+            float minEnd_FPimm = dynamic_cast<IR::ConstantFloat&>(*midEnd_inst.getVal()).getVal();
 
             immeMatch(minEnd_FPimm, BasicBlock.Func.VRegNum); // vmov
 
@@ -459,19 +459,55 @@ struct AllocaMatch{
     }
     void staticMemory(IR::ALLOCAInst& midEnd_alloca){
         unsigned int ObjSize = 4;
+        OperandType valType;
         unsigned long long VirPtr = std::stoull(midEnd_alloca.getName().substr(1));
-        for(auto layer : midEnd_alloca.getStaticArraySize()){
-            ObjSize *= layer;
-        }
         
-        FrameObj *backEnd_stackVal = new FrameObj(
-            BasicBlock.Func.getLocal(), OperandType::INT, ObjSize, VirPtr
-        );  // 开辟一个FrameObj, 同时保存alloca的name
+        auto midEnd_valCType = midEnd_alloca.getBaseTypePtr()->getTrait();
+
+        if(midEnd_valCType == IR::IRCTYPE::BASIC){
+
+            auto &midEnd_basicType = dynamic_cast<IR::BType&>(*midEnd_alloca.getBaseTypePtr());
+            switch(midEnd_basicType.getBType()){
+                case IR::IRBTYPE::I32: valType = OperandType::INT; break;
+                case IR::IRBTYPE::FLOAT: valType = OperandType::FLOAT; break;
+                // to be continued
+            }
+            // ObjSize = ...
+            FrameObj *backEnd_stackVal = new FrameObj(
+                BasicBlock.Func.getLocal(), valType, ObjSize, VirPtr
+            );  // 开辟一个FrameObj, 同时保存alloca的name
+        }
+
+        else if(midEnd_valCType == IR::IRCTYPE::ARRAY){
+            auto &midEnd_arrayType = dynamic_cast<IR::ArrayType&>(*midEnd_alloca.getBaseTypePtr()); //shared_ptr
+            
+            IR::Type *midEnd_elem = midEnd_arrayType.getElmType().get(); // maybe a do-while will be more suitable
+
+            std::vector<unsigned long long> arrayDims = {};
+
+            while(typeid(midEnd_elem) != typeid(IR::BType*)){    // 迭代到为简单类型
+                arrayDims.push_back(dynamic_cast<IR::ArrayType*>(midEnd_elem)->getSize());   // 额 这里应该不会是除了array之外的其他ctype
+                midEnd_elem = dynamic_cast<IR::ArrayType*>(midEnd_elem)->getElmType().get();    // 这两句写的有点shit
+            }
+            
+            switch(dynamic_cast<IR::BType&>(*midEnd_elem).getBType()){
+                case IR::IRBTYPE::I32: valType = OperandType::INT; break;
+                case IR::IRBTYPE::FLOAT: valType = OperandType::FLOAT; break;
+                // to be continue
+            }
+
+            ArrayObj *backEnd_stackArray = new ArrayObj(
+                BasicBlock.Func.getLocal(), valType, VirPtr, arrayDims
+            );
+        }
+
+        // else // IRCTYPE::PTR 不太清楚会在哪里使用
+
         return;
     }
 
     void dynamicMemory(IR::ALLOCAInst& midEnd_alloca){
-        // 不会做
+        // 等等中端
     }
 };
 
@@ -479,10 +515,159 @@ struct ArmTools::GepMatch{
     BB& BasicBlock;
     void operator()(InstArgs insts){
         /// @brief insts可能为一个语句或者几个语句, 取决于index有几层
+        /// @brief 假设多条的gep最终的结果一定是一个简单数据(i32 f32等), 一般也是如此
         /// @brief MIR不设置alloca语句, 但要填写FrameObj
-        /// @brief 最后的成品是将一个Obj的偏移绑定到一个MMptr上
         
+        /// @note GEP的四种情况
+        /// @note 1. ptr的base为sp, idx为constant
+        /// @note 2. ptr的base为sp, idx为VirReg
+        /// @note 3. ptr的base为VirReg, idx为constant
+        /// @note 4. ptr的base为VirReg, idx为VirReg
+
+        auto &midEnd_Gep = dynamic_cast<IR::GEPInst&>(insts.begin()->get());
+        unsigned long long VirReg = std::stoull(midEnd_Gep.getPtr()->getName().substr(1));
+        
+        MMptr *backEnd_mmptr = BasicBlock.Func.getLocal()->findMMptr(VirReg);
+        auto &arrayIdx = *midEnd_Gep.getIdxs()[1].get();    // 假设0位置默认为0
+
+        if(backEnd_mmptr->isStatic() && typeid(arrayIdx) == typeid(IR::ConstantInt&))
+            StaticBaseConstOffset(backEnd_mmptr, midEnd_Gep);
+        else if(backEnd_mmptr->isStatic())
+            StaticBaseVarOffset(backEnd_mmptr, midEnd_Gep);
+        else if(!backEnd_mmptr->isStatic() && typeid(arrayIdx) == typeid(IR::ConstantInt&))
+            DynamicBaseConstOffset(backEnd_mmptr, midEnd_Gep);
+        else 
+            DynamicBaseVarOffset(backEnd_mmptr, midEnd_Gep);
     }
+
+    void StaticBaseConstOffset(MMptr* ptr, IR::GEPInst& midEnd_Gep){
+        
+        auto &arrayIdx = dynamic_cast<IR::ConstantInt&>(*midEnd_Gep.getIdxs()[1].get());
+        unsigned long long VirReg = std::stoull(midEnd_Gep.getName().substr(1));
+
+        unsigned int elemSize = getPreElemSize(midEnd_Gep.getBaseTypePtr());
+
+        unsigned int constOffset = elemSize * arrayIdx.getVal();
+
+        MMptr *backEnd_ptr_def = new MMptr(ptr->getFrameObj(), ptr->getType(), VirReg, constOffset);
+        return;
+    }
+
+    void StaticBaseVarOffset(MMptr* ptr, IR::GEPInst& midEnd_Gep){
+        ///@note %1 = gep <ty> [sp, #offset] %2
+        /// mul %2.5 %2 #imm=elemPerSize(mov %x #imm)
+        /// adds %3 %2.5 sp(为了保持SSA)
+        /// (%1.baseReg = %3)
+        /// ......
+        /// load/store #imm [%3, #offset](%1)
+        
+        auto &arrayIdx = *midEnd_Gep.getIdxs()[1].get();    // IR::Value
+        unsigned int perElemSize = getPreElemSize(midEnd_Gep.getBaseTypePtr());
+        unsigned long long idx = std::stoull(arrayIdx.getName().substr(1));
+        Operand *midEnd_varIdx = BasicBlock.Func.VirRegOperandMap[idx]; // %2
+        
+        // movinst
+        Operand *backEnd_mov_def = new Operand(OperandType::INT, "%" + std::to_string(BasicBlock.Func.VRegNum)); // %x
+        BasicBlock.Func.VirRegOperandMap[BasicBlock.Func.VRegNum++] = backEnd_mov_def;
+        Imm *backEnd_imm = new Imm(OperandType::INT, std::to_string(perElemSize));
+        Instruction *backEnd_mov = new Instruction( // 
+            OperCode::MOV, backEnd_imm, BasicBlock, {std::ref(*backEnd_mov_def)}, {}
+        );
+        BasicBlock.InstList.push_back(backEnd_mov);
+
+        // mul
+        Operand *backEnd_mul_def = new Operand(OperandType::INT, "%" + std::to_string(BasicBlock.Func.VRegNum)); // %2.5
+        BasicBlock.Func.VirRegOperandMap[BasicBlock.Func.VRegNum++] = backEnd_mul_def;
+
+        Instruction *backEnd_mul = new Instruction(
+            OperCode::MUL, nullptr, BasicBlock, {std::ref(*backEnd_mul_def)}, {std::ref(*midEnd_varIdx), std::ref(*backEnd_mov_def)}
+        );
+        BasicBlock.InstList.push_back(backEnd_mul);
+
+        // adds
+        Operand *backEnd_adds_def = new Operand(OperandType::INT, "%" + std::to_string(BasicBlock.Func.VRegNum)); // %3
+        BasicBlock.Func.VirRegOperandMap[BasicBlock.Func.VRegNum++] = backEnd_adds_def;
+
+        Operand *backEnd_sp = new Operand(OperandType::INT, 7);
+
+        Instruction *backEnd_add = new Instruction(
+            OperCode::ADD, nullptr, BasicBlock, {std::ref(*backEnd_adds_def)}, {std::ref(*midEnd_varIdx), std::ref(*backEnd_sp)} // 7 = r7
+        );
+        BasicBlock.InstList.push_back(backEnd_add);
+
+        unsigned long long VirReg = std::stoull(midEnd_Gep.getName().substr(1));
+
+        MMptr *newPtr = new MMptr(ptr->getFrameObj(), ptr->getType(), VirReg, ptr->getOffset());
+        newPtr->setBase(backEnd_adds_def);
+
+        return;
+    }
+    void DynamicBaseConstOffset(MMptr* ptr, IR::GEPInst& midEnd_Gep){
+        ///@note %1 = gep <ty> [%2, #offset] #imm
+        /// (%1.offset = offset0 + imm)
+        /// ......
+        /// load/store #imm [%2, #offset](%1)
+        auto arrayIdx = dynamic_cast<IR::ConstantInt&>(*midEnd_Gep.getIdxs()[1].get()).getVal();
+        
+        unsigned long long VirReg = std::stoull(midEnd_Gep.getName().substr(1));
+
+        unsigned int elemSize = getPreElemSize(midEnd_Gep.getBaseTypePtr());
+
+        MMptr *newPtr = new MMptr(ptr->getFrameObj(), ptr->getType(), VirReg, ptr->getOffset() + arrayIdx*elemSize);
+        newPtr->setBase(ptr->getBase());
+        
+        return;
+    }
+    void DynamicBaseVarOffset(MMptr* ptr, IR::GEPInst& midEnd_Gep){
+        ///@note %1 = gep <ty> [%2, #offset] %3
+        /// mul %3.5 %3 #imm=elemPerSize(mov %x #imm)
+        /// adds %4 %2 %3.5
+        /// (%1.baseReg = %4)
+        /// ......
+        /// load/store #imm [%4, #offset](%1)
+        auto &arrayIdx = *midEnd_Gep.getIdxs()[1].get();
+        unsigned int perElemSize = getPreElemSize(midEnd_Gep.getBaseTypePtr());
+        unsigned long long idx = std::stoull(arrayIdx.getName().substr(1));
+        Operand *midEnd_varIdx = BasicBlock.Func.VirRegOperandMap[idx]; // %3
+
+        // movinst
+        Operand *backEnd_mov_def = new Operand(OperandType::INT, "%" + std::to_string(BasicBlock.Func.VRegNum)); // %x
+        BasicBlock.Func.VirRegOperandMap[BasicBlock.Func.VRegNum++] = backEnd_mov_def;
+        Imm *backEnd_imm = new Imm(OperandType::INT, std::to_string(perElemSize));
+        Instruction *backEnd_mov = new Instruction( // 
+            OperCode::MOV, backEnd_imm, BasicBlock, {std::ref(*backEnd_mov_def)}, {}
+        );
+        BasicBlock.InstList.push_back(backEnd_mov);
+
+        // mul
+        Operand *backEnd_mul_def = new Operand(OperandType::INT, "%" + std::to_string(BasicBlock.Func.VRegNum)); // %3.5
+        BasicBlock.Func.VirRegOperandMap[BasicBlock.Func.VRegNum++] = backEnd_mul_def;
+
+        Instruction *backEnd_mul = new Instruction(
+            OperCode::MUL, nullptr, BasicBlock, {std::ref(*backEnd_mul_def)}, {std::ref(*midEnd_varIdx), std::ref(*backEnd_mov_def)}
+        );
+        BasicBlock.InstList.push_back(backEnd_mul);
+
+        // add
+        Operand *backEnd_adds_def = new Operand(OperandType::INT, "%" + std::to_string(BasicBlock.Func.VRegNum)); // %4
+        BasicBlock.Func.VirRegOperandMap[BasicBlock.Func.VRegNum++] = backEnd_adds_def;
+
+        Instruction *backEnd_adds = new Instruction(
+            OperCode::ADD, nullptr, BasicBlock, {std::ref(*backEnd_adds_def)}, {std::ref(*midEnd_varIdx), std::ref(*ptr->getBase())}
+        );
+        BasicBlock.InstList.push_back(backEnd_adds);
+
+        unsigned long long VirReg = std::stoull(midEnd_Gep.getName().substr(1));
+
+        MMptr *newPtr = new MMptr(ptr->getFrameObj(), ptr->getType(), VirReg, ptr->getOffset());
+        newPtr->setBase(backEnd_adds_def);
+        
+        return;
+    }
+
+    unsigned int getPreElemSize(std::shared_ptr<IR::Type> ElemType){    // 计算一个elem的size(bytes)
+        
+    }    
 };
 
 struct ArmTools::LoadMatch{
@@ -490,12 +675,22 @@ struct ArmTools::LoadMatch{
     // store #imm/rx %mmptr
     void operator()(InstArgs insts) const{
         assert(insts.size() == 1);
-        auto &midEnd_store = dynamic_cast<IR::STOREInst&>(insts.begin()->get());
+        auto &midEnd_load = dynamic_cast<IR::STOREInst&>(insts.begin()->get());
 
         // 局部变量 MMptr, 假设中端传来的是简单ptr(不带gep)
-        auto idx = std::stoull(midEnd_store.getPtr()->getName().substr(1));
+        auto idx = std::stoull(midEnd_load.getPtr()->getName().substr(1));
         MMptr *ptr = BasicBlock.Func.getLocal()->findMMptr(idx);
+        assert(ptr);
+
+        OperCode backEnd_ldrCode;
+        if(ptr->getType() == OperandType::INT) backEnd_ldrCode = OperCode::LDR;
+        else backEnd_ldrCode = OperCode::VLDR_32;
         
+        MemInstruction *backEnd_ldr = new MemInstruction(
+            backEnd_ldrCode, ptr, BasicBlock
+        );
+
+        BasicBlock.InstList.push_back(backEnd_ldr);
 
         // 全局变量 Label
 
@@ -506,6 +701,24 @@ struct ArmTools::StoreMatch{
     BB& BasicBlock;
     void operator()(InstArgs insts) const{
         assert(insts.size() == 1);
+        auto &midEnd_store = dynamic_cast<IR::STOREInst&>(insts.begin()->get());
+
+        // 局部变量 MMptr, 假设中端传来的是简单ptr(不带gep)
+        auto idx = std::stoull(midEnd_store.getPtr()->getName().substr(1));
+        MMptr *ptr = BasicBlock.Func.getLocal()->findMMptr(idx);
+        assert(ptr);
+
+        OperCode backEnd_StrCode;
+        if(ptr->getType() == OperandType::INT) backEnd_StrCode = OperCode::STR;
+        else backEnd_StrCode = OperCode::VSTR_32;
+        
+        MemInstruction *backEnd_str = new MemInstruction(
+            backEnd_StrCode, ptr, BasicBlock
+        );
+
+        BasicBlock.InstList.push_back(backEnd_str);
+
+        // 全局变量 Label
     }
 };
 
@@ -543,28 +756,28 @@ struct ArmTools::BinaryMatch{
         auto &RHS = *midEnd_binary.getRHS();
 
         // 常量拦截
-        if(typeid(LHS) == typeid(IR::CI32&) && typeid(RHS) == typeid(IR::CI32)){
+        if(typeid(LHS) == typeid(IR::ConstantInt&) && typeid(RHS) == typeid(IR::ConstantInt)){
             //转mov
-            immeIntercept(dynamic_cast<IR::CI32&>(LHS).getVal(), dynamic_cast<IR::CI32&>(RHS).getVal(), backEnd_opcode);
+            immeIntercept(dynamic_cast<IR::ConstantInt&>(LHS).getVal(), dynamic_cast<IR::ConstantInt&>(RHS).getVal(), backEnd_opcode);
             return;
         }
 
         // 一个imme
-        if(typeid(LHS) == typeid(IR::CI32&) || typeid(RHS) == typeid(IR::CI32&)){
+        if(typeid(LHS) == typeid(IR::ConstantInt&) || typeid(RHS) == typeid(IR::ConstantInt&)){
             Operand *Def = new Operand(OperandType::INT, midEnd_binary.getName());
             BasicBlock.Func.VirRegOperandMap[Def->VirReg] = Def;
 
             Operand *Use = nullptr;
             int imme;
 
-            if(typeid(LHS) == typeid(IR::CI32&)){
-                imme = dynamic_cast<IR::CI32&>(LHS).getVal();
+            if(typeid(LHS) == typeid(IR::ConstantInt&)){
+                imme = dynamic_cast<IR::ConstantInt&>(LHS).getVal();
                 
                 unsigned long long idx = std::stoull(RHS.getName().substr(1)); 
                 Use = BasicBlock.Func.VirRegOperandMap[idx];
             }
             else{
-                imme = dynamic_cast<IR::CI32&>(RHS).getVal();
+                imme = dynamic_cast<IR::ConstantInt&>(RHS).getVal();
                 
                 unsigned long long idx = std::stoull(LHS.getName().substr(1)); 
                 Use = BasicBlock.Func.VirRegOperandMap[idx];
@@ -609,13 +822,13 @@ struct ArmTools::BinaryMatch{
         auto &RHS = *midEnd_binary.getRHS();
         
         ///
-        if(typeid(LHS) == typeid(IR::CI32) && typeid(RHS) == typeid(IR::CI32)){
-            immeIntercept(dynamic_cast<IR::CI32&>(LHS).getVal(), dynamic_cast<IR::CI32&>(RHS).getVal(), OperCode::MUL);
+        if(typeid(LHS) == typeid(IR::ConstantInt) && typeid(RHS) == typeid(IR::ConstantInt)){
+            immeIntercept(dynamic_cast<IR::ConstantInt&>(LHS).getVal(), dynamic_cast<IR::ConstantInt&>(RHS).getVal(), OperCode::MUL);
             return ;
         }
 
         ///
-        if(typeid(LHS) == typeid(IR::CI32) || typeid(RHS) == typeid(IR::CI32)){
+        if(typeid(LHS) == typeid(IR::ConstantInt) || typeid(RHS) == typeid(IR::ConstantInt)){
             /// smul %def, %use, #imme
             /// 先不考虑优化
             
@@ -625,13 +838,13 @@ struct ArmTools::BinaryMatch{
 
             Operand *Use1 = nullptr;
 
-            if(typeid(LHS) == typeid(IR::CI32)){
-                imme = dynamic_cast<IR::CI32&>(LHS).getVal();
+            if(typeid(LHS) == typeid(IR::ConstantInt)){
+                imme = dynamic_cast<IR::ConstantInt&>(LHS).getVal();
                 unsigned long long idx = std::stoull(RHS.getName().substr(1));
                 Use1 = BasicBlock.Func.VirRegOperandMap[idx];
             }
             else{
-                imme = dynamic_cast<IR::CI32&>(RHS).getVal();
+                imme = dynamic_cast<IR::ConstantInt&>(RHS).getVal();
                 unsigned long long idx = std::stoull(LHS.getName().substr(1));
                 Use1 = BasicBlock.Func.VirRegOperandMap[idx];
             }
@@ -671,13 +884,13 @@ struct ArmTools::BinaryMatch{
         auto &RHS = *midEnd_binary.getRHS();
         
         ///
-        if(typeid(LHS) == typeid(IR::CI32) && typeid(RHS) == typeid(IR::CI32)){
-            immeIntercept(dynamic_cast<IR::CI32&>(LHS).getVal(), dynamic_cast<IR::CI32&>(RHS).getVal(), OperCode::DIV);
+        if(typeid(LHS) == typeid(IR::ConstantInt) && typeid(RHS) == typeid(IR::ConstantInt)){
+            immeIntercept(dynamic_cast<IR::ConstantInt&>(LHS).getVal(), dynamic_cast<IR::ConstantInt&>(RHS).getVal(), OperCode::DIV);
             return ;
         }
 
         ///
-        if(typeid(LHS) == typeid(IR::CI32) || typeid(RHS) == typeid(IR::CI32)){
+        if(typeid(LHS) == typeid(IR::ConstantInt) || typeid(RHS) == typeid(IR::ConstantInt)){
             /// sdiv %def, %use, #imme
             /// 先不考虑优化
             
@@ -688,13 +901,13 @@ struct ArmTools::BinaryMatch{
             Operand *Use_l = nullptr;
             Operand *Use_r = nullptr;
 
-            if(typeid(LHS) == typeid(IR::CI32)){
-                imme = dynamic_cast<IR::CI32&>(LHS).getVal();
+            if(typeid(LHS) == typeid(IR::ConstantInt)){
+                imme = dynamic_cast<IR::ConstantInt&>(LHS).getVal();
                 unsigned long long idx = std::stoull(RHS.getName().substr(1));
                 Use_r = BasicBlock.Func.VirRegOperandMap[idx];
             }
             else{
-                imme = dynamic_cast<IR::CI32&>(RHS).getVal();
+                imme = dynamic_cast<IR::ConstantInt&>(RHS).getVal();
                 unsigned long long idx = std::stoull(LHS.getName().substr(1));
                 Use_l = BasicBlock.Func.VirRegOperandMap[idx];
             }
@@ -739,14 +952,14 @@ struct ArmTools::BinaryMatch{
         auto &RHS = *midEnd_binary.getRHS();
 
         // 常量拦截
-        if(typeid(LHS) == typeid(IR::CF32&) && typeid(RHS) == typeid(IR::CF32)){
+        if(typeid(LHS) == typeid(IR::ConstantFloat&) && typeid(RHS) == typeid(IR::ConstantFloat)){
             //转mov
-            immeIntercept(dynamic_cast<IR::CF32&>(LHS).getVal(), dynamic_cast<IR::CF32&>(RHS).getVal(), backEnd_opcode);
+            immeIntercept(dynamic_cast<IR::ConstantFloat&>(LHS).getVal(), dynamic_cast<IR::ConstantFloat&>(RHS).getVal(), backEnd_opcode);
             return;
         }
 
         // 一个imme
-        if(typeid(LHS) == typeid(IR::CF32&) || typeid(RHS) == typeid(IR::CF32&)){
+        if(typeid(LHS) == typeid(IR::ConstantFloat&) || typeid(RHS) == typeid(IR::ConstantFloat&)){
             Operand *Def = new Operand(OperandType::FLOAT, midEnd_binary.getName());
             BasicBlock.Func.VirRegOperandMap[Def->VirReg] = Def;
 
@@ -754,15 +967,15 @@ struct ArmTools::BinaryMatch{
             bool is_lval = false; // Use is_lval or not
             float imme;
 
-            if(typeid(LHS) == typeid(IR::CF32&)){
-                imme = dynamic_cast<IR::CF32&>(LHS).getVal();
+            if(typeid(LHS) == typeid(IR::ConstantFloat&)){
+                imme = dynamic_cast<IR::ConstantFloat&>(LHS).getVal();
                 is_lval = true;
 
                 unsigned long long idx = std::stoull(RHS.getName().substr(1)); 
                 Use = BasicBlock.Func.VirRegOperandMap[idx];
             }
             else{
-                imme = dynamic_cast<IR::CF32&>(RHS).getVal();
+                imme = dynamic_cast<IR::ConstantFloat&>(RHS).getVal();
                 
                 unsigned long long idx = std::stoull(LHS.getName().substr(1)); 
                 Use = BasicBlock.Func.VirRegOperandMap[idx];
@@ -813,9 +1026,9 @@ struct ArmTools::BinaryMatch{
         auto &RHS = *midEnd_binary.getRHS();
 
         // 常量拦截
-        if(typeid(LHS) == typeid(IR::CI32&) && typeid(RHS) == typeid(IR::CI32)){
+        if(typeid(LHS) == typeid(IR::ConstantInt&) && typeid(RHS) == typeid(IR::ConstantInt)){
             //转mov
-            int imme = dynamic_cast<IR::CI32&>(LHS).getVal() % dynamic_cast<IR::CI32&>(RHS).getVal();
+            int imme = dynamic_cast<IR::ConstantInt&>(LHS).getVal() % dynamic_cast<IR::ConstantInt&>(RHS).getVal();
             immeMatch(imme, BasicBlock.Func.VRegNum);
             return;
         }
@@ -827,14 +1040,14 @@ struct ArmTools::BinaryMatch{
 
         Operand *Use_sdiv_l = nullptr;
         Operand *Use_sdiv_r = nullptr;
-        if(typeid(LHS) == typeid(IR::CI32&)){
-            immeMatch(dynamic_cast<IR::CI32&>(LHS).getVal(), BasicBlock.Func.VRegNum);
+        if(typeid(LHS) == typeid(IR::ConstantInt&)){
+            immeMatch(dynamic_cast<IR::ConstantInt&>(LHS).getVal(), BasicBlock.Func.VRegNum);
             Use_sdiv_l = BasicBlock.Func.VirRegOperandMap[BasicBlock.Func.VRegNum];
             unsigned long long idx_r = std::stoull(RHS.getName().substr(1));
             Use_sdiv_r = BasicBlock.Func.VirRegOperandMap[idx_r];
         }
-        else if(typeid(RHS) == typeid(IR::CI32)){
-            immeMatch(dynamic_cast<IR::CI32&>(RHS).getVal(), BasicBlock.Func.VRegNum);
+        else if(typeid(RHS) == typeid(IR::ConstantInt)){
+            immeMatch(dynamic_cast<IR::ConstantInt&>(RHS).getVal(), BasicBlock.Func.VRegNum);
             Use_sdiv_r = BasicBlock.Func.VirRegOperandMap[BasicBlock.Func.VRegNum];
             unsigned long long idx_l = std::stoull(LHS.getName().substr(1));
             Use_sdiv_l = BasicBlock.Func.VirRegOperandMap[idx_l];
@@ -880,9 +1093,9 @@ struct ArmTools::BinaryMatch{
         auto &RHS = *midEnd_binary.getRHS();
 
         // 常量拦截
-        if(typeid(LHS) == typeid(IR::CF32&) && typeid(RHS) == typeid(IR::CF32)){
-            float lval = dynamic_cast<IR::CF32&>(LHS).getVal();
-            float rval = dynamic_cast<IR::CF32&>(RHS).getVal();
+        if(typeid(LHS) == typeid(IR::ConstantFloat&) && typeid(RHS) == typeid(IR::ConstantFloat)){
+            float lval = dynamic_cast<IR::ConstantFloat&>(LHS).getVal();
+            float rval = dynamic_cast<IR::ConstantFloat&>(RHS).getVal();
 
             float imme = lval - (lval / rval) * rval; 
             immeMatch(imme, BasicBlock.Func.VRegNum);
@@ -896,14 +1109,14 @@ struct ArmTools::BinaryMatch{
 
         Operand *Use_sdiv_l = nullptr;
         Operand *Use_sdiv_r = nullptr;
-        if(typeid(LHS) == typeid(IR::CF32&)){
-            immeMatch(dynamic_cast<IR::CF32&>(LHS).getVal(), BasicBlock.Func.VRegNum);
+        if(typeid(LHS) == typeid(IR::ConstantFloat&)){
+            immeMatch(dynamic_cast<IR::ConstantFloat&>(LHS).getVal(), BasicBlock.Func.VRegNum);
             Use_sdiv_l = BasicBlock.Func.VirRegOperandMap[BasicBlock.Func.VRegNum];
             unsigned long long idx_r = std::stoull(RHS.getName().substr(1));
             Use_sdiv_r = BasicBlock.Func.VirRegOperandMap[idx_r];
         }
-        else if(typeid(RHS) == typeid(IR::CF32)){
-            immeMatch(dynamic_cast<IR::CF32&>(RHS).getVal(), BasicBlock.Func.VRegNum);
+        else if(typeid(RHS) == typeid(IR::ConstantFloat)){
+            immeMatch(dynamic_cast<IR::ConstantFloat&>(RHS).getVal(), BasicBlock.Func.VRegNum);
             Use_sdiv_r = BasicBlock.Func.VirRegOperandMap[BasicBlock.Func.VRegNum];
             unsigned long long idx_l = std::stoull(LHS.getName().substr(1));
             Use_sdiv_l = BasicBlock.Func.VirRegOperandMap[idx_l];

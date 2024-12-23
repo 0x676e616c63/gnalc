@@ -15,7 +15,8 @@ namespace ArmStruct{
     class Function;     // 各个Func的信息，包括指令链，开栈，需要维护冲突图
     class SubFrame;
     class FrameObj;
-    
+    class ArrayObj;
+
     class BB;
     class Terminator; // dddd
     std::map<std::string, BB&> BBLabelMap;
@@ -138,6 +139,12 @@ namespace ArmTools{
     struct GepMatch{
         BB& BasicBlock;
         void operator()(InstArgs);
+        void StaticBaseConstOffset(MMptr*, IR::GEPInst&);
+        void StaticBaseVarOffset(MMptr*, IR::GEPInst&);
+        void DynamicBaseConstOffset(MMptr*, IR::GEPInst&);
+        void DynamicBaseVarOffset(MMptr*, IR::GEPInst&);
+
+        unsigned int getPreElemSize(std::shared_ptr<IR::Type> ElemType);
     };
     
     struct FPTOSIMatch{

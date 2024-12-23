@@ -52,7 +52,8 @@
         "set": "cpp",
         "unordered_set": "cpp",
         "cinttypes": "cpp",
-        "fstream": "cpp"
+        "fstream": "cpp",
+        "variant": "cpp"
     },
     "C_Cpp.codeAnalysis.clangTidy.checks.disabled": [
         "clang-diagnostic-error",

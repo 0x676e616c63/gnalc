@@ -10,12 +10,16 @@ using namespace ArmTools;
 ///@todo 还差三个类的构造函数
 Imm::Imm(OperandType type, std::string data): data_type(type), data(data){}
 
-MMptr::MMptr(){
-    this->space = nullptr; // 仅仅是一个表示需要溢出的标志, 具体的内存空间在FrameObj过程中指定
-    ///@warning space成员如果能重载为FPU寄存器, 结合FPU占用表, 即可实现溢出至FPU寄存器
+MMptr::MMptr(FrameObj* space, OperandType type, unsigned long long idx): space(space), ptrType(type), VirReg(idx){
+    space->getFather()->insertMMptr(VirReg, this);  // 入表
 }
 
-MMptr::MMptr(std::string spBiase){
+MMptr::MMptr(FrameObj* loc, OperandType type, unsigned long long idx, unsigned int off)
+    : space(loc), ptrType(type), VirReg(idx), offset(off){
+    space->getFather()->insertMMptr(VirReg, this);  // 入表
+};
+
+MMptr::MMptr(std::string spBiase){  // 疑似没用
     ///@brief for spill args
     this->data = spBiase;
 }
@@ -28,6 +32,8 @@ Operand::Operand(OperandType type, std::string midEnd_VirReg){
 }
 
 Operand::Operand(OperandType type, unsigned int color): ValType(type), color(color){};
+
+
 
 Operand::Operand(Operand& other) :
     ValType(other.ValType),

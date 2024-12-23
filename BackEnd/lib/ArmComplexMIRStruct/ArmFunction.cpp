@@ -20,8 +20,23 @@ FrameObj::FrameObj(SubFrame *Father, OperandType type, unsigned int size, unsign
     father(Father), type(type), ObjSize(size), VirPtr(idx) {
         father->insertObj(VirPtr, this);
         // idx不只是FrameObj的编号, 也是MMptr的编号
-        MMptr *ptr = new MMptr(type, idx);
+        MMptr *ptr = new MMptr(this, type, idx);
         father->insertMMptr(idx, ptr);
+}
+
+ArrayObj::ArrayObj(SubFrame* father, OperandType elementType, unsigned long long VirPtr, std::vector<unsigned long long> dims):
+    FrameObj(father, elementType, 0, VirPtr){
+        unsigned int singleElemSize = 4; // to be continued...
+
+        unsigned int totalObjSize = 0;
+        for(unsigned int size : dims){
+            arrayDims.push_back(size);
+            totalObjSize += size * singleElemSize;
+        }
+        setSize(totalObjSize);
+        
+        MMptr *ArrayPtr = new MMptr(this, elementType, VirPtr);
+        father->insertMMptr(VirPtr, ArrayPtr);
 }
 
 Function::Function(IR::Function& midEnd_function){
@@ -30,7 +45,7 @@ Function::Function(IR::Function& midEnd_function){
     this->VRegNum = midEnd_function.getVRegNum();
 
     ///@brief fill VirMap and link instructions
-    std::vector<IR::BasicBlock*>& bbs = midEnd_function.getBlocks();
+    std::vector<std::shared_ptr<IR::BasicBlock>>& bbs = midEnd_function.getBlocks();
 
     for(auto bb_it = bbs.begin(); bb_it != bbs.end(); ++bb_it){
         auto &midEnd_BB = **bb_it;
