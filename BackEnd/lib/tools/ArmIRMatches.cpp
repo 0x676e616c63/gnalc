@@ -136,6 +136,40 @@ struct ArmTools::MovtwMatch{
 
 };
 
+struct ArmTools::RetMatch{
+    BB& BasicBlock;
+    /// @note 生成一个 mov r0 %... 或者 vmov.f32 s0, %...
+    void operator()(InstArgs insts){
+        assert(insts.size() == 1);
+
+        IR::RETInst &midEnd_ret = dynamic_cast<IR::RETInst&>(insts.begin()->get());
+
+        Instruction *backEnd_ret_mov = nullptr;
+
+        unsigned long long idx = std::stoull(midEnd_ret.getRetVal().get()->getName().substr(1));
+        Operand *backEnd_ret_use = BasicBlock.Func.VirRegOperandMap[idx];
+        Operand *backEnd_ret_register = nullptr;
+
+        if(midEnd_ret.getRetType() == IR::IRBTYPE::I32){
+            backEnd_ret_register = new Operand(OperandType::INT, CoreRegisterName::r0);
+
+            backEnd_ret_mov = new Instruction(
+                OperCode::MOV, nullptr, BasicBlock, {std::ref(*backEnd_ret_register)}, {std::ref(*backEnd_ret_use)}
+            );
+        }
+        else{
+            backEnd_ret_register = new Operand(OperandType::FLOAT, ExtensionRegisterName::s0);
+            
+            backEnd_ret_mov = new Instruction(
+                OperCode::VMOV_F32, nullptr, BasicBlock, {std::ref(*backEnd_ret_register)}, {std::ref(*backEnd_ret_use)}
+            );
+        }
+        BasicBlock.InstList.push_back(backEnd_ret_mov);
+
+        return;
+    }
+};
+
 struct ArmTools::UnaryMatch{
     /// @note 仅Fneg使用
     BB& BasicBlock;
@@ -414,7 +448,7 @@ struct ArmTools::CallMatch{
 
         BasicBlock.Func.setParamSize(std::max(BasicBlock.Func.getParamSize(), (cnt - 4)*4));
 
-        ///@brief arm后端bl语句
+        ///@brief 后端bl语句
         Imm *backEnd_callee = new Imm(
             OperandType::LABEL, midEnd_call.getFuncName()
         );
@@ -422,7 +456,29 @@ struct ArmTools::CallMatch{
         Instruction *backEnd_bl = new Instruction(
             OperCode::BL, backEnd_callee, BasicBlock, {}, {}
         );
-
+        ///@brief 保存返回值
+        if(!midEnd_call.isVoid()){
+            Operand *Def = nullptr;
+            Instruction *backEnd_retVal = nullptr;
+            if(midEnd_call.getType() == IR::IRBTYPE::I32){
+                Def = new Operand(OperandType::INT, midEnd_call.getName());
+                Operand *Use = new Operand(OperandType::INT, CoreRegisterName::r0);
+                
+                backEnd_retVal = new Instruction(
+                    OperCode::MOV, nullptr, BasicBlock, {std::ref(*Def)}, {std::ref(*Use)}
+                );
+            }
+            else{
+                Def = new Operand(OperandType::FLOAT, midEnd_call.getName());
+                Operand *Use = new Operand(OperandType::FLOAT, ExtensionRegisterName::s0);
+                
+                backEnd_retVal = new Instruction(
+                    OperCode::MOV, nullptr, BasicBlock, {std::ref(*Def)}, {std::ref(*Use)}
+                );
+            }
+            BasicBlock.Func.VirRegOperandMap[Def->VirReg] = Def;
+            BasicBlock.InstList.push_back(backEnd_retVal);
+        }
         ///@brief 寄存器恢复指令(冗余)
         for(int i = 0; i < 4; ++i){
             ///@brief mov rx, %temp

@@ -44,7 +44,7 @@ class ArmStruct::BB{
 
         typedef std::initializer_list<std::reference_wrapper<IR::Instruction>> InstArgs;
         
-        void ParseInsts();// 差一个中端的参数(list or vector)
+        void ParseInsts(const std::list<std::shared_ptr<IR::Instruction>>);// 差一个中端的参数(list or vector)
 
         // Terminator& Terminator;
         std::string label;

@@ -55,8 +55,6 @@ namespace ArmTools{
     struct HashOperandReferWrapEqual;
     struct HashInstReferWrap;
     struct HashInstReferWrapEqual;
-    struct HashFrameObj;
-    struct HashFrameObjEqual;
 
     class LabelTable; // 用于查找标签
 
@@ -84,6 +82,11 @@ namespace ArmTools{
         void operator()(int, unsigned long long &temo_virReg) ;  
         bool isImmCanBeEncodedInText(unsigned long long imme);
         bool isImmCanBeEncodedInText(float imme);
+    };
+
+    struct RetMatch{
+        BB& BasicBlock;
+        void operator()(InstArgs);
     };
 
     struct BinaryMatch{

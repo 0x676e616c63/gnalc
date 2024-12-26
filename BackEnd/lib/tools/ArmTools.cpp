@@ -40,13 +40,4 @@ size_t HashInstReferWrap::operator()(const std::reference_wrapper<ArmStruct::Ins
 bool HashInstReferWrapEqual::operator()(const std::reference_wrapper<ArmStruct::Instruction>& a, const std::reference_wrapper<ArmStruct::Instruction>& b) const {
     return a.get().id == b.get().id;
 }
-
-size_t HashFrameObj::operator()(const std::reference_wrapper<ArmStruct::FrameObj>& ref) const {
-    return std::hash<int>()(ref.get().offset);
-}
-
-bool HashFrameObjEqual::operator()(const std::reference_wrapper<ArmStruct::FrameObj>& a, const std::reference_wrapper<ArmStruct::FrameObj>& b) const {
-    return a.get().offset == b.get().offset;
-}
-
 };

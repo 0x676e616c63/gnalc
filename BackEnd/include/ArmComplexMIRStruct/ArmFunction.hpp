@@ -26,6 +26,7 @@ class ArmStruct::FrameObj{
         unsigned int getSize(){return ObjSize;}
 
         void setOffset(unsigned int off){offset = off;}
+        unsigned int getOffset(){return offset;}
     private:
         unsigned int offset; // 和栈顶的偏移, 由SubFrame分配
         
@@ -65,7 +66,12 @@ class ArmStruct::SubFrame{
         unsigned int getSize(); // bytes
         unsigned int getObjCnt(){return VirPtrFrameObjMap.size();};
 
+        void setOffset(unsigned int off){offset = off;};
+        unsigned int getOffset();
+
     private:
+        unsigned int offset = 0;
+
         std::map<unsigned long long, MMptr*>VirPtrOffsetMap; // 做一个对象池
         std::map<unsigned long long, FrameObj*>VirPtrFrameObjMap; // 
 };
@@ -101,7 +107,11 @@ class ArmStruct::Function{
         unsigned int getParamSize(){return params_size;}
         void setParamSize(unsigned int size){params_size = size;}
 
+        unsigned int getStackSize(){return StackSize;};
+
     private:
+        unsigned int StackSize = 0;
+
         SubFrame *local;
         SubFrame *temp;
         unsigned int params_size = 0;

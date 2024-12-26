@@ -12,8 +12,6 @@
 
 using namespace ArmStruct;
 using namespace ArmTools;
-using FrameObjRefHash = std::unordered_set<std::reference_wrapper<ArmStruct::FrameObj>&, ArmTools::HashFrameObj, ArmTools::HashFrameObjEqual>;
-using FrameObjRefHashPtr = std::unique_ptr<std::unordered_set<std::reference_wrapper<ArmStruct::FrameObj>&, ArmTools::HashFrameObj, ArmTools::HashFrameObjEqual>>;
 ///@todo 差构造函数
 
 FrameObj::FrameObj(SubFrame *Father, OperandType type, unsigned int size, unsigned long long idx):
@@ -99,24 +97,14 @@ Function::Function(IR::Function& midEnd_function){
     /// @note 现在没有SSA了, 只能做窥孔优化
 }
 
-
-unsigned int SubFrame::getSize(){
-    unsigned int totalSize = 0;
-    for(auto it = VirPtrFrameObjMap.begin(); it != VirPtrFrameObjMap.end(); ++it){
-        totalSize += (*it).second->getSize();
-    }
-    return totalSize;
+void Function::MkFrameFinal(){
+    StackSize += local->getSize();
+    StackSize += temp->getSize();
+    temp->setOffset(0);
+    local->setOffset(temp->getSize());
 }
 
-
-void Function::TerminatorPredict(){
-    ///@todo 假设由中端传来的BB组织为一张复杂图
-    ///@todo 一个结点的入度和出度最大为2
-    ///@todo 需要将这个图转换为普通链表
-
-    ///@note 由于前端使用访问者模式划分BB, 并且这个学期还没有针对IR做优化
-    ///@note 所以传入的BB, 本身就是链式的, 这个接口可以暂时省略
-}
+// void Function::TerminatorPredict();
 
 std::string& Function::toString(){
     for(auto it = BBList.begin(); it != BBList.end(); ++it){
@@ -129,4 +117,12 @@ std::string& Function::toString(){
         }
     }
     return str;
+}
+
+unsigned int SubFrame::getSize(){
+    unsigned int totalSize = 0;
+    for(auto it = VirPtrFrameObjMap.begin(); it != VirPtrFrameObjMap.end(); ++it){
+        totalSize += (*it).second->getSize();
+    }
+    return totalSize;
 }

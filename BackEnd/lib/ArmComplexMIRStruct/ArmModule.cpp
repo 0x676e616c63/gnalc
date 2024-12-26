@@ -4,6 +4,7 @@
 #include "../../include/ArmComplexMIRStruct/ArmFunction.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmModule.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmOperand.hpp"
+#include "../../include/ArmComplexMIRStruct/ArmInstruction.hpp"
 #include "../../include/tools/ArmRegisterAlloc.hpp"
 #include "../../Arm.hpp"
 
@@ -47,14 +48,57 @@ Module::~Module(){
 
 void Module::Legalize(){
 
-    /// @todo 
-
     for(auto func_it = this->FunctionList.begin(); func_it != FunctionList.end(); ++func_it){
-        auto& func = **func_it;
+        Function& func = **func_it;
         
+        func.MkFrameFinal();
 
+        BB& BB_head = **(func.BBList.begin());
+        BB& BB_tail = *(func.BBList.back());
+
+        Operand *backEnd_r7 = new Operand(OperandType::INT, CoreRegisterName::r7);
+        Operand *backEnd_sp = new Operand(OperandType::INT, CoreRegisterName::sp);
+        Operand *backEnd_lr = new Operand(OperandType::INT, CoreRegisterName::lr);
+        Operand *backEnd_pc = new Operand(OperandType::INT, CoreRegisterName::pc);
+        Imm *backEnd_0 = new Imm(OperandType::INT, "0");
+        Imm *backEnd_stackSize = new Imm(OperandType::INT, std::to_string(func.getStackSize()));
+
+        // push {r7, lr}; sub sp, sp, #imm; add r7, sp, #0;
+        Instruction *backEnd_add_1 = new Instruction(
+            OperCode::ADD, backEnd_0, BB_head, {std::ref(*backEnd_r7)}, {std::ref(*backEnd_sp)}
+        );
+        BB_head.InstList.insert(BB_head.InstList.begin(), backEnd_add_1);
+
+        Instruction *backEnd_sub = new Instruction(
+            OperCode::SUB, backEnd_stackSize, BB_head, {std::ref(*backEnd_sp)}, {std::ref(*backEnd_sp)}
+        );
+        BB_head.InstList.insert(BB_head.InstList.begin(), backEnd_sub);
         
+        Instruction *backEnd_push = new Instruction(
+            OperCode::SUB, backEnd_stackSize, BB_head, {}, {std::ref(*backEnd_r7), std::ref(*backEnd_lr)}
+        );
+        BB_head.InstList.insert(BB_head.InstList.begin(), backEnd_push);
+        
+        // add r7, r7, #imm; mov sp, r7; pop {r7, pc}
+        Instruction *backEnd_add_2 = new Instruction(
+            OperCode::ADD, backEnd_stackSize
+            , BB_tail, {std::ref(*backEnd_r7)}, {std::ref(*backEnd_r7)}
+        );
+        BB_tail.InstList.insert(BB_tail.InstList.end(), backEnd_add_2);
+
+        Instruction *backEnd_mov = new Instruction(
+            OperCode::ADD, backEnd_stackSize
+            , BB_tail, {std::ref(*backEnd_sp)}, {std::ref(*backEnd_r7)}
+        );
+        BB_tail.InstList.insert(BB_tail.InstList.end(), backEnd_mov);        
+        
+        Instruction *backEnd_pop = new Instruction(
+            OperCode::ADD, backEnd_stackSize
+            , BB_tail, {}, {std::ref(*backEnd_r7), std::ref(*backEnd_pc)}
+        );
+        BB_tail.InstList.insert(BB_tail.InstList.end(), backEnd_pop);
     }
+    return;
 }
 
 void Module::AddFunction(Function* func){

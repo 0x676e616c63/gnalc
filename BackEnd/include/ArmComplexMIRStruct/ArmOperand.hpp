@@ -20,7 +20,7 @@ class ArmStruct::Operand{
         Operand(OperandType, std::string);
         Operand(Operand&);
         ~Operand()=default;
-        virtual std::string& toString();
+        virtual std::string toString();
         bool operator==(ArmStruct::Operand&);
         bool operator!=(ArmStruct::Operand&);
 
@@ -49,7 +49,7 @@ class ArmStruct::Imm{
         ~Imm()=default;
         OperandType data_type;
         std::string data; // data or label 在创建对象时处理
-        virtual std::string& toString();
+        virtual std::string toString();
 
 };
 class ArmStruct::MMptr : public ArmStruct::Imm{
@@ -74,7 +74,7 @@ class ArmStruct::MMptr : public ArmStruct::Imm{
 
         bool isStatic(){return baseVirReg == nullptr;};
 
-        std::string& toString() final;
+        std::string toString() final;
 
     private:
         OperandType ptrType;    // int bool float ...
@@ -89,7 +89,7 @@ class ArmStruct::Global : public ArmStruct::Imm{
         Global();
         ~Global()=default;
         std::string GlobalId;
-        virtual std::string& toString();
+        virtual std::string toString();
 };
 
 class ArmStruct::Bss : public ArmStruct::Global{
@@ -98,6 +98,6 @@ class ArmStruct::Bss : public ArmStruct::Global{
         ~Bss()=default;
         bool isAlign = true;
         unsigned int ValSize;
-        std::string& toString();
+        std::string toString();
 };
 #endif

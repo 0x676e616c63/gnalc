@@ -68,7 +68,7 @@ bool Operand::operator!=(Operand& oper){
     return this->VirReg != oper.VirReg;
 }
 
-std::string& Operand::toString(){
+std::string Operand::toString(){
     // 先这么写
     if(this->ValType == OperandType::INT){
         str += CoreRegisterMap[(CoreRegisterName)this->color];
@@ -79,20 +79,32 @@ std::string& Operand::toString(){
     return str;
 }
 
-std::string& Imm::toString(){
+std::string Imm::toString(){
     return this->data;
 }
 
-// std::string& MMptr::toString() {
-//     if(!data.empty()) return this->data; 
+std::string MMptr::toString() {
+    data += "[";
     
-//     this->data += '[';
-//     this->data += CoreRegisterMap[this->space->baseReg] + ", ";
-//     this->data += "#" + std::to_string(this->space->offset) + "]";
-//     return this->data;
-// }
+    unsigned int SubFrameOffset = this->getFrameObj()->getFather()->getOffset();
+    unsigned int ObjOffset = this->getFrameObj()->getOffset();
+    unsigned int PtrOffset = this->getOffset();
 
-std::string& Global::toString(){
+    unsigned int AbusoluteOffset = SubFrameOffset + ObjOffset + PtrOffset;
+    if(baseVirReg == nullptr){
+        data += "sp, #";
+        data += std::to_string(AbusoluteOffset); // 这里不考虑imm过大的情况
+    }
+    else{
+        data += baseVirReg->toString() + ", #";
+        data += std::to_string(AbusoluteOffset);
+    }
+
+    data += "]";
+    return data;
+}
+
+std::string Global::toString(){
     this->data += '=';
     this->data += GlobalId;
     return data;
