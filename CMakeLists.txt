@@ -14,12 +14,16 @@ endif()
 
 include_directories(include)
 
+include_directories(BackEnd/include)
+
 aux_source_directory(lib/ir GNALC_IR_SRC)
 aux_source_directory(lib/ir/instructions GNALC_IR_SRC)
 aux_source_directory(lib/lexer GNALC_LEXER_SRC)
 aux_source_directory(lib/opt GNALC_OPT_SRC)
 aux_source_directory(lib/parser GNALC_PARSER_SRC)
 aux_source_directory(lib/utils GNALC_UTILS_SRC)
+
+aux_source_directory(BackEnd/lib GNALC_BACKEND_SRC)
 
 add_executable(printast
         debug/printast.cpp
@@ -30,3 +34,5 @@ add_executable(printast
 add_executable(irgen debug/irgen.cpp ${GNALC_PARSER_SRC} ${GNALC_IR_SRC} ${GNALC_LEXER_SRC} ${GNALC_UTILS_SRC})
 
 add_executable(printir debug/irprintertest.cpp lib/irvisitors/irprinter.cpp ${GNALC_IR_SRC} ${GNALC_UTILS_SRC})
+
+add_executable(asmgen debug/irgen.cpp ${GNALC_PARSER_SRC} ${GNALC_IR_SRC} ${GNALC_LEXER_SRC} ${GNALC_UTILS_SRC} ${GNALC_BACKEND_SRC})
