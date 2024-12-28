@@ -27,6 +27,6 @@ add_executable(printast
         lib/lexer/lexer.cpp
         lib/parser/ast_printer.cpp)
 
-add_executable(irgen debug/irgen.cpp ${GNALC_PARSER_SRC} ${GNALC_IR_SRC} ${GNALC_LEXER_SRC} ${GNALC_UTILS_SRC})
+add_executable(irgen debug/irgen.cpp lib/irvisitors/irprinter.cpp ${GNALC_PARSER_SRC} ${GNALC_IR_SRC} ${GNALC_LEXER_SRC} ${GNALC_UTILS_SRC})
 
 add_executable(printir debug/irprintertest.cpp lib/irvisitors/irprinter.cpp ${GNALC_IR_SRC} ${GNALC_UTILS_SRC})

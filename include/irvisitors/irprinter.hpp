@@ -6,33 +6,39 @@
 #ifndef GNALC_IRVISITORS_IRPRINTER_HPP
 #define GNALC_IRVISITORS_IRPRINTER_HPP
 
+#include "../utils/exception.hpp"
 #include "../ir/visitor.hpp"
 #include <iostream>
 #include <fstream>
 
-namespace IR {
-
+namespace IR
+{
 class IRFormatter;
 
 // 线性IR打印（未划分基本块）
 class LIRPrinter : public IRVisitor {
 private:
-    std::ofstream outFile;
-    void write(const std::string& str);
-    void writeln(const std::string& str);
+    std::ostream& outStream;
+
+    template <typename T>
+    void write(T&& obj) {
+        outStream << obj;
+    }
+
+    template <typename T>
+    void writeln(T&& obj) {
+        outStream << obj << std::endl;
+    }
+
 public:
-    LIRPrinter(const std::string& filename);
+    explicit LIRPrinter(std::ostream& out);
     ~LIRPrinter();
 
     void printout(Module& module);
 
-    // virtual void visit(Module& node) override;
-    virtual void visit(GlobalVariable& node) override;
-    virtual void visit(Function& node) override;
-    virtual void visit(Instruction& node) override;
-    // virtual void visit(ConstantInt& node) override;
-    // virtual void visit(ConstantFloat& node) override;
-
+    void visit(GlobalVariable& node) override;
+    void visit(Function& node) override;
+    void visit(Instruction& node) override;
 };
 
 class IRPrinter : public IRVisitor {
@@ -58,6 +64,7 @@ public:
     static std::string formatFunc(Function& func); // define dso_local void @fu(i32 noundef %a, i32 noundef %b)
     static std::string formatGV(GlobalVariable& gv);
     static std::string formatInst(Instruction& inst);
+
 private:
     // 以下私有函数仅供formatInst调用
     static std::string fBinaryInst(BinaryInst& inst);
@@ -77,8 +84,6 @@ private:
 
     static std::string fHELPERInst(HELPERInst& inst);
 };
-
-
 }
 
 

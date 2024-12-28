@@ -37,10 +37,17 @@ public:
     const auto& getIniterType() const;
     bool isZero() const;
     bool isArray() const;
-    auto& getConstVal(); // 此处暂时先用非const的引用传递
-    std::vector<GVIniter>& getInnerIniter(); // 此处暂时先用非const的引用传递
 
-    std::string toString();
+    auto& getConstVal(); // 此处暂时先用非const的引用传递
+    const auto& getConstVal() const;
+
+    // std::vector<GVIniter>& getInnerIniter(); // 此处暂时先用非const的引用传递
+
+    GVIniter& addIniter(std::shared_ptr<Type> _ty, std::shared_ptr<Value> _con);
+
+    GVIniter& addIniter(std::shared_ptr<Type> _ty);
+
+    std::string toString() const;
 
     friend class GlobalVariable;
     ~GVIniter();

@@ -28,7 +28,9 @@ int main(int argc, char* argv[]) {
 
     testConstPool();
 
-    IR::LIRPrinter printer(output_file);
+    std::ofstream out(output_file);
+    Err::gassert(out.is_open(), "Invalid File");
+    IR::LIRPrinter printer(out);
 
     IR::Module module = std::move(irgenfortest());
     printer.printout(module);

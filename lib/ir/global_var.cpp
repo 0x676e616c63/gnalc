@@ -32,8 +32,22 @@ namespace IR
         return constval;
     }
 
-    std::vector<GVIniter>& GVIniter::getInnerIniter() {
-        return inner_initer;
+    const auto& GVIniter::getConstVal() const {
+        return constval;
+    }
+
+    GVIniter& GVIniter::addIniter(std::shared_ptr<Type> _ty, std::shared_ptr<Value> _con) {
+        Err::gassert(isArray());
+        is_zero = false;
+        inner_initer.emplace_back(std::move(_ty), std::move(_con));
+        return inner_initer.back();
+    }
+
+    GVIniter& GVIniter::addIniter(std::shared_ptr<Type> _ty) {
+        Err::gassert(isArray());
+        is_zero = false;
+        inner_initer.emplace_back(std::move(_ty));
+        return inner_initer.back();
     }
 
     GVIniter::~GVIniter() {}
@@ -64,7 +78,7 @@ namespace IR
 
     // void GlobalVariable::accept(IRVisitor& visitor) override { visitor.visit(*this); }
 
-std::string GVIniter::toString() {
+std::string GVIniter::toString() const {
     std::string ret;
 
     #if ENABLE_GVINITER_TOSTRING
@@ -74,9 +88,9 @@ std::string GVIniter::toString() {
             ret += " zeroinitializer";
         } else {
             ret += " [";
-            for (auto it = getInnerIniter().begin(); it != getInnerIniter().end(); it++) {
+            for (auto it = inner_initer.begin(); it != inner_initer.end(); it++) {
                 ret += it->toString();
-                if (std::next(it) != getInnerIniter().end()) {
+                if (std::next(it) != inner_initer.end()) {
                     ret += ", ";
                 }
             }

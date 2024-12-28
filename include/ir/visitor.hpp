@@ -20,41 +20,41 @@
 #include "instructions/memory.hpp"
 #include "instructions/phi.hpp"
 
-namespace IR {
-    class IRVisitor {
+namespace IR
+{
+class IRVisitor {
 public:
     // virtual void visit(example& node) {}
-    virtual void visit(Module& node) {}
-    virtual void visit(GlobalVariable& node) {}
-    virtual void visit(Function& node) {}
-    virtual void visit(BasicBlock& node) {}
-    virtual void visit(Instruction& node) {}
-    virtual void visit(ConstantInt& node) {}
-    virtual void visit(ConstantFloat& node) {}
-    virtual void visit(BinaryInst& node) {}
-    virtual void visit(FNEGInst& node) {}
-    virtual void visit(ICMPInst& node) {}
-    virtual void visit(FCMPInst& node) {}
-    virtual void visit(RETInst& node) {}
-    virtual void visit(BRInst& node) {}
-    virtual void visit(CALLInst& node) {}
-    virtual void visit(FPTOSIInst& node) {}
-    virtual void visit(SITOFPInst& node) {}
-    virtual void visit(IFBEntry& node) {}
-    virtual void visit(IFBEnd& node) {}
-    virtual void visit(ELSEBEntry& node) {}
-    virtual void visit(ELSEBEnd& node) {}
-    virtual void visit(WHILEBEntry& node) {}
-    virtual void visit(WHILEBEnd& node) {}
-    virtual void visit(ALLOCAInst& node) {}
-    virtual void visit(LOADInst& node) {}
-    virtual void visit(STOREInst& node) {}
-    virtual void visit(GEPInst& node) {}
-    virtual void visit(PHIInst& node) {}
+    virtual void visit(Module& node) { Err::unreachable(); }
+    virtual void visit(GlobalVariable& node) { Err::unreachable(); }
+    virtual void visit(Function& node) { Err::unreachable(); }
+    virtual void visit(BasicBlock& node) { Err::unreachable(); }
+    virtual void visit(Instruction& node) { Err::unreachable(); }
+    virtual void visit(ConstantInt& node) { Err::unreachable(); }
+    virtual void visit(ConstantFloat& node) { Err::unreachable(); }
+    virtual void visit(BinaryInst& node) { Err::unreachable(); }
+    virtual void visit(FNEGInst& node) { Err::unreachable(); }
+    virtual void visit(ICMPInst& node) { Err::unreachable(); }
+    virtual void visit(FCMPInst& node) { Err::unreachable(); }
+    virtual void visit(RETInst& node) { Err::unreachable(); }
+    virtual void visit(BRInst& node) { Err::unreachable(); }
+    virtual void visit(CALLInst& node) { Err::unreachable(); }
+    virtual void visit(FPTOSIInst& node) { Err::unreachable(); }
+    virtual void visit(SITOFPInst& node) { Err::unreachable(); }
+    virtual void visit(IFBEntry& node) { Err::unreachable(); }
+    virtual void visit(IFBEnd& node) { Err::unreachable(); }
+    virtual void visit(ELSEBEntry& node) { Err::unreachable(); }
+    virtual void visit(ELSEBEnd& node) { Err::unreachable(); }
+    virtual void visit(WHILEBEntry& node) { Err::unreachable(); }
+    virtual void visit(WHILEBEnd& node) { Err::unreachable(); }
+    virtual void visit(ALLOCAInst& node) { Err::unreachable(); }
+    virtual void visit(LOADInst& node) { Err::unreachable(); }
+    virtual void visit(STOREInst& node) { Err::unreachable(); }
+    virtual void visit(GEPInst& node) { Err::unreachable(); }
+    virtual void visit(PHIInst& node) { Err::unreachable(); }
 
     virtual ~IRVisitor() = default;
 };
-
 }
 
 #endif

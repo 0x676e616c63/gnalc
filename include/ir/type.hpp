@@ -20,7 +20,6 @@ enum class IRBTYPE {
     I32,
     FLOAT,
     VOID,
-    PTR, // 此处仅为方便Value返回自己的类型，PTR类型实际上应当是IRCTYPE::PTR
     UNDEFINED
 };
 
@@ -33,6 +32,23 @@ enum class IRCTYPE {
     ARRAY
 };
 
+inline size_t getBytes(IRBTYPE type) {
+    switch (type)
+    {
+    case IRBTYPE::I1:
+        Err::todo("I1 should return 1?");
+        return 1;
+    case IRBTYPE::I32:
+        return 4;
+    case IRBTYPE::FLOAT:
+        return 4;
+    default:
+        Err::error("In IR::BType::getBytes(): illegal type.");
+        return 0;
+    }
+    return 0;
+}
+
 class Type;
 class BType;
 class PtrType;
@@ -43,6 +59,7 @@ public:
     virtual ~Type() = default;
     virtual IRCTYPE getTrait() const = 0;
     virtual std::string toString() const = 0;
+    virtual size_t getBytes() const = 0;
 };
 
 /**
@@ -53,13 +70,13 @@ class BType : public Type {
 protected:
     IRBTYPE bty;
 public:
-    // BType() = default;
-    BType(IRBTYPE _bty) : bty(_bty) { Err::assert(_bty != IRBTYPE::PTR, "Ptr type defined in BType."); }
+    BType(): bty(IRBTYPE::UNDEFINED) {}
+    explicit BType(IRBTYPE _bty) : bty(_bty) {}
 
-    // void setBType(IRBTYPE _bty) { Err::assert(_bty != IRBTYPE::PTR, "Ptr type defined in BType."); bty = _bty; }
-    IRBTYPE getBType() const { return bty; }
+    IRBTYPE getInner() const { return bty; }
 
     IRCTYPE getTrait() const override { return IRCTYPE::BASIC; }
+
     std::string toString() const override {
         switch (bty)
         {
@@ -72,11 +89,15 @@ public:
         case IRBTYPE::VOID:
             return "void";
         case IRBTYPE::UNDEFINED:
-            return "UNDEFINEDTYPE";
+            return "UNDEFINED TYPE";
         default:
             Err::error("In IR::BType::toString(): illegal type.");
-            return "ILLEGALTYPE";
+            return "ILLEGAL TYPE";
         }
+    }
+
+    size_t getBytes() const override {
+        return IR::getBytes(bty);
     }
 };
 
@@ -84,11 +105,14 @@ class PtrType : public Type {
 protected:
     std::shared_ptr<Type> element_type;
 public:
-    PtrType(std::shared_ptr<Type> _ele_ty) : element_type(_ele_ty) {}
+    PtrType(std::shared_ptr<Type> element_type_) : element_type(std::move(element_type_)) {}
     auto& getElmType() const { return element_type; }
 
     IRCTYPE getTrait() const override { return IRCTYPE::PTR; }
     std::string toString() const override { return "ptr"; }
+    size_t getBytes() const override {
+        return 8;
+    }
 };
 
 class ArrayType : public Type {
@@ -96,14 +120,21 @@ protected:
     std::shared_ptr<Type> element_type;
     size_t size;
 public:
-    ArrayType(std::shared_ptr<Type> element_type, size_t size)
-        : element_type(element_type), size(size) {}
+    ArrayType(std::shared_ptr<Type> element_type_, size_t size)
+        : element_type(std::move(element_type_)), size(size) {}
+
     auto& getElmType() const { return element_type; }
-    size_t getSize() const { return size; }
+
+    size_t getArraySize() const { return size; }
 
     IRCTYPE getTrait() const override { return IRCTYPE::ARRAY; }
+
     std::string toString() const override {
-        return "[ " + std::to_string(size) + " x " + element_type->toString() + " ]";
+        return "[" + std::to_string(size) + " x " + element_type->toString() + "]";
+    }
+
+    size_t getBytes() const override {
+        return size * element_type->getBytes();
     }
 };
 
@@ -111,20 +142,18 @@ public:
 
 std::shared_ptr<BType> makeBType(IRBTYPE bty);
 std::shared_ptr<PtrType> makePtrType(std::shared_ptr<Type> ele_ty);
+
 std::shared_ptr<ArrayType> makeArrayType(std::shared_ptr<Type> ele_ty, size_t size);
 
 // 若类型不正确会返回nullptr
-std::shared_ptr<BType> toBType(std::shared_ptr<Type> ty);
-std::shared_ptr<PtrType> toPtrType(std::shared_ptr<Type> ty);
-std::shared_ptr<ArrayType> toArrayType(std::shared_ptr<Type> ty);
+std::shared_ptr<BType> toBType(const std::shared_ptr<Type>& ty);
+std::shared_ptr<PtrType> toPtrType(const std::shared_ptr<Type>& ty);
+std::shared_ptr<ArrayType> toArrayType(const std::shared_ptr<Type>& ty);
 
-// PtrType 亦会返回 IRBTYPE::PTR; BType 会返回其bty; 其他类型会返回 UNDEFIND
-IRBTYPE getBTy(std::shared_ptr<Type> ty);
 // 返回PTR, ARRAY的element_type; BType 会返回 nullptr
-std::shared_ptr<Type> getElm(std::shared_ptr<Type> ty);
-// 返回数组大小; 除arraytype之外的会返回0
-size_t getSize(std::shared_ptr<Type> ty);
+std::shared_ptr<Type> getElm(const std::shared_ptr<Type>& ty);
 
+bool isSameType(std::shared_ptr<Type> a, std::shared_ptr<Type> b);
 
 /***********下列内容为NameClass相关**********/
 

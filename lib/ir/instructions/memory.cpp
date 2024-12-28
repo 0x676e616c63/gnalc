@@ -42,13 +42,13 @@ namespace IR
     //     return getOperands().begin()->getValue();
     // }
 
-    std::shared_ptr<Type> ALLOCAInst::getBaseTypePtr() const
+    std::shared_ptr<Type> ALLOCAInst::getBaseType() const
     {
         return basetype;
     }
 
     LOADInst::LOADInst(NameRef name, std::shared_ptr<Value> _ptr, int _align)
-        : Instruction(OP::LOAD, name, getElm(_ptr->getTypePtr())), align(_align)
+        : Instruction(OP::LOAD, name, getElm(_ptr->getType())), align(_align)
     {
         addOperand(_ptr);
     }
@@ -71,9 +71,9 @@ namespace IR
         addOperand(_ptr);
     }
 
-    std::shared_ptr<Type> STOREInst::getBaseTypePtr() const
+    std::shared_ptr<Type> STOREInst::getBaseType() const
     {
-        return /*(*(getOperands().begin()))->*/getValue()->getTypePtr();
+        return /*(*(getOperands().begin()))->*/getValue()->getType();
     }
 
     std::shared_ptr<Value> STOREInst::getValue() const
@@ -91,8 +91,8 @@ namespace IR
         return align;
     }
 
-    GEPInst::GEPInst(NameRef name, std::shared_ptr<Value> _ptr, const std::list<std::shared_ptr<Value>>& idxs)
-        : Instruction(OP::GEP, name, makePtrType(getElm(getElm(_ptr->getTypePtr()))))
+    GEPInst::GEPInst(NameRef name, std::shared_ptr<Value> _ptr, const std::vector<std::shared_ptr<Value>>& idxs)
+        : Instruction(OP::GEP, name, makePtrType(getElm(getElm(_ptr->getType()))))
     {
         addOperand(_ptr);
         for (auto idx : idxs)
@@ -101,7 +101,7 @@ namespace IR
 
     std::shared_ptr<Type> GEPInst::getBaseTypePtr() const
     {
-        return getElm(getPtr()->getTypePtr());
+        return getElm(getPtr()->getType());
     }
 
     // std::vector<int> GEPInst::getArraySize() const

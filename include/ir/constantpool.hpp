@@ -58,7 +58,7 @@ public:
 
     ~ConstantPool() {
         cleanPool();
-        Err::assert(pool.empty(), "ConstantPool is not empty when destroyed.");
+        Err::gassert(pool.empty(), "ConstantPool is not empty when destroyed.");
     };
 };
 

@@ -30,7 +30,7 @@ public:
     ALLOCAInst(NameRef name, std::shared_ptr<Type> btype, int _align = 4); // FOR STATIC
     // ALLOCAInst(NameRef name, std::shared_ptr<Type> btype, std::shared_ptr<Value> num_elements, int _align = 4); // FOR DYNAMIC
 
-    std::shared_ptr<Type> getBaseTypePtr() const;
+    std::shared_ptr<Type> getBaseType() const;
     bool isStatic() const;
     // std::vector<int> getStaticArraySize() const;
     bool isArray() const;
@@ -66,7 +66,7 @@ private:
 public:
     STOREInst(std::shared_ptr<Value> _value, std::shared_ptr<Value> _ptr, int _align = 4);
 
-    std::shared_ptr<Type> getBaseTypePtr() const;
+    std::shared_ptr<Type> getBaseType() const;
     std::shared_ptr<Value> getValue() const;
     std::shared_ptr<Value> getPtr() const;
     int getAlign() const;
@@ -83,7 +83,7 @@ class GEPInst : public Instruction {
 private:
     // std::shared_ptr<Type> basetype; // _ptr的类型的element
 public:
-    GEPInst(NameRef name, std::shared_ptr<Value> _ptr, const std::list<std::shared_ptr<Value>>& idxs);
+    GEPInst(NameRef name, std::shared_ptr<Value> _ptr, const std::vector<std::shared_ptr<Value>>& idxs);
 
     std::shared_ptr<Type> getBaseTypePtr() const;
     // std::vector<int> getArraySize() const;
