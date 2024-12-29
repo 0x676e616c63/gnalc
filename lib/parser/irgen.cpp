@@ -163,22 +163,12 @@ void IRGenerator::visit(VarDef& node) {
                 return nullptr;
             };
 
-            auto isZero = [this](const Initializer::val_t& a) -> bool {
-                if (a.index() == 0)
-                    return std::get<0>(a) == 0;
-                if (a.index() == 1)
-                    return std::get<1>(a) == 0.0f;
-                Err::error("Invalid global initializer.");
-                return false;
-            };
-
-
             if (node.isArray())
             {
                 auto curr_type = toArrayType(irtype);
                 size_t init_pos = 0;
                 std::function<void(const std::shared_ptr<IR::Type>& type, IR::GVIniter& base)> init_array;
-                init_array = [this, &toIRValue, &flatten_initializer, &init_pos, &init_array, isZero]
+                init_array = [this, &toIRValue, &flatten_initializer, &init_pos, &init_array]
                 (const std::shared_ptr<IR::Type>& type, IR::GVIniter& base) {
                     auto arrtype = toArrayType(type);
                     Err::gassert(arrtype != nullptr);
