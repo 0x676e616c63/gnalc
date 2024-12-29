@@ -168,13 +168,36 @@ asmgen/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/build
 .PHONY : asmgen/fast
 
+debug/asmgen.o: debug/asmgen.cpp.o
+.PHONY : debug/asmgen.o
+
+# target to build an object file
+debug/asmgen.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/debug/asmgen.cpp.o
+.PHONY : debug/asmgen.cpp.o
+
+debug/asmgen.i: debug/asmgen.cpp.i
+.PHONY : debug/asmgen.i
+
+# target to preprocess a source file
+debug/asmgen.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/debug/asmgen.cpp.i
+.PHONY : debug/asmgen.cpp.i
+
+debug/asmgen.s: debug/asmgen.cpp.s
+.PHONY : debug/asmgen.s
+
+# target to generate assembly for a file
+debug/asmgen.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/debug/asmgen.cpp.s
+.PHONY : debug/asmgen.cpp.s
+
 debug/irgen.o: debug/irgen.cpp.o
 .PHONY : debug/irgen.o
 
 # target to build an object file
 debug/irgen.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/debug/irgen.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/debug/irgen.cpp.o
 .PHONY : debug/irgen.cpp.o
 
 debug/irgen.i: debug/irgen.cpp.i
@@ -183,7 +206,6 @@ debug/irgen.i: debug/irgen.cpp.i
 # target to preprocess a source file
 debug/irgen.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/debug/irgen.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/debug/irgen.cpp.i
 .PHONY : debug/irgen.cpp.i
 
 debug/irgen.s: debug/irgen.cpp.s
@@ -192,7 +214,6 @@ debug/irgen.s: debug/irgen.cpp.s
 # target to generate assembly for a file
 debug/irgen.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/debug/irgen.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/debug/irgen.cpp.s
 .PHONY : debug/irgen.cpp.s
 
 debug/irprintertest.o: debug/irprintertest.cpp.o
@@ -784,7 +805,6 @@ lib/lexer/lexer.o: lib/lexer/lexer.cpp.o
 lib/lexer/lexer.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/lib/lexer/lexer.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/lexer/lexer.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/lexer/lexer.cpp.o
 .PHONY : lib/lexer/lexer.cpp.o
 
 lib/lexer/lexer.i: lib/lexer/lexer.cpp.i
@@ -794,7 +814,6 @@ lib/lexer/lexer.i: lib/lexer/lexer.cpp.i
 lib/lexer/lexer.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/lib/lexer/lexer.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/lexer/lexer.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/lexer/lexer.cpp.i
 .PHONY : lib/lexer/lexer.cpp.i
 
 lib/lexer/lexer.s: lib/lexer/lexer.cpp.s
@@ -804,7 +823,6 @@ lib/lexer/lexer.s: lib/lexer/lexer.cpp.s
 lib/lexer/lexer.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/lib/lexer/lexer.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/lexer/lexer.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/lexer/lexer.cpp.s
 .PHONY : lib/lexer/lexer.cpp.s
 
 lib/parser/ast_printer.o: lib/parser/ast_printer.cpp.o
@@ -814,7 +832,6 @@ lib/parser/ast_printer.o: lib/parser/ast_printer.cpp.o
 lib/parser/ast_printer.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/lib/parser/ast_printer.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/parser/ast_printer.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/parser/ast_printer.cpp.o
 .PHONY : lib/parser/ast_printer.cpp.o
 
 lib/parser/ast_printer.i: lib/parser/ast_printer.cpp.i
@@ -824,7 +841,6 @@ lib/parser/ast_printer.i: lib/parser/ast_printer.cpp.i
 lib/parser/ast_printer.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/lib/parser/ast_printer.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/parser/ast_printer.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/parser/ast_printer.cpp.i
 .PHONY : lib/parser/ast_printer.cpp.i
 
 lib/parser/ast_printer.s: lib/parser/ast_printer.cpp.s
@@ -834,7 +850,6 @@ lib/parser/ast_printer.s: lib/parser/ast_printer.cpp.s
 lib/parser/ast_printer.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/lib/parser/ast_printer.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/parser/ast_printer.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/parser/ast_printer.cpp.s
 .PHONY : lib/parser/ast_printer.cpp.s
 
 lib/parser/irgen.o: lib/parser/irgen.cpp.o
@@ -843,7 +858,6 @@ lib/parser/irgen.o: lib/parser/irgen.cpp.o
 # target to build an object file
 lib/parser/irgen.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/parser/irgen.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/parser/irgen.cpp.o
 .PHONY : lib/parser/irgen.cpp.o
 
 lib/parser/irgen.i: lib/parser/irgen.cpp.i
@@ -852,7 +866,6 @@ lib/parser/irgen.i: lib/parser/irgen.cpp.i
 # target to preprocess a source file
 lib/parser/irgen.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/parser/irgen.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/parser/irgen.cpp.i
 .PHONY : lib/parser/irgen.cpp.i
 
 lib/parser/irgen.s: lib/parser/irgen.cpp.s
@@ -861,7 +874,6 @@ lib/parser/irgen.s: lib/parser/irgen.cpp.s
 # target to generate assembly for a file
 lib/parser/irgen.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/parser/irgen.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/parser/irgen.cpp.s
 .PHONY : lib/parser/irgen.cpp.s
 
 lib/parser/parser.o: lib/parser/parser.cpp.o
@@ -871,7 +883,6 @@ lib/parser/parser.o: lib/parser/parser.cpp.o
 lib/parser/parser.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/lib/parser/parser.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/parser/parser.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/parser/parser.cpp.o
 .PHONY : lib/parser/parser.cpp.o
 
 lib/parser/parser.i: lib/parser/parser.cpp.i
@@ -881,7 +892,6 @@ lib/parser/parser.i: lib/parser/parser.cpp.i
 lib/parser/parser.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/lib/parser/parser.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/parser/parser.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/parser/parser.cpp.i
 .PHONY : lib/parser/parser.cpp.i
 
 lib/parser/parser.s: lib/parser/parser.cpp.s
@@ -891,7 +901,6 @@ lib/parser/parser.s: lib/parser/parser.cpp.s
 lib/parser/parser.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/lib/parser/parser.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/parser/parser.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/parser/parser.cpp.s
 .PHONY : lib/parser/parser.cpp.s
 
 lib/utils/logger.o: lib/utils/logger.cpp.o
@@ -901,7 +910,6 @@ lib/utils/logger.o: lib/utils/logger.cpp.o
 lib/utils/logger.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/utils/logger.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/utils/logger.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/utils/logger.cpp.o
 .PHONY : lib/utils/logger.cpp.o
 
 lib/utils/logger.i: lib/utils/logger.cpp.i
@@ -911,7 +919,6 @@ lib/utils/logger.i: lib/utils/logger.cpp.i
 lib/utils/logger.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/utils/logger.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/utils/logger.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/utils/logger.cpp.i
 .PHONY : lib/utils/logger.cpp.i
 
 lib/utils/logger.s: lib/utils/logger.cpp.s
@@ -921,7 +928,6 @@ lib/utils/logger.s: lib/utils/logger.cpp.s
 lib/utils/logger.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/utils/logger.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/utils/logger.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/utils/logger.cpp.s
 .PHONY : lib/utils/logger.cpp.s
 
 # Help Target
@@ -936,6 +942,9 @@ help:
 	@echo "... irgen"
 	@echo "... printast"
 	@echo "... printir"
+	@echo "... debug/asmgen.o"
+	@echo "... debug/asmgen.i"
+	@echo "... debug/asmgen.s"
 	@echo "... debug/irgen.o"
 	@echo "... debug/irgen.i"
 	@echo "... debug/irgen.s"

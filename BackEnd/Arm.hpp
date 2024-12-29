@@ -37,6 +37,11 @@ namespace ArmStruct{
     class BrInst;
 };
 
+/// @brief 常量池, 在ArmStruct::Module内释放 
+extern std::vector<ArmStruct::Operand*> RegisterPool;
+extern std::vector<ArmStruct::Imm*> ConstPool;
+extern std::vector<ArmStruct::Operand*> FPURegisterPool;
+
 typedef std::initializer_list<std::reference_wrapper<IR::Instruction>> InstArgs;
 
 
@@ -62,7 +67,8 @@ namespace ArmTools{
 
     bool isVLoadStoreOffsetLegal(int offset);
 
-    class RegisterAlloc;    // 寄存器分配
+    class RegisterAlloc;    // 寄存器分配工具
+
 
     ///@warning ISO C++ forbids forward references to 'enum' types
     // enum CoreRegisterName;

@@ -11,10 +11,15 @@
 using namespace ArmStruct;
 using namespace ArmTools;
 
+std::vector<ArmStruct::Operand*> RegisterPool = {};
+std::vector<ArmStruct::Operand*> FPURegisterPool = {};
+std::vector<ArmStruct::Imm*> ConstPool = {};
+
 Module::Module(IR::Module& midEnd_Module){
     this->ModuleName = midEnd_Module.getName(); // pass by val
 
     ///@todo get .bss and get .data and get .equ
+
     ///@todo needed symbolTable
 
     ///@brief get func
@@ -25,15 +30,25 @@ Module::Module(IR::Module& midEnd_Module){
         Function* newFunc = new Function(func); // IR->MIR, localFrame ...s
         this->AddFunction(newFunc);
     }
+
+    /// @brief make RegisterPools
+    for(int i = 0; i <= 15; ++i){
+        Operand *reg = new Operand(OperandType::INT, i);
+        RegisterPool.push_back(reg);
+    }
+    for(int i = 0; i <= 31; ++i){
+        Operand *Freg = new Operand(OperandType::FLOAT, i);
+        FPURegisterPool.push_back(Freg);
+    }
 }
 
 void Module::AllocRegister(){
 
     for(auto it = FunctionList.begin(); it != FunctionList.end(); ++it){
         Function &func = **it;
-        RegisterAlloc *CoreReg = new RegisterAlloc(func, OperandType::INT, 12); // r0, r1, r2, r3, r4, r5, r6, r8, r9, r10, r11, r12
+        RegisterAlloc *CoreReg = new RegisterAlloc(func, OperandType::INT, 12); // r0, r1, r2, r3, r4, r5, r6, r8, r9, r10, r11, r12(no r7)
         CoreReg->GraphColoring();
-        RegisterAlloc *FPUReg = new RegisterAlloc(func, OperandType::FLOAT, 32);
+        RegisterAlloc *FPUReg = new RegisterAlloc(func, OperandType::FLOAT, 32); // s0 - s31
         FPUReg->GraphColoring();
     }
 }
@@ -43,6 +58,11 @@ Module::~Module(){
     for(auto dataPtr : this->dataSection) delete dataPtr;
     for(auto equPtr : this->equSection) delete equPtr;
     for(auto funcPtr : this->FunctionList) delete funcPtr;
+    
+    // free pools
+    for(auto reg : RegisterPool) delete reg;
+    for(auto FPUreg : FPURegisterPool) delete FPUreg;
+    for(auto cons : ConstPool) delete cons;
 }
 
 

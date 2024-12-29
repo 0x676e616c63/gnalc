@@ -168,22 +168,5 @@ struct MapMid2BackOpC{
     bool operator()(const std::vector<IR::OP>&, const std::vector<IR::OP>) const;
 };
 
-///@note 这个Mid2BackOpC实际上没多大价值, 主要是捋一下怎么映射的
-
-std::map<std::vector<IR::OP>, std::vector<OperCode>, MapMid2BackOpC> Mid2BackOpC = {
-    {std::vector<IR::OP>{IR::OP::RET}, 
-        std::vector<OperCode>{OperCode::MOV, OperCode::BX}}, // 注意预着色以及可能的DCE
-    {std::vector<IR::OP>{IR::OP::ICMP, IR::OP::BR},
-        std::vector<OperCode>{OperCode::CMP, OperCode::BCOND, OperCode::B}}, // 这里的跳转映射涉及到一个peephole
-    {std::vector<IR::OP>{IR::OP::FCMP, IR::OP::BR},
-        std::vector<OperCode>{OperCode::VCMP_F32, OperCode::BCOND, OperCode::B}},
-    {std::vector<IR::OP>{IR::OP::FNEG},
-        std::vector<OperCode>{OperCode::VNEG_F32}},
-    {std::vector<IR::OP>{IR::OP::ADD},
-        std::vector<OperCode>{OperCode::ADD}},
-    {std::vector<IR::OP>{IR::OP::FADD},
-        std::vector<OperCode>{OperCode::VADD_F32}},
-    // ....... 剩余的binary
-};
 };
 #endif
