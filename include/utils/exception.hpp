@@ -15,7 +15,7 @@ public:
           detail(detail_) {}
 };
 
-inline void assert(bool b, const std::string &detail_ = "Assertion failed.")
+inline void gassert(bool b, const std::string &detail_ = "Assertion failed.")
 {
     if (!b)
     {
@@ -37,7 +37,6 @@ inline void unreachable(const std::string &detail_ = "")
 {
     throw GnalcException("Unreachable: " + detail_);
 }
-
 
 inline void error(const std::string &detail_)
 {

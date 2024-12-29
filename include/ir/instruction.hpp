@@ -76,7 +76,7 @@ public:
     OP getOpcode() const;
     std::shared_ptr<BasicBlock> getParent() const;
 
-    virtual void accept(class IRVisitor& visitor) override = 0;
+    void accept(IRVisitor& visitor) override;
     ~Instruction() override;
 };
 

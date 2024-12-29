@@ -2,6 +2,8 @@
 
 #include "../../include/ir/instruction.hpp"
 
+#include <ir/visitor.hpp>
+
 namespace IR {
 
 Instruction::Instruction(OP opcode, std::string _name, std::shared_ptr<Type> _type)
@@ -17,6 +19,10 @@ OP Instruction::getOpcode() const {
 
 std::shared_ptr<BasicBlock> Instruction::getParent() const {
     return parent.lock();
+}
+
+void Instruction::accept(IRVisitor& visitor) {
+    visitor.visit(*this);
 }
 
 Instruction::~Instruction() = default;

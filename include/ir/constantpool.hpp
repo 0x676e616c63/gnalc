@@ -3,43 +3,73 @@
 #define GNALC_IR_CONSTANTPOOL_HPP
 
 #include <unordered_map>
+#include <variant>
+#include <type_traits>
+
 #include "constant.hpp"
 #include "../utils/exception.hpp"
 
-namespace IR {
-
-using Constant = Value; // 方便以后添加Constant类
-
+namespace IR
+{
 class ConstantPool {
 private:
-    // 键为常量的唯一标识（类型 + 值）
-    std::unordered_map<std::string, std::shared_ptr<Constant>> pool;
+    struct ConstantValue {
+        // TODO: Array
+        std::variant<int, float> value;
 
-    // 辅助函数：生成唯一键
-    template <typename T>
-    std::string getKey(IRBTYPE type, const T& value) {
-        return std::to_string(static_cast<int>(type)) + ":" + std::to_string(value);
-    }
+        bool is_int() const {return value.index() == 0;}
+        bool is_float() const {return value.index() == 1;}
+
+        int get_int() const {return std::get<int>(value);}
+        float get_float() const {return std::get<float>(value);}
+
+        std::string type_name() const {
+            if (value.index() == 0)
+                return "int";
+            else if (value.index() == 1)
+                return "float";
+            return "";
+        }
+
+        bool operator==(const ConstantValue &other) const {return value == other.value;}
+    };
+
+    struct ConstantHash {
+        std::size_t operator()(const ConstantValue& constant) const {
+            return std::hash<std::string>()(constant.type_name())
+                    ^ std::visit([](auto&& c)
+                        {return std::hash<std::remove_cv_t<std::remove_reference_t<decltype(c)>>>()(c);},
+                        constant.value);
+        }
+    };
+
+    std::unordered_map<ConstantValue, std::shared_ptr<Value>, ConstantHash> pool;
 
 public:
     ConstantPool() = default;
 
-    // 获取整型常量
-    std::shared_ptr<ConstantInt> getConst(int value) {
-        std::string key = getKey(IRBTYPE::I32, value);
-        if (pool.find(key) == pool.end()) {
-            pool[key] = std::make_shared<ConstantInt>(value);
+    std::shared_ptr<ConstantInt> getConst(int val) {
+        auto value = ConstantValue{val};
+        auto it = pool.find(value);
+        if (it == pool.end())
+        {
+            auto ret = std::make_shared<ConstantInt>(val);
+            pool[value] = ret;
+            return ret;
         }
-        return std::dynamic_pointer_cast<ConstantInt>(pool[key]);
+        return std::dynamic_pointer_cast<ConstantInt>(it->second);
     }
 
-    // 获取浮点型常量
-    std::shared_ptr<ConstantFloat> getConst(float value) {
-        std::string key = getKey(IRBTYPE::FLOAT, value);
-        if (pool.find(key) == pool.end()) {
-            pool[key] = std::make_shared<ConstantFloat>(value);
+    std::shared_ptr<ConstantFloat> getConst(float val) {
+        auto value = ConstantValue{val};
+        auto it = pool.find(value);
+        if (it == pool.end())
+        {
+            auto ret = std::make_shared<ConstantFloat>(val);
+            pool[value] = ret;
+            return ret;
         }
-        return std::dynamic_pointer_cast<ConstantFloat>(pool[key]);
+        return std::dynamic_pointer_cast<ConstantFloat>(it->second);
     }
 
     int cleanPool() {
@@ -58,7 +88,7 @@ public:
 
     ~ConstantPool() {
         cleanPool();
-        Err::assert(pool.empty(), "ConstantPool is not empty when destroyed.");
+        Err::gassert(pool.empty(), "ConstantPool is not empty when destroyed.");
     };
 };
 

@@ -32,8 +32,80 @@ namespace IR
         return constval;
     }
 
-    std::vector<GVIniter>& GVIniter::getInnerIniter() {
-        return inner_initer;
+    const auto& GVIniter::getConstVal() const {
+        return constval;
+    }
+
+    GVIniter& GVIniter::addIniter(std::shared_ptr<Type> _ty, std::shared_ptr<Value> _con) {
+        Err::gassert(isArray());
+        is_zero = false;
+        inner_initer.emplace_back(std::move(_ty), std::move(_con));
+        return inner_initer.back();
+    }
+
+    GVIniter& GVIniter::addIniter(std::shared_ptr<Type> _ty) {
+        Err::gassert(isArray());
+        is_zero = false;
+        inner_initer.emplace_back(std::move(_ty));
+        return inner_initer.back();
+    }
+
+    void GVIniter::normalizeZero() {
+        if (!isArray()) return;
+        // Element is Array
+        if (getElm(initer_type)->getTrait() == IRCTYPE::ARRAY)
+        {
+            bool inner_is_zero = true;
+            for (auto&& r : inner_initer)
+            {
+                r.normalizeZero();
+                if (!r.isZero())
+                {
+                    inner_is_zero = false;
+                    // Because we want the sub initializer normalized, we should not break
+                    // break;
+                }
+            }
+            if (inner_is_zero)
+            {
+                inner_initer.clear();
+                is_zero = true;
+            }
+        }
+        // Element is Number
+        else
+        {
+            bool inner_is_zero = true;
+            for (auto&& r : inner_initer)
+            {
+                if (auto ci = std::dynamic_pointer_cast<ConstantInt>(r.constval))
+                {
+                    if (ci->getVal() != 0)
+                    {
+                        inner_is_zero = false;
+                        break;
+                    }
+                }
+                else if (auto cf = std::dynamic_pointer_cast<ConstantFloat>(r.constval))
+                {
+                    if (cf->getVal() != 0)
+                    {
+                        inner_is_zero = false;
+                        break;
+                    }
+                }
+                else
+                {
+                    inner_is_zero = false;
+                    break;
+                }
+            }
+            if (inner_is_zero)
+            {
+                inner_initer.clear();
+                is_zero = true;
+            }
+        }
     }
 
     GVIniter::~GVIniter() {}
@@ -64,7 +136,7 @@ namespace IR
 
     // void GlobalVariable::accept(IRVisitor& visitor) override { visitor.visit(*this); }
 
-std::string GVIniter::toString() {
+std::string GVIniter::toString() const {
     std::string ret;
 
     #if ENABLE_GVINITER_TOSTRING
@@ -74,9 +146,9 @@ std::string GVIniter::toString() {
             ret += " zeroinitializer";
         } else {
             ret += " [";
-            for (auto it = getInnerIniter().begin(); it != getInnerIniter().end(); it++) {
+            for (auto it = inner_initer.begin(); it != inner_initer.end(); it++) {
                 ret += it->toString();
-                if (std::next(it) != getInnerIniter().end()) {
+                if (std::next(it) != inner_initer.end()) {
                     ret += ", ";
                 }
             }

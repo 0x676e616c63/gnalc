@@ -34,7 +34,7 @@ public:
     }
 
     void insert(std::string name, std::shared_ptr<IR::Value> value) {
-        Err::assert(!table.empty());
+        Err::gassert(!table.empty());
         table.back().scope.emplace(std::move(name), std::move(value));
     }
 

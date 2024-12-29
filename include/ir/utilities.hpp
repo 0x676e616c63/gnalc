@@ -33,7 +33,7 @@ bool WeakListDel(std::list<std::weak_ptr<T>>& weak_list, const std::shared_ptr<T
             ++it;
         }
     }
-    Err::assert(found, "WeakListDel(): element not found.");
+    Err::gassert(found, "WeakListDel(): element not found.");
     return found;
 }
 
@@ -46,7 +46,7 @@ bool WeakListReplace(std::list<std::weak_ptr<T>>& weak_list, const std::shared_p
             found = true;
         }
     }
-    Err::assert(found, "WeakListReplace(): element not found.");
+    Err::gassert(found, "WeakListReplace(): element not found.");
     return found;
 }
 

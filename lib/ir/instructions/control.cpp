@@ -12,14 +12,14 @@ namespace IR
 
     RETInst::RETInst(std::shared_ptr<Value> ret_val)
         : Instruction(OP::RET, "__ret", makeBType(IRBTYPE::UNDEFINED)),
-            ret_type(makeBType(ret_val->getType()))
+            ret_type(toBType(ret_val->getType()))
     {
         addOperand(ret_val);
     }
 
     bool RETInst::isVoid() const
     {
-        return getBTy(ret_type) == IRBTYPE::VOID;
+        return toBType(ret_type)->getInner() == IRBTYPE::VOID;
     }
 
     std::shared_ptr<Value> RETInst::getRetVal() const
@@ -29,7 +29,7 @@ namespace IR
 
     IRBTYPE RETInst::getRetType() const
     {
-        return getBTy(ret_type);
+        return toBType(ret_type)->getInner();
     }
 
     std::shared_ptr<BType> RETInst::getRetTypePtr() const
@@ -64,22 +64,22 @@ namespace IR
 
     std::shared_ptr<Value> BRInst::getCond() const
     {
-        Err::assert(conditional, "BRInst is not conditional.");
+        Err::gassert(conditional, "BRInst is not conditional.");
         return (*(getOperands().begin()))->getValue();
     }
     std::shared_ptr<BasicBlock> BRInst::getDest() const {
-        Err::assert(!conditional, "BRInst is conditional.");
+        Err::gassert(!conditional, "BRInst is conditional.");
         return std::dynamic_pointer_cast<BasicBlock>((*(getOperands().begin()))->getValue());
     }
     std::shared_ptr<BasicBlock> BRInst::getTrueDest() const
     {
-        Err::assert(conditional, "BRInst is not conditional.");
+        Err::gassert(conditional, "BRInst is not conditional.");
         return std::dynamic_pointer_cast<BasicBlock>((*std::next(getOperands().begin()))->getValue());
     }
 
     std::shared_ptr<BasicBlock> BRInst::getFalseDest() const
     {
-        Err::assert(conditional, "BRInst is not conditional.");
+        Err::gassert(conditional, "BRInst is not conditional.");
         return std::dynamic_pointer_cast<BasicBlock>((*std::next(std::next(getOperands().begin())))->getValue());
     }
 
@@ -94,15 +94,14 @@ namespace IR
     CALLInst::CALLInst(NameRef name, std::shared_ptr<BType> ty, std::shared_ptr<Function> func, const std::list<std::shared_ptr<Value>>& args)
         : Instruction(OP::CALL, name, ty)
     {
-        Err::assert(func->getType() == getBTy(ty), "Function type does not match return type.");
         addOperand(func);
         for (auto valptr : args)
-            addOperand(valptr);
+            addOperand(std::move(valptr));
     }
 
     bool CALLInst::isVoid() const
     {
-        return getType() == IRBTYPE::VOID;
+        return toBType(getType())->getInner() == IRBTYPE::VOID;
     }
 
     std::string CALLInst::getFuncName() const
