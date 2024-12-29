@@ -5,9 +5,9 @@ int main()
     int k[2][2] = {{1, 2}, {3, 4}};
     int l = 2;
     int ll = l;
-    float s = 12.222;
+    float s = 12.0; // 12.222
     int ss = s;
-    int m = 1 + 1.6;
+    int m = 1 + 2.0;
     int n = 2 * 3;
     int o = 2 / 3;
     int p = 3 % 2;

@@ -262,16 +262,27 @@ void IRGenerator::visit(FuncDef& node) {
         break;
     }
 
-    curr_func = std::make_shared<IR::Function>(node.getId(), IR::makeBType(ty));
-    // TODO: Function Params
+    curr_func = std::make_shared<IR::Function>("@" + node.getId(), IR::makeBType(ty));
     if (!node.isEmptyParam()) {
         for (auto& p : node.getParams()) {
             p->accept(*this);
             curr_func->addParam(curr_val);
         }
     }
+    next_temp_id = 1;
     node.getBody()->accept(*this);
+
+    // See Main function: https://en.cppreference.com/w/c/language/main_function
+    // If the return type is compatible with int and control reaches the terminating },
+    // the value returned to the environment is the same as if executing return 0;.
+    if (node.getId() == "main")
+    {
+        if (curr_func->getInsts().back()->getOpcode() != IR::OP::RET)
+            curr_func->addInst(std::make_shared<IR::RETInst>(constant_pool.getConst(0)));
+    }
+
     module.addFunction(curr_func);
+    symbol_table.insert(node.getId(), curr_func);
 }
 
 // FuncFParam: 'a' int32[][2] \n

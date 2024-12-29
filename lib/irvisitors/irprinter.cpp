@@ -91,11 +91,11 @@ std::string IRFormatter::formatOp(OP op) {
     case OP::FMUL:
         return "fmul";
     case OP::DIV:
-        return "div";
+        return "sdiv";
     case OP::FDIV:
         return "fdiv";
     case OP::REM:
-        return "rem";
+        return "srem";
     case OP::FREM:
         return "frem";
     case OP::FNEG:
