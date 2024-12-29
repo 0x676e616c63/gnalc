@@ -52,11 +52,14 @@ public:
 };
 
 class IRGenerator : public ASTVisitor {
+    // Constant Pool Destructs Last
+    // https://en.cppreference.com/w/cpp/language/destructor
+    IR::ConstantPool constant_pool;
+    // ------
     IR::Module module;
     std::shared_ptr<IR::Value> curr_val;
     std::shared_ptr<IR::Function> curr_func;
     Sym::SymbolTable symbol_table;
-    IR::ConstantPool constant_pool;
     size_t next_temp_id{0};
 
     struct Initializer {
@@ -251,6 +254,8 @@ public:
     IR::Module& get_module() { return module; }
 private:
     std::string get_temp_name();
+    // Failed will return val back
+    std::shared_ptr<IR::Value> try_type_cast(std::shared_ptr<IR::Value> val, IR::IRBTYPE dest);
 };
 
 }

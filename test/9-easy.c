@@ -4,6 +4,7 @@ int main()
 {
     int k[2][2] = {{1, 2}, {3, 4}};
     int l = 2;
+    int ll = l;
     int m = 1 + 1;
     int n = 2 * 3;
     int o = 2 / 3;

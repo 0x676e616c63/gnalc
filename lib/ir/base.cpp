@@ -93,6 +93,17 @@ bool Value::delUse(NameRef name) {
     return found;
 }
 
+void Value::cleanExpired() {
+    for (auto it = use_list.begin(); it != use_list.end();) {
+        if (it->expired()) {
+            it = use_list.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+
 bool Value::replaceUse(const std::shared_ptr<Use>& old_use, const std::shared_ptr<Use>& new_use) {
     bool found = false;
     for (auto& use : use_list) {
@@ -190,8 +201,8 @@ User* Use::getUser() const {
 }
 
 Use::~Use() {
-    // if (!val.expired())
-    //    val.lock()->delUse(this);
+    if (!val.expired())
+       val.lock()->cleanExpired();
 }
 
 }

@@ -59,6 +59,8 @@ public:
     bool delUse(User* user);
     bool delUse(NameRef name); // 根据username删除匹配use
 
+    void cleanExpired();
+
     bool replaceUse(const std::shared_ptr<Use>& old_use, const std::shared_ptr<Use>& new_use);
 
     virtual void accept(class IRVisitor& visitor) = 0;

@@ -214,52 +214,23 @@ void IRGenerator::visit(InitVal& node) {
         node.getExp()->accept(*this);
         if (curr_initializer.empty()) // TOP LEVEL and is value, then the whole is a value
         {
+            curr_val = try_type_cast(curr_val, curr_initializer.base_type);
             if (auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(curr_val))
                 curr_initializer.setVal(ci->getVal());
             else if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(curr_val))
                 curr_initializer.setVal(cf->getVal());
-            else if (auto li = std::dynamic_pointer_cast<IR::LOADInst>(curr_val))
-                curr_initializer.setVal(li);
+            else
+                curr_initializer.setVal(curr_val);
         }
         else // Not TOP LEVEL
         {
+            curr_val = try_type_cast(curr_val, curr_making_initializer->base_type);
             if (auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(curr_val))
-            {
-                if (curr_making_initializer->base_type == IR::IRBTYPE::FLOAT)
-                    curr_initializer.setVal(static_cast<float>(ci->getVal()));
-                else
-                    curr_making_initializer->add(ci->getVal());
-            }
+                curr_making_initializer->add(ci->getVal());
             else if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(curr_val))
-            {
-                if (curr_making_initializer->base_type == IR::IRBTYPE::I32)
-                    curr_initializer.setVal(static_cast<int>(cf->getVal()));
-                else
-                    curr_making_initializer->add(cf->getVal());
-            }
-            else if (auto li = std::dynamic_pointer_cast<IR::LOADInst>(curr_val))
-            {
-                if (li->getType()->getTrait() == IR::IRCTYPE::BASIC)
-                {
-                    if (curr_making_initializer->base_type == IR::IRBTYPE::I32
-                        && toBType(li->getType())->getInner() == IR::IRBTYPE::FLOAT)
-                    {
-                        auto conv = std::make_shared<IR::FPTOSIInst>(get_temp_name(), li);
-                        curr_func->addInst(conv);
-                        curr_initializer.setVal(conv);
-                    }
-                    else if (curr_making_initializer->base_type == IR::IRBTYPE::FLOAT
-                        && toBType(li->getType())->getInner() == IR::IRBTYPE::I32)
-                    {
-                        auto conv = std::make_shared<IR::SITOFPInst>(get_temp_name(), li);
-                        curr_func->addInst(conv);
-                        curr_initializer.setVal(conv);
-                    }
-                    else
-                        curr_making_initializer->add(li);
-                }
-                else curr_making_initializer->add(li);
-            }
+                curr_making_initializer->add(cf->getVal());
+            else
+                curr_making_initializer->add(curr_val);
         }
     }
 }
@@ -318,10 +289,18 @@ void IRGenerator::visit(DeclRef& node) {
         if (alloca_inst->isArray())
             curr_val = alloca_inst;
         else
-            curr_val = std::make_shared<IR::LOADInst>(get_temp_name(), alloca_inst);
+        {
+            auto load = std::make_shared<IR::LOADInst>(get_temp_name(), alloca_inst);
+            curr_func->addInst(load);
+            curr_val = load;
+        }
     }
     else if (auto gv = std::dynamic_pointer_cast<IR::GlobalVariable>(ref))
-        curr_val = std::make_shared<IR::LOADInst>(get_temp_name(), gv);
+    {
+        auto load = std::make_shared<IR::LOADInst>(get_temp_name(), gv);
+        curr_func->addInst(load);
+        curr_val = load;
+    }
     else
         Err::error("Unexpected reference type.");
 }
@@ -380,21 +359,8 @@ void IRGenerator::visit(CallExp& node) {
         else if (expected[i]->getType()->getTrait() == IR::IRCTYPE::BASIC
             && expected[i]->getType()->getTrait() == args[i]->getType()->getTrait())
         {
-            auto expected_bty = IR::toBType(expected[i]->getType())->getInner();
             auto arg_bty = IR::toBType(args[i]->getType())->getInner();
-            if (expected_bty == IR::IRBTYPE::I32 && arg_bty == IR::IRBTYPE::FLOAT)
-            {
-                auto conv = std::make_shared<IR::FPTOSIInst>(get_temp_name(), args[i]);
-                curr_func->addInst(conv);
-                args[i] = conv;
-            }
-            else if (expected_bty == IR::IRBTYPE::FLOAT && arg_bty == IR::IRBTYPE::I32)
-            {
-                auto conv = std::make_shared<IR::SITOFPInst>(get_temp_name(), args[i]);
-                curr_func->addInst(conv);
-                args[i] = conv;
-            }
-            else Err::unreachable();
+            args[i] = try_type_cast(args[i], arg_bty);
         }
         else
             Err::error("Invalid call.");
@@ -425,38 +391,16 @@ void IRGenerator::visit(BinaryOp& node) {
 
         if (node.getOp() == BiOp::ASSIGN)
         {
-            if (lhstype->getInner() == IR::IRBTYPE::I32 && rhstype->getInner() == IR::IRBTYPE::FLOAT)
-            {
-                auto conv = std::make_shared<IR::FPTOSIInst>(get_temp_name(), rhs);
-                curr_func->addInst(conv);
-                rhs = conv;
-                opreandtype = IR::makeBType(IR::IRBTYPE::I32);
-            }
-            else if (lhstype->getInner() == IR::IRBTYPE::FLOAT && rhstype->getInner() == IR::IRBTYPE::I32)
-            {
-                auto conv = std::make_shared<IR::SITOFPInst>(get_temp_name(), rhs);
-                curr_func->addInst(conv);
-                rhs = conv;
-                opreandtype = IR::makeBType(IR::IRBTYPE::FLOAT);
-            }
+            opreandtype = lhstype;
+            rhs = try_type_cast(rhs, lhstype->getInner());
         }
         else
         {
             if (lhstype->getInner() == IR::IRBTYPE::FLOAT || rhstype->getInner() == IR::IRBTYPE::FLOAT)
             {
                 opreandtype = IR::makeBType(IR::IRBTYPE::FLOAT);
-                if (lhstype->getInner() != IR::IRBTYPE::FLOAT)
-                {
-                    auto conv = std::make_shared<IR::SITOFPInst>(get_temp_name(), lhs);
-                    curr_func->addInst(conv);
-                    lhs = conv;
-                }
-                else if (rhstype->getInner() != IR::IRBTYPE::FLOAT)
-                {
-                    auto conv = std::make_shared<IR::SITOFPInst>(get_temp_name(), rhs);
-                    curr_func->addInst(conv);
-                    rhs = conv;
-                }
+                lhs = try_type_cast(lhs, IR::IRBTYPE::FLOAT);
+                rhs = try_type_cast(rhs, IR::IRBTYPE::FLOAT);
             }
             else opreandtype = IR::makeBType(IR::IRBTYPE::I32);
         }
@@ -680,4 +624,41 @@ void IRGenerator::visit(ReturnStmt& node) {
 std::string IRGenerator::get_temp_name() {
     return "%" + std::to_string(next_temp_id++);
 }
+
+std::shared_ptr<IR::Value> IRGenerator::try_type_cast(std::shared_ptr<IR::Value> val, IR::IRBTYPE dest) {
+    if (val->getType()->getTrait() != IR::IRCTYPE::BASIC)
+        return val;
+    IR::IRBTYPE src = toBType(val->getType())->getInner();
+    if (src == IR::IRBTYPE::I32 && dest == IR::IRBTYPE::FLOAT)
+    {
+        if (auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(val))
+        {
+            return constant_pool.getConst(static_cast<float>(ci->getVal()));
+        }
+        else
+        {
+            Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
+            auto conv = std::make_shared<IR::SITOFPInst>(get_temp_name(), val);
+            curr_func->addInst(conv);
+            return conv;
+        }
+    }
+    else if (src == IR::IRBTYPE::FLOAT && dest == IR::IRBTYPE::I32)
+    {
+        if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(val))
+        {
+            return constant_pool.getConst(static_cast<int>(cf->getVal()));
+        }
+        else
+        {
+            Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
+            auto conv = std::make_shared<IR::FPTOSIInst>(get_temp_name(), val);
+            curr_func->addInst(conv);
+            return conv;
+        }
+    }
+    Err::gassert(src == dest);
+    return val;
+}
+
 }
