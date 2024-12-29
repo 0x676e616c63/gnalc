@@ -55,6 +55,10 @@ void LIRPrinter::visit(Function& node) {
 
 void LIRPrinter::visit(Instruction& node) {
     Logger::logDebug("LIRPrinter: Printing Instruction \"" + node.getName() + "\"");
+
+    // It seems there is no nested scope, so it is a fixed indent.
+    write("  ");
+
     writeln(IRFormatter::formatInst(node));
 }
 

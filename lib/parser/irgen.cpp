@@ -66,7 +66,7 @@ void IRGenerator::visit(VarDef& node) {
 
     if (curr_func != nullptr)    // Check if global
     {
-        auto alloca_inst = std::make_shared<IR::ALLOCAInst>(node.getId(), irtype);
+        auto alloca_inst = std::make_shared<IR::ALLOCAInst>("%" + node.getId(), irtype);
 
         curr_func->addInst(alloca_inst);
 
@@ -83,7 +83,7 @@ void IRGenerator::visit(VarDef& node) {
             // auto is_pure_constant = std::all_of(flatten_initializer.cbegin(), flatten_initializer.cend(),
             //     [](auto&& v) { return v.index() != 2; });
 
-            auto toIRValue = [this](Initializer::val_t a) -> std::shared_ptr<IR::Value> {
+            auto toIRValue = [this](const Initializer::val_t& a) -> std::shared_ptr<IR::Value> {
                 if (a.index() == 0)
                     return constant_pool.getConst(std::get<0>(a));
                 if (a.index() == 1)
@@ -154,29 +154,41 @@ void IRGenerator::visit(VarDef& node) {
             auto flatten_initializer = curr_initializer.flatten(irtype);
             Err::gassert(flatten_initializer.size() == irtype->getBytes() / IR::getBytes(node_type), "Invalid initializer.");
 
-            auto toIRValue = [this](Initializer::val_t a) -> std::shared_ptr<IR::Value> {
+            auto toIRValue = [this](const Initializer::val_t& a) -> std::shared_ptr<IR::Value> {
                 if (a.index() == 0)
                     return constant_pool.getConst(std::get<0>(a));
                 if (a.index() == 1)
                     return constant_pool.getConst(std::get<1>(a));
-                if (a.index() == 2)
-                    Err::error("Invalid global initializer.");
+                Err::error("Invalid global initializer.");
                 return nullptr;
             };
+
+            auto isZero = [this](const Initializer::val_t& a) -> bool {
+                if (a.index() == 0)
+                    return std::get<0>(a) == 0;
+                if (a.index() == 1)
+                    return std::get<1>(a) == 0.0f;
+                Err::error("Invalid global initializer.");
+                return false;
+            };
+
 
             if (node.isArray())
             {
                 auto curr_type = toArrayType(irtype);
                 size_t init_pos = 0;
                 std::function<void(const std::shared_ptr<IR::Type>& type, IR::GVIniter& base)> init_array;
-                init_array = [this, &toIRValue, &flatten_initializer, &init_pos, &init_array]
+                init_array = [this, &toIRValue, &flatten_initializer, &init_pos, &init_array, isZero]
                 (const std::shared_ptr<IR::Type>& type, IR::GVIniter& base) {
                     auto arrtype = toArrayType(type);
                     Err::gassert(arrtype != nullptr);
                     if (arrtype->getElmType()->getTrait() == IR::IRCTYPE::ARRAY)
                     {
                         for (size_t i = 0; i < arrtype->getArraySize(); ++i)
-                            init_array(arrtype->getElmType(), base.addIniter(arrtype->getElmType()));
+                        {
+                            auto& next = base.addIniter(arrtype->getElmType());
+                            init_array(arrtype->getElmType(), next);
+                        }
                     }
                     else if (arrtype->getElmType()->getTrait() == IR::IRCTYPE::BASIC)
                     {
@@ -186,14 +198,19 @@ void IRGenerator::visit(VarDef& node) {
                     else Err::unreachable();
                 };
                 init_array(irtype, gviniter);
+                gviniter.normalizeZero();
             }
             else
             {
                 gviniter = IR::GVIniter(irtype, toIRValue(flatten_initializer[0]));
             }
         }
-        symbol_table.insert(node.getId(),
-            std::make_shared<IR::GlobalVariable>(IR::STOCLASS::GLOBAL, irtype, node.getId(), gviniter));
+
+        auto gv = std::make_shared<IR::GlobalVariable>(
+            node.isConst() ? IR::STOCLASS::CONSTANT :IR::STOCLASS::GLOBAL,
+            irtype, "@" + node.getId(), gviniter);
+        module.addGlobalVar(gv);
+        symbol_table.insert(node.getId(), gv);
     }
 }
 
@@ -279,6 +296,8 @@ void IRGenerator::visit(FuncFParam& node) {
 // DeclRefExp: 'a' \n
 // Warning: NOT always LOADInst
 void IRGenerator::visit(DeclRef& node) {
+    Err::gassert(curr_func != nullptr, "Global initializer is not a compile-time constant");
+
     auto ref = symbol_table.lookup(node.getId());
     Err::gassert(ref != nullptr,
         "Invalid reference to '" + node.getId() + "', not found.");

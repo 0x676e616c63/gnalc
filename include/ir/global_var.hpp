@@ -47,6 +47,8 @@ public:
 
     GVIniter& addIniter(std::shared_ptr<Type> _ty);
 
+    void normalizeZero();
+
     std::string toString() const;
 
     friend class GlobalVariable;

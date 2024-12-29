@@ -50,6 +50,64 @@ namespace IR
         return inner_initer.back();
     }
 
+    void GVIniter::normalizeZero() {
+        if (!isArray()) return;
+        // Element is Array
+        if (getElm(initer_type)->getTrait() == IRCTYPE::ARRAY)
+        {
+            bool inner_is_zero = true;
+            for (auto&& r : inner_initer)
+            {
+                r.normalizeZero();
+                if (!r.isZero())
+                {
+                    inner_is_zero = false;
+                    // Because we want the sub initializer normalized, we should not break
+                    // break;
+                }
+            }
+            if (inner_is_zero)
+            {
+                inner_initer.clear();
+                is_zero = true;
+            }
+        }
+        // Element is Number
+        else
+        {
+            bool inner_is_zero = true;
+            for (auto&& r : inner_initer)
+            {
+                if (auto ci = std::dynamic_pointer_cast<ConstantInt>(r.constval))
+                {
+                    if (ci->getVal() != 0)
+                    {
+                        inner_is_zero = false;
+                        break;
+                    }
+                }
+                else if (auto cf = std::dynamic_pointer_cast<ConstantFloat>(r.constval))
+                {
+                    if (cf->getVal() != 0)
+                    {
+                        inner_is_zero = false;
+                        break;
+                    }
+                }
+                else
+                {
+                    inner_is_zero = false;
+                    break;
+                }
+            }
+            if (inner_is_zero)
+            {
+                inner_initer.clear();
+                is_zero = true;
+            }
+        }
+    }
+
     GVIniter::~GVIniter() {}
 
 
