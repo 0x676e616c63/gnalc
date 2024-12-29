@@ -91,8 +91,8 @@ namespace IR
             addOperand(valptr);
     }
 
-    CALLInst::CALLInst(NameRef name, std::shared_ptr<BType> ty, std::shared_ptr<Function> func, const std::list<std::shared_ptr<Value>>& args)
-        : Instruction(OP::CALL, name, ty)
+    CALLInst::CALLInst(NameRef name, std::shared_ptr<Function> func, const std::vector<std::shared_ptr<Value>>& args)
+        : Instruction(OP::CALL, name, func->getType())
     {
         addOperand(func);
         for (auto valptr : args)

@@ -70,7 +70,7 @@ private:
 public:
     // func储存到func, args储存到operands中
     CALLInst(std::shared_ptr<Function> func, const std::vector<std::shared_ptr<Value>>& args); // for void
-    CALLInst(NameRef name, std::shared_ptr<BType> ty, std::shared_ptr<Function> func, const std::list<std::shared_ptr<Value>>& args);
+    CALLInst(NameRef name, std::shared_ptr<Function> func, const std::vector<std::shared_ptr<Value>>& args);
 
     bool isVoid() const;
     // bool isNoName();
