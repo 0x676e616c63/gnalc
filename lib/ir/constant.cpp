@@ -1,14 +1,14 @@
 #include "../../include/ir/constant.hpp"
-
-#include <bitset>
-
 #include "../../include/ir/visitor.hpp"
+
 #include <string>
+#include <cstdint>
+#include <cinttypes>
 
 namespace IR {
     ConstantInt::ConstantInt(int _val) : Value(std::to_string(_val), makeBType(IRBTYPE::I32)), val(_val) {}
 
-    int ConstantInt::getVal() { return val; }
+    int ConstantInt::getVal() const { return val; }
 
 // Maybe there is some historical reasons :(
 // See https://llvm.org/docs/LangRef.html and https://groups.google.com/g/llvm-dev/c/IlqV3TbSk6M?pli=1
@@ -21,13 +21,13 @@ namespace IR {
     std::string toIRString(float f) {
         char buf[32];
         auto d = static_cast<double>(f);
-        sprintf(buf, "0x%016llX", *reinterpret_cast<uint64_t*>(&d));
+        sprintf(buf, "0x%016" PRIX64, *reinterpret_cast<uint64_t*>(&d));
         return buf;
     }
 
     ConstantFloat::ConstantFloat(float _val) : Value(toIRString(_val), makeBType(IRBTYPE::FLOAT)), val(_val) {}
 
-    float ConstantFloat::getVal() { return val; }
+    float ConstantFloat::getVal() const { return val; }
 
     void ConstantInt::accept(IRVisitor& visitor) { visitor.visit(*this); }
 

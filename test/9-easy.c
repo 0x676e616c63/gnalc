@@ -1,8 +1,8 @@
 int a = 1, b[2] = {1,2}, c[2][2] = {{1,2},{3,4}}, d, e[2] = {}, f[2][3] = {{}, {}};
 float h = 1.0, i[2] = {1, 2}, j[2][2] = {{3, 4}};
-int func()
+int func(int kkk)
 {
-  return 3;
+  return 3 + kkk;
 }
 int main()
 {
@@ -17,6 +17,6 @@ int main()
     int o = 2 / 3;
     int p = 3 % 2;
     int q = 1 + 2 * 3 / 4 * (4 % 2);
-    int r = func() + n;
-    return r + p + kk[1]; // 11
+    int r = func(1) + n;
+    return r + p + kk[1]; // 12
 }

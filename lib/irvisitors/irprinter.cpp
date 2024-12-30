@@ -31,6 +31,13 @@ void LIRPrinter::printout(Module& module) {
         writeln("");
     }
 
+    Logger::logDebug("LIRPrinter: Printing Function Declarations");
+    for (auto& func_decl : module.getFunctionDecls())
+    {
+        func_decl->accept(*this);
+        writeln("");
+    }
+
     Logger::logInfo("LIRPrinter: Finished printing Module \"" + module.getName() + "\"");
 }
 
@@ -51,6 +58,11 @@ void LIRPrinter::visit(Function& node) {
         inst->Instruction::accept(*this);
 
     writeln("}");
+}
+
+void LIRPrinter::visit(FunctionDecl& node) {
+    Logger::logDebug("LIRPrinter: Printing Function Declaration \"" + node.getName() + "\"");
+    write(IRFormatter::formatFuncDecl(node));
 }
 
 void LIRPrinter::visit(Instruction& node) {
@@ -204,16 +216,41 @@ std::string IRFormatter::formatValue(Value& val) {
 }
 
 std::string IRFormatter::formatFunc(Function& func) {
+    auto fn_type = toFunctionType(func.getType());
+    auto ret_type = fn_type->getRet();
+
     std::string ret;
     ret += "define ";
     ret += "dso_local ";
-    ret += func.getType()->toString() + " " + func.getName();
+    ret += ret_type->toString() + " " + func.getName();
     ret += "(";
 
     for (auto it = func.getParams().begin(); it != func.getParams().end(); it++)
     {
         ret += (*it)->getType()->toString() + " noundef " + (*it)->getName();
         if (std::next(it) != func.getParams().end())
+        {
+            ret += ", ";
+        }
+    }
+
+    ret += ")";
+    return ret;
+}
+
+std::string IRFormatter::formatFuncDecl(FunctionDecl& func) {
+    auto fn_type = toFunctionType(func.getType());
+    auto ret_type = fn_type->getRet();
+
+    std::string ret;
+    ret += "declare ";
+    ret += ret_type->toString() + " " + func.getName();
+    ret += "(";
+
+    for (auto it = fn_type->getParams().begin(); it != fn_type->getParams().end(); it++)
+    {
+        ret += (*it)->toString() + " noundef";
+        if (std::next(it) != fn_type->getParams().end())
         {
             ret += ", ";
         }
@@ -383,8 +420,11 @@ std::string IRFormatter::fBRInst(BRInst& inst) {
 
 std::string IRFormatter::fCALLInst(CALLInst& inst) {
     std::string ret;
-    ret += inst.getName();
-    ret += " = ";
+    if (!inst.isVoid())
+    {
+        ret += inst.getName();
+        ret += " = ";
+    }
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
     ret += inst.getType()->toString() + " ";
     ret += inst.getFuncName();
@@ -394,8 +434,8 @@ std::string IRFormatter::fCALLInst(CALLInst& inst) {
     {
         for (auto it = args.begin(); it != args.end(); it++)
         {
-            ret += IRFormatter::formatValue(**it);
-            if (std::next(it) != inst.getArgs().end())
+            ret += (**it).getType()->toString() + " noundef " + (**it).getName();
+            if (std::next(it) != args.end())
             {
                 ret += ", ";
             }

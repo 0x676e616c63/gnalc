@@ -63,7 +63,7 @@ public:
 
     bool replaceUse(const std::shared_ptr<Use>& old_use, const std::shared_ptr<Use>& new_use);
 
-    virtual void accept(class IRVisitor& visitor) = 0;
+    virtual void accept(class IRVisitor& visitor) { Err::not_implemented(); }
     virtual ~Value();
 };
 

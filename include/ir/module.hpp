@@ -21,6 +21,7 @@ class Module : public NameC {
 private:
     std::vector<std::shared_ptr<GlobalVariable>> global_vars;
     std::vector<std::shared_ptr<Function>> funcs;
+    std::vector<std::shared_ptr<FunctionDecl>> func_decls;
 
 public:
     Module() = default;
@@ -33,6 +34,10 @@ public:
     void addFunction(std::shared_ptr<Function> func);
     const std::vector<std::shared_ptr<Function>>& getFunctions() const;
     void delFunction(NameRef name); // by name
+
+    void addFunctionDecl(std::shared_ptr<FunctionDecl> func);
+    const std::vector<std::shared_ptr<FunctionDecl>>& getFunctionDecls() const;
+    void delFunctionDecl(NameRef name); // by name
 
     void accept(IRVisitor& visitor);
     ~Module();

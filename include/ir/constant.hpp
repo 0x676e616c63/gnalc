@@ -16,7 +16,7 @@ private:
 public:
     ConstantInt(int _val);
 
-    int getVal();
+    int getVal() const;
 
     void accept(IRVisitor& visitor) override;
 };
@@ -27,7 +27,7 @@ private:
 public:
     ConstantFloat(float _val);
 
-    float getVal();
+    float getVal() const;
 
     void accept(IRVisitor& visitor) override;
 };

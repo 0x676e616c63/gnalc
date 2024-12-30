@@ -41,6 +41,22 @@ void Module::delFunction(NameRef name) {
     }
 }
 
+void Module::addFunctionDecl(std::shared_ptr<FunctionDecl> func_decl) {
+    func_decls.emplace_back(func_decl);
+}
+
+const std::vector<std::shared_ptr<FunctionDecl>>& Module::getFunctionDecls() const {
+    return func_decls;
+}
+
+void Module::delFunctionDecl(NameRef name) {
+    for (auto it = func_decls.begin(); it != func_decls.end(); ++it) {
+        if ((*it)->isName(name)) {
+            func_decls.erase(it);
+            return;
+        }
+    }
+}
 
 void Module::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
