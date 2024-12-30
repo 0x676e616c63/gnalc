@@ -102,13 +102,13 @@ class IRGenerator : public ASTVisitor {
             Err::gassert(base_type == tmp.base_type || base_type == IR::IRBTYPE::UNDEFINED,
                 "Initializer type inconsistent.");
             base_type = tmp.base_type;
-            std::get<1>(initializer).emplace_back(tmp);
+            std::get<list_t>(initializer).emplace_back(tmp);
         }
 
         Initializer* addList() {
             Err::gassert(isList());
-            std::get<1>(initializer).emplace_back(this, base_type);
-            return std::get<1>(initializer).back().makeList();
+            std::get<list_t>(initializer).emplace_back(this, base_type);
+            return std::get<list_t>(initializer).back().makeList();
         }
 
         template <typename T>
@@ -134,93 +134,127 @@ class IRGenerator : public ASTVisitor {
             initializer.emplace<std::monostate>();
         }
 
-        // TODO: flat initializer support
-        // {1, 2, 3, 4} -> {{1, 2}, {3, 4}
-        // {1, 2, {1 , 2}} -> {1, 2, 1, 2}
-        // {1, {3}} -> {1, 3, 0, 0}
+        // See: https://en.cppreference.com/w/c/language/array_initialization
         std::vector<val_t> flatten(const std::shared_ptr<IR::Type>& type) const {
             Err::gassert(type != nullptr);
 
-            if (empty())
+            if (empty() || (isList() && std::get<list_t>(initializer).empty()))
             {
                 if (type->getTrait() == IR::IRCTYPE::BASIC)
                 {
                     auto bty = IR::toBType(type)->getInner();
                     Err::gassert(bty == base_type);
-                    if (bty == IR::IRBTYPE::I32) return {0};
-                    else return {0.0f};
+                    return { make_zero() };
                 }
-                else if (type->getTrait() == IR::IRCTYPE::ARRAY)
+                if (type->getTrait() == IR::IRCTYPE::ARRAY)
                 {
-                    std::vector<val_t> ret;
                     auto arrty = std::dynamic_pointer_cast<IR::ArrayType>(type);
-                    Err::gassert(type->getTrait() == IR::IRCTYPE::ARRAY && arrty != nullptr);
-                    for (int j = 0; j < arrty->getBytes() / getBytes(base_type); ++j)
-                    {
-                        if (base_type == IR::IRBTYPE::I32)
-                            ret.emplace_back(0);
-                        else
-                            ret.emplace_back(0.0f);
-                    }
+                    return std::vector{arrty->getBytes() / getBytes(base_type), make_zero()};
+                }
+                Err::unreachable();
+            }
+            else if (isVal())
+            {
+                if (type->getTrait() == IR::IRCTYPE::BASIC)
+                    return {std::get<val_t>(initializer) };
+                if (type->getTrait() == IR::IRCTYPE::ARRAY)
+                {
+                    auto arrty = std::dynamic_pointer_cast<IR::ArrayType>(type);
+                    std::vector ret{arrty->getBytes() / getBytes(base_type), make_zero()};
+                    ret[0] = std::get<val_t>(initializer);
                     return ret;
                 }
+                Err::unreachable();
             }
-
-            if (isVal())
+            else if (isList())
             {
-                Err::gassert(type->getTrait() == IR::IRCTYPE::BASIC
-                    && IR::toBType(type)->getInner() == base_type);
-                return {std::get<val_t>(initializer)};
-            }
-
-            auto arrty = std::dynamic_pointer_cast<IR::ArrayType>(type);
-            Err::gassert(type->getTrait() == IR::IRCTYPE::ARRAY && arrty != nullptr);
-            std::vector<val_t> ret;
-
-            size_t len = 0;
-            if (arrty->getElmType()->getTrait() == IR::IRCTYPE::ARRAY)
-            {
-                auto subarrty = std::dynamic_pointer_cast<IR::ArrayType>(arrty->getElmType());
-                Err::gassert(subarrty != nullptr);
-                for (const auto& elem : std::get<list_t>(initializer))
+                const auto& list = std::get<list_t>(initializer);
+                Err::gassert(!list.empty());
+                if (type->getTrait() == IR::IRCTYPE::BASIC)
+                    return list[0].flatten(type);
+                if (type->getTrait() == IR::IRCTYPE::ARRAY)
                 {
-                    auto tmp = elem.flatten(subarrty);
-                    ret.insert(ret.end(),
-                        std::make_move_iterator(tmp.begin()),
-                         std::make_move_iterator(tmp.end()));
-                    ++len;
-                }
-
-                for (; len < arrty->getArraySize(); ++len)
-                {
-                    auto num = arrty->getElmType()->getBytes() / getBytes(base_type);
-                    for (int i = 0; i < num; ++i)
+                    size_t len = 0;
+                    auto arrty = std::dynamic_pointer_cast<IR::ArrayType>(type);
+                    auto elmty = IR::getElm(arrty);
+                    if (elmty->getTrait() == IR::IRCTYPE::BASIC)
                     {
-                        if (base_type == IR::IRBTYPE::I32)
-                            ret.emplace_back(0);
-                        else
-                            ret.emplace_back(0.0f);
+                        std::vector<val_t> ret;
+                        for (auto& subiniter : list)
+                        {
+                            auto tmp = subiniter.flatten(elmty);
+                            ret.insert(ret.end(),
+                                std::make_move_iterator(tmp.begin()),
+                                std::make_move_iterator(tmp.end()));
+                            ++len;
+                        }
+                        for (size_t i = len; i < arrty->getArraySize(); ++i)
+                            ret.emplace_back(make_zero());
+                        return ret;
                     }
-                }
-            }
-            else if (arrty->getElmType()->getTrait() == IR::IRCTYPE::BASIC)
-            {
-                for (const auto& elem : std::get<list_t>(initializer))
-                {
-                    ret.emplace_back(elem.flatten(arrty->getElmType())[0]);
-                    ++len;
-                }
+                    if (elmty->getTrait() == IR::IRCTYPE::ARRAY)
+                    {
+                        std::vector<val_t> ret;
+                        for (auto curr_sub = list.begin(); curr_sub != list.end(); ++curr_sub)
+                        {
+                            // If the nested initializer begins with an opening brace, the entire nested
+                            // initializer up to its closing brace initializes the corresponding array element:
+                            if (curr_sub->isList() || curr_sub->empty())
+                            {
+                                auto tmp = curr_sub->flatten(elmty);
+                                ret.insert(ret.end(),
+                                    std::make_move_iterator(tmp.begin()),
+                                    std::make_move_iterator(tmp.end()));
+                                ++len;
+                            }
+                            // If the nested initializer does not begin with an opening brace,
+                            // only enough initializers from the list are taken to account for the
+                            // elements or members of the sub-array, struct or union; any remaining
+                            // initializers are left to initialize the next array element:
+                            else if (curr_sub->isVal())
+                            {
+                                Initializer helper(nullptr, base_type);
+                                helper.makeList();
+                                for (size_t i = 0; i < elmty->getBytes() / IR::getBytes(base_type); ++i)
+                                {
+                                    std::get<list_t>(helper.initializer).emplace_back(*curr_sub);
+                                    ++curr_sub;
+                                    if (curr_sub == list.end())
+                                        break;
+                                }
+                                --curr_sub;
+                                auto tmp = helper.flatten(elmty);
+                                ret.insert(ret.end(),
+                                    std::make_move_iterator(tmp.begin()),
+                                    std::make_move_iterator(tmp.end()));
+                                ++len;
+                            }
+                        }
 
-                for (; len < arrty->getArraySize(); ++len)
-                {
-                    if (base_type == IR::IRBTYPE::I32)
-                        ret.emplace_back(0);
-                    else
-                        ret.emplace_back(0.0f);
+                        for (size_t i = len; i < arrty->getArraySize(); ++i)
+                        {
+                            Initializer helper(nullptr, base_type);
+                            auto tmp = helper.flatten(elmty);
+                            ret.insert(ret.end(),
+                                std::make_move_iterator(tmp.begin()),
+                                std::make_move_iterator(tmp.end()));
+                        }
+                        return ret;
+                    }
+                    Err::unreachable();
                 }
+                Err::unreachable();
             }
+            Err::unreachable();
+            return {};
+        }
 
-            return ret;
+    private:
+        val_t make_zero() const {
+            if (base_type == IR::IRBTYPE::I32)
+                return {0};
+            else
+                return {0.0f};
         }
     };
 

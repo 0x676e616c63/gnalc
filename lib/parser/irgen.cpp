@@ -18,7 +18,7 @@ void IRGenerator::visit(CompUnit& node) {
 
     auto void_type = IR::makeBType(IR::IRBTYPE::VOID);
     auto i32_type = IR::makeBType(IR::IRBTYPE::I32);
-    auto make_decl = [this](std::string name,
+    auto make_decl = [this](const std::string& name,
         std::vector<std::shared_ptr<IR::Type>> params,
         std::shared_ptr<IR::Type> ret) {
         auto fn = std::make_shared<IR::FunctionDecl>("@" + name, std::move(params), std::move(ret));
@@ -92,6 +92,22 @@ void IRGenerator::visit(VarDef& node) {
         {
             node.getInitVal()->accept(*this);
             auto flatten_initializer = curr_initializer.flatten(irtype);
+
+            // // initializer flatten debug
+            // if (flatten_initializer.size() > 1)
+            // {
+            //     for (auto&& r : flatten_initializer)
+            //     {
+            //         if (r.index() == 0)
+            //             printf("%d, ", std::get<int>(r));
+            //         else if (r.index() == 1)
+            //             printf("%f, ", std::get<float>(r));
+            //         else if (r.index() == 2)
+            //             printf("%s, ", std::get<std::shared_ptr<IR::Value>>(r)->getName().c_str());
+            //     }
+            //     printf("\n");
+            // }
+
             Err::gassert(flatten_initializer.size() == irtype->getBytes() / IR::getBytes(node_type), "Invalid initializer.");
 
             // TODO: check if it is pure constant (or part of it) and make it global for performance.
