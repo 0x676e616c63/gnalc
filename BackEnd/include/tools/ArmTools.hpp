@@ -57,6 +57,9 @@ std::map<CoreRegisterName, std::string> CoreRegisterMap = {
     {CoreRegisterName::r13, "sp"}, // r13-r15 为保留寄存器, 不参与寄存器分配
     {CoreRegisterName::r14, "lr"},
     {CoreRegisterName::r15, "pc"},
+    {CoreRegisterName::sp, "sp"},
+    {CoreRegisterName::lr, "lr"},
+    {CoreRegisterName::pc, "pc"},
 };
 enum ExtensionRegisterName{
     Exvir = -1,

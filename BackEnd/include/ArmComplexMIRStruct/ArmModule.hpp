@@ -3,12 +3,13 @@
 #include <vector>
 #include "../../../include/ir/module.hpp"
 #include "../../Arm.hpp"
+#include "../../../include/symbol_table/symbol_table.hpp"
 #include "./ArmOperand.hpp"
 
 
 class ArmStruct::Module{
     public:
-        Module(IR::Module&);       // IR -> MIR
+        Module(IR::Module&, Sym::SymbolTable&);       // IR -> MIR
         ~Module(); // 记得手动释放
         void AddFunction(Function*);
         void AddDataVar(Global*);

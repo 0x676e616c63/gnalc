@@ -7,6 +7,7 @@
 #include "../../include/ArmComplexMIRStruct/ArmBB.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmInstruction.hpp"
 #include "../../../include/ir/instruction.hpp"
+#include "../../../include/ir/type.hpp"
 #include "../../../include/ir/instructions/binary.hpp"
 #include "../../../include/ir/instructions/compare.hpp"
 #include "../../../include/ir/instructions/control.hpp"
@@ -17,6 +18,10 @@
 
 using namespace ArmTools;
 using namespace ArmStruct;
+ 
+extern std::vector<ArmStruct::Operand*> RegisterPool;
+extern std::vector<ArmStruct::Operand*> FPURegisterPool;
+extern std::vector<ArmStruct::Imm*> ConstPool;
 
 struct ArmTools::MovtwMatch{
     /// @brief 用于操作数不能为立即数, 或者立即数不合法的指令
@@ -29,6 +34,7 @@ struct ArmTools::MovtwMatch{
             /// @brief vmov %temp2 %temp1
             
             Imm *backEnd_imm = new Imm(OperandType::FLOAT, std::to_string(Ieee754));
+            ConstPool.push_back(backEnd_imm);
             
             Operand *backEnd_temp1_def = new Operand(OperandType::FLOAT, temp_VirReg);
             BasicBlock.Func.VirRegOperandMap[temp_VirReg++] = backEnd_temp1_def;
@@ -54,7 +60,9 @@ struct ArmTools::MovtwMatch{
             
             Imm *backEnd_imm_low16 = new Imm(OperandType::FLOAT, std::to_string(Ieee754 & 0xffff));
             Imm *backEnd_imm_high16 = new Imm(OperandType::FLOAT, std::to_string(Ieee754 >> 16));
-            
+            ConstPool.push_back(backEnd_imm_high16);
+            ConstPool.push_back(backEnd_imm_low16);
+
             Operand *backEnd_temp1_def = new Operand(OperandType::INT, temp_VirReg);
             BasicBlock.Func.VirRegOperandMap[temp_VirReg++] = backEnd_temp1_def;
             Operand *backEnd_temp2_def = new Operand(OperandType::FLOAT, temp_VirReg);
@@ -81,6 +89,7 @@ struct ArmTools::MovtwMatch{
         if(isImmCanBeEncodedInText((unsigned long long)imme)){
             ///@brief mov %temp #imm
             Imm *backEnd_imm = new Imm(OperandType::INT, std::to_string(imme));
+            ConstPool.push_back(backEnd_imm);
 
             Operand *backEnd_temp_def = new Operand(OperandType::INT, temp_VirReg);
             BasicBlock.Func.VirRegOperandMap[temp_VirReg++] = backEnd_temp_def;
@@ -96,6 +105,8 @@ struct ArmTools::MovtwMatch{
             ///@brief movt %temp #imm
             Imm *backEnd_imm_low16 = new Imm(OperandType::INT, std::to_string(imme & 0xffff));
             Imm *backEnd_imm_high16 = new Imm(OperandType::INT, std::to_string(imme >> 16));
+            ConstPool.push_back(backEnd_imm_high16);
+            ConstPool.push_back(backEnd_imm_low16);
 
             Operand *backEnd_temp_def = new Operand(OperandType::INT, temp_VirReg);
             BasicBlock.Func.VirRegOperandMap[temp_VirReg++] = backEnd_temp_def;
@@ -228,6 +239,7 @@ struct ArmTools::BranchMatch{
             IR::BasicBlock &destBlock = *midEnd_Branch.getDest();
             
             Imm *backEnd_label = new Imm(OperandType::LABEL, destBlock.getName());
+            ConstPool.push_back(backEnd_label);
 
             Instruction *backEnd_b = new Instruction(
                 OperCode::B, backEnd_label, BasicBlock, {}, {}
@@ -331,6 +343,8 @@ struct ArmTools::BranchMatch{
             
             Imm *TrueBlock = new Imm(OperandType::LABEL, "L" + midEnd_Branch.getTrueDest()->getName());
             Imm *FalseBlock = new Imm(OperandType::LABEL, "L" + midEnd_Branch.getFalseDest()->getName());
+            ConstPool.push_back(TrueBlock);
+            ConstPool.push_back(FalseBlock);
 
             Instruction *backEnd_BranchTrue = new Instruction(
                 backEnd_branch_opcode, TrueBlock, BasicBlock, {}, {}
@@ -436,7 +450,7 @@ struct ArmTools::CallMatch{
                 BasicBlock.InstList.push_back(backEnd_str_argx);
             }
             else{
-                Operand *backEnd_RegArgc = new Operand(OperandType::INT, cnt);
+                Operand *backEnd_RegArgc = RegisterPool[cnt];
                 
                 Instruction *backEnd_str_rx = new Instruction(
                     OperCode::MOV, nullptr, BasicBlock, {std::ref(*backEnd_RegArgc)}, {std::ref(*Use)}
@@ -449,9 +463,8 @@ struct ArmTools::CallMatch{
         BasicBlock.Func.setParamSize(std::max(BasicBlock.Func.getParamSize(), (cnt - 4)*4));
 
         ///@brief 后端bl语句
-        Imm *backEnd_callee = new Imm(
-            OperandType::LABEL, midEnd_call.getFuncName()
-        );
+        Imm *backEnd_callee = new Imm(OperandType::LABEL, midEnd_call.getFuncName());
+        ConstPool.push_back(backEnd_callee);
 
         Instruction *backEnd_bl = new Instruction(
             OperCode::BL, backEnd_callee, BasicBlock, {}, {}
@@ -460,9 +473,13 @@ struct ArmTools::CallMatch{
         if(!midEnd_call.isVoid()){
             Operand *Def = nullptr;
             Instruction *backEnd_retVal = nullptr;
-            if(midEnd_call.getType() == IR::IRBTYPE::I32){
+
+            // 当前返回值仅支持Btype
+            IR::IRBTYPE midEnd_retType = dynamic_cast<IR::BType*>(midEnd_call.getType().get())->getInner();
+
+            if(midEnd_retType == IR::IRBTYPE::I32){
                 Def = new Operand(OperandType::INT, midEnd_call.getName());
-                Operand *Use = new Operand(OperandType::INT, CoreRegisterName::r0);
+                Operand *Use = RegisterPool[CoreRegisterName::r0];
                 
                 backEnd_retVal = new Instruction(
                     OperCode::MOV, nullptr, BasicBlock, {std::ref(*Def)}, {std::ref(*Use)}
@@ -470,7 +487,7 @@ struct ArmTools::CallMatch{
             }
             else{
                 Def = new Operand(OperandType::FLOAT, midEnd_call.getName());
-                Operand *Use = new Operand(OperandType::FLOAT, ExtensionRegisterName::s0);
+                Operand *Use = FPURegisterPool[ExtensionRegisterName::s0];
                 
                 backEnd_retVal = new Instruction(
                     OperCode::MOV, nullptr, BasicBlock, {std::ref(*Def)}, {std::ref(*Use)}
@@ -482,7 +499,7 @@ struct ArmTools::CallMatch{
         ///@brief 寄存器恢复指令(冗余)
         for(int i = 0; i < 4; ++i){
             ///@brief mov rx, %temp
-            Operand *Def = new Operand(OperandType::INT, i);
+            Operand *Def = RegisterPool[i];
             Operand *Use = BasicBlock.Func.VirRegOperandMap[backEnd_temp_VReg[i]];
 
             Instruction *backEnd_callee_rx = new Instruction(
@@ -518,12 +535,12 @@ struct AllocaMatch{
         OperandType valType;
         unsigned long long VirPtr = std::stoull(midEnd_alloca.getName().substr(1));
         
-        auto midEnd_valCType = midEnd_alloca.getBaseTypePtr()->getTrait();
+        auto midEnd_valCType = midEnd_alloca.getBaseType()->getTrait();
 
         if(midEnd_valCType == IR::IRCTYPE::BASIC){
 
-            auto &midEnd_basicType = dynamic_cast<IR::BType&>(*midEnd_alloca.getBaseTypePtr());
-            switch(midEnd_basicType.getBType()){
+            auto midEnd_basicType = dynamic_cast<IR::BType*>(midEnd_alloca.getBaseType().get())->getInner();
+            switch(midEnd_basicType){
                 case IR::IRBTYPE::I32: valType = OperandType::INT; break;
                 case IR::IRBTYPE::FLOAT: valType = OperandType::FLOAT; break;
                 // to be continued
@@ -535,21 +552,21 @@ struct AllocaMatch{
         }
 
         else if(midEnd_valCType == IR::IRCTYPE::ARRAY){
-            auto &midEnd_arrayType = dynamic_cast<IR::ArrayType&>(*midEnd_alloca.getBaseTypePtr()); //shared_ptr
+            auto midEnd_arrayType = dynamic_cast<IR::ArrayType&>(*midEnd_alloca.getBaseType().get()); //shared_ptr
             
             IR::Type *midEnd_elem = midEnd_arrayType.getElmType().get(); // maybe a do-while will be more suitable
 
             std::vector<unsigned long long> arrayDims = {};
 
-            while(typeid(midEnd_elem) != typeid(IR::BType*)){    // 迭代到为简单类型
-                arrayDims.push_back(dynamic_cast<IR::ArrayType*>(midEnd_elem)->getSize());   // 额 这里应该不会是除了array之外的其他ctype
-                midEnd_elem = dynamic_cast<IR::ArrayType*>(midEnd_elem)->getElmType().get();    // 这两句写的有点shit
+            while(typeid(midEnd_elem->getTrait()) != typeid(IR::IRCTYPE::BASIC)){
+                auto midEnd_elem_array = dynamic_cast<IR::ArrayType*>(midEnd_elem);
+                arrayDims.push_back(midEnd_elem_array->getArraySize());
+                midEnd_elem = midEnd_elem_array->getElmType().get();
             }
-            
-            switch(dynamic_cast<IR::BType&>(*midEnd_elem).getBType()){
+        
+            switch(dynamic_cast<IR::BType*>(midEnd_elem)->getInner()){
                 case IR::IRBTYPE::I32: valType = OperandType::INT; break;
                 case IR::IRBTYPE::FLOAT: valType = OperandType::FLOAT; break;
-                // to be continue
             }
 
             ArrayObj *backEnd_stackArray = new ArrayObj(
@@ -625,7 +642,10 @@ struct ArmTools::GepMatch{
         // movinst
         Operand *backEnd_mov_def = new Operand(OperandType::INT, "%" + std::to_string(BasicBlock.Func.VRegNum)); // %x
         BasicBlock.Func.VirRegOperandMap[BasicBlock.Func.VRegNum++] = backEnd_mov_def;
+        
         Imm *backEnd_imm = new Imm(OperandType::INT, std::to_string(perElemSize));
+        ConstPool.push_back(backEnd_imm);
+        
         Instruction *backEnd_mov = new Instruction( // 
             OperCode::MOV, backEnd_imm, BasicBlock, {std::ref(*backEnd_mov_def)}, {}
         );
@@ -644,7 +664,7 @@ struct ArmTools::GepMatch{
         Operand *backEnd_adds_def = new Operand(OperandType::INT, "%" + std::to_string(BasicBlock.Func.VRegNum)); // %3
         BasicBlock.Func.VirRegOperandMap[BasicBlock.Func.VRegNum++] = backEnd_adds_def;
 
-        Operand *backEnd_sp = new Operand(OperandType::INT, 7);
+        Operand *backEnd_sp = RegisterPool[CoreRegisterName::r7];
 
         Instruction *backEnd_add = new Instruction(
             OperCode::ADD, nullptr, BasicBlock, {std::ref(*backEnd_adds_def)}, {std::ref(*midEnd_varIdx), std::ref(*backEnd_sp)} // 7 = r7
@@ -686,10 +706,13 @@ struct ArmTools::GepMatch{
         unsigned long long idx = std::stoull(arrayIdx.getName().substr(1));
         Operand *midEnd_varIdx = BasicBlock.Func.VirRegOperandMap[idx]; // %3
 
-        // movinst
+        // mov
         Operand *backEnd_mov_def = new Operand(OperandType::INT, "%" + std::to_string(BasicBlock.Func.VRegNum)); // %x
         BasicBlock.Func.VirRegOperandMap[BasicBlock.Func.VRegNum++] = backEnd_mov_def;
+        
         Imm *backEnd_imm = new Imm(OperandType::INT, std::to_string(perElemSize));
+        ConstPool.push_back(backEnd_imm);
+        
         Instruction *backEnd_mov = new Instruction( // 
             OperCode::MOV, backEnd_imm, BasicBlock, {std::ref(*backEnd_mov_def)}, {}
         );
@@ -722,7 +745,12 @@ struct ArmTools::GepMatch{
     }
 
     unsigned int getPreElemSize(std::shared_ptr<IR::Type> ElemType){    // 计算一个elem的size(bytes)
-        
+        auto &midEnd_elem = *ElemType.get();
+        if(midEnd_elem.getTrait() == IR::IRCTYPE::BASIC) return 4;
+        else{
+            auto &midEnd_array_elem = dynamic_cast<IR::ArrayType&>(midEnd_elem);
+            return midEnd_array_elem.getBytes();
+        }
     }    
 };
 
@@ -842,6 +870,8 @@ struct ArmTools::BinaryMatch{
             Instruction *backEnd_binary = nullptr;
             if(immeMatch.isImmCanBeEncodedInText((unsigned long long)imme)){
                 Imm *backEnd_imme = new Imm(OperandType::INT, std::to_string(imme));
+                ConstPool.push_back(backEnd_imme);
+                
                 backEnd_binary = new Instruction(
                     backEnd_opcode, backEnd_imme, BasicBlock, {std::ref(*Def)}, {}
                 );

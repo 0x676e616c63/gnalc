@@ -155,43 +155,6 @@ printir/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/build
 .PHONY : printir/fast
 
-#=============================================================================
-# Target rules for targets named asmgen
-
-# Build rule for target.
-asmgen: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 asmgen
-.PHONY : asmgen
-
-# fast build rule for target.
-asmgen/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/build
-.PHONY : asmgen/fast
-
-debug/asmgen.o: debug/asmgen.cpp.o
-.PHONY : debug/asmgen.o
-
-# target to build an object file
-debug/asmgen.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/debug/asmgen.cpp.o
-.PHONY : debug/asmgen.cpp.o
-
-debug/asmgen.i: debug/asmgen.cpp.i
-.PHONY : debug/asmgen.i
-
-# target to preprocess a source file
-debug/asmgen.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/debug/asmgen.cpp.i
-.PHONY : debug/asmgen.cpp.i
-
-debug/asmgen.s: debug/asmgen.cpp.s
-.PHONY : debug/asmgen.s
-
-# target to generate assembly for a file
-debug/asmgen.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/debug/asmgen.cpp.s
-.PHONY : debug/asmgen.cpp.s
-
 debug/irgen.o: debug/irgen.cpp.o
 .PHONY : debug/irgen.o
 
@@ -271,7 +234,6 @@ lib/ir/base.o: lib/ir/base.cpp.o
 lib/ir/base.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/base.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/base.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/base.cpp.o
 .PHONY : lib/ir/base.cpp.o
 
 lib/ir/base.i: lib/ir/base.cpp.i
@@ -281,7 +243,6 @@ lib/ir/base.i: lib/ir/base.cpp.i
 lib/ir/base.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/base.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/base.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/base.cpp.i
 .PHONY : lib/ir/base.cpp.i
 
 lib/ir/base.s: lib/ir/base.cpp.s
@@ -291,7 +252,6 @@ lib/ir/base.s: lib/ir/base.cpp.s
 lib/ir/base.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/base.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/base.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/base.cpp.s
 .PHONY : lib/ir/base.cpp.s
 
 lib/ir/basic_block.o: lib/ir/basic_block.cpp.o
@@ -301,7 +261,6 @@ lib/ir/basic_block.o: lib/ir/basic_block.cpp.o
 lib/ir/basic_block.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/basic_block.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/basic_block.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/basic_block.cpp.o
 .PHONY : lib/ir/basic_block.cpp.o
 
 lib/ir/basic_block.i: lib/ir/basic_block.cpp.i
@@ -311,7 +270,6 @@ lib/ir/basic_block.i: lib/ir/basic_block.cpp.i
 lib/ir/basic_block.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/basic_block.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/basic_block.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/basic_block.cpp.i
 .PHONY : lib/ir/basic_block.cpp.i
 
 lib/ir/basic_block.s: lib/ir/basic_block.cpp.s
@@ -321,7 +279,6 @@ lib/ir/basic_block.s: lib/ir/basic_block.cpp.s
 lib/ir/basic_block.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/basic_block.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/basic_block.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/basic_block.cpp.s
 .PHONY : lib/ir/basic_block.cpp.s
 
 lib/ir/constant.o: lib/ir/constant.cpp.o
@@ -331,7 +288,6 @@ lib/ir/constant.o: lib/ir/constant.cpp.o
 lib/ir/constant.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/constant.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/constant.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/constant.cpp.o
 .PHONY : lib/ir/constant.cpp.o
 
 lib/ir/constant.i: lib/ir/constant.cpp.i
@@ -341,7 +297,6 @@ lib/ir/constant.i: lib/ir/constant.cpp.i
 lib/ir/constant.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/constant.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/constant.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/constant.cpp.i
 .PHONY : lib/ir/constant.cpp.i
 
 lib/ir/constant.s: lib/ir/constant.cpp.s
@@ -351,7 +306,6 @@ lib/ir/constant.s: lib/ir/constant.cpp.s
 lib/ir/constant.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/constant.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/constant.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/constant.cpp.s
 .PHONY : lib/ir/constant.cpp.s
 
 lib/ir/constantpool.o: lib/ir/constantpool.cpp.o
@@ -361,7 +315,6 @@ lib/ir/constantpool.o: lib/ir/constantpool.cpp.o
 lib/ir/constantpool.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/constantpool.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/constantpool.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/constantpool.cpp.o
 .PHONY : lib/ir/constantpool.cpp.o
 
 lib/ir/constantpool.i: lib/ir/constantpool.cpp.i
@@ -371,7 +324,6 @@ lib/ir/constantpool.i: lib/ir/constantpool.cpp.i
 lib/ir/constantpool.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/constantpool.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/constantpool.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/constantpool.cpp.i
 .PHONY : lib/ir/constantpool.cpp.i
 
 lib/ir/constantpool.s: lib/ir/constantpool.cpp.s
@@ -381,7 +333,6 @@ lib/ir/constantpool.s: lib/ir/constantpool.cpp.s
 lib/ir/constantpool.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/constantpool.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/constantpool.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/constantpool.cpp.s
 .PHONY : lib/ir/constantpool.cpp.s
 
 lib/ir/function.o: lib/ir/function.cpp.o
@@ -391,7 +342,6 @@ lib/ir/function.o: lib/ir/function.cpp.o
 lib/ir/function.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/function.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/function.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/function.cpp.o
 .PHONY : lib/ir/function.cpp.o
 
 lib/ir/function.i: lib/ir/function.cpp.i
@@ -401,7 +351,6 @@ lib/ir/function.i: lib/ir/function.cpp.i
 lib/ir/function.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/function.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/function.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/function.cpp.i
 .PHONY : lib/ir/function.cpp.i
 
 lib/ir/function.s: lib/ir/function.cpp.s
@@ -411,7 +360,6 @@ lib/ir/function.s: lib/ir/function.cpp.s
 lib/ir/function.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/function.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/function.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/function.cpp.s
 .PHONY : lib/ir/function.cpp.s
 
 lib/ir/global_var.o: lib/ir/global_var.cpp.o
@@ -421,7 +369,6 @@ lib/ir/global_var.o: lib/ir/global_var.cpp.o
 lib/ir/global_var.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/global_var.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/global_var.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/global_var.cpp.o
 .PHONY : lib/ir/global_var.cpp.o
 
 lib/ir/global_var.i: lib/ir/global_var.cpp.i
@@ -431,7 +378,6 @@ lib/ir/global_var.i: lib/ir/global_var.cpp.i
 lib/ir/global_var.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/global_var.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/global_var.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/global_var.cpp.i
 .PHONY : lib/ir/global_var.cpp.i
 
 lib/ir/global_var.s: lib/ir/global_var.cpp.s
@@ -441,7 +387,6 @@ lib/ir/global_var.s: lib/ir/global_var.cpp.s
 lib/ir/global_var.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/global_var.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/global_var.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/global_var.cpp.s
 .PHONY : lib/ir/global_var.cpp.s
 
 lib/ir/instruction.o: lib/ir/instruction.cpp.o
@@ -451,7 +396,6 @@ lib/ir/instruction.o: lib/ir/instruction.cpp.o
 lib/ir/instruction.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instruction.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instruction.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instruction.cpp.o
 .PHONY : lib/ir/instruction.cpp.o
 
 lib/ir/instruction.i: lib/ir/instruction.cpp.i
@@ -461,7 +405,6 @@ lib/ir/instruction.i: lib/ir/instruction.cpp.i
 lib/ir/instruction.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instruction.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instruction.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instruction.cpp.i
 .PHONY : lib/ir/instruction.cpp.i
 
 lib/ir/instruction.s: lib/ir/instruction.cpp.s
@@ -471,7 +414,6 @@ lib/ir/instruction.s: lib/ir/instruction.cpp.s
 lib/ir/instruction.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instruction.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instruction.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instruction.cpp.s
 .PHONY : lib/ir/instruction.cpp.s
 
 lib/ir/instructions/binary.o: lib/ir/instructions/binary.cpp.o
@@ -481,7 +423,6 @@ lib/ir/instructions/binary.o: lib/ir/instructions/binary.cpp.o
 lib/ir/instructions/binary.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/binary.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/binary.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/binary.cpp.o
 .PHONY : lib/ir/instructions/binary.cpp.o
 
 lib/ir/instructions/binary.i: lib/ir/instructions/binary.cpp.i
@@ -491,7 +432,6 @@ lib/ir/instructions/binary.i: lib/ir/instructions/binary.cpp.i
 lib/ir/instructions/binary.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/binary.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/binary.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/binary.cpp.i
 .PHONY : lib/ir/instructions/binary.cpp.i
 
 lib/ir/instructions/binary.s: lib/ir/instructions/binary.cpp.s
@@ -501,7 +441,6 @@ lib/ir/instructions/binary.s: lib/ir/instructions/binary.cpp.s
 lib/ir/instructions/binary.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/binary.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/binary.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/binary.cpp.s
 .PHONY : lib/ir/instructions/binary.cpp.s
 
 lib/ir/instructions/compare.o: lib/ir/instructions/compare.cpp.o
@@ -511,7 +450,6 @@ lib/ir/instructions/compare.o: lib/ir/instructions/compare.cpp.o
 lib/ir/instructions/compare.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/compare.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/compare.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/compare.cpp.o
 .PHONY : lib/ir/instructions/compare.cpp.o
 
 lib/ir/instructions/compare.i: lib/ir/instructions/compare.cpp.i
@@ -521,7 +459,6 @@ lib/ir/instructions/compare.i: lib/ir/instructions/compare.cpp.i
 lib/ir/instructions/compare.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/compare.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/compare.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/compare.cpp.i
 .PHONY : lib/ir/instructions/compare.cpp.i
 
 lib/ir/instructions/compare.s: lib/ir/instructions/compare.cpp.s
@@ -531,7 +468,6 @@ lib/ir/instructions/compare.s: lib/ir/instructions/compare.cpp.s
 lib/ir/instructions/compare.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/compare.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/compare.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/compare.cpp.s
 .PHONY : lib/ir/instructions/compare.cpp.s
 
 lib/ir/instructions/control.o: lib/ir/instructions/control.cpp.o
@@ -541,7 +477,6 @@ lib/ir/instructions/control.o: lib/ir/instructions/control.cpp.o
 lib/ir/instructions/control.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/control.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/control.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/control.cpp.o
 .PHONY : lib/ir/instructions/control.cpp.o
 
 lib/ir/instructions/control.i: lib/ir/instructions/control.cpp.i
@@ -551,7 +486,6 @@ lib/ir/instructions/control.i: lib/ir/instructions/control.cpp.i
 lib/ir/instructions/control.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/control.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/control.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/control.cpp.i
 .PHONY : lib/ir/instructions/control.cpp.i
 
 lib/ir/instructions/control.s: lib/ir/instructions/control.cpp.s
@@ -561,7 +495,6 @@ lib/ir/instructions/control.s: lib/ir/instructions/control.cpp.s
 lib/ir/instructions/control.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/control.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/control.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/control.cpp.s
 .PHONY : lib/ir/instructions/control.cpp.s
 
 lib/ir/instructions/converse.o: lib/ir/instructions/converse.cpp.o
@@ -571,7 +504,6 @@ lib/ir/instructions/converse.o: lib/ir/instructions/converse.cpp.o
 lib/ir/instructions/converse.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/converse.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/converse.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/converse.cpp.o
 .PHONY : lib/ir/instructions/converse.cpp.o
 
 lib/ir/instructions/converse.i: lib/ir/instructions/converse.cpp.i
@@ -581,7 +513,6 @@ lib/ir/instructions/converse.i: lib/ir/instructions/converse.cpp.i
 lib/ir/instructions/converse.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/converse.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/converse.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/converse.cpp.i
 .PHONY : lib/ir/instructions/converse.cpp.i
 
 lib/ir/instructions/converse.s: lib/ir/instructions/converse.cpp.s
@@ -591,7 +522,6 @@ lib/ir/instructions/converse.s: lib/ir/instructions/converse.cpp.s
 lib/ir/instructions/converse.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/converse.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/converse.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/converse.cpp.s
 .PHONY : lib/ir/instructions/converse.cpp.s
 
 lib/ir/instructions/helper.o: lib/ir/instructions/helper.cpp.o
@@ -601,7 +531,6 @@ lib/ir/instructions/helper.o: lib/ir/instructions/helper.cpp.o
 lib/ir/instructions/helper.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/helper.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/helper.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/helper.cpp.o
 .PHONY : lib/ir/instructions/helper.cpp.o
 
 lib/ir/instructions/helper.i: lib/ir/instructions/helper.cpp.i
@@ -611,7 +540,6 @@ lib/ir/instructions/helper.i: lib/ir/instructions/helper.cpp.i
 lib/ir/instructions/helper.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/helper.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/helper.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/helper.cpp.i
 .PHONY : lib/ir/instructions/helper.cpp.i
 
 lib/ir/instructions/helper.s: lib/ir/instructions/helper.cpp.s
@@ -621,7 +549,6 @@ lib/ir/instructions/helper.s: lib/ir/instructions/helper.cpp.s
 lib/ir/instructions/helper.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/helper.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/helper.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/helper.cpp.s
 .PHONY : lib/ir/instructions/helper.cpp.s
 
 lib/ir/instructions/memory.o: lib/ir/instructions/memory.cpp.o
@@ -631,7 +558,6 @@ lib/ir/instructions/memory.o: lib/ir/instructions/memory.cpp.o
 lib/ir/instructions/memory.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/memory.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/memory.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/memory.cpp.o
 .PHONY : lib/ir/instructions/memory.cpp.o
 
 lib/ir/instructions/memory.i: lib/ir/instructions/memory.cpp.i
@@ -641,7 +567,6 @@ lib/ir/instructions/memory.i: lib/ir/instructions/memory.cpp.i
 lib/ir/instructions/memory.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/memory.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/memory.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/memory.cpp.i
 .PHONY : lib/ir/instructions/memory.cpp.i
 
 lib/ir/instructions/memory.s: lib/ir/instructions/memory.cpp.s
@@ -651,7 +576,6 @@ lib/ir/instructions/memory.s: lib/ir/instructions/memory.cpp.s
 lib/ir/instructions/memory.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/memory.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/memory.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/memory.cpp.s
 .PHONY : lib/ir/instructions/memory.cpp.s
 
 lib/ir/instructions/phi.o: lib/ir/instructions/phi.cpp.o
@@ -661,7 +585,6 @@ lib/ir/instructions/phi.o: lib/ir/instructions/phi.cpp.o
 lib/ir/instructions/phi.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/phi.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/phi.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/phi.cpp.o
 .PHONY : lib/ir/instructions/phi.cpp.o
 
 lib/ir/instructions/phi.i: lib/ir/instructions/phi.cpp.i
@@ -671,7 +594,6 @@ lib/ir/instructions/phi.i: lib/ir/instructions/phi.cpp.i
 lib/ir/instructions/phi.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/phi.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/phi.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/phi.cpp.i
 .PHONY : lib/ir/instructions/phi.cpp.i
 
 lib/ir/instructions/phi.s: lib/ir/instructions/phi.cpp.s
@@ -681,7 +603,6 @@ lib/ir/instructions/phi.s: lib/ir/instructions/phi.cpp.s
 lib/ir/instructions/phi.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/phi.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/phi.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/phi.cpp.s
 .PHONY : lib/ir/instructions/phi.cpp.s
 
 lib/ir/module.o: lib/ir/module.cpp.o
@@ -691,7 +612,6 @@ lib/ir/module.o: lib/ir/module.cpp.o
 lib/ir/module.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/module.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/module.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/module.cpp.o
 .PHONY : lib/ir/module.cpp.o
 
 lib/ir/module.i: lib/ir/module.cpp.i
@@ -701,7 +621,6 @@ lib/ir/module.i: lib/ir/module.cpp.i
 lib/ir/module.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/module.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/module.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/module.cpp.i
 .PHONY : lib/ir/module.cpp.i
 
 lib/ir/module.s: lib/ir/module.cpp.s
@@ -711,7 +630,6 @@ lib/ir/module.s: lib/ir/module.cpp.s
 lib/ir/module.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/module.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/module.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/module.cpp.s
 .PHONY : lib/ir/module.cpp.s
 
 lib/ir/type.o: lib/ir/type.cpp.o
@@ -721,7 +639,6 @@ lib/ir/type.o: lib/ir/type.cpp.o
 lib/ir/type.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/type.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/type.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/type.cpp.o
 .PHONY : lib/ir/type.cpp.o
 
 lib/ir/type.i: lib/ir/type.cpp.i
@@ -731,7 +648,6 @@ lib/ir/type.i: lib/ir/type.cpp.i
 lib/ir/type.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/type.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/type.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/type.cpp.i
 .PHONY : lib/ir/type.cpp.i
 
 lib/ir/type.s: lib/ir/type.cpp.s
@@ -741,7 +657,6 @@ lib/ir/type.s: lib/ir/type.cpp.s
 lib/ir/type.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/type.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/type.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/type.cpp.s
 .PHONY : lib/ir/type.cpp.s
 
 lib/ir/utilities.o: lib/ir/utilities.cpp.o
@@ -751,7 +666,6 @@ lib/ir/utilities.o: lib/ir/utilities.cpp.o
 lib/ir/utilities.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/utilities.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/utilities.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/utilities.cpp.o
 .PHONY : lib/ir/utilities.cpp.o
 
 lib/ir/utilities.i: lib/ir/utilities.cpp.i
@@ -761,7 +675,6 @@ lib/ir/utilities.i: lib/ir/utilities.cpp.i
 lib/ir/utilities.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/utilities.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/utilities.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/utilities.cpp.i
 .PHONY : lib/ir/utilities.cpp.i
 
 lib/ir/utilities.s: lib/ir/utilities.cpp.s
@@ -771,7 +684,6 @@ lib/ir/utilities.s: lib/ir/utilities.cpp.s
 lib/ir/utilities.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/utilities.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/utilities.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/utilities.cpp.s
 .PHONY : lib/ir/utilities.cpp.s
 
 lib/irvisitors/irprinter.o: lib/irvisitors/irprinter.cpp.o
@@ -779,6 +691,7 @@ lib/irvisitors/irprinter.o: lib/irvisitors/irprinter.cpp.o
 
 # target to build an object file
 lib/irvisitors/irprinter.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/irvisitors/irprinter.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/irvisitors/irprinter.cpp.o
 .PHONY : lib/irvisitors/irprinter.cpp.o
 
@@ -787,6 +700,7 @@ lib/irvisitors/irprinter.i: lib/irvisitors/irprinter.cpp.i
 
 # target to preprocess a source file
 lib/irvisitors/irprinter.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/irvisitors/irprinter.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/irvisitors/irprinter.cpp.i
 .PHONY : lib/irvisitors/irprinter.cpp.i
 
@@ -795,6 +709,7 @@ lib/irvisitors/irprinter.s: lib/irvisitors/irprinter.cpp.s
 
 # target to generate assembly for a file
 lib/irvisitors/irprinter.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/irvisitors/irprinter.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/irvisitors/irprinter.cpp.s
 .PHONY : lib/irvisitors/irprinter.cpp.s
 
@@ -938,13 +853,9 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... asmgen"
 	@echo "... irgen"
 	@echo "... printast"
 	@echo "... printir"
-	@echo "... debug/asmgen.o"
-	@echo "... debug/asmgen.i"
-	@echo "... debug/asmgen.s"
 	@echo "... debug/irgen.o"
 	@echo "... debug/irgen.i"
 	@echo "... debug/irgen.s"

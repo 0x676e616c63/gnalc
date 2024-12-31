@@ -15,7 +15,7 @@ std::vector<ArmStruct::Operand*> RegisterPool = {};
 std::vector<ArmStruct::Operand*> FPURegisterPool = {};
 std::vector<ArmStruct::Imm*> ConstPool = {};
 
-Module::Module(IR::Module& midEnd_Module){
+Module::Module(IR::Module& midEnd_Module, Sym::SymbolTable& symTable){
     this->ModuleName = midEnd_Module.getName(); // pass by val
 
     ///@todo get .bss and get .data and get .equ
@@ -76,12 +76,14 @@ void Module::Legalize(){
         BB& BB_head = **(func.BBList.begin());
         BB& BB_tail = *(func.BBList.back());
 
-        Operand *backEnd_r7 = new Operand(OperandType::INT, CoreRegisterName::r7);
-        Operand *backEnd_sp = new Operand(OperandType::INT, CoreRegisterName::sp);
-        Operand *backEnd_lr = new Operand(OperandType::INT, CoreRegisterName::lr);
-        Operand *backEnd_pc = new Operand(OperandType::INT, CoreRegisterName::pc);
+        Operand *backEnd_r7 = RegisterPool[CoreRegisterName::r7];
+        Operand *backEnd_sp = RegisterPool[CoreRegisterName::sp];
+        Operand *backEnd_lr = RegisterPool[CoreRegisterName::lr];
+        Operand *backEnd_pc = RegisterPool[CoreRegisterName::pc];
         Imm *backEnd_0 = new Imm(OperandType::INT, "0");
         Imm *backEnd_stackSize = new Imm(OperandType::INT, std::to_string(func.getStackSize()));
+        ConstPool.push_back(backEnd_0);
+        ConstPool.push_back(backEnd_stackSize);
 
         // push {r7, lr}; sub sp, sp, #imm; add r7, sp, #0;
         Instruction *backEnd_add_1 = new Instruction(

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(gnalc)
 
-set(CMAKE_CXX_COMPILER clang++-14)
+set(CMAKE_CXX_COMPILER clang++)
 set(CMAKE_CXX_STANDARD 17)
 
 option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
@@ -34,5 +34,3 @@ add_executable(printast
 add_executable(irgen debug/irgen.cpp lib/irvisitors/irprinter.cpp ${GNALC_PARSER_SRC} ${GNALC_IR_SRC} ${GNALC_LEXER_SRC} ${GNALC_UTILS_SRC})
 
 add_executable(printir debug/irprintertest.cpp lib/irvisitors/irprinter.cpp ${GNALC_IR_SRC} ${GNALC_UTILS_SRC})
-
-add_executable(asmgen debug/asmgen.cpp ${GNALC_IR_SRC} ${GNALC_BACKEND_SRC})
