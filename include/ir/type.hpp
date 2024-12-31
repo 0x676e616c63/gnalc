@@ -8,6 +8,9 @@
 
 #include <string>
 #include <memory>
+#include <utility>
+#include <vector>
+
 #include "../utils/exception.hpp"
 
 namespace IR {
@@ -29,7 +32,8 @@ enum class IRBTYPE {
 enum class IRCTYPE {
     BASIC,
     PTR,
-    ARRAY
+    ARRAY,
+    FUNCTION
 };
 
 inline size_t getBytes(IRBTYPE type) {
@@ -53,6 +57,7 @@ class Type;
 class BType;
 class PtrType;
 class ArrayType;
+class FunctionType;
 
 class Type {
 public:
@@ -106,7 +111,7 @@ protected:
     std::shared_ptr<Type> element_type;
 public:
     PtrType(std::shared_ptr<Type> element_type_) : element_type(std::move(element_type_)) {}
-    auto& getElmType() const { return element_type; }
+    const auto& getElmType() const { return element_type; }
 
     IRCTYPE getTrait() const override { return IRCTYPE::PTR; }
     std::string toString() const override { return "ptr"; }
@@ -123,7 +128,7 @@ public:
     ArrayType(std::shared_ptr<Type> element_type_, size_t size)
         : element_type(std::move(element_type_)), size(size) {}
 
-    auto& getElmType() const { return element_type; }
+    const auto& getElmType() const { return element_type; }
 
     size_t getArraySize() const { return size; }
 
@@ -138,17 +143,45 @@ public:
     }
 };
 
+class FunctionType : public Type {
+protected:
+    std::vector<std::shared_ptr<Type>> params;
+    std::shared_ptr<Type> ret;
+public:
+    FunctionType(std::vector<std::shared_ptr<Type>> params_, std::shared_ptr<Type> ret_)
+        : params(std::move(params_)), ret(std::move(ret_)) {}
+
+    IRCTYPE getTrait() const override { return IRCTYPE::FUNCTION; }
+
+    const std::vector<std::shared_ptr<Type>>& getParams() const {
+        return params;
+    }
+
+    const std::shared_ptr<Type>& getRet() const { return ret; }
+
+    std::string toString() const override {
+        Err::not_implemented();
+        return {};
+    }
+
+    size_t getBytes() const override {
+        Err::unreachable("Cannot get bytes of function type.");
+        return 0;
+    }
+};
+
 // 以下为一些辅助函数，类型不匹配会抛出exception
 
 std::shared_ptr<BType> makeBType(IRBTYPE bty);
 std::shared_ptr<PtrType> makePtrType(std::shared_ptr<Type> ele_ty);
-
 std::shared_ptr<ArrayType> makeArrayType(std::shared_ptr<Type> ele_ty, size_t size);
+std::shared_ptr<FunctionType> makeFunctionType(std::vector<std::shared_ptr<Type>> params, std::shared_ptr<Type> ret);
 
 // 若类型不正确会返回nullptr
 std::shared_ptr<BType> toBType(const std::shared_ptr<Type>& ty);
 std::shared_ptr<PtrType> toPtrType(const std::shared_ptr<Type>& ty);
 std::shared_ptr<ArrayType> toArrayType(const std::shared_ptr<Type>& ty);
+std::shared_ptr<FunctionType> toFunctionType(const std::shared_ptr<Type>& ty);
 
 // 返回PTR, ARRAY的element_type; BType 会返回 nullptr
 std::shared_ptr<Type> getElm(const std::shared_ptr<Type>& ty);

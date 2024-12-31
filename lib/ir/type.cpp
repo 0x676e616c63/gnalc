@@ -3,6 +3,8 @@
  */
 #include "../../include/ir/type.hpp"
 
+#include <algorithm>
+
 namespace IR {
 
     std::shared_ptr<BType> makeBType(IRBTYPE bty) {
@@ -19,6 +21,17 @@ namespace IR {
         return std::make_shared<ArrayType>(ele_ty, size);
     }
 
+    std::shared_ptr<FunctionType> makeFunctionType(
+        std::vector<std::shared_ptr<Type>> params,
+        std::shared_ptr<Type> ret)
+    {
+        Err::gassert(!std::any_of(params.begin(), params.end(),
+            [](auto&& p){return p == nullptr;}),
+            "makeFunctionType(): Param type is nullptr");
+        Err::gassert(ret != nullptr, "makeFunctionType(): Return type is nullptr.");
+        return std::make_shared<FunctionType>(std::move(params), std::move(ret));
+    }
+
     std::shared_ptr<BType> toBType(const std::shared_ptr<Type>& ty) {
         return std::dynamic_pointer_cast<BType>(ty);
     }
@@ -30,6 +43,11 @@ namespace IR {
     std::shared_ptr<ArrayType> toArrayType(const std::shared_ptr<Type>& ty) {
         return std::dynamic_pointer_cast<ArrayType>(ty);
     }
+
+    std::shared_ptr<FunctionType> toFunctionType(const std::shared_ptr<Type>& ty) {
+        return std::dynamic_pointer_cast<FunctionType>(ty);
+    }
+
 
     std::shared_ptr<Type> getElm(const std::shared_ptr<Type>& ty) {
         switch(ty->getTrait()) {
@@ -64,6 +82,19 @@ namespace IR {
             auto a_pty = toPtrType(a);
             auto b_pty = toPtrType(b);
             return isSameType(a_pty->getElmType(), b_pty->getElmType());
+        }
+        if (a->getTrait() == IRCTYPE::FUNCTION)
+        {
+            auto a_fnty = toFunctionType(a);
+            auto b_fnty = toFunctionType(b);
+            if (a_fnty->getParams().size() != b_fnty->getParams().size())
+                return false;
+            for (size_t i = 0; i < a_fnty->getParams().size(); ++i)
+            {
+                if (!isSameType(a_fnty->getParams()[i], b_fnty->getParams()[i]))
+                    return false;
+            }
+            return isSameType(a_fnty->getRet(), b_fnty->getRet());
         }
         return false;
     }

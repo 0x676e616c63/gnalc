@@ -38,6 +38,7 @@ public:
 
     void visit(GlobalVariable& node) override;
     void visit(Function& node) override;
+    void visit(FunctionDecl& node) override;
     void visit(Instruction& node) override;
 };
 
@@ -62,6 +63,7 @@ public:
     // static std::string formatConstInt(ConstantInt& ci); // 和formatValue重了
     // static std::string formatConstFloat(ConstantFloat& cf);
     static std::string formatFunc(Function& func); // define dso_local void @fu(i32 noundef %a, i32 noundef %b)
+    static std::string formatFuncDecl(FunctionDecl& func);
     static std::string formatGV(GlobalVariable& gv);
     static std::string formatInst(Instruction& inst);
 

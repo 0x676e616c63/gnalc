@@ -273,8 +273,8 @@ public:
 /**
  * FuncFParam: int a, int b[], int c[][2]（根据语言定义，第一维一定为空）
  * int a: _array=f
- * int b[]: _array=t, _one_dim=t, subcripts.size()=0
- * int c[][2]: _array=t, _one_dim=f, subcripts.size()=1
+ * int b[]: _array=t, _one_dim=t, subscripts.size()=0
+ * int c[][2]: _array=t, _one_dim=f, subscripts.size()=1
  * 
  * 处理时需注意第一维的问题!!!
  */

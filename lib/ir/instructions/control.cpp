@@ -83,16 +83,19 @@ namespace IR
         return std::dynamic_pointer_cast<BasicBlock>((*std::next(std::next(getOperands().begin())))->getValue());
     }
 
-    CALLInst::CALLInst(std::shared_ptr<Function> func, const std::vector<std::shared_ptr<Value>>& args)
+    CALLInst::CALLInst(std::shared_ptr<FunctionDecl> func,
+        const std::vector<std::shared_ptr<Value>>& args)
         : Instruction(OP::CALL, "__call", makeBType(IRBTYPE::VOID))
     {
+        Err::gassert(toBType(toFunctionType(func->getType())->getRet())->getInner() == IRBTYPE::VOID);
         addOperand(func);
         for (auto valptr : args)
             addOperand(valptr);
     }
 
-    CALLInst::CALLInst(NameRef name, std::shared_ptr<BType> ty, std::shared_ptr<Function> func, const std::list<std::shared_ptr<Value>>& args)
-        : Instruction(OP::CALL, name, ty)
+    CALLInst::CALLInst(NameRef name, std::shared_ptr<FunctionDecl> func,
+        const std::vector<std::shared_ptr<Value>>& args)
+        : Instruction(OP::CALL, name, toFunctionType(func->getType())->getRet())
     {
         addOperand(func);
         for (auto valptr : args)
@@ -109,9 +112,9 @@ namespace IR
         return (*(getOperands().begin()))->getValue()->getName();
     }
 
-    std::shared_ptr<Function> CALLInst::getFunc() const
+    std::shared_ptr<FunctionDecl> CALLInst::getFunc() const
     {
-        return std::dynamic_pointer_cast<Function>((*(getOperands().begin()))->getValue());
+        return std::dynamic_pointer_cast<FunctionDecl>((*(getOperands().begin()))->getValue());
     }
 
     std::vector<std::shared_ptr<Value>> CALLInst::getArgs() const

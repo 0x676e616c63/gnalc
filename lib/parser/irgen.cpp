@@ -15,6 +15,21 @@ namespace AST
 {
 void IRGenerator::visit(CompUnit& node) {
     symbol_table.initScope("__global");
+
+    auto void_type = IR::makeBType(IR::IRBTYPE::VOID);
+    auto i32_type = IR::makeBType(IR::IRBTYPE::I32);
+    auto make_decl = [this](const std::string& name,
+        std::vector<std::shared_ptr<IR::Type>> params,
+        std::shared_ptr<IR::Type> ret) {
+        auto fn = std::make_shared<IR::FunctionDecl>("@" + name, std::move(params), std::move(ret));
+        symbol_table.insert(name, fn);
+        module.addFunctionDecl(fn);
+    };
+
+    // Just for test on my x86-64 machine
+    make_decl("putchar", {i32_type}, i32_type);
+    // TODO: finish
+
     for (auto& n : node.getNodes()) {
         n->accept(*this);
     }
@@ -77,6 +92,22 @@ void IRGenerator::visit(VarDef& node) {
         {
             node.getInitVal()->accept(*this);
             auto flatten_initializer = curr_initializer.flatten(irtype);
+
+            // // initializer flatten debug
+            // if (flatten_initializer.size() > 1)
+            // {
+            //     for (auto&& r : flatten_initializer)
+            //     {
+            //         if (r.index() == 0)
+            //             printf("%d, ", std::get<int>(r));
+            //         else if (r.index() == 1)
+            //             printf("%f, ", std::get<float>(r));
+            //         else if (r.index() == 2)
+            //             printf("%s, ", std::get<std::shared_ptr<IR::Value>>(r)->getName().c_str());
+            //     }
+            //     printf("\n");
+            // }
+
             Err::gassert(flatten_initializer.size() == irtype->getBytes() / IR::getBytes(node_type), "Invalid initializer.");
 
             // TODO: check if it is pure constant (or part of it) and make it global for performance.
@@ -248,6 +279,9 @@ void IRGenerator::visit(ArraySubscript& node) {
 
 // FunctionDef: 'func' int32
 void IRGenerator::visit(FuncDef& node) {
+    auto prev = symbol_table.lookup(node.getId());
+    Err::gassert(prev == nullptr, "Invalid function id.");
+
     IR::IRBTYPE ty = IR::IRBTYPE::UNDEFINED;
     switch (node.getType())
     {
@@ -257,18 +291,26 @@ void IRGenerator::visit(FuncDef& node) {
     case dtype::FLOAT:
         ty = IR::IRBTYPE::FLOAT;
         break;
+    case dtype::VOID:
+        ty = IR::IRBTYPE::VOID;
+        break;
     default:
         Err::error("Function should always return int or float.");
         break;
     }
 
-    curr_func = std::make_shared<IR::Function>("@" + node.getId(), IR::makeBType(ty));
+    curr_func = nullptr;
+    std::vector<std::shared_ptr<IR::Value>> params;
     if (!node.isEmptyParam()) {
         for (auto& p : node.getParams()) {
             p->accept(*this);
-            curr_func->addParam(curr_val);
+            params.emplace_back(curr_val);
         }
     }
+
+    curr_func = std::make_shared<IR::Function>("@" + node.getId(), std::move(params), IR::makeBType(ty));
+    curr_func_params_inited = false;
+
     next_temp_id = 1;
     node.getBody()->accept(*this);
 
@@ -277,31 +319,56 @@ void IRGenerator::visit(FuncDef& node) {
     // the value returned to the environment is the same as if executing return 0;.
     if (node.getId() == "main")
     {
-        if (curr_func->getInsts().back()->getOpcode() != IR::OP::RET)
+        if (curr_func->getInsts().empty() || curr_func->getInsts().back()->getOpcode() != IR::OP::RET)
             curr_func->addInst(std::make_shared<IR::RETInst>(constant_pool.getConst(0)));
     }
 
     module.addFunction(curr_func);
     symbol_table.insert(node.getId(), curr_func);
+    curr_func = nullptr;
 }
 
 // FuncFParam: 'a' int32[][2] \n
 void IRGenerator::visit(FuncFParam& node) {
+    IR::IRBTYPE node_type = IR::IRBTYPE::UNDEFINED;
+    switch (node.getType())
+    {
+    case dtype::INT:
+        node_type = IR::IRBTYPE::I32;
+        break;
+    case dtype::FLOAT:
+        node_type = IR::IRBTYPE::FLOAT;
+        break;
+    default:
+        Err::error("Function params should always be int or float.");
+        break;
+    }
+
+    std::shared_ptr<IR::Type> ir_type;
     if (node.isArray() && !node.isOneDim()) {
+        Err::todo("Array");
         for (auto& ss : node.getSubscripts()) {
             ss->accept(*this);
         }
     }
+    else
+    {
+        ir_type = IR::makeBType(node_type);
+    }
+
+    // Remember to remove '%'.
+    // TODO: More sensible
+    curr_val = std::make_shared<IR::Value>("%" + node.getId(), ir_type);
 }
 
 // DeclRefExp: 'a' \n
 // Warning: NOT always LOADInst
 void IRGenerator::visit(DeclRef& node) {
-    Err::gassert(curr_func != nullptr, "Global initializer is not a compile-time constant");
+    Err::gassert(curr_func != nullptr, "Global initializer must be a compile-time constant");
 
     auto ref = symbol_table.lookup(node.getId());
-    Err::gassert(ref != nullptr,
-        "Invalid reference to '" + node.getId() + "', not found.");
+
+    Err::gassert(ref != nullptr, "Invalid reference to '" + node.getId() + "', not found.");
 
     // TODO: Prevent potential bugs
     if (auto alloca_inst = std::dynamic_pointer_cast<IR::ALLOCAInst>(ref))
@@ -317,39 +384,56 @@ void IRGenerator::visit(DeclRef& node) {
     }
     else if (auto gv = std::dynamic_pointer_cast<IR::GlobalVariable>(ref))
     {
-        auto load = std::make_shared<IR::LOADInst>(get_temp_name(), gv);
-        curr_func->addInst(load);
-        curr_val = load;
+        if (gv->isArray())
+            curr_val = gv;
+        else
+        {
+            auto load = std::make_shared<IR::LOADInst>(get_temp_name(), gv);
+            curr_func->addInst(load);
+            curr_val = load;
+        }
     }
-    else
-        Err::error("Unexpected reference type.");
+    else curr_val = ref;
 }
 
 // a[2][1]
 // ArrayExp: 'a' [2][1]
+// Warning: Not always LOADInst
 void IRGenerator::visit(ArrayExp& node) {
     node.getRef()->accept(*this);
     auto base = curr_val;
 
-    std::vector<std::shared_ptr<IR::Value>> idx;
+    std::vector<std::shared_ptr<IR::Value>> indices;
     for (auto& ss : node.getIndices()) {
         ss->accept(*this);
         auto idxty = toBType(curr_val->getType());
         Err::gassert(idxty != nullptr && idxty->getInner() == IR::IRBTYPE::I32,
             "Array subscripts must be integers.");
-        idx.emplace_back(curr_val);
+        indices.emplace_back(curr_val);
     }
 
-    if (std::dynamic_pointer_cast<IR::ALLOCAInst>(base) != nullptr
-        || std::dynamic_pointer_cast<IR::GlobalVariable>(base) != nullptr)
+    Err::gassert(std::dynamic_pointer_cast<IR::ALLOCAInst>(base) != nullptr
+        || std::dynamic_pointer_cast<IR::GlobalVariable>(base) != nullptr, "Not an array.");
+
+    std::shared_ptr<IR::Value> curr_gep = base;
+    for (auto&& idx : indices)
     {
-        auto gep_inst = std::make_shared<IR::GEPInst>(get_temp_name(), base, idx);
-        auto load_inst = std::make_shared<IR::LOADInst>(get_temp_name(), gep_inst);
-        curr_func->addInst(gep_inst);
+        Err::gassert(curr_gep->getType()->getTrait() == IR::IRCTYPE::PTR
+            && IR::getElm(curr_gep->getType())->getTrait() == IR::IRCTYPE::ARRAY,
+            "Invalid array index.");
+        curr_gep = std::make_shared<IR::GEPInst>(get_temp_name(), curr_gep,
+            std::vector<std::shared_ptr<IR::Value>>{constant_pool.getConst(0), idx});
+        curr_func->addInst(std::dynamic_pointer_cast<IR::Instruction>(curr_gep));
+    }
+
+    if (IR::getElm(curr_gep->getType())->getTrait() == IR::IRCTYPE::BASIC)
+    {
+        auto load_inst = std::make_shared<IR::LOADInst>(get_temp_name(), curr_gep);
         curr_func->addInst(load_inst);
         curr_val = load_inst;
     }
-    else Err::error("NOT an array.");
+    else
+        curr_val = curr_gep;
 }
 
 // a(1, 2, 3)
@@ -357,7 +441,7 @@ void IRGenerator::visit(ArrayExp& node) {
 void IRGenerator::visit(CallExp& node) {
     node.getRef()->accept(*this);
 
-    auto func = std::dynamic_pointer_cast<IR::Function>(curr_val);
+    auto func = std::dynamic_pointer_cast<IR::FunctionDecl>(curr_val);
     Err::gassert(func != nullptr, "Invalid to call '" + node.getId() + "', which is not a function.");
 
     std::vector<std::shared_ptr<IR::Value>> args;
@@ -368,16 +452,17 @@ void IRGenerator::visit(CallExp& node) {
         }
     }
 
-    auto expected = func->getParams();
+    auto functy = IR::toFunctionType(func->getType());
+    auto expected = functy->getParams();
     if (expected.size() != args.size())
         Err::error("Invalid call.");
 
     for (size_t i = 0; i < args.size(); ++i)
     {
-        if (IR::isSameType(expected[i]->getType(), args[i]->getType()))
+        if (IR::isSameType(expected[i], args[i]->getType()))
             continue;
-        else if (expected[i]->getType()->getTrait() == IR::IRCTYPE::BASIC
-            && expected[i]->getType()->getTrait() == args[i]->getType()->getTrait())
+        else if (expected[i]->getTrait() == IR::IRCTYPE::BASIC
+            && expected[i]->getTrait() == args[i]->getType()->getTrait())
         {
             auto arg_bty = IR::toBType(args[i]->getType())->getInner();
             args[i] = try_type_cast(args[i], arg_bty);
@@ -386,7 +471,14 @@ void IRGenerator::visit(CallExp& node) {
             Err::error("Invalid call.");
     }
 
-    curr_val = std::make_shared<IR::CALLInst>(func, args);
+    std::shared_ptr<IR::CALLInst> call;
+    if (IR::toBType(functy->getRet())->getInner() == IR::IRBTYPE::VOID)
+        call = std::make_shared<IR::CALLInst>(func, args);
+    else
+        call = std::make_shared<IR::CALLInst>(get_temp_name(), func, args);
+
+    curr_func->addInst(call);
+    curr_val = call;
 }
 
 void IRGenerator::visit(FuncRParam& node) {
@@ -601,11 +693,32 @@ void IRGenerator::visit(FloatLiteral& node) {
 }
 
 void IRGenerator::visit(CompStmt& node) {
+    bool need_finish = false;
+    if (!curr_func_params_inited)
+    {
+        need_finish = true;
+        curr_func_params_inited = true;
+        symbol_table.initScope();
+        for (const auto& param : curr_func->getParams())
+        {
+            auto alloca = std::make_shared<IR::ALLOCAInst>(get_temp_name(), param->getType());
+            auto str = std::make_shared<IR::STOREInst>(param, alloca);
+            curr_func->addInst(alloca);
+            curr_func->addInst(str);
+            // Because we add '%' previously, we should substr(1) to get the real ID.
+            // TODO: more sensible
+            symbol_table.insert(param->getName().substr(1), alloca);
+        }
+    }
+
     symbol_table.initScope();
     for (auto& item : node.getItems()) {
         item->accept(*this);
     }
+
     symbol_table.finishScope();
+    if (need_finish)
+        symbol_table.finishScope();
 }
 
 void IRGenerator::visit(IfStmt& node) {
@@ -631,12 +744,17 @@ void IRGenerator::visit(ContinueStmt& node) {
 }
 
 void IRGenerator::visit(ReturnStmt& node) {
+    auto expected = IR::toBType(IR::toFunctionType(curr_func->getType())->getRet())->getInner();
     if (!node.isVoid()) {
         node.getReturnVal()->accept(*this);
-        curr_func->addInst(std::make_shared<IR::RETInst>(curr_val));
+        auto ret = try_type_cast(curr_val, expected);
+        Err::gassert(ret->getType()->getTrait() == IR::IRCTYPE::BASIC
+            && IR::toBType(ret->getType())->getInner() == expected, "Invalid return");
+        curr_func->addInst(std::make_shared<IR::RETInst>(ret));
     }
     else
     {
+        Err::gassert(expected == IR::IRBTYPE::VOID, "Invalid return.");
         curr_func->addInst(std::make_shared<IR::RETInst>());
     }
 }
