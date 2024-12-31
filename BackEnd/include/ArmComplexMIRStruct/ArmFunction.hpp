@@ -52,7 +52,7 @@ class ArmStruct::ArrayObj : FrameObj{
 class ArmStruct::SubFrame{
     public:
         SubFrame();
-        ~SubFrame()=default;
+        ~SubFrame();
 
         ///@warning will ret nulls
         void insertObj(unsigned long long idx, FrameObj* Obj){VirPtrFrameObjMap[idx] = Obj;}

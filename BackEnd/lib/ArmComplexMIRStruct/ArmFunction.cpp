@@ -106,6 +106,13 @@ void Function::MkFrameFinal(){
 
 // void Function::TerminatorPredict();
 
+Function::~Function(){
+    for(auto bbptr : BBList) delete bbptr;
+    for(auto operptr : VirRegOperandMap) delete operptr.second;
+    delete local;
+    delete temp;
+}
+
 std::string& Function::toString(){
     for(auto it = BBList.begin(); it != BBList.end(); ++it){
         auto BasicBlock = **it;
@@ -126,3 +133,9 @@ unsigned int SubFrame::getSize(){
     }
     return totalSize;
 }
+
+SubFrame::~SubFrame(){
+    for(auto operptr : VirPtrFrameObjMap) delete operptr.second;
+    for(auto frameptr : VirPtrOffsetMap) delete frameptr.second;
+}
+
