@@ -12,7 +12,7 @@ namespace IR {
 class FunctionDecl : public Value {
 public:
     FunctionDecl(std::string name_, std::vector<std::shared_ptr<Type>> params,
-        std::shared_ptr<Type> ret_type);
+        std::shared_ptr<Type> ret_type, bool va_arg_);
 
     void accept(IRVisitor& visitor) override;
     ~FunctionDecl() override;

@@ -17,18 +17,36 @@ void IRGenerator::visit(CompUnit& node) {
     symbol_table.initScope("__global");
 
     auto void_type = IR::makeBType(IR::IRBTYPE::VOID);
+    auto i8_type = IR::makeBType(IR::IRBTYPE::I8);
+    auto i8ptr_type = IR::makePtrType(i8_type);
     auto i32_type = IR::makeBType(IR::IRBTYPE::I32);
+    auto i32ptr_type = IR::makePtrType(i32_type);
+    auto f32_type = IR::makeBType(IR::IRBTYPE::FLOAT);
+    auto f32ptr_type = IR::makePtrType(f32_type);
     auto make_decl = [this](const std::string& name,
         std::vector<std::shared_ptr<IR::Type>> params,
-        std::shared_ptr<IR::Type> ret) {
-        auto fn = std::make_shared<IR::FunctionDecl>("@" + name, std::move(params), std::move(ret));
+        std::shared_ptr<IR::Type> ret,
+        bool is_va_arg = false) {
+        auto fn = std::make_shared<IR::FunctionDecl>("@" + name, std::move(params), std::move(ret), is_va_arg);
         symbol_table.insert(name, fn);
         module.addFunctionDecl(fn);
     };
 
-    // Just for test on my x86-64 machine
-    make_decl("putchar", {i32_type}, i32_type);
-    // TODO: finish
+    // sylib
+    make_decl("getint", {}, i32_type);
+    make_decl("getch", {}, i32_type);
+    make_decl("getarray", {i32ptr_type}, i32_type);
+    make_decl("getfloat", {}, f32_type);
+    make_decl("getfarray", {f32ptr_type}, i32_type);
+    make_decl("putint", {i32_type}, void_type);
+    make_decl("putch", {i32_type}, void_type);
+    make_decl("putarray", {i32_type, i32ptr_type}, void_type);
+    make_decl("putfloat", {f32_type}, void_type);
+    make_decl("putfarray", {i32_type, f32ptr_type}, void_type);
+    make_decl("putf", {i8ptr_type}, void_type, true); // VAArg
+    make_decl("_sysy_starttime", {i32_type}, void_type);
+    make_decl("_sysy_stoptime", {i32_type}, void_type);
+
 
     for (auto& n : node.getNodes()) {
         n->accept(*this);
@@ -332,7 +350,13 @@ void IRGenerator::visit(FuncDef& node) {
     if (node.getId() == "main")
     {
         if (curr_func->getInsts().empty() || curr_func->getInsts().back()->getOpcode() != IR::OP::RET)
+        {
+            // Output for testing
+            curr_func->addInst(std::make_shared<IR::CALLInst>(
+                std::dynamic_pointer_cast<IR::FunctionDecl>(symbol_table.lookup("putint")),
+                std::vector<std::shared_ptr<IR::Value>>{constant_pool.getConst(0)}));
             curr_func->addInst(std::make_shared<IR::RETInst>(constant_pool.getConst(0)));
+        }
     }
 
     std::stable_sort(curr_func->getInsts().begin(), curr_func->getInsts().end(),
@@ -448,7 +472,7 @@ void IRGenerator::visit(ArrayExp& node) {
     // LOAD from Function Parameters
     if (auto load_inst = std::dynamic_pointer_cast<IR::LOADInst>(base))
     {
-        curr_gep = std::make_shared<IR::GEPInst>(get_temp_name(), base, constant_pool.getConst(0));
+        curr_gep = std::make_shared<IR::GEPInst>(get_temp_name(), base, indices[0]);
         curr_func->addInst(std::dynamic_pointer_cast<IR::Instruction>(curr_gep));
         ++i;
     }
@@ -790,6 +814,13 @@ void IRGenerator::visit(ReturnStmt& node) {
         auto ret = try_type_cast(curr_val, expected);
         Err::gassert(ret->getType()->getTrait() == IR::IRCTYPE::BASIC
             && IR::toBType(ret->getType())->getInner() == expected, "Invalid return");
+        if (curr_func->getName() == "@main")
+        {
+            // Output for testing
+            curr_func->addInst(std::make_shared<IR::CALLInst>(
+                std::dynamic_pointer_cast<IR::FunctionDecl>(symbol_table.lookup("putint")),
+                std::vector{ret}));
+        }
         curr_func->addInst(std::make_shared<IR::RETInst>(ret));
     }
     else

@@ -250,11 +250,14 @@ std::string IRFormatter::formatFuncDecl(FunctionDecl& func) {
     for (auto it = fn_type->getParams().begin(); it != fn_type->getParams().end(); it++)
     {
         ret += (*it)->toString() + " noundef";
-        if (std::next(it) != fn_type->getParams().end())
+        if (std::next(it) != fn_type->getParams().end() || fn_type->isVAArg())
         {
             ret += ", ";
         }
     }
+
+    if (fn_type->isVAArg())
+        ret += "...";
 
     ret += ")";
     return ret;
@@ -430,15 +433,12 @@ std::string IRFormatter::fCALLInst(CALLInst& inst) {
     ret += inst.getFuncName();
     ret += "(";
     auto args = inst.getArgs();
-    if (!(inst.isVoid()))
+    for (auto it = args.begin(); it != args.end(); it++)
     {
-        for (auto it = args.begin(); it != args.end(); it++)
+        ret += (**it).getType()->toString() + " noundef " + (**it).getName();
+        if (std::next(it) != args.end())
         {
-            ret += (**it).getType()->toString() + " noundef " + (**it).getName();
-            if (std::next(it) != args.end())
-            {
-                ret += ", ";
-            }
+            ret += ", ";
         }
     }
     ret += ")";

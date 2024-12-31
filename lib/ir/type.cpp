@@ -23,13 +23,14 @@ namespace IR {
 
     std::shared_ptr<FunctionType> makeFunctionType(
         std::vector<std::shared_ptr<Type>> params,
-        std::shared_ptr<Type> ret)
+        std::shared_ptr<Type> ret,
+        bool is_va_arg)
     {
         Err::gassert(!std::any_of(params.begin(), params.end(),
             [](auto&& p){return p == nullptr;}),
             "makeFunctionType(): Param type is nullptr");
         Err::gassert(ret != nullptr, "makeFunctionType(): Return type is nullptr.");
-        return std::make_shared<FunctionType>(std::move(params), std::move(ret));
+        return std::make_shared<FunctionType>(std::move(params), std::move(ret), is_va_arg);
     }
 
     std::shared_ptr<BType> toBType(const std::shared_ptr<Type>& ty) {

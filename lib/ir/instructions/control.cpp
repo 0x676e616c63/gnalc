@@ -89,7 +89,7 @@ namespace IR
     {
         Err::gassert(toBType(toFunctionType(func->getType())->getRet())->getInner() == IRBTYPE::VOID);
         addOperand(func);
-        for (auto valptr : args)
+        for (const auto& valptr : args)
             addOperand(valptr);
     }
 
@@ -98,8 +98,8 @@ namespace IR
         : Instruction(OP::CALL, name, toFunctionType(func->getType())->getRet())
     {
         addOperand(func);
-        for (auto valptr : args)
-            addOperand(std::move(valptr));
+        for (const auto& valptr : args)
+            addOperand(valptr);
     }
 
     bool CALLInst::isVoid() const
