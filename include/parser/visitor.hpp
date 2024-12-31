@@ -61,6 +61,7 @@ class IRGenerator : public ASTVisitor {
     std::shared_ptr<IR::Function> curr_func;
     Sym::SymbolTable symbol_table;
     size_t next_temp_id{1};
+    bool is_making_lval{false}; // TODO: more sensible
 
     struct Initializer {
         using list_t = std::vector<Initializer>;

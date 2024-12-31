@@ -424,8 +424,11 @@ void IRGenerator::visit(DeclRef& node) {
     // TODO: Prevent potential bugs
     if (auto alloca_inst = std::dynamic_pointer_cast<IR::ALLOCAInst>(ref))
     {
-        if (alloca_inst->isArray())
+        if (is_making_lval || alloca_inst->isArray())
+        {
+            is_making_lval = false;
             curr_val = alloca_inst;
+        }
         else
         {
             auto load = std::make_shared<IR::LOADInst>(get_temp_name(), alloca_inst);
@@ -435,8 +438,11 @@ void IRGenerator::visit(DeclRef& node) {
     }
     else if (auto gv = std::dynamic_pointer_cast<IR::GlobalVariable>(ref))
     {
-        if (gv->isArray())
+        if (is_making_lval || gv->isArray())
+        {
+            is_making_lval = false;
             curr_val = gv;
+        }
         else
         {
             auto load = std::make_shared<IR::LOADInst>(get_temp_name(), gv);
@@ -487,12 +493,13 @@ void IRGenerator::visit(ArrayExp& node) {
         curr_func->addInst(std::dynamic_pointer_cast<IR::Instruction>(curr_gep));
     }
 
-    if (IR::getElm(curr_gep->getType())->getTrait() == IR::IRCTYPE::BASIC) {
+    if (!is_making_lval && IR::getElm(curr_gep->getType())->getTrait() == IR::IRCTYPE::BASIC) {
         auto load_inst = std::make_shared<IR::LOADInst>(get_temp_name(), curr_gep);
         curr_func->addInst(load_inst);
         curr_val = load_inst;
     } else
     {
+        is_making_lval = false;
         curr_val = curr_gep;
     }
 }
@@ -569,28 +576,40 @@ void IRGenerator::visit(FuncRParam& node) {
 }
 
 void IRGenerator::visit(BinaryOp& node) {
+    if (node.getOp() == BiOp::ASSIGN)
+        is_making_lval = true;
     node.getLHS()->accept(*this);
     auto lhs = curr_val;
     node.getRHS()->accept(*this);
     auto rhs = curr_val;
     std::shared_ptr<IR::BType> opreandtype;
+
     {
         auto rhstype = IR::toBType(rhs->getType());
-        auto lhstype = IR::toBType(lhs->getType());
-        Err::gassert(lhstype != nullptr && rhstype != nullptr
-            && (lhstype->getInner() == IR::IRBTYPE::I32
-                || lhstype->getInner() == IR::IRBTYPE::FLOAT)
+        Err::gassert(rhstype != nullptr
             && (rhstype->getInner() == IR::IRBTYPE::I32
                 || rhstype->getInner() == IR::IRBTYPE::FLOAT),
             "Binary operation must be integers or floats.");
 
         if (node.getOp() == BiOp::ASSIGN)
         {
-            opreandtype = lhstype;
-            rhs = try_type_cast(rhs, lhstype->getInner());
+            auto lhstype = IR::toPtrType(lhs->getType());
+            Err::gassert(lhstype != nullptr);
+            auto lhselmty = IR::toBType(getElm(lhs->getType()))->getInner();
+               Err::gassert(lhselmty == IR::IRBTYPE::I32 || lhselmty == IR::IRBTYPE::FLOAT,
+                   "Binary operation must be integers or floats.");
+
+            opreandtype = IR::makeBType(lhselmty);
+            rhs = try_type_cast(rhs, lhselmty);
         }
         else
         {
+            auto lhstype = IR::toBType(lhs->getType());
+            Err::gassert(lhstype != nullptr
+                && (lhstype->getInner() == IR::IRBTYPE::I32
+                || lhstype->getInner() == IR::IRBTYPE::FLOAT),
+                "Binary operation must be integers or floats.");
+
             if (lhstype->getInner() == IR::IRBTYPE::FLOAT || rhstype->getInner() == IR::IRBTYPE::FLOAT)
             {
                 opreandtype = IR::makeBType(IR::IRBTYPE::FLOAT);
