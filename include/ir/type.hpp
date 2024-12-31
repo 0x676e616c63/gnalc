@@ -114,7 +114,8 @@ public:
     const auto& getElmType() const { return element_type; }
 
     IRCTYPE getTrait() const override { return IRCTYPE::PTR; }
-    std::string toString() const override { return "ptr"; }
+    // std::string toString() const override { return "ptr"; }
+    std::string toString() const override { return element_type->toString() + "*"; }
     size_t getBytes() const override {
         return 8;
     }

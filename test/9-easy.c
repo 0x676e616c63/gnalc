@@ -4,6 +4,14 @@ int func(int kkk)
 {
   return 3 + kkk;
 }
+int first_elem(int p[])
+{
+    return p[0];
+}
+int first_elem2(int p[][2])
+{
+    return p[0][0];
+}
 int main()
 {
     int k[2][2] = {{1, 2}, {3, a}};
@@ -18,5 +26,5 @@ int main()
     int p = 3 % 2;
     int q = 1 + 2 * 3 / 4 * (4 % 2);
     int r = func(1) + n;
-    return r + p + kk[1]; // 12
+    return r + p + kk[1] + first_elem(k[0]) + first_elem2(k); // 14
 }

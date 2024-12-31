@@ -91,12 +91,22 @@ namespace IR
         return align;
     }
 
-    GEPInst::GEPInst(NameRef name, std::shared_ptr<Value> _ptr, const std::vector<std::shared_ptr<Value>>& idxs)
+    GEPInst::GEPInst(NameRef name, const std::shared_ptr<Value>& _ptr,
+        const std::shared_ptr<Value>& idx1, const std::shared_ptr<Value>& idx2)
         : Instruction(OP::GEP, name, makePtrType(getElm(getElm(_ptr->getType()))))
     {
+        Err::gassert(_ptr->getType()->getTrait() == IRCTYPE::PTR);
         addOperand(_ptr);
-        for (auto idx : idxs)
-            addOperand(idx);
+        addOperand(idx1);
+        addOperand(idx2);
+    }
+
+    GEPInst::GEPInst(NameRef name, const std::shared_ptr<Value>& _ptr, const std::shared_ptr<Value>& idx)
+        : Instruction(OP::GEP, name, makePtrType(getElm(_ptr->getType())))
+    {
+        Err::gassert(_ptr->getType()->getTrait() == IRCTYPE::PTR);
+        addOperand(_ptr);
+        addOperand(idx);
     }
 
     std::shared_ptr<Type> GEPInst::getBaseTypePtr() const

@@ -83,7 +83,11 @@ class GEPInst : public Instruction {
 private:
     // std::shared_ptr<Type> basetype; // _ptr的类型的element
 public:
-    GEPInst(NameRef name, std::shared_ptr<Value> _ptr, const std::vector<std::shared_ptr<Value>>& idxs);
+    GEPInst(NameRef name, const std::shared_ptr<Value>& _ptr,
+        const std::shared_ptr<Value>& idx1, const std::shared_ptr<Value>& idx2);
+
+    GEPInst(NameRef name, const std::shared_ptr<Value>& _ptr,
+        const std::shared_ptr<Value>& idx);
 
     std::shared_ptr<Type> getBaseTypePtr() const;
     // std::vector<int> getArraySize() const;
