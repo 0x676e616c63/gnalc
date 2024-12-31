@@ -502,8 +502,8 @@ void IRGenerator::visit(CallExp& node) {
         if (expected[i]->getTrait() == IR::IRCTYPE::BASIC
             && expected[i]->getTrait() == args[i]->getType()->getTrait())
         {
-            auto arg_bty = IR::toBType(args[i]->getType())->getInner();
-            args[i] = try_type_cast(args[i], arg_bty);
+            auto expected_bty = IR::toBType(expected[i])->getInner();
+            args[i] = try_type_cast(args[i], expected_bty);
             Err::gassert(IR::isSameType(expected[i], args[i]->getType()),
                 "Invalid call.");
         }
@@ -735,7 +735,7 @@ void IRGenerator::visit(UnaryOp& node) {
         }
         break;
     case UnOp::NOT:
-        Err::todo("NOT");
+        {Err::todo("NOT");}
     }
 }
 
