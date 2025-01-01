@@ -95,6 +95,30 @@ void IRGenerator::visit(VarDef& node) {
     else
         irtype = makeBType(node_type);
 
+
+    curr_initializer.reset(node_type);
+    curr_making_initializer = &curr_initializer;
+
+    // Pure Constant
+    if (node.isConst() && !node.isArray())
+    {
+        Err::gassert(node.isInited());
+        node.getInitVal()->accept(*this);
+        auto flatten_initializer = curr_initializer.flatten(irtype);
+        Err::gassert(flatten_initializer.size() == 1);
+        const auto& cv = flatten_initializer[0];
+        if (cv.index() != 2)
+        {
+            std::shared_ptr<IR::Value> val;
+            if (cv.index() == 0)
+                val = constant_pool.getConst(std::get<0>(cv));
+            if (cv.index() == 1)
+                val = constant_pool.getConst(std::get<1>(cv));
+            symbol_table.insert(node.getId(), val);
+        }
+    }
+
+
     if (curr_func != nullptr)    // Check if global
     {
         auto alloca_inst = std::make_shared<IR::ALLOCAInst>("%" + node.getId(), irtype);
@@ -349,12 +373,11 @@ void IRGenerator::visit(FuncDef& node) {
     // the value returned to the environment is the same as if executing return 0;.
     if (node.getId() == "main")
     {
+        Err::gassert(IR::isSameType(IR::toFunctionType(curr_func->getType())->getRet(),
+            IR::makeBType(IR::IRBTYPE::I32)),
+            "Invalid main.");
         if (curr_func->getInsts().empty() || curr_func->getInsts().back()->getOpcode() != IR::OP::RET)
         {
-            // Output for testing
-            curr_func->addInst(std::make_shared<IR::CALLInst>(
-                std::dynamic_pointer_cast<IR::FunctionDecl>(symbol_table.lookup("putint")),
-                std::vector<std::shared_ptr<IR::Value>>{constant_pool.getConst(0)}));
             curr_func->addInst(std::make_shared<IR::RETInst>(constant_pool.getConst(0)));
         }
     }
@@ -575,113 +598,157 @@ void IRGenerator::visit(FuncRParam& node) {
     node.getExp()->accept(*this);
 }
 
+template<typename Base, typename T>
+Base constant_arithmetic(const std::shared_ptr<IR::Value>& lhs,
+    const std::shared_ptr<IR::Value>& rhs,
+    T&& operation) {
+    Err::gassert(IR::isSameType(lhs->getType(), rhs->getType())
+        && lhs->getType()->getTrait() == IR::IRCTYPE::BASIC);
+
+    if constexpr (std::is_same_v<Base, int>)
+    {
+        auto cl = std::dynamic_pointer_cast<IR::ConstantInt>(lhs);
+        auto cr = std::dynamic_pointer_cast<IR::ConstantInt>(rhs);
+        Err::gassert(cl != nullptr && cr != nullptr);
+        return operation(cl->getVal(), cr->getVal());
+    }
+    else if constexpr (std::is_same_v<Base, float>)
+    {
+        auto cl = std::dynamic_pointer_cast<IR::ConstantFloat>(lhs);
+        auto cr = std::dynamic_pointer_cast<IR::ConstantFloat>(rhs);
+        Err::gassert(cl != nullptr && cr != nullptr);
+        return operation(cl->getVal(), cr->getVal());
+    }
+    else
+        Err::not_implemented();
+    return Base{};
+}
+
 void IRGenerator::visit(BinaryOp& node) {
     if (node.getOp() == BiOp::ASSIGN)
-        is_making_lval = true;
-    node.getLHS()->accept(*this);
-    auto lhs = curr_val;
-    node.getRHS()->accept(*this);
-    auto rhs = curr_val;
-    std::shared_ptr<IR::BType> opreandtype;
-
     {
+        is_making_lval = true;
+        node.getLHS()->accept(*this);
+        is_making_lval = false;
+        auto lhs = curr_val;
+        node.getRHS()->accept(*this);
+        auto rhs = curr_val;
+
         auto rhstype = IR::toBType(rhs->getType());
         Err::gassert(rhstype != nullptr
             && (rhstype->getInner() == IR::IRBTYPE::I32
                 || rhstype->getInner() == IR::IRBTYPE::FLOAT),
-            "Binary operation must be integers or floats.");
+            "Invalid assign.");
+        auto lhstype = IR::toPtrType(lhs->getType());
+        Err::gassert(lhstype != nullptr, "Invalid assign, not lval.");
+        auto lhselmty = IR::toBType(getElm(lhs->getType()))->getInner();
+        Err::gassert(lhselmty == IR::IRBTYPE::I32 || lhselmty == IR::IRBTYPE::FLOAT,
+            "Invalid assign.");
 
-        if (node.getOp() == BiOp::ASSIGN)
-        {
-            auto lhstype = IR::toPtrType(lhs->getType());
-            Err::gassert(lhstype != nullptr);
-            auto lhselmty = IR::toBType(getElm(lhs->getType()))->getInner();
-               Err::gassert(lhselmty == IR::IRBTYPE::I32 || lhselmty == IR::IRBTYPE::FLOAT,
-                   "Binary operation must be integers or floats.");
+        rhs = try_type_cast(rhs, lhselmty);
 
-            opreandtype = IR::makeBType(lhselmty);
-            rhs = try_type_cast(rhs, lhselmty);
-        }
-        else
-        {
-            auto lhstype = IR::toBType(lhs->getType());
-            Err::gassert(lhstype != nullptr
-                && (lhstype->getInner() == IR::IRBTYPE::I32
-                || lhstype->getInner() == IR::IRBTYPE::FLOAT),
-                "Binary operation must be integers or floats.");
-
-            if (lhstype->getInner() == IR::IRBTYPE::FLOAT || rhstype->getInner() == IR::IRBTYPE::FLOAT)
-            {
-                opreandtype = IR::makeBType(IR::IRBTYPE::FLOAT);
-                lhs = try_type_cast(lhs, IR::IRBTYPE::FLOAT);
-                rhs = try_type_cast(rhs, IR::IRBTYPE::FLOAT);
-            }
-            else opreandtype = IR::makeBType(IR::IRBTYPE::I32);
-        }
-    }
-
-    bool is_int = opreandtype->getInner() == IR::IRBTYPE::I32;
-
-    switch (node.getOp())
-    {
-    case BiOp::ASSIGN: {
         curr_func->addInst(std::make_shared<IR::STOREInst>(rhs, lhs));
         curr_val = lhs;
+        return;
     }
-        break;
-    case BiOp::ADD:
-    case BiOp::SUB:
-    case BiOp::MUL:
-    case BiOp::DIV:
-    case BiOp::MOD: {
+
+    node.getLHS()->accept(*this);
+    auto lhs = curr_val;
+    node.getRHS()->accept(*this);
+    auto rhs = curr_val;
+    std::shared_ptr<IR::BType> oprtype;
+
+    // Type check and cast
+    {
+        auto lhstype = IR::toBType(lhs->getType());
+        auto rhstype = IR::toBType(rhs->getType());
+        Err::gassert(lhstype != nullptr && rhstype != nullptr
+            && (lhstype->getInner() == IR::IRBTYPE::I32
+            || lhstype->getInner() == IR::IRBTYPE::FLOAT)
+            && (rhstype->getInner() == IR::IRBTYPE::I32
+            || rhstype->getInner() == IR::IRBTYPE::FLOAT),
+            "Binary operation must be integers or floats.");
+
+        if (lhstype->getInner() == IR::IRBTYPE::FLOAT || rhstype->getInner() == IR::IRBTYPE::FLOAT)
+        {
+            lhs = try_type_cast(lhs, IR::IRBTYPE::FLOAT);
+            rhs = try_type_cast(rhs, IR::IRBTYPE::FLOAT);
+            oprtype = IR::makeBType(IR::IRBTYPE::FLOAT);
+        }
+        else oprtype = IR::makeBType(IR::IRBTYPE::I32);
+    }
+
+    bool is_constant = (std::dynamic_pointer_cast<IR::ConstantInt>(lhs) != nullptr
+    || std::dynamic_pointer_cast<IR::ConstantFloat>(lhs) != nullptr)
+    && (std::dynamic_pointer_cast<IR::ConstantInt>(rhs) != nullptr
+    || std::dynamic_pointer_cast<IR::ConstantFloat>(rhs) != nullptr);
+
+    // Arithmetic -> I32
+    if (node.getOp() == BiOp::ADD || node.getOp() == BiOp::SUB
+    || node.getOp() == BiOp::MUL || node.getOp() == BiOp::DIV
+    || node.getOp() == BiOp::MOD)
+    {
+        Err::gassert(oprtype->getInner() == IR::IRBTYPE::I32
+            || oprtype->getInner() == IR::IRBTYPE::FLOAT,
+            "Invalid arithmetic operations");
         IR::OP op;
+
+#define MAKE_OP(biop, iop, fop, cppop) \
+        case biop: \
+            if (oprtype->getInner() == IR::IRBTYPE::I32) \
+            { \
+                if (is_constant) \
+                { \
+                    curr_val = constant_pool.getConst(constant_arithmetic<int>(lhs, rhs, [](auto&& v1, auto&& v2) {return v1 cppop v2;})); \
+                    return; \
+                } \
+                op = iop; \
+            } \
+            else \
+            { \
+                if (is_constant) \
+                { \
+                    curr_val = constant_pool.getConst(constant_arithmetic<float>(lhs, rhs, [](auto&& v1, auto&& v2) {return v1 cppop v2;})); \
+                    return; \
+                } \
+                op = fop; \
+            } \
+        break; \
+
         switch (node.getOp())
         {
-        case BiOp::ADD:
-            if (is_int)
-                op = IR::OP::ADD;
-            else
-                op= IR::OP::FADD;
-            break;
-        case BiOp::SUB:
-            if (is_int)
-                op = IR::OP::SUB;
-            else
-                op = IR::OP::FSUB;
-            break;
-        case BiOp::MUL:
-            if (is_int)
-                op = IR::OP::MUL;
-            else
-                op = IR::OP::FMUL;
-            break;
-        case BiOp::DIV:
-            if (is_int)
-                op = IR::OP::DIV;
-            else
-                op = IR::OP::FDIV;
-            break;
+            MAKE_OP(BiOp::ADD, IR::OP::ADD, IR::OP::FADD, +)
+            MAKE_OP(BiOp::SUB, IR::OP::SUB, IR::OP::FSUB, -)
+            MAKE_OP(BiOp::MUL, IR::OP::MUL, IR::OP::FMUL, *)
+            MAKE_OP(BiOp::DIV, IR::OP::DIV, IR::OP::FDIV, /)
+
         case BiOp::MOD:
-            if (is_int)
-                op = IR::OP::REM;
-            else
-                op = IR::OP::FREM;
+            Err::gassert(oprtype->getInner() == IR::IRBTYPE::I32);
+            if (is_constant)
+            {
+                curr_val = constant_pool.getConst(constant_arithmetic<int>(lhs, rhs, [](auto&& v1, auto&& v2) {return v1 % v2;}));
+                return;
+            }
+            op = IR::OP::REM;
             break;
         default:
-                Err::unreachable();
+            Err::unreachable();
         }
+
+#undef MAKE_OP
+
         auto inst = std::make_shared<IR::BinaryInst>(get_temp_name(), op, lhs, rhs);
         curr_func->addInst(inst);
         curr_val = inst;
-        break;
+        return;
     }
-    case BiOp::LESSEQ:
-    case BiOp::GREATEQ:
-    case BiOp::GREAT:
-    case BiOp::LESS:
-    case BiOp::NOTEQ:
-    case BiOp::EQ: {
-        if (is_int)
+
+    // Compare -> I1
+    if (node.getOp() == BiOp::LESSEQ || node.getOp() == BiOp::GREATEQ
+        || node.getOp() == BiOp::GREAT || node.getOp() == BiOp::LESS
+        || node.getOp() == BiOp::NOTEQ || node.getOp() == BiOp::EQ)
+    {
+        if (oprtype->getInner() == IR::IRBTYPE::I32)
         {
             IR::ICMPOP icmpop;
             switch (node.getOp())
@@ -741,12 +808,14 @@ void IRGenerator::visit(BinaryOp& node) {
             curr_func->addInst(inst);
             curr_val = inst;
         }
+        return;
     }
-        break;
-    case BiOp::AND:
-    case BiOp::OR:
+
+    // Logical -> I1
+    if (node.getOp() == BiOp::AND || node.getOp() == BiOp::OR)
+    {
         Err::todo("AND OR");
-        break;
+        return;
     }
 }
 
@@ -833,13 +902,6 @@ void IRGenerator::visit(ReturnStmt& node) {
         auto ret = try_type_cast(curr_val, expected);
         Err::gassert(ret->getType()->getTrait() == IR::IRCTYPE::BASIC
             && IR::toBType(ret->getType())->getInner() == expected, "Invalid return");
-        if (curr_func->getName() == "@main")
-        {
-            // Output for testing
-            curr_func->addInst(std::make_shared<IR::CALLInst>(
-                std::dynamic_pointer_cast<IR::FunctionDecl>(symbol_table.lookup("putint")),
-                std::vector{ret}));
-        }
         curr_func->addInst(std::make_shared<IR::RETInst>(ret));
     }
     else

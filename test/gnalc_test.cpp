@@ -44,6 +44,8 @@ std::string read_file(const std::string& file_name) {
 }
 
 int main() {
+    size_t passed = 0;
+    std::vector<std::string> failed_tests;
     std::string lib_command = "clang -S -emit-llvm " + sycfg::sylibc + " -o sylib.ll";
     std::system(lib_command.c_str());
     for (auto&& test_dir : sycfg::dirs)
@@ -69,9 +71,11 @@ int main() {
 
             if (std::filesystem::exists(in))
                 command += "<" + in + " ";
-            command += "> " + sycfg::temp_outfile;
+            command += " > " + sycfg::temp_outfile;
 
-            std::cout << "Test '" << sy.path().stem() << "'" << std::endl;
+            command += "; echo $? > " + sycfg::temp_outfile;
+
+            std::cout << "Test " << sy.path().stem()  << std::endl;
             std::cout << "|  Running '" << command << "':" << std::endl;
 
             std::system(command.c_str());
@@ -79,20 +83,42 @@ int main() {
             auto syout = remove_newline(read_file(sycfg::temp_outfile));
             auto expected_syout = remove_newline(read_file(out));
 
+            std::filesystem::remove(sycfg::temp_outfile);
+            std::filesystem::remove(sycfg::temp_outll);
+
             if (syout != expected_syout)
             {
-                std::cout << "|  [\033[0;32;31mError\033[m] Expected '" << expected_syout << "' but got '" << syout << "'." << std::endl;
-                if (sycfg::stop_on_error) return -1;
+                std::cout << "|  [\033[0;32;31mFAILED\033[m] Expected '" << expected_syout << "' but got '" << syout << "'." << std::endl;
+                failed_tests.emplace_back(sy.path().string());
+                if (sycfg::stop_on_error)
+                {
+                    std::cout << "------------------------------------------------------------------------------" << std::endl;
+                    goto finish;
+                }
             }
             else
             {
                 std::cout << "|  [\033[0;32;32mPASSED\033[m]";
+                ++passed;
             }
-
-            std::filesystem::remove(sycfg::temp_outfile);
-            std::filesystem::remove(sycfg::temp_outll);
             std::cout << "\n------------------------------------------------------------------------------" << std::endl;
         }
+    }
+
+    finish:
+    std::cout << "Finished running " << failed_tests.size() + passed << " tests." << std::endl;
+    if (failed_tests.empty())
+    {
+        std::cout << "[\033[0;32;32mTEST PASSED\033[m] " << passed << " tests passed!" << std::endl;
+        return 0;
+    }
+    else
+    {
+        std::cout << "Failed tests: " << std::endl;
+        for (const auto& f : failed_tests)
+            std::cout << "|  " << f << std::endl;
+        std::cout << "[\033[0;32;31mTEST FAILED\033[m] " << failed_tests.size() << " tests failed!" << std::endl;
+        return -1;
     }
     return 0;
 }
