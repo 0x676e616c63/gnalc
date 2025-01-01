@@ -40,7 +40,8 @@ int main(int argc, char* argv[]) {
 
 IR::Module irgenfortest() {
     IR::Module module("test");
-    module.addFunction(std::make_shared<IR::Function>("@main", IR::makeBType(IR::IRBTYPE::VOID)));
+    module.addFunction(std::make_shared<IR::Function>
+        ("@main", std::vector<std::shared_ptr<IR::Value>>{}, IR::makeBType(IR::IRBTYPE::VOID)));
     module.addGlobalVar(std::make_shared<IR::GlobalVariable>(IR::STOCLASS::GLOBAL, IR::makeBType(IR::IRBTYPE::I32), "@test", IR::GVIniter(IR::makeBType(IR::IRBTYPE::I32), cp.getConst(1)), 4));
     return module;
 }
