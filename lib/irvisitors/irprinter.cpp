@@ -70,6 +70,17 @@ void LIRPrinter::visit(FunctionDecl& node) {
 void LIRPrinter::visit(Instruction& node) {
     Logger::logDebug("LIRPrinter: Printing Instruction \"" + node.getName() + "\"");
 
+    #if PRINT_INST_LIVEINFO
+    write("  ; livein:");
+    for (auto& val : node.getLiveIn())
+        write(" " + val->getName());
+    writeln("");
+    write("  ; liveout:");
+    for (auto& val : node.getLiveOut())
+        write(" " + val->getName());
+    writeln("");
+    #endif
+
     // It seems there is no nested scope, so it is a fixed indent.
     write("  ");
 
@@ -562,6 +573,18 @@ void IRPrinter::visit(Function& node) {
 
 void IRPrinter::visit(BasicBlock& node) {
     Logger::logDebug("IRPrinter: Printing BasicBlock \"" + node.getName() + "\"");
+    
+    #if PRINT_BB_LIVEINFO
+    write("; livein:");
+    for (auto& val : node.getLiveIn())
+        write(" " + val->getName());
+    writeln("");
+    write("; liveout:");
+    for (auto& val : node.getLiveOut())
+        write(" " + val->getName());
+    writeln("");
+    #endif
+
     write(IRFormatter::formatBB(node));
     writeln(":");
     for (auto& inst : node.getInsts())

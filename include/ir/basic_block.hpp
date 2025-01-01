@@ -9,6 +9,7 @@
 #include "base.hpp"
 
 #include <memory>
+#include <unordered_set>
 
 namespace IR {
     class Instruction;
@@ -21,8 +22,8 @@ class BasicBlock : public Value, public std::enable_shared_from_this<BasicBlock>
     std::list<std::weak_ptr<BasicBlock>> pre_bb; // 前驱
     std::list<std::weak_ptr<BasicBlock>> next_bb; // 后继
     std::list<std::shared_ptr<Instruction>> insts; // 指令列表
-    std::list<std::shared_ptr<Value>> livein;
-    std::list<std::shared_ptr<Value>> liveout;
+    std::unordered_set<std::shared_ptr<Value>> livein;
+    std::unordered_set<std::shared_ptr<Value>> liveout;
 public:
     BasicBlock(std::string _name);
     BasicBlock(std::string _name, std::list<std::shared_ptr<Instruction>> _insts);
@@ -39,8 +40,8 @@ public:
     std::list<std::shared_ptr<Instruction>>& getInsts();
     // ...
 
-    std::list<std::shared_ptr<Value>>& getLiveIn();
-    std::list<std::shared_ptr<Value>>& getLiveOut();
+    std::unordered_set<std::shared_ptr<Value>>& getLiveIn();
+    std::unordered_set<std::shared_ptr<Value>>& getLiveOut();
 
     void accept(IRVisitor& visitor) override;
     ~BasicBlock() override;

@@ -12,6 +12,7 @@ namespace IR {
         Logger::logInfo("CFG For Module " + module.getName() + " Built.");
     }
 
+    // !!!需要尽量确保第一个BB是entry, 最后一个是return
     void CFGBuilder::divider(Function& func) {
         inst_it = func.getInsts().begin();
         std::shared_ptr<BasicBlock> cur_blk;

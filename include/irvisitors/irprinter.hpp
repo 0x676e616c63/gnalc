@@ -6,6 +6,9 @@
 #ifndef GNALC_IRVISITORS_IRPRINTER_HPP
 #define GNALC_IRVISITORS_IRPRINTER_HPP
 
+#define PRINT_BB_LIVEINFO 1
+#define PRINT_INST_LIVEINFO 1
+
 #include "../utils/exception.hpp"
 #include "../ir/visitor.hpp"
 #include <iostream>

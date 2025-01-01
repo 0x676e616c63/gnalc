@@ -112,7 +112,9 @@ namespace IR
 
 
     GlobalVariable::GlobalVariable(STOCLASS _sc, std::shared_ptr<Type> _ty, std::string _name, GVIniter _initer, int _align)
-        : storage_class(_sc), vtype(std::move(_ty)), Value(std::move(_name), makePtrType(_ty)), initer(_initer), align(_align) {}
+        : storage_class(_sc), vtype(std::move(_ty)), Value(std::move(_name), makePtrType(_ty)), initer(_initer), align(_align) {
+        setTrait(ValueTrait::GLOBAL_VARIABLE);
+    }
 
     STOCLASS GlobalVariable::getStorageClass() const {
         return storage_class;

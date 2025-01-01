@@ -24,6 +24,7 @@ namespace IR
 
     std::shared_ptr<Value> RETInst::getRetVal() const
     {
+        Err::gassert(!isVoid(), "RETInst::getRetVal: RETInst is void.");
         return (*(getOperands().begin()))->getValue();
     }
 

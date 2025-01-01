@@ -9,7 +9,7 @@ namespace IR {
     std::shared_ptr<Type> ret_type, bool va_arg_)
         : Value(std::move(name_),
             makeFunctionType(std::move(params), std::move(ret_type), va_arg_))
-    {}
+    { setTrait(ValueTrait::FUNCTION); }
 
     void FunctionDecl::accept(IRVisitor& visitor) { visitor.visit(*this); }
 

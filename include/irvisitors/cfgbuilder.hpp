@@ -1,5 +1,6 @@
 /**
  * @brief 基本块划分，生成CFG
+ * @attention !!!需要尽量确保第一个BB是entry, 最后一个是return
  */
 
 #pragma once
