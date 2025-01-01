@@ -153,14 +153,14 @@ class FunctionType : public Type {
 protected:
     std::shared_ptr<Type> ret;
     std::vector<std::shared_ptr<Type>> params;
-    bool va_arg;
+    bool is_va_arg;
 public:
-    FunctionType(std::vector<std::shared_ptr<Type>> params_, std::shared_ptr<Type> ret_, bool va_arg_)
-        : params(std::move(params_)), ret(std::move(ret_)), va_arg(va_arg_) {}
+    FunctionType(std::vector<std::shared_ptr<Type>> params_, std::shared_ptr<Type> ret_, bool is_va_arg_)
+        : params(std::move(params_)), ret(std::move(ret_)), is_va_arg(is_va_arg_) {}
 
     IRCTYPE getTrait() const override { return IRCTYPE::FUNCTION; }
 
-    bool isVAArg() const {return  va_arg;}
+    bool isVAArg() const {return  is_va_arg;}
 
     const std::vector<std::shared_ptr<Type>>& getParams() const {
         return params;
