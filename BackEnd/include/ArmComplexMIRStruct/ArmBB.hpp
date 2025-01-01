@@ -33,8 +33,7 @@ class ArmStruct::Terminator{
 class ArmStruct::BB{
     public:
         BB(IR::BasicBlock&, Function&);
-        BB(IR::BasicBlock&, Function&);
-        ~BB()=default;
+        ~BB();
         
         std::string& toString();
 

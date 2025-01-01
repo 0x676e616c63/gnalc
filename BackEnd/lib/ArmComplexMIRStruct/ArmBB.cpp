@@ -10,10 +10,12 @@
 using namespace ArmStruct;
 using namespace ArmTools;
 
-BB::BB(IR::BasicBlock& midEnd_BasicBlock, Function& func): Func(Func){
+BB::BB(IR::BasicBlock& midEnd_BasicBlock, Function& func): Func(func){
    label = midEnd_BasicBlock.getName();
    ///@todo 遍历midEnd_BasicBlock中的Instruction,  这个过程会填写VIrMap
-   ParseInsts(midEnd_BasicBlock.getInsts());
+   const std::list<std::shared_ptr<IR::Instruction>> midEnd_insts = midEnd_BasicBlock.getInsts();
+   
+   ParseInsts(midEnd_insts);
 
    ///@todo 获取LiveOut信息,
 
@@ -98,10 +100,8 @@ void BB::ParseInsts(const std::list<std::shared_ptr<IR::Instruction>> insts){
             ++it;
             break;
          case IR::OP::ICMP: case IR::OP::FCMP:
-            auto &midEnd_cmp = midEnd_inst;
-            ++it;
-            auto &midEnd_br = **it;
-            (*Branch)({midEnd_cmp, midEnd_br});
+            // (*Branch)({midEnd_cmp, midEnd_br});
+            (*Branch)({midEnd_inst, **(++it)});
             ++it;
             break;
          case IR::OP::BR:  // 没有cmp的branch指令

@@ -15,6 +15,34 @@ std::vector<ArmStruct::Operand*> RegisterPool = {};
 std::vector<ArmStruct::Operand*> FPURegisterPool = {};
 std::vector<ArmStruct::Imm*> ConstPool = {};
 
+/// @note 符号表完善之后会删除
+Module::Module(IR::Module& midEnd_Module){
+    this->ModuleName = midEnd_Module.getName(); // pass by val
+
+    ///@todo get .bss and get .data and get .equ
+
+    ///@todo needed symbolTable
+
+    ///@brief get func
+    auto& funcs = midEnd_Module.getFunctions();
+
+    for(auto func_it = funcs.begin(); func_it != funcs.end(); ++func_it){
+        auto& func = **func_it;
+        Function* newFunc = new Function(func); // IR->MIR, localFrame ...s
+        this->AddFunction(newFunc);
+    }
+
+    /// @brief make RegisterPools
+    for(int i = 0; i <= 15; ++i){
+        Operand *reg = new Operand(OperandType::INT, i);
+        RegisterPool.push_back(reg);
+    }
+    for(int i = 0; i <= 31; ++i){
+        Operand *Freg = new Operand(OperandType::FLOAT, i);
+        FPURegisterPool.push_back(Freg);
+    }
+}
+
 Module::Module(IR::Module& midEnd_Module, Sym::SymbolTable& symTable){
     this->ModuleName = midEnd_Module.getName(); // pass by val
 

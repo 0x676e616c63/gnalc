@@ -158,11 +158,13 @@ InstRefHashPtr RegisterAlloc::NodeMoves(Operand& n){
     }
     return UnorderSet;
 }
+
 bool RegisterAlloc::isMoveRelated(Operand& n){
     auto temp = NodeMoves(n);
     bool ans = !(temp->empty()); // when != {}, return true
     return ans;
 }
+
 void RegisterAlloc::MkworkList(){
     ///@todo 如果没有经过ReWriteProgram这里的Initial集应该是空的
     for(auto it = initial.begin(); it != initial.end(); ++it){

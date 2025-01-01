@@ -15,7 +15,7 @@
 namespace ArmStruct{
 class Instruction{
     public:
-        Instruction(OperCode, Imm*, BB&,
+        Instruction(ArmTools::OperCode, Imm*, BB&,
         std::initializer_list<std::reference_wrapper<Operand>> Defs, 
         std::initializer_list<std::reference_wrapper<Operand>> Uses); // signal def, no SIMD
         Instruction(ArmStruct::Instruction& , ArmTools::OperCode, unsigned int);

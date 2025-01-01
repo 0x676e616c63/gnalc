@@ -9,6 +9,7 @@
 
 class ArmStruct::Module{
     public:
+        Module(IR::Module&);
         Module(IR::Module&, Sym::SymbolTable&);       // IR -> MIR
         ~Module(); // 记得手动释放
         void AddFunction(Function*);

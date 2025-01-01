@@ -4,10 +4,10 @@
 #include <iostream>
 #include <vector>
 #include <map>
-#include "../../../include/ir/base.hpp"
-#include "../../../include/ir/instructions/memory.hpp"
-#include "../../../include/ir/instructions/binary.hpp"
-#include "../../../include/ir/instruction.hpp"
+#include "../include/ir/base.hpp"
+#include "../include/ir/instructions/memory.hpp"
+#include "../include/ir/instructions/binary.hpp"
+#include "../include/ir/instruction.hpp"
 
 namespace ArmStruct{
     class Module;       // 修改自中端传来的Module
@@ -69,7 +69,61 @@ namespace ArmTools{
 
     class RegisterAlloc;    // 寄存器分配工具
 
+    enum OperCode{
+        NEG, VNEG_F32,
+        Unary_End,
 
+        Binary_Begin,   // 比较广义的Binary?
+            ADD, ADDS, SUB, SUBS, RSBS, MUL, MULS, MLA, DIV, SDIV, ORR, AND, ASR, ASRS, LSL, LSLS,LSR, ROR, RRX, EOR,
+            // SIMD
+            VADD_F32, VADD_S32,
+            VSUB_F32, VSUB_S32,
+            VMUL_S32, VMUL_F32,
+            VDIV_F32, VDIV_S32,
+        Binary_End,
+                
+        Branch_Begin,
+            BEQ, BNQ, BGT, BLT, BGE, BLE,
+            BX, BL, B, BCOND, // branch泛型
+        Branch_End,
+
+        FlagInst_Begin,
+            CMN, CMP, VCMP_F32,
+        FlagInst_End,
+
+        Mov_Begin,
+            MOV, VMOV, VMOV_F32, VMOV_S32, MOVW, MOVT, MVN,
+        Mov_End,
+
+        Type_Convert_Begin,
+            VCVT_F32_S32, VCVT_S32_F32,
+        Type_Convert_End,
+
+        LDR_Begin,
+            VLDR_32, LDR,
+        LDR_End,
+        
+        STR_Begin,
+            STR, VSTR_32,
+        STR_End,
+            // single long multiple
+            SMULL,
+            // syscall + Imm
+            SWI,
+            // push
+            PUSH,
+        /// @brief 并非Arm指令
+        Addition_Oper_Begin,
+            /// @brief 一个栈上的值, 必定要先分配再使用, 为创建Frame提供了便利
+            alloca, // local分配栈空间, 操作数为分配栈空间的大小(一个Imm Operand)
+            free, // free栈上空间, 由中端插入
+            spill,  // spill到temp上, 操作数为溢出的变量(use集)
+            fetch, // 从栈上取, 操作数同上(def集)
+            push_args, // 参数压栈, 操作数为虚拟寄存器(use集), 注意顺序, IR->MIR时生成
+            fetch_args, // callee向栈上固定偏移的位置取值(args), 并放置到操作数(def) 
+        Addition_Oper_End,
+    };
+    
     ///@warning ISO C++ forbids forward references to 'enum' types
     // enum CoreRegisterName;
     // std::map<CoreRegisterName, std::string> CoreRegisterMap;
@@ -83,7 +137,7 @@ namespace ArmTools{
     /// @note 模式匹配仿函数
 
     struct MovtwMatch{
-        BB& BasicBlock;
+        ArmStruct::BB& BasicBlock;
         void operator()(float, unsigned long long &temp_virReg) ;
         void operator()(int, unsigned long long &temo_virReg) ;  
         bool isImmCanBeEncodedInText(unsigned long long imme);
@@ -91,12 +145,12 @@ namespace ArmTools{
     };
 
     struct RetMatch{
-        BB& BasicBlock;
+        ArmStruct::BB& BasicBlock;
         void operator()(InstArgs);
     };
 
     struct BinaryMatch{
-        BB& BlockBlock;
+        ArmStruct::BB& BlockBlock;
 
         MovtwMatch immeMatch;
 
@@ -117,17 +171,17 @@ namespace ArmTools{
     };
 
     struct UnaryMatch{
-        BB& BasicBlock;
+        ArmStruct::BB& BasicBlock;
         void operator()(InstArgs);
     };
 
     struct BranchMatch{
-        BB& BasicBlock;
+        ArmStruct::BB& BasicBlock;
         void operator()(InstArgs) const;
     };
 
     struct AllocaMatch{
-        BB& BasicBlock;
+        ArmStruct::BB& BasicBlock;
         /// 主要工作是添加FrameObj
         void operator()(InstArgs) ;
         
@@ -136,45 +190,45 @@ namespace ArmTools{
     };
 
     struct LoadMatch{
-        BB& BasicBlock;
+        ArmStruct::BB& BasicBlock;
         void operator()(InstArgs) const;
     };
 
     struct StoreMatch{
-        BB& BasicBlock;
+        ArmStruct::BB& BasicBlock;
         void operator()(InstArgs) const;
     };
     
     struct GepMatch{
-        BB& BasicBlock;
+        ArmStruct::BB& BasicBlock;
         void operator()(InstArgs);
-        void StaticBaseConstOffset(MMptr*, IR::GEPInst&);
-        void StaticBaseVarOffset(MMptr*, IR::GEPInst&);
-        void DynamicBaseConstOffset(MMptr*, IR::GEPInst&);
-        void DynamicBaseVarOffset(MMptr*, IR::GEPInst&);
+        void StaticBaseConstOffset(ArmStruct::MMptr*, IR::GEPInst&);
+        void StaticBaseVarOffset(ArmStruct::MMptr*, IR::GEPInst&);
+        void DynamicBaseConstOffset(ArmStruct::MMptr*, IR::GEPInst&);
+        void DynamicBaseVarOffset(ArmStruct::MMptr*, IR::GEPInst&);
 
         unsigned int getPreElemSize(std::shared_ptr<IR::Type> ElemType);
     };
     
     struct FPTOSIMatch{
-        BB& BasicBlock;
+        ArmStruct::BB& BasicBlock;
         void operator()(InstArgs) const;
     };
 
     struct SITOFPMatch{
-        BB& BasicBlock;
+        ArmStruct::BB& BasicBlock;
         void operator()(InstArgs) const;
     };
 
     // struct ICMP, FCMP ; in BranchMatch
 
     struct CallMatch{
-        BB& BasicBlock;
+        ArmStruct::BB& BasicBlock;
         void operator()(InstArgs) const;
     };
 
     struct PhiMatch{
-        BB& BasicBlock;
+        ArmStruct::BB& BasicBlock;
         void operator()(InstArgs) const;
     };
 
