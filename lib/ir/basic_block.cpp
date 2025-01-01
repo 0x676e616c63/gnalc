@@ -22,37 +22,38 @@ namespace IR {
 
     void BasicBlock::addInst(const std::shared_ptr<Instruction>& inst) {
         insts.emplace_back(inst);
+        inst->setParent(shared_from_this());
     }
 
-    auto BasicBlock::getPreBB() const {
+    std::list<std::shared_ptr<BasicBlock>> BasicBlock::getPreBB() const {
         return WeaktoSharedList(pre_bb);
     }
 
-    auto& BasicBlock::getRPreBB() {
+    std::list<std::weak_ptr<BasicBlock>>& BasicBlock::getRPreBB() {
         return pre_bb;
     }
 
-    auto BasicBlock::getNextBB() const {
+    std::list<std::shared_ptr<BasicBlock>> BasicBlock::getNextBB() const {
         return WeaktoSharedList(next_bb);
     }
 
-    auto& BasicBlock::getRNextBB() {
+    std::list<std::weak_ptr<BasicBlock>>& BasicBlock::getRNextBB() {
         return next_bb;
     }
 
-    const auto& BasicBlock::getInsts() const {
+    const std::list<std::shared_ptr<Instruction>>& BasicBlock::getInsts() const {
         return insts;
     }
 
-    auto& BasicBlock::getInsts() {
+    std::list<std::shared_ptr<Instruction>>& BasicBlock::getInsts() {
         return insts;
     }
 
-    auto& BasicBlock::getLiveIn() {
+    std::list<std::shared_ptr<Value>>& BasicBlock::getLiveIn() {
         return livein;
     }
 
-    auto& BasicBlock::getLiveOut() {
+    std::list<std::shared_ptr<Value>>& BasicBlock::getLiveOut() {
         return liveout;
     }
 

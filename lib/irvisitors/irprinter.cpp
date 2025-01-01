@@ -215,6 +215,10 @@ std::string IRFormatter::formatValue(Value& val) {
     return val.getType()->toString() + " " + val.getName();
 }
 
+std::string IRFormatter::formatBB(BasicBlock& bb) {
+    return bb.getName();
+}
+
 std::string IRFormatter::formatFunc(Function& func) {
     auto fn_type = toFunctionType(func.getType());
     auto ret_type = fn_type->getRet();
@@ -541,4 +545,26 @@ std::string IRFormatter::fPHIInst(PHIInst& inst) {
 std::string IRFormatter::fHELPERInst(HELPERInst& inst) {
     return "; " + IRFormatter::formatHELPERTY(inst.getHlpType());
 }
+
+
+void IRPrinter::visit(Function& node) {
+    Logger::logDebug("IRPrinter: Printing Function \"" + node.getName() + "\"");
+    write(IRFormatter::formatFunc(node));
+    writeln(" {");
+
+    for (auto& blk : node.getBlocks())
+        blk->accept(*this);
+
+    writeln("}");
 }
+
+void IRPrinter::visit(BasicBlock& node) {
+    Logger::logDebug("IRPrinter: Printing BasicBlock \"" + node.getName() + "\"");
+    write(IRFormatter::formatBB(node));
+    writeln(":");
+    for (auto& inst : node.getInsts())
+        inst->Instruction::accept(*this);
+}
+
+}
+

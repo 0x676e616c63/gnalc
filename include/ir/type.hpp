@@ -169,7 +169,7 @@ public:
     const std::shared_ptr<Type>& getRet() const { return ret; }
 
     std::string toString() const override {
-        Err::not_implemented();
+        Err::not_implemented("Function type to string.");
         return {};
     }
 

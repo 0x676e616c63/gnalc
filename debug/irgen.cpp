@@ -4,6 +4,7 @@
 #include "../include/utils/logger.hpp"
 #include "../include/utils/exception.hpp"
 #include "../include/irvisitors/irprinter.hpp"
+#include "../include/irvisitors/cfgbuilder.hpp"
 
 std::shared_ptr<CompUnit> node = nullptr;
 
@@ -34,7 +35,10 @@ int main(int argc, char **argv){
     IRGenerator generator;
     generator.visit(*node);
 
-    IR::LIRPrinter printer(std::cout);
+    IR::CFGBuilder cb;
+    cb.build(generator.get_module());
+
+    IR::IRPrinter printer(std::cout);
     printer.printout(generator.get_module());
 
     return 0;

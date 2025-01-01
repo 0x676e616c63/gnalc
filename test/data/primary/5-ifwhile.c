@@ -1,16 +1,16 @@
 int main() {
-    (a);
+    int a = 3;
     if (a)
     {
-        /* code */
+        a = a + 1;
     } else
     {
-        /* code */
+        a = a - 1;
     }
     
-    while (1+2+b[3][2]+(f(x)+a))
+    while (a)
     {
-        /* code */
+        a = 0;
     }
     
     return 0;
