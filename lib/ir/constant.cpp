@@ -6,7 +6,9 @@
 #include <cinttypes>
 
 namespace IR {
-    ConstantInt::ConstantInt(int _val) : Value(std::to_string(_val), makeBType(IRBTYPE::I32)), val(_val) {}
+    ConstantInt::ConstantInt(int _val) : Value(std::to_string(_val), makeBType(IRBTYPE::I32)), val(_val) {
+        setTrait(ValueTrait::CONSTANT_LITERAL);
+    }
 
     int ConstantInt::getVal() const { return val; }
 
@@ -25,7 +27,9 @@ namespace IR {
         return buf;
     }
 
-    ConstantFloat::ConstantFloat(float _val) : Value(toIRString(_val), makeBType(IRBTYPE::FLOAT)), val(_val) {}
+    ConstantFloat::ConstantFloat(float _val) : Value(toIRString(_val), makeBType(IRBTYPE::FLOAT)), val(_val) {
+        setTrait(ValueTrait::CONSTANT_LITERAL);
+    }
 
     float ConstantFloat::getVal() const { return val; }
 

@@ -16,6 +16,8 @@ void LIRPrinter::printout(Module& module) {
 
     writeln("");
 
+    writeln("target datalayout = \"e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128\"");
+
     Logger::logDebug("LIRPrinter: Printing Global Variables");
     for (auto& gv : module.getGlobalVars())
     {
@@ -67,6 +69,17 @@ void LIRPrinter::visit(FunctionDecl& node) {
 
 void LIRPrinter::visit(Instruction& node) {
     Logger::logDebug("LIRPrinter: Printing Instruction \"" + node.getName() + "\"");
+
+    #if PRINT_INST_LIVEINFO
+    write("  ; livein:");
+    for (auto& val : node.getLiveIn())
+        write(" " + val->getName());
+    writeln("");
+    write("  ; liveout:");
+    for (auto& val : node.getLiveOut())
+        write(" " + val->getName());
+    writeln("");
+    #endif
 
     // It seems there is no nested scope, so it is a fixed indent.
     write("  ");
@@ -215,6 +228,10 @@ std::string IRFormatter::formatValue(Value& val) {
     return val.getType()->toString() + " " + val.getName();
 }
 
+std::string IRFormatter::formatBB(BasicBlock& bb) {
+    return bb.getName();
+}
+
 std::string IRFormatter::formatFunc(Function& func) {
     auto fn_type = toFunctionType(func.getType());
     auto ret_type = fn_type->getRet();
@@ -250,11 +267,14 @@ std::string IRFormatter::formatFuncDecl(FunctionDecl& func) {
     for (auto it = fn_type->getParams().begin(); it != fn_type->getParams().end(); it++)
     {
         ret += (*it)->toString() + " noundef";
-        if (std::next(it) != fn_type->getParams().end())
+        if (std::next(it) != fn_type->getParams().end() || fn_type->isVAArg())
         {
             ret += ", ";
         }
     }
+
+    if (fn_type->isVAArg())
+        ret += "...";
 
     ret += ")";
     return ret;
@@ -430,15 +450,12 @@ std::string IRFormatter::fCALLInst(CALLInst& inst) {
     ret += inst.getFuncName();
     ret += "(";
     auto args = inst.getArgs();
-    if (!(inst.isVoid()))
+    for (auto it = args.begin(); it != args.end(); it++)
     {
-        for (auto it = args.begin(); it != args.end(); it++)
+        ret += (**it).getType()->toString() + " noundef " + (**it).getName();
+        if (std::next(it) != args.end())
         {
-            ret += (**it).getType()->toString() + " noundef " + (**it).getName();
-            if (std::next(it) != args.end())
-            {
-                ret += ", ";
-            }
+            ret += ", ";
         }
     }
     ret += ")";
@@ -541,4 +558,38 @@ std::string IRFormatter::fPHIInst(PHIInst& inst) {
 std::string IRFormatter::fHELPERInst(HELPERInst& inst) {
     return "; " + IRFormatter::formatHELPERTY(inst.getHlpType());
 }
+
+
+void IRPrinter::visit(Function& node) {
+    Logger::logDebug("IRPrinter: Printing Function \"" + node.getName() + "\"");
+    write(IRFormatter::formatFunc(node));
+    writeln(" {");
+
+    for (auto& blk : node.getBlocks())
+        blk->accept(*this);
+
+    writeln("}");
 }
+
+void IRPrinter::visit(BasicBlock& node) {
+    Logger::logDebug("IRPrinter: Printing BasicBlock \"" + node.getName() + "\"");
+    
+    #if PRINT_BB_LIVEINFO
+    write("; livein:");
+    for (auto& val : node.getLiveIn())
+        write(" " + val->getName());
+    writeln("");
+    write("; liveout:");
+    for (auto& val : node.getLiveOut())
+        write(" " + val->getName());
+    writeln("");
+    #endif
+
+    write(IRFormatter::formatBB(node));
+    writeln(":");
+    for (auto& inst : node.getInsts())
+        inst->Instruction::accept(*this);
+}
+
+}
+

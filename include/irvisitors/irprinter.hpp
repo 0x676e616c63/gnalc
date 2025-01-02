@@ -6,6 +6,9 @@
 #ifndef GNALC_IRVISITORS_IRPRINTER_HPP
 #define GNALC_IRVISITORS_IRPRINTER_HPP
 
+#define PRINT_BB_LIVEINFO 1
+#define PRINT_INST_LIVEINFO 1
+
 #include "../utils/exception.hpp"
 #include "../ir/visitor.hpp"
 #include <iostream>
@@ -17,7 +20,7 @@ class IRFormatter;
 
 // 线性IR打印（未划分基本块）
 class LIRPrinter : public IRVisitor {
-private:
+protected:
     std::ostream& outStream;
 
     template <typename T>
@@ -42,7 +45,13 @@ public:
     void visit(Instruction& node) override;
 };
 
-class IRPrinter : public IRVisitor {
+class IRPrinter : public LIRPrinter {
+public:
+    explicit IRPrinter(std::ostream& out) : LIRPrinter(out) {};
+    ~IRPrinter() = default;
+    
+    void visit(Function& node) override;
+    void visit(BasicBlock& node) override;
 };
 
 /**
@@ -59,7 +68,7 @@ public:
     static std::string formatHELPERTY(HELPERTY hlpty);
 
     static std::string formatValue(Value& val); // -> i32 %a
-    // static std::string formatBB(BasicBlock& bb);
+    static std::string formatBB(BasicBlock& bb);
     // static std::string formatConstInt(ConstantInt& ci); // 和formatValue重了
     // static std::string formatConstFloat(ConstantFloat& cf);
     static std::string formatFunc(Function& func); // define dso_local void @fu(i32 noundef %a, i32 noundef %b)

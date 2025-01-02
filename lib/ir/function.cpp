@@ -6,9 +6,10 @@
 
 namespace IR {
     FunctionDecl::FunctionDecl(std::string name_, std::vector<std::shared_ptr<Type>> params,
-    std::shared_ptr<Type> ret_type)
-        : Value(std::move(name_), makeFunctionType(std::move(params), std::move(ret_type)))
-    {}
+    std::shared_ptr<Type> ret_type, bool va_arg_)
+        : Value(std::move(name_),
+            makeFunctionType(std::move(params), std::move(ret_type), va_arg_))
+    { setTrait(ValueTrait::FUNCTION); }
 
     void FunctionDecl::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
@@ -23,7 +24,8 @@ namespace IR {
 
     Function::Function(std::string name_, const std::vector<std::shared_ptr<Value>>& params_,
         std::shared_ptr<Type> ret_type)
-    : FunctionDecl(std::move(name_), get_params_type(params_), std::move(ret_type)), params(params_) {}
+    : FunctionDecl(std::move(name_),
+        get_params_type(params_), std::move(ret_type), false), params(params_) {}
 
     void Function::addBlock(std::shared_ptr<BasicBlock> blk) {
         blks.push_back(std::move(blk));

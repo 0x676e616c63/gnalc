@@ -9,6 +9,7 @@
 #include "base.hpp"
 
 #include <memory>
+#include <unordered_set>
 
 namespace IR {
     class Instruction;
@@ -17,12 +18,12 @@ namespace IR {
  * @brief BB继承自value, 其被br指令'use', 'use'了它所包含的指令
  * @note next_bb包含的BB和最后一条br指令中的相同
  */
-class BasicBlock : public Value {
+class BasicBlock : public Value, public std::enable_shared_from_this<BasicBlock> {
     std::list<std::weak_ptr<BasicBlock>> pre_bb; // 前驱
     std::list<std::weak_ptr<BasicBlock>> next_bb; // 后继
     std::list<std::shared_ptr<Instruction>> insts; // 指令列表
-    std::list<std::shared_ptr<Value>> livein;
-    std::list<std::shared_ptr<Value>> liveout;
+    std::unordered_set<std::shared_ptr<Value>> livein;
+    std::unordered_set<std::shared_ptr<Value>> liveout;
 public:
     BasicBlock(std::string _name);
     BasicBlock(std::string _name, std::list<std::shared_ptr<Instruction>> _insts);
@@ -31,20 +32,25 @@ public:
     void addPreBB(const std::shared_ptr<BasicBlock>& bb);
     void addNextBB(const std::shared_ptr<BasicBlock>& bb);
     void addInst(const std::shared_ptr<Instruction>& inst);
-    auto getPreBB() const;
-    auto getNextBB() const;
-    const auto& getInsts() const;
-    auto& getRPreBB();
-    auto& getRNextBB();
-    auto& getInsts();
+    std::list<std::shared_ptr<BasicBlock>> getPreBB() const;
+    std::list<std::shared_ptr<BasicBlock>> getNextBB() const;
+    const std::list<std::shared_ptr<Instruction>>& getInsts() const;
+    std::list<std::weak_ptr<BasicBlock>>& getRPreBB();
+    std::list<std::weak_ptr<BasicBlock>>& getRNextBB();
+    std::list<std::shared_ptr<Instruction>>& getInsts();
     // ...
 
-    auto& getLiveIn();
-    auto& getLiveOut();
+    std::unordered_set<std::shared_ptr<Value>>& getLiveIn();
+    std::unordered_set<std::shared_ptr<Value>>& getLiveOut();
 
     void accept(IRVisitor& visitor) override;
     ~BasicBlock() override;
 };
+
+inline void linkBB(const std::shared_ptr<BasicBlock>& prebb, const std::shared_ptr<BasicBlock>& nxtbb) {
+    prebb->addNextBB(nxtbb);
+    nxtbb->addPreBB(prebb);
+}
 
 }
 

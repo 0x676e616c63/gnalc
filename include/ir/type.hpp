@@ -20,6 +20,7 @@ namespace IR {
  */
 enum class IRBTYPE {
     I1, // For br's cond, icmp and fcmp return
+    I8, // For sylib's putf(char a[], ...)
     I32,
     FLOAT,
     VOID,
@@ -41,6 +42,8 @@ inline size_t getBytes(IRBTYPE type) {
     {
     case IRBTYPE::I1:
         Err::todo("I1 should return 1?");
+        return 1;
+    case IRBTYPE::I8:
         return 1;
     case IRBTYPE::I32:
         return 4;
@@ -87,6 +90,8 @@ public:
         {
         case IRBTYPE::I1:
             return "i1";
+        case IRBTYPE::I8:
+            return "i8";
         case IRBTYPE::I32:
             return "i32";
         case IRBTYPE::FLOAT:
@@ -114,7 +119,8 @@ public:
     const auto& getElmType() const { return element_type; }
 
     IRCTYPE getTrait() const override { return IRCTYPE::PTR; }
-    std::string toString() const override { return "ptr"; }
+    // std::string toString() const override { return "ptr"; }
+    std::string toString() const override { return element_type->toString() + "*"; }
     size_t getBytes() const override {
         return 8;
     }
@@ -145,13 +151,16 @@ public:
 
 class FunctionType : public Type {
 protected:
-    std::vector<std::shared_ptr<Type>> params;
     std::shared_ptr<Type> ret;
+    std::vector<std::shared_ptr<Type>> params;
+    bool is_va_arg;
 public:
-    FunctionType(std::vector<std::shared_ptr<Type>> params_, std::shared_ptr<Type> ret_)
-        : params(std::move(params_)), ret(std::move(ret_)) {}
+    FunctionType(std::vector<std::shared_ptr<Type>> params_, std::shared_ptr<Type> ret_, bool is_va_arg_)
+        : params(std::move(params_)), ret(std::move(ret_)), is_va_arg(is_va_arg_) {}
 
     IRCTYPE getTrait() const override { return IRCTYPE::FUNCTION; }
+
+    bool isVAArg() const {return  is_va_arg;}
 
     const std::vector<std::shared_ptr<Type>>& getParams() const {
         return params;
@@ -160,7 +169,7 @@ public:
     const std::shared_ptr<Type>& getRet() const { return ret; }
 
     std::string toString() const override {
-        Err::not_implemented();
+        Err::not_implemented("Function type to string.");
         return {};
     }
 
@@ -175,7 +184,7 @@ public:
 std::shared_ptr<BType> makeBType(IRBTYPE bty);
 std::shared_ptr<PtrType> makePtrType(std::shared_ptr<Type> ele_ty);
 std::shared_ptr<ArrayType> makeArrayType(std::shared_ptr<Type> ele_ty, size_t size);
-std::shared_ptr<FunctionType> makeFunctionType(std::vector<std::shared_ptr<Type>> params, std::shared_ptr<Type> ret);
+std::shared_ptr<FunctionType> makeFunctionType(std::vector<std::shared_ptr<Type>> params, std::shared_ptr<Type> ret, bool is_va_arg);
 
 // 若类型不正确会返回nullptr
 std::shared_ptr<BType> toBType(const std::shared_ptr<Type>& ty);

@@ -26,13 +26,19 @@ class Value;
 class User;
 class Use;
 
-// // Specific Value Type: 用于标识特殊类型的VALUE对象
-// enum class SVT {
-//     NORMAL,
-//     FUNCPARAM,
-//     CONSTANT
-//     // ...
-// };
+// 用于标识特殊类型的VALUE对象
+// 25.1.2: 目前仅标记了CONST, GLOBAL, FUNCTION, BASICBLOCK
+enum class ValueTrait {
+    UNDEFINED,
+    CONSTANT_LITERAL, // 常量字面量
+    ORDINARY_VARIABLE, // 一般变量（包含const）
+    GLOBAL_VARIABLE, // 全局变量
+    FUNCTION, // 函数
+    FORMAL_PARAMETER, // 形参
+    BASIC_BLOCK, // 基本块
+    VOID_INSTRUCTION // 无值的指令
+    // ...
+};
 
 /**
  * @todo replace use function
@@ -42,7 +48,7 @@ class Value : public NameC {
 protected:
     std::list<std::weak_ptr<Use>> use_list; // Use隶属于User
     std::shared_ptr<Type> vtype; // value's type
-    // SVT svt;
+    ValueTrait trait = ValueTrait::UNDEFINED;
 public:
     Value() = delete;
     Value(std::string _name, std::shared_ptr<Type> _vtype);
@@ -63,8 +69,11 @@ public:
 
     bool replaceUse(const std::shared_ptr<Use>& old_use, const std::shared_ptr<Use>& new_use);
 
-    virtual void accept(class IRVisitor& visitor) { Err::not_implemented(); }
+    virtual void accept(class IRVisitor& visitor) { Err::not_implemented("Value::accept"); }
     virtual ~Value();
+
+    void setTrait(ValueTrait _trait) { trait = _trait; }
+    ValueTrait getTrait() const { return trait; }
 };
 
 
