@@ -32,6 +32,17 @@ public:
     void accept(IRVisitor& visitor) override;
 };
 
+class ConstantI1 : public Value {
+private:
+    bool val;
+public:
+    ConstantI1(bool _val);
+
+    bool getVal() const;
+
+    void accept(IRVisitor& visitor) override;
+};
+
 // using CI32 = ConstantInt;
 // using CF32 = ConstantFloat;
 

@@ -337,7 +337,9 @@ void IRGenerator::visit(FuncDef& node) {
         break;
     }
 
+    next_temp_id = 1;
     curr_func = nullptr;
+
     std::vector<std::shared_ptr<IR::Value>> params;
     std::vector<std::string> param_ids;
     if (!node.isEmptyParam()) {
@@ -351,8 +353,6 @@ void IRGenerator::visit(FuncDef& node) {
     curr_func = std::make_shared<IR::Function>("@" + node.getId(), params, IR::makeBType(ty));
     module.addFunction(curr_func);
     symbol_table.insert(node.getId(), curr_func);
-
-    next_temp_id = 1;
 
     symbol_table.initScope();
 
@@ -386,6 +386,19 @@ void IRGenerator::visit(FuncDef& node) {
     std::stable_sort(curr_func->getInsts().begin(), curr_func->getInsts().end(),
     [](auto&& i1, auto&& i2)
         { return i1->getOpcode() == IR::OP::ALLOCA && i2->getOpcode() != IR::OP::ALLOCA; });
+
+    // Sort will destroy the order of our names, so we just rename all val.
+    size_t new_irval_id = 0;
+    for (const auto& param : curr_func->getParams())
+    {
+        param->setName("%" + std::to_string(new_irval_id++));
+    }
+    if (new_irval_id == 0) new_irval_id = 1;
+    for (const auto& inst : curr_func->getInsts())
+    {
+        if (!inst->getName().empty() && inst->getName()[0] == '%')
+            inst->setName("%" + std::to_string(new_irval_id++));
+    }
 
     curr_func = nullptr;
 }
@@ -433,7 +446,7 @@ void IRGenerator::visit(FuncFParam& node) {
         ir_type = IR::makeBType(node_type);
     }
 
-    curr_val = std::make_shared<IR::Value>("%" + node.getId(), ir_type);
+    curr_val = std::make_shared<IR::Value>("%" + node.getId(), ir_type, IR::ValueTrait::FORMAL_PARAMETER);
 }
 
 
@@ -690,8 +703,8 @@ void IRGenerator::visit(BinaryOp& node) {
     auto lhs = curr_val;
     node.getRHS()->accept(*this);
     auto rhs = curr_val;
-    std::shared_ptr<IR::BType> oprtype;
 
+    std::shared_ptr<IR::BType> oprtype;
     // Type check and cast
     {
         auto lhstype = IR::toBType(lhs->getType());
@@ -705,7 +718,13 @@ void IRGenerator::visit(BinaryOp& node) {
             || rhstype->getInner() == IR::IRBTYPE::FLOAT),
             "Binary operation must be integers or floats.");
 
-        if (lhstype->getInner() == IR::IRBTYPE::FLOAT || rhstype->getInner() == IR::IRBTYPE::FLOAT)
+        if (node.getOp() == BiOp::AND || node.getOp() == BiOp::OR)
+        {
+            lhs = try_type_cast(lhs, IR::IRBTYPE::I1);
+            rhs = try_type_cast(rhs, IR::IRBTYPE::I1);
+            oprtype = IR::makeBType(IR::IRBTYPE::I1);
+        }
+        else if (lhstype->getInner() == IR::IRBTYPE::FLOAT || rhstype->getInner() == IR::IRBTYPE::FLOAT)
         {
             lhs = try_type_cast(lhs, IR::IRBTYPE::FLOAT);
             rhs = try_type_cast(rhs, IR::IRBTYPE::FLOAT);
@@ -721,10 +740,8 @@ void IRGenerator::visit(BinaryOp& node) {
         else Err::unreachable("Invalid type.");
     }
 
-    bool is_constant = (std::dynamic_pointer_cast<IR::ConstantInt>(lhs) != nullptr
-    || std::dynamic_pointer_cast<IR::ConstantFloat>(lhs) != nullptr)
-    && (std::dynamic_pointer_cast<IR::ConstantInt>(rhs) != nullptr
-    || std::dynamic_pointer_cast<IR::ConstantFloat>(rhs) != nullptr);
+    bool is_constant = lhs->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL
+    && rhs->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL;
 
     // Arithmetic -> I32
     if (node.getOp() == BiOp::ADD || node.getOp() == BiOp::SUB
@@ -861,7 +878,17 @@ void IRGenerator::visit(BinaryOp& node) {
     if (node.getOp() == BiOp::AND || node.getOp() == BiOp::OR)
     {
         Err::gassert(oprtype->getInner() == IR::IRBTYPE::I1, "Invalid && or ||.");
-        Err::todo("AND OR");
+        switch (node.getOp())
+        {
+        case BiOp::AND:
+            curr_val = std::make_shared<IR::AND>(lhs, rhs);
+            break;
+        case BiOp::OR:
+            curr_val = std::make_shared<IR::OR>(lhs, rhs);
+            break;
+        default:
+            Err::unreachable();
+        }
         return;
     }
 }
@@ -872,6 +899,7 @@ void IRGenerator::visit(UnaryOp& node) {
     auto opreandtype = IR::toBType(curr_val->getType());
     Err::gassert(opreandtype != nullptr
         && (opreandtype->getInner() == IR::IRBTYPE::I32
+            || opreandtype->getInner() == IR::IRBTYPE::I1
             || opreandtype->getInner() == IR::IRBTYPE::FLOAT),
         "Unary operation be performed on integer or float.");
     switch (node.getOp())
@@ -881,20 +909,38 @@ void IRGenerator::visit(UnaryOp& node) {
     case UnOp::SUB:
         if (opreandtype->getInner() == IR::IRBTYPE::I32)
         {
-            auto neg = std::make_shared<IR::BinaryInst>(get_temp_name(), IR::OP::SUB,
-                constant_pool.getConst(0), curr_val);
-            curr_func->addInst(neg);
-            curr_val = neg;
+            if (auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(curr_val))
+                curr_val = constant_pool.getConst(-ci->getVal());
+            else
+            {
+                auto neg = std::make_shared<IR::BinaryInst>(get_temp_name(), IR::OP::SUB,
+                    constant_pool.getConst(0), curr_val);
+                curr_func->addInst(neg);
+                curr_val = neg;
+            }
         }
-        else
+        else if (opreandtype->getInner() == IR::IRBTYPE::FLOAT)
         {
-            auto neg = std::make_shared<IR::FNEGInst>(get_temp_name(), curr_val);
-            curr_func->addInst(neg);
-            curr_val = neg;
+            if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(curr_val))
+                curr_val = constant_pool.getConst(-cf->getVal());
+            else
+            {
+                auto neg = std::make_shared<IR::FNEGInst>(get_temp_name(), curr_val);
+                curr_func->addInst(neg);
+                curr_val = neg;
+            }
         }
+        else Err::not_implemented("SUB on unsupported type.");
         break;
     case UnOp::NOT:
-        {Err::todo("NOT");}
+        curr_val = try_type_cast(curr_val, IR::IRBTYPE::I1);
+        Err::gassert(IR::toBType(curr_val->getType())->getInner() == IR::IRBTYPE::I1,
+            "Invalid type.");
+        if (auto ci1 = std::dynamic_pointer_cast<IR::ConstantI1>(curr_val))
+            curr_val = constant_pool.getConst(!ci1->getVal());
+        else
+            curr_val = std::make_shared<IR::NOT>(curr_val);
+        break;
     }
 }
 
@@ -922,24 +968,33 @@ void IRGenerator::visit(CompStmt& node) {
 
 void IRGenerator::visit(IfStmt& node) {
     node.getCond()->accept(*this);
+    auto cond = curr_val;
+    curr_func->addInst(std::make_shared<IR::IFBEntry>(cond));
     node.getBody()->accept(*this);
+    curr_func->addInst(std::make_shared<IR::IFBEnd>());
     if(node.hasElse()) {
+        curr_func->addInst(std::make_shared<IR::ELSEBEntry>());
         node.getElseBody()->accept(*this);
+        curr_func->addInst(std::make_shared<IR::ELSEBEnd>());
     }
 }
 
 void IRGenerator::visit(WhileStmt& node) {
     node.getCond()->accept(*this);
+    auto cond = curr_val;
+    curr_func->addInst(std::make_shared<IR::WHILEBEntry>(cond));
     node.getBody()->accept(*this);
+    curr_func->addInst(std::make_shared<IR::WHILEBEnd>());
 }
 
-void IRGenerator::visit(NullStmt& node) {
-}
+void IRGenerator::visit(NullStmt& node) { }
 
 void IRGenerator::visit(BreakStmt& node) {
+    curr_func->addInst(std::make_shared<IR::BREAK>());
 }
 
 void IRGenerator::visit(ContinueStmt& node) {
+    curr_func->addInst(std::make_shared<IR::CONTINUE>());
 }
 
 void IRGenerator::visit(ReturnStmt& node) {
@@ -962,6 +1017,9 @@ std::string IRGenerator::get_temp_name() {
     return "%" + std::to_string(next_temp_id++);
 }
 
+// I32 <-> FLOAT
+// I32 -> I1
+// FLOAT -> I1
 std::shared_ptr<IR::Value> IRGenerator::try_type_cast(std::shared_ptr<IR::Value> val, IR::IRBTYPE dest) {
     if (val->getType()->getTrait() != IR::IRCTYPE::BASIC)
         return val;
@@ -990,6 +1048,36 @@ std::shared_ptr<IR::Value> IRGenerator::try_type_cast(std::shared_ptr<IR::Value>
         {
             Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
             auto conv = std::make_shared<IR::FPTOSIInst>(get_temp_name(), val);
+            curr_func->addInst(conv);
+            return conv;
+        }
+    }
+    else if (src == IR::IRBTYPE::I32 && dest == IR::IRBTYPE::I1)
+    {
+        if (auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(val))
+        {
+            return constant_pool.getConst(static_cast<bool>(ci->getVal()));
+        }
+        else
+        {
+            Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
+            auto conv = std::make_shared<IR::ICMPInst>(get_temp_name(), IR::ICMPOP::ne,
+                val, constant_pool.getConst(0));
+            curr_func->addInst(conv);
+            return conv;
+        }
+    }
+    else if (src == IR::IRBTYPE::FLOAT && dest == IR::IRBTYPE::I1)
+    {
+        if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(val))
+        {
+            return constant_pool.getConst(static_cast<bool>(cf->getVal()));
+        }
+        else
+        {
+            Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
+            auto conv = std::make_shared<IR::FCMPInst>(get_temp_name(), IR::FCMPOP::one,
+                val, constant_pool.getConst(0.0f));
             curr_func->addInst(conv);
             return conv;
         }

@@ -8,8 +8,8 @@ namespace IR {
     FunctionDecl::FunctionDecl(std::string name_, std::vector<std::shared_ptr<Type>> params,
     std::shared_ptr<Type> ret_type, bool va_arg_)
         : Value(std::move(name_),
-            makeFunctionType(std::move(params), std::move(ret_type), va_arg_))
-    { setTrait(ValueTrait::FUNCTION); }
+            makeFunctionType(std::move(params), std::move(ret_type), va_arg_), ValueTrait::FUNCTION)
+    {}
 
     void FunctionDecl::accept(IRVisitor& visitor) { visitor.visit(*this); }
 

@@ -68,7 +68,7 @@ private:
 
 public:
     // 此构造方法用于初始生成时，最开始没有划分Block，故parent为空
-    Instruction(OP opcode, std::string _name, std::shared_ptr<Type> _type);
+    Instruction(OP opcode, std::string _name, const std::shared_ptr<Type>& _type);
     // 用于后续划分之后的构造
     // Instruction(OP opcode, BasicBlock* parent, NameParam name = "", _type t = UNDEFINED) : User(t, name), opcode(opcode), parent(parent) {}
 

@@ -85,7 +85,7 @@ namespace IR {
             case OP::LOAD:
             case OP::GEP:
                 for (auto& use : inst->getOperands())
-                    if (use->getValue()->getTrait() != ValueTrait::CONSTANT_LITERAL)
+                    if (use->getValue()->getVTrait() != ValueTrait::CONSTANT_LITERAL)
                         if (inst->getLiveIn().insert(use->getValue()).second) {
                             // Logger::logDebug("Added live-in: " + use->getValue()->getName());
                             updated = true;
@@ -100,7 +100,7 @@ namespace IR {
                 auto cinst = std::dynamic_pointer_cast<RETInst>(inst);
                 Err::gassert(cinst != nullptr, "Liveana::processInst: RETInst cast failed.");
                 if (!cinst->isVoid())
-                    if (cinst->getRetVal()->getTrait() != ValueTrait::CONSTANT_LITERAL)
+                    if (cinst->getRetVal()->getVTrait() != ValueTrait::CONSTANT_LITERAL)
                         if (cinst->getLiveIn().insert(cinst->getRetVal()).second)
                             updated = true;
                 break;
@@ -110,7 +110,7 @@ namespace IR {
                 auto cinst = std::dynamic_pointer_cast<BRInst>(inst);
                 Err::gassert(cinst != nullptr, "Liveana::processInst: BRInst cast failed.");
                 if (cinst->isConditional())
-                    if (cinst->getCond()->getTrait() != ValueTrait::CONSTANT_LITERAL)
+                    if (cinst->getCond()->getVTrait() != ValueTrait::CONSTANT_LITERAL)
                         if (cinst->getLiveIn().insert(cinst->getCond()).second)
                             updated = true;
                 for (auto& val : inst->getLiveOut())
@@ -123,7 +123,7 @@ namespace IR {
                 auto cinst = std::dynamic_pointer_cast<CALLInst>(inst);
                 Err::gassert(cinst != nullptr, "Liveana::processInst: CALLInst cast failed.");
                 for (auto& val : cinst->getArgs()) 
-                    if (val->getTrait() != ValueTrait::CONSTANT_LITERAL)
+                    if (val->getVTrait() != ValueTrait::CONSTANT_LITERAL)
                         if (inst->getLiveIn().insert(val).second)
                             updated = true;
                 for (auto& val : inst->getLiveOut())
@@ -142,7 +142,7 @@ namespace IR {
                 break;
             case OP::STORE:
                 for (auto& use : inst->getOperands())
-                    if (use->getValue()->getTrait() != ValueTrait::CONSTANT_LITERAL)
+                    if (use->getValue()->getVTrait() != ValueTrait::CONSTANT_LITERAL)
                         if (inst->getLiveIn().insert(use->getValue()).second)
                             updated = true;
                 for (auto& val : inst->getLiveOut())
