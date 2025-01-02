@@ -28,12 +28,12 @@ namespace IR
         return initer_type->getTrait() == IRCTYPE::ARRAY;
     }
 
-    auto& GVIniter::getConstVal() {
+    const auto& GVIniter::getConstVal() const {
         return constval;
     }
 
-    const auto& GVIniter::getConstVal() const {
-        return constval;
+    const std::vector<GVIniter>& GVIniter::getInnerIniter() const {
+        return inner_initer;
     }
 
     GVIniter& GVIniter::addIniter(std::shared_ptr<Type> _ty, std::shared_ptr<Value> _con) {
