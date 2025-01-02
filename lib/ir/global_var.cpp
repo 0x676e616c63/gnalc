@@ -127,7 +127,11 @@ namespace IR
     bool GlobalVariable::isArray() const {
         return vtype->getTrait() == IRCTYPE::ARRAY;
     }
-
+    
+    const std::vector<GVIniter>& GVIniter::getInnerIniter() const {
+        return inner_initer;
+    }
+    
     GVIniter& GlobalVariable::getIniter() {
         return initer;
     }

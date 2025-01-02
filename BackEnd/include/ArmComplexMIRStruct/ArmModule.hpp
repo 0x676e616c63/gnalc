@@ -10,11 +10,12 @@
 class ArmStruct::Module{
     public:
         Module(IR::Module&);
-        Module(IR::Module&, Sym::SymbolTable&);       // IR -> MIR
+        // Module(IR::Module&, Sym::SymbolTable&);       // IR -> MIR
         ~Module(); // 记得手动释放
+        
         void AddFunction(Function*);
         void AddDataVar(Global*);
-        void AddBssVar(Bss*);
+        void AddBssVar(Global);
         void AddEquDef(Global*);
         
         void AllocRegister();
@@ -31,8 +32,9 @@ class ArmStruct::Module{
         std::string testSection = ".text\n";
         std::string InstSet = ".arm\n";
         std::vector<Function*> FunctionList;    // .globl func \n fun:  
+        
         std::vector<Global*> dataSection; // .data 注意使用 .align(可能直接被优化掉)
-        std::vector<Bss*> bssSection; // .bss 注意使用 .align .zero 1234
+        std::vector<Global*> bssSection;
         std::vector<Global*> equSection; // .equ PI 3.14 \n ldr r0, =PI
         // std::vector<std::unique_ptr<Global>> globalSection; // .global cnt\n cnt: .word 1234
 

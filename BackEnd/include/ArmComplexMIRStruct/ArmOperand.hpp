@@ -52,6 +52,37 @@ class ArmStruct::Imm{
         virtual std::string toString();
 
 };
+
+class ArmStruct::Global : public ArmStruct::Imm{
+    public:
+        Global(IR::GlobalVariable&);
+        ~Global();
+
+        void addInitSection(std::reference_wrapper<ArmStruct::GlobalIniter>);
+        void parse(const IR::GVIniter&);
+
+        std::string toString() final;
+    private:
+        std::vector<ArmStruct::GlobalIniter*> GlobalIniterList;
+    
+};
+
+class ArmStruct::GlobalIniter{
+    public:
+        GlobalIniter(OperandType, unsigned long long); // encodings
+        GlobalIniter(unsigned long long); // space
+        ~GlobalIniter()=default;
+
+        std::string toString();
+    private:
+        ///@brief 有初始化
+        OperandType valType;
+        unsigned long long valEncoding;
+
+        ///@brief 没有初始化
+        std::unique_ptr<std::pair<bool, unsigned long long>> blockInit;
+};
+
 class ArmStruct::MMptr : public ArmStruct::Imm{
     ///@note 关键在于能反向查找到对应的FrameObj, 同时能够被FrameObj寻址
     public:
@@ -82,22 +113,5 @@ class ArmStruct::MMptr : public ArmStruct::Imm{
         Operand *baseVirReg = nullptr;  // 为null表示它的基址为r7
         unsigned int offset = 0;
         unsigned long long VirReg;    // 有虚拟寄存器, 用于被寻找
-};
-
-class ArmStruct::Global : public ArmStruct::Imm{
-    public:
-        Global();
-        ~Global()=default;
-        std::string GlobalId;
-        virtual std::string toString();
-};
-
-class ArmStruct::Bss : public ArmStruct::Global{
-    public:
-        Bss();
-        ~Bss()=default;
-        bool isAlign = true;
-        unsigned int ValSize;
-        std::string toString();
 };
 #endif

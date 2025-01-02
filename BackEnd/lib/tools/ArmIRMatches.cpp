@@ -149,34 +149,58 @@ struct ArmTools::MovtwMatch{
 
 struct ArmTools::RetMatch{
     BB& BasicBlock;
+    MovtwMatch immeMatch;
     /// @note 生成一个 mov r0 %... 或者 vmov.f32 s0, %...
     void operator()(InstArgs insts){
         assert(insts.size() == 1);
 
         IR::RETInst &midEnd_ret = dynamic_cast<IR::RETInst&>(insts.begin()->get());
 
-        Instruction *backEnd_ret_mov = nullptr;
+        auto &midEnd_retVal = *midEnd_ret.getRetVal().get();
 
-        unsigned long long idx = std::stoull(midEnd_ret.getRetVal().get()->getName().substr(1));
-        Operand *backEnd_ret_use = BasicBlock.Func.VirRegOperandMap[idx];
-        Operand *backEnd_ret_register = nullptr;
+        if(typeid(midEnd_retVal) != typeid(IR::ConstantFloat&)
+            && typeid(midEnd_retVal) != typeid(IR::ConstantInt&)){
+            Instruction *backEnd_ret_mov = nullptr;
+            unsigned long long idx = std::stoull(midEnd_ret.getRetVal().get()->getName().substr(1));
+            Operand *backEnd_ret_use = BasicBlock.Func.VirRegOperandMap[idx];
+            Operand *backEnd_ret_register = nullptr;
+            
+            if(midEnd_ret.getRetType() == IR::IRBTYPE::I32){
+                backEnd_ret_register = RegisterPool[CoreRegisterName::r0];
 
-        if(midEnd_ret.getRetType() == IR::IRBTYPE::I32){
-            backEnd_ret_register = new Operand(OperandType::INT, CoreRegisterName::r0);
-
-            backEnd_ret_mov = new Instruction(
-                OperCode::MOV, nullptr, BasicBlock, {std::ref(*backEnd_ret_register)}, {std::ref(*backEnd_ret_use)}
-            );
+                backEnd_ret_mov = new Instruction(
+                    OperCode::MOV, nullptr, BasicBlock, {std::ref(*backEnd_ret_register)}, {std::ref(*backEnd_ret_use)}
+                );
+            }
+            else{
+                backEnd_ret_register = FPURegisterPool[ExtensionRegisterName::s0];
+                
+                backEnd_ret_mov = new Instruction(
+                    OperCode::VMOV_F32, nullptr, BasicBlock, {std::ref(*backEnd_ret_register)}, {std::ref(*backEnd_ret_use)}
+                );
+            }
+                BasicBlock.InstList.push_back(backEnd_ret_mov);
         }
         else{
-            backEnd_ret_register = new Operand(OperandType::FLOAT, ExtensionRegisterName::s0);
-            
-            backEnd_ret_mov = new Instruction(
-                OperCode::VMOV_F32, nullptr, BasicBlock, {std::ref(*backEnd_ret_register)}, {std::ref(*backEnd_ret_use)}
-            );
-        }
-        BasicBlock.InstList.push_back(backEnd_ret_mov);
+            Operand *backEnd_ret_register = nullptr;
+            Operand *backEnd_ret_use = nullptr;
+            Instruction *backEnd_ret = nullptr;
+            if(typeid(midEnd_retVal) == typeid(IR::ConstantInt&)){
+                immeMatch(dynamic_cast<IR::ConstantInt&>(midEnd_retVal).getVal(), BasicBlock.Func.VRegNum);
+                backEnd_ret_use = BasicBlock.Func.VirRegOperandMap[BasicBlock.Func.VRegNum - 1];
+                backEnd_ret_register = RegisterPool[CoreRegisterName::r0];
+                backEnd_ret = new Instruction(OperCode::MOV, nullptr, BasicBlock, {std::ref(*backEnd_ret_register)}, {std::ref(*backEnd_ret_use)});
+                BasicBlock.InstList.push_back(backEnd_ret);
+            }
+            else{
+                immeMatch(dynamic_cast<IR::ConstantFloat&>(midEnd_retVal).getVal(), BasicBlock.Func.VRegNum);
+                backEnd_ret_use = BasicBlock.Func.VirRegOperandMap[BasicBlock.Func.VRegNum - 1];
+                backEnd_ret_register = FPURegisterPool[ExtensionRegisterName::s0];
+                backEnd_ret = new Instruction(OperCode::VMOV, nullptr, BasicBlock, {std::ref(*backEnd_ret_register)}, {std::ref(*backEnd_ret_use)});
+                BasicBlock.InstList.push_back(backEnd_ret);
+            }
 
+        }
         return;
     }
 };

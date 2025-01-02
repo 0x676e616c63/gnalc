@@ -4,25 +4,19 @@
 #include "../../include/ArmComplexMIRStruct/ArmFunction.hpp"
 #include "../../Arm.hpp"
 #include "../../include/tools/ArmTools.hpp"
+#include "../../../include/ir/global_var.hpp"
+#include "../../../include/ir/constant.hpp"
 
 using namespace ArmStruct;
 using namespace ArmTools;
 ///@todo 还差三个类的构造函数
-Imm::Imm(OperandType type, std::string data): data_type(type), data(data){}
 
-MMptr::MMptr(FrameObj* space, OperandType type, unsigned long long idx): space(space), ptrType(type), VirReg(idx){
-    space->getFather()->insertMMptr(VirReg, this);  // 入表
-}
 
-MMptr::MMptr(FrameObj* loc, OperandType type, unsigned long long idx, unsigned int off)
-    : space(loc), ptrType(type), VirReg(idx), offset(off){
-    space->getFather()->insertMMptr(VirReg, this);  // 入表
-};
 
-MMptr::MMptr(std::string spBiase){  // 疑似没用
-    ///@brief for spill args
-    this->data = spBiase;
-}
+// MMptr::MMptr(std::string spBiase){  // 疑似没用
+//     ///@brief for spill args
+//     this->data = spBiase;
+// }
 
 Operand::Operand(OperandType type, std::string midEnd_VirReg){
     this->ValType = type;
@@ -34,10 +28,8 @@ Operand::Operand(OperandType type, std::string midEnd_VirReg){
 Operand::Operand(OperandType type, unsigned int color): ValType(type), color(color){};
 
 
-
 Operand::Operand(Operand& other) :
     ValType(other.ValType),
-
 
     // 深拷贝字符串指针指向的内容
     // Indentifier(std::make_unique<std::string>(*other.Indentifier)),
@@ -79,9 +71,20 @@ std::string Operand::toString(){
     return str;
 }
 
+Imm::Imm(OperandType type, std::string data): data_type(type), data(data){}
+
 std::string Imm::toString(){
     return this->data;
 }
+
+MMptr::MMptr(FrameObj* space, OperandType type, unsigned long long idx): space(space), ptrType(type), VirReg(idx){
+    space->getFather()->insertMMptr(VirReg, this);  // 入表
+}
+
+MMptr::MMptr(FrameObj* loc, OperandType type, unsigned long long idx, unsigned int off)
+    : space(loc), ptrType(type), VirReg(idx), offset(off){
+    space->getFather()->insertMMptr(VirReg, this);  // 入表
+};
 
 std::string MMptr::toString() {
     data += "[";
@@ -104,8 +107,72 @@ std::string MMptr::toString() {
     return data;
 }
 
+
+Global::Global(IR::GlobalVariable& midEnd_GlobalVar){
+    data = midEnd_GlobalVar.getName();
+    data_type = LABEL;
+
+    parse(midEnd_GlobalVar.getIniter());
+
+}
+
+Global::~Global(){
+    for(auto initerptr : GlobalIniterList) delete initerptr;
+}
+
+void Global::parse(const IR::GVIniter& midEnd_initer){
+    
+    if(midEnd_initer.isZero()){
+        unsigned long long size = midEnd_initer.getIniterType().get()->getBytes();
+
+        GlobalIniter *backEnd_initer = new GlobalIniter(size);
+        GlobalIniterList.push_back(backEnd_initer);
+        return;    
+    }
+    
+    if(!midEnd_initer.isArray()){
+        unsigned long long encoding;
+        IR::Value &constValue = *(midEnd_initer.getConstVal().get());
+
+        if(typeid(constValue) == typeid(IR::ConstantInt&)){
+            int temp = dynamic_cast<IR::ConstantInt&>(constValue).getVal();
+            encoding = *reinterpret_cast<unsigned long long*>(&temp);
+        }
+        else{
+            float temp = dynamic_cast<IR::ConstantFloat&>(constValue).getVal();
+            encoding = *reinterpret_cast<unsigned long long *>(&temp);
+        }
+        GlobalIniter *backEnd_initer = new GlobalIniter(OperandType::INT, encoding);
+        GlobalIniterList.push_back(backEnd_initer);
+
+        return;
+    }
+
+    for(auto &inner_initer : midEnd_initer.getInnerIniter()){
+        parse(inner_initer);
+    }
+
+    return;
+}
+
 std::string Global::toString(){
-    this->data += '=';
-    this->data += GlobalId;
-    return data;
+    ///@warning 默认两个indent
+    std::string str;
+    for(auto initer : GlobalIniterList){
+        str += "        " + initer->toString() + "\n";
+    }
+
+    return str;
+}
+
+std::string GlobalIniter::toString(){
+    std::string str;
+    if(blockInit.get()->first == false){
+        str += ".word " + std::to_string(valEncoding) + "\n";
+    }
+    else{
+        str += ".zero " + std::to_string(blockInit.get()->second) + "\n";
+    }
+
+    return str;
 }

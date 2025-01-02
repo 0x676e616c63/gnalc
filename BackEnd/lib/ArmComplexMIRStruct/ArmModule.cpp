@@ -1,5 +1,6 @@
 #include <vector>
 #include "../../../include/ir/module.hpp"
+#include "../../../include/ir/constant.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmBB.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmFunction.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmModule.hpp"
@@ -20,6 +21,11 @@ Module::Module(IR::Module& midEnd_Module){
     this->ModuleName = midEnd_Module.getName(); // pass by val
 
     ///@todo get .bss and get .data and get .equ
+    
+    for(auto &midEnd_globalVar : midEnd_Module.getGlobalVars()){
+        Global *backEnd_globalVar = new Global(*midEnd_globalVar.get());
+        dataSection.push_back(backEnd_globalVar);
+    }
 
     ///@todo needed symbolTable
 
@@ -43,32 +49,7 @@ Module::Module(IR::Module& midEnd_Module){
     }
 }
 
-Module::Module(IR::Module& midEnd_Module, Sym::SymbolTable& symTable){
-    this->ModuleName = midEnd_Module.getName(); // pass by val
 
-    ///@todo get .bss and get .data and get .equ
-
-    ///@todo needed symbolTable
-
-    ///@brief get func
-    auto& funcs = midEnd_Module.getFunctions();
-
-    for(auto func_it = funcs.begin(); func_it != funcs.end(); ++func_it){
-        auto& func = **func_it;
-        Function* newFunc = new Function(func); // IR->MIR, localFrame ...s
-        this->AddFunction(newFunc);
-    }
-
-    /// @brief make RegisterPools
-    for(int i = 0; i <= 15; ++i){
-        Operand *reg = new Operand(OperandType::INT, i);
-        RegisterPool.push_back(reg);
-    }
-    for(int i = 0; i <= 31; ++i){
-        Operand *Freg = new Operand(OperandType::FLOAT, i);
-        FPURegisterPool.push_back(Freg);
-    }
-}
 
 void Module::AllocRegister(){
 
@@ -159,10 +140,6 @@ void Module::AddDataVar(Global* data){
     this->dataSection.push_back(data);
 }
 
-void Module::AddBssVar(Bss* bss){
-    this->bssSection.push_back(bss);
-}
-
 void Module::AddEquDef(Global* equ){
     this->equSection.push_back(equ);
 }
@@ -174,30 +151,19 @@ std::string& Module::toString(){
     /// @note .data
     if(!dataSection.empty()){
         str += ".data\n";
+        str += "    .align 4\n";
         for(auto it = dataSection.begin(); it != dataSection.end(); ++it){
             auto data = **it;
-            str += "    .global " + data.GlobalId + "\n";
-            str += "        " + data.GlobalId + ":\n";
-            if(data.data_type == OperandType::BYTE) str += "            .byte    " + data.data + '\n';
-            else str += "           .word    " + data.data + '\n';
+            str += "    .global " + data.data + '\n';
+            str += "    " + data.data + ":\n";
+            str += data.toString();
         }
     }
-    /// @note .bss
-    if(!bssSection.empty()){
-        str += ".bss\n";
-        for(auto it = bssSection.begin(); it != bssSection.end(); ++it){
-            auto bss = **it;
-            if(bss.isAlign) str += "    .align  4\n";
-            str += "    .global " + bss.GlobalId + "\n";
-            str += "        " + bss.GlobalId + ":\n";
-            str += "            .zero   " + std::to_string(bss.ValSize) + '\n';
-        }
-    }
+
+    ///@note .bss
+
     ///@note .equ
-    for(auto it = equSection.begin(); it != equSection.end(); ++it){
-        auto equ = **it;
-        str += "    .equ    " + equ.GlobalId + ", " + equ.data + '\n';
-    }
+
     ///@note .text
     str += ".text\n.arm\n";
     for(auto it = FunctionList.begin(); it != FunctionList.end(); ++it){

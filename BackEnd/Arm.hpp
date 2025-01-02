@@ -28,7 +28,8 @@ namespace ArmStruct{
     class Imm;
     class MMptr;
     class Global;       // 全局变量
-    class Bss;
+
+    class GlobalIniter; // 相较于中端更细节的Initer
 
     ///@note MIR 子类
     class CallInst;
@@ -140,6 +141,7 @@ namespace ArmTools{
         ArmStruct::BB& BasicBlock;
         void operator()(float, unsigned long long &temp_virReg) ;
         void operator()(int, unsigned long long &temo_virReg) ;  
+        void operator()();
         bool isImmCanBeEncodedInText(unsigned long long imme);
         bool isImmCanBeEncodedInText(float imme);
     };

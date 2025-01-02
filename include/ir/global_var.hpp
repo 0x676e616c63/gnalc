@@ -41,7 +41,7 @@ public:
     auto& getConstVal(); // 此处暂时先用非const的引用传递
     const auto& getConstVal() const;
 
-    // std::vector<GVIniter>& getInnerIniter(); // 此处暂时先用非const的引用传递
+    const std::vector<GVIniter>& getInnerIniter() const;
 
     GVIniter& addIniter(std::shared_ptr<Type> _ty, std::shared_ptr<Value> _con);
 
