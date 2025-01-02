@@ -42,7 +42,7 @@ namespace IR {
         bb->getInsts().back()->getLiveOut() = bb->getLiveOut();
         bool updated = false;
         // Logger::logDebug("Processing insts in bb");
-        for (auto it = bb->getInsts().rbegin(); ; ++it) {
+        for (auto it = bb->getInsts().rbegin(); it != bb->getInsts().rend(); ++it) {
             if (processInst(*it)) {
                 updated = true;
                 Logger::logDebug("LiveAnalyser: Updated insts " + (*it)->getName() + " in bb");

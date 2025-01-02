@@ -99,7 +99,8 @@ void IRGenerator::visit(VarDef& node) {
     curr_initializer.reset(node_type);
     curr_making_initializer = &curr_initializer;
 
-    // Pure Constant
+    // Pure Constant Variable
+    // check if the given variable is unusable in constant expression
     if (node.isConst() && !node.isArray())
     {
         Err::gassert(node.isInited());
@@ -435,8 +436,30 @@ void IRGenerator::visit(FuncFParam& node) {
     curr_val = std::make_shared<IR::Value>("%" + node.getId(), ir_type);
 }
 
+
+// The following two functions (DeclRef and ArrayExp) is handling LVal.
+//
+// Given that most time we are using the LVal's value, rather than its address, (except assign (only?))
+// we add a load inst (if possible and not `is_making_lval`) afterward.
+// That means we are trying to make the `curr_val` a Basic Type if possible.
+//
+// This could simplify many insts that need a value, not its address, like binary inst, call inst,  ...
+// And we don't need to add load insts everywhere.
+// But this could also introduce bugs for Lval, when the context needs a ptr, rather than Basic Type.
+// So we use `is_making_lval` explicitly to handle such situation,
+// where we don't add load inst so that guarantees `curr_val` is a ptr.
+//
+// It's a bit quick and dirty. Maybe we should make it more sensible in the future.
+// It seems that we can add some helper functions like cast_to_type to add load inst.
+
 // DeclRefExp: 'a' \n
-// Warning: NOT always LOADInst
+//
+// From node's name to curr_val's alloca/load
+//
+// curr_val =
+// is_making_lval (which guarantees a ptr) -> alloca
+// Array -> alloca
+// Basic -> alloca -> load
 void IRGenerator::visit(DeclRef& node) {
     Err::gassert(curr_func != nullptr, "Global initializer must be a compile-time constant");
 
@@ -478,7 +501,18 @@ void IRGenerator::visit(DeclRef& node) {
 
 // a[2][1]
 // ArrayExp: 'a' [2][1]
-// Warning: Not always LOADInst
+//
+// From curr_val's Array ptr to curr_val's gep/load
+// (e.g. curr_val: [2 x i32]* -> gep)
+//
+// curr_val =
+// is_making_lval (which guarantees a ptr) -> ... -> gep
+// result type is Array -> ... -> gep
+// result type is Basic Type -> ... -> gep -> load
+//
+// Note that if the given ptr is from a load inst, which is always a function parameter (decays from array),
+// we first gep the first index for the given ptr, and the remaining indices is handled by
+// numerous small gep, which handles one index with its two gep indices a time.
 void IRGenerator::visit(ArrayExp& node) {
     node.getRef()->accept(*this);
     auto base = curr_val;
@@ -664,8 +698,10 @@ void IRGenerator::visit(BinaryOp& node) {
         auto rhstype = IR::toBType(rhs->getType());
         Err::gassert(lhstype != nullptr && rhstype != nullptr
             && (lhstype->getInner() == IR::IRBTYPE::I32
+            || lhstype->getInner() == IR::IRBTYPE::I1
             || lhstype->getInner() == IR::IRBTYPE::FLOAT)
             && (rhstype->getInner() == IR::IRBTYPE::I32
+            || rhstype->getInner() == IR::IRBTYPE::I1
             || rhstype->getInner() == IR::IRBTYPE::FLOAT),
             "Binary operation must be integers or floats.");
 
@@ -674,8 +710,15 @@ void IRGenerator::visit(BinaryOp& node) {
             lhs = try_type_cast(lhs, IR::IRBTYPE::FLOAT);
             rhs = try_type_cast(rhs, IR::IRBTYPE::FLOAT);
             oprtype = IR::makeBType(IR::IRBTYPE::FLOAT);
+            Err::gassert(isSameType(lhs->getType(), oprtype)
+                && isSameType(rhs->getType(), oprtype),
+                "Invalid type.");
         }
-        else oprtype = IR::makeBType(IR::IRBTYPE::I32);
+        else if (lhstype->getInner() == IR::IRBTYPE::I1 && rhstype->getInner() == IR::IRBTYPE::I1)
+            oprtype = IR::makeBType(IR::IRBTYPE::I1);
+        else if (lhstype->getInner() == IR::IRBTYPE::I32 && rhstype->getInner() == IR::IRBTYPE::I32)
+            oprtype = IR::makeBType(IR::IRBTYPE::I32);
+        else Err::unreachable("Invalid type.");
     }
 
     bool is_constant = (std::dynamic_pointer_cast<IR::ConstantInt>(lhs) != nullptr
@@ -748,6 +791,9 @@ void IRGenerator::visit(BinaryOp& node) {
         || node.getOp() == BiOp::GREAT || node.getOp() == BiOp::LESS
         || node.getOp() == BiOp::NOTEQ || node.getOp() == BiOp::EQ)
     {
+        Err::gassert(oprtype->getInner() == IR::IRBTYPE::I32
+            || oprtype->getInner() == IR::IRBTYPE::FLOAT,
+            "Invalid compare.");
         if (oprtype->getInner() == IR::IRBTYPE::I32)
         {
             IR::ICMPOP icmpop;
@@ -814,6 +860,7 @@ void IRGenerator::visit(BinaryOp& node) {
     // Logical -> I1
     if (node.getOp() == BiOp::AND || node.getOp() == BiOp::OR)
     {
+        Err::gassert(oprtype->getInner() == IR::IRBTYPE::I1, "Invalid && or ||.");
         Err::todo("AND OR");
         return;
     }
