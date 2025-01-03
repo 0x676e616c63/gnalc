@@ -289,8 +289,9 @@ public:
     IR::Module& get_module() { return module; }
 private:
     std::string get_temp_name();
-    // Failed will return val back
-    std::shared_ptr<IR::Value> try_type_cast(std::shared_ptr<IR::Value> val, IR::IRBTYPE dest);
+
+    // Throw exception if failed
+    std::shared_ptr<IR::Value> type_cast(std::shared_ptr<IR::Value> val, IR::IRBTYPE dest);
 };
 
 }

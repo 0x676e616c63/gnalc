@@ -40,7 +40,7 @@ public:
 };
 
 enum class CONDTY {
-    AND, OR, NOT
+    AND, OR
 };
 
 class COND : public Value {
@@ -77,18 +77,6 @@ public:
 
     const std::shared_ptr<Value>& getLHS() const { return lhs; }
     const std::shared_ptr<Value>& getRHS() const { return rhs; }
-};
-
-class NOT : public COND {
-    std::shared_ptr<Value> cond;
-
-public:
-    explicit NOT(std::shared_ptr<Value> cond_)
-        : COND(CONDTY::NOT), cond(std::move(cond_)) {
-        Err::gassert(is_cond_type(cond));
-    }
-
-    const std::shared_ptr<Value>& getCond() const { return cond; }
 };
 
 // IF Block Entry

@@ -39,7 +39,10 @@ public:
 
     std::shared_ptr<Value> getLHS() const;
     std::shared_ptr<Value> getRHS() const;
+
     ICMPOP getCond() const;
+
+    void condFlip();
 
     void accept(IRVisitor& visitor) override;
 };
@@ -82,7 +85,10 @@ public:
 
     std::shared_ptr<Value> getLHS() const;
     std::shared_ptr<Value> getRHS() const;
+
     FCMPOP getCond() const;
+
+    void condFlip();
 
     void accept(IRVisitor& visitor) override;
 };
