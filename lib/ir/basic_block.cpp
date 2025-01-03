@@ -4,13 +4,13 @@
 
 namespace IR {
     BasicBlock::BasicBlock(std::string _name)
-        : Value(std::move(_name), makeBType(IRBTYPE::UNDEFINED)) { setTrait(ValueTrait::BASIC_BLOCK); }
+        : Value(std::move(_name), makeBType(IRBTYPE::UNDEFINED), ValueTrait::BASIC_BLOCK) { }
 
     BasicBlock::BasicBlock(std::string _name, std::list<std::shared_ptr<Instruction>> _insts)
-        : Value(std::move(_name), makeBType(IRBTYPE::UNDEFINED)), insts(_insts) { setTrait(ValueTrait::BASIC_BLOCK); }
+        : Value(std::move(_name), makeBType(IRBTYPE::UNDEFINED), ValueTrait::BASIC_BLOCK), insts(_insts) { }
 
     BasicBlock::BasicBlock(std::string _name, std::list<std::weak_ptr<BasicBlock>> _pre_bb, std::list<std::weak_ptr<BasicBlock>> _next_bb, std::list<std::shared_ptr<Instruction>> _insts)
-        : Value(std::move(_name), makeBType(IRBTYPE::UNDEFINED)), insts(_insts), pre_bb(_pre_bb), next_bb(_next_bb) { setTrait(ValueTrait::BASIC_BLOCK); }
+        : Value(std::move(_name), makeBType(IRBTYPE::UNDEFINED), ValueTrait::BASIC_BLOCK), insts(_insts), pre_bb(_pre_bb), next_bb(_next_bb) {  }
 
     void BasicBlock::addPreBB(const std::shared_ptr<BasicBlock>& bb) {
         pre_bb.emplace_back(bb);

@@ -12,4 +12,8 @@ namespace IR {
     void WHILEBEntry::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
     void WHILEBEnd::accept(IRVisitor& visitor) { visitor.visit(*this); }
+
+    void BREAK::accept(IRVisitor& visitor) { visitor.visit(*this); }
+
+    void CONTINUE::accept(IRVisitor& visitor) { visitor.visit(*this); }
 }

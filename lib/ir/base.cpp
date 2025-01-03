@@ -8,8 +8,8 @@
 
 namespace IR {
 
-Value::Value(std::string _name, std::shared_ptr<Type> _vtype)
-    : NameC(std::move(_name)), vtype(std::move(_vtype)) {}
+Value::Value(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait)
+    : NameC(std::move(_name)), vtype(std::move(_vtype)), trait(_vtrait) {}
 
 std::shared_ptr<Type> Value::getType() const {
     return vtype;
@@ -120,8 +120,8 @@ Value::~Value() {
     // todo
 }
 
-User::User(std::string _name, std::shared_ptr<Type> _vtype)
-    : Value(std::move(_name), std::move(_vtype)) {}
+User::User(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait)
+    : Value(std::move(_name), std::move(_vtype), std::move(_vtrait)) {}
 
 void User::addOperand(const std::shared_ptr<Value>& v) {
     std::shared_ptr<Use> use{new Use(v, this)};

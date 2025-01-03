@@ -15,19 +15,23 @@ class ConstantPool {
 private:
     struct ConstantValue {
         // TODO: Array
-        std::variant<int, float> value;
+        std::variant<int, float, bool> value;
 
-        bool is_int() const {return value.index() == 0;}
+        bool is_i32() const {return value.index() == 0;}
         bool is_float() const {return value.index() == 1;}
+        bool is_i1() const {return value.index() == 2;}
 
-        int get_int() const {return std::get<int>(value);}
+        bool get_i1() const {return std::get<bool>(value);}
+        int get_i32() const {return std::get<int>(value);}
         float get_float() const {return std::get<float>(value);}
 
         std::string type_name() const {
             if (value.index() == 0)
-                return "int";
+                return "i32";
             else if (value.index() == 1)
                 return "float";
+            else if (value.index() == 2)
+                return "i1";
             return "";
         }
 
@@ -47,6 +51,18 @@ private:
 
 public:
     ConstantPool() = default;
+
+    std::shared_ptr<ConstantI1> getConst(bool val) {
+        auto value = ConstantValue{val};
+        auto it = pool.find(value);
+        if (it == pool.end())
+        {
+            auto ret = std::make_shared<ConstantI1>(val);
+            pool[value] = ret;
+            return ret;
+        }
+        return std::dynamic_pointer_cast<ConstantI1>(it->second);
+    }
 
     std::shared_ptr<ConstantInt> getConst(int val) {
         auto value = ConstantValue{val};

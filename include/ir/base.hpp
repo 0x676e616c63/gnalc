@@ -36,7 +36,8 @@ enum class ValueTrait {
     FUNCTION, // 函数
     FORMAL_PARAMETER, // 形参
     BASIC_BLOCK, // 基本块
-    VOID_INSTRUCTION // 无值的指令
+    VOID_INSTRUCTION, // 无值的指令
+    HELPER
     // ...
 };
 
@@ -51,7 +52,7 @@ protected:
     ValueTrait trait = ValueTrait::UNDEFINED;
 public:
     Value() = delete;
-    Value(std::string _name, std::shared_ptr<Type> _vtype);
+    Value(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait);
 
     std::shared_ptr<Type> getType() const;
 
@@ -72,8 +73,7 @@ public:
     virtual void accept(class IRVisitor& visitor) { Err::not_implemented("Value::accept"); }
     virtual ~Value();
 
-    void setTrait(ValueTrait _trait) { trait = _trait; }
-    ValueTrait getTrait() const { return trait; }
+    ValueTrait getVTrait() const { return trait; }
 };
 
 
@@ -87,7 +87,7 @@ protected:
 
 public:
     User() = delete;
-    User(std::string _name, std::shared_ptr<Type> _vtype);
+    User(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait);
 
     void addOperand(const std::shared_ptr<Value>& v);
 
