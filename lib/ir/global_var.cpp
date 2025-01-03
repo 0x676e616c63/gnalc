@@ -16,7 +16,7 @@ namespace IR
     GVIniter::GVIniter(std::shared_ptr<Type> _ty, std::vector<GVIniter> _inner_initer)
         : initer_type(std::move(_ty)), is_zero(false), inner_initer(_inner_initer) {}
 
-    const auto& GVIniter::getIniterType() const {
+    const std::shared_ptr<IR::Type>& GVIniter::getIniterType() const {
         return initer_type;
     }
 
@@ -28,12 +28,8 @@ namespace IR
         return initer_type->getTrait() == IRCTYPE::ARRAY;
     }
 
-    const auto& GVIniter::getConstVal() const {
+    const std::shared_ptr<IR::Value>& GVIniter::getConstVal() const {
         return constval;
-    }
-
-    const std::vector<GVIniter>& GVIniter::getInnerIniter() const {
-        return inner_initer;
     }
 
     GVIniter& GVIniter::addIniter(std::shared_ptr<Type> _ty, std::shared_ptr<Value> _con) {

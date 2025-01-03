@@ -46,12 +46,12 @@ class ArmStruct::ArrayObj : FrameObj{
         std::vector<unsigned long long>& getDims(){return arrayDims;}
 
     private:
-        std::vector<unsigned long long> arrayDims;
+        std::vector<unsigned long long> arrayDims = {};
 };
 
 class ArmStruct::SubFrame{
     public:
-        SubFrame();
+        SubFrame()=default;
         ~SubFrame();
 
         ///@warning will ret nulls
@@ -67,13 +67,13 @@ class ArmStruct::SubFrame{
         unsigned int getObjCnt(){return VirPtrFrameObjMap.size();};
 
         void setOffset(unsigned int off){offset = off;};
-        unsigned int getOffset();
+        unsigned int getOffset(){return offset;};
 
     private:
         unsigned int offset = 0;
 
-        std::map<unsigned long long, MMptr*>VirPtrOffsetMap; // 做一个对象池
-        std::map<unsigned long long, FrameObj*>VirPtrFrameObjMap; // 
+        std::map<unsigned long long, MMptr*>VirPtrOffsetMap = {}; // 做一个对象池
+        std::map<unsigned long long, FrameObj*>VirPtrFrameObjMap = {}; // 
 };
 
 
@@ -92,11 +92,11 @@ class ArmStruct::Function{
 
         void TerminatorPredict();
 
-        std::string& toString();
+        std::string toString();
         
         std::list<BB*> BBList;
         
-        std::map<unsigned long long, Operand*> VirRegOperandMap;
+        std::map<unsigned long long, Operand*> VirRegOperandMap = {};
         unsigned long long VRegNum;
 
         unsigned int InstCnt = 0;
@@ -110,6 +110,7 @@ class ArmStruct::Function{
         unsigned int getStackSize(){return StackSize;};
 
     private:
+    
         unsigned int StackSize = 0;
 
         SubFrame *local;

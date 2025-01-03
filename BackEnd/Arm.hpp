@@ -19,7 +19,6 @@ namespace ArmStruct{
 
     class BB;
     class Terminator; // dddd
-    std::map<std::string, BB&> BBLabelMap;
 
     class Instruction;   // 指令选择
     class MemInstruction; // load / store
@@ -111,8 +110,8 @@ namespace ArmTools{
             SMULL,
             // syscall + Imm
             SWI,
-            // push
-            PUSH,
+            // push, pop
+            PUSH, POP,
         /// @brief 并非Arm指令
         Addition_Oper_Begin,
             /// @brief 一个栈上的值, 必定要先分配再使用, 为创建Frame提供了便利
@@ -148,11 +147,12 @@ namespace ArmTools{
 
     struct RetMatch{
         ArmStruct::BB& BasicBlock;
+        MovtwMatch immeMatch;
         void operator()(InstArgs);
     };
 
     struct BinaryMatch{
-        ArmStruct::BB& BlockBlock;
+        ArmStruct::BB& BasicBlock;
 
         MovtwMatch immeMatch;
 
@@ -174,6 +174,7 @@ namespace ArmTools{
 
     struct UnaryMatch{
         ArmStruct::BB& BasicBlock;
+        MovtwMatch immeMatch;
         void operator()(InstArgs);
     };
 
@@ -239,6 +240,35 @@ namespace ArmTools{
     
     /// @note 模式匹配函数
 };
+
+//     struct MovtwMatch;
+
+//     struct RetMatch;
+
+//     struct BinaryMatch;
+
+//     struct UnaryMatch;
+
+//     struct BranchMatch;
+
+//     struct AllocaMatch;
+
+//     struct LoadMatch;
+
+//     struct StoreMatch;
+    
+//     struct GepMatch;
+    
+//     struct FPTOSIMatch;
+
+//     struct SITOFPMatch;
+
+//     // struct ICMP, FCMP ; in BranchMatch
+
+//     struct CallMatch;
+
+//     struct PhiMatch;    
+// };
 
 namespace ArmOpt{
     class SIMDInstructions; // Noen指令集优化

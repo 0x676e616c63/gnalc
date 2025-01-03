@@ -25,7 +25,10 @@ Operand::Operand(OperandType type, std::string midEnd_VirReg){
     this->moveList = {};
 }
 
-Operand::Operand(OperandType type, unsigned int color): ValType(type), color(color){};
+Operand::Operand(OperandType type, unsigned int color): ValType(type){
+    this->color.first = true;
+    this->color.second = color;
+};
 
 
 Operand::Operand(Operand& other) :
@@ -61,15 +64,22 @@ bool Operand::operator!=(Operand& oper){
 }
 
 std::string Operand::toString(){
-    // 先这么写
-    if(this->ValType == OperandType::INT){
-        str += CoreRegisterMap[(CoreRegisterName)this->color];
+    ///@bug 记得清空
+    str = "";
+    if(this->color.second == -1){ // debug
+        str += CoreRegisterMap[(CoreRegisterName)this->color.second] + "(";
+        str += std::to_string(this->VirReg) + ")";
+    }
+    else if(this->ValType == OperandType::INT){
+        str += CoreRegisterMap[(CoreRegisterName)this->color.second];
     }
     else if(this->ValType == OperandType::FLOAT){
-        str += ExtensionRegisterMap[(ExtensionRegisterName)this->color];
+        str += ExtensionRegisterMap[(ExtensionRegisterName)this->color.second];
     }
     return str;
 }
+
+Imm::Imm(OperandType type): data_type(type){}
 
 Imm::Imm(OperandType type, std::string data): data_type(type), data(data){}
 
@@ -77,12 +87,12 @@ std::string Imm::toString(){
     return this->data;
 }
 
-MMptr::MMptr(FrameObj* space, OperandType type, unsigned long long idx): space(space), ptrType(type), VirReg(idx){
+MMptr::MMptr(FrameObj* space, OperandType type, unsigned long long idx): Imm(type), space(space), VirReg(idx){
     space->getFather()->insertMMptr(VirReg, this);  // 入表
 }
 
 MMptr::MMptr(FrameObj* loc, OperandType type, unsigned long long idx, unsigned int off)
-    : space(loc), ptrType(type), VirReg(idx), offset(off){
+    : Imm(type), space(loc), VirReg(idx), offset(off){
     space->getFather()->insertMMptr(VirReg, this);  // 入表
 };
 
@@ -108,9 +118,8 @@ std::string MMptr::toString() {
 }
 
 
-Global::Global(IR::GlobalVariable& midEnd_GlobalVar){
+Global::Global(IR::GlobalVariable& midEnd_GlobalVar): Imm(OperandType::LABEL){
     data = midEnd_GlobalVar.getName();
-    data_type = LABEL;
 
     parse(midEnd_GlobalVar.getIniter());
 
@@ -123,7 +132,8 @@ Global::~Global(){
 void Global::parse(const IR::GVIniter& midEnd_initer){
     
     if(midEnd_initer.isZero()){
-        unsigned long long size = midEnd_initer.getIniterType().get()->getBytes();
+        auto &initer_type = midEnd_initer.getIniterType();
+        unsigned long long size = initer_type.get()->getBytes();
 
         GlobalIniter *backEnd_initer = new GlobalIniter(size);
         GlobalIniterList.push_back(backEnd_initer);
@@ -132,7 +142,8 @@ void Global::parse(const IR::GVIniter& midEnd_initer){
     
     if(!midEnd_initer.isArray()){
         unsigned long long encoding;
-        IR::Value &constValue = *(midEnd_initer.getConstVal().get());
+        auto& initer_type = midEnd_initer.getConstVal();
+        IR::Value &constValue = *(initer_type.get());
 
         if(typeid(constValue) == typeid(IR::ConstantInt&)){
             int temp = dynamic_cast<IR::ConstantInt&>(constValue).getVal();
@@ -153,6 +164,9 @@ void Global::parse(const IR::GVIniter& midEnd_initer){
     }
 
     return;
+}
+GlobalIniter::GlobalIniter(unsigned long long space){
+    blockInit = std::make_unique<std::pair<bool, unsigned long long>>(true, space);
 }
 
 std::string Global::toString(){

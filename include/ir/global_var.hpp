@@ -34,12 +34,12 @@ public:
     GVIniter(std::shared_ptr<Type> _ty, std::shared_ptr<Value> _con); // i32 1
     GVIniter(std::shared_ptr<Type> _ty, std::vector<GVIniter> _inner_initer); // [2 x [2 x i32]] [...]
 
-    const auto& getIniterType() const;
+    const std::shared_ptr<IR::Type>& getIniterType() const;
     bool isZero() const;
     bool isArray() const;
 
-    auto& getConstVal(); // 此处暂时先用非const的引用传递
-    const auto& getConstVal() const;
+    std::shared_ptr<IR::Value>& getConstVal(); // 此处暂时先用非const的引用传递
+    const std::shared_ptr<IR::Value>& getConstVal() const;
 
     const std::vector<GVIniter>& getInnerIniter() const;
 

@@ -1,5 +1,5 @@
-#ifndef ARM_ArmStruct
-#define ARM_ArmStruct
+#ifndef ARM_INSTRUCTION
+#define ARM_INSTRUCTION
 #pragma once
 #include <list>
 #include <vector>
@@ -35,7 +35,7 @@ class Instruction{
         /// @brief 用于反向查找
         BB &BasicBlock;
         bool operator==(Instruction&) const;
-        virtual std::string &toString();
+        virtual std::string toString();
     private:
         std::string str;
 };
@@ -46,9 +46,8 @@ class MemInstruction : public Instruction{
         MemInstruction(ArmTools::OperCode, MMptr*, BB&);
         ~MemInstruction()=default;
 
-
     private:
-        MMptr* MMptr;
+        MMptr* mmptr;
 };
 
 };

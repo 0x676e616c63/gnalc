@@ -12,6 +12,11 @@
 
 using namespace ArmStruct;
 using namespace ArmTools;
+
+extern std::vector<ArmStruct::Operand*> RegisterPool;
+extern std::vector<ArmStruct::Operand*> FPURegisterPool;
+extern std::vector<ArmStruct::Imm*> ConstPool;
+
 ///@todo 差构造函数
 
 FrameObj::FrameObj(SubFrame *Father, OperandType type, unsigned int size, unsigned long long idx):
@@ -40,11 +45,14 @@ ArrayObj::ArrayObj(SubFrame* father, OperandType elementType, unsigned long long
 
 Function::Function(IR::Function& midEnd_function){
     
-    this->Identifier = midEnd_function.getName();
+    local = new SubFrame();
+    temp = new SubFrame();
+        
+    this->Identifier = midEnd_function.getName().substr(1); // 去掉@
     this->VRegNum = midEnd_function.getVRegNum();
 
     ///@brief fill VirMap and link instructions
-    std::vector<std::shared_ptr<IR::BasicBlock>>& bbs = midEnd_function.getBlocks();
+    std::vector<std::shared_ptr<IR::BasicBlock>> bbs = midEnd_function.getBlocks();
 
     for(auto bb_it = bbs.begin(); bb_it != bbs.end(); ++bb_it){
         auto &midEnd_BB = **bb_it;
@@ -61,23 +69,27 @@ Function::Function(IR::Function& midEnd_function){
     /// @note 在首位BasicBlock插入mov %temp {r4,r5...r11}
     auto &backEnd_BB_head = **BBList.begin();
     for(int i = 4; i < 12; ++i){
+        
         Operand *Def = new Operand(OperandType::INT, "%" + std::to_string(backEnd_BB_head.Func.VRegNum));
-            backEnd_temp_VReg.push_back(backEnd_BB_head.Func.VRegNum);
-            backEnd_BB_head.Func.VirRegOperandMap[backEnd_BB_head.Func.VRegNum++] = Def; 
-            
-            Operand *Use = new Operand(OperandType::INT, i);
+        backEnd_temp_VReg.push_back(backEnd_BB_head.Func.VRegNum);
+        backEnd_BB_head.Func.VirRegOperandMap[backEnd_BB_head.Func.VRegNum++] = Def; 
+        
+        Operand *Use = RegisterPool[i]; // CoreRegisterName::ri
 
-            Instruction *backEnd_callee_rx = new Instruction(
-                OperCode::MOV, nullptr, backEnd_BB_head, {std::ref(*Def)}, {std::ref(*Use)}
-            );
-            backEnd_BB_head.InstList.push_back(backEnd_callee_rx);
+        if(i == CoreRegisterName::r7) continue;
+        
+        Instruction *backEnd_callee_rx = new Instruction(
+            OperCode::MOV, nullptr, backEnd_BB_head, {std::ref(*Def)}, {std::ref(*Use)}
+        );
+        backEnd_BB_head.InstList.push_front(backEnd_callee_rx);
     }
 
     /// @note 在最后BasicBlock插入mov {r4,r5...r11} %temp
     auto &backEnd_BB_tail = *BBList.back();    
     for(int i = 0; i < 8; ++i){
         ///@brief mov rx, %temp
-        Operand *Def = new Operand(OperandType::INT, i);
+        if(i + 4 == CoreRegisterName::r7) continue;
+        Operand *Def = RegisterPool[i + 4];
         Operand *Use = backEnd_BB_tail.Func.VirRegOperandMap[backEnd_temp_VReg[i]];
 
         Instruction *backEnd_callee_rx = new Instruction(
@@ -113,14 +125,14 @@ Function::~Function(){
     delete temp;
 }
 
-std::string& Function::toString(){
+std::string Function::toString(){
     for(auto it = BBList.begin(); it != BBList.end(); ++it){
         auto BasicBlock = **it;
         str += BasicBlock.toString() + ':' + '\n'; // BB的label
         for(auto it_inst = BasicBlock.InstList.begin(); it_inst != BasicBlock.InstList.end(); ++it_inst){
             Instruction& inst = **it_inst;
             str += "    "; // 缩进
-            str += inst.toString() + '\n';
+            str += inst.toString(); // \n 不要写多了
         }
     }
     return str;

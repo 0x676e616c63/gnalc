@@ -4,6 +4,8 @@
 #include "../include/utils/logger.hpp"
 #include "../include/utils/exception.hpp"
 #include "../include/irvisitors/irprinter.hpp"
+#include "../include/irvisitors/cfgbuilder.hpp"
+#include "../include/iropt/live_analysis.hpp"
 #include "../BackEnd/Arm.hpp"
 #include "../BackEnd/include/ArmComplexMIRStruct/ArmModule.hpp"
 
@@ -36,9 +38,14 @@ int main(int argc, char **argv){
     IRGenerator generator;
     generator.visit(*node);
 
-    IR::LIRPrinter printer(std::cout);
-    printer.printout(generator.get_module());
+    IR::CFGBuilder cb;
+    cb.build(generator.get_module());
+    IR::LiveAnalyser la;
+    la.cleanLiveInfo(generator.get_module());
+    la.processModule(generator.get_module());
 
+    // IR::IRPrinter printer(std::cout);
+    // printer.printout(generator.get_module());
     // backend
     ArmStruct::Module *backEndModule = new ArmStruct::Module(generator.get_module());
     backEndModule->AllocRegister();
@@ -46,7 +53,8 @@ int main(int argc, char **argv){
     std::string Asm = backEndModule->toString();
     
     std::cout<< Asm <<std::endl;
-    delete backEndModule;
+    // delete backEndModule; // 别删, 有double free
 
+    la.cleanLiveInfo(generator.get_module()); // 一定清除活跃信息！防止循环引用（后续可放在某个销毁函数中）
     return 0;
 }

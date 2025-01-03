@@ -8,6 +8,7 @@
 #include <type_traits>
 #include "../../Arm.hpp"
 #include "../tools/ArmTools.hpp"
+#include "../../../include/ir/global_var.hpp"
 
 enum OperandType{
     // INT 和 FLOAT主要用于Operand区分使用什么寄存器
@@ -24,7 +25,7 @@ class ArmStruct::Operand{
         bool operator==(ArmStruct::Operand&);
         bool operator!=(ArmStruct::Operand&);
 
-        OperandType ValType;    // 好像也没用?
+        OperandType ValType;
         // std::unique_ptr<std::string> Indentifier = NULL;
         unsigned long long VirReg;
 
@@ -33,7 +34,7 @@ class ArmStruct::Operand{
         std::unordered_set<std::reference_wrapper<ArmStruct::Operand>, ArmTools::HashOperandReferWrap, ArmTools::HashOperandReferWrapEqual> adjList;
         std::unordered_set<std::reference_wrapper<ArmStruct::Instruction>, ArmTools::HashInstReferWrap, ArmTools::HashInstReferWrapEqual> moveList; // the moveInst which use this ArmStruct::Operand
         std::unique_ptr<ArmStruct::Operand> alias = nullptr; // 别名, 在寄存器分配中活跃区间高度重叠的操作数
-        unsigned int color = -1;    //  预着色改这个
+        std::pair<bool, unsigned int> color = {false, -1};    //  预着色改这个
         unsigned int adjDegree = 0;
     private:
         std::string str;
@@ -44,7 +45,8 @@ class ArmStruct::Operand{
 /// @note 单独附加到inst的后面, 不放在def或者use集以避免分配寄存器
 class ArmStruct::Imm{
     public:
-        Imm();
+        // Imm();
+        Imm(OperandType);
         Imm(OperandType, std::string);
         ~Imm()=default;
         OperandType data_type;
@@ -59,7 +61,7 @@ class ArmStruct::Global : public ArmStruct::Imm{
         ~Global();
 
         void addInitSection(std::reference_wrapper<ArmStruct::GlobalIniter>);
-        void parse(const IR::GVIniter&);
+        void parse(const IR::GVIniter& midEnd_initer);
 
         std::string toString() final;
     private:
@@ -69,8 +71,8 @@ class ArmStruct::Global : public ArmStruct::Imm{
 
 class ArmStruct::GlobalIniter{
     public:
-        GlobalIniter(OperandType, unsigned long long); // encodings
-        GlobalIniter(unsigned long long); // space
+        GlobalIniter(OperandType type, unsigned long long encondings): valType(type), valEncoding(encondings){}; // encodings
+        GlobalIniter(unsigned long long space); // space
         ~GlobalIniter()=default;
 
         std::string toString();
@@ -87,11 +89,10 @@ class ArmStruct::MMptr : public ArmStruct::Imm{
     ///@note 关键在于能反向查找到对应的FrameObj, 同时能够被FrameObj寻址
     public:
         // for allocainst
-        MMptr(FrameObj* loc, OperandType type, unsigned long long idx): space(loc), ptrType(type), VirReg(idx){};
+        MMptr(FrameObj* loc, OperandType type, unsigned long long idx);
         // for gepinst
-        MMptr(FrameObj* loc, OperandType type, unsigned long long idx, unsigned int off)
-            : space(loc), ptrType(type), VirReg(idx), offset(off){};
-        MMptr(std::string);
+        MMptr(FrameObj* loc, OperandType type, unsigned long long idx, unsigned int off);
+        // MMptr(std::string);
         ~MMptr()=default;
 
         OperandType getType(){return ptrType;}

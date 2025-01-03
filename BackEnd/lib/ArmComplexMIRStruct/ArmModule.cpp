@@ -29,15 +29,6 @@ Module::Module(IR::Module& midEnd_Module){
 
     ///@todo needed symbolTable
 
-    ///@brief get func
-    auto& funcs = midEnd_Module.getFunctions();
-
-    for(auto func_it = funcs.begin(); func_it != funcs.end(); ++func_it){
-        auto& func = **func_it;
-        Function* newFunc = new Function(func); // IR->MIR, localFrame ...s
-        this->AddFunction(newFunc);
-    }
-
     /// @brief make RegisterPools
     for(int i = 0; i <= 15; ++i){
         Operand *reg = new Operand(OperandType::INT, i);
@@ -47,18 +38,30 @@ Module::Module(IR::Module& midEnd_Module){
         Operand *Freg = new Operand(OperandType::FLOAT, i);
         FPURegisterPool.push_back(Freg);
     }
+
+    ///@brief get func
+    auto& funcs = midEnd_Module.getFunctions();
+
+    for(auto func_it = funcs.begin(); func_it != funcs.end(); ++func_it){
+        auto& func = **func_it;
+        Function* newFunc = new Function(func); // IR->MIR, localFrame ...s
+        this->AddFunction(newFunc);
+    }
+
+
 }
-
-
 
 void Module::AllocRegister(){
 
     for(auto it = FunctionList.begin(); it != FunctionList.end(); ++it){
         Function &func = **it;
-        RegisterAlloc *CoreReg = new RegisterAlloc(func, OperandType::INT, 12); // r0, r1, r2, r3, r4, r5, r6, r8, r9, r10, r11, r12(no r7)
+        RegisterAlloc *CoreReg = new RegisterAlloc(func, OperandType::INT, 11); // r0, r1, r2, r3, r4, r5, r6, r8, r9, r10, r11(no r7)
         CoreReg->GraphColoring();
+        delete CoreReg;
+
         RegisterAlloc *FPUReg = new RegisterAlloc(func, OperandType::FLOAT, 32); // s0 - s31
         FPUReg->GraphColoring();
+        delete FPUReg;
     }
 }
 
@@ -106,7 +109,7 @@ void Module::Legalize(){
         BB_head.InstList.insert(BB_head.InstList.begin(), backEnd_sub);
         
         Instruction *backEnd_push = new Instruction(
-            OperCode::SUB, backEnd_stackSize, BB_head, {}, {std::ref(*backEnd_r7), std::ref(*backEnd_lr)}
+            OperCode::PUSH, backEnd_stackSize, BB_head, {}, {std::ref(*backEnd_r7), std::ref(*backEnd_lr)}
         );
         BB_head.InstList.insert(BB_head.InstList.begin(), backEnd_push);
         
@@ -124,7 +127,7 @@ void Module::Legalize(){
         BB_tail.InstList.insert(BB_tail.InstList.end(), backEnd_mov);        
         
         Instruction *backEnd_pop = new Instruction(
-            OperCode::ADD, backEnd_stackSize
+            OperCode::POP, backEnd_stackSize
             , BB_tail, {}, {std::ref(*backEnd_r7), std::ref(*backEnd_pc)}
         );
         BB_tail.InstList.insert(BB_tail.InstList.end(), backEnd_pop);
@@ -144,9 +147,9 @@ void Module::AddEquDef(Global* equ){
     this->equSection.push_back(equ);
 }
 
-std::string& Module::toString(){
+std::string Module::toString(){
     std::unique_ptr<std::string> Asm = std::make_unique<std::string>();
-    std::string& str = *Asm;
+    std::string str = *Asm;
     str += arch;
     /// @note .data
     if(!dataSection.empty()){
@@ -167,7 +170,7 @@ std::string& Module::toString(){
     ///@note .text
     str += ".text\n.arm\n";
     for(auto it = FunctionList.begin(); it != FunctionList.end(); ++it){
-        auto text = **it;
+        auto &text = **it;
         str += ".globl " + text.Identifier + '\n';
         str += text.Identifier + ":\n";
         str += text.toString();

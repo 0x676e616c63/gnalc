@@ -26,7 +26,7 @@ BB::BB(IR::BasicBlock& midEnd_BasicBlock, Function& func): Func(func){
 
 void BB::MkLiveOut(IR::BasicBlock& midEnd_BasicBlock){
    /// @todo 遍历midEnd_BasicBlock的liveout, 按VirReg来查找this->Func.VirMap,
-   std::list<std::shared_ptr<IR::Value>> &midEnd_liveOut = midEnd_BasicBlock.getLiveOut();
+   std::unordered_set<std::shared_ptr<IR::Value>> &midEnd_liveOut = midEnd_BasicBlock.getLiveOut();
 
    for(auto it = midEnd_liveOut.begin(); it != midEnd_liveOut.end(); ++it){
       auto &midEnd_value = **it;
@@ -39,9 +39,9 @@ void BB::MkLiveOut(IR::BasicBlock& midEnd_BasicBlock){
 
 void BB::ParseInsts(const std::list<std::shared_ptr<IR::Instruction>> insts){
    auto Movtw = new MovtwMatch{*this};
-   auto Ret = new RetMatch{*this};
+   auto Ret = new RetMatch{*this, *Movtw};
    auto Binary = new BinaryMatch{*this, *Movtw};
-   auto Unary = new UnaryMatch{*this};
+   auto Unary = new UnaryMatch{*this, *Movtw};
    auto Branch = new BranchMatch{*this};
    auto Alloca = new AllocaMatch{*this};
    auto Load = new LoadMatch{*this};
@@ -116,13 +116,13 @@ void BB::ParseInsts(const std::list<std::shared_ptr<IR::Instruction>> insts){
             assert(false);
       }
    }
-
+   delete Movtw; delete Ret; delete Binary; delete Unary; delete Branch; delete Alloca; delete Load; delete Store; delete Gep; delete FPTOSI; delete SITOFP; delete Call;
 }
 
 BB::~BB(){
    for(auto instPtr : this->InstList) delete instPtr;
 }
 
-std::string& BB::toString(){
+std::string BB::toString(){
    return label;
 }

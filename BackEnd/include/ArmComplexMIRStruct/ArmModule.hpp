@@ -1,3 +1,5 @@
+#ifndef ARM_MODULE
+#define ARM_MODULE
 #pragma once
 #include <string>
 #include <vector>
@@ -22,7 +24,7 @@ class ArmStruct::Module{
 
         void Legalize(); // MIR -> close arm asm
 
-        std::string& toString(); // MIR -> asm string
+        std::string toString(); // MIR -> asm string
 
     private:
         std::string ModuleName;
@@ -40,3 +42,4 @@ class ArmStruct::Module{
 
         ///@note bss data 等使用ldr或者str等操作的对象都是对应的label的地址
 };
+#endif

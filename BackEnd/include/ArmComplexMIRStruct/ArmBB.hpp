@@ -35,7 +35,7 @@ class ArmStruct::BB{
         BB(IR::BasicBlock&, Function&);
         ~BB();
         
-        std::string& toString();
+        std::string toString();
 
         void MkLiveOut(IR::BasicBlock&); // 查询func中的VirMap, 对照midEnd_BasicBlock
 

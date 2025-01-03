@@ -23,16 +23,30 @@ using namespace ArmTools;
 using namespace ArmStruct;
 
 bool MyUnOrderedSet::find(const Edge &edge){
-    return this->set.find(Edge(edge.u, edge.v)) != this->set.end(); 
+    return this->set.find(edge) != this->set.end(); 
 }
 RegisterAlloc::RegisterAlloc(Function &func, OperandType RegType, unsigned int k)
     : curFunc(func), RegType(RegType), availableColors(k), isPreColoredAlready(false), adjSet(), simplifyWorkList(), freezeWorkList(), spilledNodes(), worklistMoves(), activeMoves(), coalescedMoves(), constrainedMoves(), frozenMoves(), coloredNodes(), coalescedNodes(), selectStack(), initial() {
     // this->GraphColoring();
 }
 bool RegisterAlloc::isMoveInst(Instruction &inst){
-    if(inst.opcode > OperCode::Branch_Begin
-    && inst.opcode < OperCode::Branch_End) return false;
-    else return true;
+    if(inst.opcode > OperCode::Branch_Begin && inst.opcode < OperCode::Branch_End) return false;
+    else if(inst.attach) return false;
+    else if(RegType == FLOAT){
+        switch(inst.opcode){
+            case VNEG_F32: case VADD_F32: case VADD_S32:
+            case VMUL_F32: case VSUB_S32: case VMUL_S32:
+            case VSUB_F32: case VDIV_F32: case VDIV_S32:
+            case VCMP_F32: case VMOV:     case VMOV_F32:
+            case VMOV_S32: case VCVT_F32_S32: case VCVT_S32_F32:
+            case VLDR_32: case VSTR_32:
+                return true;
+            default:
+                return false;
+        }
+    }
+    // RegType == INT
+    return true;
 }
 
 /// @todo 分配算法和其中的数据结构参考Iterated Register Coalescing这篇论文
@@ -47,31 +61,55 @@ void RegisterAlloc::GraphColoring(){
     ///@todo 在最后的LeglizeFinal()插入BB的首位即可 
     ///@todo 尝试：首先在Lower2MIR时将插入上述保护指令, 设置好Operand.color值为对应的寄存器序号, 然后将这些Operand直接划入coloredNode中
 
+    MkInitial();
     BuildGraph();
     MkworkList();
     do{
-        if(simplifyWorkList.size()) Simplify();
-        else if(worklistMoves.size()) Coalesce();
-        else if(freezeWorkList.size()) Freeze();
-        else if(spilledNodes.size()) SelectSpill();
-    }while(!simplifyWorkList.size() && !worklistMoves.size()
-        && !freezeWorkList.size() && !spilledNodes.size());
+        if(simplifyWorkList.size()) Simplify(); // 低度数结点移除
+        else if(worklistMoves.size()) Coalesce();   // 合并无用mov指令
+        else if(freezeWorkList.size()) Freeze();    // 从冻结的mov指令中取出一个, 用于下一次的Simplify
+        else if(spilledNodes.size()) SelectSpill(); // 高度数结点溢出
+    }while(!simplifyWorkList.empty() || !worklistMoves.empty()
+        || !freezeWorkList.empty() || !spilledNodes.empty());
     AssignColors(); // will produces spills
     if(spilledNodes.size()){
         ReWriteProgram(); // RewriteProgram(spilledNodes) alloc mem and insert str/ldr inst
         GraphColoring(); // invoked using
     }
+
+    needlessMovErase();
 }
+
+void RegisterAlloc::MkInitial(){
+    // initial: temporary registers, not preassigned a color and not yet processed by the algorithm.
+    for(auto bb_it = curFunc.BBList.begin(); bb_it != curFunc.BBList.end(); ++bb_it){
+        BB& BasicBlock = **bb_it;
+
+        for(auto inst_it = BasicBlock.InstList.begin(); inst_it != BasicBlock.InstList.end(); ++inst_it){
+            Instruction& Inst = **inst_it;
+            for(auto oper_it = Inst.DefOperandList.begin(); oper_it != Inst.DefOperandList.end(); ++oper_it){
+                auto Def = *oper_it;
+                if(Def.get().ValType == RegType && !Def.get().color.first) initial.insert(Def); // no precolored
+            }
+            for(auto oper_it = Inst.UseOperandList.begin(); oper_it != Inst.UseOperandList.end(); ++oper_it){
+                auto Use = *oper_it;
+                if(Use.get().ValType == RegType && !Use.get().color.first) initial.insert(Use); // no precolored
+            }
+        }
+    }
+}
+
 void RegisterAlloc::AddEdge(Operand &u, Operand &v){
     std::unique_ptr<Edge> edge = std::make_unique<Edge>(u, v);
-    if(&u != &v && !adjSet.find(*edge)){
+    if(u.VirReg != v.VirReg && !adjSet.find(*edge)){
         ///@note 由于adjSet中存在双向边的检查，所以无需再添加(v, u)
         adjSet.set.insert(*edge);
-        if(u.color == -1){ // no precolored
+        
+        if(!u.color.first){ // no precolored
             u.adjList.insert(std::ref(v));
             ++u.adjDegree;
         }
-        if(v.color == -1){
+        if(!v.color.first){
             v.adjList.insert(std::ref(u));
             ++v.adjDegree;
         }
@@ -89,18 +127,15 @@ void RegisterAlloc::BuildGraph(){
             if(isMoveInst(curInst)){
                 /// @note live := live\use(I); forall
                 for(Operand& UseOper: curInst.UseOperandList){
-                    if(!isPreColoredAlready && UseOper.color != -1){
-                        if(UseOper.ValType == RegType) coloredNodes.insert(std::ref(UseOper)); // 预着色
-                    }
+                    if(UseOper.ValType == RegType) coloredNodes.insert(std::ref(UseOper));
+                    
                     auto iterator = Live.find(std::ref(UseOper));
                     if(iterator != Live.end()) Live.erase(iterator);
                     UseOper.moveList.insert(std::ref(curInst));
                 }
 
                 for(Operand& DefOper: curInst.DefOperandList){
-                    if(!isPreColoredAlready && DefOper.color != -1){
-                        if(DefOper.ValType == RegType) coloredNodes.insert(std::ref(DefOper)); /// 
-                    }
+                    if(DefOper.ValType == RegType) coloredNodes.insert(std::ref(DefOper));
                     DefOper.moveList.insert(std::ref(curInst));
                 }
 
@@ -125,10 +160,6 @@ void RegisterAlloc::BuildGraph(){
                 if(UseOper.ValType == RegType) Live.insert(std::ref(UseOper));
             }
         }
-        /// @note 解释一下为什么在计算完成live之后, live信息不用先前BB传播
-        /// @note 首先, 需要将live信息前传的变量一定是活跃区间跨块的变量
-        /// @note 这些变量是phi函数处理的对象
-        /// @note 在指令选择阶段phi函数被消除, 从而也不存在这种活跃区间跨块的变量
     }
     isPreColoredAlready = true;
 }
@@ -149,12 +180,15 @@ InstRefHashPtr RegisterAlloc::NodeMoves(Operand& n){
     ///@note 同上
     InstRefHashPtr UnorderSet = std::make_unique<InstRefHash>();
     *UnorderSet = n.moveList;
-    /// @note moveList[n] * (activeMoves + worklistMoves) = moveList[n]*activeMoves + moveList[n]*worklistMoves
-    for(Instruction& inst: *UnorderSet){
-        auto it = activeMoves.find(std::ref(inst));
-        if(it != activeMoves.end()) continue;
-        else it = worklistMoves.find(std::ref(inst));
-        if(it == activeMoves.end()) (*UnorderSet).erase(it);
+
+    for(auto inst_it = (*UnorderSet).begin(); inst_it != (*UnorderSet).end();){
+        auto iter = activeMoves.find(std::ref(*inst_it));
+        
+        if(iter != activeMoves.end()) continue;
+        else iter = worklistMoves.find(std::ref(*inst_it));
+        
+        if(iter == worklistMoves.end()) inst_it = (*UnorderSet).erase(inst_it);
+        else ++inst_it;
     }
     return UnorderSet;
 }
@@ -167,9 +201,10 @@ bool RegisterAlloc::isMoveRelated(Operand& n){
 
 void RegisterAlloc::MkworkList(){
     ///@todo 如果没有经过ReWriteProgram这里的Initial集应该是空的
-    for(auto it = initial.begin(); it != initial.end(); ++it){
+    for(auto it = initial.begin(); it != initial.end(); ){
         Operand& curNode = (*it).get();
-        initial.erase(it);
+        it = initial.erase(it); ///@bug
+
         if(curNode.adjDegree >= availableColors) spillWorkList.insert(std::ref(curNode));
         else if(isMoveRelated(curNode)) freezeWorkList.insert(std::ref(curNode));
         else simplifyWorkList.insert(std::ref(curNode));
@@ -178,9 +213,12 @@ void RegisterAlloc::MkworkList(){
 void RegisterAlloc::Simplify(){
     /// @note 这里论文中第一步没有forall, 一次只能化简一个node
     auto n = *(simplifyWorkList.begin());
+    
     auto it = simplifyWorkList.find(n);
     if(it != simplifyWorkList.end()) simplifyWorkList.erase(it);
+    
     selectStack.push_back(n);
+    
     OperRefHashPtr adj = Adjacent(n);
     for(Operand& m: *adj) DecrementDegree(m);
 }
@@ -211,30 +249,32 @@ void RegisterAlloc::EnableMoves(OperRefHash& nodes){
 void RegisterAlloc::Coalesce(){
     ///@note 合并多余的move指令，所以理论上Def(I)和Use(I)都只有一个元素
     ///@note let m(=copy(x, y)) in workListMoves
-    ///@note x := y or y := x ??
+    ///@note x := y
     Instruction& inst = *(worklistMoves.begin());
     Operand& x = GetAlias(inst.DefOperandList[0]);
     Operand& y = GetAlias(inst.UseOperandList[0]);
+    
     std::unique_ptr<Edge> edge;
-    if(y.color != -1) edge = std::make_unique<Edge>(y, x);
+    if(y.color.first) edge = std::make_unique<Edge>(y, x);
     else edge = std::make_unique<Edge>(x, y);
-    // Operand& u = *(edge->u);
-    // Operand& v = *(edge->v);
-    if(&edge->u == &edge->v){
+
+    worklistMoves.erase(std::ref(inst));
+
+    if(edge->u.VirReg == edge->v.VirReg){
         coalescedMoves.insert(inst);
         AddWorkList(edge->u);
     }
-    else if(edge->v.color != -1 || adjSet.find(*edge)){
+    else if(edge->v.color.first || adjSet.find(*edge)){
         constrainedMoves.insert(inst);
         AddWorkList(edge->u);
         AddWorkList(edge->v);
     }
     /// @todo 先这么写吧
-    else if(edge->u.color != -1){
+    else if(edge->u.color.first){
         OperRefHashPtr adj = Adjacent(edge->v);
         bool flag = true;
         for(auto t: (*adj)){
-            if(!OK(t, edge->u)){
+            if(!OK(t.get(), edge->u)){
                 flag = false;
                 break;
             }
@@ -244,8 +284,11 @@ void RegisterAlloc::Coalesce(){
             Combine(edge->u, edge->v);
             AddWorkList(edge->u);
         }
+        else{
+            activeMoves.insert(inst);
+        }
     }
-    else if(edge->u.color == -1){
+    else if(!edge->u.color.first){
         auto adj_u = Adjacent(edge->u);
         auto adj_v = Adjacent(edge->v);
         std::vector<std::reference_wrapper<Operand>> combinedVector;
@@ -261,24 +304,31 @@ void RegisterAlloc::Coalesce(){
             Combine(edge->u, edge->v);
             AddWorkList(edge->u);
         }
+        else{
+            activeMoves.insert(inst);
+        }
     }
     else{
         activeMoves.insert(inst);
     }
 }
 void RegisterAlloc::AddWorkList(Operand &u){
-    if(u.color == -1 && !isMoveRelated(u) && u.adjDegree < availableColors){
+    if(!u.color.first && !isMoveRelated(u) && u.adjDegree < availableColors){
         auto it = freezeWorkList.find(u);
+        ///@bug 理论上传一个.end(), 没有问题, 但就是不行
         if(it != freezeWorkList.end()) freezeWorkList.erase(it);
-        it = simplifyWorkList.find(u);
-        if(it == simplifyWorkList.end()) simplifyWorkList.insert(u);
+        
+        simplifyWorkList.insert(u);
     }
 }
 bool RegisterAlloc::OK(Operand& t, Operand& r){
     if(t.adjDegree < availableColors) return true;
-    if(t.color != -1) return true;
+    
+    if(t.color.first) return true;
+    
     std::unique_ptr<Edge> edge = std::make_unique<Edge>(t, r);
     if(adjSet.find(*edge)) return true;
+    
     return false;
 }
 bool RegisterAlloc::Conservative(OperRefHash& nodes){
@@ -289,14 +339,22 @@ bool RegisterAlloc::Conservative(OperRefHash& nodes){
     return k < availableColors;
 }
 Operand& RegisterAlloc::GetAlias(Operand& n){
+    /// @note n in coalescedNodes <==> n.alias != nullptr
+    /// @bug 不是, 怎么换个顺序就正常了?
+
     auto it = coalescedNodes.find(n);
-    if(it == coalescedNodes.end()) return n;
-    else return GetAlias(*(n.alias));
+    
+    if(it != coalescedNodes.end()) return GetAlias(*(n.alias));
+
+    return n;
 }
 void RegisterAlloc::Combine(Operand& u, Operand& v){
     auto it = freezeWorkList.find(v);
+
     if(it != freezeWorkList.end()) freezeWorkList.erase(it);
-    else spillWorkList.erase(it);
+    /// @warning spillWorkList可能为空
+    else if(spillWorkList.size()) spillWorkList.erase(it); 
+    
     coalescedNodes.insert(v);
     v.alias = std::make_unique<Operand>(u); // v.alias -> ptr; u -> ref; Operand::Operand(Operand&);
     ///@note 这里的nodeMoves[u]应该就是moveList[u]
@@ -335,25 +393,29 @@ void RegisterAlloc::FreezeMoves(Operand& u){
     }
 }
 void RegisterAlloc::AssignColors(){
-    while(selectStack.size()){
+    while(!selectStack.empty()){
         Operand& n = selectStack.back().get();
         selectStack.pop_back();
         std::vector<int> colorSeq(availableColors);
         std::iota(colorSeq.begin(), colorSeq.end(), 0);
         std::unordered_set<int> okColors(colorSeq.begin(), colorSeq.end());
+        if(RegType == INT) okColors.erase(7); // no r7
         
         for(Operand& w: n.adjList){
-            if(GetAlias(w).color != -1 || coloredNodes.find(GetAlias(w)) != coloredNodes.end()) okColors.erase(GetAlias(w).color);
+            if(GetAlias(w).color.first || coloredNodes.find(std::ref(GetAlias(w))) != coloredNodes.end()) okColors.erase(GetAlias(w).color.second);
         }
         
-        if(!(okColors.size())) spilledNodes.insert(n);
+        if(okColors.empty()) spilledNodes.insert(n);
         else{
             coloredNodes.insert(n);
-            n.color = *(okColors.begin());
+            n.color.second = *(okColors.begin());
+            if(RegType == FLOAT){
+                std::cout<<n.VirReg<<": "<<n.color.second<<'\n';
+            }
         }
     }
     for(Operand& n: coalescedNodes){
-        n.color = GetAlias(n).color;
+        n.color.second = GetAlias(n).color.second;
     }
 }
 void RegisterAlloc::ReWriteProgram(){
@@ -415,4 +477,39 @@ void RegisterAlloc::SelectSpill(){
     spillWorkList.erase(m);
     simplifyWorkList.insert(m);
     FreezeMoves(m);
+}
+
+void RegisterAlloc::needlessMovErase(){
+    
+    for(auto inst_it : coalescedMoves){
+        auto &inst = inst_it.get();
+        for(auto BasicBlock : curFunc.BBList){
+            
+            std::function<bool(Instruction*)> findViaIdx = [inst](Instruction *a){
+                return a->id == inst.id;
+            };
+            
+            auto iter = std::find_if(BasicBlock->InstList.begin(), BasicBlock->InstList.end(), findViaIdx); //
+            
+            if(iter != BasicBlock->InstList.end()) BasicBlock->InstList.erase(iter);
+        }
+    }
+
+    for(auto inst_it : constrainedMoves){
+        auto &inst = inst_it.get();
+        if(inst.opcode == MOV || inst.opcode == VMOV || inst.opcode == VMOV_F32 || inst.opcode == VMOV_S32){
+            
+            if(inst.DefOperandList[0].get().color.second == inst.UseOperandList[0].get().color.second){
+                for(auto BasicBlock : curFunc.BBList){
+                    std::function<bool(Instruction*)> findViaIdx = [inst](Instruction *a){
+                        return a->id == inst.id;
+                    };
+                    
+                    auto iter = std::find_if(BasicBlock->InstList.begin(), BasicBlock->InstList.end(), findViaIdx); //
+                    
+                    if(iter != BasicBlock->InstList.end()) BasicBlock->InstList.erase(iter);
+                }
+            }
+        }
+    }
 }

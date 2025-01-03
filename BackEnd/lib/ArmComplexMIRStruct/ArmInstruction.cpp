@@ -14,10 +14,10 @@ using namespace ArmStruct;
 using namespace ArmTools;
 
 /// @note md这里还歧义了
-MemInstruction::MemInstruction(OperCode opcode, ArmStruct::MMptr* mmptr, BB& BasicBlock):
-    Instruction(opcode, nullptr, BasicBlock, {}, {}), MMptr(mmptr){
-        if(MMptr->getBase() != nullptr){
-            this->UseOperandList.push_back(std::ref(*MMptr->getBase()));
+MemInstruction::MemInstruction(OperCode opcode, ArmStruct::MMptr* ptr, BB& BasicBlock):
+    Instruction(opcode, nullptr, BasicBlock, {}, {}), mmptr(ptr){
+        if(mmptr->getBase() != nullptr){
+            this->UseOperandList.push_back(std::ref(*mmptr->getBase()));
         }
     }
 
@@ -69,14 +69,15 @@ bool Instruction::operator==(Instruction& inst) const{
     return this->id == inst.id;
 };
 
-std::string& Instruction::toString(){
+std::string Instruction::toString(){
     std::unique_ptr<std::string> AsmInst = std::make_unique<std::string>();
-    std::string &str = *AsmInst;
+    std::string str = *AsmInst;
     if(this->opcode < OperCode::Binary_End){
         str += OperCodeMap[this->opcode] + ' ';
         str += this->DefOperandList[0].get().toString() + ", ";
         str += this->UseOperandList[0].get().toString() + ", ";
-        str += this->UseOperandList[1].get().toString() + '\n';
+        if(UseOperandList.size() > 1) str += this->UseOperandList[1].get().toString() + '\n';
+        else str += this->attach->toString() + '\n';
     }
     else if(this->opcode < OperCode::Branch_End){
         str += OperCodeMap[this->opcode] + ' ';
@@ -120,8 +121,9 @@ std::string& Instruction::toString(){
         str += "swi ";
         str += this->attach->toString() + '\n'; 
     }
-    else{ // this->opcode == PUSH
-        str += "push {";
+    else{ // this->opcode == PUSH, POP
+        if(opcode == PUSH) str += "push {";
+        else str += "pop {";
         for(auto oper: this->UseOperandList){
             str += oper.get().toString() + ", ";
         }

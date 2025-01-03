@@ -6,6 +6,8 @@ project(gnalc)
 
 option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 
+add_compile_options("-g")
+
 if (ENABLE_ASAN)
         message(STATUS "AddressSanitizer enabled")
         add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
@@ -36,6 +38,8 @@ add_executable(printast
 add_executable(irgen debug/irgen.cpp lib/irvisitors/irprinter.cpp lib/irvisitors/cfgbuilder.cpp lib/iropt/live_analysis.cpp ${GNALC_PARSER_SRC} ${GNALC_IR_SRC} ${GNALC_LEXER_SRC} ${GNALC_UTILS_SRC})
 
 add_executable(printir debug/irprintertest.cpp lib/irvisitors/irprinter.cpp ${GNALC_IR_SRC} ${GNALC_UTILS_SRC})
+
+add_executable(asmgen debug/asmgen.cpp lib/irvisitors/irprinter.cpp lib/irvisitors/cfgbuilder.cpp lib/iropt/live_analysis.cpp ${GNALC_PARSER_SRC} ${GNALC_IR_SRC} ${GNALC_LEXER_SRC} ${GNALC_UTILS_SRC} ${GNALC_BACKEND_SRC})
 
 enable_testing()
 add_subdirectory(test)

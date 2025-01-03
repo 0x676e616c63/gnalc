@@ -19,7 +19,7 @@ namespace ArmTools{
 
 class MyUnOrderedSet{
     public:
-        MyUnOrderedSet();
+        MyUnOrderedSet()=default;
         ~MyUnOrderedSet()=default;
         std::unordered_set<ArmTools::Edge, ArmTools::HashEdge, ArmTools::HashEdgeEqual> set;
         bool find(const ArmTools::Edge&);
@@ -32,6 +32,7 @@ class RegisterAlloc{
         
         void GraphColoring(); // main procedure
         
+        void MkInitial(); // fill initial
         void BuildGraph();  // used in main 
         void Simplify();
         void Coalesce();
@@ -55,6 +56,8 @@ class RegisterAlloc{
         InstRefHashPtr NodeMoves(ArmStruct::Operand&);
         bool isMoveRelated(ArmStruct::Operand&);
         void EnableMoves(OperRefHash&);
+
+        void needlessMovErase();
     private:
         OperandType RegType;
         
