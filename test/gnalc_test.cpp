@@ -76,8 +76,14 @@ int main() {
     {
         sylib_to_link = sycfg::temp_dir + "/sylib.ll";
 
-        std::string lib_command = format("clang -S -emit-llvm {} -o {}",
-            sycfg::sylibc, sylib_to_link);
+        // Just a quick and dirty trick to silence llvm-link.
+        // llvm-link will emit a warning if we link two modules of different data layouts
+        // Given that the LLVM IR we generate contains no target data layout, we use
+        // `sed` to delete 'target datalayout' from the sylib.ll
+        std::string lib_command = format("clang -S -emit-llvm {} -o {} "
+                                         "&& sed '/^target datalayout/d' {} -i",
+                                         sycfg::sylibc, sylib_to_link,
+                                         sylib_to_link);
 
         println("Running '{}'.", lib_command);
         std::system(lib_command.c_str());
@@ -164,7 +170,7 @@ int main() {
                 failed_tests.emplace_back(sy.path().string());
                 if (sycfg::stop_on_error)
                 {
-                    std::cout << "------------------------------------------------------------------------------" << std::endl;
+                    println("------------------------------------------------------------------------------");
                     goto finish;
                 }
             }
@@ -173,7 +179,7 @@ int main() {
                 println("|  [\033[0;32;32mPASSED\033[m]");
                 ++passed;
             }
-            println("\n------------------------------------------------------------------------------");
+            println("------------------------------------------------------------------------------");
         }
     }
 
