@@ -41,11 +41,11 @@ int main(int argc, char **argv){
     IRGenerator generator;
     generator.visit(*node);
 
-    IR::CFGBuilder cb;
-    cb.build(generator.get_module());
-    IR::LiveAnalyser la;
-    la.cleanLiveInfo(generator.get_module());
-    la.processModule(generator.get_module());
+    // IR::CFGBuilder cb;
+    // cb.build(generator.get_module());
+    // IR::LiveAnalyser la;
+    // la.cleanLiveInfo(generator.get_module());
+    // la.processModule(generator.get_module());
 
     if (!output_file.empty())
     {
@@ -60,6 +60,6 @@ int main(int argc, char **argv){
         printer.printout(generator.get_module());
     }
 
-    la.cleanLiveInfo(generator.get_module()); // 一定清除活跃信息！防止循环引用（后续可放在某个销毁函数中）
+    // la.cleanLiveInfo(generator.get_module()); // 一定清除活跃信息！防止循环引用（后续可放在某个销毁函数中）
     return 0;
 }

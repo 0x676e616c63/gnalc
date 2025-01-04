@@ -1,19 +1,11 @@
 #include "../../../include/ir/instructions/helper.hpp"
 #include "../../../include/ir/visitor.hpp"
 namespace IR {
-    void IFBEntry::accept(IRVisitor& visitor) { visitor.visit(*this); }
+    void IFInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
-    void IFBEnd::accept(IRVisitor& visitor) { visitor.visit(*this); }
+    void WHILEInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
-    void ELSEBEntry::accept(IRVisitor& visitor) { visitor.visit(*this); }
+    void BREAKInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
-    void ELSEBEnd::accept(IRVisitor& visitor) { visitor.visit(*this); }
-
-    void WHILEBEntry::accept(IRVisitor& visitor) { visitor.visit(*this); }
-
-    void WHILEBEnd::accept(IRVisitor& visitor) { visitor.visit(*this); }
-
-    void BREAK::accept(IRVisitor& visitor) { visitor.visit(*this); }
-
-    void CONTINUE::accept(IRVisitor& visitor) { visitor.visit(*this); }
+    void CONTINUEInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 }

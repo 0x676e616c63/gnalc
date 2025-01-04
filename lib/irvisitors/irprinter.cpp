@@ -201,27 +201,6 @@ std::string IRFormatter::formatCMPOP(FCMPOP cond) {
     }
 }
 
-std::string IRFormatter::formatHELPERTY(HELPERTY hlpty) {
-    switch (hlpty)
-    {
-    case HELPERTY::IFBEntry:
-        return "IFBEntry";
-    case HELPERTY::IFBEnd:
-        return "IFBEnd";
-    case HELPERTY::ELSEBEntry:
-        return "ELSEBEntry";
-    case HELPERTY::ELSEBEnd:
-        return "ELSEBEnd";
-    case HELPERTY::WHILEBEntry:
-        return "WHILEBEntry";
-    case HELPERTY::WHILEBEnd:
-        return "WHILEBEnd";
-    default:
-        Logger::logDebug("ERR: Unknown HELPERTY");
-        return "UNKNOWNHELPERTY";
-    }
-}
-
 std::string IRFormatter::formatValue(Value& val) {
     return val.getType()->toString() + " " + val.getName();
 }
@@ -554,7 +533,51 @@ std::string IRFormatter::fPHIInst(PHIInst& inst) {
 }
 
 std::string IRFormatter::fHELPERInst(HELPERInst& inst) {
-    return "; " + IRFormatter::formatHELPERTY(inst.getHlpType());
+    switch (inst.getHlpType())
+    {
+    case HELPERTY::IF: {
+        auto& if_inst = dynamic_cast<IFInst&>(inst);
+        std::string ret = "; if cond value\n";
+        ret += "  " + formatValue(*if_inst.getCond()) + "\n";
+        ret += "  ; if body insts\n";
+        for (const auto& body_inst : if_inst.getBodyInsts())
+            ret += "  " + formatInst(*body_inst) + "\n";
+        ret += "  ; if body end";
+        if (if_inst.hasElse())
+        {
+            ret += "\n  ; else body insts\n";
+            for (const auto& else_inst : if_inst.getElseInsts())
+                ret += "  " + formatInst(*else_inst) + "\n";
+            ret += "  ; else body end";
+        }
+        return ret;
+    }
+        break;
+    case HELPERTY::WHILE: {
+        auto& while_inst = dynamic_cast<WHILEInst&>(inst);
+        std::string ret = "; while cond insts\n";
+        for (const auto& cond_inst : while_inst.getCondInsts())
+            ret += "  " + formatInst(*cond_inst) + "\n";
+
+        ret += "  ; while cond value\n";
+        ret += "  " + formatValue(*while_inst.getCond()) + "\n";
+
+        ret += "  ; while body insts\n";
+        for (const auto& body_inst : while_inst.getBodyInsts())
+            ret += "  " + formatInst(*body_inst) + "\n";
+
+        ret += "  ; while body end";
+        return ret;
+    }
+        break;
+    case HELPERTY::BREAK:
+        return "; break";
+        break;
+    case HELPERTY::CONTINUE:
+        return "; continue";
+        break;
+    }
+    return "; unknown helper";
 }
 
 
@@ -563,8 +586,16 @@ void IRPrinter::visit(Function& node) {
     write(IRFormatter::formatFunc(node));
     writeln(" {");
 
-    for (auto& blk : node.getBlocks())
-        blk->accept(*this);
+    if (node.getBlocks().empty())
+    {
+        for (auto& inst : node.getInsts())
+            inst->Instruction::accept(*this);
+    }
+    else
+    {
+        for (auto& blk : node.getBlocks())
+            blk->accept(*this);
+    }
 
     writeln("}");
 }

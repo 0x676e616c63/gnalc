@@ -37,6 +37,7 @@ public:
 
     void addBlock(std::shared_ptr<BasicBlock> blk);
     void addInst(std::shared_ptr<Instruction> inst);
+    void setInsts(std::vector<std::shared_ptr<Instruction>> insts_);
 
     const std::vector<std::shared_ptr<Value>>& getParams() const;
     const std::vector<std::shared_ptr<BasicBlock>>& getBlocks() const;

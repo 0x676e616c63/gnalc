@@ -124,7 +124,7 @@ void IRGenerator::visit(VarDef& node) {
     {
         auto alloca_inst = std::make_shared<IR::ALLOCAInst>("%" + node.getId(), irtype);
 
-        curr_func->addInst(alloca_inst);
+        curr_insts.emplace_back(alloca_inst);
 
         curr_initializer.reset(node_type);
         curr_making_initializer = &curr_initializer;
@@ -181,7 +181,7 @@ void IRGenerator::visit(VarDef& node) {
                                     constant_pool.getConst(0),
                                     constant_pool.getConst(static_cast<int>(i)));
 
-                            curr_func->addInst(gep_inst);
+                            curr_insts.emplace_back(gep_inst);
                             init_array(arrtype->getElmType(), gep_inst);
                         }
                     }
@@ -195,8 +195,8 @@ void IRGenerator::visit(VarDef& node) {
 
                             auto str_inst = std::make_shared<IR::STOREInst>
                                     (toIRValue(flatten_initializer[init_pos++]), gep_inst);
-                            curr_func->addInst(gep_inst);
-                            curr_func->addInst(str_inst);
+                            curr_insts.emplace_back(gep_inst);
+                            curr_insts.emplace_back(str_inst);
                         }
                     }
                     else Err::unreachable();
@@ -207,7 +207,7 @@ void IRGenerator::visit(VarDef& node) {
             {
                 auto str_inst = std::make_shared<IR::STOREInst>(toIRValue(flatten_initializer[0]),
                     alloca_inst);
-                curr_func->addInst(str_inst);
+                curr_insts.emplace_back(str_inst);
             }
         }
         symbol_table.insert(node.getId(), alloca_inst);
@@ -359,8 +359,8 @@ void IRGenerator::visit(FuncDef& node) {
     for (size_t i = 0; i < param_ids.size(); ++i) {
         auto alloca = std::make_shared<IR::ALLOCAInst>(get_temp_name(), params[i]->getType());
         auto str = std::make_shared<IR::STOREInst>(params[i], alloca);
-        curr_func->addInst(alloca);
-        curr_func->addInst(str);
+        curr_insts.emplace_back(alloca);
+        curr_insts.emplace_back(str);
 
         // Because we add a '@', we need to look up `param_ids` to get real id.
         symbol_table.insert(param_ids[i], alloca);
@@ -377,13 +377,13 @@ void IRGenerator::visit(FuncDef& node) {
         Err::gassert(IR::isSameType(IR::toFunctionType(curr_func->getType())->getRet(),
             IR::makeBType(IR::IRBTYPE::I32)),
             "Invalid main.");
-        if (curr_func->getInsts().empty() || curr_func->getInsts().back()->getOpcode() != IR::OP::RET)
+        if (curr_insts.empty() || curr_insts.back()->getOpcode() != IR::OP::RET)
         {
-            curr_func->addInst(std::make_shared<IR::RETInst>(constant_pool.getConst(0)));
+            curr_insts.emplace_back(std::make_shared<IR::RETInst>(constant_pool.getConst(0)));
         }
     }
 
-    std::stable_sort(curr_func->getInsts().begin(), curr_func->getInsts().end(),
+    std::stable_sort(curr_insts.begin(), curr_insts.end(),
     [](auto&& i1, auto&& i2)
         { return i1->getOpcode() == IR::OP::ALLOCA && i2->getOpcode() != IR::OP::ALLOCA; });
 
@@ -394,12 +394,33 @@ void IRGenerator::visit(FuncDef& node) {
         param->setName("%" + std::to_string(new_irval_id++));
     }
     if (new_irval_id == 0) new_irval_id = 1;
-    for (const auto& inst : curr_func->getInsts())
+    auto change_name = [&new_irval_id](const std::shared_ptr<IR::Value>& val) {
+        if (!val->getName().empty() && val->getName()[0] == '%')
+            val->setName("%" + std::to_string(new_irval_id++));
+    };
+    for (const auto& inst : curr_insts)
     {
-        if (!inst->getName().empty() && inst->getName()[0] == '%')
-            inst->setName("%" + std::to_string(new_irval_id++));
+        if (auto if_inst = std::dynamic_pointer_cast<IR::IFInst>(inst))
+        {
+            change_name(if_inst->getCond());
+            for (auto&& inner_inst : if_inst->getBodyInsts())
+                change_name(inner_inst);
+            for (auto&& inner_inst : if_inst->getElseInsts())
+                change_name(inner_inst);
+        }
+        else if (auto while_inst = std::dynamic_pointer_cast<IR::WHILEInst>(inst))
+        {
+            change_name(while_inst->getCond());
+            for (auto&& inner_inst : while_inst->getCondInsts())
+                change_name(inner_inst);
+            for (auto&& inner_inst : while_inst->getBodyInsts())
+                change_name(inner_inst);
+        }
+        else change_name(inst);
     }
 
+    curr_func->setInsts(std::move(curr_insts));
+    curr_insts.clear();
     curr_func = nullptr;
 }
 
@@ -491,7 +512,7 @@ void IRGenerator::visit(DeclRef& node) {
         else
         {
             auto load = std::make_shared<IR::LOADInst>(get_temp_name(), alloca_inst);
-            curr_func->addInst(load);
+            curr_insts.emplace_back(load);
             curr_val = load;
         }
     }
@@ -505,7 +526,7 @@ void IRGenerator::visit(DeclRef& node) {
         else
         {
             auto load = std::make_shared<IR::LOADInst>(get_temp_name(), gv);
-            curr_func->addInst(load);
+            curr_insts.emplace_back(load);
             curr_val = load;
         }
     }
@@ -549,7 +570,7 @@ void IRGenerator::visit(ArrayExp& node) {
     if (auto load_inst = std::dynamic_pointer_cast<IR::LOADInst>(base))
     {
         curr_gep = std::make_shared<IR::GEPInst>(get_temp_name(), base, indices[0]);
-        curr_func->addInst(std::dynamic_pointer_cast<IR::Instruction>(curr_gep));
+        curr_insts.emplace_back(std::dynamic_pointer_cast<IR::Instruction>(curr_gep));
         ++i;
     }
 
@@ -560,12 +581,12 @@ void IRGenerator::visit(ArrayExp& node) {
             "Invalid array index.");
         curr_gep = std::make_shared<IR::GEPInst>(get_temp_name(), curr_gep,
                                                      constant_pool.getConst(0), indices[i]);
-        curr_func->addInst(std::dynamic_pointer_cast<IR::Instruction>(curr_gep));
+        curr_insts.emplace_back(std::dynamic_pointer_cast<IR::Instruction>(curr_gep));
     }
 
     if (!is_making_lval && IR::getElm(curr_gep->getType())->getTrait() == IR::IRCTYPE::BASIC) {
         auto load_inst = std::make_shared<IR::LOADInst>(get_temp_name(), curr_gep);
-        curr_func->addInst(load_inst);
+        curr_insts.emplace_back(load_inst);
         curr_val = load_inst;
     } else
     {
@@ -614,7 +635,7 @@ void IRGenerator::visit(CallExp& node) {
             {
                 auto gep = std::make_shared<IR::GEPInst>(get_temp_name(), args[i],
                     constant_pool.getConst(0), constant_pool.getConst(0));
-                curr_func->addInst(gep);
+                curr_insts.emplace_back(gep);
             }
             else
             {
@@ -635,7 +656,7 @@ void IRGenerator::visit(CallExp& node) {
     else
         call = std::make_shared<IR::CALLInst>(get_temp_name(), func, args);
 
-    curr_func->addInst(call);
+    curr_insts.emplace_back(call);
     curr_val = call;
 }
 
@@ -692,7 +713,7 @@ void IRGenerator::visit(BinaryOp& node) {
 
         rhs = type_cast(rhs, lhselmty);
 
-        curr_func->addInst(std::make_shared<IR::STOREInst>(rhs, lhs));
+        curr_insts.emplace_back(std::make_shared<IR::STOREInst>(rhs, lhs));
         curr_val = lhs;
         return;
     }
@@ -793,7 +814,7 @@ void IRGenerator::visit(BinaryOp& node) {
 #undef MAKE_OP
 
         auto inst = std::make_shared<IR::BinaryInst>(get_temp_name(), op, lhs, rhs);
-        curr_func->addInst(inst);
+        curr_insts.emplace_back(inst);
         curr_val = inst;
         return;
     }
@@ -833,7 +854,7 @@ void IRGenerator::visit(BinaryOp& node) {
                 Err::unreachable();
             }
             auto inst = std::make_shared<IR::ICMPInst>(get_temp_name(), icmpop, lhs, rhs);
-            curr_func->addInst(inst);
+            curr_insts.emplace_back(inst);
             curr_val = inst;
         }
         else
@@ -863,7 +884,7 @@ void IRGenerator::visit(BinaryOp& node) {
                 Err::unreachable();
             }
             auto inst = std::make_shared<IR::FCMPInst>(get_temp_name(), fcmpop, lhs, rhs);
-            curr_func->addInst(inst);
+            curr_insts.emplace_back(inst);
             curr_val = inst;
         }
         return;
@@ -876,10 +897,10 @@ void IRGenerator::visit(BinaryOp& node) {
         switch (node.getOp())
         {
         case BiOp::AND:
-            curr_val = std::make_shared<IR::AND>(lhs, rhs);
+            curr_val = std::make_shared<IR::ANDValue>(lhs, rhs);
             break;
         case BiOp::OR:
-            curr_val = std::make_shared<IR::OR>(lhs, rhs);
+            curr_val = std::make_shared<IR::ORValue>(lhs, rhs);
             break;
         default:
             Err::unreachable();
@@ -910,7 +931,7 @@ void IRGenerator::visit(UnaryOp& node) {
             {
                 auto neg = std::make_shared<IR::BinaryInst>(get_temp_name(), IR::OP::SUB,
                     constant_pool.getConst(0), curr_val);
-                curr_func->addInst(neg);
+                curr_insts.emplace_back(neg);
                 curr_val = neg;
             }
         }
@@ -921,7 +942,7 @@ void IRGenerator::visit(UnaryOp& node) {
             else
             {
                 auto neg = std::make_shared<IR::FNEGInst>(get_temp_name(), curr_val);
-                curr_func->addInst(neg);
+                curr_insts.emplace_back(neg);
                 curr_val = neg;
             }
         }
@@ -944,17 +965,17 @@ void IRGenerator::visit(UnaryOp& node) {
                 return val;
             }
             // Below is not in the spec ?
-            else if (auto and_helper = std::dynamic_pointer_cast<IR::AND>(val))
+            else if (auto and_helper = std::dynamic_pointer_cast<IR::ANDValue>(val))
             {
                 auto lhs = and_helper->getLHS();
                 auto rhs = and_helper->getRHS();
-                return std::make_shared<IR::OR>(make_not(lhs), make_not(rhs));
+                return std::make_shared<IR::ORValue>(make_not(lhs), make_not(rhs));
             }
-            else if (auto or_helper = std::dynamic_pointer_cast<IR::OR>(val))
+            else if (auto or_helper = std::dynamic_pointer_cast<IR::ORValue>(val))
             {
                 auto lhs = and_helper->getLHS();
                 auto rhs = and_helper->getRHS();
-                return std::make_shared<IR::AND>(make_not(lhs), make_not(rhs));
+                return std::make_shared<IR::ANDValue>(make_not(lhs), make_not(rhs));
             }
 
             Err::unreachable("Invalid not.");
@@ -991,33 +1012,56 @@ void IRGenerator::visit(IfStmt& node) {
     node.getCond()->accept(*this);
     auto cond = curr_val;
     cond = type_cast(cond, IR::IRBTYPE::I1);
-    curr_func->addInst(std::make_shared<IR::IFBEntry>(cond));
+
+    std::vector<std::shared_ptr<IR::Instruction>> before_if_insts;
+    std::vector<std::shared_ptr<IR::Instruction>> body_insts;
+    std::vector<std::shared_ptr<IR::Instruction>> else_insts;
+
+    std::swap(before_if_insts, curr_insts);
+
     node.getBody()->accept(*this);
-    curr_func->addInst(std::make_shared<IR::IFBEnd>());
+    std::swap(body_insts, curr_insts);
+
     if(node.hasElse()) {
-        curr_func->addInst(std::make_shared<IR::ELSEBEntry>());
         node.getElseBody()->accept(*this);
-        curr_func->addInst(std::make_shared<IR::ELSEBEnd>());
+        std::swap(else_insts, curr_insts);
     }
+
+    auto if_inst = std::make_shared<IR::IFInst>(std::move(cond), std::move(body_insts), std::move(else_insts));
+    std::swap(before_if_insts, curr_insts);
+    curr_insts.emplace_back(if_inst);
 }
 
 void IRGenerator::visit(WhileStmt& node) {
+    std::vector<std::shared_ptr<IR::Instruction>> before_while_insts;
+    std::vector<std::shared_ptr<IR::Instruction>> cond_insts;
+    std::vector<std::shared_ptr<IR::Instruction>> body_insts;
+
+    std::swap(before_while_insts, curr_insts);
+
     node.getCond()->accept(*this);
     auto cond = curr_val;
     cond = type_cast(cond, IR::IRBTYPE::I1);
-    curr_func->addInst(std::make_shared<IR::WHILEBEntry>(cond));
+
+    std::swap(cond_insts, curr_insts);
     node.getBody()->accept(*this);
-    curr_func->addInst(std::make_shared<IR::WHILEBEnd>());
+    std::swap(body_insts, curr_insts);
+
+    auto while_inst = std::make_shared<IR::WHILEInst>(std::move(cond),
+        std::move(cond_insts), std::move(body_insts));
+
+    std::swap(before_while_insts, curr_insts);
+    curr_insts.emplace_back(while_inst);
 }
 
 void IRGenerator::visit(NullStmt& node) { }
 
 void IRGenerator::visit(BreakStmt& node) {
-    curr_func->addInst(std::make_shared<IR::BREAK>());
+    curr_insts.emplace_back(std::make_shared<IR::BREAKInst>());
 }
 
 void IRGenerator::visit(ContinueStmt& node) {
-    curr_func->addInst(std::make_shared<IR::CONTINUE>());
+    curr_insts.emplace_back(std::make_shared<IR::CONTINUEInst>());
 }
 
 void IRGenerator::visit(ReturnStmt& node) {
@@ -1025,12 +1069,12 @@ void IRGenerator::visit(ReturnStmt& node) {
     if (!node.isVoid()) {
         node.getReturnVal()->accept(*this);
         auto ret = type_cast(curr_val, expected);
-        curr_func->addInst(std::make_shared<IR::RETInst>(ret));
+        curr_insts.emplace_back(std::make_shared<IR::RETInst>(ret));
     }
     else
     {
         Err::gassert(expected == IR::IRBTYPE::VOID, "Invalid return.");
-        curr_func->addInst(std::make_shared<IR::RETInst>());
+        curr_insts.emplace_back(std::make_shared<IR::RETInst>());
     }
 }
 
@@ -1054,7 +1098,7 @@ std::shared_ptr<IR::Value> IRGenerator::type_cast(std::shared_ptr<IR::Value> val
 
         Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
         auto conv = std::make_shared<IR::SITOFPInst>(get_temp_name(), val);
-        curr_func->addInst(conv);
+        curr_insts.emplace_back(conv);
         return conv;
     }
     else if (src == IR::IRBTYPE::FLOAT && dest == IR::IRBTYPE::I32)
@@ -1064,7 +1108,7 @@ std::shared_ptr<IR::Value> IRGenerator::type_cast(std::shared_ptr<IR::Value> val
 
         Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
         auto conv = std::make_shared<IR::FPTOSIInst>(get_temp_name(), val);
-        curr_func->addInst(conv);
+        curr_insts.emplace_back(conv);
         return conv;
     }
     else if (src == IR::IRBTYPE::I32 && dest == IR::IRBTYPE::I1)
@@ -1075,7 +1119,7 @@ std::shared_ptr<IR::Value> IRGenerator::type_cast(std::shared_ptr<IR::Value> val
         Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
         auto conv = std::make_shared<IR::ICMPInst>(get_temp_name(), IR::ICMPOP::ne,
             val, constant_pool.getConst(0));
-        curr_func->addInst(conv);
+        curr_insts.emplace_back(conv);
         return conv;
     }
     else if (src == IR::IRBTYPE::FLOAT && dest == IR::IRBTYPE::I1)
@@ -1086,7 +1130,7 @@ std::shared_ptr<IR::Value> IRGenerator::type_cast(std::shared_ptr<IR::Value> val
         Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
         auto conv = std::make_shared<IR::FCMPInst>(get_temp_name(), IR::FCMPOP::one,
             val, constant_pool.getConst(0.0f));
-        curr_func->addInst(conv);
+        curr_insts.emplace_back(conv);
         return conv;
     }
 

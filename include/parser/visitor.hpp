@@ -58,6 +58,7 @@ class IRGenerator : public ASTVisitor {
     // ------
     IR::Module module;
     std::shared_ptr<IR::Value> curr_val;
+    std::vector<std::shared_ptr<IR::Instruction>> curr_insts;
     std::shared_ptr<IR::Function> curr_func;
     Sym::SymbolTable symbol_table;
     size_t next_temp_id{1};

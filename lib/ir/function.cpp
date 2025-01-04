@@ -28,11 +28,15 @@ namespace IR {
         get_params_type(params_), std::move(ret_type), false), params(params_) {}
 
     void Function::addBlock(std::shared_ptr<BasicBlock> blk) {
-        blks.push_back(std::move(blk));
+        blks.emplace_back(std::move(blk));
     }
 
     void Function::addInst(std::shared_ptr<Instruction> inst) {
-        insts.push_back(std::move(inst));
+        insts.emplace_back(std::move(inst));
+    }
+
+    void Function::setInsts(std::vector<std::shared_ptr<Instruction>> insts_) {
+        std::swap(insts, insts_);
     }
 
     const std::vector<std::shared_ptr<Value>>& Function::getParams() const {
