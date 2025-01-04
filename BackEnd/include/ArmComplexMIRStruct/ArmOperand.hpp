@@ -29,8 +29,6 @@ class ArmStruct::Operand{
         // std::unique_ptr<std::string> Indentifier = NULL;
         unsigned long long VirReg;
 
-
-        /// @brief 寄存器分配相关, 拓展性几乎为零, 但是不建议改
         std::unordered_set<std::reference_wrapper<ArmStruct::Operand>, ArmTools::HashOperandReferWrap, ArmTools::HashOperandReferWrapEqual> adjList;
         std::unordered_set<std::reference_wrapper<ArmStruct::Instruction>, ArmTools::HashInstReferWrap, ArmTools::HashInstReferWrapEqual> moveList; // the moveInst which use this ArmStruct::Operand
         std::unique_ptr<ArmStruct::Operand> alias = nullptr; // 别名, 在寄存器分配中活跃区间高度重叠的操作数
@@ -95,7 +93,7 @@ class ArmStruct::MMptr : public ArmStruct::Imm{
         // MMptr(std::string);
         ~MMptr()=default;
 
-        OperandType getType(){return ptrType;}
+        OperandType getType(){return data_type;}
         FrameObj* getFrameObj(){return space;}
         void setOffset(unsigned int newOffset){offset = newOffset;}
         unsigned int getOffset(){return offset;}
@@ -109,7 +107,6 @@ class ArmStruct::MMptr : public ArmStruct::Imm{
         std::string toString() final;
 
     private:
-        OperandType ptrType;    // int bool float ...
         FrameObj* space;
         Operand *baseVirReg = nullptr;  // 为null表示它的基址为r7
         unsigned int offset = 0;

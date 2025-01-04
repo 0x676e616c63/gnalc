@@ -7,6 +7,7 @@
 #include <typeinfo>
 #include <type_traits>
 #include <numeric>
+#include <functional>
 #include "../../Arm.hpp"
 #include "../../include/tools/ArmTools.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmBB.hpp"
@@ -30,9 +31,17 @@ RegisterAlloc::RegisterAlloc(Function &func, OperandType RegType, unsigned int k
     // this->GraphColoring();
 }
 bool RegisterAlloc::isMoveInst(Instruction &inst){
-    if(inst.opcode > OperCode::Branch_Begin && inst.opcode < OperCode::Branch_End) return false;
-    else if(inst.attach) return false;
-    else if(RegType == FLOAT){
+    if(RegType == INT){
+        switch(inst.opcode){
+            case LDR: case STR:
+            case MOV:
+                if(inst.DefOperandList.size() && inst.UseOperandList.size())
+                return true;
+            default:
+                return false;
+        }
+    }
+    else{
         switch(inst.opcode){
             case VNEG_F32: case VADD_F32: case VADD_S32:
             case VMUL_F32: case VSUB_S32: case VMUL_S32:
@@ -40,13 +49,13 @@ bool RegisterAlloc::isMoveInst(Instruction &inst){
             case VCMP_F32: case VMOV:     case VMOV_F32:
             case VMOV_S32: case VCVT_F32_S32: case VCVT_S32_F32:
             case VLDR_32: case VSTR_32:
+                if(inst.DefOperandList.size() && inst.UseOperandList.size())
                 return true;
             default:
                 return false;
         }
     }
-    // RegType == INT
-    return true;
+    return false;
 }
 
 /// @todo 分配算法和其中的数据结构参考Iterated Register Coalescing这篇论文
@@ -251,6 +260,8 @@ void RegisterAlloc::Coalesce(){
     ///@note let m(=copy(x, y)) in workListMoves
     ///@note x := y
     Instruction& inst = *(worklistMoves.begin());
+    worklistMoves.erase(std::ref(inst));
+
     Operand& x = GetAlias(inst.DefOperandList[0]);
     Operand& y = GetAlias(inst.UseOperandList[0]);
     
@@ -258,7 +269,6 @@ void RegisterAlloc::Coalesce(){
     if(y.color.first) edge = std::make_unique<Edge>(y, x);
     else edge = std::make_unique<Edge>(x, y);
 
-    worklistMoves.erase(std::ref(inst));
 
     if(edge->u.VirReg == edge->v.VirReg){
         coalescedMoves.insert(inst);

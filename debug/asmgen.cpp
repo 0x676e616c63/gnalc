@@ -44,8 +44,8 @@ int main(int argc, char **argv){
     la.cleanLiveInfo(generator.get_module());
     la.processModule(generator.get_module());
 
-    // IR::IRPrinter printer(std::cout);
-    // printer.printout(generator.get_module());
+    IR::IRPrinter printer(std::cout);
+    printer.printout(generator.get_module());
     // backend
     ArmStruct::Module *backEndModule = new ArmStruct::Module(generator.get_module());
     backEndModule->AllocRegister();
@@ -53,7 +53,6 @@ int main(int argc, char **argv){
     std::string Asm = backEndModule->toString();
     
     std::cout<< Asm <<std::endl;
-    // delete backEndModule; // 别删, 有double free
 
     la.cleanLiveInfo(generator.get_module()); // 一定清除活跃信息！防止循环引用（后续可放在某个销毁函数中）
     return 0;

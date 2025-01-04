@@ -14,8 +14,11 @@ using namespace ArmStruct;
 using namespace ArmTools;
 
 /// @note md这里还歧义了
-MemInstruction::MemInstruction(OperCode opcode, ArmStruct::MMptr* ptr, BB& BasicBlock):
-    Instruction(opcode, nullptr, BasicBlock, {}, {}), mmptr(ptr){
+MemInstruction::MemInstruction(OperCode opcode, ArmStruct::MMptr* ptr, BB& BasicBlock, Operand* Def_Use):
+    mmptr(ptr), Instruction(opcode, nullptr, BasicBlock, {}, {}){
+        if(opcode == VLDR_32 || opcode == LDR) DefOperandList.push_back(std::ref(*Def_Use));
+        else UseOperandList.push_back(std::ref(*Def_Use));
+
         if(mmptr->getBase() != nullptr){
             this->UseOperandList.push_back(std::ref(*mmptr->getBase()));
         }
@@ -129,6 +132,21 @@ std::string Instruction::toString(){
         }
         str.pop_back(), str.pop_back();
         str += "}\n";
+    }
+    return str;
+}
+
+std::string MemInstruction::toString(){
+    std::string str = "";
+    if(opcode == LDR || opcode == VLDR_32){
+        str += OperCodeMap[opcode] + ' ';
+        str += DefOperandList[0].get().toString() + ", ";
+        str += mmptr->toString() + '\n';
+    }
+    else{
+        str += OperCodeMap[opcode] + ' ';
+        str += UseOperandList[0].get().toString() + ", ";
+        str += mmptr->toString() + '\n';
     }
     return str;
 }

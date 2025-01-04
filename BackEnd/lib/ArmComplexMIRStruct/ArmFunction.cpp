@@ -65,38 +65,40 @@ Function::Function(IR::Function& midEnd_function){
 
     }
     
-    std::vector<unsigned long long> backEnd_temp_VReg;
-    /// @note 在首位BasicBlock插入mov %temp {r4,r5...r11}
-    auto &backEnd_BB_head = **BBList.begin();
-    for(int i = 4; i < 12; ++i){
-        
-        Operand *Def = new Operand(OperandType::INT, "%" + std::to_string(backEnd_BB_head.Func.VRegNum));
-        backEnd_temp_VReg.push_back(backEnd_BB_head.Func.VRegNum);
-        backEnd_BB_head.Func.VirRegOperandMap[backEnd_BB_head.Func.VRegNum++] = Def; 
-        
-        Operand *Use = RegisterPool[i]; // CoreRegisterName::ri
+    if(this->Identifier != "main"){
+        std::vector<unsigned long long> backEnd_temp_VReg;
+        /// @note 在首位BasicBlock插入mov %temp {r4,r5...r11}
+        auto &backEnd_BB_head = **BBList.begin();
+        for(int i = 4; i < 12; ++i){
+            
+            Operand *Def = new Operand(OperandType::INT, "%" + std::to_string(backEnd_BB_head.Func.VRegNum));
+            backEnd_temp_VReg.push_back(backEnd_BB_head.Func.VRegNum);
+            backEnd_BB_head.Func.VirRegOperandMap[backEnd_BB_head.Func.VRegNum++] = Def; 
+            
+            Operand *Use = RegisterPool[i]; // CoreRegisterName::ri
 
-        if(i == CoreRegisterName::r7) continue;
-        
-        Instruction *backEnd_callee_rx = new Instruction(
-            OperCode::MOV, nullptr, backEnd_BB_head, {std::ref(*Def)}, {std::ref(*Use)}
-        );
-        backEnd_BB_head.InstList.push_front(backEnd_callee_rx);
-    }
+            if(i == CoreRegisterName::r7) continue;
+            
+            Instruction *backEnd_callee_rx = new Instruction(
+                OperCode::MOV, nullptr, backEnd_BB_head, {std::ref(*Def)}, {std::ref(*Use)}
+            );
+            backEnd_BB_head.InstList.push_front(backEnd_callee_rx);
+        }
 
-    /// @note 在最后BasicBlock插入mov {r4,r5...r11} %temp
-    auto &backEnd_BB_tail = *BBList.back();    
-    for(int i = 0; i < 8; ++i){
-        ///@brief mov rx, %temp
-        if(i + 4 == CoreRegisterName::r7) continue;
-        Operand *Def = RegisterPool[i + 4];
-        Operand *Use = backEnd_BB_tail.Func.VirRegOperandMap[backEnd_temp_VReg[i]];
+        /// @note 在最后BasicBlock插入mov {r4,r5...r11} %temp
+        auto &backEnd_BB_tail = *BBList.back();    
+        for(int i = 0; i < 8; ++i){
+            ///@brief mov rx, %temp
+            if(i + 4 == CoreRegisterName::r7) continue;
+            Operand *Def = RegisterPool[i + 4];
+            Operand *Use = backEnd_BB_tail.Func.VirRegOperandMap[backEnd_temp_VReg[i]];
 
-        Instruction *backEnd_callee_rx = new Instruction(
-            OperCode::MOV, nullptr, backEnd_BB_tail, {std::ref(*Def)}, {std::ref(*Use)}
-        );
+            Instruction *backEnd_callee_rx = new Instruction(
+                OperCode::MOV, nullptr, backEnd_BB_tail, {std::ref(*Def)}, {std::ref(*Use)}
+            );
 
-        backEnd_BB_tail.InstList.push_back(backEnd_callee_rx);
+            backEnd_BB_tail.InstList.push_back(backEnd_callee_rx);
+        }
     }
 
     /// @note 现在是保存了SSA形式的MIR, 在这里插入一些OPT
@@ -114,6 +116,9 @@ void Function::MkFrameFinal(){
     StackSize += temp->getSize();
     temp->setOffset(0);
     local->setOffset(temp->getSize());
+
+    temp->assignOffset();
+    local->assignOffset();
 }
 
 // void Function::TerminatorPredict();
@@ -151,3 +156,11 @@ SubFrame::~SubFrame(){
     for(auto frameptr : VirPtrOffsetMap) delete frameptr.second;
 }
 
+void SubFrame::assignOffset(){
+    unsigned long long totalOff = 0;
+    for(auto iter : VirPtrFrameObjMap){
+        auto &obj = *iter.second;
+        obj.setOffset(totalOff);
+        totalOff += obj.getSize();
+    }
+}

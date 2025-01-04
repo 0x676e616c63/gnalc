@@ -121,7 +121,7 @@ void Module::Legalize(){
         BB_tail.InstList.insert(BB_tail.InstList.end(), backEnd_add_2);
 
         Instruction *backEnd_mov = new Instruction(
-            OperCode::ADD, backEnd_stackSize
+            OperCode::MOV, nullptr
             , BB_tail, {std::ref(*backEnd_sp)}, {std::ref(*backEnd_r7)}
         );
         BB_tail.InstList.insert(BB_tail.InstList.end(), backEnd_mov);        

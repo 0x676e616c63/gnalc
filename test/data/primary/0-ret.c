@@ -1,4 +1,6 @@
 int main(){
     int a, b;
-    return 0;
+    a = a + b;
+    b = a - b;
+    return 114514;
 }

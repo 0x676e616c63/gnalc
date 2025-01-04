@@ -84,11 +84,12 @@ Imm::Imm(OperandType type): data_type(type){}
 Imm::Imm(OperandType type, std::string data): data_type(type), data(data){}
 
 std::string Imm::toString(){
-    return this->data;
+    if(data_type == LABEL) return data;
+    else return "#" + data;
 }
 
 MMptr::MMptr(FrameObj* space, OperandType type, unsigned long long idx): Imm(type), space(space), VirReg(idx){
-    space->getFather()->insertMMptr(VirReg, this);  // 入表
+    // space->getFather()->insertMMptr(VirReg, this);  // 在FrameObj内入表
 }
 
 MMptr::MMptr(FrameObj* loc, OperandType type, unsigned long long idx, unsigned int off)
@@ -97,6 +98,7 @@ MMptr::MMptr(FrameObj* loc, OperandType type, unsigned long long idx, unsigned i
 };
 
 std::string MMptr::toString() {
+    data = "";
     data += "[";
     
     unsigned int SubFrameOffset = this->getFrameObj()->getFather()->getOffset();

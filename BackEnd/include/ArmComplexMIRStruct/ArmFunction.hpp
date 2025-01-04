@@ -63,6 +63,8 @@ class ArmStruct::SubFrame{
 
         MMptr* findMMptr(unsigned long long idx){return VirPtrOffsetMap[idx];}
         
+        void assignOffset(); // for each frameObj
+
         unsigned int getSize(); // bytes
         unsigned int getObjCnt(){return VirPtrFrameObjMap.size();};
 

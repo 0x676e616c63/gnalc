@@ -43,9 +43,10 @@ class Instruction{
 class MemInstruction : public Instruction{
     /// @note 在构造时注意 MMptr->baseVirReg 是否为 nullptr
     public:
-        MemInstruction(ArmTools::OperCode, MMptr*, BB&);
+        MemInstruction(ArmTools::OperCode, MMptr*, BB&, Operand*);
         ~MemInstruction()=default;
 
+        std::string toString();
     private:
         MMptr* mmptr;
 };

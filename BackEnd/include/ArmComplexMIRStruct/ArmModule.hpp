@@ -29,7 +29,8 @@ class ArmStruct::Module{
     private:
         std::string ModuleName;
         std::string include = "";   // 可能会结合调试使用
-        std::string arch = ".arch armv7ve\n.fpu vfpv3-d16";
+        // std::string arch = ".arch armv7ve\n.fpu vfpv3-d16";
+        std::string arch = ".arch armv7ve\n";
         
         std::string testSection = ".text\n";
         std::string InstSet = ".arm\n";
