@@ -11,18 +11,13 @@ using namespace Test;
 using namespace std::filesystem;
 namespace sycfg
 {
-constexpr bool stop_on_error = true;
+// Commandline args
+bool stop_on_error = true;
+bool only_frontend = true;
+bool verbose = true;
 
-// Remember to install `qemu` and `arm-none-eabi-gcc` if test backend.
-// See `docs/gnalc-test.md`.
-constexpr bool only_frontend = true;
+// See `docs/gnalc-test.md` to get prepared.
 
-//  First update `gnalc-test-data` submodule
-//  ```shell
-//  git submodule init
-//  git submodule update
-//  ```
-//  After this your project structure looks like below.
 //
 //  gnalc -> test -> gnalc-test-data -> comp-test
 //  comp-test ->
@@ -36,57 +31,71 @@ constexpr bool only_frontend = true;
 //                         |  performance
 //                         |  h_performance
 //
-
 // Note that all the path is relative to the executing path
 // gnalc(project dir) -> cmake-build-debug(CLion's build dir) -> test -> gnalc_test(executable)
 
+// frontend + backend
 const std::string irgen_path = "../irgen";
-const std::string asmgen_path = "../asmgen";
 
+// backend
+const std::string asmgen_path = "../asmgen";
 const std::string gcc_arm_command = "arm-linux-gnueabi-gcc-14";
 const std::string qemu_arm_command = "LD_LIBRARY_PATH=/usr/arm-linux-gnueabi/lib qemu-arm";
 
-const std::string temp_dir = "./gnalc_test_temp/" + generate_unique_temp_dir();
+const std::string global_temp_dir = "./gnalc_test_temp/" + generate_unique_temp_dir();
+
 const std::string sylibc = "../../test/sylib/sylib.c";
+
 const std::string test_data = "../../test/gnalc-test-data/comp-test";
-const std::string functional = test_data + "/functional";
-const std::string performance = test_data + "/performance";
-const std::string h_functional = test_data + "/h_functional";
-const std::string h_performance = test_data + "/h_performance";
-const std::string final_functional = test_data + "/final/functional";
-const std::string final_performance = test_data + "/final/performance";
-const std::string final_h_functional = test_data + "/final/h_functional";
-const std::string final_h_performance = test_data + "/final/h_performance";
-const std::vector dirs = {
-    functional, performance,
-    h_functional, h_performance,
-    final_functional, final_performance,
-    final_h_functional, final_h_performance};
+const std::vector subdirs = {
+     "functional", "performance",
+     "h_functional", "h_performance",
+     "final/functional", "final/performance",
+     "final/h_functional", "final/h_performance"
+};
 }
 
-std::string remove_newline(std::string s) {
-    while (!s.empty() && s.back() == '\n')
-        s.pop_back();
-    return s;
-}
+int main(int argc, char* argv[]) {
+    auto print_help = [&argv]() {
+        println("Usage: {} [options]", argv[0]);
+        println("Options:");
+        println("  -a, --all      : Run all tests, regardless of failure.");
+        println("  -b, --backend  : Test backend.");
+        println("  -q, --quiet    : Be quiet.");
+        println("  -h, --help     : Print this help and exit.");
+    };
+    for (int i = 1; i < argc; i++)
+    {
+        std::string arg = argv[i];
+        if (arg == "--all" || arg == "-a")
+            sycfg::stop_on_error = false;
+        else if (arg == "--backend" || arg == "-b")
+            sycfg::only_frontend = false;
+        else if (arg == "--quiet" || arg == "-q")
+            sycfg::verbose = false;
+        else if (arg == "--help" || arg == "-h")
+        {
+            print_help();
+            return 0;
+        }
+        else
+        {
+            println("Error: Unrecognized option '{}'", arg);
+            print_help();
+            return -1;
+        }
+    }
 
-std::string read_file(const std::string& file_name) {
-    std::ifstream in(file_name);
-    std::istreambuf_iterator<char> beg(in), end;
-    return {beg, end};
-}
-
-int main() {
     println("GNALC test started.");
     size_t passed = 0;
     std::vector<std::string> failed_tests;
 
-    create_directories(sycfg::temp_dir);
+    create_directories(sycfg::global_temp_dir);
 
     std::string sylib_to_link; // .ll or .a
     if (sycfg::only_frontend)
     {
-        sylib_to_link = sycfg::temp_dir + "/sylib.ll";
+        sylib_to_link = sycfg::global_temp_dir + "/sylib.ll";
 
         // Just a quick and dirty trick to silence llvm-link.
         // llvm-link will emit a warning if we link two modules of different data layouts
@@ -97,30 +106,36 @@ int main() {
                                          sycfg::sylibc, sylib_to_link,
                                          sylib_to_link);
 
-        println("Running '{}'.", lib_command);
+        if (sycfg::verbose)
+            println("Running '{}'.", lib_command);
         std::system(lib_command.c_str());
     }
     else
     {
-        auto sylibo = sycfg::temp_dir + "/sylib.o";
-        sylib_to_link = sycfg::temp_dir + "/sylib.a";
+        auto sylibo = sycfg::global_temp_dir + "/sylib.o";
+        sylib_to_link = sycfg::global_temp_dir + "/sylib.a";
 
         std::string lib_command = format("{} -c {} -o {} && ar rcs {} {}",
             sycfg::gcc_arm_command, sycfg::sylibc, sylibo, sylib_to_link, sylibo);
 
-        println("Running '{}'.", lib_command);
+        if (sycfg::verbose)
+            println("Running '{}'.", lib_command);
         std::system(lib_command.c_str());
     }
 
-    for (auto&& test_dir : sycfg::dirs)
+    for (auto&& test_dir : sycfg::subdirs)
     {
         std::vector<directory_entry> test_files;
-        for (const auto& p : directory_iterator(test_dir))
+        for (const auto& p : directory_iterator(sycfg::test_data + "/" + test_dir))
         {
             if (p.is_regular_file() && p.path().extension() == ".sy")
                 test_files.emplace_back(p);
         }
         std::sort(test_files.begin(), test_files.end());
+
+        auto curr_temp_dir = sycfg::global_temp_dir + "/" + test_dir;
+        create_directories(curr_temp_dir);
+
         for (const auto& sy : test_files)
         {
             auto stem = sy.path().parent_path().string() + "/" + sy.path().stem().string();
@@ -128,52 +143,73 @@ int main() {
             auto testcase_out = stem + ".out";
 
             auto output = format("{}/{}.out",
-                sycfg::temp_dir, sy.path().stem().string());
+                curr_temp_dir, sy.path().stem().string());
 
             std::string command;
 
             if (sycfg::only_frontend)
             {
                 auto outll = format("{}/{}.ll",
-                    sycfg::temp_dir, sy.path().stem().string());
+                    curr_temp_dir, sy.path().stem().string());
                 auto outbc = format("{}/{}.bc",
-                    sycfg::temp_dir, sy.path().stem().string());
+                    curr_temp_dir, sy.path().stem().string());
 
+                // /bin/echo is the one in GNU coreutils
                 command = format(
                     "{} 2>&1 < {} > {}"
                     " && llvm-link 2>&1 {} {} -o {}"
-                    " && lli 2>&1 {} < {} > {}"
-                    "; echo $? > {}",
+                    " && lli {} < {} > {} 2>{}"
+                    "; /bin/echo -e \"\\n\"$? >> {}",
                     sycfg::irgen_path, sy.path().string(), outll,
                     sylib_to_link, outll, outbc,
-                    outbc, exists(testcase_in) ? testcase_in : "/dev/null", output,
+                    outbc, exists(testcase_in) ? testcase_in : "/dev/null", output, sycfg::verbose ? "&2" : "/dev/null",
                     output);
+
+                // Test for this test script.
+                // auto newsy = curr_temp_dir + "/" + sy.path().stem().string() + ".new.sy";
+                // copy_file(sy, newsy);
+                // command = format(
+                // "sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int getfarray(float a[]);void putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, float a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define starttime() _sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
+                //     " && clang -xc {} -emit-llvm -S -o {} -I ../../test/sylib/"
+                //     " && llvm-link 2>&1 {} {} -o {}"
+                //     " && lli {} < {} > {} 2>{}"
+                //     "; /bin/echo -e \"\\n\"$? >> {}",
+                //     newsy,
+                //     newsy, outll,
+                //     sylib_to_link, outll, outbc,
+                //     outbc, exists(testcase_in) ? testcase_in : "/dev/null", output, sycfg::verbose ? "&2" : "/dev/null",
+                //     output);
             }
             else
             {
                 auto outs = format("{}/{}.s",
-                    sycfg::temp_dir, sy.path().stem().string());
+                    curr_temp_dir, sy.path().stem().string());
                 auto outexec = format("{}/{}",
-                    sycfg::temp_dir, sy.path().stem().string());
+                    curr_temp_dir, sy.path().stem().string());
 
                 command = format(
                     "{} 2>&1 < {} > {}"
                     " && {} {} {} -o {}"
-                    " && {} {}"
-                    "; echo $? > {}",
+                    " && {} {} < {} > {} 2>{}"
+                    "; /bin/echo -e \"\\n\"$? >> {}",
                     sycfg::asmgen_path, sy.path().string(), outs,
                     sycfg::gcc_arm_command, outs, sylib_to_link, outexec,
-                    sycfg::qemu_arm_command, outexec,
+                    sycfg::qemu_arm_command, outexec, exists(testcase_in) ? testcase_in : "/dev/null", output, sycfg::verbose ? "&2" : "/dev/null",
                     output);
             }
 
             println("Test {}", sy.path().stem());
-            println("|  Running '{}':", command);
+
+            if (sycfg::verbose)
+                println("|  Running '{}':", command);
 
             std::system(command.c_str());
 
-            auto syout = remove_newline(read_file(output));
-            auto expected_syout = remove_newline(read_file(testcase_out));
+            auto syout = read_file(output);
+            auto expected_syout = read_file(testcase_out);
+
+            fix_newline(syout);
+            fix_newline(expected_syout);
 
             if (syout != expected_syout)
             {
@@ -182,7 +218,7 @@ int main() {
                 failed_tests.emplace_back(sy.path().string());
                 if (sycfg::stop_on_error)
                 {
-                    println("------------------------------------------------------------------------------");
+                    println("----------");
                     goto finish;
                 }
             }
@@ -191,7 +227,7 @@ int main() {
                 println("|  [\033[0;32;32mPASSED\033[m]");
                 ++passed;
             }
-            println("------------------------------------------------------------------------------");
+            println("----------");
         }
     }
 
