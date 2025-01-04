@@ -1,6 +1,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <assert.h>
 #include "../../Arm.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmOperand.hpp"
 #include "../../include/ArmComplexMIRStruct/ArmFunction.hpp"
@@ -78,9 +79,22 @@ std::string Instruction::toString(){
     if(this->opcode < OperCode::Binary_End){
         str += OperCodeMap[this->opcode] + ' ';
         str += this->DefOperandList[0].get().toString() + ", ";
-        str += this->UseOperandList[0].get().toString() + ", ";
-        if(UseOperandList.size() > 1) str += this->UseOperandList[1].get().toString() + '\n';
-        else str += this->attach->toString() + '\n';
+
+        switch(UseOperandList.size()){
+            case 0:
+                assert(false);
+                break;
+            case 1:
+                str += this->UseOperandList[0].get().toString() + ", ";
+                str += this->attach->toString() + '\n';
+                break;
+            case 2:
+                str += this->UseOperandList[0].get().toString() + ", ";
+                str += this->UseOperandList[1].get().toString() + "\n";
+                break;
+            default:
+                assert(false);
+        }
     }
     else if(this->opcode < OperCode::Branch_End){
         str += OperCodeMap[this->opcode] + ' ';

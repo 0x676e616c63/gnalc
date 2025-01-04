@@ -32,11 +32,12 @@ ArrayObj::ArrayObj(SubFrame* father, OperandType elementType, unsigned long long
     FrameObj(father, elementType, 0, VirPtr){
         unsigned int singleElemSize = 4; // to be continued...
 
-        unsigned int totalObjSize = 0;
+        unsigned int totalObjSize = 1;
         for(unsigned int size : dims){
             arrayDims.push_back(size);
-            totalObjSize += size * singleElemSize;
+            totalObjSize *= size;
         }
+        totalObjSize *= singleElemSize;
         setSize(totalObjSize);
         
         MMptr *ArrayPtr = new MMptr(this, elementType, VirPtr);

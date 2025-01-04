@@ -149,9 +149,12 @@ void RetMatch::operator()(InstArgs insts){
 
     auto &midEnd_retVal = *midEnd_ret.getRetVal().get();
 
+    Operand *backEnd_ret_register = nullptr;
+    Operand *backEnd_ret_use = nullptr;
+    Instruction *backEnd_ret_mov = nullptr;
+
     if(typeid(midEnd_retVal) != typeid(IR::ConstantFloat&)
         && typeid(midEnd_retVal) != typeid(IR::ConstantInt&)){
-        Instruction *backEnd_ret_mov = nullptr;
         unsigned long long idx = std::stoull(midEnd_ret.getRetVal().get()->getName().substr(1));
         Operand *backEnd_ret_use = BasicBlock.Func.VirRegOperandMap[idx];
         Operand *backEnd_ret_register = nullptr;
@@ -175,10 +178,6 @@ void RetMatch::operator()(InstArgs insts){
             BasicBlock.InstList.push_back(backEnd_ret_mov);
     }
     else{
-        Operand *backEnd_ret_register = nullptr;
-        Operand *backEnd_ret_use = nullptr;
-        Instruction *backEnd_ret = nullptr;
-        
         if(typeid(midEnd_retVal) == typeid(IR::ConstantInt&)){
             int imme = dynamic_cast<IR::ConstantInt&>(midEnd_retVal).getVal();
             backEnd_ret_register = RegisterPool[CoreRegisterName::r0];
@@ -186,14 +185,14 @@ void RetMatch::operator()(InstArgs insts){
             if(immeMatch.isImmCanBeEncodedInText((unsigned long long)imme)){
                 Imm *backEnd_imme = new Imm(OperandType::INT, std::to_string(imme));
                 ConstPool.push_back(backEnd_imme);
-                backEnd_ret = new Instruction(
+                backEnd_ret_mov = new Instruction(
                     OperCode::MOV, backEnd_imme, BasicBlock, {std::ref(*backEnd_ret_register)}, {}
                 );
             }
             else{
                 immeMatch(imme, BasicBlock.Func.VRegNum);
                 backEnd_ret_use = BasicBlock.Func.VirRegOperandMap[BasicBlock.Func.VRegNum - 1];
-                backEnd_ret = new Instruction(
+                backEnd_ret_mov = new Instruction(
                     OperCode::MOV, nullptr, BasicBlock, {std::ref(*backEnd_ret_register)}, {std::ref(*backEnd_ret_use)}
                 );
             }
@@ -205,21 +204,23 @@ void RetMatch::operator()(InstArgs insts){
             if(immeMatch.isImmCanBeEncodedInText((unsigned long long)imme)){
                 Imm *backEnd_imme = new Imm(OperandType::INT, std::to_string(imme));
                 ConstPool.push_back(backEnd_imme);
-                backEnd_ret = new Instruction(
+                backEnd_ret_mov = new Instruction(
                     OperCode::VMOV, backEnd_imme, BasicBlock, {std::ref(*backEnd_ret_register)}, {}
                 );
             }
             else{
                 immeMatch(imme, BasicBlock.Func.VRegNum);
                 backEnd_ret_use = BasicBlock.Func.VirRegOperandMap[BasicBlock.Func.VRegNum - 1];
-                backEnd_ret = new Instruction(
+                backEnd_ret_mov = new Instruction(
                     OperCode::VMOV, nullptr, BasicBlock, {std::ref(*backEnd_ret_register)}, {std::ref(*backEnd_ret_use)}
                 );
             }
 
         }
-        BasicBlock.InstList.push_back(backEnd_ret);
     }
+    
+    BasicBlock.InstList.push_back(backEnd_ret_mov);
+    
     return;
 }
 
@@ -602,8 +603,9 @@ void AllocaMatch::staticMemory(IR::ALLOCAInst& midEnd_alloca){
         IR::Type *midEnd_elem = midEnd_arrayType.getElmType().get(); // maybe a do-while will be more suitable
 
         std::vector<unsigned long long> arrayDims = {};
+        arrayDims.push_back(midEnd_arrayType.getArraySize());
 
-        while(typeid(midEnd_elem->getTrait()) != typeid(IR::IRCTYPE::BASIC)){
+        while(midEnd_elem->getTrait() != IR::IRCTYPE::BASIC){
             auto midEnd_elem_array = dynamic_cast<IR::ArrayType*>(midEnd_elem);
             arrayDims.push_back(midEnd_elem_array->getArraySize());
             midEnd_elem = midEnd_elem_array->getElmType().get();
@@ -786,8 +788,8 @@ void GepMatch::DynamicBaseVarOffset(MMptr* ptr, IR::GEPInst& midEnd_Gep){
     return;
 }
 
-unsigned int GepMatch::getPreElemSize(std::shared_ptr<IR::Type> ElemType){    // 计算一个elem的size(bytes)
-    auto &midEnd_elem = *ElemType.get();
+unsigned int GepMatch::getPreElemSize(std::shared_ptr<IR::Type> ArrayType){    
+    auto &midEnd_elem = *(dynamic_cast<IR::ArrayType&>(*ArrayType).getElmType()); // 计算一个elem的size(bytes)
     if(midEnd_elem.getTrait() == IR::IRCTYPE::BASIC) return 4;
     else{
         auto &midEnd_array_elem = dynamic_cast<IR::ArrayType&>(midEnd_elem);
@@ -907,7 +909,7 @@ void BinaryMatch::IntOrdinaryMatch(IR::BinaryInst& midEnd_binary, OperCode backE
             ConstPool.push_back(backEnd_imme);
             
             backEnd_binary = new Instruction(
-                backEnd_opcode, backEnd_imme, BasicBlock, {std::ref(*Def)}, {}
+                backEnd_opcode, backEnd_imme, BasicBlock, {std::ref(*Def)}, {std::ref(*Use)}
             );
         }
         else{

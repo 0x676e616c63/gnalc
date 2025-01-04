@@ -28,6 +28,8 @@ Operand::Operand(OperandType type, std::string midEnd_VirReg){
 Operand::Operand(OperandType type, unsigned int color): ValType(type){
     this->color.first = true;
     this->color.second = color;
+    //
+    this->VirReg = -1; // 确保不会和其他未着色的Oper冲突
 };
 
 
