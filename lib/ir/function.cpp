@@ -35,8 +35,9 @@ namespace IR {
         insts.emplace_back(std::move(inst));
     }
 
-    void Function::setInsts(std::vector<std::shared_ptr<Instruction>> insts_) {
-        std::swap(insts, insts_);
+    void Function::appendInsts(std::vector<std::shared_ptr<Instruction>> insts_) {
+        insts.insert(insts.end(),
+            std::make_move_iterator(insts_.begin()), std::make_move_iterator(insts_.end()));
     }
 
     const std::vector<std::shared_ptr<Value>>& Function::getParams() const {
