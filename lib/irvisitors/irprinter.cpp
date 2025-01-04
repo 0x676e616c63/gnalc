@@ -4,7 +4,7 @@
 
 namespace IR
 {
-LIRPrinter::LIRPrinter(std::ostream& out): outStream(out) {
+LIRPrinter::LIRPrinter(std::ostream& out, bool _liveinfo): outStream(out) , printLiveInfo(_liveinfo){
 }
 
 LIRPrinter::~LIRPrinter() {
@@ -68,16 +68,16 @@ void LIRPrinter::visit(FunctionDecl& node) {
 void LIRPrinter::visit(Instruction& node) {
     Logger::logDebug("LIRPrinter: Printing Instruction \"" + node.getName() + "\"");
 
-    #if PRINT_INST_LIVEINFO
-    write("  ; livein:");
-    for (auto& val : node.getLiveIn())
-        write(" " + val->getName());
-    writeln("");
-    write("  ; liveout:");
-    for (auto& val : node.getLiveOut())
-        write(" " + val->getName());
-    writeln("");
-    #endif
+    if (printLiveInfo) {
+        write("  ; livein:");
+        for (auto& val : node.getLiveIn())
+            write(" " + val->getName());
+        writeln("");
+        write("  ; liveout:");
+        for (auto& val : node.getLiveOut())
+            write(" " + val->getName());
+        writeln("");
+    }
 
     // It seems there is no nested scope, so it is a fixed indent.
     write("  ");
@@ -206,7 +206,9 @@ std::string IRFormatter::formatValue(Value& val) {
 }
 
 std::string IRFormatter::formatBB(BasicBlock& bb) {
-    return bb.getName();
+    auto ret = bb.getName();
+    ret.erase(0, 1);
+    return ret;
 }
 
 std::string IRFormatter::formatFunc(Function& func) {
@@ -603,21 +605,22 @@ void IRPrinter::visit(Function& node) {
 void IRPrinter::visit(BasicBlock& node) {
     Logger::logDebug("IRPrinter: Printing BasicBlock \"" + node.getName() + "\"");
     
-    #if PRINT_BB_LIVEINFO
-    write("; livein:");
-    for (auto& val : node.getLiveIn())
-        write(" " + val->getName());
-    writeln("");
-    write("; liveout:");
-    for (auto& val : node.getLiveOut())
-        write(" " + val->getName());
-    writeln("");
-    #endif
+    if (printLiveInfo) {
+        write("; livein:");
+        for (auto& val : node.getLiveIn())
+            write(" " + val->getName());
+        writeln("");
+        write("; liveout:");
+        for (auto& val : node.getLiveOut())
+            write(" " + val->getName());
+        writeln("");
+    }
 
     write(IRFormatter::formatBB(node));
     writeln(":");
     for (auto& inst : node.getInsts())
         inst->Instruction::accept(*this);
+    writeln("");
 }
 
 }

@@ -45,6 +45,7 @@ private:
 public:
     explicit CONDValue(CONDTY ty)
     : Value("__COND", makeBType(IRBTYPE::I1), ValueTrait::HELPER), cond_type(ty) {}
+    CONDTY getCondType() const { return cond_type; }
 };
 
 class ANDValue : public CONDValue {

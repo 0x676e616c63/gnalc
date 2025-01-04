@@ -50,13 +50,13 @@ int main(int argc, char **argv){
     if (!output_file.empty())
     {
         std::ofstream fout(output_file);
-        IR::IRPrinter printer(fout);
+        IR::IRPrinter printer(fout, true);
         printer.printout(generator.get_module());
         fout.close();
     }
     else
     {
-        IR::IRPrinter printer(std::cout);
+        IR::IRPrinter printer(std::cout, true);
         printer.printout(generator.get_module());
     }
 
