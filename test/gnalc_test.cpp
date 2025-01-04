@@ -12,8 +12,17 @@ using namespace std::filesystem;
 namespace sycfg
 {
 constexpr bool stop_on_error = true;
+
+// Remember to install `qemu` and `arm-none-eabi-gcc` if test backend.
+// See `docs/gnalc-test.md`.
 constexpr bool only_frontend = true;
 
+//  First update `gnalc-test-data` submodule
+//  ```shell
+//  git submodule init
+//  git submodule update
+//  ```
+//  After this your project structure looks like below.
 //
 //  gnalc -> test -> gnalc-test-data -> comp-test
 //  comp-test ->
@@ -33,6 +42,9 @@ constexpr bool only_frontend = true;
 
 const std::string irgen_path = "../irgen";
 const std::string asmgen_path = "../asmgen";
+
+const std::string gcc_arm_command = "arm-linux-gnueabi-gcc-14";
+const std::string qemu_arm_command = "LD_LIBRARY_PATH=/usr/arm-linux-gnueabi/lib qemu-arm";
 
 const std::string temp_dir = "./gnalc_test_temp/" + generate_unique_temp_dir();
 const std::string sylibc = "../../test/sylib/sylib.c";
@@ -93,8 +105,8 @@ int main() {
         auto sylibo = sycfg::temp_dir + "/sylib.o";
         sylib_to_link = sycfg::temp_dir + "/sylib.a";
 
-        std::string lib_command = format("gcc -c {} -o {} && ar rcs {} {}",
-            sycfg::sylibc, sylibo, sylib_to_link, sylibo);
+        std::string lib_command = format("{} -c {} -o {} && ar rcs {} {}",
+            sycfg::gcc_arm_command, sycfg::sylibc, sylibo, sylib_to_link, sylibo);
 
         println("Running '{}'.", lib_command);
         std::system(lib_command.c_str());
@@ -146,12 +158,12 @@ int main() {
 
                 command = format(
                     "{} 2>&1 < {} > {}"
-                    " && gcc {} {} -o {}"
-                    " && ./{}"
+                    " && {} {} {} -o {}"
+                    " && {} {}"
                     "; echo $? > {}",
                     sycfg::asmgen_path, sy.path().string(), outs,
-                    outs, sylib_to_link, outexec,
-                    outexec,
+                    sycfg::gcc_arm_command, outs, sylib_to_link, outexec,
+                    sycfg::qemu_arm_command, outexec,
                     output);
             }
 
