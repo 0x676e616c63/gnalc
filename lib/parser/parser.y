@@ -8,6 +8,7 @@
 extern std::shared_ptr<AST::CompUnit> node;
 using namespace AST;
 extern yy::parser::symbol_type yylex ();
+extern int yylineno;
 }
 
 %code requires {
@@ -174,7 +175,20 @@ Number: num_INT             { $$ = std::make_shared<IntLiteral>($1); }
       ;
 
 UnaryExp: PrimaryExp                    { $$ = $1; }
-        | Y_ID Y_LPAR Y_RPAR            { $$ = std::make_shared<CallExp>(std::make_shared<DeclRef>($1)); }
+        | Y_ID Y_LPAR Y_RPAR            {
+                                            if($1 == "starttime")
+                                            {
+                                                $$ = std::make_shared<CallExp>(std::make_shared<DeclRef>("_sysy_starttime"), std::make_shared<FuncRParam>(std::make_shared<IntLiteral>(yylineno)));
+                                            }
+                                            else if($1 == "stoptime")
+                                            {
+                                                $$ = std::make_shared<CallExp>(std::make_shared<DeclRef>("_sysy_stoptime"), std::make_shared<FuncRParam>(std::make_shared<IntLiteral>(yylineno)));
+                                            }
+                                            else
+                                            {
+                                                $$ = std::make_shared<CallExp>(std::make_shared<DeclRef>($1));
+                                            }
+                                        }
         | Y_ID Y_LPAR FuncRParams Y_RPAR { $$ = std::make_shared<CallExp>(std::make_shared<DeclRef>($1), $3); }
         | Y_ADD UnaryExp                { $$ = std::make_shared<UnaryOp>(UnOp::ADD, $2); }
         | Y_SUB UnaryExp                { $$ = std::make_shared<UnaryOp>(UnOp::SUB, $2); }
@@ -217,6 +231,11 @@ LOrExp: LAndExp                 { $$ = $1; }
       ;
 
 %%
+
+void setFileName(const char *name) {
+  strcpy(filename, name);
+  freopen(filename, "r", stdin);
+}
 
 void
 yy::parser::error (const std::string& msg) { 

@@ -110,6 +110,7 @@ public:
 };
 
 class WHILEBEntry : public HELPERInst {
+    std::vector<std::shared_ptr<Value>> conds;
     std::shared_ptr<Value> cond;
 public:
     explicit WHILEBEntry(std::shared_ptr<Value> cond_)

@@ -13,6 +13,7 @@
 %}
 
 %option noyywrap nounput noinput
+%option yylineno
 
 %%
 [0-9]+ { return yy::parser::make_num_INT((AST::int32)atoi(yytext)); }
