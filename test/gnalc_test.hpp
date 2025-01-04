@@ -8,7 +8,7 @@
 
 #include <ctime>
 
-#include "utils/exception.hpp"
+#include "../include/utils/exception.hpp"
 
 namespace Test
 {

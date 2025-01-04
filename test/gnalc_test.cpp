@@ -31,12 +31,15 @@ constexpr bool only_frontend = true;
 // Note that all the path is relative to the executing path
 // gnalc(project dir) -> cmake-build-debug(CLion's build dir) -> test -> gnalc_test(executable)
 
+const std::string gcc_arm_command = "arm-linux-gnueabi-gcc-14";
+const std::string qemu_arm_command = "LD_LIBRARY_PATH=/usr/arm-linux-gnueabi/lib qemu-arm";
+
 const std::string irgen_path = "../irgen";
 const std::string asmgen_path = "../asmgen";
 
 const std::string temp_dir = "./gnalc_test_temp/" + generate_unique_temp_dir();
-const std::string sylibc = "../../test/sylib/sylib.c";
-const std::string test_data = "../../test/gnalc-test-data/comp-test";
+const std::string sylibc = "../test/sylib/sylib.c";
+const std::string test_data = "../test/gnalc-test-data/comp-test";
 const std::string functional = test_data + "/functional";
 const std::string performance = test_data + "/performance";
 const std::string h_functional = test_data + "/h_functional";

@@ -44,8 +44,8 @@ int main(int argc, char **argv){
     la.cleanLiveInfo(generator.get_module());
     la.processModule(generator.get_module());
 
-    IR::IRPrinter printer(std::cout);
-    printer.printout(generator.get_module());
+    // IR::IRPrinter printer(std::cout);
+    // printer.printout(generator.get_module());
     // backend
     ArmStruct::Module *backEndModule = new ArmStruct::Module(generator.get_module());
     backEndModule->AllocRegister();
