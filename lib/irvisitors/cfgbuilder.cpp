@@ -35,14 +35,8 @@ namespace IR {
         auto ifelse = std::make_shared<BasicBlock>(nam.getIfelse());
         auto ifend = std::make_shared<BasicBlock>(nam.getIfend());
 
-        if (ifinst->getCond()->getVTrait() == ValueTrait::HELPER) {
-            const auto cond = std::dynamic_pointer_cast<CONDValue>(ifinst->getCond());
-            if (el) short_circuit_process(cond, ifthen, ifelse);
-            else short_circuit_process(cond, ifthen, ifend);
-        } else {
-            if (el) cur_blk->addInst(std::make_shared<BRInst>(ifinst->getCond(), ifthen, ifelse));
-            else cur_blk->addInst(std::make_shared<BRInst>(ifinst->getCond(), ifthen, ifend));
-        }
+        if (el) addCondBr(ifinst->getCond(), ifthen, ifelse);
+        else addCondBr(ifinst->getCond(), ifthen, ifend);
 
         cur_blk = ifthen;
         cur_func->addBlock(cur_blk);
@@ -76,7 +70,8 @@ namespace IR {
         for (auto& cond : whinst->getCondInsts()) {
             cur_blk->addInst(cond);
         }
-        cur_blk->addInst(std::make_shared<BRInst>(whinst->getCond(), whbody, whend));
+
+        addCondBr(whinst->getCond(), whbody, whend);
 
         cur_blk = whbody;
         cur_func->addBlock(cur_blk);
@@ -153,18 +148,44 @@ namespace IR {
         return insert_br;
     }
 
+    // 处理完整个的cond
     void CFGBuilder::short_circuit_process(const std::shared_ptr<CONDValue> &cond,
                                        const std::shared_ptr<BasicBlock> &true_blk,
                                        const std::shared_ptr<BasicBlock> &false_blk) {
         if (cond->getCondType() == CONDTY::AND) {
             const auto land = std::dynamic_pointer_cast<ANDValue>(cond);
             auto landlt = std::make_shared<BasicBlock>(nam.getLandlt()); //land lhs true
-            cur_blk->addInst(std::make_shared<BRInst>(land->getLHS(), landlt, false_blk));
-            // todo: move rhs calculate inst to landlt blk
+            addCondBr(land->getLHS(), landlt, false_blk);
             cur_blk = landlt;
             cur_func->addBlock(cur_blk);
-            cur_blk->addInst(std::make_shared<BRInst>(land->getRHS(), true_blk, false_blk));
+            for (const auto& rhsinst : land->getRHSInsts()) {
+                cur_blk->addInst(rhsinst);
+            }
+            addCondBr(land->getRHS(), true_blk, false_blk);
+        } else if (cond->getCondType() == CONDTY::OR) {
+            const auto lor = std::dynamic_pointer_cast<ORValue>(cond);
+            auto lorlf = std::make_shared<BasicBlock>(nam.getLorlf()); // lor lhs false
+            addCondBr(lor->getLHS(), true_blk, lorlf);
+            cur_blk = lorlf;
+            cur_func->addBlock(cur_blk);
+            for (const auto& rhsinst : lor->getRHSInsts()) {
+                cur_blk->addInst(rhsinst);
+            }
+            addCondBr(lor->getRHS(), true_blk, false_blk);
+        } else {
+            Err::unreachable("CFGBuilder::short_circuit_process: Invalid condition type.");
         }
     }
 
+    void CFGBuilder::addCondBr(const std::shared_ptr<Value> &cond,
+                                const std::shared_ptr<BasicBlock> &true_blk,
+                                const std::shared_ptr<BasicBlock> &false_blk) {
+        if (cond->getVTrait() == ValueTrait::CONDHELPER) {
+            const auto cond_value = std::dynamic_pointer_cast<CONDValue>(cond);
+            Err::gassert(cond_value != nullptr, "CFGBuilder::addCondBr: CONDValue cast failed.");
+            short_circuit_process(cond_value, true_blk, false_blk);
+        } else {
+            cur_blk->addInst(std::make_shared<BRInst>(cond, true_blk, false_blk));
+        }
+    }
 }

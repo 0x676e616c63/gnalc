@@ -6,9 +6,9 @@
 
 namespace IR {
     void LiveAnalyser::genDFSStack(const std::shared_ptr<BasicBlock>& bb) {
+        bb_stack.spush(bb);
         for (auto& nextbb : bb->getNextBB()) {
             if (!bb_stack.visited(nextbb)) {
-                bb_stack.spush(nextbb);
                 genDFSStack(nextbb);
             }
         }

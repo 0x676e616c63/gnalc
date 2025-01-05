@@ -200,7 +200,7 @@ std::string IRFormatter::formatCMPOP(FCMPOP cond) {
 }
 
 std::string IRFormatter::formatValue(Value& val) {
-    if (val.getVTrait() == ValueTrait::HELPER)
+    if (val.getVTrait() == ValueTrait::CONDHELPER)
     {
         std::string ret;
         auto& cond_value = dynamic_cast<CONDValue&>(val);

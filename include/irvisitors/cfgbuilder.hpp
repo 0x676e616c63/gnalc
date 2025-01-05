@@ -66,6 +66,10 @@ private:
     void short_circuit_process(const std::shared_ptr<CONDValue> &cond,
                            const std::shared_ptr<BasicBlock> &true_blk,
                            const std::shared_ptr<BasicBlock> &false_blk);
+    // 包含了短路cond和普通cond两种处理
+    void addCondBr(const std::shared_ptr<Value> &cond,
+                           const std::shared_ptr<BasicBlock> &true_blk,
+                           const std::shared_ptr<BasicBlock> &false_blk);
     void divider();
     void linker() const;
 public:

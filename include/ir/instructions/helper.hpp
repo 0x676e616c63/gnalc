@@ -55,7 +55,7 @@ public:
         std::shared_ptr<Value> rhs_,
         std::vector<std::shared_ptr<Instruction>> rhs_insts_)
     : Value("__COND", makeBType(IRBTYPE::I1),
-        ValueTrait::HELPER), cond_type(ty),
+        ValueTrait::CONDHELPER), cond_type(ty),
             lhs(std::move(lhs_)), rhs(std::move(rhs_)), rhs_insts(std::move(rhs_insts_)) {
             Err::gassert(is_cond_type(lhs) && is_cond_type(rhs));
     }
