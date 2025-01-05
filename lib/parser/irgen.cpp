@@ -666,14 +666,16 @@ void IRGenerator::visit(BinaryOp& node) {
     {
         node.getLHS()->accept(*this);
         auto lhs = curr_val;
+        lhs = type_cast(lhs, IR::IRBTYPE::I1);
+
         std::vector<std::shared_ptr<IR::Instruction>> rhs_insts;
         std::swap(rhs_insts, curr_insts);
+
         node.getRHS()->accept(*this);
         auto rhs = curr_val;
-        std::swap(rhs_insts, curr_insts);
+        rhs = type_cast(rhs, IR::IRBTYPE::I1); // rhs's TYPECAST should also in rhs_insts
 
-        lhs = type_cast(lhs, IR::IRBTYPE::I1);
-        rhs = type_cast(rhs, IR::IRBTYPE::I1);
+        std::swap(rhs_insts, curr_insts);
 
         bool is_constant = lhs->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL
         && rhs->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL

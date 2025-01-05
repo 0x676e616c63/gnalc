@@ -11,7 +11,6 @@
 
 namespace IR {
 
-// 通过Func中的insts划分基本块
 class NameNormalizer : public IRVisitor {
 private:
   size_t curr_idx{0};
