@@ -48,7 +48,7 @@ int main(int argc, char **argv){
     la.cleanLiveInfo(generator.get_module());
     la.processModule(generator.get_module());
 
-    IR::NameNormalizer name_normalizer(false);
+    IR::NameNormalizer name_normalizer(true);
     name_normalizer.normalize(generator.get_module());
 
     if (!output_file.empty())

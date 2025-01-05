@@ -107,6 +107,7 @@ class IRGenerator : public ASTVisitor {
 
         std::vector<val_t> flatten(const std::shared_ptr<IR::Type>& type) const;
 
+        bool isZeroIniter() const;
     private:
         val_t make_zero() const;
     };

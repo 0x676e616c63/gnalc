@@ -219,48 +219,51 @@ void IRGenerator::visit(VarDef& node) {
         if (node.isInited())
         {
             node.getInitVal()->accept(*this);
-            auto flatten_initializer = curr_initializer.flatten(irtype);
-            Err::gassert(flatten_initializer.size() == irtype->getBytes() / IR::getBytes(node_type), "Invalid initializer.");
-
-            auto toIRValue = [this](const Initializer::val_t& a) -> std::shared_ptr<IR::Value> {
-                if (a.index() == 0)
-                    return constant_pool.getConst(std::get<0>(a));
-                if (a.index() == 1)
-                    return constant_pool.getConst(std::get<1>(a));
-                Err::error("Invalid global initializer.");
-                return nullptr;
-            };
-
-            if (node.isArray())
+            if (!curr_initializer.isZeroIniter())
             {
-                auto curr_type = toArrayType(irtype);
-                size_t init_pos = 0;
-                std::function<void(const std::shared_ptr<IR::Type>& type, IR::GVIniter& base)> init_array;
-                init_array = [this, &toIRValue, &flatten_initializer, &init_pos, &init_array]
-                (const std::shared_ptr<IR::Type>& type, IR::GVIniter& base) {
-                    auto arrtype = toArrayType(type);
-                    Err::gassert(arrtype != nullptr);
-                    if (arrtype->getElmType()->getTrait() == IR::IRCTYPE::ARRAY)
-                    {
-                        for (size_t i = 0; i < arrtype->getArraySize(); ++i)
-                        {
-                            auto& next = base.addIniter(arrtype->getElmType());
-                            init_array(arrtype->getElmType(), next);
-                        }
-                    }
-                    else if (arrtype->getElmType()->getTrait() == IR::IRCTYPE::BASIC)
-                    {
-                        for (size_t i = 0; i < arrtype->getArraySize(); ++i)
-                            base.addIniter(arrtype->getElmType(), toIRValue(flatten_initializer[init_pos++]));
-                    }
-                    else Err::unreachable();
+                auto flatten_initializer = curr_initializer.flatten(irtype);
+                Err::gassert(flatten_initializer.size() == irtype->getBytes() / IR::getBytes(node_type), "Invalid initializer.");
+
+                auto toIRValue = [this](const Initializer::val_t& a) -> std::shared_ptr<IR::Value> {
+                    if (a.index() == 0)
+                        return constant_pool.getConst(std::get<0>(a));
+                    if (a.index() == 1)
+                        return constant_pool.getConst(std::get<1>(a));
+                    Err::error("Invalid global initializer.");
+                    return nullptr;
                 };
-                init_array(irtype, gviniter);
-                gviniter.normalizeZero();
-            }
-            else
-            {
-                gviniter = IR::GVIniter(irtype, toIRValue(flatten_initializer[0]));
+
+                if (node.isArray())
+                {
+                    auto curr_type = toArrayType(irtype);
+                    size_t init_pos = 0;
+                    std::function<void(const std::shared_ptr<IR::Type>& type, IR::GVIniter& base)> init_array;
+                    init_array = [this, &toIRValue, &flatten_initializer, &init_pos, &init_array]
+                    (const std::shared_ptr<IR::Type>& type, IR::GVIniter& base) {
+                        auto arrtype = toArrayType(type);
+                        Err::gassert(arrtype != nullptr);
+                        if (arrtype->getElmType()->getTrait() == IR::IRCTYPE::ARRAY)
+                        {
+                            for (size_t i = 0; i < arrtype->getArraySize(); ++i)
+                            {
+                                auto& next = base.addIniter(arrtype->getElmType());
+                                init_array(arrtype->getElmType(), next);
+                            }
+                        }
+                        else if (arrtype->getElmType()->getTrait() == IR::IRCTYPE::BASIC)
+                        {
+                            for (size_t i = 0; i < arrtype->getArraySize(); ++i)
+                                base.addIniter(arrtype->getElmType(), toIRValue(flatten_initializer[init_pos++]));
+                        }
+                        else Err::unreachable();
+                    };
+                    init_array(irtype, gviniter);
+                    gviniter.normalizeZero();
+                }
+                else
+                {
+                    gviniter = IR::GVIniter(irtype, toIRValue(flatten_initializer[0]));
+                }
             }
         }
 
@@ -788,8 +791,8 @@ void IRGenerator::visit(BinaryOp& node) {
             "Invalid arithmetic operations");
         IR::OP op;
 
-// @formatter:off
 // clang-format off
+// @formatter:off
 #define MAKE_OP(biop, iop, fop, cppop) \
         case biop: \
             if (oprtype->getInner() == IR::IRBTYPE::I32) \
@@ -811,8 +814,8 @@ void IRGenerator::visit(BinaryOp& node) {
                 op = fop; \
             } \
         break; \
-// clang-format on
 // @formatter:on
+// clang-format on
 
         switch (node.getOp())
         {
@@ -855,8 +858,8 @@ void IRGenerator::visit(BinaryOp& node) {
         {
             IR::ICMPOP icmpop;
 
-// @formatter:off
 // clang-format off
+// @formatter:off
 #define MAKE_OP(biop, iop, cppop) \
         case biop: \
             if (is_constant) \
@@ -866,8 +869,8 @@ void IRGenerator::visit(BinaryOp& node) {
             } \
             icmpop = iop; \
         break; \
-// clang-format on
 // @formatter:on
+// clang-format on
             switch (node.getOp())
             {
                 MAKE_OP(BiOp::LESSEQ, IR::ICMPOP::sle, <=)
@@ -887,8 +890,8 @@ void IRGenerator::visit(BinaryOp& node) {
         else if (oprtype->getInner() == IR::IRBTYPE::FLOAT)
         {
             IR::FCMPOP fcmpop;
-// @formatter:off
 // clang-format off
+// @formatter:off
 #define MAKE_OP(biop, fop, cppop) \
         case biop: \
             if (is_constant) \
@@ -1083,7 +1086,7 @@ void IRGenerator::visit(ReturnStmt& node) {
 
 // I32 <-> FLOAT
 // I32 <-> I1
-// FLOAT -> I1
+// FLOAT <-> I1
 std::shared_ptr<IR::Value> IRGenerator::type_cast(std::shared_ptr<IR::Value> val, IR::IRBTYPE dest) {
     const std::string bad_cast_err = "Cannot cast type from '" + val->getType()->toString() +
         "' to '" + IR::makeBType(dest)->toString() + "'.";
@@ -1142,7 +1145,18 @@ std::shared_ptr<IR::Value> IRGenerator::type_cast(std::shared_ptr<IR::Value> val
         curr_insts.emplace_back(conv);
         return conv;
     }
+    else if (src == IR::IRBTYPE::I1 && dest == IR::IRBTYPE::FLOAT)
+    {
+        if (auto ci1 = std::dynamic_pointer_cast<IR::ConstantI1>(val))
+            return constant_pool.getConst(static_cast<float>(ci1->getVal()));
 
+        Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
+        auto conv2i32 = std::make_shared<IR::ZEXTInst>(irval_temp_name, val, IR::IRBTYPE::I32);
+        auto conv2f32 = std::make_shared<IR::SITOFPInst>(irval_temp_name, conv2i32);
+        curr_insts.emplace_back(conv2i32);
+        curr_insts.emplace_back(conv2f32);
+        return conv2f32;
+    }
     Err::gassert(src == dest, bad_cast_err);
     return val;
 }
@@ -1315,5 +1329,20 @@ IRGenerator::Initializer::val_t IRGenerator::Initializer::make_zero() const {
         return {0};
     else
         return {0.0f};
+}
+
+bool IRGenerator::Initializer::isZeroIniter() const {
+    if (empty())
+        return true;
+    if (isVal())
+        return std::get<val_t>(initializer) == make_zero();
+    if (isList())
+    {
+        const auto& list = std::get<list_t>(initializer);
+        return list.empty()
+        || std::all_of(list.cbegin(), list.cend(),[](auto&& p) {return p.isZeroIniter();});
+    }
+    Err::unreachable();
+    return false;
 }
 }
