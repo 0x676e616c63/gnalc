@@ -59,7 +59,7 @@ private:
 
     bool adder(std::vector<std::shared_ptr<IR::Instruction> >::const_iterator &it
                , const std::vector<std::shared_ptr<IR::Instruction> >::const_iterator &end
-               , bool allow_break); // 将inst加进cur_blk，返回值为是否已插入br
+               , bool allow_break); // 将inst加进cur_blk，返回值为是否已插入终结语句ret, br
     void newIf(const std::shared_ptr<IFInst>& ifinst);
     void newWh(const std::shared_ptr<WHILEInst>& whinst);
 

@@ -3,6 +3,9 @@
 **/
 
 #include "../../include/irvisitors/cfgbuilder.hpp"
+
+#include <ir/utilities.hpp>
+
 #include "../../include/utils/logger.hpp"
 
 namespace IR {
@@ -110,14 +113,56 @@ namespace IR {
                     break;
             }
         }
+
+        // link完了之后，遍历基本块，查找空块和不可达的块并删除
+        for (auto it = cur_func->getBlocks().begin(); it != cur_func->getBlocks().end(); ) {
+            // 删除不可达块
+            if ((*it)->getPreBB().empty() && it != cur_func->getBlocks().begin()) {
+                for (auto nextbb: (*it)->getNextBB()) {
+                    WeakListDel(nextbb->getRPreBB(), *it);
+                }
+                it = cur_func->getBlocks().erase(it);
+                continue;
+            }
+            // 删除空块
+            if ((*it)->getInsts().empty()) {
+                // 遍历user去替换为他的prebb中的br
+                // 非结尾块的情况，prebb的br替换为惟一nextbb
+                if ((*it)->getNextBB().size() == 1) {
+                    auto nxt = (*it)->getNextBB().front();
+                    for (auto prebb : (*it)->getPreBB()) {
+                        if (prebb->getInsts().back()->getOpcode() == OP::BR) {
+                            auto brinst = std::dynamic_pointer_cast<BRInst>(prebb->getInsts().back());
+                            Err::gassert(brinst != nullptr, "CFGBuilder::linker(): can't cast BRInst");
+                            brinst->replaceUse(*it, nxt); // 改 br
+                        }
+                        WeakListReplace(prebb->getRNextBB(), *it, nxt); //改nextbb
+                        WeakListReplace(nxt->getRPreBB(), *it, prebb); // 改prebb
+                    }
+                    it = cur_func->getBlocks().erase(it);
+                } else if ((*it)->getNextBB().size() == 0) {
+                    // 结尾块
+                    if (toBType(toFunctionType(cur_func->getType())->getRet())->getInner() == IRBTYPE::VOID) {
+                        (*it)->addInst(std::make_shared<RETInst>());
+                    } else {
+                        Err::unreachable("CFGBuilder::linker(): non void func has empty reachable tail block.");
+                    }
+                    ++it;
+                } else {
+                    Err::unreachable("CFGBuilder::linker(): empty block has multiple next block.");
+                }
+                continue;
+            }
+            ++it;
+        }
     }
 
     bool CFGBuilder::adder(std::vector<std::shared_ptr<IR::Instruction> >::const_iterator &it
                            , const std::vector<std::shared_ptr<IR::Instruction> >::const_iterator &end
                            , const bool allow_break)
     {
-        bool insert_br = false;
-        for ( ; it!=end && !insert_br; ++it) {
+        bool inserted_terminator = false;
+        for ( ; it!=end && !inserted_terminator; ++it) {
             if ((*it)->getOpcode() == OP::HELPER) {
                 switch(std::shared_ptr<HELPERInst> helper = std::dynamic_pointer_cast<HELPERInst>(*it); helper->getHlpType()) {
                     case HELPERTY::IF:
@@ -130,22 +175,25 @@ namespace IR {
                         Err::gassert(allow_break, "CFGBuilder: break in invalid block.");
                         Err::gassert(!_while_end_for_break.empty(), "CFGBuilder: stack while_end_for_break is empty!");
                         cur_blk->addInst(std::make_shared<BRInst>(_while_end_for_break.top()));
-                        insert_br = true;
+                        inserted_terminator = true;
                         break;
                     case HELPERTY::CONTINUE:
                         Err::gassert(allow_break, "CFGBuilder: continue in invalid block.");
                         Err::gassert(!_while_cond_for_continue.empty(), "CFGBuilder: stack while_cond_for_continue is empty!");
                         cur_blk->addInst(std::make_shared<BRInst>(_while_cond_for_continue.top()));
-                        insert_br = true;
+                        inserted_terminator = true;
                         break;
                     default:
                         Err::unreachable("CFGBuilder::adder: Invalid HELPERInst type");
                 }
             } else {
                 cur_blk->addInst(*it);
+                if ((*it)->getOpcode() == OP::RET) {
+                    inserted_terminator = true;
+                }
             }
         }
-        return insert_br;
+        return inserted_terminator;
     }
 
     // 处理完整个的cond
