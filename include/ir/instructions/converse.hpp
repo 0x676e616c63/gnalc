@@ -47,6 +47,22 @@ public:
     void accept(IRVisitor& visitor) override;
 };
 
+// <result> = zext <ty> <value> to <ty2>
+class ZEXTInst : public Instruction {
+private:
+    IRBTYPE dest_type;
+public:
+    ZEXTInst(NameRef name, std::shared_ptr<Value> origin_val, IRBTYPE dest_type);
+
+    std::shared_ptr<Value> getOVal() const;
+    IRBTYPE getOType() const; // ORIGINAL TYPE I1
+    IRBTYPE getTType() const;
+    std::shared_ptr<Type> getOTypePtr() const;
+    std::shared_ptr<Type> getTTypePtr() const;
+
+    void accept(IRVisitor& visitor) override;
+};
+
 }
 
 #endif

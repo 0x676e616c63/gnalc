@@ -43,6 +43,7 @@ public:
     virtual void visit(CALLInst& node) { Err::not_implemented("IRVisitor::visit(CALLInst&)"); }
     virtual void visit(FPTOSIInst& node) { Err::not_implemented("IRVisitor::visit(FPTOSIInst&)"); }
     virtual void visit(SITOFPInst& node) { Err::not_implemented("IRVisitor::visit(SITOFPInst&)"); }
+    virtual void visit(ZEXTInst& node) { Err::not_implemented("IRVisitor::visit(ZEXTInst&)"); }
     virtual void visit(IFInst& node) { Err::not_implemented("IRVisitor::visit(IFInst&)"); }
     virtual void visit(WHILEInst& node) { Err::not_implemented("IRVisitor::visit(WHILEInst&)"); }
     virtual void visit(BREAKInst& node) { Err::not_implemented("IRVisitor::visit(BREAKInst&)"); }

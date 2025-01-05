@@ -139,6 +139,8 @@ std::string IRFormatter::formatOp(OP op) {
         return "fptosi";
     case OP::SITOFP:
         return "sitofp";
+    case OP::ZEXT:
+        return "zext";
     case OP::ALLOCA:
         return "alloca";
     case OP::LOAD:
@@ -341,6 +343,8 @@ std::string IRFormatter::formatInst(Instruction& inst) {
         return IRFormatter::fFPTOSIInst(dynamic_cast<FPTOSIInst&>(inst));
     case OP::SITOFP:
         return IRFormatter::fSITOFPInst(dynamic_cast<SITOFPInst&>(inst));
+    case OP::ZEXT:
+        return IRFormatter::fZEXTInst(dynamic_cast<ZEXTInst&>(inst));
     case OP::ALLOCA:
         return IRFormatter::fALLOCAInst(dynamic_cast<ALLOCAInst&>(inst));
     case OP::LOAD:
@@ -486,6 +490,18 @@ std::string IRFormatter::fSITOFPInst(SITOFPInst& inst) {
     ret += inst.getOVal()->getName();
     ret += " to ";
     ret += inst.getTTypePtr()->toString();
+    return ret;
+}
+
+std::string IRFormatter::fZEXTInst(ZEXTInst& inst) {
+    std::string ret;
+    ret += inst.getName();
+    ret += " = ";
+    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
+    ret += inst.getOTypePtr()->toString() + " ";
+    ret += inst.getOVal()->getName();
+    ret += " to ";
+    ret += inst.getType()->toString();
     return ret;
 }
 

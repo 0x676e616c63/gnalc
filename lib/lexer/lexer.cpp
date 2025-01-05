@@ -1,6 +1,6 @@
-#line 2 "./lib/lexer/lexer.cpp"
+#line 1 "./lib/lexer/lexer.cpp"
 
-#line 4 "./lib/lexer/lexer.cpp"
+#line 3 "./lib/lexer/lexer.cpp"
 
 #define  YY_INT_ALIGNED short int
 
@@ -386,7 +386,7 @@ struct yy_trans_info
 static const flex_int16_t yy_accept[109] =
     {   0,
         0,    0,   46,   44,   41,   41,   27,   30,   44,   33,
-       34,   20,   18,   39,   19,   44,   21,   44,    1,   40,
+       34,   20,   18,   39,   19,   44,   21,    1,    1,   40,
        23,   32,   25,   17,   37,   38,   17,   17,   17,   17,
        17,   17,   17,   17,   35,   44,   36,   26,   28,    4,
         0,   42,    4,    2,    0,    0,    0,    1,   22,   31,
@@ -571,9 +571,9 @@ char *yytext;
 #include <cstdlib> // just for atoi, atof, strtol, strtof
 #define YY_DECL yy::parser::symbol_type yylex ()
 
-#line 575 "./lib/lexer/lexer.cpp"
+#line 574 "./lib/lexer/lexer.cpp"
 #define YY_NO_INPUT 1
-#line 577 "./lib/lexer/lexer.cpp"
+#line 576 "./lib/lexer/lexer.cpp"
 
 #define INITIAL 0
 
@@ -790,7 +790,7 @@ YY_DECL
 	{
 #line 18 "./lib/lexer/lexer.l"
 
-#line 794 "./lib/lexer/lexer.cpp"
+#line 793 "./lib/lexer/lexer.cpp"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -1085,7 +1085,7 @@ YY_RULE_SETUP
 #line 69 "./lib/lexer/lexer.l"
 ECHO;
 	YY_BREAK
-#line 1089 "./lib/lexer/lexer.cpp"
+#line 1088 "./lib/lexer/lexer.cpp"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 

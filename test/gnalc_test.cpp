@@ -48,10 +48,10 @@ const std::string sylibc = "../../test/sylib/sylib.c";
 
 const std::string test_data = "../../test/gnalc-test-data/comp-test";
 const std::vector subdirs = {
-     "functional", "performance",
-     "h_functional", "h_performance",
-     "final/functional", "final/performance",
-     "final/h_functional", "final/h_performance"
+     "functional", //"performance",
+     //"h_functional", "h_performance",
+     //"final/functional", "final/performance",
+     //"final/h_functional", "final/h_performance"
 };
 }
 

@@ -85,6 +85,7 @@ private:
     static std::string fCALLInst(CALLInst& inst);
     static std::string fFPTOSIInst(FPTOSIInst& inst);
     static std::string fSITOFPInst(SITOFPInst& inst);
+    static std::string fZEXTInst(ZEXTInst& inst);
     static std::string fALLOCAInst(ALLOCAInst& inst);
     static std::string fLOADInst(LOADInst& inst);
     static std::string fSTOREInst(STOREInst& inst);
