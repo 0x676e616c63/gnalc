@@ -1,6 +1,6 @@
-#line 2 "./lib/lexer/lexer.cpp"
+#line 1 "./lib/lexer/lexer.cpp"
 
-#line 4 "./lib/lexer/lexer.cpp"
+#line 3 "./lib/lexer/lexer.cpp"
 
 #define  YY_INT_ALIGNED short int
 
@@ -571,9 +571,9 @@ char *yytext;
 #include <cstdlib> // just for atoi, atof, strtol, strtof
 #define YY_DECL yy::parser::symbol_type yylex ()
 
-#line 575 "./lib/lexer/lexer.cpp"
+#line 574 "./lib/lexer/lexer.cpp"
 #define YY_NO_INPUT 1
-#line 577 "./lib/lexer/lexer.cpp"
+#line 576 "./lib/lexer/lexer.cpp"
 
 #define INITIAL 0
 
@@ -790,7 +790,7 @@ YY_DECL
 	{
 #line 18 "./lib/lexer/lexer.l"
 
-#line 794 "./lib/lexer/lexer.cpp"
+#line 793 "./lib/lexer/lexer.cpp"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -1085,7 +1085,7 @@ YY_RULE_SETUP
 #line 69 "./lib/lexer/lexer.l"
 ECHO;
 	YY_BREAK
-#line 1089 "./lib/lexer/lexer.cpp"
+#line 1088 "./lib/lexer/lexer.cpp"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 

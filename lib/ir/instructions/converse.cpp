@@ -61,7 +61,37 @@ namespace IR {
         return makeBType(IRBTYPE::FLOAT);
     }
 
+    ZEXTInst::ZEXTInst(NameRef name, std::shared_ptr<Value> origin_val, IRBTYPE dest_type_)
+        : Instruction(OP::ZEXT, name, makeBType(dest_type_)), dest_type(dest_type_) {
+        addOperand(origin_val);
+    }
+
+    std::shared_ptr<Value> ZEXTInst::getOVal() const
+    {
+        return (*(getOperands().begin()))->getValue();
+    }
+
+    IRBTYPE ZEXTInst::getOType() const
+    {
+        return toBType(getOVal()->getType())->getInner();
+    }
+
+    IRBTYPE ZEXTInst::getTType() const
+    {
+        return dest_type;
+    }
+
+    std::shared_ptr<Type> ZEXTInst::getOTypePtr() const {
+        return getOVal()->getType();
+    }
+
+    std::shared_ptr<Type> ZEXTInst::getTTypePtr() const {
+        return makeBType(dest_type);
+    }
+
     void SITOFPInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
     void FPTOSIInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
+
+    void ZEXTInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 }
