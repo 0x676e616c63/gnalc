@@ -40,44 +40,46 @@ enum class CONDTY {
 };
 
 class CONDValue : public Value {
-private:
+protected:
     CONDTY cond_type;
+    std::shared_ptr<Value> lhs;
+    std::shared_ptr<Value> rhs;
+
+    // Note that only rhs_insts are store in the current CONDValue,
+    // and the lhs_insts are in the outer scope
+    // ( namely CONDValue's rhs_insts, outer WHILEInst's cond_insts or function body before IFInst)
+    std::vector<std::shared_ptr<Instruction>> rhs_insts;
 public:
-    explicit CONDValue(CONDTY ty)
-    : Value("__COND", makeBType(IRBTYPE::I1), ValueTrait::HELPER), cond_type(ty) {}
+    explicit CONDValue(CONDTY ty,
+        std::shared_ptr<Value> lhs_,
+        std::shared_ptr<Value> rhs_,
+        std::vector<std::shared_ptr<Instruction>> rhs_insts_)
+    : Value("__COND", makeBType(IRBTYPE::I1),
+        ValueTrait::HELPER), cond_type(ty),
+            lhs(std::move(lhs_)), rhs(std::move(rhs_)), rhs_insts(std::move(rhs_insts_)) {
+            Err::gassert(is_cond_type(lhs) && is_cond_type(rhs));
+    }
+
+    const std::shared_ptr<Value>& getLHS() const { return lhs; }
+    const std::shared_ptr<Value>& getRHS() const { return rhs; }
+    const std::vector<std::shared_ptr<Instruction>>& getRHSInsts() const { return rhs_insts; }
     CONDTY getCondType() const { return cond_type; }
 };
 
 class ANDValue : public CONDValue {
-    std::shared_ptr<Value> lhs;
-    std::shared_ptr<Value> rhs;
-
 public:
-    explicit ANDValue(std::shared_ptr<Value> lhs_, std::shared_ptr<Value> rhs_)
-        : CONDValue(CONDTY::AND), lhs(std::move(lhs_)), rhs(std::move(rhs_)) {
-        Err::gassert(is_cond_type(lhs) && is_cond_type(rhs));
-        // Warning: don't let its name begin with '%', or it will affect the name changing in irgen.
-        setName("  ; " + lhs->getName() + " && " + rhs->getName());
-    }
-
-    const std::shared_ptr<Value>& getLHS() const { return lhs; }
-    const std::shared_ptr<Value>& getRHS() const { return rhs; }
+    ANDValue(std::shared_ptr<Value> lhs_,
+        std::shared_ptr<Value> rhs_,
+        std::vector<std::shared_ptr<Instruction>> rhs_insts_)
+        : CONDValue(CONDTY::AND, std::move(lhs_), std::move(rhs_), std::move(rhs_insts_)) {}
 };
 
 class ORValue : public CONDValue {
-    std::shared_ptr<Value> lhs;
-    std::shared_ptr<Value> rhs;
-
 public:
-    explicit ORValue(std::shared_ptr<Value> lhs_, std::shared_ptr<Value> rhs_)
-        : CONDValue(CONDTY::OR), lhs(std::move(lhs_)), rhs(std::move(rhs_)) {
-        Err::gassert(is_cond_type(lhs) && is_cond_type(rhs));
-        // Warning: don't let its name begin with '%', or it will affect the name changing in irgen.
-        setName("  ; " + lhs->getName() + " || " + rhs->getName());
-    }
-
-    const std::shared_ptr<Value>& getLHS() const { return lhs; }
-    const std::shared_ptr<Value>& getRHS() const { return rhs; }
+    ORValue(std::shared_ptr<Value> lhs_,
+        std::shared_ptr<Value> rhs_,
+        std::vector<std::shared_ptr<Instruction>> rhs_insts_)
+    : CONDValue(CONDTY::OR, std::move(lhs_), std::move(rhs_), std::move(rhs_insts_)) {}
 };
 
 // IF Block Entry

@@ -5,6 +5,7 @@
 #include "../include/utils/exception.hpp"
 #include "../include/irvisitors/irprinter.hpp"
 #include "../include/irvisitors/cfgbuilder.hpp"
+#include "../include/irvisitors/namenormalizer.hpp"
 #include "../include/iropt/live_analysis.hpp"
 
 std::shared_ptr<CompUnit> node = nullptr;
@@ -47,16 +48,19 @@ int main(int argc, char **argv){
     la.cleanLiveInfo(generator.get_module());
     la.processModule(generator.get_module());
 
+    IR::NameNormalizer name_normalizer(false);
+    name_normalizer.normalize(generator.get_module());
+
     if (!output_file.empty())
     {
         std::ofstream fout(output_file);
-        IR::IRPrinter printer(fout, true);
+        IR::IRPrinter printer(fout, false);
         printer.printout(generator.get_module());
         fout.close();
     }
     else
     {
-        IR::IRPrinter printer(std::cout, true);
+        IR::IRPrinter printer(std::cout, false);
         printer.printout(generator.get_module());
     }
 

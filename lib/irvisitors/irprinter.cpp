@@ -4,11 +4,9 @@
 
 namespace IR
 {
-LIRPrinter::LIRPrinter(std::ostream& out, bool _liveinfo): outStream(out) , printLiveInfo(_liveinfo){
-}
+LIRPrinter::LIRPrinter(std::ostream& out, bool _liveinfo): outStream(out) , printLiveInfo(_liveinfo) { }
 
-LIRPrinter::~LIRPrinter() {
-}
+LIRPrinter::~LIRPrinter() { }
 
 void LIRPrinter::printout(Module& module) {
     Logger::logInfo("LIRPrinter: Printing Module \"" + module.getName() + "\"");
@@ -202,6 +200,32 @@ std::string IRFormatter::formatCMPOP(FCMPOP cond) {
 }
 
 std::string IRFormatter::formatValue(Value& val) {
+    if (val.getVTrait() == ValueTrait::HELPER)
+    {
+        std::string ret;
+        auto& cond_value = dynamic_cast<CONDValue&>(val);
+        if (cond_value.getCondType() == CONDTY::AND)
+        {
+            ret += "; and rhs insts\n";
+            for (const auto& rinst : cond_value.getRHSInsts())
+                ret += "  " + formatInst(*rinst) + "\n";
+            ret += "  ; and value";
+            ret += "  " + formatValue(*cond_value.getRHS()) + " && " + formatValue(*cond_value.getLHS());
+            return ret;
+        }
+        else if (cond_value.getCondType() == CONDTY::OR)
+        {
+            ret += "; or rhs insts\n";
+            for (const auto& rinst : cond_value.getRHSInsts())
+                ret += "  " + formatInst(*rinst) + "\n";
+            ret += "  ; or value";
+            ret += "  " + formatValue(*cond_value.getRHS()) + " || " + formatValue(*cond_value.getLHS());
+            return ret;
+        }
+        else
+            return "  ; unsupported cond value";
+    }
+
     return val.getType()->toString() + " " + val.getName();
 }
 
