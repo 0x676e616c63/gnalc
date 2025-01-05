@@ -61,7 +61,6 @@ class IRGenerator : public ASTVisitor {
     std::vector<std::shared_ptr<IR::Instruction>> curr_insts;
     std::shared_ptr<IR::Function> curr_func;
     Sym::SymbolTable symbol_table;
-    size_t next_temp_id{1};
     bool is_making_lval{false}; // TODO: more sensible
 
     struct Initializer {
@@ -289,7 +288,7 @@ public:
 
     IR::Module& get_module() { return module; }
 private:
-    std::string get_temp_name();
+    static std::string get_irval_name();
 
     // Throw exception if failed
     std::shared_ptr<IR::Value> type_cast(std::shared_ptr<IR::Value> val, IR::IRBTYPE dest);
