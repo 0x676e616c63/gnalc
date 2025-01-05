@@ -10,12 +10,14 @@
 
 #include "../ir/visitor.hpp"
 #include <stack>
+#include <ir/constantpool.hpp>
 
 namespace IR {
 
 // 通过Func中的insts划分基本块
 class CFGBuilder {
 private:
+    ConstantPool _const_pool; // just for linker gen return 0
     struct _idx {
     private:
         static std::string idxtos(const unsigned int idx) {
@@ -71,7 +73,7 @@ private:
                            const std::shared_ptr<BasicBlock> &true_blk,
                            const std::shared_ptr<BasicBlock> &false_blk);
     void divider();
-    void linker() const;
+    void linker();
 public:
     void build(const Module& module);
 };

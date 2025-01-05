@@ -38,6 +38,8 @@ namespace IR {
         auto ifelse = std::make_shared<BasicBlock>(nam.getIfelse());
         auto ifend = std::make_shared<BasicBlock>(nam.getIfend());
 
+        // if (!el) nam.ifelseidx--; // 为避免出错，直接不回溯了
+
         if (el) addCondBr(ifinst->getCond(), ifthen, ifelse);
         else addCondBr(ifinst->getCond(), ifthen, ifend);
 
@@ -51,8 +53,6 @@ namespace IR {
             cur_func->addBlock(cur_blk);
             it = ifinst->getElseInsts().begin();
             if (!adder(it, ifinst->getElseInsts().end(), true)) cur_blk->addInst(std::make_shared<BRInst>(ifend));
-        } else {
-            nam.ifelseidx--;
         }
 
         cur_blk = ifend;
@@ -89,7 +89,7 @@ namespace IR {
     }
 
     // link basic blocks by prevBB and nextBB
-    void CFGBuilder::linker() const {
+    void CFGBuilder::linker() {
         for (auto blk_it = cur_func->getBlocks().begin(); blk_it != cur_func->getBlocks().end(); ++blk_it) {
             if ((*blk_it)->getInsts().empty()) continue;
             switch (std::shared_ptr<Instruction> end_inst = (*blk_it)->getInsts().back(); end_inst->getOpcode()) {
@@ -144,8 +144,14 @@ namespace IR {
                     // 结尾块
                     if (toBType(toFunctionType(cur_func->getType())->getRet())->getInner() == IRBTYPE::VOID) {
                         (*it)->addInst(std::make_shared<RETInst>());
+                    } else if (toBType(toFunctionType(cur_func->getType())->getRet())->getInner() == IRBTYPE::I32) {
+                        Logger::logDebug("WARNING: CFGBuilder::linker(): non void func has empty reachable tail block.");
+                        (*it)->addInst(std::make_shared<RETInst>(_const_pool.getConst(0)));
+                    } else if (toBType(toFunctionType(cur_func->getType())->getRet())->getInner() == IRBTYPE::FLOAT) {
+                        Logger::logDebug("WARNING: CFGBuilder::linker(): non void func has empty reachable tail block.");
+                        (*it)->addInst(std::make_shared<RETInst>(_const_pool.getConst(static_cast<float>(0))));
                     } else {
-                        Err::unreachable("CFGBuilder::linker(): non void func has empty reachable tail block.");
+                        Err::unreachable("CFGBuilder::linker(): invalid function type.");
                     }
                     ++it;
                 } else {
