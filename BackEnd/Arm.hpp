@@ -124,23 +124,11 @@ namespace ArmTools{
         Addition_Oper_End,
     };
     
-    ///@warning ISO C++ forbids forward references to 'enum' types
-    // enum CoreRegisterName;
-    // std::map<CoreRegisterName, std::string> CoreRegisterMap;
-    // enum ExtensionRegisterName;
-    // std::map<ExtensionRegisterName, std::string> ExtensionRegisterMap;
-    // enum OpCode;
-    // std::map<OpCode, std::string> OpCodeMap;
-
-    // std::map<IR::OP, OperCode>Mid2BackOpC;
-    
-    /// @note 模式匹配仿函数
-
     struct MovtwMatch{
         ArmStruct::BB& BasicBlock;
+        void operator()(std::string, unsigned long long &temp_VirReg); // GlobalVal
         void operator()(float, unsigned long long &temp_virReg) ;
         void operator()(int, unsigned long long &temo_virReg) ;  
-        void operator()();
         bool isImmCanBeEncodedInText(unsigned long long imme);
         bool isImmCanBeEncodedInText(float imme);
     };
@@ -194,16 +182,19 @@ namespace ArmTools{
 
     struct LoadMatch{
         ArmStruct::BB& BasicBlock;
-        void operator()(InstArgs) const;
+        MovtwMatch GlobalMatch;
+        void operator()(InstArgs);
     };
 
     struct StoreMatch{
         ArmStruct::BB& BasicBlock;
-        void operator()(InstArgs) const;
+        MovtwMatch GlobalMatch;
+        void operator()(InstArgs);
     };
     
     struct GepMatch{
         ArmStruct::BB& BasicBlock;
+        MovtwMatch GlobalMatch;
         void operator()(InstArgs);
         void StaticBaseConstOffset(ArmStruct::MMptr*, IR::GEPInst&);
         void StaticBaseVarOffset(ArmStruct::MMptr*, IR::GEPInst&);

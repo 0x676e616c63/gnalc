@@ -68,16 +68,17 @@ bool Operand::operator!=(Operand& oper){
 std::string Operand::toString(){
     ///@bug 记得清空
     str = "";
-    if(this->color.second == -1){ // debug
-        str += CoreRegisterMap[(CoreRegisterName)this->color.second] + "(";
-        str += std::to_string(this->VirReg) + ")";
-    }
-    else if(this->ValType == OperandType::INT){
+    
+    if(this->ValType == OperandType::INT){
         str += CoreRegisterMap[(CoreRegisterName)this->color.second];
     }
     else if(this->ValType == OperandType::FLOAT){
         str += ExtensionRegisterMap[(ExtensionRegisterName)this->color.second];
     }
+    
+    ///debug
+    // str += "(" + std::to_string(this->VirReg) + ")";
+
     return str;
 }
 
@@ -96,18 +97,31 @@ MMptr::MMptr(FrameObj* space, OperandType type, unsigned long long idx): Imm(typ
 
 MMptr::MMptr(FrameObj* loc, OperandType type, unsigned long long idx, unsigned int off)
     : Imm(type), space(loc), VirReg(idx), offset(off){
-    space->getFather()->insertMMptr(VirReg, this);  // 入表
+    if(loc) space->getFather()->insertMMptr(VirReg, this);  // 入表
+    
 };
+
+MMptr::MMptr(Operand* base, OperandType type, unsigned long long off)
+    : Imm(type), baseVirReg(base), VirReg(-1), offset(off){
+    space = nullptr;
+}
 
 std::string MMptr::toString() {
     data = "";
     data += "[";
     
-    unsigned int SubFrameOffset = this->getFrameObj()->getFather()->getOffset();
-    unsigned int ObjOffset = this->getFrameObj()->getOffset();
-    unsigned int PtrOffset = this->getOffset();
+    unsigned int AbusoluteOffset = 0;
 
-    unsigned int AbusoluteOffset = SubFrameOffset + ObjOffset + PtrOffset;
+    if(this->getFrameObj()){
+        unsigned int SubFrameOffset = this->getFrameObj()->getFather()->getOffset();
+        unsigned int ObjOffset = this->getFrameObj()->getOffset();
+ 
+        AbusoluteOffset += SubFrameOffset + ObjOffset;
+    }
+    unsigned int PtrOffset = this->getOffset();
+    
+    AbusoluteOffset += PtrOffset;
+    
     if(baseVirReg == nullptr){
         data += "sp, #";
         data += std::to_string(AbusoluteOffset); // 这里不考虑imm过大的情况
@@ -123,7 +137,7 @@ std::string MMptr::toString() {
 
 
 Global::Global(IR::GlobalVariable& midEnd_GlobalVar): Imm(OperandType::LABEL){
-    data = midEnd_GlobalVar.getName();
+    data = midEnd_GlobalVar.getName().substr(1);
 
     parse(midEnd_GlobalVar.getIniter());
 
@@ -145,17 +159,17 @@ void Global::parse(const IR::GVIniter& midEnd_initer){
     }
     
     if(!midEnd_initer.isArray()){
-        unsigned long long encoding;
+        unsigned int encoding;
         auto& initer_type = midEnd_initer.getConstVal();
         IR::Value &constValue = *(initer_type.get());
 
         if(typeid(constValue) == typeid(IR::ConstantInt&)){
             int temp = dynamic_cast<IR::ConstantInt&>(constValue).getVal();
-            encoding = *reinterpret_cast<unsigned long long*>(&temp);
+            encoding = temp;
         }
         else{
             float temp = dynamic_cast<IR::ConstantFloat&>(constValue).getVal();
-            encoding = *reinterpret_cast<unsigned long long *>(&temp);
+            encoding = *reinterpret_cast<unsigned int*>(&temp);
         }
         GlobalIniter *backEnd_initer = new GlobalIniter(OperandType::INT, encoding);
         GlobalIniterList.push_back(backEnd_initer);
@@ -169,8 +183,14 @@ void Global::parse(const IR::GVIniter& midEnd_initer){
 
     return;
 }
+
+GlobalIniter::GlobalIniter(OperandType type, unsigned int encondings): valType(type), valEncoding(encondings){
+    blockInit = std::make_unique<std::pair<bool, int>>(false, -1);
+}; // encodings
+
+
 GlobalIniter::GlobalIniter(unsigned long long space){
-    blockInit = std::make_unique<std::pair<bool, unsigned long long>>(true, space);
+    blockInit = std::make_unique<std::pair<bool, int>>(true, space);
 }
 
 std::string Global::toString(){

@@ -1,5 +1,7 @@
+    int a[2][2] = {{1, 2}, {2, 3}};
+    float c = 11.45;
+
+
 int main(){
-    int a, b;
-    b = a + 4;
-    return 114514;
+    return 0;
 }

@@ -81,7 +81,7 @@ class ArmStruct::SubFrame{
 
 class ArmStruct::Function{
     public:
-        Function(IR::Function&); // waiting...
+        Function(IR::Function&, std::vector<Global*>&);
         ~Function();
         bool isStackInst(Instruction&); // stack分配相关的指令
         
@@ -101,6 +101,9 @@ class ArmStruct::Function{
         std::map<unsigned long long, Operand*> VirRegOperandMap = {};
         unsigned long long VRegNum;
 
+        std::vector<Global*>& globalVals;
+        std::map<unsigned long long, MMptr*> OffsetBase; 
+ 
         unsigned int InstCnt = 0;
         std::string Identifier;
 

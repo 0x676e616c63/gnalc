@@ -38,6 +38,7 @@ class ArmStruct::Module{
         
         std::vector<Global*> dataSection; // .data 注意使用 .align(可能直接被优化掉)
         std::vector<Global*> bssSection;
+
         std::vector<Global*> equSection; // .equ PI 3.14 \n ldr r0, =PI
         // std::vector<std::unique_ptr<Global>> globalSection; // .global cnt\n cnt: .word 1234
 

@@ -63,7 +63,9 @@
         "iomanip": "cpp",
         "span": "cpp",
         "sstream": "cpp",
-        "format": "cpp"
+        "format": "cpp",
+        "cstring": "cpp",
+        "netfwd": "cpp"
     },
     "C_Cpp.codeAnalysis.clangTidy.checks.disabled": [
         "clang-diagnostic-error",

@@ -14,7 +14,6 @@
 using namespace ArmStruct;
 using namespace ArmTools;
 
-/// @note md这里还歧义了
 MemInstruction::MemInstruction(OperCode opcode, ArmStruct::MMptr* ptr, BB& BasicBlock, Operand* Def_Use):
     mmptr(ptr), Instruction(opcode, nullptr, BasicBlock, {}, {}){
         if(opcode == VLDR_32 || opcode == LDR) DefOperandList.push_back(std::ref(*Def_Use));
@@ -24,7 +23,6 @@ MemInstruction::MemInstruction(OperCode opcode, ArmStruct::MMptr* ptr, BB& Basic
             this->UseOperandList.push_back(std::ref(*mmptr->getBase()));
         }
     }
-
 /// @note to fill VirMap and add InstCnt
 Instruction::Instruction(OperCode opcode,Imm* attach, BB& BasicBlock,
     std::initializer_list<std::reference_wrapper<Operand>> Defs, 

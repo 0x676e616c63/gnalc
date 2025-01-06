@@ -33,7 +33,7 @@ RegisterAlloc::RegisterAlloc(Function &func, OperandType RegType, unsigned int k
 bool RegisterAlloc::isMoveInst(Instruction &inst){
     if(RegType == INT){
         switch(inst.opcode){
-            case LDR: case STR:
+            // case LDR: case STR:
             case MOV:
                 if(inst.DefOperandList.size() && inst.UseOperandList.size())
                 return true;
@@ -97,11 +97,11 @@ void RegisterAlloc::MkInitial(){
         for(auto inst_it = BasicBlock.InstList.begin(); inst_it != BasicBlock.InstList.end(); ++inst_it){
             Instruction& Inst = **inst_it;
             for(auto oper_it = Inst.DefOperandList.begin(); oper_it != Inst.DefOperandList.end(); ++oper_it){
-                auto Def = *oper_it;
+                auto &Def = *oper_it;
                 if(Def.get().ValType == RegType && !Def.get().color.first) initial.insert(Def); // no precolored
             }
             for(auto oper_it = Inst.UseOperandList.begin(); oper_it != Inst.UseOperandList.end(); ++oper_it){
-                auto Use = *oper_it;
+                auto &Use = *oper_it;
                 if(Use.get().ValType == RegType && !Use.get().color.first) initial.insert(Use); // no precolored
             }
         }
@@ -131,7 +131,7 @@ void RegisterAlloc::BuildGraph(){
         /// @todo isPreColored = false时, 在coloredNodes中加入预着色结点
         Live = BasicBlock.LiveOut;
         for(auto it = BasicBlock.InstList.rbegin(); it != BasicBlock.InstList.rend(); ++it){
-                Instruction& curInst = static_cast<Instruction&>(**it);
+            Instruction& curInst = static_cast<Instruction&>(**it);
             /// @note 这里是广义的MoveInst
             if(isMoveInst(curInst)){
                 /// @note live := live\use(I); forall
@@ -152,25 +152,24 @@ void RegisterAlloc::BuildGraph(){
                 worklistMoves.insert(std::ref(curInst));
             }
             /// @note  live := live U def(I); forall d in def(I).....
-            for(Operand& DefOper: curInst.DefOperandList){
-                if(DefOper.ValType == RegType) Live.insert(std::ref(DefOper));
+            for(auto DefOper: curInst.DefOperandList){
+                if(DefOper.get().ValType == RegType) Live.insert(DefOper);
             }
-            for(Operand& DefOper: curInst.DefOperandList){
-                for(Operand& Oper: Live) AddEdge(Oper, DefOper);
+            for(auto DefOper: curInst.DefOperandList){
+                for(auto Oper: Live) AddEdge(Oper.get(), DefOper.get());
             }
             /// @note live := use(I) U (live\def(I))
             /// @note step1: live := live \ def(I)
-            for(Operand &DefOper: curInst.DefOperandList){
-                auto iterator = Live.find(std::ref(DefOper));
+            for(auto DefOper: curInst.DefOperandList){
+                auto iterator = Live.find(DefOper);
                 if(iterator != Live.end()) Live.erase(iterator);
             }
             /// @note step2: live := live U use(I)
-            for(Operand &UseOper: curInst.UseOperandList){
-                if(UseOper.ValType == RegType) Live.insert(std::ref(UseOper));
+            for(auto UseOper: curInst.UseOperandList){
+                if(UseOper.get().ValType == RegType) Live.insert(UseOper);
             }
         }
     }
-    isPreColoredAlready = true;
 }
 OperRefHashPtr RegisterAlloc::Adjacent(Operand& n){
     OperRefHashPtr UnorderSet = std::make_unique<OperRefHash>();
@@ -209,14 +208,20 @@ bool RegisterAlloc::isMoveRelated(Operand& n){
 }
 
 void RegisterAlloc::MkworkList(){
-    ///@todo 如果没有经过ReWriteProgram这里的Initial集应该是空的
+
     for(auto it = initial.begin(); it != initial.end(); ){
         Operand& curNode = (*it).get();
-        it = initial.erase(it); ///@bug
+        it = initial.erase(it);
 
-        if(curNode.adjDegree >= availableColors) spillWorkList.insert(std::ref(curNode));
-        else if(isMoveRelated(curNode)) freezeWorkList.insert(std::ref(curNode));
-        else simplifyWorkList.insert(std::ref(curNode));
+        if(curNode.adjDegree >= availableColors){
+            spillWorkList.insert(std::ref(curNode));
+        }
+        else if(isMoveRelated(curNode)){
+            freezeWorkList.insert(std::ref(curNode));
+        }
+        else{
+            simplifyWorkList.insert(std::ref(curNode));
+        }
     }
 }
 void RegisterAlloc::Simplify(){
@@ -419,9 +424,6 @@ void RegisterAlloc::AssignColors(){
         else{
             coloredNodes.insert(n);
             n.color.second = *(okColors.begin());
-            if(RegType == FLOAT){
-                std::cout<<n.VirReg<<": "<<n.color.second<<'\n';
-            }
         }
     }
     for(Operand& n: coalescedNodes){

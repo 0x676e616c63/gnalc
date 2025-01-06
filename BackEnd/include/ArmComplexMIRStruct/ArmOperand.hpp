@@ -43,7 +43,6 @@ class ArmStruct::Operand{
 /// @note 单独附加到inst的后面, 不放在def或者use集以避免分配寄存器
 class ArmStruct::Imm{
     public:
-        // Imm();
         Imm(OperandType);
         Imm(OperandType, std::string);
         ~Imm()=default;
@@ -69,7 +68,7 @@ class ArmStruct::Global : public ArmStruct::Imm{
 
 class ArmStruct::GlobalIniter{
     public:
-        GlobalIniter(OperandType type, unsigned long long encondings): valType(type), valEncoding(encondings){}; // encodings
+        GlobalIniter(OperandType type, unsigned int encondings); // encodings
         GlobalIniter(unsigned long long space); // space
         ~GlobalIniter()=default;
 
@@ -77,10 +76,10 @@ class ArmStruct::GlobalIniter{
     private:
         ///@brief 有初始化
         OperandType valType;
-        unsigned long long valEncoding;
+        unsigned int valEncoding;
 
         ///@brief 没有初始化
-        std::unique_ptr<std::pair<bool, unsigned long long>> blockInit;
+        std::unique_ptr<std::pair<bool, int>> blockInit;
 };
 
 class ArmStruct::MMptr : public ArmStruct::Imm{
@@ -90,7 +89,8 @@ class ArmStruct::MMptr : public ArmStruct::Imm{
         MMptr(FrameObj* loc, OperandType type, unsigned long long idx);
         // for gepinst
         MMptr(FrameObj* loc, OperandType type, unsigned long long idx, unsigned int off);
-        // MMptr(std::string);
+        // for globalVars(set memory baseReg)
+        MMptr(Operand* base, OperandType type, unsigned long long off);
         ~MMptr()=default;
 
         OperandType getType(){return data_type;}
@@ -110,6 +110,6 @@ class ArmStruct::MMptr : public ArmStruct::Imm{
         FrameObj* space;
         Operand *baseVirReg = nullptr;  // 为null表示它的基址为r7
         unsigned int offset = 0;
-        unsigned long long VirReg;    // 有虚拟寄存器, 用于被寻找
+        unsigned long long VirReg;    // 有虚拟寄存器, 用于被寻找, 编号来自中端
 };
 #endif

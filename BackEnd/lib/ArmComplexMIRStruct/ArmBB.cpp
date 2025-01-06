@@ -44,9 +44,9 @@ void BB::ParseInsts(const std::list<std::shared_ptr<IR::Instruction>> insts){
    auto Unary = new UnaryMatch{*this, *Movtw};
    auto Branch = new BranchMatch{*this};
    auto Alloca = new AllocaMatch{*this};
-   auto Load = new LoadMatch{*this};
-   auto Store = new StoreMatch{*this};
-   auto Gep = new GepMatch{*this};
+   auto Load = new LoadMatch{*this, *Movtw};
+   auto Store = new StoreMatch{*this, *Movtw};
+   auto Gep = new GepMatch{*this, *Movtw};
    auto FPTOSI = new FPTOSIMatch{*this};
    auto SITOFP = new SITOFPMatch{*this};
    auto Call = new CallMatch{*this};

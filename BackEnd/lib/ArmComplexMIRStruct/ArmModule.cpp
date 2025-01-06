@@ -44,8 +44,8 @@ Module::Module(IR::Module& midEnd_Module){
 
     for(auto func_it = funcs.begin(); func_it != funcs.end(); ++func_it){
         auto& func = **func_it;
-        Function* newFunc = new Function(func); // IR->MIR, localFrame ...s
-        
+        Function* newFunc = new Function(func, dataSection); // IR->MIR, localFrame ...s
+
         this->AddFunction(newFunc);
     }
 

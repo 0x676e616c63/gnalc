@@ -44,13 +44,15 @@ ArrayObj::ArrayObj(SubFrame* father, OperandType elementType, unsigned long long
         father->insertMMptr(VirPtr, ArrayPtr);
 }
 
-Function::Function(IR::Function& midEnd_function){
+Function::Function(IR::Function& midEnd_function, std::vector<Global*>& Global)
+    : globalVals(Global){
     
     local = new SubFrame();
     temp = new SubFrame();
         
     this->Identifier = midEnd_function.getName().substr(1); // 去掉@
-    this->VRegNum = midEnd_function.getVRegNum();
+    // 这里中端的接口有问题, 所以+1000, 只能缓解一下
+    this->VRegNum = midEnd_function.getVRegNum() + 1000;   
 
     ///@brief fill VirMap and link instructions
     std::vector<std::shared_ptr<IR::BasicBlock>> bbs = midEnd_function.getBlocks();
@@ -127,6 +129,7 @@ void Function::MkFrameFinal(){
 Function::~Function(){
     for(auto bbptr : BBList) delete bbptr;
     for(auto operptr : VirRegOperandMap) delete operptr.second;
+    for(auto GlobalOff : OffsetBase) delete GlobalOff.second;
     delete local;
     delete temp;
 }
