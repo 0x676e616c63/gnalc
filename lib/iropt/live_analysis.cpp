@@ -88,6 +88,7 @@ namespace IR {
             case OP::FPTOSI:
             case OP::SITOFP:
             case OP::ZEXT:
+            case OP::BITCAST:
             case OP::LOAD:
             case OP::GEP:
                 for (auto& use : inst->getOperands())

@@ -141,6 +141,8 @@ std::string IRFormatter::formatOp(OP op) {
         return "sitofp";
     case OP::ZEXT:
         return "zext";
+    case OP::BITCAST:
+        return "bitcast";
     case OP::ALLOCA:
         return "alloca";
     case OP::LOAD:
@@ -327,6 +329,11 @@ std::string IRFormatter::formatInst(Instruction& inst) {
     case OP::REM:
     case OP::FREM:
         return IRFormatter::fBinaryInst(dynamic_cast<BinaryInst&>(inst));
+    case OP::FPTOSI:
+    case OP::SITOFP:
+    case OP::ZEXT:
+    case OP::BITCAST:
+        return IRFormatter::fCastInst(dynamic_cast<CastInst&>(inst));
     case OP::FNEG:
         return IRFormatter::fFNEGInst(dynamic_cast<FNEGInst&>(inst));
     case OP::ICMP:
@@ -339,12 +346,6 @@ std::string IRFormatter::formatInst(Instruction& inst) {
         return IRFormatter::fBRInst(dynamic_cast<BRInst&>(inst));
     case OP::CALL:
         return IRFormatter::fCALLInst(dynamic_cast<CALLInst&>(inst));
-    case OP::FPTOSI:
-        return IRFormatter::fFPTOSIInst(dynamic_cast<FPTOSIInst&>(inst));
-    case OP::SITOFP:
-        return IRFormatter::fSITOFPInst(dynamic_cast<SITOFPInst&>(inst));
-    case OP::ZEXT:
-        return IRFormatter::fZEXTInst(dynamic_cast<ZEXTInst&>(inst));
     case OP::ALLOCA:
         return IRFormatter::fALLOCAInst(dynamic_cast<ALLOCAInst&>(inst));
     case OP::LOAD:
@@ -469,39 +470,15 @@ std::string IRFormatter::fCALLInst(CALLInst& inst) {
     return ret;
 }
 
-std::string IRFormatter::fFPTOSIInst(FPTOSIInst& inst) {
+std::string IRFormatter::fCastInst(CastInst& inst) {
     std::string ret;
     ret += inst.getName();
     ret += " = ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
-    ret += inst.getOTypePtr()->toString() + " ";
+    ret += inst.getOType()->toString() + " ";
     ret += inst.getOVal()->getName();
     ret += " to ";
-    ret += inst.getTTypePtr()->toString();
-    return ret;
-}
-
-std::string IRFormatter::fSITOFPInst(SITOFPInst& inst) {
-    std::string ret;
-    ret += inst.getName();
-    ret += " = ";
-    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
-    ret += inst.getOTypePtr()->toString() + " ";
-    ret += inst.getOVal()->getName();
-    ret += " to ";
-    ret += inst.getTTypePtr()->toString();
-    return ret;
-}
-
-std::string IRFormatter::fZEXTInst(ZEXTInst& inst) {
-    std::string ret;
-    ret += inst.getName();
-    ret += " = ";
-    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
-    ret += inst.getOTypePtr()->toString() + " ";
-    ret += inst.getOVal()->getName();
-    ret += " to ";
-    ret += inst.getType()->toString();
+    ret += inst.getTType()->toString();
     return ret;
 }
 
@@ -554,7 +531,7 @@ std::string IRFormatter::fGEPInst(GEPInst& inst) {
     ret += " = ";
 
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
-    ret += inst.getBaseTypePtr()->toString();
+    ret += inst.getBaseType()->toString();
 
     ret += ", ";
     ret += IRFormatter::formatValue(*(inst.getPtr()));

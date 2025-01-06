@@ -109,7 +109,7 @@ namespace IR
         addOperand(idx);
     }
 
-    std::shared_ptr<Type> GEPInst::getBaseTypePtr() const
+    std::shared_ptr<Type> GEPInst::getBaseType() const
     {
         return getElm(getPtr()->getType());
     }

@@ -41,6 +41,7 @@ enum class OP {
     FPTOSI, // converse
     SITOFP,
     ZEXT,
+    BITCAST,
 
     ICMP, // compare
     FCMP,

@@ -77,15 +77,13 @@ public:
 private:
     // 以下私有函数仅供formatInst调用
     static std::string fBinaryInst(BinaryInst& inst);
+    static std::string fCastInst(CastInst& inst);
     static std::string fFNEGInst(FNEGInst& inst);
     static std::string fICMPInst(ICMPInst& inst);
     static std::string fFCMPInst(FCMPInst& inst);
     static std::string fRETInst(RETInst& inst);
     static std::string fBRInst(BRInst& inst);
     static std::string fCALLInst(CALLInst& inst);
-    static std::string fFPTOSIInst(FPTOSIInst& inst);
-    static std::string fSITOFPInst(SITOFPInst& inst);
-    static std::string fZEXTInst(ZEXTInst& inst);
     static std::string fALLOCAInst(ALLOCAInst& inst);
     static std::string fLOADInst(LOADInst& inst);
     static std::string fSTOREInst(STOREInst& inst);

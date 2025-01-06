@@ -145,7 +145,8 @@ public:
     static constexpr auto irval_temp_name = "%%__GNALC_IR_TEMP_NAME";
 private:
     // Throw exception if failed
-    std::shared_ptr<IR::Value> type_cast(std::shared_ptr<IR::Value> val, IR::IRBTYPE dest);
+    std::shared_ptr<IR::Value> type_cast(const std::shared_ptr<IR::Value>& val, const std::shared_ptr<IR::Type>& dest);
+    std::shared_ptr<IR::Value> type_cast(const std::shared_ptr<IR::Value>& val, IR::IRBTYPE dest);
 };
 
 }

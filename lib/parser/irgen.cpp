@@ -594,38 +594,7 @@ void IRGenerator::visit(CallExp& node) {
         Err::error("Invalid call.");
 
     for (size_t i = 0; i < args.size(); ++i)
-    {
-        if (IR::isSameType(expected[i], args[i]->getType()))
-            continue;
-
-        if (expected[i]->getTrait() == IR::IRCTYPE::BASIC
-            && expected[i]->getTrait() == args[i]->getType()->getTrait())
-        {
-            auto expected_bty = IR::toBType(expected[i])->getInner();
-            args[i] = type_cast(args[i], expected_bty);
-        }
-        else if (expected[i]->getTrait() == IR::IRCTYPE::PTR
-            && args[i]->getType()->getTrait() == IR::IRCTYPE::PTR)
-        {
-            if (getElm(args[i]->getType())->getTrait() == IR::IRCTYPE::ARRAY
-                && IR::isSameType(getElm(getElm(args[i]->getType())), IR::getElm(expected[i])))
-            {
-                auto gep = std::make_shared<IR::GEPInst>(irval_temp_name, args[i],
-                    constant_pool.getConst(0), constant_pool.getConst(0));
-                curr_insts.emplace_back(gep);
-            }
-            else
-            {
-                Err::todo("Implicit pointer conversion.");
-                break;
-            }
-        }
-        else
-        {
-            Err::unreachable("Invalid call.");
-            break;
-        }
-    }
+        args[i] = type_cast(args[i], expected[i]);
 
     std::shared_ptr<IR::CALLInst> call;
     if (IR::toBType(functy->getRet())->getInner() == IR::IRBTYPE::VOID)
@@ -1084,10 +1053,43 @@ void IRGenerator::visit(ReturnStmt& node) {
     }
 }
 
+std::shared_ptr<IR::Value> IRGenerator::type_cast(const std::shared_ptr<IR::Value>& val, const std::shared_ptr<IR::Type>& dest) {
+    if (isSameType(dest, val->getType()))
+        return val;
+
+    if (dest->getTrait() == IR::IRCTYPE::BASIC)
+        return type_cast(val, IR::toBType(dest)->getInner());
+
+    if (dest->getTrait() == IR::IRCTYPE::PTR
+        && val->getType()->getTrait() == IR::IRCTYPE::PTR)
+    {
+        // decay
+        if (getElm(val->getType())->getTrait() == IR::IRCTYPE::ARRAY
+            && IR::isSameType(getElm(getElm(val->getType())), IR::getElm(dest)))
+        {
+            auto gep = std::make_shared<IR::GEPInst>(irval_temp_name, val,
+                constant_pool.getConst(0), constant_pool.getConst(0));
+            Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
+            curr_insts.emplace_back(gep);
+            return gep;
+        }
+        else
+        {
+            auto bitcast = std::make_shared<IR::BITCASTInst>(irval_temp_name, val, dest);
+            Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
+            curr_insts.emplace_back(bitcast);
+            return bitcast;
+        }
+    }
+
+    Err::unreachable("Cannot cast type from '" + val->getType()->toString() + "' to '" + dest->toString() + "'.");
+    return nullptr;
+}
+
 // I32 <-> FLOAT
 // I32 <-> I1
 // FLOAT <-> I1
-std::shared_ptr<IR::Value> IRGenerator::type_cast(std::shared_ptr<IR::Value> val, IR::IRBTYPE dest) {
+std::shared_ptr<IR::Value> IRGenerator::type_cast(const std::shared_ptr<IR::Value>& val, IR::IRBTYPE dest) {
     const std::string bad_cast_err = "Cannot cast type from '" + val->getType()->toString() +
         "' to '" + IR::makeBType(dest)->toString() + "'.";
 
@@ -1209,6 +1211,7 @@ void IRGenerator::Initializer::reset(IR::IRBTYPE irbtype) {
     initializer.emplace<std::monostate>();
 }
 
+// TODO: Use Optimize zero, avoid padding too much zero.
 // See: https://en.cppreference.com/w/c/language/array_initialization
 std::vector<IRGenerator::Initializer::val_t> IRGenerator::Initializer::flatten(const std::shared_ptr<IR::Type>& type) const {
     Err::gassert(type != nullptr);

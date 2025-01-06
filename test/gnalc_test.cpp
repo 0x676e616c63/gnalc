@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <string>
+#include <map>
 
 #include "gnalc_test.hpp"
 
@@ -14,7 +15,6 @@ namespace sycfg
 // Commandline args
 bool stop_on_error = true;
 bool only_frontend = true;
-bool verbose = true;
 
 // See `docs/gnalc-test.md` to get prepared.
 
@@ -48,10 +48,9 @@ const std::string sylibc = "../../test/sylib/sylib.c";
 
 const std::string test_data = "../../test/gnalc-test-data/comp-test";
 const std::vector subdirs = {
-     "functional", // "performance",
-     "h_functional", // "h_performance",
-     // "final/functional", "final/performance",
-     // "final/h_functional", "final/h_performance"
+     "functional", "performance",
+     "h_functional", "h_performance",
+     "final/performance", "final/h_performance"
 };
 }
 
@@ -59,11 +58,14 @@ int main(int argc, char* argv[]) {
     auto print_help = [&argv]() {
         println("Usage: {} [options]", argv[0]);
         println("Options:");
-        println("  -a, --all      : Run all tests, regardless of failure.");
-        println("  -b, --backend  : Test backend.");
-        println("  -q, --quiet    : Be quiet.");
-        println("  -h, --help     : Print this help and exit.");
+        println("  -a, --all                : Run all tests, regardless of failure.");
+        println("  -b, --backend            : Test backend.");
+        println("  -s, --skip [name_prefix] : Skip test whose name has such prefix.");
+        println("  -r, --run  [name_prefix] : Only run test whose name has such prefix.");
+        println("  -h, --help               : Print this help and exit.");
     };
+    std::vector<std::pair<std::string, std::vector<std::string>>> skip;
+    std::vector<std::pair<std::string, std::vector<std::string>>> run;
     for (int i = 1; i < argc; i++)
     {
         std::string arg = argv[i];
@@ -71,8 +73,38 @@ int main(int argc, char* argv[]) {
             sycfg::stop_on_error = false;
         else if (arg == "--backend" || arg == "-b")
             sycfg::only_frontend = false;
-        else if (arg == "--quiet" || arg == "-q")
-            sycfg::verbose = false;
+        else if (arg == "--skip" || arg == "-s")
+        {
+            if (!run.empty())
+            {
+                println("Error: '--run' conflicts with '--skip'.");
+                return -1;
+            }
+            if (i + 1 >= argc || argv[i + 1][0] == '-')
+            {
+                println("Error: Expected a name.");
+                print_help();
+                return -1;
+            }
+            skip.emplace_back(argv[i + 1], std::vector<std::string>{});
+            ++i;
+        }
+        else if (arg == "--run" || arg == "-r")
+        {
+            if (!skip.empty())
+            {
+                println("Error: '--run' conflicts with '--skip'.");
+                return -1;
+            }
+            if (i + 1 >= argc || argv[i + 1][0] == '-')
+            {
+                println("Error: Expected a name.");
+                print_help();
+                return -1;
+            }
+            run.emplace_back(argv[i + 1], std::vector<std::string>{});
+            ++i;
+        }
         else if (arg == "--help" || arg == "-h")
         {
             print_help();
@@ -88,6 +120,7 @@ int main(int argc, char* argv[]) {
 
     println("GNALC test started.");
     size_t passed = 0;
+    size_t curr_test_cnt = 0;
     std::vector<std::string> failed_tests;
 
     create_directories(sycfg::global_temp_dir);
@@ -106,8 +139,7 @@ int main(int argc, char* argv[]) {
                                          sycfg::sylibc, sylib_to_link,
                                          sylib_to_link);
 
-        if (sycfg::verbose)
-            println("Running '{}'.", lib_command);
+        println("Running '{}'.", lib_command);
         std::system(lib_command.c_str());
     }
     else
@@ -118,22 +150,54 @@ int main(int argc, char* argv[]) {
         std::string lib_command = format("{} -c {} -o {} && ar rcs {} {}",
             sycfg::gcc_arm_command, sycfg::sylibc, sylibo, sylib_to_link, sylibo);
 
-        if (sycfg::verbose)
-            println("Running '{}'.", lib_command);
+        println("Running '{}'.", lib_command);
         std::system(lib_command.c_str());
     }
 
-    for (auto&& test_dir : sycfg::subdirs)
+    for (auto&& curr_test_dir : sycfg::subdirs)
     {
         std::vector<directory_entry> test_files;
-        for (const auto& p : directory_iterator(sycfg::test_data + "/" + test_dir))
+        for (const auto& p : directory_iterator(sycfg::test_data + "/" + curr_test_dir))
         {
             if (p.is_regular_file() && p.path().extension() == ".sy")
-                test_files.emplace_back(p);
+            {
+                bool need_run = true;
+
+                if (skip.empty() && !run.empty())
+                {
+                    need_run = false;
+                    for (auto&& rule : run)
+                    {
+                        if (begins_with(p.path().stem().string(), rule.first))
+                        {
+                            need_run = true;
+                            rule.second.emplace_back(p.path().string());
+                            break;
+                        }
+                    }
+                }
+                else if (!skip.empty() && run.empty())
+                {
+                    need_run = true;
+                    for (auto&& rule : skip)
+                    {
+                        if (begins_with(p.path().stem().string(), rule.first))
+                        {
+                            need_run = false;
+                            rule.second.emplace_back(p.path().string());
+                            break;
+                        }
+                    }
+                }
+
+                if (need_run)
+                    test_files.emplace_back(p);
+            }
         }
+
         std::sort(test_files.begin(), test_files.end());
 
-        auto curr_temp_dir = sycfg::global_temp_dir + "/" + test_dir;
+        auto curr_temp_dir = sycfg::global_temp_dir + "/" + curr_test_dir;
         create_directories(curr_temp_dir);
 
         for (const auto& sy : test_files)
@@ -158,11 +222,11 @@ int main(int argc, char* argv[]) {
                 command = format(
                     "{} 2>&1 < {} > {}"
                     " && llvm-link 2>&1 {} {} -o {}"
-                    " && lli {} < {} > {} 2>{}"
+                    " && lli {} < {} > {}"
                     "; /bin/echo -e \"\\n\"$? >> {}",
                     sycfg::irgen_path, sy.path().string(), outll,
                     sylib_to_link, outll, outbc,
-                    outbc, exists(testcase_in) ? testcase_in : "/dev/null", output, sycfg::verbose ? "&2" : "/dev/null",
+                    outbc, exists(testcase_in) ? testcase_in : "/dev/null", output,
                     output);
 
                 // Test for this test script.
@@ -172,12 +236,12 @@ int main(int argc, char* argv[]) {
                 // "sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int getfarray(float a[]);void putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, float a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define starttime() _sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
                 //     " && clang -xc {} -emit-llvm -S -o {} -I ../../test/sylib/"
                 //     " && llvm-link 2>&1 {} {} -o {}"
-                //     " && lli {} < {} > {} 2>{}"
+                //     " && lli {} < {} > {}"
                 //     "; /bin/echo -e \"\\n\"$? >> {}",
                 //     newsy,
                 //     newsy, outll,
                 //     sylib_to_link, outll, outbc,
-                //     outbc, exists(testcase_in) ? testcase_in : "/dev/null", output, sycfg::verbose ? "&2" : "/dev/null",
+                //     outbc, exists(testcase_in) ? testcase_in : "/dev/null", output,
                 //     output);
             }
             else
@@ -190,18 +254,17 @@ int main(int argc, char* argv[]) {
                 command = format(
                     "{} 2>&1 < {} > {}"
                     " && {} {} {} -o {}"
-                    " && {} {} < {} > {} 2>{}"
+                    " && {} {} < {} > {}"
                     "; /bin/echo -e \"\\n\"$? >> {}",
                     sycfg::asmgen_path, sy.path().string(), outs,
                     sycfg::gcc_arm_command, outs, sylib_to_link, outexec,
-                    sycfg::qemu_arm_command, outexec, exists(testcase_in) ? testcase_in : "/dev/null", output, sycfg::verbose ? "&2" : "/dev/null",
+                    sycfg::qemu_arm_command, outexec, exists(testcase_in) ? testcase_in : "/dev/null", output,
                     output);
             }
 
-            println("Test {}", sy.path().stem());
+            println("<{}> Test {}", curr_test_cnt++, sy.path().stem());
 
-            if (sycfg::verbose)
-                println("|  Running '{}':", command);
+            println("|  Running '{}':", command);
 
             std::system(command.c_str());
 
@@ -232,7 +295,35 @@ int main(int argc, char* argv[]) {
     }
 
     finish:
-    println("Finished running {} tests.", failed_tests.size() + passed);
+    println("Finished running {} tests.", curr_test_cnt);
+
+    if (!skip.empty())
+    {
+        std::vector<std::string> skipped_tests;
+        for (auto&& r : skip)
+            skipped_tests.insert(skipped_tests.end(), r.second.cbegin(), r.second.cend());
+
+        if (!skipped_tests.empty())
+        {
+            println("Skipped {} tests: ", skipped_tests.size());
+            for (const auto& f : skipped_tests)
+                println("|  {}", f);
+        }
+    }
+    else if (!run.empty())
+    {
+        std::vector<std::string> run_tests;
+        for (auto&& r : run)
+            run_tests.insert(run_tests.end(), r.second.cbegin(), r.second.cend());
+
+        if (!run_tests.empty())
+        {
+            println("Only run {} tests: ", run_tests.size());
+            for (const auto& f : run_tests)
+                println("|  {}", f);
+        }
+    }
+
     if (failed_tests.empty())
     {
         println("[\033[0;32;32mTEST PASSED\033[m] {} tests passed!", passed);
