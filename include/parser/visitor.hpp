@@ -5,8 +5,6 @@
 #define GNALC_AST_VISITOR_HPP
 #pragma once
 
-
-
 #include "ast.hpp"
 #include "symbol_table/symbol_table.hpp"
 #include "ir/constantpool.hpp"
@@ -108,12 +106,12 @@ class IRGenerator : public ASTVisitor {
         std::vector<val_t> flatten(const std::shared_ptr<IR::Type>& type) const;
 
         bool isZeroIniter() const;
-    private:
-        val_t make_zero() const;
+
+        val_t getZeroValue() const;
     };
 
     Initializer curr_initializer;
-    Initializer* curr_making_initializer;
+    Initializer* curr_making_initializer{};
 public:
     IRGenerator() = default;
     void visit(CompUnit& node) override;

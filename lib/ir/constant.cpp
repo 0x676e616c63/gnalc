@@ -33,13 +33,20 @@ ConstantFloat::ConstantFloat(float _val)
 float ConstantFloat::getVal() const { return val; }
 
 ConstantI1::ConstantI1(bool _val)
-    : Value(_val ? "1" : "0", makeBType(IRBTYPE::I1), ValueTrait::CONSTANT_LITERAL), val(_val) {}
+    : Value(_val ? "true" : "false", makeBType(IRBTYPE::I1), ValueTrait::CONSTANT_LITERAL), val(_val) {}
 
 bool ConstantI1::getVal() const { return val; }
+
+ConstantI8::ConstantI8(char _val)
+    : Value(std::to_string(static_cast<int>(_val)), makeBType(IRBTYPE::I8), ValueTrait::CONSTANT_LITERAL), val(_val) {}
+
+char ConstantI8::getVal() const { return val; }
 
 void ConstantInt::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
 void ConstantFloat::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
 void ConstantI1::accept(IRVisitor& visitor) { visitor.visit(*this); }
+
+void ConstantI8::accept(IRVisitor& visitor) { visitor.visit(*this); }
 }

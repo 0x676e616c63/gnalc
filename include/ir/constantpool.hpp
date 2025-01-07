@@ -15,23 +15,27 @@ class ConstantPool {
 private:
     struct ConstantValue {
         // TODO: Array
-        std::variant<int, float, bool> value;
+        std::variant<bool, char, int, float> value;
 
-        bool is_i32() const {return value.index() == 0;}
-        bool is_float() const {return value.index() == 1;}
-        bool is_i1() const {return value.index() == 2;}
+        bool is_i1() const {return value.index() == 0;}
+        bool is_i8() const {return value.index() == 1;}
+        bool is_i32() const {return value.index() == 2;}
+        bool is_float() const {return value.index() == 3;}
 
         bool get_i1() const {return std::get<bool>(value);}
+        bool get_i8() const {return std::get<char>(value);}
         int get_i32() const {return std::get<int>(value);}
         float get_float() const {return std::get<float>(value);}
 
         std::string type_name() const {
             if (value.index() == 0)
-                return "i32";
+                return "i";
             else if (value.index() == 1)
-                return "float";
+                return "i8";
             else if (value.index() == 2)
-                return "i1";
+                return "i32";
+            else if (value.index() == 3)
+                return "float";
             return "";
         }
 
@@ -62,6 +66,18 @@ public:
             return ret;
         }
         return std::dynamic_pointer_cast<ConstantI1>(it->second);
+    }
+
+    std::shared_ptr<ConstantI8> getConst(char val) {
+        auto value = ConstantValue{val};
+        auto it = pool.find(value);
+        if (it == pool.end())
+        {
+            auto ret = std::make_shared<ConstantI8>(val);
+            pool[value] = ret;
+            return ret;
+        }
+        return std::dynamic_pointer_cast<ConstantI8>(it->second);
     }
 
     std::shared_ptr<ConstantInt> getConst(int val) {

@@ -34,6 +34,7 @@ public:
     virtual void visit(ConstantInt& node) { Err::not_implemented("IRVisitor::visit(ConstantInt&)"); }
     virtual void visit(ConstantFloat& node) { Err::not_implemented("IRVisitor::visit(ConstantFloat&)"); }
     virtual void visit(ConstantI1& node) { Err::not_implemented("IRVisitor::visit(ConstantI1&)"); }
+    virtual void visit(ConstantI8& node) { Err::not_implemented("IRVisitor::visit(ConstantI1&)"); }
     virtual void visit(BinaryInst& node) { Err::not_implemented("IRVisitor::visit(BinaryInst&)"); }
     virtual void visit(FNEGInst& node) { Err::not_implemented("IRVisitor::visit(FNEGInst&)"); }
     virtual void visit(ICMPInst& node) { Err::not_implemented("IRVisitor::visit(ICMPInst&)"); }

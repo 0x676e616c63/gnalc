@@ -16,7 +16,7 @@ private:
   size_t curr_idx{0};
   bool bb_rename{false};
 public:
-  NameNormalizer(bool bb_rename_) : bb_rename(bb_rename_) {};
+  explicit NameNormalizer(bool bb_rename_) : bb_rename(bb_rename_) {};
   void visit(Function& node) override;
   void visit(BasicBlock& node) override;
   void normalize(const Module& module);

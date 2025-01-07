@@ -11,23 +11,32 @@
 #include "../../include/ir/module.hpp"
 #include "../../include/parser/visitor.hpp"
 
+constexpr auto GNALC_BUILTIN_MEMSET = "llvm.memset.p0i8.i32";
+constexpr auto GNALC_LOCAL_ARRAY_MEMSET_THRESHOLD = 32;
+
 namespace AST
 {
 void IRGenerator::visit(CompUnit& node) {
     symbol_table.initScope("__global");
 
     auto void_type = IR::makeBType(IR::IRBTYPE::VOID);
+    auto i1_type = IR::makeBType(IR::IRBTYPE::I1);
     auto i8_type = IR::makeBType(IR::IRBTYPE::I8);
     auto i8ptr_type = IR::makePtrType(i8_type);
     auto i32_type = IR::makeBType(IR::IRBTYPE::I32);
     auto i32ptr_type = IR::makePtrType(i32_type);
     auto f32_type = IR::makeBType(IR::IRBTYPE::FLOAT);
     auto f32ptr_type = IR::makePtrType(f32_type);
+    // Warning: defaults to make Sylib function
     auto make_decl = [this](const std::string& name,
         std::vector<std::shared_ptr<IR::Type>> params,
         std::shared_ptr<IR::Type> ret,
-        bool is_va_arg = false) {
-        auto fn = std::make_shared<IR::FunctionDecl>("@" + name, std::move(params), std::move(ret), is_va_arg);
+        bool is_va_arg = false,
+        bool is_builtin = false,
+        bool is_sylib = true) {
+        auto fn = std::make_shared<IR::FunctionDecl>
+        ("@" + name, std::move(params), std::move(ret),
+            is_va_arg, is_builtin, is_sylib);
         symbol_table.insert(name, fn);
         module.addFunctionDecl(fn);
     };
@@ -47,6 +56,10 @@ void IRGenerator::visit(CompUnit& node) {
     make_decl("_sysy_starttime", {i32_type}, void_type);
     make_decl("_sysy_stoptime", {i32_type}, void_type);
 
+    // builtin
+    // memset (dest, val, len, isvolatile)
+    make_decl(GNALC_BUILTIN_MEMSET, {i8ptr_type, i8_type, i32_type, i1_type}, void_type,
+        false, true, false); // -> not va_arg, is builtin, and not sylib
 
     for (auto& n : node.getNodes()) {
         n->accept(*this);
@@ -116,6 +129,7 @@ void IRGenerator::visit(VarDef& node) {
             if (cv.index() == 1)
                 val = constant_pool.getConst(std::get<1>(cv));
             symbol_table.insert(node.getId(), val);
+            return;
         }
     }
 
@@ -131,28 +145,6 @@ void IRGenerator::visit(VarDef& node) {
         if (node.isInited())
         {
             node.getInitVal()->accept(*this);
-            auto flatten_initializer = curr_initializer.flatten(irtype);
-
-            // // initializer flatten debug
-            // if (flatten_initializer.size() > 1)
-            // {
-            //     for (auto&& r : flatten_initializer)
-            //     {
-            //         if (r.index() == 0)
-            //             printf("%d, ", std::get<int>(r));
-            //         else if (r.index() == 1)
-            //             printf("%f, ", std::get<float>(r));
-            //         else if (r.index() == 2)
-            //             printf("%s, ", std::get<std::shared_ptr<IR::Value>>(r)->getName().c_str());
-            //     }
-            //     printf("\n");
-            // }
-
-            Err::gassert(flatten_initializer.size() == irtype->getBytes() / IR::getBytes(node_type), "Invalid initializer.");
-
-            // TODO: check if it is pure constant (or part of it) and make it global for performance.
-            // auto is_pure_constant = std::all_of(flatten_initializer.cbegin(), flatten_initializer.cend(),
-            //     [](auto&& v) { return v.index() != 2; });
 
             auto toIRValue = [this](const Initializer::val_t& a) -> std::shared_ptr<IR::Value> {
                 if (a.index() == 0)
@@ -167,44 +159,93 @@ void IRGenerator::visit(VarDef& node) {
             if (node.isArray())
             {
                 auto curr_type = toArrayType(irtype);
-                size_t init_pos = 0;
-                std::function<void(const std::shared_ptr<IR::Type>& type, const std::shared_ptr<IR::Value>& base)> init_array;
-                init_array = [this, &toIRValue, &flatten_initializer, &init_pos, &init_array]
-                (const std::shared_ptr<IR::Type>& type, const std::shared_ptr<IR::Value>& base) {
-                    auto arrtype = toArrayType(type);
-                    Err::gassert(arrtype != nullptr);
-                    if (arrtype->getElmType()->getTrait() == IR::IRCTYPE::ARRAY)
-                    {
-                        for (size_t i = 0; i < arrtype->getArraySize(); ++i) {
-                            auto gep_inst = std::make_shared<IR::GEPInst>(irval_temp_name, base,
-                                    constant_pool.getConst(0),
-                                    constant_pool.getConst(static_cast<int>(i)));
 
-                            curr_insts.emplace_back(gep_inst);
-                            init_array(arrtype->getElmType(), gep_inst);
-                        }
-                    }
-                    else if (arrtype->getElmType()->getTrait() == IR::IRCTYPE::BASIC)
-                    {
-                        for (size_t i = 0; i < arrtype->getArraySize(); ++i)
+                bool has_filled_zero = false;
+                // If it is zero inited or exceeds the threshold, memset it.
+                if (curr_initializer.isZeroIniter() || curr_type->getBytes() > GNALC_LOCAL_ARRAY_MEMSET_THRESHOLD)
+                {
+                    auto builtin_memset = symbol_table.lookup(GNALC_BUILTIN_MEMSET);
+                    auto dest = type_cast(alloca_inst, makePtrType(IR::makeBType(IR::IRBTYPE::I8)));
+                    auto call_memset = std::make_shared<IR::CALLInst>(std::dynamic_pointer_cast<IR::FunctionDecl>(builtin_memset),
+                        std::vector<std::shared_ptr<IR::Value>>{dest,                           // ptr
+                            constant_pool.getConst(static_cast<char>(0)),                       // val
+                            constant_pool.getConst(static_cast<int>(curr_type->getBytes())),    // length
+                            constant_pool.getConst(false)});                                 // volatile
+                    curr_insts.emplace_back(call_memset);
+                    has_filled_zero = true;
+                }
+
+                if (!curr_initializer.isZeroIniter() || !has_filled_zero)
+                {
+                    auto flat = curr_initializer.flatten(irtype);
+                    Err::gassert(flat.size() == irtype->getBytes() / IR::getBytes(node_type),
+                        "Invalid initializer.");
+
+                    size_t init_pos = 0;
+                    std::function<void(const std::shared_ptr<IR::Type>& type, const std::shared_ptr<IR::Value>& base)> init_array;
+                    init_array = [this, &toIRValue, &flat, &init_pos, &init_array, &node_type, &has_filled_zero]
+                    (const std::shared_ptr<IR::Type>& type, const std::shared_ptr<IR::Value>& base) {
+                        auto arrtype = toArrayType(type);
+                        Err::gassert(arrtype != nullptr);
+                        if (arrtype->getElmType()->getTrait() == IR::IRCTYPE::ARRAY)
                         {
-                            auto gep_inst = std::make_shared<IR::GEPInst>(irval_temp_name, base,
-                                    constant_pool.getConst(0),
-                                    constant_pool.getConst(static_cast<int>(i)));
+                            auto elmarr_type = IR::toArrayType(arrtype->getElmType());
+                            for (size_t i = 0; i < arrtype->getArraySize(); ++i)
+                            {
+                                bool needs_init = !has_filled_zero;
 
-                            auto str_inst = std::make_shared<IR::STOREInst>
-                                    (toIRValue(flatten_initializer[init_pos++]), gep_inst);
-                            curr_insts.emplace_back(gep_inst);
-                            curr_insts.emplace_back(str_inst);
+                                size_t j = init_pos;
+                                for (; !needs_init && j < init_pos + elmarr_type->getBytes() / IR::getBytes(node_type); j++)
+                                {
+                                    if (flat[j] != curr_initializer.getZeroValue())
+                                    {
+                                        needs_init = true;
+                                        break;
+                                    }
+                                }
+
+                                if (!needs_init)
+                                    init_pos = j;
+                                else
+                                {
+                                    auto gep_inst = std::make_shared<IR::GEPInst>(irval_temp_name, base,
+                                            constant_pool.getConst(0),
+                                            constant_pool.getConst(static_cast<int>(i)));
+
+                                    curr_insts.emplace_back(gep_inst);
+                                    init_array(elmarr_type, gep_inst);
+                                }
+                            }
                         }
-                    }
-                    else Err::unreachable();
-                };
-                init_array(irtype, alloca_inst);
+                        else if (arrtype->getElmType()->getTrait() == IR::IRCTYPE::BASIC)
+                        {
+                            for (size_t i = 0; i < arrtype->getArraySize(); ++i)
+                            {
+                                const auto& curr_init_val = flat[init_pos++];
+                                if (!has_filled_zero || curr_init_val != curr_initializer.getZeroValue())
+                                {
+                                    auto gep_inst = std::make_shared<IR::GEPInst>(irval_temp_name, base,
+                                            constant_pool.getConst(0),
+                                            constant_pool.getConst(static_cast<int>(i)));
+
+                                    auto str_inst = std::make_shared<IR::STOREInst>
+                                            (toIRValue(curr_init_val), gep_inst);
+                                    curr_insts.emplace_back(gep_inst);
+                                    curr_insts.emplace_back(str_inst);
+                                }
+                            }
+                        }
+                        else Err::unreachable();
+                    };
+                    init_array(irtype, alloca_inst);
+                }
             }
             else
             {
-                auto str_inst = std::make_shared<IR::STOREInst>(toIRValue(flatten_initializer[0]),
+                auto flat = curr_initializer.flatten(irtype);
+                Err::gassert(flat.size() == 1, "Invalid initializer.");
+
+                auto str_inst = std::make_shared<IR::STOREInst>(toIRValue(flat[0]),
                     alloca_inst);
                 curr_insts.emplace_back(str_inst);
             }
@@ -1222,12 +1263,12 @@ std::vector<IRGenerator::Initializer::val_t> IRGenerator::Initializer::flatten(c
         {
             auto bty = IR::toBType(type)->getInner();
             Err::gassert(bty == base_type);
-            return { make_zero() };
+            return { getZeroValue() };
         }
         if (type->getTrait() == IR::IRCTYPE::ARRAY)
         {
             auto arrty = std::dynamic_pointer_cast<IR::ArrayType>(type);
-            return std::vector{arrty->getBytes() / getBytes(base_type), make_zero()};
+            return std::vector{arrty->getBytes() / getBytes(base_type), getZeroValue()};
         }
         Err::unreachable();
     }
@@ -1238,7 +1279,7 @@ std::vector<IRGenerator::Initializer::val_t> IRGenerator::Initializer::flatten(c
         if (type->getTrait() == IR::IRCTYPE::ARRAY)
         {
             auto arrty = std::dynamic_pointer_cast<IR::ArrayType>(type);
-            std::vector ret{arrty->getBytes() / getBytes(base_type), make_zero()};
+            std::vector ret{arrty->getBytes() / getBytes(base_type), getZeroValue()};
             ret[0] = std::get<val_t>(initializer);
             return ret;
         }
@@ -1267,7 +1308,7 @@ std::vector<IRGenerator::Initializer::val_t> IRGenerator::Initializer::flatten(c
                     ++len;
                 }
                 for (size_t i = len; i < arrty->getArraySize(); ++i)
-                    ret.emplace_back(make_zero());
+                    ret.emplace_back(getZeroValue());
                 return ret;
             }
             if (elmty->getTrait() == IR::IRCTYPE::ARRAY)
@@ -1327,7 +1368,7 @@ std::vector<IRGenerator::Initializer::val_t> IRGenerator::Initializer::flatten(c
     return {};
 }
 
-IRGenerator::Initializer::val_t IRGenerator::Initializer::make_zero() const {
+IRGenerator::Initializer::val_t IRGenerator::Initializer::getZeroValue() const {
     if (base_type == IR::IRBTYPE::I32)
         return {0};
     else
@@ -1338,7 +1379,7 @@ bool IRGenerator::Initializer::isZeroIniter() const {
     if (empty())
         return true;
     if (isVal())
-        return std::get<val_t>(initializer) == make_zero();
+        return std::get<val_t>(initializer) == getZeroValue();
     if (isList())
     {
         const auto& list = std::get<list_t>(initializer);
