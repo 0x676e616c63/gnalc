@@ -34,11 +34,9 @@ bool only_frontend = true;
 // Note that all the path is relative to the executing path
 // gnalc(project dir) -> cmake-build-debug(CLion's build dir) -> test -> gnalc_test(executable)
 
-// frontend + backend
-const std::string irgen_path = "../irgen";
+const std::string gnalc_path = "../gnalc";
 
 // backend
-const std::string asmgen_path = "../asmgen";
 const std::string gcc_arm_command = "arm-linux-gnueabi-gcc-14";
 const std::string qemu_arm_command = "LD_LIBRARY_PATH=/usr/arm-linux-gnueabi/lib qemu-arm";
 
@@ -220,11 +218,11 @@ int main(int argc, char* argv[]) {
 
                 // /bin/echo is the one in GNU coreutils
                 command = format(
-                    "{} 2>&1 < {} > {}"
+                    "{} 2>&1 -S -emit-llvm -o {} {}"
                     " && llvm-link 2>&1 {} {} -o {}"
                     " && lli {} < {} > {}"
                     "; /bin/echo -e \"\\n\"$? >> {}",
-                    sycfg::irgen_path, sy.path().string(), outll,
+                    sycfg::gnalc_path,outll, sy.path().string(),
                     sylib_to_link, outll, outbc,
                     outbc, exists(testcase_in) ? testcase_in : "/dev/null", output,
                     output);
@@ -252,11 +250,11 @@ int main(int argc, char* argv[]) {
                     curr_temp_dir, sy.path().stem().string());
 
                 command = format(
-                    "{} 2>&1 < {} > {}"
+                    "{} 2>&1 -o {} {}"
                     " && {} {} {} -o {}"
                     " && {} {} < {} > {}"
                     "; /bin/echo -e \"\\n\"$? >> {}",
-                    sycfg::asmgen_path, sy.path().string(), outs,
+                    sycfg::gnalc_path, outs, sy.path().string(),
                     sycfg::gcc_arm_command, outs, sylib_to_link, outexec,
                     sycfg::qemu_arm_command, outexec, exists(testcase_in) ? testcase_in : "/dev/null", output,
                     output);

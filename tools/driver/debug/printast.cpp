@@ -12,7 +12,7 @@ int main(int argc, char **argv){
         return 1;
     }
 
-    AST::Printer printer;
+    AST::ASTPrinter printer;
     printer.visit(*node);
 
     return 0;

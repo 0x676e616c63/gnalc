@@ -20,6 +20,7 @@ int main(int argc, char **argv) {
     std::string output_file;
     bool only_compilation = false;
     bool emit_llvm = false;
+    bool ast_dump = false;
     for (int i = 1; i < argc; ++i)
     {
         std::string arg(argv[i]);
@@ -59,15 +60,20 @@ int main(int argc, char **argv) {
         {
             emit_llvm = true;
         }
+        else if (arg == "-ast-dump")
+        {
+            ast_dump = true;
+        }
         else if (arg == "--help")
         {
             std::cout << "OVERVIEW: gnalc compiler\n";
-            std::cout << "USAGE: " << argv[0] << " [options] file...\n";
+            std::cout << "USAGE: " << argv[0] << " [options] file\n";
             std::cout <<
                 "OPTIONS:\n"
                 "  -o <file>            Write output to <file>\n"
                 "  -S                   Only run compilation steps\n"
                 "  -emit-llvm           Use the LLVM representation for assembler and object files\n"
+                "  -ast-dump            Build ASTs and then debug dump them\n"
                 "  --log <log-level>    Enable compiler logger. Available log-level: debug, info\n"
                 "  --help               Display available options\n"
             << std::flush;
@@ -76,14 +82,19 @@ int main(int argc, char **argv) {
             input_file = argv[i];
     }
 
-    if (!only_compilation)
+    if (!emit_llvm && !ast_dump && !only_compilation)
     {
-        std::cerr << "Error: gnalc currently only supports '-S' mode." << std::endl;
+        std::cerr << "Error: Gnalc currently only supports '-S' mode." << std::endl;
         return -1;
     }
-    else if (input_file.empty() || output_file.empty())
+    if (input_file.empty())
     {
         std::cerr << "Error: Expected input and output file." << std::endl;
+        return -1;
+    }
+    if (emit_llvm && ast_dump)
+    {
+        std::cerr << "Error: -emit-llvm conflicts with ast_dump" << std::endl;
         return -1;
     }
 
@@ -102,6 +113,13 @@ int main(int argc, char **argv) {
         return -1;
     }
 
+    if (ast_dump)
+    {
+        AST::ASTPrinter printer;
+        printer.visit(*node);
+        return 0;
+    }
+
     IRGenerator generator;
     generator.visit(*node);
 
@@ -114,12 +132,17 @@ int main(int argc, char **argv) {
     IR::NameNormalizer name_normalizer(false);
     name_normalizer.normalize(generator.get_module());
 
+    std::ostream* outstream;
+
+    if (output_file.empty())
+        outstream = &std::cout;
+    else
+        outstream = new std::ofstream(output_file);
+
     if (emit_llvm)
     {
-        std::ofstream outstream(output_file);
-        IR::IRPrinter printer(outstream, false);
+        IR::IRPrinter printer(*outstream, false);
         printer.printout(generator.get_module());
-        outstream.close();
     }
     else
     {
@@ -134,5 +157,10 @@ int main(int argc, char **argv) {
     }
 
     la.cleanLiveInfo(generator.get_module());
+
+    if (outstream != &std::cout)
+        delete outstream;
+
+    fclose(yyin);
     return 0;
 }

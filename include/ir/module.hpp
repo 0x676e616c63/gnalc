@@ -37,6 +37,7 @@ public:
 
     void addFunctionDecl(std::shared_ptr<FunctionDecl> func);
     const std::vector<std::shared_ptr<FunctionDecl>>& getFunctionDecls() const;
+    std::vector<std::shared_ptr<FunctionDecl>>& getFunctionDecls();
     void delFunctionDecl(NameRef name); // by name
 
     void accept(IRVisitor& visitor);

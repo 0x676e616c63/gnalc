@@ -65,6 +65,10 @@ void IRGenerator::visit(CompUnit& node) {
         n->accept(*this);
     }
     symbol_table.finishScope();
+
+    auto& decls = module.getFunctionDecls();
+    decls.erase(std::remove_if(decls.begin(), decls.end(),
+        [](auto&& p){return p->getRUseList().empty();}), decls.end());
 }
 
 // DeclStmt: const int32

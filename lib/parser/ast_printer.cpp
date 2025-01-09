@@ -2,7 +2,7 @@
 #include <iostream>
 
 namespace AST {
-    void Printer::PrintType(dtype t) const {
+    void ASTPrinter::PrintType(dtype t) const {
         std::cout << "\x1b[38;5;12m"; // Blue
         switch (t) {
             case dtype::INT:
@@ -20,13 +20,13 @@ namespace AST {
         std::cout << "\x1b[0m";
     }
 
-    void Printer::PrintBlank() const {
+    void ASTPrinter::PrintBlank() const {
         for (int i = 0; i < nest; i++) {
             std::cout << "| ";
         }
     }
 
-    void Printer::PrintOp(BiOp op) const {
+    void ASTPrinter::PrintOp(BiOp op) const {
         switch (op) {
             case BiOp::ASSIGN:
                 std::cout << "=";
@@ -75,7 +75,7 @@ namespace AST {
         }
     }
 
-    void Printer::PrintOp(UnOp op) const {
+    void ASTPrinter::PrintOp(UnOp op) const {
         switch (op) {
             case UnOp::NOT:
                 std::cout << "!";
@@ -92,7 +92,7 @@ namespace AST {
     }
 
     // TranslationUnit:
-    void Printer::visit(CompUnit& node) {
+    void ASTPrinter::visit(CompUnit& node) {
         std::cout << "======================================" << std::endl;
         std::cout << "    Welcome to use gnalc compiler.    " << std::endl;
         std::cout << "           AST Printer v1.0           " << std::endl;
@@ -109,7 +109,7 @@ namespace AST {
     }
 
     // DeclStmt: const int32
-    void Printer::visit(DeclStmt& node) {
+    void ASTPrinter::visit(DeclStmt& node) {
         PrintBlank();
         std::cout << "DeclStmt: ";
 
@@ -128,7 +128,7 @@ namespace AST {
     }
 
     // VarDecl: 'a' const int32[1][2]
-    void Printer::visit(VarDef& node) {
+    void ASTPrinter::visit(VarDef& node) {
         PrintBlank();
         std::cout << "VarDecl: \'" << node.getId() << "\' "; // VarDef: 'a'
 
@@ -153,7 +153,7 @@ namespace AST {
         }
     }
 
-    void Printer::visit(InitVal& node) {
+    void ASTPrinter::visit(InitVal& node) {
         if (node.isList()) {
             PrintBlank();
             std::cout << "InitList:";
@@ -173,7 +173,7 @@ namespace AST {
         }
     }
 
-    void Printer::visit(ArraySubscript& node) {
+    void ASTPrinter::visit(ArraySubscript& node) {
         fold_exp = true;
         std::cout << "[";
         node.getExp()->accept(*this);
@@ -182,7 +182,7 @@ namespace AST {
     }
 
     // FunctionDef: 'func' int32
-    void Printer::visit(FuncDef& node) {
+    void ASTPrinter::visit(FuncDef& node) {
         PrintBlank();
         std::cout << "FunctionDef: \'" << node.getId() << "\' ";
         PrintType(node.getType());
@@ -203,7 +203,7 @@ namespace AST {
     }
 
     // FuncFParam: 'a' int32[][2] \n
-    void Printer::visit(FuncFParam& node) {
+    void ASTPrinter::visit(FuncFParam& node) {
         PrintBlank();
         std::cout << "FuncFParam: \'" << node.getId() << "\' ";
 
@@ -221,7 +221,7 @@ namespace AST {
     }
 
     // DeclRefExp: 'a' \n
-    void Printer::visit(DeclRef& node) {
+    void ASTPrinter::visit(DeclRef& node) {
         if (fold_exp) {
             std::cout << node.getId();
             return;
@@ -234,7 +234,7 @@ namespace AST {
      * a[2][1]
      * ArrayExp: 'a' [2][1]
      */
-    void Printer::visit(ArrayExp& node) {
+    void ASTPrinter::visit(ArrayExp& node) {
         if (fold_exp) {
             std::cout << node.getId();
             for (auto& ss : node.getIndices()) {
@@ -256,7 +256,7 @@ namespace AST {
      * a(1, 2, 3)
      * CallExp: 'a' (1, 2, 3, )
      */
-    void Printer::visit(CallExp& node) {
+    void ASTPrinter::visit(CallExp& node) {
         if (fold_exp) {
             std::cout << node.getId();
             std::cout << "(";
@@ -283,7 +283,7 @@ namespace AST {
         std::cout << ")" <<std::endl;
     }
 
-    void Printer::visit(FuncRParam& node) {
+    void ASTPrinter::visit(FuncRParam& node) {
         fold_exp = true;
         node.getExp()->accept(*this);
         fold_exp = false;
@@ -298,7 +298,7 @@ namespace AST {
      * |-ParenExp
      * |-|-BinaryOp '-'
      */
-    void Printer::visit(BinaryOp& node) {
+    void ASTPrinter::visit(BinaryOp& node) {
         if (fold_exp) {
             node.getLHS()->accept(*this);
             PrintOp(node.getOp());
@@ -317,7 +317,7 @@ namespace AST {
         nest--;
     }
 
-    void Printer::visit(UnaryOp& node) {
+    void ASTPrinter::visit(UnaryOp& node) {
         if (fold_exp) {
             PrintOp(node.getOp());
             node.getExp()->accept(*this);
@@ -334,7 +334,7 @@ namespace AST {
         nest--;
     }
 
-    void Printer::visit(ParenExp& node) {
+    void ASTPrinter::visit(ParenExp& node) {
         if (fold_exp) {
             std::cout << "(";
             node.getExp()->accept(*this);
@@ -350,7 +350,7 @@ namespace AST {
         nest--;
     }
 
-    void Printer::visit(IntLiteral& node) {
+    void ASTPrinter::visit(IntLiteral& node) {
         if (fold_exp) {
             std::cout << node.getValue();
             return;
@@ -360,7 +360,7 @@ namespace AST {
         std::cout << "IntLiteral: " << node.getValue() << std::endl;
     }
 
-    void Printer::visit(FloatLiteral& node) {
+    void ASTPrinter::visit(FloatLiteral& node) {
         if (fold_exp) {
             std::cout << node.getValue();
             return;
@@ -370,7 +370,7 @@ namespace AST {
         std::cout << "FloatLiteral: " << node.getValue() << std::endl;
     }
 
-    void Printer::visit(CompStmt& node) {
+    void ASTPrinter::visit(CompStmt& node) {
         PrintBlank();
         std::cout << "CompStmt:" << std::endl;
         nest++;
@@ -380,7 +380,7 @@ namespace AST {
         nest--;
     }
 
-    void Printer::visit(IfStmt& node) {
+    void ASTPrinter::visit(IfStmt& node) {
         PrintBlank();
         std::cout << "IfStmt: " ;
         if(node.hasElse()) {
@@ -398,7 +398,7 @@ namespace AST {
         nest--;
     }
 
-    void Printer::visit(WhileStmt& node) {
+    void ASTPrinter::visit(WhileStmt& node) {
         PrintBlank();
         std::cout << "WhileStmt:" << std::endl;
         nest++;
@@ -407,22 +407,22 @@ namespace AST {
         nest--;
     }
 
-    void Printer::visit(NullStmt& node) {
+    void ASTPrinter::visit(NullStmt& node) {
         PrintBlank();
         std::cout << "NullStmt" << std::endl;
     }
 
-    void Printer::visit(BreakStmt& node) {
+    void ASTPrinter::visit(BreakStmt& node) {
         PrintBlank();
         std::cout << "BreakStmt" << std::endl;
     }
 
-    void Printer::visit(ContinueStmt& node) {
+    void ASTPrinter::visit(ContinueStmt& node) {
         PrintBlank();
         std::cout << "ContinueStmt" << std::endl;
     }
 
-    void Printer::visit(ReturnStmt& node) {
+    void ASTPrinter::visit(ReturnStmt& node) {
         PrintBlank();
         std::cout << "ReturnStmt:";
         nest++;
