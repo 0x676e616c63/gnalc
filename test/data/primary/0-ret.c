@@ -1,7 +1,7 @@
-    int a[2][2] = {{1, 2}, {2, 3}};
-    float c = 11.45;
-
-
 int main(){
-    return 0;
+    int a = 114514;
+    if(a == 1){
+        return 1;
+    }
+    return 1145;
 }

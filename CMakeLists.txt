@@ -26,7 +26,11 @@ aux_source_directory(lib/lexer GNALC_LEXER_SRC)
 aux_source_directory(lib/opt GNALC_OPT_SRC)
 aux_source_directory(lib/parser GNALC_PARSER_SRC)
 aux_source_directory(lib/utils GNALC_UTILS_SRC)
-set(GNALC_SRC ${GNALC_IR_SRC} ${GNALC_IRVISITORS_SRC} ${GNALC_IROPTS_SRC} ${GNALC_LEXER_SRC} ${GNALC_OPT_SRC} ${GNALC_PARSER_SRC} ${GNALC_UTILS_SRC})
+aux_source_directory(BackEnd/lib GNALC_BACKEND_SRC)
+aux_source_directory(BackEnd/lib/ArmComplexMIRStruct GNALC_BACKEND_SRC)
+aux_source_directory(BackEnd/lib/tools GNALC_BACKEND_SRC)
+
+set(GNALC_SRC ${GNALC_IR_SRC} ${GNALC_IRVISITORS_SRC} ${GNALC_IROPTS_SRC} ${GNALC_LEXER_SRC} ${GNALC_OPT_SRC} ${GNALC_PARSER_SRC} ${GNALC_UTILS_SRC} ${GNALC_BACKEND_SRC})
 
 add_executable(printast tools/driver/debug/printast.cpp lib/parser/parser.cpp lib/lexer/lexer.cpp lib/parser/ast_printer.cpp)
 

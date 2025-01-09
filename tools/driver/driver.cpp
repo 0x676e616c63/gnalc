@@ -8,6 +8,9 @@
 #include "../include/irvisitors/namenormalizer.hpp"
 #include "../include/iropt/live_analysis.hpp"
 
+#include "../BackEnd/Arm.hpp"
+#include "../BackEnd/include/ArmComplexMIRStruct/ArmModule.hpp"
+
 std::shared_ptr<CompUnit> node = nullptr;
 extern FILE *yyin;
 
@@ -108,7 +111,7 @@ int main(int argc, char **argv) {
     la.cleanLiveInfo(generator.get_module());
     la.processModule(generator.get_module());
 
-    IR::NameNormalizer name_normalizer(true);
+    IR::NameNormalizer name_normalizer(false);
     name_normalizer.normalize(generator.get_module());
 
     if (emit_llvm)
@@ -120,7 +123,14 @@ int main(int argc, char **argv) {
     }
     else
     {
-        Err::todo("Backend");
+        ArmStruct::Module *backEndModule = new ArmStruct::Module(generator.get_module());
+        backEndModule->AllocRegister();
+        backEndModule->Legalize();
+        std::string Asm = backEndModule->toString();
+        std::ofstream outstream(output_file);
+        outstream << Asm;
+        outstream.close();
+
     }
 
     la.cleanLiveInfo(generator.get_module());

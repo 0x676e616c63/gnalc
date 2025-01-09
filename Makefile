@@ -140,19 +140,6 @@ printast/fast:
 .PHONY : printast/fast
 
 #=============================================================================
-# Target rules for targets named irgen
-
-# Build rule for target.
-irgen: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 irgen
-.PHONY : irgen
-
-# fast build rule for target.
-irgen/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/build
-.PHONY : irgen/fast
-
-#=============================================================================
 # Target rules for targets named printir
 
 # Build rule for target.
@@ -166,17 +153,30 @@ printir/fast:
 .PHONY : printir/fast
 
 #=============================================================================
-# Target rules for targets named asmgen
+# Target rules for targets named irgen
 
 # Build rule for target.
-asmgen: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 asmgen
-.PHONY : asmgen
+irgen: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 irgen
+.PHONY : irgen
 
 # fast build rule for target.
-asmgen/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/build
-.PHONY : asmgen/fast
+irgen/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/build
+.PHONY : irgen/fast
+
+#=============================================================================
+# Target rules for targets named gnalc
+
+# Build rule for target.
+gnalc: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 gnalc
+.PHONY : gnalc
+
+# fast build rule for target.
+gnalc/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/build
+.PHONY : gnalc/fast
 
 #=============================================================================
 # Target rules for targets named gnalc_test
@@ -196,7 +196,8 @@ BackEnd/lib/ArmComplexMIRStruct/ArmBB.o: BackEnd/lib/ArmComplexMIRStruct/ArmBB.c
 
 # target to build an object file
 BackEnd/lib/ArmComplexMIRStruct/ArmBB.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmBB.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmBB.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/ArmComplexMIRStruct/ArmBB.cpp.o
 .PHONY : BackEnd/lib/ArmComplexMIRStruct/ArmBB.cpp.o
 
 BackEnd/lib/ArmComplexMIRStruct/ArmBB.i: BackEnd/lib/ArmComplexMIRStruct/ArmBB.cpp.i
@@ -204,7 +205,8 @@ BackEnd/lib/ArmComplexMIRStruct/ArmBB.i: BackEnd/lib/ArmComplexMIRStruct/ArmBB.c
 
 # target to preprocess a source file
 BackEnd/lib/ArmComplexMIRStruct/ArmBB.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmBB.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmBB.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/ArmComplexMIRStruct/ArmBB.cpp.i
 .PHONY : BackEnd/lib/ArmComplexMIRStruct/ArmBB.cpp.i
 
 BackEnd/lib/ArmComplexMIRStruct/ArmBB.s: BackEnd/lib/ArmComplexMIRStruct/ArmBB.cpp.s
@@ -212,7 +214,8 @@ BackEnd/lib/ArmComplexMIRStruct/ArmBB.s: BackEnd/lib/ArmComplexMIRStruct/ArmBB.c
 
 # target to generate assembly for a file
 BackEnd/lib/ArmComplexMIRStruct/ArmBB.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmBB.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmBB.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/ArmComplexMIRStruct/ArmBB.cpp.s
 .PHONY : BackEnd/lib/ArmComplexMIRStruct/ArmBB.cpp.s
 
 BackEnd/lib/ArmComplexMIRStruct/ArmFunction.o: BackEnd/lib/ArmComplexMIRStruct/ArmFunction.cpp.o
@@ -220,7 +223,8 @@ BackEnd/lib/ArmComplexMIRStruct/ArmFunction.o: BackEnd/lib/ArmComplexMIRStruct/A
 
 # target to build an object file
 BackEnd/lib/ArmComplexMIRStruct/ArmFunction.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmFunction.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmFunction.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/ArmComplexMIRStruct/ArmFunction.cpp.o
 .PHONY : BackEnd/lib/ArmComplexMIRStruct/ArmFunction.cpp.o
 
 BackEnd/lib/ArmComplexMIRStruct/ArmFunction.i: BackEnd/lib/ArmComplexMIRStruct/ArmFunction.cpp.i
@@ -228,7 +232,8 @@ BackEnd/lib/ArmComplexMIRStruct/ArmFunction.i: BackEnd/lib/ArmComplexMIRStruct/A
 
 # target to preprocess a source file
 BackEnd/lib/ArmComplexMIRStruct/ArmFunction.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmFunction.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmFunction.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/ArmComplexMIRStruct/ArmFunction.cpp.i
 .PHONY : BackEnd/lib/ArmComplexMIRStruct/ArmFunction.cpp.i
 
 BackEnd/lib/ArmComplexMIRStruct/ArmFunction.s: BackEnd/lib/ArmComplexMIRStruct/ArmFunction.cpp.s
@@ -236,7 +241,8 @@ BackEnd/lib/ArmComplexMIRStruct/ArmFunction.s: BackEnd/lib/ArmComplexMIRStruct/A
 
 # target to generate assembly for a file
 BackEnd/lib/ArmComplexMIRStruct/ArmFunction.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmFunction.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmFunction.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/ArmComplexMIRStruct/ArmFunction.cpp.s
 .PHONY : BackEnd/lib/ArmComplexMIRStruct/ArmFunction.cpp.s
 
 BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.o: BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.cpp.o
@@ -244,7 +250,8 @@ BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.o: BackEnd/lib/ArmComplexMIRStruc
 
 # target to build an object file
 BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.cpp.o
 .PHONY : BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.cpp.o
 
 BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.i: BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.cpp.i
@@ -252,7 +259,8 @@ BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.i: BackEnd/lib/ArmComplexMIRStruc
 
 # target to preprocess a source file
 BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.cpp.i
 .PHONY : BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.cpp.i
 
 BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.s: BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.cpp.s
@@ -260,7 +268,8 @@ BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.s: BackEnd/lib/ArmComplexMIRStruc
 
 # target to generate assembly for a file
 BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.cpp.s
 .PHONY : BackEnd/lib/ArmComplexMIRStruct/ArmInstruction.cpp.s
 
 BackEnd/lib/ArmComplexMIRStruct/ArmModule.o: BackEnd/lib/ArmComplexMIRStruct/ArmModule.cpp.o
@@ -268,7 +277,8 @@ BackEnd/lib/ArmComplexMIRStruct/ArmModule.o: BackEnd/lib/ArmComplexMIRStruct/Arm
 
 # target to build an object file
 BackEnd/lib/ArmComplexMIRStruct/ArmModule.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmModule.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmModule.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/ArmComplexMIRStruct/ArmModule.cpp.o
 .PHONY : BackEnd/lib/ArmComplexMIRStruct/ArmModule.cpp.o
 
 BackEnd/lib/ArmComplexMIRStruct/ArmModule.i: BackEnd/lib/ArmComplexMIRStruct/ArmModule.cpp.i
@@ -276,7 +286,8 @@ BackEnd/lib/ArmComplexMIRStruct/ArmModule.i: BackEnd/lib/ArmComplexMIRStruct/Arm
 
 # target to preprocess a source file
 BackEnd/lib/ArmComplexMIRStruct/ArmModule.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmModule.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmModule.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/ArmComplexMIRStruct/ArmModule.cpp.i
 .PHONY : BackEnd/lib/ArmComplexMIRStruct/ArmModule.cpp.i
 
 BackEnd/lib/ArmComplexMIRStruct/ArmModule.s: BackEnd/lib/ArmComplexMIRStruct/ArmModule.cpp.s
@@ -284,7 +295,8 @@ BackEnd/lib/ArmComplexMIRStruct/ArmModule.s: BackEnd/lib/ArmComplexMIRStruct/Arm
 
 # target to generate assembly for a file
 BackEnd/lib/ArmComplexMIRStruct/ArmModule.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmModule.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmModule.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/ArmComplexMIRStruct/ArmModule.cpp.s
 .PHONY : BackEnd/lib/ArmComplexMIRStruct/ArmModule.cpp.s
 
 BackEnd/lib/ArmComplexMIRStruct/ArmOperand.o: BackEnd/lib/ArmComplexMIRStruct/ArmOperand.cpp.o
@@ -292,7 +304,8 @@ BackEnd/lib/ArmComplexMIRStruct/ArmOperand.o: BackEnd/lib/ArmComplexMIRStruct/Ar
 
 # target to build an object file
 BackEnd/lib/ArmComplexMIRStruct/ArmOperand.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmOperand.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmOperand.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/ArmComplexMIRStruct/ArmOperand.cpp.o
 .PHONY : BackEnd/lib/ArmComplexMIRStruct/ArmOperand.cpp.o
 
 BackEnd/lib/ArmComplexMIRStruct/ArmOperand.i: BackEnd/lib/ArmComplexMIRStruct/ArmOperand.cpp.i
@@ -300,7 +313,8 @@ BackEnd/lib/ArmComplexMIRStruct/ArmOperand.i: BackEnd/lib/ArmComplexMIRStruct/Ar
 
 # target to preprocess a source file
 BackEnd/lib/ArmComplexMIRStruct/ArmOperand.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmOperand.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmOperand.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/ArmComplexMIRStruct/ArmOperand.cpp.i
 .PHONY : BackEnd/lib/ArmComplexMIRStruct/ArmOperand.cpp.i
 
 BackEnd/lib/ArmComplexMIRStruct/ArmOperand.s: BackEnd/lib/ArmComplexMIRStruct/ArmOperand.cpp.s
@@ -308,7 +322,8 @@ BackEnd/lib/ArmComplexMIRStruct/ArmOperand.s: BackEnd/lib/ArmComplexMIRStruct/Ar
 
 # target to generate assembly for a file
 BackEnd/lib/ArmComplexMIRStruct/ArmOperand.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmOperand.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/ArmComplexMIRStruct/ArmOperand.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/ArmComplexMIRStruct/ArmOperand.cpp.s
 .PHONY : BackEnd/lib/ArmComplexMIRStruct/ArmOperand.cpp.s
 
 BackEnd/lib/tools/ArmIRMatches.o: BackEnd/lib/tools/ArmIRMatches.cpp.o
@@ -316,7 +331,8 @@ BackEnd/lib/tools/ArmIRMatches.o: BackEnd/lib/tools/ArmIRMatches.cpp.o
 
 # target to build an object file
 BackEnd/lib/tools/ArmIRMatches.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/tools/ArmIRMatches.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/tools/ArmIRMatches.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/tools/ArmIRMatches.cpp.o
 .PHONY : BackEnd/lib/tools/ArmIRMatches.cpp.o
 
 BackEnd/lib/tools/ArmIRMatches.i: BackEnd/lib/tools/ArmIRMatches.cpp.i
@@ -324,7 +340,8 @@ BackEnd/lib/tools/ArmIRMatches.i: BackEnd/lib/tools/ArmIRMatches.cpp.i
 
 # target to preprocess a source file
 BackEnd/lib/tools/ArmIRMatches.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/tools/ArmIRMatches.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/tools/ArmIRMatches.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/tools/ArmIRMatches.cpp.i
 .PHONY : BackEnd/lib/tools/ArmIRMatches.cpp.i
 
 BackEnd/lib/tools/ArmIRMatches.s: BackEnd/lib/tools/ArmIRMatches.cpp.s
@@ -332,7 +349,8 @@ BackEnd/lib/tools/ArmIRMatches.s: BackEnd/lib/tools/ArmIRMatches.cpp.s
 
 # target to generate assembly for a file
 BackEnd/lib/tools/ArmIRMatches.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/tools/ArmIRMatches.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/tools/ArmIRMatches.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/tools/ArmIRMatches.cpp.s
 .PHONY : BackEnd/lib/tools/ArmIRMatches.cpp.s
 
 BackEnd/lib/tools/ArmRegisterAlloc.o: BackEnd/lib/tools/ArmRegisterAlloc.cpp.o
@@ -340,7 +358,8 @@ BackEnd/lib/tools/ArmRegisterAlloc.o: BackEnd/lib/tools/ArmRegisterAlloc.cpp.o
 
 # target to build an object file
 BackEnd/lib/tools/ArmRegisterAlloc.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/tools/ArmRegisterAlloc.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/tools/ArmRegisterAlloc.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/tools/ArmRegisterAlloc.cpp.o
 .PHONY : BackEnd/lib/tools/ArmRegisterAlloc.cpp.o
 
 BackEnd/lib/tools/ArmRegisterAlloc.i: BackEnd/lib/tools/ArmRegisterAlloc.cpp.i
@@ -348,7 +367,8 @@ BackEnd/lib/tools/ArmRegisterAlloc.i: BackEnd/lib/tools/ArmRegisterAlloc.cpp.i
 
 # target to preprocess a source file
 BackEnd/lib/tools/ArmRegisterAlloc.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/tools/ArmRegisterAlloc.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/tools/ArmRegisterAlloc.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/tools/ArmRegisterAlloc.cpp.i
 .PHONY : BackEnd/lib/tools/ArmRegisterAlloc.cpp.i
 
 BackEnd/lib/tools/ArmRegisterAlloc.s: BackEnd/lib/tools/ArmRegisterAlloc.cpp.s
@@ -356,7 +376,8 @@ BackEnd/lib/tools/ArmRegisterAlloc.s: BackEnd/lib/tools/ArmRegisterAlloc.cpp.s
 
 # target to generate assembly for a file
 BackEnd/lib/tools/ArmRegisterAlloc.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/tools/ArmRegisterAlloc.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/tools/ArmRegisterAlloc.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/tools/ArmRegisterAlloc.cpp.s
 .PHONY : BackEnd/lib/tools/ArmRegisterAlloc.cpp.s
 
 BackEnd/lib/tools/ArmTools.o: BackEnd/lib/tools/ArmTools.cpp.o
@@ -364,7 +385,8 @@ BackEnd/lib/tools/ArmTools.o: BackEnd/lib/tools/ArmTools.cpp.o
 
 # target to build an object file
 BackEnd/lib/tools/ArmTools.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/tools/ArmTools.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/tools/ArmTools.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/tools/ArmTools.cpp.o
 .PHONY : BackEnd/lib/tools/ArmTools.cpp.o
 
 BackEnd/lib/tools/ArmTools.i: BackEnd/lib/tools/ArmTools.cpp.i
@@ -372,7 +394,8 @@ BackEnd/lib/tools/ArmTools.i: BackEnd/lib/tools/ArmTools.cpp.i
 
 # target to preprocess a source file
 BackEnd/lib/tools/ArmTools.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/tools/ArmTools.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/tools/ArmTools.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/tools/ArmTools.cpp.i
 .PHONY : BackEnd/lib/tools/ArmTools.cpp.i
 
 BackEnd/lib/tools/ArmTools.s: BackEnd/lib/tools/ArmTools.cpp.s
@@ -380,113 +403,18 @@ BackEnd/lib/tools/ArmTools.s: BackEnd/lib/tools/ArmTools.cpp.s
 
 # target to generate assembly for a file
 BackEnd/lib/tools/ArmTools.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/BackEnd/lib/tools/ArmTools.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/BackEnd/lib/tools/ArmTools.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/BackEnd/lib/tools/ArmTools.cpp.s
 .PHONY : BackEnd/lib/tools/ArmTools.cpp.s
-
-debug/asmgen.o: debug/asmgen.cpp.o
-.PHONY : debug/asmgen.o
-
-# target to build an object file
-debug/asmgen.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/debug/asmgen.cpp.o
-.PHONY : debug/asmgen.cpp.o
-
-debug/asmgen.i: debug/asmgen.cpp.i
-.PHONY : debug/asmgen.i
-
-# target to preprocess a source file
-debug/asmgen.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/debug/asmgen.cpp.i
-.PHONY : debug/asmgen.cpp.i
-
-debug/asmgen.s: debug/asmgen.cpp.s
-.PHONY : debug/asmgen.s
-
-# target to generate assembly for a file
-debug/asmgen.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/debug/asmgen.cpp.s
-.PHONY : debug/asmgen.cpp.s
-
-debug/irgen.o: debug/irgen.cpp.o
-.PHONY : debug/irgen.o
-
-# target to build an object file
-debug/irgen.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/debug/irgen.cpp.o
-.PHONY : debug/irgen.cpp.o
-
-debug/irgen.i: debug/irgen.cpp.i
-.PHONY : debug/irgen.i
-
-# target to preprocess a source file
-debug/irgen.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/debug/irgen.cpp.i
-.PHONY : debug/irgen.cpp.i
-
-debug/irgen.s: debug/irgen.cpp.s
-.PHONY : debug/irgen.s
-
-# target to generate assembly for a file
-debug/irgen.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/debug/irgen.cpp.s
-.PHONY : debug/irgen.cpp.s
-
-debug/irprintertest.o: debug/irprintertest.cpp.o
-.PHONY : debug/irprintertest.o
-
-# target to build an object file
-debug/irprintertest.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/debug/irprintertest.cpp.o
-.PHONY : debug/irprintertest.cpp.o
-
-debug/irprintertest.i: debug/irprintertest.cpp.i
-.PHONY : debug/irprintertest.i
-
-# target to preprocess a source file
-debug/irprintertest.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/debug/irprintertest.cpp.i
-.PHONY : debug/irprintertest.cpp.i
-
-debug/irprintertest.s: debug/irprintertest.cpp.s
-.PHONY : debug/irprintertest.s
-
-# target to generate assembly for a file
-debug/irprintertest.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/debug/irprintertest.cpp.s
-.PHONY : debug/irprintertest.cpp.s
-
-debug/printast.o: debug/printast.cpp.o
-.PHONY : debug/printast.o
-
-# target to build an object file
-debug/printast.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/debug/printast.cpp.o
-.PHONY : debug/printast.cpp.o
-
-debug/printast.i: debug/printast.cpp.i
-.PHONY : debug/printast.i
-
-# target to preprocess a source file
-debug/printast.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/debug/printast.cpp.i
-.PHONY : debug/printast.cpp.i
-
-debug/printast.s: debug/printast.cpp.s
-.PHONY : debug/printast.s
-
-# target to generate assembly for a file
-debug/printast.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/debug/printast.cpp.s
-.PHONY : debug/printast.cpp.s
 
 lib/ir/base.o: lib/ir/base.cpp.o
 .PHONY : lib/ir/base.o
 
 # target to build an object file
 lib/ir/base.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/base.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/base.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/base.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/base.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/base.cpp.o
 .PHONY : lib/ir/base.cpp.o
 
 lib/ir/base.i: lib/ir/base.cpp.i
@@ -494,9 +422,9 @@ lib/ir/base.i: lib/ir/base.cpp.i
 
 # target to preprocess a source file
 lib/ir/base.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/base.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/base.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/base.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/base.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/base.cpp.i
 .PHONY : lib/ir/base.cpp.i
 
 lib/ir/base.s: lib/ir/base.cpp.s
@@ -504,9 +432,9 @@ lib/ir/base.s: lib/ir/base.cpp.s
 
 # target to generate assembly for a file
 lib/ir/base.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/base.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/base.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/base.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/base.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/base.cpp.s
 .PHONY : lib/ir/base.cpp.s
 
 lib/ir/basic_block.o: lib/ir/basic_block.cpp.o
@@ -514,9 +442,9 @@ lib/ir/basic_block.o: lib/ir/basic_block.cpp.o
 
 # target to build an object file
 lib/ir/basic_block.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/basic_block.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/basic_block.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/basic_block.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/basic_block.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/basic_block.cpp.o
 .PHONY : lib/ir/basic_block.cpp.o
 
 lib/ir/basic_block.i: lib/ir/basic_block.cpp.i
@@ -524,9 +452,9 @@ lib/ir/basic_block.i: lib/ir/basic_block.cpp.i
 
 # target to preprocess a source file
 lib/ir/basic_block.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/basic_block.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/basic_block.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/basic_block.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/basic_block.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/basic_block.cpp.i
 .PHONY : lib/ir/basic_block.cpp.i
 
 lib/ir/basic_block.s: lib/ir/basic_block.cpp.s
@@ -534,9 +462,9 @@ lib/ir/basic_block.s: lib/ir/basic_block.cpp.s
 
 # target to generate assembly for a file
 lib/ir/basic_block.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/basic_block.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/basic_block.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/basic_block.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/basic_block.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/basic_block.cpp.s
 .PHONY : lib/ir/basic_block.cpp.s
 
 lib/ir/constant.o: lib/ir/constant.cpp.o
@@ -544,9 +472,9 @@ lib/ir/constant.o: lib/ir/constant.cpp.o
 
 # target to build an object file
 lib/ir/constant.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/constant.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/constant.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/constant.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/constant.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/constant.cpp.o
 .PHONY : lib/ir/constant.cpp.o
 
 lib/ir/constant.i: lib/ir/constant.cpp.i
@@ -554,9 +482,9 @@ lib/ir/constant.i: lib/ir/constant.cpp.i
 
 # target to preprocess a source file
 lib/ir/constant.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/constant.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/constant.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/constant.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/constant.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/constant.cpp.i
 .PHONY : lib/ir/constant.cpp.i
 
 lib/ir/constant.s: lib/ir/constant.cpp.s
@@ -564,9 +492,9 @@ lib/ir/constant.s: lib/ir/constant.cpp.s
 
 # target to generate assembly for a file
 lib/ir/constant.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/constant.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/constant.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/constant.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/constant.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/constant.cpp.s
 .PHONY : lib/ir/constant.cpp.s
 
 lib/ir/constantpool.o: lib/ir/constantpool.cpp.o
@@ -574,9 +502,9 @@ lib/ir/constantpool.o: lib/ir/constantpool.cpp.o
 
 # target to build an object file
 lib/ir/constantpool.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/constantpool.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/constantpool.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/constantpool.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/constantpool.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/constantpool.cpp.o
 .PHONY : lib/ir/constantpool.cpp.o
 
 lib/ir/constantpool.i: lib/ir/constantpool.cpp.i
@@ -584,9 +512,9 @@ lib/ir/constantpool.i: lib/ir/constantpool.cpp.i
 
 # target to preprocess a source file
 lib/ir/constantpool.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/constantpool.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/constantpool.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/constantpool.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/constantpool.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/constantpool.cpp.i
 .PHONY : lib/ir/constantpool.cpp.i
 
 lib/ir/constantpool.s: lib/ir/constantpool.cpp.s
@@ -594,9 +522,9 @@ lib/ir/constantpool.s: lib/ir/constantpool.cpp.s
 
 # target to generate assembly for a file
 lib/ir/constantpool.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/constantpool.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/constantpool.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/constantpool.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/constantpool.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/constantpool.cpp.s
 .PHONY : lib/ir/constantpool.cpp.s
 
 lib/ir/function.o: lib/ir/function.cpp.o
@@ -604,9 +532,9 @@ lib/ir/function.o: lib/ir/function.cpp.o
 
 # target to build an object file
 lib/ir/function.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/function.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/function.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/function.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/function.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/function.cpp.o
 .PHONY : lib/ir/function.cpp.o
 
 lib/ir/function.i: lib/ir/function.cpp.i
@@ -614,9 +542,9 @@ lib/ir/function.i: lib/ir/function.cpp.i
 
 # target to preprocess a source file
 lib/ir/function.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/function.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/function.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/function.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/function.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/function.cpp.i
 .PHONY : lib/ir/function.cpp.i
 
 lib/ir/function.s: lib/ir/function.cpp.s
@@ -624,9 +552,9 @@ lib/ir/function.s: lib/ir/function.cpp.s
 
 # target to generate assembly for a file
 lib/ir/function.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/function.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/function.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/function.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/function.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/function.cpp.s
 .PHONY : lib/ir/function.cpp.s
 
 lib/ir/global_var.o: lib/ir/global_var.cpp.o
@@ -634,9 +562,9 @@ lib/ir/global_var.o: lib/ir/global_var.cpp.o
 
 # target to build an object file
 lib/ir/global_var.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/global_var.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/global_var.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/global_var.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/global_var.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/global_var.cpp.o
 .PHONY : lib/ir/global_var.cpp.o
 
 lib/ir/global_var.i: lib/ir/global_var.cpp.i
@@ -644,9 +572,9 @@ lib/ir/global_var.i: lib/ir/global_var.cpp.i
 
 # target to preprocess a source file
 lib/ir/global_var.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/global_var.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/global_var.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/global_var.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/global_var.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/global_var.cpp.i
 .PHONY : lib/ir/global_var.cpp.i
 
 lib/ir/global_var.s: lib/ir/global_var.cpp.s
@@ -654,9 +582,9 @@ lib/ir/global_var.s: lib/ir/global_var.cpp.s
 
 # target to generate assembly for a file
 lib/ir/global_var.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/global_var.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/global_var.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/global_var.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/global_var.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/global_var.cpp.s
 .PHONY : lib/ir/global_var.cpp.s
 
 lib/ir/instruction.o: lib/ir/instruction.cpp.o
@@ -664,9 +592,9 @@ lib/ir/instruction.o: lib/ir/instruction.cpp.o
 
 # target to build an object file
 lib/ir/instruction.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instruction.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instruction.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instruction.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instruction.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instruction.cpp.o
 .PHONY : lib/ir/instruction.cpp.o
 
 lib/ir/instruction.i: lib/ir/instruction.cpp.i
@@ -674,9 +602,9 @@ lib/ir/instruction.i: lib/ir/instruction.cpp.i
 
 # target to preprocess a source file
 lib/ir/instruction.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instruction.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instruction.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instruction.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instruction.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instruction.cpp.i
 .PHONY : lib/ir/instruction.cpp.i
 
 lib/ir/instruction.s: lib/ir/instruction.cpp.s
@@ -684,9 +612,9 @@ lib/ir/instruction.s: lib/ir/instruction.cpp.s
 
 # target to generate assembly for a file
 lib/ir/instruction.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instruction.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instruction.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instruction.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instruction.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instruction.cpp.s
 .PHONY : lib/ir/instruction.cpp.s
 
 lib/ir/instructions/binary.o: lib/ir/instructions/binary.cpp.o
@@ -694,9 +622,9 @@ lib/ir/instructions/binary.o: lib/ir/instructions/binary.cpp.o
 
 # target to build an object file
 lib/ir/instructions/binary.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/binary.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/binary.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/binary.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/binary.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/binary.cpp.o
 .PHONY : lib/ir/instructions/binary.cpp.o
 
 lib/ir/instructions/binary.i: lib/ir/instructions/binary.cpp.i
@@ -704,9 +632,9 @@ lib/ir/instructions/binary.i: lib/ir/instructions/binary.cpp.i
 
 # target to preprocess a source file
 lib/ir/instructions/binary.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/binary.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/binary.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/binary.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/binary.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/binary.cpp.i
 .PHONY : lib/ir/instructions/binary.cpp.i
 
 lib/ir/instructions/binary.s: lib/ir/instructions/binary.cpp.s
@@ -714,9 +642,9 @@ lib/ir/instructions/binary.s: lib/ir/instructions/binary.cpp.s
 
 # target to generate assembly for a file
 lib/ir/instructions/binary.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/binary.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/binary.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/binary.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/binary.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/binary.cpp.s
 .PHONY : lib/ir/instructions/binary.cpp.s
 
 lib/ir/instructions/compare.o: lib/ir/instructions/compare.cpp.o
@@ -724,9 +652,9 @@ lib/ir/instructions/compare.o: lib/ir/instructions/compare.cpp.o
 
 # target to build an object file
 lib/ir/instructions/compare.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/compare.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/compare.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/compare.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/compare.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/compare.cpp.o
 .PHONY : lib/ir/instructions/compare.cpp.o
 
 lib/ir/instructions/compare.i: lib/ir/instructions/compare.cpp.i
@@ -734,9 +662,9 @@ lib/ir/instructions/compare.i: lib/ir/instructions/compare.cpp.i
 
 # target to preprocess a source file
 lib/ir/instructions/compare.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/compare.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/compare.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/compare.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/compare.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/compare.cpp.i
 .PHONY : lib/ir/instructions/compare.cpp.i
 
 lib/ir/instructions/compare.s: lib/ir/instructions/compare.cpp.s
@@ -744,9 +672,9 @@ lib/ir/instructions/compare.s: lib/ir/instructions/compare.cpp.s
 
 # target to generate assembly for a file
 lib/ir/instructions/compare.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/compare.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/compare.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/compare.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/compare.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/compare.cpp.s
 .PHONY : lib/ir/instructions/compare.cpp.s
 
 lib/ir/instructions/control.o: lib/ir/instructions/control.cpp.o
@@ -754,9 +682,9 @@ lib/ir/instructions/control.o: lib/ir/instructions/control.cpp.o
 
 # target to build an object file
 lib/ir/instructions/control.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/control.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/control.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/control.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/control.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/control.cpp.o
 .PHONY : lib/ir/instructions/control.cpp.o
 
 lib/ir/instructions/control.i: lib/ir/instructions/control.cpp.i
@@ -764,9 +692,9 @@ lib/ir/instructions/control.i: lib/ir/instructions/control.cpp.i
 
 # target to preprocess a source file
 lib/ir/instructions/control.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/control.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/control.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/control.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/control.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/control.cpp.i
 .PHONY : lib/ir/instructions/control.cpp.i
 
 lib/ir/instructions/control.s: lib/ir/instructions/control.cpp.s
@@ -774,9 +702,9 @@ lib/ir/instructions/control.s: lib/ir/instructions/control.cpp.s
 
 # target to generate assembly for a file
 lib/ir/instructions/control.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/control.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/control.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/control.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/control.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/control.cpp.s
 .PHONY : lib/ir/instructions/control.cpp.s
 
 lib/ir/instructions/converse.o: lib/ir/instructions/converse.cpp.o
@@ -784,9 +712,9 @@ lib/ir/instructions/converse.o: lib/ir/instructions/converse.cpp.o
 
 # target to build an object file
 lib/ir/instructions/converse.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/converse.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/converse.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/converse.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/converse.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/converse.cpp.o
 .PHONY : lib/ir/instructions/converse.cpp.o
 
 lib/ir/instructions/converse.i: lib/ir/instructions/converse.cpp.i
@@ -794,9 +722,9 @@ lib/ir/instructions/converse.i: lib/ir/instructions/converse.cpp.i
 
 # target to preprocess a source file
 lib/ir/instructions/converse.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/converse.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/converse.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/converse.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/converse.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/converse.cpp.i
 .PHONY : lib/ir/instructions/converse.cpp.i
 
 lib/ir/instructions/converse.s: lib/ir/instructions/converse.cpp.s
@@ -804,9 +732,9 @@ lib/ir/instructions/converse.s: lib/ir/instructions/converse.cpp.s
 
 # target to generate assembly for a file
 lib/ir/instructions/converse.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/converse.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/converse.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/converse.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/converse.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/converse.cpp.s
 .PHONY : lib/ir/instructions/converse.cpp.s
 
 lib/ir/instructions/helper.o: lib/ir/instructions/helper.cpp.o
@@ -814,9 +742,9 @@ lib/ir/instructions/helper.o: lib/ir/instructions/helper.cpp.o
 
 # target to build an object file
 lib/ir/instructions/helper.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/helper.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/helper.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/helper.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/helper.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/helper.cpp.o
 .PHONY : lib/ir/instructions/helper.cpp.o
 
 lib/ir/instructions/helper.i: lib/ir/instructions/helper.cpp.i
@@ -824,9 +752,9 @@ lib/ir/instructions/helper.i: lib/ir/instructions/helper.cpp.i
 
 # target to preprocess a source file
 lib/ir/instructions/helper.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/helper.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/helper.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/helper.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/helper.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/helper.cpp.i
 .PHONY : lib/ir/instructions/helper.cpp.i
 
 lib/ir/instructions/helper.s: lib/ir/instructions/helper.cpp.s
@@ -834,9 +762,9 @@ lib/ir/instructions/helper.s: lib/ir/instructions/helper.cpp.s
 
 # target to generate assembly for a file
 lib/ir/instructions/helper.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/helper.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/helper.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/helper.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/helper.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/helper.cpp.s
 .PHONY : lib/ir/instructions/helper.cpp.s
 
 lib/ir/instructions/memory.o: lib/ir/instructions/memory.cpp.o
@@ -844,9 +772,9 @@ lib/ir/instructions/memory.o: lib/ir/instructions/memory.cpp.o
 
 # target to build an object file
 lib/ir/instructions/memory.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/memory.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/memory.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/memory.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/memory.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/memory.cpp.o
 .PHONY : lib/ir/instructions/memory.cpp.o
 
 lib/ir/instructions/memory.i: lib/ir/instructions/memory.cpp.i
@@ -854,9 +782,9 @@ lib/ir/instructions/memory.i: lib/ir/instructions/memory.cpp.i
 
 # target to preprocess a source file
 lib/ir/instructions/memory.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/memory.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/memory.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/memory.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/memory.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/memory.cpp.i
 .PHONY : lib/ir/instructions/memory.cpp.i
 
 lib/ir/instructions/memory.s: lib/ir/instructions/memory.cpp.s
@@ -864,9 +792,9 @@ lib/ir/instructions/memory.s: lib/ir/instructions/memory.cpp.s
 
 # target to generate assembly for a file
 lib/ir/instructions/memory.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/memory.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/memory.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/memory.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/memory.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/memory.cpp.s
 .PHONY : lib/ir/instructions/memory.cpp.s
 
 lib/ir/instructions/phi.o: lib/ir/instructions/phi.cpp.o
@@ -874,9 +802,9 @@ lib/ir/instructions/phi.o: lib/ir/instructions/phi.cpp.o
 
 # target to build an object file
 lib/ir/instructions/phi.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/phi.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/phi.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/phi.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/phi.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/phi.cpp.o
 .PHONY : lib/ir/instructions/phi.cpp.o
 
 lib/ir/instructions/phi.i: lib/ir/instructions/phi.cpp.i
@@ -884,9 +812,9 @@ lib/ir/instructions/phi.i: lib/ir/instructions/phi.cpp.i
 
 # target to preprocess a source file
 lib/ir/instructions/phi.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/phi.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/phi.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/phi.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/phi.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/phi.cpp.i
 .PHONY : lib/ir/instructions/phi.cpp.i
 
 lib/ir/instructions/phi.s: lib/ir/instructions/phi.cpp.s
@@ -894,9 +822,9 @@ lib/ir/instructions/phi.s: lib/ir/instructions/phi.cpp.s
 
 # target to generate assembly for a file
 lib/ir/instructions/phi.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/phi.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/instructions/phi.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/instructions/phi.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/instructions/phi.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/instructions/phi.cpp.s
 .PHONY : lib/ir/instructions/phi.cpp.s
 
 lib/ir/module.o: lib/ir/module.cpp.o
@@ -904,9 +832,9 @@ lib/ir/module.o: lib/ir/module.cpp.o
 
 # target to build an object file
 lib/ir/module.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/module.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/module.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/module.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/module.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/module.cpp.o
 .PHONY : lib/ir/module.cpp.o
 
 lib/ir/module.i: lib/ir/module.cpp.i
@@ -914,9 +842,9 @@ lib/ir/module.i: lib/ir/module.cpp.i
 
 # target to preprocess a source file
 lib/ir/module.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/module.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/module.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/module.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/module.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/module.cpp.i
 .PHONY : lib/ir/module.cpp.i
 
 lib/ir/module.s: lib/ir/module.cpp.s
@@ -924,9 +852,9 @@ lib/ir/module.s: lib/ir/module.cpp.s
 
 # target to generate assembly for a file
 lib/ir/module.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/module.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/module.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/module.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/module.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/module.cpp.s
 .PHONY : lib/ir/module.cpp.s
 
 lib/ir/type.o: lib/ir/type.cpp.o
@@ -934,9 +862,9 @@ lib/ir/type.o: lib/ir/type.cpp.o
 
 # target to build an object file
 lib/ir/type.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/type.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/type.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/type.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/type.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/type.cpp.o
 .PHONY : lib/ir/type.cpp.o
 
 lib/ir/type.i: lib/ir/type.cpp.i
@@ -944,9 +872,9 @@ lib/ir/type.i: lib/ir/type.cpp.i
 
 # target to preprocess a source file
 lib/ir/type.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/type.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/type.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/type.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/type.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/type.cpp.i
 .PHONY : lib/ir/type.cpp.i
 
 lib/ir/type.s: lib/ir/type.cpp.s
@@ -954,9 +882,9 @@ lib/ir/type.s: lib/ir/type.cpp.s
 
 # target to generate assembly for a file
 lib/ir/type.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/type.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/type.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/type.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/type.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/type.cpp.s
 .PHONY : lib/ir/type.cpp.s
 
 lib/ir/utilities.o: lib/ir/utilities.cpp.o
@@ -964,9 +892,9 @@ lib/ir/utilities.o: lib/ir/utilities.cpp.o
 
 # target to build an object file
 lib/ir/utilities.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/utilities.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/utilities.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/utilities.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/utilities.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/utilities.cpp.o
 .PHONY : lib/ir/utilities.cpp.o
 
 lib/ir/utilities.i: lib/ir/utilities.cpp.i
@@ -974,9 +902,9 @@ lib/ir/utilities.i: lib/ir/utilities.cpp.i
 
 # target to preprocess a source file
 lib/ir/utilities.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/utilities.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/utilities.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/utilities.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/utilities.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/utilities.cpp.i
 .PHONY : lib/ir/utilities.cpp.i
 
 lib/ir/utilities.s: lib/ir/utilities.cpp.s
@@ -984,9 +912,9 @@ lib/ir/utilities.s: lib/ir/utilities.cpp.s
 
 # target to generate assembly for a file
 lib/ir/utilities.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/utilities.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/ir/utilities.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/ir/utilities.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/ir/utilities.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/ir/utilities.cpp.s
 .PHONY : lib/ir/utilities.cpp.s
 
 lib/iropt/live_analysis.o: lib/iropt/live_analysis.cpp.o
@@ -995,7 +923,7 @@ lib/iropt/live_analysis.o: lib/iropt/live_analysis.cpp.o
 # target to build an object file
 lib/iropt/live_analysis.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/iropt/live_analysis.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/iropt/live_analysis.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/iropt/live_analysis.cpp.o
 .PHONY : lib/iropt/live_analysis.cpp.o
 
 lib/iropt/live_analysis.i: lib/iropt/live_analysis.cpp.i
@@ -1004,7 +932,7 @@ lib/iropt/live_analysis.i: lib/iropt/live_analysis.cpp.i
 # target to preprocess a source file
 lib/iropt/live_analysis.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/iropt/live_analysis.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/iropt/live_analysis.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/iropt/live_analysis.cpp.i
 .PHONY : lib/iropt/live_analysis.cpp.i
 
 lib/iropt/live_analysis.s: lib/iropt/live_analysis.cpp.s
@@ -1013,7 +941,7 @@ lib/iropt/live_analysis.s: lib/iropt/live_analysis.cpp.s
 # target to generate assembly for a file
 lib/iropt/live_analysis.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/iropt/live_analysis.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/iropt/live_analysis.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/iropt/live_analysis.cpp.s
 .PHONY : lib/iropt/live_analysis.cpp.s
 
 lib/irvisitors/cfgbuilder.o: lib/irvisitors/cfgbuilder.cpp.o
@@ -1022,7 +950,7 @@ lib/irvisitors/cfgbuilder.o: lib/irvisitors/cfgbuilder.cpp.o
 # target to build an object file
 lib/irvisitors/cfgbuilder.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/irvisitors/cfgbuilder.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/irvisitors/cfgbuilder.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/irvisitors/cfgbuilder.cpp.o
 .PHONY : lib/irvisitors/cfgbuilder.cpp.o
 
 lib/irvisitors/cfgbuilder.i: lib/irvisitors/cfgbuilder.cpp.i
@@ -1031,7 +959,7 @@ lib/irvisitors/cfgbuilder.i: lib/irvisitors/cfgbuilder.cpp.i
 # target to preprocess a source file
 lib/irvisitors/cfgbuilder.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/irvisitors/cfgbuilder.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/irvisitors/cfgbuilder.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/irvisitors/cfgbuilder.cpp.i
 .PHONY : lib/irvisitors/cfgbuilder.cpp.i
 
 lib/irvisitors/cfgbuilder.s: lib/irvisitors/cfgbuilder.cpp.s
@@ -1040,7 +968,7 @@ lib/irvisitors/cfgbuilder.s: lib/irvisitors/cfgbuilder.cpp.s
 # target to generate assembly for a file
 lib/irvisitors/cfgbuilder.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/irvisitors/cfgbuilder.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/irvisitors/cfgbuilder.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/irvisitors/cfgbuilder.cpp.s
 .PHONY : lib/irvisitors/cfgbuilder.cpp.s
 
 lib/irvisitors/irprinter.o: lib/irvisitors/irprinter.cpp.o
@@ -1048,9 +976,9 @@ lib/irvisitors/irprinter.o: lib/irvisitors/irprinter.cpp.o
 
 # target to build an object file
 lib/irvisitors/irprinter.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/irvisitors/irprinter.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/irvisitors/irprinter.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/irvisitors/irprinter.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/irvisitors/irprinter.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/irvisitors/irprinter.cpp.o
 .PHONY : lib/irvisitors/irprinter.cpp.o
 
 lib/irvisitors/irprinter.i: lib/irvisitors/irprinter.cpp.i
@@ -1058,9 +986,9 @@ lib/irvisitors/irprinter.i: lib/irvisitors/irprinter.cpp.i
 
 # target to preprocess a source file
 lib/irvisitors/irprinter.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/irvisitors/irprinter.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/irvisitors/irprinter.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/irvisitors/irprinter.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/irvisitors/irprinter.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/irvisitors/irprinter.cpp.i
 .PHONY : lib/irvisitors/irprinter.cpp.i
 
 lib/irvisitors/irprinter.s: lib/irvisitors/irprinter.cpp.s
@@ -1068,10 +996,37 @@ lib/irvisitors/irprinter.s: lib/irvisitors/irprinter.cpp.s
 
 # target to generate assembly for a file
 lib/irvisitors/irprinter.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/irvisitors/irprinter.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/irvisitors/irprinter.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/irvisitors/irprinter.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/irvisitors/irprinter.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/irvisitors/irprinter.cpp.s
 .PHONY : lib/irvisitors/irprinter.cpp.s
+
+lib/irvisitors/namenormalizer.o: lib/irvisitors/namenormalizer.cpp.o
+.PHONY : lib/irvisitors/namenormalizer.o
+
+# target to build an object file
+lib/irvisitors/namenormalizer.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/irvisitors/namenormalizer.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/irvisitors/namenormalizer.cpp.o
+.PHONY : lib/irvisitors/namenormalizer.cpp.o
+
+lib/irvisitors/namenormalizer.i: lib/irvisitors/namenormalizer.cpp.i
+.PHONY : lib/irvisitors/namenormalizer.i
+
+# target to preprocess a source file
+lib/irvisitors/namenormalizer.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/irvisitors/namenormalizer.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/irvisitors/namenormalizer.cpp.i
+.PHONY : lib/irvisitors/namenormalizer.cpp.i
+
+lib/irvisitors/namenormalizer.s: lib/irvisitors/namenormalizer.cpp.s
+.PHONY : lib/irvisitors/namenormalizer.s
+
+# target to generate assembly for a file
+lib/irvisitors/namenormalizer.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/irvisitors/namenormalizer.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/irvisitors/namenormalizer.cpp.s
+.PHONY : lib/irvisitors/namenormalizer.cpp.s
 
 lib/lexer/lexer.o: lib/lexer/lexer.cpp.o
 .PHONY : lib/lexer/lexer.o
@@ -1080,7 +1035,7 @@ lib/lexer/lexer.o: lib/lexer/lexer.cpp.o
 lib/lexer/lexer.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/lib/lexer/lexer.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/lexer/lexer.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/lexer/lexer.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/lexer/lexer.cpp.o
 .PHONY : lib/lexer/lexer.cpp.o
 
 lib/lexer/lexer.i: lib/lexer/lexer.cpp.i
@@ -1090,7 +1045,7 @@ lib/lexer/lexer.i: lib/lexer/lexer.cpp.i
 lib/lexer/lexer.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/lib/lexer/lexer.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/lexer/lexer.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/lexer/lexer.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/lexer/lexer.cpp.i
 .PHONY : lib/lexer/lexer.cpp.i
 
 lib/lexer/lexer.s: lib/lexer/lexer.cpp.s
@@ -1100,7 +1055,7 @@ lib/lexer/lexer.s: lib/lexer/lexer.cpp.s
 lib/lexer/lexer.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/lib/lexer/lexer.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/lexer/lexer.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/lexer/lexer.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/lexer/lexer.cpp.s
 .PHONY : lib/lexer/lexer.cpp.s
 
 lib/parser/ast_printer.o: lib/parser/ast_printer.cpp.o
@@ -1110,7 +1065,7 @@ lib/parser/ast_printer.o: lib/parser/ast_printer.cpp.o
 lib/parser/ast_printer.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/lib/parser/ast_printer.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/parser/ast_printer.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/parser/ast_printer.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/parser/ast_printer.cpp.o
 .PHONY : lib/parser/ast_printer.cpp.o
 
 lib/parser/ast_printer.i: lib/parser/ast_printer.cpp.i
@@ -1120,7 +1075,7 @@ lib/parser/ast_printer.i: lib/parser/ast_printer.cpp.i
 lib/parser/ast_printer.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/lib/parser/ast_printer.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/parser/ast_printer.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/parser/ast_printer.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/parser/ast_printer.cpp.i
 .PHONY : lib/parser/ast_printer.cpp.i
 
 lib/parser/ast_printer.s: lib/parser/ast_printer.cpp.s
@@ -1130,7 +1085,7 @@ lib/parser/ast_printer.s: lib/parser/ast_printer.cpp.s
 lib/parser/ast_printer.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/lib/parser/ast_printer.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/parser/ast_printer.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/parser/ast_printer.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/parser/ast_printer.cpp.s
 .PHONY : lib/parser/ast_printer.cpp.s
 
 lib/parser/irgen.o: lib/parser/irgen.cpp.o
@@ -1139,7 +1094,7 @@ lib/parser/irgen.o: lib/parser/irgen.cpp.o
 # target to build an object file
 lib/parser/irgen.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/parser/irgen.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/parser/irgen.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/parser/irgen.cpp.o
 .PHONY : lib/parser/irgen.cpp.o
 
 lib/parser/irgen.i: lib/parser/irgen.cpp.i
@@ -1148,7 +1103,7 @@ lib/parser/irgen.i: lib/parser/irgen.cpp.i
 # target to preprocess a source file
 lib/parser/irgen.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/parser/irgen.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/parser/irgen.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/parser/irgen.cpp.i
 .PHONY : lib/parser/irgen.cpp.i
 
 lib/parser/irgen.s: lib/parser/irgen.cpp.s
@@ -1157,7 +1112,7 @@ lib/parser/irgen.s: lib/parser/irgen.cpp.s
 # target to generate assembly for a file
 lib/parser/irgen.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/parser/irgen.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/parser/irgen.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/parser/irgen.cpp.s
 .PHONY : lib/parser/irgen.cpp.s
 
 lib/parser/parser.o: lib/parser/parser.cpp.o
@@ -1167,7 +1122,7 @@ lib/parser/parser.o: lib/parser/parser.cpp.o
 lib/parser/parser.cpp.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/lib/parser/parser.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/parser/parser.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/parser/parser.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/parser/parser.cpp.o
 .PHONY : lib/parser/parser.cpp.o
 
 lib/parser/parser.i: lib/parser/parser.cpp.i
@@ -1177,7 +1132,7 @@ lib/parser/parser.i: lib/parser/parser.cpp.i
 lib/parser/parser.cpp.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/lib/parser/parser.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/parser/parser.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/parser/parser.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/parser/parser.cpp.i
 .PHONY : lib/parser/parser.cpp.i
 
 lib/parser/parser.s: lib/parser/parser.cpp.s
@@ -1187,7 +1142,7 @@ lib/parser/parser.s: lib/parser/parser.cpp.s
 lib/parser/parser.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/lib/parser/parser.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/parser/parser.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/parser/parser.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/parser/parser.cpp.s
 .PHONY : lib/parser/parser.cpp.s
 
 lib/utils/logger.o: lib/utils/logger.cpp.o
@@ -1195,9 +1150,9 @@ lib/utils/logger.o: lib/utils/logger.cpp.o
 
 # target to build an object file
 lib/utils/logger.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/utils/logger.cpp.o
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/utils/logger.cpp.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/utils/logger.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/utils/logger.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/utils/logger.cpp.o
 .PHONY : lib/utils/logger.cpp.o
 
 lib/utils/logger.i: lib/utils/logger.cpp.i
@@ -1205,9 +1160,9 @@ lib/utils/logger.i: lib/utils/logger.cpp.i
 
 # target to preprocess a source file
 lib/utils/logger.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/utils/logger.cpp.i
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/utils/logger.cpp.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/utils/logger.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/utils/logger.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/utils/logger.cpp.i
 .PHONY : lib/utils/logger.cpp.i
 
 lib/utils/logger.s: lib/utils/logger.cpp.s
@@ -1215,10 +1170,106 @@ lib/utils/logger.s: lib/utils/logger.cpp.s
 
 # target to generate assembly for a file
 lib/utils/logger.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/utils/logger.cpp.s
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/lib/utils/logger.cpp.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/asmgen.dir/build.make CMakeFiles/asmgen.dir/lib/utils/logger.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/lib/utils/logger.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/lib/utils/logger.cpp.s
 .PHONY : lib/utils/logger.cpp.s
+
+tools/driver/debug/irgen.o: tools/driver/debug/irgen.cpp.o
+.PHONY : tools/driver/debug/irgen.o
+
+# target to build an object file
+tools/driver/debug/irgen.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/tools/driver/debug/irgen.cpp.o
+.PHONY : tools/driver/debug/irgen.cpp.o
+
+tools/driver/debug/irgen.i: tools/driver/debug/irgen.cpp.i
+.PHONY : tools/driver/debug/irgen.i
+
+# target to preprocess a source file
+tools/driver/debug/irgen.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/tools/driver/debug/irgen.cpp.i
+.PHONY : tools/driver/debug/irgen.cpp.i
+
+tools/driver/debug/irgen.s: tools/driver/debug/irgen.cpp.s
+.PHONY : tools/driver/debug/irgen.s
+
+# target to generate assembly for a file
+tools/driver/debug/irgen.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/irgen.dir/build.make CMakeFiles/irgen.dir/tools/driver/debug/irgen.cpp.s
+.PHONY : tools/driver/debug/irgen.cpp.s
+
+tools/driver/debug/irprintertest.o: tools/driver/debug/irprintertest.cpp.o
+.PHONY : tools/driver/debug/irprintertest.o
+
+# target to build an object file
+tools/driver/debug/irprintertest.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/tools/driver/debug/irprintertest.cpp.o
+.PHONY : tools/driver/debug/irprintertest.cpp.o
+
+tools/driver/debug/irprintertest.i: tools/driver/debug/irprintertest.cpp.i
+.PHONY : tools/driver/debug/irprintertest.i
+
+# target to preprocess a source file
+tools/driver/debug/irprintertest.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/tools/driver/debug/irprintertest.cpp.i
+.PHONY : tools/driver/debug/irprintertest.cpp.i
+
+tools/driver/debug/irprintertest.s: tools/driver/debug/irprintertest.cpp.s
+.PHONY : tools/driver/debug/irprintertest.s
+
+# target to generate assembly for a file
+tools/driver/debug/irprintertest.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/printir.dir/build.make CMakeFiles/printir.dir/tools/driver/debug/irprintertest.cpp.s
+.PHONY : tools/driver/debug/irprintertest.cpp.s
+
+tools/driver/debug/printast.o: tools/driver/debug/printast.cpp.o
+.PHONY : tools/driver/debug/printast.o
+
+# target to build an object file
+tools/driver/debug/printast.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/tools/driver/debug/printast.cpp.o
+.PHONY : tools/driver/debug/printast.cpp.o
+
+tools/driver/debug/printast.i: tools/driver/debug/printast.cpp.i
+.PHONY : tools/driver/debug/printast.i
+
+# target to preprocess a source file
+tools/driver/debug/printast.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/tools/driver/debug/printast.cpp.i
+.PHONY : tools/driver/debug/printast.cpp.i
+
+tools/driver/debug/printast.s: tools/driver/debug/printast.cpp.s
+.PHONY : tools/driver/debug/printast.s
+
+# target to generate assembly for a file
+tools/driver/debug/printast.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/printast.dir/build.make CMakeFiles/printast.dir/tools/driver/debug/printast.cpp.s
+.PHONY : tools/driver/debug/printast.cpp.s
+
+tools/driver/driver.o: tools/driver/driver.cpp.o
+.PHONY : tools/driver/driver.o
+
+# target to build an object file
+tools/driver/driver.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/tools/driver/driver.cpp.o
+.PHONY : tools/driver/driver.cpp.o
+
+tools/driver/driver.i: tools/driver/driver.cpp.i
+.PHONY : tools/driver/driver.i
+
+# target to preprocess a source file
+tools/driver/driver.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/tools/driver/driver.cpp.i
+.PHONY : tools/driver/driver.cpp.i
+
+tools/driver/driver.s: tools/driver/driver.cpp.s
+.PHONY : tools/driver/driver.s
+
+# target to generate assembly for a file
+tools/driver/driver.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/gnalc.dir/build.make CMakeFiles/gnalc.dir/tools/driver/driver.cpp.s
+.PHONY : tools/driver/driver.cpp.s
 
 # Help Target
 help:
@@ -1229,7 +1280,7 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... test"
-	@echo "... asmgen"
+	@echo "... gnalc"
 	@echo "... gnalc_test"
 	@echo "... irgen"
 	@echo "... printast"
@@ -1258,18 +1309,6 @@ help:
 	@echo "... BackEnd/lib/tools/ArmTools.o"
 	@echo "... BackEnd/lib/tools/ArmTools.i"
 	@echo "... BackEnd/lib/tools/ArmTools.s"
-	@echo "... debug/asmgen.o"
-	@echo "... debug/asmgen.i"
-	@echo "... debug/asmgen.s"
-	@echo "... debug/irgen.o"
-	@echo "... debug/irgen.i"
-	@echo "... debug/irgen.s"
-	@echo "... debug/irprintertest.o"
-	@echo "... debug/irprintertest.i"
-	@echo "... debug/irprintertest.s"
-	@echo "... debug/printast.o"
-	@echo "... debug/printast.i"
-	@echo "... debug/printast.s"
 	@echo "... lib/ir/base.o"
 	@echo "... lib/ir/base.i"
 	@echo "... lib/ir/base.s"
@@ -1330,6 +1369,9 @@ help:
 	@echo "... lib/irvisitors/irprinter.o"
 	@echo "... lib/irvisitors/irprinter.i"
 	@echo "... lib/irvisitors/irprinter.s"
+	@echo "... lib/irvisitors/namenormalizer.o"
+	@echo "... lib/irvisitors/namenormalizer.i"
+	@echo "... lib/irvisitors/namenormalizer.s"
 	@echo "... lib/lexer/lexer.o"
 	@echo "... lib/lexer/lexer.i"
 	@echo "... lib/lexer/lexer.s"
@@ -1345,6 +1387,18 @@ help:
 	@echo "... lib/utils/logger.o"
 	@echo "... lib/utils/logger.i"
 	@echo "... lib/utils/logger.s"
+	@echo "... tools/driver/debug/irgen.o"
+	@echo "... tools/driver/debug/irgen.i"
+	@echo "... tools/driver/debug/irgen.s"
+	@echo "... tools/driver/debug/irprintertest.o"
+	@echo "... tools/driver/debug/irprintertest.i"
+	@echo "... tools/driver/debug/irprintertest.s"
+	@echo "... tools/driver/debug/printast.o"
+	@echo "... tools/driver/debug/printast.i"
+	@echo "... tools/driver/debug/printast.s"
+	@echo "... tools/driver/driver.o"
+	@echo "... tools/driver/driver.i"
+	@echo "... tools/driver/driver.s"
 .PHONY : help
 
 

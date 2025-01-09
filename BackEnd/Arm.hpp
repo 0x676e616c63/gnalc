@@ -226,40 +226,7 @@ namespace ArmTools{
         void operator()(InstArgs) const;
     };
 
-
-    // std::map<IR::OP, OperCode>Mid2BackOpC;
-    
-    /// @note 模式匹配函数
 };
-
-//     struct MovtwMatch;
-
-//     struct RetMatch;
-
-//     struct BinaryMatch;
-
-//     struct UnaryMatch;
-
-//     struct BranchMatch;
-
-//     struct AllocaMatch;
-
-//     struct LoadMatch;
-
-//     struct StoreMatch;
-    
-//     struct GepMatch;
-    
-//     struct FPTOSIMatch;
-
-//     struct SITOFPMatch;
-
-//     // struct ICMP, FCMP ; in BranchMatch
-
-//     struct CallMatch;
-
-//     struct PhiMatch;    
-// };
 
 namespace ArmOpt{
     class SIMDInstructions; // Noen指令集优化

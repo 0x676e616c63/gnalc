@@ -203,7 +203,7 @@ void RetMatch::operator()(InstArgs insts){
         Operand *backEnd_ret_use = BasicBlock.Func.VirRegOperandMap[idx];
         Operand *backEnd_ret_register = nullptr;
         
-        if(midEnd_ret.getRetType() == IR::IRBTYPE::I32){
+        if(midEnd_ret.getRetType()->getInner() == IR::IRBTYPE::I32){
             
             backEnd_ret_register = RegisterPool[CoreRegisterName::r0];
 
@@ -659,6 +659,7 @@ void AllocaMatch::staticMemory(IR::ALLOCAInst& midEnd_alloca){
         switch(dynamic_cast<IR::BType*>(midEnd_elem)->getInner()){
             case IR::IRBTYPE::I32: valType = OperandType::INT; break;
             case IR::IRBTYPE::FLOAT: valType = OperandType::FLOAT; break;
+            default: Err::unreachable();
         }
 
         ArrayObj *backEnd_stackArray = new ArrayObj(
@@ -780,7 +781,7 @@ void GepMatch::StaticBaseConstOffset(MMptr* ptr, IR::GEPInst& midEnd_Gep){
     auto &arrayIdx = dynamic_cast<IR::ConstantInt&>(*midEnd_Gep.getIdxs()[1].get());
     unsigned long long VirReg = std::stoull(midEnd_Gep.getName().substr(1));
 
-    unsigned int elemSize = getPreElemSize(midEnd_Gep.getBaseTypePtr());
+    unsigned int elemSize = getPreElemSize(midEnd_Gep.getBaseType());
 
     unsigned int constOffset = ptr->getOffset() + elemSize * arrayIdx.getVal();
 
@@ -797,7 +798,7 @@ void GepMatch::StaticBaseVarOffset(MMptr* ptr, IR::GEPInst& midEnd_Gep){
     /// load/store #imm [%3, #offset](%1)
     
     auto &arrayIdx = *midEnd_Gep.getIdxs()[1].get();    // IR::Value
-    unsigned int perElemSize = getPreElemSize(midEnd_Gep.getBaseTypePtr());
+    unsigned int perElemSize = getPreElemSize(midEnd_Gep.getBaseType());
     unsigned long long idx = std::stoull(arrayIdx.getName().substr(1));
     Operand *midEnd_varIdx = BasicBlock.Func.VirRegOperandMap[idx]; // %2
     
@@ -849,7 +850,7 @@ void GepMatch::DynamicBaseConstOffset(MMptr* ptr, IR::GEPInst& midEnd_Gep){
     
     unsigned long long VirReg = std::stoull(midEnd_Gep.getName().substr(1));
 
-    unsigned int elemSize = getPreElemSize(midEnd_Gep.getBaseTypePtr());
+    unsigned int elemSize = getPreElemSize(midEnd_Gep.getBaseType());
 
     MMptr *newPtr = new MMptr(ptr->getFrameObj(), ptr->getType(), VirReg, ptr->getOffset() + arrayIdx*elemSize);
     newPtr->setBase(ptr->getBase());
@@ -868,7 +869,7 @@ void GepMatch::DynamicBaseVarOffset(MMptr* ptr, IR::GEPInst& midEnd_Gep){
     /// ......
     /// load/store #imm [%4, #offset](%1)
     auto &arrayIdx = *midEnd_Gep.getIdxs()[1].get();
-    unsigned int perElemSize = getPreElemSize(midEnd_Gep.getBaseTypePtr());
+    unsigned int perElemSize = getPreElemSize(midEnd_Gep.getBaseType());
     unsigned long long idx = std::stoull(arrayIdx.getName().substr(1));
     Operand *midEnd_varIdx = BasicBlock.Func.VirRegOperandMap[idx]; // %3
 
