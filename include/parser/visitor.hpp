@@ -13,7 +13,7 @@
 
 namespace AST {
 
-class Printer : public ASTVisitor {
+class ASTPrinter : public ASTVisitor {
 private:
     int nest = 0;
     bool fold_exp = false;

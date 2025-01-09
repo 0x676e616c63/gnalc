@@ -49,6 +49,10 @@ const std::vector<std::shared_ptr<FunctionDecl>>& Module::getFunctionDecls() con
     return func_decls;
 }
 
+std::vector<std::shared_ptr<FunctionDecl>>& Module::getFunctionDecls() {
+    return func_decls;
+}
+
 void Module::delFunctionDecl(NameRef name) {
     for (auto it = func_decls.begin(); it != func_decls.end(); ++it) {
         if ((*it)->isName(name)) {

@@ -2,6 +2,7 @@
  * @attention update: 使用 `Use` 类来管理操作数
  * @attention NO NULL WARNING
  */
+#include <algorithm>
 
 #include "../../include/ir/base.hpp"
 #include "../../include/utils/exception.hpp"
@@ -94,15 +95,9 @@ bool Value::delUse(NameRef name) {
 }
 
 void Value::cleanExpired() {
-    for (auto it = use_list.begin(); it != use_list.end();) {
-        if (it->expired()) {
-            it = use_list.erase(it);
-        } else {
-            ++it;
-        }
-    }
+    use_list.erase(std::remove_if(use_list.begin(), use_list.end(),
+        [](auto&& use) { return use.expired(); }), use_list.end());
 }
-
 
 bool Value::replaceUse(const std::shared_ptr<Use>& old_use, const std::shared_ptr<Use>& new_use) {
     bool found = false;
