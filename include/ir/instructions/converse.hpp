@@ -14,37 +14,43 @@
 
 namespace IR {
 
-// %Y = fptosi float 1.0E-247 to i32
-// 默认全为float to i32
-class FPTOSIInst : public Instruction {
+class CastInst : public Instruction {
 private:
-    // std::shared_ptr<BType> origin_type = makeBType(IRBTYPE::FLOAT);
+    std::shared_ptr<Type> dest_type;
 public:
-    FPTOSIInst(NameRef name, std::shared_ptr<Value> origin_val);
+    CastInst(OP opcode_, NameRef name, const std::shared_ptr<Value>& origin_val, const std::shared_ptr<Type>& dest_type);
 
     std::shared_ptr<Value> getOVal() const;
-    IRBTYPE getOType() const; // ORIGINAL TYPE FLOAT
-    IRBTYPE getTType() const; // TARGET TYPE I32
-    std::shared_ptr<Type> getOTypePtr() const;
-    std::shared_ptr<Type> getTTypePtr() const;
+
+    std::shared_ptr<Type> getOType() const;
+    std::shared_ptr<Type> getTType() const;
 
     void accept(IRVisitor& visitor) override;
 };
 
-// <result> = sitofp <ty> <value> to <ty2>
-class SITOFPInst : public Instruction {
-private:
-    // std::shared_ptr<BType> origin_type = makeBType(IRBTYPE::I32);
+// %Y = fptosi float 1.0E-247 to i32
+// 默认全为float to i32
+class FPTOSIInst : public CastInst {
 public:
-    SITOFPInst(NameRef name, std::shared_ptr<Value> origin_val);
+    FPTOSIInst(NameRef name, const std::shared_ptr<Value>& origin_val);
+};
 
-    std::shared_ptr<Value> getOVal() const;
-    IRBTYPE getOType() const; // ORIGINAL TYPE I32
-    IRBTYPE getTType() const; // TARGET TYPE FLOAT
-    std::shared_ptr<Type> getOTypePtr() const;
-    std::shared_ptr<Type> getTTypePtr() const;
+// <result> = sitofp <ty> <value> to <ty2>
+class SITOFPInst : public CastInst {
+public:
+    SITOFPInst(NameRef name, const std::shared_ptr<Value>& origin_val);
+};
 
-    void accept(IRVisitor& visitor) override;
+// <result> = zext <ty> <value> to <ty2>
+class ZEXTInst : public CastInst {
+public:
+    ZEXTInst(NameRef name, const std::shared_ptr<Value>& origin_val, IRBTYPE dest_type);
+};
+
+// <result> = bitcast <ty> <value> to <ty2>
+class BITCASTInst : public CastInst {
+public:
+    BITCASTInst(NameRef name, const std::shared_ptr<Value>& origin_val, const std::shared_ptr<Type>& dest_type);
 };
 
 }

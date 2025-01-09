@@ -5,29 +5,35 @@
 #include "../include/utils/exception.hpp"
 #include "../include/irvisitors/irprinter.hpp"
 #include "../include/irvisitors/cfgbuilder.hpp"
+#include "../include/irvisitors/namenormalizer.hpp"
 #include "../include/iropt/live_analysis.hpp"
 
 std::shared_ptr<CompUnit> node = nullptr;
 
 int main(int argc, char **argv){
     LogLevel level = LogLevel::NONE;
-    std::string output_file = "fkir.ll";
-    for (int i = 1; i < argc; ++i) {
-        if (std::string(argv[i]) == "-v" || std::string(argv[i]) == "--verbose") {
+    std::string output_file;
+    for (int i = 1; i < argc; ++i)
+    {
+        std::string arg(argv[i]);
+        if (arg == "-v" || arg == "--verbose")
             level = LogLevel::DEBUG;
-        } else if (std::string(argv[i]) == "-i" || std::string(argv[i]) == "--info") {
+        else if (arg == "-i" || arg == "--info")
             level = LogLevel::INFO;
-        } else if (std::string(argv[i]) == "-o" || std::string(argv[i]) == "--output") {
+        else if (arg == "-o" || arg == "--output")
+        {
             ++i;
-            output_file = std::string(argv[i]);
-        } else {
-            Logger::logInfo("Unknown option: " + std::string(argv[i]));
+            if (i >= argc)
+            {
+                std::cerr << "Error: Expected output." << std::endl;
+                return -1;
+            }
+            output_file = argv[i];
         }
     }
     Logger::setLogLevel(level);
 
     yy::parser parser;
-    // parser.set_debug_level (1);
     if (parser.parse()) {
         std::cerr << "Parser Error" << std::endl;
         return 1;
@@ -42,8 +48,21 @@ int main(int argc, char **argv){
     la.cleanLiveInfo(generator.get_module());
     la.processModule(generator.get_module());
 
-    IR::IRPrinter printer(std::cout);
-    printer.printout(generator.get_module());
+    IR::NameNormalizer name_normalizer(true);
+    name_normalizer.normalize(generator.get_module());
+
+    if (!output_file.empty())
+    {
+        std::ofstream fout(output_file);
+        IR::IRPrinter printer(fout, false);
+        printer.printout(generator.get_module());
+        fout.close();
+    }
+    else
+    {
+        IR::IRPrinter printer(std::cout, false);
+        printer.printout(generator.get_module());
+    }
 
     la.cleanLiveInfo(generator.get_module()); // 一定清除活跃信息！防止循环引用（后续可放在某个销毁函数中）
     return 0;

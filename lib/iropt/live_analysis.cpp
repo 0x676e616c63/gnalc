@@ -1,11 +1,16 @@
 #include "../../include/iropt/live_analysis.hpp"
+
+#include <variant>
+
 #include "../../include/utils/logger.hpp"
 
 namespace IR {
     void LiveAnalyser::genDFSStack(const std::shared_ptr<BasicBlock>& bb) {
+        bb_stack.spush(bb);
         for (auto& nextbb : bb->getNextBB()) {
-                bb_stack.spush(nextbb);
+            if (!bb_stack.visited(nextbb)) {
                 genDFSStack(nextbb);
+            }
         }
     }
 
@@ -18,22 +23,22 @@ namespace IR {
     }
 
     bool LiveAnalyser::processFunc(const std::shared_ptr<Function>& func) {
-        // bb_stack.restore();
-        // bool updated = false;
-        // while (!bb_stack.empty()) {
-        //     auto bb = bb_stack.pop();
-        //     for (auto& nxtbb : bb->getNextBB())
-        //         for (auto& livevar : nxtbb->getLiveIn())
-        //             if (bb->getLiveOut().insert(livevar).second)
-        //                 updated = true;
-        //     if (processBB(bb))
-        //         updated = true;
-        // }
-        // return updated;
+        bb_stack.restore();
+        bool updated = false;
+        while (!bb_stack.empty()) {
+            auto bb = bb_stack.pop();
+            for (auto& nxtbb : bb->getNextBB())
+                for (auto& livevar : nxtbb->getLiveIn())
+                    if (bb->getLiveOut().insert(livevar).second)
+                        updated = true;
+            if (processBB(bb))
+                updated = true;
+        }
+        return updated;
 
-        // just for one BB
-        processBB(func->getBlocks().front());
-        return false;
+        // // just for one BB
+        // processBB(func->getBlocks().front());
+        // return false;
     }
 
     // 返回值为LiveIn是否更新了
@@ -82,6 +87,8 @@ namespace IR {
             case OP::FNEG:
             case OP::FPTOSI:
             case OP::SITOFP:
+            case OP::ZEXT:
+            case OP::BITCAST:
             case OP::LOAD:
             case OP::GEP:
                 for (auto& use : inst->getOperands())

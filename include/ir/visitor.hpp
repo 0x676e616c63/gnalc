@@ -34,6 +34,7 @@ public:
     virtual void visit(ConstantInt& node) { Err::not_implemented("IRVisitor::visit(ConstantInt&)"); }
     virtual void visit(ConstantFloat& node) { Err::not_implemented("IRVisitor::visit(ConstantFloat&)"); }
     virtual void visit(ConstantI1& node) { Err::not_implemented("IRVisitor::visit(ConstantI1&)"); }
+    virtual void visit(ConstantI8& node) { Err::not_implemented("IRVisitor::visit(ConstantI1&)"); }
     virtual void visit(BinaryInst& node) { Err::not_implemented("IRVisitor::visit(BinaryInst&)"); }
     virtual void visit(FNEGInst& node) { Err::not_implemented("IRVisitor::visit(FNEGInst&)"); }
     virtual void visit(ICMPInst& node) { Err::not_implemented("IRVisitor::visit(ICMPInst&)"); }
@@ -43,12 +44,11 @@ public:
     virtual void visit(CALLInst& node) { Err::not_implemented("IRVisitor::visit(CALLInst&)"); }
     virtual void visit(FPTOSIInst& node) { Err::not_implemented("IRVisitor::visit(FPTOSIInst&)"); }
     virtual void visit(SITOFPInst& node) { Err::not_implemented("IRVisitor::visit(SITOFPInst&)"); }
-    virtual void visit(IFBEntry& node) { Err::not_implemented("IRVisitor::visit(IFBEntry&)"); }
-    virtual void visit(IFBEnd& node) { Err::not_implemented("IRVisitor::visit(IFBEnd&)"); }
-    virtual void visit(ELSEBEntry& node) { Err::not_implemented("IRVisitor::visit(ELSEBEntry&)"); }
-    virtual void visit(ELSEBEnd& node) { Err::not_implemented("IRVisitor::visit(ELSEBEnd&)"); }
-    virtual void visit(WHILEBEntry& node) { Err::not_implemented("IRVisitor::visit(WHILEBEntry&)"); }
-    virtual void visit(WHILEBEnd& node) { Err::not_implemented("IRVisitor::visit(WHILEBEnd&)"); }
+    virtual void visit(ZEXTInst& node) { Err::not_implemented("IRVisitor::visit(ZEXTInst&)"); }
+    virtual void visit(IFInst& node) { Err::not_implemented("IRVisitor::visit(IFInst&)"); }
+    virtual void visit(WHILEInst& node) { Err::not_implemented("IRVisitor::visit(WHILEInst&)"); }
+    virtual void visit(BREAKInst& node) { Err::not_implemented("IRVisitor::visit(BREAKInst&)"); }
+    virtual void visit(CONTINUEInst& node) { Err::not_implemented("IRVisitor::visit(CONTINUEInst&)"); }
     virtual void visit(ALLOCAInst& node) { Err::not_implemented("IRVisitor::visit(ALLOCAInst&)"); }
     virtual void visit(LOADInst& node) { Err::not_implemented("IRVisitor::visit(LOADInst&)"); }
     virtual void visit(STOREInst& node) { Err::not_implemented("IRVisitor::visit(STOREInst&)"); }

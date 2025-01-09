@@ -65,5 +65,41 @@ template<typename ...Args>
 void println(const std::string& fmtstr, Args&&... args) {
     std::cout << format(fmtstr, std::forward<Args>(args)...) << std::endl;
 }
+
+std::string read_file(const std::string& file_name) {
+    std::ifstream in(file_name);
+    std::istreambuf_iterator<char> beg(in), end;
+    return {beg, end};
+}
+
+// :(
+inline void fix_newline(std::string& str) {
+    for (auto&& ch : str)
+        if (ch == '\r') ch = '\n';
+
+    while (!str.empty() && str[0] == '\n')
+        str.erase(0, 1);
+    while (!str.empty() && str.back() == '\n')
+        str.pop_back();
+    for (size_t i = 0; i < str.size();)
+    {
+        if (str[i] == '\n' && i + 1 < str.size() && str[i + 1] == '\n')
+            str.erase(i, 1);
+        else
+            ++i;
+    }
+}
+
+inline bool begins_with(const std::string& a, const std::string& b) {
+    if (a.size() < b.size()) return false;
+    for (size_t i = 0; i < b.size(); ++i)
+    {
+        if (a[i] != b[i])
+        {
+            return false;
+        }
+    }
+    return true;
+}
 }
 #endif //GNALC_TEST_HPP

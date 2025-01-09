@@ -24,8 +24,8 @@ public:
 
     bool isVoid() const;
     std::shared_ptr<Value> getRetVal() const;
-    IRBTYPE getRetType() const;
-    std::shared_ptr<BType> getRetTypePtr() const;
+    IRBTYPE getRetBType() const;
+    std::shared_ptr<BType> getRetType() const;
 
     void accept(IRVisitor& visitor) override;
 };

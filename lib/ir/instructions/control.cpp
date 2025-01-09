@@ -28,12 +28,12 @@ namespace IR
         return (*(getOperands().begin()))->getValue();
     }
 
-    IRBTYPE RETInst::getRetType() const
+    IRBTYPE RETInst::getRetBType() const
     {
         return toBType(ret_type)->getInner();
     }
 
-    std::shared_ptr<BType> RETInst::getRetTypePtr() const
+    std::shared_ptr<BType> RETInst::getRetType() const
     {
         return ret_type;
     }

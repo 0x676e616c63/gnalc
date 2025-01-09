@@ -37,7 +37,7 @@ enum class ValueTrait {
     FORMAL_PARAMETER, // 形参
     BASIC_BLOCK, // 基本块
     VOID_INSTRUCTION, // 无值的指令
-    HELPER
+    CONDHELPER // cond中的and, or
     // ...
 };
 

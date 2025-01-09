@@ -12,12 +12,8 @@
 
 namespace IR {
 enum class HELPERTY {
-    IFBEntry,
-    IFBEnd,
-    ELSEBEntry,
-    ELSEBEnd,
-    WHILEBEntry,
-    WHILEBEnd,
+    IF,
+    WHILE,
     BREAK,
     CONTINUE
 };
@@ -43,97 +39,103 @@ enum class CONDTY {
     AND, OR
 };
 
-class COND : public Value {
-private:
+class CONDValue : public Value {
+protected:
     CONDTY cond_type;
-public:
-    explicit COND(CONDTY ty)
-    : Value("__COND", makeBType(IRBTYPE::I1), ValueTrait::HELPER), cond_type(ty) {}
-};
-
-class AND : public COND {
     std::shared_ptr<Value> lhs;
     std::shared_ptr<Value> rhs;
 
+    // Note that only rhs_insts are store in the current CONDValue,
+    // and the lhs_insts are in the outer scope
+    // ( namely CONDValue's rhs_insts, outer WHILEInst's cond_insts or function body before IFInst)
+    std::vector<std::shared_ptr<Instruction>> rhs_insts;
 public:
-    explicit AND(std::shared_ptr<Value> lhs_, std::shared_ptr<Value> rhs_)
-        : COND(CONDTY::AND), lhs(std::move(lhs_)), rhs(std::move(rhs_)) {
-        Err::gassert(is_cond_type(lhs) && is_cond_type(rhs));
+    explicit CONDValue(CONDTY ty,
+        std::shared_ptr<Value> lhs_,
+        std::shared_ptr<Value> rhs_,
+        std::vector<std::shared_ptr<Instruction>> rhs_insts_)
+    : Value("__COND", makeBType(IRBTYPE::I1),
+        ValueTrait::CONDHELPER), cond_type(ty),
+            lhs(std::move(lhs_)), rhs(std::move(rhs_)), rhs_insts(std::move(rhs_insts_)) {
+            Err::gassert(is_cond_type(lhs) && is_cond_type(rhs));
     }
 
     const std::shared_ptr<Value>& getLHS() const { return lhs; }
     const std::shared_ptr<Value>& getRHS() const { return rhs; }
+    const std::vector<std::shared_ptr<Instruction>>& getRHSInsts() const { return rhs_insts; }
+    CONDTY getCondType() const { return cond_type; }
 };
 
-class OR : public COND {
-    std::shared_ptr<Value> lhs;
-    std::shared_ptr<Value> rhs;
-
+class ANDValue : public CONDValue {
 public:
-    explicit OR(std::shared_ptr<Value> lhs_, std::shared_ptr<Value> rhs_)
-        : COND(CONDTY::OR), lhs(std::move(lhs_)), rhs(std::move(rhs_)) {
-        Err::gassert(is_cond_type(lhs) && is_cond_type(rhs));
-    }
+    ANDValue(std::shared_ptr<Value> lhs_,
+        std::shared_ptr<Value> rhs_,
+        std::vector<std::shared_ptr<Instruction>> rhs_insts_)
+        : CONDValue(CONDTY::AND, std::move(lhs_), std::move(rhs_), std::move(rhs_insts_)) {}
+};
 
-    const std::shared_ptr<Value>& getLHS() const { return lhs; }
-    const std::shared_ptr<Value>& getRHS() const { return rhs; }
+class ORValue : public CONDValue {
+public:
+    ORValue(std::shared_ptr<Value> lhs_,
+        std::shared_ptr<Value> rhs_,
+        std::vector<std::shared_ptr<Instruction>> rhs_insts_)
+    : CONDValue(CONDTY::OR, std::move(lhs_), std::move(rhs_), std::move(rhs_insts_)) {}
 };
 
 // IF Block Entry
-class IFBEntry : public HELPERInst {
+class IFInst : public HELPERInst {
     std::shared_ptr<Value> cond;
+    std::vector<std::shared_ptr<Instruction>> body_insts;
+    std::vector<std::shared_ptr<Instruction>> else_insts;
 public:
-    explicit IFBEntry(std::shared_ptr<Value> cond_)
-    : HELPERInst(HELPERTY::IFBEntry), cond(std::move(cond_)) {
+    explicit IFInst(std::shared_ptr<Value> cond_,
+        std::vector<std::shared_ptr<Instruction>> body_insts_,
+        std::vector<std::shared_ptr<Instruction>> else_insts_)
+        : HELPERInst(HELPERTY::IF),
+        cond(std::move(cond_)), body_insts(std::move(body_insts_)), else_insts(std::move(else_insts_))
+    {
         Err::gassert(is_cond_type(cond));
     }
 
+    const std::shared_ptr<Value>& getCond() { return cond; }
+    const std::vector<std::shared_ptr<Instruction>>& getBodyInsts() { return body_insts; }
+    const std::vector<std::shared_ptr<Instruction>>& getElseInsts() { return else_insts; }
+
+    bool hasElse() const { return !else_insts.empty(); }
+
     void accept(IRVisitor& visitor) override;
 };
 
-class IFBEnd : public HELPERInst {
-public:
-    IFBEnd() : HELPERInst(HELPERTY::IFBEnd) {}
-    void accept(IRVisitor& visitor) override;
-};
-
-class ELSEBEntry : public HELPERInst {
-public:
-    ELSEBEntry() : HELPERInst(HELPERTY::ELSEBEntry) {}
-    void accept(IRVisitor& visitor) override;
-};
-
-class ELSEBEnd : public HELPERInst {
-public:
-    ELSEBEnd() : HELPERInst(HELPERTY::ELSEBEnd) {}
-    void accept(IRVisitor& visitor) override;
-};
-
-class WHILEBEntry : public HELPERInst {
+class WHILEInst : public HELPERInst {
     std::shared_ptr<Value> cond;
+    std::vector<std::shared_ptr<Instruction>> cond_insts;
+    std::vector<std::shared_ptr<Instruction>> body_insts;
 public:
-    explicit WHILEBEntry(std::shared_ptr<Value> cond_)
-    : HELPERInst(HELPERTY::WHILEBEntry), cond(std::move(cond_)) {
+    explicit WHILEInst(std::shared_ptr<Value> cond_,
+        std::vector<std::shared_ptr<Instruction>> cond_insts_,
+        std::vector<std::shared_ptr<Instruction>> body_insts_)
+        : HELPERInst(HELPERTY::WHILE),
+        cond(std::move(cond_)), cond_insts(std::move(cond_insts_)), body_insts(std::move(body_insts_))
+    {
         Err::gassert(is_cond_type(cond));
     }
+
+    const std::shared_ptr<Value>& getCond() { return cond; }
+    const std::vector<std::shared_ptr<Instruction>>& getCondInsts() { return cond_insts; }
+    const std::vector<std::shared_ptr<Instruction>>& getBodyInsts() { return body_insts; }
+
     void accept(IRVisitor& visitor) override;
 };
 
-class WHILEBEnd : public HELPERInst {
+class BREAKInst : public HELPERInst {
 public:
-    WHILEBEnd() : HELPERInst(HELPERTY::WHILEBEnd) {}
+    BREAKInst() : HELPERInst(HELPERTY::BREAK) {}
     void accept(IRVisitor& visitor) override;
 };
 
-class BREAK : public HELPERInst {
+class CONTINUEInst : public HELPERInst {
 public:
-    BREAK() : HELPERInst(HELPERTY::BREAK) {}
-    void accept(IRVisitor& visitor) override;
-};
-
-class CONTINUE : public HELPERInst {
-public:
-    CONTINUE() : HELPERInst(HELPERTY::CONTINUE) {}
+    CONTINUEInst() : HELPERInst(HELPERTY::CONTINUE) {}
     void accept(IRVisitor& visitor) override;
 };
 

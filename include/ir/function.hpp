@@ -10,11 +10,19 @@
 
 namespace IR {
 class FunctionDecl : public Value {
+private:
+    bool is_builtin;
+    bool is_sylib;
 public:
     FunctionDecl(std::string name_, std::vector<std::shared_ptr<Type>> params,
-        std::shared_ptr<Type> ret_type, bool va_arg_);
+        std::shared_ptr<Type> ret_type,
+        bool is_va_arg_, bool is_builtin_, bool is_sylib_);
 
     void accept(IRVisitor& visitor) override;
+
+    bool isSylib() const;
+    bool isBuiltin() const;
+
     ~FunctionDecl() override;
 };
 
@@ -37,6 +45,7 @@ public:
 
     void addBlock(std::shared_ptr<BasicBlock> blk);
     void addInst(std::shared_ptr<Instruction> inst);
+    void appendInsts(std::vector<std::shared_ptr<Instruction>> insts_);
 
     const std::vector<std::shared_ptr<Value>>& getParams() const;
     const std::vector<std::shared_ptr<BasicBlock>>& getBlocks() const;

@@ -14,7 +14,7 @@ class ConstantInt : public Value {
 private:
     int val;
 public:
-    ConstantInt(int _val);
+    explicit ConstantInt(int _val);
 
     int getVal() const;
 
@@ -25,7 +25,7 @@ class ConstantFloat : public Value {
 private:
     float val;
 public:
-    ConstantFloat(float _val);
+    explicit ConstantFloat(float _val);
 
     float getVal() const;
 
@@ -36,9 +36,20 @@ class ConstantI1 : public Value {
 private:
     bool val;
 public:
-    ConstantI1(bool _val);
+    explicit ConstantI1(bool _val);
 
     bool getVal() const;
+
+    void accept(IRVisitor& visitor) override;
+};
+
+class ConstantI8 : public Value {
+private:
+    char val;
+public:
+    explicit ConstantI8(char _val);
+
+    char getVal() const;
 
     void accept(IRVisitor& visitor) override;
 };
