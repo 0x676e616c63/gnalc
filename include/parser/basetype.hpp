@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <string>
+#include <variant>
 
 
 namespace AST {
@@ -18,33 +19,24 @@ using int32 = int32_t;
 using float32 = float;
 using string = std::string;
 
-enum class dtype_type {
+enum class dtype {
     INT,
     FLOAT,
     VOID,
     UNDEFINED
 };
 
-using dtype = enum dtype_type;
-
 class num {
-private:
-    union {
-        float32 f;
-        int32 i;
-    } _value;
-    bool _float = false;
-    bool _int = false;
-
+    std::variant<int, float> value;
 public:
-    num(float32 f) : _value{.f = f}, _float(true) {}
-    num(int32 i) : _value{.i = i}, _int(true) {}
+    num(float32 f) : value(f) {}
+    num(int32 i) : value(i) {}
 
-    bool isFloat() const { return _float; }
-    bool isInt() const { return _int; }
+    bool isFloat() const { return value.index() == 1; }
+    bool isInt() const { return value.index() == 0; }
 
-    auto getInt() const { return _value.i; }
-    auto getFloat() const { return _value.f; }
+    auto getInt() const { return std::get<int>(value); }
+    auto getFloat() const { return std::get<float>(value); }
 
     ~num() = default;
 };

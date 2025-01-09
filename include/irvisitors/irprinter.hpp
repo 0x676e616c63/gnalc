@@ -6,36 +6,50 @@
 #ifndef GNALC_IRVISITORS_IRPRINTER_HPP
 #define GNALC_IRVISITORS_IRPRINTER_HPP
 
+#include "../utils/exception.hpp"
 #include "../ir/visitor.hpp"
 #include <iostream>
 #include <fstream>
 
-namespace IR {
-
+namespace IR
+{
 class IRFormatter;
 
 // 线性IR打印（未划分基本块）
 class LIRPrinter : public IRVisitor {
-private:
-    std::ofstream outFile;
-    void write(const std::string& str);
-    void writeln(const std::string& str);
+protected:
+    std::ostream& outStream;
+    bool printLiveInfo;
+
+    template <typename T>
+    void write(T&& obj) {
+        outStream << obj;
+    }
+
+    template <typename T>
+    void writeln(T&& obj) {
+        outStream << obj << std::endl;
+    }
+
 public:
-    LIRPrinter(const std::string& filename);
+    explicit LIRPrinter(std::ostream& out, bool _liveinfo = false);
     ~LIRPrinter();
 
     void printout(Module& module);
 
-    // virtual void visit(Module& node) override;
-    virtual void visit(GlobalVariable& node) override;
-    virtual void visit(Function& node) override;
-    virtual void visit(Instruction& node) override;
-    // virtual void visit(ConstantInt& node) override;
-    // virtual void visit(ConstantFloat& node) override;
-
+    void visit(GlobalVariable& node) override;
+    void visit(Function& node) override;
+    void visit(FunctionDecl& node) override;
+    void visit(Instruction& node) override;
 };
 
-class IRPrinter : public IRVisitor {
+class IRPrinter : public LIRPrinter {
+public:
+    explicit IRPrinter(std::ostream& out, bool _liveinfo = false) : LIRPrinter(out, _liveinfo) {};
+    ~IRPrinter() = default;
+    
+    void visit(Function& node) override;
+    void visit(BasicBlock& node) override;
 };
 
 /**
@@ -45,7 +59,6 @@ class IRPrinter : public IRVisitor {
  */
 class IRFormatter {
 public:
-    static std::string formatIRTYPE(IRTYPE type);
     static std::string formatSTOCLASS(STOCLASS cls);
     static std::string formatOp(OP op);
     static std::string formatCMPOP(ICMPOP cond);
@@ -53,23 +66,24 @@ public:
     static std::string formatHELPERTY(HELPERTY hlpty);
 
     static std::string formatValue(Value& val); // -> i32 %a
-    // static std::string formatBB(BasicBlock& bb);
+    static std::string formatBB(BasicBlock& bb);
     // static std::string formatConstInt(ConstantInt& ci); // 和formatValue重了
     // static std::string formatConstFloat(ConstantFloat& cf);
     static std::string formatFunc(Function& func); // define dso_local void @fu(i32 noundef %a, i32 noundef %b)
+    static std::string formatFuncDecl(FunctionDecl& func);
     static std::string formatGV(GlobalVariable& gv);
     static std::string formatInst(Instruction& inst);
+
 private:
     // 以下私有函数仅供formatInst调用
     static std::string fBinaryInst(BinaryInst& inst);
+    static std::string fCastInst(CastInst& inst);
     static std::string fFNEGInst(FNEGInst& inst);
     static std::string fICMPInst(ICMPInst& inst);
     static std::string fFCMPInst(FCMPInst& inst);
     static std::string fRETInst(RETInst& inst);
     static std::string fBRInst(BRInst& inst);
     static std::string fCALLInst(CALLInst& inst);
-    static std::string fFPTOSIInst(FPTOSIInst& inst);
-    static std::string fSITOFPInst(SITOFPInst& inst);
     static std::string fALLOCAInst(ALLOCAInst& inst);
     static std::string fLOADInst(LOADInst& inst);
     static std::string fSTOREInst(STOREInst& inst);
@@ -78,8 +92,6 @@ private:
 
     static std::string fHELPERInst(HELPERInst& inst);
 };
-
-
 }
 
 

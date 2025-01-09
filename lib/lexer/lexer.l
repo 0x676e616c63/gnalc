@@ -13,9 +13,10 @@
 %}
 
 %option noyywrap nounput noinput
+%option yylineno
 
 %%
-[0-9]+ { return yy::parser::make_num_INT((AST::int32)atoi(yytext)); }
+0|([1-9][0-9]*) { return yy::parser::make_num_INT((AST::int32)atoi(yytext)); }
 0[0-7]+ { return yy::parser::make_num_INT((AST::int32)strtol(yytext, NULL, 8)); }
 0[xX][0-9a-fA-F]+ { return yy::parser::make_num_INT((AST::int32)strtol(yytext, NULL, 16)); }
 
@@ -63,7 +64,7 @@
 
 [ \t\n] { /* ignore whitespace */ }
 \/\/[^\n]*\n? { /* ignore comments */ }
-\/\*.*\*\/ { /* ignore comments */ }
+"/*"([^*]|\*+[^/*])*\*+"/" { /* ignore multi-line comments */ }
 . { /* yyerror("invalid character"); */ }
 %%
 

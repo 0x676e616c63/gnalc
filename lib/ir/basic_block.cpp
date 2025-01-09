@@ -1,45 +1,59 @@
 #include "../../include/ir/basic_block.hpp"
 #include "../../include/ir/visitor.hpp"
+#include "../../include/ir/utilities.hpp"
 
 namespace IR {
-    BasicBlock::BasicBlock(std::string _name) 
-        : Value(std::move(_name), IRTYPE::UNDEFINED) {}
+    BasicBlock::BasicBlock(std::string _name)
+        : Value(std::move(_name), makeBType(IRBTYPE::UNDEFINED), ValueTrait::BASIC_BLOCK) { }
 
-    BasicBlock::BasicBlock(std::string _name, std::list<Instruction*> _insts) 
-        : Value(std::move(_name), IRTYPE::UNDEFINED), insts(_insts) {}
+    BasicBlock::BasicBlock(std::string _name, std::list<std::shared_ptr<Instruction>> _insts)
+        : Value(std::move(_name), makeBType(IRBTYPE::UNDEFINED), ValueTrait::BASIC_BLOCK), insts(_insts) { }
 
-    BasicBlock::BasicBlock(std::string _name, std::list<BasicBlock*> _pre_bb, std::list<BasicBlock*> _next_bb, std::list<Instruction*> _insts)
-        : Value(std::move(_name), IRTYPE::UNDEFINED), insts(_insts), pre_bb(_pre_bb), next_bb(_next_bb) {}
+    BasicBlock::BasicBlock(std::string _name, std::list<std::weak_ptr<BasicBlock>> _pre_bb, std::list<std::weak_ptr<BasicBlock>> _next_bb, std::list<std::shared_ptr<Instruction>> _insts)
+        : Value(std::move(_name), makeBType(IRBTYPE::UNDEFINED), ValueTrait::BASIC_BLOCK), insts(_insts), pre_bb(_pre_bb), next_bb(_next_bb) {  }
 
-    void BasicBlock::addPreBB(BasicBlock* bb) {
+    void BasicBlock::addPreBB(const std::shared_ptr<BasicBlock>& bb) {
         pre_bb.emplace_back(bb);
     }
 
-    void BasicBlock::addNextBB(BasicBlock* bb) {
+    void BasicBlock::addNextBB(const std::shared_ptr<BasicBlock>& bb) {
         next_bb.emplace_back(bb);
     }
 
-    void BasicBlock::addInst(Instruction* inst) {
+    void BasicBlock::addInst(const std::shared_ptr<Instruction>& inst) {
         insts.emplace_back(inst);
+        inst->setParent(shared_from_this());
     }
 
-    std::list<BasicBlock*>& BasicBlock::getPreBB() {
+    std::list<std::shared_ptr<BasicBlock>> BasicBlock::getPreBB() const {
+        return WeaktoSharedList(pre_bb);
+    }
+
+    std::list<std::weak_ptr<BasicBlock>>& BasicBlock::getRPreBB() {
         return pre_bb;
     }
 
-    std::list<BasicBlock*>& BasicBlock::getNextBB() {
+    std::list<std::shared_ptr<BasicBlock>> BasicBlock::getNextBB() const {
+        return WeaktoSharedList(next_bb);
+    }
+
+    std::list<std::weak_ptr<BasicBlock>>& BasicBlock::getRNextBB() {
         return next_bb;
     }
 
-    std::list<Instruction*>& BasicBlock::getInsts() {
+    const std::list<std::shared_ptr<Instruction>>& BasicBlock::getInsts() const {
         return insts;
     }
 
-    auto& BasicBlock::getLiveIn() {
+    std::list<std::shared_ptr<Instruction>>& BasicBlock::getInsts() {
+        return insts;
+    }
+
+    std::unordered_set<std::shared_ptr<Value>>& BasicBlock::getLiveIn() {
         return livein;
     }
 
-    auto& BasicBlock::getLiveOut() {
+    std::unordered_set<std::shared_ptr<Value>>& BasicBlock::getLiveOut() {
         return liveout;
     }
 

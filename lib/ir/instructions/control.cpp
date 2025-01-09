@@ -1,45 +1,51 @@
 #include "../../../include/ir/instructions/control.hpp"
 #include "../../../include/ir/visitor.hpp"
+#include "../../../include/utils/exception.hpp"
 
 #include <algorithm>
-#include <assert.h>
 
 namespace IR
 {
     RETInst::RETInst()
-        : Instruction(OP::RET, "__ret", IRTYPE::UNDEFINED),
-            ret_type(IRTYPE::VOID) {}
+        : Instruction(OP::RET, "__ret", makeBType(IRBTYPE::UNDEFINED)),
+            ret_type(makeBType(IRBTYPE::VOID)) {}
 
-    RETInst::RETInst(Value* ret_val)
-        : Instruction(OP::RET, "__ret", IRTYPE::UNDEFINED),
-            ret_type(ret_val->getType())
+    RETInst::RETInst(std::shared_ptr<Value> ret_val)
+        : Instruction(OP::RET, "__ret", makeBType(IRBTYPE::UNDEFINED)),
+            ret_type(toBType(ret_val->getType()))
     {
         addOperand(ret_val);
     }
 
     bool RETInst::isVoid() const
     {
-        return ret_type == IRTYPE::VOID;
+        return toBType(ret_type)->getInner() == IRBTYPE::VOID;
     }
 
-    Value* RETInst::getRetVal() const
+    std::shared_ptr<Value> RETInst::getRetVal() const
     {
-        return getOperands().begin()->getValue();
+        Err::gassert(!isVoid(), "RETInst::getRetVal: RETInst is void.");
+        return (*(getOperands().begin()))->getValue();
     }
 
-    IRTYPE RETInst::getRetType() const
+    IRBTYPE RETInst::getRetBType() const
+    {
+        return toBType(ret_type)->getInner();
+    }
+
+    std::shared_ptr<BType> RETInst::getRetType() const
     {
         return ret_type;
     }
 
-    BRInst::BRInst(BasicBlock* _dest)
-        : Instruction(OP::BR, "__br", IRTYPE::UNDEFINED), conditional(false)
+    BRInst::BRInst(std::shared_ptr<BasicBlock> _dest)
+        : Instruction(OP::BR, "__br", makeBType(IRBTYPE::UNDEFINED)), conditional(false)
     {
         addOperand(_dest);
     }
 
-    BRInst::BRInst(Value* cond, BasicBlock* _true_dest, BasicBlock* _false_dest)
-        : Instruction(OP::BR, "__br", IRTYPE::UNDEFINED), conditional(true)
+    BRInst::BRInst(std::shared_ptr<Value> cond, std::shared_ptr<BasicBlock> _true_dest, std::shared_ptr<BasicBlock> _false_dest)
+        : Instruction(OP::BR, "__br", makeBType(IRBTYPE::UNDEFINED)), conditional(true)
     {
         addOperand(cond);
         addOperand(_true_dest);
@@ -57,66 +63,66 @@ namespace IR
     //     return dynamic_cast<BasicBlock*>(operands.begin()->getValue());
     // }
 
-    Value* BRInst::getCond() const
+    std::shared_ptr<Value> BRInst::getCond() const
     {
-        assert(conditional);
-        return getOperands().begin()->getValue();
+        Err::gassert(conditional, "BRInst is not conditional.");
+        return (*(getOperands().begin()))->getValue();
     }
-    BasicBlock* BRInst::getDest() const {
-        assert(!conditional);
-        return dynamic_cast<BasicBlock *>(getOperands().begin()->getValue());
+    std::shared_ptr<BasicBlock> BRInst::getDest() const {
+        Err::gassert(!conditional, "BRInst is conditional.");
+        return std::dynamic_pointer_cast<BasicBlock>((*(getOperands().begin()))->getValue());
     }
-    BasicBlock* BRInst::getTrueDest() const
+    std::shared_ptr<BasicBlock> BRInst::getTrueDest() const
     {
-        assert(conditional);
-        return dynamic_cast<BasicBlock*>(std::next(getOperands().begin())->getValue());
+        Err::gassert(conditional, "BRInst is not conditional.");
+        return std::dynamic_pointer_cast<BasicBlock>((*std::next(getOperands().begin()))->getValue());
     }
 
-    BasicBlock* BRInst::getFalseDest() const
+    std::shared_ptr<BasicBlock> BRInst::getFalseDest() const
     {
-        assert(conditional);
-        return dynamic_cast<BasicBlock*>(std::next(std::next(getOperands().begin()))->getValue());
+        Err::gassert(conditional, "BRInst is not conditional.");
+        return std::dynamic_pointer_cast<BasicBlock>((*std::next(std::next(getOperands().begin())))->getValue());
     }
 
-    CALLInst::CALLInst(Function* func, const std::list<Value*>& args)
-        : Instruction(OP::CALL, "__call", IRTYPE::VOID)
+    CALLInst::CALLInst(std::shared_ptr<FunctionDecl> func,
+        const std::vector<std::shared_ptr<Value>>& args)
+        : Instruction(OP::CALL, "__call", makeBType(IRBTYPE::VOID))
+    {
+        Err::gassert(toBType(toFunctionType(func->getType())->getRet())->getInner() == IRBTYPE::VOID);
+        addOperand(func);
+        for (const auto& valptr : args)
+            addOperand(valptr);
+    }
+
+    CALLInst::CALLInst(NameRef name, std::shared_ptr<FunctionDecl> func,
+        const std::vector<std::shared_ptr<Value>>& args)
+        : Instruction(OP::CALL, name, toFunctionType(func->getType())->getRet())
     {
         addOperand(func);
-        for (auto valptr : args)
-            operands.emplace_back(valptr, this);
-        // Or something like this
-        // std::transform(args.begin(), args.end(), std::back_inserter(operands), [this](auto&& vptr){return Use{vptr, this};});
-    }
-
-    CALLInst::CALLInst(NameRef name, IRTYPE ty, Function* func, const std::list<Value*>& args)
-        : Instruction(OP::CALL, name, ty)
-    {
-        assert(func->getType() == ty);
-        addOperand(func);
-        for (auto valptr : args)
+        for (const auto& valptr : args)
             addOperand(valptr);
     }
 
     bool CALLInst::isVoid() const
     {
-        return ty == IRTYPE::VOID;
+        return toBType(getType())->getInner() == IRBTYPE::VOID;
     }
 
     std::string CALLInst::getFuncName() const
     {
-        return getOperands().begin()->getValue()->getName();
+        return (*(getOperands().begin()))->getValue()->getName();
     }
 
-    Function* CALLInst::getFunc() const
+    std::shared_ptr<FunctionDecl> CALLInst::getFunc() const
     {
-        return dynamic_cast<Function*>(getOperands().begin()->getValue());
+        return std::dynamic_pointer_cast<FunctionDecl>((*(getOperands().begin()))->getValue());
     }
 
-    std::vector<Value*> CALLInst::getArgs() const
+    std::vector<std::shared_ptr<Value>> CALLInst::getArgs() const
     {
-        std::vector<Value*> ret;
+        std::vector<std::shared_ptr<Value>> ret;
         for (auto it = std::next(getOperands().begin()); it != getOperands().end(); ++it)
-            ret.emplace_back(it->getValue());
+            ret.emplace_back((*it)->getValue());
         return ret;
     }
 

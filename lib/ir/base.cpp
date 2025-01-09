@@ -1,100 +1,181 @@
 /**
  * @attention update: 使用 `Use` 类来管理操作数
- * @todo 使用智能指针优化
- * @todo 错误处理
+ * @attention NO NULL WARNING
  */
 
 #include "../../include/ir/base.hpp"
-
+#include "../../include/utils/exception.hpp"
 
 namespace IR {
 
-Value::Value(std::string _name, IRTYPE _type) : NameC(std::move(_name)), TypeC(_type) {}
+Value::Value(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait)
+    : NameC(std::move(_name)), vtype(std::move(_vtype)), trait(_vtrait) {}
 
+std::shared_ptr<Type> Value::getType() const {
+    return vtype;
+}
 
-
-void Value::addUse(Use* use) {
+void Value::addUse(const std::weak_ptr<Use>& use) {
+    Err::gassert(!use.expired());
     use_list.emplace_back(use);
 }
 
-std::list<Use*>& Value::getUseList() {
+std::list<std::shared_ptr<Use>> Value::getUseList() const {
+    std::list<std::shared_ptr<Use>> shared_use_list;
+    for (const auto& weak_use : use_list) {
+        auto shared_use = weak_use.lock();
+        if (shared_use) {
+            shared_use_list.push_back(shared_use);
+        } else {
+            Err::error("Value::getUseList(): use is expired.");
+        }
+    }
+    return shared_use_list;
+}
+
+std::list<std::weak_ptr<Use>>& Value::getRUseList() {
     return use_list;
 }
 
-/**
- * @todo null, not found process
- * @attention repeat delete
- */
-void Value::delUseByUse(Use* use) {
-    if (use == nullptr) {
-        return;
+bool Value::delUse(Use* use) {
+    bool found = false;
+    for (auto it = use_list.begin(); it != use_list.end();) {
+        if (it->lock().get() == use) {
+            it = use_list.erase(it);
+            found = true;
+        } else {
+            ++it;
+        }
     }
-    use_list.remove(use);
+    Err::gassert(found, "Value::delUse(): use not found.");
+    return found;
 }
 
-void Value::delUseByUser(User* user) {
-    for (auto iter = use_list.begin(); iter != use_list.end(); iter++) {
-        if ((*iter)->getUser() == user) {
-            use_list.erase(iter);
-            return;
+bool Value::delUse(const std::shared_ptr<Use>& use) {
+    bool found = false;
+    for (auto it = use_list.begin(); it != use_list.end();) {
+        if (it->lock() == use) {
+            it = use_list.erase(it);
+            found = true;
+        } else {
+            ++it;
+        }
+    }
+    Err::gassert(found, "Value::delUse(): use not found.");
+    return found;
+}
+
+bool Value::delUse(User* user) {
+    bool found = false;
+    for (auto it = use_list.begin(); it != use_list.end();) {
+        if (it->lock()->getUser() == user) {
+            it = use_list.erase(it);
+            found = true;
+        } else {
+            ++it;
+        }
+    }
+    Err::gassert(found, "Value::delUse(): user not found.");
+    return found;
+}
+
+bool Value::delUse(NameRef name) {
+    bool found = false;
+    for (auto it = use_list.begin(); it != use_list.end();) {
+        if (it->lock()->getUser()->isName(name)) {
+            it = use_list.erase(it);
+            found = true;
+        } else {
+            ++it;
+        }
+    }
+    Err::gassert(found, "Value::delUse(): name not found.");
+    return found;
+}
+
+void Value::cleanExpired() {
+    for (auto it = use_list.begin(); it != use_list.end();) {
+        if (it->expired()) {
+            it = use_list.erase(it);
+        } else {
+            ++it;
         }
     }
 }
 
-void Value::delUseByName(NameRef name) {
-    for (auto iter = use_list.begin(); iter != use_list.end(); iter++) {
-        if ((*iter)->getUser()->isName(name)) {
-            use_list.erase(iter);
-            return;
-        }
-    }
-}
 
-void Value::replaceUseByUse(Use* old_use, Use* new_use) {
-    for (auto iter = use_list.begin(); iter != use_list.end(); iter++) {
-        if (*iter == old_use) {
-            *iter = new_use;
-            return;
+bool Value::replaceUse(const std::shared_ptr<Use>& old_use, const std::shared_ptr<Use>& new_use) {
+    bool found = false;
+    for (auto& use : use_list) {
+        if (use.lock() == old_use) {
+            use = new_use;
+            found = true;
         }
     }
+    Err::gassert(found, "Value::replaceUse(): old_use not found.");
+    return found;
 }
 
 Value::~Value() {
     // todo
 }
 
+User::User(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait)
+    : Value(std::move(_name), std::move(_vtype), std::move(_vtrait)) {}
 
-User::User(std::string _name, IRTYPE _type) : Value(std::move(_name), _type) {}
-
-void User::addOperand(Value* ope)
-{
-    operands.emplace_back(ope, this);
+void User::addOperand(const std::shared_ptr<Value>& v) {
+    std::shared_ptr<Use> use{new Use(v, this)};
+    use->init();
+    operands.emplace_back(std::move(use));
 }
 
-std::list<Use>& User::getOperands() {
+std::list<std::shared_ptr<Use>>& User::getOperands() {
     return operands;
 }
 
-const std::list<Use>& User::getOperands() const {
+const std::list<std::shared_ptr<Use>>& User::getOperands() const {
     return operands;
 }
 
-void User::delOperandByValue(Value *v) {
-    for (auto iter = operands.begin(); iter != operands.end(); iter++) {
-        if (iter->getValue() == v) {
-            operands.erase(iter);
-            return;
+bool User::delOperand(const std::shared_ptr<Value>& v) {
+    bool found = false;
+    for (auto it = operands.begin(); it != operands.end();) {
+        if ((*it)->getValue() == v) {
+            it = operands.erase(it);
+            found = true;
+        } else {
+            ++it;
         }
     }
+    Err::gassert(found, "User::delOperand(): value not found.");
+    return found;
 }
 
-void User::delOperandByName(NameRef name) {
-    for (auto iter = operands.begin(); iter != operands.end(); iter++) {
-        if (iter->getUser()->isName(name)) {
-            operands.erase(iter);
-            return;
+bool User::delOperand(NameRef name) {
+    bool found = false;
+    for (auto it = operands.begin(); it != operands.end();) {
+        if ((*it)->getValue()->isName(name)) {
+            it = operands.erase(it);
+            found = true;
+        } else {
+            ++it;
         }
     }
+    Err::gassert(found, "User::delOperand(): name not found.");
+    return found;
+}
+
+bool User::replaceUse(const std::shared_ptr<Value>& old_val, const std::shared_ptr<Value>& new_val) {
+    bool found = false;
+    for (auto& use : operands) {
+        if (use->getValue() == old_val) {
+            use = std::shared_ptr<Use>{new Use(new_val, use->getUser())};
+            use->init();
+            found = true;
+        }
+    }
+    Err::gassert(found, "User::replaceUse(): old_val notfound.");
+    return found;
 }
 
 User::~User() {
@@ -102,22 +183,17 @@ User::~User() {
 }
 
 
-Use::Use(Value *v, User *u) : val(v), user(u) {
-    val->addUse(this);
+Use::Use(std::weak_ptr<Value> v, User* u)
+    : val(std::move(v)), user(u) {
 }
 
-void Use::setValue(Value *v) {
-    val->delUseByUse(this);
-    val = v;
-    val->addUse(this);
+void Use::init() {
+    val.lock()->addUse(weak_from_this());
 }
 
-void Use::setUser(User *u) {
-    user = u;
-}
 
-Value* Use::getValue() const {
-    return val;
+std::shared_ptr<Value> Use::getValue() const {
+    return val.lock();
 }
 
 User* Use::getUser() const {
@@ -125,6 +201,8 @@ User* Use::getUser() const {
 }
 
 Use::~Use() {
-    val->delUseByUse(this);
+    if (!val.expired())
+       val.lock()->cleanExpired();
 }
+
 }

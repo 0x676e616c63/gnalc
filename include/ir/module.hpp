@@ -19,20 +19,25 @@ namespace IR {
  */
 class Module : public NameC {
 private:
-    std::vector<GlobalVariable*> global_vars;
-    std::vector<Function*> funcs;
+    std::vector<std::shared_ptr<GlobalVariable>> global_vars;
+    std::vector<std::shared_ptr<Function>> funcs;
+    std::vector<std::shared_ptr<FunctionDecl>> func_decls;
 
 public:
     Module() = default;
     Module(std::string _name) : NameC(std::move(_name)) {}
 
-    void addGlobalVar(GlobalVariable* global_var);
-    const std::vector<GlobalVariable*>& getGlobalVars() const;
+    void addGlobalVar(std::shared_ptr<GlobalVariable> global_var);
+    const std::vector<std::shared_ptr<GlobalVariable>>& getGlobalVars() const;
     void delGlobalVar(NameRef name); // by name
 
-    void addFunction(Function* func);
-    const std::vector<Function*>& getFunctions() const;
+    void addFunction(std::shared_ptr<Function> func);
+    const std::vector<std::shared_ptr<Function>>& getFunctions() const;
     void delFunction(NameRef name); // by name
+
+    void addFunctionDecl(std::shared_ptr<FunctionDecl> func);
+    const std::vector<std::shared_ptr<FunctionDecl>>& getFunctionDecls() const;
+    void delFunctionDecl(NameRef name); // by name
 
     void accept(IRVisitor& visitor);
     ~Module();

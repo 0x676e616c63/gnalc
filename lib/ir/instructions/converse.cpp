@@ -1,53 +1,38 @@
 #include "../../../include/ir/instructions/converse.hpp"
 #include "../../../include/ir/visitor.hpp"
-#include <cassert>
+#include "../../../include/utils/exception.hpp"
 
 namespace IR {
-    FPTOSIInst::FPTOSIInst(NameRef name, Value* origin_val)
-        : Instruction(OP::FPTOSI, name, IRTYPE::I32)
-    {
-        assert(origin_val->getType() == IRTYPE::FLOAT);
+    CastInst::CastInst(OP opcode_, NameRef name, const std::shared_ptr<Value>& origin_val,
+        const std::shared_ptr<Type>& dest_type_)
+        : Instruction(opcode_, name, dest_type_), dest_type(dest_type_) {
         addOperand(origin_val);
     }
 
-    Value* FPTOSIInst::getOVal() const
+    std::shared_ptr<Value> CastInst::getOVal() const
     {
-        return getOperands().begin()->getValue();
+        return (*(getOperands().begin()))->getValue();
     }
 
-    IRTYPE FPTOSIInst::getOType() const
-    {
-        return origin_type;
+    std::shared_ptr<Type> CastInst::getOType() const {
+        return getOVal()->getType();
     }
 
-    IRTYPE FPTOSIInst::getTType() const
-    {
-        return ty;
+    std::shared_ptr<Type> CastInst::getTType() const {
+        return dest_type;
     }
 
-    SITOFPInst::SITOFPInst(NameRef name, Value* origin_val)
-        : Instruction(OP::SITOFP, name, IRTYPE::FLOAT)
-    {
-        assert(origin_val->getType() == IRTYPE::I32);
-        addOperand(origin_val);
-    }
+    void CastInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
-    Value* SITOFPInst::getOVal() const
-    {
-        return getOperands().begin()->getValue();
-    }
+    FPTOSIInst::FPTOSIInst(NameRef name, const std::shared_ptr<Value>& origin_val)
+        : CastInst(OP::FPTOSI, name, origin_val, makeBType(IRBTYPE::I32)) {}
 
-    IRTYPE SITOFPInst::getOType() const
-    {
-        return origin_type;
-    }
+    SITOFPInst::SITOFPInst(NameRef name, const std::shared_ptr<Value>& origin_val)
+        : CastInst(OP::SITOFP, name, origin_val, makeBType(IRBTYPE::FLOAT)) {}
 
-    IRTYPE SITOFPInst::getTType() const
-    {
-        return ty;
-    }
+    ZEXTInst::ZEXTInst(NameRef name, const std::shared_ptr<Value>& origin_val, IRBTYPE dest_type_)
+        : CastInst(OP::ZEXT, name, origin_val,  makeBType(dest_type_)) {}
 
-    void SITOFPInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
-
-    void FPTOSIInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
+    BITCASTInst::BITCASTInst(NameRef name, const std::shared_ptr<Value>& origin_val, const std::shared_ptr<Type>& dest_type_)
+        : CastInst(OP::BITCAST, name, origin_val,  dest_type_) {}
 }

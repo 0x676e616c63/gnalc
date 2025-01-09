@@ -7,19 +7,16 @@
 
 namespace IR
 {
-    GVIniter::GVIniter(IRTYPE _ty)
-        : initer_type(_ty), is_zero(true), is_array(false) {}
+    GVIniter::GVIniter(std::shared_ptr<Type> _ty)
+        : initer_type(std::move(_ty)), is_zero(true) {}
 
-    GVIniter::GVIniter(IRTYPE _ty, Value* _con)
-        : initer_type(_ty), is_zero(false), is_array(false), constval(_con) {}
+    GVIniter::GVIniter(std::shared_ptr<Type> _ty, std::shared_ptr<Value> _con)
+        : initer_type(std::move(_ty)), is_zero(false), constval(_con) {}
 
-    GVIniter::GVIniter(IRTYPE _ty, std::vector<int> _array_size)
-        : initer_type(_ty), is_zero(true), is_array(true), array_size(_array_size) {}
+    GVIniter::GVIniter(std::shared_ptr<Type> _ty, std::vector<GVIniter> _inner_initer)
+        : initer_type(std::move(_ty)), is_zero(false), inner_initer(_inner_initer) {}
 
-    GVIniter::GVIniter(IRTYPE _ty, std::vector<int> _array_size, std::vector<GVIniter> _inner_initer)
-        : initer_type(_ty), is_zero(false), is_array(true), array_size(_array_size), inner_initer(_inner_initer) {}
-
-    IRTYPE GVIniter::getIniterType() const {
+    const std::shared_ptr<IR::Type>& GVIniter::getIniterType() const {
         return initer_type;
     }
 
@@ -28,46 +25,110 @@ namespace IR
     }
 
     bool GVIniter::isArray() const {
-        return is_array;
+        return initer_type->getTrait() == IRCTYPE::ARRAY;
     }
 
-    std::vector<int> GVIniter::getArraySize() const {
-        return array_size;
-    }
-
-    Value* GVIniter::getConstVal() {
+    const std::shared_ptr<IR::Value>& GVIniter::getConstVal() const {
         return constval;
     }
 
-    std::vector<GVIniter>& GVIniter::getInnerIniter() {
-        return inner_initer;
+    GVIniter& GVIniter::addIniter(std::shared_ptr<Type> _ty, std::shared_ptr<Value> _con) {
+        Err::gassert(isArray());
+        is_zero = false;
+        inner_initer.emplace_back(std::move(_ty), std::move(_con));
+        return inner_initer.back();
+    }
+
+    GVIniter& GVIniter::addIniter(std::shared_ptr<Type> _ty) {
+        Err::gassert(isArray());
+        is_zero = false;
+        inner_initer.emplace_back(std::move(_ty));
+        return inner_initer.back();
+    }
+
+    void GVIniter::normalizeZero() {
+        if (!isArray()) return;
+        // Element is Array
+        if (getElm(initer_type)->getTrait() == IRCTYPE::ARRAY)
+        {
+            bool inner_is_zero = true;
+            for (auto&& r : inner_initer)
+            {
+                r.normalizeZero();
+                if (!r.isZero())
+                {
+                    inner_is_zero = false;
+                    // Because we want the sub initializer normalized, we should not break
+                    // break;
+                }
+            }
+            if (inner_is_zero)
+            {
+                inner_initer.clear();
+                is_zero = true;
+            }
+        }
+        // Element is Number
+        else
+        {
+            bool inner_is_zero = true;
+            for (auto&& r : inner_initer)
+            {
+                if (auto ci = std::dynamic_pointer_cast<ConstantInt>(r.constval))
+                {
+                    if (ci->getVal() != 0)
+                    {
+                        inner_is_zero = false;
+                        break;
+                    }
+                }
+                else if (auto cf = std::dynamic_pointer_cast<ConstantFloat>(r.constval))
+                {
+                    if (cf->getVal() != 0)
+                    {
+                        inner_is_zero = false;
+                        break;
+                    }
+                }
+                else
+                {
+                    inner_is_zero = false;
+                    break;
+                }
+            }
+            if (inner_is_zero)
+            {
+                inner_initer.clear();
+                is_zero = true;
+            }
+        }
     }
 
     GVIniter::~GVIniter() {}
 
 
-    GlobalVariable::GlobalVariable(STOCLASS _sc, IRTYPE _ty, std::string _name, GVIniter _initer, int _align)
-        : storage_class(_sc), vtype(_ty), is_array(false), Value(_name, IRTYPE::PTR), initer(_initer), align(_align) {}
-
-    GlobalVariable::GlobalVariable(STOCLASS _sc, IRTYPE _ty, std::string _name, std::vector<int> _array_size, GVIniter _initer, int _align)
-        : storage_class(_sc), vtype(_ty), is_array(true), Value(_name, IRTYPE::PTR), initer(_initer), align(_align), array_size(_array_size) {}
+    GlobalVariable::GlobalVariable(STOCLASS _sc, std::shared_ptr<Type> _ty, std::string _name, GVIniter _initer, int _align)
+        : storage_class(_sc), vtype(std::move(_ty)),
+            Value(std::move(_name), makePtrType(_ty), ValueTrait::GLOBAL_VARIABLE),
+            initer(_initer), align(_align) {
+    }
 
     STOCLASS GlobalVariable::getStorageClass() const {
         return storage_class;
     }
 
-    IRTYPE GlobalVariable::getVarType() const {
+    const std::shared_ptr<Type>& GlobalVariable::getVarType() const {
         return vtype;
     }
 
     bool GlobalVariable::isArray() const {
-        return is_array;
+        return vtype->getTrait() == IRCTYPE::ARRAY;
     }
-
-    std::vector<int> GlobalVariable::getArraySize() const {
-        return array_size;
+    
+    const std::vector<GVIniter>& GVIniter::getInnerIniter() const {
+        return inner_initer;
     }
-
+    
     GVIniter& GlobalVariable::getIniter() {
         return initer;
     }
@@ -78,26 +139,19 @@ namespace IR
 
     // void GlobalVariable::accept(IRVisitor& visitor) override { visitor.visit(*this); }
 
-std::string GVIniter::toString() {
+std::string GVIniter::toString() const {
     std::string ret;
 
     #if ENABLE_GVINITER_TOSTRING
     if (isArray()) {
-        for (int size : getArraySize()) {
-            ret += "[" + std::to_string(size) + " x ";
-        }
-        ret += IRFormatter::formatIRTYPE(getIniterType());
-        for (int i = 0; i < getArraySize().size(); i++) {
-            ret += "]";
-        }
-
+        ret += initer_type->toString();
         if (isZero()) {
             ret += " zeroinitializer";
         } else {
-            ret += "[";
-            for (auto it = getInnerIniter().begin(); it != getInnerIniter().end(); it++) {
+            ret += " [";
+            for (auto it = inner_initer.begin(); it != inner_initer.end(); it++) {
                 ret += it->toString();
-                if (std::next(it) != getInnerIniter().end()) {
+                if (std::next(it) != inner_initer.end()) {
                     ret += ", ";
                 }
             }
@@ -105,7 +159,7 @@ std::string GVIniter::toString() {
         }
     } else {
         if (isZero()) {
-            ret += IRFormatter::formatIRTYPE(getIniterType()) + " ";
+            ret += initer_type->toString() + " ";
             ret += "0";
         } else {
             ret += IRFormatter::formatValue(*getConstVal());

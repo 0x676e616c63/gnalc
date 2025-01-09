@@ -1,11 +1,19 @@
+#include <utility>
+
 #include "../../include/ir/instruction.hpp"
+
+#include <ir/visitor.hpp>
 
 namespace IR {
 
-Instruction::Instruction(OP opcode, std::string _name, IRTYPE _type)
-    : opcode(opcode), User(_name, _type) {}
+Instruction::Instruction(OP opcode, std::string _name, const std::shared_ptr<Type>& _type)
+    : opcode(opcode), User(std::move(_name), _type,
+        (_type->getTrait() == IRCTYPE::BASIC
+        && toBType(_type)->getInner() != IRBTYPE::UNDEFINED
+        && toBType(_type)->getInner() != IRBTYPE::VOID)
+        ? ValueTrait::ORDINARY_VARIABLE : ValueTrait::VOID_INSTRUCTION) {}
 
-void Instruction::setParent(BasicBlock* p) {
+void Instruction::setParent(const std::shared_ptr<BasicBlock>& p) {
     parent = p;
 }
 
@@ -13,8 +21,12 @@ OP Instruction::getOpcode() const {
     return opcode;
 }
 
-BasicBlock* Instruction::getParent() const {
-    return parent;
+std::shared_ptr<BasicBlock> Instruction::getParent() const {
+    return parent.lock();
+}
+
+void Instruction::accept(IRVisitor& visitor) {
+    visitor.visit(*this);
 }
 
 Instruction::~Instruction() = default;
