@@ -28,7 +28,7 @@ int main(int argc, char **argv){
                 std::cerr << "Error: Expected output." << std::endl;
                 return -1;
             }
-            output_file = arg;
+            output_file = argv[i];
         }
     }
     Logger::setLogLevel(level);
