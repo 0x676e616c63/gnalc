@@ -1,0 +1,31 @@
+name: Gnalc Test
+
+on:
+  push:
+    branches: [ "main", "ci" ]
+  pull_request:
+    branches: [ "main", "ci" ]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Configure CMake
+      run: mkdir ${{github.workspace}}/build && cd ${{github.workspace}}/build && cmake ..
+
+    - name: Build
+      run: make gnalc gnalc_test -j$(nproc)
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build
+      run: ctest -C ${{env.BUILD_TYPE}}
+      
+    - name: Check
+      working-directory: ${{github.workspace}}/build
+      if: ${{ failure() }}
+      run: cat Testing/Temporary/LastTest.log
