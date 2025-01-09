@@ -5,7 +5,6 @@
 #include <string>
 #include <sstream>
 #include <vector>
-
 #include <ctime>
 
 #include "../include/utils/exception.hpp"

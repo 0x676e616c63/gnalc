@@ -3,9 +3,7 @@
 **/
 
 #include "../../include/irvisitors/cfgbuilder.hpp"
-
-#include <ir/utilities.hpp>
-
+#include "../../include/ir/utilities.hpp"
 #include "../../include/utils/logger.hpp"
 
 namespace IR {

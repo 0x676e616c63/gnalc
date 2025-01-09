@@ -1,15 +1,14 @@
-#include "../include/parser/ast.hpp"
-#include "../include/parser/visitor.hpp"
-#include "../include/parser/parser.hpp"
-#include "../include/utils/logger.hpp"
-#include "../include/utils/exception.hpp"
-#include "../include/irvisitors/irprinter.hpp"
-#include "../include/irvisitors/cfgbuilder.hpp"
-#include "../include/irvisitors/namenormalizer.hpp"
-#include "../include/iropt/live_analysis.hpp"
+#include "../../include/parser/ast.hpp"
+#include "../../include/parser/visitor.hpp"
+#include "../../include/parser/parser.hpp"
+#include "../../include/utils/logger.hpp"
+#include "../../include/irvisitors/irprinter.hpp"
+#include "../../include/irvisitors/cfgbuilder.hpp"
+#include "../../include/irvisitors/namenormalizer.hpp"
+#include "../../include/iropt/live_analysis.hpp"
 
-#include "../BackEnd/Arm.hpp"
-#include "../BackEnd/include/ArmComplexMIRStruct/ArmModule.hpp"
+#include "../../include/codegen/Arm.hpp"
+#include "../../include/codegen/ArmComplexMIRStruct/ArmModule.hpp"
 
 std::shared_ptr<CompUnit> node = nullptr;
 extern FILE *yyin;
@@ -132,35 +131,36 @@ int main(int argc, char **argv) {
     IR::NameNormalizer name_normalizer(false);
     name_normalizer.normalize(generator.get_module());
 
-    std::ostream* outstream;
+    std::ostream* poutstream = &std::cout;
+    std::ofstream outfile;
 
-    if (output_file.empty())
-        outstream = &std::cout;
-    else
-        outstream = new std::ofstream(output_file);
+    if (!output_file.empty())
+    {
+        outfile.open(output_file);
+        if (!outfile.is_open())
+        {
+            std::cerr << "Error: Failed to open output file." << std::endl;
+            return -1;
+        }
+        poutstream = &outfile;
+    }
 
     if (emit_llvm)
     {
-        IR::IRPrinter printer(*outstream, false);
+        IR::IRPrinter printer(*poutstream, false);
         printer.printout(generator.get_module());
     }
     else
     {
-        ArmStruct::Module *backEndModule = new ArmStruct::Module(generator.get_module());
+        auto backEndModule = new ArmStruct::Module(generator.get_module());
         backEndModule->AllocRegister();
         backEndModule->Legalize();
-        std::string Asm = backEndModule->toString();
-        std::ofstream outstream(output_file);
-        outstream << Asm;
-        outstream.close();
-
+        *poutstream << backEndModule->toString();
+        // TODO: fix double free.
+        // delete backEndModule;
     }
 
     la.cleanLiveInfo(generator.get_module());
-
-    if (outstream != &std::cout)
-        delete outstream;
-
     fclose(yyin);
     return 0;
 }

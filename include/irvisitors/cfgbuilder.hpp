@@ -9,8 +9,8 @@
 #define GNALC_CFGBUILDER_HPP
 
 #include "../ir/visitor.hpp"
+#include "../ir/constantpool.hpp"
 #include <stack>
-#include <ir/constantpool.hpp>
 
 namespace IR {
 

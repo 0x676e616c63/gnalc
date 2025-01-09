@@ -6,10 +6,10 @@
 #pragma once
 
 #include "ast.hpp"
-#include "symbol_table/symbol_table.hpp"
-#include "ir/constantpool.hpp"
-#include "ir/module.hpp"
-#include "ir/instructions/memory.hpp"
+#include "../symbol_table/symbol_table.hpp"
+#include "../ir/constantpool.hpp"
+#include "../ir/module.hpp"
+#include "../ir/instructions/memory.hpp"
 
 namespace AST {
 

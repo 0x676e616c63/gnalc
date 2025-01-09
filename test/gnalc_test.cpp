@@ -250,7 +250,7 @@ int main(int argc, char* argv[]) {
                     curr_temp_dir, sy.path().stem().string());
 
                 command = format(
-                    "{} 2>&1 -o {} {}"
+                    "{} 2>&1 -S -o {} {}"
                     " && {} {} {} -o {}"
                     " && {} {} < {} > {}"
                     "; /bin/echo -e \"\\n\"$? >> {}",
