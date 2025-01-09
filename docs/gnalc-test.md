@@ -3,6 +3,10 @@ First update `gnalc-test-data` submodule
 ```shell
 git submodule init
 git submodule update
+sudo apt install git-lfs
+cd test/gnalc-test-data
+git lfs install
+git lfs pull
 ```
 
 ### QEMU Installation
@@ -57,8 +61,6 @@ Copyright (c) 2003-2024 Fabrice Bellard and the QEMU Project developers
 ### GCC
 ```shell
 sudo apt install gcc-14-arm-linux-gnueabi
-# setup ld for qemu-arm
-sudo ln -s /usr/arm-linux-gnueabi/lib/ld-linux.so.3 /lib/ld-linux.so.3
 ```
 
 Then edit `gcc_arm_command` and `qemu_arm_command` in [gnalc_test.cpp](../test/gnalc_test.cpp) according to your machine.

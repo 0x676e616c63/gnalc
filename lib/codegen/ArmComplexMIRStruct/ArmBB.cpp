@@ -20,7 +20,7 @@ BB::BB(IR::BasicBlock& midEnd_BasicBlock, Function& func): Func(func){
 
    MkLiveOut(midEnd_BasicBlock);
 
-   this->label = 'L' + midEnd_BasicBlock.getName();
+   this->label = 'L' + midEnd_BasicBlock.getName().substr(1); // substr to remove '%'
 }
 
 void BB::MkLiveOut(IR::BasicBlock& midEnd_BasicBlock){
