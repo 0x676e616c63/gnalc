@@ -7,6 +7,7 @@ project(gnalc)
 option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 
 add_compile_options("-g")
+add_compile_options("-fno-limit-debug-info")
 
 if (ENABLE_ASAN)
         message(STATUS "AddressSanitizer enabled")

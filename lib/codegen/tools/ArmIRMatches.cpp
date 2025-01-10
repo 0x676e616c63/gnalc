@@ -1024,8 +1024,8 @@ void StoreMatch::operator()(InstArgs insts){
         }
 
         // vstr.32/str %x, %ptr
-        Operand *Use = new Operand(valType, midEnd_store.getName());
-        BasicBlock.Func.VirRegOperandMap[Use->VirReg] = Use;
+        unsigned long long idx = std::stoull(midEnd_store.getValue()->getName().substr(1));
+        Operand *Use = BasicBlock.Func.VirRegOperandMap[idx];
         
         MemInstruction *backEnd_ldr = new MemInstruction(backEnd_ldrCode, ptr, BasicBlock, Use);
         BasicBlock.InstList.push_back(backEnd_ldr);
