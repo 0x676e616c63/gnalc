@@ -4,30 +4,40 @@
     .global a
     a:
         .word 1
+
     .global b
     b:
         .word 1
+
         .word 2
+
     .global c
     c:
         .word 1
+
         .word 2
+
         .word 3
+
         .word 4
+
     .global d
     d:
         .zero 4
+
     .global e
     e:
         .zero 8
+
     .global f
     f:
         .zero 24
+
 .text
 .arm
 .globl main
 main:
-Lentry:
+L%entry:
     push {r7, lr}
     sub sp, sp, #0
     add r7, sp, #0

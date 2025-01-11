@@ -312,7 +312,7 @@ void UnaryMatch::operator()(InstArgs insts){
 }
 
 void BranchMatch::operator()(InstArgs insts) const{
-    assert(insts.end()->get().getOpcode() == IR::OP::BR);
+    assert(std::prev(insts.end())->get().getOpcode() == IR::OP::BR);
     
     if(insts.size() == 1){
         // br label <dest>
@@ -420,7 +420,7 @@ void BranchMatch::operator()(InstArgs insts) const{
         
         BasicBlock.InstList.push_back(backEnd_cmp);
 
-        IR::BRInst &midEnd_Branch = dynamic_cast<IR::BRInst&>(insts.end()->get());
+        IR::BRInst &midEnd_Branch = dynamic_cast<IR::BRInst&>(std::prev(insts.end())->get());
         
         Imm *TrueBlock = new Imm(OperandType::LABEL, "L" + midEnd_Branch.getTrueDest()->getName());
         Imm *FalseBlock = new Imm(OperandType::LABEL, "L" + midEnd_Branch.getFalseDest()->getName());
