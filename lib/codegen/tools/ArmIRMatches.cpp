@@ -312,7 +312,7 @@ void UnaryMatch::operator()(InstArgs insts){
 }
 
 void BranchMatch::operator()(InstArgs insts) const{
-    assert(std::prev(insts.end())->get().getOpcode() == IR::OP::BR);
+    assert(insts.end()->get().getOpcode() == IR::OP::BR);
     
     if(insts.size() == 1){
         // br label <dest>
@@ -420,10 +420,11 @@ void BranchMatch::operator()(InstArgs insts) const{
         
         BasicBlock.InstList.push_back(backEnd_cmp);
 
-        IR::BRInst &midEnd_Branch = dynamic_cast<IR::BRInst&>(std::prev(insts.end())->get());
-        
-        Imm *TrueBlock = new Imm(OperandType::LABEL, "L" + midEnd_Branch.getTrueDest()->getName());
-        Imm *FalseBlock = new Imm(OperandType::LABEL, "L" + midEnd_Branch.getFalseDest()->getName());
+        IR::BRInst &midEnd_Branch = dynamic_cast<IR::BRInst&>(insts.end()->get());
+
+        // substr to remove '%'
+        Imm *TrueBlock = new Imm(OperandType::LABEL, "L" + midEnd_Branch.getTrueDest()->getName().substr(1));
+        Imm *FalseBlock = new Imm(OperandType::LABEL, "L" + midEnd_Branch.getFalseDest()->getName().substr(1));
         ConstPool.push_back(TrueBlock);
         ConstPool.push_back(FalseBlock);
 
@@ -1024,8 +1025,8 @@ void StoreMatch::operator()(InstArgs insts){
         }
 
         // vstr.32/str %x, %ptr
-        unsigned long long idx = std::stoull(midEnd_store.getValue()->getName().substr(1));
-        Operand *Use = BasicBlock.Func.VirRegOperandMap[idx];
+        Operand *Use = new Operand(valType, midEnd_store.getName());
+        BasicBlock.Func.VirRegOperandMap[Use->VirReg] = Use;
         
         MemInstruction *backEnd_ldr = new MemInstruction(backEnd_ldrCode, ptr, BasicBlock, Use);
         BasicBlock.InstList.push_back(backEnd_ldr);
