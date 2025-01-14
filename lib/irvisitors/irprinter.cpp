@@ -234,9 +234,8 @@ std::string IRFormatter::formatValue(Value& val) {
 }
 
 std::string IRFormatter::formatBB(BasicBlock& bb) {
-    auto ret = bb.getName();
-    ret.erase(0, 1);
-    return ret;
+    // substr to remove '%'
+    return bb.getName().substr(1);
 }
 
 std::string IRFormatter::formatFunc(Function& func) {
