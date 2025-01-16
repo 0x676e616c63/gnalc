@@ -45,4 +45,5 @@ jobs:
 
       - name: Check
         working-directory: ${{github.workspace}}/build
+        if: ${{ failure() }}
         run: cat Testing/Temporary/LastTest.log
