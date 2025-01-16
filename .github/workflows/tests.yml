@@ -17,8 +17,8 @@ jobs:
       - name: Get Test data
         uses: actions/checkout@v4
         with:
-          submodules: 'recursive'
-          lfs: 'true'
+          submodules: true
+          lfs: true
           token: ${{ secrets.GH_PAT }}
 
       - name: Configure CMake
