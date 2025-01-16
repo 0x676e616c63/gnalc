@@ -14,16 +14,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Install LLVM and Clang
-        uses: KyleMayes/install-llvm-action@v2
+      - name: Setup LLVM
+        uses: ZhongRuoyu/setup-llvm@v0
         with:
-          version: "10.0.0"
+          llvm-version: 18
 
       - uses: actions/checkout@v4
         with:
           lfs: true
 # See: https://rgoswami.me/posts/priv-gh-actions/
-      - name: Get Test data
+      - name: Get test data
         env:
           SSHK: ${{ secrets.GH_PAT }} # sorry, it's not a PAT, it is a deployment key
         run: |
@@ -46,5 +46,4 @@ jobs:
 
       - name: Check
         working-directory: ${{github.workspace}}/build
-        if: ${{ failure() }}
         run: cat Testing/Temporary/LastTest.log
