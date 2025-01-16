@@ -20,8 +20,7 @@ jobs:
           llvm-version: 18
 
       - uses: actions/checkout@v4
-        with:
-          lfs: true
+
 # See: https://rgoswami.me/posts/priv-gh-actions/
       - name: Get test data
         env:

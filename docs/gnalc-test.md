@@ -59,6 +59,7 @@ Copyright (c) 2003-2024 Fabrice Bellard and the QEMU Project developers
 ```
 
 ### GCC
+#### Ubuntu
 ```shell
 sudo apt install gcc-14-arm-linux-gnueabi
 # setup ld for qemu-arm
@@ -67,6 +68,18 @@ sudo ln -s /usr/arm-linux-gnueabi/lib/ld-linux.so.3 /lib/ld-linux.so.3
 
 Then edit `gcc_arm_command` and `qemu_arm_command` in [gnalc_test.cpp](../test/gnalc_test.cpp) according to your machine.
 ```c++
-const std::string gcc_arm_command = "arm-linux-gnueabi-gcc-14";
+const std::string gcc_arm_command = "arm-linux-gnueabi-gcc-14"; 
 const std::string qemu_arm_command = "LD_LIBRARY_PATH=/usr/arm-linux-gnueabi/lib qemu-arm";
+```
+
+#### Arch/Manjaro
+```shell
+paru -S arm-linux-gnueabihf-gcc14-linaro-bin
+# setup ld for qemu-arm
+sudo ln -s /usr/arm-linux-gnueabihf/libc/lib/ld-linux-armhf.so.3 /lib/ld-linux-armhf.so.3
+```
+Then edit `gcc_arm_command` and `qemu_arm_command` in [gnalc_test.cpp](../test/gnalc_test.cpp) according to your machine.
+```c++
+const std::string gcc_arm_command = "arm-linux-gnueabihf-gcc";
+const std::string qemu_arm_command = "LD_LIBRARY_PATH=/usr/arm-linux-gnueabihf/libc/lib qemu-arm";
 ```

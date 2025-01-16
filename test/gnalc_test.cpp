@@ -37,8 +37,8 @@ bool only_frontend = true;
 const std::string gnalc_path = "../gnalc";
 
 // backend
-const std::string gcc_arm_command = "arm-linux-gnueabi-gcc-14";
-const std::string qemu_arm_command = "LD_LIBRARY_PATH=/usr/arm-linux-gnueabi/lib qemu-arm";
+const std::string gcc_arm_command = "arm-linux-gnueabihf-gcc";
+const std::string qemu_arm_command = "LD_LIBRARY_PATH=/usr/arm-linux-gnueabihf/libc/lib qemu-arm";
 
 const std::string global_temp_dir = "./gnalc_test_temp/" + generate_unique_temp_dir();
 

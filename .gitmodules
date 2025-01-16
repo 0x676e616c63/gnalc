@@ -1,3 +1,6 @@
 [submodule "test/gnalc-test-data"]
 	path = test/gnalc-test-data
 	url = git@github.com:caozhanhao/gnalc-test-data.git
+[submodule "test/gnalc-test-data-no-lfs"]
+	path = test/gnalc-test-data-no-lfs
+	url = git@github.com:caozhanhao/gnalc-test-data-no-lfs.git

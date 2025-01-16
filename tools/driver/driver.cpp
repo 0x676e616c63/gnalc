@@ -20,6 +20,7 @@ int main(int argc, char **argv) {
     bool only_compilation = false;
     bool emit_llvm = false;
     bool ast_dump = false;
+    bool optimize = false;
     for (int i = 1; i < argc; ++i)
     {
         std::string arg(argv[i]);
@@ -63,7 +64,11 @@ int main(int argc, char **argv) {
         {
             ast_dump = true;
         }
-        else if (arg == "--help")
+        else if (arg == "-O1")
+        {
+            optimize = true;
+        }
+        else if (arg == "-h" || arg == "--help")
         {
             std::cout << "OVERVIEW: gnalc compiler\n";
             std::cout << "USAGE: " << argv[0] << " [options] file\n";
@@ -71,11 +76,13 @@ int main(int argc, char **argv) {
                 "OPTIONS:\n"
                 "  -o <file>            Write output to <file>\n"
                 "  -S                   Only run compilation steps\n"
+                "  -O1                  Optimization level 1\n"
                 "  -emit-llvm           Use the LLVM representation for assembler and object files\n"
                 "  -ast-dump            Build ASTs and then debug dump them\n"
                 "  --log <log-level>    Enable compiler logger. Available log-level: debug, info\n"
-                "  --help               Display available options\n"
+                "  -h, --help           Display available options\n"
             << std::flush;
+            return 0;
         }
         else
             input_file = argv[i];
@@ -124,6 +131,12 @@ int main(int argc, char **argv) {
 
     IR::CFGBuilder cb;
     cb.build(generator.get_module());
+
+    if (optimize)
+    {
+        Err::todo("Optimization");
+    }
+
     IR::LiveAnalyser la;
     la.cleanLiveInfo(generator.get_module());
     la.processModule(generator.get_module());
