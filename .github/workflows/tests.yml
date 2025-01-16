@@ -35,6 +35,9 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: make gnalc gnalc_test -j$(nproc)
 
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v2
+
       - name: Test
         working-directory: ${{github.workspace}}/build
         run: ctest -C ${{env.BUILD_TYPE}}
