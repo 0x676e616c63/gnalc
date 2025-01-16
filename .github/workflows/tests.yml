@@ -14,12 +14,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Get Test data
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          submodules: true
           lfs: true
-          token: ${{ secrets.GH_PAT }}
+# See: https://rgoswami.me/posts/priv-gh-actions/
+      - name: Get Test data
+        env:
+          SSHK: ${{ secrets.GH_PAT }} # sorry, it's not a PAT, it is a deployment key
+        run: |
+          mkdir -p $HOME/.ssh
+          echo "$SSHK" > $HOME/.ssh/ssh.key
+          chmod 600 $HOME/.ssh/ssh.key
+          export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/ssh.key"
+          git submodule update --init --recursive
 
       - name: Configure CMake
         run: mkdir ${{github.workspace}}/build && cd ${{github.workspace}}/build && cmake ..
