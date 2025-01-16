@@ -14,26 +14,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Get Test data
-      run: | 
-        git submodule init
-        git submodule update
-        cd  ${{github.workspace}}/test/gnalc-test-data
-        git lfs pull
+      - name: Get Test data
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          lfs: 'true'
+          token: ${{ secrets.GH_PAT }}
 
-    - name: Configure CMake
-      run: mkdir ${{github.workspace}}/build && cd ${{github.workspace}}/build && cmake ..
+      - name: Configure CMake
+        run: mkdir ${{github.workspace}}/build && cd ${{github.workspace}}/build && cmake ..
 
-    - name: Build
-      working-directory: ${{github.workspace}}/build
-      run: make gnalc gnalc_test -j$(nproc)
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: make gnalc gnalc_test -j$(nproc)
 
-    - name: Test
-      working-directory: ${{github.workspace}}/build
-      run: ctest -C ${{env.BUILD_TYPE}}
-      
-    - name: Check
-      working-directory: ${{github.workspace}}/build
-      if: ${{ failure() }}
-      run: cat Testing/Temporary/LastTest.log
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: ctest -C ${{env.BUILD_TYPE}}
+
+      - name: Check
+        working-directory: ${{github.workspace}}/build
+        if: ${{ failure() }}
+        run: cat Testing/Temporary/LastTest.log
