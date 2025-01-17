@@ -1,0 +1,16 @@
+#pragma once
+#ifndef GNALC_CODEGEN_BRAINFK_BFBUILTINS_HPP
+#define GNALC_CODEGEN_BRAINFK_BFBUILTINS_HPP
+
+#include "bfmodule.hpp"
+
+// Raw Brainfk code: https://github.com/moky/BrainFuck/tree/master
+// Use `bfhelper` to translate
+namespace BrainFk::builtin {
+// Add cell #0 with #1, save the result in #2
+const std::vector bf_add = { BFInstruction::PTRINC, BFInstruction::PTRINC, BFInstruction::BEQZ, BFInstruction::DEC, BFInstruction::BNEZ, BFInstruction::PTRINC, BFInstruction::BEQZ, BFInstruction::DEC, BFInstruction::BNEZ, BFInstruction::PTRDEC, BFInstruction::PTRDEC, BFInstruction::PTRDEC, BFInstruction::BEQZ, BFInstruction::DEC, BFInstruction::PTRINC, BFInstruction::PTRINC, BFInstruction::INC, BFInstruction::PTRINC, BFInstruction::INC, BFInstruction::PTRDEC, BFInstruction::PTRDEC, BFInstruction::PTRDEC, BFInstruction::BNEZ, BFInstruction::PTRINC, BFInstruction::PTRINC, BFInstruction::BEQZ, BFInstruction::DEC, BFInstruction::PTRDEC, BFInstruction::PTRDEC, BFInstruction::PTRDEC, BFInstruction::INC, BFInstruction::PTRINC, BFInstruction::PTRINC, BFInstruction::PTRINC, BFInstruction::BNEZ, BFInstruction::PTRDEC, BFInstruction::PTRDEC, BFInstruction::BEQZ, BFInstruction::DEC, BFInstruction::PTRINC, BFInstruction::INC, BFInstruction::PTRINC, BFInstruction::INC, BFInstruction::PTRDEC, BFInstruction::PTRDEC, BFInstruction::BNEZ, BFInstruction::PTRINC, BFInstruction::PTRINC, BFInstruction::BEQZ, BFInstruction::DEC, BFInstruction::PTRDEC, BFInstruction::PTRDEC, BFInstruction::INC, BFInstruction::PTRINC, BFInstruction::PTRINC, BFInstruction::BNEZ, BFInstruction::PTRDEC, BFInstruction::PTRDEC, BFInstruction::PTRDEC };
+// Minus cell #0 with #1, save the result in #2
+const std::vector bf_sub = { BFInstruction::PTRINC, BFInstruction::PTRINC, BFInstruction::BEQZ, BFInstruction::DEC, BFInstruction::BNEZ, BFInstruction::PTRINC, BFInstruction::BEQZ, BFInstruction::DEC, BFInstruction::BNEZ, BFInstruction::PTRDEC, BFInstruction::PTRDEC, BFInstruction::PTRDEC, BFInstruction::BEQZ, BFInstruction::DEC, BFInstruction::PTRINC, BFInstruction::PTRINC, BFInstruction::INC, BFInstruction::PTRINC, BFInstruction::INC, BFInstruction::PTRDEC, BFInstruction::PTRDEC, BFInstruction::PTRDEC, BFInstruction::BNEZ, BFInstruction::PTRINC, BFInstruction::PTRINC, BFInstruction::PTRINC, BFInstruction::BEQZ, BFInstruction::DEC, BFInstruction::PTRDEC, BFInstruction::PTRDEC, BFInstruction::PTRDEC, BFInstruction::INC, BFInstruction::PTRINC, BFInstruction::PTRINC, BFInstruction::PTRINC, BFInstruction::BNEZ, BFInstruction::PTRDEC, BFInstruction::PTRDEC, BFInstruction::BEQZ, BFInstruction::DEC, BFInstruction::PTRINC, BFInstruction::DEC, BFInstruction::PTRINC, BFInstruction::INC, BFInstruction::PTRDEC, BFInstruction::PTRDEC, BFInstruction::BNEZ, BFInstruction::PTRINC, BFInstruction::PTRINC, BFInstruction::BEQZ, BFInstruction::DEC, BFInstruction::PTRDEC, BFInstruction::PTRDEC, BFInstruction::INC, BFInstruction::PTRINC, BFInstruction::PTRINC, BFInstruction::BNEZ, BFInstruction::PTRDEC, BFInstruction::PTRDEC, BFInstruction::PTRDEC };
+}
+
+#endif

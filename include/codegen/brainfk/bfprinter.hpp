@@ -1,10 +1,18 @@
 #pragma once
-#ifndef GNALC_CODEGEN_BFPRINTER_HPP
-#define GNALC_CODEGEN_BFPRINTER_HPP
+#ifndef GNALC_CODEGEN_BRAINFK_BFPRINTER_HPP
+#define GNALC_CODEGEN_BRAINFK_BFPRINTER_HPP
+
+#include <iostream>
+
+#include "bfmodule.hpp"
 
 namespace BrainFk {
 class BFPrinter {
+    std::ostream& outStream;
+    public:
+    explicit BFPrinter(std::ostream& outStream_) : outStream(outStream_) {}
 
+    void printout(const BFModule& module);
 };
 }
 #endif

@@ -8,6 +8,8 @@
 #include "../../include/iropt/live_analysis.hpp"
 
 #include "../../include/codegen/brainfk/bfgen.hpp"
+#include "../../include/codegen/brainfk/bfmodule.hpp"
+#include "../../include/codegen/brainfk/bfprinter.hpp"
 
 std::shared_ptr<CompUnit> node = nullptr;
 extern FILE *yyin;
@@ -60,7 +62,7 @@ int main(int argc, char **argv) {
         {
             emit_llvm = true;
         }
-        else if (arg == "-emit-brainfk")
+        else if (arg == "-mbrainfk")
         {
             emit_bf = true;
         }
@@ -82,8 +84,8 @@ int main(int argc, char **argv) {
                 "  -S                   Only run compilation steps\n"
                 "  -O1                  Optimization level 1\n"
                 "  -emit-llvm           Use the LLVM representation for assembler and object files\n"
-                "  -emit-brainfk        Translate SySy to brainfk\n"
                 "  -ast-dump            Build ASTs and then debug dump them\n"
+                "  -mbrainfk            Translate SySy to brainfk\n"
                 "  --log <log-level>    Enable compiler logger. Available log-level: debug, info\n"
                 "  -h, --help           Display available options\n"
             << std::flush;
@@ -171,8 +173,10 @@ int main(int argc, char **argv) {
     }
     else if (emit_bf)
     {
-        BrainFk::BFGenerator bfgen(*poutstream);
-        bfgen.write_to_stream(generator.get_module());
+        BrainFk::BFGenerator bfgen;
+        bfgen.visit(generator.get_module());
+        BrainFk::BFPrinter bfprinter(*poutstream);
+        bfprinter.printout(bfgen.getModule());
     }
     else
     {

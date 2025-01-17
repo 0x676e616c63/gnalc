@@ -34,7 +34,7 @@ add_executable(printir tools/driver/debug/irprintertest.cpp lib/irvisitors/irpri
 
 add_executable(irgen tools/driver/debug/irgen.cpp ${GNALC_SRC})
 
-add_executable(bfgen tools/driver/debug/bfgen.cpp ${GNALC_SRC})
+add_executable(bfhelper tools/driver/debug/bfhelper.cpp)
 
 add_executable(gnalc tools/driver/driver.cpp ${GNALC_SRC})
 
