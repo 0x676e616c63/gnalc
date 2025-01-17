@@ -1,12 +1,12 @@
-#include "../include/parser/ast.hpp"
-#include "../include/parser/visitor.hpp"
-#include "../include/parser/parser.hpp"
-#include "../include/utils/logger.hpp"
-#include "../include/utils/exception.hpp"
-#include "../include/irvisitors/irprinter.hpp"
-#include "../include/irvisitors/cfgbuilder.hpp"
-#include "../include/irvisitors/namenormalizer.hpp"
-#include "../include/iropt/live_analysis.hpp"
+#include "../../../include/parser/ast.hpp"
+#include "../../../include/parser/visitor.hpp"
+#include "../../../include/parser/parser.hpp"
+#include "../../../include/utils/logger.hpp"
+#include "../../../include/utils/exception.hpp"
+#include "../../../include/irvisitors/irprinter.hpp"
+#include "../../../include/irvisitors/cfgbuilder.hpp"
+#include "../../../include/irvisitors/namenormalizer.hpp"
+#include "../../../include/iropt/live_analysis.hpp"
 
 std::shared_ptr<CompUnit> node = nullptr;
 

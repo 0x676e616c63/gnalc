@@ -1,6 +1,6 @@
-#include "../include/utils/logger.hpp"
-#include "../include/irvisitors/irprinter.hpp"
-#include "../include/ir/constantpool.hpp"
+#include "../../../include/utils/logger.hpp"
+#include "../../../include/irvisitors/irprinter.hpp"
+#include "../../../include/ir/constantpool.hpp"
 #include <string>
 #include <iostream>
 

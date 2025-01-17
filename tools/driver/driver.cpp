@@ -7,8 +7,7 @@
 #include "../../include/irvisitors/namenormalizer.hpp"
 #include "../../include/iropt/live_analysis.hpp"
 
-#include "../../include/codegen/Arm.hpp"
-#include "../../include/codegen/ArmComplexMIRStruct/ArmModule.hpp"
+#include "../../include/codegen/brainfk/bfgen.hpp"
 
 std::shared_ptr<CompUnit> node = nullptr;
 extern FILE *yyin;
@@ -19,6 +18,7 @@ int main(int argc, char **argv) {
     std::string output_file;
     bool only_compilation = false;
     bool emit_llvm = false;
+    bool emit_bf = false;
     bool ast_dump = false;
     bool optimize = false;
     for (int i = 1; i < argc; ++i)
@@ -60,6 +60,10 @@ int main(int argc, char **argv) {
         {
             emit_llvm = true;
         }
+        else if (arg == "-emit-brainfk")
+        {
+            emit_bf = true;
+        }
         else if (arg == "-ast-dump")
         {
             ast_dump = true;
@@ -78,6 +82,7 @@ int main(int argc, char **argv) {
                 "  -S                   Only run compilation steps\n"
                 "  -O1                  Optimization level 1\n"
                 "  -emit-llvm           Use the LLVM representation for assembler and object files\n"
+                "  -emit-brainfk        Translate SySy to brainfk\n"
                 "  -ast-dump            Build ASTs and then debug dump them\n"
                 "  --log <log-level>    Enable compiler logger. Available log-level: debug, info\n"
                 "  -h, --help           Display available options\n"
@@ -88,7 +93,7 @@ int main(int argc, char **argv) {
             input_file = argv[i];
     }
 
-    if (!emit_llvm && !ast_dump && !only_compilation)
+    if (!emit_bf && !emit_llvm && !ast_dump && !only_compilation)
     {
         std::cerr << "Error: Gnalc currently only supports '-S' mode." << std::endl;
         return -1;
@@ -98,9 +103,10 @@ int main(int argc, char **argv) {
         std::cerr << "Error: Expected input and output file." << std::endl;
         return -1;
     }
+
     if (emit_llvm && ast_dump)
     {
-        std::cerr << "Error: -emit-llvm conflicts with ast_dump" << std::endl;
+        std::cerr << "Error: -emit-llvm conflicts with -ast-dump" << std::endl;
         return -1;
     }
 
@@ -163,14 +169,14 @@ int main(int argc, char **argv) {
         IR::IRPrinter printer(*poutstream, false);
         printer.printout(generator.get_module());
     }
+    else if (emit_bf)
+    {
+        BrainFk::BFGenerator bfgen(*poutstream);
+        bfgen.write_to_stream(generator.get_module());
+    }
     else
     {
-        auto backEndModule = new ArmStruct::Module(generator.get_module());
-        backEndModule->AllocRegister();
-        backEndModule->Legalize();
-        *poutstream << backEndModule->toString();
-        // TODO: fix double free.
-        // delete backEndModule;
+        Err::todo("Backend Refactor.");
     }
 
     la.cleanLiveInfo(generator.get_module());

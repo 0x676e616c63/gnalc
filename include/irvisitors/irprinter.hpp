@@ -45,7 +45,7 @@ public:
 
 class IRPrinter : public LIRPrinter {
 public:
-    explicit IRPrinter(std::ostream& out, bool _liveinfo = false) : LIRPrinter(out, _liveinfo) {};
+    explicit IRPrinter(std::ostream& out, bool _liveinfo = false) : LIRPrinter(out, _liveinfo) {}
     ~IRPrinter() = default;
     
     void visit(Function& node) override;

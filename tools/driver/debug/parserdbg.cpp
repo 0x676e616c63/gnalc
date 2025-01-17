@@ -1,5 +1,5 @@
-#include "../include/parser/ast.hpp"
-#include "../include/parser/parser.hpp"
+#include "../../../include/parser/ast.hpp"
+#include "../../../include/parser/parser.hpp"
 
 std::shared_ptr<AST::CompUnit> node = nullptr;
 
