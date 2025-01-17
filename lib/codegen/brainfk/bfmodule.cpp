@@ -4,11 +4,5 @@ namespace BrainFk
 {
 const std::vector<BFInstruction>& BFModule::getInstructions() const { return instructions; }
 
-void BFModule::addInst(BFInstruction inst) { instructions.emplace_back(inst); }
-
-void BFModule::addInsts(std::vector<BFInstruction> insts) {
-    instructions.insert(instructions.end(),
-        std::make_move_iterator(insts.begin()),
-        std::make_move_iterator(insts.end()));
-}
+void BFModule::setInst(std::vector<BFInstruction> inst) { instructions = std::move(inst); }
 }

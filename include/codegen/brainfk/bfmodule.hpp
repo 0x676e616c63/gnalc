@@ -33,8 +33,7 @@ class BFModule {
 public:
     const std::vector<BFInstruction>& getInstructions() const;
 
-    void addInst(BFInstruction inst);
-    void addInsts(std::vector<BFInstruction> insts);
+    void setInst(std::vector<BFInstruction> inst);
 };
 }
 #endif
