@@ -8,7 +8,8 @@
 #include "bfmodule.hpp"
 
 namespace BrainFk {
-class BFGenerator : public IR::IRVisitor {
+// This generates 32-bit brainfuck
+class BF32Generator : public IR::IRVisitor {
 public:
     struct Insts {
         std::vector<BFInstruction> insts;
@@ -27,13 +28,11 @@ private:
     BFModule module;
     std::map<std::string, std::vector<BFInstruction>> trivial_funcs; // except main
     Insts curr_insts;
-    std::map<int, int> reg_cell_index;
-    int curr_cell_pos;
-    // We use positive pos for IR register and negative pos for memory.
-    int avail_mem_cell_pos; // -
-    int avail_reg_cell_pos; // +
+    std::map<size_t, size_t> cell_index;
+    size_t curr_cell_pos;
+    size_t avail_cell_pos;
 public:
-    BFGenerator() : curr_cell_pos(0), avail_mem_cell_pos(-1), avail_reg_cell_pos(1) {}
+    BF32Generator() : curr_cell_pos(0), avail_cell_pos(0) {}
     void visit(IR::Module& node) override;
     void visit(IR::GlobalVariable& node) override;
     void visit(IR::Function& node) override;
@@ -62,8 +61,9 @@ public:
     BFModule& getModule() { return module; }
 
 private:
-    void to_cell(int pos);
-    int get_reg_cell_pos(const std::string& name);
+    void to_cell(size_t pos);
+    void set_cell(size_t pos, int32_t value);
+    int get_cell_pos(const std::string& name);
 };
 }
 #endif

@@ -9,6 +9,7 @@
 
 #include "../../include/codegen/brainfk/bfgen.hpp"
 #include "../../include/codegen/brainfk/bfmodule.hpp"
+#include "../../include/codegen/brainfk/bftrans.hpp"
 #include "../../include/codegen/brainfk/bfprinter.hpp"
 
 std::shared_ptr<CompUnit> node = nullptr;
@@ -173,10 +174,12 @@ int main(int argc, char **argv) {
     }
     else if (emit_bf)
     {
-        BrainFk::BFGenerator bfgen;
+        BrainFk::BF32Generator bfgen;
         bfgen.visit(generator.get_module());
+        BrainFk::BF32to8Trans trans;
+        trans.visit(bfgen.getModule());
         BrainFk::BFPrinter bfprinter(*poutstream);
-        bfprinter.printout(bfgen.getModule());
+        bfprinter.printout(trans.getModule());
     }
     else
     {
