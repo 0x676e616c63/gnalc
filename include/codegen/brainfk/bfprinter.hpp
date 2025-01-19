@@ -13,6 +13,8 @@ class BFPrinter {
     explicit BFPrinter(std::ostream& outStream_) : outStream(outStream_) {}
 
     void printout(const BFModule& module);
+
+    void printout(const BF3tModule& module);
 };
 }
 #endif

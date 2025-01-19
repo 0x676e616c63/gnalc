@@ -11,29 +11,118 @@ void BFPrinter::printout(const BFModule& module) {
     {
         switch (inst)
         {
-        case BFInstruction::PTRINC:
+        case BFInst::PTRINC:
             outStream << ">";
             break;
-        case BFInstruction::PTRDEC:
+        case BFInst::PTRDEC:
             outStream << "<";
             break;
-        case BFInstruction::INC:
+        case BFInst::INC:
             outStream << "+";
             break;
-        case BFInstruction::DEC:
+        case BFInst::DEC:
             outStream << "-";
             break;
-        case BFInstruction::OUTPUT:
+        case BFInst::OUTPUT:
             outStream << ".";
             break;
-        case BFInstruction::INPUT:
+        case BFInst::INPUT:
             outStream << ",";
             break;
-        case BFInstruction::BEQZ:
+        case BFInst::BEQZ:
             outStream << "[";
             break;
-        case BFInstruction::BNEZ:
+        case BFInst::BNEZ:
             outStream << "]";
+            break;
+        default:
+            Err::unreachable();
+        }
+    }
+
+    outStream << "\n";
+}
+
+void BFPrinter::printout(const BF3tModule& module) {
+    const auto& insts = module.getInstructions();
+
+    for (const auto& inst : insts)
+    {
+        switch (inst)
+        {
+        case BF3tInst::PTRINC1:
+            outStream << ">1";
+            break;
+        case BF3tInst::PTRDEC1:
+            outStream << "<1";
+            break;
+        case BF3tInst::INC1:
+            outStream << "+1";
+            break;
+        case BF3tInst::DEC1:
+            outStream << "-1";
+            break;
+        case BF3tInst::OUTPUT1:
+            outStream << ".1";
+            break;
+        case BF3tInst::INPUT1:
+            outStream << ",1";
+            break;
+        case BF3tInst::BEQZ1:
+            outStream << "[1";
+            break;
+        case BF3tInst::BNEZ1:
+            outStream << "]1";
+            break;
+
+        case BF3tInst::PTRINC2:
+            outStream << ">2";
+            break;
+        case BF3tInst::PTRDEC2:
+            outStream << "<2";
+            break;
+        case BF3tInst::INC2:
+            outStream << "+2";
+            break;
+        case BF3tInst::DEC2:
+            outStream << "-2";
+            break;
+        case BF3tInst::OUTPUT2:
+            outStream << ".2";
+            break;
+        case BF3tInst::INPUT2:
+            outStream << ",2";
+            break;
+        case BF3tInst::BEQZ2:
+            outStream << "[2";
+            break;
+        case BF3tInst::BNEZ2:
+            outStream << "]2";
+            break;
+
+        case BF3tInst::PTRINC3:
+            outStream << ">3";
+            break;
+        case BF3tInst::PTRDEC3:
+            outStream << "<3";
+            break;
+        case BF3tInst::INC3:
+            outStream << "+3";
+            break;
+        case BF3tInst::DEC3:
+            outStream << "-3";
+            break;
+        case BF3tInst::OUTPUT3:
+            outStream << ".3";
+            break;
+        case BF3tInst::INPUT3:
+            outStream << ",3";
+            break;
+        case BF3tInst::BEQZ3:
+            outStream << "[3";
+            break;
+        case BF3tInst::BNEZ3:
+            outStream << "]3";
             break;
         default:
             Err::unreachable();

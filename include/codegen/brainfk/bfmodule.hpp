@@ -6,7 +6,7 @@
 
 namespace BrainFk {
 // See: https://en.wikipedia.org/wiki/Brainfuck
-enum class BFInstruction {
+enum class BFInst {
   PTRINC,  // >   Increment the data pointer by one (to point to the next cell to the right).
 
   PTRDEC,  // <   Decrement the data pointer by one (to point to the next cell to the left).
@@ -28,12 +28,49 @@ enum class BFInstruction {
            //     jump it back to the command after the matching [ command.[a]
 };
 
-class BFModule {
-    std::vector<BFInstruction> instructions;
-public:
-    const std::vector<BFInstruction>& getInstructions() const;
+enum class BF3tInst {
+    PTRINC1,
+    PTRDEC1,
+    INC1,
+    DEC1,
+    OUTPUT1,
+    INPUT1,
+    BEQZ1,
+    BNEZ1,
 
-    void setInst(std::vector<BFInstruction> inst);
+    PTRINC2,
+    PTRDEC2,
+    INC2,
+    DEC2,
+    OUTPUT2,
+    INPUT2,
+    BEQZ2,
+    BNEZ2,
+
+    PTRINC3,
+    PTRDEC3,
+    INC3,
+    DEC3,
+    OUTPUT3,
+    INPUT3,
+    BEQZ3,
+    BNEZ3
+};
+
+class BFModule {
+    std::vector<BFInst> instructions;
+public:
+    const std::vector<BFInst>& getInstructions() const;
+
+    void setInst(std::vector<BFInst> inst);
+};
+
+class BF3tModule {
+    std::vector<BF3tInst> instructions;
+public:
+    const std::vector<BF3tInst>& getInstructions() const;
+
+    void setInst(std::vector<BF3tInst> inst);
 };
 }
 #endif

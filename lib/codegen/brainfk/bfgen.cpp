@@ -4,16 +4,16 @@
 
 namespace BrainFk
 {
-void BF32Generator::visit(IR::Module& node) {
+void BF3t32bGen::visit(IR::Module& node) {
     for (auto& func : node.getFunctions())
         func->accept(*this);
 }
 
-void BF32Generator::visit(IR::GlobalVariable& node) {
+void BF3t32bGen::visit(IR::GlobalVariable& node) {
     Err::todo();
 }
 
-void BF32Generator::visit(IR::Function& node) {
+void BF3t32bGen::visit(IR::Function& node) {
     for (auto& bb : node.getBlocks())
         bb->accept(*this);
     if (node.getName() == "@main")
@@ -23,11 +23,11 @@ void BF32Generator::visit(IR::Function& node) {
     curr_insts.insts.clear();
 }
 
-void BF32Generator::visit(IR::FunctionDecl& node) {
+void BF3t32bGen::visit(IR::FunctionDecl& node) {
     // Simply pass
 }
 
-void BF32Generator::visit(IR::BasicBlock& node) {
+void BF3t32bGen::visit(IR::BasicBlock& node) {
     for (auto it = node.getInsts().begin(); it != node.getInsts().end(); it++)
     {
         const auto& inst = *it;
@@ -38,108 +38,89 @@ void BF32Generator::visit(IR::BasicBlock& node) {
             auto name = inst->getName();
             Err::gassert(!name.empty() && (name[0] == '%' || name[0] == '@'),
                 "Invalid ir value name");
-            cell_index[std::stoi(name.substr(1))] = curr_cell_pos;
+            reg_index[std::stoi(name.substr(1))] = tape1_pos;
         }
         if (std::next(it) != node.getInsts().end()
             && (*std::next(it))->getVTrait() != IR::ValueTrait::VOID_INSTRUCTION)
         {
-            curr_insts.addInst(BFInstruction::PTRINC);
-            ++curr_cell_pos;
-            ++avail_cell_pos;
+            curr_insts.addInst(BF3tInst::PTRINC1);
+            ++tape1_pos;
+            ++tape1_avail_pos;
         }
     }
 }
 
-void BF32Generator::visit(IR::ConstantInt& node) {
-    for (int i = 0; i < std::abs(node.getVal()); ++i)
-        curr_insts.addInst(node.getVal() > 0 ? BFInstruction::INC : BFInstruction::DEC);
-}
-
-void BF32Generator::visit(IR::ConstantFloat& node) {
-    Err::todo("Float");
-}
-
-void BF32Generator::visit(IR::ConstantI1& node) {
-    if (node.getVal())
-        curr_insts.addInst(BFInstruction::INC);
-}
-
-void BF32Generator::visit(IR::ConstantI8& node) {
-    for (int i = 0; i < std::abs(node.getVal()); ++i)
-        curr_insts.addInst(node.getVal() > 0 ? BFInstruction::INC : BFInstruction::DEC);
-}
-
-void BF32Generator::visit(IR::BinaryInst& node) {
+void BF3t32bGen::visit(IR::BinaryInst& node) {
     // node.getRHS()->accept(*this);
     switch (node.getOpcode())
     {
     case IR::OP::ADD: {
-        auto temp1_pos = avail_cell_pos;
-        auto temp2_pos = avail_cell_pos + 1;
+        auto temp1_pos = tape1_avail_pos;
+        auto temp2_pos = tape1_avail_pos + 1;
 
         size_t lhs_pos,rhs_pos;
 
         if (node.getLHS()->getVTrait() != IR::ValueTrait::CONSTANT_LITERAL)
-            lhs_pos = get_cell_pos(node.getLHS()->getName());
+            lhs_pos = get_reg_pos(node.getLHS()->getName());
         else
         {
             auto lv = std::dynamic_pointer_cast<IR::ConstantInt>(node.getLHS())->getVal();
-            lhs_pos = avail_cell_pos + 2;
-            set_cell(lhs_pos, lv);
+            lhs_pos = tape1_avail_pos + 2;
+            tape1_set(lhs_pos, lv);
         }
 
         if (node.getRHS()->getVTrait() != IR::ValueTrait::CONSTANT_LITERAL)
-            rhs_pos = get_cell_pos(node.getRHS()->getName());
+            rhs_pos = get_reg_pos(node.getRHS()->getName());
         else
         {
             auto rv = std::dynamic_pointer_cast<IR::ConstantInt>(node.getRHS())->getVal();
-            rhs_pos = avail_cell_pos + 3;
-            set_cell(rhs_pos, rv);
+            rhs_pos = tape1_avail_pos + 3;
+            tape1_set(rhs_pos, rv);
         }
 
         // Copy lhs to temp1 and temp2
-        to_cell(lhs_pos);
-        curr_insts.addInst(BFInstruction::BEQZ, BFInstruction::DEC);
-        to_cell(temp1_pos);
-        curr_insts.addInst(BFInstruction::INC);
-        to_cell(temp2_pos);
-        curr_insts.addInst(BFInstruction::INC);
-        to_cell(lhs_pos);
-        curr_insts.addInst(BFInstruction::BNEZ);
+        tape1_to(lhs_pos);
+        curr_insts.addInst(BF3tInst::BEQZ1, BF3tInst::DEC1);
+        tape1_to(temp1_pos);
+        curr_insts.addInst(BF3tInst::INC1);
+        tape1_to(temp2_pos);
+        curr_insts.addInst(BF3tInst::INC1);
+        tape1_to(lhs_pos);
+        curr_insts.addInst(BF3tInst::BNEZ1);
 
         // Move temp2 to lhs
-        to_cell(temp2_pos);
-        curr_insts.addInst(BFInstruction::BEQZ, BFInstruction::DEC);
-        to_cell(lhs_pos);
-        curr_insts.addInst(BFInstruction::INC);
-        to_cell(temp2_pos);
-        curr_insts.addInst(BFInstruction::BNEZ);
+        tape1_to(temp2_pos);
+        curr_insts.addInst(BF3tInst::BEQZ1, BF3tInst::DEC1);
+        tape1_to(lhs_pos);
+        curr_insts.addInst(BF3tInst::INC1);
+        tape1_to(temp2_pos);
+        curr_insts.addInst(BF3tInst::BNEZ1);
 
         // Add rhs to temp1, and copy it to temp2
-        to_cell(rhs_pos);
-        curr_insts.addInst(BFInstruction::BEQZ, BFInstruction::DEC);
-        to_cell(temp1_pos);
-        curr_insts.addInst(BFInstruction::INC);
-        to_cell(temp2_pos);
-        curr_insts.addInst(BFInstruction::INC);
-        to_cell(rhs_pos);
-        curr_insts.addInst(BFInstruction::BNEZ);
+        tape1_to(rhs_pos);
+        curr_insts.addInst(BF3tInst::BEQZ1, BF3tInst::DEC1);
+        tape1_to(temp1_pos);
+        curr_insts.addInst(BF3tInst::INC1);
+        tape1_to(temp2_pos);
+        curr_insts.addInst(BF3tInst::INC1);
+        tape1_to(rhs_pos);
+        curr_insts.addInst(BF3tInst::BNEZ1);
 
         // Move temp2 to rhs
-        to_cell(temp2_pos);
-        curr_insts.addInst(BFInstruction::BEQZ, BFInstruction::DEC);
-        to_cell(rhs_pos);
-        curr_insts.addInst(BFInstruction::INC);
-        to_cell(temp2_pos);
-        curr_insts.addInst(BFInstruction::BNEZ);
+        tape1_to(temp2_pos);
+        curr_insts.addInst(BF3tInst::BEQZ1, BF3tInst::DEC1);
+        tape1_to(rhs_pos);
+        curr_insts.addInst(BF3tInst::INC1);
+        tape1_to(temp2_pos);
+        curr_insts.addInst(BF3tInst::BNEZ1);
 
         if (node.getLHS()->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL)
-            set_cell(lhs_pos, 0);
+            tape1_set(lhs_pos, 0);
 
         if (node.getRHS()->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL)
-            set_cell(rhs_pos, 0);
+            tape1_set(rhs_pos, 0);
 
-        to_cell(temp1_pos);
+        tape1_to(temp1_pos);
     }
         break;
     case IR::OP::SUB:
@@ -162,104 +143,145 @@ void BF32Generator::visit(IR::BinaryInst& node) {
 }
 
 
-void BF32Generator::visit(IR::FNEGInst& node) {
+void BF3t32bGen::visit(IR::FNEGInst& node) {
     Err::todo("float neg");
 }
 
-void BF32Generator::visit(IR::ICMPInst& node) {
+void BF3t32bGen::visit(IR::ICMPInst& node) {
     Err::todo("icmp");
 }
 
-void BF32Generator::visit(IR::FCMPInst& node) {
+void BF3t32bGen::visit(IR::FCMPInst& node) {
     Err::todo("fcmp");
 }
 
-void BF32Generator::visit(IR::RETInst& node) {
+void BF3t32bGen::visit(IR::RETInst& node) {
     // Simply pass
 }
 
-void BF32Generator::visit(IR::BRInst& node) {
+void BF3t32bGen::visit(IR::BRInst& node) {
     Err::todo("br");
 }
 
-void BF32Generator::visit(IR::CALLInst& node) {
+void BF3t32bGen::visit(IR::CALLInst& node) {
     if (node.getFuncName() == "@putch")
     {
         if (node.getArgs()[0]->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL)
         {
             auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(node.getArgs()[0]);
-            set_cell(avail_cell_pos, ci->getVal());
+            tape1_set(tape1_avail_pos, ci->getVal());
         }
-        curr_insts.addInst(BFInstruction::OUTPUT);
+        curr_insts.addInst(BF3tInst::OUTPUT1);
         if (node.getArgs()[0]->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL)
-            set_cell(avail_cell_pos, 0);
+            tape1_set(tape1_avail_pos, 0);
     }
     else if (node.getFuncName() == "@getch")
     {
-        curr_insts.addInst(BFInstruction::INPUT);
+        curr_insts.addInst(BF3tInst::INPUT1);
     }
     else
         Err::todo("More func");
 }
 
-void BF32Generator::visit(IR::FPTOSIInst& node) {
+void BF3t32bGen::visit(IR::FPTOSIInst& node) {
     Err::todo();
 }
 
-void BF32Generator::visit(IR::SITOFPInst& node) {
+void BF3t32bGen::visit(IR::SITOFPInst& node) {
     Err::todo();
 }
 
-void BF32Generator::visit(IR::ZEXTInst& node) {
+void BF3t32bGen::visit(IR::ZEXTInst& node) {
     Err::todo();
 }
 
-void BF32Generator::visit(IR::ALLOCAInst& node) {
+void BF3t32bGen::visit(IR::ALLOCAInst& node) {
     Err::todo();
 }
 
-void BF32Generator::visit(IR::LOADInst& node) {
+void BF3t32bGen::visit(IR::LOADInst& node) {
     Err::todo();
 }
 
-void BF32Generator::visit(IR::STOREInst& node) {
-    Err::todo();
-    auto posbak = curr_cell_pos;
-    auto ptrpos = get_cell_pos(node.getPtr()->getName());
-    to_cell(ptrpos);
-    curr_insts.addInst(BFInstruction::BEQZ, BFInstruction::DEC);
-    to_cell(posbak);
-}
-
-void BF32Generator::visit(IR::GEPInst& node) {
+void BF3t32bGen::visit(IR::STOREInst& node) {
     Err::todo();
 }
 
-void BF32Generator::visit(IR::PHIInst& node) {
+void BF3t32bGen::visit(IR::GEPInst& node) {
     Err::todo();
 }
 
-void BF32Generator::to_cell(size_t pos) {
-    while (curr_cell_pos < pos)
+void BF3t32bGen::visit(IR::PHIInst& node) {
+    Err::todo();
+}
+
+void BF3t32bGen::tape1_to(size_t pos) {
+    while (tape1_pos < pos)
     {
-        ++curr_cell_pos;
-        curr_insts.addInst(BFInstruction::PTRINC);
+        ++tape1_pos;
+        curr_insts.addInst(BF3tInst::PTRINC1);
     }
-    while (curr_cell_pos > pos)
+    while (tape1_pos > pos)
     {
-        --curr_cell_pos;
-        curr_insts.addInst(BFInstruction::PTRDEC);
+        --tape1_pos;
+        curr_insts.addInst(BF3tInst::PTRDEC1);
     }
 }
 
-void BF32Generator::set_cell(size_t pos, int32_t value) {
-    to_cell(pos);
-    curr_insts.addInst(BFInstruction::BEQZ, BFInstruction::DEC, BFInstruction::BNEZ);
+void BF3t32bGen::tape2_to(size_t pos) {
+    while (tape2_pos < pos)
+    {
+        ++tape2_pos;
+        curr_insts.addInst(BF3tInst::PTRINC2);
+    }
+    while (tape2_pos > pos)
+    {
+        --tape2_pos;
+        curr_insts.addInst(BF3tInst::PTRDEC2);
+    }
+}
+
+void BF3t32bGen::tape3_to(size_t pos) {
+    while (tape3_pos < pos)
+    {
+        ++tape3_pos;
+        curr_insts.addInst(BF3tInst::PTRINC3);
+    }
+    while (tape3_pos > pos)
+    {
+        --tape3_pos;
+        curr_insts.addInst(BF3tInst::PTRDEC3);
+    }
+}
+
+void BF3t32bGen::tape1_set(size_t pos, int32_t value) {
+    auto original_pos = tape1_pos;
+    tape1_to(pos);
+    curr_insts.addInst(BF3tInst::BEQZ1, BF3tInst::DEC1, BF3tInst::BNEZ1);
     for (int i = 0; i < std::abs(value); ++i)
-        curr_insts.addInst(value > 0 ? BFInstruction::INC : BFInstruction::DEC);
+        curr_insts.addInst(value > 0 ? BF3tInst::INC1 : BF3tInst::DEC1);
+    tape1_to(original_pos);
 }
 
-int BF32Generator::get_cell_pos(const std::string& target) {
-    return cell_index[std::stoi(target.substr(1))];
+void BF3t32bGen::tape2_set(size_t pos, int32_t value) {
+    auto original_pos = tape2_pos;
+    tape2_to(pos);
+    curr_insts.addInst(BF3tInst::BEQZ2, BF3tInst::DEC2, BF3tInst::BNEZ2);
+    for (int i = 0; i < std::abs(value); ++i)
+        curr_insts.addInst(value > 0 ? BF3tInst::INC2 : BF3tInst::DEC2);
+    tape2_to(original_pos);
+}
+
+void BF3t32bGen::tape3_set(size_t pos, int32_t value) {
+    auto original_pos = tape3_pos;
+    tape3_to(pos);
+    curr_insts.addInst(BF3tInst::BEQZ3, BF3tInst::DEC3, BF3tInst::BNEZ3);
+    for (int i = 0; i < std::abs(value); ++i)
+        curr_insts.addInst(value > 0 ? BF3tInst::INC3 : BF3tInst::DEC3);
+    tape3_to(original_pos);
+}
+
+size_t BF3t32bGen::get_reg_pos(const std::string& target) {
+    return reg_index[std::stoi(target.substr(1))];
 }
 }

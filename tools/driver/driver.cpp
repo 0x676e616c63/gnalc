@@ -174,9 +174,9 @@ int main(int argc, char **argv) {
     }
     else if (emit_bf)
     {
-        BrainFk::BF32Generator bfgen;
+        BrainFk::BF3t32bGen bfgen;
         bfgen.visit(generator.get_module());
-        BrainFk::BF32to8Trans trans;
+        BrainFk::BF32t32bTrans trans;
         trans.visit(bfgen.getModule());
         BrainFk::BFPrinter bfprinter(*poutstream);
         bfprinter.printout(trans.getModule());

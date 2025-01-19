@@ -8,13 +8,16 @@
 #include "bfmodule.hpp"
 
 namespace BrainFk {
-// This generates 32-bit brainfuck
-class BF32Generator : public IR::IRVisitor {
+// This generates 3 tape 32-bit brainfuck
+// Tape 1: IR virtual register
+// Tape 2: Memory
+// Tape 3: Temp value
+class BF3t32bGen : public IR::IRVisitor {
 public:
     struct Insts {
-        std::vector<BFInstruction> insts;
+        std::vector<BF3tInst> insts;
 
-        void addInst(BFInstruction inst) {
+        void addInst(BF3tInst inst) {
             insts.emplace_back(inst);
         }
 
@@ -25,23 +28,26 @@ public:
         }
     };
 private:
-    BFModule module;
-    std::map<std::string, std::vector<BFInstruction>> trivial_funcs; // except main
+    BF3tModule module;
+    std::map<std::string, std::vector<BF3tInst>> trivial_funcs; // except main
     Insts curr_insts;
-    std::map<size_t, size_t> cell_index;
-    size_t curr_cell_pos;
-    size_t avail_cell_pos;
+    std::map<size_t, size_t> reg_index; // Tape 1
+    size_t tape1_pos;
+    size_t tape2_pos;
+    size_t tape3_pos;
+    size_t tape1_avail_pos;
+    size_t tape2_avail_pos;
+    size_t tape3_avail_pos;
 public:
-    BF32Generator() : curr_cell_pos(0), avail_cell_pos(0) {}
+    BF3t32bGen()
+    : tape1_pos(0), tape2_pos(0), tape3_pos(0),
+    tape1_avail_pos(0), tape2_avail_pos(0), tape3_avail_pos(0) {}
+
     void visit(IR::Module& node) override;
     void visit(IR::GlobalVariable& node) override;
     void visit(IR::Function& node) override;
     void visit(IR::FunctionDecl& node) override;
     void visit(IR::BasicBlock& node) override;
-    void visit(IR::ConstantInt& node) override;
-    void visit(IR::ConstantFloat& node) override;
-    void visit(IR::ConstantI1& node) override;
-    void visit(IR::ConstantI8& node) override;
     void visit(IR::BinaryInst& node) override;
     void visit(IR::FNEGInst& node) override;
     void visit(IR::ICMPInst& node) override;
@@ -58,12 +64,16 @@ public:
     void visit(IR::GEPInst& node) override;
     void visit(IR::PHIInst& node) override;
 
-    BFModule& getModule() { return module; }
+    BF3tModule& getModule() { return module; }
 
 private:
-    void to_cell(size_t pos);
-    void set_cell(size_t pos, int32_t value);
-    int get_cell_pos(const std::string& name);
+    void tape1_to(size_t pos);
+    void tape2_to(size_t pos);
+    void tape3_to(size_t pos);
+    void tape1_set(size_t pos, int32_t value);
+    void tape2_set(size_t pos, int32_t value);
+    void tape3_set(size_t pos, int32_t value);
+    size_t get_reg_pos(const std::string& name); // Tape 1
 };
 }
 #endif
