@@ -12,6 +12,7 @@ namespace BrainFk {
 // Tape 1: IR virtual register
 // Tape 2: Memory
 // Tape 3: Temp value
+// Tape 2 is for memory, so the pos of it is a bit complicated, its pos is store in [0] in tape 1.
 class BF3t32bGen : public IR::IRVisitor {
 public:
     struct Insts {
@@ -33,15 +34,14 @@ private:
     Insts curr_insts;
     std::map<size_t, size_t> reg_index; // Tape 1
     size_t tape1_pos;
-    size_t tape2_pos;
     size_t tape3_pos;
     size_t tape1_avail_pos;
     size_t tape2_avail_pos;
     size_t tape3_avail_pos;
 public:
     BF3t32bGen()
-    : tape1_pos(0), tape2_pos(0), tape3_pos(0),
-    tape1_avail_pos(0), tape2_avail_pos(0), tape3_avail_pos(0) {}
+    : tape1_pos(0), tape3_pos(0),
+    tape1_avail_pos(1), tape2_avail_pos(0), tape3_avail_pos(0) {}
 
     void visit(IR::Module& node) override;
     void visit(IR::GlobalVariable& node) override;
@@ -68,12 +68,16 @@ public:
 
 private:
     void tape1_to(size_t pos);
-    void tape2_to(size_t pos);
     void tape3_to(size_t pos);
+
+    void tape2_to_tape1ptr(size_t pos);
+
     void tape1_set(size_t pos, int32_t value);
-    void tape2_set(size_t pos, int32_t value);
     void tape3_set(size_t pos, int32_t value);
+
     size_t get_reg_pos(const std::string& name); // Tape 1
+
+    void tape1_copy(size_t src, size_t dest);
 };
 }
 #endif

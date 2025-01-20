@@ -176,7 +176,7 @@ int main(int argc, char **argv) {
     {
         BrainFk::BF3t32bGen bfgen;
         bfgen.visit(generator.get_module());
-        BrainFk::BF32t32bTrans trans;
+        BrainFk::BF32t32bTrans trans(false);
         trans.visit(bfgen.getModule());
         BrainFk::BFPrinter bfprinter(*poutstream);
         bfprinter.printout(trans.getModule());

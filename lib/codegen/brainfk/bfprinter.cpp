@@ -127,6 +127,7 @@ void BFPrinter::printout(const BF3tModule& module) {
         default:
             Err::unreachable();
         }
+        outStream << " ";
     }
 
     outStream << "\n";

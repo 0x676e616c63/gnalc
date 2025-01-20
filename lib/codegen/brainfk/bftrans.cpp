@@ -96,43 +96,50 @@ void BF32t32bTrans::visit(const BF3tModule& input_module) {
         }
     }
 
-    insts32b.insert(insts32b.begin(), bf32b::init.cbegin(), bf32b::init.cend());
-
-    std::vector<BFInst> insts;
-
-    for (auto& inst : insts32b)
+    if (!safe_8bit)
     {
-        switch (inst)
-        {
-        case BFInst::PTRINC:
-            insts.insert(insts.end(), bf32b::ptrinc.cbegin(), bf32b::ptrinc.cend());
-            break;
-        case BFInst::PTRDEC:
-            insts.insert(insts.end(), bf32b::ptrdec.cbegin(), bf32b::ptrdec.cend());
-            break;
-        case BFInst::INC:
-            insts.insert(insts.end(), bf32b::inc.cbegin(), bf32b::inc.cend());
-            break;
-        case BFInst::DEC:
-            insts.insert(insts.end(), bf32b::dec.cbegin(), bf32b::dec.cend());
-            break;
-        case BFInst::OUTPUT:
-            insts.insert(insts.end(), bf32b::output.cbegin(), bf32b::output.cend());
-            break;
-        case BFInst::INPUT:
-            insts.insert(insts.end(), bf32b::input.cbegin(), bf32b::input.cend());
-            break;
-        case BFInst::BEQZ:
-            insts.insert(insts.end(), bf32b::beqz.cbegin(), bf32b::beqz.cend());
-            break;
-        case BFInst::BNEZ:
-            insts.insert(insts.end(), bf32b::bnez.cbegin(), bf32b::bnez.cend());
-            break;
-        default:
-            Err::unreachable();
-        }
+        module.setInst(std::move(insts32b));
     }
+    else
+    {
+        insts32b.insert(insts32b.begin(), bf32b::init.cbegin(), bf32b::init.cend());
 
-    module.setInst(std::move(insts));
+        std::vector<BFInst> insts;
+
+        for (auto& inst : insts32b)
+        {
+            switch (inst)
+            {
+            case BFInst::PTRINC:
+                insts.insert(insts.end(), bf32b::ptrinc.cbegin(), bf32b::ptrinc.cend());
+                break;
+            case BFInst::PTRDEC:
+                insts.insert(insts.end(), bf32b::ptrdec.cbegin(), bf32b::ptrdec.cend());
+                break;
+            case BFInst::INC:
+                insts.insert(insts.end(), bf32b::inc.cbegin(), bf32b::inc.cend());
+                break;
+            case BFInst::DEC:
+                insts.insert(insts.end(), bf32b::dec.cbegin(), bf32b::dec.cend());
+                break;
+            case BFInst::OUTPUT:
+                insts.insert(insts.end(), bf32b::output.cbegin(), bf32b::output.cend());
+                break;
+            case BFInst::INPUT:
+                insts.insert(insts.end(), bf32b::input.cbegin(), bf32b::input.cend());
+                break;
+            case BFInst::BEQZ:
+                insts.insert(insts.end(), bf32b::beqz.cbegin(), bf32b::beqz.cend());
+                break;
+            case BFInst::BNEZ:
+                insts.insert(insts.end(), bf32b::bnez.cbegin(), bf32b::bnez.cend());
+                break;
+            default:
+                Err::unreachable();
+            }
+        }
+
+        module.setInst(std::move(insts));
+    }
 }
 }

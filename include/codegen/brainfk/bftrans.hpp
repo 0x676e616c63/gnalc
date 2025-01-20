@@ -95,7 +95,9 @@ namespace trans::tape::bf3t
 class BF32t32bTrans {
 private:
     BFModule module;
+    bool safe_8bit;
 public:
+    explicit BF32t32bTrans(bool safe_8bit_): safe_8bit(safe_8bit_) {}
     void visit(const BF3tModule& input_module);
     BFModule& getModule() { return module; }
 };

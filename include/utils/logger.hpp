@@ -23,6 +23,26 @@ public:
         }
     }
 
+    template<typename ...Args>
+    static void logInfo(Args&& ...args) {
+        if (logLevel >= LogLevel::INFO)
+        {
+            std::cerr << "[INFO] ";
+            (std::cerr << ... << args);
+            std::cerr << std::endl;
+        }
+    }
+
+    template<typename ...Args>
+    static void logDebug(Args&& ...args) {
+        if (logLevel >= LogLevel::DEBUG)
+        {
+            std::cerr << "[DEBUG] ";
+            (std::cerr << ... << args);
+            std::cerr << std::endl;
+        }
+    }
+
 private:
     static LogLevel logLevel;
 };

@@ -15,6 +15,8 @@ class BFPrinter {
     void printout(const BFModule& module);
 
     void printout(const BF3tModule& module);
+
+    void printout_multiline(const BF3tModule& module);
 };
 }
 #endif
