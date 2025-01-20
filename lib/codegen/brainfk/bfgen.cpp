@@ -3,7 +3,6 @@
 #include "../../../include/codegen/brainfk/bfmodule.hpp"
 #include "../../../include/codegen/brainfk/bfgen.hpp"
 #include "../../../include/codegen/brainfk/bfbuiltins.hpp"
-#include "../../../include/config/config.hpp"
 #include "../../../include/utils/logger.hpp"
 
 namespace BrainFk
@@ -16,11 +15,62 @@ void BF3t32bGen::visit(IR::Module& node) {
 void BF3t32bGen::visit(IR::GlobalVariable& node) {
     Err::todo();
 }
-
 void BF3t32bGen::visit(IR::Function& node) {
-    for (auto& bb : node.getBlocks())
+    curr_is_main = node.getName() == "@main";
+    for (size_t i = 0; i < node.getBlocks().size(); i++)
+    {
+        auto curr_block_index = i + 1;
+        block_index[node.getBlocks()[i]->getName()] = curr_block_index;
+    }
+
+    tape1_set(BFP_GOTO_TARGET, 1);
+    tape1_to(BFP_GOTO_TARGET);
+    curr_insts.addInst(BF3tInst::BEQZ1);
+
+    for (size_t i = 0; i < node.getBlocks().size(); i++)
+    {
+        auto curr_block_index = i + 1;
+        const auto& bb = node.getBlocks()[i];
+
+        tape1_set(BFP_GOTO_TMP1, static_cast<uint32_t>(curr_block_index));
+        tape1_copy(BFP_GOTO_TARGET, BFP_GOTO_TMP2);
+
+        // Init: tmp1: curr_bb_idx, tmp2: target_idx
+
+        // Set tmp1 = 0, tmp2 = tmp2 - tmp1
+        tape1_to(BFP_GOTO_TMP1);
+
+        curr_insts.addInst(BF3tInst::BEQZ1, BF3tInst::DEC1);
+        tape1_to(BFP_GOTO_TMP2);
+        curr_insts.addInst(BF3tInst::DEC1);
+        tape1_to(BFP_GOTO_TMP1);
+        curr_insts.addInst(BF3tInst::BNEZ1);
+
+        // Set tmp1 = 1
+        curr_insts.addInst(BF3tInst::INC1);
+
+        // If tmp2 != 0, which means 'curr_bb_idx != target_idx', set tmp1 to 0
+        tape1_to(BFP_GOTO_TMP2);
+        curr_insts.addInst(BF3tInst::BEQZ1);
+        tape1_to(BFP_GOTO_TMP1);
+        curr_insts.addInst(BF3tInst::DEC1);
+        tape1_to(BFP_GOTO_TMP2);
+        tape1_set(BFP_GOTO_TMP2, 0);
+        curr_insts.addInst(BF3tInst::BNEZ1);
+        // Now tmp1 is the cond (curr == target)
+
+        tape1_to(BFP_GOTO_TMP1);
+        curr_insts.addInst(BF3tInst::BEQZ1);
         bb->accept(*this);
-    if (node.getName() == "@main")
+        tape1_to(BFP_GOTO_TMP1);
+        tape1_set(BFP_GOTO_TMP1, 0);
+        curr_insts.addInst(BF3tInst::BNEZ1);
+    }
+
+    tape1_to(BFP_GOTO_TARGET);
+    curr_insts.addInst(BF3tInst::BNEZ1);
+
+    if (curr_is_main)
         module.setInst(std::move(curr_insts.insts));
     else
         trivial_funcs.emplace(node.getName(), std::move(curr_insts.insts));
@@ -32,9 +82,8 @@ void BF3t32bGen::visit(IR::FunctionDecl& node) {
 }
 
 void BF3t32bGen::visit(IR::BasicBlock& node) {
-    for (auto it = node.getInsts().begin(); it != node.getInsts().end(); it++)
+    for (auto & inst : node.getInsts())
     {
-        const auto& inst = *it;
         inst->accept(*this);
 
         if (inst->getName()[0] == '%' || inst->getName()[0] == '@')
@@ -42,16 +91,13 @@ void BF3t32bGen::visit(IR::BasicBlock& node) {
             auto name = inst->getName();
             Err::gassert(!name.empty() && (name[0] == '%' || name[0] == '@'),
                 "Invalid ir value name");
-            reg_index[std::stoi(name.substr(1)) + 32] = tape1_pos;
+            reg_index[name] = tape1_pos;
         }
     }
 }
 
 void BF3t32bGen::visit(IR::BinaryInst& node) {
-    curr_insts.addInst(BF3tInst::PTRINC1);
-    ++tape1_pos;
-    ++tape1_avail_pos;
-    Logger::logDebug("Tape1 Forward, now at ", tape1_pos);
+    tape1_alloca();
 
     // node.getRHS()->accept(*this);
     switch (node.getOpcode())
@@ -59,29 +105,19 @@ void BF3t32bGen::visit(IR::BinaryInst& node) {
     case IR::OP::ADD:
     case IR::OP::SUB:{
         Logger::logDebug("Add/Sub Start.");
+        auto guard = Logger::scopeDisable();
         auto tape1_temp1_pos = tape1_pos;
-        auto tape1_temp2_pos = tape1_avail_pos + 1;
-
-        size_t lhs_pos, rhs_pos;
+        auto tape1_temp2_pos = tape1_avail_pos;
 
         if (auto lv = std::dynamic_pointer_cast<IR::ConstantInt>(node.getLHS()))
-        {
-            lhs_pos = tape1_avail_pos + 2;
-            tape1_set(lhs_pos, lv->getVal());
-        }
+            tape1_set(tape1_temp1_pos, lv->getVal());
         else
-            lhs_pos = get_reg_pos(node.getLHS()->getName());
+            tape1_copy(get_reg_pos(node.getLHS()->getName()), tape1_temp1_pos);
 
         if (auto rv = std::dynamic_pointer_cast<IR::ConstantInt>(node.getRHS()))
-        {
-            rhs_pos = tape1_avail_pos + 3;
-            tape1_set(rhs_pos, rv->getVal());
-        }
+            tape1_set(tape1_temp2_pos, rv->getVal());
         else
-            rhs_pos = get_reg_pos(node.getRHS()->getName());
-
-        tape1_copy(lhs_pos, tape1_temp1_pos);
-        tape1_copy(rhs_pos, tape1_temp2_pos);
+            tape1_copy(get_reg_pos(node.getRHS()->getName()), tape1_temp2_pos);
 
         // Move temp2 to rhs
         tape1_to(tape1_temp2_pos);
@@ -91,15 +127,7 @@ void BF3t32bGen::visit(IR::BinaryInst& node) {
         tape1_to(tape1_temp2_pos);
         curr_insts.addInst(BF3tInst::BNEZ1);
 
-        if (node.getLHS()->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL)
-            tape1_set(lhs_pos, 0);
-
-        if (node.getRHS()->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL)
-            tape1_set(rhs_pos, 0);
-
         tape1_to(tape1_temp1_pos);
-
-        Logger::logDebug("Add/Sub Finished.");
     }
         break;
     case IR::OP::FADD:
@@ -124,7 +152,58 @@ void BF3t32bGen::visit(IR::FNEGInst& node) {
 }
 
 void BF3t32bGen::visit(IR::ICMPInst& node) {
-    Err::todo("icmp");
+    Logger::logDebug("ICMP start.");
+    auto guard = Logger::scopeDisable();
+
+    tape1_alloca();
+
+    if (node.getCond() == IR::ICMPOP::eq || node.getCond() == IR::ICMPOP::ne)
+    {
+        auto tape1_temp1_pos = tape1_pos;
+        auto tape1_temp2_pos = tape1_avail_pos;
+
+        if (auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(node.getLHS()))
+            tape1_set(tape1_temp1_pos, ci->getVal());
+        else
+            tape1_copy(get_reg_pos(node.getLHS()->getName()), tape1_temp1_pos);
+
+        if (auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(node.getRHS()))
+            tape1_set(tape1_temp2_pos, ci->getVal());
+        else
+            tape1_copy(get_reg_pos(node.getRHS()->getName()), tape1_temp2_pos);
+
+        // Set tmp1 = 0, tmp2 = tmp2 - tmp1
+        tape1_to(tape1_temp1_pos);
+        curr_insts.addInst(BF3tInst::BEQZ1, BF3tInst::DEC1);
+        tape1_to(tape1_temp2_pos);
+        curr_insts.addInst(BF3tInst::DEC1);
+        tape1_to(tape1_temp1_pos);
+        curr_insts.addInst(BF3tInst::BNEZ1);
+
+        // Set tmp1 = 1 / 0
+        if (node.getCond() == IR::ICMPOP::eq)
+            curr_insts.addInst(BF3tInst::INC1);
+
+        // If tmp2 != 0, which means not equal
+        // Set tmp1 to 0 / 1
+        tape1_to(tape1_temp2_pos);
+        curr_insts.addInst(BF3tInst::BEQZ1);
+        tape1_to(tape1_temp1_pos);
+
+        if (node.getCond() == IR::ICMPOP::eq)
+            curr_insts.addInst(BF3tInst::DEC1);
+        else
+            curr_insts.addInst(BF3tInst::INC1);
+
+        tape1_to(tape1_temp2_pos);
+        curr_insts.addInst(BF3tInst::BEQZ1, BF3tInst::DEC1, BF3tInst::BNEZ1, BF3tInst::BNEZ1);
+        // Now tmp1 is the cond (curr ==/!= target)
+        tape1_to(tape1_temp1_pos);
+    }
+    else
+    {
+        Err::todo("icmp: more op");
+    }
 }
 
 void BF3t32bGen::visit(IR::FCMPInst& node) {
@@ -132,11 +211,53 @@ void BF3t32bGen::visit(IR::FCMPInst& node) {
 }
 
 void BF3t32bGen::visit(IR::RETInst& node) {
-    // Simply pass
+    // TODO: Fix ret
+    if (curr_is_main)
+        tape1_set(BFP_GOTO_TARGET, 0);
 }
 
 void BF3t32bGen::visit(IR::BRInst& node) {
-    Err::todo("br");
+    if (node.isConditional() && std::dynamic_pointer_cast<IR::ConstantI1>(node.getCond()) == nullptr)
+    {
+        auto tape1posbak = tape1_pos;
+
+        auto tape1_temp1_pos = tape1_avail_pos;
+        auto tape1_temp2_pos = tape1_avail_pos + 1;
+
+        // Set tmp1 = x, tmp2 = 1
+        tape1_copy(get_reg_pos(node.getCond()->getName()), tape1_temp1_pos);
+        tape1_set(tape1_temp2_pos, 1);
+
+        // If tmp1, to true dest and set tmp2 = 0.
+        tape1_to(tape1_temp1_pos);
+        curr_insts.addInst(BF3tInst::BEQZ1);
+        tape1_set(BFP_GOTO_TARGET, get_blk_pos(node.getTrueDest()->getName()));
+        tape1_set(tape1_temp1_pos, 0);
+        tape1_set(tape1_temp2_pos, 0);
+        curr_insts.addInst(BF3tInst::BNEZ1);
+
+        // If tmp2, to false dest.
+        // Note that if tmp1 is not 0, we will set tmp2 to 0, so it won't exec, otherwise tmp2 is 1.
+        tape1_to(tape1_temp2_pos);
+        curr_insts.addInst(BF3tInst::BEQZ1);
+        tape1_set(BFP_GOTO_TARGET, get_blk_pos(node.getFalseDest()->getName()));
+        tape1_set(tape1_temp2_pos, 0);
+        curr_insts.addInst(BF3tInst::BNEZ1);
+
+        tape1_to(tape1posbak);
+    }
+    else
+    {
+        if (node.isConditional())
+        {
+            if (std::dynamic_pointer_cast<IR::ConstantI1>(node.getCond())->getVal())
+                tape1_set(BFP_GOTO_TARGET, get_blk_pos(node.getTrueDest()->getName()));
+            else
+                tape1_set(BFP_GOTO_TARGET, get_blk_pos(node.getFalseDest()->getName()));
+        }
+        else
+            tape1_set(BFP_GOTO_TARGET, get_blk_pos(node.getDest()->getName()));
+    }
 }
 
 void BF3t32bGen::visit(IR::CALLInst& node) {
@@ -144,7 +265,9 @@ void BF3t32bGen::visit(IR::CALLInst& node) {
     {
         if (auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(node.getArgs()[0]))
         {
-            tape3_set(tape3_avail_pos++, ci->getVal());
+            tape3_avail_pos++;
+            tape3_set(tape3_avail_pos, ci->getVal());
+            tape3_to(tape3_avail_pos);
             Logger::logDebug("Put Ch, imm: ", ci->getVal());
             curr_insts.addInst(BF3tInst::OUTPUT3);
         }
@@ -153,9 +276,8 @@ void BF3t32bGen::visit(IR::CALLInst& node) {
     }
     else if (node.getFuncName() == "@getch")
     {
-        curr_insts.addInst(BF3tInst::PTRINC1);
-        ++tape1_pos;
-        ++tape1_avail_pos;
+        tape1_alloca();
+
         Logger::logDebug("Tape1 Forward, now at ", tape1_pos);
         Logger::logDebug("Get Ch");
         curr_insts.addInst(BF3tInst::INPUT1);
@@ -186,32 +308,27 @@ void BF3t32bGen::visit(IR::BITCASTInst& node) {
 
 void BF3t32bGen::visit(IR::ALLOCAInst& node) {
     auto nbytes = node.getBaseType()->getBytes() / IR::getBytes(IR::IRBTYPE::I32);
-    curr_insts.addInst(BF3tInst::PTRINC1);
-    ++tape1_pos;
-    ++tape1_avail_pos;
-    Logger::logDebug("Tape1 Forward, now at ", tape1_pos);
+    tape1_alloca();
 
     auto tape2_data_pos = tape2_avail_pos;
     tape2_avail_pos += nbytes;
 
     // Save address
-    tape1_set(tape1_pos, static_cast<int32_t>(tape2_data_pos));
+    tape1_set(tape1_pos, static_cast<uint32_t>(tape2_data_pos));
 }
 
 void BF3t32bGen::visit(IR::LOADInst& node) {
-    curr_insts.addInst(BF3tInst::PTRINC1);
-    ++tape1_pos;
-    ++tape1_avail_pos;
-    Logger::logDebug("Tape1 Forward, now at ", tape1_pos);
+    tape1_alloca();
+
+    Logger::logDebug("Loading from ", get_reg_pos(node.getPtr()->getName()), "(", node.getName(), ") to ", tape1_pos);
+    auto guard = Logger::scopeDisable();
 
     tape2_to_tape1ptr(get_reg_pos(node.getPtr()->getName()));
     tape3_to(tape3_avail_pos++);
 
-    Logger::logDebug("Tape2 curr move to Tape1 and Tape3 curr");
     curr_insts.addInst(BF3tInst::BEQZ2, BF3tInst::DEC2,
         BF3tInst::INC1, BF3tInst::INC3, BF3tInst::BNEZ2);
 
-    Logger::logDebug("Tape3 curr move to Tape2 curr");
     curr_insts.addInst(BF3tInst::BEQZ3, BF3tInst::DEC3, BF3tInst::INC2, BF3tInst::BNEZ3);
 }
 
@@ -233,17 +350,14 @@ void BF3t32bGen::visit(IR::STOREInst& node) {
         auto tape1_temp_pos = tape1_avail_pos;
         tape1_copy(tape1_val_pos, tape1_temp_pos);
         tape1_to(tape1_temp_pos);
-        Logger::logDebug("Tape1 curr move to Tape2 curr", ci->getVal());
+        Logger::logDebug("Tape1 curr move to Tape2 curr");
         curr_insts.addInst(BF3tInst::BEQZ1, BF3tInst::DEC1, BF3tInst::INC2, BF3tInst::BNEZ1);
         tape1_to(tape1posbak);
     }
 }
 
 void BF3t32bGen::visit(IR::GEPInst& node) {
-    curr_insts.addInst(BF3tInst::PTRINC1);
-    ++tape1_pos;
-    ++tape1_avail_pos;
-    Logger::logDebug("Tape1 Forward, now at ", tape1_pos);
+    tape1_alloca();
 
     Logger::logDebug("GEP Start.");
 
@@ -261,7 +375,7 @@ void BF3t32bGen::visit(IR::GEPInst& node) {
 
         if (auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(curr_idx))
         {
-            curr_idx_pos = tape1_avail_pos + 3;
+            curr_idx_pos = tape1_avail_pos + 1;
             tape1_set(curr_idx_pos, ci->getVal());
         }
         else
@@ -290,6 +404,11 @@ void BF3t32bGen::visit(IR::GEPInst& node) {
 
 void BF3t32bGen::visit(IR::PHIInst& node) {
     Err::todo();
+}
+
+void BF3t32bGen::tape1_alloca() {
+    tape1_to(tape1_avail_pos++);
+    // curr_insts.addInst(BF3tInst::BEQZ1, BF3tInst::DEC1, BF3tInst::BNEZ1);
 }
 
 void BF3t32bGen::tape1_to(size_t pos) {
@@ -322,34 +441,44 @@ void BF3t32bGen::tape3_to(size_t pos) {
     }
 }
 
-void BF3t32bGen::tape1_set(size_t pos, int32_t value) {
+void BF3t32bGen::tape1_set(size_t pos, uint32_t value) {
     Logger::logDebug("Tape1 Set pos: ", pos, " val: ", value);
+    auto guard = Logger::scopeDisable();
 
     auto original_pos = tape1_pos;
     tape1_to(pos);
     curr_insts.addInst(BF3tInst::BEQZ1, BF3tInst::DEC1, BF3tInst::BNEZ1);
-    for (int i = 0; i < static_cast<uint32_t>(value); ++i)
+    for (int i = 0; i < value; ++i)
         curr_insts.addInst(BF3tInst::INC1);
     tape1_to(original_pos);
 }
 
-void BF3t32bGen::tape3_set(size_t pos, int32_t value) {
+void BF3t32bGen::tape3_set(size_t pos, uint32_t value) {
     Logger::logDebug("Tape3 Set pos: ", pos, " val: ", value);
+    auto guard = Logger::scopeDisable();
 
     auto original_pos = tape3_pos;
     tape3_to(pos);
     curr_insts.addInst(BF3tInst::BEQZ3, BF3tInst::DEC3, BF3tInst::BNEZ3);
-    for (int i = 0; i < static_cast<uint32_t>(value); ++i)
+    for (int i = 0; i < value; ++i)
         curr_insts.addInst(BF3tInst::INC3);
     tape3_to(original_pos);
 }
 
 size_t BF3t32bGen::get_reg_pos(const std::string& target) {
-    return reg_index[std::stoi(target.substr(1)) + 32];
+    Err::gassert(reg_index.find(target) != reg_index.end());
+    return reg_index[target];
+}
+
+size_t BF3t32bGen::get_blk_pos(const std::string& target) {
+    Err::gassert(block_index.find(target) != block_index.end());
+    return block_index[target];
 }
 
 void BF3t32bGen::tape1_copy(size_t src, size_t dest) {
     Logger::logDebug("Tape1 Copy src: ", src, " dest: ", dest);
+    auto guard = Logger::scopeDisable();
+
     auto tape1posbak = tape1_pos;
     tape3_to(tape3_avail_pos++);
 
@@ -370,6 +499,7 @@ void BF3t32bGen::tape1_copy(size_t src, size_t dest) {
 
 void BF3t32bGen::tape2_to_tape1ptr(size_t ptr_pos) {
     Logger::logDebug("Tape2 To Tape1Ptr: ", ptr_pos);
+    auto guard = Logger::scopeDisable();
 
     auto tape1posbak = tape1_pos;
 
@@ -377,7 +507,7 @@ void BF3t32bGen::tape2_to_tape1ptr(size_t ptr_pos) {
     tape1_copy(ptr_pos, tape1_temp_pos);
 
     // Move tape2 to 0
-    tape1_to(0);
+    tape1_to(BFP_MEM);
     curr_insts.addInst(BF3tInst::BEQZ1, BF3tInst::DEC1, BF3tInst::PTRDEC2, BF3tInst::BNEZ1);
 
     // Move tape2 to target
@@ -385,7 +515,7 @@ void BF3t32bGen::tape2_to_tape1ptr(size_t ptr_pos) {
     curr_insts.addInst(BF3tInst::BEQZ1, BF3tInst::DEC1, BF3tInst::PTRINC2, BF3tInst::BNEZ1);
 
     // Save tape2 pos
-    tape1_copy(ptr_pos, 0);
+    tape1_copy(ptr_pos, BFP_MEM);
 
     tape1_to(tape1posbak);
 }

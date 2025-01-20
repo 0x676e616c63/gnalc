@@ -12,11 +12,21 @@
 
 namespace BrainFk {
 // This generates 3 tape 32-bit brainfuck
-// Tape 1: IR virtual register
+// Tape 1:
+//   0 - 31:   See below
+//   > 31:     IR virtual register
+
 // Tape 2: Memory
 // Tape 3: Temp value
-// Tape 2 is for memory, so the pos of it is a bit complicated, its pos is store in [0] in tape 1.
+
 class BF3t32bGen : public IR::IRVisitor {
+private:
+    enum BFPos: size_t {
+        BFP_MEM = 0,
+        BFP_GOTO_TARGET = 1,
+        BFP_GOTO_TMP1 = 2,
+        BFP_GOTO_TMP2 = 3,
+    };
 public:
     struct Insts {
         std::vector<BF3tInst> insts;
@@ -35,7 +45,9 @@ private:
     BF3tModule module;
     std::map<std::string, std::vector<BF3tInst>> trivial_funcs; // except main
     Insts curr_insts;
-    std::map<size_t, size_t> reg_index; // Tape 1
+    bool curr_is_main;
+    std::map<std::string, size_t> reg_index; // Tape 1
+    std::map<std::string, size_t> block_index;
     size_t tape1_pos;
     size_t tape3_pos;
     size_t tape1_avail_pos;
@@ -44,7 +56,8 @@ private:
 public:
     BF3t32bGen()
     : tape1_pos(0), tape3_pos(0),
-    tape1_avail_pos(1), tape2_avail_pos(0), tape3_avail_pos(0) {}
+    tape1_avail_pos(32), tape2_avail_pos(0), tape3_avail_pos(0),
+    curr_is_main(false) {}
 
     void visit(IR::Module& node) override;
     void visit(IR::GlobalVariable& node) override;
@@ -71,15 +84,19 @@ public:
     BF3tModule& getModule() { return module; }
 
 private:
+    void tape1_alloca();
+
     void tape1_to(size_t pos);
     void tape3_to(size_t pos);
 
     void tape2_to_tape1ptr(size_t pos);
 
-    void tape1_set(size_t pos, int32_t value);
-    void tape3_set(size_t pos, int32_t value);
+    void tape1_set(size_t pos, uint32_t value);
+    void tape3_set(size_t pos, uint32_t value);
 
     size_t get_reg_pos(const std::string& name); // Tape 1
+
+    size_t get_blk_pos(const std::string& name);
 
     void tape1_copy(size_t src, size_t dest);
 };
