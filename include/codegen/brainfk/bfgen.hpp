@@ -26,6 +26,7 @@ private:
         BFP_GOTO_TARGET = 1,
         BFP_GOTO_TMP1 = 2,
         BFP_GOTO_TMP2 = 3,
+        BFP_DEBUG_TMP = 4,
     };
 public:
     struct Insts {
@@ -56,7 +57,7 @@ private:
 public:
     BF3t32bGen()
     : tape1_pos(0), tape3_pos(0),
-    tape1_avail_pos(32), tape2_avail_pos(0), tape3_avail_pos(0),
+    tape1_avail_pos(32), tape2_avail_pos(0), tape3_avail_pos(1),
     curr_is_main(false) {}
 
     void visit(IR::Module& node) override;
@@ -85,6 +86,7 @@ public:
 
 private:
     void tape1_alloca();
+    void tape3_alloca();
 
     void tape1_to(size_t pos);
     void tape3_to(size_t pos);
@@ -99,6 +101,10 @@ private:
     size_t get_blk_pos(const std::string& name);
 
     void tape1_copy(size_t src, size_t dest);
+
+    void debug_output(int32_t);
+
+    void debug_tape1_show(size_t);
 };
 }
 #endif

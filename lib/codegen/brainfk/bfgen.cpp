@@ -23,11 +23,11 @@ void BF3t32bGen::visit(IR::Function& node) {
         block_index[node.getBlocks()[i]->getName()] = curr_block_index;
     }
 
-    tape1_set(BFP_GOTO_TARGET, 1);
     tape1_to(BFP_GOTO_TARGET);
+    tape1_set(BFP_GOTO_TARGET, 1);
     curr_insts.addInst(BF3tInst::BEQZ1);
 
-    for (size_t i = 0; i < node.getBlocks().size(); i++)
+    for (size_t i = 0; i < node.getBlocks().size(); ++i)
     {
         auto curr_block_index = i + 1;
         const auto& bb = node.getBlocks()[i];
@@ -49,7 +49,7 @@ void BF3t32bGen::visit(IR::Function& node) {
         // Set tmp1 = 1
         curr_insts.addInst(BF3tInst::INC1);
 
-        // If tmp2 != 0, which means 'curr_bb_idx != target_idx', set tmp1 to 0
+        // If tmp2 != 0, which means `curr_bb_idx != target_idx`, set tmp1 to 0
         tape1_to(BFP_GOTO_TMP2);
         curr_insts.addInst(BF3tInst::BEQZ1);
         tape1_to(BFP_GOTO_TMP1);
@@ -265,9 +265,8 @@ void BF3t32bGen::visit(IR::CALLInst& node) {
     {
         if (auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(node.getArgs()[0]))
         {
-            tape3_avail_pos++;
-            tape3_set(tape3_avail_pos, ci->getVal());
-            tape3_to(tape3_avail_pos);
+            tape3_alloca();
+            tape3_set(tape3_pos, ci->getVal());
             Logger::logDebug("Put Ch, imm: ", ci->getVal());
             curr_insts.addInst(BF3tInst::OUTPUT3);
         }
@@ -324,7 +323,7 @@ void BF3t32bGen::visit(IR::LOADInst& node) {
     auto guard = Logger::scopeDisable();
 
     tape2_to_tape1ptr(get_reg_pos(node.getPtr()->getName()));
-    tape3_to(tape3_avail_pos++);
+    tape3_alloca();
 
     curr_insts.addInst(BF3tInst::BEQZ2, BF3tInst::DEC2,
         BF3tInst::INC1, BF3tInst::INC3, BF3tInst::BNEZ2);
@@ -408,10 +407,16 @@ void BF3t32bGen::visit(IR::PHIInst& node) {
 
 void BF3t32bGen::tape1_alloca() {
     tape1_to(tape1_avail_pos++);
-    // curr_insts.addInst(BF3tInst::BEQZ1, BF3tInst::DEC1, BF3tInst::BNEZ1);
+    curr_insts.addInst(BF3tInst::BEQZ1, BF3tInst::DEC1, BF3tInst::BNEZ1);
+}
+
+void BF3t32bGen::tape3_alloca() {
+    tape3_to(tape3_avail_pos++);
+    curr_insts.addInst(BF3tInst::BEQZ3, BF3tInst::DEC3, BF3tInst::BNEZ3);
 }
 
 void BF3t32bGen::tape1_to(size_t pos) {
+    if (pos == tape1_pos) return;
     Logger::logDebug("Tape1 To pos: ", pos);
 
     while (tape1_pos < pos)
@@ -480,7 +485,8 @@ void BF3t32bGen::tape1_copy(size_t src, size_t dest) {
     auto guard = Logger::scopeDisable();
 
     auto tape1posbak = tape1_pos;
-    tape3_to(tape3_avail_pos++);
+    tape3_alloca();
+    tape1_set(dest, 0);
 
     // Move src(1) to dest(1) and temp(3)
     tape1_to(src);
@@ -494,6 +500,21 @@ void BF3t32bGen::tape1_copy(size_t src, size_t dest) {
 
     // Move temp(3) to src(1)
     curr_insts.addInst(BF3tInst::BEQZ3, BF3tInst::DEC3, BF3tInst::INC1, BF3tInst::BNEZ3);
+    tape1_to(tape1posbak);
+}
+
+void BF3t32bGen::debug_output(int32_t val) {
+    auto tape1posbak = tape1_pos;
+    tape1_to(BFP_DEBUG_TMP);
+    tape1_set(BFP_DEBUG_TMP, val);
+    curr_insts.addInst(BF3tInst::OUTPUT1);
+    tape1_to(tape1posbak);
+}
+
+void BF3t32bGen::debug_tape1_show(size_t pos) {
+    auto tape1posbak = tape1_pos;
+    tape1_to(pos);
+    curr_insts.addInst(BF3tInst::OUTPUT1);
     tape1_to(tape1posbak);
 }
 

@@ -26,6 +26,7 @@ int main(int argc, char **argv) {
     bool emit_llvm = false;
 #if GNALC_EXTENSION_BRAINFK
     bool emit_bf = false;
+    bool emit_bf3t = false;
 #endif
     bool ast_dump = false;
     bool optimize = false;
@@ -73,6 +74,10 @@ int main(int argc, char **argv) {
         {
             emit_bf = true;
         }
+        else if (arg == "-mbrainfk-3tape")
+        {
+            emit_bf3t = true;
+        }
 #endif
         else if (arg == "-ast-dump")
         {
@@ -95,6 +100,7 @@ int main(int argc, char **argv) {
                 "  -ast-dump            Build ASTs and then debug dump them\n"
 #if GNALC_EXTENSION_BRAINFK
                 "  -mbrainfk            Translate SySy to brainfk\n"
+                "  -mbrainfk-3tape      Translate SySy to 3-tape brainfk\n"
 #endif
                 "  --log <log-level>    Enable compiler logger. Available log-level: debug, info\n"
                 "  -h, --help           Display available options\n"
@@ -194,6 +200,13 @@ int main(int argc, char **argv) {
         trans.visit(bfgen.getModule());
         BrainFk::BFPrinter bfprinter(*poutstream);
         bfprinter.printout(trans.getModule());
+    }
+    else if (emit_bf3t)
+    {
+        BrainFk::BF3t32bGen bfgen;
+        bfgen.visit(generator.get_module());
+        BrainFk::BFPrinter bfprinter(*poutstream);
+        bfprinter.printout(bfgen.getModule());
     }
 #endif
     else
