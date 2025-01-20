@@ -1,6 +1,9 @@
+#include "../../../include/config/config.hpp"
+#if GNALC_EXTENSION_BRAINFK
 #include "../../../include/codegen/brainfk/bfmodule.hpp"
 #include "../../../include/codegen/brainfk/bfgen.hpp"
 #include "../../../include/codegen/brainfk/bfbuiltins.hpp"
+#include "../../../include/config/config.hpp"
 #include "../../../include/utils/logger.hpp"
 
 namespace BrainFk
@@ -157,20 +160,28 @@ void BF3t32bGen::visit(IR::CALLInst& node) {
         Logger::logDebug("Get Ch");
         curr_insts.addInst(BF3tInst::INPUT1);
     }
+    else if (node.getFuncName().substr(1) == Config::IR::BUILTIN_MEMSET)
+    {
+        // just pass
+    }
     else
         Err::todo("More func");
 }
 
 void BF3t32bGen::visit(IR::FPTOSIInst& node) {
-    Err::todo();
+    Err::todo("float converse");
 }
 
 void BF3t32bGen::visit(IR::SITOFPInst& node) {
-    Err::todo();
+    Err::todo("float converse");
 }
 
 void BF3t32bGen::visit(IR::ZEXTInst& node) {
-    Err::todo();
+    // Pass
+}
+
+void BF3t32bGen::visit(IR::BITCASTInst& node) {
+    // Pass
 }
 
 void BF3t32bGen::visit(IR::ALLOCAInst& node) {
@@ -379,3 +390,4 @@ void BF3t32bGen::tape2_to_tape1ptr(size_t ptr_pos) {
     tape1_to(tape1posbak);
 }
 }
+#endif

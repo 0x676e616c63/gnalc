@@ -1,5 +1,9 @@
+#pragma once
 #ifndef GNALC_CODEGEN_BRAINFK_UTILS_UTILS_HPP
 #define GNALC_CODEGEN_BRAINFK_UTILS_UTILS_HPP
+
+#include "../../../config/config.hpp"
+#if GNALC_EXTENSION_BRAINFK
 
 #include <string>
 #include "../bfmodule.hpp"
@@ -54,4 +58,5 @@ inline std::string to_mybf_presentation(const std::string& raw)
 }
 
 }
+#endif
 #endif

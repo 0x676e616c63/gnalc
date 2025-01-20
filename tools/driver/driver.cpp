@@ -1,3 +1,5 @@
+#include "../../include/config/config.hpp"
+
 #include "../../include/parser/ast.hpp"
 #include "../../include/parser/visitor.hpp"
 #include "../../include/parser/parser.hpp"
@@ -7,10 +9,11 @@
 #include "../../include/irvisitors/namenormalizer.hpp"
 #include "../../include/iropt/live_analysis.hpp"
 
+#if GNALC_EXTENSION_BRAINFK // in config.hpp
 #include "../../include/codegen/brainfk/bfgen.hpp"
-#include "../../include/codegen/brainfk/bfmodule.hpp"
 #include "../../include/codegen/brainfk/bftrans.hpp"
 #include "../../include/codegen/brainfk/bfprinter.hpp"
+#endif
 
 std::shared_ptr<CompUnit> node = nullptr;
 extern FILE *yyin;
@@ -21,7 +24,9 @@ int main(int argc, char **argv) {
     std::string output_file;
     bool only_compilation = false;
     bool emit_llvm = false;
+#if GNALC_EXTENSION_BRAINFK
     bool emit_bf = false;
+#endif
     bool ast_dump = false;
     bool optimize = false;
     for (int i = 1; i < argc; ++i)
@@ -63,10 +68,12 @@ int main(int argc, char **argv) {
         {
             emit_llvm = true;
         }
+#if GNALC_EXTENSION_BRAINFK
         else if (arg == "-mbrainfk")
         {
             emit_bf = true;
         }
+#endif
         else if (arg == "-ast-dump")
         {
             ast_dump = true;
@@ -86,7 +93,9 @@ int main(int argc, char **argv) {
                 "  -O1                  Optimization level 1\n"
                 "  -emit-llvm           Use the LLVM representation for assembler and object files\n"
                 "  -ast-dump            Build ASTs and then debug dump them\n"
+#if GNALC_EXTENSION_BRAINFK
                 "  -mbrainfk            Translate SySy to brainfk\n"
+#endif
                 "  --log <log-level>    Enable compiler logger. Available log-level: debug, info\n"
                 "  -h, --help           Display available options\n"
             << std::flush;
@@ -96,7 +105,11 @@ int main(int argc, char **argv) {
             input_file = argv[i];
     }
 
-    if (!emit_bf && !emit_llvm && !ast_dump && !only_compilation)
+    if (
+#if GNALC_EXTENSION_BRAINFK
+        !emit_bf &&
+#endif
+        !emit_llvm && !ast_dump && !only_compilation)
     {
         std::cerr << "Error: Gnalc currently only supports '-S' mode." << std::endl;
         return -1;
@@ -172,6 +185,7 @@ int main(int argc, char **argv) {
         IR::IRPrinter printer(*poutstream, false);
         printer.printout(generator.get_module());
     }
+#if GNALC_EXTENSION_BRAINFK
     else if (emit_bf)
     {
         BrainFk::BF3t32bGen bfgen;
@@ -181,6 +195,7 @@ int main(int argc, char **argv) {
         BrainFk::BFPrinter bfprinter(*poutstream);
         bfprinter.printout(trans.getModule());
     }
+#endif
     else
     {
         Err::todo("Backend Refactor.");

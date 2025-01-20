@@ -2,6 +2,9 @@
 #ifndef GNALC_CODEGEN_BRAINFK_BFGEN_HPP
 #define GNALC_CODEGEN_BRAINFK_BFGEN_HPP
 
+#include "../../config/config.hpp"
+#if GNALC_EXTENSION_BRAINFK
+
 #include <map>
 
 #include "../../ir/visitor.hpp"
@@ -58,6 +61,7 @@ public:
     void visit(IR::FPTOSIInst& node) override;
     void visit(IR::SITOFPInst& node) override;
     void visit(IR::ZEXTInst& node) override;
+    void visit(IR::BITCASTInst& node) override;
     void visit(IR::ALLOCAInst& node) override;
     void visit(IR::LOADInst& node) override;
     void visit(IR::STOREInst& node) override;
@@ -81,4 +85,4 @@ private:
 };
 }
 #endif
-
+#endif

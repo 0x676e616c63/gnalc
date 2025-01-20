@@ -10,9 +10,7 @@
 #include "../../include/ir/instructions/memory.hpp"
 #include "../../include/ir/module.hpp"
 #include "../../include/parser/visitor.hpp"
-
-constexpr auto GNALC_BUILTIN_MEMSET = "llvm.memset.p0i8.i32";
-constexpr auto GNALC_LOCAL_ARRAY_MEMSET_THRESHOLD = 32;
+#include "../../include/config/config.hpp"
 
 namespace AST
 {
@@ -58,7 +56,7 @@ void IRGenerator::visit(CompUnit& node) {
 
     // builtin
     // memset (dest, val, len, isvolatile)
-    make_decl(GNALC_BUILTIN_MEMSET, {i8ptr_type, i8_type, i32_type, i1_type}, void_type,
+    make_decl(Config::IR::BUILTIN_MEMSET, {i8ptr_type, i8_type, i32_type, i1_type}, void_type,
         false, true, false); // -> not va_arg, is builtin, and not sylib
 
     for (auto& n : node.getNodes()) {
@@ -166,9 +164,9 @@ void IRGenerator::visit(VarDef& node) {
 
                 bool has_filled_zero = false;
                 // If it is zero inited or exceeds the threshold, memset it.
-                if (curr_initializer.isZeroIniter() || curr_type->getBytes() > GNALC_LOCAL_ARRAY_MEMSET_THRESHOLD)
+                if (curr_initializer.isZeroIniter() || curr_type->getBytes() >Config::IR::LOCAL_ARRAY_MEMSET_THRESHOLD)
                 {
-                    auto builtin_memset = symbol_table.lookup(GNALC_BUILTIN_MEMSET);
+                    auto builtin_memset = symbol_table.lookup(Config::IR::BUILTIN_MEMSET);
                     auto dest = type_cast(alloca_inst, makePtrType(IR::makeBType(IR::IRBTYPE::I8)));
                     auto call_memset = std::make_shared<IR::CALLInst>(std::dynamic_pointer_cast<IR::FunctionDecl>(builtin_memset),
                         std::vector<std::shared_ptr<IR::Value>>{dest,                           // ptr

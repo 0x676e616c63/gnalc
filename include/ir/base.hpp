@@ -21,7 +21,6 @@
 #include "type.hpp"
 
 namespace IR {
-
 class Value;
 class User;
 class Use;

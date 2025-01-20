@@ -2,6 +2,9 @@
 #ifndef GNALC_CODEGEN_BRAINFK_BFMODULE_HPP
 #define GNALC_CODEGEN_BRAINFK_BFMODULE_HPP
 
+#include "../../config/config.hpp"
+#if GNALC_EXTENSION_BRAINFK
+
 #include <vector>
 
 namespace BrainFk {
@@ -73,4 +76,5 @@ public:
     void setInst(std::vector<BF3tInst> inst);
 };
 }
+#endif
 #endif

@@ -1,3 +1,5 @@
+#include "../../../include/config/config.hpp"
+#if GNALC_EXTENSION_BRAINFK
 #include "../../../include/codegen/brainfk/bfmodule.hpp"
 #include "../../../include/codegen/brainfk/bfprinter.hpp"
 #include "../../../include/utils/exception.hpp"
@@ -133,3 +135,4 @@ void BFPrinter::printout(const BF3tModule& module) {
     outStream << "\n";
 }
 }
+#endif

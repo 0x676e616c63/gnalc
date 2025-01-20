@@ -1,3 +1,5 @@
+#include "../../../include/config/config.hpp"
+#if GNALC_EXTENSION_BRAINFK
 #include "../../../include/utils/exception.hpp"
 
 #include "../../../include/codegen/brainfk/bfmodule.hpp"
@@ -143,3 +145,4 @@ void BF32t32bTrans::visit(const BF3tModule& input_module) {
     }
 }
 }
+#endif

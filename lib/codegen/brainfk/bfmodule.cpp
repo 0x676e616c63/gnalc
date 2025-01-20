@@ -1,3 +1,5 @@
+#include "../../../include/config/config.hpp"
+#if GNALC_EXTENSION_BRAINFK
 #include "../../../include/codegen/brainfk/bfmodule.hpp"
 
 namespace BrainFk
@@ -10,3 +12,4 @@ const std::vector<BF3tInst>& BF3tModule::getInstructions() const { return instru
 
 void BF3tModule::setInst(std::vector<BF3tInst> inst) { instructions = std::move(inst); }
 }
+#endif
