@@ -3,11 +3,13 @@
  */
 
 #pragma once
-#ifndef GNALC_IRVISITORS_IRPRINTER_HPP
-#define GNALC_IRVISITORS_IRPRINTER_HPP
+#ifndef GNALC_PASSES_UTILITIES_IRPRINTER_HPP
+#define GNALC_PASSES_UTILITIES_IRPRINTER_HPP
 
-#include "../utils/exception.hpp"
-#include "../ir/visitor.hpp"
+#include "../../utils/exception.hpp"
+#include "../../ir/visitor.hpp"
+#include "../pass.hpp"
+
 #include <iostream>
 #include <fstream>
 
@@ -16,7 +18,7 @@ namespace IR
 class IRFormatter;
 
 // 线性IR打印（未划分基本块）
-class LIRPrinter : public IRVisitor {
+class LIRPrinter : public ModulePass, public IRVisitor {
 protected:
     std::ostream& outStream;
     bool printLiveInfo;
@@ -35,7 +37,7 @@ public:
     explicit LIRPrinter(std::ostream& out, bool _liveinfo = false);
     ~LIRPrinter();
 
-    void printout(Module& module);
+    void runOnModule(Module& module) override;
 
     void visit(GlobalVariable& node) override;
     void visit(Function& node) override;

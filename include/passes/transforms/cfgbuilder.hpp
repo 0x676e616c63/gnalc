@@ -5,17 +5,19 @@
 
 #pragma once
 
-#ifndef GNALC_CFGBUILDER_HPP
-#define GNALC_CFGBUILDER_HPP
+#ifndef GNALC_PASSES_TRANSFORMS_CFGBUILDER_HPP
+#define GNALC_PASSES_TRANSFORMS_CFGBUILDER_HPP
 
-#include "../ir/visitor.hpp"
-#include "../ir/constantpool.hpp"
+#include "../../ir/visitor.hpp"
+#include "../../ir/constant_pool.hpp"
+#include "../pass.hpp"
+
 #include <stack>
 
 namespace IR {
 
 // 通过Func中的insts划分基本块
-class CFGBuilder {
+class CFGBuilder : public ModulePass {
 private:
     ConstantPool _const_pool; // just for linker gen return 0
     struct _idx {
@@ -75,7 +77,7 @@ private:
     void divider();
     void linker();
 public:
-    void build(const Module& module);
+    void runOnModule(Module& module) override;
 };
 
 }

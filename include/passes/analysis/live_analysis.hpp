@@ -5,16 +5,18 @@
  */
 
 #pragma once
-#ifndef GNALC_LIVE_ANALYSIS_HPP
-#define GNALC_LIVE_ANALYSIS_HPP
+#ifndef GNALC_PASSES_ANALYSIS_LIVE_ANALYSIS_HPP
+#define GNALC_PASSES_ANALYSIS_LIVE_ANALYSIS_HPP
 
-#include "../ir/visitor.hpp"
+#include "../../ir/visitor.hpp"
+#include "../pass.hpp"
+
 #include <vector>
 #include <algorithm>
 
 namespace IR {
 
-class LiveAnalyser {
+class LiveAnalyser : public ModulePass {
 private:
     // 使用DFS遍历CFG
     void genDFSStack(const std::shared_ptr<BasicBlock>& bb);
@@ -49,12 +51,11 @@ private:
         }
     } bb_stack;
 public:
-    void processModule(const Module& module);
+    void runOnModule(Module& module) override;
+private:
     bool processFunc(const std::shared_ptr<Function>& func); // 处理单个func
     bool processBB(const std::shared_ptr<BasicBlock>& bb); // 处理单个BB
     bool processInst(const std::shared_ptr<Instruction>& inst); // 处理单个inst
-
-    void cleanLiveInfo(const Module& module);
 };
 
 }

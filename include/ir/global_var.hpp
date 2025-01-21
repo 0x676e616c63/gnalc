@@ -1,9 +1,6 @@
 #pragma once
-#ifndef GNALC_IR_GLOBAL_VAR_H
-#define GNALC_IR_GLOBAL_VAR_H
-
-// 由于tostring需要使用IRFormatter的方法，visitor.hpp头文件存在交叉引用的问题，这里设一个宏以控制引用
-#define ENABLE_GVINITER_TOSTRING 1
+#ifndef GNALC_IR_GLOBAL_VAR_HPP
+#define GNALC_IR_GLOBAL_VAR_HPP
 
 #include "base.hpp"
 #include <vector>

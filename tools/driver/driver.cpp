@@ -4,16 +4,21 @@
 #include "../../include/parser/visitor.hpp"
 #include "../../include/parser/parser.hpp"
 #include "../../include/utils/logger.hpp"
-#include "../../include/irvisitors/irprinter.hpp"
-#include "../../include/irvisitors/cfgbuilder.hpp"
-#include "../../include/irvisitors/namenormalizer.hpp"
-#include "../../include/iropt/live_analysis.hpp"
+#include "../../include/passes/pass_manager.hpp"
 
 #if GNALC_EXTENSION_BRAINFK // in config.hpp
 #include "../../include/codegen/brainfk/bfgen.hpp"
 #include "../../include/codegen/brainfk/bftrans.hpp"
 #include "../../include/codegen/brainfk/bfprinter.hpp"
 #endif
+
+#include <string>
+#include <memory>
+#include <iostream>
+#include <fstream>
+
+#include "../../include/passes/utilities/irprinter.hpp"
+
 
 std::shared_ptr<CompUnit> node = nullptr;
 extern FILE *yyin;
@@ -25,8 +30,8 @@ int main(int argc, char **argv) {
     bool only_compilation = false;
     bool emit_llvm = false;
 #if GNALC_EXTENSION_BRAINFK
-    bool emit_bf = false;
-    bool emit_bf3t = false;
+    bool bf_target = false;
+    bool bf3t_target = false;
 #endif
     bool ast_dump = false;
     bool optimize = false;
@@ -72,11 +77,11 @@ int main(int argc, char **argv) {
 #if GNALC_EXTENSION_BRAINFK
         else if (arg == "-mbrainfk")
         {
-            emit_bf = true;
+            bf_target = true;
         }
         else if (arg == "-mbrainfk-3tape")
         {
-            emit_bf3t = true;
+            bf3t_target = true;
         }
 #endif
         else if (arg == "-ast-dump")
@@ -113,7 +118,7 @@ int main(int argc, char **argv) {
 
     if (
 #if GNALC_EXTENSION_BRAINFK
-        !emit_bf &&
+        !bf_target &&
 #endif
         !emit_llvm && !ast_dump && !only_compilation)
     {
@@ -154,23 +159,14 @@ int main(int argc, char **argv) {
         return 0;
     }
 
+    fclose(yyin);
+
     IRGenerator generator;
     generator.visit(*node);
 
-    IR::CFGBuilder cb;
-    cb.build(generator.get_module());
 
-    if (optimize)
-    {
-        Err::todo("Optimization");
-    }
-
-    IR::LiveAnalyser la;
-    la.cleanLiveInfo(generator.get_module());
-    la.processModule(generator.get_module());
-
-    IR::NameNormalizer name_normalizer(false);
-    name_normalizer.normalize(generator.get_module());
+    IR::PassManager pass_manager;
+    IR::register_default_pass(pass_manager, optimize ? 1 : 0);
 
     std::ostream* poutstream = &std::cout;
     std::ofstream outfile;
@@ -188,33 +184,35 @@ int main(int argc, char **argv) {
 
     if (emit_llvm)
     {
-        IR::IRPrinter printer(*poutstream, false);
-        printer.printout(generator.get_module());
+        pass_manager.registerModulePass<IR::IRPrinter>(*poutstream, false);
+        pass_manager.runOnModule(generator.get_module());
+        pass_manager.afterRunCleanup(generator.get_module());
     }
-#if GNALC_EXTENSION_BRAINFK
-    else if (emit_bf)
-    {
-        BrainFk::BF3t32bGen bfgen;
-        bfgen.visit(generator.get_module());
-        BrainFk::BF32t32bTrans trans(false);
-        trans.visit(bfgen.getModule());
-        BrainFk::BFPrinter bfprinter(*poutstream);
-        bfprinter.printout(trans.getModule());
-    }
-    else if (emit_bf3t)
-    {
-        BrainFk::BF3t32bGen bfgen;
-        bfgen.visit(generator.get_module());
-        BrainFk::BFPrinter bfprinter(*poutstream);
-        bfprinter.printout(bfgen.getModule());
-    }
-#endif
     else
     {
-        Err::todo("Backend Refactor.");
+        pass_manager.runOnModule(generator.get_module());
+        pass_manager.afterRunCleanup(generator.get_module());
+#if GNALC_EXTENSION_BRAINFK
+        if (bf_target)
+        {
+            BrainFk::BF3t32bGen bfgen;
+            bfgen.visit(generator.get_module());
+            BrainFk::BF32t32bTrans trans(false);
+            trans.visit(bfgen.getModule());
+            BrainFk::BFPrinter bfprinter(*poutstream);
+            bfprinter.printout(trans.getModule());
+            return 0;
+        }
+        else if (bf3t_target)
+        {
+            BrainFk::BF3t32bGen bfgen;
+            bfgen.visit(generator.get_module());
+            BrainFk::BFPrinter bfprinter(*poutstream);
+            bfprinter.printout(bfgen.getModule());
+            return 0;
+        }
+#endif
+        Err::todo("ARM Backend Refactor.");
     }
-
-    la.cleanLiveInfo(generator.get_module());
-    fclose(yyin);
     return 0;
 }

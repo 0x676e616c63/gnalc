@@ -49,11 +49,11 @@ namespace IR {
         return insts;
     }
 
-    std::unordered_set<std::shared_ptr<Value>>& BasicBlock::getLiveIn() {
+    LiveInfoSet& BasicBlock::getLiveIn() {
         return livein;
     }
 
-    std::unordered_set<std::shared_ptr<Value>>& BasicBlock::getLiveOut() {
+    LiveInfoSet& BasicBlock::getLiveOut() {
         return liveout;
     }
 

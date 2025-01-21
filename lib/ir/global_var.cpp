@@ -1,9 +1,6 @@
 #include "../../include/ir/global_var.hpp"
 #include "../../include/ir/visitor.hpp"
-
-#if ENABLE_GVINITER_TOSTRING
-#include "../../include/irvisitors/irprinter.hpp"
-#endif
+#include "../../include/passes/utilities/irprinter.hpp"
 
 namespace IR
 {
@@ -142,7 +139,6 @@ namespace IR
 std::string GVIniter::toString() const {
     std::string ret;
 
-    #if ENABLE_GVINITER_TOSTRING
     if (isArray()) {
         ret += initer_type->toString();
         if (isZero()) {
@@ -165,7 +161,6 @@ std::string GVIniter::toString() const {
             ret += IRFormatter::formatValue(*getConstVal());
         }
     }
-    #endif
 
     return ret;
 }

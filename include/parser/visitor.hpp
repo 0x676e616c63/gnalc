@@ -7,7 +7,7 @@
 
 #include "ast.hpp"
 #include "../symbol_table/symbol_table.hpp"
-#include "../ir/constantpool.hpp"
+#include "../ir/constant_pool.hpp"
 #include "../ir/module.hpp"
 #include "../ir/instructions/memory.hpp"
 #include "../config/config.hpp"

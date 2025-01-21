@@ -1,8 +1,8 @@
-#include "../../include/irvisitors/namenormalizer.hpp"
-#include "../../include/parser/visitor.hpp"
+#include "../../../include/passes/transforms/namenormalizer.hpp"
+#include "../../../include/parser/visitor.hpp"
 
 namespace IR {
-void NameNormalizer::normalize(const Module& module) {
+void NameNormalizer::runOnModule(Module& module) {
     for (const auto& func : module.getFunctions())
     {
         func->accept(*this);

@@ -2,9 +2,9 @@ name: Gnalc Test
 
 on:
   push:
-    branches: [ "main", "ci" ]
+    branches: [ "main", "ci", "iropt" ]
   pull_request:
-    branches: [ "main", "ci" ]
+    branches: [ "main", "ci", "iropt" ]
 
 env:
   BUILD_TYPE: Release

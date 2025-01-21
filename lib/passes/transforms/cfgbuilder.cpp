@@ -2,12 +2,12 @@
  * @attention 默认删除块中break; continue; 后的所有指令
 **/
 
-#include "../../include/irvisitors/cfgbuilder.hpp"
-#include "../../include/ir/utilities.hpp"
-#include "../../include/utils/logger.hpp"
+#include "../../../include/passes/transforms/cfgbuilder.hpp"
+#include "../../../include/ir/utilities.hpp"
+#include "../../../include/utils/logger.hpp"
 
 namespace IR {
-    void CFGBuilder::build(const Module& module) {
+    void CFGBuilder::runOnModule(Module& module) {
         Logger::logInfo("Building CFG For Module " + module.getName() + "...");
         for (auto& func : module.getFunctions()) {
             Logger::logDebug("Building CFG For Function " + func->getName() + "...");

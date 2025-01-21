@@ -9,7 +9,7 @@
 #include "base.hpp"
 
 #include <memory>
-#include <unordered_set>
+#include <set>
 
 namespace IR {
     class Instruction;
@@ -18,14 +18,15 @@ namespace IR {
  * @brief BB继承自value, 其被br指令'use', 'use'了它所包含的指令
  * @note next_bb包含的BB和最后一条br指令中的相同
  */
+
 class BasicBlock : public Value, public std::enable_shared_from_this<BasicBlock> {
     std::list<std::weak_ptr<BasicBlock>> pre_bb; // 前驱
     std::list<std::weak_ptr<BasicBlock>> next_bb; // 后继
     std::list<std::shared_ptr<Instruction>> insts; // 指令列表
-    std::unordered_set<std::shared_ptr<Value>> livein;
-    std::unordered_set<std::shared_ptr<Value>> liveout;
+    LiveInfoSet livein;
+    LiveInfoSet liveout;
 public:
-    BasicBlock(std::string _name);
+    explicit BasicBlock(std::string _name);
     BasicBlock(std::string _name, std::list<std::shared_ptr<Instruction>> _insts);
     BasicBlock(std::string _name, std::list<std::weak_ptr<BasicBlock>> _pre_bb, std::list<std::weak_ptr<BasicBlock>> _next_bb, std::list<std::shared_ptr<Instruction>> _insts);
 
@@ -40,8 +41,8 @@ public:
     std::list<std::shared_ptr<Instruction>>& getInsts();
     // ...
 
-    std::unordered_set<std::shared_ptr<Value>>& getLiveIn();
-    std::unordered_set<std::shared_ptr<Value>>& getLiveOut();
+    LiveInfoSet& getLiveIn();
+    LiveInfoSet& getLiveOut();
 
     void accept(IRVisitor& visitor) override;
     ~BasicBlock() override;

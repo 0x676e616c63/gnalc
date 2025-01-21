@@ -65,8 +65,8 @@ class Instruction : public User {
 private:
     OP opcode;
     std::weak_ptr<BasicBlock> parent = {}; // 隶属的basic block
-    std::unordered_set<std::shared_ptr<Value>> livein;
-    std::unordered_set<std::shared_ptr<Value>> liveout;
+    LiveInfoSet livein;
+    LiveInfoSet liveout;
 
 public:
     // 此构造方法用于初始生成时，最开始没有划分Block，故parent为空
@@ -80,8 +80,8 @@ public:
     OP getOpcode() const;
     std::shared_ptr<BasicBlock> getParent() const;
 
-    std::unordered_set<std::shared_ptr<Value>>& getLiveIn() { return livein; };
-    std::unordered_set<std::shared_ptr<Value>>& getLiveOut() { return liveout; };
+    LiveInfoSet& getLiveIn();
+    LiveInfoSet& getLiveOut();
 
     void accept(IRVisitor& visitor) override;
     ~Instruction() override;

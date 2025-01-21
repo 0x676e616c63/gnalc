@@ -24,6 +24,10 @@ std::shared_ptr<BasicBlock> Instruction::getParent() const {
     return parent.lock();
 }
 
+LiveInfoSet& Instruction::getLiveIn() { return livein; }
+
+LiveInfoSet& Instruction::getLiveOut() { return liveout; }
+
 void Instruction::accept(IRVisitor& visitor) {
     visitor.visit(*this);
 }
