@@ -13,20 +13,24 @@
 namespace BrainFk {
 // This generates 3 tape 32-bit brainfuck
 // Tape 1:
-//   0 - 31:   See below
+//   0 - 31:   Reserved, see `Tape1Pos` below
 //   > 31:     IR virtual register
 
 // Tape 2: Memory
+// Its pos is store in Tape1's T1P_MEM.
+
 // Tape 3: Temp value
 
 class BF3t32bGen : public IR::IRVisitor {
 private:
-    enum BFPos: size_t {
-        BFP_MEM = 0,
-        BFP_GOTO_TARGET = 1,
-        BFP_GOTO_TMP1 = 2,
-        BFP_GOTO_TMP2 = 3,
-        BFP_DEBUG_TMP = 4,
+    enum Tape1Pos: size_t {
+        T1P_MEM = 0,       // Tape 2 Pos
+
+        T1P_BR_TARGET = 1, // Next branch, 0 for quitting
+        T1P_BR_TMP1 = 2,   // Temp value for branch switching
+        T1P_BR_TMP2 = 3,   // Temp value for branch switching
+
+        T1P_DEBUG_TMP = 4, // Temp value for debugging
     };
 public:
     struct Insts {
@@ -80,7 +84,6 @@ public:
     void visit(IR::LOADInst& node) override;
     void visit(IR::STOREInst& node) override;
     void visit(IR::GEPInst& node) override;
-    void visit(IR::PHIInst& node) override;
 
     BF3tModule& getModule() { return module; }
 
