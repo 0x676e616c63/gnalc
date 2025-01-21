@@ -2,7 +2,7 @@
 #ifndef GNALC_IR_CONFIG_CONFIG_HPP
 #define GNALC_IR_CONFIG_CONFIG_HPP
 
-#define GNALC_EXTENSION_BRAINFK 1
+#define GNALC_EXTENSION_BRAINFK 0
 
 namespace Config {
 namespace IR
