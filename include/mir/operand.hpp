@@ -132,7 +132,7 @@ public:
           bank(RegisterBank::gpr){}; // for BaseADROP
 
     const std::variant<CoreRegister, FPURegister> &getColor() { return color; };
-    void setColor(unsigned int newColor); // in .cpp
+    void setColor(unsigned int newColor);
 
     virtual std::string toString();
     ~BindOnVirOP() = default;
@@ -161,7 +161,7 @@ public:
     unsigned int getConstOffset() { return constOffset; };
     void setConstOffset(unsigned int newOffset) { constOffset = newOffset; };
 
-    virtual std::string toString();
+    virtual std::string toString() = 0;
     ~BaseADROP() = default;
 };
 
@@ -218,21 +218,6 @@ public:
 
     std::string toString() final;
     ~ConstantIDX() = default;
-};
-
-class JmpLabel : public Operand {
-private:
-    std::shared_ptr<BasicBlock> &succ;
-
-public:
-    JmpLabel() = delete;
-    JmpLabel(std::shared_ptr<BasicBlock> &_succ)
-        : Operand(OperandTrait::JmpLabel, _succ->getName()), succ(_succ){};
-
-    std::shared_ptr<BasicBlock> &getSucc() { return succ; };
-
-    std::string toString() final;
-    ~JmpLabel() = default;
 };
 
 } // namespace MIR

@@ -119,7 +119,7 @@ public:
     virtual std::shared_ptr<Operand> getTargetOP() = 0;
     virtual std::shared_ptr<Operand> getSourceOP(unsigned int seq) = 0;
 
-    virtual bool OperandTypeCheck() = 0;
+    virtual bool OperandTypeCheck();
     virtual std::string toString() = 0;
     ~Instruction() = default;
 };

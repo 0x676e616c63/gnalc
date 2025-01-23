@@ -17,7 +17,7 @@ public: // 接口太多, 还不如直接访问
 
     size_t stackSize;
     unsigned int maxAlignment = 4;
-    std::vector<std::unique_ptr<FrameObj>> StackObjs;
+    std::vector<std::shared_ptr<FrameObj>> StackObjs;
 
     std::list<std::shared_ptr<ConstObj>> ConstPool;
 
@@ -38,7 +38,7 @@ private:
 
 public:
     Function() = delete;
-    Function();
+    Function(std::string _name) : Value(ValueTrait::Function, _name){};
 
     const FunctionInfo getInfo() { return info; };
     FunctionInfo &editInfo() { return info; };

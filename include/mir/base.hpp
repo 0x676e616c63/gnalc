@@ -6,12 +6,11 @@
 #include <memory>
 #include <string>
 
-/// @brief 想了想感觉后端自己实现Use-Def还是有点困难了
-
 namespace MIR {
 
 enum class ValueTrait {
     Unknown,
+    Function,
     BasicBlock,
     MachineInst,
     Operand,
