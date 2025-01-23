@@ -1,21 +1,24 @@
 #pragma once
 #ifndef GNALC_MIR_FUNCTION_HPP
 #define GNALC_MIR_FUNCTION_HPP
+#include <utility>
+
 #include "base.hpp"
 #include "basicblock.hpp"
 #include "misc.hpp"
 
 namespace MIR {
 
-/// @warning Infos只选可能有用的
+class Function;
 
+/// @warning Infos只选可能有用的
 class FunctionInfo {
 public: // 接口太多, 还不如直接访问
     std::pair<bool, std::weak_ptr<Function>> hasTailCall; // TCO优化
 
-    bool hasCall; // 除了TC之外的调用, 可以视情况节省一两条指令
+    bool hasCall{}; // 除了TC之外的调用, 可以视情况节省一两条指令
 
-    size_t stackSize;
+    size_t stackSize{};
     unsigned int maxAlignment = 4;
     std::vector<std::shared_ptr<FrameObj>> StackObjs;
 
@@ -26,7 +29,7 @@ public: // 接口太多, 还不如直接访问
 public:
     FunctionInfo() = default;
 
-    std::string toString(); // print info
+    std::string toString() const; // print info
     ~FunctionInfo() = default;
 };
 
@@ -38,20 +41,21 @@ private:
 
 public:
     Function() = delete;
-    Function(std::string _name) : Value(ValueTrait::Function, _name){};
+    explicit Function(std::string _name) : Value(ValueTrait::Function, std::move(_name)){}
 
-    const FunctionInfo getInfo() { return info; };
-    FunctionInfo &editInfo() { return info; };
+    FunctionInfo getInfo() const { return info; }
+    FunctionInfo &editInfo() { return info; }
 
     void addBlock(std::shared_ptr<BasicBlock> _block) {
-        blocks.emplace_back(_block);
-    };
+        blocks.emplace_back(std::move(_block));
+    }
+
     void delBlock(std::string &_name);
 
     const std::list<std::shared_ptr<BasicBlock>> &getBlocks() { return blocks; }
 
-    std::string toString();
-    ~Function() = default;
+    std::string toString() const;
+    ~Function() override = default;
 };
 
 }; // namespace MIR

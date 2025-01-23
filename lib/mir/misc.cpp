@@ -1,9 +1,9 @@
-#include "../include/mir/misc.hpp"
-#include "../include/mirtools/magic_enum.hpp"
+#include "../../include/mir/misc.hpp"
+#include "../../include/mirtools/magic_enum.hpp"
 #include <cctype>
 #include <iomanip>
 
-std::string MIR::FrameObj::toString() {
+std::string MIR::FrameObj::toString() const {
     std::string str;
     str += "- {";
 
@@ -43,7 +43,7 @@ bool isImmCanBeEncodedInText(float imme) {
 }
 
 MIR::ConstObj::ConstObj(int imme) {
-    unsigned int imm = (unsigned int)imme;
+    auto imm = static_cast<unsigned int>(imme);
     if (isImmCanBeEncodedInText(imm)) {
         literal = imm;
     } else {
@@ -70,7 +70,7 @@ MIR::ConstObj::ConstObj(float imme) {
     size = 4;
 }
 
-std::string MIR::ConstObj::toString() {
+std::string MIR::ConstObj::toString() const {
     std::string str;
     str += "- {";
 

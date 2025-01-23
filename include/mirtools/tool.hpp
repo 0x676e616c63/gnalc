@@ -1,7 +1,7 @@
 #pragma once
 #ifndef GNALC_MIR_TOOL_HPP
 #define GNALC_MIR_TOOL_HPP
-#include "mirtools/magic_enum.hpp"
+#include "../mirtools/magic_enum.hpp"
 
 struct variant_visitor {
     template <typename T_enum> std::string operator()(T_enum emVal) {

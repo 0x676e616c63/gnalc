@@ -85,7 +85,7 @@ enum class SourceOperandType {
     i,
     i12,
     i32,
-    cp,
+    // cp
 
     rr,
     ri,
@@ -104,24 +104,24 @@ private:
 public:
     Instruction() = delete;
     Instruction(OpCode _opcode, SourceOperandType _tptrait)
-        : opcode(_opcode), tptrait(_tptrait){};
+        : opcode(_opcode), tptrait(_tptrait) {}
     Instruction(NeonOpCode _opcode, SourceOperandType _tptrait)
-        : opcode(_opcode), tptrait(_tptrait){};
+        : opcode(_opcode), tptrait(_tptrait) {}
 
     virtual void addTargetOP(std::shared_ptr<Operand>) = 0;
-    unsigned int addSourceOP(std::shared_ptr<Operand> _SourceOP) {
-        SourceOperandList.push_back(_SourceOP);
+    unsigned int addSourceOP(std::shared_ptr<Operand> SourceOP_) {
+        SourceOperandList.push_back(std::move(SourceOP_));
         return SourceOperandList.size();
-    };
+    }
 
-    SourceOperandType getTptrait() { return tptrait; };
+    SourceOperandType getTptrait() const { return tptrait; }
 
     virtual std::shared_ptr<Operand> getTargetOP() = 0;
     virtual std::shared_ptr<Operand> getSourceOP(unsigned int seq) = 0;
 
     virtual bool OperandTypeCheck();
     virtual std::string toString() = 0;
-    ~Instruction() = default;
+    virtual ~Instruction() = default;
 };
 } // namespace MIR
 

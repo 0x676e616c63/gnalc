@@ -1,9 +1,9 @@
 #pragma once
-#ifndef _GNALC_MIR_OPERAND_HPP
-#define _GNALC_MIR_OPERAND_HPP
+#ifndef GNALC_MIR_OPERAND_HPP
+#define GNALC_MIR_OPERAND_HPP
 #include "base.hpp"
-#include "basicblock.hpp"
 #include <string>
+#include <utility>
 #include <variant>
 
 namespace MIR {
@@ -91,14 +91,14 @@ private:
 
 public:
     Operand() = delete;
-    Operand(OperandTrait _otrait)
-        : Value(ValueTrait::Operand), otrait(_otrait){};
+    explicit Operand(OperandTrait _otrait)
+        : Value(ValueTrait::Operand), otrait(_otrait){}
     Operand(OperandTrait _otrait, std::string _name)
-        : Value(ValueTrait::Operand, _name), otrait(_otrait){};
-    OperandTrait getOperandTrait() { return otrait; };
+        : Value(ValueTrait::Operand, std::move(_name)), otrait(_otrait){}
+    OperandTrait getOperandTrait() const { return otrait; }
 
-    virtual std::string toString() = 0;
-    ~Operand() = default;
+    virtual std::string toString() const = 0;
+    ~Operand() override = default;
 };
 
 class PreColedOP : public Operand {
@@ -107,13 +107,13 @@ private:
 
 public:
     PreColedOP() = delete;
-    PreColedOP(CoreRegister _color)
-        : Operand(OperandTrait::PreColored), color(_color){};
-    PreColedOP(FPURegister _color)
-        : Operand(OperandTrait::PreColored), color(_color){};
+    explicit PreColedOP(CoreRegister _color)
+        : Operand(OperandTrait::PreColored), color(_color){}
+    explicit PreColedOP(FPURegister _color)
+        : Operand(OperandTrait::PreColored), color(_color){}
 
-    std::string toString() final;
-    ~PreColedOP() = default;
+    std::string toString() const final;
+    ~PreColedOP() override = default;
 };
 
 class BindOnVirOP : public Operand {
@@ -123,19 +123,19 @@ private:
 
 public:
     BindOnVirOP() = delete;
-    BindOnVirOP(RegisterBank _bank)
-        : Operand(OperandTrait::BindOnVirRegister), bank(_bank){};
+    explicit BindOnVirOP(RegisterBank _bank)
+        : Operand(OperandTrait::BindOnVirRegister), bank(_bank){}
     BindOnVirOP(RegisterBank _bank, std::string _name)
-        : Operand(OperandTrait::BindOnVirRegister, _name), bank(_bank){};
-    BindOnVirOP(std::string _name)
-        : Operand(OperandTrait::BaseAddress, _name),
-          bank(RegisterBank::gpr){}; // for BaseADROP
+        : Operand(OperandTrait::BindOnVirRegister, std::move(_name)), bank(_bank){}
+    explicit BindOnVirOP(std::string _name)
+        : Operand(OperandTrait::BaseAddress, std::move(_name)),
+          bank(RegisterBank::gpr) {} // for BaseADROP
 
     const std::variant<CoreRegister, FPURegister> &getColor() { return color; };
     void setColor(unsigned int newColor);
 
-    virtual std::string toString();
-    ~BindOnVirOP() = default;
+    virtual std::string toString() const;
+    ~BindOnVirOP() override = default;
 };
 
 enum class BaseAddressTrait {
@@ -156,13 +156,13 @@ private:
 public:
     BaseADROP() = delete;
     BaseADROP(BaseAddressTrait _btrait, std::string _name)
-        : BindOnVirOP(_name), btrait(_btrait){};
+        : BindOnVirOP(std::move(_name)), btrait(_btrait){};
 
-    unsigned int getConstOffset() { return constOffset; };
+    unsigned int getConstOffset() const { return constOffset; };
     void setConstOffset(unsigned int newOffset) { constOffset = newOffset; };
 
-    virtual std::string toString() = 0;
-    ~BaseADROP() = default;
+    virtual std::string toString() const = 0;
+    ~BaseADROP() override = default;
 };
 
 class GlobalADROP : public BaseADROP {
@@ -172,11 +172,11 @@ private:
 public:
     GlobalADROP() = delete;
     GlobalADROP(std::string _global_name, std::string _name)
-        : BaseADROP(BaseAddressTrait::Global, _name),
-          global_name(_global_name){};
+        : BaseADROP(BaseAddressTrait::Global, std::move(_name)),
+          global_name(std::move(_global_name)){};
 
-    std::string toString() final;
-    ~GlobalADROP() = default;
+    std::string toString() const final;
+    ~GlobalADROP() override = default;
 };
 
 class StackADROP : public BaseADROP {
@@ -186,10 +186,10 @@ private:
 public:
     StackADROP() = delete;
     StackADROP(unsigned int _idx, std::string _name)
-        : BaseADROP(BaseAddressTrait::Local, _name), idx(_idx){};
+        : BaseADROP(BaseAddressTrait::Local, std::move(_name)), idx(_idx){};
 
-    std::string toString() final;
-    ~StackADROP() = default;
+    std::string toString() const final;
+    ~StackADROP() override = default;
 };
 
 class ShiftOP : public Operand {
@@ -203,8 +203,8 @@ public:
         : imme(_imme), shiftCode(_shiftCode),
           Operand(OperandTrait::ShiftImme){};
 
-    std::string toString() final;
-    ~ShiftOP() = default;
+    std::string toString() const final;
+    ~ShiftOP() override = default;
 };
 
 class ConstantIDX : public Operand {
@@ -213,11 +213,11 @@ private:
 
 public:
     ConstantIDX() = delete;
-    ConstantIDX(unsigned int _idx)
+    explicit ConstantIDX(unsigned int _idx)
         : Operand(OperandTrait::ConstantPoolValue), idx(_idx){};
 
-    std::string toString() final;
-    ~ConstantIDX() = default;
+    std::string toString() const final;
+    ~ConstantIDX() override = default;
 };
 
 } // namespace MIR

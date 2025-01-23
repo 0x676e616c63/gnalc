@@ -2,8 +2,6 @@
 #ifndef GNALC_MIR_BASE_HPP
 #define GNALC_MIR_BASE_HPP
 #include "../ir/type.hpp"
-#include <list>
-#include <memory>
 #include <string>
 
 namespace MIR {
@@ -22,13 +20,13 @@ private:
 
 public:
     Value() = delete;
-    Value(ValueTrait _vtrait) : IR::NameC(), vtrait(_vtrait){};
+    explicit Value(ValueTrait _vtrait) : IR::NameC(), vtrait(_vtrait) {}
     Value(ValueTrait _vtrait, std::string _name)
-        : IR::NameC(_name), vtrait(_vtrait){};
-    ValueTrait getValueTrait() { return vtrait; };
+        : IR::NameC(std::move(_name)), vtrait(_vtrait) {}
+    ValueTrait getValueTrait() const { return vtrait; }
 
-    virtual std::string toString() = 0;
-    ~Value() = default;
+    virtual std::string toString() const = 0;
+    virtual ~Value() = default;
 };
 
 } // namespace MIR

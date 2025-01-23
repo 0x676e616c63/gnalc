@@ -1,4 +1,4 @@
-#include "../include/mir/instruction.hpp"
+#include "../../include/mir/instruction.hpp"
 
 using namespace MIR;
 
@@ -7,14 +7,15 @@ bool Instruction::OperandTypeCheck() {
     case SourceOperandType::cp:
     case SourceOperandType::i12:
     case SourceOperandType::i:
-    case SourceOperandType::i32:
+    case SourceOperandType::i32: {
         /// @note 立即数合法化等到codegen再做, 这里一视同仁
         auto oper = SourceOperandList[0].get();
         if (!dynamic_cast<ConstantIDX *>(oper))
             return false;
+    }
         break;
 
-    default:
+    default: {
         auto oper = SourceOperandList[0].get();
         // case SourceOperandType::r:
         if (!dynamic_cast<BindOnVirOP *>(oper) ||
@@ -42,7 +43,7 @@ bool Instruction::OperandTypeCheck() {
             if (!dynamic_cast<ShiftOP *>(oper))
                 return false;
             break;
-        }
+        }}
     }
     return true;
 }

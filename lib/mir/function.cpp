@@ -1,8 +1,8 @@
-#include "../include/mir/function.hpp"
+#include "../../include/mir/function.hpp"
 
 using namespace MIR;
 
-std::string MIR::FunctionInfo::toString() {
+std::string MIR::FunctionInfo::toString() const {
     std::string str;
 
     str += "maxalignment: " + std::to_string(maxAlignment) + '\n';
@@ -14,19 +14,19 @@ std::string MIR::FunctionInfo::toString() {
         str += "hasTailCall: false\n";
 
     str += "stackobjs: \n";
-    for (auto obj : StackObjs) {
+    for (const auto& obj : StackObjs) {
         str += obj->toString();
         str += '\n';
     }
 
     str += "constreferance: \n";
-    for (auto Const : ConstPool) {
+    for (const auto& Const : ConstPool) {
         str += Const->toString();
         str += '\n';
     }
 
     str += "liveins: \n";
-    for (auto arg : LiveIns) {
+    for (const auto& arg : LiveIns) {
         str += arg->toString();
         str += '\n';
     }
@@ -34,7 +34,7 @@ std::string MIR::FunctionInfo::toString() {
     return str;
 }
 
-std::string MIR::Function::toString() {
+std::string MIR::Function::toString() const {
     std::string str;
 
     str += "name: " + getName() + '\n';
@@ -43,7 +43,7 @@ std::string MIR::Function::toString() {
 
     str += "body:\n";
 
-    for (auto basicblock : blocks) {
+    for (const auto& basicblock : blocks) {
         str += "    ";
         str += basicblock->toString();
         str += '\n';

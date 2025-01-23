@@ -16,23 +16,23 @@ enum class FrameTrait {
 
 class FrameObj {
 private:
-    unsigned int id;
+    unsigned int id{};
 
     size_t size;
-    size_t offset;
+    size_t offset{};
     FrameTrait ftrait;
 
 public:
     FrameObj() = delete;
-    FrameObj(FrameTrait _ftrait, size_t _size) : ftrait(_ftrait), size(_size){};
+    FrameObj(FrameTrait _ftrait, size_t _size) : ftrait(_ftrait), size(_size) {}
 
-    void setOffset(size_t _offset) { offset = _offset; };
-    size_t getOffset() { return offset; };
+    void setOffset(size_t _offset) { offset = _offset; }
+    size_t getOffset() const { return offset; }
 
-    void setId(unsigned int _id) { id = _id; };
-    unsigned int getId() { return id; };
+    void setId(unsigned int _id) { id = _id; }
+    unsigned int getId() const { return id; }
 
-    std::string toString(); // printf info
+    std::string toString() const; // printf info
     ~FrameObj() = default;
 };
 
@@ -40,7 +40,7 @@ using Encoding = std::pair<uint16_t, uint16_t>; // low-high
 
 class ConstObj {
 private:
-    unsigned int id;
+    unsigned int id{};
 
     std::variant<std::string, unsigned int, std::ostringstream, Encoding>
         literal;
@@ -49,17 +49,17 @@ private:
 public:
     ConstObj() = delete;
     ConstObj(std::string _glo, unsigned int _size)
-        : literal(_glo), size(_size){};
-    ConstObj(float imme);
-    ConstObj(int imme);
+        : literal(std::move(_glo)), size(_size) {}
+    explicit ConstObj(float imme);
+    explicit ConstObj(int imme);
 
-    bool isGlo() { return literal.index() == 0; };
-    bool isImme() { return literal.index() != 0; };
+    bool isGlo() const { return literal.index() == 0; }
+    bool isImme() const { return literal.index() != 0; }
 
-    void setId(unsigned int _id) { id = _id; };
-    unsigned int getId() { return id; };
+    void setId(unsigned int _id) { id = _id; }
+    unsigned int getId() const { return id; }
 
-    std::string toString(); // printf info
+    std::string toString() const; // printf info
     ~ConstObj() = default;
 };
 

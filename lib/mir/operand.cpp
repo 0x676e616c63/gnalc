@@ -5,11 +5,10 @@
 
 using namespace MIR;
 
-std::string PreColedOP::toString() {
-    std::string str;
+std::string PreColedOP::toString() const {
     variant_visitor visitor;
     ///@bug 注意调试
-    str = "$" + std::visit(visitor, color);
+    std::string str = "$" + std::visit(visitor, color);
 
     return str;
 }
@@ -36,26 +35,26 @@ void BindOnVirOP::setColor(unsigned int newcolor) {
     }
 }
 
-std::string BindOnVirOP::toString() {
+std::string BindOnVirOP::toString() const {
     std::string str =
         getName() + ':' + static_cast<std::string>(magic_enum::enum_name(bank));
 
     return str;
 }
 
-std::string GlobalADROP::toString() {
+std::string GlobalADROP::toString() const  {
     std::string str = '%' + "global." + getName();
 
     return str;
 }
 
-std::string StackADROP::toString() {
+std::string StackADROP::toString() const {
     std::string str = '%' + "stack." + std::to_string(idx);
 
     return str;
 }
 
-std::string ShiftOP::toString() {
+std::string ShiftOP::toString() const {
     std::string str;
     str += '%' + "inlineshift-";
     str += static_cast<std::string>(magic_enum::enum_name(shiftCode));
@@ -64,7 +63,7 @@ std::string ShiftOP::toString() {
     return str;
 }
 
-std::string ConstantIDX::toString() {
+std::string ConstantIDX::toString() const {
     std::string str = '%' + "const." + std::to_string(idx);
     return str;
 }

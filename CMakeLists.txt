@@ -33,11 +33,14 @@ aux_source_directory(lib/parser GNALC_PARSER_SRC)
 # Utilities
 aux_source_directory(lib/utils GNALC_UTILS_SRC)
 
+# Arm Backend
+aux_source_directory(lib/mir GNALC_MIR_SRC)
+
 # BrainFk Extension
 aux_source_directory(lib/codegen/brainfk GNALC_EXT_BFBKD_SRC)
 
 # ALL
-set(GNALC_SRC ${GNALC_LEXER_SRC} ${GNALC_PARSER_SRC} ${GNALC_IR_SRC} ${GNALC_PASSES_SRC} ${GNALC_EXT_BFBKD_SRC} ${GNALC_UTILS_SRC})
+set(GNALC_SRC ${GNALC_LEXER_SRC} ${GNALC_PARSER_SRC} ${GNALC_IR_SRC} ${GNALC_PASSES_SRC} ${GNALC_MIR_SRC} ${GNALC_EXT_BFBKD_SRC} ${GNALC_UTILS_SRC})
 
 # debug driver
 add_executable(printast tools/driver/debug/printast.cpp lib/parser/parser.cpp lib/lexer/lexer.cpp lib/parser/ast_printer.cpp)
