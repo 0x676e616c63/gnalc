@@ -16,3 +16,4 @@ build
 .vscode
 testdata
 comp-test
+gnalc-test-data

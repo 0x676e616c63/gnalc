@@ -10,9 +10,8 @@
 #include "../../include/ir/instructions/memory.hpp"
 #include "../../include/ir/module.hpp"
 #include "../../include/parser/visitor.hpp"
-
-constexpr auto GNALC_BUILTIN_MEMSET = "llvm.memset.p0i8.i32";
-constexpr auto GNALC_LOCAL_ARRAY_MEMSET_THRESHOLD = 32;
+#include "../../include/config/config.hpp"
+#include "../../include/utils/logger.hpp"
 
 namespace AST
 {
@@ -58,7 +57,7 @@ void IRGenerator::visit(CompUnit& node) {
 
     // builtin
     // memset (dest, val, len, isvolatile)
-    make_decl(GNALC_BUILTIN_MEMSET, {i8ptr_type, i8_type, i32_type, i1_type}, void_type,
+    make_decl(Config::IR::BUILTIN_MEMSET, {i8ptr_type, i8_type, i32_type, i1_type}, void_type,
         false, true, false); // -> not va_arg, is builtin, and not sylib
 
     for (auto& n : node.getNodes()) {
@@ -129,9 +128,9 @@ void IRGenerator::visit(VarDef& node) {
         {
             std::shared_ptr<IR::Value> val;
             if (cv.index() == 0)
-                val = constant_pool.getConst(std::get<0>(cv));
+                val = module.getConstantPool().getConst(std::get<0>(cv));
             if (cv.index() == 1)
-                val = constant_pool.getConst(std::get<1>(cv));
+                val = module.getConstantPool().getConst(std::get<1>(cv));
             symbol_table.insert(node.getId(), val);
             return;
         }
@@ -152,9 +151,9 @@ void IRGenerator::visit(VarDef& node) {
 
             auto toIRValue = [this](const Initializer::val_t& a) -> std::shared_ptr<IR::Value> {
                 if (a.index() == 0)
-                    return constant_pool.getConst(std::get<0>(a));
+                    return module.getConstantPool().getConst(std::get<0>(a));
                 if (a.index() == 1)
-                    return constant_pool.getConst(std::get<1>(a));
+                    return module.getConstantPool().getConst(std::get<1>(a));
                 if (a.index() == 2)
                     return std::get<2>(a);
                 return nullptr;
@@ -166,15 +165,15 @@ void IRGenerator::visit(VarDef& node) {
 
                 bool has_filled_zero = false;
                 // If it is zero inited or exceeds the threshold, memset it.
-                if (curr_initializer.isZeroIniter() || curr_type->getBytes() > GNALC_LOCAL_ARRAY_MEMSET_THRESHOLD)
+                if (curr_initializer.isZeroIniter() || curr_type->getBytes() >Config::IR::LOCAL_ARRAY_MEMSET_THRESHOLD)
                 {
-                    auto builtin_memset = symbol_table.lookup(GNALC_BUILTIN_MEMSET);
+                    auto builtin_memset = symbol_table.lookup(Config::IR::BUILTIN_MEMSET);
                     auto dest = type_cast(alloca_inst, makePtrType(IR::makeBType(IR::IRBTYPE::I8)));
                     auto call_memset = std::make_shared<IR::CALLInst>(std::dynamic_pointer_cast<IR::FunctionDecl>(builtin_memset),
                         std::vector<std::shared_ptr<IR::Value>>{dest,                           // ptr
-                            constant_pool.getConst(static_cast<char>(0)),                       // val
-                            constant_pool.getConst(static_cast<int>(curr_type->getBytes())),    // length
-                            constant_pool.getConst(false)});                                 // volatile
+                            module.getConstantPool().getConst(static_cast<char>(0)),                       // val
+                            module.getConstantPool().getConst(static_cast<int>(curr_type->getBytes())),    // length
+                            module.getConstantPool().getConst(false)});                                 // volatile
                     curr_insts.emplace_back(call_memset);
                     has_filled_zero = true;
                 }
@@ -213,8 +212,8 @@ void IRGenerator::visit(VarDef& node) {
                                 else
                                 {
                                     auto gep_inst = std::make_shared<IR::GEPInst>(irval_temp_name, base,
-                                            constant_pool.getConst(0),
-                                            constant_pool.getConst(static_cast<int>(i)));
+                                            module.getConstantPool().getConst(0),
+                                            module.getConstantPool().getConst(static_cast<int>(i)));
 
                                     curr_insts.emplace_back(gep_inst);
                                     init_array(elmarr_type, gep_inst);
@@ -229,8 +228,8 @@ void IRGenerator::visit(VarDef& node) {
                                 if (!has_filled_zero || curr_init_val != curr_initializer.getZeroValue())
                                 {
                                     auto gep_inst = std::make_shared<IR::GEPInst>(irval_temp_name, base,
-                                            constant_pool.getConst(0),
-                                            constant_pool.getConst(static_cast<int>(i)));
+                                            module.getConstantPool().getConst(0),
+                                            module.getConstantPool().getConst(static_cast<int>(i)));
 
                                     auto str_inst = std::make_shared<IR::STOREInst>
                                             (toIRValue(curr_init_val), gep_inst);
@@ -271,9 +270,9 @@ void IRGenerator::visit(VarDef& node) {
 
                 auto toIRValue = [this](const Initializer::val_t& a) -> std::shared_ptr<IR::Value> {
                     if (a.index() == 0)
-                        return constant_pool.getConst(std::get<0>(a));
+                        return module.getConstantPool().getConst(std::get<0>(a));
                     if (a.index() == 1)
-                        return constant_pool.getConst(std::get<1>(a));
+                        return module.getConstantPool().getConst(std::get<1>(a));
                     Err::error("Invalid global initializer.");
                     return nullptr;
                 };
@@ -419,19 +418,25 @@ void IRGenerator::visit(FuncDef& node) {
     // See Main function: https://en.cppreference.com/w/c/language/main_function
     // If the return type is compatible with int and control reaches the terminating },
     // the value returned to the environment is the same as if executing return 0;.
+    auto ret_type = IR::toBType(IR::toFunctionType(curr_func->getType())->getRet())->getInner();
     if (node.getId() == "main")
     {
-        Err::gassert(IR::toBType(IR::toFunctionType(curr_func->getType())->getRet())->getInner()
-            == IR::IRBTYPE::I32, "Invalid main.");
+        Err::gassert(ret_type == IR::IRBTYPE::I32, "Invalid main.");
         if (curr_insts.empty() || curr_insts.back()->getOpcode() != IR::OP::RET)
-        {
-            curr_insts.emplace_back(std::make_shared<IR::RETInst>(constant_pool.getConst(0)));
-        }
+            curr_insts.emplace_back(std::make_shared<IR::RETInst>(module.getConstantPool().getConst(0)));
     }
-    else if (IR::toBType(IR::toFunctionType(curr_func->getType())->getRet())->getInner() == IR::IRBTYPE::VOID)
+    else if (curr_insts.empty() || curr_insts.back()->getOpcode() != IR::OP::RET)
     {
-        if (curr_insts.empty() || curr_insts.back()->getOpcode() != IR::OP::RET)
+        if (ret_type == IR::IRBTYPE::VOID)
             curr_insts.emplace_back(std::make_shared<IR::RETInst>());
+        else
+        {
+            Logger::logDebug("Warning: control reaches end of non-void function.");
+            if (ret_type == IR::IRBTYPE::I32)
+                curr_insts.emplace_back(std::make_shared<IR::RETInst>(module.getConstantPool().getConst(0)));
+            else if (ret_type == IR::IRBTYPE::FLOAT)
+                curr_insts.emplace_back(std::make_shared<IR::RETInst>(module.getConstantPool().getConst(0.0f)));
+        }
     }
 
     curr_func->appendInsts(std::move(curr_insts));
@@ -603,7 +608,7 @@ void IRGenerator::visit(ArrayExp& node) {
             || getElm(curr_gep->getType())->getTrait() == IR::IRCTYPE::PTR,
             "Invalid array index.");
         curr_gep = std::make_shared<IR::GEPInst>(irval_temp_name, curr_gep,
-                                                     constant_pool.getConst(0), indices[i]);
+                                                     module.getConstantPool().getConst(0), indices[i]);
         curr_insts.emplace_back(std::dynamic_pointer_cast<IR::Instruction>(curr_gep));
     }
 
@@ -713,13 +718,13 @@ void IRGenerator::visit(BinaryOp& node) {
         {
         case BiOp::AND:
             if (is_constant)
-                curr_val = constant_pool.getConst(constant_binary<bool>(lhs, rhs, [](auto&& a, auto&& b){return a && b;}));
+                curr_val = module.getConstantPool().getConst(constant_binary<bool>(lhs, rhs, [](auto&& a, auto&& b){return a && b;}));
             else
                 curr_val = std::make_shared<IR::ANDValue>(lhs, rhs, std::move(rhs_insts));
             break;
         case BiOp::OR:
             if (is_constant)
-                curr_val = constant_pool.getConst(constant_binary<bool>(lhs, rhs, [](auto&& a, auto&& b){return a || b;}));
+                curr_val = module.getConstantPool().getConst(constant_binary<bool>(lhs, rhs, [](auto&& a, auto&& b){return a || b;}));
             else
                 curr_val = std::make_shared<IR::ORValue>(lhs, rhs, std::move(rhs_insts));
             break;
@@ -813,7 +818,7 @@ void IRGenerator::visit(BinaryOp& node) {
             { \
                 if (is_constant) \
                 { \
-                    curr_val = constant_pool.getConst(constant_binary<int>(lhs, rhs, [](auto&& v1, auto&& v2) {return v1 cppop v2;})); \
+                    curr_val = module.getConstantPool().getConst(constant_binary<int>(lhs, rhs, [](auto&& v1, auto&& v2) {return v1 cppop v2;})); \
                     return; \
                 } \
                 op = iop; \
@@ -822,7 +827,7 @@ void IRGenerator::visit(BinaryOp& node) {
             { \
                 if (is_constant) \
                 { \
-                    curr_val = constant_pool.getConst(constant_binary<float>(lhs, rhs, [](auto&& v1, auto&& v2) {return v1 cppop v2;})); \
+                    curr_val = module.getConstantPool().getConst(constant_binary<float>(lhs, rhs, [](auto&& v1, auto&& v2) {return v1 cppop v2;})); \
                     return; \
                 } \
                 op = fop; \
@@ -842,7 +847,7 @@ void IRGenerator::visit(BinaryOp& node) {
             Err::gassert(oprtype->getInner() == IR::IRBTYPE::I32);
             if (is_constant)
             {
-                curr_val = constant_pool.getConst(constant_binary<int>(lhs, rhs, [](auto&& v1, auto&& v2) {return v1 % v2;}));
+                curr_val = module.getConstantPool().getConst(constant_binary<int>(lhs, rhs, [](auto&& v1, auto&& v2) {return v1 % v2;}));
                 return;
             }
             op = IR::OP::REM;
@@ -878,7 +883,7 @@ void IRGenerator::visit(BinaryOp& node) {
         case biop: \
             if (is_constant) \
             { \
-                curr_val = constant_pool.getConst(constant_binary<int>(lhs, rhs, [](auto&& v1, auto&& v2) {return v1 cppop v2;})); \
+                curr_val = module.getConstantPool().getConst(constant_binary<int>(lhs, rhs, [](auto&& v1, auto&& v2) {return v1 cppop v2;})); \
                 return; \
             } \
             icmpop = iop; \
@@ -910,7 +915,7 @@ void IRGenerator::visit(BinaryOp& node) {
         case biop: \
             if (is_constant) \
             { \
-                curr_val = constant_pool.getConst(constant_binary<float>(lhs, rhs, [](auto&& v1, auto&& v2) {return v1 cppop v2;})); \
+                curr_val = module.getConstantPool().getConst(constant_binary<float>(lhs, rhs, [](auto&& v1, auto&& v2) {return v1 cppop v2;})); \
                 return; \
             } \
             fcmpop = fop; \
@@ -956,11 +961,11 @@ void IRGenerator::visit(UnaryOp& node) {
         if (opreandtype->getInner() == IR::IRBTYPE::I32)
         {
             if (auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(curr_val))
-                curr_val = constant_pool.getConst(-ci->getVal());
+                curr_val = module.getConstantPool().getConst(-ci->getVal());
             else
             {
                 auto neg = std::make_shared<IR::BinaryInst>(irval_temp_name, IR::OP::SUB,
-                    constant_pool.getConst(0), curr_val);
+                    module.getConstantPool().getConst(0), curr_val);
                 curr_insts.emplace_back(neg);
                 curr_val = neg;
             }
@@ -968,7 +973,7 @@ void IRGenerator::visit(UnaryOp& node) {
         else if (opreandtype->getInner() == IR::IRBTYPE::FLOAT)
         {
             if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(curr_val))
-                curr_val = constant_pool.getConst(-cf->getVal());
+                curr_val = module.getConstantPool().getConst(-cf->getVal());
             else
             {
                 auto neg = std::make_shared<IR::FNEGInst>(irval_temp_name, curr_val);
@@ -979,12 +984,12 @@ void IRGenerator::visit(UnaryOp& node) {
         else if (opreandtype->getInner() == IR::IRBTYPE::I1)
         {
             if (auto ci1 = std::dynamic_pointer_cast<IR::ConstantI1>(curr_val))
-                curr_val = constant_pool.getConst(-static_cast<int>(ci1->getVal()));
+                curr_val = module.getConstantPool().getConst(-static_cast<int>(ci1->getVal()));
             else
             {
                 curr_val = type_cast(curr_val, IR::IRBTYPE::I32);
                 auto neg = std::make_shared<IR::BinaryInst>(irval_temp_name, IR::OP::SUB,
-                constant_pool.getConst(0), curr_val);
+                module.getConstantPool().getConst(0), curr_val);
                 curr_insts.emplace_back(neg);
                 curr_val = neg;
             }
@@ -995,7 +1000,7 @@ void IRGenerator::visit(UnaryOp& node) {
     case UnOp::NOT:
         curr_val = type_cast(curr_val, IR::IRBTYPE::I1);
         if (auto ci1 = std::dynamic_pointer_cast<IR::ConstantI1>(curr_val))
-            curr_val = constant_pool.getConst(!ci1->getVal());
+            curr_val = module.getConstantPool().getConst(!ci1->getVal());
         else if (auto icmp = std::dynamic_pointer_cast<IR::ICMPInst>(curr_val))
             icmp->condFlip();
         else if (auto fcmp = std::dynamic_pointer_cast<IR::FCMPInst>(curr_val))
@@ -1011,11 +1016,11 @@ void IRGenerator::visit(ParenExp& node) {
 }
 
 void IRGenerator::visit(IntLiteral& node) {
-    curr_val = constant_pool.getConst(node.getValue());
+    curr_val = module.getConstantPool().getConst(node.getValue());
 }
 
 void IRGenerator::visit(FloatLiteral& node) {
-    curr_val = constant_pool.getConst(node.getValue());
+    curr_val = module.getConstantPool().getConst(node.getValue());
 }
 
 void IRGenerator::visit(CompStmt& node) {
@@ -1113,7 +1118,7 @@ std::shared_ptr<IR::Value> IRGenerator::type_cast(const std::shared_ptr<IR::Valu
             && IR::isSameType(getElm(getElm(val->getType())), IR::getElm(dest)))
         {
             auto gep = std::make_shared<IR::GEPInst>(irval_temp_name, val,
-                constant_pool.getConst(0), constant_pool.getConst(0));
+                module.getConstantPool().getConst(0), module.getConstantPool().getConst(0));
             Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
             curr_insts.emplace_back(gep);
             return gep;
@@ -1143,7 +1148,7 @@ std::shared_ptr<IR::Value> IRGenerator::type_cast(const std::shared_ptr<IR::Valu
     if (src == IR::IRBTYPE::I32 && dest == IR::IRBTYPE::FLOAT)
     {
         if (auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(val))
-            return constant_pool.getConst(static_cast<float>(ci->getVal()));
+            return module.getConstantPool().getConst(static_cast<float>(ci->getVal()));
 
         Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
         auto conv = std::make_shared<IR::SITOFPInst>(irval_temp_name, val);
@@ -1153,7 +1158,7 @@ std::shared_ptr<IR::Value> IRGenerator::type_cast(const std::shared_ptr<IR::Valu
     else if (src == IR::IRBTYPE::FLOAT && dest == IR::IRBTYPE::I32)
     {
         if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(val))
-            return constant_pool.getConst(static_cast<int>(cf->getVal()));
+            return module.getConstantPool().getConst(static_cast<int>(cf->getVal()));
 
         Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
         auto conv = std::make_shared<IR::FPTOSIInst>(irval_temp_name, val);
@@ -1163,18 +1168,18 @@ std::shared_ptr<IR::Value> IRGenerator::type_cast(const std::shared_ptr<IR::Valu
     else if (src == IR::IRBTYPE::I32 && dest == IR::IRBTYPE::I1)
     {
         if (auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(val))
-            return constant_pool.getConst(static_cast<bool>(ci->getVal()));
+            return module.getConstantPool().getConst(static_cast<bool>(ci->getVal()));
 
         Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
         auto conv = std::make_shared<IR::ICMPInst>(irval_temp_name, IR::ICMPOP::ne,
-            val, constant_pool.getConst(0));
+            val, module.getConstantPool().getConst(0));
         curr_insts.emplace_back(conv);
         return conv;
     }
     else if (src == IR::IRBTYPE::I1 && dest == IR::IRBTYPE::I32)
     {
         if (auto ci1 = std::dynamic_pointer_cast<IR::ConstantI1>(val))
-            return constant_pool.getConst(static_cast<int>(ci1->getVal()));
+            return module.getConstantPool().getConst(static_cast<int>(ci1->getVal()));
 
         Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
         auto conv = std::make_shared<IR::ZEXTInst>(irval_temp_name, val, IR::IRBTYPE::I32);
@@ -1184,18 +1189,18 @@ std::shared_ptr<IR::Value> IRGenerator::type_cast(const std::shared_ptr<IR::Valu
     else if (src == IR::IRBTYPE::FLOAT && dest == IR::IRBTYPE::I1)
     {
         if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(val))
-            return constant_pool.getConst(static_cast<bool>(cf->getVal()));
+            return module.getConstantPool().getConst(static_cast<bool>(cf->getVal()));
 
         Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
         auto conv = std::make_shared<IR::FCMPInst>(irval_temp_name, IR::FCMPOP::one,
-            val, constant_pool.getConst(0.0f));
+            val, module.getConstantPool().getConst(0.0f));
         curr_insts.emplace_back(conv);
         return conv;
     }
     else if (src == IR::IRBTYPE::I1 && dest == IR::IRBTYPE::FLOAT)
     {
         if (auto ci1 = std::dynamic_pointer_cast<IR::ConstantI1>(val))
-            return constant_pool.getConst(static_cast<float>(ci1->getVal()));
+            return module.getConstantPool().getConst(static_cast<float>(ci1->getVal()));
 
         Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
         auto conv2i32 = std::make_shared<IR::ZEXTInst>(irval_temp_name, val, IR::IRBTYPE::I32);

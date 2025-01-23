@@ -5,4 +5,4 @@ set(CMAKE_CXX_STANDARD 17)
 include_directories(../include)
 
 add_executable(gnalc_test gnalc_test.cpp)
-add_test(NAME gnalc_test COMMAND gnalc_test)
+add_test(NAME gnalc_test COMMAND gnalc_test --no-lfs)

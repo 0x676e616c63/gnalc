@@ -1,0 +1,49 @@
+name: Gnalc Test
+
+on:
+  push:
+    branches: [ "main", "ci", "iropt" ]
+  pull_request:
+    branches: [ "main", "ci", "iropt" ]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup LLVM
+        uses: ZhongRuoyu/setup-llvm@v0
+        with:
+          llvm-version: 18
+
+      - uses: actions/checkout@v4
+
+# See: https://rgoswami.me/posts/priv-gh-actions/
+      - name: Get test data
+        env:
+          SSHK: ${{ secrets.GH_PAT }} # sorry, it's not a PAT, it is a deployment key
+        run: |
+          mkdir -p $HOME/.ssh
+          echo "$SSHK" > $HOME/.ssh/ssh.key
+          chmod 600 $HOME/.ssh/ssh.key
+          export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/ssh.key"
+          git submodule update --init --recursive
+
+      - name: Configure CMake
+        run: mkdir ${{github.workspace}}/build && cd ${{github.workspace}}/build && cmake ..
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: make gnalc gnalc_test -j$(nproc)
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: ctest -C ${{env.BUILD_TYPE}}
+
+      - name: Check
+        working-directory: ${{github.workspace}}/build
+        if: ${{ failure() }}
+        run: cat Testing/Temporary/LastTest.log

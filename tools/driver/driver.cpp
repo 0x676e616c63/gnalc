@@ -1,28 +1,48 @@
+#include "../../include/config/config.hpp"
+
 #include "../../include/parser/ast.hpp"
 #include "../../include/parser/visitor.hpp"
 #include "../../include/parser/parser.hpp"
 #include "../../include/utils/logger.hpp"
-#include "../../include/irvisitors/irprinter.hpp"
-#include "../../include/irvisitors/cfgbuilder.hpp"
-#include "../../include/irvisitors/namenormalizer.hpp"
-#include "../../include/iropt/live_analysis.hpp"
+#include "../../include/passes/pass_manager.hpp"
+#include "../../include/passes/utilities/irprinter.hpp"
 
-#include "../../include/codegen/Arm.hpp"
-#include "../../include/codegen/ArmComplexMIRStruct/ArmModule.hpp"
+#if GNALC_EXTENSION_BRAINFK // in config.hpp
+#include "../../include/codegen/brainfk/bfgen.hpp"
+#include "../../include/codegen/brainfk/bftrans.hpp"
+#include "../../include/codegen/brainfk/bfprinter.hpp"
+#endif
+
+#include <string>
+#include <memory>
+#include <iostream>
+#include <fstream>
 
 std::shared_ptr<CompUnit> node = nullptr;
 extern FILE *yyin;
 
 int main(int argc, char **argv) {
-    LogLevel level = LogLevel::NONE;
+    Logger::setLogLevel(LogLevel::NONE);
+
+    // File
     std::string input_file;
     std::string output_file;
-    bool only_compilation = false;
-    bool emit_llvm = false;
-    bool ast_dump = false;
+
+    // Options
+    bool only_compilation = false; // -S
+    bool emit_llvm = false;        // -emit-llvm
+    bool ast_dump = false;         // -ast-dump
+    IR::OptInfo opt_info;
+
+#if GNALC_EXTENSION_BRAINFK
+    bool bf_target = false;        // -mbrainfk
+    bool bf3t_target = false;      // -mbrainfk-3tape
+#endif
+
     for (int i = 1; i < argc; ++i)
     {
         std::string arg(argv[i]);
+        // General options:
         if (arg == "--log")
         {
             ++i;
@@ -32,9 +52,9 @@ int main(int argc, char **argv) {
                 return -1;
             }
             if (std::string{argv[i]} == "info")
-                level = LogLevel::INFO;
+                Logger::setLogLevel(LogLevel::INFO);
             else if (std::string{argv[i]} == "debug")
-                level = LogLevel::DEBUG;
+                Logger::setLogLevel(LogLevel::DEBUG);
             else
             {
                 std::cerr << "Error: Invalid log level." << std::endl;
@@ -51,59 +71,71 @@ int main(int argc, char **argv) {
             }
             output_file = argv[i];
         }
-        else if (arg == "-S")
+        else if (arg == "-S")                 only_compilation = true;
+        else if (arg == "-emit-llvm")         emit_llvm = true;
+        else if (arg == "-ast-dump")          ast_dump = true;
+        else if (arg == "-O1")                opt_info = IR::o1_opt_info;
+
+        // Optimizations available:
+        else if (arg == "--mem2reg")          opt_info.mem2reg = true;
+
+#if GNALC_EXTENSION_BRAINFK
+        // Extensions:
+        else if (arg == "-mbrainfk")          bf_target = true;
+        else if (arg == "-mbrainfk-3tape")    bf3t_target = true;
+#endif
+
+        else if (arg == "-h" || arg == "--help")
         {
-            only_compilation = true;
-        }
-        else if (arg == "-emit-llvm")
-        {
-            emit_llvm = true;
-        }
-        else if (arg == "-ast-dump")
-        {
-            ast_dump = true;
-        }
-        else if (arg == "--help")
-        {
-            std::cout << "OVERVIEW: gnalc compiler\n";
-            std::cout << "USAGE: " << argv[0] << " [options] file\n";
             std::cout <<
-                "OPTIONS:\n"
-                "  -o <file>            Write output to <file>\n"
-                "  -S                   Only run compilation steps\n"
-                "  -emit-llvm           Use the LLVM representation for assembler and object files\n"
-                "  -ast-dump            Build ASTs and then debug dump them\n"
-                "  --log <log-level>    Enable compiler logger. Available log-level: debug, info\n"
-                "  --help               Display available options\n"
-            << std::flush;
+R"(OVERVIEW: gnalc compiler
+
+USAGE: " << argv[0] << " [options] file
+
+OPTIONS:
+
+General options:
+  -o <file>            - Write output to <file>
+  -S                   - Only run compilation steps
+  -O1                  - Optimization level 1
+  -emit-llvm           - Use the LLVM representation for assembler and object files
+  -ast-dump            - Build ASTs and then debug dump them
+  --log <log-level>    - Enable compiler logger. Available log-level: debug, info
+  -h, --help           - Display available options
+
+Optimizations available:
+  --mem2reg            - Promote Memory to Register
+)";
+
+#if GNALC_EXTENSION_BRAINFK
+            std::cout <<
+R"(
+Extensions:
+  -mbrainfk            Translate SySy to brainfk
+  -mbrainfk-3tape      Translate SySy to 3-tape brainfk
+)";
+#endif
+            std::cout << std::flush;
+            return 0;
         }
         else
             input_file = argv[i];
     }
 
-    if (!emit_llvm && !ast_dump && !only_compilation)
+    if (!only_compilation)
     {
         std::cerr << "Error: Gnalc currently only supports '-S' mode." << std::endl;
         return -1;
     }
-    if (input_file.empty())
-    {
-        std::cerr << "Error: Expected input and output file." << std::endl;
-        return -1;
-    }
-    if (emit_llvm && ast_dump)
-    {
-        std::cerr << "Error: -emit-llvm conflicts with ast_dump" << std::endl;
-        return -1;
-    }
 
-    Logger::setLogLevel(level);
-
-    yyin = fopen(input_file.c_str(), "r");
-    if (!yyin)
+    if (!input_file.empty())
     {
-        std::cerr << "Error: Failed to open input file." << std::endl;
-        return -1;
+        yyin = fopen(input_file.c_str(), "r");
+        if (!yyin)
+        {
+            std::cerr << "Error: Failed to open input file." << std::endl;
+            return -1;
+        }
     }
 
     yy::parser parser;
@@ -119,17 +151,13 @@ int main(int argc, char **argv) {
         return 0;
     }
 
+    if (!input_file.empty()) fclose(yyin);
+
     IRGenerator generator;
     generator.visit(*node);
 
-    IR::CFGBuilder cb;
-    cb.build(generator.get_module());
-    IR::LiveAnalyser la;
-    la.cleanLiveInfo(generator.get_module());
-    la.processModule(generator.get_module());
-
-    IR::NameNormalizer name_normalizer(false);
-    name_normalizer.normalize(generator.get_module());
+    IR::PassManager pass_manager;
+    IR::register_default_pass(pass_manager, opt_info);
 
     std::ostream* poutstream = &std::cout;
     std::ofstream outfile;
@@ -147,20 +175,35 @@ int main(int argc, char **argv) {
 
     if (emit_llvm)
     {
-        IR::IRPrinter printer(*poutstream, false);
-        printer.printout(generator.get_module());
-    }
-    else
-    {
-        auto backEndModule = new ArmStruct::Module(generator.get_module());
-        backEndModule->AllocRegister();
-        backEndModule->Legalize();
-        *poutstream << backEndModule->toString();
-        // TODO: fix double free.
-        // delete backEndModule;
+        pass_manager.registerModulePass<IR::IRPrinter>(*poutstream, false);
+        pass_manager.runOnModule(generator.get_module());
+        return 0;
     }
 
-    la.cleanLiveInfo(generator.get_module());
-    fclose(yyin);
+    pass_manager.runOnModule(generator.get_module());
+
+#if GNALC_EXTENSION_BRAINFK
+    if (bf_target || bf3t_target)
+    {
+        BrainFk::BF3t32bGen bfgen;
+        BrainFk::BFPrinter bfprinter(*poutstream);
+
+        bfgen.visit(generator.get_module());
+
+        if (!bf3t_target)
+        {
+            BrainFk::BF32t32bTrans trans(false);
+            trans.visit(bfgen.getModule());
+            bfprinter.printout(trans.getModule());
+        }
+        else
+            bfprinter.printout(bfgen.getModule());
+
+        return 0;
+    }
+#endif
+
+    Err::todo("ARM Backend Refactor.");
+
     return 0;
 }

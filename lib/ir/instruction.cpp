@@ -7,7 +7,7 @@ namespace IR {
 
 Instruction::Instruction(OP opcode, std::string _name, const std::shared_ptr<Type>& _type)
     : opcode(opcode), User(std::move(_name), _type,
-        (_type->getTrait() == IRCTYPE::BASIC
+        _type->getTrait() != IRCTYPE::BASIC || (_type->getTrait() == IRCTYPE::BASIC
         && toBType(_type)->getInner() != IRBTYPE::UNDEFINED
         && toBType(_type)->getInner() != IRBTYPE::VOID)
         ? ValueTrait::ORDINARY_VARIABLE : ValueTrait::VOID_INSTRUCTION) {}
@@ -23,6 +23,10 @@ OP Instruction::getOpcode() const {
 std::shared_ptr<BasicBlock> Instruction::getParent() const {
     return parent.lock();
 }
+
+LiveInfoSet& Instruction::getLiveIn() { return livein; }
+
+LiveInfoSet& Instruction::getLiveOut() { return liveout; }
 
 void Instruction::accept(IRVisitor& visitor) {
     visitor.visit(*this);

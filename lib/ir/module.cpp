@@ -62,6 +62,10 @@ void Module::delFunctionDecl(NameRef name) {
     }
 }
 
+ConstantPool& Module::getConstantPool() {
+    return constant_pool;
+}
+
 void Module::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
 /**

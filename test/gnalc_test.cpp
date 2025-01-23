@@ -37,13 +37,14 @@ bool only_frontend = true;
 const std::string gnalc_path = "../gnalc";
 
 // backend
-const std::string gcc_arm_command = "arm-linux-gnueabi-gcc-14";
-const std::string qemu_arm_command = "LD_LIBRARY_PATH=/usr/arm-linux-gnueabi/lib qemu-arm";
+const std::string gcc_arm_command = "arm-linux-gnueabihf-gcc";
+const std::string qemu_arm_command = "LD_LIBRARY_PATH=/usr/arm-linux-gnueabihf/libc/lib qemu-arm";
 
 const std::string global_temp_dir = "./gnalc_test_temp/" + generate_unique_temp_dir();
 
 const std::string sylibc = "../../test/sylib/sylib.c";
 
+const std::string test_data_no_lfs = "../../test/gnalc-test-data-no-lfs"; // Just for CI
 const std::string test_data = "../../test/gnalc-test-data/comp-test";
 const std::vector subdirs = {
      "functional", "performance",
@@ -60,8 +61,10 @@ int main(int argc, char* argv[]) {
         println("  -b, --backend            : Test backend.");
         println("  -s, --skip [name_prefix] : Skip test whose name has such prefix.");
         println("  -r, --run  [name_prefix] : Only run test whose name has such prefix.");
+        println("  -n, --no-lfs             : Run no lfs tests.");
         println("  -h, --help               : Print this help and exit.");
     };
+    auto real_test_data = sycfg::test_data;
     std::vector<std::pair<std::string, std::vector<std::string>>> skip;
     std::vector<std::pair<std::string, std::vector<std::string>>> run;
     for (int i = 1; i < argc; i++)
@@ -107,6 +110,10 @@ int main(int argc, char* argv[]) {
         {
             print_help();
             return 0;
+        }
+        else if (arg == "--no-lfs" || arg == "-n")
+        {
+            real_test_data = sycfg::test_data_no_lfs;
         }
         else
         {
@@ -155,7 +162,7 @@ int main(int argc, char* argv[]) {
     for (auto&& curr_test_dir : sycfg::subdirs)
     {
         std::vector<directory_entry> test_files;
-        for (const auto& p : directory_iterator(sycfg::test_data + "/" + curr_test_dir))
+        for (const auto& p : directory_iterator(real_test_data + "/" + curr_test_dir))
         {
             if (p.is_regular_file() && p.path().extension() == ".sy")
             {

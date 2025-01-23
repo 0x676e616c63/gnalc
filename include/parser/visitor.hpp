@@ -7,9 +7,9 @@
 
 #include "ast.hpp"
 #include "../symbol_table/symbol_table.hpp"
-#include "../ir/constantpool.hpp"
 #include "../ir/module.hpp"
 #include "../ir/instructions/memory.hpp"
+#include "../config/config.hpp"
 
 namespace AST {
 
@@ -50,10 +50,6 @@ public:
 };
 
 class IRGenerator : public ASTVisitor {
-    // Constant Pool Destructs Last
-    // https://en.cppreference.com/w/cpp/language/destructor
-    IR::ConstantPool constant_pool;
-    // ------
     IR::Module module;
     std::shared_ptr<IR::Value> curr_val;
     std::vector<std::shared_ptr<IR::Instruction>> curr_insts;
@@ -140,7 +136,7 @@ public:
 
     IR::Module& get_module() { return module; }
 
-    static constexpr auto irval_temp_name = "%%__GNALC_IR_TEMP_NAME";
+    static constexpr auto irval_temp_name = Config::IR::REGISTER_TEMP_NAME;
 private:
     // Throw exception if failed
     std::shared_ptr<IR::Value> type_cast(const std::shared_ptr<IR::Value>& val, const std::shared_ptr<IR::Type>& dest);

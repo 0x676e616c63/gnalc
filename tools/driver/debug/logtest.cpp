@@ -1,5 +1,5 @@
 #include <string>
-#include "../include/utils/logger.hpp"
+#include "../../../include/utils/logger.hpp"
 
 int main(int argc, char* argv[]) {
     LogLevel level = LogLevel::NONE;

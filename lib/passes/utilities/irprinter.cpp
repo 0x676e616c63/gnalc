@@ -1,6 +1,6 @@
-#include "../../include/irvisitors/irprinter.hpp"
-#include "../../include/utils/exception.hpp"
-#include "../../include/utils/logger.hpp"
+#include "../../../include/passes/utilities/irprinter.hpp"
+#include "../../../include/utils/exception.hpp"
+#include "../../../include/utils/logger.hpp"
 
 namespace IR
 {
@@ -8,7 +8,7 @@ LIRPrinter::LIRPrinter(std::ostream& out, bool _liveinfo): outStream(out) , prin
 
 LIRPrinter::~LIRPrinter() { }
 
-void LIRPrinter::printout(Module& module) {
+void LIRPrinter::runOnModule(Module& module) {
     Logger::logInfo("LIRPrinter: Printing Module \"" + module.getName() + "\"");
     writeln("; Module: " + module.getName());
 
@@ -69,11 +69,11 @@ void LIRPrinter::visit(Instruction& node) {
     if (printLiveInfo) {
         write("  ; livein:");
         for (auto& val : node.getLiveIn())
-            write(" " + val->getName());
+            write(" " + val.lock()->getName());
         writeln("");
         write("  ; liveout:");
         for (auto& val : node.getLiveOut())
-            write(" " + val->getName());
+            write(" " + val.lock()->getName());
         writeln("");
     }
 
@@ -604,16 +604,8 @@ void IRPrinter::visit(Function& node) {
     write(IRFormatter::formatFunc(node));
     writeln(" {");
 
-    if (node.getBlocks().empty())
-    {
-        for (auto& inst : node.getInsts())
-            inst->Instruction::accept(*this);
-    }
-    else
-    {
-        for (auto& blk : node.getBlocks())
-            blk->accept(*this);
-    }
+    for (auto& blk : node.getBlocks())
+        blk->accept(*this);
 
     writeln("}");
 }
@@ -624,11 +616,11 @@ void IRPrinter::visit(BasicBlock& node) {
     if (printLiveInfo) {
         write("; livein:");
         for (auto& val : node.getLiveIn())
-            write(" " + val->getName());
+            write(" " + val.lock()->getName());
         writeln("");
         write("; liveout:");
         for (auto& val : node.getLiveOut())
-            write(" " + val->getName());
+            write(" " + val.lock()->getName());
         writeln("");
     }
 

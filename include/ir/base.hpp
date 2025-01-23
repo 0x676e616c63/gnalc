@@ -18,10 +18,10 @@
 #define GNALC_IR_BASE_HPP
 
 #include <list>
+#include <set>
 #include "type.hpp"
 
 namespace IR {
-
 class Value;
 class User;
 class Use;
@@ -119,6 +119,8 @@ public:
 
     ~Use();
 };
+
+using LiveInfoSet = std::set<std::weak_ptr<Value>, std::owner_less<std::weak_ptr<Value>>>;
 }
 
 #endif

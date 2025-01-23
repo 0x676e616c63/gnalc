@@ -35,4 +35,12 @@ namespace IR {
 
     BITCASTInst::BITCASTInst(NameRef name, const std::shared_ptr<Value>& origin_val, const std::shared_ptr<Type>& dest_type_)
         : CastInst(OP::BITCAST, name, origin_val,  dest_type_) {}
+
+    void FPTOSIInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
+
+    void SITOFPInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
+
+    void ZEXTInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
+
+    void BITCASTInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 }

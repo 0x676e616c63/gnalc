@@ -1,8 +1,7 @@
-#include "../../include/iropt/live_analysis.hpp"
+#include "../../../include/passes/analysis/live_analysis.hpp"
+#include "../../../include/utils/logger.hpp"
 
 #include <variant>
-
-#include "../../include/utils/logger.hpp"
 
 namespace IR {
     void LiveAnalyser::genDFSStack(const std::shared_ptr<BasicBlock>& bb) {
@@ -14,7 +13,7 @@ namespace IR {
         }
     }
 
-    void LiveAnalyser::processModule(const Module& module) {
+    void LiveAnalyser::runOnModule(Module& module) {
         for (auto& func : module.getFunctions()) {
             bb_stack.reset();
             genDFSStack(func->getBlocks().front());
@@ -98,7 +97,7 @@ namespace IR {
                             updated = true;
                         }
                 for (auto& val : inst->getLiveOut())
-                    if (val != inst)
+                    if (val.lock() != inst)
                         if (inst->getLiveIn().insert(val).second)
                             updated = true;
                 break;
@@ -134,7 +133,7 @@ namespace IR {
                         if (inst->getLiveIn().insert(val).second)
                             updated = true;
                 for (auto& val : inst->getLiveOut())
-                    if (cinst->isVoid() || val != inst)
+                    if (cinst->isVoid() || val.lock() != inst)
                         if (inst->getLiveIn().insert(val).second)
                             updated = true;
                 break;
@@ -143,7 +142,7 @@ namespace IR {
                 // 默认为 static_allocation, 此情况无 LiveUse
                 // Logger::logDebug("processInst: alloca");
                 for (auto& val : inst->getLiveOut())
-                    if (val != inst)
+                    if (val.lock() != inst)
                         if (inst->getLiveIn().insert(val).second)
                             updated = true;
                 break;
@@ -166,18 +165,5 @@ namespace IR {
         }
         // Logger::logDebug("processed");
         return updated;
-    }
-
-    void LiveAnalyser::cleanLiveInfo(const Module& module) {
-        for (auto& func : module.getFunctions()) {
-            for (auto& bb : func->getBlocks()) {
-                bb->getLiveIn().clear();
-                bb->getLiveOut().clear();
-                for (auto& inst : bb->getInsts()) {
-                    inst->getLiveIn().clear();
-                    inst->getLiveOut().clear();
-                }
-            }
-        }
     }
 }

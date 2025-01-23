@@ -33,24 +33,32 @@ public:
 class FPTOSIInst : public CastInst {
 public:
     FPTOSIInst(NameRef name, const std::shared_ptr<Value>& origin_val);
+
+    void accept(IRVisitor& visitor) override;
 };
 
 // <result> = sitofp <ty> <value> to <ty2>
 class SITOFPInst : public CastInst {
 public:
     SITOFPInst(NameRef name, const std::shared_ptr<Value>& origin_val);
+
+    void accept(IRVisitor& visitor) override;
 };
 
 // <result> = zext <ty> <value> to <ty2>
 class ZEXTInst : public CastInst {
 public:
     ZEXTInst(NameRef name, const std::shared_ptr<Value>& origin_val, IRBTYPE dest_type);
+
+    void accept(IRVisitor& visitor) override;
 };
 
 // <result> = bitcast <ty> <value> to <ty2>
 class BITCASTInst : public CastInst {
 public:
     BITCASTInst(NameRef name, const std::shared_ptr<Value>& origin_val, const std::shared_ptr<Type>& dest_type);
+
+    void accept(IRVisitor& visitor) override;
 };
 
 }

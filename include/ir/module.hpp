@@ -9,6 +9,7 @@
 #include "base.hpp"
 #include "function.hpp"
 #include "global_var.hpp"
+#include "constant_pool.hpp"
 
 namespace IR {
 
@@ -19,13 +20,17 @@ namespace IR {
  */
 class Module : public NameC {
 private:
+    // Keep `constant_pool` the first member to make it destructs last
+    // See: https://en.cppreference.com/w/cpp/language/destructor
+    IR::ConstantPool constant_pool;
+
     std::vector<std::shared_ptr<GlobalVariable>> global_vars;
     std::vector<std::shared_ptr<Function>> funcs;
     std::vector<std::shared_ptr<FunctionDecl>> func_decls;
 
 public:
     Module() = default;
-    Module(std::string _name) : NameC(std::move(_name)) {}
+    explicit Module(std::string _name) : NameC(std::move(_name)) {}
 
     void addGlobalVar(std::shared_ptr<GlobalVariable> global_var);
     const std::vector<std::shared_ptr<GlobalVariable>>& getGlobalVars() const;
@@ -39,6 +44,8 @@ public:
     const std::vector<std::shared_ptr<FunctionDecl>>& getFunctionDecls() const;
     std::vector<std::shared_ptr<FunctionDecl>>& getFunctionDecls();
     void delFunctionDecl(NameRef name); // by name
+
+    ConstantPool& getConstantPool();
 
     void accept(IRVisitor& visitor);
     ~Module();
