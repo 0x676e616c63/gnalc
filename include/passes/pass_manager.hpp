@@ -6,7 +6,8 @@
 
 #include <vector>
 
-namespace IR {
+namespace IR
+{
 class PassManager {
   std::vector<ModulePass*> module_passes;
 public:
@@ -18,14 +19,18 @@ public:
 
   void runOnModule(Module& module);
 
-  void afterRunCleanup(Module& module);
-
   ~PassManager();
   PassManager(const PassManager&) = delete;
   PassManager(PassManager&&) = delete;
   PassManager& operator=(const PassManager&) = delete;
 };
 
-void register_default_pass(PassManager&, int);
+struct OptInfo {
+  bool mem2reg { false };
+};
+
+extern const OptInfo o1_opt_info;
+
+void register_default_pass(PassManager&, OptInfo opt_info);
 }
 #endif

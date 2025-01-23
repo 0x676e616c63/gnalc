@@ -15,9 +15,7 @@ namespace IR {
 void PassManager::runOnModule(Module& module) {
     for (const auto& pass : module_passes)
         pass->runOnModule(module);
-}
 
-void PassManager::afterRunCleanup(Module& module) {
     for (const auto& pass : module_passes)
         pass->afterRunCleanup(module);
 }
@@ -27,14 +25,18 @@ PassManager::~PassManager() {
         delete pass;
 }
 
-void register_default_pass(PassManager& pass_manager, int opt_level) {
+const OptInfo o1_opt_info = {
+    .mem2reg = true,
+};
+
+void register_default_pass(PassManager& pass_manager, OptInfo opt_info) {
     pass_manager.registerModulePass<CFGBuilder>();
     pass_manager.registerModulePass<LiveAnalyser>();
     pass_manager.registerModulePass<NameNormalizer>(true); // bb_rename: true
 
-    if (opt_level != 0)
+    if (opt_info.mem2reg)
     {
-        // TODO: add opt
+        // pass_manager.registerModulePass<Mem2reg>(some args here...);
     }
 }
 }
