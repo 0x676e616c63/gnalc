@@ -19,7 +19,6 @@ namespace IR {
 // 通过Func中的insts划分基本块
 class CFGBuilder : public ModulePass {
 private:
-    ConstantPool _const_pool; // just for linker gen return 0
     struct _idx {
     private:
         static std::string idxtos(const unsigned int idx) {

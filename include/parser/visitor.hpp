@@ -7,7 +7,6 @@
 
 #include "ast.hpp"
 #include "../symbol_table/symbol_table.hpp"
-#include "../ir/constant_pool.hpp"
 #include "../ir/module.hpp"
 #include "../ir/instructions/memory.hpp"
 #include "../config/config.hpp"
@@ -51,10 +50,6 @@ public:
 };
 
 class IRGenerator : public ASTVisitor {
-    // Constant Pool Destructs Last
-    // https://en.cppreference.com/w/cpp/language/destructor
-    IR::ConstantPool constant_pool;
-    // ------
     IR::Module module;
     std::shared_ptr<IR::Value> curr_val;
     std::vector<std::shared_ptr<IR::Instruction>> curr_insts;

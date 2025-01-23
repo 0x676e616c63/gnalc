@@ -142,13 +142,8 @@ namespace IR {
                     // 结尾块
                     if (toBType(toFunctionType(cur_func->getType())->getRet())->getInner() == IRBTYPE::VOID) {
                         (*it)->addInst(std::make_shared<RETInst>());
-                    } else if (toBType(toFunctionType(cur_func->getType())->getRet())->getInner() == IRBTYPE::I32) {
-                        Logger::logDebug("WARNING: CFGBuilder::linker(): non void func has empty reachable tail block.");
-                        (*it)->addInst(std::make_shared<RETInst>(_const_pool.getConst(0)));
-                    } else if (toBType(toFunctionType(cur_func->getType())->getRet())->getInner() == IRBTYPE::FLOAT) {
-                        Logger::logDebug("WARNING: CFGBuilder::linker(): non void func has empty reachable tail block.");
-                        (*it)->addInst(std::make_shared<RETInst>(_const_pool.getConst(static_cast<float>(0))));
-                    } else {
+                    }
+                    else {
                         Err::unreachable("CFGBuilder::linker(): invalid function type.");
                     }
                     ++it;
