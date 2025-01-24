@@ -40,10 +40,9 @@ using Encoding = std::pair<uint16_t, uint16_t>; // low-high
 
 class ConstObj {
 private:
-    unsigned int id{};
+    unsigned int id;
 
-    std::variant<std::string, unsigned int, std::ostringstream, Encoding>
-        literal;
+    std::variant<std::string, unsigned int, float, Encoding> literal;
     unsigned int size;
 
 public:

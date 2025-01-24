@@ -95,9 +95,8 @@ enum class SourceOperandType {
 class Instruction {
 private:
     std::variant<OpCode, NeonOpCode> opcode;
-    std::vector<std::shared_ptr<Operand>> SourceOperandList; /* 1 based */
 
-    std::shared_ptr<Operand> TargetOperand = nullptr;
+    std::shared_ptr<Operand> TargetOperand = nullptr; // precolored, BindOnVirOP
 
     SourceOperandType tptrait;
 
@@ -108,18 +107,16 @@ public:
     Instruction(NeonOpCode _opcode, SourceOperandType _tptrait)
         : opcode(_opcode), tptrait(_tptrait) {}
 
-    virtual void addTargetOP(std::shared_ptr<Operand>) = 0;
-    unsigned int addSourceOP(std::shared_ptr<Operand> SourceOP_) {
-        SourceOperandList.push_back(std::move(SourceOP_));
-        return SourceOperandList.size();
+    virtual void addTargetOP(std::shared_ptr<Operand> &TargetOperand_) {
+        TargetOperand = TargetOperand_;
     }
 
     SourceOperandType getTptrait() const { return tptrait; }
 
-    virtual std::shared_ptr<Operand> getTargetOP() = 0;
+    const std::shared_ptr<Operand> &getTargetOP() { return TargetOperand; };
     virtual std::shared_ptr<Operand> getSourceOP(unsigned int seq) = 0;
 
-    virtual bool OperandTypeCheck();
+    virtual bool Check() = 0;
     virtual std::string toString() = 0;
     virtual ~Instruction() = default;
 };

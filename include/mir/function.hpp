@@ -41,7 +41,9 @@ private:
 
 public:
     Function() = delete;
-    explicit Function(std::string _name) : Value(ValueTrait::Function, std::move(_name)){}
+    explicit Function(std::string _name)
+
+        : Value(ValueTrait::Function, std::move(_name)) {}
 
     FunctionInfo getInfo() const { return info; }
     FunctionInfo &editInfo() { return info; }
@@ -50,11 +52,11 @@ public:
         blocks.emplace_back(std::move(_block));
     }
 
-    void delBlock(std::string &_name);
+    void delBlock(const std::string &_name);
 
     const std::list<std::shared_ptr<BasicBlock>> &getBlocks() { return blocks; }
 
-    std::string toString() const;
+    std::string toString() const override;
     ~Function() override = default;
 };
 

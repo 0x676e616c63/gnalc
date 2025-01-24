@@ -18,10 +18,10 @@ std::string MIR::FrameObj::toString() const {
 }
 
 bool isImmCanBeEncodedInText(unsigned int imme) {
-    ///@bug imme为size_t时语义不正确, 但不为size_t时godbolt.org clang-arm32
-    ///-o2报错,
-    /// 但是本地clang-x86 -o2没问题
-    for (int shift = 0; shift <= 32; shift += 2) {
+    if (imme < 256)
+        return true; // 防止 >> 32 产生ud
+
+    for (int shift = 1; shift <= 32; shift += 2) {
         if ((((imme << shift) | (imme >> (32 - shift))) & ~0xff) == 0) {
             return true;
         }
@@ -34,8 +34,8 @@ bool isImmCanBeEncodedInText(float imme) {
     float a = imme * 128;
     for (int r = 0; r < 8; ++r) {
         for (int n = 16; n < 32; ++n) {
-            if ((std::abs((n * (1 << (7 - r)) - a)) < eps) ||
-                (std::abs((n * (1 << (7 - r)) + a)) < eps))
+            if ((std::abs(((float)(n * (1 << (7 - r))) - a)) < eps) ||
+                (std::abs(((float)(n * (1 << (7 - r))) + a)) < eps))
                 return true;
         }
     }
@@ -57,9 +57,7 @@ MIR::ConstObj::ConstObj(int imme) {
 
 MIR::ConstObj::ConstObj(float imme) {
     if (isImmCanBeEncodedInText(imme)) {
-        std::ostringstream oss; // 为了和string字面量区分
-        oss << std::scientific << imme;
-        literal.emplace<std::ostringstream>(std::move(oss)); // ?
+        literal = imme;
     } else {
         ///@brief turn into movw/movt
         unsigned int imm = *reinterpret_cast<unsigned int *>(&imme);
@@ -82,7 +80,7 @@ std::string MIR::ConstObj::toString() const {
     else if (literal.index() == 1)
         str += "'" + std::to_string(std::get<unsigned int>(literal)) + "'";
     else if (literal.index() == 2)
-        str += "'" + std::get<std::ostringstream>(literal).str() + "'";
+        str += "'" + std::to_string(std::get<float>(literal)) + "'";
     else
         str += "'" + std::to_string(std::get<Encoding>(literal).first) +
                std::to_string(std::get<Encoding>(literal).second) + "'";

@@ -42,21 +42,21 @@ std::string BindOnVirOP::toString() const {
     return str;
 }
 
-std::string GlobalADROP::toString() const  {
-    std::string str = '%' + "global." + getName();
+std::string GlobalADROP::toString() const {
+    std::string str = "%global." + getName();
 
     return str;
 }
 
 std::string StackADROP::toString() const {
-    std::string str = '%' + "stack." + std::to_string(idx);
+    std::string str = "%stack." + std::to_string(idx);
 
     return str;
 }
 
 std::string ShiftOP::toString() const {
     std::string str;
-    str += '%' + "inlineshift-";
+    str += "%inlineshift-";
     str += static_cast<std::string>(magic_enum::enum_name(shiftCode));
     str += ':' + std::to_string(imme);
 
@@ -64,6 +64,6 @@ std::string ShiftOP::toString() const {
 }
 
 std::string ConstantIDX::toString() const {
-    std::string str = '%' + "const." + std::to_string(idx);
+    std::string str = "%const." + std::to_string(idx);
     return str;
 }

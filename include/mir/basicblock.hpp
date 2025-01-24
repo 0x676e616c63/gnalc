@@ -3,8 +3,8 @@
 #define GNALC_MIR_BASICBLOCK_HPP
 #include "base.hpp"
 #include "instruction.hpp"
-#include <unordered_set>
 #include <list>
+#include <unordered_set>
 
 namespace MIR {
 
@@ -20,7 +20,7 @@ private:
 public:
     BasicBlock() : Value(ValueTrait::BasicBlock){};
     explicit BasicBlock(std::string _name)
-    : Value(ValueTrait::BasicBlock, std::move(_name)) {}
+        : Value(ValueTrait::BasicBlock, std::move(_name)) {}
 
     unsigned int addPre(const std::shared_ptr<BasicBlock> &_pre) {
         pres.emplace_back(_pre);
@@ -30,7 +30,7 @@ public:
         succs.emplace_back(_succ);
         return succs.size();
     }
-    unsigned int addInst(const std::shared_ptr<Instruction>& _inst) {
+    unsigned int addInst(const std::shared_ptr<Instruction> &_inst) {
         insts.emplace_back(_inst);
         return insts.size();
     }
@@ -55,7 +55,7 @@ public:
         return LiveOut;
     }
 
-    std::string toString() const;
+    std::string toString() const override;
     ~BasicBlock() override = default;
 };
 

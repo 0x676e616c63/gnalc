@@ -8,25 +8,25 @@ std::string MIR::FunctionInfo::toString() const {
     str += "maxalignment: " + std::to_string(maxAlignment) + '\n';
 
     if (hasTailCall.first)
-        str += "hasTailCall: true - " + '@' +
-               hasTailCall.second.lock()->getName() + '\n';
+        str += "hasTailCall: true - @" + hasTailCall.second.lock()->getName() +
+               '\n';
     else
         str += "hasTailCall: false\n";
 
     str += "stackobjs: \n";
-    for (const auto& obj : StackObjs) {
+    for (const auto &obj : StackObjs) {
         str += obj->toString();
         str += '\n';
     }
 
     str += "constreferance: \n";
-    for (const auto& Const : ConstPool) {
+    for (const auto &Const : ConstPool) {
         str += Const->toString();
         str += '\n';
     }
 
     str += "liveins: \n";
-    for (const auto& arg : LiveIns) {
+    for (const auto &arg : LiveIns) {
         str += arg->toString();
         str += '\n';
     }
@@ -43,7 +43,7 @@ std::string MIR::Function::toString() const {
 
     str += "body:\n";
 
-    for (const auto& basicblock : blocks) {
+    for (const auto &basicblock : blocks) {
         str += "    ";
         str += basicblock->toString();
         str += '\n';

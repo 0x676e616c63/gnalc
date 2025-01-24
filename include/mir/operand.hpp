@@ -92,12 +92,12 @@ private:
 public:
     Operand() = delete;
     explicit Operand(OperandTrait _otrait)
-        : Value(ValueTrait::Operand), otrait(_otrait){}
+        : Value(ValueTrait::Operand), otrait(_otrait) {}
     Operand(OperandTrait _otrait, std::string _name)
-        : Value(ValueTrait::Operand, std::move(_name)), otrait(_otrait){}
+        : Value(ValueTrait::Operand, std::move(_name)), otrait(_otrait) {}
     OperandTrait getOperandTrait() const { return otrait; }
 
-    virtual std::string toString() const = 0;
+    std::string toString() const override = 0;
     ~Operand() override = default;
 };
 
@@ -108,9 +108,9 @@ private:
 public:
     PreColedOP() = delete;
     explicit PreColedOP(CoreRegister _color)
-        : Operand(OperandTrait::PreColored), color(_color){}
+        : Operand(OperandTrait::PreColored), color(_color) {}
     explicit PreColedOP(FPURegister _color)
-        : Operand(OperandTrait::PreColored), color(_color){}
+        : Operand(OperandTrait::PreColored), color(_color) {}
 
     std::string toString() const final;
     ~PreColedOP() override = default;
@@ -124,9 +124,10 @@ private:
 public:
     BindOnVirOP() = delete;
     explicit BindOnVirOP(RegisterBank _bank)
-        : Operand(OperandTrait::BindOnVirRegister), bank(_bank){}
+        : Operand(OperandTrait::BindOnVirRegister), bank(_bank) {}
     BindOnVirOP(RegisterBank _bank, std::string _name)
-        : Operand(OperandTrait::BindOnVirRegister, std::move(_name)), bank(_bank){}
+        : Operand(OperandTrait::BindOnVirRegister, std::move(_name)),
+          bank(_bank) {}
     explicit BindOnVirOP(std::string _name)
         : Operand(OperandTrait::BaseAddress, std::move(_name)),
           bank(RegisterBank::gpr) {} // for BaseADROP
@@ -134,7 +135,7 @@ public:
     const std::variant<CoreRegister, FPURegister> &getColor() { return color; };
     void setColor(unsigned int newColor);
 
-    virtual std::string toString() const;
+    std::string toString() const override;
     ~BindOnVirOP() override = default;
 };
 
@@ -161,7 +162,7 @@ public:
     unsigned int getConstOffset() const { return constOffset; };
     void setConstOffset(unsigned int newOffset) { constOffset = newOffset; };
 
-    virtual std::string toString() const = 0;
+    std::string toString() const override = 0;
     ~BaseADROP() override = default;
 };
 
