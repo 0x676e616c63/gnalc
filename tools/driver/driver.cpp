@@ -111,8 +111,8 @@ Optimizations available:
             std::cout <<
 R"(
 Extensions:
-  -mbrainfk            Translate SySy to brainfk
-  -mbrainfk-3tape      Translate SySy to 3-tape brainfk
+  -mbrainfk            - Translate SySy to brainfk
+  -mbrainfk-3tape      - Translate SySy to 3-tape brainfk
 )";
 #endif
             std::cout << std::flush;
