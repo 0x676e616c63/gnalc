@@ -6,9 +6,9 @@
 #ifndef GNALC_PASSES_UTILITIES_IRPRINTER_HPP
 #define GNALC_PASSES_UTILITIES_IRPRINTER_HPP
 
-#include "../../utils/exception.hpp"
 #include "../../ir/visitor.hpp"
-#include "../pass.hpp"
+#include "../../utils/exception.hpp"
+#include "../pass_manager.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -18,10 +18,13 @@ namespace IR
 class IRFormatter;
 
 // 线性IR打印（未划分基本块）
-class LIRPrinter : public ModulePass, public IRVisitor {
+class LIRPrinter : public PassInfo<LIRPrinter>, public IRVisitor {
 protected:
     std::ostream& outStream;
     bool printLiveInfo;
+
+    Module* curr_module;
+    ModuleAnalysisManager* analysis_manager;
 
     template <typename T>
     void write(T&& obj) {
@@ -37,7 +40,7 @@ public:
     explicit LIRPrinter(std::ostream& out, bool _liveinfo = false);
     ~LIRPrinter();
 
-    void runOnModule(Module& module) override;
+    PreservedAnalyses run(Module &unit, ModuleAnalysisManager &manager);
 
     void visit(GlobalVariable& node) override;
     void visit(Function& node) override;

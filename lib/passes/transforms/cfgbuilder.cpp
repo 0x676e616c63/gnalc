@@ -7,19 +7,16 @@
 #include "../../../include/utils/logger.hpp"
 
 namespace IR {
-    void CFGBuilder::runOnModule(Module& module) {
-        Logger::logInfo("Building CFG For Module " + module.getName() + "...");
-        for (auto& func : module.getFunctions()) {
-            Logger::logDebug("Building CFG For Function " + func->getName() + "...");
-            cur_func = func;
-            divider();
-            linker();
-        }
-        Logger::logInfo("CFG For Module " + module.getName() + " Built.");
-    }
+
+PreservedAnalyses BuildCFGPass::run(Function& function, FunctionAnalysisManager& manager) {
+    cur_func = &function;
+    divider();
+    linker();
+    return PreservedAnalyses::none();
+}
 
     // !!!需要尽量确保第一个BB是entry, 最后一个是return
-    void CFGBuilder::divider() {
+    void BuildCFGPass::divider() {
         cur_blk = std::make_shared<BasicBlock>("%entry");
         cur_func->addBlock(cur_blk);
         // Only by doing so can get const_iterator...
@@ -29,7 +26,7 @@ namespace IR {
         nam.reset();
     }
 
-    void CFGBuilder::newIf(const std::shared_ptr<IFInst>& ifinst) {
+    void BuildCFGPass::newIf(const std::shared_ptr<IFInst>& ifinst) {
         const bool el = ifinst->hasElse();
 
         auto ifthen = std::make_shared<BasicBlock>(nam.getIfthen());
@@ -57,7 +54,7 @@ namespace IR {
         cur_func->addBlock(cur_blk);
     }
 
-    void CFGBuilder::newWh(const std::shared_ptr<WHILEInst>& whinst) {
+    void BuildCFGPass::newWh(const std::shared_ptr<WHILEInst>& whinst) {
         auto whcond = std::make_shared<BasicBlock>(nam.getWhcond());
         auto whbody = std::make_shared<BasicBlock>(nam.getWhbody());
         auto whend = std::make_shared<BasicBlock>(nam.getWhend());
@@ -87,7 +84,7 @@ namespace IR {
     }
 
     // link basic blocks by prevBB and nextBB
-    void CFGBuilder::linker() {
+    void BuildCFGPass::linker() {
         for (auto blk_it = cur_func->getBlocks().begin(); blk_it != cur_func->getBlocks().end(); ++blk_it) {
             if ((*blk_it)->getInsts().empty()) continue;
             switch (std::shared_ptr<Instruction> end_inst = (*blk_it)->getInsts().back(); end_inst->getOpcode()) {
@@ -156,9 +153,9 @@ namespace IR {
         }
     }
 
-    bool CFGBuilder::adder(std::vector<std::shared_ptr<IR::Instruction> >::const_iterator &it
-                           , const std::vector<std::shared_ptr<IR::Instruction> >::const_iterator &end
-                           , const bool allow_break)
+    bool BuildCFGPass::adder(std::vector<std::shared_ptr<IR::Instruction> >::const_iterator &it
+                             , const std::vector<std::shared_ptr<IR::Instruction> >::const_iterator &end
+                             , const bool allow_break)
     {
         bool inserted_terminator = false;
         for ( ; it!=end && !inserted_terminator; ++it) {
@@ -196,7 +193,7 @@ namespace IR {
     }
 
     // 处理完整个的cond
-    void CFGBuilder::short_circuit_process(const std::shared_ptr<CONDValue> &cond,
+    void BuildCFGPass::short_circuit_process(const std::shared_ptr<CONDValue> &cond,
                                        const std::shared_ptr<BasicBlock> &true_blk,
                                        const std::shared_ptr<BasicBlock> &false_blk) {
         if (cond->getCondType() == CONDTY::AND) {
@@ -224,7 +221,7 @@ namespace IR {
         }
     }
 
-    void CFGBuilder::addCondBr(const std::shared_ptr<Value> &cond,
+    void BuildCFGPass::addCondBr(const std::shared_ptr<Value> &cond,
                                 const std::shared_ptr<BasicBlock> &true_blk,
                                 const std::shared_ptr<BasicBlock> &false_blk) {
         if (cond->getVTrait() == ValueTrait::CONDHELPER) {

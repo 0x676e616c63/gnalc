@@ -8,33 +8,61 @@
 #ifndef GNALC_PASSES_ANALYSIS_LIVE_ANALYSIS_HPP
 #define GNALC_PASSES_ANALYSIS_LIVE_ANALYSIS_HPP
 
+#include "../../ir/base.hpp"
 #include "../../ir/visitor.hpp"
-#include "../pass.hpp"
+#include "../pass_manager.hpp"
 
 #include <vector>
+#include <unordered_map>
 #include <algorithm>
 
 namespace IR {
+// FIXME: Raw pointer
+class Liveness {
+    using LiveSet = std::set<Value*>;
+    std::unordered_map<const Value*, LiveSet> livein;
+    std::unordered_map<const Value*, LiveSet> liveout;
+    public:
+    LiveSet& getLiveIn(const Value* v) {
+        return livein.find(v)->second;
+    }
+    LiveSet& getLiveOut(const Value* v) {
+        return liveout.find(v)->second;
+    }
 
-class LiveAnalyser : public ModulePass {
+    void setLiveIn(const Value* v, const LiveSet& live) {
+        livein[v] = live;
+    }
+
+    void setLiveOut(const Value* v, const LiveSet& live) {
+        liveout[v] = live;
+    }
+
+    void reset() {
+        livein.clear();
+        liveout.clear();
+    }
+};
+
+class LiveAnalyser : public AnalysisInfo<LiveAnalyser> {
 private:
     // 使用DFS遍历CFG
-    void genDFSStack(const std::shared_ptr<BasicBlock>& bb);
+    void genDFSStack(const BasicBlock* bb);
     struct BBStack {
-        std::vector<std::shared_ptr<BasicBlock>> stack;
+        std::vector<const BasicBlock*> stack;
         int index = -1;
-        bool visited(const std::shared_ptr<BasicBlock>& bb) {
+        bool visited(const BasicBlock* bb) {
             return std::find(stack.begin(), stack.end(), bb) != stack.end();
         }
-        std::shared_ptr<BasicBlock> pop() {
+        const BasicBlock* pop() {
             if (index == -1) return nullptr;
             return stack[index--];
         }
-        void push(const std::shared_ptr<BasicBlock>& bb) {
+        void push(const BasicBlock* bb) {
             stack.push_back(bb);
             index++;
         }
-        bool spush(const std::shared_ptr<BasicBlock>& bb) {
+        bool spush(const BasicBlock* bb) {
             if (visited(bb)) return false;
             push(bb);
             return true;
@@ -51,11 +79,18 @@ private:
         }
     } bb_stack;
 public:
-    void runOnModule(Module& module) override;
+    Liveness run(Function& f, FunctionAnalysisManager& fpm);
 private:
-    bool processFunc(const std::shared_ptr<Function>& func); // 处理单个func
-    bool processBB(const std::shared_ptr<BasicBlock>& bb); // 处理单个BB
-    bool processInst(const std::shared_ptr<Instruction>& inst); // 处理单个inst
+    Liveness liveness;
+    bool processFunc(const Function* func); // 处理单个func
+    bool processBB(const BasicBlock* bb); // 处理单个BB
+    bool processInst(const Instruction* inst); // 处理单个inst
+
+public:
+    using Result = Liveness;
+private:
+    friend AnalysisInfo<LiveAnalyser>;
+    static UniqueKey Key;
 };
 
 }

@@ -1,4 +1,6 @@
 #include "../../../include/passes/utilities/irprinter.hpp"
+
+#include "../../../include/passes/analysis/live_analysis.hpp"
 #include "../../../include/utils/exception.hpp"
 #include "../../../include/utils/logger.hpp"
 
@@ -8,7 +10,10 @@ LIRPrinter::LIRPrinter(std::ostream& out, bool _liveinfo): outStream(out) , prin
 
 LIRPrinter::~LIRPrinter() { }
 
-void LIRPrinter::runOnModule(Module& module) {
+PreservedAnalyses LIRPrinter::run(Module& module, ModuleAnalysisManager& manager) {
+    curr_module = &module;
+    analysis_manager = &manager;
+
     Logger::logInfo("LIRPrinter: Printing Module \"" + module.getName() + "\"");
     writeln("; Module: " + module.getName());
 
@@ -67,13 +72,14 @@ void LIRPrinter::visit(Instruction& node) {
     Logger::logDebug("LIRPrinter: Printing Instruction \"" + node.getName() + "\"");
 
     if (printLiveInfo) {
+        auto liveness = analysis_manager->getResult<LiveAnalyser>(*curr_module);
         write("  ; livein:");
-        for (auto& val : node.getLiveIn())
-            write(" " + val.lock()->getName());
+        for (auto& val : liveness.getLiveIn(&node))
+            write(" " + val->getName());
         writeln("");
         write("  ; liveout:");
-        for (auto& val : node.getLiveOut())
-            write(" " + val.lock()->getName());
+        for (auto& val : liveness.getLiveOut(&node))
+            write(" " + val->getName());
         writeln("");
     }
 
@@ -612,15 +618,16 @@ void IRPrinter::visit(Function& node) {
 
 void IRPrinter::visit(BasicBlock& node) {
     Logger::logDebug("IRPrinter: Printing BasicBlock \"" + node.getName() + "\"");
-    
+
     if (printLiveInfo) {
+        auto liveness = analysis_manager->getResult<LiveAnalyser>(*curr_module);
         write("; livein:");
-        for (auto& val : node.getLiveIn())
-            write(" " + val.lock()->getName());
+        for (auto& val : liveness.getLiveIn(&node))
+            write(" " + val->getName());
         writeln("");
         write("; liveout:");
-        for (auto& val : node.getLiveOut())
-            write(" " + val.lock()->getName());
+        for (auto& val : liveness.getLiveOut(&node))
+            write(" " + val->getName());
         writeln("");
     }
 

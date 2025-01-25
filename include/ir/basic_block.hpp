@@ -23,8 +23,6 @@ class BasicBlock : public Value, public std::enable_shared_from_this<BasicBlock>
     std::list<std::weak_ptr<BasicBlock>> pre_bb; // 前驱
     std::list<std::weak_ptr<BasicBlock>> next_bb; // 后继
     std::list<std::shared_ptr<Instruction>> insts; // 指令列表
-    LiveInfoSet livein;
-    LiveInfoSet liveout;
 public:
     explicit BasicBlock(std::string _name);
     BasicBlock(std::string _name, std::list<std::shared_ptr<Instruction>> _insts);
@@ -40,9 +38,6 @@ public:
     std::list<std::weak_ptr<BasicBlock>>& getRNextBB();
     std::list<std::shared_ptr<Instruction>>& getInsts();
     // ...
-
-    LiveInfoSet& getLiveIn();
-    LiveInfoSet& getLiveOut();
 
     void accept(IRVisitor& visitor) override;
     ~BasicBlock() override;

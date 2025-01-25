@@ -119,8 +119,6 @@ public:
 
     ~Use();
 };
-
-using LiveInfoSet = std::set<std::weak_ptr<Value>, std::owner_less<std::weak_ptr<Value>>>;
 }
 
 #endif

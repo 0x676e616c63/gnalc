@@ -65,8 +65,6 @@ class Instruction : public User {
 private:
     OP opcode;
     std::weak_ptr<BasicBlock> parent = {}; // 隶属的basic block
-    LiveInfoSet livein;
-    LiveInfoSet liveout;
 
 public:
     // 此构造方法用于初始生成时，最开始没有划分Block，故parent为空
@@ -79,9 +77,6 @@ public:
     void setParent(const std::shared_ptr<BasicBlock>& p);
     OP getOpcode() const;
     std::shared_ptr<BasicBlock> getParent() const;
-
-    LiveInfoSet& getLiveIn();
-    LiveInfoSet& getLiveOut();
 
     void accept(IRVisitor& visitor) override;
     ~Instruction() override;

@@ -9,15 +9,14 @@
 #define GNALC_PASSES_TRANSFORMS_CFGBUILDER_HPP
 
 #include "../../ir/visitor.hpp"
-#include "../../ir/constant_pool.hpp"
-#include "../pass.hpp"
+#include "../pass_manager.hpp"
 
 #include <stack>
 
 namespace IR {
 
 // 通过Func中的insts划分基本块
-class CFGBuilder : public ModulePass {
+class BuildCFGPass : public PassInfo<BuildCFGPass> {
 private:
     struct _idx {
     private:
@@ -55,8 +54,8 @@ private:
             lorlfidx = 1;
         }
     } nam; // new BB index or name
+    Function* cur_func = nullptr;
     std::shared_ptr<BasicBlock> cur_blk;
-    std::shared_ptr<Function> cur_func;
     std::stack<std::shared_ptr<BasicBlock>> _while_cond_for_continue;
     std::stack<std::shared_ptr<BasicBlock>> _while_end_for_break;
 
@@ -76,7 +75,7 @@ private:
     void divider();
     void linker();
 public:
-    void runOnModule(Module& module) override;
+    PreservedAnalyses run(Function &function, FunctionAnalysisManager &manager);
 };
 
 }

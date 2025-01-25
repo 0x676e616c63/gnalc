@@ -6,8 +6,15 @@
 #ifndef GNALC_PASSES_TRANSFORMS_MEM2REG_HPP
 #define GNALC_PASSES_TRANSFORMS_MEM2REG_HPP
 
-#include "../../ir/visitor.hpp"
+#include "../pass_manager.hpp"
 
-// TODO
+namespace IR
+{
+class PromotePass : public PassInfo<PromotePass> {
+    // ...
+public:
+    PreservedAnalyses run(Function &function, FunctionAnalysisManager &manager);
+};
+}
 
 #endif

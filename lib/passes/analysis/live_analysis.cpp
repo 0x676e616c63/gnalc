@@ -4,31 +4,34 @@
 #include <variant>
 
 namespace IR {
-    void LiveAnalyser::genDFSStack(const std::shared_ptr<BasicBlock>& bb) {
+    void LiveAnalyser::genDFSStack(const BasicBlock* bb) {
         bb_stack.spush(bb);
         for (auto& nextbb : bb->getNextBB()) {
-            if (!bb_stack.visited(nextbb)) {
-                genDFSStack(nextbb);
+            if (!bb_stack.visited(nextbb.get())) {
+                genDFSStack(nextbb.get());
             }
         }
     }
 
-    void LiveAnalyser::runOnModule(Module& module) {
-        for (auto& func : module.getFunctions()) {
-            bb_stack.reset();
-            genDFSStack(func->getBlocks().front());
-            while(processFunc(func));
-        }
+    Liveness LiveAnalyser::run(Function& f, FunctionAnalysisManager& fpm) {
+        liveness.reset();
+        bb_stack.reset();
+        genDFSStack(f.getBlocks().front().get());
+
+        while(processFunc(&f))
+            ;
+
+        return liveness;
     }
 
-    bool LiveAnalyser::processFunc(const std::shared_ptr<Function>& func) {
+    bool LiveAnalyser::processFunc(const Function* func) {
         bb_stack.restore();
         bool updated = false;
         while (!bb_stack.empty()) {
             auto bb = bb_stack.pop();
             for (auto& nxtbb : bb->getNextBB())
-                for (auto& livevar : nxtbb->getLiveIn())
-                    if (bb->getLiveOut().insert(livevar).second)
+                for (auto& livevar : liveness.getLiveIn(nxtbb.get()))
+                    if (liveness.getLiveOut(bb).insert(livevar).second)
                         updated = true;
             if (processBB(bb))
                 updated = true;
@@ -41,30 +44,30 @@ namespace IR {
     }
 
     // 返回值为LiveIn是否更新了
-    bool LiveAnalyser::processBB(const std::shared_ptr<BasicBlock>& bb) {
+    bool LiveAnalyser::processBB(const BasicBlock* bb) {
         // Logger::logDebug("Copying LiveOut from bb to insts");
-        bb->getInsts().back()->getLiveOut() = bb->getLiveOut();
+        liveness.getLiveOut(bb->getInsts().back().get()) = liveness.getLiveOut(bb);
         bool updated = false;
         // Logger::logDebug("Processing insts in bb");
         for (auto it = bb->getInsts().rbegin(); it != bb->getInsts().rend(); ++it) {
-            if (processInst(*it)) {
+            if (processInst((*it).get())) {
                 updated = true;
                 Logger::logDebug("LiveAnalyser: Updated insts " + (*it)->getName() + " in bb");
                 if (std::next(it) != bb->getInsts().rend()){
-                    (*std::next(it))->getLiveOut() = (*it)->getLiveIn();
+                    liveness.getLiveOut(std::next(it)->get()) = liveness.getLiveIn(it->get());
                 } else {
                     break;
                 }
             }
         }
         // Logger::logDebug("Processing insts in bb done");
-        bb->getLiveIn() = bb->getInsts().front()->getLiveIn();
+        liveness.getLiveIn(bb) = liveness.getLiveIn( bb->getInsts().front().get());
         // Logger::logDebug("Copied LiveIn");
         return updated;
     }
 
     // 返回值为LiveIn是否更新了
-    bool LiveAnalyser::processInst(const std::shared_ptr<Instruction>& inst) {
+    bool LiveAnalyser::processInst(const Instruction* inst) {
         // Logger::logDebug("Processing Instruction: " + inst->getName());
         bool updated = false;
         // inst->getLiveIn().insert(std::make_shared<ConstantInt>(1));
@@ -90,69 +93,70 @@ namespace IR {
             case OP::BITCAST:
             case OP::LOAD:
             case OP::GEP:
+
                 for (auto& use : inst->getOperands())
                     if (use->getValue()->getVTrait() != ValueTrait::CONSTANT_LITERAL)
-                        if (inst->getLiveIn().insert(use->getValue()).second) {
+                        if (liveness.getLiveIn(inst).insert(use->getValue().get()).second) {
                             // Logger::logDebug("Added live-in: " + use->getValue()->getName());
                             updated = true;
                         }
-                for (auto& val : inst->getLiveOut())
-                    if (val.lock() != inst)
-                        if (inst->getLiveIn().insert(val).second)
+                for (auto& val : liveness.getLiveOut(inst))
+                    if (val != inst)
+                        if (liveness.getLiveIn(inst).insert(val).second)
                             updated = true;
                 break;
             case OP::RET:
             {
-                auto cinst = std::dynamic_pointer_cast<RETInst>(inst);
+                auto cinst = dynamic_cast<const RETInst*>(inst);
                 Err::gassert(cinst != nullptr, "Liveana::processInst: RETInst cast failed.");
                 if (!cinst->isVoid())
                     if (cinst->getRetVal()->getVTrait() != ValueTrait::CONSTANT_LITERAL)
-                        if (cinst->getLiveIn().insert(cinst->getRetVal()).second)
+                        if (liveness.getLiveIn(cinst).insert(cinst->getRetVal().get()).second)
                             updated = true;
                 break;
             }
             case OP::BR:
             {
-                auto cinst = std::dynamic_pointer_cast<BRInst>(inst);
+                auto cinst = dynamic_cast<const BRInst*>(inst);
                 Err::gassert(cinst != nullptr, "Liveana::processInst: BRInst cast failed.");
                 if (cinst->isConditional())
                     if (cinst->getCond()->getVTrait() != ValueTrait::CONSTANT_LITERAL)
-                        if (cinst->getLiveIn().insert(cinst->getCond()).second)
+                        if (liveness.getLiveIn(cinst).insert(cinst->getCond().get()).second)
                             updated = true;
-                for (auto& val : inst->getLiveOut())
-                    if (inst->getLiveIn().insert(val).second)
+                for (auto& val : liveness.getLiveOut(inst))
+                    if (liveness.getLiveIn(inst).insert(val).second)
                         updated = true;
                 break;
             }
             case OP::CALL:
             {
-                auto cinst = std::dynamic_pointer_cast<CALLInst>(inst);
+                auto cinst = dynamic_cast<const CALLInst*>(inst);
                 Err::gassert(cinst != nullptr, "Liveana::processInst: CALLInst cast failed.");
                 for (auto& val : cinst->getArgs()) 
                     if (val->getVTrait() != ValueTrait::CONSTANT_LITERAL)
-                        if (inst->getLiveIn().insert(val).second)
+                        if (liveness.getLiveIn(inst).insert(val.get()).second)
                             updated = true;
-                for (auto& val : inst->getLiveOut())
-                    if (cinst->isVoid() || val.lock() != inst)
-                        if (inst->getLiveIn().insert(val).second)
+                for (auto& val : liveness.getLiveOut(inst))
+                    if (cinst->isVoid() || val != inst)
+                        if (liveness.getLiveIn(inst).insert(val).second)
                             updated = true;
                 break;
             }
             case OP::ALLOCA:
                 // 默认为 static_allocation, 此情况无 LiveUse
                 // Logger::logDebug("processInst: alloca");
-                for (auto& val : inst->getLiveOut())
-                    if (val.lock() != inst)
-                        if (inst->getLiveIn().insert(val).second)
+                for (auto& val : liveness.getLiveOut(inst))
+                    if (val != inst)
+                        if (liveness.getLiveIn(inst).insert(val).second)
                             updated = true;
                 break;
             case OP::STORE:
                 for (auto& use : inst->getOperands())
                     if (use->getValue()->getVTrait() != ValueTrait::CONSTANT_LITERAL)
-                        if (inst->getLiveIn().insert(use->getValue()).second)
+                        if (liveness.getLiveIn(inst).insert(use->getValue().get()).second)
                             updated = true;
-                for (auto& val : inst->getLiveOut())
-                        if (inst->getLiveIn().insert(val).second)
+                for (auto& val : liveness.getLiveOut(inst))
+                        if (liveness.getLiveIn(inst).insert(val).second)
                             updated = true;
                 break;
             case OP::PHI:

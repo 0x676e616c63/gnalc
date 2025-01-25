@@ -2,13 +2,12 @@
 #include "../../../include/parser/visitor.hpp"
 
 namespace IR {
-void NameNormalizer::runOnModule(Module& module) {
-    for (const auto& func : module.getFunctions())
-    {
-        func->accept(*this);
-    }
+PreservedAnalyses NameNormalizePass::run(Function &function, FunctionAnalysisManager &manager) {
+    function.accept(*this);
+    return PreservedAnalyses::all();
 }
-void NameNormalizer::visit(Function& node) {
+
+void NameNormalizePass::visit(Function& node) {
     curr_idx = 0;
     curr_idx = 0;
 
@@ -19,7 +18,7 @@ void NameNormalizer::visit(Function& node) {
         block->accept(*this);
 }
 
-void NameNormalizer::visit(BasicBlock& node) {
+void NameNormalizePass::visit(BasicBlock& node) {
     if (bb_rename)
         node.setName("%" + std::to_string(curr_idx));
     ++curr_idx;
