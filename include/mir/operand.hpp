@@ -2,6 +2,7 @@
 #ifndef GNALC_MIR_OPERAND_HPP
 #define GNALC_MIR_OPERAND_HPP
 #include "base.hpp"
+#include "misc.hpp"
 #include <string>
 #include <utility>
 #include <variant>
@@ -101,24 +102,11 @@ public:
     ~Operand() override = default;
 };
 
-class PreColedOP : public Operand {
-private:
-    std::variant<CoreRegister, FPURegister> color;
-
-public:
-    PreColedOP() = delete;
-    explicit PreColedOP(CoreRegister _color)
-        : Operand(OperandTrait::PreColored), color(_color) {}
-    explicit PreColedOP(FPURegister _color)
-        : Operand(OperandTrait::PreColored), color(_color) {}
-
-    std::string toString() const final;
-    ~PreColedOP() override = default;
-};
-
 class BindOnVirOP : public Operand {
 private:
     RegisterBank bank;
+
+protected:
     std::variant<CoreRegister, FPURegister> color;
 
 public:
@@ -128,6 +116,13 @@ public:
     BindOnVirOP(RegisterBank _bank, std::string _name)
         : Operand(OperandTrait::BindOnVirRegister, std::move(_name)),
           bank(_bank) {}
+    explicit BindOnVirOP(CoreRegister _color)
+        : Operand(OperandTrait::PreColored), bank(RegisterBank::gpr),
+          color(_color) {}
+    explicit BindOnVirOP(FPURegister _color)
+        : Operand(OperandTrait::PreColored), bank(RegisterBank::spr),
+          color(_color) {}
+
     explicit BindOnVirOP(std::string _name)
         : Operand(OperandTrait::BaseAddress, std::move(_name)),
           bank(RegisterBank::gpr) {} // for BaseADROP
@@ -137,6 +132,16 @@ public:
 
     std::string toString() const override;
     ~BindOnVirOP() override = default;
+};
+
+class PreColedOP : public BindOnVirOP {
+public:
+    PreColedOP() = delete;
+    explicit PreColedOP(CoreRegister _color) : BindOnVirOP(_color) {}
+    explicit PreColedOP(FPURegister _color) : BindOnVirOP(_color) {}
+
+    std::string toString() const final;
+    ~PreColedOP() override = default;
 };
 
 enum class BaseAddressTrait {
@@ -210,13 +215,12 @@ public:
 
 class ConstantIDX : public Operand {
 private:
-    unsigned int idx; // 常量池的索引
+    const std::shared_ptr<ConstObj> &constant;
 
 public:
     ConstantIDX() = delete;
-    explicit ConstantIDX(unsigned int _idx)
-        : Operand(OperandTrait::ConstantPoolValue), idx(_idx){};
-
+    explicit ConstantIDX(const std::shared_ptr<ConstObj> &_constant)
+        : Operand(OperandTrait::ConstantPoolValue), constant(_constant){};
     std::string toString() const final;
     ~ConstantIDX() override = default;
 };

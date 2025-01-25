@@ -16,7 +16,9 @@ class FunctionInfo {
 public: // 接口太多, 还不如直接访问
     std::pair<bool, std::weak_ptr<Function>> hasTailCall; // TCO优化
 
-    bool hasCall{}; // 除了TC之外的调用, 可以视情况节省一两条指令
+    bool hasCall = false; // 除了TC之外的调用, 可以视情况节省一两条指令
+
+    bool isPureFunc = false;
 
     size_t stackSize{};
     unsigned int maxAlignment = 4;

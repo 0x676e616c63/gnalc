@@ -37,7 +37,7 @@ void BindOnVirOP::setColor(unsigned int newcolor) {
 
 std::string BindOnVirOP::toString() const {
     std::string str =
-        getName() + ':' + static_cast<std::string>(magic_enum::enum_name(bank));
+        getName() + ':' + std::string{magic_enum::enum_name(bank)};
 
     return str;
 }
@@ -57,13 +57,13 @@ std::string StackADROP::toString() const {
 std::string ShiftOP::toString() const {
     std::string str;
     str += "%inlineshift-";
-    str += static_cast<std::string>(magic_enum::enum_name(shiftCode));
+    str += std::string{magic_enum::enum_name(shiftCode)};
     str += ':' + std::to_string(imme);
 
     return str;
 }
 
 std::string ConstantIDX::toString() const {
-    std::string str = "%const." + std::to_string(idx);
+    std::string str = "%const." + std::to_string(constant->getId());
     return str;
 }

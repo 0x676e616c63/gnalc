@@ -10,8 +10,7 @@ std::string MIR::FrameObj::toString() const {
     str += " id: " + std::to_string(id);
     str += ", size = " + std::to_string(size);
     str += ", local-offset = " + std::to_string(offset);
-    str +=
-        ", type = " + static_cast<std::string>(magic_enum::enum_name(ftrait));
+    str += ", type = " + std::string{magic_enum::enum_name(ftrait)};
 
     str += "}";
     return str;
@@ -42,7 +41,7 @@ bool isImmCanBeEncodedInText(float imme) {
     return false;
 }
 
-MIR::ConstObj::ConstObj(int imme) {
+MIR::ConstObj::ConstObj(unsigned int _id, int imme) : id(_id) {
     auto imm = static_cast<unsigned int>(imme);
     if (isImmCanBeEncodedInText(imm)) {
         literal = imm;
@@ -52,10 +51,9 @@ MIR::ConstObj::ConstObj(int imme) {
         uint16_t highbits = imm >> 16;
         literal = Encoding(lowbits, highbits);
     }
-    size = 4;
 }
 
-MIR::ConstObj::ConstObj(float imme) {
+MIR::ConstObj::ConstObj(unsigned int _id, float imme) : id(_id) {
     if (isImmCanBeEncodedInText(imme)) {
         literal = imme;
     } else {
@@ -65,7 +63,6 @@ MIR::ConstObj::ConstObj(float imme) {
         uint16_t highbits = imm >> 16;
         literal = Encoding(lowbits, highbits);
     }
-    size = 4;
 }
 
 std::string MIR::ConstObj::toString() const {
@@ -84,8 +81,6 @@ std::string MIR::ConstObj::toString() const {
     else
         str += "'" + std::to_string(std::get<Encoding>(literal).first) +
                std::to_string(std::get<Encoding>(literal).second) + "'";
-
-    str += ", size = " + std::to_string(size);
 
     str += ", isEncInText = ";
     if (isGlo() || literal.index() == 3)

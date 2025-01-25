@@ -8,11 +8,11 @@
 namespace MIR {
 
 enum class OpCode {
-    MOV,
-    MVN, // 最后codgen的时候再替换movw/movt
+    MOV, // 最后codgen的时候再替换movw/movt
+    // MVN,
 
-    STR,
-    LDR,
+    STR, // strd(需要8字节对齐), str, strh, strb
+    LDR, // ldrd(同上), ldr, ldrh, ldrb
 
     ADD,
     SUB,
@@ -96,7 +96,7 @@ class Instruction {
 private:
     std::variant<OpCode, NeonOpCode> opcode;
 
-    std::shared_ptr<Operand> TargetOperand = nullptr; // precolored, BindOnVirOP
+    std::shared_ptr<BindOnVirOP> TargetOperand = nullptr;
 
     SourceOperandType tptrait;
 
@@ -107,13 +107,13 @@ public:
     Instruction(NeonOpCode _opcode, SourceOperandType _tptrait)
         : opcode(_opcode), tptrait(_tptrait) {}
 
-    virtual void addTargetOP(std::shared_ptr<Operand> &TargetOperand_) {
-        TargetOperand = TargetOperand_;
+    virtual void addTargetOP(std::shared_ptr<BindOnVirOP> TargetOperand_) {
+        TargetOperand = std::move(TargetOperand_);
     }
 
     SourceOperandType getTptrait() const { return tptrait; }
 
-    const std::shared_ptr<Operand> &getTargetOP() { return TargetOperand; };
+    const std::shared_ptr<BindOnVirOP> &getTargetOP() { return TargetOperand; };
     virtual std::shared_ptr<Operand> getSourceOP(unsigned int seq) = 0;
 
     virtual bool Check() = 0;

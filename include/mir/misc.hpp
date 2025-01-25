@@ -43,14 +43,13 @@ private:
     unsigned int id;
 
     std::variant<std::string, unsigned int, float, Encoding> literal;
-    unsigned int size;
 
 public:
     ConstObj() = delete;
-    ConstObj(std::string _glo, unsigned int _size)
-        : literal(std::move(_glo)), size(_size) {}
-    explicit ConstObj(float imme);
-    explicit ConstObj(int imme);
+    ConstObj(unsigned int _id, std::string _glo, unsigned int _size)
+        : id(_id), literal(std::move(_glo)) {}
+    explicit ConstObj(unsigned int _id, float imme);
+    explicit ConstObj(unsigned int _id, int imme);
 
     bool isGlo() const { return literal.index() == 0; }
     bool isImme() const { return literal.index() != 0; }
