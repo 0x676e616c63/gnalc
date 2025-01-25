@@ -1,12 +1,18 @@
 #pragma once
-#ifndef GNALC_MIR_TOOL_HPP
-#define GNALC_MIR_TOOL_HPP
-#include "../mirtools/magic_enum.hpp"
+#ifndef GNALC_MIRTOOLS_TOOL_HPP
+#define GNALC_MIRTOOLS_TOOL_HPP
 
+#include "enum_name.hpp"
+
+#include <string>
+#include <variant>
+
+namespace MIR {
 struct variant_visitor {
     template <typename T_enum> std::string operator()(T_enum emVal) {
-        return static_cast<std::string>(magic_enum::enum_name(emVal));
+        return static_cast<std::string>(enum_name(emVal));
     }
 }; // for std::visit() when come into an enum type
+}
 
 #endif

@@ -196,9 +196,9 @@ public:
 class ShiftOP : public Operand {
 private:
     unsigned int imme;
+public:
     enum class inlineShift { asr, lsl, lsr, ror, rrx } shiftCode;
 
-public:
     ShiftOP() = delete;
     ShiftOP(unsigned _imme, ShiftOP::inlineShift _shiftCode)
         : imme(_imme), shiftCode(_shiftCode),
