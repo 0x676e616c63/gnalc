@@ -1,7 +1,7 @@
 #include "../../include/mir/operand.hpp"
-#include "../../include/mirtools/magic_enum.hpp"
+#include "../../include/mirtools/enum_name.hpp"
 #include "../../include/mirtools/tool.hpp"
-#include <cassert>
+#include "../../include/utils/exception.hpp"
 
 using namespace MIR;
 
@@ -20,9 +20,9 @@ void BindOnVirOP::setColor(unsigned int newcolor) {
 
     else if (bank == RegisterBank::gprnopc) {
 
-        assert(static_cast<CoreRegister>(newcolor) != CoreRegister::pc &&
-               "MIR::BindOnVirOP::setColor(unsigned int): color "
-               "assignment conflict!");
+        Err::gassert(static_cast<CoreRegister>(newcolor) != CoreRegister::pc,
+                     "MIR::BindOnVirOP::setColor(unsigned int): color "
+                     "assignment conflict!");
 
         color = static_cast<CoreRegister>(newcolor);
 
@@ -36,8 +36,7 @@ void BindOnVirOP::setColor(unsigned int newcolor) {
 }
 
 std::string BindOnVirOP::toString() const {
-    std::string str =
-        getName() + ':' + std::string{magic_enum::enum_name(bank)};
+    std::string str = getName() + ':' + enum_name(bank);
 
     return str;
 }
@@ -57,7 +56,7 @@ std::string StackADROP::toString() const {
 std::string ShiftOP::toString() const {
     std::string str;
     str += "%inlineshift-";
-    str += std::string{magic_enum::enum_name(shiftCode)};
+    str += enum_name(shiftCode);
     str += ':' + std::to_string(imme);
 
     return str;

@@ -1,5 +1,5 @@
 #include "../../include/mir/misc.hpp"
-#include "../../include/mirtools/magic_enum.hpp"
+#include "../../include/mirtools/enum_name.hpp"
 #include <cctype>
 #include <iomanip>
 
@@ -10,7 +10,7 @@ std::string MIR::FrameObj::toString() const {
     str += " id: " + std::to_string(id);
     str += ", size = " + std::to_string(size);
     str += ", local-offset = " + std::to_string(offset);
-    str += ", type = " + std::string{magic_enum::enum_name(ftrait)};
+    str += ", type = " + enum_name(ftrait);
 
     str += "}";
     return str;
