@@ -57,12 +57,6 @@ namespace IR
         return conditional;
     }
 
-    // BasicBlock* BRInst::getDest() const
-    // {
-    //     assert(!conditional);
-    //     return dynamic_cast<BasicBlock*>(operands.begin()->getValue());
-    // }
-
     std::shared_ptr<Value> BRInst::getCond() const
     {
         Err::gassert(conditional, "BRInst is not conditional.");
@@ -82,6 +76,38 @@ namespace IR
     {
         Err::gassert(conditional, "BRInst is not conditional.");
         return std::dynamic_pointer_cast<BasicBlock>((*std::next(std::next(getOperands().begin())))->getValue());
+    }
+
+    void BRInst::setBBArgs(const std::vector<std::shared_ptr<Value>> &args) {
+        Err::gassert(!conditional, "BRInst is conditional.");
+        addOperand(std::make_shared<BBArgList>(getDest(), args));
+        set_args = true;
+    }
+
+    void BRInst::setBBArgs(const std::vector<std::shared_ptr<Value>> &t_args,
+        const std::vector<std::shared_ptr<Value>> &f_args) {
+        Err::gassert(conditional, "BRInst is not conditional.");
+        addOperand(std::make_shared<BBArgList>(getTrueDest(), t_args));
+        addOperand(std::make_shared<BBArgList>(getFalseDest(), f_args));
+        set_args = true;
+    }
+
+    std::vector<std::shared_ptr<Value>> BRInst::getBBArgs() const {
+        Err::gassert(!conditional, "BRInst is conditional.");
+        Err::gassert(set_args, "BRInst is not set args.");
+        return (std::dynamic_pointer_cast<BBArgList>((*std::next(getOperands().begin()))->getValue())->_getArgs());
+    }
+
+    std::vector<std::shared_ptr<Value>> BRInst::getTrueBBArgs() const {
+        Err::gassert(conditional, "BRInst is not conditional.");
+        Err::gassert(set_args, "BRInst is not set args.");
+        return (std::dynamic_pointer_cast<BBArgList>((*std::next(getOperands().rbegin()))->getValue())->_getArgs());
+    }
+
+    std::vector<std::shared_ptr<Value>> BRInst::getFalseBBArgs() const {
+        Err::gassert(conditional, "BRInst is not conditional.");
+        Err::gassert(set_args, "BRInst is not set args.");
+        return (std::dynamic_pointer_cast<BBArgList>((*(getOperands().rbegin()))->getValue())->_getArgs());
     }
 
     CALLInst::CALLInst(std::shared_ptr<FunctionDecl> func,
@@ -131,4 +157,22 @@ namespace IR
     void BRInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
     void CALLInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
+
+    BBArgList::BBArgList(const std::shared_ptr<BasicBlock> &block, const std::vector<std::shared_ptr<Value>> &args)
+        : User("__bb_arg_list", makeBType(IRBTYPE::UNDEFINED), ValueTrait::BB_ARG_LIST)
+            , block(block){
+        for (const auto& arg : args)
+            addOperand(arg);
+    }
+
+    BRInst *BBArgList::getBr() const {
+        return dynamic_cast<BRInst*>(getUseList().front()->getUser());
+    }
+
+    std::vector<std::shared_ptr<Value>> BBArgList::_getArgs() const {
+        std::vector<std::shared_ptr<Value>> ret;
+        for (const auto& operand : getOperands())
+            ret.emplace_back(operand->getValue());
+        return ret;
+    }
 }

@@ -34,10 +34,13 @@ enum class ValueTrait {
     ORDINARY_VARIABLE, // 一般变量（包含const）
     GLOBAL_VARIABLE, // 全局变量
     FUNCTION, // 函数
-    FORMAL_PARAMETER, // 形参
+    FORMAL_PARAMETER, // 形参（函数）
     BASIC_BLOCK, // 基本块
     VOID_INSTRUCTION, // 无值的指令
-    CONDHELPER // cond中的and, or
+    CONDHELPER, // cond中的and, or
+    PHI_OPERAND, // PHI指令操作数
+    BB_FPARAM, // 基本块形参
+    BB_ARG_LIST // 基本块实参列表
     // ...
 };
 

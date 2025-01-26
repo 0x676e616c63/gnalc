@@ -23,6 +23,7 @@ class BasicBlock : public Value, public std::enable_shared_from_this<BasicBlock>
     std::list<std::weak_ptr<BasicBlock>> pre_bb; // 前驱
     std::list<std::weak_ptr<BasicBlock>> next_bb; // 后继
     std::list<std::shared_ptr<Instruction>> insts; // 指令列表
+    std::vector<std::shared_ptr<Value>> bb_params;
 public:
     explicit BasicBlock(std::string _name);
     BasicBlock(std::string _name, std::list<std::shared_ptr<Instruction>> _insts);
@@ -38,6 +39,9 @@ public:
     std::list<std::weak_ptr<BasicBlock>>& getRNextBB();
     std::list<std::shared_ptr<Instruction>>& getInsts();
     // ...
+
+    void setBBParam(const std::vector<std::shared_ptr<Value>> &params);
+    const std::vector<std::shared_ptr<Value>>& getBBParams() const;
 
     void accept(IRVisitor& visitor) override;
     ~BasicBlock() override;

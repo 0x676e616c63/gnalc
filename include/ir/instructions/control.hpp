@@ -30,19 +30,22 @@ public:
     void accept(IRVisitor& visitor) override;
 };
 
+class BRInst;
+// arg的user是BBArgList
+struct BBArgList : public User {
+    std::shared_ptr<BasicBlock> block; // operands只存args
+    BBArgList() = delete;
+    BBArgList(const std::shared_ptr<BasicBlock> &block, const std::vector<std::shared_ptr<Value>>& args);
+    BRInst *getBr() const;
+    std::vector<std::shared_ptr<Value>> _getArgs() const;
+};
 
 // br i1 <cond>, label <iftrue>, label <iffalse>
 // br label <dest>          ; Unconditional branch
+// br i1 <cond> label %if.then1(%a, %b), label %if.end1(%c, %d)
 class BRInst : public Instruction {
-private:
-    // 全部存到oprands中
-    // BasicBlock* true_dest; // or dest
-    // BasicBlock* false_dest;
     bool conditional;
-
-    // 目前先不搞
-    // std::vector<Value*> bbparams; // 基本块参数
-
+    bool set_args = false;
 public:
     explicit BRInst(std::shared_ptr<BasicBlock> _dest);
     BRInst(std::shared_ptr<Value> cond, std::shared_ptr<BasicBlock> _true_dest, std::shared_ptr<BasicBlock> _false_dest);
@@ -53,9 +56,11 @@ public:
     std::shared_ptr<BasicBlock> getTrueDest() const;
     std::shared_ptr<BasicBlock> getFalseDest() const;
 
-    // void setBBParams(std::initializer_list<std::shared_ptr<Value>> _bbparams);
-    // void setBBparams(std::vector<std::shared_ptr<Value>>& _bbparams);
-    // std::vector<std::shared_ptr<Value>>& getBBParams();
+    void setBBArgs(const std::vector<std::shared_ptr<Value>>& args); // just for uncond
+    void setBBArgs(const std::vector<std::shared_ptr<Value>>& t_args, const std::vector<std::shared_ptr<Value>>& f_args); // just for cond
+    std::vector<std::shared_ptr<Value>> getBBArgs() const;
+    std::vector<std::shared_ptr<Value>> getTrueBBArgs() const;
+    std::vector<std::shared_ptr<Value>> getFalseBBArgs() const;
 
     void accept(IRVisitor& visitor) override;
 };

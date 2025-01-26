@@ -49,6 +49,14 @@ namespace IR {
         return insts;
     }
 
+    void BasicBlock::setBBParam(const std::vector<std::shared_ptr<Value>>& params) {
+        bb_params = params;
+    }
+
+    const std::vector<std::shared_ptr<Value>> & BasicBlock::getBBParams() const {
+        return bb_params;
+    }
+
     void BasicBlock::accept(IRVisitor& visitor)
     { visitor.visit(*this); }
 
