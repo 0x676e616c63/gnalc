@@ -1,62 +1,19 @@
-/**
- * @brief 将IR结构输出为.ll文件
- */
+#ifndef GNALC_IR_FORMATTER_HPP
+#define GNALC_IR_FORMATTER_HPP
 
 #pragma once
-#ifndef GNALC_PASSES_UTILITIES_IRPRINTER_HPP
-#define GNALC_PASSES_UTILITIES_IRPRINTER_HPP
+#include "base.hpp"
+#include "global_var.hpp"
+#include "instructions/binary.hpp"
+#include "instructions/compare.hpp"
+#include "instructions/control.hpp"
+#include "instructions/converse.hpp"
+#include "instructions/helper.hpp"
+#include "instructions/memory.hpp"
+#include "instructions/phi.hpp"
+#include <string>
 
-#include "../../ir/visitor.hpp"
-#include "../../utils/exception.hpp"
-#include "../pass_manager.hpp"
-
-#include <iostream>
-#include <fstream>
-
-namespace IR
-{
-class IRFormatter;
-
-// 线性IR打印（未划分基本块）
-class LIRPrinter : public PassInfo<LIRPrinter>, public IRVisitor {
-protected:
-    std::ostream& outStream;
-    bool printLiveInfo;
-
-    Module* curr_module;
-    ModuleAnalysisManager* analysis_manager;
-
-    template <typename T>
-    void write(T&& obj) {
-        outStream << obj;
-    }
-
-    template <typename T>
-    void writeln(T&& obj) {
-        outStream << obj << std::endl;
-    }
-
-public:
-    explicit LIRPrinter(std::ostream& out, bool _liveinfo = false);
-    ~LIRPrinter();
-
-    PreservedAnalyses run(Module &unit, ModuleAnalysisManager &manager);
-
-    void visit(GlobalVariable& node) override;
-    void visit(Function& node) override;
-    void visit(FunctionDecl& node) override;
-    void visit(Instruction& node) override;
-};
-
-class IRPrinter : public LIRPrinter {
-public:
-    explicit IRPrinter(std::ostream& out, bool _liveinfo = false) : LIRPrinter(out, _liveinfo) {}
-    ~IRPrinter() = default;
-    
-    void visit(Function& node) override;
-    void visit(BasicBlock& node) override;
-};
-
+namespace IR{
 /**
  * @brief 将IR输出为格式化文本，Printer的辅助类，亦可作调试用
  * @attention 由于目前一些类中的get函数都是非const的，因此暂时未将下列函数的参数声明为const
@@ -98,6 +55,5 @@ private:
     static std::string fHELPERInst(HELPERInst& inst);
 };
 }
-
 
 #endif

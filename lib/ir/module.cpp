@@ -29,6 +29,10 @@ const std::vector<std::shared_ptr<Function>>& Module::getFunctions() const {
     return funcs;
 }
 
+std::vector<std::shared_ptr<Function>>& Module::getFunctions() {
+    return funcs;
+}
+
 /**
  * @brief Delete by name
  */

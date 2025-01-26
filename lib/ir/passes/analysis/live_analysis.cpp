@@ -1,9 +1,11 @@
-#include "../../../include/passes/analysis/live_analysis.hpp"
-#include "../../../include/utils/logger.hpp"
+#include "../../../../include/ir/passes/analysis/live_analysis.hpp"
+#include "../../../../include/utils/logger.hpp"
 
 #include <variant>
 
 namespace IR {
+    PM::UniqueKey LiveAnalyser::Key;
+
     void LiveAnalyser::genDFSStack(const BasicBlock* bb) {
         bb_stack.spush(bb);
         for (auto& nextbb : bb->getNextBB()) {
@@ -13,7 +15,7 @@ namespace IR {
         }
     }
 
-    Liveness LiveAnalyser::run(Function& f, FunctionAnalysisManager& fpm) {
+    Liveness LiveAnalyser::run(Function& f, FAM& fpm) {
         liveness.reset();
         bb_stack.reset();
         genDFSStack(f.getBlocks().front().get());

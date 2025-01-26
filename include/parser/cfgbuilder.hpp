@@ -5,18 +5,21 @@
 
 #pragma once
 
-#ifndef GNALC_PASSES_TRANSFORMS_CFGBUILDER_HPP
-#define GNALC_PASSES_TRANSFORMS_CFGBUILDER_HPP
+#ifndef GNALC_PARSER_CFGBUILDER_HPP
+#define GNALC_PARSER_CFGBUILDER_HPP
 
-#include "../../ir/visitor.hpp"
-#include "../pass_manager.hpp"
+#include "../ir/base.hpp"
+#include "../ir/module.hpp"
+#include "../ir/basic_block.hpp"
+#include "../ir/instructions/helper.hpp"
+#include "../ir/instructions/control.hpp"
+#include "../ir/function.hpp"
 
 #include <stack>
 
-namespace IR {
-
+namespace Parser {
 // 通过Func中的insts划分基本块
-class BuildCFGPass : public PassInfo<BuildCFGPass> {
+class CFGBuilder {
 private:
     struct _idx {
     private:
@@ -54,28 +57,29 @@ private:
             lorlfidx = 1;
         }
     } nam; // new BB index or name
-    Function* cur_func = nullptr;
-    std::shared_ptr<BasicBlock> cur_blk;
-    std::stack<std::shared_ptr<BasicBlock>> _while_cond_for_continue;
-    std::stack<std::shared_ptr<BasicBlock>> _while_end_for_break;
+    std::shared_ptr<IR::LinearFunction> cur_linear_func;
+    std::shared_ptr<IR::Function> cur_making_func;
+    std::shared_ptr<IR::BasicBlock> cur_blk;
+    std::stack<std::shared_ptr<IR::BasicBlock>> _while_cond_for_continue;
+    std::stack<std::shared_ptr<IR::BasicBlock>> _while_end_for_break;
 
     bool adder(std::vector<std::shared_ptr<IR::Instruction> >::const_iterator &it
                , const std::vector<std::shared_ptr<IR::Instruction> >::const_iterator &end
                , bool allow_break); // 将inst加进cur_blk，返回值为是否已插入终结语句ret, br
-    void newIf(const std::shared_ptr<IFInst>& ifinst);
-    void newWh(const std::shared_ptr<WHILEInst>& whinst);
+    void newIf(const std::shared_ptr<IR::IFInst>& ifinst);
+    void newWh(const std::shared_ptr<IR::WHILEInst>& whinst);
 
-    void short_circuit_process(const std::shared_ptr<CONDValue> &cond,
-                           const std::shared_ptr<BasicBlock> &true_blk,
-                           const std::shared_ptr<BasicBlock> &false_blk);
+    void short_circuit_process(const std::shared_ptr<IR::CONDValue> &cond,
+                           const std::shared_ptr<IR::BasicBlock> &true_blk,
+                           const std::shared_ptr<IR::BasicBlock> &false_blk);
     // 包含了短路cond和普通cond两种处理
-    void addCondBr(const std::shared_ptr<Value> &cond,
-                           const std::shared_ptr<BasicBlock> &true_blk,
-                           const std::shared_ptr<BasicBlock> &false_blk);
+    void addCondBr(const std::shared_ptr<IR::Value> &cond,
+                           const std::shared_ptr<IR::BasicBlock> &true_blk,
+                           const std::shared_ptr<IR::BasicBlock> &false_blk);
     void divider();
     void linker();
 public:
-    PreservedAnalyses run(Function &function, FunctionAnalysisManager &manager);
+    void build(IR::Module &);
 };
 
 }

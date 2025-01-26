@@ -2,31 +2,39 @@
  * @attention 默认删除块中break; continue; 后的所有指令
 **/
 
-#include "../../../include/passes/transforms/cfgbuilder.hpp"
-#include "../../../include/ir/utilities.hpp"
-#include "../../../include/utils/logger.hpp"
+#include "../../include/parser/cfgbuilder.hpp"
+#include "../../include/ir/instructions/helper.hpp"
+#include "../../include/ir/instructions/control.hpp"
+#include "../../include/ir/utilities.hpp"
 
-namespace IR {
-
-PreservedAnalyses BuildCFGPass::run(Function& function, FunctionAnalysisManager& manager) {
-    cur_func = &function;
-    divider();
-    linker();
-    return PreservedAnalyses::none();
-}
+using namespace IR;
+namespace Parser {
+    void CFGBuilder::build(IR::Module& module) {
+        for (auto& f : module.getFunctions())
+        {
+            cur_linear_func = std::dynamic_pointer_cast<LinearFunction>(f);
+            cur_making_func = std::make_shared<Function>
+            (cur_linear_func->getName(), cur_linear_func->getParams(),
+                toFunctionType(cur_linear_func->getType())->getRet());
+            Err::gassert(cur_linear_func != nullptr, "Expected Linear IR.");
+            divider();
+            linker();
+            f = cur_making_func;
+        }
+    }
 
     // !!!需要尽量确保第一个BB是entry, 最后一个是return
-    void BuildCFGPass::divider() {
+    void CFGBuilder::divider() {
         cur_blk = std::make_shared<BasicBlock>("%entry");
-        cur_func->addBlock(cur_blk);
+        cur_making_func->addBlock(cur_blk);
         // Only by doing so can get const_iterator...
-        const auto& fkinst = cur_func->getInsts();
+        const auto& fkinst = cur_linear_func->getInsts();
         auto inst_it = fkinst.begin();
         adder(inst_it, fkinst.end(), false);
         nam.reset();
     }
 
-    void BuildCFGPass::newIf(const std::shared_ptr<IFInst>& ifinst) {
+    void CFGBuilder::newIf(const std::shared_ptr<IFInst>& ifinst) {
         const bool el = ifinst->hasElse();
 
         auto ifthen = std::make_shared<BasicBlock>(nam.getIfthen());
@@ -39,22 +47,22 @@ PreservedAnalyses BuildCFGPass::run(Function& function, FunctionAnalysisManager&
         else addCondBr(ifinst->getCond(), ifthen, ifend);
 
         cur_blk = ifthen;
-        cur_func->addBlock(cur_blk);
+        cur_making_func->addBlock(cur_blk);
         auto it = ifinst->getBodyInsts().begin();
         if (!adder(it, ifinst->getBodyInsts().end(), true)) cur_blk->addInst(std::make_shared<BRInst>(ifend));
 
         if (el) {
             cur_blk = ifelse;
-            cur_func->addBlock(cur_blk);
+            cur_making_func->addBlock(cur_blk);
             it = ifinst->getElseInsts().begin();
             if (!adder(it, ifinst->getElseInsts().end(), true)) cur_blk->addInst(std::make_shared<BRInst>(ifend));
         }
 
         cur_blk = ifend;
-        cur_func->addBlock(cur_blk);
+        cur_making_func->addBlock(cur_blk);
     }
 
-    void BuildCFGPass::newWh(const std::shared_ptr<WHILEInst>& whinst) {
+    void CFGBuilder::newWh(const std::shared_ptr<WHILEInst>& whinst) {
         auto whcond = std::make_shared<BasicBlock>(nam.getWhcond());
         auto whbody = std::make_shared<BasicBlock>(nam.getWhbody());
         auto whend = std::make_shared<BasicBlock>(nam.getWhend());
@@ -64,7 +72,7 @@ PreservedAnalyses BuildCFGPass::run(Function& function, FunctionAnalysisManager&
         cur_blk->addInst(std::make_shared<BRInst>(whcond));
 
         cur_blk = whcond;
-        cur_func->addBlock(cur_blk);
+        cur_making_func->addBlock(cur_blk);
         for (auto& cond : whinst->getCondInsts()) {
             cur_blk->addInst(cond);
         }
@@ -72,20 +80,20 @@ PreservedAnalyses BuildCFGPass::run(Function& function, FunctionAnalysisManager&
         addCondBr(whinst->getCond(), whbody, whend);
 
         cur_blk = whbody;
-        cur_func->addBlock(cur_blk);
+        cur_making_func->addBlock(cur_blk);
         if (auto it = whinst->getBodyInsts().begin(); !adder(it, whinst->getBodyInsts().end(), true))
             cur_blk->addInst(std::make_shared<BRInst>(whcond));
 
         cur_blk = whend;
-        cur_func->addBlock(cur_blk);
+        cur_making_func->addBlock(cur_blk);
 
         _while_cond_for_continue.pop();
         _while_end_for_break.pop();
     }
 
     // link basic blocks by prevBB and nextBB
-    void BuildCFGPass::linker() {
-        for (auto blk_it = cur_func->getBlocks().begin(); blk_it != cur_func->getBlocks().end(); ++blk_it) {
+    void CFGBuilder::linker() {
+        for (auto blk_it = cur_making_func->getBlocks().begin(); blk_it != cur_making_func->getBlocks().end(); ++blk_it) {
             if ((*blk_it)->getInsts().empty()) continue;
             switch (std::shared_ptr<Instruction> end_inst = (*blk_it)->getInsts().back(); end_inst->getOpcode()) {
                 case OP::BR:
@@ -102,7 +110,7 @@ PreservedAnalyses BuildCFGPass::run(Function& function, FunctionAnalysisManager&
                     break;
                 default:
                     auto next_blk = std::next(blk_it);
-                    if (next_blk != cur_func->getBlocks().end()) {
+                    if (next_blk != cur_making_func->getBlocks().end()) {
                         linkBB(*blk_it, *next_blk);
                     }
                     break;
@@ -110,13 +118,13 @@ PreservedAnalyses BuildCFGPass::run(Function& function, FunctionAnalysisManager&
         }
 
         // link完了之后，遍历基本块，查找空块和不可达的块并删除
-        for (auto it = cur_func->getBlocks().begin(); it != cur_func->getBlocks().end(); ) {
+        for (auto it = cur_making_func->getBlocks().begin(); it != cur_making_func->getBlocks().end(); ) {
             // 删除不可达块
-            if ((*it)->getPreBB().empty() && it != cur_func->getBlocks().begin()) {
-                for (auto nextbb: (*it)->getNextBB()) {
+            if ((*it)->getPreBB().empty() && it != cur_making_func->getBlocks().begin()) {
+                for (const auto& nextbb: (*it)->getNextBB()) {
                     WeakListDel(nextbb->getRPreBB(), *it);
                 }
-                it = cur_func->getBlocks().erase(it);
+                it = cur_making_func->getBlocks().erase(it);
                 continue;
             }
             // 删除空块
@@ -125,7 +133,7 @@ PreservedAnalyses BuildCFGPass::run(Function& function, FunctionAnalysisManager&
                 // 非结尾块的情况，prebb的br替换为惟一nextbb
                 if ((*it)->getNextBB().size() == 1) {
                     auto nxt = (*it)->getNextBB().front();
-                    for (auto prebb : (*it)->getPreBB()) {
+                    for (const auto& prebb : (*it)->getPreBB()) {
                         if (prebb->getInsts().back()->getOpcode() == OP::BR) {
                             auto brinst = std::dynamic_pointer_cast<BRInst>(prebb->getInsts().back());
                             Err::gassert(brinst != nullptr, "CFGBuilder::linker(): can't cast BRInst");
@@ -134,10 +142,10 @@ PreservedAnalyses BuildCFGPass::run(Function& function, FunctionAnalysisManager&
                         WeakListReplace(prebb->getRNextBB(), *it, nxt); //改nextbb
                         WeakListReplace(nxt->getRPreBB(), *it, prebb); // 改prebb
                     }
-                    it = cur_func->getBlocks().erase(it);
+                    it = cur_making_func->getBlocks().erase(it);
                 } else if ((*it)->getNextBB().size() == 0) {
                     // 结尾块
-                    if (toBType(toFunctionType(cur_func->getType())->getRet())->getInner() == IRBTYPE::VOID) {
+                    if (toBType(toFunctionType(cur_linear_func->getType())->getRet())->getInner() == IRBTYPE::VOID) {
                         (*it)->addInst(std::make_shared<RETInst>());
                     }
                     else {
@@ -153,7 +161,7 @@ PreservedAnalyses BuildCFGPass::run(Function& function, FunctionAnalysisManager&
         }
     }
 
-    bool BuildCFGPass::adder(std::vector<std::shared_ptr<IR::Instruction> >::const_iterator &it
+    bool CFGBuilder::adder(std::vector<std::shared_ptr<IR::Instruction> >::const_iterator &it
                              , const std::vector<std::shared_ptr<IR::Instruction> >::const_iterator &end
                              , const bool allow_break)
     {
@@ -193,7 +201,7 @@ PreservedAnalyses BuildCFGPass::run(Function& function, FunctionAnalysisManager&
     }
 
     // 处理完整个的cond
-    void BuildCFGPass::short_circuit_process(const std::shared_ptr<CONDValue> &cond,
+    void CFGBuilder::short_circuit_process(const std::shared_ptr<CONDValue> &cond,
                                        const std::shared_ptr<BasicBlock> &true_blk,
                                        const std::shared_ptr<BasicBlock> &false_blk) {
         if (cond->getCondType() == CONDTY::AND) {
@@ -201,7 +209,7 @@ PreservedAnalyses BuildCFGPass::run(Function& function, FunctionAnalysisManager&
             auto landlt = std::make_shared<BasicBlock>(nam.getLandlt()); //land lhs true
             addCondBr(land->getLHS(), landlt, false_blk);
             cur_blk = landlt;
-            cur_func->addBlock(cur_blk);
+            cur_making_func->addBlock(cur_blk);
             for (const auto& rhsinst : land->getRHSInsts()) {
                 cur_blk->addInst(rhsinst);
             }
@@ -211,7 +219,7 @@ PreservedAnalyses BuildCFGPass::run(Function& function, FunctionAnalysisManager&
             auto lorlf = std::make_shared<BasicBlock>(nam.getLorlf()); // lor lhs false
             addCondBr(lor->getLHS(), true_blk, lorlf);
             cur_blk = lorlf;
-            cur_func->addBlock(cur_blk);
+            cur_making_func->addBlock(cur_blk);
             for (const auto& rhsinst : lor->getRHSInsts()) {
                 cur_blk->addInst(rhsinst);
             }
@@ -221,7 +229,7 @@ PreservedAnalyses BuildCFGPass::run(Function& function, FunctionAnalysisManager&
         }
     }
 
-    void BuildCFGPass::addCondBr(const std::shared_ptr<Value> &cond,
+    void CFGBuilder::addCondBr(const std::shared_ptr<Value> &cond,
                                 const std::shared_ptr<BasicBlock> &true_blk,
                                 const std::shared_ptr<BasicBlock> &false_blk) {
         if (cond->getVTrait() == ValueTrait::CONDHELPER) {

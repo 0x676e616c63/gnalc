@@ -1,59 +1,20 @@
-/**
- * @brief AST Visitor
- */
-#ifndef GNALC_AST_VISITOR_HPP
-#define GNALC_AST_VISITOR_HPP
+#ifndef GNALC_PARSER_IRGEN_HPP
+#define GNALC_PARSER_IRGEN_HPP
 #pragma once
 
 #include "ast.hpp"
+#include "cfgbuilder.hpp"
 #include "../symbol_table/symbol_table.hpp"
 #include "../ir/module.hpp"
-#include "../ir/instructions/memory.hpp"
 #include "../config/config.hpp"
 
-namespace AST {
+namespace Parser {
 
-class ASTPrinter : public ASTVisitor {
-private:
-    int nest = 0;
-    bool fold_exp = false;
-
-public:
-    void PrintType(dtype t) const;
-    void PrintBlank() const;
-    void PrintOp(BiOp op) const;
-    void PrintOp(UnOp op) const;
-
-    void visit(CompUnit& node) override;
-    void visit(VarDef& node) override;
-    void visit(DeclStmt& node) override;
-    void visit(InitVal& node) override;
-    void visit(ArraySubscript& node) override;
-    void visit(FuncDef& node) override;
-    void visit(FuncFParam& node) override;
-    void visit(DeclRef& node) override;
-    void visit(ArrayExp& node) override;
-    void visit(CallExp& node) override;
-    void visit(FuncRParam& node) override;
-    void visit(BinaryOp& node) override;
-    void visit(UnaryOp& node) override;
-    void visit(ParenExp& node) override;
-    void visit(IntLiteral& node) override;
-    void visit(FloatLiteral& node) override;
-    void visit(CompStmt& node) override;
-    void visit(IfStmt& node) override;
-    void visit(WhileStmt& node) override;
-    void visit(NullStmt& node) override;
-    void visit(BreakStmt& node) override;
-    void visit(ContinueStmt& node) override;
-    void visit(ReturnStmt& node) override;
-};
-
-class IRGenerator : public ASTVisitor {
+class IRGenerator : public AST::ASTVisitor {
     IR::Module module;
     std::shared_ptr<IR::Value> curr_val;
     std::vector<std::shared_ptr<IR::Instruction>> curr_insts;
-    std::shared_ptr<IR::Function> curr_func;
+    std::shared_ptr<IR::LinearFunction> curr_func;
     Sym::SymbolTable symbol_table;
     bool is_making_lval{false}; // TODO: more sensible
 
@@ -110,29 +71,29 @@ class IRGenerator : public ASTVisitor {
     Initializer* curr_making_initializer{};
 public:
     IRGenerator() = default;
-    void visit(CompUnit& node) override;
-    void visit(VarDef& node) override;
-    void visit(DeclStmt& node) override;
-    void visit(InitVal& node) override;
-    void visit(ArraySubscript& node) override;
-    void visit(FuncDef& node) override;
-    void visit(FuncFParam& node) override;
-    void visit(DeclRef& node) override;
-    void visit(ArrayExp& node) override;
-    void visit(CallExp& node) override;
-    void visit(FuncRParam& node) override;
-    void visit(BinaryOp& node) override;
-    void visit(UnaryOp& node) override;
-    void visit(ParenExp& node) override;
-    void visit(IntLiteral& node) override;
-    void visit(FloatLiteral& node) override;
-    void visit(CompStmt& node) override;
-    void visit(IfStmt& node) override;
-    void visit(WhileStmt& node) override;
-    void visit(NullStmt& node) override;
-    void visit(BreakStmt& node) override;
-    void visit(ContinueStmt& node) override;
-    void visit(ReturnStmt& node) override;
+    void visit(AST::CompUnit& node) override;
+    void visit(AST::VarDef& node) override;
+    void visit(AST::DeclStmt& node) override;
+    void visit(AST::InitVal& node) override;
+    void visit(AST::ArraySubscript& node) override;
+    void visit(AST::FuncDef& node) override;
+    void visit(AST::FuncFParam& node) override;
+    void visit(AST::DeclRef& node) override;
+    void visit(AST::ArrayExp& node) override;
+    void visit(AST::CallExp& node) override;
+    void visit(AST::FuncRParam& node) override;
+    void visit(AST::BinaryOp& node) override;
+    void visit(AST::UnaryOp& node) override;
+    void visit(AST::ParenExp& node) override;
+    void visit(AST::IntLiteral& node) override;
+    void visit(AST::FloatLiteral& node) override;
+    void visit(AST::CompStmt& node) override;
+    void visit(AST::IfStmt& node) override;
+    void visit(AST::WhileStmt& node) override;
+    void visit(AST::NullStmt& node) override;
+    void visit(AST::BreakStmt& node) override;
+    void visit(AST::ContinueStmt& node) override;
+    void visit(AST::ReturnStmt& node) override;
 
     IR::Module& get_module() { return module; }
 

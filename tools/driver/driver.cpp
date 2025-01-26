@@ -1,11 +1,12 @@
 #include "../../include/config/config.hpp"
 
 #include "../../include/parser/ast.hpp"
-#include "../../include/parser/visitor.hpp"
+#include "../../include/parser/astprinter.hpp"
+#include "../../include/parser/irgen.hpp"
 #include "../../include/parser/parser.hpp"
 #include "../../include/utils/logger.hpp"
-#include "../../include/passes/pass_manager.hpp"
-#include "../../include/passes/utilities/irprinter.hpp"
+#include "../../include/ir/passes/pass_manager.hpp"
+#include "../../include/ir/passes/pass_builder.hpp"
 
 #if GNALC_EXTENSION_BRAINFK // in config.hpp
 #include "../../include/codegen/brainfk/bfgen.hpp"
@@ -18,7 +19,9 @@
 #include <iostream>
 #include <fstream>
 
-std::shared_ptr<CompUnit> node = nullptr;
+#include "../../include/ir/passes/utilities/irprinter.hpp"
+
+std::shared_ptr<AST::CompUnit> node = nullptr;
 extern FILE *yyin;
 
 int main(int argc, char **argv) {
@@ -153,11 +156,11 @@ Extensions:
 
     if (!input_file.empty()) fclose(yyin);
 
-    IRGenerator generator;
+    Parser::IRGenerator generator;
     generator.visit(*node);
 
-    IR::PassManager pass_manager;
-    IR::register_default_pass(pass_manager, opt_info);
+    auto [fam, mam] = IR::PassBuilder::buildAnalysisManager();
+    auto mpm = IR::PassBuilder::buildModulePipeline(opt_info);
 
     std::ostream* poutstream = &std::cout;
     std::ofstream outfile;
@@ -175,12 +178,12 @@ Extensions:
 
     if (emit_llvm)
     {
-        pass_manager.registerModulePass<IR::IRPrinter>(*poutstream, false);
-        pass_manager.runOnModule(generator.get_module());
+        mpm.addPass(IR::PrintModulePass(*poutstream, false));
+        mpm.run(generator.get_module(), mam);
         return 0;
     }
 
-    pass_manager.runOnModule(generator.get_module());
+    mpm.run(generator.get_module(), mam);
 
 #if GNALC_EXTENSION_BRAINFK
     if (bf_target || bf3t_target)

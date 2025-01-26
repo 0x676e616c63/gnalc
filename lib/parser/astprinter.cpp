@@ -1,4 +1,4 @@
-#include "../../include/parser/visitor.hpp"
+#include "../../include/parser/astprinter.hpp"
 #include <iostream>
 
 namespace AST {

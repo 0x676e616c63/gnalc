@@ -38,6 +38,7 @@ public:
 
     void addFunction(std::shared_ptr<Function> func);
     const std::vector<std::shared_ptr<Function>>& getFunctions() const;
+    std::vector<std::shared_ptr<Function>>& getFunctions();
     void delFunction(NameRef name); // by name
 
     void addFunctionDecl(std::shared_ptr<FunctionDecl> func);

@@ -1,10 +1,11 @@
-#include "../../../include/passes/transforms/namenormalizer.hpp"
-#include "../../../include/parser/visitor.hpp"
+#include "../../../../include/ir/passes/transforms/namenormalizer.hpp"
+
+#include "../../../../include/config/config.hpp"
 
 namespace IR {
-PreservedAnalyses NameNormalizePass::run(Function &function, FunctionAnalysisManager &manager) {
+PM::PreservedAnalyses NameNormalizePass::run(Function &function, FAM &manager) {
     function.accept(*this);
-    return PreservedAnalyses::all();
+    return PM::PreservedAnalyses::all();
 }
 
 void NameNormalizePass::visit(Function& node) {
@@ -24,7 +25,7 @@ void NameNormalizePass::visit(BasicBlock& node) {
     ++curr_idx;
     for (const auto& inst : node.getInsts())
     {
-        if (inst->getName() == AST::IRGenerator::irval_temp_name)
+        if (inst->getName() == Config::IR::REGISTER_TEMP_NAME)
             inst->setName("%" + std::to_string(curr_idx++));
     }
 }

@@ -1,94 +1,8 @@
-#include "../../../include/passes/utilities/irprinter.hpp"
-
-#include "../../../include/passes/analysis/live_analysis.hpp"
-#include "../../../include/utils/exception.hpp"
-#include "../../../include/utils/logger.hpp"
+#include "../../include/ir/formatter.hpp"
+#include "../../include/utils/logger.hpp"
 
 namespace IR
 {
-LIRPrinter::LIRPrinter(std::ostream& out, bool _liveinfo): outStream(out) , printLiveInfo(_liveinfo) { }
-
-LIRPrinter::~LIRPrinter() { }
-
-PreservedAnalyses LIRPrinter::run(Module& module, ModuleAnalysisManager& manager) {
-    curr_module = &module;
-    analysis_manager = &manager;
-
-    Logger::logInfo("LIRPrinter: Printing Module \"" + module.getName() + "\"");
-    writeln("; Module: " + module.getName());
-
-    writeln("");
-
-    Logger::logDebug("LIRPrinter: Printing Global Variables");
-    for (auto& gv : module.getGlobalVars())
-    {
-        gv->accept(*this);
-    }
-
-    writeln("");
-
-    Logger::logDebug("LIRPrinter: Printing Functions");
-    for (auto& func : module.getFunctions())
-    {
-        func->accept(*this);
-        writeln("");
-    }
-
-    Logger::logDebug("LIRPrinter: Printing Function Declarations");
-    for (auto& func_decl : module.getFunctionDecls())
-    {
-        func_decl->accept(*this);
-        writeln("");
-    }
-
-    Logger::logInfo("LIRPrinter: Finished printing Module \"" + module.getName() + "\"");
-}
-
-// void LIRPrinter::visit(Module& node) {
-// }
-
-void LIRPrinter::visit(GlobalVariable& node) {
-    Logger::logDebug("LIRPrinter: Printing Global Variable \"" + node.getName() + "\"");
-    writeln(IRFormatter::formatGV(node));
-}
-
-void LIRPrinter::visit(Function& node) {
-    Logger::logDebug("LIRPrinter: Printing Function \"" + node.getName() + "\"");
-    write(IRFormatter::formatFunc(node));
-    writeln(" {");
-
-    for (auto& inst : node.getInsts())
-        inst->Instruction::accept(*this);
-
-    writeln("}");
-}
-
-void LIRPrinter::visit(FunctionDecl& node) {
-    Logger::logDebug("LIRPrinter: Printing Function Declaration \"" + node.getName() + "\"");
-    write(IRFormatter::formatFuncDecl(node));
-}
-
-void LIRPrinter::visit(Instruction& node) {
-    Logger::logDebug("LIRPrinter: Printing Instruction \"" + node.getName() + "\"");
-
-    if (printLiveInfo) {
-        auto liveness = analysis_manager->getResult<LiveAnalyser>(*curr_module);
-        write("  ; livein:");
-        for (auto& val : liveness.getLiveIn(&node))
-            write(" " + val->getName());
-        writeln("");
-        write("  ; liveout:");
-        for (auto& val : liveness.getLiveOut(&node))
-            write(" " + val->getName());
-        writeln("");
-    }
-
-    // It seems there is no nested scope, so it is a fixed indent.
-    write("  ");
-
-    writeln(IRFormatter::formatInst(node));
-}
-
 std::string IRFormatter::formatSTOCLASS(STOCLASS cls) {
     switch (cls)
     {
@@ -603,40 +517,5 @@ std::string IRFormatter::fHELPERInst(HELPERInst& inst) {
     }
     return "; unknown helper";
 }
-
-
-void IRPrinter::visit(Function& node) {
-    Logger::logDebug("IRPrinter: Printing Function \"" + node.getName() + "\"");
-    write(IRFormatter::formatFunc(node));
-    writeln(" {");
-
-    for (auto& blk : node.getBlocks())
-        blk->accept(*this);
-
-    writeln("}");
-}
-
-void IRPrinter::visit(BasicBlock& node) {
-    Logger::logDebug("IRPrinter: Printing BasicBlock \"" + node.getName() + "\"");
-
-    if (printLiveInfo) {
-        auto liveness = analysis_manager->getResult<LiveAnalyser>(*curr_module);
-        write("; livein:");
-        for (auto& val : liveness.getLiveIn(&node))
-            write(" " + val->getName());
-        writeln("");
-        write("; liveout:");
-        for (auto& val : liveness.getLiveOut(&node))
-            write(" " + val->getName());
-        writeln("");
-    }
-
-    write(IRFormatter::formatBB(node));
-    writeln(":");
-    for (auto& inst : node.getInsts())
-        inst->Instruction::accept(*this);
-    writeln("");
-}
-
 }
 

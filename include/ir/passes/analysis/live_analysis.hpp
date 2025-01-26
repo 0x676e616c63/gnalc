@@ -5,11 +5,11 @@
  */
 
 #pragma once
-#ifndef GNALC_PASSES_ANALYSIS_LIVE_ANALYSIS_HPP
-#define GNALC_PASSES_ANALYSIS_LIVE_ANALYSIS_HPP
+#ifndef GNALC_IR_PASSES_ANALYSIS_LIVE_ANALYSIS_HPP
+#define GNALC_IR_PASSES_ANALYSIS_LIVE_ANALYSIS_HPP
 
-#include "../../ir/base.hpp"
-#include "../../ir/visitor.hpp"
+#include "../../base.hpp"
+#include "../../visitor.hpp"
 #include "../pass_manager.hpp"
 
 #include <vector>
@@ -44,7 +44,7 @@ class Liveness {
     }
 };
 
-class LiveAnalyser : public AnalysisInfo<LiveAnalyser> {
+class LiveAnalyser : public PM::AnalysisInfo<LiveAnalyser> {
 private:
     // 使用DFS遍历CFG
     void genDFSStack(const BasicBlock* bb);
@@ -79,7 +79,7 @@ private:
         }
     } bb_stack;
 public:
-    Liveness run(Function& f, FunctionAnalysisManager& fpm);
+    Liveness run(Function& f, FAM& fpm);
 private:
     Liveness liveness;
     bool processFunc(const Function* func); // 处理单个func
@@ -90,7 +90,7 @@ public:
     using Result = Liveness;
 private:
     friend AnalysisInfo<LiveAnalyser>;
-    static UniqueKey Key;
+    static PM::UniqueKey Key;
 };
 
 }

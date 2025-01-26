@@ -10,7 +10,7 @@ namespace Err {
 class GnalcException : public std::logic_error {
     std::string detail;
 public:
-    GnalcException(const std::string &detail_)
+    explicit GnalcException(const std::string &detail_)
         : logic_error("\033[0;32;31mError\033[m: " + detail_),
           detail(detail_) {}
 };

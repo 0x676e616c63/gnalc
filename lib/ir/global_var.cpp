@@ -1,6 +1,6 @@
 #include "../../include/ir/global_var.hpp"
 #include "../../include/ir/visitor.hpp"
-#include "../../include/passes/utilities/irprinter.hpp"
+#include "../../include/ir/formatter.hpp"
 
 namespace IR
 {

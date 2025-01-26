@@ -27,6 +27,7 @@ public:
     // virtual void visit(example& node) {}
     virtual void visit(Module& node) { Err::not_implemented("IRVisitor::visit(Module&)"); }
     virtual void visit(GlobalVariable& node) { Err::not_implemented("IRVisitor::visit(GlobalVariable&)"); }
+    virtual void visit(LinearFunction& node) { Err::not_implemented("IRVisitor::visit(LinearFunction&)"); }
     virtual void visit(Function& node) { Err::not_implemented("IRVisitor::visit(Function&)"); }
     virtual void visit(FunctionDecl& node) { Err::not_implemented("IRVisitor::visit(FunctionDecl&)"); }
     virtual void visit(BasicBlock& node) { Err::not_implemented("IRVisitor::visit(BasicBlock&)"); }

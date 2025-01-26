@@ -41,25 +41,12 @@ namespace IR {
         blks.emplace_back(std::move(blk));
     }
 
-    void Function::addInst(std::shared_ptr<Instruction> inst) {
-        insts.emplace_back(std::move(inst));
-    }
-
-    void Function::appendInsts(std::vector<std::shared_ptr<Instruction>> insts_) {
-        insts.insert(insts.end(),
-            std::make_move_iterator(insts_.begin()), std::make_move_iterator(insts_.end()));
-    }
-
     const std::vector<std::shared_ptr<Value>>& Function::getParams() const {
         return params;
     }
 
     const std::vector<std::shared_ptr<BasicBlock>>& Function::getBlocks() const {
         return blks;
-    }
-
-    const std::vector<std::shared_ptr<Instruction>>& Function::getInsts() const {
-        return insts;
     }
 
     std::vector<std::shared_ptr<Value>>& Function::getParams() {
@@ -70,11 +57,24 @@ namespace IR {
         return blks;
     }
 
-    std::vector<std::shared_ptr<Instruction>>& Function::getInsts() {
+    void Function::accept(IRVisitor& visitor) { visitor.visit(*this); }
+
+    void LinearFunction::addInst(std::shared_ptr<Instruction> inst) {
+        insts.emplace_back(std::move(inst));
+    }
+
+    void LinearFunction::appendInsts(std::vector<std::shared_ptr<Instruction>> insts_) {
+        insts.insert(insts.end(),
+            std::make_move_iterator(insts_.begin()), std::make_move_iterator(insts_.end()));
+    }
+
+    const std::vector<std::shared_ptr<Instruction>>& LinearFunction::getInsts() const {
         return insts;
     }
 
-    void Function::accept(IRVisitor& visitor) { visitor.visit(*this); }
+    std::vector<std::shared_ptr<Instruction>>& LinearFunction::getInsts() {
+        return insts;
+    }
 
-    Function::~Function() {}
+    void LinearFunction::accept(IRVisitor& visitor) { visitor.visit(*this); }
 }

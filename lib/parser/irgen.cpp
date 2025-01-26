@@ -9,11 +9,12 @@
 #include "../../include/ir/instructions/helper.hpp"
 #include "../../include/ir/instructions/memory.hpp"
 #include "../../include/ir/module.hpp"
-#include "../../include/parser/visitor.hpp"
+#include "../../include/parser/irgen.hpp"
 #include "../../include/config/config.hpp"
 #include "../../include/utils/logger.hpp"
 
-namespace AST
+using namespace AST;
+namespace Parser
 {
 void IRGenerator::visit(CompUnit& node) {
     symbol_table.initScope("__global");
@@ -68,6 +69,10 @@ void IRGenerator::visit(CompUnit& node) {
     auto& decls = module.getFunctionDecls();
     decls.erase(std::remove_if(decls.begin(), decls.end(),
         [](auto&& p){return p->getRUseList().empty();}), decls.end());
+
+
+    CFGBuilder builder;
+    builder.build(module);
 }
 
 // DeclStmt: const int32
@@ -396,7 +401,7 @@ void IRGenerator::visit(FuncDef& node) {
         }
     }
 
-    curr_func = std::make_shared<IR::Function>("@" + node.getId(), params, IR::makeBType(ty));
+    curr_func = std::make_shared<IR::LinearFunction>("@" + node.getId(), params, IR::makeBType(ty));
     module.addFunction(curr_func);
     symbol_table.insert(node.getId(), curr_func);
 
