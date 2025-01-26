@@ -19,6 +19,10 @@ namespace Parser {
             Err::gassert(cur_linear_func != nullptr, "Expected Linear IR.");
             divider();
             linker();
+
+            for (auto& use : f->getUseList())
+                use->getUser()->replaceUse(f, cur_making_func);
+
             f = cur_making_func;
         }
     }
