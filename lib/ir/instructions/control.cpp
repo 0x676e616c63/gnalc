@@ -158,18 +158,18 @@ namespace IR
 
     void CALLInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
-    BBArgList::BBArgList(const std::shared_ptr<BasicBlock> &block, const std::vector<std::shared_ptr<Value>> &args)
+    BRInst::BBArgList::BBArgList(const std::shared_ptr<BasicBlock> &block, const std::vector<std::shared_ptr<Value>> &args)
         : User("__bb_arg_list", makeBType(IRBTYPE::UNDEFINED), ValueTrait::BB_ARG_LIST)
             , block(block){
         for (const auto& arg : args)
             addOperand(arg);
     }
 
-    BRInst *BBArgList::getBr() const {
+    BRInst *BRInst::BBArgList::getBr() const {
         return dynamic_cast<BRInst*>(getUseList().front()->getUser());
     }
 
-    std::vector<std::shared_ptr<Value>> BBArgList::_getArgs() const {
+    std::vector<std::shared_ptr<Value>> BRInst::BBArgList::_getArgs() const {
         std::vector<std::shared_ptr<Value>> ret;
         for (const auto& operand : getOperands())
             ret.emplace_back(operand->getValue());

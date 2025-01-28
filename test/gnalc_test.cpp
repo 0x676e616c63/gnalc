@@ -26,8 +26,6 @@ bool only_frontend = true;
 //              |  performance
 //              |  h_performance
 //              |  final ->
-//                         |  functional
-//                         |  h_functional
 //                         |  performance
 //                         |  h_performance
 //

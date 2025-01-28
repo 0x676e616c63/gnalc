@@ -30,20 +30,22 @@ public:
     void accept(IRVisitor& visitor) override;
 };
 
-class BRInst;
-// arg的user是BBArgList
-struct BBArgList : public User {
-    std::shared_ptr<BasicBlock> block; // operands只存args
-    BBArgList() = delete;
-    BBArgList(const std::shared_ptr<BasicBlock> &block, const std::vector<std::shared_ptr<Value>>& args);
-    BRInst *getBr() const;
-    std::vector<std::shared_ptr<Value>> _getArgs() const;
-};
-
 // br i1 <cond>, label <iftrue>, label <iffalse>
 // br label <dest>          ; Unconditional branch
 // br i1 <cond> label %if.then1(%a, %b), label %if.end1(%c, %d)
 class BRInst : public Instruction {
+public:
+    // arg的user是BBArgList
+    class BBArgList : public User {
+        std::shared_ptr<BasicBlock> block; // operands只存args
+    public:
+        BBArgList() = delete;
+        BBArgList(const std::shared_ptr<BasicBlock> &block, const std::vector<std::shared_ptr<Value>>& args);
+        BRInst *getBr() const;
+        std::vector<std::shared_ptr<Value>> _getArgs() const;
+        void accept(IRVisitor& visitor) override { Err::not_implemented("BBArgList::visit"); }
+    };
+private:
     bool conditional;
     bool set_args = false;
 public:
