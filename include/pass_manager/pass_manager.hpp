@@ -1,3 +1,4 @@
+// Generic Pass Manager, used by IR and MIR's PassManager
 // This PassManager is inspired by the new PassManager of LLVM.
 // It also uses concept-based polymorphism, but is much simplified.
 #pragma once

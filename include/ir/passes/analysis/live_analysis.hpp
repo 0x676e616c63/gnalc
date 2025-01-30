@@ -9,7 +9,6 @@
 #define GNALC_IR_PASSES_ANALYSIS_LIVE_ANALYSIS_HPP
 
 #include "../../base.hpp"
-#include "../../visitor.hpp"
 #include "../pass_manager.hpp"
 
 #include <vector>
@@ -17,7 +16,6 @@
 #include <algorithm>
 
 namespace IR {
-// FIXME: Raw pointer
 class Liveness {
     using LiveSet = std::set<Value*>;
     std::unordered_map<const Value*, LiveSet> livein;

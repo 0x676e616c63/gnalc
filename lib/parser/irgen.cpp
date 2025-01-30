@@ -672,30 +672,10 @@ auto constant_binary(const std::shared_ptr<IR::Value>& lhs,
     Err::gassert(IR::isSameType(lhs->getType(), rhs->getType())
         && lhs->getType()->getTrait() == IR::IRCTYPE::BASIC);
 
-    if constexpr (std::is_same_v<Base, int>)
-    {
-        auto cl = std::dynamic_pointer_cast<IR::ConstantInt>(lhs);
-        auto cr = std::dynamic_pointer_cast<IR::ConstantInt>(rhs);
-        Err::gassert(cl != nullptr && cr != nullptr);
-        return operation(cl->getVal(), cr->getVal());
-    }
-    else if constexpr (std::is_same_v<Base, float>)
-    {
-        auto cl = std::dynamic_pointer_cast<IR::ConstantFloat>(lhs);
-        auto cr = std::dynamic_pointer_cast<IR::ConstantFloat>(rhs);
-        Err::gassert(cl != nullptr && cr != nullptr);
-        return operation(cl->getVal(), cr->getVal());
-    }
-    else if constexpr (std::is_same_v<Base, bool>)
-    {
-        auto ci1 = std::dynamic_pointer_cast<IR::ConstantI1>(lhs);
-        auto ci2 = std::dynamic_pointer_cast<IR::ConstantI1>(rhs);
-        Err::gassert(ci1 != nullptr && ci2 != nullptr);
-        return operation(ci1->getVal(), ci2->getVal());
-    }
-    else
-        Err::not_implemented();
-    return operation(Base{}, Base{});
+    auto lhs_val = std::dynamic_pointer_cast<IR::getIRConstantType<Base>>(lhs);
+    auto rhs_val = std::dynamic_pointer_cast<IR::getIRConstantType<Base>>(rhs);
+    Err::gassert(lhs_val != nullptr && rhs_val != nullptr);
+    return operation(lhs_val->getVal(), rhs_val->getVal());
 }
 
 void IRGenerator::visit(BinaryOp& node) {

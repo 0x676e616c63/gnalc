@@ -1,7 +1,9 @@
+#include "../../../../include/ir/base.hpp"
+#include "../../../../include/ir/instructions/control.hpp"
 #include "../../../../include/ir/passes/analysis/live_analysis.hpp"
 #include "../../../../include/utils/logger.hpp"
 
-#include <variant>
+#include <string>
 
 namespace IR {
     PM::UniqueKey LiveAnalyser::Key;

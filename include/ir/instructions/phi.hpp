@@ -15,6 +15,14 @@ struct PhiOperand;
 // %result = phi <type> [ <val1>, <block1> ], [ <val2>, <block2> ], ...
 class PHIInst : public Instruction {
 public:
+    // [ <val1>, <block1> ]
+    struct PhiOperand : public User {
+        PhiOperand() = delete;
+        PhiOperand(const std::shared_ptr<Value>& _value, const std::shared_ptr<BasicBlock>& _block);
+        std::shared_ptr<Value> getValue() const;
+        std::shared_ptr<BasicBlock> getBlock() const;
+        PHIInst* getPhi() const;
+    };
     PHIInst() = delete;
     PHIInst(NameRef name, const std::shared_ptr<Type>& _type, const std::vector<std::shared_ptr<PhiOperand>>& _operands);
 
@@ -24,14 +32,7 @@ public:
     void accept(IRVisitor& visitor) override;
 };
 
-// [ <val1>, <block1> ]
-struct PhiOperand : public User {
-    PhiOperand() = delete;
-    PhiOperand(const std::shared_ptr<Value>& _value, const std::shared_ptr<BasicBlock>& _block);
-    std::shared_ptr<Value> getValue() const;
-    std::shared_ptr<BasicBlock> getBlock() const;
-    PHIInst* getPhi() const;
-};
+
 
 }
 
