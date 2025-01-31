@@ -31,10 +31,9 @@ namespace Parser {
     void CFGBuilder::divider() {
         cur_blk = std::make_shared<BasicBlock>("%entry");
         cur_making_func->addBlock(cur_blk);
-        // Only by doing so can get const_iterator...
-        const auto& fkinst = cur_linear_func->getInsts();
-        auto inst_it = fkinst.begin();
-        adder(inst_it, fkinst.end(), false);
+        // `adder` expects a `const_iterator&`, so make it a lvalue
+        auto inst_it = cur_linear_func->cbegin();
+        adder(inst_it, cur_linear_func->cend(), false);
         nam.reset();
     }
 
@@ -97,7 +96,7 @@ namespace Parser {
 
     // link basic blocks by prevBB and nextBB
     void CFGBuilder::linker() {
-        for (auto blk_it = cur_making_func->getBlocks().begin(); blk_it != cur_making_func->getBlocks().end(); ++blk_it) {
+        for (auto blk_it = cur_making_func->begin(); blk_it != cur_making_func->end(); ++blk_it) {
             if ((*blk_it)->getInsts().empty()) continue;
             switch (std::shared_ptr<Instruction> end_inst = (*blk_it)->getInsts().back(); end_inst->getOpcode()) {
                 case OP::BR:
@@ -114,7 +113,7 @@ namespace Parser {
                     break;
                 default:
                     auto next_blk = std::next(blk_it);
-                    if (next_blk != cur_making_func->getBlocks().end()) {
+                    if (next_blk != cur_making_func->end()) {
                         linkBB(*blk_it, *next_blk);
                     }
                     break;
@@ -122,9 +121,9 @@ namespace Parser {
         }
 
         // link完了之后，遍历基本块，查找空块和不可达的块并删除
-        for (auto it = cur_making_func->getBlocks().begin(); it != cur_making_func->getBlocks().end(); ) {
+        for (auto it = cur_making_func->begin(); it != cur_making_func->end(); ) {
             // 删除不可达块
-            if ((*it)->getPreBB().empty() && it != cur_making_func->getBlocks().begin()) {
+            if ((*it)->getPreBB().empty() && it != cur_making_func->begin()) {
                 for (const auto& nextbb: (*it)->getNextBB()) {
                     WeakListDel(nextbb->getRPreBB(), *it);
                 }

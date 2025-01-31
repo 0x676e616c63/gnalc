@@ -35,16 +35,25 @@ private:
     // 后面需要再说
     // int vreg_idx = 0;
 public:
+    using const_iterator = decltype(blks)::const_iterator;
+    using iterator = decltype(blks)::iterator;
+
     Function(std::string name_, const std::vector<std::shared_ptr<Value>>& params,
         std::shared_ptr<Type> ret_type);
 
     void addBlock(std::shared_ptr<BasicBlock> blk);
 
     const std::vector<std::shared_ptr<Value>>& getParams() const;
-    const std::vector<std::shared_ptr<BasicBlock>>& getBlocks() const;
-
     std::vector<std::shared_ptr<Value>>& getParams();
+
+    // usually we can use range-based for instead of these
+    const std::vector<std::shared_ptr<BasicBlock>>& getBlocks() const;
     std::vector<std::shared_ptr<BasicBlock>>& getBlocks();
+
+    const_iterator cbegin() const;
+    const_iterator cend() const;
+    iterator begin();
+    iterator end();
     // ...
 
     // 后面需要再说
@@ -61,13 +70,22 @@ private:
     std::vector<std::shared_ptr<Instruction>> insts;
 
 public:
+    using const_iterator = decltype(insts)::const_iterator;
+    using iterator = decltype(insts)::iterator;
+
     LinearFunction(std::string name_,
         const std::vector<std::shared_ptr<Value>>& params,
         std::shared_ptr<Type> ret_type)
             : Function(std::move(name_), params, std::move(ret_type)) {}
 
+    // usually we can use range-based for instead of these
     const std::vector<std::shared_ptr<Instruction>>& getInsts() const;
     std::vector<std::shared_ptr<Instruction>>& getInsts();
+
+    const_iterator cbegin() const;
+    const_iterator cend() const;
+    iterator begin();
+    iterator end();
 
     void addInst(std::shared_ptr<Instruction> inst);
     void appendInsts(std::vector<std::shared_ptr<Instruction>> insts_);

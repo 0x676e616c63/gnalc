@@ -25,6 +25,9 @@ class BasicBlock : public Value, public std::enable_shared_from_this<BasicBlock>
     std::list<std::shared_ptr<Instruction>> insts; // 指令列表
     std::vector<std::shared_ptr<Value>> bb_params;
 public:
+    using const_iterator = decltype(insts)::const_iterator;
+    using iterator = decltype(insts)::iterator;
+
     explicit BasicBlock(std::string _name);
     BasicBlock(std::string _name, std::list<std::shared_ptr<Instruction>> _insts);
     BasicBlock(std::string _name, std::list<std::weak_ptr<BasicBlock>> _pre_bb, std::list<std::weak_ptr<BasicBlock>> _next_bb, std::list<std::shared_ptr<Instruction>> _insts);
@@ -32,12 +35,20 @@ public:
     void addPreBB(const std::shared_ptr<BasicBlock>& bb);
     void addNextBB(const std::shared_ptr<BasicBlock>& bb);
     void addInst(const std::shared_ptr<Instruction>& inst);
+
     std::list<std::shared_ptr<BasicBlock>> getPreBB() const;
     std::list<std::shared_ptr<BasicBlock>> getNextBB() const;
-    const std::list<std::shared_ptr<Instruction>>& getInsts() const;
     std::list<std::weak_ptr<BasicBlock>>& getRPreBB();
     std::list<std::weak_ptr<BasicBlock>>& getRNextBB();
+
+    // usually we can use range-based for instead of these
+    const std::list<std::shared_ptr<Instruction>>& getInsts() const;
     std::list<std::shared_ptr<Instruction>>& getInsts();
+
+    const_iterator cbegin() const;
+    const_iterator cend() const;
+    iterator begin();
+    iterator end();
     // ...
 
     void setBBParam(const std::vector<std::shared_ptr<Value>> &params);

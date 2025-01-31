@@ -49,6 +49,22 @@ namespace IR {
         return insts;
     }
 
+    BasicBlock::const_iterator BasicBlock::cbegin() const {
+        return insts.cbegin();
+    }
+
+    BasicBlock::const_iterator BasicBlock::cend() const {
+        return insts.cend();
+    }
+
+    BasicBlock::iterator BasicBlock::begin() {
+        return insts.begin();
+    }
+
+    BasicBlock::iterator BasicBlock::end() {
+        return insts.end();
+    }
+
     void BasicBlock::setBBParam(const std::vector<std::shared_ptr<Value>>& params) {
         bb_params = params;
     }

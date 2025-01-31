@@ -57,6 +57,22 @@ namespace IR {
         return blks;
     }
 
+    Function::const_iterator Function::cbegin() const {
+        return blks.cbegin();
+    }
+
+    Function::const_iterator Function::cend() const {
+        return blks.cend();
+    }
+
+    Function::iterator Function::begin() {
+        return blks.begin();
+    }
+
+    Function::iterator Function::end() {
+        return blks.end();
+    }
+
     void Function::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
     void LinearFunction::addInst(std::shared_ptr<Instruction> inst) {
@@ -74,6 +90,22 @@ namespace IR {
 
     std::vector<std::shared_ptr<Instruction>>& LinearFunction::getInsts() {
         return insts;
+    }
+
+    LinearFunction::const_iterator LinearFunction::cbegin() const {
+        return insts.cbegin();
+    }
+
+    LinearFunction::const_iterator LinearFunction::cend() const {
+        return insts.cend();
+    }
+
+    LinearFunction::iterator LinearFunction::begin() {
+        return insts.begin();
+    }
+
+    LinearFunction::iterator LinearFunction::end() {
+        return insts.end();
     }
 
     void LinearFunction::accept(IRVisitor& visitor) { visitor.visit(*this); }
