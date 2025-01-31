@@ -46,7 +46,7 @@ namespace IR
         return std::dynamic_pointer_cast<BasicBlock>(getOperands().back()->getValue());
     }
 
-    PHIInst * PHIInst::PhiOperand::getPhi() const {
-        return dynamic_cast<PHIInst*>(getUseList().front()->getUser());
+    std::shared_ptr<PHIInst> PHIInst::PhiOperand::getPhi() const {
+        return std::dynamic_pointer_cast<PHIInst>(getUseList().front()->getUser());
     }
 }

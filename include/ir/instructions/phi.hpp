@@ -21,7 +21,8 @@ public:
         PhiOperand(const std::shared_ptr<Value>& _value, const std::shared_ptr<BasicBlock>& _block);
         std::shared_ptr<Value> getValue() const;
         std::shared_ptr<BasicBlock> getBlock() const;
-        PHIInst* getPhi() const;
+
+        std::shared_ptr<PHIInst> getPhi() const;
     };
     PHIInst() = delete;
     PHIInst(NameRef name, const std::shared_ptr<Type>& _type, const std::vector<std::shared_ptr<PhiOperand>>& _operands);

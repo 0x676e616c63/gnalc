@@ -62,7 +62,7 @@ class SparsePropagationSolver {
                     auto incoming = curr->getUseList();
                     if (std::count_if(incoming.cbegin(), incoming.cend(),
                         [this](auto&& use) {
-                           return isExecutable(dynamic_cast<Instruction*>
+                           return isExecutable(std::dynamic_pointer_cast<Instruction>
                                (use->getUser())->getParent().get()); }))
                     {
                         visitInst(curr);

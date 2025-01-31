@@ -44,6 +44,7 @@ public:
     // usually we can use range-based for instead of these
     const std::list<std::shared_ptr<Instruction>>& getInsts() const;
     std::list<std::shared_ptr<Instruction>>& getInsts();
+    bool delInst(const std::shared_ptr<Instruction>& inst); // 只移除第一个匹配的项
 
     const_iterator cbegin() const;
     const_iterator cend() const;

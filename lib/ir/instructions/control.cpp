@@ -165,8 +165,8 @@ namespace IR
             addOperand(arg);
     }
 
-    BRInst *BRInst::BBArgList::getBr() const {
-        return dynamic_cast<BRInst*>(getUseList().front()->getUser());
+    std::shared_ptr<BRInst> BRInst::BBArgList::getBr() const {
+        return std::dynamic_pointer_cast<BRInst>(getUseList().front()->getUser());
     }
 
     std::vector<std::shared_ptr<Value>> BRInst::BBArgList::_getArgs() const {

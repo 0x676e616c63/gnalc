@@ -70,7 +70,7 @@ public:
 
     bool delUse(const std::shared_ptr<Use>& use); // 根据Use删除匹配的use
     bool delUse(Use* use); // For Use's Destructor
-    bool delUse(User* user);
+    bool delUse(const std::shared_ptr<User>& user);
     bool delUse(NameRef name); // 根据username删除匹配use
 
     void cleanExpired();
@@ -88,7 +88,7 @@ public:
  * @brief User是Use的所有者，User的Operands由Use中的val来保存
  * @todo find, set by value, del function
  */
-class User : public Value {
+class User : public Value, public std::enable_shared_from_this<User> {
 protected:
     std::list<std::shared_ptr<Use>> operands; // 操作数实际是Use中的val
 
@@ -122,7 +122,7 @@ private:
     void init();
 public:
     std::shared_ptr<Value> getValue() const;
-    User* getUser() const;
+    std::shared_ptr<User> getUser() const;
 
     ~Use();
 };

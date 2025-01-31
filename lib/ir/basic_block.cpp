@@ -49,6 +49,17 @@ namespace IR {
         return insts;
     }
 
+    bool BasicBlock::delInst(const std::shared_ptr<Instruction> &inst) {
+        for (auto it = insts.begin(); it != insts.end(); ++it) {
+            if (*it == inst) {
+                inst->setParent(nullptr);
+                insts.erase(it);
+                return true;
+            }
+        }
+        return false;
+    }
+
     BasicBlock::const_iterator BasicBlock::cbegin() const {
         return insts.cbegin();
     }

@@ -41,7 +41,8 @@ public:
     public:
         BBArgList() = delete;
         BBArgList(const std::shared_ptr<BasicBlock> &block, const std::vector<std::shared_ptr<Value>>& args);
-        BRInst *getBr() const;
+
+        std::shared_ptr<BRInst> getBr() const;
         std::vector<std::shared_ptr<Value>> _getArgs() const;
         void accept(IRVisitor& visitor) override { Err::not_implemented("BBArgList::visit"); }
     };

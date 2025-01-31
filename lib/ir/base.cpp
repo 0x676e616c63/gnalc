@@ -66,7 +66,7 @@ bool Value::delUse(const std::shared_ptr<Use>& use) {
     return found;
 }
 
-bool Value::delUse(User* user) {
+bool Value::delUse(const std::shared_ptr<User>& user) {
     bool found = false;
     for (auto it = use_list.begin(); it != use_list.end();) {
         if (it->lock()->getUser() == user) {
@@ -164,7 +164,8 @@ bool User::replaceUse(const std::shared_ptr<Value>& old_val, const std::shared_p
     bool found = false;
     for (auto& use : operands) {
         if (use->getValue() == old_val) {
-            use = std::shared_ptr<Use>{new Use(new_val, use->getUser())};
+            old_val->delUse(use);
+            use = std::shared_ptr<Use>{new Use(new_val, use->getUser().get())};
             use->init();
             found = true;
         }
@@ -191,8 +192,8 @@ std::shared_ptr<Value> Use::getValue() const {
     return val.lock();
 }
 
-User* Use::getUser() const {
-    return user;
+std::shared_ptr<User> Use::getUser() const {
+    return user->shared_from_this();
 }
 
 Use::~Use() {
