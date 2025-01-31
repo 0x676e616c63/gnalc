@@ -3,8 +3,10 @@
 #define GNALC_IR_FUNCTION_HPP
 
 #include "base.hpp"
+#include "constant_pool.hpp"
 #include "basic_block.hpp"
 #include "instruction.hpp"
+
 #include <memory>
 #include <utility>
 #include <vector>
@@ -31,6 +33,7 @@ class Function : public FunctionDecl {
 private:
     std::vector<std::shared_ptr<Value>> params;
     std::vector<std::shared_ptr<BasicBlock>> blks;
+    ConstantPool* constant_pool;
 
     // 后面需要再说
     // int vreg_idx = 0;
@@ -39,7 +42,7 @@ public:
     using iterator = decltype(blks)::iterator;
 
     Function(std::string name_, const std::vector<std::shared_ptr<Value>>& params,
-        std::shared_ptr<Type> ret_type);
+        std::shared_ptr<Type> ret_type, ConstantPool* pool);
 
     void addBlock(std::shared_ptr<BasicBlock> blk);
 
@@ -60,6 +63,8 @@ public:
     // int getVRegIdx() { return vreg_idx++; } // 用于生成SSA时的虚拟寄存器计数，从0开始，GetIdx后++
     // int getVRegNum() const { return vreg_idx; } // 虚拟寄存器数量
 
+    ConstantPool& getConstantPool();
+
     void accept(IRVisitor& visitor) override;
 };
 
@@ -75,8 +80,8 @@ public:
 
     LinearFunction(std::string name_,
         const std::vector<std::shared_ptr<Value>>& params,
-        std::shared_ptr<Type> ret_type)
-            : Function(std::move(name_), params, std::move(ret_type)) {}
+        std::shared_ptr<Type> ret_type, ConstantPool* pool)
+            : Function(std::move(name_), params, std::move(ret_type), pool) {}
 
     // usually we can use range-based for instead of these
     const std::vector<std::shared_ptr<Instruction>>& getInsts() const;

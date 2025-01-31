@@ -401,7 +401,7 @@ void IRGenerator::visit(FuncDef& node) {
         }
     }
 
-    curr_func = std::make_shared<IR::LinearFunction>("@" + node.getId(), params, IR::makeBType(ty));
+    curr_func = std::make_shared<IR::LinearFunction>("@" + node.getId(), params, IR::makeBType(ty), &module.getConstantPool());
     module.addFunction(curr_func);
     symbol_table.insert(node.getId(), curr_func);
 
@@ -666,8 +666,7 @@ void IRGenerator::visit(FuncRParam& node) {
 }
 
 template<typename Base, typename T>
-auto constant_binary(const std::shared_ptr<IR::Value>& lhs,
-    const std::shared_ptr<IR::Value>& rhs,
+auto constant_binary(const std::shared_ptr<IR::Value>& lhs, const std::shared_ptr<IR::Value>& rhs,
     T&& operation) {
     Err::gassert(IR::isSameType(lhs->getType(), rhs->getType())
         && lhs->getType()->getTrait() == IR::IRCTYPE::BASIC);

@@ -4,6 +4,7 @@
 #define GNALC_IR_PASSES_TRANSFORMS_CONSTANT_PROPAGATION_HPP
 
 #include "../../constant.hpp"
+#include "../../constant_proxy.hpp"
 #include "../pass_manager.hpp"
 #include "../helpers/sparse_propagation.hpp"
 

@@ -6,9 +6,10 @@
 #pragma once
 #ifndef GNALC_IR_CONSTANT_HPP
 #define GNALC_IR_CONSTANT_HPP
-#include <complex>
 
 #include "base.hpp"
+
+#include <variant>
 
 namespace IR {
 namespace detail
@@ -32,30 +33,6 @@ namespace detail
         BasicConstant& operator=(ValueT rhs) {
             inner_value = rhs;
             return *this;
-        }
-
-        BasicConstant operator+(const BasicConstant& rhs) const {
-            return BasicConstant(inner_value + rhs.inner_value);
-        }
-
-        BasicConstant operator-(const BasicConstant& rhs) const {
-            return BasicConstant(inner_value - rhs.inner_value);
-        }
-
-        BasicConstant operator*(const BasicConstant& rhs) const {
-            return BasicConstant(inner_value * rhs.inner_value);
-        }
-
-        BasicConstant operator/(const BasicConstant& rhs) const {
-            return BasicConstant(inner_value / rhs.inner_value);
-        }
-
-        BasicConstant operator&&(const BasicConstant& rhs) const {
-            return BasicConstant(inner_value && rhs.inner_value);
-        }
-
-        BasicConstant operator||(const BasicConstant& rhs) const {
-            return BasicConstant(inner_value || rhs.inner_value);
         }
 
         ValueT getVal() const { return inner_value; }

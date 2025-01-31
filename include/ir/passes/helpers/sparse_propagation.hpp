@@ -1,6 +1,11 @@
 // Generic Sparse Conditional Property Propagation, used by ConstantPropagationPass
-// Wegman, Mark N. and Zadeck, F. Kenneth. "Constant Propagation with Conditional Branches."
-// https://dl.acm.org/doi/pdf/10.1145/103135.103136
+// See:
+//    - The opcache optimizer
+//          Author's blog:  https://www.npopov.com/2022/05/22/The-opcache-optimizer.html
+//          scdf.c:         https://github.com/php/php-src/blob/cc506a81e17c3e059d44b560213ed914f8199ed5/Zend/Optimizer/scdf.c
+//          sccp.c:         https://github.com/php/php-src/blob/cc506a81e17c3e059d44b560213ed914f8199ed5/Zend/Optimizer/sccp.c
+//    - Wegman, Mark N. and Zadeck, F. Kenneth. "Constant Propagation with Conditional Branches."
+//          https://dl.acm.org/doi/pdf/10.1145/103135.103136
 #pragma once
 #ifndef GNALC_IR_PASSES_HELPER_SPARSE_PROPAGATION_HPP
 #define GNALC_IR_PASSES_HELPER_SPARSE_PROPAGATION_HPP
@@ -11,6 +16,7 @@
 #include "../../base.hpp"
 #include "../../basic_block.hpp"
 #include "../../function.hpp"
+#include "../../instructions/control.hpp"
 #include "../../instructions/phi.hpp"
 
 namespace IR {
@@ -20,7 +26,7 @@ class SparsePropagationSolver {
     class LatticeFunction {
     public:
         virtual ValT merge(ValT lhs, ValT rhs) = 0;
-        virtual ValT getVal(KeyT key) = 0;
+        virtual ValT& getVal(KeyT key) = 0;
         virtual void transfer(Instruction* inst, KeyT key) = 0;
 
         virtual ~LatticeFunction() = default;
@@ -59,8 +65,8 @@ class SparsePropagationSolver {
                     visitPHI(dynamic_cast<const PHIInst*>(curr));
                 else
                 {
-                    auto incoming = curr->getUseList();
-                    if (std::count_if(incoming.cbegin(), incoming.cend(),
+                    auto incomings = curr->getUseList();
+                    if (std::count_if(incomings.cbegin(), incomings.cend(),
                         [this](auto&& use) {
                            return isExecutable(std::dynamic_pointer_cast<Instruction>
                                (use->getUser())->getParent().get()); }))
@@ -105,8 +111,9 @@ class SparsePropagationSolver {
     }
 
     bool isFirstEvaluated(const BasicBlock* bb) {
-        auto incoming = bb->getPreBB();
-        return 1 == std::count_if(incoming.cbegin(), incoming.cend(),
+        auto incomings = bb->getPreBB();
+        return incomings.empty()
+            || 1 == std::count_if(incomings.cbegin(), incomings.cend(),
             [this](auto&& pre) { return isExecutable(pre.get()); });
     }
 
@@ -115,12 +122,25 @@ class SparsePropagationSolver {
     }
 
     void visitPHI(const PHIInst* phi) {
-        // TODO
+        auto incomings = phi->getPhiOpers();
+
+        for (const auto& in : incomings)
+        {
+
+        }
     }
 
     void visitInst(const Instruction* inst) {
         Err::gassert(inst->getOpcode() != OP::PHI);
-        // TODO
+
+        if (auto br_inst = dynamic_cast<const BRInst*>(inst); br_inst && br_inst->isConditional())
+        {
+
+        }
+        else
+        {
+
+        }
 
     }
 
