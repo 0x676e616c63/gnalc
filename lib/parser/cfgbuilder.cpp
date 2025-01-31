@@ -15,7 +15,7 @@ namespace Parser {
             cur_linear_func = std::dynamic_pointer_cast<LinearFunction>(f);
             cur_making_func = std::make_shared<Function>
             (cur_linear_func->getName(), cur_linear_func->getParams(),
-                toFunctionType(cur_linear_func->getType())->getRet());
+                toFunctionType(cur_linear_func->getType())->getRet(), &cur_linear_func->getConstantPool());
             Err::gassert(cur_linear_func != nullptr, "Expected Linear IR.");
             divider();
             linker();

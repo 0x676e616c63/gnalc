@@ -33,9 +33,9 @@ namespace IR {
     }
 
     Function::Function(std::string name_, const std::vector<std::shared_ptr<Value>>& params_,
-        std::shared_ptr<Type> ret_type)
+        std::shared_ptr<Type> ret_type, ConstantPool* pool_)
     : FunctionDecl(std::move(name_), get_params_type(params_), std::move(ret_type),
-        false, false, false), params(params_) {}
+        false, false, false), params(params_), constant_pool(pool_) {}
 
     void Function::addBlock(std::shared_ptr<BasicBlock> blk) {
         blks.emplace_back(std::move(blk));
@@ -71,6 +71,10 @@ namespace IR {
 
     Function::iterator Function::end() {
         return blks.end();
+    }
+
+    ConstantPool& Function::getConstantPool() {
+        return *constant_pool;
     }
 
     void Function::accept(IRVisitor& visitor) { visitor.visit(*this); }
