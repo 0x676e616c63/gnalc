@@ -56,6 +56,26 @@ public:
     ConstantProxy operator&&(const ConstantProxy& rhs) const;
     ConstantProxy operator||(const ConstantProxy& rhs) const;
 
+    ConstantProxy operator&&(bool rhs) const;
+    ConstantProxy operator||(bool rhs) const;
+
+    ConstantProxy operator+(char rhs) const;
+    ConstantProxy operator-(char rhs) const;
+    ConstantProxy operator*(char rhs) const;
+    ConstantProxy operator/(char rhs) const;
+    ConstantProxy operator%(char rhs) const;
+
+    ConstantProxy operator+(int rhs) const;
+    ConstantProxy operator-(int rhs) const;
+    ConstantProxy operator*(int rhs) const;
+    ConstantProxy operator/(int rhs) const;
+    ConstantProxy operator%(int rhs) const;
+
+    ConstantProxy operator+(float rhs) const;
+    ConstantProxy operator-(float rhs) const;
+    ConstantProxy operator*(float rhs) const;
+    ConstantProxy operator/(float rhs) const;
+
     bool operator==(const ConstantProxy& rhs) const;
     bool operator==(bool rhs) const;
     bool operator==(char rhs) const;
@@ -66,26 +86,16 @@ public:
     std::shared_ptr<ConstantI8> getConstantI8() const;
     std::shared_ptr<ConstantInt> getConstantInt() const;
     std::shared_ptr<ConstantFloat> getConstantFloat() const;
+
     std::shared_ptr<Value> getConstant() const;
+
+    bool get_i1() const;
+    char get_i8() const;
+    int get_int() const;
+    float get_float() const;
 
     void setPool(ConstantPool* pool_);
 };
-
-inline bool ConstantProxy::operator==(bool rhs) const {
-    return value.index() == 0 && std::get<0>(value)->getVal() == rhs;
-}
-
-inline bool ConstantProxy::operator==(char rhs) const {
-    return value.index() == 1 && std::get<1>(value)->getVal() == rhs;
-}
-
-inline bool ConstantProxy::operator==(int rhs) const {
-    return value.index() == 2 && std::get<2>(value)->getVal() == rhs;
-}
-
-inline bool ConstantProxy::operator==(float rhs) const {
-    return value.index() == 3 && std::get<3>(value)->getVal() == rhs;
-}
 
 class ConstantProxyHash {
 public:

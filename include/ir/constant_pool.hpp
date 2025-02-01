@@ -12,8 +12,11 @@ namespace IR
 {
 class ConstantPool {
 private:
-    // Set<Proxy, ProxyHash> 可以看作 Set<Pair<Literal, ValuePtr>, PairHash>
-    // 也就是 Map<Literal, ValuePtr, LiteralHash>
+    // Note:
+    //   - ConstantProxy is a ValuePtr's wrapper.
+    //   - `ConstantProxyHash` and `operator==` only deals with its inner value.
+    // Therefore:
+    // Set<Proxy> == Set<Pair<Literal, ValuePtr>> == Map<Literal, ValuePtr>
     std::unordered_set<ConstantProxy, ConstantProxyHash> pool;
 
 public:

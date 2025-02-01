@@ -83,6 +83,86 @@ ConstantProxy ConstantProxy::operator||(const ConstantProxy& rhs) const {
                                value, rhs.value);
 }
 
+ConstantProxy ConstantProxy::operator&&(bool rhs) const {
+    Err::gassert(value.index() == 0 && pool != nullptr);
+    return ConstantProxy(pool, std::get<0>(value)->getVal() && rhs);
+}
+
+ConstantProxy ConstantProxy::operator||(bool rhs) const {
+    Err::gassert(value.index() == 0 && pool != nullptr);
+    return ConstantProxy(pool, std::get<0>(value)->getVal() || rhs);
+}
+
+ConstantProxy ConstantProxy::operator+(char rhs) const {
+    Err::gassert(value.index() == 1 && pool != nullptr);
+    return ConstantProxy(pool, std::get<1>(value)->getVal() + rhs);
+}
+
+ConstantProxy ConstantProxy::operator-(char rhs) const {
+    Err::gassert(value.index() == 1 && pool != nullptr);
+    return ConstantProxy(pool, std::get<1>(value)->getVal() - rhs);
+}
+
+ConstantProxy ConstantProxy::operator*(char rhs) const {
+    Err::gassert(value.index() == 1 && pool != nullptr);
+    return ConstantProxy(pool, std::get<1>(value)->getVal() * rhs);
+}
+
+ConstantProxy ConstantProxy::operator/(char rhs) const {
+    Err::gassert(value.index() == 1 && pool != nullptr);
+    return ConstantProxy(pool, std::get<1>(value)->getVal() / rhs);
+}
+
+ConstantProxy ConstantProxy::operator%(char rhs) const {
+    Err::gassert(value.index() == 1 && pool != nullptr);
+    return ConstantProxy(pool, std::get<1>(value)->getVal() % rhs);
+}
+
+ConstantProxy ConstantProxy::operator+(int rhs) const {
+    Err::gassert(value.index() == 2 && pool != nullptr);
+    return ConstantProxy(pool, std::get<2>(value)->getVal() + rhs);
+}
+
+ConstantProxy ConstantProxy::operator-(int rhs) const {
+    Err::gassert(value.index() == 2 && pool != nullptr);
+    return ConstantProxy(pool, std::get<2>(value)->getVal() - rhs);
+}
+
+ConstantProxy ConstantProxy::operator*(int rhs) const {
+    Err::gassert(value.index() == 2 && pool != nullptr);
+    return ConstantProxy(pool, std::get<2>(value)->getVal() * rhs);
+}
+
+ConstantProxy ConstantProxy::operator/(int rhs) const {
+    Err::gassert(value.index() == 2 && pool != nullptr);
+    return ConstantProxy(pool, std::get<2>(value)->getVal() / rhs);
+}
+
+ConstantProxy ConstantProxy::operator%(int rhs) const {
+    Err::gassert(value.index() == 2 && pool != nullptr);
+    return ConstantProxy(pool, std::get<2>(value)->getVal() % rhs);
+}
+
+ConstantProxy ConstantProxy::operator+(float rhs) const {
+    Err::gassert(value.index() == 3 && pool != nullptr);
+    return ConstantProxy(pool, std::get<3>(value)->getVal() + rhs);
+}
+
+ConstantProxy ConstantProxy::operator-(float rhs) const {
+    Err::gassert(value.index() == 3 && pool != nullptr);
+    return ConstantProxy(pool, std::get<3>(value)->getVal() - rhs);
+}
+
+ConstantProxy ConstantProxy::operator*(float rhs) const {
+    Err::gassert(value.index() == 3 && pool != nullptr);
+    return ConstantProxy(pool, std::get<3>(value)->getVal() * rhs);
+}
+
+ConstantProxy ConstantProxy::operator/(float rhs) const {
+    Err::gassert(value.index() == 3 && pool != nullptr);
+    return ConstantProxy(pool, std::get<3>(value)->getVal() / rhs);
+}
+
 bool ConstantProxy::operator==(const ConstantProxy& rhs) const {
     return value.index() == rhs.value.index() && std::visit(
         [this](const auto& lhs, const auto& rhs) -> bool
@@ -90,11 +170,32 @@ bool ConstantProxy::operator==(const ConstantProxy& rhs) const {
                         value, rhs.value);
 }
 
+bool ConstantProxy::operator==(bool rhs) const {
+    return value.index() == 0 && std::get<0>(value)->getVal() == rhs;
+}
+
+bool ConstantProxy::operator==(char rhs) const {
+    return value.index() == 1 && std::get<1>(value)->getVal() == rhs;
+}
+
+bool ConstantProxy::operator==(int rhs) const {
+    return value.index() == 2 && std::get<2>(value)->getVal() == rhs;
+}
+
+bool ConstantProxy::operator==(float rhs) const {
+    return value.index() == 3 && std::get<3>(value)->getVal() == rhs;
+}
+
 std::shared_ptr<ConstantI1> ConstantProxy::getConstantI1() const { return std::get<0>(value); }
 std::shared_ptr<ConstantI8> ConstantProxy::getConstantI8() const { return std::get<1>(value); }
 std::shared_ptr<ConstantInt> ConstantProxy::getConstantInt() const { return std::get<2>(value); }
 std::shared_ptr<ConstantFloat> ConstantProxy::getConstantFloat() const { return std::get<3>(value); }
 std::shared_ptr<Value> ConstantProxy::getConstant() const { return std::visit([](auto&& v) -> std::shared_ptr<Value> { return v; }, value); }
+
+bool ConstantProxy::get_i1() const { return std::get<0>(value)->getVal(); }
+char ConstantProxy::get_i8() const { return std::get<1>(value)->getVal(); }
+int ConstantProxy::get_int() const { return std::get<2>(value)->getVal(); }
+float ConstantProxy::get_float() const { return std::get<3>(value)->getVal(); }
 
 void ConstantProxy::setPool(ConstantPool* pool_) {
     pool = pool_;
