@@ -1,0 +1,9 @@
+#pragma once
+#ifndef GNALC_MIRTOOLS_REGISTERALLOC_HPP
+#define GNALC_MIRTOOLS_REGISTERALLOC_HPP
+
+namespace MIR {
+
+}
+
+#endif
