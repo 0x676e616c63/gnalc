@@ -2,6 +2,9 @@
 #include "../../../../include/ir/passes/transforms/constant_propagation.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
 #include "../../../../include/ir/instructions/binary.hpp"
+#include "../../../../include/ir/instructions/compare.hpp"
+#include "../../../../include/ir/instructions/control.hpp"
+#include "../../../../include/ir/instructions/converse.hpp"
 #include "../../../../include/utils/logger.hpp"
 #include <optional>
 
@@ -127,7 +130,8 @@ namespace IR {
                     case OP::MUL:
                     case OP::FMUL:
                         if (lhs.isZero() || rhs.isZero())
-                            changes[inst].setConstant(lhs.getConstant() * 0);
+                            changes[inst].setConstant(
+                                ConstantProxy(constant_pool, bin->getOpcode() == OP::MUL ? 0 : 0.0f));
                         else if (lhs.isConstant() && rhs.isConstant())
                             changes[inst].setConstant(lhs.getConstant() * rhs.getConstant());
                         else if (lhs.isNAC() || rhs.isNAC())
@@ -136,7 +140,7 @@ namespace IR {
                     case OP::DIV:
                     case OP::FDIV:
                         if (rhs.isZero())
-                            Err::unreachable("Divisor should no be zero in div");
+                            Logger::logDebug("Divisor should no be zero in div");
                         else if (lhs.isZero())
                             changes[inst].setConstant(lhs.getConstant());
                         else if (lhs.isConstant() && rhs.isConstant())
@@ -145,20 +149,43 @@ namespace IR {
                             changes[inst] = LatticeInfo::NAC;
                         break;
                     case OP::REM:
-                    case OP::FREM:
                         if (rhs.isZero())
-                            Err::unreachable("Divisor should no be zero in mod");
+                            Logger::logDebug("Divisor should no be zero in mod");
                         else if (lhs.isZero())
                             changes[inst].setConstant(lhs.getConstant());
                         else if (lhs.isConstant() && rhs.isConstant())
                             changes[inst].setConstant(lhs.getConstant() % rhs.getConstant());
                         else if (lhs.isNAC() || rhs.isNAC())
                             changes[inst] = LatticeInfo::NAC;
+                    case OP::AND:
+                    case OP::OR:
+                        if (lhs.isConstant() && rhs.isConstant()) {
+                            if (bin->getOpcode() == OP::AND)
+                                changes[inst].setConstant(lhs.getConstant() && rhs.getConstant());
+                            else
+                                changes[inst].setConstant(lhs.getConstant() || rhs.getConstant());
+                        } else if (lhs.isNAC() || rhs.isNAC())
+                            changes[inst] = LatticeInfo::NAC;
 
                     default:
                         Err::unreachable("Unknown binary opcode");
                 }
-            } else if (inst->getOpcode() == OP::BR || inst->getOpcode() == OP::PHI)
+            } else if (auto fnin = std::dynamic_pointer_cast<FNEGInst>(inst)) {
+                auto val = solver.getVal(LatticeInfo::getKeyFromValue(fnin->getVal()));
+                if (val.isConstant())
+                    changes[inst].setConstant(-val.getConstant());
+                else if (val.isNAC())
+                    changes[inst] = LatticeInfo::NAC;
+            }
+            else if (auto retin=std::dynamic_pointer_cast<RETInst>(inst)) {
+                auto val=solver.getVal(LatticeInfo::getKeyFromValue(retin->getRetVal()));
+                if (val.isConstant())
+                    changes[inst].setConstant(val.getConstant());
+                else if (val.isNAC())
+                    changes[inst]=LatticeInfo::NAC;
+            }
+            //TODO call? icmp? fcmp? converse memory
+            else if (inst->getOpcode() == OP::BR || inst->getOpcode() == OP::PHI)
                 Err::unreachable("Transfer on br or phi.");
             else
                 Err::unreachable("Unknown instruction.");
