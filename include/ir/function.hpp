@@ -56,16 +56,15 @@ public:
             if (pred(*it)) {
                 for (const auto& use : (*it)->getUseList()) {
                     auto phi = std::dynamic_pointer_cast<PHIInst>(use->getUser());
-                    Err::gassert(phi != nullptr);
+                    Err::gassert(phi != nullptr,
+                        "Cannot delete a block that has users beyond phi.");
                     phi->delPhiOper(*it);
 
                     // Simplify PHI
                     auto phi_opers = phi->getPhiOpers();
                     Err::gassert(!phi_opers.empty());
-                    if (phi_opers.size() == 1) {
-                        for (const auto& phi_use : phi->getUseList())
-                            phi_use->getUser()->replaceUse(phi, phi_opers[0]->getValue());
-                    }
+                    if (phi_opers.size() == 1)
+                        phi->replaceSelf(phi_opers[0]->getValue());
                 }
                 it = blks.erase(it);
                 found = true;

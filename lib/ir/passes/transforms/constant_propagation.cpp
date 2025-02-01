@@ -171,41 +171,27 @@ namespace IR {
                     default:
                         Err::unreachable("Unknown binary opcode");
                 }
-            } else if (auto fnin = std::dynamic_pointer_cast<FNEGInst>(inst)) {
-                auto val = solver.getVal(LatticeInfo::getKeyFromValue(fnin->getVal()));
+            }
+            else if (auto fneg = std::dynamic_pointer_cast<FNEGInst>(inst)) {
+                auto val = solver.getVal(LatticeInfo::getKeyFromValue(fneg->getVal()));
                 if (val.isConstant())
                     changes[inst].setConstant(-val.getConstant());
                 else if (val.isNAC())
                     changes[inst] = LatticeInfo::NAC;
-            } else if (auto all = std::dynamic_pointer_cast<
-                ALLOCAInst>(inst)) { changes[inst] = LatticeInfo::NAC; } else if (auto gep = std::dynamic_pointer_cast<
-                GEPInst>(inst)) {
-                auto ptr = solver.getVal(LatticeInfo::getKeyFromValue(gep->getPtr()));
-                auto idxs = gep->getIdxs();
-                if (ptr.isConstant()) {
-                    auto baseaddress = ptr.getConstant();
-                    bool flag = true;
-                    for (auto &idx: idxs) {
-                        if (!solver.getVal(LatticeInfo::getKeyFromValue(idx)).isConstant()) {
-                            flag = false;
-                            changes[inst] = LatticeInfo::NAC;
-                            break;
-                        }
-                        if (flag == true) {
-                            baseaddress = baseaddress + solver.getVal(LatticeInfo::getKeyFromValue(idx)).getConstant();
-                            //这里应该乘字节大小？
-                        }
-                    }
-                } else if (ptr.isNAC())
-                    changes[inst] = LatticeInfo::NAC;
-            } else if (auto load = std::dynamic_pointer_cast<LOADInst>(inst)) {
-                auto ptr = solver.getVal(LatticeInfo::getKeyFromValue(load->getPtr()));
-                if (ptr.isConstant())
-                    changes[inst].setConstant(ptr.getConstant());
-                else if (ptr.isNAC())
-                    changes[inst] = LatticeInfo::NAC;
             }
-            //TODO call? icmp? fcmp? converse
+            else if (auto alloca = std::dynamic_pointer_cast<ALLOCAInst>(inst)) {
+                changes[inst] = LatticeInfo::NAC;
+            }
+            else if (auto gep = std::dynamic_pointer_cast<GEPInst>(inst)) {
+                changes[inst] = LatticeInfo::NAC;
+            }
+            else if (auto load = std::dynamic_pointer_cast<LOADInst>(inst)) {
+                changes[inst] = LatticeInfo::NAC;
+            }
+            else if (auto call = std::dynamic_pointer_cast<CALLInst>(inst)) {
+                changes[inst] = LatticeInfo::NAC;
+            }
+            //TODO icmp? fcmp? converse
             else if (inst->getOpcode() == OP::BR || inst->getOpcode() == OP::PHI)
                 Err::unreachable("Transfer on br or phi.");
             else
@@ -222,8 +208,41 @@ namespace IR {
         SCCPSolver solver(&lattice_func);
         solver.solve(function);
 
-        auto pa = PM::PreservedAnalyses::none();
-        // FIXME: Not none?
-        return pa;
+        // Simplify Instruction
+        for (const auto& [key, val] : solver.get_map()) {
+            if (val.isConstant()) {
+                for (auto& use : key->getUseList()) {
+                    use->getUser()->replaceUse(key, val.getConstant().getConstant());
+                    if (auto br_inst = std::dynamic_pointer_cast<BRInst>(use->getUser())) {
+                        Err::gassert(br_inst->isConditional());
+                        if (val.getConstant().get_i1())
+                            *br_inst = BRInst(br_inst->getTrueDest());
+                        else
+                            *br_inst = BRInst(br_inst->getFalseDest());
+                    }
+                }
+            }
+        }
+
+        std::unordered_set<std::shared_ptr<BasicBlock>> visited;
+        std::deque worklist{function.getBlocks()[0]};
+
+        // Get Unreachable Blocks
+        while (!worklist.empty()) {
+            auto curr = worklist.front();
+            visited.insert(curr);
+            worklist.pop_front();
+
+            for (const auto& next : curr->getNextBB()) {
+                if (solver.isFeasible(curr, next) && visited.find(next) == visited.end())
+                    worklist.emplace_back(next);
+            }
+        }
+
+        function.delBlockIf([&visited](auto&& bb) {
+            return visited.find(bb) == visited.end();
+        });
+
+        return PM::PreservedAnalyses::none();
     }
 }

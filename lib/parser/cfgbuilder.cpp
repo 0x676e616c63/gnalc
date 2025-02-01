@@ -20,8 +20,7 @@ namespace Parser {
             divider();
             linker();
 
-            for (auto& use : f->getUseList())
-                use->getUser()->replaceUse(f, cur_making_func);
+            f->replaceSelf(cur_making_func);
 
             f = cur_making_func;
         }

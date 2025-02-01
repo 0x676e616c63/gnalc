@@ -25,98 +25,39 @@ std::list<std::shared_ptr<Use>> Value::getUseList() const {
     std::list<std::shared_ptr<Use>> shared_use_list;
     for (const auto& weak_use : use_list) {
         auto shared_use = weak_use.lock();
-        if (shared_use) {
-            shared_use_list.push_back(shared_use);
-        } else {
-            Err::error("Value::getUseList(): use is expired.");
-        }
+        Err::gassert(shared_use != nullptr,
+            "Expired use should be deleted in User::delOperand");
+        if (shared_use) shared_use_list.push_back(shared_use);
     }
     return shared_use_list;
 }
 
 std::list<std::weak_ptr<Use>>& Value::getRUseList() {
-    return use_list;
+    return use_list; }
+
+void Value::replaceSelf(const std::shared_ptr<Value> &new_value) const {
+    auto shared_use_list = getUseList();
+    for (const auto& use : shared_use_list)
+        use->getUser()->replaceUse(use->getValue(), new_value);
 }
 
-bool Value::delUse(Use* use) {
-    bool found = false;
-    for (auto it = use_list.begin(); it != use_list.end();) {
-        if (it->lock().get() == use) {
-            it = use_list.erase(it);
-            found = true;
-        } else {
-            ++it;
-        }
-    }
-    Err::gassert(found, "Value::delUse(): use not found.");
-    return found;
-}
+Value::~Value() = default;
 
-bool Value::delUse(const std::shared_ptr<Use>& use) {
-    bool found = false;
-    for (auto it = use_list.begin(); it != use_list.end();) {
-        if (it->lock() == use) {
-            it = use_list.erase(it);
-            found = true;
-        } else {
-            ++it;
-        }
-    }
-    Err::gassert(found, "Value::delUse(): use not found.");
-    return found;
-}
-
-bool Value::delUse(const std::shared_ptr<User>& user) {
+bool Value::delUse(const std::shared_ptr<User> &user) {
     bool found = false;
     for (auto it = use_list.begin(); it != use_list.end();) {
         if (it->lock()->getUser() == user) {
             it = use_list.erase(it);
             found = true;
-        } else {
+        }
+        else
             ++it;
-        }
     }
-    Err::gassert(found, "Value::delUse(): user not found.");
     return found;
-}
-
-bool Value::delUse(NameRef name) {
-    bool found = false;
-    for (auto it = use_list.begin(); it != use_list.end();) {
-        if (it->lock()->getUser()->isName(name)) {
-            it = use_list.erase(it);
-            found = true;
-        } else {
-            ++it;
-        }
-    }
-    Err::gassert(found, "Value::delUse(): name not found.");
-    return found;
-}
-
-void Value::cleanExpired() {
-    use_list.erase(std::remove_if(use_list.begin(), use_list.end(),
-        [](auto&& use) { return use.expired(); }), use_list.end());
-}
-
-bool Value::replaceUse(const std::shared_ptr<Use>& old_use, const std::shared_ptr<Use>& new_use) {
-    bool found = false;
-    for (auto& use : use_list) {
-        if (use.lock() == old_use) {
-            use = new_use;
-            found = true;
-        }
-    }
-    Err::gassert(found, "Value::replaceUse(): old_use not found.");
-    return found;
-}
-
-Value::~Value() {
-    // todo
 }
 
 User::User(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait)
-    : Value(std::move(_name), std::move(_vtype), std::move(_vtrait)) {}
+    : Value(std::move(_name), std::move(_vtype), _vtrait) {}
 
 void User::addOperand(const std::shared_ptr<Value>& v) {
     std::shared_ptr<Use> use{new Use(v, this)};
@@ -146,7 +87,8 @@ bool User::replaceUse(const std::shared_ptr<Value>& old_val, const std::shared_p
     bool found = false;
     for (auto& use : operands) {
         if (use->getValue() == old_val) {
-            old_val->delUse(use);
+            auto ok = old_val->delUse(use->getUser());
+            Err::gassert(ok);
             use = std::shared_ptr<Use>{new Use(new_val, use->getUser().get())};
             use->init();
             found = true;
@@ -155,11 +97,6 @@ bool User::replaceUse(const std::shared_ptr<Value>& old_val, const std::shared_p
     Err::gassert(found, "User::replaceUse(): old_val notfound.");
     return found;
 }
-
-User::~User() {
-    // todo
-}
-
 
 Use::Use(std::weak_ptr<Value> v, User* u)
     : val(std::move(v)), user(u) {
@@ -177,10 +114,4 @@ std::shared_ptr<Value> Use::getValue() const {
 std::shared_ptr<User> Use::getUser() const {
     return user->shared_from_this();
 }
-
-Use::~Use() {
-    if (!val.expired())
-       val.lock()->cleanExpired();
-}
-
 }

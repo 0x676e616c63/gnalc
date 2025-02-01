@@ -45,9 +45,10 @@ namespace IR {
         if (auto cur_info =  alloca_infos.front(); cur_info.stores.size() == 1) {
             std::shared_ptr<Value> store_val = cur_info.stores.front()->getValue();
             for (auto & load : cur_info.loads) {
-                for (const auto & use : load->getUseList()) {
-                    use->getUser()->replaceUse(load, store_val);
-                }
+                // for (const auto & use : load->getUseList()) {
+                //     use->getUser()->replaceUse(load, store_val);
+                // }
+                load->replaceSelf(store_val);
                 load->getParent()->delFirstOfInst(load);
             }
             entry_block->delFirstOfInst(cur_info.alloca);
