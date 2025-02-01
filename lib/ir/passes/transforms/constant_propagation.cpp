@@ -5,6 +5,7 @@
 #include "../../../../include/ir/instructions/compare.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
 #include "../../../../include/ir/instructions/converse.hpp"
+#include "../../../../include/ir/instructions/memory.hpp"
 #include "../../../../include/utils/logger.hpp"
 #include <optional>
 
@@ -176,15 +177,35 @@ namespace IR {
                     changes[inst].setConstant(-val.getConstant());
                 else if (val.isNAC())
                     changes[inst] = LatticeInfo::NAC;
+            } else if (auto all = std::dynamic_pointer_cast<
+                ALLOCAInst>(inst)) { changes[inst] = LatticeInfo::NAC; } else if (auto gep = std::dynamic_pointer_cast<
+                GEPInst>(inst)) {
+                auto ptr = solver.getVal(LatticeInfo::getKeyFromValue(gep->getPtr()));
+                auto idxs = gep->getIdxs();
+                if (ptr.isConstant()) {
+                    auto baseaddress = ptr.getConstant();
+                    bool flag = true;
+                    for (auto &idx: idxs) {
+                        if (!solver.getVal(LatticeInfo::getKeyFromValue(idx)).isConstant()) {
+                            flag = false;
+                            changes[inst] = LatticeInfo::NAC;
+                            break;
+                        }
+                        if (flag == true) {
+                            baseaddress = baseaddress + solver.getVal(LatticeInfo::getKeyFromValue(idx)).getConstant();
+                            //这里应该乘字节大小？
+                        }
+                    }
+                } else if (ptr.isNAC())
+                    changes[inst] = LatticeInfo::NAC;
+            } else if (auto load = std::dynamic_pointer_cast<LOADInst>(inst)) {
+                auto ptr = solver.getVal(LatticeInfo::getKeyFromValue(load->getPtr()));
+                if (ptr.isConstant())
+                    changes[inst].setConstant(ptr.getConstant());
+                else if (ptr.isNAC())
+                    changes[inst] = LatticeInfo::NAC;
             }
-            else if (auto retin=std::dynamic_pointer_cast<RETInst>(inst)) {
-                auto val=solver.getVal(LatticeInfo::getKeyFromValue(retin->getRetVal()));
-                if (val.isConstant())
-                    changes[inst].setConstant(val.getConstant());
-                else if (val.isNAC())
-                    changes[inst]=LatticeInfo::NAC;
-            }
-            //TODO call? icmp? fcmp? converse memory
+            //TODO call? icmp? fcmp? converse
             else if (inst->getOpcode() == OP::BR || inst->getOpcode() == OP::PHI)
                 Err::unreachable("Transfer on br or phi.");
             else
