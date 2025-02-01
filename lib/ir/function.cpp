@@ -41,6 +41,10 @@ namespace IR {
         blks.emplace_back(std::move(blk));
     }
 
+    bool Function::delBlock(const std::shared_ptr<BasicBlock>& blk) {
+        return delBlockIf([&blk](auto&& b) { return b == blk; });
+    }
+
     const std::vector<std::shared_ptr<Value>>& Function::getParams() const {
         return params;
     }

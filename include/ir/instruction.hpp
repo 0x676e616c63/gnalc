@@ -8,7 +8,6 @@
 #define GNALC_IR_INSTRUCTION_HPP
 
 #include "base.hpp"
-#include "basic_block.hpp"
 
 namespace IR {
 
@@ -61,6 +60,7 @@ enum class OP {
  * @todo BB的指针问题？
  * @todo 类型是否会为ARRAY?
  */
+class BasicBlock;
 class Instruction : public User {
 private:
     OP opcode;

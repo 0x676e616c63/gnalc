@@ -7,12 +7,12 @@
 #define GNALC_IR_BASIC_BLOCK_HPP
 
 #include "base.hpp"
+#include "instruction.hpp"
 
 #include <memory>
 #include <set>
 
 namespace IR {
-    class Instruction;
     class IRVisitor;
 /**
  * @brief BB继承自value, 其被br指令'use', 'use'了它所包含的指令
@@ -44,7 +44,30 @@ public:
     // usually we can use range-based for instead of these
     const std::list<std::shared_ptr<Instruction>>& getInsts() const;
     std::list<std::shared_ptr<Instruction>>& getInsts();
-    bool delInst(const std::shared_ptr<Instruction>& inst); // 只移除第一个匹配的项
+
+    bool delFirstOfInst(const std::shared_ptr<Instruction>& inst); // 只移除第一个匹配的项
+
+    // Delete insts and its user.
+    // If pred(a) == true, pred(a->users) must be true
+    template <typename Pred>
+    bool delInstIf(Pred pred) {
+        bool found = false;
+        for (auto it = insts.begin(); it != insts.end();) {
+            if (pred(*it)) {
+                for (auto&& use : (*it)->getUseList()) {
+                    Err::gassert(pred(use->getUser()));
+                }
+                it = insts.erase(it);
+                found = true;
+            }
+            else
+                ++it;
+        }
+
+        Err::gassert(found, "BasicBlock::delInstIf(): Not found");
+        return found;
+    }
+
 
     const_iterator cbegin() const;
     const_iterator cend() const;

@@ -30,6 +30,8 @@ public:
     std::shared_ptr<Value> getValueForBlock(const std::shared_ptr<BasicBlock>& block) const;
     std::vector<std::shared_ptr<PhiOperand>> getPhiOpers() const;
 
+    void delPhiOper(const std::shared_ptr<BasicBlock>&);
+
     void accept(IRVisitor& visitor) override;
 };
 

@@ -177,13 +177,6 @@ namespace IR {
                 else if (val.isNAC())
                     changes[inst] = LatticeInfo::NAC;
             }
-            else if (auto retin=std::dynamic_pointer_cast<RETInst>(inst)) {
-                auto val=solver.getVal(LatticeInfo::getKeyFromValue(retin->getRetVal()));
-                if (val.isConstant())
-                    changes[inst].setConstant(val.getConstant());
-                else if (val.isNAC())
-                    changes[inst]=LatticeInfo::NAC;
-            }
             //TODO call? icmp? fcmp? converse memory
             else if (inst->getOpcode() == OP::BR || inst->getOpcode() == OP::PHI)
                 Err::unreachable("Transfer on br or phi.");
@@ -201,8 +194,33 @@ namespace IR {
         SCCPSolver solver(&lattice_func);
         solver.solve(function);
 
-        auto pa = PM::PreservedAnalyses::none();
-        // FIXME: Not none?
-        return pa;
+        // Simplify Instruction
+        for (const auto& [key, val] : solver.get_map()) {
+            if (val.isConstant()) {
+                for (auto& use : key->getUseList())
+                    use->getUser()->replaceUse(key, val.getConstant().getConstant());
+            }
+        }
+
+        std::unordered_set<std::shared_ptr<BasicBlock>> visited;
+        std::deque worklist{function.getBlocks()[0]};
+
+        // Get Unreachable Blocks
+        while (!worklist.empty()) {
+            auto curr = worklist.front();
+            visited.insert(curr);
+            worklist.pop_front();
+
+            for (const auto& next : curr->getNextBB()) {
+                if (solver.isFeasible(curr, next) && visited.find(next) == visited.end())
+                    worklist.emplace_back(next);
+            }
+        }
+
+        function.delBlockIf([&visited](auto&& bb) {
+            return visited.find(bb) == visited.end();
+        });
+
+        return PM::PreservedAnalyses::none();
     }
 }

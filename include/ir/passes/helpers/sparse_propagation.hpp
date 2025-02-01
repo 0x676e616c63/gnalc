@@ -52,7 +52,6 @@ class SparsePropagationSolver {
         virtual ~LatticeFunction() = default;
     };
 
-    private:
     struct Edge {
         std::shared_ptr<BasicBlock> src;
         std::shared_ptr<BasicBlock> dest;
@@ -60,6 +59,7 @@ class SparsePropagationSolver {
         Edge(std::shared_ptr<BasicBlock> src, std::shared_ptr<BasicBlock> dest)
             : src(std::move(src)), dest(std::move(dest)) {}
     };
+    private:
     std::set<Edge> feasible_edges;
     std::deque<Edge> cfg_worklist;
     std::deque<std::shared_ptr<Instruction>> ssa_worklist;
@@ -133,21 +133,11 @@ class SparsePropagationSolver {
         return lattice_map[key] = InfoT::UNDEF;
     }
 
-private:
-    void updateVal(KeyT key, ValT val) {
-        auto it = lattice_map.find(key);
-        if (it != lattice_map.end() && it->second == val)
-            return;
+    const auto& get_map() const { return lattice_map; }
 
-        lattice_map[key] = std::move(val);
-
-        std::shared_ptr<Value> changed_value = InfoT::getValueFromKey(key);
-        for (const auto& use : changed_value->getUseList())
-            ssa_worklist.emplace_back(std::dynamic_pointer_cast<Instruction>(use->getUser()));
-    }
 
     bool isFeasible(const std::shared_ptr<BasicBlock>& src,
-    const std::shared_ptr<BasicBlock>& dest) const {
+                    const std::shared_ptr<BasicBlock>& dest) const {
         return isFeasible(Edge(src, dest));
     }
 
@@ -159,6 +149,19 @@ private:
         auto incomings = bb->getPreBB();
         return std::count_if(incomings.cbegin(), incomings.cend(),
                         [&bb, this](auto&& in) { return isFeasible(in, bb); });
+    }
+
+private:
+    void updateVal(KeyT key, ValT val) {
+        auto it = lattice_map.find(key);
+        if (it != lattice_map.end() && it->second == val)
+            return;
+
+        lattice_map[key] = std::move(val);
+
+        std::shared_ptr<Value> changed_value = InfoT::getValueFromKey(key);
+        for (const auto& use : changed_value->getUseList())
+            ssa_worklist.emplace_back(std::dynamic_pointer_cast<Instruction>(use->getUser()));
     }
 
     void markFeasible(const Edge& e) {

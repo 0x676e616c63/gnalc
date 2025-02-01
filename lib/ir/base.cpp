@@ -133,31 +133,13 @@ const std::list<std::shared_ptr<Use>>& User::getOperands() const {
 }
 
 bool User::delOperand(const std::shared_ptr<Value>& v) {
-    bool found = false;
-    for (auto it = operands.begin(); it != operands.end();) {
-        if ((*it)->getValue() == v) {
-            it = operands.erase(it);
-            found = true;
-        } else {
-            ++it;
-        }
-    }
-    Err::gassert(found, "User::delOperand(): value not found.");
-    return found;
+    return delOperandIf(
+        [&v](auto&& op) { return op->getValue() == v; });
 }
 
 bool User::delOperand(NameRef name) {
-    bool found = false;
-    for (auto it = operands.begin(); it != operands.end();) {
-        if ((*it)->getValue()->isName(name)) {
-            it = operands.erase(it);
-            found = true;
-        } else {
-            ++it;
-        }
-    }
-    Err::gassert(found, "User::delOperand(): name not found.");
-    return found;
+    return delOperandIf(
+        [&name](auto&& op) { return op->getValue()->isName(name); });
 }
 
 bool User::replaceUse(const std::shared_ptr<Value>& old_val, const std::shared_ptr<Value>& new_val) {

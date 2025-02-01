@@ -3,6 +3,7 @@
 #define GNALC_IR_FUNCTION_HPP
 
 #include "base.hpp"
+#include "instructions/phi.hpp"
 #include "constant_pool.hpp"
 #include "basic_block.hpp"
 #include "instruction.hpp"
@@ -45,6 +46,36 @@ public:
         std::shared_ptr<Type> ret_type, ConstantPool* pool);
 
     void addBlock(std::shared_ptr<BasicBlock> blk);
+
+    bool delBlock(const std::shared_ptr<BasicBlock>& blk);
+
+    template <typename Pred>
+    bool delBlockIf(Pred pred) {
+        bool found = false;
+        for (auto it = blks.begin(); it != blks.end();) {
+            if (pred(*it)) {
+                for (const auto& use : (*it)->getUseList()) {
+                    auto phi = std::dynamic_pointer_cast<PHIInst>(use->getUser());
+                    Err::gassert(phi != nullptr);
+                    phi->delPhiOper(*it);
+
+                    // Simplify PHI
+                    auto phi_opers = phi->getPhiOpers();
+                    Err::gassert(!phi_opers.empty());
+                    if (phi_opers.size() == 1) {
+                        for (const auto& phi_use : phi->getUseList())
+                            phi_use->getUser()->replaceUse(phi, phi_opers[0]->getValue());
+                    }
+                }
+                it = blks.erase(it);
+                found = true;
+            }
+            else
+                ++it;
+        }
+        Err::gassert(found, "Function::delBlockIf(): Not found");
+        return found;
+    }
 
     const std::vector<std::shared_ptr<Value>>& getParams() const;
     std::vector<std::shared_ptr<Value>>& getParams();
