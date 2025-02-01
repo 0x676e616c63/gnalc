@@ -1,15 +1,12 @@
 #include "../../../../include/ir/passes/helpers/sparse_propagation.hpp"
 #include "../../../../include/ir/passes/transforms/constant_propagation.hpp"
-
-#include <optional>
-
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
 #include "../../../../include/ir/instructions/binary.hpp"
 #include "../../../../include/utils/logger.hpp"
-#include "../../../../include/utils/misc.hpp"
+#include <optional>
 
 namespace IR {
-    class SCCPLatticeVal {
+    class LatticeVal {
     public:
         enum class Type {
             UNDEF,     // Undefined
@@ -20,14 +17,27 @@ namespace IR {
         Type type;
         std::optional<ConstantProxy> value;
     public:
-        SCCPLatticeVal() : type(Type::UNDEF) {}
+        LatticeVal() : type(Type::UNDEF) {}
+        LatticeVal(const LatticeVal&) = default;
+        LatticeVal& operator=(const LatticeVal& rhs) = default;
 
-        explicit SCCPLatticeVal(Type type_) : type(type_) {
+        explicit LatticeVal(Type type_) : type(type_) {
             Err::gassert(type != Type::CONSTANT);
         }
 
-        explicit SCCPLatticeVal(ConstantProxy val)
+        explicit LatticeVal(ConstantProxy val)
             : type(Type::CONSTANT), value(val) { }
+
+
+        bool operator==(const LatticeVal& rhs) const {
+            if (type != rhs.type)
+                return false;
+            if (isConstant())
+                return value == rhs.value;
+            return true;
+        }
+
+        bool operator!=(const LatticeVal& rhs) const { return !(*this == rhs); }
 
         bool isUndef() const { return type == Type::UNDEF; }
         bool isConstant() const { return type == Type::CONSTANT; }
@@ -36,10 +46,12 @@ namespace IR {
             Err::gassert(isConstant());
             return *value;
         }
-        void setConstant(ConstantProxy val) {
+
+        void setConstant(const ConstantProxy& val) {
             type = Type::CONSTANT;
             value.emplace(val);
         }
+
         bool isZero() const {
             Err::gassert(isConstant());
             return getConstant() == false || getConstant() == '\0'
@@ -47,104 +59,69 @@ namespace IR {
         }
     };
 
-    using SCCPSolver = SparsePropagationSolver<Value *, SCCPLatticeVal>;
+    using LatticeKey = std::shared_ptr<Value>;
+
+    class LatticeInfo {
+        public:
+        inline static const auto NAC = LatticeVal(LatticeVal::Type::NAC);
+        inline static const auto UNDEF = LatticeVal(LatticeVal::Type::UNDEF);
+        static LatticeKey getKeyFromValue(const std::shared_ptr<Value>& key) { return key; }
+        static std::shared_ptr<Value> getValueFromKey(const LatticeKey& key) { return key; }
+    };
+
+    using SCCPSolver = SparsePropagationSolver<LatticeKey, LatticeVal, LatticeInfo>;
 
     class SCCPLatticeFunc : public SCCPSolver::LatticeFunction {
-        using KeyT = Value *;
-        using ValT = SCCPLatticeVal;
-
-        inline static const auto NAC = SCCPLatticeVal(SCCPLatticeVal::Type::NAC);
-        inline static const auto UNDEF = SCCPLatticeVal(SCCPLatticeVal::Type::UNDEF);
-
         ConstantPool* constant_pool;
     public:
         explicit SCCPLatticeFunc(ConstantPool* pool) : constant_pool(pool) {}
 
-        std::unordered_map<KeyT, ValT> latticeValues;
-
-        ValT merge(ValT lhs, ValT rhs) override {
+        LatticeVal merge(LatticeVal lhs, LatticeVal rhs) const override {
             if (lhs.isNAC() || rhs.isNAC())
-                return NAC;
+                return LatticeInfo::NAC;
+
             if (lhs.isUndef())
                 return rhs;
             if (rhs.isUndef())
                 return lhs;
 
-            if (lhs.isConstant() && rhs.isConstant()) {
-                if (lhs.getConstant() == rhs.getConstant())
-                    return lhs;
+            if (lhs.isConstant() && rhs.isConstant() && lhs.getConstant() == rhs.getConstant()) {
+                return lhs;
             }
 
-            return NAC;
+            return LatticeInfo::NAC;
         }
 
-        ValT& getVal(KeyT key) override {
-            auto it = latticeValues.find(key);
-            Err::gassert(it != latticeValues.end());
-            return it->second;
-        }
+        void transfer(
+            const std::shared_ptr<Instruction>& inst,
+            std::unordered_map<LatticeKey, LatticeVal>& changes,
+            SCCPSolver& solver) const override {
+            if (auto bin = std::dynamic_pointer_cast<BinaryInst>(inst))
+            {
+                auto lhs = solver.getVal(LatticeInfo::getKeyFromValue(bin->getLHS()));
+                auto rhs = solver.getVal(LatticeInfo::getKeyFromValue(bin->getRHS()));
 
-        void transfer(Instruction *inst, KeyT key) override {
-            if (auto binaryInst = dynamic_cast<BinaryInst *>(inst)) {
-                auto &lhs_lattice = getVal(binaryInst->getLHS().get());
-                auto &rhs_lattice = getVal(binaryInst->getRHS().get());
-
-                switch (binaryInst->getOpcode())
+                switch (bin->getOpcode())
                 {
                 case OP::ADD:
-                case OP::FADD: {
-                    if (lhs_lattice.isConstant() && rhs_lattice.isConstant())
-                        latticeValues[key].setConstant(lhs_lattice.getConstant() + rhs_lattice.getConstant());
-                    else if (lhs_lattice.isNAC() || rhs_lattice.isNAC())
-                        latticeValues[key] = NAC;
-                    else
-                        latticeValues[key] = UNDEF;
+                case OP::FADD:
+                    if (lhs.isConstant() && rhs.isConstant())
+                        changes[inst].setConstant(lhs.getConstant() + rhs.getConstant());
+                    else if (lhs.isNAC() || rhs.isNAC())
+                        changes[inst] = LatticeInfo::NAC;
                     break;
-                }
-                case OP::SUB:
-                case OP::FSUB: {
-                    if (lhs_lattice.isConstant() && rhs_lattice.isConstant())
-                        latticeValues[key].setConstant(lhs_lattice.getConstant() - rhs_lattice.getConstant());
-                    else if (lhs_lattice.isNAC() || rhs_lattice.isNAC())
-                        latticeValues[key] = NAC;
-                    else
-                        latticeValues[key] = UNDEF;
-                    break;
-                }
-                case OP::MUL:
-                case OP::FMUL: {
-                    if (lhs_lattice.isConstant() && rhs_lattice.isConstant())
-                        latticeValues[key].setConstant(lhs_lattice.getConstant() * rhs_lattice.getConstant());
-                    else if (lhs_lattice.isZero() || rhs_lattice.isZero())
-                        latticeValues[key].setConstant(ConstantProxy(constant_pool, binaryInst->getOpcode() == OP::MUL ? 0 : 0.0f));
-                    else if (lhs_lattice.isNAC() || rhs_lattice.isNAC())
-                        latticeValues[key] = NAC;
-                    else
-                        latticeValues[key] = UNDEF;
-                    break;
-                }
-                case OP::DIV:
-                case OP::FDIV: {
-                    // This should cause an abort in run-time, not compile-time.
-                    if (rhs_lattice.isZero())
-                        Logger::logInfo("Warning: Divide by zero.");
-
-                    if (lhs_lattice.isConstant() && rhs_lattice.isConstant())
-                        latticeValues[key].setConstant(lhs_lattice.getConstant() / rhs_lattice.getConstant());
-                    else if (lhs_lattice.isZero())
-                        latticeValues[key].setConstant(ConstantProxy(constant_pool, binaryInst->getOpcode() == OP::DIV ? 0 : 0.0f));
-                    else if (lhs_lattice.isNAC() || rhs_lattice.isNAC())
-                        latticeValues[key] = NAC;
-                    else
-                        latticeValues[key] = UNDEF;
-                    break;
-                }
-                    // TODO more opcode to write
                 default:
-                    Err::unreachable("Unexpected Instruction.");
-                    break;
+                    Err::unreachable("Unknown binary opcode");
                 }
-            } else latticeValues[key] = NAC;
+            }
+            else if (inst->getOpcode() == OP::BR || inst->getOpcode() == OP::PHI)
+                Err::unreachable("Transfer on br or phi.");
+            else
+                Err::unreachable("Unknown instruction.");
+        }
+
+        ConstantProxy getValueFromLatticeVal(const LatticeVal& v) const override {
+            return v.getConstant();
         }
     };
 

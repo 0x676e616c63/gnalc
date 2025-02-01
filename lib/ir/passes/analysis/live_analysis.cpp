@@ -17,7 +17,7 @@ namespace IR {
         }
     }
 
-    Liveness LiveAnalyser::run(Function& f, FAM& fpm) {
+    Liveness LiveAnalyser::run(Function& f, FAM& fam) {
         liveness.reset();
         bb_stack.reset();
         genDFSStack(f.getBlocks().front().get());
