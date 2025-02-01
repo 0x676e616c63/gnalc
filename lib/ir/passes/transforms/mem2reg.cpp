@@ -41,6 +41,7 @@ namespace IR {
         return false;
     }
 
+    // todo: store前load
     bool PromotePass::rewriteSingleStoreAlloca() {
         if (auto cur_info =  alloca_infos.front(); cur_info.stores.size() == 1) {
             std::shared_ptr<Value> store_val = cur_info.stores.front()->getValue();

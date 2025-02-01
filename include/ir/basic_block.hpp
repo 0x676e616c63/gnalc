@@ -45,6 +45,8 @@ public:
     const std::list<std::shared_ptr<Instruction>>& getInsts() const;
     std::list<std::shared_ptr<Instruction>>& getInsts();
 
+    unsigned getInstIndex(const std::shared_ptr<Instruction>& i) const; // 从0开始，查找不到报错
+
     bool delFirstOfInst(const std::shared_ptr<Instruction>& inst); // 只移除第一个匹配的项
 
     // Delete insts and its user.
@@ -86,6 +88,8 @@ inline void linkBB(const std::shared_ptr<BasicBlock>& prebb, const std::shared_p
     prebb->addNextBB(nxtbb);
     nxtbb->addPreBB(prebb);
 }
+
+
 
 }
 

@@ -16,6 +16,9 @@ namespace IR
 {
 class PromotePass : public PM::PassInfo<PromotePass> {
     // ...
+    struct BLOCK_INFO {
+
+    };
     struct ALLOCA_INFO{
         std::shared_ptr<ALLOCAInst> alloca;
         std::vector<std::shared_ptr<LOADInst>> loads;

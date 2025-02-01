@@ -49,6 +49,18 @@ namespace IR {
         return insts;
     }
 
+    unsigned BasicBlock::getInstIndex(const std::shared_ptr<Instruction> &i) const {
+        unsigned index = 0;
+        for (const auto & inst : insts) {
+            if (inst == i) {
+                return index;
+            }
+            index++;
+        }
+        Err::error("BasicBlock::getInstIndex(): can't find target instruction");
+        return 0;
+    }
+
     bool BasicBlock::delFirstOfInst(const std::shared_ptr<Instruction> &inst) {
         for (auto it = insts.begin(); it != insts.end(); ++it) {
             if (*it == inst) {
