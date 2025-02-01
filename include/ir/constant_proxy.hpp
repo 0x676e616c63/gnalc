@@ -76,11 +76,46 @@ public:
     ConstantProxy operator*(float rhs) const;
     ConstantProxy operator/(float rhs) const;
 
+    ConstantProxy operator+() const;
+    ConstantProxy operator-() const;
+    ConstantProxy operator!() const;
+
+    ConstantProxy& operator++();
+    ConstantProxy& operator--();
+    ConstantProxy operator++(int);
+    ConstantProxy operator--(int);
+
+    // Only Same Type
+    bool operator<(const ConstantProxy& rhs) const;
+    bool operator>(const ConstantProxy& rhs) const;
+    bool operator<=(const ConstantProxy& rhs) const;
+    bool operator>=(const ConstantProxy& rhs) const;
     bool operator==(const ConstantProxy& rhs) const;
+    bool operator!=(const ConstantProxy& rhs) const;
+
     bool operator==(bool rhs) const;
+    bool operator!=(bool rhs) const;
+
     bool operator==(char rhs) const;
+    bool operator!=(char rhs) const;
+    bool operator>=(char rhs) const;
+    bool operator<=(char rhs) const;
+    bool operator>(char rhs) const;
+    bool operator<(char rhs) const;
+
     bool operator==(int rhs) const;
+    bool operator!=(int rhs) const;
+    bool operator>=(int rhs) const;
+    bool operator<=(int rhs) const;
+    bool operator>(int rhs) const;
+    bool operator<(int rhs) const;
+
     bool operator==(float rhs) const;
+    bool operator!=(float rhs) const;
+    bool operator>=(float rhs) const;
+    bool operator<=(float rhs) const;
+    bool operator>(float rhs) const;
+    bool operator<(float rhs) const;
 
     std::shared_ptr<ConstantI1> getConstantI1() const;
     std::shared_ptr<ConstantI8> getConstantI8() const;
