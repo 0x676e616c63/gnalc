@@ -30,6 +30,13 @@ namespace IR
         return ret;
     }
 
+    void PHIInst::delPhiOper(const std::shared_ptr<BasicBlock> & target) {
+        delOperandIf(
+             [&target](const auto& oper) {
+                 return std::dynamic_pointer_cast<PhiOperand>(oper->getValue())->getBlock() == target;
+             });
+    }
+
     void PHIInst::accept(IRVisitor& visitor) { visitor.visit(*this); }
 
     PHIInst::PhiOperand::PhiOperand(const std::shared_ptr<Value> &_value, const std::shared_ptr<BasicBlock> &_block)

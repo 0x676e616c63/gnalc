@@ -33,9 +33,9 @@ namespace IR {
     bool PromotePass::removeUnusedAlloca() {
         if (auto cur_info =  alloca_infos.front(); cur_info.loads.empty()) {
             for (auto & store : cur_info.stores) {
-                store->getParent()->delInst(store);
+                store->getParent()->delFirstOfInst(store);
             }
-            entry_block->delInst(cur_info.alloca);
+            entry_block->delFirstOfInst(cur_info.alloca);
             return true;
         }
         return false;
@@ -48,9 +48,9 @@ namespace IR {
                 for (const auto & use : load->getUseList()) {
                     use->getUser()->replaceUse(load, store_val);
                 }
-                load->getParent()->delInst(load);
+                load->getParent()->delFirstOfInst(load);
             }
-            entry_block->delInst(cur_info.alloca);
+            entry_block->delFirstOfInst(cur_info.alloca);
             return true;
         }
         return false;

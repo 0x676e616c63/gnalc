@@ -104,6 +104,21 @@ public:
     bool delOperand(const std::shared_ptr<Value>& v);
     bool delOperand(NameRef name);
 
+    template <typename Pred>
+    bool delOperandIf(Pred pred) {
+        bool found = false;
+        for (auto it = operands.begin(); it != operands.end();) {
+            if (pred(*it)) {
+                it = operands.erase(it);
+                found = true;
+            } else {
+                ++it;
+            }
+        }
+        Err::gassert(found, "User::delOperandIf(): not found.");
+        return found;
+    }
+
     bool replaceUse(const std::shared_ptr<Value>& old_val, const std::shared_ptr<Value>& new_val);
 
     virtual void accept(IRVisitor& visitor) override = 0;

@@ -49,7 +49,7 @@ namespace IR {
         return insts;
     }
 
-    bool BasicBlock::delInst(const std::shared_ptr<Instruction> &inst) {
+    bool BasicBlock::delFirstOfInst(const std::shared_ptr<Instruction> &inst) {
         for (auto it = insts.begin(); it != insts.end(); ++it) {
             if (*it == inst) {
                 inst->setParent(nullptr);
