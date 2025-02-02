@@ -1,9 +1,13 @@
+// LLVM Pass benchmark
+//
 // Command: './pass_benchmark -o1 -O0 -o2 -passes=<pipeline>'
+//
+// For example: './pass_benchmark -o1 -O0 -o2 -passes='loop-unroll-full''
 // Note:
-// '-O0' and '-passes=<pipeline>' will be passed to `opt`
-// Use 'opt -print-passes' to see all available passes.
-// See https://llvm.org/docs/NewPassManager.html#invoking-opt for more details
-// on the pass pipeline syntax.
+// - '-O0' and '-passes=<pipeline>' will be passed to `opt`
+// - Use 'opt -print-passes' to see all available passes.
+// - See https://llvm.org/docs/NewPassManager.html#invoking-opt for more details
+//   on the pass pipeline syntax.
 
 #include <algorithm>
 #include <filesystem>
