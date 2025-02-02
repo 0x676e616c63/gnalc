@@ -1,16 +1,16 @@
 #include "../../../include/pass_manager/pass_manager.hpp"
-#include "../../../include/ir/passes/pass_manager.hpp"
+#include "../../../include/mir/passes/pass_manager.hpp"
 
 namespace PM {
-template class AnalysisManager<IR::Module>;
-template class AnalysisManager<IR::Function>;
+template class AnalysisManager<MIR::Module>;
+template class AnalysisManager<MIR::Function>;
 
-template class PassManager<IR::Module>;
-template class PassManager<IR::Function>;
+template class PassManager<MIR::Module>;
+template class PassManager<MIR::Function>;
 
-template class AllAnalysesOn<IR::Module>;
-template class AllAnalysesOn<IR::Function>;
+template class AllAnalysesOn<MIR::Module>;
+template class AllAnalysesOn<MIR::Function>;
 
-template class InnerAnalysisManagerProxy<AnalysisManager<IR::Function>,
-                                         IR::Module>;
+template class InnerAnalysisManagerProxy<AnalysisManager<MIR::Function>,
+                                         MIR::Module>;
 } // namespace PM
