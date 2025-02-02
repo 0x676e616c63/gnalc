@@ -1,3 +1,10 @@
+// Command: './pass_benchmark -o1 -O0 -o2 -passes=<pipeline>'
+// Note:
+// '-O0' and '-passes=<pipeline>' will be passed to `opt`
+// Use 'opt -print-passes' to see all available passes.
+// See https://llvm.org/docs/NewPassManager.html#invoking-opt for more details
+// on the pass pipeline syntax.
+
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
@@ -22,7 +29,7 @@ struct TestData {
     directory_entry sy;
     std::string sylib;
     std::string temp_dir;
-    std::string clang_options;
+    std::string cmd_options;
 };
 
 std::string make_pathname(const std::string& raw) {
@@ -41,7 +48,7 @@ TestResult run_test(const TestData& data) {
             data.sy.path().stem().string() + ".in";
 
     auto out_file_id = format("{}_{}",
-    data.sy.path().stem().string(), data.clang_options);
+    data.sy.path().stem().string(), data.cmd_options);
 
     auto output =
         format("{}/{}.out", data.temp_dir, out_file_id);
@@ -51,6 +58,7 @@ TestResult run_test(const TestData& data) {
     auto outtime = format("{}/{}.time", data.temp_dir, out_file_id);
     if (cfg::only_frontend) {
         auto outll = format("{}/{}.ll", data.temp_dir, out_file_id);
+        auto opt_outll = format("{}/{}.opt.ll", data.temp_dir, out_file_id);
         auto outbc = format("{}/{}.bc", data.temp_dir, out_file_id);
 
         // /bin/echo is the one in GNU coreutils
@@ -59,10 +67,12 @@ TestResult run_test(const TestData& data) {
 
         compile_command = format(
             "sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int getfarray(float a[]);void putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, float a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define starttime() _sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
-            " && clang {} -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null"
+            " && clang -O0 -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null"
+            " && opt {} -S   {} -o {}"
             " && llvm-link 2>&1 {} {} -o {}",
             newsy,
-            data.clang_options, newsy, outll,
+            newsy, outll,
+            data.cmd_options, outll, opt_outll,
             data.sylib, outll, outbc);
 
         command = format(
@@ -118,10 +128,10 @@ void write_benchmark_result_to(const BenchmarkData& data, std::ostream& out) {
         / static_cast<double>(res2.time_elapsed);
 
         println(out, "<{}> {}:", i, test1.sy.path().stem().string());
-        println(out, "'{}': {}us", test1.clang_options, res1.time_elapsed);
-        println(out, "'{}': {}us", test2.clang_options, res2.time_elapsed);
+        println(out, "'{}': {}us", test1.cmd_options, res1.time_elapsed);
+        println(out, "'{}': {}us", test2.cmd_options, res2.time_elapsed);
         println(out, "'{}' is {}x faster than '{}'.",
-            test2.clang_options, ratio, test1.clang_options);
+            test2.cmd_options, ratio, test1.cmd_options);
         println(out, "----------");
     }
 
@@ -148,8 +158,8 @@ int main(int argc, char *argv[]) {
     auto print_help = [&argv]() {
         println("Usage: {} [options]", argv[0]);
         println("Options:");
-        println("  -o1, --option1 [clang_option]    : Specify option1.");
-        println("  -o2, --option2 [clang_option]    : Specify option2.");
+        println("  -o1, --option1 [opt_option]    : Specify option1.");
+        println("  -o2, --option2 [opt_option]    : Specify option2.");
         println("  -b, --backend                    : Compile to elf and benchmark.");
         println("  -s, --skip [name_prefix]         : Skip test whose name has such "
                 "prefix.");
@@ -310,13 +320,13 @@ int main(int argc, char *argv[]) {
                 .sy = sy,
                 .sylib = sylib_to_link,
                 .temp_dir = curr_temp_dir,
-                .clang_options = benchmark_data.option1
+                .cmd_options = benchmark_data.option1
             };
             TestData data2{
                 .sy = sy,
                 .sylib = sylib_to_link,
                 .temp_dir = curr_temp_dir,
-                .clang_options = benchmark_data.option2
+                .cmd_options = benchmark_data.option2
             };
 
             auto res1 = run_test(data1);
@@ -385,7 +395,7 @@ int main(int argc, char *argv[]) {
         println("Failed tests: ");
         for (const auto &f : failed_tests) {
             println("| testcase: {} | options: {}",
-                f.sy.path().string(), f.clang_options);
+                f.sy.path().string(), f.cmd_options);
         }
         println("[\033[0;32;31mTEST FAILED\033[m] {} tests failed!",
                 failed_tests.size());
