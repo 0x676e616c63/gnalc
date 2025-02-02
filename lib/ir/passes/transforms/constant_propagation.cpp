@@ -223,9 +223,9 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
                         std::dynamic_pointer_cast<BRInst>(use->getUser())) {
                     Err::gassert(br_inst->isConditional());
                     if (val.getConstant().get_i1())
-                        *br_inst = BRInst(br_inst->getTrueDest());
+                        br_inst->dropFalseDest();
                     else
-                        *br_inst = BRInst(br_inst->getFalseDest());
+                        br_inst->dropTrueDest();
                 }
             }
         }

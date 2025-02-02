@@ -38,19 +38,19 @@ bool ALLOCAInst::isArray() const {
 
 std::shared_ptr<Type> ALLOCAInst::getBaseType() const { return basetype; }
 
-LOADInst::LOADInst(NameRef name, std::shared_ptr<Value> _ptr, int _align)
+LOADInst::LOADInst(NameRef name, const std::shared_ptr<Value> &_ptr, int _align)
     : Instruction(OP::LOAD, name, getElm(_ptr->getType())), align(_align) {
     addOperand(_ptr);
 }
 
 std::shared_ptr<Value> LOADInst::getPtr() const {
-    return (*(getOperands().begin()))->getValue();
+    return getOperand(0)->getValue();
 }
 
 int LOADInst::getAlign() const { return align; }
 
-STOREInst::STOREInst(std::shared_ptr<Value> _value, std::shared_ptr<Value> _ptr,
-                     int _align)
+STOREInst::STOREInst(const std::shared_ptr<Value> &_value,
+                     const std::shared_ptr<Value> &_ptr, int _align)
     : Instruction(OP::STORE, "__store", makeBType(IRBTYPE::UNDEFINED)),
       align(_align) {
     addOperand(_value);
@@ -58,15 +58,15 @@ STOREInst::STOREInst(std::shared_ptr<Value> _value, std::shared_ptr<Value> _ptr,
 }
 
 std::shared_ptr<Type> STOREInst::getBaseType() const {
-    return /*(*(getOperands().begin()))->*/ getValue()->getType();
+    return getValue()->getType();
 }
 
 std::shared_ptr<Value> STOREInst::getValue() const {
-    return (*(getOperands().begin()))->getValue();
+    return getOperand(0)->getValue();
 }
 
 std::shared_ptr<Value> STOREInst::getPtr() const {
-    return (*(std::next(getOperands().begin())))->getValue();
+    return getOperand(1)->getValue();
 }
 
 int STOREInst::getAlign() const { return align; }
@@ -93,19 +93,13 @@ std::shared_ptr<Type> GEPInst::getBaseType() const {
     return getElm(getPtr()->getType());
 }
 
-// std::vector<int> GEPInst::getArraySize() const
-// {
-//     return array_size;
-// }
-
 std::shared_ptr<Value> GEPInst::getPtr() const {
-    return (*(getOperands().begin()))->getValue();
+    return getOperand(0)->getValue();
 }
 
 std::vector<std::shared_ptr<Value>> GEPInst::getIdxs() const {
     std::vector<std::shared_ptr<Value>> ret;
-    for (auto it = std::next(getOperands().begin()); it != getOperands().end();
-         ++it)
+    for (auto it = getOperands().begin() + 1; it != getOperands().end(); ++it)
         ret.emplace_back((*it)->getValue());
     return ret;
 }

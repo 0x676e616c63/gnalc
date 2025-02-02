@@ -28,8 +28,8 @@ private:
     ICMPOP cond;
 
 public:
-    ICMPInst(NameRef name, ICMPOP cond, std::shared_ptr<Value> lhs,
-             std::shared_ptr<Value> rhs);
+    ICMPInst(NameRef name, ICMPOP cond, const std::shared_ptr<Value> &lhs,
+             const std::shared_ptr<Value> &rhs);
 
     std::shared_ptr<Value> getLHS() const;
 
@@ -75,8 +75,8 @@ private:
     FCMPOP cond;
 
 public:
-    FCMPInst(NameRef name, FCMPOP cond, std::shared_ptr<Value> lhs,
-             std::shared_ptr<Value> rhs);
+    FCMPInst(NameRef name, FCMPOP cond, const std::shared_ptr<Value> &lhs,
+             const std::shared_ptr<Value> &rhs);
 
     std::shared_ptr<Value> getLHS() const;
 

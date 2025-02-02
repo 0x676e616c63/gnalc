@@ -92,8 +92,8 @@ class Value : public NameC {
     friend class User;
 
 protected:
-    std::list<std::weak_ptr<Use>> use_list; // Use隶属于User
-    std::shared_ptr<Type> vtype;            // value's type
+    std::vector<std::weak_ptr<Use>> use_list; // Use隶属于User
+    std::shared_ptr<Type> vtype;              // value's type
     ValueTrait trait = ValueTrait::UNDEFINED;
 
 public:
@@ -104,8 +104,8 @@ public:
 
     void addUse(const std::weak_ptr<Use> &use);
 
-    std::list<std::shared_ptr<Use>> getUseList() const;
-    std::list<std::weak_ptr<Use>> &getRUseList();
+    std::vector<std::shared_ptr<Use>> getUseList() const;
+    std::vector<std::weak_ptr<Use>> &getRUseList();
 
     // i.e. Replace all uses with, RAUW
     void replaceSelf(const std::shared_ptr<Value> &new_value) const;
@@ -144,8 +144,10 @@ public:
  * @brief User是Use的所有者，User的Operands由Use中的val来保存
  */
 class User : public Value, public std::enable_shared_from_this<User> {
-protected:
-    std::list<std::shared_ptr<Use>> operands; // 操作数实际是Use中的val
+private:
+    // operands 设为 private, 防止子类误用，因为删除 opreand 需要处理 use 关系
+    // operands 里的 Use 中的 val 是实际的操作数
+    std::vector<std::shared_ptr<Use>> operands;
 
 public:
     User() = delete;
@@ -153,11 +155,12 @@ public:
 
     void addOperand(const std::shared_ptr<Value> &v);
 
-    std::list<std::shared_ptr<Use>> &getOperands();
-    const std::list<std::shared_ptr<Use>> &getOperands() const;
+    const std::vector<std::shared_ptr<Use>> &getOperands() const;
+    const std::shared_ptr<Use> &getOperand(size_t index) const;
 
     bool delOperand(const std::shared_ptr<Value> &v);
     bool delOperand(NameRef name);
+    bool delOperand(size_t index);
 
     template <typename Pred> bool delOperandIf(Pred pred) {
         bool found = false;

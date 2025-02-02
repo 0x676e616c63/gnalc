@@ -11,7 +11,7 @@ CastInst::CastInst(OP opcode_, NameRef name,
 }
 
 std::shared_ptr<Value> CastInst::getOVal() const {
-    return (*(getOperands().begin()))->getValue();
+    return getOperand(0)->getValue();
 }
 
 std::shared_ptr<Type> CastInst::getOType() const {

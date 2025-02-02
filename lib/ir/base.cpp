@@ -7,6 +7,8 @@
 #include "../../include/ir/base.hpp"
 #include "../../include/utils/exception.hpp"
 
+#include <functional>
+
 namespace IR {
 
 Value::Value(std::string _name, std::shared_ptr<Type> _vtype,
@@ -20,8 +22,8 @@ void Value::addUse(const std::weak_ptr<Use> &use) {
     use_list.emplace_back(use);
 }
 
-std::list<std::shared_ptr<Use>> Value::getUseList() const {
-    std::list<std::shared_ptr<Use>> shared_use_list;
+std::vector<std::shared_ptr<Use>> Value::getUseList() const {
+    std::vector<std::shared_ptr<Use>> shared_use_list;
     for (const auto &weak_use : use_list) {
         auto shared_use = weak_use.lock();
         Err::gassert(shared_use != nullptr,
@@ -32,7 +34,7 @@ std::list<std::shared_ptr<Use>> Value::getUseList() const {
     return shared_use_list;
 }
 
-std::list<std::weak_ptr<Use>> &Value::getRUseList() { return use_list; }
+std::vector<std::weak_ptr<Use>> &Value::getRUseList() { return use_list; }
 
 void Value::replaceSelf(const std::shared_ptr<Value> &new_value) const {
     auto shared_use_list = getUseList();
@@ -63,10 +65,11 @@ void User::addOperand(const std::shared_ptr<Value> &v) {
     operands.emplace_back(std::move(use));
 }
 
-std::list<std::shared_ptr<Use>> &User::getOperands() { return operands; }
-
-const std::list<std::shared_ptr<Use>> &User::getOperands() const {
+const std::vector<std::shared_ptr<Use>> &User::getOperands() const {
     return operands;
+}
+const std::shared_ptr<Use> &User::getOperand(size_t index) const {
+    return operands[index];
 }
 
 bool User::delOperand(const std::shared_ptr<Value> &v) {
@@ -76,6 +79,19 @@ bool User::delOperand(const std::shared_ptr<Value> &v) {
 bool User::delOperand(NameRef name) {
     return delOperandIf(
         [&name](auto &&op) { return op->getValue()->isName(name); });
+}
+
+bool User::delOperand(size_t index) {
+    Err::gassert(index < operands.size());
+    if (index >= operands.size())
+        return false;
+    auto use = operands[index];
+    auto ok = use->getValue()->delUse(use->getUser());
+    Err::gassert(ok);
+    operands.erase(
+        operands.begin() +
+        static_cast<decltype(operands)::iterator::difference_type>(index));
+    return true;
 }
 
 bool User::replaceUse(const std::shared_ptr<Value> &old_val,

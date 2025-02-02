@@ -28,19 +28,20 @@ std::shared_ptr<Type> OPtoTY(OP op) {
 }
 
 // TYPE 由 OP 决定
-BinaryInst::BinaryInst(NameRef name, OP opcode, std::shared_ptr<Value> lhs,
-                       std::shared_ptr<Value> rhs)
+BinaryInst::BinaryInst(NameRef name, OP opcode,
+                       const std::shared_ptr<Value> &lhs,
+                       const std::shared_ptr<Value> &rhs)
     : Instruction(opcode, name, OPtoTY(opcode)) {
     addOperand(lhs);
     addOperand(rhs);
 }
 
 std::shared_ptr<Value> BinaryInst::getLHS() const {
-    return (*(getOperands().begin()))->getValue();
+    return getOperand(0)->getValue();
 }
 
 std::shared_ptr<Value> BinaryInst::getRHS() const {
-    return (*(getOperands().rbegin()))->getValue();
+    return getOperand(1)->getValue();
 }
 
 FNEGInst::FNEGInst(NameRef name, std::shared_ptr<Value> val)
@@ -49,7 +50,7 @@ FNEGInst::FNEGInst(NameRef name, std::shared_ptr<Value> val)
 }
 
 std::shared_ptr<Value> FNEGInst::getVal() const {
-    return (*(getOperands().begin()))->getValue();
+    return getOperand(0)->getValue();
 }
 
 void BinaryInst::accept(IRVisitor &visitor) { visitor.visit(*this); }

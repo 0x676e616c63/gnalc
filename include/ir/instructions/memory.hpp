@@ -56,7 +56,7 @@ private:
 public:
     // LOADInst(NameRef name, std::shared_ptr<Type> ty, std::shared_ptr<Value>
     // _ptr, int _align = 4);
-    LOADInst(NameRef name, std::shared_ptr<Value> _ptr, int _align = 4);
+    LOADInst(NameRef name, const std::shared_ptr<Value> &_ptr, int _align = 4);
 
     std::shared_ptr<Value> getPtr() const;
     int getAlign() const;
@@ -72,8 +72,8 @@ private:
     int align = 4;
 
 public:
-    STOREInst(std::shared_ptr<Value> _value, std::shared_ptr<Value> _ptr,
-              int _align = 4);
+    STOREInst(const std::shared_ptr<Value> &_value,
+              const std::shared_ptr<Value> &_ptr, int _align = 4);
 
     std::shared_ptr<Type> getBaseType() const;
     std::shared_ptr<Value> getValue() const;
@@ -100,7 +100,6 @@ public:
             const std::shared_ptr<Value> &idx);
 
     std::shared_ptr<Type> getBaseType() const;
-    // std::vector<int> getArraySize() const;
     std::shared_ptr<Value> getPtr() const;
     std::vector<std::shared_ptr<Value>> getIdxs() const;
 

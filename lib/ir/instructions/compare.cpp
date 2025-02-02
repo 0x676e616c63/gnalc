@@ -5,19 +5,19 @@
 #include "../../../include/ir/visitor.hpp"
 
 namespace IR {
-ICMPInst::ICMPInst(NameRef name, ICMPOP cond, std::shared_ptr<Value> lhs,
-                   std::shared_ptr<Value> rhs)
+ICMPInst::ICMPInst(NameRef name, ICMPOP cond, const std::shared_ptr<Value> &lhs,
+                   const std::shared_ptr<Value> &rhs)
     : Instruction(OP::ICMP, name, makeBType(IRBTYPE::I1)), cond(cond) {
     addOperand(lhs);
     addOperand(rhs);
 }
 
 std::shared_ptr<Value> ICMPInst::getLHS() const {
-    return (*(getOperands().begin()))->getValue();
+    return getOperand(0)->getValue();
 }
 
 std::shared_ptr<Value> ICMPInst::getRHS() const {
-    return (*(getOperands().rbegin()))->getValue();
+    return getOperand(1)->getValue();
 }
 
 ICMPOP ICMPInst::getCond() const { return cond; }
@@ -48,19 +48,19 @@ void ICMPInst::condFlip() {
     }
 }
 
-FCMPInst::FCMPInst(NameRef name, FCMPOP cond, std::shared_ptr<Value> lhs,
-                   std::shared_ptr<Value> rhs)
+FCMPInst::FCMPInst(NameRef name, FCMPOP cond, const std::shared_ptr<Value> &lhs,
+                   const std::shared_ptr<Value> &rhs)
     : Instruction(OP::FCMP, name, makeBType(IRBTYPE::I1)), cond(cond) {
     addOperand(lhs);
     addOperand(rhs);
 }
 
 std::shared_ptr<Value> FCMPInst::getLHS() const {
-    return (*(getOperands().begin()))->getValue();
+    return getOperand(0)->getValue();
 }
 
 std::shared_ptr<Value> FCMPInst::getRHS() const {
-    return (*(getOperands().rbegin()))->getValue();
+    return getOperand(1)->getValue();
 }
 
 FCMPOP FCMPInst::getCond() const { return cond; }

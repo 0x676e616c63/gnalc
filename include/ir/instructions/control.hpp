@@ -33,6 +33,14 @@ public:
 // br i1 <cond>, label <iftrue>, label <iffalse>
 // br label <dest>          ; Unconditional branch
 // br i1 <cond> label %if.then1(%a, %b), label %if.end1(%c, %d)
+//
+// BRInst operands:
+// Conditional
+// cond | true_dest | false_dest | true_args | false_args
+//  0         1            2           3           4
+// Unconditional
+// dest | dest_args
+//   0        1
 class BRInst : public Instruction {
 public:
     // arg的user是BBArgList
@@ -55,9 +63,10 @@ private:
     bool set_args = false;
 
 public:
-    explicit BRInst(std::shared_ptr<BasicBlock> _dest);
-    BRInst(std::shared_ptr<Value> cond, std::shared_ptr<BasicBlock> _true_dest,
-           std::shared_ptr<BasicBlock> _false_dest);
+    explicit BRInst(const std::shared_ptr<BasicBlock> &_dest);
+    BRInst(const std::shared_ptr<Value> &cond,
+           const std::shared_ptr<BasicBlock> &_true_dest,
+           const std::shared_ptr<BasicBlock> &_false_dest);
 
     bool isConditional() const;
     std::shared_ptr<Value> getCond() const;
@@ -74,11 +83,14 @@ public:
     std::vector<std::shared_ptr<Value>> getTrueBBArgs() const;
     std::vector<std::shared_ptr<Value>> getFalseBBArgs() const;
 
+    void dropFalseDest();
+    void dropTrueDest();
+
     void accept(IRVisitor &visitor) override;
 };
 
 //<result> = [tail | musttail | notail ] call [fast-math flags] [cconv] [ret
-//attrs] [addrspace(<num>)]
+// attrs] [addrspace(<num>)]
 //            <ty>|<fnty> <fnptrval>(<function args>) [fn attrs] [ operand
 //            bundles ]
 //
@@ -88,9 +100,9 @@ private:
     // std::shared_ptr<WeakUse> func;
 public:
     // func储存到func, args储存到operands中
-    CALLInst(std::shared_ptr<FunctionDecl> func,
+    CALLInst(const std::shared_ptr<FunctionDecl> &func,
              const std::vector<std::shared_ptr<Value>> &args); // for void
-    CALLInst(NameRef name, std::shared_ptr<FunctionDecl> func,
+    CALLInst(NameRef name, const std::shared_ptr<FunctionDecl> &func,
              const std::vector<std::shared_ptr<Value>> &args);
 
     bool isVoid() const;

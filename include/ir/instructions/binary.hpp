@@ -19,8 +19,8 @@ namespace IR {
 // operands = [%1, %2]
 class BinaryInst : public Instruction {
 public:
-    BinaryInst(NameRef name, OP opcode, std::shared_ptr<Value> lhs,
-               std::shared_ptr<Value> rhs);
+    BinaryInst(NameRef name, OP opcode, const std::shared_ptr<Value> &lhs,
+               const std::shared_ptr<Value> &rhs);
 
     std::shared_ptr<Value> getLHS() const;
     std::shared_ptr<Value> getRHS() const;
