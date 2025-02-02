@@ -305,9 +305,9 @@ public:
                 LatticeInfo::getKeyFromValue(zext->getOVal()));
 
             if (val.isConstant()) {
-                switch (zext->getOType()) {
+                switch (toBType(zext->getOType())->getInner()) {
                 case IRBTYPE::I1:
-                    switch (zext->getTType()) {
+                    switch (toBType(zext->getTType())->getInner()) {
                     case IRBTYPE::I8:
                         changes[inst].setConstant(ConstantProxy(
                             constant_pool,
@@ -318,45 +318,24 @@ public:
                             constant_pool,
                             static_cast<int>(val.getConstant().get_i1())));
                         break;
-                    case IRBTYPE::FLOAT:
-                        changes[inst].setConstant(ConstantProxy(
-                            constant_pool,
-                            static_cast<float>(val.getConstant().get_i1())));
-                        break;
                     default:
                         Err::unreachable("target type could not zext otype:I1");
                     }
                 case IRBTYPE::I8:
-                    switch (zext->getTType()) {
+                    switch (toBType(zext->getTType())->getInner()) {
                     case IRBTYPE::I32:
                         changes[inst].setConstant(ConstantProxy(
                             constant_pool,
                             static_cast<int>(val.getConstant().get_i8())));
                         break;
-                    case IRBTYPE::FLOAT:
-                        changes[inst].setConstant(ConstantProxy(
-                            constant_pool,
-                            static_cast<float>(val.getConstant().get_i8())));
-                        break;
                     default:
                         Err::unreachable("target type could not zext otype:I8");
                     }
-                case IRBTYPE::I32:
-                    switch (zext->getTType()) {
-                    case IRBTYPE::FLOAT:
-                        changes[inst].setConstant(ConstantProxy(
-                            constant_pool,
-                            static_cast<float>(val.getConstant().get_int())));
-                        break;
-                    default:
-                        Err::unreachable(
-                            "target type could not zext otype:I32");
-                    }
-
                 default:
                     Err::unreachable("target type could not zext");
                 }
-            }
+            } else if (val.isNAC())
+                changes[inst] = LatticeInfo::NAC;
 
         } else if (auto bit = std::dynamic_pointer_cast<BITCASTInst>(inst)) {
             changes[inst] = LatticeInfo::NAC;
