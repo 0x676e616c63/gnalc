@@ -2,6 +2,10 @@
 
 #include "../../include/ir/passes/pass_builder.hpp"
 #include "../../include/ir/passes/pass_manager.hpp"
+#include "../../include/mir/builder/lowering.hpp"
+#include "../../include/mir/passes/pass_builder.hpp"
+#include "../../include/mir/passes/pass_manager.hpp"
+#include "../../include/ir/passes/utilities/irprinter.hpp"
 #include "../../include/parser/ast.hpp"
 #include "../../include/parser/astprinter.hpp"
 #include "../../include/parser/irgen.hpp"
@@ -19,8 +23,6 @@
 #include <memory>
 #include <string>
 
-#include "../../include/ir/passes/utilities/irprinter.hpp"
-
 std::shared_ptr<AST::CompUnit> node = nullptr;
 extern FILE *yyin;
 
@@ -36,6 +38,7 @@ int main(int argc, char **argv) {
     bool emit_llvm = false;        // -emit-llvm
     bool ast_dump = false;         // -ast-dump
     IR::OptInfo opt_info;
+    MIR::OptInfo mir_opt_info;
 
 #if GNALC_EXTENSION_BRAINFK
     bool bf_target = false;   // -mbrainfk
@@ -72,8 +75,10 @@ int main(int argc, char **argv) {
             emit_llvm = true;
         else if (arg == "-ast-dump")
             ast_dump = true;
-        else if (arg == "-O1")
+        else if (arg == "-O1") {
             opt_info = IR::o1_opt_info;
+            mir_opt_info = MIR::o1_opt_info;
+        }
 
         // Optimizations available:
         else if (arg == "--mem2reg")
@@ -151,8 +156,8 @@ Extensions:
     if (!input_file.empty())
         fclose(yyin);
 
-    Parser::IRGenerator generator;
-    generator.visit(*node);
+    Parser::IRGenerator irgen;
+    irgen.visit(*node);
 
     auto [fam, mam] = IR::PassBuilder::buildAnalysisManager();
     auto mpm = IR::PassBuilder::buildModulePipeline(opt_info);
@@ -171,11 +176,11 @@ Extensions:
 
     if (emit_llvm) {
         mpm.addPass(IR::PrintModulePass(*poutstream, false));
-        mpm.run(generator.get_module(), mam);
+        mpm.run(irgen.get_module(), mam);
         return 0;
     }
 
-    mpm.run(generator.get_module(), mam);
+    mpm.run(irgen.get_module(), mam);
 
 #if GNALC_EXTENSION_BRAINFK
     if (bf_target || bf3t_target) {
@@ -195,7 +200,14 @@ Extensions:
     }
 #endif
 
-    Err::todo("ARM Backend Refactor.");
+    auto [mir_fam, mir_mam] = MIR::PassBuilder::buildAnalysisManager();
+    auto mir_mpm = MIR::PassBuilder::buildModulePipeline(mir_opt_info);
+
+    MIR::Lowering mirgen;
+    mirgen(irgen.get_module());
+    mir_mpm.run(mirgen.getModule(), mir_mam);
+
+    *poutstream << mirgen.getModule().toString();
 
     return 0;
 }

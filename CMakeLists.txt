@@ -28,6 +28,16 @@ aux_source_directory(lib/ir/passes/analysis GNALC_IR_SRC)
 aux_source_directory(lib/ir/passes/transforms GNALC_IR_SRC)
 aux_source_directory(lib/ir/passes/utilities GNALC_IR_SRC)
 
+# MIR
+aux_source_directory(lib/mir GNALC_MIR_SRC)
+aux_source_directory(lib/mir/builder GNALC_MIR_SRC)
+# aux_source_directory(lib/mirtools GNALC_MIR_SRC)
+aux_source_directory(lib/mir/instruction GNALC_MIR_SRC)
+aux_source_directory(lib/mir/passes GNALC_MIR_SRC)
+# aux_source_directory(lib/mir/passes/analysis GNALC_MIR_SRC)
+aux_source_directory(lib/mir/passes/transforms GNALC_MIR_SRC)
+# aux_source_directory(lib/mir/passes/utilities GNALC_MIR_SRC)
+
 # Pass Manager
 aux_source_directory(lib/pass_manager GNALC_PM_SRC)
 
@@ -38,7 +48,7 @@ aux_source_directory(lib/utils GNALC_UTILS_SRC)
 aux_source_directory(lib/codegen/brainfk GNALC_EXT_BFBKD_SRC)
 
 # ALL
-set(GNALC_SRC ${GNALC_LEXER_SRC} ${GNALC_PARSER_SRC} ${GNALC_IR_SRC} ${GNALC_PM_SRC} ${GNALC_EXT_BFBKD_SRC} ${GNALC_UTILS_SRC})
+set(GNALC_SRC ${GNALC_LEXER_SRC} ${GNALC_PARSER_SRC} ${GNALC_IR_SRC} ${GNALC_MIR_SRC} ${GNALC_PM_SRC} ${GNALC_EXT_BFBKD_SRC} ${GNALC_UTILS_SRC})
 
 # debug driver
 add_executable(printast tools/driver/debug/printast.cpp lib/parser/parser.cpp lib/lexer/lexer.cpp lib/parser/astprinter.cpp)
