@@ -41,12 +41,19 @@ struct InstLowering {
     std::shared_ptr<Instruction>
     operator()(const std::shared_ptr<IR::Instruction> &);
 
-    void binaryLower();
-    void compareLower();
-    void controlLower();
-    void converseLower();
-    void memoryLower();
-    void phiLower(); // 保留phi指令, 方便phiEliminate前后的调试
+    std::shared_ptr<Instruction> binaryLower();
+    std::shared_ptr<Instruction> icmpLower();
+    std::shared_ptr<Instruction> fcmpLower();
+    std::shared_ptr<Instruction> retLower();
+    std::shared_ptr<Instruction> brLower();
+    std::shared_ptr<Instruction> callLower();
+    std::shared_ptr<Instruction> zextLower();
+    std::shared_ptr<Instruction> bitcastLower();
+    std::shared_ptr<Instruction> allocaLower();
+    std::shared_ptr<Instruction> loadLower();
+    std::shared_ptr<Instruction> storeLower();
+    std::shared_ptr<Instruction> gepLower();
+    std::shared_ptr<Instruction> phiLower();
 };
 
 class Lowering {

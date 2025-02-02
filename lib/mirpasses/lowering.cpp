@@ -39,7 +39,8 @@ std::shared_ptr<BasicBlock> Lowering::lower(const IR::BasicBlock &midEnd_bb) {
     ///@note lowering 中没有填写pres, succs以及活跃信息, 应该在phi消除中会填
 
     for (auto &midEnd_inst : midEnd_bb.getInsts()) {
-        basicblock->addInst(instlower(midEnd_inst));
+        if (auto inst = instlower(midEnd_inst))
+            basicblock->addInst(inst);
     }
 
     return basicblock;
