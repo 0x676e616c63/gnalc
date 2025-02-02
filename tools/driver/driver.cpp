@@ -2,10 +2,10 @@
 
 #include "../../include/ir/passes/pass_builder.hpp"
 #include "../../include/ir/passes/pass_manager.hpp"
+#include "../../include/ir/passes/utilities/irprinter.hpp"
 #include "../../include/mir/builder/lowering.hpp"
 #include "../../include/mir/passes/pass_builder.hpp"
 #include "../../include/mir/passes/pass_manager.hpp"
-#include "../../include/ir/passes/utilities/irprinter.hpp"
 #include "../../include/parser/ast.hpp"
 #include "../../include/parser/astprinter.hpp"
 #include "../../include/parser/irgen.hpp"

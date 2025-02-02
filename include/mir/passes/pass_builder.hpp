@@ -24,5 +24,5 @@ public:
     static void registerFunctionAnalyses(FAM &);
     static void registerProxies(FAM &, MAM &);
 };
-} // namespace IR
+} // namespace MIR
 #endif

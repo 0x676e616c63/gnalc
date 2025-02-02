@@ -59,5 +59,5 @@ template <typename FunctionPassT> auto makeModulePass(FunctionPassT &&pass) {
         std::unique_ptr<ModulePassWrapper::FunctionPassConceptT>(
             new FunctionPassModelT(std::forward<FunctionPassT>(pass))));
 }
-} // namespace IR
+} // namespace MIR
 #endif

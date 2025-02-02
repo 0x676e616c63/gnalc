@@ -2,8 +2,8 @@
 #include "../../../include/mir/passes/pass_manager.hpp"
 
 // Transforms
-#include "../../../include/mir/passes/transforms/peephole.hpp"
 #include "../../../include/mir/passes/transforms/legalize.hpp"
+#include "../../../include/mir/passes/transforms/peephole.hpp"
 
 namespace MIR {
 
@@ -53,4 +53,4 @@ void PassBuilder::registerFunctionAnalyses(FAM &fam) {
 
 void PassBuilder::registerModuleAnalyses(MAM &) {}
 
-} // namespace IR
+} // namespace MIR
