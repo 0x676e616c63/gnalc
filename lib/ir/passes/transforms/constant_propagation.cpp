@@ -276,9 +276,90 @@ public:
                         ConstantProxy(constant_pool,
                                       lhs.getConstant() < rhs.getConstant()));
                     break;
+                default:
+                    Err::unreachable("Unknown fcmp OP");
                 }
+
             } else if (lhs.isNAC() || rhs.isNAC())
                 changes[inst] = LatticeInfo::NAC;
+        } else if (auto fti = std::dynamic_pointer_cast<FPTOSIInst>(inst)) {
+            auto val = solver.getVal(
+                LatticeInfo::getKeyFromValue(fti->getOVal()));
+            if (val.isConstant())
+                changes[inst].setConstant(ConstantProxy(
+                    constant_pool,
+                    static_cast<int>(val.getConstant().get_float())));
+            else if (val.isNAC())
+                changes[inst] = LatticeInfo::NAC;
+        } else if (auto itf = std::dynamic_pointer_cast<SITOFPInst>(inst)) {
+            auto val = solver.getVal(
+                LatticeInfo::getKeyFromValue(itf->getOVal()));
+            if (val.isConstant())
+                changes[inst].setConstant(ConstantProxy(
+                    constant_pool,
+                    static_cast<float>(val.getConstant().get_int())));
+            else if (val.isNAC())
+                changes[inst] = LatticeInfo::NAC;
+        } else if (auto zext = std::dynamic_pointer_cast<ZEXTInst>(inst)) {
+            auto val = solver.getVal(
+                LatticeInfo::getKeyFromValue(zext->getOVal()));
+
+            if (val.isConstant()) {
+                switch (zext->getOType()) {
+                case IRBTYPE::I1:
+                    switch (zext->getTType()) {
+                    case IRBTYPE::I8:
+                        changes[inst].setConstant(ConstantProxy(
+                            constant_pool,
+                            static_cast<char>(val.getConstant().get_i1())));
+                        break;
+                    case IRBTYPE::I32:
+                        changes[inst].setConstant(ConstantProxy(
+                            constant_pool,
+                            static_cast<int>(val.getConstant().get_i1())));
+                        break;
+                    case IRBTYPE::FLOAT:
+                        changes[inst].setConstant(ConstantProxy(
+                            constant_pool,
+                            static_cast<float>(val.getConstant().get_i1())));
+                        break;
+                    default:
+                        Err::unreachable("target type could not zext otype:I1");
+                    }
+                case IRBTYPE::I8:
+                    switch (zext->getTType()) {
+                    case IRBTYPE::I32:
+                        changes[inst].setConstant(ConstantProxy(
+                            constant_pool,
+                            static_cast<int>(val.getConstant().get_i8())));
+                        break;
+                    case IRBTYPE::FLOAT:
+                        changes[inst].setConstant(ConstantProxy(
+                            constant_pool,
+                            static_cast<float>(val.getConstant().get_i8())));
+                        break;
+                    default:
+                        Err::unreachable("target type could not zext otype:I8");
+                    }
+                case IRBTYPE::I32:
+                    switch (zext->getTType()) {
+                    case IRBTYPE::FLOAT:
+                        changes[inst].setConstant(ConstantProxy(
+                            constant_pool,
+                            static_cast<float>(val.getConstant().get_int())));
+                        break;
+                    default:
+                        Err::unreachable(
+                            "target type could not zext otype:I32");
+                    }
+
+                default:
+                    Err::unreachable("target type could not zext");
+                }
+            }
+
+        } else if (auto bit = std::dynamic_pointer_cast<BITCASTInst>(inst)) {
+            changes[inst] = LatticeInfo::NAC;
         }
         // TODO  converse
         else if (inst->getOpcode() == OP::BR || inst->getOpcode() == OP::PHI)
