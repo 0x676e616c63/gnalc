@@ -1,15 +1,15 @@
-#ifndef GNALC_MIR_LOWERING_HPP
-#define GNALC_MIR_LOWERING_HPP
-#include "../ir/basic_block.hpp"
-#include "../ir/function.hpp"
-#include "../ir/instruction.hpp"
-#include "../ir/module.hpp"
-#include "../mir/base.hpp"
-#include "../mir/function.hpp"
-#include "../mir/instruction.hpp"
-#include "../mir/module.hpp"
-#include "../mir/operand.hpp"
-#include "../mir/varpool.hpp"
+#ifndef GNALC_MIRBUILDER_LOWERING_HPP
+#define GNALC_MIRBUILDER_LOWERING_HPP
+#include "../../ir/basic_block.hpp"
+#include "../../ir/function.hpp"
+#include "../../ir/instruction.hpp"
+#include "../../ir/module.hpp"
+#include "../../mir/base.hpp"
+#include "../../mir/function.hpp"
+#include "../../mir/instruction.hpp"
+#include "../../mir/module.hpp"
+#include "../../mir/operand.hpp"
+#include "../../mir/varpool.hpp"
 
 namespace MIR {
 

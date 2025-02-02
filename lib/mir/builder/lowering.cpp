@@ -1,4 +1,4 @@
-#include "../../include/mirpasses/lowering.hpp"
+#include "../../../include/mir/builder/lowering.hpp"
 #include <cassert>
 
 using namespace MIR;
