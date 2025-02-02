@@ -63,7 +63,9 @@ public:
         for (auto it = insts.begin(); it != insts.end();) {
             if (pred(*it)) {
                 for (auto &&use : (*it)->getUseList()) {
-                    Err::gassert(pred(use->getUser()));
+                    Err::gassert(pred(use->getUser()),
+                                 "BasicBlock::delInstIf(): Cannot delete a "
+                                 "Inst without deleting its User.");
                 }
                 it = insts.erase(it);
                 found = true;

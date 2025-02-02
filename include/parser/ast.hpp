@@ -130,9 +130,8 @@ private:
     std::shared_ptr<InitVal> initval;
 
 public:
-    std::shared_ptr<VarDef> next =
-        nullptr; // in parser.y:91:VarDefs:
-                 // 由于自下而上的语法分析，先构建VarDef，再构建DeclStmt，故先使用next存储;
+    std::shared_ptr<VarDef> next = nullptr; // in parser.y:91:VarDefs:
+        // 由于自下而上的语法分析，先构建VarDef，再构建DeclStmt，故先使用next存储;
 
     // 构建函数参考：parser.y:95:VarDef
     VarDef(string id) : id(id) {}

@@ -546,8 +546,7 @@ void IRGenerator::visit(FuncFParam &node) {
 //
 // From node's name to curr_val's alloca/load
 //
-// curr_val =
-// is_making_lval (which guarantees a ptr) -> alloca
+// curr_val = is_making_lval (which guarantees a ptr) -> alloca
 // Array -> alloca
 // Basic -> alloca -> load
 void IRGenerator::visit(DeclRef &node) {
@@ -850,7 +849,7 @@ void IRGenerator::visit(BinaryOp &node) {
                 op = fop; \
             } \
         break; \
-// @formatter:on
+// @formatter:on                                                    \
         // clang-format on
 
         switch (node.getOp()) {
@@ -905,7 +904,7 @@ void IRGenerator::visit(BinaryOp &node) {
             } \
             icmpop = iop; \
         break; \
-// @formatter:on
+// @formatter:on                                                \
         // clang-format on
             switch (node.getOp()) {
                 MAKE_OP(BiOp::LESSEQ, IR::ICMPOP::sle, <=)

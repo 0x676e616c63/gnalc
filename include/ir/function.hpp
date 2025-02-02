@@ -58,9 +58,9 @@ public:
                 for (const auto &use : (*it)->getUseList()) {
                     auto phi =
                         std::dynamic_pointer_cast<PHIInst>(use->getUser());
-                    Err::gassert(
-                        phi != nullptr,
-                        "Cannot delete a block that has users beyond phi.");
+                    Err::gassert(phi != nullptr,
+                                 "Function::delBlockIf(): Cannot delete a "
+                                 "block that has users beyond phi.");
                     phi->delPhiOper(*it);
 
                     // Simplify PHI

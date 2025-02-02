@@ -92,8 +92,8 @@ class Value : public NameC {
     friend class User;
 
 protected:
-    std::vector<std::weak_ptr<Use>> use_list; // Use隶属于User
-    std::shared_ptr<Type> vtype;              // value's type
+    std::list<std::weak_ptr<Use>> use_list; // Use隶属于User
+    std::shared_ptr<Type> vtype;            // value's type
     ValueTrait trait = ValueTrait::UNDEFINED;
 
 public:
@@ -104,8 +104,8 @@ public:
 
     void addUse(const std::weak_ptr<Use> &use);
 
-    std::vector<std::shared_ptr<Use>> getUseList() const;
-    std::vector<std::weak_ptr<Use>> &getRUseList();
+    std::list<std::shared_ptr<Use>> getUseList() const;
+    std::list<std::weak_ptr<Use>> &getRUseList();
 
     // i.e. Replace all uses with, RAUW
     void replaceSelf(const std::shared_ptr<Value> &new_value) const;
@@ -145,7 +145,7 @@ public:
  */
 class User : public Value, public std::enable_shared_from_this<User> {
 private:
-    // operands 设为 private, 防止子类误用，因为删除 opreand 需要处理 use 关系
+    // operands 设为 private, 防止子类误用，因为删除 operand 需要处理 use 关系
     // operands 里的 Use 中的 val 是实际的操作数
     std::vector<std::shared_ptr<Use>> operands;
 

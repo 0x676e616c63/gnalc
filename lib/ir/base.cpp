@@ -22,8 +22,8 @@ void Value::addUse(const std::weak_ptr<Use> &use) {
     use_list.emplace_back(use);
 }
 
-std::vector<std::shared_ptr<Use>> Value::getUseList() const {
-    std::vector<std::shared_ptr<Use>> shared_use_list;
+std::list<std::shared_ptr<Use>> Value::getUseList() const {
+    std::list<std::shared_ptr<Use>> shared_use_list;
     for (const auto &weak_use : use_list) {
         auto shared_use = weak_use.lock();
         Err::gassert(shared_use != nullptr,
@@ -34,7 +34,7 @@ std::vector<std::shared_ptr<Use>> Value::getUseList() const {
     return shared_use_list;
 }
 
-std::vector<std::weak_ptr<Use>> &Value::getRUseList() { return use_list; }
+std::list<std::weak_ptr<Use>> &Value::getRUseList() { return use_list; }
 
 void Value::replaceSelf(const std::shared_ptr<Value> &new_value) const {
     auto shared_use_list = getUseList();

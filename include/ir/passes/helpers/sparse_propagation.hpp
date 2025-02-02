@@ -1,22 +1,18 @@
-// Generic Sparse Conditional Property Propagation, used by
-// ConstantPropagationPass See:
+// Generic Sparse Conditional Property Propagation, used by ConstantPropagationPass
+// See:
 //    - Static Single Assignment Book, P104, 8.2.2, Algorithm 8.1
-//    - Wegman, Mark N. and Zadeck, F. Kenneth. "Constant Propagation with
-//    Conditional Branches."
+//    - Wegman, Mark N. and Zadeck, F. Kenneth. "Constant Propagation with Conditional Branches."
 //          https://dl.acm.org/doi/pdf/10.1145/103135.103136
 //    - LLVM SparseSolver
 //          SparsePropagation.h:
 //          https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Analysis/SparsePropagation.h
 //    - The opcache optimizer
-//          Author's blog:
-//          https://www.npopov.com/2022/05/22/The-opcache-optimizer.html scdf.c:
-//          https://github.com/php/php-src/blob/cc506a81e17c3e059d44b560213ed914f8199ed5/Zend/Optimizer/scdf.c
-//          sccp.c:
-//          https://github.com/php/php-src/blob/cc506a81e17c3e059d44b560213ed914f8199ed5/Zend/Optimizer/sccp.c
+//          Author's blog: https://www.npopov.com/2022/05/22/The-opcache-optimizer.html
+//          scdf.c: https://github.com/php/php-src/blob/cc506a81e17c3e059d44b560213ed914f8199ed5/Zend/Optimizer/scdf.c
+//          sccp.c: https://github.com/php/php-src/blob/cc506a81e17c3e059d44b560213ed914f8199ed5/Zend/Optimizer/sccp.c
 //    - QBE
 //          Official Website: https://c9x.me/compile/
-//          fold.c (Unofficial GitHub Mirror):
-//          https://github.com/caozhanhao/qbe/blob/master/fold.c
+//          fold.c (Unofficial GitHub Mirror): https://github.com/caozhanhao/qbe/blob/master/fold.c
 #pragma once
 #ifndef GNALC_IR_PASSES_HELPER_SPARSE_PROPAGATION_HPP
 #define GNALC_IR_PASSES_HELPER_SPARSE_PROPAGATION_HPP
@@ -39,11 +35,10 @@ namespace IR {
 //
 // InfoT provides interface for manipulating lattice
 // InfoT should provide:
-//     InfoT::UNDEF; Indicating the top of the lattice. InfoT::NAC; Indicating
-//     the bottom of the lattice. KeyT InfoT::getKeyFromValue(const
-//     std::shared_ptr<Value>& val);    Getting a KeyT from an IR::Value
-//     std::shared_ptr<Value> InfoT::getValueFromKey(const KeyT& val); Getting
-//     an IR::Value from a KeyT
+//     InfoT::UNDEF;     Indicating the top of the lattice.
+//     InfoT::NAC;       Indicating the bottom of the lattice.
+//     KeyT InfoT::getKeyFromValue(const std::shared_ptr<Value>& val);    Getting a KeyT from an IR::Value
+//     std::shared_ptr<Value> InfoT::getValueFromKey(const KeyT& val);    Getting an IR::Value from a KeyT
 template <typename KeyT, typename ValT, typename InfoT>
 class SparsePropagationSolver {
 public:
