@@ -7,14 +7,13 @@
 #include "../ir/base.hpp"
 #include "../utils/exception.hpp"
 
-#include <utility>
-#include <stack>
 #include <map>
+#include <stack>
 #include <string>
+#include <utility>
 #include <vector>
 
-namespace Sym
-{
+namespace Sym {
 class SymbolTable {
     struct Scope {
         std::string name;
@@ -22,6 +21,7 @@ class SymbolTable {
     };
 
     std::vector<Scope> table;
+
 public:
     SymbolTable() {}
 
@@ -29,24 +29,21 @@ public:
         table.emplace_back(Scope{std::move(name), {}});
     }
 
-    void finishScope() {
-        table.pop_back();
-    }
+    void finishScope() { table.pop_back(); }
 
     void insert(std::string name, std::shared_ptr<IR::Value> value) {
         Err::gassert(!table.empty());
         table.back().scope.emplace(std::move(name), std::move(value));
     }
 
-    std::shared_ptr<IR::Value> lookup(const std::string& name) const {
-        for (auto it = table.rbegin(); it != table.rend(); ++it)
-        {
+    std::shared_ptr<IR::Value> lookup(const std::string &name) const {
+        for (auto it = table.rbegin(); it != table.rend(); ++it) {
             if (auto f = it->scope.find(name); f != it->scope.end())
                 return f->second;
         }
         return nullptr;
     }
 };
-}
+} // namespace Sym
 
 #endif

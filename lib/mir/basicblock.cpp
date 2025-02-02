@@ -6,7 +6,7 @@ std::string BasicBlock::toString() const {
     std::string str;
     str += getName() + ":\n";
 
-    for (const auto& inst : insts) {
+    for (const auto &inst : insts) {
         str += "        ";
         str += inst->toString();
         str += '\n';

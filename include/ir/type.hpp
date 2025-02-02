@@ -6,8 +6,8 @@
 #ifndef GNALC_IR_TYPE_HPP
 #define GNALC_IR_TYPE_HPP
 
-#include <string>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -30,16 +30,10 @@ enum class IRBTYPE {
 /**
  * @brief IR COMPOUND TYPE 包含复杂结构类型
  */
-enum class IRCTYPE {
-    BASIC,
-    PTR,
-    ARRAY,
-    FUNCTION
-};
+enum class IRCTYPE { BASIC, PTR, ARRAY, FUNCTION };
 
 inline size_t getBytes(IRBTYPE type) {
-    switch (type)
-    {
+    switch (type) {
     case IRBTYPE::I1:
         Err::todo("I1 should return 1?");
         return 1;
@@ -77,8 +71,9 @@ public:
 class BType : public Type {
 protected:
     IRBTYPE bty;
+
 public:
-    BType(): bty(IRBTYPE::UNDEFINED) {}
+    BType() : bty(IRBTYPE::UNDEFINED) {}
     explicit BType(IRBTYPE _bty) : bty(_bty) {}
 
     IRBTYPE getInner() const { return bty; }
@@ -86,8 +81,7 @@ public:
     IRCTYPE getTrait() const override { return IRCTYPE::BASIC; }
 
     std::string toString() const override {
-        switch (bty)
-        {
+        switch (bty) {
         case IRBTYPE::I1:
             return "i1";
         case IRBTYPE::I8:
@@ -106,47 +100,47 @@ public:
         }
     }
 
-    size_t getBytes() const override {
-        return IR::getBytes(bty);
-    }
+    size_t getBytes() const override { return IR::getBytes(bty); }
 };
 
 class PtrType : public Type {
 protected:
     std::shared_ptr<Type> element_type;
+
 public:
-    PtrType(std::shared_ptr<Type> element_type_) : element_type(std::move(element_type_)) {}
-    const auto& getElmType() const { return element_type; }
+    PtrType(std::shared_ptr<Type> element_type_)
+        : element_type(std::move(element_type_)) {}
+    const auto &getElmType() const { return element_type; }
 
     IRCTYPE getTrait() const override { return IRCTYPE::PTR; }
     // std::string toString() const override { return "ptr"; }
-    std::string toString() const override { return element_type->toString() + "*"; }
-    size_t getBytes() const override {
-        return 8;
+    std::string toString() const override {
+        return element_type->toString() + "*";
     }
+    size_t getBytes() const override { return 8; }
 };
 
 class ArrayType : public Type {
 protected:
     std::shared_ptr<Type> element_type;
     size_t size;
+
 public:
     ArrayType(std::shared_ptr<Type> element_type_, size_t size)
         : element_type(std::move(element_type_)), size(size) {}
 
-    const auto& getElmType() const { return element_type; }
+    const auto &getElmType() const { return element_type; }
 
     size_t getArraySize() const { return size; }
 
     IRCTYPE getTrait() const override { return IRCTYPE::ARRAY; }
 
     std::string toString() const override {
-        return "[" + std::to_string(size) + " x " + element_type->toString() + "]";
+        return "[" + std::to_string(size) + " x " + element_type->toString() +
+               "]";
     }
 
-    size_t getBytes() const override {
-        return size * element_type->getBytes();
-    }
+    size_t getBytes() const override { return size * element_type->getBytes(); }
 };
 
 class FunctionType : public Type {
@@ -154,19 +148,22 @@ protected:
     std::shared_ptr<Type> ret;
     std::vector<std::shared_ptr<Type>> params;
     bool is_va_arg;
+
 public:
-    FunctionType(std::vector<std::shared_ptr<Type>> params_, std::shared_ptr<Type> ret_, bool is_va_arg_)
-        : params(std::move(params_)), ret(std::move(ret_)), is_va_arg(is_va_arg_) {}
+    FunctionType(std::vector<std::shared_ptr<Type>> params_,
+                 std::shared_ptr<Type> ret_, bool is_va_arg_)
+        : params(std::move(params_)), ret(std::move(ret_)),
+          is_va_arg(is_va_arg_) {}
 
     IRCTYPE getTrait() const override { return IRCTYPE::FUNCTION; }
 
-    bool isVAArg() const {return  is_va_arg;}
+    bool isVAArg() const { return is_va_arg; }
 
-    const std::vector<std::shared_ptr<Type>>& getParams() const {
+    const std::vector<std::shared_ptr<Type>> &getParams() const {
         return params;
     }
 
-    const std::shared_ptr<Type>& getRet() const { return ret; }
+    const std::shared_ptr<Type> &getRet() const { return ret; }
 
     std::string toString() const override {
         Err::not_implemented("Function type to string.");
@@ -183,37 +180,42 @@ public:
 
 std::shared_ptr<BType> makeBType(IRBTYPE bty);
 std::shared_ptr<PtrType> makePtrType(std::shared_ptr<Type> ele_ty);
-std::shared_ptr<ArrayType> makeArrayType(std::shared_ptr<Type> ele_ty, size_t size);
-std::shared_ptr<FunctionType> makeFunctionType(std::vector<std::shared_ptr<Type>> params, std::shared_ptr<Type> ret, bool is_va_arg);
+std::shared_ptr<ArrayType> makeArrayType(std::shared_ptr<Type> ele_ty,
+                                         size_t size);
+std::shared_ptr<FunctionType>
+makeFunctionType(std::vector<std::shared_ptr<Type>> params,
+                 std::shared_ptr<Type> ret, bool is_va_arg);
 
 // 若类型不正确会返回nullptr
-std::shared_ptr<BType> toBType(const std::shared_ptr<Type>& ty);
-std::shared_ptr<PtrType> toPtrType(const std::shared_ptr<Type>& ty);
-std::shared_ptr<ArrayType> toArrayType(const std::shared_ptr<Type>& ty);
-std::shared_ptr<FunctionType> toFunctionType(const std::shared_ptr<Type>& ty);
+std::shared_ptr<BType> toBType(const std::shared_ptr<Type> &ty);
+std::shared_ptr<PtrType> toPtrType(const std::shared_ptr<Type> &ty);
+std::shared_ptr<ArrayType> toArrayType(const std::shared_ptr<Type> &ty);
+std::shared_ptr<FunctionType> toFunctionType(const std::shared_ptr<Type> &ty);
 
 // 返回PTR, ARRAY的element_type; BType 会返回 nullptr
-std::shared_ptr<Type> getElm(const std::shared_ptr<Type>& ty);
+std::shared_ptr<Type> getElm(const std::shared_ptr<Type> &ty);
 
 bool isSameType(std::shared_ptr<Type> a, std::shared_ptr<Type> b);
 
 /***********下列内容为NameClass相关**********/
 
-using NameRef = const std::string&; // 赋值名字时改为str::string, 用move传值；引用名字时使用该类型别名
+using NameRef = const std::string
+    &; // 赋值名字时改为str::string, 用move传值；引用名字时使用该类型别名
 
 // move传值
 // C means class
 class NameC {
 private:
     std::string name;
+
 public:
     NameC() = default;
     NameC(std::string _name) : name(_name) {}
 
     void setName(std::string _name) { name = _name; }
-    bool isName(NameRef _name) { return _name==name; }
+    bool isName(NameRef _name) { return _name == name; }
     std::string getName() const { return name; }
 };
-}
+} // namespace IR
 
 #endif

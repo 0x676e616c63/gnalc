@@ -5,18 +5,15 @@
 #include "../../../config/config.hpp"
 #if GNALC_EXTENSION_BRAINFK
 
-#include <string>
 #include "../bfmodule.hpp"
+#include <string>
 namespace BrainFk {
 
-inline std::string to_mybf_presentation(const std::string& raw)
-{
+inline std::string to_mybf_presentation(const std::string &raw) {
     std::string ret = "{ ";
 
-    for (auto& ch : raw)
-    {
-        switch (ch)
-        {
+    for (auto &ch : raw) {
+        switch (ch) {
         case '>':
             ret += "BFInstruction::PTRINC";
             break;
@@ -42,7 +39,8 @@ inline std::string to_mybf_presentation(const std::string& raw)
             ret += "BFInstruction::BNEZ";
             break;
         default:
-            std::cerr << "Warning: Ignored character '" << ch << "'" << std::endl;
+            std::cerr << "Warning: Ignored character '" << ch << "'"
+                      << std::endl;
             continue;
         }
 
@@ -57,6 +55,6 @@ inline std::string to_mybf_presentation(const std::string& raw)
     return ret;
 }
 
-}
+} // namespace BrainFk
 #endif
 #endif

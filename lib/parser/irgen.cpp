@@ -1,21 +1,21 @@
-#include <functional>
 #include <algorithm>
+#include <functional>
 
-#include "../../include/ir/instructions/converse.hpp"
-#include "../../include/ir/instructions/compare.hpp"
+#include "../../include/config/config.hpp"
 #include "../../include/ir/constant.hpp"
 #include "../../include/ir/instructions/binary.hpp"
+#include "../../include/ir/instructions/compare.hpp"
 #include "../../include/ir/instructions/control.hpp"
+#include "../../include/ir/instructions/converse.hpp"
 #include "../../include/ir/instructions/helper.hpp"
 #include "../../include/ir/instructions/memory.hpp"
 #include "../../include/ir/module.hpp"
-#include "../../include/parser/visitor.hpp"
-#include "../../include/config/config.hpp"
+#include "../../include/parser/irgen.hpp"
 #include "../../include/utils/logger.hpp"
 
-namespace AST
-{
-void IRGenerator::visit(CompUnit& node) {
+using namespace AST;
+namespace Parser {
+void IRGenerator::visit(CompUnit &node) {
     symbol_table.initScope("__global");
 
     auto void_type = IR::makeBType(IR::IRBTYPE::VOID);
@@ -27,15 +27,14 @@ void IRGenerator::visit(CompUnit& node) {
     auto f32_type = IR::makeBType(IR::IRBTYPE::FLOAT);
     auto f32ptr_type = IR::makePtrType(f32_type);
     // Warning: defaults to make Sylib function
-    auto make_decl = [this](const std::string& name,
-        std::vector<std::shared_ptr<IR::Type>> params,
-        std::shared_ptr<IR::Type> ret,
-        bool is_va_arg = false,
-        bool is_builtin = false,
-        bool is_sylib = true) {
-        auto fn = std::make_shared<IR::FunctionDecl>
-        ("@" + name, std::move(params), std::move(ret),
-            is_va_arg, is_builtin, is_sylib);
+    auto make_decl = [this](const std::string &name,
+                            std::vector<std::shared_ptr<IR::Type>> params,
+                            std::shared_ptr<IR::Type> ret,
+                            bool is_va_arg = false, bool is_builtin = false,
+                            bool is_sylib = true) {
+        auto fn = std::make_shared<IR::FunctionDecl>(
+            "@" + name, std::move(params), std::move(ret), is_va_arg,
+            is_builtin, is_sylib);
         symbol_table.insert(name, fn);
         module.addFunctionDecl(fn);
     };
@@ -57,31 +56,36 @@ void IRGenerator::visit(CompUnit& node) {
 
     // builtin
     // memset (dest, val, len, isvolatile)
-    make_decl(Config::IR::BUILTIN_MEMSET, {i8ptr_type, i8_type, i32_type, i1_type}, void_type,
-        false, true, false); // -> not va_arg, is builtin, and not sylib
+    make_decl(Config::IR::BUILTIN_MEMSET,
+              {i8ptr_type, i8_type, i32_type, i1_type}, void_type, false, true,
+              false); // -> not va_arg, is builtin, and not sylib
 
-    for (auto& n : node.getNodes()) {
+    for (auto &n : node.getNodes()) {
         n->accept(*this);
     }
     symbol_table.finishScope();
 
-    auto& decls = module.getFunctionDecls();
-    decls.erase(std::remove_if(decls.begin(), decls.end(),
-        [](auto&& p){return p->getRUseList().empty();}), decls.end());
+    auto &decls = module.getFunctionDecls();
+    decls.erase(
+        std::remove_if(decls.begin(), decls.end(),
+                       [](auto &&p) { return p->getRUseList().empty(); }),
+        decls.end());
+
+    CFGBuilder builder;
+    builder.build(module);
 }
 
 // DeclStmt: const int32
-void IRGenerator::visit(DeclStmt& node) {
-    for (auto& v : node.getVardefs()) {
+void IRGenerator::visit(DeclStmt &node) {
+    for (auto &v : node.getVardefs()) {
         v->accept(*this);
     }
 }
 
 // VarDecl: 'a' const int32[1][2]
-void IRGenerator::visit(VarDef& node) {
+void IRGenerator::visit(VarDef &node) {
     IR::IRBTYPE node_type = IR::IRBTYPE::UNDEFINED;
-    switch (node.getType())
-    {
+    switch (node.getType()) {
     case dtype::INT:
         node_type = IR::IRBTYPE::I32;
         break;
@@ -97,35 +101,32 @@ void IRGenerator::visit(VarDef& node) {
     if (node.isArray()) {
         std::vector<int> array_sizes;
 
-        for (auto &ss: node.getSubscripts()) {
+        for (auto &ss : node.getSubscripts()) {
             ss->accept(*this);
             auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(curr_val);
-            Err::gassert(ci != nullptr, "Array dimensions should be constant integers.");
+            Err::gassert(ci != nullptr,
+                         "Array dimensions should be constant integers.");
             array_sizes.emplace_back(ci->getVal());
         }
 
         irtype = makeBType(node_type);
         for (auto rit = array_sizes.rbegin(); rit != array_sizes.rend(); ++rit)
             irtype = makeArrayType(irtype, *rit);
-    }
-    else
+    } else
         irtype = makeBType(node_type);
-
 
     curr_initializer.reset(node_type);
     curr_making_initializer = &curr_initializer;
 
     // Pure Constant Variable
     // check if the given variable is unusable in constant expression
-    if (node.isConst() && !node.isArray())
-    {
+    if (node.isConst() && !node.isArray()) {
         Err::gassert(node.isInited());
         node.getInitVal()->accept(*this);
         auto flatten_initializer = curr_initializer.flatten(irtype);
         Err::gassert(flatten_initializer.size() == 1);
-        const auto& cv = flatten_initializer[0];
-        if (cv.index() != 2)
-        {
+        const auto &cv = flatten_initializer[0];
+        if (cv.index() != 2) {
             std::shared_ptr<IR::Value> val;
             if (cv.index() == 0)
                 val = module.getConstantPool().getConst(std::get<0>(cv));
@@ -136,20 +137,21 @@ void IRGenerator::visit(VarDef& node) {
         }
     }
 
-
-    if (curr_func != nullptr)    // Check if global
+    if (curr_func != nullptr) // Check if global
     {
-        auto alloca_inst = std::make_shared<IR::ALLOCAInst>(irval_temp_name, irtype);
+        auto alloca_inst =
+            std::make_shared<IR::ALLOCAInst>(irval_temp_name, irtype);
         curr_func->addInst(alloca_inst); // CURR_FUNC
 
         curr_initializer.reset(node_type);
         curr_making_initializer = &curr_initializer;
 
-        if (node.isInited())
-        {
+        if (node.isInited()) {
             node.getInitVal()->accept(*this);
 
-            auto toIRValue = [this](const Initializer::val_t& a) -> std::shared_ptr<IR::Value> {
+            auto toIRValue =
+                [this](
+                    const Initializer::val_t &a) -> std::shared_ptr<IR::Value> {
                 if (a.index() == 0)
                     return module.getConstantPool().getConst(std::get<0>(a));
                 if (a.index() == 1)
@@ -159,49 +161,66 @@ void IRGenerator::visit(VarDef& node) {
                 return nullptr;
             };
 
-            if (node.isArray())
-            {
+            if (node.isArray()) {
                 auto curr_type = toArrayType(irtype);
 
                 bool has_filled_zero = false;
                 // If it is zero inited or exceeds the threshold, memset it.
-                if (curr_initializer.isZeroIniter() || curr_type->getBytes() >Config::IR::LOCAL_ARRAY_MEMSET_THRESHOLD)
-                {
-                    auto builtin_memset = symbol_table.lookup(Config::IR::BUILTIN_MEMSET);
-                    auto dest = type_cast(alloca_inst, makePtrType(IR::makeBType(IR::IRBTYPE::I8)));
-                    auto call_memset = std::make_shared<IR::CALLInst>(std::dynamic_pointer_cast<IR::FunctionDecl>(builtin_memset),
-                        std::vector<std::shared_ptr<IR::Value>>{dest,                           // ptr
-                            module.getConstantPool().getConst(static_cast<char>(0)),                       // val
-                            module.getConstantPool().getConst(static_cast<int>(curr_type->getBytes())),    // length
-                            module.getConstantPool().getConst(false)});                                 // volatile
+                if (curr_initializer.isZeroIniter() ||
+                    curr_type->getBytes() >
+                        Config::IR::LOCAL_ARRAY_MEMSET_THRESHOLD) {
+                    auto builtin_memset =
+                        symbol_table.lookup(Config::IR::BUILTIN_MEMSET);
+                    auto dest =
+                        type_cast(alloca_inst,
+                                  makePtrType(IR::makeBType(IR::IRBTYPE::I8)));
+                    auto call_memset = std::make_shared<IR::CALLInst>(
+                        std::dynamic_pointer_cast<IR::FunctionDecl>(
+                            builtin_memset),
+                        std::vector<std::shared_ptr<IR::Value>>{
+                            dest, // ptr
+                            module.getConstantPool().getConst(
+                                static_cast<char>(0)), // val
+                            module.getConstantPool().getConst(static_cast<int>(
+                                curr_type->getBytes())), // length
+                            module.getConstantPool().getConst(
+                                false)}); // volatile
                     curr_insts.emplace_back(call_memset);
                     has_filled_zero = true;
                 }
 
-                if (!curr_initializer.isZeroIniter() || !has_filled_zero)
-                {
+                if (!curr_initializer.isZeroIniter() || !has_filled_zero) {
                     auto flat = curr_initializer.flatten(irtype);
-                    Err::gassert(flat.size() == irtype->getBytes() / IR::getBytes(node_type),
-                        "Invalid initializer.");
+                    Err::gassert(flat.size() == irtype->getBytes() /
+                                                    IR::getBytes(node_type),
+                                 "Invalid initializer.");
 
                     size_t init_pos = 0;
-                    std::function<void(const std::shared_ptr<IR::Type>& type, const std::shared_ptr<IR::Value>& base)> init_array;
-                    init_array = [this, &toIRValue, &flat, &init_pos, &init_array, &node_type, &has_filled_zero]
-                    (const std::shared_ptr<IR::Type>& type, const std::shared_ptr<IR::Value>& base) {
+                    std::function<void(const std::shared_ptr<IR::Type> &type,
+                                       const std::shared_ptr<IR::Value> &base)>
+                        init_array;
+                    init_array = [this, &toIRValue, &flat, &init_pos,
+                                  &init_array, &node_type, &has_filled_zero](
+                                     const std::shared_ptr<IR::Type> &type,
+                                     const std::shared_ptr<IR::Value> &base) {
                         auto arrtype = toArrayType(type);
                         Err::gassert(arrtype != nullptr);
-                        if (arrtype->getElmType()->getTrait() == IR::IRCTYPE::ARRAY)
-                        {
-                            auto elmarr_type = IR::toArrayType(arrtype->getElmType());
-                            for (size_t i = 0; i < arrtype->getArraySize(); ++i)
-                            {
+                        if (arrtype->getElmType()->getTrait() ==
+                            IR::IRCTYPE::ARRAY) {
+                            auto elmarr_type =
+                                IR::toArrayType(arrtype->getElmType());
+                            for (size_t i = 0; i < arrtype->getArraySize();
+                                 ++i) {
                                 bool needs_init = !has_filled_zero;
 
                                 size_t j = init_pos;
-                                for (; !needs_init && j < init_pos + elmarr_type->getBytes() / IR::getBytes(node_type); j++)
-                                {
-                                    if (flat[j] != curr_initializer.getZeroValue())
-                                    {
+                                for (;
+                                     !needs_init &&
+                                     j < init_pos + elmarr_type->getBytes() /
+                                                        IR::getBytes(node_type);
+                                     j++) {
+                                    if (flat[j] !=
+                                        curr_initializer.getZeroValue()) {
                                         needs_init = true;
                                         break;
                                     }
@@ -209,147 +228,158 @@ void IRGenerator::visit(VarDef& node) {
 
                                 if (!needs_init)
                                     init_pos = j;
-                                else
-                                {
-                                    auto gep_inst = std::make_shared<IR::GEPInst>(irval_temp_name, base,
-                                            module.getConstantPool().getConst(0),
-                                            module.getConstantPool().getConst(static_cast<int>(i)));
+                                else {
+                                    auto gep_inst =
+                                        std::make_shared<IR::GEPInst>(
+                                            irval_temp_name, base,
+                                            module.getConstantPool().getConst(
+                                                0),
+                                            module.getConstantPool().getConst(
+                                                static_cast<int>(i)));
 
                                     curr_insts.emplace_back(gep_inst);
                                     init_array(elmarr_type, gep_inst);
                                 }
                             }
-                        }
-                        else if (arrtype->getElmType()->getTrait() == IR::IRCTYPE::BASIC)
-                        {
-                            for (size_t i = 0; i < arrtype->getArraySize(); ++i)
-                            {
-                                const auto& curr_init_val = flat[init_pos++];
-                                if (!has_filled_zero || curr_init_val != curr_initializer.getZeroValue())
-                                {
-                                    auto gep_inst = std::make_shared<IR::GEPInst>(irval_temp_name, base,
-                                            module.getConstantPool().getConst(0),
-                                            module.getConstantPool().getConst(static_cast<int>(i)));
+                        } else if (arrtype->getElmType()->getTrait() ==
+                                   IR::IRCTYPE::BASIC) {
+                            for (size_t i = 0; i < arrtype->getArraySize();
+                                 ++i) {
+                                const auto &curr_init_val = flat[init_pos++];
+                                if (!has_filled_zero ||
+                                    curr_init_val !=
+                                        curr_initializer.getZeroValue()) {
+                                    auto gep_inst =
+                                        std::make_shared<IR::GEPInst>(
+                                            irval_temp_name, base,
+                                            module.getConstantPool().getConst(
+                                                0),
+                                            module.getConstantPool().getConst(
+                                                static_cast<int>(i)));
 
-                                    auto str_inst = std::make_shared<IR::STOREInst>
-                                            (toIRValue(curr_init_val), gep_inst);
+                                    auto str_inst =
+                                        std::make_shared<IR::STOREInst>(
+                                            toIRValue(curr_init_val), gep_inst);
                                     curr_insts.emplace_back(gep_inst);
                                     curr_insts.emplace_back(str_inst);
                                 }
                             }
-                        }
-                        else Err::unreachable();
+                        } else
+                            Err::unreachable();
                     };
                     init_array(irtype, alloca_inst);
                 }
-            }
-            else
-            {
+            } else {
                 auto flat = curr_initializer.flatten(irtype);
                 Err::gassert(flat.size() == 1, "Invalid initializer.");
 
-                auto str_inst = std::make_shared<IR::STOREInst>(toIRValue(flat[0]),
-                    alloca_inst);
+                auto str_inst = std::make_shared<IR::STOREInst>(
+                    toIRValue(flat[0]), alloca_inst);
                 curr_insts.emplace_back(str_inst);
             }
         }
         symbol_table.insert(node.getId(), alloca_inst);
-    }
-    else
-    {
+    } else {
         curr_initializer.reset(node_type);
         curr_making_initializer = &curr_initializer;
         auto gviniter = IR::GVIniter(irtype);
-        if (node.isInited())
-        {
+        if (node.isInited()) {
             node.getInitVal()->accept(*this);
-            if (!curr_initializer.isZeroIniter())
-            {
+            if (!curr_initializer.isZeroIniter()) {
                 auto flatten_initializer = curr_initializer.flatten(irtype);
-                Err::gassert(flatten_initializer.size() == irtype->getBytes() / IR::getBytes(node_type), "Invalid initializer.");
+                Err::gassert(flatten_initializer.size() ==
+                                 irtype->getBytes() / IR::getBytes(node_type),
+                             "Invalid initializer.");
 
-                auto toIRValue = [this](const Initializer::val_t& a) -> std::shared_ptr<IR::Value> {
+                auto toIRValue = [this](const Initializer::val_t &a)
+                    -> std::shared_ptr<IR::Value> {
                     if (a.index() == 0)
-                        return module.getConstantPool().getConst(std::get<0>(a));
+                        return module.getConstantPool().getConst(
+                            std::get<0>(a));
                     if (a.index() == 1)
-                        return module.getConstantPool().getConst(std::get<1>(a));
+                        return module.getConstantPool().getConst(
+                            std::get<1>(a));
                     Err::error("Invalid global initializer.");
                     return nullptr;
                 };
 
-                if (node.isArray())
-                {
+                if (node.isArray()) {
                     auto curr_type = toArrayType(irtype);
                     size_t init_pos = 0;
-                    std::function<void(const std::shared_ptr<IR::Type>& type, IR::GVIniter& base)> init_array;
-                    init_array = [this, &toIRValue, &flatten_initializer, &init_pos, &init_array]
-                    (const std::shared_ptr<IR::Type>& type, IR::GVIniter& base) {
+                    std::function<void(const std::shared_ptr<IR::Type> &type,
+                                       IR::GVIniter &base)>
+                        init_array;
+                    init_array = [this, &toIRValue, &flatten_initializer,
+                                  &init_pos, &init_array](
+                                     const std::shared_ptr<IR::Type> &type,
+                                     IR::GVIniter &base) {
                         auto arrtype = toArrayType(type);
                         Err::gassert(arrtype != nullptr);
-                        if (arrtype->getElmType()->getTrait() == IR::IRCTYPE::ARRAY)
-                        {
-                            for (size_t i = 0; i < arrtype->getArraySize(); ++i)
-                            {
-                                auto& next = base.addIniter(arrtype->getElmType());
+                        if (arrtype->getElmType()->getTrait() ==
+                            IR::IRCTYPE::ARRAY) {
+                            for (size_t i = 0; i < arrtype->getArraySize();
+                                 ++i) {
+                                auto &next =
+                                    base.addIniter(arrtype->getElmType());
                                 init_array(arrtype->getElmType(), next);
                             }
-                        }
-                        else if (arrtype->getElmType()->getTrait() == IR::IRCTYPE::BASIC)
-                        {
+                        } else if (arrtype->getElmType()->getTrait() ==
+                                   IR::IRCTYPE::BASIC) {
                             for (size_t i = 0; i < arrtype->getArraySize(); ++i)
-                                base.addIniter(arrtype->getElmType(), toIRValue(flatten_initializer[init_pos++]));
-                        }
-                        else Err::unreachable();
+                                base.addIniter(
+                                    arrtype->getElmType(),
+                                    toIRValue(flatten_initializer[init_pos++]));
+                        } else
+                            Err::unreachable();
                     };
                     init_array(irtype, gviniter);
                     gviniter.normalizeZero();
-                }
-                else
-                {
-                    gviniter = IR::GVIniter(irtype, toIRValue(flatten_initializer[0]));
+                } else {
+                    gviniter =
+                        IR::GVIniter(irtype, toIRValue(flatten_initializer[0]));
                 }
             }
         }
 
         auto gv = std::make_shared<IR::GlobalVariable>(
-            node.isConst() ? IR::STOCLASS::CONSTANT :IR::STOCLASS::GLOBAL,
+            node.isConst() ? IR::STOCLASS::CONSTANT : IR::STOCLASS::GLOBAL,
             irtype, "@" + node.getId(), gviniter);
         module.addGlobalVar(gv);
         symbol_table.insert(node.getId(), gv);
     }
 }
 
-void IRGenerator::visit(InitVal& node) {
-    if (node.isList())
-    {
+void IRGenerator::visit(InitVal &node) {
+    if (node.isList()) {
         if (curr_initializer.empty())
             curr_making_initializer = curr_initializer.makeList();
         else
             curr_making_initializer = curr_making_initializer->addList();
 
-        for (auto& iv : node.getInner()) {
+        for (auto &iv : node.getInner()) {
             iv->accept(*this);
         }
         curr_making_initializer = curr_making_initializer->parent;
-    } else
-    {
+    } else {
         node.getExp()->accept(*this);
-        if (curr_initializer.empty()) // TOP LEVEL and is value, then the whole is a value
+        if (curr_initializer
+                .empty()) // TOP LEVEL and is value, then the whole is a value
         {
             curr_val = type_cast(curr_val, curr_initializer.base_type);
             if (auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(curr_val))
                 curr_initializer.setVal(ci->getVal());
-            else if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(curr_val))
+            else if (auto cf =
+                         std::dynamic_pointer_cast<IR::ConstantFloat>(curr_val))
                 curr_initializer.setVal(cf->getVal());
             else
                 curr_initializer.setVal(curr_val);
-        }
-        else // Not TOP LEVEL
+        } else // Not TOP LEVEL
         {
             curr_val = type_cast(curr_val, curr_making_initializer->base_type);
             if (auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(curr_val))
                 curr_making_initializer->add(ci->getVal());
-            else if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(curr_val))
+            else if (auto cf =
+                         std::dynamic_pointer_cast<IR::ConstantFloat>(curr_val))
                 curr_making_initializer->add(cf->getVal());
             else
                 curr_making_initializer->add(curr_val);
@@ -357,18 +387,15 @@ void IRGenerator::visit(InitVal& node) {
     }
 }
 
-void IRGenerator::visit(ArraySubscript& node) {
-    node.getExp()->accept(*this);
-}
+void IRGenerator::visit(ArraySubscript &node) { node.getExp()->accept(*this); }
 
 // FunctionDef: 'func' int32
-void IRGenerator::visit(FuncDef& node) {
+void IRGenerator::visit(FuncDef &node) {
     auto prev = symbol_table.lookup(node.getId());
     Err::gassert(prev == nullptr, "Invalid function id.");
 
     IR::IRBTYPE ty = IR::IRBTYPE::UNDEFINED;
-    switch (node.getType())
-    {
+    switch (node.getType()) {
     case dtype::INT:
         ty = IR::IRBTYPE::I32;
         break;
@@ -389,21 +416,24 @@ void IRGenerator::visit(FuncDef& node) {
     std::vector<std::string> param_ids;
 
     if (!node.isEmptyParam()) {
-        for (auto &p: node.getParams()) {
+        for (auto &p : node.getParams()) {
             p->accept(*this);
             param_ids.emplace_back(p->getId());
             params.emplace_back(curr_val);
         }
     }
 
-    curr_func = std::make_shared<IR::Function>("@" + node.getId(), params, IR::makeBType(ty));
+    curr_func = std::make_shared<IR::LinearFunction>("@" + node.getId(), params,
+                                                     IR::makeBType(ty),
+                                                     &module.getConstantPool());
     module.addFunction(curr_func);
     symbol_table.insert(node.getId(), curr_func);
 
     symbol_table.initScope();
 
     for (size_t i = 0; i < param_ids.size(); ++i) {
-        auto alloca = std::make_shared<IR::ALLOCAInst>(irval_temp_name, params[i]->getType());
+        auto alloca = std::make_shared<IR::ALLOCAInst>(irval_temp_name,
+                                                       params[i]->getType());
         auto str = std::make_shared<IR::STOREInst>(params[i], alloca);
 
         curr_func->addInst(alloca); // CURR_FUNC
@@ -416,26 +446,30 @@ void IRGenerator::visit(FuncDef& node) {
     symbol_table.finishScope();
 
     // See Main function: https://en.cppreference.com/w/c/language/main_function
-    // If the return type is compatible with int and control reaches the terminating },
-    // the value returned to the environment is the same as if executing return 0;.
-    auto ret_type = IR::toBType(IR::toFunctionType(curr_func->getType())->getRet())->getInner();
-    if (node.getId() == "main")
-    {
+    // If the return type is compatible with int and control reaches the
+    // terminating }, the value returned to the environment is the same as if
+    // executing return 0;.
+    auto ret_type =
+        IR::toBType(IR::toFunctionType(curr_func->getType())->getRet())
+            ->getInner();
+    if (node.getId() == "main") {
         Err::gassert(ret_type == IR::IRBTYPE::I32, "Invalid main.");
         if (curr_insts.empty() || curr_insts.back()->getOpcode() != IR::OP::RET)
-            curr_insts.emplace_back(std::make_shared<IR::RETInst>(module.getConstantPool().getConst(0)));
-    }
-    else if (curr_insts.empty() || curr_insts.back()->getOpcode() != IR::OP::RET)
-    {
+            curr_insts.emplace_back(std::make_shared<IR::RETInst>(
+                module.getConstantPool().getConst(0)));
+    } else if (curr_insts.empty() ||
+               curr_insts.back()->getOpcode() != IR::OP::RET) {
         if (ret_type == IR::IRBTYPE::VOID)
             curr_insts.emplace_back(std::make_shared<IR::RETInst>());
-        else
-        {
-            Logger::logDebug("Warning: control reaches end of non-void function.");
+        else {
+            Logger::logDebug(
+                "Warning: control reaches end of non-void function.");
             if (ret_type == IR::IRBTYPE::I32)
-                curr_insts.emplace_back(std::make_shared<IR::RETInst>(module.getConstantPool().getConst(0)));
+                curr_insts.emplace_back(std::make_shared<IR::RETInst>(
+                    module.getConstantPool().getConst(0)));
             else if (ret_type == IR::IRBTYPE::FLOAT)
-                curr_insts.emplace_back(std::make_shared<IR::RETInst>(module.getConstantPool().getConst(0.0f)));
+                curr_insts.emplace_back(std::make_shared<IR::RETInst>(
+                    module.getConstantPool().getConst(0.0f)));
         }
     }
 
@@ -445,7 +479,7 @@ void IRGenerator::visit(FuncDef& node) {
 }
 
 // FuncFParam: 'a' int32[][2] \n
-void IRGenerator::visit(FuncFParam& node) {
+void IRGenerator::visit(FuncFParam &node) {
     IR::IRBTYPE node_type = IR::IRBTYPE::UNDEFINED;
     switch (node.getType()) {
     case dtype::INT:
@@ -455,103 +489,96 @@ void IRGenerator::visit(FuncFParam& node) {
         node_type = IR::IRBTYPE::FLOAT;
         break;
     default:
-        Err::error("Function parameters' base type should always be int or float.");
+        Err::error(
+            "Function parameters' base type should always be int or float.");
         break;
     }
 
     std::shared_ptr<IR::Type> ir_type;
     if (node.isArray()) {
-        if (node.isOneDim())
-        {
+        if (node.isOneDim()) {
             Err::gassert(node.getSubscripts().empty());
             ir_type = makePtrType(makeBType(node_type));
-        }
-        else
-        {
+        } else {
             std::vector<int> array_sizes;
 
-            for (const auto &ss: node.getSubscripts()) {
+            for (const auto &ss : node.getSubscripts()) {
                 ss->accept(*this);
                 auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(curr_val);
-                Err::gassert(ci != nullptr, "Array dimensions should be constant integers.");
+                Err::gassert(ci != nullptr,
+                             "Array dimensions should be constant integers.");
                 array_sizes.emplace_back(ci->getVal());
             }
 
             ir_type = makeBType(node_type);
-            for (auto rit = array_sizes.rbegin(); rit < array_sizes.rend(); ++rit)
+            for (auto rit = array_sizes.rbegin(); rit < array_sizes.rend();
+                 ++rit)
                 ir_type = makeArrayType(ir_type, *rit);
             ir_type = makePtrType(ir_type);
         }
-    }
-    else {
+    } else {
         ir_type = IR::makeBType(node_type);
     }
 
-    curr_val = std::make_shared<IR::Value>(irval_temp_name, ir_type, IR::ValueTrait::FORMAL_PARAMETER);
+    curr_val = std::make_shared<IR::Value>(irval_temp_name, ir_type,
+                                           IR::ValueTrait::FORMAL_PARAMETER);
 }
-
 
 // The following two functions (DeclRef and ArrayExp) is handling LVal.
 //
-// Given that most time we are using the LVal's value, rather than its address, (except assign (only?))
-// we add a load inst (if possible and not `is_making_lval`) afterward.
-// That means we are trying to make the `curr_val` a Basic Type if possible.
+// Given that most time we are using the LVal's value, rather than its address,
+// (except assign (only?)) we add a load inst (if possible and not
+// `is_making_lval`) afterward. That means we are trying to make the `curr_val`
+// a Basic Type if possible.
 //
-// This could simplify many insts that need a value, not its address, like binary inst, call inst,  ...
-// And we don't need to add load insts everywhere.
-// But this could also introduce bugs for Lval, when the context needs a ptr, rather than Basic Type.
-// So we use `is_making_lval` explicitly to handle such situation,
-// where we don't add load inst so that guarantees `curr_val` is a ptr.
+// This could simplify many insts that need a value, not its address, like
+// binary inst, call inst,  ... And we don't need to add load insts everywhere.
+// But this could also introduce bugs for Lval, when the context needs a ptr,
+// rather than Basic Type. So we use `is_making_lval` explicitly to handle such
+// situation, where we don't add load inst so that guarantees `curr_val` is a
+// ptr.
 //
-// It's a bit quick and dirty. Maybe we should make it more sensible in the future.
-// It seems that we can add some helper functions like cast_to_type to add load inst.
+// It's a bit quick and dirty. Maybe we should make it more sensible in the
+// future. It seems that we can add some helper functions like cast_to_type to
+// add load inst.
 
 // DeclRefExp: 'a' \n
 //
 // From node's name to curr_val's alloca/load
 //
-// curr_val =
-// is_making_lval (which guarantees a ptr) -> alloca
+// curr_val = is_making_lval (which guarantees a ptr) -> alloca
 // Array -> alloca
 // Basic -> alloca -> load
-void IRGenerator::visit(DeclRef& node) {
+void IRGenerator::visit(DeclRef &node) {
     auto ref = symbol_table.lookup(node.getId());
-    Err::gassert(ref != nullptr, "Invalid reference to '" + node.getId() + "', not found.");
+    Err::gassert(ref != nullptr,
+                 "Invalid reference to '" + node.getId() + "', not found.");
 
-    if (curr_func == nullptr)
-    {
+    if (curr_func == nullptr) {
         Err::gassert(ref->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL,
-            "Global initializer must be a compile-time constant");
+                     "Global initializer must be a compile-time constant");
     }
 
     // TODO: Prevent potential bugs
-    if (auto alloca_inst = std::dynamic_pointer_cast<IR::ALLOCAInst>(ref))
-    {
-        if (is_making_lval || alloca_inst->isArray())
-        {
+    if (auto alloca_inst = std::dynamic_pointer_cast<IR::ALLOCAInst>(ref)) {
+        if (is_making_lval || alloca_inst->isArray()) {
             curr_val = alloca_inst;
-        }
-        else
-        {
-            auto load = std::make_shared<IR::LOADInst>(irval_temp_name, alloca_inst);
+        } else {
+            auto load =
+                std::make_shared<IR::LOADInst>(irval_temp_name, alloca_inst);
             curr_insts.emplace_back(load);
             curr_val = load;
         }
-    }
-    else if (auto gv = std::dynamic_pointer_cast<IR::GlobalVariable>(ref))
-    {
-        if (is_making_lval || gv->isArray())
-        {
+    } else if (auto gv = std::dynamic_pointer_cast<IR::GlobalVariable>(ref)) {
+        if (is_making_lval || gv->isArray()) {
             curr_val = gv;
-        }
-        else
-        {
+        } else {
             auto load = std::make_shared<IR::LOADInst>(irval_temp_name, gv);
             curr_insts.emplace_back(load);
             curr_val = load;
         }
-    }
-    else curr_val = ref;
+    } else
+        curr_val = ref;
 }
 
 // a[2][1]
@@ -565,22 +592,24 @@ void IRGenerator::visit(DeclRef& node) {
 // result type is Array -> ... -> gep
 // result type is Basic Type -> ... -> gep -> load
 //
-// Note that if the given ptr is from a load inst, which is always a function parameter (decays from array),
-// we first gep the first index for the given ptr, and the remaining indices is handled by
-// numerous small gep, which handles one index with its two gep indices a time.
-void IRGenerator::visit(ArrayExp& node) {
-    // Because the Array id and the ArraySubscripts may contain DeclRef or ArrayExp,
-    // and they should not be treated as lval.
-    // So we temporarily turn off `is_making_lval`.
+// Note that if the given ptr is from a load inst, which is always a function
+// parameter (decays from array), we first gep the first index for the given
+// ptr, and the remaining indices is handled by numerous small gep, which
+// handles one index with its two gep indices a time.
+void IRGenerator::visit(ArrayExp &node) {
+    // Because the Array id and the ArraySubscripts may contain DeclRef or
+    // ArrayExp, and they should not be treated as lval. So we temporarily turn
+    // off `is_making_lval`.
     bool is_making_lvalbak = is_making_lval;
     is_making_lval = false;
 
     node.getRef()->accept(*this);
     auto base = curr_val;
-    Err::gassert(base->getType()->getTrait() == IR::IRCTYPE::PTR, "Not an array.");
+    Err::gassert(base->getType()->getTrait() == IR::IRCTYPE::PTR,
+                 "Not an array.");
 
     std::vector<std::shared_ptr<IR::Value>> indices;
-    for (const auto& ss: node.getIndices()) {
+    for (const auto &ss : node.getIndices()) {
         ss->accept(*this);
         auto idxty = toBType(curr_val->getType());
         Err::gassert(idxty != nullptr && idxty->getInner() == IR::IRBTYPE::I32,
@@ -595,44 +624,49 @@ void IRGenerator::visit(ArrayExp& node) {
 
     // TODO: More sensible
     // LOAD from Function Parameters
-    if (auto load_inst = std::dynamic_pointer_cast<IR::LOADInst>(base))
-    {
-        curr_gep = std::make_shared<IR::GEPInst>(irval_temp_name, base, indices[0]);
-        curr_insts.emplace_back(std::dynamic_pointer_cast<IR::Instruction>(curr_gep));
+    if (auto load_inst = std::dynamic_pointer_cast<IR::LOADInst>(base)) {
+        curr_gep =
+            std::make_shared<IR::GEPInst>(irval_temp_name, base, indices[0]);
+        curr_insts.emplace_back(
+            std::dynamic_pointer_cast<IR::Instruction>(curr_gep));
         ++i;
     }
 
-    for (; i < indices.size(); i++)
-    {
-        Err::gassert(getElm(curr_gep->getType())->getTrait() == IR::IRCTYPE::ARRAY
-            || getElm(curr_gep->getType())->getTrait() == IR::IRCTYPE::PTR,
+    for (; i < indices.size(); i++) {
+        Err::gassert(
+            getElm(curr_gep->getType())->getTrait() == IR::IRCTYPE::ARRAY ||
+                getElm(curr_gep->getType())->getTrait() == IR::IRCTYPE::PTR,
             "Invalid array index.");
-        curr_gep = std::make_shared<IR::GEPInst>(irval_temp_name, curr_gep,
-                                                     module.getConstantPool().getConst(0), indices[i]);
-        curr_insts.emplace_back(std::dynamic_pointer_cast<IR::Instruction>(curr_gep));
+        curr_gep = std::make_shared<IR::GEPInst>(
+            irval_temp_name, curr_gep, module.getConstantPool().getConst(0),
+            indices[i]);
+        curr_insts.emplace_back(
+            std::dynamic_pointer_cast<IR::Instruction>(curr_gep));
     }
 
-    if (!is_making_lval && IR::getElm(curr_gep->getType())->getTrait() == IR::IRCTYPE::BASIC) {
-        auto load_inst = std::make_shared<IR::LOADInst>(irval_temp_name, curr_gep);
+    if (!is_making_lval &&
+        IR::getElm(curr_gep->getType())->getTrait() == IR::IRCTYPE::BASIC) {
+        auto load_inst =
+            std::make_shared<IR::LOADInst>(irval_temp_name, curr_gep);
         curr_insts.emplace_back(load_inst);
         curr_val = load_inst;
-    } else
-    {
+    } else {
         curr_val = curr_gep;
     }
 }
 
 // a(1, 2, 3)
 // CallExp: 'a' (1, 2, 3, )
-void IRGenerator::visit(CallExp& node) {
+void IRGenerator::visit(CallExp &node) {
     node.getRef()->accept(*this);
 
     auto func = std::dynamic_pointer_cast<IR::FunctionDecl>(curr_val);
-    Err::gassert(func != nullptr, "Invalid to call '" + node.getId() + "', which is not a function.");
+    Err::gassert(func != nullptr, "Invalid to call '" + node.getId() +
+                                      "', which is not a function.");
 
     std::vector<std::shared_ptr<IR::Value>> args;
     if (!node.isEmptyParam()) {
-        for (auto& p : node.getParams()) {
+        for (auto &p : node.getParams()) {
             p->accept(*this);
             args.emplace_back(curr_val);
         }
@@ -656,47 +690,23 @@ void IRGenerator::visit(CallExp& node) {
     curr_val = call;
 }
 
-void IRGenerator::visit(FuncRParam& node) {
-    node.getExp()->accept(*this);
+void IRGenerator::visit(FuncRParam &node) { node.getExp()->accept(*this); }
+
+template <typename Base, typename T>
+auto constant_binary(const std::shared_ptr<IR::Value> &lhs,
+                     const std::shared_ptr<IR::Value> &rhs, T &&operation) {
+    Err::gassert(IR::isSameType(lhs->getType(), rhs->getType()) &&
+                 lhs->getType()->getTrait() == IR::IRCTYPE::BASIC);
+
+    auto lhs_val = std::dynamic_pointer_cast<IR::getIRConstantType<Base>>(lhs);
+    auto rhs_val = std::dynamic_pointer_cast<IR::getIRConstantType<Base>>(rhs);
+    Err::gassert(lhs_val != nullptr && rhs_val != nullptr);
+    return operation(lhs_val->getVal(), rhs_val->getVal());
 }
 
-template<typename Base, typename T>
-auto constant_binary(const std::shared_ptr<IR::Value>& lhs,
-    const std::shared_ptr<IR::Value>& rhs,
-    T&& operation) {
-    Err::gassert(IR::isSameType(lhs->getType(), rhs->getType())
-        && lhs->getType()->getTrait() == IR::IRCTYPE::BASIC);
-
-    if constexpr (std::is_same_v<Base, int>)
-    {
-        auto cl = std::dynamic_pointer_cast<IR::ConstantInt>(lhs);
-        auto cr = std::dynamic_pointer_cast<IR::ConstantInt>(rhs);
-        Err::gassert(cl != nullptr && cr != nullptr);
-        return operation(cl->getVal(), cr->getVal());
-    }
-    else if constexpr (std::is_same_v<Base, float>)
-    {
-        auto cl = std::dynamic_pointer_cast<IR::ConstantFloat>(lhs);
-        auto cr = std::dynamic_pointer_cast<IR::ConstantFloat>(rhs);
-        Err::gassert(cl != nullptr && cr != nullptr);
-        return operation(cl->getVal(), cr->getVal());
-    }
-    else if constexpr (std::is_same_v<Base, bool>)
-    {
-        auto ci1 = std::dynamic_pointer_cast<IR::ConstantI1>(lhs);
-        auto ci2 = std::dynamic_pointer_cast<IR::ConstantI1>(rhs);
-        Err::gassert(ci1 != nullptr && ci2 != nullptr);
-        return operation(ci1->getVal(), ci2->getVal());
-    }
-    else
-        Err::not_implemented();
-    return operation(Base{}, Base{});
-}
-
-void IRGenerator::visit(BinaryOp& node) {
+void IRGenerator::visit(BinaryOp &node) {
     // Logical -> I1
-    if (node.getOp() == BiOp::AND || node.getOp() == BiOp::OR)
-    {
+    if (node.getOp() == BiOp::AND || node.getOp() == BiOp::OR) {
         node.getLHS()->accept(*this);
         auto lhs = curr_val;
         lhs = type_cast(lhs, IR::IRBTYPE::I1);
@@ -706,27 +716,34 @@ void IRGenerator::visit(BinaryOp& node) {
 
         node.getRHS()->accept(*this);
         auto rhs = curr_val;
-        rhs = type_cast(rhs, IR::IRBTYPE::I1); // rhs's TYPECAST should also in rhs_insts
+        rhs = type_cast(
+            rhs, IR::IRBTYPE::I1); // rhs's TYPECAST should also in rhs_insts
 
         std::swap(rhs_insts, curr_insts);
 
-        bool is_constant = lhs->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL
-        && rhs->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL
-        && rhs_insts.empty();
+        bool is_constant =
+            lhs->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL &&
+            rhs->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL &&
+            rhs_insts.empty();
 
-        switch (node.getOp())
-        {
+        switch (node.getOp()) {
         case BiOp::AND:
             if (is_constant)
-                curr_val = module.getConstantPool().getConst(constant_binary<bool>(lhs, rhs, [](auto&& a, auto&& b){return a && b;}));
+                curr_val =
+                    module.getConstantPool().getConst(constant_binary<bool>(
+                        lhs, rhs, [](auto &&a, auto &&b) { return a && b; }));
             else
-                curr_val = std::make_shared<IR::ANDValue>(lhs, rhs, std::move(rhs_insts));
+                curr_val = std::make_shared<IR::ANDValue>(lhs, rhs,
+                                                          std::move(rhs_insts));
             break;
         case BiOp::OR:
             if (is_constant)
-                curr_val = module.getConstantPool().getConst(constant_binary<bool>(lhs, rhs, [](auto&& a, auto&& b){return a || b;}));
+                curr_val =
+                    module.getConstantPool().getConst(constant_binary<bool>(
+                        lhs, rhs, [](auto &&a, auto &&b) { return a || b; }));
             else
-                curr_val = std::make_shared<IR::ORValue>(lhs, rhs, std::move(rhs_insts));
+                curr_val = std::make_shared<IR::ORValue>(lhs, rhs,
+                                                         std::move(rhs_insts));
             break;
         default:
             Err::unreachable();
@@ -734,8 +751,7 @@ void IRGenerator::visit(BinaryOp& node) {
         return;
     }
 
-    if (node.getOp() == BiOp::ASSIGN)
-    {
+    if (node.getOp() == BiOp::ASSIGN) {
         is_making_lval = true;
         node.getLHS()->accept(*this);
         is_making_lval = false;
@@ -744,15 +760,16 @@ void IRGenerator::visit(BinaryOp& node) {
         auto rhs = curr_val;
 
         auto rhstype = IR::toBType(rhs->getType());
-        Err::gassert(rhstype != nullptr
-            && (rhstype->getInner() == IR::IRBTYPE::I32
-                || rhstype->getInner() == IR::IRBTYPE::FLOAT),
-            "Invalid assign.");
+        Err::gassert(rhstype != nullptr &&
+                         (rhstype->getInner() == IR::IRBTYPE::I32 ||
+                          rhstype->getInner() == IR::IRBTYPE::FLOAT),
+                     "Invalid assign.");
         auto lhstype = IR::toPtrType(lhs->getType());
         Err::gassert(lhstype != nullptr, "Invalid assign, not lval.");
         auto lhselmty = IR::toBType(getElm(lhs->getType()))->getInner();
-        Err::gassert(lhselmty == IR::IRBTYPE::I32 || lhselmty == IR::IRBTYPE::FLOAT,
-            "Invalid assign.");
+        Err::gassert(lhselmty == IR::IRBTYPE::I32 ||
+                         lhselmty == IR::IRBTYPE::FLOAT,
+                     "Invalid assign.");
 
         rhs = type_cast(rhs, lhselmty);
 
@@ -771,46 +788,45 @@ void IRGenerator::visit(BinaryOp& node) {
     {
         auto lhstype = IR::toBType(lhs->getType());
         auto rhstype = IR::toBType(rhs->getType());
-        Err::gassert(lhstype != nullptr && rhstype != nullptr
-            && (lhstype->getInner() == IR::IRBTYPE::I32
-            || lhstype->getInner() == IR::IRBTYPE::I1
-            || lhstype->getInner() == IR::IRBTYPE::FLOAT)
-            && (rhstype->getInner() == IR::IRBTYPE::I32
-            || rhstype->getInner() == IR::IRBTYPE::I1
-            || rhstype->getInner() == IR::IRBTYPE::FLOAT),
-            "Binary operation must be integers or floats.");
+        Err::gassert(lhstype != nullptr && rhstype != nullptr &&
+                         (lhstype->getInner() == IR::IRBTYPE::I32 ||
+                          lhstype->getInner() == IR::IRBTYPE::I1 ||
+                          lhstype->getInner() == IR::IRBTYPE::FLOAT) &&
+                         (rhstype->getInner() == IR::IRBTYPE::I32 ||
+                          rhstype->getInner() == IR::IRBTYPE::I1 ||
+                          rhstype->getInner() == IR::IRBTYPE::FLOAT),
+                     "Binary operation must be integers or floats.");
 
-        if (lhstype->getInner() == IR::IRBTYPE::FLOAT || rhstype->getInner() == IR::IRBTYPE::FLOAT)
-        {
+        if (lhstype->getInner() == IR::IRBTYPE::FLOAT ||
+            rhstype->getInner() == IR::IRBTYPE::FLOAT) {
             lhs = type_cast(lhs, IR::IRBTYPE::FLOAT);
             rhs = type_cast(rhs, IR::IRBTYPE::FLOAT);
             oprtype = IR::makeBType(IR::IRBTYPE::FLOAT);
-        }
-        else if (lhstype->getInner() == IR::IRBTYPE::I32 || rhstype->getInner() == IR::IRBTYPE::I32)
-        {
+        } else if (lhstype->getInner() == IR::IRBTYPE::I32 ||
+                   rhstype->getInner() == IR::IRBTYPE::I32) {
             lhs = type_cast(lhs, IR::IRBTYPE::I32);
             rhs = type_cast(rhs, IR::IRBTYPE::I32);
             oprtype = IR::makeBType(IR::IRBTYPE::I32);
-        }
-        else if (lhstype->getInner() == IR::IRBTYPE::I1 && rhstype->getInner() == IR::IRBTYPE::I1)
+        } else if (lhstype->getInner() == IR::IRBTYPE::I1 &&
+                   rhstype->getInner() == IR::IRBTYPE::I1)
             oprtype = IR::makeBType(IR::IRBTYPE::I1);
-        else Err::unreachable("Invalid type.");
+        else
+            Err::unreachable("Invalid type.");
     }
 
-    bool is_constant = lhs->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL
-    && rhs->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL;
+    bool is_constant = lhs->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL &&
+                       rhs->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL;
 
     // Arithmetic -> I32
-    if (node.getOp() == BiOp::ADD || node.getOp() == BiOp::SUB
-    || node.getOp() == BiOp::MUL || node.getOp() == BiOp::DIV
-    || node.getOp() == BiOp::MOD)
-    {
-        Err::gassert(oprtype->getInner() == IR::IRBTYPE::I32
-            || oprtype->getInner() == IR::IRBTYPE::FLOAT,
-            "Invalid arithmetic operations");
+    if (node.getOp() == BiOp::ADD || node.getOp() == BiOp::SUB ||
+        node.getOp() == BiOp::MUL || node.getOp() == BiOp::DIV ||
+        node.getOp() == BiOp::MOD) {
+        Err::gassert(oprtype->getInner() == IR::IRBTYPE::I32 ||
+                         oprtype->getInner() == IR::IRBTYPE::FLOAT,
+                     "Invalid arithmetic operations");
         IR::OP op;
 
-// clang-format off
+        // clang-format off
 // @formatter:off
 #define MAKE_OP(biop, iop, fop, cppop) \
         case biop: \
@@ -833,11 +849,10 @@ void IRGenerator::visit(BinaryOp& node) {
                 op = fop; \
             } \
         break; \
-// @formatter:on
-// clang-format on
+// @formatter:on                                                    \
+        // clang-format on
 
-        switch (node.getOp())
-        {
+        switch (node.getOp()) {
             MAKE_OP(BiOp::ADD, IR::OP::ADD, IR::OP::FADD, +)
             MAKE_OP(BiOp::SUB, IR::OP::SUB, IR::OP::FSUB, -)
             MAKE_OP(BiOp::MUL, IR::OP::MUL, IR::OP::FMUL, *)
@@ -845,9 +860,11 @@ void IRGenerator::visit(BinaryOp& node) {
 
         case BiOp::MOD:
             Err::gassert(oprtype->getInner() == IR::IRBTYPE::I32);
-            if (is_constant)
-            {
-                curr_val = module.getConstantPool().getConst(constant_binary<int>(lhs, rhs, [](auto&& v1, auto&& v2) {return v1 % v2;}));
+            if (is_constant) {
+                curr_val = module.getConstantPool().getConst(
+                    constant_binary<int>(lhs, rhs, [](auto &&v1, auto &&v2) {
+                        return v1 % v2;
+                    }));
                 return;
             }
             op = IR::OP::REM;
@@ -858,26 +875,25 @@ void IRGenerator::visit(BinaryOp& node) {
 
 #undef MAKE_OP
 
-        auto inst = std::make_shared<IR::BinaryInst>(irval_temp_name, op, lhs, rhs);
+        auto inst =
+            std::make_shared<IR::BinaryInst>(irval_temp_name, op, lhs, rhs);
         curr_insts.emplace_back(inst);
         curr_val = inst;
         return;
     }
 
     // Compare -> I1
-    if (node.getOp() == BiOp::LESSEQ || node.getOp() == BiOp::GREATEQ
-        || node.getOp() == BiOp::GREAT || node.getOp() == BiOp::LESS
-        || node.getOp() == BiOp::NOTEQ || node.getOp() == BiOp::EQ)
-    {
-        Err::gassert(oprtype->getInner() == IR::IRBTYPE::I32
-            || oprtype->getInner() == IR::IRBTYPE::I1
-            || oprtype->getInner() == IR::IRBTYPE::FLOAT,
-            "Invalid compare.");
-        if (oprtype->getInner() == IR::IRBTYPE::I32)
-        {
+    if (node.getOp() == BiOp::LESSEQ || node.getOp() == BiOp::GREATEQ ||
+        node.getOp() == BiOp::GREAT || node.getOp() == BiOp::LESS ||
+        node.getOp() == BiOp::NOTEQ || node.getOp() == BiOp::EQ) {
+        Err::gassert(oprtype->getInner() == IR::IRBTYPE::I32 ||
+                         oprtype->getInner() == IR::IRBTYPE::I1 ||
+                         oprtype->getInner() == IR::IRBTYPE::FLOAT,
+                     "Invalid compare.");
+        if (oprtype->getInner() == IR::IRBTYPE::I32) {
             IR::ICMPOP icmpop;
 
-// clang-format off
+            // clang-format off
 // @formatter:off
 #define MAKE_OP(biop, iop, cppop) \
         case biop: \
@@ -888,10 +904,9 @@ void IRGenerator::visit(BinaryOp& node) {
             } \
             icmpop = iop; \
         break; \
-// @formatter:on
-// clang-format on
-            switch (node.getOp())
-            {
+// @formatter:on                                                \
+        // clang-format on
+            switch (node.getOp()) {
                 MAKE_OP(BiOp::LESSEQ, IR::ICMPOP::sle, <=)
                 MAKE_OP(BiOp::GREATEQ, IR::ICMPOP::sge, >=)
                 MAKE_OP(BiOp::LESS, IR::ICMPOP::slt, <)
@@ -902,14 +917,13 @@ void IRGenerator::visit(BinaryOp& node) {
                 Err::unreachable();
             }
 #undef MAKE_OP
-            auto inst = std::make_shared<IR::ICMPInst>(irval_temp_name, icmpop, lhs, rhs);
+            auto inst = std::make_shared<IR::ICMPInst>(irval_temp_name, icmpop,
+                                                       lhs, rhs);
             curr_insts.emplace_back(inst);
             curr_val = inst;
-        }
-        else if (oprtype->getInner() == IR::IRBTYPE::FLOAT)
-        {
+        } else if (oprtype->getInner() == IR::IRBTYPE::FLOAT) {
             IR::FCMPOP fcmpop;
-// clang-format off
+            // clang-format off
 // @formatter:off
 #define MAKE_OP(biop, fop, cppop) \
         case biop: \
@@ -919,11 +933,10 @@ void IRGenerator::visit(BinaryOp& node) {
                 return; \
             } \
             fcmpop = fop; \
-        break; \
-// clang-format on
-// @formatter:on
-            switch (node.getOp())
-            {
+        break;                                                \
+        // clang-format on                                                     \
+        // @formatter:on
+            switch (node.getOp()) {
                 MAKE_OP(BiOp::LESSEQ, IR::FCMPOP::ole, <=)
                 MAKE_OP(BiOp::GREATEQ, IR::FCMPOP::oge, >=)
                 MAKE_OP(BiOp::LESS, IR::FCMPOP::olt, <)
@@ -934,68 +947,64 @@ void IRGenerator::visit(BinaryOp& node) {
                 Err::unreachable();
             }
 #undef MAKE_OP
-            auto inst = std::make_shared<IR::FCMPInst>(irval_temp_name, fcmpop, lhs, rhs);
+            auto inst = std::make_shared<IR::FCMPInst>(irval_temp_name, fcmpop,
+                                                       lhs, rhs);
             curr_insts.emplace_back(inst);
             curr_val = inst;
-        }
-        else
+        } else
             Err::not_implemented("Unsupported compare operation.");
         return;
     }
 }
 
-void IRGenerator::visit(UnaryOp& node) {
+void IRGenerator::visit(UnaryOp &node) {
     node.getExp()->accept(*this);
 
     auto opreandtype = IR::toBType(curr_val->getType());
-    Err::gassert(opreandtype != nullptr
-        && (opreandtype->getInner() == IR::IRBTYPE::I32
-            || opreandtype->getInner() == IR::IRBTYPE::I1
-            || opreandtype->getInner() == IR::IRBTYPE::FLOAT),
-        "Unary operation be performed on integer or float.");
-    switch (node.getOp())
-    {
+    Err::gassert(opreandtype != nullptr &&
+                     (opreandtype->getInner() == IR::IRBTYPE::I32 ||
+                      opreandtype->getInner() == IR::IRBTYPE::I1 ||
+                      opreandtype->getInner() == IR::IRBTYPE::FLOAT),
+                 "Unary operation be performed on integer or float.");
+    switch (node.getOp()) {
     case UnOp::ADD:
         break;
     case UnOp::SUB:
-        if (opreandtype->getInner() == IR::IRBTYPE::I32)
-        {
+        if (opreandtype->getInner() == IR::IRBTYPE::I32) {
             if (auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(curr_val))
                 curr_val = module.getConstantPool().getConst(-ci->getVal());
-            else
-            {
-                auto neg = std::make_shared<IR::BinaryInst>(irval_temp_name, IR::OP::SUB,
+            else {
+                auto neg = std::make_shared<IR::BinaryInst>(
+                    irval_temp_name, IR::OP::SUB,
                     module.getConstantPool().getConst(0), curr_val);
                 curr_insts.emplace_back(neg);
                 curr_val = neg;
             }
-        }
-        else if (opreandtype->getInner() == IR::IRBTYPE::FLOAT)
-        {
-            if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(curr_val))
+        } else if (opreandtype->getInner() == IR::IRBTYPE::FLOAT) {
+            if (auto cf =
+                    std::dynamic_pointer_cast<IR::ConstantFloat>(curr_val))
                 curr_val = module.getConstantPool().getConst(-cf->getVal());
-            else
-            {
-                auto neg = std::make_shared<IR::FNEGInst>(irval_temp_name, curr_val);
+            else {
+                auto neg =
+                    std::make_shared<IR::FNEGInst>(irval_temp_name, curr_val);
                 curr_insts.emplace_back(neg);
                 curr_val = neg;
             }
-        }
-        else if (opreandtype->getInner() == IR::IRBTYPE::I1)
-        {
+        } else if (opreandtype->getInner() == IR::IRBTYPE::I1) {
             if (auto ci1 = std::dynamic_pointer_cast<IR::ConstantI1>(curr_val))
-                curr_val = module.getConstantPool().getConst(-static_cast<int>(ci1->getVal()));
-            else
-            {
+                curr_val = module.getConstantPool().getConst(
+                    -static_cast<int>(ci1->getVal()));
+            else {
                 curr_val = type_cast(curr_val, IR::IRBTYPE::I32);
-                auto neg = std::make_shared<IR::BinaryInst>(irval_temp_name, IR::OP::SUB,
-                module.getConstantPool().getConst(0), curr_val);
+                auto neg = std::make_shared<IR::BinaryInst>(
+                    irval_temp_name, IR::OP::SUB,
+                    module.getConstantPool().getConst(0), curr_val);
                 curr_insts.emplace_back(neg);
                 curr_val = neg;
             }
             break;
-        }
-        else Err::not_implemented("SUB on unsupported type.");
+        } else
+            Err::not_implemented("SUB on unsupported type.");
         break;
     case UnOp::NOT:
         curr_val = type_cast(curr_val, IR::IRBTYPE::I1);
@@ -1011,29 +1020,27 @@ void IRGenerator::visit(UnaryOp& node) {
     }
 }
 
-void IRGenerator::visit(ParenExp& node) {
-    node.getExp()->accept(*this);
-}
+void IRGenerator::visit(ParenExp &node) { node.getExp()->accept(*this); }
 
-void IRGenerator::visit(IntLiteral& node) {
+void IRGenerator::visit(IntLiteral &node) {
     curr_val = module.getConstantPool().getConst(node.getValue());
 }
 
-void IRGenerator::visit(FloatLiteral& node) {
+void IRGenerator::visit(FloatLiteral &node) {
     curr_val = module.getConstantPool().getConst(node.getValue());
 }
 
-void IRGenerator::visit(CompStmt& node) {
+void IRGenerator::visit(CompStmt &node) {
     symbol_table.initScope();
 
-    for (auto& item : node.getItems()) {
+    for (auto &item : node.getItems()) {
         item->accept(*this);
     }
 
     symbol_table.finishScope();
 }
 
-void IRGenerator::visit(IfStmt& node) {
+void IRGenerator::visit(IfStmt &node) {
     node.getCond()->accept(*this);
     auto cond = curr_val;
     cond = type_cast(cond, IR::IRBTYPE::I1);
@@ -1047,17 +1054,18 @@ void IRGenerator::visit(IfStmt& node) {
     node.getBody()->accept(*this);
     std::swap(body_insts, curr_insts);
 
-    if(node.hasElse()) {
+    if (node.hasElse()) {
         node.getElseBody()->accept(*this);
         std::swap(else_insts, curr_insts);
     }
 
-    auto if_inst = std::make_shared<IR::IFInst>(std::move(cond), std::move(body_insts), std::move(else_insts));
+    auto if_inst = std::make_shared<IR::IFInst>(
+        std::move(cond), std::move(body_insts), std::move(else_insts));
     std::swap(before_if_insts, curr_insts);
     curr_insts.emplace_back(if_inst);
 }
 
-void IRGenerator::visit(WhileStmt& node) {
+void IRGenerator::visit(WhileStmt &node) {
     std::vector<std::shared_ptr<IR::Instruction>> before_while_insts;
     std::vector<std::shared_ptr<IR::Instruction>> cond_insts;
     std::vector<std::shared_ptr<IR::Instruction>> body_insts;
@@ -1072,139 +1080,152 @@ void IRGenerator::visit(WhileStmt& node) {
     node.getBody()->accept(*this);
     std::swap(body_insts, curr_insts);
 
-    auto while_inst = std::make_shared<IR::WHILEInst>(std::move(cond),
-        std::move(cond_insts), std::move(body_insts));
+    auto while_inst = std::make_shared<IR::WHILEInst>(
+        std::move(cond), std::move(cond_insts), std::move(body_insts));
 
     std::swap(before_while_insts, curr_insts);
     curr_insts.emplace_back(while_inst);
 }
 
-void IRGenerator::visit(NullStmt& node) { }
+void IRGenerator::visit(NullStmt &node) {}
 
-void IRGenerator::visit(BreakStmt& node) {
+void IRGenerator::visit(BreakStmt &node) {
     curr_insts.emplace_back(std::make_shared<IR::BREAKInst>());
 }
 
-void IRGenerator::visit(ContinueStmt& node) {
+void IRGenerator::visit(ContinueStmt &node) {
     curr_insts.emplace_back(std::make_shared<IR::CONTINUEInst>());
 }
 
-void IRGenerator::visit(ReturnStmt& node) {
-    auto expected = IR::toBType(IR::toFunctionType(curr_func->getType())->getRet())->getInner();
+void IRGenerator::visit(ReturnStmt &node) {
+    auto expected =
+        IR::toBType(IR::toFunctionType(curr_func->getType())->getRet())
+            ->getInner();
     if (!node.isVoid()) {
         node.getReturnVal()->accept(*this);
         auto ret = type_cast(curr_val, expected);
         curr_insts.emplace_back(std::make_shared<IR::RETInst>(ret));
-    }
-    else
-    {
+    } else {
         Err::gassert(expected == IR::IRBTYPE::VOID, "Invalid return.");
         curr_insts.emplace_back(std::make_shared<IR::RETInst>());
     }
 }
 
-std::shared_ptr<IR::Value> IRGenerator::type_cast(const std::shared_ptr<IR::Value>& val, const std::shared_ptr<IR::Type>& dest) {
+std::shared_ptr<IR::Value>
+IRGenerator::type_cast(const std::shared_ptr<IR::Value> &val,
+                       const std::shared_ptr<IR::Type> &dest) {
     if (isSameType(dest, val->getType()))
         return val;
 
     if (dest->getTrait() == IR::IRCTYPE::BASIC)
         return type_cast(val, IR::toBType(dest)->getInner());
 
-    if (dest->getTrait() == IR::IRCTYPE::PTR
-        && val->getType()->getTrait() == IR::IRCTYPE::PTR)
-    {
+    if (dest->getTrait() == IR::IRCTYPE::PTR &&
+        val->getType()->getTrait() == IR::IRCTYPE::PTR) {
         // decay
-        if (getElm(val->getType())->getTrait() == IR::IRCTYPE::ARRAY
-            && IR::isSameType(getElm(getElm(val->getType())), IR::getElm(dest)))
-        {
-            auto gep = std::make_shared<IR::GEPInst>(irval_temp_name, val,
-                module.getConstantPool().getConst(0), module.getConstantPool().getConst(0));
-            Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
+        if (getElm(val->getType())->getTrait() == IR::IRCTYPE::ARRAY &&
+            IR::isSameType(getElm(getElm(val->getType())), IR::getElm(dest))) {
+            auto gep = std::make_shared<IR::GEPInst>(
+                irval_temp_name, val, module.getConstantPool().getConst(0),
+                module.getConstantPool().getConst(0));
+            Err::gassert(curr_func != nullptr,
+                         "Invalid implicit type conversion in global.");
             curr_insts.emplace_back(gep);
             return gep;
-        }
-        else
-        {
-            auto bitcast = std::make_shared<IR::BITCASTInst>(irval_temp_name, val, dest);
-            Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
+        } else {
+            auto bitcast =
+                std::make_shared<IR::BITCASTInst>(irval_temp_name, val, dest);
+            Err::gassert(curr_func != nullptr,
+                         "Invalid implicit type conversion in global.");
             curr_insts.emplace_back(bitcast);
             return bitcast;
         }
     }
 
-    Err::unreachable("Cannot cast type from '" + val->getType()->toString() + "' to '" + dest->toString() + "'.");
+    Err::unreachable("Cannot cast type from '" + val->getType()->toString() +
+                     "' to '" + dest->toString() + "'.");
     return nullptr;
 }
 
 // I32 <-> FLOAT
 // I32 <-> I1
 // FLOAT <-> I1
-std::shared_ptr<IR::Value> IRGenerator::type_cast(const std::shared_ptr<IR::Value>& val, IR::IRBTYPE dest) {
-    const std::string bad_cast_err = "Cannot cast type from '" + val->getType()->toString() +
-        "' to '" + IR::makeBType(dest)->toString() + "'.";
+std::shared_ptr<IR::Value>
+IRGenerator::type_cast(const std::shared_ptr<IR::Value> &val,
+                       IR::IRBTYPE dest) {
+    const std::string bad_cast_err = "Cannot cast type from '" +
+                                     val->getType()->toString() + "' to '" +
+                                     IR::makeBType(dest)->toString() + "'.";
 
-    Err::gassert(val->getType()->getTrait() == IR::IRCTYPE::BASIC, bad_cast_err);
+    Err::gassert(val->getType()->getTrait() == IR::IRCTYPE::BASIC,
+                 bad_cast_err);
     IR::IRBTYPE src = toBType(val->getType())->getInner();
-    if (src == IR::IRBTYPE::I32 && dest == IR::IRBTYPE::FLOAT)
-    {
+    if (src == IR::IRBTYPE::I32 && dest == IR::IRBTYPE::FLOAT) {
         if (auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(val))
-            return module.getConstantPool().getConst(static_cast<float>(ci->getVal()));
+            return module.getConstantPool().getConst(
+                static_cast<float>(ci->getVal()));
 
-        Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
+        Err::gassert(curr_func != nullptr,
+                     "Invalid implicit type conversion in global.");
         auto conv = std::make_shared<IR::SITOFPInst>(irval_temp_name, val);
         curr_insts.emplace_back(conv);
         return conv;
-    }
-    else if (src == IR::IRBTYPE::FLOAT && dest == IR::IRBTYPE::I32)
-    {
+    } else if (src == IR::IRBTYPE::FLOAT && dest == IR::IRBTYPE::I32) {
         if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(val))
-            return module.getConstantPool().getConst(static_cast<int>(cf->getVal()));
+            return module.getConstantPool().getConst(
+                static_cast<int>(cf->getVal()));
 
-        Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
+        Err::gassert(curr_func != nullptr,
+                     "Invalid implicit type conversion in global.");
         auto conv = std::make_shared<IR::FPTOSIInst>(irval_temp_name, val);
         curr_insts.emplace_back(conv);
         return conv;
-    }
-    else if (src == IR::IRBTYPE::I32 && dest == IR::IRBTYPE::I1)
-    {
+    } else if (src == IR::IRBTYPE::I32 && dest == IR::IRBTYPE::I1) {
         if (auto ci = std::dynamic_pointer_cast<IR::ConstantInt>(val))
-            return module.getConstantPool().getConst(static_cast<bool>(ci->getVal()));
+            return module.getConstantPool().getConst(
+                static_cast<bool>(ci->getVal()));
 
-        Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
-        auto conv = std::make_shared<IR::ICMPInst>(irval_temp_name, IR::ICMPOP::ne,
-            val, module.getConstantPool().getConst(0));
+        Err::gassert(curr_func != nullptr,
+                     "Invalid implicit type conversion in global.");
+        auto conv = std::make_shared<IR::ICMPInst>(
+            irval_temp_name, IR::ICMPOP::ne, val,
+            module.getConstantPool().getConst(0));
         curr_insts.emplace_back(conv);
         return conv;
-    }
-    else if (src == IR::IRBTYPE::I1 && dest == IR::IRBTYPE::I32)
-    {
+    } else if (src == IR::IRBTYPE::I1 && dest == IR::IRBTYPE::I32) {
         if (auto ci1 = std::dynamic_pointer_cast<IR::ConstantI1>(val))
-            return module.getConstantPool().getConst(static_cast<int>(ci1->getVal()));
+            return module.getConstantPool().getConst(
+                static_cast<int>(ci1->getVal()));
 
-        Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
-        auto conv = std::make_shared<IR::ZEXTInst>(irval_temp_name, val, IR::IRBTYPE::I32);
+        Err::gassert(curr_func != nullptr,
+                     "Invalid implicit type conversion in global.");
+        auto conv = std::make_shared<IR::ZEXTInst>(irval_temp_name, val,
+                                                   IR::IRBTYPE::I32);
         curr_insts.emplace_back(conv);
         return conv;
-    }
-    else if (src == IR::IRBTYPE::FLOAT && dest == IR::IRBTYPE::I1)
-    {
+    } else if (src == IR::IRBTYPE::FLOAT && dest == IR::IRBTYPE::I1) {
         if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(val))
-            return module.getConstantPool().getConst(static_cast<bool>(cf->getVal()));
+            return module.getConstantPool().getConst(
+                static_cast<bool>(cf->getVal()));
 
-        Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
-        auto conv = std::make_shared<IR::FCMPInst>(irval_temp_name, IR::FCMPOP::one,
-            val, module.getConstantPool().getConst(0.0f));
+        Err::gassert(curr_func != nullptr,
+                     "Invalid implicit type conversion in global.");
+        auto conv = std::make_shared<IR::FCMPInst>(
+            irval_temp_name, IR::FCMPOP::one, val,
+            module.getConstantPool().getConst(0.0f));
         curr_insts.emplace_back(conv);
         return conv;
-    }
-    else if (src == IR::IRBTYPE::I1 && dest == IR::IRBTYPE::FLOAT)
-    {
+    } else if (src == IR::IRBTYPE::I1 && dest == IR::IRBTYPE::FLOAT) {
         if (auto ci1 = std::dynamic_pointer_cast<IR::ConstantI1>(val))
-            return module.getConstantPool().getConst(static_cast<float>(ci1->getVal()));
+            return module.getConstantPool().getConst(
+                static_cast<float>(ci1->getVal()));
 
-        Err::gassert(curr_func != nullptr, "Invalid implicit type conversion in global.");
-        auto conv2i32 = std::make_shared<IR::ZEXTInst>(irval_temp_name, val, IR::IRBTYPE::I32);
-        auto conv2f32 = std::make_shared<IR::SITOFPInst>(irval_temp_name, conv2i32);
+        Err::gassert(curr_func != nullptr,
+                     "Invalid implicit type conversion in global.");
+        auto conv2i32 = std::make_shared<IR::ZEXTInst>(irval_temp_name, val,
+                                                       IR::IRBTYPE::I32);
+        auto conv2f32 =
+            std::make_shared<IR::SITOFPInst>(irval_temp_name, conv2i32);
         curr_insts.emplace_back(conv2i32);
         curr_insts.emplace_back(conv2f32);
         return conv2f32;
@@ -1213,21 +1234,22 @@ std::shared_ptr<IR::Value> IRGenerator::type_cast(const std::shared_ptr<IR::Valu
     return val;
 }
 
-
 IRGenerator::Initializer::Initializer()
-    : initializer(std::monostate{}), parent(nullptr), base_type(IR::IRBTYPE::UNDEFINED) {}
-IRGenerator::Initializer::Initializer(Initializer* parent_, IR::IRBTYPE btype)
+    : initializer(std::monostate{}), parent(nullptr),
+      base_type(IR::IRBTYPE::UNDEFINED) {}
+IRGenerator::Initializer::Initializer(Initializer *parent_, IR::IRBTYPE btype)
     : initializer(std::monostate{}), parent(parent_), base_type(btype) {}
-IRGenerator::Initializer::Initializer(int a, Initializer* parent_)
+IRGenerator::Initializer::Initializer(int a, Initializer *parent_)
     : base_type(IR::IRBTYPE::I32), initializer(val_t{a}), parent(parent_) {}
-IRGenerator::Initializer::Initializer(float a, Initializer* parent_)
+IRGenerator::Initializer::Initializer(float a, Initializer *parent_)
     : base_type(IR::IRBTYPE::FLOAT), initializer(val_t{a}), parent(parent_) {}
-IRGenerator::Initializer::Initializer(std::shared_ptr<IR::Value> a, Initializer* parent_)
+IRGenerator::Initializer::Initializer(std::shared_ptr<IR::Value> a,
+                                      Initializer *parent_)
     : initializer(val_t{a}), parent(parent_) {
     auto bt = IR::toBType(a->getType());
-    Err::gassert(bt != nullptr
-        && (bt->getInner() == IR::IRBTYPE::I32 || bt->getInner() == IR::IRBTYPE::FLOAT),
-        "Invalid initializer");
+    Err::gassert(bt != nullptr && (bt->getInner() == IR::IRBTYPE::I32 ||
+                                   bt->getInner() == IR::IRBTYPE::FLOAT),
+                 "Invalid initializer");
     base_type = bt->getInner();
 }
 
@@ -1239,13 +1261,13 @@ bool IRGenerator::Initializer::isVal() const {
     return initializer.index() == 2;
 }
 
-IRGenerator::Initializer* IRGenerator::Initializer::addList() {
+IRGenerator::Initializer *IRGenerator::Initializer::addList() {
     Err::gassert(isList());
     std::get<list_t>(initializer).emplace_back(this, base_type);
     return std::get<list_t>(initializer).back().makeList();
 }
 
-IRGenerator::Initializer* IRGenerator::Initializer::makeList() {
+IRGenerator::Initializer *IRGenerator::Initializer::makeList() {
     Err::gassert(empty());
     initializer.emplace<list_t>();
     return this;
@@ -1263,89 +1285,81 @@ void IRGenerator::Initializer::reset(IR::IRBTYPE irbtype) {
 
 // TODO: Use Optimize zero, avoid padding too much zero.
 // See: https://en.cppreference.com/w/c/language/array_initialization
-std::vector<IRGenerator::Initializer::val_t> IRGenerator::Initializer::flatten(const std::shared_ptr<IR::Type>& type) const {
+std::vector<IRGenerator::Initializer::val_t>
+IRGenerator::Initializer::flatten(const std::shared_ptr<IR::Type> &type) const {
     Err::gassert(type != nullptr);
 
-    if (empty() || (isList() && std::get<list_t>(initializer).empty()))
-    {
-        if (type->getTrait() == IR::IRCTYPE::BASIC)
-        {
+    if (empty() || (isList() && std::get<list_t>(initializer).empty())) {
+        if (type->getTrait() == IR::IRCTYPE::BASIC) {
             auto bty = IR::toBType(type)->getInner();
             Err::gassert(bty == base_type);
-            return { getZeroValue() };
+            return {getZeroValue()};
         }
-        if (type->getTrait() == IR::IRCTYPE::ARRAY)
-        {
+        if (type->getTrait() == IR::IRCTYPE::ARRAY) {
             auto arrty = std::dynamic_pointer_cast<IR::ArrayType>(type);
-            return std::vector{arrty->getBytes() / getBytes(base_type), getZeroValue()};
+            return std::vector{arrty->getBytes() / getBytes(base_type),
+                               getZeroValue()};
         }
         Err::unreachable();
-    }
-    else if (isVal())
-    {
+    } else if (isVal()) {
         if (type->getTrait() == IR::IRCTYPE::BASIC)
-            return {std::get<val_t>(initializer) };
-        if (type->getTrait() == IR::IRCTYPE::ARRAY)
-        {
+            return {std::get<val_t>(initializer)};
+        if (type->getTrait() == IR::IRCTYPE::ARRAY) {
             auto arrty = std::dynamic_pointer_cast<IR::ArrayType>(type);
-            std::vector ret{arrty->getBytes() / getBytes(base_type), getZeroValue()};
+            std::vector ret{arrty->getBytes() / getBytes(base_type),
+                            getZeroValue()};
             ret[0] = std::get<val_t>(initializer);
             return ret;
         }
         Err::unreachable();
-    }
-    else if (isList())
-    {
-        const auto& list = std::get<list_t>(initializer);
+    } else if (isList()) {
+        const auto &list = std::get<list_t>(initializer);
         Err::gassert(!list.empty());
         if (type->getTrait() == IR::IRCTYPE::BASIC)
             return list[0].flatten(type);
-        if (type->getTrait() == IR::IRCTYPE::ARRAY)
-        {
+        if (type->getTrait() == IR::IRCTYPE::ARRAY) {
             size_t len = 0;
             auto arrty = std::dynamic_pointer_cast<IR::ArrayType>(type);
             auto elmty = IR::getElm(arrty);
-            if (elmty->getTrait() == IR::IRCTYPE::BASIC)
-            {
+            if (elmty->getTrait() == IR::IRCTYPE::BASIC) {
                 std::vector<val_t> ret;
-                for (auto& subiniter : list)
-                {
+                for (auto &subiniter : list) {
                     auto tmp = subiniter.flatten(elmty);
-                    ret.insert(ret.end(),
-                        std::make_move_iterator(tmp.begin()),
-                        std::make_move_iterator(tmp.end()));
+                    ret.insert(ret.end(), std::make_move_iterator(tmp.begin()),
+                               std::make_move_iterator(tmp.end()));
                     ++len;
                 }
                 for (size_t i = len; i < arrty->getArraySize(); ++i)
                     ret.emplace_back(getZeroValue());
                 return ret;
             }
-            if (elmty->getTrait() == IR::IRCTYPE::ARRAY)
-            {
+            if (elmty->getTrait() == IR::IRCTYPE::ARRAY) {
                 std::vector<val_t> ret;
-                for (auto curr_sub = list.begin(); curr_sub != list.end(); ++curr_sub)
-                {
-                    // If the nested initializer begins with an opening brace, the entire nested
-                    // initializer up to its closing brace initializes the corresponding array element:
-                    if (curr_sub->isList() || curr_sub->empty())
-                    {
+                for (auto curr_sub = list.begin(); curr_sub != list.end();
+                     ++curr_sub) {
+                    // If the nested initializer begins with an opening brace,
+                    // the entire nested initializer up to its closing brace
+                    // initializes the corresponding array element:
+                    if (curr_sub->isList() || curr_sub->empty()) {
                         auto tmp = curr_sub->flatten(elmty);
                         ret.insert(ret.end(),
-                            std::make_move_iterator(tmp.begin()),
-                            std::make_move_iterator(tmp.end()));
+                                   std::make_move_iterator(tmp.begin()),
+                                   std::make_move_iterator(tmp.end()));
                         ++len;
                     }
-                    // If the nested initializer does not begin with an opening brace,
-                    // only enough initializers from the list are taken to account for the
-                    // elements or members of the sub-array, struct or union; any remaining
-                    // initializers are left to initialize the next array element:
-                    else if (curr_sub->isVal())
-                    {
+                    // If the nested initializer does not begin with an opening
+                    // brace, only enough initializers from the list are taken
+                    // to account for the elements or members of the sub-array,
+                    // struct or union; any remaining initializers are left to
+                    // initialize the next array element:
+                    else if (curr_sub->isVal()) {
                         Initializer helper(nullptr, base_type);
                         helper.makeList();
-                        for (size_t i = 0; i < elmty->getBytes() / IR::getBytes(base_type); ++i)
-                        {
-                            std::get<list_t>(helper.initializer).emplace_back(*curr_sub);
+                        for (size_t i = 0;
+                             i < elmty->getBytes() / IR::getBytes(base_type);
+                             ++i) {
+                            std::get<list_t>(helper.initializer)
+                                .emplace_back(*curr_sub);
                             ++curr_sub;
                             if (curr_sub == list.end())
                                 break;
@@ -1353,19 +1367,17 @@ std::vector<IRGenerator::Initializer::val_t> IRGenerator::Initializer::flatten(c
                         --curr_sub;
                         auto tmp = helper.flatten(elmty);
                         ret.insert(ret.end(),
-                            std::make_move_iterator(tmp.begin()),
-                            std::make_move_iterator(tmp.end()));
+                                   std::make_move_iterator(tmp.begin()),
+                                   std::make_move_iterator(tmp.end()));
                         ++len;
                     }
                 }
 
-                for (size_t i = len; i < arrty->getArraySize(); ++i)
-                {
+                for (size_t i = len; i < arrty->getArraySize(); ++i) {
                     Initializer helper(nullptr, base_type);
                     auto tmp = helper.flatten(elmty);
-                    ret.insert(ret.end(),
-                        std::make_move_iterator(tmp.begin()),
-                        std::make_move_iterator(tmp.end()));
+                    ret.insert(ret.end(), std::make_move_iterator(tmp.begin()),
+                               std::make_move_iterator(tmp.end()));
                 }
                 return ret;
             }
@@ -1389,13 +1401,13 @@ bool IRGenerator::Initializer::isZeroIniter() const {
         return true;
     if (isVal())
         return std::get<val_t>(initializer) == getZeroValue();
-    if (isList())
-    {
-        const auto& list = std::get<list_t>(initializer);
-        return list.empty()
-        || std::all_of(list.cbegin(), list.cend(),[](auto&& p) {return p.isZeroIniter();});
+    if (isList()) {
+        const auto &list = std::get<list_t>(initializer);
+        return list.empty() ||
+               std::all_of(list.cbegin(), list.cend(),
+                           [](auto &&p) { return p.isZeroIniter(); });
     }
     Err::unreachable();
     return false;
 }
-}
+} // namespace Parser
