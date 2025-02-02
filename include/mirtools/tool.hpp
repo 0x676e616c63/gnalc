@@ -8,10 +8,19 @@
 #include <variant>
 
 namespace MIR {
+
+struct variant_toString {
+    std::string operator()(int val) { return std::to_string(val); }
+    std::string operator()(size_t val) { return std::to_string(val); }
+    std::string operator()(float val) { return std::to_string(val); }
+};
+
 struct variant_visitor {
+
     template <typename T_enum> std::string operator()(T_enum emVal) {
-        return static_cast<std::string>(enum_name(emVal));
+        return enum_name(emVal);
     }
+
 }; // for std::visit() when come into an enum type
 } // namespace MIR
 

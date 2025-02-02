@@ -22,11 +22,9 @@ public: // 接口太多, 还不如直接访问
 
     size_t stackSize{};
     unsigned int maxAlignment = 4;
-    std::vector<std::shared_ptr<FrameObj>> StackObjs;
+    std::vector<std::shared_ptr<FrameObj>> StackObjs; // arg ret local spill
 
-    std::list<std::shared_ptr<ConstObj>> ConstPool;
-
-    std::list<std::shared_ptr<Operand>> LiveIns; // 参数, 暂时这么写
+    unsigned int args;
 
 public:
     FunctionInfo() = default;
@@ -44,7 +42,6 @@ private:
 public:
     Function() = delete;
     explicit Function(std::string _name)
-
         : Value(ValueTrait::Function, std::move(_name)) {}
 
     FunctionInfo getInfo() const { return info; }
@@ -53,10 +50,10 @@ public:
     void addBlock(std::shared_ptr<BasicBlock> _block) {
         blocks.emplace_back(std::move(_block));
     }
-
     void delBlock(const std::string &_name);
-
     const std::list<std::shared_ptr<BasicBlock>> &getBlocks() { return blocks; }
+
+    void culStackFrame();
 
     std::string toString() const override;
     ~Function() override = default;

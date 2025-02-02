@@ -104,10 +104,9 @@ public:
 
 class BindOnVirOP : public Operand {
 private:
-    RegisterBank bank;
-
 protected:
     std::variant<CoreRegister, FPURegister> color;
+    RegisterBank bank;
 
 public:
     BindOnVirOP() = delete;
@@ -153,6 +152,8 @@ enum class BaseAddressTrait {
 class BaseADROP : public BindOnVirOP {
 private:
     BaseAddressTrait btrait;
+
+protected:
     /// @note 加constOffset是为了和llc的mir在形式上兼容的同时, 尽量使用[rx,
     /// #imm]简化指令条数
     /// @note Addri时, 该条指令将被折叠, imme加在constOffset上
@@ -161,11 +162,15 @@ private:
 
 public:
     BaseADROP() = delete;
-    BaseADROP(BaseAddressTrait _btrait, std::string _name)
-        : BindOnVirOP(std::move(_name)), btrait(_btrait){};
+    BaseADROP(BaseAddressTrait _btrait, std::string _name,
+              unsigned int _constOffset)
+        : BindOnVirOP(std::move(_name)), btrait(_btrait),
+          constOffset(_constOffset){};
 
     unsigned int getConstOffset() const { return constOffset; };
     void setConstOffset(unsigned int newOffset) { constOffset = newOffset; };
+
+    BaseAddressTrait getTrait() { return btrait; };
 
     std::string toString() const override = 0;
     ~BaseADROP() override = default;
@@ -177,8 +182,9 @@ private:
 
 public:
     GlobalADROP() = delete;
-    GlobalADROP(std::string _global_name, std::string _name)
-        : BaseADROP(BaseAddressTrait::Global, std::move(_name)),
+    GlobalADROP(std::string _global_name, std::string _name,
+                unsigned int _offset)
+        : BaseADROP(BaseAddressTrait::Global, std::move(_name), _offset),
           global_name(std::move(_global_name)){};
 
     std::string toString() const final;
@@ -187,12 +193,16 @@ public:
 
 class StackADROP : public BaseADROP {
 private:
-    unsigned int idx;
+    std::shared_ptr<FrameObj> obj;
 
 public:
     StackADROP() = delete;
-    StackADROP(unsigned int _idx, std::string _name)
-        : BaseADROP(BaseAddressTrait::Local, std::move(_name)), idx(_idx){};
+    StackADROP(std::shared_ptr<FrameObj> _obj, std::string _name,
+               unsigned int _offset)
+        : BaseADROP(BaseAddressTrait::Local, std::move(_name), _offset),
+          obj(std::move(_obj)){};
+
+    std::shared_ptr<FrameObj> getObj() { return obj; }
 
     std::string toString() const final;
     ~StackADROP() override = default;
@@ -201,6 +211,7 @@ public:
 class ShiftOP : public Operand {
 private:
     unsigned int imme;
+
 public:
     enum class inlineShift { asr, lsl, lsr, ror, rrx } shiftCode;
 

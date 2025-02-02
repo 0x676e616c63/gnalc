@@ -1,5 +1,7 @@
 #include "../../include/mir/misc.hpp"
+#include "../../include/ir/constant.hpp"
 #include "../../include/mirtools/enum_name.hpp"
+#include "../../include/mirtools/tool.hpp"
 #include <cctype>
 #include <iomanip>
 
@@ -14,6 +16,103 @@ std::string MIR::FrameObj::toString() const {
 
     str += "}";
     return str;
+}
+
+std::string MIR::GlobalObj::toString() const {
+    std::string str;
+    variant_toString visitor;
+
+    str += "- {";
+
+    str += " name: " + name;
+    str += ", size = " + std::to_string(size);
+
+    str += ", initial: [ ";
+    for (auto &init : initializer) {
+        if (init.first) {
+            str += std::visit(visitor, init.second);
+        } else {
+            str += "0x" + std::visit(visitor, init.second);
+        }
+        str += ", ";
+    }
+
+    str += "] }";
+
+    return str;
+}
+
+MIR::GlobalObj::GlobalObj(IR::GlobalVariable &midEnd_Glo) {
+    name = midEnd_Glo.getName();
+    mkInitializer(midEnd_Glo.getIniter());
+    initializerMerge();
+}
+
+void MIR::GlobalObj::mkInitializer(const IR::GVIniter &midEnd_GVIniter) {
+    ///@brief flat midEnd GVIniter
+
+    if (midEnd_GVIniter.isArray()) {
+        if (midEnd_GVIniter.isZero())
+            initializer.emplace_back(false, 1);
+        else {
+            if (auto ci1 = std::dynamic_pointer_cast<IR::ConstantI1>(
+                    midEnd_GVIniter.getConstVal())) {
+                size += 1;
+                initializer.emplace_back(true, ci1->getVal());
+            } else if (auto ci8 = std::dynamic_pointer_cast<IR::ConstantI8>(
+                           midEnd_GVIniter.getConstVal())) {
+                size += 1;
+                initializer.emplace_back(true, ci8->getVal());
+            } else if (auto ci32 = std::dynamic_pointer_cast<IR::ConstantInt>(
+                           midEnd_GVIniter.getConstVal())) {
+                size += 4;
+                initializer.emplace_back(true, ci32->getVal());
+            } else if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(
+                           midEnd_GVIniter.getConstVal())) {
+                size += 4;
+                initializer.emplace_back(true, cf->getVal());
+            } else {
+                // UNDIFINE
+            }
+        }
+    }
+    /// Array
+    else {
+        if (midEnd_GVIniter.isZero()) {
+
+            auto &midEnd_type = midEnd_GVIniter.getIniterType();
+            initializer.emplace_back(false, midEnd_type->getBytes());
+
+        } else {
+            auto &midEnd_inner_initer = midEnd_GVIniter.getInnerIniter();
+
+            for (auto &initer : midEnd_inner_initer) {
+                mkInitializer(initer);
+            }
+        }
+    }
+}
+
+void MIR::GlobalObj::initializerMerge() {
+    for (auto it = initializer.begin(); it != initializer.end();) {
+        if (!it->first)
+            ++it;
+        else {
+            auto next_it = std::next(it);
+            if (next_it == initializer.end())
+                break;
+
+            if (next_it->first)
+                ++it;
+            else {
+                // it为0, next_it也为0
+                auto &ref = std::get<size_t>(it->second);
+                ref += std::get<size_t>(next_it->second); // merge size
+
+                initializer.erase(next_it); // del next_it, it remain
+            }
+        }
+    }
 }
 
 bool isImmCanBeEncodedInText(unsigned int imme) {

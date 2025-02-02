@@ -1,6 +1,8 @@
 #ifndef GNALC_MIR_FRAME_HPP
 #define GNALC_MIR_FRAME_HPP
+#include "../ir/global_var.hpp"
 #include "base.hpp"
+#include <list>
 #include <sstream>
 #include <variant>
 
@@ -19,7 +21,7 @@ private:
     unsigned int id{};
 
     size_t size;
-    size_t offset{};
+    size_t offset{}; // 相对与sp或者fp或者r7
     FrameTrait ftrait;
 
 public:
@@ -35,6 +37,29 @@ public:
     std::string toString() const; // printf info
     ~FrameObj() = default;
 };
+
+class GlobalObj {
+private:
+    std::string name;
+
+    size_t size;
+
+    // <true, value> <false, size>
+    std::list<std::pair<bool, std::variant<int, float, size_t>>> initializer;
+
+public:
+    GlobalObj();
+    explicit GlobalObj(IR::GlobalVariable &);
+
+    void mkInitializer(const IR::GVIniter &);
+
+    void initializerMerge(); // 合并相邻的零散的0
+
+    std::string toString() const;
+    ~GlobalObj() = default;
+};
+
+/// @note 上面两个Obj用于记录内存分配
 
 using Encoding = std::pair<uint16_t, uint16_t>; // low-high
 

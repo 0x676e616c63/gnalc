@@ -1,3 +1,4 @@
+#include "../../ir/instructions/phi.hpp"
 #include "../instruction.hpp"
 
 namespace MIR {
@@ -15,7 +16,8 @@ public:
     }
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
-    std::string toString() override;
+    bool Check() override;
+    // std::string toString() override;
     ~copy() override = default;
 };
 } // namespace MIR

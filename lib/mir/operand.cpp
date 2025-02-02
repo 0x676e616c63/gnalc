@@ -42,14 +42,18 @@ std::string BindOnVirOP::toString() const {
 }
 
 std::string GlobalADROP::toString() const {
-    std::string str = "%global." + getName();
-
+    /// %1:gpr(%global.aaa + 16)
+    std::string str = getName() + ':' + enum_name(bank);
+    str += "(%global." + global_name;
+    str += " + " + std::to_string(constOffset) + ')';
     return str;
 }
 
 std::string StackADROP::toString() const {
-    std::string str = "%stack." + std::to_string(idx);
-
+    /// %1:gpr(%stack.bbb + 16)
+    std::string str = getName() + ':' + enum_name(bank);
+    str += "(%stack." + std::to_string(idx);
+    str += " + " + std::to_string(constOffset) + ')';
     return str;
 }
 

@@ -75,8 +75,8 @@ enum class NeonOpCode {
 
     VCMP,
 
-    VSITOS,
-    VSTOSI,
+    VSITOF,
+    VFTOSI,
 };
 
 enum class SourceOperandType {
@@ -85,11 +85,13 @@ enum class SourceOperandType {
     i,
     i12,
     i32,
+    a,
     // cp
 
     rr,
     ri,
     rsi /* 或者rrsi更加贴切 */,
+    ra /* a means address*/,
 };
 
 class Instruction {
@@ -98,6 +100,7 @@ private:
 
     std::shared_ptr<BindOnVirOP> TargetOperand = nullptr;
 
+protected:
     SourceOperandType tptrait;
 
 public:
@@ -111,13 +114,11 @@ public:
         TargetOperand = std::move(TargetOperand_);
     }
 
-    SourceOperandType getTptrait() const { return tptrait; }
-
     const std::shared_ptr<BindOnVirOP> &getTargetOP() { return TargetOperand; };
     virtual std::shared_ptr<Operand> getSourceOP(unsigned int seq) = 0;
 
-    virtual bool Check() = 0;
-    virtual std::string toString() = 0;
+    virtual bool Check() = 0; // tptriat, sourceoperand
+    virtual std::string toString() final;
     virtual ~Instruction() = default;
 };
 } // namespace MIR
