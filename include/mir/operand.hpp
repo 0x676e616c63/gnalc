@@ -162,7 +162,7 @@ private:
 public:
     BaseADROP() = delete;
     BaseADROP(BaseAddressTrait _btrait, std::string _name)
-        : BindOnVirOP(std::move(_name)), btrait(_btrait){};
+        : BindOnVirOP(std::move(_name)), btrait(_btrait) {};
 
     unsigned int getConstOffset() const { return constOffset; };
     void setConstOffset(unsigned int newOffset) { constOffset = newOffset; };
@@ -179,7 +179,7 @@ public:
     GlobalADROP() = delete;
     GlobalADROP(std::string _global_name, std::string _name)
         : BaseADROP(BaseAddressTrait::Global, std::move(_name)),
-          global_name(std::move(_global_name)){};
+          global_name(std::move(_global_name)) {};
 
     std::string toString() const final;
     ~GlobalADROP() override = default;
@@ -192,7 +192,7 @@ private:
 public:
     StackADROP() = delete;
     StackADROP(unsigned int _idx, std::string _name)
-        : BaseADROP(BaseAddressTrait::Local, std::move(_name)), idx(_idx){};
+        : BaseADROP(BaseAddressTrait::Local, std::move(_name)), idx(_idx) {};
 
     std::string toString() const final;
     ~StackADROP() override = default;
@@ -201,13 +201,14 @@ public:
 class ShiftOP : public Operand {
 private:
     unsigned int imme;
+
 public:
     enum class inlineShift { asr, lsl, lsr, ror, rrx } shiftCode;
 
     ShiftOP() = delete;
     ShiftOP(unsigned _imme, ShiftOP::inlineShift _shiftCode)
         : imme(_imme), shiftCode(_shiftCode),
-          Operand(OperandTrait::ShiftImme){};
+          Operand(OperandTrait::ShiftImme) {};
 
     std::string toString() const final;
     ~ShiftOP() override = default;
@@ -220,7 +221,7 @@ private:
 public:
     ConstantIDX() = delete;
     explicit ConstantIDX(const std::shared_ptr<ConstObj> &_constant)
-        : Operand(OperandTrait::ConstantPoolValue), constant(_constant){};
+        : Operand(OperandTrait::ConstantPoolValue), constant(_constant) {};
     std::string toString() const final;
     ~ConstantIDX() override = default;
 };

@@ -1,23 +1,23 @@
 #include "../../include/config/config.hpp"
 
+#include "../../include/ir/passes/pass_builder.hpp"
+#include "../../include/ir/passes/pass_manager.hpp"
 #include "../../include/parser/ast.hpp"
 #include "../../include/parser/astprinter.hpp"
 #include "../../include/parser/irgen.hpp"
 #include "../../include/parser/parser.hpp"
 #include "../../include/utils/logger.hpp"
-#include "../../include/ir/passes/pass_manager.hpp"
-#include "../../include/ir/passes/pass_builder.hpp"
 
 #if GNALC_EXTENSION_BRAINFK // in config.hpp
 #include "../../include/codegen/brainfk/bfgen.hpp"
-#include "../../include/codegen/brainfk/bftrans.hpp"
 #include "../../include/codegen/brainfk/bfprinter.hpp"
+#include "../../include/codegen/brainfk/bftrans.hpp"
 #endif
 
-#include <string>
-#include <memory>
-#include <iostream>
 #include <fstream>
+#include <iostream>
+#include <memory>
+#include <string>
 
 #include "../../include/ir/passes/utilities/irprinter.hpp"
 
@@ -38,19 +38,16 @@ int main(int argc, char **argv) {
     IR::OptInfo opt_info;
 
 #if GNALC_EXTENSION_BRAINFK
-    bool bf_target = false;        // -mbrainfk
-    bool bf3t_target = false;      // -mbrainfk-3tape
+    bool bf_target = false;   // -mbrainfk
+    bool bf3t_target = false; // -mbrainfk-3tape
 #endif
 
-    for (int i = 1; i < argc; ++i)
-    {
+    for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
         // General options:
-        if (arg == "--log")
-        {
+        if (arg == "--log") {
             ++i;
-            if (i >= argc)
-            {
+            if (i >= argc) {
                 std::cerr << "Error: Expected log level." << std::endl;
                 return -1;
             }
@@ -58,40 +55,41 @@ int main(int argc, char **argv) {
                 Logger::setLogLevel(LogLevel::INFO);
             else if (std::string{argv[i]} == "debug")
                 Logger::setLogLevel(LogLevel::DEBUG);
-            else
-            {
+            else {
                 std::cerr << "Error: Invalid log level." << std::endl;
                 return -1;
             }
-        }
-        else if (arg == "-o")
-        {
+        } else if (arg == "-o") {
             ++i;
-            if (i >= argc)
-            {
+            if (i >= argc) {
                 std::cerr << "Error: Expected output." << std::endl;
                 return -1;
             }
             output_file = argv[i];
-        }
-        else if (arg == "-S")                 only_compilation = true;
-        else if (arg == "-emit-llvm")         emit_llvm = true;
-        else if (arg == "-ast-dump")          ast_dump = true;
-        else if (arg == "-O1")                opt_info = IR::o1_opt_info;
+        } else if (arg == "-S")
+            only_compilation = true;
+        else if (arg == "-emit-llvm")
+            emit_llvm = true;
+        else if (arg == "-ast-dump")
+            ast_dump = true;
+        else if (arg == "-O1")
+            opt_info = IR::o1_opt_info;
 
         // Optimizations available:
-        else if (arg == "--mem2reg")          opt_info.mem2reg = true;
+        else if (arg == "--mem2reg")
+            opt_info.mem2reg = true;
 
 #if GNALC_EXTENSION_BRAINFK
         // Extensions:
-        else if (arg == "-mbrainfk")          bf_target = true;
-        else if (arg == "-mbrainfk-3tape")    bf3t_target = true;
+        else if (arg == "-mbrainfk")
+            bf_target = true;
+        else if (arg == "-mbrainfk-3tape")
+            bf3t_target = true;
 #endif
 
-        else if (arg == "-h" || arg == "--help")
-        {
+        else if (arg == "-h" || arg == "--help") {
             std::cout <<
-R"(OVERVIEW: gnalc compiler
+                R"(OVERVIEW: gnalc compiler
 
 USAGE: " << argv[0] << " [options] file
 
@@ -112,7 +110,7 @@ Optimizations available:
 
 #if GNALC_EXTENSION_BRAINFK
             std::cout <<
-R"(
+                R"(
 Extensions:
   -mbrainfk            - Translate SySy to brainfk
   -mbrainfk-3tape      - Translate SySy to 3-tape brainfk
@@ -120,22 +118,19 @@ Extensions:
 #endif
             std::cout << std::flush;
             return 0;
-        }
-        else
+        } else
             input_file = argv[i];
     }
 
-    if (!only_compilation)
-    {
-        std::cerr << "Error: Gnalc currently only supports '-S' mode." << std::endl;
+    if (!only_compilation) {
+        std::cerr << "Error: Gnalc currently only supports '-S' mode."
+                  << std::endl;
         return -1;
     }
 
-    if (!input_file.empty())
-    {
+    if (!input_file.empty()) {
         yyin = fopen(input_file.c_str(), "r");
-        if (!yyin)
-        {
+        if (!yyin) {
             std::cerr << "Error: Failed to open input file." << std::endl;
             return -1;
         }
@@ -147,14 +142,14 @@ Extensions:
         return -1;
     }
 
-    if (ast_dump)
-    {
+    if (ast_dump) {
         AST::ASTPrinter printer;
         printer.visit(*node);
         return 0;
     }
 
-    if (!input_file.empty()) fclose(yyin);
+    if (!input_file.empty())
+        fclose(yyin);
 
     Parser::IRGenerator generator;
     generator.visit(*node);
@@ -162,22 +157,19 @@ Extensions:
     auto [fam, mam] = IR::PassBuilder::buildAnalysisManager();
     auto mpm = IR::PassBuilder::buildModulePipeline(opt_info);
 
-    std::ostream* poutstream = &std::cout;
+    std::ostream *poutstream = &std::cout;
     std::ofstream outfile;
 
-    if (!output_file.empty())
-    {
+    if (!output_file.empty()) {
         outfile.open(output_file);
-        if (!outfile.is_open())
-        {
+        if (!outfile.is_open()) {
             std::cerr << "Error: Failed to open output file." << std::endl;
             return -1;
         }
         poutstream = &outfile;
     }
 
-    if (emit_llvm)
-    {
+    if (emit_llvm) {
         mpm.addPass(IR::PrintModulePass(*poutstream, false));
         mpm.run(generator.get_module(), mam);
         return 0;
@@ -186,20 +178,17 @@ Extensions:
     mpm.run(generator.get_module(), mam);
 
 #if GNALC_EXTENSION_BRAINFK
-    if (bf_target || bf3t_target)
-    {
+    if (bf_target || bf3t_target) {
         BrainFk::BF3t32bGen bfgen;
         BrainFk::BFPrinter bfprinter(*poutstream);
 
         bfgen.visit(generator.get_module());
 
-        if (!bf3t_target)
-        {
+        if (!bf3t_target) {
             BrainFk::BF32t32bTrans trans(false);
             trans.visit(bfgen.getModule());
             bfprinter.printout(trans.getModule());
-        }
-        else
+        } else
             bfprinter.printout(bfgen.getModule());
 
         return 0;

@@ -4,12 +4,11 @@
 
 #include <unordered_set>
 
+#include "../utils/exception.hpp"
 #include "constant.hpp"
 #include "constant_proxy.hpp"
-#include "../utils/exception.hpp"
 
-namespace IR
-{
+namespace IR {
 class ConstantPool {
 private:
     // Note:
@@ -35,8 +34,6 @@ public:
     ~ConstantPool();
 };
 
-}
-
-
+} // namespace IR
 
 #endif

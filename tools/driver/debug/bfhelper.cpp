@@ -3,9 +3,8 @@
 #include "../../../include/codegen/brainfk/bfmodule.hpp"
 #include "../../../include/codegen/brainfk/utils/utils.hpp"
 
-int main(int argc, char* argv[]) {
-    if (argc != 2)
-    {
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
         std::cerr << "Usage: " << argv[0] << " <brainfk code>" << std::endl;
         return 1;
     }

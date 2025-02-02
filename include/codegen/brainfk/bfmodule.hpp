@@ -10,25 +10,30 @@
 namespace BrainFk {
 // See: https://en.wikipedia.org/wiki/Brainfuck
 enum class BFInst {
-  PTRINC,  // >   Increment the data pointer by one (to point to the next cell to the right).
+    PTRINC, // >   Increment the data pointer by one (to point to the next cell
+            // to the right).
 
-  PTRDEC,  // <   Decrement the data pointer by one (to point to the next cell to the left).
+    PTRDEC, // <   Decrement the data pointer by one (to point to the next cell
+            // to the left).
 
-  INC,     // +   Increment the byte at the data pointer by one.
+    INC, // +   Increment the byte at the data pointer by one.
 
-  DEC,     // -   Decrement the byte at the data pointer by one.
+    DEC, // -   Decrement the byte at the data pointer by one.
 
-  OUTPUT,  // .   Output the byte at the data pointer.
+    OUTPUT, // .   Output the byte at the data pointer.
 
-  INPUT,   // ,   Accept one byte of input, storing its value in the byte at the data pointer.
+    INPUT, // ,   Accept one byte of input, storing its value in the byte at the
+           // data pointer.
 
-  BEQZ,    // [   If the byte at the data pointer is zero,
-           //     then instead of moving the instruction pointer forward to the next command,
-           //     jump it forward to the command after the matching ] command.
+    BEQZ, // [   If the byte at the data pointer is zero,
+          //     then instead of moving the instruction pointer forward to the
+          //     next command, jump it forward to the command after the matching
+          //     ] command.
 
-  BNEZ     // ]   If the byte at the data pointer is nonzero,
-           //     then instead of moving the instruction pointer forward to the next command,
-           //     jump it back to the command after the matching [ command.[a]
+    BNEZ // ]   If the byte at the data pointer is nonzero,
+         //     then instead of moving the instruction pointer forward to the
+         //     next command, jump it back to the command after the matching [
+         //     command.[a]
 };
 
 enum class BF3tInst {
@@ -62,19 +67,21 @@ enum class BF3tInst {
 
 class BFModule {
     std::vector<BFInst> instructions;
+
 public:
-    const std::vector<BFInst>& getInstructions() const;
+    const std::vector<BFInst> &getInstructions() const;
 
     void setInst(std::vector<BFInst> inst);
 };
 
 class BF3tModule {
     std::vector<BF3tInst> instructions;
+
 public:
-    const std::vector<BF3tInst>& getInstructions() const;
+    const std::vector<BF3tInst> &getInstructions() const;
 
     void setInst(std::vector<BF3tInst> inst);
 };
-}
+} // namespace BrainFk
 #endif
 #endif

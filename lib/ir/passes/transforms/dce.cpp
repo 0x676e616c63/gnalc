@@ -2,8 +2,5 @@
 
 namespace IR {
 PM::PreservedAnalyses DeadCodeEliminationPass::run(Function &function,
-                                                   FAM &manager) {
-
-
-}
+                                                   FAM &manager) {}
 } // namespace IR

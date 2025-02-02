@@ -8,10 +8,7 @@
 namespace IR {
 
 // storage_class
-enum class STOCLASS {
-    GLOBAL,
-    CONSTANT
-};
+enum class STOCLASS { GLOBAL, CONSTANT };
 
 // IR GlobalVariable Initializer
 // int i;
@@ -22,27 +19,30 @@ enum class STOCLASS {
 class GVIniter {
 private:
     std::shared_ptr<Type> initer_type;
-    bool is_zero; // is zeroinitializer, 对于array就输出zeroinitializer, 不是array就输出0
-    std::shared_ptr<Value> constval; // 只针对非array的情况!!! 内容只能是ConstantInt or Float
+    bool is_zero; // is zeroinitializer, 对于array就输出zeroinitializer,
+                  // 不是array就输出0
+    std::shared_ptr<Value>
+        constval; // 只针对非array的情况!!! 内容只能是ConstantInt or Float
     std::vector<GVIniter> inner_initer; // isarray == true
 public:
     GVIniter() = delete;
     GVIniter(std::shared_ptr<Type> _ty); // zeroinit
     GVIniter(std::shared_ptr<Type> _ty, std::shared_ptr<Value> _con); // i32 1
-    GVIniter(std::shared_ptr<Type> _ty, std::vector<GVIniter> _inner_initer); // [2 x [2 x i32]] [...]
+    GVIniter(std::shared_ptr<Type> _ty,
+             std::vector<GVIniter> _inner_initer); // [2 x [2 x i32]] [...]
 
-    const std::shared_ptr<IR::Type>& getIniterType() const;
+    const std::shared_ptr<IR::Type> &getIniterType() const;
     bool isZero() const;
     bool isArray() const;
 
-    std::shared_ptr<IR::Value>& getConstVal(); // 此处暂时先用非const的引用传递
-    const std::shared_ptr<IR::Value>& getConstVal() const;
+    std::shared_ptr<IR::Value> &getConstVal(); // 此处暂时先用非const的引用传递
+    const std::shared_ptr<IR::Value> &getConstVal() const;
 
-    const std::vector<GVIniter>& getInnerIniter() const;
+    const std::vector<GVIniter> &getInnerIniter() const;
 
-    GVIniter& addIniter(std::shared_ptr<Type> _ty, std::shared_ptr<Value> _con);
+    GVIniter &addIniter(std::shared_ptr<Type> _ty, std::shared_ptr<Value> _con);
 
-    GVIniter& addIniter(std::shared_ptr<Type> _ty);
+    GVIniter &addIniter(std::shared_ptr<Type> _ty);
 
     void normalizeZero();
 
@@ -53,8 +53,10 @@ public:
 };
 
 /**
- * @brief @arr = dso_local global [2 x [2 x i32]] [[2 x i32] [i32 5, i32 6], [2 x i32] zeroinitializer], align 4
- * @brief \@<name> = [linkage] [visibility] [storage_class] [addrspace(<n>)] <type> <initializer>, [align <alignment>]
+ * @brief @arr = dso_local global [2 x [2 x i32]] [[2 x i32] [i32 5, i32 6], [2
+ * x i32] zeroinitializer], align 4
+ * @brief \@<name> = [linkage] [visibility] [storage_class] [addrspace(<n>)]
+ * <type> <initializer>, [align <alignment>]
  * @attention 全局变量的type为ptr
  * @attention 默认linkage 是dso_local
  */
@@ -64,18 +66,21 @@ private:
     std::shared_ptr<Type> vtype; // 表示的variable的类型
     GVIniter initer;
     int align;
+
 public:
-    GlobalVariable(STOCLASS _sc, std::shared_ptr<Type> _ty, std::string _name, GVIniter _initer, int _align = 4); // 对于无初始值的，使用第一种构造方式
+    GlobalVariable(STOCLASS _sc, std::shared_ptr<Type> _ty, std::string _name,
+                   GVIniter _initer,
+                   int _align = 4); // 对于无初始值的，使用第一种构造方式
 
     STOCLASS getStorageClass() const;
-    const std::shared_ptr<Type>& getVarType() const;
+    const std::shared_ptr<Type> &getVarType() const;
     bool isArray() const;
-    GVIniter& getIniter();
+    GVIniter &getIniter();
     int getAlign() const;
 
-    void accept(IRVisitor& visitor) override;
+    void accept(IRVisitor &visitor) override;
     ~GlobalVariable() override;
 };
-}
+} // namespace IR
 
 #endif

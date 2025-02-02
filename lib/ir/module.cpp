@@ -8,7 +8,8 @@ void Module::addGlobalVar(std::shared_ptr<GlobalVariable> global_var) {
     global_vars.emplace_back(global_var);
 }
 
-const std::vector<std::shared_ptr<GlobalVariable>>& Module::getGlobalVars() const {
+const std::vector<std::shared_ptr<GlobalVariable>> &
+Module::getGlobalVars() const {
     return global_vars;
 }
 
@@ -25,13 +26,11 @@ void Module::addFunction(std::shared_ptr<Function> func) {
     funcs.emplace_back(func);
 }
 
-const std::vector<std::shared_ptr<Function>>& Module::getFunctions() const {
+const std::vector<std::shared_ptr<Function>> &Module::getFunctions() const {
     return funcs;
 }
 
-std::vector<std::shared_ptr<Function>>& Module::getFunctions() {
-    return funcs;
-}
+std::vector<std::shared_ptr<Function>> &Module::getFunctions() { return funcs; }
 
 /**
  * @brief Delete by name
@@ -49,11 +48,12 @@ void Module::addFunctionDecl(std::shared_ptr<FunctionDecl> func_decl) {
     func_decls.emplace_back(func_decl);
 }
 
-const std::vector<std::shared_ptr<FunctionDecl>>& Module::getFunctionDecls() const {
+const std::vector<std::shared_ptr<FunctionDecl>> &
+Module::getFunctionDecls() const {
     return func_decls;
 }
 
-std::vector<std::shared_ptr<FunctionDecl>>& Module::getFunctionDecls() {
+std::vector<std::shared_ptr<FunctionDecl>> &Module::getFunctionDecls() {
     return func_decls;
 }
 
@@ -66,15 +66,12 @@ void Module::delFunctionDecl(NameRef name) {
     }
 }
 
-ConstantPool& Module::getConstantPool() {
-    return constant_pool;
-}
+ConstantPool &Module::getConstantPool() { return constant_pool; }
 
-void Module::accept(IRVisitor& visitor) { visitor.visit(*this); }
+void Module::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
 /**
  * @todo
  */
-Module::~Module() {
-}
-};
+Module::~Module() {}
+}; // namespace IR

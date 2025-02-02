@@ -3,10 +3,10 @@
 #define GNALC_IR_FUNCTION_HPP
 
 #include "base.hpp"
-#include "instructions/phi.hpp"
-#include "constant_pool.hpp"
 #include "basic_block.hpp"
+#include "constant_pool.hpp"
 #include "instruction.hpp"
+#include "instructions/phi.hpp"
 
 #include <memory>
 #include <utility>
@@ -17,12 +17,13 @@ class FunctionDecl : public Value {
 private:
     bool is_builtin;
     bool is_sylib;
+
 public:
     FunctionDecl(std::string name_, std::vector<std::shared_ptr<Type>> params,
-        std::shared_ptr<Type> ret_type,
-        bool is_va_arg_, bool is_builtin_, bool is_sylib_);
+                 std::shared_ptr<Type> ret_type, bool is_va_arg_,
+                 bool is_builtin_, bool is_sylib_);
 
-    void accept(IRVisitor& visitor) override;
+    void accept(IRVisitor &visitor) override;
 
     bool isSylib() const;
     bool isBuiltin() const;
@@ -34,7 +35,7 @@ class Function : public FunctionDecl {
 private:
     std::vector<std::shared_ptr<Value>> params;
     std::vector<std::shared_ptr<BasicBlock>> blks;
-    ConstantPool* constant_pool;
+    ConstantPool *constant_pool;
 
     // 后面需要再说
     // int vreg_idx = 0;
@@ -42,21 +43,23 @@ public:
     using const_iterator = decltype(blks)::const_iterator;
     using iterator = decltype(blks)::iterator;
 
-    Function(std::string name_, const std::vector<std::shared_ptr<Value>>& params,
-        std::shared_ptr<Type> ret_type, ConstantPool* pool);
+    Function(std::string name_,
+             const std::vector<std::shared_ptr<Value>> &params,
+             std::shared_ptr<Type> ret_type, ConstantPool *pool);
 
     void addBlock(std::shared_ptr<BasicBlock> blk);
 
-    bool delBlock(const std::shared_ptr<BasicBlock>& blk);
+    bool delBlock(const std::shared_ptr<BasicBlock> &blk);
 
-    template <typename Pred>
-    bool delBlockIf(Pred pred) {
+    template <typename Pred> bool delBlockIf(Pred pred) {
         bool found = false;
         for (auto it = blks.begin(); it != blks.end();) {
             if (pred(*it)) {
-                for (const auto& use : (*it)->getUseList()) {
-                    auto phi = std::dynamic_pointer_cast<PHIInst>(use->getUser());
-                    Err::gassert(phi != nullptr,
+                for (const auto &use : (*it)->getUseList()) {
+                    auto phi =
+                        std::dynamic_pointer_cast<PHIInst>(use->getUser());
+                    Err::gassert(
+                        phi != nullptr,
                         "Cannot delete a block that has users beyond phi.");
                     phi->delPhiOper(*it);
 
@@ -68,20 +71,19 @@ public:
                 }
                 it = blks.erase(it);
                 found = true;
-            }
-            else
+            } else
                 ++it;
         }
         Err::gassert(found, "Function::delBlockIf(): Not found");
         return found;
     }
 
-    const std::vector<std::shared_ptr<Value>>& getParams() const;
-    std::vector<std::shared_ptr<Value>>& getParams();
+    const std::vector<std::shared_ptr<Value>> &getParams() const;
+    std::vector<std::shared_ptr<Value>> &getParams();
 
     // usually we can use range-based for instead of these
-    const std::vector<std::shared_ptr<BasicBlock>>& getBlocks() const;
-    std::vector<std::shared_ptr<BasicBlock>>& getBlocks();
+    const std::vector<std::shared_ptr<BasicBlock>> &getBlocks() const;
+    std::vector<std::shared_ptr<BasicBlock>> &getBlocks();
 
     const_iterator cbegin() const;
     const_iterator cend() const;
@@ -90,12 +92,13 @@ public:
     // ...
 
     // 后面需要再说
-    // int getVRegIdx() { return vreg_idx++; } // 用于生成SSA时的虚拟寄存器计数，从0开始，GetIdx后++
-    // int getVRegNum() const { return vreg_idx; } // 虚拟寄存器数量
+    // int getVRegIdx() { return vreg_idx++; } //
+    // 用于生成SSA时的虚拟寄存器计数，从0开始，GetIdx后++ int getVRegNum() const
+    // { return vreg_idx; } // 虚拟寄存器数量
 
-    ConstantPool& getConstantPool();
+    ConstantPool &getConstantPool();
 
-    void accept(IRVisitor& visitor) override;
+    void accept(IRVisitor &visitor) override;
 };
 
 // 基本块划分前的过渡
@@ -109,13 +112,13 @@ public:
     using iterator = decltype(insts)::iterator;
 
     LinearFunction(std::string name_,
-        const std::vector<std::shared_ptr<Value>>& params,
-        std::shared_ptr<Type> ret_type, ConstantPool* pool)
-            : Function(std::move(name_), params, std::move(ret_type), pool) {}
+                   const std::vector<std::shared_ptr<Value>> &params,
+                   std::shared_ptr<Type> ret_type, ConstantPool *pool)
+        : Function(std::move(name_), params, std::move(ret_type), pool) {}
 
     // usually we can use range-based for instead of these
-    const std::vector<std::shared_ptr<Instruction>>& getInsts() const;
-    std::vector<std::shared_ptr<Instruction>>& getInsts();
+    const std::vector<std::shared_ptr<Instruction>> &getInsts() const;
+    std::vector<std::shared_ptr<Instruction>> &getInsts();
 
     const_iterator cbegin() const;
     const_iterator cend() const;
@@ -125,8 +128,8 @@ public:
     void addInst(std::shared_ptr<Instruction> inst);
     void appendInsts(std::vector<std::shared_ptr<Instruction>> insts_);
 
-    void accept(IRVisitor& visitor) override;
+    void accept(IRVisitor &visitor) override;
 };
-}
+} // namespace IR
 
 #endif

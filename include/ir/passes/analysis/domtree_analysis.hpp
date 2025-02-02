@@ -18,7 +18,8 @@ class DomTree {
     //     return domtree.find(block)->second;
     // }
     //
-    // void setDomTree(const std::shared_ptr<BasicBlock>& block, const DomSet& domset) {
+    // void setDomTree(const std::shared_ptr<BasicBlock>& block, const DomSet&
+    // domset) {
     //     domtree[block] = domset;
     // }
     //
@@ -36,10 +37,11 @@ class DomTree {
 // todo: 注意到live分析也对基本块进行了dfs, 能否重用？
 class DomTreeAnalysis : public PM::AnalysisInfo<DomTreeAnalysis> {
 public:
-    DomTree run(Function& f, FAM& fpm);
+    DomTree run(Function &f, FAM &fpm);
+
 private:
     struct INFO {
-        int dfn; // 从0开始
+        int dfn;                          // 从0开始
         std::shared_ptr<BasicBlock> sdom; // semi-dom
         std::shared_ptr<BasicBlock> idom;
         std::shared_ptr<BasicBlock> dfst_parent;
@@ -49,13 +51,14 @@ private:
     std::vector<std::shared_ptr<BasicBlock>> idfn; // 用于通过dfn逆向查找bb
     std::shared_ptr<BasicBlock> entry;
     int SDOM(int i);
-    int SDOM(const std::shared_ptr<BasicBlock>& b);
+    int SDOM(const std::shared_ptr<BasicBlock> &b);
     void dfs();
-    void calcSDOM(); // https://blog.csdn.net/Dong_HFUT/article/details/121375025#Semidominators_76
+    void
+    calcSDOM(); // https://blog.csdn.net/Dong_HFUT/article/details/121375025#Semidominators_76
     void calcIDOM();
-    void analyze(Function& f);
+    void analyze(Function &f);
 };
 
-}
+} // namespace IR
 
 #endif

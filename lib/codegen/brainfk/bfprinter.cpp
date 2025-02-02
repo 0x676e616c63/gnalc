@@ -4,15 +4,12 @@
 #include "../../../include/codegen/brainfk/bfprinter.hpp"
 #include "../../../include/utils/exception.hpp"
 
-namespace BrainFk
-{
-void BFPrinter::printout(const BFModule& module) {
-    const auto& insts = module.getInstructions();
+namespace BrainFk {
+void BFPrinter::printout(const BFModule &module) {
+    const auto &insts = module.getInstructions();
 
-    for (const auto& inst : insts)
-    {
-        switch (inst)
-        {
+    for (const auto &inst : insts) {
+        switch (inst) {
         case BFInst::PTRINC:
             outStream << ">";
             break;
@@ -45,13 +42,11 @@ void BFPrinter::printout(const BFModule& module) {
     outStream << "\n";
 }
 
-void BFPrinter::printout(const BF3tModule& module) {
-    const auto& insts = module.getInstructions();
+void BFPrinter::printout(const BF3tModule &module) {
+    const auto &insts = module.getInstructions();
 
-    for (const auto& inst : insts)
-    {
-        switch (inst)
-        {
+    for (const auto &inst : insts) {
+        switch (inst) {
         case BF3tInst::PTRINC1:
             outStream << ">1";
             break;
@@ -134,5 +129,5 @@ void BFPrinter::printout(const BF3tModule& module) {
 
     outStream << "\n";
 }
-}
+} // namespace BrainFk
 #endif

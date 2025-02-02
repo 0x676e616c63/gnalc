@@ -6,8 +6,7 @@
 
 #include <string>
 
-namespace IR
-{
+namespace IR {
 struct OptInfo {
     bool mem2reg{false};
 };
@@ -15,15 +14,15 @@ struct OptInfo {
 extern const OptInfo o1_opt_info;
 
 class PassBuilder {
-    public:
+public:
     static FPM buildFunctionPipeline(OptInfo opt_info);
     static MPM buildModulePipeline(OptInfo opt_info);
 
     static std::tuple<FAM, MAM> buildAnalysisManager();
 
-    static void registerModuleAnalyses(MAM&);
-    static void registerFunctionAnalyses(FAM&);
-    static void registerProxies(FAM&, MAM&);
+    static void registerModuleAnalyses(MAM &);
+    static void registerFunctionAnalyses(FAM &);
+    static void registerProxies(FAM &, MAM &);
 };
-}
+} // namespace IR
 #endif

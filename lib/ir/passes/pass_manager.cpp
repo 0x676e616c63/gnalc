@@ -11,5 +11,6 @@ template class PassManager<IR::Function>;
 template class AllAnalysesOn<IR::Module>;
 template class AllAnalysesOn<IR::Function>;
 
-template class InnerAnalysisManagerProxy<AnalysisManager<IR::Function>, IR::Module>;
-}
+template class InnerAnalysisManagerProxy<AnalysisManager<IR::Function>,
+                                         IR::Module>;
+} // namespace PM

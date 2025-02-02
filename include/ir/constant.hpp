@@ -12,61 +12,62 @@
 #include <variant>
 
 namespace IR {
-namespace detail
-{
-    // For the sake of convenience, the name of a constant is the string representation of its value.
-    template <typename ValueT, IRBTYPE IRType>
-    class BasicConstant : public Value {
-        ValueT inner_value;
-    public:
-        using value_type = ValueT;
+namespace detail {
+// For the sake of convenience, the name of a constant is the string
+// representation of its value.
+template <typename ValueT, IRBTYPE IRType> class BasicConstant : public Value {
+    ValueT inner_value;
 
-        explicit BasicConstant(ValueT value_)
-            : Value(toIRString(value_), makeBType(IRType), ValueTrait::CONSTANT_LITERAL),
-              inner_value(value_) {}
+public:
+    using value_type = ValueT;
 
-        BasicConstant& operator=(const BasicConstant& rhs) {
-            inner_value = rhs.inner_value;
-            return *this;
-        }
+    explicit BasicConstant(ValueT value_)
+        : Value(toIRString(value_), makeBType(IRType),
+                ValueTrait::CONSTANT_LITERAL),
+          inner_value(value_) {}
 
-        BasicConstant& operator=(ValueT rhs) {
-            inner_value = rhs;
-            return *this;
-        }
+    BasicConstant &operator=(const BasicConstant &rhs) {
+        inner_value = rhs.inner_value;
+        return *this;
+    }
 
-        ValueT getVal() const { return inner_value; }
+    BasicConstant &operator=(ValueT rhs) {
+        inner_value = rhs;
+        return *this;
+    }
 
-        bool operator==(const BasicConstant& rhs) const { return inner_value == rhs.inner_value; }
+    ValueT getVal() const { return inner_value; }
 
-        void accept(IRVisitor& visitor) override;
-    };
-}
+    bool operator==(const BasicConstant &rhs) const {
+        return inner_value == rhs.inner_value;
+    }
+
+    void accept(IRVisitor &visitor) override;
+};
+} // namespace detail
 
 using ConstantI1 = detail::BasicConstant<bool, IRBTYPE::I1>;
 using ConstantI8 = detail::BasicConstant<char, IRBTYPE::I8>;
 using ConstantInt = detail::BasicConstant<int, IRBTYPE::I32>;
 using ConstantFloat = detail::BasicConstant<float, IRBTYPE::FLOAT>;
 
-namespace detail
-{
-    template <typename T>
-    auto getIRConstantTypeHelper() {
-        using U = std::remove_reference_t<std::remove_cv_t<T>>;
-        static_assert(std::is_same_v<U, bool> || std::is_same_v<U, char>
-            || std::is_same_v<U, int> || std::is_same_v<U, float>,
-            "Unexpected type.");
+namespace detail {
+template <typename T> auto getIRConstantTypeHelper() {
+    using U = std::remove_reference_t<std::remove_cv_t<T>>;
+    static_assert(std::is_same_v<U, bool> || std::is_same_v<U, char> ||
+                      std::is_same_v<U, int> || std::is_same_v<U, float>,
+                  "Unexpected type.");
 
-        if constexpr (std::is_same_v<U, bool>)
-            return ConstantI1(false);
-        else if constexpr (std::is_same_v<U, char>)
-            return ConstantI8(0);
-        else if constexpr (std::is_same_v<U, int>)
-            return ConstantInt(0);
-        else if constexpr (std::is_same_v<U, float>)
-            return ConstantFloat(0);
-    }
+    if constexpr (std::is_same_v<U, bool>)
+        return ConstantI1(false);
+    else if constexpr (std::is_same_v<U, char>)
+        return ConstantI8(0);
+    else if constexpr (std::is_same_v<U, int>)
+        return ConstantInt(0);
+    else if constexpr (std::is_same_v<U, float>)
+        return ConstantFloat(0);
 }
+} // namespace detail
 
 // Get IR representation for a cpp basic type:
 // getIRConstantType<int>   -> ConstantInt
@@ -74,6 +75,6 @@ namespace detail
 // ...
 template <typename ValueT>
 using getIRConstantType = decltype(detail::getIRConstantTypeHelper<ValueT>());
-}
+} // namespace IR
 
 #endif

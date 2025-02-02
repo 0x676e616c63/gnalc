@@ -1,7 +1,7 @@
 /**
  * @file base.hpp
  * @brief IR base class: Value User Use...
- * 
+ *
  * @attention 指针问题
  */
 
@@ -20,8 +20,8 @@
 #include <list>
 #include <set>
 
-#include <cstdint>
 #include <cinttypes>
+#include <cstdint>
 
 #include "type.hpp"
 
@@ -34,17 +34,17 @@ class Use;
 // 25.1.2: 目前仅标记了CONST, GLOBAL, FUNCTION, BASICBLOCK
 enum class ValueTrait {
     UNDEFINED,
-    CONSTANT_LITERAL, // 常量字面量
+    CONSTANT_LITERAL,  // 常量字面量
     ORDINARY_VARIABLE, // 一般变量（包含const）
-    GLOBAL_VARIABLE, // 全局变量
-    FUNCTION, // 函数
-    FORMAL_PARAMETER, // 形参（函数）
-    BASIC_BLOCK, // 基本块
-    VOID_INSTRUCTION, // 无值的指令
-    CONDHELPER, // cond中的and, or
-    PHI_OPERAND, // PHI指令操作数
-    BB_FPARAM, // 基本块形参
-    BB_ARG_LIST // 基本块实参列表
+    GLOBAL_VARIABLE,   // 全局变量
+    FUNCTION,          // 函数
+    FORMAL_PARAMETER,  // 形参（函数）
+    BASIC_BLOCK,       // 基本块
+    VOID_INSTRUCTION,  // 无值的指令
+    CONDHELPER,        // cond中的and, or
+    PHI_OPERAND,       // PHI指令操作数
+    BB_FPARAM,         // 基本块形参
+    BB_ARG_LIST        // 基本块实参列表
     // ...
 };
 
@@ -58,77 +58,87 @@ enum class ValueTrait {
 //
 // Use 存有一个 std::weak_ptr<Value> 和 User*
 //
-// 由于 Use 只存储了 裸指针 以及 weak_ptr，User 和 Value 之间并没有在内存上的所有关系。
-// 两大 User, 即 Instruction 和 Constant，其内存分别由 BasicBlock 和 ConstantPool 管理
+// 由于 Use 只存储了 裸指针 以及 weak_ptr，User 和 Value
+// 之间并没有在内存上的所有关系。 两大 User, 即 Instruction 和
+// Constant，其内存分别由 BasicBlock 和 ConstantPool 管理
 //
 // 这样设计 Use 是为了方便转换出 shared_ptr
 // Use 存 User* 而不是 weak_ptr<User> 的原因是，
-// User 通常是通过 make_shared 创建，调用 User 的构造函数时，User 并未由 shared_ptr 管理，
-// 所以此时还不能调用 User 的 weak_from_this/shared_from_this。
-// 而存 User* 也可后面通过 Use::getUser() 中的 user->shared_from_this(); 获得 shared_ptr
-// 这样延后了 shared_from_this 的调用时机，从而正确运行。
-// 而 Value 则无需考虑此事，构造 User 时，Value 通常已有 shared_ptr 管理 (在 BasicBlock 或者 ConstantPool)
+// User 通常是通过 make_shared 创建，调用 User 的构造函数时，User 并未由
+// shared_ptr 管理， 所以此时还不能调用 User 的
+// weak_from_this/shared_from_this。 而存 User* 也可后面通过 Use::getUser() 中的
+// user->shared_from_this(); 获得 shared_ptr 这样延后了 shared_from_this
+// 的调用时机，从而正确运行。 而 Value 则无需考虑此事，构造 User 时，Value
+// 通常已有 shared_ptr 管理 (在 BasicBlock 或者 ConstantPool)
 //
 // 值得注意的是，Use 的构造函数设为了 private，
-// 这是因为 User 通过 make_shared 构造 Use 时，需要添加 Use 的 weak_ptr 到 Value 的 use_list
-// 而调用 Use 的构造函数时，Use 并没有 shared_ptr 管理，不能调用 weak_from_this/shared_from_this，
-// 需要稍后调用 Use::init() 再添加。
-// 设为 private 可以防止其他地方误用，该构造函数只应当被 User 调用，并由它调用 Use::init().
+// 这是因为 User 通过 make_shared 构造 Use 时，需要添加 Use 的 weak_ptr 到 Value
+// 的 use_list 而调用 Use 的构造函数时，Use 并没有 shared_ptr 管理，不能调用
+// weak_from_this/shared_from_this， 需要稍后调用 Use::init() 再添加。 设为
+// private 可以防止其他地方误用，该构造函数只应当被 User 调用，并由它调用
+// Use::init().
 //
-// delUse 也设为了 private，这是因为 Value 的 use_list 由 User 添加，也应当由 User 删除
-// 所以 delUse 不应该被外界调用。
+// delUse 也设为了 private，这是因为 Value 的 use_list 由 User 添加，也应当由
+// User 删除 所以 delUse 不应该被外界调用。
 //
 // TODO:
-// Value 存 weak_ptr<Use> 起初是为了避免循环引用，但现在看来似乎改为 shared_ptr<Use> 也无妨, 因为 Use 只存了 weak_ptr<Value>
-// 但是 weak_ptr<Use> 确实也没啥大问题，而且还能避免 User 忘记删除 Value 的 use_list，
+// Value 存 weak_ptr<Use> 起初是为了避免循环引用，但现在看来似乎改为
+// shared_ptr<Use> 也无妨, 因为 Use 只存了 weak_ptr<Value> 但是 weak_ptr<Use>
+// 确实也没啥大问题，而且还能避免 User 忘记删除 Value 的 use_list，
 // 因为这样会导致该 weak_ptr<Use> expired。
 // 所以暂时不改也没问题。
 
 class Value : public NameC {
     friend class User;
+
 protected:
     std::list<std::weak_ptr<Use>> use_list; // Use隶属于User
-    std::shared_ptr<Type> vtype; // value's type
+    std::shared_ptr<Type> vtype;            // value's type
     ValueTrait trait = ValueTrait::UNDEFINED;
+
 public:
     Value() = delete;
     Value(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait);
 
     std::shared_ptr<Type> getType() const;
 
-    void addUse(const std::weak_ptr<Use>& use);
+    void addUse(const std::weak_ptr<Use> &use);
 
     std::list<std::shared_ptr<Use>> getUseList() const;
-    std::list<std::weak_ptr<Use>>& getRUseList();
+    std::list<std::weak_ptr<Use>> &getRUseList();
 
     // i.e. Replace all uses with, RAUW
-    void replaceSelf(const std::shared_ptr<Value>& new_value)const;
+    void replaceSelf(const std::shared_ptr<Value> &new_value) const;
 
-    virtual void accept(class IRVisitor& visitor) { Err::not_implemented("Value::accept"); }
+    virtual void accept(class IRVisitor &visitor) {
+        Err::not_implemented("Value::accept");
+    }
 
     virtual ~Value();
 
     ValueTrait getVTrait() const { return trait; }
 
 private:
-    // PRIVATE because we want to ensure use is only deleted by User's delOperand.
-    bool delUse(const std::shared_ptr<User>& user);
+    // PRIVATE because we want to ensure use is only deleted by User's
+    // delOperand.
+    bool delUse(const std::shared_ptr<User> &user);
 };
 
-class Use: public std::enable_shared_from_this<Use> {
+class Use : public std::enable_shared_from_this<Use> {
     friend class User;
+
 private:
     std::weak_ptr<Value> val;
-    User* user;
+    User *user;
 
     // PRIVATE because we want to ensure the use is inited.
-    Use(std::weak_ptr<Value> v, User* u);
+    Use(std::weak_ptr<Value> v, User *u);
     void init();
+
 public:
     std::shared_ptr<Value> getValue() const;
     std::shared_ptr<User> getUser() const;
 };
-
 
 /**
  * @brief User是Use的所有者，User的Operands由Use中的val来保存
@@ -141,16 +151,15 @@ public:
     User() = delete;
     User(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait);
 
-    void addOperand(const std::shared_ptr<Value>& v);
+    void addOperand(const std::shared_ptr<Value> &v);
 
-    std::list<std::shared_ptr<Use>>& getOperands();
-    const std::list<std::shared_ptr<Use>>& getOperands() const;
+    std::list<std::shared_ptr<Use>> &getOperands();
+    const std::list<std::shared_ptr<Use>> &getOperands() const;
 
-    bool delOperand(const std::shared_ptr<Value>& v);
+    bool delOperand(const std::shared_ptr<Value> &v);
     bool delOperand(NameRef name);
 
-    template <typename Pred>
-    bool delOperandIf(Pred pred) {
+    template <typename Pred> bool delOperandIf(Pred pred) {
         bool found = false;
         for (auto it = operands.begin(); it != operands.end();) {
             if (pred(*it)) {
@@ -166,35 +175,36 @@ public:
         return found;
     }
 
-    bool replaceUse(const std::shared_ptr<Value>& old_val, const std::shared_ptr<Value>& new_val);
+    bool replaceUse(const std::shared_ptr<Value> &old_val,
+                    const std::shared_ptr<Value> &new_val);
 
-    void accept(IRVisitor& visitor) override = 0;
+    void accept(IRVisitor &visitor) override = 0;
 };
 
-template <typename T>
-std::string toIRString(T value) {
+template <typename T> std::string toIRString(T value) {
     return std::to_string(value);
 }
 
 // Maybe there is some historical reasons :(
-// See https://llvm.org/docs/LangRef.html and https://groups.google.com/g/llvm-dev/c/IlqV3TbSk6M?pli=1
-// A Useful Tool: https://www.h-schmidt.net/FloatConverter/IEEE754.html
-// More info about how llvm check our output float:
-// LLParser: https://github.com/llvm/llvm-project/blob/main/llvm/lib/AsmParser/LLParser.cpp#L6140
-// ConstantFP::isValueValidForType: https://github.com/llvm/llvm-project/blob/main/llvm/lib/IR/Constants.cpp#L1611
-// IEEEFloat::convert: https://github.com/llvm/llvm-project/blob/main/llvm/lib/Support/APFloat.cpp#L2533
-// That's hard to port, orz, so we just convert all float to the hexadecimal form.
-template <>
-inline std::string toIRString(float value) {
+// See https://llvm.org/docs/LangRef.html and
+// https://groups.google.com/g/llvm-dev/c/IlqV3TbSk6M?pli=1 A Useful Tool:
+// https://www.h-schmidt.net/FloatConverter/IEEE754.html More info about how
+// llvm check our output float: LLParser:
+// https://github.com/llvm/llvm-project/blob/main/llvm/lib/AsmParser/LLParser.cpp#L6140
+// ConstantFP::isValueValidForType:
+// https://github.com/llvm/llvm-project/blob/main/llvm/lib/IR/Constants.cpp#L1611
+// IEEEFloat::convert:
+// https://github.com/llvm/llvm-project/blob/main/llvm/lib/Support/APFloat.cpp#L2533
+// That's hard to port, orz, so we just convert all float to the hexadecimal
+// form.
+template <> inline std::string toIRString(float value) {
     char buf[32];
     auto d = static_cast<double>(value);
-    sprintf(buf, "0x%016" PRIX64, *reinterpret_cast<uint64_t*>(&d));
+    sprintf(buf, "0x%016" PRIX64, *reinterpret_cast<uint64_t *>(&d));
     return buf;
 }
 
-inline std::string toIRString(const std::string& value) {
-    return value;
-}
-}
+inline std::string toIRString(const std::string &value) { return value; }
+} // namespace IR
 
 #endif

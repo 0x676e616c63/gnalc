@@ -12,22 +12,17 @@
 #include <string>
 #include <variant>
 
-
 namespace AST {
 
 using int32 = int32_t;
 using float32 = float;
 using string = std::string;
 
-enum class dtype {
-    INT,
-    FLOAT,
-    VOID,
-    UNDEFINED
-};
+enum class dtype { INT, FLOAT, VOID, UNDEFINED };
 
 class num {
     std::variant<int, float> value;
+
 public:
     num(float32 f) : value(f) {}
     num(int32 i) : value(i) {}
@@ -41,6 +36,6 @@ public:
     ~num() = default;
 };
 
-}
+} // namespace AST
 
 #endif

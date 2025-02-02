@@ -7,34 +7,32 @@
 
 #include "../utils/exception.hpp"
 
-#include <vector>
-#include <map>
-#include <set>
-#include <memory>
 #include <list>
+#include <map>
+#include <memory>
+#include <set>
 #include <string>
+#include <vector>
 
-namespace PM
-{
+namespace PM {
 class alignas(8) UniqueKey {};
 
-template <typename UnitT>
-class AllAnalysesOn {
+template <typename UnitT> class AllAnalysesOn {
 public:
-    static UniqueKey* ID() { return &Key; }
+    static UniqueKey *ID() { return &Key; }
 
 private:
     static UniqueKey Key;
 };
 
-template <typename UnitT>
-UniqueKey AllAnalysesOn<UnitT>::Key;
+template <typename UnitT> UniqueKey AllAnalysesOn<UnitT>::Key;
 
 class PreservedAnalyses {
 private:
     static UniqueKey all_analyses_key;
-    std::set<UniqueKey*> preserved;
-    std::set<UniqueKey*> abandoned;
+    std::set<UniqueKey *> preserved;
+    std::set<UniqueKey *> abandoned;
+
 public:
     static PreservedAnalyses none() { return {}; }
 
@@ -44,48 +42,44 @@ public:
         return PA;
     }
 
-    template <typename AnalysisT>
-    void preserve() { preserve(AnalysisT::ID()); }
+    template <typename AnalysisT> void preserve() { preserve(AnalysisT::ID()); }
 
-    template <typename AnalysisT>
-    void abandon() { abandon(AnalysisT::ID()); }
+    template <typename AnalysisT> void abandon() { abandon(AnalysisT::ID()); }
 
-    void preserve(UniqueKey* ID) {
+    void preserve(UniqueKey *ID) {
         abandoned.erase(ID);
         if (!allPreserved())
             preserved.insert(ID);
     }
 
-    void abandon(UniqueKey* ID) {
+    void abandon(UniqueKey *ID) {
         preserved.erase(ID);
         abandoned.insert(ID);
     }
 
-    template <typename AnalysisSetT>
-    void preserveSet() {
+    template <typename AnalysisSetT> void preserveSet() {
         preserveSet(AnalysisSetT::ID());
     }
 
-    void preserveSet(UniqueKey* ID) {
+    void preserveSet(UniqueKey *ID) {
         if (!allPreserved())
             preserved.insert(ID);
     }
 
-    void retain(const PreservedAnalyses& arg) {
-        if (arg.allPreserved()) return;
-        if (allPreserved())
-        {
+    void retain(const PreservedAnalyses &arg) {
+        if (arg.allPreserved())
+            return;
+        if (allPreserved()) {
             *this = arg;
             return;
         }
 
-        for (auto* id : arg.abandoned)
-        {
+        for (auto *id : arg.abandoned) {
             preserved.erase(id);
             abandoned.insert(id);
         }
 
-        for (auto* id : preserved)
+        for (auto *id : preserved)
             if (!arg.preserved.count(id))
                 preserved.erase(id);
     }
@@ -94,55 +88,54 @@ public:
         return abandoned.empty() && preserved.count(&all_analyses_key);
     }
 
-    template <typename T>
-    bool isPreserved() const {
+    template <typename T> bool isPreserved() const {
         return isPreserved(T::ID());
     }
 
-    bool isPreserved(UniqueKey* ID) const {
-        return !abandoned.count(ID) && (preserved.count(ID) || preserved.count(&all_analyses_key));
+    bool isPreserved(UniqueKey *ID) const {
+        return !abandoned.count(ID) &&
+               (preserved.count(ID) || preserved.count(&all_analyses_key));
     }
 };
 
-template <typename UnitT, typename AnalysisManagerT>
-class PassConcept {
+template <typename UnitT, typename AnalysisManagerT> class PassConcept {
 public:
     virtual ~PassConcept() = default;
-    virtual PreservedAnalyses run(UnitT& unit, AnalysisManagerT& manager) = 0;
+    virtual PreservedAnalyses run(UnitT &unit, AnalysisManagerT &manager) = 0;
 };
 
 template <typename UnitT, typename PassT, typename AnalysisManagerT>
 class PassModel : public PassConcept<UnitT, AnalysisManagerT> {
 public:
-    explicit PassModel(PassT pass_) : pass(std::move(pass_)) { }
+    explicit PassModel(PassT pass_) : pass(std::move(pass_)) {}
 
-    PassModel(const PassModel& arg) : pass(arg.Pass) { }
+    PassModel(const PassModel &arg) : pass(arg.Pass) {}
 
-    PassModel(PassModel&& arg) noexcept : pass(std::move(arg.Pass)) { }
+    PassModel(PassModel &&arg) noexcept : pass(std::move(arg.Pass)) {}
 
-    PreservedAnalyses run(UnitT& unit, AnalysisManagerT& manager) override {
+    PreservedAnalyses run(UnitT &unit, AnalysisManagerT &manager) override {
         return pass.run(unit, manager);
     }
 
     PassT pass;
 };
 
-class AnalysisResultConcept { };
+class AnalysisResultConcept {};
 
 template <typename ResultT>
 class AnalysisResultModel : public AnalysisResultConcept {
 public:
-    explicit AnalysisResultModel(ResultT result_) : result(std::move(result_)) {}
+    explicit AnalysisResultModel(ResultT result_)
+        : result(std::move(result_)) {}
     ResultT result;
 };
 
-template <typename UnitT>
-class AnalysisManager;
+template <typename UnitT> class AnalysisManager;
 
-template <typename UnitT>
-class AnalysisPassConcept {
+template <typename UnitT> class AnalysisPassConcept {
 public:
-    virtual std::unique_ptr<AnalysisResultConcept> run(UnitT& unit, AnalysisManager<UnitT>& am) = 0;
+    virtual std::unique_ptr<AnalysisResultConcept>
+    run(UnitT &unit, AnalysisManager<UnitT> &am) = 0;
     virtual ~AnalysisPassConcept() = default;
 };
 
@@ -152,66 +145,68 @@ public:
     using ResultModelT = AnalysisResultModel<typename PassT::Result>;
     PassT pass;
 
-    explicit AnalysisPassModel(PassT pass_) : pass(std::move(pass_)) { }
+    explicit AnalysisPassModel(PassT pass_) : pass(std::move(pass_)) {}
 
-    AnalysisPassModel(const AnalysisPassModel& Arg) : pass(Arg.pass) { }
+    AnalysisPassModel(const AnalysisPassModel &Arg) : pass(Arg.pass) {}
 
-    AnalysisPassModel(AnalysisPassModel&& Arg) noexcept : pass(std::move(Arg.pass)) { }
+    AnalysisPassModel(AnalysisPassModel &&Arg) noexcept
+        : pass(std::move(Arg.pass)) {}
 
-    friend void swap(AnalysisPassModel& lhs, AnalysisPassModel& rhs) noexcept {
+    friend void swap(AnalysisPassModel &lhs, AnalysisPassModel &rhs) noexcept {
         using std::swap;
         swap(lhs.Pass, rhs.Pass);
     }
 
-    AnalysisPassModel& operator=(AnalysisPassModel item) {
+    AnalysisPassModel &operator=(AnalysisPassModel item) {
         swap(*this, item);
         return *this;
     }
 
-    std::unique_ptr<AnalysisResultConcept> run(UnitT& unit, AnalysisManager<UnitT>& am) override {
+    std::unique_ptr<AnalysisResultConcept>
+    run(UnitT &unit, AnalysisManager<UnitT> &am) override {
         return std::make_unique<ResultModelT>(pass.run(unit, am));
     }
 };
 
-template <typename DerivedT>
-class PassInfo {};
+template <typename DerivedT> class PassInfo {};
 
-template <typename DerivedT>
-class AnalysisInfo {
+template <typename DerivedT> class AnalysisInfo {
 public:
-    static UniqueKey* ID() {
+    static UniqueKey *ID() {
         static_assert(std::is_base_of_v<AnalysisInfo, DerivedT>,
                       "The template argument should be the derived type.");
         return &DerivedT::Key;
     }
 };
 
-template <typename UnitT>
-class AnalysisManager {
+template <typename UnitT> class AnalysisManager {
 public:
     using PassConceptT = AnalysisPassConcept<UnitT>;
+
 private:
     // Unit -> all of its Results
-    using unit_res_t = std::list<std::pair<UniqueKey*, std::unique_ptr<AnalysisResultConcept>>>;
-    using all_res_t = std::map<UnitT*, unit_res_t>;
+    using unit_res_t = std::list<
+        std::pair<UniqueKey *, std::unique_ptr<AnalysisResultConcept>>>;
+    using all_res_t = std::map<UnitT *, unit_res_t>;
     // Certain Pass -> Result
-    using index_t = std::map<std::pair<UniqueKey *, UnitT *>, unit_res_t::iterator>;
+    using index_t =
+        std::map<std::pair<UniqueKey *, UnitT *>, unit_res_t::iterator>;
 
-    std::map<UniqueKey*, std::unique_ptr<PassConceptT>> passes;
+    std::map<UniqueKey *, std::unique_ptr<PassConceptT>> passes;
     all_res_t results;
     index_t index;
+
 public:
     AnalysisManager() = default;
-    AnalysisManager(AnalysisManager&&) = default;
-    AnalysisManager& operator=(AnalysisManager&&) noexcept = default;
+    AnalysisManager(AnalysisManager &&) = default;
+    AnalysisManager &operator=(AnalysisManager &&) noexcept = default;
 
     void clear() {
         results.clear();
         index.clear();
     }
 
-    template <typename PassT>
-    typename PassT::Result& getResult(UnitT& unit) {
+    template <typename PassT> typename PassT::Result &getResult(UnitT &unit) {
         const auto pass_id = PassT::ID();
         Err::gassert(passes.count(pass_id), "No such pass registered.");
 
@@ -229,34 +224,33 @@ public:
         }
 
         using ResultModel = AnalysisResultModel<typename PassT::Result>;
-        return static_cast<ResultModel&>(*it->second->second).result;
+        return static_cast<ResultModel &>(*it->second->second).result;
     }
 
-    template <typename PassGetter>
-    bool registerPass(PassGetter&& pass_getter) {
+    template <typename PassGetter> bool registerPass(PassGetter &&pass_getter) {
         using PassT = decltype(pass_getter());
         using PassModelT = AnalysisPassModel<UnitT, PassT>;
 
-        auto& pass = passes[PassT::ID()];
-        if (pass) return false;
+        auto &pass = passes[PassT::ID()];
+        if (pass)
+            return false;
         pass.reset(new PassModelT(pass_getter()));
         return true;
     }
 
-    void invalidate(UnitT& unit, const PreservedAnalyses& pa) {
-        if (pa.allPreserved()) return;
+    void invalidate(UnitT &unit, const PreservedAnalyses &pa) {
+        if (pa.allPreserved())
+            return;
 
-        auto& unit_res = results[&unit];
+        auto &unit_res = results[&unit];
 
-        for (auto it = unit_res.begin(); it != unit_res.end();)
-        {
+        for (auto it = unit_res.begin(); it != unit_res.end();) {
             auto pass_id = it->first;
-            if (!pa.isPreserved(pass_id))
-            {
+            if (!pa.isPreserved(pass_id)) {
                 unit_res.erase(it);
                 index.erase({pass_id, &unit});
-            }
-            else ++it;
+            } else
+                ++it;
         }
     }
 };
@@ -270,34 +264,34 @@ protected:
 public:
     explicit PassManager() = default;
 
-    PassManager(PassManager&& arg) noexcept : passes(std::move(arg.passes)) { }
+    PassManager(PassManager &&arg) noexcept : passes(std::move(arg.passes)) {}
 
-    PassManager& operator=(PassManager&& rhs) noexcept {
+    PassManager &operator=(PassManager &&rhs) noexcept {
         passes = std::move(rhs.passes);
         return *this;
     }
 
     template <typename PassT>
     std::enable_if_t<!std::is_same_v<PassT, PassManager>>
-    addPass(PassT&& pass) {
+    addPass(PassT &&pass) {
         using PassModelT = PassModel<UnitT, PassT, AnalysisManager<UnitT>>;
         // comment from LLVM:
         // Do not use make_unique or emplace_back, they cause too many template
         // instantiations, causing terrible compile times.
-        passes.push_back(std::unique_ptr<PassConceptT>(new PassModelT(std::forward<PassT>(pass))));
+        passes.push_back(std::unique_ptr<PassConceptT>(
+            new PassModelT(std::forward<PassT>(pass))));
     }
 
     template <typename PassT>
-    std::enable_if_t<std::is_same_v<PassT, PassManager>>
-    addPass(PassT&& pass) {
-        for (auto& P : pass.passes)
+    std::enable_if_t<std::is_same_v<PassT, PassManager>> addPass(PassT &&pass) {
+        for (auto &P : pass.passes)
             passes.push_back(std::move(P));
     }
 
-    PreservedAnalyses run(UnitT& unit, AnalysisManager<UnitT>& am) {
+    PreservedAnalyses run(UnitT &unit, AnalysisManager<UnitT> &am) {
         PreservedAnalyses pa = PreservedAnalyses::all();
 
-        for (auto& pass : passes) {
+        for (auto &pass : passes) {
             PreservedAnalyses curr_pa = pass->run(unit, am);
             am.invalidate(unit, curr_pa);
             pa.retain(curr_pa);
@@ -318,8 +312,7 @@ public:
     public:
         explicit Result(AnalysisManagerT &inner_am_) : inner_am(&inner_am_) {}
 
-        Result(Result &&arg) noexcept
-          : inner_am(std::move(arg.inner_am)) {
+        Result(Result &&arg) noexcept : inner_am(std::move(arg.inner_am)) {
             arg.inner_am = nullptr;
         }
 
@@ -335,7 +328,7 @@ public:
             return *this;
         }
 
-        AnalysisManagerT& getManager() { return *inner_am; }
+        AnalysisManagerT &getManager() { return *inner_am; }
 
     private:
         AnalysisManagerT *inner_am;
@@ -344,9 +337,7 @@ public:
     explicit InnerAnalysisManagerProxy(AnalysisManagerT &InnerAM)
         : inner_am(&InnerAM) {}
 
-    Result run(UnitT &, AnalysisManager<UnitT> &) {
-        return Result(*inner_am);
-    }
+    Result run(UnitT &, AnalysisManager<UnitT> &) { return Result(*inner_am); }
 
 private:
     friend AnalysisInfo<InnerAnalysisManagerProxy<AnalysisManagerT, UnitT>>;
@@ -356,5 +347,5 @@ private:
 
 template <typename AnalysisManagerT, typename UnitT>
 UniqueKey InnerAnalysisManagerProxy<AnalysisManagerT, UnitT>::Key;
-}
+} // namespace PM
 #endif

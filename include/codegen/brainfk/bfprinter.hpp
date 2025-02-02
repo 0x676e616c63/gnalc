@@ -11,16 +11,17 @@
 
 namespace BrainFk {
 class BFPrinter {
-    std::ostream& outStream;
-    public:
-    explicit BFPrinter(std::ostream& outStream_) : outStream(outStream_) {}
+    std::ostream &outStream;
 
-    void printout(const BFModule& module);
+public:
+    explicit BFPrinter(std::ostream &outStream_) : outStream(outStream_) {}
 
-    void printout(const BF3tModule& module);
+    void printout(const BFModule &module);
 
-    void printout_multiline(const BF3tModule& module);
+    void printout(const BF3tModule &module);
+
+    void printout_multiline(const BF3tModule &module);
 };
-}
+} // namespace BrainFk
 #endif
 #endif

@@ -3,7 +3,7 @@
 
 std::shared_ptr<AST::CompUnit> node = nullptr;
 
-int main(int argc, char **argv){
+int main(int argc, char **argv) {
     yy::parser parser;
     parser.parse();
 

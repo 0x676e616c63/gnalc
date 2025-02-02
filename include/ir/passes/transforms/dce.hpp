@@ -10,5 +10,5 @@ public:
     static PM::PreservedAnalyses run(Function &function, FAM &manager);
 };
 
-}
+} // namespace IR
 #endif
