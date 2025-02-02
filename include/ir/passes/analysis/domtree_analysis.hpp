@@ -2,30 +2,30 @@
 #ifndef GNALC_IR_PASSES_ANALYSIS_DOMTREE_ANALYSIS_HPP
 #define GNALC_IR_PASSES_ANALYSIS_DOMTREE_ANALYSIS_HPP
 
-#include "../../base.hpp"
 #include "../pass_manager.hpp"
 
 namespace IR {
 
-// TODO
+// 如果只需要获得DomSet就不需要树形结构了？
+using DomSet = std::set<std::shared_ptr<BasicBlock>>;
+struct DomTree {
+    struct Node {
+        std::shared_ptr<BasicBlock> bb;
+        std::shared_ptr<Node> parent; // 就是idom
+        std::vector<std::shared_ptr<Node>> children;
 
-class DomTree {
-    // todo: need to refactor
-    // using DomSet = std::set<std::shared_ptr<BasicBlock>>;
-    // std::unordered_map<std::shared_ptr<BasicBlock>, DomSet> domtree;
-    // public:
-    // DomSet& getDomSet(const std::shared_ptr<BasicBlock>& block) {
-    //     return domtree.find(block)->second;
-    // }
-    //
-    // void setDomTree(const std::shared_ptr<BasicBlock>& block, const DomSet&
-    // domset) {
-    //     domtree[block] = domset;
-    // }
-    //
-    // void reset() {
-    //     domtree.clear();
-    // }
+        explicit Node(const std::shared_ptr<BasicBlock> &bb) : bb(bb) {}
+    };
+    std::shared_ptr<Node> root;
+    std::unordered_map<std::shared_ptr<BasicBlock>, std::shared_ptr<Node>> nodes;
+    bool ADomB(const std::shared_ptr<BasicBlock>& a, const std::shared_ptr<BasicBlock>& b);
+    DomSet getDomSet(const std::shared_ptr<BasicBlock>& b);
+    void printDomTree();
+private:
+    void print(const std::shared_ptr<Node> &node, int level);
+    void initDTN(std::vector<std::shared_ptr<BasicBlock>> &blocks);
+    void linkDTN(const std::shared_ptr<BasicBlock> &b, const std::shared_ptr<BasicBlock> &idom);
+    friend class DomTreeAnalysis;
 };
 
 // Semi-NCA 算法
@@ -34,28 +34,60 @@ class DomTree {
 // https://blog.csdn.net/dashuniuniu/article/details/103462147
 // https://zhuanlan.zhihu.com/p/586372481
 // https://zhuanlan.zhihu.com/p/365912693
+// todo: 快速更新？
 // todo: 注意到live分析也对基本块进行了dfs, 能否重用？
 class DomTreeAnalysis : public PM::AnalysisInfo<DomTreeAnalysis> {
 public:
     DomTree run(Function &f, FAM &fpm);
 
 private:
-    struct INFO {
-        int dfn;                          // 从0开始
-        std::shared_ptr<BasicBlock> sdom; // semi-dom
-        std::shared_ptr<BasicBlock> idom;
-        std::shared_ptr<BasicBlock> dfst_parent;
-        std::vector<std::shared_ptr<BasicBlock>> dfst_children;
-    };
-    std::unordered_map<std::shared_ptr<BasicBlock>, INFO> dt_info;
-    std::vector<std::shared_ptr<BasicBlock>> idfn; // 用于通过dfn逆向查找bb
-    std::shared_ptr<BasicBlock> entry;
-    int SDOM(int i);
-    int SDOM(const std::shared_ptr<BasicBlock> &b);
-    void dfs();
-    void
-    calcSDOM(); // https://blog.csdn.net/Dong_HFUT/article/details/121375025#Semidominators_76
-    void calcIDOM();
+    using pBB = std::shared_ptr<BasicBlock>;
+    struct {
+        struct DFS_TREE_NODE {
+            pBB bb;
+            int _dfn;
+            pBB dfs_parent;
+            std::vector<pBB> dfs_children;
+            pBB _sdom;
+            pBB _idom;
+            pBB _tmp_ancester; // 用于逆序求递归sdom时进行简单优化；可能未被赋值
+        };
+        std::unordered_map<pBB, DFS_TREE_NODE> node_map;
+        std::vector<pBB> idfn;
+        int index = 0;
+        int dfn(const pBB &b) { return node_map[b]._dfn; }
+        pBB sdom(const pBB &b) { return node_map[b]._sdom; }
+        pBB idom(const pBB &b) { return node_map[b]._idom; }
+        bool visited(const pBB &b) { return node_map.find(b) != node_map.end(); }
+        void linkDFSTN(const pBB &parent, const pBB &child) {
+            node_map[parent].dfs_children.emplace_back(child);
+            node_map[child].dfs_parent = parent;
+        }
+        void addDFSTN(const pBB &b) {
+            node_map[b] = {b, index++};
+            idfn.emplace_back(b);
+        }
+        pBB recurSDOM(const pBB &cur_b, const pBB &pre_b) {
+            // 仅用于dfn(cur_b) < dfn(pre_b)
+            // todo: 利用并查集优化？
+            if (node_map[pre_b]._tmp_ancester == nullptr) {
+                node_map[pre_b]._tmp_ancester = node_map[pre_b]._sdom;
+            }
+            auto candidate = node_map[pre_b]._tmp_ancester;
+            while (dfn(candidate) > dfn(cur_b)) {
+                candidate = node_map[candidate]._tmp_ancester;
+            }
+            node_map[pre_b]._tmp_ancester = candidate;
+            return candidate;
+        }
+    } info;
+    pBB entry = nullptr;
+    DomTree domtree;
+    void buildDFST();
+    // https://blog.csdn.net/Dong_HFUT/article/details/121375025#Semidominators_76
+    void calcSDOM();
+    // void calcIDOM();
+    // https://qaqcxh.github.io/Blogs/graph%20theory/DominatorTheory.html#6-semi-nca%E7%AE%97%E6%B3%95
     void analyze(Function &f);
 };
 

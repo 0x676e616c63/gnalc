@@ -5,27 +5,78 @@
 #include "../../../../include/utils/logger.hpp"
 
 namespace IR {
-int DomTreeAnalysis::SDOM(const int i) {
-    return dt_info[dt_info[idfn[i]].sdom].dfn;
-}
+    bool DomTree::ADomB(const std::shared_ptr<BasicBlock> &a, const std::shared_ptr<BasicBlock> &b) {
+        if (nodes[a] == root) return true;
+        if (a == b) return true;
+        auto _b = nodes[b];
+        while (_b != root) {
+            _b = _b->parent;
+            if (nodes[a] == _b) return true;
+        }
+        return false;
+    }
 
-int DomTreeAnalysis::SDOM(const std::shared_ptr<BasicBlock> &b) {
-    return dt_info[dt_info[b].sdom].dfn;
-}
+    DomSet DomTree::getDomSet(const std::shared_ptr<BasicBlock> &b) {
+        DomSet domset = {b};
+        auto _b = nodes[b];
+        do {
+            _b = _b->parent;
+            domset.insert(_b->bb);
+        } while (_b != root);
+        return domset;
+    }
 
-void DomTreeAnalysis::dfs() {
-    // todo: 构造DFS TREE
-    int index = 0;
-    std::stack<std::shared_ptr<BasicBlock>> dfs_stack;
-    dfs_stack.push(entry);
-    idfn.clear();
+    void DomTree::printDomTree() {
+        std::cout << "DomTree:" << std::endl;
+        print(root, 0);
+    }
+
+    void DomTree::print(const std::shared_ptr<Node> &node, int level) {
+        if (node == nullptr) return;
+        for (int i = 0; i < level; i++) {
+            std::cout << "|   ";
+        }
+        std::cout << node->bb->getName()  << std::endl;
+        level++;
+        for (auto & n : node->children) {
+            print(n, level);
+        }
+    }
+
+    void DomTree::initDTN(std::vector<std::shared_ptr<BasicBlock>> &blocks) {
+        for (auto &block : blocks) {
+            nodes[block] = std::make_shared<Node>(block);
+        }
+        root = nodes[blocks.front()];
+    }
+
+    void DomTree::linkDTN(const std::shared_ptr<BasicBlock> &b, const std::shared_ptr<BasicBlock> &idom) {
+        if (nodes[b] == root) {
+            // root = nodes[b];
+        } else if (idom == b) {
+            Err::unreachable("DomTree::linkDTN");
+        } else {
+            nodes[b]->parent = nodes[idom];
+            nodes[idom]->children.emplace_back(nodes[b]);
+        }
+    }
+
+    DomTree DomTreeAnalysis::run(Function &f, FAM &fpm) {
+        analyze(f);
+        return domtree;
+    }
+
+    void DomTreeAnalysis::buildDFST() {
+    std::stack<std::pair<pBB, pBB>> dfs_stack; // {node, parent}
+    dfs_stack.push({entry, nullptr});
     while (!dfs_stack.empty()) {
-        if (dt_info.find(dfs_stack.top()) == dt_info.end()) {
-            dt_info[dfs_stack.top()] = {index++};
-            idfn.push_back(dfs_stack.top()); // 这里保证idfn的索引与index相同
-            auto nxt_bbs = dfs_stack.top()->getNextBB();
+        auto [cur, parent] = dfs_stack.top();
+        if (!info.visited(cur)) {
+            info.addDFSTN(cur);
+            info.linkDFSTN(parent, cur);
+            auto nxt_bbs = cur->getNextBB();
             for (auto it = nxt_bbs.rbegin(); it != nxt_bbs.rend(); ++it) {
-                dfs_stack.push(*it);
+                dfs_stack.push({*it, cur});
             }
         }
         dfs_stack.pop();
@@ -33,37 +84,45 @@ void DomTreeAnalysis::dfs() {
 }
 
 void DomTreeAnalysis::calcSDOM() {
-    for (auto it = idfn.rbegin(); it != idfn.rend(); ++it) {
-        int candidate = dt_info[*it].dfn;
+    for (auto it = info.idfn.rbegin(); it != info.idfn.rend(); ++it) {
+        pBB candidate = *it;
         for (const auto &p : (*it)->getPreBB()) {
-            if (dt_info[p].dfn < dt_info[*it].dfn) {
-                if (dt_info[p].dfn < candidate) {
-                    candidate = dt_info[p].dfn;
+            if (info.dfn(p) <= info.dfn(*it)) {
+                if (info.dfn(p) < info.dfn(candidate)) {
+                    candidate = p;
                 }
             } else {
-                // todo: 利用并查集优化？
-                int candidate2 = SDOM(p);
-                while (candidate2 >= dt_info[*it].dfn) {
-                    candidate2 = SDOM(candidate2);
-                }
-                if (candidate2 < candidate) {
+                auto candidate2 = info.recurSDOM(*it, p);
+                if (info.dfn(candidate2) < info.dfn(candidate)) {
                     candidate = candidate2;
                 }
             }
         }
-        dt_info[*it].sdom = idfn[candidate];
+        info.node_map[*it]._sdom = candidate;
     }
 }
 
-void DomTreeAnalysis::calcIDOM() {
-    // TODO
-}
+// void DomTreeAnalysis::calcIDOM() {
+//     // Semi-NCA 直接在构建DT过程计算 IDOM
+// }
 
 void DomTreeAnalysis::analyze(Function &f) {
     entry = f.getBlocks().front();
-    dfs();
+    buildDFST();
     calcSDOM();
-    calcIDOM();
-    // TODO 根据idom构建domtree
+    // calcIDOM();
+    domtree.initDTN(info.idfn);
+    for (auto key : info.idfn) {
+        // 3个树图MD越看越迷...
+        auto dfs_tree_node = info.node_map[key]; // DFS SPANNING TREE'S NODE
+        auto dfs_tree_parent = dfs_tree_node.dfs_parent; // DFS SPANNING TREE'S PARENT NODE
+        auto cur_dom_tree_node = domtree.nodes[dfs_tree_parent]; // DomTree's Node
+        while (info.dfn(cur_dom_tree_node->bb) > info.dfn(dfs_tree_node._sdom)) {
+            cur_dom_tree_node = cur_dom_tree_node->parent;
+        }
+        dfs_tree_node._idom = cur_dom_tree_node->bb;
+        // result need to fix when idom is not equal to sdom??
+        domtree.linkDTN(dfs_tree_node.bb, dfs_tree_node._idom);
+    }
 }
 } // namespace IR
