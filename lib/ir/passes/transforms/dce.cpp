@@ -1,71 +1,72 @@
 #include "../../../../include/ir/passes/transforms/dce.hpp"
-
 #include "../../../../include/ir/instructions/control.hpp"
 
-#include <bits/valarray_before.h>
+#include <algorithm>
 
 namespace IR {
-PM::PreservedAnalyses DeadCodeEliminationPass::run() {
+PM::PreservedAnalyses DeadCodeEliminationPass::run(Function &function, FAM &manager) {
+    // Maybe write a new pass for side effect?
+    // Or just make it a member function.
+    // auto side_effect_checker = manager.getResult<SideEffectAnalysis>(function);
+
     //flag:
-    bool madeChange = true;
-    while (madeChange) {
-        madeChange = false;
-        std::vector<std::shared_ptr<Instruction> > worklist;
-        for (auto block : func) {
-            for (auto insts = block->getInsts().rbegin();
-                 insts != block->getInsts().rend();) {
+    bool modified = true;
+    while (modified) {
+        modified = false;
+        worklist.clear();
+        for (const auto& block : function) {
+            for (auto insts = block->getInsts().rbegin(); insts != block->getInsts().rend();) {
                 auto inst = *insts;
                 --insts;
-                if (std::find(worklist.begin(), worklist.end(), inst) ==
-                    worklist.end()) {
-                    madeChange |= dceInst(inst, worklist);
+                if (std::find(worklist.begin(), worklist.end(), inst) == worklist.end()) {
+                    modified |= visitInst(inst);
                 }
             }
             while (!worklist.empty()) {
                 auto inst_ = worklist.back();
                 worklist.pop_back();
-                madeChange |= dceInst(inst_, worklist);
+                modified |= visitInst(inst_);
             }
 //TODO function side effect and constant return analysis
         }
     }
+
+    return PM::PreservedAnalyses::none();
 }
 
-bool DeadCodeEliminationPass::dceInst(std::shared_ptr<Instruction> inst,
-                                      std::vector<std::shared_ptr<Instruction> >
-                                      &worklist) {
-
-    if (isDeadInst(inst)) {
+bool DeadCodeEliminationPass::visitInst(const std::shared_ptr<Instruction>& inst) {
+    if (!isCritical(inst)) {
         for (auto &use : inst->getOperands()) {
             auto op = use->getValue();
             if (auto inst_ =std::dynamic_pointer_cast<Instruction>(op)) {
-                if (isDeadInst(inst_))
-                    worklist.push_back(inst_);
+                if (!isCritical(inst_))
+                    worklist.emplace_back(inst_);
             }
         }
         return true;
     }
     return false;
 }
-bool DeadCodeEliminationPass::isDeadInst(std::shared_ptr<Instruction> inst) {
-    if (auto phi=std::dynamic_pointer_cast<PHIInst>(inst)) {
-        if (HandPhi(phi)) {
-            return true;
+bool DeadCodeEliminationPass::isCritical(const std::shared_ptr<Instruction>& inst) {
+    if (inst->getOperands().empty())
+        return false;
+
+    if (auto phi= std::dynamic_pointer_cast<PHIInst>(inst)) {
+        if (visitPhi(phi)) {
+            return false;
         }
-        return false;
+        return true;
     }
-    if (!inst->getOperands().empty())
-        return false;
-    if (auto br =std::dynamic_pointer_cast<BRInst>(inst))
-        return false;
-    if (auto call=std::dynamic_pointer_cast<CALLInst>(inst))
-        return false;
-    if (auto ret=std::dynamic_pointer_cast<RETInst>(inst))
-        return false;
+    if (inst->getOpcode() == OP::BR)
+        return true;
+    if (inst->getOpcode() == OP::CALL)
+        return true;
+    if (inst->getOpcode() == OP::RET)
+        return true;
 //TODO have side effect->true
-    return false;
+    return true;
 }
-bool DeadCodeEliminationPass::HandPhi(std::shared_ptr<PHIInst> phi) {
+bool DeadCodeEliminationPass::visitPhi(const std::shared_ptr<PHIInst>& phi) {
     if (phi->getOperands().size()==0)
         return true;
     if (phi->getOperands().size()==1) {
@@ -73,7 +74,7 @@ bool DeadCodeEliminationPass::HandPhi(std::shared_ptr<PHIInst> phi) {
         //TODO
     }
 }
-bool DeadCodeEliminationPass::DeadPhiCycle(std::shared_ptr<PHIInst> phi, std::set<std::shared_ptr<PHIInst> > potentiallyDeadPhis) {
+bool DeadCodeEliminationPass::checkDeadPhiCycle(const std::shared_ptr<PHIInst>& phi, std::set<std::shared_ptr<PHIInst>>& potentiallyDeadPhis) {
     //TODO
 }
 
