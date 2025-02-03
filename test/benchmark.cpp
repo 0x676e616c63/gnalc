@@ -118,17 +118,41 @@ void sighandler(int)
     exit(-1);
 }
 
-auto a_tmp = benchmark_data.mode1 = "clang-o0";
+// auto a_tmp = benchmark_data.mode1 = "clang-o0";
+// TestData get_mode1_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
+//     auto clang_irgen = [](const std::string& newsy, const std::string& outll) {
+//         auto ret = format("sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int getfarray(float a[]);void putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, float a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define starttime() _sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
+//                                 " && clang -O0 -Xclang -disable-O0-optnone -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null",
+//                                 newsy,
+//                                 newsy, outll);
+//
+//         return ret;
+//     };
+//
+//     return TestData{
+//         .sy = sy,
+//         .sylib = sylib_to_link,
+//         .temp_dir = curr_temp_dir,
+//         .mode_id = benchmark_data.mode1,
+//         .irgen = clang_irgen
+//     };
+// }
+
+
+auto a_tmp = benchmark_data.mode1 = "clang-mem2reg";
 TestData get_mode1_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
     auto clang_irgen = [](const std::string& newsy, const std::string& outll) {
+        auto out_o0_ll = outll + ".o0.ll";
         auto ret = format("sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int getfarray(float a[]);void putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, float a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define starttime() _sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
                                 " && clang -O0 -Xclang -disable-O0-optnone -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null",
                                 newsy,
-                                newsy, outll);
+                                newsy, out_o0_ll);
+
+        ret += format("&& opt {} -S {} -o {}",
+               "-passes=mem2reg", out_o0_ll, outll);
 
         return ret;
     };
-
     return TestData{
         .sy = sy,
         .sylib = sylib_to_link,
@@ -137,6 +161,7 @@ TestData get_mode1_data(const directory_entry& sy, const std::string& sylib_to_l
         .irgen = clang_irgen
     };
 }
+
 
 // auto b_tmp = benchmark_data.mode2 = "gnalc";
 // TestData get_mode2_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
@@ -154,7 +179,7 @@ TestData get_mode1_data(const directory_entry& sy, const std::string& sylib_to_l
 //     };
 // }
 
-auto b_tmp = benchmark_data.mode2 = "clang-loop-unroll-full";
+auto b_tmp = benchmark_data.mode2 = "clang-dce";
 TestData get_mode2_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
     auto clang_irgen = [](const std::string& newsy, const std::string& outll) {
         auto out_o0_ll = outll + ".o0.ll";
@@ -164,7 +189,7 @@ TestData get_mode2_data(const directory_entry& sy, const std::string& sylib_to_l
                                 newsy, out_o0_ll);
 
         ret += format("&& opt {} -S {} -o {}",
-               "-passes=loop-unroll-full", out_o0_ll, outll);
+               "-passes=mem2reg,dce", out_o0_ll, outll);
 
         return ret;
     };
