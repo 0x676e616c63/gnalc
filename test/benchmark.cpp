@@ -29,8 +29,15 @@ using namespace std::filesystem;
 struct BenchmarkData {
     std::string mode1;
     std::string mode2;
-    std::vector<std::pair<TestData, TestResult>> results1;
-    std::vector<std::pair<TestData, TestResult>> results2;
+
+    struct Item {
+        TestData data;
+        TestResult res;
+        std::string source_output;
+        bool success{};
+    };
+    std::vector<Item> results1;
+    std::vector<Item> results2;
 };
 
 struct RatioData {
@@ -51,13 +58,12 @@ void write_benchmark_result_to(const BenchmarkData& data, std::ostream& out) {
     };
 
     for (size_t i = 0; i < data.results1.size() && i < data.results2.size(); ++i) {
-        const auto &test1 = data.results1[i].first;
-        const auto &test2 = data.results2[i].first;
-        const auto& res1 = data.results1[i].second;
-        const auto& res2 = data.results2[i].second;
+        const auto& [test1, res1, ll1, success1] = data.results1[i];
+        const auto& [test2, res2, ll2, success2] = data.results2[i];
+
         Err::gassert(test1.sy == test2.sy);
 
-        if (res1.time_elapsed == 0 || res2.time_elapsed == 0) {
+        if (!success1 || !success2) {
             println(out, "<{}> {}:", i, test1.sy.path().stem().string());
             println(out, "Skipped failed tests.");
             println(out, "----------");
@@ -74,10 +80,13 @@ void write_benchmark_result_to(const BenchmarkData& data, std::ostream& out) {
         total2 += res2.time_elapsed;
 
         println(out, "<{}> {}:", i, test1.sy.path().stem().string());
+        println(out, "'{}' ll output: {}", test1.mode_id, res1.source_output);
         println(out, "'{}': {}us", test1.mode_id, res1.time_elapsed);
+        println(out, "'{}' ll output: {}", test2.mode_id, res2.source_output);
         println(out, "'{}': {}us", test2.mode_id, res2.time_elapsed);
         println(out, "'{}' is {}x faster than '{}'.",
             test2.mode_id, ratio(res1.time_elapsed, res2.time_elapsed), test1.mode_id);
+
         println(out, "----------");
     }
 
@@ -92,10 +101,10 @@ void write_benchmark_result_to(const BenchmarkData& data, std::ostream& out) {
     println(out, "On average, '{}' is {}x faster than '{}'.",
         data.mode2, average_ratio, data.mode1);
 
-    println(out, "Faster:");
+    println(out, "Fastest:");
     println(out,"{}: {}x", max->testcase, max->ratio);
 
-    println(out, "Slower:");
+    println(out, "Slowest:");
     println(out,"{}: {}x", min->testcase, min->ratio);
 }
 
@@ -109,17 +118,13 @@ void sighandler(int)
     exit(-1);
 }
 
-auto a_tmp = benchmark_data.mode1 = "clangO0";
+auto a_tmp = benchmark_data.mode1 = "clang-o0";
 TestData get_mode1_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
     auto clang_irgen = [](const std::string& newsy, const std::string& outll) {
         auto ret = format("sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int getfarray(float a[]);void putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, float a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define starttime() _sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
-                                " && clang -O0 -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null",
+                                " && clang -O0 -Xclang -disable-O0-optnone -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null",
                                 newsy,
                                 newsy, outll);
-
-        // ret += format(
-        //     "&& opt {} -S {} -o {} && ",
-        //        "-O0", outll, outll);
 
         return ret;
     };
@@ -133,28 +138,98 @@ TestData get_mode1_data(const directory_entry& sy, const std::string& sylib_to_l
     };
 }
 
-auto b_tmp = benchmark_data.mode2 = "gnalc";
-TestData get_mode2_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
-    auto gnalc_irgen = [](const std::string& newsy, const std::string& outll) {
-        return format("../gnalc -S {} -o {} -emit-llvm",
-                                newsy, outll);
-    };
+// auto b_tmp = benchmark_data.mode2 = "gnalc";
+// TestData get_mode2_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
+//     auto gnalc_irgen = [](const std::string& newsy, const std::string& outll) {
+//         return format("../gnalc -S {} -o {} -emit-llvm",
+//                                 newsy, outll);
+//     };
+//
+//     return TestData{
+//         .sy = sy,
+//         .sylib = sylib_to_link,
+//         .temp_dir = curr_temp_dir,
+//         .mode_id = benchmark_data.mode2,
+//         .irgen = gnalc_irgen
+//     };
+// }
 
+auto b_tmp = benchmark_data.mode2 = "clang-loop-unroll-full";
+TestData get_mode2_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
+    auto clang_irgen = [](const std::string& newsy, const std::string& outll) {
+        auto out_o0_ll = outll + ".o0.ll";
+        auto ret = format("sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int getfarray(float a[]);void putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, float a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define starttime() _sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
+                                " && clang -O0 -Xclang -disable-O0-optnone -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null",
+                                newsy,
+                                newsy, out_o0_ll);
+
+        ret += format("&& opt {} -S {} -o {}",
+               "-passes=loop-unroll-full", out_o0_ll, outll);
+
+        return ret;
+    };
     return TestData{
         .sy = sy,
         .sylib = sylib_to_link,
         .temp_dir = curr_temp_dir,
         .mode_id = benchmark_data.mode2,
-        .irgen = gnalc_irgen
+        .irgen = clang_irgen
     };
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     signal(SIGINT, sighandler);
+
+    auto print_help = [&argv]() {
+        println("Usage: {} [options]", argv[0]);
+        println("Options:");
+        println("  -s, --skip [name_prefix] : Skip test whose name has such "
+                "prefix.");
+        println("  -r, --run  [name_prefix] : Only run test whose name has "
+                "such prefix.");
+        println("  -h, --help               : Print this help and exit.");
+    };
 
     auto real_test_data = cfg::test_data;
     std::vector<std::pair<std::string, std::vector<std::string>>> skip;
     std::vector<std::pair<std::string, std::vector<std::string>>> run;
+
+
+    for (int i = 1; i < argc; i++) {
+        std::string arg = argv[i];
+        if (arg == "--skip" || arg == "-s") {
+            if (!run.empty()) {
+                println("Error: '--run' conflicts with '--skip'.");
+                return -1;
+            }
+            if (i + 1 >= argc || argv[i + 1][0] == '-') {
+                println("Error: Expected a name.");
+                print_help();
+                return -1;
+            }
+            skip.emplace_back(argv[i + 1], std::vector<std::string>{});
+            ++i;
+        } else if (arg == "--run" || arg == "-r") {
+            if (!skip.empty()) {
+                println("Error: '--run' conflicts with '--skip'.");
+                return -1;
+            }
+            if (i + 1 >= argc || argv[i + 1][0] == '-') {
+                println("Error: Expected a name.");
+                print_help();
+                return -1;
+            }
+            run.emplace_back(argv[i + 1], std::vector<std::string>{});
+            ++i;
+        } else if (arg == "--help" || arg == "-h") {
+            print_help();
+            return 0;
+        } else {
+            println("Error: Unrecognized option '{}'", arg);
+            print_help();
+            return -1;
+        }
+    }
 
     println("Pass benchmark started.");
     println("Mode1: '{}'", benchmark_data.mode1);
@@ -225,7 +300,7 @@ int main() {
                 if (need_run)
                     test_files.emplace_back(p);
             }
-        }
+             }
 
         std::sort(test_files.begin(), test_files.end());
 
@@ -241,22 +316,12 @@ int main() {
             auto expected_syout = read_file(testcase_out);
             fix_newline(expected_syout);
 
-            auto clang_irgen = [](const std::string& newsy, const std::string& outll) {
-                return format("sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int getfarray(float a[]);void putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, float a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define starttime() _sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
-                                        " && clang -O0 -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null",
-                                        newsy,
-                                        newsy, outll);
-            };
-
             // Run
             auto data1 = get_mode1_data(sy, sylib_to_link, curr_temp_dir);
             auto data2 = get_mode2_data(sy, sylib_to_link, curr_temp_dir);
 
             auto res1 = run_test(data1);
             auto res2 = run_test(data2);
-
-            benchmark_data.results1.emplace_back(data1, res1);
-            benchmark_data.results2.emplace_back(data2, res2);
 
             bool failed = false;
             if (res1.output != expected_syout) {
@@ -273,6 +338,19 @@ int main() {
                 failed_tests.emplace_back(data2);
                 failed = true;
             }
+
+            benchmark_data.results1.emplace_back(BenchmarkData::Item
+            {
+                .data = data1,
+                .res = res1,
+                .success = res1.output == expected_syout
+            });
+            benchmark_data.results2.emplace_back(BenchmarkData::Item
+            {
+                .data = data2,
+                .res = res2,
+                .success = res2.output == expected_syout
+            });
 
             if (!failed) {
                 println("     [\033[0;32;32mFINISHED\033[m]");

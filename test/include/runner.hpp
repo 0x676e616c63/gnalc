@@ -9,6 +9,7 @@
 namespace Test {
 
 struct TestResult {
+    std::string source_output; // .ll or .s
     std::string output;
     size_t time_elapsed;
 };
@@ -48,19 +49,20 @@ inline TestResult run_test(const TestData& data) {
 
     auto outtime = format("{}/{}.time", data.temp_dir, out_file_id);
 
+    std::string out_source;
     if (cfg::only_frontend) {
-        auto outll = format("{}/{}.ll", data.temp_dir, out_file_id);
+        out_source = format("{}/{}.ll", data.temp_dir, out_file_id);
         auto outbc = format("{}/{}.bc", data.temp_dir, out_file_id);
 
         // /bin/echo is the one in GNU coreutils
         auto newsy = data.temp_dir + "/" + out_file_id + ".new.sy";
         std::filesystem::copy_file(data.sy, newsy);
 
-        irgen_command = data.irgen(newsy, outll);
+        irgen_command = data.irgen(newsy, out_source);
 
         link_command += format(
             "llvm-link 2>&1 {} {} -o {}",
-            data.sylib, outll, outbc);
+            data.sylib, out_source, outbc);
 
         command = format(
         "lli {} < {} > {} 2>{};"
@@ -84,7 +86,7 @@ inline TestResult run_test(const TestData& data) {
 
     auto time_elased = parse_time(read_file(outtime));
 
-    return {syout, time_elased};
+    return {out_source, syout, time_elased};
 }
 
 }
