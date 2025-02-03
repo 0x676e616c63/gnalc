@@ -6,8 +6,8 @@
 #include <string>
 #include <vector>
 
-#include "config.hpp"
-#include "gnalc_test.hpp"
+#include "include/config.hpp"
+#include "include/runner.hpp"
 
 using namespace Test;
 using namespace std::filesystem;

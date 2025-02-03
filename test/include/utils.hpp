@@ -1,5 +1,5 @@
-#ifndef GNALC_TEST_HPP
-#define GNALC_TEST_HPP
+#ifndef GNALC_TEST_UTILS_HPP
+#define GNALC_TEST_UTILS_HPP
 
 #include <chrono>
 #include <ctime>
