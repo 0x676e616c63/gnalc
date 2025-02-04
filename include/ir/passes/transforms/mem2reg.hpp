@@ -37,8 +37,15 @@ class PromotePass : public PM::PassInfo<PromotePass> {
     bool removeUnusedAlloca();
     bool rewriteSingleStoreAlloca();
     bool promoteSingleBlockAlloca();
-    void computeProcessQueue();
-    void processAlloca();
+    void insertPhi();
+    void queuePhiNode();
+    void rename();
+
+    // 计算迭代支配前沿
+    // https://dl.acm.org/doi/pdf/10.1145/199448.199464
+    void computeIDF(const std::set<std::shared_ptr<BasicBlock>> &def_blk,
+                    const std::set<std::shared_ptr<BasicBlock>> &live_in_blk,
+                    std::vector<std::shared_ptr<BasicBlock>> &phi_blk);
 
     void promoteMemoryToRegister(Function &function);
 

@@ -56,16 +56,11 @@ std::list<std::shared_ptr<Instruction>> &BasicBlock::getInsts() {
     return insts;
 }
 
-unsigned BasicBlock::getInstIndex(const std::shared_ptr<Instruction> &i) const {
-    unsigned index = 0;
+void BasicBlock::updateInstIndex() const {
+    unsigned i = 0;
     for (const auto &inst : insts) {
-        if (inst == i) {
-            return index;
-        }
-        index++;
+        inst->index = i++;
     }
-    Err::error("BasicBlock::getInstIndex(): can't find target instruction");
-    return 0;
 }
 
 bool BasicBlock::delFirstOfInst(const std::shared_ptr<Instruction> &inst) {
@@ -99,6 +94,9 @@ void BasicBlock::setBBParam(const std::vector<std::shared_ptr<Value>> &params) {
 const std::vector<std::shared_ptr<Value>> &BasicBlock::getBBParams() const {
     return bb_params;
 }
+
+std::shared_ptr<Function> BasicBlock::getParent() const { return parent; }
+void BasicBlock::setParent(const std::shared_ptr<Function> &_parent) { parent = _parent; }
 
 void BasicBlock::accept(IRVisitor &visitor) { visitor.visit(*this); }
 

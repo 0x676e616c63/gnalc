@@ -4,6 +4,8 @@
 
 #include "../../../../include/utils/logger.hpp"
 
+#include <queue>
+
 namespace IR {
 PM::UniqueKey DomTreeAnalysis::Key;
 
@@ -52,16 +54,54 @@ PM::UniqueKey DomTreeAnalysis::Key;
         root = nodes[blocks.front()];
     }
 
-    void DomTree::linkDTN(const std::shared_ptr<BasicBlock> &b, const std::shared_ptr<BasicBlock> &idom) {
+    void DomTree::linkDTN(const std::shared_ptr<BasicBlock> &b,
+                          const std::shared_ptr<BasicBlock> &idom) {
         if (nodes[b] == root) {
             // root = nodes[b];
         } else if (idom == b) {
-            Err::unreachable("DomTree::linkDTN");
+            Err::unreachable("DomTree::linkDTN: idom = self");
         } else {
             nodes[b]->parent = nodes[idom];
             nodes[idom]->children.emplace_back(nodes[b]);
         }
     }
+
+    void DomTree::updateLevel() {
+        unsigned l = 0;
+        unsigned i = 0;
+        std::vector<std::shared_ptr<Node>> cur;
+        std::vector<std::shared_ptr<Node>> next;
+        cur.emplace_back(root);
+        while (!cur.empty()) {
+            ++l;
+            for (const auto &n : cur) {
+                n->level = l;
+                n->bfs_num = ++i;
+                Err::gassert(next.empty(),
+                             "DomTree::updateLevel: next vector is not empty!");
+                for (auto &c : n->children) {
+                    next.emplace_back(c);
+                }
+            }
+            cur = next;
+            next.clear();
+        }
+        // return l; // height
+    }
+
+    // void DomTree::updateDFSNumber() {
+    //     std::stack<std::shared_ptr<Node>> stack;
+    //     stack.emplace(root);
+    //     unsigned id = 0;
+    //     while (!stack.empty()) {
+    //         const auto node = stack.top();
+    //         stack.pop();
+    //         node->dfs_num = ++id;
+    //         for (auto it = node->children.rbegin(); it != node->children.rend(); ++it) {
+    //             stack.emplace(*it);
+    //         }
+    //     }
+    // }
 
     DomTree DomTreeAnalysis::run(Function &f, FAM &fam) {
         analyze(f);
@@ -70,18 +110,18 @@ PM::UniqueKey DomTreeAnalysis::Key;
 
     void DomTreeAnalysis::buildDFST() {
     std::stack<std::pair<pBB, pBB>> dfs_stack; // {node, parent}
-    dfs_stack.push({entry, nullptr});
+    dfs_stack.emplace(entry, nullptr);
     while (!dfs_stack.empty()) {
         auto [cur, parent] = dfs_stack.top();
+        dfs_stack.pop();
         if (!info.visited(cur)) {
             info.addDFSTN(cur);
             info.linkDFSTN(parent, cur);
             auto nxt_bbs = cur->getNextBB();
             for (auto it = nxt_bbs.rbegin(); it != nxt_bbs.rend(); ++it) {
-                dfs_stack.push({*it, cur});
+                dfs_stack.emplace(*it, cur);
             }
         }
-        dfs_stack.pop();
     }
 }
 
@@ -114,7 +154,7 @@ void DomTreeAnalysis::analyze(Function &f) {
     calcSDOM();
     // calcIDOM();
     domtree.initDTN(info.idfn);
-    for (auto key : info.idfn) {
+    for (const auto& key : info.idfn) {
         // 3个树图MD越看越迷...
         auto dfs_tree_node = info.node_map[key]; // DFS SPANNING TREE'S NODE
         auto dfs_tree_parent = dfs_tree_node.dfs_parent; // DFS SPANNING TREE'S PARENT NODE
@@ -126,5 +166,7 @@ void DomTreeAnalysis::analyze(Function &f) {
         // result need to fix when idom is not equal to sdom??
         domtree.linkDTN(dfs_tree_node.bb, dfs_tree_node._idom);
     }
+    domtree.updateLevel();
+    // domtree.updateDFSNumber();
 }
 } // namespace IR

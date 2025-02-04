@@ -40,6 +40,7 @@ Function::Function(std::string name_,
       params(params_), constant_pool(pool_) {}
 
 void Function::addBlock(std::shared_ptr<BasicBlock> blk) {
+    blk->setParent(shared_from_this());
     blks.emplace_back(std::move(blk));
 }
 
@@ -68,6 +69,21 @@ Function::iterator Function::begin() { return blks.begin(); }
 Function::iterator Function::end() { return blks.end(); }
 
 ConstantPool &Function::getConstantPool() { return *constant_pool; }
+
+void Function::updateBBIndex() {
+    unsigned i = 0;
+    for (const auto &blk : blks) {
+        blk->index = i++;
+    }
+}
+
+void Function::updateAllIndex() {
+    unsigned i = 0;
+    for (const auto &blk : blks) {
+        blk->index = i++;
+        blk->updateInstIndex();
+    }
+}
 
 void Function::accept(IRVisitor &visitor) { visitor.visit(*this); }
 

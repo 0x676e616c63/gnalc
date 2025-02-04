@@ -79,6 +79,8 @@ public:
     OP getOpcode() const;
     std::shared_ptr<BasicBlock> getParent() const;
 
+    unsigned index = 0; // 使用前调用父块的update方法！
+
     void accept(IRVisitor &visitor) override;
     ~Instruction() override;
 };

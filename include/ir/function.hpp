@@ -31,7 +31,7 @@ public:
     ~FunctionDecl() override;
 };
 
-class Function : public FunctionDecl {
+class Function : public FunctionDecl, public std::enable_shared_from_this<Function> {
 private:
     std::vector<std::shared_ptr<Value>> params;
     std::vector<std::shared_ptr<BasicBlock>> blks;
@@ -97,6 +97,9 @@ public:
     // { return vreg_idx; } // 虚拟寄存器数量
 
     ConstantPool &getConstantPool();
+
+    void updateBBIndex();
+    void updateAllIndex();
 
     void accept(IRVisitor &visitor) override;
 };

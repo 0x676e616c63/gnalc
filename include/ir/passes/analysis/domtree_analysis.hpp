@@ -13,6 +13,8 @@ struct DomTree {
         std::shared_ptr<BasicBlock> bb;
         std::shared_ptr<Node> parent; // 就是idom
         std::vector<std::shared_ptr<Node>> children;
+        unsigned level = 0; // 节点层次，root是1
+        unsigned bfs_num = 0;
 
         explicit Node(const std::shared_ptr<BasicBlock> &bb) : bb(bb) {}
     };
@@ -25,6 +27,8 @@ private:
     void print(const std::shared_ptr<Node> &node, int level);
     void initDTN(std::vector<std::shared_ptr<BasicBlock>> &blocks);
     void linkDTN(const std::shared_ptr<BasicBlock> &b, const std::shared_ptr<BasicBlock> &idom);
+    void updateLevel();
+    // void updateDFSNumber();
     friend class DomTreeAnalysis;
 };
 

@@ -7,6 +7,7 @@
 #define GNALC_IR_BASIC_BLOCK_HPP
 
 #include "base.hpp"
+#include "function.hpp"
 #include "instruction.hpp"
 
 #include <memory>
@@ -25,6 +26,7 @@ class BasicBlock : public Value,
     std::list<std::weak_ptr<BasicBlock>> next_bb;  // 后继
     std::list<std::shared_ptr<Instruction>> insts; // 指令列表
     std::vector<std::shared_ptr<Value>> bb_params;
+    std::shared_ptr<Function> parent;
 
 public:
     using const_iterator = decltype(insts)::const_iterator;
@@ -50,8 +52,9 @@ public:
     const std::list<std::shared_ptr<Instruction>> &getInsts() const;
     std::list<std::shared_ptr<Instruction>> &getInsts();
 
-    unsigned getInstIndex(
-        const std::shared_ptr<Instruction> &i) const; // 从0开始，查找不到报错
+    void updateInstIndex() const;
+
+    unsigned index = 0; // 使用前调用父函数的update方法！
 
     // No use-def check, just remove the first matched item
     bool delFirstOfInst(const std::shared_ptr<Instruction> &inst);
@@ -90,6 +93,9 @@ public:
 
     void setBBParam(const std::vector<std::shared_ptr<Value>> &params);
     const std::vector<std::shared_ptr<Value>> &getBBParams() const;
+
+    std::shared_ptr<Function> getParent() const;
+    void setParent(const std::shared_ptr<Function> &_parent);
 
     void accept(IRVisitor &visitor) override;
     ~BasicBlock() override;
