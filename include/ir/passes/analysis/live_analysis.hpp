@@ -77,6 +77,7 @@ private:
     bool processBB(const BasicBlock *bb);      // 处理单个BB
     bool processInst(const Instruction *inst); // 处理单个inst
 
+    // For PassManager
 public:
     using Result = Liveness;
 

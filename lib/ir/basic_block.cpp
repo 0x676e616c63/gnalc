@@ -78,6 +78,11 @@ bool BasicBlock::delFirstOfInst(const std::shared_ptr<Instruction> &inst) {
     }
     return false;
 }
+bool BasicBlock::delInst(const std::shared_ptr<Instruction> &target) {
+    return delInstIf([&target](const auto& inst) {
+        return inst == target;
+    });
+}
 
 BasicBlock::const_iterator BasicBlock::cbegin() const { return insts.cbegin(); }
 

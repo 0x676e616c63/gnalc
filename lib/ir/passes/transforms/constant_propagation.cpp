@@ -374,6 +374,9 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
                 }
             }
         }
+        auto inst = std::dynamic_pointer_cast<Instruction>(key);
+        Err::gassert(inst != nullptr);
+        inst->getParent()->delInst(inst);
     }
 
     std::unordered_set<std::shared_ptr<BasicBlock> > visited;

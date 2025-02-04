@@ -1,43 +1,44 @@
+#include "../../../../include/ir/passes/helpers/side_effect.hpp"
 #include "../../../../include/ir/passes/transforms/dce.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
 
 #include <algorithm>
+#include <functional>
 
 namespace IR {
 PM::PreservedAnalyses DeadCodeEliminationPass::run(
     Function &function, FAM &manager) {
-    // Maybe write a new pass for side effect?
-    // Or just make it a member function.
-    // auto side_effect_checker = manager.getResult<SideEffectAnalysis>(function);
+    this->fam = &manager;
+    this->func = &function;
 
     bool modified = true;
     while (modified) {
         modified = false;
-        auto retvalue = returnValueAnalysis(function);
-        if (function.getParams().empty() && function.getBlocks().size() > 1) {
-            for (auto block : function) { function.delBlock(block); }
-            auto basicblock = std::make_shared<BasicBlock>();
-            auto retinst = std::make_shared<RETInst>(retvalue);
-            basicblock->addInst(retinst);
-            function.addBlock(basicblock);
-            modified = true;
 
-        }
-        if (modified)
-            continue;
+        // Maybe useless, because we are doing alias analysis
+        // auto retvalue = returnValueAnalysis(function);
+        // if (function.getParams().empty() && function.getBlocks().size() > 1) {
+        //     for (const auto& block : function)
+        //         function.delBlock(block);
+        //     auto basicblock = std::make_shared<BasicBlock>();
+        //     auto retinst = std::make_shared<RETInst>(retvalue);
+        //     basicblock->addInst(retinst);
+        //     function.addBlock(basicblock);
+        //     modified = true;
+        // }
+        // if (modified)
+        //     continue;
 
         worklist.clear();
         dead.clear();
 
         for (const auto &block : function) {
-            for (auto insts = block->getInsts().rbegin();
-                 insts != block->getInsts().rend();) {
-                auto inst = *insts;
-                --insts;
-                if (std::find(worklist.begin(), worklist.end(), inst) ==
-                    worklist.end()) {
+            for (auto inst_it = block->getInsts().rbegin();
+                 inst_it != block->getInsts().rend();) {
+                const auto& inst = *inst_it;
+                --inst_it;
+                if (std::find(worklist.begin(), worklist.end(), inst) == worklist.end())
                     modified |= visitInst(inst);
-                }
             }
             while (!worklist.empty()) {
                 auto inst_ = worklist.back();
@@ -48,8 +49,7 @@ PM::PreservedAnalyses DeadCodeEliminationPass::run(
         }
     }
     for (const auto &block : function) {
-
-        block->delInstIf([this](std::shared_ptr<Instruction> inst) {
+        block->delInstIf([this](const auto& inst) {
             return this->dead.find(inst) != this->dead.cend();
         });
     }
@@ -60,7 +60,7 @@ PM::PreservedAnalyses DeadCodeEliminationPass::run(
 bool DeadCodeEliminationPass::visitInst(
     const std::shared_ptr<Instruction> &inst) {
     if (!isCritical(inst)) {
-        for (auto &use : inst->getOperands()) {
+        for (const auto &use : inst->getOperands()) {
             auto op = use->getValue();
             if (auto inst_ = std::dynamic_pointer_cast<Instruction>(op)) {
                 if (!isCritical(inst_))
@@ -84,12 +84,12 @@ bool DeadCodeEliminationPass::isCritical(
         }
         return true;
     }
-    if (inst->getOpcode() == OP::BR)
-        return true;
-    if (inst->getOpcode() == OP::CALL)
-        return true;
-    if (inst->getOpcode() == OP::RET)
-        return true;
+    if (auto call = std::dynamic_pointer_cast<CALLInst>(inst)) {
+        if (call->getFunc().get() == func)
+            return true;
+        return hasSideEffect(*fam, call.get());
+    }
+
     //TODO have side effect->true
     return true;
 }
@@ -109,11 +109,11 @@ bool DeadCodeEliminationPass::checkDeadPhiCycle(
 std::shared_ptr<Value> DeadCodeEliminationPass::returnValueAnalysis(
     Function &function) {
     std::shared_ptr<Value> retValue = nullptr;
-    for (auto block : function) {
-        for (auto inst : block->getInsts()) {
+    for (const auto& block : function) {
+        for (const auto& inst : *block) {
             if (auto phi = std::dynamic_pointer_cast<PHIInst>(inst)) {
                 std::shared_ptr<Value> sameValue = nullptr;
-                for (auto phi_operand : phi->getPhiOpers()) {
+                for (const auto& phi_operand : phi->getPhiOpers()) {
                     auto value = phi_operand->getValue();
                     if (sameValue && value != sameValue)
                         return nullptr;
@@ -123,7 +123,6 @@ std::shared_ptr<Value> DeadCodeEliminationPass::returnValueAnalysis(
                     inst->replaceSelf(sameValue);
             }
             if (auto retinst = std::dynamic_pointer_cast<RETInst>(inst)) {
-
                 if (retinst->isVoid())
                     retValue = nullptr;
                 else {
@@ -132,7 +131,6 @@ std::shared_ptr<Value> DeadCodeEliminationPass::returnValueAnalysis(
                         return nullptr;
                     retValue = value;
                 }
-
             }
         }
     }
@@ -140,6 +138,5 @@ std::shared_ptr<Value> DeadCodeEliminationPass::returnValueAnalysis(
         return retValue;
     return nullptr;
 }
-
 
 } // namespace IR

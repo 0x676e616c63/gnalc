@@ -8,6 +8,8 @@ namespace IR {
 class DeadCodeEliminationPass : public PM::PassInfo<DeadCodeEliminationPass> {
     std::vector<std::shared_ptr<Instruction>> worklist;
     std::set<std::shared_ptr<Instruction>> dead;
+    Function* func{};
+    FAM* fam{};
 public:
     PM::PreservedAnalyses run(Function &function, FAM &manager);
 private:
@@ -16,7 +18,7 @@ private:
     bool visitInst(const std::shared_ptr<Instruction>& inst);
     bool checkDeadPhiCycle(const std::shared_ptr<PHIInst>& phi,
         std::set<std::shared_ptr<PHIInst>>& potentiallyDeadPhis);
-    std::shared_ptr<Value> returnValueAnalysis(Function &function);
+    static std::shared_ptr<Value> returnValueAnalysis(Function &function);
 };
 
 

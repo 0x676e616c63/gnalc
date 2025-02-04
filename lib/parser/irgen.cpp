@@ -119,7 +119,7 @@ void IRGenerator::visit(VarDef &node) {
     curr_making_initializer = &curr_initializer;
 
     // Pure Constant Variable
-    // check if the given variable is unusable in constant expression
+    // check if the given variable is usable in constant expression
     if (node.isConst() && !node.isArray()) {
         Err::gassert(node.isInited());
         node.getInitVal()->accept(*this);

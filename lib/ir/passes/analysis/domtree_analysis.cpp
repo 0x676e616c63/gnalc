@@ -5,6 +5,8 @@
 #include "../../../../include/utils/logger.hpp"
 
 namespace IR {
+PM::UniqueKey DomTreeAnalysis::Key;
+
     bool DomTree::ADomB(const std::shared_ptr<BasicBlock> &a, const std::shared_ptr<BasicBlock> &b) {
         if (nodes[a] == root) return true;
         if (a == b) return true;
@@ -61,7 +63,7 @@ namespace IR {
         }
     }
 
-    DomTree DomTreeAnalysis::run(Function &f, FAM &fpm) {
+    DomTree DomTreeAnalysis::run(Function &f, FAM &fam) {
         analyze(f);
         return domtree;
     }

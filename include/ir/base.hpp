@@ -90,8 +90,7 @@ enum class ValueTrait {
 
 class Value : public NameC {
     friend class User;
-
-protected:
+private:
     std::list<std::weak_ptr<Use>> use_list; // Use隶属于User
     std::shared_ptr<Type> vtype;            // value's type
     ValueTrait trait = ValueTrait::UNDEFINED;
@@ -153,10 +152,16 @@ public:
     User() = delete;
     User(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait);
 
-    void addOperand(const std::shared_ptr<Value> &v);
+    bool replaceUse(const std::shared_ptr<Value> &old_val,
+                    const std::shared_ptr<Value> &new_val);
+
+    void accept(IRVisitor &visitor) override = 0;
 
     const std::vector<std::shared_ptr<Use>> &getOperands() const;
     const std::shared_ptr<Use> &getOperand(size_t index) const;
+
+protected:
+    void addOperand(const std::shared_ptr<Value> &v);
 
     bool delOperand(const std::shared_ptr<Value> &v);
     bool delOperand(NameRef name);
@@ -177,11 +182,6 @@ public:
         Err::gassert(found, "User::delOperandIf(): not found.");
         return found;
     }
-
-    bool replaceUse(const std::shared_ptr<Value> &old_val,
-                    const std::shared_ptr<Value> &new_val);
-
-    void accept(IRVisitor &visitor) override = 0;
 };
 
 template <typename T> std::string toIRString(T value) {

@@ -53,8 +53,12 @@ public:
     unsigned getInstIndex(
         const std::shared_ptr<Instruction> &i) const; // 从0开始，查找不到报错
 
-    bool delFirstOfInst(
-        const std::shared_ptr<Instruction> &inst); // 只移除第一个匹配的项
+    // No use-def check, just remove the first matched item
+    bool delFirstOfInst(const std::shared_ptr<Instruction> &inst);
+
+    // With use-def check, remove all matched.
+    // The instruction must have no users.
+    bool delInst(const std::shared_ptr<Instruction> &inst);
 
     // Delete insts and its user.
     // If pred(a) == true, pred(a->users) must be true
@@ -63,7 +67,8 @@ public:
         for (auto it = insts.begin(); it != insts.end();) {
             if (pred(*it)) {
                 for (auto &&use : (*it)->getUseList()) {
-                    Err::gassert(pred(use->getUser()),
+                    Err::gassert(
+                        pred(std::dynamic_pointer_cast<Instruction>(use->getUser())),
                                  "BasicBlock::delInstIf(): Cannot delete a "
                                  "Inst without deleting its User.");
                 }

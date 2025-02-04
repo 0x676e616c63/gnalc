@@ -38,7 +38,7 @@ private:
 // todo: 注意到live分析也对基本块进行了dfs, 能否重用？
 class DomTreeAnalysis : public PM::AnalysisInfo<DomTreeAnalysis> {
 public:
-    DomTree run(Function &f, FAM &fpm);
+    DomTree run(Function &f, FAM &fam);
 
 private:
     using pBB = std::shared_ptr<BasicBlock>;
@@ -89,6 +89,14 @@ private:
     // void calcIDOM();
     // https://qaqcxh.github.io/Blogs/graph%20theory/DominatorTheory.html#6-semi-nca%E7%AE%97%E6%B3%95
     void analyze(Function &f);
+
+    // For PassManager:
+public:
+    using Result = DomTree;
+
+private:
+    friend AnalysisInfo<DomTreeAnalysis>;
+    static PM::UniqueKey Key;
 };
 
 } // namespace IR

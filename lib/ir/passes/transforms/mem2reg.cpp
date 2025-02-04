@@ -2,12 +2,12 @@
 #include "../../../../include/utils/exception.hpp"
 
 namespace IR {
-    bool PromotePass::iADomB(const std::shared_ptr<Instruction>& ia, const std::shared_ptr<Instruction>& ib) {
-        if (ia->getParent() == ib->getParent()) {
-            return ia->getParent()->getInstIndex(ia) < ib->getParent()->getInstIndex(ib);
-        }
-        return DT.ADomB(ia->getParent(), ib->getParent());
+bool PromotePass::iADomB(const std::shared_ptr<Instruction>& ia, const std::shared_ptr<Instruction>& ib) {
+    if (ia->getParent() == ib->getParent()) {
+        return ia->getParent()->getInstIndex(ia) < ib->getParent()->getInstIndex(ib);
     }
+    return DT.ADomB(ia->getParent(), ib->getParent());
+}
 
 void PromotePass::analyseAlloca() {
     for (const auto &inst : entry_block->getInsts()) {
@@ -35,10 +35,10 @@ void PromotePass::analyseAlloca() {
                         promotable = false;
                         break;
                     }
-                } else {
-                    promotable = false;
-                    break;
-                }
+                    } else {
+                        promotable = false;
+                        break;
+                    }
                 // if (user->getVTrait() == ValueTrait::ORDINARY_VARIABLE &&
                 //     std::dynamic_pointer_cast<Instruction>(user)->getOpcode() ==
                 //         OP::LOAD) {
@@ -147,8 +147,8 @@ void PromotePass::computeProcessQueue() {
                 i != cur_info.user_blocks.end()) {
                 if (!i->second.store_map.empty())
                     // if p is a def block...
-                    continue;
-            }
+                        continue;
+                }
             tmp_work_queue.push(p);
         }
     }
@@ -157,7 +157,7 @@ void PromotePass::computeProcessQueue() {
 }
 
 void PromotePass::processAlloca() {
-        // todo
+    // todo
 }
 
 void PromotePass::promoteMemoryToRegister(Function &function) {
@@ -180,8 +180,12 @@ void PromotePass::promoteMemoryToRegister(Function &function) {
 }
 
 PM::PreservedAnalyses PromotePass::run(Function &function, FAM &manager) {
-    DT = {/*todo*/};
+    DT = manager.getResult<DomTreeAnalysis>(function);
+
     promoteMemoryToRegister(function);
-    return {/*todo*/};
+
+    PM::PreservedAnalyses pa;
+    pa.preserve<DomTreeAnalysis>();
+    return pa;
 }
-} // namespace IR
+}// namespace IR
