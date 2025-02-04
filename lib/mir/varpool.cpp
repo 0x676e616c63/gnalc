@@ -8,7 +8,7 @@ std::shared_ptr<Operand> VarPool::getValue(const IR::Value &val) {
     auto it = pool.find(wrapper);
 
     if (it == pool.end()) {
-        return nullptr;
+        return nullptr; // 一般不会出现的情况
     } else {
         return it->second;
     }

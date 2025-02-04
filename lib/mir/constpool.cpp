@@ -2,8 +2,7 @@
 
 using namespace MIR;
 
-template <typename T_variant>
-std::shared_ptr<ConstObj> ConstPool::getConstant(const T_variant &imme) {
+std::shared_ptr<ConstObj> ConstPool::getConstant(const std::string &imme) {
     auto temp = ConstVal(imme);
 
     auto it = pool.find(temp);

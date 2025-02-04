@@ -3,6 +3,12 @@
 #include "../../ir/basic_block.hpp"
 #include "../../ir/function.hpp"
 #include "../../ir/instruction.hpp"
+#include "../../ir/instructions/binary.hpp"
+#include "../../ir/instructions/compare.hpp"
+#include "../../ir/instructions/control.hpp"
+#include "../../ir/instructions/converse.hpp"
+#include "../../ir/instructions/memory.hpp"
+#include "../../ir/instructions/phi.hpp"
 #include "../../ir/module.hpp"
 #include "../../mir/base.hpp"
 #include "../../mir/function.hpp"
@@ -19,12 +25,27 @@ struct OperandLowering {
     ConstPool &ConstPool;
     VarPool &VarPool;
 
-    /// when def
+    /// when use
     std::shared_ptr<Operand> fastFind(const std::shared_ptr<IR::Value> &);
 
-    /// when use
+    /// @warning 可能会出现多个ConstantIDX指向同一个ConstObj, 会浪费内存
+    template <typename T_variant>
+    std::shared_ptr<Operand> fastFind(const T_variant &constVal) {
+        auto constPtr = ConstPool.getConstant(constVal);
+        auto constOper = std::make_shared<ConstantIDX>(constPtr);
+        return constOper;
+    }
+
     template <typename T_Reg>
-    std::shared_ptr<PreColedOP> getPreColored(T_Reg color);
+    std::shared_ptr<PreColedOP> getPreColored(T_Reg color) {
+        return VarPool.getValue(color);
+    }
+
+    /// when def
+    std::shared_ptr<BindOnVirOP> mkOP(const IR::Value &, RegisterBank);
+
+    std::shared_ptr<BindOnVirOP> mkOP(const std::shared_ptr<IR::Type> &,
+                                      RegisterBank);
 
     std::shared_ptr<GlobalADROP> mkBaseOP(const IR::Value &,
                                           const std::string &, unsigned int);
@@ -38,22 +59,50 @@ struct OperandLowering {
 
 struct InstLowering {
     OperandLowering operlower;
-    std::shared_ptr<Instruction>
+
+    std::list<std::shared_ptr<Instruction>>
     operator()(const std::shared_ptr<IR::Instruction> &);
 
-    std::shared_ptr<Instruction> binaryLower();
-    std::shared_ptr<Instruction> icmpLower();
-    std::shared_ptr<Instruction> fcmpLower();
-    std::shared_ptr<Instruction> retLower();
-    std::shared_ptr<Instruction> brLower();
-    std::shared_ptr<Instruction> callLower();
-    std::shared_ptr<Instruction> zextLower();
-    std::shared_ptr<Instruction> bitcastLower();
-    std::shared_ptr<Instruction> allocaLower();
-    std::shared_ptr<Instruction> loadLower();
-    std::shared_ptr<Instruction> storeLower();
-    std::shared_ptr<Instruction> gepLower();
-    std::shared_ptr<Instruction> phiLower();
+    std::list<std::shared_ptr<Instruction>>
+    binaryLower(const std::shared_ptr<IR::BinaryInst> &);
+
+    std::list<std::shared_ptr<Instruction>>
+    icmpLower(const std::shared_ptr<IR::ICMPInst> &);
+
+    std::list<std::shared_ptr<Instruction>>
+    retLower(const std::shared_ptr<IR::RETInst> &);
+
+    std::list<std::shared_ptr<Instruction>>
+    brLower(const std::shared_ptr<IR::BRInst> &);
+
+    std::list<std::shared_ptr<Instruction>>
+    callLower(const std::shared_ptr<IR::CALLInst> &);
+
+    std::list<std::shared_ptr<Instruction>>
+    zextLower(const std::shared_ptr<IR::ZEXTInst> &);
+
+    std::list<std::shared_ptr<Instruction>>
+    bitcastLower(const std::shared_ptr<IR::BITCASTInst> &);
+
+    std::list<std::shared_ptr<Instruction>>
+    allocaLower(const std::shared_ptr<IR::ALLOCAInst> &);
+
+    std::list<std::shared_ptr<Instruction>>
+    loadLower(const std::shared_ptr<IR::LOADInst> &);
+
+    std::list<std::shared_ptr<Instruction>>
+    storeLower(const std::shared_ptr<IR::STOREInst> &);
+
+    std::list<std::shared_ptr<Instruction>>
+    gepLower(const std::shared_ptr<IR::GEPInst> &);
+
+    std::list<std::shared_ptr<Instruction>>
+    phiLower(const std::shared_ptr<IR::PHIInst> &);
+
+    // Neon SIMD
+
+    // std::list<std::shared_ptr<Instruction>>
+    // fcmpLower(const std::shared_ptr<IR::FCMPInst> &);
 };
 
 class Lowering {

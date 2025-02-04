@@ -13,7 +13,12 @@ std::string Instruction::toString() {
         str += enum_name(std::get<OpCode>(opcode));
     else
         str += enum_name(std::get<NeonOpCode>(opcode));
-    str += enum_name(tptrait) + ' ';
+
+    str += enum_name(condition);
+    if (flashFlag)
+        str += 's';
+
+    str += '-' + enum_name(tptrait) + ' ';
 
     if (getSourceOP(1)) {
         str += getSourceOP(1)->toString() + ' ';
@@ -22,7 +27,7 @@ std::string Instruction::toString() {
         str += getSourceOP(2)->toString() + ' ';
     }
     if (getSourceOP(3)) {
-        str += getSourceOP(2)->toString() + ' ';
+        str += getSourceOP(3)->toString() + ' ';
     }
 
     str += '\n';

@@ -18,7 +18,7 @@ private:
     std::list<std::shared_ptr<Instruction>> insts;
 
 public:
-    BasicBlock() : Value(ValueTrait::BasicBlock) {};
+    BasicBlock() : Value(ValueTrait::BasicBlock){};
     explicit BasicBlock(std::string _name)
         : Value(ValueTrait::BasicBlock, std::move(_name)) {}
 
@@ -31,9 +31,17 @@ public:
         return succs.size();
     }
     unsigned int addInst(const std::shared_ptr<Instruction> &_inst) {
-        insts.emplace_back(_inst);
+        if (_inst)
+            insts.emplace_back(_inst);
         return insts.size();
     }
+
+    unsigned int addInsts(std::list<std::shared_ptr<Instruction>> _insts) {
+        if (_insts.size())
+            insts.splice(insts.end(), _insts);
+        return insts.size();
+    }
+
     unsigned int addLiveIn(const std::shared_ptr<BindOnVirOP> &_livein) {
         LiveIn.insert(_livein);
         return LiveIn.size();

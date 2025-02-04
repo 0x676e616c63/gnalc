@@ -8,8 +8,16 @@ namespace MIR {
 
 class ConstPool {
 private:
-    struct ConstVal {
-        std::variant<int, float, std::string> value;
+    class ConstVal {
+    public:
+        ConstVal() = delete;
+        explicit ConstVal(const std::string &imme) : value(imme) {}
+        explicit ConstVal(int imme) : value(imme) {}
+        explicit ConstVal(float imme) : value(imme) {}
+        explicit ConstVal(bool imme) : value(imme) {}
+        explicit ConstVal(char imme) : value(imme) {}
+
+        std::variant<std::string, int, float, bool, char> value;
 
         unsigned int getType() const { return value.index(); }
 
@@ -19,8 +27,8 @@ private:
     };
 
     struct ConstPoolHash {
-        static size_t
-        variant_hash(const std::variant<int, float, std::string> &val) {
+        static size_t variant_hash(
+            const std::variant<std::string, int, float, bool, char> &val) {
             return std::hash<
                 std::remove_cv_t<std::remove_reference_t<decltype(val)>>>()(
                 val);
@@ -37,8 +45,21 @@ private:
 public:
     ConstPool() = default;
 
-    template <typename T_variant>
-    std::shared_ptr<ConstObj> getConstant(const T_variant &);
+    std::shared_ptr<ConstObj> getConstant(const std::string &imme);
+
+    template <typename T_variant> /* int, float, char, bool */
+    std::shared_ptr<ConstObj> getConstant(T_variant imme) {
+        ConstVal temp(imme);
+
+        auto it = pool.find(temp);
+        if (it == pool.end()) {
+            std::shared_ptr<ConstObj> constant =
+                std::make_shared<ConstObj>(pool.size(), imme);
+            it = pool.emplace(temp, constant).first;
+        }
+
+        return it->second;
+    }
 
     ~ConstPool() = default;
 };

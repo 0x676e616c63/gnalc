@@ -143,7 +143,7 @@ bool isImmCanBeEncodedInText(float imme) {
 MIR::ConstObj::ConstObj(unsigned int _id, int imme) : id(_id) {
     auto imm = static_cast<unsigned int>(imme);
     if (isImmCanBeEncodedInText(imm)) {
-        literal = imm;
+        literal = imme;
     } else {
         ///@brief turn into movw/movt
         uint16_t lowbits = imm & 0xffff;
@@ -164,6 +164,9 @@ MIR::ConstObj::ConstObj(unsigned int _id, float imme) : id(_id) {
     }
 }
 
+MIR::ConstObj::ConstObj(unsigned int _id, bool imme) : id(_id), literal(imme) {}
+MIR::ConstObj::ConstObj(unsigned int _id, char imme) : id(_id), literal(imme) {}
+
 std::string MIR::ConstObj::toString() const {
     std::string str;
     str += "- {";
@@ -174,7 +177,7 @@ std::string MIR::ConstObj::toString() const {
     if (isGlo())
         str += "'" + std::get<std::string>(literal) + "'";
     else if (literal.index() == 1)
-        str += "'" + std::to_string(std::get<unsigned int>(literal)) + "'";
+        str += "'" + std::to_string(std::get<int>(literal)) + "'";
     else if (literal.index() == 2)
         str += "'" + std::to_string(std::get<float>(literal)) + "'";
     else

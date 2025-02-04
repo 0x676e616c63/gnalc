@@ -14,6 +14,8 @@ enum class OpCode {
     STR, // strd(需要8字节对齐), str, strh, strb
     LDR, // ldrd(同上), ldr, ldrh, ldrb
 
+    NEG,
+
     ADD,
     SUB,
     RSB,
@@ -30,21 +32,20 @@ enum class OpCode {
 
     MUL,
     MULS,
-    DIV /* SDIV */,
+    DIV,
+    SDIV /* SDIV */,
 
-    SMULL /* SMULL RdLo, RdHi, Rn, Rm */,
+    MLA /* Rd = Rn + (Rm * Rs) */,
+    MLS /* Rd = Rn - (Rm * Rs) */,
+    SMMUL, /* Rd = (Rm *Rs)[63:32] */
+    SMMLA, /* Rd = Rn + (Rm * Rs)[63:32] */
+    SMMLS, /* Rd = Rn - (Rm * Rs)[63:32] */
 
-    MLA /* %1 = %4 + %2 * %3 */,
+    SMULL /* SMULL RdLo, RdHi, Rm, Rs */,
 
     SWI /* =SYSCALL */,
 
     B,
-    BEQ,
-    BNQ,
-    BGT,
-    BLT,
-    BGE,
-    BLE,
     BX_RET,
     BX_SET_SWI,
     BL,
@@ -84,21 +85,40 @@ enum class SourceOperandType {
     cp,
     i,
     i12,
+    i16,
     i32,
     a,
     // cp
 
     rr,
+    rrr,
     ri,
     rsi /* 或者rrsi更加贴切 */,
     ra /* a means address*/,
 };
+
+enum class CondCodeFlag {
+    AL,
+    eq,
+    ne,
+    mi, // minus
+    pl, // plus
+    lt,
+    gt,
+    le,
+    ge,
+}; // 一般只用于处理分支问题
 
 class Instruction {
 private:
     std::variant<OpCode, NeonOpCode> opcode;
 
     std::shared_ptr<BindOnVirOP> TargetOperand = nullptr;
+
+    CondCodeFlag condition = CondCodeFlag::AL;
+
+    /// @warning 并不是所有指令都可以刷新符号位
+    bool flashFlag = false;
 
 protected:
     SourceOperandType tptrait;
@@ -117,10 +137,15 @@ public:
     const std::shared_ptr<BindOnVirOP> &getTargetOP() { return TargetOperand; };
     virtual std::shared_ptr<Operand> getSourceOP(unsigned int seq) = 0;
 
+    CondCodeFlag getCondCodeFlag() { return condition; }
+    void setCondCodeFlag(CondCodeFlag newFlag) { condition = newFlag; }
+
+    void setFlash() { flashFlag = true; }
+
     virtual bool Check() = 0; // tptriat, sourceoperand
     virtual std::string toString() final;
     virtual ~Instruction() = default;
-};
+}; // namespace MIR
 } // namespace MIR
 
 #endif

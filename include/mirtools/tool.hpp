@@ -2,8 +2,11 @@
 #ifndef GNALC_MIRTOOLS_TOOL_HPP
 #define GNALC_MIRTOOLS_TOOL_HPP
 
+#include "../../include/ir/instruction.hpp"
+#include "../../include/mir/instruction.hpp"
 #include "enum_name.hpp"
 
+#include <map>
 #include <string>
 #include <variant>
 
@@ -22,6 +25,9 @@ struct variant_visitor {
     }
 
 }; // for std::visit() when come into an enum type
+
+extern std::map<IR::OP, MIR::OpCode> OPmap;
+
 } // namespace MIR
 
 #endif

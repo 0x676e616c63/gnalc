@@ -11,7 +11,7 @@ private:
         /// @brief 为IR::Value添加 operator ==
         const IR::Value &val;
         bool operator==(const IRValueWrapper &anthor) const {
-            return this->val.getName() == anthor.val.getName();
+            return &(this->val) == &(anthor.val); // 比较地址
         }
     };
 

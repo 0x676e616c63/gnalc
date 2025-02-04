@@ -184,6 +184,29 @@ template <> inline std::string enum_name<FPURegister>(FPURegister t) {
     return "unknown FPURegister";
 }
 
+template <> inline std::string enum_name<CondCodeFlag>(CondCodeFlag t) {
+    switch (t) {
+    case CondCodeFlag::AL:
+        return "";
+    case CondCodeFlag::eq:
+        return "eq";
+    case CondCodeFlag::ne:
+        return "ne";
+    case CondCodeFlag::mi:
+        return "mi";
+    case CondCodeFlag::pl:
+        return "pl";
+    case CondCodeFlag::lt:
+        return "lt";
+    case CondCodeFlag::gt:
+        return "gt";
+    case CondCodeFlag::le:
+        return "le"; // AL,
+    case CondCodeFlag::ge:
+        return "ge";
+    }
+}
+
 template <> inline std::string enum_name<OpCode>(OpCode t) {
     switch (t) {
     case OpCode::MOV:
@@ -192,6 +215,8 @@ template <> inline std::string enum_name<OpCode>(OpCode t) {
         return "str";
     case OpCode::LDR:
         return "ldr";
+    case OpCode::NEG:
+        return "neg";
     case OpCode::ADD:
         return "add";
     case OpCode::SUB:
@@ -224,26 +249,18 @@ template <> inline std::string enum_name<OpCode>(OpCode t) {
         return "muls";
     case OpCode::DIV:
         return "div";
+    case OpCode::SDIV:
+        return "sdiv";
     case OpCode::SMULL:
         return "smull";
     case OpCode::MLA:
         return "mla";
+    case OpCode::MLS:
+        return "mls";
     case OpCode::SWI:
         return "swi";
     case OpCode::B:
         return "b";
-    case OpCode::BEQ:
-        return "beq";
-    case OpCode::BNQ:
-        return "bnq";
-    case OpCode::BGT:
-        return "bgt";
-    case OpCode::BLT:
-        return "blt";
-    case OpCode::BGE:
-        return "bge";
-    case OpCode::BLE:
-        return "ble";
     case OpCode::BX_RET:
         return "bx_ret";
     case OpCode::BX_SET_SWI:
@@ -315,10 +332,14 @@ inline std::string enum_name<SourceOperandType>(SourceOperandType t) {
         return "i";
     case SourceOperandType::i12:
         return "i12";
+    case SourceOperandType::i16:
+        return "i16";
     case SourceOperandType::i32:
         return "i32";
     case SourceOperandType::rr:
         return "rr";
+    case SourceOperandType::rrr:
+        return "rrr";
     case SourceOperandType::ri:
         return "ri";
     case SourceOperandType::rsi:

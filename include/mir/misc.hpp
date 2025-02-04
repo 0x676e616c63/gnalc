@@ -67,17 +67,20 @@ class ConstObj {
 private:
     unsigned int id;
 
-    std::variant<std::string, unsigned int, float, Encoding> literal;
+    std::variant<std::string, int, float, bool, char, Encoding> literal;
 
 public:
     ConstObj() = delete;
-    ConstObj(unsigned int _id, std::string _glo, unsigned int _size)
+    ConstObj(unsigned int _id, std::string _glo)
         : id(_id), literal(std::move(_glo)) {}
     explicit ConstObj(unsigned int _id, float imme);
     explicit ConstObj(unsigned int _id, int imme);
+    explicit ConstObj(unsigned int _id, bool imme);
+    explicit ConstObj(unsigned int _id, char imme);
 
     bool isGlo() const { return literal.index() == 0; }
     bool isImme() const { return literal.index() != 0; }
+    bool isEncoded() const { return literal.index() == 5; }
 
     void setId(unsigned int _id) { id = _id; }
     unsigned int getId() const { return id; }

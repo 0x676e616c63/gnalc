@@ -2,14 +2,14 @@
 
 using namespace MIR;
 
-std::shared_ptr<Operand> copy::getSourceOP(unsigned int seq) {
+std::shared_ptr<Operand> copyInst::getSourceOP(unsigned int seq) {
     if (seq == 1)
         return SourceOperand;
     else
         return nullptr;
 }
 
-bool copy::Check() {
+bool copyInst::Check() {
     if (tptrait != SourceOperandType::r)
         return false;
 
