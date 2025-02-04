@@ -11,20 +11,24 @@
 namespace IR {
 PM::UniqueKey AliasAnalysisPass::Key;
 
-bool AliasAnalysisResult::insertAlias(const Value *target, const Value *alias) {
+bool AliasAnalysisResult::insertPotentialAlias(const Value *target, const Value *alias) {
     Err::gassert(target->getType()->getTrait() == IRCTYPE::PTR);
 
     auto &info = ptr_info[target];
-    if (target->getVTrait() == ValueTrait::GLOBAL_VARIABLE ||
-        target->getVTrait() == ValueTrait::FORMAL_PARAMETER) {
-        info.untracked = true;
+    if (target->getVTrait() == ValueTrait::GLOBAL_VARIABLE) {
+        info.global_var = true;
+        return info.potential_alias.insert(target).second;
+    }
+    else if(target->getVTrait() == ValueTrait::FORMAL_PARAMETER) {
+        info.untracked_array = true;
         return info.potential_alias.insert(target).second;
     } else {
         const auto &alias_info = ptr_info[alias];
         bool changed = false;
         for (const auto &r : alias_info.potential_alias)
             changed |= info.potential_alias.insert(r).second;
-        info.untracked |= alias_info.untracked;
+        info.untracked_array |= alias_info.untracked_array;
+        info.global_var |= alias_info.global_var;
         return changed;
     }
     return false;
@@ -33,7 +37,8 @@ AliasAnalysisResult::PtrInfo AliasAnalysisResult::getPtrInfo(const Value *ptr) c
     Err::gassert(ptr->getType()->getTrait() == IRCTYPE::PTR);
     if (ptr->getVTrait() == ValueTrait::GLOBAL_VARIABLE) {
         return PtrInfo{
-            .untracked = true,
+            .untracked_array = false,
+            .global_var = true,
             .potential_alias = {ptr}
         };
     }
@@ -44,7 +49,7 @@ AliasAnalysisResult::PtrInfo AliasAnalysisResult::getPtrInfo(const Value *ptr) c
 }
 
 bool isPtrInfoAlias(const AliasAnalysisResult::PtrInfo& info1, const AliasAnalysisResult::PtrInfo& info2) {
-    if (info1.untracked || info2.untracked)
+    if (info1.untracked_array || info2.untracked_array)
         return true;
 
     for (auto p1 : info1.potential_alias) {
@@ -111,7 +116,8 @@ AliasAnalysisResult::getAliasInfo(const Value *v1, const Value *v2) const {
 
 AliasAnalysisResult::ModRefInfo
 AliasAnalysisResult::getInstModRefInfo(const Instruction *inst,
-                                       const Value *candidate) const {
+                                       const Value *candidate,
+                                       FAM& fam) const {
     Err::gassert(candidate->getType()->getTrait() == IRCTYPE::PTR);
 
     auto candidate_info = getPtrInfo(candidate);
@@ -134,8 +140,53 @@ AliasAnalysisResult::getInstModRefInfo(const Instruction *inst,
             return ModRefInfo::Mod;
     }
     else if (auto call = dynamic_cast<const CALLInst*>(inst)) {
-        // FIXME: Recursion Call.
-        return ModRefInfo::ModRef;
+        auto callee = call->getFunc().get();
+        if (auto callee_def = dynamic_cast<Function*>(callee)) {
+            if (callee_def != this->func) {
+                auto callee_aa = fam.getResult<AliasAnalysisPass>(*callee_def);
+                if (callee_aa.has_untracked_call)
+                    return ModRefInfo::ModRef;
+                if (callee_aa.getFunctionModRefInfo() == ModRefInfo::NoModRef)
+                    return ModRefInfo::NoModRef;
+
+                bool mod = false;
+                bool ref = false;
+
+                for (auto write : callee_aa.write) {
+                    PtrInfo write_info;
+                    if (write->getVTrait() == ValueTrait::GLOBAL_VARIABLE)
+                        write_info = getPtrInfo(write);
+                    else {
+                        Err::gassert(write->getVTrait() == ValueTrait::FORMAL_PARAMETER);
+                        auto fp = dynamic_cast<const FormalParam*>(write);
+                        write_info = getPtrInfo(call->getArgs()[fp->getIndex()].get());
+                    }
+                    mod |= isPtrInfoAlias(candidate_info, write_info);
+                    if (mod) break;
+                }
+                for (auto read : callee_aa.read) {
+                    PtrInfo read_info;
+                    if (read->getVTrait() == ValueTrait::GLOBAL_VARIABLE)
+                        read_info = getPtrInfo(read);
+                    else {
+                        Err::gassert(read->getVTrait() == ValueTrait::FORMAL_PARAMETER);
+                        auto fp = dynamic_cast<const FormalParam*>(read);
+                        read_info = getPtrInfo(call->getArgs()[fp->getIndex()].get());
+                    }
+                    ref |= isPtrInfoAlias(candidate_info, read_info);
+                    if (ref) break;
+                }
+
+                if (mod && ref)
+                    return ModRefInfo::ModRef;
+                if (mod)
+                    return ModRefInfo::Mod;
+                if (ref)
+                    return ModRefInfo::Ref;
+            }
+        }
+        else if (!isPureBuiltinOrSylibFunc(callee))
+            return ModRefInfo::ModRef;
     }
 
     return ModRefInfo::NoModRef;
@@ -157,9 +208,13 @@ AliasAnalysisResult::getFunctionModRefInfo() const {
 
     return ModRefInfo::ModRef;
 }
+bool AliasAnalysisResult::hasUntrackedCall() const {
+    return has_untracked_call;
+}
 
 AliasAnalysisResult AliasAnalysisPass::run(Function &func, FAM &fam) {
     AliasAnalysisResult res;
+    res.func = &func;
 
     // Array arguments
     for (const auto& curr : func.getParams()) {
@@ -167,7 +222,7 @@ AliasAnalysisResult AliasAnalysisPass::run(Function &func, FAM &fam) {
         Err::gassert(curr_trait == IRCTYPE::PTR || curr_trait == IRCTYPE::BASIC);
         if (curr_trait == IRCTYPE::PTR) {
             auto& info = res.ptr_info[curr.get()];
-            info.untracked = true;
+            info.untracked_array = true;
             info.potential_alias = { curr.get() };
         }
     }
@@ -195,11 +250,11 @@ AliasAnalysisResult AliasAnalysisPass::run(Function &func, FAM &fam) {
 
             for (const auto& inst : *curr) {
                 if (auto gep = std::dynamic_pointer_cast<GEPInst>(inst))
-                    changed |= res.insertAlias(gep.get(), gep->getPtr().get());
+                    changed |= res.insertPotentialAlias(gep.get(), gep->getPtr().get());
                 else if (auto phi = std::dynamic_pointer_cast<PHIInst>(inst)) {
                     if (phi->getType()->getTrait() == IRCTYPE::PTR) {
                         for (const auto& oper : phi->getPhiOpers())
-                            changed |= res.insertAlias(phi.get(), oper->getValue().get());
+                            changed |= res.insertPotentialAlias(phi.get(), oper->getValue().get());
                     }
                 }
             }
@@ -216,28 +271,55 @@ AliasAnalysisResult AliasAnalysisPass::run(Function &func, FAM &fam) {
         for (const auto& inst : *bb) {
             if (auto load = std::dynamic_pointer_cast<LOADInst>(inst)) {
                 auto ptr = load->getPtr().get();
-                if (res.getPtrInfo(ptr).untracked)
+                if (res.getPtrInfo(ptr).untracked_array || res.getPtrInfo(ptr).global_var)
                     res.read.insert(ptr);
             }
             else if (auto store = std::dynamic_pointer_cast<STOREInst>(inst)) {
                 auto ptr = store->getPtr().get();
-                if (res.getPtrInfo(ptr).untracked)
+                if (res.getPtrInfo(ptr).untracked_array || res.getPtrInfo(ptr).global_var)
                     res.write.insert(ptr);
             }
             else if (auto call = std::dynamic_pointer_cast<CALLInst>(inst)) {
-                auto call_fn = call->getFunc().get();
-                if (call_fn->isSylib()) {
-                    if (call_fn->getName() != "@_sysy_starttime"
-                        && call_fn->getName() != "@_sysy_stoptime") {
-                        res.has_untracked_call = true;
+                auto callee = call->getFunc().get();
+                if (auto callee_def = dynamic_cast<Function*>(callee)) {
+                    // SysY enforces strict definition-before-use for functions,
+                    // but with no support for function declarations.
+                    // This implies that mutual recursion (fn0 -> fn1 -> fn0) is impossible.
+                    // For example, without function declarations,
+                    // the following can't compile.
+                    // int fn0() { return fn1(); }
+                    // int fn1() { return fn0(); }
+                    // Given that, we only check if the `call` refers to
+                    // current function to see if it is in a recursive chain.
+                    if (callee_def != &func) {
+                        auto callee_aa = fam.getResult<AliasAnalysisPass>(*callee_def);
+
+                        for (auto write : callee_aa.write) {
+                            if (callee_aa.getPtrInfo(write).global_var)
+                                res.write.insert(write);
+                            else if (callee_aa.getPtrInfo(write).untracked_array) {
+                                auto fp = dynamic_cast<const FormalParam*>(write);
+                                auto param_info = res.getPtrInfo(call->getArgs()[fp->getIndex()].get());
+                                if (param_info.untracked_array || param_info.global_var)
+                                    res.write.insert(write);
+                            }
+                        }
+
+                        for (auto read : callee_aa.read) {
+                            if (callee_aa.getPtrInfo(read).global_var)
+                                res.read.insert(read);
+                            else if (callee_aa.getPtrInfo(read).untracked_array) {
+                                auto fp = dynamic_cast<const FormalParam*>(read);
+                                auto param_info = res.getPtrInfo(call->getArgs()[fp->getIndex()].get());
+                                if (param_info.untracked_array || param_info.global_var)
+                                    res.read.insert(read);
+                            }
+                        }
+
+                        res.has_untracked_call |= callee_aa.has_untracked_call;
                     }
                 }
-                else if (call_fn->isBuiltin()) {
-                    // IRGen only use memset to initialize array
-                    if (call_fn->getName() != "@" + std::string{Config::IR::BUILTIN_MEMSET})
-                        res.has_untracked_call = true;
-                }
-                else // FIXME: Recursion call.
+                else if (!isPureBuiltinOrSylibFunc(callee))
                     res.has_untracked_call = true;
             }
         }
@@ -245,6 +327,42 @@ AliasAnalysisResult AliasAnalysisPass::run(Function &func, FAM &fam) {
 
     return res;
 }
+bool isPureBuiltinOrSylibFunc(const FunctionDecl *fn) {
+    if (fn->isSylib()) {
+        if (fn->getName() == "@_sysy_starttime" ||
+            fn->getName() == "@_sysy_stoptime")
+            return true;
+    }
+    else if (fn->isBuiltin()) {
+        // IRGen only use memset to initialize array
+        if (fn->getName() == "@" + std::string{Config::IR::BUILTIN_MEMSET})
+            return true;
+    }
+    return false;
+}
 
+bool isPure(FAM &fam, const CALLInst *call) {
+    auto callee = call->getFunc().get();
+    if (isPureBuiltinOrSylibFunc(callee))
+        return false;
 
+    auto callee_def = dynamic_cast<Function *>(callee);
+    Err::gassert(callee_def != nullptr, "isPure(): Unknown function");
+    auto call_res = fam.getResult<AliasAnalysisPass>(*callee_def);
+    return call_res.getFunctionModRefInfo() == AliasAnalysisResult::ModRefInfo::NoModRef;
+}
+
+bool hasSideEffect(FAM &fam, const CALLInst *call) {
+    auto callee = call->getFunc().get();
+    if (isPureBuiltinOrSylibFunc(callee))
+        return false;
+
+    auto callee_def = dynamic_cast<Function *>(callee);
+    Err::gassert(callee_def != nullptr, "hasSideEffect(): Unknown function");
+    auto call_res = fam.getResult<AliasAnalysisPass>(*callee_def);
+    return call_res.getFunctionModRefInfo() ==
+               AliasAnalysisResult::ModRefInfo::Mod ||
+           call_res.getFunctionModRefInfo() ==
+               AliasAnalysisResult::ModRefInfo::ModRef;
+}
 } // namespace IR

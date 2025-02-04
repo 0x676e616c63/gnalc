@@ -1,4 +1,4 @@
-#include "../../../../include/ir/passes/helpers/side_effect.hpp"
+#include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../../include/ir/passes/transforms/dce.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
 

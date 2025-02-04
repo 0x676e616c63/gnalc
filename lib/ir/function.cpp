@@ -22,10 +22,11 @@ bool FunctionDecl::isSylib() const { return is_sylib; }
 
 bool FunctionDecl::isBuiltin() const { return is_builtin; }
 
-FunctionDecl::~FunctionDecl() {}
+FunctionDecl::~FunctionDecl() = default;
+void FormalParam::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
 std::vector<std::shared_ptr<Type>>
-get_params_type(const std::vector<std::shared_ptr<Value>> &p) {
+get_params_type(const std::vector<std::shared_ptr<FormalParam>> &p) {
     std::vector<std::shared_ptr<Type>> params_type;
     std::transform(p.begin(), p.end(), std::back_inserter(params_type),
                    [](auto &&v) { return v->getType(); });
@@ -33,7 +34,7 @@ get_params_type(const std::vector<std::shared_ptr<Value>> &p) {
 }
 
 Function::Function(std::string name_,
-                   const std::vector<std::shared_ptr<Value>> &params_,
+                   const std::vector<std::shared_ptr<FormalParam>> &params_,
                    std::shared_ptr<Type> ret_type, ConstantPool *pool_)
     : FunctionDecl(std::move(name_), get_params_type(params_),
                    std::move(ret_type), false, false, false),
@@ -47,15 +48,15 @@ bool Function::delBlock(const std::shared_ptr<BasicBlock> &blk) {
     return delBlockIf([&blk](auto &&b) { return b == blk; });
 }
 
-const std::vector<std::shared_ptr<Value>> &Function::getParams() const {
+const std::vector<std::shared_ptr<FormalParam>> &Function::getParams() const {
     return params;
 }
+
+std::vector<std::shared_ptr<FormalParam>> &Function::getParams() { return params; }
 
 const std::vector<std::shared_ptr<BasicBlock>> &Function::getBlocks() const {
     return blks;
 }
-
-std::vector<std::shared_ptr<Value>> &Function::getParams() { return params; }
 
 std::vector<std::shared_ptr<BasicBlock>> &Function::getBlocks() { return blks; }
 

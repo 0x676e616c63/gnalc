@@ -412,14 +412,16 @@ void IRGenerator::visit(FuncDef &node) {
 
     curr_func = nullptr;
 
-    std::vector<std::shared_ptr<IR::Value>> params;
+    std::vector<std::shared_ptr<IR::FormalParam>> params;
     std::vector<std::string> param_ids;
 
     if (!node.isEmptyParam()) {
-        for (auto &p : node.getParams()) {
-            p->accept(*this);
-            param_ids.emplace_back(p->getId());
-            params.emplace_back(curr_val);
+        const auto& ast_params = node.getParams();
+        for (size_t i = 0; i < ast_params.size(); ++i) {
+            ast_params[i]->accept(*this);
+            param_ids.emplace_back(ast_params[i]->getId());
+            params.emplace_back(std::make_shared<IR::FormalParam>(
+                curr_val->getName(), curr_val->getType(), i));
         }
     }
 

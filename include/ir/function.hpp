@@ -31,9 +31,19 @@ public:
     ~FunctionDecl() override;
 };
 
+class FormalParam : public Value {
+    size_t index;
+public:
+    explicit FormalParam(std::string name, std::shared_ptr<Type> ty, size_t index_)
+        : Value(std::move(name), ty, ValueTrait::FORMAL_PARAMETER) , index(index_) {}
+    size_t getIndex() const { return index; }
+
+    void accept(IRVisitor &visitor) override;
+};
+
 class Function : public FunctionDecl {
 private:
-    std::vector<std::shared_ptr<Value>> params;
+    std::vector<std::shared_ptr<FormalParam>> params;
     std::vector<std::shared_ptr<BasicBlock>> blks;
     ConstantPool *constant_pool;
 
@@ -44,7 +54,7 @@ public:
     using iterator = decltype(blks)::iterator;
 
     Function(std::string name_,
-             const std::vector<std::shared_ptr<Value>> &params,
+             const std::vector<std::shared_ptr<FormalParam>> &params,
              std::shared_ptr<Type> ret_type, ConstantPool *pool);
 
     void addBlock(std::shared_ptr<BasicBlock> blk);
@@ -78,8 +88,8 @@ public:
         return found;
     }
 
-    const std::vector<std::shared_ptr<Value>> &getParams() const;
-    std::vector<std::shared_ptr<Value>> &getParams();
+    const std::vector<std::shared_ptr<FormalParam>> &getParams() const;
+    std::vector<std::shared_ptr<FormalParam>> &getParams();
 
     // usually we can use range-based for instead of these
     const std::vector<std::shared_ptr<BasicBlock>> &getBlocks() const;
@@ -112,7 +122,7 @@ public:
     using iterator = decltype(insts)::iterator;
 
     LinearFunction(std::string name_,
-                   const std::vector<std::shared_ptr<Value>> &params,
+                   const std::vector<std::shared_ptr<FormalParam>> &params,
                    std::shared_ptr<Type> ret_type, ConstantPool *pool)
         : Function(std::move(name_), params, std::move(ret_type), pool) {}
 
