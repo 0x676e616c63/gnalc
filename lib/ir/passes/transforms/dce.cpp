@@ -8,12 +8,11 @@
 namespace IR {
 PM::PreservedAnalyses DCEPass::run(Function &function, FAM &fam) {
     std::set<std::shared_ptr<Instruction>> dead;
-    std::deque<std::shared_ptr<Instruction>> worklist{};
+    std::deque<std::shared_ptr<Instruction>> worklist;
 
     for (const auto &block : function) {
-        for (const auto &inst : *block) {
+        for (const auto &inst : *block)
             worklist.emplace_back(inst);
-        }
     }
 
     while (!worklist.empty()) {
@@ -34,6 +33,9 @@ PM::PreservedAnalyses DCEPass::run(Function &function, FAM &fam) {
             }
         }
     }
+
+    if (dead.empty())
+        return PM::PreservedAnalyses::all();
 
     for (const auto &block : function) {
         block->delInstIf([&dead](const auto &candidate) {

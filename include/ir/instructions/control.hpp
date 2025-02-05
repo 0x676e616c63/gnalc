@@ -83,6 +83,8 @@ public:
     std::vector<std::shared_ptr<Value>> getTrueBBArgs() const;
     std::vector<std::shared_ptr<Value>> getFalseBBArgs() const;
 
+    // Make it unconditional.
+    // Remember to unlinkBB to update CFG.
     void dropFalseDest();
     void dropTrueDest();
 

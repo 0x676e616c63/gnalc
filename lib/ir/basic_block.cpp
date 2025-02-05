@@ -30,6 +30,24 @@ void BasicBlock::addPreBB(const std::shared_ptr<BasicBlock> &bb) {
 void BasicBlock::addNextBB(const std::shared_ptr<BasicBlock> &bb) {
     next_bb.emplace_back(bb);
 }
+bool BasicBlock::delPreBB(const std::shared_ptr<BasicBlock> &bb) {
+    for (auto it = pre_bb.begin(); it != pre_bb.end();) {
+        if (it->lock() == bb) {
+            pre_bb.erase(it);
+            return true;
+        }
+    }
+    return false;
+}
+bool BasicBlock::delNextBB(const std::shared_ptr<BasicBlock> &bb) {
+    for (auto it = next_bb.begin(); it != next_bb.end();) {
+        if (it->lock() == bb) {
+            next_bb.erase(it);
+            return true;
+        }
+    }
+    return false;
+}
 
 void BasicBlock::addInst(const std::shared_ptr<Instruction> &inst) {
     insts.emplace_back(inst);

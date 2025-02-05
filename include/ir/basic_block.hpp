@@ -19,9 +19,16 @@ class IRVisitor;
  * @brief BB继承自value, 其被br指令'use', 'use'了它所包含的指令
  * @note next_bb包含的BB和最后一条br指令中的相同
  */
+inline void linkBB(const std::shared_ptr<BasicBlock> &prebb,
+                   const std::shared_ptr<BasicBlock> &nxtbb);
 
 class BasicBlock : public Value,
                    public std::enable_shared_from_this<BasicBlock> {
+    friend void linkBB(const std::shared_ptr<BasicBlock> &prebb,
+                   const std::shared_ptr<BasicBlock> &nxtbb);
+    friend void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,
+               const std::shared_ptr<BasicBlock> &nxtbb);
+
     std::list<std::weak_ptr<BasicBlock>> pre_bb;   // 前驱
     std::list<std::weak_ptr<BasicBlock>> next_bb;  // 后继
     std::list<std::shared_ptr<Instruction>> insts; // 指令列表
@@ -39,8 +46,6 @@ public:
                std::list<std::weak_ptr<BasicBlock>> _next_bb,
                std::list<std::shared_ptr<Instruction>> _insts);
 
-    void addPreBB(const std::shared_ptr<BasicBlock> &bb);
-    void addNextBB(const std::shared_ptr<BasicBlock> &bb);
     void addInst(const std::shared_ptr<Instruction> &inst);
 
     std::list<std::shared_ptr<BasicBlock>> getPreBB() const;
@@ -99,6 +104,12 @@ public:
 
     void accept(IRVisitor &visitor) override;
     ~BasicBlock() override;
+
+    private:
+    void addPreBB(const std::shared_ptr<BasicBlock> &bb);
+    void addNextBB(const std::shared_ptr<BasicBlock> &bb);
+    bool delPreBB(const std::shared_ptr<BasicBlock> &bb);
+    bool delNextBB(const std::shared_ptr<BasicBlock> &bb);
 };
 
 inline void linkBB(const std::shared_ptr<BasicBlock> &prebb,
@@ -106,7 +117,13 @@ inline void linkBB(const std::shared_ptr<BasicBlock> &prebb,
     prebb->addNextBB(nxtbb);
     nxtbb->addPreBB(prebb);
 }
-
+inline void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,
+                   const std::shared_ptr<BasicBlock> &nxtbb) {
+    bool ok = prebb->delNextBB(nxtbb);
+    Err::gassert(ok);
+    ok = nxtbb->delPreBB(prebb);
+    Err::gassert(ok);
+}
 } // namespace IR
 
 #endif

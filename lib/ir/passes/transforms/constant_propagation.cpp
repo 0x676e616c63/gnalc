@@ -352,10 +352,14 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
                 if (auto br_inst =
                         std::dynamic_pointer_cast<BRInst>(use->getUser())) {
                     Err::gassert(br_inst->isConditional());
-                    if (val.getConstant().get_i1())
+                    if (val.getConstant().get_i1()) {
+                        unlinkBB(br_inst->getParent(), br_inst->getFalseDest());
                         br_inst->dropFalseDest();
-                    else
+                    }
+                    else {
+                        unlinkBB(br_inst->getParent(), br_inst->getTrueDest());
                         br_inst->dropTrueDest();
+                    }
                 }
             }
         }
@@ -370,7 +374,7 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
     // Get Unreachable Blocks
     while (!worklist.empty()) {
         auto curr = worklist.front();
-        visited.insert(curr);
+        visited.emplace(curr);
         worklist.pop_front();
 
         for (const auto &next : curr->getNextBB()) {
