@@ -7,6 +7,8 @@
 
 namespace IR {
 PM::PreservedAnalyses DCEPass::run(Function &function, FAM &fam) {
+    bool dce_inst_modified = false;
+
     std::set<std::shared_ptr<Instruction>> dead;
     std::deque<std::shared_ptr<Instruction>> worklist;
 
@@ -34,19 +36,19 @@ PM::PreservedAnalyses DCEPass::run(Function &function, FAM &fam) {
         }
     }
 
-    if (dead.empty())
-        return PM::PreservedAnalyses::all();
-
     for (const auto &block : function) {
-        block->delInstIf([&dead](const auto &candidate) {
+        dce_inst_modified |= block->delInstIf([&dead](const auto &candidate) {
             return dead.find(candidate) != dead.end();
         });
     }
 
-    PM::PreservedAnalyses pa;
-    pa.preserve<DomTreeAnalysis>();
-    pa.preserve<AliasAnalysisPass>();
-    return pa;
+    if (dce_inst_modified) {
+        PM::PreservedAnalyses pa;
+        pa.preserve<DomTreeAnalysis>();
+        return pa;
+    }
+
+    return PM::PreservedAnalyses::all();
 }
 
 } // namespace IR

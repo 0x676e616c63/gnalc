@@ -7,6 +7,9 @@
 
 namespace IR {
 PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
+    bool adce_inst_modified = false;
+    bool adce_cfg_modified = false;
+
     std::deque<std::shared_ptr<Instruction>> worklist;
     std::set<std::shared_ptr<Instruction>> critical;
     // Mark
@@ -61,17 +64,21 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     block->delInst(br);
                     // TODO
                     // block->addInst(std::make_shared<BRInst>(<nearest marked post dominator>))
+                    adce_cfg_modified = true;
                 }
                 else
                     dead.emplace(inst);
             }
         }
-        block->delInstIf([&dead](const auto& inst) { return dead.find(inst) != dead.end(); });
+        adce_inst_modified |= block->delInstIf([&dead](const auto& inst)
+            { return dead.find(inst) != dead.end(); });
     }
+
 
     // Clean
     bool modified = true;
     while (modified) {
+        modified = false;
         auto end = function.getBlocks().back();
         Err::gassert(end->getInsts().back()->getOpcode() == OP::RET);
         std::set<std::shared_ptr<BasicBlock>> visited;
@@ -131,7 +138,18 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     postorder_worklist.emplace_back(bb);
             }
         }
+        adce_cfg_modified |= modified;
     }
-    return PM::PreservedAnalyses::none();
+
+    if (adce_cfg_modified)
+        return PM::PreservedAnalyses::none();
+
+    if (adce_inst_modified) {
+        PM::PreservedAnalyses pa;
+        pa.preserve<DomTreeAnalysis>();
+        return pa;
+    }
+
+    return PM::PreservedAnalyses::all();
 }
 } // namespace IR

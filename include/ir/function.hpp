@@ -87,7 +87,6 @@ public:
             } else
                 ++it;
         }
-        Err::gassert(found, "Function::delBlockIf(): Not found");
         return found;
     }
 

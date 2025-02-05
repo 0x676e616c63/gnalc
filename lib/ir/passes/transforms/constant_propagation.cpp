@@ -339,6 +339,9 @@ public:
 
 PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
                                                    FAM &manager) {
+    bool sccp_inst_modified = false;
+    bool sccp_cfg_modified = false;
+
     SCCPLatticeFunc lattice_func(&function.getConstantPool());
     SCCPSolver solver(&lattice_func);
     solver.solve(function);
@@ -360,12 +363,14 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
                         unlinkBB(br_inst->getParent(), br_inst->getTrueDest());
                         br_inst->dropTrueDest();
                     }
+                    sccp_cfg_modified = true;
                 }
             }
+            auto inst = std::dynamic_pointer_cast<Instruction>(key);
+            Err::gassert(inst != nullptr);
+            inst->getParent()->delInst(inst);
+            sccp_inst_modified = true;
         }
-        auto inst = std::dynamic_pointer_cast<Instruction>(key);
-        Err::gassert(inst != nullptr);
-        inst->getParent()->delInst(inst);
     }
 
     std::unordered_set<std::shared_ptr<BasicBlock>> visited;
@@ -384,9 +389,18 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
         }
     }
 
-    function.delBlockIf(
+    sccp_cfg_modified |= function.delBlockIf(
         [&visited](auto &&bb) { return visited.find(bb) == visited.end(); });
 
-    return PM::PreservedAnalyses::none();
+    if (sccp_cfg_modified)
+        return PM::PreservedAnalyses::none();
+
+    if (sccp_inst_modified) {
+        PM::PreservedAnalyses pa;
+        pa.preserve<DomTreeAnalysis>();
+        return pa;
+    }
+
+    return PM::PreservedAnalyses::all();
 }
 } // namespace IR

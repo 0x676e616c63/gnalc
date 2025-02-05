@@ -177,7 +177,6 @@ protected:
                 ++it;
             }
         }
-        Err::gassert(found, "User::delOperandIf(): not found.");
         return found;
     }
 };

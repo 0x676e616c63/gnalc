@@ -88,8 +88,6 @@ public:
             } else
                 ++it;
         }
-
-        Err::gassert(found, "BasicBlock::delInstIf(): Not found");
         return found;
     }
 
