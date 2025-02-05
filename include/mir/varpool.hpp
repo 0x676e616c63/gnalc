@@ -10,8 +10,8 @@ private:
     struct IRValueWrapper {
         /// @brief 为IR::Value添加 operator ==
         const IR::Value &val;
-        bool operator==(const IRValueWrapper &anthor) const {
-            return &(this->val) == &(anthor.val); // 比较地址
+        bool operator==(const IRValueWrapper &another) const {
+            return &(this->val) == &(another.val); // 比较地址
         }
     };
 

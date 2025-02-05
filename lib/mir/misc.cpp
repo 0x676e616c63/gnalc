@@ -42,7 +42,7 @@ std::string MIR::GlobalObj::toString() const {
     return str;
 }
 
-MIR::GlobalObj::GlobalObj(IR::GlobalVariable &midEnd_Glo) {
+MIR::GlobalObj::GlobalObj(const IR::GlobalVariable &midEnd_Glo) {
     name = midEnd_Glo.getName();
     mkInitializer(midEnd_Glo.getIniter());
     initializerMerge();
@@ -51,29 +51,21 @@ MIR::GlobalObj::GlobalObj(IR::GlobalVariable &midEnd_Glo) {
 void MIR::GlobalObj::mkInitializer(const IR::GVIniter &midEnd_GVIniter) {
     ///@brief flat midEnd GVIniter
 
-    if (midEnd_GVIniter.isArray()) {
+    if (!midEnd_GVIniter.isArray()) {
         if (midEnd_GVIniter.isZero())
             initializer.emplace_back(false, 1);
         else {
-            if (auto ci1 = std::dynamic_pointer_cast<IR::ConstantI1>(
+            // IR's Global Variable must be ConstantInt or ConstantFloat
+            if (auto ci32 = std::dynamic_pointer_cast<IR::ConstantInt>(
                     midEnd_GVIniter.getConstVal())) {
-                size += 1;
-                initializer.emplace_back(true, ci1->getVal());
-            } else if (auto ci8 = std::dynamic_pointer_cast<IR::ConstantI8>(
-                           midEnd_GVIniter.getConstVal())) {
-                size += 1;
-                initializer.emplace_back(true, ci8->getVal());
-            } else if (auto ci32 = std::dynamic_pointer_cast<IR::ConstantInt>(
-                           midEnd_GVIniter.getConstVal())) {
                 size += 4;
                 initializer.emplace_back(true, ci32->getVal());
             } else if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(
                            midEnd_GVIniter.getConstVal())) {
                 size += 4;
                 initializer.emplace_back(true, cf->getVal());
-            } else {
-                // UNDIFINE
-            }
+            } else
+                Err::unreachable("Invalid GlobalVariable's initializer");
         }
     }
     /// Array
@@ -84,9 +76,9 @@ void MIR::GlobalObj::mkInitializer(const IR::GVIniter &midEnd_GVIniter) {
             initializer.emplace_back(false, midEnd_type->getBytes());
 
         } else {
-            auto &midEnd_inner_initer = midEnd_GVIniter.getInnerIniter();
+            const auto &midEnd_inner_initer = midEnd_GVIniter.getInnerIniter();
 
-            for (auto &initer : midEnd_inner_initer) {
+            for (const auto &initer : midEnd_inner_initer) {
                 mkInitializer(initer);
             }
         }

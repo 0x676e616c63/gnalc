@@ -49,7 +49,7 @@ private:
 
 public:
     GlobalObj();
-    explicit GlobalObj(IR::GlobalVariable &);
+    explicit GlobalObj(const IR::GlobalVariable &);
 
     void mkInitializer(const IR::GVIniter &);
 

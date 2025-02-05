@@ -1,5 +1,4 @@
 #include "../../../include/mir/builder/lowering.hpp"
-#include <cassert>
 
 using namespace MIR;
 
@@ -50,8 +49,7 @@ std::list<std::shared_ptr<Instruction>>
 InstLowering::operator()(const std::shared_ptr<IR::Instruction> &midEnd_inst) {
     std::list<std::shared_ptr<Instruction>> inst{};
     if (auto binary = std::dynamic_pointer_cast<IR::BinaryInst>(midEnd_inst)) {
-        if (std::dynamic_pointer_cast<IR::BType>(binary->getType())
-                ->getInner() == IR::IRBTYPE::I32)
+        if (IR::toBType(binary->getType())->getInner() == IR::IRBTYPE::I32)
             inst = binaryLower(binary);
         else {
             /// SIMD
@@ -89,7 +87,7 @@ InstLowering::operator()(const std::shared_ptr<IR::Instruction> &midEnd_inst) {
     } else if (auto phi = std::dynamic_pointer_cast<IR::PHIInst>(midEnd_inst)) {
         inst = phiLower(phi);
     } else {
-        assert(false && "ir lowering to mir failed\n");
+        Err::unreachable("InstLowering: unknown IR instruction");
     }
 
     return inst;
@@ -100,7 +98,7 @@ InstLowering::operator()(const std::shared_ptr<IR::Instruction> &midEnd_inst) {
 // ===============
 std::shared_ptr<Operand>
 OperandLowering::fastFind(const std::shared_ptr<IR::Value> &midEnd_val) {
-    /// varibelPool find
+    /// variablePool find
     if (auto ptr = VarPool.getValue(*midEnd_val))
         return ptr;
 
@@ -141,7 +139,7 @@ OperandLowering::fastFind(const std::shared_ptr<IR::Value> &midEnd_val) {
 
     // else
     else {
-        assert(false && "fast find an operand failed\n");
+        Err::unreachable("fast find an operand failed");
         return nullptr;
     }
 }

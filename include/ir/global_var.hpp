@@ -76,6 +76,7 @@ public:
     const std::shared_ptr<Type> &getVarType() const;
     bool isArray() const;
     GVIniter &getIniter();
+    const GVIniter &getIniter() const;
     int getAlign() const;
 
     void accept(IRVisitor &visitor) override;
