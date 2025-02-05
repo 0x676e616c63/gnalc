@@ -19,8 +19,11 @@ class IRVisitor;
  * @brief BB继承自value, 其被br指令'use', 'use'了它所包含的指令
  * @note next_bb包含的BB和最后一条br指令中的相同
  */
-inline void linkBB(const std::shared_ptr<BasicBlock> &prebb,
+void linkBB(const std::shared_ptr<BasicBlock> &prebb,
                    const std::shared_ptr<BasicBlock> &nxtbb);
+
+void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,
+           const std::shared_ptr<BasicBlock> &nxtbb);
 
 class BasicBlock : public Value,
                    public std::enable_shared_from_this<BasicBlock> {
@@ -111,19 +114,6 @@ public:
     bool delPreBB(const std::shared_ptr<BasicBlock> &bb);
     bool delNextBB(const std::shared_ptr<BasicBlock> &bb);
 };
-
-inline void linkBB(const std::shared_ptr<BasicBlock> &prebb,
-                   const std::shared_ptr<BasicBlock> &nxtbb) {
-    prebb->addNextBB(nxtbb);
-    nxtbb->addPreBB(prebb);
-}
-inline void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,
-                   const std::shared_ptr<BasicBlock> &nxtbb) {
-    bool ok = prebb->delNextBB(nxtbb);
-    Err::gassert(ok);
-    ok = nxtbb->delPreBB(prebb);
-    Err::gassert(ok);
-}
 } // namespace IR
 
 #endif

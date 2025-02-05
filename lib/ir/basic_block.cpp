@@ -122,5 +122,19 @@ void BasicBlock::setParent(const std::shared_ptr<Function> &_parent) {
 
 void BasicBlock::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
-BasicBlock::~BasicBlock() {}
+BasicBlock::~BasicBlock() = default;
+
+void linkBB(const std::shared_ptr<BasicBlock> &prebb,
+                   const std::shared_ptr<BasicBlock> &nxtbb) {
+    prebb->addNextBB(nxtbb);
+    nxtbb->addPreBB(prebb);
+}
+
+void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,
+                   const std::shared_ptr<BasicBlock> &nxtbb) {
+    bool ok = prebb->delNextBB(nxtbb);
+    Err::gassert(ok);
+    ok = nxtbb->delPreBB(prebb);
+    Err::gassert(ok);
+}
 } // namespace IR
