@@ -62,7 +62,7 @@ InstLowering::icmpLower(const std::shared_ptr<IR::ICMPInst> &icmp) {
     ///@note 原始的LLVM IR的 icmp/fcmp 之后就是对应跳转指令
     ///@note 然而在优化之后就不一定, 比较和跳转之间可能存在刷新符号位的指令
     ///@note 所以使用带条件的mov保证所有情况下都正常执行, 后续数据流窥孔中再考虑合并为常见情况
-    std::list<std::shared_ptr<Instruction>> insts{};
+    std::list<std::shared_ptr<Instruction>> insts;
 
     auto boolVal = operlower.mkOP(*icmp, RegisterBank::gpr);
     std::shared_ptr<IR::Value> rval = icmp->getRHS();

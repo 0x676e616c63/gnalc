@@ -4,13 +4,12 @@
 #include "../../../include/mir/instructions/copy.hpp"
 #include "../../../include/mir/instructions/memory.hpp"
 #include "../../../include/mirtools/tool.hpp"
-#include <cassert>
 
 using namespace MIR;
 
 std::list<std::shared_ptr<Instruction>>
 InstLowering::allocaLower(const std::shared_ptr<IR::ALLOCAInst> &alloca) {
-    std::list<std::shared_ptr<Instruction>> insts{};
+    std::list<std::shared_ptr<Instruction>> insts;
     unsigned long long size;
     size = alloca->getBaseType()->getBytes();
 
@@ -21,7 +20,7 @@ InstLowering::allocaLower(const std::shared_ptr<IR::ALLOCAInst> &alloca) {
 
 std::list<std::shared_ptr<Instruction>>
 InstLowering::loadLower(const std::shared_ptr<IR::LOADInst> &load) {
-    std::list<std::shared_ptr<Instruction>> insts{};
+    std::list<std::shared_ptr<Instruction>> insts;
 
     auto ptr = std::dynamic_pointer_cast<BaseADROP>(
         operlower.fastFind(load->getPtr()));
@@ -39,7 +38,7 @@ InstLowering::loadLower(const std::shared_ptr<IR::LOADInst> &load) {
 
 std::list<std::shared_ptr<Instruction>>
 InstLowering::storeLower(const std::shared_ptr<IR::STOREInst> &store) {
-    std::list<std::shared_ptr<Instruction>> insts{};
+    std::list<std::shared_ptr<Instruction>> insts;
 
     auto ptr = std::dynamic_pointer_cast<BaseADROP>(
         operlower.fastFind(store->getPtr()));
@@ -55,8 +54,8 @@ InstLowering::storeLower(const std::shared_ptr<IR::STOREInst> &store) {
     if (auto store_const = std::dynamic_pointer_cast<IR::ConstantInt>(val)) {
         // mov Rd, #imme
         auto const_int = operlower.fastFind(store_const->getVal());
-        auto relay = operlower.mkOP(
-            std::make_shared<IR::BType>(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto relay =
+            operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
 
         auto mov =
             std::make_shared<movInst>(SourceOperandType::i, relay, const_int);
@@ -73,7 +72,7 @@ InstLowering::storeLower(const std::shared_ptr<IR::STOREInst> &store) {
 
 std::list<std::shared_ptr<Instruction>>
 InstLowering::gepLower(const std::shared_ptr<IR::GEPInst> &gep) {
-    std::list<std::shared_ptr<Instruction>> insts{};
+    std::list<std::shared_ptr<Instruction>> insts;
 
     // 假设所有的Gep都以行开头作为基址, 也就是idx[0]一定为0
     auto idx = gep->getIdxs()[1];
@@ -89,7 +88,7 @@ InstLowering::gepLower(const std::shared_ptr<IR::GEPInst> &gep) {
     auto PreElemSize = arraytype->getBytes();
 
     if (!arraytype)
-        assert(false && "get gep ArrayType failed\n");
+        Err::unreachable("memory lower: IR try to gep a none-Array type");
 
     // =======================
     // idx为常量, 后端隐式地统计偏移, 避免多余指令
@@ -106,8 +105,8 @@ InstLowering::gepLower(const std::shared_ptr<IR::GEPInst> &gep) {
     else {
         // mul temp1, operlower(idx), #imme (带优化)
         // add (BindOnVirOP)temp2, (BindOnVirOP)ptr, temp1
-        auto relay = operlower.mkOP(
-            std::make_shared<IR::BType>(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto relay =
+            operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
         auto mul_midEnd = std::make_shared<IR::BinaryInst>(
             relay->getName(), IR::OP::MUL, idx,
             std::make_shared<IR::ConstantInt>(PreElemSize));

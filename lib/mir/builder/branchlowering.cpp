@@ -4,13 +4,12 @@
 #include "../../../include/mir/instructions/copy.hpp"
 #include "../../../include/mir/instructions/memory.hpp"
 #include "../../../include/mirtools/tool.hpp"
-#include <cassert>
 
 using namespace MIR;
 
 std::list<std::shared_ptr<Instruction>>
 InstLowering::brLower(const std::shared_ptr<IR::BRInst> &br) {
-    std::list<std::shared_ptr<Instruction>> insts{};
+    std::list<std::shared_ptr<Instruction>> insts;
 
     if (!br->isConditional()) {
         // b label
@@ -42,7 +41,7 @@ InstLowering::brLower(const std::shared_ptr<IR::BRInst> &br) {
 
 std::list<std::shared_ptr<Instruction>>
 InstLowering::retLower(const std::shared_ptr<IR::RETInst> &ret) {
-    std::list<std::shared_ptr<Instruction>> insts{};
+    std::list<std::shared_ptr<Instruction>> insts;
 
     auto retType = ret->getRetBType();
     auto retVal = operlower.fastFind(ret->getRetVal());
@@ -62,7 +61,7 @@ InstLowering::retLower(const std::shared_ptr<IR::RETInst> &ret) {
 
 std::list<std::shared_ptr<Instruction>>
 InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
-    std::list<std::shared_ptr<Instruction>> insts{};
+    std::list<std::shared_ptr<Instruction>> insts;
 
     auto functype =
         std::dynamic_pointer_cast<IR::FunctionType>(call->getFunc()->getType());
