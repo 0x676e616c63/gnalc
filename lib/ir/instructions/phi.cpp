@@ -2,6 +2,9 @@
 #include "../../../include/ir/visitor.hpp"
 
 namespace IR {
+PHIInst::PHIInst(NameRef name, const std::shared_ptr<Type> &_type)
+    : Instruction(OP::PHI, name, _type) {}
+
 PHIInst::PHIInst(NameRef name, const std::shared_ptr<Type> &_type,
                  const std::vector<std::shared_ptr<PhiOperand>> &_operands)
     : Instruction(OP::PHI, name, _type) {
@@ -22,6 +25,10 @@ PHIInst::getValueForBlock(const std::shared_ptr<BasicBlock> &block) const {
         }
     }
     return nullptr;
+}
+void PHIInst::addPhiOpers(const std::vector<std::shared_ptr<PhiOperand>> &_operands) {
+    for (const auto &oper : _operands)
+        addOperand(oper);
 }
 
 std::vector<std::shared_ptr<PHIInst::PhiOperand>> PHIInst::getPhiOpers() const {

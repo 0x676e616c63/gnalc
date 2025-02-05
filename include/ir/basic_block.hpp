@@ -8,6 +8,7 @@
 
 #include "base.hpp"
 #include "instruction.hpp"
+#include "instructions/phi.hpp"
 
 #include <memory>
 #include <set>
@@ -62,7 +63,7 @@ public:
 
     void updateInstIndex() const;
 
-    unsigned index = 0; // 使用前调用父函数的update方法！
+    unsigned index = 0; // 不经过插入删除接口修改后使用先调用父函数的update方法！
 
     // No use-def check, just remove the first matched item
     bool delFirstOfInst(const std::shared_ptr<Instruction> &inst);
@@ -88,6 +89,7 @@ public:
             } else
                 ++it;
         }
+        if (found) updateInstIndex();
         return found;
     }
 
@@ -102,6 +104,8 @@ public:
 
     std::shared_ptr<Function> getParent() const;
     void setParent(const std::shared_ptr<Function> &_parent);
+
+    void insertPhi(const std::shared_ptr<PHIInst> & node);
 
     void accept(IRVisitor &visitor) override;
     ~BasicBlock() override;
