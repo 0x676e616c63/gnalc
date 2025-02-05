@@ -11,14 +11,7 @@ using namespace MIR;
 struct splited {
     unsigned int exp1;
     unsigned int exp2;
-    enum class oper {
-        singlePos,
-        singleNeg,
-        addPos,
-        addNeg,
-        sub,
-        none
-    } cul; // 0 == add, 1 == sub, 2 == nope
+    enum class oper { singlePos, singleNeg, addPos, addNeg, sub, none } cul;
 };
 
 splited SplitTo2PowX(int);

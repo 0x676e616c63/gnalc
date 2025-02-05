@@ -6,6 +6,7 @@
 #include "base.hpp"
 #include "basicblock.hpp"
 #include "misc.hpp"
+#include "varpool.hpp"
 
 namespace MIR {
 
@@ -23,6 +24,7 @@ public: // 接口太多, 还不如直接访问
     size_t stackSize{};
     unsigned int maxAlignment = 4;
     std::vector<std::shared_ptr<FrameObj>> StackObjs; // arg ret local spill
+    VarPool varpool;
 
     unsigned int args;
 

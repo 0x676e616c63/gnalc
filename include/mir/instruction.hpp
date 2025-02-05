@@ -53,6 +53,8 @@ enum class OpCode {
 
     CMP,
     CMN,
+    TST,
+    TEQ,
 
     COPY /* 伪指令 */
 };

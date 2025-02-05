@@ -109,6 +109,7 @@ public:
           SourceOperand_1(std::move(SourceOperand_1_)),
           SourceOperand_2(std::move(SourceOperand_2_)) {
         addTargetOP(nullptr);
+        setFlash();
     };
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
     bool Check() override;

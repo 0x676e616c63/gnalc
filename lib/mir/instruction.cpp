@@ -15,7 +15,9 @@ std::string Instruction::toString() {
         str += enum_name(std::get<NeonOpCode>(opcode));
 
     str += enum_name(condition);
-    if (flashFlag)
+    if (flashFlag && std::get<OpCode>(opcode) != OpCode::CMN &&
+        std::get<OpCode>(opcode) != OpCode::CMP &&
+        std::get<OpCode>(opcode) != OpCode::TST)
         str += 's';
 
     str += '-' + enum_name(tptrait) + ' ';

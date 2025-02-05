@@ -273,6 +273,10 @@ template <> inline std::string enum_name<OpCode>(OpCode t) {
         return "cmp";
     case OpCode::CMN:
         return "cmn";
+    case OpCode::TST:
+        return "tst";
+    case OpCode::TEQ:
+        return "teq";
     case OpCode::COPY:
         return "COPY";
     }

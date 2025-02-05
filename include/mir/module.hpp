@@ -8,8 +8,7 @@ namespace MIR {
 class Module {
 private:
     std::list<std::shared_ptr<Function>> funcs;
-    ConstPool ConstPool;
-    VarPool VarPool;
+    ConstPool constpool;
 
     std::vector<std::shared_ptr<GlobalObj>> GlobalVals;
 
@@ -28,8 +27,10 @@ public:
 
     template <typename T_variant>
     std::shared_ptr<ConstObj> getConst(const T_variant &_val) {
-        ConstPool.getConstant(_val);
+        constpool.getConstant(_val);
     }
+
+    ConstPool &getConstPool() { return constpool; }
 
     std::string toString();
 };
