@@ -7,13 +7,13 @@
 #define GNALC_IR_BASIC_BLOCK_HPP
 
 #include "base.hpp"
-#include "function.hpp"
 #include "instruction.hpp"
 
 #include <memory>
 #include <set>
 
 namespace IR {
+class Function;
 class IRVisitor;
 /**
  * @brief BB继承自value, 其被br指令'use', 'use'了它所包含的指令
@@ -26,7 +26,7 @@ class BasicBlock : public Value,
     std::list<std::weak_ptr<BasicBlock>> next_bb;  // 后继
     std::list<std::shared_ptr<Instruction>> insts; // 指令列表
     std::vector<std::shared_ptr<Value>> bb_params;
-    std::shared_ptr<Function> parent;
+    std::weak_ptr<Function> parent;
 
 public:
     using const_iterator = decltype(insts)::const_iterator;

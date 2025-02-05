@@ -676,10 +676,17 @@ void IRGenerator::visit(CallExp &node) {
 
     auto functy = IR::toFunctionType(func->getType());
     auto expected = functy->getParams();
-    if (expected.size() != args.size())
-        Err::error("Invalid call.");
 
-    for (size_t i = 0; i < args.size(); ++i)
+    if (functy->isVAArg()) {
+        if (expected.size() > args.size())
+            Err::error("Invalid call.");
+    }
+    else {
+        if (expected.size() != args.size())
+            Err::error("Invalid call.");
+    }
+
+    for (size_t i = 0; i < expected.size(); ++i)
         args[i] = type_cast(args[i], expected[i]);
 
     std::shared_ptr<IR::CALLInst> call;

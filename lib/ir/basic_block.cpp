@@ -95,7 +95,7 @@ const std::vector<std::shared_ptr<Value>> &BasicBlock::getBBParams() const {
     return bb_params;
 }
 
-std::shared_ptr<Function> BasicBlock::getParent() const { return parent; }
+std::shared_ptr<Function> BasicBlock::getParent() const { return parent.lock(); }
 void BasicBlock::setParent(const std::shared_ptr<Function> &_parent) { parent = _parent; }
 
 void BasicBlock::accept(IRVisitor &visitor) { visitor.visit(*this); }

@@ -2,6 +2,7 @@
 #include "../../../../include/utils/exception.hpp"
 
 #include <stack>
+#include <algorithm>
 
 namespace IR {
 bool PromotePass::iADomB(const std::shared_ptr<Instruction> &ia,
