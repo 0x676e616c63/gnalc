@@ -1,6 +1,5 @@
 #include "../../../include/mir/instructions/binary.hpp"
 #include "../../../include/mirtools/enum_name.hpp"
-#include <cassert>
 
 using namespace MIR;
 

@@ -18,7 +18,7 @@ private:
     std::list<std::shared_ptr<Instruction>> insts;
 
 public:
-    BasicBlock() : Value(ValueTrait::BasicBlock){};
+    BasicBlock() : Value(ValueTrait::BasicBlock) {}
     explicit BasicBlock(std::string _name)
         : Value(ValueTrait::BasicBlock, std::move(_name)) {}
 

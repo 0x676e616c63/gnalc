@@ -42,7 +42,7 @@ InstLowering::binaryLower(const std::shared_ptr<IR::BinaryInst> &binary) {
 
     auto op = binary->getOpcode();
 
-    std::list<std::shared_ptr<Instruction>> insts{};
+    std::list<std::shared_ptr<Instruction>> insts;
 
     std::shared_ptr<IR::Value> rval = binary->getRHS();
     std::shared_ptr<IR::Value> lval = binary->getLHS();
@@ -460,7 +460,7 @@ InstLowering::binaryLower(const std::shared_ptr<IR::BinaryInst> &binary) {
         insts.emplace_back(mls);
 
     } else {
-        assert(false && "binary lowering failed\n");
+        Err::unreachable("binary lowering: Unexpected IR::OP.");
     }
 
     return insts;
@@ -476,31 +476,31 @@ splited SplitTo2PowX(int multiplier) {
         multiplier = std::abs(multiplier);
     }
 
-    unsigned int cnt = __builtin_popcount((unsigned int)multiplier);
+    unsigned int cnt = popcount_wrapper((unsigned int)multiplier);
 
     switch (cnt) {
     case 0:
         /// @brief 乘0
         break;
     case 1:
-        twin.exp1 = __builtin_ctz(multiplier);
+        twin.exp1 = ctz_wrapper(multiplier);
         if (reverse)
             twin.cul = splited::oper::singleNeg;
         else
             twin.cul = splited::oper::singlePos;
         break;
     case 2:
-        twin.exp1 = __builtin_ctz(multiplier);
+        twin.exp1 = ctz_wrapper(multiplier);
         multiplier = multiplier >> (twin.exp1 + 1);
-        twin.exp2 = __builtin_ctz(multiplier) + twin.exp1 + 1;
+        twin.exp2 = ctz_wrapper(multiplier) + twin.exp1 + 1;
         if (reverse)
             twin.cul = splited::oper::addNeg;
         else
             twin.cul = splited::oper::addPos;
         break;
     default:
-        unsigned int leading = __builtin_clz(multiplier);
-        unsigned int tailing = __builtin_ctz(multiplier);
+        unsigned int leading = clz_wrapper(multiplier);
+        unsigned int tailing = ctz_wrapper(multiplier);
 
         if (leading + tailing + cnt != 32) {
             twin.cul = splited::oper::none;
@@ -652,7 +652,7 @@ mulOpt(const std::shared_ptr<BindOnVirOP> &target,
 }
 
 multiplication ChooseMultipler(int divisor) {
-    int log_2 = 32 - __builtin_clz(divisor - 1);
+    int log_2 = 32 - clz_wrapper(divisor - 1);
     int shift = log_2;
 
     size_t low = (std::size_t(1) << (32 + shift)) / divisor;
@@ -694,12 +694,12 @@ divOpt(const std::shared_ptr<BindOnVirOP> &target,
         insts.emplace_back(neg);
     }
 
-    if (__builtin_popcount(divisor_const) == 1) {
+    if (popcount_wrapper(divisor_const) == 1) {
         // asr	temp1, dividend, #31                ; temp1是一个掩码(0xFFFFFFFF)
         // lsr	temp2, temp1, #32 - log2(divisor)   ; dividend为正时, temp2 = 0; 反之 temp2 = divisor - 1;
         // add	temp3, divident, temp2              ; 当dividend为负数, 修正为向0取整, dividend + divisor - 1
         // asr	target, temp3, #divisor
-        auto exp = __builtin_ctz(divisor_const);
+        auto exp = ctz_wrapper(divisor_const);
 
         auto relay1 = operlower.mkOP(
             std::make_shared<IR::BType>(IR::IRBTYPE::I32), RegisterBank::gpr);

@@ -5,7 +5,6 @@
 #include "../../../include/mir/instructions/memory.hpp"
 #include "../../../include/mirtools/tool.hpp"
 #include <algorithm>
-#include <cassert>
 
 using namespace MIR;
 
@@ -24,6 +23,8 @@ IR::ICMPOP getReverse(IR::ICMPOP _cond) {
     case IR::ICMPOP::slt:
         return IR::ICMPOP::sgt;
     }
+    Err::unreachable("getReverse(): Unknown ICMPOP");
+    return IR::ICMPOP::eq;
 }
 
 void setMovCond(const std::shared_ptr<movInst> &mov_true,
@@ -82,12 +83,12 @@ InstLowering::icmpLower(const std::shared_ptr<IR::ICMPInst> &icmp) {
         auto constlval = operlower.fastFind(lconst->getVal());
         auto constrval = operlower.fastFind(rconst->getVal());
 
-        auto relaylval = operlower.mkOP(
-            std::make_shared<IR::BType>(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto relaylval =
+            operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
         auto mov_lval = std::make_shared<movInst>(SourceOperandType::ri,
                                                   relaylval, constlval);
-        auto relayrval = operlower.mkOP(
-            std::make_shared<IR::BType>(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto relayrval =
+            operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
         auto mov_rval = std::make_shared<movInst>(SourceOperandType::ri,
                                                   relayrval, constrval);
 
@@ -123,9 +124,8 @@ InstLowering::icmpLower(const std::shared_ptr<IR::ICMPInst> &icmp) {
             insts.emplace_back(cmp);
         } else {
             // 加 mov
-            auto relaylval =
-                operlower.mkOP(std::make_shared<IR::BType>(IR::IRBTYPE::I32),
-                               RegisterBank::gpr);
+            auto relaylval = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32),
+                                            RegisterBank::gpr);
             auto mov_lval = std::make_shared<movInst>(SourceOperandType::ri,
                                                       relaylval, constlval);
             auto cmp = std::make_shared<compareInst>(
@@ -147,9 +147,8 @@ InstLowering::icmpLower(const std::shared_ptr<IR::ICMPInst> &icmp) {
 
         if (constrval->getConst()->isEncoded()) {
             // 加 mov
-            auto relayrval =
-                operlower.mkOP(std::make_shared<IR::BType>(IR::IRBTYPE::I32),
-                               RegisterBank::gpr);
+            auto relayrval = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32),
+                                            RegisterBank::gpr);
             auto mov_rval = std::make_shared<movInst>(SourceOperandType::ri,
                                                       relayrval, constrval);
             auto cmp = std::make_shared<compareInst>(

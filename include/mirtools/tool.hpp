@@ -28,6 +28,17 @@ struct variant_visitor {
 
 extern std::map<IR::OP, MIR::OpCode> OPmap;
 
+constexpr int popcount_wrapper(unsigned val) {
+    return __builtin_popcount(val);
+}
+
+constexpr int clz_wrapper(unsigned val) {
+    return __builtin_clz(val);
+}
+
+constexpr int ctz_wrapper(unsigned val) {
+    return __builtin_ctz(val);
+}
 } // namespace MIR
 
 #endif

@@ -1,7 +1,5 @@
 #include "../../../include/ir/instructions/memory.hpp"
 #include "../../../include/ir/visitor.hpp"
-#include <cassert>
-#include <stdexcept>
 
 namespace IR {
 ALLOCAInst::ALLOCAInst(NameRef name, std::shared_ptr<Type> btype, int _align)
