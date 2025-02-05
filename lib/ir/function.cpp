@@ -8,8 +8,7 @@ FunctionDecl::FunctionDecl(std::string name_,
                            std::vector<std::shared_ptr<Type>> params,
                            std::shared_ptr<Type> ret_type, bool is_va_arg_,
                            bool is_builtin_, bool is_sylib_)
-    : Value(
-          std::move(name_),
+    : Value( std::move(name_),
           makeFunctionType(std::move(params), std::move(ret_type), is_va_arg_),
           ValueTrait::FUNCTION),
       is_builtin(is_builtin_), is_sylib(is_sylib_) {
@@ -53,7 +52,9 @@ const std::vector<std::shared_ptr<FormalParam>> &Function::getParams() const {
     return params;
 }
 
-std::vector<std::shared_ptr<FormalParam>> &Function::getParams() { return params; }
+std::vector<std::shared_ptr<FormalParam>> &Function::getParams() {
+    return params;
+}
 
 const std::vector<std::shared_ptr<BasicBlock>> &Function::getBlocks() const {
     return blks;

@@ -13,9 +13,9 @@ namespace IR {
 class LatticeVal {
 public:
     enum class Type {
-        UNDEF, // Undefined
+        UNDEF,    // Undefined
         CONSTANT, // Constant value
-        NAC // Not a constant value
+        NAC       // Not a constant value
     };
 
 private:
@@ -23,8 +23,7 @@ private:
     std::optional<ConstantProxy> value;
 
 public:
-    LatticeVal() : type(Type::UNDEF) {
-    }
+    LatticeVal() : type(Type::UNDEF) {}
 
     LatticeVal(const LatticeVal &) = default;
 
@@ -34,8 +33,7 @@ public:
         Err::gassert(type != Type::CONSTANT);
     }
 
-    explicit LatticeVal(ConstantProxy val) : type(Type::CONSTANT), value(val) {
-    }
+    explicit LatticeVal(ConstantProxy val) : type(Type::CONSTANT), value(val) {}
 
     bool operator==(const LatticeVal &rhs) const {
         if (type != rhs.type)
@@ -90,8 +88,7 @@ class SCCPLatticeFunc : public SCCPSolver::LatticeFunction {
     ConstantPool *constant_pool;
 
 public:
-    explicit SCCPLatticeFunc(ConstantPool *pool) : constant_pool(pool) {
-    }
+    explicit SCCPLatticeFunc(ConstantPool *pool) : constant_pool(pool) {}
 
     LatticeVal merge(LatticeVal lhs, LatticeVal rhs) const override {
         if (lhs.isNAC() || rhs.isNAC())
@@ -191,90 +188,70 @@ public:
                 changes[inst].setConstant(-val.getConstant());
             else if (val.isNAC())
                 changes[inst] = LatticeInfo::NAC;
-        } else if (auto alloca = std::dynamic_pointer_cast<ALLOCAInst>(inst)) {
-            changes[inst] = LatticeInfo::NAC;
-        } else if (auto gep = std::dynamic_pointer_cast<GEPInst>(inst)) {
-            changes[inst] = LatticeInfo::NAC;
-        } else if (auto load = std::dynamic_pointer_cast<LOADInst>(inst)) {
-            changes[inst] = LatticeInfo::NAC;
-        } else if (auto call = std::dynamic_pointer_cast<CALLInst>(inst)) {
-            changes[inst] = LatticeInfo::NAC;
         } else if (auto icmp = std::dynamic_pointer_cast<ICMPInst>(inst)) {
-            auto lhs = solver.getVal(
-                LatticeInfo::getKeyFromValue(icmp->getLHS()));
-            auto rhs = solver.getVal(
-                LatticeInfo::getKeyFromValue(icmp->getRHS()));
+            auto lhs =
+                solver.getVal(LatticeInfo::getKeyFromValue(icmp->getLHS()));
+            auto rhs =
+                solver.getVal(LatticeInfo::getKeyFromValue(icmp->getRHS()));
             if (lhs.isConstant() && rhs.isConstant()) {
                 switch (icmp->getCond()) {
                 case ICMPOP::eq:
-                    changes[inst].setConstant(
-                        ConstantProxy(constant_pool,
-                                      lhs.getConstant() == rhs.getConstant()));
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() == rhs.getConstant()));
                     break;
                 case ICMPOP::ne:
-                    changes[inst].setConstant(
-                        ConstantProxy(constant_pool,
-                                      lhs.getConstant() != rhs.getConstant()));
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() != rhs.getConstant()));
                     break;
                 case ICMPOP::sge:
-                    changes[inst].setConstant(
-                        ConstantProxy(constant_pool,
-                                      lhs.getConstant() >= rhs.getConstant()));
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() >= rhs.getConstant()));
                     break;
                 case ICMPOP::sgt:
-                    changes[inst].setConstant(
-                        ConstantProxy(constant_pool,
-                                      lhs.getConstant() > rhs.getConstant()));
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() > rhs.getConstant()));
                     break;
                 case ICMPOP::sle:
-                    changes[inst].setConstant(
-                        ConstantProxy(constant_pool,
-                                      lhs.getConstant() <= rhs.getConstant()));
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() <= rhs.getConstant()));
                     break;
                 case ICMPOP::slt:
-                    changes[inst].setConstant(
-                        ConstantProxy(constant_pool,
-                                      lhs.getConstant() < rhs.getConstant()));
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() < rhs.getConstant()));
                     break;
                 }
             } else if (lhs.isNAC() || rhs.isNAC())
                 changes[inst] = LatticeInfo::NAC;
         } else if (auto fcmp = std::dynamic_pointer_cast<FCMPInst>(inst)) {
-            auto lhs = solver.getVal(
-                LatticeInfo::getKeyFromValue(fcmp->getLHS()));
-            auto rhs = solver.getVal(
-                LatticeInfo::getKeyFromValue(fcmp->getRHS()));
+            auto lhs =
+                solver.getVal(LatticeInfo::getKeyFromValue(fcmp->getLHS()));
+            auto rhs =
+                solver.getVal(LatticeInfo::getKeyFromValue(fcmp->getRHS()));
             if (lhs.isConstant() && rhs.isConstant()) {
                 switch (fcmp->getCond()) {
                 case FCMPOP::oeq:
-                    changes[inst].setConstant(
-                        ConstantProxy(constant_pool,
-                                      lhs.getConstant() == rhs.getConstant()));
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() == rhs.getConstant()));
                     break;
                 case FCMPOP::one:
-                    changes[inst].setConstant(
-                        ConstantProxy(constant_pool,
-                                      lhs.getConstant() != rhs.getConstant()));
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() != rhs.getConstant()));
                     break;
                 case FCMPOP::oge:
-                    changes[inst].setConstant(
-                        ConstantProxy(constant_pool,
-                                      lhs.getConstant() >= rhs.getConstant()));
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() >= rhs.getConstant()));
                     break;
                 case FCMPOP::ogt:
-                    changes[inst].setConstant(
-                        ConstantProxy(constant_pool,
-                                      lhs.getConstant() > rhs.getConstant()));
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() > rhs.getConstant()));
                     break;
                 case FCMPOP::ole:
-                    changes[inst].setConstant(
-                        ConstantProxy(constant_pool,
-                                      lhs.getConstant() <= rhs.getConstant()));
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() <= rhs.getConstant()));
                     break;
                 case FCMPOP::olt:
-                    changes[inst].setConstant(
-                        ConstantProxy(constant_pool,
-                                      lhs.getConstant() < rhs.getConstant()));
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() < rhs.getConstant()));
                     break;
                 default:
                     Err::unreachable("Unknown fcmp OP");
@@ -283,26 +260,28 @@ public:
             } else if (lhs.isNAC() || rhs.isNAC())
                 changes[inst] = LatticeInfo::NAC;
         } else if (auto fti = std::dynamic_pointer_cast<FPTOSIInst>(inst)) {
-            auto val = solver.getVal(
-                LatticeInfo::getKeyFromValue(fti->getOVal()));
-            if (val.isConstant())
+            auto val =
+                solver.getVal(LatticeInfo::getKeyFromValue(fti->getOVal()));
+            if (val.isConstant()) {
                 changes[inst].setConstant(ConstantProxy(
                     constant_pool,
                     static_cast<int>(val.getConstant().get_float())));
+            }
             else if (val.isNAC())
                 changes[inst] = LatticeInfo::NAC;
         } else if (auto itf = std::dynamic_pointer_cast<SITOFPInst>(inst)) {
-            auto val = solver.getVal(
-                LatticeInfo::getKeyFromValue(itf->getOVal()));
-            if (val.isConstant())
+            auto val =
+                solver.getVal(LatticeInfo::getKeyFromValue(itf->getOVal()));
+            if (val.isConstant()) {
                 changes[inst].setConstant(ConstantProxy(
-                    constant_pool,
-                    static_cast<float>(val.getConstant().get_int())));
+                   constant_pool,
+                   static_cast<float>(val.getConstant().get_int())));
+            }
             else if (val.isNAC())
                 changes[inst] = LatticeInfo::NAC;
         } else if (auto zext = std::dynamic_pointer_cast<ZEXTInst>(inst)) {
-            auto val = solver.getVal(
-                LatticeInfo::getKeyFromValue(zext->getOVal()));
+            auto val =
+                solver.getVal(LatticeInfo::getKeyFromValue(zext->getOVal()));
 
             if (val.isConstant()) {
                 switch (toBType(zext->getOType())->getInner()) {
@@ -336,11 +315,17 @@ public:
                 }
             } else if (val.isNAC())
                 changes[inst] = LatticeInfo::NAC;
-
+        } else if (auto alloca = std::dynamic_pointer_cast<ALLOCAInst>(inst)) {
+            changes[inst] = LatticeInfo::NAC;
+        } else if (auto gep = std::dynamic_pointer_cast<GEPInst>(inst)) {
+            changes[inst] = LatticeInfo::NAC;
+        } else if (auto load = std::dynamic_pointer_cast<LOADInst>(inst)) {
+            changes[inst] = LatticeInfo::NAC;
+        } else if (auto call = std::dynamic_pointer_cast<CALLInst>(inst)) {
+            changes[inst] = LatticeInfo::NAC;
         } else if (auto bit = std::dynamic_pointer_cast<BITCASTInst>(inst)) {
             changes[inst] = LatticeInfo::NAC;
         }
-        // TODO  converse
         else if (inst->getOpcode() == OP::BR || inst->getOpcode() == OP::PHI)
             Err::unreachable("Transfer on br or phi.");
         else
@@ -365,7 +350,7 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
                 use->getUser()->replaceUse(key,
                                            val.getConstant().getConstant());
                 if (auto br_inst =
-                    std::dynamic_pointer_cast<BRInst>(use->getUser())) {
+                        std::dynamic_pointer_cast<BRInst>(use->getUser())) {
                     Err::gassert(br_inst->isConditional());
                     if (val.getConstant().get_i1())
                         br_inst->dropFalseDest();
@@ -379,7 +364,7 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
         inst->getParent()->delInst(inst);
     }
 
-    std::unordered_set<std::shared_ptr<BasicBlock> > visited;
+    std::unordered_set<std::shared_ptr<BasicBlock>> visited;
     std::deque worklist{function.getBlocks()[0]};
 
     // Get Unreachable Blocks

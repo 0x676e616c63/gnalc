@@ -33,15 +33,18 @@ public:
 
 class FormalParam : public Value {
     size_t index;
+
 public:
     explicit FormalParam(std::string name, std::shared_ptr<Type> ty, size_t index_)
-        : Value(std::move(name), ty, ValueTrait::FORMAL_PARAMETER) , index(index_) {}
+        : Value(std::move(name), std::move(ty), ValueTrait::FORMAL_PARAMETER),
+          index(index_) {}
     size_t getIndex() const { return index; }
 
     void accept(IRVisitor &visitor) override;
 };
 
-class Function : public FunctionDecl, public std::enable_shared_from_this<Function> {
+class Function : public FunctionDecl,
+                 public std::enable_shared_from_this<Function> {
 private:
     std::vector<std::shared_ptr<FormalParam>> params;
     std::vector<std::shared_ptr<BasicBlock>> blks;

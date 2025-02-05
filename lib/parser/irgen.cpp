@@ -416,7 +416,7 @@ void IRGenerator::visit(FuncDef &node) {
     std::vector<std::string> param_ids;
 
     if (!node.isEmptyParam()) {
-        const auto& ast_params = node.getParams();
+        const auto &ast_params = node.getParams();
         for (size_t i = 0; i < ast_params.size(); ++i) {
             ast_params[i]->accept(*this);
             param_ids.emplace_back(ast_params[i]->getId());
@@ -680,8 +680,7 @@ void IRGenerator::visit(CallExp &node) {
     if (functy->isVAArg()) {
         if (expected.size() > args.size())
             Err::error("Invalid call.");
-    }
-    else {
+    } else {
         if (expected.size() != args.size())
             Err::error("Invalid call.");
     }

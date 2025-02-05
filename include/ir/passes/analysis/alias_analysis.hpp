@@ -5,8 +5,8 @@
 #ifndef GNALC_IR_PASSES_ANALYSIS_ALIAS_ANALYSIS_HPP
 #define GNALC_IR_PASSES_ANALYSIS_ALIAS_ANALYSIS_HPP
 
-#include "../pass_manager.hpp"
 #include "../../instructions/control.hpp"
+#include "../pass_manager.hpp"
 
 namespace IR {
 class AliasAnalysisPass;
@@ -19,34 +19,33 @@ public:
         // Global Variable
         bool global_var = false;
         // Maybe alias
-        std::set<const Value*> potential_alias;
+        std::set<const Value *> potential_alias;
     };
+
 private:
     // Target
-    Function* func;
+    Function *func;
 
     // Local/Array arguments info map
-    std::unordered_map<const Value*, PtrInfo> ptr_info;
+    std::unordered_map<const Value *, PtrInfo> ptr_info;
 
     // Mod/Ref info, only global and Array arguments
-    std::set<const Value*> read;
-    std::set<const Value*> write;
+    std::set<const Value *> read;
+    std::set<const Value *> write;
 
     // some call we don't know (part of Sylib)
     bool has_untracked_call = false;
 
     // Try insert `alias` to `target` as a potential alias.
     // Returns true for success.
-    bool insertPotentialAlias(const Value* target, const Value* alias);
+    bool insertPotentialAlias(const Value *target, const Value *alias);
 
     // For cases involved with global variable,
     // this function generates one for global variable.
-    PtrInfo getPtrInfo(const Value* ptr) const;
+    PtrInfo getPtrInfo(const Value *ptr) const;
+
 public:
-    enum class AliasInfo {
-        MustAlias,
-        NoAlias
-    };
+    enum class AliasInfo { MustAlias, NoAlias };
     enum class ModRefInfo {
         NoModRef,
         Ref,
@@ -55,10 +54,11 @@ public:
     };
 
     // v1 and v2 must be Global Variable or array with the given function
-    AliasInfo getAliasInfo(const Value* v1, const Value* v2) const;
+    AliasInfo getAliasInfo(const Value *v1, const Value *v2) const;
 
     // candidate must be Global Variable or array with the given function
-    ModRefInfo getInstModRefInfo(const Instruction* inst, const Value* candidate, FAM& fam) const;
+    ModRefInfo getInstModRefInfo(const Instruction *inst,
+                                 const Value *candidate, FAM &fam) const;
 
     ModRefInfo getFunctionModRefInfo() const;
 

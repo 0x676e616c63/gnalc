@@ -1,3 +1,5 @@
+#include <utility>
+
 #include "../../include/ir/basic_block.hpp"
 #include "../../include/ir/utilities.hpp"
 #include "../../include/ir/visitor.hpp"
@@ -11,15 +13,15 @@ BasicBlock::BasicBlock(std::string _name,
                        std::list<std::shared_ptr<Instruction>> _insts)
     : Value(std::move(_name), makeBType(IRBTYPE::UNDEFINED),
             ValueTrait::BASIC_BLOCK),
-      insts(_insts) {}
+      insts(std::move(_insts)) {}
 
 BasicBlock::BasicBlock(std::string _name,
                        std::list<std::weak_ptr<BasicBlock>> _pre_bb,
                        std::list<std::weak_ptr<BasicBlock>> _next_bb,
                        std::list<std::shared_ptr<Instruction>> _insts)
     : Value(std::move(_name), makeBType(IRBTYPE::UNDEFINED),
-            ValueTrait::BASIC_BLOCK),
-      insts(_insts), pre_bb(_pre_bb), next_bb(_next_bb) {}
+            ValueTrait::BASIC_BLOCK), insts(std::move(_insts)),
+            pre_bb(std::move(_pre_bb)), next_bb(std::move(_next_bb)) {}
 
 void BasicBlock::addPreBB(const std::shared_ptr<BasicBlock> &bb) {
     pre_bb.emplace_back(bb);
@@ -74,9 +76,7 @@ bool BasicBlock::delFirstOfInst(const std::shared_ptr<Instruction> &inst) {
     return false;
 }
 bool BasicBlock::delInst(const std::shared_ptr<Instruction> &target) {
-    return delInstIf([&target](const auto& inst) {
-        return inst == target;
-    });
+    return delInstIf([&target](const auto &inst) { return inst == target; });
 }
 
 BasicBlock::const_iterator BasicBlock::cbegin() const { return insts.cbegin(); }
@@ -95,8 +95,12 @@ const std::vector<std::shared_ptr<Value>> &BasicBlock::getBBParams() const {
     return bb_params;
 }
 
-std::shared_ptr<Function> BasicBlock::getParent() const { return parent.lock(); }
-void BasicBlock::setParent(const std::shared_ptr<Function> &_parent) { parent = _parent; }
+std::shared_ptr<Function> BasicBlock::getParent() const {
+    return parent.lock();
+}
+void BasicBlock::setParent(const std::shared_ptr<Function> &_parent) {
+    parent = _parent;
+}
 
 void BasicBlock::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
