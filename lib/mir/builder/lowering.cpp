@@ -132,7 +132,7 @@ InstLowering::operator()(const std::shared_ptr<IR::Instruction> &midEnd_inst) {
 std::shared_ptr<Operand>
 OperandLowering::fastFind(const std::shared_ptr<IR::Value> &midEnd_val) {
     /// variablePool find
-    if (auto ptr = VarPool.getValue(*midEnd_val))
+    if (auto ptr = varpool.getValue(*midEnd_val))
         return ptr;
 
     /// constPool find or insert, 但实际上似乎用不到, 因为对是否是常量的判断提前到instlower了

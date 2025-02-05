@@ -44,6 +44,7 @@ std::string MIR::GlobalObj::toString() const {
 
 MIR::GlobalObj::GlobalObj(const IR::GlobalVariable &midEnd_Glo) {
     name = midEnd_Glo.getName();
+    size = midEnd_Glo.getIniter().getIniterType()->getBytes();
     mkInitializer(midEnd_Glo.getIniter());
     initializerMerge();
 }
@@ -53,16 +54,14 @@ void MIR::GlobalObj::mkInitializer(const IR::GVIniter &midEnd_GVIniter) {
 
     if (!midEnd_GVIniter.isArray()) {
         if (midEnd_GVIniter.isZero())
-            initializer.emplace_back(false, 1);
+            initializer.emplace_back(false, 4); // sizeof(int) or sizeof(float)
         else {
             // IR's Global Variable must be ConstantInt or ConstantFloat
             if (auto ci32 = std::dynamic_pointer_cast<IR::ConstantInt>(
                     midEnd_GVIniter.getConstVal())) {
-                size += 4;
                 initializer.emplace_back(true, ci32->getVal());
             } else if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(
                            midEnd_GVIniter.getConstVal())) {
-                size += 4;
                 initializer.emplace_back(true, cf->getVal());
             } else
                 Err::unreachable("Invalid GlobalVariable's initializer");
