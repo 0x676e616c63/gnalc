@@ -13,8 +13,10 @@ PM::PreservedAnalyses DCEPass::run(Function &function, FAM &fam) {
     std::deque<std::shared_ptr<Instruction>> worklist;
 
     for (const auto &block : function) {
-        for (const auto &inst : *block)
-            worklist.emplace_back(inst);
+        for (const auto &inst : *block) {
+            if (inst->getVTrait() != ValueTrait::VOID_INSTRUCTION)
+                worklist.emplace_back(inst);
+        }
     }
 
     while (!worklist.empty()) {

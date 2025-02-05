@@ -366,7 +366,7 @@ bool isPureBuiltinOrSylibFunc(const FunctionDecl *fn) {
 bool isPure(FAM &fam, const CALLInst *call) {
     auto callee = call->getFunc().get();
     if (isPureBuiltinOrSylibFunc(callee))
-        return false;
+        return true;
 
     auto callee_def = dynamic_cast<Function *>(callee);
     Err::gassert(callee_def != nullptr, "isPure(): Unknown function");
