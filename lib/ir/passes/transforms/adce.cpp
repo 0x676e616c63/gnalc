@@ -83,14 +83,19 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
         Err::gassert(end->getInsts().back()->getOpcode() == OP::RET);
         std::set<std::shared_ptr<BasicBlock>> visited;
         auto end_pres = end->getPreBB();
-        std::deque postorder_worklist(end_pres.begin(), end_pres.end());
+        std::deque postorder(end_pres.begin(), end_pres.end());
 
-        while (!postorder_worklist.empty()) {
-            auto curr = postorder_worklist.front();
+        while (!postorder.empty()) {
+            auto curr = postorder.front();
             visited.emplace(curr);
-            postorder_worklist.pop_front();
+            for (const auto& bb : curr->getPreBB()) {
+                if (visited.find(bb) == visited.end())
+                    postorder.emplace_back(bb);
+            }
+        }
 
-            // One Pass
+        // One Pass
+        for (const auto& curr : postorder) {
             auto br = std::dynamic_pointer_cast<BRInst>(curr->getInsts().back());
             Err::gassert(br != nullptr);
             if (br->isConditional()) {
@@ -161,12 +166,8 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     }
                 }
             }
-
-            for (const auto& bb : curr->getPreBB()) {
-                if (visited.find(bb) == visited.end())
-                    postorder_worklist.emplace_back(bb);
-            }
         }
+
         adce_cfg_modified |= modified;
     }
 
