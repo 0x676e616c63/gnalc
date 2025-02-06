@@ -87,6 +87,7 @@ public:
             } else
                 ++it;
         }
+        if (found) updateBBIndex();
         return found;
     }
 

@@ -13,7 +13,9 @@ BasicBlock::BasicBlock(std::string _name,
                        std::list<std::shared_ptr<Instruction>> _insts)
     : Value(std::move(_name), makeBType(IRBTYPE::UNDEFINED),
             ValueTrait::BASIC_BLOCK),
-      insts(std::move(_insts)) {}
+      insts(std::move(_insts)) {
+    updateInstIndex();
+}
 
 BasicBlock::BasicBlock(std::string _name,
                        std::list<std::weak_ptr<BasicBlock>> _pre_bb,
@@ -21,7 +23,9 @@ BasicBlock::BasicBlock(std::string _name,
                        std::list<std::shared_ptr<Instruction>> _insts)
     : Value(std::move(_name), makeBType(IRBTYPE::UNDEFINED),
             ValueTrait::BASIC_BLOCK), insts(std::move(_insts)),
-            pre_bb(std::move(_pre_bb)), next_bb(std::move(_next_bb)) {}
+            pre_bb(std::move(_pre_bb)), next_bb(std::move(_next_bb)) {
+    updateInstIndex();
+}
 
 void BasicBlock::addPreBB(const std::shared_ptr<BasicBlock> &bb) {
     pre_bb.emplace_back(bb);
@@ -50,6 +54,7 @@ bool BasicBlock::delNextBB(const std::shared_ptr<BasicBlock> &bb) {
 }
 
 void BasicBlock::addInst(const std::shared_ptr<Instruction> &inst) {
+    inst->index = insts.size();
     insts.emplace_back(inst);
     inst->setParent(shared_from_this());
 }
@@ -88,6 +93,7 @@ bool BasicBlock::delFirstOfInst(const std::shared_ptr<Instruction> &inst) {
         if (*it == inst) {
             inst->setParent(nullptr);
             insts.erase(it);
+            updateInstIndex();
             return true;
         }
     }
@@ -118,6 +124,11 @@ std::shared_ptr<Function> BasicBlock::getParent() const {
 }
 void BasicBlock::setParent(const std::shared_ptr<Function> &_parent) {
     parent = _parent;
+}
+
+void BasicBlock::insertPhi(const std::shared_ptr<PHIInst> &node) {
+    insts.emplace_front(node);
+    updateInstIndex();
 }
 
 void BasicBlock::accept(IRVisitor &visitor) { visitor.visit(*this); }

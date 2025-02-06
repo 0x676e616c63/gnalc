@@ -40,6 +40,7 @@ Function::Function(std::string name_,
       params(params_), constant_pool(pool_) {}
 
 void Function::addBlock(std::shared_ptr<BasicBlock> blk) {
+    blk->index = blks.size();
     blk->setParent(shared_from_this());
     blks.emplace_back(std::move(blk));
 }

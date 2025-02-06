@@ -24,11 +24,13 @@ class PromotePass : public PM::PassInfo<PromotePass> {
         std::vector<std::shared_ptr<LOADInst>> loads;
         std::vector<std::shared_ptr<STOREInst>> stores;
         std::map<std::shared_ptr<BasicBlock>, BLOCK_INFO> user_blocks; // load, store的父块信息map
+        // bool processed = false; // 标记后不再rename
     };
-    std::queue<ALLOCA_INFO> alloca_infos;
+    std::list<ALLOCA_INFO> alloca_infos;
     std::shared_ptr<BasicBlock> entry_block;
     DomTree DT;
     ALLOCA_INFO cur_info;
+    std::map<std::pair<unsigned, unsigned>, std::shared_ptr<PHIInst>> new_phi_nodes; // <<AllocaNo, BlockNo>, PhiNode>
 
     // 用于判断INST的支配关系
     bool iADomB(const std::shared_ptr<Instruction>& ia, const std::shared_ptr<Instruction>& ib);
@@ -38,7 +40,6 @@ class PromotePass : public PM::PassInfo<PromotePass> {
     bool rewriteSingleStoreAlloca();
     bool promoteSingleBlockAlloca();
     void insertPhi();
-    void queuePhiNode();
     void rename();
 
     // 计算迭代支配前沿

@@ -26,11 +26,13 @@ public:
         std::shared_ptr<PHIInst> getPhi() const;
     };
     PHIInst() = delete;
+    PHIInst(NameRef name, const std::shared_ptr<Type> &_type);
     PHIInst(NameRef name, const std::shared_ptr<Type> &_type,
-            const std::vector<std::shared_ptr<PhiOperand>> &_operands);
+        const std::vector<std::shared_ptr<PhiOperand>> &_operands);
 
     std::shared_ptr<Value>
     getValueForBlock(const std::shared_ptr<BasicBlock> &block) const;
+    void addPhiOpers(const std::vector<std::shared_ptr<PhiOperand>> &_operands);
     std::vector<std::shared_ptr<PhiOperand>> getPhiOpers() const;
 
     void delPhiOper(const std::shared_ptr<BasicBlock> &);

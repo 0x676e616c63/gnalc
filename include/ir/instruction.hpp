@@ -79,7 +79,7 @@ public:
     OP getOpcode() const;
     std::shared_ptr<BasicBlock> getParent() const;
 
-    unsigned index = 0; // 使用前调用父块的update方法！
+    unsigned index = 0; // 不经过插入删除接口修改后使用先调用父块的update方法！
 
     void accept(IRVisitor &visitor) override;
     ~Instruction() override;

@@ -59,7 +59,7 @@ void PromotePass::analyseAlloca() {
                 // }
             }
             if (promotable) {
-                alloca_infos.push(info);
+                alloca_infos.emplace_back(info);
             }
         }
     }
@@ -123,8 +123,8 @@ bool PromotePass::promoteSingleBlockAlloca() {
 
 void PromotePass::insertPhi() {
     std::queue<std::shared_ptr<BasicBlock>> tmp_work_queue; // 临时处理队列
-    std::set<std::shared_ptr<BasicBlock>> live_in_blocks; // 即需要传递alloca值的块
-    std::set<std::shared_ptr<BasicBlock>> define_blocks; // 定义块
+    std::set<std::shared_ptr<BasicBlock>> live_in_blocks;   // 即需要传递alloca值的块
+    std::set<std::shared_ptr<BasicBlock>> define_blocks;    // 定义块
 
     // 初步处理 user_block
     for (const auto &[b, i] : cur_info.user_blocks) {
@@ -155,8 +155,8 @@ void PromotePass::insertPhi() {
                 i != cur_info.user_blocks.end()) {
                 if (!i->second.store_map.empty())
                     // if p is a def block...
-                        continue;
-                }
+                    continue;
+            }
             tmp_work_queue.push(p);
         }
     }
@@ -164,21 +164,60 @@ void PromotePass::insertPhi() {
     std::vector<std::shared_ptr<BasicBlock>> phi_blocks;
     computeIDF(define_blocks, live_in_blocks, phi_blocks);
 
+    // todo : 是否需要？将phi_blocks改为set之后可以删掉168-174, 181, 是否有其他作用？
     if (phi_blocks.size() > 1) {
         std::sort(phi_blocks.begin(), phi_blocks.end(),
-            [](const std::shared_ptr<BasicBlock>& a,
-                const std::shared_ptr<BasicBlock>& b) {
-                return  a->index < b->index;
-            });
+                  [](const std::shared_ptr<BasicBlock> &a,
+                        const std::shared_ptr<BasicBlock> &b) {
+                        return a->index < b->index;
+                  });
     }
 
-    for (auto bb : phi_blocks) {
-        queuePhiNode();
+    // todo : 更换存储数据结构以便rename使用
+    // todo : BasicBlock: 修改insertPhi函数以便按alloca顺序插入phi指令；添加Phi指令计数器以便转换为bbparam
+    unsigned cur_version = 0;
+    for (const auto& bb : phi_blocks) {
+        auto &node = new_phi_nodes[std::make_pair(cur_info.alloca->index, bb->index)];
+        if (node) continue;
+
+        node = std::make_shared<PHIInst>(cur_info.alloca->getName()+"."+std::to_string(cur_version++),
+                                        cur_info.alloca->getBaseType());
+        bb->insertPhi(node);
     }
 }
 
 void PromotePass::rename() {
-    // todo
+    std::map<std::shared_ptr<ALLOCAInst>, std::shared_ptr<Value>> incoming_values;
+    const auto undef_val = std::make_shared<Value>("__reg_undef", makeBType(IRBTYPE::UNDEFINED), ValueTrait::UNDEFINED);
+    for (auto &info : alloca_infos) {
+        incoming_values[info.alloca] = undef_val;
+    }
+
+    std::stack<std::shared_ptr<BasicBlock>> work_stack;
+    std::set<std::shared_ptr<BasicBlock>> visited;
+    work_stack.push(entry_block);
+    while (!work_stack.empty()) {
+        const auto b = work_stack.top();
+        work_stack.pop();
+        if (!visited.insert(b).second)
+            continue;
+        // todo
+
+        // todo : process load store and phi
+
+
+
+        for (const auto &n : b->getNextBB()) {
+            // todo : process phi in next block
+
+
+            work_stack.push(n);
+        }
+    }
+
+    for (auto &info : alloca_infos) {
+        entry_block->delFirstOfInst(info.alloca);
+    }
 }
 
 // 大部分参考LLVM实现了...
@@ -187,7 +226,8 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
                              std::vector<std::shared_ptr<BasicBlock>>& phi_blk) {
     using pDTN = std::shared_ptr<DomTree::Node>;
     using DTNPair = std::pair<unsigned, pDTN>;
-    std::priority_queue<DTNPair, std::vector<DTNPair>, std::less()> PQ; // DT节点优先队列
+    // todo : greater or less?
+    std::priority_queue<DTNPair, std::vector<DTNPair>, std::greater<>> PQ; // DT节点优先队列
     for (const auto &b : def_blk) {
         PQ.emplace((DTNPair){DT.nodes[b]->bfs_num, DT.nodes[b]});
     }
@@ -243,17 +283,20 @@ void PromotePass::promoteMemoryToRegister(Function &function) {
                  "First block is not named entry");
 
     analyseAlloca();
-    while (!alloca_infos.empty()) {
-        cur_info = alloca_infos.front();
-        if (removeUnusedAlloca()) ;
-        else if (rewriteSingleStoreAlloca()) ;
-        else if (promoteSingleBlockAlloca()) ;
-        else {
+
+    for (auto it = alloca_infos.begin(); it != alloca_infos.end(); ) {
+        cur_info = *it;
+        if (removeUnusedAlloca() ||
+            rewriteSingleStoreAlloca() ||
+            promoteSingleBlockAlloca()) {
+            it = alloca_infos.erase(it);
+        } else {
             insertPhi();
-            rename();
+            ++it;
         }
-        alloca_infos.pop();
     }
+
+    rename();
 }
 
 PM::PreservedAnalyses PromotePass::run(Function &function, FAM &manager) {
