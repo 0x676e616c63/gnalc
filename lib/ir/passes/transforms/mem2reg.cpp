@@ -209,17 +209,18 @@ void PromotePass::rename() {
         for (const auto& i : b->getInsts()) {
             switch (i->getOpcode()) {
                 case OP::PHI:
-                    auto phi = std::dynamic_pointer_cast<PHIInst>(i);
-                    incoming_values[phi_to_alloca_map[phi]] = phi;
+                    incoming_values[phi_to_alloca_map[std::dynamic_pointer_cast<PHIInst>(i)]] = i;
                     break;
                 case OP::LOAD:
-                    auto load = std::dynamic_pointer_cast<LOADInst>(i);
-                    load->replaceSelf(incoming_values[std::dynamic_pointer_cast<ALLOCAInst>(load->getPtr())]);
+                    i->replaceSelf(
+                        incoming_values[std::dynamic_pointer_cast<ALLOCAInst>(
+                            std::dynamic_pointer_cast<LOADInst>(i)->getPtr())]);
                     b->delInst(i);
                     break;
                 case OP::STORE:
-                    auto store = std::dynamic_pointer_cast<STOREInst>(i);
-                    incoming_values[std::dynamic_pointer_cast<ALLOCAInst>(store->getPtr())] = store->getValue();
+                    incoming_values[std::dynamic_pointer_cast<ALLOCAInst>(
+                                std::dynamic_pointer_cast<STOREInst>(i)->getPtr())] = std::dynamic_pointer_cast<
+                                STOREInst>(i)->getValue();
                     b->delInst(i);
                     break;
                 default:

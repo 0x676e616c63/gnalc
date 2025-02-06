@@ -24,6 +24,8 @@ public:
         std::shared_ptr<BasicBlock> getBlock() const;
 
         std::shared_ptr<PHIInst> getPhi() const;
+
+        void accept(IRVisitor &visitor) override;
     };
     PHIInst() = delete;
     PHIInst(NameRef name, const std::shared_ptr<Type> &_type);

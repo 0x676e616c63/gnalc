@@ -68,4 +68,6 @@ std::shared_ptr<BasicBlock> PHIInst::PhiOperand::getBlock() const {
 std::shared_ptr<PHIInst> PHIInst::PhiOperand::getPhi() const {
     return std::dynamic_pointer_cast<PHIInst>(getUseList().front()->getUser());
 }
+
+void PHIInst::PhiOperand::accept(IRVisitor &visitor) { visitor.visit(*this); }
 } // namespace IR
