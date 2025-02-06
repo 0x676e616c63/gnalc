@@ -41,10 +41,6 @@ aux_source_directory(lib/codegen/brainfk GNALC_EXT_BFBKD_SRC)
 set(GNALC_SRC ${GNALC_LEXER_SRC} ${GNALC_PARSER_SRC} ${GNALC_IR_SRC} ${GNALC_PM_SRC} ${GNALC_EXT_BFBKD_SRC} ${GNALC_UTILS_SRC})
 
 # debug driver
-add_executable(printast tools/driver/debug/printast.cpp lib/parser/parser.cpp lib/lexer/lexer.cpp lib/parser/astprinter.cpp)
-
-add_executable(printir tools/driver/debug/irprintertest.cpp lib/ir/passes/utilities/irprinter.cpp ${GNALC_IR_SRC} ${GNALC_UTILS_SRC})
-
 add_executable(irgen tools/driver/debug/irgen.cpp ${GNALC_SRC})
 
 add_executable(bfhelper tools/driver/debug/bfhelper.cpp)
