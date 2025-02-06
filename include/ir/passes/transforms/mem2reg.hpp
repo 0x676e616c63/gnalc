@@ -30,7 +30,8 @@ class PromotePass : public PM::PassInfo<PromotePass> {
     std::shared_ptr<BasicBlock> entry_block;
     DomTree DT;
     ALLOCA_INFO cur_info;
-    std::map<std::pair<unsigned, unsigned>, std::shared_ptr<PHIInst>> new_phi_nodes; // <<AllocaNo, BlockNo>, PhiNode>
+    // std::map<std::pair<unsigned, unsigned>, std::shared_ptr<PHIInst>> new_phi_nodes; // <<AllocaNo, BlockNo>, PhiNode>
+    std::map<std::shared_ptr<PHIInst>, std::shared_ptr<ALLOCAInst>> phi_to_alloca_map;
 
     // 用于判断INST的支配关系
     bool iADomB(const std::shared_ptr<Instruction>& ia, const std::shared_ptr<Instruction>& ib);
@@ -46,7 +47,7 @@ class PromotePass : public PM::PassInfo<PromotePass> {
     // https://dl.acm.org/doi/pdf/10.1145/199448.199464
     void computeIDF(const std::set<std::shared_ptr<BasicBlock>> &def_blk,
                     const std::set<std::shared_ptr<BasicBlock>> &live_in_blk,
-                    std::vector<std::shared_ptr<BasicBlock>> &phi_blk);
+                    std::set<std::shared_ptr<BasicBlock>> &phi_blk);
 
     void promoteMemoryToRegister(Function &function);
 

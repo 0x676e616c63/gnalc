@@ -4,6 +4,8 @@
 #include <stack>
 #include <algorithm>
 
+#include "../../../../include/ir/instructions/phi.hpp"
+
 namespace IR {
 bool PromotePass::iADomB(const std::shared_ptr<Instruction> &ia,
                          const std::shared_ptr<Instruction> &ib) {
@@ -161,28 +163,28 @@ void PromotePass::insertPhi() {
         }
     }
 
-    std::vector<std::shared_ptr<BasicBlock>> phi_blocks;
+    std::set<std::shared_ptr<BasicBlock>> phi_blocks;
     computeIDF(define_blocks, live_in_blocks, phi_blocks);
 
-    // todo : 是否需要？将phi_blocks改为set之后可以删掉168-174, 181, 是否有其他作用？
-    if (phi_blocks.size() > 1) {
-        std::sort(phi_blocks.begin(), phi_blocks.end(),
-                  [](const std::shared_ptr<BasicBlock> &a,
-                        const std::shared_ptr<BasicBlock> &b) {
-                        return a->index < b->index;
-                  });
-    }
+    // 是否需要？将phi_blocks改为set之后可以删掉168-174, 181, 是否有其他作用？
+    // if (phi_blocks.size() > 1) {
+    //     std::sort(phi_blocks.begin(), phi_blocks.end(),
+    //               [](const std::shared_ptr<BasicBlock> &a,
+    //                     const std::shared_ptr<BasicBlock> &b) {
+    //                     return a->index < b->index;
+    //               });
+    // }
 
-    // todo : 更换存储数据结构以便rename使用
-    // todo : BasicBlock: 修改insertPhi函数以便按alloca顺序插入phi指令；添加Phi指令计数器以便转换为bbparam
+    // 是否需要new_phi_nodes?
     unsigned cur_version = 0;
     for (const auto& bb : phi_blocks) {
-        auto &node = new_phi_nodes[std::make_pair(cur_info.alloca->index, bb->index)];
-        if (node) continue;
+        // auto &node = new_phi_nodes[std::make_pair(cur_info.alloca->index, bb->index)];
+        // if (node) continue;
 
-        node = std::make_shared<PHIInst>(cur_info.alloca->getName()+"."+std::to_string(cur_version++),
+        auto node = std::make_shared<PHIInst>(cur_info.alloca->getName()+"."+std::to_string(cur_version++),
                                         cur_info.alloca->getBaseType());
         bb->insertPhi(node);
+        phi_to_alloca_map[node] = cur_info.alloca;
     }
 }
 
@@ -201,15 +203,42 @@ void PromotePass::rename() {
         work_stack.pop();
         if (!visited.insert(b).second)
             continue;
-        // todo
 
-        // todo : process load store and phi
-
-
+        //  process load store and phi
+        //  todo : maybe need fix if some blocks just have one predBB
+        for (const auto& i : b->getInsts()) {
+            switch (i->getOpcode()) {
+                case OP::PHI:
+                    auto phi = std::dynamic_pointer_cast<PHIInst>(i);
+                    incoming_values[phi_to_alloca_map[phi]] = phi;
+                    break;
+                case OP::LOAD:
+                    auto load = std::dynamic_pointer_cast<LOADInst>(i);
+                    load->replaceSelf(incoming_values[std::dynamic_pointer_cast<ALLOCAInst>(load->getPtr())]);
+                    b->delInst(i);
+                    break;
+                case OP::STORE:
+                    auto store = std::dynamic_pointer_cast<STOREInst>(i);
+                    incoming_values[std::dynamic_pointer_cast<ALLOCAInst>(store->getPtr())] = store->getValue();
+                    b->delInst(i);
+                    break;
+                default:
+                    break;
+            }
+        }
 
         for (const auto &n : b->getNextBB()) {
-            // todo : process phi in next block
-
+            // process phi in next block
+            auto phi_it = n->getInsts().begin();
+            for (unsigned i = 0; i < n->getPhiCount(); ++i) {
+                if (auto phi_node = std::dynamic_pointer_cast<PHIInst>(*phi_it)) {
+                    phi_node->addPhiOper(
+                        std::make_shared<PHIInst::PhiOperand>(incoming_values[phi_to_alloca_map[phi_node]], b));
+                } else {
+                    Err::error("PromotePass::rename(): phi node cast failed!");
+                }
+                ++phi_it;
+            }
 
             work_stack.push(n);
         }
@@ -223,7 +252,7 @@ void PromotePass::rename() {
 // 大部分参考LLVM实现了...
 void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_blk,
                              const std::set<std::shared_ptr<BasicBlock>>& live_in_blk,
-                             std::vector<std::shared_ptr<BasicBlock>>& phi_blk) {
+                             std::set<std::shared_ptr<BasicBlock>>& phi_blk) {
     using pDTN = std::shared_ptr<DomTree::Node>;
     using DTNPair = std::pair<unsigned, pDTN>;
     // todo : greater or less?
@@ -265,7 +294,7 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
                 if (!live_in_blk.count(next))
                     continue;
 
-                phi_blk.emplace_back(next);
+                phi_blk.insert(next);
                 if (!def_blk.count(next))
                     PQ.emplace((DTNPair){next_node->bfs_num, next_node});
             }

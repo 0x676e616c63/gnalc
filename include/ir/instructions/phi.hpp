@@ -32,7 +32,7 @@ public:
 
     std::shared_ptr<Value>
     getValueForBlock(const std::shared_ptr<BasicBlock> &block) const;
-    void addPhiOpers(const std::vector<std::shared_ptr<PhiOperand>> &_operands);
+    void addPhiOper(const std::shared_ptr<PhiOperand> &_operands);
     std::vector<std::shared_ptr<PhiOperand>> getPhiOpers() const;
 
     void delPhiOper(const std::shared_ptr<BasicBlock> &);

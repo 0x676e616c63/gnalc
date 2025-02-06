@@ -117,8 +117,15 @@ void BasicBlock::setParent(const std::shared_ptr<Function> &_parent) {
 }
 
 void BasicBlock::insertPhi(const std::shared_ptr<PHIInst> &node) {
-    insts.emplace_front(node);
+    auto it = insts.begin();
+    std::advance(it, phi_count);
+    insts.insert(it, node);
+    phi_count++;
     updateInstIndex();
+}
+
+unsigned BasicBlock::getPhiCount() const {
+    return phi_count;
 }
 
 void BasicBlock::accept(IRVisitor &visitor) { visitor.visit(*this); }

@@ -44,6 +44,7 @@ class BasicBlock : public Value,
     std::list<std::shared_ptr<Instruction>> insts; // 指令列表
     std::vector<std::shared_ptr<Value>> bb_params;
     std::weak_ptr<Function> parent;
+    unsigned phi_count = 0;
 
 public:
     using const_iterator = decltype(insts)::const_iterator;
@@ -106,7 +107,8 @@ public:
     std::shared_ptr<Function> getParent() const;
     void setParent(const std::shared_ptr<Function> &_parent);
 
-    void insertPhi(const std::shared_ptr<PHIInst> & node);
+    void insertPhi(const std::shared_ptr<PHIInst> & node); // 插入到第一个非phi指令之前
+    unsigned getPhiCount() const;
 
     void accept(IRVisitor &visitor) override;
     ~BasicBlock() override;
