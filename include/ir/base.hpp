@@ -95,6 +95,16 @@ private:
 
 public:
     Value() = delete;
+    // Every Value's address is unique, and is owned by BasicBlock/ConstantPool.
+    // So there's no copy or move constructor, which can be confusing when implicit invoked.
+    // If the instruction really needs a copy for the sake of convenience,
+    // (like copying a BRInst in some CFG Transform Passes)
+    // add a `std::shared_ptr<XXX> clone() const` to make it explicitly.
+    Value(const Value &other) = delete;
+    Value &operator=(const Value &other) = delete;
+    Value(Value &&other) = delete;
+    Value &operator=(Value &&other) = delete;
+
     Value(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait);
 
     std::shared_ptr<Type> getType() const;

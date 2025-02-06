@@ -366,6 +366,9 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
                     sccp_cfg_modified = true;
                 }
             }
+            // Delete replaced constant instruction,
+            // Though DCE/ADCE can make it too, deleting them in an earlier pass
+            // can invalidate less Analysis Results, thus making the compiler faster.
             auto inst = std::dynamic_pointer_cast<Instruction>(key);
             Err::gassert(inst != nullptr);
             inst->getParent()->delInst(inst);
@@ -390,7 +393,7 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
     }
 
     sccp_cfg_modified |= function.delBlockIf(
-        [&visited](auto &&bb) { return visited.find(bb) == visited.end(); });
+        [&visited](const auto& bb) { return visited.find(bb) == visited.end(); });
 
     if (sccp_cfg_modified)
         return PM::PreservedAnalyses::none();

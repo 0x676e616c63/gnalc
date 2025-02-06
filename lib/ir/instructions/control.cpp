@@ -52,6 +52,21 @@ BRInst::BRInst(const std::shared_ptr<Value> &cond,
     addOperand(_false_dest);
 }
 
+std::shared_ptr<BRInst> BRInst::clone() const {
+    std::shared_ptr<BRInst> ret;
+    if (isConditional()) {
+        ret = std::make_shared<BRInst>(getCond(), getTrueDest(), getFalseDest());
+        if (set_args)
+            ret->setBBArgs(getTrueBBArgs(), getFalseBBArgs());
+    }
+    else {
+        ret = std::make_shared<BRInst>(getDest());
+        if (set_args)
+            ret->setBBArgs(getBBArgs());
+    }
+    return ret;
+}
+
 bool BRInst::isConditional() const { return conditional; }
 
 std::shared_ptr<Value> BRInst::getCond() const {

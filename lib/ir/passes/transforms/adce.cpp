@@ -98,6 +98,9 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                 {
                     // case 1
                     // replace the branch with a jump
+
+                    // No unlinkBB because true_dest and false_dest are identical
+                    // So just drop it.
                     br->dropFalseDest();
                     modified = true;
                 }
@@ -107,16 +110,34 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                 if (curr->getInsts().size() == 1) {
                     // case 2
                     // replace transfers to `curr` with transfers to `dest`
-                    curr->replaceSelf(dest);
-                    modified = true;
+                    for (const auto& use : curr->getUseList()) {
+                        // getUseList -> get PreBB's BRInst
+                        auto pre_br = std::dynamic_pointer_cast<BRInst>(use->getValue());
+                        Err::gassert(pre_br != nullptr);
+                        unlinkBB(pre_br->getParent(), curr);
+                        linkBB(pre_br->getParent(), dest);
+                        pre_br->replaceUse(curr, dest);
+                        modified = true;
+                    }
                 }
                 else if (dest->getPreBB().size() == 1) {
                     // case 3
                     // Combine `curr` and `dest`
                     unlinkBB(curr, dest);
                     curr->delInst(br);
+
+                    // Phi contains Value's ptr, so moving instructions to another block
+                    // don't invalidate Phi. Just take care of the CFG.
                     for (const auto& dest_inst : dest->getInsts())
                         curr->addInst(dest_inst);
+
+                    for (const auto& dest_succ : dest->getNextBB()) {
+                        unlinkBB(dest, dest_succ);
+                        linkBB(curr, dest_succ);
+                    }
+
+                    // Since `dest` only has one incoming block, delete `curr`'s br will
+                    // make it have no users, so it's a safe delete.
                     function.delBlock(dest);
                     modified = true;
                 }
@@ -127,7 +148,15 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                         // overwrite `curr`'s jump with a copy of dest`'s branch
                         unlinkBB(curr, dest);
                         curr->delInst(br);
-                        curr->addInst(std::make_shared<BRInst>(*dest_br));
+
+                        curr->addInst(dest_br->clone()); // Warning: not shallow copy.
+                        if (dest_br->isConditional()) {
+                            linkBB(curr, dest_br->getTrueDest());
+                            linkBB(curr, dest_br->getFalseDest());
+                        }
+                        else
+                            linkBB(curr, dest_br->getDest());
+
                         modified = true;
                     }
                 }
