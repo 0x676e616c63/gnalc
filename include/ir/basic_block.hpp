@@ -13,6 +13,10 @@
 #include <memory>
 #include <set>
 
+namespace Parser {
+class CFGBuilder;
+}
+
 namespace IR {
 class Function;
 class IRVisitor;
@@ -28,6 +32,8 @@ void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,
 
 class BasicBlock : public Value,
                    public std::enable_shared_from_this<BasicBlock> {
+    friend class Parser::CFGBuilder;
+    friend class Function;
     friend void linkBB(const std::shared_ptr<BasicBlock> &prebb,
                    const std::shared_ptr<BasicBlock> &nxtbb);
     friend void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,
@@ -54,14 +60,9 @@ public:
 
     std::list<std::shared_ptr<BasicBlock>> getPreBB() const;
     std::list<std::shared_ptr<BasicBlock>> getNextBB() const;
-    std::list<std::weak_ptr<BasicBlock>> &getRPreBB();
-    std::list<std::weak_ptr<BasicBlock>> &getRNextBB();
 
     // usually we can use range-based for instead of these
     const std::list<std::shared_ptr<Instruction>> &getInsts() const;
-    std::list<std::shared_ptr<Instruction>> &getInsts();
-
-    void updateInstIndex() const;
 
     unsigned index = 0; // 不经过插入删除接口修改后使用先调用父函数的update方法！
 
@@ -115,6 +116,7 @@ public:
     void addNextBB(const std::shared_ptr<BasicBlock> &bb);
     bool delPreBB(const std::shared_ptr<BasicBlock> &bb);
     bool delNextBB(const std::shared_ptr<BasicBlock> &bb);
+    void updateInstIndex() const;
 };
 } // namespace IR
 

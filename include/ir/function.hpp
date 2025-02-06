@@ -12,6 +12,10 @@
 #include <utility>
 #include <vector>
 
+namespace Parser {
+class CFGBuilder;
+}
+
 namespace IR {
 class FunctionDecl : public Value {
 private:
@@ -45,6 +49,7 @@ public:
 
 class Function : public FunctionDecl,
                  public std::enable_shared_from_this<Function> {
+    friend class Parser::CFGBuilder;
 private:
     std::vector<std::shared_ptr<FormalParam>> params;
     std::vector<std::shared_ptr<BasicBlock>> blks;
@@ -92,11 +97,9 @@ public:
     }
 
     const std::vector<std::shared_ptr<FormalParam>> &getParams() const;
-    std::vector<std::shared_ptr<FormalParam>> &getParams();
 
-    // usually we can use range-based for instead of these
+    // usually we can use range-based for instead of this
     const std::vector<std::shared_ptr<BasicBlock>> &getBlocks() const;
-    std::vector<std::shared_ptr<BasicBlock>> &getBlocks();
 
     const_iterator cbegin() const;
     const_iterator cend() const;
@@ -111,10 +114,11 @@ public:
 
     ConstantPool &getConstantPool();
 
+    void accept(IRVisitor &visitor) override;
+
+private:
     void updateBBIndex();
     void updateAllIndex();
-
-    void accept(IRVisitor &visitor) override;
 };
 
 // 基本块划分前的过渡
@@ -134,7 +138,6 @@ public:
 
     // usually we can use range-based for instead of these
     const std::vector<std::shared_ptr<Instruction>> &getInsts() const;
-    std::vector<std::shared_ptr<Instruction>> &getInsts();
 
     const_iterator cbegin() const;
     const_iterator cend() const;

@@ -53,15 +53,9 @@ const std::vector<std::shared_ptr<FormalParam>> &Function::getParams() const {
     return params;
 }
 
-std::vector<std::shared_ptr<FormalParam>> &Function::getParams() {
-    return params;
-}
-
 const std::vector<std::shared_ptr<BasicBlock>> &Function::getBlocks() const {
     return blks;
 }
-
-std::vector<std::shared_ptr<BasicBlock>> &Function::getBlocks() { return blks; }
 
 Function::const_iterator Function::cbegin() const { return blks.cbegin(); }
 
@@ -102,10 +96,6 @@ void LinearFunction::appendInsts(
 
 const std::vector<std::shared_ptr<Instruction>> &
 LinearFunction::getInsts() const {
-    return insts;
-}
-
-std::vector<std::shared_ptr<Instruction>> &LinearFunction::getInsts() {
     return insts;
 }
 

@@ -160,8 +160,8 @@ std::string IRFormatter::formatFunc(Function &func) {
     ret += ret_type->toString() + " " + func.getName();
     ret += "(";
 
-    for (auto it = func.getParams().begin(); it != func.getParams().end();
-         it++) {
+    const auto& params = func.getParams();
+    for (auto it = params.begin(); it != params.end(); it++) {
         ret += (*it)->getType()->toString() + " noundef " + (*it)->getName();
         if (std::next(it) != func.getParams().end()) {
             ret += ", ";

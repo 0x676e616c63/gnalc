@@ -11,6 +11,11 @@
 #include "global_var.hpp"
 #include <memory>
 
+namespace Parser {
+class CFGBuilder;
+class IRGenerator;
+}
+
 namespace IR {
 
 /**
@@ -19,6 +24,8 @@ namespace IR {
  * @todo 更改容器类型！
  */
 class Module : public NameC {
+    friend class Parser::CFGBuilder;
+    friend class Parser::IRGenerator;
 private:
     // Keep `constant_pool` the first member to make it destructs last
     // See: https://en.cppreference.com/w/cpp/language/destructor
@@ -38,18 +45,18 @@ public:
 
     void addFunction(std::shared_ptr<Function> func);
     const std::vector<std::shared_ptr<Function>> &getFunctions() const;
-    std::vector<std::shared_ptr<Function>> &getFunctions();
     void delFunction(NameRef name); // by name
 
     void addFunctionDecl(std::shared_ptr<FunctionDecl> func);
     const std::vector<std::shared_ptr<FunctionDecl>> &getFunctionDecls() const;
-    std::vector<std::shared_ptr<FunctionDecl>> &getFunctionDecls();
     void delFunctionDecl(NameRef name); // by name
 
     ConstantPool &getConstantPool();
 
+    void removeUnusedFuncDecl();
+
     void accept(IRVisitor &visitor);
-    ~Module();
+    ~Module() = default;
 };
 } // namespace IR
 

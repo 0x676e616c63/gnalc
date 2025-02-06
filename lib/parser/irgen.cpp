@@ -65,11 +65,7 @@ void IRGenerator::visit(CompUnit &node) {
     }
     symbol_table.finishScope();
 
-    auto &decls = module.getFunctionDecls();
-    decls.erase(
-        std::remove_if(decls.begin(), decls.end(),
-                       [](auto &&p) { return p->getRUseList().empty(); }),
-        decls.end());
+    module.removeUnusedFuncDecl();
 
     CFGBuilder builder;
     builder.build(module);

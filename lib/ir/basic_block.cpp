@@ -63,21 +63,11 @@ std::list<std::shared_ptr<BasicBlock>> BasicBlock::getPreBB() const {
     return WeaktoSharedList(pre_bb);
 }
 
-std::list<std::weak_ptr<BasicBlock>> &BasicBlock::getRPreBB() { return pre_bb; }
-
 std::list<std::shared_ptr<BasicBlock>> BasicBlock::getNextBB() const {
     return WeaktoSharedList(next_bb);
 }
 
-std::list<std::weak_ptr<BasicBlock>> &BasicBlock::getRNextBB() {
-    return next_bb;
-}
-
 const std::list<std::shared_ptr<Instruction>> &BasicBlock::getInsts() const {
-    return insts;
-}
-
-std::list<std::shared_ptr<Instruction>> &BasicBlock::getInsts() {
     return insts;
 }
 

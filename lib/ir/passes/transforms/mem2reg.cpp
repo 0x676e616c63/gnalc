@@ -300,8 +300,6 @@ void PromotePass::promoteMemoryToRegister(Function &function) {
 }
 
 PM::PreservedAnalyses PromotePass::run(Function &function, FAM &manager) {
-    function.updateAllIndex();
-
     DT = manager.getResult<DomTreeAnalysis>(function);
 
     promoteMemoryToRegister(function);
