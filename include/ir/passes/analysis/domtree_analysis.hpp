@@ -32,6 +32,9 @@ private:
     friend class DomTreeAnalysis;
 };
 
+// PostDom 和 Dom 几乎一样，只是算法上前驱是后继，反之亦然。
+struct PostDomTree : DomTree {};
+
 // Semi-NCA 算法
 // see:
 // https://oi-wiki.org/graph/dominator-tree/#lengauertarjan-%E7%AE%97%E6%B3%95
@@ -101,6 +104,11 @@ public:
 private:
     friend AnalysisInfo<DomTreeAnalysis>;
     static PM::UniqueKey Key;
+};
+
+class PostDomTreeAnalysis : public DomTreeAnalysis {
+public:
+    // PostDomTree run(Function &f, FAM &fam) override;
 };
 
 } // namespace IR

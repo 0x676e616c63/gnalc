@@ -177,4 +177,10 @@ void DomTreeAnalysis::analyze(Function &f) {
     domtree.updateLevel();
     // domtree.updateDFSNumber();
 }
+
+// PostDomTree PostDomTreeAnalysis::run(Function &f, FAM &fam) {
+//     analyze(f);
+//     return domtree;
+//
+// }
 } // namespace IR
