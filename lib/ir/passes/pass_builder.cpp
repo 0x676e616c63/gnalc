@@ -46,6 +46,7 @@ void PassBuilder::registerFunctionAnalyses(FAM &fam) {
 
     FUNCTION_ANALYSIS(LiveAnalysis())
     FUNCTION_ANALYSIS(DomTreeAnalysis())
+    FUNCTION_ANALYSIS(PostDomTreeAnalysis())
     FUNCTION_ANALYSIS(AliasAnalysis())
 
 #undef FUNCTION_ANALYSIS

@@ -29,7 +29,7 @@ enum class OP {
     REM,
     FREM,
 
-    AND, // bitwise binary
+    AND, // logical binary
     OR,
 
     ALLOCA, // memory

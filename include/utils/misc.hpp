@@ -2,6 +2,8 @@
 #ifndef GNALC_UTILS_MISC_HPP
 #define GNALC_UTILS_MISC_HPP
 
+#include <map>
+#include <utility>
 #include <type_traits>
 
 namespace Util {
