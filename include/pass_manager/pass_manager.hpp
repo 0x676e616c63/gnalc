@@ -1,6 +1,23 @@
-// Generic Pass Manager, used by IR and MIR's PassManager
-// This PassManager is inspired by the new PassManager of LLVM.
-// It also uses concept-based polymorphism, but is much simplified.
+// Generic Pass Manager used by both the IR and MIR PassManagers.
+//
+// Adopting design concepts from LLVM's New PassManager framework,
+// this implementation maintains a lightweight structure
+// appropriate for gnalc's limited pass pipeline.
+//
+// A key difference is our manual handling of analysis dependencies.
+// Each transform pass may invalidate one or more analysis passes.
+// Consequently, when a transform pass invalidates an analysis pass,
+// it must also explicitly invalidate any analysis passes that depend on it.
+//
+// For example:
+//
+//              invalidate                  depend
+// TransformA --------------> AnalysisA -------------> AnalysisB
+//
+// Even if TransformA does not directly require AnalysisB, it must still explicitly
+// invalidate both AnalysisA and AnalysisB.
+//
+
 #pragma once
 #ifndef GNALC_PASS_MANAGER_PASS_MANAGER_HPP
 #define GNALC_PASS_MANAGER_PASS_MANAGER_HPP
@@ -16,16 +33,6 @@
 
 namespace PM {
 class alignas(8) UniqueKey {};
-
-template <typename UnitT> class AllAnalysesOn {
-public:
-    static UniqueKey *ID() { return &Key; }
-
-private:
-    static UniqueKey Key;
-};
-
-template <typename UnitT> UniqueKey AllAnalysesOn<UnitT>::Key;
 
 class PreservedAnalyses {
 private:
@@ -296,8 +303,6 @@ public:
             am.invalidate(unit, curr_pa);
             pa.retain(curr_pa);
         }
-
-        pa.preserveSet<AllAnalysesOn<UnitT>>();
 
         return pa;
     }

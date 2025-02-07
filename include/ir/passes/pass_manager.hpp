@@ -1,5 +1,3 @@
-// This PassManager is inspired by the new PassManager of LLVM.
-// It also uses concept-based polymorphism, but is much simplified.
 #pragma once
 #ifndef GNALC_IR_PASSES_PASS_MANAGER_HPP
 #define GNALC_IR_PASSES_PASS_MANAGER_HPP
@@ -14,9 +12,6 @@ extern template class AnalysisManager<IR::Function>;
 
 extern template class PassManager<IR::Module>;
 extern template class PassManager<IR::Function>;
-
-extern template class AllAnalysesOn<IR::Module>;
-extern template class AllAnalysesOn<IR::Function>;
 
 extern template class InnerAnalysisManagerProxy<AnalysisManager<IR::Function>,
                                                 IR::Module>;
@@ -49,7 +44,6 @@ public:
             pa.retain(curr_pa);
         }
 
-        pa.preserveSet<PM::AllAnalysesOn<Function>>();
         pa.preserve<FAMProxy>();
         return pa;
     }
