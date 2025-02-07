@@ -120,6 +120,7 @@ void BasicBlock::insertPhi(const std::shared_ptr<PHIInst> &node) {
     auto it = insts.begin();
     std::advance(it, phi_count);
     insts.insert(it, node);
+    node->setParent(shared_from_this());
     phi_count++;
     updateInstIndex();
 }

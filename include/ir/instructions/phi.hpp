@@ -9,8 +9,6 @@
 #include "../instruction.hpp"
 
 namespace IR {
-struct PhiOperand;
-
 // PHI_INST --USE-> PHI_OPER --USE-> {val, blk}
 // %result = phi <type> [ <val1>, <block1> ], [ <val2>, <block2> ], ...
 class PHIInst : public Instruction {
@@ -27,6 +25,8 @@ public:
 
         void accept(IRVisitor &visitor) override;
     };
+    // todo : 直接存到operands里面
+    std::list<std::shared_ptr<PhiOperand>> popers; // phi opers
     PHIInst() = delete;
     PHIInst(NameRef name, const std::shared_ptr<Type> &_type);
     PHIInst(NameRef name, const std::shared_ptr<Type> &_type,

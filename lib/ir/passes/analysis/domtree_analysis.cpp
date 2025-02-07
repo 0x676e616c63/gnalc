@@ -110,6 +110,7 @@ void DomTree::updateLevel() {
 
 DomTree DomTreeAnalysis::run(Function &f, FAM &fam) {
     analyze(f);
+    info = {};
     return domtree;
 }
 
@@ -161,6 +162,7 @@ void DomTreeAnalysis::analyze(Function &f) {
     domtree.initDTN(info.idfn);
     for (const auto &key : info.idfn) {
         // 3个树图MD越看越迷...
+        if (key == entry) continue; // 跳过根节点
         auto dfs_tree_node = info.node_map[key]; // DFS SPANNING TREE'S NODE
         auto dfs_tree_parent =
             dfs_tree_node.dfs_parent; // DFS SPANNING TREE'S PARENT NODE
