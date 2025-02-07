@@ -442,7 +442,23 @@ std::string IRFormatter::fGEPInst(GEPInst &inst) {
 
 std::string IRFormatter::fPHIInst(PHIInst &inst) {
     std::string ret;
-
+    ret += inst.getName();
+    ret += " = ";
+    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
+    ret += inst.getType()->toString() + " ";
+    auto opers = inst.getPhiOpers();
+    for (auto it = opers.begin(); ; ) {
+        ret += "[ ";
+        ret += formatValue(*((*it)->getValue()));
+        ret += ", ";
+        ret += (*it)->getBlock()->getName() + " ";
+        ret += "]";
+        if (++it == opers.end()) {
+            break;
+        } else {
+            ret += ", ";
+        }
+    }
     return ret;
 }
 

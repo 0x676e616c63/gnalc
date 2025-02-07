@@ -27,6 +27,7 @@ PHIInst::getValueForBlock(const std::shared_ptr<BasicBlock> &block) const {
     return nullptr;
 }
 void PHIInst::addPhiOper(const std::shared_ptr<PhiOperand> &_operands) {
+    popers.emplace_back(_operands);
     addOperand(_operands);
 }
 

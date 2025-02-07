@@ -67,7 +67,8 @@ private:
         pBB idom(const pBB &b) { return node_map[b]._idom; }
         bool visited(const pBB &b) { return node_map.find(b) != node_map.end(); }
         void linkDFSTN(const pBB &parent, const pBB &child) {
-            node_map[parent].dfs_children.emplace_back(child);
+            if (parent)
+                node_map[parent].dfs_children.emplace_back(child);
             node_map[child].dfs_parent = parent;
         }
         void addDFSTN(const pBB &b) {

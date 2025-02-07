@@ -4,6 +4,7 @@
 #include <stack>
 #include <algorithm>
 
+#include "../../../../include/config/config.hpp"
 #include "../../../../include/ir/instructions/phi.hpp"
 
 namespace IR {
@@ -181,7 +182,7 @@ void PromotePass::insertPhi() {
         // auto &node = new_phi_nodes[std::make_pair(cur_info.alloca->index, bb->index)];
         // if (node) continue;
 
-        auto node = std::make_shared<PHIInst>(cur_info.alloca->getName()+"."+std::to_string(cur_version++),
+        auto node = std::make_shared<PHIInst>(Config::IR::REGISTER_TEMP_NAME,
                                         cur_info.alloca->getBaseType());
         bb->insertPhi(node);
         phi_to_alloca_map[node] = cur_info.alloca;
@@ -189,6 +190,7 @@ void PromotePass::insertPhi() {
 }
 
 void PromotePass::rename() {
+    if (alloca_infos.empty()) return;
     std::map<std::shared_ptr<ALLOCAInst>, std::shared_ptr<Value>> incoming_values;
     const auto undef_val = std::make_shared<Value>("__reg_undef", makeBType(IRBTYPE::UNDEFINED), ValueTrait::UNDEFINED);
     for (auto &info : alloca_infos) {
@@ -206,26 +208,36 @@ void PromotePass::rename() {
 
         //  process load store and phi
         //  todo : maybe need fix if some blocks just have one predBB
+        std::vector<std::shared_ptr<Instruction>> del_insts;
         for (const auto& i : b->getInsts()) {
             switch (i->getOpcode()) {
                 case OP::PHI:
                     incoming_values[phi_to_alloca_map[std::dynamic_pointer_cast<PHIInst>(i)]] = i;
                     break;
                 case OP::LOAD:
+                    if (!incoming_values.count(std::dynamic_pointer_cast<ALLOCAInst>(
+                            std::dynamic_pointer_cast<LOADInst>(i)->getPtr()))) break;
                     i->replaceSelf(
                         incoming_values[std::dynamic_pointer_cast<ALLOCAInst>(
                             std::dynamic_pointer_cast<LOADInst>(i)->getPtr())]);
-                    b->delInst(i);
+                    del_insts.emplace_back(i);
                     break;
                 case OP::STORE:
+                    if (!incoming_values.count(std::dynamic_pointer_cast<ALLOCAInst>(
+                            std::dynamic_pointer_cast<STOREInst>(i)->getPtr()))) break;
                     incoming_values[std::dynamic_pointer_cast<ALLOCAInst>(
-                                std::dynamic_pointer_cast<STOREInst>(i)->getPtr())] = std::dynamic_pointer_cast<
+                            std::dynamic_pointer_cast<STOREInst>(i)->getPtr())] = std::dynamic_pointer_cast<
                                 STOREInst>(i)->getValue();
-                    b->delInst(i);
+                    del_insts.emplace_back(i);
                     break;
                 default:
                     break;
             }
+        }
+
+        // todo: 可以在bb中添加返回删除后迭代器的方法
+        for (auto &inst : del_insts) {
+            b->delInst(inst);
         }
 
         for (const auto &n : b->getNextBB()) {
@@ -309,7 +321,7 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
 
 void PromotePass::promoteMemoryToRegister(Function &function) {
     entry_block = function.getBlocks().front();
-    Err::gassert(entry_block->isName("entry"),
+    Err::gassert(entry_block->isName("%entry"),
                  "First block is not named entry");
 
     analyseAlloca();
