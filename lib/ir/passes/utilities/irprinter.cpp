@@ -62,7 +62,7 @@ void PrinterBase::visit(BasicBlock &node) {
 
 PM::PreservedAnalyses PrintFunctionPass::run(Function &func, FAM &fam) {
     if (printLiveInfo)
-        liveness = fam.getResult<LiveAnalyser>(func);
+        liveness = fam.getResult<LiveAnalysis>(func);
 
     func.accept(*this);
     return PM::PreservedAnalyses::all();

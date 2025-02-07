@@ -9,6 +9,7 @@
 #include "../../../include/ir/passes/transforms/namenormalizer.hpp"
 
 // Utilities
+#include "../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../include/ir/passes/utilities/irprinter.hpp"
 
 namespace IR {
@@ -21,7 +22,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FPM fpm;
 
     if (opt_info.mem2reg) {
-        // fpm.addPass(PromotePass());
+        fpm.addPass(PromotePass());
     }
 
     fpm.addPass(NameNormalizePass(true)); // bb_rename: true
@@ -35,15 +36,6 @@ MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
     return mpm;
 }
 
-std::tuple<FAM, MAM> PassBuilder::buildAnalysisManager() {
-    FAM fam;
-    MAM mam;
-    registerFunctionAnalyses(fam);
-    registerModuleAnalyses(mam);
-    registerProxies(fam, mam);
-    return {std::move(fam), std::move(mam)};
-}
-
 void PassBuilder::registerProxies(FAM &fam, MAM &mam) {
     mam.registerPass([&] { return FAMProxy(fam); });
 }
@@ -52,8 +44,9 @@ void PassBuilder::registerFunctionAnalyses(FAM &fam) {
 #define FUNCTION_ANALYSIS(CREATE_PASS)                                         \
     fam.registerPass([&] { return CREATE_PASS; });
 
-    FUNCTION_ANALYSIS(LiveAnalyser())
-    // ...
+    FUNCTION_ANALYSIS(LiveAnalysis())
+    FUNCTION_ANALYSIS(DomTreeAnalysis())
+    FUNCTION_ANALYSIS(AliasAnalysis())
 
 #undef FUNCTION_ANALYSIS
 }

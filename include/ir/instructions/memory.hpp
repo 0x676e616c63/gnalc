@@ -103,6 +103,11 @@ public:
     std::shared_ptr<Value> getPtr() const;
     std::vector<std::shared_ptr<Value>> getIdxs() const;
 
+    // Check if all the indices are constant.
+    bool isConstantOffset() const;
+    // Get the constant offset, if not constant, an exception will be thrown.
+    size_t getConstantOffset() const;
+
     void accept(IRVisitor &visitor) override;
 };
 

@@ -9,10 +9,10 @@
 #include "../pass_manager.hpp"
 
 namespace IR {
-class AliasAnalysisPass;
+class AliasAnalysis;
 class AliasAnalysisResult {
 public:
-    friend class AliasAnalysisPass;
+    friend class AliasAnalysis;
     struct PtrInfo {
         // Array arguments
         bool untracked_array = false;
@@ -45,7 +45,7 @@ private:
     PtrInfo getPtrInfo(const Value *ptr) const;
 
 public:
-    enum class AliasInfo { MustAlias, NoAlias };
+    enum class AliasInfo { MustAlias, MayAlias, NoAlias };
     enum class ModRefInfo {
         NoModRef,
         Ref,
@@ -58,7 +58,7 @@ public:
 
     // candidate must be Global Variable or array with the given function
     ModRefInfo getInstModRefInfo(const Instruction *inst,
-                                 const Value *candidate, FAM &fam) const;
+                                 const Value *location, FAM &fam) const;
 
     ModRefInfo getFunctionModRefInfo() const;
 
@@ -66,7 +66,7 @@ public:
     bool hasUntrackedCall() const;
 };
 
-class AliasAnalysisPass : public PM::AnalysisInfo<AliasAnalysisPass> {
+class AliasAnalysis : public PM::AnalysisInfo<AliasAnalysis> {
 public:
     static AliasAnalysisResult run(Function &f, FAM &fam);
 
@@ -75,7 +75,7 @@ public:
     using Result = AliasAnalysisResult;
 
 private:
-    friend AnalysisInfo<AliasAnalysisPass>;
+    friend AnalysisInfo<AliasAnalysis>;
     static PM::UniqueKey Key;
 };
 

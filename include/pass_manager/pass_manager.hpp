@@ -247,7 +247,7 @@ public:
         for (auto it = unit_res.begin(); it != unit_res.end();) {
             auto pass_id = it->first;
             if (!pa.isPreserved(pass_id)) {
-                unit_res.erase(it);
+                it = unit_res.erase(it);
                 index.erase({pass_id, &unit});
             } else
                 ++it;

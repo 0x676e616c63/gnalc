@@ -35,7 +35,7 @@ public:
     }
 };
 
-class LiveAnalyser : public PM::AnalysisInfo<LiveAnalyser> {
+class LiveAnalysis : public PM::AnalysisInfo<LiveAnalysis> {
 private:
     // 使用DFS遍历CFG
     void genDFSStack(const BasicBlock *bb);
@@ -82,7 +82,7 @@ public:
     using Result = Liveness;
 
 private:
-    friend AnalysisInfo<LiveAnalyser>;
+    friend AnalysisInfo<LiveAnalysis>;
     static PM::UniqueKey Key;
 };
 

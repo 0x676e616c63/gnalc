@@ -6,9 +6,9 @@
 #include <string>
 
 namespace IR {
-PM::UniqueKey LiveAnalyser::Key;
+PM::UniqueKey LiveAnalysis::Key;
 
-void LiveAnalyser::genDFSStack(const BasicBlock *bb) {
+void LiveAnalysis::genDFSStack(const BasicBlock *bb) {
     bb_stack.spush(bb);
     for (auto &nextbb : bb->getNextBB()) {
         if (!bb_stack.visited(nextbb.get())) {
@@ -17,7 +17,7 @@ void LiveAnalyser::genDFSStack(const BasicBlock *bb) {
     }
 }
 
-Liveness LiveAnalyser::run(Function &f, FAM &fam) {
+Liveness LiveAnalysis::run(Function &f, FAM &fam) {
     liveness.reset();
     bb_stack.reset();
     genDFSStack(f.getBlocks().front().get());
@@ -28,7 +28,7 @@ Liveness LiveAnalyser::run(Function &f, FAM &fam) {
     return liveness;
 }
 
-bool LiveAnalyser::processFunc(const Function *func) {
+bool LiveAnalysis::processFunc(const Function *func) {
     bb_stack.restore();
     bool updated = false;
     while (!bb_stack.empty()) {
@@ -48,7 +48,7 @@ bool LiveAnalyser::processFunc(const Function *func) {
 }
 
 // 返回值为LiveIn是否更新了
-bool LiveAnalyser::processBB(const BasicBlock *bb) {
+bool LiveAnalysis::processBB(const BasicBlock *bb) {
     // Logger::logDebug("Copying LiveOut from bb to insts");
     liveness.getLiveOut(bb->getInsts().back().get()) = liveness.getLiveOut(bb);
     bool updated = false;
@@ -73,7 +73,7 @@ bool LiveAnalyser::processBB(const BasicBlock *bb) {
 }
 
 // 返回值为LiveIn是否更新了
-bool LiveAnalyser::processInst(const Instruction *inst) {
+bool LiveAnalysis::processInst(const Instruction *inst) {
     // Logger::logDebug("Processing Instruction: " + inst->getName());
     bool updated = false;
     // inst->getLiveIn().insert(std::make_shared<ConstantInt>(1));

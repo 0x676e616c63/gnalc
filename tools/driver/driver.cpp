@@ -138,7 +138,7 @@ Extensions:
 
     yy::parser parser;
     if (parser.parse()) {
-        std::cerr << "Synax Error" << std::endl;
+        std::cerr << "Syntax Error" << std::endl;
         return -1;
     }
 
@@ -154,7 +154,12 @@ Extensions:
     Parser::IRGenerator generator;
     generator.visit(*node);
 
-    auto [fam, mam] = IR::PassBuilder::buildAnalysisManager();
+    IR::FAM fam;
+    IR::MAM mam;
+    IR::PassBuilder::registerFunctionAnalyses(fam);
+    IR::PassBuilder::registerModuleAnalyses(mam);
+    IR::PassBuilder::registerProxies(fam, mam);
+
     auto mpm = IR::PassBuilder::buildModulePipeline(opt_info);
 
     std::ostream *poutstream = &std::cout;

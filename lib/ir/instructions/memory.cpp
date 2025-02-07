@@ -1,5 +1,7 @@
 #include "../../../include/ir/instructions/memory.hpp"
 #include "../../../include/ir/visitor.hpp"
+
+#include <algorithm>
 #include <cassert>
 #include <stdexcept>
 
@@ -102,6 +104,27 @@ std::vector<std::shared_ptr<Value>> GEPInst::getIdxs() const {
     for (auto it = getOperands().begin() + 1; it != getOperands().end(); ++it)
         ret.emplace_back((*it)->getValue());
     return ret;
+}
+bool GEPInst::isConstantOffset() const {
+    auto idx = getIdxs();
+    return std::all_of(idx.cbegin(), idx.cend(),
+        [](const auto& i){ return i->getVTrait() == ValueTrait::CONSTANT_LITERAL; });
+}
+
+size_t GEPInst::getConstantOffset() const {
+    auto idx = getIdxs();
+
+    size_t offset = 0;
+    std::shared_ptr<Type> curr_type = getElm(getBaseType());
+    for (const auto& i : idx) {
+        auto ci = std::dynamic_pointer_cast<ConstantInt>(i);
+        Err::gassert(ci != nullptr, "GEPInst::getConstantOffset(): Not constant offset.");
+        Err::gassert(curr_type != nullptr, "GEPInst::getConstantOffset(): Invalid GEPInst, type mismatched with indices.");
+        offset += ci->getVal() * curr_type->getBytes();
+        curr_type = getElm(curr_type);
+    }
+
+    return offset;
 }
 
 void ALLOCAInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
