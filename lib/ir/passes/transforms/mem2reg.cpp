@@ -177,7 +177,6 @@ void PromotePass::insertPhi() {
     // }
 
     // 是否需要new_phi_nodes?
-    unsigned cur_version = 0;
     for (const auto& bb : phi_blocks) {
         // auto &node = new_phi_nodes[std::make_pair(cur_info.alloca->index, bb->index)];
         // if (node) continue;
@@ -189,12 +188,14 @@ void PromotePass::insertPhi() {
     }
 }
 
-void PromotePass::rename() {
+void PromotePass::rename(const Function &f) {
     if (alloca_infos.empty()) return;
-    std::map<std::shared_ptr<ALLOCAInst>, std::shared_ptr<Value>> incoming_values;
-    const auto undef_val = std::make_shared<Value>("__reg_undef", makeBType(IRBTYPE::UNDEFINED), ValueTrait::UNDEFINED);
+    // std::map<std::shared_ptr<ALLOCAInst>, std::shared_ptr<Value>> incoming_values;
+    using ABPair = std::pair<std::shared_ptr<ALLOCAInst>, std::shared_ptr<BasicBlock>>;
+    std::map<ABPair, std::shared_ptr<Value>> incoming_values;
     for (auto &info : alloca_infos) {
-        incoming_values[info.alloca] = undef_val;
+        for (auto &b : f.getBlocks())
+            incoming_values[{info.alloca, b}] = undef_val;
     }
 
     std::stack<std::shared_ptr<BasicBlock>> work_stack;
@@ -206,27 +207,33 @@ void PromotePass::rename() {
         if (!visited.insert(b).second)
             continue;
 
+        // todo : 可用livein信息优化
+        if (b->getPreBB().size() == 1) {
+            for (auto &info : alloca_infos) {
+                incoming_values[{info.alloca, b}] = incoming_values[{info.alloca, b->getPreBB().front()}];
+            }
+        }
+
         //  process load store and phi
-        //  todo : maybe need fix if some blocks just have one predBB
         std::vector<std::shared_ptr<Instruction>> del_insts;
         for (const auto& i : b->getInsts()) {
             switch (i->getOpcode()) {
                 case OP::PHI:
-                    incoming_values[phi_to_alloca_map[std::dynamic_pointer_cast<PHIInst>(i)]] = i;
+                    incoming_values[{phi_to_alloca_map[std::dynamic_pointer_cast<PHIInst>(i)], b}] = i;
                     break;
                 case OP::LOAD:
-                    if (!incoming_values.count(std::dynamic_pointer_cast<ALLOCAInst>(
-                            std::dynamic_pointer_cast<LOADInst>(i)->getPtr()))) break;
+                    if (!incoming_values.count({std::dynamic_pointer_cast<ALLOCAInst>(
+                            std::dynamic_pointer_cast<LOADInst>(i)->getPtr()), b})) break;
                     i->replaceSelf(
-                        incoming_values[std::dynamic_pointer_cast<ALLOCAInst>(
-                            std::dynamic_pointer_cast<LOADInst>(i)->getPtr())]);
+                        incoming_values[{std::dynamic_pointer_cast<ALLOCAInst>(
+                            std::dynamic_pointer_cast<LOADInst>(i)->getPtr()), b}]);
                     del_insts.emplace_back(i);
                     break;
                 case OP::STORE:
-                    if (!incoming_values.count(std::dynamic_pointer_cast<ALLOCAInst>(
-                            std::dynamic_pointer_cast<STOREInst>(i)->getPtr()))) break;
-                    incoming_values[std::dynamic_pointer_cast<ALLOCAInst>(
-                            std::dynamic_pointer_cast<STOREInst>(i)->getPtr())] = std::dynamic_pointer_cast<
+                    if (!incoming_values.count({std::dynamic_pointer_cast<ALLOCAInst>(
+                            std::dynamic_pointer_cast<STOREInst>(i)->getPtr()), b})) break;
+                    incoming_values[{std::dynamic_pointer_cast<ALLOCAInst>(
+                            std::dynamic_pointer_cast<STOREInst>(i)->getPtr()), b}] = std::dynamic_pointer_cast<
                                 STOREInst>(i)->getValue();
                     del_insts.emplace_back(i);
                     break;
@@ -246,7 +253,7 @@ void PromotePass::rename() {
             for (unsigned i = 0; i < n->getPhiCount(); ++i) {
                 if (auto phi_node = std::dynamic_pointer_cast<PHIInst>(*phi_it)) {
                     phi_node->addPhiOper(
-                        std::make_shared<PHIInst::PhiOperand>(incoming_values[phi_to_alloca_map[phi_node]], b));
+                        std::make_shared<PHIInst::PhiOperand>(incoming_values[{phi_to_alloca_map[phi_node], b}], b));
                 } else {
                     Err::error("PromotePass::rename(): phi node cast failed!");
                 }
@@ -319,7 +326,7 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
     }
 }
 
-void PromotePass::promoteMemoryToRegister(Function &function) {
+void PromotePass::promoteMemoryToRegister(const Function &function) {
     entry_block = function.getBlocks().front();
     Err::gassert(entry_block->isName("%entry"),
                  "First block is not named entry");
@@ -338,13 +345,19 @@ void PromotePass::promoteMemoryToRegister(Function &function) {
         }
     }
 
-    rename();
+    rename(function);
 }
 
 PM::PreservedAnalyses PromotePass::run(Function &function, FAM &manager) {
     DT = manager.getResult<DomTreeAnalysis>(function);
 
     promoteMemoryToRegister(function);
+
+    cur_info = {};
+    alloca_infos.clear();
+    phi_to_alloca_map.clear();
+    entry_block = nullptr;
+    DT = {};
 
     PM::PreservedAnalyses pa;
     pa.preserve<DomTreeAnalysis>();

@@ -15,6 +15,8 @@
 
 namespace IR {
 class PromotePass : public PM::PassInfo<PromotePass> {
+    // just for debug
+    std::shared_ptr<Value> undef_val = std::make_shared<Value>("__reg_undef", makeBType(IRBTYPE::UNDEFINED), ValueTrait::UNDEFINED);
     struct BLOCK_INFO {
         std::map<unsigned, std::shared_ptr<LOADInst>> load_map;
         std::map<unsigned, std::shared_ptr<STOREInst>> store_map;
@@ -41,7 +43,7 @@ class PromotePass : public PM::PassInfo<PromotePass> {
     bool rewriteSingleStoreAlloca();
     bool promoteSingleBlockAlloca();
     void insertPhi();
-    void rename();
+    void rename(const Function &f);
 
     // 计算迭代支配前沿
     // https://dl.acm.org/doi/pdf/10.1145/199448.199464
@@ -49,7 +51,7 @@ class PromotePass : public PM::PassInfo<PromotePass> {
                     const std::set<std::shared_ptr<BasicBlock>> &live_in_blk,
                     std::set<std::shared_ptr<BasicBlock>> &phi_blk);
 
-    void promoteMemoryToRegister(Function &function);
+    void promoteMemoryToRegister(const Function &function);
 
 public:
     PM::PreservedAnalyses run(Function &function, FAM &manager);

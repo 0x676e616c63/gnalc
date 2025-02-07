@@ -82,8 +82,6 @@ void DomTree::updateLevel() {
         for (const auto &n : cur) {
             n->level = l;
             n->bfs_num = ++i;
-            Err::gassert(next.empty(),
-                         "DomTree::updateLevel: next vector is not empty!");
             for (auto &c : n->children) {
                 next.emplace_back(c);
             }
