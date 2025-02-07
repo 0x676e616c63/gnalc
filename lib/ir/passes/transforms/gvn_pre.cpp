@@ -183,13 +183,12 @@ class ValueSet {
         return values.find(kind) == values.end();
     }
 
-    iterator erase(iterator it) { return values.erase(it); }
-    iterator erase(const_iterator it) { return values.erase(it); }
-    iterator erase(iterator it1, iterator it2) {
-        return values.erase(it1, it2);
-    }
-    iterator erase(const_iterator it1, const_iterator it2) {
-        return values.erase(it1, it2);
+    bool erase(ValueKind kind) {
+        auto it = values.find(kind);
+        if (it == values.end())
+            return false;
+        values.erase(it);
+        return true;
     }
 
     const_iterator cbegin() const { return values.cbegin(); }
@@ -200,9 +199,26 @@ class ValueSet {
 
 ValueSet intersect(const ValueSet& a, const ValueSet& b) {
     ValueSet ret;
-    std::set_intersection(a.cbegin(), a.cend(),
-    b.cbegin(), b.cend(), ret.begin(),
-    [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
+
+    // std::map's key type is const, and the pair's copy assignment operator is implicitly deleted in Clang.
+    // See: https://stackoverflow.com/questions/52639887/clang-copy-assignment-operator-is-getting-deleted-while-using-stdmap-in-libc
+    // std::set_intersection(a.cbegin(), a.cend(),
+    // b.cbegin(), b.cend(), ret.begin(),
+    // [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
+
+    // https://en.cppreference.com/w/cpp/algorithm/set_intersection
+    auto it1 = a.cbegin(), it2 = b.cbegin();
+    while (it1 != a.cend() && it2 != b.cend())
+    {
+        if (it1->first < it2->first)
+            ++it1;
+        else
+        {
+            if (it2->first >= it1->first)
+                ret.insert(it1->first, it1->second); // it1->first and it2->first are equivalent.
+            ++it2;
+        }
+    }
     return ret;
 }
 
@@ -211,6 +227,9 @@ ValueSet intersect(const ValueSet& a, const ValueSet& b) {
 class ValueVec {
     std::map<std::shared_ptr<Value>, ValueKind> values;
 public:
+    using const_iterator = decltype(values)::const_iterator;
+    using iterator = decltype(values)::iterator;
+
     void insert(ValueKind kind, const std::shared_ptr<Value>& value) {
         values[value] = kind;
     }
@@ -221,6 +240,11 @@ public:
         }
         return false;
     }
+
+    const_iterator cbegin() const { return values.cbegin(); }
+    const_iterator cend() const { return values.cend(); }
+    iterator begin() { return values.begin(); }
+    iterator end() { return values.end(); }
 };
 
 using ValueSetMap = std::map<std::shared_ptr<BasicBlock>, ValueSet>;
@@ -335,9 +359,8 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
             }
             else if (succ.size() == 1) {
                 // phi translate(A[succ(b)], b, succ(b))
-                const auto& succ_antic_in = antic_in_map[succ.front()];
-                for (const auto& r : succ_antic_in) {
-                    auto v = phi_translate(v, curr->bb, succ.front());
+                for (const auto& r : antic_in_map[succ.front()]) {
+                    auto v = phi_translate(r.second, curr->bb, succ.front());
                     antic_out.insert(table.getKind(v), v);
                 }
             }
@@ -356,10 +379,8 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
             for (const auto& [kind, val] : exp_gen)
                 antic_in.insert(kind, val);
 
-            antic_in.erase(std::remove_if(antic_in.begin(), antic_in.end(),
-                [&tmp_gen](const auto& v) {
-                    return tmp_gen.contains(v.first);
-                }));
+            for (const auto& [_val, kind] : tmp_gen)
+                antic_in.erase(kind);
 
             for (const auto& child : curr->children)
             {
