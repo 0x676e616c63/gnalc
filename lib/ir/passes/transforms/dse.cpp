@@ -10,45 +10,37 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
 
     std::set<std::shared_ptr<STOREInst>> eraseSet;
     eraseSet.clear();
-    for (const auto &block : function) {
-        std::vector<std::shared_ptr<STOREInst> > storeList;
-        for (const auto &inst : *block) {
-            if (auto store = std::dynamic_pointer_cast<STOREInst>(inst))
-                storeList.push_back(store);
-        }
-        for (const auto &storeinst : storeList) {
-            auto ptr = storeinst->getPtr();
-            bool flag = false;
 
-            for (const auto &inst : *block) {
-                if (auto tempStoreInst = std::dynamic_pointer_cast<STOREInst>(inst)) {
-                    if (tempStoreInst == storeinst) {
-                        flag = true;
-                        continue;
+    for (const auto & block:function) {
+        auto iter1=block->begin();
+        while (iter1!=block->end()) {
+            auto iter2=iter1;
+            if (auto storeInst=std::dynamic_pointer_cast<STOREInst>(*iter1)) {
+                bool flag=true;
+                iter2++;
+                while (iter2!=block->end()) {
+                    if (flag) {
+                        if (auto tempStoreInst = std::dynamic_pointer_cast<STOREInst>(*iter2)) {
+                            auto tempPtr = tempStoreInst->getPtr();
+                            if (aliasResult.getAliasInfo(storeInst->getPtr().get(), tempPtr.get()) == AliasAnalysisResult::AliasInfo::MustAlias) {
+                                tempStoreInst->replaceSelf(storeInst);
+                            }
+                        } else {
+                            auto modref = aliasResult.getInstModRefInfo((*iter2).get(), storeInst->getPtr().get(), fam);
+                            if (modref == AliasAnalysisResult::ModRefInfo::Mod || modref == AliasAnalysisResult::ModRefInfo::ModRef)
+                            {
+                                flag = false;
+                                break;
+                            }
+                        }
                     }
                 }
-                if (flag) {
-                    if (auto tempStoreInst = std::dynamic_pointer_cast<STOREInst>(inst)) {
-                        auto tempPtr = tempStoreInst->getPtr();
-                        if (aliasResult.getAliasInfo(ptr.get(), tempPtr.get()) == AliasAnalysisResult::AliasInfo::MustAlias) {
-                            tempStoreInst->replaceSelf(storeinst);
-                        }
-                    } else {
-                        auto modref = aliasResult.getInstModRefInfo(inst.get(), ptr.get(), fam);
-                        if (modref == AliasAnalysisResult::ModRefInfo::Mod || modref == AliasAnalysisResult::ModRefInfo::ModRef)
-                        {
-                            flag = false;
-                            break;
-                        }
-                    }
-                }
+                if (flag)
+                    eraseSet.insert(storeInst);
             }
-
-            if (flag)
-                eraseSet.insert(storeinst);
+            else ++iter1;
         }
     }
-
     bool dse_inst_modified = false;
 
     // erase dead inst
