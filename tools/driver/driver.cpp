@@ -175,7 +175,7 @@ Extensions:
     }
 
     if (emit_llvm) {
-        mpm.addPass(IR::PrintModulePass(*poutstream, false));
+        mpm.addPass(IR::PrintModulePass(*poutstream));
         mpm.run(generator.get_module(), mam);
         return 0;
     }
