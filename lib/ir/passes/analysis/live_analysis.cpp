@@ -18,12 +18,12 @@ Liveness LiveAnalysis::run(Function &f, FAM &fam) {
 bool LiveAnalysis::processFunc(const Function *func) {
     auto dfvisitor = func->getDFVisitor();
     bool updated = false;
-    for (auto bb : dfvisitor) {
+    for (const auto& bb : dfvisitor) {
         for (auto &nxtbb : bb->getNextBB())
             for (auto &livevar : liveness.getLiveIn(nxtbb.get()))
-                if (liveness.getLiveOut(bb).insert(livevar).second)
+                if (liveness.getLiveOut(bb.get()).insert(livevar).second)
                     updated = true;
-        if (processBB(bb))
+        if (processBB(bb.get()))
             updated = true;
     }
     return updated;

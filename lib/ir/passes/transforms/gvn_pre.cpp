@@ -333,8 +333,8 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     modified = true;
     while (modified) {
         modified = false;
-        auto postdom_visitor = postdomtree.getBFVisitor();
-        for (const auto& curr : postdom_visitor) {
+        auto dom_visitor = domtree.getBFVisitor();
+        for (const auto& curr : dom_visitor) {
             ValueSetMap insert_set_map;
             auto idom = curr->parent->bb;
             // TODO

@@ -49,13 +49,9 @@ public:
 };
 
 struct BBSuccGetter {
-    std::vector<BasicBlock*> operator()(BasicBlock* bb)
+    auto operator()(const std::shared_ptr<BasicBlock>& bb)
     {
-        std::vector<BasicBlock*> ret;
-        auto succ = bb->getNextBB();
-        for (const auto& s : succ)
-            ret.emplace_back(s.get());
-        return ret;
+        return bb->getNextBB();
     }
 };
 
@@ -70,8 +66,8 @@ private:
     // 后面需要再说
     // int vreg_idx = 0;
 public:
-    using CFGBFVisitor = Util::GenericBFVisitor<BasicBlock, BBSuccGetter>;
-    using CFGDFVisitor = Util::GenericDFVisitor<BasicBlock, BBSuccGetter>;
+    using CFGBFVisitor = Util::GenericBFVisitor<std::shared_ptr<BasicBlock>, BBSuccGetter>;
+    using CFGDFVisitor = Util::GenericDFVisitor<std::shared_ptr<BasicBlock>, BBSuccGetter>;
     using const_iterator = decltype(blks)::const_iterator;
     using iterator = decltype(blks)::iterator;
 
@@ -131,11 +127,11 @@ public:
     void accept(IRVisitor &visitor) override;
 
     auto getBFVisitor() const {
-        return CFGBFVisitor(blks[0].get());
+        return CFGBFVisitor(blks[0]);
     }
 
     auto getDFVisitor() const {
-        return CFGDFVisitor(blks[0].get());
+        return CFGDFVisitor(blks[0]);
     }
 
 private:

@@ -19,15 +19,12 @@ struct DomTree {
         explicit Node(const std::shared_ptr<BasicBlock> &bb) : bb(bb) {}
     };
     struct NodeChildGetter {
-        std::vector<Node*> operator()(Node *node) {
-            std::vector<Node*> ret;
-            for (const auto &child : node->children)
-                ret.emplace_back(child.get());
-            return ret;
+        auto operator()(const std::shared_ptr<Node>& node) {
+            return node->children;
         }
     };
-    using NodeBFVisitor = Util::GenericBFVisitor<Node, NodeChildGetter>;
-    using NodeDFVisitor = Util::GenericDFVisitor<Node, NodeChildGetter>;
+    using NodeBFVisitor = Util::GenericBFVisitor<std::shared_ptr<Node>, NodeChildGetter>;
+    using NodeDFVisitor = Util::GenericDFVisitor<std::shared_ptr<Node>, NodeChildGetter>;
 
 
     std::shared_ptr<Node> root;
@@ -36,8 +33,8 @@ struct DomTree {
     DomSet getDomSet(const std::shared_ptr<BasicBlock>& b);
     void printDomTree();
 
-    auto getBFVisitor() const { return NodeBFVisitor{ root.get() }; }
-    auto getDFVisitor() const { return NodeDFVisitor{ root.get() }; }
+    auto getBFVisitor() const { return NodeBFVisitor{ root }; }
+    auto getDFVisitor() const { return NodeDFVisitor{ root }; }
 private:
     void print(const std::shared_ptr<Node> &node, int level);
     void initDTN(std::vector<std::shared_ptr<BasicBlock>> &blocks);
