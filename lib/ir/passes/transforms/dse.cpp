@@ -1,8 +1,9 @@
 #include "../../../../include/ir/passes/transforms/dse.hpp"
+#include "../../../../include/ir/instructions/memory.hpp"
 #include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
-#include "../../../../include/ir/instructions/memory.hpp"
 
+#include <algorithm>
 
 namespace IR {
 PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
@@ -10,26 +11,22 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
 
     std::set<std::shared_ptr<Instruction>> eraseSet;
     for (const auto & block: function) {
-        for (auto iter1 = block->begin(); iter1 != block->end(); ++iter1) {
-            auto store1 = std::dynamic_pointer_cast<STOREInst>(*iter1);
-            if (store1 == nullptr)
-                continue;
+        for (auto it = block->begin(); it != block->end(); ++it) {
+            auto store = std::dynamic_pointer_cast<STOREInst>(*it);
+            if (store == nullptr) continue;
 
-            auto store1_ptr = store1->getPtr().get();
-            for (auto iter2 = std::next(iter1); iter2 != block->end(); ++iter2) {
-                if (auto store2 = std::dynamic_pointer_cast<STOREInst>(*iter2)) {
-                    auto store2_ptr = store2->getPtr().get();
-                    if (aliasResult.getAliasInfo(store1_ptr, store2_ptr)
-                            == AliasAnalysisResult::AliasInfo::MustAlias) {
-                        store2->replaceSelf(store1);
-                        eraseSet.emplace(store2);
-                    }
-                } else {
-                    auto modref = aliasResult.getInstModRefInfo(iter2->get(), store1_ptr, fam);
-                    if (modref == AliasAnalysisResult::ModRefInfo::Mod || modref == AliasAnalysisResult::ModRefInfo::ModRef)
-                        break;
-                }
-            }
+            // Eliminate a store if there is no reference to that memory.
+            // Note that duplicate store to the same location will also be eliminated.
+            auto store_ptr = store->getPtr().get();
+            bool has_read = std::any_of(std::next(it), block->end(),
+                [this, &fam, &aliasResult, &store_ptr](const auto & inst) {
+                    auto modref = aliasResult.
+                    getInstModRefInfo(inst.get(), store_ptr, fam);
+                    return modref == AliasAnalysisResult::ModRefInfo::Ref
+                    || modref == AliasAnalysisResult::ModRefInfo::ModRef;});
+
+            if (!has_read)
+                eraseSet.emplace(store);
         }
     }
 
