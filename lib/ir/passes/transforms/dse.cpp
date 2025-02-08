@@ -8,39 +8,31 @@ namespace IR {
 PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
     auto aliasResult = fam.getResult<AliasAnalysis>(function);
 
-    std::set<std::shared_ptr<STOREInst>> eraseSet;
-    eraseSet.clear();
+    std::set<std::shared_ptr<Instruction>> eraseSet;
+    for (const auto & block: function) {
+        for (auto iter1 = block->begin(); iter1 != block->end(); ++iter1) {
+            auto store1 = std::dynamic_pointer_cast<STOREInst>(*iter1);
+            if (store1 == nullptr)
+                continue;
 
-    for (const auto & block:function) {
-        auto iter1=block->begin();
-        while (iter1!=block->end()) {
-            auto iter2=iter1;
-            if (auto storeInst=std::dynamic_pointer_cast<STOREInst>(*iter1)) {
-                bool flag=true;
-                iter2++;
-                while (iter2!=block->end()) {
-                    if (flag) {
-                        if (auto tempStoreInst = std::dynamic_pointer_cast<STOREInst>(*iter2)) {
-                            auto tempPtr = tempStoreInst->getPtr();
-                            if (aliasResult.getAliasInfo(storeInst->getPtr().get(), tempPtr.get()) == AliasAnalysisResult::AliasInfo::MustAlias) {
-                                tempStoreInst->replaceSelf(storeInst);
-                            }
-                        } else {
-                            auto modref = aliasResult.getInstModRefInfo((*iter2).get(), storeInst->getPtr().get(), fam);
-                            if (modref == AliasAnalysisResult::ModRefInfo::Mod || modref == AliasAnalysisResult::ModRefInfo::ModRef)
-                            {
-                                flag = false;
-                                break;
-                            }
-                        }
+            auto store1_ptr = store1->getPtr().get();
+            for (auto iter2 = std::next(iter1); iter2 != block->end(); ++iter2) {
+                if (auto store2 = std::dynamic_pointer_cast<STOREInst>(*iter2)) {
+                    auto store2_ptr = store2->getPtr().get();
+                    if (aliasResult.getAliasInfo(store1_ptr, store2_ptr)
+                            == AliasAnalysisResult::AliasInfo::MustAlias) {
+                        store2->replaceSelf(store1);
+                        eraseSet.emplace(store2);
                     }
+                } else {
+                    auto modref = aliasResult.getInstModRefInfo(iter2->get(), store1_ptr, fam);
+                    if (modref == AliasAnalysisResult::ModRefInfo::Mod || modref == AliasAnalysisResult::ModRefInfo::ModRef)
+                        break;
                 }
-                if (flag)
-                    eraseSet.insert(storeInst);
             }
-            else ++iter1;
         }
     }
+
     bool dse_inst_modified = false;
 
     // erase dead inst

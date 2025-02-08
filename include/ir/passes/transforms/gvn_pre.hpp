@@ -2,6 +2,7 @@
 // See:
 //     - Thomas VanDrunen and Antony L. Hosking "Value-based Partial Redundancy Elimination":
 //           https://link.springer.com/content/pdf/10.1007/978-3-540-24723-4_12.pdf
+//           https://hosking.github.io/links/VanDrunen+2004CC.pdf  (same but with higher resolution)
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_GVN_PRE_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_GVN_PRE_HPP
@@ -146,7 +147,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     ValueVecMap phi_gen_map,   // temporaries that are defined by a phi
                 tmp_gen_map;   // temporaries that are defined by non-phi instructions
 
-    std::shared_ptr<Value> GVNPREPass::phi_translate(
+    std::shared_ptr<Value> phi_translate(
     const std::shared_ptr<Value>& value,
     const std::shared_ptr<BasicBlock>& curr,
     const std::shared_ptr<BasicBlock>& succ);
