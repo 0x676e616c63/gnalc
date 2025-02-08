@@ -208,11 +208,11 @@ void PromotePass::rename(const Function &f) {
             continue;
 
         // todo : 可用livein信息优化
-        if (b->getPreBB().size() == 1) {
-            for (auto &info : alloca_infos) {
-                incoming_values[{info.alloca, b}] = incoming_values[{info.alloca, b->getPreBB().front()}];
-            }
-        }
+        // if (b->getPreBB().size() >= 1) {
+        //     for (auto &info : alloca_infos) {
+        //         incoming_values[{info.alloca, b}] = incoming_values[{info.alloca, b->getPreBB().front()}];
+        //     }
+        // }
 
         //  process load store and phi
         std::vector<std::shared_ptr<Instruction>> del_insts;
@@ -224,6 +224,21 @@ void PromotePass::rename(const Function &f) {
                 case OP::LOAD:
                     if (!incoming_values.count({std::dynamic_pointer_cast<ALLOCAInst>(
                             std::dynamic_pointer_cast<LOADInst>(i)->getPtr()), b})) break;
+                    // 用于在替换前检查是否是undef_val, 若是则沿cfg向上查找非undef的值
+                    if (auto alloca = std::dynamic_pointer_cast<ALLOCAInst>(
+                        std::dynamic_pointer_cast<LOADInst>(i)->getPtr()); incoming_values[{alloca, b}] == undef_val) {
+                        for (auto pb = b->getPreBB().front();;) {
+                            if (incoming_values[{alloca, pb}] == undef_val) {
+                                if (!pb->getPreBB().empty())
+                                    pb = pb->getPreBB().front();
+                                else
+                                    Err::error("PromotePass::rename(): PreBB is empty!");
+                            } else {
+                                incoming_values[{alloca, b}] = incoming_values[{alloca, pb}];
+                                break;
+                            }
+                        }
+                    }
                     i->replaceSelf(
                         incoming_values[{std::dynamic_pointer_cast<ALLOCAInst>(
                             std::dynamic_pointer_cast<LOADInst>(i)->getPtr()), b}]);
@@ -252,6 +267,20 @@ void PromotePass::rename(const Function &f) {
             auto phi_it = n->getInsts().begin();
             for (unsigned i = 0; i < n->getPhiCount(); ++i) {
                 if (auto phi_node = std::dynamic_pointer_cast<PHIInst>(*phi_it)) {
+                    // 用于在替换前检查是否是undef_val, 若是则沿cfg向上查找非undef的值
+                    if (auto alloca = phi_to_alloca_map[phi_node]; incoming_values[{alloca, b}] == undef_val) {
+                        for (auto pb = b->getPreBB().front();;) {
+                            if (incoming_values[{alloca, pb}] == undef_val) {
+                                if (!pb->getPreBB().empty())
+                                    pb = pb->getPreBB().front();
+                                else
+                                    Err::error("PromotePass::rename(): PreBB is empty!");
+                            } else {
+                                incoming_values[{alloca, b}] = incoming_values[{alloca, pb}];
+                                break;
+                            }
+                        }
+                    }
                     phi_node->addPhiOper(
                         std::make_shared<PHIInst::PhiOperand>(incoming_values[{phi_to_alloca_map[phi_node], b}], b));
                 } else {

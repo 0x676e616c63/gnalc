@@ -23,12 +23,14 @@ int main(int argc, char *argv[]) {
                 "prefix.");
         println("  -r, --run  [name_prefix] : Only run test whose name has "
                 "such prefix.");
+        println("  -p, --para [param]       : Run with gnalc parameter.");
         println("  -n, --no-lfs             : Run no lfs tests.");
         println("  -h, --help               : Print this help and exit.");
     };
     auto real_test_data = cfg::test_data;
     std::vector<std::pair<std::string, std::vector<std::string>>> skip;
     std::vector<std::pair<std::string, std::vector<std::string>>> run;
+    std::string gnalc_params;
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
         if (arg == "--all" || arg == "-a")
@@ -64,6 +66,8 @@ int main(int argc, char *argv[]) {
             return 0;
         } else if (arg == "--no-lfs" || arg == "-n") {
             real_test_data = cfg::test_data_no_lfs;
+        } else if (arg == "--para" || arg == "-p") {
+            gnalc_params += " " + std::string(argv[++i]);
         } else {
             println("Error: Unrecognized option '{}'", arg);
             print_help();
@@ -162,11 +166,11 @@ int main(int argc, char *argv[]) {
 
                 // /bin/echo is the one in GNU coreutils
                 command =
-                    format("{} 2>&1 -S -emit-llvm -o {} {}"
+                    format("{} 2>&1 -S -emit-llvm{} -o {} {}"
                            " && llvm-link 2>&1 {} {} -o {}"
                            " && lli {} < {} > {}"
                            "; /bin/echo -e \"\\n\"$? >> {}",
-                           cfg::gnalc_path, outll, sy.path().string(),
+                           cfg::gnalc_path, gnalc_params, outll, sy.path().string(),
                            sylib_to_link, outll, outbc, outbc,
                            exists(testcase_in) ? testcase_in : "/dev/null",
                            output, output);
@@ -178,11 +182,11 @@ int main(int argc, char *argv[]) {
                     format("{}/{}", curr_temp_dir, sy.path().stem().string());
 
                 command =
-                    format("{} 2>&1 -S -o {} {}"
+                    format("{} 2>&1 -S{} -o {} {}"
                            " && {} {} {} -o {}"
                            " && {} {} < {} > {}"
                            "; /bin/echo -e \"\\n\"$? >> {}",
-                           cfg::gnalc_path, outs, sy.path().string(),
+                           cfg::gnalc_path, gnalc_params, outs, sy.path().string(),
                            cfg::gcc_arm_command, outs, sylib_to_link, outexec,
                            cfg::qemu_arm_command, outexec,
                            exists(testcase_in) ? testcase_in : "/dev/null",
