@@ -1,6 +1,8 @@
 #include "../../../include/ir/instructions/phi.hpp"
 #include "../../../include/ir/visitor.hpp"
 
+#include <algorithm>
+
 namespace IR {
 PHIInst::PHIInst(NameRef name, const std::shared_ptr<Type> &_type)
     : Instruction(OP::PHI, name, _type) {}
@@ -40,11 +42,25 @@ std::vector<std::shared_ptr<PHIInst::PhiOperand>> PHIInst::getPhiOpers() const {
     return ret;
 }
 
+bool PHIInst::replaceBlock(const std::shared_ptr<BasicBlock> &before,
+    const std::shared_ptr<BasicBlock> &after) {
+    for (const auto& poper : popers) {
+        if (poper->getBlock() == before)
+            poper->setBlock(after);
+        return true;
+    }
+    return false;
+}
+
 void PHIInst::delPhiOper(const std::shared_ptr<BasicBlock> &target) {
     delOperandIf([&target](const auto &oper) {
         return std::dynamic_pointer_cast<PhiOperand>(oper->getValue())
                    ->getBlock() == target;
     });
+    auto it = std::find_if(popers.begin(), popers.end(),
+        [&target](const auto& poper) { return poper->getBlock() == target; });
+    Err::gassert(it != popers.end());
+    popers.erase(it);
 }
 
 void PHIInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
@@ -58,12 +74,17 @@ PHIInst::PhiOperand::PhiOperand(const std::shared_ptr<Value> &_value,
 }
 
 std::shared_ptr<Value> PHIInst::PhiOperand::getValue() const {
-    return getOperands().front()->getValue();
+    return getOperand(0)->getValue();
 }
 
 std::shared_ptr<BasicBlock> PHIInst::PhiOperand::getBlock() const {
     return std::dynamic_pointer_cast<BasicBlock>(
-        getOperands().back()->getValue());
+        getOperand(1)->getValue());
+}
+
+void PHIInst::PhiOperand::setBlock(const std::shared_ptr<BasicBlock>& _block) {
+    delOperand(1);
+    addOperand(_block);
 }
 
 std::shared_ptr<PHIInst> PHIInst::PhiOperand::getPhi() const {

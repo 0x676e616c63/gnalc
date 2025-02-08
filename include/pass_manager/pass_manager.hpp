@@ -14,7 +14,7 @@
 //              invalidate                  depend
 // TransformA --------------> AnalysisA -------------> AnalysisB
 //
-// Even if TransformA does not directly require AnalysisB, it must still explicitly
+// Even if TransformA does not directly invalidate AnalysisB, it must still explicitly
 // invalidate both AnalysisA and AnalysisB.
 //
 

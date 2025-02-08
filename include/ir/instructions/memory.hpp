@@ -99,6 +99,9 @@ public:
     GEPInst(NameRef name, const std::shared_ptr<Value> &_ptr,
             const std::shared_ptr<Value> &idx);
 
+    GEPInst(NameRef name, const std::shared_ptr<Value> &_ptr,
+        const std::vector<std::shared_ptr<Value>> &idxs);
+
     std::shared_ptr<Type> getBaseType() const;
     std::shared_ptr<Value> getPtr() const;
     std::vector<std::shared_ptr<Value>> getIdxs() const;
