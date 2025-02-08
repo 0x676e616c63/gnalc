@@ -7,6 +7,7 @@
 #include "constant_pool.hpp"
 #include "instruction.hpp"
 #include "instructions/phi.hpp"
+#include "../utils/generic_visitor.hpp"
 
 #include <memory>
 #include <utility>
@@ -47,6 +48,17 @@ public:
     void accept(IRVisitor &visitor) override;
 };
 
+struct BBSuccGetter {
+    std::vector<BasicBlock*> operator()(BasicBlock* bb)
+    {
+        std::vector<BasicBlock*> ret;
+        auto succ = bb->getNextBB();
+        for (const auto& s : succ)
+            ret.emplace_back(s.get());
+        return ret;
+    }
+};
+
 class Function : public FunctionDecl,
                  public std::enable_shared_from_this<Function> {
     friend class Parser::CFGBuilder;
@@ -58,6 +70,8 @@ private:
     // 后面需要再说
     // int vreg_idx = 0;
 public:
+    using CFGBFVisitor = Util::GenericBFVisitor<BasicBlock, BBSuccGetter>;
+    using CFGDFVisitor = Util::GenericDFVisitor<BasicBlock, BBSuccGetter>;
     using const_iterator = decltype(blks)::const_iterator;
     using iterator = decltype(blks)::iterator;
 
@@ -115,6 +129,14 @@ public:
     ConstantPool &getConstantPool();
 
     void accept(IRVisitor &visitor) override;
+
+    auto getBFVisitor() const {
+        return CFGBFVisitor(blks[0].get());
+    }
+
+    auto getDFVisitor() const {
+        return CFGDFVisitor(blks[0].get());
+    }
 
 private:
     void updateBBIndex();

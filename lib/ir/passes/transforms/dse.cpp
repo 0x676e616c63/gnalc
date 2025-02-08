@@ -18,14 +18,20 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
             // Eliminate a store if there is no reference to that memory.
             // Note that duplicate store to the same location will also be eliminated.
             auto store_ptr = store->getPtr().get();
-            bool has_read = std::any_of(std::next(it), block->end(),
-                [this, &fam, &aliasResult, &store_ptr](const auto & inst) {
-                    auto modref = aliasResult.
-                    getInstModRefInfo(inst.get(), store_ptr, fam);
-                    return modref == AliasAnalysisResult::ModRefInfo::Ref
-                    || modref == AliasAnalysisResult::ModRefInfo::ModRef;});
+            bool should_eliminate = true; // Agressive
+            for (auto it2 = std::next(it); it2 != block->end(); ++it2) {
+                auto modref = aliasResult.getInstModRefInfo(it2->get(), store_ptr, fam);
+                // 存在 Reference 就不能消除
+                if (modref == AliasAnalysisResult::ModRefInfo::Ref || modref == AliasAnalysisResult::ModRefInfo::ModRef) {
+                    should_eliminate = false;
+                    break;
+                }
+                // 存在 Mod 就不用往后看了
+                if (modref == AliasAnalysisResult::ModRefInfo::Mod)
+                    break;
+            }
 
-            if (!has_read)
+            if (should_eliminate)
                 eraseSet.emplace(store);
         }
     }

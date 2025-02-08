@@ -8,31 +8,17 @@
 namespace IR {
 PM::UniqueKey LiveAnalysis::Key;
 
-void LiveAnalysis::genDFSStack(const BasicBlock *bb) {
-    bb_stack.spush(bb);
-    for (auto &nextbb : bb->getNextBB()) {
-        if (!bb_stack.visited(nextbb.get())) {
-            genDFSStack(nextbb.get());
-        }
-    }
-}
-
 Liveness LiveAnalysis::run(Function &f, FAM &fam) {
     liveness.reset();
-    bb_stack.reset();
-    genDFSStack(f.getBlocks().front().get());
-
     while (processFunc(&f))
         ;
-
     return liveness;
 }
 
 bool LiveAnalysis::processFunc(const Function *func) {
-    bb_stack.restore();
+    auto dfvisitor = func->getDFVisitor();
     bool updated = false;
-    while (!bb_stack.empty()) {
-        auto bb = bb_stack.pop();
+    for (auto bb : dfvisitor) {
         for (auto &nxtbb : bb->getNextBB())
             for (auto &livevar : liveness.getLiveIn(nxtbb.get()))
                 if (liveness.getLiveOut(bb).insert(livevar).second)
@@ -41,10 +27,6 @@ bool LiveAnalysis::processFunc(const Function *func) {
             updated = true;
     }
     return updated;
-
-    // // just for one BB
-    // processBB(func->getBlocks().front());
-    // return false;
 }
 
 // 返回值为LiveIn是否更新了

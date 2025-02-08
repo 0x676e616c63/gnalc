@@ -108,6 +108,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         const_iterator cend() const { return values.cend(); }
         iterator begin() { return values.begin(); }
         iterator end() { return values.end(); }
+        auto size() const { return values.size(); }
     };
 
     static ValueSet intersect(const ValueSet& a, const ValueSet& b);

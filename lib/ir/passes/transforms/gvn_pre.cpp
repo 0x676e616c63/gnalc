@@ -218,14 +218,8 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     // 1. Topdown traversal of the dominator tree.
     // Build AVAIL_OUT, EXP_GEN, PHI_GEN and TMP_GEN
     auto domtree = fam.getResult<DomTreeAnalysis>(function);
-    std::deque worklist{ domtree.root };
-    std::set<std::shared_ptr<DomTree::Node>> visited;
-    visited.insert(domtree.root);
-    while (!worklist.empty()) {
-        auto curr = worklist.front();
-        worklist.pop_front();
-        visited.insert(curr);
-
+    auto visitor = domtree.getBFVisitor();
+    for (const auto& curr : visitor) {
         auto& avail_out = avail_out_map[curr->bb]; // = canon(AVAIL_IN[b] ∪ PHI_GEN(b) ∪ TMP_GEN(b))
         auto& exp_gen = exp_gen_map[curr->bb];     // temporaries and non-simple
         auto& phi_gen = phi_gen_map[curr->bb];     // temporaries that are defined by a phi
@@ -259,13 +253,8 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                 avail_out.insert(kind, inst);
             }
         }
-
-        for (const auto& child : curr->children)
-        {
-            if (visited.find(child) == visited.end())
-                worklist.emplace_back(child);
-        }
     }
+
 
     // 2. Calculates flow sets to determine the antileader sets
     //    and conducts the fixed-point iteration
@@ -277,13 +266,10 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     bool modified = true;
     while (modified) {
         modified = false;
-        worklist = { postdomtree.root };
-        visited.clear();
-        while (!worklist.empty()) {
-            auto curr = worklist.front();
-            worklist.pop_front();
-            visited.insert(curr);
 
+        auto postdom_visitor = postdomtree.getBFVisitor();
+        for (const auto& curr : postdom_visitor)
+        {
             // First build ANTIC_OUT
             ValueSet antic_out;
             auto succ = curr->bb->getNextBB();
@@ -321,20 +307,20 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
             auto& exp_gen = exp_gen_map[curr->bb];
             auto& tmp_gen = tmp_gen_map[curr->bb];
 
+            auto last_round_size = antic_in.size();
+
             for (const auto& [kind, val] : antic_out)
                 antic_in.insert(kind, val);
 
             for (const auto& [kind, val] : exp_gen)
                 antic_in.insert(kind, val);
 
+            // TMP_GEN acts as a kill set of ANTIC_IN
             for (const auto& [_val, kind] : tmp_gen)
                 antic_in.erase(kind);
 
-            for (const auto& child : curr->children)
-            {
-                if (visited.find(child) == visited.end())
-                    worklist.emplace_back(child);
-            }
+            modified |= (last_round_size != antic_in.size());
+
         }
     }
 
@@ -343,6 +329,17 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     // Step 2 - Insert
     //
 
+    // a top-down traversal of the dominator tree
+    modified = true;
+    while (modified) {
+        modified = false;
+        auto postdom_visitor = postdomtree.getBFVisitor();
+        for (const auto& curr : postdom_visitor) {
+            ValueSetMap insert_set_map;
+            auto idom = curr->parent->bb;
+            // TODO
+        }
+    }
 
     //
     // Step 3 - Eliminate

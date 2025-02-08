@@ -69,6 +69,18 @@ void Module::removeUnusedFuncDecl() {
                        [](auto &&p) { return p->getUseList().empty(); }),
         func_decls.end());
 }
+Module::const_iterator Module::cbegin() const {
+    return funcs.cbegin();
+}
+Module::const_iterator Module::cend() const {
+    return funcs.cend();
+}
+Module::iterator Module::begin() {
+    return funcs.begin();
+}
+Module::iterator Module::end() {
+    return funcs.end();
+}
 
 void Module::accept(IRVisitor &visitor) { visitor.visit(*this); }
 }; // namespace IR

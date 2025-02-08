@@ -36,6 +36,9 @@ private:
     std::vector<std::shared_ptr<FunctionDecl>> func_decls;
 
 public:
+    using const_iterator = decltype(funcs)::const_iterator;
+    using iterator = decltype(funcs)::iterator;
+
     Module() = default;
     explicit Module(std::string _name) : NameC(std::move(_name)) {}
 
@@ -54,6 +57,11 @@ public:
     ConstantPool &getConstantPool();
 
     void removeUnusedFuncDecl();
+
+    const_iterator cbegin() const;
+    const_iterator cend() const;
+    iterator begin();
+    iterator end();
 
     void accept(IRVisitor &visitor);
     ~Module() = default;

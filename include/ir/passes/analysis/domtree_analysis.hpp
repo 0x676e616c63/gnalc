@@ -3,9 +3,9 @@
 #define GNALC_IR_PASSES_ANALYSIS_DOMTREE_ANALYSIS_HPP
 
 #include "../pass_manager.hpp"
+#include "../../../utils/generic_visitor.hpp"
 
 namespace IR {
-
 // 如果只需要获得DomSet就不需要树形结构了？
 using DomSet = std::set<std::shared_ptr<BasicBlock>>;
 struct DomTree {
@@ -18,11 +18,26 @@ struct DomTree {
 
         explicit Node(const std::shared_ptr<BasicBlock> &bb) : bb(bb) {}
     };
+    struct NodeChildGetter {
+        std::vector<Node*> operator()(Node *node) {
+            std::vector<Node*> ret;
+            for (const auto &child : node->children)
+                ret.emplace_back(child.get());
+            return ret;
+        }
+    };
+    using NodeBFVisitor = Util::GenericBFVisitor<Node, NodeChildGetter>;
+    using NodeDFVisitor = Util::GenericDFVisitor<Node, NodeChildGetter>;
+
+
     std::shared_ptr<Node> root;
     std::unordered_map<std::shared_ptr<BasicBlock>, std::shared_ptr<Node>> nodes;
     bool ADomB(const std::shared_ptr<BasicBlock>& a, const std::shared_ptr<BasicBlock>& b);
     DomSet getDomSet(const std::shared_ptr<BasicBlock>& b);
     void printDomTree();
+
+    auto getBFVisitor() const { return NodeBFVisitor{ root.get() }; }
+    auto getDFVisitor() const { return NodeDFVisitor{ root.get() }; }
 private:
     void print(const std::shared_ptr<Node> &node, int level);
     void initDTN(std::vector<std::shared_ptr<BasicBlock>> &blocks);

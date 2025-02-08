@@ -43,6 +43,7 @@ set(GNALC_SRC ${GNALC_LEXER_SRC} ${GNALC_PARSER_SRC} ${GNALC_IR_SRC} ${GNALC_PM_
 # debug driver
 add_executable(irgen tools/driver/debug/irgen.cpp ${GNALC_SRC})
 add_executable(pmtest tools/driver/debug/pmtest.cpp ${GNALC_SRC})
+add_executable(generic_visitor_test tools/driver/debug/generic_visitor_test.cpp ${GNALC_SRC})
 add_executable(bfhelper tools/driver/debug/bfhelper.cpp)
 
 # main driver
