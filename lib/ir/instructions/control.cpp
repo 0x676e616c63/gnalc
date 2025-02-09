@@ -176,6 +176,16 @@ std::vector<std::shared_ptr<Value>> CALLInst::getArgs() const {
     return ret;
 }
 
+void CALLInst::setTailCall() {
+    is_tail_call=true;
+}
+
+bool CALLInst::isTailCall() const {
+    return is_tail_call;
+}
+
+
+
 void RETInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
 void BRInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
