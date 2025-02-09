@@ -56,6 +56,36 @@ bool Value::delUse(const std::shared_ptr<User> &user) {
     return found;
 }
 
+
+bool Value::delUse(User* user) {
+    bool found = false;
+    for (auto it = use_list.begin(); it != use_list.end();) {
+        if (it->lock()->getRawUser() == user) {
+            it = use_list.erase(it);
+            found = true;
+        } else
+            ++it;
+    }
+    return found;
+}
+
+User::~User() {
+    for (const auto& use : operands) {
+        // Warning:
+        // shared_ptr is destroyed, so getUser() will throw bad_weak_ptr
+        // because getUser() calls shared_from_this
+        // auto ok = (*it)->getValue()->delUse((*it)->getUser());
+
+        auto val = use->getValue();
+        // Because one's operands may be destroyed before itself and we can't prevent this happen.
+        // It's hard to always delete a value before its user.
+        if (val) {
+            auto ok = val->delUse(this);
+            Err::gassert(ok);
+        }
+    }
+}
+
 User::User(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait)
     : Value(std::move(_name), std::move(_vtype), _vtrait) {}
 
@@ -113,6 +143,10 @@ bool User::replaceUse(const std::shared_ptr<Value> &old_val,
 Use::Use(std::weak_ptr<Value> v, User *u) : val(std::move(v)), user(u) {}
 
 void Use::init() { val.lock()->addUse(weak_from_this()); }
+
+User *Use::getRawUser() const {
+    return user;
+}
 
 std::shared_ptr<Value> Use::getValue() const { return val.lock(); }
 

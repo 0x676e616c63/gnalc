@@ -126,13 +126,17 @@ public:
     ValueTrait getVTrait() const { return trait; }
 
 private:
-    // PRIVATE because we want to ensure use is only deleted by User's
-    // delOperand.
+    // PRIVATE because we want to ensure use is only deleted by User's delOperand or destructor.
     bool delUse(const std::shared_ptr<User> &user);
+    // When User is being destructed, User's shared_ptr is destroyed, so
+    // User::shared_from_this will throw bad_weak_ptr.
+    // So we use user's raw pointer to get around it.
+    bool delUse(User* user);
 };
 
 class Use : public std::enable_shared_from_this<Use> {
     friend class User;
+    friend class Value;
 
 private:
     std::weak_ptr<Value> val;
@@ -141,6 +145,11 @@ private:
     // PRIVATE because we want to ensure the use is inited.
     Use(std::weak_ptr<Value> v, User *u);
     void init();
+
+    // PRIVATE because only Value::delUse(User*) should invoke this.
+    // Because getUser() will call User::shared_from_this,
+    // but when User is being destructed, that won't work.
+    User* getRawUser() const;
 
 public:
     std::shared_ptr<Value> getValue() const;
@@ -158,6 +167,8 @@ private:
 
 public:
     User() = delete;
+    ~User() override;
+
     User(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait);
 
     bool replaceUse(const std::shared_ptr<Value> &old_val,

@@ -49,6 +49,7 @@ public:
                               std::unordered_map<KeyT, ValT> &changes,
                               SparsePropagationSolver &solver) const = 0;
         virtual ConstantProxy getValueFromLatticeVal(const ValT &v) const = 0;
+        virtual ValT computeLatticeVal(const KeyT& key) const = 0;
         virtual ~LatticeFunction() = default;
     };
 
@@ -124,11 +125,11 @@ public:
         }
     }
 
-    ValT getVal(KeyT key) {
+    ValT getVal(const KeyT& key) {
         auto it = lattice_map.find(key);
         if (it != lattice_map.end())
             return it->second;
-        return lattice_map[key] = InfoT::UNDEF;
+        return lattice_map[key] = lattice_func->computeLatticeVal(key);
     }
 
     const auto &get_map() const { return lattice_map; }
@@ -202,8 +203,7 @@ private:
             // To ensure it contains a ConstantI1, we use `proxy.get_i1()`
             // rather than `proxy == true`. If it does not contain a ConstantI1,
             // an exception will be thrown.
-            else if (lattice_func->getValueFromLatticeVal(cond_lattice)
-                         .get_i1())
+            else if (lattice_func->getValueFromLatticeVal(cond_lattice).get_i1())
                 cfg_worklist.emplace_back(br_inst->getParent(),
                                           br_inst->getTrueDest());
             else

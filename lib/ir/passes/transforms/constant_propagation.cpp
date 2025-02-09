@@ -335,6 +335,12 @@ public:
     ConstantProxy getValueFromLatticeVal(const LatticeVal &v) const override {
         return v.getConstant();
     }
+
+    LatticeVal computeLatticeVal(const std::shared_ptr<Value>& key) const override {
+        if (key->getVTrait() == ValueTrait::CONSTANT_LITERAL)
+            return LatticeVal(ConstantProxy(constant_pool, key));
+        return LatticeInfo::UNDEF;
+    }
 };
 
 PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
@@ -348,7 +354,7 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
 
     // Simplify Instruction
     for (const auto &[key, val] : solver.get_map()) {
-        if (val.isConstant()) {
+        if (val.isConstant() && key->getVTrait() != ValueTrait::CONSTANT_LITERAL) {
             for (auto &use : key->getUseList()) {
                 use->getUser()->replaceUse(key,
                                            val.getConstant().getConstant());
