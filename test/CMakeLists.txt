@@ -6,4 +6,4 @@ include_directories(../include)
 
 add_executable(pass_benchmark benchmark.cpp)
 add_executable(gnalc_test test.cpp)
-add_test(NAME gnalc_test COMMAND gnalc_test --no-lfs)
+add_test(NAME gnalc_test COMMAND gnalc_test)

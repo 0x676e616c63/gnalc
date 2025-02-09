@@ -25,8 +25,7 @@ inline bool only_frontend = true;
 //                         |  h_performance
 //
 // Note that all the path is relative to the executing path
-// gnalc(project dir) -> cmake-build-debug(CLion's build dir) -> test ->
-// gnalc_test(executable)
+// gnalc(project dir) -> cmake-build-debug(CLion's build dir) -> test -> gnalc_test(executable)
 
 const std::string gnalc_path = "../gnalc";
 
@@ -43,8 +42,6 @@ const std::string global_benchmark_temp_dir =
 
 const std::string sylibc = "../../test/sylib/sylib.c";
 
-const std::string test_data_no_lfs =
-    "../../test/gnalc-test-data-no-lfs"; // Just for CI
 const std::string test_data = "../../test/gnalc-test-data/comp-test";
 const std::vector subdirs = {"functional",        "performance",
                              "h_functional",      "h_performance",

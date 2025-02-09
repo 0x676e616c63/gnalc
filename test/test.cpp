@@ -13,7 +13,7 @@ using namespace Test;
 using namespace std::filesystem;
 
 int main(int argc, char *argv[]) {
-    auto print_help = [&argv]() {
+    auto print_help = [&argv] {
         println("Usage: {} [options]", argv[0]);
         println("Options:");
         println("  -a, --all                : Run all tests, regardless of "
@@ -24,10 +24,8 @@ int main(int argc, char *argv[]) {
         println("  -r, --run  [name_prefix] : Only run test whose name has "
                 "such prefix.");
         println("  -p, --para [param]       : Run with gnalc parameter.");
-        println("  -n, --no-lfs             : Run no lfs tests.");
         println("  -h, --help               : Print this help and exit.");
     };
-    auto real_test_data = cfg::test_data;
     std::vector<std::pair<std::string, std::vector<std::string>>> skip;
     std::vector<std::pair<std::string, std::vector<std::string>>> run;
     std::string gnalc_params;
@@ -64,8 +62,6 @@ int main(int argc, char *argv[]) {
         } else if (arg == "--help" || arg == "-h") {
             print_help();
             return 0;
-        } else if (arg == "--no-lfs" || arg == "-n") {
-            real_test_data = cfg::test_data_no_lfs;
         } else if (arg == "--para" || arg == "-p") {
             gnalc_params += " " + std::string(argv[++i]);
         } else {
@@ -113,7 +109,7 @@ int main(int argc, char *argv[]) {
     for (auto &&curr_test_dir : cfg::subdirs) {
         std::vector<directory_entry> test_files;
         for (const auto &p :
-             directory_iterator(real_test_data + "/" + curr_test_dir)) {
+             directory_iterator(cfg::test_data + "/" + curr_test_dir)) {
             if (p.is_regular_file() && p.path().extension() == ".sy") {
                 bool need_run = true;
 
