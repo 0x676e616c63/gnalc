@@ -15,6 +15,7 @@
 #include "../../../include/ir/passes/transforms/gvn_pre.hpp"
 #include "../../../include/ir/passes/transforms/mem2reg.hpp"
 #include "../../../include/ir/passes/transforms/namenormalizer.hpp"
+#include "../../../include/ir/passes/transforms/mark_tail_call.hpp"
 
 // Utilities
 #include "../../../include/ir/passes/utilities/irprinter.hpp"
@@ -52,7 +53,8 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     if (opt_info.gvnpre)
         fpm.addPass(GVNPREPass());
 
-    // if (opt_info.tailcall)
+    if (opt_info.tailcall)
+        fpm.addPass(MarkTailCallPass());
 
     fpm.addPass(NameNormalizePass(true)); // bb_rename: true
 

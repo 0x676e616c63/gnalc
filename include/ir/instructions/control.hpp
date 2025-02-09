@@ -107,7 +107,7 @@ public:
 class CALLInst : public Instruction {
 private:
     // std::shared_ptr<WeakUse> func;
-    bool is_tail_call=false;
+    bool is_tail_call = false;
 public:
     // func储存到func, args储存到operands中
     CALLInst(const std::shared_ptr<FunctionDecl> &func,

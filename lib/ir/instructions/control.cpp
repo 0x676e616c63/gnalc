@@ -177,7 +177,7 @@ std::vector<std::shared_ptr<Value>> CALLInst::getArgs() const {
 }
 
 void CALLInst::setTailCall() {
-    is_tail_call=true;
+    is_tail_call = true;
 }
 
 bool CALLInst::isTailCall() const {

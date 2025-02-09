@@ -354,6 +354,8 @@ std::string IRFormatter::fCALLInst(CALLInst &inst) {
         ret += inst.getName();
         ret += " = ";
     }
+    if (inst.isTailCall())
+        ret += "tail ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
     ret += inst.getType()->toString() + " ";
     ret += inst.getFuncName();

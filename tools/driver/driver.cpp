@@ -170,7 +170,7 @@ Extensions:
     if (!input_file.empty())
         fclose(yyin);
 
-    Parser::IRGenerator generator(input_file);
+    Parser::IRGenerator generator(input_file); // set Module's name to `input_file`
     generator.visit(*node);
 
     IR::FAM fam;
