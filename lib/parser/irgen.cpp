@@ -15,6 +15,10 @@
 
 using namespace AST;
 namespace Parser {
+IRGenerator::IRGenerator(const std::string &module_name) {
+    module.setName(module_name);
+}
+
 void IRGenerator::visit(CompUnit &node) {
     symbol_table.initScope("__global");
 

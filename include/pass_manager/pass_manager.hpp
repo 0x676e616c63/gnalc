@@ -311,7 +311,7 @@ public:
         PreservedAnalyses pa = PreservedAnalyses::all();
 
         for (auto &pass : passes) {
-            Logger::logInfo("Running ", pass->name());
+            Logger::logInfo("[PM]: Running '", pass->name(), "' at '", unit.getName(), "'");
             PreservedAnalyses curr_pa = pass->run(unit, am);
             am.invalidate(unit, curr_pa);
             pa.retain(curr_pa);

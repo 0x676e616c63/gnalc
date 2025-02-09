@@ -14,8 +14,8 @@ inline bool only_frontend = true;
 // See `docs/gnalc-test.md` to get prepared.
 
 //
-//  gnalc -> test -> gnalc-test-data -> comp-test
-//  comp-test ->
+//  gnalc -> test -> contest
+//  contest ->
 //              |  functional
 //              |  h_functional
 //              |  performance
@@ -42,7 +42,7 @@ const std::string global_benchmark_temp_dir =
 
 const std::string sylibc = "../../test/sylib/sylib.c";
 
-const std::string test_data = "../../test/gnalc-test-data/comp-test";
+const std::string test_data = "../../test/contest";
 const std::vector subdirs = {"functional",        "performance",
                              "h_functional",      "h_performance",
                              "final/performance", "final/h_performance"};

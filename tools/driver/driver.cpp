@@ -81,6 +81,16 @@ int main(int argc, char **argv) {
         // Optimizations available:
         else if (arg == "--mem2reg")
             opt_info.mem2reg = true;
+        else if (arg == "--sccp")
+            opt_info.sccp = true;
+        else if (arg == "--dce")
+            opt_info.dce = true;
+        else if (arg == "--adce")
+            opt_info.adce = true;
+        else if (arg == "--dse")
+            opt_info.dse = true;
+        else if (arg == "--gvnpre")
+            opt_info.tailcall = true;
 
 #if GNALC_EXTENSION_BRAINFK
         // Extensions:
@@ -160,7 +170,7 @@ Extensions:
     if (!input_file.empty())
         fclose(yyin);
 
-    Parser::IRGenerator generator;
+    Parser::IRGenerator generator(input_file);
     generator.visit(*node);
 
     IR::FAM fam;
