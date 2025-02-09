@@ -94,14 +94,16 @@ private:
         pBB recurSDOM(const pBB &cur_b, const pBB &pre_b) {
             // 仅用于dfn(cur_b) < dfn(pre_b)
             // todo: 利用并查集优化？
-            if (node_map[pre_b]._tmp_ancester == nullptr) {
-                node_map[pre_b]._tmp_ancester = node_map[pre_b]._sdom;
-            }
+            // if (node_map[pre_b]._tmp_ancester == nullptr) {
+            //     node_map[pre_b]._tmp_ancester = node_map[pre_b]._sdom;
+            // }
             auto candidate = node_map[pre_b]._tmp_ancester;
             while (dfn(candidate) > dfn(cur_b)) {
                 candidate = node_map[candidate]._tmp_ancester;
             }
             node_map[pre_b]._tmp_ancester = candidate;
+            // if (candidate == nullptr)
+            //     Err::error("DomTreeAnalysis::recurSDOM: candidate is nullptr");
             return candidate;
         }
     } info;

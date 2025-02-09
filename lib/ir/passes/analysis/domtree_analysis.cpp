@@ -147,6 +147,7 @@ void DomTreeAnalysis::calcSDOM() {
             }
         }
         info.node_map[*it]._sdom = candidate;
+        info.node_map[*it]._tmp_ancester = candidate;
     }
 }
 
@@ -167,6 +168,9 @@ void DomTreeAnalysis::analyze() {
             dfs_tree_node.dfs_parent; // DFS SPANNING TREE'S PARENT NODE
         auto cur_dom_tree_node =
             domtree.nodes[dfs_tree_parent]; // DomTree's Node
+        // if (dfs_tree_node._sdom == nullptr) {
+        //     Err::error("DomTreeAnalysis::analyze: sdom does not exist");
+        // }
         while (info.dfn(cur_dom_tree_node->bb) >
                info.dfn(dfs_tree_node._sdom)) {
             cur_dom_tree_node = cur_dom_tree_node->parent;
@@ -220,6 +224,7 @@ void PostDomTreeAnalysis::calcSDOM() {
             }
         }
         info.node_map[*it]._sdom = candidate;
+        info.node_map[*it]._tmp_ancester = candidate;
     }
 }
 

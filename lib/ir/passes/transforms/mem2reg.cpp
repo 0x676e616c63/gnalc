@@ -87,7 +87,8 @@ bool PromotePass::rewriteSingleStoreAlloca() {
         auto rval = store->getValue();
         for (auto &load : cur_info.loads) {
             if (!iADomB(store, load)) {
-                Err::error("PromotePass::rewriteSingleStoreAlloca(): load before single store.");
+                // Err::error("PromotePass::rewriteSingleStoreAlloca(): load before single store.");
+                Logger::logInfo("\033[33m[WARNING]\033[0m PromotePass::rewriteSingleStoreAlloca(): load before single store!");
                 return false;
             }
             load->replaceSelf(rval);
@@ -198,7 +199,7 @@ void PromotePass::insertPhi() {
     }
 }
 
-void PromotePass::rename(const Function &f) {
+void PromotePass::rename(Function &f) {
     if (alloca_infos.empty()) return;
     // std::map<std::shared_ptr<ALLOCAInst>, std::shared_ptr<Value>> incoming_values;
     using ABPair = std::pair<std::shared_ptr<ALLOCAInst>, std::shared_ptr<BasicBlock>>;
@@ -238,7 +239,7 @@ void PromotePass::rename(const Function &f) {
                     // 用于在替换前检查是否是undef_val, 若是则沿cfg向上查找非undef的值
                     if (auto alloca = std::dynamic_pointer_cast<ALLOCAInst>(
                         std::dynamic_pointer_cast<LOADInst>(i)->getPtr()); incoming_values[{alloca, b}] == undef_val) {
-                        for (auto pb = b->getPreBB().front();;) {
+                        for (auto pb = b;;) {
                             if (incoming_values[{alloca, pb}] == undef_val) {
                                 // if (!pb->getPreBB().empty())
                                 //     pb = pb->getPreBB().front();
@@ -284,14 +285,18 @@ void PromotePass::rename(const Function &f) {
                 if (auto phi_node = std::dynamic_pointer_cast<PHIInst>(*phi_it)) {
                     // 用于在替换前检查是否是undef_val, 若是则沿cfg向上查找非undef的值
                     if (auto alloca = phi_to_alloca_map[phi_node]; incoming_values[{alloca, b}] == undef_val) {
-                        for (auto pb = b->getPreBB().front();;) {
+                        for (auto pb = b;;) {
                             if (incoming_values[{alloca, pb}] == undef_val) {
                                 // if (!pb->getPreBB().empty())
                                 //     pb = pb->getPreBB().front();
                                 if (DT.nodes[pb]->parent != nullptr)
                                     pb = DT.nodes[pb]->parent->bb;
-                                else
-                                    Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
+                                else {
+                                    // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
+                                    Logger::logInfo("\033[33m[WARNING]\033[0m PromotePass::rename(): Value are not defined for all dominance nodes! Use 0 instead.");
+                                    incoming_values[{alloca, b}] = f.getConstantPool().getConst(0);
+                                    break;
+                                }
                             } else {
                                 incoming_values[{alloca, b}] = incoming_values[{alloca, pb}];
                                 break;
@@ -323,7 +328,8 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
     using pDTN = std::shared_ptr<DomTree::Node>;
     using DTNPair = std::pair<unsigned, pDTN>;
     // todo : greater or less?
-    std::priority_queue<DTNPair, std::vector<DTNPair>, std::greater<>> PQ; // DT节点优先队列
+    // todo : why less?
+    std::priority_queue<DTNPair, std::vector<DTNPair>, std::less<>> PQ; // DT节点优先队列
     for (const auto &b : def_blk) {
         PQ.emplace((DTNPair){DT.nodes[b]->bfs_num, DT.nodes[b]});
     }
@@ -373,7 +379,7 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
     }
 }
 
-void PromotePass::promoteMemoryToRegister(const Function &function) {
+void PromotePass::promoteMemoryToRegister(Function &function) {
     entry_block = function.getBlocks().front();
     if (!name_normalized)
         Err::gassert(entry_block->isName("%entry"),

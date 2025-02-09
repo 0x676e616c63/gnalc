@@ -48,7 +48,7 @@ class PromotePass : public PM::PassInfo<PromotePass> {
     bool rewriteSingleStoreAlloca();
     bool promoteSingleBlockAlloca();
     void insertPhi();
-    void rename(const Function &f);
+    void rename(Function &f);
 
     // 计算迭代支配前沿
     // https://dl.acm.org/doi/pdf/10.1145/199448.199464
@@ -56,7 +56,7 @@ class PromotePass : public PM::PassInfo<PromotePass> {
                     const std::set<std::shared_ptr<BasicBlock>> &live_in_blk,
                     std::set<std::shared_ptr<BasicBlock>> &phi_blk);
 
-    void promoteMemoryToRegister(const Function &function);
+    void promoteMemoryToRegister(Function &function);
 
 public:
     explicit PromotePass(bool _name_normalized) : name_normalized(_name_normalized) {};
