@@ -107,6 +107,7 @@ public:
 class CALLInst : public Instruction {
 private:
     // std::shared_ptr<WeakUse> func;
+    bool is_tail_call=false;
 public:
     // func储存到func, args储存到operands中
     CALLInst(const std::shared_ptr<FunctionDecl> &func,
@@ -122,6 +123,9 @@ public:
     std::vector<std::shared_ptr<Value>> getArgs() const;
 
     void accept(IRVisitor &visitor) override;
+
+    void setTailCall();
+    bool isTailCall() const;
 };
 
 } // namespace IR
