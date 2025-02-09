@@ -6,7 +6,7 @@
 #include "../../../utils/generic_visitor.hpp"
 
 namespace IR {
-// 如果只需要获得DomSet就不需要树形结构了？
+// todo: 使用通用DFS优化
 using DomSet = std::set<std::shared_ptr<BasicBlock>>;
 struct DomTree {
     struct Node {
@@ -35,7 +35,7 @@ struct DomTree {
 
     auto getBFVisitor() const { return NodeBFVisitor{ root }; }
     auto getDFVisitor() const { return NodeDFVisitor{ root }; }
-private:
+protected:
     void print(const std::shared_ptr<Node> &node, int level);
     void initDTN(std::vector<std::shared_ptr<BasicBlock>> &blocks);
     void linkDTN(const std::shared_ptr<BasicBlock> &b, const std::shared_ptr<BasicBlock> &idom);
@@ -45,7 +45,11 @@ private:
 };
 
 // PostDom 和 Dom 几乎一样，只是算法上前驱是后继，反之亦然。
-struct PostDomTree : DomTree {};
+struct PostDomTree : DomTree {
+    bool is_root_virtual = false;
+
+    friend class PostDomTreeAnalysis;
+};
 
 // Semi-NCA 算法
 // see:
@@ -61,7 +65,7 @@ public:
 
 private:
     using pBB = std::shared_ptr<BasicBlock>;
-    struct {
+    struct DTAINFO {
         struct DFS_TREE_NODE {
             pBB bb;
             int _dfn;
@@ -108,7 +112,7 @@ private:
     void calcSDOM();
     // void calcIDOM();
     // https://qaqcxh.github.io/Blogs/graph%20theory/DominatorTheory.html#6-semi-nca%E7%AE%97%E6%B3%95
-    void analyze(Function &f);
+    void analyze();
 
     // For PassManager:
 public:
@@ -117,11 +121,34 @@ public:
 private:
     friend AnalysisInfo<DomTreeAnalysis>;
     static PM::UniqueKey Key;
+    friend class PostDomTreeAnalysis;
 };
 
-class PostDomTreeAnalysis : public DomTreeAnalysis {
+// 相对于DomTreeAnalysis而言，只需加一个虚拟出口根（若有多出口），反转一下CFG方向
+class PostDomTreeAnalysis : public PM::AnalysisInfo<PostDomTreeAnalysis> {
 public:
-    // PostDomTree run(Function &f, FAM &fam) override;
+    PostDomTree run(Function &f, FAM &fam);
+
+private:
+    using pBB = std::shared_ptr<BasicBlock>;
+    DomTreeAnalysis::DTAINFO info;
+    pBB exit = nullptr;
+    bool is_exit_virtual = false;
+    PostDomTree post_domtree;
+    void buildDFST();
+    void calcSDOM();
+    void analyze();
+
+    void setExit(const Function& f); // 用于在CFG中连接虚拟根和真出口节点
+    void restoreCFG(); // 用于计算完成后清除出口块对虚拟根节点的CFG边
+
+    // For PassManager:
+public:
+    using Result = PostDomTree;
+
+private:
+    friend AnalysisInfo<PostDomTreeAnalysis>;
+    static PM::UniqueKey Key;
 };
 
 } // namespace IR

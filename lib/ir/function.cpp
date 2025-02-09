@@ -67,6 +67,19 @@ Function::iterator Function::end() { return blks.end(); }
 
 ConstantPool &Function::getConstantPool() { return *constant_pool; }
 
+void Function::addExitBB(std::shared_ptr<BasicBlock> blk) {
+    exits.emplace_back(std::move(blk));
+}
+
+std::vector<std::shared_ptr<BasicBlock>> Function::getExitBBs() const {
+    std::vector<std::shared_ptr<BasicBlock>> ret;
+    for (auto &blk : exits) {
+        if (!blk.expired())
+            ret.emplace_back(blk.lock());
+    }
+    return ret;
+}
+
 void Function::updateBBIndex() {
     unsigned i = 0;
     for (const auto &blk : blks) {

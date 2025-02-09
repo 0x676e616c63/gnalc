@@ -61,6 +61,7 @@ class Function : public FunctionDecl,
 private:
     std::vector<std::shared_ptr<FormalParam>> params;
     std::vector<std::shared_ptr<BasicBlock>> blks;
+    std::vector<std::weak_ptr<BasicBlock>> exits; // 为了防止之后删除块之类的操作忘记在这里处理，使用weak_ptr, get的时候检查是否expired
     ConstantPool *constant_pool;
 
     // 后面需要再说
@@ -133,6 +134,9 @@ public:
     auto getDFVisitor() const {
         return CFGDFVisitor(blks[0]);
     }
+
+    void addExitBB(std::shared_ptr<BasicBlock> blk);
+    std::vector<std::shared_ptr<BasicBlock>> getExitBBs() const;
 
 private:
     void updateBBIndex();

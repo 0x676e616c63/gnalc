@@ -20,6 +20,7 @@ class CFGBuilder;
 namespace IR {
 class Function;
 class IRVisitor;
+class PostDomTreeAnalysis;
 /**
  * @brief BB继承自value, 其被br指令'use', 'use'了它所包含的指令
  * @note next_bb包含的BB和最后一条br指令中的相同
@@ -34,6 +35,7 @@ class BasicBlock : public Value,
                    public std::enable_shared_from_this<BasicBlock> {
     friend class Parser::CFGBuilder;
     friend class Function;
+    friend class PostDomTreeAnalysis;
     friend void linkBB(const std::shared_ptr<BasicBlock> &prebb,
                    const std::shared_ptr<BasicBlock> &nxtbb);
     friend void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,

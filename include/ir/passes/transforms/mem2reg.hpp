@@ -1,5 +1,7 @@
 /**
  * @brief 转换为SSA形式
+ * @todo PhiOper直接存到operands里面
+ * @todo BB中PhiInst单独存
  */
 #pragma once
 
@@ -15,7 +17,7 @@
 
 namespace IR {
 class PromotePass : public PM::PassInfo<PromotePass> {
-    // just for debug
+    // Keep this to avoid interruptions
     std::shared_ptr<Value> undef_val = std::make_shared<Value>("__reg_undef", makeBType(IRBTYPE::UNDEFINED), ValueTrait::UNDEFINED);
     struct BLOCK_INFO {
         std::map<unsigned, std::shared_ptr<LOADInst>> load_map;

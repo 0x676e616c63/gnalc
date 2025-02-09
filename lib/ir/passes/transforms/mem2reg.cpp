@@ -85,7 +85,6 @@ bool PromotePass::rewriteSingleStoreAlloca() {
         auto rval = store->getValue();
         for (auto &load : cur_info.loads) {
             if (!iADomB(store, load)) {
-                // todo: 替换为undef?
                 Err::error("PromotePass::rewriteSingleStoreAlloca(): load before single store.");
                 return false;
             }
@@ -207,7 +206,7 @@ void PromotePass::rename(const Function &f) {
         if (!visited.insert(b).second)
             continue;
 
-        // todo : 可用livein信息优化
+        // 可用livein信息优化? 应该不需要了
         // if (b->getPreBB().size() >= 1) {
         //     for (auto &info : alloca_infos) {
         //         incoming_values[{info.alloca, b}] = incoming_values[{info.alloca, b->getPreBB().front()}];

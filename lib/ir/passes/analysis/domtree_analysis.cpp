@@ -8,6 +8,7 @@
 
 namespace IR {
 PM::UniqueKey DomTreeAnalysis::Key;
+PM::UniqueKey PostDomTreeAnalysis::Key;
 
 bool DomTree::ADomB(const std::shared_ptr<BasicBlock> &a,
                     const std::shared_ptr<BasicBlock> &b) {
@@ -35,7 +36,7 @@ DomSet DomTree::getDomSet(const std::shared_ptr<BasicBlock> &b) {
 }
 
 void DomTree::printDomTree() {
-    std::cout << "DomTree:" << std::endl;
+    std::cout << "(Post)DomTree:" << std::endl;
     print(root, 0);
 }
 
@@ -107,7 +108,8 @@ void DomTree::updateLevel() {
 // }
 
 DomTree DomTreeAnalysis::run(Function &f, FAM &fam) {
-    analyze(f);
+    entry = f.getBlocks().front();
+    analyze();
     info = {};
     return domtree;
 }
@@ -152,8 +154,7 @@ void DomTreeAnalysis::calcSDOM() {
 //     // Semi-NCA 直接在构建DT过程计算 IDOM
 // }
 
-void DomTreeAnalysis::analyze(Function &f) {
-    entry = f.getBlocks().front();
+void DomTreeAnalysis::analyze() {
     buildDFST();
     calcSDOM();
     // calcIDOM();
@@ -178,9 +179,96 @@ void DomTreeAnalysis::analyze(Function &f) {
     // domtree.updateDFSNumber();
 }
 
-// PostDomTree PostDomTreeAnalysis::run(Function &f, FAM &fam) {
-//     analyze(f);
-//     return domtree;
-//
-// }
+PostDomTree PostDomTreeAnalysis::run(Function &f, FAM &fam) {
+    setExit(f);
+    analyze();
+    post_domtree.is_root_virtual = is_exit_virtual;
+    info = {};
+    return post_domtree;
+}
+
+void PostDomTreeAnalysis::buildDFST() {
+    std::stack<std::pair<pBB, pBB>> dfs_stack; // {node, parent}
+    dfs_stack.emplace(exit, nullptr);
+    while (!dfs_stack.empty()) {
+        auto [cur, parent] = dfs_stack.top();
+        dfs_stack.pop();
+        if (!info.visited(cur)) {
+            info.addDFSTN(cur);
+            info.linkDFSTN(parent, cur);
+            auto pre_bbs = cur->getPreBB();
+            for (auto it = pre_bbs.rbegin(); it != pre_bbs.rend(); ++it) {
+                dfs_stack.emplace(*it, cur);
+            }
+        }
+    }
+}
+
+void PostDomTreeAnalysis::calcSDOM() {
+    for (auto it = info.idfn.rbegin(); it != info.idfn.rend(); ++it) {
+        pBB candidate = *it;
+        for (const auto &n : (*it)->getNextBB()) {
+            if (info.dfn(n) <= info.dfn(*it)) {
+                if (info.dfn(n) < info.dfn(candidate)) {
+                    candidate = n;
+                }
+            } else {
+                auto candidate2 = info.recurSDOM(*it, n);
+                if (info.dfn(candidate2) < info.dfn(candidate)) {
+                    candidate = candidate2;
+                }
+            }
+        }
+        info.node_map[*it]._sdom = candidate;
+    }
+}
+
+void PostDomTreeAnalysis::analyze() {
+    buildDFST();
+    calcSDOM();
+    post_domtree.initDTN(info.idfn);
+    for (const auto &key : info.idfn) {
+        // 3个树图MD越看越迷...
+        if (key == exit) continue; // 跳过根节点
+        auto dfs_tree_node = info.node_map[key]; // DFS SPANNING TREE'S NODE
+        auto dfs_tree_parent =
+            dfs_tree_node.dfs_parent; // DFS SPANNING TREE'S PARENT NODE
+        auto cur_dom_tree_node =
+            post_domtree.nodes[dfs_tree_parent]; // DomTree's Node
+        while (info.dfn(cur_dom_tree_node->bb) >
+               info.dfn(dfs_tree_node._sdom)) {
+            cur_dom_tree_node = cur_dom_tree_node->parent;
+               }
+        dfs_tree_node._idom = cur_dom_tree_node->bb;
+        // result need to fix when idom is not equal to sdom??
+        post_domtree.linkDTN(dfs_tree_node.bb, dfs_tree_node._idom);
+    }
+    post_domtree.updateLevel();
+}
+
+void PostDomTreeAnalysis::setExit(const Function &f) {
+    const auto exit_bbs = f.getExitBBs();
+    if (exit_bbs.empty()) {
+        Err::unreachable("PostDomTreeAnalysis::setExit(): no exit!");
+    }
+    if (exit_bbs.size() == 1) {
+        exit = exit_bbs.front();
+        is_exit_virtual = false;
+    } else {
+        exit = std::make_shared<BasicBlock>("VIRTUAL_EXIT_NODE");
+        for (const auto &b : exit_bbs) {
+            b->addNextBB(exit);
+            exit->addPreBB(b);
+        }
+        is_exit_virtual = true;
+    }
+}
+
+void PostDomTreeAnalysis::restoreCFG() {
+    if (!is_exit_virtual) return;
+    for (const auto &real_exit : exit->getPreBB()) {
+        real_exit->next_bb.clear();
+    }
+    exit->pre_bb.clear();
+}
 } // namespace IR
