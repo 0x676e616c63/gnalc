@@ -228,10 +228,12 @@ void PromotePass::rename(const Function &f) {
                         std::dynamic_pointer_cast<LOADInst>(i)->getPtr()); incoming_values[{alloca, b}] == undef_val) {
                         for (auto pb = b->getPreBB().front();;) {
                             if (incoming_values[{alloca, pb}] == undef_val) {
-                                if (!pb->getPreBB().empty())
-                                    pb = pb->getPreBB().front();
+                                // if (!pb->getPreBB().empty())
+                                //     pb = pb->getPreBB().front();
+                                if (DT.nodes[pb]->parent != nullptr)
+                                    pb = DT.nodes[pb]->parent->bb;
                                 else
-                                    Err::error("PromotePass::rename(): PreBB is empty!");
+                                    Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
                             } else {
                                 incoming_values[{alloca, b}] = incoming_values[{alloca, pb}];
                                 break;
@@ -270,10 +272,12 @@ void PromotePass::rename(const Function &f) {
                     if (auto alloca = phi_to_alloca_map[phi_node]; incoming_values[{alloca, b}] == undef_val) {
                         for (auto pb = b->getPreBB().front();;) {
                             if (incoming_values[{alloca, pb}] == undef_val) {
-                                if (!pb->getPreBB().empty())
-                                    pb = pb->getPreBB().front();
+                                // if (!pb->getPreBB().empty())
+                                //     pb = pb->getPreBB().front();
+                                if (DT.nodes[pb]->parent != nullptr)
+                                    pb = DT.nodes[pb]->parent->bb;
                                 else
-                                    Err::error("PromotePass::rename(): PreBB is empty!");
+                                    Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
                             } else {
                                 incoming_values[{alloca, b}] = incoming_values[{alloca, pb}];
                                 break;
