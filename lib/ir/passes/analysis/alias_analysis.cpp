@@ -104,9 +104,11 @@ bool mayPtrInfoAlias(const AliasAnalysisResult::PtrInfo &info1,
 
 AliasAnalysisResult::AliasInfo
 AliasAnalysisResult::getAliasInfo(const Value *v1, const Value *v2) const {
-    Err::gassert(v1 != v2);
     Err::gassert(v1->getType()->getTrait() == IRCTYPE::PTR &&
                  v2->getType()->getTrait() == IRCTYPE::PTR);
+
+    if (v1 == v2)
+        return AliasInfo::MustAlias;
 
     auto info1 = getPtrInfo(v1);
     auto info2 = getPtrInfo(v2);
@@ -275,14 +277,9 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
     // Alias
     bool changed = true;
     while (changed) {
-        std::deque<BasicBlock *> worklist{entry};
-        std::set<const BasicBlock *> visited;
-
-        while (!worklist.empty()) {
-            BasicBlock *curr = worklist.front();
-            worklist.pop_front();
-            visited.insert(curr);
-
+        changed = false;
+        auto bfv = func.getBFVisitor();
+        for (const auto& curr : bfv) {
             for (const auto &inst : *curr) {
                 if (auto gep = std::dynamic_pointer_cast<GEPInst>(inst))
                     changed |= res.insertPotentialAlias(gep.get(),
@@ -294,11 +291,6 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
                                 phi.get(), oper->getValue().get());
                     }
                 }
-            }
-
-            for (const auto &succ : curr->getNextBB()) {
-                if (visited.find(succ.get()) == visited.end())
-                    worklist.emplace_back(succ.get());
             }
         }
     }

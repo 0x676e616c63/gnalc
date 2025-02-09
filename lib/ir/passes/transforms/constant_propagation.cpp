@@ -166,6 +166,7 @@ public:
                                               rhs.getConstant());
                 else if (lhs.isNAC() || rhs.isNAC())
                     changes[inst] = LatticeInfo::NAC;
+                break;
             case OP::AND:
             case OP::OR:
                 if (lhs.isConstant() && rhs.isConstant()) {
@@ -177,7 +178,7 @@ public:
                                                   rhs.getConstant());
                 } else if (lhs.isNAC() || rhs.isNAC())
                     changes[inst] = LatticeInfo::NAC;
-
+                break;
             default:
                 Err::unreachable("Unknown binary opcode");
             }
@@ -270,8 +271,7 @@ public:
             else if (val.isNAC())
                 changes[inst] = LatticeInfo::NAC;
         } else if (auto itf = std::dynamic_pointer_cast<SITOFPInst>(inst)) {
-            auto val =
-                solver.getVal(LatticeInfo::getKeyFromValue(itf->getOVal()));
+            auto val = solver.getVal(LatticeInfo::getKeyFromValue(itf->getOVal()));
             if (val.isConstant()) {
                 changes[inst].setConstant(ConstantProxy(
                    constant_pool,
@@ -280,9 +280,7 @@ public:
             else if (val.isNAC())
                 changes[inst] = LatticeInfo::NAC;
         } else if (auto zext = std::dynamic_pointer_cast<ZEXTInst>(inst)) {
-            auto val =
-                solver.getVal(LatticeInfo::getKeyFromValue(zext->getOVal()));
-
+            auto val = solver.getVal(LatticeInfo::getKeyFromValue(zext->getOVal()));
             if (val.isConstant()) {
                 switch (toBType(zext->getOType())->getInner()) {
                 case IRBTYPE::I1:

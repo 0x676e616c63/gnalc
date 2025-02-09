@@ -85,11 +85,12 @@ public:
         for (auto it = blks.begin(); it != blks.end();) {
             if (pred(*it)) {
                 for (const auto &use : (*it)->getUseList()) {
-                    auto phi =
-                        std::dynamic_pointer_cast<PHIInst>(use->getUser());
-                    Err::gassert(phi != nullptr,
+                    auto phi_oper =
+                        std::dynamic_pointer_cast<PHIInst::PhiOperand>(use->getUser());
+                    Err::gassert(phi_oper != nullptr,
                                  "Function::delBlockIf(): Cannot delete a "
                                  "block that has users beyond phi.");
+                    auto phi = phi_oper->getPhi();
                     phi->delPhiOper(*it);
 
                     // Simplify PHI

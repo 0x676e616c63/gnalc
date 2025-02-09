@@ -59,8 +59,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     if (opt_info.tailcall)
         fpm.addPass(MarkTailCallPass());
 
-    if (!opt_info.advance_name_norm)
-        fpm.addPass(NameNormalizePass(true)); // bb_rename: true
+    fpm.addPass(NameNormalizePass(true)); // bb_rename: true
 
     return fpm;
 }

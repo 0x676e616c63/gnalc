@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "../../../utils/logger.hpp"
 #include "../../base.hpp"
 #include "../../basic_block.hpp"
 #include "../../function.hpp"
@@ -80,9 +81,7 @@ public:
         ssa_worklist.clear();
         feasible_edges.clear();
 
-        auto entry_node = target.getBlocks()[0];
-        for (const auto &out : entry_node->getNextBB())
-            cfg_worklist.emplace_back(entry_node, out);
+        cfg_worklist.emplace_back(nullptr, target.getBlocks()[0]);
 
         while (!cfg_worklist.empty() || !ssa_worklist.empty()) {
             while (!ssa_worklist.empty()) {
@@ -145,6 +144,8 @@ public:
 
     size_t countFeasibleInEdge(const std::shared_ptr<BasicBlock> &bb) const {
         auto incomings = bb->getPreBB();
+        if (incomings.empty())  // Entry node
+            return isFeasible(nullptr, bb) ? 1 : 0;
         return std::count_if(
             incomings.cbegin(), incomings.cend(),
             [&bb, this](auto &&in) { return isFeasible(in, bb); });
@@ -159,9 +160,16 @@ private:
         lattice_map[key] = std::move(val);
 
         std::shared_ptr<Value> changed_value = InfoT::getValueFromKey(key);
-        for (const auto &use : changed_value->getUseList())
-            ssa_worklist.emplace_back(
-                std::dynamic_pointer_cast<Instruction>(use->getUser()));
+        for (const auto &use : changed_value->getUseList()) {
+            if (auto phi_oper = std::dynamic_pointer_cast<PHIInst::PhiOperand>(use->getUser())) {
+                ssa_worklist.emplace_back(phi_oper->getPhi());
+            }
+            else {
+                auto inst = std::dynamic_pointer_cast<Instruction>(use->getUser());
+                Err::gassert(inst != nullptr);
+                ssa_worklist.emplace_back(inst);
+            }
+        }
     }
 
     void markFeasible(const Edge &e) { feasible_edges.insert(e); }

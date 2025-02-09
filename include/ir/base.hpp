@@ -192,7 +192,7 @@ protected:
         // Since a User can have multiple identical operands,
         // like `%1 = getelementptr [4 x [2 x i32]], ptr %2, i32 0, i32 0` has two ConstantInt(0)
         // We use `deleted` to avoid duplicate `delUse`, because the second `delUse` will fail.
-        // Although avoiding is duplicate `delUs` is unnecessary
+        // Although avoiding duplicate `delUse` is unnecessary
         // and removing the check `Err::gassert(ok);` can ignore delUse's failure,
         // We intentionally preserve this check to verify the correctness of other part of our compiler.
         std::set<Value*> deleted;

@@ -35,7 +35,7 @@ void BasicBlock::addNextBB(const std::shared_ptr<BasicBlock> &bb) {
     next_bb.emplace_back(bb);
 }
 bool BasicBlock::delPreBB(const std::shared_ptr<BasicBlock> &bb) {
-    for (auto it = pre_bb.begin(); it != pre_bb.end();) {
+    for (auto it = pre_bb.begin(); it != pre_bb.end(); ++it) {
         if (it->lock() == bb) {
             pre_bb.erase(it);
             return true;
@@ -44,7 +44,7 @@ bool BasicBlock::delPreBB(const std::shared_ptr<BasicBlock> &bb) {
     return false;
 }
 bool BasicBlock::delNextBB(const std::shared_ptr<BasicBlock> &bb) {
-    for (auto it = next_bb.begin(); it != next_bb.end();) {
+    for (auto it = next_bb.begin(); it != next_bb.end(); ++it) {
         if (it->lock() == bb) {
             next_bb.erase(it);
             return true;

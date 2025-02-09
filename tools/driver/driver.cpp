@@ -90,6 +90,8 @@ int main(int argc, char **argv) {
         else if (arg == "--dse")
             opt_info.dse = true;
         else if (arg == "--gvnpre")
+            opt_info.gvnpre = true;
+        else if (arg == "--tailcall")
             opt_info.tailcall = true;
 
         // Debug options:

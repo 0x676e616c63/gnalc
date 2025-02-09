@@ -59,7 +59,7 @@ class PromotePass : public PM::PassInfo<PromotePass> {
     void promoteMemoryToRegister(const Function &function);
 
 public:
-    explicit PromotePass(const bool _name_normalized) : name_normalized(_name_normalized) {};
+    explicit PromotePass(bool _name_normalized) : name_normalized(_name_normalized) {};
     PM::PreservedAnalyses run(Function &function, FAM &manager);
 };
 } // namespace IR

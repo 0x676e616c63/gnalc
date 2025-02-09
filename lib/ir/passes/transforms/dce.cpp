@@ -30,10 +30,8 @@ PM::PreservedAnalyses DCEPass::run(Function &function, FAM &fam) {
             }
             dead.insert(inst);
             for (const auto &use : inst->getOperands()) {
-                if (use->getValue()->getVTrait() != ValueTrait::CONSTANT_LITERAL) {
-                    worklist.emplace_back(
-                           std::dynamic_pointer_cast<Instruction>(use->getValue()));
-                }
+                if (auto i = std::dynamic_pointer_cast<Instruction>(use->getValue()))
+                    worklist.emplace_back(i);
             }
         }
     }

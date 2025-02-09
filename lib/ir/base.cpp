@@ -60,6 +60,8 @@ User::~User() {
     std::set<Value*> deleted;
     for (const auto& curr : operands) {
         auto curr_val = curr->getValue();
+        // Because one's operands may be destroyed before itself and we can't prevent this happen.
+        // It's hard to always delete a value before its user.
         if (!curr_val) continue;
         if (deleted.find(curr_val.get()) == deleted.end()) {
             deleted.insert(curr_val.get());
