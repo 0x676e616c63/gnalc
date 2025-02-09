@@ -44,19 +44,6 @@ void Value::replaceSelf(const std::shared_ptr<Value> &new_value) const {
 
 Value::~Value() = default;
 
-bool Value::delUse(const std::shared_ptr<User> &user) {
-    bool found = false;
-    for (auto it = use_list.begin(); it != use_list.end();) {
-        if (it->lock()->getUser() == user) {
-            it = use_list.erase(it);
-            found = true;
-        } else
-            ++it;
-    }
-    return found;
-}
-
-
 bool Value::delUse(User* user) {
     bool found = false;
     for (auto it = use_list.begin(); it != use_list.end();) {
@@ -70,17 +57,13 @@ bool Value::delUse(User* user) {
 }
 
 User::~User() {
-    for (const auto& use : operands) {
-        // Warning:
-        // shared_ptr is destroyed, so getUser() will throw bad_weak_ptr
-        // because getUser() calls shared_from_this
-        // auto ok = (*it)->getValue()->delUse((*it)->getUser());
-
-        auto val = use->getValue();
-        // Because one's operands may be destroyed before itself and we can't prevent this happen.
-        // It's hard to always delete a value before its user.
-        if (val) {
-            auto ok = val->delUse(this);
+    std::set<Value*> deleted;
+    for (const auto& curr : operands) {
+        auto curr_val = curr->getValue();
+        if (!curr_val) continue;
+        if (deleted.find(curr_val.get()) == deleted.end()) {
+            deleted.insert(curr_val.get());
+            auto ok = curr_val->delUse(this);
             Err::gassert(ok);
         }
     }
@@ -103,12 +86,12 @@ const std::shared_ptr<Use> &User::getOperand(size_t index) const {
 }
 
 bool User::delOperand(const std::shared_ptr<Value> &v) {
-    return delOperandIf([&v](auto &&op) { return op->getValue() == v; });
+    return delOperandIf([&v](auto &&value) { return value == v; });
 }
 
 bool User::delOperand(NameRef name) {
     return delOperandIf(
-        [&name](auto &&op) { return op->getValue()->isName(name); });
+        [&name](auto &&value) { return value->isName(name); });
 }
 
 bool User::delOperand(size_t index) {
@@ -116,7 +99,7 @@ bool User::delOperand(size_t index) {
     if (index >= operands.size())
         return false;
     auto use = operands[index];
-    auto ok = use->getValue()->delUse(use->getUser());
+    auto ok = use->getValue()->delUse(use->getUser().get());
     Err::gassert(ok);
     operands.erase(
         operands.begin() +
@@ -129,7 +112,7 @@ bool User::replaceUse(const std::shared_ptr<Value> &old_val,
     bool found = false;
     for (auto &use : operands) {
         if (use->getValue() == old_val) {
-            auto ok = old_val->delUse(use->getUser());
+            auto ok = old_val->delUse(use->getUser().get());
             Err::gassert(ok);
             use = std::shared_ptr<Use>{new Use(new_val, use->getUser().get())};
             use->init();

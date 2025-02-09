@@ -127,7 +127,6 @@ public:
 
 private:
     // PRIVATE because we want to ensure use is only deleted by User's delOperand or destructor.
-    bool delUse(const std::shared_ptr<User> &user);
     // When User is being destructed, User's shared_ptr is destroyed, so
     // User::shared_from_this will throw bad_weak_ptr.
     // So we use user's raw pointer to get around it.
@@ -186,11 +185,24 @@ protected:
     bool delOperand(NameRef name);
     bool delOperand(size_t index);
 
+    // Delete what makes pred(value) == true, and release the Use-def relation.
+    // Returns true if deleted.
     template <typename Pred> bool delOperandIf(Pred pred) {
         bool found = false;
+        // Since a User can have multiple identical operands,
+        // like `%1 = getelementptr [4 x [2 x i32]], ptr %2, i32 0, i32 0` has two ConstantInt(0)
+        // We use `deleted` to avoid duplicate `delUse`, because the second `delUse` will fail.
+        // Although avoiding is duplicate `delUs` is unnecessary
+        // and removing the check `Err::gassert(ok);` can ignore delUse's failure,
+        // We intentionally preserve this check to verify the correctness of other part of our compiler.
+        std::set<Value*> deleted;
         for (auto it = operands.begin(); it != operands.end();) {
-            if (pred(*it)) {
-                auto ok = (*it)->getValue()->delUse((*it)->getUser());
+            auto curr_val = (*it)->getValue();
+            Err::gassert(curr_val != nullptr);
+            if (deleted.find(curr_val.get()) == deleted.end()
+                && pred(curr_val)) {
+                deleted.insert(curr_val.get());
+                auto ok = curr_val->delUse(this);
                 Err::gassert(ok);
                 it = operands.erase(it);
                 found = true;

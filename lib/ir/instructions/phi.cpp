@@ -53,9 +53,8 @@ bool PHIInst::replaceBlock(const std::shared_ptr<BasicBlock> &before,
 }
 
 void PHIInst::delPhiOper(const std::shared_ptr<BasicBlock> &target) {
-    delOperandIf([&target](const auto &oper) {
-        return std::dynamic_pointer_cast<PhiOperand>(oper->getValue())
-                   ->getBlock() == target;
+    delOperandIf([&target](const auto &value) {
+        return std::dynamic_pointer_cast<PhiOperand>(value)->getBlock() == target;
     });
     auto it = std::find_if(popers.begin(), popers.end(),
         [&target](const auto& poper) { return poper->getBlock() == target; });
