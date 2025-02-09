@@ -9,6 +9,12 @@
 namespace IR {
 struct OptInfo {
     bool mem2reg{false};
+    bool sccp{false};
+    bool dce{false};
+    bool adce{false};
+    bool dse{false};
+    bool gvnpre{false};
+    bool tailcall{false};
 };
 
 extern const OptInfo o1_opt_info;

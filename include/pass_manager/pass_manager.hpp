@@ -23,6 +23,8 @@
 #define GNALC_PASS_MANAGER_PASS_MANAGER_HPP
 
 #include "../utils/exception.hpp"
+#include "../utils/logger.hpp"
+#include "../utils/misc.hpp"
 
 #include <list>
 #include <map>
@@ -108,6 +110,7 @@ public:
 template <typename UnitT, typename AnalysisManagerT> class PassConcept {
 public:
     virtual ~PassConcept() = default;
+    virtual std::string_view name() const = 0;
     virtual PreservedAnalyses run(UnitT &unit, AnalysisManagerT &manager) = 0;
 };
 
@@ -123,6 +126,8 @@ public:
     PreservedAnalyses run(UnitT &unit, AnalysisManagerT &manager) override {
         return pass.run(unit, manager);
     }
+
+    std::string_view name() const override { return PassT::name(); }
 
     PassT pass;
 };
@@ -175,7 +180,14 @@ public:
     }
 };
 
-template <typename DerivedT> class PassInfo {};
+template <typename DerivedT> class PassInfo {
+public:
+    static std::string_view name() {
+        static_assert(std::is_base_of_v<PassInfo, DerivedT>,
+                      "The template argument should be the derived type.");
+        return Util::getTypeName<DerivedT>();
+    }
+};
 
 template <typename DerivedT> class AnalysisInfo {
 public:
@@ -299,6 +311,7 @@ public:
         PreservedAnalyses pa = PreservedAnalyses::all();
 
         for (auto &pass : passes) {
+            Logger::logInfo("Running ", pass->name());
             PreservedAnalyses curr_pa = pass->run(unit, am);
             am.invalidate(unit, curr_pa);
             pa.retain(curr_pa);
