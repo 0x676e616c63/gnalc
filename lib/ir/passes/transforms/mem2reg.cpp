@@ -71,9 +71,11 @@ void PromotePass::analyseAlloca() {
 bool PromotePass::removeUnusedAlloca() {
     if (cur_info.loads.empty()) {
         for (auto &store : cur_info.stores) {
-            store->getParent()->delFirstOfInst(store);
+            // store->getParent()->delFirstOfInst(store);
+            del_queue.insert(store);
         }
-        entry_block->delFirstOfInst(cur_info.alloca);
+        // entry_block->delFirstOfInst(cur_info.alloca);
+        del_queue.insert(cur_info.alloca);
         return true;
     }
     return false;
@@ -89,10 +91,13 @@ bool PromotePass::rewriteSingleStoreAlloca() {
                 return false;
             }
             load->replaceSelf(rval);
-            load->getParent()->delFirstOfInst(load);
+            // load->getParent()->delFirstOfInst(load);
+            del_queue.insert(load);
         }
-        store->getParent()->delFirstOfInst(store);
-        entry_block->delFirstOfInst(cur_info.alloca);
+        // store->getParent()->delFirstOfInst(store);
+        // entry_block->delFirstOfInst(cur_info.alloca);
+        del_queue.insert(store);
+        del_queue.insert(cur_info.alloca);
         return true;
     }
     return false;
@@ -112,12 +117,15 @@ bool PromotePass::promoteSingleBlockAlloca() {
                 return false;
             }
             load->replaceSelf(rval);
-            load->getParent()->delFirstOfInst(load);
+            // load->getParent()->delFirstOfInst(load);
+            del_queue.insert(load);
         }
         for (auto &store : cur_info.stores) {
-            store->getParent()->delFirstOfInst(store);
+            // store->getParent()->delFirstOfInst(store);
+            del_queue.insert(store);
         }
-        entry_block->delFirstOfInst(cur_info.alloca);
+        // entry_block->delFirstOfInst(cur_info.alloca);
+        del_queue.insert(cur_info.alloca);
         return true;
     }
     return false;
@@ -176,12 +184,15 @@ void PromotePass::insertPhi() {
     // }
 
     // 是否需要new_phi_nodes?
+    unsigned version = 0;
     for (const auto& bb : phi_blocks) {
         // auto &node = new_phi_nodes[std::make_pair(cur_info.alloca->index, bb->index)];
         // if (node) continue;
-
-        auto node = std::make_shared<PHIInst>(Config::IR::REGISTER_TEMP_NAME,
-                                        cur_info.alloca->getBaseType());
+        std::shared_ptr<PHIInst> node;
+        if (!name_normalized)
+            node = std::make_shared<PHIInst>(Config::IR::REGISTER_TEMP_NAME, cur_info.alloca->getBaseType());
+        else
+            node = std::make_shared<PHIInst>(cur_info.alloca->getName()+"."+std::to_string(++version), cur_info.alloca->getBaseType());
         bb->insertPhi(node);
         phi_to_alloca_map[node] = cur_info.alloca;
     }
@@ -214,8 +225,9 @@ void PromotePass::rename(const Function &f) {
         // }
 
         //  process load store and phi
-        std::vector<std::shared_ptr<Instruction>> del_insts;
+        // std::vector<std::shared_ptr<Instruction>> del_insts;
         for (const auto& i : b->getInsts()) {
+            if (del_queue.count(i)) continue;
             switch (i->getOpcode()) {
                 case OP::PHI:
                     incoming_values[{phi_to_alloca_map[std::dynamic_pointer_cast<PHIInst>(i)], b}] = i;
@@ -243,7 +255,8 @@ void PromotePass::rename(const Function &f) {
                     i->replaceSelf(
                         incoming_values[{std::dynamic_pointer_cast<ALLOCAInst>(
                             std::dynamic_pointer_cast<LOADInst>(i)->getPtr()), b}]);
-                    del_insts.emplace_back(i);
+                    // del_insts.emplace_back(i);
+                    del_queue.insert(i);
                     break;
                 case OP::STORE:
                     if (!incoming_values.count({std::dynamic_pointer_cast<ALLOCAInst>(
@@ -251,7 +264,8 @@ void PromotePass::rename(const Function &f) {
                     incoming_values[{std::dynamic_pointer_cast<ALLOCAInst>(
                             std::dynamic_pointer_cast<STOREInst>(i)->getPtr()), b}] = std::dynamic_pointer_cast<
                                 STOREInst>(i)->getValue();
-                    del_insts.emplace_back(i);
+                    // del_insts.emplace_back(i);
+                    del_queue.insert(i);
                     break;
                 default:
                     break;
@@ -259,9 +273,9 @@ void PromotePass::rename(const Function &f) {
         }
 
         // todo: 可以在bb中添加返回删除后迭代器的方法
-        for (auto &inst : del_insts) {
-            b->delInst(inst);
-        }
+        // for (auto &inst : del_insts) {
+        //     b->delInst(inst);
+        // }
 
         for (const auto &n : b->getNextBB()) {
             // process phi in next block
@@ -297,7 +311,8 @@ void PromotePass::rename(const Function &f) {
     }
 
     for (auto &info : alloca_infos) {
-        entry_block->delFirstOfInst(info.alloca);
+        // entry_block->delFirstOfInst(info.alloca);
+        del_queue.insert(info.alloca);
     }
 }
 
@@ -360,8 +375,9 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
 
 void PromotePass::promoteMemoryToRegister(const Function &function) {
     entry_block = function.getBlocks().front();
-    Err::gassert(entry_block->isName("%entry"),
-                 "First block is not named entry");
+    if (!name_normalized)
+        Err::gassert(entry_block->isName("%entry"),
+                     "First block is not named entry");
 
     analyseAlloca();
 
@@ -378,6 +394,10 @@ void PromotePass::promoteMemoryToRegister(const Function &function) {
     }
 
     rename(function);
+
+    for (const auto& inst : del_queue) {
+        inst->getParent()->delFirstOfInst(inst);
+    }
 }
 
 PM::PreservedAnalyses PromotePass::run(Function &function, FAM &manager) {
@@ -390,6 +410,7 @@ PM::PreservedAnalyses PromotePass::run(Function &function, FAM &manager) {
     phi_to_alloca_map.clear();
     entry_block = nullptr;
     DT = {};
+    del_queue.clear();
 
     PM::PreservedAnalyses pa;
     pa.preserve<DomTreeAnalysis>();

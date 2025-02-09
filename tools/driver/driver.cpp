@@ -92,6 +92,10 @@ int main(int argc, char **argv) {
         else if (arg == "--gvnpre")
             opt_info.tailcall = true;
 
+        // Debug options:
+        else if (arg == "--ann")
+            opt_info.advance_name_norm = true;
+
 #if GNALC_EXTENSION_BRAINFK
         // Extensions:
         else if (arg == "-mbrainfk")
@@ -125,6 +129,9 @@ Optimizations available:
   --dse                - Dead Store Elimination
   --gvnpre             - Value-Based Partial Redundancy Elimination (GVN-PRE)
   --tailcall           - Tail call optimization
+
+Debug options:
+  --ann                - Advance name normalization (before the function passes)
 )";
 
 #if GNALC_EXTENSION_BRAINFK

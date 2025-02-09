@@ -15,6 +15,8 @@ struct OptInfo {
     bool dse{false};
     bool gvnpre{false};
     bool tailcall{false};
+
+    bool advance_name_norm{false};
 };
 
 extern const OptInfo o1_opt_info;
