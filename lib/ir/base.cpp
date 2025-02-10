@@ -11,8 +11,7 @@
 
 namespace IR {
 
-Value::Value(std::string _name, std::shared_ptr<Type> _vtype,
-             ValueTrait _vtrait)
+Value::Value(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait)
     : NameC(std::move(_name)), vtype(std::move(_vtype)), trait(_vtrait) {}
 
 std::shared_ptr<Type> Value::getType() const { return vtype; }
@@ -26,8 +25,7 @@ std::list<std::shared_ptr<Use>> Value::getUseList() const {
     std::list<std::shared_ptr<Use>> shared_use_list;
     for (const auto &weak_use : use_list) {
         auto shared_use = weak_use.lock();
-        Err::gassert(shared_use != nullptr,
-                     "Expired use should be deleted in User::delOperand");
+        Err::gassert(shared_use != nullptr, "Expired use should be by User.");
         if (shared_use)
             shared_use_list.push_back(shared_use);
     }
@@ -59,11 +57,18 @@ bool Value::delUse(User* user) {
 }
 
 User::~User() {
+    // One User can have several identical operands, and deleting one operand will make `delUse` fail
+    // But we want to check if `delUse` really deletes a Use,
+    // so we maintain a deleted to avoid duplicate `delUse`
+    // Same as `delOperandIf`, this is unnecessary.
+    // But we intentionally preserve it to verify the correctness of other part of our compiler.
     std::set<Value*> deleted;
     for (const auto& curr : operands) {
         auto curr_val = curr->getValue();
         // Because one's operands may be destroyed before itself and we can't prevent this happen.
         // It's hard to always delete a value before its user.
+        // For example, when the whole compiling is done, and Module's destructor runs,
+        // all instructions will be deleted, but not in the def-use relationship.
         if (!curr_val) continue;
         if (deleted.find(curr_val.get()) == deleted.end()) {
             deleted.insert(curr_val.get());
