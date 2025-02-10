@@ -25,14 +25,19 @@ bool DomTree::ADomB(const std::shared_ptr<BasicBlock> &a,
     return false;
 }
 
-DomSet DomTree::getDomSet(const std::shared_ptr<BasicBlock> &b) {
-    DomSet domset = {b};
+BlockSet DomTree::getDomSet(const std::shared_ptr<BasicBlock> &b) {
+    BlockSet domset = {b};
     auto _b = nodes[b];
     do {
         _b = _b->parent;
         domset.insert(_b->bb);
     } while (_b != root);
     return domset;
+}
+
+BlockSet DomTree::getDomFrontier(const std::shared_ptr<BasicBlock> &b) {
+    // todo
+    return {};
 }
 
 void DomTree::printDomTree() {
@@ -90,27 +95,14 @@ void DomTree::updateLevel() {
         cur = next;
         next.clear();
     }
-    // return l; // height
 }
 
-// void DomTree::updateDFSNumber() {
-//     std::stack<std::shared_ptr<Node>> stack;
-//     stack.emplace(root);
-//     unsigned id = 0;
-//     while (!stack.empty()) {
-//         const auto node = stack.top();
-//         stack.pop();
-//         node->dfs_num = ++id;
-//         for (auto it = node->children.rbegin(); it != node->children.rend(); ++it) {
-//             stack.emplace(*it);
-//         }
-//     }
-// }
-
 DomTree DomTreeAnalysis::run(Function &f, FAM &fam) {
+    domtree = {};
     entry = f.getBlocks().front();
     analyze();
     info = {};
+    entry = nullptr;
     return domtree;
 }
 
@@ -151,14 +143,9 @@ void DomTreeAnalysis::calcSDOM() {
     }
 }
 
-// void DomTreeAnalysis::calcIDOM() {
-//     // Semi-NCA 直接在构建DT过程计算 IDOM
-// }
-
 void DomTreeAnalysis::analyze() {
     buildDFST();
     calcSDOM();
-    // calcIDOM();
     domtree.initDTN(info.idfn);
     for (const auto &key : info.idfn) {
         // 3个树图MD越看越迷...
@@ -168,9 +155,6 @@ void DomTreeAnalysis::analyze() {
             dfs_tree_node.dfs_parent; // DFS SPANNING TREE'S PARENT NODE
         auto cur_dom_tree_node =
             domtree.nodes[dfs_tree_parent]; // DomTree's Node
-        // if (dfs_tree_node._sdom == nullptr) {
-        //     Err::error("DomTreeAnalysis::analyze: sdom does not exist");
-        // }
         while (info.dfn(cur_dom_tree_node->bb) >
                info.dfn(dfs_tree_node._sdom)) {
             cur_dom_tree_node = cur_dom_tree_node->parent;
@@ -180,13 +164,15 @@ void DomTreeAnalysis::analyze() {
         domtree.linkDTN(dfs_tree_node.bb, dfs_tree_node._idom);
     }
     domtree.updateLevel();
-    // domtree.updateDFSNumber();
 }
 
 PostDomTree PostDomTreeAnalysis::run(Function &f, FAM &fam) {
+    post_domtree = {};
     setExit(f);
     analyze();
     post_domtree.is_root_virtual = is_exit_virtual;
+    restoreCFG();
+    exit = nullptr;
     info = {};
     return post_domtree;
 }
@@ -243,7 +229,7 @@ void PostDomTreeAnalysis::analyze() {
         while (info.dfn(cur_dom_tree_node->bb) >
                info.dfn(dfs_tree_node._sdom)) {
             cur_dom_tree_node = cur_dom_tree_node->parent;
-               }
+        }
         dfs_tree_node._idom = cur_dom_tree_node->bb;
         // result need to fix when idom is not equal to sdom??
         post_domtree.linkDTN(dfs_tree_node.bb, dfs_tree_node._idom);

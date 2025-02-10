@@ -45,20 +45,6 @@ void PromotePass::analyseAlloca() {
                         promotable = false;
                         break;
                     }
-                // if (user->getVTrait() == ValueTrait::ORDINARY_VARIABLE &&
-                //     std::dynamic_pointer_cast<Instruction>(user)->getOpcode() ==
-                //         OP::LOAD) {
-                //     info.loads.emplace_back(
-                //         std::dynamic_pointer_cast<LOADInst>(user));
-                // } else if (user->getVTrait() == ValueTrait::VOID_INSTRUCTION &&
-                //            std::dynamic_pointer_cast<Instruction>(user)
-                //                    ->getOpcode() == OP::STORE) {
-                //     info.stores.emplace_back(
-                //         std::dynamic_pointer_cast<STOREInst>(user));
-                // } else {
-                //     promotable = false;
-                //     break;
-                // }
             }
             if (promotable) {
                 alloca_infos.emplace_back(info);
@@ -70,10 +56,8 @@ void PromotePass::analyseAlloca() {
 bool PromotePass::removeUnusedAlloca() {
     if (cur_info.loads.empty()) {
         for (auto &store : cur_info.stores) {
-            // store->getParent()->delFirstOfInst(store);
             del_queue.insert(store);
         }
-        // entry_block->delFirstOfInst(cur_info.alloca);
         del_queue.insert(cur_info.alloca);
         return true;
     }
@@ -91,11 +75,8 @@ bool PromotePass::rewriteSingleStoreAlloca() {
                 return false;
             }
             load->replaceSelf(rval);
-            // load->getParent()->delFirstOfInst(load);
             del_queue.insert(load);
         }
-        // store->getParent()->delFirstOfInst(store);
-        // entry_block->delFirstOfInst(cur_info.alloca);
         del_queue.insert(store);
         del_queue.insert(cur_info.alloca);
         return true;
@@ -108,7 +89,7 @@ bool PromotePass::promoteSingleBlockAlloca() {
         for (auto & load : cur_info.loads) {
             auto it =  cur_info.user_blocks[load->getParent()].store_map.lower_bound(load->index);
             if (it == cur_info.user_blocks[load->getParent()].store_map.begin()) {
-                Err::error("PromotePass::promoteSingleBlockAlloca(): store map is empty or load before store.");
+                Logger::logWarning("[M2R] promoteSingleBlockAlloca(): store map is empty or load before store.");
                 return false;
             }
             auto rval = (--it)->second->getValue();
@@ -117,14 +98,11 @@ bool PromotePass::promoteSingleBlockAlloca() {
                 return false;
             }
             load->replaceSelf(rval);
-            // load->getParent()->delFirstOfInst(load);
             del_queue.insert(load);
         }
         for (auto &store : cur_info.stores) {
-            // store->getParent()->delFirstOfInst(store);
             del_queue.insert(store);
         }
-        // entry_block->delFirstOfInst(cur_info.alloca);
         del_queue.insert(cur_info.alloca);
         return true;
     }
@@ -174,20 +152,8 @@ void PromotePass::insertPhi() {
     std::set<std::shared_ptr<BasicBlock>> phi_blocks;
     computeIDF(define_blocks, live_in_blocks, phi_blocks);
 
-    // 是否需要？将phi_blocks改为set之后可以删掉168-174, 181, 是否有其他作用？
-    // if (phi_blocks.size() > 1) {
-    //     std::sort(phi_blocks.begin(), phi_blocks.end(),
-    //               [](const std::shared_ptr<BasicBlock> &a,
-    //                     const std::shared_ptr<BasicBlock> &b) {
-    //                     return a->index < b->index;
-    //               });
-    // }
-
-    // 是否需要new_phi_nodes?
     unsigned version = 0;
     for (const auto& bb : phi_blocks) {
-        // auto &node = new_phi_nodes[std::make_pair(cur_info.alloca->index, bb->index)];
-        // if (node) continue;
         auto node = std::make_shared<PHIInst>(cur_info.alloca->getName() + "." + std::to_string(++version), cur_info.alloca->getBaseType());
         bb->addPhiInst(node);
         phi_to_alloca_map[node] = cur_info.alloca;
@@ -196,7 +162,6 @@ void PromotePass::insertPhi() {
 
 void PromotePass::rename(Function &f) {
     if (alloca_infos.empty()) return;
-    // std::map<std::shared_ptr<ALLOCAInst>, std::shared_ptr<Value>> incoming_values;
     using ABPair = std::pair<std::shared_ptr<ALLOCAInst>, std::shared_ptr<BasicBlock>>;
     std::map<ABPair, std::shared_ptr<Value>> incoming_values;
     for (auto &info : alloca_infos) {
@@ -213,15 +178,7 @@ void PromotePass::rename(Function &f) {
         if (!visited.insert(b).second)
             continue;
 
-        // 可用livein信息优化? 应该不需要了
-        // if (b->getPreBB().size() >= 1) {
-        //     for (auto &info : alloca_infos) {
-        //         incoming_values[{info.alloca, b}] = incoming_values[{info.alloca, b->getPreBB().front()}];
-        //     }
-        // }
-
         //  process load store and phi
-        // std::vector<std::shared_ptr<Instruction>> del_insts;
         for (const auto &i : b->getPhiInsts()) {
             if (del_queue.count(i)) continue;
             incoming_values[{phi_to_alloca_map[std::dynamic_pointer_cast<PHIInst>(i)], b}] = i;
@@ -237,14 +194,17 @@ void PromotePass::rename(Function &f) {
                         std::dynamic_pointer_cast<LOADInst>(i)->getPtr()); incoming_values[{alloca, b}] == undef_val) {
                         for (auto pb = b;;) {
                             if (incoming_values[{alloca, pb}] == undef_val) {
-                                // if (!pb->getPreBB().empty())
-                                //     pb = pb->getPreBB().front();
                                 if (DT.nodes[pb]->parent != nullptr)
                                     pb = DT.nodes[pb]->parent->bb;
-                                else
-                                    Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
+                                else {
+                                    // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
+                                    Logger::logWarning("[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
+                                    incoming_values[{alloca, b}] = f.getConstantPool().getConst(0);
+                                    break;
+                                }
                             } else {
                                 incoming_values[{alloca, b}] = incoming_values[{alloca, pb}];
+                                Err::gassert(incoming_values[{alloca, b}] != nullptr, "PromotePass::rename(): Incoming value is null!");
                                 break;
                             }
                         }
@@ -252,7 +212,6 @@ void PromotePass::rename(Function &f) {
                     i->replaceSelf(
                         incoming_values[{std::dynamic_pointer_cast<ALLOCAInst>(
                             std::dynamic_pointer_cast<LOADInst>(i)->getPtr()), b}]);
-                    // del_insts.emplace_back(i);
                     del_queue.insert(i);
                     break;
                 case OP::STORE:
@@ -261,18 +220,12 @@ void PromotePass::rename(Function &f) {
                     incoming_values[{std::dynamic_pointer_cast<ALLOCAInst>(
                             std::dynamic_pointer_cast<STOREInst>(i)->getPtr()), b}] = std::dynamic_pointer_cast<
                                 STOREInst>(i)->getValue();
-                    // del_insts.emplace_back(i);
                     del_queue.insert(i);
                     break;
                 default:
                     break;
             }
         }
-
-        // todo: 可以在bb中添加返回删除后迭代器的方法
-        // for (auto &inst : del_insts) {
-        //     b->delInst(inst);
-        // }
 
         for (const auto &n : b->getNextBB()) {
             // process phi in next block
@@ -281,8 +234,6 @@ void PromotePass::rename(Function &f) {
                 if (auto alloca = phi_to_alloca_map[phi_node]; incoming_values[{alloca, b}] == undef_val) {
                     for (auto pb = b;;) {
                         if (incoming_values[{alloca, pb}] == undef_val) {
-                            // if (!pb->getPreBB().empty())
-                            //     pb = pb->getPreBB().front();
                             if (DT.nodes[pb]->parent != nullptr)
                                 pb = DT.nodes[pb]->parent->bb;
                             else {
@@ -293,6 +244,7 @@ void PromotePass::rename(Function &f) {
                             }
                         } else {
                             incoming_values[{alloca, b}] = incoming_values[{alloca, pb}];
+                            Err::gassert(incoming_values[{alloca, b}] != nullptr, "PromotePass::rename(): Incoming value is null!");
                             break;
                         }
                     }
@@ -305,7 +257,6 @@ void PromotePass::rename(Function &f) {
     }
 
     for (auto &info : alloca_infos) {
-        // entry_block->delFirstOfInst(info.alloca);
         del_queue.insert(info.alloca);
     }
 }
@@ -316,7 +267,6 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
                              std::set<std::shared_ptr<BasicBlock>>& phi_blk) {
     using pDTN = std::shared_ptr<DomTree::Node>;
     using DTNPair = std::pair<unsigned, pDTN>;
-    // todo : greater or less?
     // todo : why less?
     std::priority_queue<DTNPair, std::vector<DTNPair>, std::less<>> PQ; // DT节点优先队列
     for (const auto &b : def_blk) {
@@ -390,14 +340,19 @@ void PromotePass::promoteMemoryToRegister(Function &function) {
 
     rename(function);
 
-    for (const auto& inst : del_queue) {
-        Logger::logDebug("[M2R] Deleting: "+IRFormatter::formatInst(*inst));
-        if (inst->getParent() == nullptr) {
-            Logger::logWarning("[M2R] The instruction to be deleted is incorrect, skip.");
-            continue;
-        }
-        inst->getParent()->delFirstOfInst(inst);
-    }
+    // for (const auto& inst : del_queue) {
+    //     Logger::logDebug("[M2R] Deleting: "+IRFormatter::formatInst(*inst));
+    //     if (inst->getParent() == nullptr) {
+    //         Logger::logWarning("[M2R] The instruction to be deleted is incorrect, skip.");
+    //         continue;
+    //     }
+    //     inst->getParent()->delFirstOfInst(inst);
+    // }
+    std::set<std::shared_ptr<BasicBlock>> del_inst_blocks;
+    for (const auto& inst : del_queue)
+        del_inst_blocks.insert(inst->getParent());
+    for (const auto& blk : del_inst_blocks)
+        blk->delInstIf([this](const auto& inst){ return del_queue.count(inst); }, BasicBlock::DEL_MODE::ALL);
 }
 
 PM::PreservedAnalyses PromotePass::run(Function &function, FAM &manager) {

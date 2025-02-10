@@ -1,9 +1,5 @@
 /**
  * @brief 转换为SSA形式
- * @todo PhiOper直接存到operands里面
- * @todo BB中PhiInst单独存
- * @todo index可以在删除大量元素之后做
- * @todo 优化assart
  */
 #pragma once
 
@@ -31,13 +27,11 @@ class PromotePass : public PM::PassInfo<PromotePass> {
         std::vector<std::shared_ptr<LOADInst>> loads;
         std::vector<std::shared_ptr<STOREInst>> stores;
         std::map<std::shared_ptr<BasicBlock>, BLOCK_INFO> user_blocks; // load, store的父块信息map
-        // bool processed = false; // 标记后不再rename
     };
     std::list<ALLOCA_INFO> alloca_infos;
     std::shared_ptr<BasicBlock> entry_block;
     DomTree DT;
     ALLOCA_INFO cur_info;
-    // std::map<std::pair<unsigned, unsigned>, std::shared_ptr<PHIInst>> new_phi_nodes; // <<AllocaNo, BlockNo>, PhiNode>
     std::map<std::shared_ptr<PHIInst>, std::shared_ptr<ALLOCAInst>> phi_to_alloca_map;
     std::set<std::shared_ptr<Instruction>> del_queue;
 

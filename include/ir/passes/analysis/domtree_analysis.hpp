@@ -6,8 +6,8 @@
 #include "../../../utils/generic_visitor.hpp"
 
 namespace IR {
-// todo: 使用通用DFS优化
-using DomSet = std::set<std::shared_ptr<BasicBlock>>;
+// todo: 使用缓存的DFS优化
+using BlockSet = std::set<std::shared_ptr<BasicBlock>>;
 struct DomTree {
     struct Node {
         std::shared_ptr<BasicBlock> bb;
@@ -26,11 +26,12 @@ struct DomTree {
     using NodeBFVisitor = Util::GenericBFVisitor<std::shared_ptr<Node>, NodeChildGetter>;
     using NodeDFVisitor = Util::GenericDFVisitor<std::shared_ptr<Node>, NodeChildGetter>;
 
-
     std::shared_ptr<Node> root;
     std::unordered_map<std::shared_ptr<BasicBlock>, std::shared_ptr<Node>> nodes;
+
     bool ADomB(const std::shared_ptr<BasicBlock>& a, const std::shared_ptr<BasicBlock>& b);
-    DomSet getDomSet(const std::shared_ptr<BasicBlock>& b);
+    BlockSet getDomSet(const std::shared_ptr<BasicBlock>& b); // todo : 建立缓存
+    BlockSet getDomFrontier(const std::shared_ptr<BasicBlock>& b); // todo : 建立缓存
     void printDomTree();
 
     auto getBFVisitor() const { return NodeBFVisitor{ root }; }
@@ -40,7 +41,6 @@ protected:
     void initDTN(std::vector<std::shared_ptr<BasicBlock>> &blocks);
     void linkDTN(const std::shared_ptr<BasicBlock> &b, const std::shared_ptr<BasicBlock> &idom);
     void updateLevel();
-    // void updateDFSNumber();
     friend class DomTreeAnalysis;
 };
 
@@ -57,8 +57,7 @@ struct PostDomTree : DomTree {
 // https://blog.csdn.net/dashuniuniu/article/details/103462147
 // https://zhuanlan.zhihu.com/p/586372481
 // https://zhuanlan.zhihu.com/p/365912693
-// todo: 快速更新？
-// todo: 注意到live分析也对基本块进行了dfs, 能否重用？
+// todo: 快速更新
 class DomTreeAnalysis : public PM::AnalysisInfo<DomTreeAnalysis> {
 public:
     DomTree run(Function &f, FAM &fam);
@@ -91,30 +90,21 @@ private:
             node_map[b] = {b, index++};
             idfn.emplace_back(b);
         }
+        // 仅用于dfn(cur_b) < dfn(pre_b)
         pBB recurSDOM(const pBB &cur_b, const pBB &pre_b) {
-            // 仅用于dfn(cur_b) < dfn(pre_b)
             // todo: 利用并查集优化？
-            // if (node_map[pre_b]._tmp_ancester == nullptr) {
-            //     node_map[pre_b]._tmp_ancester = node_map[pre_b]._sdom;
-            // }
             auto candidate = node_map[pre_b]._tmp_ancester;
-            while (dfn(candidate) > dfn(cur_b)) {
+            while (dfn(candidate) > dfn(cur_b))
                 candidate = node_map[candidate]._tmp_ancester;
-            }
             node_map[pre_b]._tmp_ancester = candidate;
-            // if (candidate == nullptr)
-            //     Err::error("DomTreeAnalysis::recurSDOM: candidate is nullptr");
             return candidate;
         }
     } info;
     pBB entry = nullptr;
     DomTree domtree;
     void buildDFST();
-    // https://blog.csdn.net/Dong_HFUT/article/details/121375025#Semidominators_76
-    void calcSDOM();
-    // void calcIDOM();
-    // https://qaqcxh.github.io/Blogs/graph%20theory/DominatorTheory.html#6-semi-nca%E7%AE%97%E6%B3%95
-    void analyze();
+    void calcSDOM(); // https://blog.csdn.net/Dong_HFUT/article/details/121375025#Semidominators_76
+    void analyze(); // https://qaqcxh.github.io/Blogs/graph%20theory/DominatorTheory.html#6-semi-nca%E7%AE%97%E6%B3%95
 
     // For PassManager:
 public:
