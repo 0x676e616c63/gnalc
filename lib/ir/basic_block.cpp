@@ -96,30 +96,31 @@ void BasicBlock::updateInstIndex() const {
 }
 
 bool BasicBlock::delFirstOfInst(const std::shared_ptr<Instruction> &inst) {
-    if (inst->getOpcode() == OP::PHI) {
-        for (auto it = phi_insts.begin(); it != phi_insts.end(); ++it) {
-            if (*it == inst) {
-                inst->setParent(nullptr);
-                phi_insts.erase(it);
-                updateInstIndex();
-                return true;
-            }
+    for (auto it = insts.begin(); it != insts.end(); ++it) {
+        if (*it == inst) {
+            inst->setParent(nullptr);
+            insts.erase(it);
+            updateInstIndex();
+            return true;
         }
-        return false;
-    } else {
-        for (auto it = insts.begin(); it != insts.end(); ++it) {
-            if (*it == inst) {
-                inst->setParent(nullptr);
-                insts.erase(it);
-                updateInstIndex();
-                return true;
-            }
-        }
-        return false;
     }
+    return false;
 }
-bool BasicBlock::delInst(const std::shared_ptr<Instruction> &target) {
-    return delInstIf([&target](const auto &inst) { return inst == target; });
+
+bool BasicBlock::delFirstOfPhiInst(const std::shared_ptr<PHIInst> &inst) {
+    for (auto it = phi_insts.begin(); it != phi_insts.end(); ++it) {
+        if (*it == inst) {
+            inst->setParent(nullptr);
+            phi_insts.erase(it);
+            updateInstIndex();
+            return true;
+        }
+    }
+    return false;
+}
+
+bool BasicBlock::delInst(const std::shared_ptr<Instruction> &target, const DEL_MODE mode) {
+    return delInstIf([&target](const auto &inst) { return inst == target; }, mode);
 }
 
 BasicBlock::const_iterator BasicBlock::cbegin() const { return insts.cbegin(); }
@@ -188,7 +189,7 @@ void safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb, const std::shared_pt
     }
     else {
         Err::gassert(br->getDest() == nxtbb, "The given block is not a successor.");
-        prebb->delInst(br);
+        prebb->delInst(br, TODO);
     }
 
     std::set<std::shared_ptr<Instruction>> unused_phi;

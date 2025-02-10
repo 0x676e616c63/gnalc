@@ -80,41 +80,51 @@ public:
     unsigned index = 0; // 不经过插入删除接口修改后使用先调用父函数的update方法！
 
     // No use-def check, just remove the first matched item
+    // PHI Instruction is not included!
     bool delFirstOfInst(const std::shared_ptr<Instruction> &inst);
+    // No use-def check, just remove the first matched item
+    bool delFirstOfPhiInst(const std::shared_ptr<PHIInst> &inst);
 
+    enum class DEL_MODE {
+        ALL,
+        PHI,
+        NON_PHI
+    };
     // With use-def check, remove all matched.
     // The instruction must have no users.
-    bool delInst(const std::shared_ptr<Instruction> &inst);
+    bool delInst(const std::shared_ptr<Instruction> &inst, DEL_MODE mode = DEL_MODE::ALL);
 
     // Delete instructions that satisfied: `pred(inst) == true`
     // Requires the target instruction have no users than expiring users.
     // "expiring users": users that are being deleted. (pred(inst->getUsers()) == true)
     // In other word, If pred(a) == true, pred(a->users) must be true
     template <typename Pred>
-    bool delInstIf(Pred pred) {
+    bool delInstIf(Pred pred, const DEL_MODE mode = DEL_MODE::ALL) {
         bool found = false;
-        for (auto it = phi_insts.begin(); it != phi_insts.end();) {
-            if (pred(*it)) {
-                for (const auto& use : (*it)->getUseList()) {
-                    Err::gassert(pred(std::dynamic_pointer_cast<Instruction>(use->getUser())),
-                                 "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
-                }
-                it = phi_insts.erase(it);
-                found = true;
-            } else
-                ++it;
-        }
-        for (auto it = insts.begin(); it != insts.end();) {
-            if (pred(*it)) {
-                for (const auto& use : (*it)->getUseList()) {
-                    Err::gassert(pred(std::dynamic_pointer_cast<Instruction>(use->getUser())),
-                                "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
-                }
-                it = insts.erase(it);
-                found = true;
-            } else
-                ++it;
-        }
+        if (mode != DEL_MODE::NON_PHI)
+            for (auto it = phi_insts.begin(); it != phi_insts.end();) {
+                if (pred(*it)) {
+                    for (const auto& use : (*it)->getUseList()) {
+                        Err::gassert(pred(std::dynamic_pointer_cast<Instruction>(use->getUser())),
+                                     "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
+                    }
+                    it = phi_insts.erase(it);
+                    found = true;
+                } else
+                    ++it;
+            }
+        if (mode != DEL_MODE::PHI)
+            for (auto it = insts.begin(); it != insts.end();) {
+                if (pred(*it)) {
+                    for (const auto& use : (*it)->getUseList()) {
+                        Err::gassert(pred(std::dynamic_pointer_cast<Instruction>(use->getUser())),
+                                    "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
+                    }
+                    it = insts.erase(it);
+                    found = true;
+                } else
+                    ++it;
+            }
         if (found)
             updateInstIndex();
         return found;
