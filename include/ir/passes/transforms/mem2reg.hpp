@@ -3,6 +3,7 @@
  * @todo PhiOper直接存到operands里面
  * @todo BB中PhiInst单独存
  * @todo index可以在删除大量元素之后做
+ * @todo 优化assart
  */
 #pragma once
 
@@ -15,6 +16,7 @@
 
 #include "../../visitor.hpp"
 #include "../analysis/domtree_analysis.hpp"
+#include "../../../../include/ir/formatter.hpp"
 
 namespace IR {
 class PromotePass : public PM::PassInfo<PromotePass> {
