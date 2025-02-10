@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
 
         // Just a quick and dirty trick to silence llvm-link.
         // llvm-link will emit a warning if we link two modules of different
-        // data layouts Given that the LLVM IR we generate contains no target
+        // data layouts. Given that the LLVM IR we generate contains no target
         // data layout, we use `sed` to delete 'target datalayout' from the
         // sylib.ll
         std::string lib_command =

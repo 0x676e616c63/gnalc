@@ -7,11 +7,13 @@
 #ifndef GNALC_IR_PASSES_TRANSFORMS_GVN_PRE_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_GVN_PRE_HPP
 
-#include "../pass_manager.hpp"
 #include "../../../../include/ir/instructions/binary.hpp"
 #include "../../../../include/ir/instructions/compare.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
 #include "../../../../include/ir/instructions/memory.hpp"
+#include "../pass_manager.hpp"
+
+#include <algorithm>
 
 namespace IR {
 class GVNPREPass : public PM::PassInfo<GVNPREPass> {
@@ -77,31 +79,37 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     // Value-wise SET
     class ValueSet {
         friend ValueSet intersect(const ValueSet& a, const ValueSet& b);
-        std::map<ValueKind, std::shared_ptr<Value>> values;
+        // Use std::vector to keep the topological sort
+        std::vector<std::pair<ValueKind, std::shared_ptr<Value>>> values;
     public:
         using const_iterator = decltype(values)::const_iterator;
         using iterator = decltype(values)::iterator;
 
         void insert(ValueKind kind, const std::shared_ptr<Value>& value) {
-            values.emplace(kind, value);
+            values.emplace_back(kind, value);
         }
 
         bool contains(ValueKind kind) const {
-            return values.find(kind) == values.end();
+            return std::any_of(values.begin(), values.end(),
+                [kind](const auto& v) { return v.first == kind; });
         }
 
         bool erase(ValueKind kind) {
-            auto it = values.find(kind);
-            if (it == values.end())
-                return false;
-            values.erase(it);
-            return true;
+            for (auto it = values.begin(); it != values.end(); ++it) {
+                if (it->first == kind) {
+                    values.erase(it);
+                    return true;
+                }
+            }
+            return false;
         }
 
-        auto getValue(ValueKind kind) const {
-            auto it = values.find(kind);
-            Err::gassert(it != values.end());
-            return it->second;
+        std::shared_ptr<Value> getValue(ValueKind kind) const {
+            for (const auto& v : values) {
+                if (v.first == kind)
+                    return v.second;
+            }
+            return nullptr;
         }
 
         const_iterator cbegin() const { return values.cbegin(); }
@@ -115,20 +123,18 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
 
     // Not Value-wise Vector
     class ValueVec {
-        std::map<std::shared_ptr<Value>, ValueKind> values;
+        std::vector<std::pair<ValueKind, std::shared_ptr<Value>>> values;
     public:
         using const_iterator = decltype(values)::const_iterator;
         using iterator = decltype(values)::iterator;
 
         void insert(ValueKind kind, const std::shared_ptr<Value>& value) {
-            values[value] = kind;
+            values.emplace_back(kind, value);
         }
-        bool contains(ValueKind target) const {
-            for (const auto& [_val, kind] : values) {
-                if (target == kind)
-                    return true;
-            }
-            return false;
+
+        bool contains(ValueKind kind) const {
+            return std::any_of(values.begin(), values.end(),
+                [kind](const auto& v) { return v.first == kind; });
         }
 
         const_iterator cbegin() const { return values.cbegin(); }
@@ -148,9 +154,9 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     ValueVecMap phi_gen_map,   // temporaries that are defined by a phi
                 tmp_gen_map;   // temporaries that are defined by non-phi instructions
 
-    std::shared_ptr<Value> phi_translate(
+    std::tuple<ValueKind, std::shared_ptr<Value>> phi_translate(
     const std::shared_ptr<Value>& value,
-    const std::shared_ptr<BasicBlock>& curr,
+    const std::shared_ptr<BasicBlock>& pred,
     const std::shared_ptr<BasicBlock>& succ);
 public:
     PM::PreservedAnalyses run(Function &function, FAM &manager);

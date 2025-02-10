@@ -39,7 +39,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
         fpm.addPass(NameNormalizePass(true)); // bb_rename: true
 
     if (opt_info.mem2reg)
-        fpm.addPass(PromotePass(opt_info.advance_name_norm));
+        fpm.addPass(PromotePass());
 
     if (opt_info.sccp)
         fpm.addPass(ConstantPropagationPass());
@@ -59,7 +59,8 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     if (opt_info.tailcall)
         fpm.addPass(MarkTailCallPass());
 
-    fpm.addPass(NameNormalizePass(true)); // bb_rename: true
+    if (!opt_info.advance_name_norm)
+        fpm.addPass(NameNormalizePass(true)); // bb_rename: true
 
     return fpm;
 }

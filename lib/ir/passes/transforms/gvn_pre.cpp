@@ -161,14 +161,29 @@ GVNPREPass::ValueSet GVNPREPass::intersect(const ValueSet &a, const ValueSet &b)
     return ret;
 }
 
-std::shared_ptr<Value> GVNPREPass::phi_translate(
+// Returns the representation of a given value at `succ` block
+// to the representation of it in the `pred` block.
+//
+// pred -------> succ
+// other_pred ---^
+//
+// pred:
+//   %v1 = 1
+//   br succ
+//
+// succ:
+//   %succ_val = phi [%v1, pred], [%v2, other_pred])
+//
+// Returns %v1 for `phi_translate(%succ_val, pred, succ)`
+std::tuple<GVNPREPass::ValueKind, std::shared_ptr<Value>> GVNPREPass::phi_translate(
     const std::shared_ptr<Value>& value,
-    const std::shared_ptr<BasicBlock>& curr,
+    const std::shared_ptr<BasicBlock>& pred,
     const std::shared_ptr<BasicBlock>& succ) {
     // if the temporary is defined by a phi at the successor,
     // it returns the operand to that phi corresponding to the predecessor
     if (auto phi = std::dynamic_pointer_cast<PHIInst>(value)) {
-        return phi->getValueForBlock(curr);
+        auto v = phi->getValueForBlock(pred);
+        return { table.getKind(v), v };
     }
 
     if (isExpr(value)) {
@@ -177,8 +192,8 @@ std::shared_ptr<Value> GVNPREPass::phi_translate(
         std::vector<std::shared_ptr<Value>> translated;
         std::transform(operands.begin(), operands.end(),
             std::back_inserter(translated),
-                [this, &curr, &succ](const auto& use)
-                { return phi_translate(use->getValue(), curr, succ); });
+                [this, &pred, &succ](const auto& use)
+                { return std::get<1>(phi_translate(use->getValue(), pred, succ)); });
 
         std::shared_ptr<Instruction> translated_inst;
         if (auto binary = std::dynamic_pointer_cast<BinaryInst>(inst)) {
@@ -196,18 +211,13 @@ std::shared_ptr<Value> GVNPREPass::phi_translate(
         else if (auto gep = std::dynamic_pointer_cast<GEPInst>(inst)) {
             translated_inst = std::make_shared<GEPInst>(gep->getName(), gep->getPtr(), translated);
         }
+
         auto translated_kind = table.getKind(translated_inst);
-
-        if (!avail_out_map[curr].contains(translated_kind)) {
-            exp_gen_map[curr].insert(translated_kind, translated_inst);
-            return translated_inst;
-        }
-
-        return avail_out_map[curr].getValue(translated_kind);
+        return { translated_kind, translated_inst };
     }
 
     // otherwise returning the temporary
-    return value;
+    return { table.getKind(value), value };
 }
 
 PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
@@ -218,8 +228,8 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     // 1. Topdown traversal of the dominator tree.
     // Build AVAIL_OUT, EXP_GEN, PHI_GEN and TMP_GEN
     auto domtree = fam.getResult<DomTreeAnalysis>(function);
-    auto visitor = domtree.getBFVisitor();
-    for (const auto& curr : visitor) {
+    auto dfvisitor = domtree.getDFVisitor();
+    for (const auto& curr : dfvisitor) {
         auto& avail_out = avail_out_map[curr->bb]; // = canon(AVAIL_IN[b] ∪ PHI_GEN(b) ∪ TMP_GEN(b))
         auto& exp_gen = exp_gen_map[curr->bb];     // temporaries and non-simple
         auto& phi_gen = phi_gen_map[curr->bb];     // temporaries that are defined by a phi
@@ -267,8 +277,8 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     while (modified) {
         modified = false;
 
-        auto postdom_visitor = postdomtree.getBFVisitor();
-        for (const auto& curr : postdom_visitor)
+        dfvisitor = postdomtree.getDFVisitor();
+        for (const auto& curr : dfvisitor)
         {
             // First build ANTIC_OUT
             ValueSet antic_out;
@@ -293,9 +303,9 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
             }
             else if (succ.size() == 1) {
                 // phi_translate(A[succ(b)], b, succ(b))
-                for (const auto& r : antic_in_map[succ.front()]) {
-                    auto v = phi_translate(r.second, curr->bb, succ.front());
-                    antic_out.insert(table.getKind(v), v);
+                for (const auto&[_kind, val] : antic_in_map[succ.front()]) {
+                    auto [k, v] = phi_translate(val, curr->bb, succ.front());
+                    antic_out.insert(k, v);
                 }
             }
             else Err::unreachable();
@@ -316,7 +326,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                 antic_in.insert(kind, val);
 
             // TMP_GEN acts as a kill set of ANTIC_IN
-            for (const auto& [_val, kind] : tmp_gen)
+            for (const auto& [kind, _val] : tmp_gen)
                 antic_in.erase(kind);
 
             modified |= (last_round_size != antic_in.size());
@@ -333,11 +343,34 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     modified = true;
     while (modified) {
         modified = false;
-        auto dom_visitor = domtree.getBFVisitor();
-        for (const auto& curr : dom_visitor) {
-            ValueSetMap insert_set_map;
-            auto idom = curr->parent->bb;
-            // TODO
+        dfvisitor = domtree.getDFVisitor();
+        for (const auto& curr : dfvisitor) {
+            auto preds = curr->bb->getPreBB();
+            if (preds.size() > 1) {
+                auto& antic_in = antic_in_map[curr->bb];
+                for (const auto& [_kind, val] : antic_in) {
+                    std::set<std::shared_ptr<BasicBlock>> available_preds;
+                    for (const auto& pred : preds) {
+                        auto [pred_kind, pred_val]
+                            = phi_translate(val, pred, curr->bb);
+
+                        if (avail_out_map[pred].contains(pred_kind))
+                            available_preds.insert(pred);
+                    }
+                    // If the expression is available in at least one predecessor,
+                    // then we insert it in predecessors where it is not available.
+                    // Generating fresh temporaries, we perform the necessary insertions
+                    // and create a phi to merge the predecessors’ leaders
+                    if (!available_preds.empty()) {
+                        for (const auto& pred : preds) {
+                            if (available_preds.find(pred) == available_preds.end()) {
+
+                            }
+                        }
+                    }
+                }
+            }
+
         }
     }
 

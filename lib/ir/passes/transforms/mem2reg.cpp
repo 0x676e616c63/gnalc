@@ -189,11 +189,7 @@ void PromotePass::insertPhi() {
     for (const auto& bb : phi_blocks) {
         // auto &node = new_phi_nodes[std::make_pair(cur_info.alloca->index, bb->index)];
         // if (node) continue;
-        std::shared_ptr<PHIInst> node;
-        if (!name_normalized)
-            node = std::make_shared<PHIInst>(Config::IR::REGISTER_TEMP_NAME, cur_info.alloca->getBaseType());
-        else
-            node = std::make_shared<PHIInst>(cur_info.alloca->getName()+"."+std::to_string(++version), cur_info.alloca->getBaseType());
+        auto node = std::make_shared<PHIInst>(cur_info.alloca->getName() + "." + std::to_string(++version), cur_info.alloca->getBaseType());
         bb->insertPhi(node);
         phi_to_alloca_map[node] = cur_info.alloca;
     }
@@ -381,9 +377,9 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
 
 void PromotePass::promoteMemoryToRegister(Function &function) {
     entry_block = function.getBlocks().front();
-    if (!name_normalized)
-        Err::gassert(entry_block->isName("%entry"),
-                     "First block is not named entry");
+
+    Err::gassert(entry_block->getPreBB().empty(),
+        "First block is not entry block");
 
     analyseAlloca();
 
