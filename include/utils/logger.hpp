@@ -27,6 +27,12 @@ public:
         }
     }
 
+    static void logWarning(const std::string &message) {
+        if (logLevel >= LogLevel::INFO) {
+            std::cerr << "\033[33m[WARNING] " << message << "\033[0m" << std::endl;
+        }
+    }
+
     static void logDebug(const std::string &message) {
         if (logLevel >= LogLevel::DEBUG) {
             std::cerr << "[DEBUG] " << message << std::endl;

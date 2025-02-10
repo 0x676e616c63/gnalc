@@ -4,7 +4,6 @@
 #include <stack>
 #include <algorithm>
 
-#include "../../../../include/config/config.hpp"
 #include "../../../../include/ir/instructions/phi.hpp"
 
 namespace IR {
@@ -88,7 +87,7 @@ bool PromotePass::rewriteSingleStoreAlloca() {
         for (auto &load : cur_info.loads) {
             if (!iADomB(store, load)) {
                 // Err::error("PromotePass::rewriteSingleStoreAlloca(): load before single store.");
-                Logger::logInfo("\033[33m[WARNING]\033[0m PromotePass::rewriteSingleStoreAlloca(): load before single store!");
+                Logger::logWarning("[M2R] rewriteSingleStoreAlloca(): load before single store!");
                 return false;
             }
             load->replaceSelf(rval);
@@ -289,7 +288,7 @@ void PromotePass::rename(Function &f) {
                                     pb = DT.nodes[pb]->parent->bb;
                                 else {
                                     // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
-                                    Logger::logInfo("\033[33m[WARNING]\033[0m PromotePass::rename(): Value are not defined for all dominance nodes! Use 0 instead.");
+                                    Logger::logWarning("[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
                                     incoming_values[{alloca, b}] = f.getConstantPool().getConst(0);
                                     break;
                                 }
@@ -398,6 +397,11 @@ void PromotePass::promoteMemoryToRegister(Function &function) {
     rename(function);
 
     for (const auto& inst : del_queue) {
+        Logger::logDebug("[M2R] Deleting: "+IRFormatter::formatInst(*inst));
+        if (inst->getParent() == nullptr) {
+            Logger::logWarning("[M2R] The instruction to be deleted is incorrect, skip.");
+            continue;
+        }
         inst->getParent()->delFirstOfInst(inst);
     }
 }
