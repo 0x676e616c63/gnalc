@@ -451,9 +451,9 @@ std::string IRFormatter::fPHIInst(PHIInst &inst) {
     auto opers = inst.getPhiOpers();
     for (auto it = opers.begin(); ; ) {
         ret += "[ ";
-        ret += (*it)->getValue()->getName();
+        ret += it->value->getName();
         ret += ", ";
-        ret += (*it)->getBlock()->getName() + " ";
+        ret += it->block->getName() + " ";
         ret += "]";
         if (++it == opers.end()) {
             break;

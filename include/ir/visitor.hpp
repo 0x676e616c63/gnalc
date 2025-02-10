@@ -126,9 +126,6 @@ public:
 
     virtual ~IRVisitor() = default;
 
-    virtual void visit(PHIInst::PhiOperand & node) {
-        Err::not_implemented("IRVisitor::visit(PHIInst::PhiOperand&)");
-    }
 };
 } // namespace IR
 

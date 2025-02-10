@@ -9,33 +9,24 @@
 #include "../instruction.hpp"
 
 namespace IR {
-// PHI_INST --USE-> PHI_OPER --USE-> {val, blk}
+// PHI_INST --USE-> {val, blk}
 // %result = phi <type> [ <val1>, <block1> ], [ <val2>, <block2> ], ...
 class PHIInst : public Instruction {
 public:
     // [ <val1>, <block1> ]
-    struct PhiOperand : public User {
-        PhiOperand() = delete;
-        PhiOperand(const std::shared_ptr<Value> &_value,
-                   const std::shared_ptr<BasicBlock> &_block);
-        std::shared_ptr<Value> getValue() const;
-        std::shared_ptr<BasicBlock> getBlock() const;
-        void setBlock(const std::shared_ptr<BasicBlock>& _block);
-        std::shared_ptr<PHIInst> getPhi() const;
-
-        void accept(IRVisitor &visitor) override;
+    // 只有getPhiOpers会构造
+    struct PhiOper {
+        std::shared_ptr<Value> value;
+        std::shared_ptr<BasicBlock> block;
+        PhiOper(const std::shared_ptr<Value> &_value, const std::shared_ptr<BasicBlock> &_block)
+            : value(_value), block(_block) {}
     };
-    // todo : 直接存到operands里面
-    std::list<std::shared_ptr<PhiOperand>> popers; // phi opers
     PHIInst() = delete;
     PHIInst(NameRef name, const std::shared_ptr<Type> &_type);
-    PHIInst(NameRef name, const std::shared_ptr<Type> &_type,
-        const std::vector<std::shared_ptr<PhiOperand>> &_operands);
 
-    std::shared_ptr<Value>
-    getValueForBlock(const std::shared_ptr<BasicBlock> &block) const;
-    void addPhiOper(const std::shared_ptr<PhiOperand> &_operands);
-    std::vector<std::shared_ptr<PhiOperand>> getPhiOpers() const;
+    std::shared_ptr<Value> getValueForBlock(const std::shared_ptr<BasicBlock> &block) const;
+    void addPhiOper(const std::shared_ptr<Value> &val, const std::shared_ptr<BasicBlock> &blk);
+    std::vector<PhiOper> getPhiOpers() const;
 
     bool replaceBlock(const std::shared_ptr<BasicBlock> &before,
         const std::shared_ptr<BasicBlock> &after);

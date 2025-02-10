@@ -288,7 +288,7 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
                     if (phi->getType()->getTrait() == IRCTYPE::PTR) {
                         for (const auto &oper : phi->getPhiOpers())
                             changed |= res.insertPotentialAlias(
-                                phi.get(), oper->getValue().get());
+                                phi.get(), oper.value.get());
                     }
                 }
             }

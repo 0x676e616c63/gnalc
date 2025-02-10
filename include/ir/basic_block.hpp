@@ -50,9 +50,9 @@ class BasicBlock : public Value,
     std::list<std::weak_ptr<BasicBlock>> pre_bb;   // 前驱
     std::list<std::weak_ptr<BasicBlock>> next_bb;  // 后继
     std::list<std::shared_ptr<Instruction>> insts; // 指令列表
+    std::list<std::shared_ptr<PHIInst>> phi_insts;
     std::vector<std::shared_ptr<Value>> bb_params;
     std::weak_ptr<Function> parent;
-    unsigned phi_count = 0;
 
 public:
     using const_iterator = decltype(insts)::const_iterator;
@@ -66,12 +66,16 @@ public:
                std::list<std::shared_ptr<Instruction>> _insts);
 
     void addInst(const std::shared_ptr<Instruction> &inst);
+    void addPhiInst(const std::shared_ptr<PHIInst> &node); // 插入到phi_insts
 
     std::list<std::shared_ptr<BasicBlock>> getPreBB() const;
     std::list<std::shared_ptr<BasicBlock>> getNextBB() const;
 
     // usually we can use range-based for instead of these
     const std::list<std::shared_ptr<Instruction>> &getInsts() const;
+    const std::list<std::shared_ptr<PHIInst>> &getPhiInsts() const;
+    std::list<std::shared_ptr<Instruction>> getAllInsts() const;
+    unsigned getPhiCount() const;
 
     unsigned index = 0; // 不经过插入删除接口修改后使用先调用父函数的update方法！
 
@@ -89,16 +93,22 @@ public:
     template <typename Pred>
     bool delInstIf(Pred pred) {
         bool found = false;
+        for (auto it = phi_insts.begin(); it != phi_insts.end();) {
+            if (pred(*it)) {
+                for (const auto& use : (*it)->getUseList()) {
+                    Err::gassert(pred(std::dynamic_pointer_cast<Instruction>(use->getUser())),
+                                 "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
+                }
+                it = phi_insts.erase(it);
+                found = true;
+            } else
+                ++it;
+        }
         for (auto it = insts.begin(); it != insts.end();) {
             if (pred(*it)) {
                 for (const auto& use : (*it)->getUseList()) {
-                    if (auto phi_oper = std::dynamic_pointer_cast<PHIInst::PhiOperand>(use->getUser())) {
-                        Err::gassert(pred(phi_oper->getPhi()),
-                                     "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
-                    } else {
-                        Err::gassert(pred(std::dynamic_pointer_cast<Instruction>(use->getUser())),
-                                     "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
-                    }
+                    Err::gassert(pred(std::dynamic_pointer_cast<Instruction>(use->getUser())),
+                                "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
                 }
                 it = insts.erase(it);
                 found = true;
@@ -121,9 +131,6 @@ public:
 
     std::shared_ptr<Function> getParent() const;
     void setParent(const std::shared_ptr<Function> &_parent);
-
-    void insertPhi(const std::shared_ptr<PHIInst> &node); // 插入到第一个非phi指令之前
-    unsigned getPhiCount() const;
 
     void accept(IRVisitor &visitor) override;
     ~BasicBlock() override;

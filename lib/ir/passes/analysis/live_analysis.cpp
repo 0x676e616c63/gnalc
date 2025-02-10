@@ -32,15 +32,16 @@ bool LiveAnalysis::processFunc(const Function *func) {
 // 返回值为LiveIn是否更新了
 bool LiveAnalysis::processBB(const BasicBlock *bb) {
     // Logger::logDebug("Copying LiveOut from bb to insts");
-    liveness.getLiveOut(bb->getInsts().back().get()) = liveness.getLiveOut(bb);
+    auto all = bb->getAllInsts();
+    liveness.getLiveOut(all.back().get()) = liveness.getLiveOut(bb);
     bool updated = false;
     // Logger::logDebug("Processing insts in bb");
-    for (auto it = bb->getInsts().rbegin(); it != bb->getInsts().rend(); ++it) {
+    for (auto it = all.rbegin(); it != all.rend(); ++it) {
         if (processInst((*it).get())) {
             updated = true;
             Logger::logDebug("LiveAnalyser: Updated insts " + (*it)->getName() +
                              " in bb");
-            if (std::next(it) != bb->getInsts().rend()) {
+            if (std::next(it) != all.rend()) {
                 liveness.getLiveOut(std::next(it)->get()) =
                     liveness.getLiveIn(it->get());
             } else {
@@ -49,7 +50,7 @@ bool LiveAnalysis::processBB(const BasicBlock *bb) {
         }
     }
     // Logger::logDebug("Processing insts in bb done");
-    liveness.getLiveIn(bb) = liveness.getLiveIn(bb->getInsts().front().get());
+    liveness.getLiveIn(bb) = liveness.getLiveIn(all.front().get());
     // Logger::logDebug("Copied LiveIn");
     return updated;
 }

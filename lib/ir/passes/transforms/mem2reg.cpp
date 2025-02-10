@@ -189,7 +189,7 @@ void PromotePass::insertPhi() {
         // auto &node = new_phi_nodes[std::make_pair(cur_info.alloca->index, bb->index)];
         // if (node) continue;
         auto node = std::make_shared<PHIInst>(cur_info.alloca->getName() + "." + std::to_string(++version), cur_info.alloca->getBaseType());
-        bb->insertPhi(node);
+        bb->addPhiInst(node);
         phi_to_alloca_map[node] = cur_info.alloca;
     }
 }
@@ -222,12 +222,13 @@ void PromotePass::rename(Function &f) {
 
         //  process load store and phi
         // std::vector<std::shared_ptr<Instruction>> del_insts;
+        for (const auto &i : b->getPhiInsts()) {
+            if (del_queue.count(i)) continue;
+            incoming_values[{phi_to_alloca_map[std::dynamic_pointer_cast<PHIInst>(i)], b}] = i;
+        }
         for (const auto& i : b->getInsts()) {
             if (del_queue.count(i)) continue;
             switch (i->getOpcode()) {
-                case OP::PHI:
-                    incoming_values[{phi_to_alloca_map[std::dynamic_pointer_cast<PHIInst>(i)], b}] = i;
-                    break;
                 case OP::LOAD:
                     if (!incoming_values.count({std::dynamic_pointer_cast<ALLOCAInst>(
                             std::dynamic_pointer_cast<LOADInst>(i)->getPtr()), b})) break;
@@ -275,35 +276,28 @@ void PromotePass::rename(Function &f) {
 
         for (const auto &n : b->getNextBB()) {
             // process phi in next block
-            auto phi_it = n->getInsts().begin();
-            for (unsigned i = 0; i < n->getPhiCount(); ++i) {
-                if (auto phi_node = std::dynamic_pointer_cast<PHIInst>(*phi_it)) {
-                    // 用于在替换前检查是否是undef_val, 若是则沿cfg向上查找非undef的值
-                    if (auto alloca = phi_to_alloca_map[phi_node]; incoming_values[{alloca, b}] == undef_val) {
-                        for (auto pb = b;;) {
-                            if (incoming_values[{alloca, pb}] == undef_val) {
-                                // if (!pb->getPreBB().empty())
-                                //     pb = pb->getPreBB().front();
-                                if (DT.nodes[pb]->parent != nullptr)
-                                    pb = DT.nodes[pb]->parent->bb;
-                                else {
-                                    // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
-                                    Logger::logWarning("[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
-                                    incoming_values[{alloca, b}] = f.getConstantPool().getConst(0);
-                                    break;
-                                }
-                            } else {
-                                incoming_values[{alloca, b}] = incoming_values[{alloca, pb}];
+            for (const auto & phi_node : n->getPhiInsts()) {
+                // 用于在替换前检查是否是undef_val, 若是则沿cfg向上查找非undef的值
+                if (auto alloca = phi_to_alloca_map[phi_node]; incoming_values[{alloca, b}] == undef_val) {
+                    for (auto pb = b;;) {
+                        if (incoming_values[{alloca, pb}] == undef_val) {
+                            // if (!pb->getPreBB().empty())
+                            //     pb = pb->getPreBB().front();
+                            if (DT.nodes[pb]->parent != nullptr)
+                                pb = DT.nodes[pb]->parent->bb;
+                            else {
+                                // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
+                                Logger::logWarning("[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
+                                incoming_values[{alloca, b}] = f.getConstantPool().getConst(0);
                                 break;
                             }
+                        } else {
+                            incoming_values[{alloca, b}] = incoming_values[{alloca, pb}];
+                            break;
                         }
                     }
-                    phi_node->addPhiOper(
-                        std::make_shared<PHIInst::PhiOperand>(incoming_values[{phi_to_alloca_map[phi_node], b}], b));
-                } else {
-                    Err::error("PromotePass::rename(): phi node cast failed!");
                 }
-                ++phi_it;
+                phi_node->addPhiOper(incoming_values[{phi_to_alloca_map[phi_node], b}], b);
             }
 
             work_stack.push(n);

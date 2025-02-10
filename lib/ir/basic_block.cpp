@@ -1,6 +1,9 @@
 #include <utility>
 
 #include "../../include/ir/basic_block.hpp"
+
+#include <list>
+
 #include "../../include/ir/utilities.hpp"
 #include "../../include/ir/visitor.hpp"
 
@@ -54,7 +57,7 @@ bool BasicBlock::delNextBB(const std::shared_ptr<BasicBlock> &bb) {
 }
 
 void BasicBlock::addInst(const std::shared_ptr<Instruction> &inst) {
-    inst->index = insts.size();
+    inst->index = phi_insts.size()+insts.size();
     insts.emplace_back(inst);
     inst->setParent(shared_from_this());
 }
@@ -71,23 +74,49 @@ const std::list<std::shared_ptr<Instruction>> &BasicBlock::getInsts() const {
     return insts;
 }
 
+const std::list<std::shared_ptr<PHIInst>> & BasicBlock::getPhiInsts() const {
+    return phi_insts;
+}
+
+std::list<std::shared_ptr<Instruction>> BasicBlock::getAllInsts() const {
+    std::list<std::shared_ptr<Instruction>> all;
+    all.insert(all.end(), phi_insts.begin(), phi_insts.end());
+    all.insert(all.end(), insts.begin(), insts.end());
+    return all;
+}
+
 void BasicBlock::updateInstIndex() const {
     unsigned i = 0;
+    for (const auto &inst : phi_insts) {
+        inst->index = ++i;
+    }
     for (const auto &inst : insts) {
-        inst->index = i++;
+        inst->index = ++i;
     }
 }
 
 bool BasicBlock::delFirstOfInst(const std::shared_ptr<Instruction> &inst) {
-    for (auto it = insts.begin(); it != insts.end(); ++it) {
-        if (*it == inst) {
-            inst->setParent(nullptr);
-            insts.erase(it);
-            updateInstIndex();
-            return true;
+    if (inst->getOpcode() == OP::PHI) {
+        for (auto it = phi_insts.begin(); it != phi_insts.end(); ++it) {
+            if (*it == inst) {
+                inst->setParent(nullptr);
+                phi_insts.erase(it);
+                updateInstIndex();
+                return true;
+            }
         }
+        return false;
+    } else {
+        for (auto it = insts.begin(); it != insts.end(); ++it) {
+            if (*it == inst) {
+                inst->setParent(nullptr);
+                insts.erase(it);
+                updateInstIndex();
+                return true;
+            }
+        }
+        return false;
     }
-    return false;
 }
 bool BasicBlock::delInst(const std::shared_ptr<Instruction> &target) {
     return delInstIf([&target](const auto &inst) { return inst == target; });
@@ -116,17 +145,14 @@ void BasicBlock::setParent(const std::shared_ptr<Function> &_parent) {
     parent = _parent;
 }
 
-void BasicBlock::insertPhi(const std::shared_ptr<PHIInst> &node) {
-    auto it = insts.begin();
-    std::advance(it, phi_count);
-    insts.insert(it, node);
+void BasicBlock::addPhiInst(const std::shared_ptr<PHIInst> &node) {
+    phi_insts.emplace_back(node);
     node->setParent(shared_from_this());
-    phi_count++;
     updateInstIndex();
 }
 
 unsigned BasicBlock::getPhiCount() const {
-    return phi_count;
+    return phi_insts.size();
 }
 
 void BasicBlock::accept(IRVisitor &visitor) { visitor.visit(*this); }
@@ -172,7 +198,7 @@ void safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb, const std::shared_pt
                 auto opers = phi->getPhiOpers();
                 Err::gassert(!opers.empty());
                 if (opers.size() == 1) {
-                    phi->replaceSelf(opers[0]->getValue());
+                    phi->replaceSelf(opers[0].value);
                     // Don't delete it right now, because we are in a loop.
                     // Deleting will invalidate iterators.
                     unused_phi.insert(phi);

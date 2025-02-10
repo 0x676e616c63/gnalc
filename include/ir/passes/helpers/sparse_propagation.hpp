@@ -161,14 +161,9 @@ private:
 
         std::shared_ptr<Value> changed_value = InfoT::getValueFromKey(key);
         for (const auto &use : changed_value->getUseList()) {
-            if (auto phi_oper = std::dynamic_pointer_cast<PHIInst::PhiOperand>(use->getUser())) {
-                ssa_worklist.emplace_back(phi_oper->getPhi());
-            }
-            else {
-                auto inst = std::dynamic_pointer_cast<Instruction>(use->getUser());
-                Err::gassert(inst != nullptr);
-                ssa_worklist.emplace_back(inst);
-            }
+            auto inst = std::dynamic_pointer_cast<Instruction>(use->getUser());
+            Err::gassert(inst != nullptr);
+            ssa_worklist.emplace_back(inst);
         }
     }
 
@@ -181,10 +176,10 @@ private:
         auto phi_lattice = getVal(phi_key);
 
         for (const auto &in : incomings) {
-            if (!isFeasible(in->getBlock(), phi->getParent()))
+            if (!isFeasible(in.block, phi->getParent()))
                 continue;
 
-            auto in_key = InfoT::getKeyFromValue(in->getValue());
+            auto in_key = InfoT::getKeyFromValue(in.value);
             auto in_lattice = getVal(in_key);
             if (in_lattice != phi_lattice)
                 phi_lattice = lattice_func->merge(phi_lattice, in_lattice);
