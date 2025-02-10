@@ -189,7 +189,7 @@ void safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb, const std::shared_pt
     }
     else {
         Err::gassert(br->getDest() == nxtbb, "The given block is not a successor.");
-        prebb->delInst(br, TODO);
+        prebb->delInst(br, BasicBlock::DEL_MODE::NON_PHI);
     }
 
     std::set<std::shared_ptr<Instruction>> unused_phi;
