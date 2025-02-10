@@ -75,8 +75,7 @@ enum class ValueTrait {
 // weak_from_this/shared_from_this， 需要稍后调用 Use::init() 再添加。
 // 设为 private 可以防止其他地方误用，该构造函数只应当被 User 调用，并由它调用 Use::init().
 //
-// delUse 也设为了 private，这是因为 Value 的 use_list 由 User 添加，也应当由
-// User 删除 所以 delUse 不应该被外界调用。
+// addUse/delUse 也设为了 private，这是因为 Value 的 use_list 由 User 添加，也应当由 User 删除。
 //
 // TODO:
 // Value 存 weak_ptr<Use> 起初是为了避免循环引用，但现在看来似乎改为
@@ -125,11 +124,10 @@ public:
     ValueTrait getVTrait() const { return trait; }
 
 private:
+    // PRIVATE because we want to ensure use is only modified by User.
     void addUse(const std::weak_ptr<Use> &use);
-
-    // PRIVATE because we want to ensure use is only deleted by User's delOperand or destructor.
-    // When User is being destructed, User's shared_ptr is destroyed, so
-    // User::shared_from_this will throw bad_weak_ptr.
+    // When User is being destructed, User's shared_ptr is destroyed.
+    // Therefore, `User::shared_from_this` will throw bad_weak_ptr.
     // So we use user's raw pointer to get around it.
     bool delUse(User* user);
 };
