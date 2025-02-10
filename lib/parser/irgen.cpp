@@ -73,6 +73,12 @@ void IRGenerator::visit(CompUnit &node) {
 
     CFGBuilder builder;
     builder.build(module);
+    curr_func = nullptr;
+    curr_initializer.reset(IR::IRBTYPE::I32);
+    curr_val = nullptr;
+    curr_making_initializer = nullptr;
+    curr_insts.clear();
+    is_making_lval = false;
 }
 
 // DeclStmt: const int32
