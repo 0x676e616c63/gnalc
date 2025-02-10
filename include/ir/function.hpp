@@ -43,7 +43,9 @@ public:
     explicit FormalParam(std::string name, std::shared_ptr<Type> ty, size_t index_)
         : Value(std::move(name), std::move(ty), ValueTrait::FORMAL_PARAMETER),
           index(index_) {}
+
     size_t getIndex() const { return index; }
+    void setIndex(size_t index_) { index = index_; }
 
     void accept(IRVisitor &visitor) override;
 };
@@ -78,26 +80,24 @@ public:
 
     void addBlock(std::shared_ptr<BasicBlock> blk);
 
+    // Delete a Block
+    // Requires the target block have no users than Phi.
     bool delBlock(const std::shared_ptr<BasicBlock> &blk);
 
+    // Delete blocks that satisfied: `pred(block) == true`
+    // Requires the target block have no predecessors or successors
+    // In other word, If pred(a) == true, pred(a->user->getPre/NextBB()) must be true
     template <typename Pred> bool delBlockIf(Pred pred) {
         bool found = false;
         for (auto it = blks.begin(); it != blks.end();) {
             if (pred(*it)) {
-                for (const auto &use : (*it)->getUseList()) {
-                    auto phi_oper =
-                        std::dynamic_pointer_cast<PHIInst::PhiOperand>(use->getUser());
-                    Err::gassert(phi_oper != nullptr,
-                                 "Function::delBlockIf(): Cannot delete a "
-                                 "block that has users beyond phi.");
-                    auto phi = phi_oper->getPhi();
-                    phi->delPhiOper(*it);
-
-                    // Simplify PHI
-                    auto phi_opers = phi->getPhiOpers();
-                    Err::gassert(!phi_opers.empty());
-                    if (phi_opers.size() == 1)
-                        phi->replaceSelf(phi_opers[0]->getValue());
+                for (const auto &prebb : (*it)->getPreBB()) {
+                    Err::gassert(pred(prebb),
+                        "Cannot delete a block that have predecessors");
+                }
+                for (const auto &nextbb : (*it)->getNextBB()) {
+                    Err::gassert(pred(nextbb),
+                        "Cannot delete a block that have successors");
                 }
                 it = blks.erase(it);
                 found = true;

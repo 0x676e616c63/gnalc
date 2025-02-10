@@ -6,7 +6,12 @@ project(gnalc)
 
 option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 
-add_compile_options("-g")
+# add `-fstandalone-debug` to fix CLion's bundled LLDB
+# See:
+#      - https://github.com/vadimcn/codelldb/issues/415
+#      - https://bugzilla.redhat.com/show_bug.cgi?id=1740927
+# Well, there are still some bugs, but fewer than before.
+add_compile_options("-g" "-fstandalone-debug")
 
 if (ENABLE_ASAN)
         message(STATUS "AddressSanitizer enabled")

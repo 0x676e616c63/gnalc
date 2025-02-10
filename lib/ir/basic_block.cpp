@@ -146,4 +146,43 @@ void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,
     ok = nxtbb->delPreBB(prebb);
     Err::gassert(ok);
 }
+
+void safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb, const std::shared_ptr<BasicBlock> &nxtbb) {
+    unlinkBB(prebb, nxtbb);
+    auto br = std::dynamic_pointer_cast<BRInst>(prebb->getInsts().back());
+    Err::gassert(br != nullptr);
+    if (br->isConditional()) {
+        if (br->getTrueDest() == nxtbb)
+            br->dropTrueDest();
+        else {
+            Err::gassert(br->getFalseDest() == nxtbb,
+                "The given block is not a successor.");
+            br->dropFalseDest();
+        }
+    }
+    else {
+        Err::gassert(br->getDest() == nxtbb, "The given block is not a successor.");
+        prebb->delInst(br);
+    }
+
+    std::set<std::shared_ptr<Instruction>> unused_phi;
+    for (const auto& inst : *nxtbb) {
+        if (auto phi = std::dynamic_pointer_cast<PHIInst>(inst)) {
+            if (phi->delPhiOper(prebb)) {
+                auto opers = phi->getPhiOpers();
+                Err::gassert(!opers.empty());
+                if (opers.size() == 1) {
+                    phi->replaceSelf(opers[0]->getValue());
+                    // Don't delete it right now, because we are in a loop.
+                    // Deleting will invalidate iterators.
+                    unused_phi.insert(phi);
+                }
+            }
+        }
+        else break;
+    }
+    nxtbb->delInstIf([&unused_phi](const auto& inst) {
+        return  unused_phi.find(inst) != unused_phi.end();
+    });
+}
 } // namespace IR

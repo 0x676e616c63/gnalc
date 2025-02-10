@@ -21,25 +21,31 @@ namespace IR {
 class Function;
 class IRVisitor;
 class PostDomTreeAnalysis;
+
+// Only handles CFG.
+void linkBB(const std::shared_ptr<BasicBlock> &prebb,
+            const std::shared_ptr<BasicBlock> &nxtbb);
+
+void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,
+              const std::shared_ptr<BasicBlock> &nxtbb);
+
+// Not only unlink CFG, but also handles BRInst and PHIInst
+void safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb,
+                  const std::shared_ptr<BasicBlock> &nxtbb);
+
 /**
  * @brief BB继承自value, 其被br指令'use', 'use'了它所包含的指令
  * @note next_bb包含的BB和最后一条br指令中的相同
  */
-void linkBB(const std::shared_ptr<BasicBlock> &prebb,
-                   const std::shared_ptr<BasicBlock> &nxtbb);
-
-void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,
-           const std::shared_ptr<BasicBlock> &nxtbb);
-
 class BasicBlock : public Value,
                    public std::enable_shared_from_this<BasicBlock> {
     friend class Parser::CFGBuilder;
     friend class Function;
     friend class PostDomTreeAnalysis;
     friend void linkBB(const std::shared_ptr<BasicBlock> &prebb,
-                   const std::shared_ptr<BasicBlock> &nxtbb);
+                       const std::shared_ptr<BasicBlock> &nxtbb);
     friend void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,
-               const std::shared_ptr<BasicBlock> &nxtbb);
+                         const std::shared_ptr<BasicBlock> &nxtbb);
 
     std::list<std::weak_ptr<BasicBlock>> pre_bb;   // 前驱
     std::list<std::weak_ptr<BasicBlock>> next_bb;  // 后继
@@ -76,24 +82,31 @@ public:
     // The instruction must have no users.
     bool delInst(const std::shared_ptr<Instruction> &inst);
 
-    // Delete insts and its user.
-    // If pred(a) == true, pred(a->users) must be true
-    template <typename Pred> bool delInstIf(Pred pred) {
+    // Delete instructions that satisfied: `pred(inst) == true`
+    // Requires the target instruction have no users than expiring users.
+    // "expiring users": users that are being deleted. (pred(inst->getUsers()) == true)
+    // In other word, If pred(a) == true, pred(a->users) must be true
+    template <typename Pred>
+    bool delInstIf(Pred pred) {
         bool found = false;
         for (auto it = insts.begin(); it != insts.end();) {
             if (pred(*it)) {
-                for (auto &&use : (*it)->getUseList()) {
-                    Err::gassert(pred(std::dynamic_pointer_cast<Instruction>(
-                                     use->getUser())),
-                                 "BasicBlock::delInstIf(): Cannot delete a "
-                                 "Inst without deleting its User.");
+                for (const auto& use : (*it)->getUseList()) {
+                    if (auto phi_oper = std::dynamic_pointer_cast<PHIInst::PhiOperand>(use->getUser())) {
+                        Err::gassert(pred(phi_oper->getPhi()),
+                                     "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
+                    } else {
+                        Err::gassert(pred(std::dynamic_pointer_cast<Instruction>(use->getUser())),
+                                     "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
+                    }
                 }
                 it = insts.erase(it);
                 found = true;
             } else
                 ++it;
         }
-        if (found) updateInstIndex();
+        if (found)
+            updateInstIndex();
         return found;
     }
 
@@ -109,13 +122,13 @@ public:
     std::shared_ptr<Function> getParent() const;
     void setParent(const std::shared_ptr<Function> &_parent);
 
-    void insertPhi(const std::shared_ptr<PHIInst> & node); // 插入到第一个非phi指令之前
+    void insertPhi(const std::shared_ptr<PHIInst> &node); // 插入到第一个非phi指令之前
     unsigned getPhiCount() const;
 
     void accept(IRVisitor &visitor) override;
     ~BasicBlock() override;
 
-    private:
+private:
     void addPreBB(const std::shared_ptr<BasicBlock> &bb);
     void addNextBB(const std::shared_ptr<BasicBlock> &bb);
     bool delPreBB(const std::shared_ptr<BasicBlock> &bb);

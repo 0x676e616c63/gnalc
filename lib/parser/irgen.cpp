@@ -420,8 +420,10 @@ void IRGenerator::visit(FuncDef &node) {
         for (size_t i = 0; i < ast_params.size(); ++i) {
             ast_params[i]->accept(*this);
             param_ids.emplace_back(ast_params[i]->getId());
-            params.emplace_back(std::make_shared<IR::FormalParam>(
-                curr_val->getName(), curr_val->getType(), i));
+            auto f = std::dynamic_pointer_cast<IR::FormalParam>(curr_val);
+            Err::gassert(f != nullptr, "Invalid formal param.");
+            f->setIndex(i);
+            params.emplace_back(f);
         }
     }
 
@@ -522,8 +524,8 @@ void IRGenerator::visit(FuncFParam &node) {
         ir_type = IR::makeBType(node_type);
     }
 
-    curr_val = std::make_shared<IR::Value>(irval_temp_name, ir_type,
-                                           IR::ValueTrait::FORMAL_PARAMETER);
+    // The index should be overwritten by Function's visitor.
+    curr_val = std::make_shared<IR::FormalParam>(irval_temp_name, ir_type, 0);
 }
 
 // The following two functions (DeclRef and ArrayExp) is handling LVal.

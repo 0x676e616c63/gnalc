@@ -38,8 +38,10 @@ std::list<std::weak_ptr<Use>> &Value::getRUseList() { return use_list; }
 
 void Value::replaceSelf(const std::shared_ptr<Value> &new_value) const {
     auto shared_use_list = getUseList();
-    for (const auto &use : shared_use_list)
-        use->getUser()->replaceUse(use->getValue(), new_value);
+    for (const auto &use : shared_use_list) {
+        bool ok = use->getUser()->replaceUse(use->getValue(), new_value);
+        Err::gassert(ok);
+    }
 }
 
 Value::~Value() = default;

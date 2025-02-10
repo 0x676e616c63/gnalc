@@ -40,7 +40,7 @@ public:
     bool replaceBlock(const std::shared_ptr<BasicBlock> &before,
         const std::shared_ptr<BasicBlock> &after);
 
-    void delPhiOper(const std::shared_ptr<BasicBlock> &);
+    bool delPhiOper(const std::shared_ptr<BasicBlock> &);
 
     void accept(IRVisitor &visitor) override;
 };

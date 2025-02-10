@@ -60,7 +60,8 @@ public:
     }
 
     bool isZero() const {
-        Err::gassert(isConstant());
+        if (!isConstant())
+            return false;
         return getConstant() == false || getConstant() == '\0' ||
                getConstant() == 0 || getConstant() == 0.0f;
     }
@@ -135,9 +136,12 @@ public:
                 break;
             case OP::MUL:
             case OP::FMUL:
-                if (lhs.isZero() || rhs.isZero())
-                    changes[inst].setConstant(ConstantProxy(
-                        constant_pool, bin->getOpcode() == OP::MUL ? 0 : 0.0f));
+                if (lhs.isZero() || rhs.isZero()) {
+                    if (bin->getOpcode() == OP::MUL)
+                        changes[inst].setConstant(ConstantProxy(constant_pool, 0));
+                    else
+                        changes[inst].setConstant(ConstantProxy(constant_pool, 0.0f));
+                }
                 else if (lhs.isConstant() && rhs.isConstant())
                     changes[inst].setConstant(lhs.getConstant() *
                                               rhs.getConstant());
@@ -298,6 +302,7 @@ public:
                     default:
                         Err::unreachable("target type could not zext otype:I1");
                     }
+                    break;
                 case IRBTYPE::I8:
                     switch (toBType(zext->getTType())->getInner()) {
                     case IRBTYPE::I32:
@@ -308,6 +313,7 @@ public:
                     default:
                         Err::unreachable("target type could not zext otype:I8");
                     }
+                    break;
                 default:
                     Err::unreachable("target type could not zext");
                 }
@@ -337,6 +343,8 @@ public:
     LatticeVal computeLatticeVal(const std::shared_ptr<Value>& key) const override {
         if (key->getVTrait() == ValueTrait::CONSTANT_LITERAL)
             return LatticeVal(ConstantProxy(constant_pool, key));
+        if (key->getVTrait() == ValueTrait::FORMAL_PARAMETER)
+            return LatticeInfo::NAC;
         return LatticeInfo::UNDEF;
     }
 };
@@ -352,52 +360,59 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
 
     // Simplify Instruction
     for (const auto &[key, val] : solver.get_map()) {
-        if (val.isConstant() && key->getVTrait() != ValueTrait::CONSTANT_LITERAL) {
+        if (val.isConstant()) {
+            // Note that the key might already be a ConstantLiteral before SCCP,
+            // but that doesn't matter.
+            // If we can get a ConstantLiteral here, it must be used in propagation,
+            // and thus might be a BRInst's Cond, which we should handle it as if it is
+            // a constant produced by SCCP.
             for (auto &use : key->getUseList()) {
                 use->getUser()->replaceUse(key,
                                            val.getConstant().getConstant());
                 if (auto br_inst =
                         std::dynamic_pointer_cast<BRInst>(use->getUser())) {
+
                     Err::gassert(br_inst->isConditional());
-                    if (val.getConstant().get_i1()) {
-                        unlinkBB(br_inst->getParent(), br_inst->getFalseDest());
-                        br_inst->dropFalseDest();
-                    }
-                    else {
-                        unlinkBB(br_inst->getParent(), br_inst->getTrueDest());
-                        br_inst->dropTrueDest();
-                    }
+
+                    std::shared_ptr<BasicBlock> dropped;
+                    if (val.getConstant().get_i1())
+                        safeUnlinkBB(br_inst->getParent(), br_inst->getFalseDest());
+                    else
+                        safeUnlinkBB(br_inst->getParent(), br_inst->getTrueDest());
+
                     sccp_cfg_modified = true;
                 }
             }
-            // Delete replaced constant instruction,
-            // Though DCE/ADCE can make it too, deleting them in an earlier pass
-            // can invalidate less Analysis Results, thus making the compiler faster.
-            auto inst = std::dynamic_pointer_cast<Instruction>(key);
-            Err::gassert(inst != nullptr);
-            inst->getParent()->delInst(inst);
-            sccp_inst_modified = true;
+            // If the key is not a ConstantLiteral, it must be a constant produced by SCCP.
+            // So we delete the key.
+            if (key->getVTrait() != ValueTrait::CONSTANT_LITERAL) {
+                // Delete replaced constant instruction,
+                // Though DCE/ADCE can make it too, deleting them in an earlier pass
+                // can invalidate less Analysis Results, thus making the compiler faster.
+                auto inst = std::dynamic_pointer_cast<Instruction>(key);
+                Err::gassert(inst != nullptr);
+                inst->getParent()->delInst(inst);
+                sccp_inst_modified = true;
+            }
         }
     }
 
-    std::unordered_set<std::shared_ptr<BasicBlock>> visited;
-    std::deque worklist{function.getBlocks()[0]};
+    // Since we already handled CFG above,
+    // all the unreachable blocks' in edge have been cut.
+    // So just a trivial traversal will find all of them
+    auto dfv = function.getDFVisitor();
+    std::unordered_set live(dfv.begin(), dfv.end());
 
-    // Get Unreachable Blocks
-    while (!worklist.empty()) {
-        auto curr = worklist.front();
-        visited.emplace(curr);
-        worklist.pop_front();
-
-        for (const auto &next : curr->getNextBB()) {
-            if (solver.isFeasible(curr, next) &&
-                visited.find(next) == visited.end())
-                worklist.emplace_back(next);
+    // Cut the outgoing edge of the unreachable block
+    for (const auto& block : function) {
+        if (live.find(block) == live.end()) {
+            for (const auto& succ : block->getNextBB())
+                safeUnlinkBB(block, succ);
         }
     }
 
     sccp_cfg_modified |= function.delBlockIf(
-        [&visited](const auto& bb) { return visited.find(bb) == visited.end(); });
+        [&live](const auto& bb) { return live.find(bb) == live.end();});
 
     if (sccp_cfg_modified)
         return PM::PreservedAnalyses::none();

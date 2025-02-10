@@ -87,6 +87,7 @@ enum class ValueTrait {
 
 class Value : public NameC {
     friend class User;
+    friend class Use;
 
 private:
     std::list<std::weak_ptr<Use>> use_list; // Use隶属于User
@@ -109,8 +110,6 @@ public:
 
     std::shared_ptr<Type> getType() const;
 
-    void addUse(const std::weak_ptr<Use> &use);
-
     std::list<std::shared_ptr<Use>> getUseList() const;
     std::list<std::weak_ptr<Use>> &getRUseList();
 
@@ -126,6 +125,8 @@ public:
     ValueTrait getVTrait() const { return trait; }
 
 private:
+    void addUse(const std::weak_ptr<Use> &use);
+
     // PRIVATE because we want to ensure use is only deleted by User's delOperand or destructor.
     // When User is being destructed, User's shared_ptr is destroyed, so
     // User::shared_from_this will throw bad_weak_ptr.

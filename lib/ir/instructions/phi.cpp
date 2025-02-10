@@ -52,14 +52,17 @@ bool PHIInst::replaceBlock(const std::shared_ptr<BasicBlock> &before,
     return false;
 }
 
-void PHIInst::delPhiOper(const std::shared_ptr<BasicBlock> &target) {
-    delOperandIf([&target](const auto &value) {
+bool PHIInst::delPhiOper(const std::shared_ptr<BasicBlock> &target) {
+    bool found = delOperandIf([&target](const auto &value) {
         return std::dynamic_pointer_cast<PhiOperand>(value)->getBlock() == target;
     });
-    auto it = std::find_if(popers.begin(), popers.end(),
-        [&target](const auto& poper) { return poper->getBlock() == target; });
-    Err::gassert(it != popers.end());
-    popers.erase(it);
+    if (found) {
+        auto it = std::find_if(popers.begin(), popers.end(),
+            [&target](const auto& poper) { return poper->getBlock() == target; });
+        Err::gassert(it != popers.end());
+        popers.erase(it);
+    }
+    return found;
 }
 
 void PHIInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
