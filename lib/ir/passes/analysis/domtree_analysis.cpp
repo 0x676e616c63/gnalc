@@ -10,32 +10,32 @@ namespace IR {
 PM::UniqueKey DomTreeAnalysis::Key;
 PM::UniqueKey PostDomTreeAnalysis::Key;
 
-bool DomTree::ADomB(const std::shared_ptr<BasicBlock> &a,
-                    const std::shared_ptr<BasicBlock> &b) {
+bool DomTree::ADomB(BasicBlock* a,
+                    BasicBlock* b) {
     if (nodes[a] == root)
         return true;
     if (a == b)
         return true;
-    auto _b = nodes[b];
-    while (_b != root) {
+    auto _b = nodes[b].get();
+    while (_b != root.get()) {
         _b = _b->parent;
-        if (nodes[a] == _b)
+        if (nodes[a].get() == _b)
             return true;
     }
     return false;
 }
 
-BlockSet DomTree::getDomSet(const std::shared_ptr<BasicBlock> &b) {
+BlockSet DomTree::getDomSet(BasicBlock* b) {
     BlockSet domset = {b};
-    auto _b = nodes[b];
+    auto _b = nodes[b].get();
     do {
         _b = _b->parent;
         domset.insert(_b->bb);
-    } while (_b != root);
+    } while (_b != root.get());
     return domset;
 }
 
-BlockSet DomTree::getDomFrontier(const std::shared_ptr<BasicBlock> &b) {
+BlockSet DomTree::getDomFrontier(BasicBlock* b) {
     // todo
     return {};
 }
@@ -58,21 +58,20 @@ void DomTree::print(const std::shared_ptr<Node> &node, int level) {
     }
 }
 
-void DomTree::initDTN(std::vector<std::shared_ptr<BasicBlock>> &blocks) {
+void DomTree::initDTN(std::vector<BasicBlock*> &blocks) {
     for (auto &block : blocks) {
-        nodes[block] = std::make_shared<Node>(block);
+        nodes[block] = std::make_unique<Node>(block);
     }
     root = nodes[blocks.front()];
 }
 
-void DomTree::linkDTN(const std::shared_ptr<BasicBlock> &b,
-                      const std::shared_ptr<BasicBlock> &idom) {
+void DomTree::linkDTN(BasicBlock* b, BasicBlock* idom) {
     if (nodes[b] == root) {
         // root = nodes[b];
     } else if (idom == b) {
         Err::unreachable("DomTree::linkDTN: idom = self");
     } else {
-        nodes[b]->parent = nodes[idom];
+        nodes[b]->parent = nodes[idom].get();
         nodes[idom]->children.emplace_back(nodes[b]);
     }
 }
@@ -99,7 +98,7 @@ void DomTree::updateLevel() {
 
 DomTree DomTreeAnalysis::run(Function &f, FAM &fam) {
     domtree = {};
-    entry = f.getBlocks().front();
+    entry = f.getBlocks().front().get();
     analyze();
     info = {};
     entry = nullptr;
@@ -117,7 +116,7 @@ void DomTreeAnalysis::buildDFST() {
             info.linkDFSTN(parent, cur);
             auto nxt_bbs = cur->getNextBB();
             for (auto it = nxt_bbs.rbegin(); it != nxt_bbs.rend(); ++it) {
-                dfs_stack.emplace(*it, cur);
+                dfs_stack.emplace(it->get(), cur);
             }
         }
     }
@@ -127,12 +126,12 @@ void DomTreeAnalysis::calcSDOM() {
     for (auto it = info.idfn.rbegin(); it != info.idfn.rend(); ++it) {
         pBB candidate = *it;
         for (const auto &p : (*it)->getPreBB()) {
-            if (info.dfn(p) <= info.dfn(*it)) {
-                if (info.dfn(p) < info.dfn(candidate)) {
-                    candidate = p;
+            if (info.dfn(p.get()) <= info.dfn(*it)) {
+                if (info.dfn(p.get()) < info.dfn(candidate)) {
+                    candidate = p.get();
                 }
             } else {
-                auto candidate2 = info.recurSDOM(*it, p);
+                auto candidate2 = info.recurSDOM(*it, p.get());
                 if (info.dfn(candidate2) < info.dfn(candidate)) {
                     candidate = candidate2;
                 }
@@ -154,7 +153,7 @@ void DomTreeAnalysis::analyze() {
         auto dfs_tree_parent =
             dfs_tree_node.dfs_parent; // DFS SPANNING TREE'S PARENT NODE
         auto cur_dom_tree_node =
-            domtree.nodes[dfs_tree_parent]; // DomTree's Node
+            domtree.nodes[dfs_tree_parent].get(); // DomTree's Node
         while (info.dfn(cur_dom_tree_node->bb) >
                info.dfn(dfs_tree_node._sdom)) {
             cur_dom_tree_node = cur_dom_tree_node->parent;
@@ -188,7 +187,7 @@ void PostDomTreeAnalysis::buildDFST() {
             info.linkDFSTN(parent, cur);
             auto pre_bbs = cur->getPreBB();
             for (auto it = pre_bbs.rbegin(); it != pre_bbs.rend(); ++it) {
-                dfs_stack.emplace(*it, cur);
+                dfs_stack.emplace(it->get(), cur);
             }
         }
     }
@@ -198,12 +197,12 @@ void PostDomTreeAnalysis::calcSDOM() {
     for (auto it = info.idfn.rbegin(); it != info.idfn.rend(); ++it) {
         pBB candidate = *it;
         for (const auto &n : (*it)->getNextBB()) {
-            if (info.dfn(n) <= info.dfn(*it)) {
-                if (info.dfn(n) < info.dfn(candidate)) {
-                    candidate = n;
+            if (info.dfn(n.get()) <= info.dfn(*it)) {
+                if (info.dfn(n.get()) < info.dfn(candidate)) {
+                    candidate = n.get();
                 }
             } else {
-                auto candidate2 = info.recurSDOM(*it, n);
+                auto candidate2 = info.recurSDOM(*it, n.get());
                 if (info.dfn(candidate2) < info.dfn(candidate)) {
                     candidate = candidate2;
                 }
@@ -225,7 +224,7 @@ void PostDomTreeAnalysis::analyze() {
         auto dfs_tree_parent =
             dfs_tree_node.dfs_parent; // DFS SPANNING TREE'S PARENT NODE
         auto cur_dom_tree_node =
-            post_domtree.nodes[dfs_tree_parent]; // DomTree's Node
+            post_domtree.nodes[dfs_tree_parent].get(); // DomTree's Node
         while (info.dfn(cur_dom_tree_node->bb) >
                info.dfn(dfs_tree_node._sdom)) {
             cur_dom_tree_node = cur_dom_tree_node->parent;
@@ -243,12 +242,13 @@ void PostDomTreeAnalysis::setExit(const Function &f) {
         Err::unreachable("PostDomTreeAnalysis::setExit(): no exit!");
     }
     if (exit_bbs.size() == 1) {
-        exit = exit_bbs.front();
+        exit = exit_bbs.front().get();
         is_exit_virtual = false;
     } else {
-        exit = std::make_shared<BasicBlock>("VIRTUAL_EXIT_NODE");
+        auto vexit = std::make_shared<BasicBlock>("VIRTUAL_EXIT_NODE");
+        exit = vexit.get();
         for (const auto &b : exit_bbs) {
-            b->addNextBB(exit);
+            b->addNextBB(vexit);
             exit->addPreBB(b);
         }
         is_exit_virtual = true;

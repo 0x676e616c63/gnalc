@@ -83,14 +83,15 @@ public:
             return;
         }
 
-        for (auto *id : arg.abandoned) {
+        for (auto id : arg.abandoned) {
             preserved.erase(id);
             abandoned.insert(id);
         }
 
-        for (auto *id : preserved)
+        for (auto id : preserved) {
             if (!arg.preserved.count(id))
                 preserved.erase(id);
+        }
     }
 
     bool allPreserved() const {
@@ -148,6 +149,7 @@ template <typename UnitT> class AnalysisPassConcept {
 public:
     virtual std::unique_ptr<AnalysisResultConcept>
     run(UnitT &unit, AnalysisManager<UnitT> &am) = 0;
+    virtual std::string_view name() const = 0;
     virtual ~AnalysisPassConcept() = default;
 };
 
@@ -174,6 +176,8 @@ public:
         return *this;
     }
 
+    std::string_view name() const override { return PassT::name(); }
+
     std::unique_ptr<AnalysisResultConcept>
     run(UnitT &unit, AnalysisManager<UnitT> &am) override {
         return std::make_unique<ResultModelT>(pass.run(unit, am));
@@ -195,6 +199,12 @@ public:
         static_assert(std::is_base_of_v<AnalysisInfo, DerivedT>,
                       "The template argument should be the derived type.");
         return &DerivedT::Key;
+    }
+
+    static std::string_view name() {
+        static_assert(std::is_base_of_v<AnalysisInfo, DerivedT>,
+                      "The template argument should be the derived type.");
+        return Util::getTypeName<DerivedT>();
     }
 };
 
@@ -235,12 +245,15 @@ public:
         auto [it, inserted] = index.insert(std::make_pair(
             std::make_pair(pass_id, &unit), unit_res_t::iterator()));
 
+        auto &pass = passes.find(pass_id)->second;
         if (inserted) {
-            auto &pass = passes.find(pass_id)->second;
             auto &res = results[&unit];
             res.emplace_back(pass_id, pass->run(unit, *this));
             it->second = std::prev(res.end());
+            Logger::logInfo("[AM]: Running '", pass->name(), "' for '", unit.getName(), "'");
         }
+        else
+            Logger::logInfo("[AM]: Get cached '", pass->name(), "' for '", unit.getName(), "'");
 
         using ResultModel = AnalysisResultModel<typename PassT::Result>;
         return static_cast<ResultModel &>(*it->second->second).result;

@@ -29,8 +29,23 @@ void linkBB(const std::shared_ptr<BasicBlock> &prebb,
 void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,
               const std::shared_ptr<BasicBlock> &nxtbb);
 
-// Not only unlink CFG, but also handles BRInst and PHIInst
-void safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb,
+// Safely disconnects two basic blocks in CFG while maintaining SSA consistency
+//
+// This function performs three key operations:
+// 1. Removes CFG edges between the `prebb` and `nxtbb` blocks
+// 2. Updates or removes relevant BRInst
+// 3. Fix and collects invalidated PHIInst that need removal
+//
+// Why returns the dead PHI rather than delete them in place:
+//     Dead phis can be in a cycle, and might involve multiple blocks.
+//     In other word, when `safeUnlinkBB` is called within a function,
+//     the returned dead phis might have users(also a phi) in other blocks of the function.
+//     To help `delInstIf` check if we delete right instructions,
+//     we return them to be gathered and deleted at once.
+//
+// WARNING: when `safeUnlinkBB` is called within a function, the returned dead phis should be
+//          gathered for all basic blocks, and deleted at once.
+[[nodiscard]] std::vector<std::shared_ptr<PHIInst>> safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb,
                   const std::shared_ptr<BasicBlock> &nxtbb);
 
 /**
@@ -106,7 +121,7 @@ public:
                 if (pred(*it)) {
                     for (const auto& use : (*it)->getUseList()) {
                         Err::gassert(pred(std::dynamic_pointer_cast<Instruction>(use->getUser())),
-                                     "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
+                                     "BasicBlock::delInstIf(): Cannot delete a Phi without deleting its User.");
                     }
                     it = phi_insts.erase(it);
                     found = true;

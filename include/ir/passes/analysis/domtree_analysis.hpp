@@ -7,16 +7,16 @@
 
 namespace IR {
 // todo: 使用缓存的DFS优化
-using BlockSet = std::set<std::shared_ptr<BasicBlock>>;
+using BlockSet = std::set<BasicBlock*>;
 struct DomTree {
     struct Node {
-        std::shared_ptr<BasicBlock> bb;
-        std::shared_ptr<Node> parent; // 就是idom
+        BasicBlock* bb;
+        Node* parent; // 就是idom
         std::vector<std::shared_ptr<Node>> children;
         unsigned level = 0; // 节点层次，root是1
         unsigned bfs_num = 0;
 
-        explicit Node(const std::shared_ptr<BasicBlock> &bb) : bb(bb) {}
+        explicit Node(BasicBlock *bb) : bb(bb), parent(nullptr) {}
     };
     struct NodeChildGetter {
         auto operator()(const std::shared_ptr<Node>& node) {
@@ -27,19 +27,19 @@ struct DomTree {
     using NodeDFVisitor = Util::GenericDFVisitor<std::shared_ptr<Node>, NodeChildGetter>;
 
     std::shared_ptr<Node> root;
-    std::unordered_map<std::shared_ptr<BasicBlock>, std::shared_ptr<Node>> nodes;
+    std::unordered_map<BasicBlock*, std::shared_ptr<Node>> nodes;
 
-    bool ADomB(const std::shared_ptr<BasicBlock>& a, const std::shared_ptr<BasicBlock>& b);
-    BlockSet getDomSet(const std::shared_ptr<BasicBlock>& b); // todo : 建立缓存
-    BlockSet getDomFrontier(const std::shared_ptr<BasicBlock>& b); // todo : 建立缓存
+    bool ADomB(BasicBlock* a, BasicBlock* b);
+    BlockSet getDomSet(BasicBlock* b); // todo : 建立缓存
+    BlockSet getDomFrontier(BasicBlock* b); // todo : 建立缓存
     void printDomTree();
 
     auto getBFVisitor() const { return NodeBFVisitor{ root }; }
     auto getDFVisitor() const { return NodeDFVisitor{ root }; }
 protected:
     void print(const std::shared_ptr<Node> &node, int level);
-    void initDTN(std::vector<std::shared_ptr<BasicBlock>> &blocks);
-    void linkDTN(const std::shared_ptr<BasicBlock> &b, const std::shared_ptr<BasicBlock> &idom);
+    void initDTN(std::vector<BasicBlock*> &blocks);
+    void linkDTN(BasicBlock* b, BasicBlock* idom);
     void updateLevel();
     friend class DomTreeAnalysis;
 };
@@ -63,7 +63,7 @@ public:
     DomTree run(Function &f, FAM &fam);
 
 private:
-    using pBB = std::shared_ptr<BasicBlock>;
+    using pBB = BasicBlock*;
     struct DTAINFO {
         struct DFS_TREE_NODE {
             pBB bb;
@@ -122,7 +122,7 @@ public:
     PostDomTree run(Function &f, FAM &fam);
 
 private:
-    using pBB = std::shared_ptr<BasicBlock>;
+    using pBB = BasicBlock*;
     DomTreeAnalysis::DTAINFO info;
     pBB exit = nullptr;
     bool is_exit_virtual = false;

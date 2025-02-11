@@ -28,10 +28,9 @@ public:
     void addPhiOper(const std::shared_ptr<Value> &val, const std::shared_ptr<BasicBlock> &blk);
     std::vector<PhiOper> getPhiOpers() const;
 
-    bool replaceBlock(const std::shared_ptr<BasicBlock> &before,
-        const std::shared_ptr<BasicBlock> &after);
+    bool delPhiOperByVal(const std::shared_ptr<Value> &);
 
-    bool delPhiOper(const std::shared_ptr<BasicBlock> &);
+    bool delPhiOperByBlock(const std::shared_ptr<BasicBlock> &);
 
     void accept(IRVisitor &visitor) override;
 };

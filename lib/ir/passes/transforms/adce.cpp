@@ -112,17 +112,25 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
             }
             else {
                 auto dest = br->getDest();
-                if (curr->getInsts().size() == 1) {
+                if (curr->getInsts().size() == 1) { // Curr is empty
                     // case 2
                     // replace transfers to `curr` with transfers to `dest`
+                    //    - break in edge to curr and out edge to dest
+                    //    - fix BRInst
+                    //    - fix phi
                     for (const auto& use : curr->getUseList()) {
-                        // getUseList -> get PreBB's BRInst
-                        auto pre_br = std::dynamic_pointer_cast<BRInst>(use->getValue());
-                        Err::gassert(pre_br != nullptr);
-                        unlinkBB(pre_br->getParent(), curr);
-                        linkBB(pre_br->getParent(), dest);
-                        pre_br->replaceUse(curr, dest);
-                        modified = true;
+                        // getUseList -> get PreBB's BRInst or SuccBB's PHI
+                        if (auto pre_br = std::dynamic_pointer_cast<BRInst>(use->getValue())) {
+                            auto pred = pre_br->getParent();
+                            unlinkBB(pred, curr);
+                            linkBB(pred, dest);
+                            pre_br->replaceOperand(curr, dest);
+
+                            for (const auto& phi : dest->getPhiInsts())
+                                phi->replaceOperand(curr, pred);
+
+                            modified = true;
+                        }
                     }
                 }
                 else if (dest->getPreBB().size() == 1) {
@@ -133,6 +141,8 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
 
                     // Phi contains Value's ptr, so moving instructions to another block
                     // don't invalidate Phi. Just take care of the CFG.
+                    for (const auto& dest_phi : dest->getPhiInsts())
+                        curr->addPhiInst(dest_phi);
                     for (const auto& dest_inst : dest->getInsts())
                         curr->addInst(dest_inst);
 
@@ -146,7 +156,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     function.delBlock(dest);
                     modified = true;
                 }
-                else if (dest->getInsts().size() == 1) {
+                else if (dest->getInsts().size() == 1) { // Dest is empty
                     auto dest_br = std::dynamic_pointer_cast<BRInst>(dest->getInsts().back());
                     if (dest_br->isConditional()) {
                         // case 4

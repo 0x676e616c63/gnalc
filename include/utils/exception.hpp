@@ -79,7 +79,9 @@ inline void not_implemented(const std::string &detail_ = "") {
 inline void unreachable(const std::string &detail_ = "") {
     throw GnalcException("Unreachable: " + detail_);
 }
-inline void error(const std::string &detail_) { throw GnalcException(detail_); }
+inline void error(const std::string &detail_) {
+    throw GnalcException(detail_);
+}
 #endif
 } // namespace Err
 #endif

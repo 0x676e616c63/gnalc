@@ -76,10 +76,14 @@ public:
     explicit SparsePropagationSolver(LatticeFunction *func_)
         : lattice_func(func_) {}
 
-    void solve(Function &target) {
+    void clear() {
         cfg_worklist.clear();
         ssa_worklist.clear();
-        feasible_edges.clear();
+        lattice_map.clear();
+    }
+
+    void solve(Function &target) {
+        clear();
 
         cfg_worklist.emplace_back(nullptr, target.getBlocks()[0]);
 
@@ -100,20 +104,14 @@ public:
 
                 markFeasible(curr);
 
+                for (const auto &inst : curr.dest->getPhiInsts())
+                    visitPHI(inst);
+
                 // i.e. the target node is encountered to be executable for the
                 // first time
                 if (countFeasibleInEdge(curr.dest) == 1) {
-                    for (const auto &inst : *curr.dest) {
-                        if (inst->getOpcode() == OP::PHI)
-                            visitPHI(std::dynamic_pointer_cast<PHIInst>(inst));
-                        else
-                            visitInst(inst);
-                    }
-                } else {
-                    for (const auto &inst : *curr.dest) {
-                        if (inst->getOpcode() == OP::PHI)
-                            visitPHI(std::dynamic_pointer_cast<PHIInst>(inst));
-                    }
+                    for (const auto &inst : *curr.dest)
+                        visitInst(inst);
                 }
 
                 auto outgoings = curr.dest->getNextBB();

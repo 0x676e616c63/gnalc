@@ -23,13 +23,13 @@ PM::PreservedAnalyses BreakCriticalEdgesPass::run(Function &function, FAM &fam) 
 
                     // BRInst
                     auto br = curr->getInsts().back();
-                    br->replaceUse(succ, new_block);
+                    br->replaceOperand(succ, new_block);
                     new_block->addInst(std::make_shared<BRInst>(succ));
 
                     // PHI
                     for (auto& r : succ->getInsts()) {
                         if (auto phi = std::dynamic_pointer_cast<PHIInst>(r)) {
-                            auto ok = phi->replaceBlock(curr, new_block);
+                            auto ok = phi->replaceOperand(curr, new_block);
                             Err::gassert(ok);
                         }
                         else break;

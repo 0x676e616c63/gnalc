@@ -358,6 +358,8 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
     SCCPSolver solver(&lattice_func);
     solver.solve(function);
 
+    std::set<std::shared_ptr<PHIInst>> dead_phis;
+
     // Simplify Instruction
     for (const auto &[key, val] : solver.get_map()) {
         if (val.isConstant()) {
@@ -365,27 +367,33 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
             // but that doesn't matter.
             // If we can get a ConstantLiteral here, it must be used in propagation,
             // and thus might be a BRInst's Cond, which we should handle it as if it is
-            // a constant produced by SCCP.
-            for (auto &use : key->getUseList()) {
-                use->getUser()->replaceUse(key,
-                                           val.getConstant().getConstant());
-                if (auto br_inst =
-                        std::dynamic_pointer_cast<BRInst>(use->getUser())) {
-
+            // a constant deduced by SCCP.
+            auto use_list = key->getUseList();
+            for (const auto &use : use_list) {
+                if (auto br_inst = std::dynamic_pointer_cast<BRInst>(use->getUser())) {
                     Err::gassert(br_inst->isConditional());
-
                     std::shared_ptr<BasicBlock> dropped;
-                    if (val.getConstant().get_i1())
-                        safeUnlinkBB(br_inst->getParent(), br_inst->getFalseDest());
-                    else
-                        safeUnlinkBB(br_inst->getParent(), br_inst->getTrueDest());
-
+                    if (val.getConstant().get_i1()) {
+                        auto tmp
+                            = safeUnlinkBB(br_inst->getParent(), br_inst->getFalseDest());
+                        dead_phis.insert(
+                            std::make_move_iterator(tmp.begin()),
+                            std::make_move_iterator(tmp.end()));
+                    }
+                    else {
+                        auto tmp
+                            = safeUnlinkBB(br_inst->getParent(), br_inst->getTrueDest());
+                        dead_phis.insert(
+                        std::make_move_iterator(tmp.begin()),
+                            std::make_move_iterator(tmp.end()));
+                    }
                     sccp_cfg_modified = true;
                 }
             }
-            // If the key is not a ConstantLiteral, it must be a constant produced by SCCP.
-            // So we delete the key.
+            // If the key is not a ConstantLiteral, it must be a constant deduced by SCCP.
+            // So we replace and delete the key.
             if (key->getVTrait() != ValueTrait::CONSTANT_LITERAL) {
+                key->replaceSelf(val.getConstant().getConstant());
                 // Delete replaced constant instruction,
                 // Though DCE/ADCE can make it too, deleting them in an earlier pass
                 // can invalidate less Analysis Results, thus making the compiler faster.
@@ -397,6 +405,9 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
         }
     }
 
+    // Clear the solver to destructs temp values.
+    solver.clear();
+
     // Since we already handled CFG above,
     // all the unreachable blocks' in edge have been cut.
     // So just a trivial traversal will find all of them
@@ -406,13 +417,24 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
     // Cut the outgoing edge of the unreachable block
     for (const auto& block : function) {
         if (live.find(block) == live.end()) {
-            for (const auto& succ : block->getNextBB())
-                safeUnlinkBB(block, succ);
+            for (const auto& succ : block->getNextBB()) {
+                auto tmp = safeUnlinkBB(block, succ);
+                dead_phis.insert(
+                    std::make_move_iterator(tmp.begin()),
+                    std::make_move_iterator(tmp.end()));
+            }
         }
     }
 
+    // Delete dead blocks first, because dead phis may be used in dead blocks.
     sccp_cfg_modified |= function.delBlockIf(
-        [&live](const auto& bb) { return live.find(bb) == live.end();});
+    [&live](const auto& bb) { return live.find(bb) == live.end();});
+
+    for (auto& block : function) {
+        block->delInstIf([&dead_phis](const auto& p) {
+            return dead_phis.find(std::dynamic_pointer_cast<PHIInst>(p)) != dead_phis.end();
+        }, BasicBlock::DEL_MODE::PHI);
+    }
 
     if (sccp_cfg_modified)
         return PM::PreservedAnalyses::none();
@@ -420,6 +442,7 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
     if (sccp_inst_modified) {
         PM::PreservedAnalyses pa;
         pa.preserve<DomTreeAnalysis>();
+        pa.preserve<PostDomTreeAnalysis>();
         return pa;
     }
 

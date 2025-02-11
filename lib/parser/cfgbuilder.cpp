@@ -152,7 +152,7 @@ void CFGBuilder::linker() {
                             prebb->getInsts().back());
                         Err::gassert(brinst != nullptr,
                                      "CFGBuilder::linker(): can't cast BRInst");
-                        brinst->replaceUse(*it, nxt); // 改 br
+                        brinst->replaceOperand(*it, nxt); // 改 br
                     }
                     WeakListReplace(prebb->next_bb, *it, nxt); // 改nextbb
                     WeakListReplace(nxt->pre_bb, *it, prebb);  // 改prebb

@@ -174,8 +174,11 @@ void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,
     Err::gassert(ok);
 }
 
-void safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb, const std::shared_ptr<BasicBlock> &nxtbb) {
+std::vector<std::shared_ptr<PHIInst>> safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb, const std::shared_ptr<BasicBlock> &nxtbb) {
+    // Unlink CFG
     unlinkBB(prebb, nxtbb);
+
+    // Break BRInst
     auto br = std::dynamic_pointer_cast<BRInst>(prebb->getInsts().back());
     Err::gassert(br != nullptr);
     if (br->isConditional()) {
@@ -192,24 +195,71 @@ void safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb, const std::shared_pt
         prebb->delInst(br, BasicBlock::DEL_MODE::NON_PHI);
     }
 
-    std::set<std::shared_ptr<Instruction>> unused_phi;
-    for (const auto& inst : *nxtbb) {
-        if (auto phi = std::dynamic_pointer_cast<PHIInst>(inst)) {
-            if (phi->delPhiOper(prebb)) {
-                auto opers = phi->getPhiOpers();
-                Err::gassert(!opers.empty());
-                if (opers.size() == 1) {
+    // Handle PHI
+    // This a little tricky because when we're deleting a PHIInst's operand,
+    // the result phi might only have one operand. In that case we want to
+    // replace the phi with the value in that operand.
+    // But when this involving multiple blocks,
+    // the replacing might affect other phi in other block, thus cause a replacing propagation.
+    // As the propagation goes, a phi can end up self-referenced or even empty (dead block only).
+    //
+    //        bb0 -- bb1
+    //          \    |
+    //           bb2
+    //
+    // bb0:
+    //    %0 = phi [ %1, %bb1 ] [ %2, %bb2 ]
+    // bb1:
+    //    %1 = phi [ %0, %bb0 ] [ %2, %bb2 ]
+    // bb2:
+    //    %2 = phi [ %0, %bb0 ] [ %1, %bb1 ]
+    //
+    // First we unlink bb1 -> bb2
+    //    %2 = phi [ %0, %bb0 ],  then we want to replace %2 with %0
+    // So,
+    // bb0:
+    //    %0 = phi [ %1, %bb1 ] [ %0, %bb2 ]
+    // bb1:
+    //    %1 = phi [ %0, %bb0 ] [ %0, %bb2 ]
+    // bb2:
+    //
+    // Then we unlink bb1 -> bb0
+    //    %0 = phi [ %0, %bb2 ],  here we can't replace because that makes no sense.
+    // So,
+    // bb0:
+    //    %0 = phi [ %0, %bb2 ]
+    // bb1:
+    //    %1 = phi [ %0, %bb0 ] [ %0, %bb2 ]
+    // bb2:
+    //
+    // Finally we unlink bb2 -> bb0,
+    //    %0 = phi [], a weird empty phi occurred.
+    // Note that this can only happen in dead block.
+    // And we can't figure if a block is dead, because there might be dead loops.
+    // So we just mark the phi as dead.
+    // So,
+    // bb0:
+    //    %0 = phi []
+    // bb1:
+    //    %1 = phi [ %0, %bb0 ] [ %0, %bb2 ]
+    // bb2:
+    std::vector<std::shared_ptr<PHIInst>> unused_phi;
+    for (const auto& phi : nxtbb->getPhiInsts()) {
+        // Delete the phi operand from the unlinked `prebb`
+        if (phi->delPhiOperByBlock(prebb)) {
+            // Simplify PHI
+            auto opers = phi->getPhiOpers();
+            if (opers.size() == 1) {
+                // Only one operand, check if it is self-reference.
+                // If it is self-reference, replaceSelf makes no sense.
+                if (opers[0].value != phi)
                     phi->replaceSelf(opers[0].value);
-                    // Don't delete it right now, because we are in a loop.
-                    // Deleting will invalidate iterators.
-                    unused_phi.insert(phi);
-                }
+                unused_phi.emplace_back(phi);
             }
+            else if (opers.empty())
+                unused_phi.emplace_back(phi);
         }
-        else break;
     }
-    nxtbb->delInstIf([&unused_phi](const auto& inst) {
-        return  unused_phi.find(inst) != unused_phi.end();
-    });
+    return unused_phi;
 }
 } // namespace IR

@@ -3,6 +3,9 @@
 //     - Thomas VanDrunen and Antony L. Hosking "Value-based Partial Redundancy Elimination":
 //           https://link.springer.com/content/pdf/10.1007/978-3-540-24723-4_12.pdf
 //           https://hosking.github.io/links/VanDrunen+2004CC.pdf  (same but with higher resolution)
+//    - Optimizing SSA Code: GVN-PRE
+//           blogpost: https://medium.com/@mikn/optimizing-ssa-code-gvn-pre-69de83e3be29
+//           source: https://github.com/I-mikan-I/ssa-compiler
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_GVN_PRE_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_GVN_PRE_HPP
@@ -22,6 +25,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     class Expr {
     public:
         enum class ExprOp {
+            // Binary
             Add,
             Sub,
             Mul,
@@ -30,68 +34,118 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
             And,
             Or,
             Mod,
-            Eq,
-            Ne,
-            Gt,
-            Lt,
-            Ge,
-            Le,
+            // // Cmp
+            // Eq,
+            // Ne,
+            // Gt,
+            // Lt,
+            // Ge,
+            // Le,
+            // Others
             Gep,
+            Constant,
+            Phi,
+            UntrackedInst,
+            // Unexpected
             UNEXPECTED
         };
 
     private:
+        std::shared_ptr<Value> ir_value;
         std::vector<ValueKind> opreands;
         ExprOp op{ExprOp::UNEXPECTED};
 
     public:
-        Expr(ExprOp op, std::vector<ValueKind> operands_)
-            : op(op), opreands(std::move(operands_)) {}
+        Expr(std::shared_ptr<Value> irv, ExprOp op, std::vector<ValueKind> operands_ = {})
+            : ir_value(std::move(irv)), op(op), opreands(std::move(operands_)) {}
+
+        void canon() const;
+
+        const std::vector<ValueKind> &getOpers() const;
+
+        bool is_simple() const;
+
+        std::shared_ptr<Value> getIRVal() const;
 
         static ExprOp makeOP(OP op);
 
-        static ExprOp makeOP(ICMPOP icmpop);
-
-        static ExprOp makeOP(FCMPOP fcmpop);
+        // static ExprOp makeOP(ICMPOP icmpop);
+        //
+        // static ExprOp makeOP(FCMPOP fcmpop);
 
         bool operator==(const Expr &rhs) const;
     };
 
-    static bool isExpr(const std::shared_ptr<Value>& v);
-
     class NumberTable {
-        std::map<std::shared_ptr<Value>, ValueKind> value_table;
-        std::map<std::shared_ptr<Expr>, ValueKind> expr_table;
-
+        std::vector<std::shared_ptr<Expr>> expr_pool;
+        std::map<Expr *, ValueKind> expr_table;
         ValueKind kind_cnt = 0;
 
-        // Values are held by BasicBlock and ConstantPool.
-        // So make Expr held by a ExprPool.
-        std::vector<std::shared_ptr<Expr>> expr_pool;
-
     public:
-        ValueKind getKind(const std::shared_ptr<Value>& value);
+        void clear();
+        ValueKind getKindOrInsert(const std::shared_ptr<Value> &value);
 
-    private:
-        std::shared_ptr<Expr> getExpr(const std::shared_ptr<Instruction>& inst);
+        ValueKind getKindOrInsert(Expr *expr);
+
+        Expr *getExprOrInsert(const std::shared_ptr<Value> &inst);
     };
 
-    // Value-wise SET
-    class ValueSet {
-        friend ValueSet intersect(const ValueSet& a, const ValueSet& b);
-        // Use std::vector to keep the topological sort
-        std::vector<std::pair<ValueKind, std::shared_ptr<Value>>> values;
+    class LeaderSet {
+        std::map<ValueKind, std::shared_ptr<Value>> values;
+
     public:
         using const_iterator = decltype(values)::const_iterator;
         using iterator = decltype(values)::iterator;
 
-        void insert(ValueKind kind, const std::shared_ptr<Value>& value) {
-            values.emplace_back(kind, value);
+        void insert(ValueKind kind, const std::shared_ptr<Value> &value) {
+            values[kind] = value;
+        }
+
+        bool contains(ValueKind kind) const {
+            return values.find(kind) != values.end();
+        }
+
+        bool erase(ValueKind kind) {
+            auto it = values.find(kind);
+            if (it == values.end())
+                return false;
+            values.erase(it);
+            return true;
+        }
+
+        std::shared_ptr<Value> getValue(ValueKind kind) const {
+            auto it = values.find(kind);
+            if (it == values.end())
+                return nullptr;
+            return it->second;
+        }
+
+        const_iterator cbegin() const { return values.cbegin(); }
+        const_iterator cend() const { return values.cend(); }
+        iterator begin() { return values.begin(); }
+        iterator end() { return values.end(); }
+        auto size() const { return values.size(); }
+    };
+
+    class AntiLeaderSet;
+    static AntiLeaderSet intersect(const AntiLeaderSet &a, const AntiLeaderSet &b);
+    class AntiLeaderSet {
+        friend AntiLeaderSet GVNPREPass::intersect(const AntiLeaderSet &a, const AntiLeaderSet &b);
+        std::vector<std::pair<ValueKind, Expr*>> values; // vector to keep topological sort
+    public:
+        using const_iterator = decltype(values)::const_iterator;
+        using iterator = decltype(values)::iterator;
+
+        void insert(ValueKind kind, Expr* e) {
+            auto it = std::find_if(values.begin(), values.end(),
+                                   [&kind](const auto &p) { return p.first == kind; });
+            if (it == values.end())
+                values.emplace_back(kind, e);
         }
 
         bool contains(ValueKind kind) const {
             return std::any_of(values.begin(), values.end(),
-                [kind](const auto& v) { return v.first == kind; });
+                               [kind](const auto &v) { return v.first == kind; });
         }
 
         bool erase(ValueKind kind) {
@@ -104,60 +158,36 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
             return false;
         }
 
-        std::shared_ptr<Value> getValue(ValueKind kind) const {
-            for (const auto& v : values) {
-                if (v.first == kind)
-                    return v.second;
-            }
-            return nullptr;
-        }
-
-        const_iterator cbegin() const { return values.cbegin(); }
-        const_iterator cend() const { return values.cend(); }
-        iterator begin() { return values.begin(); }
-        iterator end() { return values.end(); }
-        auto size() const { return values.size(); }
-    };
-
-    static ValueSet intersect(const ValueSet& a, const ValueSet& b);
-
-    // Not Value-wise Vector
-    class ValueVec {
-        std::vector<std::pair<ValueKind, std::shared_ptr<Value>>> values;
-    public:
-        using const_iterator = decltype(values)::const_iterator;
-        using iterator = decltype(values)::iterator;
-
-        void insert(ValueKind kind, const std::shared_ptr<Value>& value) {
-            values.emplace_back(kind, value);
-        }
-
-        bool contains(ValueKind kind) const {
-            return std::any_of(values.begin(), values.end(),
-                [kind](const auto& v) { return v.first == kind; });
-        }
+        size_t size() const { return values.size(); }
 
         const_iterator cbegin() const { return values.cbegin(); }
         const_iterator cend() const { return values.cend(); }
         iterator begin() { return values.begin(); }
         iterator end() { return values.end(); }
     };
-
-    using ValueSetMap = std::map<std::shared_ptr<BasicBlock>, ValueSet>;
-    using ValueVecMap = std::map<std::shared_ptr<BasicBlock>, ValueVec>;
 
     NumberTable table;
 
-    ValueSetMap avail_out_map, // = canon(AVAIL IN[b] ∪ PHI_GEN(b) ∪ TMP_GEN(b))
-                antic_in_map,  // = clean(canon_expr(ANTIC_OUT[b] ∪ EXP_GEN[b] − TMP_GEN(b)))
-                exp_gen_map;   // temporaries and non-simple
-    ValueVecMap phi_gen_map,   // temporaries that are defined by a phi
-                tmp_gen_map;   // temporaries that are defined by non-phi instructions
+    // AVAIL_OUT = canon(AVAIL IN[b] ∪ PHI_GEN(b) ∪ TMP_GEN(b))
+    std::map<std::shared_ptr<BasicBlock>, LeaderSet> avail_out_map;
 
-    std::tuple<ValueKind, std::shared_ptr<Value>> phi_translate(
-    const std::shared_ptr<Value>& value,
-    const std::shared_ptr<BasicBlock>& pred,
-    const std::shared_ptr<BasicBlock>& succ);
+    // ANTIC_IN = clean(canon_expr(ANTIC_OUT[b] ∪ EXP_GEN[b] − TMP_GEN(b)))
+    std::map<std::shared_ptr<BasicBlock>, AntiLeaderSet> antic_in_map;
+
+    // PHI_GEN: temporaries that are defined by a phi
+    std::map<std::shared_ptr<BasicBlock>, LeaderSet> phi_gen_map;
+
+    // EXP_GEN:  temporaries and non-simple
+    std::map<std::shared_ptr<BasicBlock>, AntiLeaderSet> exp_gen_map;
+
+    // TMP_GEN: temporaries that are defined by non-phi instructions
+    std::map<std::shared_ptr<BasicBlock>, std::set<std::shared_ptr<Value>>> tmp_gen_map;
+
+    std::tuple<ValueKind, Expr*> phi_translate(
+        Expr* expr,
+        const std::shared_ptr<BasicBlock> &pred,
+        const std::shared_ptr<BasicBlock> &succ);
+
 public:
     PM::PreservedAnalyses run(Function &function, FAM &manager);
 };

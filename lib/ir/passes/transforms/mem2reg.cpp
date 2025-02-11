@@ -12,7 +12,7 @@ bool PromotePass::iADomB(const std::shared_ptr<Instruction> &ia,
     if (ia->getParent() == ib->getParent()) {
         return ia->index < ib->index;
     }
-    return DT.ADomB(ia->getParent(), ib->getParent());
+    return DT.ADomB(ia->getParent().get(), ib->getParent().get());
 }
 
 void PromotePass::analyseAlloca() {
@@ -194,8 +194,8 @@ void PromotePass::rename(Function &f) {
                         std::dynamic_pointer_cast<LOADInst>(i)->getPtr()); incoming_values[{alloca, b}] == undef_val) {
                         for (auto pb = b;;) {
                             if (incoming_values[{alloca, pb}] == undef_val) {
-                                if (DT.nodes[pb]->parent != nullptr)
-                                    pb = DT.nodes[pb]->parent->bb;
+                                if (DT.nodes[pb.get()]->parent != nullptr)
+                                    pb = DT.nodes[pb.get()]->parent->bb->shared_from_this();
                                 else {
                                     // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
                                     Logger::logWarning("[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
@@ -234,8 +234,8 @@ void PromotePass::rename(Function &f) {
                 if (auto alloca = phi_to_alloca_map[phi_node]; incoming_values[{alloca, b}] == undef_val) {
                     for (auto pb = b;;) {
                         if (incoming_values[{alloca, pb}] == undef_val) {
-                            if (DT.nodes[pb]->parent != nullptr)
-                                pb = DT.nodes[pb]->parent->bb;
+                            if (DT.nodes[pb.get()]->parent != nullptr)
+                                pb = DT.nodes[pb.get()]->parent->bb->shared_from_this();
                             else {
                                 // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
                                 Logger::logWarning("[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
@@ -270,7 +270,7 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
     // todo : why less?
     std::priority_queue<DTNPair, std::vector<DTNPair>, std::less<>> PQ; // DT节点优先队列
     for (const auto &b : def_blk) {
-        PQ.emplace((DTNPair){DT.nodes[b]->bfs_num, DT.nodes[b]});
+        PQ.emplace((DTNPair){DT.nodes[b.get()]->bfs_num, DT.nodes[b.get()]});
     }
 
     std::set<pDTN> visited_pq;
@@ -292,9 +292,9 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
 
             // process succ node in cfg
             for (const auto& next : node->bb->getNextBB()) {
-                auto next_node = DT.nodes[next];
+                auto next_node = DT.nodes[next.get()];
 
-                if (next_node->parent == node)
+                if (next_node->parent == node.get())
                     continue;
 
                 if (next_node->level > root->level)
@@ -369,6 +369,7 @@ PM::PreservedAnalyses PromotePass::run(Function &function, FAM &manager) {
 
     PM::PreservedAnalyses pa;
     pa.preserve<DomTreeAnalysis>();
+    pa.preserve<PostDomTreeAnalysis>();
     return pa;
 }
 }// namespace IR

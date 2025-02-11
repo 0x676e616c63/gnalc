@@ -33,20 +33,22 @@ std::vector<PHIInst::PhiOper> PHIInst::getPhiOpers() const {
     }
     return ret;
 }
-
-bool PHIInst::replaceBlock(const std::shared_ptr<BasicBlock> &before,
-    const std::shared_ptr<BasicBlock> &after) {
-    return replaceUse(before, after);
+bool PHIInst::delPhiOperByVal(const std::shared_ptr<Value> & target) {
+    for (size_t i = 1; i < getOperands().size(); i += 2) {
+        if (getOperand(i - 1)->getValue() == target) {
+            delOperand(i);
+            delOperand(i - 1);
+            return true;
+        }
+    }
+    return false;
 }
 
-bool PHIInst::delPhiOper(const std::shared_ptr<BasicBlock> &target) {
-    int index = -1;
-    for (auto it = getOperands().begin(); it != getOperands().end(); ++it) {
-        ++it;
-        index += 2;
-        if ((*it)->getValue() == target) {
-            delOperand(index);
-            delOperand(index-1);
+bool PHIInst::delPhiOperByBlock(const std::shared_ptr<BasicBlock> &target) {
+    for (size_t i = 1; i < getOperands().size(); i += 2) {
+        if (getOperand(i)->getValue() == target) {
+            delOperand(i);
+            delOperand(i - 1);
             return true;
         }
     }

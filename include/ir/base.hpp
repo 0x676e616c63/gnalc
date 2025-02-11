@@ -126,10 +126,12 @@ public:
 private:
     // PRIVATE because we want to ensure use is only modified by User.
     void addUse(const std::weak_ptr<Use> &use);
-    // When User is being destructed, User's shared_ptr is destroyed.
-    // Therefore, `User::shared_from_this` will throw bad_weak_ptr.
-    // So we use user's raw pointer to get around it.
-    bool delUse(User* user);
+
+    // Why not user:
+    //   A User can have multiple identical operand,
+    //   thus having multiple Uses. Though having identical Value,
+    //   they are independent object, and their address is unique.
+    bool delUse(const std::shared_ptr<Use> &target);
 };
 
 class Use : public std::enable_shared_from_this<Use> {
@@ -147,7 +149,7 @@ private:
     // PRIVATE because only Value::delUse(User*) should invoke this.
     // Because getUser() will call User::shared_from_this,
     // but when User is being destructed, that won't work.
-    User* getRawUser() const;
+    User *getRawUser() const;
 
 public:
     std::shared_ptr<Value> getValue() const;
@@ -169,13 +171,23 @@ public:
 
     User(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait);
 
-    bool replaceUse(const std::shared_ptr<Value> &old_val,
-                    const std::shared_ptr<Value> &new_val);
-
     void accept(IRVisitor &visitor) override = 0;
 
     const std::vector<std::shared_ptr<Use>> &getOperands() const;
     const std::shared_ptr<Use> &getOperand(size_t index) const;
+
+    bool replaceOperand(const std::shared_ptr<Value> &before, const std::shared_ptr<Value> &after);
+
+    // Note:
+    // Replace Use shouldn't compare Use's value.
+    // Considering: %0 = gep ptr %a, i32 %b, i32 %b
+    //              %0 operands: <use0: a> <use1: b> <use2: b>
+    //              %b use_list:  <use1: 0> <use2: 1>
+    // If we only care about Use's value, we might end up with:
+    //              %0 operands: <use0: a> <use1: b>
+    //              %b use_list:  <use2: 0>
+    bool replaceUse(const std::shared_ptr<Use> &old_use,
+                    const std::shared_ptr<Value> &new_use);
 
 protected:
     void addOperand(const std::shared_ptr<Value> &v);
@@ -188,20 +200,15 @@ protected:
     // Returns true if deleted.
     template <typename Pred> bool delOperandIf(Pred pred) {
         bool found = false;
-        // Since a User can have multiple identical operands,
-        // like `%1 = getelementptr [4 x [2 x i32]], ptr %2, i32 0, i32 0` has two ConstantInt(0)
-        // We use `deleted` to avoid duplicate `delUse`, because the second `delUse` will fail.
-        // Although avoiding duplicate `delUse` is unnecessary
-        // and removing the check `Err::gassert(ok);` can ignore delUse's failure,
-        // We intentionally preserve this check to verify the correctness of other part of our compiler.
-        std::set<Value*> deleted;
         for (auto it = operands.begin(); it != operands.end();) {
             auto curr_val = (*it)->getValue();
-            Err::gassert(curr_val != nullptr);
-            if (deleted.find(curr_val.get()) == deleted.end()
-                && pred(curr_val)) {
-                deleted.insert(curr_val.get());
-                auto ok = curr_val->delUse(this);
+            // `curr_val` can be nullptr if the operands have been destroyed,
+            // but that shouldn't happen when the User is alive.
+            // But in `~User()`, that is ok.
+            Err::gassert(curr_val != nullptr,
+                "User's operands has been destroyed unexpectedly.");
+            if (pred(curr_val)) {
+                auto ok = curr_val->delUse(*it);
                 Err::gassert(ok);
                 it = operands.erase(it);
                 found = true;
