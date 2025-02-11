@@ -45,6 +45,13 @@ void Function::addBlock(std::shared_ptr<BasicBlock> blk) {
     blks.emplace_back(std::move(blk));
 }
 
+void Function::addBlockAsEntry(const std::shared_ptr<BasicBlock>& blk) {
+    blk->index = 0;
+    blk->setParent(shared_from_this());
+    blks.insert(blks.begin(), blk);
+    updateBBIndex();
+}
+
 bool Function::delBlock(const std::shared_ptr<BasicBlock> &blk) {
     return delBlockIf([&blk](auto &&b) { return b == blk; });
 }

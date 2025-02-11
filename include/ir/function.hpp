@@ -80,6 +80,10 @@ public:
 
     void addBlock(std::shared_ptr<BasicBlock> blk);
 
+    // Add the given block as the entry block
+    // Caller should take care of the CFG.
+    void addBlockAsEntry(const std::shared_ptr<BasicBlock>& blk);
+
     // Delete a Block
     // Requires the target block have no users than Phi.
     bool delBlock(const std::shared_ptr<BasicBlock> &blk);

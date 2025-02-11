@@ -1,7 +1,13 @@
+// Tail Recursion Elimination Pass
+// This pass eliminate tail recursion and mark tail call.
 //
-// Created by edragain on 2/9/25.
+// WARNING: This pass SHOULD run after PromotePass(mem2reg),
+//          otherwise phis might not be handled correctly
 //
-// https://discourse.llvm.org/t/how-to-understand-tail-call/51097
+// Reference:
+//   https://llvm.org/docs/Passes.html#tailcallelim-tail-call-elimination
+//   https://llvm.org/docs/CodeGenerator.html#tail-call-optimization
+//   https://discourse.llvm.org/t/how-to-understand-tail-call/51097
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_MARK_TAIL_CALL_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_MARK_TAIL_CALL_HPP
@@ -10,7 +16,7 @@
 #include "../../../pass_manager/pass_manager.hpp"
 
 namespace IR {
-class MarkTailCallPass: public PM::PassInfo<MarkTailCallPass> {
+class TailRecursionEliminationPass: public PM::PassInfo<TailRecursionEliminationPass> {
 public:
     PM::PreservedAnalyses run(Function& function, FAM &manager);
 };

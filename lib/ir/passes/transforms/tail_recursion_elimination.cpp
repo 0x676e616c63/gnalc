@@ -6,7 +6,8 @@
 #include "../../../../include/ir/instructions/memory.hpp"
 
 namespace IR {
-PM::PreservedAnalyses MarkTailCallPass::run(Function &function, FAM &manager) {
+PM::PreservedAnalyses TailRecursionEliminationPass::run(Function &function, FAM &manager) {
+    bool tailopt_cfg_modified = false;
     auto dfVisitor = function.getDFVisitor();
     std::vector<std::pair<std::shared_ptr<CALLInst>, std::shared_ptr<RETInst> > > worklist;
     for (const auto &block : dfVisitor) {
@@ -14,72 +15,71 @@ PM::PreservedAnalyses MarkTailCallPass::run(Function &function, FAM &manager) {
             auto call = std::dynamic_pointer_cast<CALLInst>(*iter);
             auto ret = std::dynamic_pointer_cast<RETInst>(*std::next(iter));
             if (call != nullptr && ret != nullptr && ((call->isVoid() && ret->isVoid()) || ret->getRetVal() == call)) {
-                //if call->func=function tail recursive
-                //else tail call
-                if (call->getFuncName() == function.getName())
+                // Tail position: (ret immediately follows call and ret uses value of call or is void)
+                // If call->func == function, tail recursion.
+                // Otherwise, tail call
+                if (call->getFunc().get() == &function)
                     worklist.emplace_back(call, ret);
                 else
                     call->setTailCall();
             }
         }
     }
-    if (!worklist.empty()) {
-        //if entry block have alloca inst we divide entry block into two blocks
-        //else we create a new block as new entry block
-        auto entryBlock = *function.begin();
-        std::shared_ptr<ALLOCAInst> lastAllocaInst = nullptr;
 
-        for (const auto &inst : *entryBlock) {
-            if (auto allocaInst = std::dynamic_pointer_cast<ALLOCAInst>(inst)) {
-                lastAllocaInst = allocaInst;
-            } else
-                break;
+    if (!worklist.empty()) {
+        // If the entry block have ALLOCInst, we divide it into two blocks
+        // Otherwise we create a new block as the new entry block
+        auto oldEntryBlock = *function.begin();
+
+        std::vector<std::shared_ptr<ALLOCAInst>> allocas;
+        for (const auto &inst : *oldEntryBlock) {
+            if (auto alloca = std::dynamic_pointer_cast<ALLOCAInst>(inst))
+                allocas.emplace_back(alloca);
+            else break;
         }
-        std::shared_ptr<BasicBlock> newEntryBlock = nullptr;
-        if (lastAllocaInst == nullptr) {
-            newEntryBlock = std::make_shared<BasicBlock>("noalloca");
-        } else {
-            newEntryBlock = std::make_shared<BasicBlock>("havealloca");
-            for (const auto &inst : *entryBlock) {
-                newEntryBlock->addInst(inst);
-                entryBlock->delInst(inst);
-                if (std::dynamic_pointer_cast<ALLOCAInst>(inst) == lastAllocaInst) {
-                    break;
-                }
-            }
+
+        auto newEntryBlock = std::make_shared<BasicBlock>("tailcall");
+        for (const auto& alloca : allocas) {
+            newEntryBlock->addInst(alloca);
+            oldEntryBlock->delFirstOfInst(alloca); // NO USE-DEF CHECK
         }
-        newEntryBlock->addInst(std::dynamic_pointer_cast<Instruction>(std::make_shared<BRInst>(entryBlock)));
-        linkBB(newEntryBlock, entryBlock);
-        function.addBlock(newEntryBlock);
+
+        newEntryBlock->addInst(std::make_shared<BRInst>(oldEntryBlock));
+        linkBB(newEntryBlock, oldEntryBlock);
+        function.addBlockAsEntry(newEntryBlock);
 
         // replace params with PHI
         auto &params = function.getParams();
-        std::vector<std::shared_ptr<PHIInst> > phivector;
-        for (auto &param : params) {
-            auto phiInst = std::make_shared<PHIInst>(param->getName(), param->getType());
+        std::vector<std::shared_ptr<PHIInst> > param_phis;
+        for (const auto &param : params) {
+            auto phiInst = std::make_shared<PHIInst>(param->getName() + "tailcall", param->getType());
             param->replaceSelf(phiInst);
             phiInst->addPhiOper(param, newEntryBlock);
-            phivector.push_back(phiInst);
+            param_phis.emplace_back(phiInst);
         }
         for (const auto &[call,ret] : worklist) {
-            auto bb = call->getParent();
-            int i = 0;
-            for (const auto &arg : call->getArgs()) {
-                phivector[i]->addPhiOper(arg, bb);
-                ++i;
-            }
-            i = 0;
-            bb->delInst(call);
-            bb->delInst(ret);
-            //entry block is used for jump
-            bb->addInst(std::dynamic_pointer_cast<Instruction>(std::make_shared<BRInst>(entryBlock)));
+            auto exit_block = call->getParent();
+            const auto& args = call->getArgs();
+            for (size_t i = 0; i < args.size(); ++i)
+                param_phis[i]->addPhiOper(args[i], exit_block);
+
+            exit_block->delFirstOfInst(call);
+            exit_block->delFirstOfInst(ret);
+
+            // Then we jump to the old entry block
+            exit_block->addInst(std::make_shared<BRInst>(oldEntryBlock));
+            linkBB(exit_block, oldEntryBlock);
         }
 
-
-        for (const auto &phi : phivector) {
-            entryBlock->addPhiInst(phi);
+        for (const auto &phi : param_phis) {
+            oldEntryBlock->addPhiInst(phi);
         }
+
+        tailopt_cfg_modified = true;
     }
+
+    if (tailopt_cfg_modified)
+        return PM::PreservedAnalyses::none();
 
     return PM::PreservedAnalyses::all();
 }
