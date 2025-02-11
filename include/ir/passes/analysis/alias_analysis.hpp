@@ -19,6 +19,8 @@ public:
         // Global Variable
         bool global_var = false;
         // Maybe alias
+        // There is GlobalVariables or FormalArguments or ALLOCA
+        // NO GEP here.
         std::set<const Value *> potential_alias;
     };
 

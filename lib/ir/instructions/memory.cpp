@@ -124,11 +124,11 @@ size_t GEPInst::getConstantOffset() const {
     auto idx = getIdxs();
 
     size_t offset = 0;
-    std::shared_ptr<Type> curr_type = getElm(getBaseType());
+    std::shared_ptr<Type> curr_type = getBaseType();
     for (const auto& i : idx) {
         auto ci = std::dynamic_pointer_cast<ConstantInt>(i);
-        Err::gassert(ci != nullptr, "GEPInst::getConstantOffset(): Not constant offset.");
-        Err::gassert(curr_type != nullptr, "GEPInst::getConstantOffset(): Invalid GEPInst, type mismatched with indices.");
+        Err::gassert(ci != nullptr, "Not constant offset.");
+        Err::gassert(curr_type != nullptr, "Invalid GEPInst, type mismatched with indices.");
         offset += ci->getVal() * curr_type->getBytes();
         curr_type = getElm(curr_type);
     }

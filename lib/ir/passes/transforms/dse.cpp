@@ -6,33 +6,63 @@
 #include <algorithm>
 
 namespace IR {
+// TODO, optimization
+std::shared_ptr<DomTree::Node> getDomTreeNode(const DomTree& tree, const std::shared_ptr<BasicBlock>& block) {
+    auto dfv = tree.getDFVisitor();
+    for (const auto& n : dfv) {
+        if (n->bb == block.get())
+            return n;
+    }
+    return nullptr;
+}
 PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
     auto aliasResult = fam.getResult<AliasAnalysis>(function);
-
+    auto domtree = fam.getResult<DomTreeAnalysis>(function);
     std::set<std::shared_ptr<Instruction>> eraseSet;
-    for (const auto & block: function) {
-        for (auto it = block->begin(); it != block->end(); ++it) {
+    for (const auto & store_block: function) {
+        for (auto it = store_block->begin(); it != store_block->end(); ++it) {
             auto store = std::dynamic_pointer_cast<STOREInst>(*it);
             if (store == nullptr) continue;
-
-            // Eliminate a store if there is no reference to that memory.
-            // Note that duplicate store to the same location will also be eliminated.
             auto store_ptr = store->getPtr().get();
-            bool should_eliminate = true; // Agressive
-            for (auto it2 = std::next(it); it2 != block->end(); ++it2) {
-                auto modref = aliasResult.getInstModRefInfo(it2->get(), store_ptr, fam);
-                // 存在 Reference 就不能消除
+
+            bool overwritten = false;
+            bool referenced = false;
+
+            // Eliminate a store if overwritten
+            for (auto inst_it = std::next(it); inst_it != store_block->end(); ++inst_it) {
+                auto modref = aliasResult.getInstModRefInfo(inst_it->get(), store_ptr, fam);
                 if (modref == AliasAnalysisResult::ModRefInfo::Ref || modref == AliasAnalysisResult::ModRefInfo::ModRef) {
-                    should_eliminate = false;
+                    referenced = true;
                     break;
                 }
-                // 存在 Mod 就不用往后看了
                 if (modref == AliasAnalysisResult::ModRefInfo::Mod)
-                    break;
+                    overwritten = true;
             }
 
-            if (should_eliminate)
-                eraseSet.emplace(store);
+            // Already referenced within the block, alive, go for the next store
+            if (referenced)
+                continue;
+
+            // No referenced but overwritten within the block, dead, delete it
+            if (overwritten)
+                eraseSet.insert(store);
+            // No referenced and no written, check other blocks to see if there is reference
+            else {
+                auto node = getDomTreeNode(domtree, store_block);
+                DomTree::NodeDFVisitor dfv{node};
+                for (const auto& candidate : dfv) {
+                    for (const auto& inst : *candidate->bb) {
+                        auto modref = aliasResult.getInstModRefInfo(inst.get(), store_ptr, fam);
+                        if (modref == AliasAnalysisResult::ModRefInfo::Ref || modref == AliasAnalysisResult::ModRefInfo::ModRef) {
+                            referenced = true;
+                            break;
+                        }
+                    }
+                    if (referenced) break;
+                }
+                if (!referenced)
+                    eraseSet.emplace(store);
+            }
         }
     }
 

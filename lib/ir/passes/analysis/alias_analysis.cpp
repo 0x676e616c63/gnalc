@@ -6,6 +6,7 @@
 #include "../../../../include/utils/logger.hpp"
 
 #include <deque>
+#include <optional>
 
 namespace IR {
 PM::UniqueKey AliasAnalysis::Key;
@@ -46,46 +47,6 @@ AliasAnalysisResult::getPtrInfo(const Value *ptr) const {
     return it->second;
 }
 
-// GEP: same ptr with different indices
-bool isNoAliasGEP(const Value *v1, const Value *v2) {
-    auto gep1 = dynamic_cast<const GEPInst *>(v1);
-    auto gep2 = dynamic_cast<const GEPInst *>(v2);
-    if (gep1 && gep2) {                         // Both are gep
-        if (gep1->getPtr() == gep2->getPtr()) { // Same ptr
-            auto idx1 = gep1->getIdxs();
-            auto idx2 = gep2->getIdxs();
-            if (idx1.size() == idx2.size()) { // Same number of index
-                auto idx1_0 =
-                    std::dynamic_pointer_cast<ConstantInt>(idx1[0])->getVal();
-                auto idx2_0 =
-                    std::dynamic_pointer_cast<ConstantInt>(idx2[0])->getVal();
-                if (idx1.size() == 1) { // 1
-                    if (idx1_0 != idx2_0)
-                        return true;
-                } else if (idx1.size() == 2) { // 2
-                    auto idx1_1 =
-                        std::dynamic_pointer_cast<ConstantInt>(idx1[1])
-                            ->getVal();
-                    auto idx2_1 =
-                        std::dynamic_pointer_cast<ConstantInt>(idx2[1])
-                            ->getVal();
-                    auto size =
-                        toPtrType(gep1->getPtr()->getType())->getBytes();
-                    auto inner_size = toPtrType(gep1->getPtr()->getType())
-                                          ->getElmType()
-                                          ->getBytes();
-                    if (size * idx1_0 + inner_size * idx1_1 !=
-                        size * idx2_0 + inner_size * idx2_1) {
-                        return true;
-                    }
-                } else
-                    Err::unreachable("Unexpected size of GEP.");
-            }
-        }
-    }
-    return false;
-}
-
 bool mayPtrInfoAlias(const AliasAnalysisResult::PtrInfo &info1,
                     const AliasAnalysisResult::PtrInfo &info2) {
     if (info1.untracked_array || info2.untracked_array
@@ -100,6 +61,26 @@ bool mayPtrInfoAlias(const AliasAnalysisResult::PtrInfo &info1,
     }
 
     return false;
+}
+
+// Returns the ALLOCA/GlobalVariable and offset about it.
+std::optional<std::tuple<const Value*, size_t>> getGepTotalOffset(const GEPInst* gep) {
+    size_t offset = 0;
+    while (gep) {
+        if (!gep->isConstantOffset())
+            return std::nullopt;
+        offset += gep->getConstantOffset();
+        auto base_ptr = gep->getPtr().get();
+        if (auto base_gep = dynamic_cast<const GEPInst*>(base_ptr)) {
+            gep = base_gep;
+        }
+        else if (auto alloca = dynamic_cast<const ALLOCAInst*>(base_ptr))
+            return std::make_tuple(alloca, offset);
+        else if (auto gv = dynamic_cast<GlobalVariable*>(base_ptr))
+            return std::make_tuple(gv, offset);
+        else Err::unreachable();
+    }
+    return std::nullopt;
 }
 
 AliasAnalysisResult::AliasInfo
@@ -120,17 +101,19 @@ AliasAnalysisResult::getAliasInfo(const Value *v1, const Value *v2) const {
 
     auto gep1 = dynamic_cast<const GEPInst *>(v1);
     auto gep2 = dynamic_cast<const GEPInst *>(v2);
-    if (gep1 && gep2)
-    {
-        if (gep1->getPtr() == gep2->getPtr()) {
-            if (gep1->isConstantOffset() && gep2->isConstantOffset()) {
-                if (gep1->getConstantOffset() == gep2->getConstantOffset())
-                    return AliasInfo::MustAlias;
-                return AliasInfo::NoAlias;
-            }
-            return AliasInfo::MayAlias;
+    // If all gep and no phi involves
+    if (gep1 && gep2 && info1.potential_alias.size() == 1 && info2.potential_alias.size() == 1) {
+        auto opt1 = getGepTotalOffset(gep1);
+        auto opt2 = getGepTotalOffset(gep2);
+        if (opt1.has_value() && opt2.has_value()) {
+            auto [base1, offset1] = opt1.value();
+            auto [base2, offset2] = opt2.value();
+            // They are all constant offset, and all based on ALLOCAInst or GlobalVariable
+            // If the base and offset are identical, the gep must alias.
+            if (base1 == base2 && offset1 == offset2)
+                return AliasInfo::MustAlias;
+            return AliasInfo::NoAlias;
         }
-        return AliasInfo::NoAlias;
     }
 
     for (auto p1 : info1.potential_alias) {
@@ -150,14 +133,12 @@ AliasAnalysisResult::getInstModRefInfo(const Instruction *inst,
 
     auto location_info = getPtrInfo(location);
     if (auto load = dynamic_cast<const LOADInst *>(inst)) {
-        auto load_info = getPtrInfo(load->getPtr().get());
         auto aa = getAliasInfo(load->getPtr().get(), location);
         if (aa == AliasInfo::NoAlias)
             return ModRefInfo::NoModRef;
         else
             return ModRefInfo::Ref;
     } else if (auto store = dynamic_cast<const STOREInst *>(inst)) {
-        auto store_info = getPtrInfo(store->getPtr().get());
         auto aa = getAliasInfo(store->getPtr().get(), location);
         if (aa == AliasInfo::NoAlias)
             return ModRefInfo::NoModRef;
@@ -278,8 +259,9 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
     bool changed = true;
     while (changed) {
         changed = false;
-        auto bfv = func.getBFVisitor();
-        for (const auto& curr : bfv) {
+        // A domtree traversal may be faster ?
+        auto dfv = func.getDFVisitor();
+        for (const auto& curr : dfv) {
             for (const auto &inst : *curr) {
                 if (auto gep = std::dynamic_pointer_cast<GEPInst>(inst))
                     changed |= res.insertPotentialAlias(gep.get(),
@@ -301,14 +283,31 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
             if (auto load = std::dynamic_pointer_cast<LOADInst>(inst)) {
                 auto ptr = load->getPtr().get();
                 if (res.getPtrInfo(ptr).untracked_array ||
-                    res.getPtrInfo(ptr).global_var)
-                    res.read.insert(ptr);
+                    res.getPtrInfo(ptr).global_var) {
+                    if (auto gep = dynamic_cast<GEPInst*>(ptr)) {
+                        Value* array = gep->getPtr().get();
+                        while (dynamic_cast<GEPInst*>(array))
+                            array = dynamic_cast<GEPInst*>(array)->getPtr().get();
+                        res.read.insert(array);
+                    }
+                    else
+                        res.read.insert(ptr);
+                }
             } else if (auto store =
                            std::dynamic_pointer_cast<STOREInst>(inst)) {
                 auto ptr = store->getPtr().get();
                 if (res.getPtrInfo(ptr).untracked_array ||
                     res.getPtrInfo(ptr).global_var)
-                    res.write.insert(ptr);
+                {
+                    if (auto gep = dynamic_cast<GEPInst*>(ptr)) {
+                        Value* array = gep->getPtr().get();
+                        while (dynamic_cast<GEPInst*>(array))
+                            array = dynamic_cast<GEPInst*>(array)->getPtr().get();
+                        res.write.insert(array);
+                    }
+                    else
+                        res.write.insert(ptr);
+                }
             } else if (auto call = std::dynamic_pointer_cast<CALLInst>(inst)) {
                 auto callee = call->getFunc().get();
                 if (auto callee_def = dynamic_cast<Function *>(callee)) {
@@ -380,11 +379,15 @@ bool isPureBuiltinOrSylibFunc(const FunctionDecl *fn) {
 
 bool isPure(FAM &fam, const CALLInst *call) {
     auto callee = call->getFunc().get();
+    // Recognized pure functions
     if (isPureBuiltinOrSylibFunc(callee))
         return true;
 
     auto callee_def = dynamic_cast<Function *>(callee);
-    Err::gassert(callee_def != nullptr, "isPure(): Unknown function");
+    // Unknown builtin/sylib
+    if (callee_def == nullptr)
+        return false;
+
     auto call_res = fam.getResult<AliasAnalysis>(*callee_def);
     return call_res.getFunctionModRefInfo() ==
            AliasAnalysisResult::ModRefInfo::NoModRef;
@@ -392,11 +395,16 @@ bool isPure(FAM &fam, const CALLInst *call) {
 
 bool hasSideEffect(FAM &fam, const CALLInst *call) {
     auto callee = call->getFunc().get();
+
+    // Recognized pure functions
     if (isPureBuiltinOrSylibFunc(callee))
         return false;
 
     auto callee_def = dynamic_cast<Function *>(callee);
-    Err::gassert(callee_def != nullptr, "hasSideEffect(): Unknown function");
+    // Unknown builtin/sylib
+    if (callee_def == nullptr)
+        return true;
+
     auto call_res = fam.getResult<AliasAnalysis>(*callee_def);
     return call_res.getFunctionModRefInfo() ==
                AliasAnalysisResult::ModRefInfo::Mod ||
