@@ -128,7 +128,8 @@ public:
 
     const std::variant<CoreRegister, FPURegister> &getColor() { return color; };
     void setColor(unsigned int newColor);
-    template <typename T_Reg> void setColor(T_Reg newColor) {
+    template <typename T_Reg>
+    void setColor(T_Reg newColor) {
         color = newColor; ///
     }
 
@@ -229,7 +230,11 @@ private:
     unsigned int imme;
 
 public:
-    enum class inlineShift { asr, lsl, lsr, ror, rrx } shiftCode;
+    enum class inlineShift { asr,
+                             lsl,
+                             lsr,
+                             ror,
+                             rrx } shiftCode;
 
     ShiftOP() = delete;
     ShiftOP(unsigned _imme, ShiftOP::inlineShift _shiftCode)

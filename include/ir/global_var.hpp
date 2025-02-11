@@ -8,7 +8,8 @@
 namespace IR {
 
 // storage_class
-enum class STOCLASS { GLOBAL, CONSTANT };
+enum class STOCLASS { GLOBAL,
+                      CONSTANT };
 
 // IR GlobalVariable Initializer
 // int i;
@@ -22,11 +23,11 @@ private:
     bool is_zero; // is zeroinitializer, 对于array就输出zeroinitializer,
                   // 不是array就输出0
     std::shared_ptr<Value>
-        constval; // 只针对非array的情况!!! 内容只能是ConstantInt or Float
+        constval;                       // 只针对非array的情况!!! 内容只能是ConstantInt or Float
     std::vector<GVIniter> inner_initer; // isarray == true
 public:
     GVIniter() = delete;
-    GVIniter(std::shared_ptr<Type> _ty); // zeroinit
+    GVIniter(std::shared_ptr<Type> _ty);                              // zeroinit
     GVIniter(std::shared_ptr<Type> _ty, std::shared_ptr<Value> _con); // i32 1
     GVIniter(std::shared_ptr<Type> _ty,
              std::vector<GVIniter> _inner_initer); // [2 x [2 x i32]] [...]
@@ -75,7 +76,6 @@ public:
     STOCLASS getStorageClass() const;
     const std::shared_ptr<Type> &getVarType() const;
     bool isArray() const;
-    GVIniter &getIniter();
     const GVIniter &getIniter() const;
     int getAlign() const;
 

@@ -54,8 +54,23 @@ std::string format(const std::string &fmtstr, Args &&...args) {
 }
 
 template <typename... Args>
+void println(std::ostream& os, const std::string &fmtstr, Args &&...args) {
+    os << format(fmtstr, std::forward<Args>(args)...) << std::endl;
+}
+
+template <typename... Args>
 void println(const std::string &fmtstr, Args &&...args) {
-    std::cout << format(fmtstr, std::forward<Args>(args)...) << std::endl;
+    println(std::cout, fmtstr, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void print(std::ostream& os, const std::string &fmtstr, Args &&...args) {
+    os << format(fmtstr, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void print(const std::string &fmtstr, Args &&...args) {
+    print(std::cout, fmtstr, std::forward<Args>(args)...);
 }
 
 std::string read_file(const std::string &file_name) {
@@ -91,6 +106,16 @@ inline bool begins_with(const std::string &a, const std::string &b) {
         }
     }
     return true;
+}
+
+inline size_t parse_time(const std::string &s) {
+    auto lastline_beg = s.rfind('\n', s.size() - 2);
+    std::string lastline = s.substr(lastline_beg + 1);
+    int hour, minute, second, microsecond;
+    sscanf(lastline.c_str(), "TOTAL: %dH-%dM-%dS-%dus\n", &hour, &minute,
+           &second, &microsecond);
+    return hour * 3600000000 + minute * 60000000 + second * 1000000 +
+           microsecond;
 }
 } // namespace Test
 #endif // GNALC_TEST_HPP

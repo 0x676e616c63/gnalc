@@ -60,7 +60,8 @@ public:
     }
 
     bool isZero() const {
-        Err::gassert(isConstant());
+        if (!isConstant())
+            return false;
         return getConstant() == false || getConstant() == '\0' ||
                getConstant() == 0 || getConstant() == 0.0f;
     }
@@ -72,9 +73,11 @@ class LatticeInfo {
 public:
     inline static const auto NAC = LatticeVal(LatticeVal::Type::NAC);
     inline static const auto UNDEF = LatticeVal(LatticeVal::Type::UNDEF);
+
     static LatticeKey getKeyFromValue(const std::shared_ptr<Value> &key) {
         return key;
     }
+
     static std::shared_ptr<Value> getValueFromKey(const LatticeKey &key) {
         return key;
     }
@@ -133,9 +136,12 @@ public:
                 break;
             case OP::MUL:
             case OP::FMUL:
-                if (lhs.isZero() || rhs.isZero())
-                    changes[inst].setConstant(ConstantProxy(
-                        constant_pool, bin->getOpcode() == OP::MUL ? 0 : 0.0f));
+                if (lhs.isZero() || rhs.isZero()) {
+                    if (bin->getOpcode() == OP::MUL)
+                        changes[inst].setConstant(ConstantProxy(constant_pool, 0));
+                    else
+                        changes[inst].setConstant(ConstantProxy(constant_pool, 0.0f));
+                }
                 else if (lhs.isConstant() && rhs.isConstant())
                     changes[inst].setConstant(lhs.getConstant() *
                                               rhs.getConstant());
@@ -164,6 +170,7 @@ public:
                                               rhs.getConstant());
                 else if (lhs.isNAC() || rhs.isNAC())
                     changes[inst] = LatticeInfo::NAC;
+                break;
             case OP::AND:
             case OP::OR:
                 if (lhs.isConstant() && rhs.isConstant()) {
@@ -175,7 +182,7 @@ public:
                                                   rhs.getConstant());
                 } else if (lhs.isNAC() || rhs.isNAC())
                     changes[inst] = LatticeInfo::NAC;
-
+                break;
             default:
                 Err::unreachable("Unknown binary opcode");
             }
@@ -186,6 +193,132 @@ public:
                 changes[inst].setConstant(-val.getConstant());
             else if (val.isNAC())
                 changes[inst] = LatticeInfo::NAC;
+        } else if (auto icmp = std::dynamic_pointer_cast<ICMPInst>(inst)) {
+            auto lhs =
+                solver.getVal(LatticeInfo::getKeyFromValue(icmp->getLHS()));
+            auto rhs =
+                solver.getVal(LatticeInfo::getKeyFromValue(icmp->getRHS()));
+            if (lhs.isConstant() && rhs.isConstant()) {
+                switch (icmp->getCond()) {
+                case ICMPOP::eq:
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() == rhs.getConstant()));
+                    break;
+                case ICMPOP::ne:
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() != rhs.getConstant()));
+                    break;
+                case ICMPOP::sge:
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() >= rhs.getConstant()));
+                    break;
+                case ICMPOP::sgt:
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() > rhs.getConstant()));
+                    break;
+                case ICMPOP::sle:
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() <= rhs.getConstant()));
+                    break;
+                case ICMPOP::slt:
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() < rhs.getConstant()));
+                    break;
+                }
+            } else if (lhs.isNAC() || rhs.isNAC())
+                changes[inst] = LatticeInfo::NAC;
+        } else if (auto fcmp = std::dynamic_pointer_cast<FCMPInst>(inst)) {
+            auto lhs =
+                solver.getVal(LatticeInfo::getKeyFromValue(fcmp->getLHS()));
+            auto rhs =
+                solver.getVal(LatticeInfo::getKeyFromValue(fcmp->getRHS()));
+            if (lhs.isConstant() && rhs.isConstant()) {
+                switch (fcmp->getCond()) {
+                case FCMPOP::oeq:
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() == rhs.getConstant()));
+                    break;
+                case FCMPOP::one:
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() != rhs.getConstant()));
+                    break;
+                case FCMPOP::oge:
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() >= rhs.getConstant()));
+                    break;
+                case FCMPOP::ogt:
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() > rhs.getConstant()));
+                    break;
+                case FCMPOP::ole:
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() <= rhs.getConstant()));
+                    break;
+                case FCMPOP::olt:
+                    changes[inst].setConstant(ConstantProxy(
+                        constant_pool, lhs.getConstant() < rhs.getConstant()));
+                    break;
+                default:
+                    Err::unreachable("Unknown fcmp OP");
+                }
+
+            } else if (lhs.isNAC() || rhs.isNAC())
+                changes[inst] = LatticeInfo::NAC;
+        } else if (auto fti = std::dynamic_pointer_cast<FPTOSIInst>(inst)) {
+            auto val =
+                solver.getVal(LatticeInfo::getKeyFromValue(fti->getOVal()));
+            if (val.isConstant()) {
+                changes[inst].setConstant(ConstantProxy(
+                    constant_pool,
+                    static_cast<int>(val.getConstant().get_float())));
+            }
+            else if (val.isNAC())
+                changes[inst] = LatticeInfo::NAC;
+        } else if (auto itf = std::dynamic_pointer_cast<SITOFPInst>(inst)) {
+            auto val = solver.getVal(LatticeInfo::getKeyFromValue(itf->getOVal()));
+            if (val.isConstant()) {
+                changes[inst].setConstant(ConstantProxy(
+                   constant_pool,
+                   static_cast<float>(val.getConstant().get_int())));
+            }
+            else if (val.isNAC())
+                changes[inst] = LatticeInfo::NAC;
+        } else if (auto zext = std::dynamic_pointer_cast<ZEXTInst>(inst)) {
+            auto val = solver.getVal(LatticeInfo::getKeyFromValue(zext->getOVal()));
+            if (val.isConstant()) {
+                switch (toBType(zext->getOType())->getInner()) {
+                case IRBTYPE::I1:
+                    switch (toBType(zext->getTType())->getInner()) {
+                    case IRBTYPE::I8:
+                        changes[inst].setConstant(ConstantProxy(
+                            constant_pool,
+                            static_cast<char>(val.getConstant().get_i1())));
+                        break;
+                    case IRBTYPE::I32:
+                        changes[inst].setConstant(ConstantProxy(
+                            constant_pool,
+                            static_cast<int>(val.getConstant().get_i1())));
+                        break;
+                    default:
+                        Err::unreachable("target type could not zext otype:I1");
+                    }
+                    break;
+                case IRBTYPE::I8:
+                    switch (toBType(zext->getTType())->getInner()) {
+                    case IRBTYPE::I32:
+                        changes[inst].setConstant(ConstantProxy(
+                            constant_pool,
+                            static_cast<int>(val.getConstant().get_i8())));
+                        break;
+                    default:
+                        Err::unreachable("target type could not zext otype:I8");
+                    }
+                    break;
+                default:
+                    Err::unreachable("target type could not zext");
+                }
+            } else if (val.isNAC())
+                changes[inst] = LatticeInfo::NAC;
         } else if (auto alloca = std::dynamic_pointer_cast<ALLOCAInst>(inst)) {
             changes[inst] = LatticeInfo::NAC;
         } else if (auto gep = std::dynamic_pointer_cast<GEPInst>(inst)) {
@@ -194,8 +327,9 @@ public:
             changes[inst] = LatticeInfo::NAC;
         } else if (auto call = std::dynamic_pointer_cast<CALLInst>(inst)) {
             changes[inst] = LatticeInfo::NAC;
+        } else if (auto bit = std::dynamic_pointer_cast<BITCASTInst>(inst)) {
+            changes[inst] = LatticeInfo::NAC;
         }
-        // TODO icmp? fcmp? converse
         else if (inst->getOpcode() == OP::BR || inst->getOpcode() == OP::PHI)
             Err::unreachable("Transfer on br or phi.");
         else
@@ -205,51 +339,113 @@ public:
     ConstantProxy getValueFromLatticeVal(const LatticeVal &v) const override {
         return v.getConstant();
     }
+
+    LatticeVal computeLatticeVal(const std::shared_ptr<Value>& key) const override {
+        if (key->getVTrait() == ValueTrait::CONSTANT_LITERAL)
+            return LatticeVal(ConstantProxy(constant_pool, key));
+        if (key->getVTrait() == ValueTrait::FORMAL_PARAMETER)
+            return LatticeInfo::NAC;
+        return LatticeInfo::UNDEF;
+    }
 };
 
 PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
                                                    FAM &manager) {
+    bool sccp_inst_modified = false;
+    bool sccp_cfg_modified = false;
+
     SCCPLatticeFunc lattice_func(&function.getConstantPool());
     SCCPSolver solver(&lattice_func);
     solver.solve(function);
 
+    std::set<std::shared_ptr<PHIInst>> dead_phis;
+
     // Simplify Instruction
     for (const auto &[key, val] : solver.get_map()) {
         if (val.isConstant()) {
-            for (auto &use : key->getUseList()) {
-                use->getUser()->replaceUse(key,
-                                           val.getConstant().getConstant());
-                if (auto br_inst =
-                        std::dynamic_pointer_cast<BRInst>(use->getUser())) {
+            // Note that the key might already be a ConstantLiteral before SCCP,
+            // but that doesn't matter.
+            // If we can get a ConstantLiteral here, it must be used in propagation,
+            // and thus might be a BRInst's Cond, which we should handle it as if it is
+            // a constant deduced by SCCP.
+            auto use_list = key->getUseList();
+            for (const auto &use : use_list) {
+                if (auto br_inst = std::dynamic_pointer_cast<BRInst>(use->getUser())) {
                     Err::gassert(br_inst->isConditional());
-                    if (val.getConstant().get_i1())
-                        br_inst->dropFalseDest();
-                    else
-                        br_inst->dropTrueDest();
+                    std::shared_ptr<BasicBlock> dropped;
+                    if (val.getConstant().get_i1()) {
+                        auto tmp
+                            = safeUnlinkBB(br_inst->getParent(), br_inst->getFalseDest());
+                        dead_phis.insert(
+                            std::make_move_iterator(tmp.begin()),
+                            std::make_move_iterator(tmp.end()));
+                    }
+                    else {
+                        auto tmp
+                            = safeUnlinkBB(br_inst->getParent(), br_inst->getTrueDest());
+                        dead_phis.insert(
+                        std::make_move_iterator(tmp.begin()),
+                            std::make_move_iterator(tmp.end()));
+                    }
+                    sccp_cfg_modified = true;
                 }
+            }
+            // If the key is not a ConstantLiteral, it must be a constant deduced by SCCP.
+            // So we replace and delete the key.
+            if (key->getVTrait() != ValueTrait::CONSTANT_LITERAL) {
+                key->replaceSelf(val.getConstant().getConstant());
+                // Delete replaced constant instruction,
+                // Though DCE/ADCE can make it too, deleting them in an earlier pass
+                // can invalidate less Analysis Results, thus making the compiler faster.
+                auto inst = std::dynamic_pointer_cast<Instruction>(key);
+                Err::gassert(inst != nullptr);
+                inst->getParent()->delInst(inst);
+                sccp_inst_modified = true;
             }
         }
     }
 
-    std::unordered_set<std::shared_ptr<BasicBlock>> visited;
-    std::deque worklist{function.getBlocks()[0]};
+    // Clear the solver to destructs temp values.
+    solver.clear();
 
-    // Get Unreachable Blocks
-    while (!worklist.empty()) {
-        auto curr = worklist.front();
-        visited.insert(curr);
-        worklist.pop_front();
+    // Since we already handled CFG above,
+    // all the unreachable blocks' in edge have been cut.
+    // So just a trivial traversal will find all of them
+    auto dfv = function.getDFVisitor();
+    std::unordered_set live(dfv.begin(), dfv.end());
 
-        for (const auto &next : curr->getNextBB()) {
-            if (solver.isFeasible(curr, next) &&
-                visited.find(next) == visited.end())
-                worklist.emplace_back(next);
+    // Cut the outgoing edge of the unreachable block
+    for (const auto& block : function) {
+        if (live.find(block) == live.end()) {
+            for (const auto& succ : block->getNextBB()) {
+                auto tmp = safeUnlinkBB(block, succ);
+                dead_phis.insert(
+                    std::make_move_iterator(tmp.begin()),
+                    std::make_move_iterator(tmp.end()));
+            }
         }
     }
 
-    function.delBlockIf(
-        [&visited](auto &&bb) { return visited.find(bb) == visited.end(); });
+    // Delete dead blocks first, because dead phis may be used in dead blocks.
+    sccp_cfg_modified |= function.delBlockIf(
+    [&live](const auto& bb) { return live.find(bb) == live.end();});
 
-    return PM::PreservedAnalyses::none();
+    for (auto& block : function) {
+        block->delInstIf([&dead_phis](const auto& p) {
+            return dead_phis.find(std::dynamic_pointer_cast<PHIInst>(p)) != dead_phis.end();
+        }, BasicBlock::DEL_MODE::PHI);
+    }
+
+    if (sccp_cfg_modified)
+        return PM::PreservedAnalyses::none();
+
+    if (sccp_inst_modified) {
+        PM::PreservedAnalyses pa;
+        pa.preserve<DomTreeAnalysis>();
+        pa.preserve<PostDomTreeAnalysis>();
+        return pa;
+    }
+
+    return PM::PreservedAnalyses::all();
 }
 } // namespace IR

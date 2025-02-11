@@ -18,8 +18,9 @@ class ConstantProxyHash;
 // Proxy for IR Constants, providing easy interface through type erasure.
 // Warning:
 //   1. This is not a part of the IR, due to its "dynamic" type. (NOT a derived
-//   class from `IR::Value`)
-//   2. It throws an exception in operation between different type.
+//      class from `IR::Value`)
+//   2. If type mismatched, ONLY `operator==`/`operator!=` returns false/true,
+//      other operators will throw an exception.
 //   3. It depends on ConstantPool only in operators that generates new
 //   constant.
 class ConstantProxy {
@@ -98,28 +99,29 @@ public:
     bool operator>(const ConstantProxy &rhs) const;
     bool operator<=(const ConstantProxy &rhs) const;
     bool operator>=(const ConstantProxy &rhs) const;
+
+
     bool operator==(const ConstantProxy &rhs) const;
     bool operator!=(const ConstantProxy &rhs) const;
-
     bool operator==(bool rhs) const;
     bool operator!=(bool rhs) const;
-
     bool operator==(char rhs) const;
     bool operator!=(char rhs) const;
+    bool operator==(int rhs) const;
+    bool operator!=(int rhs) const;
+    bool operator==(float rhs) const;
+    bool operator!=(float rhs) const;
+
     bool operator>=(char rhs) const;
     bool operator<=(char rhs) const;
     bool operator>(char rhs) const;
     bool operator<(char rhs) const;
 
-    bool operator==(int rhs) const;
-    bool operator!=(int rhs) const;
     bool operator>=(int rhs) const;
     bool operator<=(int rhs) const;
     bool operator>(int rhs) const;
     bool operator<(int rhs) const;
 
-    bool operator==(float rhs) const;
-    bool operator!=(float rhs) const;
     bool operator>=(float rhs) const;
     bool operator<=(float rhs) const;
     bool operator>(float rhs) const;

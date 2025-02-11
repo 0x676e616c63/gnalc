@@ -9,6 +9,14 @@
 namespace IR {
 struct OptInfo {
     bool mem2reg{false};
+    bool sccp{false};
+    bool dce{false};
+    bool adce{false};
+    bool dse{false};
+    bool gvnpre{false};
+    bool tailcall{false};
+
+    bool advance_name_norm{false};
 };
 
 extern const OptInfo o1_opt_info;
@@ -17,8 +25,6 @@ class PassBuilder {
 public:
     static FPM buildFunctionPipeline(OptInfo opt_info);
     static MPM buildModulePipeline(OptInfo opt_info);
-
-    static std::tuple<FAM, MAM> buildAnalysisManager();
 
     static void registerModuleAnalyses(MAM &);
     static void registerFunctionAnalyses(FAM &);

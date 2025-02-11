@@ -63,10 +63,17 @@ private:
     bool set_args = false;
 
 public:
+    // Make a BRInst
+    // Make sure to linkBB to update CFG.
     explicit BRInst(const std::shared_ptr<BasicBlock> &_dest);
     BRInst(const std::shared_ptr<Value> &cond,
            const std::shared_ptr<BasicBlock> &_true_dest,
            const std::shared_ptr<BasicBlock> &_false_dest);
+
+    // Make it unconditional.
+    // Make sure to unlinkBB to update CFG.
+    void dropFalseDest();
+    void dropTrueDest();
 
     bool isConditional() const;
     std::shared_ptr<Value> getCond() const;
@@ -83,8 +90,10 @@ public:
     std::vector<std::shared_ptr<Value>> getTrueBBArgs() const;
     std::vector<std::shared_ptr<Value>> getFalseBBArgs() const;
 
-    void dropFalseDest();
-    void dropTrueDest();
+    // Make a copy of current BRInst
+    // Warning: this generates a new Instruction, rather a reference to the current one.
+    // Make sure to add it to BasicBlock
+    std::shared_ptr<BRInst> clone() const;
 
     void accept(IRVisitor &visitor) override;
 };
@@ -98,6 +107,7 @@ public:
 class CALLInst : public Instruction {
 private:
     // std::shared_ptr<WeakUse> func;
+    bool is_tail_call = false;
 public:
     // func储存到func, args储存到operands中
     CALLInst(const std::shared_ptr<FunctionDecl> &func,
@@ -113,6 +123,9 @@ public:
     std::vector<std::shared_ptr<Value>> getArgs() const;
 
     void accept(IRVisitor &visitor) override;
+
+    void setTailCall();
+    bool isTailCall() const;
 };
 
 } // namespace IR

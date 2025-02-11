@@ -8,23 +8,66 @@
 
 #include "base.hpp"
 #include "instruction.hpp"
+#include "instructions/phi.hpp"
 
 #include <memory>
 #include <set>
 
+namespace Parser {
+class CFGBuilder;
+}
+
 namespace IR {
+class Function;
 class IRVisitor;
+class PostDomTreeAnalysis;
+
+// Only handles CFG.
+void linkBB(const std::shared_ptr<BasicBlock> &prebb,
+            const std::shared_ptr<BasicBlock> &nxtbb);
+
+void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,
+              const std::shared_ptr<BasicBlock> &nxtbb);
+
+// Safely disconnects two basic blocks in CFG while maintaining SSA consistency
+//
+// This function performs three key operations:
+// 1. Removes CFG edges between the `prebb` and `nxtbb` blocks
+// 2. Updates or removes relevant BRInst
+// 3. Fix and collects invalidated PHIInst that need removal
+//
+// Why returns the dead PHI rather than delete them in place:
+//     Dead phis can be in a cycle, and might involve multiple blocks.
+//     In other word, when `safeUnlinkBB` is called within a function,
+//     the returned dead phis might have users(also a phi) in other blocks of the function.
+//     To help `delInstIf` check if we delete right instructions,
+//     we return them to be gathered and deleted at once.
+//
+// WARNING: when `safeUnlinkBB` is called within a function, the returned dead phis should be
+//          gathered for all basic blocks, and deleted at once.
+[[nodiscard]] std::vector<std::shared_ptr<PHIInst>> safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb,
+                  const std::shared_ptr<BasicBlock> &nxtbb);
+
 /**
  * @brief BB继承自value, 其被br指令'use', 'use'了它所包含的指令
  * @note next_bb包含的BB和最后一条br指令中的相同
  */
-
 class BasicBlock : public Value,
                    public std::enable_shared_from_this<BasicBlock> {
+    friend class Parser::CFGBuilder;
+    friend class Function;
+    friend class PostDomTreeAnalysis;
+    friend void linkBB(const std::shared_ptr<BasicBlock> &prebb,
+                       const std::shared_ptr<BasicBlock> &nxtbb);
+    friend void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,
+                         const std::shared_ptr<BasicBlock> &nxtbb);
+
     std::list<std::weak_ptr<BasicBlock>> pre_bb;   // 前驱
     std::list<std::weak_ptr<BasicBlock>> next_bb;  // 后继
     std::list<std::shared_ptr<Instruction>> insts; // 指令列表
+    std::list<std::shared_ptr<PHIInst>> phi_insts;
     std::vector<std::shared_ptr<Value>> bb_params;
+    std::weak_ptr<Function> parent;
 
 public:
     using const_iterator = decltype(insts)::const_iterator;
@@ -37,43 +80,68 @@ public:
                std::list<std::weak_ptr<BasicBlock>> _next_bb,
                std::list<std::shared_ptr<Instruction>> _insts);
 
-    void addPreBB(const std::shared_ptr<BasicBlock> &bb);
-    void addNextBB(const std::shared_ptr<BasicBlock> &bb);
     void addInst(const std::shared_ptr<Instruction> &inst);
+    void addPhiInst(const std::shared_ptr<PHIInst> &node); // 插入到phi_insts
 
     std::list<std::shared_ptr<BasicBlock>> getPreBB() const;
     std::list<std::shared_ptr<BasicBlock>> getNextBB() const;
-    std::list<std::weak_ptr<BasicBlock>> &getRPreBB();
-    std::list<std::weak_ptr<BasicBlock>> &getRNextBB();
 
     // usually we can use range-based for instead of these
     const std::list<std::shared_ptr<Instruction>> &getInsts() const;
-    std::list<std::shared_ptr<Instruction>> &getInsts();
+    const std::list<std::shared_ptr<PHIInst>> &getPhiInsts() const;
+    std::list<std::shared_ptr<Instruction>> getAllInsts() const;
+    unsigned getPhiCount() const;
 
-    unsigned getInstIndex(
-        const std::shared_ptr<Instruction> &i) const; // 从0开始，查找不到报错
+    unsigned index = 0; // 不经过插入删除接口修改后使用先调用父函数的update方法！
 
-    bool delFirstOfInst(
-        const std::shared_ptr<Instruction> &inst); // 只移除第一个匹配的项
+    // No use-def check, just remove the first matched item
+    // PHI Instruction is not included!
+    bool delFirstOfInst(const std::shared_ptr<Instruction> &inst);
+    // No use-def check, just remove the first matched item
+    bool delFirstOfPhiInst(const std::shared_ptr<PHIInst> &inst);
 
-    // Delete insts and its user.
-    // If pred(a) == true, pred(a->users) must be true
-    template <typename Pred> bool delInstIf(Pred pred) {
+    enum class DEL_MODE {
+        ALL,
+        PHI,
+        NON_PHI
+    };
+    // With use-def check, remove all matched.
+    // The instruction must have no users.
+    bool delInst(const std::shared_ptr<Instruction> &inst, DEL_MODE mode = DEL_MODE::ALL);
+
+    // Delete instructions that satisfied: `pred(inst) == true`
+    // Requires the target instruction have no users than expiring users.
+    // "expiring users": users that are being deleted. (pred(inst->getUsers()) == true)
+    // In other word, If pred(a) == true, pred(a->users) must be true
+    template <typename Pred>
+    bool delInstIf(Pred pred, const DEL_MODE mode = DEL_MODE::ALL) {
         bool found = false;
-        for (auto it = insts.begin(); it != insts.end();) {
-            if (pred(*it)) {
-                for (auto &&use : (*it)->getUseList()) {
-                    Err::gassert(pred(use->getUser()),
-                                 "BasicBlock::delInstIf(): Cannot delete a "
-                                 "Inst without deleting its User.");
-                }
-                it = insts.erase(it);
-                found = true;
-            } else
-                ++it;
-        }
-
-        Err::gassert(found, "BasicBlock::delInstIf(): Not found");
+        if (mode != DEL_MODE::NON_PHI)
+            for (auto it = phi_insts.begin(); it != phi_insts.end();) {
+                if (pred(*it)) {
+                    for (const auto& use : (*it)->getUseList()) {
+                        Err::gassert(pred(std::dynamic_pointer_cast<Instruction>(use->getUser())),
+                                     "BasicBlock::delInstIf(): Cannot delete a Phi without deleting its User.");
+                    }
+                    it = phi_insts.erase(it);
+                    found = true;
+                } else
+                    ++it;
+            }
+        if (mode != DEL_MODE::PHI)
+            for (auto it = insts.begin(); it != insts.end();) {
+                if (pred(*it)) {
+                    for (const auto& use : (*it)->getUseList()) {
+                        Err::gassert(pred(std::dynamic_pointer_cast<Instruction>(use->getUser())),
+                                    "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
+                    }
+                    it = insts.erase(it);
+                    found = true;
+                } else
+                    ++it;
+            }
+        if (found)
+            updateInstIndex();
         return found;
     }
 
@@ -86,16 +154,19 @@ public:
     void setBBParam(const std::vector<std::shared_ptr<Value>> &params);
     const std::vector<std::shared_ptr<Value>> &getBBParams() const;
 
+    std::shared_ptr<Function> getParent() const;
+    void setParent(const std::shared_ptr<Function> &_parent);
+
     void accept(IRVisitor &visitor) override;
     ~BasicBlock() override;
+
+private:
+    void addPreBB(const std::shared_ptr<BasicBlock> &bb);
+    void addNextBB(const std::shared_ptr<BasicBlock> &bb);
+    bool delPreBB(const std::shared_ptr<BasicBlock> &bb);
+    bool delNextBB(const std::shared_ptr<BasicBlock> &bb);
+    void updateInstIndex() const;
 };
-
-inline void linkBB(const std::shared_ptr<BasicBlock> &prebb,
-                   const std::shared_ptr<BasicBlock> &nxtbb) {
-    prebb->addNextBB(nxtbb);
-    nxtbb->addPreBB(prebb);
-}
-
 } // namespace IR
 
 #endif

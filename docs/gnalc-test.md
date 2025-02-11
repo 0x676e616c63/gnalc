@@ -1,12 +1,8 @@
 ### Test Data
-First update `gnalc-test-data` submodule
+First update `contest` submodule
 ```shell
 git submodule init
 git submodule update
-sudo apt install git-lfs
-cd test/gnalc-test-data
-git lfs install
-git lfs pull
 ```
 
 ### QEMU Installation

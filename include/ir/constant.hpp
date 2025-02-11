@@ -26,16 +26,6 @@ public:
                 ValueTrait::CONSTANT_LITERAL),
           inner_value(value_) {}
 
-    BasicConstant &operator=(const BasicConstant &rhs) {
-        inner_value = rhs.inner_value;
-        return *this;
-    }
-
-    BasicConstant &operator=(ValueT rhs) {
-        inner_value = rhs;
-        return *this;
-    }
-
     ValueT getVal() const { return inner_value; }
 
     bool operator==(const BasicConstant &rhs) const {

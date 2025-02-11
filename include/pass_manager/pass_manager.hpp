@@ -1,11 +1,30 @@
-// Generic Pass Manager, used by IR and MIR's PassManager
-// This PassManager is inspired by the new PassManager of LLVM.
-// It also uses concept-based polymorphism, but is much simplified.
+// Generic Pass Manager used by both the IR and MIR PassManagers.
+//
+// Adopting design concepts from LLVM's New PassManager framework,
+// this implementation maintains a lightweight structure
+// appropriate for gnalc's limited pass pipeline.
+//
+// A key difference is our manual handling of analysis dependencies.
+// Each transform pass may invalidate one or more analysis passes.
+// Consequently, when a transform pass invalidates an analysis pass,
+// it must also explicitly invalidate any analysis passes that depend on it.
+//
+// For example:
+//
+//              invalidate                  depend
+// TransformA --------------> AnalysisA -------------> AnalysisB
+//
+// Even if TransformA does not directly invalidate AnalysisB, it must still explicitly
+// invalidate both AnalysisA and AnalysisB.
+//
+
 #pragma once
 #ifndef GNALC_PASS_MANAGER_PASS_MANAGER_HPP
 #define GNALC_PASS_MANAGER_PASS_MANAGER_HPP
 
 #include "../utils/exception.hpp"
+#include "../utils/logger.hpp"
+#include "../utils/misc.hpp"
 
 #include <list>
 #include <map>
@@ -16,16 +35,6 @@
 
 namespace PM {
 class alignas(8) UniqueKey {};
-
-template <typename UnitT> class AllAnalysesOn {
-public:
-    static UniqueKey *ID() { return &Key; }
-
-private:
-    static UniqueKey Key;
-};
-
-template <typename UnitT> UniqueKey AllAnalysesOn<UnitT>::Key;
 
 class PreservedAnalyses {
 private:
@@ -74,14 +83,15 @@ public:
             return;
         }
 
-        for (auto *id : arg.abandoned) {
+        for (auto id : arg.abandoned) {
             preserved.erase(id);
             abandoned.insert(id);
         }
 
-        for (auto *id : preserved)
+        for (auto id : preserved) {
             if (!arg.preserved.count(id))
                 preserved.erase(id);
+        }
     }
 
     bool allPreserved() const {
@@ -101,6 +111,7 @@ public:
 template <typename UnitT, typename AnalysisManagerT> class PassConcept {
 public:
     virtual ~PassConcept() = default;
+    virtual std::string_view name() const = 0;
     virtual PreservedAnalyses run(UnitT &unit, AnalysisManagerT &manager) = 0;
 };
 
@@ -116,6 +127,8 @@ public:
     PreservedAnalyses run(UnitT &unit, AnalysisManagerT &manager) override {
         return pass.run(unit, manager);
     }
+
+    std::string_view name() const override { return PassT::name(); }
 
     PassT pass;
 };
@@ -136,6 +149,7 @@ template <typename UnitT> class AnalysisPassConcept {
 public:
     virtual std::unique_ptr<AnalysisResultConcept>
     run(UnitT &unit, AnalysisManager<UnitT> &am) = 0;
+    virtual std::string_view name() const = 0;
     virtual ~AnalysisPassConcept() = default;
 };
 
@@ -162,13 +176,22 @@ public:
         return *this;
     }
 
+    std::string_view name() const override { return PassT::name(); }
+
     std::unique_ptr<AnalysisResultConcept>
     run(UnitT &unit, AnalysisManager<UnitT> &am) override {
         return std::make_unique<ResultModelT>(pass.run(unit, am));
     }
 };
 
-template <typename DerivedT> class PassInfo {};
+template <typename DerivedT> class PassInfo {
+public:
+    static std::string_view name() {
+        static_assert(std::is_base_of_v<PassInfo, DerivedT>,
+                      "The template argument should be the derived type.");
+        return Util::getTypeName<DerivedT>();
+    }
+};
 
 template <typename DerivedT> class AnalysisInfo {
 public:
@@ -176,6 +199,12 @@ public:
         static_assert(std::is_base_of_v<AnalysisInfo, DerivedT>,
                       "The template argument should be the derived type.");
         return &DerivedT::Key;
+    }
+
+    static std::string_view name() {
+        static_assert(std::is_base_of_v<AnalysisInfo, DerivedT>,
+                      "The template argument should be the derived type.");
+        return Util::getTypeName<DerivedT>();
     }
 };
 
@@ -216,12 +245,15 @@ public:
         auto [it, inserted] = index.insert(std::make_pair(
             std::make_pair(pass_id, &unit), unit_res_t::iterator()));
 
+        auto &pass = passes.find(pass_id)->second;
         if (inserted) {
-            auto &pass = passes.find(pass_id)->second;
             auto &res = results[&unit];
             res.emplace_back(pass_id, pass->run(unit, *this));
             it->second = std::prev(res.end());
+            Logger::logInfo("[AM]: Running '", pass->name(), "' for '", unit.getName(), "'");
         }
+        else
+            Logger::logInfo("[AM]: Get cached '", pass->name(), "' for '", unit.getName(), "'");
 
         using ResultModel = AnalysisResultModel<typename PassT::Result>;
         return static_cast<ResultModel &>(*it->second->second).result;
@@ -247,7 +279,7 @@ public:
         for (auto it = unit_res.begin(); it != unit_res.end();) {
             auto pass_id = it->first;
             if (!pa.isPreserved(pass_id)) {
-                unit_res.erase(it);
+                it = unit_res.erase(it);
                 index.erase({pass_id, &unit});
             } else
                 ++it;
@@ -292,12 +324,11 @@ public:
         PreservedAnalyses pa = PreservedAnalyses::all();
 
         for (auto &pass : passes) {
+            Logger::logInfo("[PM]: Running '", pass->name(), "' at '", unit.getName(), "'");
             PreservedAnalyses curr_pa = pass->run(unit, am);
             am.invalidate(unit, curr_pa);
             pa.retain(curr_pa);
         }
-
-        pa.preserveSet<AllAnalysesOn<UnitT>>();
 
         return pa;
     }

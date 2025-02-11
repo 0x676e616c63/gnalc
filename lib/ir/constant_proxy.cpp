@@ -293,41 +293,48 @@ bool ConstantProxy::operator>=(const ConstantProxy &rhs) const {
         value, rhs.value);
 }
 
-bool ConstantProxy::operator!=(const ConstantProxy &rhs) const {
-    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool);
+
+
+bool ConstantProxy::operator==(const ConstantProxy &rhs) const {
+    Err::gassert(pool == rhs.pool);
+    if (value.index() != rhs.value.index())
+        return false;
     return std::visit(
         [this](const auto &lhs, const auto &rhs) -> bool {
-            return lhs->getVal() != rhs->getVal();
+            return lhs->getVal() == rhs->getVal();
         },
         value, rhs.value);
 }
 
+bool ConstantProxy::operator==(bool rhs) const {
+    return value.index() == 0 && std::get<0>(value)->getVal() == rhs;
+}
+
+bool ConstantProxy::operator==(char rhs) const {
+    return value.index() == 1 && std::get<1>(value)->getVal() == rhs;
+}
+
+bool ConstantProxy::operator==(int rhs) const {
+    return value.index() == 2 && std::get<2>(value)->getVal() == rhs;
+}
+
+bool ConstantProxy::operator==(float rhs) const {
+    return value.index() == 3 && std::get<3>(value)->getVal() == rhs;
+}
+bool ConstantProxy::operator!=(const ConstantProxy &rhs) const {
+    return !(*this == rhs);
+}
 bool ConstantProxy::operator!=(bool rhs) const {
-    Err::gassert(value.index() == 0);
-    return std::visit(
-        [&rhs](const auto &val) -> bool { return val->getVal() != rhs; },
-        value);
+    return !(*this == rhs);
 }
-
 bool ConstantProxy::operator!=(char rhs) const {
-    Err::gassert(value.index() == 1);
-    return std::visit(
-        [&rhs](const auto &val) -> bool { return val->getVal() != rhs; },
-        value);
+    return !(*this == rhs);
 }
-
 bool ConstantProxy::operator!=(int rhs) const {
-    Err::gassert(value.index() == 2);
-    return std::visit(
-        [&rhs](const auto &val) -> bool { return val->getVal() != rhs; },
-        value);
+    return !(*this == rhs);
 }
-
 bool ConstantProxy::operator!=(float rhs) const {
-    Err::gassert(value.index() == 3);
-    return std::visit(
-        [&rhs](const auto &val) -> bool { return val->getVal() != rhs; },
-        value);
+    return !(*this == rhs);
 }
 
 bool ConstantProxy::operator>(char rhs) const {
@@ -406,31 +413,6 @@ bool ConstantProxy::operator<=(float rhs) const {
     return std::visit(
         [&rhs](const auto &val) -> bool { return val->getVal() <= rhs; },
         value);
-}
-
-bool ConstantProxy::operator==(const ConstantProxy &rhs) const {
-    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool);
-    return std::visit(
-        [this](const auto &lhs, const auto &rhs) -> bool {
-            return lhs->getVal() == rhs->getVal();
-        },
-        value, rhs.value);
-}
-
-bool ConstantProxy::operator==(bool rhs) const {
-    return value.index() == 0 && std::get<0>(value)->getVal() == rhs;
-}
-
-bool ConstantProxy::operator==(char rhs) const {
-    return value.index() == 1 && std::get<1>(value)->getVal() == rhs;
-}
-
-bool ConstantProxy::operator==(int rhs) const {
-    return value.index() == 2 && std::get<2>(value)->getVal() == rhs;
-}
-
-bool ConstantProxy::operator==(float rhs) const {
-    return value.index() == 3 && std::get<3>(value)->getVal() == rhs;
 }
 
 std::shared_ptr<ConstantI1> ConstantProxy::getConstantI1() const {
