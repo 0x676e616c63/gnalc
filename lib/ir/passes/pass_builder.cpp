@@ -15,7 +15,7 @@
 #include "../../../include/ir/passes/transforms/gvn_pre.hpp"
 #include "../../../include/ir/passes/transforms/mem2reg.hpp"
 #include "../../../include/ir/passes/transforms/namenormalizer.hpp"
-#include "../../../include/ir/passes/transforms/mark_tail_call.hpp"
+#include "../../../include/ir/passes/transforms/tail_recursion_elimination.hpp"
 
 // Utilities
 #include "../../../include/ir/passes/utilities/irprinter.hpp"

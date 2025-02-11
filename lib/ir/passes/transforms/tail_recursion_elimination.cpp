@@ -40,7 +40,7 @@ PM::PreservedAnalyses MarkTailCallPass::run(Function &function, FAM &manager) {
             newEntryBlock = std::make_shared<BasicBlock>("noalloca");
         } else {
             newEntryBlock = std::make_shared<BasicBlock>("havealloca");
-            for (const auto &inst : entryBlock) {
+            for (const auto &inst : *entryBlock) {
                 newEntryBlock->addInst(inst);
                 entryBlock->delInst(inst);
                 if (std::dynamic_pointer_cast<ALLOCAInst>(inst) == lastAllocaInst) {
