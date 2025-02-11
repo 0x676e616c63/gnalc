@@ -18,7 +18,6 @@ public:
         addTargetOP(std::move(TargetOperand_));
     }
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
-    bool Check() override;
     ~unaryInst() override = default;
 };
 
@@ -40,7 +39,6 @@ public:
     }
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
-    bool Check() override;
     // std::string toString() override;
     ~binaryInst() override = default;
 };
@@ -66,7 +64,6 @@ public:
     }
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
-    bool Check() override;
     ~ternaryInst() override = default;
 };
 
@@ -91,7 +88,6 @@ public:
     }
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
-    bool Check() override;
     ~binaryImmInst() override = default;
 };
 
@@ -112,7 +108,6 @@ public:
         setFlash();
     };
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
-    bool Check() override;
     ~compareInst() override = default;
 };
 

@@ -42,3 +42,8 @@ void VarPool::addValue(const IR::Value &val, std::shared_ptr<Operand> Value) {
     IRValueWrapper wrapper{val};
     pool[wrapper] = std::move(Value);
 }
+
+void VarPool::addLoaded(const ConstObj &obj,
+                        std::shared_ptr<BindOnVirOP> Value) {
+    load_map[obj] = std::move(Value);
+}

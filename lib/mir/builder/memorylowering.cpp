@@ -21,103 +21,107 @@ InstLowering::allocaLower(const std::shared_ptr<IR::ALLOCAInst> &alloca) {
 std::list<std::shared_ptr<Instruction>>
 InstLowering::loadLower(const std::shared_ptr<IR::LOADInst> &load) {
     std::list<std::shared_ptr<Instruction>> insts;
-
-    auto ptr = std::dynamic_pointer_cast<BaseADROP>(
-        operlower.fastFind(load->getPtr()));
-    if (!ptr)
-        // lowering全局变量, 获得一个GlobalADROP(offset == 0)
-        ptr = operlower.mkBaseOP(*load->getPtr(), load->getPtr()->getName(), 0);
-
+    auto ptr = load->getPtr();
     auto target = operlower.mkOP(*load, RegisterBank::gpr);
 
-    auto ldr = std::make_shared<ldrInst>(SourceOperandType::a, 4, target, ptr);
-    insts.emplace_back(ldr);
+    if (auto global_ptr = std::dynamic_pointer_cast<IR::GlobalVariable>(ptr)) {
+        // mov %relay, #upper:global #lower:global
+        // ldr %target, [%relay]
+        auto relay = operlower.mkBaseOP(global_ptr->getName(), nullptr);
 
+        auto global_addr = operlower.fastFind(global_ptr->getName());
+
+        auto mov =
+            std::make_shared<movInst>(SourceOperandType::a, relay, global_addr);
+
+        auto ldr =
+            std::make_shared<ldrInst>(SourceOperandType::a, 4, target, relay);
+        insts.emplace_back(mov);
+        insts.emplace_back(ldr);
+    } else {
+        // ldr %target, [%...]
+        auto addr =
+            std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(ptr));
+        auto ldr =
+            std::make_shared<ldrInst>(SourceOperandType::a, 4, target, addr);
+        insts.emplace_back(ldr);
+    }
     return insts;
 }
 
 std::list<std::shared_ptr<Instruction>>
 InstLowering::storeLower(const std::shared_ptr<IR::STOREInst> &store) {
     std::list<std::shared_ptr<Instruction>> insts;
+    auto ptr = store->getPtr();
+    auto target = operlower.mkOP(*store, RegisterBank::gpr);
 
-    auto ptr = std::dynamic_pointer_cast<BaseADROP>(
-        operlower.fastFind(store->getPtr()));
+    if (auto global_ptr = std::dynamic_pointer_cast<IR::GlobalVariable>(ptr)) {
+        auto relay = operlower.mkBaseOP(global_ptr->getName(), nullptr);
 
-    if (!ptr)
-        // lowering全局变量, 获得一个GlobalADROP(offset == 0)
-        ptr =
-            operlower.mkBaseOP(*store->getPtr(), store->getPtr()->getName(), 0);
-
-    auto val = store->getValue();
-    std::shared_ptr<BindOnVirOP> regOP = nullptr;
-
-    if (auto store_const = std::dynamic_pointer_cast<IR::ConstantInt>(val)) {
-        // mov Rd, #imme
-        auto const_int = operlower.fastFind(store_const->getVal());
-        auto relay =
-            operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto global_addr = operlower.fastFind(global_ptr->getName());
 
         auto mov =
-            std::make_shared<movInst>(SourceOperandType::i, relay, const_int);
+            std::make_shared<movInst>(SourceOperandType::a, relay, global_addr);
+
+        auto str =
+            std::make_shared<strInst>(SourceOperandType::a, 4, target, relay);
         insts.emplace_back(mov);
-        regOP = relay;
-    } else
-        regOP = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(val));
-
-    auto str = std::make_shared<strInst>(SourceOperandType::rr, 4, regOP, ptr);
-    insts.emplace_back(str);
-
-    return insts;
+        insts.emplace_back(str);
+    } else {
+        auto addr =
+            std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(ptr));
+        auto str =
+            std::make_shared<ldrInst>(SourceOperandType::a, 4, target, addr);
+        insts.emplace_back(str);
+    }
 }
 
 std::list<std::shared_ptr<Instruction>>
 InstLowering::gepLower(const std::shared_ptr<IR::GEPInst> &gep) {
     std::list<std::shared_ptr<Instruction>> insts;
-
-    // 假设所有的Gep都以行开头作为基址, 也就是idx[0]一定为0
+    auto ptr = gep->getPtr();
     auto idx = gep->getIdxs()[1];
-    auto ptr =
-        std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(gep->getPtr()));
+    int perElemSize =
+        std::dynamic_pointer_cast<IR::ArrayType>(gep->getBaseType())
+            ->getElmType()
+            ->getBytes();
 
-    if (!ptr)
-        // lowering全局变量, 获得一个GlobalADROP(offset == 0)
-        ptr = operlower.mkBaseOP(*gep->getPtr(), gep->getPtr()->getName(), 0);
+    /// 一共四种情况, ptr是否是全局变量, idx是否是常量
 
-    auto arraytype =
-        std::dynamic_pointer_cast<IR::ArrayType>(gep->getBaseType());
-    auto PreElemSize = arraytype->getBytes();
+    std::shared_ptr<BaseADROP> baseOP;
+    if (auto global_ptr = std::dynamic_pointer_cast<IR::GlobalVariable>(ptr)) {
+        auto pair = operlower.LoadedFind(global_ptr->getName());
+        if (pair.first)
+            baseOP = std::dynamic_pointer_cast<BaseADROP>(pair.second);
+        else {
+            /// 加mov
+            auto relay = std::dynamic_pointer_cast<BaseADROP>(pair.second);
 
-    if (!arraytype)
-        Err::unreachable("memory lower: IR try to gep a none-Array type");
+            auto global_addr = operlower.fastFind(global_ptr->getName());
 
-    // =======================
-    // idx为常量, 后端隐式地统计偏移, 避免多余指令
-    // =======================
-    if (auto const_idx = std::dynamic_pointer_cast<IR::ConstantInt>(idx)) {
+            auto mov = std::make_shared<movInst>(SourceOperandType::a, relay,
+                                                 global_addr);
+            insts.emplace_back(mov);
+            baseOP = relay;
+        }
 
-        unsigned long long add_offset = PreElemSize * const_idx->getVal();
+        if (auto const_idx = std::dynamic_pointer_cast<IR::ConstantInt>(idx)) {
+            auto add_offset = const_idx->getVal() * perElemSize;
+            operlower.mkBaseOP(*gep, baseOP, add_offset);
+        } else {
+            // mul %temp1, %var_idx, #imme (带优化)
+            // add (%BindOnVirOP)temp2, %(BindOnVirOP)baseOP, %temp1
+            auto relay2 = operlower.mkBaseOP(*gep, baseOP, 0);
+            auto var_idx = operlower.fastFind(idx);
 
-        operlower.mkBaseOP(*gep, ptr, add_offset);
-    }
-    // =======================
-    // idx为虚拟寄存器中的变量, 需要添加计算偏移的指令
-    // =======================
-    else {
-        // mul temp1, operlower(idx), #imme (带优化)
-        // add (BindOnVirOP)temp2, (BindOnVirOP)ptr, temp1
-        auto relay =
-            operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
-        auto mul_midEnd = std::make_shared<IR::BinaryInst>(
-            relay->getName(), IR::OP::MUL, idx,
-            std::make_shared<IR::ConstantInt>(PreElemSize));
+            auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32),
+                                        RegisterBank::gpr);
+            auto mul_midEnd = std::make_shared<IR::BinaryInst>(
+                relay->getName(), IR::OP::MUL, idx,
+                std::make_shared<IR::ConstantInt>(perElemSize));
 
-        insts.splice(insts.end(), binaryLower(mul_midEnd)); // 复用
-
-        // temp2获取新的命名(gep->getName()), 继承ptr指向的内存以及常数偏移
-        auto relay2 = operlower.mkBaseOP(*gep, ptr, 0);
-        auto add = std::make_shared<binaryInst>(
-            OpCode::ADD, SourceOperandType::rr, relay2, relay, ptr);
-        insts.emplace_back(add);
+            insts.splice(insts.end(), binaryLower(mul_midEnd)); // 复用
+        }
     }
 
     return insts;

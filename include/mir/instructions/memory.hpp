@@ -18,7 +18,6 @@ public:
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
 
-    bool Check() override;
     // std::string toString() override;
 
     ~movInst() override = default;
@@ -43,7 +42,6 @@ public:
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
 
-    bool Check() override;
     // std::string toString() override;
 
     ~strInst() override = default;
@@ -66,7 +64,6 @@ public:
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
 
-    bool Check() override;
     // std::string toString() override;
 
     ~ldrInst() override = default;

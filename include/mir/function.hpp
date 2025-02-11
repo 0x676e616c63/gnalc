@@ -55,8 +55,6 @@ public:
     void delBlock(const std::string &_name);
     const std::list<std::shared_ptr<BasicBlock>> &getBlocks() { return blocks; }
 
-    void culStackFrame();
-
     std::string toString() const override;
     ~Function() override = default;
 };

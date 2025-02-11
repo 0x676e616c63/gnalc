@@ -29,7 +29,30 @@ struct OperandLowering {
     /// when use
     std::shared_ptr<Operand> fastFind(const std::shared_ptr<IR::Value> &);
 
-    /// @warning 可能会出现多个ConstantIDX指向同一个ConstObj, 会浪费内存
+    /// 在需要获得常数时, 先使用这个
+    /// 如果返回不为nullptr, 万事大吉
+    /// 如果返回为nullptr, 在instlower环境中手动加ldr/mov
+    template <typename T_variant>
+    std::pair<bool, std::shared_ptr<BindOnVirOP>>
+    LoadedFind(const T_variant &constVal) {
+        auto constPtr = constpool.getConstant(constVal);
+        auto loadPtr = varpool.getLoaded(*constPtr);
+        if (loadPtr)
+            return {true, loadPtr};
+        else {
+            if (typeid(T_variant) == typeid(float)) {
+                loadPtr =
+                    mkOP(IR::makeBType(IR::IRBTYPE::FLOAT), RegisterBank::spr);
+                varpool.addLoaded(*constPtr, loadPtr);
+            } else {
+                loadPtr =
+                    mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+                varpool.addLoaded(*constPtr, loadPtr);
+            }
+            return {false, loadPtr};
+        }
+    }
+
     template <typename T_variant>
     std::shared_ptr<Operand> fastFind(const T_variant &constVal) {
         auto constPtr = constpool.getConstant(constVal);
@@ -42,25 +65,30 @@ struct OperandLowering {
         return varpool.getValue(color);
     }
 
-    /// when def
+    /// def时建立键值对
     std::shared_ptr<BindOnVirOP> mkOP(const IR::Value &, RegisterBank);
 
+    /// 添加一般中介变量
     std::shared_ptr<BindOnVirOP> mkOP(const std::shared_ptr<IR::Type> &,
                                       RegisterBank);
 
+    /// store/load中创建临时GlobalADROP
+    std::shared_ptr<GlobalADROP> mkBaseOP(const std::string &,
+                                          const std::shared_ptr<BindOnVirOP> &);
+    // 全局变量第一次Gep
     std::shared_ptr<GlobalADROP> mkBaseOP(const IR::Value &,
-                                          const std::string &, unsigned int);
-
-    // std::shared_ptr<StackADROP> mkBaseOP(const IR::Value &,
-    //                                      const std::shared_ptr<FrameObj> &,
-    //                                      unsigned int);
-
-    /// 加静态偏移
+                                          const std::string &, unsigned int,
+                                          const std::shared_ptr<BindOnVirOP> &);
+    // Gep, 传递寄存器偏移, 加常量偏移
     std::shared_ptr<BaseADROP> mkBaseOP(const IR::Value &,
                                         const std::shared_ptr<BaseADROP> &,
-                                        unsigned int);
-
-    std::shared_ptr<StackADROP> mkStackOP(const IR::Value &, unsigned int);
+                                        unsigned int add_offset);
+    // 开辟栈空间(alloca)
+    std::shared_ptr<StackADROP> mkStackOP(const IR::Value &, unsigned int size);
+    // 开辟栈空间(arg fix-stack)
+    std::shared_ptr<StackADROP> mkStackOP(unsigned int seq);
+    // 开辟栈空间(spill)
+    std::shared_ptr<StackADROP> mkStackOP();
 };
 
 struct InstLowering {
@@ -70,10 +98,10 @@ struct InstLowering {
     operator()(const std::shared_ptr<IR::Instruction> &);
 
     std::list<std::shared_ptr<Instruction>>
-    binaryLower(const std::shared_ptr<IR::BinaryInst> &); //
+    binaryLower(const std::shared_ptr<IR::BinaryInst> &);
 
     std::list<std::shared_ptr<Instruction>>
-    icmpLower(const std::shared_ptr<IR::ICMPInst> &); //
+    icmpLower(const std::shared_ptr<IR::ICMPInst> &);
 
     std::list<std::shared_ptr<Instruction>>
     retLower(const std::shared_ptr<IR::RETInst> &);
@@ -85,25 +113,25 @@ struct InstLowering {
     callLower(const std::shared_ptr<IR::CALLInst> &);
 
     std::list<std::shared_ptr<Instruction>>
-    zextLower(const std::shared_ptr<IR::ZEXTInst> &);
+    zextLower(const std::shared_ptr<IR::ZEXTInst> &); //
 
     std::list<std::shared_ptr<Instruction>>
-    bitcastLower(const std::shared_ptr<IR::BITCASTInst> &);
+    bitcastLower(const std::shared_ptr<IR::BITCASTInst> &); //
 
     std::list<std::shared_ptr<Instruction>>
-    allocaLower(const std::shared_ptr<IR::ALLOCAInst> &); //
+    allocaLower(const std::shared_ptr<IR::ALLOCAInst> &);
 
     std::list<std::shared_ptr<Instruction>>
-    loadLower(const std::shared_ptr<IR::LOADInst> &); //
+    loadLower(const std::shared_ptr<IR::LOADInst> &);
 
     std::list<std::shared_ptr<Instruction>>
-    storeLower(const std::shared_ptr<IR::STOREInst> &); //
+    storeLower(const std::shared_ptr<IR::STOREInst> &);
 
     std::list<std::shared_ptr<Instruction>>
-    gepLower(const std::shared_ptr<IR::GEPInst> &); //
+    gepLower(const std::shared_ptr<IR::GEPInst> &);
 
     std::list<std::shared_ptr<Instruction>>
-    phiLower(const std::shared_ptr<IR::PHIInst> &);
+    phiLower(const std::shared_ptr<IR::PHIInst> &); //
 
     // Neon SIMD
 
@@ -120,8 +148,8 @@ public:
 
     void operator()(const IR::Module &);
     std::shared_ptr<Function> lower(const IR::Function &);
-    std::shared_ptr<BasicBlock> lower(const IR::BasicBlock &, VarPool &,
-                                      std::vector<std::shared_ptr<FrameObj>> &);
+    std::shared_ptr<BasicBlock> lower(const IR::BasicBlock &,
+                                      OperandLowering &);
 
     void PhiEliminate();
 

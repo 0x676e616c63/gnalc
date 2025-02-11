@@ -36,9 +36,16 @@ public:
         return insts.size();
     }
 
-    unsigned int addInsts(std::list<std::shared_ptr<Instruction>> _insts) {
-        if (_insts.size())
+    unsigned int addInsts_back(std::list<std::shared_ptr<Instruction>> _insts) {
+        if (!_insts.empty())
             insts.splice(insts.end(), _insts);
+        return insts.size();
+    }
+
+    unsigned int
+    addInsts_front(std::list<std::shared_ptr<Instruction>> _insts) {
+        if (!_insts.empty())
+            insts.splice(insts.begin(), _insts);
         return insts.size();
     }
 

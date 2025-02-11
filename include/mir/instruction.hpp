@@ -70,16 +70,18 @@ enum class NeonOpCode {
     VSUB,
     VMUL,
     VDIV,
-    VNEG,
 
     VADDV,
     VMAXV,
     VMINV, /* reductions */
 
-    VCMP,
+    VNEG,
 
     VSITOF,
     VFTOSI,
+
+    VCMP,
+
 };
 
 enum class SourceOperandType {
@@ -132,6 +134,8 @@ public:
     Instruction(NeonOpCode _opcode, SourceOperandType _tptrait)
         : opcode(_opcode), tptrait(_tptrait) {}
 
+    std::variant<OpCode, NeonOpCode> getOpCode() { return opcode; }
+
     virtual void addTargetOP(std::shared_ptr<BindOnVirOP> TargetOperand_) {
         TargetOperand = std::move(TargetOperand_);
     }
@@ -144,10 +148,35 @@ public:
 
     void setFlash() { flashFlag = true; }
 
-    virtual bool Check() = 0; // tptriat, sourceoperand
-    virtual std::string toString() final;
+    virtual std::string toString();
     virtual ~Instruction() = default;
-}; // namespace MIR
-} // namespace MIR
+};
 
+enum class bitType {
+    /* s8, s16 */
+    s32,
+    f32,
+    /*f16, f64, f128*/
+    DEFAULT32,
+};
+
+class NeonInstruction : public Instruction {
+protected:
+    // 对于有目的操作数的指令, 代表目标操作数和源操作数
+    // 对于无目标操作数如(vcmp, vstr), 代表两个操作数
+    std::pair<bitType, bitType> dataTypes;
+
+private:
+public:
+    NeonInstruction() = delete;
+    NeonInstruction(NeonOpCode _opcode, SourceOperandType _type,
+                    const std::pair<bitType, bitType> &_dataTypes)
+        : Instruction(_opcode, _type), dataTypes(_dataTypes) {}
+
+    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override = 0;
+
+    std::string toString() override;
+    ~NeonInstruction() override = default;
+};
+} // namespace MIR
 #endif

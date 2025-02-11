@@ -51,8 +51,9 @@ std::string GlobalADROP::toString() const {
 
 std::string StackADROP::toString() const {
     /// %1:gpr(%stack.bbb + 16)
-    std::string str = getName() + ':' + enum_name(bank);
-    str += "(%stack." + std::to_string(idx);
+    std::string str;
+    str = getName() + ':' + enum_name(bank);
+    str += "(%stack." + std::to_string(obj->getId());
     str += " + " + std::to_string(constOffset) + ')';
     return str;
 }

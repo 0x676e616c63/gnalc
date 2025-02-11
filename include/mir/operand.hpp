@@ -71,10 +71,9 @@ enum class FPURegister {
 
 enum class RegisterBank {
     gpr,
-    gprnopc,
-    /* gpr but no pc */ spr, /* 32 bits */
-    dpr,                     /* 64 bits */
-
+    spr, /* 32 bits */
+    dpr, /* 64 bits */
+    qpr, /* 128 bits*/
 };
 
 enum class OperandTrait {
@@ -129,6 +128,11 @@ public:
 
     const std::variant<CoreRegister, FPURegister> &getColor() { return color; };
     void setColor(unsigned int newColor);
+    template <typename T_Reg> void setColor(T_Reg newColor) {
+        color = newColor; ///
+    }
+
+    RegisterBank getRegisterBank() { return bank; }
 
     std::string toString() const override;
     ~BindOnVirOP() override = default;
@@ -161,17 +165,24 @@ protected:
     /// @note 最后codegen时, 需要判断constOffset的大小
     unsigned int constOffset = 0;
 
+    /// @brief 单向的依赖
+    /// @brief 用于辅助预着色, 和数据流分析无关
+    std::shared_ptr<BindOnVirOP> varOffset;
+
 public:
     BaseADROP() = delete;
     BaseADROP(BaseAddressTrait _btrait, std::string _name,
-              unsigned int _constOffset)
+              unsigned int _constOffset,
+              const std::shared_ptr<BindOnVirOP> &_varOffset)
         : BindOnVirOP(std::move(_name)), btrait(_btrait),
-          constOffset(_constOffset) {}
+          constOffset(_constOffset), varOffset(_varOffset) {}
 
     unsigned int getConstOffset() const { return constOffset; }
     void setConstOffset(unsigned int newOffset) { constOffset = newOffset; }
 
     BaseAddressTrait getTrait() { return btrait; }
+
+    const std::shared_ptr<BindOnVirOP> getBase() const { return varOffset; }
 
     std::string toString() const override = 0;
     ~BaseADROP() override = default;
@@ -184,9 +195,11 @@ private:
 public:
     GlobalADROP() = delete;
     GlobalADROP(std::string _global_name, std::string _name,
-                unsigned int _offset)
-        : BaseADROP(BaseAddressTrait::Global, std::move(_name), _offset),
-          global_name(std::move(_global_name)) {};
+                unsigned int _offset,
+                const std::shared_ptr<BindOnVirOP> &_varOffset)
+        : BaseADROP(BaseAddressTrait::Global, std::move(_name), _offset,
+                    _varOffset),
+          global_name(std::move(_global_name)){};
 
     std::string toString() const final;
     ~GlobalADROP() override = default;
@@ -199,8 +212,10 @@ private:
 public:
     StackADROP() = delete;
     StackADROP(std::shared_ptr<FrameObj> _obj, std::string _name,
-               unsigned int _offset)
-        : BaseADROP(BaseAddressTrait::Local, std::move(_name), _offset),
+               unsigned int _offset,
+               const std::shared_ptr<BindOnVirOP> &_varOffset)
+        : BaseADROP(BaseAddressTrait::Local, std::move(_name), _offset,
+                    _varOffset),
           obj(std::move(_obj)) {}
 
     std::shared_ptr<FrameObj> getObj() { return obj; }
@@ -218,8 +233,8 @@ public:
 
     ShiftOP() = delete;
     ShiftOP(unsigned _imme, ShiftOP::inlineShift _shiftCode)
-        : imme(_imme), shiftCode(_shiftCode),
-          Operand(OperandTrait::ShiftImme) {}
+        : imme(_imme), shiftCode(_shiftCode), Operand(OperandTrait::ShiftImme) {
+    }
 
     std::string toString() const final;
     ~ShiftOP() override = default;

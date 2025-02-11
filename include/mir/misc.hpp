@@ -21,7 +21,7 @@ private:
     unsigned int id{};
 
     size_t size;
-    size_t offset{}; // 相对与sp或者fp或者r7
+    long long offset{}; // 相对与sp或者fp或者r7
     FrameTrait ftrait;
 
 public:
@@ -67,6 +67,7 @@ class ConstObj {
 private:
     unsigned int id;
 
+    /// @brief std::string代表常量地址, 仅在mov中出现
     std::variant<std::string, int, float, bool, char, Encoding> literal;
 
 public:
@@ -84,6 +85,10 @@ public:
 
     void setId(unsigned int _id) { id = _id; }
     unsigned int getId() const { return id; }
+
+    bool operator==(const ConstObj &other) const {
+        return other.literal == literal;
+    }
 
     std::string toString() const; // printf info
     ~ConstObj() = default;

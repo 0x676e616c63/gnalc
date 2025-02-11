@@ -1,4 +1,6 @@
 #include "../../../include/mir/builder/lowering.hpp"
+#include "../../../include/mir/instructions/copy.hpp"
+#include "../../../include/mir/instructions/memory.hpp"
 
 using namespace MIR;
 
@@ -21,31 +23,75 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
 
     func->editInfo().args = midEnd_function.getParams().size();
 
-    for (auto &midEnd_bb : midEnd_function.getBlocks()) {
-        func->addBlock(lower(*midEnd_bb, func->editInfo().varpool,
-                             func->editInfo().StackObjs));
+    OperandLowering operlower{module.getConstPool(), func->editInfo().varpool,
+                              func->editInfo().StackObjs};
+
+    /// @brief 函数参数加载到varpool里, 并且适当添加ldr指令
+    unsigned int cnt = 0;  // int 或者 地址(数组退化而来)
+    unsigned int fcnt = 0; // float
+    std::list<std::shared_ptr<Instruction>> arg_insts;
+
+    for (const auto &arg : midEnd_function.getParams()) {
+        auto arg_type = arg->getType();
+
+        if (std::dynamic_pointer_cast<IR::PtrType>(arg_type) ||
+            std::dynamic_pointer_cast<IR::BType>(arg_type)->getInner() ==
+                IR::IRBTYPE::I32) {
+            if (cnt <= 4) {
+                auto arg_in_reg =
+                    operlower.getPreColored(static_cast<CoreRegister>(cnt));
+                auto val = operlower.mkOP(*arg, RegisterBank::gpr);
+                auto copy = std::make_shared<COPY>(val, arg_in_reg);
+                arg_insts.emplace_back(copy);
+            } else {
+                // 参数在内存中
+                auto val = operlower.mkOP(*arg, RegisterBank::gpr);
+                auto arg_in_stack = operlower.mkStackOP(cnt);
+                auto ldr = std::make_shared<ldrInst>(SourceOperandType::a, 4,
+                                                     val, arg_in_stack);
+                arg_insts.emplace_back(ldr);
+            }
+            ++cnt;
+        } else if (std::dynamic_pointer_cast<IR::BType>(arg_type)->getInner() ==
+                   IR::IRBTYPE::FLOAT) {
+            if (fcnt <= 32) {
+                auto arg_in_freg =
+                    operlower.getPreColored(static_cast<CoreRegister>(cnt));
+                auto val = operlower.mkOP(*arg, RegisterBank::spr);
+                auto copy = std::make_shared<COPY>(val, arg_in_freg);
+                arg_insts.emplace_back(copy);
+            } else {
+                Err::unreachable("too many float args for functioon");
+            }
+            ++fcnt;
+        } else {
+            Err::unreachable("unknown arg type encountered!");
+        }
     }
 
-    ///@brief 整合栈帧, 但是还没有栈帧相关或者返回指令
-    func->culStackFrame();
+    for (auto &midEnd_bb : midEnd_function.getBlocks()) {
+        auto basicblock = lower(*midEnd_bb, operlower);
+        if (func->getBlocks().empty()) {
+            basicblock->addInsts_front(arg_insts);
+        }
+        func->addBlock(basicblock);
+    }
 
     return func;
 }
 
-std::shared_ptr<BasicBlock>
-Lowering::lower(const IR::BasicBlock &midEnd_bb, VarPool &varpool,
-                std::vector<std::shared_ptr<FrameObj>> &stackobjs) {
+std::shared_ptr<BasicBlock> Lowering::lower(const IR::BasicBlock &midEnd_bb,
+                                            OperandLowering &operlower) {
     std::shared_ptr<BasicBlock> basicblock =
         std::make_shared<BasicBlock>(midEnd_bb.getName());
 
-    OperandLowering operlower{module.getConstPool(), varpool, stackobjs};
     InstLowering instlower{operlower};
 
     ///@note lowering 中没有填写pres, succs以及活跃信息, 应该在phi消除中会填
 
     for (auto &midEnd_inst : midEnd_bb.getInsts()) {
         auto insts = instlower(midEnd_inst);
-        basicblock->addInsts(insts);
+        basicblock->addInsts_back(insts);
     }
 
     return basicblock;
@@ -196,23 +242,28 @@ std::shared_ptr<BindOnVirOP> OperandLowering::mkOP(const IR::Value &val,
     return ptr;
 }
 
-std::shared_ptr<GlobalADROP> OperandLowering::mkBaseOP(const IR::Value &val,
-                                                       const std::string &name,
-                                                       unsigned int offset) {
-    /* global_name, name, offset*/
-    auto ptr = std::make_shared<GlobalADROP>(val.getName(), name, offset);
-    varpool.addValue(val, ptr);
+std::shared_ptr<GlobalADROP>
+OperandLowering::mkBaseOP(const std::string &global_name,
+                          const std::shared_ptr<BindOnVirOP> &base) {
+    auto virtual_val = std::make_shared<IR::Value>(
+        "%" + std::to_string(varpool.size()), IR::makeBType(IR::IRBTYPE::I32),
+        IR::ValueTrait::ORDINARY_VARIABLE);
+    auto ptr = std::make_shared<GlobalADROP>(global_name,
+                                             virtual_val->getName(), 0, base);
+    varpool.addValue(*virtual_val, ptr);
     return ptr;
 }
 
-// std::shared_ptr<StackADROP>
-// OperandLowering::mkBaseOP(const IR::Value &val,
-//                           const std::shared_ptr<FrameObj> &obj,
-//                           unsigned int offset) {
-//     auto ptr = std::make_shared<StackADROP>(obj, val.getName(), offset);
-//     VarPool.addValue(val, ptr);
-//     return ptr;
-// }
+std::shared_ptr<GlobalADROP>
+OperandLowering::mkBaseOP(const IR::Value &val, const std::string &val_name,
+                          unsigned int constOffset,
+                          const std::shared_ptr<BindOnVirOP> &varOffset) {
+    /* global_name, name, offset*/
+    auto ptr = std::make_shared<GlobalADROP>(val.getName(), val_name,
+                                             constOffset, varOffset);
+    varpool.addValue(val, ptr);
+    return ptr;
+}
 
 std::shared_ptr<BaseADROP>
 OperandLowering::mkBaseOP(const IR::Value &val,
@@ -220,16 +271,17 @@ OperandLowering::mkBaseOP(const IR::Value &val,
                           unsigned int add_offset) {
 
     if (base->getTrait() == BaseAddressTrait::Global) {
-        auto ptr =
-            std::make_shared<GlobalADROP>(base->getName(), val.getName(),
-                                          base->getConstOffset() + add_offset);
+        auto ptr = std::make_shared<GlobalADROP>(
+            base->getName(), val.getName(), base->getConstOffset() + add_offset,
+            base->getBase());
 
         varpool.addValue(val, ptr);
         return ptr;
     } else {
         auto ptr = std::make_shared<StackADROP>(
             std::dynamic_pointer_cast<StackADROP>(base)->getObj(),
-            val.getName(), base->getConstOffset() + add_offset);
+            val.getName(), base->getConstOffset() + add_offset,
+            base->getBase());
 
         varpool.addValue(val, ptr);
         return ptr;
@@ -241,9 +293,35 @@ std::shared_ptr<StackADROP> OperandLowering::mkStackOP(const IR::Value &val,
     auto obj = std::make_shared<FrameObj>(FrameTrait::Alloca, size);
     StackObjs.emplace_back(obj);
 
+    auto r7 = getPreColored(CoreRegister::r7);
+
     std::shared_ptr<StackADROP> ptr =
-        std::make_shared<StackADROP>(obj, val.getName(), 0);
+        std::make_shared<StackADROP>(obj, val.getName(), 0, r7);
 
     varpool.addValue(val, ptr);
+    return ptr;
+}
+
+std::shared_ptr<StackADROP> OperandLowering::mkStackOP(unsigned int seq) {
+    auto obj = std::make_shared<FrameObj>(FrameTrait::Arg, 4);
+    StackObjs.emplace_back(obj);
+
+    auto sp = getPreColored(CoreRegister::sp);
+
+    std::shared_ptr<StackADROP> ptr = std::make_shared<StackADROP>(
+        obj, "%fix-stack." + std::to_string(seq - 4), 0, sp);
+
+    return ptr;
+}
+
+std::shared_ptr<StackADROP> OperandLowering::mkStackOP() {
+    auto obj = std::make_shared<FrameObj>(FrameTrait::Spill, 4);
+    StackObjs.emplace_back(obj);
+
+    auto sp = getPreColored(CoreRegister::sp);
+
+    std::shared_ptr<StackADROP> ptr =
+        std::make_shared<StackADROP>(obj, "%spill-stack", 0, sp);
+
     return ptr;
 }

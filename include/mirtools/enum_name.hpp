@@ -35,12 +35,12 @@ template <> inline std::string enum_name<RegisterBank>(RegisterBank t) {
     switch (t) {
     case RegisterBank::gpr:
         return "gpr";
-    case RegisterBank::gprnopc:
-        return "gprnopc";
     case RegisterBank::spr:
         return "spr";
     case RegisterBank::dpr:
         return "dpr";
+    case RegisterBank::qpr:
+        return "qpr";
     }
     Err::unreachable();
     return "unknown RegisterBank";
@@ -201,7 +201,7 @@ template <> inline std::string enum_name<CondCodeFlag>(CondCodeFlag t) {
     case CondCodeFlag::gt:
         return "gt";
     case CondCodeFlag::le:
-        return "le"; // AL,
+        return "le";
     case CondCodeFlag::ge:
         return "ge";
     }
@@ -253,6 +253,12 @@ template <> inline std::string enum_name<OpCode>(OpCode t) {
         return "sdiv";
     case OpCode::SMULL:
         return "smull";
+    case OpCode::SMMUL:
+        return "smmul";
+    case OpCode::SMMLA:
+        return "smmla";
+    case OpCode::SMMLS:
+        return "smmls";
     case OpCode::MLA:
         return "mla";
     case OpCode::MLS:
@@ -321,6 +327,17 @@ template <> inline std::string enum_name<NeonOpCode>(NeonOpCode t) {
     }
     Err::unreachable();
     return "unknown NeonOperCode";
+}
+
+template <> inline std::string enum_name<bitType>(bitType t) {
+    switch (t) {
+    case bitType::DEFAULT32:
+        return "32";
+    case bitType::f32:
+        return "f32";
+    case bitType::s32:
+        return "s32";
+    }
 }
 
 template <>
