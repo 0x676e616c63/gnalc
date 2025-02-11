@@ -6,59 +6,42 @@
 #include <string>
 
 namespace IR {
-PM::UniqueKey LiveAnalyser::Key;
+PM::UniqueKey LiveAnalysis::Key;
 
-void LiveAnalyser::genDFSStack(const BasicBlock *bb) {
-    bb_stack.spush(bb);
-    for (auto &nextbb : bb->getNextBB()) {
-        if (!bb_stack.visited(nextbb.get())) {
-            genDFSStack(nextbb.get());
-        }
-    }
-}
-
-Liveness LiveAnalyser::run(Function &f, FAM &fam) {
+Liveness LiveAnalysis::run(Function &f, FAM &fam) {
     liveness.reset();
-    bb_stack.reset();
-    genDFSStack(f.getBlocks().front().get());
-
     while (processFunc(&f))
         ;
-
     return liveness;
 }
 
-bool LiveAnalyser::processFunc(const Function *func) {
-    bb_stack.restore();
+bool LiveAnalysis::processFunc(const Function *func) {
+    auto dfvisitor = func->getDFVisitor();
     bool updated = false;
-    while (!bb_stack.empty()) {
-        auto bb = bb_stack.pop();
+    for (const auto& bb : dfvisitor) {
         for (auto &nxtbb : bb->getNextBB())
             for (auto &livevar : liveness.getLiveIn(nxtbb.get()))
-                if (liveness.getLiveOut(bb).insert(livevar).second)
+                if (liveness.getLiveOut(bb.get()).insert(livevar).second)
                     updated = true;
-        if (processBB(bb))
+        if (processBB(bb.get()))
             updated = true;
     }
     return updated;
-
-    // // just for one BB
-    // processBB(func->getBlocks().front());
-    // return false;
 }
 
 // 返回值为LiveIn是否更新了
-bool LiveAnalyser::processBB(const BasicBlock *bb) {
+bool LiveAnalysis::processBB(const BasicBlock *bb) {
     // Logger::logDebug("Copying LiveOut from bb to insts");
-    liveness.getLiveOut(bb->getInsts().back().get()) = liveness.getLiveOut(bb);
+    auto all = bb->getAllInsts();
+    liveness.getLiveOut(all.back().get()) = liveness.getLiveOut(bb);
     bool updated = false;
     // Logger::logDebug("Processing insts in bb");
-    for (auto it = bb->getInsts().rbegin(); it != bb->getInsts().rend(); ++it) {
+    for (auto it = all.rbegin(); it != all.rend(); ++it) {
         if (processInst((*it).get())) {
             updated = true;
             Logger::logDebug("LiveAnalyser: Updated insts " + (*it)->getName() +
                              " in bb");
-            if (std::next(it) != bb->getInsts().rend()) {
+            if (std::next(it) != all.rend()) {
                 liveness.getLiveOut(std::next(it)->get()) =
                     liveness.getLiveIn(it->get());
             } else {
@@ -67,13 +50,13 @@ bool LiveAnalyser::processBB(const BasicBlock *bb) {
         }
     }
     // Logger::logDebug("Processing insts in bb done");
-    liveness.getLiveIn(bb) = liveness.getLiveIn(bb->getInsts().front().get());
+    liveness.getLiveIn(bb) = liveness.getLiveIn(all.front().get());
     // Logger::logDebug("Copied LiveIn");
     return updated;
 }
 
 // 返回值为LiveIn是否更新了
-bool LiveAnalyser::processInst(const Instruction *inst) {
+bool LiveAnalysis::processInst(const Instruction *inst) {
     // Logger::logDebug("Processing Instruction: " + inst->getName());
     bool updated = false;
     // inst->getLiveIn().insert(std::make_shared<ConstantInt>(1));

@@ -1,6 +1,10 @@
 #include "../../../include/ir/instructions/memory.hpp"
 #include "../../../include/ir/visitor.hpp"
 
+#include <algorithm>
+#include <cassert>
+#include <stdexcept>
+
 namespace IR {
 ALLOCAInst::ALLOCAInst(NameRef name, std::shared_ptr<Type> btype, int _align)
     : Instruction(OP::ALLOCA, name, makePtrType(btype)),
@@ -87,6 +91,15 @@ GEPInst::GEPInst(NameRef name, const std::shared_ptr<Value> &_ptr,
     addOperand(idx);
 }
 
+GEPInst::GEPInst(NameRef name, const std::shared_ptr<Value> &_ptr,
+    const std::vector<std::shared_ptr<Value>> &idxs)
+    : Instruction(OP::GEP, name, makePtrType(getElm(_ptr->getType()))) {
+    Err::gassert(_ptr->getType()->getTrait() == IRCTYPE::PTR);
+    addOperand(_ptr);
+    for (const auto &idx : idxs)
+        addOperand(idx);
+}
+
 std::shared_ptr<Type> GEPInst::getBaseType() const {
     return getElm(getPtr()->getType());
 }
@@ -100,6 +113,27 @@ std::vector<std::shared_ptr<Value>> GEPInst::getIdxs() const {
     for (auto it = getOperands().begin() + 1; it != getOperands().end(); ++it)
         ret.emplace_back((*it)->getValue());
     return ret;
+}
+bool GEPInst::isConstantOffset() const {
+    auto idx = getIdxs();
+    return std::all_of(idx.cbegin(), idx.cend(),
+        [](const auto& i){ return i->getVTrait() == ValueTrait::CONSTANT_LITERAL; });
+}
+
+size_t GEPInst::getConstantOffset() const {
+    auto idx = getIdxs();
+
+    size_t offset = 0;
+    std::shared_ptr<Type> curr_type = getBaseType();
+    for (const auto& i : idx) {
+        auto ci = std::dynamic_pointer_cast<ConstantInt>(i);
+        Err::gassert(ci != nullptr, "Not constant offset.");
+        Err::gassert(curr_type != nullptr, "Invalid GEPInst, type mismatched with indices.");
+        offset += ci->getVal() * curr_type->getBytes();
+        curr_type = getElm(curr_type);
+    }
+
+    return offset;
 }
 
 void ALLOCAInst::accept(IRVisitor &visitor) { visitor.visit(*this); }

@@ -60,9 +60,8 @@ public:
 class PrintModulePass : public PM::PassInfo<PrintModulePass>,
                         public PrinterBase {
 public:
-    explicit PrintModulePass(std::ostream &outStream_,
-                             bool printLiveInfo_ = false)
-        : PrinterBase(outStream_, printLiveInfo_) {}
+    explicit PrintModulePass(std::ostream &outStream_)
+        : PrinterBase(outStream_, false) {}
 
     PM::PreservedAnalyses run(Module &unit, MAM &manager);
 };

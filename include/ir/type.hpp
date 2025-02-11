@@ -113,7 +113,7 @@ public:
     const auto &getElmType() const { return element_type; }
 
     IRCTYPE getTrait() const override { return IRCTYPE::PTR; }
-    // std::string toString() const override { return "ptr"; }
+
     std::string toString() const override {
         return element_type->toString() + "*";
     }
@@ -136,8 +136,7 @@ public:
     IRCTYPE getTrait() const override { return IRCTYPE::ARRAY; }
 
     std::string toString() const override {
-        return "[" + std::to_string(size) + " x " + element_type->toString() +
-               "]";
+        return "[" + std::to_string(size) + " x " + element_type->toString() + "]";
     }
 
     size_t getBytes() const override { return size * element_type->getBytes(); }
@@ -195,12 +194,11 @@ std::shared_ptr<FunctionType> toFunctionType(const std::shared_ptr<Type> &ty);
 // 返回PTR, ARRAY的element_type; BType 会返回 nullptr
 std::shared_ptr<Type> getElm(const std::shared_ptr<Type> &ty);
 
-bool isSameType(std::shared_ptr<Type> a, std::shared_ptr<Type> b);
+bool isSameType(const std::shared_ptr<Type>& a, const std::shared_ptr<Type>& b);
 
 /***********下列内容为NameClass相关**********/
 
-using NameRef = const std::string
-    &; // 赋值名字时改为str::string, 用move传值；引用名字时使用该类型别名
+using NameRef = const std::string&; // 赋值名字时改为str::string, 用move传值；引用名字时使用该类型别名
 
 // move传值
 // C means class
@@ -210,9 +208,9 @@ private:
 
 public:
     NameC() = default;
-    NameC(std::string _name) : name(_name) {}
+    explicit NameC(std::string _name) : name(std::move(_name)) {}
 
-    void setName(std::string _name) { name = _name; }
+    void setName(std::string _name) { name = std::move(_name); }
     bool isName(NameRef _name) { return _name == name; }
     std::string getName() const { return name; }
 };

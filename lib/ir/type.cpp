@@ -13,14 +13,13 @@ std::shared_ptr<BType> makeBType(IRBTYPE bty) {
 
 std::shared_ptr<PtrType> makePtrType(std::shared_ptr<Type> ele_ty) {
     Err::gassert(ele_ty != nullptr, "makePtrType(): Element type is nullptr.");
-    return std::make_shared<PtrType>(ele_ty);
+    return std::make_shared<PtrType>(std::move(ele_ty));
 }
 
-std::shared_ptr<ArrayType> makeArrayType(std::shared_ptr<Type> ele_ty,
-                                         size_t size) {
+std::shared_ptr<ArrayType> makeArrayType(std::shared_ptr<Type> ele_ty, size_t size) {
     Err::gassert(ele_ty != nullptr,
                  "makeArrayType(): Element type is nullptr.");
-    return std::make_shared<ArrayType>(ele_ty, size);
+    return std::make_shared<ArrayType>(std::move(ele_ty), size);
 }
 
 std::shared_ptr<FunctionType>
@@ -61,7 +60,7 @@ std::shared_ptr<Type> getElm(const std::shared_ptr<Type> &ty) {
     }
 }
 
-bool isSameType(std::shared_ptr<Type> a, std::shared_ptr<Type> b) {
+bool isSameType(const std::shared_ptr<Type>& a, const std::shared_ptr<Type>& b) {
     if (a->getTrait() != b->getTrait())
         return false;
 

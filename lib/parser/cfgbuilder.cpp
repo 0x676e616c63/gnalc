@@ -10,7 +10,7 @@
 using namespace IR;
 namespace Parser {
 void CFGBuilder::build(IR::Module &module) {
-    for (auto &f : module.getFunctions()) {
+    for (auto &f : module.funcs) {
         cur_linear_func = std::dynamic_pointer_cast<LinearFunction>(f);
         cur_making_func = std::make_shared<Function>(
             cur_linear_func->getName(), cur_linear_func->getParams(),
@@ -23,6 +23,7 @@ void CFGBuilder::build(IR::Module &module) {
         f->replaceSelf(cur_making_func);
 
         f = cur_making_func;
+        f->updateAllIndex();
     }
 }
 
@@ -118,6 +119,7 @@ void CFGBuilder::linker() {
             break;
         }
         case OP::RET:
+            cur_making_func->addExitBB(*blk_it);
             break;
         default:
             auto next_blk = std::next(blk_it);
@@ -133,9 +135,9 @@ void CFGBuilder::linker() {
         // 删除不可达块
         if ((*it)->getPreBB().empty() && it != cur_making_func->begin()) {
             for (const auto &nextbb : (*it)->getNextBB()) {
-                WeakListDel(nextbb->getRPreBB(), *it);
+                WeakListDel(nextbb->pre_bb, *it);
             }
-            it = cur_making_func->getBlocks().erase(it);
+            it = cur_making_func->blks.erase(it);
             continue;
         }
         // 删除空块
@@ -150,18 +152,19 @@ void CFGBuilder::linker() {
                             prebb->getInsts().back());
                         Err::gassert(brinst != nullptr,
                                      "CFGBuilder::linker(): can't cast BRInst");
-                        brinst->replaceUse(*it, nxt); // 改 br
+                        brinst->replaceOperand(*it, nxt); // 改 br
                     }
-                    WeakListReplace(prebb->getRNextBB(), *it, nxt); // 改nextbb
-                    WeakListReplace(nxt->getRPreBB(), *it, prebb);  // 改prebb
+                    WeakListReplace(prebb->next_bb, *it, nxt); // 改nextbb
+                    WeakListReplace(nxt->pre_bb, *it, prebb);  // 改prebb
                 }
-                it = cur_making_func->getBlocks().erase(it);
-            } else if ((*it)->getNextBB().size() == 0) {
+                it = cur_making_func->blks.erase(it);
+            } else if ((*it)->getNextBB().empty()) {
                 // 结尾块
                 if (toBType(
                         toFunctionType(cur_linear_func->getType())->getRet())
                         ->getInner() == IRBTYPE::VOID) {
                     (*it)->addInst(std::make_shared<RETInst>());
+                    cur_making_func->addExitBB(*it);
                 } else {
                     Err::unreachable(
                         "CFGBuilder::linker(): invalid function type.");

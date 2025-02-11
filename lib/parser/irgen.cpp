@@ -15,6 +15,10 @@
 
 using namespace AST;
 namespace Parser {
+IRGenerator::IRGenerator(const std::string &module_name) {
+    module.setName(module_name);
+}
+
 void IRGenerator::visit(CompUnit &node) {
     symbol_table.initScope("__global");
 
@@ -65,14 +69,16 @@ void IRGenerator::visit(CompUnit &node) {
     }
     symbol_table.finishScope();
 
-    auto &decls = module.getFunctionDecls();
-    decls.erase(
-        std::remove_if(decls.begin(), decls.end(),
-                       [](auto &&p) { return p->getRUseList().empty(); }),
-        decls.end());
+    module.removeUnusedFuncDecl();
 
     CFGBuilder builder;
     builder.build(module);
+    curr_func = nullptr;
+    curr_initializer.reset(IR::IRBTYPE::I32);
+    curr_val = nullptr;
+    curr_making_initializer = nullptr;
+    curr_insts.clear();
+    is_making_lval = false;
 }
 
 // DeclStmt: const int32
@@ -119,7 +125,7 @@ void IRGenerator::visit(VarDef &node) {
     curr_making_initializer = &curr_initializer;
 
     // Pure Constant Variable
-    // check if the given variable is unusable in constant expression
+    // check if the given variable is usable in constant expression
     if (node.isConst() && !node.isArray()) {
         Err::gassert(node.isInited());
         node.getInitVal()->accept(*this);
@@ -412,14 +418,18 @@ void IRGenerator::visit(FuncDef &node) {
 
     curr_func = nullptr;
 
-    std::vector<std::shared_ptr<IR::Value>> params;
+    std::vector<std::shared_ptr<IR::FormalParam>> params;
     std::vector<std::string> param_ids;
 
     if (!node.isEmptyParam()) {
-        for (auto &p : node.getParams()) {
-            p->accept(*this);
-            param_ids.emplace_back(p->getId());
-            params.emplace_back(curr_val);
+        const auto &ast_params = node.getParams();
+        for (size_t i = 0; i < ast_params.size(); ++i) {
+            ast_params[i]->accept(*this);
+            param_ids.emplace_back(ast_params[i]->getId());
+            auto f = std::dynamic_pointer_cast<IR::FormalParam>(curr_val);
+            Err::gassert(f != nullptr, "Invalid formal param.");
+            f->setIndex(i);
+            params.emplace_back(f);
         }
     }
 
@@ -520,8 +530,8 @@ void IRGenerator::visit(FuncFParam &node) {
         ir_type = IR::makeBType(node_type);
     }
 
-    curr_val = std::make_shared<IR::Value>(irval_temp_name, ir_type,
-                                           IR::ValueTrait::FORMAL_PARAMETER);
+    // The index should be overwritten by Function's visitor.
+    curr_val = std::make_shared<IR::FormalParam>(irval_temp_name, ir_type, 0);
 }
 
 // The following two functions (DeclRef and ArrayExp) is handling LVal.
@@ -674,10 +684,16 @@ void IRGenerator::visit(CallExp &node) {
 
     auto functy = IR::toFunctionType(func->getType());
     auto expected = functy->getParams();
-    if (expected.size() != args.size())
-        Err::error("Invalid call.");
 
-    for (size_t i = 0; i < args.size(); ++i)
+    if (functy->isVAArg()) {
+        if (expected.size() > args.size())
+            Err::error("Invalid call.");
+    } else {
+        if (expected.size() != args.size())
+            Err::error("Invalid call.");
+    }
+
+    for (size_t i = 0; i < expected.size(); ++i)
         args[i] = type_cast(args[i], expected[i]);
 
     std::shared_ptr<IR::CALLInst> call;

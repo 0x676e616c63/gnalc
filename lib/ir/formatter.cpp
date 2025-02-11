@@ -160,8 +160,8 @@ std::string IRFormatter::formatFunc(Function &func) {
     ret += ret_type->toString() + " " + func.getName();
     ret += "(";
 
-    for (auto it = func.getParams().begin(); it != func.getParams().end();
-         it++) {
+    const auto& params = func.getParams();
+    for (auto it = params.begin(); it != params.end(); it++) {
         ret += (*it)->getType()->toString() + " noundef " + (*it)->getName();
         if (std::next(it) != func.getParams().end()) {
             ret += ", ";
@@ -354,6 +354,8 @@ std::string IRFormatter::fCALLInst(CALLInst &inst) {
         ret += inst.getName();
         ret += " = ";
     }
+    if (inst.isTailCall())
+        ret += "tail ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
     ret += inst.getType()->toString() + " ";
     ret += inst.getFuncName();
@@ -442,7 +444,23 @@ std::string IRFormatter::fGEPInst(GEPInst &inst) {
 
 std::string IRFormatter::fPHIInst(PHIInst &inst) {
     std::string ret;
-
+    ret += inst.getName();
+    ret += " = ";
+    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
+    ret += inst.getType()->toString() + " ";
+    auto opers = inst.getPhiOpers();
+    for (auto it = opers.begin(); ; ) {
+        ret += "[ ";
+        ret += it->value->getName();
+        ret += ", ";
+        ret += it->block->getName() + " ";
+        ret += "]";
+        if (++it == opers.end()) {
+            break;
+        } else {
+            ret += ", ";
+        }
+    }
     return ret;
 }
 

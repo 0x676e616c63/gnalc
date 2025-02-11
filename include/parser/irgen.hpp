@@ -72,6 +72,7 @@ class IRGenerator : public AST::ASTVisitor {
 
 public:
     IRGenerator() = default;
+    explicit IRGenerator(const std::string& module_name);
     void visit(AST::CompUnit &node) override;
     void visit(AST::VarDef &node) override;
     void visit(AST::DeclStmt &node) override;
