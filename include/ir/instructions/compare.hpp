@@ -10,7 +10,6 @@
 #include "../instruction.hpp"
 
 namespace IR {
-
 // eq: equal
 // ne: not equal
 // sgt: signed greater than
@@ -18,35 +17,30 @@ namespace IR {
 // slt: signed less than
 // sle: signed less or equal
 // NO UNSIGNED
-enum class ICMPOP {
-    eq,
-    ne,
-    sgt,
-    sge,
-    slt,
-    sle
-};
+enum class ICMPOP { eq, ne, sgt, sge, slt, sle };
 
 // <result> = icmp <cond> <ty> <op1>, <op2>
-// 1216修复：cmp指令的type(运算结果的type)应为i1, 操作数的type可用getLHS()->getType()获得，暂不设basetype
+// 1216修复：cmp指令的type(运算结果的type)应为i1,
+// 操作数的type可用getLHS()->getType()获得，暂不设basetype
 // @attention ：默认op1和op2类型一致，均为i32
 class ICMPInst : public Instruction {
 private:
     ICMPOP cond;
 
 public:
-    ICMPInst(NameRef name, ICMPOP cond, std::shared_ptr<Value> lhs, std::shared_ptr<Value> rhs);
+    ICMPInst(NameRef name, ICMPOP cond, const std::shared_ptr<Value> &lhs,
+             const std::shared_ptr<Value> &rhs);
 
     std::shared_ptr<Value> getLHS() const;
+
     std::shared_ptr<Value> getRHS() const;
 
     ICMPOP getCond() const;
 
     void condFlip();
 
-    void accept(IRVisitor& visitor) override;
+    void accept(IRVisitor &visitor) override;
 };
-
 
 // false: no comparison, always returns false
 // oeq: ordered and equal
@@ -81,18 +75,19 @@ private:
     FCMPOP cond;
 
 public:
-    FCMPInst(NameRef name, FCMPOP cond, std::shared_ptr<Value> lhs, std::shared_ptr<Value> rhs);
+    FCMPInst(NameRef name, FCMPOP cond, const std::shared_ptr<Value> &lhs,
+             const std::shared_ptr<Value> &rhs);
 
     std::shared_ptr<Value> getLHS() const;
+
     std::shared_ptr<Value> getRHS() const;
 
     FCMPOP getCond() const;
 
     void condFlip();
 
-    void accept(IRVisitor& visitor) override;
+    void accept(IRVisitor &visitor) override;
 };
-
-}
+} // namespace IR
 
 #endif

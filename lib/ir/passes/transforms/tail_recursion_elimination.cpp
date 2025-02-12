@@ -1,0 +1,87 @@
+//
+// Created by edragain on 2/9/25.
+//
+#include "../../../../include/ir/passes/transforms/tail_recursion_elimination.hpp"
+#include "../../../../include/ir/instructions/control.hpp"
+#include "../../../../include/ir/instructions/memory.hpp"
+
+namespace IR {
+PM::PreservedAnalyses TailRecursionEliminationPass::run(Function &function, FAM &manager) {
+    bool tailopt_cfg_modified = false;
+    auto dfVisitor = function.getDFVisitor();
+    std::vector<std::pair<std::shared_ptr<CALLInst>, std::shared_ptr<RETInst> > > worklist;
+    for (const auto &block : dfVisitor) {
+        for (auto iter = block->begin(); std::next(iter) != block->end(); ++iter) {
+            auto call = std::dynamic_pointer_cast<CALLInst>(*iter);
+            auto ret = std::dynamic_pointer_cast<RETInst>(*std::next(iter));
+            if (call != nullptr && ret != nullptr && ((call->isVoid() && ret->isVoid()) || ret->getRetVal() == call)) {
+                // Tail position: (ret immediately follows call and ret uses value of call or is void)
+                // If call->func == function, tail recursion.
+                // Otherwise, tail call
+                if (call->getFunc().get() == &function)
+                    worklist.emplace_back(call, ret);
+                else
+                    call->setTailCall();
+            }
+        }
+    }
+
+    if (!worklist.empty()) {
+        // If the entry block have ALLOCInst, we divide it into two blocks
+        // Otherwise we create a new block as the new entry block
+        auto oldEntryBlock = *function.begin();
+
+        std::vector<std::shared_ptr<ALLOCAInst>> allocas;
+        for (const auto &inst : *oldEntryBlock) {
+            if (auto alloca = std::dynamic_pointer_cast<ALLOCAInst>(inst))
+                allocas.emplace_back(alloca);
+            else break;
+        }
+
+        auto newEntryBlock = std::make_shared<BasicBlock>("tailcall");
+        for (const auto& alloca : allocas) {
+            newEntryBlock->addInst(alloca);
+            oldEntryBlock->delFirstOfInst(alloca); // NO USE-DEF CHECK
+        }
+
+        newEntryBlock->addInst(std::make_shared<BRInst>(oldEntryBlock));
+        linkBB(newEntryBlock, oldEntryBlock);
+        function.addBlockAsEntry(newEntryBlock);
+
+        // replace params with PHI
+        auto &params = function.getParams();
+        std::vector<std::shared_ptr<PHIInst> > param_phis;
+        for (const auto &param : params) {
+            auto phiInst = std::make_shared<PHIInst>(param->getName() + "tailcall", param->getType());
+            param->replaceSelf(phiInst);
+            phiInst->addPhiOper(param, newEntryBlock);
+            param_phis.emplace_back(phiInst);
+        }
+        for (const auto &[call,ret] : worklist) {
+            auto exit_block = call->getParent();
+            const auto& args = call->getArgs();
+            for (size_t i = 0; i < args.size(); ++i)
+                param_phis[i]->addPhiOper(args[i], exit_block);
+
+            exit_block->delFirstOfInst(call);
+            exit_block->delFirstOfInst(ret);
+
+            // Then we jump to the old entry block
+            exit_block->addInst(std::make_shared<BRInst>(oldEntryBlock));
+            linkBB(exit_block, oldEntryBlock);
+        }
+
+        for (const auto &phi : param_phis) {
+            oldEntryBlock->addPhiInst(phi);
+        }
+
+        tailopt_cfg_modified = true;
+    }
+
+    if (tailopt_cfg_modified)
+        return PM::PreservedAnalyses::none();
+
+    return PM::PreservedAnalyses::all();
+}
+
+}

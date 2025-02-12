@@ -1,5 +1,3 @@
 #include "../../include/ir/utilities.hpp"
 
-namespace IR {
-
-}
+namespace IR {}

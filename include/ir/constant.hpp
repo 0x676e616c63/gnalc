@@ -6,57 +6,65 @@
 #pragma once
 #ifndef GNALC_IR_CONSTANT_HPP
 #define GNALC_IR_CONSTANT_HPP
+
 #include "base.hpp"
 
+#include <variant>
+
 namespace IR {
-// const的name就是它的值toString
-class ConstantInt : public Value {
-private:
-    int val;
+namespace detail {
+// For the sake of convenience, the name of a constant is the string
+// representation of its value.
+template <typename ValueT, IRBTYPE IRType> class BasicConstant : public Value {
+    ValueT inner_value;
+
 public:
-    explicit ConstantInt(int _val);
+    using value_type = ValueT;
 
-    int getVal() const;
+    explicit BasicConstant(ValueT value_)
+        : Value(toIRString(value_), makeBType(IRType),
+                ValueTrait::CONSTANT_LITERAL),
+          inner_value(value_) {}
 
-    void accept(IRVisitor& visitor) override;
+    ValueT getVal() const { return inner_value; }
+
+    bool operator==(const BasicConstant &rhs) const {
+        return inner_value == rhs.inner_value;
+    }
+
+    void accept(IRVisitor &visitor) override;
 };
+} // namespace detail
 
-class ConstantFloat : public Value {
-private:
-    float val;
-public:
-    explicit ConstantFloat(float _val);
+using ConstantI1 = detail::BasicConstant<bool, IRBTYPE::I1>;
+using ConstantI8 = detail::BasicConstant<char, IRBTYPE::I8>;
+using ConstantInt = detail::BasicConstant<int, IRBTYPE::I32>;
+using ConstantFloat = detail::BasicConstant<float, IRBTYPE::FLOAT>;
 
-    float getVal() const;
+namespace detail {
+template <typename T> auto getIRConstantTypeHelper() {
+    using U = std::remove_reference_t<std::remove_cv_t<T>>;
+    static_assert(std::is_same_v<U, bool> || std::is_same_v<U, char> ||
+                      std::is_same_v<U, int> || std::is_same_v<U, float>,
+                  "Unexpected type.");
 
-    void accept(IRVisitor& visitor) override;
-};
-
-class ConstantI1 : public Value {
-private:
-    bool val;
-public:
-    explicit ConstantI1(bool _val);
-
-    bool getVal() const;
-
-    void accept(IRVisitor& visitor) override;
-};
-
-class ConstantI8 : public Value {
-private:
-    char val;
-public:
-    explicit ConstantI8(char _val);
-
-    char getVal() const;
-
-    void accept(IRVisitor& visitor) override;
-};
-
-// using CI32 = ConstantInt;
-// using CF32 = ConstantFloat;
-
+    if constexpr (std::is_same_v<U, bool>)
+        return ConstantI1(false);
+    else if constexpr (std::is_same_v<U, char>)
+        return ConstantI8(0);
+    else if constexpr (std::is_same_v<U, int>)
+        return ConstantInt(0);
+    else if constexpr (std::is_same_v<U, float>)
+        return ConstantFloat(0);
 }
+} // namespace detail
+
+// Get IR representation for a cpp basic type:
+// getIRConstantType<int>   -> ConstantInt
+// getIRConstantType<float> -> ConstantFloat
+// ...
+template <typename ValueT>
+using getIRConstantType = decltype(detail::getIRConstantTypeHelper<ValueT>());
+} // namespace IR
 
 #endif

@@ -1,12 +1,14 @@
-#include <string>
 #include "../../../include/utils/logger.hpp"
+#include <string>
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     LogLevel level = LogLevel::NONE;
     for (int i = 1; i < argc; ++i) {
-        if (std::string(argv[i]) == "-v" || std::string(argv[i]) == "--verbose") {
+        if (std::string(argv[i]) == "-v" ||
+            std::string(argv[i]) == "--verbose") {
             level = LogLevel::DEBUG;
-        } else if (std::string(argv[i]) == "-i" || std::string(argv[i]) == "--info") {
+        } else if (std::string(argv[i]) == "-i" ||
+                   std::string(argv[i]) == "--info") {
             level = LogLevel::INFO;
         }
     }

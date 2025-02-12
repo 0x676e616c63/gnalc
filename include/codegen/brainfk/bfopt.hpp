@@ -10,11 +10,12 @@
 namespace BrainFk {
 class BFOpt {
 private:
-  BFModule module;
+    BFModule module;
+
 public:
-  void visit(const BFModule& input_module);
-  BFModule& getModule() { return module; }
+    void visit(const BFModule &input_module);
+    BFModule &getModule() { return module; }
 };
-}
+} // namespace BrainFk
 #endif
 #endif
