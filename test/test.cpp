@@ -26,8 +26,8 @@ int main(int argc, char *argv[]) {
         println("  -p, --para [param]       : Run with gnalc parameter.");
         println("  -h, --help               : Print this help and exit.");
     };
-    std::vector<std::pair<std::string, std::vector<std::string>>> skip;
-    std::vector<std::pair<std::string, std::vector<std::string>>> run;
+    RunSet skip;
+    SkipSet run;
     std::string gnalc_params;
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
                 print_help();
                 return -1;
             }
-            skip.emplace_back(argv[i + 1], std::vector<std::string>{});
+            skip.emplace_back(Rule{argv[i + 1], {}});
             ++i;
         } else if (arg == "--run" || arg == "-r") {
             if (!skip.empty()) {
@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
                 print_help();
                 return -1;
             }
-            run.emplace_back(argv[i + 1], std::vector<std::string>{});
+            run.emplace_back(Rule{argv[i + 1], {}});
             ++i;
         } else if (arg == "--help" || arg == "-h") {
             print_help();
@@ -78,133 +78,56 @@ int main(int argc, char *argv[]) {
 
     create_directories(cfg::global_temp_dir);
 
-    std::string sylib_to_link; // .ll or .a
-    if (cfg::only_frontend) {
-        sylib_to_link = cfg::global_temp_dir + "/sylib.ll";
-
-        // Just a quick and dirty trick to silence llvm-link.
-        // llvm-link will emit a warning if we link two modules of different
-        // data layouts. Given that the LLVM IR we generate contains no target
-        // data layout, we use `sed` to delete 'target datalayout' from the
-        // sylib.ll
-        std::string lib_command =
-            format("clang -S -emit-llvm {} -o {} "
-                   "&& sed '/^target datalayout/d' {} -i",
-                   cfg::sylibc, sylib_to_link, sylib_to_link);
-
-        println("Running '{}'.", lib_command);
-        std::system(lib_command.c_str());
-    } else {
-        auto sylibo = cfg::global_temp_dir + "/sylib.o";
-        sylib_to_link = cfg::global_temp_dir + "/sylib.a";
-
-        std::string lib_command =
-            format("{} -c {} -o {} && ar rcs {} {}", cfg::gcc_arm_command,
-                   cfg::sylibc, sylibo, sylib_to_link, sylibo);
-
-        println("Running '{}'.", lib_command);
-        std::system(lib_command.c_str());
-    }
+    std::string sylib_to_link = prepare_sylib(cfg::global_temp_dir); // .ll or .a
 
     for (auto &&curr_test_dir : cfg::subdirs) {
-        std::vector<directory_entry> test_files;
-        for (const auto &p :
-             directory_iterator(cfg::test_data + "/" + curr_test_dir)) {
-            if (p.is_regular_file() && p.path().extension() == ".sy") {
-                bool need_run = true;
-
-                if (skip.empty() && !run.empty()) {
-                    need_run = false;
-                    for (auto &&rule : run) {
-                        if (begins_with(p.path().stem().string(), rule.first)) {
-                            need_run = true;
-                            rule.second.emplace_back(p.path().string());
-                            break;
-                        }
-                    }
-                } else if (!skip.empty() && run.empty()) {
-                    need_run = true;
-                    for (auto &&rule : skip) {
-                        if (begins_with(p.path().stem().string(), rule.first)) {
-                            need_run = false;
-                            rule.second.emplace_back(p.path().string());
-                            break;
-                        }
-                    }
-                }
-
-                if (need_run)
-                    test_files.emplace_back(p);
-            }
-        }
-
-        std::sort(test_files.begin(), test_files.end());
+        auto test_files = gather_test_files(curr_test_dir, run, skip);
 
         auto curr_temp_dir = cfg::global_temp_dir + "/" + curr_test_dir;
         create_directories(curr_temp_dir);
 
+
         for (const auto &sy : test_files) {
-            auto stem = sy.path().parent_path().string() + "/" +
-                        sy.path().stem().string();
-            auto testcase_in = stem + ".in";
-            auto testcase_out = stem + ".out";
-
-            auto output =
-                format("{}/{}.out", curr_temp_dir, sy.path().stem().string());
-
-            std::string command;
-
-            if (cfg::only_frontend) {
-                auto outll = format("{}/{}.ll", curr_temp_dir,
-                                    sy.path().stem().string());
-                auto outbc = format("{}/{}.bc", curr_temp_dir,
-                                    sy.path().stem().string());
-
-                // /bin/echo is the one in GNU coreutils
-                command =
-                    format("{} 2>&1 -S -emit-llvm{} -o {} {}"
-                           " && llvm-link 2>&1 {} {} -o {}"
-                           " && lli {} < {} > {}"
-                           "; /bin/echo -e \"\\n\"$? >> {}",
-                           cfg::gnalc_path, gnalc_params, outll, sy.path().string(),
-                           sylib_to_link, outll, outbc, outbc,
-                           exists(testcase_in) ? testcase_in : "/dev/null",
-                           output, output);
-
-            } else {
-                auto outs =
-                    format("{}/{}.s", curr_temp_dir, sy.path().stem().string());
-                auto outexec =
-                    format("{}/{}", curr_temp_dir, sy.path().stem().string());
-
-                command =
-                    format("{} 2>&1 -S{} -o {} {}"
-                           " && {} {} {} -o {}"
-                           " && {} {} < {} > {}"
-                           "; /bin/echo -e \"\\n\"$? >> {}",
-                           cfg::gnalc_path, gnalc_params, outs, sy.path().string(),
-                           cfg::gcc_arm_command, outs, sylib_to_link, outexec,
-                           cfg::qemu_arm_command, outexec,
-                           exists(testcase_in) ? testcase_in : "/dev/null",
-                           output, output);
-            }
-
-            println("<{}> Test {}", curr_test_cnt++, sy.path().stem());
-
-            println("|  Running '{}':", command);
-
-            std::system(command.c_str());
-
-            auto syout = read_file(output);
+            print("<{}> Test {}", curr_test_cnt++, sy.path().stem());
+            // Expected
+            auto testcase_out = sy.path().parent_path().string() + "/" +
+                    sy.path().stem().string() + ".out";
             auto expected_syout = read_file(testcase_out);
-
-            fix_newline(syout);
             fix_newline(expected_syout);
 
-            if (syout != expected_syout) {
+
+            // Run
+            TestData data{
+                .sy = sy,
+                .sylib = sylib_to_link,
+                .temp_dir = curr_temp_dir,
+                .mode_id = "gnalc_test"
+            };
+
+            if (cfg::only_frontend) {
+                auto gnalc_irgen = [&gnalc_params](const std::string& newsy, const std::string& outll) {
+                    return format("../gnalc -S {} -o {} -emit-llvm{}",
+                                            newsy, outll, gnalc_params);
+                };
+                data.ir_asm_gen = gnalc_irgen;
+
+            } else {
+                auto gnalc_asmgen = [&gnalc_params](const std::string& newsy, const std::string& outs) {
+                    return format("{} -S{} -o {} {}",
+                           cfg::gnalc_path, gnalc_params, outs, newsy);
+                    // Test
+                    // return format("arm-linux-gnueabihf-gcc -S -o {} -xc {}", outs, newsy);
+                };
+                data.ir_asm_gen = gnalc_asmgen;
+            }
+
+            // Check
+            auto res = run_test(data);
+
+            if (res.output != expected_syout) {
                 println("|  [\033[0;32;31mFAILED\033[m] Expected '{}' but got "
                         "'{}'.",
-                        expected_syout, syout);
+                        expected_syout, res.output);
                 failed_tests.emplace_back(sy.path().string());
                 if (cfg::stop_on_error) {
                     println("----------");
@@ -221,29 +144,7 @@ int main(int argc, char *argv[]) {
 finish:
     println("Finished running {} tests.", curr_test_cnt);
 
-    if (!skip.empty()) {
-        std::vector<std::string> skipped_tests;
-        for (auto &&r : skip)
-            skipped_tests.insert(skipped_tests.end(), r.second.cbegin(),
-                                 r.second.cend());
-
-        if (!skipped_tests.empty()) {
-            println("Skipped {} tests: ", skipped_tests.size());
-            for (const auto &f : skipped_tests)
-                println("|  {}", f);
-        }
-    } else if (!run.empty()) {
-        std::vector<std::string> run_tests;
-        for (auto &&r : run)
-            run_tests.insert(run_tests.end(), r.second.cbegin(),
-                             r.second.cend());
-
-        if (!run_tests.empty()) {
-            println("Only run {} tests: ", run_tests.size());
-            for (const auto &f : run_tests)
-                println("|  {}", f);
-        }
-    }
+    print_run_skip_status(run, skip);
 
     if (failed_tests.empty()) {
         println("[\033[0;32;32mTEST PASSED\033[m] {} tests passed!", passed);
