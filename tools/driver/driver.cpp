@@ -233,7 +233,12 @@ Extensions:
     }
 #endif
 
-    auto [mir_fam, mir_mam] = MIR::PassBuilder::buildAnalysisManager();
+    MIR::FAM mir_fam;
+    MIR::MAM mir_mam;
+    MIR::PassBuilder::registerFunctionAnalyses(mir_fam);
+    MIR::PassBuilder::registerModuleAnalyses(mir_mam);
+    MIR::PassBuilder::registerProxies(mir_fam, mir_mam);
+
     auto mir_mpm = MIR::PassBuilder::buildModulePipeline(mir_opt_info);
 
     MIR::Lowering mirgen;

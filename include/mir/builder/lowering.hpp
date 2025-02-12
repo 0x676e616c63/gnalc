@@ -40,7 +40,8 @@ struct OperandLowering {
         if (loadPtr)
             return {true, loadPtr};
         else {
-            if (typeid(T_variant) == typeid(float)) {
+            using U_variant = std::remove_cv_t<std::remove_reference_t<T_variant>>;
+            if constexpr (std::is_same_v<U_variant, float>) {
                 loadPtr =
                     mkOP(IR::makeBType(IR::IRBTYPE::FLOAT), RegisterBank::spr);
                 varpool.addLoaded(*constPtr, loadPtr);

@@ -8,9 +8,6 @@ template class AnalysisManager<MIR::Function>;
 template class PassManager<MIR::Module>;
 template class PassManager<MIR::Function>;
 
-template class AllAnalysesOn<MIR::Module>;
-template class AllAnalysesOn<MIR::Function>;
-
 template class InnerAnalysisManagerProxy<AnalysisManager<MIR::Function>,
                                          MIR::Module>;
 } // namespace PM
