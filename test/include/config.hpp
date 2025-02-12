@@ -14,8 +14,8 @@ inline bool only_frontend = true;
 // See `docs/gnalc-test.md` to get prepared.
 
 //
-//  gnalc -> test -> gnalc-test-data -> comp-test
-//  comp-test ->
+//  gnalc -> test -> contest
+//  contest ->
 //              |  functional
 //              |  h_functional
 //              |  performance
@@ -25,8 +25,7 @@ inline bool only_frontend = true;
 //                         |  h_performance
 //
 // Note that all the path is relative to the executing path
-// gnalc(project dir) -> cmake-build-debug(CLion's build dir) -> test ->
-// gnalc_test(executable)
+// gnalc(project dir) -> cmake-build-debug(CLion's build dir) -> test -> gnalc_test(executable)
 
 const std::string gnalc_path = "../gnalc";
 
