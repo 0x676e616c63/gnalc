@@ -42,9 +42,7 @@ const std::string global_benchmark_temp_dir =
 
 const std::string sylibc = "../../test/sylib/sylib.c";
 
-const std::string test_data_no_lfs =
-    "../../test/gnalc-test-data-no-lfs"; // Just for CI
-const std::string test_data = "../../test/gnalc-test-data/comp-test";
+const std::string test_data = "../../test/contest";
 const std::vector subdirs = {"functional",        "performance",
                              "h_functional",      "h_performance",
                              "final/performance", "final/h_performance"};

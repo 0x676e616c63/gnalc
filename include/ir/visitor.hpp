@@ -39,6 +39,9 @@ public:
     virtual void visit(FunctionDecl &node) {
         Err::not_implemented("IRVisitor::visit(FunctionDecl&)");
     }
+    virtual void visit(FormalParam &node) {
+        Err::not_implemented("IRVisitor::visit(FormalParam&)");
+    }
     virtual void visit(BasicBlock &node) {
         Err::not_implemented("IRVisitor::visit(BasicBlock&)");
     }
@@ -122,6 +125,7 @@ public:
     }
 
     virtual ~IRVisitor() = default;
+
 };
 } // namespace IR
 

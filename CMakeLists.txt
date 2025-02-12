@@ -6,7 +6,12 @@ project(gnalc)
 
 option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 
-add_compile_options("-g")
+# add `-fstandalone-debug` to fix CLion's bundled LLDB
+# See:
+#      - https://github.com/vadimcn/codelldb/issues/415
+#      - https://bugzilla.redhat.com/show_bug.cgi?id=1740927
+# Well, there are still some bugs, but fewer than before.
+add_compile_options("-g" "-fstandalone-debug")
 
 if (ENABLE_ASAN)
         message(STATUS "AddressSanitizer enabled")
@@ -41,12 +46,8 @@ aux_source_directory(lib/codegen/brainfk GNALC_EXT_BFBKD_SRC)
 set(GNALC_SRC ${GNALC_LEXER_SRC} ${GNALC_PARSER_SRC} ${GNALC_IR_SRC} ${GNALC_PM_SRC} ${GNALC_EXT_BFBKD_SRC} ${GNALC_UTILS_SRC})
 
 # debug driver
-add_executable(printast tools/driver/debug/printast.cpp lib/parser/parser.cpp lib/lexer/lexer.cpp lib/parser/astprinter.cpp)
-
-add_executable(printir tools/driver/debug/irprintertest.cpp lib/ir/passes/utilities/irprinter.cpp ${GNALC_IR_SRC} ${GNALC_UTILS_SRC})
-
-add_executable(irgen tools/driver/debug/irgen.cpp ${GNALC_SRC})
-
+add_executable(pmtest tools/driver/debug/pmtest.cpp ${GNALC_SRC})
+add_executable(generic_visitor_test tools/driver/debug/generic_visitor_test.cpp ${GNALC_SRC})
 add_executable(bfhelper tools/driver/debug/bfhelper.cpp)
 
 # main driver

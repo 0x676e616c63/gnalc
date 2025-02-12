@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "../../../utils/logger.hpp"
 #include "../../base.hpp"
 #include "../../basic_block.hpp"
 #include "../../function.hpp"
@@ -49,6 +50,7 @@ public:
                               std::unordered_map<KeyT, ValT> &changes,
                               SparsePropagationSolver &solver) const = 0;
         virtual ConstantProxy getValueFromLatticeVal(const ValT &v) const = 0;
+        virtual ValT computeLatticeVal(const KeyT& key) const = 0;
         virtual ~LatticeFunction() = default;
     };
 
@@ -74,14 +76,16 @@ public:
     explicit SparsePropagationSolver(LatticeFunction *func_)
         : lattice_func(func_) {}
 
-    void solve(Function &target) {
+    void clear() {
         cfg_worklist.clear();
         ssa_worklist.clear();
-        feasible_edges.clear();
+        lattice_map.clear();
+    }
 
-        auto entry_node = target.getBlocks()[0];
-        for (const auto &out : entry_node->getNextBB())
-            cfg_worklist.emplace_back(entry_node, out);
+    void solve(Function &target) {
+        clear();
+
+        cfg_worklist.emplace_back(nullptr, target.getBlocks()[0]);
 
         while (!cfg_worklist.empty() || !ssa_worklist.empty()) {
             while (!ssa_worklist.empty()) {
@@ -100,20 +104,14 @@ public:
 
                 markFeasible(curr);
 
+                for (const auto &inst : curr.dest->getPhiInsts())
+                    visitPHI(inst);
+
                 // i.e. the target node is encountered to be executable for the
                 // first time
                 if (countFeasibleInEdge(curr.dest) == 1) {
-                    for (const auto &inst : *curr.dest) {
-                        if (inst->getOpcode() == OP::PHI)
-                            visitPHI(std::dynamic_pointer_cast<PHIInst>(inst));
-                        else
-                            visitInst(inst);
-                    }
-                } else {
-                    for (const auto &inst : *curr.dest) {
-                        if (inst->getOpcode() == OP::PHI)
-                            visitPHI(std::dynamic_pointer_cast<PHIInst>(inst));
-                    }
+                    for (const auto &inst : *curr.dest)
+                        visitInst(inst);
                 }
 
                 auto outgoings = curr.dest->getNextBB();
@@ -124,11 +122,11 @@ public:
         }
     }
 
-    ValT getVal(KeyT key) {
+    ValT getVal(const KeyT& key) {
         auto it = lattice_map.find(key);
         if (it != lattice_map.end())
             return it->second;
-        return lattice_map[key] = InfoT::UNDEF;
+        return lattice_map[key] = lattice_func->computeLatticeVal(key);
     }
 
     const auto &get_map() const { return lattice_map; }
@@ -144,6 +142,8 @@ public:
 
     size_t countFeasibleInEdge(const std::shared_ptr<BasicBlock> &bb) const {
         auto incomings = bb->getPreBB();
+        if (incomings.empty())  // Entry node
+            return isFeasible(nullptr, bb) ? 1 : 0;
         return std::count_if(
             incomings.cbegin(), incomings.cend(),
             [&bb, this](auto &&in) { return isFeasible(in, bb); });
@@ -158,9 +158,11 @@ private:
         lattice_map[key] = std::move(val);
 
         std::shared_ptr<Value> changed_value = InfoT::getValueFromKey(key);
-        for (const auto &use : changed_value->getUseList())
-            ssa_worklist.emplace_back(
-                std::dynamic_pointer_cast<Instruction>(use->getUser()));
+        for (const auto &use : changed_value->getUseList()) {
+            auto inst = std::dynamic_pointer_cast<Instruction>(use->getUser());
+            Err::gassert(inst != nullptr);
+            ssa_worklist.emplace_back(inst);
+        }
     }
 
     void markFeasible(const Edge &e) { feasible_edges.insert(e); }
@@ -172,10 +174,10 @@ private:
         auto phi_lattice = getVal(phi_key);
 
         for (const auto &in : incomings) {
-            if (!isFeasible(in->getBlock(), phi->getParent()))
+            if (!isFeasible(in.block, phi->getParent()))
                 continue;
 
-            auto in_key = InfoT::getKeyFromValue(in->getValue());
+            auto in_key = InfoT::getKeyFromValue(in.value);
             auto in_lattice = getVal(in_key);
             if (in_lattice != phi_lattice)
                 phi_lattice = lattice_func->merge(phi_lattice, in_lattice);
@@ -202,8 +204,7 @@ private:
             // To ensure it contains a ConstantI1, we use `proxy.get_i1()`
             // rather than `proxy == true`. If it does not contain a ConstantI1,
             // an exception will be thrown.
-            else if (lattice_func->getValueFromLatticeVal(cond_lattice)
-                         .get_i1())
+            else if (lattice_func->getValueFromLatticeVal(cond_lattice).get_i1())
                 cfg_worklist.emplace_back(br_inst->getParent(),
                                           br_inst->getTrueDest());
             else

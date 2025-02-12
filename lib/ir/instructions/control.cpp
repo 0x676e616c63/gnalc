@@ -52,6 +52,21 @@ BRInst::BRInst(const std::shared_ptr<Value> &cond,
     addOperand(_false_dest);
 }
 
+std::shared_ptr<BRInst> BRInst::clone() const {
+    std::shared_ptr<BRInst> ret;
+    if (isConditional()) {
+        ret = std::make_shared<BRInst>(getCond(), getTrueDest(), getFalseDest());
+        if (set_args)
+            ret->setBBArgs(getTrueBBArgs(), getFalseBBArgs());
+    }
+    else {
+        ret = std::make_shared<BRInst>(getDest());
+        if (set_args)
+            ret->setBBArgs(getBBArgs());
+    }
+    return ret;
+}
+
 bool BRInst::isConditional() const { return conditional; }
 
 std::shared_ptr<Value> BRInst::getCond() const {
@@ -160,6 +175,16 @@ std::vector<std::shared_ptr<Value>> CALLInst::getArgs() const {
         ret.emplace_back((*it)->getValue());
     return ret;
 }
+
+void CALLInst::setTailCall() {
+    is_tail_call = true;
+}
+
+bool CALLInst::isTailCall() const {
+    return is_tail_call;
+}
+
+
 
 void RETInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
 

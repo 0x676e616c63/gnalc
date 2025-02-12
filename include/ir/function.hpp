@@ -7,10 +7,15 @@
 #include "constant_pool.hpp"
 #include "instruction.hpp"
 #include "instructions/phi.hpp"
+#include "../utils/generic_visitor.hpp"
 
 #include <memory>
 #include <utility>
 #include <vector>
+
+namespace Parser {
+class CFGBuilder;
+}
 
 namespace IR {
 class FunctionDecl : public Value {
@@ -31,59 +36,86 @@ public:
     ~FunctionDecl() override;
 };
 
-class Function : public FunctionDecl {
+class FormalParam : public Value {
+    size_t index;
+
+public:
+    explicit FormalParam(std::string name, std::shared_ptr<Type> ty, size_t index_)
+        : Value(std::move(name), std::move(ty), ValueTrait::FORMAL_PARAMETER),
+          index(index_) {}
+
+    size_t getIndex() const { return index; }
+    void setIndex(size_t index_) { index = index_; }
+
+    void accept(IRVisitor &visitor) override;
+};
+
+struct BBSuccGetter {
+    auto operator()(const std::shared_ptr<BasicBlock>& bb)
+    {
+        return bb->getNextBB();
+    }
+};
+
+class Function : public FunctionDecl,
+                 public std::enable_shared_from_this<Function> {
+    friend class Parser::CFGBuilder;
 private:
-    std::vector<std::shared_ptr<Value>> params;
+    std::vector<std::shared_ptr<FormalParam>> params;
     std::vector<std::shared_ptr<BasicBlock>> blks;
+    std::vector<std::weak_ptr<BasicBlock>> exits; // 为了防止之后删除块之类的操作忘记在这里处理，使用weak_ptr, get的时候检查是否expired
     ConstantPool *constant_pool;
 
     // 后面需要再说
     // int vreg_idx = 0;
 public:
+    using CFGBFVisitor = Util::GenericBFVisitor<std::shared_ptr<BasicBlock>, BBSuccGetter>;
+    using CFGDFVisitor = Util::GenericDFVisitor<std::shared_ptr<BasicBlock>, BBSuccGetter>;
     using const_iterator = decltype(blks)::const_iterator;
     using iterator = decltype(blks)::iterator;
 
     Function(std::string name_,
-             const std::vector<std::shared_ptr<Value>> &params,
+             const std::vector<std::shared_ptr<FormalParam>> &params,
              std::shared_ptr<Type> ret_type, ConstantPool *pool);
 
     void addBlock(std::shared_ptr<BasicBlock> blk);
 
+    // Add the given block as the entry block
+    // Caller should take care of the CFG.
+    void addBlockAsEntry(const std::shared_ptr<BasicBlock>& blk);
+
+    // Delete a Block
+    // Requires the target block have no users than Phi.
     bool delBlock(const std::shared_ptr<BasicBlock> &blk);
 
+    // Delete blocks that satisfied: `pred(block) == true`
+    // Requires the target block have no predecessors or successors
+    // In other word, If pred(a) == true, pred(a->user->getPre/NextBB()) must be true
     template <typename Pred> bool delBlockIf(Pred pred) {
         bool found = false;
         for (auto it = blks.begin(); it != blks.end();) {
             if (pred(*it)) {
-                for (const auto &use : (*it)->getUseList()) {
-                    auto phi =
-                        std::dynamic_pointer_cast<PHIInst>(use->getUser());
-                    Err::gassert(phi != nullptr,
-                                 "Function::delBlockIf(): Cannot delete a "
-                                 "block that has users beyond phi.");
-                    phi->delPhiOper(*it);
-
-                    // Simplify PHI
-                    auto phi_opers = phi->getPhiOpers();
-                    Err::gassert(!phi_opers.empty());
-                    if (phi_opers.size() == 1)
-                        phi->replaceSelf(phi_opers[0]->getValue());
+                for (const auto &prebb : (*it)->getPreBB()) {
+                    Err::gassert(pred(prebb),
+                        "Cannot delete a block that have predecessors");
+                }
+                for (const auto &nextbb : (*it)->getNextBB()) {
+                    Err::gassert(pred(nextbb),
+                        "Cannot delete a block that have successors");
                 }
                 it = blks.erase(it);
                 found = true;
             } else
                 ++it;
         }
-        Err::gassert(found, "Function::delBlockIf(): Not found");
+        if (found) updateBBIndex();
         return found;
     }
 
-    const std::vector<std::shared_ptr<Value>> &getParams() const;
-    std::vector<std::shared_ptr<Value>> &getParams();
+    const std::vector<std::shared_ptr<FormalParam>> &getParams() const;
 
-    // usually we can use range-based for instead of these
+    // usually we can use range-based for instead of this
     const std::vector<std::shared_ptr<BasicBlock>> &getBlocks() const;
-    std::vector<std::shared_ptr<BasicBlock>> &getBlocks();
 
     const_iterator cbegin() const;
     const_iterator cend() const;
@@ -99,6 +131,21 @@ public:
     ConstantPool &getConstantPool();
 
     void accept(IRVisitor &visitor) override;
+
+    auto getBFVisitor() const {
+        return CFGBFVisitor(blks[0]);
+    }
+
+    auto getDFVisitor() const {
+        return CFGDFVisitor(blks[0]);
+    }
+
+    void addExitBB(std::shared_ptr<BasicBlock> blk);
+    std::vector<std::shared_ptr<BasicBlock>> getExitBBs() const;
+
+private:
+    void updateBBIndex();
+    void updateAllIndex();
 };
 
 // 基本块划分前的过渡
@@ -112,13 +159,12 @@ public:
     using iterator = decltype(insts)::iterator;
 
     LinearFunction(std::string name_,
-                   const std::vector<std::shared_ptr<Value>> &params,
+                   const std::vector<std::shared_ptr<FormalParam>> &params,
                    std::shared_ptr<Type> ret_type, ConstantPool *pool)
         : Function(std::move(name_), params, std::move(ret_type), pool) {}
 
     // usually we can use range-based for instead of these
     const std::vector<std::shared_ptr<Instruction>> &getInsts() const;
-    std::vector<std::shared_ptr<Instruction>> &getInsts();
 
     const_iterator cbegin() const;
     const_iterator cend() const;

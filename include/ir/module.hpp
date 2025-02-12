@@ -11,6 +11,11 @@
 #include "global_var.hpp"
 #include <memory>
 
+namespace Parser {
+class CFGBuilder;
+class IRGenerator;
+}
+
 namespace IR {
 
 /**
@@ -19,6 +24,8 @@ namespace IR {
  * @todo 更改容器类型！
  */
 class Module : public NameC {
+    friend class Parser::CFGBuilder;
+    friend class Parser::IRGenerator;
 private:
     // Keep `constant_pool` the first member to make it destructs last
     // See: https://en.cppreference.com/w/cpp/language/destructor
@@ -29,6 +36,9 @@ private:
     std::vector<std::shared_ptr<FunctionDecl>> func_decls;
 
 public:
+    using const_iterator = decltype(funcs)::const_iterator;
+    using iterator = decltype(funcs)::iterator;
+
     Module() = default;
     explicit Module(std::string _name) : NameC(std::move(_name)) {}
 
@@ -38,18 +48,23 @@ public:
 
     void addFunction(std::shared_ptr<Function> func);
     const std::vector<std::shared_ptr<Function>> &getFunctions() const;
-    std::vector<std::shared_ptr<Function>> &getFunctions();
     void delFunction(NameRef name); // by name
 
     void addFunctionDecl(std::shared_ptr<FunctionDecl> func);
     const std::vector<std::shared_ptr<FunctionDecl>> &getFunctionDecls() const;
-    std::vector<std::shared_ptr<FunctionDecl>> &getFunctionDecls();
     void delFunctionDecl(NameRef name); // by name
 
     ConstantPool &getConstantPool();
 
+    void removeUnusedFuncDecl();
+
+    const_iterator cbegin() const;
+    const_iterator cend() const;
+    iterator begin();
+    iterator end();
+
     void accept(IRVisitor &visitor);
-    ~Module();
+    ~Module() = default;
 };
 } // namespace IR
 

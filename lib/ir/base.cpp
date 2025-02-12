@@ -5,14 +5,15 @@
 #include <algorithm>
 
 #include "../../include/ir/base.hpp"
+
+#include "../../include/ir/instructions/phi.hpp"
 #include "../../include/utils/exception.hpp"
 
 #include <functional>
 
 namespace IR {
 
-Value::Value(std::string _name, std::shared_ptr<Type> _vtype,
-             ValueTrait _vtrait)
+Value::Value(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait)
     : NameC(std::move(_name)), vtype(std::move(_vtype)), trait(_vtrait) {}
 
 std::shared_ptr<Type> Value::getType() const { return vtype; }
@@ -26,8 +27,7 @@ std::list<std::shared_ptr<Use>> Value::getUseList() const {
     std::list<std::shared_ptr<Use>> shared_use_list;
     for (const auto &weak_use : use_list) {
         auto shared_use = weak_use.lock();
-        Err::gassert(shared_use != nullptr,
-                     "Expired use should be deleted in User::delOperand");
+        Err::gassert(shared_use != nullptr, "Expired use should be deleted by User.");
         if (shared_use)
             shared_use_list.push_back(shared_use);
     }
@@ -37,23 +37,67 @@ std::list<std::shared_ptr<Use>> Value::getUseList() const {
 std::list<std::weak_ptr<Use>> &Value::getRUseList() { return use_list; }
 
 void Value::replaceSelf(const std::shared_ptr<Value> &new_value) const {
+    Err::gassert(this != new_value.get(), "Replace with an identical value doesn't make sense.");
     auto shared_use_list = getUseList();
-    for (const auto &use : shared_use_list)
-        use->getUser()->replaceUse(use->getValue(), new_value);
+    for (const auto &use : shared_use_list) {
+        bool ok = use->getUser()->replaceUse(use, new_value);
+        Err::gassert(ok);
+    }
 }
 
 Value::~Value() = default;
 
-bool Value::delUse(const std::shared_ptr<User> &user) {
+bool Value::delUse(const std::shared_ptr<Use>& target) {
+    for (auto it = use_list.begin(); it != use_list.end(); ++it) {
+        Err::gassert(!it->expired(), "Expired use should be deleted by User.");
+        if (!it->expired() && it->lock() == target) {
+            use_list.erase(it);
+            return true;
+        }
+    }
+    return false;
+}
+
+User::~User() {
+    for (const auto& curr : operands) {
+        auto curr_val = curr->getValue();
+        // Because one's operands may be destroyed before itself and we can't prevent this happen.
+        // It's hard to always delete a value before its user.
+        // For example, when the whole compiling is done, and Module's destructor runs,
+        // all instructions will be deleted, but not in the def-use relationship.
+        if (!curr_val) continue;
+        auto ok = curr_val->delUse(curr);
+        Err::gassert(ok);
+    }
+}
+
+bool User::replaceOperand(const std::shared_ptr<Value> &before, const std::shared_ptr<Value> &after){
     bool found = false;
-    for (auto it = use_list.begin(); it != use_list.end();) {
-        if (it->lock()->getUser() == user) {
-            it = use_list.erase(it);
+    for (const auto& use : operands) {
+        if (use->getValue() == before) {
+            replaceUse(use, after);
             found = true;
-        } else
-            ++it;
+        }
     }
     return found;
+}
+
+bool User::replaceUse(const std::shared_ptr<Use> &old_use,
+                      const std::shared_ptr<Value> &new_value) {
+    Err::gassert(old_use->getValue() != new_value,
+        "Replace with an identical value doesn't make sense.");
+    for (auto &use : operands) {
+        if (use == old_use) {
+            auto ok = use->getValue()->delUse(use);
+            Err::gassert(ok, "The use has been released unexpectedly.");
+            // Don't `make_shared` because the constructor is private.
+            use = std::shared_ptr<Use>(new Use(new_value, use->getUser().get()));
+            use->init();
+            return true;
+        }
+    }
+    Err::unreachable("User::replaceOneUse(): old_val notfound.");
+    return false;
 }
 
 User::User(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait)
@@ -73,12 +117,12 @@ const std::shared_ptr<Use> &User::getOperand(size_t index) const {
 }
 
 bool User::delOperand(const std::shared_ptr<Value> &v) {
-    return delOperandIf([&v](auto &&op) { return op->getValue() == v; });
+    return delOperandIf([&v](const auto& value) { return value == v; });
 }
 
 bool User::delOperand(NameRef name) {
     return delOperandIf(
-        [&name](auto &&op) { return op->getValue()->isName(name); });
+        [&name](const auto& value) { return value->isName(name); });
 }
 
 bool User::delOperand(size_t index) {
@@ -86,7 +130,7 @@ bool User::delOperand(size_t index) {
     if (index >= operands.size())
         return false;
     auto use = operands[index];
-    auto ok = use->getValue()->delUse(use->getUser());
+    auto ok = use->getValue()->delUse(use);
     Err::gassert(ok);
     operands.erase(
         operands.begin() +
@@ -94,25 +138,13 @@ bool User::delOperand(size_t index) {
     return true;
 }
 
-bool User::replaceUse(const std::shared_ptr<Value> &old_val,
-                      const std::shared_ptr<Value> &new_val) {
-    bool found = false;
-    for (auto &use : operands) {
-        if (use->getValue() == old_val) {
-            auto ok = old_val->delUse(use->getUser());
-            Err::gassert(ok);
-            use = std::shared_ptr<Use>{new Use(new_val, use->getUser().get())};
-            use->init();
-            found = true;
-        }
-    }
-    Err::gassert(found, "User::replaceUse(): old_val notfound.");
-    return found;
-}
-
 Use::Use(std::weak_ptr<Value> v, User *u) : val(std::move(v)), user(u) {}
 
 void Use::init() { val.lock()->addUse(weak_from_this()); }
+
+User *Use::getRawUser() const {
+    return user;
+}
 
 std::shared_ptr<Value> Use::getValue() const { return val.lock(); }
 

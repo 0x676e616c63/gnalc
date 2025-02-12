@@ -55,14 +55,14 @@ void PrinterBase::visit(BasicBlock &node) {
 
     write(IRFormatter::formatBB(node));
     writeln(":");
-    for (auto &inst : node.getInsts())
+    for (const auto& inst : node.getAllInsts())
         inst->Instruction::accept(*this);
     writeln("");
 }
 
 PM::PreservedAnalyses PrintFunctionPass::run(Function &func, FAM &fam) {
     if (printLiveInfo)
-        liveness = fam.getResult<LiveAnalyser>(func);
+        liveness = fam.getResult<LiveAnalysis>(func);
 
     func.accept(*this);
     return PM::PreservedAnalyses::all();

@@ -111,7 +111,7 @@ const std::vector<GVIniter> &GVIniter::getInnerIniter() const {
     return inner_initer;
 }
 
-GVIniter &GlobalVariable::getIniter() { return initer; }
+const GVIniter &GlobalVariable::getIniter() const { return initer; }
 
 int GlobalVariable::getAlign() const { return align; }
 

@@ -29,7 +29,7 @@ enum class OP {
     REM,
     FREM,
 
-    AND, // bitwise binary
+    AND, // logical binary
     OR,
 
     ALLOCA, // memory
@@ -78,6 +78,8 @@ public:
     void setParent(const std::shared_ptr<BasicBlock> &p);
     OP getOpcode() const;
     std::shared_ptr<BasicBlock> getParent() const;
+
+    unsigned index = 0; // 不经过插入删除接口修改后使用先调用父块的update方法！
 
     void accept(IRVisitor &visitor) override;
     ~Instruction() override;
