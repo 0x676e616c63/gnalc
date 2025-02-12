@@ -18,133 +18,94 @@
 #include <string>
 #include <vector>
 
-#include "config.hpp"
-#include "gnalc_test.hpp"
+#include "include/config.hpp"
+#include "include/runner.hpp"
+
+#include <numeric>
 
 using namespace Test;
 using namespace std::filesystem;
 
-struct TestResult {
-    std::string output;
-    size_t time_elapsed;
-};
-
-struct TestData {
-    directory_entry sy;
-    std::string sylib;
-    std::string temp_dir;
-    std::string cmd_options;
-};
-
-std::string make_pathname(const std::string& raw) {
-    std::string ret;
-    for (const auto& c : raw) {
-        if (c == '/' || c == ' ')
-            ret += '_';
-        else
-            ret += c;
-    }
-    return ret;
-}
-
-TestResult run_test(const TestData& data) {
-    auto testcase_in = data.sy.path().parent_path().string() + "/" +
-            data.sy.path().stem().string() + ".in";
-
-    auto out_file_id = format("{}_{}",
-    data.sy.path().stem().string(), data.cmd_options);
-
-    auto output =
-        format("{}/{}.out", data.temp_dir, out_file_id);
-
-    std::string compile_command, command;
-
-    auto outtime = format("{}/{}.time", data.temp_dir, out_file_id);
-    if (cfg::only_frontend) {
-        auto outll = format("{}/{}.ll", data.temp_dir, out_file_id);
-        auto opt_outll = format("{}/{}.opt.ll", data.temp_dir, out_file_id);
-        auto outbc = format("{}/{}.bc", data.temp_dir, out_file_id);
-
-        // /bin/echo is the one in GNU coreutils
-        auto newsy = data.temp_dir + "/" + out_file_id + ".new.sy";
-        copy_file(data.sy, newsy);
-
-        compile_command = format(
-            "sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int getfarray(float a[]);void putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, float a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define starttime() _sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
-            " && clang -O0 -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null"
-            " && opt {} -S   {} -o {}"
-            " && llvm-link 2>&1 {} {} -o {}",
-            newsy,
-            newsy, outll,
-            data.cmd_options, outll, opt_outll,
-            data.sylib, outll, outbc);
-
-        command = format(
-        "lli {} < {} > {} 2>{};"
-            "/bin/echo -e \"\\n\"$? >> {}",
-            outbc, exists(testcase_in) ? testcase_in : "/dev/null", output, outtime,
-            output);
-    } else {
-        Err::todo("I'll write this when we have a real Raspberry Pi.");
-    }
-
-    // println("|  Running '{}':", compile_command);
-    std::system(compile_command.c_str());
-    // println("|  Running '{}':", command);
-    std::system(command.c_str());
-
-    auto syout = read_file(output);
-    fix_newline(syout);
-
-    auto time_elased = parse_time(read_file(outtime));
-
-    return {syout, time_elased};
-}
-
 struct BenchmarkData {
-    std::string option1;
-    std::string option2;
-    std::vector<std::pair<TestData, TestResult>> results1;
-    std::vector<std::pair<TestData, TestResult>> results2;
+    std::string mode1;
+    std::string mode2;
+
+    struct Item {
+        TestData data;
+        TestResult res;
+        std::string source_output;
+        bool success{};
+    };
+    std::vector<Item> results1;
+    std::vector<Item> results2;
+};
+
+struct RatioData {
+    std::string testcase;
+    size_t time1;
+    size_t time2;
+    double ratio;
 };
 
 void write_benchmark_result_to(const BenchmarkData& data, std::ostream& out) {
     println(out, "Benchmark results:");
+    std::vector<RatioData> times;
     size_t total1 = 0;
     size_t total2 = 0;
+
+    auto ratio = [](auto a, auto b) {
+        return static_cast<double>(a) / static_cast<double>(b);
+    };
+
     for (size_t i = 0; i < data.results1.size() && i < data.results2.size(); ++i) {
-        const auto &test1 = data.results1[i].first;
-        const auto &test2 = data.results2[i].first;
-        const auto& res1 = data.results1[i].second;
-        const auto& res2 = data.results2[i].second;
+        const auto& [test1, res1, ll1, success1] = data.results1[i];
+        const auto& [test2, res2, ll2, success2] = data.results2[i];
+
         Err::gassert(test1.sy == test2.sy);
 
-        if (res1.time_elapsed == 0 || res2.time_elapsed == 0) {
+        if (!success1 || !success2) {
             println(out, "<{}> {}:", i, test1.sy.path().stem().string());
             println(out, "Skipped failed tests.");
             println(out, "----------");
             continue;
         }
 
+        times.emplace_back(RatioData{
+            .testcase = test1.sy.path(),
+            .time1 = res1.time_elapsed,
+            .time2 = res2.time_elapsed,
+            .ratio = ratio(res1.time_elapsed, res2.time_elapsed)
+        });
         total1 += res1.time_elapsed;
         total2 += res2.time_elapsed;
-        auto ratio = static_cast<double>(res1.time_elapsed)
-        / static_cast<double>(res2.time_elapsed);
 
         println(out, "<{}> {}:", i, test1.sy.path().stem().string());
-        println(out, "'{}': {}us", test1.cmd_options, res1.time_elapsed);
-        println(out, "'{}': {}us", test2.cmd_options, res2.time_elapsed);
+        // println(out, "'{}' ll output: {}", test1.mode_id, res1.source_output);
+        println(out, "'{}': {}us", test1.mode_id, res1.time_elapsed);
+        // println(out, "'{}' ll output: {}", test2.mode_id, res2.source_output);
+        println(out, "'{}': {}us", test2.mode_id, res2.time_elapsed);
         println(out, "'{}' is {}x faster than '{}'.",
-            test2.cmd_options, ratio, test1.cmd_options);
+            test2.mode_id, ratio(res1.time_elapsed, res2.time_elapsed), test1.mode_id);
+
         println(out, "----------");
     }
 
-    auto ratio = static_cast<double>(total1) / static_cast<double>(total2);
+    auto [min, max]
+    = std::minmax_element(times.begin(), times.end(),
+        [](const RatioData& a, const RatioData& b) { return a.ratio < b.ratio; });
+
+    auto average_ratio = ratio(total1, total2);
     println(out,"Total time:");
-    println(out,"'{}': {}us", data.option1, total1);
-    println(out,"'{}': {}us", data.option2, total2);
+    println(out,"'{}': {}us", data.mode1, total1);
+    println(out,"'{}': {}us", data.mode2, total2);
     println(out, "On average, '{}' is {}x faster than '{}'.",
-        data.option2, ratio, data.option1);
+        data.mode2, average_ratio, data.mode1);
+
+    println(out, "Fastest:");
+    println(out,"{}: {}x", max->testcase, max->ratio);
+
+    println(out, "Slowest:");
+    println(out,"{}: {}x", min->testcase, min->ratio);
 }
 
 BenchmarkData benchmark_data;
@@ -157,91 +118,161 @@ void sighandler(int)
     exit(-1);
 }
 
+// auto a_tmp = benchmark_data.mode1 = "clang-o0";
+// TestData get_mode1_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
+//     auto clang_irgen = [](const std::string& newsy, const std::string& outll) {
+//         auto ret = format("sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int getfarray(float a[]);void putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, float a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define starttime() _sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
+//                                 " && clang -O0 -Xclang -disable-O0-optnone -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null",
+//                                 newsy,
+//                                 newsy, outll);
+//
+//         return ret;
+//     };
+//
+//     return TestData{
+//         .sy = sy,
+//         .sylib = sylib_to_link,
+//         .temp_dir = curr_temp_dir,
+//         .mode_id = benchmark_data.mode1,
+//         .irgen = clang_irgen
+//     };
+// }
+
+
+// auto a_tmp = benchmark_data.mode1 = "clang-mem2reg-sccp";
+// TestData get_mode1_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
+//     auto clang_irgen = [](const std::string& newsy, const std::string& outll) {
+//         auto out_o0_ll = outll + ".o0.ll";
+//         auto ret = format("sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int getfarray(float a[]);void putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, float a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define starttime() _sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
+//                                 " && clang -O0 -Xclang -disable-O0-optnone -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null",
+//                                 newsy,
+//                                 newsy, out_o0_ll);
+//
+//         ret += format("&& opt {} -S {} -o {} -debug-pass-manager",
+//                "-passes=mem2reg,sccp", out_o0_ll, outll);
+//
+//         return ret;
+//     };
+//     return TestData{
+//         .sy = sy,
+//         .sylib = sylib_to_link,
+//         .temp_dir = curr_temp_dir,
+//         .mode_id = benchmark_data.mode1,
+//         .ir_asm_gen = clang_irgen
+//     };
+// }
+
+auto a_tmp = benchmark_data.mode1 = "gnalc-O0";
+TestData get_mode1_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
+    auto gnalc_irgen = [](const std::string& newsy, const std::string& outll) {
+        return format("../gnalc -S {} -o {} -emit-llvm",
+                                newsy, outll);
+    };
+
+    return TestData{
+        .sy = sy,
+        .sylib = sylib_to_link,
+        .temp_dir = curr_temp_dir,
+        .mode_id = benchmark_data.mode1,
+        .ir_asm_gen = gnalc_irgen
+    };
+}
+
+
+auto b_tmp = benchmark_data.mode2 = "gnalc-mem2reg";
+TestData get_mode2_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
+    auto gnalc_irgen = [](const std::string& newsy, const std::string& outll) {
+        return format("../gnalc -S {} -o {} -emit-llvm --mem2reg",
+                                newsy, outll);
+    };
+
+    return TestData{
+        .sy = sy,
+        .sylib = sylib_to_link,
+        .temp_dir = curr_temp_dir,
+        .mode_id = benchmark_data.mode2,
+        .ir_asm_gen = gnalc_irgen
+    };
+}
+
+// auto b_tmp = benchmark_data.mode2 = "clang-dce";
+// TestData get_mode2_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
+//     auto clang_irgen = [](const std::string& newsy, const std::string& outll) {
+//         auto out_o0_ll = outll + ".o0.ll";
+//         auto ret = format("sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int getfarray(float a[]);void putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, float a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define starttime() _sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
+//                                 " && clang -O0 -Xclang -disable-O0-optnone -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null",
+//                                 newsy,
+//                                 newsy, out_o0_ll);
+//
+//         ret += format("&& opt {} -S {} -o {}",
+//                "-passes=mem2reg,dce", out_o0_ll, outll);
+//
+//         return ret;
+//     };
+//     return TestData{
+//         .sy = sy,
+//         .sylib = sylib_to_link,
+//         .temp_dir = curr_temp_dir,
+//         .mode_id = benchmark_data.mode2,
+//         .ir_asm_gen = clang_irgen
+//     };
+// }
+
 int main(int argc, char *argv[]) {
     signal(SIGINT, sighandler);
+
     auto print_help = [&argv]() {
         println("Usage: {} [options]", argv[0]);
         println("Options:");
-        println("  -o1, --option1 [opt_option]    : Specify option1.");
-        println("  -o2, --option2 [opt_option]    : Specify option2.");
-        println("  -b, --backend                    : Compile to elf and benchmark.");
-        println("  -s, --skip [name_prefix]         : Skip test whose name has such "
+        println("  -s, --skip [name_prefix] : Skip test whose name has such "
                 "prefix.");
-        println("  -r, --run  [name_prefix]         : Only run test whose name has "
+        println("  -r, --run  [name_prefix] : Only run test whose name has "
                 "such prefix.");
-        println("  -h, --help                       : Print this help and exit.");
+        println("  -h, --help               : Print this help and exit.");
     };
-    auto real_test_data = cfg::test_data;
-    std::vector<std::pair<std::string, std::vector<std::string>>> skip;
-    std::vector<std::pair<std::string, std::vector<std::string>>> run;
+
+    RunSet run;
+    SkipSet skip;
+
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
-        if (arg == "--backend" || arg == "-b")
-            cfg::only_frontend = false;
-        else if (arg == "--skip" || arg == "-s") {
+        if (arg == "--skip" || arg == "-s") {
             if (!run.empty()) {
                 println("Error: '--run' conflicts with '--skip'.");
                 return -1;
             }
             if (i + 1 >= argc || argv[i + 1][0] == '-') {
-                println("Error: '--skip/-s' expects a name.");
+                println("Error: Expected a name.");
                 print_help();
                 return -1;
             }
-            skip.emplace_back(argv[i + 1], std::vector<std::string>{});
+            skip.emplace_back(Rule{argv[i + 1], {}});
             ++i;
-        }
-        else if (arg == "--run" || arg == "-r") {
+        } else if (arg == "--run" || arg == "-r") {
             if (!skip.empty()) {
                 println("Error: '--run' conflicts with '--skip'.");
                 return -1;
             }
-            if (i + 1 >= argc) {
-                println("Error: '--run/-r' expects a name.");
+            if (i + 1 >= argc || argv[i + 1][0] == '-') {
+                println("Error: Expected a name.");
                 print_help();
                 return -1;
             }
-            run.emplace_back(argv[i + 1], std::vector<std::string>{});
+            run.emplace_back(Rule{argv[i + 1], {}});
             ++i;
-        }
-        else if (arg == "--option1" || arg == "-o1") {
-            if (i + 1 >= argc) {
-                println("Error: '--option1/-o1' expects a name.");
-                print_help();
-                return -1;
-            }
-            benchmark_data.option1 = argv[i + 1];
-            ++i;
-        }
-        else if (arg == "--option2" || arg == "-o2") {
-            if (i + 1 >= argc) {
-                println("Error: '--option2/-o2' expects a name.");
-                print_help();
-                return -1;
-            }
-            benchmark_data.option2 = argv[i + 1];
-            ++i;
-        }
-        else if (arg == "--hfelp" || arg == "-h") {
+        } else if (arg == "--help" || arg == "-h") {
             print_help();
             return 0;
-        }
-        else {
+        } else {
             println("Error: Unrecognized option '{}'", arg);
             print_help();
             return -1;
         }
     }
 
-    if (benchmark_data.option1.empty() || benchmark_data.option2.empty()) {
-        println("Error: Missing options.");
-        print_help();
-        return -1;
-    }
-
     println("Pass benchmark started.");
-    println("Option1: '{}'", benchmark_data.option1);
-    println("Option2: '{}'", benchmark_data.option2);
+    println("Mode1: '{}'", benchmark_data.mode1);
+    println("Mode2: '{}'", benchmark_data.mode2);
 
     size_t passed = 0;
     size_t curr_test_cnt = 0;
@@ -250,61 +281,10 @@ int main(int argc, char *argv[]) {
 
     create_directories(cfg::global_benchmark_temp_dir);
 
-    std::string sylib_to_link; // .ll or .a
-    if (cfg::only_frontend) {
-        sylib_to_link = cfg::global_benchmark_temp_dir + "/sylib.ll";
-
-        std::string lib_command =
-            format("clang -S -emit-llvm {} -o {}",
-            cfg::sylibc, sylib_to_link);
-
-        println("Running '{}'.", lib_command);
-        std::system(lib_command.c_str());
-    } else {
-        auto sylibo = cfg::global_benchmark_temp_dir + "/sylib.o";
-        sylib_to_link = cfg::global_benchmark_temp_dir + "/sylib.a";
-
-        std::string lib_command =
-            format("clang -c {} -o {} && ar rcs {} {}",
-                   cfg::sylibc, sylibo, sylib_to_link, sylibo);
-
-        println("Running '{}'.", lib_command);
-        std::system(lib_command.c_str());
-    }
+    std::string sylib_to_link = prepare_sylib(cfg::global_benchmark_temp_dir); // .ll or .a
 
     for (auto &&curr_test_dir : cfg::benchmark_subdirs) {
-        std::vector<directory_entry> test_files;
-        for (const auto &p :
-             directory_iterator(real_test_data + "/" + curr_test_dir)) {
-            if (p.is_regular_file() && p.path().extension() == ".sy") {
-                bool need_run = true;
-
-                if (skip.empty() && !run.empty()) {
-                    need_run = false;
-                    for (auto &&rule : run) {
-                        if (begins_with(p.path().stem().string(), rule.first)) {
-                            need_run = true;
-                            rule.second.emplace_back(p.path().string());
-                            break;
-                        }
-                    }
-                } else if (!skip.empty() && run.empty()) {
-                    need_run = true;
-                    for (auto &&rule : skip) {
-                        if (begins_with(p.path().stem().string(), rule.first)) {
-                            need_run = false;
-                            rule.second.emplace_back(p.path().string());
-                            break;
-                        }
-                    }
-                }
-
-                if (need_run)
-                    test_files.emplace_back(p);
-            }
-        }
-
-        std::sort(test_files.begin(), test_files.end());
+        auto test_files = gather_test_files(curr_test_dir, run, skip);
 
         auto curr_temp_dir = cfg::global_benchmark_temp_dir + "/" + curr_test_dir;
         create_directories(curr_temp_dir);
@@ -318,26 +298,12 @@ int main(int argc, char *argv[]) {
             auto expected_syout = read_file(testcase_out);
             fix_newline(expected_syout);
 
-
             // Run
-            TestData data1{
-                .sy = sy,
-                .sylib = sylib_to_link,
-                .temp_dir = curr_temp_dir,
-                .cmd_options = benchmark_data.option1
-            };
-            TestData data2{
-                .sy = sy,
-                .sylib = sylib_to_link,
-                .temp_dir = curr_temp_dir,
-                .cmd_options = benchmark_data.option2
-            };
+            auto data1 = get_mode1_data(sy, sylib_to_link, curr_temp_dir);
+            auto data2 = get_mode2_data(sy, sylib_to_link, curr_temp_dir);
 
             auto res1 = run_test(data1);
             auto res2 = run_test(data2);
-
-            benchmark_data.results1.emplace_back(data1, res1);
-            benchmark_data.results2.emplace_back(data2, res2);
 
             bool failed = false;
             if (res1.output != expected_syout) {
@@ -355,6 +321,19 @@ int main(int argc, char *argv[]) {
                 failed = true;
             }
 
+            benchmark_data.results1.emplace_back(BenchmarkData::Item
+            {
+                .data = data1,
+                .res = res1,
+                .success = res1.output == expected_syout
+            });
+            benchmark_data.results2.emplace_back(BenchmarkData::Item
+            {
+                .data = data2,
+                .res = res2,
+                .success = res2.output == expected_syout
+            });
+
             if (!failed) {
                 println("     [\033[0;32;32mFINISHED\033[m]");
                 ++passed;
@@ -369,37 +348,15 @@ int main(int argc, char *argv[]) {
     finish:
     println("Finished running {} tests.", curr_test_cnt);
 
-    if (!skip.empty()) {
-        std::vector<std::string> skipped_tests;
-        for (auto &&r : skip)
-            skipped_tests.insert(skipped_tests.end(), r.second.cbegin(),
-                                 r.second.cend());
-
-        if (!skipped_tests.empty()) {
-            println("Skipped {} tests: ", skipped_tests.size());
-            for (const auto &f : skipped_tests)
-                println("|  {}", f);
-        }
-    } else if (!run.empty()) {
-        std::vector<std::string> run_tests;
-        for (auto &&r : run)
-            run_tests.insert(run_tests.end(), r.second.cbegin(),
-                             r.second.cend());
-
-        if (!run_tests.empty()) {
-            println("Only run {} tests: ", run_tests.size());
-            for (const auto &f : run_tests)
-                println("|  {}", f);
-        }
-    }
+    print_run_skip_status(run, skip);
 
     if (failed_tests.empty()) {
         println("[\033[0;32;32mTEST PASSED\033[m] {} tests passed!", passed);
     } else {
         println("Failed tests: ");
         for (const auto &f : failed_tests) {
-            println("| testcase: {} | options: {}",
-                f.sy.path().string(), f.cmd_options);
+            println("| testcase: {} | mode: {}",
+                f.sy.path().string(), f.mode_id);
         }
         println("[\033[0;32;31mTEST FAILED\033[m] {} tests failed!",
                 failed_tests.size());
@@ -407,7 +364,13 @@ int main(int argc, char *argv[]) {
 
     println("");
     write_benchmark_result_to(benchmark_data, std::cout);
-    std::ofstream output_file(cfg::global_benchmark_temp_dir + "/benchmark_result");
+    auto path =
+        format("{}/{}_vs_{}",
+            cfg::global_benchmark_temp_dir,
+            make_pathname(benchmark_data.mode2),
+            make_pathname(benchmark_data.mode1));
+    std::ofstream output_file(path);
     write_benchmark_result_to(benchmark_data, output_file);
+    println("Benchmark result saved to {}", path);
     return 0;
 }
