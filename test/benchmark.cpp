@@ -80,9 +80,9 @@ void write_benchmark_result_to(const BenchmarkData& data, std::ostream& out) {
         total2 += res2.time_elapsed;
 
         println(out, "<{}> {}:", i, test1.sy.path().stem().string());
-        println(out, "'{}' ll output: {}", test1.mode_id, res1.source_output);
+        // println(out, "'{}' ll output: {}", test1.mode_id, res1.source_output);
         println(out, "'{}': {}us", test1.mode_id, res1.time_elapsed);
-        println(out, "'{}' ll output: {}", test2.mode_id, res2.source_output);
+        // println(out, "'{}' ll output: {}", test2.mode_id, res2.source_output);
         println(out, "'{}': {}us", test2.mode_id, res2.time_elapsed);
         println(out, "'{}' is {}x faster than '{}'.",
             test2.mode_id, ratio(res1.time_elapsed, res2.time_elapsed), test1.mode_id);
@@ -139,68 +139,84 @@ void sighandler(int)
 // }
 
 
-auto a_tmp = benchmark_data.mode1 = "clang-mem2reg";
+// auto a_tmp = benchmark_data.mode1 = "clang-mem2reg-sccp";
+// TestData get_mode1_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
+//     auto clang_irgen = [](const std::string& newsy, const std::string& outll) {
+//         auto out_o0_ll = outll + ".o0.ll";
+//         auto ret = format("sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int getfarray(float a[]);void putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, float a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define starttime() _sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
+//                                 " && clang -O0 -Xclang -disable-O0-optnone -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null",
+//                                 newsy,
+//                                 newsy, out_o0_ll);
+//
+//         ret += format("&& opt {} -S {} -o {} -debug-pass-manager",
+//                "-passes=mem2reg,sccp", out_o0_ll, outll);
+//
+//         return ret;
+//     };
+//     return TestData{
+//         .sy = sy,
+//         .sylib = sylib_to_link,
+//         .temp_dir = curr_temp_dir,
+//         .mode_id = benchmark_data.mode1,
+//         .ir_asm_gen = clang_irgen
+//     };
+// }
+
+auto a_tmp = benchmark_data.mode1 = "gnalc-O0";
 TestData get_mode1_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
-    auto clang_irgen = [](const std::string& newsy, const std::string& outll) {
-        auto out_o0_ll = outll + ".o0.ll";
-        auto ret = format("sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int getfarray(float a[]);void putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, float a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define starttime() _sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
-                                " && clang -O0 -Xclang -disable-O0-optnone -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null",
-                                newsy,
-                                newsy, out_o0_ll);
-
-        ret += format("&& opt {} -S {} -o {}",
-               "-passes=mem2reg", out_o0_ll, outll);
-
-        return ret;
+    auto gnalc_irgen = [](const std::string& newsy, const std::string& outll) {
+        return format("../gnalc -S {} -o {} -emit-llvm",
+                                newsy, outll);
     };
+
     return TestData{
         .sy = sy,
         .sylib = sylib_to_link,
         .temp_dir = curr_temp_dir,
         .mode_id = benchmark_data.mode1,
-        .ir_asm_gen = clang_irgen
+        .ir_asm_gen = gnalc_irgen
     };
 }
 
 
-// auto b_tmp = benchmark_data.mode2 = "gnalc";
-// TestData get_mode2_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
-//     auto gnalc_irgen = [](const std::string& newsy, const std::string& outll) {
-//         return format("../gnalc -S {} -o {} -emit-llvm",
-//                                 newsy, outll);
-//     };
-//
-//     return TestData{
-//         .sy = sy,
-//         .sylib = sylib_to_link,
-//         .temp_dir = curr_temp_dir,
-//         .mode_id = benchmark_data.mode2,
-//         .irgen = gnalc_irgen
-//     };
-// }
-
-auto b_tmp = benchmark_data.mode2 = "clang-dce";
+auto b_tmp = benchmark_data.mode2 = "gnalc-mem2reg";
 TestData get_mode2_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
-    auto clang_irgen = [](const std::string& newsy, const std::string& outll) {
-        auto out_o0_ll = outll + ".o0.ll";
-        auto ret = format("sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int getfarray(float a[]);void putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, float a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define starttime() _sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
-                                " && clang -O0 -Xclang -disable-O0-optnone -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null",
-                                newsy,
-                                newsy, out_o0_ll);
-
-        ret += format("&& opt {} -S {} -o {}",
-               "-passes=mem2reg,dce", out_o0_ll, outll);
-
-        return ret;
+    auto gnalc_irgen = [](const std::string& newsy, const std::string& outll) {
+        return format("../gnalc -S {} -o {} -emit-llvm --mem2reg",
+                                newsy, outll);
     };
+
     return TestData{
         .sy = sy,
         .sylib = sylib_to_link,
         .temp_dir = curr_temp_dir,
         .mode_id = benchmark_data.mode2,
-        .ir_asm_gen = clang_irgen
+        .ir_asm_gen = gnalc_irgen
     };
 }
+
+// auto b_tmp = benchmark_data.mode2 = "clang-dce";
+// TestData get_mode2_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
+//     auto clang_irgen = [](const std::string& newsy, const std::string& outll) {
+//         auto out_o0_ll = outll + ".o0.ll";
+//         auto ret = format("sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int getfarray(float a[]);void putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, float a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define starttime() _sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
+//                                 " && clang -O0 -Xclang -disable-O0-optnone -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null",
+//                                 newsy,
+//                                 newsy, out_o0_ll);
+//
+//         ret += format("&& opt {} -S {} -o {}",
+//                "-passes=mem2reg,dce", out_o0_ll, outll);
+//
+//         return ret;
+//     };
+//     return TestData{
+//         .sy = sy,
+//         .sylib = sylib_to_link,
+//         .temp_dir = curr_temp_dir,
+//         .mode_id = benchmark_data.mode2,
+//         .ir_asm_gen = clang_irgen
+//     };
+// }
 
 int main(int argc, char *argv[]) {
     signal(SIGINT, sighandler);
@@ -348,7 +364,13 @@ int main(int argc, char *argv[]) {
 
     println("");
     write_benchmark_result_to(benchmark_data, std::cout);
-    std::ofstream output_file(cfg::global_benchmark_temp_dir + "/benchmark_result");
+    auto path =
+        format("{}/{}_vs_{}",
+            cfg::global_benchmark_temp_dir,
+            make_pathname(benchmark_data.mode2),
+            make_pathname(benchmark_data.mode1));
+    std::ofstream output_file(path);
     write_benchmark_result_to(benchmark_data, output_file);
+    println("Benchmark result saved to {}", path);
     return 0;
 }

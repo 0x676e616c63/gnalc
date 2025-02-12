@@ -1,0 +1,594 @@
+Benchmark results:
+<0> 01_mm1:
+'clang-mem2reg': 619534us
+'gnalc-mem2reg': 623570us
+'gnalc-mem2reg' is 0.993528x faster than 'clang-mem2reg'.
+----------
+<1> 01_mm2:
+'clang-mem2reg': 560311us
+'gnalc-mem2reg': 555538us
+'gnalc-mem2reg' is 1.00859x faster than 'clang-mem2reg'.
+----------
+<2> 01_mm3:
+'clang-mem2reg': 423439us
+'gnalc-mem2reg': 423353us
+'gnalc-mem2reg' is 1.0002x faster than 'clang-mem2reg'.
+----------
+<3> 03_sort1:
+'clang-mem2reg': 212152us
+'gnalc-mem2reg': 203158us
+'gnalc-mem2reg' is 1.04427x faster than 'clang-mem2reg'.
+----------
+<4> 03_sort2:
+'clang-mem2reg': 3628598us
+'gnalc-mem2reg': 3278864us
+'gnalc-mem2reg' is 1.10666x faster than 'clang-mem2reg'.
+----------
+<5> 03_sort3:
+'clang-mem2reg': 700397us
+'gnalc-mem2reg': 642498us
+'gnalc-mem2reg' is 1.09012x faster than 'clang-mem2reg'.
+----------
+<6> 04_spmv1:
+'clang-mem2reg': 405588us
+'gnalc-mem2reg': 415734us
+'gnalc-mem2reg' is 0.975595x faster than 'clang-mem2reg'.
+----------
+<7> 04_spmv2:
+'clang-mem2reg': 300003us
+'gnalc-mem2reg': 304449us
+'gnalc-mem2reg' is 0.985397x faster than 'clang-mem2reg'.
+----------
+<8> 04_spmv3:
+'clang-mem2reg': 285026us
+'gnalc-mem2reg': 285344us
+'gnalc-mem2reg' is 0.998886x faster than 'clang-mem2reg'.
+----------
+<9> fft0:
+'clang-mem2reg': 3019580us
+'gnalc-mem2reg': 2754615us
+'gnalc-mem2reg' is 1.09619x faster than 'clang-mem2reg'.
+----------
+<10> fft1:
+'clang-mem2reg': 6513030us
+'gnalc-mem2reg': 5937265us
+'gnalc-mem2reg' is 1.09697x faster than 'clang-mem2reg'.
+----------
+<11> fft2:
+'clang-mem2reg': 6277321us
+'gnalc-mem2reg': 5702457us
+'gnalc-mem2reg' is 1.10081x faster than 'clang-mem2reg'.
+----------
+<12> gameoflife-gosper:
+'clang-mem2reg': 1626324us
+'gnalc-mem2reg': 1680508us
+'gnalc-mem2reg' is 0.967757x faster than 'clang-mem2reg'.
+----------
+<13> gameoflife-oscillator:
+'clang-mem2reg': 1441869us
+'gnalc-mem2reg': 1484409us
+'gnalc-mem2reg' is 0.971342x faster than 'clang-mem2reg'.
+----------
+<14> gameoflife-p61glidergun:
+'clang-mem2reg': 1520367us
+'gnalc-mem2reg': 1584789us
+'gnalc-mem2reg' is 0.95935x faster than 'clang-mem2reg'.
+----------
+<15> if-combine1:
+'clang-mem2reg': 1057770us
+'gnalc-mem2reg': 1074965us
+'gnalc-mem2reg' is 0.984004x faster than 'clang-mem2reg'.
+----------
+<16> if-combine2:
+'clang-mem2reg': 1584190us
+'gnalc-mem2reg': 1608475us
+'gnalc-mem2reg' is 0.984902x faster than 'clang-mem2reg'.
+----------
+<17> if-combine3:
+'clang-mem2reg': 2743173us
+'gnalc-mem2reg': 2852279us
+'gnalc-mem2reg' is 0.961748x faster than 'clang-mem2reg'.
+----------
+<18> large_loop_array_1:
+'clang-mem2reg': 1014178us
+'gnalc-mem2reg': 1012333us
+'gnalc-mem2reg' is 1.00182x faster than 'clang-mem2reg'.
+----------
+<19> large_loop_array_2:
+'clang-mem2reg': 2008615us
+'gnalc-mem2reg': 2009280us
+'gnalc-mem2reg' is 0.999669x faster than 'clang-mem2reg'.
+----------
+<20> large_loop_array_3:
+'clang-mem2reg': 807249us
+'gnalc-mem2reg': 806914us
+'gnalc-mem2reg' is 1.00042x faster than 'clang-mem2reg'.
+----------
+<21> matmul1:
+'clang-mem2reg': 608570us
+'gnalc-mem2reg': 606473us
+'gnalc-mem2reg' is 1.00346x faster than 'clang-mem2reg'.
+----------
+<22> matmul2:
+'clang-mem2reg': 605102us
+'gnalc-mem2reg': 603063us
+'gnalc-mem2reg' is 1.00338x faster than 'clang-mem2reg'.
+----------
+<23> matmul3:
+'clang-mem2reg': 606417us
+'gnalc-mem2reg': 604731us
+'gnalc-mem2reg' is 1.00279x faster than 'clang-mem2reg'.
+----------
+<24> recursive_call_1:
+'clang-mem2reg': 3748766us
+'gnalc-mem2reg': 3737679us
+'gnalc-mem2reg' is 1.00297x faster than 'clang-mem2reg'.
+----------
+<25> recursive_call_2:
+'clang-mem2reg': 938375us
+'gnalc-mem2reg': 937711us
+'gnalc-mem2reg' is 1.00071x faster than 'clang-mem2reg'.
+----------
+<26> recursive_call_3:
+'clang-mem2reg': 1887079us
+'gnalc-mem2reg': 1871957us
+'gnalc-mem2reg' is 1.00808x faster than 'clang-mem2reg'.
+----------
+<27> shuffle0:
+'clang-mem2reg': 1620930us
+'gnalc-mem2reg': 1644203us
+'gnalc-mem2reg' is 0.985845x faster than 'clang-mem2reg'.
+----------
+<28> shuffle1:
+'clang-mem2reg': 807066us
+'gnalc-mem2reg': 822982us
+'gnalc-mem2reg' is 0.980661x faster than 'clang-mem2reg'.
+----------
+<29> shuffle2:
+'clang-mem2reg': 575610us
+'gnalc-mem2reg': 519785us
+'gnalc-mem2reg' is 1.1074x faster than 'clang-mem2reg'.
+----------
+<30> sl1:
+'clang-mem2reg': 1820180us
+'gnalc-mem2reg': 1815816us
+'gnalc-mem2reg' is 1.0024x faster than 'clang-mem2reg'.
+----------
+<31> sl2:
+'clang-mem2reg': 548825us
+'gnalc-mem2reg': 543621us
+'gnalc-mem2reg' is 1.00957x faster than 'clang-mem2reg'.
+----------
+<32> sl3:
+'clang-mem2reg': 233424us
+'gnalc-mem2reg': 233831us
+'gnalc-mem2reg' is 0.998259x faster than 'clang-mem2reg'.
+----------
+<33> transpose0:
+'clang-mem2reg': 457273us
+'gnalc-mem2reg': 469153us
+'gnalc-mem2reg' is 0.974678x faster than 'clang-mem2reg'.
+----------
+<34> transpose1:
+'clang-mem2reg': 467070us
+'gnalc-mem2reg': 467463us
+'gnalc-mem2reg' is 0.999159x faster than 'clang-mem2reg'.
+----------
+<35> transpose2:
+'clang-mem2reg': 989990us
+'gnalc-mem2reg': 1076252us
+'gnalc-mem2reg' is 0.91985x faster than 'clang-mem2reg'.
+----------
+<36> h-1-01:
+'clang-mem2reg': 38967730us
+'gnalc-mem2reg': 39156895us
+'gnalc-mem2reg' is 0.995169x faster than 'clang-mem2reg'.
+----------
+<37> h-1-02:
+'clang-mem2reg': 3351396us
+'gnalc-mem2reg': 3360580us
+'gnalc-mem2reg' is 0.997267x faster than 'clang-mem2reg'.
+----------
+<38> h-1-03:
+'clang-mem2reg': 18602137us
+'gnalc-mem2reg': 18731378us
+'gnalc-mem2reg' is 0.9931x faster than 'clang-mem2reg'.
+----------
+<39> h-2-01:
+'clang-mem2reg': 2454467us
+'gnalc-mem2reg': 2452931us
+'gnalc-mem2reg' is 1.00063x faster than 'clang-mem2reg'.
+----------
+<40> h-2-02:
+'clang-mem2reg': 2403700us
+'gnalc-mem2reg': 2404992us
+'gnalc-mem2reg' is 0.999463x faster than 'clang-mem2reg'.
+----------
+<41> h-2-03:
+'clang-mem2reg': 2944693us
+'gnalc-mem2reg': 2945123us
+'gnalc-mem2reg' is 0.999854x faster than 'clang-mem2reg'.
+----------
+<42> h-3-01:
+'clang-mem2reg': 352992us
+'gnalc-mem2reg': 352154us
+'gnalc-mem2reg' is 1.00238x faster than 'clang-mem2reg'.
+----------
+<43> h-3-02:
+'clang-mem2reg': 352981us
+'gnalc-mem2reg': 351827us
+'gnalc-mem2reg' is 1.00328x faster than 'clang-mem2reg'.
+----------
+<44> h-3-03:
+'clang-mem2reg': 351303us
+'gnalc-mem2reg': 349781us
+'gnalc-mem2reg' is 1.00435x faster than 'clang-mem2reg'.
+----------
+<45> h-4-01:
+'clang-mem2reg': 807625us
+'gnalc-mem2reg': 791184us
+'gnalc-mem2reg' is 1.02078x faster than 'clang-mem2reg'.
+----------
+<46> h-4-02:
+'clang-mem2reg': 2701516us
+'gnalc-mem2reg': 2591844us
+'gnalc-mem2reg' is 1.04231x faster than 'clang-mem2reg'.
+----------
+<47> h-4-03:
+'clang-mem2reg': 4938168us
+'gnalc-mem2reg': 4840794us
+'gnalc-mem2reg' is 1.02012x faster than 'clang-mem2reg'.
+----------
+<48> h-5-01:
+'clang-mem2reg': 572939us
+'gnalc-mem2reg': 576144us
+'gnalc-mem2reg' is 0.994437x faster than 'clang-mem2reg'.
+----------
+<49> h-5-02:
+'clang-mem2reg': 568889us
+'gnalc-mem2reg': 573522us
+'gnalc-mem2reg' is 0.991922x faster than 'clang-mem2reg'.
+----------
+<50> h-5-03:
+'clang-mem2reg': 571818us
+'gnalc-mem2reg': 577083us
+'gnalc-mem2reg' is 0.990877x faster than 'clang-mem2reg'.
+----------
+<51> h-6-01:
+'clang-mem2reg': 594351us
+'gnalc-mem2reg': 595221us
+'gnalc-mem2reg' is 0.998538x faster than 'clang-mem2reg'.
+----------
+<52> h-6-02:
+'clang-mem2reg': 888807us
+'gnalc-mem2reg': 887821us
+'gnalc-mem2reg' is 1.00111x faster than 'clang-mem2reg'.
+----------
+<53> h-6-03:
+'clang-mem2reg': 1185116us
+'gnalc-mem2reg': 1185337us
+'gnalc-mem2reg' is 0.999814x faster than 'clang-mem2reg'.
+----------
+<54> h-7-01:
+'clang-mem2reg': 300592us
+'gnalc-mem2reg': 197215us
+'gnalc-mem2reg' is 1.52418x faster than 'clang-mem2reg'.
+----------
+<55> h-8-01:
+'clang-mem2reg': 401980us
+'gnalc-mem2reg': 401380us
+'gnalc-mem2reg' is 1.00149x faster than 'clang-mem2reg'.
+----------
+<56> h-8-02:
+'clang-mem2reg': 403840us
+'gnalc-mem2reg': 401370us
+'gnalc-mem2reg' is 1.00615x faster than 'clang-mem2reg'.
+----------
+<57> h-8-03:
+'clang-mem2reg': 402819us
+'gnalc-mem2reg': 401435us
+'gnalc-mem2reg' is 1.00345x faster than 'clang-mem2reg'.
+----------
+<58> 2024-1RK-26:
+'clang-mem2reg': 6297080us
+'gnalc-mem2reg': 5708908us
+'gnalc-mem2reg' is 1.10303x faster than 'clang-mem2reg'.
+----------
+<59> 2024-2D0-22:
+'clang-mem2reg': 286203us
+'gnalc-mem2reg': 287868us
+'gnalc-mem2reg' is 0.994216x faster than 'clang-mem2reg'.
+----------
+<60> 2024-51P-30:
+'clang-mem2reg': 2682198us
+'gnalc-mem2reg': 2653437us
+'gnalc-mem2reg' is 1.01084x faster than 'clang-mem2reg'.
+----------
+<61> 2024-5HA-8:
+'clang-mem2reg': 1443846us
+'gnalc-mem2reg': 1483180us
+'gnalc-mem2reg' is 0.97348x faster than 'clang-mem2reg'.
+----------
+<62> 2024-5NG-2:
+'clang-mem2reg': 820749us
+'gnalc-mem2reg': 804905us
+'gnalc-mem2reg' is 1.01968x faster than 'clang-mem2reg'.
+----------
+<63> 2024-84M-11:
+'clang-mem2reg': 424124us
+'gnalc-mem2reg': 423703us
+'gnalc-mem2reg' is 1.00099x faster than 'clang-mem2reg'.
+----------
+<64> 2024-AZ7-32:
+'clang-mem2reg': 1610786us
+'gnalc-mem2reg': 1593084us
+'gnalc-mem2reg' is 1.01111x faster than 'clang-mem2reg'.
+----------
+<65> 2024-BE3-31:
+'clang-mem2reg': 405245us
+'gnalc-mem2reg': 414132us
+'gnalc-mem2reg' is 0.978541x faster than 'clang-mem2reg'.
+----------
+<66> 2024-BJV-10:
+'clang-mem2reg': 3225094us
+'gnalc-mem2reg': 3307427us
+'gnalc-mem2reg' is 0.975107x faster than 'clang-mem2reg'.
+----------
+<67> 2024-CH1-5:
+'clang-mem2reg': 211145us
+'gnalc-mem2reg': 196115us
+'gnalc-mem2reg' is 1.07664x faster than 'clang-mem2reg'.
+----------
+<68> 2024-ETJ-33:
+'clang-mem2reg': 468123us
+'gnalc-mem2reg': 468353us
+'gnalc-mem2reg' is 0.999509x faster than 'clang-mem2reg'.
+----------
+<69> 2024-FI8-9:
+'clang-mem2reg': 701369us
+'gnalc-mem2reg': 640921us
+'gnalc-mem2reg' is 1.09431x faster than 'clang-mem2reg'.
+----------
+<70> 2024-FQX-25:
+'clang-mem2reg': 2007194us
+'gnalc-mem2reg': 2007009us
+'gnalc-mem2reg' is 1.00009x faster than 'clang-mem2reg'.
+----------
+<71> 2024-I9Y-15:
+'clang-mem2reg': 807470us
+'gnalc-mem2reg': 806322us
+'gnalc-mem2reg' is 1.00142x faster than 'clang-mem2reg'.
+----------
+<72> 2024-IG5-12:
+'clang-mem2reg': 988093us
+'gnalc-mem2reg': 1079426us
+'gnalc-mem2reg' is 0.915387x faster than 'clang-mem2reg'.
+----------
+<73> 2024-JR2-21:
+'clang-mem2reg': 999776us
+'gnalc-mem2reg': 998631us
+'gnalc-mem2reg' is 1.00115x faster than 'clang-mem2reg'.
+----------
+<74> 2024-K22-4:
+'clang-mem2reg': 1819768us
+'gnalc-mem2reg': 1818779us
+'gnalc-mem2reg' is 1.00054x faster than 'clang-mem2reg'.
+----------
+<75> 2024-LW8-7:
+'clang-mem2reg': 3567343us
+'gnalc-mem2reg': 3276363us
+'gnalc-mem2reg' is 1.08881x faster than 'clang-mem2reg'.
+----------
+<76> 2024-OBF-29:
+'clang-mem2reg': 461809us
+'gnalc-mem2reg': 463738us
+'gnalc-mem2reg' is 0.99584x faster than 'clang-mem2reg'.
+----------
+<77> 2024-PAF-17:
+'clang-mem2reg': 636484us
+'gnalc-mem2reg': 619308us
+'gnalc-mem2reg' is 1.02773x faster than 'clang-mem2reg'.
+----------
+<78> 2024-PCT-14:
+'clang-mem2reg': 544072us
+'gnalc-mem2reg': 543896us
+'gnalc-mem2reg' is 1.00032x faster than 'clang-mem2reg'.
+----------
+<79> 2024-QV9-34:
+'clang-mem2reg': 1521098us
+'gnalc-mem2reg': 1585206us
+'gnalc-mem2reg' is 0.959559x faster than 'clang-mem2reg'.
+----------
+<80> 2024-T6G-27:
+'clang-mem2reg': 555953us
+'gnalc-mem2reg': 554989us
+'gnalc-mem2reg' is 1.00174x faster than 'clang-mem2reg'.
+----------
+<81> 2024-TBR-19:
+'clang-mem2reg': 7090720us
+'gnalc-mem2reg': 7088287us
+'gnalc-mem2reg' is 1.00034x faster than 'clang-mem2reg'.
+----------
+<82> 2024-U7D-6:
+'clang-mem2reg': 3237888us
+'gnalc-mem2reg': 3299792us
+'gnalc-mem2reg' is 0.98124x faster than 'clang-mem2reg'.
+----------
+<83> 2024-U7W-16:
+'clang-mem2reg': 6559577us
+'gnalc-mem2reg': 5927056us
+'gnalc-mem2reg' is 1.10672x faster than 'clang-mem2reg'.
+----------
+<84> 2024-V6O-23:
+'clang-mem2reg': 1072285us
+'gnalc-mem2reg': 1061233us
+'gnalc-mem2reg' is 1.01041x faster than 'clang-mem2reg'.
+----------
+<85> 2024-VGH-20:
+'clang-mem2reg': 1618166us
+'gnalc-mem2reg': 1640312us
+'gnalc-mem2reg' is 0.986499x faster than 'clang-mem2reg'.
+----------
+<86> 2024-VRT-1:
+'clang-mem2reg': 3228387us
+'gnalc-mem2reg': 3295345us
+'gnalc-mem2reg' is 0.979681x faster than 'clang-mem2reg'.
+----------
+<87> 2024-X7M-3:
+'clang-mem2reg': 1631051us
+'gnalc-mem2reg': 1674700us
+'gnalc-mem2reg' is 0.973936x faster than 'clang-mem2reg'.
+----------
+<88> 2024-XRB-24:
+'clang-mem2reg': 233389us
+'gnalc-mem2reg': 232593us
+'gnalc-mem2reg' is 1.00342x faster than 'clang-mem2reg'.
+----------
+<89> 2024-XU5-13:
+'clang-mem2reg': 3019680us
+'gnalc-mem2reg': 2756735us
+'gnalc-mem2reg' is 1.09538x faster than 'clang-mem2reg'.
+----------
+<90> 2024-Y60-18:
+'clang-mem2reg': 299289us
+'gnalc-mem2reg': 303324us
+'gnalc-mem2reg' is 0.986697x faster than 'clang-mem2reg'.
+----------
+<91> 2024-Z3A-28:
+'clang-mem2reg': 576927us
+'gnalc-mem2reg': 520021us
+'gnalc-mem2reg' is 1.10943x faster than 'clang-mem2reg'.
+----------
+<92> 2024-0ZE-13:
+'clang-mem2reg': 406082us
+'gnalc-mem2reg': 401589us
+'gnalc-mem2reg' is 1.01119x faster than 'clang-mem2reg'.
+----------
+<93> 2024-1WO-11:
+'clang-mem2reg': 2451470us
+'gnalc-mem2reg': 2451567us
+'gnalc-mem2reg' is 0.99996x faster than 'clang-mem2reg'.
+----------
+<94> 2024-2KM-21:
+'clang-mem2reg': 3346217us
+'gnalc-mem2reg': 3356702us
+'gnalc-mem2reg' is 0.996876x faster than 'clang-mem2reg'.
+----------
+<95> 2024-7UJ-12:
+'clang-mem2reg': 132726us
+'gnalc-mem2reg': 124140us
+'gnalc-mem2reg' is 1.06916x faster than 'clang-mem2reg'.
+----------
+<96> 2024-8NL-18:
+'clang-mem2reg': 405270us
+'gnalc-mem2reg': 401394us
+'gnalc-mem2reg' is 1.00966x faster than 'clang-mem2reg'.
+----------
+<97> 2024-931-6:
+'clang-mem2reg': 806579us
+'gnalc-mem2reg': 800399us
+'gnalc-mem2reg' is 1.00772x faster than 'clang-mem2reg'.
+----------
+<98> 2024-BAV-3:
+'clang-mem2reg': 10058583us
+'gnalc-mem2reg': 10069281us
+'gnalc-mem2reg' is 0.998938x faster than 'clang-mem2reg'.
+----------
+<99> 2024-C64-14:
+'clang-mem2reg': 2963778us
+'gnalc-mem2reg': 2941728us
+'gnalc-mem2reg' is 1.0075x faster than 'clang-mem2reg'.
+----------
+<100> 2024-CH6-24:
+'clang-mem2reg': 475333us
+'gnalc-mem2reg': 374639us
+'gnalc-mem2reg' is 1.26878x faster than 'clang-mem2reg'.
+----------
+<101> 2024-DCV-7:
+'clang-mem2reg': 574095us
+'gnalc-mem2reg': 575963us
+'gnalc-mem2reg' is 0.996757x faster than 'clang-mem2reg'.
+----------
+<102> 2024-FAF-19:
+'clang-mem2reg': 18606299us
+'gnalc-mem2reg': 18737696us
+'gnalc-mem2reg' is 0.992988x faster than 'clang-mem2reg'.
+----------
+<103> 2024-FVJ-15:
+'clang-mem2reg': 569297us
+'gnalc-mem2reg': 576385us
+'gnalc-mem2reg' is 0.987703x faster than 'clang-mem2reg'.
+----------
+<104> 2024-H17-1:
+'clang-mem2reg': 2403766us
+'gnalc-mem2reg': 2399301us
+'gnalc-mem2reg' is 1.00186x faster than 'clang-mem2reg'.
+----------
+<105> 2024-I4W-2:
+'clang-mem2reg': 1445267us
+'gnalc-mem2reg': 1369508us
+'gnalc-mem2reg' is 1.05532x faster than 'clang-mem2reg'.
+----------
+<106> 2024-JVU-10:
+'clang-mem2reg': 38786164us
+'gnalc-mem2reg': 39121392us
+'gnalc-mem2reg' is 0.991431x faster than 'clang-mem2reg'.
+----------
+<107> 2024-K0I-17:
+'clang-mem2reg': 4919587us
+'gnalc-mem2reg': 4839695us
+'gnalc-mem2reg' is 1.01651x faster than 'clang-mem2reg'.
+----------
+<108> 2024-KVV-20:
+'clang-mem2reg': 917069us
+'gnalc-mem2reg': 917226us
+'gnalc-mem2reg' is 0.999829x faster than 'clang-mem2reg'.
+----------
+<109> 2024-LN4-9:
+'clang-mem2reg': 569191us
+'gnalc-mem2reg': 575466us
+'gnalc-mem2reg' is 0.989096x faster than 'clang-mem2reg'.
+----------
+<110> 2024-MXP-16:
+'clang-mem2reg': 2700482us
+'gnalc-mem2reg': 2589971us
+'gnalc-mem2reg' is 1.04267x faster than 'clang-mem2reg'.
+----------
+<111> 2024-NCY-23:
+'clang-mem2reg': 1268332us
+'gnalc-mem2reg': 1256705us
+'gnalc-mem2reg' is 1.00925x faster than 'clang-mem2reg'.
+----------
+<112> 2024-NKK-22:
+'clang-mem2reg': 404673us
+'gnalc-mem2reg': 402102us
+'gnalc-mem2reg' is 1.00639x faster than 'clang-mem2reg'.
+----------
+<113> 2024-NT1-4:
+'clang-mem2reg': 3793903us
+'gnalc-mem2reg': 3575743us
+'gnalc-mem2reg' is 1.06101x faster than 'clang-mem2reg'.
+----------
+<114> 2024-PKP-8:
+'clang-mem2reg': 1643396us
+'gnalc-mem2reg': 1640459us
+'gnalc-mem2reg' is 1.00179x faster than 'clang-mem2reg'.
+----------
+<115> 2024-U03-25:
+'clang-mem2reg': 4245231us
+'gnalc-mem2reg': 4243026us
+'gnalc-mem2reg' is 1.00052x faster than 'clang-mem2reg'.
+----------
+<116> 2024-VTF-5:
+'clang-mem2reg': 403265us
+'gnalc-mem2reg': 400502us
+'gnalc-mem2reg' is 1.0069x faster than 'clang-mem2reg'.
+----------
+Total time:
+'clang-mem2reg': 302131686us
+'gnalc-mem2reg': 298999205us
+On average, 'gnalc-mem2reg' is 1.01048x faster than 'clang-mem2reg'.
+Fastest:
+../../test/contest/h_performance/h-7-01.sy: 1.52418x
+Slowest:
+../../test/contest/final/performance/2024-IG5-12.sy: 0.915387x
