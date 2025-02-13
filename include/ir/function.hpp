@@ -36,6 +36,8 @@ public:
     ~FunctionDecl() override;
 };
 
+// FormalParam shouldn't contain a parent.
+// If really need it, update CFGBuilder to move them correctly from LinearFunction to Function.
 class FormalParam : public Value {
     size_t index;
 
@@ -142,6 +144,8 @@ public:
 
     void addExitBB(std::shared_ptr<BasicBlock> blk);
     std::vector<std::shared_ptr<BasicBlock>> getExitBBs() const;
+
+    size_t getInstCount() const;
 
 private:
     void updateBBIndex();

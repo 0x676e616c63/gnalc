@@ -113,8 +113,14 @@ BenchmarkData benchmark_data;
 void sighandler(int)
 {
     write_benchmark_result_to(benchmark_data, std::cout);
-    std::ofstream output_file(cfg::global_benchmark_temp_dir + "/benchmark_result");
+    auto path =
+        format("{}/{}_vs_{}",
+            cfg::global_benchmark_temp_dir,
+            make_pathname(benchmark_data.mode2),
+            make_pathname(benchmark_data.mode1));
+    std::ofstream output_file(path);
     write_benchmark_result_to(benchmark_data, output_file);
+    println("Benchmark result saved to {}", path);
     exit(-1);
 }
 
@@ -162,10 +168,10 @@ void sighandler(int)
 //     };
 // }
 
-auto a_tmp = benchmark_data.mode1 = "gnalc-O0";
+auto a_tmp = benchmark_data.mode1 = "gnalc-mem2reg";
 TestData get_mode1_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
     auto gnalc_irgen = [](const std::string& newsy, const std::string& outll) {
-        return format("../gnalc -S {} -o {} -emit-llvm",
+        return format("../gnalc -S {} -o {} -emit-llvm --mem2reg",
                                 newsy, outll);
     };
 
@@ -179,10 +185,10 @@ TestData get_mode1_data(const directory_entry& sy, const std::string& sylib_to_l
 }
 
 
-auto b_tmp = benchmark_data.mode2 = "gnalc-mem2reg";
+auto b_tmp = benchmark_data.mode2 = "gnalc-mem2reg-sccp-dce";
 TestData get_mode2_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
     auto gnalc_irgen = [](const std::string& newsy, const std::string& outll) {
-        return format("../gnalc -S {} -o {} -emit-llvm --mem2reg",
+        return format("../gnalc -S {} -o {} -emit-llvm --mem2reg --sccp --dce",
                                 newsy, outll);
     };
 

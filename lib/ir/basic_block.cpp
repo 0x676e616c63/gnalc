@@ -160,6 +160,10 @@ void BasicBlock::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
 BasicBlock::~BasicBlock() = default;
 
+size_t BasicBlock::getAllInstCount() const {
+    return phi_insts.size() + insts.size();
+}
+
 void linkBB(const std::shared_ptr<BasicBlock> &prebb,
                    const std::shared_ptr<BasicBlock> &nxtbb) {
     prebb->addNextBB(nxtbb);

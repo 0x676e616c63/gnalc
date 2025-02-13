@@ -8,35 +8,13 @@
 namespace IR {
 ALLOCAInst::ALLOCAInst(NameRef name, std::shared_ptr<Type> btype, int _align)
     : Instruction(OP::ALLOCA, name, makePtrType(btype)),
-      basetype(std::move(btype)), align(_align), is_static(true) {}
-
-// ALLOCAInst::ALLOCAInst(NameRef name, std::shared_ptr<Type> btype,
-// std::shared_ptr<Value> num_elements, int _align)
-//     : Instruction(OP::ALLOCA, name, makePtrType(makeArrayType(btype,
-//     num_elements->))),
-//         basetype(std::move(btype)), align(_align), is_static(false)
-// {
-//     addOperand(num_elements);
-// }
+      basetype(std::move(btype)), align(_align) {}
 
 int ALLOCAInst::getAlign() const { return align; }
-
-bool ALLOCAInst::isStatic() const { return is_static; }
-
-// std::vector<int> ALLOCAInst::getStaticArraySize() const
-// {
-//     return static_array_size;
-// }
 
 bool ALLOCAInst::isArray() const {
     return basetype->getTrait() == IRCTYPE::ARRAY;
 }
-
-// Value* ALLOCAInst::getNumElements() const
-// {
-//     assert(isArray());
-//     return getOperands().begin()->getValue();
-// }
 
 std::shared_ptr<Type> ALLOCAInst::getBaseType() const { return basetype; }
 

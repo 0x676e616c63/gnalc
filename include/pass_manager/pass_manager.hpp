@@ -11,8 +11,8 @@
 //
 // For example:
 //
-//              invalidate                  depend
-// TransformA --------------> AnalysisA -------------> AnalysisB
+//              invalidate                  used by
+// TransformA --------------> AnalysisA <--------------- AnalysisB
 //
 // Even if TransformA does not directly invalidate AnalysisB, it must still explicitly
 // invalidate both AnalysisA and AnalysisB.
@@ -250,10 +250,10 @@ public:
             auto &res = results[&unit];
             res.emplace_back(pass_id, pass->run(unit, *this));
             it->second = std::prev(res.end());
-            Logger::logInfo("[AM]: Running '", pass->name(), "' for '", unit.getName(), "'");
+            Logger::logInfo("[AM]: Running '", pass->name(), "' on '", unit.getName(), "'");
         }
         else
-            Logger::logInfo("[AM]: Get cached '", pass->name(), "' for '", unit.getName(), "'");
+            Logger::logInfo("[AM]: Get cached '", pass->name(), "' on '", unit.getName(), "'");
 
         using ResultModel = AnalysisResultModel<typename PassT::Result>;
         return static_cast<ResultModel &>(*it->second->second).result;
@@ -286,6 +286,17 @@ public:
         }
     }
 };
+
+namespace detail {
+template <typename T, typename U = void>
+struct hasGetInstCount : std::false_type {};
+
+template <typename T>
+struct hasGetInstCount<T, std::void_t<decltype(std::declval<T>().getInstCount())>> : std::true_type {};
+
+template <typename T>
+constexpr bool hasGetInstCountV = hasGetInstCount<T>::value;
+}
 
 template <typename UnitT>
 class PassManager : public PassInfo<PassManager<UnitT>> {
@@ -324,10 +335,24 @@ public:
         PreservedAnalyses pa = PreservedAnalyses::all();
 
         for (auto &pass : passes) {
-            Logger::logInfo("[PM]: Running '", pass->name(), "' at '", unit.getName(), "'");
-            PreservedAnalyses curr_pa = pass->run(unit, am);
-            am.invalidate(unit, curr_pa);
-            pa.retain(curr_pa);
+            if constexpr(detail::hasGetInstCountV<UnitT>) {
+                auto old_inst_cnt = unit.getInstCount();
+
+                PreservedAnalyses curr_pa = pass->run(unit, am);
+                am.invalidate(unit, curr_pa);
+                pa.retain(curr_pa);
+
+                auto new_inst_cnt = unit.getInstCount();
+                Logger::logInfo("[PM]: Running '", pass->name(), "' on '", unit.getName(),
+                    "'.(inst: " , old_inst_cnt, " -> ", new_inst_cnt, ")");
+            }
+            else {
+                PreservedAnalyses curr_pa = pass->run(unit, am);
+                am.invalidate(unit, curr_pa);
+                pa.retain(curr_pa);
+
+                Logger::logInfo("[PM]: Running '", pass->name(), "' on '", unit.getName(), "'.");
+            }
         }
 
         return pa;

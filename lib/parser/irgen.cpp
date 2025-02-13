@@ -211,22 +211,14 @@ void IRGenerator::visit(VarDef &node) {
                                      const std::shared_ptr<IR::Value> &base) {
                         auto arrtype = toArrayType(type);
                         Err::gassert(arrtype != nullptr);
-                        if (arrtype->getElmType()->getTrait() ==
-                            IR::IRCTYPE::ARRAY) {
-                            auto elmarr_type =
-                                IR::toArrayType(arrtype->getElmType());
-                            for (size_t i = 0; i < arrtype->getArraySize();
-                                 ++i) {
+                        if (arrtype->getElmType()->getTrait() == IR::IRCTYPE::ARRAY) {
+                            auto elmarr_type = toArrayType(arrtype->getElmType());
+                            for (size_t i = 0; i < arrtype->getArraySize(); ++i) {
                                 bool needs_init = !has_filled_zero;
 
                                 size_t j = init_pos;
-                                for (;
-                                     !needs_init &&
-                                     j < init_pos + elmarr_type->getBytes() /
-                                                        IR::getBytes(node_type);
-                                     j++) {
-                                    if (flat[j] !=
-                                        curr_initializer.getZeroValue()) {
+                                for (;!needs_init && j < init_pos + elmarr_type->getBytes() / getBytes(node_type); j++) {
+                                    if (flat[j] != curr_initializer.getZeroValue()) {
                                         needs_init = true;
                                         break;
                                     }
@@ -235,37 +227,24 @@ void IRGenerator::visit(VarDef &node) {
                                 if (!needs_init)
                                     init_pos = j;
                                 else {
-                                    auto gep_inst =
-                                        std::make_shared<IR::GEPInst>(
-                                            irval_temp_name, base,
-                                            module.getConstantPool().getConst(
-                                                0),
-                                            module.getConstantPool().getConst(
-                                                static_cast<int>(i)));
+                                    auto gep_inst = std::make_shared<IR::GEPInst>( irval_temp_name, base,
+                                            module.getConstantPool().getConst(0),
+                                            module.getConstantPool().getConst(static_cast<int>(i)));
 
                                     curr_insts.emplace_back(gep_inst);
                                     init_array(elmarr_type, gep_inst);
                                 }
                             }
-                        } else if (arrtype->getElmType()->getTrait() ==
-                                   IR::IRCTYPE::BASIC) {
-                            for (size_t i = 0; i < arrtype->getArraySize();
-                                 ++i) {
+                        } else if (arrtype->getElmType()->getTrait() == IR::IRCTYPE::BASIC) {
+                            for (size_t i = 0; i < arrtype->getArraySize(); ++i) {
                                 const auto &curr_init_val = flat[init_pos++];
-                                if (!has_filled_zero ||
-                                    curr_init_val !=
-                                        curr_initializer.getZeroValue()) {
-                                    auto gep_inst =
-                                        std::make_shared<IR::GEPInst>(
-                                            irval_temp_name, base,
-                                            module.getConstantPool().getConst(
-                                                0),
-                                            module.getConstantPool().getConst(
-                                                static_cast<int>(i)));
+                                if (!has_filled_zero || curr_init_val != curr_initializer.getZeroValue()) {
+                                    auto gep_inst = std::make_shared<IR::GEPInst>(irval_temp_name, base,
+                                            module.getConstantPool().getConst(0),
+                                            module.getConstantPool().getConst(static_cast<int>(i)));
 
                                     auto str_inst =
-                                        std::make_shared<IR::STOREInst>(
-                                            toIRValue(curr_init_val), gep_inst);
+                                        std::make_shared<IR::STOREInst>(toIRValue(curr_init_val), gep_inst);
                                     curr_insts.emplace_back(gep_inst);
                                     curr_insts.emplace_back(str_inst);
                                 }
@@ -279,8 +258,7 @@ void IRGenerator::visit(VarDef &node) {
                 auto flat = curr_initializer.flatten(irtype);
                 Err::gassert(flat.size() == 1, "Invalid initializer.");
 
-                auto str_inst = std::make_shared<IR::STOREInst>(
-                    toIRValue(flat[0]), alloca_inst);
+                auto str_inst = std::make_shared<IR::STOREInst>(toIRValue(flat[0]), alloca_inst);
                 curr_insts.emplace_back(str_inst);
             }
         }

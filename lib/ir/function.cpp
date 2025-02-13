@@ -2,6 +2,7 @@
 #include "../../include/ir/visitor.hpp"
 
 #include <algorithm>
+#include <numeric>
 
 namespace IR {
 FunctionDecl::FunctionDecl(std::string name_,
@@ -84,6 +85,13 @@ std::vector<std::shared_ptr<BasicBlock>> Function::getExitBBs() const {
         if (!blk.expired())
             ret.emplace_back(blk.lock());
     }
+    return ret;
+}
+
+size_t Function::getInstCount() const {
+    size_t ret = 0;
+    for (const auto &bb : blks)
+        ret += bb->getAllInstCount();
     return ret;
 }
 

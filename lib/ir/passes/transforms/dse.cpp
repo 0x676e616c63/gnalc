@@ -6,18 +6,8 @@
 #include <algorithm>
 
 namespace IR {
-// TODO, optimization
-std::shared_ptr<DomTree::Node> getDomTreeNode(const DomTree& tree, const std::shared_ptr<BasicBlock>& block) {
-    auto dfv = tree.getDFVisitor();
-    for (const auto& n : dfv) {
-        if (n->bb == block.get())
-            return n;
-    }
-    return nullptr;
-}
 PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
-    auto aliasResult = fam.getResult<AliasAnalysis>(function);
-    auto domtree = fam.getResult<DomTreeAnalysis>(function);
+    auto aa_res = fam.getResult<AliasAnalysis>(function);
     std::set<std::shared_ptr<Instruction>> eraseSet;
     for (const auto & store_block: function) {
         for (auto it = store_block->begin(); it != store_block->end(); ++it) {
@@ -30,13 +20,17 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
 
             // Eliminate a store if overwritten
             for (auto inst_it = std::next(it); inst_it != store_block->end(); ++inst_it) {
-                auto modref = aliasResult.getInstModRefInfo(inst_it->get(), store_ptr, fam);
-                if (modref == AliasAnalysisResult::ModRefInfo::Ref || modref == AliasAnalysisResult::ModRefInfo::ModRef) {
+                auto modref = aa_res.getInstModRefInfo(inst_it->get(), store_ptr, fam);
+                if (modref == ModRefInfo::Ref || modref == ModRefInfo::ModRef) {
                     referenced = true;
                     break;
                 }
-                if (modref == AliasAnalysisResult::ModRefInfo::Mod)
-                    overwritten = true;
+                if (auto store2 = std::dynamic_pointer_cast<STOREInst>(*inst_it)) {
+                    auto store2_ptr = store2->getPtr().get();
+                    auto aa = aa_res.getAliasInfo(store_ptr, store2_ptr);
+                    if (aa == AliasInfo::MustAlias)
+                        overwritten = true;
+                }
             }
 
             // Already referenced within the block, alive, go for the next store
@@ -44,24 +38,32 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
                 continue;
 
             // No referenced but overwritten within the block, dead, delete it
-            if (overwritten)
+            if (overwritten) {
                 eraseSet.insert(store);
-            // No referenced and no written, check other blocks to see if there is reference
-            else {
-                auto node = getDomTreeNode(domtree, store_block);
-                DomTree::NodeDFVisitor dfv{node};
+                Logger::logDebug("[DSE] on '", function.getName(),
+                    "': Store to '", store->getPtr()->getName(),
+                    "' got overwritten within a block, deleted.");
+            }
+            // No referenced and no written and is points to a local memory
+            // check other blocks to see if there is reference
+            else if (aa_res.isLocal(store_ptr)) {
+                Function::CFGDFVisitor dfv{store_block};
                 for (const auto& candidate : dfv) {
-                    for (const auto& inst : *candidate->bb) {
-                        auto modref = aliasResult.getInstModRefInfo(inst.get(), store_ptr, fam);
-                        if (modref == AliasAnalysisResult::ModRefInfo::Ref || modref == AliasAnalysisResult::ModRefInfo::ModRef) {
+                    for (const auto& inst : *candidate) {
+                        auto modref = aa_res.getInstModRefInfo(inst.get(), store_ptr, fam);
+                        if (modref == ModRefInfo::Ref || modref == ModRefInfo::ModRef) {
                             referenced = true;
                             break;
                         }
                     }
                     if (referenced) break;
                 }
-                if (!referenced)
+                if (!referenced) {
                     eraseSet.emplace(store);
+                    Logger::logDebug("[DSE] on '", function.getName(),
+                        "': Store to a local variable '", store->getPtr()->getName(),
+                        "' has no reference in function, deleted.");
+                }
             }
         }
     }

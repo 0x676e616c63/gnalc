@@ -160,6 +160,8 @@ public:
     void accept(IRVisitor &visitor) override;
     ~BasicBlock() override;
 
+    size_t getAllInstCount() const;
+
 private:
     void addPreBB(const std::shared_ptr<BasicBlock> &bb);
     void addNextBB(const std::shared_ptr<BasicBlock> &bb);

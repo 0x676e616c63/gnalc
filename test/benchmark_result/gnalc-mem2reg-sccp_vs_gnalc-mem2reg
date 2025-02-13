@@ -1,0 +1,594 @@
+Benchmark results:
+<0> 01_mm1:
+'gnalc-mem2reg': 632588us
+'gnalc-mem2reg-sccp': 635242us
+'gnalc-mem2reg-sccp' is 0.995822x faster than 'gnalc-mem2reg'.
+----------
+<1> 01_mm2:
+'gnalc-mem2reg': 566772us
+'gnalc-mem2reg-sccp': 568179us
+'gnalc-mem2reg-sccp' is 0.997524x faster than 'gnalc-mem2reg'.
+----------
+<2> 01_mm3:
+'gnalc-mem2reg': 431336us
+'gnalc-mem2reg-sccp': 432839us
+'gnalc-mem2reg-sccp' is 0.996528x faster than 'gnalc-mem2reg'.
+----------
+<3> 03_sort1:
+'gnalc-mem2reg': 199775us
+'gnalc-mem2reg-sccp': 206523us
+'gnalc-mem2reg-sccp' is 0.967326x faster than 'gnalc-mem2reg'.
+----------
+<4> 03_sort2:
+'gnalc-mem2reg': 3395138us
+'gnalc-mem2reg-sccp': 3383648us
+'gnalc-mem2reg-sccp' is 1.0034x faster than 'gnalc-mem2reg'.
+----------
+<5> 03_sort3:
+'gnalc-mem2reg': 654268us
+'gnalc-mem2reg-sccp': 654628us
+'gnalc-mem2reg-sccp' is 0.99945x faster than 'gnalc-mem2reg'.
+----------
+<6> 04_spmv1:
+'gnalc-mem2reg': 425729us
+'gnalc-mem2reg-sccp': 433790us
+'gnalc-mem2reg-sccp' is 0.981417x faster than 'gnalc-mem2reg'.
+----------
+<7> 04_spmv2:
+'gnalc-mem2reg': 312358us
+'gnalc-mem2reg-sccp': 311290us
+'gnalc-mem2reg-sccp' is 1.00343x faster than 'gnalc-mem2reg'.
+----------
+<8> 04_spmv3:
+'gnalc-mem2reg': 297408us
+'gnalc-mem2reg-sccp': 298059us
+'gnalc-mem2reg-sccp' is 0.997816x faster than 'gnalc-mem2reg'.
+----------
+<9> fft0:
+'gnalc-mem2reg': 2805988us
+'gnalc-mem2reg-sccp': 2811594us
+'gnalc-mem2reg-sccp' is 0.998006x faster than 'gnalc-mem2reg'.
+----------
+<10> fft1:
+'gnalc-mem2reg': 6049140us
+'gnalc-mem2reg-sccp': 6046131us
+'gnalc-mem2reg-sccp' is 1.0005x faster than 'gnalc-mem2reg'.
+----------
+<11> fft2:
+'gnalc-mem2reg': 5827959us
+'gnalc-mem2reg-sccp': 5822994us
+'gnalc-mem2reg-sccp' is 1.00085x faster than 'gnalc-mem2reg'.
+----------
+<12> gameoflife-gosper:
+'gnalc-mem2reg': 1719621us
+'gnalc-mem2reg-sccp': 1711069us
+'gnalc-mem2reg-sccp' is 1.005x faster than 'gnalc-mem2reg'.
+----------
+<13> gameoflife-oscillator:
+'gnalc-mem2reg': 1500383us
+'gnalc-mem2reg-sccp': 1510629us
+'gnalc-mem2reg-sccp' is 0.993217x faster than 'gnalc-mem2reg'.
+----------
+<14> gameoflife-p61glidergun:
+'gnalc-mem2reg': 1617341us
+'gnalc-mem2reg-sccp': 1618516us
+'gnalc-mem2reg-sccp' is 0.999274x faster than 'gnalc-mem2reg'.
+----------
+<15> if-combine1:
+'gnalc-mem2reg': 1109005us
+'gnalc-mem2reg-sccp': 971411us
+'gnalc-mem2reg-sccp' is 1.14164x faster than 'gnalc-mem2reg'.
+----------
+<16> if-combine2:
+'gnalc-mem2reg': 1639403us
+'gnalc-mem2reg-sccp': 1452280us
+'gnalc-mem2reg-sccp' is 1.12885x faster than 'gnalc-mem2reg'.
+----------
+<17> if-combine3:
+'gnalc-mem2reg': 2727982us
+'gnalc-mem2reg-sccp': 2421060us
+'gnalc-mem2reg-sccp' is 1.12677x faster than 'gnalc-mem2reg'.
+----------
+<18> large_loop_array_1:
+'gnalc-mem2reg': 1017069us
+'gnalc-mem2reg-sccp': 1016438us
+'gnalc-mem2reg-sccp' is 1.00062x faster than 'gnalc-mem2reg'.
+----------
+<19> large_loop_array_2:
+'gnalc-mem2reg': 2045605us
+'gnalc-mem2reg-sccp': 2047455us
+'gnalc-mem2reg-sccp' is 0.999096x faster than 'gnalc-mem2reg'.
+----------
+<20> large_loop_array_3:
+'gnalc-mem2reg': 820961us
+'gnalc-mem2reg-sccp': 818936us
+'gnalc-mem2reg-sccp' is 1.00247x faster than 'gnalc-mem2reg'.
+----------
+<21> matmul1:
+'gnalc-mem2reg': 616713us
+'gnalc-mem2reg-sccp': 617335us
+'gnalc-mem2reg-sccp' is 0.998992x faster than 'gnalc-mem2reg'.
+----------
+<22> matmul2:
+'gnalc-mem2reg': 620762us
+'gnalc-mem2reg-sccp': 621470us
+'gnalc-mem2reg-sccp' is 0.998861x faster than 'gnalc-mem2reg'.
+----------
+<23> matmul3:
+'gnalc-mem2reg': 664448us
+'gnalc-mem2reg-sccp': 616464us
+'gnalc-mem2reg-sccp' is 1.07784x faster than 'gnalc-mem2reg'.
+----------
+<24> recursive_call_1:
+'gnalc-mem2reg': 3813126us
+'gnalc-mem2reg-sccp': 3813476us
+'gnalc-mem2reg-sccp' is 0.999908x faster than 'gnalc-mem2reg'.
+----------
+<25> recursive_call_2:
+'gnalc-mem2reg': 955797us
+'gnalc-mem2reg-sccp': 954409us
+'gnalc-mem2reg-sccp' is 1.00145x faster than 'gnalc-mem2reg'.
+----------
+<26> recursive_call_3:
+'gnalc-mem2reg': 1908632us
+'gnalc-mem2reg-sccp': 1906348us
+'gnalc-mem2reg-sccp' is 1.0012x faster than 'gnalc-mem2reg'.
+----------
+<27> shuffle0:
+'gnalc-mem2reg': 1649982us
+'gnalc-mem2reg-sccp': 1653726us
+'gnalc-mem2reg-sccp' is 0.997736x faster than 'gnalc-mem2reg'.
+----------
+<28> shuffle1:
+'gnalc-mem2reg': 845880us
+'gnalc-mem2reg-sccp': 850031us
+'gnalc-mem2reg-sccp' is 0.995117x faster than 'gnalc-mem2reg'.
+----------
+<29> shuffle2:
+'gnalc-mem2reg': 548405us
+'gnalc-mem2reg-sccp': 532618us
+'gnalc-mem2reg-sccp' is 1.02964x faster than 'gnalc-mem2reg'.
+----------
+<30> sl1:
+'gnalc-mem2reg': 1858429us
+'gnalc-mem2reg-sccp': 1857855us
+'gnalc-mem2reg-sccp' is 1.00031x faster than 'gnalc-mem2reg'.
+----------
+<31> sl2:
+'gnalc-mem2reg': 555309us
+'gnalc-mem2reg-sccp': 555175us
+'gnalc-mem2reg-sccp' is 1.00024x faster than 'gnalc-mem2reg'.
+----------
+<32> sl3:
+'gnalc-mem2reg': 238861us
+'gnalc-mem2reg-sccp': 237980us
+'gnalc-mem2reg-sccp' is 1.0037x faster than 'gnalc-mem2reg'.
+----------
+<33> transpose0:
+'gnalc-mem2reg': 478933us
+'gnalc-mem2reg-sccp': 477919us
+'gnalc-mem2reg-sccp' is 1.00212x faster than 'gnalc-mem2reg'.
+----------
+<34> transpose1:
+'gnalc-mem2reg': 476558us
+'gnalc-mem2reg-sccp': 476116us
+'gnalc-mem2reg-sccp' is 1.00093x faster than 'gnalc-mem2reg'.
+----------
+<35> transpose2:
+'gnalc-mem2reg': 1103313us
+'gnalc-mem2reg-sccp': 1109886us
+'gnalc-mem2reg-sccp' is 0.994078x faster than 'gnalc-mem2reg'.
+----------
+<36> h-1-01:
+'gnalc-mem2reg': 39936327us
+'gnalc-mem2reg-sccp': 39930483us
+'gnalc-mem2reg-sccp' is 1.00015x faster than 'gnalc-mem2reg'.
+----------
+<37> h-1-02:
+'gnalc-mem2reg': 3428492us
+'gnalc-mem2reg-sccp': 3421864us
+'gnalc-mem2reg-sccp' is 1.00194x faster than 'gnalc-mem2reg'.
+----------
+<38> h-1-03:
+'gnalc-mem2reg': 19087521us
+'gnalc-mem2reg-sccp': 19085745us
+'gnalc-mem2reg-sccp' is 1.00009x faster than 'gnalc-mem2reg'.
+----------
+<39> h-2-01:
+'gnalc-mem2reg': 2499226us
+'gnalc-mem2reg-sccp': 2496458us
+'gnalc-mem2reg-sccp' is 1.00111x faster than 'gnalc-mem2reg'.
+----------
+<40> h-2-02:
+'gnalc-mem2reg': 2450972us
+'gnalc-mem2reg-sccp': 2446507us
+'gnalc-mem2reg-sccp' is 1.00183x faster than 'gnalc-mem2reg'.
+----------
+<41> h-2-03:
+'gnalc-mem2reg': 3004857us
+'gnalc-mem2reg-sccp': 3000790us
+'gnalc-mem2reg-sccp' is 1.00136x faster than 'gnalc-mem2reg'.
+----------
+<42> h-3-01:
+'gnalc-mem2reg': 359489us
+'gnalc-mem2reg-sccp': 358570us
+'gnalc-mem2reg-sccp' is 1.00256x faster than 'gnalc-mem2reg'.
+----------
+<43> h-3-02:
+'gnalc-mem2reg': 359650us
+'gnalc-mem2reg-sccp': 357822us
+'gnalc-mem2reg-sccp' is 1.00511x faster than 'gnalc-mem2reg'.
+----------
+<44> h-3-03:
+'gnalc-mem2reg': 358965us
+'gnalc-mem2reg-sccp': 355968us
+'gnalc-mem2reg-sccp' is 1.00842x faster than 'gnalc-mem2reg'.
+----------
+<45> h-4-01:
+'gnalc-mem2reg': 803571us
+'gnalc-mem2reg-sccp': 805170us
+'gnalc-mem2reg-sccp' is 0.998014x faster than 'gnalc-mem2reg'.
+----------
+<46> h-4-02:
+'gnalc-mem2reg': 2632084us
+'gnalc-mem2reg-sccp': 2643515us
+'gnalc-mem2reg-sccp' is 0.995676x faster than 'gnalc-mem2reg'.
+----------
+<47> h-4-03:
+'gnalc-mem2reg': 4940515us
+'gnalc-mem2reg-sccp': 4939855us
+'gnalc-mem2reg-sccp' is 1.00013x faster than 'gnalc-mem2reg'.
+----------
+<48> h-5-01:
+'gnalc-mem2reg': 593014us
+'gnalc-mem2reg-sccp': 592950us
+'gnalc-mem2reg-sccp' is 1.00011x faster than 'gnalc-mem2reg'.
+----------
+<49> h-5-02:
+'gnalc-mem2reg': 591371us
+'gnalc-mem2reg-sccp': 594078us
+'gnalc-mem2reg-sccp' is 0.995443x faster than 'gnalc-mem2reg'.
+----------
+<50> h-5-03:
+'gnalc-mem2reg': 593887us
+'gnalc-mem2reg-sccp': 588853us
+'gnalc-mem2reg-sccp' is 1.00855x faster than 'gnalc-mem2reg'.
+----------
+<51> h-6-01:
+'gnalc-mem2reg': 604407us
+'gnalc-mem2reg-sccp': 602884us
+'gnalc-mem2reg-sccp' is 1.00253x faster than 'gnalc-mem2reg'.
+----------
+<52> h-6-02:
+'gnalc-mem2reg': 904635us
+'gnalc-mem2reg-sccp': 905876us
+'gnalc-mem2reg-sccp' is 0.99863x faster than 'gnalc-mem2reg'.
+----------
+<53> h-6-03:
+'gnalc-mem2reg': 1207724us
+'gnalc-mem2reg-sccp': 1209252us
+'gnalc-mem2reg-sccp' is 0.998736x faster than 'gnalc-mem2reg'.
+----------
+<54> h-7-01:
+'gnalc-mem2reg': 200458us
+'gnalc-mem2reg-sccp': 199333us
+'gnalc-mem2reg-sccp' is 1.00564x faster than 'gnalc-mem2reg'.
+----------
+<55> h-8-01:
+'gnalc-mem2reg': 417721us
+'gnalc-mem2reg-sccp': 416939us
+'gnalc-mem2reg-sccp' is 1.00188x faster than 'gnalc-mem2reg'.
+----------
+<56> h-8-02:
+'gnalc-mem2reg': 411313us
+'gnalc-mem2reg-sccp': 411225us
+'gnalc-mem2reg-sccp' is 1.00021x faster than 'gnalc-mem2reg'.
+----------
+<57> h-8-03:
+'gnalc-mem2reg': 415899us
+'gnalc-mem2reg-sccp': 417243us
+'gnalc-mem2reg-sccp' is 0.996779x faster than 'gnalc-mem2reg'.
+----------
+<58> 2024-1RK-26:
+'gnalc-mem2reg': 5823487us
+'gnalc-mem2reg-sccp': 5816951us
+'gnalc-mem2reg-sccp' is 1.00112x faster than 'gnalc-mem2reg'.
+----------
+<59> 2024-2D0-22:
+'gnalc-mem2reg': 300520us
+'gnalc-mem2reg-sccp': 298838us
+'gnalc-mem2reg-sccp' is 1.00563x faster than 'gnalc-mem2reg'.
+----------
+<60> 2024-51P-30:
+'gnalc-mem2reg': 2709602us
+'gnalc-mem2reg-sccp': 2712419us
+'gnalc-mem2reg-sccp' is 0.998961x faster than 'gnalc-mem2reg'.
+----------
+<61> 2024-5HA-8:
+'gnalc-mem2reg': 1514424us
+'gnalc-mem2reg-sccp': 1518443us
+'gnalc-mem2reg-sccp' is 0.997353x faster than 'gnalc-mem2reg'.
+----------
+<62> 2024-5NG-2:
+'gnalc-mem2reg': 851685us
+'gnalc-mem2reg-sccp': 869907us
+'gnalc-mem2reg-sccp' is 0.979053x faster than 'gnalc-mem2reg'.
+----------
+<63> 2024-84M-11:
+'gnalc-mem2reg': 433994us
+'gnalc-mem2reg-sccp': 432430us
+'gnalc-mem2reg-sccp' is 1.00362x faster than 'gnalc-mem2reg'.
+----------
+<64> 2024-AZ7-32:
+'gnalc-mem2reg': 1628434us
+'gnalc-mem2reg-sccp': 1627493us
+'gnalc-mem2reg-sccp' is 1.00058x faster than 'gnalc-mem2reg'.
+----------
+<65> 2024-BE3-31:
+'gnalc-mem2reg': 426268us
+'gnalc-mem2reg-sccp': 425782us
+'gnalc-mem2reg-sccp' is 1.00114x faster than 'gnalc-mem2reg'.
+----------
+<66> 2024-BJV-10:
+'gnalc-mem2reg': 3357874us
+'gnalc-mem2reg-sccp': 3358685us
+'gnalc-mem2reg-sccp' is 0.999759x faster than 'gnalc-mem2reg'.
+----------
+<67> 2024-CH1-5:
+'gnalc-mem2reg': 199353us
+'gnalc-mem2reg-sccp': 198926us
+'gnalc-mem2reg-sccp' is 1.00215x faster than 'gnalc-mem2reg'.
+----------
+<68> 2024-ETJ-33:
+'gnalc-mem2reg': 474692us
+'gnalc-mem2reg-sccp': 473971us
+'gnalc-mem2reg-sccp' is 1.00152x faster than 'gnalc-mem2reg'.
+----------
+<69> 2024-FI8-9:
+'gnalc-mem2reg': 653305us
+'gnalc-mem2reg-sccp': 654570us
+'gnalc-mem2reg-sccp' is 0.998067x faster than 'gnalc-mem2reg'.
+----------
+<70> 2024-FQX-25:
+'gnalc-mem2reg': 2045136us
+'gnalc-mem2reg-sccp': 2045992us
+'gnalc-mem2reg-sccp' is 0.999582x faster than 'gnalc-mem2reg'.
+----------
+<71> 2024-I9Y-15:
+'gnalc-mem2reg': 820263us
+'gnalc-mem2reg-sccp': 819975us
+'gnalc-mem2reg-sccp' is 1.00035x faster than 'gnalc-mem2reg'.
+----------
+<72> 2024-IG5-12:
+'gnalc-mem2reg': 1104601us
+'gnalc-mem2reg-sccp': 1107491us
+'gnalc-mem2reg-sccp' is 0.99739x faster than 'gnalc-mem2reg'.
+----------
+<73> 2024-JR2-21:
+'gnalc-mem2reg': 1017540us
+'gnalc-mem2reg-sccp': 1020000us
+'gnalc-mem2reg-sccp' is 0.997588x faster than 'gnalc-mem2reg'.
+----------
+<74> 2024-K22-4:
+'gnalc-mem2reg': 1852971us
+'gnalc-mem2reg-sccp': 1852659us
+'gnalc-mem2reg-sccp' is 1.00017x faster than 'gnalc-mem2reg'.
+----------
+<75> 2024-LW8-7:
+'gnalc-mem2reg': 3337367us
+'gnalc-mem2reg-sccp': 3333117us
+'gnalc-mem2reg-sccp' is 1.00128x faster than 'gnalc-mem2reg'.
+----------
+<76> 2024-OBF-29:
+'gnalc-mem2reg': 473123us
+'gnalc-mem2reg-sccp': 473987us
+'gnalc-mem2reg-sccp' is 0.998177x faster than 'gnalc-mem2reg'.
+----------
+<77> 2024-PAF-17:
+'gnalc-mem2reg': 632330us
+'gnalc-mem2reg-sccp': 628483us
+'gnalc-mem2reg-sccp' is 1.00612x faster than 'gnalc-mem2reg'.
+----------
+<78> 2024-PCT-14:
+'gnalc-mem2reg': 554907us
+'gnalc-mem2reg-sccp': 553904us
+'gnalc-mem2reg-sccp' is 1.00181x faster than 'gnalc-mem2reg'.
+----------
+<79> 2024-QV9-34:
+'gnalc-mem2reg': 1617696us
+'gnalc-mem2reg-sccp': 1623622us
+'gnalc-mem2reg-sccp' is 0.99635x faster than 'gnalc-mem2reg'.
+----------
+<80> 2024-T6G-27:
+'gnalc-mem2reg': 565121us
+'gnalc-mem2reg-sccp': 567424us
+'gnalc-mem2reg-sccp' is 0.995941x faster than 'gnalc-mem2reg'.
+----------
+<81> 2024-TBR-19:
+'gnalc-mem2reg': 7274366us
+'gnalc-mem2reg-sccp': 7268033us
+'gnalc-mem2reg-sccp' is 1.00087x faster than 'gnalc-mem2reg'.
+----------
+<82> 2024-U7D-6:
+'gnalc-mem2reg': 3367253us
+'gnalc-mem2reg-sccp': 3385670us
+'gnalc-mem2reg-sccp' is 0.99456x faster than 'gnalc-mem2reg'.
+----------
+<83> 2024-U7W-16:
+'gnalc-mem2reg': 6023089us
+'gnalc-mem2reg-sccp': 6035925us
+'gnalc-mem2reg-sccp' is 0.997873x faster than 'gnalc-mem2reg'.
+----------
+<84> 2024-V6O-23:
+'gnalc-mem2reg': 1083620us
+'gnalc-mem2reg-sccp': 1086335us
+'gnalc-mem2reg-sccp' is 0.997501x faster than 'gnalc-mem2reg'.
+----------
+<85> 2024-VGH-20:
+'gnalc-mem2reg': 1651617us
+'gnalc-mem2reg-sccp': 1650343us
+'gnalc-mem2reg-sccp' is 1.00077x faster than 'gnalc-mem2reg'.
+----------
+<86> 2024-VRT-1:
+'gnalc-mem2reg': 3360200us
+'gnalc-mem2reg-sccp': 3365834us
+'gnalc-mem2reg-sccp' is 0.998326x faster than 'gnalc-mem2reg'.
+----------
+<87> 2024-X7M-3:
+'gnalc-mem2reg': 1718882us
+'gnalc-mem2reg-sccp': 1728190us
+'gnalc-mem2reg-sccp' is 0.994614x faster than 'gnalc-mem2reg'.
+----------
+<88> 2024-XRB-24:
+'gnalc-mem2reg': 237595us
+'gnalc-mem2reg-sccp': 236803us
+'gnalc-mem2reg-sccp' is 1.00334x faster than 'gnalc-mem2reg'.
+----------
+<89> 2024-XU5-13:
+'gnalc-mem2reg': 2801589us
+'gnalc-mem2reg-sccp': 2803847us
+'gnalc-mem2reg-sccp' is 0.999195x faster than 'gnalc-mem2reg'.
+----------
+<90> 2024-Y60-18:
+'gnalc-mem2reg': 312844us
+'gnalc-mem2reg-sccp': 313406us
+'gnalc-mem2reg-sccp' is 0.998207x faster than 'gnalc-mem2reg'.
+----------
+<91> 2024-Z3A-28:
+'gnalc-mem2reg': 535833us
+'gnalc-mem2reg-sccp': 537350us
+'gnalc-mem2reg-sccp' is 0.997177x faster than 'gnalc-mem2reg'.
+----------
+<92> 2024-0ZE-13:
+'gnalc-mem2reg': 413145us
+'gnalc-mem2reg-sccp': 415392us
+'gnalc-mem2reg-sccp' is 0.994591x faster than 'gnalc-mem2reg'.
+----------
+<93> 2024-1WO-11:
+'gnalc-mem2reg': 2501501us
+'gnalc-mem2reg-sccp': 2491902us
+'gnalc-mem2reg-sccp' is 1.00385x faster than 'gnalc-mem2reg'.
+----------
+<94> 2024-2KM-21:
+'gnalc-mem2reg': 3425114us
+'gnalc-mem2reg-sccp': 3425676us
+'gnalc-mem2reg-sccp' is 0.999836x faster than 'gnalc-mem2reg'.
+----------
+<95> 2024-7UJ-12:
+'gnalc-mem2reg': 125766us
+'gnalc-mem2reg-sccp': 126006us
+'gnalc-mem2reg-sccp' is 0.998095x faster than 'gnalc-mem2reg'.
+----------
+<96> 2024-8NL-18:
+'gnalc-mem2reg': 411796us
+'gnalc-mem2reg-sccp': 410900us
+'gnalc-mem2reg-sccp' is 1.00218x faster than 'gnalc-mem2reg'.
+----------
+<97> 2024-931-6:
+'gnalc-mem2reg': 803687us
+'gnalc-mem2reg-sccp': 803436us
+'gnalc-mem2reg-sccp' is 1.00031x faster than 'gnalc-mem2reg'.
+----------
+<98> 2024-BAV-3:
+'gnalc-mem2reg': 10360493us
+'gnalc-mem2reg-sccp': 10309926us
+'gnalc-mem2reg-sccp' is 1.0049x faster than 'gnalc-mem2reg'.
+----------
+<99> 2024-C64-14:
+'gnalc-mem2reg': 2999916us
+'gnalc-mem2reg-sccp': 3001557us
+'gnalc-mem2reg-sccp' is 0.999453x faster than 'gnalc-mem2reg'.
+----------
+<100> 2024-CH6-24:
+'gnalc-mem2reg': 380097us
+'gnalc-mem2reg-sccp': 381080us
+'gnalc-mem2reg-sccp' is 0.99742x faster than 'gnalc-mem2reg'.
+----------
+<101> 2024-DCV-7:
+'gnalc-mem2reg': 592901us
+'gnalc-mem2reg-sccp': 594737us
+'gnalc-mem2reg-sccp' is 0.996913x faster than 'gnalc-mem2reg'.
+----------
+<102> 2024-FAF-19:
+'gnalc-mem2reg': 19080135us
+'gnalc-mem2reg-sccp': 19102482us
+'gnalc-mem2reg-sccp' is 0.99883x faster than 'gnalc-mem2reg'.
+----------
+<103> 2024-FVJ-15:
+'gnalc-mem2reg': 589186us
+'gnalc-mem2reg-sccp': 591887us
+'gnalc-mem2reg-sccp' is 0.995437x faster than 'gnalc-mem2reg'.
+----------
+<104> 2024-H17-1:
+'gnalc-mem2reg': 2449042us
+'gnalc-mem2reg-sccp': 2454839us
+'gnalc-mem2reg-sccp' is 0.997639x faster than 'gnalc-mem2reg'.
+----------
+<105> 2024-I4W-2:
+'gnalc-mem2reg': 1403689us
+'gnalc-mem2reg-sccp': 1396987us
+'gnalc-mem2reg-sccp' is 1.0048x faster than 'gnalc-mem2reg'.
+----------
+<106> 2024-JVU-10:
+'gnalc-mem2reg': 39924113us
+'gnalc-mem2reg-sccp': 39939327us
+'gnalc-mem2reg-sccp' is 0.999619x faster than 'gnalc-mem2reg'.
+----------
+<107> 2024-K0I-17:
+'gnalc-mem2reg': 4939317us
+'gnalc-mem2reg-sccp': 4945481us
+'gnalc-mem2reg-sccp' is 0.998754x faster than 'gnalc-mem2reg'.
+----------
+<108> 2024-KVV-20:
+'gnalc-mem2reg': 934546us
+'gnalc-mem2reg-sccp': 934022us
+'gnalc-mem2reg-sccp' is 1.00056x faster than 'gnalc-mem2reg'.
+----------
+<109> 2024-LN4-9:
+'gnalc-mem2reg': 590513us
+'gnalc-mem2reg-sccp': 595298us
+'gnalc-mem2reg-sccp' is 0.991962x faster than 'gnalc-mem2reg'.
+----------
+<110> 2024-MXP-16:
+'gnalc-mem2reg': 2649465us
+'gnalc-mem2reg-sccp': 2640185us
+'gnalc-mem2reg-sccp' is 1.00351x faster than 'gnalc-mem2reg'.
+----------
+<111> 2024-NCY-23:
+'gnalc-mem2reg': 1293993us
+'gnalc-mem2reg-sccp': 1294141us
+'gnalc-mem2reg-sccp' is 0.999886x faster than 'gnalc-mem2reg'.
+----------
+<112> 2024-NKK-22:
+'gnalc-mem2reg': 410332us
+'gnalc-mem2reg-sccp': 412286us
+'gnalc-mem2reg-sccp' is 0.995261x faster than 'gnalc-mem2reg'.
+----------
+<113> 2024-NT1-4:
+'gnalc-mem2reg': 3656687us
+'gnalc-mem2reg-sccp': 3661610us
+'gnalc-mem2reg-sccp' is 0.998656x faster than 'gnalc-mem2reg'.
+----------
+<114> 2024-PKP-8:
+'gnalc-mem2reg': 1678177us
+'gnalc-mem2reg-sccp': 1678939us
+'gnalc-mem2reg-sccp' is 0.999546x faster than 'gnalc-mem2reg'.
+----------
+<115> 2024-U03-25:
+'gnalc-mem2reg': 4331157us
+'gnalc-mem2reg-sccp': 4362538us
+'gnalc-mem2reg-sccp' is 0.992807x faster than 'gnalc-mem2reg'.
+----------
+<116> 2024-VTF-5:
+'gnalc-mem2reg': 409494us
+'gnalc-mem2reg-sccp': 411231us
+'gnalc-mem2reg-sccp' is 0.995776x faster than 'gnalc-mem2reg'.
+----------
+Total time:
+'gnalc-mem2reg': 305048918us
+'gnalc-mem2reg-sccp': 304443569us
+On average, 'gnalc-mem2reg-sccp' is 1.00199x faster than 'gnalc-mem2reg'.
+Fastest:
+../../test/contest/performance/if-combine1.sy: 1.14164x
+Slowest:
+../../test/contest/performance/03_sort1.sy: 0.967326x
