@@ -173,8 +173,12 @@ public:
 
     void accept(IRVisitor &visitor) override = 0;
 
+    // In general, passes should avoid direct manipulation of operands through these
+    // functions unless the intent is to perform such operations in a generic manner.
     const std::vector<std::shared_ptr<Use>> &getOperands() const;
     const std::shared_ptr<Use> &getOperand(size_t index) const;
+    void setOperand(size_t index, const std::shared_ptr<Value>& val);
+    void swapOperand(size_t a, size_t b);
 
     bool replaceOperand(const std::shared_ptr<Value> &before, const std::shared_ptr<Value> &after);
 

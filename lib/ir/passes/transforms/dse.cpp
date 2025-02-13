@@ -44,7 +44,7 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
                     "': Store to '", store->getPtr()->getName(),
                     "' got overwritten within a block, deleted.");
             }
-            // No referenced and no written and is points to a local memory
+            // No referenced and no written and points to a local memory
             // check other blocks to see if there is reference
             else if (aa_res.isLocal(store_ptr)) {
                 Function::CFGDFVisitor dfv{store_block};
