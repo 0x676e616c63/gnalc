@@ -10,7 +10,7 @@
 #include <deque>
 
 namespace IR {
-void GVNPREPass::Expr::canon() const {
+void GVNPREPass::Expr::canon() {
     switch (op) {
     case ExprOp::Add:
     case ExprOp::Mul:
@@ -223,7 +223,7 @@ GVNPREPass::Expr* GVNPREPass::phi_translate(
         std::transform(operands.begin(), operands.end(),
             std::back_inserter(translated),
                 [this, &pred, &succ](const auto& use)
-                { return std::get<1>(phi_translate(table.getExprOrInsert(use->getValue()), pred, succ))->getIRVal(); });
+                { return phi_translate(table.getExprOrInsert(use->getValue()), pred, succ)->getIRVal(); });
 
         std::shared_ptr<Instruction> translated_inst;
         auto kind = table.getKindOrInsert(expr);
@@ -328,9 +328,9 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
             }
             else if (succ.size() == 1) {
                 // phi_translate(A[succ(b)], b, succ(b))
-                for (const auto&[_kind, val] : antic_in_map[succ.front().get()]) {
-                    auto [k, v] = phi_translate(val, curr->bb, succ.front().get());
-                    antic_out.insert(k, v);
+                for (const auto&[kind, val] : antic_in_map[succ.front().get()]) {
+                    auto translated = phi_translate(val, curr->bb, succ.front().get());
+                    antic_out.insert(kind, translated);
                 }
             }
             else Err::unreachable();

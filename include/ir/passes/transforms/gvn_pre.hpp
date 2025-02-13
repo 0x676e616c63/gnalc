@@ -59,7 +59,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         Expr(std::shared_ptr<Value> irv, ExprOp op, std::vector<ValueKind> operands_ = {})
             : ir_value(std::move(irv)), op(op), opreands(std::move(operands_)) {}
 
-        void canon() const;
+        void canon();
 
         const std::vector<ValueKind> &getOpers() const;
 
