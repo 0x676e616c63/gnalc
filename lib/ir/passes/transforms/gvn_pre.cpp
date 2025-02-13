@@ -11,12 +11,24 @@
 
 namespace IR {
 void GVNPREPass::Expr::canon() const {
+    switch (op) {
+    case ExprOp::Add:
+    case ExprOp::Mul:
+    case ExprOp::And:
+    case ExprOp::Or:
+    std::sort(opreands.begin(), opreands.end());
+        break;
+    default: break;
+    }
 }
 const std::vector<GVNPREPass::ValueKind> &GVNPREPass::Expr::getOpers() const {
+    return opreands;
 }
 bool GVNPREPass::Expr::is_simple() const {
+    return op != ExprOp::UntrackedInst;
 }
 std::shared_ptr<Value> GVNPREPass::Expr::getIRVal() const {
+    return ir_value;
 }
 GVNPREPass::Expr::ExprOp GVNPREPass::Expr::makeOP(OP op) {
     switch (op) {
@@ -128,7 +140,7 @@ GVNPREPass::Expr* GVNPREPass::NumberTable::getExprOrInsert(const std::shared_ptr
             expr = std::make_shared<Expr>(gep, Expr::ExprOp::Gep, std::move(operands));
         }
         else if (auto phi = std::dynamic_pointer_cast<PHIInst>(ir_value))
-            expr = std::make_shared<Expr>(gep, Expr::ExprOp::Phi);
+            expr = std::make_shared<Expr>(phi, Expr::ExprOp::Phi);
         else
             expr = std::make_shared<Expr>(ir_value, Expr::ExprOp::UntrackedInst);
     }
@@ -190,17 +202,18 @@ GVNPREPass::AntiLeaderSet GVNPREPass::intersect(const AntiLeaderSet &a, const An
 //   %succ_val = phi [%v1, pred], [%v2, other_pred])
 //
 // Returns %v1 for `phi_translate(%succ_val, pred, succ)`
-std::tuple<GVNPREPass::ValueKind, GVNPREPass::Expr*> GVNPREPass::phi_translate(
+// Note that this functions might generate a new Inst for the pred block.
+// And the Inst's owner is Expr. If hoisted, the Inst will be added to the pred block.
+GVNPREPass::Expr* GVNPREPass::phi_translate(
     Expr* expr,
-    const std::shared_ptr<BasicBlock>& pred,
-    const std::shared_ptr<BasicBlock>& succ) {
+    BasicBlock* pred,
+    BasicBlock* succ) {
     // if the temporary is defined by a phi at the successor,
     // it returns the operand to that phi corresponding to the predecessor
     if (auto phi = std::dynamic_pointer_cast<PHIInst>(expr->getIRVal())) {
-        auto v = phi->getValueForBlock(pred);
+        auto v = phi->getValueForBlock(pred->shared_from_this());
         auto e = table.getExprOrInsert(v);
-        auto kind = table.getKindOrInsert(e);
-        return { kind, e };
+        return e;
     }
 
     if (!expr->is_simple()) {
@@ -213,22 +226,28 @@ std::tuple<GVNPREPass::ValueKind, GVNPREPass::Expr*> GVNPREPass::phi_translate(
                 { return std::get<1>(phi_translate(table.getExprOrInsert(use->getValue()), pred, succ))->getIRVal(); });
 
         std::shared_ptr<Instruction> translated_inst;
-        if (auto binary = std::dynamic_pointer_cast<BinaryInst>(inst)) {
-            translated_inst = std::make_shared<BinaryInst>(binary->getName(),
-                binary->getOpcode(), translated[0], translated[1]);
+        auto kind = table.getKindOrInsert(expr);
+        if (avail_out_map[pred].contains(kind)) {
+            translated_inst = std::dynamic_pointer_cast<Instruction>(avail_out_map[pred].getValue(kind));
+            Err::gassert(translated_inst != nullptr);
         }
-        else if (auto gep = std::dynamic_pointer_cast<GEPInst>(inst)) {
-            translated_inst = std::make_shared<GEPInst>(gep->getName(), gep->getPtr(), translated);
+        else {
+            if (auto binary = std::dynamic_pointer_cast<BinaryInst>(inst)) {
+                translated_inst = std::make_shared<BinaryInst>(binary->getName(),
+                    binary->getOpcode(), translated[0], translated[1]);
+            }
+            else if (auto gep = std::dynamic_pointer_cast<GEPInst>(inst)) {
+                translated_inst = std::make_shared<GEPInst>(gep->getName(), gep->getPtr(), translated);
+            }
+            else Err::unreachable("Unknown inst");
         }
 
         auto translated_expr = table.getExprOrInsert(translated_inst);
-        auto translated_kind = table.getKindOrInsert(translated_expr);
-        return { translated_kind, translated_expr };
+        return translated_expr;
     }
 
     // otherwise returning the temporary
-    auto kind = table.getKindOrInsert(expr);
-    return { kind , expr };
+    return expr;
 }
 
 PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
@@ -241,14 +260,14 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     auto domtree = fam.getResult<DomTreeAnalysis>(function);
     auto dfvisitor = domtree.getDFVisitor();
     for (const auto& curr : dfvisitor) {
-        auto& avail_out = avail_out_map[curr->bb->shared_from_this()]; // = canon(AVAIL_IN[b] ∪ PHI_GEN(b) ∪ TMP_GEN(b))
-        auto& exp_gen = exp_gen_map[curr->bb->shared_from_this()]; // temporaries and non-simple
-        auto& phi_gen = phi_gen_map[curr->bb->shared_from_this()]; // temporaries that are defined by a phi
-        auto& tmp_gen = tmp_gen_map[curr->bb->shared_from_this()]; // temporaries that are defined by non-phi instructions
+        auto& avail_out = avail_out_map[curr->bb]; // = canon(AVAIL_IN[b] ∪ PHI_GEN(b) ∪ TMP_GEN(b))
+        auto& exp_gen = exp_gen_map[curr->bb]; // temporaries and non-simple
+        auto& phi_gen = phi_gen_map[curr->bb]; // temporaries that are defined by a phi
+        auto& tmp_gen = tmp_gen_map[curr->bb]; // temporaries that are defined by non-phi instructions
 
         // inherit expressions from the dominator
         if (curr->parent)
-            avail_out = avail_out_map[curr->parent->bb->shared_from_this()];
+            avail_out = avail_out_map[curr->parent->bb];
 
         for (const auto& inst : *curr->bb) {
             // PHI_GEN
@@ -271,8 +290,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
             }
         }
     }
-
-
+    
     // 2. Calculates flow sets to determine the antileader sets
     //    and conducts the fixed-point iteration
     // Build ANTIC_IN
@@ -306,12 +324,12 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                     [](const auto& i){return i->getOpcode() == OP::PHI; }),
                     "Critical edge should be broken before GVN-PRE.");
 
-                antic_out = intersect(antic_in_map[succ0], antic_in_map[succ1]);
+                antic_out = intersect(antic_in_map[succ0.get()], antic_in_map[succ1.get()]);
             }
             else if (succ.size() == 1) {
                 // phi_translate(A[succ(b)], b, succ(b))
-                for (const auto&[_kind, val] : antic_in_map[succ.front()]) {
-                    auto [k, v] = phi_translate(val, curr->bb->shared_from_this(), succ.front());
+                for (const auto&[_kind, val] : antic_in_map[succ.front().get()]) {
+                    auto [k, v] = phi_translate(val, curr->bb, succ.front().get());
                     antic_out.insert(k, v);
                 }
             }
@@ -320,9 +338,9 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
             // Then build ANTIC_IN
             // = clean(canon_e(ANTIC_OUT[b] ∪ EXP_GEN[b] − TMP_GEN(b)))
 
-            auto& antic_in = antic_in_map[curr->bb->shared_from_this()];
-            auto& exp_gen = exp_gen_map[curr->bb->shared_from_this()];
-            auto& tmp_gen = tmp_gen_map[curr->bb->shared_from_this()];
+            auto& antic_in = antic_in_map[curr->bb];
+            auto& exp_gen = exp_gen_map[curr->bb];
+            auto& tmp_gen = tmp_gen_map[curr->bb];
 
             auto last_round_size = antic_in.size();
 
@@ -337,7 +355,6 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                 antic_in.erase(table.getKindOrInsert(val));
 
             modified |= (last_round_size != antic_in.size());
-
         }
     }
 
@@ -354,32 +371,64 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
         for (const auto& curr : dfvisitor) {
             auto preds = curr->bb->getPreBB();
             if (preds.size() > 1) {
-                auto& antic_in = antic_in_map[curr->bb->shared_from_this()];
-                for (const auto& [_kind, expr] : antic_in) {
-                    std::set<std::shared_ptr<BasicBlock>> available_preds;
-                    for (const auto& pred : preds) {
-                        auto [pred_kind, pred_val]
-                            = phi_translate(expr, pred, curr->bb->shared_from_this());
+                auto& antic_in = antic_in_map[curr->bb];
 
-                        if (avail_out_map[pred].contains(pred_kind))
-                            available_preds.insert(pred);
+                for (const auto& [kind, expr_to_hoist] : antic_in) {
+                    // BasicBlock -> Available?/translated expr
+                    std::map<BasicBlock*, std::tuple<bool, Expr*>> translated;
+                    bool avail_at_least_one = false;
+                    bool all_available = true;
+                    for (const auto& pred : preds) {
+                        auto pred_expr = phi_translate(expr_to_hoist, pred.get(), curr->bb);
+                        bool avail = avail_out_map[pred.get()].contains(kind);
+                        avail_at_least_one |= avail;
+                        all_available &= avail;
+                        translated[pred.get()] = std::make_tuple(avail, pred_expr);
                     }
+
                     // If the expression is available in at least one predecessor,
                     // then we insert it in predecessors where it is not available.
                     // Generating fresh temporaries, we perform the necessary insertions
-                    // and create a phi to merge the predecessors’ leaders
-                    if (!available_preds.empty()) { // at least one
+                    // and create a phi to merge the predecessors' leaders
+                    if (avail_at_least_one && !all_available) {
+                        auto phi = std::make_shared<PHIInst>("%hoist-from-" + curr->bb->getName(),
+                            expr_to_hoist->getIRVal()->getType());
                         for (const auto& pred : preds) {
-                            if (available_preds.find(pred) == available_preds.end()) { // not available
-                                auto hoisted_inst = std::dynamic_pointer_cast<Instruction>(expr->getIRVal());
+                            auto [avail, hoisted_expr] = translated[pred.get()];
+                            auto hoisted_inst = std::dynamic_pointer_cast<Instruction>(
+                                hoisted_expr->getIRVal());
+                            if (!avail) {
                                 Err::gassert(hoisted_inst != nullptr);
-                                pred->addInst(hoisted_inst);
+                                pred->addInstBeforeTerminator(hoisted_inst);
+                                auto ok = avail_out_map[pred.get()].insert(kind, hoisted_inst);
+                                Err::gassert(ok);
+                                ok = exp_gen_map[pred.get()].insert(kind, hoisted_expr);
+                                Err::gassert(ok);
+                                modified = true;
                             }
+                            phi->addPhiOper(hoisted_inst, pred);
                         }
+                        curr->bb->addPhiInst(phi);
+                    }
+                }
+
+                // Whenever we create a new computation or phi, we possibly make a new
+                // value, and we at least create a new leader for that value in the given block.
+                // We update that block's leader set and its new set.
+                // Since this information should be propagated to other blocks
+                // which the new temporaries reach, for each block we also add
+                // all the expressions in its dominator's new set into the block's own leader
+                // set and new set.
+                auto dom_exp_gen = exp_gen_map[curr->bb];
+                // Here we only handle the idom child, and let the propagation fly.
+                // In the next round, the "idom" will become to "dom" and handle its idoms.
+                for (const auto& idom_child : curr->children) {
+                    for (const auto& [kind, expr] : dom_exp_gen) {
+                        exp_gen_map[idom_child->bb].insert(kind, expr);
+                        avail_out_map[idom_child->bb].insert(kind, expr->getIRVal());
                     }
                 }
             }
-
         }
     }
 
@@ -387,7 +436,24 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     // Step 3 - Eliminate
     //
 
-    // cleanup
+    // For any instruction, find the leader of the target's value.
+    // If it differs from that target, then there is a constant or
+    // an earlier-defined temporary with the same value
+
+    std::set<std::shared_ptr<Instruction>> eliminated_insts;
+    for (const auto& bb : function) {
+        for (const auto& inst : *bb) {
+            auto kind = table.getKindOrInsert(inst);
+            auto& avail_out = avail_out_map[bb.get()];
+            if (avail_out.contains(kind)) {
+                inst->replaceSelf(avail_out.getValue(kind));
+                bb->delInst(inst);
+                eliminated_insts.insert(inst);
+            }
+        }
+    }
+
+    // cleanup to release temp objects
     table.clear();
 
     avail_out_map.clear();

@@ -81,6 +81,8 @@ public:
                std::list<std::shared_ptr<Instruction>> _insts);
 
     void addInst(const std::shared_ptr<Instruction> &inst);
+    void addInstAfterPhi(const std::shared_ptr<Instruction> &inst);
+    void addInstBeforeTerminator(const std::shared_ptr<Instruction> &inst);
     void addPhiInst(const std::shared_ptr<PHIInst> &node); // 插入到phi_insts
 
     std::list<std::shared_ptr<BasicBlock>> getPreBB() const;

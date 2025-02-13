@@ -97,8 +97,9 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         using const_iterator = decltype(values)::const_iterator;
         using iterator = decltype(values)::iterator;
 
-        void insert(ValueKind kind, const std::shared_ptr<Value> &value) {
-            values[kind] = value;
+        bool insert(ValueKind kind, const std::shared_ptr<Value> &value) {
+            auto [it, inserted] = values.insert(std::make_pair(kind, value));
+            return inserted;
         }
 
         bool contains(ValueKind kind) const {
@@ -136,11 +137,14 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         using const_iterator = decltype(values)::const_iterator;
         using iterator = decltype(values)::iterator;
 
-        void insert(ValueKind kind, Expr* e) {
+        bool insert(ValueKind kind, Expr* e) {
             auto it = std::find_if(values.begin(), values.end(),
                                    [&kind](const auto &p) { return p.first == kind; });
-            if (it == values.end())
+            if (it == values.end()) {
                 values.emplace_back(kind, e);
+                return true;
+            }
+            return false;
         }
 
         bool contains(ValueKind kind) const {
@@ -168,25 +172,27 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
 
     NumberTable table;
 
+    // Since we won't delete or add blocks, use BasicBlock* is ok.
+
     // AVAIL_OUT = canon(AVAIL IN[b] ∪ PHI_GEN(b) ∪ TMP_GEN(b))
-    std::map<std::shared_ptr<BasicBlock>, LeaderSet> avail_out_map;
+    std::map<BasicBlock*, LeaderSet> avail_out_map;
 
     // ANTIC_IN = clean(canon_expr(ANTIC_OUT[b] ∪ EXP_GEN[b] − TMP_GEN(b)))
-    std::map<std::shared_ptr<BasicBlock>, AntiLeaderSet> antic_in_map;
+    std::map<BasicBlock*, AntiLeaderSet> antic_in_map;
 
     // PHI_GEN: temporaries that are defined by a phi
-    std::map<std::shared_ptr<BasicBlock>, LeaderSet> phi_gen_map;
+    std::map<BasicBlock*, LeaderSet> phi_gen_map;
 
     // EXP_GEN:  temporaries and non-simple
-    std::map<std::shared_ptr<BasicBlock>, AntiLeaderSet> exp_gen_map;
+    std::map<BasicBlock*, AntiLeaderSet> exp_gen_map;
 
     // TMP_GEN: temporaries that are defined by non-phi instructions
-    std::map<std::shared_ptr<BasicBlock>, std::set<std::shared_ptr<Value>>> tmp_gen_map;
+    std::map<BasicBlock*, std::set<std::shared_ptr<Value>>> tmp_gen_map;
 
-    std::tuple<ValueKind, Expr*> phi_translate(
+    Expr* phi_translate(
         Expr* expr,
-        const std::shared_ptr<BasicBlock> &pred,
-        const std::shared_ptr<BasicBlock> &succ);
+        BasicBlock* pred,
+        BasicBlock* succ);
 
 public:
     PM::PreservedAnalyses run(Function &function, FAM &manager);

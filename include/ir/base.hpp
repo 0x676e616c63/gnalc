@@ -183,13 +183,13 @@ public:
     bool replaceOperand(const std::shared_ptr<Value> &before, const std::shared_ptr<Value> &after);
 
     // Note:
-    // Replace Use shouldn't compare Use's value.
+    // Replace Use shouldn't compare Use's user/value.
     // Considering: %0 = gep ptr %a, i32 %b, i32 %b
-    //              %0 operands: <use0: a> <use1: b> <use2: b>
-    //              %b use_list:  <use1: 0> <use2: 1>
-    // If we only care about Use's value, we might end up with:
-    //              %0 operands: <use0: a> <use1: b>
-    //              %b use_list:  <use2: 0>
+    //              %0 operands: <use0: %a> <use1: %b> <use2: %b>
+    //              %b use_list:  <use1: %0> <use2: %0>
+    // If we only care about Use's user/value, we might end up with:
+    //              %0 operands: <use0: %a> <use1: %b>
+    //              %b use_list:  <use2: %0>
     bool replaceUse(const std::shared_ptr<Use> &old_use,
                     const std::shared_ptr<Value> &new_use);
 
