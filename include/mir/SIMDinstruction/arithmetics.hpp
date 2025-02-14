@@ -58,3 +58,16 @@ public:
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
     ~Vcmp() override = default;
 };
+
+class Vmrs : public Instruction {
+private:
+public:
+    Vmrs() = default;
+
+    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override {
+        return nullptr;
+    }
+
+    std::string toString() override { return "vmrs APSR_nzcv, FPSCR"; }
+    ~Vmrs() override = default;
+};

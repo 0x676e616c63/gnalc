@@ -288,6 +288,8 @@ InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
         auto vmov =
             std::make_shared<Vmov>(SourceOperandType::r, target, reg, pair);
         insts.emplace_back(vmov);
+    } else if (retType->getInner() == IR::IRBTYPE::VOID) {
+        // nothing
     } else {
         Err::unreachable("unknown ret value type detected!");
     }

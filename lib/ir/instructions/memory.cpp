@@ -100,15 +100,6 @@ GEPInst::GEPInst(NameRef name, const std::shared_ptr<Value> &_ptr,
         addOperand(idx);
 }
 
-GEPInst::GEPInst(NameRef name, const std::shared_ptr<Value> &_ptr,
-                 const std::vector<std::shared_ptr<Value>> &idxs)
-    : Instruction(OP::GEP, name, makePtrType(getElm(_ptr->getType()))) {
-    Err::gassert(_ptr->getType()->getTrait() == IRCTYPE::PTR);
-    addOperand(_ptr);
-    for (const auto &idx : idxs)
-        addOperand(idx);
-}
-
 std::shared_ptr<Type> GEPInst::getBaseType() const {
     return getElm(getPtr()->getType());
 }

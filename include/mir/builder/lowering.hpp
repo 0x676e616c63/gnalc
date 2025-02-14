@@ -29,26 +29,48 @@ struct OperandLowering {
     /// when use
     std::shared_ptr<Operand> fastFind(const std::shared_ptr<IR::Value> &);
 
-    /// 在需要获得常数时, 先使用这个
-    /// 如果返回不为nullptr, 万事大吉
-    /// 如果返回为nullptr, 在instlower环境中手动加ldr/mov
-    template <typename T_variant>
+    /// 在需要获得常数/地址时, 先使用这个
+    /// 如果返回不为false, 万事大吉
+    /// 如果返回为false, 在instlower环境中手动加mov/vmov
     std::pair<bool, std::shared_ptr<BindOnVirOP>>
-    LoadedFind(const T_variant &constVal) {
+    LoadedFind(int constVal) {
         auto constPtr = constpool.getConstant(constVal);
         auto loadPtr = varpool.getLoaded(*constPtr);
         if (loadPtr)
             return {true, loadPtr};
         else {
-            if (typeid(T_variant) == typeid(float)) {
-                loadPtr =
-                    mkOP(IR::makeBType(IR::IRBTYPE::FLOAT), RegisterBank::spr);
-                varpool.addLoaded(*constPtr, loadPtr);
-            } else {
-                loadPtr =
-                    mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
-                varpool.addLoaded(*constPtr, loadPtr);
-            }
+            loadPtr =
+                mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+            varpool.addLoaded(*constPtr, loadPtr);
+            return {false, loadPtr};
+        }
+    }
+
+    std::pair<bool, std::shared_ptr<BindOnVirOP>>
+    LoadedFind(float constVal) {
+        auto constPtr = constpool.getConstant(constVal);
+        auto loadPtr = varpool.getLoaded(*constPtr);
+        if (loadPtr)
+            return {true, loadPtr};
+        else {
+            // 浮点数加载到通用寄存器
+            loadPtr =
+                mkOP(IR::makeBType(IR::IRBTYPE::FLOAT), RegisterBank::gpr);
+            varpool.addLoaded(*constPtr, loadPtr);
+            return {false, loadPtr};
+        }
+    }
+
+    std::pair<bool, std::shared_ptr<BindOnVirOP>>
+    LoadedFind(const std::string &constVal) {
+        auto constPtr = constpool.getConstant(constVal);
+        auto loadPtr = varpool.getLoaded(*constPtr);
+        if (loadPtr)
+            return {true, loadPtr};
+        else {
+            loadPtr =
+                mkBaseOP(constVal, nullptr);
+            varpool.addLoaded(*constPtr, loadPtr);
             return {false, loadPtr};
         }
     }
@@ -135,8 +157,14 @@ struct InstLowering {
 
     // Neon SIMD
 
-    // std::list<std::shared_ptr<Instruction>>
-    // fcmpLower(const std::shared_ptr<IR::FCMPInst> &);
+    std::list<std::shared_ptr<Instruction>>
+    fcmpLower(const std::shared_ptr<IR::FCMPInst> &);
+
+    std::list<std::shared_ptr<Instruction>> binaryLower_v(const std::shared_ptr<IR::BinaryInst> &);
+
+    std::list<std::shared_ptr<Instruction>> loadLower_v(const std::shared_ptr<IR::LOADInst> &); //
+
+    std::list<std::shared_ptr<Instruction>> storeLower_v(const std::shared_ptr<IR::STOREInst> &); //
 };
 
 class Lowering {

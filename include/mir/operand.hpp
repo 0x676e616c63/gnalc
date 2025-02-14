@@ -183,7 +183,7 @@ public:
 
     BaseAddressTrait getTrait() { return btrait; }
 
-    const std::shared_ptr<BindOnVirOP> getBase() const { return varOffset; }
+    std::shared_ptr<BindOnVirOP> getBase() const { return varOffset; }
 
     std::string toString() const override = 0;
     ~BaseADROP() override = default;

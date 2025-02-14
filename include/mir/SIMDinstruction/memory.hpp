@@ -40,12 +40,12 @@ public:
 
 class Vstr : public NeonInstruction {
 private:
-    std::shared_ptr<BaseADROP> SourceOperand_1;
+    std::shared_ptr<BindOnVirOP> SourceOperand_1;
     std::shared_ptr<BaseADROP> SourceOperand_2;
 
 public:
     Vstr() = delete;
-    Vstr(std::shared_ptr<BaseADROP> SourceOperand_1_,
+    Vstr(std::shared_ptr<BindOnVirOP> SourceOperand_1_,
          std::shared_ptr<BaseADROP> SourceOperand_2_,
          std::pair<bitType, bitType> _dataTypes)
         : NeonInstruction(NeonOpCode::VSTR, SourceOperandType::ra, _dataTypes),

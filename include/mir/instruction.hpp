@@ -77,10 +77,10 @@ enum class NeonOpCode {
 
     VNEG,
 
-    VSITOF,
-    VFTOSI,
+    VCVT,
 
     VCMP,
+    VMRS, /* vmrs APSR_nzcv, FPSCR */
 
 };
 

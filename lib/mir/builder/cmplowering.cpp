@@ -1,3 +1,5 @@
+#include "../../../include/mir/SIMDinstruction/arithmetics.hpp"
+#include "../../../include/mir/SIMDinstruction/memory.hpp"
 #include "../../../include/mir/builder/lowering.hpp"
 #include "../../../include/mir/instructions/binary.hpp"
 #include "../../../include/mir/instructions/branch.hpp"
@@ -54,6 +56,38 @@ void setMovCond(const std::shared_ptr<movInst> &mov_true,
         mov_true->setCondCodeFlag(CondCodeFlag::lt);
         mov_false->setCondCodeFlag(CondCodeFlag::ge);
         break;
+    }
+}
+
+void setMovCond(const std::shared_ptr<movInst> &mov_true,
+                const std::shared_ptr<movInst> &mov_false, IR::FCMPOP cond) {
+    switch (cond) {
+    case IR::FCMPOP::oeq:
+        mov_true->setCondCodeFlag(CondCodeFlag::eq);
+        mov_false->setCondCodeFlag(CondCodeFlag::ne);
+        break;
+    case IR::FCMPOP::one:
+        mov_true->setCondCodeFlag(CondCodeFlag::ne);
+        mov_false->setCondCodeFlag(CondCodeFlag::eq);
+        break;
+    case IR::FCMPOP::oge:
+        mov_true->setCondCodeFlag(CondCodeFlag::ge);
+        mov_false->setCondCodeFlag(CondCodeFlag::lt);
+        break;
+    case IR::FCMPOP::ogt:
+        mov_true->setCondCodeFlag(CondCodeFlag::gt);
+        mov_false->setCondCodeFlag(CondCodeFlag::le);
+        break;
+    case IR::FCMPOP::ole:
+        mov_true->setCondCodeFlag(CondCodeFlag::le);
+        mov_false->setCondCodeFlag(CondCodeFlag::gt);
+        break;
+    case IR::FCMPOP::olt:
+        mov_true->setCondCodeFlag(CondCodeFlag::lt);
+        mov_false->setCondCodeFlag(CondCodeFlag::ge);
+        break;
+    case IR::FCMPOP::ord:
+        Err::todo("fcmp with FCMPOP ord");
     }
 }
 
@@ -177,6 +211,99 @@ InstLowering::icmpLower(const std::shared_ptr<IR::ICMPInst> &icmp) {
     // =========================
     // step2: 条件mov
     // =========================
+    auto bool_true = operlower.fastFind(1);
+    auto bool_false = operlower.fastFind(0);
+
+    auto mov_true =
+        std::make_shared<movInst>(SourceOperandType::ri, boolVal, bool_true);
+    auto mov_false =
+        std::make_shared<movInst>(SourceOperandType::ri, boolVal, bool_false);
+
+    setMovCond(mov_true, mov_false, cond);
+
+    insts.emplace_back(mov_true);
+    insts.emplace_back(mov_false);
+    return insts;
+}
+
+std::list<std::shared_ptr<Instruction>> InstLowering::fcmpLower(const std::shared_ptr<IR::FCMPInst> &fcmp) {
+    std::list<std::shared_ptr<Instruction>> insts;
+
+    /// @note 比较两个float
+    /// @note vcmp + vmrs, vmrs相当于一个声明
+
+    auto boolVal = operlower.mkOP(*fcmp, RegisterBank::gpr);
+    std::shared_ptr<IR::Value> rval = fcmp->getRHS();
+    std::shared_ptr<IR::Value> lval = fcmp->getLHS();
+    auto cond = fcmp->getCond();
+
+    auto rconst = std::dynamic_pointer_cast<IR::ConstantFloat>(rval);
+    auto lconst = std::dynamic_pointer_cast<IR::ConstantFloat>(lval);
+
+    // ===================
+    // step1: vcmp
+    // ===================
+    if (rconst && lconst) {
+        Err::todo("fcmp 2 const float.");
+    } else if (rconst || lconst) {
+        // mov %tmp::spr, #imme
+        // vmov %tmp2, %tmp
+        // vcmp.f32 %virVal, %tmp2
+        float immeVal;
+        std::shared_ptr<ConstantIDX> constVal;
+        std::shared_ptr<BindOnVirOP> virVal;
+
+        if (rconst) {
+            immeVal = rconst->getVal();
+            virVal = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lconst));
+            constVal = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(rconst->getVal()));
+        } else {
+            immeVal = rconst->getVal();
+            virVal = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rconst));
+            constVal = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(lconst->getVal()));
+        }
+
+        if (constVal->getConst()->isEncoded()) {
+            // mov %tmp::gpr, #imme
+            // vmov %tmp2::spr, %tmp
+            // vcmp.f32 %virVal, %tmp2
+            // vmrs ...
+
+            auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+            auto relay2 = operlower.mkOP(IR::makeBType(IR::IRBTYPE::FLOAT), RegisterBank::spr);
+
+            auto mov = std::make_shared<movInst>(SourceOperandType::cp, relay, constVal);
+            auto pair = std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32);
+            auto vmov = std::make_shared<Vmov>(SourceOperandType::r, relay2, relay, pair);
+            pair = std::make_pair(bitType::f32, bitType::DEFAULT32);
+            auto vcmp = std::make_shared<Vcmp>(SourceOperandType::rr, virVal, relay2, pair);
+            auto vmrs = std::make_shared<Vmrs>();
+
+            insts.emplace_back(mov);
+            insts.emplace_back(vmov);
+            insts.emplace_back(vcmp);
+            insts.emplace_back(vmrs);
+        } else {
+            // vmov %tmp, #imme
+            // vcmp.f32 %virVal, %tmp
+            // vmrs
+            auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::FLOAT), RegisterBank::spr);
+
+            auto pair = std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32);
+            auto vmov = std::make_shared<Vmov>(SourceOperandType::cp, relay, constVal, pair);
+            pair = std::make_pair(bitType::f32, bitType::DEFAULT32);
+            auto vcmp = std::make_shared<Vcmp>(SourceOperandType::rr, virVal, relay, pair);
+            auto vmrs = std::make_shared<Vmrs>();
+
+            insts.emplace_back(vmov);
+            insts.emplace_back(vcmp);
+            insts.emplace_back(vmrs);
+        }
+    }
+    // ===================
+    // step2: 条件mov
+    // ===================
+
     auto bool_true = operlower.fastFind(1);
     auto bool_false = operlower.fastFind(0);
 

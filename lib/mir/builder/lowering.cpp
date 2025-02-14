@@ -61,11 +61,11 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
                 auto copy = std::make_shared<COPY>(val, arg_in_freg);
                 arg_insts.emplace_back(copy);
             } else {
-                Err::unreachable("too many float args for functioon");
+                Err::unreachable("functionLower: too many float args for functioon");
             }
             ++fcnt;
         } else {
-            Err::unreachable("unknown arg type encountered!");
+            Err::unreachable("functionLower: unknown arg type encountered!");
         }
     }
 
@@ -99,56 +99,56 @@ std::shared_ptr<BasicBlock> Lowering::lower(const IR::BasicBlock &midEnd_bb,
 
 std::list<std::shared_ptr<Instruction>>
 InstLowering::operator()(const std::shared_ptr<IR::Instruction> &midEnd_inst) {
-    std::list<std::shared_ptr<Instruction>> inst{};
+    std::list<std::shared_ptr<Instruction>> insts;
     if (auto binary = std::dynamic_pointer_cast<IR::BinaryInst>(midEnd_inst)) {
         if (IR::toBType(binary->getType())->getInner() == IR::IRBTYPE::I32)
-            inst = binaryLower(binary);
+            insts = binaryLower(binary);
         else {
-            /// SIMD
+            insts = binaryLower_v(binary);
         }
 
     } else if (auto icmp =
                    std::dynamic_pointer_cast<IR::ICMPInst>(midEnd_inst)) {
-        inst = icmpLower(icmp);
-        // } else if (auto fcmp =
-        //                std::dynamic_pointer_cast<IR::FCMPInst>(midEnd_inst)) {
-        //     inst = fcmpLower(fcmp);
+        insts = icmpLower(icmp);
+    } else if (auto fcmp =
+                   std::dynamic_pointer_cast<IR::FCMPInst>(midEnd_inst)) {
+        insts = fcmpLower(fcmp);
     } else if (auto ret = std::dynamic_pointer_cast<IR::RETInst>(midEnd_inst)) {
 
-        inst = retLower(ret);
+        insts = retLower(ret);
 
     } else if (auto br = std::dynamic_pointer_cast<IR::BRInst>(midEnd_inst)) {
 
-        inst = brLower(br);
+        insts = brLower(br);
 
     } else if (auto call =
                    std::dynamic_pointer_cast<IR::CALLInst>(midEnd_inst)) {
 
-        inst = callLower(call);
+        insts = callLower(call);
 
     } else if (auto zext =
                    std::dynamic_pointer_cast<IR::ZEXTInst>(midEnd_inst)) {
 
-        inst = zextLower(zext);
+        insts = zextLower(zext);
 
     } else if (auto bitcast =
                    std::dynamic_pointer_cast<IR::BITCASTInst>(midEnd_inst)) {
 
-        inst = bitcastLower(bitcast);
+        insts = bitcastLower(bitcast);
 
     } else if (auto alloca =
                    std::dynamic_pointer_cast<IR::ALLOCAInst>(midEnd_inst)) {
 
-        inst = allocaLower(alloca);
+        insts = allocaLower(alloca);
 
     } else if (auto load =
                    std::dynamic_pointer_cast<IR::LOADInst>(midEnd_inst)) {
 
         if (std::dynamic_pointer_cast<IR::BType>(load->getType())->getInner() ==
             IR::IRBTYPE::I32) {
-            inst = loadLower(load);
+            insts = loadLower(load);
         } else {
-            /// SIMD
+            insts = loadLower_v(load);
         }
 
     } else if (auto store =
@@ -157,19 +157,19 @@ InstLowering::operator()(const std::shared_ptr<IR::Instruction> &midEnd_inst) {
         /// @warning 这里假设非SIMD的store指令的BaseType只会是BType, 否则会SEGV
         if (std::dynamic_pointer_cast<IR::BType>(store->getBaseType())
                 ->getInner() == IR::IRBTYPE::I32) {
-            inst = storeLower(store);
+            insts = storeLower(store);
         } else {
-            /// SIMD
+            insts = storeLower_v(store);
         }
     } else if (auto gep = std::dynamic_pointer_cast<IR::GEPInst>(midEnd_inst)) {
-        inst = gepLower(gep);
+        insts = gepLower(gep);
     } else if (auto phi = std::dynamic_pointer_cast<IR::PHIInst>(midEnd_inst)) {
-        inst = phiLower(phi);
+        insts = phiLower(phi);
     } else {
-        Err::unreachable("InstLowering: unknown IR instruction");
+        Err::unreachable("instLowering: unknown IR instruction");
     }
 
-    return inst;
+    return insts;
 }
 
 // ===============
@@ -218,7 +218,7 @@ OperandLowering::fastFind(const std::shared_ptr<IR::Value> &midEnd_val) {
 
     // else
     else {
-        Err::unreachable("fast find an operand failed");
+        Err::unreachable("operLower: fast find an operand failed");
         return nullptr;
     }
 }

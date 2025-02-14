@@ -1,3 +1,4 @@
+#include "../../../include/mir/SIMDinstruction/arithmetics.hpp"
 #include "../../../include/mir/builder/lowering.hpp"
 #include "../../../include/mir/instructions/binary.hpp"
 #include "../../../include/mir/instructions/branch.hpp"
@@ -11,7 +12,12 @@ using namespace MIR;
 struct splited {
     unsigned int exp1;
     unsigned int exp2;
-    enum class oper { singlePos, singleNeg, addPos, addNeg, sub, none } cul;
+    enum class oper { singlePos,
+                      singleNeg,
+                      addPos,
+                      addNeg,
+                      sub,
+                      none } cul;
 };
 
 splited SplitTo2PowX(int);
@@ -783,6 +789,99 @@ divOpt(const std::shared_ptr<BindOnVirOP> &target,
             OpCode::ADD, SourceOperandType::rsi, target, relay2, dividend,
             std::make_shared<ShiftOP>(31, ShiftOP::inlineShift::lsr));
         insts.emplace_back(add);
+    }
+
+    return insts;
+}
+
+std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower_v(const std::shared_ptr<IR::BinaryInst> &binary) {
+    std::list<std::shared_ptr<Instruction>> insts;
+    auto target = operlower.mkOP(*binary, RegisterBank::spr);
+
+    auto op = binary->getOpcode();
+
+    std::shared_ptr<IR::Value> rval = binary->getRHS();
+    std::shared_ptr<IR::Value> lval = binary->getLHS();
+
+    std::shared_ptr<BindOnVirOP> oper1;
+    std::shared_ptr<BindOnVirOP> oper2;
+
+    auto lconst = std::dynamic_pointer_cast<IR::ConstantFloat>(rval);
+    auto rconst = std::dynamic_pointer_cast<IR::ConstantFloat>(lval);
+
+    if (lconst) {
+        float const_float = lconst->getVal();
+
+        auto pair = operlower.LoadedFind(const_float);
+        oper1 = pair.second;
+        if (!pair.first) {
+            // mov %oper1, #imme
+            auto mov = std::make_shared<movInst>(SourceOperandType::cp, oper1, operlower.fastFind(const_float));
+            insts.emplace_back(mov);
+        }
+    } else {
+        oper1 = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
+    }
+
+    if (rconst) {
+        float const_float = rconst->getVal();
+
+        auto pair = operlower.LoadedFind(const_float);
+        oper2 = pair.second;
+        if (!pair.first) {
+            // mov %oper2, #imme
+            auto mov = std::make_shared<movInst>(SourceOperandType::cp, oper2, operlower.fastFind(const_float));
+            insts.emplace_back(mov);
+        }
+    } else {
+        if (rval)
+            oper2 = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rval));
+        else
+            oper2 = nullptr;
+    }
+
+    /// vxxx %target, %oper1, %oper2
+
+    auto datapair = std::make_pair(bitType::f32, bitType::DEFAULT32);
+    switch (op) {
+    case IR::OP::ADD: {
+        auto vadd = std::make_shared<Vbinary>(MIR::NeonOpCode::VADD, target, oper1, oper2, datapair);
+        insts.emplace_back(vadd);
+    } break;
+
+    case IR::OP::SUB: {
+        auto vsub = std::make_shared<Vbinary>(MIR::NeonOpCode::VSUB, target, oper1, oper2, datapair);
+        insts.emplace_back(vsub);
+    } break;
+
+    case IR::OP::MUL: {
+        auto vmul = std::make_shared<Vbinary>(MIR::NeonOpCode::VMUL, target, oper1, oper2, datapair);
+        insts.emplace_back(vmul);
+    } break;
+    case IR::OP::DIV: {
+        auto vdiv = std::make_shared<Vbinary>(MIR::NeonOpCode::VMUL, target, oper1, oper2, datapair);
+        insts.emplace_back(vdiv);
+    } break;
+    case IR::OP::FNEG: {
+        auto vneg = std::make_shared<Vunary>(MIR::NeonOpCode::VNEG, target, oper1, datapair);
+        insts.emplace_back(vneg);
+    } break;
+    case IR::OP::FREM: {
+        // vdiv.f32	%tmp1, %oper1, %oper2
+        // vmul.f32	%tmp2, %oper2, %tmp1
+        // vsub.f32	%target, %oper1, %tmp2
+        auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::FLOAT), RegisterBank::spr);
+        auto relay2 = operlower.mkOP(IR::makeBType(IR::IRBTYPE::FLOAT), RegisterBank::spr);
+
+        auto vdiv = std::make_shared<Vbinary>(NeonOpCode::VDIV, relay, oper1, oper2, datapair);
+        auto vmul = std::make_shared<Vbinary>(NeonOpCode::VMUL, relay2, oper2, relay, datapair);
+        auto vsub = std::make_shared<Vbinary>(NeonOpCode::VSUB, target, oper1, relay2, datapair);
+        insts.emplace_back(vdiv);
+        insts.emplace_back(vmul);
+        insts.emplace_back(vsub);
+    } break;
+    default:
+        Err::unreachable("instLower: binarylower_v encountered unknown IR::OP");
     }
 
     return insts;
