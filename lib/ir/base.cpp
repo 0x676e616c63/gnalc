@@ -116,6 +116,21 @@ const std::shared_ptr<Use> &User::getOperand(size_t index) const {
     return operands[index];
 }
 
+void User::setOperand(size_t index, const std::shared_ptr<Value> &val) {
+    Err::gassert(index < operands.size(), "index out of range");
+    auto use = operands[index];
+    auto ok = use->getValue()->delUse(use);
+    Err::gassert(ok);
+    std::shared_ptr<Use> new_use{new Use(val, this)};
+    use->init();
+    operands[index] = std::move(new_use);
+}
+
+void User::swapOperand(size_t a, size_t b) {
+    Err::gassert(a < operands.size() && b < operands.size(), "index out of range");
+    std::swap(operands[a], operands[b]);
+}
+
 bool User::delOperand(const std::shared_ptr<Value> &v) {
     return delOperandIf([&v](const auto& value) { return value == v; });
 }
@@ -126,7 +141,7 @@ bool User::delOperand(NameRef name) {
 }
 
 bool User::delOperand(size_t index) {
-    Err::gassert(index < operands.size());
+    Err::gassert(index < operands.size(), "index out of range");
     if (index >= operands.size())
         return false;
     auto use = operands[index];

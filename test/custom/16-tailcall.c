@@ -1,13 +1,11 @@
-void fn0() { }
-int fn1() { return 1; }
-int fn2()
+int fn2(int a)
 {
-    fn0();
-    fn1();
-    return 1;
+    if(a == 0)
+        return 0;
+    return fn2(a - 1);
 }
 int fn3() {
-    return fn2();
+    return fn2(10);
 }
 int main() {
     fn3();

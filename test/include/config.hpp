@@ -4,7 +4,7 @@
 
 #include <string>
 
-#include "gnalc_test.hpp"
+#include "utils.hpp"
 
 namespace Test::cfg {
 // Commandline args

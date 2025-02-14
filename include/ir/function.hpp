@@ -36,6 +36,8 @@ public:
     ~FunctionDecl() override;
 };
 
+// FormalParam shouldn't contain a parent.
+// If really need it, update CFGBuilder to move them correctly from LinearFunction to Function.
 class FormalParam : public Value {
     size_t index;
 
@@ -79,6 +81,10 @@ public:
              std::shared_ptr<Type> ret_type, ConstantPool *pool);
 
     void addBlock(std::shared_ptr<BasicBlock> blk);
+
+    // Add the given block as the entry block
+    // Caller should take care of the CFG.
+    void addBlockAsEntry(const std::shared_ptr<BasicBlock>& blk);
 
     // Delete a Block
     // Requires the target block have no users than Phi.
@@ -138,6 +144,8 @@ public:
 
     void addExitBB(std::shared_ptr<BasicBlock> blk);
     std::vector<std::shared_ptr<BasicBlock>> getExitBBs() const;
+
+    size_t getInstCount() const;
 
 private:
     void updateBBIndex();

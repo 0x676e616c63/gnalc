@@ -57,9 +57,22 @@ bool BasicBlock::delNextBB(const std::shared_ptr<BasicBlock> &bb) {
 }
 
 void BasicBlock::addInst(const std::shared_ptr<Instruction> &inst) {
-    inst->index = phi_insts.size()+insts.size();
+    inst->index = phi_insts.size() + insts.size();
     insts.emplace_back(inst);
     inst->setParent(shared_from_this());
+}
+
+void BasicBlock::addInstAfterPhi(const std::shared_ptr<Instruction> &inst) {
+    insts.insert(insts.begin(), inst);
+    updateInstIndex();
+}
+
+void BasicBlock::addInstBeforeTerminator(const std::shared_ptr<Instruction> &inst) {
+    auto term = insts.back();
+    Err::gassert(term->getOpcode() == OP::BR || term->getOpcode() == OP::RET);
+    term->index = phi_insts.size() + insts.size();
+    inst->index = term->index - 1;
+    insts.insert(std::prev(insts.end()), term);
 }
 
 std::list<std::shared_ptr<BasicBlock>> BasicBlock::getPreBB() const {
@@ -159,6 +172,10 @@ unsigned BasicBlock::getPhiCount() const {
 void BasicBlock::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
 BasicBlock::~BasicBlock() = default;
+
+size_t BasicBlock::getAllInstCount() const {
+    return phi_insts.size() + insts.size();
+}
 
 void linkBB(const std::shared_ptr<BasicBlock> &prebb,
                    const std::shared_ptr<BasicBlock> &nxtbb) {

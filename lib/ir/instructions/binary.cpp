@@ -44,6 +44,18 @@ std::shared_ptr<Value> BinaryInst::getRHS() const {
     return getOperand(1)->getValue();
 }
 
+void BinaryInst::setLHS(const std::shared_ptr<Value> &lhs) {
+    setOperand(0, lhs);
+}
+
+void BinaryInst::setRHS(const std::shared_ptr<Value> &rhs) {
+    setOperand(1, rhs);
+}
+
+void BinaryInst::swapLHSRHS() {
+    swapOperand(0, 1);
+}
+
 FNEGInst::FNEGInst(NameRef name, std::shared_ptr<Value> val)
     : Instruction(OP::FNEG, name, makeBType(IRBTYPE::FLOAT)) {
     addOperand(val);

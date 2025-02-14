@@ -26,6 +26,7 @@ public:
 
     std::shared_ptr<Value> getValueForBlock(const std::shared_ptr<BasicBlock> &block) const;
     void addPhiOper(const std::shared_ptr<Value> &val, const std::shared_ptr<BasicBlock> &blk);
+
     std::vector<PhiOper> getPhiOpers() const;
 
     bool delPhiOperByVal(const std::shared_ptr<Value> &);

@@ -25,6 +25,10 @@ public:
     std::shared_ptr<Value> getLHS() const;
     std::shared_ptr<Value> getRHS() const;
 
+    void setLHS(const std::shared_ptr<Value>& lhs);
+    void setRHS(const std::shared_ptr<Value>& rhs);
+    void swapLHSRHS();
+
     void accept(IRVisitor &visitor) override;
 };
 

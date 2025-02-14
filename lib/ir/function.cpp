@@ -2,6 +2,7 @@
 #include "../../include/ir/visitor.hpp"
 
 #include <algorithm>
+#include <numeric>
 
 namespace IR {
 FunctionDecl::FunctionDecl(std::string name_,
@@ -45,6 +46,13 @@ void Function::addBlock(std::shared_ptr<BasicBlock> blk) {
     blks.emplace_back(std::move(blk));
 }
 
+void Function::addBlockAsEntry(const std::shared_ptr<BasicBlock>& blk) {
+    blk->index = 0;
+    blk->setParent(shared_from_this());
+    blks.insert(blks.begin(), blk);
+    updateBBIndex();
+}
+
 bool Function::delBlock(const std::shared_ptr<BasicBlock> &blk) {
     return delBlockIf([&blk](auto &&b) { return b == blk; });
 }
@@ -77,6 +85,13 @@ std::vector<std::shared_ptr<BasicBlock>> Function::getExitBBs() const {
         if (!blk.expired())
             ret.emplace_back(blk.lock());
     }
+    return ret;
+}
+
+size_t Function::getInstCount() const {
+    size_t ret = 0;
+    for (const auto &bb : blks)
+        ret += bb->getAllInstCount();
     return ret;
 }
 

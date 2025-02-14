@@ -10,6 +10,13 @@
 
 namespace IR {
 class AliasAnalysis;
+enum class AliasInfo { MustAlias, MayAlias, NoAlias };
+enum class ModRefInfo {
+    NoModRef,
+    Ref,
+    Mod,
+    ModRef,
+};
 class AliasAnalysisResult {
 public:
     friend class AliasAnalysis;
@@ -19,6 +26,8 @@ public:
         // Global Variable
         bool global_var = false;
         // Maybe alias
+        // Only GlobalVariables or FormalArguments or ALLOCA
+        // NO GEP or BITCAST here.
         std::set<const Value *> potential_alias;
     };
 
@@ -26,10 +35,10 @@ private:
     // Target
     Function *func;
 
-    // Local/Array arguments info map
+    // Local pointers/FormalArguments info map
     std::unordered_map<const Value *, PtrInfo> ptr_info;
 
-    // Mod/Ref info, only global and Array arguments
+    // Function's Mod/Ref info, only GlobalVariables and FormalArguments
     std::set<const Value *> read;
     std::set<const Value *> write;
 
@@ -45,18 +54,14 @@ private:
     PtrInfo getPtrInfo(const Value *ptr) const;
 
 public:
-    enum class AliasInfo { MustAlias, MayAlias, NoAlias };
-    enum class ModRefInfo {
-        NoModRef,
-        Ref,
-        Mod,
-        ModRef,
-    };
-
-    // v1 and v2 must be Global Variable or array with the given function
+    // v1 and v2 must be pointers
     AliasInfo getAliasInfo(const Value *v1, const Value *v2) const;
 
-    // candidate must be Global Variable or array with the given function
+    // v must be pointer
+    // Check if v points a memory that outside don't know.
+    bool isLocal(const Value *v) const;
+
+    // location must be a pointer
     ModRefInfo getInstModRefInfo(const Instruction *inst,
                                  const Value *location, FAM &fam) const;
 

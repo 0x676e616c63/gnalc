@@ -360,7 +360,7 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
 
     std::set<std::shared_ptr<PHIInst>> dead_phis;
 
-    // Simplify Instruction
+    // Simplify Instruction and Cut the In Edge of Unreachable block
     for (const auto &[key, val] : solver.get_map()) {
         if (val.isConstant()) {
             // Note that the key might already be a ConstantLiteral before SCCP,
@@ -371,8 +371,11 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
             auto use_list = key->getUseList();
             for (const auto &use : use_list) {
                 if (auto br_inst = std::dynamic_pointer_cast<BRInst>(use->getUser())) {
+                    // BRInst of other function should be handled by their SCCP !!!
+                    if (br_inst->getParent()->getParent().get() != &function)
+                        continue;
+
                     Err::gassert(br_inst->isConditional());
-                    std::shared_ptr<BasicBlock> dropped;
                     if (val.getConstant().get_i1()) {
                         auto tmp
                             = safeUnlinkBB(br_inst->getParent(), br_inst->getFalseDest());
