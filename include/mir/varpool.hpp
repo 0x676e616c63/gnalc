@@ -56,7 +56,7 @@ public:
     void addValue(const IR::Value &, std::shared_ptr<Operand>); // Def
 
     void addLoaded(const ConstObj &, std::shared_ptr<BindOnVirOP>);
-    size_t size() { return pool.size(); }
+    size_t size() const { return pool.size(); }
 
     ~VarPool() = default;
 };

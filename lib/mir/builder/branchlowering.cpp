@@ -102,8 +102,7 @@ InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     auto func = call->getFunc();
-    auto functype =
-        std::dynamic_pointer_cast<IR::FunctionType>(func->getType());
+    auto functype = IR::toFunctionType(func->getType());
 
     // auto &types = functype->getParams();
     auto params = call->getArgs();
@@ -116,7 +115,7 @@ InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
     // =====================
     for (auto &arg : params) {
         auto type = arg->getType();
-        if (auto btype = std::dynamic_pointer_cast<IR::BType>(type)) {
+        if (auto btype = IR::toBType(type)) {
             /// @brief int / float
             if (btype->getInner() == IR::IRBTYPE::I32) {
                 if (cnt <= 4) {
@@ -163,7 +162,7 @@ InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
                     insts.emplace_back(str);
                 }
                 ++cnt;
-            } else {
+            } else if (btype->getInner() == IR::IRBTYPE::FLOAT) {
 
                 auto reg =
                     operlower.getPreColored(static_cast<FPURegister>(fcnt));
@@ -205,6 +204,7 @@ InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
 
                 ++fcnt;
             }
+            else Err::not_implemented("Unknown basic type '" + btype->toString() + "'");
         } else {
             /// @brief 指针类
             std::shared_ptr<BindOnVirOP> arg_in_reg;
@@ -275,7 +275,7 @@ InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
     // step3: 接收返回值
     // =====================
     std::shared_ptr<BindOnVirOP> target;
-    auto retType = std::dynamic_pointer_cast<IR::BType>(functype->getRet());
+    auto retType = IR::toBType(functype->getRet());
     if (retType->getInner() == IR::IRBTYPE::I32) {
         target = operlower.mkOP(*call, RegisterBank::gpr);
         auto reg = operlower.getPreColored(CoreRegister::r0);

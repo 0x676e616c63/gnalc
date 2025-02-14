@@ -39,38 +39,16 @@ struct OperandLowering {
         if (loadPtr)
             return {true, loadPtr};
         else {
-            loadPtr =
-                mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
-            varpool.addLoaded(*constPtr, loadPtr);
-            return {false, loadPtr};
-        }
-    }
-
-    std::pair<bool, std::shared_ptr<BindOnVirOP>>
-    LoadedFind(float constVal) {
-        auto constPtr = constpool.getConstant(constVal);
-        auto loadPtr = varpool.getLoaded(*constPtr);
-        if (loadPtr)
-            return {true, loadPtr};
-        else {
-            // 浮点数加载到通用寄存器
-            loadPtr =
-                mkOP(IR::makeBType(IR::IRBTYPE::FLOAT), RegisterBank::gpr);
-            varpool.addLoaded(*constPtr, loadPtr);
-            return {false, loadPtr};
-        }
-    }
-
-    std::pair<bool, std::shared_ptr<BindOnVirOP>>
-    LoadedFind(const std::string &constVal) {
-        auto constPtr = constpool.getConstant(constVal);
-        auto loadPtr = varpool.getLoaded(*constPtr);
-        if (loadPtr)
-            return {true, loadPtr};
-        else {
-            loadPtr =
-                mkBaseOP(constVal, nullptr);
-            varpool.addLoaded(*constPtr, loadPtr);
+            using U_variant = std::remove_cv_t<std::remove_reference_t<T_variant>>;
+            if constexpr (std::is_same_v<U_variant, float>) {
+                loadPtr =
+                    mkOP(IR::makeBType(IR::IRBTYPE::FLOAT), RegisterBank::spr);
+                varpool.addLoaded(*constPtr, loadPtr);
+            } else {
+                loadPtr =
+                    mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+                varpool.addLoaded(*constPtr, loadPtr);
+            }
             return {false, loadPtr};
         }
     }

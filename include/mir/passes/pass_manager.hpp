@@ -13,9 +13,6 @@ extern template class AnalysisManager<MIR::Function>;
 extern template class PassManager<MIR::Module>;
 extern template class PassManager<MIR::Function>;
 
-extern template class AllAnalysesOn<MIR::Module>;
-extern template class AllAnalysesOn<MIR::Function>;
-
 extern template class InnerAnalysisManagerProxy<AnalysisManager<MIR::Function>,
                                                 MIR::Module>;
 } // namespace PM
@@ -47,7 +44,6 @@ public:
             pa.retain(curr_pa);
         }
 
-        pa.preserveSet<PM::AllAnalysesOn<Function>>();
         pa.preserve<FAMProxy>();
         return pa;
     }

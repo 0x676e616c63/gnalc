@@ -29,15 +29,6 @@ MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
     return mpm;
 }
 
-std::tuple<FAM, MAM> PassBuilder::buildAnalysisManager() {
-    FAM fam;
-    MAM mam;
-    registerFunctionAnalyses(fam);
-    registerModuleAnalyses(mam);
-    registerProxies(fam, mam);
-    return {std::move(fam), std::move(mam)};
-}
-
 void PassBuilder::registerProxies(FAM &fam, MAM &mam) {
     mam.registerPass([&] { return FAMProxy(fam); });
 }

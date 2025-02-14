@@ -18,8 +18,6 @@ public:
     static FPM buildFunctionPipeline(OptInfo opt_info);
     static MPM buildModulePipeline(OptInfo opt_info);
 
-    static std::tuple<FAM, MAM> buildAnalysisManager();
-
     static void registerModuleAnalyses(MAM &);
     static void registerFunctionAnalyses(FAM &);
     static void registerProxies(FAM &, MAM &);

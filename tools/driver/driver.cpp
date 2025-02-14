@@ -78,40 +78,40 @@ int main(int argc, char **argv) {
             emit_llvm = true;
         else if (arg == "-ast-dump")
             ast_dump = true;
-        else if (arg == "-O1" || arg == "-O")
+        else if (arg == "-O1" || arg == "-O") {
             opt_info = IR::o1_opt_info;
 
-        // Optimizations available:
-        else if (arg == "--mem2reg")
-            opt_info.mem2reg = true;
-        else if (arg == "--sccp")
-            opt_info.sccp = true;
-        else if (arg == "--dce")
-            opt_info.dce = true;
-        else if (arg == "--adce")
-            opt_info.adce = true;
-        else if (arg == "--dse")
-            opt_info.dse = true;
-        else if (arg == "--gvnpre")
-            opt_info.gvnpre = true;
-        else if (arg == "--tailcall")
-            opt_info.tailcall = true;
+            // Optimizations available:
+            else if (arg == "--mem2reg")
+                opt_info.mem2reg = true;
+            else if (arg == "--sccp")
+                opt_info.sccp = true;
+            else if (arg == "--dce")
+                opt_info.dce = true;
+            else if (arg == "--adce")
+                opt_info.adce = true;
+            else if (arg == "--dse")
+                opt_info.dse = true;
+            else if (arg == "--gvnpre")
+                opt_info.gvnpre = true;
+            else if (arg == "--tailcall")
+                opt_info.tailcall = true;
 
-        // Debug options:
-        else if (arg == "--ann")
-            opt_info.advance_name_norm = true;
+            // Debug options:
+            else if (arg == "--ann")
+                opt_info.advance_name_norm = true;
 
 #if GNALC_EXTENSION_BRAINFK
-    // Extensions:
-    else if (arg == "-mbrainfk")
-        bf_target = true;
-    else if (arg == "-mbrainfk-3tape")
-        bf3t_target = true;
+            // Extensions:
+            else if (arg == "-mbrainfk")
+                bf_target = true;
+            else if (arg == "-mbrainfk-3tape")
+                bf3t_target = true;
 #endif
 
-    else if (arg == "-h" || arg == "--help") {
-        std::cout <<
-            R"(OVERVIEW: gnalc compiler
+            else if (arg == "-h" || arg == "--help") {
+                std::cout <<
+                    R"(OVERVIEW: gnalc compiler
 
 USAGE: " << argv[0] << " [options] file
 
@@ -140,98 +140,110 @@ Debug options:
 )";
 
 #if GNALC_EXTENSION_BRAINFK
-        std::cout <<
-            R"(
+                std::cout <<
+                    R"(
 Extensions:
   -mbrainfk            - Translate SySy to brainfk
   -mbrainfk-3tape      - Translate SySy to 3-tape brainfk
 )";
 #endif
-        std::cout << std::flush;
-        return 0;
-    }
-    else input_file = argv[i];
-}
+                std::cout << std::flush;
+                return 0;
+            }
+            else input_file = argv[i];
+        }
 
-if (!only_compilation) {
-    std::cerr << "Error: Gnalc currently only supports '-S' mode."
-              << std::endl;
-    return -1;
-}
+        if (!only_compilation) {
+            std::cerr << "Error: Gnalc currently only supports '-S' mode."
+                      << std::endl;
+            return -1;
+        }
 
-if (!input_file.empty()) {
-    yyin = fopen(input_file.c_str(), "r");
-    if (!yyin) {
-        std::cerr << "Error: Failed to open input file." << std::endl;
-        return -1;
-    }
-}
+        if (!input_file.empty()) {
+            yyin = fopen(input_file.c_str(), "r");
+            if (!yyin) {
+                std::cerr << "Error: Failed to open input file." << std::endl;
+                return -1;
+            }
+        }
 
-    yy::parser parser;
-    if (parser.parse()) {
-        std::cerr << "Syntax Error" << std::endl;
-        return -1;
-    }
+        yy::parser parser;
+        if (parser.parse()) {
+            std::cerr << "Syntax Error" << std::endl;
+            return -1;
+        }
 
-if (ast_dump) {
-    AST::ASTPrinter printer;
-    printer.visit(*node);
-    return 0;
-}
+        if (ast_dump) {
+            AST::ASTPrinter printer;
+            printer.visit(*node);
+            return 0;
+        }
 
-if (!input_file.empty())
-    fclose(yyin);
+        if (!input_file.empty())
+            fclose(yyin);
 
-    Parser::IRGenerator generator(input_file); // set Module's name to `input_file`
-    generator.visit(*node);
+        Parser::IRGenerator generator(input_file); // set Module's name to `input_file`
+        generator.visit(*node);
 
-    IR::FAM fam;
-    IR::MAM mam;
-    IR::PassBuilder::registerFunctionAnalyses(fam);
-    IR::PassBuilder::registerModuleAnalyses(mam);
-    IR::PassBuilder::registerProxies(fam, mam);
+        IR::FAM fam;
+        IR::MAM mam;
+        IR::PassBuilder::registerFunctionAnalyses(fam);
+        IR::PassBuilder::registerModuleAnalyses(mam);
+        IR::PassBuilder::registerProxies(fam, mam);
 
-    auto mpm = IR::PassBuilder::buildModulePipeline(opt_info);
+        auto mpm = IR::PassBuilder::buildModulePipeline(opt_info);
 
-std::ostream *poutstream = &std::cout;
-std::ofstream outfile;
+        std::ostream *poutstream = &std::cout;
+        std::ofstream outfile;
 
-if (!output_file.empty()) {
-    outfile.open(output_file);
-    if (!outfile.is_open()) {
-        std::cerr << "Error: Failed to open output file." << std::endl;
-        return -1;
-    }
-    poutstream = &outfile;
-}
+        if (!output_file.empty()) {
+            outfile.open(output_file);
+            if (!outfile.is_open()) {
+                std::cerr << "Error: Failed to open output file." << std::endl;
+                return -1;
+            }
+            poutstream = &outfile;
+        }
 
-    if (emit_llvm) {
-        mpm.addPass(IR::PrintModulePass(*poutstream));
+        if (emit_llvm) {
+            mpm.addPass(IR::PrintModulePass(*poutstream));
+            mpm.run(generator.get_module(), mam);
+            return 0;
+        }
+
         mpm.run(generator.get_module(), mam);
-        return 0;
-    }
-
-    mpm.run(generator.get_module(), mam);
 
 #if GNALC_EXTENSION_BRAINFK
-if (bf_target || bf3t_target) {
-    BrainFk::BF3t32bGen bfgen;
-    BrainFk::BFPrinter bfprinter(*poutstream);
+        if (bf_target || bf3t_target) {
+            BrainFk::BF3t32bGen bfgen;
+            BrainFk::BFPrinter bfprinter(*poutstream);
 
-    bfgen.visit(generator.get_module());
+            bfgen.visit(generator.get_module());
 
-    if (!bf3t_target) {
-        BrainFk::BF32t32bTrans trans(false);
-        trans.visit(bfgen.getModule());
-        bfprinter.printout(trans.getModule());
-    } else
-        bfprinter.printout(bfgen.getModule());
+            if (!bf3t_target) {
+                BrainFk::BF32t32bTrans trans(false);
+                trans.visit(bfgen.getModule());
+                bfprinter.printout(trans.getModule());
+            } else
+                bfprinter.printout(bfgen.getModule());
 
-    return 0;
-}
+            return 0;
+        }
 #endif
 
-    Err::todo("ARM Backend Refactor.");
+        MIR::FAM mir_fam;
+        MIR::MAM mir_mam;
+        MIR::PassBuilder::registerFunctionAnalyses(mir_fam);
+        MIR::PassBuilder::registerModuleAnalyses(mir_mam);
+        MIR::PassBuilder::registerProxies(mir_fam, mir_mam);
 
-return 0;
-}
+        auto mir_mpm = MIR::PassBuilder::buildModulePipeline(mir_opt_info);
+
+        MIR::Lowering mirgen;
+        mirgen(generator.get_module());
+        mir_mpm.run(mirgen.getModule(), mir_mam);
+
+        *poutstream << mirgen.getModule().toString();
+
+        return 0;
+    }
