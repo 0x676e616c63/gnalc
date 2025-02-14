@@ -6,6 +6,8 @@
 //    - Optimizing SSA Code: GVN-PRE
 //           blogpost: https://medium.com/@mikn/optimizing-ssa-code-gvn-pre-69de83e3be29
 //           source: https://github.com/I-mikan-I/ssa-compiler
+//    - GCC
+//           tree-ssa-pre.cc: https://github.com/gcc-mirror/gcc/blob/master/gcc/tree-ssa-pre.cc
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_GVN_PRE_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_GVN_PRE_HPP
@@ -17,6 +19,7 @@
 #include "../pass_manager.hpp"
 
 #include <algorithm>
+#include <limits>
 
 namespace IR {
 class GVNPREPass : public PM::PassInfo<GVNPREPass> {
@@ -45,7 +48,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
             Gep,
             Constant,
             Phi,
-            UntrackedInst,
+            UntrackedIRVal,
             // Unexpected
             UNEXPECTED
         };
@@ -63,7 +66,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
 
         const std::vector<ValueKind> &getOpers() const;
 
-        bool is_simple() const;
+        bool isUntracked() const;
 
         std::shared_ptr<Value> getIRVal() const;
 
@@ -76,6 +79,9 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         bool operator==(const Expr &rhs) const;
     };
 
+    // For getKindOrInsert's error
+    static constexpr ValueKind NotValueKind = std::numeric_limits<ValueKind>::max();
+
     class NumberTable {
         std::vector<std::shared_ptr<Expr>> expr_pool;
         std::map<Expr *, ValueKind> expr_table;
@@ -83,6 +89,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
 
     public:
         void clear();
+
         ValueKind getKindOrInsert(const std::shared_ptr<Value> &value);
 
         ValueKind getKindOrInsert(Expr *expr);
@@ -90,7 +97,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         Expr *getExprOrInsert(const std::shared_ptr<Value> &inst);
     };
 
-    class LeaderSet {
+    class KindTempSet {
         std::map<ValueKind, std::shared_ptr<Value>> values;
 
     public:
@@ -98,15 +105,18 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         using iterator = decltype(values)::iterator;
 
         bool insert(ValueKind kind, const std::shared_ptr<Value> &value) {
+            Err::gassert(kind != NotValueKind);
             auto [it, inserted] = values.insert(std::make_pair(kind, value));
             return inserted;
         }
 
         bool contains(ValueKind kind) const {
+            Err::gassert(kind != NotValueKind);
             return values.find(kind) != values.end();
         }
 
         bool erase(ValueKind kind) {
+            Err::gassert(kind != NotValueKind);
             auto it = values.find(kind);
             if (it == values.end())
                 return false;
@@ -115,6 +125,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         }
 
         std::shared_ptr<Value> getValue(ValueKind kind) const {
+            Err::gassert(kind != NotValueKind);
             auto it = values.find(kind);
             if (it == values.end())
                 return nullptr;
@@ -128,16 +139,17 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         auto size() const { return values.size(); }
     };
 
-    class AntiLeaderSet;
-    static AntiLeaderSet intersect(const AntiLeaderSet &a, const AntiLeaderSet &b);
-    class AntiLeaderSet {
-        friend AntiLeaderSet GVNPREPass::intersect(const AntiLeaderSet &a, const AntiLeaderSet &b);
+    class KindExprSet;
+    static KindExprSet intersect(const KindExprSet &a, const KindExprSet &b);
+    class KindExprSet {
+        friend KindExprSet GVNPREPass::intersect(const KindExprSet &a, const KindExprSet &b);
         std::vector<std::pair<ValueKind, Expr*>> values; // vector to keep topological sort
     public:
         using const_iterator = decltype(values)::const_iterator;
         using iterator = decltype(values)::iterator;
 
         bool insert(ValueKind kind, Expr* e) {
+            Err::gassert(kind != NotValueKind);
             auto it = std::find_if(values.begin(), values.end(),
                                    [&kind](const auto &p) { return p.first == kind; });
             if (it == values.end()) {
@@ -148,11 +160,13 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         }
 
         bool contains(ValueKind kind) const {
+            Err::gassert(kind != NotValueKind);
             return std::any_of(values.begin(), values.end(),
                                [kind](const auto &v) { return v.first == kind; });
         }
 
         bool erase(ValueKind kind) {
+            Err::gassert(kind != NotValueKind);
             for (auto it = values.begin(); it != values.end(); ++it) {
                 if (it->first == kind) {
                     values.erase(it);
@@ -170,6 +184,10 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         iterator end() { return values.end(); }
     };
 
+    using LeaderSet = KindTempSet;
+    using AntiLeaderSet = KindExprSet;
+    using TempSet = std::set<std::shared_ptr<Value>>;
+
     NumberTable table;
 
     // Since we won't delete or add blocks, use BasicBlock* is ok.
@@ -181,13 +199,13 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     std::map<BasicBlock*, AntiLeaderSet> antic_in_map;
 
     // PHI_GEN: temporaries that are defined by a phi
-    std::map<BasicBlock*, LeaderSet> phi_gen_map;
+    std::map<BasicBlock*, KindTempSet> phi_gen_map;
 
-    // EXP_GEN:  temporaries and non-simple
-    std::map<BasicBlock*, AntiLeaderSet> exp_gen_map;
+    // EXP_GEN: temporaries and non-simple
+    std::map<BasicBlock*, KindExprSet> exp_gen_map;
 
     // TMP_GEN: temporaries that are defined by non-phi instructions
-    std::map<BasicBlock*, std::set<std::shared_ptr<Value>>> tmp_gen_map;
+    std::map<BasicBlock*, TempSet> tmp_gen_map;
 
     Expr* phi_translate(
         Expr* expr,

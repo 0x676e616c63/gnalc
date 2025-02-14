@@ -53,8 +53,10 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     if (opt_info.dse)
         fpm.addPass(DSEPass());
 
-    if (opt_info.gvnpre)
+    if (opt_info.gvnpre) {
+        fpm.addPass(BreakCriticalEdgesPass());
         fpm.addPass(GVNPREPass());
+    }
 
     if (opt_info.tailcall)
         fpm.addPass(TailRecursionEliminationPass());

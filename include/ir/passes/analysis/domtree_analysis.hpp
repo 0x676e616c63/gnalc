@@ -46,9 +46,11 @@ protected:
 
 // PostDom 和 Dom 几乎一样，只是算法上前驱是后继，反之亦然。
 struct PostDomTree : DomTree {
-    bool is_root_virtual = false;
-
     friend class PostDomTreeAnalysis;
+
+    bool isVirtualRoot() const {
+        return root->bb == nullptr;
+    }
 };
 
 // Semi-NCA 算法
@@ -124,7 +126,7 @@ public:
 private:
     using pBB = BasicBlock*;
     DomTreeAnalysis::DTAINFO info;
-    pBB exit = nullptr;
+    std::shared_ptr<BasicBlock> exit = nullptr;
     bool is_exit_virtual = false;
     PostDomTree post_domtree;
     void buildDFST();

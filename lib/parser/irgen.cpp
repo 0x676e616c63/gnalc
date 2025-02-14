@@ -710,8 +710,7 @@ void IRGenerator::visit(BinaryOp &node) {
 
         node.getRHS()->accept(*this);
         auto rhs = curr_val;
-        rhs = type_cast(
-            rhs, IR::IRBTYPE::I1); // rhs's TYPECAST should also in rhs_insts
+        rhs = type_cast(rhs, IR::IRBTYPE::I1); // rhs's TYPECAST should also in rhs_insts
 
         std::swap(rhs_insts, curr_insts);
 

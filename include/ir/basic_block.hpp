@@ -80,6 +80,7 @@ public:
                std::list<std::weak_ptr<BasicBlock>> _next_bb,
                std::list<std::shared_ptr<Instruction>> _insts);
 
+    void addInst(size_t index, const std::shared_ptr<Instruction> &inst);
     void addInst(const std::shared_ptr<Instruction> &inst);
     void addInstAfterPhi(const std::shared_ptr<Instruction> &inst);
     void addInstBeforeTerminator(const std::shared_ptr<Instruction> &inst);

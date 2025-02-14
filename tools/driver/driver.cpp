@@ -93,7 +93,8 @@ int main(int argc, char **argv) {
             opt_info.gvnpre = true;
         else if (arg == "--tailcall")
             opt_info.tailcall = true;
-
+        else if (arg == "--reassociate")
+            opt_info.reassociate = true;
         // Debug options:
         else if (arg == "--ann")
             opt_info.advance_name_norm = true;
@@ -110,7 +111,7 @@ int main(int argc, char **argv) {
             std::cout <<
                 R"(OVERVIEW: gnalc compiler
 
-USAGE: " << argv[0] << " [options] file
+USAGE: gnalc [options] file
 
 OPTIONS:
 
@@ -124,13 +125,14 @@ General options:
   -h, --help           - Display available options
 
 Optimizations available:
-  --mem2reg            - Promote Memory to Register
-  --sccp               - Sparse Conditional Constant Propagation
-  --dce                - Dead Code Elimination
-  --adce               - Aggressive Dead Code Elimination
-  --dse                - Dead Store Elimination
-  --gvnpre             - Value-Based Partial Redundancy Elimination (GVN-PRE)
+  --mem2reg            - Promote memory to register
+  --sccp               - Sparse conditional constant propagation
+  --dce                - Dead code elimination
+  --adce               - Aggressive dead code elimination
+  --dse                - Dead store elimination
+  --gvnpre             - Value-Based partial redundancy elimination (GVN-PRE)
   --tailcall           - Tail call optimization
+  --reassociate        - Reassociate commutative expressions
 
 Debug options:
   --ann                - Advance name normalization (before the function passes)

@@ -119,7 +119,6 @@ void CFGBuilder::linker() {
             break;
         }
         case OP::RET:
-            cur_making_func->addExitBB(*blk_it);
             break;
         default:
             auto next_blk = std::next(blk_it);
@@ -164,7 +163,6 @@ void CFGBuilder::linker() {
                         toFunctionType(cur_linear_func->getType())->getRet())
                         ->getInner() == IRBTYPE::VOID) {
                     (*it)->addInst(std::make_shared<RETInst>());
-                    cur_making_func->addExitBB(*it);
                 } else {
                     Err::unreachable(
                         "CFGBuilder::linker(): invalid function type.");

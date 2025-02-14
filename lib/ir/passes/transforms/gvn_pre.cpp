@@ -24,8 +24,8 @@ void GVNPREPass::Expr::canon() {
 const std::vector<GVNPREPass::ValueKind> &GVNPREPass::Expr::getOpers() const {
     return opreands;
 }
-bool GVNPREPass::Expr::is_simple() const {
-    return op != ExprOp::UntrackedInst;
+bool GVNPREPass::Expr::isUntracked() const {
+    return op == ExprOp::UntrackedIRVal;
 }
 std::shared_ptr<Value> GVNPREPass::Expr::getIRVal() const {
     return ir_value;
@@ -101,7 +101,7 @@ bool GVNPREPass::Expr::operator==(const Expr &rhs) const {
     Err::gassert(op != ExprOp::UNEXPECTED);
     if (op != rhs.op || opreands != rhs.opreands)
         return false;
-    if (op == ExprOp::UntrackedInst || op == ExprOp::Constant)
+    if (op == ExprOp::UntrackedIRVal || op == ExprOp::Constant)
         return ir_value == rhs.ir_value;
     return true;
 }
@@ -112,10 +112,13 @@ void GVNPREPass::NumberTable::clear() {
 }
 
 GVNPREPass::ValueKind GVNPREPass::NumberTable::getKindOrInsert(const std::shared_ptr<Value> &value) {
-    return getKindOrInsert(getExprOrInsert(value));
+    auto e = getExprOrInsert(value);
+    if (e == nullptr) return NotValueKind;
+    return getKindOrInsert(e);
 }
 
 GVNPREPass::ValueKind GVNPREPass::NumberTable::getKindOrInsert(Expr *expr){
+    if (expr == nullptr) return NotValueKind;
     auto it = expr_table.find(expr);
     if (it != expr_table.end())
         return it->second;
@@ -126,28 +129,29 @@ GVNPREPass::ValueKind GVNPREPass::NumberTable::getKindOrInsert(Expr *expr){
 
 GVNPREPass::Expr* GVNPREPass::NumberTable::getExprOrInsert(const std::shared_ptr<Value> &ir_value) {
     std::shared_ptr<Expr> expr;
-    if (ir_value->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
-        if (auto binary = std::dynamic_pointer_cast<BinaryInst>(ir_value)) {
-            expr = std::make_shared<Expr>(binary, Expr::makeOP(binary->getOpcode()),
-                std::vector{ getKindOrInsert(binary->getLHS()), getKindOrInsert(binary->getRHS()) });
-        }
-        else if (auto gep = std::dynamic_pointer_cast<GEPInst>(ir_value)) {
-            const auto &raw_operands = gep->getOperands();
-            std::vector<ValueKind> operands;
-            std::transform(raw_operands.begin(), raw_operands.end(),
-                           std::back_inserter(operands),
-                           [this](const auto &use) { return getKindOrInsert(use->getValue()); });
-            expr = std::make_shared<Expr>(gep, Expr::ExprOp::Gep, std::move(operands));
-        }
-        else if (auto phi = std::dynamic_pointer_cast<PHIInst>(ir_value))
-            expr = std::make_shared<Expr>(phi, Expr::ExprOp::Phi);
-        else
-            expr = std::make_shared<Expr>(ir_value, Expr::ExprOp::UntrackedInst);
+    if(isSameType(ir_value->getType(), makeBType(IRBTYPE::UNDEFINED))
+        || isSameType(ir_value->getType(), makeBType(IRBTYPE::VOID))) {
+        return nullptr;
     }
-    else if (ir_value->getVTrait() == ValueTrait::CONSTANT_LITERAL) {
+
+    if (ir_value->getVTrait() == ValueTrait::CONSTANT_LITERAL)
         expr = std::make_shared<Expr>(ir_value, Expr::ExprOp::Constant);
+    else if (auto binary = std::dynamic_pointer_cast<BinaryInst>(ir_value)) {
+        expr = std::make_shared<Expr>(binary, Expr::makeOP(binary->getOpcode()),
+            std::vector{ getKindOrInsert(binary->getLHS()), getKindOrInsert(binary->getRHS()) });
     }
-    else Err::unreachable("Not Expr");
+    else if (auto gep = std::dynamic_pointer_cast<GEPInst>(ir_value)) {
+        const auto &raw_operands = gep->getOperands();
+        std::vector<ValueKind> operands;
+        std::transform(raw_operands.begin(), raw_operands.end(),
+                       std::back_inserter(operands),
+                       [this](const auto &use) { return getKindOrInsert(use->getValue()); });
+        expr = std::make_shared<Expr>(gep, Expr::ExprOp::Gep, std::move(operands));
+    }
+    else if (auto phi = std::dynamic_pointer_cast<PHIInst>(ir_value))
+        expr = std::make_shared<Expr>(phi, Expr::ExprOp::Phi);
+    else
+        expr = std::make_shared<Expr>(ir_value, Expr::ExprOp::UntrackedIRVal);
 
     expr->canon();
 
@@ -163,8 +167,8 @@ GVNPREPass::Expr* GVNPREPass::NumberTable::getExprOrInsert(const std::shared_ptr
     return expr.get();
 }
 
-GVNPREPass::AntiLeaderSet GVNPREPass::intersect(const AntiLeaderSet &a, const AntiLeaderSet &b) {
-    AntiLeaderSet ret;
+GVNPREPass::KindExprSet GVNPREPass::intersect(const KindExprSet &a, const KindExprSet &b) {
+    KindExprSet ret;
 
     // std::map's key type is const, and the pair's copy assignment operator is implicitly deleted in Clang.
     // See: https://stackoverflow.com/questions/52639887/clang-copy-assignment-operator-is-getting-deleted-while-using-stdmap-in-libc
@@ -199,7 +203,7 @@ GVNPREPass::AntiLeaderSet GVNPREPass::intersect(const AntiLeaderSet &a, const An
 //   br succ
 //
 // succ:
-//   %succ_val = phi [%v1, pred], [%v2, other_pred])
+//   %succ_val = phi [%v1, pred], [%v2, other_pred]
 //
 // Returns %v1 for `phi_translate(%succ_val, pred, succ)`
 // Note that this functions might generate a new Inst for the pred block.
@@ -216,38 +220,36 @@ GVNPREPass::Expr* GVNPREPass::phi_translate(
         return e;
     }
 
-    if (!expr->is_simple()) {
-        auto inst = std::dynamic_pointer_cast<Instruction>(expr->getIRVal());
-        auto operands = inst->getOperands();
-        std::vector<std::shared_ptr<Value>> translated;
-        std::transform(operands.begin(), operands.end(),
-            std::back_inserter(translated),
-                [this, &pred, &succ](const auto& use)
-                { return phi_translate(table.getExprOrInsert(use->getValue()), pred, succ)->getIRVal(); });
+    if (expr->isUntracked())
+        return expr;
 
-        std::shared_ptr<Instruction> translated_inst;
-        auto kind = table.getKindOrInsert(expr);
-        if (avail_out_map[pred].contains(kind)) {
-            translated_inst = std::dynamic_pointer_cast<Instruction>(avail_out_map[pred].getValue(kind));
-            Err::gassert(translated_inst != nullptr);
-        }
-        else {
-            if (auto binary = std::dynamic_pointer_cast<BinaryInst>(inst)) {
-                translated_inst = std::make_shared<BinaryInst>(binary->getName(),
-                    binary->getOpcode(), translated[0], translated[1]);
-            }
-            else if (auto gep = std::dynamic_pointer_cast<GEPInst>(inst)) {
-                translated_inst = std::make_shared<GEPInst>(gep->getName(), gep->getPtr(), translated);
-            }
-            else Err::unreachable("Unknown inst");
-        }
+    auto inst = std::dynamic_pointer_cast<Instruction>(expr->getIRVal());
+    auto operands = inst->getOperands();
+    std::vector<std::shared_ptr<Value>> translated;
+    std::transform(operands.begin(), operands.end(),
+        std::back_inserter(translated),
+            [this, &pred, &succ](const auto& use)
+            { return phi_translate(table.getExprOrInsert(use->getValue()), pred, succ)->getIRVal(); });
 
-        auto translated_expr = table.getExprOrInsert(translated_inst);
-        return translated_expr;
+    std::shared_ptr<Instruction> translated_inst;
+    auto kind = table.getKindOrInsert(expr);
+    if (avail_out_map[pred].contains(kind)) {
+        translated_inst = std::dynamic_pointer_cast<Instruction>(avail_out_map[pred].getValue(kind));
+        Err::gassert(translated_inst != nullptr);
+    }
+    else {
+        if (auto binary = std::dynamic_pointer_cast<BinaryInst>(inst)) {
+            translated_inst = std::make_shared<BinaryInst>(binary->getName(),
+                binary->getOpcode(), translated[0], translated[1]);
+        }
+        else if (auto gep = std::dynamic_pointer_cast<GEPInst>(inst)) {
+            translated_inst = std::make_shared<GEPInst>(gep->getName(), gep->getPtr(), translated);
+        }
+        else Err::unreachable("Unknown inst");
     }
 
-    // otherwise returning the temporary
-    return expr;
+    auto translated_expr = table.getExprOrInsert(translated_inst);
+    return translated_expr;
 }
 
 PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
@@ -276,17 +278,15 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                 phi_gen.insert(kind, phi);
                 avail_out.insert(kind, inst);
             }
-            // EXP_GEN
-            else if (std::dynamic_pointer_cast<BinaryInst>(inst) || inst->getOpcode() == OP::GEP)
-            {
-                auto expr = table.getExprOrInsert(inst);
-                auto kind = table.getKindOrInsert(expr);
-                exp_gen.insert(kind, expr);
-            }
-            // TMP_GEN
-            else if (inst->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
+            // EXP_GEN AND TMP_GEN
+            else {
                 tmp_gen.insert(inst);
-                avail_out.insert(table.getKindOrInsert(inst), inst);
+                auto expr = table.getExprOrInsert(inst);
+                if (expr != nullptr) {
+                    auto kind = table.getKindOrInsert(expr);
+                    exp_gen.insert(kind, expr);
+                    avail_out.insert(kind, inst);
+                }
             }
         }
     }
@@ -305,8 +305,11 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
         dfvisitor = postdomtree.getDFVisitor();
         for (const auto& curr : dfvisitor)
         {
+            if (curr->bb == nullptr) // Skip the virtual root.
+                continue;
+
             // First build ANTIC_OUT
-            AntiLeaderSet antic_out;
+            KindExprSet antic_out;
             auto succ = curr->bb->getNextBB();
             if (succ.size() == 2) {
                 // {e|e ∈ ANTIC_IN[succ_0(b)] ∧ ∀ b' ∈ succ(b), ∃ e' ∈ ANTIC_IN[b'] | lookup(e) = lookup(e') }
@@ -333,7 +336,6 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                     antic_out.insert(kind, translated);
                 }
             }
-            else Err::unreachable();
 
             // Then build ANTIC_IN
             // = clean(canon_e(ANTIC_OUT[b] ∪ EXP_GEN[b] − TMP_GEN(b)))
@@ -351,8 +353,11 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                 antic_in.insert(kind, val);
 
             // TMP_GEN acts as a kill set of ANTIC_IN
-            for (const auto& val : tmp_gen)
-                antic_in.erase(table.getKindOrInsert(val));
+            for (const auto& val : tmp_gen) {
+                auto k = table.getKindOrInsert(val);
+                if (k != NotValueKind)
+                    antic_in.erase(k);
+            }
 
             modified |= (last_round_size != antic_in.size());
         }
@@ -405,6 +410,8 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                                 ok = exp_gen_map[pred.get()].insert(kind, hoisted_expr);
                                 Err::gassert(ok);
                                 modified = true;
+                                Logger::logDebug("[GVN-PRE] on '", function.getName(), "': '",
+                                    hoisted_inst->getName(), "' hoisted to block '", pred->getName(), "'.");
                             }
                             phi->addPhiOper(hoisted_inst, pred);
                         }
@@ -440,17 +447,28 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     // If it differs from that target, then there is a constant or
     // an earlier-defined temporary with the same value
 
-    std::set<std::shared_ptr<Instruction>> eliminated_insts;
+    std::set<std::shared_ptr<Instruction>> eliminated;
     for (const auto& bb : function) {
         for (const auto& inst : *bb) {
             auto kind = table.getKindOrInsert(inst);
-            auto& avail_out = avail_out_map[bb.get()];
-            if (avail_out.contains(kind)) {
-                inst->replaceSelf(avail_out.getValue(kind));
-                bb->delInst(inst);
-                eliminated_insts.insert(inst);
+            if (kind != NotValueKind) {
+                auto& avail_out = avail_out_map[bb.get()];
+                if (avail_out.contains(kind)) {
+                    auto leader_value = avail_out.getValue(kind);
+                    if (inst != leader_value) {
+                        inst->replaceSelf(leader_value);
+                        eliminated.emplace(inst);
+                        Logger::logDebug("[GVN-PRE] on '", function.getName(), "': '",
+                            inst->getName(), "' replaced with '", leader_value->getName(), "'.");
+                    }
+                }
             }
         }
+    }
+    for (const auto& bb : function) {
+        bb->delInstIf([&eliminated](const auto& i) {
+            return eliminated.find(i) != eliminated.end();
+        });
     }
 
     // cleanup to release temp objects

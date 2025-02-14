@@ -169,7 +169,11 @@ PostDomTree PostDomTreeAnalysis::run(Function &f, FAM &fam) {
     post_domtree = {};
     setExit(f);
     analyze();
-    post_domtree.is_root_virtual = is_exit_virtual;
+    if (is_exit_virtual) {
+        // If the root is virtual, then it is linked to a virtual block that is going to destructs
+        // when `exit = nullptr`
+        post_domtree.root->bb = nullptr;
+    }
     restoreCFG();
     exit = nullptr;
     info = {};
@@ -178,7 +182,7 @@ PostDomTree PostDomTreeAnalysis::run(Function &f, FAM &fam) {
 
 void PostDomTreeAnalysis::buildDFST() {
     std::stack<std::pair<pBB, pBB>> dfs_stack; // {node, parent}
-    dfs_stack.emplace(exit, nullptr);
+    dfs_stack.emplace(exit.get(), nullptr);
     while (!dfs_stack.empty()) {
         auto [cur, parent] = dfs_stack.top();
         dfs_stack.pop();
@@ -219,7 +223,7 @@ void PostDomTreeAnalysis::analyze() {
     post_domtree.initDTN(info.idfn);
     for (const auto &key : info.idfn) {
         // 3个树图MD越看越迷...
-        if (key == exit) continue; // 跳过根节点
+        if (key == exit.get()) continue; // 跳过根节点
         auto dfs_tree_node = info.node_map[key]; // DFS SPANNING TREE'S NODE
         auto dfs_tree_parent =
             dfs_tree_node.dfs_parent; // DFS SPANNING TREE'S PARENT NODE
@@ -242,13 +246,12 @@ void PostDomTreeAnalysis::setExit(const Function &f) {
         Err::unreachable("PostDomTreeAnalysis::setExit(): no exit!");
     }
     if (exit_bbs.size() == 1) {
-        exit = exit_bbs.front().get();
+        exit = exit_bbs.front();
         is_exit_virtual = false;
     } else {
-        auto vexit = std::make_shared<BasicBlock>("VIRTUAL_EXIT_NODE");
-        exit = vexit.get();
+        exit = std::make_shared<BasicBlock>("VIRTUAL_EXIT_NODE");
         for (const auto &b : exit_bbs) {
-            b->addNextBB(vexit);
+            b->addNextBB(exit);
             exit->addPreBB(b);
         }
         is_exit_virtual = true;
