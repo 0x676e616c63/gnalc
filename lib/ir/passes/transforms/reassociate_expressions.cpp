@@ -193,14 +193,16 @@ bool ReassociateExpressionsPass::linearizeExprTree(const std::shared_ptr<Instruc
         //add 0
         //fadd -0.0f
         switch (opcode) {
-        case OP::ADD:
+        case OP::ADD: {
             auto identityAdd = func->getConstantPool().getConst(0);
             ops.emplace_back(identityAdd, 1);
             break;
-        case OP::FADD:
+        }
+        case OP::FADD: {
             auto identityFadd = func->getConstantPool().getConst(-0.0f);
             ops.emplace_back(identityFadd, 1);
             break;
+        }
         default:
             break;
         }
@@ -391,7 +393,7 @@ std::shared_ptr<Value> ReassociateExpressionsPass::optAdd(const std::shared_ptr<
             if (index == i)
                 continue;
             if (ops.size() == 2)
-                return std::dynamic_pointer_cast<BType>(currOp->getType())->getInner() == IRBTYPE::FLOAT ? func->getConstantPool().getConst(0.0f) : func->getConstantPool().getConst(0);
+                return toBType(currOp->getType())->getInner() == IRBTYPE::FLOAT ? std::shared_ptr<Value>(func->getConstantPool().getConst(0.0f)) : std::shared_ptr<Value>(func->getConstantPool().getConst(0));
             ops.erase(ops.begin() + i);
             if (i < index)
                 --index;
@@ -445,7 +447,7 @@ std::shared_ptr<Value> ReassociateExpressionsPass::optAdd(const std::shared_ptr<
     }
     if (maxOccurrtime > 1) {
 
-        auto dummyInst = std::dynamic_pointer_cast<BType>(binary->getType())->getInner() == IRBTYPE::FLOAT
+        auto dummyInst = toBType(binary->getType())->getInner() == IRBTYPE::FLOAT
                              ? std::make_shared<BinaryInst>("twisemaxOccurrVal", OP::FADD, maxOccurrVal, maxOccurrVal)
                              : std::make_shared<BinaryInst>("twisemaxOccurrVal", OP::ADD, maxOccurrVal, maxOccurrVal);
         //ensure maxOcurrVal is used twise to avoid removefact

@@ -16,6 +16,7 @@ PHIInst::getValueForBlock(const std::shared_ptr<BasicBlock> &block) const {
         if ((*it)->getValue() == block)
             return (*--it)->getValue();
     }
+    Err::unreachable("Not a pred block.");
     return nullptr;
 }
 

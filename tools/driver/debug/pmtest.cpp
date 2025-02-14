@@ -41,7 +41,7 @@ public:
     }
 };
 
-class TestNoPreservedFunctionPass {
+class TestNoPreservedFunctionPass : public PM::PassInfo<TestNoPreservedFunctionPass> {
 public:
     PM::PreservedAnalyses run(IR::Function& f, IR::FAM& fam) {
         std::cout << "TestNoPreservedFunctionPass::run: func_name: " << f.getName() << std::endl;

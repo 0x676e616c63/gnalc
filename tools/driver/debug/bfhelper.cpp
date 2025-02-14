@@ -1,3 +1,5 @@
+#include "../../../include/config/config.hpp"
+#if GNALC_EXTENSION_BRAINFK
 #include <iostream>
 
 #include "../../../include/codegen/brainfk/bfmodule.hpp"
@@ -11,3 +13,4 @@ int main(int argc, char *argv[]) {
     std::cout << BrainFk::to_mybf_presentation(argv[1]) << std::endl;
     return 0;
 }
+#endif

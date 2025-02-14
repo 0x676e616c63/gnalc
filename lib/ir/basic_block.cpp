@@ -35,6 +35,7 @@ void BasicBlock::addInst(size_t index, const std::shared_ptr<Instruction> &inst)
     auto it = std::next(insts.begin(),
         static_cast<decltype(insts)::iterator::difference_type>(index));
     insts.insert(it, inst);
+    updateInstIndex();
 }
 
 void BasicBlock::addPreBB(const std::shared_ptr<BasicBlock> &bb) {
@@ -79,7 +80,7 @@ void BasicBlock::addInstBeforeTerminator(const std::shared_ptr<Instruction> &ins
     Err::gassert(term->getOpcode() == OP::BR || term->getOpcode() == OP::RET);
     term->index = phi_insts.size() + insts.size();
     inst->index = term->index - 1;
-    insts.insert(std::prev(insts.end()), term);
+    insts.insert(std::prev(insts.end()), inst);
 }
 
 std::list<std::shared_ptr<BasicBlock>> BasicBlock::getPreBB() const {
