@@ -88,9 +88,11 @@ public:
             abandoned.insert(id);
         }
 
-        for (auto id : preserved) {
-            if (!arg.preserved.count(id))
-                preserved.erase(id);
+        for (auto it = preserved.begin(); it != preserved.end(); ) {
+            if (!arg.preserved.count(*it))
+                it = preserved.erase(it);
+            else
+                ++it;
         }
     }
 
