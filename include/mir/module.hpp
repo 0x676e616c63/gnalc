@@ -1,11 +1,12 @@
 #ifndef GNALC_MIR_MODULE_HPP
 #define GNALC_MIR_MODULE_HPP
+#include "base.hpp"
 #include "constpool.hpp"
 #include "function.hpp"
 #include "varpool.hpp"
 
 namespace MIR {
-class Module {
+class Module : public Value {
 private:
     std::list<std::shared_ptr<Function>> funcs;
     ConstPool constpool;
@@ -13,7 +14,8 @@ private:
     std::vector<std::shared_ptr<GlobalObj>> GlobalVals;
 
 public:
-    Module() = default;
+    Module() = delete;
+    explicit Module(std::string _name) : Value(ValueTrait::Module, std::move(_name)) {}
 
     void addGlobal(const std::shared_ptr<GlobalObj> &_glo) {
         GlobalVals.emplace_back(_glo);
@@ -32,7 +34,7 @@ public:
 
     ConstPool &getConstPool() { return constpool; }
 
-    std::string toString();
+    std::string toString() const override;
 };
 } // namespace MIR
 

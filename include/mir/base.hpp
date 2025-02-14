@@ -8,6 +8,7 @@ namespace MIR {
 
 enum class ValueTrait {
     Unknown,
+    Module,
     Function,
     BasicBlock,
     MachineInst,

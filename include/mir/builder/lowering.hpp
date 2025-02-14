@@ -32,8 +32,9 @@ struct OperandLowering {
     /// 在需要获得常数/地址时, 先使用这个
     /// 如果返回不为false, 万事大吉
     /// 如果返回为false, 在instlower环境中手动加mov/vmov
+    template <typename T_variant>
     std::pair<bool, std::shared_ptr<BindOnVirOP>>
-    LoadedFind(int constVal) {
+    LoadedFind(const T_variant &constVal) {
         auto constPtr = constpool.getConstant(constVal);
         auto loadPtr = varpool.getLoaded(*constPtr);
         if (loadPtr)
@@ -44,9 +45,13 @@ struct OperandLowering {
                 loadPtr =
                     mkOP(IR::makeBType(IR::IRBTYPE::FLOAT), RegisterBank::spr);
                 varpool.addLoaded(*constPtr, loadPtr);
-            } else {
+            } else if constexpr (std::is_same_v<U_variant, int>) {
                 loadPtr =
                     mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+                varpool.addLoaded(*constPtr, loadPtr);
+            } else {
+                loadPtr =
+                    mkBaseOP(constVal, nullptr);
                 varpool.addLoaded(*constPtr, loadPtr);
             }
             return {false, loadPtr};
@@ -147,7 +152,7 @@ struct InstLowering {
 
 class Lowering {
 private:
-    Module module;
+    std::shared_ptr<Module> module;
 
 public:
     Lowering() = default;
@@ -159,7 +164,7 @@ public:
 
     void PhiEliminate();
 
-    Module &getModule() { return module; }
+    const std::shared_ptr<Module> &getModule() { return module; }
     ~Lowering() = default;
 };
 

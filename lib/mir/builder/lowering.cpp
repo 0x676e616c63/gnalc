@@ -6,14 +6,15 @@ using namespace MIR;
 
 void Lowering::operator()(const IR::Module &midEnd_module) {
     ///@brief 处理全局变量
+    this->module = std::make_shared<Module>(midEnd_module.getName());
     for (auto &midEnd_glo : midEnd_module.getGlobalVars()) {
         std::shared_ptr<GlobalObj> obj =
             std::make_shared<GlobalObj>(*midEnd_glo);
-        module.addGlobal(obj);
+        module->addGlobal(obj);
     }
 
     for (auto &midEnd_func : midEnd_module.getFunctions()) {
-        module.addFunc(lower(*midEnd_func));
+        module->addFunc(lower(*midEnd_func));
     }
 }
 
@@ -23,7 +24,7 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
 
     func->editInfo().args = midEnd_function.getParams().size();
 
-    OperandLowering operlower{module.getConstPool(), func->editInfo().varpool,
+    OperandLowering operlower{module->getConstPool(), func->editInfo().varpool,
                               func->editInfo().StackObjs};
 
     /// @brief 函数参数加载到varpool里, 并且适当添加ldr指令
