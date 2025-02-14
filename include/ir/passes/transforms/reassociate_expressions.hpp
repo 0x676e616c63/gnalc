@@ -37,22 +37,25 @@ public:
        // bool isVaild() const{return value1!==nullptr&&value2!=nullptr;}
     };
     bool MadeChange;
+    std::shared_ptr<BinaryInst>  Neg2Mul(const std::shared_ptr<Instruction>& neg);
 private:
     unsigned getRank(const std::shared_ptr<Value>& v) ;
     void canonicalizeOperands( const std::shared_ptr<Instruction>& inst);
     void ReassociateExpression(std::shared_ptr<BinaryInst> inst);
     void RewriteExpr(const std::shared_ptr<BinaryInst>& binary,
         std::vector<ValueRank> &ops);
-    std::shared_ptr<Value> optExpr(std::shared_ptr<BinaryInst> binary,
+    std::shared_ptr<Value> optExpr(std::shared_ptr<BinaryInst>& binary,
         std::vector<ValueRank> &ops);
-    std::shared_ptr<Value> optAdd(std::shared_ptr<Instruction> inst,
+    std::shared_ptr<Value> optAdd(const std::shared_ptr<BinaryInst>& binary,
         std::vector<ValueRank> &ops );
-    std::shared_ptr<Value> optMul(std::shared_ptr<BinaryInst> binary,
+    std::shared_ptr<Value> optMul(std::shared_ptr<BinaryInst>& binary,
         std::vector<ValueRank> &ops);
     std::shared_ptr<Value> removeFactorFromExpression(std::shared_ptr<Value>& v,const std::shared_ptr<Value>& factor);
     void eraseInst(std::shared_ptr<Instruction> inst);
     void RecursivelyEraseDeadInsts(std::shared_ptr<Instruction> inst,std::vector<std::shared_ptr<Instruction>> insts);
     void optInst(std::shared_ptr<Instruction>);
+    Function* func;
+    bool linearizeExprTree(const std::shared_ptr<Instruction> &inst, std::vector<std::pair<std::shared_ptr<Value>, unsigned> > &ops, std::vector<std::shared_ptr<Instruction> > &redo);
 
 };
 }
