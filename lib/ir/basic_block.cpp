@@ -144,13 +144,17 @@ bool BasicBlock::delInst(const std::shared_ptr<Instruction> &target, const DEL_M
     return delInstIf([&target](const auto &inst) { return inst == target; }, mode);
 }
 
-BasicBlock::const_iterator BasicBlock::cbegin() const { return insts.cbegin(); }
+BasicBlock::const_iterator BasicBlock::begin() const { return insts.begin(); }
 
-BasicBlock::const_iterator BasicBlock::cend() const { return insts.cend(); }
+BasicBlock::const_iterator BasicBlock::end() const { return insts.end(); }
 
 BasicBlock::iterator BasicBlock::begin() { return insts.begin(); }
 
 BasicBlock::iterator BasicBlock::end() { return insts.end(); }
+
+BasicBlock::const_iterator BasicBlock::cbegin() const { return insts.cbegin(); }
+
+BasicBlock::const_iterator BasicBlock::cend() const { return insts.cend(); }
 
 void BasicBlock::setBBParam(const std::vector<std::shared_ptr<Value>> &params) {
     bb_params = params;

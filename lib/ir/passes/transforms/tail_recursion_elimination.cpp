@@ -8,9 +8,9 @@
 namespace IR {
 PM::PreservedAnalyses TailRecursionEliminationPass::run(Function &function, FAM &manager) {
     bool tailopt_cfg_modified = false;
-    auto dfVisitor = function.getDFVisitor();
+    auto exitbbs = function.getExitBBs();
     std::vector<std::pair<std::shared_ptr<CALLInst>, std::shared_ptr<RETInst> > > worklist;
-    for (const auto &block : dfVisitor) {
+    for (const auto &block : exitbbs) {
         for (auto iter = block->begin(); std::next(iter) != block->end(); ++iter) {
             auto call = std::dynamic_pointer_cast<CALLInst>(*iter);
             auto ret = std::dynamic_pointer_cast<RETInst>(*std::next(iter));

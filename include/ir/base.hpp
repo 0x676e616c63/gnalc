@@ -30,8 +30,7 @@ class Value;
 class User;
 class Use;
 
-// 用于标识特殊类型的VALUE对象
-// 25.1.2: 目前仅标记了CONST, GLOBAL, FUNCTION, BASICBLOCK
+// 用于标识 IR::Value 的特征
 enum class ValueTrait {
     UNDEFINED,
     CONSTANT_LITERAL,  // 常量字面量
@@ -42,7 +41,6 @@ enum class ValueTrait {
     BASIC_BLOCK,       // 基本块
     VOID_INSTRUCTION,  // 无值的指令
     CONDHELPER,        // cond中的and, or
-    PHI_OPERAND,       // PHI指令操作数
     BB_FPARAM,         // 基本块形参
     BB_ARG_LIST        // 基本块实参列表
     // ...

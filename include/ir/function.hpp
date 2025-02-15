@@ -118,10 +118,12 @@ public:
     // usually we can use range-based for instead of this
     const std::vector<std::shared_ptr<BasicBlock>> &getBlocks() const;
 
-    const_iterator cbegin() const;
-    const_iterator cend() const;
+    const_iterator begin() const;
+    const_iterator end() const;
     iterator begin();
     iterator end();
+    const_iterator cbegin() const;
+    const_iterator cend() const;
     // ...
 
     // 后面需要再说
@@ -168,10 +170,12 @@ public:
     // usually we can use range-based for instead of these
     const std::vector<std::shared_ptr<Instruction>> &getInsts() const;
 
-    const_iterator cbegin() const;
-    const_iterator cend() const;
+    const_iterator begin() const;
+    const_iterator end() const;
     iterator begin();
     iterator end();
+    const_iterator cbegin() const;
+    const_iterator cend() const;
 
     void addInst(std::shared_ptr<Instruction> inst);
     void appendInsts(std::vector<std::shared_ptr<Instruction>> insts_);

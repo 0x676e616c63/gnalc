@@ -37,6 +37,8 @@ public:
     [[nodiscard]] size_t size() const { return worklist.size(); }
     [[nodiscard]] iterator begin() { return worklist.begin(); }
     [[nodiscard]] iterator end() { return worklist.end(); }
+    [[nodiscard]] iterator begin() const { return worklist.begin(); }
+    [[nodiscard]] iterator end() const { return worklist.end(); }
 };
 
 template <typename NodeT, typename ChildrenGetter>
@@ -67,6 +69,8 @@ public:
     [[nodiscard]] size_t size() const { return worklist.size(); }
     [[nodiscard]] iterator begin() { return worklist.begin(); }
     [[nodiscard]] iterator end() { return worklist.end(); }
+    [[nodiscard]] iterator begin() const { return worklist.begin(); }
+    [[nodiscard]] iterator end() const { return worklist.end(); }
 };
 } // namespace Util
 #endif

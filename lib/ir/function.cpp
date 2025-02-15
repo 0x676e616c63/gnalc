@@ -65,13 +65,17 @@ const std::vector<std::shared_ptr<BasicBlock>> &Function::getBlocks() const {
     return blks;
 }
 
-Function::const_iterator Function::cbegin() const { return blks.cbegin(); }
+Function::const_iterator Function::begin() const { return blks.begin(); }
 
-Function::const_iterator Function::cend() const { return blks.cend(); }
+Function::const_iterator Function::end() const { return blks.end(); }
 
 Function::iterator Function::begin() { return blks.begin(); }
 
 Function::iterator Function::end() { return blks.end(); }
+
+Function::const_iterator Function::cbegin() const { return blks.cbegin(); }
+
+Function::const_iterator Function::cend() const { return blks.cend(); }
 
 ConstantPool &Function::getConstantPool() { return *constant_pool; }
 
@@ -123,17 +127,17 @@ LinearFunction::getInsts() const {
     return insts;
 }
 
-LinearFunction::const_iterator LinearFunction::cbegin() const {
-    return insts.cbegin();
-}
+LinearFunction::const_iterator LinearFunction::begin() const { return insts.begin(); }
 
-LinearFunction::const_iterator LinearFunction::cend() const {
-    return insts.cend();
-}
+LinearFunction::const_iterator LinearFunction::end() const { return insts.end(); }
 
 LinearFunction::iterator LinearFunction::begin() { return insts.begin(); }
 
 LinearFunction::iterator LinearFunction::end() { return insts.end(); }
+
+LinearFunction::const_iterator LinearFunction::cbegin() const { return insts.cbegin(); }
+
+LinearFunction::const_iterator LinearFunction::cend() const { return insts.cend(); }
 
 void LinearFunction::accept(IRVisitor &visitor) { visitor.visit(*this); }
 } // namespace IR

@@ -148,10 +148,12 @@ public:
         return found;
     }
 
-    const_iterator cbegin() const;
-    const_iterator cend() const;
+    const_iterator begin() const;
+    const_iterator end() const;
     iterator begin();
     iterator end();
+    const_iterator cbegin() const;
+    const_iterator cend() const;
     // ...
 
     void setBBParam(const std::vector<std::shared_ptr<Value>> &params);

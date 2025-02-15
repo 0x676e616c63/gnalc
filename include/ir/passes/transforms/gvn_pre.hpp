@@ -1,4 +1,16 @@
 // Implementation of GVN-PRE
+//
+// Note:
+//       In our IR implementation, values, registers, and instructions form equivalent entities
+//       through SSA form. In other words, a value and the register it is stored in are equivalent.
+//
+//             instruction == value == register
+//
+//       We have no `mov` in IR, and in fact we have no temporaries mentioned in the paper.
+//       All the instructions are treated as expressions or blackbox registers.
+//       Consequently, in this implementation, the TMP_GEN and PHI_GEN
+//       mentioned in the paper are intentionally omitted.
+//
 // See:
 //     - Thomas VanDrunen and Antony L. Hosking "Value-based Partial Redundancy Elimination":
 //           https://link.springer.com/content/pdf/10.1007/978-3-540-24723-4_12.pdf
@@ -6,7 +18,7 @@
 //    - Optimizing SSA Code: GVN-PRE
 //           blogpost: https://medium.com/@mikn/optimizing-ssa-code-gvn-pre-69de83e3be29
 //           source: https://github.com/I-mikan-I/ssa-compiler
-//    - GCC
+//    - GCC:
 //           GCC Wiki: https://gcc.gnu.org/wiki/GVN-PRE
 //           tree-ssa-pre.cc: https://github.com/gcc-mirror/gcc/blob/master/gcc/tree-ssa-pre.cc
 #pragma once
@@ -47,17 +59,15 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
             // Le,
             // Others
             Gep,
-            Constant,
+            GlobalTemp,
             Phi,
-            Reg,
-            // Unexpected
-            UNEXPECTED
+            Untracked,
         };
 
     private:
         std::shared_ptr<Value> ir_value;
         std::vector<ValueKind> operands;
-        ExprOp op{ExprOp::UNEXPECTED};
+        ExprOp op;
 
     public:
         Expr(std::shared_ptr<Value> irv, ExprOp op, std::vector<ValueKind> operands_ = {})
@@ -65,11 +75,12 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
 
         void canon();
 
+        ExprOp getExprOpcode() const;
         const std::vector<ValueKind> &getExprOperands() const;
 
         // Three special Expr
-        bool isReg() const;
-        bool isConstant() const;
+        bool isUntracked() const;
+        bool isGlobalTemp() const;
         bool isPhi() const;
 
         std::shared_ptr<Value> getIRVal() const;
@@ -86,8 +97,8 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     // For getKindOrInsert's error
     static constexpr ValueKind NotValueKind = std::numeric_limits<ValueKind>::max();
 
-    class KindTempSet {
-        friend std::ostream& operator<<(std::ostream &os, const KindTempSet &set);
+    class KindIRValSet {
+        friend std::ostream& operator<<(std::ostream &os, const KindIRValSet &set);
 
         std::map<ValueKind, std::shared_ptr<Value>> values;
 
@@ -99,6 +110,12 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
             Err::gassert(kind != NotValueKind);
             auto [it, inserted] = values.insert(std::make_pair(kind, value));
             return inserted;
+        }
+
+        bool update(ValueKind kind, const std::shared_ptr<Value> &value) {
+            bool modified = (values.find(kind) == values.end() || values[kind] != value);
+            values[kind] = value;
+            return modified;
         }
 
         bool contains(ValueKind kind) const {
@@ -123,24 +140,25 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
             return it->second;
         }
 
-        const_iterator cbegin() const { return values.cbegin(); }
-        const_iterator cend() const { return values.cend(); }
+        const_iterator begin() const { return values.begin(); }
+        const_iterator end() const { return values.end(); }
         iterator begin() { return values.begin(); }
         iterator end() { return values.end(); }
+        const_iterator cbegin() const { return values.cbegin(); }
+        const_iterator cend() const { return values.cend(); }
         auto size() const { return values.size(); }
         bool empty() const { return values.empty(); }
 
-        bool operator==(const KindTempSet &other) const {
+        bool operator==(const KindIRValSet &other) const {
             return values == other.values;
         }
-        bool operator!=(const KindTempSet &other) const {
+        bool operator!=(const KindIRValSet &other) const {
             return values != other.values;
         }
     };
 
     class KindExprSet;
     class KindExprSet {
-        friend KindExprSet intersect(const KindExprSet &a, const KindExprSet &b);
         friend std::ostream& operator<<(std::ostream &os, const KindExprSet &set);
         std::vector<std::pair<ValueKind, Expr*>> values; // vector to keep topological sort
     public:
@@ -177,10 +195,12 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
 
         size_t size() const { return values.size(); }
         bool empty() const { return values.empty(); }
-        const_iterator cbegin() const { return values.cbegin(); }
-        const_iterator cend() const { return values.cend(); }
+        const_iterator begin() const { return values.begin(); }
+        const_iterator end() const { return values.end(); }
         iterator begin() { return values.begin(); }
         iterator end() { return values.end(); }
+        const_iterator cbegin() const { return values.cbegin(); }
+        const_iterator cend() const { return values.cend(); }
 
         bool operator==(const KindExprSet &other) const {
             return values == other.values;
@@ -204,9 +224,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         ValueKind getKindOrInsert(const std::shared_ptr<Value> &value, KindExprSet& exp_gen);
         Expr *getExprOrInsert(const std::shared_ptr<Value> &inst, KindExprSet& exp_gen);
 
-        // added_exps contains new exprs that added to `exp_gen`
-        ValueKind getKindOrInsert(const std::shared_ptr<Value> &value, KindExprSet& exp_gen, std::set<ValueKind> & added_exps);
-        Expr *getExprOrInsert(const std::shared_ptr<Value> &inst, KindExprSet& exp_gen, std::set<ValueKind> & added_exps);
+        void setPhiKind(const std::shared_ptr<PHIInst> &inst, ValueKind kind);
 
         bool empty() const { return expr_table.empty(); }
 
@@ -214,7 +232,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         Expr* getExprFromPool(const std::shared_ptr<Expr> &item);
     };
 
-    using LeaderSet = KindTempSet;
+    using LeaderSet = KindIRValSet;
     using AntiLeaderSet = KindExprSet;
     using TempSet = std::set<std::shared_ptr<Value>>;
 
@@ -231,24 +249,20 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     // ANTIC_OUT
     std::map<BasicBlock*, AntiLeaderSet> antic_out_map;
 
-    // PHI_GEN: temporaries that are defined by a phi
-    std::map<BasicBlock*, KindTempSet> phi_gen_map;
-
     // EXP_GEN: temporaries and non-simple
     std::map<BasicBlock*, KindExprSet> exp_gen_map;
 
-    // TMP_GEN: temporaries that are defined by non-phi instructions
-    std::map<BasicBlock*, TempSet> tmp_gen_map;
+    // NEW_SET when inserting
+    std::map<BasicBlock*, KindIRValSet> new_set_map;
 
-    Expr* phi_translate(
-        Expr* expr,
-        BasicBlock* pred,
-        BasicBlock* succ);
+    size_t name_cnt;
 
-    friend KindExprSet intersect(const KindExprSet &a, const KindExprSet &b);
+    std::map<BasicBlock*, KindIRValSet> phi_translate_temp_map;
+    std::shared_ptr<Value> phi_translate(Expr* expr, BasicBlock* pred, BasicBlock* succ);
+
     friend std::ostream& operator<<(std::ostream &os, const Expr &expr);
     friend std::ostream& operator<<(std::ostream &os, const NumberTable &table);
-    friend std::ostream& operator<<(std::ostream &os, const KindTempSet &set);
+    friend std::ostream& operator<<(std::ostream &os, const KindIRValSet &set);
     friend std::ostream& operator<<(std::ostream &os, const KindExprSet &set);
     friend std::ostream& operator<<(std::ostream &os, const GVNPREPass & gvnpre);
 public:

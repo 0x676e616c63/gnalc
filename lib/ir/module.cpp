@@ -69,17 +69,23 @@ void Module::removeUnusedFuncDecl() {
                        [](auto &&p) { return p->getUseList().empty(); }),
         func_decls.end());
 }
-Module::const_iterator Module::cbegin() const {
-    return funcs.cbegin();
+Module::const_iterator Module::begin() const {
+    return funcs.begin();
 }
-Module::const_iterator Module::cend() const {
-    return funcs.cend();
+Module::const_iterator Module::end() const {
+    return funcs.end();
 }
 Module::iterator Module::begin() {
     return funcs.begin();
 }
 Module::iterator Module::end() {
     return funcs.end();
+}
+Module::const_iterator Module::cbegin() const {
+    return funcs.cbegin();
+}
+Module::const_iterator Module::cend() const {
+    return funcs.cend();
 }
 
 void Module::accept(IRVisitor &visitor) { visitor.visit(*this); }
