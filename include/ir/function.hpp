@@ -139,8 +139,8 @@ public:
         return CFGBFVisitor(blks[0]);
     }
 
-    auto getDFVisitor() const {
-        return CFGDFVisitor(blks[0]);
+    auto getDFVisitor(Util::DFVOrder order = Util::DFVOrder::PreOrder) const {
+        return CFGDFVisitor(blks[0], order);
     }
 
     std::vector<std::shared_ptr<BasicBlock>> getExitBBs() const;

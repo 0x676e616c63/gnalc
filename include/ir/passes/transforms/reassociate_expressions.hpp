@@ -14,8 +14,7 @@ struct ValueRank {
     std::shared_ptr<Value> op;
     unsigned rank;
 
-    ValueRank(unsigned r, const std::shared_ptr<Value> &v): rank(r), op(v) {
-    }
+    ValueRank(unsigned r, const std::shared_ptr<Value> &v): rank(r), op(v) { }
 };
 
 inline bool operator<(const ValueRank &lhs, const ValueRank &rhs) {
@@ -34,40 +33,38 @@ class ReassociateExpressionsPass : public PM::PassInfo<ReassociateExpressionsPas
 public:
     PM::PreservedAnalyses run(Function &function, FAM &manager);
 
+private:
     std::map<std::shared_ptr<Value>, unsigned> valueRankMap;
-    std::map<std::shared_ptr<BasicBlock>, unsigned> RankMap;
+    std::map<std::shared_ptr<BasicBlock>, unsigned> bbRankMap;
     std::set<std::shared_ptr<Instruction> > redoList;
+    Function *func{};
+    bool madeChange{};
 
-    struct PairMapValue {
+   struct PairMapValue {
         std::weak_ptr<Value> value1;
         std::weak_ptr<Value> value2;
         unsigned score;
         // bool isVaild() const{return value1!==nullptr&&value2!=nullptr;}
     };
 
-    bool MadeChange;
 
-    std::shared_ptr<BinaryInst> Neg2Mul(const std::shared_ptr<Instruction> &neg);
-
-private:
-    Function *func;
+    std::shared_ptr<BinaryInst> neg2Mul(const std::shared_ptr<Instruction> &neg);
 
     unsigned getRank(const std::shared_ptr<Value> &v);
 
     void canonicalizeOperands(const std::shared_ptr<Instruction> &inst);
 
-    void ReassociateExpression(std::shared_ptr<BinaryInst> &inst);
+    void reassociateExpression(std::shared_ptr<BinaryInst> &inst);
 
-    void RewriteExpr(const std::shared_ptr<BinaryInst> &binary,
+    void rewriteExpr(const std::shared_ptr<BinaryInst> &binary,
                      std::vector<ValueRank> &ops);
 
     void eraseInst(std::shared_ptr<Instruction> &inst);
 
-    void RecursivelyEraseDeadInsts(std::shared_ptr<Instruction> &inst, std::set<std::shared_ptr<Instruction> > &insts);
+    void recursivelyEraseDeadInsts(std::shared_ptr<Instruction> &inst, std::set<std::shared_ptr<Instruction> > &insts);
 
     void optInst(std::shared_ptr<Instruction> &inst);
     void getNegInsts(std::shared_ptr<Value>& v,std::vector<std::shared_ptr<Instruction>>& candi);
-
 
     std::shared_ptr<Value> optExpr(std::shared_ptr<BinaryInst> &binary,
                                    std::vector<ValueRank> &ops);
@@ -93,9 +90,7 @@ private:
 
     bool linearizeExprTree(const std::shared_ptr<Instruction> &inst, std::vector<std::pair<std::shared_ptr<Value>, unsigned> > &ops, std::set<std::shared_ptr<Instruction> > &redo);
 
-    std::shared_ptr<BinaryInst> Sub2Add(std::shared_ptr<BinaryInst> &sub, std::set<std::shared_ptr<Instruction> > &redo);
-
-
+    std::shared_ptr<BinaryInst> sub2Add(std::shared_ptr<BinaryInst> &sub, std::set<std::shared_ptr<Instruction> > &redo);
 };
 }
 #endif //GNALC_IR_PASSES_TRANSFORMS_REASSOCIATE_EXPRESSIONS_HPP

@@ -247,7 +247,6 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
 
     using LeaderSet = KindIRValSet;
     using AntiLeaderSet = KindExprSet;
-    using TempSet = std::set<std::shared_ptr<Value>>;
 
     NumberTable table;
 

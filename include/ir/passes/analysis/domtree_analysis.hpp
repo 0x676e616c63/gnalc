@@ -35,7 +35,9 @@ struct DomTree {
     void printDomTree();
 
     auto getBFVisitor() const { return NodeBFVisitor{ root }; }
-    auto getDFVisitor() const { return NodeDFVisitor{ root }; }
+    auto getDFVisitor(Util::DFVOrder order = Util::DFVOrder::PreOrder) const {
+        return NodeDFVisitor{ root, order };
+    }
 protected:
     void print(const std::shared_ptr<Node> &node, int level);
     void initDTN(std::vector<BasicBlock*> &blocks);
