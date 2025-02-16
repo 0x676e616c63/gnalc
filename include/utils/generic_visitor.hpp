@@ -55,14 +55,14 @@ class GenericDFVisitor {
 public:
     using iterator = typename decltype(worklist)::iterator;
 
-    explicit GenericDFVisitor(NodeT root, DFVOrder order) {
+    explicit GenericDFVisitor(NodeT root, DFVOrder order = DFVOrder::PreOrder) {
         switch (order) {
             case DFVOrder::PreOrder: {
                 std::deque<NodeT> s{ root };
                 std::set<NodeT> visited;
                 while (!s.empty()) {
-                    auto curr = s.top();
-                    s.pop();
+                    auto curr = s.back();
+                    s.pop_back();
                     visited.insert(curr);
 
                     worklist.push_back(curr);
@@ -70,7 +70,7 @@ public:
                     const auto& children = ChildrenGetter()(curr);
                     for (auto it = children.rbegin(); it != children.rend(); ++it) {
                         if (visited.find(*it) == visited.end())
-                            s.push(*it);
+                            s.push_back(*it);
                     }
                 }
             }
