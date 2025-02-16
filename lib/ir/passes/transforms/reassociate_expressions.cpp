@@ -71,14 +71,14 @@ void getSingleUseFactor(const std::shared_ptr<Value> &v, std::vector<std::shared
     }
 }
 
-std::shared_ptr<Value> makeAddTree(std::vector<std::weak_ptr<Value> > &ops, OP opcode,unsigned index,const std::shared_ptr<BasicBlock>& bb) {
+std::shared_ptr<Value> makeAddTree(std::vector<std::weak_ptr<Value> > &ops, OP opcode, unsigned index, const std::shared_ptr<BasicBlock> &bb) {
     if (ops.size() == 1)
         return ops.back().lock();
     auto lhs = ops.back().lock();
     ops.pop_back();
-    auto rhs = makeAddTree(ops, opcode,index,bb);
-    auto binary=std::make_shared<BinaryInst>("makeAddTree", opcode, lhs, rhs);
-    bb->addInst(index,binary);
+    auto rhs = makeAddTree(ops, opcode, index, bb);
+    auto binary = std::make_shared<BinaryInst>("makeAddTree", opcode, lhs, rhs);
+    bb->addInst(index, binary);
     return binary;
 }
 
@@ -101,6 +101,16 @@ PM::PreservedAnalyses ReassociateExpressionsPass::run(Function &function, FAM &m
         }
     }
     //TODO
+    MadeChange=false;
+    for (const auto&node:DFVisitor) {
+        auto bb=std::shared_ptr<BasicBlock>(node->bb);
+        // todo check for trivially dead
+    }
+    std::set<std::shared_ptr<Instruction>> redo;
+    for (const auto& redoinst:redoList) {
+        redo.insert(redoinst);
+    }
+
     return PM::PreservedAnalyses::all();
 }
 
@@ -131,7 +141,7 @@ void ReassociateExpressionsPass::canonicalizeOperands(const std::shared_ptr<Inst
     }
 }
 
-bool ReassociateExpressionsPass::linearizeExprTree(const std::shared_ptr<Instruction> &inst, std::vector<std::pair<std::shared_ptr<Value>, unsigned> > &ops, std::vector<std::shared_ptr<Instruction> > &redo) {
+bool ReassociateExpressionsPass::linearizeExprTree(const std::shared_ptr<Instruction> &inst, std::vector<std::pair<std::shared_ptr<Value>, unsigned> > &ops, std::set<std::shared_ptr<Instruction> > &redo) {
     std::vector<std::pair<std::shared_ptr<Instruction>, unsigned> > workList;
     auto opcode = inst->getOpcode();
     workList.emplace_back(inst, 1);
@@ -171,9 +181,9 @@ bool ReassociateExpressionsPass::linearizeExprTree(const std::shared_ptr<Instruc
                 for (const auto &USE : mul->getUseList()) {
                     auto user = USE->getUser();
                     if (auto binary = std::dynamic_pointer_cast<BinaryInst>(user))
-                        redo.emplace_back(binary);
+                        redo.insert(binary);
                 }
-                redo.emplace_back(neg);
+                redo.insert(neg);
                 changed = true;
                 continue;
             }
@@ -295,7 +305,7 @@ void ReassociateExpressionsPass::RewriteExpr(const std::shared_ptr<BinaryInst> &
         } while (true);
     }
     for (const auto &binaryinst : node2rewrite) {
-        redoList.emplace_back(binaryinst);
+        redoList.insert(binaryinst);
     }
 }
 
@@ -311,26 +321,49 @@ std::shared_ptr<Value> ReassociateExpressionsPass::removeFactorFromExpression(st
         Factors.insert(Factors.end(), t.second, ValueRank(getRank(t.first), t.first));
     }
     bool canFactor = false;
+    bool isNegate = false;
+    bool isInt = false;
     for (unsigned i = 0; i < Factors.size(); ++i) {
         if (Factors[i].op == factor) {
             canFactor = true;
             Factors.erase(Factors.begin() + i);
         }
-
+        auto constInt1 = std::dynamic_pointer_cast<ConstantInt>(factor);
+        auto constInt2 = std::dynamic_pointer_cast<ConstantInt>(Factors[i].op);
+        if (constInt1 && constInt2 && constInt1->getVal() == -constInt2->getVal()) {
+            canFactor = isNegate = isInt = true;
+            Factors.erase(Factors.begin() + i);
+            break;
+        }
+        auto constFp1 = std::dynamic_pointer_cast<ConstantFloat>(factor);
+        auto constFp2 = std::dynamic_pointer_cast<ConstantFloat>(Factors[i].op);
+        if (constFp1 && constFp2 && constFp1->getVal() == -constFp2->getVal()) {
+            canFactor = isNegate = true;
+            Factors.erase(Factors.begin() + i);
+            break;
+        }
     }
-    //todo remove negative version
     if (!canFactor) {
         RewriteExpr(binaryInst, Factors);
         return nullptr;
     }
     if (Factors.size() == 1) {
-        redoList.emplace_back(binaryInst);
+        redoList.insert(binaryInst);
         v = Factors[0].op;
     } else {
         RewriteExpr(binaryInst, Factors);
         v = binaryInst;
     }
-    //todo support negative
+    if (isNegate) {
+        if (isInt) {
+            auto neg = std::make_shared<BinaryInst>("neg", OP::SUB, func->getConstantPool().getConst(0), v);
+            binaryInst->getParent()->addInst(binaryInst->index + 1, neg);
+        } else {
+            auto fneg = std::make_shared<FNEGInst>("fneg", v);
+            binaryInst->getParent()->addInst(binaryInst->index + 1, fneg);
+        }
+    }
+
     return v;
 }
 
@@ -370,13 +403,13 @@ std::shared_ptr<Value> ReassociateExpressionsPass::optAdd(const std::shared_ptr<
             } while (i != ops.size() && ops[i].op == currOp);
             std::shared_ptr<BinaryInst> mul = nullptr;
             if (std::dynamic_pointer_cast<BType>(currOp->getType())->getInner() == IRBTYPE::FLOAT) {
-                mul = std::make_shared<BinaryInst>("add2mul", OP::MUL, currOp, func->getConstantPool().getConst(float(repeatnumber)));
+                mul = std::make_shared<BinaryInst>("add2mul", OP::MUL, currOp, func->getConstantPool().getConst(static_cast<float>(repeatnumber)));
             } else
                 mul = std::make_shared<BinaryInst>("add2fmul", OP::FMUL, currOp, func->getConstantPool().getConst(repeatnumber));
             //insert mul before binary
             binary->getParent()->addInst(binary->index - 1, mul);
 
-            redoList.emplace_back(mul);
+            redoList.insert(mul);
 
             if (ops.empty())
                 return mul;
@@ -409,7 +442,7 @@ std::shared_ptr<Value> ReassociateExpressionsPass::optAdd(const std::shared_ptr<
     std::map<std::shared_ptr<Value>, unsigned> factorOccurrTimes;
     unsigned maxOccurrtime = 0;
     std::shared_ptr<Value> maxOccurrVal = nullptr;
-    for (const auto &op:ops) {
+    for (const auto &op : ops) {
 
         if (auto bin = getReassociableOp(op.op, OP::MUL, OP::FMUL)) {
             std::vector<std::shared_ptr<Value> > Factors;
@@ -474,12 +507,12 @@ std::shared_ptr<Value> ReassociateExpressionsPass::optAdd(const std::shared_ptr<
         //todo dummy->delete
         std::shared_ptr<Value> v;
         if (isInt)
-            v = makeAddTree(newMulOps, OP::ADD,binary->index-1,binary->getParent());
+            v = makeAddTree(newMulOps, OP::ADD, binary->index - 1, binary->getParent());
         else
-            v = makeAddTree(newMulOps, OP::FADD,binary->index-1,binary->getParent());
+            v = makeAddTree(newMulOps, OP::FADD, binary->index - 1, binary->getParent());
         //try to deal with A*A*B+A*A*C->A*(A*B+A*C)->A*(A*(B+C)
         if (auto inst = std::dynamic_pointer_cast<Instruction>(v)) {
-            redoList.emplace_back(inst);
+            redoList.insert(inst);
         }
         std::shared_ptr<BinaryInst> mul;
 
@@ -488,8 +521,8 @@ std::shared_ptr<Value> ReassociateExpressionsPass::optAdd(const std::shared_ptr<
         else
             mul = std::make_shared<BinaryInst>("fmul inst", OP::FMUL, v, maxOccurrVal);
         //insert mul into bb
-        binary->getParent()->addInst(binary->index-1,mul);
-        redoList.emplace_back(mul);
+        binary->getParent()->addInst(binary->index - 1, mul);
+        redoList.insert(mul);
         if (ops.empty())
             return mul;
         ops.insert(ops.begin(), ValueRank(getRank(mul), mul));
@@ -500,9 +533,356 @@ std::shared_ptr<Value> ReassociateExpressionsPass::optAdd(const std::shared_ptr<
 std::shared_ptr<Value> ReassociateExpressionsPass::optMul(std::shared_ptr<BinaryInst> &binary, std::vector<ValueRank> &ops) {
     return nullptr;
 }
-void ReassociateExpressionsPass::ReassociateExpression(std::shared_ptr<BinaryInst> inst) {
-    //TODO
 
+void ReassociateExpressionsPass::optInst(std::shared_ptr<Instruction> &inst) {
+    if (!std::dynamic_pointer_cast<FNEGInst>(inst) && !std::dynamic_pointer_cast<BinaryInst>(inst))
+        return;
+    //check inst is commutative
+    switch (inst->getOpcode()) {
+    case OP::ADD:
+    case OP::FADD:
+    case OP::MUL:
+    case OP::FMUL:
+        canonicalizeOperands(inst);
+        break;
+    default:
+        break;
+    }
+    //fixme:inst is commutative also have: and or icmp fcmp
+    // for now we just condider add mul
+
+    if (auto result = canonicalizeNegFloat(inst))
+        inst = result;
+
+    auto binary = std::dynamic_pointer_cast<BinaryInst>(inst);
+
+    if (inst->getOpcode() == OP::SUB) {
+        if (canSub2Add(binary)) {
+            auto negInst = Sub2Add(binary, redoList);
+            redoList.insert(inst);
+            MadeChange = true;
+            inst = negInst;
+        } else if (isNeg(std::dynamic_pointer_cast<BinaryInst>(inst))) {
+            if (getReassociableOp(binary->getRHS(), OP::MUL) && binary->getUseList().size() != 1 || !getReassociableOp(std::dynamic_pointer_cast<BinaryInst>(binary->getUseList().back()->getUser()), OP::MUL)) {
+                auto negInst = Neg2Mul(binary);
+                for (const auto &use : binary->getUseList()) {
+                    auto user = use->getUser();
+                    if (auto user2binary = std::dynamic_pointer_cast<BinaryInst>(user))
+                        redoList.insert(user2binary);
+                }
+                redoList.insert(inst);
+                MadeChange = true;
+                inst = negInst;
+            }
+        }
+    } else if (inst->getOpcode() == OP::FNEG || inst->getOpcode() == OP::FSUB) {
+        if (canSub2Add(binary)) {
+            auto negInst = Sub2Add(binary, redoList);
+            redoList.insert(inst);
+            MadeChange = true;
+            inst = negInst;
+        } else if (inst->getOpcode() == OP::FNEG) {
+            auto lastUser = inst->getUseList().back()->getUser();
+            if (getReassociableOp(std::dynamic_pointer_cast<FNEGInst>(inst)->getVal(), OP::FMUL) && inst->getUseList().size() != 1 || !getReassociableOp(lastUser, OP::FMUL)) {
+                auto negInst = Neg2Mul(inst);
+                for (const auto &use : negInst->getUseList()) {
+                    auto user = use->getUser();
+                    if (auto user2binary = std::dynamic_pointer_cast<BinaryInst>(user)) {
+                        redoList.insert(user2binary);
+                    }
+                }
+                redoList.insert(inst);
+                MadeChange = true;
+                inst = negInst;
+            }
+        }
+    }
+
+    // check inst is associative
+    switch (inst->getOpcode()) {
+    case OP::ADD:
+    case OP::FADD:
+    case OP::MUL:
+    case OP::FMUL:
+        return;
+    default:
+        break;
+    }
+
+    auto binaryInst = std::dynamic_pointer_cast<BinaryInst>(inst);
+    auto opcode = binaryInst->getOpcode();
+    auto lastUserInst = std::dynamic_pointer_cast<Instruction>(binaryInst->getUseList().back()->getUser());
+    if (binaryInst->getUseList().size() == 1 && lastUserInst && lastUserInst->getOpcode() == opcode) {
+        if (lastUserInst != binaryInst && binaryInst->getParent() == lastUserInst->getParent())
+            redoList.insert(lastUserInst);
+        return;
+    }
+    if (binaryInst->getUseList().size() == 1 && lastUserInst && binaryInst->getOpcode() == OP::ADD && lastUserInst->getOpcode() == OP::SUB)
+        return;
+    if (binaryInst->getUseList().size() == 1 && lastUserInst && binaryInst->getOpcode() == OP::FADD && lastUserInst->getOpcode() == OP::FSUB)
+        return;
+    ReassociateExpression(binaryInst);
 }
 
+void ReassociateExpressionsPass::ReassociateExpression(std::shared_ptr<BinaryInst> &inst) {
+    std::vector<std::pair<std::shared_ptr<Value>, unsigned> > tree;
+    MadeChange |= linearizeExprTree(inst, tree, redoList);
+    std::vector<ValueRank> ops;
+    ops.reserve(tree.size());
+    for (const auto &t : tree) {
+        ops.insert(ops.end(), t.second, ValueRank(getRank(t.first), t.first));
+    }
+    std::sort(ops.begin(), ops.end());
+    if (auto v = optExpr(inst, ops)) {
+        if (inst == v)
+            return;
+        inst->replaceSelf(v);
+        redoList.insert(inst);
+        return;
+    }
+    // for example (-X) * Y + Z -> Z - X+Y
+    if (inst->getUseList().size() == 1) {
+        auto lastUserInstOpcode = std::dynamic_pointer_cast<Instruction>((*inst->getUseList().end())->getValue())->getOpcode();
+        if (inst->getOpcode() == OP::MUL &&
+            lastUserInstOpcode == OP::ADD && std::dynamic_pointer_cast<ConstantInt>(ops.back().op)->getVal() == -1) {
+            ValueRank temp = ops.back();
+            ops.pop_back();
+            ops.insert(ops.begin(), temp);
+        } else if (inst->getOpcode() == OP::FMUL && lastUserInstOpcode == OP::FADD && std::dynamic_pointer_cast<ConstantFloat>(ops.back().op)->getVal() == -1.0f) {
+            ValueRank temp = ops.back();
+            ops.pop_back();
+            ops.insert(ops.begin(), temp);
+        }
+    }
+    if (ops.size() == 1) {
+        if (ops[0].op == inst)
+            return;
+        //self reference
+        inst->replaceSelf(ops[0].op);
+        redoList.insert(inst);
+        return;
+    }
+    //TODO pair map for CSE
+    RewriteExpr(inst, ops);
+}
+
+void ReassociateExpressionsPass::eraseInst(std::shared_ptr<Instruction> &inst) {
+    //remove trivially dead
+    std::vector<std::shared_ptr<Value> > ops;
+    for (const auto &op : inst->getOperands()) {
+        ops.emplace_back(op->getValue());
+    }
+    valueRankMap.erase(inst);
+    redoList.erase(inst);
+    auto bb = inst->getParent();
+    bb->delFirstOfInst(inst); //the  inst is no used
+    std::set<std::shared_ptr<Instruction> > visit;
+    for (const auto &v : ops) {
+        if (auto v2inst = std::dynamic_pointer_cast<Instruction>(v)) {
+            auto opcode = v2inst->getOpcode();
+            while (v2inst->getUseList().size() == 1 && std::dynamic_pointer_cast<Instruction>(v2inst->getUseList().back()->getUser())->getOpcode() == opcode && visit.insert(v2inst).second)
+                v2inst = std::dynamic_pointer_cast<Instruction>(v2inst->getUseList().back()->getUser());
+            if (valueRankMap.find(v2inst) != valueRankMap.end())
+                redoList.insert(v2inst);
+        }
+    }
+    MadeChange = true;
+}
+
+void ReassociateExpressionsPass::RecursivelyEraseDeadInsts(std::shared_ptr<Instruction> &inst, std::set<std::shared_ptr<Instruction> > &insts) {
+    std::vector<std::shared_ptr<Value> > ops;
+    for (auto &i : inst->getOperands()) {
+        ops.emplace_back(i->getValue());
+    }
+    insts.erase(inst);
+    redoList.erase(inst);
+    valueRankMap.erase(inst);
+    auto bb = inst->getParent();
+    bb->delInst(inst);
+    for (const auto &op : ops) {
+        if (auto op2inst = std::dynamic_pointer_cast<Instruction>(op)) {
+            if (op2inst->getUseList().empty())
+                insts.insert(op2inst);
+        }
+    }
+}
+
+std::shared_ptr<Instruction> ReassociateExpressionsPass::canonicalizeNegFloat(std::shared_ptr<Instruction> &inst) {
+    if (auto binary = std::dynamic_pointer_cast<BinaryInst>(inst)) {
+        auto lhs = binary->getLHS();
+        auto rhs = binary->getRHS();
+        auto lhs2Inst = std::dynamic_pointer_cast<Instruction>(lhs);
+        auto rhs2Inst = std::dynamic_pointer_cast<Instruction>(rhs);
+        if (binary->getOpcode() == OP::FADD && rhs->getUseList().size() == 1) {
+            //otherOp + subtree
+            if (auto result = canonicalizeNegFloatOp(inst, rhs2Inst, lhs)) {
+                inst = result;
+            }
+        } else if (binary->getOpcode() == OP::FADD && lhs->getUseList().size() == 1) {
+            //subtree + otherOp
+            if (auto result = canonicalizeNegFloatOp(inst, lhs2Inst, rhs)) {
+                inst = result;
+            }
+        } else if (binary->getOpcode() == OP::FSUB && rhs->getUseList().size() == 1) {
+            //othOp - subtree
+            if (auto result = canonicalizeNegFloatOp(inst, rhs2Inst, lhs)) {
+                inst = result;
+            }
+        }
+    }
+    return inst;
+}
+
+std::shared_ptr<Instruction> ReassociateExpressionsPass::canonicalizeNegFloatOp(std::shared_ptr<Instruction> &inst, std::shared_ptr<Instruction> &op, std::shared_ptr<Value> &v) {
+
+    std::vector<std::shared_ptr<Instruction> > candi;
+
+    std::shared_ptr<Value> i = op;
+    getNegInsts(i, candi);
+    if (candi.empty()) {
+        return nullptr;
+    }
+    for (const auto &negFP : candi) {
+        auto binary = std::dynamic_pointer_cast<BinaryInst>(negFP);
+        auto lhs = binary->getLHS();
+        auto rhs = binary->getRHS();
+        if (lhs->getVTrait() == ValueTrait::CONSTANT_LITERAL && std::dynamic_pointer_cast<ConstantFloat>(lhs)->getVal() < 0.0f && rhs->getVTrait() != ValueTrait::CONSTANT_LITERAL) {
+            binary->setLHS(func->getConstantPool().getConst(-std::dynamic_pointer_cast<ConstantFloat>(lhs)->getVal()));
+            MadeChange = true;
+        }
+        if (rhs->getVTrait() == ValueTrait::CONSTANT_LITERAL && std::dynamic_pointer_cast<ConstantFloat>(rhs)->getVal() < 0.0f && lhs->getVTrait() != ValueTrait::CONSTANT_LITERAL) {
+            binary->setRHS(func->getConstantPool().getConst(-std::dynamic_pointer_cast<ConstantFloat>(rhs)->getVal()));
+            MadeChange = true;
+        }
+    }
+    if (candi.size() % 2 == 0)
+        return inst;
+    std::shared_ptr<BinaryInst> newInst = nullptr;
+    if (inst->getOpcode() == OP::FSUB) {
+        newInst = std::make_shared<BinaryInst>(inst->getName(), OP::FSUB, v, op);
+    }
+    if (inst->getOpcode() == OP::FADD) {
+        newInst = std::make_shared<BinaryInst>(inst->getName(), OP::FADD, v, op);
+
+    }
+    inst->getParent()->addInst(inst->index, newInst);
+    inst->replaceSelf(newInst);
+    redoList.insert(inst);
+    return newInst;
+}
+
+bool ReassociateExpressionsPass::canSub2Add(const std::shared_ptr<BinaryInst> &sub) {
+    if (sub->getOpcode() == OP::SUB && sub->getLHS() == func->getConstantPool().getConst(0))
+        return false;
+    auto lhs = sub->getLHS();
+    auto rhs = sub->getRHS();
+    if (getReassociableOp(lhs, OP::ADD, OP::FADD) || getReassociableOp(lhs, OP::SUB, OP::FSUB))
+        return true;
+    if (getReassociableOp(rhs, OP::ADD, OP::FADD) || getReassociableOp(rhs, OP::SUB, OP::FSUB))
+        return true;
+    if (sub->getUseList().size() == 1) {
+        auto lastUserInst = std::dynamic_pointer_cast<Instruction>(sub->getUseList().back()->getUser());
+        if (getReassociableOp(lastUserInst, OP::ADD, OP::FADD) || getReassociableOp(lastUserInst, OP::SUB, OP::FSUB)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+std::shared_ptr<BinaryInst> ReassociateExpressionsPass::Sub2Add(std::shared_ptr<BinaryInst> &sub, std::set<std::shared_ptr<Instruction> > &redo) {
+    std::shared_ptr<BinaryInst> add;
+    auto neg = negVal(sub->getRHS(), sub, redo);
+
+    if (sub->getOpcode() == OP::SUB) {
+        add = std::make_shared<BinaryInst>(sub->getName(), OP::SUB, sub->getLHS(), neg);
+
+        sub->setLHS(func->getConstantPool().getConst(0));
+        sub->setRHS(func->getConstantPool().getConst(0));
+
+    } else if (sub->getOpcode() == OP::FSUB) {
+        add = std::make_shared<BinaryInst>(sub->getName(), OP::FSUB, sub->getLHS(), neg);
+
+        sub->setLHS(func->getConstantPool().getConst(0.0f));
+        sub->setRHS(func->getConstantPool().getConst(0.0f));
+    }
+    sub->replaceSelf(add);
+    return add;
+}
+
+std::shared_ptr<Value> ReassociateExpressionsPass::negVal(const std::shared_ptr<Value> &v, std::shared_ptr<BinaryInst> &binary, std::set<std::shared_ptr<Instruction> > &redo) {
+if (v->getVTrait()==ValueTrait::CONSTANT_LITERAL) {
+    if (auto Fp=std::dynamic_pointer_cast<ConstantFloat>(v)) {
+        return func->getConstantPool().getConst(-Fp->getVal());
+    }
+        if (auto Int=std::dynamic_pointer_cast<ConstantInt>(v)) {
+            return func->getConstantPool().getConst(-Int->getVal());
+        }
+
+}
+    //-(x+y+z+1) -> -x + -y + -z + -1
+
+    if (const auto &add = getReassociableOp(binary, OP::ADD, OP::FADD)) {
+        add->setLHS(negVal(add->getLHS(), binary, redo));
+        add->setRHS(negVal(add->getRHS(), binary, redo));
+        binary->getParent()->addInst(binary->index - 1, add);
+
+        redo.insert(add);
+
+        return add;
+    }
+    for (const auto &use : v->getUseList()) {
+        auto user = use->getUser();
+        if (!std::dynamic_pointer_cast<FNEGInst>(user) || !(isNeg(std::dynamic_pointer_cast<BinaryInst>(user))))
+            continue;
+        auto theNeg=std::dynamic_pointer_cast<Instruction>(user);
+    if (!theNeg||theNeg->getParent()->getParent()!=binary->getParent()->getParent())
+        continue;
+
+        //TODO insert negative into function base on inst /non inst
+        redo.insert(theNeg);
+        return theNeg;
+    }
+}
+
+bool ReassociateExpressionsPass::isNeg(const std::shared_ptr<BinaryInst> &binary) const {
+    auto lhs = binary->getLHS();
+
+    if (binary->getOpcode() == OP::SUB && std::dynamic_pointer_cast<ConstantInt>(lhs) == func->getConstantPool().getConst(0)) {
+        return true;
+    }
+    if (binary->getOpcode() == OP::FSUB && std::dynamic_pointer_cast<ConstantFloat>(lhs) == func->getConstantPool().getConst(0.0f)) {
+        return true;
+    }
+    return false;
+}
+
+void ReassociateExpressionsPass::getNegInsts(std::shared_ptr<Value> &v, std::vector<std::shared_ptr<Instruction> > &candi) {
+    if (v->getUseList().size() != 1 || !std::dynamic_pointer_cast<Instruction>(v))
+        return;
+    auto binary = std::dynamic_pointer_cast<BinaryInst>(v);
+    auto lhs = binary->getLHS();
+    auto rhs = binary->getRHS();
+    switch (binary->getOpcode()) {
+    case OP::FMUL:
+        if (lhs->getVTrait() == ValueTrait::CONSTANT_LITERAL)
+            break;
+        if (std::dynamic_pointer_cast<ConstantFloat>(rhs)->getVal() < 0.0f) {
+            candi.emplace_back(binary);
+        }
+        getNegInsts(lhs, candi);
+        getNegInsts(rhs, candi);
+        break;
+    case OP::FDIV:
+        if (lhs->getVTrait() == ValueTrait::CONSTANT_LITERAL && rhs->getVTrait() == ValueTrait::CONSTANT_LITERAL)
+            break;
+        if (std::dynamic_pointer_cast<ConstantFloat>(lhs)->getVal() < 0.0f || std::dynamic_pointer_cast<ConstantFloat>(rhs)->getVal() < 0.0f) {
+            candi.emplace_back(binary);
+        }
+        getNegInsts(lhs, candi);
+        getNegInsts(rhs, candi);
+        break;
+    default:
+        break;
+    }
+}
 }
