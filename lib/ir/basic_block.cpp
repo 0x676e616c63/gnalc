@@ -72,6 +72,7 @@ void BasicBlock::addInst(const std::shared_ptr<Instruction> &inst) {
 
 void BasicBlock::addInstAfterPhi(const std::shared_ptr<Instruction> &inst) {
     insts.insert(insts.begin(), inst);
+    inst->setParent(shared_from_this());
     updateInstIndex();
 }
 
@@ -81,6 +82,7 @@ void BasicBlock::addInstBeforeTerminator(const std::shared_ptr<Instruction> &ins
     term->index = phi_insts.size() + insts.size();
     inst->index = term->index - 1;
     insts.insert(std::prev(insts.end()), inst);
+    inst->setParent(shared_from_this());
 }
 
 std::list<std::shared_ptr<BasicBlock>> BasicBlock::getPreBB() const {

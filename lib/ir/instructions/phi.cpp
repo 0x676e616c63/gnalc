@@ -21,6 +21,7 @@ PHIInst::getValueForBlock(const std::shared_ptr<BasicBlock> &block) const {
 }
 
 void PHIInst::addPhiOper(const std::shared_ptr<Value> &val, const std::shared_ptr<BasicBlock> &blk) {
+    Err::gassert(isSameType(getType(), val->getType()), "PHIInst::addPhiOper(): type mismatched");
     addOperand(val);
     addOperand(blk);
 }

@@ -13,6 +13,9 @@ PM::PreservedAnalyses DCEPass::run(Function &function, FAM &fam) {
     std::deque<std::shared_ptr<Instruction>> worklist;
 
     for (const auto &block : function) {
+        for (const auto &phi : block->getPhiInsts())
+            worklist.emplace_back(phi);
+
         for (const auto &inst : *block) {
             if (inst->getVTrait() != ValueTrait::VOID_INSTRUCTION)
                 worklist.emplace_back(inst);
@@ -29,9 +32,11 @@ PM::PreservedAnalyses DCEPass::run(Function &function, FAM &fam) {
                     continue;
             }
             dead.insert(inst);
-            for (const auto &use : inst->getOperands()) {
-                if (auto i = std::dynamic_pointer_cast<Instruction>(use->getValue()))
-                    worklist.emplace_back(i);
+            if (inst->getOpcode() != OP::PHI) {
+                for (const auto &use : inst->getOperands()) {
+                    if (auto i = std::dynamic_pointer_cast<Instruction>(use->getValue()))
+                        worklist.emplace_back(i);
+                }
             }
         }
     }

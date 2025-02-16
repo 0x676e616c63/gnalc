@@ -51,10 +51,17 @@ std::shared_ptr<Value> STOREInst::getPtr() const {
 
 int STOREInst::getAlign() const { return align; }
 
+// 这是 gep 本身的类型，不是它的 BaseType，只辅助构造函数使用，所以只在 memory.cpp 里定义。
+std::shared_ptr<Type> getGEPType(std::shared_ptr<Type> gep_ptr_type, size_t idx_size) {
+    while (idx_size--)
+        gep_ptr_type = getElm(gep_ptr_type);
+    return makePtrType(gep_ptr_type);
+}
+
 GEPInst::GEPInst(NameRef name, const std::shared_ptr<Value> &_ptr,
                  const std::shared_ptr<Value> &idx1,
                  const std::shared_ptr<Value> &idx2)
-    : Instruction(OP::GEP, name, makePtrType(getElm(getElm(_ptr->getType())))) {
+    : Instruction(OP::GEP, name, getGEPType(_ptr->getType(), 2)) {
     Err::gassert(_ptr->getType()->getTrait() == IRCTYPE::PTR);
     addOperand(_ptr);
     addOperand(idx1);
@@ -63,7 +70,7 @@ GEPInst::GEPInst(NameRef name, const std::shared_ptr<Value> &_ptr,
 
 GEPInst::GEPInst(NameRef name, const std::shared_ptr<Value> &_ptr,
                  const std::shared_ptr<Value> &idx)
-    : Instruction(OP::GEP, name, makePtrType(getElm(_ptr->getType()))) {
+    : Instruction(OP::GEP, name, getGEPType(_ptr->getType(), 1)) {
     Err::gassert(_ptr->getType()->getTrait() == IRCTYPE::PTR);
     addOperand(_ptr);
     addOperand(idx);
@@ -71,7 +78,7 @@ GEPInst::GEPInst(NameRef name, const std::shared_ptr<Value> &_ptr,
 
 GEPInst::GEPInst(NameRef name, const std::shared_ptr<Value> &_ptr,
     const std::vector<std::shared_ptr<Value>> &idxs)
-    : Instruction(OP::GEP, name, makePtrType(getElm(_ptr->getType()))) {
+    : Instruction(OP::GEP, name, getGEPType(_ptr->getType(), idxs.size())) {
     Err::gassert(_ptr->getType()->getTrait() == IRCTYPE::PTR);
     addOperand(_ptr);
     for (const auto &idx : idxs)

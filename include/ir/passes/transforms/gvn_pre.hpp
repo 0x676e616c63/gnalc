@@ -18,6 +18,8 @@
 //    - Optimizing SSA Code: GVN-PRE
 //           blogpost: https://medium.com/@mikn/optimizing-ssa-code-gvn-pre-69de83e3be29
 //           source: https://github.com/I-mikan-I/ssa-compiler
+//    - LLVM:
+//           GVN.cpp: https://github.com/llvm/llvm-project/blob/main/llvm/lib/Transforms/Scalar/GVN.cpp#L2911
 //    - GCC:
 //           GCC Wiki: https://gcc.gnu.org/wiki/GVN-PRE
 //           tree-ssa-pre.cc: https://github.com/gcc-mirror/gcc/blob/master/gcc/tree-ssa-pre.cc
@@ -50,15 +52,16 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
             Rem,
             And,
             Or,
-            // // Cmp
+            // Cmp
             // Eq,
             // Ne,
             // Gt,
             // Lt,
             // Ge,
             // Le,
-            // Others
+            // getelementptr
             Gep,
+            // Others
             GlobalTemp,
             Phi,
             Untracked,
@@ -257,9 +260,10 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
 
     size_t name_cnt;
 
-    std::map<BasicBlock*, KindIRValSet> phi_translate_temp_map;
+    std::map<BasicBlock*, KindIRValSet> phi_translate_map;
     std::shared_ptr<Value> phi_translate(Expr* expr, BasicBlock* pred, BasicBlock* succ);
 
+    // For debugg
     friend std::ostream& operator<<(std::ostream &os, const Expr &expr);
     friend std::ostream& operator<<(std::ostream &os, const NumberTable &table);
     friend std::ostream& operator<<(std::ostream &os, const KindIRValSet &set);

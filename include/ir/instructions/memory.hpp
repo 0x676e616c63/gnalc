@@ -71,6 +71,7 @@ public:
 // result的类型为ptr(makePtrType(getElm(getElm(_ptr->getTypePtr()))))
 // 目前先不考虑多维数组，用i*col+j的方式索引，或者先gep计算出行开头，再计算偏移
 // 12.6：多个index操作已加
+// getBaseType() 返回 <ty>
 class GEPInst : public Instruction {
 public:
     GEPInst(NameRef name, const std::shared_ptr<Value> &_ptr,
