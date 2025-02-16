@@ -1,5 +1,6 @@
 #include "../../../../include/ir/passes/transforms/gvn_pre.hpp"
 
+#include "../../../../include/config/config.hpp"
 #include "../../../../include/ir/instructions/binary.hpp"
 #include "../../../../include/ir/instructions/compare.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
@@ -231,10 +232,12 @@ bool GVNPREPass::Expr::operator==(const Expr &rhs) const {
 void GVNPREPass::NumberTable::clear() {
     expr_table.clear();
     kind_cnt = 0;
+    too_deeply_nested_expr_detected = false;
 }
 
-GVNPREPass::ValueKind GVNPREPass::NumberTable::getKindOrInsert(const std::shared_ptr<Value> &value, KindExprSet& exp_gen) {
-    auto e = getExprOrInsert(value, exp_gen);
+GVNPREPass::ValueKind GVNPREPass::NumberTable::getKindOrInsert(
+    const std::shared_ptr<Value> &value, KindExprSet& exp_gen, size_t nested_expr_cnt) {
+    auto e = getExprOrInsert(value, exp_gen, nested_expr_cnt);
     if (e == nullptr) return NotValueKind;
     return getKindOrInsert(e);
 }
@@ -250,7 +253,25 @@ GVNPREPass::ValueKind GVNPREPass::NumberTable::getKindOrInsert(Expr *expr) {
     return kind_cnt++;
 }
 
-GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(const std::shared_ptr<Value> &ir_value, KindExprSet &exp_gen) {
+GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(
+    const std::shared_ptr<Value> &ir_value, KindExprSet &exp_gen, size_t nested_expr_cnt) {
+    if (nested_expr_cnt > Config::IR::GVNPRE_SKIP_NESTED_EXPR_THRESHOLD) {
+        Logger::logInfo("[GVN-PRE]: Skipped analysis on an Expr, nested too deeply (more than ",
+            nested_expr_cnt, "). Continuing will cause a terrible compile time.");
+        too_deeply_nested_expr_detected = true;
+        auto expr = std::make_shared<Expr>(ir_value, Expr::ExprOp::Untracked);
+        expr->canon();
+        auto pool_expr = getExprFromPool(expr);
+        // Already in table
+        if (expr_table.find(pool_expr) != expr_table.end())
+            return pool_expr;
+        // New Exp
+        auto kind = getKindOrInsert(pool_expr);
+        // Assume there is no phi
+        exp_gen.insert(kind, pool_expr);
+        return pool_expr;
+    }
+
     std::shared_ptr<Expr> expr;
     if (isSameType(ir_value->getType(), makeBType(IRBTYPE::UNDEFINED)) || isSameType(ir_value->getType(), makeBType(IRBTYPE::VOID))) {
         return nullptr;
@@ -272,8 +293,8 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(const std::shared_ptr
             std::vector<ValueKind> operands;
             std::transform(raw_operands.begin(), raw_operands.end(),
                            std::back_inserter(operands),
-                           [this, &exp_gen](const auto &use) {
-                               return getKindOrInsert(use->getValue(), exp_gen);
+                           [this, &exp_gen, &nested_expr_cnt](const auto &use) {
+                               return getKindOrInsert(use->getValue(), exp_gen, nested_expr_cnt + 1);
                            });
 
             if (auto binary = std::dynamic_pointer_cast<BinaryInst>(ir_value)) {
@@ -337,10 +358,7 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprFromPool(const std::shared_ptr
 // Note that if the translated Expr doesn't exist, expr->getIRVal()->getParent() will be nullptr.
 // And we DO NOT update `exp_gen` in `phi_translate`.
 // When hoisted, this Inst will be added to `pred`, and the `exp_gen` will be updated.
-std::shared_ptr<Value> GVNPREPass::phi_translate(
-    Expr* expr,
-    BasicBlock* pred,
-    BasicBlock* succ) {
+std::shared_ptr<Value> GVNPREPass::phi_translate(Expr* expr, BasicBlock* pred, BasicBlock* succ) {
     // if the temporary is defined by a phi at the successor,
     // it returns the operand to that phi corresponding to the predecessor
     if (expr->isPhi()) {
@@ -450,6 +468,13 @@ std::shared_ptr<Value> GVNPREPass::phi_translate(
 }
 
 PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
+    if (function.getBlocks().size() > Config::IR::GVNPRE_SKIP_BLOCK_THRESHOLD) {
+        Logger::logInfo("[GVN-PRE]: Skipped '", function.getName(),
+            "', too many blocks (", function.getBlocks().size(),
+            "). Continuing it will cause a terrible compile time.");
+        return PM::PreservedAnalyses::all();
+    }
+
     bool gvnpre_inst_modified = false;
     //
     // Step 1 - BuildSets
@@ -480,6 +505,11 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                 auto kind = table.getKindOrInsert(expr);
                 exp_gen.insert(kind, expr);
                 avail_out.insert(kind, inst);
+
+                if (table.should_quit_for_too_deeply_nested_expr()) {
+                    reset();
+                    return PM::PreservedAnalyses::all();
+                }
             }
         }
     }
@@ -515,10 +545,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
 
                 // Since there is no critical edges, successors should have no phi.
                 // Just a consistency check
-                Err::gassert(!std::any_of(succ0->cbegin(), succ0->cend(),
-                    [](const auto& i){ return i->getOpcode() == OP::PHI; })
-                    && !std::any_of(succ1->cbegin(), succ1->cend(),
-                    [](const auto& i){ return i->getOpcode() == OP::PHI; }),
+                Err::gassert(succ0->getPhiCount() == 0 && succ1->getPhiCount() == 0,
                     "Critical edge should be broken before GVN-PRE.");
 
                 for (const auto& [kind, expr] : antic_in_map[succ0]) {
@@ -747,7 +774,11 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
         for (const auto& inst : *bb) {
             KindExprSet exp_gen_temp;
             auto kind = table.getKindOrInsert(inst, exp_gen_temp);
-            Err::gassert(exp_gen_temp.empty());
+            // exp_gen_temp could not have new values except for
+            // expressions that are nested too deeply. ( > Config::GVNPRE_SKIP_EXPR_THRESHOLD)
+            // We are not interested in them.
+            if(!exp_gen_temp.empty())
+                continue;
             if (kind != NotValueKind) {
                 auto leader_value = avail_out.getValue(kind);
                 Err::gassert(leader_value != nullptr);
@@ -800,15 +831,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     }
 
     // cleanup to release temp objects
-    table.clear();
-    avail_out_map.clear();
-    antic_in_map.clear();
-    antic_out_map.clear();
-    exp_gen_map.clear();
-    new_set_map.clear();
-    phi_translate_map.clear();
-    name_cnt = 0;
-
+    reset();
 
     if (gvnpre_inst_modified) {
         PM::PreservedAnalyses pa;

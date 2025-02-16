@@ -221,14 +221,21 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         std::vector<std::shared_ptr<Expr>> expr_pool;
         std::map<Expr *, ValueKind> expr_table;
         ValueKind kind_cnt = 0;
+        bool too_deeply_nested_expr_detected = false;
 
     public:
+        bool should_quit_for_too_deeply_nested_expr() const {
+            return too_deeply_nested_expr_detected;
+        }
+
         void clear();
 
         ValueKind getKindOrInsert(Expr *expr);
 
-        ValueKind getKindOrInsert(const std::shared_ptr<Value> &value, KindExprSet& exp_gen);
-        Expr *getExprOrInsert(const std::shared_ptr<Value> &inst, KindExprSet& exp_gen);
+        ValueKind getKindOrInsert(const std::shared_ptr<Value> &value, KindExprSet& exp_gen,
+            size_t nested_expr_cnt = 0);
+        Expr *getExprOrInsert(const std::shared_ptr<Value> &inst, KindExprSet& exp_gen,
+            size_t nested_expr_cnt = 0);
 
         void setPhiKind(const std::shared_ptr<PHIInst> &inst, ValueKind kind);
 
@@ -265,6 +272,17 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
 
     std::map<BasicBlock*, KindIRValSet> phi_translate_map;
     std::shared_ptr<Value> phi_translate(Expr* expr, BasicBlock* pred, BasicBlock* succ);
+
+    void reset() {
+        table.clear();
+        avail_out_map.clear();
+        antic_in_map.clear();
+        antic_out_map.clear();
+        exp_gen_map.clear();
+        new_set_map.clear();
+        phi_translate_map.clear();
+        name_cnt = 0;
+    }
 
     // For debug
     friend std::ostream& operator<<(std::ostream &os, const Expr &expr);

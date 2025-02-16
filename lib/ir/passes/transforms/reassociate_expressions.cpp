@@ -5,6 +5,7 @@
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
 
 #include <limits>
+#include <algorithm>
 
 
 namespace IR {
