@@ -55,10 +55,6 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
 
     if (opt_info.gvnpre) {
         fpm.addPass(BreakCriticalEdgesPass());
-
-        // // TODO: for GVNPRE debug, comment it when commit.
-        // fpm.addPass(NameNormalizePass(true));
-
         fpm.addPass(GVNPREPass());
     }
 

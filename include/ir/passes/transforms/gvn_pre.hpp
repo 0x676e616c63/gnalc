@@ -10,6 +10,8 @@
 //       All the instructions are treated as expressions or blackbox registers.
 //       Consequently, in this implementation, the TMP_GEN and PHI_GEN
 //       mentioned in the paper are intentionally omitted.
+//       (This is based on my own understanding. While initial testing shows correct redundancy elimination,
+//        I am not very sure the correctness.)
 //
 // See:
 //     - Thomas VanDrunen and Antony L. Hosking "Value-based Partial Redundancy Elimination":
@@ -23,6 +25,8 @@
 //    - GCC:
 //           GCC Wiki: https://gcc.gnu.org/wiki/GVN-PRE
 //           tree-ssa-pre.cc: https://github.com/gcc-mirror/gcc/blob/master/gcc/tree-ssa-pre.cc
+//
+// TODO: Restrictions should be applied on hoisting to avoid excessive register pressure
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_GVN_PRE_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_GVN_PRE_HPP
@@ -45,25 +49,24 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     public:
         enum class ExprOp {
             // Binary
-            Add,
-            Sub,
-            Mul,
-            Div,
-            Rem,
-            And,
-            Or,
-            // Cmp
-            // Eq,
-            // Ne,
-            // Gt,
-            // Lt,
-            // Ge,
-            // Le,
-            // getelementptr
+            Add, Sub, Mul, Div, Rem, And, Or,
+
+            // Cmp,
+            // I was not sure whether we do this pass to cmp is effective or not.
+            // Also, it might influence codegen.
+            // Eq, Ne, Gt, Lt, Ge, Le,
+
+            // Getelementptr
             Gep,
-            // Others
+
+            // Constant, GlobalVariable, FormalParam, Local array ALLOCAInst
+            // They do not change within the function.
             GlobalTemp,
+
+            // PHIInst, their ValueKind might be designated to its operands when inserting
             Phi,
+
+            // blackbox registers, we can't move expressions that contain them.
             Untracked,
         };
 
@@ -263,7 +266,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     std::map<BasicBlock*, KindIRValSet> phi_translate_map;
     std::shared_ptr<Value> phi_translate(Expr* expr, BasicBlock* pred, BasicBlock* succ);
 
-    // For debugg
+    // For debug
     friend std::ostream& operator<<(std::ostream &os, const Expr &expr);
     friend std::ostream& operator<<(std::ostream &os, const NumberTable &table);
     friend std::ostream& operator<<(std::ostream &os, const KindIRValSet &set);

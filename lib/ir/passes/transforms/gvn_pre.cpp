@@ -257,7 +257,11 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(const std::shared_ptr
     }
 
     bool is_phi = false;
-    if (ir_value->getVTrait() == ValueTrait::CONSTANT_LITERAL || ir_value->getVTrait() == ValueTrait::FORMAL_PARAMETER || ir_value->getVTrait() == ValueTrait::GLOBAL_VARIABLE || (std::dynamic_pointer_cast<ALLOCAInst>(ir_value) != nullptr && std::dynamic_pointer_cast<ALLOCAInst>(ir_value)->isArray()))
+    if (ir_value->getVTrait() == ValueTrait::CONSTANT_LITERAL
+        || ir_value->getVTrait() == ValueTrait::FORMAL_PARAMETER
+        || ir_value->getVTrait() == ValueTrait::GLOBAL_VARIABLE
+        || (std::dynamic_pointer_cast<ALLOCAInst>(ir_value) != nullptr
+            && std::dynamic_pointer_cast<ALLOCAInst>(ir_value)->isArray()))
         expr = std::make_shared<Expr>(ir_value, Expr::ExprOp::GlobalTemp);
     else {
         if (auto phi = std::dynamic_pointer_cast<PHIInst>(ir_value)) {
@@ -446,6 +450,7 @@ std::shared_ptr<Value> GVNPREPass::phi_translate(
 }
 
 PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
+    bool gvnpre_inst_modified = false;
     //
     // Step 1 - BuildSets
     //
@@ -685,6 +690,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                             }
                         }
 
+                        gvnpre_inst_modified = true;
                         curr->bb->addPhiInst(phi);
                         // Given that `curr` has more than one predecessor,
                         // each predecessor must only have one successor
@@ -746,10 +752,17 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                 auto leader_value = avail_out.getValue(kind);
                 Err::gassert(leader_value != nullptr);
                 if (inst != leader_value) {
+                    // The paper said there should be a move, but replaceSelf is ok.
+                    // Note that
+                    // 1. The `leader_value` available at this block must originate from a dominator block
+                    // 2. The `inst` inherently dominates all its uses
+                    // Therefore, the `leader_value` dominates all `inst`'s uses, and we can safely
+                    // replace all `inst`'s uses with `leader_value`.
                     inst->replaceSelf(leader_value);
                     eliminated.emplace(inst);
                     Logger::logDebug("[GVN-PRE] on '", function.getName(), "': '",
                         inst->getName(), "' replaced with '", leader_value->getName(), "'.");
+                    gvnpre_inst_modified = true;
                 }
             }
         }
@@ -781,7 +794,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     }
 
     for (const auto& bb : function) {
-        bb->delInstIf([&eliminated](const auto& i) {
+        gvnpre_inst_modified |= bb->delInstIf([&eliminated](const auto& i) {
             return eliminated.find(i) != eliminated.end();
         });
     }
@@ -795,6 +808,15 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     new_set_map.clear();
     phi_translate_map.clear();
     name_cnt = 0;
-    return PM::PreservedAnalyses::none(); // FIXME, not always none
+
+
+    if (gvnpre_inst_modified) {
+        PM::PreservedAnalyses pa;
+        pa.preserve<DomTreeAnalysis>();
+        pa.preserve<PostDomTreeAnalysis>();
+        return pa;
+    }
+
+    return PM::PreservedAnalyses::all();
 }
 } // namespace IR
