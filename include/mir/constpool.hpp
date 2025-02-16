@@ -1,5 +1,6 @@
 #pragma once
 #ifndef GNALC_MIR_CONSTPOOL_HPP
+#define GNALC_MIR_CONSTPOOL_HPP
 #include "misc.hpp"
 #include "operand.hpp"
 #include <unordered_map>

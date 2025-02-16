@@ -1,3 +1,7 @@
+#pragma once
+#ifndef GNALC_MIR_BRANCH_HPP
+#define GNALC_MIR_BRANCH_HPP
+
 #include "../../ir/basic_block.hpp"
 #include "../../ir/function.hpp"
 #include "../basicblock.hpp"
@@ -35,3 +39,5 @@ public:
     ~branchInst() override = default;
 };
 } // namespace MIR
+
+#endif

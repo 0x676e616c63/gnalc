@@ -1,3 +1,4 @@
+#pragma once
 #ifndef GNALC_MIR_MODULE_HPP
 #define GNALC_MIR_MODULE_HPP
 #include "base.hpp"

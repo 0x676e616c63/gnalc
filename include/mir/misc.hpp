@@ -1,3 +1,4 @@
+#pragma once
 #ifndef GNALC_MIR_FRAME_HPP
 #define GNALC_MIR_FRAME_HPP
 #include "../ir/global_var.hpp"

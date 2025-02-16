@@ -171,18 +171,19 @@ struct InstLowering {
 
 class Lowering {
 private:
-    std::shared_ptr<Module> module;
+    Module module;
 
 public:
-    Lowering() = default;
+    Lowering() = delete;
+    explicit Lowering(const IR::Module &);
 
-    void operator()(const IR::Module &);
+    void
+    operator()(const IR::Module &);
     std::shared_ptr<Function> lower(const IR::Function &);
     std::shared_ptr<BasicBlock> lower(const IR::BasicBlock &,
                                       OperandLowering &);
 
-    // Phi消除单独做成pass
-    const std::shared_ptr<Module> &getModule() { return module; }
+    Module &getModule() { return module; }
     ~Lowering() = default;
 };
 

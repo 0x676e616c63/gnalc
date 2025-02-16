@@ -1,6 +1,9 @@
-#include <utility>
+#pragma once
+#ifndef GNALC_MIR_BINARY_HPP
+#define GNALC_MIR_BINARY_HPP
 
 #include "../instruction.hpp"
+#include <utility>
 
 namespace MIR {
 
@@ -113,3 +116,5 @@ public:
 };
 
 } // namespace MIR
+
+#endif

@@ -41,7 +41,7 @@ aux_source_directory(lib/mir/instruction GNALC_MIR_SRC)
 aux_source_directory(lib/mir/passes GNALC_MIR_SRC)
 # aux_source_directory(lib/mir/passes/analysis GNALC_MIR_SRC)
 aux_source_directory(lib/mir/passes/transforms GNALC_MIR_SRC)
-# aux_source_directory(lib/mir/passes/utilities GNALC_MIR_SRC)
+aux_source_directory(lib/mir/passes/utilities GNALC_MIR_SRC)
 
 # Pass Manager
 aux_source_directory(lib/pass_manager GNALC_PM_SRC)
