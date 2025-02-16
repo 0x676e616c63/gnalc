@@ -127,10 +127,10 @@ public:
           bank(RegisterBank::gpr) {} // for BaseADROP
 
     const std::variant<CoreRegister, FPURegister> &getColor() { return color; };
-    void setColor(unsigned int newColor);
+
     template <typename T_Reg>
     void setColor(T_Reg newColor) {
-        color = newColor; ///
+        color = newColor;
     }
 
     RegisterBank getRegisterBank() { return bank; }
@@ -153,6 +153,7 @@ enum class BaseAddressTrait {
     // 两种trait主要是加载基址寄存器的方法不一样
     Global,
     Local,
+    Runtime, // phi汇合不确定是那种指针, 模糊处理
 };
 
 class BaseADROP : public BindOnVirOP {
@@ -185,7 +186,7 @@ public:
 
     std::shared_ptr<BindOnVirOP> getBase() const { return varOffset; }
 
-    std::string toString() const override = 0;
+    std::string toString() const override;
     ~BaseADROP() override = default;
 };
 

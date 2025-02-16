@@ -255,11 +255,11 @@ std::list<std::shared_ptr<Instruction>> InstLowering::fcmpLower(const std::share
 
         if (rconst) {
             immeVal = rconst->getVal();
-            virVal = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lconst));
+            virVal = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
             constVal = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(rconst->getVal()));
         } else {
             immeVal = rconst->getVal();
-            virVal = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rconst));
+            virVal = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rval));
             constVal = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(lconst->getVal()));
         }
 

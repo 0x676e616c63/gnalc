@@ -56,7 +56,8 @@ enum class OpCode {
     TST,
     TEQ,
 
-    COPY /* 伪指令 */
+    COPY,
+    PHI,
 };
 
 enum class NeonOpCode {
@@ -115,8 +116,6 @@ enum class CondCodeFlag {
 
 class Instruction {
 private:
-    std::variant<OpCode, NeonOpCode> opcode;
-
     std::shared_ptr<BindOnVirOP> TargetOperand = nullptr;
 
     CondCodeFlag condition = CondCodeFlag::AL;
@@ -126,6 +125,7 @@ private:
 
 protected:
     SourceOperandType tptrait;
+    std::variant<OpCode, NeonOpCode> opcode;
 
 public:
     Instruction() = delete;

@@ -20,13 +20,14 @@ struct variant_toString {
 
 struct variant_visitor {
 
-    template <typename T_enum> std::string operator()(T_enum emVal) {
+    template <typename T_enum>
+    std::string operator()(T_enum emVal) {
         return enum_name(emVal);
     }
 
 }; // for std::visit() when come into an enum type
 
-extern std::map<IR::OP, MIR::OpCode> OPmap;
+// extern std::map<IR::OP, MIR::OpCode> OPmap;
 
 constexpr int popcount_wrapper(unsigned val) {
     return __builtin_popcount(val);

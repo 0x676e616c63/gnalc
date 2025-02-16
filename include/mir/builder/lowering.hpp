@@ -50,6 +50,7 @@ struct OperandLowering {
                     mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
                 varpool.addLoaded(*constPtr, loadPtr);
             } else {
+                // 需函数外手动 std::dynamic_pointer_cast
                 loadPtr =
                     mkBaseOP(constVal, nullptr);
                 varpool.addLoaded(*constPtr, loadPtr);
@@ -88,6 +89,8 @@ struct OperandLowering {
     std::shared_ptr<BaseADROP> mkBaseOP(const IR::Value &,
                                         const std::shared_ptr<BaseADROP> &,
                                         unsigned int add_offset);
+    // Phi中仅绑定IR::Value
+    std::shared_ptr<BaseADROP> mkBaseOP(const IR::Value &);
     // 开辟栈空间(alloca)
     std::shared_ptr<StackADROP> mkStackOP(const IR::Value &, unsigned int size);
     // 开辟栈空间(arg fix-stack)
@@ -118,10 +121,18 @@ struct InstLowering {
     callLower(const std::shared_ptr<IR::CALLInst> &);
 
     std::list<std::shared_ptr<Instruction>>
-    zextLower(const std::shared_ptr<IR::ZEXTInst> &); //
+    zextLower(const std::shared_ptr<IR::ZEXTInst> &) {
+        std::list<std::shared_ptr<Instruction>> insts;
+        Err::todo("InstLowering: encounter zext inst in IR");
+        return insts;
+    };
 
     std::list<std::shared_ptr<Instruction>>
-    bitcastLower(const std::shared_ptr<IR::BITCASTInst> &); //
+    bitcastLower(const std::shared_ptr<IR::BITCASTInst> &) {
+        std::list<std::shared_ptr<Instruction>> insts;
+        Err::todo("InstLowering: encounter bitcast inst in IR");
+        return insts;
+    };
 
     std::list<std::shared_ptr<Instruction>>
     allocaLower(const std::shared_ptr<IR::ALLOCAInst> &);
@@ -136,18 +147,26 @@ struct InstLowering {
     gepLower(const std::shared_ptr<IR::GEPInst> &);
 
     std::list<std::shared_ptr<Instruction>>
-    phiLower(const std::shared_ptr<IR::PHIInst> &); //
+    phiLower(const std::shared_ptr<IR::PHIInst> &);
 
     // Neon SIMD
+    std::list<std::shared_ptr<Instruction>>
+    fptosiLower(const std::shared_ptr<IR::FPTOSIInst> &);
+
+    std::list<std::shared_ptr<Instruction>>
+    sitofpLower(const std::shared_ptr<IR::SITOFPInst> &);
 
     std::list<std::shared_ptr<Instruction>>
     fcmpLower(const std::shared_ptr<IR::FCMPInst> &);
 
-    std::list<std::shared_ptr<Instruction>> binaryLower_v(const std::shared_ptr<IR::BinaryInst> &);
+    std::list<std::shared_ptr<Instruction>>
+    binaryLower_v(const std::shared_ptr<IR::BinaryInst> &);
 
-    std::list<std::shared_ptr<Instruction>> loadLower_v(const std::shared_ptr<IR::LOADInst> &); //
+    std::list<std::shared_ptr<Instruction>>
+    loadLower_v(const std::shared_ptr<IR::LOADInst> &);
 
-    std::list<std::shared_ptr<Instruction>> storeLower_v(const std::shared_ptr<IR::STOREInst> &); //
+    std::list<std::shared_ptr<Instruction>>
+    storeLower_v(const std::shared_ptr<IR::STOREInst> &);
 };
 
 class Lowering {
@@ -162,8 +181,7 @@ public:
     std::shared_ptr<BasicBlock> lower(const IR::BasicBlock &,
                                       OperandLowering &);
 
-    void PhiEliminate();
-
+    // Phi消除单独做成pass
     const std::shared_ptr<Module> &getModule() { return module; }
     ~Lowering() = default;
 };

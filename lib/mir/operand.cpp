@@ -13,48 +13,58 @@ std::string PreColedOP::toString() const {
     return str;
 }
 
-void BindOnVirOP::setColor(unsigned int newcolor) {
-    if (bank == RegisterBank::gpr)
-
-        color = static_cast<CoreRegister>(newcolor);
-
-    else if (bank == RegisterBank::gprnopc) {
-
-        Err::gassert(static_cast<CoreRegister>(newcolor) != CoreRegister::pc,
-                     "MIR::BindOnVirOP::setColor(unsigned int): color "
-                     "assignment conflict!");
-
-        color = static_cast<CoreRegister>(newcolor);
-
-    } else if (bank == RegisterBank::spr)
-
-        color = static_cast<FPURegister>(newcolor);
-
-    else if (bank == RegisterBank::dpr) {
-        /// @note to be continued
-    }
-}
-
 std::string BindOnVirOP::toString() const {
     std::string str = getName() + ':' + enum_name(bank);
 
     return str;
 }
 
-std::string GlobalADROP::toString() const {
-    /// %1:gpr(%global.aaa + 16)
+std::string BaseADROP::toString() const {
+    /// %1:gpr(%Runtime + [varOffset] + 16)
     std::string str = getName() + ':' + enum_name(bank);
-    str += "(%global." + global_name;
-    str += " + " + std::to_string(constOffset) + ')';
+
+    str += "(%Runtime";
+    if (varOffset)
+        str += " + " + varOffset->toString();
+
+    if (constOffset)
+        str += " + " + std::to_string(constOffset);
+
+    str += ")";
+
+    return str;
+}
+
+std::string GlobalADROP::toString() const {
+    /// %1:gpr(%Global.aaa + [varOffset] + 16)
+
+    std::string str = getName() + ':' + enum_name(bank);
+
+    str += "(%Global." + global_name;
+    if (varOffset)
+        str += " + " + varOffset->toString();
+
+    if (constOffset)
+        str += " + " + std::to_string(constOffset);
+
+    str += ")";
+
     return str;
 }
 
 std::string StackADROP::toString() const {
-    /// %1:gpr(%stack.bbb + 16)
-    std::string str;
-    str = getName() + ':' + enum_name(bank);
-    str += "(%stack." + std::to_string(obj->getId());
-    str += " + " + std::to_string(constOffset) + ')';
+    /// %1:gpr(%Stack.bbb + [varOffset] + 16)
+    std::string str = getName() + ':' + enum_name(bank);
+
+    str += "(%Stack." + std::to_string(obj->getId());
+    if (varOffset && !std::dynamic_pointer_cast<PreColedOP>(varOffset)) // !sp/r7
+        str += " + " + varOffset->toString();
+
+    if (constOffset)
+        str += " + " + std::to_string(constOffset);
+
+    str += ")";
+
     return str;
 }
 

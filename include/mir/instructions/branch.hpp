@@ -1,3 +1,5 @@
+#include "../../ir/basic_block.hpp"
+#include "../../ir/function.hpp"
 #include "../basicblock.hpp"
 #include "../function.hpp"
 #include "../instruction.hpp"
@@ -26,8 +28,10 @@ public:
         return nullptr;
     };
     auto getDest() { return Dest; }
+    bool isJmpToBlock() { return Dest.index() == 0; }
+    bool isJmpToFunc() { return Dest.index() == 1; }
 
-    // std::string toString() override;
+    std::string toString() override;
     ~branchInst() override = default;
 };
 } // namespace MIR

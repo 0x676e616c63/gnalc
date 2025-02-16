@@ -70,12 +70,30 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
         }
     }
 
+    /// @brief blocklowering
     for (auto &midEnd_bb : midEnd_function.getBlocks()) {
         auto basicblock = lower(*midEnd_bb, operlower);
         if (func->getBlocks().empty()) {
             basicblock->addInsts_front(arg_insts);
         }
-        func->addBlock(basicblock);
+        /// @brief 构建block_list, block_pool
+        func->addBlock(midEnd_function.getName(), basicblock);
+    }
+
+    for (const auto &midEnd_bb : midEnd_function.getBlocks()) {
+        auto &backEnd_bb = func->getBlock(midEnd_bb->getName());
+
+        /// @brief 填写block的前驱后继关系
+        for (auto &midEnd_pre : midEnd_bb->getPreBB()) {
+            backEnd_bb->addPre(func->getBlock(midEnd_pre->getName()));
+        }
+
+        for (auto &midEnd_succ : midEnd_bb->getNextBB()) {
+            backEnd_bb->addSucc(func->getBlock(midEnd_succ->getName()));
+        }
+
+        /// @brief 填LiveIn, LiveOuts
+        /// @todo
     }
 
     return func;
@@ -84,7 +102,7 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
 std::shared_ptr<BasicBlock> Lowering::lower(const IR::BasicBlock &midEnd_bb,
                                             OperandLowering &operlower) {
     std::shared_ptr<BasicBlock> basicblock =
-        std::make_shared<BasicBlock>(midEnd_bb.getName());
+        std::make_shared<BasicBlock>(midEnd_bb.getName(), !(midEnd_bb.getPhiInsts().empty())); // 最终的asm中可能重名
 
     InstLowering instlower{operlower};
 
@@ -107,13 +125,14 @@ InstLowering::operator()(const std::shared_ptr<IR::Instruction> &midEnd_inst) {
         else {
             insts = binaryLower_v(binary);
         }
+    } else if (auto icmp = std::dynamic_pointer_cast<IR::ICMPInst>(midEnd_inst)) {
 
-    } else if (auto icmp =
-                   std::dynamic_pointer_cast<IR::ICMPInst>(midEnd_inst)) {
         insts = icmpLower(icmp);
-    } else if (auto fcmp =
-                   std::dynamic_pointer_cast<IR::FCMPInst>(midEnd_inst)) {
+
+    } else if (auto fcmp = std::dynamic_pointer_cast<IR::FCMPInst>(midEnd_inst)) {
+
         insts = fcmpLower(fcmp);
+
     } else if (auto ret = std::dynamic_pointer_cast<IR::RETInst>(midEnd_inst)) {
 
         insts = retLower(ret);
@@ -122,39 +141,37 @@ InstLowering::operator()(const std::shared_ptr<IR::Instruction> &midEnd_inst) {
 
         insts = brLower(br);
 
-    } else if (auto call =
-                   std::dynamic_pointer_cast<IR::CALLInst>(midEnd_inst)) {
+    } else if (auto call = std::dynamic_pointer_cast<IR::CALLInst>(midEnd_inst)) {
 
         insts = callLower(call);
 
-    } else if (auto zext =
-                   std::dynamic_pointer_cast<IR::ZEXTInst>(midEnd_inst)) {
+    } else if (auto fptosi = std::dynamic_pointer_cast<IR::FPTOSIInst>(midEnd_inst)) {
+
+        insts = fptosiLower(fptosi);
+
+    } else if (auto sitofp = std::dynamic_pointer_cast<IR::SITOFPInst>(midEnd_inst)) {
+
+        insts = sitofpLower(sitofp);
+
+    } else if (auto zext = std::dynamic_pointer_cast<IR::ZEXTInst>(midEnd_inst)) {
 
         insts = zextLower(zext);
 
-    } else if (auto bitcast =
-                   std::dynamic_pointer_cast<IR::BITCASTInst>(midEnd_inst)) {
+    } else if (auto bitcast = std::dynamic_pointer_cast<IR::BITCASTInst>(midEnd_inst)) {
 
         insts = bitcastLower(bitcast);
 
-    } else if (auto alloca =
-                   std::dynamic_pointer_cast<IR::ALLOCAInst>(midEnd_inst)) {
+    } else if (auto alloca = std::dynamic_pointer_cast<IR::ALLOCAInst>(midEnd_inst)) {
 
         insts = allocaLower(alloca);
 
-    } else if (auto load =
-                   std::dynamic_pointer_cast<IR::LOADInst>(midEnd_inst)) {
-
-        if (std::dynamic_pointer_cast<IR::BType>(load->getType())->getInner() ==
-            IR::IRBTYPE::I32) {
+    } else if (auto load = std::dynamic_pointer_cast<IR::LOADInst>(midEnd_inst)) {
+        if (std::dynamic_pointer_cast<IR::BType>(load->getType())->getInner() == IR::IRBTYPE::I32) {
             insts = loadLower(load);
         } else {
             insts = loadLower_v(load);
         }
-
-    } else if (auto store =
-                   std::dynamic_pointer_cast<IR::STOREInst>(midEnd_inst)) {
-
+    } else if (auto store = std::dynamic_pointer_cast<IR::STOREInst>(midEnd_inst)) {
         /// @warning 这里假设非SIMD的store指令的BaseType只会是BType, 否则会SEGV
         if (std::dynamic_pointer_cast<IR::BType>(store->getBaseType())
                 ->getInner() == IR::IRBTYPE::I32) {
@@ -278,7 +295,7 @@ OperandLowering::mkBaseOP(const IR::Value &val,
 
         varpool.addValue(val, ptr);
         return ptr;
-    } else {
+    } else if (base->getTrait() == BaseAddressTrait::Local) {
         auto ptr = std::make_shared<StackADROP>(
             std::dynamic_pointer_cast<StackADROP>(base)->getObj(),
             val.getName(), base->getConstOffset() + add_offset,
@@ -286,7 +303,20 @@ OperandLowering::mkBaseOP(const IR::Value &val,
 
         varpool.addValue(val, ptr);
         return ptr;
+    } else {
+        auto ptr = std::make_shared<BaseADROP>(BaseAddressTrait::Runtime, val.getName(), base->getConstOffset() + add_offset, base->getBase());
+
+        varpool.addValue(val, ptr);
+        return ptr;
     }
+}
+
+std::shared_ptr<BaseADROP> OperandLowering::mkBaseOP(const IR::Value &val) {
+    auto ptr = std::make_shared<BaseADROP>(BaseAddressTrait::Runtime, val.getName(), 0, nullptr);
+
+    varpool.addValue(val, ptr);
+
+    return ptr;
 }
 
 std::shared_ptr<StackADROP> OperandLowering::mkStackOP(const IR::Value &val,

@@ -14,7 +14,7 @@ class Function;
 
 /// @warning Infos只选可能有用的
 class FunctionInfo {
-public: // 接口太多, 还不如直接访问
+public:                                                   // 接口太多, 还不如直接访问
     std::pair<bool, std::weak_ptr<Function>> hasTailCall; // TCO优化
 
     bool hasCall = false; // 除了TC之外的调用, 可以视情况节省一两条指令
@@ -41,6 +41,8 @@ private:
     FunctionInfo info;
     std::list<std::shared_ptr<BasicBlock>> blocks;
 
+    std::unordered_map<std::string, std::shared_ptr<BasicBlock>> blockpool; // 对象池
+
 public:
     Function() = delete;
     explicit Function(std::string _name)
@@ -49,10 +51,15 @@ public:
     FunctionInfo getInfo() const { return info; }
     FunctionInfo &editInfo() { return info; }
 
-    void addBlock(std::shared_ptr<BasicBlock> _block) {
+    void addBlock(const std::string &_block_name, std::shared_ptr<BasicBlock> _block) {
         blocks.emplace_back(std::move(_block));
+        blockpool[_block_name] = _block;
     }
-    void delBlock(const std::string &_name);
+
+    // void delBlock(const std::string &_name);
+
+    std::shared_ptr<BasicBlock> &getBlock(const std::string &_name) { return blockpool[_name]; }
+
     const std::list<std::shared_ptr<BasicBlock>> &getBlocks() { return blocks; }
 
     std::string toString() const override;

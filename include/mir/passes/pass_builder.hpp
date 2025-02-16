@@ -8,7 +8,7 @@
 
 namespace MIR {
 struct OptInfo {
-    bool peephole;
+    bool peephole{false};
 };
 
 extern const OptInfo o1_opt_info;

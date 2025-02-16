@@ -137,24 +137,26 @@ InstLowering::gepLower(const std::shared_ptr<IR::GEPInst> &gep) {
             insts.emplace_back(mov);
             baseOP = relay;
         }
+    } else {
+        baseOP = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(ptr));
+    }
 
-        if (auto const_idx = std::dynamic_pointer_cast<IR::ConstantInt>(idx)) {
-            auto add_offset = const_idx->getVal() * perElemSize;
-            operlower.mkBaseOP(*gep, baseOP, add_offset);
-        } else {
-            // mul %temp1, %var_idx, #imme (带优化)
-            // add (%BindOnVirOP)temp2, %(BindOnVirOP)baseOP, %temp1
-            auto relay2 = operlower.mkBaseOP(*gep, baseOP, 0);
-            auto var_idx = operlower.fastFind(idx);
+    if (auto const_idx = std::dynamic_pointer_cast<IR::ConstantInt>(idx)) {
+        auto add_offset = const_idx->getVal() * perElemSize;
+        operlower.mkBaseOP(*gep, baseOP, add_offset);
+    } else {
+        // mul %temp1, %var_idx, #imme (带优化)
+        // add (%BindOnVirOP)temp2, %(BindOnVirOP)baseOP, %temp1
+        auto relay2 = operlower.mkBaseOP(*gep, baseOP, 0);
+        auto var_idx = operlower.fastFind(idx);
 
-            auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32),
-                                        RegisterBank::gpr);
-            auto mul_midEnd = std::make_shared<IR::BinaryInst>(
-                relay->getName(), IR::OP::MUL, idx,
-                std::make_shared<IR::ConstantInt>(perElemSize));
+        auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32),
+                                    RegisterBank::gpr);
+        auto mul_midEnd = std::make_shared<IR::BinaryInst>(
+            relay->getName(), IR::OP::MUL, idx,
+            std::make_shared<IR::ConstantInt>(perElemSize));
 
-            insts.splice(insts.end(), binaryLower(mul_midEnd)); // 复用
-        }
+        insts.splice(insts.end(), binaryLower(mul_midEnd)); // 复用
     }
 
     return insts;

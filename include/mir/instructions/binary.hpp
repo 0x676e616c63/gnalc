@@ -107,6 +107,7 @@ public:
         addTargetOP(nullptr);
         setFlash();
     };
+
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
     ~compareInst() override = default;
 };

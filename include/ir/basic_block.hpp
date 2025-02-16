@@ -46,7 +46,7 @@ void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,
 // WARNING: when `safeUnlinkBB` is called within a function, the returned dead phis should be
 //          gathered for all basic blocks, and deleted at once.
 [[nodiscard]] std::vector<std::shared_ptr<PHIInst>> safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb,
-                  const std::shared_ptr<BasicBlock> &nxtbb);
+                                                                 const std::shared_ptr<BasicBlock> &nxtbb);
 
 /**
  * @brief BB继承自value, 其被br指令'use', 'use'了它所包含的指令
@@ -121,7 +121,7 @@ public:
         if (mode != DEL_MODE::NON_PHI)
             for (auto it = phi_insts.begin(); it != phi_insts.end();) {
                 if (pred(*it)) {
-                    for (const auto& use : (*it)->getUseList()) {
+                    for (const auto &use : (*it)->getUseList()) {
                         Err::gassert(pred(std::dynamic_pointer_cast<Instruction>(use->getUser())),
                                      "BasicBlock::delInstIf(): Cannot delete a Phi without deleting its User.");
                     }
@@ -133,9 +133,9 @@ public:
         if (mode != DEL_MODE::PHI)
             for (auto it = insts.begin(); it != insts.end();) {
                 if (pred(*it)) {
-                    for (const auto& use : (*it)->getUseList()) {
+                    for (const auto &use : (*it)->getUseList()) {
                         Err::gassert(pred(std::dynamic_pointer_cast<Instruction>(use->getUser())),
-                                    "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
+                                     "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
                     }
                     it = insts.erase(it);
                     found = true;

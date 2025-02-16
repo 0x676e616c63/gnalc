@@ -33,6 +33,20 @@ std::string Instruction::toString() {
     return str;
 }
 
+std::string bitTage(std::pair<bitType, bitType> dataTypes) {
+    std::string str;
+
+    if (dataTypes.first == bitType::DEFAULT32 && dataTypes.second == bitType::DEFAULT32) {
+        str = ".32";
+    } else if (dataTypes.first == bitType::f32 && dataTypes.second == bitType::DEFAULT32) {
+        str = ".f32";
+    } else {
+        Err::todo("NeonInstruction::bitTage: unknown bitwides");
+    }
+
+    return str;
+}
+
 std::string NeonInstruction::toString() {
     std::string str;
 
@@ -43,7 +57,7 @@ std::string NeonInstruction::toString() {
 
     str += enum_name(getCondCodeFlag()); ///
 
-    str += '.' + enum_name(dataTypes.first) + '.' + enum_name(dataTypes.second);
+    str += bitTage(dataTypes);
 
     /// Neon指令没有S标记
 
