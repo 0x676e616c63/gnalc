@@ -121,6 +121,8 @@ public:
 
     ValueTrait getVTrait() const { return trait; }
 
+    size_t getUseCount() const;
+
 private:
     // PRIVATE because we want to ensure use is only modified by User.
     void addUse(const std::weak_ptr<Use> &use);

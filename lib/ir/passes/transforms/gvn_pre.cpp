@@ -623,14 +623,14 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     //                   |
     //                   bb5
     //
-    // BEFORE:
+    // Initial:
     // bb5:
     //   %a1 = add %0, 1
     // bb2:
     //   %a = add %0, 1
     //
     //
-    // The First round:
+    // The first round:
     // bb4:
     //   %a2 = add %0, 1
     // bb5:

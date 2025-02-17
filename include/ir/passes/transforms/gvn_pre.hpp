@@ -17,12 +17,12 @@
 //     - Thomas VanDrunen and Antony L. Hosking "Value-based Partial Redundancy Elimination":
 //           https://link.springer.com/content/pdf/10.1007/978-3-540-24723-4_12.pdf
 //           https://hosking.github.io/links/VanDrunen+2004CC.pdf  (same but with higher resolution)
-//    - Optimizing SSA Code: GVN-PRE
+//     - Optimizing SSA Code: GVN-PRE
 //           blogpost: https://medium.com/@mikn/optimizing-ssa-code-gvn-pre-69de83e3be29
 //           source: https://github.com/I-mikan-I/ssa-compiler
-//    - LLVM:
+//     - LLVM:
 //           GVN.cpp: https://github.com/llvm/llvm-project/blob/main/llvm/lib/Transforms/Scalar/GVN.cpp#L2911
-//    - GCC:
+//     - GCC:
 //           GCC Wiki: https://gcc.gnu.org/wiki/GVN-PRE
 //           tree-ssa-pre.cc: https://github.com/gcc-mirror/gcc/blob/master/gcc/tree-ssa-pre.cc
 //

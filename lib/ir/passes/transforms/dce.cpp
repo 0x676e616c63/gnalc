@@ -26,7 +26,7 @@ PM::PreservedAnalyses DCEPass::run(Function &function, FAM &fam) {
         auto inst = worklist.front();
         worklist.pop_front();
 
-        if (inst->getUseList().empty()) {
+        if (inst->getUseCount() == 0) {
             if (auto call = std::dynamic_pointer_cast<CALLInst>(inst)) {
                 if (hasSideEffect(fam, call.get()))
                     continue;

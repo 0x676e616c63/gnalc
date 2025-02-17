@@ -18,6 +18,12 @@ Value::Value(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait
 
 std::shared_ptr<Type> Value::getType() const { return vtype; }
 
+size_t Value::getUseCount() const {
+    // Expired use should be deleted by User.
+    // So just get the size.
+    return use_list.size();
+}
+
 void Value::addUse(const std::weak_ptr<Use> &use) {
     Err::gassert(!use.expired());
     use_list.emplace_back(use);
