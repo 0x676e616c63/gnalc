@@ -1,11 +1,11 @@
-int insertsort(int a[])
+int insertsort(int b)
 {
-        int j = 111;
-        while(j>9&&3<a[j])
-        {
-            a[j+1]=a[j];
-            j = j - 1;
-        }
-        a[j+1]=3;
-    return 0;
+    int a = b;
+    int c = b;
+    int d;
+    if (a > c)
+        d = a + c;
+    else
+        d = a + c;
+    return a + c;
 }

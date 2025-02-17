@@ -229,12 +229,6 @@ bool GVNPREPass::Expr::operator==(const Expr &rhs) const {
     return operands == rhs.operands;
 }
 
-void GVNPREPass::NumberTable::clear() {
-    expr_table.clear();
-    kind_cnt = 0;
-    too_deeply_nested_expr_detected = false;
-}
-
 GVNPREPass::ValueKind GVNPREPass::NumberTable::getKindOrInsert(
     const std::shared_ptr<Value> &value, KindExprSet& exp_gen, size_t nested_expr_cnt) {
     auto e = getExprOrInsert(value, exp_gen, nested_expr_cnt);
@@ -312,6 +306,8 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(
     expr->canon();
     auto pool_expr = getExprFromPool(expr);
 
+    Err::gassert(isSameType(ir_value->getType(), pool_expr->getIRVal()->getType()));
+
     // Already in table
     if (expr_table.find(pool_expr) != expr_table.end())
         return pool_expr;
@@ -324,8 +320,8 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(
     return pool_expr;
 }
 
-void GVNPREPass::NumberTable::setPhiKind(const std::shared_ptr<PHIInst> &inst, ValueKind kind) {
-    auto expr = std::make_shared<Expr>(inst, Expr::ExprOp::Phi);
+void GVNPREPass::NumberTable::setPhiKind(const std::shared_ptr<PHIInst> &phi, ValueKind kind) {
+    auto expr = std::make_shared<Expr>(phi, Expr::ExprOp::Phi);
     auto pool_expr = getExprFromPool(expr);
     expr_table[pool_expr] = kind;
 }
@@ -434,6 +430,9 @@ std::shared_ptr<Value> GVNPREPass::phi_translate(Expr* expr, BasicBlock* pred, B
     }
     else Err::unreachable("Unknown inst");
 
+    Err::gassert(isSameType(expr->getIRVal()->getType(), translated_inst->getType()),
+        "Translated expression's type is different from original expression's type.");
+
     KindExprSet exp_gen_temp;
     auto translated_kind = table.getKindOrInsert(translated_inst, exp_gen_temp);
 
@@ -442,6 +441,7 @@ std::shared_ptr<Value> GVNPREPass::phi_translate(Expr* expr, BasicBlock* pred, B
         auto tinst = std::dynamic_pointer_cast<Instruction>
             (avail_out_map[pred].getValue(translated_kind));
         Err::gassert(tinst != nullptr);
+        Err::gassert(isSameType(tinst->getType(), translated_inst->getType()));
         return tinst;
     }
 
@@ -460,6 +460,7 @@ std::shared_ptr<Value> GVNPREPass::phi_translate(Expr* expr, BasicBlock* pred, B
         auto tinst = std::dynamic_pointer_cast<Instruction>
             (phi_translate_map[pred].getValue(translated_kind));
         Err::gassert(tinst != nullptr);
+        Err::gassert(isSameType(tinst->getType(), translated_inst->getType()));
         return tinst;
     }
 
@@ -665,10 +666,20 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                 auto& antic_in = antic_in_map[curr->bb];
 
                 for (const auto& [kind_to_hoist, expr_to_hoist] : antic_in) {
-                    // BasicBlock -> available, translated kind, translated val
+                    // Note that new_set inherits from dominators, not predecessors. It is safe to use them
+                    // in this block. In fact, if an expression is in new_set, it is guaranteed
+                    // to exist in avail_out. Every recomputing in this block will be eliminated
+                    // in the elimination phase. So just skip it.
+                    // This can also be done by erasing `kind_to_hoist` from antic_in_map[curr->bb]
+                    // after an expression being hoisted. But be aware that we are iterating the `antic_in`.
+                    // `kind_to_hoist` is actually a const reference to an element in `antic_in`.
+                    // Erasing it will invalidate `kind_to_hoist`, which is hard to debug :(
+                    if (new_set_map[curr->bb].contains(kind_to_hoist))
+                        continue;
+
+                    // Pred -> available, translated kind, translated val
                     std::map<BasicBlock*, std::tuple<bool, ValueKind, std::shared_ptr<Value>>> translated;
                     bool avail_at_least_one = false;
-                    bool all_available = true;
                     for (const auto& pred : preds) {
                         auto tval = phi_translate(expr_to_hoist, pred.get(), curr->bb);
                         KindExprSet exp_gen_temp;
@@ -677,15 +688,16 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                         // so `tkind` rather than `kind_to_hoist`
                         bool is_avail_in_pred = avail_out_map[pred.get()].contains(tkind);
                         avail_at_least_one |= is_avail_in_pred;
-                        all_available &= is_avail_in_pred;
                         translated[pred.get()] = std::make_tuple(is_avail_in_pred, tkind, tval);
                     }
 
                     // If the expression is available in at least one predecessor,
                     // then we insert it in predecessors where it is not available.
                     // Generating fresh temporaries, we perform the necessary insertions
-                    // and create a phi to merge the predecessors' leaders
-                    if (avail_at_least_one && !all_available) {
+                    // and create a phi to merge the predecessors' leaders.
+                    // If the expression is available in at all predecessors,
+                    // then we only insert a phi.
+                    if (avail_at_least_one) {
                         auto phi = std::make_shared<PHIInst>("%gvnpre.p" + std::to_string(name_cnt),
                             expr_to_hoist->getIRVal()->getType());
                         for (const auto& pred : preds) {

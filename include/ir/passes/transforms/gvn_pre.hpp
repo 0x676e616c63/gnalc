@@ -228,7 +228,12 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
             return too_deeply_nested_expr_detected;
         }
 
-        void clear();
+        void clear() {
+            expr_table.clear();
+            expr_pool.clear();
+            kind_cnt = 0;
+            too_deeply_nested_expr_detected = false;
+        }
 
         ValueKind getKindOrInsert(Expr *expr);
 
@@ -267,7 +272,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     // NEW_SET when inserting
     std::map<BasicBlock*, KindIRValSet> new_set_map;
 
-    size_t name_cnt;
+    size_t name_cnt = 0;
 
     std::map<BasicBlock*, KindIRValSet> phi_translate_map;
     std::shared_ptr<Value> phi_translate(Expr* expr, BasicBlock* pred, BasicBlock* succ);
