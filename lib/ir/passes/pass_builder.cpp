@@ -15,6 +15,7 @@
 #include "../../../include/ir/passes/transforms/gvn_pre.hpp"
 #include "../../../include/ir/passes/transforms/mem2reg.hpp"
 #include "../../../include/ir/passes/transforms/namenormalizer.hpp"
+#include "../../../include/ir/passes/transforms/reassociate.hpp"
 #include "../../../include/ir/passes/transforms/tail_recursion_elimination.hpp"
 
 // Utilities
@@ -43,6 +44,14 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
 
     if (opt_info.sccp)
         fpm.addPass(ConstantPropagationPass());
+
+    if (opt_info.reassociate) {
+        // For Reassociate Debug, remove it when committing.
+        fpm.addPass(NameNormalizePass(true));
+
+
+        fpm.addPass(ReassociatePass());
+    }
 
     if (opt_info.dce)
         fpm.addPass(DCEPass());

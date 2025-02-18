@@ -124,11 +124,11 @@ const std::shared_ptr<Use> &User::getOperand(size_t index) const {
 
 void User::setOperand(size_t index, const std::shared_ptr<Value> &val) {
     Err::gassert(index < operands.size(), "index out of range");
-    auto use = operands[index];
-    auto ok = use->getValue()->delUse(use);
+    auto old_use = operands[index];
+    auto ok = old_use->getValue()->delUse(old_use);
     Err::gassert(ok);
     std::shared_ptr<Use> new_use{new Use(val, this)};
-    use->init();
+    new_use->init();
     operands[index] = std::move(new_use);
 }
 

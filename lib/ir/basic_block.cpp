@@ -31,10 +31,18 @@ BasicBlock::BasicBlock(std::string _name,
     updateInstIndex();
 }
 
+void BasicBlock::addInst(iterator it, const std::shared_ptr<Instruction> &inst) {
+    insts.insert(it, inst);
+    inst->setParent(shared_from_this());
+    updateInstIndex();
+}
+
 void BasicBlock::addInst(size_t index, const std::shared_ptr<Instruction> &inst) {
+    index -= phi_insts.size();
     auto it = std::next(insts.begin(),
         static_cast<decltype(insts)::iterator::difference_type>(index));
     insts.insert(it, inst);
+    inst->setParent(shared_from_this());
     updateInstIndex();
 }
 
@@ -109,13 +117,11 @@ std::list<std::shared_ptr<Instruction>> BasicBlock::getAllInsts() const {
 }
 
 void BasicBlock::updateInstIndex() const {
-    unsigned i = 0;
-    for (const auto &inst : phi_insts) {
-        inst->index = ++i;
-    }
-    for (const auto &inst : insts) {
-        inst->index = ++i;
-    }
+    size_t i = 0;
+    for (const auto &inst : phi_insts)
+        inst->index = i++;
+    for (const auto &inst : insts)
+        inst->index = i++;
 }
 
 bool BasicBlock::delFirstOfInst(const std::shared_ptr<Instruction> &inst) {
@@ -157,6 +163,30 @@ BasicBlock::iterator BasicBlock::end() { return insts.end(); }
 BasicBlock::const_iterator BasicBlock::cbegin() const { return insts.cbegin(); }
 
 BasicBlock::const_iterator BasicBlock::cend() const { return insts.cend(); }
+
+BasicBlock::phi_const_iterator BasicBlock::phi_begin() const {
+    return phi_insts.begin();
+}
+
+BasicBlock::phi_const_iterator BasicBlock::phi_end() const {
+    return phi_insts.end();
+}
+
+BasicBlock::phi_iterator BasicBlock::phi_begin() {
+    return phi_insts.begin();
+}
+
+BasicBlock::phi_iterator BasicBlock::phi_end() {
+    return phi_insts.end();
+}
+
+BasicBlock::phi_const_iterator BasicBlock::phi_cbegin() const {
+    return phi_insts.cbegin();
+}
+
+BasicBlock::phi_const_iterator BasicBlock::phi_cend() const {
+    return phi_insts.cend();
+}
 
 void BasicBlock::setBBParam(const std::vector<std::shared_ptr<Value>> &params) {
     bb_params = params;

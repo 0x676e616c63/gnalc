@@ -72,6 +72,8 @@ class BasicBlock : public Value,
 public:
     using const_iterator = decltype(insts)::const_iterator;
     using iterator = decltype(insts)::iterator;
+    using phi_const_iterator = decltype(phi_insts)::const_iterator;
+    using phi_iterator = decltype(phi_insts)::iterator;
 
     explicit BasicBlock(std::string _name);
     BasicBlock(std::string _name,
@@ -80,6 +82,7 @@ public:
                std::list<std::weak_ptr<BasicBlock>> _next_bb,
                std::list<std::shared_ptr<Instruction>> _insts);
 
+    void addInst(iterator it, const std::shared_ptr<Instruction>& inst);
     void addInst(size_t index, const std::shared_ptr<Instruction> &inst);
     void addInst(const std::shared_ptr<Instruction> &inst);
     void addInstAfterPhi(const std::shared_ptr<Instruction> &inst);
@@ -95,7 +98,7 @@ public:
     std::list<std::shared_ptr<Instruction>> getAllInsts() const;
     unsigned getPhiCount() const;
 
-    unsigned index = 0; // 不经过插入删除接口修改后使用先调用父函数的update方法！
+    unsigned index = 0;
 
     // No use-def check, just remove the first matched item
     // PHI Instruction is not included!
@@ -154,6 +157,13 @@ public:
     iterator end();
     const_iterator cbegin() const;
     const_iterator cend() const;
+
+    phi_const_iterator phi_begin() const;
+    phi_const_iterator phi_end() const;
+    phi_iterator phi_begin();
+    phi_iterator phi_end();
+    phi_const_iterator phi_cbegin() const;
+    phi_const_iterator phi_cend() const;
     // ...
 
     void setBBParam(const std::vector<std::shared_ptr<Value>> &params);

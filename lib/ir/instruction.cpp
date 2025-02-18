@@ -26,6 +26,11 @@ std::shared_ptr<BasicBlock> Instruction::getParent() const {
     return parent.lock();
 }
 
+BasicBlock::iterator Instruction::getIter() const {
+    Err::gassert(getOpcode() != OP::PHI);
+    return std::next(parent.lock()->begin(), index - parent.lock()->getPhiCount());
+}
+
 void Instruction::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
 Instruction::~Instruction() = default;

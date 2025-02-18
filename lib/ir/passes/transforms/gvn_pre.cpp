@@ -379,9 +379,9 @@ std::shared_ptr<Value> GVNPREPass::phi_translate(Expr* expr, BasicBlock* pred, B
     // Available after translation:
     //                  bb1 ------> bb3
     // bb1:
-    // %gep0 = gep %0 %1
+    //   %gep0 = gep %0 %1
     // bb3:
-    // %b = phi [ %1, %bb1 ] [ %2, %bb2 ]
+    //   %b = phi [ %1, %bb1 ] [ %2, %bb2 ]
     //
     // Imagine we are translating <gep %0 %b> from bb3 to bb1,
     // Before translation, <gep %0 %b> is not available in bb1.
