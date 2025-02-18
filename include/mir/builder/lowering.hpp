@@ -22,6 +22,8 @@ namespace MIR {
 struct OperandLowering {
     ///@note 由于操作数不是透过依赖关系获得的,
     /// 所以和常量一样需要一个池来查找和存放
+    const size_t med_val_cnt;
+
     ConstPool &constpool;
     VarPool &varpool;
     std::vector<std::shared_ptr<FrameObj>> &StackObjs;
@@ -51,8 +53,10 @@ struct OperandLowering {
                 varpool.addLoaded(*constPtr, loadPtr);
             } else {
                 // 需函数外手动 std::dynamic_pointer_cast
+                // 全局变量的第一个地址操作数, varoffset为其自身
                 loadPtr =
                     mkBaseOP(constVal, nullptr);
+                std::dynamic_pointer_cast<BaseADROP>(loadPtr)->setBase(loadPtr);
                 varpool.addLoaded(*constPtr, loadPtr);
             }
             return {false, loadPtr};

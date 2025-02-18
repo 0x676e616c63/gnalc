@@ -235,7 +235,6 @@ Extensions:
 #endif
 
     MIR::Lowering lower(generator.get_module());
-    lower(generator.get_module());
 
     MIR::FAM bkd_fam;
     MIR::MAM bkd_mam;

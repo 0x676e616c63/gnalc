@@ -14,19 +14,20 @@ std::string Instruction::toString() {
     str += enum_name(condition);
     if (flashFlag && std::get<OpCode>(opcode) != OpCode::CMN &&
         std::get<OpCode>(opcode) != OpCode::CMP &&
-        std::get<OpCode>(opcode) != OpCode::TST)
-        str += 's';
+        std::get<OpCode>(opcode) != OpCode::TST &&
+        std::get<OpCode>(opcode) != OpCode::TEQ)
+        str += 'S';
 
-    str += '-' + enum_name(tptrait) + ' ';
+    str += enum_name(tptrait) + ' ';
 
     if (getSourceOP(1)) {
-        str += getSourceOP(1)->toString() + ' ';
+        str += getSourceOP(1)->toString();
     }
     if (getSourceOP(2)) {
-        str += getSourceOP(2)->toString() + ' ';
+        str += ", " + getSourceOP(2)->toString();
     }
     if (getSourceOP(3)) {
-        str += getSourceOP(3)->toString() + ' ';
+        str += ", " + getSourceOP(3)->toString();
     }
 
     str += '\n';

@@ -23,9 +23,11 @@ void PrintBase::visit(Operand &oper) {
 }
 
 PM::PreservedAnalyses PrintFunctionPass::run(Function &func, FAM &man) {
+    visit(func);
     return PM::PreservedAnalyses::all();
 }
 
 PM::PreservedAnalyses PrintModulePass::run(Module &mod, MAM &man) {
+    visit(mod);
     return PM::PreservedAnalyses::all();
 }

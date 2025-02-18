@@ -62,6 +62,70 @@ public:
         return it->second;
     }
 
+    class iterator {
+    private:
+        std::unordered_map<ConstVal, std::shared_ptr<ConstObj>, ConstPoolHash>::iterator pair_it;
+
+    public:
+        iterator() = delete;
+        explicit iterator(std::unordered_map<ConstVal, std::shared_ptr<ConstObj>, ConstPoolHash>::iterator _umap_it) {
+            pair_it = _umap_it;
+        }
+
+        std::shared_ptr<ConstObj> &operator*() {
+            return pair_it->second;
+        }
+
+        iterator &operator++() {
+            pair_it++;
+            return *this;
+        }
+
+        bool operator!=(const iterator &other) const {
+            return other.pair_it != this->pair_it;
+        }
+    };
+
+    iterator begin() {
+        return iterator(pool.begin());
+    }
+
+    iterator end() {
+        return iterator(pool.end());
+    }
+
+    class Citerator {
+    private:
+        std::unordered_map<ConstVal, std::shared_ptr<ConstObj>, ConstPoolHash>::const_iterator pair_it;
+
+    public:
+        Citerator() = delete;
+        explicit Citerator(const std::unordered_map<ConstVal, std::shared_ptr<ConstObj>, ConstPoolHash>::const_iterator _umap_cit) {
+            pair_it = _umap_cit;
+        }
+
+        const std::shared_ptr<ConstObj> &operator*() const {
+            return pair_it->second;
+        }
+
+        Citerator &operator++() {
+            pair_it++;
+            return *this;
+        }
+
+        bool operator!=(const Citerator &other) const {
+            return other.pair_it != this->pair_it;
+        }
+    };
+
+    Citerator cbegin() const {
+        return Citerator(pool.cbegin());
+    }
+
+    Citerator cend() const {
+        return Citerator(pool.cend());
+    }
+
     ~ConstPool() = default;
 };
 } // namespace MIR

@@ -33,8 +33,7 @@ std::string Function::toString() const {
 
     for (const auto &basicblock : blocks) {
         str += "    ";
-        str += basicblock->toString() + ':';
-        str += '\n';
+        str += basicblock->toString() + '\n';
     }
 
     return str;

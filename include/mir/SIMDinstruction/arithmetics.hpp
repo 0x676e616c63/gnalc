@@ -62,7 +62,6 @@ public:
 class Vmrs : public Instruction {
 private:
 public:
-    Vmrs() = delete;
     Vmrs() : Instruction(NeonOpCode::VMRS, SourceOperandType::cp) {}
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override {

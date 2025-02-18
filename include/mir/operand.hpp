@@ -168,8 +168,7 @@ protected:
     unsigned int constOffset = 0;
 
     /// @brief 单向的依赖
-    /// @brief 用于辅助预着色, 和数据流分析无关
-    std::shared_ptr<BindOnVirOP> varOffset;
+    std::weak_ptr<BindOnVirOP> varOffset;
 
 public:
     BaseADROP() = delete;
@@ -184,7 +183,18 @@ public:
 
     BaseAddressTrait getTrait() { return btrait; }
 
-    std::shared_ptr<BindOnVirOP> getBase() const { return varOffset; }
+    void setBase(const std::shared_ptr<BindOnVirOP> &_varOffset) {
+        varOffset = _varOffset;
+    }
+
+    std::shared_ptr<BindOnVirOP>
+    getBase() const {
+        if (!varOffset.expired()) {
+            return varOffset.lock();
+        } else {
+            return nullptr;
+        }
+    }
 
     std::string toString() const override;
     ~BaseADROP() override = default;
@@ -202,6 +212,8 @@ public:
         : BaseADROP(BaseAddressTrait::Global, std::move(_name), _offset,
                     _varOffset),
           global_name(std::move(_global_name)){};
+
+    std::string getGloName() const { return global_name; }
 
     std::string toString() const final;
     ~GlobalADROP() override = default;
@@ -248,14 +260,14 @@ public:
 
 class ConstantIDX : public Operand {
 private:
-    const std::shared_ptr<ConstObj> &constant;
+    const std::shared_ptr<ConstObj> constant;
 
 public:
     ConstantIDX() = delete;
     explicit ConstantIDX(const std::shared_ptr<ConstObj> &_constant)
         : Operand(OperandTrait::ConstantPoolValue), constant(_constant) {}
 
-    std::shared_ptr<ConstObj> getConst() { return constant; }
+    const std::shared_ptr<ConstObj> &getConst() { return constant; }
 
     std::string toString() const final;
     ~ConstantIDX() override = default;

@@ -52,13 +52,13 @@ public:
     FunctionInfo &editInfo() { return info; }
 
     void addBlock(const std::string &_block_name, std::shared_ptr<BasicBlock> _block) {
-        blocks.emplace_back(std::move(_block));
+        blocks.emplace_back(_block);
         blockpool[_block_name] = _block;
     }
 
     // void delBlock(const std::string &_name);
 
-    std::shared_ptr<BasicBlock> &getBlock(const std::string &_name) { return blockpool[_name]; }
+    std::shared_ptr<BasicBlock> getBlock(const std::string &_name) { return blockpool[_name]; }
 
     const std::list<std::shared_ptr<BasicBlock>> &getBlocks() { return blocks; }
 

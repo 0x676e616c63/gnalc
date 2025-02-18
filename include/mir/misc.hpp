@@ -83,9 +83,13 @@ public:
     bool isGlo() const { return literal.index() == 0; }
     bool isImme() const { return literal.index() != 0; }
     bool isEncoded() const { return literal.index() == 5; }
+    bool isFloat() const { return literal.index() == 2; }
 
     void setId(unsigned int _id) { id = _id; }
     unsigned int getId() const { return id; }
+
+    unsigned int getType() { return literal.index(); }
+    std::string getVal();
 
     bool operator==(const ConstObj &other) const {
         return other.literal == literal;

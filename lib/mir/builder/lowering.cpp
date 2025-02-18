@@ -27,8 +27,11 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
 
     func->editInfo().args = midEnd_function.getParams().size();
 
-    OperandLowering operlower{module.getConstPool(), func->editInfo().varpool,
-                              func->editInfo().StackObjs};
+    OperandLowering operlower{
+        midEnd_function.getInstCount() + func->getInfo().args,
+        module.getConstPool(),
+        func->editInfo().varpool,
+        func->editInfo().StackObjs};
 
     /// @brief 函数参数加载到varpool里, 并且适当添加ldr指令
     unsigned int cnt = 0;  // int 或者 地址(数组退化而来)
@@ -80,11 +83,11 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
             basicblock->addInsts_front(arg_insts);
         }
         /// @brief 构建block_list, block_pool
-        func->addBlock(midEnd_function.getName(), basicblock);
+        func->addBlock(midEnd_bb->getName(), basicblock);
     }
 
     for (const auto &midEnd_bb : midEnd_function.getBlocks()) {
-        auto &backEnd_bb = func->getBlock(midEnd_bb->getName());
+        auto backEnd_bb = func->getBlock(midEnd_bb->getName());
 
         /// @brief 填写block的前驱后继关系
         for (auto &midEnd_pre : midEnd_bb->getPreBB()) {
@@ -248,8 +251,7 @@ std::shared_ptr<BindOnVirOP>
 OperandLowering::mkOP(const std::shared_ptr<IR::Type> &type,
                       RegisterBank bank) {
     auto virtual_val =
-        std::make_shared<IR::Value>("%" + std::to_string(varpool.size()), type,
-                                    IR::ValueTrait::ORDINARY_VARIABLE);
+        std::make_shared<IR::Value>("%" + std::to_string(varpool.size() + med_val_cnt + 1), type, IR::ValueTrait::ORDINARY_VARIABLE);
     auto ptr = std::make_shared<BindOnVirOP>(bank, virtual_val->getName());
     varpool.addValue(*virtual_val, ptr);
 
@@ -267,10 +269,12 @@ std::shared_ptr<GlobalADROP>
 OperandLowering::mkBaseOP(const std::string &global_name,
                           const std::shared_ptr<BindOnVirOP> &base) {
     auto virtual_val = std::make_shared<IR::Value>(
-        "%" + std::to_string(varpool.size()), IR::makeBType(IR::IRBTYPE::I32),
+        "%" + std::to_string(varpool.size() + med_val_cnt + 1),
+        IR::makeBType(IR::IRBTYPE::I32),
         IR::ValueTrait::ORDINARY_VARIABLE);
     auto ptr = std::make_shared<GlobalADROP>(global_name,
-                                             virtual_val->getName(), 0, base);
+                                             virtual_val->getName(),
+                                             0, base);
     varpool.addValue(*virtual_val, ptr);
     return ptr;
 }
@@ -280,8 +284,10 @@ OperandLowering::mkBaseOP(const IR::Value &val, const std::string &val_name,
                           unsigned int constOffset,
                           const std::shared_ptr<BindOnVirOP> &varOffset) {
     /* global_name, name, offset*/
-    auto ptr = std::make_shared<GlobalADROP>(val.getName(), val_name,
-                                             constOffset, varOffset);
+    auto ptr = std::make_shared<GlobalADROP>(val_name,
+                                             val.getName(),
+                                             constOffset,
+                                             varOffset);
     varpool.addValue(val, ptr);
     return ptr;
 }
@@ -293,7 +299,8 @@ OperandLowering::mkBaseOP(const IR::Value &val,
 
     if (base->getTrait() == BaseAddressTrait::Global) {
         auto ptr = std::make_shared<GlobalADROP>(
-            base->getName(), val.getName(), base->getConstOffset() + add_offset,
+            std::dynamic_pointer_cast<GlobalADROP>(base)->getGloName(),
+            val.getName(), base->getConstOffset() + add_offset,
             base->getBase());
 
         varpool.addValue(val, ptr);

@@ -195,21 +195,21 @@ inline std::string enum_name<CondCodeFlag>(CondCodeFlag t) {
     case CondCodeFlag::AL:
         return "";
     case CondCodeFlag::eq:
-        return "eq";
+        return "EQ";
     case CondCodeFlag::ne:
-        return "ne";
+        return "NE";
     case CondCodeFlag::mi:
-        return "mi";
+        return "MI";
     case CondCodeFlag::pl:
-        return "pl";
+        return "PL";
     case CondCodeFlag::lt:
-        return "lt";
+        return "LT";
     case CondCodeFlag::gt:
-        return "gt";
+        return "GT";
     case CondCodeFlag::le:
-        return "le";
+        return "LE";
     case CondCodeFlag::ge:
-        return "ge";
+        return "GE";
     }
 }
 
@@ -217,81 +217,83 @@ template <>
 inline std::string enum_name<OpCode>(OpCode t) {
     switch (t) {
     case OpCode::MOV:
-        return "mov";
+        return "MOV";
     case OpCode::STR:
-        return "str";
+        return "STR";
     case OpCode::LDR:
-        return "ldr";
+        return "LDR";
     case OpCode::NEG:
-        return "neg";
+        return "NEG";
     case OpCode::ADD:
-        return "add";
+        return "ADD";
     case OpCode::SUB:
-        return "sub";
+        return "SUB";
     case OpCode::RSB:
-        return "rsb";
+        return "RSB";
     case OpCode::ORR:
-        return "orr";
+        return "ORR";
     case OpCode::AND:
-        return "and";
+        return "AND";
     case OpCode::EOR:
-        return "eor";
+        return "EOR";
     case OpCode::ORN:
-        return "orn";
+        return "ORN";
     case OpCode::BIC:
-        return "bic";
+        return "BIC";
     case OpCode::ASR:
-        return "asr";
+        return "ASR";
     case OpCode::LSL:
-        return "lsl";
+        return "LSL";
     case OpCode::LSR:
-        return "lsr";
+        return "LSR";
     case OpCode::ROR:
-        return "ror";
+        return "ROR";
     case OpCode::RRX:
-        return "rrx";
+        return "RRX";
     case OpCode::MUL:
-        return "mul";
-    case OpCode::MULS:
-        return "muls";
+        return "MUL";
     case OpCode::DIV:
-        return "div";
+        return "DIV";
     case OpCode::SDIV:
-        return "sdiv";
+        return "SDIV";
     case OpCode::SMULL:
-        return "smull";
+        return "SMULL";
     case OpCode::SMMUL:
-        return "smmul";
+        return "SMMUL";
     case OpCode::SMMLA:
         return "smmla";
     case OpCode::SMMLS:
-        return "smmls";
+        return "SMMLS";
     case OpCode::MLA:
-        return "mla";
+        return "MLA";
     case OpCode::MLS:
-        return "mls";
+        return "MLS";
     case OpCode::SWI:
-        return "swi";
+        return "SWI";
     case OpCode::B:
-        return "b";
+        return "B";
     case OpCode::BX_RET:
-        return "bx_ret";
+        return "BX_RET";
     case OpCode::BX_SET_SWI:
-        return "bx_switch";
+        return "BX_SWITCH";
     case OpCode::BL:
-        return "bl";
+        return "BL";
     case OpCode::BLX:
-        return "blx";
+        return "BLX";
     case OpCode::CMP:
-        return "cmp";
+        return "CMP";
     case OpCode::CMN:
-        return "cmn";
+        return "CMN";
     case OpCode::TST:
-        return "tst";
+        return "TST";
     case OpCode::TEQ:
-        return "teq";
+        return "TEQ";
     case OpCode::COPY:
         return "COPY";
+    case OpCode::RET:
+        return "RET";
+    case OpCode::PHI:
+        return "You_are_not_supposed_to_see_this";
     }
     Err::unreachable();
     return "unknown OpCode";
@@ -301,37 +303,37 @@ template <>
 inline std::string enum_name<NeonOpCode>(NeonOpCode t) {
     switch (t) {
     case NeonOpCode::VMOV:
-        return "vmov";
+        return "VMOV";
     case NeonOpCode::VSTR:
-        return "vstr";
+        return "VSTR";
     case NeonOpCode::VLDR:
-        return "vldr";
+        return "VLDR";
     case NeonOpCode::VSTX:
-        return "vstx";
+        return "VSTX";
     case NeonOpCode::VLDX:
-        return "vldx";
+        return "VLDX";
     case NeonOpCode::VADD:
-        return "vadd";
+        return "VADD";
     case NeonOpCode::VSUB:
-        return "vsub";
+        return "VSUB";
     case NeonOpCode::VMUL:
-        return "vmul";
+        return "VMUL";
     case NeonOpCode::VDIV:
-        return "vdiv";
+        return "VDIV";
     case NeonOpCode::VNEG:
-        return "vneg";
+        return "VNEG";
     case NeonOpCode::VADDV:
-        return "vaddv";
+        return "VADDV";
     case NeonOpCode::VMAXV:
-        return "vmaxv";
+        return "VMAXV";
     case NeonOpCode::VMINV:
-        return "vminv";
+        return "VMINV";
     case NeonOpCode::VCMP:
-        return "vcmp";
+        return "VCMP";
     case NeonOpCode::VCVT:
-        return "vcvt";
+        return "VCVT";
     case NeonOpCode::VMRS:
-        return "vmrs";
+        return "VMRS";
     }
     Err::unreachable();
     return "unknown NeonOperCode";

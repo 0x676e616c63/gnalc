@@ -36,6 +36,10 @@ InstLowering::brLower(const std::shared_ptr<IR::BRInst> &br) {
         b_true->setCondCodeFlag(CondCodeFlag::eq);
         auto b_false = std::make_shared<branchInst>(OpCode::B, falseDest,
                                                     falseDest->getName());
+        // b_false.condflag : AL
+        insts.emplace_back(teq);
+        insts.emplace_back(b_true);
+        insts.emplace_back(b_false);
     }
 
     return insts;
@@ -43,7 +47,6 @@ InstLowering::brLower(const std::shared_ptr<IR::BRInst> &br) {
 
 std::list<std::shared_ptr<Instruction>>
 InstLowering::retLower(const std::shared_ptr<IR::RETInst> &ret) {
-    /// @brief 指令选择阶段, retLower只有加载返回值, 因为不确定后续lr是如何恢复的
     std::list<std::shared_ptr<Instruction>> insts;
 
     auto retType = ret->getRetBType();
@@ -68,7 +71,7 @@ InstLowering::retLower(const std::shared_ptr<IR::RETInst> &ret) {
                 // vmov $s0, %tmp
                 auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32),
                                             RegisterBank::gpr);
-                auto mov = std::make_shared<movInst>(SourceOperandType::cp,
+                auto mov = std::make_shared<movInst>(SourceOperandType::i,
                                                      relay, retVal);
                 auto vmov = std::make_shared<Vmov>(
                     SourceOperandType::r,
@@ -78,7 +81,7 @@ InstLowering::retLower(const std::shared_ptr<IR::RETInst> &ret) {
             } else {
                 // vmov $s0, %retVal
                 auto vmov = std::make_shared<Vmov>(
-                    SourceOperandType::cp,
+                    SourceOperandType::i,
                     operlower.getPreColored(FPURegister::s0), retVal, pair);
                 insts.emplace_back(vmov);
             }
@@ -93,6 +96,9 @@ InstLowering::retLower(const std::shared_ptr<IR::RETInst> &ret) {
             insts.emplace_back(vmov);
         }
     }
+
+    auto bkd_ret = std::make_shared<RET>();
+    insts.emplace_back(bkd_ret);
 
     return insts;
 }
@@ -128,13 +134,13 @@ InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
                         auto const_arg =
                             operlower.fastFind(arg_const->getVal());
                         auto mov = std::make_shared<movInst>(
-                            SourceOperandType::cp, reg, const_arg);
+                            SourceOperandType::ri, reg, const_arg);
                         insts.emplace_back(mov);
 
                     } else {
                         auto arg_in_reg = operlower.fastFind(arg);
                         auto mov = std::make_shared<movInst>(
-                            SourceOperandType::r, reg, arg_in_reg);
+                            SourceOperandType::rr, reg, arg_in_reg);
                         insts.emplace_back(mov);
                     }
 
@@ -149,7 +155,7 @@ InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
                             operlower.fastFind(arg_const->getVal());
 
                         auto mov = std::make_shared<movInst>(
-                            SourceOperandType::cp, arg_in_reg, const_arg);
+                            SourceOperandType::ri, arg_in_reg, const_arg);
                         insts.emplace_back(mov);
                     } else {
                         arg_in_reg = std::dynamic_pointer_cast<BindOnVirOP>(
@@ -178,7 +184,7 @@ InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
                             IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
 
                         auto mov = std::make_shared<movInst>(
-                            SourceOperandType::cp, arg_in_reg, const_arg);
+                            SourceOperandType::ri, arg_in_reg, const_arg);
                         auto pair = std::make_pair(bitType::DEFAULT32,
                                                    bitType::DEFAULT32);
                         auto vmov = std::make_shared<Vmov>(
@@ -189,7 +195,7 @@ InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
                         auto pair = std::make_pair(bitType::DEFAULT32,
                                                    bitType::DEFAULT32);
                         auto vmov = std::make_shared<Vmov>(
-                            SourceOperandType::cp, reg, const_arg, pair);
+                            SourceOperandType::ri, reg, const_arg, pair);
                         insts.emplace_back(vmov);
                     }
 
@@ -203,8 +209,8 @@ InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
                 }
 
                 ++fcnt;
-            }
-            else Err::not_implemented("Unknown basic type '" + btype->toString() + "'");
+            } else
+                Err::not_implemented("Unknown basic type '" + btype->toString() + "'");
         } else {
             /// @brief 指针类
             std::shared_ptr<BindOnVirOP> arg_in_reg;
@@ -225,7 +231,7 @@ InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
                     // add %tmp, %base, %tmp2
                     auto relay2 = operlower.mkOP(
                         IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
-                    auto mov = std::make_shared<movInst>(SourceOperandType::cp,
+                    auto mov = std::make_shared<movInst>(SourceOperandType::ri,
                                                          relay2, const_offset);
 
                     auto add = std::make_shared<binaryImmInst>(

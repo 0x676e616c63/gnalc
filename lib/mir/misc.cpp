@@ -4,13 +4,14 @@
 #include "../../include/mirtools/tool.hpp"
 #include <cctype>
 #include <iomanip>
+#include <sstream>
 
 std::string MIR::FrameObj::toString() const {
     std::string str;
     str += "- {";
 
     str += " id: " + std::to_string(id);
-    str += ", size = " + std::to_string(size);
+    str += ", size = " + std::to_string(size) + 'B';
     str += ", local-offset = " + std::to_string(offset);
     str += ", type = " + enum_name(ftrait);
 
@@ -27,16 +28,16 @@ std::string MIR::GlobalObj::toString() const {
     str += " name: " + name;
     str += ", size = " + std::to_string(size);
 
-    str += ", initial: [ ";
+    str += ", initial: [";
     for (auto &init : initializer) {
         if (init.first) {
             str += std::visit(visitor, init.second);
         } else {
-            str += "0x" + std::visit(visitor, init.second);
+            str += "NullByte x " + std::visit(visitor, init.second);
         }
         str += ", ";
     }
-
+    str = str.substr(0, str.length() - 2); // delete last ", "
     str += "] }";
 
     return str;
@@ -165,21 +166,48 @@ std::string MIR::ConstObj::toString() const {
     str += " id: " + std::to_string(id);
 
     str += ", literal = ";
-    if (isGlo())
+    if (isGlo()) {
+
         str += "'" + std::get<std::string>(literal) + "'";
-    else if (literal.index() == 1)
+        str += ", type = DataSectionAddr";
+
+    } else if (literal.index() == 1) {
         str += "'" + std::to_string(std::get<int>(literal)) + "'";
-    else if (literal.index() == 2)
+        str += ", type = int32";
+    } else if (literal.index() == 2) {
+
         str += "'" + std::to_string(std::get<float>(literal)) + "'";
-    else
-        str += "'" + std::to_string(std::get<Encoding>(literal).first) +
-               std::to_string(std::get<Encoding>(literal).second) + "'";
+        str += ", type = float32";
+
+    } else if (literal.index() == 3) {
+
+        str += "'" + std::to_string(std::get<bool>(literal)) + "'";
+        str += ", type = boolen";
+
+    } else if (literal.index() == 4) {
+
+        str += "'" + std::to_string(std::get<char>(literal)) + "'";
+        str += ", type = chr";
+    } else if (literal.index() == 5) {
+        // hex
+        std::ostringstream hex_ss;
+        uint16_t low = std::get<Encoding>(literal).first;
+        uint16_t high = std::get<Encoding>(literal).second;
+
+        hex_ss << "0x";
+        if (high)
+            hex_ss << std::hex << high;
+        hex_ss << std::hex << low;
+
+        str += "'" + hex_ss.str() + "'";
+        str += ". type = int32";
+    }
 
     str += ", isEncInText = ";
-    if (isGlo() || literal.index() == 3)
-        str += "false";
-    else
+    if (isEncoded() || isGlo())
         str += "true";
+    else
+        str += "false";
 
     str += " }";
 

@@ -31,7 +31,6 @@ enum class OpCode {
     RRX /*带拓展的向右循环移*/,
 
     MUL,
-    MULS,
     DIV,
     SDIV /* SDIV */,
 
@@ -58,6 +57,7 @@ enum class OpCode {
 
     COPY,
     PHI,
+    RET, // 具体ret方法将视情况而定
 };
 
 enum class NeonOpCode {
@@ -136,7 +136,7 @@ public:
 
     std::variant<OpCode, NeonOpCode> getOpCode() { return opcode; }
 
-    virtual void addTargetOP(std::shared_ptr<BindOnVirOP> TargetOperand_) {
+    void addTargetOP(std::shared_ptr<BindOnVirOP> TargetOperand_) {
         TargetOperand = std::move(TargetOperand_);
     }
 

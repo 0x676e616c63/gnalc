@@ -816,7 +816,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower_v(const std::s
         oper1 = pair.second;
         if (!pair.first) {
             // mov %oper1, #imme
-            auto mov = std::make_shared<movInst>(SourceOperandType::cp, oper1, operlower.fastFind(const_float));
+            auto mov = std::make_shared<movInst>(SourceOperandType::ri, oper1, operlower.fastFind(const_float));
             insts.emplace_back(mov);
         }
     } else {
@@ -830,7 +830,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower_v(const std::s
         oper2 = pair.second;
         if (!pair.first) {
             // mov %oper2, #imme
-            auto mov = std::make_shared<movInst>(SourceOperandType::cp, oper2, operlower.fastFind(const_float));
+            auto mov = std::make_shared<movInst>(SourceOperandType::ri, oper2, operlower.fastFind(const_float));
             insts.emplace_back(mov);
         }
     } else {

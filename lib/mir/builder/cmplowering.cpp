@@ -272,11 +272,11 @@ std::list<std::shared_ptr<Instruction>> InstLowering::fcmpLower(const std::share
             auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
             auto relay2 = operlower.mkOP(IR::makeBType(IR::IRBTYPE::FLOAT), RegisterBank::spr);
 
-            auto mov = std::make_shared<movInst>(SourceOperandType::cp, relay, constVal);
+            auto mov = std::make_shared<movInst>(SourceOperandType::ri, relay, constVal);
             auto pair = std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32);
             auto vmov = std::make_shared<Vmov>(SourceOperandType::r, relay2, relay, pair);
             pair = std::make_pair(bitType::f32, bitType::DEFAULT32);
-            auto vcmp = std::make_shared<Vcmp>(SourceOperandType::rr, virVal, relay2, pair);
+            auto vcmp = std::make_shared<Vcmp>(NeonOpCode::VCMP, virVal, relay2, pair);
             auto vmrs = std::make_shared<Vmrs>();
 
             insts.emplace_back(mov);
@@ -290,9 +290,9 @@ std::list<std::shared_ptr<Instruction>> InstLowering::fcmpLower(const std::share
             auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::FLOAT), RegisterBank::spr);
 
             auto pair = std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32);
-            auto vmov = std::make_shared<Vmov>(SourceOperandType::cp, relay, constVal, pair);
+            auto vmov = std::make_shared<Vmov>(SourceOperandType::ri, relay, constVal, pair);
             pair = std::make_pair(bitType::f32, bitType::DEFAULT32);
-            auto vcmp = std::make_shared<Vcmp>(SourceOperandType::rr, virVal, relay, pair);
+            auto vcmp = std::make_shared<Vcmp>(NeonOpCode::VCMP, virVal, relay, pair);
             auto vmrs = std::make_shared<Vmrs>();
 
             insts.emplace_back(vmov);

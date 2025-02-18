@@ -5,8 +5,10 @@ using namespace MIR;
 
 std::string branchInst::toString() {
     std::string str;
-    str += enum_name(std::get<OpCode>(opcode)) + ' ';
-    str += JmpTo;
+    str += enum_name(std::get<OpCode>(opcode));
+    str += enum_name(getCondCodeFlag());
+    str += ' ';
+    str += JmpTo + '\n';
 
     return str;
 }

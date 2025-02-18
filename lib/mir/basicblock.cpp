@@ -9,7 +9,6 @@ std::string BasicBlock::toString() const {
     for (const auto &inst : insts) {
         str += "        ";
         str += inst->toString();
-        str += '\n';
     }
 
     return str;

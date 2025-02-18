@@ -68,7 +68,7 @@ InstLowering::storeLower(const std::shared_ptr<IR::STOREInst> &store) {
 
         if (!pair.first) {
             // mov %val_in_reg, #imme_int
-            auto mov = std::make_shared<movInst>(SourceOperandType::cp, val_in_reg, operlower.fastFind(const_int_val->getVal()));
+            auto mov = std::make_shared<movInst>(SourceOperandType::ri, val_in_reg, operlower.fastFind(const_int_val->getVal()));
             insts.emplace_back(mov);
         }
     } else if (auto const_float_val = std::dynamic_pointer_cast<IR::ConstantFloat>(val)) {
@@ -77,7 +77,7 @@ InstLowering::storeLower(const std::shared_ptr<IR::STOREInst> &store) {
 
         if (!pair.first) {
             // mov %val_in_reg, #imme_float
-            auto mov = std::make_shared<movInst>(SourceOperandType::cp, val_in_reg, operlower.fastFind(const_float_val->getVal()));
+            auto mov = std::make_shared<movInst>(SourceOperandType::ri, val_in_reg, operlower.fastFind(const_float_val->getVal()));
             insts.emplace_back(mov);
         }
     } else {
@@ -132,8 +132,7 @@ InstLowering::gepLower(const std::shared_ptr<IR::GEPInst> &gep) {
 
             auto global_addr = operlower.fastFind(global_ptr->getName());
 
-            auto mov = std::make_shared<movInst>(SourceOperandType::a, relay,
-                                                 global_addr);
+            auto mov = std::make_shared<movInst>(SourceOperandType::a, relay, global_addr);
             insts.emplace_back(mov);
             baseOP = relay;
         }

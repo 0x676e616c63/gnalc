@@ -23,9 +23,9 @@ std::string BaseADROP::toString() const {
     /// %1:gpr(%Runtime + [varOffset] + 16)
     std::string str = getName() + ':' + enum_name(bank);
 
-    str += "(%Runtime";
-    if (varOffset)
-        str += " + " + varOffset->toString();
+    str += "(%Runtime:";
+    if (!varOffset.expired())
+        str += " + " + varOffset.lock()->toString();
 
     if (constOffset)
         str += " + " + std::to_string(constOffset);
@@ -41,8 +41,10 @@ std::string GlobalADROP::toString() const {
     std::string str = getName() + ':' + enum_name(bank);
 
     str += "(%Global." + global_name;
-    if (varOffset)
-        str += " + " + varOffset->toString();
+    if (!varOffset.expired()) {
+        auto varPtr = varOffset.lock();
+        str += ": " + varPtr->getName();
+    }
 
     if (constOffset)
         str += " + " + std::to_string(constOffset);
@@ -57,8 +59,8 @@ std::string StackADROP::toString() const {
     std::string str = getName() + ':' + enum_name(bank);
 
     str += "(%Stack." + std::to_string(obj->getId());
-    if (varOffset && !std::dynamic_pointer_cast<PreColedOP>(varOffset)) // !sp/r7
-        str += " + " + varOffset->toString();
+    if (!varOffset.expired() && !std::dynamic_pointer_cast<PreColedOP>(getBase())) // !sp/r7
+        str += ": " + varOffset.lock()->toString();
 
     if (constOffset)
         str += " + " + std::to_string(constOffset);

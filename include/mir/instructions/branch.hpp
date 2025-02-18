@@ -38,6 +38,19 @@ public:
     std::string toString() override;
     ~branchInst() override = default;
 };
+
+class RET : public Instruction {
+public:
+    RET() : Instruction(OpCode::RET, SourceOperandType::cp) {}
+
+    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override {
+        return nullptr;
+    };
+
+    std::string toString() override { return "RET"; }
+    ~RET() override = default;
+};
+
 } // namespace MIR
 
 #endif
