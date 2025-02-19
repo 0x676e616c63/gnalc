@@ -844,21 +844,21 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower_v(const std::s
 
     auto datapair = std::make_pair(bitType::f32, bitType::DEFAULT32);
     switch (op) {
-    case IR::OP::ADD: {
+    case IR::OP::FADD: {
         auto vadd = std::make_shared<Vbinary>(MIR::NeonOpCode::VADD, target, oper1, oper2, datapair);
         insts.emplace_back(vadd);
     } break;
 
-    case IR::OP::SUB: {
+    case IR::OP::FSUB: {
         auto vsub = std::make_shared<Vbinary>(MIR::NeonOpCode::VSUB, target, oper1, oper2, datapair);
         insts.emplace_back(vsub);
     } break;
 
-    case IR::OP::MUL: {
+    case IR::OP::FMUL: {
         auto vmul = std::make_shared<Vbinary>(MIR::NeonOpCode::VMUL, target, oper1, oper2, datapair);
         insts.emplace_back(vmul);
     } break;
-    case IR::OP::DIV: {
+    case IR::OP::FDIV: {
         auto vdiv = std::make_shared<Vbinary>(MIR::NeonOpCode::VMUL, target, oper1, oper2, datapair);
         insts.emplace_back(vdiv);
     } break;

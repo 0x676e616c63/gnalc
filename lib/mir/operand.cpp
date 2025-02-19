@@ -59,9 +59,11 @@ std::string StackADROP::toString() const {
     std::string str = getName() + ':' + enum_name(bank);
 
     str += "(%Stack." + std::to_string(obj->getId());
-    if (!varOffset.expired() && !std::dynamic_pointer_cast<PreColedOP>(getBase())) // !sp/r7
-        str += ": " + varOffset.lock()->toString();
-
+    if (!varOffset.expired() && !std::dynamic_pointer_cast<PreColedOP>(getBase())) {
+        // not sp/r7
+        auto varPtr = varOffset.lock();
+        str += ": " + varPtr->getName();
+    }
     if (constOffset)
         str += " + " + std::to_string(constOffset);
 

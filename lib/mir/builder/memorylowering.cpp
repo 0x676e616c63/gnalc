@@ -234,3 +234,44 @@ std::list<std::shared_ptr<Instruction>> InstLowering::storeLower_v(const std::sh
     insts.emplace_back(vstr);
     return insts;
 }
+
+std::list<std::shared_ptr<Instruction>>
+InstLowering::loadLower_p(const std::shared_ptr<IR::LOADInst> &load) {
+    std::list<std::shared_ptr<Instruction>> insts;
+
+    ///@brief load获得的值为一个指针
+    ///@brief 由于基本类型只有int float, 所以load ptr应该不会是全局变量
+    std::shared_ptr<BaseADROP> ptr = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(load->getPtr()));
+    std::shared_ptr<BaseADROP> target = operlower.mkBaseOP(*load, ptr);
+
+    // ldr %target, [%ptr]
+    auto ldr = std::make_shared<ldrInst>(SourceOperandType::ra, 4, target, ptr);
+    insts.emplace_back(ldr);
+
+    return insts;
+}
+
+std::list<std::shared_ptr<Instruction>>
+InstLowering::storeLower_p(const std::shared_ptr<IR::STOREInst> &store) {
+    std::list<std::shared_ptr<Instruction>> insts;
+
+    ///@brief store的指针值不为常数
+
+    std::shared_ptr<BaseADROP> value = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(store->getValue()));
+    std::shared_ptr<BaseADROP> ptr = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(store->getPtr()));
+
+    auto str = std::make_shared<strInst>(SourceOperandType::ra, 4, value, ptr);
+    insts.emplace_back(str);
+
+    return insts;
+}
+
+std::list<std::shared_ptr<Instruction>>
+InstLowering::gepLower_p(const std::shared_ptr<IR::GEPInst> &gep) {
+    std::list<std::shared_ptr<Instruction>> insts;
+
+    auto ptr = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(gep->getPtr()));
+    auto target = std::dynamic_pointer_cast<BaseADROP>(operlower.mkBaseOP(*gep, ptr));
+
+    return insts; // empty
+}

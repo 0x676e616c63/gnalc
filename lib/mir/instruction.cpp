@@ -41,6 +41,10 @@ std::string bitTage(std::pair<bitType, bitType> dataTypes) {
         str = ".32";
     } else if (dataTypes.first == bitType::f32 && dataTypes.second == bitType::DEFAULT32) {
         str = ".f32";
+    } else if (dataTypes.first == bitType::s32 && dataTypes.second == bitType::f32) {
+        str = ".s32.f32";
+    } else if (dataTypes.first == bitType::f32 && dataTypes.second == bitType::s32) {
+        str = ".f32.s32";
     } else {
         Err::todo("NeonInstruction::bitTage: unknown bitwides");
     }

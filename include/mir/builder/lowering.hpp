@@ -89,11 +89,14 @@ struct OperandLowering {
     std::shared_ptr<GlobalADROP> mkBaseOP(const IR::Value &,
                                           const std::string &, unsigned int,
                                           const std::shared_ptr<BindOnVirOP> &);
+    // ldr时解引用多重指针以得到一个指针
+    std::shared_ptr<BaseADROP> mkBaseOP(const IR::Value &,
+                                        const std::shared_ptr<BaseADROP> &ptr);
     // Gep, 传递寄存器偏移, 加常量偏移
     std::shared_ptr<BaseADROP> mkBaseOP(const IR::Value &,
                                         const std::shared_ptr<BaseADROP> &,
                                         unsigned int add_offset);
-    // Phi中仅绑定IR::Value
+    // 仅绑定IR::Value, ::Runtime
     std::shared_ptr<BaseADROP> mkBaseOP(const IR::Value &);
     // 开辟栈空间(alloca)
     std::shared_ptr<StackADROP> mkStackOP(const IR::Value &, unsigned int size);
@@ -171,6 +174,14 @@ struct InstLowering {
 
     std::list<std::shared_ptr<Instruction>>
     storeLower_v(const std::shared_ptr<IR::STOREInst> &);
+
+    ///@note 补充
+    std::list<std::shared_ptr<Instruction>>
+    loadLower_p(const std::shared_ptr<IR::LOADInst> &);
+    std::list<std::shared_ptr<Instruction>>
+    storeLower_p(const std::shared_ptr<IR::STOREInst> &);
+    std::list<std::shared_ptr<Instruction>>
+    gepLower_p(const std::shared_ptr<IR::GEPInst> &);
 };
 
 class Lowering {

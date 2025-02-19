@@ -11,7 +11,7 @@ std::string MIR::FrameObj::toString() const {
     str += "- {";
 
     str += " id: " + std::to_string(id);
-    str += ", size = " + std::to_string(size) + 'B';
+    str += ", size = " + std::to_string(size) + " B";
     str += ", local-offset = " + std::to_string(offset);
     str += ", type = " + enum_name(ftrait);
 
@@ -87,13 +87,12 @@ void MIR::GlobalObj::mkInitializer(const IR::GVIniter &midEnd_GVIniter) {
 
 void MIR::GlobalObj::initializerMerge() {
     for (auto it = initializer.begin(); it != initializer.end();) {
-        if (!it->first)
+        if (it->first) // true
             ++it;
-        else {
+        else { // false
             auto next_it = std::next(it);
             if (next_it == initializer.end())
                 break;
-
             if (next_it->first)
                 ++it;
             else {

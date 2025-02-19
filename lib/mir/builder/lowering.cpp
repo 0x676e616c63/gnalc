@@ -41,9 +41,25 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
     for (const auto &arg : midEnd_function.getParams()) {
         auto arg_type = arg->getType();
 
-        if (std::dynamic_pointer_cast<IR::PtrType>(arg_type) ||
-            std::dynamic_pointer_cast<IR::BType>(arg_type)->getInner() ==
-                IR::IRBTYPE::I32) {
+        if (std::dynamic_pointer_cast<IR::PtrType>(arg_type)) {
+            if (cnt <= 4) {
+                auto arg_in_reg =
+                    operlower.getPreColored(static_cast<CoreRegister>(cnt));
+                // auto val = operlower.mkOP(*arg, RegisterBank::gpr);
+                auto val = operlower.mkBaseOP(*arg);
+                auto copy = std::make_shared<COPY>(val, arg_in_reg);
+                arg_insts.emplace_back(copy);
+            } else {
+                // 参数在内存中
+                auto val = operlower.mkBaseOP(*arg);
+                auto arg_in_stack = operlower.mkStackOP(cnt);
+                auto ldr = std::make_shared<ldrInst>(SourceOperandType::a, 4,
+                                                     val, arg_in_stack);
+                arg_insts.emplace_back(ldr);
+            }
+            ++cnt;
+        } else if (std::dynamic_pointer_cast<IR::BType>(arg_type)->getInner() ==
+                   IR::IRBTYPE::I32) {
             if (cnt <= 4) {
                 auto arg_in_reg =
                     operlower.getPreColored(static_cast<CoreRegister>(cnt));
@@ -172,23 +188,32 @@ InstLowering::operator()(const std::shared_ptr<IR::Instruction> &midEnd_inst) {
         insts = allocaLower(alloca);
 
     } else if (auto load = std::dynamic_pointer_cast<IR::LOADInst>(midEnd_inst)) {
-        if (std::dynamic_pointer_cast<IR::BType>(load->getType())->getInner() == IR::IRBTYPE::I32) {
+        if (std::dynamic_pointer_cast<IR::PtrType>(load->getType())) {
+            insts = loadLower_p(load);
+        } else if (std::dynamic_pointer_cast<IR::BType>(load->getType())->getInner() == IR::IRBTYPE::I32) {
             insts = loadLower(load);
         } else {
             insts = loadLower_v(load);
         }
     } else if (auto store = std::dynamic_pointer_cast<IR::STOREInst>(midEnd_inst)) {
-        /// @warning 这里假设非SIMD的store指令的BaseType只会是BType, 否则会SEGV
-        if (std::dynamic_pointer_cast<IR::BType>(store->getBaseType())
-                ->getInner() == IR::IRBTYPE::I32) {
+        /// @warning Btype, PtrType
+        if (std::dynamic_pointer_cast<IR::PtrType>(store->getBaseType())) {
+            insts = storeLower_p(store);
+        } else if (std::dynamic_pointer_cast<IR::BType>(store->getBaseType())->getInner() == IR::IRBTYPE::I32) {
             insts = storeLower(store);
         } else {
             insts = storeLower_v(store);
         }
     } else if (auto gep = std::dynamic_pointer_cast<IR::GEPInst>(midEnd_inst)) {
-        insts = gepLower(gep);
+        if (std::dynamic_pointer_cast<IR::BType>(gep->getPtr()->getType()))
+            insts = gepLower(gep);
+        else
+            insts = gepLower_p(gep);
+
     } else if (auto phi = std::dynamic_pointer_cast<IR::PHIInst>(midEnd_inst)) {
+
         insts = phiLower(phi);
+
     } else {
         Err::unreachable("instLowering: unknown IR instruction");
     }
@@ -290,6 +315,37 @@ OperandLowering::mkBaseOP(const IR::Value &val, const std::string &val_name,
                                              varOffset);
     varpool.addValue(val, ptr);
     return ptr;
+}
+
+std::shared_ptr<BaseADROP> OperandLowering::mkBaseOP(const IR::Value &val,
+                                                     const std::shared_ptr<BaseADROP> &ptr) {
+    if (ptr->getTrait() == BaseAddressTrait::Global) {
+        auto new_ptr = std::make_shared<GlobalADROP>(
+            std::dynamic_pointer_cast<GlobalADROP>(ptr)->getGloName(),
+            val.getName(), 0,
+            nullptr);
+        new_ptr->setBase(new_ptr);
+
+        varpool.addValue(val, new_ptr);
+        return new_ptr;
+    } else if (ptr->getTrait() == BaseAddressTrait::Local) {
+        auto new_ptr = std::make_shared<StackADROP>(
+            std::dynamic_pointer_cast<StackADROP>(ptr)->getObj(),
+            val.getName(), 0,
+            nullptr);
+        new_ptr->setBase(new_ptr);
+
+        varpool.addValue(val, new_ptr);
+        return new_ptr;
+    } else {
+        auto new_ptr = std::make_shared<BaseADROP>(
+            BaseAddressTrait::Runtime, val.getName(),
+            0, nullptr);
+        new_ptr->setBase(new_ptr);
+
+        varpool.addValue(val, new_ptr);
+        return new_ptr;
+    }
 }
 
 std::shared_ptr<BaseADROP>
