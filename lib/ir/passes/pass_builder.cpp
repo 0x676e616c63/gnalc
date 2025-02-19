@@ -45,13 +45,8 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     if (opt_info.sccp)
         fpm.addPass(ConstantPropagationPass());
 
-    if (opt_info.reassociate) {
-        // For Reassociate Debug, remove it when committing.
-        fpm.addPass(NameNormalizePass(true));
-
-
+    if (opt_info.reassociate)
         fpm.addPass(ReassociatePass());
-    }
 
     if (opt_info.dce)
         fpm.addPass(DCEPass());

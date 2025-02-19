@@ -27,6 +27,7 @@
 //           tree-ssa-pre.cc: https://github.com/gcc-mirror/gcc/blob/master/gcc/tree-ssa-pre.cc
 //
 // TODO: Restrictions should be applied on hoisting to avoid excessive register pressure
+// TODO: Load elimination? https://blog.llvm.org/2009/12/introduction-to-load-elimination-in-gvn.html
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_GVN_PRE_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_GVN_PRE_HPP

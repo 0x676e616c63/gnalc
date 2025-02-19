@@ -1,4 +1,5 @@
 // Reassociate commutative expressions
+// Warning: this pass won't reassociate float operations
 // Reference:
 // https://llvm.org/doxygen/classllvm_1_1ReassociatePass.html
 // https://llvm.org/doxygen/Reassociate_8cpp.html
@@ -54,11 +55,6 @@ private:
     void reassociateExpression(const std::shared_ptr<BinaryInst> &inst);
 
     std::shared_ptr<BinaryInst> neg2mul(const std::shared_ptr<Instruction> &neg);
-
-    std::shared_ptr<BinaryInst> canonNegFPImpl(const std::shared_ptr<BinaryInst> &inst,
-    const std::shared_ptr<BinaryInst> &subtree, const std::shared_ptr<Value> &v);
-
-    std::shared_ptr<BinaryInst> canonNegFP(const std::shared_ptr<BinaryInst> &binary);
 
     std::shared_ptr<Instruction> canonInst(const std::shared_ptr<Instruction>& inst);
 

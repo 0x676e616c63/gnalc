@@ -19,53 +19,27 @@ std::shared_ptr<BinaryInst> isOneUseBinary(const std::shared_ptr<Value> &v, OP o
     return nullptr;
 }
 
-std::shared_ptr<BinaryInst> isOneUseOp(const std::shared_ptr<Value> &v, OP opcode1, OP opcode2) {
+std::shared_ptr<BinaryInst> isOneUseOp(const std::shared_ptr<Value> &v, OP opcode) {
     auto binary = std::dynamic_pointer_cast<BinaryInst>(v);
-    if (binary && binary->getUseCount() == 1 && (binary->getOpcode() == opcode1 || binary->getOpcode() == opcode2))
+    if (binary && binary->getUseCount() == 1 && (binary->getOpcode() == opcode))
         return binary;
     return nullptr;
 }
 
-bool isBinaryNeg(const std::shared_ptr<BinaryInst> &binary) {
+bool isIntBinaryNeg(const std::shared_ptr<BinaryInst> &binary) {
     auto lhs = binary->getLHS();
-
     auto ci = std::dynamic_pointer_cast<ConstantInt>(lhs);
-    auto cf = std::dynamic_pointer_cast<ConstantFloat>(lhs);
-
     if (binary->getOpcode() == OP::SUB && ci && ci->getVal() == 0)
         return true;
-
-    if (binary->getOpcode() == OP::FSUB && cf && cf->getVal() == 0.0f)
-        return true;
-
-    return false;
-}
-
-bool isNeg(const std::shared_ptr<Value> &v) {
-    if (auto inst = std::dynamic_pointer_cast<Instruction>(v)) {
-        if (inst->getOpcode() == OP::FNEG)
-            return true;
-        if (auto binary = std::dynamic_pointer_cast<BinaryInst>(inst))
-            return isBinaryNeg(binary);
-        return false;
-    }
     return false;
 }
 
 std::shared_ptr<BinaryInst> ReassociatePass::neg2mul(const std::shared_ptr<Instruction> &neg) {
     // sub 0 x -> mul x -1
-    // fneg x -> fmul x -1.0f
-    Err::gassert(isNeg(neg));
-    std::shared_ptr<BinaryInst> result = nullptr;
-    if (auto fneg = std::dynamic_pointer_cast<FNEGInst>(neg)) {
-        result = std::make_shared<BinaryInst>("%reass.fn2m" + std::to_string(name_cnt++),
-                                             OP::FMUL, fneg->getVal(), func->getConstantPool().getConst(-1.0f));
-    }
-    else {
-        auto sub = std::dynamic_pointer_cast<BinaryInst>(neg);
-        result = std::make_shared<BinaryInst>("%reass.n2m" + std::to_string(name_cnt++),
-                                              OP::MUL, sub->getRHS(), func->getConstantPool().getConst(-1));
-    }
+    auto binary = std::dynamic_pointer_cast<BinaryInst>(neg);
+    Err::gassert(binary && isIntBinaryNeg(binary));
+    auto result = std::make_shared<BinaryInst>("%reass.n2m" + std::to_string(name_cnt++),
+    OP::MUL, binary->getRHS(), func->getConstantPool().getConst(-1));
     result->getParent()->addInst(neg->index, result);
     neg->replaceSelf(result);
     optModified = true;
@@ -73,7 +47,7 @@ std::shared_ptr<BinaryInst> ReassociatePass::neg2mul(const std::shared_ptr<Instr
 }
 
 void extractOneUseFactors(const std::shared_ptr<Value> &v, std::vector<std::shared_ptr<Value>> &factors) {
-    if (auto binary = isOneUseOp(v, OP::MUL, OP::FMUL)) {
+    if (auto binary = isOneUseOp(v, OP::MUL)) {
         extractOneUseFactors(binary->getRHS(), factors);
         extractOneUseFactors(binary->getLHS(), factors);
     } else
@@ -153,7 +127,6 @@ std::vector<ExprTreeNode> ReassociatePass::analyzeExprTree(const std::shared_ptr
 void ReassociatePass::rewriteExpr(
     const std::shared_ptr<BinaryInst> &root,
     std::vector<ValueEntry> &ops) {
-    bool isIntExpr = toBType(root->getType())->getInner() == IRBTYPE::I32;
     auto opcode = root->getOpcode();
     std::vector<std::shared_ptr<BinaryInst>> availNodes;
     std::set<std::shared_ptr<Value>> skipList; // Skip all leafs, rewriting them is not safe
@@ -191,7 +164,7 @@ void ReassociatePass::rewriteExpr(
                 curr->setRHS(newRHS);
             }
             optModified = true;
-            if (!rewriteBeg) rewriteBeg = curr;
+            rewriteBeg = curr;
             break;
         }
         // While others, the LHS is a subtree and the RHS is op[i]
@@ -225,11 +198,7 @@ void ReassociatePass::rewriteExpr(
         else {
             // There is no node left available, and we've made an unwise choice.
             // Just get one from air.
-            std::shared_ptr<Value> zero;
-            if (isIntExpr)
-                zero = func->getConstantPool().getConst(0);
-            else
-                zero = func->getConstantPool().getConst(0.0f);
+            auto zero = func->getConstantPool().getConst(0);
             auto dummy = std::make_shared<BinaryInst>("%reass.oops" + std::to_string(name_cnt++),
                 opcode, zero, zero);
             root->getParent()->addInst(root->index, dummy);
@@ -238,7 +207,7 @@ void ReassociatePass::rewriteExpr(
             Logger::logWarning("[Reassociate]: Oops! No nodes left available. Generating one for rewriting.");
         }
 
-        if (!rewriteBeg) rewriteBeg = curr;
+        rewriteBeg = curr;
         optModified = true;
     }
 
@@ -260,10 +229,9 @@ void ReassociatePass::rewriteExpr(
 
 std::shared_ptr<Value> ReassociatePass::removeFactor
     (const std::shared_ptr<Value> &v, const std::shared_ptr<Value> &factor) {
-    auto binaryInst = isOneUseOp(v, OP::MUL, OP::FMUL);
+    auto binaryInst = isOneUseOp(v, OP::MUL);
     if (!binaryInst)
         return nullptr;
-    bool isIntExpr = toBType(binaryInst->getType())->getInner() == IRBTYPE::I32;
 
     auto tree = analyzeExprTree(binaryInst);
     std::vector<ValueEntry> factors;
@@ -286,13 +254,6 @@ std::shared_ptr<Value> ReassociatePass::removeFactor
             factors.erase(factors.begin() + i);
             break;
         }
-        auto cf1 = std::dynamic_pointer_cast<ConstantFloat>(factor);
-        auto cf2 = std::dynamic_pointer_cast<ConstantFloat>(factors[i].op);
-        if (cf1 && cf2 && cf1->getVal() == -cf2->getVal()) {
-            canRemove = needsNegate = true;
-            factors.erase(factors.begin() + i);
-            break;
-        }
     }
 
     if (!canRemove) {
@@ -309,14 +270,9 @@ std::shared_ptr<Value> ReassociatePass::removeFactor
     }
 
     if (needsNegate) {
-        if (isIntExpr) {
-            auto neg = std::make_shared<BinaryInst>("%reass.neg" + std::to_string(name_cnt++),
-                                                    OP::SUB, func->getConstantPool().getConst(0), ret);
-            binaryInst->getParent()->addInst(binaryInst->index, neg);
-        } else {
-            auto fneg = std::make_shared<FNEGInst>("%reass.neg" + std::to_string(name_cnt++), ret);
-            binaryInst->getParent()->addInst(binaryInst->index, fneg);
-        }
+        auto neg = std::make_shared<BinaryInst>("%reass.neg" + std::to_string(name_cnt++),
+                                                OP::SUB, func->getConstantPool().getConst(0), ret);
+        binaryInst->getParent()->addInst(binaryInst->index, neg);
     }
 
     return ret;
@@ -327,7 +283,6 @@ std::shared_ptr<Value> ReassociatePass::optAdd(
     std::vector<ValueEntry> &ops) {
     // Fold add to mul
     // Y + Y + Y + Z -> 3 * Y + Z
-    bool isIntExpr = toBType(root->getType())->getInner() == IRBTYPE::I32;
     for (size_t i = 0, e = ops.size(); i != e; ++i) {
         auto curr = ops[i].op;
         if (i + 1 != ops.size() && ops[i + 1].op == curr) {
@@ -338,16 +293,9 @@ std::shared_ptr<Value> ReassociatePass::optAdd(
             } while (i != ops.size() && ops[i].op == curr);
 
 
-            std::shared_ptr<BinaryInst> mul = nullptr;
-            if (isIntExpr) {
-                mul = std::make_shared<BinaryInst>("%reass.a2m" + std::to_string(name_cnt++),
+            auto mul = std::make_shared<BinaryInst>("%reass.a2m" + std::to_string(name_cnt++),
                                    OP::MUL, curr,
                                    func->getConstantPool().getConst(repeatedTimes));
-            } else {
-                mul = std::make_shared<BinaryInst>("%reass.a2fm" + std::to_string(name_cnt++),
-                                   OP::FMUL, curr,
-                                   func->getConstantPool().getConst(static_cast<float>(repeatedTimes)));
-            }
 
             root->getParent()->addInst(root->index, mul);
             redoSet.insert(mul);
@@ -367,7 +315,7 @@ std::shared_ptr<Value> ReassociatePass::optAdd(
     size_t maxCnt = 0;
     std::shared_ptr<Value> maxCntFactor = nullptr;
     for (const auto &op : ops) {
-        if (auto mul = isOneUseOp(op.op, OP::MUL, OP::FMUL)) {
+        if (auto mul = isOneUseOp(op.op, OP::MUL)) {
             std::vector<std::shared_ptr<Value>> factors;
             extractOneUseFactors(mul, factors);
             std::set<std::shared_ptr<Value>> dup;
@@ -388,16 +336,15 @@ std::shared_ptr<Value> ReassociatePass::optAdd(
             // Explicitly use maxCntFactor twice to ensure it won't
             // suddenly become oneUse due to removing
             auto dummy = std::make_shared<BinaryInst>("%reass.fa" + std::to_string(name_cnt++),
-                                                                isIntExpr ? OP::ADD : OP::FADD,
-                                                                maxCntFactor, maxCntFactor);
+                OP::ADD, maxCntFactor, maxCntFactor);
             for (size_t i = 0; i < ops.size(); ++i) {
-                if (!isOneUseOp(ops[i].op, OP::MUL, OP::FMUL))
+                if (!isOneUseOp(ops[i].op, OP::MUL))
                     continue;
                 if (auto value = removeFactor(ops[i].op, maxCntFactor)) {
                     for (size_t j = ops.size(); j != i;) {
                         --j;
                         if (ops[j].op == ops[i].op) {
-                            newMulOps.emplace_back(ops[i].op);
+                            newMulOps.emplace_back(value);
                             ops.erase(ops.begin() + j);
                         }
                     }
@@ -406,24 +353,15 @@ std::shared_ptr<Value> ReassociatePass::optAdd(
             }
         }
 
-        std::shared_ptr<Value> v;
-        if (isIntExpr)
-            v = makeAddTree(newMulOps, OP::ADD, root, name_cnt);
-        else
-            v = makeAddTree(newMulOps, OP::FADD, root, name_cnt);
+        auto v = makeAddTree(newMulOps, OP::ADD, root, name_cnt);
 
         // Redo it to find:
         // A * A * B + A * A * C -> A * (A * B + A * C) -> A * (A * (B + C)))
         if (auto inst = std::dynamic_pointer_cast<Instruction>(v))
             redoSet.insert(inst);
 
-        std::shared_ptr<BinaryInst> mul;
-        if (isIntExpr)
-            mul = std::make_shared<BinaryInst>("%reass.m" + std::to_string(name_cnt++),
+        auto mul = std::make_shared<BinaryInst>("%reass.m" + std::to_string(name_cnt++),
                                                OP::MUL, v, maxCntFactor);
-        else
-            mul = std::make_shared<BinaryInst>("%reass.fm" + std::to_string(name_cnt++),
-                                               OP::FMUL, v, maxCntFactor);
         root->getParent()->addInst(root->index, mul);
         redoSet.insert(mul);
         optModified = true;
@@ -439,7 +377,6 @@ std::shared_ptr<Value> ReassociatePass::optMul(
     return nullptr;
 }
 
-
 std::shared_ptr<Value> ReassociatePass::optExpr(
     const std::shared_ptr<BinaryInst> &root, std::vector<ValueEntry> &ops) {
     auto opcode = root->getOpcode();
@@ -452,11 +389,10 @@ std::shared_ptr<Value> ReassociatePass::optExpr(
         ConstantProxy cpr(&func->getConstantPool(), rhs);
         switch (root->getOpcode()) {
 #define MAKE_FOLD(irop, cppop) case OP::irop: return (cpl cppop cpr).getConstant(); break;
-#define MAKE_FOLD2(irop, irop2, cppop) case OP::irop: case OP::irop2: return (cpl cppop cpr).getConstant(); break;
-            MAKE_FOLD2(ADD, FADD, +)
-            MAKE_FOLD2(SUB, FSUB, -)
-            MAKE_FOLD2(MUL, FMUL, *)
-            MAKE_FOLD2(DIV, FDIV, /)
+            MAKE_FOLD(ADD, +)
+            MAKE_FOLD(SUB, -)
+            MAKE_FOLD(MUL, *)
+            MAKE_FOLD(DIV, /)
             MAKE_FOLD(REM, %)
             MAKE_FOLD(AND, &&)
             MAKE_FOLD(OR, ||)
@@ -469,12 +405,10 @@ std::shared_ptr<Value> ReassociatePass::optExpr(
     Rank old_size = ops.size();
     switch (opcode) {
     case OP::ADD:
-    case OP::FADD:
         if (auto result = optAdd(root, ops))
             return result;
         break;
     case OP::MUL:
-    case OP::FMUL:
         if (auto result = optMul(root, ops))
             return result;
         break;
@@ -486,114 +420,10 @@ std::shared_ptr<Value> ReassociatePass::optExpr(
     return nullptr;
 }
 
-void analyzeNegatible(const std::shared_ptr<Value> &v, std::vector<std::shared_ptr<BinaryInst>> &result) {
-    if (v->getUseCount() != 1 || !std::dynamic_pointer_cast<Instruction>(v))
-        return;
-    auto binary = std::dynamic_pointer_cast<BinaryInst>(v);
-    auto lhs = binary->getLHS();
-    auto rhs = binary->getRHS();
-    auto lcf = std::dynamic_pointer_cast<ConstantFloat>(lhs);
-    auto rcf = std::dynamic_pointer_cast<ConstantFloat>(rhs);
-    switch (binary->getOpcode()) {
-    case OP::FMUL:
-        // Skip non-canonical
-        if (lcf)
-            break;
-        if (lcf && lcf->getVal() < 0.0f)
-            result.emplace_back(binary);
-        analyzeNegatible(lhs, result);
-        analyzeNegatible(rhs, result);
-        break;
-    case OP::FDIV:
-        if (lcf && rcf)
-            break;
-        if ((lcf && lcf->getVal() < 0.0f) || (rcf && rcf->getVal() < 0.0f))
-            result.emplace_back(binary);
-
-        analyzeNegatible(lhs, result);
-        analyzeNegatible(rhs, result);
-        break;
-    default:
-        break;
-    }
-}
-
-std::shared_ptr<BinaryInst> ReassociatePass::canonNegFPImpl(const std::shared_ptr<BinaryInst> &binary,
-                                                                       const std::shared_ptr<BinaryInst> &subtree, const std::shared_ptr<Value> &v) {
-    if (binary->getOpcode() != OP::FADD && binary->getOpcode() != OP::FSUB)
-        return binary;
-
-    // Ensure subtree is rhs
-    Err::gassert(binary->getRHS() == subtree || (binary->getLHS() == subtree && binary->getOpcode() == OP::FADD));
-
-    // Collect negative constants
-    std::vector<std::shared_ptr<BinaryInst>> negatibles;
-    analyzeNegatible(subtree, negatibles);
-    if (negatibles.empty())
-        return binary;
-
-    for (const auto &candidate : negatibles) {
-        auto lcf = std::dynamic_pointer_cast<ConstantFloat>(candidate->getLHS());
-        auto rcf = std::dynamic_pointer_cast<ConstantFloat>(candidate->getRHS());
-        if (lcf && !rcf) {
-            candidate->setLHS(func->getConstantPool().getConst(-lcf->getVal()));
-            optModified = true;
-        } else if (rcf && !lcf) {
-            candidate->setRHS(func->getConstantPool().getConst(-rcf->getVal()));
-            optModified = true;
-        } else
-            Err::unreachable();
-    }
-
-    if (negatibles.size() % 2 == 0)
-        return binary;
-
-    // v op subtree
-    // <negate subtree>
-    // v -op subtree
-    std::shared_ptr<BinaryInst> newInst;
-    if (binary->getOpcode() == OP::FADD) {
-        newInst = std::make_shared<BinaryInst>("%reass.fs" + std::to_string(name_cnt++),
-                                               OP::FSUB, v, subtree);
-    } else {
-        newInst = std::make_shared<BinaryInst>("%reass.fa" + std::to_string(name_cnt++),
-                                               OP::FADD, v, subtree);
-    }
-    binary->getParent()->addInst(binary->index, newInst);
-    binary->replaceSelf(newInst);
-    optModified = true;
-    return newInst;
-}
-
-std::shared_ptr<BinaryInst> ReassociatePass::canonNegFP(const std::shared_ptr<BinaryInst> &binary) {
-    if (binary == nullptr)
-        return nullptr;
-
-    auto lhs = binary->getLHS();
-    auto rhs = binary->getRHS();
-
-    auto lsubtree = std::dynamic_pointer_cast<BinaryInst>(lhs);
-    auto rsubtree = std::dynamic_pointer_cast<BinaryInst>(rhs);
-
-    // Keep subtree the rhs.
-    if (binary->getOpcode() == OP::FADD) {
-        if (rsubtree && rsubtree->getUseCount() == 0)
-            return canonNegFPImpl(binary, rsubtree, lhs);
-        if (lsubtree && lsubtree->getUseCount() == 0)
-            return canonNegFPImpl(binary, rsubtree, lhs);
-    } else if (binary->getOpcode() == OP::FSUB) {
-        if (rsubtree && rsubtree->getUseCount() == 0)
-            return canonNegFPImpl(binary, rsubtree, lhs);
-    }
-    return binary;
-}
-
 std::shared_ptr<Instruction> ReassociatePass::canonInst(const std::shared_ptr<Instruction> &inst) {
     switch (inst->getOpcode()) {
     case OP::ADD:
-    case OP::FADD:
     case OP::MUL:
-    case OP::FMUL:
     case OP::AND:
     case OP::OR: {
         auto bin = std::dynamic_pointer_cast<BinaryInst>(inst);
@@ -609,9 +439,6 @@ std::shared_ptr<Instruction> ReassociatePass::canonInst(const std::shared_ptr<In
     default:
         break;
     }
-
-    if (auto neg = canonNegFP(std::dynamic_pointer_cast<BinaryInst>(inst)))
-        return neg;
     return inst;
 }
 
@@ -654,7 +481,10 @@ void ReassociatePass::reassociateExpression(const std::shared_ptr<BinaryInst> &i
 
 void ReassociatePass::optInst(const std::shared_ptr<Instruction> &raw_inst) {
     // DO NOT reassociate ICMP/FCMP for better codegen
-    if (!std::dynamic_pointer_cast<FNEGInst>(raw_inst) && !std::dynamic_pointer_cast<BinaryInst>(raw_inst))
+    if (!std::dynamic_pointer_cast<BinaryInst>(raw_inst))
+        return;
+
+    if (toBType(raw_inst->getType())->getInner() == IRBTYPE::FLOAT)
         return;
 
     auto candidate = raw_inst;
@@ -664,7 +494,7 @@ void ReassociatePass::optInst(const std::shared_ptr<Instruction> &raw_inst) {
     auto binary = std::dynamic_pointer_cast<BinaryInst>(candidate);
 
     if (candidate->getOpcode() == OP::SUB) {
-        if (isBinaryNeg(binary)) {
+        if (isIntBinaryNeg(binary)) {
             // 0 - x * x
             if (isOneUseBinary(binary->getRHS(), OP::MUL) // operand is a multiply tree
                 &&
@@ -687,8 +517,6 @@ void ReassociatePass::optInst(const std::shared_ptr<Instruction> &raw_inst) {
     // check candidate is associative
     if (candidate->getOpcode() != OP::MUL
         && candidate->getOpcode() != OP::ADD
-        && candidate->getOpcode() != OP::FMUL
-        && candidate->getOpcode() != OP::FADD
         && candidate->getOpcode() != OP::AND
         && candidate->getOpcode() != OP::OR)
         return;
@@ -709,8 +537,6 @@ void ReassociatePass::optInst(const std::shared_ptr<Instruction> &raw_inst) {
         }
 
     if (binary->getOpcode() == OP::ADD && lastUser->getOpcode() == OP::SUB)
-        return;
-    if (binary->getOpcode() == OP::FADD && lastUser->getOpcode() == OP::FSUB)
         return;
     }
 
@@ -771,9 +597,8 @@ PM::PreservedAnalyses ReassociatePass::run(Function &function, FAM &manager) {
     // Cleanup to release temporaries
     reset();
 
-    if (!reassociate_inst_modified) {
+    if (!reassociate_inst_modified)
         return PM::PreservedAnalyses::all();
-    }
 
     PM::PreservedAnalyses pa;
     pa.preserve<DomTreeAnalysis>();
