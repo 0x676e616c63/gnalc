@@ -44,6 +44,7 @@ PM::PreservedAnalyses DCEPass::run(Function &function, FAM &fam) {
     if (dce_inst_modified) {
         PM::PreservedAnalyses pa;
         pa.preserve<DomTreeAnalysis>();
+        pa.preserve<PostDomTreeAnalysis>();
         return pa;
     }
 

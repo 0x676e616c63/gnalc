@@ -16,6 +16,7 @@ struct OptInfo {
     bool gvnpre{false};
     bool tailcall{false};
     bool reassociate{false};
+    bool instsimplify{false};
 
     bool advance_name_norm{false};
 };

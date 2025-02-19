@@ -14,14 +14,23 @@ template <class... Ts> struct overloaded : Ts... {
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 template <typename T, template <typename...> typename Primary>
-class is_specialization_of : public std::false_type {};
+struct is_specialization_of : public std::false_type {};
 
 template <template <typename...> typename Primary, typename... Args>
-class is_specialization_of<Primary<Args...>, Primary> : public std::true_type {
+struct is_specialization_of<Primary<Args...>, Primary> : public std::true_type {
 };
 
 template <typename T, template <typename...> typename Primary>
 constexpr bool is_specialization_of_v = is_specialization_of<T, Primary>::value;
+
+template <typename T>
+struct remove_cvref
+{
+    using type = std::remove_cv_t<std::remove_reference_t<T>>;
+};
+
+template <typename T>
+using remove_cvref_t = typename remove_cvref<T>::type;
 
 // C++20's source_location may be better.
 template <typename getTypeNameArgument>

@@ -95,6 +95,8 @@ int main(int argc, char **argv) {
             opt_info.tailcall = true;
         else if (arg == "--reassociate")
             opt_info.reassociate = true;
+        else if (arg == "--instsimplify")
+            opt_info.instsimplify = true;
         // Debug options:
         else if (arg == "--ann")
             opt_info.advance_name_norm = true;
@@ -133,6 +135,7 @@ Optimizations available:
   --gvnpre             - Value-Based partial redundancy elimination (GVN-PRE)
   --tailcall           - Tail call optimization
   --reassociate        - Reassociate commutative expressions
+  --instsimplify       - Simplify instructions
 
 Debug options:
   --ann                - Advance name normalization (before the function passes)

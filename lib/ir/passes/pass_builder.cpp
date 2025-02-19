@@ -19,6 +19,7 @@
 #include "../../../include/ir/passes/transforms/tail_recursion_elimination.hpp"
 
 // Utilities
+#include "../../../include/ir/passes/transforms/instsimplify.hpp"
 #include "../../../include/ir/passes/utilities/irprinter.hpp"
 
 namespace IR {
@@ -31,6 +32,8 @@ const OptInfo o1_opt_info = {
     .dse = true,
     .gvnpre = true,
     .tailcall = true,
+    .reassociate = true,
+    .instsimplify = true
 };
 
 FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
@@ -47,6 +50,9 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
 
     if (opt_info.reassociate)
         fpm.addPass(ReassociatePass());
+
+    if (opt_info.instsimplify)
+        fpm.addPass(InstSimplifyPass());
 
     if (opt_info.dce)
         fpm.addPass(DCEPass());

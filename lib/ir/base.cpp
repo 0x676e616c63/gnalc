@@ -109,6 +109,10 @@ bool User::replaceUse(const std::shared_ptr<Use> &old_use,
 User::User(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait)
     : Value(std::move(_name), std::move(_vtype), _vtrait) {}
 
+size_t User::getNumOperands() const {
+    return operands.size();
+}
+
 void User::addOperand(const std::shared_ptr<Value> &v) {
     std::shared_ptr<Use> use{new Use(v, this)};
     use->init();

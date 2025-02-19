@@ -182,6 +182,9 @@ public:
 
     bool replaceOperand(const std::shared_ptr<Value> &before, const std::shared_ptr<Value> &after);
 
+    size_t getNumOperands() const;
+
+
     // Note:
     // Replace Use shouldn't compare Use's user/value.
     // Considering: %0 = gep ptr %a, i32 %b, i32 %b
