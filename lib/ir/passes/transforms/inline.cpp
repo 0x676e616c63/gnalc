@@ -21,48 +21,7 @@ bool InlinePass::canInline(const Function &vFunc, const Function &uFunc) {
         flag = true;
     return flag;
 }
-
-PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
-    bool inline_cfg_modified = false;
-
-    std::vector<std::shared_ptr<CALLInst>> workList;
-
-    auto dfVisitor = function.getDFVisitor();
-    //collect callinst
-    for (const auto &bb : dfVisitor) {
-        for (const auto &inst : *bb) {
-            if (auto callInst = std::dynamic_pointer_cast<CALLInst>(inst))
-                workList.emplace_back(callInst);
-        }
-    }
-    //calculate func inst numbers
-    for (const auto &call : workList) {
-        for (const auto &bb : call->getParent()->getParent()->getDFVisitor()) {
-            funcInstCount[*call->getParent()->getParent()] += bb->getInsts().size();
-        }
-    }
-    //check for callinst can inline
-    //and make function inline
-    for (const auto &call : workList) {
-        if (canInline(*call->getParent()->getParent(), function)) {
-            auto bb=call->getParent();
-            std::shared_ptr<Instruction> inst=call;
-            //TODO simpiey
-            funcInline(*call->getParent()->getParent(),function,bb,inst);
-    inline_cfg_modified=true;
-            inlineCount[*call->getParent()->getParent()] += 1;
-            funcInstCount[function] += funcInstCount[*call->getParent()->getParent()];
-        }
-    }
-
-    inlineCount.clear();
-    funcInstCount.clear();
-    if (inline_cfg_modified)
-        return PM::PreservedAnalyses::none();
-
-    return PM::PreservedAnalyses::all();
-}
-void InlinePass::funcInline(Function &vFunc, Function &uFunc, std::shared_ptr<BasicBlock> &bb,std::shared_ptr<Instruction> inst) {
+void InlinePass::funcInline(Function & vFunc, Function &uFunc, std::shared_ptr<BasicBlock> &bb,std::shared_ptr<Instruction> &inst) {
     //todo 分割基本块，连接基本块
     //跳到新基本块再跳回来
     //alloca insert
@@ -81,7 +40,7 @@ void InlinePass::funcInline(Function &vFunc, Function &uFunc, std::shared_ptr<Ba
             }
         }
     }
-    //move nexrbb of bb to newblock
+    //move nextbb of bb to newblock
     for (const auto &next:bb->getNextBB()) {
         linkBB(newBlock,next);
         unlinkBB(bb,next);
@@ -99,6 +58,51 @@ void InlinePass::funcInline(Function &vFunc, Function &uFunc, std::shared_ptr<Ba
     //replace params with call args
 
 
+}
+
+PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
+    bool inline_cfg_modified = false;
+
+    std::vector<std::shared_ptr<CALLInst>> workList;
+
+    auto dfVisitor = function.getDFVisitor();
+    //collect callinst
+    for (const auto &bb : dfVisitor) {
+        for (const auto &inst : *bb) {
+            if (auto callInst = std::dynamic_pointer_cast<CALLInst>(inst))
+                workList.emplace_back(callInst);
+        }
+    }
+    //calculate func inst numbers
+    for (const auto &call : workList) {
+        if (auto func=std::dynamic_pointer_cast<Function>(call->getFunc())) {
+            for (const auto &bb : func->getDFVisitor()) {
+                funcInstCount[*func] += bb->getInsts().size();
+            }
+        }
+    }
+    //check for callinst can inline
+    //and make function inline
+    for (const auto &call : workList) {
+       if (auto func=std::dynamic_pointer_cast<Function>(call->getFunc())) {
+           if (canInline(*func, function)) {
+               auto bb=call->getParent();
+               std::shared_ptr<Instruction> inst=call;
+               //TODO
+               funcInline(*func,function,bb,inst);
+               inline_cfg_modified=true;
+               inlineCount[*func] += 1;
+               funcInstCount[function] += funcInstCount[*func];
+           }
+       }
+    }
+
+    inlineCount.clear();
+    funcInstCount.clear();
+    if (inline_cfg_modified)
+        return PM::PreservedAnalyses::none();
+
+    return PM::PreservedAnalyses::all();
 }
 
 } // namespace IR
