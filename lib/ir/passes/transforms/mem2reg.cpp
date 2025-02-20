@@ -276,10 +276,23 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
     std::set<pDTN> visited_pq;
     std::set<pDTN> visited_stn; // subtree node queue (work list in llvm)
 
+    // std::set<std::shared_ptr<BasicBlock>> idf; // JUST FOR TEST DomTree::getDF()
+
     // process every def nodes, find dom frontier
     while (!PQ.empty()) {
         auto root = PQ.top().second;
         PQ.pop();
+
+        // // JUST FOR TEST DomTree::getDF()
+        // auto df = DT.getDomFrontier(root->bb);
+        // for (const auto &b : df) {
+        //     if (visited_pq.count(DT.nodes[b]))
+        //         continue;
+        //     auto sb = b->shared_from_this();
+        //     if (!live_in_blk.count(sb))
+        //         continue;
+        //     idf.insert(sb);
+        // }
 
         std::stack<pDTN> STN{}; // subtree node queue (work list in llvm)
         STN.push(root);
@@ -316,6 +329,12 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
                     STN.push(dom_child);
         }
     }
+
+    // // JUST FOR TEST DomTree::getDF()
+    // if (phi_blk.size() == idf.size() && std::equal(phi_blk.begin(), phi_blk.end(), idf.begin()))
+    //     std::cout << "TEST DF: IDF IS EQUAL." << std::endl;
+    // else
+    //     Err::error("TEST DF: IDF IS NOT EQUAL!");
 }
 
 void PromotePass::promoteMemoryToRegister(Function &function) {
