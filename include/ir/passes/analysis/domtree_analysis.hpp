@@ -76,7 +76,7 @@ private:
             std::vector<pBB> dfs_children;
             pBB _sdom;
             pBB _idom;
-            pBB _tmp_ancester; // 用于逆序求递归sdom时进行简单优化；可能未被赋值
+            pBB _tmp_ancester; // 用于逆序求递归sdom时进行简单优化
         };
         std::unordered_map<pBB, DFS_TREE_NODE> node_map;
         std::vector<pBB> idfn;

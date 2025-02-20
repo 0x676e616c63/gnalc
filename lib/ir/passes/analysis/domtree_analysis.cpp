@@ -10,6 +10,7 @@ namespace IR {
 PM::UniqueKey DomTreeAnalysis::Key;
 PM::UniqueKey PostDomTreeAnalysis::Key;
 
+// todo: 在构造支配树时预计算DFS进入/离开时间戳可将支配关系判断优化为O(1)时间操作
 bool DomTree::ADomB(BasicBlock* a,
                     BasicBlock* b) {
     if (nodes[a] == root)
@@ -36,8 +37,33 @@ BlockSet DomTree::getDomSet(BasicBlock* b) {
 }
 
 BlockSet DomTree::getDomFrontier(BasicBlock* b) {
-    // todo
-    return {};
+    BlockSet DF;
+    std::stack<Node*> STN;
+    STN.push(nodes[b].get());
+
+    while (!STN.empty()) {
+        const auto node = STN.top();
+        STN.pop();
+
+        for (const auto& next : node->bb->getNextBB()) {
+            const auto next_node = nodes[next.get()];
+
+            if (next_node->parent == node)
+                continue;
+
+            // Level过滤剪枝
+            if (next_node->level > nodes[b]->level)
+                continue;
+
+            DF.insert(next.get());
+        }
+
+        for (const auto& dom_child : node->children)
+            // DON'T NEED BECAUSE NO CONTEST OF 'visited_stn'
+            // if (visited_stn.insert(dom_child.get()).second)
+            STN.push(dom_child.get());
+    }
+    return DF;
 }
 
 void DomTree::printDomTree() {
