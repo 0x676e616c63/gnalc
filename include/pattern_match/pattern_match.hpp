@@ -109,7 +109,7 @@ struct ClassMatchBindIf {
 
 // Generic Instruction Match, matching instructions' opcode and operands
 // Requirement:
-//   InstInfo should have `InstType`, `NumOperandsGetter`, `OperandGetter`, `OpcodeGetter`
+//   InstInfo should have `OpcodeType`, `InstType`, `NumOperandsGetter`, `OperandGetter`, `OpcodeGetter`
 template <
     typename InstInfo,
     typename InstInfo::OpcodeType opcode,

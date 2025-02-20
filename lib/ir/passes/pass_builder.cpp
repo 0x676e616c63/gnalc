@@ -13,6 +13,7 @@
 #include "../../../include/ir/passes/transforms/dce.hpp"
 #include "../../../include/ir/passes/transforms/dse.hpp"
 #include "../../../include/ir/passes/transforms/gvn_pre.hpp"
+#include "../../../include/ir/passes/transforms/inline.hpp"
 #include "../../../include/ir/passes/transforms/mem2reg.hpp"
 #include "../../../include/ir/passes/transforms/namenormalizer.hpp"
 #include "../../../include/ir/passes/transforms/reassociate.hpp"
@@ -33,7 +34,8 @@ const OptInfo o1_opt_info = {
     .gvnpre = true,
     .tailcall = true,
     .reassociate = true,
-    .instsimplify = true
+    .instsimplify = true,
+    .inliner = true
 };
 
 FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
@@ -76,6 +78,9 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
 
     if (opt_info.adce)
         fpm.addPass(ADCEPass());
+
+    if (opt_info.inliner)
+        fpm.addPass(InlinePass());
 
     if (!opt_info.advance_name_norm)
         fpm.addPass(NameNormalizePass(true)); // bb_rename: true

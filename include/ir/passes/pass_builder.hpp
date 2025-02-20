@@ -17,6 +17,7 @@ struct OptInfo {
     bool tailcall{false};
     bool reassociate{false};
     bool instsimplify{false};
+    bool inliner{false}; // Avoid conflict with C++ keyword `inline`
 
     bool advance_name_norm{false};
 };
