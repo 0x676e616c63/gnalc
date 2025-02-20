@@ -1,6 +1,7 @@
 //
 // Created by edragain on 2/12/25.
 //
+#include "../../../../include/ir/passes/helpers/constant_fold.hpp"
 #include "../../../../include/ir/passes/transforms/reassociate.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
 
@@ -382,25 +383,9 @@ std::shared_ptr<Value> ReassociatePass::optExpr(
     auto opcode = root->getOpcode();
 
     // Fold constant
-    auto lhs = root->getLHS();
-    auto rhs = root->getRHS();
-    if (lhs->getVTrait() == ValueTrait::CONSTANT_LITERAL && rhs->getVTrait() == ValueTrait::CONSTANT_LITERAL) {
-        ConstantProxy cpl(&func->getConstantPool(), lhs);
-        ConstantProxy cpr(&func->getConstantPool(), rhs);
-        switch (root->getOpcode()) {
-#define MAKE_FOLD(irop, cppop) case OP::irop: return (cpl cppop cpr).getConstant(); break;
-            MAKE_FOLD(ADD, +)
-            MAKE_FOLD(SUB, -)
-            MAKE_FOLD(MUL, *)
-            MAKE_FOLD(DIV, /)
-            MAKE_FOLD(REM, %)
-            MAKE_FOLD(AND, &&)
-            MAKE_FOLD(OR, ||)
-#undef MAKE_FOLD
-#undef MAKE_FOLD2
-            default : break;
-        }
-    }
+    auto fold = foldConstant(func->getConstantPool(), root);
+    if (fold != root)
+        return fold;
 
     Rank old_size = ops.size();
     switch (opcode) {

@@ -11,14 +11,17 @@
 
 namespace IR {
 
-// INSTRUCTION'S OPCODE
+// Instruction's Opcode
 enum class OP {
-    RET, // ctrl
+    // Terminator
+    RET,
     BR,
 
-    FNEG, // unary
+    // Unary
+    FNEG,
 
-    ADD, // binary
+    // Binary
+    ADD,
     FADD,
     SUB,
     FSUB,
@@ -27,37 +30,41 @@ enum class OP {
     DIV,
     FDIV,
     REM,
-    FREM,
+    FREM, // not implemented in IRGen
 
-    AND, // logical binary
-    OR,
+    AND, // bitwise, not implemented in IRGen
+    OR,  // bitwise, not implemented in IRGen
 
-    ALLOCA, // memory
+    // Memory Operation
+    ALLOCA,
     LOAD,
     STORE,
+
+    // Getelementptr
     GEP,
 
-    FPTOSI, // converse
+    // Type Cast
+    FPTOSI,
     SITOFP,
     ZEXT,
     BITCAST,
 
-    ICMP, // compare
+    // Compare
+    ICMP,
     FCMP,
 
+    // Phi Node
     PHI,
 
+    // Function Call
     CALL,
 
+    // Helper for easy IRGen, pruned after CFGBuilder
     HELPER
-
 };
 
 /**
- * @brief Instruction的操作数实际上由User的Oprands来管理
- *
- * @todo BB的指针问题？
- * @todo 类型是否会为ARRAY?
+ * @brief Instruction的操作数实际上由User的Operands来管理
  */
 class BasicBlock;
 class Instruction : public User {

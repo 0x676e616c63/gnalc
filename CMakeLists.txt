@@ -30,6 +30,7 @@ aux_source_directory(lib/ir GNALC_IR_SRC)
 aux_source_directory(lib/ir/instructions GNALC_IR_SRC)
 aux_source_directory(lib/ir/passes GNALC_IR_SRC)
 aux_source_directory(lib/ir/passes/analysis GNALC_IR_SRC)
+aux_source_directory(lib/ir/passes/helpers GNALC_IR_SRC)
 aux_source_directory(lib/ir/passes/transforms GNALC_IR_SRC)
 aux_source_directory(lib/ir/passes/utilities GNALC_IR_SRC)
 
