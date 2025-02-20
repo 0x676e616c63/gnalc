@@ -2,6 +2,7 @@
 #ifndef GNALC_IR_PATTERN_PATTERN_MATCH_HPP
 #define GNALC_IR_PATTERN_PATTERN_MATCH_HPP
 
+#include "../pattern_match/pattern_match.hpp"
 #include "base.hpp"
 #include "constant.hpp"
 #include "instructions/binary.hpp"
@@ -10,18 +11,17 @@
 #include "instructions/converse.hpp"
 #include "instructions/memory.hpp"
 #include "instructions/phi.hpp"
-#include "../pattern_match/pattern_match.hpp"
 
 using namespace PatternMatch;
 namespace IR::M {
 inline auto value() { return ClassMatch<Value>{}; }
 
-inline auto value(Value*& v) {
-  return ClassMatchBind<Value, Value*>{v};
+inline auto value(Value *&v) {
+    return ClassMatchBind<Value, Value *>{v};
 }
 
-inline auto value(std::shared_ptr<Value>& v) {
-  return ClassMatchBind<Value, std::shared_ptr<Value>>{v};
+inline auto value(std::shared_ptr<Value> &v) {
+    return ClassMatchBind<Value, std::shared_ptr<Value>>{v};
 }
 
 inline auto ci1() { return ClassMatch<ConstantI1>{}; }
@@ -29,110 +29,145 @@ inline auto ci8() { return ClassMatch<ConstantI8>{}; }
 inline auto ci32() { return ClassMatch<ConstantInt>{}; }
 inline auto cf32() { return ClassMatch<ConstantFloat>{}; }
 inline auto constant() {
-  return ClassesMatch<ConstantI1, ConstantI8, ConstantInt, ConstantFloat>{};
+    return ClassesMatch<ConstantI1, ConstantI8, ConstantInt, ConstantFloat>{};
 }
 
 template <typename T>
 struct ConstantProj {
-  template <typename U>
-  T operator()(const U& u) {
-    return u.getVal();
-  }
+    template <typename U>
+    T operator()(const U &u) {
+        return u.getVal();
+    }
 };
 
-inline auto ci1(bool& a) {
-  return ClassMatchBind<ConstantI1, bool, ConstantProj<bool>>{ a };
+inline auto ci1(bool &a) {
+    return ClassMatchBind<ConstantI1, bool, ConstantProj<bool>>{a};
 }
 
-inline auto ci8(char& a) {
-  return ClassMatchBind<ConstantI8, char, ConstantProj<char>>{ a };
+inline auto ci8(char &a) {
+    return ClassMatchBind<ConstantI8, char, ConstantProj<char>>{a};
 }
 
-inline auto ci32(int& a) {
-  return ClassMatchBind<ConstantInt, int, ConstantProj<int>>{ a };
+inline auto ci32(int &a) {
+    return ClassMatchBind<ConstantInt, int, ConstantProj<int>>{a};
 }
 
-inline auto cf32(float& a) {
-  return ClassMatchBind<ConstantFloat, float, ConstantProj<float>>{ a };
+inline auto cf32(float &a) {
+    return ClassMatchBind<ConstantFloat, float, ConstantProj<float>>{a};
 }
 
 inline auto ci1(bool a) {
-  return ClassMatchIf<ConstantI1>{[a](const ConstantI1& b) {
-    return a == b.getVal();
-  }};
+    return ClassMatchIf<ConstantI1>{[a](const ConstantI1 &b) {
+        return a == b.getVal();
+    }};
 }
 
 inline auto ci8(char a) {
-  return ClassMatchIf<ConstantI8>{[a](const ConstantI8& b) {
-    return a == b.getVal();
-  }};
+    return ClassMatchIf<ConstantI8>{[a](const ConstantI8 &b) {
+        return a == b.getVal();
+    }};
 }
 
 inline auto ci32(int a) {
-  return ClassMatchIf<ConstantInt>{[a](const ConstantInt& b) {
-    return a == b.getVal();
-  }};
+    return ClassMatchIf<ConstantInt>{[a](const ConstantInt &b) {
+        return a == b.getVal();
+    }};
 }
 
 inline auto cf32(float a) {
-  return ClassMatchIf<ConstantFloat>{[a](const ConstantFloat& b) {
-    return a == b.getVal();
-  }};
+    return ClassMatchIf<ConstantFloat>{[a](const ConstantFloat &b) {
+        return a == b.getVal();
+    }};
 }
 
 struct IRInstInfo {
-  using InstType = Instruction;
-  using OpcodeType = OP;
-  struct NumOperandsGetter {
-    size_t operator()(const Instruction& inst) {
-      return inst.getNumOperands();
-    }
-  };
-  struct OperandGetter {
-    auto operator()(const Instruction& inst, size_t idx) {
-      return inst.getOperand(idx)->getValue();
-    }
-  };
-  struct OpcodeGetter {
-    OP operator()(const Instruction& inst) {
-      return inst.getOpcode();
-    }
-  };
+    using InstType = Instruction;
+    using OpcodeType = OP;
+    struct NumOperandsGetter {
+        size_t operator()(const Instruction &inst) {
+            return inst.getNumOperands();
+        }
+    };
+    struct OperandGetter {
+        auto operator()(const Instruction &inst, size_t idx) {
+            return inst.getOperand(idx)->getValue();
+        }
+    };
+    struct OpcodeGetter {
+        OP operator()(const Instruction &inst) {
+            return inst.getOpcode();
+        }
+    };
 };
 
-#define MAKE_INST_MATCH(pattern_name, opcode) \
-template <typename... OperandPatterns> \
-inline auto pattern_name(OperandPatterns &&...ops) { \
-  return InstMatch<IRInstInfo, OP::opcode, OperandPatterns...>(std::forward<OperandPatterns>(ops)...); \
+struct SharedPtrValueProj {
+    Value *operator()(const std::shared_ptr<Value> &u) {
+        return u.get();
+    }
+};
+
+template <size_t NumOperands>
+auto same_operands(const std::shared_ptr<Value> &which = nullptr) {
+    return IdenticalOperandInstMatch<IRInstInfo, NumOperands>{which};
 }
 
-MAKE_INST_MATCH(ret, RET)
-MAKE_INST_MATCH(br, BR)
-MAKE_INST_MATCH(fneg, FNEG)
-MAKE_INST_MATCH(add, ADD)
-MAKE_INST_MATCH(fadd, FADD)
-MAKE_INST_MATCH(sub, SUB)
-MAKE_INST_MATCH(fsub, FSUB)
-MAKE_INST_MATCH(mul, MUL)
-MAKE_INST_MATCH(fmul, FMUL)
-MAKE_INST_MATCH(div, DIV)
-MAKE_INST_MATCH(fdiv, FDIV)
-MAKE_INST_MATCH(rem, REM)
-MAKE_INST_MATCH(frem, FREM)
-MAKE_INST_MATCH(logical_and, AND) // Avoid conflict with C++ keyword `and`
-MAKE_INST_MATCH(logical_or, OR) // Avoid conflict with C++ keyword `or`
-MAKE_INST_MATCH(allocate, ALLOCA) // Avoid conflict with marco `alloca`
-MAKE_INST_MATCH(load, LOAD)
-MAKE_INST_MATCH(store, STORE)
-MAKE_INST_MATCH(gep, GEP)
-MAKE_INST_MATCH(fptosi, FPTOSI)
-MAKE_INST_MATCH(sitosf, SITOFP)
-MAKE_INST_MATCH(zext, ZEXT)
-MAKE_INST_MATCH(bitcast, BITCAST)
-MAKE_INST_MATCH(icmp, ICMP)
-MAKE_INST_MATCH(fcmp, FCMP)
-MAKE_INST_MATCH(phi, PHI)
-MAKE_INST_MATCH(call, CALL)
+template <size_t NumOperands>
+auto same_operands(const Value *which) {
+    return IdenticalOperandInstMatch<IRInstInfo, NumOperands, SharedPtrValueProj>{which};
+}
+
+template <OP opcode, size_t NumOperands>
+auto same_operands(const std::shared_ptr<Value> &which = nullptr) {
+    return IdenticalOperandInstMatchWithOp<IRInstInfo, opcode, NumOperands>{which};
+}
+
+template <OP opcode, size_t NumOperands>
+auto same_operands(const Value *which) {
+    return IdenticalOperandInstMatchWithOp<IRInstInfo, opcode, NumOperands, SharedPtrValueProj>{which};
+}
+
+// Match Inst and Operand
+#define MAKE_INST_MATCH2(pattern_name, opcode, num0, num1)                                                   \
+    template <typename... OperandPatterns>                                                                   \
+    auto pattern_name(OperandPatterns &&...ops) {                                                            \
+        static_assert(sizeof...(OperandPatterns) == (num0) || sizeof...(OperandPatterns) == (num1),          \
+                      "Number of operands mismatched");                                                      \
+        return InstMatch<IRInstInfo, OP::opcode, OperandPatterns...>(std::forward<OperandPatterns>(ops)...); \
+    }
+
+#define MAKE_INST_MATCH(pattern_name, opcode, num0) MAKE_INST_MATCH2(pattern_name, opcode, num0, num0)
+
+#define MAKE_INST_MATCH_ANY(pattern_name, opcode)                                                            \
+    template <typename... OperandPatterns>                                                                   \
+    auto pattern_name(OperandPatterns &&...ops) {                                                            \
+        return InstMatch<IRInstInfo, OP::opcode, OperandPatterns...>(std::forward<OperandPatterns>(ops)...); \
+    }
+
+MAKE_INST_MATCH2(ret, RET, 0, 1)
+MAKE_INST_MATCH2(br, BR, 1, 2)
+MAKE_INST_MATCH(fneg, FNEG, 1)
+MAKE_INST_MATCH(add, ADD, 2)
+MAKE_INST_MATCH(fadd, FADD, 2)
+MAKE_INST_MATCH(sub, SUB, 2)
+MAKE_INST_MATCH(fsub, FSUB, 2)
+MAKE_INST_MATCH(mul, MUL, 2)
+MAKE_INST_MATCH(fmul, FMUL, 2)
+MAKE_INST_MATCH(div, DIV, 2)
+MAKE_INST_MATCH(fdiv, FDIV, 2)
+MAKE_INST_MATCH(rem, REM, 2)
+MAKE_INST_MATCH(frem, FREM, 2)
+MAKE_INST_MATCH(allocate, ALLOCA, 0) // Avoid conflict with marco `alloca`
+MAKE_INST_MATCH(load, LOAD, 2)
+MAKE_INST_MATCH(store, STORE, 2)
+MAKE_INST_MATCH_ANY(gep, GEP)
+MAKE_INST_MATCH(fptosi, FPTOSI, 1)
+MAKE_INST_MATCH(sitosf, SITOFP, 1)
+MAKE_INST_MATCH(zext, ZEXT, 1)
+MAKE_INST_MATCH(bitcast, BITCAST, 1)
+MAKE_INST_MATCH(icmp, ICMP, 2)
+MAKE_INST_MATCH(fcmp, FCMP, 2)
+MAKE_INST_MATCH_ANY(phi, PHI)
+MAKE_INST_MATCH_ANY(call, CALL)
 
 #undef MAKE_INST_MATCH
 
