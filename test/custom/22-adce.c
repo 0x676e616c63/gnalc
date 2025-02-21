@@ -1,8 +1,18 @@
-//test domain of global var define and local define
-int a = 3;
-int b = 5;
+// test if-{if}-else
+int if_if_Else() {
+  int a;
+  a = 5;
+  int b;
+  b = 10;
+  if(a == 5){
+    if (b == 10) 
+      a = 25;
+  }
+    else 
+      a = a + 15;
+  return (a);
+}
 
 int main(){
-    int a = 5;
-    return a + b;
+  return (if_if_Else());
 }

@@ -76,8 +76,8 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     if (opt_info.dce)
         fpm.addPass(DCEPass());
 
-    if (opt_info.adce)
-        fpm.addPass(ADCEPass());
+    // if (opt_info.adce)
+    //     fpm.addPass(ADCEPass());
 
     if (opt_info.inliner)
         fpm.addPass(InlinePass());

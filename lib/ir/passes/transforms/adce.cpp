@@ -18,14 +18,12 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
             if (inst->getOpcode() == OP::STORE || inst->getOpcode() == OP::RET) {
                 critical.emplace(inst);
                 worklist.emplace_back(inst);
-            }
-            else if (auto call = std::dynamic_pointer_cast<CALLInst>(inst)) {
+            } else if (auto call = std::dynamic_pointer_cast<CALLInst>(inst)) {
                 if (hasSideEffect(fam, call.get())) {
                     critical.emplace(inst);
                     worklist.emplace_back(inst);
                 }
-            }
-            else if (auto br = std::dynamic_pointer_cast<BRInst>(inst)) {
+            } else if (auto br = std::dynamic_pointer_cast<BRInst>(inst)) {
                 // The treatment of control-flow operations is more complex.
                 // Every jump is considered useful.
                 // Branches are considered useful only if the execution of a useful operation
@@ -43,18 +41,22 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
         auto inst = worklist.front();
         worklist.pop_front();
 
-        for (const auto& oper : inst->getOperands()) {
-            if (oper->getValue()->getVTrait() == ValueTrait::ORDINARY_VARIABLE)
-                critical.emplace(std::dynamic_pointer_cast<Instruction>(oper->getValue()));
+        for (const auto &use : inst->getOperands()) {
+            if (use->getValue()->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
+                auto oper = std::dynamic_pointer_cast<Instruction>(use->getValue());
+                if (critical.find(oper) == critical.end()) {
+                    critical.emplace(oper);
+                    worklist.emplace_back(oper);
+                }
+            }
         }
 
         auto rdf = postdomtree.getDomFrontier(inst->getParent().get());
-        Logger::logDebug("[ADCE]: ReverseDomFrontier '", inst->getParent()->getName(), "': ");
-        for (const auto& a : rdf) {
-            Logger::logDebug("[ADCE]: ", a->getName());
-        }
-        for (const auto& bb : rdf) {
-            // Err::gassert(bb != inst->getParent().get());
+        // Logger::logDebug("[ADCE]: ReverseDomFrontier '", inst->getParent()->getName(), "': ");
+        // for (const auto& a : rdf) {
+        //     Logger::logDebug("[ADCE]: ", a->getName());
+        // }
+        for (const auto &bb : rdf) {
             if (auto br = std::dynamic_pointer_cast<BRInst>(bb->getInsts().back())) {
                 if (br->isConditional() && critical.find(br) == critical.end()) {
                     if (br->getCond()->getVTrait() == ValueTrait::ORDINARY_VARIABLE)
@@ -74,51 +76,48 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
         for (const auto &inst : *block) {
             if (critical.find(inst) == critical.end()) {
                 if (auto br = std::dynamic_pointer_cast<BRInst>(inst)) {
-                   if(br->isConditional()) {
-                       // Rewrite it with an unconditional BRInst
-                       // to the nearest marked post dominator
-                       bool dead_br = safeUnlinkBB(block, br->getTrueDest(), dead_phis);
-                       Err::gassert(!dead_br);
-                       // After safeUnlink, br becomes a jump, but not dead.
-                       dead_br = safeUnlinkBB(block, br->getDest(), dead_phis);
-                       // Here br is dead.
-                       Err::gassert(dead_br);
-                       dead.emplace(br);
+                    Err::gassert(br->isConditional());
+                    // Rewrite it with an unconditional BRInst
+                    // to the nearest marked post dominator
+                    bool dead_br = safeUnlinkBB(block, br->getTrueDest(), dead_phis);
+                    Err::gassert(!dead_br);
+                    // After safeUnlink, br becomes a jump, but not dead.
+                    dead_br = safeUnlinkBB(block, br->getDest(), dead_phis);
+                    // Here br is dead.
+                    Err::gassert(dead_br);
+                    dead.emplace(br);
 
-                       auto nearest_pdom = postdomtree.nodes[block.get()].get();
-                       bool found = false;
-                       do {
-                           nearest_pdom = nearest_pdom->parent;
-                           for (const auto& pdominst : *nearest_pdom->bb) {
-                               if (critical.find(pdominst) != critical.end()) {
-                                   found = true;
-                                   break;
-                               }
-                           }
-                           if (found) break;
-                       } while (nearest_pdom->parent != nullptr);
-                       // Since, by definition, the exit block is useful, this search must terminate.
-                       // Also, if there is a virtual root, its children must also be exit blocks. Thus, the
-                       // search can't terminate at the virtual root.
-                       Err::gassert(found && nearest_pdom->bb != nullptr);
-                       block->addInst(std::make_shared<BRInst>(nearest_pdom->bb->shared_from_this()));
-                       adce_cfg_modified = true;
-                   }
-                }
-                else
+                    auto nearest_pdom = postdomtree.nodes[block.get()].get();
+                    bool found = false;
+                    do {
+                        nearest_pdom = nearest_pdom->parent;
+                        for (const auto &pdominst : *nearest_pdom->bb) {
+                            if (critical.find(pdominst) != critical.end()) {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (found)
+                            break;
+                    } while (nearest_pdom->parent != nullptr);
+                    // Since, by definition, the exit block is useful, this search must terminate.
+                    // Also, if there is a virtual root, its children must also be exit blocks. Thus, the
+                    // search can't terminate at the virtual root.
+                    Err::gassert(found && nearest_pdom->bb != nullptr);
+                    block->addInst(std::make_shared<BRInst>(nearest_pdom->bb->shared_from_this()));
+                    adce_cfg_modified = true;
+                } else
                     dead.emplace(inst);
             }
         }
-        adce_inst_modified |= block->delInstIf([&dead](const auto& inst)
-            { return dead.find(inst) != dead.end(); });
+        adce_inst_modified |= block->delInstIf([&dead](const auto &inst) { return dead.find(inst) != dead.end(); });
     }
 
-    for (auto& block : function) {
-        block->delInstIf([&dead_phis](const auto& p) {
+    for (auto &block : function) {
+        adce_inst_modified |= block->delInstIf([&dead_phis](const auto &p) {
             return dead_phis.find(std::dynamic_pointer_cast<PHIInst>(p)) != dead_phis.end();
         }, BasicBlock::DEL_MODE::PHI);
     }
-
 
     // Clean
     bool modified = true;
@@ -127,13 +126,18 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
         // Compute Postorder
         auto postorder = function.getDFVisitor(Util::DFVOrder::PostOrder);
         // One Pass
-        for (const auto& curr : postorder) {
+        for (const auto &curr : postorder) {
             auto br = std::dynamic_pointer_cast<BRInst>(curr->getInsts().back());
             if (br == nullptr)
                 continue;
             if (br->isConditional()) {
                 if (br->getTrueDest() == br->getFalseDest()) {
-                    // case 1
+                    // 1. Fold a Redundant Branch
+                    // curr ends in a branch, and both sides of the branch target the same block (dest)
+                    //
+                    //  curr ----> dest ----> ...   <to>    curr ----> dest ----> ...
+                    //  | ----------^
+                    //
                     // replace the branch with a jump
 
                     // No unlinkBB because true_dest and false_dest are identical
@@ -141,44 +145,67 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     br->dropFalseDest();
                     modified = true;
                 }
-            }
-            else {
+            } else {
                 auto dest = br->getDest();
-                if (curr->getInsts().size() == 1) { // Curr is empty
-                    // case 2
+                if (curr->getAllInstCount() == 1) { // curr is empty
+                    // 2. Remove an Empty Block
+                    // curr contains only a jump
+                    //
+                    //                         ...                         ...
+                    //                         |                            |
+                    //           (empty)       v                            v
+                    //  ... ----> curr -----> dest      <to>     ... ---> dest
+                    //             ^                                        ^
+                    //             |                                        |
+                    //             |                                        |
+                    //            ...                                      ...
+                    //
                     // replace transfers to `curr` with transfers to `dest`
-                    //    - break in edge to curr and out edge to dest
+                    //    - fix CFG
                     //    - fix BRInst
-                    //    - fix phi
-                    for (const auto& use : curr->getUseList()) {
+                    //    - replace dest's phi with curr's dominator
+                    unlinkBB(curr, dest);
+                    for (const auto &use : curr->getUseList()) {
                         // getUseList -> get PreBB's BRInst or SuccBB's PHI
-                        if (auto pre_br = std::dynamic_pointer_cast<BRInst>(use->getValue())) {
+                        if (auto pre_br
+                            = std::dynamic_pointer_cast<BRInst>(use->getUser())) {
                             auto pred = pre_br->getParent();
                             unlinkBB(pred, curr);
                             linkBB(pred, dest);
                             pre_br->replaceOperand(curr, dest);
-
-                            for (const auto& phi : dest->getPhiInsts())
-                                phi->replaceOperand(curr, pred);
-
-                            modified = true;
-                        }
+                        } else if (auto dest_phi
+                            = std::dynamic_pointer_cast<PHIInst>(use->getUser())) {
+                            Err::gassert(dest_phi->getParent() == dest);
+                            auto domtree = fam.getResult<DomTreeAnalysis>(function);
+                            auto dom = domtree.nodes[curr.get()]->parent->bb;
+                            dest_phi->replaceOperand(curr, dom->shared_from_this());
+                        } else
+                            Err::unreachable();
                     }
+                    function.delBlock(curr);
+                    modified = true;
                 }
-                else if (dest->getPreBB().size() == 1) {
-                    // case 3
+                if (dest->getPreBB().size() == 1) {
+                    // 3. Combine Blocks
+                    // curr ends in a jump to dest and dest has only one predecessor
+                    //
+                    //          ...           ...                               ...   ...
+                    //           |             ^                                 |     ^
+                    //           v             |                                 v     |
+                    // ... ---> curr  ----->  dest  ---> ...     <to>   ... ---> curr+dest ----> ...
+                    //
                     // Combine `curr` and `dest`
                     unlinkBB(curr, dest);
                     curr->delInst(br);
 
                     // Phi contains Value's ptr, so moving instructions to another block
                     // don't invalidate Phi. Just take care of the CFG.
-                    for (const auto& dest_phi : dest->getPhiInsts())
+                    for (const auto &dest_phi : dest->getPhiInsts())
                         curr->addPhiInst(dest_phi);
-                    for (const auto& dest_inst : dest->getInsts())
+                    for (const auto &dest_inst : dest->getInsts())
                         curr->addInst(dest_inst);
 
-                    for (const auto& dest_succ : dest->getNextBB()) {
+                    for (const auto &dest_succ : dest->getNextBB()) {
                         unlinkBB(dest, dest_succ);
                         linkBB(curr, dest_succ);
                     }
@@ -188,21 +215,29 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     function.delBlock(dest);
                     modified = true;
                 }
-                else if (dest->getInsts().size() == 1) { // Dest is empty
+                 if (dest->getAllInstCount() == 1) { // Dest is empty
                     auto dest_br = std::dynamic_pointer_cast<BRInst>(dest->getInsts().back());
-                    if (dest_br->isConditional()) {
-                        // case 4
+                    if (dest_br && dest_br->isConditional()) {
+                        // 4. Hoist a Branch
+                        // curr ends with a jump to an empty block dest and dest ends with a branch,
+                        //
+                        //           ...          ...                           ...       ...
+                        //           |             ^                             |       /   |
+                        //           |             |                             |      /     |
+                        //           v             |                             v    /        |
+                        // ... ---> curr  ----->  dest  ---> ...  <to> ... ---> curr         dest  ----> ...
+                        //                      (empty)                          |          (empty)       ^
+                        //                         ^                             |             ^          |
+                        //                         |                             |             |          |
+                        //                        ...                            |            ...         |
+                        //                                                       |-------------------------
+                        //
                         // overwrite `curr`'s jump with a copy of dest`'s branch
                         unlinkBB(curr, dest);
                         curr->delInst(br);
-
                         curr->addInst(dest_br->clone()); // Warning: not shallow copy.
-                        if (dest_br->isConditional()) {
-                            linkBB(curr, dest_br->getTrueDest());
-                            linkBB(curr, dest_br->getFalseDest());
-                        }
-                        else
-                            linkBB(curr, dest_br->getDest());
+                        linkBB(curr, dest_br->getTrueDest());
+                        linkBB(curr, dest_br->getFalseDest());
 
                         modified = true;
                     }
@@ -219,6 +254,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
     if (adce_inst_modified) {
         PM::PreservedAnalyses pa;
         pa.preserve<DomTreeAnalysis>();
+        pa.preserve<PostDomTreeAnalysis>();
         return pa;
     }
 

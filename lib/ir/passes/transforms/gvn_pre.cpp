@@ -621,7 +621,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     //      bb4  ---->  bb3 ---------
     //                   ^
     //                   |
-    //                   bb5
+    //                  bb5
     //
     // Initial:
     // bb5:
