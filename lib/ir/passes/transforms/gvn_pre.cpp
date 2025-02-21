@@ -526,8 +526,8 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     while (modified) {
         modified = false;
 
-        dfvisitor = postdomtree.getDFVisitor();
-        for (const auto& curr : dfvisitor)
+        auto pdfvisitor = postdomtree.getDFVisitor();
+        for (const auto& curr : pdfvisitor)
         {
             // Skip the virtual root.
             if (curr->bb == nullptr)

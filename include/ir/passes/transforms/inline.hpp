@@ -12,15 +12,14 @@ namespace IR {
     public:
         PM::PreservedAnalyses run(Function &function, FAM &manager);
 
-        std::map<Function, unsigned> inlineCount;
-
     private:
+        size_t name_cnt = 0;
+        std::map<const Function*, unsigned> inlineCount;
+
         bool canInline(const Function &vFunc, const Function &uFunc);
 
         void funcInline(Function &vFunc, Function &uFunc, std::shared_ptr<BasicBlock> &bb,
                         std::shared_ptr<CALLInst> &call);
-
-        size_t name_cnt = 0;
     };
 } // namespace IR
 #endif

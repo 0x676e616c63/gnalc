@@ -235,7 +235,10 @@ void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,
     Err::gassert(ok);
 }
 
-std::vector<std::shared_ptr<PHIInst>> safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb, const std::shared_ptr<BasicBlock> &nxtbb) {
+bool safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb,
+                  const std::shared_ptr<BasicBlock> &nxtbb,
+                  std::set<std::shared_ptr<PHIInst>>& dead_phis) {
+    bool need_to_remove_br = false;
     // Unlink CFG
     unlinkBB(prebb, nxtbb);
 
@@ -253,7 +256,9 @@ std::vector<std::shared_ptr<PHIInst>> safeUnlinkBB(const std::shared_ptr<BasicBl
     }
     else {
         Err::gassert(br->getDest() == nxtbb, "The given block is not a successor.");
-        prebb->delInst(br, BasicBlock::DEL_MODE::NON_PHI);
+        // Well, the block has no successor, this might because we are deleting unreachable blocks.
+        // Anyway, tell the caller about it.
+        need_to_remove_br = true;
     }
 
     // Handle PHI
@@ -304,7 +309,6 @@ std::vector<std::shared_ptr<PHIInst>> safeUnlinkBB(const std::shared_ptr<BasicBl
     // bb1:
     //    %1 = phi [ %0, %bb0 ] [ %0, %bb2 ]
     // bb2:
-    std::vector<std::shared_ptr<PHIInst>> unused_phi;
     for (const auto& phi : nxtbb->getPhiInsts()) {
         // Delete the phi operand from the unlinked `prebb`
         if (phi->delPhiOperByBlock(prebb)) {
@@ -315,12 +319,12 @@ std::vector<std::shared_ptr<PHIInst>> safeUnlinkBB(const std::shared_ptr<BasicBl
                 // If it is self-reference, replaceSelf makes no sense.
                 if (opers[0].value != phi)
                     phi->replaceSelf(opers[0].value);
-                unused_phi.emplace_back(phi);
+                dead_phis.emplace(phi);
             }
             else if (opers.empty())
-                unused_phi.emplace_back(phi);
+                dead_phis.emplace(phi);
         }
     }
-    return unused_phi;
+    return need_to_remove_br;
 }
 } // namespace IR

@@ -4,6 +4,7 @@
 #ifndef GNALC_UTILS_GENERIC_VISITOR_HPP
 #define GNALC_UTILS_GENERIC_VISITOR_HPP
 
+#include <vector>
 #include <deque>
 #include <set>
 

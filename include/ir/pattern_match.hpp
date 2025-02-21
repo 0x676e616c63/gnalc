@@ -24,6 +24,16 @@ inline auto value(std::shared_ptr<Value> &v) {
     return ClassMatchBind<Value, std::shared_ptr<Value>>{v};
 }
 
+inline auto inst() { return ClassMatch<Instruction>{}; }
+
+inline auto inst(Instruction *&v) {
+    return ClassMatchBind<Instruction, Instruction *>{v};
+}
+
+inline auto inst(std::shared_ptr<Instruction> &v) {
+    return ClassMatchBind<Instruction, std::shared_ptr<Instruction>>{v};
+}
+
 inline auto ci1() { return ClassMatch<ConstantI1>{}; }
 inline auto ci8() { return ClassMatch<ConstantI8>{}; }
 inline auto ci32() { return ClassMatch<ConstantInt>{}; }
@@ -170,6 +180,8 @@ MAKE_INST_MATCH_ANY(phi, PHI)
 MAKE_INST_MATCH_ANY(call, CALL)
 
 #undef MAKE_INST_MATCH
+#undef MAKE_INST_MATCH2
+#undef MAKE_INST_MATCH_ANY
 
 } // namespace IR::M
 #endif // GNALC_IR_PATTERN_PATTERN_MATCH_HPP

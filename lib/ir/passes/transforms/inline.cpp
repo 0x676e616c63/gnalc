@@ -17,7 +17,7 @@ bool InlinePass::canInline(const Function &calleeFn, const Function &callerFn) {
     }
     if (calleeFn.getName() != callerFn.getName())
         flag &= true;
-    if (inlineCount[calleeFn] <= 30)
+    if (inlineCount[&calleeFn] <= 30)
         flag = true;
     if (calleeFn.getInstCount() + callerFn.getInstCount() <= 200)
         flag = true;
@@ -45,11 +45,10 @@ void InlinePass::funcInline(Function &calleeFn, Function &callerFn, std::shared_
     }
     callerFn.addBlock(newBlock);
     // delete inst in bb which move to newblock already
-    for (auto i : *bb) {
-        bb->delInstIf([&] {
-            return removeList.find(i) != removeList.end();
-        });
-    }
+
+    bb->delInstIf([&removeList](const auto& candidate) {
+        return removeList.find(candidate) != removeList.end();
+    });
 
     removeList.clear();
 
@@ -67,11 +66,10 @@ void InlinePass::funcInline(Function &calleeFn, Function &callerFn, std::shared_
         }
     }
 
-    for (auto deleteInst : removeList) {
-        (*copyBlocks.begin())->delInstIf([&] {
-            return removeList.find(deleteInst) != removeList.end();
-        });
-    }
+    (*copyBlocks.begin())->delInstIf([&removeList] (const auto& candidate){
+        return removeList.find(candidate) != removeList.end();
+    });
+
     removeList.clear();
     // insert BR into bb
     auto BR = std::make_shared<BRInst>(*copyBlocks.begin());
@@ -94,7 +92,7 @@ void InlinePass::funcInline(Function &calleeFn, Function &callerFn, std::shared_
     } else {
         // deal with phi
         //TODO phi operand.size==1
-        auto phi = std::make_shared<PHIInst>("%inline" + name_cnt++, call->getType());
+        auto phi = std::make_shared<PHIInst>("%inline" + std::to_string(name_cnt++), call->getType());
         for (const auto &copyBlock : copyBlocks) {
             auto lastInst = copyBlock->getInsts().back();
             if (auto ret = std::dynamic_pointer_cast<RETInst>(lastInst)) {
@@ -140,12 +138,13 @@ PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
 
                 inline_cfg_modified = true;
 
-                inlineCount[*func] += 1;
+                inlineCount[func.get()] += 1;
             }
         }
     }
 
     inlineCount.clear();
+    name_cnt = 0;
     if (inline_cfg_modified)
         return PM::PreservedAnalyses::none();
 
