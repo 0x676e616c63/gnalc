@@ -25,8 +25,8 @@ std::shared_ptr<AST::CompUnit> node = nullptr;
 extern FILE *yyin;
 
 int main(int argc, char **argv) {
-    // gnalc is still in development, so make it defaults to be `LogLevel::INFO`.
-    Logger::setLogLevel(LogLevel::INFO);
+    // gnalc is still in development, so make it defaults to be `LogLevel::DEBUG`.
+    Logger::setLogLevel(LogLevel::DEBUG);
 
     // File
     std::string input_file;
@@ -102,6 +102,8 @@ int main(int argc, char **argv) {
         // Debug options:
         else if (arg == "--ann")
             opt_info.advance_name_norm = true;
+        else if (arg == "--verify")
+            opt_info.verify = true;
 
 #if GNALC_EXTENSION_BRAINFK
         // Extensions:
@@ -141,7 +143,8 @@ Optimizations available:
   --inline             - Inline suitable functions
 
 Debug options:
-  --ann                - Advance name normalization (before the function passes)
+  --ann                - Use the advance name normalization result (after IRGen). (This disables the one at the last).
+  --verify             - Verify IR after each pass
 )";
 
 #if GNALC_EXTENSION_BRAINFK

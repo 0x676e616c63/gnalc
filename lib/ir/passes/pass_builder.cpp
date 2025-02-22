@@ -22,6 +22,7 @@
 // Utilities
 #include "../../../include/ir/passes/transforms/instsimplify.hpp"
 #include "../../../include/ir/passes/utilities/irprinter.hpp"
+#include "../../../include/ir/passes/utilities/verifier.hpp"
 
 namespace IR {
 
@@ -35,52 +36,85 @@ const OptInfo o1_opt_info = {
     .tailcall = true,
     .reassociate = true,
     .instsimplify = true,
-    .inliner = true
+    .inliner = true,
+    .verify = false,
 };
 
 FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FPM fpm;
 
-    if (opt_info.advance_name_norm)
-        fpm.addPass(NameNormalizePass(true)); // bb_rename: true
+    // ANN disables the last name normalization pass.
+    fpm.addPass(NameNormalizePass(true)); // bb_rename: true
 
-    if (opt_info.mem2reg)
+    if (opt_info.mem2reg) {
         fpm.addPass(PromotePass());
+        if (opt_info.verify)
+            fpm.addPass(VerifyPass());
+    }
 
-    if (opt_info.sccp)
+    if (opt_info.sccp) {
         fpm.addPass(ConstantPropagationPass());
+        if (opt_info.verify)
+            fpm.addPass(VerifyPass());
+    }
 
-    if (opt_info.reassociate)
+    if (opt_info.reassociate) {
         fpm.addPass(ReassociatePass());
+        if (opt_info.verify)
+            fpm.addPass(VerifyPass());
+    }
 
-    if (opt_info.instsimplify)
+    if (opt_info.instsimplify) {
         fpm.addPass(InstSimplifyPass());
+        if (opt_info.verify)
+            fpm.addPass(VerifyPass());
+    }
 
-    if (opt_info.dce)
+    if (opt_info.dce) {
         fpm.addPass(DCEPass());
+        if (opt_info.verify)
+            fpm.addPass(VerifyPass());
+    }
 
-    if (opt_info.adce)
+    if (opt_info.adce) {
         fpm.addPass(ADCEPass());
+        if (opt_info.verify)
+            fpm.addPass(VerifyPass());
+    }
 
-    if (opt_info.dse)
+    if (opt_info.dse) {
         fpm.addPass(DSEPass());
+        if (opt_info.verify)
+            fpm.addPass(VerifyPass());
+    }
 
     if (opt_info.gvnpre) {
         fpm.addPass(BreakCriticalEdgesPass());
         fpm.addPass(GVNPREPass());
+        if (opt_info.verify)
+            fpm.addPass(VerifyPass());
     }
 
-    if (opt_info.tailcall)
+    if (opt_info.tailcall) {
         fpm.addPass(TailRecursionEliminationPass());
+        if (opt_info.verify)
+            fpm.addPass(VerifyPass());
+    }
 
-    if (opt_info.dce)
+    if (opt_info.dce) {
         fpm.addPass(DCEPass());
+        if (opt_info.verify)
+            fpm.addPass(VerifyPass());
+    }
 
     // if (opt_info.adce)
     //     fpm.addPass(ADCEPass());
 
-    if (opt_info.inliner)
+    if (opt_info.inliner) {
         fpm.addPass(InlinePass());
+        if (opt_info.verify)
+            fpm.addPass(VerifyPass());
+    }
 
     if (!opt_info.advance_name_norm)
         fpm.addPass(NameNormalizePass(true)); // bb_rename: true

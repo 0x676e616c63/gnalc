@@ -20,6 +20,7 @@ struct OptInfo {
     bool inliner{false}; // Avoid conflict with C++ keyword `inline`
 
     bool advance_name_norm{false};
+    bool verify{true}; // Defaults to verify in development.
 };
 
 extern const OptInfo o1_opt_info;

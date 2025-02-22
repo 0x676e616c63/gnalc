@@ -246,6 +246,12 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
         changed = false;
         auto dfv = func.getDFVisitor();
         for (const auto& curr : dfv) {
+            for (const auto &phi : curr->getPhiInsts()) {
+                if (phi->getType()->getTrait() == IRCTYPE::PTR) {
+                    for (const auto &oper : phi->getPhiOpers())
+                        changed |= res.insertPotentialAlias(phi.get(), oper.value.get());
+                }
+            }
             for (const auto &inst : *curr) {
                 if (inst->getType()->getTrait() == IRCTYPE::PTR) {
                     if (auto alloca = std::dynamic_pointer_cast<ALLOCAInst>(inst)) {
@@ -257,10 +263,6 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
                     else if (auto bitcast = std::dynamic_pointer_cast<BITCASTInst>(inst)) {
                         Err::gassert(bitcast->getOVal()->getType()->getTrait() == IRCTYPE::PTR);
                         changed |= res.insertPotentialAlias(bitcast.get(), bitcast->getOVal().get());
-                    }
-                    else if (auto phi = std::dynamic_pointer_cast<PHIInst>(inst)) {
-                        for (const auto &oper : phi->getPhiOpers())
-                            changed |= res.insertPotentialAlias(phi.get(), oper.value.get());
                     }
                     else Err::unreachable("Unknown ptr type");
                 }

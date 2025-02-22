@@ -73,7 +73,7 @@ public:
 
 class AliasAnalysis : public PM::AnalysisInfo<AliasAnalysis> {
 public:
-    static AliasAnalysisResult run(Function &f, FAM &fam);
+    AliasAnalysisResult run(Function &f, FAM &fam);
 
     // For PassManager
 public:

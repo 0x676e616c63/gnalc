@@ -25,6 +25,7 @@ PostDomTree PostDomTreeAnalysis::run(Function &f, FAM &fam) {
     }
     restoreCFG();
     exit = nullptr;
+    is_exit_virtual = false;
     return builder.domtree;
 }
 
