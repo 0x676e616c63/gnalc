@@ -340,15 +340,8 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
 
     return res;
 }
-bool isPureBuiltinOrSylibFunc(const FunctionDecl *fn) {
-    if (fn->isSylib())
-        return false;
 
-    if (fn->isBuiltin()) {
-        // IRGen only use memset to initialize array
-        if (fn->getName() == "@" + std::string{Config::IR::BUILTIN_MEMSET})
-            return true;
-    }
+bool isPureBuiltinOrSylibFunc(const FunctionDecl *fn) {
     return false;
 }
 

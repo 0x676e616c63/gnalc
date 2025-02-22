@@ -43,6 +43,7 @@ private:
     std::set<const Value *> write;
 
     // some call we don't know (part of Sylib)
+    // TODO: untracked_write and untracked_read
     bool has_untracked_call = false;
 
     // Try insert `alias` to `target` as a potential alias.
@@ -85,6 +86,7 @@ private:
 };
 
 // These functions can be treated as pure function (NoModRef)
+// Currently there is no such function.
 bool isPureBuiltinOrSylibFunc(const FunctionDecl *fn);
 
 // Check if function is pure

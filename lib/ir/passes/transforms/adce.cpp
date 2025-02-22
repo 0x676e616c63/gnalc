@@ -59,8 +59,11 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
         for (const auto &bb : rdf) {
             if (auto br = std::dynamic_pointer_cast<BRInst>(bb->getInsts().back())) {
                 if (br->isConditional() && critical.find(br) == critical.end()) {
-                    if (br->getCond()->getVTrait() == ValueTrait::ORDINARY_VARIABLE)
-                        critical.emplace(std::dynamic_pointer_cast<Instruction>(br->getCond()));
+                    if (br->getCond()->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
+                        auto cond = std::dynamic_pointer_cast<Instruction>(br->getCond());
+                        critical.emplace(cond);
+                        worklist.emplace_back(cond);
+                    }
                     critical.emplace(br);
                     worklist.emplace_back(br);
                 }
@@ -69,10 +72,10 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
     }
 
     std::set<std::shared_ptr<PHIInst>> dead_phis;
+    std::set<std::shared_ptr<Instruction>> dead;
 
     // Sweep
     for (const auto &block : function) {
-        std::set<std::shared_ptr<Instruction>> dead;
         for (const auto &inst : *block) {
             if (critical.find(inst) == critical.end()) {
                 if (auto br = std::dynamic_pointer_cast<BRInst>(inst)) {
@@ -110,10 +113,12 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     dead.emplace(inst);
             }
         }
-        adce_inst_modified |= block->delInstIf([&dead](const auto &inst) { return dead.find(inst) != dead.end(); });
     }
 
     for (auto &block : function) {
+        adce_inst_modified |= block->delInstIf([&dead](const auto &inst) {
+            return dead.find(inst) != dead.end();
+        }, BasicBlock::DEL_MODE::NON_PHI);
         adce_inst_modified |= block->delInstIf([&dead_phis](const auto &p) {
             return dead_phis.find(std::dynamic_pointer_cast<PHIInst>(p)) != dead_phis.end();
         }, BasicBlock::DEL_MODE::PHI);
@@ -144,10 +149,32 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     // So just drop it.
                     br->dropFalseDest();
                     modified = true;
+                    Logger::logDebug("[ADCE] on '", function.getName(),
+                        "': drop BRInst of BasicBlock '", curr->getName(), "' 's identical destination");
                 }
             } else {
                 auto dest = br->getDest();
-                if (curr->getAllInstCount() == 1) { // curr is empty
+                // The following case is not safe in SSA. For example,
+                //
+                // bb0:
+                //   // something
+                //   br cond, bb1, %bb2
+                // bb1:
+                //   br %bb2
+                // bb2:
+                //   %a = phi [ %b, %bb0 ], [ %c, %bb1 ]
+                //
+                // After optimization:
+                //
+                // bb0:
+                //   // something
+                //   br %bb2
+                // bb2:
+                //   %a = phi [ %b, %bb0 ], [ %c, %bb0 ]
+                //
+                // Obviously, the PHIInst is broken.
+                //
+                /* if (curr->getAllInstCount() == 1) { // curr is empty
                     // 2. Remove an Empty Block
                     // curr contains only a jump
                     //
@@ -184,7 +211,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     }
                     function.delBlock(curr);
                     modified = true;
-                }
+                } */
                 if (dest->getPreBB().size() == 1) {
                     // 3. Combine Blocks
                     // curr ends in a jump to dest and dest has only one predecessor
@@ -198,10 +225,11 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     unlinkBB(curr, dest);
                     curr->delInst(br);
 
-                    // Phi contains Value's ptr, so moving instructions to another block
-                    // don't invalidate Phi. Just take care of the CFG.
-                    for (const auto &dest_phi : dest->getPhiInsts())
-                        curr->addPhiInst(dest_phi);
+                    // Since dest has only one predecessor, there can be no phi.
+                    // Also, all dest's users are its successors' phi, replace them with curr.
+                    Err::gassert(dest->getPhiCount() == 0);
+                    dest->replaceSelf(curr);
+
                     for (const auto &dest_inst : dest->getInsts())
                         curr->addInst(dest_inst);
 
@@ -209,6 +237,10 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                         unlinkBB(dest, dest_succ);
                         linkBB(curr, dest_succ);
                     }
+
+
+                    Logger::logDebug("[ADCE] on '", function.getName(),
+                        "': Combined BasicBlock '", curr->getName(), "' and '", dest->getName(), "'.");
 
                     // Since `dest` only has one incoming block, delete `curr`'s br will
                     // make it have no users, so it's a safe delete.
@@ -236,9 +268,18 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                         unlinkBB(curr, dest);
                         curr->delInst(br);
                         curr->addInst(dest_br->clone()); // Warning: not shallow copy.
-                        linkBB(curr, dest_br->getTrueDest());
-                        linkBB(curr, dest_br->getFalseDest());
+                        auto dest_succ0 = dest_br->getTrueDest();
+                        auto dest_succ1 = dest_br->getFalseDest();
+                        linkBB(curr, dest_succ0);
+                        linkBB(curr, dest_succ1);
 
+                        for (const auto& phi : dest_succ0->getPhiInsts())
+                            phi->addPhiOper(phi->getValueForBlock(dest), curr);
+                        for (const auto& phi : dest_succ1->getPhiInsts())
+                            phi->addPhiOper(phi->getValueForBlock(dest), curr);
+
+                        Logger::logDebug("[ADCE] on '", function.getName(),
+                            "': Hoisted Branch of '", dest->getName(), "' to '", curr->getName(), "'.");
                         modified = true;
                     }
                 }

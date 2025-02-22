@@ -4,7 +4,7 @@
 //   - If CFG is consistent with control-flow instructions
 //   - If PhiNode is consistent with CFG
 //   - If an Instruction dominated all its uses
-// Note that the last one will be skipped if there is a previous error.
+// Note that some check will be skipped if there is a previous error.
 // Otherwise, the compiler might abort during that check.
 #pragma once
 #ifndef GNALC_IR_PASSES_UTILITIES_VERIFIER_HPP
