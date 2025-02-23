@@ -68,9 +68,11 @@ enum class OP {
  */
 class BasicBlock;
 class Instruction : public User {
+    friend class BasicBlock;
 private:
     OP opcode;
     std::weak_ptr<BasicBlock> parent = {}; // 隶属的basic block
+    size_t index = 0;
 
 public:
     // 此构造方法用于初始生成时，最开始没有划分Block，故parent为空
@@ -80,9 +82,8 @@ public:
     OP getOpcode() const;
     std::shared_ptr<BasicBlock> getParent() const;
 
+    size_t getIndex() const;
     std::list<std::shared_ptr<Instruction>>::iterator getIter() const;
-
-    unsigned index = 0; // 不经过插入删除接口修改后使用先调用父块的update方法！
 
     void accept(IRVisitor &visitor) override;
     ~Instruction() override;

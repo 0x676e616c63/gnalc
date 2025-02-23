@@ -14,7 +14,11 @@
 
 namespace IR {
 class VerifyPass : public PM::PassInfo<VerifyPass> {
+private:
+    bool abort_when_verify_failed;
 public:
+    explicit VerifyPass(bool abort_when_verify_failed_ = false)
+        : abort_when_verify_failed(abort_when_verify_failed_) {}
     PM::PreservedAnalyses run(Function &function, FAM &manager);
 };
 

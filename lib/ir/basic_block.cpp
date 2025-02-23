@@ -124,6 +124,10 @@ void BasicBlock::updateInstIndex() const {
         inst->index = i++;
 }
 
+std::vector<std::shared_ptr<BasicBlock>>::iterator BasicBlock::getIter() const {
+    return std::next(parent.lock()->begin(), index);
+}
+
 bool BasicBlock::delFirstOfInst(const std::shared_ptr<Instruction> &inst) {
     for (auto it = insts.begin(); it != insts.end(); ++it) {
         if (*it == inst) {
@@ -211,6 +215,10 @@ void BasicBlock::addPhiInst(const std::shared_ptr<PHIInst> &node) {
 
 unsigned BasicBlock::getPhiCount() const {
     return phi_insts.size();
+}
+
+size_t BasicBlock::getIndex() const {
+    return index;
 }
 
 void BasicBlock::accept(IRVisitor &visitor) { visitor.visit(*this); }
@@ -311,7 +319,7 @@ bool safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb,
     // bb2:
     for (const auto& phi : nxtbb->getPhiInsts()) {
         // Delete the phi operand from the unlinked `prebb`
-        if (phi->delPhiOperByBlock(prebb)) {
+        if (phi->delOnePhiOperByBlock(prebb)) {
             // Simplify PHI
             auto opers = phi->getPhiOpers();
             if (opers.size() == 1) {

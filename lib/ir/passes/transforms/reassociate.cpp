@@ -41,7 +41,7 @@ std::shared_ptr<BinaryInst> ReassociatePass::neg2mul(const std::shared_ptr<Instr
     Err::gassert(binary && isIntBinaryNeg(binary));
     auto result = std::make_shared<BinaryInst>("%reass.n2m" + std::to_string(name_cnt++),
     OP::MUL, binary->getRHS(), func->getConstantPool().getConst(-1));
-    result->getParent()->addInst(neg->index, result);
+    result->getParent()->addInst(neg->getIndex(), result);
     neg->replaceSelf(result);
     optModified = true;
     return result;
@@ -64,7 +64,7 @@ std::shared_ptr<Value> makeAddTree(std::vector<std::shared_ptr<Value>> &ops,
     auto rhs = makeAddTree(ops, opcode, before, name_cnt);
     auto binary = std::make_shared<BinaryInst>("%reass.mkat" + std::to_string(name_cnt++),
         opcode, lhs, rhs);
-    before->getParent()->addInst(before->index, binary);
+    before->getParent()->addInst(before->getIndex(), binary);
     return binary;
 }
 
@@ -202,7 +202,7 @@ void ReassociatePass::rewriteExpr(
             auto zero = func->getConstantPool().getConst(0);
             auto dummy = std::make_shared<BinaryInst>("%reass.oops" + std::to_string(name_cnt++),
                 opcode, zero, zero);
-            root->getParent()->addInst(root->index, dummy);
+            root->getParent()->addInst(root->getIndex(), dummy);
             curr->setLHS(dummy);
             curr = dummy;
             Logger::logWarning("[Reassociate]: Oops! No nodes left available. Generating one for rewriting.");
@@ -273,7 +273,7 @@ std::shared_ptr<Value> ReassociatePass::removeFactor
     if (needsNegate) {
         auto neg = std::make_shared<BinaryInst>("%reass.neg" + std::to_string(name_cnt++),
                                                 OP::SUB, func->getConstantPool().getConst(0), ret);
-        binaryInst->getParent()->addInst(binaryInst->index, neg);
+        binaryInst->getParent()->addInst(binaryInst->getIndex(), neg);
     }
 
     return ret;
@@ -298,7 +298,7 @@ std::shared_ptr<Value> ReassociatePass::optAdd(
                                    OP::MUL, curr,
                                    func->getConstantPool().getConst(repeatedTimes));
 
-            root->getParent()->addInst(root->index, mul);
+            root->getParent()->addInst(root->getIndex(), mul);
             redoSet.insert(mul);
             optModified = true;
             if (ops.empty())
@@ -363,7 +363,7 @@ std::shared_ptr<Value> ReassociatePass::optAdd(
 
         auto mul = std::make_shared<BinaryInst>("%reass.m" + std::to_string(name_cnt++),
                                                OP::MUL, v, maxCntFactor);
-        root->getParent()->addInst(root->index, mul);
+        root->getParent()->addInst(root->getIndex(), mul);
         redoSet.insert(mul);
         optModified = true;
         if (ops.empty())

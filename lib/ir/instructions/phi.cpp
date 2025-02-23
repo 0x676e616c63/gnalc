@@ -35,7 +35,7 @@ std::vector<PHIInst::PhiOper> PHIInst::getPhiOpers() const {
     }
     return ret;
 }
-bool PHIInst::delPhiOperByVal(const std::shared_ptr<Value> & target) {
+bool PHIInst::delOnePhiOperByVal(const std::shared_ptr<Value> & target) {
     for (size_t i = 1; i < getOperands().size(); i += 2) {
         if (getOperand(i - 1)->getValue() == target) {
             delOperand(i);
@@ -46,7 +46,7 @@ bool PHIInst::delPhiOperByVal(const std::shared_ptr<Value> & target) {
     return false;
 }
 
-bool PHIInst::delPhiOperByBlock(const std::shared_ptr<BasicBlock> &target) {
+bool PHIInst::delOnePhiOperByBlock(const std::shared_ptr<BasicBlock> &target) {
     for (size_t i = 1; i < getOperands().size(); i += 2) {
         if (getOperand(i)->getValue() == target) {
             delOperand(i);

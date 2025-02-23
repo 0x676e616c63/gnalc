@@ -187,7 +187,7 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                 auto uselist = inst->getUseList();
                 for (const auto &use : uselist) {
                     auto usee = std::dynamic_pointer_cast<Instruction>(use->getValue());
-                    if ((bb == usee->getParent() && inst->index > usee->index)
+                    if ((bb == usee->getParent() && inst->getIndex() > usee->getIndex())
                         || !domtree.ADomB(bb.get(), usee->getParent().get())) {
                         Logger::logCritical("[VerifyPass]: Instruction '",
                                             inst->getName(), "' does not dominate its use in '",
@@ -203,7 +203,7 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
 
     if (fatal_error_cnt != 0) {
         Logger::logCritical("[VerifyPass] on '", function.getName(), "': Found ", fatal_error_cnt, " fatal error(s).");
-        if (Config::IR::ABORT_WHEN_VERIFY_FAILED)
+        if (abort_when_verify_failed)
             std::abort();
     }
 

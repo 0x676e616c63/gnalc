@@ -46,7 +46,7 @@ void Function::addBlock(std::shared_ptr<BasicBlock> blk) {
     blks.emplace_back(std::move(blk));
 }
 
-void Function::addBlockAsEntry(const std::shared_ptr<BasicBlock>& blk) {
+void Function::addBlockAsEntry(const std::shared_ptr<BasicBlock> &blk) {
     blk->index = 0;
     blk->setParent(shared_from_this());
     blks.insert(blks.begin(), blk);

@@ -71,6 +71,7 @@ class BasicBlock : public Value,
     std::list<std::shared_ptr<PHIInst>> phi_insts;
     std::vector<std::shared_ptr<Value>> bb_params;
     std::weak_ptr<Function> parent;
+    size_t index = 0;
 
 public:
     using const_iterator = decltype(insts)::const_iterator;
@@ -101,7 +102,8 @@ public:
     std::list<std::shared_ptr<Instruction>> getAllInsts() const;
     unsigned getPhiCount() const;
 
-    unsigned index = 0;
+    size_t getIndex() const;
+    std::vector<std::shared_ptr<BasicBlock>>::iterator getIter() const;
 
     // No use-def check, just remove the first matched item
     // PHI Instruction is not included!

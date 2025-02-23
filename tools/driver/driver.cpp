@@ -104,7 +104,10 @@ int main(int argc, char **argv) {
             opt_info.advance_name_norm = true;
         else if (arg == "--verify")
             opt_info.verify = true;
-
+        else if (arg == "--strict") {
+            opt_info.verify = true;
+            opt_info.abort_when_verify_failed = true;
+        }
 #if GNALC_EXTENSION_BRAINFK
         // Extensions:
         else if (arg == "-mbrainfk")
@@ -145,6 +148,7 @@ Optimizations available:
 Debug options:
   --ann                - Use the advance name normalization result (after IRGen). (This disables the one at the last).
   --verify             - Verify IR after each pass
+  --strict             - Enable verify and abort when verify failed
 )";
 
 #if GNALC_EXTENSION_BRAINFK

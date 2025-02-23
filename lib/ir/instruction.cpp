@@ -26,6 +26,10 @@ std::shared_ptr<BasicBlock> Instruction::getParent() const {
     return parent.lock();
 }
 
+size_t Instruction::getIndex() const {
+    return index;
+}
+
 BasicBlock::iterator Instruction::getIter() const {
     Err::gassert(getOpcode() != OP::PHI);
     return std::next(parent.lock()->begin(), index - parent.lock()->getPhiCount());
