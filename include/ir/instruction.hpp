@@ -63,12 +63,29 @@ enum class OP {
     HELPER
 };
 
+
+class Instruction;
+class BasicBlock;
+
+// We can't see BasicBlock's definition here, use BBIter to get around it.
+using BBInstIter = std::list<std::shared_ptr<Instruction>>::iterator;
+
+// Warning: PHIInst MUST NOT invoke it
+void moveInst(const std::shared_ptr<Instruction>& inst,
+    const std::shared_ptr<BasicBlock>& new_bb, BBInstIter location);
+void moveInsts(BBInstIter beg, BBInstIter end,
+    const std::shared_ptr<BasicBlock>& new_bb, BBInstIter location);
+void moveInst(const std::shared_ptr<Instruction>& inst,
+    const std::shared_ptr<BasicBlock>& new_bb);
+void moveInsts(BBInstIter beg, BBInstIter end,
+    const std::shared_ptr<BasicBlock>& new_bb);
+
 /**
  * @brief Instruction的操作数实际上由User的Operands来管理
  */
-class BasicBlock;
 class Instruction : public User {
     friend class BasicBlock;
+
 private:
     OP opcode;
     std::weak_ptr<BasicBlock> parent = {}; // 隶属的basic block
@@ -83,12 +100,14 @@ public:
     std::shared_ptr<BasicBlock> getParent() const;
 
     size_t getIndex() const;
-    std::list<std::shared_ptr<Instruction>>::iterator getIter() const;
+
+    // NO PHI
+    BBInstIter getIter() const;
 
     void accept(IRVisitor &visitor) override;
+
     ~Instruction() override;
 };
-
 } // namespace IR
 
 #endif

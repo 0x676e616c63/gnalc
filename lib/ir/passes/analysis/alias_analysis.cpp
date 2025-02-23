@@ -143,7 +143,8 @@ ModRefInfo AliasAnalysisResult::getInstModRefInfo(const Instruction *inst, const
             }
             // void putarray(int n, int a[]);
             if (callee->getName() == "@putarray" || callee->getName() == "@putfarray" || callee->getName() == "@putf") {
-                for (auto &r : call->getArgs()) {
+                auto actual_args = call->getArgs();
+                for (auto &r : actual_args) {
                     if (r->getType()->getTrait() == IRCTYPE::PTR) {
                         auto alias = getAliasInfo(r.get(), location);
                         if (alias == AliasInfo::MustAlias || alias == AliasInfo::MayAlias)
@@ -154,7 +155,8 @@ ModRefInfo AliasAnalysisResult::getInstModRefInfo(const Instruction *inst, const
             }
 
             if (callee->getName() == "@" + std::string{Config::IR::BUILTIN_MEMSET}) {
-                for (auto &r : call->getArgs()) {
+                auto actual_args = call->getArgs();
+                for (auto &r : actual_args) {
                     if (r->getType()->getTrait() == IRCTYPE::PTR) {
                         auto alias = getAliasInfo(r.get(), location);
                         if (alias == AliasInfo::MustAlias || alias == AliasInfo::MayAlias)
@@ -255,7 +257,7 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
         }
     }
 
-    auto entry = func.getBlocks()[0].get();
+    auto entry = func.getBlocks().front().get();
 
     // Local Alloca
     for (const auto &inst : *entry) {
@@ -385,7 +387,8 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
                     // void putarray(int n, int a[]);
                     else if (callee->getName() == "@putarray" || callee->getName() == "@putfarray" ||
                              callee->getName() == "@putf") {
-                        for (auto &actual : call->getArgs()) {
+                        auto actual_args = call->getArgs();
+                        for (const auto &actual : actual_args) {
                             if (actual->getType()->getTrait() == IRCTYPE::PTR) {
                                 for (const auto &mayalias : res.getPtrInfo(actual.get()).potential_alias) {
                                     if (mayalias->getVTrait() == ValueTrait::GLOBAL_VARIABLE ||
@@ -396,7 +399,8 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
                         }
                         res.has_sylib_call = true;
                     } else if (callee->getName() == "@" + std::string{Config::IR::BUILTIN_MEMSET}) {
-                        for (auto &actual : call->getArgs()) {
+                        auto actual_args = call->getArgs();
+                        for (const auto &actual : actual_args) {
                             if (actual->getType()->getTrait() == IRCTYPE::PTR) {
                                 for (const auto &mayalias : res.getPtrInfo(actual.get()).potential_alias) {
                                     if (mayalias->getVTrait() == ValueTrait::GLOBAL_VARIABLE ||

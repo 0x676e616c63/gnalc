@@ -69,8 +69,6 @@ void IRGenerator::visit(CompUnit &node) {
     }
     symbol_table.finishScope();
 
-    module.removeUnusedFuncDecl();
-
     CFGBuilder builder;
     builder.build(module);
     curr_func = nullptr;

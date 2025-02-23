@@ -51,6 +51,16 @@ bool safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb,
                   const std::shared_ptr<BasicBlock> &nxtbb,
                   std::set<std::shared_ptr<PHIInst>>& dead_phis);
 
+
+using FunctionBBIter = std::list<std::shared_ptr<BasicBlock>>::iterator;
+void moveBlock(const std::shared_ptr<BasicBlock>& bb,
+    const std::shared_ptr<Function>& new_func, FunctionBBIter location);
+void moveBlocks(FunctionBBIter beg, FunctionBBIter end,
+    const std::shared_ptr<Function>& new_func, FunctionBBIter location);
+void moveBlock(const std::shared_ptr<BasicBlock>& bb,
+    const std::shared_ptr<Function>& new_func);
+void moveBlocks(FunctionBBIter beg, FunctionBBIter end,
+    const std::shared_ptr<Function>& new_func);
 /**
  * @brief BB继承自value, 其被br指令'use', 'use'了它所包含的指令
  * @note next_bb包含的BB和最后一条br指令中的相同
@@ -106,7 +116,8 @@ public:
     unsigned getPhiCount() const;
 
     size_t getIndex() const;
-    std::vector<std::shared_ptr<BasicBlock>>::iterator getIter() const;
+
+    FunctionBBIter getIter() const;
 
     // No use-def check, just remove the first matched item
     // PHI Instruction is not included!
@@ -130,30 +141,34 @@ public:
     template <typename Pred>
     bool delInstIf(Pred pred, const DEL_MODE mode = DEL_MODE::ALL) {
         bool found = false;
-        if (mode != DEL_MODE::NON_PHI)
+        if (mode != DEL_MODE::NON_PHI) {
             for (auto it = phi_insts.begin(); it != phi_insts.end();) {
                 if (pred(*it)) {
                     for (const auto& use : (*it)->getUseList()) {
                         Err::gassert(pred(std::dynamic_pointer_cast<Instruction>(use->getUser())),
                                      "BasicBlock::delInstIf(): Cannot delete a Phi without deleting its User.");
                     }
+                    (*it)->setParent(nullptr);
                     it = phi_insts.erase(it);
                     found = true;
                 } else
                     ++it;
             }
-        if (mode != DEL_MODE::PHI)
+        }
+        if (mode != DEL_MODE::PHI) {
             for (auto it = insts.begin(); it != insts.end();) {
                 if (pred(*it)) {
                     for (const auto& use : (*it)->getUseList()) {
                         Err::gassert(pred(std::dynamic_pointer_cast<Instruction>(use->getUser())),
                                     "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
                     }
+                    (*it)->setParent(nullptr);
                     it = insts.erase(it);
                     found = true;
                 } else
                     ++it;
             }
+        }
         if (found)
             updateInstIndex();
         return found;

@@ -95,9 +95,7 @@ public:
     Value() = delete;
     // Every Value's address is unique, and is owned by BasicBlock/ConstantPool.
     // So there's no copy or move constructor, which can be confusing when implicit invoked.
-    // If the instruction really needs a copy for the sake of convenience,
-    // (like copying a BRInst in some CFG Transform Passes)
-    // add a `std::shared_ptr<XXX> clone() const` to make it explicitly.
+    // If the instruction really needs a copy, use `clone()`;
     Value(const Value &other) = delete;
     Value &operator=(const Value &other) = delete;
     Value(Value &&other) = delete;
@@ -117,6 +115,17 @@ public:
         Err::not_implemented("Value::accept");
     }
 
+    // Warning: this MUST NOT be called by another clone.
+    // Note that Instruction's clone only don't clone their operands.
+    // Only Function's clone will return an independent function with independent instructions.
+    std::shared_ptr<Value> clone() const {
+        auto cloned = cloneImpl();
+        auto raw = cloned.get();
+        Err::gassert(raw != nullptr && typeid(*raw) == typeid(*this),
+            "Derived class should override this correctly.");
+        return cloned;
+    }
+
     virtual ~Value();
 
     ValueTrait getVTrait() const { return trait; }
@@ -132,7 +141,20 @@ private:
     //   thus having multiple Uses. Though having identical Value,
     //   they are independent object, and their address is unique.
     bool delUse(const std::shared_ptr<Use> &target);
+
+    virtual std::shared_ptr<Value> cloneImpl() const {
+        Err::not_implemented("Value::cloneImpl");
+        return nullptr;
+    }
 };
+
+// Helper template
+template <typename T>
+auto makeClone(const std::shared_ptr<T>& value)
+    -> std::enable_if_t<std::is_base_of_v<Value, T>, std::shared_ptr<T>>
+{
+    return std::dynamic_pointer_cast<T>(value->clone());
+}
 
 class Use : public std::enable_shared_from_this<Use> {
     friend class User;

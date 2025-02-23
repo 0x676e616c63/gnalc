@@ -38,6 +38,7 @@ public:
         FAM &fam = mam.getResult<FAMProxy>(m).getManager();
 
         PM::PreservedAnalyses pa = PM::PreservedAnalyses::all();
+        // Keep this forward traversal. Some pass (e.g. Inline) rely on this
         for (const auto &func : m.getFunctions()) {
             PM::PreservedAnalyses curr_pa = function_pass->run(*func, fam);
             fam.invalidate(*func, curr_pa);

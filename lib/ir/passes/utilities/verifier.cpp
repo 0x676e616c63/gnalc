@@ -16,12 +16,16 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
     for (const auto &bb : function) {
         auto all_insts = bb->getAllInsts();
         for (const auto &inst : all_insts) {
-            // Some pass leave this to DCE, uncomment these will make the pass too noisy.
-            // if (inst->getUseCount() == 0 && inst->getOpcode() != OP::CALL
-            //     && inst->getVTrait() != ValueTrait::VOID_INSTRUCTION) {
-            //     Logger::logWarning("[VerifierPass]: Trivially dead Instruction '",
-            //         inst->getName(), "' detected.");
-            // }
+            if (inst->getParent() == nullptr) {
+                Logger::logCritical("[VerifyPass]: Instruction '", inst->getName(),
+                    "''s parent pointer is nullptr. But it is in '", bb->getName(), "'.");
+                ++fatal_error_cnt;
+            } else if (inst->getParent() != bb) {
+                Logger::logCritical("[VerifyPass]: Instruction '", inst->getName(),
+                    "''s parent pointer is ", inst->getParent()->getName(),
+                    ". But it is in '", bb->getName(), "'.");
+                ++fatal_error_cnt;
+            }
 
             auto ruselist = inst->getRUseList();
             for (const auto &weak_use : ruselist) {
@@ -66,7 +70,7 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
         // Check CFG
         auto fndfv = function.getDFVisitor();
         std::set<std::shared_ptr<BasicBlock>> reachable_blocks{fndfv.begin(), fndfv.end()};
-        const auto &entry = function.getBlocks()[0];
+        const auto &entry = function.getBlocks().front();
         if (!entry->getPreBB().empty()) {
             Logger::logCritical("[VerifyPass]: Entry BasicBlock '", entry->getName(), "' has predecessors.");
             ++fatal_error_cnt;

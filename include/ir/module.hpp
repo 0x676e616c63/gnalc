@@ -44,19 +44,17 @@ public:
 
     void addGlobalVar(std::shared_ptr<GlobalVariable> global_var);
     const std::vector<std::shared_ptr<GlobalVariable>> &getGlobalVars() const;
-    void delGlobalVar(NameRef name); // by name
+    bool delGlobalVar(const std::shared_ptr<GlobalVariable>& target);
 
     void addFunction(std::shared_ptr<Function> func);
     const std::vector<std::shared_ptr<Function>> &getFunctions() const;
-    void delFunction(NameRef name); // by name
+    bool delFunction(const std::shared_ptr<Function>& target);
 
     void addFunctionDecl(std::shared_ptr<FunctionDecl> func);
     const std::vector<std::shared_ptr<FunctionDecl>> &getFunctionDecls() const;
-    void delFunctionDecl(NameRef name); // by name
+    bool delFunctionDecl(const std::shared_ptr<FunctionDecl>& target);
 
     ConstantPool &getConstantPool();
-
-    void removeUnusedFuncDecl();
 
     const_iterator begin() const;
     const_iterator end() const;

@@ -14,13 +14,14 @@
 #include "../../../include/ir/passes/transforms/dse.hpp"
 #include "../../../include/ir/passes/transforms/gvn_pre.hpp"
 #include "../../../include/ir/passes/transforms/inline.hpp"
+#include "../../../include/ir/passes/transforms/instsimplify.hpp"
 #include "../../../include/ir/passes/transforms/mem2reg.hpp"
 #include "../../../include/ir/passes/transforms/namenormalizer.hpp"
 #include "../../../include/ir/passes/transforms/reassociate.hpp"
 #include "../../../include/ir/passes/transforms/tail_recursion_elimination.hpp"
+#include "../../../include/ir/passes/transforms/tree_shaking.hpp"
 
 // Utilities
-#include "../../../include/ir/passes/transforms/instsimplify.hpp"
 #include "../../../include/ir/passes/utilities/irprinter.hpp"
 #include "../../../include/ir/passes/utilities/verifier.hpp"
 
@@ -125,6 +126,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
 MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
     MPM mpm;
     mpm.addPass(makeModulePass(buildFunctionPipeline(opt_info)));
+    mpm.addPass(TreeShakingPass());
     return mpm;
 }
 

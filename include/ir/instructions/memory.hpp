@@ -32,6 +32,11 @@ public:
     int getAlign() const;
 
     void accept(IRVisitor &visitor) override;
+
+private:
+    std::shared_ptr<Value> cloneImpl() const override {
+        return std::make_shared<ALLOCAInst>(getName(), basetype, align);
+    }
 };
 
 // <result> = load [volatile] <ty>, ptr <pointer>[, align <alignment>]......
@@ -47,6 +52,11 @@ public:
     int getAlign() const;
 
     void accept(IRVisitor &visitor) override;
+
+private:
+    std::shared_ptr<Value> cloneImpl() const override {
+        return std::make_shared<LOADInst>(getName(), getPtr(), align);
+    }
 };
 
 // store [volatile] <ty> <value>, ptr <pointer>[, align <alignment>]......
@@ -64,6 +74,11 @@ public:
     int getAlign() const;
 
     void accept(IRVisitor &visitor) override;
+
+private:
+    std::shared_ptr<Value> cloneImpl() const override {
+        return std::make_shared<STOREInst>(getValue(), getPtr(), align);
+    }
 };
 
 // <result> = getelementptr <ty>, ptr <ptrval> {, <ty> <idx>}*
@@ -94,6 +109,10 @@ public:
     size_t getConstantOffset() const;
 
     void accept(IRVisitor &visitor) override;
+
+    std::shared_ptr<Value> cloneImpl() const override {
+        return std::make_shared<GEPInst>(getName(), getPtr(), getIdxs());
+    }
 };
 
 } // namespace IR

@@ -1,11 +1,9 @@
-#include <utility>
-
 #include "../../include/ir/basic_block.hpp"
-
-#include <list>
-
 #include "../../include/ir/utilities.hpp"
 #include "../../include/ir/visitor.hpp"
+
+#include <utility>
+#include <list>
 
 namespace IR {
 BasicBlock::BasicBlock(std::string _name)
@@ -32,12 +30,14 @@ BasicBlock::BasicBlock(std::string _name,
 }
 
 void BasicBlock::addInst(iterator it, const std::shared_ptr<Instruction> &inst) {
+    Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
     insts.insert(it, inst);
     inst->setParent(shared_from_this());
     updateInstIndex();
 }
 
 void BasicBlock::addInst(size_t index, const std::shared_ptr<Instruction> &inst) {
+    Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
     index -= phi_insts.size();
     auto it = std::next(insts.begin(),
         static_cast<decltype(insts)::iterator::difference_type>(index));
@@ -73,18 +73,21 @@ bool BasicBlock::delNextBB(const std::shared_ptr<BasicBlock> &bb) {
 }
 
 void BasicBlock::addInst(const std::shared_ptr<Instruction> &inst) {
+    Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
     inst->index = phi_insts.size() + insts.size();
     insts.emplace_back(inst);
     inst->setParent(shared_from_this());
 }
 
 void BasicBlock::addInstAfterPhi(const std::shared_ptr<Instruction> &inst) {
+    Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
     insts.insert(insts.begin(), inst);
     inst->setParent(shared_from_this());
     updateInstIndex();
 }
 
 void BasicBlock::addInstBeforeTerminator(const std::shared_ptr<Instruction> &inst) {
+    Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
     auto term = insts.back();
     Err::gassert(term->getOpcode() == OP::BR || term->getOpcode() == OP::RET);
     term->index = phi_insts.size() + insts.size();
@@ -124,7 +127,7 @@ void BasicBlock::updateInstIndex() const {
         inst->index = i++;
 }
 
-std::vector<std::shared_ptr<BasicBlock>>::iterator BasicBlock::getIter() const {
+FunctionBBIter BasicBlock::getIter() const {
     return std::next(parent.lock()->begin(), index);
 }
 
@@ -334,5 +337,27 @@ bool safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb,
         }
     }
     return need_to_remove_br;
+}
+
+void moveBlock(const std::shared_ptr<BasicBlock>& bb,
+    const std::shared_ptr<Function>& new_func, FunctionBBIter location) {
+    Err::gassert(bb->getParent() != new_func, "Function not changed");
+    auto target = std::dynamic_pointer_cast<BasicBlock>(bb->shared_from_this());
+    bb->getParent()->delFirstOfBlock(target);
+    new_func->addBlock(location, target);
+}
+void moveBlocks(FunctionBBIter beg, FunctionBBIter end,
+    const std::shared_ptr<Function>& new_func, FunctionBBIter location) {
+    std::vector<std::shared_ptr<BasicBlock>> tmp{beg, end};
+    for (const auto& bb : tmp)
+        moveBlock(bb, new_func, location);
+}
+void moveBlock(const std::shared_ptr<BasicBlock>& bb,
+    const std::shared_ptr<Function>& new_func) {
+    moveBlock(bb, new_func, new_func->end());
+}
+void moveBlocks(FunctionBBIter beg, FunctionBBIter end,
+    const std::shared_ptr<Function>& new_func) {
+    moveBlocks(beg, end, new_func, new_func->end());
 }
 } // namespace IR

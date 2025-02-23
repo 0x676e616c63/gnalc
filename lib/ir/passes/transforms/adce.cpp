@@ -309,7 +309,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                         // Note that empty block don't have phi, so `unlink` rather than `safeUnlink`
                         unlinkBB(curr, dest);
                         curr->delInst(br);
-                        curr->addInst(dest_br->clone()); // Warning: not shallow copy.
+                        curr->addInst(makeClone(dest_br)); // Warning: not shallow copy.
                         auto dest_succ0 = dest_br->getTrueDest();
                         auto dest_succ1 = dest_br->getFalseDest();
                         linkBB(curr, dest_succ0);

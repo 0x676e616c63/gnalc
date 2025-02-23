@@ -1,6 +1,7 @@
 // Function Verify Pass
 // This pass verifies:
 //   - If mutual use-def is valid
+//   - If all instructions' parent pointer is valid
 //   - If CFG is consistent with control-flow instructions
 //   - If PhiNode is consistent with CFG
 //   - If an Instruction dominated all its uses

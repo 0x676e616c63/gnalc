@@ -52,9 +52,7 @@ void BinaryInst::setRHS(const std::shared_ptr<Value> &rhs) {
     setOperand(1, rhs);
 }
 
-void BinaryInst::swapLHSRHS() {
-    swapOperand(0, 1);
-}
+void BinaryInst::swapLHSRHS() { swapOperand(0, 1); }
 
 FNEGInst::FNEGInst(NameRef name, std::shared_ptr<Value> val)
     : Instruction(OP::FNEG, name, makeBType(IRBTYPE::FLOAT)) {
@@ -66,6 +64,5 @@ std::shared_ptr<Value> FNEGInst::getVal() const {
 }
 
 void BinaryInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
-
 void FNEGInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
 } // namespace IR

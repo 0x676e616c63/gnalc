@@ -20,8 +20,7 @@ constexpr auto GVNPRE_SKIP_BLOCK_THRESHOLD = 1000;
 constexpr auto GVNPRE_SKIP_NESTED_EXPR_THRESHOLD = 1000;
 
 // Function Inline
-// TODO: A abstract cost or a specific size (?)
-// constexpr auto FUNCTION_INLINE_COST_THRESHOLD = 100;
+constexpr auto FUNCTION_INLINE_INST_THRESHOLD = 1000;
 } // namespace Config::IR
 
 #endif

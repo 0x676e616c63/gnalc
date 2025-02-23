@@ -33,16 +33,14 @@ PM::PreservedAnalyses TailRecursionEliminationPass::run(Function &function, FAM 
 
         std::vector<std::shared_ptr<ALLOCAInst>> allocas;
         for (const auto &inst : *oldEntryBlock) {
-            if (auto alloca = std::dynamic_pointer_cast<ALLOCAInst>(inst))
-                allocas.emplace_back(alloca);
+            if (auto alloc = std::dynamic_pointer_cast<ALLOCAInst>(inst))
+                allocas.emplace_back(alloc);
             else break;
         }
 
         auto newEntryBlock = std::make_shared<BasicBlock>("tailcall");
-        for (const auto& alloca : allocas) {
-            newEntryBlock->addInst(alloca);
-            oldEntryBlock->delFirstOfInst(alloca); // NO USE-DEF CHECK
-        }
+        for (const auto& alloc : allocas)
+            moveInst(alloc, newEntryBlock, newEntryBlock->begin());
 
         newEntryBlock->addInst(std::make_shared<BRInst>(oldEntryBlock));
         linkBB(newEntryBlock, oldEntryBlock);

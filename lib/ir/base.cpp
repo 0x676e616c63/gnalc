@@ -88,10 +88,8 @@ bool User::replaceOperand(const std::shared_ptr<Value> &before, const std::share
     return found;
 }
 
-bool User::replaceUse(const std::shared_ptr<Use> &old_use,
-                      const std::shared_ptr<Value> &new_value) {
-    Err::gassert(old_use->getValue() != new_value,
-        "Replace with an identical value doesn't make sense.");
+bool User::replaceUse(const std::shared_ptr<Use> &old_use, const std::shared_ptr<Value> &new_value) {
+    Err::gassert(old_use->getValue() != new_value, "Replace with an identical value doesn't make sense.");
     for (auto &use : operands) {
         if (use == old_use) {
             auto ok = use->getValue()->delUse(use);

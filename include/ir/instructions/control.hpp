@@ -28,6 +28,13 @@ public:
     std::shared_ptr<BType> getRetType() const;
 
     void accept(IRVisitor &visitor) override;
+
+private:
+    std::shared_ptr<Value> cloneImpl() const override {
+        if (isVoid())
+            return std::make_shared<RETInst>();
+        return std::make_shared<RETInst>(getRetVal());
+    }
 };
 
 // br i1 <cond>, label <iftrue>, label <iffalse>
@@ -90,12 +97,23 @@ public:
     std::vector<std::shared_ptr<Value>> getTrueBBArgs() const;
     std::vector<std::shared_ptr<Value>> getFalseBBArgs() const;
 
-    // Make a copy of current BRInst
-    // Warning: this generates a new Instruction, rather a reference to the current one.
-    // Make sure to add it to BasicBlock
-    std::shared_ptr<BRInst> clone() const;
-
     void accept(IRVisitor &visitor) override;
+
+private:
+    std::shared_ptr<Value> cloneImpl() const override {
+        std::shared_ptr<BRInst> ret;
+        if (isConditional()) {
+            ret = std::make_shared<BRInst>(getCond(), getTrueDest(), getFalseDest());
+            if (set_args)
+                ret->setBBArgs(getTrueBBArgs(), getFalseBBArgs());
+        }
+        else {
+            ret = std::make_shared<BRInst>(getDest());
+            if (set_args)
+                ret->setBBArgs(getBBArgs());
+        }
+        return ret;
+    }
 };
 
 //<result> = [tail | musttail | notail ] call [fast-math flags] [cconv] [ret
@@ -126,6 +144,20 @@ public:
 
     void setTailCall();
     bool isTailCall() const;
+
+private:
+    std::shared_ptr<Value> cloneImpl() const override {
+        if (isVoid()) {
+            auto ret = std::make_shared<CALLInst>(getFunc(), getArgs());
+            if (is_tail_call)
+                ret->setTailCall();
+            return ret;
+        }
+        auto ret = std::make_shared<CALLInst>(getFuncName(), getFunc(), getArgs());
+        if (is_tail_call)
+            ret->setTailCall();
+        return ret;
+    }
 };
 
 } // namespace IR
