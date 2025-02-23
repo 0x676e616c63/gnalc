@@ -51,12 +51,16 @@ bool safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb,
                   const std::shared_ptr<BasicBlock> &nxtbb,
                   std::set<std::shared_ptr<PHIInst>>& dead_phis);
 
-
+// We can't see Function's definition here, use `FunctionBBIter` to get around it.
 using FunctionBBIter = std::list<std::shared_ptr<BasicBlock>>::iterator;
+
+// Move `bb` to `new_func`'s `location`
+// This deletes `bb` from its parent, and insert it before `new_func`'s location
 void moveBlock(const std::shared_ptr<BasicBlock>& bb,
     const std::shared_ptr<Function>& new_func, FunctionBBIter location);
 void moveBlocks(FunctionBBIter beg, FunctionBBIter end,
     const std::shared_ptr<Function>& new_func, FunctionBBIter location);
+// The following two functions move `bb` to `new_func`'s end
 void moveBlock(const std::shared_ptr<BasicBlock>& bb,
     const std::shared_ptr<Function>& new_func);
 void moveBlocks(FunctionBBIter beg, FunctionBBIter end,

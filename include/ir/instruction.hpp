@@ -67,14 +67,17 @@ enum class OP {
 class Instruction;
 class BasicBlock;
 
-// We can't see BasicBlock's definition here, use BBIter to get around it.
+// We can't see BasicBlock's definition here, use `BBInstIter` to get around it.
 using BBInstIter = std::list<std::shared_ptr<Instruction>>::iterator;
 
-// Warning: PHIInst MUST NOT invoke it
+// Warning: PHIInst MUST NOT invoke the following four `moveInst(s)`
+// Move `inst` to `new_bb`'s `location`
+// This deletes `inst` from its parent, and insert it before `new_bb`'s location
 void moveInst(const std::shared_ptr<Instruction>& inst,
     const std::shared_ptr<BasicBlock>& new_bb, BBInstIter location);
 void moveInsts(BBInstIter beg, BBInstIter end,
     const std::shared_ptr<BasicBlock>& new_bb, BBInstIter location);
+// The following two functions move `inst` to `new_bb`'s end
 void moveInst(const std::shared_ptr<Instruction>& inst,
     const std::shared_ptr<BasicBlock>& new_bb);
 void moveInsts(BBInstIter beg, BBInstIter end,
@@ -101,7 +104,7 @@ public:
 
     size_t getIndex() const;
 
-    // NO PHI
+    // Warning: PHIInst MUST NOT invoke this.
     BBInstIter getIter() const;
 
     void accept(IRVisitor &visitor) override;

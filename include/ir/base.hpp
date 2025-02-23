@@ -115,7 +115,7 @@ public:
         Err::not_implemented("Value::accept");
     }
 
-    // Warning: this MUST NOT be called by another clone.
+    // Warning: this MUST NOT be called by another clone. (Except Function::cloneImpl)
     // Note that Instruction's clone only don't clone their operands.
     // Only Function's clone will return an independent function with independent instructions.
     std::shared_ptr<Value> clone() const {
