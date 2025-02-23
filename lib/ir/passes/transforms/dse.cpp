@@ -74,7 +74,7 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
     for (auto &block : function) {
         dse_inst_modified |= block->delInstIf([&eraseSet](const auto &inst) {
             return eraseSet.find(inst) != eraseSet.end();
-        });
+        }, BasicBlock::DEL_MODE::NON_PHI);
     }
 
     if (dse_inst_modified) {

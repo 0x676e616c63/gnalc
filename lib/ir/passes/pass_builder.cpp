@@ -107,8 +107,8 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
             fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));
     }
 
-    // if (opt_info.adce)
-    //     fpm.addPass(ADCEPass());
+    if (opt_info.adce)
+        fpm.addPass(ADCEPass());
 
     if (opt_info.inliner) {
         fpm.addPass(InlinePass());

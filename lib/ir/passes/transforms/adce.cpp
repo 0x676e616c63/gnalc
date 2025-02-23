@@ -76,7 +76,10 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
 
     // Sweep
     for (const auto &block : function) {
-        for (const auto &inst : *block) {
+        // Note that `getAllInsts()` returns a temporary object.
+        // Deleting/Adding Instruction while iterating it is safe.
+        auto all_insts = block->getAllInsts();
+        for (const auto &inst : all_insts) {
             if (critical.find(inst) == critical.end()) {
                 if (auto br = std::dynamic_pointer_cast<BRInst>(inst)) {
                     Err::gassert(br->isConditional());
@@ -107,6 +110,8 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     // Also, if there is a virtual root, its children must also be exit blocks. Thus, the
                     // search can't terminate at the virtual root.
                     Err::gassert(found && nearest_pdom->bb != nullptr);
+                    linkBB(block, nearest_pdom->bb->shared_from_this());
+                    // The new BRInst won't be iterated in `all_insts`. So no need to add it to critical.
                     block->addInst(std::make_shared<BRInst>(nearest_pdom->bb->shared_from_this()));
                     adce_cfg_modified = true;
                 } else
@@ -116,9 +121,11 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
     }
 
     for (auto &block : function) {
+        // Trivially dead phi might in `dead`
         adce_inst_modified |= block->delInstIf([&dead](const auto &inst) {
             return dead.find(inst) != dead.end();
-        }, BasicBlock::DEL_MODE::NON_PHI);
+        });
+        // `dead_phis` is phis that become dead in `safeUnlink`
         adce_inst_modified |= block->delInstIf([&dead_phis](const auto &p) {
             return dead_phis.find(std::dynamic_pointer_cast<PHIInst>(p)) != dead_phis.end();
         }, BasicBlock::DEL_MODE::PHI);
@@ -130,6 +137,8 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
     while (modified) {
         modified = false;
         // Compute Postorder
+        // Note that the GenericVisitors do traversals in their constructors, they won't invalidate when
+        // BasicBlocks are removed, and they may contain erased blocks.
         auto postorder = function.getDFVisitor(Util::DFVOrder::PostOrder);
         // One Pass
         for (const auto &curr : postorder) {

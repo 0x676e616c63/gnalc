@@ -99,6 +99,9 @@ public:
     // usually we can use range-based for instead of these
     const std::list<std::shared_ptr<Instruction>> &getInsts() const;
     const std::list<std::shared_ptr<PHIInst>> &getPhiInsts() const;
+    // Returns a temporary object.
+    // Deleting/Adding Instruction while iterating it is safe.
+    // Some pass rely on this. (like ADCE).
     std::list<std::shared_ptr<Instruction>> getAllInsts() const;
     unsigned getPhiCount() const;
 
