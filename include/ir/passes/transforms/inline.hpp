@@ -9,7 +9,6 @@
 #ifndef GNALC_IR_PASSES_TRANSFORMS_INLINE_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_INLINE_HPP
 
-#include "../../../../include/ir/instructions/control.hpp"
 #include "../pass_manager.hpp"
 
 namespace IR {

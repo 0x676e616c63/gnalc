@@ -89,6 +89,8 @@ int main(int argc, char **argv) {
             opt_info.adce = true;
         else if (arg == "--dse")
             opt_info.dse = true;
+        else if (arg == "--loadelim")
+            opt_info.loadelim = true;
         else if (arg == "--gvnpre")
             opt_info.gvnpre = true;
         else if (arg == "--tailcall")
@@ -139,6 +141,7 @@ Optimizations available:
   --dce                - Dead code elimination
   --adce               - Aggressive dead code elimination
   --dse                - Dead store elimination
+  --loadelim           - Redundant load elimination
   --gvnpre             - Value-Based partial redundancy elimination (GVN-PRE)
   --tailcall           - Tail call optimization
   --reassociate        - Reassociate commutative expressions

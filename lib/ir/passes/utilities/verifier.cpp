@@ -2,6 +2,7 @@
 
 #include "../../../../include/config/config.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
+#include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
 #include "../../../../include/utils/logger.hpp"
 

@@ -13,6 +13,7 @@
 #include "../../../include/ir/passes/transforms/dce.hpp"
 #include "../../../include/ir/passes/transforms/dse.hpp"
 #include "../../../include/ir/passes/transforms/gvn_pre.hpp"
+#include "../../../include/ir/passes/transforms/load_elimination.hpp"
 #include "../../../include/ir/passes/transforms/inline.hpp"
 #include "../../../include/ir/passes/transforms/instsimplify.hpp"
 #include "../../../include/ir/passes/transforms/mem2reg.hpp"
@@ -79,6 +80,12 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
 
     if (opt_info.adce) {
         fpm.addPass(ADCEPass());
+        if (opt_info.verify)
+            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));
+    }
+
+    if (opt_info.loadelim) {
+        fpm.addPass(LoadEliminationPass());
         if (opt_info.verify)
             fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));
     }

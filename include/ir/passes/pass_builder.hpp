@@ -13,6 +13,7 @@ struct OptInfo {
     bool dce{false};
     bool adce{false};
     bool dse{false};
+    bool loadelim{false};
     bool gvnpre{false};
     bool tailcall{false};
     bool reassociate{false};

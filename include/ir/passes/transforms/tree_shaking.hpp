@@ -1,4 +1,5 @@
-// Remove useless global variables, functions and function declarations
+// TreeShakingPass
+// This is a Module Pass that removes useless global variables, functions and function declarations.
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_TREE_SHAKING_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_TREE_SHAKING_HPP

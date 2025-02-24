@@ -1,6 +1,6 @@
 #include "../../../../include/ir/passes/transforms/tree_shaking.hpp"
 
-#include <deque>
+#include <vector>
 
 namespace IR {
 PM::PreservedAnalyses TreeShakingPass::run(Module &module, MAM &mam) {

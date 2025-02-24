@@ -9,7 +9,7 @@
 #include <deque>
 
 namespace IR {
-// FIXME: Inline Cost Calcuation
+// FIXME: Inline Cost Calculation
 bool shouldBeInlined(const Function &fn) {
     for (const auto& bb : fn) {
         for (const auto& inst : *bb) {
@@ -50,15 +50,15 @@ PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
         cloned_entry->setName(cloned_entry->getName() + ".inline.entry" + std::to_string(name_cnt++));
         std::vector<std::shared_ptr<ALLOCAInst>> allocas;
         for (const auto& inst : *cloned_entry) {
-            if (auto alloca = std::dynamic_pointer_cast<ALLOCAInst>(inst))
-                allocas.emplace_back(alloca);
+            if (auto alloc = std::dynamic_pointer_cast<ALLOCAInst>(inst))
+                allocas.emplace_back(alloc);
             else
                 break;
         }
         for (const auto& alloc : allocas) {
-            // Because the call_block might be entry.
-            // `entry->begin()` rather than `entry->end()`
-            // can make sure the alloca is in entry after splitting.
+            // Note that the call_block might be entry block.
+            // Inserting alloca before `entry->begin()` rather than `entry->end()`
+            // can make sure the alloca is in the entry block after splitting.
             moveInst(alloc, entry, entry->begin());
         }
 
