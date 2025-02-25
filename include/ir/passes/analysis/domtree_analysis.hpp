@@ -70,7 +70,8 @@ struct GenericDomTree {
         }
     };
     using NodeBFVisitor = Util::GenericBFVisitor<std::shared_ptr<Node>, NodeChildGetter>;
-    using NodeDFVisitor = Util::GenericDFVisitor<std::shared_ptr<Node>, NodeChildGetter>;
+    template<Util::DFVOrder order = Util::DFVOrder::PreOrder>
+    using NodeDFVisitor = Util::GenericDFVisitor<std::shared_ptr<Node>, NodeChildGetter, order>;
 
     std::shared_ptr<Node> root;
     std::unordered_map<BasicBlock *, std::shared_ptr<Node>> nodes;
@@ -134,11 +135,12 @@ struct GenericDomTree {
         print(root, 0);
     }
 
-    NodeBFVisitor getBFVisitor() const {
-        return NodeBFVisitor{root};
+    auto getBFVisitor() const {
+        return NodeBFVisitor{ root };
     }
-    NodeDFVisitor getDFVisitor(Util::DFVOrder order = Util::DFVOrder::PreOrder) const {
-        return NodeDFVisitor{root, order};
+    template<Util::DFVOrder order = Util::DFVOrder::PreOrder>
+    auto getDFVisitor() const {
+        return NodeDFVisitor<order>{ root };
     }
 
 private:

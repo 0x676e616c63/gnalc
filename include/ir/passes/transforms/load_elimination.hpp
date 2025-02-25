@@ -1,3 +1,11 @@
+// Load Elimination
+//
+// This pass performs a post-order traversal of the CFG to eliminate load instructions through:
+// - Replacing subsequent loads with previously loaded values
+// - Propagating stored values directly to dependent loads
+//
+// TODO: Current implementation is time-consuming.
+//       Consider adopting MemorySSA-based analysis to enhance optimization efficiency.
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_LOAD_ELIMINATION_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_LOAD_ELIMINATION_HPP

@@ -88,8 +88,10 @@ class BasicBlock : public Value,
     size_t index = 0;
 
 public:
-    using const_iterator = decltype(insts)::const_iterator;
     using iterator = decltype(insts)::iterator;
+    using const_iterator = decltype(insts)::const_iterator;
+    using reverse_iterator = decltype(insts)::reverse_iterator;
+    using const_reverse_iterator = decltype(insts)::const_reverse_iterator;
     using phi_const_iterator = decltype(phi_insts)::const_iterator;
     using phi_iterator = decltype(phi_insts)::iterator;
 
@@ -184,6 +186,13 @@ public:
     iterator end();
     const_iterator cbegin() const;
     const_iterator cend() const;
+
+    const_reverse_iterator rbegin() const;
+    const_reverse_iterator rend() const;
+    reverse_iterator rbegin();
+    reverse_iterator rend();
+    const_reverse_iterator crbegin() const;
+    const_reverse_iterator crend() const;
 
     phi_const_iterator phi_begin() const;
     phi_const_iterator phi_end() const;

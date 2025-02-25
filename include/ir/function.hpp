@@ -76,9 +76,13 @@ private:
     // int vreg_idx = 0;
 public:
     using CFGBFVisitor = Util::GenericBFVisitor<std::shared_ptr<BasicBlock>, BBSuccGetter>;
-    using CFGDFVisitor = Util::GenericDFVisitor<std::shared_ptr<BasicBlock>, BBSuccGetter>;
-    using const_iterator = decltype(blks)::const_iterator;
+    template<Util::DFVOrder order>
+    using CFGDFVisitor = Util::GenericDFVisitor<std::shared_ptr<BasicBlock>, BBSuccGetter, order>;
+
     using iterator = decltype(blks)::iterator;
+    using const_iterator = decltype(blks)::const_iterator;
+    using reverse_iterator = decltype(blks)::reverse_iterator;
+    using const_reverse_iterator = decltype(blks)::const_reverse_iterator;
 
     Function(std::string name_,
              const std::vector<std::shared_ptr<FormalParam>> &params,
@@ -135,7 +139,13 @@ public:
     iterator end();
     const_iterator cbegin() const;
     const_iterator cend() const;
-    // ...
+
+    const_reverse_iterator rbegin() const;
+    const_reverse_iterator rend() const;
+    reverse_iterator rbegin();
+    reverse_iterator rend();
+    const_reverse_iterator crbegin() const;
+    const_reverse_iterator crend() const;
 
     // 后面需要再说
     // int getVRegIdx() { return vreg_idx++; } //
@@ -150,8 +160,9 @@ public:
         return CFGBFVisitor(blks.front());
     }
 
-    auto getDFVisitor(Util::DFVOrder order = Util::DFVOrder::PreOrder) const {
-        return CFGDFVisitor(blks.front(), order);
+    template<Util::DFVOrder order = Util::DFVOrder::PreOrder>
+    auto getDFVisitor() const {
+        return CFGDFVisitor<order>(blks.front());
     }
 
     std::vector<std::shared_ptr<BasicBlock>> getExitBBs() const;

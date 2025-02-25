@@ -171,6 +171,18 @@ BasicBlock::const_iterator BasicBlock::cbegin() const { return insts.cbegin(); }
 
 BasicBlock::const_iterator BasicBlock::cend() const { return insts.cend(); }
 
+BasicBlock::const_reverse_iterator BasicBlock::rbegin() const { return insts.rbegin(); }
+
+BasicBlock::const_reverse_iterator BasicBlock::rend() const { return insts.rend(); }
+
+BasicBlock::reverse_iterator BasicBlock::rbegin() { return insts.rbegin(); }
+
+BasicBlock::reverse_iterator BasicBlock::rend() { return insts.rend(); }
+
+BasicBlock::const_reverse_iterator BasicBlock::crbegin() const { return insts.crbegin(); }
+
+BasicBlock::const_reverse_iterator BasicBlock::crend() const { return insts.crend(); }
+
 BasicBlock::phi_const_iterator BasicBlock::phi_begin() const {
     return phi_insts.begin();
 }

@@ -103,6 +103,18 @@ Function::const_iterator Function::cbegin() const { return blks.cbegin(); }
 
 Function::const_iterator Function::cend() const { return blks.cend(); }
 
+Function::const_reverse_iterator Function::rbegin() const { return blks.rbegin(); }
+
+Function::const_reverse_iterator Function::rend() const { return blks.rend(); }
+
+Function::reverse_iterator Function::rbegin() { return blks.rbegin(); }
+
+Function::reverse_iterator Function::rend() { return blks.rend(); }
+
+Function::const_reverse_iterator Function::crbegin() const { return blks.crbegin(); }
+
+Function::const_reverse_iterator Function::crend() const { return blks.crend(); }
+
 ConstantPool &Function::getConstantPool() { return *constant_pool; }
 
 std::vector<std::shared_ptr<BasicBlock>> Function::getExitBBs() const {

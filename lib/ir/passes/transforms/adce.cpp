@@ -139,7 +139,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
         // Compute Postorder
         // Note that the GenericVisitors do traversals in their constructors, they won't invalidate when
         // BasicBlocks are removed, and they may contain erased blocks.
-        auto postorder = function.getDFVisitor(Util::DFVOrder::PostOrder);
+        auto postorder = function.getDFVisitor<Util::DFVOrder::PostOrder>();
         // One Pass
         for (const auto &curr : postorder) {
             if (dead_blocks.find(curr) != dead_blocks.end()) {

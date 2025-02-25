@@ -547,7 +547,7 @@ PM::PreservedAnalyses ReassociatePass::run(Function &function, FAM &manager) {
     for (const auto &param : function.getParams())
         valueRankMap[param] = ++rank;
 
-    auto rpov = function.getDFVisitor(Util::DFVOrder::ReversePostOrder);
+    auto rpov = function.getDFVisitor<Util::DFVOrder::ReversePostOrder>();
     for (const auto &node : rpov) {
         // << 16 to avoid collision with other block
         Rank bbRank = bbRankMap[node] = ++rank << 16;
