@@ -34,11 +34,11 @@ inline auto inst(std::shared_ptr<Instruction> &v) {
     return ClassMatchBind<Instruction, std::shared_ptr<Instruction>>{v};
 }
 
-inline auto ci1() { return ClassMatch<ConstantI1>{}; }
-inline auto ci8() { return ClassMatch<ConstantI8>{}; }
-inline auto ci32() { return ClassMatch<ConstantInt>{}; }
-inline auto cf32() { return ClassMatch<ConstantFloat>{}; }
-inline auto constant() {
+inline auto value_ci1() { return ClassMatch<ConstantI1>{}; }
+inline auto value_ci8() { return ClassMatch<ConstantI8>{}; }
+inline auto value_ci32() { return ClassMatch<ConstantInt>{}; }
+inline auto value_cf32() { return ClassMatch<ConstantFloat>{}; }
+inline auto value_constant() {
     return ClassesMatch<ConstantI1, ConstantI8, ConstantInt, ConstantFloat>{};
 }
 
@@ -50,41 +50,41 @@ struct ConstantProj {
     }
 };
 
-inline auto ci1(bool &a) {
+inline auto value_ci1(bool &a) {
     return ClassMatchBind<ConstantI1, bool, ConstantProj<bool>>{a};
 }
 
-inline auto ci8(char &a) {
+inline auto value_ci8(char &a) {
     return ClassMatchBind<ConstantI8, char, ConstantProj<char>>{a};
 }
 
-inline auto ci32(int &a) {
+inline auto value_ci32(int &a) {
     return ClassMatchBind<ConstantInt, int, ConstantProj<int>>{a};
 }
 
-inline auto cf32(float &a) {
+inline auto value_cf32(float &a) {
     return ClassMatchBind<ConstantFloat, float, ConstantProj<float>>{a};
 }
 
-inline auto ci1(bool a) {
+inline auto value_ci1(bool a) {
     return ClassMatchIf<ConstantI1>{[a](const ConstantI1 &b) {
         return a == b.getVal();
     }};
 }
 
-inline auto ci8(char a) {
+inline auto value_ci8(char a) {
     return ClassMatchIf<ConstantI8>{[a](const ConstantI8 &b) {
         return a == b.getVal();
     }};
 }
 
-inline auto ci32(int a) {
+inline auto value_ci32(int a) {
     return ClassMatchIf<ConstantInt>{[a](const ConstantInt &b) {
         return a == b.getVal();
     }};
 }
 
-inline auto cf32(float a) {
+inline auto value_cf32(float a) {
     return ClassMatchIf<ConstantFloat>{[a](const ConstantFloat &b) {
         return a == b.getVal();
     }};
@@ -153,31 +153,31 @@ auto same_operands(const Value *which) {
         return InstMatch<IRInstInfo, OP::opcode, OperandPatterns...>(std::forward<OperandPatterns>(ops)...); \
     }
 
-MAKE_INST_MATCH2(ret, RET, 0, 1)
-MAKE_INST_MATCH2(br, BR, 1, 2)
-MAKE_INST_MATCH(fneg, FNEG, 1)
-MAKE_INST_MATCH(add, ADD, 2)
-MAKE_INST_MATCH(fadd, FADD, 2)
-MAKE_INST_MATCH(sub, SUB, 2)
-MAKE_INST_MATCH(fsub, FSUB, 2)
-MAKE_INST_MATCH(mul, MUL, 2)
-MAKE_INST_MATCH(fmul, FMUL, 2)
-MAKE_INST_MATCH(div, DIV, 2)
-MAKE_INST_MATCH(fdiv, FDIV, 2)
-MAKE_INST_MATCH(rem, REM, 2)
-MAKE_INST_MATCH(frem, FREM, 2)
-MAKE_INST_MATCH(allocate, ALLOCA, 0) // Avoid conflict with marco `alloca`
-MAKE_INST_MATCH(load, LOAD, 2)
-MAKE_INST_MATCH(store, STORE, 2)
-MAKE_INST_MATCH_ANY(gep, GEP)
-MAKE_INST_MATCH(fptosi, FPTOSI, 1)
-MAKE_INST_MATCH(sitosf, SITOFP, 1)
-MAKE_INST_MATCH(zext, ZEXT, 1)
-MAKE_INST_MATCH(bitcast, BITCAST, 1)
-MAKE_INST_MATCH(icmp, ICMP, 2)
-MAKE_INST_MATCH(fcmp, FCMP, 2)
-MAKE_INST_MATCH_ANY(phi, PHI)
-MAKE_INST_MATCH_ANY(call, CALL)
+MAKE_INST_MATCH2(inst_ret, RET, 0, 1)
+MAKE_INST_MATCH2(inst_br, BR, 1, 2)
+MAKE_INST_MATCH(inst_fneg, FNEG, 1)
+MAKE_INST_MATCH(inst_add, ADD, 2)
+MAKE_INST_MATCH(inst_fadd, FADD, 2)
+MAKE_INST_MATCH(inst_sub, SUB, 2)
+MAKE_INST_MATCH(inst_fsub, FSUB, 2)
+MAKE_INST_MATCH(inst_mul, MUL, 2)
+MAKE_INST_MATCH(inst_fmul, FMUL, 2)
+MAKE_INST_MATCH(inst_div, DIV, 2)
+MAKE_INST_MATCH(inst_fdiv, FDIV, 2)
+MAKE_INST_MATCH(inst_rem, REM, 2)
+MAKE_INST_MATCH(inst_frem, FREM, 2)
+MAKE_INST_MATCH(inst_alloca, ALLOCA, 0)
+MAKE_INST_MATCH(inst_load, LOAD, 2)
+MAKE_INST_MATCH(inst_store, STORE, 2)
+MAKE_INST_MATCH_ANY(inst_gep, GEP)
+MAKE_INST_MATCH(inst_fptosi, FPTOSI, 1)
+MAKE_INST_MATCH(inst_sitosf, SITOFP, 1)
+MAKE_INST_MATCH(inst_zext, ZEXT, 1)
+MAKE_INST_MATCH(inst_bitcast, BITCAST, 1)
+MAKE_INST_MATCH(inst_icmp, ICMP, 2)
+MAKE_INST_MATCH(inst_fcmp, FCMP, 2)
+MAKE_INST_MATCH_ANY(inst_phi, PHI)
+MAKE_INST_MATCH_ANY(inst_call, CALL)
 
 #undef MAKE_INST_MATCH
 #undef MAKE_INST_MATCH2

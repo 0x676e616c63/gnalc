@@ -59,11 +59,17 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
             if (!aa_res.isLocal(store_ptr))
                 continue;
 
+            auto successors = store_block->getNextBB();
+            std::set<std::shared_ptr<BasicBlock>> visited;
+            std::deque<std::shared_ptr<BasicBlock>> worklist{successors.begin(), successors.end()};
             // STOREInst that may contribute to the elimination
             std::vector<std::shared_ptr<STOREInst>> candidates;
             std::vector<std::shared_ptr<Instruction>> killers;
-            Function::CFGDFVisitor<Util::DFVOrder::PreOrder> store_dfv{store_block};
-            for (const auto &store_succ : store_dfv) {
+            while (!worklist.empty()) {
+                auto store_succ = worklist.front();
+                visited.emplace(store_succ);
+                worklist.pop_front();
+
                 // If we meet the store block again, there is a back edge, and thus we should
                 // consider the instructions that before the store we want to eliminate. If there is
                 // a Reference on that memory, it is not safe to eliminate the store.
@@ -77,14 +83,17 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
                         if (auto store2 = std::dynamic_pointer_cast<STOREInst>(inst)) {
                             auto store2_ptr = store2->getPtr().get();
                             auto aa = aa_res.getAliasInfo(store2_ptr, store_ptr);
-                            if (aa == AliasInfo::MustAlias)
+                            if (aa == AliasInfo::MustAlias) {
                                 candidates.emplace_back(store);
-                            break;
+                                break;
+                            }
                         }
-                        auto modref = aa_res.getInstModRefInfo(inst.get(), store_ptr, fam);
-                        if (modref == ModRefInfo::Ref || modref == ModRefInfo::ModRef) {
-                            killers.emplace_back(inst);
-                            break;
+                        else {
+                            auto modref = aa_res.getInstModRefInfo(inst.get(), store_ptr, fam);
+                            if (modref == ModRefInfo::Ref || modref == ModRefInfo::ModRef) {
+                                killers.emplace_back(inst);
+                                break;
+                            }
                         }
                     }
                 } else {
@@ -95,6 +104,12 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
                             break;
                         }
                     }
+                }
+
+                auto succs = store_succ->getNextBB();
+                for (const auto &p : succs) {
+                    if (visited.find(p) == visited.end())
+                        worklist.emplace_back(p);
                 }
             }
 
@@ -141,7 +156,7 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
             }
         }
 
-        // Delete unused loads immediately to avoid influence on preceding analysis
+        // Delete unused stores immediately to avoid influence on preceding analysis
         dse_inst_modified |= store_block->delInstIf(
             [&unused_store](const auto &inst) { return unused_store.find(inst) != unused_store.end(); },
             BasicBlock::DEL_MODE::NON_PHI);

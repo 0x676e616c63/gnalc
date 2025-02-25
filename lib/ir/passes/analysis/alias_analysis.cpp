@@ -287,8 +287,9 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
                         // We've handled it above
                         continue;
                     }
-                    if (auto gep = std::dynamic_pointer_cast<GEPInst>(inst))
+                    if (auto gep = std::dynamic_pointer_cast<GEPInst>(inst)) {
                         changed |= res.insertPotentialAlias(gep.get(), gep->getPtr().get());
+                    }
                     else if (auto bitcast = std::dynamic_pointer_cast<BITCASTInst>(inst)) {
                         Err::gassert(bitcast->getOVal()->getType()->getTrait() == IRCTYPE::PTR);
                         changed |= res.insertPotentialAlias(bitcast.get(), bitcast->getOVal().get());

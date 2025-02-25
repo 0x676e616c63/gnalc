@@ -34,9 +34,9 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             // A + 0 -> A
             // 0 + A -> A
             // A - 0 -> A
-            if (match(inst, M::add(M::value(other), M::ci32(0)))
-                || match(inst, M::add(M::ci32(0), M::value(other)))
-                || match(inst, M::sub(M::value(other), M::ci32(0)))) {
+            if (match(inst, M::inst_add(M::value(other), M::value_ci32(0)))
+                || match(inst, M::inst_add(M::value_ci32(0), M::value(other)))
+                || match(inst, M::inst_sub(M::value(other), M::value_ci32(0)))) {
                 inst->replaceSelf(other);
                 instsimplify_inst_modified = true;
             }
@@ -44,10 +44,10 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             // 0 * A = 0
             // 0 / A = 0
             // 0 % A = 0
-            else if (match(inst, M::mul(M::value(), M::ci32(0)))
-                || match(inst, M::mul(M::ci32(0), M::value()))
-                || match(inst, M::div(M::ci32(0), M::value()))
-                || match(inst, M::rem(M::ci32(0), M::value()))) {
+            else if (match(inst, M::inst_mul(M::value(), M::value_ci32(0)))
+                || match(inst, M::inst_mul(M::value_ci32(0), M::value()))
+                || match(inst, M::inst_div(M::value_ci32(0), M::value()))
+                || match(inst, M::inst_rem(M::value_ci32(0), M::value()))) {
                 inst->replaceSelf(function.getConstantPool().getConst(0));
                 instsimplify_inst_modified = true;
             }

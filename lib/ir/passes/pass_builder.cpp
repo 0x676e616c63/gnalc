@@ -47,9 +47,9 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     // ANN disables the last name normalization pass.
     fpm.addPass(NameNormalizePass(true)); // bb_rename: true
 
-#define FUNCTION_TRANSFORM(name, classname)                                                                            \
+#define FUNCTION_TRANSFORM(name, pass)                                                                            \
     if (opt_info.name) {                                                                                               \
-        fpm.addPass(classname());                                                                                      \
+        fpm.addPass(pass);                                                                                      \
         if (opt_info.verify)                                                                                           \
             fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));                                                \
     }
@@ -66,22 +66,22 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     // FUNCTION_TRANSFORM(dse, DSEPass)
     // FUNCTION_TRANSFORM(gvnpre, GVNPREPass)
 
-    FUNCTION_TRANSFORM(mem2reg, PromotePass)
-    FUNCTION_TRANSFORM(inliner, InlinePass)
-    FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass)
-    FUNCTION_TRANSFORM(sccp, ConstantPropagationPass)
-    FUNCTION_TRANSFORM(adce, ADCEPass)
-    FUNCTION_TRANSFORM(reassociate, ReassociatePass)
-    FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass)
-    FUNCTION_TRANSFORM(sccp, ConstantPropagationPass)
-    FUNCTION_TRANSFORM(gvnpre, GVNPREPass)
-    FUNCTION_TRANSFORM(loadelim, LoadEliminationPass)
-    FUNCTION_TRANSFORM(dse, DSEPass)
-    FUNCTION_TRANSFORM(loadelim, LoadEliminationPass)
-    FUNCTION_TRANSFORM(dse, DSEPass)
-    FUNCTION_TRANSFORM(loadelim, LoadEliminationPass)
-    FUNCTION_TRANSFORM(dce, DCEPass)
-    FUNCTION_TRANSFORM(adce, ADCEPass)
+    FUNCTION_TRANSFORM(mem2reg, PromotePass())
+    FUNCTION_TRANSFORM(inliner, InlinePass())
+    FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass())
+    FUNCTION_TRANSFORM(sccp, ConstantPropagationPass())
+    FUNCTION_TRANSFORM(adce, ADCEPass())
+    FUNCTION_TRANSFORM(reassociate, ReassociatePass())
+    FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass())
+    FUNCTION_TRANSFORM(sccp, ConstantPropagationPass())
+    FUNCTION_TRANSFORM(gvnpre, GVNPREPass())
+    FUNCTION_TRANSFORM(loadelim, LoadEliminationPass())
+    FUNCTION_TRANSFORM(dse, DSEPass())
+    FUNCTION_TRANSFORM(loadelim, LoadEliminationPass())
+    FUNCTION_TRANSFORM(dse, DSEPass())
+    FUNCTION_TRANSFORM(loadelim, LoadEliminationPass())
+    FUNCTION_TRANSFORM(dce, DCEPass())
+    FUNCTION_TRANSFORM(adce, ADCEPass())
 
 #undef FUNCTION_TRANSFORM
 
