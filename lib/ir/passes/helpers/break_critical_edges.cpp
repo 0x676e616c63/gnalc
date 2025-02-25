@@ -1,14 +1,14 @@
-#include "../../../../include/ir/passes/transforms/break_critical_edges.hpp"
+#include "../../../../include/ir/passes/helpers/break_critical_edges.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
 
 #include <deque>
 
 namespace IR {
-PM::PreservedAnalyses BreakCriticalEdgesPass::run(Function &function, FAM &fam) {
+bool break_critical_edges(Function &function) {
     bool bce_cfg_modified = false;
 
-    std::vector<std::shared_ptr<BasicBlock>> blocks_to_add;
-    for (const auto& curr : function) {
+    auto dfv = function.getDFVisitor();
+    for (const auto& curr : dfv) {
         auto nextbbs = curr->getNextBB();
         if (nextbbs.size() <= 1) continue;
         for (const auto& succ : nextbbs) {
@@ -20,7 +20,7 @@ PM::PreservedAnalyses BreakCriticalEdgesPass::run(Function &function, FAM &fam) 
                 // Create a new block
                 auto new_block = std::make_shared<BasicBlock>(
                     curr->getName() + "_no_critical_edge_" + succ->getName());
-                blocks_to_add.emplace_back(new_block);
+                function.addBlock(succ->getIter(), new_block);
 
                 // CFG
                 unlinkBB(curr, succ);
@@ -42,12 +42,7 @@ PM::PreservedAnalyses BreakCriticalEdgesPass::run(Function &function, FAM &fam) 
             }
         }
     }
-    for (const auto& bb : blocks_to_add)
-        function.addBlock(bb);
 
-    if (bce_cfg_modified)
-        return PM::PreservedAnalyses::none();
-
-    return PM::PreservedAnalyses::all();
+    return bce_cfg_modified;
 }
 } // namespace IR

@@ -33,7 +33,7 @@ jobs:
 
       - name: Test
         working-directory: ${{github.workspace}}/build
-        run: ctest -C ${{env.BUILD_TYPE}} -R gnalc_test_o1
+        run: ctest -C ${{env.BUILD_TYPE}} -R o1
 
       - name: Check
         working-directory: ${{github.workspace}}/build

@@ -2,20 +2,19 @@
 #include "../../../include/ir/passes/pass_manager.hpp"
 
 // Analysis
-#include "../../../include/ir/passes/analysis/live_analysis.hpp"
 #include "../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../include/ir/passes/analysis/domtree_analysis.hpp"
+#include "../../../include/ir/passes/analysis/live_analysis.hpp"
 
 // Transforms
 #include "../../../include/ir/passes/transforms/adce.hpp"
-#include "../../../include/ir/passes/transforms/break_critical_edges.hpp"
 #include "../../../include/ir/passes/transforms/constant_propagation.hpp"
 #include "../../../include/ir/passes/transforms/dce.hpp"
 #include "../../../include/ir/passes/transforms/dse.hpp"
 #include "../../../include/ir/passes/transforms/gvn_pre.hpp"
-#include "../../../include/ir/passes/transforms/load_elimination.hpp"
 #include "../../../include/ir/passes/transforms/inline.hpp"
 #include "../../../include/ir/passes/transforms/instsimplify.hpp"
+#include "../../../include/ir/passes/transforms/load_elimination.hpp"
 #include "../../../include/ir/passes/transforms/mem2reg.hpp"
 #include "../../../include/ir/passes/transforms/namenormalizer.hpp"
 #include "../../../include/ir/passes/transforms/reassociate.hpp"
@@ -48,81 +47,43 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     // ANN disables the last name normalization pass.
     fpm.addPass(NameNormalizePass(true)); // bb_rename: true
 
-    if (opt_info.mem2reg) {
-        fpm.addPass(PromotePass());
-        if (opt_info.verify)
-            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));
+#define FUNCTION_TRANSFORM(name, classname)                                                                            \
+    if (opt_info.name) {                                                                                               \
+        fpm.addPass(classname());                                                                                      \
+        if (opt_info.verify)                                                                                           \
+            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));                                                \
     }
 
-    if (opt_info.sccp) {
-        fpm.addPass(ConstantPropagationPass());
-        if (opt_info.verify)
-            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));
-    }
+    // FUNCTION_TRANSFORM(mem2reg, PromotePass)
+    // FUNCTION_TRANSFORM(inliner, InlinePass)
+    // FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass)
+    // FUNCTION_TRANSFORM(sccp, ConstantPropagationPass)
+    // FUNCTION_TRANSFORM(reassociate, ReassociatePass)
+    // FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass)
+    // FUNCTION_TRANSFORM(dce, DCEPass)
+    // FUNCTION_TRANSFORM(adce, ADCEPass)
+    // FUNCTION_TRANSFORM(loadelim, LoadEliminationPass)
+    // FUNCTION_TRANSFORM(dse, DSEPass)
+    // FUNCTION_TRANSFORM(gvnpre, GVNPREPass)
 
-    if (opt_info.reassociate) {
-        fpm.addPass(ReassociatePass());
-        if (opt_info.verify)
-            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));
-    }
+    FUNCTION_TRANSFORM(mem2reg, PromotePass)
+    FUNCTION_TRANSFORM(inliner, InlinePass)
+    FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass)
+    FUNCTION_TRANSFORM(sccp, ConstantPropagationPass)
+    FUNCTION_TRANSFORM(adce, ADCEPass)
+    FUNCTION_TRANSFORM(reassociate, ReassociatePass)
+    FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass)
+    FUNCTION_TRANSFORM(sccp, ConstantPropagationPass)
+    FUNCTION_TRANSFORM(gvnpre, GVNPREPass)
+    FUNCTION_TRANSFORM(loadelim, LoadEliminationPass)
+    FUNCTION_TRANSFORM(dse, DSEPass)
+    FUNCTION_TRANSFORM(loadelim, LoadEliminationPass)
+    FUNCTION_TRANSFORM(dse, DSEPass)
+    FUNCTION_TRANSFORM(loadelim, LoadEliminationPass)
+    FUNCTION_TRANSFORM(dce, DCEPass)
+    FUNCTION_TRANSFORM(adce, ADCEPass)
 
-    if (opt_info.instsimplify) {
-        fpm.addPass(InstSimplifyPass());
-        if (opt_info.verify)
-            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));
-    }
-
-    if (opt_info.dce) {
-        fpm.addPass(DCEPass());
-        if (opt_info.verify)
-            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));
-    }
-
-    if (opt_info.adce) {
-        fpm.addPass(ADCEPass());
-        if (opt_info.verify)
-            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));
-    }
-
-    if (opt_info.loadelim) {
-        fpm.addPass(LoadEliminationPass());
-        if (opt_info.verify)
-            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));
-    }
-
-    if (opt_info.dse) {
-        fpm.addPass(DSEPass());
-        if (opt_info.verify)
-            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));
-    }
-
-    if (opt_info.gvnpre) {
-        fpm.addPass(BreakCriticalEdgesPass());
-        fpm.addPass(GVNPREPass());
-        if (opt_info.verify)
-            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));
-    }
-
-    if (opt_info.tailcall) {
-        fpm.addPass(TailRecursionEliminationPass());
-        if (opt_info.verify)
-            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));
-    }
-
-    if (opt_info.dce) {
-        fpm.addPass(DCEPass());
-        if (opt_info.verify)
-            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));
-    }
-
-    if (opt_info.adce)
-        fpm.addPass(ADCEPass());
-
-    if (opt_info.inliner) {
-        fpm.addPass(InlinePass());
-        if (opt_info.verify)
-            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));
-    }
+#undef FUNCTION_TRANSFORM
 
     if (!opt_info.advance_name_norm)
         fpm.addPass(NameNormalizePass(true)); // bb_rename: true
@@ -142,8 +103,7 @@ void PassBuilder::registerProxies(FAM &fam, MAM &mam) {
 }
 
 void PassBuilder::registerFunctionAnalyses(FAM &fam) {
-#define FUNCTION_ANALYSIS(CREATE_PASS)                                         \
-    fam.registerPass([&] { return CREATE_PASS; });
+#define FUNCTION_ANALYSIS(CREATE_PASS) fam.registerPass([&] { return CREATE_PASS; });
 
     FUNCTION_ANALYSIS(LiveAnalysis())
     FUNCTION_ANALYSIS(DomTreeAnalysis())

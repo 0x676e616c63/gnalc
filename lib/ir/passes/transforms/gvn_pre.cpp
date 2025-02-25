@@ -6,6 +6,7 @@
 #include "../../../../include/ir/instructions/control.hpp"
 #include "../../../../include/ir/instructions/memory.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
+#include "../../../../include/ir/passes/helpers/break_critical_edges.hpp"
 
 #include <algorithm>
 #include <deque>
@@ -477,6 +478,8 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     }
 
     bool gvnpre_inst_modified = false;
+    bool gvnpre_cfg_modified = break_critical_edges(function);
+
     //
     // Step 1 - BuildSets
     //
@@ -844,6 +847,9 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
 
     // cleanup to release temp objects
     reset();
+
+    if (gvnpre_cfg_modified)
+        return PM::PreservedAnalyses::none();
 
     if (gvnpre_inst_modified) {
         PM::PreservedAnalyses pa;
