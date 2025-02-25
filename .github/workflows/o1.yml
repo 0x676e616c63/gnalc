@@ -1,4 +1,4 @@
-name: Gnalc Test - Base
+name: Gnalc Test - O1
 
 on:
   push:
@@ -33,7 +33,7 @@ jobs:
 
       - name: Test
         working-directory: ${{github.workspace}}/build
-        run: ctest -C ${{env.BUILD_TYPE}} -R gnalc_test
+        run: ctest -C ${{env.BUILD_TYPE}} -R gnalc_test_o1
 
       - name: Check
         working-directory: ${{github.workspace}}/build
