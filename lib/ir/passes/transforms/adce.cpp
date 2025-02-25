@@ -268,8 +268,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     Err::gassert(dest->getPhiCount() == 0);
                     dest->replaceSelf(curr);
 
-                    for (const auto &dest_inst : dest->getInsts())
-                        curr->addInst(dest_inst);
+                    moveInsts(dest->begin(), dest->end(), curr);
 
                     auto dest_nextbbs = dest->getNextBB();
                     for (const auto &dest_succ : dest_nextbbs) {

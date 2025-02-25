@@ -1,8 +1,25 @@
-int main() {
-  int i = 0;
-  while(i < 20) {
-    int j = 0;
-    i = i + 1;
+// test if-else-if
+int ifElseIf() {
+  int a;
+  a = 5;
+  int b;
+  b = 10;
+  if(a == 6 || b == 0xb) {
+    return a;
   }
-  return 1;
+  else {
+    if (b == 10 && a == 1)
+      a = 25;
+    else if (b == 10 && a == -5)
+      a = a + 15;
+    else
+      a = -+a;
+  }
+
+  return a;
+}
+
+int main(){
+  putint(ifElseIf());
+  return 0;
 }
