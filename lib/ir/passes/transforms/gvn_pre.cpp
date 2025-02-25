@@ -750,7 +750,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                 // which the new temporaries reach, for each block we also add
                 // all the expressions in its dominator's new set into the block's own leader
                 // set and new set.
-                DomTree::NodeDFVisitor dom_dfv{curr};
+                DomTree::NodeDFVisitor<Util::DFVOrder::PreOrder> dom_dfv{curr};
                 for (const auto& dom_child : dom_dfv) {
                     // Exprs are associated with ValueKind, so they are always
                     // identical if the expression is identical.
