@@ -34,3 +34,15 @@ InstLowering::sitofpLower(const std::shared_ptr<IR::SITOFPInst> &sitofp) {
 
     return insts;
 }
+
+std::list<std::shared_ptr<Instruction>>
+InstLowering::bitcastLower(const std::shared_ptr<IR::BITCASTInst> &bitcast) {
+    std::list<std::shared_ptr<Instruction>> insts;
+
+    /// bitcast 用于转换不同类型的指针, 但是对于后端来说
+    /// 对指针的类型并不敏感, 实质上都是地址
+    auto origin_ptr = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(bitcast->getOVal()));
+    operlower.mkBind(*bitcast, origin_ptr);
+
+    return insts;
+}

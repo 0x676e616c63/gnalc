@@ -74,6 +74,11 @@ struct OperandLowering {
     std::shared_ptr<PreColedOP> getPreColored(T_Reg color) {
         return varpool.getValue(color);
     }
+    /// 绑定, 一个 MIR::Operand 可能对应 IR::Value
+    /// 常见于对于后端来说没必要的转换
+    void mkBind(const IR::Value &mid, const std::shared_ptr<BindOnVirOP> &bkd) {
+        varpool.addValue(mid, bkd);
+    }
 
     /// def时建立键值对
     std::shared_ptr<BindOnVirOP> mkOP(const IR::Value &, RegisterBank);
@@ -135,11 +140,7 @@ struct InstLowering {
     };
 
     std::list<std::shared_ptr<Instruction>>
-    bitcastLower(const std::shared_ptr<IR::BITCASTInst> &) {
-        std::list<std::shared_ptr<Instruction>> insts;
-        Err::todo("InstLowering: encounter bitcast inst in IR");
-        return insts;
-    };
+    bitcastLower(const std::shared_ptr<IR::BITCASTInst> &);
 
     std::list<std::shared_ptr<Instruction>>
     allocaLower(const std::shared_ptr<IR::ALLOCAInst> &);

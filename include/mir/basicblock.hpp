@@ -2,6 +2,7 @@
 #ifndef GNALC_MIR_BASICBLOCK_HPP
 #define GNALC_MIR_BASICBLOCK_HPP
 #include "../ir/utilities.hpp"
+#include "../mirtools/tool.hpp"
 #include "base.hpp"
 #include "instruction.hpp"
 #include <list>
@@ -18,21 +19,13 @@ private:
 
     std::list<std::shared_ptr<Instruction>> insts;
 
-    bool containPhi;
-
 public:
+    const bool containPhi{};
+
     BasicBlock() : Value(ValueTrait::BasicBlock) {}
     BasicBlock(std::string _name, bool _isContailPhi)
         : Value(ValueTrait::BasicBlock, std::move(_name)), containPhi(_isContailPhi) {}
 
-    unsigned int addPre(const std::shared_ptr<BasicBlock> &_pre) {
-        pres.emplace_back(_pre);
-        return pres.size();
-    }
-    unsigned int addSucc(const std::shared_ptr<BasicBlock> &_succ) {
-        succs.emplace_back(_succ);
-        return succs.size();
-    }
     unsigned int addInst(const std::shared_ptr<Instruction> &_inst) {
         if (_inst)
             insts.emplace_back(_inst);
@@ -61,10 +54,26 @@ public:
         return LiveOut.size();
     }
 
-    std::list<std::shared_ptr<BasicBlock>> getPres() const { return IR::WeaktoSharedList(pres); }
-    std::list<std::shared_ptr<BasicBlock>> getSuccs() const { return IR::WeaktoSharedList(succs); }
+    std::list<std::shared_ptr<BasicBlock>> getPreds() const {
+        return MIR::WeaktoSharedList(pres);
+    }
+    std::list<std::shared_ptr<BasicBlock>> getSuccs() const { return MIR::WeaktoSharedList(succs); }
 
-    std::list<std::shared_ptr<Instruction>> &getInsts() { return insts; }
+    unsigned int addPred(const std::shared_ptr<BasicBlock> &_pre) {
+        pres.emplace_back(_pre);
+        return pres.size();
+    }
+    unsigned int addSucc(const std::shared_ptr<BasicBlock> &_succ) {
+        succs.emplace_back(_succ);
+        return succs.size();
+    }
+
+    void delPred(std::shared_ptr<BasicBlock> pred);
+
+    void delSucc(std::shared_ptr<BasicBlock> succ);
+
+    std::list<std::shared_ptr<Instruction>> &
+    getInsts() { return insts; }
 
     std::unordered_set<std::shared_ptr<BindOnVirOP>> &getLiveIn() {
         return LiveIn;
@@ -72,6 +81,8 @@ public:
     std::unordered_set<std::shared_ptr<BindOnVirOP>> &getLiveOut() {
         return LiveOut;
     }
+
+    void delInst(std::shared_ptr<Instruction>);
 
     std::string toString() const override;
     ~BasicBlock() override = default;

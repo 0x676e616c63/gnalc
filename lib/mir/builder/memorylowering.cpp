@@ -112,6 +112,9 @@ InstLowering::storeLower(const std::shared_ptr<IR::STOREInst> &store) {
 std::list<std::shared_ptr<Instruction>>
 InstLowering::gepLower(const std::shared_ptr<IR::GEPInst> &gep) {
     std::list<std::shared_ptr<Instruction>> insts;
+
+    /// gep 将数组退化为对应类型的指针, 所以其实也算是一种converse?
+
     auto ptr = gep->getPtr();
     auto idx = gep->getIdxs()[1];
     int perElemSize =

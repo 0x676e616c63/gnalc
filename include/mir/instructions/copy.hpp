@@ -11,12 +11,12 @@ namespace MIR {
 /// @brief 以及在寄存器分配中, 表示出寄存器占用
 class COPY : public Instruction {
 private:
-    std::shared_ptr<BindOnVirOP> SourceOperand;
+    std::shared_ptr<Operand> SourceOperand;
 
 public:
     COPY() = delete;
     COPY(std::shared_ptr<BindOnVirOP> TargetOP_,
-         std::shared_ptr<BindOnVirOP> SourceOperand_)
+         std::shared_ptr<Operand> SourceOperand_)
         : Instruction(OpCode::COPY, SourceOperandType::r),
           SourceOperand(std::move(SourceOperand_)) {
         addTargetOP(std::move(TargetOP_));
@@ -46,6 +46,7 @@ public:
     PHI(std::shared_ptr<BindOnVirOP> TargetOP_, std::vector<PhiOper> _list) : SourceOperands(std::move(_list)), Instruction(OpCode::PHI, SourceOperandType::rr) { addTargetOP(std::move(TargetOP_)); }
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
+    std::vector<PhiOper> getPhiOper() const { return SourceOperands; }
     std::string toString() override;
     ~PHI() override = default;
 };

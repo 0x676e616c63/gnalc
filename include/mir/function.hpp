@@ -28,6 +28,9 @@ public:                                                   // 接口太多, 还�
 
     unsigned int args;
 
+    VarPool &getPool() { return varpool; }
+    const VarPool &getPool() const { return varpool; }
+
 public:
     FunctionInfo() = default;
 
@@ -51,7 +54,7 @@ public:
     FunctionInfo getInfo() const { return info; }
     FunctionInfo &editInfo() { return info; }
 
-    void addBlock(const std::string &_block_name, std::shared_ptr<BasicBlock> _block) {
+    void addBlock(const std::string &_block_name, const std::shared_ptr<BasicBlock> _block) {
         blocks.emplace_back(_block);
         blockpool[_block_name] = _block;
     }

@@ -123,7 +123,10 @@ InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
         auto type = arg->getType();
         if (auto btype = IR::toBType(type)) {
             /// @brief int / float
-            if (btype->getInner() == IR::IRBTYPE::I32) {
+            if (btype->getInner() == IR::IRBTYPE::I32 ||
+                btype->getInner() == IR::IRBTYPE::I8 ||
+                btype->getInner() == IR::IRBTYPE::I1) {
+                // 传参的时候I几都一样, 尤其是用寄存器的时候
                 if (cnt <= 4) {
                     // mov $rx, %arg
                     auto reg =

@@ -135,6 +135,8 @@ public:
 
     RegisterBank getRegisterBank() { return bank; }
 
+    RegisterBank getBank() const { return bank; }
+
     std::string toString() const override;
     ~BindOnVirOP() override = default;
 };

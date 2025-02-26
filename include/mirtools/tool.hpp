@@ -40,6 +40,23 @@ constexpr int clz_wrapper(unsigned val) {
 constexpr int ctz_wrapper(unsigned val) {
     return __builtin_ctz(val);
 }
+
+///@note 般的中端的同名检查, 但是根据clang-tidy的提示去掉了const
+template <typename T>
+std::list<std::shared_ptr<T>>
+WeaktoSharedList(const std::list<std::weak_ptr<T>> &weak_list) {
+    std::list<std::shared_ptr<T>> shared_list;
+    for (const auto &weakp : weak_list) {
+        auto sharedp = weakp.lock();
+        if (sharedp) {
+            shared_list.push_back(sharedp);
+        } else {
+            Err::error("WeaktoSharedList(): element is expired.");
+        }
+    }
+    return shared_list;
+}
+
 } // namespace MIR
 
 #endif

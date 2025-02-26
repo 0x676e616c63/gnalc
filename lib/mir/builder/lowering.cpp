@@ -107,7 +107,7 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
 
         /// @brief 填写block的前驱后继关系
         for (auto &midEnd_pre : midEnd_bb->getPreBB()) {
-            backEnd_bb->addPre(func->getBlock(midEnd_pre->getName()));
+            backEnd_bb->addPred(func->getBlock(midEnd_pre->getName()));
         }
 
         for (auto &midEnd_succ : midEnd_bb->getNextBB()) {
