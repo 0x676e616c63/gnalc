@@ -19,6 +19,9 @@ struct OptInfo {
     bool reassociate{false};
     bool instsimplify{false};
     bool inliner{false}; // Avoid conflict with C++ keyword `inline`
+    bool loop_simplify{false};
+    bool loop_rotate{false};
+    bool lcssa{false};
 
     bool advance_name_norm{false};
     bool verify{true}; // Defaults to verify in development.

@@ -5,6 +5,7 @@
 #include "../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../include/ir/passes/analysis/domtree_analysis.hpp"
 #include "../../../include/ir/passes/analysis/live_analysis.hpp"
+#include "../../../include/ir/passes/analysis/loop_analysis.hpp"
 
 // Transforms
 #include "../../../include/ir/passes/transforms/adce.hpp"
@@ -14,7 +15,10 @@
 #include "../../../include/ir/passes/transforms/gvn_pre.hpp"
 #include "../../../include/ir/passes/transforms/inline.hpp"
 #include "../../../include/ir/passes/transforms/instsimplify.hpp"
+#include "../../../include/ir/passes/transforms/lcssa.hpp"
 #include "../../../include/ir/passes/transforms/load_elimination.hpp"
+#include "../../../include/ir/passes/transforms/loop_rotate.hpp"
+#include "../../../include/ir/passes/transforms/loop_simplify.hpp"
 #include "../../../include/ir/passes/transforms/mem2reg.hpp"
 #include "../../../include/ir/passes/transforms/namenormalizer.hpp"
 #include "../../../include/ir/passes/transforms/reassociate.hpp"
@@ -38,6 +42,9 @@ const OptInfo o1_opt_info = {
     .reassociate = true,
     .instsimplify = true,
     .inliner = true,
+    .loop_simplify = true,
+    .loop_rotate = true,
+    .lcssa = true,
     .verify = false,
 };
 
@@ -47,9 +54,9 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     // ANN disables the last name normalization pass.
     fpm.addPass(NameNormalizePass(true)); // bb_rename: true
 
-#define FUNCTION_TRANSFORM(name, pass)                                                                            \
+#define FUNCTION_TRANSFORM(name, pass)                                                                                 \
     if (opt_info.name) {                                                                                               \
-        fpm.addPass(pass);                                                                                      \
+        fpm.addPass(pass);                                                                                             \
         if (opt_info.verify)                                                                                           \
             fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));                                                \
     }
@@ -67,8 +74,8 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     // FUNCTION_TRANSFORM(gvnpre, GVNPREPass)
 
     FUNCTION_TRANSFORM(mem2reg, PromotePass())
-    FUNCTION_TRANSFORM(inliner, InlinePass())
     FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass())
+    FUNCTION_TRANSFORM(inliner, InlinePass())
     FUNCTION_TRANSFORM(sccp, ConstantPropagationPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
     FUNCTION_TRANSFORM(reassociate, ReassociatePass())
@@ -82,6 +89,10 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FUNCTION_TRANSFORM(loadelim, LoadEliminationPass())
     FUNCTION_TRANSFORM(dce, DCEPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
+
+    // FUNCTION_TRANSFORM(loop_simplify, LoopSimplifyPass())
+    // FUNCTION_TRANSFORM(loop_simplify, LoopRotatePass())
+    // FUNCTION_TRANSFORM(loop_simplify, LCSSAPass())
 
 #undef FUNCTION_TRANSFORM
 
@@ -109,6 +120,7 @@ void PassBuilder::registerFunctionAnalyses(FAM &fam) {
     FUNCTION_ANALYSIS(DomTreeAnalysis())
     FUNCTION_ANALYSIS(PostDomTreeAnalysis())
     FUNCTION_ANALYSIS(AliasAnalysis())
+    FUNCTION_ANALYSIS(LoopAnalysis())
 
 #undef FUNCTION_ANALYSIS
 }

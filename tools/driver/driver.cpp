@@ -101,6 +101,12 @@ int main(int argc, char **argv) {
             opt_info.instsimplify = true;
         else if (arg == "--inline")
             opt_info.inliner = true;
+        else if (arg == "--loopsimplify")
+            opt_info.loop_simplify = true;
+        else if (arg == "--looprotate")
+            opt_info.loop_rotate = true;
+        else if (arg == "--lcssa")
+            opt_info.lcssa = true;
         // Debug options:
         else if (arg == "--ann")
             opt_info.advance_name_norm = true;
@@ -147,6 +153,9 @@ Optimizations available:
   --reassociate        - Reassociate commutative expressions
   --instsimplify       - Simplify instructions
   --inline             - Inline suitable functions
+  --loopsimplify       - Canonicalize loops to The Loop Simplify Form
+  --looprotate         - Canonicalize loops to The Rotated Loop Form
+  --lcssa              - Canonicalize loops to The Loop Closed SSA Form
 
 Debug options:
   --ann                - Use the advance name normalization result (after IRGen). (This disables the one at the last).
