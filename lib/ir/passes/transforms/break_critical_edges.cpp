@@ -4,7 +4,7 @@
 #include <vector>
 
 namespace IR {
-PM::PreservedAnalyses run(Function &function, FAM &manager) {
+PM::PreservedAnalyses BreakCriticalEdgesPass::run(Function &function, FAM &manager) {
     bool bce_cfg_modified = false;
 
     auto dfv = function.getDFVisitor();
