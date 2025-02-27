@@ -388,13 +388,13 @@ std::string IRFormatter::fALLOCAInst(ALLOCAInst &inst) {
     ret += inst.getName();
     ret += " = ";
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
-    if (inst.isStatic()) {
-        ret += inst.getBaseType()->toString();
-    } else {
+    // if (inst.isStatic()) {
+    ret += inst.getBaseType()->toString();
+    // } else {
         // ret += IRFormatter::formatIRTYPE(inst.getBaseType());
         // ret += ", ";
         // ret += IRFormatter::formatValue(*(inst.getNumElements()));
-    }
+    // }
     ret += ", align ";
     ret += std::to_string(inst.getAlign());
     return ret;

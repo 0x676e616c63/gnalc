@@ -25,8 +25,8 @@ std::shared_ptr<AST::CompUnit> node = nullptr;
 extern FILE *yyin;
 
 int main(int argc, char **argv) {
-    // gnalc is still in development, so make it defaults to be `LogLevel::INFO`.
-    Logger::setLogLevel(LogLevel::INFO);
+    // gnalc is still in development, so make it defaults to be `LogLevel::DEBUG`.
+    Logger::setLogLevel(LogLevel::DEBUG);
 
     // File
     std::string input_file;
@@ -89,15 +89,37 @@ int main(int argc, char **argv) {
             opt_info.adce = true;
         else if (arg == "--dse")
             opt_info.dse = true;
+        else if (arg == "--loadelim")
+            opt_info.loadelim = true;
         else if (arg == "--gvnpre")
             opt_info.gvnpre = true;
         else if (arg == "--tailcall")
             opt_info.tailcall = true;
-
+        else if (arg == "--reassociate")
+            opt_info.reassociate = true;
+        else if (arg == "--instsimplify")
+            opt_info.instsimplify = true;
+        else if (arg == "--inline")
+            opt_info.inliner = true;
+        else if (arg == "--loopsimplify")
+            opt_info.loop_simplify = true;
+        else if (arg == "--looprotate")
+            opt_info.loop_rotate = true;
+        else if (arg == "--lcssa")
+            opt_info.lcssa = true;
+        else if (arg == "--loopunroll")
+            opt_info.loop_unroll = true;
+        else if (arg == "--jumpthreading")
+            opt_info.jump_threading = true;
         // Debug options:
         else if (arg == "--ann")
             opt_info.advance_name_norm = true;
-
+        else if (arg == "--verify")
+            opt_info.verify = true;
+        else if (arg == "--strict") {
+            opt_info.verify = true;
+            opt_info.abort_when_verify_failed = true;
+        }
 #if GNALC_EXTENSION_BRAINFK
         // Extensions:
         else if (arg == "-mbrainfk")
@@ -110,7 +132,7 @@ int main(int argc, char **argv) {
             std::cout <<
                 R"(OVERVIEW: gnalc compiler
 
-USAGE: " << argv[0] << " [options] file
+USAGE: gnalc [options] file
 
 OPTIONS:
 
@@ -124,16 +146,27 @@ General options:
   -h, --help           - Display available options
 
 Optimizations available:
-  --mem2reg            - Promote Memory to Register
-  --sccp               - Sparse Conditional Constant Propagation
-  --dce                - Dead Code Elimination
-  --adce               - Aggressive Dead Code Elimination
-  --dse                - Dead Store Elimination
-  --gvnpre             - Value-Based Partial Redundancy Elimination (GVN-PRE)
+  --mem2reg            - Promote memory to register
+  --sccp               - Sparse conditional constant propagation
+  --dce                - Dead code elimination
+  --adce               - Aggressive dead code elimination
+  --dse                - Dead store elimination
+  --loadelim           - Redundant load elimination
+  --gvnpre             - Value-Based partial redundancy elimination (GVN-PRE)
   --tailcall           - Tail call optimization
+  --reassociate        - Reassociate commutative expressions
+  --instsimplify       - Simplify instructions
+  --inline             - Inline suitable functions
+  --loopsimplify       - Canonicalize loops to The Loop Simplify Form
+  --looprotate         - Canonicalize loops to The Rotated Loop Form
+  --lcssa              - Canonicalize loops to The Loop Closed SSA Form
+  --loopunroll         - Unroll loops
+  --jumpthreading      - Jump Threading
 
 Debug options:
-  --ann                - Advance name normalization (before the function passes)
+  --ann                - Use the advance name normalization result (after IRGen). (This disables the one at the last).
+  --verify             - Verify IR after each pass
+  --strict             - Enable verify and abort when verify failed
 )";
 
 #if GNALC_EXTENSION_BRAINFK
@@ -204,6 +237,7 @@ Extensions:
 
     if (emit_llvm) {
         mpm.addPass(IR::PrintModulePass(*poutstream));
+        // mpm.addPass(IR::PrintModulePass(std::cout)); // debug, remove it
         mpm.run(generator.get_module(), mam);
         return 0;
     }

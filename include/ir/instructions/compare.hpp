@@ -40,6 +40,11 @@ public:
     void condFlip();
 
     void accept(IRVisitor &visitor) override;
+
+private:
+    std::shared_ptr<Value> cloneImpl() const override {
+        return std::make_shared<ICMPInst>(getName(), cond, getLHS(), getRHS());
+    }
 };
 
 // false: no comparison, always returns false
@@ -87,6 +92,11 @@ public:
     void condFlip();
 
     void accept(IRVisitor &visitor) override;
+
+private:
+    std::shared_ptr<Value> cloneImpl() const override {
+        return std::make_shared<FCMPInst>(getName(), cond, getLHS(), getRHS());
+    }
 };
 } // namespace IR
 

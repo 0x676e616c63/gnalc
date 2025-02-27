@@ -11,14 +11,17 @@
 
 namespace IR {
 
-// INSTRUCTION'S OPCODE
+// Instruction's Opcode
 enum class OP {
-    RET, // ctrl
+    // Terminator
+    RET,
     BR,
 
-    FNEG, // unary
+    // Unary
+    FNEG,
 
-    ADD, // binary
+    // Binary
+    ADD,
     FADD,
     SUB,
     FSUB,
@@ -27,64 +30,87 @@ enum class OP {
     DIV,
     FDIV,
     REM,
-    FREM,
+    FREM, // not implemented in IRGen
 
-    AND, // logical binary
-    OR,
+    AND, // bitwise, not implemented in IRGen
+    OR,  // bitwise, not implemented in IRGen
 
-    ALLOCA, // memory
+    // Memory Operation
+    ALLOCA,
     LOAD,
     STORE,
+
+    // Getelementptr
     GEP,
 
-    FPTOSI, // converse
+    // Type Cast
+    FPTOSI,
     SITOFP,
     ZEXT,
     BITCAST,
 
-    ICMP, // compare
+    // Compare
+    ICMP,
     FCMP,
 
+    // Phi Node
     PHI,
 
+    // Function Call
     CALL,
 
+    // Helper for easy IRGen, pruned after CFGBuilder
     HELPER
-
 };
 
-/**
- * @brief Instruction的操作数实际上由User的Oprands来管理
- *
- * @todo BB的指针问题？
- * @todo 类型是否会为ARRAY?
- */
+
+class Instruction;
 class BasicBlock;
+
+// We can't see BasicBlock's definition here, use `BBInstIter` to get around it.
+using BBInstIter = std::list<std::shared_ptr<Instruction>>::iterator;
+
+// Warning: PHIInst MUST NOT invoke the following four `moveInst(s)`
+// Move `inst` to `new_bb`'s `location`
+// This deletes `inst` from its parent, and insert it before `new_bb`'s location
+void moveInst(const std::shared_ptr<Instruction>& inst,
+    const std::shared_ptr<BasicBlock>& new_bb, BBInstIter location);
+void moveInsts(BBInstIter beg, BBInstIter end,
+    const std::shared_ptr<BasicBlock>& new_bb, BBInstIter location);
+// The following two functions move `inst` to `new_bb`'s end
+void moveInst(const std::shared_ptr<Instruction>& inst,
+    const std::shared_ptr<BasicBlock>& new_bb);
+void moveInsts(BBInstIter beg, BBInstIter end,
+    const std::shared_ptr<BasicBlock>& new_bb);
+
+/**
+ * @brief Instruction的操作数实际上由User的Operands来管理
+ */
 class Instruction : public User {
+    friend class BasicBlock;
+
 private:
     OP opcode;
     std::weak_ptr<BasicBlock> parent = {}; // 隶属的basic block
+    size_t index = 0;
 
 public:
     // 此构造方法用于初始生成时，最开始没有划分Block，故parent为空
-    Instruction(OP opcode, std::string _name,
-                const std::shared_ptr<Type> &_type);
-    // 用于后续划分之后的构造
-    // Instruction(OP opcode, BasicBlock* parent, NameParam name = "", _type t =
-    // UNDEFINED) : User(t, name), opcode(opcode), parent(parent) {}
-
-    // addOprand in User
+    Instruction(OP opcode, std::string _name, const std::shared_ptr<Type> &_type);
 
     void setParent(const std::shared_ptr<BasicBlock> &p);
     OP getOpcode() const;
     std::shared_ptr<BasicBlock> getParent() const;
 
-    unsigned index = 0; // 不经过插入删除接口修改后使用先调用父块的update方法！
+    size_t getIndex() const;
+
+    // Warning: PHIInst MUST NOT invoke this.
+    BBInstIter getIter() const;
 
     void accept(IRVisitor &visitor) override;
+
     ~Instruction() override;
 };
-
 } // namespace IR
 
 #endif

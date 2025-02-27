@@ -18,6 +18,12 @@ Value::Value(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait
 
 std::shared_ptr<Type> Value::getType() const { return vtype; }
 
+size_t Value::getUseCount() const {
+    // Expired use should be deleted by User.
+    // So just get the size.
+    return use_list.size();
+}
+
 void Value::addUse(const std::weak_ptr<Use> &use) {
     Err::gassert(!use.expired());
     use_list.emplace_back(use);
@@ -82,10 +88,8 @@ bool User::replaceOperand(const std::shared_ptr<Value> &before, const std::share
     return found;
 }
 
-bool User::replaceUse(const std::shared_ptr<Use> &old_use,
-                      const std::shared_ptr<Value> &new_value) {
-    Err::gassert(old_use->getValue() != new_value,
-        "Replace with an identical value doesn't make sense.");
+bool User::replaceUse(const std::shared_ptr<Use> &old_use, const std::shared_ptr<Value> &new_value) {
+    Err::gassert(old_use->getValue() != new_value, "Replace with an identical value doesn't make sense.");
     for (auto &use : operands) {
         if (use == old_use) {
             auto ok = use->getValue()->delUse(use);
@@ -103,6 +107,10 @@ bool User::replaceUse(const std::shared_ptr<Use> &old_use,
 User::User(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait)
     : Value(std::move(_name), std::move(_vtype), _vtrait) {}
 
+size_t User::getNumOperands() const {
+    return operands.size();
+}
+
 void User::addOperand(const std::shared_ptr<Value> &v) {
     std::shared_ptr<Use> use{new Use(v, this)};
     use->init();
@@ -116,6 +124,21 @@ const std::shared_ptr<Use> &User::getOperand(size_t index) const {
     return operands[index];
 }
 
+void User::setOperand(size_t index, const std::shared_ptr<Value> &val) {
+    Err::gassert(index < operands.size(), "index out of range");
+    auto old_use = operands[index];
+    auto ok = old_use->getValue()->delUse(old_use);
+    Err::gassert(ok);
+    std::shared_ptr<Use> new_use{new Use(val, this)};
+    new_use->init();
+    operands[index] = std::move(new_use);
+}
+
+void User::swapOperand(size_t a, size_t b) {
+    Err::gassert(a < operands.size() && b < operands.size(), "index out of range");
+    std::swap(operands[a], operands[b]);
+}
+
 bool User::delOperand(const std::shared_ptr<Value> &v) {
     return delOperandIf([&v](const auto& value) { return value == v; });
 }
@@ -126,7 +149,7 @@ bool User::delOperand(NameRef name) {
 }
 
 bool User::delOperand(size_t index) {
-    Err::gassert(index < operands.size());
+    Err::gassert(index < operands.size(), "index out of range");
     if (index >= operands.size())
         return false;
     auto use = operands[index];

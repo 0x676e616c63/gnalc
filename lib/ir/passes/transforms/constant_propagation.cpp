@@ -376,20 +376,13 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
                         continue;
 
                     Err::gassert(br_inst->isConditional());
-                    if (val.getConstant().get_i1()) {
-                        auto tmp
-                            = safeUnlinkBB(br_inst->getParent(), br_inst->getFalseDest());
-                        dead_phis.insert(
-                            std::make_move_iterator(tmp.begin()),
-                            std::make_move_iterator(tmp.end()));
-                    }
-                    else {
-                        auto tmp
-                            = safeUnlinkBB(br_inst->getParent(), br_inst->getTrueDest());
-                        dead_phis.insert(
-                        std::make_move_iterator(tmp.begin()),
-                            std::make_move_iterator(tmp.end()));
-                    }
+
+                    // Since we delete unreachable blocks below, we don't check if `safeUnlinkBB`
+                    // requires us to delete the BRInst. (no successor)
+                    if (val.getConstant().get_i1())
+                        safeUnlinkBB(br_inst->getParent(), br_inst->getFalseDest(), dead_phis);
+                    else
+                        safeUnlinkBB(br_inst->getParent(), br_inst->getTrueDest(), dead_phis);
                     sccp_cfg_modified = true;
                 }
             }
@@ -420,12 +413,8 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
     // Cut the outgoing edge of the unreachable block
     for (const auto& block : function) {
         if (live.find(block) == live.end()) {
-            for (const auto& succ : block->getNextBB()) {
-                auto tmp = safeUnlinkBB(block, succ);
-                dead_phis.insert(
-                    std::make_move_iterator(tmp.begin()),
-                    std::make_move_iterator(tmp.end()));
-            }
+            for (const auto& succ : block->getNextBB())
+                safeUnlinkBB(block, succ, dead_phis);
         }
     }
 

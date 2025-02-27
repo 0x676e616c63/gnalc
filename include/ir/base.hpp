@@ -30,8 +30,7 @@ class Value;
 class User;
 class Use;
 
-// 用于标识特殊类型的VALUE对象
-// 25.1.2: 目前仅标记了CONST, GLOBAL, FUNCTION, BASICBLOCK
+// 用于标识 IR::Value 的特征
 enum class ValueTrait {
     UNDEFINED,
     CONSTANT_LITERAL,  // 常量字面量
@@ -42,7 +41,6 @@ enum class ValueTrait {
     BASIC_BLOCK,       // 基本块
     VOID_INSTRUCTION,  // 无值的指令
     CONDHELPER,        // cond中的and, or
-    PHI_OPERAND,       // PHI指令操作数
     BB_FPARAM,         // 基本块形参
     BB_ARG_LIST        // 基本块实参列表
     // ...
@@ -97,9 +95,7 @@ public:
     Value() = delete;
     // Every Value's address is unique, and is owned by BasicBlock/ConstantPool.
     // So there's no copy or move constructor, which can be confusing when implicit invoked.
-    // If the instruction really needs a copy for the sake of convenience,
-    // (like copying a BRInst in some CFG Transform Passes)
-    // add a `std::shared_ptr<XXX> clone() const` to make it explicitly.
+    // If the instruction really needs a copy, use `clone()`;
     Value(const Value &other) = delete;
     Value &operator=(const Value &other) = delete;
     Value(Value &&other) = delete;
@@ -119,9 +115,22 @@ public:
         Err::not_implemented("Value::accept");
     }
 
+    // Warning: this MUST NOT be called by another clone. (Except Function::cloneImpl)
+    // Note that Instruction's clone only don't clone their operands.
+    // Only Function's clone will return an independent function with independent instructions.
+    std::shared_ptr<Value> clone() const {
+        auto cloned = cloneImpl();
+        auto raw = cloned.get();
+        Err::gassert(raw != nullptr && typeid(*raw) == typeid(*this),
+            "Derived class should override this correctly.");
+        return cloned;
+    }
+
     virtual ~Value();
 
     ValueTrait getVTrait() const { return trait; }
+
+    size_t getUseCount() const;
 
 private:
     // PRIVATE because we want to ensure use is only modified by User.
@@ -132,7 +141,20 @@ private:
     //   thus having multiple Uses. Though having identical Value,
     //   they are independent object, and their address is unique.
     bool delUse(const std::shared_ptr<Use> &target);
+
+    virtual std::shared_ptr<Value> cloneImpl() const {
+        Err::not_implemented("Value::cloneImpl");
+        return nullptr;
+    }
 };
+
+// Helper template
+template <typename T>
+auto makeClone(const std::shared_ptr<T>& value)
+    -> std::enable_if_t<std::is_base_of_v<Value, T>, std::shared_ptr<T>>
+{
+    return std::dynamic_pointer_cast<T>(value->clone());
+}
 
 class Use : public std::enable_shared_from_this<Use> {
     friend class User;
@@ -173,19 +195,26 @@ public:
 
     void accept(IRVisitor &visitor) override = 0;
 
+    // In general, passes should avoid direct manipulation of operands through these
+    // functions unless the intent is to perform such operations in a generic manner.
     const std::vector<std::shared_ptr<Use>> &getOperands() const;
     const std::shared_ptr<Use> &getOperand(size_t index) const;
+    void setOperand(size_t index, const std::shared_ptr<Value>& val);
+    void swapOperand(size_t a, size_t b);
 
     bool replaceOperand(const std::shared_ptr<Value> &before, const std::shared_ptr<Value> &after);
 
+    size_t getNumOperands() const;
+
+
     // Note:
-    // Replace Use shouldn't compare Use's value.
+    // Replace Use shouldn't compare Use's user/value.
     // Considering: %0 = gep ptr %a, i32 %b, i32 %b
-    //              %0 operands: <use0: a> <use1: b> <use2: b>
-    //              %b use_list:  <use1: 0> <use2: 1>
-    // If we only care about Use's value, we might end up with:
-    //              %0 operands: <use0: a> <use1: b>
-    //              %b use_list:  <use2: 0>
+    //              %0 operands: <use0: %a> <use1: %b> <use2: %b>
+    //              %b use_list:  <use1: %0> <use2: %0>
+    // If we only care about Use's user/value, we might end up with:
+    //              %0 operands: <use0: %a> <use1: %b>
+    //              %b use_list:  <use2: %0>
     bool replaceUse(const std::shared_ptr<Use> &old_use,
                     const std::shared_ptr<Value> &new_use);
 

@@ -10,7 +10,7 @@ namespace IR {
 bool PromotePass::iADomB(const std::shared_ptr<Instruction> &ia,
                          const std::shared_ptr<Instruction> &ib) {
     if (ia->getParent() == ib->getParent()) {
-        return ia->index < ib->index;
+        return ia->getIndex() < ib->getIndex();
     }
     return DT.ADomB(ia->getParent().get(), ib->getParent().get());
 }
@@ -32,11 +32,11 @@ void PromotePass::analyseAlloca() {
                     if (inst_user->getOpcode() == OP::LOAD) {
                         auto load = std::dynamic_pointer_cast<LOADInst>(inst_user);
                         info.loads.emplace_back(load);
-                        info.user_blocks[load->getParent()].load_map[inst_user->index] = load;
+                        info.user_blocks[load->getParent()].load_map[inst_user->getIndex()] = load;
                     } else if (inst_user->getOpcode() == OP::STORE) {
                         auto store = std::dynamic_pointer_cast<STOREInst>(inst_user);
                         info.stores.emplace_back(store);
-                        info.user_blocks[store->getParent()].store_map[inst_user->index] = store;
+                        info.user_blocks[store->getParent()].store_map[inst_user->getIndex()] = store;
                     } else {
                         promotable = false;
                         break;
@@ -87,7 +87,7 @@ bool PromotePass::rewriteSingleStoreAlloca() {
 bool PromotePass::promoteSingleBlockAlloca() {
     if (cur_info.user_blocks.size() == 1) {
         for (auto & load : cur_info.loads) {
-            auto it =  cur_info.user_blocks[load->getParent()].store_map.lower_bound(load->index);
+            auto it =  cur_info.user_blocks[load->getParent()].store_map.lower_bound(load->getIndex());
             if (it == cur_info.user_blocks[load->getParent()].store_map.begin()) {
                 Logger::logWarning("[M2R] promoteSingleBlockAlloca(): store map is empty or load before store.");
                 return false;

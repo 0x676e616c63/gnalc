@@ -55,7 +55,9 @@ void PrinterBase::visit(BasicBlock &node) {
 
     write(IRFormatter::formatBB(node));
     writeln(":");
-    for (const auto& inst : node.getAllInsts())
+    for (const auto& inst : node.getPhiInsts())
+        inst->Instruction::accept(*this);
+    for (const auto& inst : node.getInsts())
         inst->Instruction::accept(*this);
     writeln("");
 }

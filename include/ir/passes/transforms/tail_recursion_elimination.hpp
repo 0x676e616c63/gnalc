@@ -9,8 +9,8 @@
 //   https://llvm.org/docs/CodeGenerator.html#tail-call-optimization
 //   https://discourse.llvm.org/t/how-to-understand-tail-call/51097
 #pragma once
-#ifndef GNALC_IR_PASSES_TRANSFORMS_MARK_TAIL_CALL_HPP
-#define GNALC_IR_PASSES_TRANSFORMS_MARK_TAIL_CALL_HPP
+#ifndef GNALC_IR_PASSES_TRANSFORMS_TAIL_RECURISON_ELIMINATION_HPP
+#define GNALC_IR_PASSES_TRANSFORMS_TAIL_RECURISON_ELIMINATION_HPP
 #include "../pass_manager.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
 #include "../../../pass_manager/pass_manager.hpp"
@@ -21,4 +21,4 @@ public:
     PM::PreservedAnalyses run(Function& function, FAM &manager);
 };
 }
-#endif //GNALC_IR_PASSES_TRANSFORMS_MARK_TAIL_CALL_HPP
+#endif //GNALC_IR_PASSES_TRANSFORMS_TAIL_RECURISON_ELIMINATION_HPP

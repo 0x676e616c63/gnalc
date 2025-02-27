@@ -8,9 +8,9 @@
 namespace IR {
 PM::PreservedAnalyses TailRecursionEliminationPass::run(Function &function, FAM &manager) {
     bool tailopt_cfg_modified = false;
-    auto dfVisitor = function.getDFVisitor();
+    auto exitbbs = function.getExitBBs();
     std::vector<std::pair<std::shared_ptr<CALLInst>, std::shared_ptr<RETInst> > > worklist;
-    for (const auto &block : dfVisitor) {
+    for (const auto &block : exitbbs) {
         for (auto iter = block->begin(); std::next(iter) != block->end(); ++iter) {
             auto call = std::dynamic_pointer_cast<CALLInst>(*iter);
             auto ret = std::dynamic_pointer_cast<RETInst>(*std::next(iter));
@@ -33,16 +33,14 @@ PM::PreservedAnalyses TailRecursionEliminationPass::run(Function &function, FAM 
 
         std::vector<std::shared_ptr<ALLOCAInst>> allocas;
         for (const auto &inst : *oldEntryBlock) {
-            if (auto alloca = std::dynamic_pointer_cast<ALLOCAInst>(inst))
-                allocas.emplace_back(alloca);
+            if (auto alloc = std::dynamic_pointer_cast<ALLOCAInst>(inst))
+                allocas.emplace_back(alloc);
             else break;
         }
 
         auto newEntryBlock = std::make_shared<BasicBlock>("tailcall");
-        for (const auto& alloca : allocas) {
-            newEntryBlock->addInst(alloca);
-            oldEntryBlock->delFirstOfInst(alloca); // NO USE-DEF CHECK
-        }
+        for (const auto& alloc : allocas)
+            moveInst(alloc, newEntryBlock, newEntryBlock->begin());
 
         newEntryBlock->addInst(std::make_shared<BRInst>(oldEntryBlock));
         linkBB(newEntryBlock, oldEntryBlock);

@@ -26,13 +26,23 @@ public:
 
     std::shared_ptr<Value> getValueForBlock(const std::shared_ptr<BasicBlock> &block) const;
     void addPhiOper(const std::shared_ptr<Value> &val, const std::shared_ptr<BasicBlock> &blk);
+
     std::vector<PhiOper> getPhiOpers() const;
 
-    bool delPhiOperByVal(const std::shared_ptr<Value> &);
+    bool delOnePhiOperByVal(const std::shared_ptr<Value> &);
 
-    bool delPhiOperByBlock(const std::shared_ptr<BasicBlock> &);
+    bool delOnePhiOperByBlock(const std::shared_ptr<BasicBlock> &);
 
     void accept(IRVisitor &visitor) override;
+
+private:
+    std::shared_ptr<Value> cloneImpl() const override {
+        auto cloned = std::make_shared<PHIInst>(getName(), getType());
+        auto opers = getPhiOpers();
+        for (const auto& [val, bb] : opers)
+            cloned->addPhiOper(val, bb);
+        return cloned;
+    }
 };
 
 } // namespace IR

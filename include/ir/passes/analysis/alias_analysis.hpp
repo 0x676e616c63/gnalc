@@ -10,6 +10,13 @@
 
 namespace IR {
 class AliasAnalysis;
+enum class AliasInfo { MustAlias, MayAlias, NoAlias };
+enum class ModRefInfo {
+    NoModRef,
+    Ref,
+    Mod,
+    ModRef,
+};
 class AliasAnalysisResult {
 public:
     friend class AliasAnalysis;
@@ -19,8 +26,8 @@ public:
         // Global Variable
         bool global_var = false;
         // Maybe alias
-        // There is GlobalVariables or FormalArguments or ALLOCA
-        // NO GEP here.
+        // Only GlobalVariables or FormalArguments or ALLOCA
+        // NO GEP or BITCAST here.
         std::set<const Value *> potential_alias;
     };
 
@@ -28,15 +35,22 @@ private:
     // Target
     Function *func;
 
-    // Local/Array arguments info map
+    // Local pointers/FormalArguments info map
     std::unordered_map<const Value *, PtrInfo> ptr_info;
 
-    // Mod/Ref info, only global and Array arguments
+    // Function's Mod/Ref info, only GlobalVariables and FormalArguments
     std::set<const Value *> read;
     std::set<const Value *> write;
 
-    // some call we don't know (part of Sylib)
+    // Some call we don't know
+    // This may happen when we add runtime parallel lib or something.
+    // When function contains them, the `ModRefInfo` will always be `ModRef`.
     bool has_untracked_call = false;
+
+    // Has call to sylib
+    // This means the function uses sylib.
+    // In general, we can't eliminate them, they always have side effect.
+    bool has_sylib_call = false;
 
     // Try insert `alias` to `target` as a potential alias.
     // Returns true for success.
@@ -47,30 +61,29 @@ private:
     PtrInfo getPtrInfo(const Value *ptr) const;
 
 public:
-    enum class AliasInfo { MustAlias, MayAlias, NoAlias };
-    enum class ModRefInfo {
-        NoModRef,
-        Ref,
-        Mod,
-        ModRef,
-    };
-
-    // v1 and v2 must be Global Variable or array with the given function
+    // v1 and v2 must be pointers
     AliasInfo getAliasInfo(const Value *v1, const Value *v2) const;
 
-    // candidate must be Global Variable or array with the given function
+    // v must be pointer
+    // Check if v points a memory that outside don't know.
+    bool isLocal(const Value *v) const;
+
+    // location must be a pointer
     ModRefInfo getInstModRefInfo(const Instruction *inst,
                                  const Value *location, FAM &fam) const;
 
     ModRefInfo getFunctionModRefInfo() const;
 
-    // Check if it contains call to Sylib function: getxxx(), putxxx()
+    // Check if it contains call that we don't know
     bool hasUntrackedCall() const;
+
+    // Check if it contains call to Sylib function: getxxx(), putxxx()
+    bool hasSylibCall() const;
 };
 
 class AliasAnalysis : public PM::AnalysisInfo<AliasAnalysis> {
 public:
-    static AliasAnalysisResult run(Function &f, FAM &fam);
+    AliasAnalysisResult run(Function &f, FAM &fam);
 
     // For PassManager
 public:
@@ -82,6 +95,7 @@ private:
 };
 
 // These functions can be treated as pure function (NoModRef)
+// Currently there is no such function.
 bool isPureBuiltinOrSylibFunc(const FunctionDecl *fn);
 
 // Check if function is pure

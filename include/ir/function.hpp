@@ -2,12 +2,12 @@
 #ifndef GNALC_IR_FUNCTION_HPP
 #define GNALC_IR_FUNCTION_HPP
 
+#include "../utils/generic_visitor.hpp"
 #include "base.hpp"
 #include "basic_block.hpp"
 #include "constant_pool.hpp"
 #include "instruction.hpp"
 #include "instructions/phi.hpp"
-#include "../utils/generic_visitor.hpp"
 
 #include <memory>
 #include <utility>
@@ -36,6 +36,8 @@ public:
     ~FunctionDecl() override;
 };
 
+// FormalParam shouldn't contain a parent.
+// If really need it, update CFGBuilder to move them correctly from LinearFunction to Function.
 class FormalParam : public Value {
     size_t index;
 
@@ -48,6 +50,11 @@ public:
     void setIndex(size_t index_) { index = index_; }
 
     void accept(IRVisitor &visitor) override;
+
+private:
+    std::shared_ptr<Value> cloneImpl() const override {
+        return std::make_shared<FormalParam>(getName(), getType(), index);
+    }
 };
 
 struct BBSuccGetter {
@@ -62,27 +69,35 @@ class Function : public FunctionDecl,
     friend class Parser::CFGBuilder;
 private:
     std::vector<std::shared_ptr<FormalParam>> params;
-    std::vector<std::shared_ptr<BasicBlock>> blks;
-    std::vector<std::weak_ptr<BasicBlock>> exits; // 为了防止之后删除块之类的操作忘记在这里处理，使用weak_ptr, get的时候检查是否expired
+    std::list<std::shared_ptr<BasicBlock>> blks;
     ConstantPool *constant_pool;
 
     // 后面需要再说
     // int vreg_idx = 0;
 public:
     using CFGBFVisitor = Util::GenericBFVisitor<std::shared_ptr<BasicBlock>, BBSuccGetter>;
-    using CFGDFVisitor = Util::GenericDFVisitor<std::shared_ptr<BasicBlock>, BBSuccGetter>;
-    using const_iterator = decltype(blks)::const_iterator;
+    template<Util::DFVOrder order>
+    using CFGDFVisitor = Util::GenericDFVisitor<std::shared_ptr<BasicBlock>, BBSuccGetter, order>;
+
     using iterator = decltype(blks)::iterator;
+    using const_iterator = decltype(blks)::const_iterator;
+    using reverse_iterator = decltype(blks)::reverse_iterator;
+    using const_reverse_iterator = decltype(blks)::const_reverse_iterator;
 
     Function(std::string name_,
              const std::vector<std::shared_ptr<FormalParam>> &params,
              std::shared_ptr<Type> ret_type, ConstantPool *pool);
 
+    void addBlock(iterator it, std::shared_ptr<BasicBlock> blk);
+    void addBlock(size_t index, std::shared_ptr<BasicBlock> blk);
     void addBlock(std::shared_ptr<BasicBlock> blk);
 
     // Add the given block as the entry block
     // Caller should take care of the CFG.
     void addBlockAsEntry(const std::shared_ptr<BasicBlock>& blk);
+
+    // No check. Only deletes the first matched
+    bool delFirstOfBlock(const std::shared_ptr<BasicBlock> &blk);
 
     // Delete a Block
     // Requires the target block have no users than Phi.
@@ -103,6 +118,7 @@ public:
                     Err::gassert(pred(nextbb),
                         "Cannot delete a block that have successors");
                 }
+                (*it)->setParent(nullptr);
                 it = blks.erase(it);
                 found = true;
             } else
@@ -115,13 +131,21 @@ public:
     const std::vector<std::shared_ptr<FormalParam>> &getParams() const;
 
     // usually we can use range-based for instead of this
-    const std::vector<std::shared_ptr<BasicBlock>> &getBlocks() const;
+    const std::list<std::shared_ptr<BasicBlock>> &getBlocks() const;
 
-    const_iterator cbegin() const;
-    const_iterator cend() const;
+    const_iterator begin() const;
+    const_iterator end() const;
     iterator begin();
     iterator end();
-    // ...
+    const_iterator cbegin() const;
+    const_iterator cend() const;
+
+    const_reverse_iterator rbegin() const;
+    const_reverse_iterator rend() const;
+    reverse_iterator rbegin();
+    reverse_iterator rend();
+    const_reverse_iterator crbegin() const;
+    const_reverse_iterator crend() const;
 
     // 后面需要再说
     // int getVRegIdx() { return vreg_idx++; } //
@@ -133,19 +157,23 @@ public:
     void accept(IRVisitor &visitor) override;
 
     auto getBFVisitor() const {
-        return CFGBFVisitor(blks[0]);
+        return CFGBFVisitor(blks.front());
     }
 
+    template<Util::DFVOrder order = Util::DFVOrder::PreOrder>
     auto getDFVisitor() const {
-        return CFGDFVisitor(blks[0]);
+        return CFGDFVisitor<order>(blks.front());
     }
 
-    void addExitBB(std::shared_ptr<BasicBlock> blk);
     std::vector<std::shared_ptr<BasicBlock>> getExitBBs() const;
+
+    size_t getInstCount() const;
 
 private:
     void updateBBIndex();
     void updateAllIndex();
+
+    std::shared_ptr<Value> cloneImpl() const override;
 };
 
 // 基本块划分前的过渡
@@ -166,10 +194,12 @@ public:
     // usually we can use range-based for instead of these
     const std::vector<std::shared_ptr<Instruction>> &getInsts() const;
 
-    const_iterator cbegin() const;
-    const_iterator cend() const;
+    const_iterator begin() const;
+    const_iterator end() const;
     iterator begin();
     iterator end();
+    const_iterator cbegin() const;
+    const_iterator cend() const;
 
     void addInst(std::shared_ptr<Instruction> inst);
     void appendInsts(std::vector<std::shared_ptr<Instruction>> insts_);
