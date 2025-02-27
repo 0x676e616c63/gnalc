@@ -1,9 +1,10 @@
 //
 // Created by edragain on 2/12/25.
 //
-#include "../../../../include/ir/passes/helpers/constant_fold.hpp"
 #include "../../../../include/ir/passes/transforms/reassociate.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
+#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
+#include "../../../../include/ir/passes/helpers/constant_fold.hpp"
 
 #include <algorithm>
 #include <limits>
@@ -588,6 +589,7 @@ PM::PreservedAnalyses ReassociatePass::run(Function &function, FAM &manager) {
     PM::PreservedAnalyses pa;
     pa.preserve<DomTreeAnalysis>();
     pa.preserve<PostDomTreeAnalysis>();
+    pa.preserve<LoopAnalysis>();
     return pa;
 }
 } // namespace IR

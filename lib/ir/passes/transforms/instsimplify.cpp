@@ -1,6 +1,7 @@
 #include "../../../../include/ir/passes/transforms/instsimplify.hpp"
 #include "../../../../include/ir/base.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
+#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 #include "../../../../include/ir/passes/helpers/constant_fold.hpp"
 #include "../../../../include/ir/pattern_match.hpp"
 
@@ -101,6 +102,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         PM::PreservedAnalyses pa;
         pa.preserve<DomTreeAnalysis>();
         pa.preserve<PostDomTreeAnalysis>();
+        pa.preserve<LoopAnalysis>();
         return pa;
     }
 

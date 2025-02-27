@@ -14,7 +14,7 @@
 namespace IR {
 class ConstantPropagationPass : public PM::PassInfo<ConstantPropagationPass> {
 public:
-    static PM::PreservedAnalyses run(Function &function, FAM &manager);
+    PM::PreservedAnalyses run(Function &function, FAM &manager);
 };
 
 } // namespace IR

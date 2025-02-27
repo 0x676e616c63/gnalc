@@ -5,6 +5,7 @@
 #include <algorithm>
 
 #include "../../../../include/ir/instructions/phi.hpp"
+#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 
 namespace IR {
 bool PromotePass::iADomB(const std::shared_ptr<Instruction> &ia,
@@ -389,6 +390,7 @@ PM::PreservedAnalyses PromotePass::run(Function &function, FAM &manager) {
     PM::PreservedAnalyses pa;
     pa.preserve<DomTreeAnalysis>();
     pa.preserve<PostDomTreeAnalysis>();
+    pa.preserve<LoopAnalysis>();
     return pa;
 }
 }// namespace IR

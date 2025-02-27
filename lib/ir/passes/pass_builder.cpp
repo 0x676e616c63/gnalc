@@ -9,6 +9,7 @@
 
 // Transforms
 #include "../../../include/ir/passes/transforms/adce.hpp"
+#include "../../../include/ir/passes/transforms/break_critical_edges.hpp"
 #include "../../../include/ir/passes/transforms/constant_propagation.hpp"
 #include "../../../include/ir/passes/transforms/dce.hpp"
 #include "../../../include/ir/passes/transforms/dse.hpp"
@@ -65,6 +66,15 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
             fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));                                                \
     }
 
+#define FUNCTION_TRANSFORM2(name, pass1, pass2)                                                                        \
+    if (opt_info.name) {                                                                                               \
+        fpm.addPass(pass1);                                                                                            \
+        if (opt_info.verify)                                                                                           \
+            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));                                                \
+        fpm.addPass(pass2);                                                                                            \
+        if (opt_info.verify)                                                                                           \
+            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));                                                \
+    }
     // FUNCTION_TRANSFORM(mem2reg, PromotePass)
     // FUNCTION_TRANSFORM(inliner, InlinePass)
     // FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass)
@@ -75,7 +85,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     // FUNCTION_TRANSFORM(adce, ADCEPass)
     // FUNCTION_TRANSFORM(loadelim, LoadEliminationPass)
     // FUNCTION_TRANSFORM(dse, DSEPass)
-    // FUNCTION_TRANSFORM(gvnpre, GVNPREPass)
+    // FUNCTION_TRANSFORM2(gvnpre, BreakCriticalEdgesPass(), GVNPREPass())
 
     FUNCTION_TRANSFORM(mem2reg, PromotePass())
     FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass())
@@ -85,7 +95,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FUNCTION_TRANSFORM(reassociate, ReassociatePass())
     FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass())
     FUNCTION_TRANSFORM(sccp, ConstantPropagationPass())
-    FUNCTION_TRANSFORM(gvnpre, GVNPREPass())
+    FUNCTION_TRANSFORM2(gvnpre, BreakCriticalEdgesPass(), GVNPREPass())
     FUNCTION_TRANSFORM(loadelim, LoadEliminationPass())
     FUNCTION_TRANSFORM(dse, DSEPass())
     FUNCTION_TRANSFORM(loadelim, LoadEliminationPass())

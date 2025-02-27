@@ -5,6 +5,7 @@
 #include "../../../../include/ir/instructions/converse.hpp"
 #include "../../../../include/ir/instructions/memory.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
+#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 #include "../../../../include/ir/passes/helpers/sparse_propagation.hpp"
 #include "../../../../include/utils/logger.hpp"
 #include <optional>
@@ -435,6 +436,7 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
         PM::PreservedAnalyses pa;
         pa.preserve<DomTreeAnalysis>();
         pa.preserve<PostDomTreeAnalysis>();
+        pa.preserve<LoopAnalysis>();
         return pa;
     }
 

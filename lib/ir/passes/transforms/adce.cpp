@@ -2,6 +2,7 @@
 #include "../../../../include/ir/instructions/control.hpp"
 #include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
+#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 
 #include <deque>
 
@@ -340,6 +341,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
     if (adce_inst_modified) {
         PM::PreservedAnalyses pa;
         pa.preserve<DomTreeAnalysis>();
+        pa.preserve<LoopAnalysis>();
         pa.preserve<PostDomTreeAnalysis>();
         return pa;
     }

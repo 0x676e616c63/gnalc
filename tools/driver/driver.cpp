@@ -237,6 +237,7 @@ Extensions:
 
     if (emit_llvm) {
         mpm.addPass(IR::PrintModulePass(*poutstream));
+        mpm.addPass(IR::makeModulePass(IR::PrintLoopPass(std::cout)));
         // mpm.addPass(IR::PrintModulePass(std::cout)); // debug, remove it
         mpm.run(generator.get_module(), mam);
         return 0;

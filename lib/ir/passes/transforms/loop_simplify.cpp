@@ -9,12 +9,15 @@ namespace IR {
 PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
     bool loop_simplify_cfg_modified = false;
 
+    auto loop_info = fam.getResult<LoopAnalysis>(function);
+
     if (loop_simplify_cfg_modified)
         return PM::PreservedAnalyses::none();
 
     PM::PreservedAnalyses pa;
     pa.preserve<DomTreeAnalysis>();
     pa.preserve<PostDomTreeAnalysis>();
+    pa.preserve<LoopAnalysis>();
     return pa;
 }
 

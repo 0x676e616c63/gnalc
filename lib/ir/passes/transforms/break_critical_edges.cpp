@@ -1,10 +1,10 @@
-#include "../../../../include/ir/passes/helpers/break_critical_edges.hpp"
+#include "../../../../include/ir/passes/transforms/break_critical_edges.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
 
-#include <deque>
+#include <vector>
 
 namespace IR {
-bool break_critical_edges(Function &function) {
+PM::PreservedAnalyses run(Function &function, FAM &manager) {
     bool bce_cfg_modified = false;
 
     auto dfv = function.getDFVisitor();
@@ -43,6 +43,9 @@ bool break_critical_edges(Function &function) {
         }
     }
 
-    return bce_cfg_modified;
+    if (bce_cfg_modified)
+        return PM::PreservedAnalyses::none();
+
+    return PM::PreservedAnalyses::all();
 }
 } // namespace IR
