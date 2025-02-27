@@ -107,6 +107,10 @@ int main(int argc, char **argv) {
             opt_info.loop_rotate = true;
         else if (arg == "--lcssa")
             opt_info.lcssa = true;
+        else if (arg == "--loopunroll")
+            opt_info.loop_unroll = true;
+        else if (arg == "--jumpthreading")
+            opt_info.jump_threading = true;
         // Debug options:
         else if (arg == "--ann")
             opt_info.advance_name_norm = true;
@@ -156,6 +160,8 @@ Optimizations available:
   --loopsimplify       - Canonicalize loops to The Loop Simplify Form
   --looprotate         - Canonicalize loops to The Rotated Loop Form
   --lcssa              - Canonicalize loops to The Loop Closed SSA Form
+  --loopunroll         - Unroll loops
+  --jumpthreading      - Jump Threading
 
 Debug options:
   --ann                - Use the advance name normalization result (after IRGen). (This disables the one at the last).

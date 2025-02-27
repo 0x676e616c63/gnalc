@@ -111,7 +111,7 @@ const std::vector<std::shared_ptr<Loop>> &LoopInfo::getTopLevelLoops() const {
     return top_level_loops;
 }
 
-LoopInfo LoopAnalysis::run(Function &function, FAM &fam) {
+LoopInfo LoopAnalysis:: run(Function &function, FAM &fam) {
     LoopInfo info;
     auto domtree = fam.getResult<DomTreeAnalysis>(function);
     auto dom_pdfv = domtree.getDFVisitor<Util::DFVOrder::PostOrder>();

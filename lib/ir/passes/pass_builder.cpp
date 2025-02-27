@@ -15,10 +15,12 @@
 #include "../../../include/ir/passes/transforms/gvn_pre.hpp"
 #include "../../../include/ir/passes/transforms/inline.hpp"
 #include "../../../include/ir/passes/transforms/instsimplify.hpp"
+#include "../../../include/ir/passes/transforms/jump_threading.hpp"
 #include "../../../include/ir/passes/transforms/lcssa.hpp"
 #include "../../../include/ir/passes/transforms/load_elimination.hpp"
 #include "../../../include/ir/passes/transforms/loop_rotate.hpp"
 #include "../../../include/ir/passes/transforms/loop_simplify.hpp"
+#include "../../../include/ir/passes/transforms/loop_unroll.hpp"
 #include "../../../include/ir/passes/transforms/mem2reg.hpp"
 #include "../../../include/ir/passes/transforms/namenormalizer.hpp"
 #include "../../../include/ir/passes/transforms/reassociate.hpp"
@@ -42,9 +44,11 @@ const OptInfo o1_opt_info = {
     .reassociate = true,
     .instsimplify = true,
     .inliner = true,
-    .loop_simplify = true,
-    .loop_rotate = true,
-    .lcssa = true,
+    .loop_simplify = false,
+    .loop_rotate = false,
+    .lcssa = false,
+    .loop_unroll = false,
+    .jump_threading = false,
     .verify = false,
 };
 
@@ -89,10 +93,11 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FUNCTION_TRANSFORM(loadelim, LoadEliminationPass())
     FUNCTION_TRANSFORM(dce, DCEPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
-
-    // FUNCTION_TRANSFORM(loop_simplify, LoopSimplifyPass())
-    // FUNCTION_TRANSFORM(loop_simplify, LoopRotatePass())
-    // FUNCTION_TRANSFORM(loop_simplify, LCSSAPass())
+    FUNCTION_TRANSFORM(loop_simplify, LoopSimplifyPass())
+    FUNCTION_TRANSFORM(loop_rotate, LoopRotatePass())
+    FUNCTION_TRANSFORM(lcssa, LCSSAPass())
+    FUNCTION_TRANSFORM(loop_unroll, LoopUnrollPass())
+    FUNCTION_TRANSFORM(jump_threading, JumpThreadingPass())
 
 #undef FUNCTION_TRANSFORM
 
