@@ -41,6 +41,15 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
                 inst->replaceSelf(other);
                 instsimplify_inst_modified = true;
             }
+            // A - A = 0
+            else if (match(inst, M::same_operands<OP::SUB, 2>())) {
+                inst->replaceSelf(function.getConstantPool().getConst(0));
+                instsimplify_inst_modified = true;
+            }
+            else if (match(inst, M::same_operands<OP::FSUB, 2>())) {
+                inst->replaceSelf(function.getConstantPool().getConst(0.0f));
+                instsimplify_inst_modified = true;
+            }
             // A * 0 = 0
             // 0 * A = 0
             // 0 / A = 0

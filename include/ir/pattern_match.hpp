@@ -34,6 +34,23 @@ inline auto inst(std::shared_ptr<Instruction> &v) {
     return ClassMatchBind<Instruction, std::shared_ptr<Instruction>>{v};
 }
 
+template <typename SubPattern> struct OneUseMatch {
+    SubPattern sub_pattern;
+
+    explicit OneUseMatch(const SubPattern &sub_pattern_) : sub_pattern(sub_pattern_) {}
+
+    template <typename T>
+    bool match(const T &v) const {
+        auto cast = PatternMatch::detail::ptrCast<Value>(v);
+        return cast && cast->getUseCount() == 1 && sub_pattern.match(cast);
+    }
+};
+
+template <typename T>
+auto one_use(const T& sub_pattern) {
+    return OneUseMatch(sub_pattern);
+}
+
 inline auto value_ci1() { return ClassMatch<ConstantI1>{}; }
 inline auto value_ci8() { return ClassMatch<ConstantI8>{}; }
 inline auto value_ci32() { return ClassMatch<ConstantInt>{}; }
