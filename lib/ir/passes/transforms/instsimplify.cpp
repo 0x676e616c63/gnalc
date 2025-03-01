@@ -96,6 +96,62 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         }
     }
 
+        std::deque<std::shared_ptr<Instruction>> worklist;
+        auto dfVisitor=function.getDFVisitor();
+    for (const auto & bb:dfVisitor) {
+        for (const auto& inst:*bb) {
+            switch (inst->getOpcode()) {
+            case OP::BR:
+            case OP::CALL:
+            case OP::RET:
+                //todo add more OPcode
+                break;
+                default:worklist.emplace_back(inst);
+                break;
+            }
+        }
+    }
+    while (!worklist.empty()) {
+        std::shared_ptr<Value> other;
+        int c1=0,c2=0;
+         auto inst=worklist.front();
+            // add (sub c1 x) c2 ->sub (c1 + c2) x
+            if (match(inst,M::inst_add(M::inst_sub(M::value_ci32(c1),M::value(other)),M::value_ci32(c2)))) {
+                auto sub=std::make_shared<BinaryInst>(inst->getName(),OP::SUB,function.getConstantPool().getConst(c1+c2),other);
+                inst->replaceSelf(sub);
+                inst->getParent()->addInst(inst->getIndex(),sub);
+            }
+            // add (zext (add x -1)) 1 -> zext x (x !=0)
+            else if (match(inst,M::inst_add(M::inst_add(M::inst_zext(M::value(other)),M::value_ci32(-1)),M::value_ci32(1)))) {
+                //todo check for  zero
+                inst->replaceSelf(other);
+            }
+            // zext(false) + c -> c
+            else if (match(inst,M::inst_add(M::inst_zext(M::value_ci1(false)),M::value_ci32(c1)))) {
+                inst->replaceSelf(function.getConstantPool().getConst(c1));
+            }
+            // zext(true) + c -> c + 1
+            else if (match(inst,M::inst_add(M::inst_zext(M::value_ci1(true)),M::value_ci32(c1)))) {
+                inst->replaceSelf(function.getConstantPool().getConst(c1+1));
+            }
+
+            // todo x % c1 + ((x / c1) % c2) * c1 -> x % (c1 * c2)
+            // todo x - -a -> x + a
+
+            // c1 - (x + c2) -> (c1 - c2) - x
+            else if (match(inst,M::inst_sub(M::value_ci32(c1),M::inst_add(M::value_ci32(c2),M::value(other))))||
+                match(inst,M::inst_sub(M::value_ci32(c1),M::inst_add(M::value(other),M::value_ci32(c2))))) {
+                auto sub=std::make_shared<BinaryInst>(inst->getName(),OP::SUB,function.getConstantPool().getConst(c1-c2),other);
+                inst->replaceSelf(sub);
+                inst->getParent()->addInst(inst->getIndex(),sub);
+            }
+            // todo A * B - A*C -> A * (B-C)
+            // todo - (x * c)= x * -c (for float)
+
+
+
+        worklist.pop_front();
+    }
     if (instsimplify_inst_modified) {
         PM::PreservedAnalyses pa;
         pa.preserve<DomTreeAnalysis>();
