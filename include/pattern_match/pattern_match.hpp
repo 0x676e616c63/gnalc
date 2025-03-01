@@ -85,8 +85,10 @@ struct ClassMatchBind {
     template <typename T>
     bool match(const T &v) const {
         auto cast = detail::ptrCast<Class>(v);
+        if (!cast)
+            return false;
         result = Proj()(cast);
-        return cast != nullptr;
+        return true;
     }
 };
 
@@ -102,8 +104,10 @@ struct ClassMatchBindIf {
     template <typename T>
     bool match(const T &v) const {
         auto cast = detail::ptrCast<Class>(v);
+        if (!cast)
+            return false;
         result = Proj()(cast);
-        return cast && pred(*cast);
+        return pred(*cast);
     }
 };
 

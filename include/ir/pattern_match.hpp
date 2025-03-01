@@ -16,21 +16,21 @@ using namespace PatternMatch;
 namespace IR::M {
 inline auto value() { return ClassMatch<Value>{}; }
 
-inline auto value(Value *&v) {
+inline auto val_capture(Value *&v) {
     return ClassMatchBind<Value, Value *>{v};
 }
 
-inline auto value(std::shared_ptr<Value> &v) {
+inline auto val_capture(std::shared_ptr<Value> &v) {
     return ClassMatchBind<Value, std::shared_ptr<Value>>{v};
 }
 
 inline auto inst() { return ClassMatch<Instruction>{}; }
 
-inline auto inst(Instruction *&v) {
+inline auto inst_capture(Instruction *&v) {
     return ClassMatchBind<Instruction, Instruction *>{v};
 }
 
-inline auto inst(std::shared_ptr<Instruction> &v) {
+inline auto inst_capture(std::shared_ptr<Instruction> &v) {
     return ClassMatchBind<Instruction, std::shared_ptr<Instruction>>{v};
 }
 
@@ -51,11 +51,11 @@ auto one_use(const T& sub_pattern) {
     return OneUseMatch(sub_pattern);
 }
 
-inline auto value_ci1() { return ClassMatch<ConstantI1>{}; }
-inline auto value_ci8() { return ClassMatch<ConstantI8>{}; }
-inline auto value_ci32() { return ClassMatch<ConstantInt>{}; }
-inline auto value_cf32() { return ClassMatch<ConstantFloat>{}; }
-inline auto value_constant() {
+inline auto val_i1() { return ClassMatch<ConstantI1>{}; }
+inline auto val_i8() { return ClassMatch<ConstantI8>{}; }
+inline auto val_i32() { return ClassMatch<ConstantInt>{}; }
+inline auto val_f32() { return ClassMatch<ConstantFloat>{}; }
+inline auto val_const() {
     return ClassesMatch<ConstantI1, ConstantI8, ConstantInt, ConstantFloat>{};
 }
 
@@ -63,45 +63,45 @@ template <typename T>
 struct ConstantProj {
     template <typename U>
     T operator()(const U &u) {
-        return u.getVal();
+        return u->getVal();
     }
 };
 
-inline auto value_ci1(bool &a) {
+inline auto val_capture_i1(bool &a) {
     return ClassMatchBind<ConstantI1, bool, ConstantProj<bool>>{a};
 }
 
-inline auto value_ci8(char &a) {
+inline auto val_capture_i8(char &a) {
     return ClassMatchBind<ConstantI8, char, ConstantProj<char>>{a};
 }
 
-inline auto value_ci32(int &a) {
+inline auto val_capture_i32(int &a) {
     return ClassMatchBind<ConstantInt, int, ConstantProj<int>>{a};
 }
 
-inline auto value_cf32(float &a) {
+inline auto val_capture_f32(float &a) {
     return ClassMatchBind<ConstantFloat, float, ConstantProj<float>>{a};
 }
 
-inline auto value_ci1(bool a) {
+inline auto val_is_i1(bool a) {
     return ClassMatchIf<ConstantI1>{[a](const ConstantI1 &b) {
         return a == b.getVal();
     }};
 }
 
-inline auto value_ci8(char a) {
+inline auto val_is_i8(char a) {
     return ClassMatchIf<ConstantI8>{[a](const ConstantI8 &b) {
         return a == b.getVal();
     }};
 }
 
-inline auto value_ci32(int a) {
+inline auto val_is_i32(int a) {
     return ClassMatchIf<ConstantInt>{[a](const ConstantInt &b) {
         return a == b.getVal();
     }};
 }
 
-inline auto value_cf32(float a) {
+inline auto val_is_f32(float a) {
     return ClassMatchIf<ConstantFloat>{[a](const ConstantFloat &b) {
         return a == b.getVal();
     }};
