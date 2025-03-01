@@ -22,49 +22,9 @@ class Function;
 class IRVisitor;
 class PostDomTreeAnalysis;
 
-// Only handles CFG.
-void linkBB(const std::shared_ptr<BasicBlock> &prebb,
-            const std::shared_ptr<BasicBlock> &nxtbb);
-
-void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,
-              const std::shared_ptr<BasicBlock> &nxtbb);
-
-// Safely disconnects two basic blocks in CFG while maintaining SSA consistency
-//
-// This function performs three key operations:
-// 1. Removes CFG edges between the `prebb` and `nxtbb` blocks
-// 2. Updates relevant BRInst (won't delete it)
-// 3. Fix and collects invalidated PHIInst that need removal
-// 4. Returns whether the BRInst should be removed or not
-//
-// Why returns the dead PHI rather than delete them in place:
-//     Dead phis can be in a cycle, and might involve multiple blocks.
-//     In other word, when `safeUnlinkBB` is called within a function,
-//     the returned dead phis might have users(also a phi) in other blocks of the function.
-//     To help `delInstIf` check if we delete right instructions,
-//     we return them to be gathered and deleted at once.
-//
-// WARNING: This function won't delete instructions. The BRInst or PHIInst requires the caller to delete.
-//          When `safeUnlinkBB` is called within a function, the returned dead phis should be
-//          gathered for all basic blocks, and deleted at once.
-bool safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb,
-                  const std::shared_ptr<BasicBlock> &nxtbb,
-                  std::set<std::shared_ptr<PHIInst>>& dead_phis);
-
 // We can't see Function's definition here, use `FunctionBBIter` to get around it.
 using FunctionBBIter = std::list<std::shared_ptr<BasicBlock>>::iterator;
 
-// Move `bb` to `new_func`'s `location`
-// This deletes `bb` from its parent, and insert it before `new_func`'s location
-void moveBlock(const std::shared_ptr<BasicBlock>& bb,
-    const std::shared_ptr<Function>& new_func, FunctionBBIter location);
-void moveBlocks(FunctionBBIter beg, FunctionBBIter end,
-    const std::shared_ptr<Function>& new_func, FunctionBBIter location);
-// The following two functions move `bb` to `new_func`'s end
-void moveBlock(const std::shared_ptr<BasicBlock>& bb,
-    const std::shared_ptr<Function>& new_func);
-void moveBlocks(FunctionBBIter beg, FunctionBBIter end,
-    const std::shared_ptr<Function>& new_func);
 /**
  * @brief BB继承自value, 其被br指令'use', 'use'了它所包含的指令
  * @note next_bb包含的BB和最后一条br指令中的相同

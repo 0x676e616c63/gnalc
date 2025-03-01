@@ -1,5 +1,6 @@
 #include "../../../../include/ir/passes/transforms/instsimplify.hpp"
 #include "../../../../include/ir/base.hpp"
+#include "../../../../include/ir/block_utils.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 #include "../../../../include/ir/passes/helpers/constant_fold.hpp"
@@ -10,19 +11,7 @@ namespace IR {
 PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
     bool instsimplify_inst_modified = false;
     for (const auto &bb : function) {
-        for (const auto& phi : bb->getPhiInsts()) {
-            auto phi_opers = phi->getPhiOpers();
-            Err::gassert(!phi_opers.empty());
-            std::shared_ptr<Value> common_value = phi_opers[0].value;
-            for (const auto& [v, b] : phi_opers) {
-                if (common_value != v) {
-                    common_value = nullptr;
-                    break;
-                }
-            }
-            if (common_value != nullptr)
-                phi->replaceSelf(common_value);
-        }
+        foldPHI(bb);
         for (const auto &inst : *bb) {
             // Fold Constant
             auto fold = foldConstant(function.getConstantPool(), inst);

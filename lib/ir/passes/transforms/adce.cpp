@@ -3,6 +3,7 @@
 #include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
+#include "../../../../include/ir/block_utils.hpp"
 
 #include <deque>
 
@@ -264,8 +265,8 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     unlinkBB(curr, dest);
                     curr->delInst(br);
 
-                    // Since dest has only one predecessor, there can be no phi.
-                    // Also, all dest's users are its successors' phi, replace them with curr.
+                    foldPHI(dest);
+                    // all dest's users are its successors' phi, replace them with curr.
                     Err::gassert(dest->getPhiCount() == 0);
                     dest->replaceSelf(curr);
 

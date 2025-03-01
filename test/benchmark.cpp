@@ -176,10 +176,10 @@ void sighandler(int)
 //     };
 // }
 
-auto a_tmp = benchmark_data.mode1 = "gnalc-mem2reg";
+auto a_tmp = benchmark_data.mode1 = "gnalc-oldsccp";
 TestData get_mode1_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
     auto gnalc_irgen = [](const std::string& newsy, const std::string& outll) {
-        return format("../gnalc -S {} -o {} -emit-llvm --mem2reg",
+        return format("../gnalc-old -S {} -o {} -emit-llvm --mem2reg --sccp",
                                 newsy, outll);
     };
 
@@ -193,10 +193,10 @@ TestData get_mode1_data(const directory_entry& sy, const std::string& sylib_to_l
 }
 
 
-auto b_tmp = benchmark_data.mode2 = "gnalc-O1";
+auto b_tmp = benchmark_data.mode2 = "gnalc-newsccp";
 TestData get_mode2_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
     auto gnalc_irgen = [](const std::string& newsy, const std::string& outll) {
-        return format("../gnalc -S {} -o {} -emit-llvm -O1",
+        return format("../gnalc -S {} -o {} -emit-llvm --mem2reg --sccp",
                                 newsy, outll);
     };
 

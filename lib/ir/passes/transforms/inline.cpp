@@ -1,5 +1,5 @@
 #include "../../../../include/ir/passes/transforms/inline.hpp"
-
+#include "../../../../include/ir/block_utils.hpp"
 #include "../../../../include/config/config.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
 #include "../../../../include/ir/instructions/memory.hpp"

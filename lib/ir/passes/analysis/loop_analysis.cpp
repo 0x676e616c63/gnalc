@@ -53,8 +53,15 @@ bool Loop::isLatch(const BasicBlock *bb) const {
     Err::gassert(contains(bb));
     auto header = getHeader();
     auto succs = bb->getNextBB();
-    return std::any_of(succs.cbegin(), succs.cend(), [&header](const auto& succ) {
-        return succ.get() == header;
+    return std::any_of(succs.cbegin(), succs.cend(), [&header](const auto &succ) { return succ.get() == header; });
+}
+
+bool Loop::isExiting(const BasicBlock *bb) const {
+    if (!contains(bb))
+        return false;
+    auto succs = bb->getNextBB();
+    return std::any_of(succs.cbegin(), succs.cend(), [this](const auto &succ) {
+        return !contains(succ.get());
     });
 }
 
@@ -112,6 +119,26 @@ size_t Loop::getLoopDepth() const {
 
     return ret;
 }
+
+bool Loop::hasDedicatedExits() const {
+    auto exits = getExitBlocks();
+    return std::all_of(exits.cbegin(), exits.cend(), [this](const auto &exit) {
+        auto preds = exit->getPreBB();
+        return std::all_of(preds.cbegin(), preds.cend(), [this](const auto &pred) {
+            return contains(pred.get());
+        });
+    });
+}
+
+bool Loop::isSimplifiedForm() const {
+    return getPreHeader() && getLatch() && hasDedicatedExits();
+}
+
+bool Loop::isRotatedForm() const {
+    auto latch = getLatch();
+    return latch && isExiting(latch);
+}
+
 bool Loop::delBlock(const BasicBlock *bb) {
     auto it = std::find(blocks.begin(), blocks.end(), bb);
     if (it == blocks.end())

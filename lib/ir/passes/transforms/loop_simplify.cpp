@@ -1,7 +1,9 @@
 #include "../../../../include/ir/passes/transforms/loop_simplify.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
+
+#include "../../../../include/ir/block_utils.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
+#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 
 #include <deque>
 
@@ -10,118 +12,124 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
     bool loop_simplify_cfg_modified = false;
 
     auto loop_info = fam.getResult<LoopAnalysis>(function);
+    for (const auto& toplevel : loop_info) {
+        auto looppdfv = toplevel->getDFVisitor<Util::DFVOrder::PostOrder>();
 
-    for (const auto& loop : loop_info) {
-        auto header = loop->getHeader()->shared_from_this();
+        for (const auto& loop : looppdfv)
+        {
+            auto header = loop->getHeader()->shared_from_this();
 
-        // Ensure a preheader
-        auto preheader = loop->getPreHeader();
-        if (!preheader) {
-            auto new_preheader = std::make_shared<BasicBlock>("%loopsimplify.ph");
-            auto preds = header->getPreBB();
-            for (const auto& pred : preds) {
-                if (!loop->contains(pred.get())) {
-                    auto br = std::dynamic_pointer_cast<BRInst>(pred->getInsts().back());
-                    Err::gassert(br != nullptr);
-                    br->replaceOperand(header, new_preheader);
-                    unlinkBB(pred, header);
-                    linkBB(pred, new_preheader);
+            // Ensure a preheader
+            auto preheader = loop->getPreHeader();
+            if (!preheader) {
+                auto new_preheader = std::make_shared<BasicBlock>("%loopsimplify.ph");
+                auto preds = header->getPreBB();
+                for (const auto& pred : preds) {
+                    if (!loop->contains(pred.get())) {
+                        auto br = std::dynamic_pointer_cast<BRInst>(pred->getInsts().back());
+                        Err::gassert(br != nullptr);
+                        br->replaceOperand(header, new_preheader);
+                        unlinkBB(pred, header);
+                        linkBB(pred, new_preheader);
+                    }
                 }
-            }
-            new_preheader->addInst(std::make_shared<BRInst>(header));
-            linkBB(new_preheader, header);
+                new_preheader->addInst(std::make_shared<BRInst>(header));
+                linkBB(new_preheader, header);
 
-            for (const auto& phi : header->getPhiInsts()) {
-                auto phi_operands = phi->getPhiOpers();
-                auto new_phi = std::make_shared<PHIInst>("%loopsimplify.phi", phi->getType());
-                for (const auto& [val, bb] : phi_operands) {
-                    if (loop->contains(bb.get()))
-                        continue;
-                    phi->delOnePhiOperByBlock(bb);
-                    phi->addPhiOper(new_phi, new_preheader);
-                    new_phi->addPhiOper(val, bb);
-                }
-                new_preheader->addPhiInst(new_phi);
-            }
-
-            function.addBlock(header->getIter(), new_preheader);
-            preheader = new_preheader.get();
-            loop_simplify_cfg_modified = true;
-        }
-
-        // Ensure a single backedge (which implies that there is a single latch)
-        auto latch = loop->getLatch();
-        if (!latch) {
-            auto new_latch = std::make_shared<BasicBlock>("%loopsimplify.latch");
-            new_latch->addInst(std::make_shared<BRInst>(header));
-            linkBB(new_latch, header);
-            auto latches = loop->getLatches();
-            for (const auto& raw_old_latch : latches) {
-                auto old_latch = raw_old_latch->shared_from_this();
-                auto br = std::dynamic_pointer_cast<BRInst>(old_latch->getInsts().back());
-                Err::gassert(br != nullptr);
-                br->replaceOperand(header, new_latch);
-                unlinkBB(old_latch, header);
-                linkBB(old_latch, new_latch);
-            }
-            for (const auto& phi : header->getPhiInsts()) {
-                auto phi_operands = phi->getPhiOpers();
-                auto new_phi = std::make_shared<PHIInst>("%loopsimplify.phi", phi->getType());
-                for (const auto& [val, bb] : phi_operands) {
-                    if (bb.get() == preheader)
-                        continue;
-                    phi->delOnePhiOperByBlock(bb);
-                    new_phi->addPhiOper(val, bb);
-                }
-                new_latch->addPhiInst(new_phi);
-                phi->addPhiOper(new_phi, new_latch);
-            }
-            function.addBlock(std::next(latches.back()->getIter()), new_latch);
-            latch = new_latch.get();
-            loop_simplify_cfg_modified = true;
-        }
-
-        // Ensure dedicated exits.
-        // That is, no exit block for the loop has a predecessor
-        // that is outside the loop. This implies that all exit blocks
-        // are dominated by the loop header.
-        auto exits = loop->getExitBlocks();
-        for (const auto& raw_exit : exits) {
-            auto exit = raw_exit->shared_from_this();
-            std::vector<std::shared_ptr<BasicBlock>> in_loop_preds;
-            bool is_dedicated = true;
-            auto exit_preds = exit->getPreBB();
-            for (const auto& ep : exit_preds) {
-                if (loop->contains(ep.get()))
-                    in_loop_preds.emplace_back(ep);
-                else
-                    is_dedicated = false;
-            }
-
-            if (!is_dedicated) {
-                auto new_exit = std::make_shared<BasicBlock>("%loopsimplify.exit");
-                new_exit->addInst(std::make_shared<BRInst>(exit));
-                linkBB(new_exit, exit);
-                for (const auto& in_loop_pred : in_loop_preds) {
-                    auto br = std::dynamic_pointer_cast<BRInst>(in_loop_pred->getInsts().back());
-                    br->replaceOperand(exit, new_exit);
-                    unlinkBB(in_loop_pred, exit);
-                    linkBB(in_loop_pred, new_exit);
-                }
-                for (const auto& phi : exit->getPhiInsts()) {
+                for (const auto& phi : header->getPhiInsts()) {
                     auto phi_operands = phi->getPhiOpers();
                     auto new_phi = std::make_shared<PHIInst>("%loopsimplify.phi", phi->getType());
                     for (const auto& [val, bb] : phi_operands) {
-                        if (!loop->contains(bb.get()))
+                        if (loop->contains(bb.get()))
                             continue;
                         phi->delOnePhiOperByBlock(bb);
-                        phi->addPhiOper(new_phi, new_exit);
+                        phi->addPhiOper(new_phi, new_preheader);
                         new_phi->addPhiOper(val, bb);
                     }
-                    new_exit->addPhiInst(new_phi);
+                    new_preheader->addPhiInst(new_phi);
                 }
-                function.addBlock(std::next(exit->getIter()), new_exit);
+                foldPHI(new_preheader);
+                function.addBlock(header->getIter(), new_preheader);
+                preheader = new_preheader.get();
                 loop_simplify_cfg_modified = true;
+            }
+
+            // Ensure a single backedge (which implies that there is a single latch)
+            auto latch = loop->getLatch();
+            if (!latch) {
+                auto new_latch = std::make_shared<BasicBlock>("%loopsimplify.latch");
+                new_latch->addInst(std::make_shared<BRInst>(header));
+                linkBB(new_latch, header);
+                auto latches = loop->getLatches();
+                for (const auto& raw_old_latch : latches) {
+                    auto old_latch = raw_old_latch->shared_from_this();
+                    auto br = std::dynamic_pointer_cast<BRInst>(old_latch->getInsts().back());
+                    Err::gassert(br != nullptr);
+                    br->replaceOperand(header, new_latch);
+                    unlinkBB(old_latch, header);
+                    linkBB(old_latch, new_latch);
+                }
+                for (const auto& phi : header->getPhiInsts()) {
+                    auto phi_operands = phi->getPhiOpers();
+                    auto new_phi = std::make_shared<PHIInst>("%loopsimplify.phi", phi->getType());
+                    for (const auto& [val, bb] : phi_operands) {
+                        if (bb.get() == preheader)
+                            continue;
+                        phi->delOnePhiOperByBlock(bb);
+                        new_phi->addPhiOper(val, bb);
+                    }
+                    new_latch->addPhiInst(new_phi);
+                    phi->addPhiOper(new_phi, new_latch);
+                }
+                foldPHI(new_latch);
+                function.addBlock(std::next(latches.back()->getIter()), new_latch);
+                latch = new_latch.get();
+                loop_simplify_cfg_modified = true;
+            }
+
+            // Ensure dedicated exits.
+            // That is, no exit block for the loop has a predecessor
+            // that is outside the loop. This implies that all exit blocks
+            // are dominated by the loop header.
+            auto exits = loop->getExitBlocks();
+            for (const auto& raw_exit : exits) {
+                auto exit = raw_exit->shared_from_this();
+                std::vector<std::shared_ptr<BasicBlock>> in_loop_preds;
+                bool is_dedicated = true;
+                auto exit_preds = exit->getPreBB();
+                for (const auto& ep : exit_preds) {
+                    if (loop->contains(ep.get()))
+                        in_loop_preds.emplace_back(ep);
+                    else
+                        is_dedicated = false;
+                }
+
+                if (!is_dedicated) {
+                    auto new_exit = std::make_shared<BasicBlock>("%loopsimplify.exit");
+                    new_exit->addInst(std::make_shared<BRInst>(exit));
+                    linkBB(new_exit, exit);
+                    for (const auto& in_loop_pred : in_loop_preds) {
+                        auto br = std::dynamic_pointer_cast<BRInst>(in_loop_pred->getInsts().back());
+                        br->replaceOperand(exit, new_exit);
+                        unlinkBB(in_loop_pred, exit);
+                        linkBB(in_loop_pred, new_exit);
+                    }
+                    for (const auto& phi : exit->getPhiInsts()) {
+                        auto phi_operands = phi->getPhiOpers();
+                        auto new_phi = std::make_shared<PHIInst>("%loopsimplify.phi", phi->getType());
+                        for (const auto& [val, bb] : phi_operands) {
+                            if (!loop->contains(bb.get()))
+                                continue;
+                            phi->delOnePhiOperByBlock(bb);
+                            phi->addPhiOper(new_phi, new_exit);
+                            new_phi->addPhiOper(val, bb);
+                        }
+                        new_exit->addPhiInst(new_phi);
+                    }
+                    foldPHI(new_exit);
+                    function.addBlock(std::next(exit->getIter()), new_exit);
+                    loop_simplify_cfg_modified = true;
+                }
             }
         }
     }

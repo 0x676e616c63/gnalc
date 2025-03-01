@@ -49,13 +49,13 @@ public:
     const_reverse_iterator crbegin() const;
     const_reverse_iterator crend() const;
 
-    auto getBFVisitor() const {
-        return LoopBFVisitor(sub_loops[0]);
+    auto getBFVisitor() {
+        return LoopBFVisitor{ shared_from_this() };
     }
 
     template<Util::DFVOrder order = Util::DFVOrder::PreOrder>
-    auto getDFVisitor() const {
-        return LoopDFVisitor<order>(sub_loops[0]);
+    auto getDFVisitor() {
+        return LoopDFVisitor<order>{ shared_from_this() };
     }
 
     explicit Loop(BasicBlock* bb);
@@ -67,6 +67,10 @@ public:
     BasicBlock* getPreHeader() const;
 
     bool isLatch(const BasicBlock* bb) const;
+
+    // Note that an exiting block is a block which points to the exit block.
+    // In other words, the exiting block is in the loop.
+    bool isExiting(const BasicBlock* bb) const;
 
     std::vector<BasicBlock*> getExitBlocks() const;
 
@@ -84,6 +88,10 @@ public:
     const std::vector<BasicBlock*>& getBlocks() const;
 
     size_t getLoopDepth() const;
+
+    bool hasDedicatedExits() const;
+    bool isSimplifiedForm() const;
+    bool isRotatedForm() const;
 
     bool delBlock(const BasicBlock* bb);
     void addBlock(BasicBlock* bb);

@@ -7,6 +7,7 @@
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 #include "../../../../include/ir/passes/helpers/sparse_propagation.hpp"
+#include "../../../../include/ir/block_utils.hpp"
 #include "../../../../include/utils/logger.hpp"
 #include <optional>
 
