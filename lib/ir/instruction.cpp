@@ -62,4 +62,14 @@ void moveInsts(BBInstIter beg, BBInstIter end,
     const std::shared_ptr<BasicBlock>& new_bb) {
     moveInsts(beg, end, new_bb, new_bb->end());
 }
+
+void movePhiInsts(const std::shared_ptr<BasicBlock>& src_bb, const std::shared_ptr<BasicBlock>& dest_bb)
+{
+    Err::gassert(src_bb != dest_bb);
+    std::list<std::shared_ptr<PHIInst>> phis = src_bb->getPhiInsts(); // Not a reference
+    for (const auto& phi : phis) {
+        src_bb->delFirstOfPhiInst(phi);
+        dest_bb->addPhiInst(phi);
+    }
+}
 } // namespace IR

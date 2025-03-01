@@ -58,25 +58,29 @@ bool Loop::isLatch(const BasicBlock *bb) const {
     });
 }
 
-bool Loop::isExit(const BasicBlock *bb) const {
-    auto succs = bb->getNextBB();
-    return std::any_of(succs.cbegin(), succs.cend(), [this](const auto& succ) {
-        return !contains(succ.get());
-    });
-}
-
 std::vector<BasicBlock *> Loop::getExitBlocks() const {
     std::vector<BasicBlock*> ret;
-    std::copy_if(blocks.cbegin(), blocks.cend(), std::back_inserter(ret),
-        [this](const auto& bb) { return isExit(bb); });
+    for (const auto& bb : blocks) {
+        auto succs = bb->getNextBB();
+        for (const auto& candidate : succs) {
+            if (!contains(candidate.get()))
+                ret.emplace_back(candidate.get());
+        }
+    }
     return ret;
 }
 
 std::vector<BasicBlock *> Loop::getLatches() const {
-    std::vector<BasicBlock*> ret;
-    std::copy_if(blocks.cbegin(), blocks.cend(), std::back_inserter(ret),
-        [this](const auto& bb) { return isLatch(bb); });
+    std::vector<BasicBlock *> ret;
+    std::copy_if(blocks.crbegin(), blocks.crend(), std::back_inserter(ret),
+                 [this](const auto &bb) { return isLatch(bb); });
     return ret;
+}
+BasicBlock *Loop::getLatch() const {
+    auto latches = getLatches();
+    if (latches.size() != 1)
+        return nullptr;
+    return latches[0];
 }
 
 bool Loop::isOutermost() const {
@@ -93,9 +97,9 @@ std::shared_ptr<Loop> Loop::getOutermostLoop() {
     return ret;
 }
 
-const std::vector<std::shared_ptr<Loop>> &Loop::getSubLoops() const {
-    return sub_loops;
-}
+const std::vector<std::shared_ptr<Loop>> &Loop::getSubLoops() const { return sub_loops; }
+
+const std::vector<BasicBlock *> &Loop::getBlocks() const { return blocks; }
 
 size_t Loop::getLoopDepth() const {
     size_t ret = 0;
@@ -107,6 +111,19 @@ size_t Loop::getLoopDepth() const {
     }
 
     return ret;
+}
+bool Loop::delBlock(const BasicBlock *bb) {
+    auto it = std::find(blocks.begin(), blocks.end(), bb);
+    if (it == blocks.end())
+        return false;
+    blocks.erase(it);
+    blockset.erase(bb);
+    return true;
+}
+
+void Loop::addBlock(BasicBlock *bb) {
+    blocks.emplace_back(bb);
+    blockset.insert(bb);
 }
 
 std::shared_ptr<Loop> LoopInfo::getLoopFor(const BasicBlock *bb) const {

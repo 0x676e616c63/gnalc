@@ -15,7 +15,7 @@ class LoopAnalysis;
 class Loop : public std::enable_shared_from_this<Loop> {
     friend class LoopAnalysis;
     std::vector<std::shared_ptr<Loop>> sub_loops;
-    std::vector<BasicBlock*> blocks;
+    std::vector<BasicBlock*> blocks; // First is the header
     std::set<const BasicBlock*> blockset;
     std::weak_ptr<Loop> parent;
 
@@ -67,10 +67,13 @@ public:
     BasicBlock* getPreHeader() const;
 
     bool isLatch(const BasicBlock* bb) const;
-    bool isExit(const BasicBlock* bb) const;
 
     std::vector<BasicBlock*> getExitBlocks() const;
+
+    // Note that multiple Latches will become one after LoopSimplify
     std::vector<BasicBlock*> getLatches() const;
+    // If there is only one latch, return it.
+    BasicBlock* getLatch() const;
 
     bool isOutermost() const;
     bool isInnermost() const;
@@ -78,7 +81,12 @@ public:
 
     const std::vector<std::shared_ptr<Loop>>& getSubLoops() const;
 
+    const std::vector<BasicBlock*>& getBlocks() const;
+
     size_t getLoopDepth() const;
+
+    bool delBlock(const BasicBlock* bb);
+    void addBlock(BasicBlock* bb);
 };
 
 class LoopInfo {
