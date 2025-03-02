@@ -194,9 +194,9 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             inst->getParent()->addInst(inst->getIndex(),mul);
             instsimplify_inst_modified = true;
         }
-        // float: -x + y -> x - y
+        // float: -x + y -> y - x
         else if (match(inst,M::inst_fadd(M::inst_fneg(M::val_capture(x)),M::val_capture(y)))) {
-            auto fsub=std::make_shared<BinaryInst>(inst->getName(),OP::FSUB,x,y);
+            auto fsub=std::make_shared<BinaryInst>(inst->getName(),OP::FSUB,y,x);
             inst->replaceSelf(fsub);
             inst->getParent()->addInst(inst->getIndex(), fsub);
             instsimplify_inst_modified = true;
