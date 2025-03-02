@@ -121,7 +121,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             inst->getParent()->addInst(inst->getIndex(), sub);
             instsimplify_inst_modified = true;
         }
-        else if (match(inst,M::inst_add())) {
+        else if (match(inst,M::inst_add(M::val_capture(x),M::val_capture(y)))) {
             // x % c1 + ((x / c1) % c2) * c1 -> x % (c1 * c2)
             auto lhs=std::dynamic_pointer_cast<BinaryInst>(inst)->getLHS();
             auto rhs=std::dynamic_pointer_cast<BinaryInst>(inst)->getRHS();
@@ -211,7 +211,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             instsimplify_inst_modified = true;
         }
         // float: (-x / y) + z or (x / -y) + z -> z - (x / y)
-        else if (match(inst,M::inst_fadd(M::inst_fdiv(M::inst_fneg(M::val_capture(x),M::val_capture(y)),M::val_capture(z))))||
+        else if (match(inst,M::inst_fadd(M::inst_fdiv(M::inst_fneg(M::val_capture(x)),M::val_capture(y)),M::val_capture(z)))||
             match(inst,M::inst_fadd(M::inst_fdiv(M::val_capture(x),M::inst_fneg(M::val_capture(y))),M::val_capture(z)))) {
             auto fdiv=std::make_shared<BinaryInst>("%instsimplify.tmp"+std::to_string(name_cnt++),OP::FDIV,x,y);
             auto fsub=std::make_shared<BinaryInst>(inst->getName(),OP::FSUB,z,fdiv);
@@ -280,7 +280,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         // float: x - (-y * z) → x + (y * z)
         //        x - (-y / z) → x + (y / z)
         else if (match(inst,M::inst_fsub(M::val_capture(x),M::inst_fmul(M::inst_fneg(M::val_capture(y)),M::val_capture(z))))||
-            match(inst,M::inst_fsub(M::val_capture(x),M::inst_fdiv(M::inst_fneg(M::val_capture(y))),M::val_capture(z)))) {
+            match(inst,M::inst_fsub(M::val_capture(x),M::inst_fdiv(M::inst_fneg(M::val_capture(y)),M::val_capture(z))))) {
             auto fInst=std::make_shared<BinaryInst>("%instsimplify.tmp"+std::to_string(name_cnt++),inst->getOpcode(),y,z);
             auto fadd=std::make_shared<BinaryInst>(inst->getName(),OP::FADD,x,fInst);
             inst->replaceSelf(fadd);
