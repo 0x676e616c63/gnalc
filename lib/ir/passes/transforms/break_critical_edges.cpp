@@ -28,7 +28,7 @@ PM::PreservedAnalyses BreakCriticalEdgesPass::run(Function &function, FAM &manag
                 linkBB(new_block, succ);
 
                 // BRInst
-                auto br = std::dynamic_pointer_cast<BRInst>(curr->getInsts().back());
+                auto br = curr->getBRInst();
                 Err::gassert(br != nullptr);
                 bool ok = br->replaceOperand(succ, new_block);
                 Err::gassert(ok);

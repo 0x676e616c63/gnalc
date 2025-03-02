@@ -26,7 +26,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                 auto preds = header->getPreBB();
                 for (const auto& pred : preds) {
                     if (!loop->contains(pred.get())) {
-                        auto br = std::dynamic_pointer_cast<BRInst>(pred->getInsts().back());
+                        auto br = pred->getBRInst();
                         Err::gassert(br != nullptr);
                         br->replaceOperand(header, new_preheader);
                         unlinkBB(pred, header);
@@ -63,7 +63,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                 auto latches = loop->getLatches();
                 for (const auto& raw_old_latch : latches) {
                     auto old_latch = raw_old_latch->shared_from_this();
-                    auto br = std::dynamic_pointer_cast<BRInst>(old_latch->getInsts().back());
+                    auto br = old_latch->getBRInst();
                     Err::gassert(br != nullptr);
                     br->replaceOperand(header, new_latch);
                     unlinkBB(old_latch, header);
@@ -109,7 +109,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                     new_exit->addInst(std::make_shared<BRInst>(exit));
                     linkBB(new_exit, exit);
                     for (const auto& in_loop_pred : in_loop_preds) {
-                        auto br = std::dynamic_pointer_cast<BRInst>(in_loop_pred->getInsts().back());
+                        auto br = in_loop_pred->getBRInst();
                         br->replaceOperand(exit, new_exit);
                         unlinkBB(in_loop_pred, exit);
                         linkBB(in_loop_pred, new_exit);

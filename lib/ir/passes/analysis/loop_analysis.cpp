@@ -42,12 +42,16 @@ BasicBlock *Loop::getHeader() const {
 
 BasicBlock *Loop::getPreHeader() const {
     auto header = getHeader();
-    auto pres = header->getPreBB();
-    if (pres.size() != 1)
-        return nullptr;
-    if (pres.front()->getNextBB().size() != 1)
-        return nullptr;
-    return pres.front().get();
+    auto preds = header->getPreBB();
+    BasicBlock* preheader = nullptr;
+    for (const auto& pred : preds) {
+        if (contains(pred.get()))
+            continue;
+        if (preheader)
+            return nullptr;
+        preheader = pred.get();
+    }
+    return preheader;
 }
 bool Loop::isLatch(const BasicBlock *bb) const {
     Err::gassert(contains(bb));

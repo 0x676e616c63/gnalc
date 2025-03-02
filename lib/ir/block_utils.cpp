@@ -26,7 +26,7 @@ bool safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb,
     unlinkBB(prebb, nxtbb);
 
     // Break BRInst
-    auto br = std::dynamic_pointer_cast<BRInst>(prebb->getInsts().back());
+    auto br = prebb->getBRInst();
     Err::gassert(br != nullptr);
     if (br->isConditional()) {
         if (br->getTrueDest() == nxtbb)

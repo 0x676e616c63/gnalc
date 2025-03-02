@@ -100,7 +100,7 @@ bool User::replaceUse(const std::shared_ptr<Use> &old_use, const std::shared_ptr
             return true;
         }
     }
-    Err::unreachable("User::replaceOneUse(): old_val notfound.");
+    Err::unreachable("User::replaceOneUse(): old use notfound.");
     return false;
 }
 

@@ -218,8 +218,14 @@ const std::vector<std::shared_ptr<Value>> &BasicBlock::getBBParams() const {
 std::shared_ptr<Function> BasicBlock::getParent() const {
     return parent.lock();
 }
-void BasicBlock::setParent(const std::shared_ptr<Function> &_parent) {
-    parent = _parent;
+void BasicBlock::setParent(const std::shared_ptr<Function> &_parent) { parent = _parent; }
+
+std::shared_ptr<Instruction> BasicBlock::getTerminator() const { return insts.back(); }
+std::shared_ptr<BRInst> BasicBlock::getBRInst() const {
+    return std::dynamic_pointer_cast<BRInst>(getTerminator());
+}
+std::shared_ptr<RETInst> BasicBlock::getRETInst() const {
+    return std::dynamic_pointer_cast<RETInst>(getTerminator());
 }
 
 void BasicBlock::addPhiInst(const std::shared_ptr<PHIInst> &node) {
@@ -240,7 +246,16 @@ void BasicBlock::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
 BasicBlock::~BasicBlock() = default;
 
-size_t BasicBlock::getAllInstCount() const {
-    return phi_insts.size() + insts.size();
+size_t BasicBlock::getAllInstCount() const { return phi_insts.size() + insts.size(); }
+
+std::shared_ptr<Value> BasicBlock::cloneImpl() const {
+    Err::not_implemented(
+        "BasicBlock::cloneImpl:"
+        "Cloning basic blocks requires manual handling of instruction dependencies."
+        "We MUST clone each Instruction individually and maintain "
+        "a value mapping (original -> cloned) for operand replacement."
+        "Direct cloning would break use-def chains in SSA form."
+    );
+    return nullptr;
 }
 } // namespace IR

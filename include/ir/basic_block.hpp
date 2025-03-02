@@ -21,6 +21,8 @@ namespace IR {
 class Function;
 class IRVisitor;
 class PostDomTreeAnalysis;
+class BRInst;
+class RETInst;
 
 // We can't see Function's definition here, use `FunctionBBIter` to get around it.
 using FunctionBBIter = std::list<std::shared_ptr<BasicBlock>>::iterator;
@@ -168,12 +170,17 @@ public:
     std::shared_ptr<Function> getParent() const;
     void setParent(const std::shared_ptr<Function> &_parent);
 
+    std::shared_ptr<Instruction> getTerminator() const;
+    std::shared_ptr<BRInst> getBRInst() const;
+    std::shared_ptr<RETInst> getRETInst() const;
+
     void accept(IRVisitor &visitor) override;
     ~BasicBlock() override;
 
     size_t getAllInstCount() const;
 
 private:
+    std::shared_ptr<Value> cloneImpl() const override;
     void addPreBB(const std::shared_ptr<BasicBlock> &bb);
     void addNextBB(const std::shared_ptr<BasicBlock> &bb);
     bool delPreBB(const std::shared_ptr<BasicBlock> &bb);

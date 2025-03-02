@@ -53,6 +53,7 @@ void moveBlock(const std::shared_ptr<BasicBlock>& bb,
 void moveBlocks(FunctionBBIter beg, FunctionBBIter end,
     const std::shared_ptr<Function>& new_func);
 
+// Replace single entry or same value phi with its operand
 void foldPHI(const std::shared_ptr<BasicBlock> &bb);
 } // namespace IR
 

@@ -100,7 +100,7 @@ public:
     bool delFirstOfBlock(const std::shared_ptr<BasicBlock> &blk);
 
     // Delete a Block
-    // Requires the target block have no users than Phi.
+    // Requires the target block have no predecessors or successors
     bool delBlock(const std::shared_ptr<BasicBlock> &blk);
 
     // Delete blocks that satisfied: `pred(block) == true`
