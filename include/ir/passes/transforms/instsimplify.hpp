@@ -8,6 +8,8 @@ namespace IR {
 class InstSimplifyPass : public PM::PassInfo<InstSimplifyPass> {
 public:
     PM::PreservedAnalyses run(Function &function, FAM &manager);
+private:
+    int name_cnt=0;
 };
 
 } // namespace IR
