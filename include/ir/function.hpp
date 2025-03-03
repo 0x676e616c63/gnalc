@@ -154,6 +154,11 @@ public:
 
     ConstantPool &getConstantPool();
 
+    template<typename T>
+    auto getConst(T&& val) {
+        return constant_pool->getConst(std::forward<T>(val));
+    }
+
     void accept(IRVisitor &visitor) override;
 
     auto getBFVisitor() const {

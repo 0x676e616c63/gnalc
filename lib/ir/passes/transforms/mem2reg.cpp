@@ -200,7 +200,7 @@ void PromotePass::rename(Function &f) {
                                 else {
                                     // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
                                     Logger::logWarning("[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
-                                    incoming_values[{alloca, b}] = f.getConstantPool().getConst(0);
+                                    incoming_values[{alloca, b}] = f.getConst(0);
                                     break;
                                 }
                             } else {
@@ -240,7 +240,7 @@ void PromotePass::rename(Function &f) {
                             else {
                                 // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
                                 Logger::logWarning("[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
-                                incoming_values[{alloca, b}] = f.getConstantPool().getConst(0);
+                                incoming_values[{alloca, b}] = f.getConst(0);
                                 break;
                             }
                         } else {

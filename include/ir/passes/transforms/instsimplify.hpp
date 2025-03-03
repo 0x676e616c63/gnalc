@@ -9,7 +9,8 @@ class InstSimplifyPass : public PM::PassInfo<InstSimplifyPass> {
 public:
     PM::PreservedAnalyses run(Function &function, FAM &manager);
 private:
-    int name_cnt=0;
+    size_t name_cnt = 0;
+    std::string getTmp();
 };
 
 } // namespace IR

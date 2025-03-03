@@ -14,23 +14,23 @@
 
 using namespace PatternMatch;
 namespace IR::M {
-inline auto value() { return ClassMatch<Value>{}; }
+inline auto Val() { return ClassMatch<Value>{}; }
 
-inline auto val_capture(Value *&v) {
+inline auto VBind(Value *&v) {
     return ClassMatchBind<Value, Value *>{v};
 }
 
-inline auto val_capture(std::shared_ptr<Value> &v) {
+inline auto VBind(std::shared_ptr<Value> &v) {
     return ClassMatchBind<Value, std::shared_ptr<Value>>{v};
 }
 
-inline auto inst() { return ClassMatch<Instruction>{}; }
+inline auto Inst() { return ClassMatch<Instruction>{}; }
 
-inline auto inst_capture(Instruction *&v) {
+inline auto IBind(Instruction *&v) {
     return ClassMatchBind<Instruction, Instruction *>{v};
 }
 
-inline auto inst_capture(std::shared_ptr<Instruction> &v) {
+inline auto IBind(std::shared_ptr<Instruction> &v) {
     return ClassMatchBind<Instruction, std::shared_ptr<Instruction>>{v};
 }
 
@@ -47,15 +47,15 @@ template <typename SubPattern> struct OneUseMatch {
 };
 
 template <typename T>
-auto one_use(const T& sub_pattern) {
+auto OneUse(const T& sub_pattern) {
     return OneUseMatch(sub_pattern);
 }
 
-inline auto val_i1() { return ClassMatch<ConstantI1>{}; }
-inline auto val_i8() { return ClassMatch<ConstantI8>{}; }
-inline auto val_i32() { return ClassMatch<ConstantInt>{}; }
-inline auto val_f32() { return ClassMatch<ConstantFloat>{}; }
-inline auto val_const() {
+inline auto I1() { return ClassMatch<ConstantI1>{}; }
+inline auto I8() { return ClassMatch<ConstantI8>{}; }
+inline auto I32() { return ClassMatch<ConstantInt>{}; }
+inline auto F32() { return ClassMatch<ConstantFloat>{}; }
+inline auto Const() {
     return ClassesMatch<ConstantI1, ConstantI8, ConstantInt, ConstantFloat>{};
 }
 
@@ -67,42 +67,65 @@ struct ConstantProj {
     }
 };
 
-inline auto val_capture_i1(bool &a) {
+inline auto I1Bind(bool &a) {
     return ClassMatchBind<ConstantI1, bool, ConstantProj<bool>>{a};
 }
 
-inline auto val_capture_i8(char &a) {
+inline auto I1Bind(char &a) {
     return ClassMatchBind<ConstantI8, char, ConstantProj<char>>{a};
 }
 
-inline auto val_capture_i32(int &a) {
+inline auto I32Bind(int &a) {
     return ClassMatchBind<ConstantInt, int, ConstantProj<int>>{a};
 }
 
-inline auto val_capture_f32(float &a) {
+inline auto F32Bind(float &a) {
     return ClassMatchBind<ConstantFloat, float, ConstantProj<float>>{a};
 }
 
-inline auto val_is_i1(bool a) {
-    return ClassMatchIf<ConstantI1>{[a](const ConstantI1 &b) {
+// Note that the following 'Is' must take a reference as paramater
+// and transfer that reference to the predicate.
+// Imagine something like
+//
+//   match(inst, M::Sub(M::VBind(x), M::Is(x))
+//
+// The evaluation order in C++ is undefined, if the `M::Is` is invoked first,
+// the value in the predicate is the one before VBind, which is invalid.
+// However, passing a reference can avoid the problem.
+// Because in InstMatch, we match M::VBind first, and then M::Is.
+// When `M::Is`'s predicate is invoked, the desired value has already been binded.
+inline auto Is(const Value*& v) {
+    return ClassMatchIf<Value>{[&v](const Value &b) {
+        return v == &b;
+    }};
+}
+
+inline auto Is(const std::shared_ptr<Value> &v) {
+    return ClassMatchIf<Value>{[&v](const Value &b) {
+        return v.get() == &b;
+    }};
+}
+
+inline auto Is(const bool& a) {
+    return ClassMatchIf<ConstantI1>{[&a](const ConstantI1 &b) {
         return a == b.getVal();
     }};
 }
 
-inline auto val_is_i8(char a) {
-    return ClassMatchIf<ConstantI8>{[a](const ConstantI8 &b) {
+inline auto Is(const char& a) {
+    return ClassMatchIf<ConstantI8>{[&a](const ConstantI8 &b) {
         return a == b.getVal();
     }};
 }
 
-inline auto val_is_i32(int a) {
-    return ClassMatchIf<ConstantInt>{[a](const ConstantInt &b) {
+inline auto Is(const int& a) {
+    return ClassMatchIf<ConstantInt>{[&a](const ConstantInt &b) {
         return a == b.getVal();
     }};
 }
 
-inline auto val_is_f32(float a) {
-    return ClassMatchIf<ConstantFloat>{[a](const ConstantFloat &b) {
+inline auto Is(const float& a) {
+    return ClassMatchIf<ConstantFloat>{[&a](const ConstantFloat &b) {
         return a == b.getVal();
     }};
 }
@@ -133,26 +156,6 @@ struct SharedPtrValueProj {
     }
 };
 
-template <size_t NumOperands>
-auto same_operands(const std::shared_ptr<Value> &which = nullptr) {
-    return IdenticalOperandInstMatch<IRInstInfo, NumOperands>{which};
-}
-
-template <size_t NumOperands>
-auto same_operands(const Value *which) {
-    return IdenticalOperandInstMatch<IRInstInfo, NumOperands, SharedPtrValueProj>{which};
-}
-
-template <OP opcode, size_t NumOperands>
-auto same_operands(const std::shared_ptr<Value> &which = nullptr) {
-    return IdenticalOperandInstMatchWithOp<IRInstInfo, opcode, NumOperands>{which};
-}
-
-template <OP opcode, size_t NumOperands>
-auto same_operands(const Value *which) {
-    return IdenticalOperandInstMatchWithOp<IRInstInfo, opcode, NumOperands, SharedPtrValueProj>{which};
-}
-
 // Match Inst and Operand
 #define MAKE_INST_MATCH2(pattern_name, opcode, num0, num1)                                                   \
     template <typename... OperandPatterns>                                                                   \
@@ -170,31 +173,31 @@ auto same_operands(const Value *which) {
         return InstMatch<IRInstInfo, OP::opcode, OperandPatterns...>(std::forward<OperandPatterns>(ops)...); \
     }
 
-MAKE_INST_MATCH2(inst_ret, RET, 0, 1)
-MAKE_INST_MATCH2(inst_br, BR, 1, 2)
-MAKE_INST_MATCH(inst_fneg, FNEG, 1)
-MAKE_INST_MATCH(inst_add, ADD, 2)
-MAKE_INST_MATCH(inst_fadd, FADD, 2)
-MAKE_INST_MATCH(inst_sub, SUB, 2)
-MAKE_INST_MATCH(inst_fsub, FSUB, 2)
-MAKE_INST_MATCH(inst_mul, MUL, 2)
-MAKE_INST_MATCH(inst_fmul, FMUL, 2)
-MAKE_INST_MATCH(inst_div, DIV, 2)
-MAKE_INST_MATCH(inst_fdiv, FDIV, 2)
-MAKE_INST_MATCH(inst_rem, REM, 2)
-MAKE_INST_MATCH(inst_frem, FREM, 2)
-MAKE_INST_MATCH(inst_alloca, ALLOCA, 0)
-MAKE_INST_MATCH(inst_load, LOAD, 2)
-MAKE_INST_MATCH(inst_store, STORE, 2)
-MAKE_INST_MATCH_ANY(inst_gep, GEP)
-MAKE_INST_MATCH(inst_fptosi, FPTOSI, 1)
-MAKE_INST_MATCH(inst_sitosf, SITOFP, 1)
-MAKE_INST_MATCH(inst_zext, ZEXT, 1)
-MAKE_INST_MATCH(inst_bitcast, BITCAST, 1)
-MAKE_INST_MATCH(inst_icmp, ICMP, 2)
-MAKE_INST_MATCH(inst_fcmp, FCMP, 2)
-MAKE_INST_MATCH_ANY(inst_phi, PHI)
-MAKE_INST_MATCH_ANY(inst_call, CALL)
+MAKE_INST_MATCH2(Ret, RET, 0, 1)
+MAKE_INST_MATCH2(Br, BR, 1, 2)
+MAKE_INST_MATCH(Fneg, FNEG, 1)
+MAKE_INST_MATCH(Add, ADD, 2)
+MAKE_INST_MATCH(Fadd, FADD, 2)
+MAKE_INST_MATCH(Sub, SUB, 2)
+MAKE_INST_MATCH(Fsub, FSUB, 2)
+MAKE_INST_MATCH(Mul, MUL, 2)
+MAKE_INST_MATCH(Fmul, FMUL, 2)
+MAKE_INST_MATCH(Div, DIV, 2)
+MAKE_INST_MATCH(Fdiv, FDIV, 2)
+MAKE_INST_MATCH(Rem, REM, 2)
+MAKE_INST_MATCH(Frem, FREM, 2)
+MAKE_INST_MATCH(Alloca, ALLOCA, 0)
+MAKE_INST_MATCH(Load, LOAD, 2)
+MAKE_INST_MATCH(Store, STORE, 2)
+MAKE_INST_MATCH_ANY(Gep, GEP)
+MAKE_INST_MATCH(Fptosi, FPTOSI, 1)
+MAKE_INST_MATCH(Sitofp, SITOFP, 1)
+MAKE_INST_MATCH(Zext, ZEXT, 1)
+MAKE_INST_MATCH(Bitcast, BITCAST, 1)
+MAKE_INST_MATCH(Icmp, ICMP, 2)
+MAKE_INST_MATCH(Fcmp, FCMP, 2)
+MAKE_INST_MATCH_ANY(Phi, PHI)
+MAKE_INST_MATCH_ANY(Call, CALL)
 
 #undef MAKE_INST_MATCH
 #undef MAKE_INST_MATCH2

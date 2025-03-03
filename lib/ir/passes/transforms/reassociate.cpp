@@ -41,7 +41,7 @@ std::shared_ptr<BinaryInst> ReassociatePass::neg2mul(const std::shared_ptr<Instr
     auto binary = std::dynamic_pointer_cast<BinaryInst>(neg);
     Err::gassert(binary && isIntBinaryNeg(binary));
     auto result = std::make_shared<BinaryInst>("%reass.n2m" + std::to_string(name_cnt++),
-    OP::MUL, binary->getRHS(), func->getConstantPool().getConst(-1));
+    OP::MUL, binary->getRHS(), func->getConst(-1));
     result->getParent()->addInst(neg->getIndex(), result);
     neg->replaceSelf(result);
     optModified = true;
@@ -200,7 +200,7 @@ void ReassociatePass::rewriteExpr(
         else {
             // There is no node left available, and we've made an unwise choice.
             // Just get one from air.
-            auto zero = func->getConstantPool().getConst(0);
+            auto zero = func->getConst(0);
             auto dummy = std::make_shared<BinaryInst>("%reass.oops" + std::to_string(name_cnt++),
                 opcode, zero, zero);
             root->getParent()->addInst(root->getIndex(), dummy);
@@ -273,7 +273,7 @@ std::shared_ptr<Value> ReassociatePass::removeFactor
 
     if (needsNegate) {
         auto neg = std::make_shared<BinaryInst>("%reass.neg" + std::to_string(name_cnt++),
-                                                OP::SUB, func->getConstantPool().getConst(0), ret);
+                                                OP::SUB, func->getConst(0), ret);
         binaryInst->getParent()->addInst(binaryInst->getIndex(), neg);
     }
 
@@ -297,7 +297,7 @@ std::shared_ptr<Value> ReassociatePass::optAdd(
 
             auto mul = std::make_shared<BinaryInst>("%reass.a2m" + std::to_string(name_cnt++),
                                    OP::MUL, curr,
-                                   func->getConstantPool().getConst(repeatedTimes));
+                                   func->getConst(repeatedTimes));
 
             root->getParent()->addInst(root->getIndex(), mul);
             redoSet.insert(mul);
