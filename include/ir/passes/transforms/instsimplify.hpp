@@ -10,7 +10,7 @@ public:
     PM::PreservedAnalyses run(Function &function, FAM &manager);
 private:
     size_t name_cnt = 0;
-    std::string getTmp();
+    std::string getTmpName();
 };
 
 } // namespace IR
