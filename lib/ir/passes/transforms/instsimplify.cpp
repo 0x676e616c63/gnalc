@@ -9,12 +9,12 @@
 using namespace PatternMatch;
 
 namespace IR {
-
-
 PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
     bool instsimplify_inst_modified = false;
+
+    // First simplify basic instruction patterns without adding any instruction
     for (const auto &bb : function) {
-        foldPHI(bb);
+        foldPHI(bb, preserve_lcssa);
         for (const auto &inst : *bb) {
             // Fold Constant
             auto fold = foldConstant(function.getConstantPool(), inst);
@@ -22,7 +22,6 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
                 inst->replaceSelf(fold);
                 continue;
             }
-            // Peephole
             std::shared_ptr<Value> x;
             // x + 0 -> x
             // 0 + x -> x
@@ -32,11 +31,14 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             // 1 * x -> x
             // x * 1.0f -> x
             // 1.0f * x -> x
-            if (match(inst, M::Add(M::VBind(x), M::Is(0))) || match(inst, M::Add(M::Is(0), M::VBind(x))) ||
-                match(inst, M::Sub(M::VBind(x), M::Is(0))) || match(inst, M::Div(M::VBind(x), M::Is(1))) || match(
-                    inst, M::Mul(M::VBind(x), M::Is(1))) ||
-                match(inst, M::Mul(M::Is(1), M::VBind(x))) || match(inst, M::Fmul(M::VBind(x), M::Is(1.0f))) || match(
-                    inst, M::Fmul(M::Is(1.0f), M::VBind(x)))) {
+            if (match(inst, M::Add(M::VBind(x), M::Is(0))) ||
+                match(inst, M::Add(M::Is(0), M::VBind(x))) ||
+                match(inst, M::Sub(M::VBind(x), M::Is(0))) ||
+                match(inst, M::Div(M::VBind(x), M::Is(1))) ||
+                match(inst, M::Mul(M::VBind(x), M::Is(1))) ||
+                match(inst, M::Mul(M::Is(1), M::VBind(x))) ||
+                match(inst, M::Fmul(M::VBind(x), M::Is(1.0f))) ||
+                match(inst, M::Fmul(M::Is(1.0f), M::VBind(x)))) {
                 inst->replaceSelf(x);
                 instsimplify_inst_modified = true;
             }
@@ -53,9 +55,11 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             // 0 / x = 0
             // 0 % x = 0
             // x % 1 = 0
-            else if (match(inst, M::Mul(M::Val(), M::Is(0))) || match(inst, M::Mul(M::Is(0), M::Val())) ||
-                     match(inst, M::Div(M::Is(0), M::Val())) || match(inst, M::Rem(M::Is(0), M::Val())) ||
-                     match(inst, M::Rem(M::VBind(x), M::Is(1)))) {
+            else if (match(inst, M::Mul(M::Val(), M::Is(0))) ||
+                     match(inst, M::Mul(M::Is(0), M::Val())) ||
+                     match(inst, M::Div(M::Is(0), M::Val())) ||
+                     match(inst, M::Rem(M::Is(0), M::Val())) ||
+                     match(inst, M::Rem(M::Val(), M::Is(1)))) {
                 inst->replaceSelf(function.getConst(0));
                 instsimplify_inst_modified = true;
             }
@@ -101,11 +105,13 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
                     break;
                 }
             }
-            // To be continued
         }
     }
 
+    // Then combine more complex instruction patterns
     std::vector<std::shared_ptr<Instruction> > worklist;
+
+    // Take a reverse post order traversal of the CFG to handle sub expressions first.
     auto rpodfv = function.getDFVisitor<Util::DFVOrder::ReversePostOrder>();
     for (const auto &bb : rpodfv) {
         for (const auto &inst : *bb) {
@@ -131,9 +137,8 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         }
         // x % y + ((x / y) % z) * y -> x % (y * z)
         else if (match(inst, M::Add(M::Rem(M::VBind(x), M::VBind(y)), // x % y +
-                                    M::Mul(M::Rem(M::Div(M::Is(x), M::Is(y)), M::VBind(z)),
-                                           M::Is(y))))) {
-            // ((x / y) % z) * y
+                                    M::Mul(M::Rem(M::Div(M::Is(x), M::Is(y)), M::VBind(z)), // ((x / y) % z)
+                                           M::Is(y))))) { // * y
             auto mul = std::make_shared<BinaryInst>(getTmpName(), OP::MUL, y, z);
             auto rem = std::make_shared<BinaryInst>(getTmpName(), OP::REM, x, mul);
             inst->replaceSelf(rem);
@@ -307,14 +312,16 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         }
 
         // x * -1 or -1 * x -> sub 0 x
-        else if (match(inst, M::Mul(M::VBind(x), M::Is(-1))) || match(inst, M::Mul(M::Is(-1), M::VBind(x)))) {
+        else if (match(inst, M::Mul(M::VBind(x), M::Is(-1))) ||
+                 match(inst, M::Mul(M::Is(-1), M::VBind(x)))) {
             auto sub = std::make_shared<BinaryInst>(getTmpName(), OP::SUB, function.getConst(0), x);
             inst->replaceSelf(sub);
             inst->getParent()->addInst(inst->getIndex(), sub);
             instsimplify_inst_modified = true;
         }
         // float: x * -1.0f or -1.0f * x -> fneg x
-        else if (match(inst, M::Fmul(M::VBind(x), M::Is(-1.0f))) || match(inst, M::Fmul(M::Is(-1.0f), M::VBind(x)))) {
+        else if (match(inst, M::Fmul(M::VBind(x), M::Is(-1.0f))) ||
+                 match(inst, M::Fmul(M::Is(-1.0f), M::VBind(x)))) {
             auto fneg = std::make_shared<FNEGInst>(getTmpName(), x);
             inst->replaceSelf(fneg);
             inst->getParent()->addInst(inst->getIndex(), fneg);
@@ -324,10 +331,10 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         // -x / -y -> x / y
         // float: -x * -y -> x * y
         //        -x / -y -> x / y
-        else if (match(inst, M::Mul(M::Sub(M::Is(0), M::VBind(x)), M::Sub(M::Is(0), M::VBind(y)))) || match(
-                     inst, M::Div(M::Sub(M::Is(0), M::VBind(x)), M::Sub(M::Is(0), M::VBind(y)))) ||
-                 match(inst, M::Fmul(M::Fneg(M::VBind(x)), M::Fneg(M::VBind(y)))) || match(
-                     inst, M::Fdiv(M::Fneg(M::VBind(x)), M::Fneg(M::VBind(y))))) {
+        else if (match(inst, M::Mul(M::Sub(M::Is(0), M::VBind(x)), M::Sub(M::Is(0), M::VBind(y)))) ||
+                 match(inst, M::Div(M::Sub(M::Is(0), M::VBind(x)), M::Sub(M::Is(0), M::VBind(y)))) ||
+                 match(inst, M::Fmul(M::Fneg(M::VBind(x)), M::Fneg(M::VBind(y)))) ||
+                 match(inst, M::Fdiv(M::Fneg(M::VBind(x)), M::Fneg(M::VBind(y))))) {
             auto binary = std::make_shared<BinaryInst>(getTmpName(), inst->getOpcode(), x, y);
             inst->replaceSelf(binary);
             inst->getParent()->addInst(inst->getIndex(), binary);
@@ -354,6 +361,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             inst->getParent()->addInst(inst->getIndex(), add);
             instsimplify_inst_modified = true;
         }
+        // Since integer division truncates towards zero, this transformation is valid.
         // (x - (x % y)) / y -> x / y
         else if (match(inst, M::Div(M::Sub(M::VBind(x), M::Rem(M::Is(x), M::VBind(y))), M::Is(y)))) {
             auto div = std::make_shared<BinaryInst>(getTmpName(), OP::DIV, x, y);
@@ -376,6 +384,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
     return PM::PreservedAnalyses::all();
 }
 
+// TODO: more meaningful names
 std::string InstSimplifyPass::getTmpName() {
     return "%instsim" + std::to_string(name_cnt++);
 }

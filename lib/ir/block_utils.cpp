@@ -133,11 +133,13 @@ void moveBlocks(FunctionBBIter beg, FunctionBBIter end,
     moveBlocks(beg, end, new_func, new_func->end());
 }
 
-void foldPHI(const std::shared_ptr<BasicBlock> &bb) {
+void foldPHI(const std::shared_ptr<BasicBlock> &bb, bool preserve_lcssa) {
     std::set<std::shared_ptr<Instruction>> dead_phis;
     for (const auto& phi : bb->getPhiInsts()) {
         auto phi_opers = phi->getPhiOpers();
         Err::gassert(!phi_opers.empty());
+        if (preserve_lcssa && phi_opers.size() == 1)
+            continue;
         std::shared_ptr<Value> common_value = phi_opers[0].value;
         for (const auto& [v, b] : phi_opers) {
             if (common_value != v) {

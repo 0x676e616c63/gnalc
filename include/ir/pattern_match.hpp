@@ -83,17 +83,20 @@ inline auto F32Bind(float &a) {
     return ClassMatchBind<ConstantFloat, float, ConstantProj<float>>{a};
 }
 
-// Note that the following 'Is' must take a reference as paramater
-// and transfer that reference to the predicate.
 // Imagine something like
 //
 //   match(inst, M::Sub(M::VBind(x), M::Is(x))
 //
-// The evaluation order in C++ is undefined, if the `M::Is` is invoked first,
-// the value in the predicate is the one before VBind, which is invalid.
-// However, passing a reference can avoid the problem.
-// Because in InstMatch, we match M::VBind first, and then M::Is.
-// When `M::Is`'s predicate is invoked, the desired value has already been binded.
+// Though the evaluation order in C++ is undefined, and the `M::Is` can be invoked first,
+// that doesn't matter. Because the Binding (`M::VBind`) and predicate (`M::Is`) expressions
+// are evaluated lazily. The actual pattern matching occurs when `match()` is invoked,
+// not during expression construction.
+//
+// Also, in `InstMatch`, parameters are matched in the order they appear in the `match()` expression,
+// which guarantees `M::VBind` operations execute before dependent `M::Is` checks.
+// This, however, requires the `M::Is` to take a reference as its parameter
+// and transfer that reference to the predicate. Thus, when `M::Is`'s predicate is invoked
+// by `InstMatch::match`, the desired value has already been bound by `M::VBind`.
 inline auto Is(const Value*& v) {
     return ClassMatchIf<Value>{[&v](const Value &b) {
         return v == &b;

@@ -130,8 +130,9 @@ struct InstMatch {
 
     template <size_t curr, size_t end>
     std::enable_if_t<curr != end, bool> matchOperands(const BaseInstType& candidate) const {
-        // Note that we must match curr first, and then curr + 1
-        // IR::M::Is relies on this behavior.
+        // Note that we must match `curr` first, and then `curr + 1`
+        // In other words, the order of matching should be from left to right.
+        // IR::M::Is relies on this behavior, see comments in `ir/pattern_match.hpp`
         return matchOperands<curr, curr>(candidate) && matchOperands<curr + 1, end>(candidate);
     }
 
