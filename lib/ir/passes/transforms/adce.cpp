@@ -250,7 +250,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     modified = true;
                 }
                 // If curr is deleted, we can't combine them. So it's `else if` rather than `if`
-                else if (dest->getPreBB().size() == 1) {
+                else if (dest->getNumPreBBs() == 1) {
                     // 3. Combine Blocks
                     // curr ends in a jump to dest and dest has only one predecessor
                     //

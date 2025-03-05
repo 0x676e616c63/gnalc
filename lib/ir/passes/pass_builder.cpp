@@ -103,11 +103,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FUNCTION_TRANSFORM(loadelim, LoadEliminationPass())
     FUNCTION_TRANSFORM(dce, DCEPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
-    fpm.addPass(NameNormalizePass(true));
-    // fpm.addPass(PrintFunctionPass(std::cout));
-    // fpm.addPass(PrintLoopPass(std::cout));
     FUNCTION_TRANSFORM(loop_simplify, LoopSimplifyPass())
-    // fpm.addPass(PrintLoopPass(std::cout));
     FUNCTION_TRANSFORM(loop_rotate, LoopRotatePass())
     FUNCTION_TRANSFORM(lcssa, LCSSAPass())
     FUNCTION_TRANSFORM(loop_unroll, LoopUnrollPass())

@@ -156,4 +156,48 @@ void foldPHI(const std::shared_ptr<BasicBlock> &bb, bool preserve_lcssa) {
         return dead_phis.find(inst) != dead_phis.end();
     }, BasicBlock::DEL_MODE::PHI);
 }
+
+std::shared_ptr<BasicBlock> breakCriticalEdge(
+    const std::shared_ptr<BasicBlock>& pred, const std::shared_ptr<BasicBlock>& succ) {
+    {
+        auto pred_succs = pred->getNextBB();
+        bool ok = false;
+        for (const auto& s : pred_succs) {
+            if (s == succ) {
+                ok = true;
+                break;
+            }
+        }
+        Err::gassert(ok, "There is no edge between '"
+            + pred->getName() + "' and '" + succ->getName() + "'.");
+    }
+
+    if (pred->getNumNextBBs() == 1 || succ->getNumPreBBs() == 1)
+        return nullptr;
+
+    // Create a new block
+    auto new_block = std::make_shared<BasicBlock>(
+        pred->getName() + "_bce_" + succ->getName());
+    pred->getParent()->addBlock(succ->getIter(), new_block);
+
+    // CFG
+    unlinkBB(pred, succ);
+    linkBB(pred, new_block);
+    linkBB(new_block, succ);
+
+    // BRInst
+    auto br = pred->getBRInst();
+    Err::gassert(br != nullptr);
+    bool ok = br->replaceOperand(succ, new_block);
+    Err::gassert(ok);
+    new_block->addInst(std::make_shared<BRInst>(succ));
+
+    // PHI
+    for (const auto& phi : succ->getPhiInsts()) {
+        ok = phi->replaceOperand(pred, new_block);
+        Err::gassert(ok);
+    }
+
+    return new_block;
+}
 } // namespace IR

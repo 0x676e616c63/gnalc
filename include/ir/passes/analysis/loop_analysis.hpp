@@ -15,7 +15,7 @@ class LoopAnalysis;
 class Loop : public std::enable_shared_from_this<Loop> {
     friend class LoopAnalysis;
     std::vector<std::shared_ptr<Loop>> sub_loops;
-    std::vector<BasicBlock*> blocks; // First is the header
+    std::list<BasicBlock*> blocks; // First is the header
     std::set<const BasicBlock*> blockset;
     std::weak_ptr<Loop> parent;
 
@@ -85,16 +85,17 @@ public:
 
     const std::vector<std::shared_ptr<Loop>>& getSubLoops() const;
 
-    const std::vector<BasicBlock*>& getBlocks() const;
+    const std::list<BasicBlock*>& getBlocks() const;
 
     size_t getLoopDepth() const;
 
     bool hasDedicatedExits() const;
-    bool isSimplifiedForm() const;
+    bool isSimplifyForm() const;
     bool isRotatedForm() const;
 
     bool delBlock(const BasicBlock* bb);
     void addBlock(BasicBlock* bb);
+    void moveToHeader(const BasicBlock* bb);
 };
 
 class LoopInfo {

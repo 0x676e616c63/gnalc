@@ -1,5 +1,6 @@
 #include "../../../../include/ir/passes/transforms/break_critical_edges.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
+#include "../../../../include/ir/block_utils.hpp"
 
 #include <vector>
 
@@ -12,34 +13,8 @@ PM::PreservedAnalyses BreakCriticalEdgesPass::run(Function &function, FAM &manag
         auto nextbbs = curr->getNextBB();
         if (nextbbs.size() <= 1) continue;
         for (const auto& succ : nextbbs) {
-            if (succ->getPreBB().size() > 1) {
-                bce_cfg_modified = true;
-                // curr <-> succ
-                // curr <-> new block <-> succ
-
-                // Create a new block
-                auto new_block = std::make_shared<BasicBlock>(
-                    curr->getName() + "_no_critical_edge_" + succ->getName());
-                function.addBlock(succ->getIter(), new_block);
-
-                // CFG
-                unlinkBB(curr, succ);
-                linkBB(curr, new_block);
-                linkBB(new_block, succ);
-
-                // BRInst
-                auto br = curr->getBRInst();
-                Err::gassert(br != nullptr);
-                bool ok = br->replaceOperand(succ, new_block);
-                Err::gassert(ok);
-                new_block->addInst(std::make_shared<BRInst>(succ));
-
-                // PHI
-                for (const auto& phi : succ->getPhiInsts()) {
-                    ok = phi->replaceOperand(curr, new_block);
-                    Err::gassert(ok);
-                }
-            }
+            auto newbb = breakCriticalEdge(curr, succ);
+            bce_cfg_modified |= (newbb != nullptr);
         }
     }
 

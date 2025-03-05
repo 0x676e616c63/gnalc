@@ -261,6 +261,23 @@ public:
         return static_cast<ResultModel &>(*it->second->second).result;
     }
 
+    template <typename PassT> typename PassT::Result &getFreshResult(UnitT &unit) {
+        const auto pass_id = PassT::ID();
+        Err::gassert(passes.count(pass_id), "No such pass registered.");
+
+        auto [it, inserted] = index.insert(std::make_pair(
+            std::make_pair(pass_id, &unit), unit_res_t::iterator()));
+
+        auto &pass = passes.find(pass_id)->second;
+        auto &res = results[&unit];
+        res.emplace_back(pass_id, pass->run(unit, *this));
+        it->second = std::prev(res.end());
+        Logger::logInfo("[AM]: Running '", pass->name(), "' on '", unit.getName(), "'");
+
+        using ResultModel = AnalysisResultModel<typename PassT::Result>;
+        return static_cast<ResultModel &>(*it->second->second).result;
+    }
+
     template <typename PassGetter> bool registerPass(PassGetter &&pass_getter) {
         using PassT = decltype(pass_getter());
         using PassModelT = AnalysisPassModel<UnitT, PassT>;

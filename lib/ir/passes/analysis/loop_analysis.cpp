@@ -37,7 +37,7 @@ bool Loop::contains(const BasicBlock *bb) const {
 }
 
 BasicBlock *Loop::getHeader() const {
-    return blocks[0];
+    return blocks.front();
 }
 
 BasicBlock *Loop::getPreHeader() const {
@@ -110,7 +110,7 @@ std::shared_ptr<Loop> Loop::getOutermostLoop() {
 
 const std::vector<std::shared_ptr<Loop>> &Loop::getSubLoops() const { return sub_loops; }
 
-const std::vector<BasicBlock *> &Loop::getBlocks() const { return blocks; }
+const std::list<BasicBlock *> &Loop::getBlocks() const { return blocks; }
 
 size_t Loop::getLoopDepth() const {
     size_t ret = 0;
@@ -134,7 +134,7 @@ bool Loop::hasDedicatedExits() const {
     });
 }
 
-bool Loop::isSimplifiedForm() const {
+bool Loop::isSimplifyForm() const {
     return getPreHeader() && getLatch() && hasDedicatedExits();
 }
 
@@ -155,6 +155,16 @@ bool Loop::delBlock(const BasicBlock *bb) {
 void Loop::addBlock(BasicBlock *bb) {
     blocks.emplace_back(bb);
     blockset.insert(bb);
+}
+
+void Loop::moveToHeader(const BasicBlock *bb) {
+    Err::gassert(contains(bb));
+    auto it = std::find(blocks.begin(), blocks.end(), bb);
+    Err::gassert(it != blocks.end());
+    if (it != blocks.begin()) {
+        blocks.insert(blocks.begin(), *it);
+        blocks.erase(it);
+    }
 }
 
 std::shared_ptr<Loop> LoopInfo::getLoopFor(const BasicBlock *bb) const {

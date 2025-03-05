@@ -55,6 +55,11 @@ void moveBlocks(FunctionBBIter beg, FunctionBBIter end,
 
 // Replace single entry or same value phi with its operand
 void foldPHI(const std::shared_ptr<BasicBlock> &bb, bool preserve_lcssa = false);
+
+// Break critical edges,
+// returns the generated basic block if there is a critical edge, or nullptr for not.
+std::shared_ptr<BasicBlock> breakCriticalEdge(
+    const std::shared_ptr<BasicBlock>& pred, const std::shared_ptr<BasicBlock>& succ);
 } // namespace IR
 
 #endif

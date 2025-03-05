@@ -74,6 +74,9 @@ public:
     std::list<std::shared_ptr<BasicBlock>> getPreBB() const;
     std::list<std::shared_ptr<BasicBlock>> getNextBB() const;
 
+    size_t getNumPreBBs() const;
+    size_t getNumNextBBs() const;
+
     // usually we can use range-based for instead of these
     const std::list<std::shared_ptr<Instruction>> &getInsts() const;
     const std::list<std::shared_ptr<PHIInst>> &getPhiInsts() const;

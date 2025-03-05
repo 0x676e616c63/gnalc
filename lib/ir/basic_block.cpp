@@ -100,8 +100,13 @@ std::list<std::shared_ptr<BasicBlock>> BasicBlock::getPreBB() const {
     return WeaktoSharedList(pre_bb);
 }
 
-std::list<std::shared_ptr<BasicBlock>> BasicBlock::getNextBB() const {
-    return WeaktoSharedList(next_bb);
+std::list<std::shared_ptr<BasicBlock>> BasicBlock::getNextBB() const { return WeaktoSharedList(next_bb); }
+
+size_t BasicBlock::getNumPreBBs() const {
+    return pre_bb.size();
+}
+size_t BasicBlock::getNumNextBBs() const {
+    return next_bb.size();
 }
 
 const std::list<std::shared_ptr<Instruction>> &BasicBlock::getInsts() const {

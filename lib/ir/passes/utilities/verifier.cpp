@@ -48,14 +48,14 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                 }
 
                 auto oper_uselist = operand->getValue()->getRUseList();
-                bool found_curr_user = false;
+                bool found_curr_use = false;
                 for (const auto &weak_use : oper_uselist) {
-                    if (!weak_use.expired() && weak_use.lock()->getUser() == inst) {
-                        found_curr_user = true;
+                    if (!weak_use.expired() && weak_use.lock() == operand) {
+                        found_curr_use = true;
                         break;
                     }
                 }
-                if (!found_curr_user) {
+                if (!found_curr_use) {
                     Logger::logCritical(
                         "[VerifyPass]: Missing use in '",
                         inst->getName(), "''s operand '", operand->getValue()->getName(), "'.");
@@ -188,7 +188,8 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
     if (fatal_error_cnt == 0) {
         auto domtree = fam.getResult<DomTreeAnalysis>(function);
         for (const auto &bb : function) {
-            for (const auto &inst : *bb) {
+            auto all_insts = bb->getAllInsts();
+            for (const auto &inst : all_insts) {
                 auto uselist = inst->getUseList();
                 for (const auto &use : uselist) {
                     auto usee = std::dynamic_pointer_cast<Instruction>(use->getValue());
