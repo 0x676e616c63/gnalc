@@ -114,7 +114,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
     }
 
     // Then combine more complex instruction patterns
-    std::vector<std::shared_ptr<Instruction>> worklist;
+    std::vector<std::shared_ptr<Instruction> > worklist;
 
     // Take a reverse post order traversal of the CFG to handle sub expressions first.
     auto rpodfv = function.getDFVisitor<Util::DFVOrder::ReversePostOrder>();
@@ -140,7 +140,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             instsimplify_inst_modified = true;
         }
         // x % y + ((x / y) % z) * y -> x % (y * z)
-        else if (match(inst, M::Add(M::Rem(M::VBind(x), M::VBind(y)),                       // x % y +
+        else if (match(inst, M::Add(M::Rem(M::VBind(x), M::VBind(y)), // x % y +
                                     M::Mul(M::Rem(M::Div(M::Is(x), M::Is(y)), M::VBind(z)), // ((x / y) % z)
                                            M::Is(y))))) {
             // * y
@@ -541,64 +541,64 @@ bool InstSimplifyPass::foldGEP(const std::shared_ptr<PHIInst> &phi) {
     Logger::logDebug("[InstSimplify]: folded phi '", phi->getName(), "'.");
     return true;
 }
+
 bool InstSimplifyPass::canSafelySinkLoad(const std::shared_ptr<LOADInst> &load) {
-     for (const auto& inst:*load->getParent()) {
-         if (auto store=std::dynamic_pointer_cast<STOREInst>(inst)) {
-             if (store->getPtr()==load->getPtr())
-                 return false;
-         }
-     }
-    if (auto allocaInst=std::dynamic_pointer_cast<ALLOCAInst>(load->getPtr())) {
-        bool isAddressTaken=false;
-        for (const auto& use:allocaInst->getUseList()) {
-            if (auto loadInst=std::dynamic_pointer_cast<LOADInst>(use->getUser()))
+    for (const auto &inst : *load->getParent()) {
+        if (auto store = std::dynamic_pointer_cast<STOREInst>(inst)) {
+            if (store->getPtr() == load->getPtr())
+                return false;
+        }
+    }
+    if (auto allocaInst = std::dynamic_pointer_cast<ALLOCAInst>(load->getPtr())) {
+        bool isAddressTaken = false;
+        for (const auto &use : allocaInst->getUseList()) {
+            if (auto loadInst = std::dynamic_pointer_cast<LOADInst>(use->getUser()))
                 continue;
-            if (auto storeInst=std::dynamic_pointer_cast<STOREInst>(use->getUser())) {
-                if (storeInst->getPtr()==allocaInst)
+            if (auto storeInst = std::dynamic_pointer_cast<STOREInst>(use->getUser())) {
+                if (storeInst->getPtr() == allocaInst)
                     continue;
             }
-            isAddressTaken=true;
+            isAddressTaken = true;
             break;
         }
         if (!isAddressTaken)
             return false;
     }
-    if (auto gep=std::dynamic_pointer_cast<GEPInst>(load->getPtr())) {
+    if (auto gep = std::dynamic_pointer_cast<GEPInst>(load->getPtr())) {
         if (gep->isConstantOffset())
-        return false;
+            return false;
     }
     return true;
 }
+
 bool InstSimplifyPass::foldLoad(const std::shared_ptr<PHIInst> &phi) {
     auto phi_opers = phi->getPhiOpers();
-    auto temp=std::dynamic_pointer_cast<LOADInst>(phi_opers[0].value);
+    auto temp = std::dynamic_pointer_cast<LOADInst>(phi_opers[0].value);
 
     if (!temp)
         return false;
 
-    auto align=temp->getAlign();
+    auto align = temp->getAlign();
 
-
-    for (const auto & [val,bb]:phi_opers) {
-        auto loadInst=std::dynamic_pointer_cast<LOADInst>(val);
-        if (!loadInst||loadInst->getUseCount()!=1)
+    for (const auto &[val,bb] : phi_opers) {
+        auto loadInst = std::dynamic_pointer_cast<LOADInst>(val);
+        if (!loadInst || loadInst->getUseCount() != 1)
             return false;
         // if the value which is loaded could be modified between load and phi
         // we cann't sink load
-        if (loadInst->getParent()!=bb||!canSafelySinkLoad(loadInst))
+        if (loadInst->getParent() != bb || !canSafelySinkLoad(loadInst))
             return false;
-        align=std::min(align,loadInst->getAlign());
+        align = std::min(align, loadInst->getAlign());
     }
 
+    auto new_phi = std::make_shared<PHIInst>(getTmpName(), temp->getPtr()->getType());
 
-    auto new_phi=std::make_shared<PHIInst>(getTmpName(),temp->getPtr()->getType());
-
-    for (const auto & [val,bb]:phi_opers) {
-        auto loadInst=std::dynamic_pointer_cast<LOADInst>(val);
-        new_phi->addPhiOper(loadInst->getPtr(),bb);
+    for (const auto &[val,bb] : phi_opers) {
+        auto loadInst = std::dynamic_pointer_cast<LOADInst>(val);
+        new_phi->addPhiOper(loadInst->getPtr(), bb);
     }
 
-    auto new_load=std::make_shared<LOADInst>(getTmpName(),new_phi,align);
+    auto new_load = std::make_shared<LOADInst>(getTmpName(), new_phi, align);
 
     phi->replaceSelf(new_load);
     phi->getParent()->addPhiInst(new_phi);
