@@ -9,6 +9,7 @@
 #define GNALC_IR_PASSES_TRANSFORMS_INSTSIMPLIFY_HPP
 
 #include "../pass_manager.hpp"
+#include "../../instructions/memory.hpp"
 
 namespace IR {
 class InstSimplifyPass : public PM::PassInfo<InstSimplifyPass> {
@@ -21,7 +22,8 @@ private:
     std::string getTmpName();
     bool foldBinary(const std::shared_ptr<PHIInst>& phi);
     bool foldGEP(const std::shared_ptr<PHIInst>& phi);
-
+    bool foldLoad(const std::shared_ptr<PHIInst>& phi);
+    bool canSafelySinkLoad(const std::shared_ptr<LOADInst>& load);
 };
 
 } // namespace IR
