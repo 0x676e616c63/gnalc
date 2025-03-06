@@ -19,6 +19,9 @@ private:
     bool preserve_lcssa;
     size_t name_cnt = 0;
     std::string getTmpName();
+    bool foldBinary(const std::shared_ptr<PHIInst>& phi);
+    bool foldGEP(const std::shared_ptr<PHIInst>& phi);
+
 };
 
 } // namespace IR

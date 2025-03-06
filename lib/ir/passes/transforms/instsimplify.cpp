@@ -138,7 +138,8 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         // x % y + ((x / y) % z) * y -> x % (y * z)
         else if (match(inst, M::Add(M::Rem(M::VBind(x), M::VBind(y)), // x % y +
                                     M::Mul(M::Rem(M::Div(M::Is(x), M::Is(y)), M::VBind(z)), // ((x / y) % z)
-                                           M::Is(y))))) { // * y
+                                           M::Is(y))))) {
+            // * y
             auto mul = std::make_shared<BinaryInst>(getTmpName(), OP::MUL, y, z);
             auto rem = std::make_shared<BinaryInst>(getTmpName(), OP::REM, x, mul);
             inst->replaceSelf(rem);
@@ -368,7 +369,13 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             inst->replaceSelf(div);
             inst->getParent()->addInst(inst->getIndex(), div);
             instsimplify_inst_modified = true;
+        } else if (inst->getOpcode() == OP::PHI) {
+            auto phi = std::dynamic_pointer_cast<PHIInst>(inst);
+            instsimplify_inst_modified |= foldBinary(phi);
+            instsimplify_inst_modified |= foldGEP(phi);
+
         }
+
     }
 
     name_cnt = 0;
@@ -388,4 +395,138 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
 std::string InstSimplifyPass::getTmpName() {
     return "%instsim" + std::to_string(name_cnt++);
 }
+
+bool InstSimplifyPass::foldBinary(const std::shared_ptr<PHIInst> &phi) {
+    // fold Bin Or Cmp Into PHI
+    // Before:
+    // %phi = phi [add(%a, %b), %bb1], [add(%a, %c), %bb2]
+    // After:
+    // %phi1 = phi [%b, %bb1], [%c, %bb2]
+    // %new_add = add %a, %phi1
+    //TODO this is the binary version we still need icmp fcmp version
+    auto firstInst = std::dynamic_pointer_cast<BinaryInst>(phi->getPhiOpers().front().value);
+    if (!firstInst)
+        return false;
+
+    auto opcode = firstInst->getOpcode();
+    auto lhs = firstInst->getLHS();
+    auto rhs = firstInst->getRHS();
+    auto lhsType = lhs->getType();
+    auto rhsType = rhs->getType();
+
+    for (auto iter = std::next(phi->getPhiOpers().begin()); iter != phi->getPhiOpers().end(); ++iter) {
+        auto otherInst = std::dynamic_pointer_cast<BinaryInst>(iter->value);
+        if (!otherInst || otherInst->getOpcode() != opcode || otherInst->getUseCount() != 1 || otherInst->getLHS()->
+            getType() != lhsType || otherInst->getRHS()->getType() != rhsType) {
+            return false;
+        }
+        if (otherInst->getLHS() != lhs)
+            lhs = nullptr;
+        if (otherInst->getRHS() != rhs)
+            rhs = nullptr;
+
+        std::shared_ptr<PHIInst> newLHS = nullptr;
+        std::shared_ptr<PHIInst> newRHS = nullptr;
+
+        if (!lhs && !rhs)
+            return false;
+
+        if (!lhs) {
+            newLHS = std::make_shared<PHIInst>(getTmpName(), lhsType);
+            newLHS->addPhiOper(firstInst->getLHS(), phi->getPhiOpers().front().block);
+            phi->getParent()->addInstAfterPhi(newLHS);
+            lhs = newLHS;
+        }
+        if (!rhs) {
+            newRHS = std::make_shared<PHIInst>(getTmpName(), lhsType);
+            newRHS->addPhiOper(firstInst->getRHS(), phi->getPhiOpers().front().block);
+            phi->getParent()->addInstAfterPhi(newRHS);
+            rhs = newRHS;
+        }
+
+        if (newLHS || newRHS) {
+            for (auto iter1 = std::next(phi->getPhiOpers().begin()); iter1 != phi->getPhiOpers().end(); ++iter1) {
+                if (newLHS) {
+                    newLHS->addPhiOper(std::dynamic_pointer_cast<BinaryInst>(iter1->value)->getLHS(), iter1->block);
+                }
+                if (newRHS) {
+                    newRHS->addPhiOper(std::dynamic_pointer_cast<BinaryInst>(iter1->value)->getRHS(), iter1->block);
+                }
+            }
+        }
+
+        auto newInst = std::make_shared<BinaryInst>(getTmpName(), opcode, lhs, rhs);
+        phi->getParent()->addInstAfterPhi(newInst);
+        phi->replaceSelf(newInst);
+    }
+    return true;
+}
+
+bool InstSimplifyPass::foldGEP(const std::shared_ptr<PHIInst> &phi) {
+    auto firstInst = std::dynamic_pointer_cast<GEPInst>(phi->getPhiOpers().front().value);
+    // check for gep inst is all alloca inst
+    bool isAllocaInst = true;
+    // check for need new phi node
+    bool needNewPhi = false;
+
+    auto firstInstIdxes = std::vector<std::shared_ptr<
+        Value> >(firstInst->getIdxs().begin(), firstInst->getIdxs().end());
+
+    for (auto iter = std::next(phi->getPhiOpers().begin()); iter != phi->getPhiOpers().end(); ++iter) {
+
+        auto gep = std::dynamic_pointer_cast<GEPInst>(iter->value);
+        if (!gep || gep->getUseCount() != 1 || gep->getBaseType() != firstInst->getBaseType() || gep->getIdxs().size()
+            !=
+            firstInst->getIdxs().size()) {
+            return false;
+        }
+        if (isAllocaInst && (!std::dynamic_pointer_cast<ALLOCAInst>(gep->getPtr()) || gep->isConstantOffset())) {
+            isAllocaInst = false;
+        }
+        for (unsigned op = 0; op < firstInst->getIdxs().size(); ++op) {
+            if (firstInst->getIdxs()[op] == gep->getIdxs()[op])
+                continue;
+            if (firstInst->getIdxs()[op]->getVTrait() == ValueTrait::CONSTANT_LITERAL || gep->getIdxs()[op]->getVTrait()
+                == ValueTrait::CONSTANT_LITERAL)
+                return false;
+            if (firstInst->getIdxs()[op]->getType() != gep->getIdxs()[op]->getType())
+                return false;
+            if (needNewPhi)
+                return false;
+            firstInstIdxes[op] = nullptr;
+            needNewPhi = true;
+        }
+        if (isAllocaInst)
+            return false;
+
+        //create new phi node
+        bool hasCreatePhi = false;
+        std::vector<std::shared_ptr<PHIInst> > phis;
+        for (unsigned op = 0; op < firstInst->getIdxs().size(); ++op) {
+            auto newPhiInst = std::make_shared<PHIInst>(getTmpName(), firstInstIdxes[op]->getType());
+            newPhiInst->addPhiOper(firstInstIdxes[op], phi->getParent());
+            phis.emplace_back(newPhiInst);
+            firstInstIdxes[op] = newPhiInst;
+            phi->getParent()->addInstAfterPhi(newPhiInst);
+            hasCreatePhi = true;
+        }
+        if (hasCreatePhi) {
+            for (auto iter1 = std::next(phi->getPhiOpers().begin()); iter1 != phi->getPhiOpers().end(); ++iter1) {
+                auto gepInst = std::dynamic_pointer_cast<GEPInst>(iter1->value);
+                for (unsigned op = 0; op < phis.size(); ++op) {
+                    if (const auto &phiOp = phis[op]) {
+                        phiOp->addPhiOper(gepInst->getIdxs()[op], iter1->block);
+                    }
+                }
+            }
+        }
+    }
+    auto base = firstInstIdxes.front();
+    auto temp = std::vector<std::shared_ptr<Value> >(firstInstIdxes.begin() + 1, firstInstIdxes.end());
+    auto gepInst = std::make_shared<GEPInst>(getTmpName(), base, temp);
+    phi->replaceSelf(gepInst);
+    phi->getParent()->addInstAfterPhi(gepInst);
+    return true;
+}
+
 } // namespace IR
