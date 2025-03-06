@@ -34,6 +34,16 @@ inline auto IBind(std::shared_ptr<Instruction> &v) {
     return ClassMatchBind<Instruction, std::shared_ptr<Instruction>>{v};
 }
 
+inline auto Block() { return ClassMatch<BasicBlock>{}; }
+
+inline auto BBind(BasicBlock *&v) {
+    return ClassMatchBind<BasicBlock, BasicBlock *>{v};
+}
+
+inline auto BBind(std::shared_ptr<BasicBlock> &v) {
+    return ClassMatchBind<BasicBlock, std::shared_ptr<BasicBlock>>{v};
+}
+
 template <typename SubPattern> struct OneUseMatch {
     SubPattern sub_pattern;
 

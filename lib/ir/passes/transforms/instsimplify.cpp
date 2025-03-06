@@ -6,6 +6,11 @@
 #include "../../../../include/ir/passes/helpers/constant_fold.hpp"
 #include "../../../../include/ir/pattern_match.hpp"
 
+#include <algorithm>
+#include <vector>
+#include <string>
+#include <memory>
+
 using namespace PatternMatch;
 
 namespace IR {
@@ -109,7 +114,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
     }
 
     // Then combine more complex instruction patterns
-    std::vector<std::shared_ptr<Instruction> > worklist;
+    std::vector<std::shared_ptr<Instruction>> worklist;
 
     // Take a reverse post order traversal of the CFG to handle sub expressions first.
     auto rpodfv = function.getDFVisitor<Util::DFVOrder::ReversePostOrder>();
@@ -129,14 +134,13 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
 
         // (c1 - x) + c2 -> (c1 + c2) - x
         if (match(inst, M::Add(M::Sub(M::I32Bind(c1), M::VBind(x)), M::I32Bind(c2)))) {
-            auto sub = std::make_shared<BinaryInst>(getTmpName(), OP::SUB,
-                                                    function.getConst(c1 + c2), x);
+            auto sub = std::make_shared<BinaryInst>(getTmpName(), OP::SUB, function.getConst(c1 + c2), x);
             inst->replaceSelf(sub);
             inst->getParent()->addInst(inst->getIndex(), sub);
             instsimplify_inst_modified = true;
         }
         // x % y + ((x / y) % z) * y -> x % (y * z)
-        else if (match(inst, M::Add(M::Rem(M::VBind(x), M::VBind(y)), // x % y +
+        else if (match(inst, M::Add(M::Rem(M::VBind(x), M::VBind(y)),                       // x % y +
                                     M::Mul(M::Rem(M::Div(M::Is(x), M::Is(y)), M::VBind(z)), // ((x / y) % z)
                                            M::Is(y))))) {
             // * y
@@ -234,8 +238,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         //        -(c / x) -> -c / x
         else if (match(inst, M::Fneg(M::OneUse(M::Inst())))) {
             if (match(inst, M::Fneg(M::Fmul(M::VBind(x), M::F32Bind(fc1))))) {
-                auto fmul = std::make_shared<BinaryInst>(getTmpName(),
-                                                         OP::FMUL, x, function.getConst(-fc1));
+                auto fmul = std::make_shared<BinaryInst>(getTmpName(), OP::FMUL, x, function.getConst(-fc1));
                 inst->replaceSelf(fmul);
                 inst->getParent()->addInst(inst->getIndex(), fmul);
                 instsimplify_inst_modified = true;
@@ -373,9 +376,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             auto phi = std::dynamic_pointer_cast<PHIInst>(inst);
             instsimplify_inst_modified |= foldBinary(phi);
             instsimplify_inst_modified |= foldGEP(phi);
-
         }
-
     }
 
     name_cnt = 0;
@@ -396,136 +397,148 @@ std::string InstSimplifyPass::getTmpName() {
     return "%instsim" + std::to_string(name_cnt++);
 }
 
+// fold PHI of BinaryInst
+// Before:
+//   %phi = phi [add(%a, %b), %bb1], [add(%a, %c), %bb2]
+// After:
+//   %phi1 = phi [%b, %bb1], [%c, %bb2]
+//   %new_add = add %a, %phi1
 bool InstSimplifyPass::foldBinary(const std::shared_ptr<PHIInst> &phi) {
-    // fold Bin Or Cmp Into PHI
-    // Before:
-    // %phi = phi [add(%a, %b), %bb1], [add(%a, %c), %bb2]
-    // After:
-    // %phi1 = phi [%b, %bb1], [%c, %bb2]
-    // %new_add = add %a, %phi1
-    //TODO this is the binary version we still need icmp fcmp version
-    auto firstInst = std::dynamic_pointer_cast<BinaryInst>(phi->getPhiOpers().front().value);
-    if (!firstInst)
+    auto phi_opers = phi->getPhiOpers();
+
+    auto temp = std::dynamic_pointer_cast<BinaryInst>(phi_opers[0].value);
+    if (!temp)
+        return false;
+    OP common_op = temp->getOpcode();
+    auto common_lhs = temp->getLHS();
+    auto common_rhs = temp->getRHS();
+
+    for (const auto &[val, bb] : phi_opers) {
+        auto bin = std::dynamic_pointer_cast<BinaryInst>(val);
+        if (!bin || common_op != bin->getOpcode())
+            return false;
+
+        common_lhs = (common_lhs == bin->getLHS()) ? bin->getLHS() : nullptr;
+        common_rhs = (common_rhs == bin->getRHS()) ? bin->getRHS() : nullptr;
+
+        if (!common_lhs && !common_rhs)
+            return false;
+    }
+
+    // Don't bother with identical instructions, they'll be hoisted by GVN-PRE.
+    if (common_lhs && common_rhs)
         return false;
 
-    auto opcode = firstInst->getOpcode();
-    auto lhs = firstInst->getLHS();
-    auto rhs = firstInst->getRHS();
-    auto lhsType = lhs->getType();
-    auto rhsType = rhs->getType();
-
-    for (auto iter = std::next(phi->getPhiOpers().begin()); iter != phi->getPhiOpers().end(); ++iter) {
-        auto otherInst = std::dynamic_pointer_cast<BinaryInst>(iter->value);
-        if (!otherInst || otherInst->getOpcode() != opcode || otherInst->getUseCount() != 1 || otherInst->getLHS()->
-            getType() != lhsType || otherInst->getRHS()->getType() != rhsType) {
-            return false;
-        }
-        if (otherInst->getLHS() != lhs)
-            lhs = nullptr;
-        if (otherInst->getRHS() != rhs)
-            rhs = nullptr;
-
-        std::shared_ptr<PHIInst> newLHS = nullptr;
-        std::shared_ptr<PHIInst> newRHS = nullptr;
-
-        if (!lhs && !rhs)
-            return false;
-
-        if (!lhs) {
-            newLHS = std::make_shared<PHIInst>(getTmpName(), lhsType);
-            newLHS->addPhiOper(firstInst->getLHS(), phi->getPhiOpers().front().block);
-            phi->getParent()->addInstAfterPhi(newLHS);
-            lhs = newLHS;
-        }
-        if (!rhs) {
-            newRHS = std::make_shared<PHIInst>(getTmpName(), lhsType);
-            newRHS->addPhiOper(firstInst->getRHS(), phi->getPhiOpers().front().block);
-            phi->getParent()->addInstAfterPhi(newRHS);
-            rhs = newRHS;
-        }
-
-        if (newLHS || newRHS) {
-            for (auto iter1 = std::next(phi->getPhiOpers().begin()); iter1 != phi->getPhiOpers().end(); ++iter1) {
-                if (newLHS) {
-                    newLHS->addPhiOper(std::dynamic_pointer_cast<BinaryInst>(iter1->value)->getLHS(), iter1->block);
-                }
-                if (newRHS) {
-                    newRHS->addPhiOper(std::dynamic_pointer_cast<BinaryInst>(iter1->value)->getRHS(), iter1->block);
-                }
-            }
-        }
-
-        auto newInst = std::make_shared<BinaryInst>(getTmpName(), opcode, lhs, rhs);
-        phi->getParent()->addInstAfterPhi(newInst);
-        phi->replaceSelf(newInst);
-    }
+    // Create a phi to merge the uncommon operands
+    auto uncommon_phi = std::make_shared<PHIInst>(getTmpName(), phi->getType());
+    if (common_lhs) {
+        for (const auto &[val, bb] : phi_opers)
+            uncommon_phi->addPhiOper(std::dynamic_pointer_cast<BinaryInst>(val)->getRHS(), bb);
+        auto new_bin = std::make_shared<BinaryInst>(getTmpName(), common_op, common_lhs, uncommon_phi);
+        phi->getParent()->addInstAfterPhi(new_bin);
+        phi->replaceSelf(new_bin);
+    } else if (common_rhs) {
+        for (const auto &[val, bb] : phi_opers)
+            uncommon_phi->addPhiOper(std::dynamic_pointer_cast<BinaryInst>(val)->getLHS(), bb);
+        auto new_bin = std::make_shared<BinaryInst>(getTmpName(), common_op, uncommon_phi, common_rhs);
+        phi->getParent()->addInstAfterPhi(new_bin);
+        phi->replaceSelf(new_bin);
+    } else
+        Err::unreachable();
+    phi->getParent()->addPhiInst(uncommon_phi);
+    Logger::logDebug("[InstSimplify]: folded phi '", phi->getName(), "'.");
     return true;
 }
 
+// fold PHI of Getelementptr
+// Before:
+//   %phi = phi [gep(%a, %b, ...), %bb1], [gep(%a, %c, ...), %bb2]
+// After:
+//   %phi1 = phi [%b, %bb1], [%c, %bb2]
+//   %new_add = gep %a, %phi1, ...
+// Note that we don't fold it if there is any alloca or different constant index.
 bool InstSimplifyPass::foldGEP(const std::shared_ptr<PHIInst> &phi) {
-    auto firstInst = std::dynamic_pointer_cast<GEPInst>(phi->getPhiOpers().front().value);
-    // check for gep inst is all alloca inst
-    bool isAllocaInst = true;
-    // check for need new phi node
-    bool needNewPhi = false;
+    auto phi_opers = phi->getPhiOpers();
 
-    auto firstInstIdxes = std::vector<std::shared_ptr<
-        Value> >(firstInst->getIdxs().begin(), firstInst->getIdxs().end());
+    auto temp = std::dynamic_pointer_cast<GEPInst>(phi_opers[0].value);
+    if (!temp)
+        return false;
 
-    for (auto iter = std::next(phi->getPhiOpers().begin()); iter != phi->getPhiOpers().end(); ++iter) {
+    // Note that the back is the PTR
+    auto commons = temp->getIdxs();
+    commons.emplace_back(temp->getPtr());
 
-        auto gep = std::dynamic_pointer_cast<GEPInst>(iter->value);
-        if (!gep || gep->getUseCount() != 1 || gep->getBaseType() != firstInst->getBaseType() || gep->getIdxs().size()
-            !=
-            firstInst->getIdxs().size()) {
+    size_t uncommon_cnt = 0;
+    for (const auto &[val, bb] : phi_opers) {
+        auto gep = std::dynamic_pointer_cast<GEPInst>(val);
+        if (!gep || gep->isConstantOffset())
             return false;
+
+        // Different number of operands
+        auto indices = gep->getIdxs();
+        if (indices.size() != commons.size() - 1)
+            return false;
+
+        // Don't merge with ALLOCAInsts, load from them sometimes can be eliminated.
+        if (std::dynamic_pointer_cast<ALLOCAInst>(gep->getPtr()))
+            return false;
+
+        if (commons.back() != nullptr && commons.back() != gep->getPtr()) {
+            commons.back() = nullptr;
+            ++uncommon_cnt;
         }
-        if (isAllocaInst && (!std::dynamic_pointer_cast<ALLOCAInst>(gep->getPtr()) || gep->isConstantOffset())) {
-            isAllocaInst = false;
-        }
-        for (unsigned op = 0; op < firstInst->getIdxs().size(); ++op) {
-            if (firstInst->getIdxs()[op] == gep->getIdxs()[op])
+
+        for (size_t i = 0; i < commons.size() - 1; ++i) {
+            if (commons[i] == nullptr || commons[i] == indices[i])
                 continue;
-            if (firstInst->getIdxs()[op]->getVTrait() == ValueTrait::CONSTANT_LITERAL || gep->getIdxs()[op]->getVTrait()
-                == ValueTrait::CONSTANT_LITERAL)
-                return false;
-            if (firstInst->getIdxs()[op]->getType() != gep->getIdxs()[op]->getType())
-                return false;
-            if (needNewPhi)
-                return false;
-            firstInstIdxes[op] = nullptr;
-            needNewPhi = true;
-        }
-        if (isAllocaInst)
-            return false;
 
-        //create new phi node
-        bool hasCreatePhi = false;
-        std::vector<std::shared_ptr<PHIInst> > phis;
-        for (unsigned op = 0; op < firstInst->getIdxs().size(); ++op) {
-            auto newPhiInst = std::make_shared<PHIInst>(getTmpName(), firstInstIdxes[op]->getType());
-            newPhiInst->addPhiOper(firstInstIdxes[op], phi->getParent());
-            phis.emplace_back(newPhiInst);
-            firstInstIdxes[op] = newPhiInst;
-            phi->getParent()->addInstAfterPhi(newPhiInst);
-            hasCreatePhi = true;
+            // Don't merge with constant.
+            // In general, they are cheaper to compute.
+            if (indices[i]->getVTrait() == ValueTrait::CONSTANT_LITERAL ||
+                commons[i]->getVTrait() == ValueTrait::CONSTANT_LITERAL)
+                return false;
+
+            commons[i] = nullptr;
+            ++uncommon_cnt;
         }
-        if (hasCreatePhi) {
-            for (auto iter1 = std::next(phi->getPhiOpers().begin()); iter1 != phi->getPhiOpers().end(); ++iter1) {
-                auto gepInst = std::dynamic_pointer_cast<GEPInst>(iter1->value);
-                for (unsigned op = 0; op < phis.size(); ++op) {
-                    if (const auto &phiOp = phis[op]) {
-                        phiOp->addPhiOper(gepInst->getIdxs()[op], iter1->block);
-                    }
-                }
-            }
-        }
+
+        // We only insert one phi. So if there is another uncommon operand, give up.
+        if (uncommon_cnt > 1)
+            return false;
     }
-    auto base = firstInstIdxes.front();
-    auto temp = std::vector<std::shared_ptr<Value> >(firstInstIdxes.begin() + 1, firstInstIdxes.end());
-    auto gepInst = std::make_shared<GEPInst>(getTmpName(), base, temp);
-    phi->replaceSelf(gepInst);
-    phi->getParent()->addInstAfterPhi(gepInst);
+
+    // Don't bother with identical instructions, they'll be hoisted by GVN-PRE.
+    if (uncommon_cnt == 0)
+        return false;
+
+    auto uncommon_it = std::find(commons.begin(), commons.end(), nullptr);
+    size_t uncommon_index = uncommon_it - commons.begin();
+    Err::gassert(uncommon_it != commons.end());
+
+    auto uncommon_phi = std::make_shared<PHIInst>(getTmpName(), phi->getType());
+
+    // Handle ptrs
+    if (uncommon_index == commons.size() - 1) {
+        for (const auto &[val, bb] : phi_opers) {
+            auto gep = std::dynamic_pointer_cast<GEPInst>(val);
+            uncommon_phi->addPhiOper(gep->getPtr(), bb);
+        }
+        commons.pop_back();
+        auto new_gep = std::make_shared<GEPInst>(getTmpName(), uncommon_phi, commons);
+        phi->replaceSelf(new_gep);
+    } else {
+        for (const auto &[val, bb] : phi_opers) {
+            auto gep = std::dynamic_pointer_cast<GEPInst>(val);
+            uncommon_phi->addPhiOper(gep->getIdxs()[uncommon_index], bb);
+        }
+        auto ptr = commons.back();
+        commons.pop_back();
+        commons[uncommon_index] = uncommon_phi;
+        auto new_gep = std::make_shared<GEPInst>(getTmpName(), ptr, commons);
+        phi->replaceSelf(new_gep);
+    }
+    phi->getParent()->addPhiInst(uncommon_phi);
+    Logger::logDebug("[InstSimplify]: folded phi '", phi->getName(), "'.");
     return true;
 }
 
