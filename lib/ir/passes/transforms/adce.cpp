@@ -167,7 +167,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
 
                     const auto& dest_phis = br->getDest()->getPhiInsts();
                     for (const auto& phi : dest_phis)
-                        phi->delOnePhiOperByBlock(curr);
+                        phi->delPhiOperByBlock(curr);
 
                     modified = true;
                     Logger::logDebug("[ADCE] on '", function.getName(),

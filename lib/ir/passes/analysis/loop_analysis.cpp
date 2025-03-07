@@ -69,13 +69,13 @@ bool Loop::isExiting(const BasicBlock *bb) const {
     });
 }
 
-std::vector<BasicBlock *> Loop::getExitBlocks() const {
-    std::vector<BasicBlock*> ret;
+std::set<BasicBlock *> Loop::getExitBlocks() const {
+    std::set<BasicBlock*> ret;
     for (const auto& bb : blocks) {
         auto succs = bb->getNextBB();
         for (const auto& candidate : succs) {
             if (!contains(candidate.get()))
-                ret.emplace_back(candidate.get());
+                ret.emplace(candidate.get());
         }
     }
     return ret;
@@ -143,7 +143,7 @@ bool Loop::isRotatedForm() const {
     return latch && isExiting(latch);
 }
 
-bool Loop::delBlock(const BasicBlock *bb) {
+bool Loop::delBlockForCurrLoop(const BasicBlock *bb) {
     auto it = std::find(blocks.begin(), blocks.end(), bb);
     if (it == blocks.end())
         return false;
@@ -179,8 +179,18 @@ bool LoopInfo::isLoopHeader(const BasicBlock *bb) const {
     return loop && loop->getHeader() == bb;
 }
 
-const std::vector<std::shared_ptr<Loop>> &LoopInfo::getTopLevelLoops() const {
-    return top_level_loops;
+const std::vector<std::shared_ptr<Loop>> &LoopInfo::getTopLevelLoops() const { return top_level_loops; }
+
+bool LoopInfo::delBlock(const BasicBlock *bb) {
+    auto it = loop_map.find(bb);
+    if (it == loop_map.end())
+        return false;
+
+    for (auto loop = it->second; loop != nullptr; loop = loop->getParent())
+        loop->delBlockForCurrLoop(bb);
+
+    loop_map.erase(bb);
+    return true;
 }
 
 LoopInfo::const_iterator LoopInfo::begin() const { return top_level_loops.begin(); }

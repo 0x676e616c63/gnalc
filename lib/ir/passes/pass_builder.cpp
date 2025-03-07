@@ -35,6 +35,7 @@
 namespace IR {
 
 const OptInfo o1_opt_info = {
+    // Function Transforms
     .mem2reg = true,
     .sccp = true,
     .dce = true,
@@ -50,6 +51,9 @@ const OptInfo o1_opt_info = {
     .lcssa = false,
     .loop_unroll = false,
     .jump_threading = false,
+    // Module Transforms
+    .tree_shaking = true,
+    // Function Debug
     .verify = false,
 };
 
@@ -120,7 +124,8 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
 MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
     MPM mpm;
     mpm.addPass(makeModulePass(buildFunctionPipeline(opt_info)));
-    mpm.addPass(TreeShakingPass());
+    if (opt_info.tree_shaking)
+        mpm.addPass(TreeShakingPass());
     return mpm;
 }
 

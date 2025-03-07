@@ -77,6 +77,8 @@ void IRGenerator::visit(CompUnit &node) {
     curr_making_initializer = nullptr;
     curr_insts.clear();
     is_making_lval = false;
+
+    module.removeUnusedFuncDecls();
 }
 
 // DeclStmt: const int32

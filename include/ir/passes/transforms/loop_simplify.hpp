@@ -18,6 +18,9 @@ namespace IR {
 class LoopSimplifyPass : public PM::PassInfo<LoopSimplifyPass> {
 public:
     PM::PreservedAnalyses run(Function &function, FAM &manager);
+
+private:
+    size_t name_cnt = 0;
 };
 
 } // namespace IR

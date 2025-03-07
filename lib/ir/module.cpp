@@ -63,6 +63,21 @@ bool Module::delFunctionDecl(const std::shared_ptr<FunctionDecl> & target) {
 
 ConstantPool &Module::getConstantPool() { return constant_pool; }
 
+void Module::removeUnusedFuncDecls() {
+    func_decls.erase(
+        std::remove_if(func_decls.begin(), func_decls.end(),
+                       [](auto &&p) { return p->getUseCount() == 0; }),
+        func_decls.end());
+}
+void Module::removeUnusedFuncs() {
+    funcs.erase(
+        std::remove_if(funcs.begin(), funcs.end(),
+                       [](auto &&p) {
+                           return p->getUseCount() == 0 && p->getName() != "@main";
+                       }),
+        funcs.end());
+}
+
 Module::const_iterator Module::begin() const {
     return funcs.begin();
 }

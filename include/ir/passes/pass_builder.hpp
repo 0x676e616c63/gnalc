@@ -25,6 +25,8 @@ struct OptInfo {
     bool loop_unroll{false};
     bool jump_threading{false};
 
+    bool tree_shaking{false};
+
     bool advance_name_norm{false};
     bool verify{true}; // Defaults to verify in development.
     bool abort_when_verify_failed{false};

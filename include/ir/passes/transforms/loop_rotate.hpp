@@ -9,7 +9,7 @@ class LoopRotatePass : public PM::PassInfo<LoopRotatePass> {
 public:
     PM::PreservedAnalyses run(Function &function, FAM &manager);
 private:
-    size_t name_cnt{};
+    size_t name_cnt = 0;
 };
 
 } // namespace IR

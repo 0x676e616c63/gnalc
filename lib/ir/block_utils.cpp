@@ -1,7 +1,9 @@
 #include "../../include/ir/block_utils.hpp"
 
-#include <utility>
+#include "../../include/utils/logger.hpp"
+
 #include <list>
+#include <utility>
 
 namespace IR {
 void linkBB(const std::shared_ptr<BasicBlock> &prebb,
@@ -94,7 +96,7 @@ bool safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb,
     // bb2:
     for (const auto& phi : nxtbb->getPhiInsts()) {
         // Delete the phi operand from the unlinked `prebb`
-        if (phi->delOnePhiOperByBlock(prebb)) {
+        if (phi->delPhiOperByBlock(prebb)) {
             // Simplify PHI
             auto opers = phi->getPhiOpers();
             if (opers.size() == 1) {
@@ -148,8 +150,12 @@ void foldPHI(const std::shared_ptr<BasicBlock> &bb, bool preserve_lcssa) {
             }
         }
         if (common_value != nullptr) {
-            phi->replaceSelf(common_value);
-            dead_phis.emplace(phi);
+            if (common_value == phi)
+                Logger::logWarning("IR::foldPHI: Skipped self-reference phi.");
+            else {
+                phi->replaceSelf(common_value);
+                dead_phis.emplace(phi);
+            }
         }
     }
     bb->delInstIf([&dead_phis](const auto& inst) {

@@ -72,7 +72,7 @@ public:
     // In other words, the exiting block is in the loop.
     bool isExiting(const BasicBlock* bb) const;
 
-    std::vector<BasicBlock*> getExitBlocks() const;
+    std::set<BasicBlock*> getExitBlocks() const;
 
     // Note that multiple Latches will become one after LoopSimplify
     std::vector<BasicBlock*> getLatches() const;
@@ -93,7 +93,7 @@ public:
     bool isSimplifyForm() const;
     bool isRotatedForm() const;
 
-    bool delBlock(const BasicBlock* bb);
+    bool delBlockForCurrLoop(const BasicBlock* bb);
     void addBlock(BasicBlock* bb);
     void moveToHeader(const BasicBlock* bb);
 };
@@ -125,6 +125,8 @@ public:
     std::shared_ptr<Loop> getLoopFor(const BasicBlock* bb) const;
     bool isLoopHeader(const BasicBlock* bb) const;
     const std::vector<std::shared_ptr<Loop>>& getTopLevelLoops() const;
+
+    bool delBlock(const BasicBlock* bb);
 };
 
 class LoopAnalysis : public PM::AnalysisInfo<LoopAnalysis> {

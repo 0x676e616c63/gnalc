@@ -79,6 +79,7 @@ int main(int argc, char **argv) {
             opt_info = IR::o1_opt_info;
 
         // Optimizations available:
+        // Function Transforms
         else if (arg == "--mem2reg")
             opt_info.mem2reg = true;
         else if (arg == "--sccp")
@@ -111,6 +112,9 @@ int main(int argc, char **argv) {
             opt_info.loop_unroll = true;
         else if (arg == "--jumpthreading")
             opt_info.jump_threading = true;
+        // Module Transforms
+        else if (arg == "--treeshaking")
+            opt_info.tree_shaking = true;
         // Debug options:
         else if (arg == "--ann")
             opt_info.advance_name_norm = true;
@@ -162,6 +166,7 @@ Optimizations available:
   --lcssa              - Canonicalize loops to The Loop Closed SSA Form
   --loopunroll         - Unroll loops
   --jumpthreading      - Jump Threading
+  --treeshaking        - Shake off unused functions, function declarations and global variables
 
 Debug options:
   --ann                - Use the advance name normalization result (after IRGen). (This disables the one at the last).
