@@ -7,15 +7,17 @@
 #include "../../../../include/ir/pattern_match.hpp"
 
 #include <algorithm>
-#include <vector>
-#include <string>
 #include <memory>
+#include <string>
+#include <vector>
 
 using namespace PatternMatch;
 
 namespace IR {
 PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
     bool instsimplify_inst_modified = false;
+    this->fam = &fam;
+    this->func = &function;
 
     // First simplify basic instruction patterns without adding any instruction
     for (const auto &bb : function) {
@@ -114,7 +116,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
     }
 
     // Then combine more complex instruction patterns
-    std::vector<std::shared_ptr<Instruction> > worklist;
+    std::vector<std::shared_ptr<Instruction>> worklist;
 
     // Take a reverse post order traversal of the CFG to handle sub expressions first.
     auto rpodfv = function.getDFVisitor<Util::DFVOrder::ReversePostOrder>();
@@ -140,7 +142,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             instsimplify_inst_modified = true;
         }
         // x % y + ((x / y) % z) * y -> x % (y * z)
-        else if (match(inst, M::Add(M::Rem(M::VBind(x), M::VBind(y)), // x % y +
+        else if (match(inst, M::Add(M::Rem(M::VBind(x), M::VBind(y)),                       // x % y +
                                     M::Mul(M::Rem(M::Div(M::Is(x), M::Is(y)), M::VBind(z)), // ((x / y) % z)
                                            M::Is(y))))) {
             // * y
@@ -166,8 +168,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         // c1 - (x + c2) -> (c1 - c2) - x
         else if (match(inst, M::Sub(M::I32Bind(c1), M::Add(M::VBind(x), M::I32Bind(c2)))) ||
                  match(inst, M::Sub(M::I32Bind(c1), M::Add(M::I32Bind(c2), M::VBind(x))))) {
-            auto sub = std::make_shared<BinaryInst>(getTmpName(), OP::SUB,
-                                                    function.getConst(c1 - c2), x);
+            auto sub = std::make_shared<BinaryInst>(getTmpName(), OP::SUB, function.getConst(c1 - c2), x);
             inst->replaceSelf(sub);
             inst->getParent()->addInst(inst->getIndex(), sub);
             instsimplify_inst_modified = true;
@@ -446,7 +447,7 @@ bool InstSimplifyPass::foldBinary(const std::shared_ptr<PHIInst> &phi) {
     } else
         Err::unreachable();
     phi->getParent()->addPhiInst(uncommon_phi);
-    Logger::logDebug("[InstSimplify]: folded phi '", phi->getName(), "'.");
+    Logger::logDebug("[InstSimplify]: folded phi of binary '", phi->getName(), "'.");
     return true;
 }
 
@@ -538,24 +539,30 @@ bool InstSimplifyPass::foldGEP(const std::shared_ptr<PHIInst> &phi) {
         phi->replaceSelf(new_gep);
     }
     phi->getParent()->addPhiInst(uncommon_phi);
-    Logger::logDebug("[InstSimplify]: folded phi '", phi->getName(), "'.");
+    Logger::logDebug("[InstSimplify]: folded phi of gep '", phi->getName(), "'.");
     return true;
 }
 
-bool InstSimplifyPass::canSafelySinkLoad(const std::shared_ptr<LOADInst> &load) {
-    for (const auto &inst : *load->getParent()) {
-        if (auto store = std::dynamic_pointer_cast<STOREInst>(inst)) {
-            if (store->getPtr() == load->getPtr())
-                return false;
-        }
+bool InstSimplifyPass::isLoadSuitableForSinking(const std::shared_ptr<LOADInst> &load) {
+    auto aa_res = fam->getResult<AliasAnalysis>(*func);
+
+    // If there is some modify after the load in the block, we can not sink it.
+    for (auto it = load->getIter(); it != load->getParent()->end(); ++it) {
+        auto modref = aa_res.getInstModRefInfo(it->get(), load->getPtr().get(), *fam);
+        if (modref == ModRefInfo::Mod || modref == ModRefInfo::ModRef)
+            return false;
     }
-    if (auto allocaInst = std::dynamic_pointer_cast<ALLOCAInst>(load->getPtr())) {
+
+    // If the load has its address taken, ( which means the user of that memory are all store/load )
+    // it's not profitable to sink it. Because we may promote it to register later.
+    if (auto alloc = std::dynamic_pointer_cast<ALLOCAInst>(load->getPtr())) {
         bool isAddressTaken = false;
-        for (const auto &use : allocaInst->getUseList()) {
-            if (auto loadInst = std::dynamic_pointer_cast<LOADInst>(use->getUser()))
+        auto use_list = alloc->getUseList();
+        for (const auto &use : use_list) {
+            if (auto load2 = std::dynamic_pointer_cast<LOADInst>(use->getUser()))
                 continue;
             if (auto storeInst = std::dynamic_pointer_cast<STOREInst>(use->getUser())) {
-                if (storeInst->getPtr() == allocaInst)
+                if (storeInst->getPtr() == alloc)
                     continue;
             }
             isAddressTaken = true;
@@ -564,6 +571,8 @@ bool InstSimplifyPass::canSafelySinkLoad(const std::shared_ptr<LOADInst> &load) 
         if (!isAddressTaken)
             return false;
     }
+
+    // If it's a load from a constant GEP, don't sink for better codegen.
     if (auto gep = std::dynamic_pointer_cast<GEPInst>(load->getPtr())) {
         if (gep->isConstantOffset())
             return false;
@@ -571,41 +580,44 @@ bool InstSimplifyPass::canSafelySinkLoad(const std::shared_ptr<LOADInst> &load) 
     return true;
 }
 
+// fold PHI of Load
+// Before:
+//   %phi = phi [load(%a), %bb1], [load(%b), %bb2]
+// After:
+//   %phi1 = phi [%a, %bb1], [%b, %bb2]
+//   %new_add = load %phi1
 bool InstSimplifyPass::foldLoad(const std::shared_ptr<PHIInst> &phi) {
     auto phi_opers = phi->getPhiOpers();
     auto temp = std::dynamic_pointer_cast<LOADInst>(phi_opers[0].value);
-
     if (!temp)
         return false;
 
-    auto align = temp->getAlign();
+    auto min_align = temp->getAlign();
 
-    for (const auto &[val,bb] : phi_opers) {
-        auto loadInst = std::dynamic_pointer_cast<LOADInst>(val);
-        if (!loadInst || loadInst->getUseCount() != 1)
+    for (const auto &[val, bb] : phi_opers) {
+        auto load = std::dynamic_pointer_cast<LOADInst>(val);
+        if (!load || load->getUseCount() != 1)
             return false;
-        // if the value which is loaded could be modified between load and phi
-        // we cann't sink load
-        if (loadInst->getParent() != bb || !canSafelySinkLoad(loadInst))
+        // We cannot sink if the loaded value could be modified between load and phi
+        if (load->getParent() != bb || !isLoadSuitableForSinking(load))
             return false;
-        align = std::min(align, loadInst->getAlign());
+        min_align = std::min(min_align, load->getAlign());
     }
 
-    auto new_phi = std::make_shared<PHIInst>(getTmpName(), temp->getPtr()->getType());
+    auto merged_ptr = std::make_shared<PHIInst>(getTmpName(), temp->getPtr()->getType());
 
-    for (const auto &[val,bb] : phi_opers) {
-        auto loadInst = std::dynamic_pointer_cast<LOADInst>(val);
-        new_phi->addPhiOper(loadInst->getPtr(), bb);
+    for (const auto &[val, bb] : phi_opers) {
+        auto load = std::dynamic_pointer_cast<LOADInst>(val);
+        merged_ptr->addPhiOper(load->getPtr(), bb);
     }
 
-    auto new_load = std::make_shared<LOADInst>(getTmpName(), new_phi, align);
+    auto merged_load = std::make_shared<LOADInst>(getTmpName(), merged_ptr, min_align);
 
-    phi->replaceSelf(new_load);
-    phi->getParent()->addPhiInst(new_phi);
-    phi->getParent()->addInstAfterPhi(new_load);
-
+    phi->replaceSelf(merged_load);
+    phi->getParent()->addPhiInst(merged_ptr);
+    phi->getParent()->addInstAfterPhi(merged_load);
+    Logger::logDebug("[InstSimplify]: folded phi of load '", phi->getName(), "'.");
     return true;
 }
-
 
 } // namespace IR

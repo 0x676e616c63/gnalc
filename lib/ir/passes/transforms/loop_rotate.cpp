@@ -294,7 +294,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                     // preheader -> new_header
                     // preheader -> new_preheader -> new_header
                     auto new_preheader = std::make_shared<BasicBlock>
-                        ("%lr.pheader" + std::to_string(name_cnt++));
+                        ("%lr.nph" + std::to_string(name_cnt++));
                     new_preheader->addInst(std::make_shared<BRInst>(new_header));
 
                     for (const auto& phi : new_header->getPhiInsts())
