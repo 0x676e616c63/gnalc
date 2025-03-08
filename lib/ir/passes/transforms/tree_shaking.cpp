@@ -33,9 +33,7 @@ PM::PreservedAnalyses TreeShakingPass::run(Module &module, MAM &mam) {
     for (const auto& gv : dead_gv)
         module.delGlobalVar(gv);
 
-    if (tree_shaking_func_modified)
-        return PM::PreservedAnalyses::none();
-    return PM::PreservedAnalyses::all();
+    return tree_shaking_func_modified ? PreserveNone() : PreserveAll();
 }
 
 } // namespace IR

@@ -387,10 +387,6 @@ PM::PreservedAnalyses PromotePass::run(Function &function, FAM &manager) {
     DT = {};
     del_queue.clear();
 
-    PM::PreservedAnalyses pa;
-    pa.preserve<DomTreeAnalysis>();
-    pa.preserve<PostDomTreeAnalysis>();
-    pa.preserve<LoopAnalysis>();
-    return pa;
+    return PreserveCFGAnalyses();
 }
 }// namespace IR

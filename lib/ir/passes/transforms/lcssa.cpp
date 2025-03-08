@@ -9,14 +9,9 @@ namespace IR {
 PM::PreservedAnalyses LCSSAPass::run(Function &function, FAM &fam) {
     bool lcssa_cfg_modified = false;
 
-    if (lcssa_cfg_modified)
-        return PM::PreservedAnalyses::none();
+    // ...
 
-    PM::PreservedAnalyses pa;
-    pa.preserve<DomTreeAnalysis>();
-    pa.preserve<PostDomTreeAnalysis>();
-    pa.preserve<LoopAnalysis>();
-    return pa;
+    return lcssa_cfg_modified ? PreserveNone() : PreserveCFGAnalyses();
 }
 
 } // namespace IR

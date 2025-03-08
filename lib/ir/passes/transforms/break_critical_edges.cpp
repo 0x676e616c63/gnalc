@@ -18,9 +18,6 @@ PM::PreservedAnalyses BreakCriticalEdgesPass::run(Function &function, FAM &manag
         }
     }
 
-    if (bce_cfg_modified)
-        return PM::PreservedAnalyses::none();
-
-    return PM::PreservedAnalyses::all();
+    return bce_cfg_modified ? PreserveNone() : PreserveAll();
 }
 } // namespace IR

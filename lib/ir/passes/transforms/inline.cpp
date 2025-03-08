@@ -139,10 +139,8 @@ PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
     }
 
     name_cnt = 0;
-    if (inline_cfg_modified)
-        return PM::PreservedAnalyses::none();
 
-    return PM::PreservedAnalyses::all();
+    return inline_cfg_modified ? PreserveNone() : PreserveAll();
 }
 
 } // namespace IR

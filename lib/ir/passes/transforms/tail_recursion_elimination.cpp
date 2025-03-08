@@ -77,10 +77,7 @@ PM::PreservedAnalyses TailRecursionEliminationPass::run(Function &function, FAM 
         tailopt_cfg_modified = true;
     }
 
-    if (tailopt_cfg_modified)
-        return PM::PreservedAnalyses::none();
-
-    return PM::PreservedAnalyses::all();
+    return tailopt_cfg_modified ? PreserveNone() : PreserveAll();
 }
 
 }

@@ -848,14 +848,6 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     // cleanup to release temp objects
     reset();
 
-    if (gvnpre_inst_modified) {
-        PM::PreservedAnalyses pa;
-        pa.preserve<DomTreeAnalysis>();
-        pa.preserve<PostDomTreeAnalysis>();
-        pa.preserve<LoopAnalysis>();
-        return pa;
-    }
-
-    return PM::PreservedAnalyses::all();
+    return gvnpre_inst_modified ? PreserveCFGAnalyses() : PreserveAll();
 }
 } // namespace IR

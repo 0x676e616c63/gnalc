@@ -10,6 +10,7 @@
 // Transforms
 #include "../../../include/ir/passes/transforms/adce.hpp"
 #include "../../../include/ir/passes/transforms/break_critical_edges.hpp"
+#include "../../../include/ir/passes/transforms/cfgsimplify.hpp"
 #include "../../../include/ir/passes/transforms/constant_propagation.hpp"
 #include "../../../include/ir/passes/transforms/dce.hpp"
 #include "../../../include/ir/passes/transforms/dse.hpp"
@@ -41,6 +42,7 @@ const OptInfo o1_opt_info = {
     .sccp = true,
     .dce = true,
     .adce = true,
+    .cfgsimplify = true,
     .dse = true,
     .gvnpre = true,
     .tailcall = true,
@@ -58,6 +60,58 @@ const OptInfo o1_opt_info = {
     // Function Debug
     .verify = false,
 };
+
+FPM PassBuilder::buildFunctionFixedPointPipeline() {
+    // Reassociate does not converge, set a threshold
+    auto make_arithmetic = [] {
+        PM::FixedPointPM<Function> arithmetic(10);
+        arithmetic.addPass(ReassociatePass());
+        arithmetic.addPass(InstSimplifyPass());
+        arithmetic.addPass(ConstantPropagationPass());
+        arithmetic.addPass(DCEPass());
+        arithmetic.addPass(ADCEPass());
+        return arithmetic;
+    };
+
+    auto make_clean = [] {
+        PM::FixedPointPM<Function> cleanup;
+        cleanup.addPass(InstSimplifyPass());
+        cleanup.addPass(ConstantPropagationPass());
+        cleanup.addPass(BreakCriticalEdgesPass());
+        cleanup.addPass(GVNPREPass());
+        cleanup.addPass(DCEPass());
+        cleanup.addPass(ADCEPass());
+        cleanup.addPass(LoadEliminationPass());
+        cleanup.addPass(DSEPass());
+        return cleanup;
+    };
+
+    auto make_ipo = [] {
+        FPM ipo;
+        ipo.addPass(TailRecursionEliminationPass());
+        ipo.addPass(InlinePass());
+        return ipo;
+    };
+
+    FPM fpm;
+    fpm.addPass(NameNormalizePass(true));
+    fpm.addPass(PromotePass());
+    fpm.addPass(make_ipo());
+    fpm.addPass(make_clean());
+    fpm.addPass(make_arithmetic());
+    fpm.addPass(make_clean());
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(NameNormalizePass(true));
+
+    return fpm;
+}
+
+MPM PassBuilder::buildModuleFixedPointPipeline() {
+    MPM mpm;
+    mpm.addPass(makeModulePass(buildFunctionFixedPointPipeline()));
+    mpm.addPass(TreeShakingPass());
+    return mpm;
+}
 
 FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FPM fpm;
@@ -81,26 +135,20 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
         if (opt_info.verify)                                                                                           \
             fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));                                                \
     }
-    // FUNCTION_TRANSFORM(mem2reg, PromotePass)
-    // FUNCTION_TRANSFORM(inliner, InlinePass)
-    // FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass)
-    // FUNCTION_TRANSFORM(sccp, ConstantPropagationPass)
-    // FUNCTION_TRANSFORM(reassociate, ReassociatePass)
-    // FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass)
-    // FUNCTION_TRANSFORM(dce, DCEPass)
-    // FUNCTION_TRANSFORM(adce, ADCEPass)
-    // FUNCTION_TRANSFORM(loadelim, LoadEliminationPass)
-    // FUNCTION_TRANSFORM(dse, DSEPass)
-    // FUNCTION_TRANSFORM2(gvnpre, BreakCriticalEdgesPass(), GVNPREPass())
 
     FUNCTION_TRANSFORM(mem2reg, PromotePass())
     FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass())
     FUNCTION_TRANSFORM(inliner, InlinePass())
+    // FIXME: bug here
+    // FUNCTION_TRANSFORM(reassociate, ReassociatePass())
     FUNCTION_TRANSFORM(sccp, ConstantPropagationPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
     FUNCTION_TRANSFORM(reassociate, ReassociatePass())
     FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass())
     FUNCTION_TRANSFORM(sccp, ConstantPropagationPass())
+    FUNCTION_TRANSFORM(dce, DCEPass())
+    FUNCTION_TRANSFORM(adce, ADCEPass())
+    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
     FUNCTION_TRANSFORM2(gvnpre, BreakCriticalEdgesPass(), GVNPREPass())
     FUNCTION_TRANSFORM(loadelim, LoadEliminationPass())
     FUNCTION_TRANSFORM(dse, DSEPass())

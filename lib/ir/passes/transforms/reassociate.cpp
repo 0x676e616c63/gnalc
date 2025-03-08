@@ -201,12 +201,12 @@ void ReassociatePass::rewriteExpr(
             // There is no node left available, and we've made an unwise choice.
             // Just get one from air.
             auto zero = func->getConst(0);
-            auto dummy = std::make_shared<BinaryInst>("%reass.oops" + std::to_string(name_cnt++),
+            auto dummy = std::make_shared<BinaryInst>("%reass.new" + std::to_string(name_cnt++),
                 opcode, zero, zero);
             root->getParent()->addInst(root->getIndex(), dummy);
             curr->setLHS(dummy);
             curr = dummy;
-            Logger::logWarning("[Reassociate]: Oops! No nodes left available. Generating one for rewriting.");
+            Logger::logWarning("[Reassociate]: No nodes left available. Generating one for rewriting.");
         }
 
         rewriteBeg = curr;
@@ -583,13 +583,6 @@ PM::PreservedAnalyses ReassociatePass::run(Function &function, FAM &manager) {
     // Cleanup to release temporaries
     reset();
 
-    if (!reassociate_inst_modified)
-        return PM::PreservedAnalyses::all();
-
-    PM::PreservedAnalyses pa;
-    pa.preserve<DomTreeAnalysis>();
-    pa.preserve<PostDomTreeAnalysis>();
-    pa.preserve<LoopAnalysis>();
-    return pa;
+    return reassociate_inst_modified ? PreserveCFGAnalyses() : PreserveAll();
 }
 } // namespace IR

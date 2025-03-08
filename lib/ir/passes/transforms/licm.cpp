@@ -7,16 +7,9 @@
 
 namespace IR {
 PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
-    bool lcssa_inst_modified = false;
+    bool licm_inst_modified = false;
 
-    if (lcssa_inst_modified) {
-        PM::PreservedAnalyses pa;
-        pa.preserve<DomTreeAnalysis>();
-        pa.preserve<PostDomTreeAnalysis>();
-        pa.preserve<LoopAnalysis>();
-        return pa;
-    }
-    return PM::PreservedAnalyses::all();
+    return licm_inst_modified ? PreserveCFGAnalyses() : PreserveAll();
 }
 
 } // namespace IR

@@ -523,17 +523,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
 
     name_cnt = 0;
 
-    if (loop_rotate_cfg_modified) {
-        PM::PreservedAnalyses pa;
-        pa.preserve<LoopAnalysis>();
-        return pa;
-    }
-
-    PM::PreservedAnalyses pa;
-    pa.preserve<DomTreeAnalysis>();
-    pa.preserve<PostDomTreeAnalysis>();
-    pa.preserve<LoopAnalysis>();
-    return pa;
+    return loop_rotate_cfg_modified ? PreserveLoopAnalyses() : PreserveCFGAnalyses();
 }
 
 } // namespace IR

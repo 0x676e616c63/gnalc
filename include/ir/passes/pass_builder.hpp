@@ -12,6 +12,7 @@ struct OptInfo {
     bool sccp{false};
     bool dce{false};
     bool adce{false};
+    bool cfgsimplify{false};
     bool dse{false};
     bool loadelim{false};
     bool gvnpre{false};
@@ -37,6 +38,8 @@ extern const OptInfo o1_opt_info;
 
 class PassBuilder {
 public:
+    static FPM buildFunctionFixedPointPipeline();
+    static MPM buildModuleFixedPointPipeline();
     static FPM buildFunctionPipeline(OptInfo opt_info);
     static MPM buildModulePipeline(OptInfo opt_info);
 

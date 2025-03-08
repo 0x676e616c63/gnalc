@@ -620,16 +620,11 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
     }
 
     if (sccp_cfg_modified)
-        return PM::PreservedAnalyses::none();
+        return PreserveNone();
 
-    if (sccp_inst_modified) {
-        PM::PreservedAnalyses pa;
-        pa.preserve<DomTreeAnalysis>();
-        pa.preserve<PostDomTreeAnalysis>();
-        pa.preserve<LoopAnalysis>();
-        return pa;
-    }
+    if (sccp_inst_modified)
+        return PreserveCFGAnalyses();
 
-    return PM::PreservedAnalyses::all();
+    return PreserveAll();
 }
 } // namespace IR

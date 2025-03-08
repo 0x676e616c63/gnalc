@@ -235,14 +235,7 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
         unused_load.clear();
     }
 
-    if (load_elimination_inst_modified) {
-        PM::PreservedAnalyses pa;
-        pa.preserve<DomTreeAnalysis>();
-        pa.preserve<PostDomTreeAnalysis>();
-        pa.preserve<LoopAnalysis>();
-        return pa;
-    }
-    return PM::PreservedAnalyses::all();
+    return load_elimination_inst_modified ? PreserveCFGAnalyses() : PreserveAll();
 }
 
 } // namespace IR

@@ -164,15 +164,7 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
         unused_store.clear();
     }
 
-    if (dse_inst_modified) {
-        PM::PreservedAnalyses pa;
-        pa.preserve<DomTreeAnalysis>();
-        pa.preserve<PostDomTreeAnalysis>();
-        pa.preserve<LoopAnalysis>();
-        return pa;
-    }
-
-    return PM::PreservedAnalyses::all();
+    return dse_inst_modified ? PreserveCFGAnalyses() : PreserveAll();
 }
 
 } // namespace IR

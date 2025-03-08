@@ -9,14 +9,7 @@ namespace IR {
 PM::PreservedAnalyses LoopUnrollPass::run(Function &function, FAM &fam) {
     bool loop_unroll_cfg_modified = false;
 
-    if (loop_unroll_cfg_modified)
-        return PM::PreservedAnalyses::none();
-
-    PM::PreservedAnalyses pa;
-    pa.preserve<DomTreeAnalysis>();
-    pa.preserve<PostDomTreeAnalysis>();
-    pa.preserve<LoopAnalysis>();
-    return pa;
+    return loop_unroll_cfg_modified ? PreserveLoopAnalyses() : PreserveCFGAnalyses();
 }
 
 } // namespace IR

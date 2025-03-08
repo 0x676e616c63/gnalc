@@ -36,6 +36,7 @@ int main(int argc, char **argv) {
     bool only_compilation = false; // -S
     bool emit_llvm = false;        // -emit-llvm
     bool ast_dump = false;         // -ast-dump
+    bool fixed_point_pipeline = false; // -fixed-point
     IR::OptInfo opt_info;
 
 #if GNALC_EXTENSION_BRAINFK
@@ -75,6 +76,8 @@ int main(int argc, char **argv) {
             emit_llvm = true;
         else if (arg == "-ast-dump")
             ast_dump = true;
+        else if (arg == "-fixed-point")
+            fixed_point_pipeline = true;
         else if (arg == "-O1" || arg == "-O")
             opt_info = IR::o1_opt_info;
 
@@ -90,6 +93,7 @@ int main(int argc, char **argv) {
         OPT_ARG("--sccp", "--no-sccp", sccp)
         OPT_ARG("--dce", "--no-dce", dce)
         OPT_ARG("--adce", "--no-adce", adce)
+        OPT_ARG("--cfgsimplify", "--no-cfgsimplify", cfgsimplify)
         OPT_ARG("--dse", "--no-dse", dse)
         OPT_ARG("--loadelim", "--no-loadelim", loadelim)
         OPT_ARG("--gvnpre", "--no-gvnpre", gvnpre)
@@ -137,6 +141,7 @@ General options:
   -O,-O1               - Optimization level 1
   -emit-llvm           - Use the LLVM representation for assembler and object files
   -ast-dump            - Build ASTs and then debug dump them
+  -fixed-point         - Enable the fixed point optimization pipeline. (Ignore other optimization options)
   --log <log-level>    - Enable compiler logger. Available log-level: debug, info, none
   -h, --help           - Display available options
 
@@ -145,6 +150,7 @@ Optimizations available:
   --sccp               - Sparse conditional constant propagation
   --dce                - Dead code elimination
   --adce               - Aggressive dead code elimination
+  --cfgsimplify        - Simplify control flow
   --dse                - Dead store elimination
   --loadelim           - Redundant load elimination
   --gvnpre             - Value-Based partial redundancy elimination (GVN-PRE)
@@ -218,7 +224,11 @@ Extensions:
     IR::PassBuilder::registerModuleAnalyses(mam);
     IR::PassBuilder::registerProxies(fam, mam);
 
-    auto mpm = IR::PassBuilder::buildModulePipeline(opt_info);
+    IR::MPM mpm;
+    if (fixed_point_pipeline)
+        mpm = IR::PassBuilder::buildModuleFixedPointPipeline();
+    else
+        mpm = IR::PassBuilder::buildModulePipeline(opt_info);
 
     std::ostream *poutstream = &std::cout;
     std::ofstream outfile;

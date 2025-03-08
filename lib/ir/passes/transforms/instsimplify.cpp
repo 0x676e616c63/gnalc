@@ -383,15 +383,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
 
     name_cnt = 0;
 
-    if (instsimplify_inst_modified) {
-        PM::PreservedAnalyses pa;
-        pa.preserve<DomTreeAnalysis>();
-        pa.preserve<PostDomTreeAnalysis>();
-        pa.preserve<LoopAnalysis>();
-        return pa;
-    }
-
-    return PM::PreservedAnalyses::all();
+    return instsimplify_inst_modified ? PreserveCFGAnalyses() : PreserveAll();
 }
 
 // TODO: more meaningful names

@@ -148,17 +148,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
 
     name_cnt = 0;
 
-    if (loop_simplify_cfg_modified) {
-        PM::PreservedAnalyses pa;
-        pa.preserve<LoopAnalysis>();
-        return pa;
-    }
-
-    PM::PreservedAnalyses pa;
-    pa.preserve<DomTreeAnalysis>();
-    pa.preserve<PostDomTreeAnalysis>();
-    pa.preserve<LoopAnalysis>();
-    return pa;
+    return loop_simplify_cfg_modified ? PreserveAll() : PreserveCFGAnalyses();
 }
 
 } // namespace IR
