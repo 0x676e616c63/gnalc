@@ -2,6 +2,8 @@
 #include "../../../../include/ir/instructions/control.hpp"
 #include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
+#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
+#include "../../../../include/ir/block_utils.hpp"
 
 #include <deque>
 
@@ -57,7 +59,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
         //     Logger::logDebug("[ADCE]: ", a->getName());
         // }
         for (const auto &bb : rdf) {
-            if (auto br = std::dynamic_pointer_cast<BRInst>(bb->getInsts().back())) {
+            if (auto br = bb->getBRInst()) {
                 if (br->isConditional() && critical.find(br) == critical.end()) {
                     if (br->getCond()->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
                         auto cond = std::dynamic_pointer_cast<Instruction>(br->getCond());
@@ -146,7 +148,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                 // Skip dead blocks
                 continue;
             }
-            auto br = std::dynamic_pointer_cast<BRInst>(curr->getInsts().back());
+            auto br = curr->getBRInst();
             if (br == nullptr)
                 continue;
             if (br->isConditional()) {
@@ -165,7 +167,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
 
                     const auto& dest_phis = br->getDest()->getPhiInsts();
                     for (const auto& phi : dest_phis)
-                        phi->delOnePhiOperByBlock(curr);
+                        phi->delPhiOperByBlock(curr);
 
                     modified = true;
                     Logger::logDebug("[ADCE] on '", function.getName(),
@@ -235,7 +237,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     // Don't search by use list, dead blocks hasn't been destroyed.
                     auto prebbs = curr->getPreBB();
                     for (const auto &pred : prebbs) {
-                        auto pre_br = std::dynamic_pointer_cast<BRInst>(pred->getInsts().back());
+                        auto pre_br = pred->getBRInst();
                         unlinkBB(pred, curr);
                         linkBB(pred, dest);
                         pre_br->replaceOperand(curr, dest);
@@ -248,7 +250,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     modified = true;
                 }
                 // If curr is deleted, we can't combine them. So it's `else if` rather than `if`
-                else if (dest->getPreBB().size() == 1) {
+                else if (dest->getNumPreBBs() == 1) {
                     // 3. Combine Blocks
                     // curr ends in a jump to dest and dest has only one predecessor
                     //
@@ -263,8 +265,8 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     unlinkBB(curr, dest);
                     curr->delInst(br);
 
-                    // Since dest has only one predecessor, there can be no phi.
-                    // Also, all dest's users are its successors' phi, replace them with curr.
+                    foldPHI(dest);
+                    // all dest's users are its successors' phi, replace them with curr.
                     Err::gassert(dest->getPhiCount() == 0);
                     dest->replaceSelf(curr);
 
@@ -287,7 +289,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                 // If dest's BRInst was hoisted to curr in case3, dest is deleted.
                 // This will invalidate case4. So it's `else if` rather than `if`
                 else if (dest->getAllInstCount() == 1) { // Dest is empty
-                    auto dest_br = std::dynamic_pointer_cast<BRInst>(dest->getInsts().back());
+                    auto dest_br = dest->getBRInst();
                     if (dest_br && dest_br->isConditional()) {
                         // 4. Hoist a Branch
                         // curr ends with a jump to an empty block dest and dest ends with a branch,
@@ -340,6 +342,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
     if (adce_inst_modified) {
         PM::PreservedAnalyses pa;
         pa.preserve<DomTreeAnalysis>();
+        pa.preserve<LoopAnalysis>();
         pa.preserve<PostDomTreeAnalysis>();
         return pa;
     }

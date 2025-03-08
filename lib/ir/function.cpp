@@ -256,5 +256,17 @@ LinearFunction::const_iterator LinearFunction::cbegin() const { return insts.cbe
 
 LinearFunction::const_iterator LinearFunction::cend() const { return insts.cend(); }
 
+LinearFunction::const_reverse_iterator LinearFunction::rbegin() const { return insts.rbegin(); }
+
+LinearFunction::const_reverse_iterator LinearFunction::rend() const { return insts.rend(); }
+
+LinearFunction::reverse_iterator LinearFunction::rbegin() { return insts.rbegin(); }
+
+LinearFunction::reverse_iterator LinearFunction::rend() { return insts.rend(); }
+
+LinearFunction::const_reverse_iterator LinearFunction::crbegin() const { return insts.crbegin(); }
+
+LinearFunction::const_reverse_iterator LinearFunction::crend() const { return insts.crend(); }
+
 void LinearFunction::accept(IRVisitor &visitor) { visitor.visit(*this); }
 } // namespace IR

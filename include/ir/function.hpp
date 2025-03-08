@@ -100,7 +100,7 @@ public:
     bool delFirstOfBlock(const std::shared_ptr<BasicBlock> &blk);
 
     // Delete a Block
-    // Requires the target block have no users than Phi.
+    // Requires the target block have no predecessors or successors
     bool delBlock(const std::shared_ptr<BasicBlock> &blk);
 
     // Delete blocks that satisfied: `pred(block) == true`
@@ -154,6 +154,11 @@ public:
 
     ConstantPool &getConstantPool();
 
+    template<typename T>
+    auto getConst(T&& val) {
+        return constant_pool->getConst(std::forward<T>(val));
+    }
+
     void accept(IRVisitor &visitor) override;
 
     auto getBFVisitor() const {
@@ -183,8 +188,10 @@ private:
     std::vector<std::shared_ptr<Instruction>> insts;
 
 public:
-    using const_iterator = decltype(insts)::const_iterator;
     using iterator = decltype(insts)::iterator;
+    using const_iterator = decltype(insts)::const_iterator;
+    using reverse_iterator = decltype(insts)::reverse_iterator;
+    using const_reverse_iterator = decltype(insts)::const_reverse_iterator;
 
     LinearFunction(std::string name_,
                    const std::vector<std::shared_ptr<FormalParam>> &params,
@@ -200,6 +207,13 @@ public:
     iterator end();
     const_iterator cbegin() const;
     const_iterator cend() const;
+
+    const_reverse_iterator rbegin() const;
+    const_reverse_iterator rend() const;
+    reverse_iterator rbegin();
+    reverse_iterator rend();
+    const_reverse_iterator crbegin() const;
+    const_reverse_iterator crend() const;
 
     void addInst(std::shared_ptr<Instruction> inst);
     void appendInsts(std::vector<std::shared_ptr<Instruction>> insts_);

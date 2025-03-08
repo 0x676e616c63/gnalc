@@ -100,8 +100,13 @@ std::list<std::shared_ptr<BasicBlock>> BasicBlock::getPreBB() const {
     return WeaktoSharedList(pre_bb);
 }
 
-std::list<std::shared_ptr<BasicBlock>> BasicBlock::getNextBB() const {
-    return WeaktoSharedList(next_bb);
+std::list<std::shared_ptr<BasicBlock>> BasicBlock::getNextBB() const { return WeaktoSharedList(next_bb); }
+
+size_t BasicBlock::getNumPreBBs() const {
+    return pre_bb.size();
+}
+size_t BasicBlock::getNumNextBBs() const {
+    return next_bb.size();
 }
 
 const std::list<std::shared_ptr<Instruction>> &BasicBlock::getInsts() const {
@@ -218,8 +223,14 @@ const std::vector<std::shared_ptr<Value>> &BasicBlock::getBBParams() const {
 std::shared_ptr<Function> BasicBlock::getParent() const {
     return parent.lock();
 }
-void BasicBlock::setParent(const std::shared_ptr<Function> &_parent) {
-    parent = _parent;
+void BasicBlock::setParent(const std::shared_ptr<Function> &_parent) { parent = _parent; }
+
+std::shared_ptr<Instruction> BasicBlock::getTerminator() const { return insts.back(); }
+std::shared_ptr<BRInst> BasicBlock::getBRInst() const {
+    return std::dynamic_pointer_cast<BRInst>(getTerminator());
+}
+std::shared_ptr<RETInst> BasicBlock::getRETInst() const {
+    return std::dynamic_pointer_cast<RETInst>(getTerminator());
 }
 
 void BasicBlock::addPhiInst(const std::shared_ptr<PHIInst> &node) {
@@ -240,136 +251,16 @@ void BasicBlock::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
 BasicBlock::~BasicBlock() = default;
 
-size_t BasicBlock::getAllInstCount() const {
-    return phi_insts.size() + insts.size();
-}
+size_t BasicBlock::getAllInstCount() const { return phi_insts.size() + insts.size(); }
 
-void linkBB(const std::shared_ptr<BasicBlock> &prebb,
-                   const std::shared_ptr<BasicBlock> &nxtbb) {
-    prebb->addNextBB(nxtbb);
-    nxtbb->addPreBB(prebb);
-}
-
-void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,
-                   const std::shared_ptr<BasicBlock> &nxtbb) {
-    bool ok = prebb->delNextBB(nxtbb);
-    Err::gassert(ok);
-    ok = nxtbb->delPreBB(prebb);
-    Err::gassert(ok);
-}
-
-bool safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb,
-                  const std::shared_ptr<BasicBlock> &nxtbb,
-                  std::set<std::shared_ptr<PHIInst>>& dead_phis) {
-    bool need_to_remove_br = false;
-    // Unlink CFG
-    unlinkBB(prebb, nxtbb);
-
-    // Break BRInst
-    auto br = std::dynamic_pointer_cast<BRInst>(prebb->getInsts().back());
-    Err::gassert(br != nullptr);
-    if (br->isConditional()) {
-        if (br->getTrueDest() == nxtbb)
-            br->dropTrueDest();
-        else {
-            Err::gassert(br->getFalseDest() == nxtbb,
-                "The given block is not a successor.");
-            br->dropFalseDest();
-        }
-    }
-    else {
-        Err::gassert(br->getDest() == nxtbb, "The given block is not a successor.");
-        // Well, the block has no successor, this might because we are deleting unreachable blocks.
-        // Anyway, tell the caller about it.
-        need_to_remove_br = true;
-    }
-
-    // Handle PHI
-    // This a little tricky because when we're deleting a PHIInst's operand,
-    // the result phi might only have one operand. In that case we want to
-    // replace the phi with the value in that operand.
-    // But when this involving multiple blocks,
-    // the replacing might affect other phi in other block, thus cause a replacing propagation.
-    // As the propagation goes, a phi can end up self-referenced or even empty (dead block only).
-    //
-    //        bb0 -- bb1
-    //          \    |
-    //           bb2
-    //
-    // bb0:
-    //    %0 = phi [ %1, %bb1 ] [ %2, %bb2 ]
-    // bb1:
-    //    %1 = phi [ %0, %bb0 ] [ %2, %bb2 ]
-    // bb2:
-    //    %2 = phi [ %0, %bb0 ] [ %1, %bb1 ]
-    //
-    // First we unlink bb1 -> bb2
-    //    %2 = phi [ %0, %bb0 ],  then we want to replace %2 with %0
-    // So,
-    // bb0:
-    //    %0 = phi [ %1, %bb1 ] [ %0, %bb2 ]
-    // bb1:
-    //    %1 = phi [ %0, %bb0 ] [ %0, %bb2 ]
-    // bb2:
-    //
-    // Then we unlink bb1 -> bb0
-    //    %0 = phi [ %0, %bb2 ],  here we can't replace because that makes no sense.
-    // So,
-    // bb0:
-    //    %0 = phi [ %0, %bb2 ]
-    // bb1:
-    //    %1 = phi [ %0, %bb0 ] [ %0, %bb2 ]
-    // bb2:
-    //
-    // Finally we unlink bb2 -> bb0,
-    //    %0 = phi [], a weird empty phi occurred.
-    // Note that this can only happen in dead block.
-    // And we can't figure if a block is dead, because there might be dead loops.
-    // So we just mark the phi as dead.
-    // So,
-    // bb0:
-    //    %0 = phi []
-    // bb1:
-    //    %1 = phi [ %0, %bb0 ] [ %0, %bb2 ]
-    // bb2:
-    for (const auto& phi : nxtbb->getPhiInsts()) {
-        // Delete the phi operand from the unlinked `prebb`
-        if (phi->delOnePhiOperByBlock(prebb)) {
-            // Simplify PHI
-            auto opers = phi->getPhiOpers();
-            if (opers.size() == 1) {
-                // Only one operand, check if it is self-reference.
-                // If it is self-reference, replaceSelf makes no sense.
-                if (opers[0].value != phi)
-                    phi->replaceSelf(opers[0].value);
-                dead_phis.emplace(phi);
-            }
-            else if (opers.empty())
-                dead_phis.emplace(phi);
-        }
-    }
-    return need_to_remove_br;
-}
-
-void moveBlock(const std::shared_ptr<BasicBlock>& bb,
-    const std::shared_ptr<Function>& new_func, FunctionBBIter location) {
-    Err::gassert(bb->getParent() != new_func, "Function not changed");
-    auto target = std::dynamic_pointer_cast<BasicBlock>(bb->shared_from_this());
-    bb->getParent()->delFirstOfBlock(target);
-    new_func->addBlock(location, target);
-}
-void moveBlocks(FunctionBBIter beg, FunctionBBIter end,
-    const std::shared_ptr<Function>& new_func, FunctionBBIter location) {
-    std::vector<std::shared_ptr<BasicBlock>> tmp{beg, end};
-    for (const auto& bb : tmp)
-        moveBlock(bb, new_func, location);
-}
-void moveBlock(const std::shared_ptr<BasicBlock>& bb,
-    const std::shared_ptr<Function>& new_func) {
-    moveBlock(bb, new_func, new_func->end());
-}
-void moveBlocks(FunctionBBIter beg, FunctionBBIter end,
-    const std::shared_ptr<Function>& new_func) {
-    moveBlocks(beg, end, new_func, new_func->end());
+std::shared_ptr<Value> BasicBlock::cloneImpl() const {
+    Err::not_implemented(
+        "BasicBlock::cloneImpl:"
+        "Cloning basic blocks requires manual handling of instruction dependencies."
+        "We MUST clone each Instruction individually and maintain "
+        "a value mapping (original -> cloned) for operand replacement."
+        "Direct cloning would break use-def chains in SSA form."
+    );
+    return nullptr;
 }
 } // namespace IR

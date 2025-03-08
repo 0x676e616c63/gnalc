@@ -2,6 +2,7 @@
 #include "../../../../include/ir/instructions/control.hpp"
 #include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
+#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 
 #include <deque>
 
@@ -49,6 +50,7 @@ PM::PreservedAnalyses DCEPass::run(Function &function, FAM &fam) {
         PM::PreservedAnalyses pa;
         pa.preserve<DomTreeAnalysis>();
         pa.preserve<PostDomTreeAnalysis>();
+        pa.preserve<LoopAnalysis>();
         return pa;
     }
 

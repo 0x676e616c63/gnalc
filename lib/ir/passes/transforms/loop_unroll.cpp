@@ -15,6 +15,7 @@ PM::PreservedAnalyses LoopUnrollPass::run(Function &function, FAM &fam) {
     PM::PreservedAnalyses pa;
     pa.preserve<DomTreeAnalysis>();
     pa.preserve<PostDomTreeAnalysis>();
+    pa.preserve<LoopAnalysis>();
     return pa;
 }
 

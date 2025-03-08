@@ -63,12 +63,13 @@ enum class OP {
     HELPER
 };
 
-
 class Instruction;
 class BasicBlock;
+class PHIInst;
 
 // We can't see BasicBlock's definition here, use `BBInstIter` to get around it.
 using BBInstIter = std::list<std::shared_ptr<Instruction>>::iterator;
+using BBPhiInstIter = std::list<std::shared_ptr<PHIInst>>::iterator;
 
 // Warning: PHIInst MUST NOT invoke the following four `moveInst(s)`
 // Move `inst` to `new_bb`'s `location`
@@ -82,6 +83,8 @@ void moveInst(const std::shared_ptr<Instruction>& inst,
     const std::shared_ptr<BasicBlock>& new_bb);
 void moveInsts(BBInstIter beg, BBInstIter end,
     const std::shared_ptr<BasicBlock>& new_bb);
+
+void movePhiInsts(const std::shared_ptr<BasicBlock>& src_bb, const std::shared_ptr<BasicBlock>& dest_bb);
 
 /**
  * @brief Instruction的操作数实际上由User的Operands来管理

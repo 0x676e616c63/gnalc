@@ -56,6 +56,14 @@ public:
 
     ConstantPool &getConstantPool();
 
+    void removeUnusedFuncDecls();
+    void removeUnusedFuncs();
+
+    template<typename T>
+    auto getConst(T&& val) {
+        return constant_pool.getConst(std::forward<T>(val));
+    }
+
     const_iterator begin() const;
     const_iterator end() const;
     iterator begin();

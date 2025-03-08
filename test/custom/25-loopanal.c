@@ -1,10 +1,8 @@
-int main()
-{
-    int i = 10;
-    while(i > 0)
-    {
-        putch(i);
-        i = i - 1;
+int main() {
+    int i = 0;
+    while (i < 100 - 1) {  // 调整循环条件
+        i = i + 1;
     }
-    return 0;
+
+    return 1;
 }

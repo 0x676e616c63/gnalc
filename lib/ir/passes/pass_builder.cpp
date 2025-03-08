@@ -9,6 +9,7 @@
 
 // Transforms
 #include "../../../include/ir/passes/transforms/adce.hpp"
+#include "../../../include/ir/passes/transforms/break_critical_edges.hpp"
 #include "../../../include/ir/passes/transforms/constant_propagation.hpp"
 #include "../../../include/ir/passes/transforms/dce.hpp"
 #include "../../../include/ir/passes/transforms/dse.hpp"
@@ -28,12 +29,14 @@
 #include "../../../include/ir/passes/transforms/tree_shaking.hpp"
 
 // Utilities
+#include "../../../include/ir/passes/transforms/licm.hpp"
 #include "../../../include/ir/passes/utilities/irprinter.hpp"
 #include "../../../include/ir/passes/utilities/verifier.hpp"
 
 namespace IR {
 
 const OptInfo o1_opt_info = {
+    // Function Transforms
     .mem2reg = true,
     .sccp = true,
     .dce = true,
@@ -47,8 +50,12 @@ const OptInfo o1_opt_info = {
     .loop_simplify = false,
     .loop_rotate = false,
     .lcssa = false,
+    .licm = false,
     .loop_unroll = false,
     .jump_threading = false,
+    // Module Transforms
+    .tree_shaking = true,
+    // Function Debug
     .verify = false,
 };
 
@@ -65,6 +72,15 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
             fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));                                                \
     }
 
+#define FUNCTION_TRANSFORM2(name, pass1, pass2)                                                                        \
+    if (opt_info.name) {                                                                                               \
+        fpm.addPass(pass1);                                                                                            \
+        if (opt_info.verify)                                                                                           \
+            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));                                                \
+        fpm.addPass(pass2);                                                                                            \
+        if (opt_info.verify)                                                                                           \
+            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));                                                \
+    }
     // FUNCTION_TRANSFORM(mem2reg, PromotePass)
     // FUNCTION_TRANSFORM(inliner, InlinePass)
     // FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass)
@@ -75,7 +91,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     // FUNCTION_TRANSFORM(adce, ADCEPass)
     // FUNCTION_TRANSFORM(loadelim, LoadEliminationPass)
     // FUNCTION_TRANSFORM(dse, DSEPass)
-    // FUNCTION_TRANSFORM(gvnpre, GVNPREPass)
+    // FUNCTION_TRANSFORM2(gvnpre, BreakCriticalEdgesPass(), GVNPREPass())
 
     FUNCTION_TRANSFORM(mem2reg, PromotePass())
     FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass())
@@ -85,7 +101,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FUNCTION_TRANSFORM(reassociate, ReassociatePass())
     FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass())
     FUNCTION_TRANSFORM(sccp, ConstantPropagationPass())
-    FUNCTION_TRANSFORM(gvnpre, GVNPREPass())
+    FUNCTION_TRANSFORM2(gvnpre, BreakCriticalEdgesPass(), GVNPREPass())
     FUNCTION_TRANSFORM(loadelim, LoadEliminationPass())
     FUNCTION_TRANSFORM(dse, DSEPass())
     FUNCTION_TRANSFORM(loadelim, LoadEliminationPass())
@@ -96,6 +112,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FUNCTION_TRANSFORM(loop_simplify, LoopSimplifyPass())
     FUNCTION_TRANSFORM(loop_rotate, LoopRotatePass())
     FUNCTION_TRANSFORM(lcssa, LCSSAPass())
+    FUNCTION_TRANSFORM(licm, LICMPass())
     FUNCTION_TRANSFORM(loop_unroll, LoopUnrollPass())
     FUNCTION_TRANSFORM(jump_threading, JumpThreadingPass())
 
@@ -110,7 +127,8 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
 MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
     MPM mpm;
     mpm.addPass(makeModulePass(buildFunctionPipeline(opt_info)));
-    mpm.addPass(TreeShakingPass());
+    if (opt_info.tree_shaking)
+        mpm.addPass(TreeShakingPass());
     return mpm;
 }
 

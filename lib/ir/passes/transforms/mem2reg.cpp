@@ -5,6 +5,7 @@
 #include <algorithm>
 
 #include "../../../../include/ir/instructions/phi.hpp"
+#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 
 namespace IR {
 bool PromotePass::iADomB(const std::shared_ptr<Instruction> &ia,
@@ -199,7 +200,7 @@ void PromotePass::rename(Function &f) {
                                 else {
                                     // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
                                     Logger::logWarning("[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
-                                    incoming_values[{alloca, b}] = f.getConstantPool().getConst(0);
+                                    incoming_values[{alloca, b}] = f.getConst(0);
                                     break;
                                 }
                             } else {
@@ -239,7 +240,7 @@ void PromotePass::rename(Function &f) {
                             else {
                                 // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
                                 Logger::logWarning("[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
-                                incoming_values[{alloca, b}] = f.getConstantPool().getConst(0);
+                                incoming_values[{alloca, b}] = f.getConst(0);
                                 break;
                             }
                         } else {
@@ -389,6 +390,7 @@ PM::PreservedAnalyses PromotePass::run(Function &function, FAM &manager) {
     PM::PreservedAnalyses pa;
     pa.preserve<DomTreeAnalysis>();
     pa.preserve<PostDomTreeAnalysis>();
+    pa.preserve<LoopAnalysis>();
     return pa;
 }
 }// namespace IR

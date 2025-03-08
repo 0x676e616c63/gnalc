@@ -3,6 +3,7 @@
 #include "../../../../include/ir/instructions/memory.hpp"
 #include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
+#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 
 #include <algorithm>
 
@@ -238,6 +239,7 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
         PM::PreservedAnalyses pa;
         pa.preserve<DomTreeAnalysis>();
         pa.preserve<PostDomTreeAnalysis>();
+        pa.preserve<LoopAnalysis>();
         return pa;
     }
     return PM::PreservedAnalyses::all();

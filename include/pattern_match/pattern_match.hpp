@@ -85,8 +85,10 @@ struct ClassMatchBind {
     template <typename T>
     bool match(const T &v) const {
         auto cast = detail::ptrCast<Class>(v);
+        if (!cast)
+            return false;
         result = Proj()(cast);
-        return cast != nullptr;
+        return true;
     }
 };
 
@@ -102,8 +104,10 @@ struct ClassMatchBindIf {
     template <typename T>
     bool match(const T &v) const {
         auto cast = detail::ptrCast<Class>(v);
+        if (!cast)
+            return false;
         result = Proj()(cast);
-        return cast && pred(*cast);
+        return pred(*cast);
     }
 };
 
@@ -126,6 +130,9 @@ struct InstMatch {
 
     template <size_t curr, size_t end>
     std::enable_if_t<curr != end, bool> matchOperands(const BaseInstType& candidate) const {
+        // Note that we must match `curr` first, and then `curr + 1`
+        // In other words, the order of matching should be from left to right.
+        // IR::M::Is relies on this behavior, see comments in `ir/pattern_match.hpp`
         return matchOperands<curr, curr>(candidate) && matchOperands<curr + 1, end>(candidate);
     }
 
@@ -140,90 +147,6 @@ struct InstMatch {
             return OpcodeGetter()(*inst) == opcode
                 && NumOperandsGetter()(*inst) == sizeof...(OperandPatterns)
                 && matchOperands<0, sizeof...(OperandPatterns) - 1>(*inst);
-        }
-        return false;
-    }
-};
-
-// Generic Instruction Match, matching instructions
-// that have `NumOperands` operands, and all of which are identical.
-// It doesn't match instructions that have no operand.
-//
-// Requires decltype(OperandGetter()) is a pointer and has `operator==`.
-//
-// Warning:
-//   This Pattern only checks the operands with `operator==`.
-//   Ensure the operand's address is identical only if they are identical.
-template <typename InstInfo, size_t NumOperands, typename Proj = detail::Identity>
-struct IdenticalOperandInstMatch {
-    using BaseInstType = typename InstInfo::InstType;
-    using OperandGetter = typename InstInfo::OperandGetter;
-    using NumOperandsGetter = typename InstInfo::NumOperandsGetter;
-    using Expected = Util::remove_cvref_t<decltype(std::declval<Proj>()
-        (std::declval<OperandGetter>()(std::declval<BaseInstType>(), 0)))>;
-
-    mutable Expected common;
-
-    explicit IdenticalOperandInstMatch(Expected common_ = nullptr) : common(common_) {}
-
-    template <size_t curr, size_t end>
-    std::enable_if_t<curr != end, bool> matchOperands(const BaseInstType& candidate) const {
-        return matchOperands<curr, curr>(candidate) && matchOperands<curr + 1, end>(candidate);
-    }
-
-    template <size_t curr, size_t end>
-    std::enable_if_t<curr == end, bool> matchOperands(const BaseInstType& candidate) const {
-        return Proj()(OperandGetter()(candidate, curr)) == common;
-    }
-
-    template <typename T>
-    bool match(const T& v) const {
-        if (auto inst = detail::ptrCast<BaseInstType>(v)) {
-            static_assert(NumOperands != 0, "Cannot match instructions that have no operand.");
-            if (NumOperandsGetter()(*inst) != NumOperands)
-                return false;
-            if (common != nullptr)
-                common = Proj()(OperandGetter()(*inst, 0));
-            return matchOperands<0, NumOperands - 1>(*inst);
-        }
-        return false;
-    }
-};
-
-// Almost the same as IdenticalOperandInstMatch, but checks opcode.
-template <typename InstInfo, typename InstInfo::OpcodeType opcode,
-    size_t NumOperands, typename Proj = detail::Identity>
-struct IdenticalOperandInstMatchWithOp {
-    using BaseInstType = typename InstInfo::InstType;
-    using OperandGetter = typename InstInfo::OperandGetter;
-    using OpcodeGetter = typename InstInfo::OpcodeGetter;
-    using NumOperandsGetter = typename InstInfo::NumOperandsGetter;
-    using Expected = Util::remove_cvref_t<decltype(std::declval<Proj>()
-        (std::declval<OperandGetter>()(std::declval<BaseInstType>(), 0)))>;
-
-    mutable Expected common;
-
-    explicit IdenticalOperandInstMatchWithOp(Expected common_ = nullptr) : common(common_) {}
-
-    template <size_t curr, size_t end>
-    std::enable_if_t<curr != end, bool> matchOperands(const BaseInstType& candidate) const {
-        return matchOperands<curr, curr>(candidate) && matchOperands<curr + 1, end>(candidate);
-    }
-
-    template <size_t curr, size_t end>
-    std::enable_if_t<curr == end, bool> matchOperands(const BaseInstType& candidate) const {
-        return Proj()(OperandGetter()(candidate, curr)) == common;
-    }
-
-    template <typename T>
-    bool match(const T& v) const {
-        if (auto inst = detail::ptrCast<BaseInstType>(v)) {
-            static_assert(NumOperands != 0, "Cannot match instructions that have no operand.");
-            if (NumOperandsGetter()(*inst) != NumOperands || OpcodeGetter()(*inst) != opcode)
-                return false;
-            if (common != nullptr)
-                common = Proj()(OperandGetter()(*inst, 0));
-            return matchOperands<0, NumOperands - 1>(*inst);
         }
         return false;
     }

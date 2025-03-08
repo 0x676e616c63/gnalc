@@ -19,6 +19,9 @@ namespace IR {
 class TailRecursionEliminationPass: public PM::PassInfo<TailRecursionEliminationPass> {
 public:
     PM::PreservedAnalyses run(Function& function, FAM &manager);
+
+private:
+    size_t name_cnt = 0;
 };
 }
 #endif //GNALC_IR_PASSES_TRANSFORMS_TAIL_RECURISON_ELIMINATION_HPP

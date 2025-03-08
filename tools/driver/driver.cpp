@@ -78,39 +78,34 @@ int main(int argc, char **argv) {
         else if (arg == "-O1" || arg == "-O")
             opt_info = IR::o1_opt_info;
 
+#define OPT_ARG(cli_arg, cli_no_arg, opt_name)                                                           \
+    else if(arg == (cli_arg)) \
+        opt_info.opt_name = true;\
+    else if (arg == (cli_no_arg)) \
+        opt_info.opt_name = false;
+
         // Optimizations available:
-        else if (arg == "--mem2reg")
-            opt_info.mem2reg = true;
-        else if (arg == "--sccp")
-            opt_info.sccp = true;
-        else if (arg == "--dce")
-            opt_info.dce = true;
-        else if (arg == "--adce")
-            opt_info.adce = true;
-        else if (arg == "--dse")
-            opt_info.dse = true;
-        else if (arg == "--loadelim")
-            opt_info.loadelim = true;
-        else if (arg == "--gvnpre")
-            opt_info.gvnpre = true;
-        else if (arg == "--tailcall")
-            opt_info.tailcall = true;
-        else if (arg == "--reassociate")
-            opt_info.reassociate = true;
-        else if (arg == "--instsimplify")
-            opt_info.instsimplify = true;
-        else if (arg == "--inline")
-            opt_info.inliner = true;
-        else if (arg == "--loopsimplify")
-            opt_info.loop_simplify = true;
-        else if (arg == "--looprotate")
-            opt_info.loop_rotate = true;
-        else if (arg == "--lcssa")
-            opt_info.lcssa = true;
-        else if (arg == "--loopunroll")
-            opt_info.loop_unroll = true;
-        else if (arg == "--jumpthreading")
-            opt_info.jump_threading = true;
+        // Function Transforms
+        OPT_ARG("--mem2reg", "--no-mem2reg", mem2reg)
+        OPT_ARG("--sccp", "--no-sccp", sccp)
+        OPT_ARG("--dce", "--no-dce", dce)
+        OPT_ARG("--adce", "--no-adce", adce)
+        OPT_ARG("--dse", "--no-dse", dse)
+        OPT_ARG("--loadelim", "--no-loadelim", loadelim)
+        OPT_ARG("--gvnpre", "--no-gvnpre", gvnpre)
+        OPT_ARG("--tailcall", "--no-tailcall", tailcall)
+        OPT_ARG("--reassociate", "--no-reassociate", reassociate)
+        OPT_ARG("--instsimplify", "--no-instsimplify", instsimplify)
+        OPT_ARG("--inline", "--no-inline", inliner)
+        OPT_ARG("--loopsimplify", "--no-loopsimplify", loop_simplify)
+        OPT_ARG("--looprotate", "--no-looprotate", loop_rotate)
+        OPT_ARG("--lcssa", "--no-lcssa", lcssa)
+        OPT_ARG("--licm", "--no-licm", licm)
+        OPT_ARG("--loopunroll", "--no-loopunroll", loop_unroll)
+        OPT_ARG("--jumpthreading", "--no-jumpthreading", jump_threading)
+        // Module Transforms
+        OPT_ARG("--treeshaking", "--no-treeshaking", tree_shaking)
+#undef OPT_ARG
         // Debug options:
         else if (arg == "--ann")
             opt_info.advance_name_norm = true;
@@ -162,8 +157,10 @@ Optimizations available:
   --lcssa              - Canonicalize loops to The Loop Closed SSA Form
   --loopunroll         - Unroll loops
   --jumpthreading      - Jump Threading
+  --treeshaking        - Shake off unused functions, function declarations and global variables
 
 Debug options:
+  --no-<pass>          - Remove <pass> from pipeline, <pass> are specified by 'Optimizations available' above.
   --ann                - Use the advance name normalization result (after IRGen). (This disables the one at the last).
   --verify             - Verify IR after each pass
   --strict             - Enable verify and abort when verify failed
@@ -237,6 +234,7 @@ Extensions:
 
     if (emit_llvm) {
         mpm.addPass(IR::PrintModulePass(*poutstream));
+        // mpm.addPass(IR::makeModulePass(IR::PrintLoopPass(std::cout)));
         // mpm.addPass(IR::PrintModulePass(std::cout)); // debug, remove it
         mpm.run(generator.get_module(), mam);
         return 0;

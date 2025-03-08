@@ -6,7 +6,7 @@
 #include "../../../../include/ir/instructions/control.hpp"
 #include "../../../../include/ir/instructions/memory.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
-#include "../../../../include/ir/passes/helpers/break_critical_edges.hpp"
+#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 
 #include <algorithm>
 #include <deque>
@@ -49,13 +49,10 @@ std::ostream &operator<<(std::ostream &os, const GVNPREPass::Expr &expr) {
     case GVNPREPass::Expr::ExprOp::Phi:
         os << "phi " << expr.ir_value->getName();
         break;
-    case GVNPREPass::Expr::ExprOp::Untracked:
-        os << "untracked " << expr.ir_value->getName();
-        break;
     default:
         Err::unreachable();
     }
-    if (!expr.isGlobalTemp() && !expr.isPhi() && !expr.isUntracked()
+    if (!expr.isGlobalTemp() && !expr.isPhi()
         && std::dynamic_pointer_cast<Instruction>(expr.ir_value)->getParent() == nullptr) {
         os << "(gen)";
     }
@@ -142,9 +139,6 @@ GVNPREPass::Expr::ExprOp GVNPREPass::Expr::getExprOpcode() const {
 const std::vector<GVNPREPass::ValueKind> &GVNPREPass::Expr::getExprOperands() const {
     return operands;
 }
-bool GVNPREPass::Expr::isUntracked() const {
-    return op == ExprOp::Untracked;
-}
 bool GVNPREPass::Expr::isGlobalTemp() const {
     return op == ExprOp::GlobalTemp;
 }
@@ -179,7 +173,7 @@ GVNPREPass::Expr::ExprOp GVNPREPass::Expr::makeOP(OP op) {
     default:
         Err::unreachable("Unknown OP");
     }
-    return ExprOp::Untracked;
+    return ExprOp::Add;
 }
 
 // GVNPREPass::Expr::ExprOp GVNPREPass::Expr::makeOP(ICMPOP icmpop) {
@@ -225,7 +219,7 @@ GVNPREPass::Expr::ExprOp GVNPREPass::Expr::makeOP(OP op) {
 bool GVNPREPass::Expr::operator==(const Expr &rhs) const {
     if (op != rhs.op)
         return false;
-    if (op == ExprOp::Untracked || op == ExprOp::GlobalTemp || op == ExprOp::Phi)
+    if (op == ExprOp::GlobalTemp || op == ExprOp::Phi)
         return ir_value == rhs.ir_value;
     return operands == rhs.operands;
 }
@@ -254,17 +248,7 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(
         Logger::logInfo("[GVN-PRE]: Skipped analysis on an Expr, nested too deeply (more than ",
             nested_expr_cnt, "). Continuing will cause a terrible compile time.");
         too_deeply_nested_expr_detected = true;
-        auto expr = std::make_shared<Expr>(ir_value, Expr::ExprOp::Untracked);
-        expr->canon();
-        auto pool_expr = getExprFromPool(expr);
-        // Already in table
-        if (expr_table.find(pool_expr) != expr_table.end())
-            return pool_expr;
-        // New Exp
-        auto kind = getKindOrInsert(pool_expr);
-        // Assume there is no phi
-        exp_gen.insert(kind, pool_expr);
-        return pool_expr;
+        return nullptr;
     }
 
     std::shared_ptr<Expr> expr;
@@ -286,22 +270,28 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(
         } else if (auto inst = std::dynamic_pointer_cast<Instruction>(ir_value)) {
             const auto &raw_operands = inst->getOperands();
             std::vector<ValueKind> operands;
+            bool killed = false;
             std::transform(raw_operands.begin(), raw_operands.end(),
                            std::back_inserter(operands),
-                           [this, &exp_gen, &nested_expr_cnt](const auto &use) {
-                               return getKindOrInsert(use->getValue(), exp_gen, nested_expr_cnt + 1);
+                           [this, &exp_gen, &nested_expr_cnt, &killed](const auto &use) {
+                               auto kind = getKindOrInsert(use->getValue(),
+                                   exp_gen, nested_expr_cnt + 1);
+                               if (kind == NotValueKind)
+                                   killed = true;
+                               return kind;
                            });
 
+            if (killed)
+                return nullptr;
             if (auto binary = std::dynamic_pointer_cast<BinaryInst>(ir_value)) {
                 Err::gassert(operands.size() == 2);
                 expr = std::make_shared<Expr>(binary, Expr::makeOP(binary->getOpcode()), std::move(operands));
             } else if (auto gep = std::dynamic_pointer_cast<GEPInst>(ir_value)) {
                 Err::gassert(operands.size() > 1);
                 expr = std::make_shared<Expr>(gep, Expr::ExprOp::Gep, std::move(operands));
-            } else
-                expr = std::make_shared<Expr>(ir_value, Expr::ExprOp::Untracked);
+            } else return nullptr;
         } else
-            expr = std::make_shared<Expr>(ir_value, Expr::ExprOp::Untracked);
+            return nullptr;
     }
 
     expr->canon();
@@ -369,7 +359,7 @@ std::shared_ptr<Value> GVNPREPass::phi_translate(Expr* expr, BasicBlock* pred, B
         return phi->getValueForBlock(pred->shared_from_this());
     }
 
-    if (expr->isUntracked() || expr->isGlobalTemp())
+    if (expr->isGlobalTemp())
         return expr->getIRVal();
 
     // To accurately determine if an expression is available in `pred`,
@@ -408,14 +398,21 @@ std::shared_ptr<Value> GVNPREPass::phi_translate(Expr* expr, BasicBlock* pred, B
     auto inst = std::dynamic_pointer_cast<Instruction>(expr->getIRVal());
     auto raw_operands = inst->getOperands();
     std::vector<std::shared_ptr<Value>> translated_operands;
+    bool killed = false;
     std::transform(raw_operands.begin(), raw_operands.end(),
         std::back_inserter(translated_operands),
-            [this, &pred, &succ](const auto& use)
+            [this, &pred, &succ, &killed](const auto& use)
             {
                 KindExprSet exp_gen_temp;
-                return phi_translate(
+                auto v = phi_translate(
                     table.getExprOrInsert(use->getValue(), exp_gen_temp), pred, succ);
+                if (v == nullptr)
+                    killed = true;
+                return v;
             });
+
+    if (killed)
+        return nullptr;
 
     std::shared_ptr<Instruction> translated_inst;
     if (auto binary = std::dynamic_pointer_cast<BinaryInst>(inst)) {
@@ -436,6 +433,11 @@ std::shared_ptr<Value> GVNPREPass::phi_translate(Expr* expr, BasicBlock* pred, B
 
     KindExprSet exp_gen_temp;
     auto translated_kind = table.getKindOrInsert(translated_inst, exp_gen_temp);
+
+    // The translated instruction might contain some blackbox registers.
+    // If so, drop it.
+    if (translated_kind == NotValueKind)
+        return nullptr;
 
     // See if the `translated_inst` in `avail_out`
     if (avail_out_map[pred].contains(translated_kind)) {
@@ -478,7 +480,6 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     }
 
     bool gvnpre_inst_modified = false;
-    bool gvnpre_cfg_modified = break_critical_edges(function);
 
     //
     // Step 1 - BuildSets
@@ -507,8 +508,10 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
             if (inst->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
                 auto expr = table.getExprOrInsert(inst, exp_gen);
                 auto kind = table.getKindOrInsert(expr);
-                exp_gen.insert(kind, expr);
-                avail_out.insert(kind, inst);
+                if (kind != NotValueKind) {
+                    exp_gen.insert(kind, expr);
+                    avail_out.insert(kind, inst);
+                }
 
                 if (table.should_quit_for_too_deeply_nested_expr()) {
                     reset();
@@ -562,9 +565,11 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                 auto succ0 = succ.front().get();
                 for (const auto&[kind, val] : antic_in_map[succ0]) {
                     auto translated_val = phi_translate(val, curr->bb, succ0);
-                    KindExprSet exp_gen_temp;
-                    auto translated_expr = table.getExprOrInsert(translated_val, exp_gen_temp);
-                    curr_antic_out.insert(table.getKindOrInsert(translated_expr), translated_expr);
+                    if (translated_val != nullptr) {
+                        KindExprSet exp_gen_temp;
+                        auto translated_expr = table.getExprOrInsert(translated_val, exp_gen_temp);
+                        curr_antic_out.insert(table.getKindOrInsert(translated_expr), translated_expr);
+                    }
                 }
             }
 
@@ -586,32 +591,20 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
 
             // clean
             AntiLeaderSet cleaned_antic_in;
-            std::set<ValueKind> killed_kinds;
             for (const auto& [kind, expr] : antic_in_temp) {
-                bool operand_got_killed = false;
-                for (auto operand : expr->getExprOperands()) {
-                    if (killed_kinds.find(operand) != killed_kinds.end()) {
-                        killed_kinds.insert(kind);
-                        operand_got_killed = true;
-                        break;
-                    }
-                }
-                if (!operand_got_killed) {
-                    if (expr->isUntracked())
-                        killed_kinds.insert(kind);
-                    else if (!expr->isGlobalTemp())
-                        cleaned_antic_in.insert(kind, expr);
-                }
+                if (!expr->isGlobalTemp())
+                    cleaned_antic_in.insert(kind, expr);
             }
 
             auto& antic_in = antic_in_map[curr->bb];
             modified |= (antic_in != cleaned_antic_in);
             antic_in = cleaned_antic_in;
         }
+
+        // Logger::logDebug("[GVN-PRE] on '", function.getName(), "':\n", *this);
     }
 
     // Logger::logDebug("[GVN-PRE] on '", function.getName(), "':\n", *this);
-    // return PM::PreservedAnalyses::none();
 
     //
     // Step 2 - Insert
@@ -683,8 +676,13 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                     // Pred -> available, translated kind, translated val
                     std::map<BasicBlock*, std::tuple<bool, ValueKind, std::shared_ptr<Value>>> translated;
                     bool avail_at_least_one = false;
+                    bool killed = false;
                     for (const auto& pred : preds) {
                         auto tval = phi_translate(expr_to_hoist, pred.get(), curr->bb);
+                        if (tval == nullptr) {
+                            killed = true;
+                            break;
+                        }
                         KindExprSet exp_gen_temp;
                         auto tkind = table.getKindOrInsert(tval, exp_gen_temp);
                         // What we care is if the translated expr is available in `pred`,
@@ -693,6 +691,9 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                         avail_at_least_one |= is_avail_in_pred;
                         translated[pred.get()] = std::make_tuple(is_avail_in_pred, tkind, tval);
                     }
+
+                    if (killed)
+                        continue;
 
                     // If the expression is available in at least one predecessor,
                     // then we insert it in predecessors where it is not available.
@@ -796,8 +797,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                 continue;
             if (kind != NotValueKind) {
                 auto leader_value = avail_out.getValue(kind);
-                Err::gassert(leader_value != nullptr);
-                if (inst != leader_value) {
+                if (leader_value != nullptr && inst != leader_value) {
                     // The paper said there should be a move, but replaceSelf is ok.
                     // Note that
                     // 1. The `leader_value` available at this block must originate from a dominator block
@@ -848,13 +848,11 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     // cleanup to release temp objects
     reset();
 
-    if (gvnpre_cfg_modified)
-        return PM::PreservedAnalyses::none();
-
     if (gvnpre_inst_modified) {
         PM::PreservedAnalyses pa;
         pa.preserve<DomTreeAnalysis>();
         pa.preserve<PostDomTreeAnalysis>();
+        pa.preserve<LoopAnalysis>();
         return pa;
     }
 

@@ -78,6 +78,8 @@ struct GenericDomTree {
 
     // todo: 在构造支配树时预计算DFS进入/离开时间戳可将支配关系判断优化为O(1)时间操作
     bool ADomB(BasicBlock *a, BasicBlock *b) {
+        Err::gassert(nodes.count(a) && nodes.count(b), "No dominator tree for unreachable blocks.");
+
         if (nodes[a] == root)
             return true;
         if (a == b)
@@ -91,6 +93,8 @@ struct GenericDomTree {
         return false;
     }
     BlockSet getDomSet(BasicBlock *b) {
+        Err::gassert(nodes.count(b), "No dominator tree for unreachable blocks.");
+
         BlockSet domset = {b};
         auto _b = nodes[b].get();
         do {
@@ -101,6 +105,8 @@ struct GenericDomTree {
     }
 
     BlockSet getDomFrontier(BasicBlock *b) {
+        Err::gassert(nodes.count(b), "No dominator tree for unreachable blocks.");
+
         BlockSet DF;
         std::stack<Node *> STN;
         STN.push(nodes[b].get());

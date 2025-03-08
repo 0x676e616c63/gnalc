@@ -22,8 +22,11 @@ struct OptInfo {
     bool loop_simplify{false};
     bool loop_rotate{false};
     bool lcssa{false};
+    bool licm{false};
     bool loop_unroll{false};
     bool jump_threading{false};
+
+    bool tree_shaking{false};
 
     bool advance_name_norm{false};
     bool verify{true}; // Defaults to verify in development.
