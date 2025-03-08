@@ -34,6 +34,11 @@
 #include "../../../include/ir/passes/utilities/irprinter.hpp"
 #include "../../../include/ir/passes/utilities/verifier.hpp"
 
+#include <algorithm>
+#include <random>
+#include <string>
+#include <vector>
+
 namespace IR {
 
 const OptInfo o1_opt_info = {
@@ -140,7 +145,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass())
     FUNCTION_TRANSFORM(inliner, InlinePass())
     // FIXME: bug here
-    // FUNCTION_TRANSFORM(reassociate, ReassociatePass())
+    FUNCTION_TRANSFORM(reassociate, ReassociatePass())
     FUNCTION_TRANSFORM(sccp, ConstantPropagationPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
     FUNCTION_TRANSFORM(reassociate, ReassociatePass())
@@ -177,6 +182,78 @@ MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
     mpm.addPass(makeModulePass(buildFunctionPipeline(opt_info)));
     if (opt_info.tree_shaking)
         mpm.addPass(TreeShakingPass());
+    return mpm;
+}
+
+FPM PassBuilder::buildFunctionFuzzTestingPipeline() {
+    FPM fpm;
+    fpm.addPass(PromotePass());
+    fpm.addPass(NameNormalizePass(true));
+    std::vector<std::function<std::string_view()>> passes;
+
+#define REGISTER_FUNCTION_TRANSFORM(pass)                                                                              \
+    passes.emplace_back([&fpm] {                                                                                       \
+        fpm.addPass(pass());                                                                                           \
+        fpm.addPass(VerifyPass(true));                                                                                 \
+        return pass::name();                                                                                           \
+    });
+
+#define REGISTER_FUNCTION_TRANSFORM2(pass1, pass2)                                                                     \
+    passes.emplace_back([&fpm] {                                                                                       \
+        fpm.addPass(pass1());                                                                                          \
+        fpm.addPass(pass2());                                                                                          \
+        fpm.addPass(VerifyPass(true));                                                                                 \
+        return pass2::name();                                                                                          \
+    });
+
+    REGISTER_FUNCTION_TRANSFORM(TailRecursionEliminationPass)
+    REGISTER_FUNCTION_TRANSFORM(InlinePass)
+    REGISTER_FUNCTION_TRANSFORM(ReassociatePass)
+    REGISTER_FUNCTION_TRANSFORM(ConstantPropagationPass)
+    REGISTER_FUNCTION_TRANSFORM(ADCEPass)
+    REGISTER_FUNCTION_TRANSFORM(InstSimplifyPass)
+    REGISTER_FUNCTION_TRANSFORM(DCEPass)
+    REGISTER_FUNCTION_TRANSFORM(CFGSimplifyPass)
+    REGISTER_FUNCTION_TRANSFORM2(BreakCriticalEdgesPass, GVNPREPass)
+    REGISTER_FUNCTION_TRANSFORM(LoadEliminationPass)
+    REGISTER_FUNCTION_TRANSFORM(DSEPass)
+    // REGISTER_FUNCTION_TRANSFORM(LoopSimplifyPass)
+    // REGISTER_FUNCTION_TRANSFORM(LoopRotatePass)
+    // REGISTER_FUNCTION_TRANSFORM(LCSSAPass)
+    // REGISTER_FUNCTION_TRANSFORM(LICMPass)
+    // REGISTER_FUNCTION_TRANSFORM(LoopUnrollPass)
+    // REGISTER_FUNCTION_TRANSFORM(JumpThreadingPass)
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<size_t> distrib(0, passes.size() - 1);
+
+    // Duplicate some passes
+    auto duplicating_times = passes.size() * 2;
+    for (size_t i = 0; i < duplicating_times; ++i)
+        passes.emplace_back(passes[distrib(gen)]);
+
+    std::shuffle(passes.begin(), passes.end(), std::mt19937(std::random_device()()));
+    std::string pipeline;
+    for (auto &add_pass : passes) {
+        std::string name{ add_pass() };
+        pipeline += name + ", ";
+    }
+    if (!pipeline.empty()) {
+        pipeline.pop_back();
+        pipeline.pop_back();
+    }
+
+    Logger::logInfo("[FuzzTesting]: Running pipeline: ", pipeline);
+
+    fpm.addPass(NameNormalizePass(true));
+    return fpm;
+}
+
+MPM PassBuilder::buildModuleFuzzTestingPipeline() {
+    MPM mpm;
+    mpm.addPass(makeModulePass(buildFunctionFuzzTestingPipeline()));
+    mpm.addPass(TreeShakingPass());
     return mpm;
 }
 

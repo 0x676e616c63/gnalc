@@ -37,6 +37,7 @@ int main(int argc, char **argv) {
     bool emit_llvm = false;        // -emit-llvm
     bool ast_dump = false;         // -ast-dump
     bool fixed_point_pipeline = false; // -fixed-point
+    bool fuzz_testing = false; // -fuzz
     IR::OptInfo opt_info;
 
 #if GNALC_EXTENSION_BRAINFK
@@ -78,6 +79,8 @@ int main(int argc, char **argv) {
             ast_dump = true;
         else if (arg == "-fixed-point")
             fixed_point_pipeline = true;
+        else if (arg == "-fuzz")
+            fuzz_testing = true;
         else if (arg == "-O1" || arg == "-O")
             opt_info = IR::o1_opt_info;
 
@@ -142,6 +145,7 @@ General options:
   -emit-llvm           - Use the LLVM representation for assembler and object files
   -ast-dump            - Build ASTs and then debug dump them
   -fixed-point         - Enable the fixed point optimization pipeline. (Ignore other optimization options)
+  -fuzz                - Enable fuzz testing pipeline. (Ignore other optimization options)
   --log <log-level>    - Enable compiler logger. Available log-level: debug, info, none
   -h, --help           - Display available options
 
@@ -227,6 +231,8 @@ Extensions:
     IR::MPM mpm;
     if (fixed_point_pipeline)
         mpm = IR::PassBuilder::buildModuleFixedPointPipeline();
+    else if (fuzz_testing)
+        mpm = IR::PassBuilder::buildModuleFuzzTestingPipeline();
     else
         mpm = IR::PassBuilder::buildModulePipeline(opt_info);
 

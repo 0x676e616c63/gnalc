@@ -40,8 +40,12 @@ class PassBuilder {
 public:
     static FPM buildFunctionFixedPointPipeline();
     static MPM buildModuleFixedPointPipeline();
+
     static FPM buildFunctionPipeline(OptInfo opt_info);
     static MPM buildModulePipeline(OptInfo opt_info);
+
+    static FPM buildFunctionFuzzTestingPipeline();
+    static MPM buildModuleFuzzTestingPipeline();
 
     static void registerModuleAnalyses(MAM &);
     static void registerFunctionAnalyses(FAM &);
