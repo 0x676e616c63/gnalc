@@ -38,6 +38,7 @@ int main(int argc, char **argv) {
     bool ast_dump = false;         // -ast-dump
     bool fixed_point_pipeline = false; // -fixed-point
     bool fuzz_testing = false; // -fuzz
+    std::string fuzz_testing_repro;
     IR::OptInfo opt_info;
 
 #if GNALC_EXTENSION_BRAINFK
@@ -81,7 +82,14 @@ int main(int argc, char **argv) {
             fixed_point_pipeline = true;
         else if (arg == "-fuzz")
             fuzz_testing = true;
-        else if (arg == "-O1" || arg == "-O")
+        else if (arg == "-fuzz-repro") {
+            ++i;
+            if (i >= argc) {
+                std::cerr << "Error: Expected fuzz pipeline." << std::endl;
+                return -1;
+            }
+            fuzz_testing_repro = argv[i];
+        } else if (arg == "-O1" || arg == "-O")
             opt_info = IR::o1_opt_info;
 
 #define OPT_ARG(cli_arg, cli_no_arg, opt_name)                                                           \
@@ -146,6 +154,7 @@ General options:
   -ast-dump            - Build ASTs and then debug dump them
   -fixed-point         - Enable the fixed point optimization pipeline. (Ignore other optimization options)
   -fuzz                - Enable fuzz testing pipeline. (Ignore other optimization options)
+  -fuzz-repro <pipeline>     - Reproduce fuzz testing pipeline. Find <pipeline> in the fuzz testing log.
   --log <log-level>    - Enable compiler logger. Available log-level: debug, info, none
   -h, --help           - Display available options
 
@@ -199,7 +208,7 @@ Extensions:
     if (!input_file.empty()) {
         yyin = fopen(input_file.c_str(), "r");
         if (!yyin) {
-            std::cerr << "Error: Failed to open input file." << std::endl;
+            std::cerr << "Error: Failed to open input file '" << input_file << "'." << std::endl;
             return -1;
         }
     }
@@ -229,10 +238,12 @@ Extensions:
     IR::PassBuilder::registerProxies(fam, mam);
 
     IR::MPM mpm;
-    if (fixed_point_pipeline)
-        mpm = IR::PassBuilder::buildModuleFixedPointPipeline();
+    if (!fuzz_testing_repro.empty())
+        mpm = IR::PassBuilder::buildModuleFuzzTestingPipeline(fuzz_testing_repro);
     else if (fuzz_testing)
         mpm = IR::PassBuilder::buildModuleFuzzTestingPipeline();
+    else if (fixed_point_pipeline)
+        mpm = IR::PassBuilder::buildModuleFixedPointPipeline();
     else
         mpm = IR::PassBuilder::buildModulePipeline(opt_info);
 
@@ -242,7 +253,7 @@ Extensions:
     if (!output_file.empty()) {
         outfile.open(output_file);
         if (!outfile.is_open()) {
-            std::cerr << "Error: Failed to open output file." << std::endl;
+            std::cerr << "Error: Failed to open output file '" << output_file << "'." << std::endl;
             return -1;
         }
         poutstream = &outfile;

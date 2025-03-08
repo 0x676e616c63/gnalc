@@ -38,6 +38,8 @@
 #include <random>
 #include <string>
 #include <vector>
+#include <optional>
+#include <functional>
 
 namespace IR {
 
@@ -145,7 +147,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass())
     FUNCTION_TRANSFORM(inliner, InlinePass())
     // FIXME: bug here
-    FUNCTION_TRANSFORM(reassociate, ReassociatePass())
+    // FUNCTION_TRANSFORM(reassociate, ReassociatePass())
     FUNCTION_TRANSFORM(sccp, ConstantPropagationPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
     FUNCTION_TRANSFORM(reassociate, ReassociatePass())
@@ -185,25 +187,23 @@ MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
     return mpm;
 }
 
-FPM PassBuilder::buildFunctionFuzzTestingPipeline() {
+FPM PassBuilder::buildFunctionFuzzTestingPipeline(const std::string& repro) {
     FPM fpm;
     fpm.addPass(PromotePass());
     fpm.addPass(NameNormalizePass(true));
-    std::vector<std::function<std::string_view()>> passes;
+    std::vector<std::pair<std::string_view, std::function<void(bool)>>> passes;
 
 #define REGISTER_FUNCTION_TRANSFORM(pass)                                                                              \
-    passes.emplace_back([&fpm] {                                                                                       \
+    passes.emplace_back(pass::name(), [&fpm] (bool strict){                                                                                       \
         fpm.addPass(pass());                                                                                           \
-        fpm.addPass(VerifyPass(true));                                                                                 \
-        return pass::name();                                                                                           \
+        fpm.addPass(VerifyPass(strict));                                                                                 \
     });
 
 #define REGISTER_FUNCTION_TRANSFORM2(pass1, pass2)                                                                     \
-    passes.emplace_back([&fpm] {                                                                                       \
+    passes.emplace_back(pass2::name(), [&fpm] (bool strict){                                                                                       \
         fpm.addPass(pass1());                                                                                          \
         fpm.addPass(pass2());                                                                                          \
-        fpm.addPass(VerifyPass(true));                                                                                 \
-        return pass2::name();                                                                                          \
+        fpm.addPass(VerifyPass(strict));                                                                                 \
     });
 
     REGISTER_FUNCTION_TRANSFORM(TailRecursionEliminationPass)
@@ -224,36 +224,68 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline() {
     // REGISTER_FUNCTION_TRANSFORM(LoopUnrollPass)
     // REGISTER_FUNCTION_TRANSFORM(JumpThreadingPass)
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<size_t> distrib(0, passes.size() - 1);
+    if (repro.empty()) {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<size_t> distrib(0, passes.size() - 1);
 
-    // Duplicate some passes
-    auto duplicating_times = passes.size() * 2;
-    for (size_t i = 0; i < duplicating_times; ++i)
-        passes.emplace_back(passes[distrib(gen)]);
+        // Duplicate some passes
+        auto duplicating_times = passes.size() * 2;
+        for (size_t i = 0; i < duplicating_times; ++i)
+            passes.emplace_back(passes[distrib(gen)]);
 
-    std::shuffle(passes.begin(), passes.end(), std::mt19937(std::random_device()()));
-    std::string pipeline;
-    for (auto &add_pass : passes) {
-        std::string name{ add_pass() };
-        pipeline += name + ", ";
+        std::shuffle(passes.begin(), passes.end(), std::mt19937(std::random_device()()));
+        std::string pipeline;
+        for (const auto &[name, pass_adder] : passes) {
+            pass_adder(true);
+            pipeline += name;
+            pipeline += ", ";
+        }
+        if (!pipeline.empty()) {
+            pipeline.pop_back();
+            pipeline.pop_back();
+        }
+        fpm.addPass(NameNormalizePass(true));
+
+        Logger::logInfo("[FuzzTesting]: Running pipeline: '", pipeline
+            + "'. Run with '-fuzz-repro <this pipeline>' to reproduce it.");
     }
-    if (!pipeline.empty()) {
-        pipeline.pop_back();
-        pipeline.pop_back();
+    else {
+        auto find_pass = [&passes](const std::string &target) -> std::optional<std::function<void(bool)>> {
+            for (const auto &[name, pass_adder] : passes) {
+                if (target == name)
+                    return pass_adder;
+            }
+            return std::nullopt;
+        };
+        std::string curr;
+        for (auto ch : repro) {
+            if (ch == ',') {
+                auto p = find_pass(curr);
+                Err::gassert(p.has_value(), "[FuzzTesting]: Unknown pass: '" + curr + "'.");
+                // Disable strict mode for debugging
+                (*p)(false);
+                curr.clear();
+            }
+            else if (ch != ' ')
+                curr += ch;
+        }
+        auto p = find_pass(curr);
+        Err::gassert(p.has_value(), "[FuzzTesting]: Unknown pass: '" + curr + "'.");
+        (*p)(false);
+        curr.clear();
+
+        Logger::logInfo("[FuzzTesting]: Reproducing pipeline: ", repro);
     }
-
-    Logger::logInfo("[FuzzTesting]: Running pipeline: ", pipeline);
-
-    fpm.addPass(NameNormalizePass(true));
     return fpm;
 }
 
-MPM PassBuilder::buildModuleFuzzTestingPipeline() {
+MPM PassBuilder::buildModuleFuzzTestingPipeline(const std::string& repro) {
     MPM mpm;
-    mpm.addPass(makeModulePass(buildFunctionFuzzTestingPipeline()));
-    mpm.addPass(TreeShakingPass());
+    mpm.addPass(makeModulePass(buildFunctionFuzzTestingPipeline(repro)));
+    // Disable Treeshaking in Repro mode for debugging
+    if (repro.empty())
+        mpm.addPass(TreeShakingPass());
     return mpm;
 }
 

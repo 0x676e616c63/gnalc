@@ -29,12 +29,6 @@ std::ostream &operator<<(std::ostream &os, const GVNPREPass::Expr &expr) {
     case GVNPREPass::Expr::ExprOp::Rem:
         os << "v" << expr.operands[0] << " % v" << expr.operands[1];
         break;
-    case GVNPREPass::Expr::ExprOp::And:
-        os << "v" << expr.operands[0] << " && v" << expr.operands[1];
-        break;
-    case GVNPREPass::Expr::ExprOp::Or:
-        os << "v" << expr.operands[0] << " || v" << expr.operands[1];
-        break;
     case GVNPREPass::Expr::ExprOp::Gep:
         os << "gep ";
         for (auto it = expr.operands.begin(); it != expr.operands.end(); ++it) {
@@ -125,8 +119,6 @@ void GVNPREPass::Expr::canon() {
     switch (op) {
     case ExprOp::Add:
     case ExprOp::Mul:
-    case ExprOp::And:
-    case ExprOp::Or:
         std::sort(operands.begin(), operands.end());
         break;
     default:
@@ -166,10 +158,6 @@ GVNPREPass::Expr::ExprOp GVNPREPass::Expr::makeOP(OP op) {
     case OP::REM:
     case OP::FREM:
         return ExprOp::Rem;
-    case OP::AND:
-        return ExprOp::And;
-    case OP::OR:
-        return ExprOp::Or;
     default:
         Err::unreachable("Unknown OP");
     }
@@ -583,10 +571,15 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
             auto& exp_gen = exp_gen_map[curr->bb];
             AntiLeaderSet antic_in_temp;
 
-            for (const auto& [kind, val] : antic_out)
+            // Note that we MUST merge EXP_GEN first to keep the topological order in ANTIC_IN.
+            //
+            // EXP_GEN is the expressions generated within the basic block, and it might be
+            // used in the successors. Therefore, the expressions in EXP_GEN can be used
+            // in the ANTIC_OUT. So merge EXP_GEN first.
+            for (const auto& [kind, val] : exp_gen)
                 antic_in_temp.insert(kind, val);
 
-            for (const auto& [kind, val] : exp_gen)
+            for (const auto& [kind, val] : antic_out)
                 antic_in_temp.insert(kind, val);
 
             // clean

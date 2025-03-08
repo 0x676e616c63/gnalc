@@ -50,7 +50,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     public:
         enum class ExprOp {
             // Binary
-            Add, Sub, Mul, Div, Rem, And, Or,
+            Add, Sub, Mul, Div, Rem,
 
             // Cmp,
             // I was not sure whether we do this pass to cmp is effective or not.
