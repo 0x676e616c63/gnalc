@@ -226,6 +226,7 @@ private:
     std::map<UniqueKey *, std::unique_ptr<PassConceptT>> passes;
     all_res_t results;
     index_t index;
+    bool is_getting_fresh_result = false;
 
 public:
     AnalysisManager() = default;
@@ -235,9 +236,13 @@ public:
     void clear() {
         results.clear();
         index.clear();
+        is_getting_fresh_result = false;
     }
 
     template <typename PassT> typename PassT::Result &getResult(UnitT &unit) {
+        if (is_getting_fresh_result)
+            return getFreshResult<PassT>(unit);
+
         const auto pass_id = PassT::ID();
         Err::gassert(passes.count(pass_id), "No such pass registered.");
 
@@ -262,6 +267,7 @@ public:
     }
 
     template <typename PassT> typename PassT::Result &getFreshResult(UnitT &unit) {
+        is_getting_fresh_result = true;
         const auto pass_id = PassT::ID();
         Err::gassert(passes.count(pass_id), "No such pass registered.");
 
@@ -273,6 +279,8 @@ public:
         res.emplace_back(pass_id, pass->run(unit, *this));
         it->second = std::prev(res.end());
         Logger::logInfo("[AM]: Running '", pass->name(), "' on '", unit.getName(), "'");
+
+        is_getting_fresh_result = false;
 
         using ResultModel = AnalysisResultModel<typename PassT::Result>;
         return static_cast<ResultModel &>(*it->second->second).result;

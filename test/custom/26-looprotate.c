@@ -11,75 +11,75 @@ int quick_read(){
 	if (f) return -x;
 	else return x;
 }
-int n, m;
-const int maxn = 1005;
-const int maxm = 5005;
-int to[maxm], next[maxm], head[maxn], cnt = 0;
-int que[maxn], h, tail, inq[maxn];
+const int maxn = 10005;
+int n, m, f[maxn][20], dep[maxn];
+int to[maxn], next[maxn], head[maxn], cnt = 0;
 void add_edge(int from, int To){
 	to[cnt] = To;
 	next[cnt] = head[from];
 	head[from] = cnt;
 	cnt = cnt + 1;
-	to[cnt] = from;
-	next[cnt] = head[To];
-	head[To] = cnt;
-	cnt = cnt + 1;
+	f[To][0] = from;
 }
 void init(){
-	int i = 0;
-	while (i < maxn){
+	dep[0] = 0x3f3f3f3f;
+	int i = 1;
+	while (i <= n){
 		head[i] = -1;
 		i = i + 1;
 	}
 }
-void inqueue(int x){
-	inq[x] = 1;
-	tail = tail + 1;
-	que[tail] = x;
-}
-int pop_queue(){
-	h = h + 1;
-	int res = que[h];
-	return que[h];
-}
-int same(int s, int t){
-	h = 0;
-	tail = 0;
-	inqueue(s);
-	int res = 0;
-	while (h < tail){
-		int x = pop_queue();
-		if (x == t) res = 1;
-		int i = head[x];
-		while (i != -1){
-			if (!inq[to[i]]) inqueue(to[i]);
-			i = next[i];
-		}
-	}
+void tree(int x, int d){
+	dep[x] = d;
 	int i = 0;
-	while (i <= tail){
-		inq[que[i]] = 0;
+	while (f[x][i]){
+		f[x][i + 1] = f[f[x][i]][i];
 		i = i + 1;
 	}
-	return res;
+	i = head[x];
+	while (i != -1){
+		int y = to[i];
+		tree(y, d + 1);
+		i = next[i];
+	}
+}
+int LCA(int x, int y){
+	if (dep[x] < dep[y]){
+		int t = x;
+		x = y;
+		y = t;
+	}
+	int i = 19;
+	while (dep[x] > dep[y]){
+		if (f[x][i] && dep[f[x][i]] >= dep[y])
+			x = f[x][i];
+		i = i - 1;
+	}
+	if (x == y) return x;
+	i = 19;
+	while (i >= 0){
+		if (f[x][i] != f[y][i]){
+			x = f[x][i];
+			y = f[y][i];
+		}
+		i = i - 1;
+	}
+	return f[x][0];
 }
 int main(){
 	n = quick_read(); m = quick_read();
 	init();
+	int i = 1;
+	while (i != n){
+		int x = quick_read(), y = quick_read();
+		add_edge(x, y);
+		i = i + 1;
+	}
+	tree(1, 1);
 	while (m){
-		int ch = getch();
-		while (ch != 81 && ch != 85){
-			ch = getch();
-		}
-		if (ch == 81){ // query
-			int x = quick_read(), y = quick_read();
-			putint(same(x, y));
-			putch(10);
-		}else{ // union
-			int x = quick_read(), y = quick_read();
-			add_edge(x, y);
-		}
+		int x = quick_read(), y = quick_read();
+		putint(LCA(x, y));
+		putch(10);
 		m = m - 1;
 	}
 	return 0;

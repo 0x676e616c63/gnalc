@@ -155,6 +155,8 @@ bool Loop::delBlockForCurrLoop(const BasicBlock *bb) {
 void Loop::addBlock(BasicBlock *bb) {
     blocks.emplace_back(bb);
     blockset.insert(bb);
+    for (auto loop = getParent(); loop != nullptr; loop = loop->getParent())
+        loop->addBlock(bb);
 }
 
 void Loop::moveToHeader(const BasicBlock *bb) {

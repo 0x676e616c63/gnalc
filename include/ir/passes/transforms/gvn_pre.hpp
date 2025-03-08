@@ -66,9 +66,6 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
 
             // PHIInst, their ValueKind might be designated to its operands when inserting
             Phi,
-
-            // blackbox registers, we can't move expressions that contain them.
-            Untracked,
         };
 
     private:
@@ -85,8 +82,6 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         ExprOp getExprOpcode() const;
         const std::vector<ValueKind> &getExprOperands() const;
 
-        // Three special Expr
-        bool isUntracked() const;
         bool isGlobalTemp() const;
         bool isPhi() const;
 
@@ -157,10 +152,18 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         bool empty() const { return values.empty(); }
 
         bool operator==(const KindIRValSet &other) const {
-            return values == other.values;
+            if (values.size() != other.values.size())
+                return false;
+            for (auto it1 = values.begin(), it2 = other.values.begin();
+                 it1 != values.end() && it2 != other.values.end();
+                 ++it1, ++it2) {
+                if (it1->first != it2->first)
+                    return false;
+            }
+            return true;
         }
         bool operator!=(const KindIRValSet &other) const {
-            return values != other.values;
+            return !(*this == other);
         }
     };
 
@@ -210,10 +213,12 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         const_iterator cend() const { return values.cend(); }
 
         bool operator==(const KindExprSet &other) const {
-            return values == other.values;
+            return std::is_permutation(values.begin(), values.end(),
+                other.values.begin(), other.values.end(),
+                [](const auto &a, const auto &b) { return a.first == b.first; });
         }
         bool operator!=(const KindExprSet &other) const {
-            return values != other.values;
+            return !(*this == other);
         }
     };
 
