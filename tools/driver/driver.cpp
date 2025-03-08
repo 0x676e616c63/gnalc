@@ -147,16 +147,16 @@ USAGE: gnalc [options] file
 OPTIONS:
 
 General options:
-  -o <file>            - Write output to <file>
-  -S                   - Only run compilation steps
-  -O,-O1               - Optimization level 1
-  -emit-llvm           - Use the LLVM representation for assembler and object files
-  -ast-dump            - Build ASTs and then debug dump them
-  -fixed-point         - Enable the fixed point optimization pipeline. (Ignore other optimization options)
-  -fuzz                - Enable fuzz testing pipeline. (Ignore other optimization options)
-  -fuzz-repro <pipeline>     - Reproduce fuzz testing pipeline. Find <pipeline> in the fuzz testing log.
-  --log <log-level>    - Enable compiler logger. Available log-level: debug, info, none
-  -h, --help           - Display available options
+  -o <file>               - Write output to <file>
+  -S                      - Only run compilation steps
+  -O,-O1                  - Optimization level 1
+  -emit-llvm              - Use the LLVM representation for assembler and object files
+  -ast-dump               - Build ASTs and then debug dump them
+  -fixed-point            - Enable the fixed point optimization pipeline. (Ignore other optimization options)
+  -fuzz                   - Enable fuzz testing pipeline. (Ignore other optimization options)
+  -fuzz-repro <pipeline>  - Reproduce fuzz testing pipeline. Find <pipeline> in the fuzz testing log.
+  --log <log-level>       - Enable compiler logger. Available log-level: debug, info, none
+  -h, --help              - Display available options
 
 Optimizations available:
   --mem2reg            - Promote memory to register
@@ -261,8 +261,6 @@ Extensions:
 
     if (emit_llvm) {
         mpm.addPass(IR::PrintModulePass(*poutstream));
-        // mpm.addPass(IR::makeModulePass(IR::PrintLoopPass(std::cout)));
-        // mpm.addPass(IR::PrintModulePass(std::cout)); // debug, remove it
         mpm.run(generator.get_module(), mam);
         return 0;
     }

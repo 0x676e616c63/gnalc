@@ -107,17 +107,25 @@ public:
     // Requires the target block have no predecessors or successors
     // In other word, If pred(a) == true, pred(a->user->getPre/NextBB()) must be true
     template <typename Pred> bool delBlockIf(Pred pred) {
-        bool found = false;
-        for (auto it = blks.begin(); it != blks.end();) {
-            if (pred(*it)) {
-                for (const auto &prebb : (*it)->getPreBB()) {
+        // Do check first because after erasing the predecessors might get expired.
+        for (const auto& bb : blks) {
+            if (pred(bb)) {
+                auto prebbs = bb->getPreBB();
+                for (const auto &prebb : prebbs) {
                     Err::gassert(pred(prebb),
                         "Cannot delete a block that have predecessors");
                 }
-                for (const auto &nextbb : (*it)->getNextBB()) {
+                auto nextbbs = bb->getNextBB();
+                for (const auto &nextbb : nextbbs) {
                     Err::gassert(pred(nextbb),
                         "Cannot delete a block that have successors");
                 }
+            }
+        }
+
+        bool found = false;
+        for (auto it = blks.begin(); it != blks.end();) {
+            if (pred(*it)) {
                 (*it)->setParent(nullptr);
                 it = blks.erase(it);
                 found = true;

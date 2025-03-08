@@ -74,8 +74,10 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
         }
 
         for (const auto &bb : function) {
-            if (reachable_blocks.find(bb) == reachable_blocks.end())
-                Logger::logWarning("[VerifyPass]: Unreachable BasicBlock '", bb->getName(), "' detected.");
+            if (reachable_blocks.find(bb) == reachable_blocks.end()) {
+                Logger::logCritical("[VerifyPass]: Unreachable BasicBlock '", bb->getName(), "' detected.");
+                ++fatal_error_cnt;
+            }
 
             const auto &insts = bb->getInsts();
             auto succs = bb->getNextBB();

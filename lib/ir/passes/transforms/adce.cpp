@@ -122,6 +122,20 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
         }
     }
 
+    auto dfv = function.getDFVisitor();
+    std::unordered_set<std::shared_ptr<BasicBlock>> reachable{dfv.begin(), dfv.end()};
+
+    for (const auto& block : function) {
+        if (reachable.find(block) == reachable.end()) {
+            for (const auto& succ : block->getNextBB())
+                safeUnlinkBB(block, succ, dead_phis);
+        }
+    }
+
+    adce_cfg_modified |= function.delBlockIf([&reachable](const auto &block) {
+        return reachable.find(block) == reachable.end();
+    });
+
     for (auto &block : function) {
         // Trivially dead phi might in `dead`
         adce_inst_modified |= block->delInstIf([&dead](const auto &inst) {

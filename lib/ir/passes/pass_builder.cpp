@@ -106,6 +106,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline() {
     fpm.addPass(make_ipo());
     fpm.addPass(make_clean());
     fpm.addPass(make_arithmetic());
+    fpm.addPass(CFGSimplifyPass());
     fpm.addPass(make_clean());
     fpm.addPass(CFGSimplifyPass());
     fpm.addPass(NameNormalizePass(true));
