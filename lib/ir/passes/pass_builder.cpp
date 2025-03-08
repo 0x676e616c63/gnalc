@@ -148,7 +148,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass())
     FUNCTION_TRANSFORM(inliner, InlinePass())
     // FIXME: bug here
-    // FUNCTION_TRANSFORM(reassociate, ReassociatePass())
+    FUNCTION_TRANSFORM(reassociate, ReassociatePass())
     FUNCTION_TRANSFORM(sccp, ConstantPropagationPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
     FUNCTION_TRANSFORM(reassociate, ReassociatePass())
