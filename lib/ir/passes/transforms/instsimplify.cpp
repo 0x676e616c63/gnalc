@@ -377,6 +377,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             auto phi = std::dynamic_pointer_cast<PHIInst>(inst);
             instsimplify_inst_modified |= foldBinary(phi);
             instsimplify_inst_modified |= foldGEP(phi);
+            instsimplify_inst_modified |= foldLoad(phi);
         }
     }
 

@@ -29,6 +29,7 @@
 #include "../../../include/ir/passes/transforms/tree_shaking.hpp"
 
 // Utilities
+#include "../../../include/ir/passes/transforms/licm.hpp"
 #include "../../../include/ir/passes/utilities/irprinter.hpp"
 #include "../../../include/ir/passes/utilities/verifier.hpp"
 
@@ -49,6 +50,7 @@ const OptInfo o1_opt_info = {
     .loop_simplify = false,
     .loop_rotate = false,
     .lcssa = false,
+    .licm = false,
     .loop_unroll = false,
     .jump_threading = false,
     // Module Transforms
@@ -110,6 +112,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FUNCTION_TRANSFORM(loop_simplify, LoopSimplifyPass())
     FUNCTION_TRANSFORM(loop_rotate, LoopRotatePass())
     FUNCTION_TRANSFORM(lcssa, LCSSAPass())
+    FUNCTION_TRANSFORM(licm, LICMPass())
     FUNCTION_TRANSFORM(loop_unroll, LoopUnrollPass())
     FUNCTION_TRANSFORM(jump_threading, JumpThreadingPass())
 
