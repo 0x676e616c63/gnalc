@@ -31,6 +31,10 @@ public:                                                   // 接口太多, 还�
     VarPool &getPool() { return varpool; }
     const VarPool &getPool() const { return varpool; }
 
+    ///@note 因为pass之间无法传递数据, 所以这个信息只能耦合在这个地方
+    ///@note 其次, 这是全局的available, 因为图着色的分析不深入到单个inst
+    std::vector<unsigned int> availableSRegisters;
+
 public:
     FunctionInfo() = default;
 
@@ -39,7 +43,7 @@ public:
 };
 
 class Function : public Value {
-
+private:
 private:
     FunctionInfo info;
     std::list<std::shared_ptr<BasicBlock>> blocks;
@@ -54,7 +58,7 @@ public:
     FunctionInfo getInfo() const { return info; }
     FunctionInfo &editInfo() { return info; }
 
-    void addBlock(const std::string &_block_name, const std::shared_ptr<BasicBlock> _block) {
+    void addBlock(const std::string &_block_name, const std::shared_ptr<BasicBlock> &_block) {
         blocks.emplace_back(_block);
         blockpool[_block_name] = _block;
     }

@@ -141,7 +141,10 @@ public:
     }
 
     const std::shared_ptr<BindOnVirOP> &getTargetOP() { return TargetOperand; };
+
+    /// @note from 1
     virtual std::shared_ptr<Operand> getSourceOP(unsigned int seq) = 0;
+    virtual void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) = 0;
 
     CondCodeFlag getCondCodeFlag() { return condition; }
     void setCondCodeFlag(CondCodeFlag newFlag) { condition = newFlag; }
@@ -174,6 +177,7 @@ public:
         : Instruction(_opcode, _type), dataTypes(_dataTypes) {}
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override = 0;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override = 0;
 
     std::string toString() override;
     ~NeonInstruction() override = default;

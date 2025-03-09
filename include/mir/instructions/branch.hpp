@@ -28,9 +28,9 @@ public:
         : Instruction(JmpCode_, SourceOperandType::cp), Dest(std::move(Dest_)),
           JmpTo(std::move(JmpTo_)) {}
 
-    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override {
-        return nullptr;
-    };
+    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override = 0;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override = 0;
+
     auto getDest() { return Dest; }
     bool isJmpToBlock() { return Dest.index() == 0; }
     bool isJmpToFunc() { return Dest.index() == 1; }
@@ -43,9 +43,8 @@ class RET : public Instruction {
 public:
     RET() : Instruction(OpCode::RET, SourceOperandType::cp) {}
 
-    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override {
-        return nullptr;
-    };
+    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override = 0;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override = 0;
 
     std::string toString() override { return "RET"; }
     ~RET() override = default;

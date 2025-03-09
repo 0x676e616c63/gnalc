@@ -132,12 +132,13 @@ BlkP PhiEliminatePass::splitCriticalEgde(const BlkP &pred, const BlkP &succ, con
 
         auto midBlk = std::make_shared<BasicBlock>(blkName, false); // 抽象名字
 
-        ///@note 修改CFG
+        ///@note 拆分critical边, 修改CFG(虽然大概率用不着)
         func->addBlock(midBlk->getName(), midBlk);
         pred->delSucc(succ);
         succ->delPred(pred);
         pred->addSucc(midBlk);
         succ->addPred(midBlk);
+        ///@todo liveout没转移
 
         getMidBlk[pred][succ] = std::move(midBlk);
     }

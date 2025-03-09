@@ -1,0 +1,444 @@
+#include "../../../../include/mir/passes/transforms/registeralloc.hpp"
+#include <random>
+#include <utility>
+
+using namespace MIR;
+
+PM::PreservedAnalyses RAPass::run(Function &bkd_function, FAM &) {
+    func = bkd_function;
+    availableSRegisters = func.editInfo().availableSRegisters;
+    varpool = func.editInfo().varpool;
+
+    Main();
+
+    return PM::PreservedAnalyses::all();
+}
+
+void RAPass::Main() {
+    liveAnalysis.analyse();
+
+    Build();
+    MkWorkList();
+
+    while (simplifyWorkList.empty() && worklistMoves.empty() && freezeWorkList.empty() && spillWorkList.empty()) {
+        if (!simplifyWorkList.empty())
+            Simplify();
+        else if (!worklistMoves.empty())
+            Coalesce();
+        else if (!freezeWorkList.empty())
+            Freeze();
+        else if (!spillWorkList.empty())
+            SelectSpill();
+    }
+
+    AssignColors();
+
+    if (!spilledNodes.empty()) {
+        ReWriteProgram();
+        Main();
+    }
+}
+
+void RAPass::AddEdge(const OperP &u, const OperP &v) {
+    Edge edge{u, v};
+
+    if (u != v && adjSet.find(edge) == adjSet.end()) {
+        adjSet.insert(std::move(edge));
+
+        if (precolored.find(u) == precolored.end()) { // no precolored
+            adjList[u].insert(v);
+            ++degree[u];
+        }
+
+        if (precolored.find(v) == precolored.end()) {
+            adjList[v].insert(u);
+            ++degree[v];
+        }
+    }
+}
+
+void RAPass::Build() {
+    auto liveinfo = liveAnalysis.getInfo();
+
+    for (const auto &blk : func.getBlocks()) {
+
+        auto live = liveinfo.liveOut[blk];
+        const auto &insts = blk->getInsts();
+
+        for (auto inst_it = insts.rbegin(); inst_it != insts.rend(); inst_it++) {
+            const auto &inst = *inst_it;
+
+            const auto &use = getUse(inst);
+            const auto &def = getDef(inst);
+
+            if (isMoveInstruction(inst)) { // 广义的move inst
+                ///@note 理论上如果是callinst, 需要在这里专门设置对参数的冲突
+                ///@note 但是由于指令选择时翻译了装载参数的语句, 所以这里可以不管了
+                delBySet(live, use);
+
+                for (const auto &n : getUnion<OperP>(def, use)) {
+                    addBySet(moveList[n], std::unordered_set{inst});
+                }
+
+                addBySet(worklistMoves, std::unordered_set{inst});
+            }
+
+            addBySet(live, def);
+
+            for (const auto &d : def) {
+                for (const auto &l : live) {
+                    AddEdge(l, d);
+                }
+            }
+
+            delBySet(live, def);
+            addBySet(live, use);
+
+            if (isInitialed)
+                continue;
+
+            ///@note 在原算法基础上, 顺便填写initial 和 precolored
+            ///@note 只有第一次才这么做
+            for (const auto &n : getUnion<OperP>(def, use)) {
+                if (std::dynamic_pointer_cast<PreColedOP>(n)) {
+                    precolored.insert(n);
+                    degree[n] = -1; // 可能多次赋值
+                } else if (auto addr = std::dynamic_pointer_cast<BaseADROP>(n)) {
+                    if (!std::dynamic_pointer_cast<PreColedOP>(addr->getBase())) {
+                        ///@warning 如果寻址范围大于4096字节, 可能需要再加一个pass
+                        ///@warning 或者更改指令选择
+                        initial.insert(addr->getBase());
+                    }
+                } else if (std::dynamic_pointer_cast<BindOnVirOP>(n))
+                    initial.insert(n);
+                else
+                    Err::unreachable("trying to alloc register for a constant");
+            }
+        }
+    }
+    isInitialed = true;
+}
+
+void RAPass::MkWorkList() {
+    for (const auto &n : initial) {
+        delBySet(initial, WorkList{n});
+
+        if (degree[n] >= K) {
+            addBySet(spillWorkList, WorkList{n});
+        } else if (MoveRelated(n)) {
+            addBySet(freezeWorkList, WorkList{n});
+        } else {
+            addBySet(simplifyWorkList, WorkList{n});
+        }
+    }
+}
+
+void RAPass::Simplify() {
+    ///@note 理论上论文这里也是一种启发式算法: 从simplifyWorkList随便取出一个
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<std::size_t>
+        dist(0, simplifyWorkList.size() - 1);
+    std::size_t randomIdx = dist(gen);
+
+    auto it = simplifyWorkList.begin();
+    std::advance(it, randomIdx);
+
+    const auto n = *it;
+    simplifyWorkList.erase(n);
+
+    selectStack.emplace_back(n);
+
+    for (const auto &m : Adjacent(n)) {
+        DecrementDegree(m);
+    }
+}
+
+void RAPass::DecrementDegree(const OperP &m) {
+    auto d = degree[m];
+
+    if (!std::dynamic_pointer_cast<PreColedOP>(m))
+        --degree[m];
+
+    if (d == K) {
+        EnableMoves(getUnion<OperP>(Nodes{m}, Adjacent(m)));
+        delBySet(spillWorkList, WorkList{m});
+
+        if (MoveRelated(m)) {
+            addBySet(freezeWorkList, WorkList{m});
+        } else {
+            addBySet(simplifyWorkList, WorkList{m});
+        }
+    }
+}
+
+void RAPass::EnableMoves(const Nodes &nodes) {
+    for (const auto &n : nodes) {
+        for (const auto &m : NodeMoves(n)) {
+            if (activeMoves.find(m) != activeMoves.end()) {
+                delBySet(activeMoves, Moves{m});
+                addBySet(worklistMoves, Moves{m});
+            }
+        }
+    }
+}
+
+void RAPass::Coalesce() {
+    ///@note 依然是启发式地随便弄一个
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<std::size_t>
+        dist(0, simplifyWorkList.size() - 1);
+    std::size_t randomIdx = dist(gen);
+
+    auto it = worklistMoves.begin();
+
+    std::advance(it, randomIdx);
+    auto m = *it;
+    worklistMoves.erase(m);
+
+    Err::gassert(isMoveInstruction(m), "try Coalesce a not move inst");
+    Err::gassert(getDef(m).size() == 1 && getUse(m).size() == 1, "Coalesce a invalid 'move' inst");
+
+    auto x = *(getDef(m).begin());
+    auto y = *(getUse(m).begin());
+
+    auto x_a = GetAlias(x);
+    auto y_a = GetAlias(y);
+
+    Edge edge{nullptr, nullptr};
+    if (precolored.find(y_a) != precolored.end())
+        edge.u = y_a, edge.v = x_a;
+    else
+        edge.u = x_a, edge.v = y_a;
+
+    auto &u = edge.u;
+    auto &v = edge.v;
+    if (u == v) {
+        addBySet(coalescedMoves, Moves{m});
+    } else if (precolored.find(v) != precolored.end() || adjSet.find(edge) != adjSet.end()) {
+        addBySet(constrainedMoves, Moves{m});
+        AddWorkList(u);
+        AddWorkList(v);
+    }
+    ///@note 将论文的一个if-else拆成了两个
+    else if (precolored.find(u) != precolored.end()) {
+        ///@note George check
+
+        bool flag = true;
+        for (const auto &t : Adjacent(v)) {
+            if (!OK(t, u)) {
+                flag = false;
+                break;
+            }
+        }
+
+        if (flag)
+            goto __Combine_try;
+        else
+            goto __Combine_giveup;
+
+    } else if (precolored.find(u) == precolored.end() && Conservative(getUnion<OperP>(Adjacent(u), Adjacent(v)))) {
+    __Combine_try:
+        addBySet(coalescedMoves, Moves{m});
+        Combine(u, v);
+        AddWorkList(u);
+    } else {
+    __Combine_giveup:
+        addBySet(activeMoves, Moves{m});
+    }
+}
+
+void RAPass::AddWorkList(const OperP &u) {
+    if (precolored.find(u) == precolored.end() && !MoveRelated(u) && degree[u] < K) {
+        delBySet(freezeWorkList, WorkList{u});
+        addBySet(simplifyWorkList, WorkList{u});
+    }
+}
+
+void RAPass::Combine(const OperP &u, const OperP &v) {
+    if (freezeWorkList.find(v) != freezeWorkList.end())
+        delBySet(freezeWorkList, WorkList{v});
+    else
+        delBySet(spillWorkList, WorkList{v});
+
+    addBySet(coalescedNodes, Nodes{v});
+    alias[v] = u;
+
+    ///@note nodeMoves[u] := nodeMoves[u] ∪ nodeMoves[v]
+    ///@note 有充分的理由认为论文写错了, 因为根本没有声明nodeMoves
+    ///@note 应该是moveList
+    addBySet(moveList[u], moveList[v]);
+
+    for (const auto &t : Adjacent(v)) {
+        AddEdge(t, u);
+        DecrementDegree(t);
+    }
+
+    if (degree[u] >= K && freezeWorkList.find(u) != freezeWorkList.end()) {
+        delBySet(freezeWorkList, WorkList{u});
+        addBySet(spillWorkList, WorkList{u});
+    }
+}
+
+void RAPass::Freeze() {
+    ///@note 启发式随便找 x 3
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<std::size_t>
+        dist(0, simplifyWorkList.size() - 1);
+    std::size_t randomIdx = dist(gen);
+
+    auto it = freezeWorkList.begin();
+
+    std::advance(it, randomIdx);
+
+    auto u = *it;
+
+    freezeWorkList.erase(u);
+
+    addBySet(simplifyWorkList, WorkList{u});
+
+    FreezeMoves(u);
+}
+
+void RAPass::FreezeMoves(const OperP &u) {
+    for (const auto &m : NodeMoves(u)) {
+
+        Err::gassert(isMoveInstruction(m), "try Coalesce a not move inst");
+        Err::gassert(getDef(m).size() == 1 && getUse(m).size() == 1, "Coalesce a invalid 'move' inst");
+
+        auto u = *(getUse(m).begin());
+        auto v = *(getDef(m).end());
+
+        if (activeMoves.find(m) != activeMoves.end())
+            delBySet(activeMoves, Moves{m});
+        else
+            delBySet(worklistMoves, Moves{m});
+
+        addBySet(frozenMoves, Moves{m});
+
+        if (NodeMoves(v).empty() && degree[v] < K) {
+            delBySet(freezeWorkList, WorkList{v});
+            addBySet(simplifyWorkList, WorkList{v});
+        }
+    }
+}
+
+void RAPass::SelectSpill() {
+    ///@note 启发式算法, 但是自己设计
+    auto m = heuristicSpill();
+
+    delBySet(spillWorkList, WorkList{m});
+    addBySet(simplifyWorkList, WorkList{m});
+
+    FreezeMoves(m);
+}
+
+void RAPass::AssignColors() {
+    while (!selectStack.empty()) {
+        auto n = selectStack.back();
+        selectStack.pop_back();
+        std::vector<unsigned int> okColors(0, K - 1);
+
+        for (const auto &w : adjList[n]) {
+            if (getUnion<OperP>(coloredNodes, precolored).count(GetAlias(w))) {
+                auto w_a = GetAlias(w);
+                auto w_a_reg = std::dynamic_pointer_cast<BindOnVirOP>(w_a);
+
+                Err::gassert(w_a_reg != nullptr, "try assign color for a none virReg op");
+
+                auto rm_idx = static_cast<unsigned int>(std::get<CoreRegister>(w_a_reg->getColor()));
+
+                okColors.erase(okColors.begin() + rm_idx);
+            }
+        }
+
+        if (okColors.empty()) {
+            addBySet(spilledNodes, Nodes{n});
+        } else {
+            addBySet(coloredNodes, Nodes{n});
+            auto c = okColors.back(); // 对于通用寄存器, 尽量避开r0-r3分配, 倒着分配或者从r4开始
+
+            auto n_reg = std::dynamic_pointer_cast<BindOnVirOP>(n);
+            Err::gassert(n_reg != nullptr, "try assign color for a none virReg op");
+
+            n_reg->setColor(static_cast<CoreRegister>(c));
+        }
+    }
+
+    for (const auto &n : coloredNodes) {
+        ///@note 有没有可能重复assign color?
+        auto n_reg = std::dynamic_pointer_cast<BindOnVirOP>(n);
+        auto n_a = GetAlias(n_reg);
+        auto n_a_reg = std::dynamic_pointer_cast<BindOnVirOP>(n_a);
+        Err::gassert(n_reg != nullptr, "try assign color for a none virReg op");
+        Err::gassert(n_a_reg != nullptr, "try assign color for a none virReg op");
+
+        n_reg->setColor(n_a_reg->getColor());
+    }
+}
+
+void RAPass::ReWriteProgram() {
+    initial.clear();
+
+    for (const auto &n : spilledNodes) {
+        addBySet(initial, spill(n));
+    }
+
+    spilledNodes.clear();
+    addBySet(initial, coalescedNodes);
+    addBySet(initial, coloredNodes);
+}
+
+RAPass::Nodes RAPass::Adjacent(const OperP &n) {
+    return getExclude<OperP>(adjList[n], Nodes(selectStack.begin(), selectStack.end()), coalescedNodes);
+}
+
+RAPass::Moves RAPass::NodeMoves(const OperP &n) {
+    auto set = getUnion<InstP>(activeMoves, worklistMoves);
+
+    Moves movs{};
+
+    for (const auto &p : set) {
+        if (moveList[n].find(p) != moveList[n].end())
+            movs.insert(p);
+    }
+
+    return movs;
+}
+
+bool RAPass::MoveRelated(const OperP &n) {
+    return !NodeMoves(n).empty();
+}
+
+bool RAPass::OK(const OperP &t, const OperP &r) {
+    if (degree[t] < K)
+        return true;
+    else if (precolored.find(t) != precolored.end())
+        return true;
+    else if (adjSet.find(Edge{t, r}) != adjSet.end())
+        return true;
+    else
+        return false;
+}
+
+bool RAPass::Conservative(const Nodes &nodes) {
+    unsigned int k = 0;
+
+    for (const auto &n : nodes) {
+        if (degree[n] >= K)
+            ++k;
+    }
+
+    return k < K;
+}
+
+OperP RAPass::GetAlias(OperP n) {
+    if (coalescedNodes.find(n) != coloredNodes.end())
+        return GetAlias(alias[n]);
+
+    Err::gassert(n != nullptr, "get a nullptr alias");
+
+    return n;
+}

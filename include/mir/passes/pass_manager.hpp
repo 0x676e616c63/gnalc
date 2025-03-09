@@ -18,6 +18,18 @@ extern template class InnerAnalysisManagerProxy<AnalysisManager<MIR::Function>,
 } // namespace PM
 
 namespace MIR {
+
+using OperP = std::shared_ptr<MIR::Operand>;
+using BlkP = std::shared_ptr<MIR::BasicBlock>;
+using FuncP = std::shared_ptr<MIR::Function>;
+using InstP = std::shared_ptr<MIR::Instruction>;
+using NInstP = std::shared_ptr<MIR::NeonInstruction>;
+
+using PreColP = std::shared_ptr<MIR::PreColedOP>;
+using BindOnP = std::shared_ptr<MIR::BindOnVirOP>;
+using ConstP = std::shared_ptr<MIR::ConstantIDX>;
+using BaseP = std::shared_ptr<MIR::BaseADROP>;
+
 using FAM = PM::AnalysisManager<Function>;
 using MAM = PM::AnalysisManager<Module>;
 
@@ -49,7 +61,8 @@ public:
     }
 };
 
-template <typename FunctionPassT> auto makeModulePass(FunctionPassT &&pass) {
+template <typename FunctionPassT>
+auto makeModulePass(FunctionPassT &&pass) {
     using FunctionPassModelT = PM::PassModel<Function, FunctionPassT, FAM>;
     return ModulePassWrapper(
         std::unique_ptr<ModulePassWrapper::FunctionPassConceptT>(

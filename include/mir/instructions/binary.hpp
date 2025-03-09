@@ -20,7 +20,10 @@ public:
           SourceOperand_1(std::move(SourceOperand_1_)) {
         addTargetOP(std::move(TargetOperand_));
     }
+
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
+
     ~unaryInst() override = default;
 };
 
@@ -42,7 +45,8 @@ public:
     }
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
-    // std::string toString() override;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
+
     ~binaryInst() override = default;
 };
 
@@ -67,6 +71,8 @@ public:
     }
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
+
     ~ternaryInst() override = default;
 };
 
@@ -91,6 +97,8 @@ public:
     }
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
+
     ~binaryImmInst() override = default;
 };
 
@@ -112,6 +120,8 @@ public:
     };
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
+
     ~compareInst() override = default;
 };
 

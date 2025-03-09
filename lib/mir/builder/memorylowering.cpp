@@ -130,7 +130,7 @@ InstLowering::gepLower(const std::shared_ptr<IR::GEPInst> &gep) {
         if (pair.first)
             baseOP = std::dynamic_pointer_cast<BaseADROP>(pair.second);
         else {
-            /// 加mov
+            // mov %relay, #...
             auto relay = std::dynamic_pointer_cast<BaseADROP>(pair.second);
 
             auto global_addr = operlower.fastFind(global_ptr->getName());

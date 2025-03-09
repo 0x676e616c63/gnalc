@@ -7,10 +7,6 @@
 
 namespace MIR {
 
-using OperP = std::shared_ptr<MIR::Operand>;
-using BlkP = std::shared_ptr<MIR::BasicBlock>;
-using FuncP = std::shared_ptr<MIR::Function>;
-
 struct PhiBlkPairs {
     ///@warning 这里的src和dst可能是同一个
     FuncP func;

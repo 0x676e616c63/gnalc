@@ -155,7 +155,7 @@ enum class BaseAddressTrait {
     // 两种trait主要是加载基址寄存器的方法不一样
     Global,
     Local,
-    Runtime, // phi汇合不确定是那种指针, 模糊处理
+    Runtime, // phi汇合不确定是哪种指针, 模糊处理
 };
 
 class BaseADROP : public BindOnVirOP {
@@ -167,7 +167,7 @@ protected:
     /// #imm]简化指令条数
     /// @note Addri时, 该条指令将被折叠, imme加在constOffset上
     /// @note 最后codegen时, 需要判断constOffset的大小
-    unsigned int constOffset = 0;
+    int constOffset = 0;
 
     /// @brief 单向的依赖
     std::weak_ptr<BindOnVirOP> varOffset;
@@ -175,13 +175,13 @@ protected:
 public:
     BaseADROP() = delete;
     BaseADROP(BaseAddressTrait _btrait, std::string _name,
-              unsigned int _constOffset,
+              int _constOffset,
               const std::shared_ptr<BindOnVirOP> &_varOffset)
         : BindOnVirOP(std::move(_name)), btrait(_btrait),
           constOffset(_constOffset), varOffset(_varOffset) {}
 
-    unsigned int getConstOffset() const { return constOffset; }
-    void setConstOffset(unsigned int newOffset) { constOffset = newOffset; }
+    int getConstOffset() const { return constOffset; }
+    void setConstOffset(int newOffset) { constOffset = newOffset; }
 
     BaseAddressTrait getTrait() { return btrait; }
 
@@ -209,7 +209,7 @@ private:
 public:
     GlobalADROP() = delete;
     GlobalADROP(std::string _global_name, std::string _name,
-                unsigned int _offset,
+                int _offset,
                 const std::shared_ptr<BindOnVirOP> &_varOffset)
         : BaseADROP(BaseAddressTrait::Global, std::move(_name), _offset,
                     _varOffset),
@@ -228,7 +228,7 @@ private:
 public:
     StackADROP() = delete;
     StackADROP(std::shared_ptr<FrameObj> _obj, std::string _name,
-               unsigned int _offset,
+               int _offset,
                const std::shared_ptr<BindOnVirOP> &_varOffset)
         : BaseADROP(BaseAddressTrait::Local, std::move(_name), _offset,
                     _varOffset),

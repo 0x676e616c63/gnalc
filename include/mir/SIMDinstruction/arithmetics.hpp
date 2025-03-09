@@ -20,6 +20,8 @@ public:
     }
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
+
     ~Vbinary() override = default;
 };
 
@@ -38,6 +40,8 @@ public:
     }
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
+
     ~Vunary() override = default;
 };
 
@@ -56,6 +60,8 @@ public:
           SourceOperand_2(std::move(SourceOperand_2_)) {}
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
+
     ~Vcmp() override = default;
 };
 
@@ -64,9 +70,9 @@ private:
 public:
     Vmrs() : Instruction(NeonOpCode::VMRS, SourceOperandType::cp) {}
 
-    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override {
-        return nullptr;
-    }
+    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override = 0;
+
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override = 0;
 
     std::string toString() override { return "vmrs APSR_nzcv, FPSCR"; }
     ~Vmrs() override = default;

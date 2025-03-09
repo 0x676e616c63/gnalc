@@ -9,6 +9,14 @@ std::shared_ptr<Operand> COPY::getSourceOP(unsigned int seq) {
         return nullptr;
 }
 
+void COPY::setSourceOP(unsigned int seq, std::shared_ptr<Operand> ptr_new) {
+    if (seq == 1) {
+        SourceOperand = ptr_new;
+    } else {
+        Err::unreachable("set operand index out of ");
+    }
+}
+
 std::shared_ptr<Operand> PHI::getSourceOP(unsigned int seq) {
     if (seq > SourceOperands.size()) {
         return nullptr;

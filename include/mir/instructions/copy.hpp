@@ -23,7 +23,8 @@ public:
     }
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
-    // std::string toString() override;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
+
     ~COPY() override = default;
 };
 
@@ -46,6 +47,8 @@ public:
     PHI(std::shared_ptr<BindOnVirOP> TargetOP_, std::vector<PhiOper> _list) : SourceOperands(std::move(_list)), Instruction(OpCode::PHI, SourceOperandType::rr) { addTargetOP(std::move(TargetOP_)); }
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override = 0;
+
     std::vector<PhiOper> getPhiOper() const { return SourceOperands; }
     std::string toString() override;
     ~PHI() override = default;

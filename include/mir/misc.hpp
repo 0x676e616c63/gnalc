@@ -95,6 +95,8 @@ public:
         return other.literal == literal;
     }
 
+    auto getLiteral() const { return literal; }
+
     std::string toString() const; // printf info
     ~ConstObj() = default;
 };

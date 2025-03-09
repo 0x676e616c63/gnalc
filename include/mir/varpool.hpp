@@ -50,12 +50,32 @@ public:
     std::shared_ptr<PreColedOP> getValue(CoreRegister _color);
     std::shared_ptr<PreColedOP> getValue(FPURegister _color);
 
+    template <typename T_variant>
+    std::pair<std::shared_ptr<BindOnVirOP>, std::shared_ptr<ConstObj>>
+    getLoaded(const T_variant &literal) {
+        unsigned int cnt = 0;
+        for (const auto &pair : load_map) {
+            if (literal == std::get<std::remove_cv_t<std::remove_reference_t<decltype(literal)>>>(pair.first.getLiteral()))
+                return {load_map[pair.first], nullptr};
+            ++cnt;
+        }
+        auto obj = std::make_shared<ConstObj>(cnt, literal);
+
+        auto op = addValue_anonymously(false);
+        addLoaded(*obj, op); // obj 析构?
+        return {op, obj};
+    }
+
     std::shared_ptr<BindOnVirOP> getLoaded(const ConstObj &obj) {
         return load_map[obj];
     }
 
     void addValue(const IR::Value &, std::shared_ptr<Operand>); // Def
 
+    std::shared_ptr<BindOnVirOP> addValue_anonymously(bool isFloat); // 用于添加一个新的BindOnVirOP
+
+    std::shared_ptr<StackADROP> addStackValue_anonymously(const std::shared_ptr<FrameObj> &); // 用于获得一个空的栈空间(4bytes)
+                                                                                              // 寄存器分配用
     void addLoaded(const ConstObj &, std::shared_ptr<BindOnVirOP>);
     size_t size() const { return pool.size(); }
 

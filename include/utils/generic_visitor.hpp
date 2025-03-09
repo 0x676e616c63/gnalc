@@ -5,8 +5,9 @@
 #define GNALC_UTILS_GENERIC_VISITOR_HPP
 
 #include <deque>
-#include <stack>
 #include <set>
+#include <stack>
+#include <utility>
 
 namespace Util {
 template <typename NodeT, typename ChildrenGetter>
@@ -17,7 +18,7 @@ public:
     using iterator = typename decltype(worklist)::iterator;
 
     explicit GenericBFVisitor(NodeT root) {
-        std::deque<NodeT> q{ root };
+        std::deque<NodeT> q{std::move(root)};
         std::set<NodeT> visited;
         while (!q.empty()) {
             auto curr = q.front();
@@ -26,8 +27,8 @@ public:
 
             worklist.push_back(curr);
 
-            const auto& children = ChildrenGetter()(curr);
-            for (const auto& child : children) {
+            const auto &children = ChildrenGetter()(curr);
+            for (const auto &child : children) {
                 if (visited.find(child) == visited.end())
                     q.push_back(child);
             }
@@ -42,10 +43,11 @@ public:
 template <typename NodeT, typename ChildrenGetter>
 class GenericDFVisitor {
     std::vector<NodeT> worklist{};
+
 public:
     using iterator = typename decltype(worklist)::iterator;
 
-    explicit GenericDFVisitor(NodeT root) {
+    explicit GenericDFVisitor(const NodeT &root) {
         std::stack<NodeT> s;
         s.push(root);
         std::set<NodeT> visited;
@@ -56,8 +58,8 @@ public:
 
             worklist.push_back(curr);
 
-            const auto& children = ChildrenGetter()(curr);
-            for (const auto& child : children) {
+            const auto &children = ChildrenGetter()(curr);
+            for (const auto &child : children) {
                 if (visited.find(child) == visited.end())
                     s.push(child);
             }
