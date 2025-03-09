@@ -9,6 +9,7 @@
 #include <stack>
 #include <string>
 #include <vector>
+#include <queue>
 
 namespace IR {
 namespace detail {
@@ -104,6 +105,7 @@ struct GenericDomTree {
         return domset;
     }
 
+    // TODO: needs optimization
     BlockSet getDomFrontier(BasicBlock *b) {
         Err::gassert(nodes.count(b), "No dominator tree for unreachable blocks.");
 
@@ -118,24 +120,16 @@ struct GenericDomTree {
             auto nextbbs = BBHandle::next(node->bb);
             for (const auto &next : nextbbs) {
                 const auto next_node = nodes[next];
-
-                if (next_node->parent == node)
-                    continue;
-
-                // Level过滤剪枝
-                if (next_node->level > nodes[b]->level)
-                    continue;
-
-                DF.insert(next);
+                if (!ADomB(b, next))
+                    DF.insert(next);
             }
 
             for (const auto &dom_child : node->children)
-                // DON'T NEED BECAUSE NO CONTEST OF 'visited_stn'
-                // if (visited_stn.insert(dom_child.get()).second)
                 STN.push(dom_child.get());
         }
         return DF;
     }
+
     void printDomTree() {
         std::cout << "(Post)DomTree:" << std::endl;
         print(root, 0);

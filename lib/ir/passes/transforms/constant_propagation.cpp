@@ -604,7 +604,8 @@ PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
     // Cut the outgoing edge of the unreachable block
     for (const auto& block : function) {
         if (live.find(block) == live.end()) {
-            for (const auto& succ : block->getNextBB())
+            auto succs = block->getNextBB();
+            for (const auto& succ : succs)
                 safeUnlinkBB(block, succ, dead_phis);
         }
     }

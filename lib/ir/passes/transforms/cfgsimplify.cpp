@@ -47,7 +47,7 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                         phi->delPhiOperByBlock(curr);
 
                     modified = true;
-                    Logger::logDebug("[ADCE] on '", function.getName(),
+                    Logger::logDebug("[CFGSimplify] on '", function.getName(),
                                      "': drop BRInst of BasicBlock '", curr->getName(), "' 's identical destination");
                 }
             } else {
@@ -120,7 +120,7 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                         pre_br->replaceOperand(curr, dest);
                     }
 
-                    Logger::logDebug("[ADCE] on '", function.getName(),
+                    Logger::logDebug("[CFGSimplify] on '", function.getName(),
                         "': Remove empty BasicBlock '", curr->getName(), "'.");
 
                     dead_blocks.emplace(curr);
@@ -155,7 +155,7 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                         linkBB(curr, dest_succ);
                     }
 
-                    Logger::logDebug("[ADCE] on '", function.getName(),
+                    Logger::logDebug("[CFGSimplify] on '", function.getName(),
                                      "': Combined BasicBlock '", curr->getName(), "' and '", dest->getName(), "'.");
 
                     // Since `dest` only has one incoming block, and all phi has been replaced,
@@ -198,7 +198,7 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                         for (const auto &phi : dest_succ1->getPhiInsts())
                             phi->addPhiOper(phi->getValueForBlock(dest), curr);
 
-                        Logger::logDebug("[ADCE] on '", function.getName(),
+                        Logger::logDebug("[CFGSimplify] on '", function.getName(),
                                          "': Hoisted Branch of '", dest->getName(), "' to '", curr->getName(), "'.");
                         modified = true;
                     }

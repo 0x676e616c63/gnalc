@@ -191,6 +191,8 @@ MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
 FPM PassBuilder::buildFunctionFuzzTestingPipeline(const std::string& repro) {
     FPM fpm;
     fpm.addPass(PromotePass());
+    fpm.addPass(TailRecursionEliminationPass());
+    fpm.addPass(InlinePass());
     fpm.addPass(NameNormalizePass(true));
     std::vector<std::pair<std::string_view, std::function<void(bool)>>> passes;
 
@@ -207,8 +209,6 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(const std::string& repro) {
         fpm.addPass(VerifyPass(strict));                                                                                 \
     });
 
-    REGISTER_FUNCTION_TRANSFORM(TailRecursionEliminationPass)
-    REGISTER_FUNCTION_TRANSFORM(InlinePass)
     REGISTER_FUNCTION_TRANSFORM(ReassociatePass)
     REGISTER_FUNCTION_TRANSFORM(ConstantPropagationPass)
     REGISTER_FUNCTION_TRANSFORM(ADCEPass)
@@ -252,7 +252,12 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(const std::string& repro) {
             + "'. Run with '-fuzz-repro <this pipeline>' to reproduce it.");
     }
     else {
-        auto find_pass = [&passes](const std::string &target) -> std::optional<std::function<void(bool)>> {
+        auto find_pass = [&passes, &fpm](const std::string &target) -> std::optional<std::function<void(bool)>> {
+            if (target == NameNormalizePass::name())
+                return [&fpm](bool) {
+                      fpm.addPass(NameNormalizePass(true));
+                };
+
             for (const auto &[name, pass_adder] : passes) {
                 if (target == name)
                     return pass_adder;
@@ -275,6 +280,8 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(const std::string& repro) {
         Err::gassert(p.has_value(), "[FuzzTesting]: Unknown pass: '" + curr + "'.");
         (*p)(false);
         curr.clear();
+
+        // fpm.addPass(NameNormalizePass(true));
 
         Logger::logInfo("[FuzzTesting]: Reproducing pipeline: ", repro);
     }

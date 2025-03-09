@@ -30,7 +30,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                 // Every jump is considered useful.
                 // Branches are considered useful only if the execution of a useful operation
                 // depends on their presence.
-                if (!br->isConditional()) {
+                if (!br->isConditional() || block->getIndex() == 0) {
                     critical.emplace(br);
                     worklist.emplace_back(br);
                 }
@@ -43,9 +43,11 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
         auto inst = worklist.front();
         worklist.pop_front();
 
-        for (const auto &use : inst->getOperands()) {
-            if (use->getValue()->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
-                auto oper = std::dynamic_pointer_cast<Instruction>(use->getValue());
+        std::vector new_alive_blocks{inst->getParent()};
+
+        auto uses = inst->getOperands();
+        for (const auto &use : uses) {
+            if (auto oper = std::dynamic_pointer_cast<Instruction>(use->getValue())) {
                 if (critical.find(oper) == critical.end()) {
                     critical.emplace(oper);
                     worklist.emplace_back(oper);
@@ -53,25 +55,34 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
             }
         }
 
-        auto rdf = postdomtree.getDomFrontier(inst->getParent().get());
-        // Logger::logDebug("[ADCE]: ReverseDomFrontier '", inst->getParent()->getName(), "': ");
-        // for (const auto& a : rdf) {
-        //     Logger::logDebug("[ADCE]: ", a->getName());
-        // }
-        for (const auto &bb : rdf) {
-            if (auto br = bb->getBRInst()) {
-                if (br->isConditional() && critical.find(br) == critical.end()) {
-                    if (br->getCond()->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
-                        auto cond = std::dynamic_pointer_cast<Instruction>(br->getCond());
-                        critical.emplace(cond);
-                        worklist.emplace_back(cond);
-                    }
+        if (auto phi = std::dynamic_pointer_cast<PHIInst>(inst)) {
+            auto phi_opers = phi->getPhiOpers();
+            for (const auto &[_val, bb] : phi_opers)
+                new_alive_blocks.emplace_back(bb);
+        }
+
+        for (const auto& alivebb : new_alive_blocks) {
+            auto rdf = postdomtree.getDomFrontier(alivebb.get());
+            for (const auto &bb : rdf) {
+                auto br = bb->getBRInst();
+                Err::gassert(br != nullptr);
+                if (critical.find(br) == critical.end()) {
                     critical.emplace(br);
                     worklist.emplace_back(br);
                 }
             }
         }
     }
+
+    // postdomtree.printDomTree();
+    // for (const auto& bb : function) {
+    //     auto rdf = postdomtree.getDomFrontier(bb.get());
+    //     std::cerr << bb->getName() << ": ";
+    //     for (const auto &b : rdf) {
+    //         std::cerr << b->getName() << ", ";
+    //     }
+    //     std::cerr << std::endl;
+    // }
 
     std::set<std::shared_ptr<PHIInst>> dead_phis;
     std::set<std::shared_ptr<Instruction>> dead;
@@ -93,12 +104,18 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     dead_br = safeUnlinkBB(block, br->getDest(), dead_phis);
                     // Here br is dead.
                     Err::gassert(dead_br);
-                    dead.emplace(br);
+                    block->delInst(br);
 
                     auto nearest_pdom = postdomtree.nodes[block.get()].get();
                     bool found = false;
                     do {
                         nearest_pdom = nearest_pdom->parent;
+                        for (const auto &pdomphi : nearest_pdom->bb->getPhiInsts()) {
+                            if (critical.find(pdomphi) != critical.end()) {
+                                found = true;
+                                break;
+                            }
+                        }
                         for (const auto &pdominst : *nearest_pdom->bb) {
                             if (critical.find(pdominst) != critical.end()) {
                                 found = true;
@@ -116,6 +133,8 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     // The new BRInst won't be iterated in `all_insts`. So no need to add it to critical.
                     block->addInst(std::make_shared<BRInst>(nearest_pdom->bb->shared_from_this()));
                     adce_cfg_modified = true;
+                    Logger::logDebug("[ADCE]: Retargeting '",
+                        block->getName(), "' to '", nearest_pdom->bb->getName());
                 } else
                     dead.emplace(inst);
             }
@@ -127,7 +146,8 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
 
     for (const auto& block : function) {
         if (reachable.find(block) == reachable.end()) {
-            for (const auto& succ : block->getNextBB())
+            auto succs = block->getNextBB();
+            for (const auto& succ : succs)
                 safeUnlinkBB(block, succ, dead_phis);
         }
     }
