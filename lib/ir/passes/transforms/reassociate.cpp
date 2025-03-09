@@ -258,7 +258,7 @@ std::shared_ptr<Value> ReassociatePass::removeFactor
         }
     }
 
-    if (!canRemove) {
+    if (!canRemove&&factors.size()!=0) {
         rewriteExpr(binaryInst, factors);
         return nullptr;
     }
@@ -266,7 +266,7 @@ std::shared_ptr<Value> ReassociatePass::removeFactor
     auto ret = v;
     if (factors.size() == 1)
         ret = factors[0].op;
-    else {
+    else if (factors.size()!=0) {
         rewriteExpr(binaryInst, factors);
         ret = binaryInst;
     }
