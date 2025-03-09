@@ -258,7 +258,7 @@ std::shared_ptr<Value> ReassociatePass::removeFactor
         }
     }
 
-    if (!canRemove&&factors.size()!=0) {
+    if (!canRemove && !factors.empty()) {
         rewriteExpr(binaryInst, factors);
         return nullptr;
     }
@@ -266,7 +266,7 @@ std::shared_ptr<Value> ReassociatePass::removeFactor
     auto ret = v;
     if (factors.size() == 1)
         ret = factors[0].op;
-    else if (factors.size()!=0) {
+    else if (!factors.empty()) {
         rewriteExpr(binaryInst, factors);
         ret = binaryInst;
     }
@@ -274,7 +274,7 @@ std::shared_ptr<Value> ReassociatePass::removeFactor
     if (needsNegate) {
         auto neg = std::make_shared<BinaryInst>("%reass.neg" + std::to_string(name_cnt++),
                                                 OP::SUB, func->getConst(0), ret);
-        binaryInst->getParent()->addInst(binaryInst->getIndex(), neg);
+        binaryInst->getParent()->addInst(std::next(binaryInst->getIter()), neg);
     }
 
     return ret;

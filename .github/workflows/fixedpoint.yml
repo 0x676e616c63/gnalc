@@ -1,12 +1,5 @@
 name: Gnalc Test - FixedPoint
 
-# Reland this when bugs are fixed.
-#on:
-#  push:
-#    branches: [ "main", "ci", "iropt" ]
-#  pull_request:
-#    branches: [ "main", "ci", "iropt" ]
-
 on:
   push:
     branches: [ "main", "ci" ]
