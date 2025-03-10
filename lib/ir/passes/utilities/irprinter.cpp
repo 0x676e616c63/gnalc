@@ -68,7 +68,7 @@ PM::PreservedAnalyses PrintFunctionPass::run(Function &func, FAM &fam) {
         liveness = fam.getResult<LiveAnalysis>(func);
 
     func.accept(*this);
-    return PM::PreservedAnalyses::all();
+    return PreserveAll();
 }
 
 PM::PreservedAnalyses PrintModulePass::run(Module &module, MAM &mam) {
@@ -93,7 +93,7 @@ PM::PreservedAnalyses PrintModulePass::run(Module &module, MAM &mam) {
         writeln("");
     }
 
-    return PM::PreservedAnalyses::all();
+    return PreserveAll();
 }
 
 PM::PreservedAnalyses PrintLoopPass::run(Function &func, FAM &fam) {
@@ -133,6 +133,11 @@ PM::PreservedAnalyses PrintLoopPass::run(Function &func, FAM &fam) {
         writeln("----------");
     }
 
-    return PM::PreservedAnalyses::all();
+    return PreserveAll();
+}
+
+PM::PreservedAnalyses PrintDebugMessagePass::run(Function &func, FAM &fam) {
+    writeln("[Debug Message] at '", func.getName() , "': ", message);
+    return PreserveAll();
 }
 } // namespace IR

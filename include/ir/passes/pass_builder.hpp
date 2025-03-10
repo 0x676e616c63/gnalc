@@ -44,6 +44,9 @@ public:
     static FPM buildFunctionPipeline(OptInfo opt_info);
     static MPM buildModulePipeline(OptInfo opt_info);
 
+    static FPM buildFunctionDebugPipeline();
+    static MPM buildModuleDebugPipeline();
+
     // Reproduce or Produce a Fuzz Testing Pipeline.
     static FPM buildFunctionFuzzTestingPipeline(const std::string& repro = "");
     static MPM buildModuleFuzzTestingPipeline(const std::string& repro = "");

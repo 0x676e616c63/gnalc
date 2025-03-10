@@ -82,6 +82,16 @@ public:
 
     PM::PreservedAnalyses run(Function &unit, FAM &manager);
 };
+
+class PrintDebugMessagePass : public PM::PassInfo<PrintDebugMessagePass>, public PrinterBase {
+private:
+    std::string message;
+public:
+    explicit PrintDebugMessagePass(std::ostream &outStream_, std::string message_)
+        : PrinterBase(outStream_, false), message(std::move(message_)) {}
+
+    PM::PreservedAnalyses run(Function &unit, FAM &manager);
+};
 } // namespace IR
 
 #endif

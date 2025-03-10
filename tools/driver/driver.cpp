@@ -38,6 +38,7 @@ int main(int argc, char **argv) {
     bool ast_dump = false;         // -ast-dump
     bool fixed_point_pipeline = false; // -fixed-point
     bool fuzz_testing = false; // -fuzz
+    bool debug_pipeline = false; // -debug-pipeline
     std::string fuzz_testing_repro;
     IR::OptInfo opt_info;
 
@@ -80,16 +81,7 @@ int main(int argc, char **argv) {
             ast_dump = true;
         else if (arg == "-fixed-point")
             fixed_point_pipeline = true;
-        else if (arg == "-fuzz")
-            fuzz_testing = true;
-        else if (arg == "-fuzz-repro") {
-            ++i;
-            if (i >= argc) {
-                std::cerr << "Error: Expected fuzz pipeline." << std::endl;
-                return -1;
-            }
-            fuzz_testing_repro = argv[i];
-        } else if (arg == "-O1" || arg == "-O")
+        else if (arg == "-O1" || arg == "-O")
             opt_info = IR::o1_opt_info;
 
 #define OPT_ARG(cli_arg, cli_no_arg, opt_name)                                                           \
@@ -122,6 +114,18 @@ int main(int argc, char **argv) {
         OPT_ARG("--treeshaking", "--no-treeshaking", tree_shaking)
 #undef OPT_ARG
         // Debug options:
+        else if (arg == "-fuzz")
+            fuzz_testing = true;
+        else if (arg == "-fuzz-repro") {
+            ++i;
+            if (i >= argc) {
+                std::cerr << "Error: Expected fuzz pipeline." << std::endl;
+                return -1;
+            }
+            fuzz_testing = true;
+            fuzz_testing_repro = argv[i];
+        } else if (arg == "-debug-pipeline")
+            debug_pipeline = true;
         else if (arg == "--ann")
             opt_info.advance_name_norm = true;
         else if (arg == "--verify")
@@ -153,8 +157,6 @@ General options:
   -emit-llvm              - Use the LLVM representation for assembler and object files
   -ast-dump               - Build ASTs and then debug dump them
   -fixed-point            - Enable the fixed point optimization pipeline. (Ignore other optimization options)
-  -fuzz                   - Enable fuzz testing pipeline. (Ignore other optimization options)
-  -fuzz-repro <pipeline>  - Reproduce fuzz testing pipeline. Find <pipeline> in the fuzz testing log.
   --log <log-level>       - Enable compiler logger. Available log-level: debug, info, none
   -h, --help              - Display available options
 
@@ -179,10 +181,13 @@ Optimizations available:
   --treeshaking        - Shake off unused functions, function declarations and global variables
 
 Debug options:
-  --no-<pass>          - Remove <pass> from pipeline, <pass> are specified by 'Optimizations available' above.
-  --ann                - Use the advance name normalization result (after IRGen). (This disables the one at the last).
-  --verify             - Verify IR after each pass
-  --strict             - Enable verify and abort when verify failed
+  -fuzz                   - Enable fuzz testing pipeline. (Ignore other optimization options)
+  -fuzz-repro <pipeline>  - Reproduce fuzz testing pipeline. Find <pipeline> in the fuzz testing log.
+  -debug-pipeline         - Builtin pipeline for debugging.
+  --no-<pass>             - Remove <pass> from pipeline, <pass> are specified by 'Optimizations available' above.
+  --ann                   - Use the advance name normalization result (after IRGen). (This disables the one at the last).
+  --verify                - Verify IR after each pass
+  --strict                - Enable verify and abort when verify failed
 )";
 
 #if GNALC_EXTENSION_BRAINFK
@@ -238,10 +243,10 @@ Extensions:
     IR::PassBuilder::registerProxies(fam, mam);
 
     IR::MPM mpm;
-    if (!fuzz_testing_repro.empty())
-        mpm = IR::PassBuilder::buildModuleFuzzTestingPipeline(fuzz_testing_repro);
+    if (debug_pipeline)
+        mpm = IR::PassBuilder::buildModuleDebugPipeline();
     else if (fuzz_testing)
-        mpm = IR::PassBuilder::buildModuleFuzzTestingPipeline();
+        mpm = IR::PassBuilder::buildModuleFuzzTestingPipeline(fuzz_testing_repro);
     else if (fixed_point_pipeline)
         mpm = IR::PassBuilder::buildModuleFixedPointPipeline();
     else

@@ -147,8 +147,6 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FUNCTION_TRANSFORM(mem2reg, PromotePass())
     FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass())
     FUNCTION_TRANSFORM(inliner, InlinePass())
-    // FIXME: bug here
-    FUNCTION_TRANSFORM(reassociate, ReassociatePass())
     FUNCTION_TRANSFORM(sccp, ConstantPropagationPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
     FUNCTION_TRANSFORM(reassociate, ReassociatePass())
@@ -185,6 +183,27 @@ MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
     mpm.addPass(makeModulePass(buildFunctionPipeline(opt_info)));
     if (opt_info.tree_shaking)
         mpm.addPass(TreeShakingPass());
+    return mpm;
+}
+
+FPM PassBuilder::buildFunctionDebugPipeline() {
+    FPM fpm;
+    fpm.addPass(PromotePass());
+    fpm.addPass(InlinePass());
+    fpm.addPass(NameNormalizePass(true));
+    fpm.addPass(ConstantPropagationPass());
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(PrintDebugMessagePass(std::cerr, "Before ADCE"));
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(ADCEPass());
+    fpm.addPass(PrintDebugMessagePass(std::cerr, "After ADCE"));
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    return fpm;
+}
+
+MPM PassBuilder::buildModuleDebugPipeline() {
+    MPM mpm;
+    mpm.addPass(makeModulePass(buildFunctionDebugPipeline()));
     return mpm;
 }
 
@@ -231,7 +250,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(const std::string& repro) {
         std::uniform_int_distribution<size_t> distrib(0, passes.size() - 1);
 
         // Duplicate some passes
-        auto duplicating_times = static_cast<size_t>(static_cast<double>(passes.size()) / 2.0);
+        auto duplicating_times = static_cast<size_t>(static_cast<double>(passes.size()) * 5.0);
         for (size_t i = 0; i < duplicating_times; ++i)
             passes.emplace_back(passes[distrib(gen)]);
 
