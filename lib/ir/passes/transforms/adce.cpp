@@ -81,8 +81,18 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
     //     for (const auto &b : rdf) {
     //         std::cerr << b->getName() << ", ";
     //     }
+    //     if (postdomtree.ADomB(bb.get(), bb.get())) {
+    //         std::cerr << "TRUE";
+    //     }
+    //     else
+    //         std::cerr << "F";
     //     std::cerr << std::endl;
     // }
+    //
+    // for (const auto& c : critical) {
+    //     std::cerr << c->getName() << ", " << c->getParent()->getName() << std::endl;
+    // }
+    // std::cerr << std::endl;
 
     std::set<std::shared_ptr<PHIInst>> dead_phis;
     std::set<std::shared_ptr<Instruction>> dead;

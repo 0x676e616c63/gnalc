@@ -1,39 +1,52 @@
-int main() {
-  int sum = 0;
-  int i = 0;
-  while(i < 20) {
-    int j = 0;
-    while (j < 10) {
-      int k = 0;
-      while (k < 5) {
-        int m = 0;
-        while (m < 3) {
-          if (m + 1 >= 3)
-            if (m)
-              if (m || !m)
-                if (m - -1 >= 3)
-                  {{{{;;break;continue;}}}}
-          int n = 0;
-          while (n < 2) {
-            n = n + 1;
+const int ascii_0 = 48;
+
+int my_getint()
+{
+    int sum = 0, c;
+
+    while (1) {
+        c = getch() - ascii_0;
+        if (c < 0 || c > 9) {
             continue;
+        } else {
             break;
-            sum = sum + 1;
-          }
-          m = m + 1;
-          sum = sum + 1;
         }
-        while(1) {
-          while(1) break;
-          break;
-        }
-        k = k + 1;
-      }
-      j = j + 1;
-      continue;
-      j = j + 1;
     }
-    i = i + 1;
-  }
-  return sum;
+    sum = c;
+
+    while (1) {
+        c = getch() - ascii_0;
+        if (c >= 0 && c <= 9) {
+            sum = sum * 10 + c;
+        } else {
+            break;
+        }
+    }
+
+    return sum;
+}
+
+void my_putint(int a)
+{
+    int b[16], i = 0;
+    while (a > 0) {
+        b[i] = a % 10 + ascii_0;
+        a = a / 10;
+        i = i + 1;
+    }
+    while (i > 0) {
+        i = i - 1;
+        putch(b[i]);
+    }
+}
+
+int main()
+{
+    int n = my_getint();
+    while (n > 0) {
+        int m = my_getint();
+        my_putint(m); putch(10);
+        n = n - 1;
+    }
+    return 0;
 }

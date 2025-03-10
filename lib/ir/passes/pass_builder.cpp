@@ -250,7 +250,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(const std::string& repro) {
         std::uniform_int_distribution<size_t> distrib(0, passes.size() - 1);
 
         // Duplicate some passes
-        auto duplicating_times = static_cast<size_t>(static_cast<double>(passes.size()) * 5.0);
+        auto duplicating_times = passes.size();
         for (size_t i = 0; i < duplicating_times; ++i)
             passes.emplace_back(passes[distrib(gen)]);
 

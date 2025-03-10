@@ -120,7 +120,7 @@ struct GenericDomTree {
             auto nextbbs = BBHandle::next(node->bb);
             for (const auto &next : nextbbs) {
                 const auto next_node = nodes[next];
-                if (!ADomB(b, next))
+                if (!ADomB(b, next) || b == next)
                     DF.insert(next);
             }
 
