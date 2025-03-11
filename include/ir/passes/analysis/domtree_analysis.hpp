@@ -122,6 +122,18 @@ struct GenericDomTree {
                 const auto next_node = nodes[next];
                 if (!ADomB(b, next) || b == next)
                     DF.insert(next);
+
+                // 不想de了QAQ，能跑就算了。。有缘再de吧
+                // 复现方式：test/custom/991-idfbug.c
+                // -S --log debug -emit-llvm --mem2reg
+                // -fuzz-repro "IR::GVNPREPass, IR::CFGSimplifyPass, IR::NameNormalizePass, IR::ADCEPass"
+                // 正误输出在test/custom/991-idfbug.c注释
+                // if (next_node->parent == node)
+                //     continue;
+                // // Level过滤剪枝
+                // if (next_node->level > nodes[b]->level)
+                //     continue;
+                // DF.insert(next);
             }
 
             for (const auto &dom_child : node->children)
