@@ -1,5 +1,7 @@
 #include "../../../../include/ir/passes/transforms/tree_shaking.hpp"
 
+#include "../../../../include/ir/instructions/memory.hpp"
+
 #include <vector>
 
 namespace IR {
@@ -8,7 +10,7 @@ PM::PreservedAnalyses TreeShakingPass::run(Module &module, MAM &mam) {
 
     // First shake functions to release function declarations and global variables.
     std::vector<std::shared_ptr<Function>> dead_fn;
-    for (auto& fn : module.getFunctions()) {
+    for (const auto& fn : module.getFunctions()) {
         if (fn->getName() != "@main" && fn->getUseCount() == 0)
             dead_fn.emplace_back(fn);
     }
@@ -17,7 +19,7 @@ PM::PreservedAnalyses TreeShakingPass::run(Module &module, MAM &mam) {
         module.delFunction(fn);
 
     std::vector<std::shared_ptr<FunctionDecl>> dead_decl;
-    for (auto& decl : module.getFunctionDecls()) {
+    for (const auto& decl : module.getFunctionDecls()) {
         if (decl->getUseCount() == 0)
             dead_decl.emplace_back(decl);
     }

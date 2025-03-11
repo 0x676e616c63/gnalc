@@ -188,16 +188,16 @@ MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
-    fpm.addPass(PromotePass());
-    fpm.addPass(InlinePass());
-    fpm.addPass(NameNormalizePass(true));
-    fpm.addPass(ConstantPropagationPass());
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(PrintDebugMessagePass(std::cerr, "Before ADCE"));
-    fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(ADCEPass());
-    fpm.addPass(PrintDebugMessagePass(std::cerr, "After ADCE"));
-    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(IR::PromotePass())                ;
+    fpm.addPass(IR::NameNormalizePass(true))         ;
+    fpm.addPass(IR::GVNPREPass())                ;
+    fpm.addPass(IR::DSEPass())                   ;
+    fpm.addPass(IR::GVNPREPass())                ;
+    fpm.addPass(IR::DCEPass())                   ;
+    fpm.addPass(IR::ReassociatePass())           ;
+    fpm.addPass(IR::GVNPREPass())                ;
+    fpm.addPass(IR::ConstantPropagationPass())   ;
+    fpm.addPass(IR::NameNormalizePass(true))         ;
     return fpm;
 }
 
@@ -272,10 +272,21 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(const std::string& repro) {
     }
     else {
         auto find_pass = [&passes, &fpm](const std::string &target) -> std::optional<std::function<void(bool)>> {
-            if (target == NameNormalizePass::name())
+            if (target == NameNormalizePass::name()) {
                 return [&fpm](bool) {
-                      fpm.addPass(NameNormalizePass(true));
+                    fpm.addPass(NameNormalizePass(true));
                 };
+            }
+            if (target == PrintFunctionPass::name()) {
+                return [&fpm](bool) {
+                    fpm.addPass(PrintFunctionPass(std::cerr));
+                };
+            }
+            if (target == PrintModulePass::name()) {
+                return [&fpm](bool) {
+                    fpm.addPass(PrintFunctionPass(std::cerr));
+                };
+            }
 
             for (const auto &[name, pass_adder] : passes) {
                 if (target == name)

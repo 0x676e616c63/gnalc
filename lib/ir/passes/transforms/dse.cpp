@@ -57,39 +57,80 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
                 continue;
 
             // Not local memory. Reference may happen outside the function, skip it.
-            if (!aa_res.isLocal(store_ptr))
-                continue;
-
-            auto successors = store_block->getNextBB();
-            std::set<std::shared_ptr<BasicBlock>> visited;
-            std::deque<std::shared_ptr<BasicBlock>> worklist{successors.begin(), successors.end()};
-            // STOREInst that may contribute to the elimination
-            std::vector<std::shared_ptr<STOREInst>> candidates;
-            std::vector<std::shared_ptr<Instruction>> killers;
-            while (!worklist.empty()) {
-                auto store_succ = worklist.front();
-                visited.emplace(store_succ);
-                worklist.pop_front();
-
-                // If we meet the store block again, there is a back edge, and thus we should
-                // consider the instructions that before the store we want to eliminate. If there is
-                // a Reference on that memory, it is not safe to eliminate the store.
-                // For other blocks, if it post dominates the store block, we can eliminate the store
-                // if there is a store in the post dominator block. If not, we still need to look at it
-                // to figure out if there is something could kill the opportunity.
-                if (store_succ != store_block && postdomtree.ADomB(store_succ.get(), store_block.get())) {
-                    for (const auto &inst : *store_succ) {
-                        // We only collect the first possible store in a block,
-                        // So once we find one, break.
-                        if (auto store2 = std::dynamic_pointer_cast<STOREInst>(inst)) {
-                            auto store2_ptr = store2->getPtr().get();
-                            auto aa = aa_res.getAliasInfo(store2_ptr, store_ptr);
-                            if (aa == AliasInfo::MustAlias) {
-                                candidates.emplace_back(store);
+            if (!aa_res.isLocal(store_ptr)) {
+                auto real_store_ptr = store_ptr;
+                while (auto gep = dynamic_cast<GEPInst*>(real_store_ptr))
+                    real_store_ptr = gep->getPtr().get();
+                if (real_store_ptr->getVTrait() == ValueTrait::GLOBAL_VARIABLE) {
+                    std::deque worklist{real_store_ptr};
+                    while (!worklist.empty())
+                    {
+                        auto curr = worklist.front();
+                        worklist.pop_front();
+                        auto use_list = curr->getUseList();
+                        for (const auto &use : use_list) {
+                            auto user_inst = std::dynamic_pointer_cast<Instruction>(use->getUser());
+                            if (user_inst->getOpcode() != OP::STORE && user_inst->getOpcode() != OP::GEP) {
+                                killed = true;
                                 break;
                             }
+                            if (user_inst->getOpcode() == OP::GEP)
+                                worklist.emplace_back(user_inst.get());
                         }
-                        else {
+                        if (killed)
+                            break;
+                    }
+                    if (!killed) {
+                        unused_store.emplace(store);
+                        continue;
+                    }
+                }
+                else if (real_store_ptr->getVTrait() == ValueTrait::FORMAL_PARAMETER) {
+                    // TODO: check caller's actual argument.
+                    continue;
+                }
+            }
+            // local memory, check through CFG.
+            else {
+                auto successors = store_block->getNextBB();
+                std::set<std::shared_ptr<BasicBlock>> visited;
+                std::deque<std::shared_ptr<BasicBlock>> worklist{successors.begin(), successors.end()};
+                // STOREInst that may contribute to the elimination
+                std::vector<std::shared_ptr<STOREInst>> candidates;
+                std::vector<std::shared_ptr<Instruction>> killers;
+                while (!worklist.empty()) {
+                    auto store_succ = worklist.front();
+                    visited.emplace(store_succ);
+                    worklist.pop_front();
+
+                    // If we meet the store block again, there is a back edge, and thus we should
+                    // consider the instructions that before the store we want to eliminate. If there is
+                    // a Reference on that memory, it is not safe to eliminate the store.
+                    // For other blocks, if it post dominates the store block, we can eliminate the store
+                    // if there is a store in the post dominator block. If not, we still need to look at it
+                    // to figure out if there is something could kill the opportunity.
+                    if (store_succ != store_block && postdomtree.ADomB(store_succ.get(), store_block.get())) {
+                        for (const auto &inst : *store_succ) {
+                            // We only collect the first possible store in a block,
+                            // So once we find one, break.
+                            if (auto store2 = std::dynamic_pointer_cast<STOREInst>(inst)) {
+                                auto store2_ptr = store2->getPtr().get();
+                                auto aa = aa_res.getAliasInfo(store2_ptr, store_ptr);
+                                if (aa == AliasInfo::MustAlias) {
+                                    candidates.emplace_back(store);
+                                    break;
+                                }
+                            }
+                            else {
+                                auto modref = aa_res.getInstModRefInfo(inst.get(), store_ptr, fam);
+                                if (modref == ModRefInfo::Ref || modref == ModRefInfo::ModRef) {
+                                    killers.emplace_back(inst);
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        for (const auto &inst : *store_succ) {
                             auto modref = aa_res.getInstModRefInfo(inst.get(), store_ptr, fam);
                             if (modref == ModRefInfo::Ref || modref == ModRefInfo::ModRef) {
                                 killers.emplace_back(inst);
@@ -97,63 +138,55 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
                             }
                         }
                     }
-                } else {
-                    for (const auto &inst : *store_succ) {
-                        auto modref = aa_res.getInstModRefInfo(inst.get(), store_ptr, fam);
-                        if (modref == ModRefInfo::Ref || modref == ModRefInfo::ModRef) {
-                            killers.emplace_back(inst);
-                            break;
-                        }
+
+                    auto succs = store_succ->getNextBB();
+                    for (const auto &p : succs) {
+                        if (visited.find(p) == visited.end())
+                            worklist.emplace_back(p);
                     }
                 }
 
-                auto succs = store_succ->getNextBB();
-                for (const auto &p : succs) {
-                    if (visited.find(p) == visited.end())
-                        worklist.emplace_back(p);
-                }
-            }
-
-            if (killers.empty()) // A store with no reference, erase it.
-                unused_store.emplace(store);
-            else {
-                // Note that we have collect possible store in a pre-order.
-                // In other word, candidates[0] is the earliest one in control flow.
-                // Then we do forward traversal of the candidates. If one candidate
-                // dominates all other candidate and killers,
-                // it is the most recent modify on the store's memory.
-                // That is to say, it is that store who gives us opportunity to eliminate a store.
-                bool found_one = false;
-                for (const auto &candidate : candidates) {
-                    bool able_to_delete = true;
-                    for (const auto &another : candidates) {
-                        if (another == candidate)
-                            continue;
-                        // We only collect one candidate in a block.
-                        Err::gassert(candidate->getParent() != another->getParent());
-                        if (!domtree.ADomB(candidate->getParent().get(), another->getParent().get())) {
-                            able_to_delete = false;
-                            break;
-                        }
-                    }
-                    for (const auto &killer : killers) {
-                        if (killer->getParent() == candidate->getParent()) {
-                            if (killer->getIndex() < candidate->getIndex()) {
+                if (killers.empty()) // A store with no reference, erase it.
+                    unused_store.emplace(store);
+                else {
+                    // Note that we have collect possible store in a pre-order.
+                    // In other word, candidates[0] is the earliest one in control flow.
+                    // Then we do forward traversal of the candidates. If one candidate
+                    // dominates all other candidate and killers,
+                    // it is the most recent modify on the store's memory.
+                    // That is to say, it is that store who gives us opportunity to eliminate a store.
+                    bool found_one = false;
+                    for (const auto &candidate : candidates) {
+                        bool able_to_delete = true;
+                        for (const auto &another : candidates) {
+                            if (another == candidate)
+                                continue;
+                            // We only collect one candidate in a block.
+                            Err::gassert(candidate->getParent() != another->getParent());
+                            if (!domtree.ADomB(candidate->getParent().get(), another->getParent().get())) {
                                 able_to_delete = false;
                                 break;
                             }
-                        } else if (!postdomtree.ADomB(candidate->getParent().get(), killer->getParent().get())) {
-                            able_to_delete = false;
+                        }
+                        for (const auto &killer : killers) {
+                            if (killer->getParent() == candidate->getParent()) {
+                                if (killer->getIndex() < candidate->getIndex()) {
+                                    able_to_delete = false;
+                                    break;
+                                }
+                            } else if (!postdomtree.ADomB(candidate->getParent().get(), killer->getParent().get())) {
+                                able_to_delete = false;
+                                break;
+                            }
+                        }
+                        if (able_to_delete) {
+                            found_one = true;
                             break;
                         }
                     }
-                    if (able_to_delete) {
-                        found_one = true;
-                        break;
-                    }
+                    if (found_one)
+                        unused_store.emplace(store);
                 }
-                if (found_one)
-                    unused_store.emplace(store);
             }
         }
 
