@@ -123,6 +123,7 @@ struct GenericDomTree {
                 if (!ADomB(b, next) || b == next)
                     DF.insert(next);
 
+                // 考虑自循环是否处理？即b == next
                 // 不想de了QAQ，能跑就算了。。有缘再de吧
                 // 复现方式：test/custom/991-idfbug.c
                 // -S --log debug -emit-llvm --mem2reg
