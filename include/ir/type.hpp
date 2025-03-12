@@ -38,7 +38,6 @@ enum class IRCTYPE { BASIC,
 inline size_t getBytes(IRBTYPE type) {
     switch (type) {
     case IRBTYPE::I1:
-        Err::todo("I1 should return 1?");
         return 1;
     case IRBTYPE::I8:
         return 1;

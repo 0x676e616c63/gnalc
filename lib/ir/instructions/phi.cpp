@@ -16,10 +16,12 @@ PHIInst::getValueForBlock(const std::shared_ptr<BasicBlock> &block) const {
         if ((*it)->getValue() == block)
             return (*--it)->getValue();
     }
+    Err::unreachable("Not a pred block.");
     return nullptr;
 }
 
 void PHIInst::addPhiOper(const std::shared_ptr<Value> &val, const std::shared_ptr<BasicBlock> &blk) {
+    Err::gassert(isSameType(getType(), val->getType()), "PHIInst::addPhiOper(): type mismatched");
     addOperand(val);
     addOperand(blk);
 }
@@ -33,16 +35,6 @@ std::vector<PHIInst::PhiOper> PHIInst::getPhiOpers() const {
     }
     return ret;
 }
-bool PHIInst::delPhiOperByVal(const std::shared_ptr<Value> & target) {
-    for (size_t i = 1; i < getOperands().size(); i += 2) {
-        if (getOperand(i - 1)->getValue() == target) {
-            delOperand(i);
-            delOperand(i - 1);
-            return true;
-        }
-    }
-    return false;
-}
 
 bool PHIInst::delPhiOperByBlock(const std::shared_ptr<BasicBlock> &target) {
     for (size_t i = 1; i < getOperands().size(); i += 2) {
@@ -51,6 +43,14 @@ bool PHIInst::delPhiOperByBlock(const std::shared_ptr<BasicBlock> &target) {
             delOperand(i - 1);
             return true;
         }
+    }
+    return false;
+}
+
+bool PHIInst::hasBlock(const std::shared_ptr<BasicBlock> & target) {
+    for (size_t i = 1; i < getOperands().size(); i += 2) {
+        if (getOperand(i)->getValue() == target)
+            return true;
     }
     return false;
 }

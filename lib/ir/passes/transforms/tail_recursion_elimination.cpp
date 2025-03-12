@@ -8,9 +8,9 @@
 namespace IR {
 PM::PreservedAnalyses TailRecursionEliminationPass::run(Function &function, FAM &manager) {
     bool tailopt_cfg_modified = false;
-    auto dfVisitor = function.getDFVisitor();
+    auto exitbbs = function.getExitBBs();
     std::vector<std::pair<std::shared_ptr<CALLInst>, std::shared_ptr<RETInst> > > worklist;
-    for (const auto &block : dfVisitor) {
+    for (const auto &block : exitbbs) {
         for (auto iter = block->begin(); std::next(iter) != block->end(); ++iter) {
             auto call = std::dynamic_pointer_cast<CALLInst>(*iter);
             auto ret = std::dynamic_pointer_cast<RETInst>(*std::next(iter));
@@ -33,16 +33,14 @@ PM::PreservedAnalyses TailRecursionEliminationPass::run(Function &function, FAM 
 
         std::vector<std::shared_ptr<ALLOCAInst>> allocas;
         for (const auto &inst : *oldEntryBlock) {
-            if (auto alloca = std::dynamic_pointer_cast<ALLOCAInst>(inst))
-                allocas.emplace_back(alloca);
+            if (auto alloc = std::dynamic_pointer_cast<ALLOCAInst>(inst))
+                allocas.emplace_back(alloc);
             else break;
         }
 
-        auto newEntryBlock = std::make_shared<BasicBlock>("tailcall");
-        for (const auto& alloca : allocas) {
-            newEntryBlock->addInst(alloca);
-            oldEntryBlock->delFirstOfInst(alloca); // NO USE-DEF CHECK
-        }
+        auto newEntryBlock = std::make_shared<BasicBlock>("%tre.bb" + std::to_string(name_cnt++));
+        for (const auto& alloc : allocas)
+            moveInst(alloc, newEntryBlock, newEntryBlock->begin());
 
         newEntryBlock->addInst(std::make_shared<BRInst>(oldEntryBlock));
         linkBB(newEntryBlock, oldEntryBlock);
@@ -52,7 +50,8 @@ PM::PreservedAnalyses TailRecursionEliminationPass::run(Function &function, FAM 
         auto &params = function.getParams();
         std::vector<std::shared_ptr<PHIInst> > param_phis;
         for (const auto &param : params) {
-            auto phiInst = std::make_shared<PHIInst>(param->getName() + "tailcall", param->getType());
+            auto phiInst = std::make_shared<PHIInst>(
+                "%tre.fp" + std::to_string(name_cnt++), param->getType());
             param->replaceSelf(phiInst);
             phiInst->addPhiOper(param, newEntryBlock);
             param_phis.emplace_back(phiInst);
@@ -78,10 +77,7 @@ PM::PreservedAnalyses TailRecursionEliminationPass::run(Function &function, FAM 
         tailopt_cfg_modified = true;
     }
 
-    if (tailopt_cfg_modified)
-        return PM::PreservedAnalyses::none();
-
-    return PM::PreservedAnalyses::all();
+    return tailopt_cfg_modified ? PreserveNone() : PreserveAll();
 }
 
 }

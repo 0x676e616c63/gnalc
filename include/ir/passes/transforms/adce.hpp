@@ -1,5 +1,7 @@
 // Aggressive Dead Code Elimination
-// Engineering A Compiler 2nd, 10.2.1 and 10.2.2
+//
+// This implementation is adapted from
+// Engineering A Compiler 2nd, 10.2.1 and 10.2.2 (`Mark`, `Sweep`)
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_ADCE_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_ADCE_HPP

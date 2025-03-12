@@ -36,6 +36,11 @@ public:
     FPTOSIInst(NameRef name, const std::shared_ptr<Value> &origin_val);
 
     void accept(IRVisitor &visitor) override;
+
+private:
+    std::shared_ptr<Value> cloneImpl() const override {
+        return std::make_shared<FPTOSIInst>(getName(), getOVal());
+    }
 };
 
 // <result> = sitofp <ty> <value> to <ty2>
@@ -44,6 +49,11 @@ public:
     SITOFPInst(NameRef name, const std::shared_ptr<Value> &origin_val);
 
     void accept(IRVisitor &visitor) override;
+
+private:
+    std::shared_ptr<Value> cloneImpl() const override {
+        return std::make_shared<SITOFPInst>(getName(), getOVal());
+    }
 };
 
 // <result> = zext <ty> <value> to <ty2>
@@ -53,6 +63,12 @@ public:
              IRBTYPE dest_type);
 
     void accept(IRVisitor &visitor) override;
+
+private:
+    std::shared_ptr<Value> cloneImpl() const override {
+        return std::make_shared<ZEXTInst>(getName(),
+            getOVal(), toBType(getTType())->getInner());
+    }
 };
 
 // <result> = bitcast <ty> <value> to <ty2>
@@ -62,6 +78,11 @@ public:
                 const std::shared_ptr<Type> &dest_type);
 
     void accept(IRVisitor &visitor) override;
+
+private:
+    std::shared_ptr<Value> cloneImpl() const override {
+        return std::make_shared<BITCASTInst>(getName(), getOVal(), getTType());
+    }
 };
 
 } // namespace IR

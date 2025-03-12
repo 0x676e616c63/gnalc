@@ -32,6 +32,11 @@ public:
     int getAlign() const;
 
     void accept(IRVisitor &visitor) override;
+
+private:
+    std::shared_ptr<Value> cloneImpl() const override {
+        return std::make_shared<ALLOCAInst>(getName(), basetype, align);
+    }
 };
 
 // <result> = load [volatile] <ty>, ptr <pointer>[, align <alignment>]......
@@ -47,6 +52,11 @@ public:
     int getAlign() const;
 
     void accept(IRVisitor &visitor) override;
+
+private:
+    std::shared_ptr<Value> cloneImpl() const override {
+        return std::make_shared<LOADInst>(getName(), getPtr(), align);
+    }
 };
 
 // store [volatile] <ty> <value>, ptr <pointer>[, align <alignment>]......
@@ -64,6 +74,11 @@ public:
     int getAlign() const;
 
     void accept(IRVisitor &visitor) override;
+
+private:
+    std::shared_ptr<Value> cloneImpl() const override {
+        return std::make_shared<STOREInst>(getValue(), getPtr(), align);
+    }
 };
 
 // <result> = getelementptr <ty>, ptr <ptrval> {, <ty> <idx>}*
@@ -71,6 +86,7 @@ public:
 // result的类型为ptr(makePtrType(getElm(getElm(_ptr->getTypePtr()))))
 // 目前先不考虑多维数组，用i*col+j的方式索引，或者先gep计算出行开头，再计算偏移
 // 12.6：多个index操作已加
+// getBaseType() 返回 <ty>
 class GEPInst : public Instruction {
 public:
     GEPInst(NameRef name, const std::shared_ptr<Value> &_ptr,
@@ -93,6 +109,10 @@ public:
     size_t getConstantOffset() const;
 
     void accept(IRVisitor &visitor) override;
+
+    std::shared_ptr<Value> cloneImpl() const override {
+        return std::make_shared<GEPInst>(getName(), getPtr(), getIdxs());
+    }
 };
 
 } // namespace IR

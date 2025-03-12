@@ -1,11 +1,9 @@
-#include <utility>
-
 #include "../../include/ir/basic_block.hpp"
-
-#include <list>
-
 #include "../../include/ir/utilities.hpp"
 #include "../../include/ir/visitor.hpp"
+
+#include <utility>
+#include <list>
 
 namespace IR {
 BasicBlock::BasicBlock(std::string _name)
@@ -25,8 +23,26 @@ BasicBlock::BasicBlock(std::string _name,
                        std::list<std::weak_ptr<BasicBlock>> _next_bb,
                        std::list<std::shared_ptr<Instruction>> _insts)
     : Value(std::move(_name), makeBType(IRBTYPE::UNDEFINED),
-            ValueTrait::BASIC_BLOCK), insts(std::move(_insts)),
-            pre_bb(std::move(_pre_bb)), next_bb(std::move(_next_bb)) {
+            ValueTrait::BASIC_BLOCK),
+      insts(std::move(_insts)),
+      pre_bb(std::move(_pre_bb)), next_bb(std::move(_next_bb)) {
+    updateInstIndex();
+}
+
+void BasicBlock::addInst(iterator it, const std::shared_ptr<Instruction> &inst) {
+    Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
+    insts.insert(it, inst);
+    inst->setParent(shared_from_this());
+    updateInstIndex();
+}
+
+void BasicBlock::addInst(size_t index, const std::shared_ptr<Instruction> &inst) {
+    Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
+    index -= phi_insts.size();
+    auto it = std::next(insts.begin(),
+        static_cast<decltype(insts)::iterator::difference_type>(index));
+    insts.insert(it, inst);
+    inst->setParent(shared_from_this());
     updateInstIndex();
 }
 
@@ -57,30 +73,40 @@ bool BasicBlock::delNextBB(const std::shared_ptr<BasicBlock> &bb) {
 }
 
 void BasicBlock::addInst(const std::shared_ptr<Instruction> &inst) {
+    Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
     inst->index = phi_insts.size() + insts.size();
     insts.emplace_back(inst);
     inst->setParent(shared_from_this());
 }
 
 void BasicBlock::addInstAfterPhi(const std::shared_ptr<Instruction> &inst) {
+    Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
     insts.insert(insts.begin(), inst);
+    inst->setParent(shared_from_this());
     updateInstIndex();
 }
 
 void BasicBlock::addInstBeforeTerminator(const std::shared_ptr<Instruction> &inst) {
+    Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
     auto term = insts.back();
     Err::gassert(term->getOpcode() == OP::BR || term->getOpcode() == OP::RET);
     term->index = phi_insts.size() + insts.size();
     inst->index = term->index - 1;
-    insts.insert(std::prev(insts.end()), term);
+    insts.insert(std::prev(insts.end()), inst);
+    inst->setParent(shared_from_this());
 }
 
 std::list<std::shared_ptr<BasicBlock>> BasicBlock::getPreBB() const {
     return WeaktoSharedList(pre_bb);
 }
 
-std::list<std::shared_ptr<BasicBlock>> BasicBlock::getNextBB() const {
-    return WeaktoSharedList(next_bb);
+std::list<std::shared_ptr<BasicBlock>> BasicBlock::getNextBB() const { return WeaktoSharedList(next_bb); }
+
+size_t BasicBlock::getNumPreBBs() const {
+    return pre_bb.size();
+}
+size_t BasicBlock::getNumNextBBs() const {
+    return next_bb.size();
 }
 
 const std::list<std::shared_ptr<Instruction>> &BasicBlock::getInsts() const {
@@ -99,13 +125,15 @@ std::list<std::shared_ptr<Instruction>> BasicBlock::getAllInsts() const {
 }
 
 void BasicBlock::updateInstIndex() const {
-    unsigned i = 0;
-    for (const auto &inst : phi_insts) {
-        inst->index = ++i;
-    }
-    for (const auto &inst : insts) {
-        inst->index = ++i;
-    }
+    size_t i = 0;
+    for (const auto &inst : phi_insts)
+        inst->index = i++;
+    for (const auto &inst : insts)
+        inst->index = i++;
+}
+
+FunctionBBIter BasicBlock::getIter() const {
+    return std::next(parent.lock()->begin(), index);
 }
 
 bool BasicBlock::delFirstOfInst(const std::shared_ptr<Instruction> &inst) {
@@ -136,13 +164,53 @@ bool BasicBlock::delInst(const std::shared_ptr<Instruction> &target, const DEL_M
     return delInstIf([&target](const auto &inst) { return inst == target; }, mode);
 }
 
-BasicBlock::const_iterator BasicBlock::cbegin() const { return insts.cbegin(); }
+BasicBlock::const_iterator BasicBlock::begin() const { return insts.begin(); }
 
-BasicBlock::const_iterator BasicBlock::cend() const { return insts.cend(); }
+BasicBlock::const_iterator BasicBlock::end() const { return insts.end(); }
 
 BasicBlock::iterator BasicBlock::begin() { return insts.begin(); }
 
 BasicBlock::iterator BasicBlock::end() { return insts.end(); }
+
+BasicBlock::const_iterator BasicBlock::cbegin() const { return insts.cbegin(); }
+
+BasicBlock::const_iterator BasicBlock::cend() const { return insts.cend(); }
+
+BasicBlock::const_reverse_iterator BasicBlock::rbegin() const { return insts.rbegin(); }
+
+BasicBlock::const_reverse_iterator BasicBlock::rend() const { return insts.rend(); }
+
+BasicBlock::reverse_iterator BasicBlock::rbegin() { return insts.rbegin(); }
+
+BasicBlock::reverse_iterator BasicBlock::rend() { return insts.rend(); }
+
+BasicBlock::const_reverse_iterator BasicBlock::crbegin() const { return insts.crbegin(); }
+
+BasicBlock::const_reverse_iterator BasicBlock::crend() const { return insts.crend(); }
+
+BasicBlock::phi_const_iterator BasicBlock::phi_begin() const {
+    return phi_insts.begin();
+}
+
+BasicBlock::phi_const_iterator BasicBlock::phi_end() const {
+    return phi_insts.end();
+}
+
+BasicBlock::phi_iterator BasicBlock::phi_begin() {
+    return phi_insts.begin();
+}
+
+BasicBlock::phi_iterator BasicBlock::phi_end() {
+    return phi_insts.end();
+}
+
+BasicBlock::phi_const_iterator BasicBlock::phi_cbegin() const {
+    return phi_insts.cbegin();
+}
+
+BasicBlock::phi_const_iterator BasicBlock::phi_cend() const {
+    return phi_insts.cend();
+}
 
 void BasicBlock::setBBParam(const std::vector<std::shared_ptr<Value>> &params) {
     bb_params = params;
@@ -155,8 +223,14 @@ const std::vector<std::shared_ptr<Value>> &BasicBlock::getBBParams() const {
 std::shared_ptr<Function> BasicBlock::getParent() const {
     return parent.lock();
 }
-void BasicBlock::setParent(const std::shared_ptr<Function> &_parent) {
-    parent = _parent;
+void BasicBlock::setParent(const std::shared_ptr<Function> &_parent) { parent = _parent; }
+
+std::shared_ptr<Instruction> BasicBlock::getTerminator() const { return insts.back(); }
+std::shared_ptr<BRInst> BasicBlock::getBRInst() const {
+    return std::dynamic_pointer_cast<BRInst>(getTerminator());
+}
+std::shared_ptr<RETInst> BasicBlock::getRETInst() const {
+    return std::dynamic_pointer_cast<RETInst>(getTerminator());
 }
 
 void BasicBlock::addPhiInst(const std::shared_ptr<PHIInst> &node) {
@@ -169,114 +243,24 @@ unsigned BasicBlock::getPhiCount() const {
     return phi_insts.size();
 }
 
+size_t BasicBlock::getIndex() const {
+    return index;
+}
+
 void BasicBlock::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
 BasicBlock::~BasicBlock() = default;
 
-size_t BasicBlock::getAllInstCount() const {
-    return phi_insts.size() + insts.size();
-}
+size_t BasicBlock::getAllInstCount() const { return phi_insts.size() + insts.size(); }
 
-void linkBB(const std::shared_ptr<BasicBlock> &prebb,
-                   const std::shared_ptr<BasicBlock> &nxtbb) {
-    prebb->addNextBB(nxtbb);
-    nxtbb->addPreBB(prebb);
-}
-
-void unlinkBB(const std::shared_ptr<BasicBlock> &prebb,
-                   const std::shared_ptr<BasicBlock> &nxtbb) {
-    bool ok = prebb->delNextBB(nxtbb);
-    Err::gassert(ok);
-    ok = nxtbb->delPreBB(prebb);
-    Err::gassert(ok);
-}
-
-std::vector<std::shared_ptr<PHIInst>> safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb, const std::shared_ptr<BasicBlock> &nxtbb) {
-    // Unlink CFG
-    unlinkBB(prebb, nxtbb);
-
-    // Break BRInst
-    auto br = std::dynamic_pointer_cast<BRInst>(prebb->getInsts().back());
-    Err::gassert(br != nullptr);
-    if (br->isConditional()) {
-        if (br->getTrueDest() == nxtbb)
-            br->dropTrueDest();
-        else {
-            Err::gassert(br->getFalseDest() == nxtbb,
-                "The given block is not a successor.");
-            br->dropFalseDest();
-        }
-    }
-    else {
-        Err::gassert(br->getDest() == nxtbb, "The given block is not a successor.");
-        prebb->delInst(br, BasicBlock::DEL_MODE::NON_PHI);
-    }
-
-    // Handle PHI
-    // This a little tricky because when we're deleting a PHIInst's operand,
-    // the result phi might only have one operand. In that case we want to
-    // replace the phi with the value in that operand.
-    // But when this involving multiple blocks,
-    // the replacing might affect other phi in other block, thus cause a replacing propagation.
-    // As the propagation goes, a phi can end up self-referenced or even empty (dead block only).
-    //
-    //        bb0 -- bb1
-    //          \    |
-    //           bb2
-    //
-    // bb0:
-    //    %0 = phi [ %1, %bb1 ] [ %2, %bb2 ]
-    // bb1:
-    //    %1 = phi [ %0, %bb0 ] [ %2, %bb2 ]
-    // bb2:
-    //    %2 = phi [ %0, %bb0 ] [ %1, %bb1 ]
-    //
-    // First we unlink bb1 -> bb2
-    //    %2 = phi [ %0, %bb0 ],  then we want to replace %2 with %0
-    // So,
-    // bb0:
-    //    %0 = phi [ %1, %bb1 ] [ %0, %bb2 ]
-    // bb1:
-    //    %1 = phi [ %0, %bb0 ] [ %0, %bb2 ]
-    // bb2:
-    //
-    // Then we unlink bb1 -> bb0
-    //    %0 = phi [ %0, %bb2 ],  here we can't replace because that makes no sense.
-    // So,
-    // bb0:
-    //    %0 = phi [ %0, %bb2 ]
-    // bb1:
-    //    %1 = phi [ %0, %bb0 ] [ %0, %bb2 ]
-    // bb2:
-    //
-    // Finally we unlink bb2 -> bb0,
-    //    %0 = phi [], a weird empty phi occurred.
-    // Note that this can only happen in dead block.
-    // And we can't figure if a block is dead, because there might be dead loops.
-    // So we just mark the phi as dead.
-    // So,
-    // bb0:
-    //    %0 = phi []
-    // bb1:
-    //    %1 = phi [ %0, %bb0 ] [ %0, %bb2 ]
-    // bb2:
-    std::vector<std::shared_ptr<PHIInst>> unused_phi;
-    for (const auto& phi : nxtbb->getPhiInsts()) {
-        // Delete the phi operand from the unlinked `prebb`
-        if (phi->delPhiOperByBlock(prebb)) {
-            // Simplify PHI
-            auto opers = phi->getPhiOpers();
-            if (opers.size() == 1) {
-                // Only one operand, check if it is self-reference.
-                // If it is self-reference, replaceSelf makes no sense.
-                if (opers[0].value != phi)
-                    phi->replaceSelf(opers[0].value);
-                unused_phi.emplace_back(phi);
-            }
-            else if (opers.empty())
-                unused_phi.emplace_back(phi);
-        }
-    }
-    return unused_phi;
+std::shared_ptr<Value> BasicBlock::cloneImpl() const {
+    Err::not_implemented(
+        "BasicBlock::cloneImpl:"
+        "Cloning basic blocks requires manual handling of instruction dependencies."
+        "We MUST clone each Instruction individually and maintain "
+        "a value mapping (original -> cloned) for operand replacement."
+        "Direct cloning would break use-def chains in SSA form."
+    );
+    return nullptr;
 }
 } // namespace IR

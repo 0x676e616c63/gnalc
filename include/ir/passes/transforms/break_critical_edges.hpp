@@ -1,4 +1,4 @@
-// Break critical edges in CFG, which is required by GVN-PRE
+// Break critical edges in CFG, which is required by GVN-PRE and codegen
 //
 // critical edges: edges from blocks with more than one successor
 //                 to blocks with more than one predecessor

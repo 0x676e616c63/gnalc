@@ -6,7 +6,7 @@
 #include <memory>
 #include <string>
 
-enum class LogLevel { NONE, INFO, DEBUG };
+enum class LogLevel { DEBUG, INFO, WARNING, CRITICAL, NONE };
 
 class Logger {
     template <typename T> class LoggerGuard {
@@ -22,44 +22,58 @@ public:
     static void setLogLevel(LogLevel level) { logLevel = level; }
 
     static void logInfo(const std::string &message) {
-        if (logLevel >= LogLevel::INFO) {
+        if (logLevel <= LogLevel::INFO) {
             std::cerr << "[INFO] " << message << std::endl;
         }
     }
 
     static void logWarning(const std::string &message) {
-        if (logLevel >= LogLevel::INFO) {
+        if (logLevel <= LogLevel::WARNING) {
             std::cerr << "\033[33m[WARNING] " << message << "\033[0m" << std::endl;
         }
     }
 
+    static void logCritical(const std::string &message) {
+        if (logLevel <= LogLevel::CRITICAL) {
+            std::cerr << "\033[32;31m[CRITICAL] " << message << "\033[0m" << std::endl;
+        }
+    }
+
     static void logDebug(const std::string &message) {
-        if (logLevel >= LogLevel::DEBUG) {
+        if (logLevel <= LogLevel::DEBUG) {
             std::cerr << "[DEBUG] " << message << std::endl;
         }
     }
 
     template <typename... Args> static void logInfo(Args &&...args) {
-        if (logLevel >= LogLevel::INFO) {
+        if (logLevel <= LogLevel::INFO) {
             std::cerr << "[INFO] ";
             (std::cerr << ... << args);
             std::cerr << std::endl;
         }
     }
 
-    template <typename... Args> static void logDebug(Args &&...args) {
-        if (logLevel >= LogLevel::DEBUG) {
-            std::cerr << "[DEBUG] ";
-            (std::cerr << ... << args);
-            std::cerr << std::endl;
-        }
-    }
-
     template <typename... Args> static void logWarning(Args &&...args) {
-        if (logLevel >= LogLevel::DEBUG) {
+        if (logLevel <= LogLevel::WARNING) {
             std::cerr << "\033[33m[WARNING] ";
             (std::cerr << ... << args);
             std::cerr << "\033[0m" << std::endl;
+        }
+    }
+
+    template <typename... Args> static void logCritical(Args &&...args) {
+        if (logLevel <= LogLevel::CRITICAL) {
+            std::cerr << "\033[32;31m[CRITICAL] ";
+            (std::cerr << ... << args);
+            std::cerr << "\033[0m" << std::endl;
+        }
+    }
+
+    template <typename... Args> static void logDebug(Args &&...args) {
+        if (logLevel <= LogLevel::DEBUG) {
+            std::cerr << "[DEBUG] ";
+            (std::cerr << ... << args);
+            std::cerr << std::endl;
         }
     }
 

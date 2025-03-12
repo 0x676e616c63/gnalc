@@ -19,17 +19,22 @@ namespace IR {
 // operands = [%1, %2]
 class BinaryInst : public Instruction {
 public:
-    BinaryInst(NameRef name, OP opcode, const std::shared_ptr<Value> &lhs,
-               const std::shared_ptr<Value> &rhs);
+    BinaryInst(NameRef name, OP opcode, const std::shared_ptr<Value> &lhs, const std::shared_ptr<Value> &rhs);
 
     std::shared_ptr<Value> getLHS() const;
     std::shared_ptr<Value> getRHS() const;
 
-    void setLHS(const std::shared_ptr<Value>& lhs);
-    void setRHS(const std::shared_ptr<Value>& rhs);
+    void setLHS(const std::shared_ptr<Value> &lhs);
+    void setRHS(const std::shared_ptr<Value> &rhs);
     void swapLHSRHS();
 
     void accept(IRVisitor &visitor) override;
+
+private:
+    std::shared_ptr<Value> cloneImpl() const override {
+        return std::make_shared<BinaryInst>
+        (getName(), getOpcode(), getLHS(), getRHS());
+    }
 };
 
 // OP = FNEG, type = f32
@@ -41,8 +46,12 @@ public:
     std::shared_ptr<Value> getVal() const;
 
     void accept(IRVisitor &visitor) override;
-};
 
+private:
+    std::shared_ptr<Value> cloneImpl() const override {
+        return std::make_shared<FNEGInst>(getName(), getVal());
+    }
+};
 } // namespace IR
 
 #endif

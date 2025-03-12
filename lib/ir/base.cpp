@@ -18,6 +18,12 @@ Value::Value(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait
 
 std::shared_ptr<Type> Value::getType() const { return vtype; }
 
+size_t Value::getUseCount() const {
+    // Expired use should be deleted by User.
+    // So just get the size.
+    return use_list.size();
+}
+
 void Value::addUse(const std::weak_ptr<Use> &use) {
     Err::gassert(!use.expired());
     use_list.emplace_back(use);
@@ -82,10 +88,8 @@ bool User::replaceOperand(const std::shared_ptr<Value> &before, const std::share
     return found;
 }
 
-bool User::replaceUse(const std::shared_ptr<Use> &old_use,
-                      const std::shared_ptr<Value> &new_value) {
-    Err::gassert(old_use->getValue() != new_value,
-        "Replace with an identical value doesn't make sense.");
+bool User::replaceUse(const std::shared_ptr<Use> &old_use, const std::shared_ptr<Value> &new_value) {
+    Err::gassert(old_use->getValue() != new_value, "Replace with an identical value doesn't make sense.");
     for (auto &use : operands) {
         if (use == old_use) {
             auto ok = use->getValue()->delUse(use);
@@ -96,12 +100,16 @@ bool User::replaceUse(const std::shared_ptr<Use> &old_use,
             return true;
         }
     }
-    Err::unreachable("User::replaceOneUse(): old_val notfound.");
+    Err::unreachable("User::replaceOneUse(): old use notfound.");
     return false;
 }
 
 User::User(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait)
     : Value(std::move(_name), std::move(_vtype), _vtrait) {}
+
+size_t User::getNumOperands() const {
+    return operands.size();
+}
 
 void User::addOperand(const std::shared_ptr<Value> &v) {
     std::shared_ptr<Use> use{new Use(v, this)};
@@ -118,11 +126,11 @@ const std::shared_ptr<Use> &User::getOperand(size_t index) const {
 
 void User::setOperand(size_t index, const std::shared_ptr<Value> &val) {
     Err::gassert(index < operands.size(), "index out of range");
-    auto use = operands[index];
-    auto ok = use->getValue()->delUse(use);
+    auto old_use = operands[index];
+    auto ok = old_use->getValue()->delUse(old_use);
     Err::gassert(ok);
     std::shared_ptr<Use> new_use{new Use(val, this)};
-    use->init();
+    new_use->init();
     operands[index] = std::move(new_use);
 }
 

@@ -1,0 +1,34 @@
+// Inst Simplify Pass
+// Common peephole optimizations on Instructions through algebraic simplification and strength reduction
+// This pass recognize common instruction patterns using the PatternMatch utility
+// and simplify them while maintaining program semantics.
+//
+// Note that this pass would destroy the LCSSA form unless `preserve_lcssa` is set.
+#pragma once
+#ifndef GNALC_IR_PASSES_TRANSFORMS_INSTSIMPLIFY_HPP
+#define GNALC_IR_PASSES_TRANSFORMS_INSTSIMPLIFY_HPP
+
+#include "../../instructions/memory.hpp"
+#include "../analysis/alias_analysis.hpp"
+#include "../pass_manager.hpp"
+
+namespace IR {
+class InstSimplifyPass : public PM::PassInfo<InstSimplifyPass> {
+public:
+    explicit InstSimplifyPass(bool preserve_lcssa_ = false) : preserve_lcssa(preserve_lcssa_) {}
+    PM::PreservedAnalyses run(Function &function, FAM &manager);
+
+private:
+    bool preserve_lcssa;
+    size_t name_cnt = 0;
+    FAM *fam;
+    Function *func;
+    std::string getTmpName();
+    bool foldBinary(const std::shared_ptr<PHIInst> &phi);
+    bool foldGEP(const std::shared_ptr<PHIInst> &phi);
+    bool foldLoad(const std::shared_ptr<PHIInst> &phi);
+    bool isLoadSuitableForSinking(const std::shared_ptr<LOADInst> &load);
+};
+
+} // namespace IR
+#endif

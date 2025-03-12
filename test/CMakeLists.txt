@@ -6,4 +6,7 @@ include_directories(../include)
 
 add_executable(pass_benchmark benchmark.cpp)
 add_executable(gnalc_test test.cpp)
-add_test(NAME gnalc_test COMMAND gnalc_test)
+add_test(NAME base COMMAND gnalc_test)
+add_test(NAME o1 COMMAND gnalc_test -p -O1)
+add_test(NAME fixedpoint COMMAND gnalc_test -p -fixed-point)
+add_test(NAME fuzz COMMAND gnalc_test -p -fuzz)

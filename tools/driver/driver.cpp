@@ -28,17 +28,21 @@ std::shared_ptr<AST::CompUnit> node = nullptr;
 extern FILE *yyin;
 
 int main(int argc, char **argv) {
-    // gnalc is still in development, so make it defaults to be `LogLevel::INFO`.
-    Logger::setLogLevel(LogLevel::INFO);
+    // gnalc is still in development, so make it defaults to be `LogLevel::DEBUG`.
+    Logger::setLogLevel(LogLevel::DEBUG);
 
     // File
     std::string input_file;
     std::string output_file;
 
     // Options
-    bool only_compilation = false; // -S
-    bool emit_llvm = false;        // -emit-llvm
-    bool ast_dump = false;         // -ast-dump
+    bool only_compilation = false;     // -S
+    bool emit_llvm = false;            // -emit-llvm
+    bool ast_dump = false;             // -ast-dump
+    bool fixed_point_pipeline = false; // -fixed-point
+    bool fuzz_testing = false;         // -fuzz
+    bool debug_pipeline = false;       // -debug-pipeline
+    std::string fuzz_testing_repro;
     IR::OptInfo opt_info;
     MIR::OptInfo bkd_opt_info;
 
@@ -79,36 +83,60 @@ int main(int argc, char **argv) {
             emit_llvm = true;
         else if (arg == "-ast-dump")
             ast_dump = true;
+        else if (arg == "-fixed-point")
+            fixed_point_pipeline = true;
         else if (arg == "-O1" || arg == "-O")
             opt_info = IR::o1_opt_info;
 
-        // Optimizations available:
-        else if (arg == "--mem2reg")
-            opt_info.mem2reg = true;
-        else if (arg == "--sccp")
-            opt_info.sccp = true;
-        else if (arg == "--dce")
-            opt_info.dce = true;
-        else if (arg == "--adce")
-            opt_info.adce = true;
-        else if (arg == "--dse")
-            opt_info.dse = true;
-        else if (arg == "--gvnpre")
-            opt_info.gvnpre = true;
-        else if (arg == "--tailcall")
-            opt_info.tailcall = true;
-        else if (arg == "--reassociate")
-            opt_info.reassociate = true;
-        // Debug options:
-        else if (arg == "--ann")
-            opt_info.advance_name_norm = true;
+#define OPT_ARG(cli_arg, cli_no_arg, opt_name)                                                                         \
+    else if (arg == (cli_arg)) opt_info.opt_name = true;                                                               \
+    else if (arg == (cli_no_arg)) opt_info.opt_name = false;
 
+        // Optimizations available:
+        // Function Transforms
+        OPT_ARG("--mem2reg", "--no-mem2reg", mem2reg)
+        OPT_ARG("--sccp", "--no-sccp", sccp)
+        OPT_ARG("--dce", "--no-dce", dce)
+        OPT_ARG("--adce", "--no-adce", adce)
+        OPT_ARG("--cfgsimplify", "--no-cfgsimplify", cfgsimplify)
+        OPT_ARG("--dse", "--no-dse", dse)
+        OPT_ARG("--loadelim", "--no-loadelim", loadelim)
+        OPT_ARG("--gvnpre", "--no-gvnpre", gvnpre)
+        OPT_ARG("--tailcall", "--no-tailcall", tailcall)
+        OPT_ARG("--reassociate", "--no-reassociate", reassociate)
+        OPT_ARG("--instsimplify", "--no-instsimplify", instsimplify)
+        OPT_ARG("--inline", "--no-inline", inliner)
+        OPT_ARG("--loopsimplify", "--no-loopsimplify", loop_simplify)
+        OPT_ARG("--looprotate", "--no-looprotate", loop_rotate)
+        OPT_ARG("--lcssa", "--no-lcssa", lcssa)
+        OPT_ARG("--licm", "--no-licm", licm)
+        OPT_ARG("--loopunroll", "--no-loopunroll", loop_unroll)
+        OPT_ARG("--jumpthreading", "--no-jumpthreading", jump_threading)
+        // Module Transforms
+        OPT_ARG("--treeshaking", "--no-treeshaking", tree_shaking)
+#undef OPT_ARG
+        // Debug options:
+        else if (arg == "-fuzz") fuzz_testing = true;
+        else if (arg == "-fuzz-repro") {
+            ++i;
+            if (i >= argc) {
+                std::cerr << "Error: Expected fuzz pipeline." << std::endl;
+                return -1;
+            }
+            fuzz_testing = true;
+            fuzz_testing_repro = argv[i];
+        }
+        else if (arg == "-debug-pipeline") debug_pipeline = true;
+        else if (arg == "--ann") opt_info.advance_name_norm = true;
+        else if (arg == "--verify") opt_info.verify = true;
+        else if (arg == "--strict") {
+            opt_info.verify = true;
+            opt_info.abort_when_verify_failed = true;
+        }
 #if GNALC_EXTENSION_BRAINFK
         // Extensions:
-        else if (arg == "-mbrainfk")
-            bf_target = true;
-        else if (arg == "-mbrainfk-3tape")
-            bf3t_target = true;
+        else if (arg == "-mbrainfk") bf_target = true;
+        else if (arg == "-mbrainfk-3tape") bf3t_target = true;
 #endif
 
         else if (arg == "-h" || arg == "--help") {
@@ -120,26 +148,43 @@ USAGE: gnalc [options] file
 OPTIONS:
 
 General options:
-  -o <file>            - Write output to <file>
-  -S                   - Only run compilation steps
-  -O,-O1               - Optimization level 1
-  -emit-llvm           - Use the LLVM representation for assembler and object files
-  -ast-dump            - Build ASTs and then debug dump them
-  --log <log-level>    - Enable compiler logger. Available log-level: debug, info, none
-  -h, --help           - Display available options
+  -o <file>               - Write output to <file>
+  -S                      - Only run compilation steps
+  -O,-O1                  - Optimization level 1
+  -emit-llvm              - Use the LLVM representation for assembler and object files
+  -ast-dump               - Build ASTs and then debug dump them
+  -fixed-point            - Enable the fixed point optimization pipeline. (Ignore other optimization options)
+  --log <log-level>       - Enable compiler logger. Available log-level: debug, info, none
+  -h, --help              - Display available options
 
 Optimizations available:
   --mem2reg            - Promote memory to register
   --sccp               - Sparse conditional constant propagation
   --dce                - Dead code elimination
   --adce               - Aggressive dead code elimination
+  --cfgsimplify        - Simplify control flow
   --dse                - Dead store elimination
+  --loadelim           - Redundant load elimination
   --gvnpre             - Value-Based partial redundancy elimination (GVN-PRE)
   --tailcall           - Tail call optimization
   --reassociate        - Reassociate commutative expressions
+  --instsimplify       - Simplify instructions
+  --inline             - Inline suitable functions
+  --loopsimplify       - Canonicalize loops to The Loop Simplify Form
+  --looprotate         - Canonicalize loops to The Rotated Loop Form
+  --lcssa              - Canonicalize loops to The Loop Closed SSA Form
+  --loopunroll         - Unroll loops
+  --jumpthreading      - Jump Threading
+  --treeshaking        - Shake off unused functions, function declarations and global variables
 
 Debug options:
-  --ann                - Advance name normalization (before the function passes)
+  -fuzz                   - Enable fuzz testing pipeline. (Ignore other optimization options)
+  -fuzz-repro <pipeline>  - Reproduce fuzz testing pipeline. Find <pipeline> in the fuzz testing log.
+  -debug-pipeline         - Builtin pipeline for debugging.
+  --no-<pass>             - Remove <pass> from pipeline, <pass> are specified by 'Optimizations available' above.
+  --ann                   - Use the advance name normalization result (after IRGen). (This disables the one at the last).
+  --verify                - Verify IR after each pass
+  --strict                - Enable verify and abort when verify failed
 )";
 
 #if GNALC_EXTENSION_BRAINFK
@@ -152,20 +197,19 @@ Extensions:
 #endif
             std::cout << std::flush;
             return 0;
-        } else
-            input_file = argv[i];
+        }
+        else input_file = argv[i];
     }
 
     if (!only_compilation) {
-        std::cerr << "Error: Gnalc currently only supports '-S' mode."
-                  << std::endl;
+        std::cerr << "Error: Gnalc currently only supports '-S' mode." << std::endl;
         return -1;
     }
 
     if (!input_file.empty()) {
         yyin = fopen(input_file.c_str(), "r");
         if (!yyin) {
-            std::cerr << "Error: Failed to open input file." << std::endl;
+            std::cerr << "Error: Failed to open input file '" << input_file << "'." << std::endl;
             return -1;
         }
     }
@@ -194,7 +238,15 @@ Extensions:
     IR::PassBuilder::registerModuleAnalyses(mam);
     IR::PassBuilder::registerProxies(fam, mam);
 
-    auto mpm = IR::PassBuilder::buildModulePipeline(opt_info);
+    IR::MPM mpm;
+    if (debug_pipeline)
+        mpm = IR::PassBuilder::buildModuleDebugPipeline();
+    else if (fuzz_testing)
+        mpm = IR::PassBuilder::buildModuleFuzzTestingPipeline(fuzz_testing_repro);
+    else if (fixed_point_pipeline)
+        mpm = IR::PassBuilder::buildModuleFixedPointPipeline();
+    else
+        mpm = IR::PassBuilder::buildModulePipeline(opt_info);
 
     std::ostream *poutstream = &std::cout;
     std::ofstream outfile;
@@ -202,7 +254,7 @@ Extensions:
     if (!output_file.empty()) {
         outfile.open(output_file);
         if (!outfile.is_open()) {
-            std::cerr << "Error: Failed to open output file." << std::endl;
+            std::cerr << "Error: Failed to open output file '" << output_file << "'." << std::endl;
             return -1;
         }
         poutstream = &outfile;

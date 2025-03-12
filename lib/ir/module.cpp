@@ -14,13 +14,14 @@ const std::vector<std::shared_ptr<GlobalVariable>> & Module::getGlobalVars() con
     return global_vars;
 }
 
-void Module::delGlobalVar(NameRef name) {
+bool Module::delGlobalVar(const std::shared_ptr<GlobalVariable>& target) {
     for (auto it = global_vars.begin(); it != global_vars.end(); ++it) {
-        if ((*it)->isName(name)) {
+        if (*it == target) {
             global_vars.erase(it);
-            return;
+            return true;
         }
     }
+    return false;
 }
 
 void Module::addFunction(std::shared_ptr<Function> func) {
@@ -31,16 +32,14 @@ const std::vector<std::shared_ptr<Function>> &Module::getFunctions() const {
     return funcs;
 }
 
-/**
- * @brief Delete by name
- */
-void Module::delFunction(NameRef name) {
+bool Module::delFunction(const std::shared_ptr<Function> & target) {
     for (auto it = funcs.begin(); it != funcs.end(); ++it) {
-        if ((*it)->isName(name)) {
+        if (*it == target) {
             funcs.erase(it);
-            return;
+            return true;
         }
     }
+    return false;
 }
 
 void Module::addFunctionDecl(std::shared_ptr<FunctionDecl> func_decl) {
@@ -52,34 +51,50 @@ Module::getFunctionDecls() const {
     return func_decls;
 }
 
-void Module::delFunctionDecl(NameRef name) {
+bool Module::delFunctionDecl(const std::shared_ptr<FunctionDecl> & target) {
     for (auto it = func_decls.begin(); it != func_decls.end(); ++it) {
-        if ((*it)->isName(name)) {
+        if (*it == target) {
             func_decls.erase(it);
-            return;
+            return true;
         }
     }
+    return false;
 }
 
 ConstantPool &Module::getConstantPool() { return constant_pool; }
 
-void Module::removeUnusedFuncDecl() {
+void Module::removeUnusedFuncDecls() {
     func_decls.erase(
         std::remove_if(func_decls.begin(), func_decls.end(),
-                       [](auto &&p) { return p->getUseList().empty(); }),
+                       [](auto &&p) { return p->getUseCount() == 0; }),
         func_decls.end());
 }
-Module::const_iterator Module::cbegin() const {
-    return funcs.cbegin();
+void Module::removeUnusedFuncs() {
+    funcs.erase(
+        std::remove_if(funcs.begin(), funcs.end(),
+                       [](auto &&p) {
+                           return p->getUseCount() == 0 && p->getName() != "@main";
+                       }),
+        funcs.end());
 }
-Module::const_iterator Module::cend() const {
-    return funcs.cend();
+
+Module::const_iterator Module::begin() const {
+    return funcs.begin();
+}
+Module::const_iterator Module::end() const {
+    return funcs.end();
 }
 Module::iterator Module::begin() {
     return funcs.begin();
 }
 Module::iterator Module::end() {
     return funcs.end();
+}
+Module::const_iterator Module::cbegin() const {
+    return funcs.cbegin();
+}
+Module::const_iterator Module::cend() const {
+    return funcs.cend();
 }
 
 void Module::accept(IRVisitor &visitor) { visitor.visit(*this); }

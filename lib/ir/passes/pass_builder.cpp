@@ -2,68 +2,175 @@
 #include "../../../include/ir/passes/pass_manager.hpp"
 
 // Analysis
-#include "../../../include/ir/passes/analysis/live_analysis.hpp"
 #include "../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../include/ir/passes/analysis/domtree_analysis.hpp"
+#include "../../../include/ir/passes/analysis/live_analysis.hpp"
+#include "../../../include/ir/passes/analysis/loop_analysis.hpp"
 
 // Transforms
 #include "../../../include/ir/passes/transforms/adce.hpp"
 #include "../../../include/ir/passes/transforms/break_critical_edges.hpp"
+#include "../../../include/ir/passes/transforms/cfgsimplify.hpp"
 #include "../../../include/ir/passes/transforms/constant_propagation.hpp"
 #include "../../../include/ir/passes/transforms/dce.hpp"
 #include "../../../include/ir/passes/transforms/dse.hpp"
 #include "../../../include/ir/passes/transforms/gvn_pre.hpp"
+#include "../../../include/ir/passes/transforms/inline.hpp"
+#include "../../../include/ir/passes/transforms/instsimplify.hpp"
+#include "../../../include/ir/passes/transforms/jump_threading.hpp"
+#include "../../../include/ir/passes/transforms/lcssa.hpp"
+#include "../../../include/ir/passes/transforms/load_elimination.hpp"
+#include "../../../include/ir/passes/transforms/loop_rotate.hpp"
+#include "../../../include/ir/passes/transforms/loop_simplify.hpp"
+#include "../../../include/ir/passes/transforms/loop_unroll.hpp"
 #include "../../../include/ir/passes/transforms/mem2reg.hpp"
 #include "../../../include/ir/passes/transforms/namenormalizer.hpp"
+#include "../../../include/ir/passes/transforms/reassociate.hpp"
 #include "../../../include/ir/passes/transforms/tail_recursion_elimination.hpp"
+#include "../../../include/ir/passes/transforms/tree_shaking.hpp"
 
 // Utilities
+#include "../../../include/ir/passes/transforms/licm.hpp"
 #include "../../../include/ir/passes/utilities/irprinter.hpp"
+#include "../../../include/ir/passes/utilities/verifier.hpp"
+
+#include <algorithm>
+#include <random>
+#include <string>
+#include <vector>
+#include <optional>
+#include <functional>
 
 namespace IR {
 
 const OptInfo o1_opt_info = {
+    // Function Transforms
     .mem2reg = true,
     .sccp = true,
     .dce = true,
     .adce = true,
+    .cfgsimplify = true,
     .dse = true,
     .gvnpre = true,
     .tailcall = true,
+    .reassociate = true,
+    .instsimplify = true,
+    .inliner = true,
+    .loop_simplify = false,
+    .loop_rotate = false,
+    .lcssa = false,
+    .licm = false,
+    .loop_unroll = false,
+    .jump_threading = false,
+    // Module Transforms
+    .tree_shaking = true,
+    // Function Debug
+    .verify = false,
 };
+
+FPM PassBuilder::buildFunctionFixedPointPipeline() {
+    // Reassociate does not converge, set a threshold
+    auto make_arithmetic = [] {
+        PM::FixedPointPM<Function> arithmetic(10);
+        arithmetic.addPass(ReassociatePass());
+        arithmetic.addPass(InstSimplifyPass());
+        arithmetic.addPass(ConstantPropagationPass());
+        arithmetic.addPass(DCEPass());
+        arithmetic.addPass(ADCEPass());
+        return arithmetic;
+    };
+
+    auto make_clean = [] {
+        PM::FixedPointPM<Function> cleanup;
+        cleanup.addPass(InstSimplifyPass());
+        cleanup.addPass(ConstantPropagationPass());
+        cleanup.addPass(BreakCriticalEdgesPass());
+        cleanup.addPass(GVNPREPass());
+        cleanup.addPass(DCEPass());
+        cleanup.addPass(ADCEPass());
+        cleanup.addPass(LoadEliminationPass());
+        cleanup.addPass(DSEPass());
+        return cleanup;
+    };
+
+    auto make_ipo = [] {
+        FPM ipo;
+        ipo.addPass(TailRecursionEliminationPass());
+        ipo.addPass(InlinePass());
+        return ipo;
+    };
+
+    FPM fpm;
+    fpm.addPass(NameNormalizePass(true));
+    fpm.addPass(PromotePass());
+    fpm.addPass(make_ipo());
+    fpm.addPass(make_clean());
+    fpm.addPass(make_arithmetic());
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(make_clean());
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(NameNormalizePass(true));
+
+    return fpm;
+}
+
+MPM PassBuilder::buildModuleFixedPointPipeline() {
+    MPM mpm;
+    mpm.addPass(makeModulePass(buildFunctionFixedPointPipeline()));
+    mpm.addPass(TreeShakingPass());
+    return mpm;
+}
 
 FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FPM fpm;
 
-    if (opt_info.advance_name_norm)
-        fpm.addPass(NameNormalizePass(true)); // bb_rename: true
+    // ANN disables the last name normalization pass.
+    fpm.addPass(NameNormalizePass(true)); // bb_rename: true
 
-    if (opt_info.mem2reg)
-        fpm.addPass(PromotePass());
+#define FUNCTION_TRANSFORM(name, pass)                                                                                 \
+    if (opt_info.name) {                                                                                               \
+        fpm.addPass(pass);                                                                                             \
+        if (opt_info.verify)                                                                                           \
+            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));                                                \
+    }
 
-    if (opt_info.sccp)
-        fpm.addPass(ConstantPropagationPass());
+#define FUNCTION_TRANSFORM2(name, pass1, pass2)                                                                        \
+    if (opt_info.name) {                                                                                               \
+        fpm.addPass(pass1);                                                                                            \
+        if (opt_info.verify)                                                                                           \
+            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));                                                \
+        fpm.addPass(pass2);                                                                                            \
+        if (opt_info.verify)                                                                                           \
+            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));                                                \
+    }
 
-    if (opt_info.dce)
-        fpm.addPass(DCEPass());
+    FUNCTION_TRANSFORM(mem2reg, PromotePass())
+    FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass())
+    FUNCTION_TRANSFORM(inliner, InlinePass())
+    FUNCTION_TRANSFORM(sccp, ConstantPropagationPass())
+    FUNCTION_TRANSFORM(adce, ADCEPass())
+    FUNCTION_TRANSFORM(reassociate, ReassociatePass())
+    FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass())
+    FUNCTION_TRANSFORM(sccp, ConstantPropagationPass())
+    FUNCTION_TRANSFORM(dce, DCEPass())
+    FUNCTION_TRANSFORM(adce, ADCEPass())
+    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
+    FUNCTION_TRANSFORM2(gvnpre, BreakCriticalEdgesPass(), GVNPREPass())
+    FUNCTION_TRANSFORM(loadelim, LoadEliminationPass())
+    FUNCTION_TRANSFORM(dse, DSEPass())
+    FUNCTION_TRANSFORM(loadelim, LoadEliminationPass())
+    FUNCTION_TRANSFORM(dse, DSEPass())
+    FUNCTION_TRANSFORM(loadelim, LoadEliminationPass())
+    FUNCTION_TRANSFORM(dce, DCEPass())
+    FUNCTION_TRANSFORM(adce, ADCEPass())
+    FUNCTION_TRANSFORM(loop_simplify, LoopSimplifyPass())
+    FUNCTION_TRANSFORM(loop_rotate, LoopRotatePass())
+    FUNCTION_TRANSFORM(lcssa, LCSSAPass())
+    FUNCTION_TRANSFORM(licm, LICMPass())
+    FUNCTION_TRANSFORM(loop_unroll, LoopUnrollPass())
+    FUNCTION_TRANSFORM(jump_threading, JumpThreadingPass())
 
-    if (opt_info.adce)
-        fpm.addPass(ADCEPass());
-
-    if (opt_info.dse)
-        fpm.addPass(DSEPass());
-
-    if (opt_info.gvnpre)
-        fpm.addPass(GVNPREPass());
-
-    if (opt_info.tailcall)
-        fpm.addPass(TailRecursionEliminationPass());
-
-    if (opt_info.dce)
-        fpm.addPass(DCEPass());
-
-    if (opt_info.adce)
-        fpm.addPass(ADCEPass());
+#undef FUNCTION_TRANSFORM
 
     if (!opt_info.advance_name_norm)
         fpm.addPass(NameNormalizePass(true)); // bb_rename: true
@@ -74,6 +181,149 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
 MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
     MPM mpm;
     mpm.addPass(makeModulePass(buildFunctionPipeline(opt_info)));
+    if (opt_info.tree_shaking)
+        mpm.addPass(TreeShakingPass());
+    return mpm;
+}
+
+FPM PassBuilder::buildFunctionDebugPipeline() {
+    FPM fpm;
+    fpm.addPass(IR::PromotePass());
+    fpm.addPass(IR::NameNormalizePass(true));
+    fpm.addPass(IR::GVNPREPass());
+    fpm.addPass(IR::DSEPass());
+    fpm.addPass(IR::GVNPREPass());
+    fpm.addPass(IR::DCEPass());
+    fpm.addPass(IR::ReassociatePass());
+    fpm.addPass(IR::GVNPREPass());
+    fpm.addPass(IR::ConstantPropagationPass());
+    fpm.addPass(IR::NameNormalizePass(true));
+    return fpm;
+}
+
+MPM PassBuilder::buildModuleDebugPipeline() {
+    MPM mpm;
+    mpm.addPass(makeModulePass(buildFunctionDebugPipeline()));
+    return mpm;
+}
+
+FPM PassBuilder::buildFunctionFuzzTestingPipeline(const std::string& repro) {
+    FPM fpm;
+    fpm.addPass(PromotePass());
+    fpm.addPass(TailRecursionEliminationPass());
+    fpm.addPass(InlinePass());
+    fpm.addPass(NameNormalizePass(true));
+    std::vector<std::pair<std::string_view, std::function<void(bool)>>> passes;
+
+#define REGISTER_FUNCTION_TRANSFORM(pass)                                                                              \
+    passes.emplace_back(pass::name(), [&fpm] (bool strict){                                                                                       \
+        fpm.addPass(pass());                                                                                           \
+        fpm.addPass(VerifyPass(strict));                                                                                 \
+    });
+
+#define REGISTER_FUNCTION_TRANSFORM2(pass1, pass2)                                                                     \
+    passes.emplace_back(pass2::name(), [&fpm] (bool strict){                                                                                       \
+        fpm.addPass(pass1());                                                                                          \
+        fpm.addPass(pass2());                                                                                          \
+        fpm.addPass(VerifyPass(strict));                                                                                 \
+    });
+
+    REGISTER_FUNCTION_TRANSFORM(ReassociatePass)
+    REGISTER_FUNCTION_TRANSFORM(ConstantPropagationPass)
+    REGISTER_FUNCTION_TRANSFORM(ADCEPass)
+    REGISTER_FUNCTION_TRANSFORM(InstSimplifyPass)
+    REGISTER_FUNCTION_TRANSFORM(DCEPass)
+    REGISTER_FUNCTION_TRANSFORM(CFGSimplifyPass)
+    REGISTER_FUNCTION_TRANSFORM2(BreakCriticalEdgesPass, GVNPREPass)
+    REGISTER_FUNCTION_TRANSFORM(LoadEliminationPass)
+    REGISTER_FUNCTION_TRANSFORM(DSEPass)
+    // REGISTER_FUNCTION_TRANSFORM(LoopSimplifyPass)
+    // REGISTER_FUNCTION_TRANSFORM(LoopRotatePass)
+    // REGISTER_FUNCTION_TRANSFORM(LCSSAPass)
+    // REGISTER_FUNCTION_TRANSFORM(LICMPass)
+    // REGISTER_FUNCTION_TRANSFORM(LoopUnrollPass)
+    // REGISTER_FUNCTION_TRANSFORM(JumpThreadingPass)
+
+    if (repro.empty()) {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<size_t> distrib(0, passes.size() - 1);
+
+        // Duplicate some passes
+        auto duplicating_times = passes.size();
+        for (size_t i = 0; i < duplicating_times; ++i)
+            passes.emplace_back(passes[distrib(gen)]);
+
+        std::shuffle(passes.begin(), passes.end(), std::mt19937(std::random_device()()));
+        std::string pipeline;
+        for (const auto &[name, pass_adder] : passes) {
+            pass_adder(true);
+            pipeline += name;
+            pipeline += ", ";
+        }
+        if (!pipeline.empty()) {
+            pipeline.pop_back();
+            pipeline.pop_back();
+        }
+        fpm.addPass(NameNormalizePass(true));
+
+        Logger::logInfo("[FuzzTesting]: Running pipeline: '", pipeline
+            + "'. Run with '-fuzz-repro <this pipeline>' to reproduce it.");
+    }
+    else {
+        auto find_pass = [&passes, &fpm](const std::string &target) -> std::optional<std::function<void(bool)>> {
+            if (target == NameNormalizePass::name()) {
+                return [&fpm](bool) {
+                    fpm.addPass(NameNormalizePass(true));
+                };
+            }
+            if (target == PrintFunctionPass::name()) {
+                return [&fpm](bool) {
+                    fpm.addPass(PrintFunctionPass(std::cerr));
+                };
+            }
+            if (target == PrintModulePass::name()) {
+                return [&fpm](bool) {
+                    fpm.addPass(PrintFunctionPass(std::cerr));
+                };
+            }
+
+            for (const auto &[name, pass_adder] : passes) {
+                if (target == name)
+                    return pass_adder;
+            }
+            return std::nullopt;
+        };
+        std::string curr;
+        for (auto ch : repro) {
+            if (ch == ',') {
+                auto p = find_pass(curr);
+                Err::gassert(p.has_value(), "[FuzzTesting]: Unknown pass: '" + curr + "'.");
+                // Disable strict mode for debugging
+                (*p)(false);
+                curr.clear();
+            }
+            else if (ch != ' ')
+                curr += ch;
+        }
+        auto p = find_pass(curr);
+        Err::gassert(p.has_value(), "[FuzzTesting]: Unknown pass: '" + curr + "'.");
+        (*p)(false);
+        curr.clear();
+
+        // fpm.addPass(NameNormalizePass(true));
+
+        Logger::logInfo("[FuzzTesting]: Reproducing pipeline: ", repro);
+    }
+    return fpm;
+}
+
+MPM PassBuilder::buildModuleFuzzTestingPipeline(const std::string& repro) {
+    MPM mpm;
+    mpm.addPass(makeModulePass(buildFunctionFuzzTestingPipeline(repro)));
+    // Disable Treeshaking in Repro mode for debugging
+    if (repro.empty())
+        mpm.addPass(TreeShakingPass());
     return mpm;
 }
 
@@ -82,13 +332,13 @@ void PassBuilder::registerProxies(FAM &fam, MAM &mam) {
 }
 
 void PassBuilder::registerFunctionAnalyses(FAM &fam) {
-#define FUNCTION_ANALYSIS(CREATE_PASS)                                         \
-    fam.registerPass([&] { return CREATE_PASS; });
+#define FUNCTION_ANALYSIS(CREATE_PASS) fam.registerPass([&] { return CREATE_PASS; });
 
     FUNCTION_ANALYSIS(LiveAnalysis())
     FUNCTION_ANALYSIS(DomTreeAnalysis())
     FUNCTION_ANALYSIS(PostDomTreeAnalysis())
     FUNCTION_ANALYSIS(AliasAnalysis())
+    FUNCTION_ANALYSIS(LoopAnalysis())
 
 #undef FUNCTION_ANALYSIS
 }

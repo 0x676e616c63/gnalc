@@ -30,10 +30,23 @@ protected:
     explicit PrinterBase(std::ostream &outStream_, bool printLiveInfo_ = false)
         : outStream(outStream_), printLiveInfo(printLiveInfo_) {}
 
-    template <typename T> void write(T &&obj) { outStream << obj; }
+    template <typename T>
+    void write(T &&obj) { outStream << obj; }
 
-    template <typename T> void writeln(T &&obj) {
+    template <typename T>
+    void writeln(T &&obj) {
         outStream << obj << std::endl;
+    }
+
+    template <typename ...Args>
+    void write(Args&& ...args) {
+        (outStream << ... << args);
+    }
+
+    template <typename ...Args>
+    void writeln(Args&& ...args) {
+        (outStream << ... << args);
+        outStream << std::endl;
     }
 
     void visit(GlobalVariable &node) override;
@@ -45,10 +58,6 @@ protected:
 
 class PrintFunctionPass : public PM::PassInfo<PrintFunctionPass>,
                           public PrinterBase {
-protected:
-    Function *curr_func{};
-    FAM *fam{};
-
 public:
     explicit PrintFunctionPass(std::ostream &outStream_,
                                bool printLiveInfo_ = false)
@@ -64,6 +73,24 @@ public:
         : PrinterBase(outStream_, false) {}
 
     PM::PreservedAnalyses run(Module &unit, MAM &manager);
+};
+
+class PrintLoopPass : public PM::PassInfo<PrintLoopPass>, public PrinterBase {
+public:
+    explicit PrintLoopPass(std::ostream &outStream_)
+        : PrinterBase(outStream_, false) {}
+
+    PM::PreservedAnalyses run(Function &unit, FAM &manager);
+};
+
+class PrintDebugMessagePass : public PM::PassInfo<PrintDebugMessagePass>, public PrinterBase {
+private:
+    std::string message;
+public:
+    explicit PrintDebugMessagePass(std::ostream &outStream_, std::string message_)
+        : PrinterBase(outStream_, false), message(std::move(message_)) {}
+
+    PM::PreservedAnalyses run(Function &unit, FAM &manager);
 };
 } // namespace IR
 

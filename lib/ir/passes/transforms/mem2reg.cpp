@@ -5,12 +5,13 @@
 #include <algorithm>
 
 #include "../../../../include/ir/instructions/phi.hpp"
+#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 
 namespace IR {
 bool PromotePass::iADomB(const std::shared_ptr<Instruction> &ia,
                          const std::shared_ptr<Instruction> &ib) {
     if (ia->getParent() == ib->getParent()) {
-        return ia->index < ib->index;
+        return ia->getIndex() < ib->getIndex();
     }
     return DT.ADomB(ia->getParent().get(), ib->getParent().get());
 }
@@ -32,11 +33,11 @@ void PromotePass::analyseAlloca() {
                     if (inst_user->getOpcode() == OP::LOAD) {
                         auto load = std::dynamic_pointer_cast<LOADInst>(inst_user);
                         info.loads.emplace_back(load);
-                        info.user_blocks[load->getParent()].load_map[inst_user->index] = load;
+                        info.user_blocks[load->getParent()].load_map[inst_user->getIndex()] = load;
                     } else if (inst_user->getOpcode() == OP::STORE) {
                         auto store = std::dynamic_pointer_cast<STOREInst>(inst_user);
                         info.stores.emplace_back(store);
-                        info.user_blocks[store->getParent()].store_map[inst_user->index] = store;
+                        info.user_blocks[store->getParent()].store_map[inst_user->getIndex()] = store;
                     } else {
                         promotable = false;
                         break;
@@ -87,7 +88,7 @@ bool PromotePass::rewriteSingleStoreAlloca() {
 bool PromotePass::promoteSingleBlockAlloca() {
     if (cur_info.user_blocks.size() == 1) {
         for (auto & load : cur_info.loads) {
-            auto it =  cur_info.user_blocks[load->getParent()].store_map.lower_bound(load->index);
+            auto it =  cur_info.user_blocks[load->getParent()].store_map.lower_bound(load->getIndex());
             if (it == cur_info.user_blocks[load->getParent()].store_map.begin()) {
                 Logger::logWarning("[M2R] promoteSingleBlockAlloca(): store map is empty or load before store.");
                 return false;
@@ -199,7 +200,7 @@ void PromotePass::rename(Function &f) {
                                 else {
                                     // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
                                     Logger::logWarning("[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
-                                    incoming_values[{alloca, b}] = f.getConstantPool().getConst(0);
+                                    incoming_values[{alloca, b}] = f.getConst(0);
                                     break;
                                 }
                             } else {
@@ -239,7 +240,7 @@ void PromotePass::rename(Function &f) {
                             else {
                                 // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
                                 Logger::logWarning("[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
-                                incoming_values[{alloca, b}] = f.getConstantPool().getConst(0);
+                                incoming_values[{alloca, b}] = f.getConst(0);
                                 break;
                             }
                         } else {
@@ -276,10 +277,23 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
     std::set<pDTN> visited_pq;
     std::set<pDTN> visited_stn; // subtree node queue (work list in llvm)
 
+    // std::set<std::shared_ptr<BasicBlock>> idf; // JUST FOR TEST DomTree::getDF()
+
     // process every def nodes, find dom frontier
     while (!PQ.empty()) {
         auto root = PQ.top().second;
         PQ.pop();
+
+        // // JUST FOR TEST DomTree::getDF()
+        // auto df = DT.getDomFrontier(root->bb);
+        // for (const auto &b : df) {
+        //     if (visited_pq.count(DT.nodes[b]))
+        //         continue;
+        //     auto sb = b->shared_from_this();
+        //     if (!live_in_blk.count(sb))
+        //         continue;
+        //     idf.insert(sb);
+        // }
 
         std::stack<pDTN> STN{}; // subtree node queue (work list in llvm)
         STN.push(root);
@@ -316,6 +330,12 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
                     STN.push(dom_child);
         }
     }
+
+    // // JUST FOR TEST DomTree::getDF()
+    // if (phi_blk.size() == idf.size() && std::equal(phi_blk.begin(), phi_blk.end(), idf.begin()))
+    //     std::cout << "TEST DF: IDF IS EQUAL." << std::endl;
+    // else
+    //     Err::error("TEST DF: IDF IS NOT EQUAL!");
 }
 
 void PromotePass::promoteMemoryToRegister(Function &function) {
@@ -367,9 +387,6 @@ PM::PreservedAnalyses PromotePass::run(Function &function, FAM &manager) {
     DT = {};
     del_queue.clear();
 
-    PM::PreservedAnalyses pa;
-    pa.preserve<DomTreeAnalysis>();
-    pa.preserve<PostDomTreeAnalysis>();
-    return pa;
+    return PreserveCFGAnalyses();
 }
 }// namespace IR

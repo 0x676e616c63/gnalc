@@ -6,11 +6,10 @@ namespace IR {
 PM::PreservedAnalyses NameNormalizePass::run(Function &function, FAM &manager) {
     function.accept(*this);
     curr_idx = 0;
-    return PM::PreservedAnalyses::all();
+    return PreserveAll();
 }
 
 void NameNormalizePass::visit(Function &node) {
-    curr_idx = 0;
     curr_idx = 0;
 
     for (const auto &param : node.getParams())

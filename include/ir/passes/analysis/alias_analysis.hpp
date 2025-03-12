@@ -42,8 +42,15 @@ private:
     std::set<const Value *> read;
     std::set<const Value *> write;
 
-    // some call we don't know (part of Sylib)
+    // Some call we don't know
+    // This may happen when we add runtime parallel lib or something.
+    // When function contains them, the `ModRefInfo` will always be `ModRef`.
     bool has_untracked_call = false;
+
+    // Has call to sylib
+    // This means the function uses sylib.
+    // In general, we can't eliminate them, they always have side effect.
+    bool has_sylib_call = false;
 
     // Try insert `alias` to `target` as a potential alias.
     // Returns true for success.
@@ -67,13 +74,16 @@ public:
 
     ModRefInfo getFunctionModRefInfo() const;
 
-    // Check if it contains call to Sylib function: getxxx(), putxxx()
+    // Check if it contains call that we don't know
     bool hasUntrackedCall() const;
+
+    // Check if it contains call to Sylib function: getxxx(), putxxx()
+    bool hasSylibCall() const;
 };
 
 class AliasAnalysis : public PM::AnalysisInfo<AliasAnalysis> {
 public:
-    static AliasAnalysisResult run(Function &f, FAM &fam);
+    AliasAnalysisResult run(Function &f, FAM &fam);
 
     // For PassManager
 public:
@@ -85,6 +95,7 @@ private:
 };
 
 // These functions can be treated as pure function (NoModRef)
+// Currently there is no such function.
 bool isPureBuiltinOrSylibFunc(const FunctionDecl *fn);
 
 // Check if function is pure

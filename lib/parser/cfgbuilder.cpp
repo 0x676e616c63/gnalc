@@ -105,9 +105,7 @@ void CFGBuilder::linker() {
          blk_it != cur_making_func->end(); ++blk_it) {
         if ((*blk_it)->getInsts().empty())
             continue;
-        switch (std::shared_ptr<Instruction> end_inst =
-                    (*blk_it)->getInsts().back();
-                end_inst->getOpcode()) {
+        switch (auto end_inst = (*blk_it)->getTerminator(); end_inst->getOpcode()) {
         case OP::BR: {
             if (const auto inst = std::dynamic_pointer_cast<BRInst>(end_inst);
                 inst->isConditional()) {
@@ -119,7 +117,6 @@ void CFGBuilder::linker() {
             break;
         }
         case OP::RET:
-            cur_making_func->addExitBB(*blk_it);
             break;
         default:
             auto next_blk = std::next(blk_it);
@@ -147,9 +144,7 @@ void CFGBuilder::linker() {
             if ((*it)->getNextBB().size() == 1) {
                 auto nxt = (*it)->getNextBB().front();
                 for (const auto &prebb : (*it)->getPreBB()) {
-                    if (prebb->getInsts().back()->getOpcode() == OP::BR) {
-                        auto brinst = std::dynamic_pointer_cast<BRInst>(
-                            prebb->getInsts().back());
+                    if (auto brinst = prebb->getBRInst()) {
                         Err::gassert(brinst != nullptr,
                                      "CFGBuilder::linker(): can't cast BRInst");
                         brinst->replaceOperand(*it, nxt); // 改 br
@@ -164,7 +159,6 @@ void CFGBuilder::linker() {
                         toFunctionType(cur_linear_func->getType())->getRet())
                         ->getInner() == IRBTYPE::VOID) {
                     (*it)->addInst(std::make_shared<RETInst>());
-                    cur_making_func->addExitBB(*it);
                 } else {
                     Err::unreachable(
                         "CFGBuilder::linker(): invalid function type.");

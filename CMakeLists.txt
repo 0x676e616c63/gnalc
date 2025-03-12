@@ -30,6 +30,7 @@ aux_source_directory(lib/ir GNALC_IR_SRC)
 aux_source_directory(lib/ir/instructions GNALC_IR_SRC)
 aux_source_directory(lib/ir/passes GNALC_IR_SRC)
 aux_source_directory(lib/ir/passes/analysis GNALC_IR_SRC)
+aux_source_directory(lib/ir/passes/helpers GNALC_IR_SRC)
 aux_source_directory(lib/ir/passes/transforms GNALC_IR_SRC)
 aux_source_directory(lib/ir/passes/utilities GNALC_IR_SRC)
 
@@ -47,6 +48,9 @@ aux_source_directory(lib/mir/passes/utilities GNALC_MIR_SRC)
 # Pass Manager
 aux_source_directory(lib/pass_manager GNALC_PM_SRC)
 
+# Pattern Match
+aux_source_directory(lib/pattern_match GNALC_PTM_SRC)
+
 # Utilities
 aux_source_directory(lib/utils GNALC_UTILS_SRC)
 
@@ -54,7 +58,14 @@ aux_source_directory(lib/utils GNALC_UTILS_SRC)
 aux_source_directory(lib/codegen/brainfk GNALC_EXT_BFBKD_SRC)
 
 # ALL
-set(GNALC_SRC ${GNALC_LEXER_SRC} ${GNALC_PARSER_SRC} ${GNALC_IR_SRC} ${GNALC_MIR_SRC} ${GNALC_PM_SRC} ${GNALC_EXT_BFBKD_SRC} ${GNALC_UTILS_SRC})
+set(GNALC_SRC
+        ${GNALC_LEXER_SRC}
+        ${GNALC_PARSER_SRC}
+        ${GNALC_IR_SRC}
+        ${GNALC_PM_SRC}
+        ${GNALC_PTM_SRC}
+        ${GNALC_EXT_BFBKD_SRC}
+        ${GNALC_UTILS_SRC})
 
 # debug driver
 add_executable(pmtest tools/driver/debug/pmtest.cpp ${GNALC_SRC})

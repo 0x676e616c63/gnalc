@@ -85,7 +85,7 @@ public:
     void solve(Function &target) {
         clear();
 
-        cfg_worklist.emplace_back(nullptr, target.getBlocks()[0]);
+        cfg_worklist.emplace_back(nullptr, target.getBlocks().front());
 
         while (!cfg_worklist.empty() || !ssa_worklist.empty()) {
             while (!ssa_worklist.empty()) {

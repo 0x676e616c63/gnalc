@@ -88,9 +88,11 @@ public:
             abandoned.insert(id);
         }
 
-        for (auto id : preserved) {
-            if (!arg.preserved.count(id))
-                preserved.erase(id);
+        for (auto it = preserved.begin(); it != preserved.end(); ) {
+            if (!arg.preserved.count(*it))
+                it = preserved.erase(it);
+            else
+                ++it;
         }
     }
 
@@ -224,6 +226,7 @@ private:
     std::map<UniqueKey *, std::unique_ptr<PassConceptT>> passes;
     all_res_t results;
     index_t index;
+    bool is_getting_fresh_result = false;
 
 public:
     AnalysisManager() = default;
@@ -233,9 +236,13 @@ public:
     void clear() {
         results.clear();
         index.clear();
+        is_getting_fresh_result = false;
     }
 
     template <typename PassT> typename PassT::Result &getResult(UnitT &unit) {
+        if (is_getting_fresh_result)
+            return getFreshResult<PassT>(unit);
+
         const auto pass_id = PassT::ID();
         Err::gassert(passes.count(pass_id), "No such pass registered.");
 
@@ -254,6 +261,26 @@ public:
         }
         else
             Logger::logInfo("[AM]: Get cached '", pass->name(), "' on '", unit.getName(), "'");
+
+        using ResultModel = AnalysisResultModel<typename PassT::Result>;
+        return static_cast<ResultModel &>(*it->second->second).result;
+    }
+
+    template <typename PassT> typename PassT::Result &getFreshResult(UnitT &unit) {
+        is_getting_fresh_result = true;
+        const auto pass_id = PassT::ID();
+        Err::gassert(passes.count(pass_id), "No such pass registered.");
+
+        auto [it, inserted] = index.insert(std::make_pair(
+            std::make_pair(pass_id, &unit), unit_res_t::iterator()));
+
+        auto &pass = passes.find(pass_id)->second;
+        auto &res = results[&unit];
+        res.emplace_back(pass_id, pass->run(unit, *this));
+        it->second = std::prev(res.end());
+        Logger::logInfo("[AM]: Running '", pass->name(), "' on '", unit.getName(), "'");
+
+        is_getting_fresh_result = false;
 
         using ResultModel = AnalysisResultModel<typename PassT::Result>;
         return static_cast<ResultModel &>(*it->second->second).result;
@@ -343,7 +370,7 @@ public:
                 pa.retain(curr_pa);
 
                 auto new_inst_cnt = unit.getInstCount();
-                Logger::logInfo("[PM]: Running '", pass->name(), "' on '", unit.getName(),
+                Logger::logInfo("[PM]: Finished '", pass->name(), "' on '", unit.getName(),
                     "'.(inst: " , old_inst_cnt, " -> ", new_inst_cnt, ")");
             }
             else {
@@ -351,7 +378,93 @@ public:
                 am.invalidate(unit, curr_pa);
                 pa.retain(curr_pa);
 
-                Logger::logInfo("[PM]: Running '", pass->name(), "' on '", unit.getName(), "'.");
+                Logger::logInfo("[PM]: Finished '", pass->name(), "' on '", unit.getName(), "'.");
+            }
+        }
+
+        return pa;
+    }
+};
+
+template <typename UnitT>
+class FixedPointPM : public PassInfo<FixedPointPM<UnitT>> {
+protected:
+    using PassConceptT = PassConcept<UnitT, AnalysisManager<UnitT>>;
+    // (pass, ignoring change)
+    std::vector<std::pair<std::unique_ptr<PassConceptT>, bool>> passes;
+    size_t threshold;
+    bool threshold_explicitly_set;
+public:
+    explicit FixedPointPM(size_t threshold_)
+        : threshold(threshold_), threshold_explicitly_set(true) {}
+
+    explicit FixedPointPM()
+        : threshold(100), threshold_explicitly_set(false) {}
+
+    FixedPointPM(FixedPointPM &&arg) noexcept
+        : passes(std::move(arg.passes)), threshold(arg.threshold),
+            threshold_explicitly_set(arg.threshold_explicitly_set) {}
+
+    FixedPointPM &operator=(FixedPointPM &&rhs) noexcept {
+        passes = std::move(rhs.passes);
+        return *this;
+    }
+
+    template <typename PassT>
+    std::enable_if_t<!std::is_same_v<PassT, PassManager<UnitT>>>
+    addPass(PassT &&pass, bool ignoring_change = false) {
+        using PassModelT = PassModel<UnitT, PassT, AnalysisManager<UnitT>>;
+        passes.push_back(std::make_pair(std::unique_ptr<PassConceptT>(
+            new PassModelT(std::forward<PassT>(pass))), ignoring_change));
+    }
+
+    template <typename PassT>
+    std::enable_if_t<std::is_same_v<PassT, PassManager<UnitT>>> addPass(
+        PassT &&pass, bool ignoring_changes = false) {
+        for (auto &P : pass.passes)
+            passes.push_back(std::make_pair(std::move(P), ignoring_changes));
+    }
+
+    PreservedAnalyses run(UnitT &unit, AnalysisManager<UnitT> &am) {
+        PreservedAnalyses pa = PreservedAnalyses::all();
+        bool modified = true;
+        size_t round = 1;
+        while (modified) {
+            modified = false;
+
+            for (auto &[pass, ignoring_change] : passes) {
+                if constexpr(detail::hasGetInstCountV<UnitT>) {
+                    auto old_inst_cnt = unit.getInstCount();
+
+                    PreservedAnalyses curr_pa = pass->run(unit, am);
+                    if (!ignoring_change)
+                        modified |= !curr_pa.allPreserved();
+                    am.invalidate(unit, curr_pa);
+                    pa.retain(curr_pa);
+
+                    auto new_inst_cnt = unit.getInstCount();
+                    Logger::logInfo("[FixedPointPM] at round ", round, ": Finished '",
+                        pass->name(), "' on '", unit.getName(),
+                        "'.(inst: " , old_inst_cnt, " -> ", new_inst_cnt, ")");
+                }
+                else {
+                    PreservedAnalyses curr_pa = pass->run(unit, am);
+                    if (!ignoring_change)
+                        modified |= !curr_pa.allPreserved();
+                    am.invalidate(unit, curr_pa);
+                    pa.retain(curr_pa);
+
+                    Logger::logInfo("[FixedPointPM] at round ", round, ": Finished '",
+                        pass->name(), "' on '", unit.getName(), "'.");
+                }
+            }
+            if (++round > threshold) {
+                if (!threshold_explicitly_set) {
+                    Logger::logWarning(
+                        "[FixedPointPM]: Default Fixed point iteration threshold reached. Check the pipeline!"
+                        "To disable this message, set the threshold explicitly.");
+                }
+                break;
             }
         }
 

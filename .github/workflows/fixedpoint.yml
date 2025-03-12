@@ -1,10 +1,10 @@
-name: Gnalc Test
+name: Gnalc Test - FixedPoint
 
 on:
   push:
-    branches: [ "main", "ci", "iropt" ]
+    branches: [ "main", "ci" ]
   pull_request:
-    branches: [ "main", "ci", "iropt" ]
+    branches: [ "main", "ci" ]
 
 env:
   BUILD_TYPE: Release
@@ -21,16 +21,8 @@ jobs:
 
       - uses: actions/checkout@v4
 
-# See: https://rgoswami.me/posts/priv-gh-actions/
       - name: Get test data
-        env:
-          SSHK: ${{ secrets.GH_PAT }} # sorry, it's not a PAT, it is a deployment key
-        run: |
-          mkdir -p $HOME/.ssh
-          echo "$SSHK" > $HOME/.ssh/ssh.key
-          chmod 600 $HOME/.ssh/ssh.key
-          export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/ssh.key"
-          git submodule update --init --recursive
+        run: git submodule update --init --recursive
 
       - name: Configure CMake
         run: mkdir ${{github.workspace}}/build && cd ${{github.workspace}}/build && cmake ..
@@ -41,7 +33,7 @@ jobs:
 
       - name: Test
         working-directory: ${{github.workspace}}/build
-        run: ctest -C ${{env.BUILD_TYPE}}
+        run: ctest -C ${{env.BUILD_TYPE}} -R fixedpoint
 
       - name: Check
         working-directory: ${{github.workspace}}/build

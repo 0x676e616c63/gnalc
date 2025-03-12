@@ -2,6 +2,7 @@
 #include "../../../../include/ir/formatter.hpp"
 
 #include "../../../../include/ir/passes/analysis/live_analysis.hpp"
+#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 #include "../../../../include/utils/logger.hpp"
 
 namespace IR {
@@ -67,7 +68,7 @@ PM::PreservedAnalyses PrintFunctionPass::run(Function &func, FAM &fam) {
         liveness = fam.getResult<LiveAnalysis>(func);
 
     func.accept(*this);
-    return PM::PreservedAnalyses::all();
+    return PreserveAll();
 }
 
 PM::PreservedAnalyses PrintModulePass::run(Module &module, MAM &mam) {
@@ -92,6 +93,51 @@ PM::PreservedAnalyses PrintModulePass::run(Module &module, MAM &mam) {
         writeln("");
     }
 
-    return PM::PreservedAnalyses::all();
+    return PreserveAll();
+}
+
+PM::PreservedAnalyses PrintLoopPass::run(Function &func, FAM &fam) {
+    auto loop_info = fam.getResult<LoopAnalysis>(func);
+    const auto& top_levels = loop_info.getTopLevelLoops();
+
+    auto print_loop = [this] (const std::shared_ptr<Loop>& loop) {
+        writeln("Loop Depth: " + std::to_string(loop->getLoopDepth()));
+        auto preheader = loop->getPreHeader();
+        if (preheader) {
+            writeln("PreHeader: ");
+            preheader->accept(*this);
+        }
+        writeln("Header: ");
+        loop->getHeader()->accept(*this);
+
+        auto latches = loop->getLatches();
+        for (const auto& latch : latches) {
+            writeln("Latch: ");
+            latch->accept(*this);
+        }
+
+        auto exits = loop->getExitBlocks();
+        for (const auto& exit : exits) {
+            writeln("Exit: ");
+            exit->accept(*this);
+        }
+    };
+
+    writeln("Printing Loops: ");
+    for (const auto& loop : top_levels) {
+        print_loop(loop);
+        for (size_t i = 0; i < loop->getSubLoops().size(); ++i) {
+            writeln("SubLoop " + std::to_string(i) + ": ");
+            print_loop(loop->getSubLoops()[i]);
+        }
+        writeln("----------");
+    }
+
+    return PreserveAll();
+}
+
+PM::PreservedAnalyses PrintDebugMessagePass::run(Function &func, FAM &fam) {
+    writeln("[Debug Message] at '", func.getName() , "': ", message);
+    return PreserveAll();
 }
 } // namespace IR

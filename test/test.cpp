@@ -89,29 +89,22 @@ int main(int argc, char *argv[]) {
         for (const auto &sy : test_files) {
             print("<{}> Test {}", curr_test_cnt++, sy.path().stem());
             // Expected
-            auto testcase_out = sy.path().parent_path().string() + "/" +
-                                sy.path().stem().string() + ".out";
+            auto testcase_out = sy.path().parent_path().string() + "/" + sy.path().stem().string() + ".out";
             auto expected_syout = read_file(testcase_out);
             fix_newline(expected_syout);
 
             // Run
-            TestData data{
-                .sy = sy,
-                .sylib = sylib_to_link,
-                .temp_dir = curr_temp_dir,
-                .mode_id = "gnalc_test"};
+            TestData data{.sy = sy, .sylib = sylib_to_link, .temp_dir = curr_temp_dir, .mode_id = "gnalc_test"};
 
             if (cfg::only_frontend) {
                 auto gnalc_irgen = [&gnalc_params](const std::string &newsy, const std::string &outll) {
-                    return format("../gnalc -S {} -o {} -emit-llvm{}",
-                                  newsy, outll, gnalc_params);
+                    return format("{} -S {} -o {} -emit-llvm{}", cfg::gnalc_path, newsy, outll, gnalc_params);
                 };
                 data.ir_asm_gen = gnalc_irgen;
 
             } else {
                 auto gnalc_asmgen = [&gnalc_params](const std::string &newsy, const std::string &outs) {
-                    return format("{} -S{} -o {} {}",
-                                  cfg::gnalc_path, gnalc_params, outs, newsy);
+                    return format("{} -S{} -o {} {}", cfg::gnalc_path, gnalc_params, outs, newsy);
                     // Test
                     // return format("arm-linux-gnueabihf-gcc -S -o {} -xc {}", outs, newsy);
                 };
@@ -150,8 +143,7 @@ finish:
         println("Failed tests: ");
         for (const auto &f : failed_tests)
             println("|  {}", f);
-        println("[\033[0;32;31mTEST FAILED\033[m] {} tests failed!",
-                failed_tests.size());
+        println("[\033[0;32;31mTEST FAILED\033[m] {} tests failed!", failed_tests.size());
         return -1;
     }
     return 0;

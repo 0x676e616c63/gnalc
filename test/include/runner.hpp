@@ -36,7 +36,7 @@ inline std::string make_pathname(const std::string &raw) {
     return ret;
 }
 
-inline TestResult run_test(const TestData& data) {
+inline TestResult run_test(const TestData& data, bool only_run_frontend = cfg::only_frontend) {
     auto testcase_in = data.sy.path().parent_path().string() + "/" +
             data.sy.path().stem().string() + ".in";
     auto out_file_id = format("{}_{}",
@@ -51,7 +51,7 @@ inline TestResult run_test(const TestData& data) {
 
     std::string ir_asm_gen_command, link_command, exec_command;
     std::string out_source;
-    if (cfg::only_frontend) {
+    if (only_run_frontend) {
         out_source = format("{}/{}.ll", data.temp_dir, out_file_id);
         auto outbc = format("{}/{}.bc", data.temp_dir, out_file_id);
 
@@ -77,8 +77,14 @@ inline TestResult run_test(const TestData& data) {
             cfg::gcc_arm_command, out_source, data.sylib, outexec);
 
         exec_command =
-            format("{} {} < {} > {}",
-                   cfg::qemu_arm_command, outexec, std::filesystem::exists(testcase_in) ? testcase_in : "/dev/null", output);
+            format("{} {} < {} > {} 2>{}",
+                   cfg::qemu_arm_command, outexec, std::filesystem::exists(testcase_in) ? testcase_in : "/dev/null", output, outtime);
+        // link_command = format("{} {} {} -o {}",
+        //     "clang", out_source, data.sylib, outexec);
+        //
+        // exec_command =
+        //     format("{} < {} > {} 2>{}",
+        //            outexec, std::filesystem::exists(testcase_in) ? testcase_in : "/dev/null", output, outtime);
     }
     exec_command += R"(;/bin/echo -e "\n"$? >> )" + output;
 
@@ -99,9 +105,9 @@ inline TestResult run_test(const TestData& data) {
     return {out_source, syout, time_elased};
 }
 
-inline std::string prepare_sylib(const std::string& global_tmp_dir) {
+inline std::string prepare_sylib(const std::string& global_tmp_dir, bool only_run_frontend = cfg::only_frontend) {
     std::string sylib_to_link;
-    if (cfg::only_frontend) {
+    if (only_run_frontend) {
         sylib_to_link = global_tmp_dir + "/sylib.ll";
 
         // Just a quick and dirty trick to silence llvm-link.
