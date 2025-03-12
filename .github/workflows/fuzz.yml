@@ -2,8 +2,14 @@ name: Gnalc Test - Fuzz
 on:
   push:
     branches: [ "main", "ci", "iropt" ]
+    paths:
+      - 'lib/**'
+      - 'include/**'
   pull_request:
     branches: [ "main", "ci", "iropt" ]
+    paths:
+      - 'lib/**'
+      - 'include/**'
 
 env:
   BUILD_TYPE: Release

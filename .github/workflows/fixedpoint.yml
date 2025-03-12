@@ -3,8 +3,14 @@ name: Gnalc Test - FixedPoint
 on:
   push:
     branches: [ "main", "ci" ]
+    paths:
+      - 'lib/**'
+      - 'include/**'
   pull_request:
     branches: [ "main", "ci" ]
+    paths:
+      - 'lib/**'
+      - 'include/**'
 
 env:
   BUILD_TYPE: Release

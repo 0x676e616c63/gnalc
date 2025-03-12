@@ -3,8 +3,14 @@ name: Gnalc Test - O1
 on:
   push:
     branches: [ "main", "ci", "iropt" ]
+    paths:
+      - 'lib/**'
+      - 'include/**'
   pull_request:
     branches: [ "main", "ci", "iropt" ]
+    paths:
+      - 'lib/**'
+      - 'include/**'
 
 env:
   BUILD_TYPE: Release
