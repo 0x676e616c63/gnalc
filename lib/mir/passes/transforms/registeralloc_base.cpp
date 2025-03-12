@@ -1,4 +1,6 @@
 #include "../../../../include/mir/passes/transforms/registeralloc.hpp"
+#include <algorithm>
+#include <numeric>
 #include <random>
 #include <utility>
 
@@ -383,7 +385,7 @@ void RAPass::ReWriteProgram() {
     initial.clear();
 
     for (const auto &n : spilledNodes) {
-        addBySet(initial, spill(n));
+        addBySet(initial, spill_tryOpt(n));
     }
 
     spilledNodes.clear();
@@ -441,4 +443,69 @@ OperP RAPass::GetAlias(OperP n) {
     Err::gassert(n != nullptr, "get a nullptr alias");
 
     return n;
+}
+
+PM::PreservedAnalyses NeonRAPass::run(Function &bkd_function, FAM &) {
+    func = bkd_function;
+    varpool = func.editInfo().varpool;
+
+    availableSRegisters.resize(32);
+
+    std::iota(availableSRegisters.begin(), availableSRegisters.end(), 0);
+
+    Main();
+
+    // 耦合版Pass间传参数
+    func.editInfo().availableSRegisters = availableSRegisters;
+
+    return PM::PreservedAnalyses::all();
+}
+
+void NeonRAPass::AssignColors() {
+    while (!selectStack.empty()) {
+        auto n = selectStack.back();
+        selectStack.pop_back();
+        std::vector<unsigned int> okColors(0, K - 1);
+
+        for (const auto &w : adjList[n]) {
+            if (getUnion<OperP>(coloredNodes, precolored).count(GetAlias(w))) {
+                auto w_a = GetAlias(w);
+                auto w_a_reg = std::dynamic_pointer_cast<BindOnVirOP>(w_a);
+
+                Err::gassert(w_a_reg != nullptr, "try assign color for a none virReg op");
+
+                auto rm_idx = static_cast<unsigned int>(std::get<CoreRegister>(w_a_reg->getColor()));
+
+                okColors.erase(okColors.begin() + rm_idx);
+            }
+        }
+
+        if (okColors.empty()) {
+            addBySet(spilledNodes, Nodes{n});
+        } else {
+            addBySet(coloredNodes, Nodes{n});
+            auto c = okColors.back();
+
+            auto n_reg = std::dynamic_pointer_cast<BindOnVirOP>(n);
+            Err::gassert(n_reg != nullptr, "try assign color for a none virReg op");
+
+            n_reg->setColor(static_cast<CoreRegister>(c));
+
+            ///@note 排除available
+            auto it = std::find_if(availableSRegisters.begin(), availableSRegisters.end(), [&c](const auto &item) { return item == c; });
+
+            availableSRegisters.erase(it);
+        }
+    }
+
+    for (const auto &n : coloredNodes) {
+        auto n_reg = std::dynamic_pointer_cast<BindOnVirOP>(n);
+        auto n_a = GetAlias(n_reg);
+        auto n_a_reg = std::dynamic_pointer_cast<BindOnVirOP>(n_a);
+        Err::gassert(n_reg != nullptr, "try assign color for a none virReg op");
+        Err::gassert(n_a_reg != nullptr, "try assign color for a none virReg op");
+
+        ///@todo dpr, qpr
+        n_reg->setColor(n_a_reg->getColor());
+    }
 }

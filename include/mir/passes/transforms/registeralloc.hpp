@@ -11,7 +11,7 @@
 namespace MIR {
 
 class RAPass : public PM::PassInfo<RAPass> {
-protected:
+public:
     using OperSet = std::unordered_set<std::shared_ptr<Operand>>;
     using WorkList = std::unordered_set<std::shared_ptr<Operand>>;
     using Nodes = std::unordered_set<std::shared_ptr<Operand>>;
@@ -36,7 +36,7 @@ public:
     ///@todo 需要往这个Pass传一个浮点寄存器的占用表
     virtual PM::PreservedAnalyses run(Function &, FAM &);
 
-private:
+protected:
     // datas
     Function &func;
 
@@ -69,12 +69,12 @@ private:
     // color
     unsigned int K = CORE_REGISTER_MAX_NUM;
 
-private:
+protected:
     /// procedures
     void Main();
     // void LivenessAnalysis();
     void Build();
-    virtual void MkWorkList(); //
+    void MkWorkList(); //
     void AddEdge(const OperP &, const OperP &);
     void Simplify();
     void DecrementDegree(const OperP &);
@@ -87,9 +87,9 @@ private:
     void SelectSpill();
     virtual void AssignColors();
 
-    virtual void ReWriteProgram(); // 用于不同的ReWrite
+    void ReWriteProgram(); // 用于不同的ReWrite
 
-private:
+protected:
     /// function
     Nodes Adjacent(const OperP &);
     Moves NodeMoves(const OperP &);
@@ -99,7 +99,7 @@ private:
     bool Conservative(const Nodes &);        // Briggs 开发的合并启发式算法
     OperP GetAlias(OperP);                   // 递归
 
-private:
+protected:
     // 土制函数及数据结构
 
     ///@note 填充initial 和 precolored
@@ -149,26 +149,31 @@ private:
     OperP heuristicSpill();
     std::map<OperP, unsigned int> intervalLengths;
     /// @note 选择合适的方式溢出, 将原变量替换为一套临时变量(相当于弃用原变量)
-    Nodes spill(const OperP &);
+    virtual Nodes spill_tryOpt(const OperP &);
+    virtual Nodes spill_classic(const OperP &);
+    Nodes spill_opt(const OperP &);
     ///@note 用于溢出优化的浮点寄存器, 只出不进
-    std::vector<unsigned int> &availableSRegisters;
+    std::vector<unsigned int> availableSRegisters;
 };
 
-class NeonRAPass : public PM::PassInfo<NeonRAPass>, RAPass {
+class NeonRAPass : public PM::PassInfo<NeonRAPass>, public RAPass {
 public:
     PM::PreservedAnalyses run(Function &, FAM &) override;
 
-private:
+protected:
     // datas
     unsigned int K = FPU_REGISTER_MAX_NUM;
 
-private:
+protected:
     // procedures
-    void MkWorkList() override;
     void AssignColors() override;
-    void ReWriteProgram() override;
 
-private:
+protected:
+    Nodes getUse(const InstP &) override;
+    Nodes getDef(const InstP &) override;
+    Nodes spill_tryOpt(const OperP &) override;
+    Nodes spill_classic(const OperP &) override;
+    std::vector<unsigned int> availableSRegisters;
 };
 
 } // namespace MIR

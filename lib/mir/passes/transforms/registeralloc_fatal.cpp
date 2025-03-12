@@ -30,7 +30,7 @@ RAPass::Nodes RAPass::getUse(const InstP &inst) {
     Nodes uses;
     for (int i = 1; i < 5; ++i) {
         auto op = inst->getSourceOP(i);
-        if (std::dynamic_pointer_cast<BindOnVirOP>(op))
+        if (std::dynamic_pointer_cast<BindOnVirOP>(op) && std::dynamic_pointer_cast<BindOnVirOP>(op)->getBank() == RegisterBank::gpr)
             uses.insert(op);
     }
 
@@ -38,7 +38,12 @@ RAPass::Nodes RAPass::getUse(const InstP &inst) {
 }
 
 RAPass::Nodes RAPass::getDef(const InstP &inst) {
-    return Nodes{inst->getTargetOP()};
+    Nodes defs;
+
+    if (std::dynamic_pointer_cast<BindOnVirOP>(inst->getTargetOP()) && std::dynamic_pointer_cast<BindOnVirOP>(inst->getTargetOP())->getBank() == RegisterBank::gpr)
+        defs.insert(inst->getTargetOP());
+
+    return defs;
 }
 
 OperP RAPass::heuristicSpill() {
@@ -50,7 +55,7 @@ OperP RAPass::heuristicSpill() {
     double weight_max = 0;
     OperP spilled = nullptr;
     for (const auto &op : spilledNodes) {
-        double weight = liveAnalysis.getInfo().intervalLengths[op] * Weight_IntervalLength;
+        double weight = liveAnalysis.getInfo().intervalLengths[op] * Weight_IntervalLength; // narrowing convert here
         weight += degree[op] * Weight_Degree;
         if (!std::dynamic_pointer_cast<BaseADROP>(op))
             weight += extra_Weight_ForNotPtr;
@@ -62,8 +67,15 @@ OperP RAPass::heuristicSpill() {
     return spilled;
 }
 
+RAPass::Nodes RAPass::spill_tryOpt(const OperP &op) {
+    if (availableSRegisters.empty())
+        return spill_classic(op);
+    else
+        return spill_opt(op);
+}
+
 ///@note 返回用于替换的小区间虚拟寄存器
-RAPass::Nodes RAPass::spill(const OperP &op) {
+RAPass::Nodes RAPass::spill_classic(const OperP &op) {
     ///@brief 扫一遍insts, 将spillNode换成对应的新虚拟寄存器
     ///@brief 在def之后加str, 在use之前加ldr, 都溢出到栈上
     ///@warning 注意更改BaseADROP的基址寄存器(getBase())和变址寄存器
@@ -73,8 +85,9 @@ RAPass::Nodes RAPass::spill(const OperP &op) {
     // 溢出的栈空间
     auto stackspace = std::make_shared<FrameObj>(FrameTrait::Spill, 4);
     func.editInfo().StackObjs.emplace_back(stackspace);
+    auto stackaddr = varpool.addStackValue_anonymously(stackspace); // base = r7
 
-    for (auto blk : func.getBlocks()) {
+    for (const auto &blk : func.getBlocks()) {
         auto &insts = blk->getInsts();
         for (auto inst_it = insts.begin(); inst_it != insts.end();) {
             bool insert_before = false;
@@ -91,7 +104,6 @@ RAPass::Nodes RAPass::spill(const OperP &op) {
                 if (base->getBase() == op) { // 需要setBase()
                     insert_before = true;
 
-                    auto stackaddr = varpool.addStackValue_anonymously(stackspace); // base = r7
                     auto read_stage = varpool.addValue_anonymously(false);
                     base->setBase(read_stage); // 弃用原基址寄存器(修改原指令)
                     stageValues.insert(read_stage);
@@ -103,7 +115,6 @@ RAPass::Nodes RAPass::spill(const OperP &op) {
                 if (index == op) { // maybe nullptr
                     insert_before = true;
 
-                    auto stackaddr = varpool.addStackValue_anonymously(stackspace); // base = r7
                     auto read_stage = varpool.addValue_anonymously(false);
                     ldr->setIndexReg(read_stage); // 修改原指令
                     stageValues.insert(read_stage);
@@ -115,7 +126,6 @@ RAPass::Nodes RAPass::spill(const OperP &op) {
                 if (def == op) {
                     insert_after = true;
 
-                    auto stackaddr = varpool.addStackValue_anonymously(stackspace); // base = r7
                     auto write_stage = varpool.addValue_anonymously(false);
                     ldr->addTargetOP(write_stage); // 修改原指令
                     stageValues.insert(write_stage);
@@ -134,7 +144,6 @@ RAPass::Nodes RAPass::spill(const OperP &op) {
                 if (use == op) {
                     insert_before = true;
 
-                    auto stackaddr = varpool.addStackValue_anonymously(stackspace); // base = r7
                     auto read_stage = varpool.addValue_anonymously(false);
                     str->setSourceOP(1, read_stage); // 修改原指令
                     stageValues.insert(read_stage);
@@ -146,7 +155,6 @@ RAPass::Nodes RAPass::spill(const OperP &op) {
                 if (base->getBase() == op) { // 需要setBase()
                     insert_before = true;
 
-                    auto stackaddr = varpool.addStackValue_anonymously(stackspace); // base = r7
                     auto read_stage = varpool.addValue_anonymously(false);
                     base->setBase(read_stage); // 弃用原基址寄存器(修改原指令)
                     stageValues.insert(read_stage);
@@ -158,7 +166,6 @@ RAPass::Nodes RAPass::spill(const OperP &op) {
                 if (index == op) { // maybe nullptr
                     insert_before = true;
 
-                    auto stackaddr = varpool.addStackValue_anonymously(stackspace); // base = r7
                     auto read_stage = varpool.addValue_anonymously(false);
                     str->setIndexReg(read_stage); // 修改原指令
                     stageValues.insert(read_stage);
@@ -167,15 +174,171 @@ RAPass::Nodes RAPass::spill(const OperP &op) {
                     insts.insert(inst_it, ldr_new);
                 }
 
+            } else if (auto vldr = std::dynamic_pointer_cast<Vldr>(inst)) {
+                auto base = std::dynamic_pointer_cast<BaseADROP>(vldr->getSourceOP(1));
+                auto index = vldr->getSourceOP(2);
+
+                Err::gassert(base != nullptr, "base register is NULL");
+
+                if (base->getBase() == op) { // 需要setBase()
+                    insert_before = true;
+
+                    auto read_stage = varpool.addValue_anonymously(false);
+                    base->setBase(read_stage); // 弃用原基址寄存器(修改原指令)
+                    stageValues.insert(read_stage);
+                    auto ldr_new = std::make_shared<ldrInst>(SourceOperandType::rsi, 4, read_stage, stackaddr); // ldr %new_base, [%stackaddr]
+
+                    insts.insert(inst_it, ldr_new);
+                }
+
+                if (index == op) { // maybe nullptr
+                    insert_before = true;
+
+                    auto read_stage = varpool.addValue_anonymously(false);
+                    ldr->setIndexReg(read_stage); // 修改原指令
+                    stageValues.insert(read_stage);
+                    auto ldr_new = std::make_shared<ldrInst>(SourceOperandType::rsi, 4, read_stage, stackaddr);
+
+                    insts.insert(inst_it, ldr_new);
+                }
+            } else if (auto vstr = std::dynamic_pointer_cast<Vstr>(inst)) {
+                auto base = std::dynamic_pointer_cast<BaseADROP>(str->getSourceOP(2));
+                auto index = str->getSourceOP(3);
+
+                Err::gassert(base != nullptr, "base register is NULL");
+
+                if (base->getBase() == op) { // 需要setBase()
+                    insert_before = true;
+
+                    auto read_stage = varpool.addValue_anonymously(false);
+                    base->setBase(read_stage); // 弃用原基址寄存器(修改原指令)
+                    stageValues.insert(read_stage);
+                    auto ldr_new = std::make_shared<ldrInst>(SourceOperandType::rsi, 4, read_stage, stackaddr); // ldr %new_base, [%stackaddr]
+
+                    insts.insert(inst_it, ldr_new);
+                }
+
+                if (index == op) { // maybe nullptr
+                    insert_before = true;
+
+                    auto read_stage = varpool.addValue_anonymously(false);
+                    str->setIndexReg(read_stage); // 修改原指令
+                    stageValues.insert(read_stage);
+                    auto ldr_new = std::make_shared<ldrInst>(SourceOperandType::rsi, 4, read_stage, stackaddr);
+
+                    insts.insert(inst_it, ldr_new);
+                }
             } else {
                 auto uses = getUse(inst);
                 auto defs = getDef(inst);
 
                 if (uses.find(op) != uses.end()) {
+                    insert_before = true;
+
+                    auto read_stage = varpool.addValue_anonymously(false);
+                    auto ldr_new = std::make_shared<ldrInst>(SourceOperandType::rsi, 4, read_stage, stackaddr);
+                    for (int i = 1; i < 5; ++i) {
+                        if (inst->getSourceOP(i) == op) {
+                            inst->setSourceOP(i, read_stage);
+                            break;
+                        }
+                    }
+                    stageValues.insert(read_stage);
+
+                    insts.insert(inst_it, ldr_new);
                 }
 
                 if (defs.find(op) != defs.end()) {
+                    insert_after = true;
+
+                    auto write_stage = varpool.addValue_anonymously(false);
+                    auto str_new = std::make_shared<strInst>(SourceOperandType::rsi, 4, write_stage, stackaddr);
+                    inst->addTargetOP(write_stage);
+                    stageValues.insert(write_stage);
+
+                    insts.insert(std::next(inst_it), str_new);
                 }
+            }
+
+            if (insert_after)
+                ++inst_it, ++inst_it;
+            else
+                ++inst_it;
+        }
+    }
+    return stageValues;
+}
+
+NeonRAPass::Nodes getUse(const InstP &inst) {
+    NeonRAPass::Nodes uses;
+    for (int i = 1; i < 5; ++i) {
+        auto op = inst->getSourceOP(i);
+        if (std::dynamic_pointer_cast<BindOnVirOP>(op) && std::dynamic_pointer_cast<BindOnVirOP>(op)->getBank() == RegisterBank::spr)
+            ///@todo dpr, qpr...
+
+            uses.insert(op);
+    }
+    return uses;
+}
+
+NeonRAPass::Nodes getDef(const InstP &inst) {
+    NeonRAPass::Nodes defs;
+
+    if (std::dynamic_pointer_cast<BindOnVirOP>(inst->getTargetOP()) && std::dynamic_pointer_cast<BindOnVirOP>(inst->getTargetOP())->getBank() == RegisterBank::spr)
+        ///@todo dpr, qpr
+        defs.insert(inst->getTargetOP());
+
+    return defs;
+}
+
+NeonRAPass::Nodes NeonRAPass::spill_tryOpt(const OperP &op) {
+    return spill_classic(op);
+}
+
+NeonRAPass::Nodes NeonRAPass::spill_classic(const OperP &op) {
+    Nodes stageValues;
+
+    // 溢出的栈空间
+    auto stackspace = std::make_shared<FrameObj>(FrameTrait::Spill, 4);
+    func.editInfo().StackObjs.emplace_back(stackspace);
+    auto stackaddr = varpool.addStackValue_anonymously(stackspace);
+
+    for (const auto &blk : func.getBlocks()) {
+        auto &insts = blk->getInsts();
+        for (auto inst_it = insts.begin(); inst_it != insts.end();) {
+            bool insert_before = false;
+            bool insert_after = false;
+            auto inst = *inst_it;
+
+            auto uses = getUse(inst);
+            auto defs = getDef(inst);
+
+            if (uses.find(op) != uses.end()) {
+                insert_before = true;
+                ///@todo spr, dpr...
+
+                auto read_stage = varpool.addValue_anonymously(false);
+                auto vldr_new = std::make_shared<Vldr>(read_stage, stackaddr, std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32));
+                for (int i = 1; i < 5; ++i) {
+                    if (inst->getSourceOP(i) == op) {
+                        inst->setSourceOP(i, read_stage);
+                        break;
+                    }
+                }
+                stageValues.insert(read_stage);
+
+                insts.insert(inst_it, vldr_new);
+            }
+
+            if (defs.find(op) != defs.end()) {
+                insert_after = true;
+                ///@todo spr, dpr...
+
+                auto write_stage = varpool.addValue_anonymously(true);
+                auto vstr_new = std::make_shared<Vstr>(write_stage, stackaddr, std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32));
+                stageValues.insert(write_stage);
+
+                insts.insert(std::next(inst_it), vstr_new);
             }
 
             if (insert_after)
