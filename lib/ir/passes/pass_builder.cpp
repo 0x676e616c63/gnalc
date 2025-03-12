@@ -188,16 +188,16 @@ MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
-    fpm.addPass(IR::PromotePass())                ;
-    fpm.addPass(IR::NameNormalizePass(true))         ;
-    fpm.addPass(IR::GVNPREPass())                ;
-    fpm.addPass(IR::DSEPass())                   ;
-    fpm.addPass(IR::GVNPREPass())                ;
-    fpm.addPass(IR::DCEPass())                   ;
-    fpm.addPass(IR::ReassociatePass())           ;
-    fpm.addPass(IR::GVNPREPass())                ;
-    fpm.addPass(IR::ConstantPropagationPass())   ;
-    fpm.addPass(IR::NameNormalizePass(true))         ;
+    fpm.addPass(IR::PromotePass());
+    fpm.addPass(IR::NameNormalizePass(true));
+    fpm.addPass(IR::GVNPREPass());
+    fpm.addPass(IR::DSEPass());
+    fpm.addPass(IR::GVNPREPass());
+    fpm.addPass(IR::DCEPass());
+    fpm.addPass(IR::ReassociatePass());
+    fpm.addPass(IR::GVNPREPass());
+    fpm.addPass(IR::ConstantPropagationPass());
+    fpm.addPass(IR::NameNormalizePass(true));
     return fpm;
 }
 

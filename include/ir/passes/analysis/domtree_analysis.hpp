@@ -76,22 +76,28 @@ struct GenericDomTree {
 
     std::shared_ptr<Node> root;
     std::unordered_map<BasicBlock *, std::shared_ptr<Node>> nodes;
+    std::unordered_map<BasicBlock *, std::unordered_map<BasicBlock *, bool>> dom_cache;
 
     // todo: 在构造支配树时预计算DFS进入/离开时间戳可将支配关系判断优化为O(1)时间操作
     bool ADomB(BasicBlock *a, BasicBlock *b) {
         Err::gassert(nodes.count(a) && nodes.count(b), "No dominator tree for unreachable blocks.");
-
         if (nodes[a] == root)
             return true;
         if (a == b)
             return true;
-        auto _b = nodes[b].get();
-        while (_b != root.get()) {
-            _b = _b->parent;
-            if (nodes[a].get() == _b)
-                return true;
-        }
-        return false;
+
+        auto it1 = dom_cache[a].find(b);
+        if (it1 != dom_cache[a].end())
+            return it1->second;
+
+        // If b dominates a, a cannot dominates b.
+        auto it2 = dom_cache[b].find(a);
+        if (it2 != dom_cache[b].end() && it2->second)
+            return false;
+
+        auto res = ADomBImpl(a, b);
+        dom_cache[a][b] = res;
+        return res;
     }
     BlockSet getDomSet(BasicBlock *b) {
         Err::gassert(nodes.count(b), "No dominator tree for unreachable blocks.");
@@ -144,6 +150,16 @@ struct GenericDomTree {
     }
 
 private:
+    bool ADomBImpl(BasicBlock* a, BasicBlock* b) {
+        auto _b = nodes[b].get();
+        while (_b != root.get()) {
+            _b = _b->parent;
+            if (nodes[a].get() == _b)
+                return true;
+        }
+        return false;
+    }
+
     void print(const std::shared_ptr<Node> &node, int level) {
         if (node == nullptr)
             return;
