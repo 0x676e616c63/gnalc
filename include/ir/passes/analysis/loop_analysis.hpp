@@ -72,6 +72,9 @@ public:
     // In other words, the exiting block is in the loop.
     bool isExiting(const BasicBlock* bb) const;
 
+    // Note that the exit block is not a part of the loop.
+    bool isExit(const BasicBlock* bb) const;
+
     std::set<BasicBlock*> getExitBlocks() const;
 
     // Note that multiple Latches will become one after LoopSimplify

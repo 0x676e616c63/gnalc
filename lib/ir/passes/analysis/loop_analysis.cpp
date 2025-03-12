@@ -64,9 +64,16 @@ bool Loop::isExiting(const BasicBlock *bb) const {
     if (!contains(bb))
         return false;
     auto succs = bb->getNextBB();
-    return std::any_of(succs.cbegin(), succs.cend(), [this](const auto &succ) {
-        return !contains(succ.get());
-    });
+    return std::any_of(succs.cbegin(), succs.cend(),
+        [this](const auto &succ) { return !contains(succ.get()); });
+}
+
+bool Loop::isExit(const BasicBlock *bb) const {
+    if (contains(bb))
+        return false;
+    auto preds = bb->getPreBB();
+    return std::any_of(preds.cbegin(), preds.cend(),
+        [this](const auto &pred) { return !contains(pred.get()); });
 }
 
 std::set<BasicBlock *> Loop::getExitBlocks() const {

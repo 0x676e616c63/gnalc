@@ -7,8 +7,7 @@ namespace IR {
 PHIInst::PHIInst(NameRef name, const std::shared_ptr<Type> &_type)
     : Instruction(OP::PHI, name, _type) {}
 
-std::shared_ptr<Value>
-PHIInst::getValueForBlock(const std::shared_ptr<BasicBlock> &block) const {
+std::shared_ptr<Value> PHIInst::getValueForBlock(const std::shared_ptr<BasicBlock> &block) const {
     if (block == nullptr)
         Err::error("PHIInst::getValueForBlock(): block is null.");
     for (auto it = getOperands().begin(); it != getOperands().end(); ++it) {
@@ -17,6 +16,14 @@ PHIInst::getValueForBlock(const std::shared_ptr<BasicBlock> &block) const {
             return (*--it)->getValue();
     }
     Err::unreachable("Not a pred block.");
+    return nullptr;
+}
+
+std::shared_ptr<BasicBlock> PHIInst::getBlockForValue(const std::shared_ptr<Use> &use) const {
+    for (auto it = getOperands().begin(); it != getOperands().end(); ++it) {
+        if (*it == use)
+            return std::dynamic_pointer_cast<BasicBlock>((*++it)->getValue());
+    }
     return nullptr;
 }
 
