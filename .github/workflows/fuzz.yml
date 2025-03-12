@@ -5,11 +5,13 @@ on:
     paths:
       - 'lib/**'
       - 'include/**'
+      - '.github/workflows/fuzz.yml'
   pull_request:
     branches: [ "main", "ci", "iropt" ]
     paths:
       - 'lib/**'
       - 'include/**'
+      - '.github/workflows/fuzz.yml'
 
 env:
   BUILD_TYPE: Release

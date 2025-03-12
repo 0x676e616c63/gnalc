@@ -6,11 +6,13 @@ on:
     paths:
       - 'lib/**'
       - 'include/**'
+      - '.github/workflows/fixedpoint.yml'
   pull_request:
     branches: [ "main", "ci" ]
     paths:
       - 'lib/**'
       - 'include/**'
+      - '.github/workflows/fixedpoint.yml'
 
 env:
   BUILD_TYPE: Release
