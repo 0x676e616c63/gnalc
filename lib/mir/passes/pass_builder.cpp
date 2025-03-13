@@ -2,8 +2,10 @@
 #include "../../../include/mir/passes/pass_manager.hpp"
 
 // Transforms
-#include "../../../include/mir/passes/transforms/legalize.hpp"
 #include "../../../include/mir/passes/transforms/peephole.hpp"
+#include "../../../include/mir/passes/transforms/phiEliminate.hpp"
+#include "../../../include/mir/passes/transforms/preRAlegalize.hpp"
+#include "../../../include/mir/passes/transforms/registeralloc.hpp"
 
 namespace MIR {
 
@@ -18,8 +20,11 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
         fpm.addPass(PeepHolePass());
     }
 
-    fpm.addPass(LegalizePass());
+    fpm.addPass(PreRALegalize());
 
+    // fpm.addPass(NeonRAPass()); // pass name 还有问题
+
+    fpm.addPass(RAPass());
     return fpm;
 }
 
@@ -34,8 +39,7 @@ void PassBuilder::registerProxies(FAM &fam, MAM &mam) {
 }
 
 void PassBuilder::registerFunctionAnalyses(FAM &fam) {
-#define FUNCTION_ANALYSIS(CREATE_PASS)                                         \
-    fam.registerPass([&] { return CREATE_PASS; });
+#define FUNCTION_ANALYSIS(CREATE_PASS) fam.registerPass([&] { return CREATE_PASS; });
 
     // ...
 

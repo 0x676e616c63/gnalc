@@ -13,23 +13,18 @@ namespace MIR {
 class branchInst : public Instruction {
 private:
     std::variant<std::shared_ptr<IR::BasicBlock>,
-                 std::shared_ptr<IR::FunctionDecl>>
-        Dest; // 为PhiEliminate准备
+                 std::shared_ptr<IR::FunctionDecl>> Dest; // 为PhiEliminate准备
     std::string JmpTo;
 
 public:
     branchInst() = delete;
-    branchInst(OpCode JmpCode_, std::shared_ptr<IR::BasicBlock> Dest_,
-               std::string JmpTo_)
-        : Instruction(JmpCode_, SourceOperandType::cp), Dest(std::move(Dest_)),
-          JmpTo(std::move(JmpTo_)) {}
-    branchInst(OpCode JmpCode_, std::shared_ptr<IR::FunctionDecl> Dest_,
-               std::string JmpTo_)
-        : Instruction(JmpCode_, SourceOperandType::cp), Dest(std::move(Dest_)),
-          JmpTo(std::move(JmpTo_)) {}
+    branchInst(OpCode JmpCode_, std::shared_ptr<IR::BasicBlock> Dest_, std::string JmpTo_)
+        : Instruction(JmpCode_, SourceOperandType::cp), Dest(std::move(Dest_)), JmpTo(std::move(JmpTo_)) {}
+    branchInst(OpCode JmpCode_, std::shared_ptr<IR::FunctionDecl> Dest_, std::string JmpTo_)
+        : Instruction(JmpCode_, SourceOperandType::cp), Dest(std::move(Dest_)), JmpTo(std::move(JmpTo_)) {}
 
-    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override = 0;
-    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override = 0;
+    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override { return nullptr; }
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override {}
 
     auto getDest() { return Dest; }
     bool isJmpToBlock() { return Dest.index() == 0; }
@@ -43,8 +38,8 @@ class RET : public Instruction {
 public:
     RET() : Instruction(OpCode::RET, SourceOperandType::cp) {}
 
-    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override = 0;
-    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override = 0;
+    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override { return nullptr; }
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override {} // 为了过编译只能先do nothing
 
     std::string toString() override { return "RET"; }
     ~RET() override = default;

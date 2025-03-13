@@ -14,17 +14,12 @@ struct Liveness {
     std::map<BlkP, std::unordered_set<OperP>> liveIn;
     std::map<BlkP, std::unordered_set<OperP>> liveOut;
 
-    enum class relatedType { Use,
-                             Def };
+    enum class relatedType { Use, Def };
 
     struct tempHash {
-        std::size_t operator()(const OperP &ptr) const {
-            return std::hash<size_t>()((size_t)(ptr.get()));
-        }
+        std::size_t operator()(const OperP &ptr) const { return std::hash<size_t>()((size_t)(ptr.get())); }
 
-        std::size_t operator()(const InstP &ptr) const {
-            return std::hash<size_t>()((size_t)(ptr.get()));
-        }
+        std::size_t operator()(const InstP &ptr) const { return std::hash<size_t>()((size_t)(ptr.get())); }
     };
 
     std::map<OperP, std::unordered_set<std::pair<InstP, relatedType>, tempHash>, tempHash> use_def_Insts;
@@ -44,16 +39,14 @@ struct Liveness {
 
 class LiveAnalysis { // 仅在RA时, 供给给单个function使用
 private:
-    Function &func;
+    Function *func;
     Liveness liveinfo;
 
 public:
-    LiveAnalysis() = delete;
-    explicit LiveAnalysis(Function &_func) noexcept : func(_func) {}
+    LiveAnalysis() = default;
+    // explicit LiveAnalysis(Function &_func) noexcept : func(&_func) {}
 
-    Liveness analyse();
-
-    void runOnFunc();
+    void runOnFunc(Function *_func);
     void runOnBlk(const BlkP &);
     void runOnInst(const InstP &inst, std::unordered_set<OperP> &livein, std::unordered_set<OperP> &liveout);
 

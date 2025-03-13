@@ -5,6 +5,7 @@
 #include "../../SIMDinstruction/memory.hpp"
 #include "../../instructions/memory.hpp"
 #include "../pass_manager.hpp"
+#include <optional>
 
 namespace MIR {
 
@@ -14,8 +15,8 @@ public:
     PM::PreservedAnalyses run(Function &function, FAM &manager);
 
 private:
-    Function &func;
-    VarPool &varpool;
+    Function *func; // 不清楚栈上还是堆上
+    VarPool *varpool;
 
     void runOnBlk(const BlkP &);
     void runOnInst(const BlkP &, const InstP &);

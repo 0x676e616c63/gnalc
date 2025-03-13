@@ -7,7 +7,7 @@
 namespace MIR {
 
 PM::PreservedAnalyses PhiEliminatePass::run(Module &bkd_module, MAM &mam) {
-    module = bkd_module;
+    module = &bkd_module;
 
     MkWorkList(); // 筛选Phi fun && blk
     for (auto &phi_func : processList) {
@@ -48,7 +48,7 @@ std::vector<std::pair<OperP, OperP>> PhiEliminatePass::findPair(const BlkP &blk,
 }
 
 void PhiEliminatePass::MkWorkList() {
-    auto &func_list = module.getFuncs();
+    auto &func_list = module->getFuncs();
 
     for (const auto &func : func_list) {
         PhiFunction func_phi{{}};
@@ -109,7 +109,8 @@ OperP PhiEliminatePass::addCOYPInst(const BlkP &emitBlk, const OperP &dst, const
     auto stagedVal = std::make_shared<BindOnVirOP>(bank, '%' + std::to_string(varpool.size()));
 
     ///@brief 用undefined是考虑到可能是双字或者四字数据
-    auto temp_midVal = std::make_shared<IR::Value>(stagedVal->getName(), IR::makeBType(IR::IRBTYPE::UNDEFINED), IR::ValueTrait::ORDINARY_VARIABLE);
+    auto temp_midVal = std::make_shared<IR::Value>(stagedVal->getName(), IR::makeBType(IR::IRBTYPE::UNDEFINED),
+                                                   IR::ValueTrait::ORDINARY_VARIABLE);
     varpool.addValue(*temp_midVal, stagedVal);
 
     ///@brief push_before_branch

@@ -6,6 +6,7 @@
 #include "../../module.hpp"
 #include "../analysis/live_analysis.hpp"
 #include "../pass_manager.hpp"
+#include <optional>
 #include <stdarg.h>
 
 namespace MIR {
@@ -38,7 +39,7 @@ public:
 
 protected:
     // datas
-    Function &func;
+    Function *Func; // 用裸指针是因为不清楚是栈上还是堆上的内存
 
     OperSet precolored{};
     OperSet initial{};
@@ -109,11 +110,10 @@ protected:
     LiveAnalysis liveAnalysis;
 
     ///@note 变量池
-    VarPool &varpool;
+    VarPool *varpool;
 
     ///@note 判断是否是 "move"指令
-    bool
-    isMoveInstruction(const InstP &);
+    bool isMoveInstruction(const InstP &);
 
     ///@note get函数需要过滤
     virtual Nodes getUse(const InstP &);
@@ -131,8 +131,7 @@ protected:
             victim.erase(ptr);
         }
     }
-    template <typename T, typename... Tsets>
-    std::unordered_set<T> getUnion(Tsets... sets) {
+    template <typename T, typename... Tsets> std::unordered_set<T> getUnion(Tsets... sets) {
         std::unordered_set<T> union_set;
         // (void)std::initializer_list<int>{(union_set.insert(sets.begin(), sets.end()), 0)...};
         (union_set.insert(sets.begin(), sets.end()), ...);
@@ -141,7 +140,17 @@ protected:
     template <typename T, typename... Tsets>
     std::unordered_set<T> getExclude(std::unordered_set<T> victim, Tsets... sets) {
         auto exclude_set = std::move(victim);
-        (exclude_set.erase(sets.begin(), sets.end()), ...);
+
+        if (exclude_set.empty())
+            return exclude_set;
+
+        auto lambda = [&exclude_set](const auto &set) -> void {
+            for (const auto &t : set) {
+                exclude_set.erase(t);
+            }
+        };
+
+        (lambda(sets), ...);
         return exclude_set;
     }
 
@@ -156,7 +165,7 @@ protected:
     std::vector<unsigned int> availableSRegisters;
 };
 
-class NeonRAPass : public PM::PassInfo<NeonRAPass>, public RAPass {
+class NeonRAPass : public RAPass {
 public:
     PM::PreservedAnalyses run(Function &, FAM &) override;
 

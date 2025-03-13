@@ -8,8 +8,7 @@
 
 using namespace MIR;
 
-std::list<std::shared_ptr<Instruction>>
-InstLowering::allocaLower(const std::shared_ptr<IR::ALLOCAInst> &alloca) {
+std::list<std::shared_ptr<Instruction>> InstLowering::allocaLower(const std::shared_ptr<IR::ALLOCAInst> &alloca) {
     std::list<std::shared_ptr<Instruction>> insts;
     unsigned long long size;
     size = alloca->getBaseType()->getBytes();
@@ -19,8 +18,7 @@ InstLowering::allocaLower(const std::shared_ptr<IR::ALLOCAInst> &alloca) {
     return insts; // empty
 }
 
-std::list<std::shared_ptr<Instruction>>
-InstLowering::loadLower(const std::shared_ptr<IR::LOADInst> &load) {
+std::list<std::shared_ptr<Instruction>> InstLowering::loadLower(const std::shared_ptr<IR::LOADInst> &load) {
     std::list<std::shared_ptr<Instruction>> insts;
     auto ptr = load->getPtr();
     std::shared_ptr<BindOnVirOP> val_in_reg = operlower.mkOP(*load, RegisterBank::gpr);
@@ -35,7 +33,8 @@ InstLowering::loadLower(const std::shared_ptr<IR::LOADInst> &load) {
 
         if (!pair.first) {
             // mov %ptr_in_reg, #...
-            auto mov = std::make_shared<movInst>(SourceOperandType::a, ptr_in_reg, operlower.fastFind(global_ptr->getName()));
+            auto mov =
+                std::make_shared<movInst>(SourceOperandType::a, ptr_in_reg, operlower.fastFind(global_ptr->getName()));
             insts.emplace_back(mov);
         }
     } else {
@@ -51,8 +50,7 @@ InstLowering::loadLower(const std::shared_ptr<IR::LOADInst> &load) {
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>>
-InstLowering::storeLower(const std::shared_ptr<IR::STOREInst> &store) {
+std::list<std::shared_ptr<Instruction>> InstLowering::storeLower(const std::shared_ptr<IR::STOREInst> &store) {
     std::list<std::shared_ptr<Instruction>> insts;
     auto ptr = store->getPtr();
     auto val = store->getValue();
@@ -68,7 +66,8 @@ InstLowering::storeLower(const std::shared_ptr<IR::STOREInst> &store) {
 
         if (!pair.first) {
             // mov %val_in_reg, #imme_int
-            auto mov = std::make_shared<movInst>(SourceOperandType::ri, val_in_reg, operlower.fastFind(const_int_val->getVal()));
+            auto mov = std::make_shared<movInst>(SourceOperandType::ri, val_in_reg,
+                                                 operlower.fastFind(const_int_val->getVal()));
             insts.emplace_back(mov);
         }
     } else if (auto const_float_val = std::dynamic_pointer_cast<IR::ConstantFloat>(val)) {
@@ -77,7 +76,8 @@ InstLowering::storeLower(const std::shared_ptr<IR::STOREInst> &store) {
 
         if (!pair.first) {
             // mov %val_in_reg, #imme_float
-            auto mov = std::make_shared<movInst>(SourceOperandType::ri, val_in_reg, operlower.fastFind(const_float_val->getVal()));
+            auto mov = std::make_shared<movInst>(SourceOperandType::ri, val_in_reg,
+                                                 operlower.fastFind(const_float_val->getVal()));
             insts.emplace_back(mov);
         }
     } else {
@@ -93,7 +93,8 @@ InstLowering::storeLower(const std::shared_ptr<IR::STOREInst> &store) {
 
         if (!pair.first) {
             // mov %ptr_in_reg, #...
-            auto mov = std::make_shared<movInst>(SourceOperandType::a, ptr_in_reg, operlower.fastFind(global_ptr->getName()));
+            auto mov =
+                std::make_shared<movInst>(SourceOperandType::a, ptr_in_reg, operlower.fastFind(global_ptr->getName()));
             insts.emplace_back(mov);
         }
     } else {
@@ -109,18 +110,14 @@ InstLowering::storeLower(const std::shared_ptr<IR::STOREInst> &store) {
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>>
-InstLowering::gepLower(const std::shared_ptr<IR::GEPInst> &gep) {
+std::list<std::shared_ptr<Instruction>> InstLowering::gepLower(const std::shared_ptr<IR::GEPInst> &gep) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     /// gep 将数组退化为对应类型的指针, 所以其实也算是一种converse?
 
     auto ptr = gep->getPtr();
     auto idx = gep->getIdxs()[1];
-    int perElemSize =
-        std::dynamic_pointer_cast<IR::ArrayType>(gep->getBaseType())
-            ->getElmType()
-            ->getBytes();
+    int perElemSize = std::dynamic_pointer_cast<IR::ArrayType>(gep->getBaseType())->getElmType()->getBytes();
 
     /// 一共四种情况, ptr是否是全局变量, idx是否是常量
 
@@ -152,11 +149,9 @@ InstLowering::gepLower(const std::shared_ptr<IR::GEPInst> &gep) {
         auto relay2 = operlower.mkBaseOP(*gep, baseOP, 0);
         auto var_idx = operlower.fastFind(idx);
 
-        auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32),
-                                    RegisterBank::gpr);
-        auto mul_midEnd = std::make_shared<IR::BinaryInst>(
-            relay->getName(), IR::OP::MUL, idx,
-            std::make_shared<IR::ConstantInt>(perElemSize));
+        auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto mul_midEnd = std::make_shared<IR::BinaryInst>(relay->getName(), IR::OP::MUL, idx,
+                                                           std::make_shared<IR::ConstantInt>(perElemSize));
 
         insts.splice(insts.end(), binaryLower(mul_midEnd)); // 复用
     }
@@ -180,7 +175,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::loadLower_v(const std::sha
         if (!pair.first) {
             // vmov %ptr_in_reg, #...
             auto pair = std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32);
-            auto vmov = std::make_shared<Vmov>(SourceOperandType::a, ptr_in_reg, operlower.fastFind(global_ptr->getName()), pair);
+            auto vmov = std::make_shared<Vmov>(SourceOperandType::a, ptr_in_reg,
+                                               operlower.fastFind(global_ptr->getName()), pair);
             insts.emplace_back(vmov);
         }
     } else {
@@ -222,7 +218,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::storeLower_v(const std::sh
 
         if (!pair.first) {
             // mov %ptr_in_reg, #...
-            auto mov = std::make_shared<movInst>(SourceOperandType::a, ptr_in_reg, operlower.fastFind(global_ptr->getName()));
+            auto mov =
+                std::make_shared<movInst>(SourceOperandType::a, ptr_in_reg, operlower.fastFind(global_ptr->getName()));
             insts.emplace_back(mov);
         }
     } else {
@@ -238,8 +235,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::storeLower_v(const std::sh
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>>
-InstLowering::loadLower_p(const std::shared_ptr<IR::LOADInst> &load) {
+std::list<std::shared_ptr<Instruction>> InstLowering::loadLower_p(const std::shared_ptr<IR::LOADInst> &load) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     ///@brief load获得的值为一个指针
@@ -254,8 +250,7 @@ InstLowering::loadLower_p(const std::shared_ptr<IR::LOADInst> &load) {
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>>
-InstLowering::storeLower_p(const std::shared_ptr<IR::STOREInst> &store) {
+std::list<std::shared_ptr<Instruction>> InstLowering::storeLower_p(const std::shared_ptr<IR::STOREInst> &store) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     ///@brief store的指针值不为常数
@@ -269,12 +264,12 @@ InstLowering::storeLower_p(const std::shared_ptr<IR::STOREInst> &store) {
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>>
-InstLowering::gepLower_p(const std::shared_ptr<IR::GEPInst> &gep) {
+std::list<std::shared_ptr<Instruction>> InstLowering::gepLower_p(const std::shared_ptr<IR::GEPInst> &gep) {
     std::list<std::shared_ptr<Instruction>> insts;
 
-    auto ptr = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(gep->getPtr()));
-    auto target = std::dynamic_pointer_cast<BaseADROP>(operlower.mkBaseOP(*gep, ptr));
+    ///@bug
+    auto ptr = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(gep->getPtr())); // base
+    auto target = std::dynamic_pointer_cast<BaseADROP>(operlower.mkBaseOP(*gep, ptr));  // gep value
 
     return insts; // empty
 }

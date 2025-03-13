@@ -7,9 +7,9 @@
 using namespace MIR;
 
 PM::PreservedAnalyses RAPass::run(Function &bkd_function, FAM &) {
-    func = bkd_function;
-    availableSRegisters = func.editInfo().availableSRegisters;
-    varpool = func.editInfo().varpool;
+    Func = &bkd_function;                                       ///@bug
+    availableSRegisters = Func->editInfo().availableSRegisters; ///@bug
+    varpool = &(Func->editInfo().varpool);
 
     Main();
 
@@ -17,12 +17,12 @@ PM::PreservedAnalyses RAPass::run(Function &bkd_function, FAM &) {
 }
 
 void RAPass::Main() {
-    liveAnalysis.analyse();
+    liveAnalysis.runOnFunc(Func); // analysis
 
     Build();
     MkWorkList();
 
-    while (simplifyWorkList.empty() && worklistMoves.empty() && freezeWorkList.empty() && spillWorkList.empty()) {
+    while (!simplifyWorkList.empty() || !worklistMoves.empty() || !freezeWorkList.empty() || !spillWorkList.empty()) {
         if (!simplifyWorkList.empty())
             Simplify();
         else if (!worklistMoves.empty())
@@ -62,7 +62,7 @@ void RAPass::AddEdge(const OperP &u, const OperP &v) {
 void RAPass::Build() {
     auto liveinfo = liveAnalysis.getInfo();
 
-    for (const auto &blk : func.getBlocks()) {
+    for (const auto &blk : Func->getBlocks()) {
 
         auto live = liveinfo.liveOut[blk];
         const auto &insts = blk->getInsts();
@@ -122,8 +122,8 @@ void RAPass::Build() {
 }
 
 void RAPass::MkWorkList() {
-    for (const auto &n : initial) {
-        delBySet(initial, WorkList{n});
+    for (auto it = initial.begin(); it != initial.end();) {
+        const auto n = *it;
 
         if (degree[n] >= K) {
             addBySet(spillWorkList, WorkList{n});
@@ -132,6 +132,9 @@ void RAPass::MkWorkList() {
         } else {
             addBySet(simplifyWorkList, WorkList{n});
         }
+
+        it = std::next(it);
+        delBySet(initial, WorkList{n}); ///@bug
     }
 }
 
@@ -139,8 +142,7 @@ void RAPass::Simplify() {
     ///@note 理论上论文这里也是一种启发式算法: 从simplifyWorkList随便取出一个
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<std::size_t>
-        dist(0, simplifyWorkList.size() - 1);
+    std::uniform_int_distribution<std::size_t> dist(0, simplifyWorkList.size() - 1);
     std::size_t randomIdx = dist(gen);
 
     auto it = simplifyWorkList.begin();
@@ -189,8 +191,7 @@ void RAPass::Coalesce() {
     ///@note 依然是启发式地随便弄一个
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<std::size_t>
-        dist(0, simplifyWorkList.size() - 1);
+    std::uniform_int_distribution<std::size_t> dist(0, worklistMoves.size() - 1);
     std::size_t randomIdx = dist(gen);
 
     auto it = worklistMoves.begin();
@@ -287,8 +288,7 @@ void RAPass::Freeze() {
     ///@note 启发式随便找 x 3
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<std::size_t>
-        dist(0, simplifyWorkList.size() - 1);
+    std::uniform_int_distribution<std::size_t> dist(0, simplifyWorkList.size() - 1);
     std::size_t randomIdx = dist(gen);
 
     auto it = freezeWorkList.begin();
@@ -341,7 +341,9 @@ void RAPass::AssignColors() {
     while (!selectStack.empty()) {
         auto n = selectStack.back();
         selectStack.pop_back();
-        std::vector<unsigned int> okColors(0, K - 1);
+        std::vector<unsigned int> okColors(K);
+
+        std::iota(okColors.begin(), okColors.end(), 0);
 
         for (const auto &w : adjList[n]) {
             if (getUnion<OperP>(coloredNodes, precolored).count(GetAlias(w))) {
@@ -410,9 +412,7 @@ RAPass::Moves RAPass::NodeMoves(const OperP &n) {
     return movs;
 }
 
-bool RAPass::MoveRelated(const OperP &n) {
-    return !NodeMoves(n).empty();
-}
+bool RAPass::MoveRelated(const OperP &n) { return !NodeMoves(n).empty(); }
 
 bool RAPass::OK(const OperP &t, const OperP &r) {
     if (degree[t] < K)
@@ -446,8 +446,8 @@ OperP RAPass::GetAlias(OperP n) {
 }
 
 PM::PreservedAnalyses NeonRAPass::run(Function &bkd_function, FAM &) {
-    func = bkd_function;
-    varpool = func.editInfo().varpool;
+    Func = &bkd_function;
+    varpool = &(Func->editInfo().varpool);
 
     availableSRegisters.resize(32);
 
@@ -455,8 +455,8 @@ PM::PreservedAnalyses NeonRAPass::run(Function &bkd_function, FAM &) {
 
     Main();
 
-    // 耦合版Pass间传参数
-    func.editInfo().availableSRegisters = availableSRegisters;
+    // 吓我一跳我释放忍术 --- 耦合!
+    Func->editInfo().availableSRegisters = availableSRegisters;
 
     return PM::PreservedAnalyses::all();
 }
@@ -465,7 +465,9 @@ void NeonRAPass::AssignColors() {
     while (!selectStack.empty()) {
         auto n = selectStack.back();
         selectStack.pop_back();
-        std::vector<unsigned int> okColors(0, K - 1);
+        std::vector<unsigned int> okColors(K);
+
+        std::iota(okColors.begin(), okColors.end(), 0);
 
         for (const auto &w : adjList[n]) {
             if (getUnion<OperP>(coloredNodes, precolored).count(GetAlias(w))) {
@@ -492,7 +494,8 @@ void NeonRAPass::AssignColors() {
             n_reg->setColor(static_cast<CoreRegister>(c));
 
             ///@note 排除available
-            auto it = std::find_if(availableSRegisters.begin(), availableSRegisters.end(), [&c](const auto &item) { return item == c; });
+            auto it = std::find_if(availableSRegisters.begin(), availableSRegisters.end(),
+                                   [&c](const auto &item) { return item == c; });
 
             availableSRegisters.erase(it);
         }

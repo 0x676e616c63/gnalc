@@ -28,7 +28,7 @@ public:
     PM::PreservedAnalyses run(Module &, MAM &);
 
 private:
-    Module &module;
+    Module *module;
     std::vector<PhiFunction> processList;
     std::map<BlkP, std::map<BlkP, BlkP>> getMidBlk; // mid = getMidBlk[pred][succ];
 

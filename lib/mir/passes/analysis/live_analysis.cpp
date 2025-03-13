@@ -15,9 +15,7 @@ std::list<OperP> extractUse(const InstP &inst) {
     return uses;
 }
 
-OperP extractDef(const InstP &inst) {
-    return inst->getTargetOP();
-}
+OperP extractDef(const InstP &inst) { return inst->getTargetOP(); }
 
 std::unordered_set<OperP> extractDef_v(const InstP &inst) {
     std::unordered_set<OperP> defs;
@@ -27,14 +25,16 @@ std::unordered_set<OperP> extractDef_v(const InstP &inst) {
     return defs;
 }
 
-void LiveAnalysis::runOnFunc() {
+void LiveAnalysis::runOnFunc(Function *_func) {
+    func = _func;
+
     ///@note 需要blks的dfs序
     std::vector<BlkP> dfsSeq;
     std::set<BlkP> visited;
     std::stack<BlkP> s;
 
     ///@warning 我们必须假设第一个blk是root
-    const auto root_blk = *(func.getBlocks().begin());
+    const auto root_blk = *(func->getBlocks().begin());
 
     s.push(root_blk);
 
@@ -73,7 +73,9 @@ void LiveAnalysis::runOnBlk(const BlkP &blk) {
 
     for (auto it = insts.rbegin(); it != insts.rend(); ++it) {
         runOnInst(*it, instLiveIn[*it], instLiveOut[*it]);
-        instLiveOut[*std::next(it)] = instLiveIn[*it]; ///@bug
+        if (it != std::prev(insts.rend())) {
+            instLiveOut[*std::next(it)] = instLiveIn[*it]; ///@bug
+        }
     }
 }
 

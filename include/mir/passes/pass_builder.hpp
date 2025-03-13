@@ -8,7 +8,10 @@
 
 namespace MIR {
 struct OptInfo {
-    bool peephole{false};
+    bool peephole = false;      // func pass
+    bool phiEliminate = true;   // module pass
+    bool PreRALeagalize = true; // func pass
+    bool RA = true;             // func pass
 };
 
 extern const OptInfo o1_opt_info;

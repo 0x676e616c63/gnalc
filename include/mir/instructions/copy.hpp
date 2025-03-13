@@ -15,10 +15,8 @@ private:
 
 public:
     COPY() = delete;
-    COPY(std::shared_ptr<BindOnVirOP> TargetOP_,
-         std::shared_ptr<Operand> SourceOperand_)
-        : Instruction(OpCode::COPY, SourceOperandType::r),
-          SourceOperand(std::move(SourceOperand_)) {
+    COPY(std::shared_ptr<BindOnVirOP> TargetOP_, std::shared_ptr<Operand> SourceOperand_)
+        : Instruction(OpCode::COPY, SourceOperandType::r), SourceOperand(std::move(SourceOperand_)) {
         addTargetOP(std::move(TargetOP_));
     }
 
@@ -44,10 +42,13 @@ private:
 
 public:
     PHI() = delete;
-    PHI(std::shared_ptr<BindOnVirOP> TargetOP_, std::vector<PhiOper> _list) : SourceOperands(std::move(_list)), Instruction(OpCode::PHI, SourceOperandType::rr) { addTargetOP(std::move(TargetOP_)); }
+    PHI(std::shared_ptr<BindOnVirOP> TargetOP_, std::vector<PhiOper> _list)
+        : SourceOperands(std::move(_list)), Instruction(OpCode::PHI, SourceOperandType::rr) {
+        addTargetOP(std::move(TargetOP_));
+    }
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
-    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override = 0;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override {};
 
     std::vector<PhiOper> getPhiOper() const { return SourceOperands; }
     std::string toString() override;

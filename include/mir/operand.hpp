@@ -91,10 +91,8 @@ private:
 
 public:
     Operand() = delete;
-    explicit Operand(OperandTrait _otrait)
-        : Value(ValueTrait::Operand), otrait(_otrait) {}
-    Operand(OperandTrait _otrait, std::string _name)
-        : Value(ValueTrait::Operand, std::move(_name)), otrait(_otrait) {}
+    explicit Operand(OperandTrait _otrait) : Value(ValueTrait::Operand), otrait(_otrait) {}
+    Operand(OperandTrait _otrait, std::string _name) : Value(ValueTrait::Operand, std::move(_name)), otrait(_otrait) {}
     OperandTrait getOperandTrait() const { return otrait; }
 
     std::string toString() const override = 0;
@@ -109,29 +107,21 @@ protected:
 
 public:
     BindOnVirOP() = delete;
-    explicit BindOnVirOP(RegisterBank _bank)
-        : Operand(OperandTrait::BindOnVirRegister), bank(_bank) {}
+    explicit BindOnVirOP(RegisterBank _bank) : Operand(OperandTrait::BindOnVirRegister), bank(_bank) {}
     BindOnVirOP(RegisterBank _bank, std::string _name)
-        : Operand(OperandTrait::BindOnVirRegister, std::move(_name)),
-          bank(_bank) {}
+        : Operand(OperandTrait::BindOnVirRegister, std::move(_name)), bank(_bank) {}
 
     explicit BindOnVirOP(CoreRegister _color)
-        : Operand(OperandTrait::PreColored), bank(RegisterBank::gpr),
-          color(_color) {}
+        : Operand(OperandTrait::PreColored), bank(RegisterBank::gpr), color(_color) {}
     explicit BindOnVirOP(FPURegister _color)
-        : Operand(OperandTrait::PreColored), bank(RegisterBank::spr),
-          color(_color) {} // for PreColored
+        : Operand(OperandTrait::PreColored), bank(RegisterBank::spr), color(_color) {} // for PreColored
 
     explicit BindOnVirOP(std::string _name)
-        : Operand(OperandTrait::BaseAddress, std::move(_name)),
-          bank(RegisterBank::gpr) {} // for BaseADROP
+        : Operand(OperandTrait::BaseAddress, std::move(_name)), bank(RegisterBank::gpr) {} // for BaseADROP
 
     const std::variant<CoreRegister, FPURegister> &getColor() { return color; };
 
-    template <typename T_Reg>
-    void setColor(T_Reg newColor) {
-        color = newColor;
-    }
+    template <typename T_Reg> void setColor(T_Reg newColor) { color = newColor; }
 
     RegisterBank getRegisterBank() { return bank; }
 
@@ -170,27 +160,22 @@ protected:
     int constOffset = 0;
 
     /// @brief 单向的依赖
-    std::weak_ptr<BindOnVirOP> varOffset;
+    std::weak_ptr<BindOnVirOP> varOffset; // base
 
 public:
     BaseADROP() = delete;
-    BaseADROP(BaseAddressTrait _btrait, std::string _name,
-              int _constOffset,
+    BaseADROP(BaseAddressTrait _btrait, std::string _name, int _constOffset,
               const std::shared_ptr<BindOnVirOP> &_varOffset)
-        : BindOnVirOP(std::move(_name)), btrait(_btrait),
-          constOffset(_constOffset), varOffset(_varOffset) {}
+        : BindOnVirOP(std::move(_name)), btrait(_btrait), constOffset(_constOffset), varOffset(_varOffset) {}
 
     int getConstOffset() const { return constOffset; }
     void setConstOffset(int newOffset) { constOffset = newOffset; }
 
     BaseAddressTrait getTrait() { return btrait; }
 
-    void setBase(const std::shared_ptr<BindOnVirOP> &_varOffset) {
-        varOffset = _varOffset;
-    }
+    void setBase(const std::shared_ptr<BindOnVirOP> &_varOffset) { varOffset = _varOffset; }
 
-    std::shared_ptr<BindOnVirOP>
-    getBase() const {
+    std::shared_ptr<BindOnVirOP> getBase() const {
         if (!varOffset.expired()) {
             return varOffset.lock();
         } else {
@@ -208,11 +193,9 @@ private:
 
 public:
     GlobalADROP() = delete;
-    GlobalADROP(std::string _global_name, std::string _name,
-                int _offset,
+    GlobalADROP(std::string _global_name, std::string _name, int _offset,
                 const std::shared_ptr<BindOnVirOP> &_varOffset)
-        : BaseADROP(BaseAddressTrait::Global, std::move(_name), _offset,
-                    _varOffset),
+        : BaseADROP(BaseAddressTrait::Global, std::move(_name), _offset, _varOffset),
           global_name(std::move(_global_name)){};
 
     std::string getGloName() const { return global_name; }
@@ -227,12 +210,9 @@ private:
 
 public:
     StackADROP() = delete;
-    StackADROP(std::shared_ptr<FrameObj> _obj, std::string _name,
-               int _offset,
+    StackADROP(std::shared_ptr<FrameObj> _obj, std::string _name, int _offset,
                const std::shared_ptr<BindOnVirOP> &_varOffset)
-        : BaseADROP(BaseAddressTrait::Local, std::move(_name), _offset,
-                    _varOffset),
-          obj(std::move(_obj)) {}
+        : BaseADROP(BaseAddressTrait::Local, std::move(_name), _offset, _varOffset), obj(std::move(_obj)) {}
 
     std::shared_ptr<FrameObj> getObj() { return obj; }
 
@@ -245,16 +225,11 @@ private:
     unsigned int imme;
 
 public:
-    enum class inlineShift { asr,
-                             lsl,
-                             lsr,
-                             ror,
-                             rrx } shiftCode;
+    enum class inlineShift { asr, lsl, lsr, ror, rrx } shiftCode;
 
     ShiftOP() = delete;
     ShiftOP(unsigned _imme, ShiftOP::inlineShift _shiftCode)
-        : imme(_imme), shiftCode(_shiftCode), Operand(OperandTrait::ShiftImme) {
-    }
+        : imme(_imme), shiftCode(_shiftCode), Operand(OperandTrait::ShiftImme) {}
 
     std::string toString() const final;
     ~ShiftOP() override = default;

@@ -10,11 +10,9 @@ private:
 public:
     Vbinary() = delete;
     Vbinary(NeonOpCode _opcode, std::shared_ptr<BindOnVirOP> TargetOperand_,
-            std::shared_ptr<BindOnVirOP> SourceOperand_1_,
-            std::shared_ptr<BindOnVirOP> SourceOperand_2_,
+            std::shared_ptr<BindOnVirOP> SourceOperand_1_, std::shared_ptr<BindOnVirOP> SourceOperand_2_,
             std::pair<bitType, bitType> _dataTypes)
-        : NeonInstruction(_opcode, SourceOperandType::rr, _dataTypes),
-          SourceOperand_1(std::move(SourceOperand_1_)),
+        : NeonInstruction(_opcode, SourceOperandType::rr, _dataTypes), SourceOperand_1(std::move(SourceOperand_1_)),
           SourceOperand_2(std::move(SourceOperand_2_)) {
         addTargetOP(std::move(TargetOperand_));
     }
@@ -32,10 +30,8 @@ private:
 public:
     Vunary() = delete;
     Vunary(NeonOpCode _opcode, std::shared_ptr<BindOnVirOP> TargetOperand_,
-           std::shared_ptr<BindOnVirOP> SourceOperand_1_,
-           std::pair<bitType, bitType> _dataTypes)
-        : NeonInstruction(_opcode, SourceOperandType::r, _dataTypes),
-          SourceOperand_1(std::move(SourceOperand_1_)) {
+           std::shared_ptr<BindOnVirOP> SourceOperand_1_, std::pair<bitType, bitType> _dataTypes)
+        : NeonInstruction(_opcode, SourceOperandType::r, _dataTypes), SourceOperand_1(std::move(SourceOperand_1_)) {
         addTargetOP(std::move(TargetOperand_));
     }
 
@@ -53,10 +49,8 @@ private:
 public:
     Vcmp() = delete;
     Vcmp(NeonOpCode _opcode, std::shared_ptr<BindOnVirOP> SourceOperand_1_,
-         std::shared_ptr<BindOnVirOP> SourceOperand_2_,
-         std::pair<bitType, bitType> _dataTypes)
-        : NeonInstruction(_opcode, SourceOperandType::rr, _dataTypes),
-          SourceOperand_1(std::move(SourceOperand_1_)),
+         std::shared_ptr<BindOnVirOP> SourceOperand_2_, std::pair<bitType, bitType> _dataTypes)
+        : NeonInstruction(_opcode, SourceOperandType::rr, _dataTypes), SourceOperand_1(std::move(SourceOperand_1_)),
           SourceOperand_2(std::move(SourceOperand_2_)) {}
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
@@ -70,9 +64,9 @@ private:
 public:
     Vmrs() : Instruction(NeonOpCode::VMRS, SourceOperandType::cp) {}
 
-    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override = 0;
+    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override { return nullptr; }
 
-    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override = 0;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override {}
 
     std::string toString() override { return "vmrs APSR_nzcv, FPSCR"; }
     ~Vmrs() override = default;

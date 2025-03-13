@@ -14,16 +14,40 @@ std::string PreColedOP::toString() const {
 }
 
 std::string BindOnVirOP::toString() const {
-    std::string str = getName() + ':' + enum_name(bank);
+    std::string str = getName();
+
+    if (bank == RegisterBank::gpr && std::get<CoreRegister>(color) != CoreRegister::none) {
+        str += ":$" + enum_name(std::get<CoreRegister>(color));
+    } else if (bank == RegisterBank::spr && std::get<FPURegister>(color) != FPURegister::none) {
+        str += ":$" + enum_name(std::get<FPURegister>(color));
+    } else {
+        str += ':' + enum_name(bank);
+    }
+
+    ///@todo dpr, qpr...
 
     return str;
 }
 
 std::string BaseADROP::toString() const {
-    /// %1:gpr(%Runtime + [varOffset] + 16)
+    /// %1:gpr(#Runtime + [varOffset] + 16)
     std::string str = getName() + ':' + enum_name(bank);
 
-    str += "(%Runtime:";
+    str += "(#Rt";
+
+    if (!varOffset.expired() && varOffset.lock().get() == this) {
+        auto base = varOffset.lock(); // self
+
+        if (std::get<CoreRegister>(base->getColor()) != CoreRegister::none) // 一定是gpr
+            str += ": $" + enum_name(std::get<CoreRegister>(base->getColor()));
+
+        if (constOffset)
+            str += " + " + std::to_string(constOffset);
+
+        str += ')';
+        return str;
+    }
+
     if (!varOffset.expired())
         str += " + " + varOffset.lock()->toString();
 
@@ -36,14 +60,33 @@ std::string BaseADROP::toString() const {
 }
 
 std::string GlobalADROP::toString() const {
-    /// %1:gpr(%Global.aaa + [varOffset] + 16)
+    /// %1:gpr(#Global.aaa + [varOffset] + 16)
 
     std::string str = getName() + ':' + enum_name(bank);
 
-    str += "(%Global." + global_name;
+    str += "(#Glo." + global_name;
+
+    // 元始天尊
+    if (!varOffset.expired() && varOffset.lock().get() == this) {
+        auto base = varOffset.lock(); // self
+
+        if (std::get<CoreRegister>(base->getColor()) != CoreRegister::none) // 一定是gpr
+            str += ": $" + enum_name(std::get<CoreRegister>(base->getColor()));
+
+        if (constOffset)
+            str += " + " + std::to_string(constOffset);
+
+        str += ')';
+        return str;
+    }
+
     if (!varOffset.expired()) {
         auto varPtr = varOffset.lock();
-        str += ": " + varPtr->getName();
+
+        if (std::get<CoreRegister>(varPtr->getColor()) != CoreRegister::none)
+            str += ": $" + enum_name(std::get<CoreRegister>(varPtr->getColor()));
+        else
+            str += ": " + varPtr->getName();
     }
 
     if (constOffset)
@@ -55,14 +98,32 @@ std::string GlobalADROP::toString() const {
 }
 
 std::string StackADROP::toString() const {
-    /// %1:gpr(%Stack.bbb + [varOffset] + 16)
+    /// %1:gpr(#Stack.bbb + [varOffset] + 16)
     std::string str = getName() + ':' + enum_name(bank);
 
-    str += "(%Stack." + std::to_string(obj->getId());
+    str += "(#Stk." + std::to_string(obj->getId());
+
+    if (!varOffset.expired() && varOffset.lock().get() == this) {
+        auto base = varOffset.lock(); // self
+
+        if (std::get<CoreRegister>(base->getColor()) != CoreRegister::none) // 一定是gpr
+            str += ": $" + enum_name(std::get<CoreRegister>(base->getColor()));
+
+        if (constOffset)
+            str += " + " + std::to_string(constOffset);
+
+        str += ')';
+        return str;
+    }
+
     if (!varOffset.expired() && !std::dynamic_pointer_cast<PreColedOP>(getBase())) {
         // not sp/r7
         auto varPtr = varOffset.lock();
-        str += ": " + varPtr->getName();
+
+        if (std::get<CoreRegister>(varPtr->getColor()) != CoreRegister::none)
+            str += ": $" + enum_name(std::get<CoreRegister>(varPtr->getColor()));
+        else
+            str += ": " + varPtr->getName();
     }
     if (constOffset)
         str += " + " + std::to_string(constOffset);

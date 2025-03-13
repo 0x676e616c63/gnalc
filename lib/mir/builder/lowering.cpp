@@ -4,15 +4,12 @@
 
 using namespace MIR;
 
-Lowering::Lowering(const IR::Module &midEnd_module) : module(midEnd_module.getName()) {
-    (*this)(midEnd_module);
-}
+Lowering::Lowering(const IR::Module &midEnd_module) : module(midEnd_module.getName()) { (*this)(midEnd_module); }
 
 void Lowering::operator()(const IR::Module &midEnd_module) {
     ///@brief 处理全局变量
     for (auto &midEnd_glo : midEnd_module.getGlobalVars()) {
-        std::shared_ptr<GlobalObj> obj =
-            std::make_shared<GlobalObj>(*midEnd_glo);
+        std::shared_ptr<GlobalObj> obj = std::make_shared<GlobalObj>(*midEnd_glo);
         module.addGlobal(obj);
     }
 
@@ -22,16 +19,12 @@ void Lowering::operator()(const IR::Module &midEnd_module) {
 }
 
 std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
-    std::shared_ptr<Function> func =
-        std::make_shared<Function>(midEnd_function.getName());
+    std::shared_ptr<Function> func = std::make_shared<Function>(midEnd_function.getName());
 
     func->editInfo().args = midEnd_function.getParams().size();
 
-    OperandLowering operlower{
-        midEnd_function.getInstCount() + func->getInfo().args,
-        module.getConstPool(),
-        func->editInfo().varpool,
-        func->editInfo().StackObjs};
+    OperandLowering operlower{midEnd_function.getInstCount() + func->getInfo().args, module.getConstPool(),
+                              func->editInfo().varpool, func->editInfo().StackObjs};
 
     /// @brief 函数参数加载到varpool里, 并且适当添加ldr指令
     unsigned int cnt = 0;  // int 或者 地址(数组退化而来)
@@ -43,8 +36,7 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
 
         if (std::dynamic_pointer_cast<IR::PtrType>(arg_type)) {
             if (cnt <= 4) {
-                auto arg_in_reg =
-                    operlower.getPreColored(static_cast<CoreRegister>(cnt));
+                auto arg_in_reg = operlower.getPreColored(static_cast<CoreRegister>(cnt));
                 // auto val = operlower.mkOP(*arg, RegisterBank::gpr);
                 auto val = operlower.mkBaseOP(*arg);
                 auto copy = std::make_shared<COPY>(val, arg_in_reg);
@@ -53,16 +45,13 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
                 // 参数在内存中
                 auto val = operlower.mkBaseOP(*arg);
                 auto arg_in_stack = operlower.mkStackOP(cnt);
-                auto ldr = std::make_shared<ldrInst>(SourceOperandType::a, 4,
-                                                     val, arg_in_stack);
+                auto ldr = std::make_shared<ldrInst>(SourceOperandType::a, 4, val, arg_in_stack);
                 arg_insts.emplace_back(ldr);
             }
             ++cnt;
-        } else if (std::dynamic_pointer_cast<IR::BType>(arg_type)->getInner() ==
-                   IR::IRBTYPE::I32) {
+        } else if (std::dynamic_pointer_cast<IR::BType>(arg_type)->getInner() == IR::IRBTYPE::I32) {
             if (cnt <= 4) {
-                auto arg_in_reg =
-                    operlower.getPreColored(static_cast<CoreRegister>(cnt));
+                auto arg_in_reg = operlower.getPreColored(static_cast<CoreRegister>(cnt));
                 auto val = operlower.mkOP(*arg, RegisterBank::gpr);
                 auto copy = std::make_shared<COPY>(val, arg_in_reg);
                 arg_insts.emplace_back(copy);
@@ -70,16 +59,13 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
                 // 参数在内存中
                 auto val = operlower.mkOP(*arg, RegisterBank::gpr);
                 auto arg_in_stack = operlower.mkStackOP(cnt);
-                auto ldr = std::make_shared<ldrInst>(SourceOperandType::a, 4,
-                                                     val, arg_in_stack);
+                auto ldr = std::make_shared<ldrInst>(SourceOperandType::a, 4, val, arg_in_stack);
                 arg_insts.emplace_back(ldr);
             }
             ++cnt;
-        } else if (std::dynamic_pointer_cast<IR::BType>(arg_type)->getInner() ==
-                   IR::IRBTYPE::FLOAT) {
+        } else if (std::dynamic_pointer_cast<IR::BType>(arg_type)->getInner() == IR::IRBTYPE::FLOAT) {
             if (fcnt <= 32) {
-                auto arg_in_freg =
-                    operlower.getPreColored(static_cast<CoreRegister>(cnt));
+                auto arg_in_freg = operlower.getPreColored(static_cast<CoreRegister>(cnt));
                 auto val = operlower.mkOP(*arg, RegisterBank::spr);
                 auto copy = std::make_shared<COPY>(val, arg_in_freg);
                 arg_insts.emplace_back(copy);
@@ -121,8 +107,7 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
     return func;
 }
 
-std::shared_ptr<BasicBlock> Lowering::lower(const IR::BasicBlock &midEnd_bb,
-                                            OperandLowering &operlower) {
+std::shared_ptr<BasicBlock> Lowering::lower(const IR::BasicBlock &midEnd_bb, OperandLowering &operlower) {
     std::shared_ptr<BasicBlock> basicblock =
         std::make_shared<BasicBlock>(midEnd_bb.getName(), !(midEnd_bb.getPhiInsts().empty())); // 最终的asm中可能重名
 
@@ -138,8 +123,7 @@ std::shared_ptr<BasicBlock> Lowering::lower(const IR::BasicBlock &midEnd_bb,
     return basicblock;
 }
 
-std::list<std::shared_ptr<Instruction>>
-InstLowering::operator()(const std::shared_ptr<IR::Instruction> &midEnd_inst) {
+std::list<std::shared_ptr<Instruction>> InstLowering::operator()(const std::shared_ptr<IR::Instruction> &midEnd_inst) {
     std::list<std::shared_ptr<Instruction>> insts;
     if (auto binary = std::dynamic_pointer_cast<IR::BinaryInst>(midEnd_inst)) {
         if (IR::toBType(binary->getType())->getInner() == IR::IRBTYPE::I32)
@@ -197,7 +181,7 @@ InstLowering::operator()(const std::shared_ptr<IR::Instruction> &midEnd_inst) {
         }
     } else if (auto store = std::dynamic_pointer_cast<IR::STOREInst>(midEnd_inst)) {
         /// @warning Btype, PtrType
-        if (std::dynamic_pointer_cast<IR::PtrType>(store->getBaseType())) {
+        if (std::dynamic_pointer_cast<IR::PtrType>(store->getBaseType())) { // getValue->getType
             insts = storeLower_p(store);
         } else if (std::dynamic_pointer_cast<IR::BType>(store->getBaseType())->getInner() == IR::IRBTYPE::I32) {
             insts = storeLower(store);
@@ -205,10 +189,12 @@ InstLowering::operator()(const std::shared_ptr<IR::Instruction> &midEnd_inst) {
             insts = storeLower_v(store);
         }
     } else if (auto gep = std::dynamic_pointer_cast<IR::GEPInst>(midEnd_inst)) {
-        if (std::dynamic_pointer_cast<IR::BType>(gep->getPtr()->getType()))
-            insts = gepLower(gep);
-        else
-            insts = gepLower_p(gep);
+        // if (std::dynamic_pointer_cast<IR::BType>(gep->getPtr()->getType())) ///@bug ???
+        //     insts = gepLower(gep);
+        // else
+        //     insts = gepLower_p(gep);
+
+        insts = gepLower(gep);
 
     } else if (auto phi = std::dynamic_pointer_cast<IR::PHIInst>(midEnd_inst)) {
 
@@ -224,8 +210,7 @@ InstLowering::operator()(const std::shared_ptr<IR::Instruction> &midEnd_inst) {
 // ===============
 // operlower
 // ===============
-std::shared_ptr<Operand>
-OperandLowering::fastFind(const std::shared_ptr<IR::Value> &midEnd_val) {
+std::shared_ptr<Operand> OperandLowering::fastFind(const std::shared_ptr<IR::Value> &midEnd_val) {
     /// variablePool find
     if (auto ptr = varpool.getValue(*midEnd_val))
         return ptr;
@@ -237,29 +222,25 @@ OperandLowering::fastFind(const std::shared_ptr<IR::Value> &midEnd_val) {
         auto constOper = std::make_shared<ConstantIDX>(constPtr);
         return constOper;
 
-    } else if (auto ci8 =
-                   std::dynamic_pointer_cast<IR::ConstantI8>(midEnd_val)) {
+    } else if (auto ci8 = std::dynamic_pointer_cast<IR::ConstantI8>(midEnd_val)) {
 
         auto constPtr = constpool.getConstant(ci8->getVal());
         auto constOper = std::make_shared<ConstantIDX>(constPtr);
         return constOper;
 
-    } else if (auto ci32 =
-                   std::dynamic_pointer_cast<IR::ConstantInt>(midEnd_val)) {
+    } else if (auto ci32 = std::dynamic_pointer_cast<IR::ConstantInt>(midEnd_val)) {
 
         auto constPtr = constpool.getConstant(ci32->getVal());
         auto constOper = std::make_shared<ConstantIDX>(constPtr);
         return constOper;
 
-    } else if (auto cf =
-                   std::dynamic_pointer_cast<IR::ConstantFloat>(midEnd_val)) {
+    } else if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(midEnd_val)) {
 
         auto constPtr = constpool.getConstant(cf->getVal());
         auto constOper = std::make_shared<ConstantIDX>(constPtr);
         return constOper;
 
-    } else if (auto glb =
-                   std::dynamic_pointer_cast<IR::GlobalVariable>(midEnd_val)) {
+    } else if (auto glb = std::dynamic_pointer_cast<IR::GlobalVariable>(midEnd_val)) {
         auto constPtr = constpool.getConstant(glb->getName());
         auto constOper = std::make_shared<ConstantIDX>(constPtr);
         return constOper;
@@ -272,75 +253,56 @@ OperandLowering::fastFind(const std::shared_ptr<IR::Value> &midEnd_val) {
     }
 }
 
-std::shared_ptr<BindOnVirOP>
-OperandLowering::mkOP(const std::shared_ptr<IR::Type> &type,
-                      RegisterBank bank) {
-    auto virtual_val =
-        std::make_shared<IR::Value>("%" + std::to_string(varpool.size() + med_val_cnt + 1), type, IR::ValueTrait::ORDINARY_VARIABLE);
+std::shared_ptr<BindOnVirOP> OperandLowering::mkOP(const std::shared_ptr<IR::Type> &type, RegisterBank bank) {
+    auto virtual_val = std::make_shared<IR::Value>("%" + std::to_string(varpool.size() + med_val_cnt + 1), type,
+                                                   IR::ValueTrait::ORDINARY_VARIABLE);
     auto ptr = std::make_shared<BindOnVirOP>(bank, virtual_val->getName());
     varpool.addValue(*virtual_val, ptr);
 
     return ptr;
 }
 
-std::shared_ptr<BindOnVirOP> OperandLowering::mkOP(const IR::Value &val,
-                                                   RegisterBank bank) {
+std::shared_ptr<BindOnVirOP> OperandLowering::mkOP(const IR::Value &val, RegisterBank bank) {
     auto ptr = std::make_shared<BindOnVirOP>(bank, val.getName());
     varpool.addValue(val, ptr);
     return ptr;
 }
 
-std::shared_ptr<GlobalADROP>
-OperandLowering::mkBaseOP(const std::string &global_name,
-                          const std::shared_ptr<BindOnVirOP> &base) {
-    auto virtual_val = std::make_shared<IR::Value>(
-        "%" + std::to_string(varpool.size() + med_val_cnt + 1),
-        IR::makeBType(IR::IRBTYPE::I32),
-        IR::ValueTrait::ORDINARY_VARIABLE);
-    auto ptr = std::make_shared<GlobalADROP>(global_name,
-                                             virtual_val->getName(),
-                                             0, base);
+std::shared_ptr<GlobalADROP> OperandLowering::mkBaseOP(const std::string &global_name,
+                                                       const std::shared_ptr<BindOnVirOP> &base) {
+    auto virtual_val = std::make_shared<IR::Value>("%" + std::to_string(varpool.size() + med_val_cnt + 1),
+                                                   IR::makeBType(IR::IRBTYPE::I32), IR::ValueTrait::ORDINARY_VARIABLE);
+    auto ptr = std::make_shared<GlobalADROP>(global_name, virtual_val->getName(), 0, base);
     varpool.addValue(*virtual_val, ptr);
     return ptr;
 }
 
-std::shared_ptr<GlobalADROP>
-OperandLowering::mkBaseOP(const IR::Value &val, const std::string &val_name,
-                          unsigned int constOffset,
-                          const std::shared_ptr<BindOnVirOP> &varOffset) {
+std::shared_ptr<GlobalADROP> OperandLowering::mkBaseOP(const IR::Value &val, const std::string &val_name,
+                                                       unsigned int constOffset,
+                                                       const std::shared_ptr<BindOnVirOP> &varOffset) {
     /* global_name, name, offset*/
-    auto ptr = std::make_shared<GlobalADROP>(val_name,
-                                             val.getName(),
-                                             constOffset,
-                                             varOffset);
+    auto ptr = std::make_shared<GlobalADROP>(val_name, val.getName(), constOffset, varOffset);
     varpool.addValue(val, ptr);
     return ptr;
 }
 
-std::shared_ptr<BaseADROP> OperandLowering::mkBaseOP(const IR::Value &val,
-                                                     const std::shared_ptr<BaseADROP> &ptr) {
+std::shared_ptr<BaseADROP> OperandLowering::mkBaseOP(const IR::Value &val, const std::shared_ptr<BaseADROP> &ptr) {
     if (ptr->getTrait() == BaseAddressTrait::Global) {
-        auto new_ptr = std::make_shared<GlobalADROP>(
-            std::dynamic_pointer_cast<GlobalADROP>(ptr)->getGloName(),
-            val.getName(), 0,
-            nullptr);
+        auto new_ptr = std::make_shared<GlobalADROP>(std::dynamic_pointer_cast<GlobalADROP>(ptr)->getGloName(),
+                                                     val.getName(), 0, nullptr);
         new_ptr->setBase(new_ptr);
 
         varpool.addValue(val, new_ptr);
         return new_ptr;
     } else if (ptr->getTrait() == BaseAddressTrait::Local) {
-        auto new_ptr = std::make_shared<StackADROP>(
-            std::dynamic_pointer_cast<StackADROP>(ptr)->getObj(),
-            val.getName(), 0,
-            nullptr);
+        auto new_ptr = std::make_shared<StackADROP>(std::dynamic_pointer_cast<StackADROP>(ptr)->getObj(), val.getName(),
+                                                    0, nullptr);
         new_ptr->setBase(new_ptr);
 
         varpool.addValue(val, new_ptr);
         return new_ptr;
     } else {
-        auto new_ptr = std::make_shared<BaseADROP>(
-            BaseAddressTrait::Runtime, val.getName(),
-            0, nullptr);
+        auto new_ptr = std::make_shared<BaseADROP>(BaseAddressTrait::Runtime, val.getName(), 0, nullptr);
         new_ptr->setBase(new_ptr);
 
         varpool.addValue(val, new_ptr);
@@ -348,29 +310,24 @@ std::shared_ptr<BaseADROP> OperandLowering::mkBaseOP(const IR::Value &val,
     }
 }
 
-std::shared_ptr<BaseADROP>
-OperandLowering::mkBaseOP(const IR::Value &val,
-                          const std::shared_ptr<BaseADROP> &base,
-                          unsigned int add_offset) {
+std::shared_ptr<BaseADROP> OperandLowering::mkBaseOP(const IR::Value &val, const std::shared_ptr<BaseADROP> &base,
+                                                     unsigned int add_offset) {
 
     if (base->getTrait() == BaseAddressTrait::Global) {
-        auto ptr = std::make_shared<GlobalADROP>(
-            std::dynamic_pointer_cast<GlobalADROP>(base)->getGloName(),
-            val.getName(), base->getConstOffset() + add_offset,
-            base->getBase());
+        auto ptr = std::make_shared<GlobalADROP>(std::dynamic_pointer_cast<GlobalADROP>(base)->getGloName(),
+                                                 val.getName(), base->getConstOffset() + add_offset, base->getBase());
 
         varpool.addValue(val, ptr);
         return ptr;
     } else if (base->getTrait() == BaseAddressTrait::Local) {
-        auto ptr = std::make_shared<StackADROP>(
-            std::dynamic_pointer_cast<StackADROP>(base)->getObj(),
-            val.getName(), base->getConstOffset() + add_offset,
-            base->getBase());
+        auto ptr = std::make_shared<StackADROP>(std::dynamic_pointer_cast<StackADROP>(base)->getObj(), val.getName(),
+                                                base->getConstOffset() + add_offset, base->getBase());
 
         varpool.addValue(val, ptr);
         return ptr;
     } else {
-        auto ptr = std::make_shared<BaseADROP>(BaseAddressTrait::Runtime, val.getName(), base->getConstOffset() + add_offset, base->getBase());
+        auto ptr = std::make_shared<BaseADROP>(BaseAddressTrait::Runtime, val.getName(),
+                                               base->getConstOffset() + add_offset, base->getBase());
 
         varpool.addValue(val, ptr);
         return ptr;
@@ -385,15 +342,13 @@ std::shared_ptr<BaseADROP> OperandLowering::mkBaseOP(const IR::Value &val) {
     return ptr;
 }
 
-std::shared_ptr<StackADROP> OperandLowering::mkStackOP(const IR::Value &val,
-                                                       unsigned int size) {
+std::shared_ptr<StackADROP> OperandLowering::mkStackOP(const IR::Value &val, unsigned int size) {
     auto obj = std::make_shared<FrameObj>(FrameTrait::Alloca, size);
     StackObjs.emplace_back(obj);
 
     auto r7 = getPreColored(CoreRegister::r7);
 
-    std::shared_ptr<StackADROP> ptr =
-        std::make_shared<StackADROP>(obj, val.getName(), 0, r7);
+    std::shared_ptr<StackADROP> ptr = std::make_shared<StackADROP>(obj, val.getName(), 0, r7);
 
     varpool.addValue(val, ptr);
     return ptr;
@@ -405,8 +360,7 @@ std::shared_ptr<StackADROP> OperandLowering::mkStackOP(unsigned int seq) {
 
     auto sp = getPreColored(CoreRegister::sp);
 
-    std::shared_ptr<StackADROP> ptr = std::make_shared<StackADROP>(
-        obj, "%fix-stack." + std::to_string(seq - 4), 0, sp);
+    std::shared_ptr<StackADROP> ptr = std::make_shared<StackADROP>(obj, "%fix-stack." + std::to_string(seq - 4), 0, sp);
 
     return ptr;
 }
@@ -417,8 +371,7 @@ std::shared_ptr<StackADROP> OperandLowering::mkStackOP() {
 
     auto sp = getPreColored(CoreRegister::sp);
 
-    std::shared_ptr<StackADROP> ptr =
-        std::make_shared<StackADROP>(obj, "%spill-stack", 0, sp);
+    std::shared_ptr<StackADROP> ptr = std::make_shared<StackADROP>(obj, "%spill-stack", 0, sp);
 
     return ptr;
 }
