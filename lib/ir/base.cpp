@@ -64,6 +64,30 @@ bool Value::delUse(const std::shared_ptr<Use>& target) {
     return false;
 }
 
+User::const_iterator User::begin() const { return operands.begin(); }
+
+User::const_iterator User::end() const { return operands.end(); }
+
+User::iterator User::begin() { return operands.begin(); }
+
+User::iterator User::end() { return operands.end(); }
+
+User::const_iterator User::cbegin() const { return operands.cbegin(); }
+
+User::const_iterator User::cend() const { return operands.cend(); }
+
+User::const_reverse_iterator User::rbegin() const { return operands.rbegin(); }
+
+User::const_reverse_iterator User::rend() const { return operands.rend(); }
+
+User::reverse_iterator User::rbegin() { return operands.rbegin(); }
+
+User::reverse_iterator User::rend() { return operands.rend(); }
+
+User::const_reverse_iterator User::crbegin() const { return operands.crbegin(); }
+
+User::const_reverse_iterator User::crend() const { return operands.crend(); }
+
 User::~User() {
     for (const auto& curr : operands) {
         auto curr_val = curr->getValue();

@@ -253,7 +253,8 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(
             && std::dynamic_pointer_cast<ALLOCAInst>(ir_value)->isArray()))
         expr = std::make_shared<Expr>(ir_value, Expr::ExprOp::GlobalTemp);
     else {
-        // We avoid assigning ValueKinds to PHI operands here to prevent infinite recursion,
+        // When assigning ValueKinds to PHI, we do not consider
+        // its operands' ValueKinds to prevent infinite recursion,
         // since PHI nodes can cyclically reference themselves.
         // Besides, the ValueKind of PHI nodes isn't crucial at this stage because:
         // If an equivalent PHI already exists, but we assign it with a different ValueKind,
@@ -326,8 +327,7 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprFromPool(const std::shared_ptr
 // to the representation of it in the `pred` block.
 //
 // pred -------> succ
-// other_pred ---^// We avoid assigning ValueKinds to PHI operands here to prevent infinite recursion during numbering,
-// since PHI nodes can cyclically reference themselves.
+// other_pred ---^
 //
 // pred:
 //   %v1 = 1

@@ -96,6 +96,8 @@ public:
     bool isSimplifyForm() const;
     bool isRotatedForm() const;
 
+    bool isAllOperandsLoopInvariant(const Instruction* inst) const;
+
     bool delBlockForCurrLoop(const BasicBlock* bb);
     void addBlock(BasicBlock* bb);
     void moveToHeader(const BasicBlock* bb);

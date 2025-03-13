@@ -7,6 +7,7 @@
 #include "../../../../include/ir/instructions/memory.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
+#include "../../../../include/ir/passes/helpers/constant_fold.hpp"
 #include "../../../../include/ir/pattern_match.hpp"
 #include "../../../../include/pattern_match/pattern_match.hpp"
 
@@ -100,8 +101,13 @@ std::shared_ptr<BasicBlock> tryMergeLatchToExiting(const Loop &loop) {
     // Don't mess up the consecutive cmp and br for better codegen
     //   %cond = icmp ...
     //   br %cond ...
-    if (pred_br->getIndex() != 0)
-        moveInsts(latch->begin(), latch->end(), single_pred, std::prev(pred_br->getIter()));
+    if (auto cond_inst = std::dynamic_pointer_cast<Instruction>(pred_br->getCond())) {
+        if (cond_inst->getParent() == single_pred)
+            moveInsts(latch->begin(), latch->end(), single_pred, cond_inst->getIter());
+        else
+            Logger::logWarning("Cond '", cond_inst->getName(),
+                "' and BRInst are in separate block.");
+    }
     else
         moveInsts(latch->begin(), latch->end(), single_pred, pred_br->getIter());
 
@@ -423,6 +429,10 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
             auto cloned_ph_br = old_preheader->getBRInst();
             Err::gassert(cloned_ph_br->isConditional());
             bool preheader_br_is_conditional = true;
+            if (auto fold = foldConstant(function.getConstantPool(), cloned_ph_br->getCond())) {
+                if (fold != cloned_ph_br->getCond())
+                    cloned_ph_br->getCond()->replaceSelf(fold);
+            }
             if (auto ci1 = std::dynamic_pointer_cast<ConstantI1>(cloned_ph_br->getCond())) {
                 std::set<std::shared_ptr<PHIInst>> dead_phis;
                 if ((ci1 && cloned_ph_br->getTrueDest() == new_header) ||

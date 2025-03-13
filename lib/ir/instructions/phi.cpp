@@ -10,7 +10,7 @@ PHIInst::PHIInst(NameRef name, const std::shared_ptr<Type> &_type)
 std::shared_ptr<Value> PHIInst::getValueForBlock(const std::shared_ptr<BasicBlock> &block) const {
     if (block == nullptr)
         Err::error("PHIInst::getValueForBlock(): block is null.");
-    for (auto it = getOperands().begin(); it != getOperands().end(); ++it) {
+    for (auto it = begin(); it != end(); ++it) {
         ++it;
         if ((*it)->getValue() == block)
             return (*--it)->getValue();
@@ -20,7 +20,7 @@ std::shared_ptr<Value> PHIInst::getValueForBlock(const std::shared_ptr<BasicBloc
 }
 
 std::shared_ptr<BasicBlock> PHIInst::getBlockForValue(const std::shared_ptr<Use> &use) const {
-    for (auto it = getOperands().begin(); it != getOperands().end(); ++it) {
+    for (auto it = begin(); it != end(); ++it) {
         if (*it == use)
             return std::dynamic_pointer_cast<BasicBlock>((*++it)->getValue());
     }
@@ -35,7 +35,7 @@ void PHIInst::addPhiOper(const std::shared_ptr<Value> &val, const std::shared_pt
 
 std::vector<PHIInst::PhiOper> PHIInst::getPhiOpers() const {
     std::vector<PhiOper> ret;
-    for (auto it = getOperands().begin(); it != getOperands().end(); ++it) {
+    for (auto it = begin(); it != end(); ++it) {
         auto v = (*it)->getValue();
         auto b = std::dynamic_pointer_cast<BasicBlock>((*++it)->getValue());
         ret.emplace_back(v, b);

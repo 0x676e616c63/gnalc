@@ -95,7 +95,7 @@ std::shared_ptr<Value> GEPInst::getPtr() const {
 
 std::vector<std::shared_ptr<Value>> GEPInst::getIdxs() const {
     std::vector<std::shared_ptr<Value>> ret;
-    for (auto it = getOperands().begin() + 1; it != getOperands().end(); ++it)
+    for (auto it = begin() + 1; it != end(); ++it)
         ret.emplace_back((*it)->getValue());
     return ret;
 }

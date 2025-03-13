@@ -189,10 +189,11 @@ MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     fpm.addPass(IR::PromotePass());
-    fpm.addPass(IR::NameNormalizePass(true));
     fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::LoopRotatePass());
     fpm.addPass(IR::LCSSAPass());
     fpm.addPass(IR::NameNormalizePass(true));
+    fpm.addPass(IR::LICMPass());
     return fpm;
 }
 

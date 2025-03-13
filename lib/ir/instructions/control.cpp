@@ -156,7 +156,7 @@ std::shared_ptr<FunctionDecl> CALLInst::getFunc() const {
 
 std::vector<std::shared_ptr<Value>> CALLInst::getArgs() const {
     std::vector<std::shared_ptr<Value>> ret;
-    for (auto it = getOperands().begin() + 1; it != getOperands().end(); ++it)
+    for (auto it = begin() + 1; it != end(); ++it)
         ret.emplace_back((*it)->getValue());
     return ret;
 }

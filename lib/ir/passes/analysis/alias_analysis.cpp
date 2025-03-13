@@ -40,7 +40,7 @@ AliasAnalysisResult::PtrInfo AliasAnalysisResult::getPtrInfo(const Value *ptr) c
     }
 
     auto it = ptr_info.find(ptr);
-    Err::gassert(it != ptr_info.end());
+    Err::gassert(it != ptr_info.end(), "No such pointer registered.");
     return it->second;
 }
 
@@ -243,6 +243,13 @@ ModRefInfo AliasAnalysisResult::getFunctionModRefInfo() const {
 }
 bool AliasAnalysisResult::hasUntrackedCall() const { return has_untracked_call; }
 bool AliasAnalysisResult::hasSylibCall() const { return has_sylib_call; }
+
+void AliasAnalysisResult::addClonedInst(const Instruction *inst, const Instruction *cloned) {
+    Err::gassert(cloned->getParent() == inst->getParent() &&
+        inst->getParent()->getParent().get() == func);
+    Err::gassert(ptr_info.count(cloned), "No such instruction registered.");
+    ptr_info[cloned] = ptr_info[inst];
+}
 
 AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
     AliasAnalysisResult res;

@@ -150,6 +150,15 @@ bool Loop::isRotatedForm() const {
     return latch && isExiting(latch);
 }
 
+bool Loop::isAllOperandsLoopInvariant(const Instruction *inst) const {
+    return std::all_of(inst->begin(), inst->end(),
+        [this](const auto& use) {
+            if (auto inst = std::dynamic_pointer_cast<Instruction>(use->getValue()))
+                return !contains(inst->getParent().get());
+            return true;
+        });
+}
+
 bool Loop::delBlockForCurrLoop(const BasicBlock *bb) {
     auto it = std::find(blocks.begin(), blocks.end(), bb);
     if (it == blocks.end())

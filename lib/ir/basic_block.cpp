@@ -77,10 +77,11 @@ void BasicBlock::addInstAfterPhi(const std::shared_ptr<Instruction> &inst) {
     updateInstIndex();
 }
 
+// FIXME: add it before BRInst's cond.
 void BasicBlock::addInstBeforeTerminator(const std::shared_ptr<Instruction> &inst) {
     Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
     Err::gassert(inst->getOpcode() != OP::PHI, "Do not add a phi via addInstBeforeTerminator. Use addPhiInst instead.");
-    auto term = insts.back();
+    auto term = getTerminator();
     Err::gassert(term->getOpcode() == OP::BR || term->getOpcode() == OP::RET);
     term->index = phi_insts.size() + insts.size();
     inst->index = term->index - 1;

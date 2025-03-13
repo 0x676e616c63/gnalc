@@ -188,6 +188,25 @@ private:
     std::vector<std::shared_ptr<Use>> operands;
 
 public:
+    using iterator = decltype(operands)::iterator;
+    using const_iterator = decltype(operands)::const_iterator;
+    using reverse_iterator = decltype(operands)::reverse_iterator;
+    using const_reverse_iterator = decltype(operands)::const_reverse_iterator;
+
+    const_iterator begin() const;
+    const_iterator end() const;
+    iterator begin();
+    iterator end();
+    const_iterator cbegin() const;
+    const_iterator cend() const;
+
+    const_reverse_iterator rbegin() const;
+    const_reverse_iterator rend() const;
+    reverse_iterator rbegin();
+    reverse_iterator rend();
+    const_reverse_iterator crbegin() const;
+    const_reverse_iterator crend() const;
+
     User() = delete;
     ~User() override;
 
