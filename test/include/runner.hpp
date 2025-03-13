@@ -145,11 +145,17 @@ struct Rule {
 using RunSet = std::vector<Rule>;
 using SkipSet = std::vector<Rule>;
 inline std::vector<std::filesystem::directory_entry>
-gather_test_files(const std::string &curr_test_dir, RunSet &run, SkipSet &skip) {
+gather_test_files(const std::string &curr_test_dir, RunSet &run, SkipSet &skip, const std::string& resume) {
     std::vector<std::filesystem::directory_entry> test_files;
 
-    for (const auto &p :
-         std::filesystem::directory_iterator(cfg::test_data + "/" + curr_test_dir)) {
+    auto dit = std::filesystem::directory_iterator(cfg::test_data + "/" + curr_test_dir);
+    auto it = begin(dit);
+    if (!resume.empty()) {
+        while (it != end(dit) && !begins_with(it->path().stem().string(), resume))
+            ++it;
+    }
+    for (; it != end(dit); ++it) {
+        const auto& p = *it;
         if (p.is_regular_file() && p.path().extension() == ".sy") {
             bool need_run = true;
 
@@ -182,7 +188,9 @@ gather_test_files(const std::string &curr_test_dir, RunSet &run, SkipSet &skip) 
     return test_files;
 }
 
-inline void print_run_skip_status(const RunSet& run, const SkipSet& skip) {
+inline void print_run_skip_status(const RunSet& run, const SkipSet& skip, const std::string& resume) {
+    if (!resume.empty())
+        println("Resumed from {}.", resume);
     if (!skip.empty()) {
         std::vector<std::string> skipped_tests;
         for (auto &&r : skip)

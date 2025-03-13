@@ -16,18 +16,17 @@ int main(int argc, char *argv[]) {
     auto print_help = [&argv] {
         println("Usage: {} [options]", argv[0]);
         println("Options:");
-        println("  -a, --all                : Run all tests, regardless of "
-                "failure.");
-        println("  -b, --backend            : Test backend.");
-        println("  -s, --skip [name_prefix] : Skip test whose name has such "
-                "prefix.");
-        println("  -r, --run  [name_prefix] : Only run test whose name has "
-                "such prefix.");
-        println("  -p, --para [param]       : Run with gnalc parameter.");
-        println("  -h, --help               : Print this help and exit.");
+        println("  -a, --all                  Run all tests, regardless of failure.");
+        println("  -b, --backend              Test backend.");
+        println("  -s, --skip   [name_prefix] Skip test whose name has such prefix.");
+        println("  -r, --run    [name_prefix] Only run test whose name has such prefix.");
+        println("  -e, --resume [name_prefix] Start from test whose name have such prefix.");
+        println("  -p, --para [param]         Run with gnalc parameter.");
+        println("  -h, --help                 Print this help and exit.");
     };
     RunSet skip;
     SkipSet run;
+    std::string resume;
     std::string gnalc_params;
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
@@ -59,6 +58,14 @@ int main(int argc, char *argv[]) {
             }
             run.emplace_back(Rule{argv[i + 1], {}});
             ++i;
+        } else if (arg == "--resume" || arg == "-e") {
+            if (i + 1 >= argc || argv[i + 1][0] == '-') {
+                println("Error: Expected a name.");
+                print_help();
+                return -1;
+            }
+            resume = argv[i + 1];
+            ++i;
         } else if (arg == "--help" || arg == "-h") {
             print_help();
             return 0;
@@ -81,7 +88,7 @@ int main(int argc, char *argv[]) {
     std::string sylib_to_link = prepare_sylib(cfg::global_temp_dir); // .ll or .a
 
     for (auto &&curr_test_dir : cfg::subdirs) {
-        auto test_files = gather_test_files(curr_test_dir, run, skip);
+        auto test_files = gather_test_files(curr_test_dir, run, skip, resume);
 
         auto curr_temp_dir = cfg::global_temp_dir + "/" + curr_test_dir;
         create_directories(curr_temp_dir);
@@ -144,7 +151,7 @@ int main(int argc, char *argv[]) {
 finish:
     println("Finished running {} tests.", curr_test_cnt);
 
-    print_run_skip_status(run, skip);
+    print_run_skip_status(run, skip, resume);
 
     if (failed_tests.empty()) {
         println("[\033[0;32;32mTEST PASSED\033[m] {} tests passed!", passed);
