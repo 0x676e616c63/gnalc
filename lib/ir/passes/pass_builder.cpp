@@ -202,7 +202,7 @@ MPM PassBuilder::buildModuleDebugPipeline() {
     return mpm;
 }
 
-FPM PassBuilder::buildFunctionFuzzTestingPipeline(const std::string& repro) {
+FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const std::string& repro) {
     FPM fpm;
     fpm.addPass(PromotePass());
     fpm.addPass(TailRecursionEliminationPass());
@@ -245,7 +245,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(const std::string& repro) {
         std::uniform_int_distribution<size_t> distrib(0, passes.size() - 1);
 
         // Duplicate some passes
-        auto duplicating_times = passes.size();
+        auto duplicating_times = static_cast<size_t>(static_cast<double>(passes.size()) * duplication_rate);
         for (size_t i = 0; i < duplicating_times; ++i)
             passes.emplace_back(passes[distrib(gen)]);
 
@@ -313,9 +313,9 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(const std::string& repro) {
     return fpm;
 }
 
-MPM PassBuilder::buildModuleFuzzTestingPipeline(const std::string& repro) {
+MPM PassBuilder::buildModuleFuzzTestingPipeline(double duplication_rate, const std::string& repro) {
     MPM mpm;
-    mpm.addPass(makeModulePass(buildFunctionFuzzTestingPipeline(repro)));
+    mpm.addPass(makeModulePass(buildFunctionFuzzTestingPipeline(duplication_rate, repro)));
     // Disable Treeshaking in Repro mode for debugging
     if (repro.empty())
         mpm.addPass(TreeShakingPass());

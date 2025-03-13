@@ -1,6 +1,7 @@
 #include "../../../../include/ir/passes/transforms/gvn_pre.hpp"
 
 #include "../../../../include/config/config.hpp"
+#include "../../../../include/ir/block_utils.hpp"
 #include "../../../../include/ir/instructions/binary.hpp"
 #include "../../../../include/ir/instructions/compare.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
@@ -252,6 +253,12 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(
             && std::dynamic_pointer_cast<ALLOCAInst>(ir_value)->isArray()))
         expr = std::make_shared<Expr>(ir_value, Expr::ExprOp::GlobalTemp);
     else {
+        // We avoid assigning ValueKinds to PHI operands here to prevent infinite recursion,
+        // since PHI nodes can cyclically reference themselves.
+        // Besides, the ValueKind of PHI nodes isn't crucial at this stage because:
+        // If an equivalent PHI already exists, but we assign it with a different ValueKind,
+        // we'll simply insert an equivalent PHI node during the insertion phase.
+        // And any redundant PHIs will be eliminated during the subsequent cleanup.
         if (auto phi = std::dynamic_pointer_cast<PHIInst>(ir_value)) {
             expr = std::make_shared<Expr>(phi, Expr::ExprOp::Phi);
             is_phi = true;
@@ -319,7 +326,8 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprFromPool(const std::shared_ptr
 // to the representation of it in the `pred` block.
 //
 // pred -------> succ
-// other_pred ---^
+// other_pred ---^// We avoid assigning ValueKinds to PHI operands here to prevent infinite recursion during numbering,
+// since PHI nodes can cyclically reference themselves.
 //
 // pred:
 //   %v1 = 1
@@ -464,7 +472,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
         Logger::logInfo("[GVN-PRE]: Skipped '", function.getName(),
             "', too many blocks (", function.getBlocks().size(),
             "). Continuing it will cause a terrible compile time.");
-        return PM::PreservedAnalyses::all();
+        return PreserveAll();
     }
 
     bool gvnpre_inst_modified = false;
@@ -503,7 +511,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
 
                 if (table.should_quit_for_too_deeply_nested_expr()) {
                     reset();
-                    return PM::PreservedAnalyses::all();
+                    return PreserveAll();
                 }
             }
         }
@@ -695,7 +703,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                     // If the expression is available in at all predecessors,
                     // then we only insert a phi.
                     if (avail_at_least_one) {
-                        auto phi = std::make_shared<PHIInst>("%gvnpre.p" + std::to_string(name_cnt),
+                        auto phi = std::make_shared<PHIInst>("%gvnpre.p" + std::to_string(name_cnt++),
                             expr_to_hoist->getIRVal()->getType());
                         for (const auto& pred : preds) {
                             auto [avail, hoisted_kind, hoisted_ir_val] = translated[pred.get()];
@@ -809,27 +817,11 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
 
 
     // After replacing, the phi might end up unused or having the same value for all predecessors.
-    // If so, eliminate it.
-    for (const auto& bb : function) {
-        for (const auto& phi : bb->getPhiInsts()) {
-            if (phi->getUseList().empty()) {
-                eliminated.emplace(phi);
-                continue;
-            }
-
-            auto phi_opers = phi->getPhiOpers();
-            std::shared_ptr<Value> common_value = phi_opers[0].value;
-            for (const auto& [v, b] : phi_opers) {
-                if (common_value != v) {
-                    common_value = nullptr;
-                    break;
-                }
-            }
-            if (common_value != nullptr) {
-                phi->replaceSelf(common_value);
-                eliminated.emplace(phi);
-            }
-        }
+    // Do this in a Reverse Post Order because phi can be in a cycle.
+    auto rpodfv = function.getDFVisitor<Util::DFVOrder::ReversePostOrder>();
+    for (const auto& bb : rpodfv) {
+        foldPHI(bb);
+        removeIdenticalPhi(bb);
     }
 
     for (const auto& bb : function) {

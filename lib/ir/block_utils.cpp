@@ -4,6 +4,7 @@
 
 #include <list>
 #include <utility>
+#include <algorithm>
 
 namespace IR {
 void linkBB(const std::shared_ptr<BasicBlock> &prebb,
@@ -138,6 +139,10 @@ void moveBlocks(FunctionBBIter beg, FunctionBBIter end,
 void foldPHI(const std::shared_ptr<BasicBlock> &bb, bool preserve_lcssa) {
     std::set<std::shared_ptr<Instruction>> dead_phis;
     for (const auto& phi : bb->getPhiInsts()) {
+        if (phi->getUseCount() == 0) {
+            dead_phis.emplace(phi);
+            continue;
+        }
         auto phi_opers = phi->getPhiOpers();
         Err::gassert(!phi_opers.empty());
         if (preserve_lcssa && phi_opers.size() == 1)
@@ -155,6 +160,33 @@ void foldPHI(const std::shared_ptr<BasicBlock> &bb, bool preserve_lcssa) {
             else {
                 phi->replaceSelf(common_value);
                 dead_phis.emplace(phi);
+            }
+        }
+    }
+    bb->delInstIf([&dead_phis](const auto& inst) {
+        return dead_phis.find(inst) != dead_phis.end();
+    }, BasicBlock::DEL_MODE::PHI);
+}
+
+void removeIdenticalPhi(const std::shared_ptr<BasicBlock> &bb) {
+    using ValBBPair = std::pair<std::shared_ptr<Value>, std::shared_ptr<BasicBlock>>;
+    std::vector<std::pair<std::shared_ptr<PHIInst>, std::vector<ValBBPair>>> phi_info;
+    for (const auto& phi : bb->getPhiInsts()) {
+        phi_info.emplace_back(phi, std::vector<ValBBPair>{});
+        auto phi_opers = phi->getPhiOpers();
+        for (const auto& [v, b] : phi_opers)
+            phi_info.back().second.emplace_back(v, b);
+        std::sort(phi_info.back().second.begin(), phi_info.back().second.end());
+    }
+
+    std::set<std::shared_ptr<Instruction>> dead_phis;
+    for (size_t i = 0; i < phi_info.size(); ++i) {
+        if (dead_phis.count(phi_info[i].first))
+            continue;
+        for (size_t j = i + 1; j < phi_info.size(); ++j) {
+            if (phi_info[i].second == phi_info[j].second) {
+                phi_info[j].first->replaceSelf(phi_info[i].first);
+                dead_phis.emplace(phi_info[j].first);
             }
         }
     }

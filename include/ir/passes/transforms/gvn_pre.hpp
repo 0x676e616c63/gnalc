@@ -1,4 +1,4 @@
-// Implementation of GVN-PRE
+// GVN-PRE
 //
 // Note:
 //       In our IR implementation, values, registers, and instructions form equivalent entities
