@@ -51,9 +51,8 @@ bool isSafeToMove(const std::shared_ptr<Loop> &loop, const std::shared_ptr<Instr
 
 bool noUseInLoop(const std::shared_ptr<Loop> &loop, const std::shared_ptr<Instruction> &inst) {
     Err::gassert(loop->contains(inst->getParent().get()), "The instruction is not defined in the loop.");
-    auto use_list = inst->getUseList();
-    return std::all_of(use_list.begin(), use_list.end(), [&loop](const auto &use) {
-        auto user_inst = std::dynamic_pointer_cast<Instruction>(use->getUser());
+    return std::all_of(inst->user_begin(), inst->user_end(), [&loop](const auto &user) {
+        auto user_inst = std::dynamic_pointer_cast<Instruction>(user);
         return !loop->contains(user_inst->getParent().get());
     });
 }
@@ -99,7 +98,8 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                             for (const auto& exit : exits) {
                                 if (domtree.ADomB(bb, exit)) {
                                     auto sunk = makeClone(inst);
-                                    aa_res.addClonedInst(inst.get(), sunk.get());
+                                    if (inst->getType()->getTrait() == IRCTYPE::PTR)
+                                        aa_res.addClonedInst(inst.get(), sunk.get());
                                     sunk->setName(inst->getName() + ".licm.s" + std::to_string(name_cnt++));
                                     exit->addInstAfterPhi(sunk);
                                     sunk_insts[exit] = sunk;
@@ -110,17 +110,16 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                             if (sunk_insts.empty())
                                 continue;
 
-                            auto use_list = inst->getUseList();
-                            for (const auto &use : use_list) {
-                                auto user_inst = std::dynamic_pointer_cast<Instruction>(use->getUser());
+                            for (const auto &user : inst->users()) {
+                                auto user_inst = std::dynamic_pointer_cast<Instruction>(user);
                                 if (loop->contains(user_inst->getParent().get()))
                                     continue;
 
                                 // Outside Loop Use
                                 auto phi = std::dynamic_pointer_cast<PHIInst>(user_inst);
+                                Err::gassert(phi != nullptr, "Expected LCSSA in LICM.");
                                 auto exit_block = phi->getParent();
-
-                                Err::gassert(phi != nullptr && loop->isExit(exit_block.get()),
+                                Err::gassert(loop->isExit(exit_block.get()),
                                              "Expected LCSSA in LICM.");
 
                                 const auto& sunk = sunk_insts[exit_block.get()];

@@ -148,43 +148,49 @@ inline std::vector<std::filesystem::directory_entry>
 gather_test_files(const std::string &curr_test_dir, RunSet &run, SkipSet &skip, const std::string& resume) {
     std::vector<std::filesystem::directory_entry> test_files;
 
-    auto dit = std::filesystem::directory_iterator(cfg::test_data + "/" + curr_test_dir);
-    auto it = begin(dit);
+    std::vector<std::filesystem::directory_entry> all_files;
+    for (auto& entry : std::filesystem::directory_iterator(cfg::test_data + "/" + curr_test_dir)) {
+        if (entry.is_regular_file() && entry.path().extension() == ".sy")
+            all_files.emplace_back(entry);
+    }
+    std::sort(all_files.begin(), all_files.end(), [](const auto& a, const auto& b) {
+        return a.path().stem().string() < b.path().stem().string();
+    });
+
+    auto it = all_files.begin();
     if (!resume.empty()) {
-        while (it != end(dit) && !begins_with(it->path().stem().string(), resume))
+        while (it != all_files.end() && !begins_with(it->path().stem().string(), resume))
             ++it;
     }
-    for (; it != end(dit); ++it) {
+    for (; it != all_files.end(); ++it) {
         const auto& p = *it;
-        if (p.is_regular_file() && p.path().extension() == ".sy") {
-            bool need_run = true;
 
-            if (skip.empty() && !run.empty()) {
-                need_run = false;
-                for (auto &&rule : run) {
-                    if (begins_with(p.path().stem().string(), rule.pattern)) {
-                        need_run = true;
-                        rule.matched_results.emplace_back(p.path().string());
-                        break;
-                    }
-                }
-            } else if (!skip.empty() && run.empty()) {
-                need_run = true;
-                for (auto &&rule : skip) {
-                    if (begins_with(p.path().stem().string(), rule.pattern)) {
-                        need_run = false;
-                        rule.matched_results.emplace_back(p.path().string());
-                        break;
-                    }
+        bool need_run = true;
+
+        if (skip.empty() && !run.empty()) {
+            need_run = false;
+            for (auto &&rule : run) {
+                if (begins_with(p.path().stem().string(), rule.pattern)) {
+                    need_run = true;
+                    rule.matched_results.emplace_back(p.path().string());
+                    break;
                 }
             }
-
-            if (need_run)
-                test_files.emplace_back(p);
+        } else if (!skip.empty() && run.empty()) {
+            need_run = true;
+            for (auto &&rule : skip) {
+                if (begins_with(p.path().stem().string(), rule.pattern)) {
+                    need_run = false;
+                    rule.matched_results.emplace_back(p.path().string());
+                    break;
+                }
+            }
         }
+
+        if (need_run)
+            test_files.emplace_back(p);
     }
 
-    std::sort(test_files.begin(), test_files.end());
     return test_files;
 }
 

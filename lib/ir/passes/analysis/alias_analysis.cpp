@@ -245,9 +245,7 @@ bool AliasAnalysisResult::hasUntrackedCall() const { return has_untracked_call; 
 bool AliasAnalysisResult::hasSylibCall() const { return has_sylib_call; }
 
 void AliasAnalysisResult::addClonedInst(const Instruction *inst, const Instruction *cloned) {
-    Err::gassert(cloned->getParent() == inst->getParent() &&
-        inst->getParent()->getParent().get() == func);
-    Err::gassert(ptr_info.count(cloned), "No such instruction registered.");
+    Err::gassert(ptr_info.count(inst), "No such instruction registered.");
     ptr_info[cloned] = ptr_info[inst];
 }
 

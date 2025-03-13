@@ -32,6 +32,18 @@ struct remove_cvref
 template <typename T>
 using remove_cvref_t = typename remove_cvref<T>::type;
 
+template <typename T>
+struct make_iterator_range {
+    make_iterator_range(const T& begin, const T& end) : begin_it(begin), end_it(end) {}
+
+    auto begin() const { return begin_it; }
+    auto end() const { return end_it; }
+
+private:
+    T const& begin_it;
+    T const& end_it;
+};
+
 // C++20's source_location may be better.
 template <typename getTypeNameArgument>
 std::string_view getTypeName() {

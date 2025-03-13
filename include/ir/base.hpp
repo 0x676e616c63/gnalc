@@ -19,11 +19,13 @@
 
 #include <list>
 #include <set>
+#include <iterator>
 
 #include <cinttypes>
 #include <cstdint>
 
 #include "type.hpp"
+#include "../utils/misc.hpp"
 
 namespace IR {
 class Value;
@@ -81,6 +83,7 @@ enum class ValueTrait {
 // 但是 weak_ptr<Use> 确实也没啥大问题，而且还能避免 User 忘记删除 Value 的 use_list，
 // 因为这样会导致该 weak_ptr<Use> expired。
 // 所以暂时不改也没问题。
+//
 
 class Value : public NameC {
     friend class User;
@@ -131,6 +134,38 @@ public:
     ValueTrait getVTrait() const { return trait; }
 
     size_t getUseCount() const;
+
+    class UserIterator {
+    private:
+        using InnerIterT = decltype(use_list)::const_iterator;
+        InnerIterT iter;
+    public:
+        using difference_type = InnerIterT::difference_type;
+        using value_type = std::shared_ptr<User>;
+        using pointer = std::shared_ptr<User>*;
+        using reference = std::shared_ptr<User>&;
+        using iterator_category = InnerIterT::iterator_category;
+
+        explicit UserIterator(InnerIterT iter_);
+
+        UserIterator &operator++();
+        UserIterator operator++(int);
+        UserIterator &operator--();
+        UserIterator operator--(int);
+
+        bool operator==(UserIterator other) const;
+        bool operator!=(UserIterator other) const;
+        std::shared_ptr<User> operator*() const;
+    };
+
+    UserIterator user_begin() const;
+    UserIterator user_end() const;
+
+    auto users() const {
+        return Util::make_iterator_range(user_begin(), user_end());
+    }
+
+    std::shared_ptr<User> getSingleUser() const;
 
 private:
     // PRIVATE because we want to ensure use is only modified by User.
@@ -185,27 +220,57 @@ class User : public Value, public std::enable_shared_from_this<User> {
 private:
     // operands 设为 private, 防止子类误用，因为删除 operand 需要处理 use 关系
     // operands 里的 Use 中的 val 是实际的操作数
-    std::vector<std::shared_ptr<Use>> operands;
+    std::vector<std::shared_ptr<Use>> operand_uses;
 
 public:
-    using iterator = decltype(operands)::iterator;
-    using const_iterator = decltype(operands)::const_iterator;
-    using reverse_iterator = decltype(operands)::reverse_iterator;
-    using const_reverse_iterator = decltype(operands)::const_reverse_iterator;
+    using UseIterator = decltype(operand_uses)::const_iterator;
+    UseIterator use_begin() const;
+    UseIterator use_end() const;
 
-    const_iterator begin() const;
-    const_iterator end() const;
-    iterator begin();
-    iterator end();
-    const_iterator cbegin() const;
-    const_iterator cend() const;
+    auto uses() const {
+        return Util::make_iterator_range(use_begin(), use_end());
+    }
 
-    const_reverse_iterator rbegin() const;
-    const_reverse_iterator rend() const;
-    reverse_iterator rbegin();
-    reverse_iterator rend();
-    const_reverse_iterator crbegin() const;
-    const_reverse_iterator crend() const;
+    class OperandIterator {
+    private:
+        using InnerIterT = decltype(operand_uses)::const_iterator;
+        InnerIterT iter;
+
+    public:
+        using difference_type = InnerIterT::difference_type;
+        using value_type = std::shared_ptr<Value>;
+        using pointer = std::shared_ptr<Value>*;
+        using reference = std::shared_ptr<Value>&;
+        using iterator_category = InnerIterT::iterator_category;
+
+        explicit OperandIterator(InnerIterT iter_);
+
+        OperandIterator &operator++();
+        OperandIterator operator++(int);
+        OperandIterator &operator--();
+        OperandIterator operator--(int);
+
+        OperandIterator& operator+=(difference_type n);
+        OperandIterator& operator-=(difference_type n);
+        OperandIterator operator+(difference_type n) const;
+        OperandIterator operator-(difference_type n) const;
+        bool operator<(OperandIterator other) const;
+        bool operator>(OperandIterator other) const;
+        bool operator<=(OperandIterator other) const;
+        bool operator>=(OperandIterator other) const;
+        difference_type operator-(OperandIterator other) const;
+
+        bool operator==(OperandIterator other) const;
+        bool operator!=(OperandIterator other) const;
+        std::shared_ptr<Value> operator*() const;
+    };
+
+    OperandIterator operand_begin() const;
+    OperandIterator operand_end() const;
+
+    auto operands() const {
+        return Util::make_iterator_range(operand_begin(), operand_end());
+    }
 
     User() = delete;
     ~User() override;
@@ -218,13 +283,12 @@ public:
     // functions unless the intent is to perform such operations in a generic manner.
     const std::vector<std::shared_ptr<Use>> &getOperands() const;
     const std::shared_ptr<Use> &getOperand(size_t index) const;
-    void setOperand(size_t index, const std::shared_ptr<Value>& val);
+    void setOperand(size_t index, const std::shared_ptr<Value> &val);
     void swapOperand(size_t a, size_t b);
 
     bool replaceOperand(const std::shared_ptr<Value> &before, const std::shared_ptr<Value> &after);
 
     size_t getNumOperands() const;
-
 
     // Note:
     // Replace Use shouldn't compare Use's user/value.
@@ -234,8 +298,7 @@ public:
     // If we only care about Use's user/value, we might end up with:
     //              %0 operands: <use0: %a> <use1: %b>
     //              %b use_list:  <use2: %0>
-    bool replaceUse(const std::shared_ptr<Use> &old_use,
-                    const std::shared_ptr<Value> &new_use);
+    bool replaceUse(const std::shared_ptr<Use> &old_use, const std::shared_ptr<Value> &new_use);
 
 protected:
     void addOperand(const std::shared_ptr<Value> &v);
@@ -248,17 +311,16 @@ protected:
     // Returns true if deleted.
     template <typename Pred> bool delOperandIf(Pred pred) {
         bool found = false;
-        for (auto it = operands.begin(); it != operands.end();) {
+        for (auto it = operand_uses.begin(); it != operand_uses.end();) {
             auto curr_val = (*it)->getValue();
             // `curr_val` can be nullptr if the operands have been destroyed,
             // but that shouldn't happen when the User is alive.
             // But in `~User()`, that is ok.
-            Err::gassert(curr_val != nullptr,
-                "User's operands has been destroyed unexpectedly.");
+            Err::gassert(curr_val != nullptr, "User's operands has been destroyed unexpectedly.");
             if (pred(curr_val)) {
                 auto ok = curr_val->delUse(*it);
                 Err::gassert(ok);
-                it = operands.erase(it);
+                it = operand_uses.erase(it);
                 found = true;
             } else {
                 ++it;

@@ -156,8 +156,8 @@ std::shared_ptr<FunctionDecl> CALLInst::getFunc() const {
 
 std::vector<std::shared_ptr<Value>> CALLInst::getArgs() const {
     std::vector<std::shared_ptr<Value>> ret;
-    for (auto it = begin() + 1; it != end(); ++it)
-        ret.emplace_back((*it)->getValue());
+    for (auto it = operand_begin() + 1; it != operand_end(); ++it)
+        ret.emplace_back(*it);
     return ret;
 }
 
@@ -168,8 +168,6 @@ void CALLInst::setTailCall() {
 bool CALLInst::isTailCall() const {
     return is_tail_call;
 }
-
-
 
 void RETInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
 

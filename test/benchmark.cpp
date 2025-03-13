@@ -323,6 +323,8 @@ int main(int argc, char *argv[]) {
 
     for (auto &&curr_test_dir : cfg::benchmark_subdirs) {
         auto test_files = gather_test_files(curr_test_dir, run, skip, resume);
+        if (test_files.empty())
+            continue;
 
         auto curr_temp_dir = cfg::global_benchmark_temp_dir + "/" + curr_test_dir;
         create_directories(curr_temp_dir);

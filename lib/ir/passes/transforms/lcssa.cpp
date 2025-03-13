@@ -74,8 +74,7 @@ PM::PreservedAnalyses LCSSAPass::run(Function &function, FAM &fam) {
                     if (inst->getUseCount() == 0)
                         continue;
                     // If this inst is only used in the block, skip it.
-                    if (inst->getUseCount() == 1) {
-                        auto single_user = inst->getUseList().back()->getUser();
+                    if (auto single_user = inst->getSingleUser()) {
                         auto single_user_inst = std::dynamic_pointer_cast<Instruction>(single_user);
                         if (single_user_inst->getOpcode() != OP::PHI &&
                             single_user_inst->getParent().get() == candidate) {

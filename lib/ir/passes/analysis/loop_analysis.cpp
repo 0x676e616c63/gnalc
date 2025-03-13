@@ -151,9 +151,9 @@ bool Loop::isRotatedForm() const {
 }
 
 bool Loop::isAllOperandsLoopInvariant(const Instruction *inst) const {
-    return std::all_of(inst->begin(), inst->end(),
-        [this](const auto& use) {
-            if (auto inst = std::dynamic_pointer_cast<Instruction>(use->getValue()))
+    return std::all_of(inst->operand_begin(), inst->operand_end(),
+        [this](const auto& val) {
+            if (auto inst = std::dynamic_pointer_cast<Instruction>(val))
                 return !contains(inst->getParent().get());
             return true;
         });

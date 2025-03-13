@@ -512,17 +512,16 @@ void ReassociatePass::optInst(const std::shared_ptr<Instruction> &raw_inst) {
 
     // If this is a node of a tree, ignore it until we get the root.
     auto opcode = binary->getOpcode();
-    if (binary->getUseCount() == 1) {
-        auto lastUser = std::dynamic_pointer_cast<Instruction>
-            (binary->getUseList().back()->getUser());
-        Err::gassert(lastUser != nullptr);
-        if (lastUser->getOpcode() == opcode) {
-            if (lastUser != binary && binary->getParent() == lastUser->getParent())
-                redoSet.insert(lastUser);
+    if (auto single_user = binary->getSingleUser()) {
+        auto user_inst = std::dynamic_pointer_cast<Instruction>(single_user);
+        Err::gassert(user_inst != nullptr);
+        if (user_inst->getOpcode() == opcode) {
+            if (user_inst != binary && binary->getParent() == user_inst->getParent())
+                redoSet.insert(user_inst);
             return;
         }
 
-    if (binary->getOpcode() == OP::ADD && lastUser->getOpcode() == OP::SUB)
+    if (binary->getOpcode() == OP::ADD && user_inst->getOpcode() == OP::SUB)
         return;
     }
 

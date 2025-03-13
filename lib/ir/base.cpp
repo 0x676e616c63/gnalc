@@ -23,6 +23,47 @@ size_t Value::getUseCount() const {
     // So just get the size.
     return use_list.size();
 }
+Value::UserIterator::UserIterator(InnerIterT iter_)
+  : iter(iter_) {}
+
+Value::UserIterator &Value::UserIterator::operator++() {
+    ++iter;
+    return *this;
+}
+Value::UserIterator Value::UserIterator::operator++(int) {
+    UserIterator ret{*this};
+    ++iter;
+    return ret;
+}
+
+Value::UserIterator &Value::UserIterator::operator--() {
+    --iter;
+    return *this;
+}
+Value::UserIterator Value::UserIterator::operator--(int) {
+    UserIterator ret{*this};
+    --iter;
+    return ret;
+}
+
+bool Value::UserIterator::operator==(UserIterator other) const {
+    return iter == other.iter;
+}
+bool Value::UserIterator::operator!=(UserIterator other) const {
+    return iter != other.iter;
+}
+std::shared_ptr<User> Value::UserIterator::operator*() const { return iter->lock()->getUser(); }
+
+Value::UserIterator Value::user_begin() const {
+    return UserIterator{use_list.begin()};
+}
+Value::UserIterator Value::user_end() const { return UserIterator{use_list.end()}; }
+
+std::shared_ptr<User> Value::getSingleUser() const {
+    if (use_list.size() != 1)
+        return nullptr;
+    return use_list.begin()->lock()->getUser();
+}
 
 void Value::addUse(const std::weak_ptr<Use> &use) {
     Err::gassert(!use.expired());
@@ -64,32 +105,78 @@ bool Value::delUse(const std::shared_ptr<Use>& target) {
     return false;
 }
 
-User::const_iterator User::begin() const { return operands.begin(); }
+User::UseIterator User::use_begin() const { return operand_uses.begin(); }
 
-User::const_iterator User::end() const { return operands.end(); }
+User::UseIterator User::use_end() const { return operand_uses.end(); }
 
-User::iterator User::begin() { return operands.begin(); }
+User::OperandIterator::OperandIterator(InnerIterT iter_)
+  : iter(iter_) {}
 
-User::iterator User::end() { return operands.end(); }
+User::OperandIterator &User::OperandIterator::operator++() {
+    ++iter;
+    return *this;
+}
+User::OperandIterator User::OperandIterator::operator++(int) {
+    OperandIterator ret{*this};
+    ++iter;
+    return ret;
+}
 
-User::const_iterator User::cbegin() const { return operands.cbegin(); }
+User::OperandIterator &User::OperandIterator::operator--() {
+    --iter;
+    return *this;
+}
+User::OperandIterator User::OperandIterator::operator--(int) {
+    OperandIterator ret{*this};
+    --iter;
+    return ret;
+}
 
-User::const_iterator User::cend() const { return operands.cend(); }
+User::OperandIterator& User::OperandIterator::operator+=(difference_type n) {
+    iter += n;
+    return *this;
+}
+User::OperandIterator& User::OperandIterator::operator-=(difference_type n) {
+    iter -= n;
+    return *this;
+}
+bool User::OperandIterator::operator<(OperandIterator other) const {
+    return iter < other.iter;
+}
+bool User::OperandIterator::operator>(OperandIterator other) const {
+    return iter > other.iter;
+}
+bool User::OperandIterator::operator<=(OperandIterator other) const {
+    return iter <= other.iter;
+}
+bool User::OperandIterator::operator>=(OperandIterator other) const { return iter >= other.iter; }
 
-User::const_reverse_iterator User::rbegin() const { return operands.rbegin(); }
+User::OperandIterator::difference_type User::OperandIterator::operator-(OperandIterator other) const {
+    return iter - other.iter;
+}
 
-User::const_reverse_iterator User::rend() const { return operands.rend(); }
+User::OperandIterator User::OperandIterator::operator+(difference_type n) const {
+    return OperandIterator{iter + n};
+}
+User::OperandIterator User::OperandIterator::operator-(difference_type n) const { return OperandIterator{iter - n}; }
 
-User::reverse_iterator User::rbegin() { return operands.rbegin(); }
+bool User::OperandIterator::operator==(OperandIterator other) const {
+    return iter == other.iter;
+}
+bool User::OperandIterator::operator!=(OperandIterator other) const {
+    return iter != other.iter;
+}
+std::shared_ptr<Value> User::OperandIterator::operator*() const { return (*iter)->getValue(); }
 
-User::reverse_iterator User::rend() { return operands.rend(); }
-
-User::const_reverse_iterator User::crbegin() const { return operands.crbegin(); }
-
-User::const_reverse_iterator User::crend() const { return operands.crend(); }
+User::OperandIterator User::operand_begin() const {
+    return OperandIterator{operand_uses.begin()};
+}
+User::OperandIterator User::operand_end() const {
+    return OperandIterator{operand_uses.end()};
+}
 
 User::~User() {
-    for (const auto& curr : operands) {
+    for (const auto& curr : operand_uses) {
         auto curr_val = curr->getValue();
         // Because one's operands may be destroyed before itself and we can't prevent this happen.
         // It's hard to always delete a value before its user.
@@ -103,7 +190,7 @@ User::~User() {
 
 bool User::replaceOperand(const std::shared_ptr<Value> &before, const std::shared_ptr<Value> &after){
     bool found = false;
-    for (const auto& use : operands) {
+    for (const auto& use : operand_uses) {
         if (use->getValue() == before) {
             replaceUse(use, after);
             found = true;
@@ -114,7 +201,7 @@ bool User::replaceOperand(const std::shared_ptr<Value> &before, const std::share
 
 bool User::replaceUse(const std::shared_ptr<Use> &old_use, const std::shared_ptr<Value> &new_value) {
     Err::gassert(old_use->getValue() != new_value, "Replace with an identical value doesn't make sense.");
-    for (auto &use : operands) {
+    for (auto &use : operand_uses) {
         if (use == old_use) {
             auto ok = use->getValue()->delUse(use);
             Err::gassert(ok, "The use has been released unexpectedly.");
@@ -132,35 +219,35 @@ User::User(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait)
     : Value(std::move(_name), std::move(_vtype), _vtrait) {}
 
 size_t User::getNumOperands() const {
-    return operands.size();
+    return operand_uses.size();
 }
 
 void User::addOperand(const std::shared_ptr<Value> &v) {
     std::shared_ptr<Use> use{new Use(v, this)};
     use->init();
-    operands.emplace_back(std::move(use));
+    operand_uses.emplace_back(std::move(use));
 }
 
 const std::vector<std::shared_ptr<Use>> &User::getOperands() const {
-    return operands;
+    return operand_uses;
 }
 const std::shared_ptr<Use> &User::getOperand(size_t index) const {
-    return operands[index];
+    return operand_uses[index];
 }
 
 void User::setOperand(size_t index, const std::shared_ptr<Value> &val) {
-    Err::gassert(index < operands.size(), "index out of range");
-    auto old_use = operands[index];
+    Err::gassert(index < operand_uses.size(), "index out of range");
+    auto old_use = operand_uses[index];
     auto ok = old_use->getValue()->delUse(old_use);
     Err::gassert(ok);
     std::shared_ptr<Use> new_use{new Use(val, this)};
     new_use->init();
-    operands[index] = std::move(new_use);
+    operand_uses[index] = std::move(new_use);
 }
 
 void User::swapOperand(size_t a, size_t b) {
-    Err::gassert(a < operands.size() && b < operands.size(), "index out of range");
-    std::swap(operands[a], operands[b]);
+    Err::gassert(a < operand_uses.size() && b < operand_uses.size(), "index out of range");
+    std::swap(operand_uses[a], operand_uses[b]);
 }
 
 bool User::delOperand(const std::shared_ptr<Value> &v) {
@@ -173,15 +260,15 @@ bool User::delOperand(NameRef name) {
 }
 
 bool User::delOperand(size_t index) {
-    Err::gassert(index < operands.size(), "index out of range");
-    if (index >= operands.size())
+    Err::gassert(index < operand_uses.size(), "index out of range");
+    if (index >= operand_uses.size())
         return false;
-    auto use = operands[index];
+    auto use = operand_uses[index];
     auto ok = use->getValue()->delUse(use);
     Err::gassert(ok);
-    operands.erase(
-        operands.begin() +
-        static_cast<decltype(operands)::iterator::difference_type>(index));
+    operand_uses.erase(
+        operand_uses.begin() +
+        static_cast<decltype(operand_uses)::iterator::difference_type>(index));
     return true;
 }
 

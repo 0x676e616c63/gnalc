@@ -95,8 +95,8 @@ std::shared_ptr<Value> GEPInst::getPtr() const {
 
 std::vector<std::shared_ptr<Value>> GEPInst::getIdxs() const {
     std::vector<std::shared_ptr<Value>> ret;
-    for (auto it = begin() + 1; it != end(); ++it)
-        ret.emplace_back((*it)->getValue());
+    for (auto it = operand_begin() + 1; it != operand_end(); ++it)
+        ret.emplace_back(*it);
     return ret;
 }
 bool GEPInst::isConstantOffset() const {
