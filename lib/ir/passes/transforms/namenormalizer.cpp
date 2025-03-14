@@ -24,7 +24,7 @@ void NameNormalizePass::visit(BasicBlock &node) {
         node.setName("%" + std::to_string(curr_idx));
     ++curr_idx;
 
-    for (const auto &phi : node.getPhiInsts())
+    for (const auto &phi : node.phis())
         phi->setName("%" + std::to_string(curr_idx++));
     for (const auto &inst : node) {
         if (inst->getVTrait() == ValueTrait::ORDINARY_VARIABLE)

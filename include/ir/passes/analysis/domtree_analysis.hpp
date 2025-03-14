@@ -15,16 +15,14 @@ namespace IR {
 namespace detail {
 struct DTBasicBlockHandle {
     static std::vector<BasicBlock *> prev(const BasicBlock *bb) {
-        auto raw = bb->getPreBB();
         std::vector<BasicBlock *> ret;
-        for (const auto &r : raw)
+        for (const auto &r : bb->preds())
             ret.emplace_back(r.get());
         return ret;
     }
     static std::vector<BasicBlock *> next(const BasicBlock *bb) {
-        auto raw = bb->getNextBB();
         std::vector<BasicBlock *> ret;
-        for (const auto &r : raw)
+        for (const auto &r : bb->succs())
             ret.emplace_back(r.get());
         return ret;
     }
@@ -32,16 +30,14 @@ struct DTBasicBlockHandle {
 
 struct PostDTBasicBlockHandle {
     static std::vector<BasicBlock *> prev(const BasicBlock *bb) {
-        auto raw = bb->getNextBB();
         std::vector<BasicBlock *> ret;
-        for (const auto &r : raw)
+        for (const auto &r : bb->succs())
             ret.emplace_back(r.get());
         return ret;
     }
     static std::vector<BasicBlock *> next(const BasicBlock *bb) {
-        auto raw = bb->getPreBB();
         std::vector<BasicBlock *> ret;
-        for (const auto &r : raw)
+        for (const auto &r : bb->preds())
             ret.emplace_back(r.get());
         return ret;
     }

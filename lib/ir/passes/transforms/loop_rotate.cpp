@@ -70,11 +70,10 @@ std::shared_ptr<BasicBlock> tryMergeLatchToExiting(const Loop &loop) {
         }
     }
 
-    auto preds = latch->getPreBB();
-    if (preds.size() != 1)
+    if (latch->getNumPreds() != 1)
         return nullptr;
 
-    const auto &single_pred = preds.front();
+    const auto &single_pred = *latch->pred_begin();
     if (single_pred == latch // Don't merge single block loop
         || !loop.isExiting(single_pred.get()))
         return nullptr;
@@ -144,7 +143,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
             bool latch_merged = false;
             if (auto dead_latch = tryMergeLatchToExiting(*loop)) {
                 loop_info.delBlock(dead_latch.get());
-                if (dead_latch->getNumPreBBs() == 0)
+                if (dead_latch->getNumPreds() == 0)
                     function.delBlock(dead_latch);
                 loop_rotate_cfg_modified = true;
                 latch_merged = true;
@@ -220,7 +219,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
 
             Err::gassert(*loop->getExitBlocks().begin() == exit.get());
 
-            if (exit->getNumPreBBs() != 1)
+            if (exit->getNumPreds() != 1)
                 continue;
 
             // We rotate only if
@@ -245,7 +244,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
             // And header must dominate the body, so the body (new_header)
             // should only have one predecessor.
             // If not, give up
-            if (new_header->getNumPreBBs() != 1)
+            if (new_header->getNumPreds() != 1)
                 continue;
             // Fold the phi of body (new_header) if any.
             foldPHI(new_header);
@@ -410,7 +409,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                 phi->delPhiOperByBlock(old_preheader);
 
             // Now the old header should have only one predecessor, which is the latch.
-            Err::gassert(old_header->getNumPreBBs() == 1 && old_header->getPreBB().front() == old_latch);
+            Err::gassert(old_header->getNumPreds() == 1 && *old_header->pred_begin() == old_latch);
             foldPHI(old_header);
 
             // Update Loop Info
@@ -480,8 +479,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                 //   |---------------------------                 |---------------------------
                 //
                 // In practice, this is the same as critical edges breaking.
-                auto exit_preds = exit->getPreBB();
-                for (const auto &exit_pred : exit_preds) {
+                for (const auto &exit_pred : exit->preds()) {
                     const auto &exit_pred_loop = loop_info.getLoopFor(exit_pred.get());
                     // We only split exiting edges
                     if (!exit_pred_loop || exit_pred_loop->contains(exit.get()))
@@ -499,8 +497,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                 moveInsts(old_header->begin(), old_header->end(), old_latch);
                 unlinkBB(old_latch, old_header);
                 // After edge splitting, the header's successors might have changed.
-                auto old_header_succs = old_header->getNextBB();
-                for (const auto &succ : old_header_succs) {
+                for (const auto &succ : old_header->succs()) {
                     unlinkBB(old_header, succ);
                     linkBB(old_latch, succ);
                     for (const auto &phi : succ->getPhiInsts())

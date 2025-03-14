@@ -42,7 +42,7 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                     unlinkBB(curr, br->getFalseDest());
                     br->dropFalseDest();
 
-                    const auto& dest_phis = br->getDest()->getPhiInsts();
+                    const auto& dest_phis = br->getDest()->phis();
                     for (const auto& phi : dest_phis)
                         phi->delPhiOperByBlock(curr);
 
@@ -126,7 +126,7 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                     modified = true;
                 }
                 // If curr is deleted, we can't combine them. So it's `else if` rather than `if`
-                else if (dest->getNumPreBBs() == 1) {
+                else if (dest->getNumPreds() == 1) {
                     // 3. Combine Blocks
                     // curr ends in a jump to dest and dest has only one predecessor
                     //
@@ -192,9 +192,9 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                         linkBB(curr, dest_succ0);
                         linkBB(curr, dest_succ1);
 
-                        for (const auto &phi : dest_succ0->getPhiInsts())
+                        for (const auto &phi : dest_succ0->phis())
                             phi->addPhiOper(phi->getValueForBlock(dest), curr);
-                        for (const auto &phi : dest_succ1->getPhiInsts())
+                        for (const auto &phi : dest_succ1->phis())
                             phi->addPhiOper(phi->getValueForBlock(dest), curr);
 
                         Logger::logDebug("[CFGSimplify] on '", function.getName(),

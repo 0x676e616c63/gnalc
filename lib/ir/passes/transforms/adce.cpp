@@ -120,7 +120,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     bool found = false;
                     do {
                         nearest_pdom = nearest_pdom->parent;
-                        for (const auto &pdomphi : nearest_pdom->bb->getPhiInsts()) {
+                        for (const auto &pdomphi : nearest_pdom->bb->phis()) {
                             if (critical.find(pdomphi) != critical.end()) {
                                 found = true;
                                 break;
@@ -156,8 +156,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
 
     for (const auto& block : function) {
         if (reachable.find(block) == reachable.end()) {
-            auto succs = block->getNextBB();
-            for (const auto& succ : succs)
+            for (const auto& succ : block->succs())
                 safeUnlinkBB(block, succ, dead_phis);
         }
     }

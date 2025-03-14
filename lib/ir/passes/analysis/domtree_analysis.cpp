@@ -49,7 +49,7 @@ void PostDomTreeAnalysis::setExit(const Function &f) {
 
 void PostDomTreeAnalysis::restoreCFG() const {
     if (!is_exit_virtual) return;
-    for (const auto &real_exit : exit->getPreBB()) {
+    for (const auto &real_exit : exit->preds()) {
         real_exit->next_bb.clear();
     }
     exit->pre_bb.clear();

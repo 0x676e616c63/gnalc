@@ -494,7 +494,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
             avail_out = avail_out_map[curr->parent->bb];
 
         // AVAIL_OUT
-        for (const auto& phi : curr->bb->getPhiInsts()) {
+        for (const auto& phi : curr->bb->phis()) {
             auto kind = table.getKindOrInsert(phi, exp_gen);
             avail_out.insert(kind, phi);
         }

@@ -95,7 +95,7 @@ bool safeUnlinkBB(const std::shared_ptr<BasicBlock> &prebb,
     // bb1:
     //    %1 = phi [ %0, %bb0 ] [ %0, %bb2 ]
     // bb2:
-    for (const auto& phi : nxtbb->getPhiInsts()) {
+    for (const auto& phi : nxtbb->phis()) {
         // Delete the phi operand from the unlinked `prebb`
         if (phi->delPhiOperByBlock(prebb)) {
             // Simplify PHI
@@ -138,7 +138,7 @@ void moveBlocks(FunctionBBIter beg, FunctionBBIter end,
 
 void foldPHI(const std::shared_ptr<BasicBlock> &bb, bool preserve_lcssa) {
     std::set<std::shared_ptr<Instruction>> dead_phis;
-    for (const auto& phi : bb->getPhiInsts()) {
+    for (const auto& phi : bb->phis()) {
         if (phi->getUseCount() == 0) {
             dead_phis.emplace(phi);
             continue;
@@ -171,7 +171,7 @@ void foldPHI(const std::shared_ptr<BasicBlock> &bb, bool preserve_lcssa) {
 void removeIdenticalPhi(const std::shared_ptr<BasicBlock> &bb) {
     using ValBBPair = std::pair<std::shared_ptr<Value>, std::shared_ptr<BasicBlock>>;
     std::vector<std::pair<std::shared_ptr<PHIInst>, std::vector<ValBBPair>>> phi_info;
-    for (const auto& phi : bb->getPhiInsts()) {
+    for (const auto& phi : bb->phis()) {
         phi_info.emplace_back(phi, std::vector<ValBBPair>{});
         auto phi_opers = phi->getPhiOpers();
         for (const auto& [v, b] : phi_opers)
@@ -198,9 +198,8 @@ void removeIdenticalPhi(const std::shared_ptr<BasicBlock> &bb) {
 std::shared_ptr<BasicBlock> breakCriticalEdge(
     const std::shared_ptr<BasicBlock>& pred, const std::shared_ptr<BasicBlock>& succ) {
     {
-        auto pred_succs = pred->getNextBB();
         bool ok = false;
-        for (const auto& s : pred_succs) {
+        for (const auto& s : pred->succs()) {
             if (s == succ) {
                 ok = true;
                 break;
@@ -210,7 +209,7 @@ std::shared_ptr<BasicBlock> breakCriticalEdge(
             + pred->getName() + "' and '" + succ->getName() + "'.");
     }
 
-    if (pred->getNumNextBBs() == 1 || succ->getNumPreBBs() == 1)
+    if (pred->getNumSuccs() == 1 || succ->getNumPreds() == 1)
         return nullptr;
 
     // Create a new block
@@ -231,7 +230,7 @@ std::shared_ptr<BasicBlock> breakCriticalEdge(
     new_block->addInst(std::make_shared<BRInst>(succ));
 
     // PHI
-    for (const auto& phi : succ->getPhiInsts()) {
+    for (const auto& phi : succ->phis()) {
         ok = phi->replaceOperand(pred, new_block);
         Err::gassert(ok);
     }

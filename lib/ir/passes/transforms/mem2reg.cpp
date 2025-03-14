@@ -138,7 +138,7 @@ void PromotePass::insertPhi() {
         if (!live_in_blocks.insert(b).second)
             continue;
 
-        for (const auto &p : b->getPreBB()) {
+        for (const auto &p : b->preds()) {
             if (auto i = cur_info.user_blocks.find(p);
                 i != cur_info.user_blocks.end()) {
                 if (!i->second.store_map.empty())
@@ -179,7 +179,7 @@ void PromotePass::rename(Function &f) {
             continue;
 
         //  process load store and phi
-        for (const auto &i : b->getPhiInsts()) {
+        for (const auto &i : b->phis()) {
             if (del_queue.count(i)) continue;
             incoming_values[{phi_to_alloca_map[std::dynamic_pointer_cast<PHIInst>(i)], b}] = i;
         }
@@ -227,9 +227,9 @@ void PromotePass::rename(Function &f) {
             }
         }
 
-        for (const auto &n : b->getNextBB()) {
+        for (const auto &n : b->succs()) {
             // process phi in next block
-            for (const auto & phi_node : n->getPhiInsts()) {
+            for (const auto & phi_node : n->phis()) {
                 // 用于在替换前检查是否是undef_val, 若是则沿cfg向上查找非undef的值
                 if (auto alloca = phi_to_alloca_map[phi_node]; incoming_values[{alloca, b}] == undef_val) {
                     for (auto pb = b;;) {
@@ -304,7 +304,7 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
             STN.pop();
 
             // process succ node in cfg
-            for (const auto& next : node->bb->getNextBB()) {
+            for (const auto& next : node->bb->succs()) {
                 auto next_node = DT.nodes[next.get()];
 
                 if (next_node->parent == node.get())
@@ -340,7 +340,7 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
 void PromotePass::promoteMemoryToRegister(Function &function) {
     entry_block = function.getBlocks().front();
 
-    Err::gassert(entry_block->getPreBB().empty(),
+    Err::gassert(entry_block->getNumPreds() == 0,
         "First block is not entry block");
 
     analyseAlloca();

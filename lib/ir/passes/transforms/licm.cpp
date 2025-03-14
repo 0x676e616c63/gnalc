@@ -26,7 +26,7 @@ bool isSafeToMove(const std::shared_ptr<Loop> &loop, const std::shared_ptr<Instr
 
     // If the load's memory can be modified in the loop, give up.
     if (auto load = std::dynamic_pointer_cast<LOADInst>(inst)) {
-        for (const auto &bb : loop->getBlocks()) {
+        for (const auto &bb : loop->blocks()) {
             for (const auto &killer : *bb) {
                 auto modref = aa_res.getInstModRefInfo(killer.get(), load->getPtr().get(), fam);
                 if (modref == ModRefInfo::Mod || modref == ModRefInfo::ModRef)
@@ -37,7 +37,7 @@ bool isSafeToMove(const std::shared_ptr<Loop> &loop, const std::shared_ptr<Instr
         if (!isPure(fam, call.get()))
             return false;
     } else if (auto store = std::dynamic_pointer_cast<STOREInst>(inst)) {
-        for (const auto &bb : loop->getBlocks()) {
+        for (const auto &bb : loop->blocks()) {
             for (const auto &killer : *bb) {
                 auto modref = aa_res.getInstModRefInfo(killer.get(), store->getPtr().get(), fam);
                 if (modref == ModRefInfo::Ref || modref == ModRefInfo::ModRef)
@@ -75,7 +75,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
         // Do a post order traversal of the loop tree, so that we can move instructions in one go.
         auto lpdfv = top_level->getDFVisitor<Util::DFVOrder::PostOrder>();
         for (const auto &loop : lpdfv) {
-            std::vector<BasicBlock *> loop_blocks{loop->getBlocks().begin(), loop->getBlocks().end()};
+            std::vector<BasicBlock *> loop_blocks{loop->block_begin(), loop->block_end()};
             //
             // Sink
             //

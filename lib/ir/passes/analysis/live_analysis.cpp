@@ -19,7 +19,7 @@ bool LiveAnalysis::processFunc(const Function *func) {
     auto dfvisitor = func->getDFVisitor();
     bool updated = false;
     for (const auto& bb : dfvisitor) {
-        for (auto &nxtbb : bb->getNextBB())
+        for (const auto &nxtbb : bb->succs())
             for (auto &livevar : liveness.getLiveIn(nxtbb.get()))
                 if (liveness.getLiveOut(bb.get()).insert(livevar).second)
                     updated = true;

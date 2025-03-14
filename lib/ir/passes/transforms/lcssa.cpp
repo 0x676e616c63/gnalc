@@ -117,7 +117,7 @@ PM::PreservedAnalyses LCSSAPass::run(Function &function, FAM &fam) {
                     std::shared_ptr<PHIInst> avail_phi;
 
                     // Check if there is already what we want
-                    for (const auto& phi : exit->getPhiInsts()) {
+                    for (const auto& phi : exit->phis()) {
                         auto phi_opers = phi->getPhiOpers();
                         bool ok = true;
                         for (const auto& [val, bb] : phi_opers) {
@@ -132,8 +132,7 @@ PM::PreservedAnalyses LCSSAPass::run(Function &function, FAM &fam) {
                     if (avail_phi == nullptr) {
                         auto phi = std::make_shared<PHIInst>(
                             curr_inst->getName() + ".lcssa" + std::to_string(name_cnt++), curr_inst->getType());
-                        auto preds = exit->getPreBB();
-                        for (const auto& pred : preds) {
+                        for (const auto& pred : exit->preds()) {
                             phi->addPhiOper(curr_inst, pred);
                             if (!loop->contains(pred.get())) {
                                 uses_to_rewrite.emplace_back

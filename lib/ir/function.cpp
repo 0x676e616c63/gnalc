@@ -120,7 +120,7 @@ ConstantPool &Function::getConstantPool() { return *constant_pool; }
 std::vector<std::shared_ptr<BasicBlock>> Function::getExitBBs() const {
     std::vector<std::shared_ptr<BasicBlock>> ret;
     for (const auto &bb : blks) {
-        if (bb->getNextBB().empty())
+        if (bb->getNumSuccs() == 0)
             ret.emplace_back(bb);
     }
     return ret;
@@ -167,7 +167,7 @@ std::shared_ptr<Value> Function::cloneImpl() const {
 
     for (const auto &blk : blks) {
         auto cloned_bb = std::make_shared<BasicBlock>(blk->getName() + ".cloned");
-        for (auto& phi : blk->getPhiInsts()) {
+        for (auto& phi : blk->phis()) {
             auto cloned_phi = makeClone(phi);
             cloned_bb->addPhiInst(cloned_phi);
             old2new_inst[phi] = cloned_phi;
@@ -178,11 +178,9 @@ std::shared_ptr<Value> Function::cloneImpl() const {
             old2new_inst[inst] = cloned_inst;
         }
 
-        auto prebb = blk->getPreBB();
-        auto nxtbb = blk->getNextBB();
-        for (const auto& p : prebb)
+        for (const auto& p : blk->preds())
             cloned_bb->addPreBB(p);
-        for (const auto& n : nxtbb)
+        for (const auto& n : blk->succs())
             cloned_bb->addNextBB(n);
 
         std::vector<std::shared_ptr<Value>> cloned_bbparams;

@@ -280,7 +280,7 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
         changed = false;
         auto dfv = func.getDFVisitor();
         for (const auto &curr : dfv) {
-            for (const auto &phi : curr->getPhiInsts()) {
+            for (const auto &phi : curr->phis()) {
                 if (phi->getType()->getTrait() == IRCTYPE::PTR) {
                     for (const auto &oper : phi->getPhiOpers())
                         changed |= res.insertPotentialAlias(phi.get(), oper.value.get());

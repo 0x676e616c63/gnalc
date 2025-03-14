@@ -550,7 +550,7 @@ PM::PreservedAnalyses ReassociatePass::run(Function &function, FAM &manager) {
     for (const auto &node : rpov) {
         // << 16 to avoid collision with other block
         Rank bbRank = bbRankMap[node] = ++rank << 16;
-        for (const auto &phi : node->getPhiInsts())
+        for (const auto &phi : node->phis())
             valueRankMap[phi] = ++bbRank;
         for (const auto &inst : *node) {
             if (std::dynamic_pointer_cast<BinaryInst>(inst) == nullptr)

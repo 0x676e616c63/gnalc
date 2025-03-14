@@ -71,15 +71,17 @@ public:
     void addInstBeforeTerminator(const std::shared_ptr<Instruction> &inst);
     void addPhiInst(const std::shared_ptr<PHIInst> &node); // 插入到phi_insts
 
+    // Usually we use `preds()` and `succs()` instead of them
     std::list<std::shared_ptr<BasicBlock>> getPreBB() const;
     std::list<std::shared_ptr<BasicBlock>> getNextBB() const;
 
-    size_t getNumPreBBs() const;
-    size_t getNumNextBBs() const;
+    size_t getNumPreds() const;
+    size_t getNumSuccs() const;
 
-    // usually we can use range-based for instead of these
+    // Usually we use range-based for instead of these
     const std::list<std::shared_ptr<Instruction>> &getInsts() const;
     const std::list<std::shared_ptr<PHIInst>> &getPhiInsts() const;
+
     // Returns a temporary object.
     // Deleting/Adding Instruction while iterating it is safe.
     // Some pass rely on this. (like ADCE).
@@ -165,6 +167,9 @@ public:
     phi_iterator phi_end();
     phi_const_iterator phi_cbegin() const;
     phi_const_iterator phi_cend() const;
+    auto phis() const {
+        return Util::make_iterator_range(phi_begin(), phi_end());
+    }
     // ...
 
     void setBBParam(const std::vector<std::shared_ptr<Value>> &params);
@@ -181,6 +186,64 @@ public:
     ~BasicBlock() override;
 
     size_t getAllInstCount() const;
+
+    class BasicBlockIterator {
+    private:
+        using InnerIterT = decltype(pre_bb)::const_iterator;
+        InnerIterT iter;
+
+    public:
+        using difference_type = InnerIterT::difference_type;
+        using value_type = std::shared_ptr<BasicBlock>;
+        using pointer = std::shared_ptr<BasicBlock> *;
+        using reference = std::shared_ptr<BasicBlock> &;
+        using iterator_category = InnerIterT::iterator_category;
+
+        explicit BasicBlockIterator(InnerIterT iter_) : iter(iter_) {}
+
+        BasicBlockIterator &operator++() {
+            ++iter;
+            return *this;
+        }
+        BasicBlockIterator operator++(int) {
+            return BasicBlockIterator{iter++};
+        }
+
+        BasicBlockIterator &operator--() {
+            --iter;
+            return *this;
+        }
+        BasicBlockIterator operator--(int) {
+            return BasicBlockIterator{iter--};
+        }
+
+        bool operator==(BasicBlockIterator other) const { return iter == other.iter; }
+        bool operator!=(BasicBlockIterator other) const { return iter != other.iter; }
+        std::shared_ptr<BasicBlock> operator*() const {
+            return iter->lock();
+        }
+    };
+
+    BasicBlockIterator pred_begin() const {
+        return BasicBlockIterator{pre_bb.begin()};
+    }
+    BasicBlockIterator pred_end() const {
+        return BasicBlockIterator{pre_bb.end()};
+    }
+    BasicBlockIterator succ_begin() const {
+        return BasicBlockIterator{next_bb.begin()};
+    }
+    BasicBlockIterator succ_end() const {
+        return BasicBlockIterator{next_bb.end()};
+    }
+
+    auto preds() const {
+        return Util::make_iterator_range(pred_begin(), pred_end());
+    }
+
+    auto succs() const {
+        return Util::make_iterator_range(succ_begin(), succ_end());
+    }
 
 private:
     std::shared_ptr<Value> cloneImpl() const override;

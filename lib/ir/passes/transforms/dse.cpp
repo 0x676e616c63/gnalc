@@ -90,9 +90,8 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
             }
             // local memory, check through CFG.
             else {
-                auto successors = store_block->getNextBB();
                 std::set<std::shared_ptr<BasicBlock>> visited;
-                std::deque<std::shared_ptr<BasicBlock>> worklist{successors.begin(), successors.end()};
+                std::deque<std::shared_ptr<BasicBlock>> worklist{store_block->succ_begin(), store_block->succ_end()};
                 // STOREInst that may contribute to the elimination
                 std::vector<std::shared_ptr<STOREInst>> candidates;
                 std::vector<std::shared_ptr<Instruction>> killers;
@@ -137,8 +136,7 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
                         }
                     }
 
-                    auto succs = store_succ->getNextBB();
-                    for (const auto &p : succs) {
+                    for (const auto &p : store_succ->succs()) {
                         if (visited.find(p) == visited.end())
                             worklist.emplace_back(p);
                     }

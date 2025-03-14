@@ -15,7 +15,7 @@ class LoopAnalysis;
 class Loop : public std::enable_shared_from_this<Loop> {
     friend class LoopAnalysis;
     std::vector<std::shared_ptr<Loop>> sub_loops;
-    std::list<BasicBlock*> blocks; // First is the header
+    std::list<BasicBlock*> loop_blocks; // First is the header
     std::set<const BasicBlock*> blockset;
     std::weak_ptr<Loop> parent;
 
@@ -35,6 +35,11 @@ public:
     using reverse_iterator = decltype(sub_loops)::reverse_iterator;
     using const_reverse_iterator = decltype(sub_loops)::const_reverse_iterator;
 
+    using block_iterator = decltype(loop_blocks)::iterator;
+    using block_const_iterator = decltype(loop_blocks)::const_iterator;
+    using block_reverse_iterator = decltype(loop_blocks)::reverse_iterator;
+    using block_const_reverse_iterator = decltype(loop_blocks)::const_reverse_iterator;
+
     const_iterator begin() const;
     const_iterator end() const;
     iterator begin();
@@ -48,6 +53,24 @@ public:
     reverse_iterator rend();
     const_reverse_iterator crbegin() const;
     const_reverse_iterator crend() const;
+
+    block_const_iterator block_begin() const;
+    block_const_iterator block_end() const;
+    block_iterator block_begin();
+    block_iterator block_end();
+    block_const_iterator block_cbegin() const;
+    block_const_iterator block_cend() const;
+    
+    block_const_reverse_iterator block_rbegin() const;
+    block_const_reverse_iterator block_rend() const;
+    block_reverse_iterator block_rbegin();
+    block_reverse_iterator block_rend();
+    block_const_reverse_iterator block_crbegin() const;
+    block_const_reverse_iterator block_crend() const;
+
+    auto blocks() const {
+        return Util::make_iterator_range(block_begin(), block_end());
+    }
 
     auto getBFVisitor() {
         return LoopBFVisitor{ shared_from_this() };
