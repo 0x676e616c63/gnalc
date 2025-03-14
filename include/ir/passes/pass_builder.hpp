@@ -51,6 +51,8 @@ public:
     static FPM buildFunctionFuzzTestingPipeline(double duplication_rate = 1.0, const std::string& repro = "");
     static MPM buildModuleFuzzTestingPipeline(double duplication_rate = 1.0, const std::string& repro = "");
 
+    static MPM buildModuleParallelPipeline(size_t num_threads);
+
     static void registerModuleAnalyses(MAM &);
     static void registerFunctionAnalyses(FAM &);
     static void registerProxies(FAM &, MAM &);

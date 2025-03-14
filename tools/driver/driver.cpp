@@ -41,6 +41,7 @@ int main(int argc, char **argv) {
     double fuzz_testing_duplication_rate = 1.0; // -fuzz-rate
     std::string fuzz_testing_repro;             // -fuzz-repro
     bool debug_pipeline = false;                // -debug-pipeline
+    size_t parallel_num_threads = 1;            // -parallel-pipeline <num_threads>
     IR::OptInfo opt_info;                       // --xxx
 
 #if GNALC_EXTENSION_BRAINFK
@@ -82,6 +83,20 @@ int main(int argc, char **argv) {
             ast_dump = true;
         else if (arg == "-fixed-point")
             fixed_point_pipeline = true;
+        else if (arg == "-parallel-pipeline") {
+            ++i;
+            if (i >= argc) {
+                std::cerr << "Error: Expected number of parallel threads." << std::endl;
+                return -1;
+            }
+            try {
+                parallel_num_threads = std::stoi(argv[i]);
+            }
+            catch (std::invalid_argument&) {
+                std::cerr << "Error: Invalid number of parallel threads. Expected an integer." << std::endl;
+                return -1;
+            }
+        }
         else if (arg == "-O1" || arg == "-O")
             opt_info = IR::o1_opt_info;
 
@@ -167,14 +182,15 @@ USAGE: gnalc [options] file
 OPTIONS:
 
 General options:
-  -o <file>               - Write output to <file>
-  -S                      - Only run compilation steps
-  -O,-O1                  - Optimization level 1
-  -emit-llvm              - Use the LLVM representation for assembler and object files
-  -ast-dump               - Build ASTs and then debug dump them
-  -fixed-point            - Enable the fixed point optimization pipeline. (Ignore other optimization options)
-  --log <log-level>       - Enable compiler logger. Available log-level: debug, info, none
-  -h, --help              - Display available options
+  -o <file>                         - Write output to <file>
+  -S                                - Only run compilation steps
+  -O,-O1                            - Optimization level 1
+  -emit-llvm                        - Use the LLVM representation for assembler and object files
+  -ast-dump                         - Build ASTs and then debug dump them
+  -fixed-point                      - Enable the fixed point optimization pipeline. (Ignore other optimization options)
+  -parallel-pipeline <num-threads>  - Parallelize passes for faster compilation.
+  --log <log-level>                 - Enable compiler logger. Available log-level: debug, info, none
+  -h, --help                        - Display available options
 
 Optimizations available:
   --mem2reg            - Promote memory to register
@@ -266,6 +282,8 @@ Extensions:
         mpm = IR::PassBuilder::buildModuleFuzzTestingPipeline(fuzz_testing_duplication_rate, fuzz_testing_repro);
     else if (fixed_point_pipeline)
         mpm = IR::PassBuilder::buildModuleFixedPointPipeline();
+    else if (parallel_num_threads != 1)
+        mpm = IR::PassBuilder::buildModuleParallelPipeline(parallel_num_threads);
     else
         mpm = IR::PassBuilder::buildModulePipeline(opt_info);
 

@@ -323,6 +323,40 @@ MPM PassBuilder::buildModuleFuzzTestingPipeline(double duplication_rate, const s
     return mpm;
 }
 
+MPM PassBuilder::buildModuleParallelPipeline(size_t num_threads) {
+    MPM mpm;
+
+    auto pass_getter = [] {
+        FPM pm;
+        pm.addPass(NameNormalizePass(true));
+        pm.addPass(PromotePass());
+        pm.addPass(TailRecursionEliminationPass());
+        pm.addPass(ReassociatePass());
+        pm.addPass(InstSimplifyPass());
+        pm.addPass(ConstantPropagationPass());
+        pm.addPass(BreakCriticalEdgesPass());
+        pm.addPass(GVNPREPass());
+        return pm;
+    };
+    mpm.addPass(makeParallelizedModulePass(pass_getter, 4));
+
+    FPM inline_and_clean;
+    inline_and_clean.addPass(InlinePass());
+    inline_and_clean.addPass(ADCEPass());
+    inline_and_clean.addPass(CFGSimplifyPass());
+    inline_and_clean.addPass(ConstantPropagationPass());
+    inline_and_clean.addPass(BreakCriticalEdgesPass());
+    inline_and_clean.addPass(GVNPREPass());
+    inline_and_clean.addPass(LoadEliminationPass());
+    inline_and_clean.addPass(DSEPass());
+    inline_and_clean.addPass(LoadEliminationPass());
+    inline_and_clean.addPass(ADCEPass());
+    inline_and_clean.addPass(NameNormalizePass(true));
+    mpm.addPass(makeModulePass(std::move(inline_and_clean)));
+
+    return mpm;
+}
+
 void PassBuilder::registerProxies(FAM &fam, MAM &mam) {
     mam.registerPass([&] { return FAMProxy(fam); });
 }

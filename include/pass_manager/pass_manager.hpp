@@ -32,6 +32,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <mutex>
 
 namespace PM {
 class alignas(8) UniqueKey {};
@@ -227,11 +228,19 @@ private:
     all_res_t results;
     index_t index;
     bool is_getting_fresh_result = false;
-
+    std::unique_ptr<std::mutex> mtx;
 public:
     AnalysisManager() = default;
     AnalysisManager(AnalysisManager &&) = default;
     AnalysisManager &operator=(AnalysisManager &&) noexcept = default;
+
+    void initMutex() {
+        mtx = std::make_unique<std::mutex>();
+    }
+
+    void dropMutex() {
+        mtx = nullptr;
+    }
 
     void clear() {
         results.clear();
@@ -246,6 +255,9 @@ public:
         const auto pass_id = PassT::ID();
         Err::gassert(passes.count(pass_id), "No such pass registered.");
 
+        if (mtx)
+            mtx->lock();
+
         // Try insert an empty iterator.
         // If succeeded, the result iterator is at the desired position.
         // If not, the result iterator is the cached result.
@@ -254,13 +266,24 @@ public:
 
         auto &pass = passes.find(pass_id)->second;
         if (inserted) {
+            if (mtx)
+                mtx->unlock();
+
+            auto pass_result = pass->run(unit, *this);
+
+            if (mtx)
+                mtx->lock();
+
             auto &res = results[&unit];
-            res.emplace_back(pass_id, pass->run(unit, *this));
+            res.emplace_back(pass_id, std::move(pass_result));
             it->second = std::prev(res.end());
             Logger::logInfo("[AM]: Running '", pass->name(), "' on '", unit.getName(), "'");
         }
         else
             Logger::logInfo("[AM]: Get cached '", pass->name(), "' on '", unit.getName(), "'");
+
+        if (mtx)
+            mtx->unlock();
 
         using ResultModel = AnalysisResultModel<typename PassT::Result>;
         return static_cast<ResultModel &>(*it->second->second).result;
@@ -271,13 +294,19 @@ public:
         const auto pass_id = PassT::ID();
         Err::gassert(passes.count(pass_id), "No such pass registered.");
 
+        auto &pass = passes.find(pass_id)->second;
+        auto pass_result = pass->run(unit, *this);
+
+        if (mtx)
+            mtx->lock();
         auto [it, inserted] = index.insert(std::make_pair(
             std::make_pair(pass_id, &unit), unit_res_t::iterator()));
-
-        auto &pass = passes.find(pass_id)->second;
         auto &res = results[&unit];
-        res.emplace_back(pass_id, pass->run(unit, *this));
+        res.emplace_back(pass_id, std::move(pass_result));
         it->second = std::prev(res.end());
+
+        if (mtx)
+            mtx->unlock();
         Logger::logInfo("[AM]: Running '", pass->name(), "' on '", unit.getName(), "'");
 
         is_getting_fresh_result = false;
