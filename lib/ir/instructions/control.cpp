@@ -185,7 +185,7 @@ BRInst::BBArgList::BBArgList(const std::shared_ptr<BasicBlock> &block,
 }
 
 std::shared_ptr<BRInst> BRInst::BBArgList::getBr() const {
-    return std::dynamic_pointer_cast<BRInst>(getUseList().front()->getUser());
+    return std::dynamic_pointer_cast<BRInst>(*operand_begin());
 }
 
 std::vector<std::shared_ptr<Value>> BRInst::BBArgList::_getArgs() const {

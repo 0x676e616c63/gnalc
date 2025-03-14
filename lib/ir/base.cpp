@@ -23,41 +23,47 @@ size_t Value::getUseCount() const {
     // So just get the size.
     return use_list.size();
 }
-Value::UserIterator::UserIterator(InnerIterT iter_)
-  : iter(iter_) {}
 
-Value::UserIterator &Value::UserIterator::operator++() {
-    ++iter;
-    return *this;
-}
-Value::UserIterator Value::UserIterator::operator++(int) {
-    UserIterator ret{*this};
-    ++iter;
-    return ret;
-}
-
-Value::UserIterator &Value::UserIterator::operator--() {
-    --iter;
-    return *this;
-}
-Value::UserIterator Value::UserIterator::operator--(int) {
-    UserIterator ret{*this};
-    --iter;
-    return ret;
-}
-
-bool Value::UserIterator::operator==(UserIterator other) const {
-    return iter == other.iter;
-}
-bool Value::UserIterator::operator!=(UserIterator other) const {
-    return iter != other.iter;
-}
-std::shared_ptr<User> Value::UserIterator::operator*() const { return iter->lock()->getUser(); }
-
-Value::UserIterator Value::user_begin() const {
+Value::UserIterator<> Value::user_begin() const {
     return UserIterator{use_list.begin()};
 }
-Value::UserIterator Value::user_end() const { return UserIterator{use_list.end()}; }
+Value::UserIterator<> Value::user_end() const { return UserIterator{use_list.end()}; }
+
+Value::UserIterator<Instruction> Value::inst_user_begin() const {
+    return UserIterator<Instruction>{use_list.begin()};
+}
+Value::UserIterator<Instruction> Value::inst_user_end() const { return UserIterator<Instruction>{use_list.end()}; }
+
+Value::UseIterator::UseIterator(InnerIterT iter_): iter(iter_) {}
+Value::UseIterator &Value::UseIterator::operator++() {
+    ++iter;
+    return *this;
+}
+Value::UseIterator Value::UseIterator::operator++(int) {
+    return UseIterator{iter++};
+}
+Value::UseIterator &Value::UseIterator::operator--() {
+    --iter;
+    return *this;
+}
+Value::UseIterator Value::UseIterator::operator--(int) {
+    return UseIterator{iter--};
+}
+bool Value::UseIterator::operator==(UseIterator other) const {
+    return iter == other.iter;
+}
+bool Value::UseIterator::operator!=(UseIterator other) const {
+    return iter != other.iter;
+}
+std::shared_ptr<Use> Value::UseIterator::operator*() const {
+    return iter->lock();
+}
+Value::UseIterator Value::self_uses_begin() const {
+    return UseIterator{use_list.begin()};
+}
+Value::UseIterator Value::self_uses_end() const {
+    return UseIterator{use_list.end()};
+}
 
 std::shared_ptr<User> Value::getSingleUser() const {
     if (use_list.size() != 1)
@@ -105,9 +111,9 @@ bool Value::delUse(const std::shared_ptr<Use>& target) {
     return false;
 }
 
-User::UseIterator User::use_begin() const { return operand_uses.begin(); }
+User::UseIterator User::operand_use_begin() const { return operand_uses_list.begin(); }
 
-User::UseIterator User::use_end() const { return operand_uses.end(); }
+User::UseIterator User::operand_use_end() const { return operand_uses_list.end(); }
 
 User::OperandIterator::OperandIterator(InnerIterT iter_)
   : iter(iter_) {}
@@ -117,9 +123,7 @@ User::OperandIterator &User::OperandIterator::operator++() {
     return *this;
 }
 User::OperandIterator User::OperandIterator::operator++(int) {
-    OperandIterator ret{*this};
-    ++iter;
-    return ret;
+    return OperandIterator{iter++};
 }
 
 User::OperandIterator &User::OperandIterator::operator--() {
@@ -127,9 +131,7 @@ User::OperandIterator &User::OperandIterator::operator--() {
     return *this;
 }
 User::OperandIterator User::OperandIterator::operator--(int) {
-    OperandIterator ret{*this};
-    --iter;
-    return ret;
+    return OperandIterator{iter--};
 }
 
 User::OperandIterator& User::OperandIterator::operator+=(difference_type n) {
@@ -169,14 +171,14 @@ bool User::OperandIterator::operator!=(OperandIterator other) const {
 std::shared_ptr<Value> User::OperandIterator::operator*() const { return (*iter)->getValue(); }
 
 User::OperandIterator User::operand_begin() const {
-    return OperandIterator{operand_uses.begin()};
+    return OperandIterator{operand_uses_list.begin()};
 }
 User::OperandIterator User::operand_end() const {
-    return OperandIterator{operand_uses.end()};
+    return OperandIterator{operand_uses_list.end()};
 }
 
 User::~User() {
-    for (const auto& curr : operand_uses) {
+    for (const auto& curr : operand_uses_list) {
         auto curr_val = curr->getValue();
         // Because one's operands may be destroyed before itself and we can't prevent this happen.
         // It's hard to always delete a value before its user.
@@ -190,7 +192,7 @@ User::~User() {
 
 bool User::replaceOperand(const std::shared_ptr<Value> &before, const std::shared_ptr<Value> &after){
     bool found = false;
-    for (const auto& use : operand_uses) {
+    for (const auto& use : operand_uses_list) {
         if (use->getValue() == before) {
             replaceUse(use, after);
             found = true;
@@ -201,7 +203,7 @@ bool User::replaceOperand(const std::shared_ptr<Value> &before, const std::share
 
 bool User::replaceUse(const std::shared_ptr<Use> &old_use, const std::shared_ptr<Value> &new_value) {
     Err::gassert(old_use->getValue() != new_value, "Replace with an identical value doesn't make sense.");
-    for (auto &use : operand_uses) {
+    for (auto &use : operand_uses_list) {
         if (use == old_use) {
             auto ok = use->getValue()->delUse(use);
             Err::gassert(ok, "The use has been released unexpectedly.");
@@ -219,35 +221,35 @@ User::User(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait)
     : Value(std::move(_name), std::move(_vtype), _vtrait) {}
 
 size_t User::getNumOperands() const {
-    return operand_uses.size();
+    return operand_uses_list.size();
 }
 
 void User::addOperand(const std::shared_ptr<Value> &v) {
     std::shared_ptr<Use> use{new Use(v, this)};
     use->init();
-    operand_uses.emplace_back(std::move(use));
+    operand_uses_list.emplace_back(std::move(use));
 }
 
 const std::vector<std::shared_ptr<Use>> &User::getOperands() const {
-    return operand_uses;
+    return operand_uses_list;
 }
 const std::shared_ptr<Use> &User::getOperand(size_t index) const {
-    return operand_uses[index];
+    return operand_uses_list[index];
 }
 
 void User::setOperand(size_t index, const std::shared_ptr<Value> &val) {
-    Err::gassert(index < operand_uses.size(), "index out of range");
-    auto old_use = operand_uses[index];
+    Err::gassert(index < operand_uses_list.size(), "index out of range");
+    auto old_use = operand_uses_list[index];
     auto ok = old_use->getValue()->delUse(old_use);
     Err::gassert(ok);
     std::shared_ptr<Use> new_use{new Use(val, this)};
     new_use->init();
-    operand_uses[index] = std::move(new_use);
+    operand_uses_list[index] = std::move(new_use);
 }
 
 void User::swapOperand(size_t a, size_t b) {
-    Err::gassert(a < operand_uses.size() && b < operand_uses.size(), "index out of range");
-    std::swap(operand_uses[a], operand_uses[b]);
+    Err::gassert(a < operand_uses_list.size() && b < operand_uses_list.size(), "index out of range");
+    std::swap(operand_uses_list[a], operand_uses_list[b]);
 }
 
 bool User::delOperand(const std::shared_ptr<Value> &v) {
@@ -260,15 +262,15 @@ bool User::delOperand(NameRef name) {
 }
 
 bool User::delOperand(size_t index) {
-    Err::gassert(index < operand_uses.size(), "index out of range");
-    if (index >= operand_uses.size())
+    Err::gassert(index < operand_uses_list.size(), "index out of range");
+    if (index >= operand_uses_list.size())
         return false;
-    auto use = operand_uses[index];
+    auto use = operand_uses_list[index];
     auto ok = use->getValue()->delUse(use);
     Err::gassert(ok);
-    operand_uses.erase(
-        operand_uses.begin() +
-        static_cast<decltype(operand_uses)::iterator::difference_type>(index));
+    operand_uses_list.erase(
+        operand_uses_list.begin() +
+        static_cast<decltype(operand_uses_list)::iterator::difference_type>(index));
     return true;
 }
 

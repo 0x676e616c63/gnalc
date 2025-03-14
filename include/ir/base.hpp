@@ -85,6 +85,30 @@ enum class ValueTrait {
 // 所以暂时不改也没问题。
 //
 
+
+class Use : public std::enable_shared_from_this<Use> {
+    friend class User;
+    friend class Value;
+
+private:
+    std::weak_ptr<Value> val;
+    User *user;
+
+    // PRIVATE because we want to ensure the use is inited.
+    Use(std::weak_ptr<Value> v, User *u);
+    void init();
+
+    // PRIVATE because only Value::delUse(User*) should invoke this.
+    // Because getUser() will call User::shared_from_this,
+    // but when User is being destructed, that won't work.
+    User *getRawUser() const;
+
+public:
+    std::shared_ptr<Value> getValue() const;
+    std::shared_ptr<User> getUser() const;
+};
+
+class Instruction;
 class Value : public NameC {
     friend class User;
     friend class Use;
@@ -135,34 +159,96 @@ public:
 
     size_t getUseCount() const;
 
+    template <typename DownCastUserTo = User>
     class UserIterator {
     private:
         using InnerIterT = decltype(use_list)::const_iterator;
         InnerIterT iter;
+
     public:
         using difference_type = InnerIterT::difference_type;
-        using value_type = std::shared_ptr<User>;
-        using pointer = std::shared_ptr<User>*;
-        using reference = std::shared_ptr<User>&;
+        using value_type = std::shared_ptr<DownCastUserTo>;
+        using pointer = std::shared_ptr<DownCastUserTo> *;
+        using reference = std::shared_ptr<DownCastUserTo> &;
         using iterator_category = InnerIterT::iterator_category;
 
-        explicit UserIterator(InnerIterT iter_);
+        explicit UserIterator(InnerIterT iter_) : iter(iter_) {}
 
-        UserIterator &operator++();
-        UserIterator operator++(int);
-        UserIterator &operator--();
-        UserIterator operator--(int);
+        UserIterator &operator++() {
+            ++iter;
+            return *this;
+        }
+        UserIterator operator++(int) {
+            return UseIterator{iter++};
+        }
 
-        bool operator==(UserIterator other) const;
-        bool operator!=(UserIterator other) const;
-        std::shared_ptr<User> operator*() const;
+        UserIterator &operator--() {
+            --iter;
+            return *this;
+        }
+        UserIterator operator--(int) {
+            return UserIterator{iter--};
+        }
+
+        bool operator==(UserIterator other) const { return iter == other.iter; }
+        bool operator!=(UserIterator other) const { return iter != other.iter; }
+        std::shared_ptr<DownCastUserTo> operator*() const {
+            if constexpr(std::is_same_v<DownCastUserTo, User>)
+                return iter->lock()->getUser();
+            else {
+                auto ret = std::dynamic_pointer_cast<DownCastUserTo>(iter->lock()->getUser());
+                Err::gassert(ret != nullptr,
+                    "Value::UserIterator: Cannot downcast current user to '" +
+                    std::string{Util::getTypeName<DownCastUserTo>()} + "'.");
+                return ret;
+            }
+        }
     };
 
-    UserIterator user_begin() const;
-    UserIterator user_end() const;
+    UserIterator<> user_begin() const;
+    UserIterator<> user_end() const;
+
+    // Currently all users are instructions
+    UserIterator<Instruction> inst_user_begin() const;
+    UserIterator<Instruction> inst_user_end() const;
 
     auto users() const {
         return Util::make_iterator_range(user_begin(), user_end());
+    }
+
+    auto inst_users() const {
+        return Util::make_iterator_range(inst_user_begin(), inst_user_end());
+    }
+
+    class UseIterator {
+    private:
+        using InnerIterT = decltype(use_list)::const_iterator;
+        InnerIterT iter;
+
+    public:
+        using difference_type = InnerIterT::difference_type;
+        using value_type = std::shared_ptr<Use>;
+        using pointer = std::shared_ptr<Use>*;
+        using reference = std::shared_ptr<Use>&;
+        using iterator_category = InnerIterT::iterator_category;
+
+        explicit UseIterator(InnerIterT iter_);
+
+        UseIterator &operator++();
+        UseIterator operator++(int);
+        UseIterator &operator--();
+        UseIterator operator--(int);
+
+        bool operator==(UseIterator other) const;
+        bool operator!=(UseIterator other) const;
+        std::shared_ptr<Use> operator*() const;
+    };
+
+    UseIterator self_uses_begin() const;
+    UseIterator self_uses_end() const;
+
+    auto self_uses() const {
+        return Util::make_iterator_range(self_uses_begin(), self_uses_end());
     }
 
     std::shared_ptr<User> getSingleUser() const;
@@ -191,28 +277,6 @@ auto makeClone(const std::shared_ptr<T>& value)
     return std::dynamic_pointer_cast<T>(value->clone());
 }
 
-class Use : public std::enable_shared_from_this<Use> {
-    friend class User;
-    friend class Value;
-
-private:
-    std::weak_ptr<Value> val;
-    User *user;
-
-    // PRIVATE because we want to ensure the use is inited.
-    Use(std::weak_ptr<Value> v, User *u);
-    void init();
-
-    // PRIVATE because only Value::delUse(User*) should invoke this.
-    // Because getUser() will call User::shared_from_this,
-    // but when User is being destructed, that won't work.
-    User *getRawUser() const;
-
-public:
-    std::shared_ptr<Value> getValue() const;
-    std::shared_ptr<User> getUser() const;
-};
-
 /**
  * @brief User是Use的所有者，User的Operands由Use中的val来保存
  */
@@ -220,20 +284,20 @@ class User : public Value, public std::enable_shared_from_this<User> {
 private:
     // operands 设为 private, 防止子类误用，因为删除 operand 需要处理 use 关系
     // operands 里的 Use 中的 val 是实际的操作数
-    std::vector<std::shared_ptr<Use>> operand_uses;
+    std::vector<std::shared_ptr<Use>> operand_uses_list;
 
 public:
-    using UseIterator = decltype(operand_uses)::const_iterator;
-    UseIterator use_begin() const;
-    UseIterator use_end() const;
+    using UseIterator = decltype(operand_uses_list)::const_iterator;
+    UseIterator operand_use_begin() const;
+    UseIterator operand_use_end() const;
 
-    auto uses() const {
-        return Util::make_iterator_range(use_begin(), use_end());
+    auto operand_uses() const {
+        return Util::make_iterator_range(operand_use_begin(), operand_use_end());
     }
 
     class OperandIterator {
     private:
-        using InnerIterT = decltype(operand_uses)::const_iterator;
+        using InnerIterT = decltype(operand_uses_list)::const_iterator;
         InnerIterT iter;
 
     public:
@@ -311,7 +375,7 @@ protected:
     // Returns true if deleted.
     template <typename Pred> bool delOperandIf(Pred pred) {
         bool found = false;
-        for (auto it = operand_uses.begin(); it != operand_uses.end();) {
+        for (auto it = operand_uses_list.begin(); it != operand_uses_list.end();) {
             auto curr_val = (*it)->getValue();
             // `curr_val` can be nullptr if the operands have been destroyed,
             // but that shouldn't happen when the User is alive.
@@ -320,7 +384,7 @@ protected:
             if (pred(curr_val)) {
                 auto ok = curr_val->delUse(*it);
                 Err::gassert(ok);
-                it = operand_uses.erase(it);
+                it = operand_uses_list.erase(it);
                 found = true;
             } else {
                 ++it;

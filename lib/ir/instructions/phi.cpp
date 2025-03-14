@@ -20,9 +20,10 @@ std::shared_ptr<Value> PHIInst::getValueForBlock(const std::shared_ptr<BasicBloc
 }
 
 std::shared_ptr<BasicBlock> PHIInst::getBlockForValue(const std::shared_ptr<Use> &use) const {
-    for (auto it = use_begin(); it != use_end(); ++it) {
+    Err::gassert(use->getValue()->getVTrait() != ValueTrait::BASIC_BLOCK);
+    for (auto it = operand_use_begin(); it != operand_use_end(); ++it) {
         if (*it == use)
-            return std::dynamic_pointer_cast<BasicBlock>((*++it)->getValue());
+            return std::dynamic_pointer_cast<BasicBlock>((*(it + 1))->getValue());
     }
     return nullptr;
 }

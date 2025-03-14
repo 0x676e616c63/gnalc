@@ -488,9 +488,8 @@ void ReassociatePass::optInst(const std::shared_ptr<Instruction> &raw_inst) {
                 (binary->getUseCount() != 1
                     || !isOneUseBinary(binary->getUseList().back()->getUser(), OP::MUL))) {
                 auto negInst = neg2mul(binary);
-                auto use_list = binary->getUseList();
-                for (const auto &use : use_list) {
-                    if (auto binary_user = std::dynamic_pointer_cast<BinaryInst>(use->getUser()))
+                for (const auto &user : binary->users()) {
+                    if (auto binary_user = std::dynamic_pointer_cast<BinaryInst>(user))
                         redoSet.insert(binary_user);
                 }
                 redoSet.insert(candidate);

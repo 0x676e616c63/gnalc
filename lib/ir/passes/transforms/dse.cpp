@@ -67,15 +67,13 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
                     {
                         auto curr = worklist.front();
                         worklist.pop_front();
-                        auto use_list = curr->getUseList();
-                        for (const auto &use : use_list) {
-                            auto user_inst = std::dynamic_pointer_cast<Instruction>(use->getUser());
-                            if (user_inst->getOpcode() != OP::STORE && user_inst->getOpcode() != OP::GEP) {
+                        for (const auto &user : curr->inst_users()) {
+                            if (user->getOpcode() != OP::STORE && user->getOpcode() != OP::GEP) {
                                 killed = true;
                                 break;
                             }
-                            if (user_inst->getOpcode() == OP::GEP)
-                                worklist.emplace_back(user_inst.get());
+                            if (user->getOpcode() == OP::GEP)
+                                worklist.emplace_back(user.get());
                         }
                         if (killed)
                             break;

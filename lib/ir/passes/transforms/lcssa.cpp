@@ -92,8 +92,7 @@ PM::PreservedAnalyses LCSSAPass::run(Function &function, FAM &fam) {
                 inst_worklist.pop_back();
                 auto inst_bb = curr_inst->getParent();
 
-                auto use_list = curr_inst->getUseList();
-                for (const auto& use : use_list) {
+                for (const auto& use : curr_inst->self_uses()) {
                     auto user_inst = std::dynamic_pointer_cast<Instruction>(use->getUser());
                     auto user_bb = user_inst->getParent();
 
@@ -138,7 +137,7 @@ PM::PreservedAnalyses LCSSAPass::run(Function &function, FAM &fam) {
                             phi->addPhiOper(curr_inst, pred);
                             if (!loop->contains(pred.get())) {
                                 uses_to_rewrite.emplace_back
-                                    (*std::prev(std::prev(phi->getUseList().end())));
+                                    (*std::prev(std::prev(phi->operand_use_end())));
                             }
                         }
                         exit->addPhiInst(phi);

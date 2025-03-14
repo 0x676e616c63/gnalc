@@ -53,9 +53,8 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
             } else {
                 auto dest = br->getDest();
                 bool curr_is_used_by_phi = false;
-                auto curr_use_list = curr->getUseList();
-                for (const auto &use : curr_use_list) {
-                    if (auto phi = std::dynamic_pointer_cast<PHIInst>(use->getUser())) {
+                for (const auto &user : curr->users()) {
+                    if (auto phi = std::dynamic_pointer_cast<PHIInst>(user)) {
                         if (dead_blocks.find(phi->getParent()) == dead_blocks.end()) {
                             curr_is_used_by_phi = true;
                             break;

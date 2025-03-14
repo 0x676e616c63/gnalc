@@ -228,14 +228,11 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
             // Or it is merged to exiting before.
             // Or it is profitable. (see above)
             if (loop->isExiting(old_latch.get()) && !latch_merged) {
-                bool is_profitable = false;
+                bool is_profitable = true;
                 for (const auto &phi : old_header->getPhiInsts()) {
-                    auto phi_uses = phi->getUseList();
-                    for (const auto &use : phi_uses) {
-                        auto inst = std::dynamic_pointer_cast<Instruction>(use->getValue());
-                        Err::gassert(inst != nullptr);
-                        if (inst->getParent() != exit) {
-                            is_profitable = true;
+                    for (const auto &user : phi->inst_users()) {
+                        if (user->getParent() != exit) {
+                            is_profitable = false;
                             break;
                         }
                     }
@@ -305,10 +302,9 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                 // If the inst are used outside the old Header but in the loop,
                 // create a phi in the new header for those uses.
                 // For uses outside the loop, we create a phi in the exit block later.
-                auto use_list = inst->getUseList();
                 bool used_outside_header_but_in_loop = false;
-                for (const auto &use : use_list) {
-                    auto parent = std::dynamic_pointer_cast<Instruction>(use->getUser())->getParent();
+                for (const auto &user : inst->inst_users()) {
+                    auto parent = user->getParent();
                     if (parent != old_header && loop->contains(parent.get())) {
                         used_outside_header_but_in_loop = true;
                         break;

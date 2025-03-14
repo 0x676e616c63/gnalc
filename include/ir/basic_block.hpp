@@ -115,8 +115,8 @@ public:
         if (mode != DEL_MODE::NON_PHI) {
             for (auto it = phi_insts.begin(); it != phi_insts.end();) {
                 if (pred(*it)) {
-                    for (const auto& use : (*it)->getUseList()) {
-                        Err::gassert(pred(std::dynamic_pointer_cast<Instruction>(use->getUser())),
+                    for (const auto& user : (*it)->inst_users()) {
+                        Err::gassert(pred(user),
                                      "BasicBlock::delInstIf(): Cannot delete a Phi without deleting its User.");
                     }
                     (*it)->setParent(nullptr);
@@ -129,8 +129,8 @@ public:
         if (mode != DEL_MODE::PHI) {
             for (auto it = insts.begin(); it != insts.end();) {
                 if (pred(*it)) {
-                    for (const auto& use : (*it)->getUseList()) {
-                        Err::gassert(pred(std::dynamic_pointer_cast<Instruction>(use->getUser())),
+                    for (const auto& user : (*it)->inst_users()) {
+                        Err::gassert(pred(user),
                                     "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
                     }
                     (*it)->setParent(nullptr);

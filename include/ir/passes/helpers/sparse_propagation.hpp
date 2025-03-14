@@ -158,11 +158,8 @@ private:
         lattice_map[key] = std::move(val);
 
         std::shared_ptr<Value> changed_value = InfoT::getValueFromKey(key);
-        for (const auto &use : changed_value->getUseList()) {
-            auto inst = std::dynamic_pointer_cast<Instruction>(use->getUser());
-            Err::gassert(inst != nullptr);
-            ssa_worklist.emplace_back(inst);
-        }
+        for (const auto &user : changed_value->inst_users())
+            ssa_worklist.emplace_back(user);
     }
 
     void markFeasible(const Edge &e) { feasible_edges.insert(e); }

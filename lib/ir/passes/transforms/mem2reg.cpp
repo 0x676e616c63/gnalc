@@ -24,8 +24,7 @@ void PromotePass::analyseAlloca() {
             ALLOCA_INFO info = {alloca_inst};
             bool promotable = true;
             // 遍历所有User, 只接受LOAD, STORE语句
-            for (const auto &use : inst->getUseList()) {
-                const auto user = use->getUser()->shared_from_this();
+            for (const auto &user : inst->users()) {
                 // Attention: 这里前提是所有的ORDINARY_VARIABLE都是INSTRUCTION
                 if (user->getVTrait() == ValueTrait::ORDINARY_VARIABLE ||
                     user->getVTrait() == ValueTrait::VOID_INSTRUCTION) {

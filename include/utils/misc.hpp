@@ -40,8 +40,22 @@ struct make_iterator_range {
     auto end() const { return end_it; }
 
 private:
-    T const& begin_it;
-    T const& end_it;
+    T begin_it;
+    T end_it;
+};
+
+template <typename T>
+struct reverse {
+    using BegIterT = decltype(std::rbegin(std::declval<T>()));
+    using EndIterT = decltype(std::rend(std::declval<T>()));
+    explicit reverse(const T& range) : begin_it(std::rbegin(range)), end_it(std::rend(range)) {}
+
+    auto begin() const { return begin_it; }
+    auto end() const { return end_it; }
+
+private:
+    BegIterT begin_it;
+    EndIterT end_it;
 };
 
 // C++20's source_location may be better.

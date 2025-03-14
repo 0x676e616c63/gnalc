@@ -184,9 +184,7 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
         for (const auto &bb : function) {
             auto all_insts = bb->getAllInsts();
             for (const auto &inst : all_insts) {
-                auto uselist = inst->getUseList();
-                for (const auto &use : uselist) {
-                    auto user = std::dynamic_pointer_cast<Instruction>(use->getUser());
+                for (const auto &user : inst->inst_users()) {
                     if (user->getOpcode() != OP::PHI) {
                         if ((bb == user->getParent() && inst->getIndex() > user->getIndex()) ||
                             !domtree.ADomB(bb.get(), user->getParent().get())) {
