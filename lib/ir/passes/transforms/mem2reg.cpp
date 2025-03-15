@@ -194,8 +194,8 @@ void PromotePass::rename(Function &f) {
                         std::dynamic_pointer_cast<LOADInst>(i)->getPtr()); incoming_values[{alloca, b}] == undef_val) {
                         for (auto pb = b;;) {
                             if (incoming_values[{alloca, pb}] == undef_val) {
-                                if (DT.nodes[pb.get()]->parent != nullptr)
-                                    pb = DT.nodes[pb.get()]->parent->bb->shared_from_this();
+                                if (DT[pb.get()]->parent() != nullptr)
+                                    pb = DT[pb.get()]->parent()->block()->shared_from_this();
                                 else {
                                     // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
                                     Logger::logWarning("[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
@@ -234,8 +234,8 @@ void PromotePass::rename(Function &f) {
                 if (auto alloca = phi_to_alloca_map[phi_node]; incoming_values[{alloca, b}] == undef_val) {
                     for (auto pb = b;;) {
                         if (incoming_values[{alloca, pb}] == undef_val) {
-                            if (DT.nodes[pb.get()]->parent != nullptr)
-                                pb = DT.nodes[pb.get()]->parent->bb->shared_from_this();
+                            if (DT[pb.get()]->parent() != nullptr)
+                                pb = DT[pb.get()]->parent()->block()->shared_from_this();
                             else {
                                 // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
                                 Logger::logWarning("[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
@@ -270,7 +270,7 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
     // todo : why less?
     std::priority_queue<DTNPair, std::vector<DTNPair>, std::less<>> PQ; // DT节点优先队列
     for (const auto &b : def_blk) {
-        PQ.emplace((DTNPair){DT.nodes[b.get()]->bfs_num, DT.nodes[b.get()]});
+        PQ.emplace((DTNPair){DT[b.get()]->bfs_num(), DT[b.get()]});
     }
 
     std::set<pDTN> visited_pq;
@@ -304,13 +304,13 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
             STN.pop();
 
             // process succ node in cfg
-            for (const auto& next : node->bb->succs()) {
-                auto next_node = DT.nodes[next.get()];
+            for (const auto& next : node->block()->succs()) {
+                auto next_node = DT[next.get()];
 
-                if (next_node->parent == node.get())
+                if (next_node->parent() == node.get())
                     continue;
 
-                if (next_node->level > root->level)
+                if (next_node->level() > root->level())
                     continue;
 
                 if (!visited_pq.insert(next_node).second)
@@ -321,10 +321,10 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
 
                 phi_blk.insert(next);
                 if (!def_blk.count(next))
-                    PQ.emplace((DTNPair){next_node->bfs_num, next_node});
+                    PQ.emplace((DTNPair){next_node->bfs_num(), next_node});
             }
 
-            for (const auto& dom_child : node->children)
+            for (const auto& dom_child : node->children())
                 if (visited_stn.insert(dom_child).second)
                     STN.push(dom_child);
         }

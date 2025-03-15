@@ -21,7 +21,7 @@ PostDomTree PostDomTreeAnalysis::run(Function &f, FAM &fam) {
     if (is_exit_virtual) {
         // If the root is virtual, then it is linked to a virtual block that is going to destructs
         // when `exit = nullptr`
-        builder.domtree.root->bb = nullptr;
+        builder.domtree.root()->setBlock(nullptr);
     }
     restoreCFG();
     exit = nullptr;

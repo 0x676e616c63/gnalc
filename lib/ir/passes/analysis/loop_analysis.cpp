@@ -238,13 +238,13 @@ LoopInfo LoopAnalysis::run(Function &function, FAM &fam) {
 
     for (const auto& node : dom_pdfv) {
         std::vector<BasicBlock*> backedges;
-        for (const auto& pred : node->bb->preds()) {
-            if (domtree.ADomB(node->bb, pred.get()))
+        for (const auto& pred : node->block()->preds()) {
+            if (domtree.ADomB(node->block(), pred.get()))
                 backedges.emplace_back(pred.get());
         }
 
         if (!backedges.empty()) {
-            auto newloop = std::make_shared<Loop>(node->bb);
+            auto newloop = std::make_shared<Loop>(node->block());
             auto worklist = backedges;
             while (!worklist.empty()) {
                 auto pred = worklist.back();
@@ -266,7 +266,7 @@ LoopInfo LoopAnalysis::run(Function &function, FAM &fam) {
                     info.loop_map[pred] = newloop;
 
                     // See if we've reached the header
-                    if (pred != node->bb) {
+                    if (pred != node->block()) {
                         for (const auto& p : pred->preds())
                             worklist.emplace_back(p.get());
                     }

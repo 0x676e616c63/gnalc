@@ -4,7 +4,7 @@
 
 #include "../config/config.hpp"
 #include "../ir/module.hpp"
-#include "../symbol_table/symbol_table.hpp"
+#include "symbol_table.hpp"
 #include "ast.hpp"
 #include "cfgbuilder.hpp"
 
@@ -15,7 +15,7 @@ class IRGenerator : public AST::ASTVisitor {
     std::shared_ptr<IR::Value> curr_val;
     std::vector<std::shared_ptr<IR::Instruction>> curr_insts;
     std::shared_ptr<IR::LinearFunction> curr_func;
-    Sym::SymbolTable symbol_table;
+    SymbolTable symbol_table;
     bool is_making_lval{false}; // TODO: more sensible
 
     struct Initializer {

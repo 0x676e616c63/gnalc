@@ -116,17 +116,17 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     Err::gassert(dead_br);
                     block->delInst(br);
 
-                    auto nearest_pdom = postdomtree.nodes[block.get()].get();
+                    auto nearest_pdom = postdomtree[block.get()].get();
                     bool found = false;
                     do {
-                        nearest_pdom = nearest_pdom->parent;
-                        for (const auto &pdomphi : nearest_pdom->bb->phis()) {
+                        nearest_pdom = nearest_pdom->parent();
+                        for (const auto &pdomphi : nearest_pdom->block()->phis()) {
                             if (critical.find(pdomphi) != critical.end()) {
                                 found = true;
                                 break;
                             }
                         }
-                        for (const auto &pdominst : *nearest_pdom->bb) {
+                        for (const auto &pdominst : *nearest_pdom->block()) {
                             if (critical.find(pdominst) != critical.end()) {
                                 found = true;
                                 break;
@@ -134,17 +134,17 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                         }
                         if (found)
                             break;
-                    } while (nearest_pdom->parent != nullptr);
+                    } while (nearest_pdom->parent() != nullptr);
                     // Since, by definition, the exit block is useful, this search must terminate.
                     // Also, if there is a virtual root, its children must also be exit blocks. Thus, the
                     // search can't terminate at the virtual root.
-                    Err::gassert(found && nearest_pdom->bb != nullptr);
-                    linkBB(block, nearest_pdom->bb->shared_from_this());
+                    Err::gassert(found && nearest_pdom->block() != nullptr);
+                    linkBB(block, nearest_pdom->block()->shared_from_this());
                     // The new BRInst won't be iterated in `all_insts`. So no need to add it to critical.
-                    block->addInst(std::make_shared<BRInst>(nearest_pdom->bb->shared_from_this()));
+                    block->addInst(std::make_shared<BRInst>(nearest_pdom->block()->shared_from_this()));
                     adce_cfg_modified = true;
                     Logger::logDebug("[ADCE]: Retargeting '",
-                        block->getName(), "' to '", nearest_pdom->bb->getName());
+                        block->getName(), "' to '", nearest_pdom->block()->getName());
                 } else
                     dead.emplace(inst);
             }

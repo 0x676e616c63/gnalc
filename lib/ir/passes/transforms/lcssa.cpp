@@ -50,7 +50,7 @@ PM::PreservedAnalyses LCSSAPass::run(Function &function, FAM &fam) {
                 //    -------------------------
                 //
                 // The Exiting is immediately dominated by PreHeader, which is not a part of the loop.
-                auto idom = domtree.nodes[curr]->parent->bb;
+                auto idom = domtree[curr]->parent()->block();
                 if (!loop->contains(idom))
                     continue;
 
