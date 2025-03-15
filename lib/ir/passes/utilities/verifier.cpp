@@ -15,8 +15,7 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
     size_t fatal_error_cnt = 0;
     // Check use-def
     for (const auto &bb : function) {
-        auto all_insts = bb->getAllInsts();
-        for (const auto &inst : all_insts) {
+        for (const auto &inst : bb->all_insts()) {
             if (inst->getParent() == nullptr) {
                 Logger::logCritical("[VerifyPass]: Instruction '", inst->getName(),
                                     "''s parent pointer is nullptr. But it is in '", bb->getName(), "'.");
@@ -159,8 +158,8 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                 }
 
                 std::shared_ptr<Value> common_value = phi_opers[0].value;
-                for (const auto &[val, bb] : phi_opers) {
-                    if (std::find(bb->pred_begin(), bb->pred_end(), bb) == bb->pred_end()) {
+                for (const auto &[val, phi_incoming_bb] : phi_opers) {
+                    if (std::find(bb->pred_begin(), bb->pred_end(), phi_incoming_bb) == bb->pred_end()) {
                         Logger::logCritical("[VerifyPass]: PHIInst '", phi_inst->getName(), "' has wrong operand '[ ",
                                             val->getName(), ", ", bb->getName(), " ]'.");
                         ++fatal_error_cnt;
@@ -179,8 +178,7 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
     if (fatal_error_cnt == 0) {
         auto domtree = fam.getResult<DomTreeAnalysis>(function);
         for (const auto &bb : function) {
-            auto all_insts = bb->getAllInsts();
-            for (const auto &inst : all_insts) {
+            for (const auto &inst : bb->all_insts()) {
                 for (const auto &user : inst->inst_users()) {
                     if (user->getOpcode() != OP::PHI) {
                         if ((bb == user->getParent() && inst->getIndex() > user->getIndex()) ||

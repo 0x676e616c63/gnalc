@@ -9,9 +9,11 @@
 #include "base.hpp"
 #include "instruction.hpp"
 #include "instructions/phi.hpp"
+#include "../utils/iterator.hpp"
 
 #include <memory>
 #include <set>
+#include <variant>
 
 namespace Parser {
 class CFGBuilder;
@@ -170,7 +172,88 @@ public:
     auto phis() const {
         return Util::make_iterator_range(phi_begin(), phi_end());
     }
-    // ...
+
+    // (phi, insts)
+    class AllInstIterator {
+    private:
+        using PhiIterT = decltype(phi_insts)::const_iterator;
+        using InstIter = decltype(insts)::const_iterator;
+        struct PhiIter {
+            PhiIterT iter;
+            PhiIterT phi_end;
+            InstIter inst_begin;
+            bool operator==(const PhiIter &other) const {
+                return iter == other.iter && phi_end == other.phi_end && inst_begin == other.inst_begin;
+            }
+        };
+        std::variant<PhiIter, InstIter> iter;
+
+    public:
+        using difference_type = PhiIterT::difference_type;
+        using value_type = std::shared_ptr<Instruction>;
+        using pointer = std::shared_ptr<Instruction> *;
+        using reference = std::shared_ptr<Instruction> &;
+        using iterator_category = std::forward_iterator_tag;
+
+        explicit AllInstIterator(PhiIterT iter, PhiIterT phi_end, InstIter inst_begin)
+            : iter(PhiIter{iter, phi_end, inst_begin}) {}
+
+        explicit AllInstIterator(InstIter inst_iter)
+            : iter(inst_iter) {}
+
+
+        AllInstIterator &operator++() {
+            if (std::holds_alternative<PhiIter>(iter)) {
+                auto& phi_iter = std::get<PhiIter>(iter);
+                if (std::next(phi_iter.iter) != phi_iter.phi_end) {
+                    ++phi_iter.iter;
+                    return *this;
+                }
+                iter = phi_iter.inst_begin;
+                return *this;
+            }
+            auto& inst_iter = std::get<InstIter>(iter);
+            ++inst_iter;
+            return *this;
+        }
+
+        AllInstIterator operator++(int) {
+            auto ret = AllInstIterator{*this};
+            if (std::holds_alternative<PhiIter>(iter)) {
+                auto& phi_iter = std::get<PhiIter>(iter);
+                if (std::next(phi_iter.iter) != phi_iter.phi_end) {
+                    ++phi_iter.iter;
+                    return ret;
+                }
+                iter = phi_iter.inst_begin;
+                return *this;
+            }
+            auto& inst_iter = std::get<InstIter>(iter);
+            ++inst_iter;
+            return ret;
+        }
+
+        bool operator==(AllInstIterator other) const{ return iter == other.iter; }
+        bool operator!=(AllInstIterator other) const { return !(*this == other); }
+        std::shared_ptr<Instruction> operator*() const {
+            if (std::holds_alternative<PhiIter>(iter))
+                return *std::get<PhiIter>(iter).iter;
+            return *std::get<InstIter>(iter);
+        }
+    };
+
+    AllInstIterator all_inst_begin() const {
+        if (!phi_insts.empty())
+            return AllInstIterator{phi_insts.begin(), phi_insts.end(), insts.begin()};
+        return AllInstIterator{insts.begin()};
+    }
+    AllInstIterator all_inst_end() const {
+        return AllInstIterator{insts.end()};
+    }
+
+    auto all_insts() const {
+        return Util::make_iterator_range(all_inst_begin(), all_inst_end());
+    }
 
     void setBBParam(const std::vector<std::shared_ptr<Value>> &params);
     const std::vector<std::shared_ptr<Value>> &getBBParams() const;

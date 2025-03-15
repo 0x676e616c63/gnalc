@@ -22,7 +22,8 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
             auto preheader = loop->getPreHeader();
             if (!preheader) {
                 auto new_preheader = std::make_shared<BasicBlock>("%ls.ph" + std::to_string(name_cnt++));
-                for (const auto &pred : header->preds()) {
+                auto header_preds = header->getPreBB();
+                for (const auto &pred : header_preds) {
                     if (!loop->contains(pred.get())) {
                         auto br = pred->getBRInst();
                         Err::gassert(br != nullptr);

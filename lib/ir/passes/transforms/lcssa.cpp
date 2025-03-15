@@ -69,8 +69,7 @@ PM::PreservedAnalyses LCSSAPass::run(Function &function, FAM &fam) {
                 // skip blocks that are in the subloop. They are in LCSSA already.
                 if (loop_info.getLoopFor(candidate) != loop)
                     continue;
-                auto all_insts = candidate->getAllInsts();
-                for (const auto& inst : all_insts) {
+                for (const auto& inst : candidate->all_insts()) {
                     if (inst->getUseCount() == 0)
                         continue;
                     // If this inst is only used in the block, skip it.

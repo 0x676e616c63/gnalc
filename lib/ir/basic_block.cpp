@@ -1,5 +1,5 @@
 #include "../../include/ir/basic_block.hpp"
-#include "../../include/ir/utilities.hpp"
+#include "../../include/utils/misc.hpp"
 #include "../../include/ir/visitor.hpp"
 
 #include <list>
@@ -89,9 +89,9 @@ void BasicBlock::addInstBeforeTerminator(const std::shared_ptr<Instruction> &ins
     inst->setParent(shared_from_this());
 }
 
-std::list<std::shared_ptr<BasicBlock>> BasicBlock::getPreBB() const { return WeaktoSharedList(pre_bb); }
+std::list<std::shared_ptr<BasicBlock>> BasicBlock::getPreBB() const { return Util::WeaktoSharedList(pre_bb); }
 
-std::list<std::shared_ptr<BasicBlock>> BasicBlock::getNextBB() const { return WeaktoSharedList(next_bb); }
+std::list<std::shared_ptr<BasicBlock>> BasicBlock::getNextBB() const { return Util::WeaktoSharedList(next_bb); }
 
 size_t BasicBlock::getNumPreds() const { return pre_bb.size(); }
 size_t BasicBlock::getNumSuccs() const { return next_bb.size(); }

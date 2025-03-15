@@ -497,7 +497,8 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                 moveInsts(old_header->begin(), old_header->end(), old_latch);
                 unlinkBB(old_latch, old_header);
                 // After edge splitting, the header's successors might have changed.
-                for (const auto &succ : old_header->succs()) {
+                auto old_header_succs = old_header->getNextBB();
+                for (const auto &succ : old_header_succs) {
                     unlinkBB(old_header, succ);
                     linkBB(old_latch, succ);
                     for (const auto &phi : succ->getPhiInsts())

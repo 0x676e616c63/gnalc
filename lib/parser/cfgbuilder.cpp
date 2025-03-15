@@ -5,7 +5,7 @@
 #include "../../include/parser/cfgbuilder.hpp"
 #include "../../include/ir/instructions/control.hpp"
 #include "../../include/ir/instructions/helper.hpp"
-#include "../../include/ir/utilities.hpp"
+#include "../../include/utils/misc.hpp"
 
 using namespace IR;
 namespace Parser {
@@ -132,7 +132,7 @@ void CFGBuilder::linker() {
         // 删除不可达块
         if ((*it)->getNumPreds() == 0 && it != cur_making_func->begin()) {
             for (const auto &nextbb : (*it)->succs()) {
-                WeakListDel(nextbb->pre_bb, *it);
+                Util::WeakListDel(nextbb->pre_bb, *it);
             }
             it = cur_making_func->blks.erase(it);
             continue;
@@ -149,8 +149,8 @@ void CFGBuilder::linker() {
                                      "CFGBuilder::linker(): can't cast BRInst");
                         brinst->replaceOperand(*it, nxt); // 改 br
                     }
-                    WeakListReplace(prebb->next_bb, *it, nxt); // 改nextbb
-                    WeakListReplace(nxt->pre_bb, *it, prebb);  // 改prebb
+                    Util::WeakListReplace(prebb->next_bb, *it, nxt); // 改nextbb
+                    Util::WeakListReplace(nxt->pre_bb, *it, prebb);  // 改prebb
                 }
                 it = cur_making_func->blks.erase(it);
             } else if ((*it)->getNumSuccs() == 0) {

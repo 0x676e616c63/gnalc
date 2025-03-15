@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <numeric>
+#include <map>
 
 namespace IR {
 FunctionDecl::FunctionDecl(std::string name_,
@@ -198,8 +199,7 @@ std::shared_ptr<Value> Function::cloneImpl() const {
         for (auto& n : cloned_bb->next_bb)
             n = old2new_bb[n.lock()];
 
-        auto all_insts = cloned_bb->getAllInsts();
-        for (const auto& inst : all_insts) {
+        for (const auto& inst : cloned_bb->all_insts()) {
             auto operands = inst->getOperands();
             for (const auto& use : operands) {
                 auto usee = use->getValue();

@@ -25,6 +25,7 @@
 #include <cstdint>
 
 #include "type.hpp"
+#include "../utils/iterator.hpp"
 #include "../utils/misc.hpp"
 
 namespace IR {

@@ -156,7 +156,8 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
 
     for (const auto& block : function) {
         if (reachable.find(block) == reachable.end()) {
-            for (const auto& succ : block->succs())
+            auto succs = block->getNextBB();
+            for (const auto& succ : succs)
                 safeUnlinkBB(block, succ, dead_phis);
         }
     }
