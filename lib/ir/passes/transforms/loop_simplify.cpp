@@ -27,7 +27,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                     if (!loop->contains(pred.get())) {
                         auto br = pred->getBRInst();
                         Err::gassert(br != nullptr);
-                        br->replaceOperand(header, new_preheader);
+                        br->replaceAllUses(header, new_preheader);
                         unlinkBB(pred, header);
                         linkBB(pred, new_preheader);
                     }
@@ -67,7 +67,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                     auto old_latch = raw_old_latch->shared_from_this();
                     auto br = old_latch->getBRInst();
                     Err::gassert(br != nullptr);
-                    br->replaceOperand(header, new_latch);
+                    br->replaceAllUses(header, new_latch);
                     unlinkBB(old_latch, header);
                     linkBB(old_latch, new_latch);
                 }
@@ -114,7 +114,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                     linkBB(new_exit, exit);
                     for (const auto &in_loop_pred : in_loop_preds) {
                         auto br = in_loop_pred->getBRInst();
-                        br->replaceOperand(exit, new_exit);
+                        br->replaceAllUses(exit, new_exit);
                         unlinkBB(in_loop_pred, exit);
                         linkBB(in_loop_pred, new_exit);
                     }
@@ -140,7 +140,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                     curr_loop_changed = true;
                 }
             }
-
+            Err::gassert(loop->isSimplifyForm(), "Failed to simplify a loop.");
             loop_simplify_cfg_modified |= curr_loop_changed;
         }
     }

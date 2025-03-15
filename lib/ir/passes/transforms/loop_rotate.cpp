@@ -84,11 +84,11 @@ std::shared_ptr<BasicBlock> tryMergeLatchToExiting(const Loop &loop) {
 
     auto jmp_dest = jmp->getDest();
     for (const auto &phi : jmp_dest->getPhiInsts())
-        phi->replaceOperand(latch, single_pred);
+        phi->replaceAllUses(latch, single_pred);
 
     auto pred_br = single_pred->getBRInst();
     Err::gassert(pred_br->isConditional());
-    pred_br->replaceOperand(latch, jmp_dest);
+    pred_br->replaceAllUses(latch, jmp_dest);
 
     unlinkBB(latch, jmp_dest);
     unlinkBB(single_pred, latch);
@@ -135,10 +135,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
     for (const auto &toplevel : loop_info) {
         auto looppdfv = toplevel->getDFVisitor<Util::DFVOrder::ReversePostOrder>();
         for (const auto &loop : looppdfv) {
-            if (!loop->isSimplifyForm()) {
-                ++num_nonsimplified_loops;
-                continue;
-            }
+            Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplify Form.");
 
             bool latch_merged = false;
             if (auto dead_latch = tryMergeLatchToExiting(*loop)) {
@@ -340,13 +337,13 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                                          user_phi->hasBlock(old_latch));
                             if (user_phi->hasBlock(new_header) && user_phi->getValueForBlock(new_header) == user_inst)
                                 continue;
-                            user_phi->replaceOperand(rd.old_header, rd.new_header);
+                            user_phi->replaceAllUses(rd.old_header, rd.new_header);
                         }
                     }
                     // If the use is in the loop but not the old Header, replace them with the new Header's version.
                     else if (loop->contains(user_block.get())) {
                         if (user_inst != rd.new_header)
-                            user_inst->replaceOperand(rd.old_header, rd.new_header);
+                            user_inst->replaceAllUses(rd.old_header, rd.new_header);
                     }
                     // For uses outside the loop:
                     //   1. If it is used in the exit block, see if it is used by a LCSSA phi.
@@ -378,7 +375,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                                 exit->addPhiInst(avail_phi);
                             }
                             // Replace the use with that phi
-                            user_inst->replaceOperand(rd.old_header, avail_phi);
+                            user_inst->replaceAllUses(rd.old_header, avail_phi);
                         }
                     }
                 }
@@ -452,9 +449,9 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                 new_preheader->addInst(std::make_shared<BRInst>(new_header));
 
                 for (const auto &phi : new_header->getPhiInsts())
-                    phi->replaceOperand(old_preheader, new_preheader);
+                    phi->replaceAllUses(old_preheader, new_preheader);
 
-                cloned_ph_br->replaceOperand(new_header, new_preheader);
+                cloned_ph_br->replaceAllUses(new_header, new_preheader);
 
                 // Fix CFG
                 unlinkBB(old_preheader, new_header);
@@ -479,7 +476,8 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                 //   |---------------------------                 |---------------------------
                 //
                 // In practice, this is the same as critical edges breaking.
-                for (const auto &exit_pred : exit->preds()) {
+                auto exit_preds = exit->getPreBB();
+                for (const auto &exit_pred : exit_preds) {
                     const auto &exit_pred_loop = loop_info.getLoopFor(exit_pred.get());
                     // We only split exiting edges
                     if (!exit_pred_loop || exit_pred_loop->contains(exit.get()))
@@ -502,7 +500,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                     unlinkBB(old_header, succ);
                     linkBB(old_latch, succ);
                     for (const auto &phi : succ->getPhiInsts())
-                        phi->replaceOperand(old_header, old_latch);
+                        phi->replaceAllUses(old_header, old_latch);
                 }
 
                 loop_info.delBlock(old_header.get());

@@ -125,7 +125,7 @@ PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
             unlinkBB(call_block, succ);
             linkBB(after_call, succ);
             for (const auto& phi : succ->phis())
-                phi->replaceOperand(call_block, after_call);
+                phi->replaceAllUses(call_block, after_call);
         }
         linkBB(call_block, cloned_entry);
         for (const auto& [bb, val] : return_info)

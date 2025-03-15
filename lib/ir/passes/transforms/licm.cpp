@@ -1,5 +1,6 @@
 #include "../../../../include/ir/passes/transforms/licm.hpp"
 
+#include "../../../../include/ir/block_utils.hpp"
 #include "../../../../include/ir/instructions/binary.hpp"
 #include "../../../../include/ir/instructions/compare.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
@@ -75,6 +76,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
         // Do a post order traversal of the loop tree, so that we can move instructions in one go.
         auto lpdfv = top_level->getDFVisitor<Util::DFVOrder::PostOrder>();
         for (const auto &loop : lpdfv) {
+            Err::gassert(loop->isLCSSAForm(), "Expected LCSSA form in LICM.");
             std::vector<BasicBlock *> loop_blocks{loop->block_begin(), loop->block_end()};
             //
             // Sink
@@ -101,6 +103,28 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                                     sunk->setName(inst->getName() + ".licm.s" + std::to_string(name_cnt++));
                                     exit->addInstAfterPhi(sunk);
                                     sunk_insts[exit] = sunk;
+
+                                    // Rewrite the sunk instruction's uses to keep LCSSA Form
+                                    auto operands = sunk->getOperands();
+                                    for (const auto& use : operands) {
+                                        if (auto oper = std::dynamic_pointer_cast<Instruction>(use->getValue())) {
+                                            auto oper_inst_block = oper->getParent().get();
+                                            if (loop->contains(oper_inst_block)) {
+                                                // See if there is what we want already.
+                                                auto avail_phi = findLCSSAPhi(oper_inst_block, oper);
+                                                if (avail_phi == nullptr) {
+                                                    avail_phi = std::make_shared<PHIInst>(
+                                                       "%licm.p" + std::to_string(name_cnt++), oper->getType());
+                                                    for (const auto& pred : exit->preds())
+                                                        avail_phi->addPhiOper(oper, pred);
+                                                    exit->addPhiInst(avail_phi);
+                                                    if (oper->getType()->getTrait() == IRCTYPE::PTR)
+                                                        aa_res.addClonedInst(oper.get(), avail_phi.get());
+                                                }
+                                                sunk->replaceUse(use, avail_phi);
+                                            }
+                                        }
+                                    }
                                 }
                             }
 
@@ -109,17 +133,22 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                                 continue;
 
                             for (const auto &user : inst->inst_users()) {
-                                if (loop->contains(user->getParent().get()))
+                                auto user_block = user->getParent().get();
+                                // A quick path for most uses being in the same block
+                                if (user_block == inst->getParent().get() || loop->contains(user_block))
                                     continue;
 
                                 // Outside Loop Use
                                 auto phi = std::dynamic_pointer_cast<PHIInst>(user);
-                                Err::gassert(phi != nullptr, "Expected LCSSA in LICM.");
+                                Err::gassert(phi != nullptr, "Expected LCSSA form in LICM.");
                                 auto exit_block = phi->getParent();
-                                Err::gassert(loop->isExit(exit_block.get()), "Expected LCSSA in LICM.");
+                                Err::gassert(loop->isExit(exit_block.get()), "Expected LCSSA form in LICM.");
 
                                 const auto &sunk = sunk_insts[exit_block.get()];
                                 Err::gassert(sunk != nullptr);
+
+                                // Since we've ensured dedicated exits above, all uses of the phi is dominated
+                                // by the exit block, so a trivial replaceSelf is enough.
                                 phi->replaceSelf(sunk);
                                 dead_insts.emplace(phi);
                             }

@@ -351,8 +351,6 @@ public:
     void setOperand(size_t index, const std::shared_ptr<Value> &val);
     void swapOperand(size_t a, size_t b);
 
-    bool replaceOperand(const std::shared_ptr<Value> &before, const std::shared_ptr<Value> &after);
-
     size_t getNumOperands() const;
 
     // Note:
@@ -365,6 +363,8 @@ public:
     //              %b use_list:  <use2: %0>
     bool replaceUse(const std::shared_ptr<Use> &old_use, const std::shared_ptr<Value> &new_use);
 
+    // Replace all uses of `before` with `after`
+    bool replaceAllUses(const std::shared_ptr<Value> &before, const std::shared_ptr<Value> &after);
 protected:
     void addOperand(const std::shared_ptr<Value> &v);
 

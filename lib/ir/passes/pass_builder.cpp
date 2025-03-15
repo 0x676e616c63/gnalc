@@ -191,9 +191,15 @@ MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
-    fpm.addPass(IR::PromotePass());
-    fpm.addPass(IR::NameNormalizePass(true));
-    fpm.addPass(VerifyPass());
+    fpm.addPass(PromotePass());
+    fpm.addPass(LoopSimplifyPass());
+    fpm.addPass(LoopRotatePass());
+    fpm.addPass(NameNormalizePass(true));
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(LCSSAPass());
+    fpm.addPass(LICMPass());
+    fpm.addPass(VerifyPass(true));
+    fpm.addPass(NameNormalizePass(true));
     return fpm;
 }
 

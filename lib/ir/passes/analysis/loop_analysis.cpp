@@ -82,7 +82,7 @@ bool Loop::isExit(const BasicBlock *bb) const {
     if (contains(bb))
         return false;
     return std::any_of(bb->pred_begin(), bb->pred_end(),
-        [this](const auto &pred) { return !contains(pred.get()); });
+        [this](const auto &pred) { return contains(pred.get()); });
 }
 
 std::set<BasicBlock *> Loop::getExitBlocks() const {
@@ -155,6 +155,41 @@ bool Loop::isSimplifyForm() const {
 bool Loop::isRotatedForm() const {
     auto latch = getLatch();
     return latch && isExiting(latch);
+}
+
+bool Loop::isLCSSAForm() const {
+    return std::all_of(loop_blocks.cbegin(), loop_blocks.cend(), [this](const BasicBlock *bb) {
+        for (const auto &inst : bb->all_insts()) {
+            for (const auto &use : inst->self_uses()) {
+                auto user = std::dynamic_pointer_cast<Instruction>(use->getUser());
+                auto user_block = user->getParent().get();
+                if (auto phi_user = std::dynamic_pointer_cast<PHIInst>(user))
+                    user_block = phi_user->getBlockForValue(use).get();
+                // A quick path for most uses being in the same block
+                if (user_block != bb && !contains(user_block))
+                    return false;
+            }
+        }
+        return true;
+    });
+}
+
+bool Loop::isRecursivelyLCSSAForm(const LoopInfo& loop_info) const {
+    // Just check every block's the innermost loop.
+    return std::all_of(loop_blocks.cbegin(), loop_blocks.cend(), [&loop_info](const BasicBlock *bb) {
+        auto loop = loop_info.getLoopFor(bb);
+        for (const auto &inst : bb->all_insts()) {
+            for (const auto &use : inst->self_uses()) {
+                auto user = std::dynamic_pointer_cast<Instruction>(use->getUser());
+                auto user_block = user->getParent();
+                if (auto phi_user = std::dynamic_pointer_cast<PHIInst>(user))
+                    user_block = phi_user->getBlockForValue(use);
+                if (!loop->contains(user_block.get()))
+                    return false;
+            }
+        }
+        return true;
+    });
 }
 
 bool Loop::isAllOperandsLoopInvariant(const Instruction *inst) const {

@@ -225,13 +225,13 @@ std::shared_ptr<BasicBlock> breakCriticalEdge(
     // BRInst
     auto br = pred->getBRInst();
     Err::gassert(br != nullptr);
-    bool ok = br->replaceOperand(succ, new_block);
+    bool ok = br->replaceAllUses(succ, new_block);
     Err::gassert(ok);
     new_block->addInst(std::make_shared<BRInst>(succ));
 
     // PHI
     for (const auto& phi : succ->phis()) {
-        ok = phi->replaceOperand(pred, new_block);
+        ok = phi->replaceAllUses(pred, new_block);
         Err::gassert(ok);
     }
 
@@ -249,5 +249,17 @@ bool breakAllCriticalEdges(const Function & function) {
         }
     }
     return modified;
+}
+
+std::shared_ptr<PHIInst> findLCSSAPhi(const BasicBlock* block, const std::shared_ptr<Value>& value) {
+    for (const auto& phi : block->phis()) {
+        auto phi_opers = phi->getPhiOpers();
+        for (const auto& [val, bb] : phi_opers) {
+            if (val != value)
+                return nullptr;
+        }
+        return phi;
+    }
+    return nullptr;
 }
 } // namespace IR

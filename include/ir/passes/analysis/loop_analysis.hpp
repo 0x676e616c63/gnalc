@@ -11,7 +11,7 @@
 
 namespace IR {
 class LoopAnalysis;
-
+class LoopInfo;
 class Loop : public std::enable_shared_from_this<Loop> {
     friend class LoopAnalysis;
     std::vector<std::shared_ptr<Loop>> sub_loops;
@@ -118,6 +118,8 @@ public:
     bool hasDedicatedExits() const;
     bool isSimplifyForm() const;
     bool isRotatedForm() const;
+    bool isLCSSAForm() const;
+    bool isRecursivelyLCSSAForm(const LoopInfo& loop_info) const;
 
     bool isAllOperandsLoopInvariant(const Instruction* inst) const;
 
