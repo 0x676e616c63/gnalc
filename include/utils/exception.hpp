@@ -5,8 +5,11 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string>
+
+#include "stacktrace.hpp"
+
 #if __has_builtin(__builtin_FILE) && __has_builtin(__builtin_FUNCTION) && __has_builtin(__builtin_LINE)
-#define GNALC_SOURCE_LOCATION_ENABLE 1
+#define GNALC_SOURCE_LOCATION_ENABLE
 struct SourceLocation
 {
     static constexpr SourceLocation current(const char* file = __builtin_FILE(),
@@ -42,17 +45,19 @@ class GnalcException : public std::logic_error {
     std::string detail;
 
 public:
-#if GNALC_SOURCE_LOCATION_ENABLE
+#ifdef GNALC_SOURCE_LOCATION_ENABLE
     explicit GnalcException(const std::string& detail_, SourceLocation loc_ = SourceLocation::current())
         : logic_error("\033[0;32;31mError: \033[1;37m" + location_to_str(loc_) + ":\033[m " + detail_),
-            detail(detail_) {}
+            detail(detail_) {
+        print_stacktrace();
+    }
 #else
     explicit GnalcException(const std::string &detail_)
         : logic_error("\033[0;32;31mError\033[m: " + detail_), detail(detail_) {}
 #endif
 };
 
-#if GNALC_SOURCE_LOCATION_ENABLE
+#ifdef GNALC_SOURCE_LOCATION_ENABLE
 inline void gassert(bool b, const std::string &detail_ = "Assertion failed.",
     SourceLocation loc_ = SourceLocation::current()) {
     if (!b) {
