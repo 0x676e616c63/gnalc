@@ -1,6 +1,11 @@
 #include "../../../include/mir/passes/pass_builder.hpp"
 #include "../../../include/mir/passes/pass_manager.hpp"
 
+// Analysis
+#include "../../../include/mir/passes/analysis/live_analysis.hpp"
+#include "../../../include/mir/passes/analysis/domtree_analysis.hpp"
+
+
 // Transforms
 #include "../../../include/mir/passes/transforms/peephole.hpp"
 #include "../../../include/mir/passes/transforms/phiEliminate.hpp"
@@ -41,6 +46,8 @@ void PassBuilder::registerProxies(FAM &fam, MAM &mam) {
 void PassBuilder::registerFunctionAnalyses(FAM &fam) {
 #define FUNCTION_ANALYSIS(CREATE_PASS) fam.registerPass([&] { return CREATE_PASS; });
 
+    FUNCTION_ANALYSIS(LiveAnalysis())
+    FUNCTION_ANALYSIS(DomTreeAnalysis())
     // ...
 
 #undef FUNCTION_ANALYSIS

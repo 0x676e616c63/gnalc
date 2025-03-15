@@ -37,7 +37,7 @@ aux_source_directory(lib/ir/passes/utilities GNALC_IR_SRC)
 # MIR
 aux_source_directory(lib/mir GNALC_MIR_SRC)
 aux_source_directory(lib/mir/builder GNALC_MIR_SRC)
-# aux_source_directory(lib/mirtools GNALC_MIR_SRC)
+aux_source_directory(lib/mirtools GNALC_MIR_SRC)
 aux_source_directory(lib/mir/instruction GNALC_MIR_SRC)
 aux_source_directory(lib/mir/SIMDinstruction GNALC_MIR_SRC)
 aux_source_directory(lib/mir/passes GNALC_MIR_SRC)

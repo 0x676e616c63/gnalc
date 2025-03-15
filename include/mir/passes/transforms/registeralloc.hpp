@@ -1,11 +1,10 @@
 #pragma once
 #ifndef GNALC_MIRTOOLS_REGISTERALLOC_HPP
 #define GNALC_MIRTOOLS_REGISTERALLOC_HPP
-#define CORE_REGISTER_MAX_NUM 12
-#define FPU_REGISTER_MAX_NUM 32
 #include "../../module.hpp"
 #include "../analysis/live_analysis.hpp"
 #include "../pass_manager.hpp"
+#include "../../../../include/config/config.hpp"
 #include <optional>
 #include <stdarg.h>
 
@@ -39,7 +38,7 @@ public:
 
 protected:
     // datas
-    Function *Func; // 用裸指针是因为不清楚是栈上还是堆上的内存
+    Function *Func{}; // 用裸指针是因为不清楚是栈上还是堆上的内存
 
     OperSet precolored{};
     OperSet initial{};
@@ -68,7 +67,7 @@ protected:
     std::unordered_map<OperP, Moves> moveList;
     std::map<OperP, OperP> alias;
     // color
-    unsigned int K = CORE_REGISTER_MAX_NUM;
+    unsigned int K = Config::MIR::CORE_REGISTER_MAX_NUM;
 
 protected:
     /// procedures
@@ -107,7 +106,7 @@ protected:
     bool isInitialed = false;
 
     ///@note 活跃分析以及信息
-    LiveAnalysis liveAnalysis;
+    Liveness liveinfo;
 
     ///@note 变量池
     VarPool *varpool;
@@ -171,7 +170,7 @@ public:
 
 protected:
     // datas
-    unsigned int K = FPU_REGISTER_MAX_NUM;
+    unsigned int K = Config::MIR::FPU_REGISTER_MAX_NUM;
 
 protected:
     // procedures

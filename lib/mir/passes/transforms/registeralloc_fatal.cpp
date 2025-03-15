@@ -58,7 +58,7 @@ OperP RAPass::heuristicSpill() {
     double weight_max = 0;
     OperP spilled = nullptr;
     for (const auto &op : spilledNodes) {
-        double weight = liveAnalysis.getInfo().intervalLengths[op] * Weight_IntervalLength; // narrowing convert here
+        double weight = liveinfo.intervalLengths[op] * Weight_IntervalLength; // narrowing convert here
         weight += degree[op] * Weight_Degree;
         if (!std::dynamic_pointer_cast<BaseADROP>(op))
             weight += extra_Weight_ForNotPtr;

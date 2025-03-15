@@ -6,10 +6,11 @@
 
 using namespace MIR;
 
-PM::PreservedAnalyses RAPass::run(Function &bkd_function, FAM &) {
+PM::PreservedAnalyses RAPass::run(Function &bkd_function, FAM & fam) {
     Func = &bkd_function;                                       ///@bug
     availableSRegisters = Func->editInfo().availableSRegisters; ///@bug
     varpool = &(Func->editInfo().varpool);
+    liveinfo = fam.getResult<LiveAnalysis>(bkd_function);
 
     Main();
 
@@ -17,8 +18,6 @@ PM::PreservedAnalyses RAPass::run(Function &bkd_function, FAM &) {
 }
 
 void RAPass::Main() {
-    liveAnalysis.runOnFunc(Func); // analysis
-
     Build();
     MkWorkList();
 
@@ -60,8 +59,6 @@ void RAPass::AddEdge(const OperP &u, const OperP &v) {
 }
 
 void RAPass::Build() {
-    auto liveinfo = liveAnalysis.getInfo();
-
     for (const auto &blk : Func->getBlocks()) {
 
         auto live = liveinfo.liveOut[blk];

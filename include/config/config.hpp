@@ -23,4 +23,10 @@ constexpr auto GVNPRE_SKIP_NESTED_EXPR_THRESHOLD = 1000;
 constexpr auto FUNCTION_INLINE_INST_THRESHOLD = 1000;
 } // namespace Config::IR
 
+namespace Config::MIR {
+// Register Allocation
+constexpr auto CORE_REGISTER_MAX_NUM = 12;
+constexpr auto FPU_REGISTER_MAX_NUM = 32;
+}
+
 #endif
