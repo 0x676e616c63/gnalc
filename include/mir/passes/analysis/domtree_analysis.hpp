@@ -2,15 +2,11 @@
 #ifndef GNALC_MIR_PASSES_ANALYSIS_DOMTREE_ANALYSIS_HPP
 #define GNALC_MIR_PASSES_ANALYSIS_DOMTREE_ANALYSIS_HPP
 
-#include "../../../utils/generic_visitor.hpp"
 #include "../../../graph/domtree.hpp"
 #include "../pass_manager.hpp"
 
 #include <memory>
-#include <stack>
-#include <string>
 #include <vector>
-#include <queue>
 
 namespace Graph {
 template<>
@@ -47,7 +43,6 @@ public:
 private:
     friend AnalysisInfo<DomTreeAnalysis>;
     static PM::UniqueKey Key;
-    friend class PostDomTreeAnalysis;
 };
 } // namespace IR
 
