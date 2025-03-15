@@ -237,4 +237,17 @@ std::shared_ptr<BasicBlock> breakCriticalEdge(
 
     return new_block;
 }
+bool breakAllCriticalEdges(const Function & function) {
+    bool modified = false;
+    auto dfv = function.getDFVisitor();
+    for (const auto& curr : dfv) {
+        auto nextbbs = curr->getNextBB();
+        if (nextbbs.size() <= 1) continue;
+        for (const auto& succ : nextbbs) {
+            auto newbb = breakCriticalEdge(curr, succ);
+            modified |= (newbb != nullptr);
+        }
+    }
+    return modified;
+}
 } // namespace IR

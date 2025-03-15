@@ -11,6 +11,7 @@
 #include "../../../include/ir/passes/transforms/adce.hpp"
 #include "../../../include/ir/passes/transforms/break_critical_edges.hpp"
 #include "../../../include/ir/passes/transforms/cfgsimplify.hpp"
+#include "../../../include/ir/passes/transforms/codegen_prepare.hpp"
 #include "../../../include/ir/passes/transforms/constant_propagation.hpp"
 #include "../../../include/ir/passes/transforms/dce.hpp"
 #include "../../../include/ir/passes/transforms/dse.hpp"
@@ -19,6 +20,7 @@
 #include "../../../include/ir/passes/transforms/instsimplify.hpp"
 #include "../../../include/ir/passes/transforms/jump_threading.hpp"
 #include "../../../include/ir/passes/transforms/lcssa.hpp"
+#include "../../../include/ir/passes/transforms/licm.hpp"
 #include "../../../include/ir/passes/transforms/load_elimination.hpp"
 #include "../../../include/ir/passes/transforms/loop_rotate.hpp"
 #include "../../../include/ir/passes/transforms/loop_simplify.hpp"
@@ -30,7 +32,6 @@
 #include "../../../include/ir/passes/transforms/tree_shaking.hpp"
 
 // Utilities
-#include "../../../include/ir/passes/transforms/licm.hpp"
 #include "../../../include/ir/passes/utilities/irprinter.hpp"
 #include "../../../include/ir/passes/utilities/verifier.hpp"
 
@@ -109,6 +110,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline() {
     fpm.addPass(CFGSimplifyPass());
     fpm.addPass(make_clean());
     fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(CodeGenPreparePass());
     fpm.addPass(NameNormalizePass(true));
 
     return fpm;
@@ -172,6 +174,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
 
 #undef FUNCTION_TRANSFORM
 
+    fpm.addPass(CodeGenPreparePass());
     if (!opt_info.advance_name_norm)
         fpm.addPass(NameNormalizePass(true)); // bb_rename: true
 
@@ -258,6 +261,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const
             pipeline.pop_back();
             pipeline.pop_back();
         }
+        fpm.addPass(CodeGenPreparePass());
         fpm.addPass(NameNormalizePass(true));
 
         Logger::logInfo("[FuzzTesting]: Running pipeline: '", pipeline

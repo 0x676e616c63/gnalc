@@ -67,6 +67,8 @@ void removeIdenticalPhi(const std::shared_ptr<BasicBlock> &bb);
 // returns the generated basic block if there is a critical edge, or nullptr for not.
 std::shared_ptr<BasicBlock> breakCriticalEdge(
     const std::shared_ptr<BasicBlock>& pred, const std::shared_ptr<BasicBlock>& succ);
+// Break all critical edges in a function, return true if the function is modified.
+bool breakAllCriticalEdges(const Function& function);
 } // namespace IR
 
 #endif
