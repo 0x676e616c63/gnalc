@@ -18,3 +18,9 @@ testdata
 comp-test
 gnalc_arm
 gnalc
+test.c
+test.ll
+test.s
+.gdb_history
+test copy.s
+.gdb_history

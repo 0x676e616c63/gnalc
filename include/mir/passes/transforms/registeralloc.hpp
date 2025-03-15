@@ -104,7 +104,8 @@ protected:
     // 土制函数及数据结构
 
     ///@note 填充initial 和 precolored
-    bool isInitialed = false;
+    ///@bug 由于FAM特性, 不同Function使用相同Pass时, 简单数据不会清空, 所以需要在run中手动置空
+    bool isInitialed;
 
     ///@note 活跃分析以及信息
     LiveAnalysis liveAnalysis;
@@ -157,12 +158,17 @@ protected:
     /// @note selectspill时使用的启发式算法
     OperP heuristicSpill();
     std::map<OperP, unsigned int> intervalLengths;
+
     /// @note 选择合适的方式溢出, 将原变量替换为一套临时变量(相当于弃用原变量)
     virtual Nodes spill_tryOpt(const OperP &);
     virtual Nodes spill_classic(const OperP &);
     Nodes spill_opt(const OperP &);
+
     ///@note 用于溢出优化的浮点寄存器, 只出不进
     std::vector<unsigned int> availableSRegisters;
+
+    ///@note 溢出次数(包含opt)
+    unsigned int spilltimes = 0;
 };
 
 class NeonRAPass : public RAPass {

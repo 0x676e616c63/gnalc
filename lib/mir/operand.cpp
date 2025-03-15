@@ -116,9 +116,9 @@ std::string StackADROP::toString() const {
         return str;
     }
 
-    if (!varOffset.expired() && !std::dynamic_pointer_cast<PreColedOP>(getBase())) {
-        // not sp/r7
-        auto varPtr = varOffset.lock();
+    if (!varOffset.expired()) {
+        // could be sp/r7
+        auto varPtr = getBase();
 
         if (std::get<CoreRegister>(varPtr->getColor()) != CoreRegister::none)
             str += ": $" + enum_name(std::get<CoreRegister>(varPtr->getColor()));

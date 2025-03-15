@@ -11,8 +11,11 @@ PM::PreservedAnalyses RAPass::run(Function &bkd_function, FAM &) {
     availableSRegisters = Func->editInfo().availableSRegisters; ///@bug
     varpool = &(Func->editInfo().varpool);
 
+    isInitialed = false;
+
     Main();
 
+    Func->editInfo().spilltimes += spilltimes;
     return PM::PreservedAnalyses::all();
 }
 
@@ -125,6 +128,9 @@ void RAPass::MkWorkList() {
     for (auto it = initial.begin(); it != initial.end();) {
         const auto n = *it;
 
+        Err::gassert(n != nullptr, "n is nullptr");
+        Err::gassert(std::dynamic_pointer_cast<PreColedOP>(n) == nullptr, "try put a precolored op into initial");
+
         if (degree[n] >= K) {
             addBySet(spillWorkList, WorkList{n});
         } else if (MoveRelated(n)) {
@@ -140,16 +146,21 @@ void RAPass::MkWorkList() {
 
 void RAPass::Simplify() {
     ///@note 理论上论文这里也是一种启发式算法: 从simplifyWorkList随便取出一个
+
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<std::size_t> dist(0, simplifyWorkList.size() - 1);
     std::size_t randomIdx = dist(gen);
 
     auto it = simplifyWorkList.begin();
+
     std::advance(it, randomIdx);
 
     const auto n = *it;
-    simplifyWorkList.erase(n);
+
+    Err::gassert(n != nullptr, "n is nullptr");
+
+    simplifyWorkList.erase(it); ///@bug
 
     selectStack.emplace_back(n);
 
@@ -159,6 +170,8 @@ void RAPass::Simplify() {
 }
 
 void RAPass::DecrementDegree(const OperP &m) {
+    Err::gassert(m != nullptr, "m is nullptr");
+
     auto d = degree[m];
 
     if (!std::dynamic_pointer_cast<PreColedOP>(m))
@@ -219,6 +232,7 @@ void RAPass::Coalesce() {
     auto &v = edge.v;
     if (u == v) {
         addBySet(coalescedMoves, Moves{m});
+        AddWorkList(u);
     } else if (precolored.find(v) != precolored.end() || adjSet.find(edge) != adjSet.end()) {
         addBySet(constrainedMoves, Moves{m});
         AddWorkList(u);
@@ -242,6 +256,7 @@ void RAPass::Coalesce() {
             goto __Combine_giveup;
 
     } else if (precolored.find(u) == precolored.end() && Conservative(getUnion<OperP>(Adjacent(u), Adjacent(v)))) {
+    ///@note Briggs check
     __Combine_try:
         addBySet(coalescedMoves, Moves{m});
         Combine(u, v);
@@ -288,7 +303,7 @@ void RAPass::Freeze() {
     ///@note 启发式随便找 x 3
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_int_distribution<std::size_t> dist(0, simplifyWorkList.size() - 1);
+    std::uniform_int_distribution<std::size_t> dist(0, freezeWorkList.size() - 1);
     std::size_t randomIdx = dist(gen);
 
     auto it = freezeWorkList.begin();
@@ -329,7 +344,9 @@ void RAPass::FreezeMoves(const OperP &u) {
 
 void RAPass::SelectSpill() {
     ///@note 启发式算法, 但是自己设计
-    auto m = heuristicSpill();
+    auto m = heuristicSpill(); ///@bug
+
+    Err::gassert(m != nullptr, "m is nullptr");
 
     delBySet(spillWorkList, WorkList{m});
     addBySet(simplifyWorkList, WorkList{m});
@@ -352,10 +369,16 @@ void RAPass::AssignColors() {
 
                 Err::gassert(w_a_reg != nullptr, "try assign color for a none virReg op");
 
+                ///@note maybe none
                 auto rm_idx = static_cast<unsigned int>(std::get<CoreRegister>(w_a_reg->getColor()));
 
-                okColors.erase(okColors.begin() + rm_idx);
+                auto it = std::find_if(okColors.begin(), okColors.end(),
+                                       [&rm_idx](const auto &num) { return num == rm_idx; });
+                if (it != okColors.end())
+                    okColors.erase(it);
             }
+
+            Err::gassert(okColors.size() <= K, "vector okColors corrupted."); ///@bug
         }
 
         if (okColors.empty()) {
@@ -365,13 +388,16 @@ void RAPass::AssignColors() {
             auto c = okColors.back(); // 对于通用寄存器, 尽量避开r0-r3分配, 倒着分配或者从r4开始
 
             auto n_reg = std::dynamic_pointer_cast<BindOnVirOP>(n);
+
             Err::gassert(n_reg != nullptr, "try assign color for a none virReg op");
+            Err::gassert(std::dynamic_pointer_cast<PreColedOP>(n_reg) == nullptr,
+                         "try assign color for a precolored op");
 
             n_reg->setColor(static_cast<CoreRegister>(c));
         }
     }
 
-    for (const auto &n : coloredNodes) {
+    for (const auto &n : coalescedNodes) {
         ///@note 有没有可能重复assign color?
         auto n_reg = std::dynamic_pointer_cast<BindOnVirOP>(n);
         auto n_a = GetAlias(n_reg);
@@ -379,7 +405,7 @@ void RAPass::AssignColors() {
         Err::gassert(n_reg != nullptr, "try assign color for a none virReg op");
         Err::gassert(n_a_reg != nullptr, "try assign color for a none virReg op");
 
-        n_reg->setColor(n_a_reg->getColor());
+        n_reg->setColor(std::get<CoreRegister>(n_a_reg->getColor()));
     }
 }
 
@@ -400,6 +426,8 @@ RAPass::Nodes RAPass::Adjacent(const OperP &n) {
 }
 
 RAPass::Moves RAPass::NodeMoves(const OperP &n) {
+    Err::gassert(n != nullptr, "n is nullptr");
+
     auto set = getUnion<InstP>(activeMoves, worklistMoves);
 
     Moves movs{};
@@ -449,14 +477,16 @@ PM::PreservedAnalyses NeonRAPass::run(Function &bkd_function, FAM &) {
     Func = &bkd_function;
     varpool = &(Func->editInfo().varpool);
 
-    availableSRegisters.resize(32);
+    isInitialed = false;
 
+    availableSRegisters.resize(32);
     std::iota(availableSRegisters.begin(), availableSRegisters.end(), 0);
 
     Main();
 
     // 吓我一跳我释放忍术 --- 耦合!
     Func->editInfo().availableSRegisters = availableSRegisters;
+    Func->editInfo().spilltimes += spilltimes;
 
     return PM::PreservedAnalyses::all();
 }

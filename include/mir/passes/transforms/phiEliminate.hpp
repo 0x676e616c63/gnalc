@@ -32,6 +32,14 @@ private:
     std::vector<PhiFunction> processList;
     std::map<BlkP, std::map<BlkP, BlkP>> getMidBlk; // mid = getMidBlk[pred][succ];
 
+    struct tempHash {
+        std::size_t operator()(const std::pair<InstP, BlkP> &pair) const {
+            return std::hash<size_t>()((size_t)(pair.first.get()) ^ (size_t)(pair.second.get()));
+        }
+    };
+
+    std::unordered_set<std::pair<InstP, BlkP>, tempHash> delList;
+
     std::vector<std::pair<OperP, OperP>> findPair(const BlkP &, const BlkP &);
     void MkWorkList();
     void RunOnFunc(PhiFunction &);

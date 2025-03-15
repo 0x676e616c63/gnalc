@@ -14,6 +14,10 @@ PM::PreservedAnalyses PhiEliminatePass::run(Module &bkd_module, MAM &mam) {
         RunOnFunc(phi_func);
     }
 
+    for (const auto &pair : delList) {
+        pair.second->delInst(pair.first);
+    }
+
     return PM::PreservedAnalyses::all();
 }
 
@@ -40,8 +44,8 @@ std::vector<std::pair<OperP, OperP>> PhiEliminatePass::findPair(const BlkP &blk,
             dst_src_vec.emplace_back(target, phioper.val);
         }
 
-        ///@brief 删除PhiInst
-        succ->delInst(phiInst);
+        ///@brief 准备删除PhiInst
+        delList.insert(std::make_pair(phiInst, succ));
     }
 
     return dst_src_vec;
@@ -51,17 +55,14 @@ void PhiEliminatePass::MkWorkList() {
     auto &func_list = module->getFuncs();
 
     for (const auto &func : func_list) {
-        PhiFunction func_phi{{}};
+        PhiFunction func_phi;
         for (const auto &blk : func->getBlocks()) {
-            if (!blk->containPhi)
-                continue;
-            else {
-                ///@note 只遍历succ应该就行
-                for (const auto &succ : blk->getSuccs()) {
-                    PhiBlkPairs blk_phipairs{func, blk, succ};
-                    blk_phipairs.pairs = std::move(findPair(blk, succ));
-                    func_phi.PhiList.emplace_back(blk_phipairs);
-                }
+            for (const auto &succ : blk->getSuccs()) {
+                if (!succ->containPhi)
+                    continue;
+                PhiBlkPairs blk_phipairs{func, blk, succ};
+                blk_phipairs.pairs = std::move(findPair(blk, succ));
+                func_phi.PhiList.emplace_back(blk_phipairs);
             }
         }
 
@@ -220,7 +221,7 @@ void PhiEliminatePass::RunOnBlkPair(const PhiBlkPairs &process) {
                 StagedMap[dst] = stagedVal;
             }
 
-            pushBeforeBranch(emitBlk, dst, src);
+            pushBeforeBranch(emitBlk, src, dst); ///@bug, src和dst可能还需要再考虑一下
 
             auto &node = graph[idx];
             for (auto nxt : node.nxt) {

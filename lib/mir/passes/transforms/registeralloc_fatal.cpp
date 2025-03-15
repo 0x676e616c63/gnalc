@@ -57,13 +57,13 @@ OperP RAPass::heuristicSpill() {
     ///@note 计算溢出权重
     double weight_max = 0;
     OperP spilled = nullptr;
-    for (const auto &op : spilledNodes) {
+    for (const auto &op : spillWorkList) {
         double weight = liveAnalysis.getInfo().intervalLengths[op] * Weight_IntervalLength; // narrowing convert here
         weight += degree[op] * Weight_Degree;
         if (!std::dynamic_pointer_cast<BaseADROP>(op))
             weight += extra_Weight_ForNotPtr;
 
-        if (weight > weight_max)
+        if (weight >= weight_max)
             spilled = op;
     }
 
@@ -72,6 +72,8 @@ OperP RAPass::heuristicSpill() {
 
 ///@note 返回用于替换的小区间虚拟寄存器
 RAPass::Nodes RAPass::spill_tryOpt(const OperP &op) {
+    ++spilltimes;
+
     if (availableSRegisters.empty())
         return spill_classic(op);
     else
@@ -278,8 +280,9 @@ RAPass::Nodes RAPass::spill_classic(const OperP &op) {
 
     // 溢出的栈空间
     auto stackspace = std::make_shared<FrameObj>(FrameTrait::Spill, 4);
+    stackspace->setId(Func->editInfo().StackObjs.size());
     Func->editInfo().StackObjs.emplace_back(stackspace);
-    auto stackaddr = varpool->addStackValue_anonymously(stackspace); // base = r7
+    auto stackaddr = varpool->addStackValue_anonymously(stackspace); // base = sp
 
     for (const auto &blk : Func->getBlocks()) {
         auto &insts = blk->getInsts();
@@ -491,13 +494,17 @@ NeonRAPass::Nodes NeonRAPass::getDef(const InstP &inst) {
     return defs;
 }
 
-NeonRAPass::Nodes NeonRAPass::spill_tryOpt(const OperP &op) { return spill_classic(op); }
+NeonRAPass::Nodes NeonRAPass::spill_tryOpt(const OperP &op) {
+    ++spilltimes;
+    return spill_classic(op);
+}
 
 NeonRAPass::Nodes NeonRAPass::spill_classic(const OperP &op) {
     Nodes stageValues;
 
     // 溢出的栈空间
     auto stackspace = std::make_shared<FrameObj>(FrameTrait::Spill, 4);
+    stackspace->setId(Func->editInfo().StackObjs.size());
     Func->editInfo().StackObjs.emplace_back(stackspace);
     auto stackaddr = varpool->addStackValue_anonymously(stackspace);
 

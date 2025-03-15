@@ -34,6 +34,7 @@ public:                                                   // 接口太多, 还�
     ///@note 因为pass之间无法传递数据, 所以这个信息只能耦合在这个地方
     ///@note 其次, 这是全局的available, 因为图着色的分析不深入到单个inst
     std::vector<unsigned int> availableSRegisters;
+    unsigned int spilltimes = 0;
 
 public:
     FunctionInfo() = default;
@@ -52,8 +53,7 @@ private:
 
 public:
     Function() = delete;
-    explicit Function(std::string _name)
-        : Value(ValueTrait::Function, std::move(_name)) {}
+    explicit Function(std::string _name) : Value(ValueTrait::Function, std::move(_name)) {}
 
     FunctionInfo getInfo() const { return info; }
     FunctionInfo &editInfo() { return info; }

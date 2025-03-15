@@ -1,6 +1,7 @@
 #include "../../../include/mir/builder/lowering.hpp"
 #include "../../../include/mir/instructions/copy.hpp"
 #include "../../../include/mir/instructions/memory.hpp"
+#include <iostream>
 
 using namespace MIR;
 
@@ -78,9 +79,12 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
         }
     }
 
-    /// @brief blocklowering
-    for (auto &midEnd_bb : midEnd_function.getBlocks()) {
+    ///@brief 获取逆后序blks
+    auto blocks = midEnd_function.getDFVisitor<Util::DFVOrder::ReversePostOrder>();
+
+    for (auto &midEnd_bb : blocks) {
         auto basicblock = lower(*midEnd_bb, operlower);
+
         if (func->getBlocks().empty()) {
             basicblock->addInsts_front(arg_insts);
         }
@@ -99,9 +103,6 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
         for (auto &midEnd_succ : midEnd_bb->getNextBB()) {
             backEnd_bb->addSucc(func->getBlock(midEnd_succ->getName()));
         }
-
-        /// @brief 填LiveIn, LiveOuts
-        /// @todo
     }
 
     return func;
@@ -115,7 +116,7 @@ std::shared_ptr<BasicBlock> Lowering::lower(const IR::BasicBlock &midEnd_bb, Ope
 
     ///@note lowering 中没有填写pres, succs以及活跃信息, 应该在phi消除中会填
 
-    for (auto &midEnd_inst : midEnd_bb.getInsts()) {
+    for (auto &midEnd_inst : midEnd_bb.getAllInsts()) {
         auto insts = instlower(midEnd_inst);
         basicblock->addInsts_back(insts);
     }
@@ -246,7 +247,6 @@ std::shared_ptr<Operand> OperandLowering::fastFind(const std::shared_ptr<IR::Val
         return constOper;
     }
 
-    // else
     else {
         Err::unreachable("operLower: fast find an operand failed");
         return nullptr;
@@ -344,11 +344,13 @@ std::shared_ptr<BaseADROP> OperandLowering::mkBaseOP(const IR::Value &val) {
 
 std::shared_ptr<StackADROP> OperandLowering::mkStackOP(const IR::Value &val, unsigned int size) {
     auto obj = std::make_shared<FrameObj>(FrameTrait::Alloca, size);
+    obj->setId(StackObjs.size());
+
     StackObjs.emplace_back(obj);
 
-    auto r7 = getPreColored(CoreRegister::r7);
+    auto sp = getPreColored(CoreRegister::sp);
 
-    std::shared_ptr<StackADROP> ptr = std::make_shared<StackADROP>(obj, val.getName(), 0, r7);
+    std::shared_ptr<StackADROP> ptr = std::make_shared<StackADROP>(obj, val.getName(), 0, sp);
 
     varpool.addValue(val, ptr);
     return ptr;
@@ -356,6 +358,7 @@ std::shared_ptr<StackADROP> OperandLowering::mkStackOP(const IR::Value &val, uns
 
 std::shared_ptr<StackADROP> OperandLowering::mkStackOP(unsigned int seq) {
     auto obj = std::make_shared<FrameObj>(FrameTrait::Arg, 4);
+    obj->setId(StackObjs.size());
     StackObjs.emplace_back(obj);
 
     auto sp = getPreColored(CoreRegister::sp);
@@ -367,6 +370,7 @@ std::shared_ptr<StackADROP> OperandLowering::mkStackOP(unsigned int seq) {
 
 std::shared_ptr<StackADROP> OperandLowering::mkStackOP() {
     auto obj = std::make_shared<FrameObj>(FrameTrait::Spill, 4);
+    obj->setId(StackObjs.size());
     StackObjs.emplace_back(obj);
 
     auto sp = getPreColored(CoreRegister::sp);

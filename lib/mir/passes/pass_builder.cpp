@@ -20,16 +20,17 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
         fpm.addPass(PeepHolePass());
     }
 
-    fpm.addPass(PreRALegalize());
+    fpm.addPass(PreRALegalize()); // necessary
 
     // fpm.addPass(NeonRAPass()); // pass name 还有问题
 
-    fpm.addPass(RAPass());
+    fpm.addPass(RAPass()); // necessary
     return fpm;
 }
 
 MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
     MPM mpm;
+    mpm.addPass(PhiEliminatePass()); // necessary
     mpm.addPass(makeModulePass(buildFunctionPipeline(opt_info)));
     return mpm;
 }

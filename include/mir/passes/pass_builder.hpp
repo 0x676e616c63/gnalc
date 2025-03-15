@@ -10,7 +10,7 @@ namespace MIR {
 struct OptInfo {
     bool peephole = false;      // func pass
     bool phiEliminate = true;   // module pass
-    bool PreRALeagalize = true; // func pass
+    bool preRAleagalize = true; // func pass
     bool RA = true;             // func pass
 };
 
