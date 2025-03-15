@@ -57,7 +57,7 @@ OperP RAPass::heuristicSpill() {
     ///@note 计算溢出权重
     double weight_max = 0;
     OperP spilled = nullptr;
-    for (const auto &op : spilledNodes) {
+    for (const auto &op : spillWorkList) {
         double weight = liveinfo.intervalLengths[op] * Weight_IntervalLength; // narrowing convert here
         weight += degree[op] * Weight_Degree;
         if (!std::dynamic_pointer_cast<BaseADROP>(op))

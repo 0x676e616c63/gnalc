@@ -20,6 +20,7 @@ gnalc_arm
 gnalc
 test.c
 test.ll
+test copy.ll
 test.s
 .gdb_history
 test copy.s
