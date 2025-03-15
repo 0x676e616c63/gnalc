@@ -31,6 +31,10 @@ struct OperandLowering {
     /// when use
     std::shared_ptr<Operand> fastFind(const std::shared_ptr<IR::Value> &);
 
+    /// when phi use
+    std::shared_ptr<Operand> fastFind_phi(const std::shared_ptr<IR::Value> &);
+    std::shared_ptr<Operand> search_phi(const IR::Value &);
+
     /// 在需要获得常数/地址时, 先使用这个
     /// 如果返回不为false, 万事大吉
     /// 如果返回为false, 在instlower环境中手动加mov/vmov

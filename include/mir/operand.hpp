@@ -167,7 +167,7 @@ protected:
     /// @note 最后codegen时, 需要判断constOffset的大小
     int constOffset = 0;
 
-    /// @brief 单向的依赖
+    /// @brief 单向的依赖, 若无额外的依赖, 则设置为其自身(方便寄存器分配)
     std::weak_ptr<BindOnVirOP> varOffset; // base
 
 public:

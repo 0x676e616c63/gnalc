@@ -249,7 +249,65 @@ std::shared_ptr<Operand> OperandLowering::fastFind(const std::shared_ptr<IR::Val
 
     else {
         Err::unreachable("operLower: fast find an operand failed");
+    }
+}
+
+std::shared_ptr<Operand> OperandLowering::search_phi(const IR::Value &midEnd_phi_val) {
+    if (auto ptr = varpool.getValue(midEnd_phi_val))
+        return ptr;
+    else
         return nullptr;
+}
+
+std::shared_ptr<Operand> OperandLowering::fastFind_phi(const std::shared_ptr<IR::Value> &midEnd_phi_val) {
+    /// variablePool find
+    if (auto ptr = varpool.getValue(*midEnd_phi_val))
+        return ptr;
+
+    /// constPool find or insert, 但实际上似乎用不到, 因为对是否是常量的判断提前到instlower了
+    if (auto ci1 = std::dynamic_pointer_cast<IR::ConstantI1>(midEnd_phi_val)) {
+
+        auto constPtr = constpool.getConstant(ci1->getVal());
+        auto constOper = std::make_shared<ConstantIDX>(constPtr);
+        return constOper;
+
+    } else if (auto ci8 = std::dynamic_pointer_cast<IR::ConstantI8>(midEnd_phi_val)) {
+
+        auto constPtr = constpool.getConstant(ci8->getVal());
+        auto constOper = std::make_shared<ConstantIDX>(constPtr);
+        return constOper;
+
+    } else if (auto ci32 = std::dynamic_pointer_cast<IR::ConstantInt>(midEnd_phi_val)) {
+
+        auto constPtr = constpool.getConstant(ci32->getVal());
+        auto constOper = std::make_shared<ConstantIDX>(constPtr);
+        return constOper;
+
+    } else if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(midEnd_phi_val)) {
+
+        auto constPtr = constpool.getConstant(cf->getVal());
+        auto constOper = std::make_shared<ConstantIDX>(constPtr);
+        return constOper;
+
+    } else if (auto glb = std::dynamic_pointer_cast<IR::GlobalVariable>(midEnd_phi_val)) {
+        auto constPtr = constpool.getConstant(glb->getName());
+        auto constOper = std::make_shared<ConstantIDX>(constPtr);
+        return constOper;
+    }
+    ///@note 顺序遍历blk时, 遇到存在循环的CFG和phi, 极有可能出现use before def的情况
+    else {
+        ///@note 这里可以考虑加一个能打印的warning
+        if (auto btype = std::dynamic_pointer_cast<IR::BType>(midEnd_phi_val->getType())) {
+            if (btype->getInner() == IR::IRBTYPE::I32) {
+                return mkOP(*midEnd_phi_val, RegisterBank::gpr);
+            } else if (btype->getInner() == IR::IRBTYPE::FLOAT) {
+                return mkOP(*midEnd_phi_val, RegisterBank::spr);
+            } else {
+                Err::unreachable("phiLower: target value with unknown btype");
+            }
+        } else {
+            return mkBaseOP(*midEnd_phi_val);
+        }
     }
 }
 
@@ -336,6 +394,7 @@ std::shared_ptr<BaseADROP> OperandLowering::mkBaseOP(const IR::Value &val, const
 
 std::shared_ptr<BaseADROP> OperandLowering::mkBaseOP(const IR::Value &val) {
     auto ptr = std::make_shared<BaseADROP>(BaseAddressTrait::Runtime, val.getName(), 0, nullptr);
+    ptr->setBase(ptr);
 
     varpool.addValue(val, ptr);
 
