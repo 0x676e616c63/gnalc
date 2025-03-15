@@ -53,13 +53,22 @@ void moveBlock(const std::shared_ptr<BasicBlock>& bb,
 void moveBlocks(FunctionBBIter beg, FunctionBBIter end,
     const std::shared_ptr<Function>& new_func);
 
+
+// Since phi can have another phi as its operand,
+// the following two functions should be called in a Reverse Post Order.
+
 // Replace single entry or same value phi with its operand
+// This also deletes trivially dead phis with no user.
 void foldPHI(const std::shared_ptr<BasicBlock> &bb, bool preserve_lcssa = false);
+// Remove phi with identical operands
+void removeIdenticalPhi(const std::shared_ptr<BasicBlock> &bb);
 
 // Break critical edges,
 // returns the generated basic block if there is a critical edge, or nullptr for not.
 std::shared_ptr<BasicBlock> breakCriticalEdge(
     const std::shared_ptr<BasicBlock>& pred, const std::shared_ptr<BasicBlock>& succ);
+// Break all critical edges in a function, return true if the function is modified.
+bool breakAllCriticalEdges(const Function& function);
 } // namespace IR
 
 #endif

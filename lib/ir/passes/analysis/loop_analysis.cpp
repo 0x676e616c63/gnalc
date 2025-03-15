@@ -22,9 +22,21 @@ Loop::reverse_iterator Loop::rbegin() { return sub_loops.rbegin(); }
 Loop::reverse_iterator Loop::rend() { return sub_loops.rend(); }
 Loop::const_reverse_iterator Loop::crbegin() const { return sub_loops.crbegin(); }
 Loop::const_reverse_iterator Loop::crend() const { return sub_loops.crend(); }
+Loop::block_const_iterator Loop::block_begin() const { return loop_blocks.begin(); }
+Loop::block_const_iterator Loop::block_end() const { return loop_blocks.end(); }
+Loop::block_iterator Loop::block_begin() { return loop_blocks.begin(); }
+Loop::block_iterator Loop::block_end() { return loop_blocks.end(); }
+Loop::block_const_iterator Loop::block_cbegin() const { return loop_blocks.cbegin(); }
+Loop::block_const_iterator Loop::block_cend() const { return loop_blocks.cend(); }
+Loop::block_const_reverse_iterator Loop::block_rbegin() const { return loop_blocks.crbegin(); }
+Loop::block_const_reverse_iterator Loop::block_rend() const { return loop_blocks.rend(); }
+Loop::block_reverse_iterator Loop::block_rbegin() { return loop_blocks.rbegin(); }
+Loop::block_reverse_iterator Loop::block_rend() { return loop_blocks.rend(); }
+Loop::block_const_reverse_iterator Loop::block_crbegin() const { return loop_blocks.crbegin(); }
+Loop::block_const_reverse_iterator Loop::block_crend() const { return loop_blocks.crend(); }
 
 Loop::Loop(BasicBlock *bb) {
-    blocks.emplace_back(bb);
+    loop_blocks.emplace_back(bb);
     blockset.emplace(bb);
 }
 
@@ -37,14 +49,13 @@ bool Loop::contains(const BasicBlock *bb) const {
 }
 
 BasicBlock *Loop::getHeader() const {
-    return blocks.front();
+    return loop_blocks.front();
 }
 
 BasicBlock *Loop::getPreHeader() const {
     auto header = getHeader();
-    auto preds = header->getPreBB();
     BasicBlock* preheader = nullptr;
-    for (const auto& pred : preds) {
+    for (const auto& pred : header->preds()) {
         if (contains(pred.get()))
             continue;
         if (preheader)
@@ -56,24 +67,28 @@ BasicBlock *Loop::getPreHeader() const {
 bool Loop::isLatch(const BasicBlock *bb) const {
     Err::gassert(contains(bb));
     auto header = getHeader();
-    auto succs = bb->getNextBB();
-    return std::any_of(succs.cbegin(), succs.cend(), [&header](const auto &succ) { return succ.get() == header; });
+    return std::any_of(bb->succ_begin(), bb->succ_end(),
+        [&header](const auto &succ) { return succ.get() == header; });
 }
 
 bool Loop::isExiting(const BasicBlock *bb) const {
     if (!contains(bb))
         return false;
-    auto succs = bb->getNextBB();
-    return std::any_of(succs.cbegin(), succs.cend(), [this](const auto &succ) {
-        return !contains(succ.get());
-    });
+    return std::any_of(bb->succ_begin(), bb->succ_end(),
+        [this](const auto &succ) { return !contains(succ.get()); });
+}
+
+bool Loop::isExit(const BasicBlock *bb) const {
+    if (contains(bb))
+        return false;
+    return std::any_of(bb->pred_begin(), bb->pred_end(),
+        [this](const auto &pred) { return !contains(pred.get()); });
 }
 
 std::set<BasicBlock *> Loop::getExitBlocks() const {
     std::set<BasicBlock*> ret;
-    for (const auto& bb : blocks) {
-        auto succs = bb->getNextBB();
-        for (const auto& candidate : succs) {
+    for (const auto& bb : loop_blocks) {
+        for (const auto& candidate : bb->succs()) {
             if (!contains(candidate.get()))
                 ret.emplace(candidate.get());
         }
@@ -83,7 +98,7 @@ std::set<BasicBlock *> Loop::getExitBlocks() const {
 
 std::vector<BasicBlock *> Loop::getLatches() const {
     std::vector<BasicBlock *> ret;
-    std::copy_if(blocks.crbegin(), blocks.crend(), std::back_inserter(ret),
+    std::copy_if(loop_blocks.crbegin(), loop_blocks.crend(), std::back_inserter(ret),
                  [this](const auto &bb) { return isLatch(bb); });
     return ret;
 }
@@ -110,7 +125,7 @@ std::shared_ptr<Loop> Loop::getOutermostLoop() {
 
 const std::vector<std::shared_ptr<Loop>> &Loop::getSubLoops() const { return sub_loops; }
 
-const std::list<BasicBlock *> &Loop::getBlocks() const { return blocks; }
+const std::list<BasicBlock *> &Loop::getBlocks() const { return loop_blocks; }
 
 size_t Loop::getLoopDepth() const {
     size_t ret = 0;
@@ -127,8 +142,7 @@ size_t Loop::getLoopDepth() const {
 bool Loop::hasDedicatedExits() const {
     auto exits = getExitBlocks();
     return std::all_of(exits.cbegin(), exits.cend(), [this](const auto &exit) {
-        auto preds = exit->getPreBB();
-        return std::all_of(preds.cbegin(), preds.cend(), [this](const auto &pred) {
+        return std::all_of(exit->pred_begin(), exit->pred_end(), [this](const auto &pred) {
             return contains(pred.get());
         });
     });
@@ -143,17 +157,26 @@ bool Loop::isRotatedForm() const {
     return latch && isExiting(latch);
 }
 
+bool Loop::isAllOperandsLoopInvariant(const Instruction *inst) const {
+    return std::all_of(inst->operand_begin(), inst->operand_end(),
+        [this](const auto& val) {
+            if (auto inst = std::dynamic_pointer_cast<Instruction>(val))
+                return !contains(inst->getParent().get());
+            return true;
+        });
+}
+
 bool Loop::delBlockForCurrLoop(const BasicBlock *bb) {
-    auto it = std::find(blocks.begin(), blocks.end(), bb);
-    if (it == blocks.end())
+    auto it = std::find(loop_blocks.begin(), loop_blocks.end(), bb);
+    if (it == loop_blocks.end())
         return false;
-    blocks.erase(it);
+    loop_blocks.erase(it);
     blockset.erase(bb);
     return true;
 }
 
 void Loop::addBlock(BasicBlock *bb) {
-    blocks.emplace_back(bb);
+    loop_blocks.emplace_back(bb);
     blockset.insert(bb);
     for (auto loop = getParent(); loop != nullptr; loop = loop->getParent())
         loop->addBlock(bb);
@@ -161,11 +184,11 @@ void Loop::addBlock(BasicBlock *bb) {
 
 void Loop::moveToHeader(const BasicBlock *bb) {
     Err::gassert(contains(bb));
-    auto it = std::find(blocks.begin(), blocks.end(), bb);
-    Err::gassert(it != blocks.end());
-    if (it != blocks.begin()) {
-        blocks.insert(blocks.begin(), *it);
-        blocks.erase(it);
+    auto it = std::find(loop_blocks.begin(), loop_blocks.end(), bb);
+    Err::gassert(it != loop_blocks.end());
+    if (it != loop_blocks.begin()) {
+        loop_blocks.insert(loop_blocks.begin(), *it);
+        loop_blocks.erase(it);
     }
 }
 
@@ -215,14 +238,13 @@ LoopInfo LoopAnalysis::run(Function &function, FAM &fam) {
 
     for (const auto& node : dom_pdfv) {
         std::vector<BasicBlock*> backedges;
-        auto preds = node->bb->getPreBB();
-        for (const auto& pred : preds) {
-            if (domtree.ADomB(node->bb, pred.get()))
+        for (const auto& pred : node->block()->preds()) {
+            if (domtree.ADomB(node->block(), pred.get()))
                 backedges.emplace_back(pred.get());
         }
 
         if (!backedges.empty()) {
-            auto newloop = std::make_shared<Loop>(node->bb);
+            auto newloop = std::make_shared<Loop>(node->block());
             auto worklist = backedges;
             while (!worklist.empty()) {
                 auto pred = worklist.back();
@@ -233,8 +255,7 @@ LoopInfo LoopAnalysis::run(Function &function, FAM &fam) {
                     auto sub_outer  = subloop->getOutermostLoop();
                     if (sub_outer != newloop) {
                         sub_outer->setParent(newloop);
-                        auto sub_preds = sub_outer->getHeader()->getPreBB();
-                        for (const auto& p : sub_preds) {
+                        for (const auto& p : sub_outer->getHeader()->preds()) {
                             if (info.getLoopFor(p.get()) != sub_outer)
                                 worklist.emplace_back(p.get());
                         }
@@ -245,9 +266,8 @@ LoopInfo LoopAnalysis::run(Function &function, FAM &fam) {
                     info.loop_map[pred] = newloop;
 
                     // See if we've reached the header
-                    if (pred != node->bb) {
-                        auto inner_preds = pred->getPreBB();
-                        for (const auto& p : inner_preds)
+                    if (pred != node->block()) {
+                        for (const auto& p : pred->preds())
                             worklist.emplace_back(p.get());
                     }
                 }
@@ -268,7 +288,7 @@ LoopInfo LoopAnalysis::run(Function &function, FAM &fam) {
             subloop = subloop->getParent();
         }
         while (subloop != nullptr) {
-            subloop->blocks.emplace_back(bb.get());
+            subloop->loop_blocks.emplace_back(bb.get());
             subloop->blockset.emplace(bb.get());
             subloop = subloop->getParent();
         }

@@ -6,18 +6,6 @@
 
 namespace IR {
 PM::PreservedAnalyses BreakCriticalEdgesPass::run(Function &function, FAM &manager) {
-    bool bce_cfg_modified = false;
-
-    auto dfv = function.getDFVisitor();
-    for (const auto& curr : dfv) {
-        auto nextbbs = curr->getNextBB();
-        if (nextbbs.size() <= 1) continue;
-        for (const auto& succ : nextbbs) {
-            auto newbb = breakCriticalEdge(curr, succ);
-            bce_cfg_modified |= (newbb != nullptr);
-        }
-    }
-
-    return bce_cfg_modified ? PreserveNone() : PreserveAll();
+    return breakAllCriticalEdges(function) ? PreserveNone() : PreserveAll();
 }
 } // namespace IR

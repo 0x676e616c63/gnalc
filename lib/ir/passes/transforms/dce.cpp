@@ -14,7 +14,7 @@ PM::PreservedAnalyses DCEPass::run(Function &function, FAM &fam) {
     std::deque<std::shared_ptr<Instruction>> worklist;
 
     for (const auto &block : function) {
-        for (const auto &phi : block->getPhiInsts())
+        for (const auto &phi : block->phis())
             worklist.emplace_back(phi);
 
         for (const auto &inst : *block) {

@@ -22,8 +22,8 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
             auto preheader = loop->getPreHeader();
             if (!preheader) {
                 auto new_preheader = std::make_shared<BasicBlock>("%ls.ph" + std::to_string(name_cnt++));
-                auto preds = header->getPreBB();
-                for (const auto &pred : preds) {
+                auto header_preds = header->getPreBB();
+                for (const auto &pred : header_preds) {
                     if (!loop->contains(pred.get())) {
                         auto br = pred->getBRInst();
                         Err::gassert(br != nullptr);
@@ -35,7 +35,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                 new_preheader->addInst(std::make_shared<BRInst>(header));
                 linkBB(new_preheader, header);
 
-                for (const auto &phi : header->getPhiInsts()) {
+                for (const auto &phi : header->phis()) {
                     auto phi_operands = phi->getPhiOpers();
                     auto new_phi = std::make_shared<PHIInst>("%ls.phi" + std::to_string(name_cnt++), phi->getType());
                     for (const auto &[val, bb] : phi_operands) {
@@ -71,7 +71,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                     unlinkBB(old_latch, header);
                     linkBB(old_latch, new_latch);
                 }
-                for (const auto &phi : header->getPhiInsts()) {
+                for (const auto &phi : header->phis()) {
                     auto phi_operands = phi->getPhiOpers();
                     auto new_phi = std::make_shared<PHIInst>("%ls.phi" + std::to_string(name_cnt++), phi->getType());
                     for (const auto &[val, bb] : phi_operands) {
@@ -99,8 +99,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                 auto exit = raw_exit->shared_from_this();
                 std::vector<std::shared_ptr<BasicBlock>> in_loop_preds;
                 bool is_dedicated = true;
-                auto exit_preds = exit->getPreBB();
-                for (const auto &ep : exit_preds) {
+                for (const auto &ep : exit->preds()) {
                     if (loop->contains(ep.get()))
                         in_loop_preds.emplace_back(ep);
                     else
@@ -119,7 +118,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                         unlinkBB(in_loop_pred, exit);
                         linkBB(in_loop_pred, new_exit);
                     }
-                    for (const auto &phi : exit->getPhiInsts()) {
+                    for (const auto &phi : exit->phis()) {
                         auto phi_operands = phi->getPhiOpers();
                         auto new_phi =
                             std::make_shared<PHIInst>("%ls.phi" + std::to_string(name_cnt++), phi->getType());
@@ -148,7 +147,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
 
     name_cnt = 0;
 
-    return loop_simplify_cfg_modified ? PreserveAll() : PreserveCFGAnalyses();
+    return loop_simplify_cfg_modified ? PreserveNone() : PreserveCFGAnalyses();
 }
 
 } // namespace IR

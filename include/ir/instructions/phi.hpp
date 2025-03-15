@@ -25,6 +25,8 @@ public:
     PHIInst(NameRef name, const std::shared_ptr<Type> &_type);
 
     std::shared_ptr<Value> getValueForBlock(const std::shared_ptr<BasicBlock> &block) const;
+    std::shared_ptr<BasicBlock> getBlockForValue(const std::shared_ptr<Use> &use) const;
+
     void addPhiOper(const std::shared_ptr<Value> &val, const std::shared_ptr<BasicBlock> &blk);
 
     std::vector<PhiOper> getPhiOpers() const;

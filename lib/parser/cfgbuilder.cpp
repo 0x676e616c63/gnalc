@@ -5,7 +5,7 @@
 #include "../../include/parser/cfgbuilder.hpp"
 #include "../../include/ir/instructions/control.hpp"
 #include "../../include/ir/instructions/helper.hpp"
-#include "../../include/ir/utilities.hpp"
+#include "../../include/utils/misc.hpp"
 
 using namespace IR;
 namespace Parser {
@@ -130,9 +130,9 @@ void CFGBuilder::linker() {
     // link完了之后，遍历基本块，查找空块和不可达的块并删除
     for (auto it = cur_making_func->begin(); it != cur_making_func->end();) {
         // 删除不可达块
-        if ((*it)->getPreBB().empty() && it != cur_making_func->begin()) {
-            for (const auto &nextbb : (*it)->getNextBB()) {
-                WeakListDel(nextbb->pre_bb, *it);
+        if ((*it)->getNumPreds() == 0 && it != cur_making_func->begin()) {
+            for (const auto &nextbb : (*it)->succs()) {
+                Util::WeakListDel(nextbb->pre_bb, *it);
             }
             it = cur_making_func->blks.erase(it);
             continue;
@@ -141,19 +141,19 @@ void CFGBuilder::linker() {
         if ((*it)->getInsts().empty()) {
             // 遍历user去替换为他的prebb中的br
             // 非结尾块的情况，prebb的br替换为惟一nextbb
-            if ((*it)->getNextBB().size() == 1) {
-                auto nxt = (*it)->getNextBB().front();
-                for (const auto &prebb : (*it)->getPreBB()) {
+            if ((*it)->getNumSuccs() == 1) {
+                auto nxt = *(*it)->succ_begin();
+                for (const auto &prebb : (*it)->preds()) {
                     if (auto brinst = prebb->getBRInst()) {
                         Err::gassert(brinst != nullptr,
                                      "CFGBuilder::linker(): can't cast BRInst");
                         brinst->replaceOperand(*it, nxt); // 改 br
                     }
-                    WeakListReplace(prebb->next_bb, *it, nxt); // 改nextbb
-                    WeakListReplace(nxt->pre_bb, *it, prebb);  // 改prebb
+                    Util::WeakListReplace(prebb->next_bb, *it, nxt); // 改nextbb
+                    Util::WeakListReplace(nxt->pre_bb, *it, prebb);  // 改prebb
                 }
                 it = cur_making_func->blks.erase(it);
-            } else if ((*it)->getNextBB().empty()) {
+            } else if ((*it)->getNumSuccs() == 0) {
                 // 结尾块
                 if (toBType(
                         toFunctionType(cur_linear_func->getType())->getRet())

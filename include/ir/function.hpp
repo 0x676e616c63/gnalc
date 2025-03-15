@@ -110,13 +110,11 @@ public:
         // Do check first because after erasing the predecessors might get expired.
         for (const auto& bb : blks) {
             if (pred(bb)) {
-                auto prebbs = bb->getPreBB();
-                for (const auto &prebb : prebbs) {
+                for (const auto &prebb : bb->preds()) {
                     Err::gassert(pred(prebb),
                         "Cannot delete a block that have predecessors");
                 }
-                auto nextbbs = bb->getNextBB();
-                for (const auto &nextbb : nextbbs) {
+                for (const auto &nextbb : bb->succs()) {
                     Err::gassert(pred(nextbb),
                         "Cannot delete a block that have successors");
                 }

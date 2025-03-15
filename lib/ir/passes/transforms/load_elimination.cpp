@@ -91,9 +91,8 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
             // and, of those dominates the load block, collect all the possible candidates.
             // Finally, find the one that post dominates all other candidates and killers,
             // which is the most recent update on that memory.
-            auto predecessors = load_block->getPreBB();
             std::set<std::shared_ptr<BasicBlock>> visited;
-            std::deque<std::shared_ptr<BasicBlock>> worklist{predecessors.begin(), predecessors.end()};
+            std::deque<std::shared_ptr<BasicBlock>> worklist{load_block->pred_begin(), load_block->pred_end()};
             // LOADInst/STOREInst that may contribute to the elimination
             std::vector<std::shared_ptr<Instruction>> candidates;
             std::vector<std::shared_ptr<Instruction>> killers;
@@ -173,8 +172,7 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                     }
                 }
 
-                auto preds = load_pred->getPreBB();
-                for (const auto &p : preds) {
+                for (const auto &p : load_pred->preds()) {
                     if (visited.find(p) == visited.end())
                         worklist.emplace_back(p);
                 }

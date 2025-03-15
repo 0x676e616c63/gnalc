@@ -24,8 +24,7 @@ void PromotePass::analyseAlloca() {
             ALLOCA_INFO info = {alloca_inst};
             bool promotable = true;
             // 遍历所有User, 只接受LOAD, STORE语句
-            for (const auto &use : inst->getUseList()) {
-                const auto user = use->getUser()->shared_from_this();
+            for (const auto &user : inst->users()) {
                 // Attention: 这里前提是所有的ORDINARY_VARIABLE都是INSTRUCTION
                 if (user->getVTrait() == ValueTrait::ORDINARY_VARIABLE ||
                     user->getVTrait() == ValueTrait::VOID_INSTRUCTION) {
@@ -139,7 +138,7 @@ void PromotePass::insertPhi() {
         if (!live_in_blocks.insert(b).second)
             continue;
 
-        for (const auto &p : b->getPreBB()) {
+        for (const auto &p : b->preds()) {
             if (auto i = cur_info.user_blocks.find(p);
                 i != cur_info.user_blocks.end()) {
                 if (!i->second.store_map.empty())
@@ -180,7 +179,7 @@ void PromotePass::rename(Function &f) {
             continue;
 
         //  process load store and phi
-        for (const auto &i : b->getPhiInsts()) {
+        for (const auto &i : b->phis()) {
             if (del_queue.count(i)) continue;
             incoming_values[{phi_to_alloca_map[std::dynamic_pointer_cast<PHIInst>(i)], b}] = i;
         }
@@ -195,8 +194,8 @@ void PromotePass::rename(Function &f) {
                         std::dynamic_pointer_cast<LOADInst>(i)->getPtr()); incoming_values[{alloca, b}] == undef_val) {
                         for (auto pb = b;;) {
                             if (incoming_values[{alloca, pb}] == undef_val) {
-                                if (DT.nodes[pb.get()]->parent != nullptr)
-                                    pb = DT.nodes[pb.get()]->parent->bb->shared_from_this();
+                                if (DT[pb.get()]->parent() != nullptr)
+                                    pb = DT[pb.get()]->parent()->block()->shared_from_this();
                                 else {
                                     // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
                                     Logger::logWarning("[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
@@ -228,15 +227,15 @@ void PromotePass::rename(Function &f) {
             }
         }
 
-        for (const auto &n : b->getNextBB()) {
+        for (const auto &n : b->succs()) {
             // process phi in next block
-            for (const auto & phi_node : n->getPhiInsts()) {
+            for (const auto & phi_node : n->phis()) {
                 // 用于在替换前检查是否是undef_val, 若是则沿cfg向上查找非undef的值
                 if (auto alloca = phi_to_alloca_map[phi_node]; incoming_values[{alloca, b}] == undef_val) {
                     for (auto pb = b;;) {
                         if (incoming_values[{alloca, pb}] == undef_val) {
-                            if (DT.nodes[pb.get()]->parent != nullptr)
-                                pb = DT.nodes[pb.get()]->parent->bb->shared_from_this();
+                            if (DT[pb.get()]->parent() != nullptr)
+                                pb = DT[pb.get()]->parent()->block()->shared_from_this();
                             else {
                                 // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
                                 Logger::logWarning("[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
@@ -271,7 +270,7 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
     // todo : why less?
     std::priority_queue<DTNPair, std::vector<DTNPair>, std::less<>> PQ; // DT节点优先队列
     for (const auto &b : def_blk) {
-        PQ.emplace((DTNPair){DT.nodes[b.get()]->bfs_num, DT.nodes[b.get()]});
+        PQ.emplace((DTNPair){DT[b.get()]->bfs_num(), DT[b.get()]});
     }
 
     std::set<pDTN> visited_pq;
@@ -305,13 +304,13 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
             STN.pop();
 
             // process succ node in cfg
-            for (const auto& next : node->bb->getNextBB()) {
-                auto next_node = DT.nodes[next.get()];
+            for (const auto& next : node->block()->succs()) {
+                auto next_node = DT[next.get()];
 
-                if (next_node->parent == node.get())
+                if (next_node->parent() == node.get())
                     continue;
 
-                if (next_node->level > root->level)
+                if (next_node->level() > root->level())
                     continue;
 
                 if (!visited_pq.insert(next_node).second)
@@ -322,10 +321,10 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
 
                 phi_blk.insert(next);
                 if (!def_blk.count(next))
-                    PQ.emplace((DTNPair){next_node->bfs_num, next_node});
+                    PQ.emplace((DTNPair){next_node->bfs_num(), next_node});
             }
 
-            for (const auto& dom_child : node->children)
+            for (const auto& dom_child : node->children())
                 if (visited_stn.insert(dom_child).second)
                     STN.push(dom_child);
         }
@@ -341,7 +340,7 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
 void PromotePass::promoteMemoryToRegister(Function &function) {
     entry_block = function.getBlocks().front();
 
-    Err::gassert(entry_block->getPreBB().empty(),
+    Err::gassert(entry_block->getNumPreds() == 0,
         "First block is not entry block");
 
     analyseAlloca();

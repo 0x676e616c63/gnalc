@@ -79,6 +79,9 @@ public:
 
     // Check if it contains call to Sylib function: getxxx(), putxxx()
     bool hasSylibCall() const;
+
+    // Add a cloned instruction
+    void addClonedInst(const Instruction *inst, const Instruction *cloned);
 };
 
 class AliasAnalysis : public PM::AnalysisInfo<AliasAnalysis> {

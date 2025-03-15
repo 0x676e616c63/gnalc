@@ -11,6 +11,7 @@
 #include "../../../include/ir/passes/transforms/adce.hpp"
 #include "../../../include/ir/passes/transforms/break_critical_edges.hpp"
 #include "../../../include/ir/passes/transforms/cfgsimplify.hpp"
+#include "../../../include/ir/passes/transforms/codegen_prepare.hpp"
 #include "../../../include/ir/passes/transforms/constant_propagation.hpp"
 #include "../../../include/ir/passes/transforms/dce.hpp"
 #include "../../../include/ir/passes/transforms/dse.hpp"
@@ -19,6 +20,7 @@
 #include "../../../include/ir/passes/transforms/instsimplify.hpp"
 #include "../../../include/ir/passes/transforms/jump_threading.hpp"
 #include "../../../include/ir/passes/transforms/lcssa.hpp"
+#include "../../../include/ir/passes/transforms/licm.hpp"
 #include "../../../include/ir/passes/transforms/load_elimination.hpp"
 #include "../../../include/ir/passes/transforms/loop_rotate.hpp"
 #include "../../../include/ir/passes/transforms/loop_simplify.hpp"
@@ -30,7 +32,6 @@
 #include "../../../include/ir/passes/transforms/tree_shaking.hpp"
 
 // Utilities
-#include "../../../include/ir/passes/transforms/licm.hpp"
 #include "../../../include/ir/passes/utilities/irprinter.hpp"
 #include "../../../include/ir/passes/utilities/verifier.hpp"
 
@@ -109,6 +110,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline() {
     fpm.addPass(CFGSimplifyPass());
     fpm.addPass(make_clean());
     fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(CodeGenPreparePass());
     fpm.addPass(NameNormalizePass(true));
 
     return fpm;
@@ -172,6 +174,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
 
 #undef FUNCTION_TRANSFORM
 
+    fpm.addPass(CodeGenPreparePass());
     if (!opt_info.advance_name_norm)
         fpm.addPass(NameNormalizePass(true)); // bb_rename: true
 
@@ -190,14 +193,7 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     fpm.addPass(IR::PromotePass());
     fpm.addPass(IR::NameNormalizePass(true));
-    fpm.addPass(IR::GVNPREPass());
-    fpm.addPass(IR::DSEPass());
-    fpm.addPass(IR::GVNPREPass());
-    fpm.addPass(IR::DCEPass());
-    fpm.addPass(IR::ReassociatePass());
-    fpm.addPass(IR::GVNPREPass());
-    fpm.addPass(IR::ConstantPropagationPass());
-    fpm.addPass(IR::NameNormalizePass(true));
+    fpm.addPass(VerifyPass());
     return fpm;
 }
 
@@ -207,7 +203,7 @@ MPM PassBuilder::buildModuleDebugPipeline() {
     return mpm;
 }
 
-FPM PassBuilder::buildFunctionFuzzTestingPipeline(const std::string& repro) {
+FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const std::string& repro) {
     FPM fpm;
     fpm.addPass(PromotePass());
     fpm.addPass(TailRecursionEliminationPass());
@@ -250,7 +246,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(const std::string& repro) {
         std::uniform_int_distribution<size_t> distrib(0, passes.size() - 1);
 
         // Duplicate some passes
-        auto duplicating_times = passes.size();
+        auto duplicating_times = static_cast<size_t>(static_cast<double>(passes.size()) * duplication_rate);
         for (size_t i = 0; i < duplicating_times; ++i)
             passes.emplace_back(passes[distrib(gen)]);
 
@@ -265,6 +261,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(const std::string& repro) {
             pipeline.pop_back();
             pipeline.pop_back();
         }
+        fpm.addPass(CodeGenPreparePass());
         fpm.addPass(NameNormalizePass(true));
 
         Logger::logInfo("[FuzzTesting]: Running pipeline: '", pipeline
@@ -318,9 +315,9 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(const std::string& repro) {
     return fpm;
 }
 
-MPM PassBuilder::buildModuleFuzzTestingPipeline(const std::string& repro) {
+MPM PassBuilder::buildModuleFuzzTestingPipeline(double duplication_rate, const std::string& repro) {
     MPM mpm;
-    mpm.addPass(makeModulePass(buildFunctionFuzzTestingPipeline(repro)));
+    mpm.addPass(makeModulePass(buildFunctionFuzzTestingPipeline(duplication_rate, repro)));
     // Disable Treeshaking in Repro mode for debugging
     if (repro.empty())
         mpm.addPass(TreeShakingPass());

@@ -75,8 +75,8 @@ std::shared_ptr<Value> GEPInst::getPtr() const { return getOperand(0)->getValue(
 
 std::vector<std::shared_ptr<Value>> GEPInst::getIdxs() const {
     std::vector<std::shared_ptr<Value>> ret;
-    for (auto it = getOperands().begin() + 1; it != getOperands().end(); ++it)
-        ret.emplace_back((*it)->getValue());
+    for (auto it = operand_begin() + 1; it != operand_end(); ++it)
+        ret.emplace_back(*it);
     return ret;
 }
 bool GEPInst::isConstantOffset() const {
@@ -89,19 +89,16 @@ size_t GEPInst::getConstantOffset() const {
     auto idx = getIdxs();
 
     size_t offset = 0;
-    std::shared_ptr<Type> curr_type = getElm(getBaseType());
-    for (const auto &i : idx) {
-        std::shared_ptr<Type> curr_type = getBaseType();
-        for (const auto &i : idx) {
-            auto ci = std::dynamic_pointer_cast<ConstantInt>(i);
-            Err::gassert(ci != nullptr, "Not constant offset.");
-            Err::gassert(curr_type != nullptr, "Invalid GEPInst, type mismatched with indices.");
-            offset += ci->getVal() * curr_type->getBytes();
-            curr_type = getElm(curr_type);
-        }
-
-        return offset;
+    std::shared_ptr<Type> curr_type = getBaseType();
+    for (const auto& i : idx) {
+        auto ci = std::dynamic_pointer_cast<ConstantInt>(i);
+        Err::gassert(ci != nullptr, "Not constant offset.");
+        Err::gassert(curr_type != nullptr, "Invalid GEPInst, type mismatched with indices.");
+        offset += ci->getVal() * curr_type->getBytes();
+        curr_type = getElm(curr_type);
     }
+
+    return offset;
 }
 
 void ALLOCAInst::accept(IRVisitor &visitor) { visitor.visit(*this); }

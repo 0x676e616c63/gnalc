@@ -550,11 +550,10 @@ bool InstSimplifyPass::isLoadSuitableForSinking(const std::shared_ptr<LOADInst> 
     // it's not profitable to sink it. Because we may promote it to register later.
     if (auto alloc = std::dynamic_pointer_cast<ALLOCAInst>(load->getPtr())) {
         bool isAddressTaken = false;
-        auto use_list = alloc->getUseList();
-        for (const auto &use : use_list) {
-            if (auto load2 = std::dynamic_pointer_cast<LOADInst>(use->getUser()))
+        for (const auto &user : alloc->users()) {
+            if (auto load2 = std::dynamic_pointer_cast<LOADInst>(user))
                 continue;
-            if (auto storeInst = std::dynamic_pointer_cast<STOREInst>(use->getUser())) {
+            if (auto storeInst = std::dynamic_pointer_cast<STOREInst>(user)) {
                 if (storeInst->getPtr() == alloc)
                     continue;
             }

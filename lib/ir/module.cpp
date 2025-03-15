@@ -1,6 +1,5 @@
 #include "../../include/ir/module.hpp"
 #include "../../include/ir/visitor.hpp"
-#include "../../include/symbol_table/symbol_table.hpp"
 
 #include <algorithm>
 

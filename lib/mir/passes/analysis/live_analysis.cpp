@@ -3,6 +3,8 @@
 
 using namespace MIR;
 
+PM::UniqueKey LiveAnalysis::Key;
+
 std::list<OperP> extractUse(const InstP &inst) {
     std::list<OperP> uses;
 
@@ -190,4 +192,10 @@ void LiveAnalysis::runOnInst(const InstP &inst, std::unordered_set<OperP> &livei
             break;
         }
     }
+}
+
+Liveness LiveAnalysis::run(Function &f, FAM &fam) {
+    liveinfo.clear();
+    runOnFunc(&f);
+    return liveinfo;
 }

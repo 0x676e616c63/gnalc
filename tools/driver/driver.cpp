@@ -36,14 +36,15 @@ int main(int argc, char **argv) {
     std::string output_file;
 
     // Options
-    bool only_compilation = false;     // -S
-    bool emit_llvm = false;            // -emit-llvm
-    bool ast_dump = false;             // -ast-dump
-    bool fixed_point_pipeline = false; // -fixed-point
-    bool fuzz_testing = false;         // -fuzz
-    bool debug_pipeline = false;       // -debug-pipeline
-    std::string fuzz_testing_repro;
-    IR::OptInfo opt_info;
+    bool only_compilation = false;              // -S
+    bool emit_llvm = false;                     // -emit-llvm
+    bool ast_dump = false;                      // -ast-dump
+    bool fixed_point_pipeline = false;          // -fixed-point
+    bool fuzz_testing = false;                  // -fuzz
+    double fuzz_testing_duplication_rate = 1.0; // -fuzz-rate
+    std::string fuzz_testing_repro;             // -fuzz-repro
+    bool debug_pipeline = false;                // -debug-pipeline
+    IR::OptInfo opt_info;                       // --xxx
     MIR::OptInfo bkd_opt_info;
 
 #if GNALC_EXTENSION_BRAINFK
@@ -116,7 +117,23 @@ int main(int argc, char **argv) {
         OPT_ARG("--treeshaking", "--no-treeshaking", tree_shaking)
 #undef OPT_ARG
         // Debug options:
-        else if (arg == "-fuzz") fuzz_testing = true;
+        else if (arg == "-fuzz")
+            fuzz_testing = true;
+        else if (arg == "-fuzz-rate") {
+            ++i;
+            if (i >= argc) {
+                std::cerr << "Error: Expected fuzz duplication rate." << std::endl;
+                return -1;
+            }
+            fuzz_testing = true;
+            try {
+                fuzz_testing_duplication_rate = std::stod(argv[i]);
+            }
+            catch (std::invalid_argument&) {
+                std::cerr << "Error: Invalid fuzz duplication rate. Expected a floating point." << std::endl;
+                return -1;
+            }
+        }
         else if (arg == "-fuzz-repro") {
             ++i;
             if (i >= argc) {
@@ -125,18 +142,22 @@ int main(int argc, char **argv) {
             }
             fuzz_testing = true;
             fuzz_testing_repro = argv[i];
-        }
-        else if (arg == "-debug-pipeline") debug_pipeline = true;
-        else if (arg == "--ann") opt_info.advance_name_norm = true;
-        else if (arg == "--verify") opt_info.verify = true;
+        } else if (arg == "-debug-pipeline")
+            debug_pipeline = true;
+        else if (arg == "--ann")
+            opt_info.advance_name_norm = true;
+        else if (arg == "--verify")
+            opt_info.verify = true;
         else if (arg == "--strict") {
             opt_info.verify = true;
             opt_info.abort_when_verify_failed = true;
         }
 #if GNALC_EXTENSION_BRAINFK
         // Extensions:
-        else if (arg == "-mbrainfk") bf_target = true;
-        else if (arg == "-mbrainfk-3tape") bf3t_target = true;
+        else if (arg == "-mbrainfk")
+            bf_target = true;
+        else if (arg == "-mbrainfk-3tape")
+            bf3t_target = true;
 #endif
 
         else if (arg == "-h" || arg == "--help") {
@@ -178,13 +199,14 @@ Optimizations available:
   --treeshaking        - Shake off unused functions, function declarations and global variables
 
 Debug options:
-  -fuzz                   - Enable fuzz testing pipeline. (Ignore other optimization options)
-  -fuzz-repro <pipeline>  - Reproduce fuzz testing pipeline. Find <pipeline> in the fuzz testing log.
-  -debug-pipeline         - Builtin pipeline for debugging.
-  --no-<pass>             - Remove <pass> from pipeline, <pass> are specified by 'Optimizations available' above.
-  --ann                   - Use the advance name normalization result (after IRGen). (This disables the one at the last).
-  --verify                - Verify IR after each pass
-  --strict                - Enable verify and abort when verify failed
+  -fuzz                      - Enable fuzz testing pipeline. (Ignore other optimization options)
+  -fuzz-rate <rate: double>  - Set the duplication rate for fuzz testing pipeline.
+  -fuzz-repro <pipeline>     - Reproduce fuzz testing pipeline. Find <pipeline> in the fuzz testing log.
+  -debug-pipeline            - Builtin pipeline for debugging.
+  --no-<pass>                - Remove <pass> from pipeline, <pass> are specified by 'Optimizations available' above.
+  --ann                      - Use the advance name normalization result (after IRGen). (This disables the one at the last).
+  --verify                   - Verify IR after each pass
+  --strict                   - Enable verify and abort when verify failed
 )";
 
 #if GNALC_EXTENSION_BRAINFK
@@ -242,7 +264,7 @@ Extensions:
     if (debug_pipeline)
         mpm = IR::PassBuilder::buildModuleDebugPipeline();
     else if (fuzz_testing)
-        mpm = IR::PassBuilder::buildModuleFuzzTestingPipeline(fuzz_testing_repro);
+        mpm = IR::PassBuilder::buildModuleFuzzTestingPipeline(fuzz_testing_duplication_rate, fuzz_testing_repro);
     else if (fixed_point_pipeline)
         mpm = IR::PassBuilder::buildModuleFixedPointPipeline();
     else
@@ -266,8 +288,6 @@ Extensions:
         return 0;
     }
 
-    mpm.run(generator.get_module(), mam);
-
 #if GNALC_EXTENSION_BRAINFK
     if (bf_target || bf3t_target) {
         BrainFk::BF3t32bGen bfgen;
@@ -285,6 +305,8 @@ Extensions:
         return 0;
     }
 #endif
+
+    mpm.run(generator.get_module(), mam);
 
     MIR::Lowering lower(generator.get_module());
 
@@ -304,6 +326,7 @@ Extensions:
     }
 
     bkd_mpm.run(lower.getModule(), bkd_mam);
+    Err::todo("ARM Assembler");
 
     return 0;
 }

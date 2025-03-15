@@ -2,10 +2,12 @@
 #ifndef GNALC_UTILS_MISC_HPP
 #define GNALC_UTILS_MISC_HPP
 
-#include <map>
-#include <utility>
 #include <string_view>
 #include <type_traits>
+#include <list>
+#include <memory>
+
+#include "exception.hpp"
 
 namespace Util {
 template <class... Ts> struct overloaded : Ts... {
@@ -17,20 +19,16 @@ template <typename T, template <typename...> typename Primary>
 struct is_specialization_of : public std::false_type {};
 
 template <template <typename...> typename Primary, typename... Args>
-struct is_specialization_of<Primary<Args...>, Primary> : public std::true_type {
-};
+struct is_specialization_of<Primary<Args...>, Primary> : public std::true_type {};
 
 template <typename T, template <typename...> typename Primary>
 constexpr bool is_specialization_of_v = is_specialization_of<T, Primary>::value;
 
-template <typename T>
-struct remove_cvref
-{
+template <typename T> struct remove_cvref {
     using type = std::remove_cv_t<std::remove_reference_t<T>>;
 };
 
-template <typename T>
-using remove_cvref_t = typename remove_cvref<T>::type;
+template <typename T> using remove_cvref_t = typename remove_cvref<T>::type;
 
 // C++20's source_location may be better.
 template <typename getTypeNameArgument>
@@ -46,6 +44,48 @@ std::string_view getTypeName() {
 #else
     return std::string_view{"UNKNOWN_NAME"};
 #endif
+}
+
+template <typename T>
+const std::list<std::shared_ptr<T>> WeaktoSharedList(const std::list<std::weak_ptr<T>> &weak_list) {
+    std::list<std::shared_ptr<T>> shared_list;
+    for (const auto &weakp : weak_list) {
+        auto sharedp = weakp.lock();
+        if (sharedp) {
+            shared_list.push_back(sharedp);
+        } else {
+            Err::error("WeaktoSharedList(): element is expired.");
+        }
+    }
+    return shared_list;
+}
+
+template <typename T> bool WeakListDel(std::list<std::weak_ptr<T>> &weak_list, const std::shared_ptr<T> &p) {
+    bool found = false;
+    for (auto it = weak_list.begin(); it != weak_list.end();) {
+        if (it->lock() == p) {
+            it = weak_list.erase(it);
+            found = true;
+        } else {
+            ++it;
+        }
+    }
+    Err::gassert(found, "WeakListDel(): element not found.");
+    return found;
+}
+
+template <typename T>
+bool WeakListReplace(std::list<std::weak_ptr<T>> &weak_list, const std::shared_ptr<T> &old_p,
+                     const std::shared_ptr<T> &new_p) {
+    bool found = false;
+    for (auto &weakp : weak_list) {
+        if (weakp.lock() == old_p) {
+            weakp = new_p;
+            found = true;
+        }
+    }
+    Err::gassert(found, "WeakListReplace(): element not found.");
+    return found;
 }
 } // namespace Util
 #endif

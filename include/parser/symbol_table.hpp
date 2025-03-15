@@ -1,19 +1,16 @@
 #pragma once
-#ifndef GNALC_SYMBOL_TABLE_HPP
-#define GNALC_SYMBOL_TABLE_HPP
-
-#include <functional>
+#ifndef GNALC_PARSER_SYMBOL_TABLE_HPP
+#define GNALC_PARSER_SYMBOL_TABLE_HPP
 
 #include "../ir/base.hpp"
 #include "../utils/exception.hpp"
 
 #include <map>
-#include <stack>
 #include <string>
 #include <utility>
 #include <vector>
 
-namespace Sym {
+namespace Parser {
 class SymbolTable {
     struct Scope {
         std::string name;
@@ -44,6 +41,6 @@ public:
         return nullptr;
     }
 };
-} // namespace Sym
+} // namespace Parser
 
 #endif

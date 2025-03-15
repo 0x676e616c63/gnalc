@@ -7,6 +7,7 @@
 #include "../../../../include/ir/instructions/memory.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
+#include "../../../../include/ir/passes/helpers/constant_fold.hpp"
 #include "../../../../include/ir/pattern_match.hpp"
 #include "../../../../include/pattern_match/pattern_match.hpp"
 
@@ -69,11 +70,10 @@ std::shared_ptr<BasicBlock> tryMergeLatchToExiting(const Loop &loop) {
         }
     }
 
-    auto preds = latch->getPreBB();
-    if (preds.size() != 1)
+    if (latch->getNumPreds() != 1)
         return nullptr;
 
-    const auto &single_pred = preds.front();
+    const auto &single_pred = *latch->pred_begin();
     if (single_pred == latch // Don't merge single block loop
         || !loop.isExiting(single_pred.get()))
         return nullptr;
@@ -100,8 +100,13 @@ std::shared_ptr<BasicBlock> tryMergeLatchToExiting(const Loop &loop) {
     // Don't mess up the consecutive cmp and br for better codegen
     //   %cond = icmp ...
     //   br %cond ...
-    if (pred_br->getIndex() != 0)
-        moveInsts(latch->begin(), latch->end(), single_pred, std::prev(pred_br->getIter()));
+    if (auto cond_inst = std::dynamic_pointer_cast<Instruction>(pred_br->getCond())) {
+        if (cond_inst->getParent() == single_pred)
+            moveInsts(latch->begin(), latch->end(), single_pred, cond_inst->getIter());
+        else
+            Logger::logWarning("Cond '", cond_inst->getName(),
+                "' and BRInst are in separate block.");
+    }
     else
         moveInsts(latch->begin(), latch->end(), single_pred, pred_br->getIter());
 
@@ -138,7 +143,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
             bool latch_merged = false;
             if (auto dead_latch = tryMergeLatchToExiting(*loop)) {
                 loop_info.delBlock(dead_latch.get());
-                if (dead_latch->getNumPreBBs() == 0)
+                if (dead_latch->getNumPreds() == 0)
                     function.delBlock(dead_latch);
                 loop_rotate_cfg_modified = true;
                 latch_merged = true;
@@ -214,7 +219,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
 
             Err::gassert(*loop->getExitBlocks().begin() == exit.get());
 
-            if (exit->getNumPreBBs() != 1)
+            if (exit->getNumPreds() != 1)
                 continue;
 
             // We rotate only if
@@ -222,14 +227,11 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
             // Or it is merged to exiting before.
             // Or it is profitable. (see above)
             if (loop->isExiting(old_latch.get()) && !latch_merged) {
-                bool is_profitable = false;
+                bool is_profitable = true;
                 for (const auto &phi : old_header->getPhiInsts()) {
-                    auto phi_uses = phi->getUseList();
-                    for (const auto &use : phi_uses) {
-                        auto inst = std::dynamic_pointer_cast<Instruction>(use->getValue());
-                        Err::gassert(inst != nullptr);
-                        if (inst->getParent() != exit) {
-                            is_profitable = true;
+                    for (const auto &user : phi->inst_users()) {
+                        if (user->getParent() != exit) {
+                            is_profitable = false;
                             break;
                         }
                     }
@@ -242,7 +244,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
             // And header must dominate the body, so the body (new_header)
             // should only have one predecessor.
             // If not, give up
-            if (new_header->getNumPreBBs() != 1)
+            if (new_header->getNumPreds() != 1)
                 continue;
             // Fold the phi of body (new_header) if any.
             foldPHI(new_header);
@@ -299,10 +301,9 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                 // If the inst are used outside the old Header but in the loop,
                 // create a phi in the new header for those uses.
                 // For uses outside the loop, we create a phi in the exit block later.
-                auto use_list = inst->getUseList();
                 bool used_outside_header_but_in_loop = false;
-                for (const auto &use : use_list) {
-                    auto parent = std::dynamic_pointer_cast<Instruction>(use->getUser())->getParent();
+                for (const auto &user : inst->inst_users()) {
+                    auto parent = user->getParent();
                     if (parent != old_header && loop->contains(parent.get())) {
                         used_outside_header_but_in_loop = true;
                         break;
@@ -408,7 +409,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                 phi->delPhiOperByBlock(old_preheader);
 
             // Now the old header should have only one predecessor, which is the latch.
-            Err::gassert(old_header->getNumPreBBs() == 1 && old_header->getPreBB().front() == old_latch);
+            Err::gassert(old_header->getNumPreds() == 1 && *old_header->pred_begin() == old_latch);
             foldPHI(old_header);
 
             // Update Loop Info
@@ -423,6 +424,10 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
             auto cloned_ph_br = old_preheader->getBRInst();
             Err::gassert(cloned_ph_br->isConditional());
             bool preheader_br_is_conditional = true;
+            if (auto fold = foldConstant(function.getConstantPool(), cloned_ph_br->getCond())) {
+                if (fold != cloned_ph_br->getCond())
+                    cloned_ph_br->getCond()->replaceSelf(fold);
+            }
             if (auto ci1 = std::dynamic_pointer_cast<ConstantI1>(cloned_ph_br->getCond())) {
                 std::set<std::shared_ptr<PHIInst>> dead_phis;
                 if ((ci1 && cloned_ph_br->getTrueDest() == new_header) ||
@@ -474,8 +479,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                 //   |---------------------------                 |---------------------------
                 //
                 // In practice, this is the same as critical edges breaking.
-                auto exit_preds = exit->getPreBB();
-                for (const auto &exit_pred : exit_preds) {
+                for (const auto &exit_pred : exit->preds()) {
                     const auto &exit_pred_loop = loop_info.getLoopFor(exit_pred.get());
                     // We only split exiting edges
                     if (!exit_pred_loop || exit_pred_loop->contains(exit.get()))

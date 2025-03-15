@@ -85,7 +85,7 @@ public:
     void solve(Function &target) {
         clear();
 
-        cfg_worklist.emplace_back(nullptr, target.getBlocks().front());
+        cfg_worklist.emplace_back(nullptr, *target.begin());
 
         while (!cfg_worklist.empty() || !ssa_worklist.empty()) {
             while (!ssa_worklist.empty()) {
@@ -104,7 +104,7 @@ public:
 
                 markFeasible(curr);
 
-                for (const auto &inst : curr.dest->getPhiInsts())
+                for (const auto &inst : curr.dest->phis())
                     visitPHI(inst);
 
                 // i.e. the target node is encountered to be executable for the
@@ -114,10 +114,9 @@ public:
                         visitInst(inst);
                 }
 
-                auto outgoings = curr.dest->getNextBB();
-                if (outgoings.size() == 1 &&
-                    !isFeasible(curr.dest, *outgoings.begin()))
-                    cfg_worklist.emplace_back(curr.dest, *outgoings.begin());
+                if (curr.dest->getNumSuccs() == 1 &&
+                    !isFeasible(curr.dest, *curr.dest->succ_begin()))
+                    cfg_worklist.emplace_back(curr.dest, *curr.dest->succ_begin());
             }
         }
     }
@@ -141,11 +140,10 @@ public:
     }
 
     size_t countFeasibleInEdge(const std::shared_ptr<BasicBlock> &bb) const {
-        auto incomings = bb->getPreBB();
-        if (incomings.empty())  // Entry node
+        if (bb->getNumPreds() == 0)  // Entry node
             return isFeasible(nullptr, bb) ? 1 : 0;
         return std::count_if(
-            incomings.cbegin(), incomings.cend(),
+            bb->pred_begin(), bb->pred_end(),
             [&bb, this](auto &&in) { return isFeasible(in, bb); });
     }
 
@@ -158,11 +156,8 @@ private:
         lattice_map[key] = std::move(val);
 
         std::shared_ptr<Value> changed_value = InfoT::getValueFromKey(key);
-        for (const auto &use : changed_value->getUseList()) {
-            auto inst = std::dynamic_pointer_cast<Instruction>(use->getUser());
-            Err::gassert(inst != nullptr);
-            ssa_worklist.emplace_back(inst);
-        }
+        for (const auto &user : changed_value->inst_users())
+            ssa_worklist.emplace_back(user);
     }
 
     void markFeasible(const Edge &e) { feasible_edges.insert(e); }

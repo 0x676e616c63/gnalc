@@ -3,8 +3,16 @@ name: Gnalc Test - O1
 on:
   push:
     branches: [ "main", "ci", "iropt" ]
+    paths:
+      - 'lib/**'
+      - 'include/**'
+      - '.github/workflows/o1.yml'
   pull_request:
     branches: [ "main", "ci", "iropt" ]
+    paths:
+      - 'lib/**'
+      - 'include/**'
+      - '.github/workflows/o1.yml'
 
 env:
   BUILD_TYPE: Release

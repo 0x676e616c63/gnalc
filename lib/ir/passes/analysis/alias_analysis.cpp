@@ -40,7 +40,7 @@ AliasAnalysisResult::PtrInfo AliasAnalysisResult::getPtrInfo(const Value *ptr) c
     }
 
     auto it = ptr_info.find(ptr);
-    Err::gassert(it != ptr_info.end());
+    Err::gassert(it != ptr_info.end(), "No such pointer registered.");
     return it->second;
 }
 
@@ -244,6 +244,11 @@ ModRefInfo AliasAnalysisResult::getFunctionModRefInfo() const {
 bool AliasAnalysisResult::hasUntrackedCall() const { return has_untracked_call; }
 bool AliasAnalysisResult::hasSylibCall() const { return has_sylib_call; }
 
+void AliasAnalysisResult::addClonedInst(const Instruction *inst, const Instruction *cloned) {
+    Err::gassert(ptr_info.count(inst), "No such instruction registered.");
+    ptr_info[cloned] = ptr_info[inst];
+}
+
 AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
     AliasAnalysisResult res;
     res.func = &func;
@@ -275,7 +280,7 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
         changed = false;
         auto dfv = func.getDFVisitor();
         for (const auto &curr : dfv) {
-            for (const auto &phi : curr->getPhiInsts()) {
+            for (const auto &phi : curr->phis()) {
                 if (phi->getType()->getTrait() == IRCTYPE::PTR) {
                     for (const auto &oper : phi->getPhiOpers())
                         changed |= res.insertPotentialAlias(phi.get(), oper.value.get());

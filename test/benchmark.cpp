@@ -254,13 +254,13 @@ int main(int argc, char *argv[]) {
     auto print_help = [&argv]() {
         println("Usage: {} [options]", argv[0]);
         println("Options:");
-        println("  -s, --skip [name_prefix] : Skip test whose name has such "
-                "prefix.");
-        println("  -r, --run  [name_prefix] : Only run test whose name has "
-                "such prefix.");
-        println("  -h, --help               : Print this help and exit.");
+        println("  -s, --skip   [name_prefix] Skip test whose name has such prefix.");
+        println("  -r, --run    [name_prefix] Only run test whose name has such prefix.");
+        println("  -e, --resume [name_prefix] Start from test whose name have such prefix.");
+        println("  -h, --help                 Print this help and exit.");
     };
 
+    std::string resume_pattern;
     RunSet run;
     SkipSet skip;
 
@@ -290,6 +290,14 @@ int main(int argc, char *argv[]) {
             }
             run.emplace_back(Rule{argv[i + 1], {}});
             ++i;
+        } else if (arg == "--resume" || arg == "-e") {
+            if (i + 1 >= argc || argv[i + 1][0] == '-') {
+                println("Error: Expected a name.");
+                print_help();
+                return -1;
+            }
+            resume_pattern = argv[i + 1];
+            ++i;
         } else if (arg == "--help" || arg == "-h") {
             print_help();
             return 0;
@@ -306,6 +314,7 @@ int main(int argc, char *argv[]) {
 
     size_t passed = 0;
     size_t curr_test_cnt = 0;
+    bool have_resumed = resume_pattern.empty();
     // Well, there shouldn't be any "failed" tests for clang, but just in case.
     std::vector<TestData> failed_tests;
 
@@ -315,11 +324,19 @@ int main(int argc, char *argv[]) {
 
     for (auto &&curr_test_dir : cfg::benchmark_subdirs) {
         auto test_files = gather_test_files(curr_test_dir, run, skip);
+        if (test_files.empty())
+            continue;
 
         auto curr_temp_dir = cfg::global_benchmark_temp_dir + "/" + curr_test_dir;
         create_directories(curr_temp_dir);
 
         for (const auto &sy : test_files) {
+            if (!have_resumed) {
+                if (!begins_with(sy.path().stem(), resume_pattern))
+                    continue;
+                have_resumed = true;
+            }
+
             print("<{}> Test {}", curr_test_cnt++, sy.path().stem());
 
             // Expected
