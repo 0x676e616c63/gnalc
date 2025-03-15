@@ -2,10 +2,29 @@
 
 using namespace MIR;
 
-std::string Module::toString() {
+std::string Module::toString() const {
     std::string str;
-    for (const auto &f : funcs) {
-        str += f->toString() + '\n';
+
+    ///@brief globalobj
+    str += "GlobalValues:\n";
+    for (const auto &it : GlobalVals) {
+        str += it->toString();
+        str += "\n";
+    }
+
+    ///@brief constobj
+    str += "ConstValues:\n";
+
+    for (auto it = constpool.cbegin(); it != constpool.cend(); ++it) {
+        str += (*it)->toString();
+        str += "\n";
+    }
+
+    ///@brief functions
+    for (const auto &func : funcs) {
+        str += "\n---\n";
+        str += func->toString();
+        str += '\n';
     }
     return str;
 }

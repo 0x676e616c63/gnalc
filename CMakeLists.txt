@@ -34,6 +34,17 @@ aux_source_directory(lib/ir/passes/helpers GNALC_IR_SRC)
 aux_source_directory(lib/ir/passes/transforms GNALC_IR_SRC)
 aux_source_directory(lib/ir/passes/utilities GNALC_IR_SRC)
 
+# MIR
+aux_source_directory(lib/mir GNALC_MIR_SRC)
+aux_source_directory(lib/mir/builder GNALC_MIR_SRC)
+# aux_source_directory(lib/mirtools GNALC_MIR_SRC)
+aux_source_directory(lib/mir/instruction GNALC_MIR_SRC)
+aux_source_directory(lib/mir/SIMDinstruction GNALC_MIR_SRC)
+aux_source_directory(lib/mir/passes GNALC_MIR_SRC)
+aux_source_directory(lib/mir/passes/analysis GNALC_MIR_SRC)
+aux_source_directory(lib/mir/passes/transforms GNALC_MIR_SRC)
+aux_source_directory(lib/mir/passes/utilities GNALC_MIR_SRC)
+
 # Pass Manager
 aux_source_directory(lib/pass_manager GNALC_PM_SRC)
 
@@ -51,6 +62,7 @@ set(GNALC_SRC
         ${GNALC_LEXER_SRC}
         ${GNALC_PARSER_SRC}
         ${GNALC_IR_SRC}
+        ${GNALC_MIR_SRC}
         ${GNALC_PM_SRC}
         ${GNALC_PTM_SRC}
         ${GNALC_EXT_BFBKD_SRC}
@@ -63,6 +75,9 @@ add_executable(bfhelper tools/driver/debug/bfhelper.cpp)
 
 # main driver
 add_executable(gnalc tools/driver/driver.cpp ${GNALC_SRC})
+
+# with Arm bkd
+add_executable(gnalc_arm tools/driver/driver.cpp ${GNALC_SRC} ${GNALC_MIR_SRC})
 
 enable_testing()
 add_subdirectory(test)

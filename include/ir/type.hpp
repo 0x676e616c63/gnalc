@@ -30,7 +30,10 @@ enum class IRBTYPE {
 /**
  * @brief IR COMPOUND TYPE 包含复杂结构类型
  */
-enum class IRCTYPE { BASIC, PTR, ARRAY, FUNCTION };
+enum class IRCTYPE { BASIC,
+                     PTR,
+                     ARRAY,
+                     FUNCTION };
 
 inline size_t getBytes(IRBTYPE type) {
     switch (type) {
@@ -193,11 +196,11 @@ std::shared_ptr<FunctionType> toFunctionType(const std::shared_ptr<Type> &ty);
 // 返回PTR, ARRAY的element_type; BType 会返回 nullptr
 std::shared_ptr<Type> getElm(const std::shared_ptr<Type> &ty);
 
-bool isSameType(const std::shared_ptr<Type>& a, const std::shared_ptr<Type>& b);
+bool isSameType(const std::shared_ptr<Type> &a, const std::shared_ptr<Type> &b);
 
 /***********下列内容为NameClass相关**********/
 
-using NameRef = const std::string&; // 赋值名字时改为str::string, 用move传值；引用名字时使用该类型别名
+using NameRef = const std::string &; // 赋值名字时改为str::string, 用move传值；引用名字时使用该类型别名
 
 // move传值
 // C means class

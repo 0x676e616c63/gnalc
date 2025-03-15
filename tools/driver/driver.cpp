@@ -2,6 +2,11 @@
 
 #include "../../include/ir/passes/pass_builder.hpp"
 #include "../../include/ir/passes/pass_manager.hpp"
+#include "../../include/ir/passes/utilities/irprinter.hpp"
+#include "../../include/mir/builder/lowering.hpp"
+#include "../../include/mir/passes/pass_builder.hpp"
+#include "../../include/mir/passes/pass_manager.hpp"
+#include "../../include/mir/passes/utilities/mirprinter.hpp"
 #include "../../include/parser/ast.hpp"
 #include "../../include/parser/astprinter.hpp"
 #include "../../include/parser/irgen.hpp"
@@ -18,8 +23,6 @@
 #include <iostream>
 #include <memory>
 #include <string>
-
-#include "../../include/ir/passes/utilities/irprinter.hpp"
 
 std::shared_ptr<AST::CompUnit> node = nullptr;
 extern FILE *yyin;
@@ -42,6 +45,7 @@ int main(int argc, char **argv) {
     std::string fuzz_testing_repro;             // -fuzz-repro
     bool debug_pipeline = false;                // -debug-pipeline
     IR::OptInfo opt_info;                       // --xxx
+    MIR::OptInfo bkd_opt_info;
 
 #if GNALC_EXTENSION_BRAINFK
     bool bf_target = false;   // -mbrainfk
@@ -85,11 +89,9 @@ int main(int argc, char **argv) {
         else if (arg == "-O1" || arg == "-O")
             opt_info = IR::o1_opt_info;
 
-#define OPT_ARG(cli_arg, cli_no_arg, opt_name)                                                           \
-    else if(arg == (cli_arg)) \
-        opt_info.opt_name = true;\
-    else if (arg == (cli_no_arg)) \
-        opt_info.opt_name = false;
+#define OPT_ARG(cli_arg, cli_no_arg, opt_name)                                                                         \
+    else if (arg == (cli_arg)) opt_info.opt_name = true;                                                               \
+    else if (arg == (cli_no_arg)) opt_info.opt_name = false;
 
         // Optimizations available:
         // Function Transforms
@@ -217,13 +219,12 @@ Extensions:
 #endif
             std::cout << std::flush;
             return 0;
-        } else
-            input_file = argv[i];
+        }
+        else input_file = argv[i];
     }
 
     if (!only_compilation) {
-        std::cerr << "Error: Gnalc currently only supports '-S' mode."
-                  << std::endl;
+        std::cerr << "Error: Gnalc currently only supports '-S' mode." << std::endl;
         return -1;
     }
 
@@ -307,7 +308,25 @@ Extensions:
 
     mpm.run(generator.get_module(), mam);
 
-    Err::todo("ARM Backend Refactor.");
+    MIR::Lowering lower(generator.get_module());
+
+    MIR::FAM bkd_fam;
+    MIR::MAM bkd_mam;
+
+    MIR::PassBuilder::registerFunctionAnalyses(bkd_fam);
+    MIR::PassBuilder::registerModuleAnalyses(bkd_mam);
+    MIR::PassBuilder::registerProxies(bkd_fam, bkd_mam);
+
+    auto bkd_mpm = MIR::PassBuilder::buildModulePipeline(bkd_opt_info);
+
+    if (only_compilation) {
+        bkd_mpm.addPass(MIR::PrintModulePass(*poutstream));
+        bkd_mpm.run(lower.getModule(), bkd_mam);
+        return 0;
+    }
+
+    bkd_mpm.run(lower.getModule(), bkd_mam);
+    Err::todo("ARM Assembler");
 
     return 0;
 }

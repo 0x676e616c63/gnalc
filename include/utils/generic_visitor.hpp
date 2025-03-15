@@ -13,8 +13,7 @@
 #include <vector>
 
 namespace Util {
-template <typename NodeT, typename ChildrenGetter>
-class GenericBFVisitor {
+template <typename NodeT, typename ChildrenGetter> class GenericBFVisitor {
     std::vector<NodeT> worklist{};
 
 public:
@@ -63,8 +62,7 @@ public:
 
 enum class DFVOrder { PreOrder, PostOrder, ReversePreOrder, ReversePostOrder };
 
-template <typename NodeT, typename ChildrenGetter, DFVOrder order = DFVOrder::PreOrder>
-class GenericDFVisitor {
+template <typename NodeT, typename ChildrenGetter, DFVOrder order = DFVOrder::PreOrder> class GenericDFVisitor {
     std::vector<NodeT> worklist{};
 
 public:
@@ -132,13 +130,11 @@ public:
                 }
             }
         } else if constexpr (order == DFVOrder::ReversePreOrder) {
-            GenericDFVisitor<NodeT, ChildrenGetter, DFVOrder::PreOrder> dfv{ root };
-            worklist.insert(worklist.end(), std::make_move_iterator(dfv.rbegin()),
-                            std::make_move_iterator(dfv.rend()));
+            GenericDFVisitor<NodeT, ChildrenGetter, DFVOrder::PreOrder> dfv{root};
+            worklist.insert(worklist.end(), std::make_move_iterator(dfv.rbegin()), std::make_move_iterator(dfv.rend()));
         } else if constexpr (order == DFVOrder::ReversePostOrder) {
-            GenericDFVisitor<NodeT, ChildrenGetter, DFVOrder::PostOrder> dfv{ root };
-            worklist.insert(worklist.end(), std::make_move_iterator(dfv.rbegin()),
-                            std::make_move_iterator(dfv.rend()));
+            GenericDFVisitor<NodeT, ChildrenGetter, DFVOrder::PostOrder> dfv{root};
+            worklist.insert(worklist.end(), std::make_move_iterator(dfv.rbegin()), std::make_move_iterator(dfv.rend()));
         }
     }
 

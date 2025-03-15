@@ -1,3 +1,4 @@
+#pragma once
 #ifndef GNALC_MIR_FRAME_HPP
 #define GNALC_MIR_FRAME_HPP
 #include "../ir/global_var.hpp"
@@ -21,7 +22,7 @@ private:
     unsigned int id{};
 
     size_t size;
-    size_t offset{}; // 相对与sp或者fp或者r7
+    long long offset{}; // 相对与sp或者fp或者r7
     FrameTrait ftrait;
 
 public:
@@ -49,7 +50,7 @@ private:
 
 public:
     GlobalObj();
-    explicit GlobalObj(IR::GlobalVariable &);
+    explicit GlobalObj(const IR::GlobalVariable &);
 
     void mkInitializer(const IR::GVIniter &);
 
@@ -67,20 +68,34 @@ class ConstObj {
 private:
     unsigned int id;
 
-    std::variant<std::string, unsigned int, float, Encoding> literal;
+    /// @brief std::string代表常量地址, 仅在mov中出现
+    std::variant<std::string, int, float, bool, char, Encoding> literal;
 
 public:
     ConstObj() = delete;
-    ConstObj(unsigned int _id, std::string _glo, unsigned int _size)
+    ConstObj(unsigned int _id, std::string _glo)
         : id(_id), literal(std::move(_glo)) {}
     explicit ConstObj(unsigned int _id, float imme);
     explicit ConstObj(unsigned int _id, int imme);
+    explicit ConstObj(unsigned int _id, bool imme);
+    explicit ConstObj(unsigned int _id, char imme);
 
     bool isGlo() const { return literal.index() == 0; }
     bool isImme() const { return literal.index() != 0; }
+    bool isEncoded() const { return literal.index() == 5; }
+    bool isFloat() const { return literal.index() == 2; }
 
     void setId(unsigned int _id) { id = _id; }
     unsigned int getId() const { return id; }
+
+    unsigned int getType() { return literal.index(); }
+    std::string getVal();
+
+    bool operator==(const ConstObj &other) const {
+        return other.literal == literal;
+    }
+
+    auto getLiteral() const { return literal; }
 
     std::string toString() const; // printf info
     ~ConstObj() = default;

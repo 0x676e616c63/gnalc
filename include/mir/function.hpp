@@ -6,6 +6,7 @@
 #include "base.hpp"
 #include "basicblock.hpp"
 #include "misc.hpp"
+#include "varpool.hpp"
 
 namespace MIR {
 
@@ -13,7 +14,7 @@ class Function;
 
 /// @warning Infos只选可能有用的
 class FunctionInfo {
-public: // 接口太多, 还不如直接访问
+public:                                                   // 接口太多, 还不如直接访问
     std::pair<bool, std::weak_ptr<Function>> hasTailCall; // TCO优化
 
     bool hasCall = false; // 除了TC之外的调用, 可以视情况节省一两条指令
@@ -23,8 +24,16 @@ public: // 接口太多, 还不如直接访问
     size_t stackSize{};
     unsigned int maxAlignment = 4;
     std::vector<std::shared_ptr<FrameObj>> StackObjs; // arg ret local spill
+    VarPool varpool;
 
     unsigned int args;
+
+    VarPool &getPool() { return varpool; }
+    const VarPool &getPool() const { return varpool; }
+
+    ///@note 因为pass之间无法传递数据, 所以这个信息只能耦合在这个地方
+    ///@note 其次, 这是全局的available, 因为图着色的分析不深入到单个inst
+    std::vector<unsigned int> availableSRegisters;
 
 public:
     FunctionInfo() = default;
@@ -34,10 +43,12 @@ public:
 };
 
 class Function : public Value {
-
+private:
 private:
     FunctionInfo info;
     std::list<std::shared_ptr<BasicBlock>> blocks;
+
+    std::unordered_map<std::string, std::shared_ptr<BasicBlock>> blockpool; // 对象池
 
 public:
     Function() = delete;
@@ -47,13 +58,16 @@ public:
     FunctionInfo getInfo() const { return info; }
     FunctionInfo &editInfo() { return info; }
 
-    void addBlock(std::shared_ptr<BasicBlock> _block) {
-        blocks.emplace_back(std::move(_block));
+    void addBlock(const std::string &_block_name, const std::shared_ptr<BasicBlock> &_block) {
+        blocks.emplace_back(_block);
+        blockpool[_block_name] = _block;
     }
-    void delBlock(const std::string &_name);
-    const std::list<std::shared_ptr<BasicBlock>> &getBlocks() { return blocks; }
 
-    void culStackFrame();
+    // void delBlock(const std::string &_name);
+
+    std::shared_ptr<BasicBlock> getBlock(const std::string &_name) { return blockpool[_name]; }
+
+    const std::list<std::shared_ptr<BasicBlock>> &getBlocks() { return blocks; }
 
     std::string toString() const override;
     ~Function() override = default;

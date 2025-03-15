@@ -12,9 +12,11 @@
 #include <string>
 
 namespace MIR {
-template <typename T> std::string enum_name(T t) = delete;
+template <typename T>
+std::string enum_name(T t) = delete;
 
-template <> inline std::string enum_name<FrameTrait>(FrameTrait t) {
+template <>
+inline std::string enum_name<FrameTrait>(FrameTrait t) {
     switch (t) {
     case FrameTrait::Alloca:
         return "Alloca";
@@ -31,16 +33,17 @@ template <> inline std::string enum_name<FrameTrait>(FrameTrait t) {
     return "unknown FrameTrait";
 }
 
-template <> inline std::string enum_name<RegisterBank>(RegisterBank t) {
+template <>
+inline std::string enum_name<RegisterBank>(RegisterBank t) {
     switch (t) {
     case RegisterBank::gpr:
         return "gpr";
-    case RegisterBank::gprnopc:
-        return "gprnopc";
     case RegisterBank::spr:
         return "spr";
     case RegisterBank::dpr:
         return "dpr";
+    case RegisterBank::qpr:
+        return "qpr";
     }
     Err::unreachable();
     return "unknown RegisterBank";
@@ -64,7 +67,8 @@ inline std::string enum_name<ShiftOP::inlineShift>(ShiftOP::inlineShift t) {
     return "unknown inlineShift";
 }
 
-template <> inline std::string enum_name<CoreRegister>(CoreRegister t) {
+template <>
+inline std::string enum_name<CoreRegister>(CoreRegister t) {
     switch (t) {
     // case CoreRegister::none:          return "none";
     case CoreRegister::r0:
@@ -110,7 +114,8 @@ template <> inline std::string enum_name<CoreRegister>(CoreRegister t) {
     return "unknown CoreRegister";
 }
 
-template <> inline std::string enum_name<FPURegister>(FPURegister t) {
+template <>
+inline std::string enum_name<FPURegister>(FPURegister t) {
     switch (t) {
         // case FPURegister::none:          return "none";
     case FPURegister::s0:
@@ -184,122 +189,166 @@ template <> inline std::string enum_name<FPURegister>(FPURegister t) {
     return "unknown FPURegister";
 }
 
-template <> inline std::string enum_name<OpCode>(OpCode t) {
+template <>
+inline std::string enum_name<CondCodeFlag>(CondCodeFlag t) {
+    switch (t) {
+    case CondCodeFlag::AL:
+        return "";
+    case CondCodeFlag::eq:
+        return "EQ";
+    case CondCodeFlag::ne:
+        return "NE";
+    case CondCodeFlag::mi:
+        return "MI";
+    case CondCodeFlag::pl:
+        return "PL";
+    case CondCodeFlag::lt:
+        return "LT";
+    case CondCodeFlag::gt:
+        return "GT";
+    case CondCodeFlag::le:
+        return "LE";
+    case CondCodeFlag::ge:
+        return "GE";
+    }
+}
+
+template <>
+inline std::string enum_name<OpCode>(OpCode t) {
     switch (t) {
     case OpCode::MOV:
-        return "mov";
+        return "MOV";
     case OpCode::STR:
-        return "str";
+        return "STR";
     case OpCode::LDR:
-        return "ldr";
+        return "LDR";
+    case OpCode::NEG:
+        return "NEG";
     case OpCode::ADD:
-        return "add";
+        return "ADD";
     case OpCode::SUB:
-        return "sub";
+        return "SUB";
     case OpCode::RSB:
-        return "rsb";
+        return "RSB";
     case OpCode::ORR:
-        return "orr";
+        return "ORR";
     case OpCode::AND:
-        return "and";
+        return "AND";
     case OpCode::EOR:
-        return "eor";
+        return "EOR";
     case OpCode::ORN:
-        return "orn";
+        return "ORN";
     case OpCode::BIC:
-        return "bic";
+        return "BIC";
     case OpCode::ASR:
-        return "asr";
+        return "ASR";
     case OpCode::LSL:
-        return "lsl";
+        return "LSL";
     case OpCode::LSR:
-        return "lsr";
+        return "LSR";
     case OpCode::ROR:
-        return "ror";
+        return "ROR";
     case OpCode::RRX:
-        return "rrx";
+        return "RRX";
     case OpCode::MUL:
-        return "mul";
-    case OpCode::MULS:
-        return "muls";
+        return "MUL";
     case OpCode::DIV:
-        return "div";
+        return "DIV";
+    case OpCode::SDIV:
+        return "SDIV";
     case OpCode::SMULL:
-        return "smull";
+        return "SMULL";
+    case OpCode::SMMUL:
+        return "SMMUL";
+    case OpCode::SMMLA:
+        return "smmla";
+    case OpCode::SMMLS:
+        return "SMMLS";
     case OpCode::MLA:
-        return "mla";
+        return "MLA";
+    case OpCode::MLS:
+        return "MLS";
     case OpCode::SWI:
-        return "swi";
+        return "SWI";
     case OpCode::B:
-        return "b";
-    case OpCode::BEQ:
-        return "beq";
-    case OpCode::BNQ:
-        return "bnq";
-    case OpCode::BGT:
-        return "bgt";
-    case OpCode::BLT:
-        return "blt";
-    case OpCode::BGE:
-        return "bge";
-    case OpCode::BLE:
-        return "ble";
+        return "B";
     case OpCode::BX_RET:
-        return "bx_ret";
+        return "BX_RET";
     case OpCode::BX_SET_SWI:
-        return "bx_switch";
+        return "BX_SWITCH";
     case OpCode::BL:
-        return "bl";
+        return "BL";
     case OpCode::BLX:
-        return "blx";
+        return "BLX";
     case OpCode::CMP:
-        return "cmp";
+        return "CMP";
     case OpCode::CMN:
-        return "cmn";
+        return "CMN";
+    case OpCode::TST:
+        return "TST";
+    case OpCode::TEQ:
+        return "TEQ";
     case OpCode::COPY:
         return "COPY";
+    case OpCode::RET:
+        return "RET";
+    case OpCode::PHI:
+        return "You_are_not_supposed_to_see_this";
     }
     Err::unreachable();
     return "unknown OpCode";
 }
 
-template <> inline std::string enum_name<NeonOpCode>(NeonOpCode t) {
+template <>
+inline std::string enum_name<NeonOpCode>(NeonOpCode t) {
     switch (t) {
     case NeonOpCode::VMOV:
-        return "vmov";
+        return "VMOV";
     case NeonOpCode::VSTR:
-        return "vstr";
+        return "VSTR";
     case NeonOpCode::VLDR:
-        return "vldr";
+        return "VLDR";
     case NeonOpCode::VSTX:
-        return "vstx";
+        return "VSTX";
     case NeonOpCode::VLDX:
-        return "vldx";
+        return "VLDX";
     case NeonOpCode::VADD:
-        return "vadd";
+        return "VADD";
     case NeonOpCode::VSUB:
-        return "vsub";
+        return "VSUB";
     case NeonOpCode::VMUL:
-        return "vmul";
+        return "VMUL";
     case NeonOpCode::VDIV:
-        return "vdiv";
+        return "VDIV";
     case NeonOpCode::VNEG:
-        return "vneg";
+        return "VNEG";
     case NeonOpCode::VADDV:
-        return "vaddv";
+        return "VADDV";
     case NeonOpCode::VMAXV:
-        return "vmaxv";
+        return "VMAXV";
     case NeonOpCode::VMINV:
-        return "vminv";
+        return "VMINV";
     case NeonOpCode::VCMP:
-        return "vcmp";
-    case NeonOpCode::VSITOF:
-        return "vcvt.s32.f32";
-    case NeonOpCode::VFTOSI:
-        return "vcvt.f32.s32";
+        return "VCMP";
+    case NeonOpCode::VCVT:
+        return "VCVT";
+    case NeonOpCode::VMRS:
+        return "VMRS";
     }
     Err::unreachable();
     return "unknown NeonOperCode";
+}
+
+template <>
+inline std::string enum_name<bitType>(bitType t) {
+    switch (t) {
+    case bitType::DEFAULT32:
+        return "32";
+    case bitType::f32:
+        return "f32";
+    case bitType::s32:
+        return "s32";
+    }
 }
 
 template <>
@@ -315,10 +364,14 @@ inline std::string enum_name<SourceOperandType>(SourceOperandType t) {
         return "i";
     case SourceOperandType::i12:
         return "i12";
+    case SourceOperandType::i16:
+        return "i16";
     case SourceOperandType::i32:
         return "i32";
     case SourceOperandType::rr:
         return "rr";
+    case SourceOperandType::rrr:
+        return "rrr";
     case SourceOperandType::ri:
         return "ri";
     case SourceOperandType::rsi:

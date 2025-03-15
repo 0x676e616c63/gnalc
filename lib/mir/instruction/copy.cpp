@@ -2,19 +2,40 @@
 
 using namespace MIR;
 
-std::shared_ptr<Operand> copy::getSourceOP(unsigned int seq) {
+std::shared_ptr<Operand> COPY::getSourceOP(unsigned int seq) {
     if (seq == 1)
         return SourceOperand;
     else
         return nullptr;
 }
 
-bool copy::Check() {
-    if (tptrait != SourceOperandType::r)
-        return false;
+void COPY::setSourceOP(unsigned int seq, std::shared_ptr<Operand> ptr_new) {
+    if (seq == 1) {
+        SourceOperand = ptr_new;
+    } else {
+        Err::unreachable("set operand index out of ");
+    }
+}
 
-    if (!dynamic_cast<BindOnVirOP *>(SourceOperand.get()))
-        return false;
-    else
-        return true;
+std::shared_ptr<Operand> PHI::getSourceOP(unsigned int seq) {
+    if (seq > SourceOperands.size()) {
+        return nullptr;
+    } else {
+        return SourceOperands[seq - 1].val;
+    }
+}
+
+std::string PHI::toString() {
+    std::string str;
+
+    str += getTargetOP()->toString();
+    str += "= PHI ";
+
+    for (const auto &PhiOper : SourceOperands) {
+        str += "[ ";
+        str += PhiOper.val->toString() + ", ";
+        str += '%' + PhiOper.pre + " ], ";
+    }
+
+    return str;
 }
