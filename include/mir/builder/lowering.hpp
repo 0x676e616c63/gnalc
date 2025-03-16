@@ -19,6 +19,33 @@
 
 namespace MIR {
 
+struct OperandLowering;
+
+struct splited {
+    unsigned int exp1;
+    unsigned int exp2;
+    enum class oper { singlePos, singleNeg, addPos, addNeg, sub, none } cul;
+};
+
+splited SplitTo2PowX(int);
+
+std::list<std::shared_ptr<Instruction>> mulOpt(const std::shared_ptr<BindOnVirOP> &target,
+                                               const std::shared_ptr<IR::Value> &virRegVal,
+                                               const std::shared_ptr<IR::ConstantInt> &constVal,
+                                               OperandLowering &operlower);
+
+struct multiplication {
+    int mul;
+    int shift;
+};
+
+multiplication ChooseMultipler(int);
+
+std::list<std::shared_ptr<Instruction>> divOpt(const std::shared_ptr<BindOnVirOP> &target,
+                                               const std::shared_ptr<IR::Value> &virRegVal,
+                                               const std::shared_ptr<IR::ConstantInt> &constVal,
+                                               OperandLowering &operlower);
+
 struct OperandLowering {
     ///@note 由于操作数不是透过依赖关系获得的,
     /// 所以和常量一样需要一个池来查找和存放

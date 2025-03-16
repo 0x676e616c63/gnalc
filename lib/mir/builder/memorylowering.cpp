@@ -144,16 +144,17 @@ std::list<std::shared_ptr<Instruction>> InstLowering::gepLower(const std::shared
         auto add_offset = const_idx->getVal() * perElemSize;
         operlower.mkBaseOP(*gep, baseOP, add_offset);
     } else {
-        // mul %temp1, %var_idx, #imme (带优化)
-        // add (%BindOnVirOP)temp2, %(BindOnVirOP)baseOP, %temp1
+        // mul %relay1, %var_idx, #perElemsize ; 带优化, 计算偏移大小
+        // add (%BindOnVirOP)relay2, %(BindOnVirOP)baseOP, %relay1
+        // 这里add之后可以考虑做一个窥孔, 将相应的ldr改成基址变址寻址
+        auto relay1 = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
         auto relay2 = operlower.mkBaseOP(*gep, baseOP, 0);
-        auto var_idx = operlower.fastFind(idx);
 
-        auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
-        auto mul_midEnd = std::make_shared<IR::BinaryInst>(relay->getName(), IR::OP::MUL, idx,
-                                                           std::make_shared<IR::ConstantInt>(perElemSize));
+        auto mul_insts = mulOpt(relay1, idx, std::make_shared<IR::ConstantInt>(perElemSize), operlower);
+        insts.insert(insts.end(), mul_insts.begin(), mul_insts.end());
 
-        insts.splice(insts.end(), binaryLower(mul_midEnd)); // 复用
+        auto add = std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::rr, relay2, baseOP, relay1, nullptr);
+        insts.emplace_back(add);
     }
 
     return insts;
