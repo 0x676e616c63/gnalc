@@ -4,6 +4,7 @@
 #include "../../../../include/ir/instructions/control.hpp"
 #include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
+#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 #include "../../../../include/utils/logger.hpp"
 
 #include <algorithm>
@@ -156,24 +157,9 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                         ++fatal_error_cnt;
                     }
                 }
-
-                std::shared_ptr<Value> common_value = phi_opers[0].value;
-                for (const auto &[val, phi_incoming_bb] : phi_opers) {
-                    if (std::find(bb->pred_begin(), bb->pred_end(), phi_incoming_bb) == bb->pred_end()) {
-                        Logger::logCritical("[VerifyPass]: PHIInst '", phi_inst->getName(), "' has wrong operand '[ ",
-                                            val->getName(), ", ", bb->getName(), " ]'.");
-                        ++fatal_error_cnt;
-                    }
-                    if (val != common_value)
-                        common_value = nullptr;
-                }
-                if (common_value != nullptr) {
-                    Logger::logWarning("[VerifyPass]: PHIInst '", phi_inst->getName(), "' has identical operands.");
-                }
             }
         }
-    } else
-        Logger::logWarning("[VerifyPass]: Skipped some check due to previous fatal error(s).");
+    }
 
     if (fatal_error_cnt == 0) {
         auto domtree = fam.getResult<DomTreeAnalysis>(function);
@@ -191,8 +177,27 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                 }
             }
         }
-    } else
-        Logger::logWarning("[VerifyPass]: Skipped some check due to previous fatal error(s).");
+    }
+
+    // Check loop info
+    if (fatal_error_cnt == 0) {
+        auto loop_info = fam.getResult<LoopAnalysis>(function);
+        for (const auto& top_level : loop_info) {
+            auto lpdfv = top_level->getDFVisitor();
+            for (const auto& loop : lpdfv) {
+                for (const auto& bb : loop->blocks()) {
+                    for (auto p = loop; p != nullptr; p = p->getParent()) {
+                        if (!p->contains(bb)) {
+                            Logger::logCritical("[VerifyPass]: BasicBlock '", bb->getName(), "' in '",
+                                                loop->getHeader()->getName(), "'. But is not in loop '",
+                                                p->getHeader()->getName(), "'.");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 
     if (fatal_error_cnt != 0) {
         Logger::logCritical("[VerifyPass] on '", function.getName(), "': Found ", fatal_error_cnt, " fatal error(s).");

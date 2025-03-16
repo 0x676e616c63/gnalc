@@ -483,7 +483,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
 
     // 1. Topdown traversal of the dominator tree.
     // Build AVAIL_OUT, EXP_GEN
-    auto domtree = fam.getResult<DomTreeAnalysis>(function);
+    auto& domtree = fam.getResult<DomTreeAnalysis>(function);
     auto dfvisitor = domtree.getDFVisitor();
     for (const auto& curr : dfvisitor) {
         auto& avail_out = avail_out_map[curr->block()]; // = canon(AVAIL_IN[b] ∪ PHI_GEN(b) ∪ TMP_GEN(b))
@@ -523,7 +523,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
 
     // Perform top-down traversals of the post-dominator tree
     // to help fast convergence since information flows backward over the CFG.
-    auto postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
+    auto& postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
     bool modified = true;
     while (modified) {
         modified = false;

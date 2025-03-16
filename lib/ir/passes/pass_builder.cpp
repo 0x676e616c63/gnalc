@@ -193,9 +193,8 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     fpm.addPass(PromotePass());
     fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(LoopRotatePass());
     fpm.addPass(NameNormalizePass(true));
-    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(LoopRotatePass());
     fpm.addPass(LCSSAPass());
     fpm.addPass(LICMPass());
     fpm.addPass(VerifyPass(true));

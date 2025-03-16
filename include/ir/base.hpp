@@ -364,7 +364,7 @@ public:
     bool replaceUse(const std::shared_ptr<Use> &old_use, const std::shared_ptr<Value> &new_use);
 
     // Replace all uses of `before` with `after`
-    bool replaceAllUses(const std::shared_ptr<Value> &before, const std::shared_ptr<Value> &after);
+    bool replaceAllOperands(const std::shared_ptr<Value> &before, const std::shared_ptr<Value> &after);
 protected:
     void addOperand(const std::shared_ptr<Value> &v);
 

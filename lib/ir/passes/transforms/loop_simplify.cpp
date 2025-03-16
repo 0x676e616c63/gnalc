@@ -11,7 +11,7 @@ namespace IR {
 PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
     bool loop_simplify_cfg_modified = false;
 
-    auto loop_info = fam.getResult<LoopAnalysis>(function);
+    auto& loop_info = fam.getResult<LoopAnalysis>(function);
     for (const auto &toplevel : loop_info) {
         auto looppdfv = toplevel->getDFVisitor<Util::DFVOrder::PostOrder>();
 
@@ -27,7 +27,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                     if (!loop->contains(pred.get())) {
                         auto br = pred->getBRInst();
                         Err::gassert(br != nullptr);
-                        br->replaceAllUses(header, new_preheader);
+                        br->replaceAllOperands(header, new_preheader);
                         unlinkBB(pred, header);
                         linkBB(pred, new_preheader);
                     }
@@ -50,7 +50,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                 foldPHI(new_preheader);
                 function.addBlock(header->getIter(), new_preheader);
                 if (!loop->isOutermost())
-                    loop->getParent()->addBlock(new_preheader.get());
+                    loop_info.addBlock(loop->getParent(), new_preheader.get());
                 preheader = new_preheader.get();
                 curr_loop_changed = true;
             }
@@ -67,7 +67,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                     auto old_latch = raw_old_latch->shared_from_this();
                     auto br = old_latch->getBRInst();
                     Err::gassert(br != nullptr);
-                    br->replaceAllUses(header, new_latch);
+                    br->replaceAllOperands(header, new_latch);
                     unlinkBB(old_latch, header);
                     linkBB(old_latch, new_latch);
                 }
@@ -85,7 +85,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                 }
                 foldPHI(new_latch);
                 function.addBlock(std::next(latches.back()->getIter()), new_latch);
-                loop->addBlock(new_latch.get());
+                loop_info.addBlock(loop, new_latch.get());
                 latch = new_latch.get();
                 curr_loop_changed = true;
             }
@@ -114,7 +114,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                     linkBB(new_exit, exit);
                     for (const auto &in_loop_pred : in_loop_preds) {
                         auto br = in_loop_pred->getBRInst();
-                        br->replaceAllUses(exit, new_exit);
+                        br->replaceAllOperands(exit, new_exit);
                         unlinkBB(in_loop_pred, exit);
                         linkBB(in_loop_pred, new_exit);
                     }
@@ -136,7 +136,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
 
                     auto exit_loop = loop_info.getLoopFor(exit.get());
                     if (exit_loop)
-                        exit_loop->addBlock(new_exit.get());
+                        loop_info.addBlock(exit_loop, new_exit.get());
                     curr_loop_changed = true;
                 }
             }

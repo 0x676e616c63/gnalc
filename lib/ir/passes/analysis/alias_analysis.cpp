@@ -125,91 +125,29 @@ ModRefInfo AliasAnalysisResult::getInstModRefInfo(const Instruction *inst, const
         else
             return ModRefInfo::Mod;
     } else if (auto call = dynamic_cast<const CALLInst *>(inst)) {
-        auto callee = call->getFunc().get();
-        auto callee_def = dynamic_cast<Function *>(callee);
-
-        if (callee_def == nullptr) {
-            if (isPureBuiltinOrSylibFunc(callee) || callee->getName() == "@getint" || callee->getName() == "@getch" ||
-                callee->getName() == "@getfloat" || callee->getName() == "@putint" || callee->getName() == "@putch" ||
-                callee->getName() == "@putfloat" || callee->getName() == "@_sysy_starttime" ||
-                callee->getName() == "@_sysy_stoptime")
-                return ModRefInfo::NoModRef;
-            // int getarray(int a[]);
-            if (callee->getName() == "@getarray" || callee->getName() == "@getfarray") {
-                auto alias = getAliasInfo(call->getArgs()[0].get(), location);
-                if (alias == AliasInfo::MustAlias || alias == AliasInfo::MayAlias)
-                    return ModRefInfo::Mod;
-                return ModRefInfo::NoModRef;
-            }
-            // void putarray(int n, int a[]);
-            if (callee->getName() == "@putarray" || callee->getName() == "@putfarray" || callee->getName() == "@putf") {
-                auto actual_args = call->getArgs();
-                for (auto &r : actual_args) {
-                    if (r->getType()->getTrait() == IRCTYPE::PTR) {
-                        auto alias = getAliasInfo(r.get(), location);
-                        if (alias == AliasInfo::MustAlias || alias == AliasInfo::MayAlias)
-                            return ModRefInfo::Ref;
-                    }
-                }
-                return ModRefInfo::NoModRef;
-            }
-
-            if (callee->getName() == "@" + std::string{Config::IR::BUILTIN_MEMSET}) {
-                auto actual_args = call->getArgs();
-                for (auto &r : actual_args) {
-                    if (r->getType()->getTrait() == IRCTYPE::PTR) {
-                        auto alias = getAliasInfo(r.get(), location);
-                        if (alias == AliasInfo::MustAlias || alias == AliasInfo::MayAlias)
-                            return ModRefInfo::Mod;
-                    }
-                }
-                return ModRefInfo::NoModRef;
-            }
-
-            // Unrecognized sylib/builtin
-            Logger::logWarning("[AliasAnalysis]: Unrecognized function '", callee->getName(), "'.");
+        auto rwinfo = getCallRWInfo(fam, call);
+        if (rwinfo.untracked)
             return ModRefInfo::ModRef;
-        }
-
-        auto callee_aa = fam.getResult<AliasAnalysis>(*callee_def);
-        if (callee_aa.has_untracked_call)
-            return ModRefInfo::ModRef;
-        if (callee_aa.getFunctionModRefInfo() == ModRefInfo::NoModRef)
-            return ModRefInfo::NoModRef;
 
         bool mod = false;
         bool ref = false;
-
-        for (auto write : callee_aa.write) {
-            if (write->getVTrait() == ValueTrait::GLOBAL_VARIABLE) {
-                auto alias = getAliasInfo(write, location);
+        // Note that the callee can access the whole array through a gep 0, 0.
+        // So we need to check the actual argument's all potential alias,
+        // since all of them can be accessed through that argument in the callee.
+        for (auto actual_write : rwinfo.write) {
+            auto actual_alias = getPtrInfo(actual_write).potential_alias;
+            for (const auto &mayalias : actual_alias) {
+                auto alias = getAliasInfo(mayalias, location);
                 mod |= (alias == AliasInfo::MustAlias || alias == AliasInfo::MayAlias);
-            } else {
-                Err::gassert(write->getVTrait() == ValueTrait::FORMAL_PARAMETER);
-                auto fp = dynamic_cast<const FormalParam *>(write);
-                auto actual = call->getArgs()[fp->getIndex()].get();
-                auto actual_alias = getPtrInfo(actual).potential_alias;
-                for (const auto &mayalias : actual_alias) {
-                    auto alias = getAliasInfo(mayalias, location);
-                    mod |= (alias == AliasInfo::MustAlias || alias == AliasInfo::MayAlias);
-                }
             }
             if (mod)
                 break;
         }
-        for (auto read : callee_aa.read) {
-            if (read->getVTrait() == ValueTrait::GLOBAL_VARIABLE) {
-                auto alias = getAliasInfo(read, location);
+        for (auto actual_read : rwinfo.read) {
+            auto actual_alias = getPtrInfo(actual_read).potential_alias;
+            for (const auto &mayalias : actual_alias) {
+                auto alias = getAliasInfo(mayalias, location);
                 ref |= (alias == AliasInfo::MustAlias || alias == AliasInfo::MayAlias);
-            } else {
-                Err::gassert(read->getVTrait() == ValueTrait::FORMAL_PARAMETER);
-                auto fp = dynamic_cast<const FormalParam *>(read);
-                auto actual = call->getArgs()[fp->getIndex()].get();
-                auto actual_alias = getPtrInfo(actual).potential_alias;
-                for (const auto &mayalias : actual_alias) {
-                    auto alias = getAliasInfo(mayalias, location);
-                    ref |= (alias == AliasInfo::MustAlias || alias == AliasInfo::MayAlias);
-                }
             }
             if (ref)
                 break;
@@ -294,8 +232,7 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
                     }
                     if (auto gep = std::dynamic_pointer_cast<GEPInst>(inst)) {
                         changed |= res.insertPotentialAlias(gep.get(), gep->getPtr().get());
-                    }
-                    else if (auto bitcast = std::dynamic_pointer_cast<BITCASTInst>(inst)) {
+                    } else if (auto bitcast = std::dynamic_pointer_cast<BITCASTInst>(inst)) {
                         Err::gassert(bitcast->getOVal()->getType()->getTrait() == IRCTYPE::PTR);
                         changed |= res.insertPotentialAlias(bitcast.get(), bitcast->getOVal().get());
                     } else
@@ -429,6 +366,74 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
 }
 
 bool isPureBuiltinOrSylibFunc(const FunctionDecl *fn) { return false; }
+
+RWInfo getCallRWInfo(FAM &fam, const CALLInst *call) {
+    auto callee = call->getFunc().get();
+    if (isPureBuiltinOrSylibFunc(callee))
+        return {};
+
+    auto callee_def = dynamic_cast<Function *>(callee);
+    // Unknown builtin/sylib
+    if (callee_def == nullptr) {
+        if (callee->getName() == "@getint" || callee->getName() == "@getch" || callee->getName() == "@getfloat" ||
+            callee->getName() == "@putint" || callee->getName() == "@putch" || callee->getName() == "@putfloat" ||
+            callee->getName() == "@_sysy_starttime" || callee->getName() == "@_sysy_stoptime")
+            return {};
+        // int getarray(int a[]);
+        if (callee->getName() == "@getarray" || callee->getName() == "@getfarray") {
+            return {.read = {}, .write = {call->getArgs()[0].get()}, .untracked = false};
+        }
+        // void putarray(int n, int a[]);
+        if (callee->getName() == "@putarray" || callee->getName() == "@putfarray" || callee->getName() == "@putf") {
+            auto actual_args = call->getArgs();
+            std::vector<const Value *> read;
+            for (auto &r : actual_args) {
+                if (r->getType()->getTrait() == IRCTYPE::PTR)
+                    read.emplace_back(r.get());
+            }
+            return { .read = read, .write = {}, .untracked = false };
+        }
+
+        if (callee->getName() == "@" + std::string{Config::IR::BUILTIN_MEMSET}) {
+            auto actual_args = call->getArgs();
+            std::vector<const Value *> write;
+            for (auto &r : actual_args) {
+                if (r->getType()->getTrait() == IRCTYPE::PTR)
+                    write.emplace_back(r.get());
+            }
+            return { .read = {}, .write = write, .untracked = false };
+        }
+
+        Logger::logWarning("[AliasAnalysis]: Unrecognized function '", callee->getName(), "'.");
+        return { .untracked = true };
+    }
+
+    auto callee_aa = fam.getResult<AliasAnalysis>(*callee_def);
+
+    std::vector<const Value *> write_ret;
+    std::vector<const Value *> read_ret;
+    for (auto write : callee_aa.getWrite()) {
+        if (write->getVTrait() == ValueTrait::GLOBAL_VARIABLE)
+            write_ret.emplace_back(write);
+        else {
+            Err::gassert(write->getVTrait() == ValueTrait::FORMAL_PARAMETER);
+            auto fp = dynamic_cast<const FormalParam *>(write);
+            auto actual = call->getArgs()[fp->getIndex()].get();
+            write_ret.emplace_back(actual);
+        }
+    }
+    for (auto read : callee_aa.getRead()) {
+        if (read->getVTrait() == ValueTrait::GLOBAL_VARIABLE)
+            read_ret.emplace_back(read);
+        else {
+            Err::gassert(read->getVTrait() == ValueTrait::FORMAL_PARAMETER);
+            auto fp = dynamic_cast<const FormalParam *>(read);
+            auto actual = call->getArgs()[fp->getIndex()].get();
+            read_ret.emplace_back(actual);
+        }
+    }
+    return {read_ret, write_ret, false};
+}
 
 bool isPure(FAM &fam, const CALLInst *call) {
     auto callee = call->getFunc().get();

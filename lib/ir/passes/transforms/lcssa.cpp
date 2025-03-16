@@ -25,17 +25,17 @@ namespace IR {
 //
 //
 // Uses outside the loop must in the blocks that are reachable from the exit.
-// If there is only one exit dominate Target, the value in exit is what we want.
-// Because the exits cannot reach each other, that dominator exit must the only exit that can reach it.
+// If there is only one exit dominate Target, the value in that exit is what we want.
+// Because the exits cannot reach each other, that dominator exit must be the only exit that can reach it.
 //
 // However, if there is no such dominator exit, which means there are multiple exits
 // that can reach that block, none of them can dominate Target. Thus, new phi nodes
 // are needed to merge the LCSSA phis.
 //
 // The way to check if we need to create a new phi node in a block is to check if the block's idom is in the loop.
-// Since values flow through the idom chain, the original must dominates the Target.
+// Since values flow through the idom chain, the original block must dominate the Target.
 // So if the idom is not the loop, we are still below the exits (for example, in Target).
-// In that case we don't insert phi and `getValueForBlock` from the idom.
+// In that case we don't insert phi and use the value in the idom. (`getValueForBlock` from idom)
 // If the idom is in the loop, a phi is needed to merge the incoming blocks' values.
 //
 // A generalized tool should be set up in the future.
@@ -43,31 +43,120 @@ std::shared_ptr<Value> LCSSAPass::getValueForBlock(
     const Loop& loop,
     const DomTree::Node* node,
     const std::shared_ptr<Value>& value,
-    std::map<const DomTree::Node*, std::shared_ptr<Value>>& added_values) {
-    auto it = added_values.find(node);
-    if (it != added_values.end())
+    std::map<const DomTree::Node*, std::shared_ptr<Value>>& available_values) {
+    auto& domtree = *pdomtree;
+    auto it = available_values.find(node);
+    if (it != available_values.end())
         return it->second;
 
     auto idom = node->parent();
-    Err::gassert(idom != nullptr);
+    Err::gassert(idom != nullptr, "No such value available.");
     if (!loop.contains(idom->block())) {
-        auto val = getValueForBlock(loop, idom, value, added_values);
-        return added_values[node] = val;
+        auto val = getValueForBlock(loop, idom, value, available_values);
+        return available_values[node] = val;
     }
 
     auto phi = std::make_shared<PHIInst>("%lcssa.p" + std::to_string(name_cnt++), value->getType());
     node->block()->addPhiInst(phi);
     for (const auto& pred : node->block()->preds()) {
-        auto val = getValueForBlock(loop, domtree[pred.get()].get(), value, added_values);
+        auto val = getValueForBlock(loop, domtree[pred.get()].get(), value, available_values);
         phi->addPhiOper(val, pred);
     }
-    return added_values[node] = phi;
+    return available_values[node] = phi;
+}
+
+bool LCSSAPass::formLCSSAOnInsts(std::deque<std::shared_ptr<Instruction>>& worklist) {
+    auto& domtree = *pdomtree;
+    auto& loop_info = *ploop_info;
+    bool modified = false;
+    std::vector<std::shared_ptr<Use>> uses_to_rewrite;
+    std::map<const DomTree::Node*, std::shared_ptr<Value>> available_values;
+    while (!worklist.empty()) {
+        uses_to_rewrite.clear();
+        available_values.clear();
+
+        auto curr_inst = worklist.front();
+        worklist.pop_front();
+        auto inst_bb = curr_inst->getParent();
+        auto loop = loop_info.getLoopFor(inst_bb.get());
+        Err::gassert(loop != nullptr, "Instruction does not in a loop.");
+        auto exits = loop->getExitBlocks();
+
+        for (const auto& use : curr_inst->self_uses()) {
+            auto user_inst = std::dynamic_pointer_cast<Instruction>(use->getUser());
+            auto user_bb = user_inst->getParent();
+
+            // For phi, the use of each incoming value is deemed to occur
+            // on the edge from the corresponding predecessor block to the current block.
+            // (See LangRef: https://llvm.org/docs/LangRef.html#id318)
+            // For practical purposes, we consider it occurs in the corresponding predecessor.
+            if (auto phi = std::dynamic_pointer_cast<PHIInst>(user_inst))
+                user_bb = phi->getBlockForValue(use);
+
+            // A quick path for most uses being in the same block
+            if (inst_bb != user_bb && !loop->contains(user_bb.get()))
+                uses_to_rewrite.emplace_back(use);
+        }
+        if (uses_to_rewrite.empty())
+            continue;
+
+        // Insert a phi into all the exit blocks that are dominated by the value
+        for (const auto& exit : exits) {
+            if (!domtree.ADomB(inst_bb.get(), exit))
+                continue;
+
+            // Check if there is already what we want
+            auto avail_phi = findLCSSAPhi(exit, curr_inst);
+            if (avail_phi == nullptr) {
+                avail_phi = std::make_shared<PHIInst>(
+                    curr_inst->getName() + ".lcssa" + std::to_string(name_cnt++), curr_inst->getType());
+                for (const auto& pred : exit->preds()) {
+                    avail_phi->addPhiOper(curr_inst, pred);
+                    if (!loop->contains(pred.get())) {
+                        uses_to_rewrite.emplace_back
+                            (*std::prev(std::prev(avail_phi->operand_use_end())));
+                    }
+                }
+                exit->addPhiInst(avail_phi);
+                Err::gassert(available_values[domtree[exit].get()] == nullptr,
+                    "Duplicate phi insertion.");
+            }
+            available_values[domtree[exit].get()] = avail_phi;
+        }
+
+        for (const auto& use : uses_to_rewrite) {
+            auto user_inst = std::dynamic_pointer_cast<Instruction>(use->getUser());
+            auto user_bb = user_inst->getParent();
+            if (auto phi = std::dynamic_pointer_cast<PHIInst>(user_inst))
+                user_bb = phi->getBlockForValue(use);
+
+            auto val = getValueForBlock(*loop,
+                domtree[user_bb.get()].get(), curr_inst, available_values);
+            user_inst->replaceUse(use, val);
+            modified = true;
+        }
+
+        // getValueForBlock might insert phi in other disjoint loops, update them.
+        for (const auto& [node, value] : available_values) {
+            auto inst = std::dynamic_pointer_cast<Instruction>(value);
+            if (auto loop2 = loop_info.getLoopFor(inst->getParent().get())) {
+                if (!loop->contains(loop2.get()))
+                    worklist.emplace_back(inst);
+            }
+        }
+    }
+    return modified;
 }
 
 PM::PreservedAnalyses LCSSAPass::run(Function &function, FAM &fam) {
     bool lcssa_inst_modified = false;
-    auto loop_info = fam.getResult<LoopAnalysis>(function);
-    domtree = fam.getResult<DomTreeAnalysis>(function);
+
+    ploop_info = &fam.getResult<LoopAnalysis>(function);
+    pdomtree = &fam.getResult<DomTreeAnalysis>(function);
+
+    auto& domtree = *pdomtree;
+    auto& loop_info = *ploop_info;
+
     for (const auto &toplevel : loop_info) {
         // Rewrite uses outside the loop, forming LCSSA phi in the exit blocks.
         // Handle the innermost loop first so that outer one's LCSSA form won't be destroyed.
@@ -127,7 +216,7 @@ PM::PreservedAnalyses LCSSAPass::run(Function &function, FAM &fam) {
             //
             // Collect instructions that might have uses outside the loop
             //
-            std::vector<std::shared_ptr<Instruction>> inst_worklist;
+            std::deque<std::shared_ptr<Instruction>> inst_worklist;
             // For each instruction in the exit dominating blocks, check if they have
             // uses outside the loop. If so, rewrite their uses.
             for (const auto& candidate : exit_dominating_blocks) {
@@ -150,73 +239,21 @@ PM::PreservedAnalyses LCSSAPass::run(Function &function, FAM &fam) {
                 }
             }
 
-            while (!inst_worklist.empty()) {
-                std::vector<std::shared_ptr<Use>> uses_to_rewrite;
-                std::map<const DomTree::Node*, std::shared_ptr<Value>> added_values;
-                auto curr_inst = inst_worklist.back();
-                inst_worklist.pop_back();
-                auto inst_bb = curr_inst->getParent();
-
-                for (const auto& use : curr_inst->self_uses()) {
-                    auto user_inst = std::dynamic_pointer_cast<Instruction>(use->getUser());
-                    auto user_bb = user_inst->getParent();
-
-                    // For phi, the use of each incoming value is deemed to occur
-                    // on the edge from the corresponding predecessor block to the current block.
-                    // (See LangRef: https://llvm.org/docs/LangRef.html#id318)
-                    // For practical purposes, we consider it occurs in the corresponding predecessor.
-                    if (auto phi = std::dynamic_pointer_cast<PHIInst>(user_inst))
-                        user_bb = phi->getBlockForValue(use);
-
-                    // A quick path for most uses being in the same block
-                    if (inst_bb != user_bb && !loop->contains(user_bb.get()))
-                        uses_to_rewrite.emplace_back(use);
-                }
-                if (uses_to_rewrite.empty())
-                    continue;
-
-                // Insert a phi into all the exit blocks that are dominated by the value
-                for (const auto& exit : curr_loop_exits) {
-                    if (!domtree.ADomB(inst_bb.get(), exit))
-                        continue;
-
-                    // Check if there is already what we want
-                    auto avail_phi = findLCSSAPhi(exit, curr_inst);
-                    if (avail_phi == nullptr) {
-                        avail_phi = std::make_shared<PHIInst>(
-                            curr_inst->getName() + ".lcssa" + std::to_string(name_cnt++), curr_inst->getType());
-                        for (const auto& pred : exit->preds()) {
-                            avail_phi->addPhiOper(curr_inst, pred);
-                            if (!loop->contains(pred.get())) {
-                                uses_to_rewrite.emplace_back
-                                    (*std::prev(std::prev(avail_phi->operand_use_end())));
-                            }
-                        }
-                        exit->addPhiInst(avail_phi);
-                        Err::gassert(added_values[domtree[exit].get()] == nullptr,
-                            "Duplicated phi insertion.");
-                    }
-                    added_values[domtree[exit].get()] = avail_phi;
-                }
-
-                for (const auto& use : uses_to_rewrite) {
-                    auto user_inst = std::dynamic_pointer_cast<Instruction>(use->getUser());
-                    auto user_bb = user_inst->getParent();
-                    if (auto phi = std::dynamic_pointer_cast<PHIInst>(user_inst))
-                        user_bb = phi->getBlockForValue(use);
-
-                    auto val = getValueForBlock(*loop,
-                        domtree[user_bb.get()].get(), curr_inst, added_values);
-                    user_inst->replaceUse(use, val);
-                    lcssa_inst_modified = true;
-                }
-            }
+            lcssa_inst_modified |= formLCSSAOnInsts(inst_worklist);
             Err::gassert(loop->isLCSSAForm(), "Failed to transform a loop into LCSSA form.");
         }
     }
 
+
+    for (const auto &toplevel : loop_info) {
+        auto looppdfv = toplevel->getDFVisitor();
+        for (const auto &loop : looppdfv)
+            Err::gassert(loop->isLCSSAForm(), "Failed to transform a loop into LCSSA form.");
+    }
+
+    pdomtree = nullptr;
+    ploop_info = nullptr;
     name_cnt = 0;
-    domtree = {};
     return lcssa_inst_modified ? PreserveCFGAnalyses() : PreserveAll();
 }
 

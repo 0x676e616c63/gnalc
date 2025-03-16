@@ -38,7 +38,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
         }
     }
 
-    auto postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
+    auto& postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
     while (!worklist.empty()) {
         auto inst = worklist.front();
         worklist.pop_front();

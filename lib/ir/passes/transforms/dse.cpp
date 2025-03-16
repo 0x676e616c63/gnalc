@@ -10,9 +10,9 @@ namespace IR {
 PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
     bool dse_inst_modified = false;
 
-    auto aa_res = fam.getResult<AliasAnalysis>(function);
-    auto domtree = fam.getResult<DomTreeAnalysis>(function);
-    auto postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
+    auto& aa_res = fam.getResult<AliasAnalysis>(function);
+    auto& domtree = fam.getResult<DomTreeAnalysis>(function);
+    auto& postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
     std::set<std::shared_ptr<Instruction>> unused_store;
 
     // For each store, collect all possible store on its post dominator block as candidates.

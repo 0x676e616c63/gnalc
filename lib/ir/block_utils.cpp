@@ -225,13 +225,13 @@ std::shared_ptr<BasicBlock> breakCriticalEdge(
     // BRInst
     auto br = pred->getBRInst();
     Err::gassert(br != nullptr);
-    bool ok = br->replaceAllUses(succ, new_block);
+    bool ok = br->replaceAllOperands(succ, new_block);
     Err::gassert(ok);
     new_block->addInst(std::make_shared<BRInst>(succ));
 
     // PHI
     for (const auto& phi : succ->phis()) {
-        ok = phi->replaceAllUses(pred, new_block);
+        ok = phi->replaceAllOperands(pred, new_block);
         Err::gassert(ok);
     }
 
@@ -251,14 +251,21 @@ bool breakAllCriticalEdges(const Function & function) {
     return modified;
 }
 
+bool isLCSSAPhi(const std::shared_ptr<PHIInst> &phi, std::shared_ptr<Value> target_val) {
+    auto phi_opers = phi->getPhiOpers();
+    Err::gassert(!phi_opers.empty());
+    if (target_val == nullptr)
+        target_val = phi_opers[0].value;
+    for (const auto& [val, bb] : phi_opers) {
+        if (val != target_val)
+            return false;
+    }
+    return true;
+}
 std::shared_ptr<PHIInst> findLCSSAPhi(const BasicBlock* block, const std::shared_ptr<Value>& value) {
     for (const auto& phi : block->phis()) {
-        auto phi_opers = phi->getPhiOpers();
-        for (const auto& [val, bb] : phi_opers) {
-            if (val != value)
-                return nullptr;
-        }
-        return phi;
+        if (isLCSSAPhi(phi, value))
+            return phi;
     }
     return nullptr;
 }
