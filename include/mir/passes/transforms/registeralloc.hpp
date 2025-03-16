@@ -1,10 +1,10 @@
 #pragma once
 #ifndef GNALC_MIRTOOLS_REGISTERALLOC_HPP
 #define GNALC_MIRTOOLS_REGISTERALLOC_HPP
+#include "../../../../include/config/config.hpp"
 #include "../../module.hpp"
 #include "../analysis/live_analysis.hpp"
 #include "../pass_manager.hpp"
-#include "../../../../include/config/config.hpp"
 #include <optional>
 #include <stdarg.h>
 

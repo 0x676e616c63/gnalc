@@ -39,3 +39,20 @@ std::string Function::toString() const {
 
     return str;
 }
+
+std::string Function::toString_Debug() {
+    std::string str;
+
+    str += "name: " + getName() + '\n';
+
+    str += info.toString();
+
+    str += "body:\n";
+
+    for (auto &basicblock : blocks) {
+        str += "    ";
+        str += basicblock->toString_debug(info.liveinfo.liveIn[basicblock], info.liveinfo.liveOut[basicblock]) + '\n';
+    }
+
+    return str;
+}

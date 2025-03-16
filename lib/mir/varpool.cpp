@@ -16,7 +16,7 @@ std::shared_ptr<Operand> VarPool::getValue(const IR::Value &val) {
 
 std::shared_ptr<PreColedOP> VarPool::getValue(CoreRegister _color) {
     std::shared_ptr<PreColedOP> ptr;
-    if (gpr_pool[_color]) {
+    if (gpr_pool.find(_color) != gpr_pool.end()) {
         ptr = gpr_pool[_color];
         return ptr;
     } else {
@@ -28,7 +28,7 @@ std::shared_ptr<PreColedOP> VarPool::getValue(CoreRegister _color) {
 
 std::shared_ptr<PreColedOP> VarPool::getValue(FPURegister _color) {
     std::shared_ptr<PreColedOP> ptr;
-    if (spr_pool[_color]) {
+    if (spr_pool.find(_color) != spr_pool.end()) {
         ptr = spr_pool[_color];
         return ptr;
     } else {

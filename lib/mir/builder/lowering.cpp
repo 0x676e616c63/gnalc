@@ -24,8 +24,9 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
 
     func->editInfo().args = midEnd_function.getParams().size();
 
-    OperandLowering operlower{midEnd_function.getInstCount() + func->getInfo().args, module.getConstPool(),
-                              func->editInfo().varpool, func->editInfo().StackObjs};
+    OperandLowering operlower{
+        midEnd_function.getInstCount() + midEnd_function.getBlocks().size() + func->getInfo().args,
+        module.getConstPool(), func->editInfo().varpool, func->editInfo().StackObjs}; // first: med_val_cnt
 
     /// @brief 函数参数加载到varpool里, 并且适当添加ldr指令
     unsigned int cnt = 0;  // int 或者 地址(数组退化而来)
@@ -312,6 +313,7 @@ std::shared_ptr<Operand> OperandLowering::fastFind_phi(const std::shared_ptr<IR:
 }
 
 std::shared_ptr<BindOnVirOP> OperandLowering::mkOP(const std::shared_ptr<IR::Type> &type, RegisterBank bank) {
+
     auto virtual_val = std::make_shared<IR::Value>("%" + std::to_string(varpool.size() + med_val_cnt + 1), type,
                                                    IR::ValueTrait::ORDINARY_VARIABLE);
     auto ptr = std::make_shared<BindOnVirOP>(bank, virtual_val->getName());
@@ -321,6 +323,10 @@ std::shared_ptr<BindOnVirOP> OperandLowering::mkOP(const std::shared_ptr<IR::Typ
 }
 
 std::shared_ptr<BindOnVirOP> OperandLowering::mkOP(const IR::Value &val, RegisterBank bank) {
+    // 处理phi时提前添加的def
+    if (auto phi_mk = std::dynamic_pointer_cast<BindOnVirOP>(search_phi(val)))
+        return phi_mk;
+
     auto ptr = std::make_shared<BindOnVirOP>(bank, val.getName());
     varpool.addValue(val, ptr);
     return ptr;
@@ -393,6 +399,9 @@ std::shared_ptr<BaseADROP> OperandLowering::mkBaseOP(const IR::Value &val, const
 }
 
 std::shared_ptr<BaseADROP> OperandLowering::mkBaseOP(const IR::Value &val) {
+    if (auto phi_mk = std::dynamic_pointer_cast<BaseADROP>(search_phi(val)))
+        return phi_mk;
+
     auto ptr = std::make_shared<BaseADROP>(BaseAddressTrait::Runtime, val.getName(), 0, nullptr);
     ptr->setBase(ptr);
 

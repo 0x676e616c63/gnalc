@@ -238,15 +238,22 @@ std::list<std::shared_ptr<Instruction>> InstLowering::callLower(const std::share
     // =====================
     // step2: call
     // =====================
-    auto bl_call = std::make_shared<branchInst>(OpCode::BL, func, func->getName());
+    std::shared_ptr<BindOnVirOP> target;
+    auto retType = IR::toBType(functype->getRet());
+    unsigned int RetValType = -1;
+    if (retType->getInner() == IR::IRBTYPE::VOID)
+        RetValType = 0;
+    else if (retType->getInner() == IR::IRBTYPE::FLOAT)
+        RetValType = 2;
+    else // float
+        RetValType = 1;
+    auto bl_call = std::make_shared<branchInst>(OpCode::BL, func, func->getName(), RetValType);
 
     insts.emplace_back(bl_call);
 
     // =====================
     // step3: 接收返回值
     // =====================
-    std::shared_ptr<BindOnVirOP> target;
-    auto retType = IR::toBType(functype->getRet());
     if (retType->getInner() == IR::IRBTYPE::I32) {
         target = operlower.mkOP(*call, RegisterBank::gpr);
         auto reg = operlower.getPreColored(CoreRegister::r0);

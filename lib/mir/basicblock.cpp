@@ -15,6 +15,40 @@ std::string BasicBlock::toString() const {
     return str;
 }
 
+std::string BasicBlock::toString_debug(liveSet liveIn, liveSet liveOut) const {
+    std::string str;
+
+    str += getName() + ":\n";
+
+    str += "        liveIn:";
+    for (const auto &op : liveIn) {
+        if (auto precoloredop = std::dynamic_pointer_cast<PreColedOP>(op)) {
+            if (precoloredop->getBank() == RegisterBank::gpr)
+                str += " $" + enum_name(std::get<CoreRegister>(precoloredop->getColor())) + ',';
+            else if (precoloredop->getBank() == RegisterBank::spr)
+                str += " $" + enum_name(std::get<FPURegister>(precoloredop->getColor())) + ',';
+            else
+                Err::todo("dpr, qpr todo...");
+        } else
+            str += ' ' + op->getName() + ',';
+    }
+    str += '\n';
+
+    for (const auto &inst : insts) {
+        str += "            ";
+        str += inst->toString();
+    }
+
+    str += "        liveOut:";
+
+    for (const auto &op : liveOut) {
+        str += ' ' + op->getName() + ',';
+    }
+    str += '\n';
+
+    return str;
+}
+
 void BasicBlock::delPred(std::shared_ptr<BasicBlock> pred) {
     auto lambda = [&pred](const auto &blk_ptr) {
         Err::gassert(!blk_ptr.expired(), "blk in pres already released!");
