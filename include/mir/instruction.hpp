@@ -98,7 +98,7 @@ enum class SourceOperandType {
     rr,
     rrr,
     ri,
-    rsi /* 或者rrsi更加贴切 */,
+    rsi /* 或者rrsi更加贴切, si == shiftimme */,
     ra /* a means address*/,
 };
 

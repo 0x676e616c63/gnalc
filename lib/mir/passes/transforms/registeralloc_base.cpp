@@ -336,7 +336,7 @@ void RAPass::FreezeMoves(const OperP &u) {
         Err::gassert(getDef(m).size() == 1 && getUse(m).size() == 1, "Coalesce a invalid 'move' inst");
 
         auto u = *(getUse(m).begin());
-        auto v = *(getDef(m).end());
+        auto v = *(getDef(m).begin());
 
         if (activeMoves.find(m) != activeMoves.end())
             delBySet(activeMoves, Moves{m});

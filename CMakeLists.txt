@@ -76,8 +76,5 @@ add_executable(bfhelper tools/driver/debug/bfhelper.cpp)
 # main driver
 add_executable(gnalc tools/driver/driver.cpp ${GNALC_SRC})
 
-# with Arm bkd
-add_executable(gnalc_arm tools/driver/driver.cpp ${GNALC_SRC} ${GNALC_MIR_SRC})
-
 enable_testing()
 add_subdirectory(test)

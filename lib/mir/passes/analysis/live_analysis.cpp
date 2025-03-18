@@ -11,7 +11,11 @@ std::list<OperP> LiveAnalysis::extractUse(const InstP &inst) {
 
     for (int i = 1; i < 5; ++i) {
         auto use = inst->getSourceOP(i);
-        if (std::dynamic_pointer_cast<BindOnVirOP>(use))
+        if (auto ptr = std::dynamic_pointer_cast<BaseADROP>(use)) {
+            uses.emplace_back(ptr->getBase());
+        }
+
+        else if (std::dynamic_pointer_cast<BindOnVirOP>(use))
             uses.emplace_back(use);
     }
 
@@ -125,6 +129,7 @@ void LiveAnalysis::runOnInst(const InstP &inst, std::unordered_set<OperP> &livei
         case OpCode::BIC:
         case OpCode::ASR:
         case OpCode::LSL:
+        case OpCode::LSR:
         case OpCode::ROR:
         case OpCode::RRX:
         case OpCode::MUL:
@@ -170,7 +175,8 @@ void LiveAnalysis::runOnInst(const InstP &inst, std::unordered_set<OperP> &livei
             livein = liveout;
             break;
         default:
-            Err::unreachable("instruction liveness encounter an unknown op");
+            Err::unreachable("instruction liveness encounter an unknown op: " +
+                             enum_name(std::get<OpCode>(inst->getOpCode())));
         }
 
     } else {

@@ -16,6 +16,21 @@ std::list<std::shared_ptr<Instruction>> InstLowering::brLower(const std::shared_
         auto Dest = br->getDest();
         auto b_true = std::make_shared<branchInst>(OpCode::B, Dest, Dest->getName());
         insts.emplace_back(b_true);
+    } else if (auto constcond = std::dynamic_pointer_cast<IR::ConstantI1>(br->getCond())) {
+        //   虽然奇怪但是确实有这种IR
+        //   br i1 1, label %true, label %false
+        //   br i1 0, label %true, label %false
+        auto trueDest = br->getTrueDest();
+        auto falseDest = br->getFalseDest();
+        auto boolean = constcond->getVal();
+
+        if (boolean) {
+            auto b_true = std::make_shared<branchInst>(OpCode::B, trueDest, trueDest->getName());
+            insts.emplace_back(b_true);
+        } else {
+            auto b_false = std::make_shared<branchInst>(OpCode::B, trueDest, falseDest->getName());
+            insts.emplace_back(b_false);
+        }
     } else {
         auto cond = br->getCond();
         auto trueDest = br->getTrueDest();

@@ -32,10 +32,19 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
         if (rconst && lconst) {
             int constVal = rconst->getVal() + lconst->getVal();
 
-            auto constOP = operlower.fastFind(constVal);
+            auto pair = operlower.LoadedFind(constVal);
 
-            auto mov = std::make_shared<movInst>(SourceOperandType::i32, target, constOP);
-            insts.emplace_back(mov);
+            if (!pair.first) {
+                // mov
+
+                auto constOP = operlower.fastFind(constVal);
+                auto mov = std::make_shared<movInst>(SourceOperandType::i32, pair.second, constOP);
+                insts.emplace_back(mov);
+            }
+
+            /// copy 很有机会消除
+            auto copy = std::make_shared<COPY>(target, pair.second);
+            insts.emplace_back(copy);
         }
         // ===================
         // 2. 第二操作数为常量
@@ -121,10 +130,20 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
         // ====================
         if (rconst && lconst) {
             int constVal = lconst->getVal() - rconst->getVal();
-            auto constOP = operlower.fastFind(constVal);
 
-            auto mov = std::make_shared<movInst>(SourceOperandType::i32, target, constOP);
-            insts.emplace_back(mov);
+            auto pair = operlower.LoadedFind(constVal);
+
+            if (!pair.first) {
+                // mov
+
+                auto constOP = operlower.fastFind(constVal);
+                auto mov = std::make_shared<movInst>(SourceOperandType::i32, pair.second, constOP);
+                insts.emplace_back(mov);
+            }
+
+            /// copy 很有机会消除
+            auto copy = std::make_shared<COPY>(target, pair.second);
+            insts.emplace_back(copy);
         }
         // ===================
         // 2. 第二操作数为常量
@@ -207,11 +226,21 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
         // 1. 常量拦截
         // ====================
         if (rconst && lconst) {
-            int constVal = lconst->getVal() * rconst->getVal();
-            auto constOP = operlower.fastFind(constVal);
+            int constVal = rconst->getVal() * lconst->getVal();
 
-            auto mov = std::make_shared<movInst>(SourceOperandType::i32, target, constOP);
-            insts.emplace_back(mov);
+            auto pair = operlower.LoadedFind(constVal);
+
+            if (!pair.first) {
+                // mov
+
+                auto constOP = operlower.fastFind(constVal);
+                auto mov = std::make_shared<movInst>(SourceOperandType::i32, pair.second, constOP);
+                insts.emplace_back(mov);
+            }
+
+            /// copy 很有机会消除
+            auto copy = std::make_shared<COPY>(target, pair.second);
+            insts.emplace_back(copy);
         }
         // ===================
         // 2. 第二操作数为常量, 选择优化
@@ -286,10 +315,20 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
         // ====================
         if (rconst && lconst) {
             int constVal = lconst->getVal() / rconst->getVal();
-            auto constOP = operlower.fastFind(constVal);
 
-            auto mov = std::make_shared<movInst>(SourceOperandType::i32, target, constOP);
-            insts.emplace_back(mov);
+            auto pair = operlower.LoadedFind(constVal);
+
+            if (!pair.first) {
+                // mov
+
+                auto constOP = operlower.fastFind(constVal);
+                auto mov = std::make_shared<movInst>(SourceOperandType::i32, pair.second, constOP);
+                insts.emplace_back(mov);
+            }
+
+            /// copy 很有机会消除
+            auto copy = std::make_shared<COPY>(target, pair.second);
+            insts.emplace_back(copy);
         }
         // ===================
         // 2. 第二操作数为常量, 除常数优化
