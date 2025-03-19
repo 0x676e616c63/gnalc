@@ -9,7 +9,8 @@
 
 using namespace MIR;
 
-std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::shared_ptr<IR::BinaryInst> &binary) {
+std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::shared_ptr<IR::BinaryInst> &binary,
+                                                                  const std::shared_ptr<BasicBlock> &blk) {
     auto target = operlower.mkOP(*binary, RegisterBank::gpr);
 
     auto op = binary->getOpcode();
@@ -32,18 +33,10 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
         if (rconst && lconst) {
             int constVal = rconst->getVal() + lconst->getVal();
 
-            auto pair = operlower.LoadedFind(constVal);
+            auto result = operlower.LoadedFind(constVal, blk); // 预加载的字面量
 
-            if (!pair.first) {
-                // mov
-
-                auto constOP = operlower.fastFind(constVal);
-                auto mov = std::make_shared<movInst>(SourceOperandType::i32, pair.second, constOP);
-                insts.emplace_back(mov);
-            }
-
-            /// copy 很有机会消除
-            auto copy = std::make_shared<COPY>(target, pair.second);
+            /// 一般认为 copy 很有机会消除
+            auto copy = std::make_shared<COPY>(target, result);
             insts.emplace_back(copy);
         }
         // ===================
@@ -55,16 +48,9 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
             auto regOP = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
             auto constOP = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(constVal));
 
-            ///@brief 判断是否超出范围, 加一条movInst, 此时需要一个新的中继操作数
             if (constOP->getConst()->isEncoded()) {
 
-                auto pair = operlower.LoadedFind(constVal);
-                auto relay = pair.second;
-
-                if (!pair.first) {
-                    auto mov = std::make_shared<movInst>(SourceOperandType::i32, relay, constOP);
-                    insts.emplace_back(mov);
-                }
+                auto relay = operlower.LoadedFind(constVal, blk);
 
                 auto add =
                     std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::rr, target, regOP, relay, nullptr);
@@ -88,13 +74,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
             ///@brief 判断是否超出范围, 加一条movInst, 此时需要一个新的中继操作数
             if (constOP->getConst()->isEncoded()) {
 
-                auto pair = operlower.LoadedFind(constVal);
-                auto relay = pair.second;
-
-                if (!pair.first) {
-                    auto mov = std::make_shared<movInst>(SourceOperandType::i32, relay, constOP);
-                    insts.emplace_back(mov);
-                }
+                auto relay = operlower.LoadedFind(constVal, blk);
 
                 auto add =
                     std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::rr, target, regOP, relay, nullptr);
@@ -131,18 +111,9 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
         if (rconst && lconst) {
             int constVal = lconst->getVal() - rconst->getVal();
 
-            auto pair = operlower.LoadedFind(constVal);
+            auto relay = operlower.LoadedFind(constVal, blk);
 
-            if (!pair.first) {
-                // mov
-
-                auto constOP = operlower.fastFind(constVal);
-                auto mov = std::make_shared<movInst>(SourceOperandType::i32, pair.second, constOP);
-                insts.emplace_back(mov);
-            }
-
-            /// copy 很有机会消除
-            auto copy = std::make_shared<COPY>(target, pair.second);
+            auto copy = std::make_shared<COPY>(target, relay);
             insts.emplace_back(copy);
         }
         // ===================
@@ -154,15 +125,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
             auto regOP = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
             auto constOP = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(constVal));
 
-            ///@brief 判断是否超出范围, 加一条movInst, 此时需要一个新的中继操作数
             if (constOP->getConst()->isEncoded()) {
-                auto pair = operlower.LoadedFind(constVal);
-                auto relay = pair.second;
-
-                if (!pair.first) {
-                    auto mov = std::make_shared<movInst>(SourceOperandType::i32, relay, constOP);
-                    insts.emplace_back(mov);
-                }
+                auto relay = operlower.LoadedFind(constVal, blk);
 
                 auto sub =
                     std::make_shared<binaryImmInst>(OpCode::SUB, SourceOperandType::rr, target, regOP, relay, nullptr);
@@ -183,20 +147,13 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
             auto regOP = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rval));
             auto constOP = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(constVal));
 
-            ///@brief 判断是否超出范围, 加一条movInst, 此时需要一个新的中继操作数
             if (constOP->getConst()->isEncoded()) {
-                auto pair = operlower.LoadedFind(constVal);
+                auto relay = operlower.LoadedFind(constVal, blk);
 
-                auto relay = pair.second;
+                auto sub =
+                    std::make_shared<binaryImmInst>(OpCode::RSB, SourceOperandType::rr, target, relay, regOP, nullptr);
 
-                if (!pair.first) {
-                    auto mov = std::make_shared<movInst>(SourceOperandType::i32, relay, constOP);
-                    insts.emplace_back(mov);
-                }
-
-                auto rsb =
-                    std::make_shared<binaryImmInst>(OpCode::RSB, SourceOperandType::rr, target, regOP, relay, nullptr);
-                insts.emplace_back(rsb);
+                insts.emplace_back(sub);
             } else {
                 auto rsb = std::make_shared<binaryImmInst>(OpCode::RSB, SourceOperandType::ri, target, regOP, constOP,
                                                            nullptr);
@@ -228,18 +185,9 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
         if (rconst && lconst) {
             int constVal = rconst->getVal() * lconst->getVal();
 
-            auto pair = operlower.LoadedFind(constVal);
+            auto relay = operlower.LoadedFind(constVal, blk);
 
-            if (!pair.first) {
-                // mov
-
-                auto constOP = operlower.fastFind(constVal);
-                auto mov = std::make_shared<movInst>(SourceOperandType::i32, pair.second, constOP);
-                insts.emplace_back(mov);
-            }
-
-            /// copy 很有机会消除
-            auto copy = std::make_shared<COPY>(target, pair.second);
+            auto copy = std::make_shared<COPY>(target, relay);
             insts.emplace_back(copy);
         }
         // ===================
@@ -249,18 +197,13 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
             int constVal = rconst->getVal();
 
             if (SplitTo2PowX(constVal).cul != splited::oper::none) {
-                insts.splice(insts.end(), mulOpt(target, lval, rconst, operlower));
+                insts.splice(insts.end(), mulOpt(target, lval, rconst, operlower, blk));
 
             } else {
                 auto regOP = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
                 auto constOP = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(constVal));
 
-                auto pair = operlower.LoadedFind(constVal);
-                auto relay = pair.second;
-                if (!pair.first) {
-                    auto mov = std::make_shared<movInst>(SourceOperandType::i32, relay, constOP);
-                    insts.emplace_back(mov);
-                }
+                auto relay = operlower.LoadedFind(constVal, blk);
 
                 auto mul = std::make_shared<binaryInst>(OpCode::MUL, SourceOperandType::rr, target, regOP, relay);
 
@@ -274,17 +217,12 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
             int constVal = lconst->getVal();
 
             if (SplitTo2PowX(constVal).cul != splited::oper::none) {
-                insts.splice(insts.end(), mulOpt(target, rval, lconst, operlower));
+                insts.splice(insts.end(), mulOpt(target, rval, lconst, operlower, blk));
             } else {
                 auto regOP = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rval));
                 auto constOP = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(constVal));
 
-                auto pair = operlower.LoadedFind(constVal);
-                auto relay = pair.second;
-                if (!pair.first) {
-                    auto mov = std::make_shared<movInst>(SourceOperandType::i32, relay, constOP);
-                    insts.emplace_back(mov);
-                }
+                auto relay = operlower.LoadedFind(constVal, blk);
 
                 auto mul = std::make_shared<binaryInst>(OpCode::MUL, SourceOperandType::rr, target, regOP, relay);
 
@@ -316,18 +254,9 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
         if (rconst && lconst) {
             int constVal = lconst->getVal() / rconst->getVal();
 
-            auto pair = operlower.LoadedFind(constVal);
+            auto relay = operlower.LoadedFind(constVal, blk);
 
-            if (!pair.first) {
-                // mov
-
-                auto constOP = operlower.fastFind(constVal);
-                auto mov = std::make_shared<movInst>(SourceOperandType::i32, pair.second, constOP);
-                insts.emplace_back(mov);
-            }
-
-            /// copy 很有机会消除
-            auto copy = std::make_shared<COPY>(target, pair.second);
+            auto copy = std::make_shared<COPY>(target, relay);
             insts.emplace_back(copy);
         }
         // ===================
@@ -336,7 +265,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
         else if (rconst) {
             // int constVal = rconst->getVal();
 
-            insts.splice(insts.end(), divOpt(target, lval, rconst, operlower));
+            insts.splice(insts.end(), divOpt(target, lval, rconst, operlower, blk));
         }
         // ===================
         // 3. 第一操作数为常量
@@ -347,12 +276,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
             auto regOP = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rval));
             auto constOP = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(constVal));
 
-            auto pair = operlower.LoadedFind(constVal);
-            auto relay = pair.second;
-            if (!pair.first) {
-                auto mov = std::make_shared<movInst>(SourceOperandType::i32, relay, constOP);
-                insts.emplace_back(mov);
-            }
+            auto relay = operlower.LoadedFind(constVal, blk);
 
             auto sdiv = std::make_shared<binaryInst>(OpCode::SDIV, SourceOperandType::rr, target, relay, regOP);
 
@@ -376,21 +300,14 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
     else if (op == IR::OP::REM) {
         auto rconst = std::dynamic_pointer_cast<IR::ConstantInt>(rval);
         auto lconst = std::dynamic_pointer_cast<IR::ConstantInt>(lval);
-        // ===================
-        // step1: 使用mov加载到寄存器
-        // ===================
+
         std::shared_ptr<BindOnVirOP> dividend;
         std::shared_ptr<BindOnVirOP> divisor;
 
         if (rconst) {
             auto constOP = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(rconst->getVal()));
 
-            auto pair = operlower.LoadedFind(rconst->getVal());
-            auto relay = pair.second;
-            if (!pair.first) {
-                auto mov = std::make_shared<movInst>(SourceOperandType::i32, relay, constOP);
-                insts.emplace_back(mov);
-            }
+            auto relay = operlower.LoadedFind(rconst->getVal(), blk);
 
             divisor = relay;
         } else {
@@ -400,12 +317,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
         if (lconst) {
             auto constOP = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(lconst->getVal()));
 
-            auto pair = operlower.LoadedFind(lconst->getVal());
-            auto relay = pair.second;
-            if (!pair.first) {
-                auto mov = std::make_shared<movInst>(SourceOperandType::i32, relay, constOP);
-                insts.emplace_back(mov);
-            }
+            auto relay = operlower.LoadedFind(lconst->getVal(), blk);
+
             dividend = relay;
         } else {
             dividend = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
@@ -430,7 +343,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower_v(const std::shared_ptr<IR::BinaryInst> &binary) {
+std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower_v(const std::shared_ptr<IR::BinaryInst> &binary,
+                                                                    const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
     auto target = operlower.mkOP(*binary, RegisterBank::spr);
 
@@ -448,13 +362,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower_v(const std::s
     if (lconst) {
         float const_float = lconst->getVal();
 
-        auto pair = operlower.LoadedFind(const_float);
-        oper1 = pair.second;
-        if (!pair.first) {
-            // mov %oper1, #imme
-            auto mov = std::make_shared<movInst>(SourceOperandType::ri, oper1, operlower.fastFind(const_float));
-            insts.emplace_back(mov);
-        }
+        auto relay = operlower.LoadedFind(const_float, blk);
+        oper1 = relay;
     } else {
         oper1 = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
     }
@@ -462,17 +371,12 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower_v(const std::s
     if (rconst) {
         float const_float = rconst->getVal();
 
-        auto pair = operlower.LoadedFind(const_float);
-        oper2 = pair.second;
-        if (!pair.first) {
-            // mov %oper2, #imme
-            auto mov = std::make_shared<movInst>(SourceOperandType::ri, oper2, operlower.fastFind(const_float));
-            insts.emplace_back(mov);
-        }
+        auto relay = operlower.LoadedFind(const_float, blk);
+        oper2 = relay;
     } else {
         if (rval)
             oper2 = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rval));
-        else
+        else // FNEG
             oper2 = nullptr;
     }
 
@@ -499,7 +403,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower_v(const std::s
         insts.emplace_back(vdiv);
     } break;
     case IR::OP::FNEG: {
-        auto vneg = std::make_shared<Vunary>(MIR::NeonOpCode::VNEG, target, oper1, datapair);
+        auto vneg = std::make_shared<Vunary>(MIR::NeonOpCode::VNEG, target, oper1, datapair); // oper2 = nullptr
         insts.emplace_back(vneg);
     } break;
     case IR::OP::FREM: {

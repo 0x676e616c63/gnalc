@@ -2,11 +2,11 @@
 #include "../../../include/mir/passes/pass_manager.hpp"
 
 // Analysis
-#include "../../../include/mir/passes/analysis/live_analysis.hpp"
 #include "../../../include/mir/passes/analysis/domtree_analysis.hpp"
-
+#include "../../../include/mir/passes/analysis/live_analysis.hpp"
 
 // Transforms
+#include "../../../include/mir/passes/transforms/const2reg.hpp"
 #include "../../../include/mir/passes/transforms/peephole.hpp"
 #include "../../../include/mir/passes/transforms/phiEliminate.hpp"
 #include "../../../include/mir/passes/transforms/preRAlegalize.hpp"
@@ -26,6 +26,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     }
 
     fpm.addPass(PreRALegalize()); // necessary
+    fpm.addPass(Const2Reg());
 
     // fpm.addPass(NeonRAPass()); // pass name 还有问题
 

@@ -37,9 +37,11 @@ OperP LiveAnalysis::extractDef(const InstP &inst) {
         else if (type == 1)
             return varpool.getValue(CoreRegister::r0);
         else if (type == 2)
-            varpool.getValue(FPURegister::s0);
-        else
+            return varpool.getValue(FPURegister::s0);
+        else {
             Err::unreachable("invalid ret type while live anaylsis");
+            return nullptr; // just to make clang happy
+        }
     }
 }
 

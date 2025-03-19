@@ -43,7 +43,11 @@ void VarPool::addValue(const IR::Value &val, std::shared_ptr<Operand> Value) {
     pool[wrapper] = std::move(Value);
 }
 
-void VarPool::addLoaded(const ConstObj &obj, std::shared_ptr<BindOnVirOP> Value) { load_map[obj] = std::move(Value); }
+void VarPool::addLoaded(const ConstObj &obj, const std::shared_ptr<BindOnVirOP> &Value,
+                        const std::shared_ptr<BasicBlock> &blk) {
+    const2vir[obj] = Value;
+    const2blks[obj].insert(blk);
+}
 
 std::shared_ptr<BindOnVirOP> VarPool::addValue_anonymously(bool isFloat) {
     std::string name = '%' + std::to_string(pool.size());

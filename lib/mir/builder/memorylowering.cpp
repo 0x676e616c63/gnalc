@@ -8,7 +8,8 @@
 
 using namespace MIR;
 
-std::list<std::shared_ptr<Instruction>> InstLowering::allocaLower(const std::shared_ptr<IR::ALLOCAInst> &alloca) {
+std::list<std::shared_ptr<Instruction>> InstLowering::allocaLower(const std::shared_ptr<IR::ALLOCAInst> &alloca,
+                                                                  const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
     unsigned long long size;
     size = alloca->getBaseType()->getBytes();
@@ -18,7 +19,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::allocaLower(const std::sha
     return insts; // empty
 }
 
-std::list<std::shared_ptr<Instruction>> InstLowering::loadLower(const std::shared_ptr<IR::LOADInst> &load) {
+std::list<std::shared_ptr<Instruction>> InstLowering::loadLower(const std::shared_ptr<IR::LOADInst> &load,
+                                                                const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
     auto ptr = load->getPtr();
     std::shared_ptr<BindOnVirOP> val_in_reg = operlower.mkOP(*load, RegisterBank::gpr);
@@ -28,15 +30,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::loadLower(const std::share
     // step1: ptr是否是全局变量
     // ==================
     if (auto global_ptr = std::dynamic_pointer_cast<IR::GlobalVariable>(ptr)) {
-        auto pair = operlower.LoadedFind(global_ptr->getName());
-        ptr_in_reg = std::dynamic_pointer_cast<BaseADROP>(pair.second);
-
-        if (!pair.first) {
-            // mov %ptr_in_reg, #...
-            auto mov =
-                std::make_shared<movInst>(SourceOperandType::a, ptr_in_reg, operlower.fastFind(global_ptr->getName()));
-            insts.emplace_back(mov);
-        }
+        ptr_in_reg = std::dynamic_pointer_cast<BaseADROP>(operlower.LoadedFind(global_ptr->getName(), blk));
+        Err::gassert(ptr_in_reg != nullptr, "find a loaded global ptr failed");
     } else {
         ptr_in_reg = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(ptr));
     }
@@ -50,7 +45,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::loadLower(const std::share
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>> InstLowering::storeLower(const std::shared_ptr<IR::STOREInst> &store) {
+std::list<std::shared_ptr<Instruction>> InstLowering::storeLower(const std::shared_ptr<IR::STOREInst> &store,
+                                                                 const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
     auto ptr = store->getPtr();
     auto val = store->getValue();
@@ -58,28 +54,12 @@ std::list<std::shared_ptr<Instruction>> InstLowering::storeLower(const std::shar
     std::shared_ptr<BaseADROP> ptr_in_reg;
 
     // ==================
-    // step1: str的值是否为常数(int and float)
+    // step1: str的值是否为常数 int or float(pass down by storeLower_v)
     // ==================
     if (auto const_int_val = std::dynamic_pointer_cast<IR::ConstantInt>(val)) {
-        auto pair = operlower.LoadedFind(const_int_val->getVal());
-        val_in_reg = pair.second;
-
-        if (!pair.first) {
-            // mov %val_in_reg, #imme_int
-            auto mov = std::make_shared<movInst>(SourceOperandType::ri, val_in_reg,
-                                                 operlower.fastFind(const_int_val->getVal()));
-            insts.emplace_back(mov);
-        }
+        val_in_reg = operlower.LoadedFind(const_int_val->getVal(), blk);
     } else if (auto const_float_val = std::dynamic_pointer_cast<IR::ConstantFloat>(val)) {
-        auto pair = operlower.LoadedFind(const_float_val->getVal());
-        val_in_reg = pair.second;
-
-        if (!pair.first) {
-            // mov %val_in_reg, #imme_float
-            auto mov = std::make_shared<movInst>(SourceOperandType::ri, val_in_reg,
-                                                 operlower.fastFind(const_float_val->getVal()));
-            insts.emplace_back(mov);
-        }
+        val_in_reg = operlower.LoadedFind(const_float_val->getVal(), blk);
     } else {
         val_in_reg = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(val));
     }
@@ -88,15 +68,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::storeLower(const std::shar
     // step2: ptr是否是全局变量
     // ==================
     if (auto global_ptr = std::dynamic_pointer_cast<IR::GlobalVariable>(ptr)) {
-        auto pair = operlower.LoadedFind(global_ptr->getName());
-        ptr_in_reg = std::dynamic_pointer_cast<BaseADROP>(pair.second);
-
-        if (!pair.first) {
-            // mov %ptr_in_reg, #...
-            auto mov =
-                std::make_shared<movInst>(SourceOperandType::a, ptr_in_reg, operlower.fastFind(global_ptr->getName()));
-            insts.emplace_back(mov);
-        }
+        ptr_in_reg = std::dynamic_pointer_cast<BaseADROP>(operlower.LoadedFind(global_ptr->getName(), blk));
+        Err::gassert(ptr_in_reg != nullptr, "find a loaded global ptr failed");
     } else {
         ptr_in_reg = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(ptr));
     }
@@ -110,7 +83,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::storeLower(const std::shar
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>> InstLowering::gepLower(const std::shared_ptr<IR::GEPInst> &gep) {
+std::list<std::shared_ptr<Instruction>> InstLowering::gepLower(const std::shared_ptr<IR::GEPInst> &gep,
+                                                               const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     /// gep 将数组退化为对应类型的指针, 所以其实也算是一种converse?
@@ -123,19 +97,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::gepLower(const std::shared
 
     std::shared_ptr<BaseADROP> baseOP;
     if (auto global_ptr = std::dynamic_pointer_cast<IR::GlobalVariable>(ptr)) {
-        auto pair = operlower.LoadedFind(global_ptr->getName());
-        if (pair.first)
-            baseOP = std::dynamic_pointer_cast<BaseADROP>(pair.second);
-        else {
-            // mov %relay, #...
-            auto relay = std::dynamic_pointer_cast<BaseADROP>(pair.second);
-
-            auto global_addr = operlower.fastFind(global_ptr->getName());
-
-            auto mov = std::make_shared<movInst>(SourceOperandType::a, relay, global_addr);
-            insts.emplace_back(mov);
-            baseOP = relay;
-        }
+        baseOP = std::dynamic_pointer_cast<BaseADROP>(operlower.LoadedFind(global_ptr->getName(), blk));
+        Err::gassert(baseOP != nullptr, "find a loaded global ptr failed");
     } else {
         baseOP = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(ptr));
     }
@@ -150,7 +113,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::gepLower(const std::shared
         auto relay1 = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
         auto relay2 = operlower.mkBaseOP(*gep, baseOP, 0);
 
-        auto mul_insts = mulOpt(relay1, idx, std::make_shared<IR::ConstantInt>(perElemSize), operlower);
+        auto mul_insts = mulOpt(relay1, idx, std::make_shared<IR::ConstantInt>(perElemSize), operlower, blk);
         insts.insert(insts.end(), mul_insts.begin(), mul_insts.end());
 
         auto add = std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::rr, relay2, baseOP, relay1, nullptr);
@@ -160,7 +123,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::gepLower(const std::shared
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>> InstLowering::loadLower_v(const std::shared_ptr<IR::LOADInst> &load) {
+std::list<std::shared_ptr<Instruction>> InstLowering::loadLower_v(const std::shared_ptr<IR::LOADInst> &load,
+                                                                  const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
     auto ptr = load->getPtr();
     std::shared_ptr<BindOnVirOP> val_in_reg = operlower.mkOP(*load, RegisterBank::spr);
@@ -170,16 +134,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::loadLower_v(const std::sha
     // step1: ptr是否是全局变量
     // ==================
     if (auto global_ptr = std::dynamic_pointer_cast<IR::GlobalVariable>(ptr)) {
-        auto pair = operlower.LoadedFind(global_ptr->getName());
-        ptr_in_reg = std::dynamic_pointer_cast<BaseADROP>(pair.second);
-
-        if (!pair.first) {
-            // vmov %ptr_in_reg, #...
-            auto pair = std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32);
-            auto vmov = std::make_shared<Vmov>(SourceOperandType::a, ptr_in_reg,
-                                               operlower.fastFind(global_ptr->getName()), pair);
-            insts.emplace_back(vmov);
-        }
+        ptr_in_reg = std::dynamic_pointer_cast<BaseADROP>(operlower.LoadedFind(global_ptr->getName(), blk));
+        Err::gassert(ptr_in_reg != nullptr, "find a loaded global ptr failed");
     } else {
         ptr_in_reg = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(ptr));
     }
@@ -193,7 +149,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::loadLower_v(const std::sha
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>> InstLowering::storeLower_v(const std::shared_ptr<IR::STOREInst> &store) {
+std::list<std::shared_ptr<Instruction>> InstLowering::storeLower_v(const std::shared_ptr<IR::STOREInst> &store,
+                                                                   const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
     auto ptr = store->getPtr();
     auto val = store->getValue();
@@ -204,7 +161,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::storeLower_v(const std::sh
     // step1: str的值是否为常数, 为常数退化为str
     // ==================
     if (auto const_val = std::dynamic_pointer_cast<IR::ConstantFloat>(val)) {
-        insts = storeLower(store);
+        insts = storeLower(store, blk);
         return insts;
     } else {
         val_in_reg = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(val));
@@ -214,15 +171,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::storeLower_v(const std::sh
     // step2: ptr是否是全局变量
     // ==================
     if (auto global_ptr = std::dynamic_pointer_cast<IR::GlobalVariable>(ptr)) {
-        auto pair = operlower.LoadedFind(global_ptr->getName());
-        ptr_in_reg = std::dynamic_pointer_cast<BaseADROP>(pair.second);
-
-        if (!pair.first) {
-            // mov %ptr_in_reg, #...
-            auto mov =
-                std::make_shared<movInst>(SourceOperandType::a, ptr_in_reg, operlower.fastFind(global_ptr->getName()));
-            insts.emplace_back(mov);
-        }
+        ptr_in_reg = std::dynamic_pointer_cast<BaseADROP>(operlower.LoadedFind(global_ptr->getName(), blk));
+        Err::gassert(ptr_in_reg != nullptr, "find a loaded global ptr failed");
     } else {
         ptr_in_reg = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(ptr));
     }
@@ -236,7 +186,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::storeLower_v(const std::sh
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>> InstLowering::loadLower_p(const std::shared_ptr<IR::LOADInst> &load) {
+std::list<std::shared_ptr<Instruction>> InstLowering::loadLower_p(const std::shared_ptr<IR::LOADInst> &load,
+                                                                  const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     ///@brief load获得的值为一个指针
@@ -251,7 +202,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::loadLower_p(const std::sha
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>> InstLowering::storeLower_p(const std::shared_ptr<IR::STOREInst> &store) {
+std::list<std::shared_ptr<Instruction>> InstLowering::storeLower_p(const std::shared_ptr<IR::STOREInst> &store,
+                                                                   const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     ///@brief store的指针值不为常数
@@ -265,7 +217,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::storeLower_p(const std::sh
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>> InstLowering::gepLower_p(const std::shared_ptr<IR::GEPInst> &gep) {
+std::list<std::shared_ptr<Instruction>> InstLowering::gepLower_p(const std::shared_ptr<IR::GEPInst> &gep,
+                                                                 const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     ///@bug

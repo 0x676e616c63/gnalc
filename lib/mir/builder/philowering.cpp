@@ -3,7 +3,8 @@
 
 using namespace MIR;
 
-std::list<std::shared_ptr<Instruction>> InstLowering::phiLower(const std::shared_ptr<IR::PHIInst> &phi) {
+std::list<std::shared_ptr<Instruction>> InstLowering::phiLower(const std::shared_ptr<IR::PHIInst> &phi,
+                                                               const std::shared_ptr<BasicBlock> &blk) {
     /// @note 指令选择阶段会保留Phi的形式
     std::list<std::shared_ptr<Instruction>> insts;
 

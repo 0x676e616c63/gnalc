@@ -59,7 +59,7 @@ splited SplitTo2PowX(int multiplier) {
 std::list<std::shared_ptr<Instruction>> mulOpt(const std::shared_ptr<BindOnVirOP> &target,
                                                const std::shared_ptr<IR::Value> &virRegVal,
                                                const std::shared_ptr<IR::ConstantInt> &constVal,
-                                               OperandLowering &operlower) {
+                                               OperandLowering &operlower, const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     int multipler = constVal->getVal();
@@ -153,15 +153,7 @@ std::list<std::shared_ptr<Instruction>> mulOpt(const std::shared_ptr<BindOnVirOP
         }
     } else if (split.cul == splited::oper::none) {
         // 做回自己
-        auto pair = operlower.LoadedFind(multipler);
-
-        auto multipler_op = pair.second;
-
-        if (!pair.first) {
-            auto multipler_const = operlower.fastFind(multipler);
-            auto mov = std::make_shared<movInst>(SourceOperandType::i32, multipler_op, multipler_const);
-            insts.emplace_back(mov);
-        }
+        auto multipler_op = operlower.LoadedFind(multipler, blk);
 
         auto mul = std::make_shared<binaryInst>(OpCode::MUL, SourceOperandType::rr, target, mulval, multipler_op);
         insts.emplace_back(mul);
@@ -193,7 +185,7 @@ multiplication ChooseMultipler(int divisor) {
 std::list<std::shared_ptr<Instruction>> divOpt(const std::shared_ptr<BindOnVirOP> &target,
                                                const std::shared_ptr<IR::Value> &virRegVal,
                                                const std::shared_ptr<IR::ConstantInt> &constVal,
-                                               OperandLowering &operlower) {
+                                               OperandLowering &operlower, const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     int divisor_const = constVal->getVal();
@@ -245,15 +237,7 @@ std::list<std::shared_ptr<Instruction>> divOpt(const std::shared_ptr<BindOnVirOP
 
         auto shift = operlower.fastFind(multipler.shift);
 
-        auto pair = operlower.LoadedFind(multipler_const);
-
-        auto relay = pair.second;
-
-        if (!pair.first) {
-            auto mul_const = operlower.fastFind(multipler_const);
-            auto mov = std::make_shared<movInst>(SourceOperandType::i32, relay, mul_const);
-            insts.emplace_back(mov);
-        }
+        auto relay = operlower.LoadedFind(multipler_const, blk);
 
         auto relay2 = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
         if (multipler.mul > 0x80000000) {

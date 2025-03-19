@@ -73,16 +73,9 @@ void PreRALegalize::addInstBefore(const BlkP &blk, const std::shared_ptr<ldrInst
     int offset = baseReg->getConstOffset();
     baseReg->setConstOffset(0);
 
-    auto pair = varpool->getLoaded(offset);
+    auto [ptr, const_op] = varpool->getLoaded(offset, blk);
 
-    if (pair.second) { // nullptr
-        // mov %index_reg, #baseReg.constOffset
-        auto mov =
-            std::make_shared<movInst>(SourceOperandType::ri, pair.first, std::make_shared<ConstantIDX>(pair.second));
-        insts.insert(it, mov);
-    }
-
-    ldr->setIndexReg(pair.first);
+    ldr->setIndexReg(ptr);
 }
 void PreRALegalize::addInstBefore(const BlkP &blk, const std::shared_ptr<strInst> &str) {
     auto &insts = blk->getInsts();
@@ -93,16 +86,9 @@ void PreRALegalize::addInstBefore(const BlkP &blk, const std::shared_ptr<strInst
     int offset = baseReg->getConstOffset();
     baseReg->setConstOffset(0);
 
-    auto pair = varpool->getLoaded(offset);
+    auto [ptr, const_op] = varpool->getLoaded(offset, blk);
 
-    if (pair.second) { // nullptr
-        // mov %index_reg, #baseReg.constOffset
-        auto mov =
-            std::make_shared<movInst>(SourceOperandType::ri, pair.first, std::make_shared<ConstantIDX>(pair.second));
-        insts.insert(it, mov);
-    }
-
-    str->setIndexReg(pair.first);
+    str->setIndexReg(ptr);
 }
 void PreRALegalize::addInstBefore(const BlkP &blk, const std::shared_ptr<Vldr> &Vldr) {
     auto &insts = blk->getInsts();
@@ -113,16 +99,9 @@ void PreRALegalize::addInstBefore(const BlkP &blk, const std::shared_ptr<Vldr> &
     int offset = baseReg->getConstOffset();
     baseReg->setConstOffset(0);
 
-    auto pair = varpool->getLoaded(offset);
+    auto [ptr, const_op] = varpool->getLoaded(offset, blk);
 
-    if (pair.second) { // nullptr
-        // mov %index_reg, #baseReg.constOffset
-        auto mov =
-            std::make_shared<movInst>(SourceOperandType::ri, pair.first, std::make_shared<ConstantIDX>(pair.second));
-        insts.insert(it, mov);
-    }
-
-    Vldr->setIndexReg(pair.first);
+    Vldr->setIndexReg(ptr);
 }
 void PreRALegalize::addInstBefore(const BlkP &blk, const std::shared_ptr<Vstr> &Vstr) {
     auto &insts = blk->getInsts();
@@ -133,14 +112,7 @@ void PreRALegalize::addInstBefore(const BlkP &blk, const std::shared_ptr<Vstr> &
     int offset = baseReg->getConstOffset();
     baseReg->setConstOffset(0);
 
-    auto pair = varpool->getLoaded(offset);
+    auto [ptr, const_op] = varpool->getLoaded(offset, blk);
 
-    if (pair.second) { // nullptr
-        // mov %index_reg, #baseReg.constOffset
-        auto mov =
-            std::make_shared<movInst>(SourceOperandType::ri, pair.first, std::make_shared<ConstantIDX>(pair.second));
-        insts.insert(it, mov);
-    }
-
-    Vstr->setIndexReg(pair.first);
+    Vstr->setIndexReg(ptr);
 }

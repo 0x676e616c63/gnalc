@@ -118,89 +118,90 @@ std::shared_ptr<BasicBlock> Lowering::lower(const IR::BasicBlock &midEnd_bb, Ope
     ///@note lowering 中没有填写pres, succs以及活跃信息, 应该在phi消除中会填
 
     for (auto &midEnd_inst : midEnd_bb.getAllInsts()) {
-        auto insts = instlower(midEnd_inst);
+        auto insts = instlower(midEnd_inst, basicblock);
         basicblock->addInsts_back(insts);
     }
 
     return basicblock;
 }
 
-std::list<std::shared_ptr<Instruction>> InstLowering::operator()(const std::shared_ptr<IR::Instruction> &midEnd_inst) {
+std::list<std::shared_ptr<Instruction>> InstLowering::operator()(const std::shared_ptr<IR::Instruction> &midEnd_inst,
+                                                                 const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
     if (auto binary = std::dynamic_pointer_cast<IR::BinaryInst>(midEnd_inst)) {
         if (IR::toBType(binary->getType())->getInner() == IR::IRBTYPE::I32)
-            insts = binaryLower(binary);
+            insts = binaryLower(binary, blk);
         else {
-            insts = binaryLower_v(binary);
+            insts = binaryLower_v(binary, blk);
         }
     } else if (auto icmp = std::dynamic_pointer_cast<IR::ICMPInst>(midEnd_inst)) {
 
-        insts = icmpLower(icmp);
+        insts = icmpLower(icmp, blk);
 
     } else if (auto fcmp = std::dynamic_pointer_cast<IR::FCMPInst>(midEnd_inst)) {
 
-        insts = fcmpLower(fcmp);
+        insts = fcmpLower(fcmp, blk);
 
     } else if (auto ret = std::dynamic_pointer_cast<IR::RETInst>(midEnd_inst)) {
 
-        insts = retLower(ret);
+        insts = retLower(ret, blk);
 
     } else if (auto br = std::dynamic_pointer_cast<IR::BRInst>(midEnd_inst)) {
 
-        insts = brLower(br);
+        insts = brLower(br, blk);
 
     } else if (auto call = std::dynamic_pointer_cast<IR::CALLInst>(midEnd_inst)) {
 
-        insts = callLower(call);
+        insts = callLower(call, blk);
 
     } else if (auto fptosi = std::dynamic_pointer_cast<IR::FPTOSIInst>(midEnd_inst)) {
 
-        insts = fptosiLower(fptosi);
+        insts = fptosiLower(fptosi, blk);
 
     } else if (auto sitofp = std::dynamic_pointer_cast<IR::SITOFPInst>(midEnd_inst)) {
 
-        insts = sitofpLower(sitofp);
+        insts = sitofpLower(sitofp, blk);
 
     } else if (auto zext = std::dynamic_pointer_cast<IR::ZEXTInst>(midEnd_inst)) {
 
-        insts = zextLower(zext);
+        insts = zextLower(zext, blk);
 
     } else if (auto bitcast = std::dynamic_pointer_cast<IR::BITCASTInst>(midEnd_inst)) {
 
-        insts = bitcastLower(bitcast);
+        insts = bitcastLower(bitcast, blk);
 
     } else if (auto alloca = std::dynamic_pointer_cast<IR::ALLOCAInst>(midEnd_inst)) {
 
-        insts = allocaLower(alloca);
+        insts = allocaLower(alloca, blk);
 
     } else if (auto load = std::dynamic_pointer_cast<IR::LOADInst>(midEnd_inst)) {
         if (std::dynamic_pointer_cast<IR::PtrType>(load->getType())) {
-            insts = loadLower_p(load);
+            insts = loadLower_p(load, blk);
         } else if (std::dynamic_pointer_cast<IR::BType>(load->getType())->getInner() == IR::IRBTYPE::I32) {
-            insts = loadLower(load);
+            insts = loadLower(load, blk);
         } else {
-            insts = loadLower_v(load);
+            insts = loadLower_v(load, blk);
         }
     } else if (auto store = std::dynamic_pointer_cast<IR::STOREInst>(midEnd_inst)) {
         /// @warning Btype, PtrType
         if (std::dynamic_pointer_cast<IR::PtrType>(store->getBaseType())) { // getValue->getType
-            insts = storeLower_p(store);
+            insts = storeLower_p(store, blk);
         } else if (std::dynamic_pointer_cast<IR::BType>(store->getBaseType())->getInner() == IR::IRBTYPE::I32) {
-            insts = storeLower(store);
+            insts = storeLower(store, blk);
         } else {
-            insts = storeLower_v(store);
+            insts = storeLower_v(store, blk);
         }
     } else if (auto gep = std::dynamic_pointer_cast<IR::GEPInst>(midEnd_inst)) {
         // if (std::dynamic_pointer_cast<IR::BType>(gep->getPtr()->getType())) ///@bug ???
-        //     insts = gepLower(gep);
+        //     insts = gepLower(gep, blk);
         // else
-        //     insts = gepLower_p(gep);
+        //     insts = gepLower_p(gep, blk);
 
-        insts = gepLower(gep);
+        insts = gepLower(gep, blk);
 
     } else if (auto phi = std::dynamic_pointer_cast<IR::PHIInst>(midEnd_inst)) {
 
-        insts = phiLower(phi);
+        insts = phiLower(phi, blk);
 
     } else {
         Err::unreachable("instLowering: unknown IR instruction");
@@ -251,6 +252,7 @@ std::shared_ptr<Operand> OperandLowering::fastFind(const std::shared_ptr<IR::Val
     else {
         Err::unreachable("operLower: fast find an operand failed");
     }
+    return nullptr; // just to make clang happy
 }
 
 std::shared_ptr<Operand> OperandLowering::search_phi(const IR::Value &midEnd_phi_val) {
@@ -309,6 +311,7 @@ std::shared_ptr<Operand> OperandLowering::fastFind_phi(const std::shared_ptr<IR:
         } else {
             return mkBaseOP(*midEnd_phi_val);
         }
+        return nullptr; // just make clang happy
     }
 }
 

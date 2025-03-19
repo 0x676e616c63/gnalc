@@ -32,7 +32,7 @@ splited SplitTo2PowX(int);
 std::list<std::shared_ptr<Instruction>> mulOpt(const std::shared_ptr<BindOnVirOP> &target,
                                                const std::shared_ptr<IR::Value> &virRegVal,
                                                const std::shared_ptr<IR::ConstantInt> &constVal,
-                                               OperandLowering &operlower);
+                                               OperandLowering &operlower, const std::shared_ptr<BasicBlock> &blk);
 
 struct multiplication {
     int mul;
@@ -44,7 +44,7 @@ multiplication ChooseMultipler(int);
 std::list<std::shared_ptr<Instruction>> divOpt(const std::shared_ptr<BindOnVirOP> &target,
                                                const std::shared_ptr<IR::Value> &virRegVal,
                                                const std::shared_ptr<IR::ConstantInt> &constVal,
-                                               OperandLowering &operlower);
+                                               OperandLowering &operlower, const std::shared_ptr<BasicBlock> &blk);
 
 struct OperandLowering {
     ///@note 由于操作数不是透过依赖关系获得的,
@@ -62,30 +62,32 @@ struct OperandLowering {
     std::shared_ptr<Operand> fastFind_phi(const std::shared_ptr<IR::Value> &);
     std::shared_ptr<Operand> search_phi(const IR::Value &);
 
-    /// 在需要获得常数/地址时, 先使用这个
-    /// 如果返回不为false, 万事大吉
-    /// 如果返回为false, 在instlower环境中手动加mov/vmov
-    template <typename T_variant> std::pair<bool, std::shared_ptr<BindOnVirOP>> LoadedFind(const T_variant &constVal) {
-        auto constPtr = constpool.getConstant(constVal);
-        auto loadPtr = varpool.getLoaded(*constPtr);
-        if (loadPtr)
-            return {true, loadPtr};
+    /// 仅返回注册过的存有字面量的virop, 在fix-pass中补全mov
+    template <typename T_variant>
+    std::shared_ptr<BindOnVirOP> LoadedFind(const T_variant &constVal, const std::shared_ptr<BasicBlock> &blk) {
+        auto constPtr = constpool.getConstant(constVal); // constobj ptr
+        ///@note getLoaded 用于访问load池
+        auto loadPtr = varpool.getLoaded(*constPtr, blk); // maybe nullptr
+        if (loadPtr != nullptr)
+            /// use old
+            return loadPtr;
         else {
+            /// create a new obj
             using U_variant = std::remove_cv_t<std::remove_reference_t<T_variant>>;
             if constexpr (std::is_same_v<U_variant, float>) {
                 loadPtr = mkOP(IR::makeBType(IR::IRBTYPE::FLOAT), RegisterBank::spr);
-                varpool.addLoaded(*constPtr, loadPtr);
+                varpool.addLoaded(*constPtr, loadPtr, blk);
             } else if constexpr (std::is_same_v<U_variant, int>) {
                 loadPtr = mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
-                varpool.addLoaded(*constPtr, loadPtr);
+                varpool.addLoaded(*constPtr, loadPtr, blk);
             } else {
                 // 需函数外手动 std::dynamic_pointer_cast
                 // 全局变量的第一个地址操作数, varoffset为其自身
                 loadPtr = mkBaseOP(constVal, nullptr);
                 std::dynamic_pointer_cast<BaseADROP>(loadPtr)->setBase(loadPtr);
-                varpool.addLoaded(*constPtr, loadPtr);
+                varpool.addLoaded(*constPtr, loadPtr, blk);
             }
-            return {false, loadPtr};
+            return loadPtr;
         }
     }
 
@@ -128,57 +130,79 @@ struct OperandLowering {
 struct InstLowering {
     OperandLowering operlower;
 
-    std::list<std::shared_ptr<Instruction>> operator()(const std::shared_ptr<IR::Instruction> &);
+    std::list<std::shared_ptr<Instruction>> operator()(const std::shared_ptr<IR::Instruction> &,
+                                                       const std::shared_ptr<BasicBlock> &self);
 
-    std::list<std::shared_ptr<Instruction>> binaryLower(const std::shared_ptr<IR::BinaryInst> &);
+    std::list<std::shared_ptr<Instruction>> binaryLower(const std::shared_ptr<IR::BinaryInst> &,
+                                                        const std::shared_ptr<BasicBlock> &self);
 
-    std::list<std::shared_ptr<Instruction>> icmpLower(const std::shared_ptr<IR::ICMPInst> &);
+    std::list<std::shared_ptr<Instruction>> icmpLower(const std::shared_ptr<IR::ICMPInst> &,
+                                                      const std::shared_ptr<BasicBlock> &self);
 
-    std::list<std::shared_ptr<Instruction>> retLower(const std::shared_ptr<IR::RETInst> &);
+    std::list<std::shared_ptr<Instruction>> retLower(const std::shared_ptr<IR::RETInst> &,
+                                                     const std::shared_ptr<BasicBlock> &self);
 
-    std::list<std::shared_ptr<Instruction>> brLower(const std::shared_ptr<IR::BRInst> &);
+    std::list<std::shared_ptr<Instruction>> brLower(const std::shared_ptr<IR::BRInst> &,
+                                                    const std::shared_ptr<BasicBlock> &self);
 
-    std::list<std::shared_ptr<Instruction>> callLower(const std::shared_ptr<IR::CALLInst> &);
+    std::list<std::shared_ptr<Instruction>> callLower(const std::shared_ptr<IR::CALLInst> &,
+                                                      const std::shared_ptr<BasicBlock> &self);
 
-    std::list<std::shared_ptr<Instruction>> zextLower(const std::shared_ptr<IR::ZEXTInst> &) {
+    std::list<std::shared_ptr<Instruction>> zextLower(const std::shared_ptr<IR::ZEXTInst> &,
+                                                      const std::shared_ptr<BasicBlock> &self) {
         std::list<std::shared_ptr<Instruction>> insts;
         Err::todo("InstLowering: encounter zext inst in IR");
         return insts;
     };
 
-    std::list<std::shared_ptr<Instruction>> bitcastLower(const std::shared_ptr<IR::BITCASTInst> &);
+    std::list<std::shared_ptr<Instruction>> bitcastLower(const std::shared_ptr<IR::BITCASTInst> &,
+                                                         const std::shared_ptr<BasicBlock> &self);
 
-    std::list<std::shared_ptr<Instruction>> allocaLower(const std::shared_ptr<IR::ALLOCAInst> &);
+    std::list<std::shared_ptr<Instruction>> allocaLower(const std::shared_ptr<IR::ALLOCAInst> &,
+                                                        const std::shared_ptr<BasicBlock> &self);
 
-    std::list<std::shared_ptr<Instruction>> loadLower(const std::shared_ptr<IR::LOADInst> &);
+    std::list<std::shared_ptr<Instruction>> loadLower(const std::shared_ptr<IR::LOADInst> &,
+                                                      const std::shared_ptr<BasicBlock> &self);
 
-    std::list<std::shared_ptr<Instruction>> storeLower(const std::shared_ptr<IR::STOREInst> &);
+    std::list<std::shared_ptr<Instruction>> storeLower(const std::shared_ptr<IR::STOREInst> &,
+                                                       const std::shared_ptr<BasicBlock> &self);
 
-    std::list<std::shared_ptr<Instruction>> gepLower(const std::shared_ptr<IR::GEPInst> &);
+    std::list<std::shared_ptr<Instruction>> gepLower(const std::shared_ptr<IR::GEPInst> &,
+                                                     const std::shared_ptr<BasicBlock> &self);
 
-    std::list<std::shared_ptr<Instruction>> phiLower(const std::shared_ptr<IR::PHIInst> &);
+    std::list<std::shared_ptr<Instruction>> phiLower(const std::shared_ptr<IR::PHIInst> &,
+                                                     const std::shared_ptr<BasicBlock> &self);
 
     // Neon SIMD
-    std::list<std::shared_ptr<Instruction>> fptosiLower(const std::shared_ptr<IR::FPTOSIInst> &);
+    std::list<std::shared_ptr<Instruction>> fptosiLower(const std::shared_ptr<IR::FPTOSIInst> &,
+                                                        const std::shared_ptr<BasicBlock> &self);
 
-    std::list<std::shared_ptr<Instruction>> sitofpLower(const std::shared_ptr<IR::SITOFPInst> &);
+    std::list<std::shared_ptr<Instruction>> sitofpLower(const std::shared_ptr<IR::SITOFPInst> &,
+                                                        const std::shared_ptr<BasicBlock> &self);
 
-    std::list<std::shared_ptr<Instruction>> fcmpLower(const std::shared_ptr<IR::FCMPInst> &);
+    std::list<std::shared_ptr<Instruction>> fcmpLower(const std::shared_ptr<IR::FCMPInst> &,
+                                                      const std::shared_ptr<BasicBlock> &self);
 
-    std::list<std::shared_ptr<Instruction>> binaryLower_v(const std::shared_ptr<IR::BinaryInst> &);
+    std::list<std::shared_ptr<Instruction>> binaryLower_v(const std::shared_ptr<IR::BinaryInst> &,
+                                                          const std::shared_ptr<BasicBlock> &self);
 
-    std::list<std::shared_ptr<Instruction>> loadLower_v(const std::shared_ptr<IR::LOADInst> &);
+    std::list<std::shared_ptr<Instruction>> loadLower_v(const std::shared_ptr<IR::LOADInst> &,
+                                                        const std::shared_ptr<BasicBlock> &self);
 
-    std::list<std::shared_ptr<Instruction>> storeLower_v(const std::shared_ptr<IR::STOREInst> &);
+    std::list<std::shared_ptr<Instruction>> storeLower_v(const std::shared_ptr<IR::STOREInst> &,
+                                                         const std::shared_ptr<BasicBlock> &self);
 
     ///@note 补充
 
     // load一个指针
-    std::list<std::shared_ptr<Instruction>> loadLower_p(const std::shared_ptr<IR::LOADInst> &);
+    std::list<std::shared_ptr<Instruction>> loadLower_p(const std::shared_ptr<IR::LOADInst> &,
+                                                        const std::shared_ptr<BasicBlock> &self);
     // store一个指针
-    std::list<std::shared_ptr<Instruction>> storeLower_p(const std::shared_ptr<IR::STOREInst> &);
+    std::list<std::shared_ptr<Instruction>> storeLower_p(const std::shared_ptr<IR::STOREInst> &,
+                                                         const std::shared_ptr<BasicBlock> &self);
     //
-    std::list<std::shared_ptr<Instruction>> gepLower_p(const std::shared_ptr<IR::GEPInst> &);
+    std::list<std::shared_ptr<Instruction>> gepLower_p(const std::shared_ptr<IR::GEPInst> &,
+                                                       const std::shared_ptr<BasicBlock> &self);
 };
 
 class Lowering {

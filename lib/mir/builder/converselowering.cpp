@@ -3,8 +3,8 @@
 
 using namespace MIR;
 
-std::list<std::shared_ptr<Instruction>>
-InstLowering::fptosiLower(const std::shared_ptr<IR::FPTOSIInst> &fptosi) {
+std::list<std::shared_ptr<Instruction>> InstLowering::fptosiLower(const std::shared_ptr<IR::FPTOSIInst> &fptosi,
+                                                                  const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     // 类型转换应该不会有常数
@@ -19,8 +19,8 @@ InstLowering::fptosiLower(const std::shared_ptr<IR::FPTOSIInst> &fptosi) {
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>>
-InstLowering::sitofpLower(const std::shared_ptr<IR::SITOFPInst> &sitofp) {
+std::list<std::shared_ptr<Instruction>> InstLowering::sitofpLower(const std::shared_ptr<IR::SITOFPInst> &sitofp,
+                                                                  const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     // 类型转换应该不会有常数
@@ -35,8 +35,8 @@ InstLowering::sitofpLower(const std::shared_ptr<IR::SITOFPInst> &sitofp) {
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>>
-InstLowering::bitcastLower(const std::shared_ptr<IR::BITCASTInst> &bitcast) {
+std::list<std::shared_ptr<Instruction>> InstLowering::bitcastLower(const std::shared_ptr<IR::BITCASTInst> &bitcast,
+                                                                   const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     /// bitcast 用于转换不同类型的指针, 但是对于后端来说

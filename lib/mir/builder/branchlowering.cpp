@@ -8,7 +8,8 @@
 
 using namespace MIR;
 
-std::list<std::shared_ptr<Instruction>> InstLowering::brLower(const std::shared_ptr<IR::BRInst> &br) {
+std::list<std::shared_ptr<Instruction>> InstLowering::brLower(const std::shared_ptr<IR::BRInst> &br,
+                                                              const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     if (!br->isConditional()) {
@@ -54,7 +55,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::brLower(const std::shared_
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>> InstLowering::retLower(const std::shared_ptr<IR::RETInst> &ret) {
+std::list<std::shared_ptr<Instruction>> InstLowering::retLower(const std::shared_ptr<IR::RETInst> &ret,
+                                                               const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     auto retType = ret->getRetBType();
@@ -115,7 +117,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::retLower(const std::shared
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>> InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
+std::list<std::shared_ptr<Instruction>> InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call,
+                                                                const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     auto func = call->getFunc();
