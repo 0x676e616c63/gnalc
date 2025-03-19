@@ -37,7 +37,7 @@ class Use;
 enum class ValueTrait {
     UNDEFINED,
     CONSTANT_LITERAL,  // 常量字面量
-    ORDINARY_VARIABLE, // 一般变量（包含const）
+    ORDINARY_VARIABLE, // 一般变量（包含const），也即有值的指令
     GLOBAL_VARIABLE,   // 全局变量
     FUNCTION,          // 函数
     FORMAL_PARAMETER,  // 形参（函数）

@@ -191,6 +191,7 @@ User::~User() {
 }
 
 bool User::replaceAllOperands(const std::shared_ptr<Value> &before, const std::shared_ptr<Value> &after){
+    if (before == after) return false;
     bool found = false;
     for (const auto& use : operand_uses_list) {
         if (use->getValue() == before) {
