@@ -26,3 +26,4 @@ test.s
 test copy.s
 .gdb_history
 functional25
+gnalc_stripped
