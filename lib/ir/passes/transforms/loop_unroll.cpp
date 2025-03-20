@@ -33,11 +33,11 @@ bool LoopUnrollPass::unroll_loop(const std::shared_ptr<Loop> &loop, const int co
 
     // !hasAddressTaken() ?
 
-    auto pre_header = loop->getPreHeader()->shared_from_this();
-    auto header = loop->getHeader()->shared_from_this();
-    auto latch = loop->getLatch()->shared_from_this();
-    auto blocks = loop->getBlocks();
-    auto exits = loop->getExitBlocks();
+    const auto pre_header = loop->getPreHeader()->shared_from_this();
+    const auto header = loop->getHeader()->shared_from_this();
+    const auto latch = loop->getLatch()->shared_from_this();
+    const auto& blocks = loop->getBlocks();
+    const auto exits = loop->getExitBlocks();
 
     using pB = std::shared_ptr<BasicBlock>;
     using pI = std::shared_ptr<Instruction>;
@@ -50,6 +50,7 @@ bool LoopUnrollPass::unroll_loop(const std::shared_ptr<Loop> &loop, const int co
     std::map<pB, BV> BMap;
     std::map<pI, IV> IMap;
 
+    // Return IMap[inst][i] or inst.
     auto IMapFind = [&](pI inst, const int i) {
         if (const auto it = IMap.find(inst); it != IMap.end()) {
             return it->second[i];
@@ -57,6 +58,7 @@ bool LoopUnrollPass::unroll_loop(const std::shared_ptr<Loop> &loop, const int co
         return inst;
     };
 
+    // Return BMap[block][i] or block.
     auto BMapFind = [&](pB block, const int i) {
         if (const auto it = BMap.find(block); it != BMap.end()) {
             return it->second[i];
@@ -64,8 +66,50 @@ bool LoopUnrollPass::unroll_loop(const std::shared_ptr<Loop> &loop, const int co
         return block;
     };
 
+    // initialize B/IMap
+    // count+1是为了容纳完全展开的最后一个header或余数循环的块
+    for (const auto& bb : blocks) {
+        BMap[bb->shared_from_this()] = BV(count+1, nullptr);
+        BMap[bb->shared_from_this()][0] = bb->shared_from_this();
+        for (int i = 1; i < count+1; i++) {
+            BMap[bb->shared_from_this()][i] = std::make_shared<BasicBlock>(bb->getName()+".unroll"+std::to_string(i));
+        }
+        for (auto& inst : bb->getAllInsts()) {
+            IMap[inst] = IV(count+1, nullptr);
+            IMap[inst][0] = inst;
+        }
+    }
+
+    /// clone loop: 克隆count-1次原循环。条件，迭代等尚未优化...
+    ///
+    /// preHeader             preHeader
+    ///     |                 Header[0]<-----
+    ///   Header<---           Body[0]      |
+    ///     |      |          Latch [0]     |
+    ///    Body    |  ---->   Header[1]     |
+    ///     |      |           ......       |
+    ///   Latch-----        Latch[count-1]---
+    ///
+    /// latch[n]---->header[n+1]
+    ///
+    /// Simplified loop has only one preHeader, and the pred BB of the header is the preHeader and the latch of the loop.
+    /// When unrolled, the 'latches' except the last one point to the next header.
+    /// As a result, the original Header has two pred BBs: the preHeader and the last latch.
+    /// The other 'headers' of the cloned part have only one pred BB -- the latch of the previous part.
+    ///
+    /// LCSSA loop's 'live in variable' is used in the PHI node of the header block.
+    /// Since the cloned headers have only one predecessor BB, the phi of the cloned headers can be replaced with
+    /// the value of the latch from the previous cloned part. The operands of the PHI node in exit blocks will be
+    /// expanded with the value of the cloned exiting block.
+
+    // process raw loop
+    // 断开了latch[0]->header[0]的cfg边, 添加了latch[count-1]->header[0]
+    const auto& last_latch = BMap[latch][count-1];
+    unlinkBB(latch, header);
+    linkBB(last_latch, header);
+
+    // clone other inst
     auto CloneNonPhiInst = [&](const pB& raw, const pB& cur, const int i) {
-        // clone other inst
         for (const auto& inst : *raw) {
             const auto new_inst = std::dynamic_pointer_cast<Instruction>(inst->clone());
             new_inst->setName(inst->getName()+".unroll"+std::to_string(i));
@@ -88,8 +132,8 @@ bool LoopUnrollPass::unroll_loop(const std::shared_ptr<Loop> &loop, const int co
         }
     };
 
+    // process exiting block, update exit block's phi
     auto ProcessExitingBlock = [&](const pB& raw, const pB& cur, const int i) {
-        // process exiting block
         if (loop->isExiting(raw.get())) {
             for (auto succ : raw->succs()) {
                 if (exits.count(succ.get())) {
@@ -113,77 +157,41 @@ bool LoopUnrollPass::unroll_loop(const std::shared_ptr<Loop> &loop, const int co
         }
     };
 
-    // initialize B/IMap
-    for (const auto& bb : blocks) {
-        BMap[bb->shared_from_this()] = BV(count, nullptr);
-        BMap[bb->shared_from_this()][0] = bb->shared_from_this();
-        for (int i = 1; i < count; i++) {
-            BMap[bb->shared_from_this()][i] = std::make_shared<BasicBlock>(bb->getName()+".unroll"+std::to_string(i));
-        }
-        for (auto& inst : bb->getAllInsts()) {
-            IMap[inst] = IV(count, nullptr);
-            IMap[inst][0] = inst;
-        }
-    }
+    // Clone header to BMap[header][i], update exit block's phi.
+    auto CloneHeaderBlock = [&](const int i) {
+        const auto& rh = header; // raw header
+        const auto ch = BMap[rh][i]; // current header
 
-    // preHeader             preHeader
-    //     |                 Header[0]<-----
-    //   Header<---           Body[0]      |
-    //     |      |          Latch [0]     |
-    //    Body    |  ---->   Header[1]     |
-    //     |      |           ......       |
-    //   Latch-----        Latch[count-1]---
-    //
-    // latch[n]---->header[n+1]
-    //
-    // Simplified loop has only one preHeader, and the pred BB of the header is the preHeader and the latch of the loop.
-    // When unrolled, the 'latches' except the last one point to the next header.
-    // As a result, the original Header has two pred BBs: the preHeader and the last latch.
-    // The other 'headers' of the cloned part have only one pred BB -- the latch of the previous part.
-    //
-    // LCSSA loop's 'live in variable' is used in the PHI node of the header block.
-    // Since the cloned headers have only one predecessor BB, the phi of the cloned headers can be replaced with
-    // the value of the latch from the previous cloned part. The operands of the PHI node in exit blocks will be
-    // expanded with the value of the cloned exiting block.
+        // latch[n-1]-->header[i]
+        linkBB(BMap[latch][i-1], ch);
 
-    // process raw loop
-    // 断开了latch[0]->header[0]的cfg边, 添加了latch[count-1]->header[0]
-    unlinkBB(latch, header);
-    linkBB(BMap[latch][count-1], header);
+        // clone header's phi, replace with previous part's value
+        for (auto& phi : rh->phis()) {
+            auto phi_value_from_loop = phi->getValueForBlock(latch);
+            // 如果原始header的phi里的value是常量的话，就无法存到IMap里面了，同时由于其user尚未创建，无法直接把常量传播
+            // 故使用 phi [v, b] 形式
+            const auto new_phi = std::make_shared<PHIInst>(phi->getName()+".unroll"+std::to_string(i), phi->getType());
+            IMap[phi][i] = new_phi;
+            if (phi_value_from_loop->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
+                // Instruction情况
+                new_phi->addPhiOper(IMapFind(std::dynamic_pointer_cast<Instruction>(phi_value_from_loop), i-1), BMap[latch][i-1]);
+            } else {
+                // 其他情况：常量、全局变量
+                new_phi->addPhiOper(phi_value_from_loop, BMap[latch][i-1]);
+            }
+            ch->addPhiInst(new_phi);
+        }
+
+        CloneNonPhiInst(rh, ch, i);
+        ProcessExitingBlock(rh, ch, i);
+    };
 
     // clone blocks, link blocks, update phi...
     for (int i = 1; i < count; i++) {
         auto raw_bb_iter = loop->block_begin();
 
         // process header
-        {
-            Err::gassert(header.get() == *raw_bb_iter, "First raw_bb_iter is not the header!");
-            auto rh = (*raw_bb_iter)->shared_from_this(); // current raw header
-            auto ch = BMap[rh][i]; // current header
-
-            // latch[n-1]-->header[i]
-            linkBB(BMap[latch][i-1], ch);
-
-            // clone header's phi, replace with previous part's value
-            for (auto& phi : rh->phis()) {
-                auto phi_value_from_loop = phi->getValueForBlock(latch);
-                // 如果原始header的phi里的value是常量的话，就无法存到IMap里面了，同时由于其user尚未创建，无法直接把常量传播
-                // 故使用 phi [v, b] 形式
-                const auto new_phi = std::make_shared<PHIInst>(phi->getName()+".unroll"+std::to_string(i), phi->getType());
-                IMap[phi][i] = new_phi;
-                if (phi_value_from_loop->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
-                    // Instruction情况
-                    new_phi->addPhiOper(IMapFind(std::dynamic_pointer_cast<Instruction>(phi_value_from_loop), i-1), BMap[latch][i-1]);
-                } else {
-                    // 其他情况：常量、全局变量
-                    new_phi->addPhiOper(phi_value_from_loop, BMap[latch][i-1]);
-                }
-                ch->addPhiInst(new_phi);
-            }
-
-            CloneNonPhiInst(rh, ch, i);
-            ProcessExitingBlock(rh, ch, i);
-        }
+        CloneHeaderBlock(i);
 
         // process other block
         ++raw_bb_iter;
@@ -220,16 +228,34 @@ bool LoopUnrollPass::unroll_loop(const std::shared_ptr<Loop> &loop, const int co
         }
     }
 
-    // 修改latch的br
+    // 针对特定展开策略进行分支优化
+    // Fully Unroll
+    if (!partially) {
+        unlinkBB(last_latch, header);
+        CloneHeaderBlock(count); // 包含link last_latch-->last_header
+        BMap[header][count]->getBRInst()->dropTrueDest();
+    }
+
+    // 修改latches的br: br header --> br next_header; last_latch特殊处理
+    // ATTENTION: 此步之后修改了原loop的inst, 一些lambda函数可能失效
     for (int i = 0; i < count-1; i++)
         BMap[latch][i]->getBRInst()->replaceAllOperands(BMap[header][i], BMap[header][i+1]);
-    BMap[latch][count-1]->getBRInst()->replaceAllOperands(BMap[header][count-1], header);
+    if (partially)
+        last_latch->getBRInst()->replaceAllOperands(BMap[header][count-1], header);
+    else
+        last_latch->getBRInst()->replaceAllOperands(BMap[header][count-1], BMap[header][count]);
 
-    // process raw header's phi node
+    // process raw header's phi node:
+    // For partially: [%x, latch] --> [%xx, last_latch]
+    // For fully: delete [%x, latch]
     for (const auto& phi : header->phis()) {
-        auto phi_value_from_loop = phi->getValueForBlock(latch);
-        phi->replaceAllOperands(phi_value_from_loop, IMapFind(std::dynamic_pointer_cast<Instruction>(phi_value_from_loop), count-1));
-        phi->replaceAllOperands(latch, BMap[latch][count-1]);
+        if (partially) {
+            auto phi_value_from_loop = phi->getValueForBlock(latch);
+            phi->replaceAllOperands(phi_value_from_loop, IMapFind(std::dynamic_pointer_cast<Instruction>(phi_value_from_loop), count-1));
+            phi->replaceAllOperands(latch, last_latch);
+        } else {
+            phi->delPhiOperByBlock(latch);
+        }
     }
 
     // add to function
@@ -239,6 +265,11 @@ bool LoopUnrollPass::unroll_loop(const std::shared_ptr<Loop> &loop, const int co
             func.addBlock(it_after_loop, BMap[b->shared_from_this()][i]);
         }
     }
+    if (!partially)
+        func.addBlock(it_after_loop, BMap[header][count]);
+
+
+    // Fold branches for iterations where we know that they will exit or not exit.
 
     // process runtime unroll
 
