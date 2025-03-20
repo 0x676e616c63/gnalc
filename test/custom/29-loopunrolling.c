@@ -2,12 +2,14 @@
 
 int func(int i) {
 	int a = 1;
-    int n = 6;
+    int n = 4;
     int j = 0;
     while (j < n) {
+//        putch(a);
         a = a + i;
         j = j + 1;
-        if (j == n) {
+        if (j > n) {
+            putch(j);
             break;
         }
     }
@@ -30,7 +32,7 @@ int func(int i) {
 //    return a[3];
 //}
 //
-//int main() {
-//    int a = func(7);
-//    return a;
-//}
+int main() {
+    int a = func(7);
+    return a;
+}
