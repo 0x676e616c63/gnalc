@@ -4,8 +4,6 @@
 #include <cstdlib> // just for atoi, atof, strtol, strtof
 #define YY_DECL yyy::parser::symbol_type yylex ()
 
-namespace IRLEX {
-
 %}
 
 %option noyywrap nounput noinput
@@ -19,13 +17,13 @@ namespace IRLEX {
 [-a-zA-Z$._0-9]*[^\n]":"    { return yyy::parser::make_I_BLKID(yytext); }
 [%@][-a-zA-Z$._0-9]*        { return yyy::parser::make_I_ID(yytext); }
 
-0|([1-9][0-9]*) { return yyy::parser::make_irnum_INT((int)atoi(yytext)); }
-0[0-7]+ { return yyy::parser::make_irnum_INT((int)strtol(yytext, NULL, 8)); }
-0[xX][0-9a-fA-F]+ { return yyy::parser::make_irnum_INT((int)strtol(yytext, NULL, 16)); }
+0|([1-9][0-9]*) { return yyy::parser::make_IRNUM_INT((int)atoi(yytext)); }
+0[0-7]+ { return yyy::parser::make_IRNUM_INT((int)strtol(yytext, NULL, 8)); }
+0[xX][0-9a-fA-F]+ { return yyy::parser::make_IRNUM_INT((int)strtol(yytext, NULL, 16)); }
 
-(([0-9]+\.[0-9]*)|([0-9]*\.[0-9]+))([eE][\+-]?[0-9]+)? { return yyy::parser::make_irnum_FLOAT((float)atof(yytext)); }
-[0-9]+[eE][\+-]?[0-9]+ { return yyy::parser::make_irnum_FLOAT((float)atof(yytext)); }
-0[xX](([0-9a-fA-F]+)|([0-9a-fA-F]+\.[0-9a-fA-F]*)|([0-9a-fA-F]*\.[0-9a-fA-F]+))[pP][\+-]?[0-9]+ { return yyy::parser::make_irnum_FLOAT((float)strtof(yytext, NULL)); }
+(([0-9]+\.[0-9]*)|([0-9]*\.[0-9]+))([eE][\+-]?[0-9]+)? { return yyy::parser::make_IRNUM_FLOAT((float)atof(yytext)); }
+[0-9]+[eE][\+-]?[0-9]+ { return yyy::parser::make_IRNUM_FLOAT((float)atof(yytext)); }
+0[xX](([0-9a-fA-F]+)|([0-9a-fA-F]+\.[0-9a-fA-F]*)|([0-9a-fA-F]*\.[0-9a-fA-F]+))[pP][\+-]?[0-9]+ { return yyy::parser::make_IRNUM_FLOAT((float)strtof(yytext, NULL)); }
 
 "ret"           { return yyy::parser::make_I_RET(); }
 "br"            { return yyy::parser::make_I_BR(); }
@@ -50,8 +48,8 @@ namespace IRLEX {
 "sitofp"        { return yyy::parser::make_I_SITOFP(); }
 "zext"          { return yyy::parser::make_I_ZEXT(); }
 "bitcast"       { return yyy::parser::make_I_BITCAST(); }
-"icmp"          { return yyy::parser::make_I_ICMPA(); }
-"fcmp"          { return yyy::parser::make_I_FCMPA(); }
+"icmp"          { return yyy::parser::make_I_ICMP(); }
+"fcmp"          { return yyy::parser::make_I_FCMP(); }
 "phi"           { return yyy::parser::make_I_PHI(); }
 "call"          { return yyy::parser::make_I_CALL(); }
 
@@ -87,6 +85,10 @@ namespace IRLEX {
 "float"         { return yyy::parser::make_I_FLOAT(); }
 "void"          { return yyy::parser::make_I_VOID(); }
 "*"             { return yyy::parser::make_I_STAR(); }
+"x"             { return yyy::parser::make_I_X(); }
+
+"zeroinitializer"   { return yyy::parser::make_I_ZEROINITER(); }
+"..."           { return yyy::parser::make_I_DOTDOTDOT(); // VAArg }
 
 "(" { return yyy::parser::make_I_LPAR(); }
 ")" { return yyy::parser::make_I_RPAR(); }
@@ -99,5 +101,3 @@ namespace IRLEX {
 
 . { /* yyerror("invalid character"); */ }
 %%
-
-}
