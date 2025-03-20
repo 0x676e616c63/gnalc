@@ -19,12 +19,20 @@
 #include "../../include/codegen/brainfk/bftrans.hpp"
 #endif
 
+#ifdef GNALC_EXTENSION_TPO
+
+#endif
+
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <string>
 
+#ifndef GNALC_EXTENSION_TPO
 std::shared_ptr<AST::CompUnit> node = nullptr;
+#else
+std::shared_ptr<IR::Module> irnode = nullptr;
+#endif
 extern FILE *yyin;
 
 int main(int argc, char **argv) {
@@ -83,6 +91,10 @@ int main(int argc, char **argv) {
         else if (arg == "-emit-llvm")
             emit_llvm = true;
         else if (arg == "-ast-dump")
+#ifdef GNALC_EXTENSION_TPO
+            std::cerr << "Error: AST dump is not available in TPO mode." << std::endl;
+            return -1;
+#endif
             ast_dump = true;
         else if (arg == "-fixed-point")
             fixed_point_pipeline = true;
@@ -161,19 +173,20 @@ int main(int argc, char **argv) {
 #endif
 
         else if (arg == "-h" || arg == "--help") {
+#ifndef GNALC_EXTENSION_TPO
+            std::cout << "OVERVIEW: gnalc compiler\n\nUSAGE: gnalc [options] file\n\n";
+#else
+            std::cout << "OVERVIEW: tpo - an extension of the gnalc compiler\n\nUSAGE: tpo [options] file\n\n";
+#endif
             std::cout <<
-                R"(OVERVIEW: gnalc compiler
-
-USAGE: gnalc [options] file
-
-OPTIONS:
+                R"(OPTIONS:
 
 General options:
   -o <file>               - Write output to <file>
   -S                      - Only run compilation steps
   -O,-O1                  - Optimization level 1
   -emit-llvm              - Use the LLVM representation for assembler and object files
-  -ast-dump               - Build ASTs and then debug dump them
+  -ast-dump               - Build ASTs and then debug dump them. (Unavailable in TPO mode)
   -fixed-point            - Enable the fixed point optimization pipeline. (Ignore other optimization options)
   --log <log-level>       - Enable compiler logger. Available log-level: debug, info, none
   -h, --help              - Display available options
@@ -236,6 +249,7 @@ Extensions:
         }
     }
 
+#ifndef GNALC_EXTENSION_TPO
     yy::parser parser;
     if (parser.parse()) {
         std::cerr << "Syntax Error" << std::endl;
@@ -253,6 +267,8 @@ Extensions:
 
     Parser::IRGenerator generator(input_file); // set Module's name to `input_file`
     generator.visit(*node);
+#else
+#endif
 
     IR::FAM fam;
     IR::MAM mam;
