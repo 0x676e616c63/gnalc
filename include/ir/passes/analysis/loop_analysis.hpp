@@ -123,6 +123,7 @@ public:
     bool isLCSSAForm() const;
     bool isRecursivelyLCSSAForm(const LoopInfo& loop_info) const;
 
+    bool isLoopInvariant(const Value* val) const;
     bool isAllOperandsLoopInvariant(const Instruction* inst) const;
 
     void moveToHeader(const BasicBlock* bb);

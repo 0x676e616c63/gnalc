@@ -4,7 +4,7 @@
 namespace IR {
 PM::PreservedAnalyses CodeGenPreparePass::run(Function &function, FAM &fam) {
     breakAllCriticalEdges(function);
-    // Since this is the last IR Pass, preserving analysis is unecessary.
+    // Since this is the last IR Pass, preserving analysis is unnecessary.
     return PreserveNone();
 }
 

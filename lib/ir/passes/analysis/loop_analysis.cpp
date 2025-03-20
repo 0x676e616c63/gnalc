@@ -183,7 +183,7 @@ bool Loop::isLCSSAForm() const {
     });
 }
 
-bool Loop::isRecursivelyLCSSAForm(const LoopInfo& loop_info) const {
+bool Loop::isRecursivelyLCSSAForm(const LoopInfo &loop_info) const {
     // Just check every block's the innermost loop.
     return std::all_of(loop_blocks.cbegin(), loop_blocks.cend(), [&loop_info](const BasicBlock *bb) {
         auto loop = loop_info.getLoopFor(bb);
@@ -192,13 +192,15 @@ bool Loop::isRecursivelyLCSSAForm(const LoopInfo& loop_info) const {
     });
 }
 
+bool Loop::isLoopInvariant(const Value *val) const {
+    if (auto inst = dynamic_cast<const Instruction*>(val))
+        return !contains(inst->getParent().get());
+    return true;
+}
+
 bool Loop::isAllOperandsLoopInvariant(const Instruction *inst) const {
     return std::all_of(inst->operand_begin(), inst->operand_end(),
-        [this](const auto& val) {
-            if (auto inst = std::dynamic_pointer_cast<Instruction>(val))
-                return !contains(inst->getParent().get());
-            return true;
-        });
+        [this](const auto& val) { return isLoopInvariant(val.get()); });
 }
 
 bool Loop::delBlockForCurrLoop(BasicBlock *bb) {

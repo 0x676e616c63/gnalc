@@ -6,6 +6,7 @@
 #include "../../../include/ir/passes/analysis/domtree_analysis.hpp"
 #include "../../../include/ir/passes/analysis/live_analysis.hpp"
 #include "../../../include/ir/passes/analysis/loop_analysis.hpp"
+#include "../../../include/ir/passes/analysis/scev.hpp"
 
 // Transforms
 #include "../../../include/ir/passes/transforms/adce.hpp"
@@ -341,6 +342,7 @@ void PassBuilder::registerFunctionAnalyses(FAM &fam) {
     FUNCTION_ANALYSIS(PostDomTreeAnalysis())
     FUNCTION_ANALYSIS(AliasAnalysis())
     FUNCTION_ANALYSIS(LoopAnalysis())
+    FUNCTION_ANALYSIS(SCEVAnalysis())
 
 #undef FUNCTION_ANALYSIS
 }
