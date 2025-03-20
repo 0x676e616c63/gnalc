@@ -31,8 +31,11 @@ RAPass::Nodes RAPass::getUse(const InstP &inst) {
     Nodes uses;
     for (int i = 1; i < 5; ++i) {
         auto op = inst->getSourceOP(i);
-        if (std::dynamic_pointer_cast<BindOnVirOP>(op) &&
-            std::dynamic_pointer_cast<BindOnVirOP>(op)->getBank() == RegisterBank::gpr)
+
+        if (auto ptr = std::dynamic_pointer_cast<BaseADROP>(op)) {
+            uses.insert(ptr->getBase()); // maybe itself
+        } else if (auto vir = std::dynamic_pointer_cast<BindOnVirOP>(op) &&
+                              std::dynamic_pointer_cast<BindOnVirOP>(op)->getBank() == RegisterBank::gpr)
             uses.insert(op);
     }
 
@@ -42,9 +45,13 @@ RAPass::Nodes RAPass::getUse(const InstP &inst) {
 RAPass::Nodes RAPass::getDef(const InstP &inst) {
     Nodes defs;
 
-    if (std::dynamic_pointer_cast<BindOnVirOP>(inst->getTargetOP()) &&
-        std::dynamic_pointer_cast<BindOnVirOP>(inst->getTargetOP())->getBank() == RegisterBank::gpr)
-        defs.insert(inst->getTargetOP());
+    auto op = inst->getTargetOP();
+
+    if (auto ptr = std::dynamic_pointer_cast<BaseADROP>(op)) {
+        defs.insert(ptr->getBase()); // maybe itself
+    } else if (auto vir = std::dynamic_pointer_cast<BindOnVirOP>(op) &&
+                          std::dynamic_pointer_cast<BindOnVirOP>(op)->getBank() == RegisterBank::gpr)
+        defs.insert(op);
 
     return defs;
 }
@@ -52,7 +59,7 @@ RAPass::Nodes RAPass::getDef(const InstP &inst) {
 OperP RAPass::heuristicSpill() {
     const double Weight_IntervalLength = 2.5;
     const double Weight_Degree = 3;
-    const double extra_Weight_ForNotPtr = -50;
+    const double extra_Weight_ForNotPtr = +60;
 
     ///@note 计算溢出权重
     double weight_max = 0;
@@ -63,10 +70,12 @@ OperP RAPass::heuristicSpill() {
         if (!std::dynamic_pointer_cast<BaseADROP>(op))
             weight += extra_Weight_ForNotPtr;
 
-        if (weight >= weight_max)
+        if (weight >= weight_max) {
             spilled = op;
+            weight_max = weight;
+        }
     }
-
+    Err::gassert(spilled != nullptr, "spilled is nullptr");
     return spilled;
 }
 

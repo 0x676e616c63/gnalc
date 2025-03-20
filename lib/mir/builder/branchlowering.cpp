@@ -145,13 +145,15 @@ std::list<std::shared_ptr<Instruction>> InstLowering::callLower(const std::share
                     auto reg = operlower.getPreColored(static_cast<CoreRegister>(cnt));
 
                     if (auto arg_const = std::dynamic_pointer_cast<IR::ConstantInt>(arg)) {
-                        auto const_arg = operlower.fastFind(arg_const->getVal());
-                        auto mov = std::make_shared<movInst>(SourceOperandType::ri, reg, const_arg);
-                        insts.emplace_back(mov);
-
+                        // auto const_arg = operlower.fastFind(arg_const->getVal());
+                        // auto mov = std::make_shared<movInst>(SourceOperandType::i32, reg, const_arg);
+                        // insts.emplace_back(mov);
+                        auto const_arg = operlower.LoadedFind(arg_const->getVal(), blk);
+                        auto copy = std::make_shared<COPY>(reg, const_arg);
+                        insts.emplace_back(copy);
                     } else {
                         auto arg_in_reg = operlower.fastFind(arg);
-                        auto mov = std::make_shared<movInst>(SourceOperandType::rr, reg, arg_in_reg);
+                        auto mov = std::make_shared<movInst>(SourceOperandType::r, reg, arg_in_reg);
                         insts.emplace_back(mov);
                     }
 
@@ -160,11 +162,12 @@ std::list<std::shared_ptr<Instruction>> InstLowering::callLower(const std::share
                     // str %arg, [sp, #offset]
                     std::shared_ptr<BindOnVirOP> arg_in_reg;
                     if (auto arg_const = std::dynamic_pointer_cast<IR::ConstantInt>(arg)) {
-                        arg_in_reg = operlower.mkOP(*arg, RegisterBank::gpr);
-                        auto const_arg = operlower.fastFind(arg_const->getVal());
+                        // arg_in_reg = operlower.mkOP(*arg, RegisterBank::gpr);
+                        // auto const_arg = operlower.fastFind(arg_const->getVal());
 
-                        auto mov = std::make_shared<movInst>(SourceOperandType::ri, arg_in_reg, const_arg);
-                        insts.emplace_back(mov);
+                        // auto mov = std::make_shared<movInst>(SourceOperandType::r, arg_in_reg, const_arg);
+                        // insts.emplace_back(mov);
+                        arg_in_reg = operlower.LoadedFind(arg_const->getVal(), blk);
                     } else {
                         arg_in_reg = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(arg));
                     }
@@ -182,12 +185,10 @@ std::list<std::shared_ptr<Instruction>> InstLowering::callLower(const std::share
                     // vmov $sx, %tmp
                     auto const_arg = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(arg_const->getVal()));
                     if (const_arg->getConst()->isEncoded()) {
-                        auto arg_in_reg = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+                        auto arg_in_reg = operlower.LoadedFind(arg_const->getVal(), blk);
 
-                        auto mov = std::make_shared<movInst>(SourceOperandType::ri, arg_in_reg, const_arg);
                         auto pair = std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32);
                         auto vmov = std::make_shared<Vmov>(SourceOperandType::r, reg, arg_in_reg, pair);
-                        insts.emplace_back(mov);
                         insts.emplace_back(vmov);
                     } else {
                         auto pair = std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32);
@@ -221,12 +222,10 @@ std::list<std::shared_ptr<Instruction>> InstLowering::callLower(const std::share
                 if (const_offset->getConst()->isEncoded()) {
                     // mov %tmp2, #constOffset
                     // add %tmp, %base, %tmp2
-                    auto relay2 = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
-                    auto mov = std::make_shared<movInst>(SourceOperandType::ri, relay2, const_offset);
+                    auto relay2 = operlower.LoadedFind(std::get<int>(const_offset->getConst()->getLiteral()), blk);
 
                     auto add = std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::rr, relay, base, relay2,
                                                                nullptr);
-                    insts.emplace_back(mov);
                     insts.emplace_back(add);
                 } else {
                     // add %tmp, %base, #constOffset
@@ -243,7 +242,6 @@ std::list<std::shared_ptr<Instruction>> InstLowering::callLower(const std::share
 
                 auto mov = std::make_shared<movInst>(SourceOperandType::r, reg, arg_in_reg);
                 insts.emplace_back(mov);
-
             } else {
                 // str %loc, [sp, #offset]
                 auto str = std::make_shared<strInst>(SourceOperandType::ra, 4, arg_in_reg, operlower.mkStackOP());

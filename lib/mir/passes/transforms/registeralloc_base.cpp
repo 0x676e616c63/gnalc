@@ -356,8 +356,6 @@ void RAPass::SelectSpill() {
     ///@note 启发式算法, 但是自己设计
     auto m = heuristicSpill(); ///@bug
 
-    Err::gassert(m != nullptr, "m is nullptr");
-
     delBySet(spillWorkList, WorkList{m});
     addBySet(simplifyWorkList, WorkList{m});
 
@@ -388,14 +386,17 @@ void RAPass::AssignColors() {
                     okColors.erase(it);
             }
 
-            Err::gassert(okColors.size() <= K, "vector okColors corrupted."); ///@bug
+            Err::gassert(okColors.size() <= K, "vector okColors corrupted.");
         }
 
         if (okColors.empty()) {
             addBySet(spilledNodes, Nodes{n});
+        } else if (std::dynamic_pointer_cast<PreColedOP>(n) != nullptr) {
+            /// Iterated Register Coalescing会将预着色寄存器一起放入图中
         } else {
             addBySet(coloredNodes, Nodes{n});
-            auto c = okColors.back(); // 对于通用寄存器, 尽量避开r0-r3分配, 倒着分配或者从r4开始
+            auto c = *(okColors.begin());
+            // auto c = okColors.back(); // 对于通用寄存器, 尽量避开r0-r3分配, 倒着分配或者从r4开始
 
             auto n_reg = std::dynamic_pointer_cast<BindOnVirOP>(n);
 
@@ -530,8 +531,11 @@ void NeonRAPass::AssignColors() {
 
         if (okColors.empty()) {
             addBySet(spilledNodes, Nodes{n});
+        } else if (std::dynamic_pointer_cast<PreColedOP>(n) != nullptr) {
+            /// Iterated Register Coalescing会将预着色寄存器一起放入图中
         } else {
             addBySet(coloredNodes, Nodes{n});
+            // auto c = *(okColors.begin());
             auto c = okColors.back();
 
             auto n_reg = std::dynamic_pointer_cast<BindOnVirOP>(n);

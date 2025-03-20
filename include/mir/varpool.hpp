@@ -25,12 +25,7 @@ private:
 
     std::unordered_map<IRValueWrapper, std::shared_ptr<Operand>, VarPoolHash> pool;
 
-    /// 一个ConstObj, 经过ldr/mov之后得到的虚拟寄存器
-    /// @warning 理论上, 这个东西可以减少ldr/mov的数量, 但是可能增加寄存器压力
-    /// @warning , 尤其是某个常数或者全局变量很常用, 而且执行流程又很长时
-    /// @warning 然后, 一些特别大的常数可能不在这里面, 比如ChooseMultipler生成的multipler
-    /// @warning with complex CFGs, a ConstIDX maybe used before def.
-    /// @note 其次, 这个东西可以被其他优化方法取代
+    // for const2reg
     struct LoadMapHash {
         size_t operator()(const ConstObj &obj) const { return (size_t)obj.getId(); }
     };

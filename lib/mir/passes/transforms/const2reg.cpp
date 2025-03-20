@@ -24,7 +24,6 @@ void Const2Reg::Main() {
 }
 
 void Const2Reg::mkConst2Reg(const ConstObj &constobj, const BindOnP &constvir, BasicBlock *blk) {
-    ///@brief 在blk首插入move
 
     std::shared_ptr<movInst> mov;
     auto constobj_ptr = std::make_shared<ConstObj>(constobj);
@@ -35,7 +34,23 @@ void Const2Reg::mkConst2Reg(const ConstObj &constobj, const BindOnP &constvir, B
         mov = std::make_shared<movInst>(SourceOperandType::i32, constvir, std::make_shared<ConstantIDX>(constobj_ptr));
 
     auto &insts = blk->getInsts();
-    insts.emplace_front(mov);
+
+    auto extract = [](const auto &_inst) -> std::set<OperP> {
+        std::set<OperP> set;
+        for (int i = 1; i < 5; ++i) {
+            if (auto op = _inst->getSourceOP(i))
+                set.insert(op);
+        }
+        return set;
+    };
+
+    for (auto it = insts.begin(); it != insts.end(); ++it) {
+        auto uses = extract(*it);
+        if (uses.find(constvir) != uses.end()) {
+            insts.insert(it, mov);
+            break;
+        }
+    }
 }
 
 void Const2Reg::runOneach(std::unordered_set<BlkP> blks, const ConstObj &constobj, const BindOnP &constvir) {

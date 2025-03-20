@@ -149,11 +149,7 @@ struct InstLowering {
                                                       const std::shared_ptr<BasicBlock> &self);
 
     std::list<std::shared_ptr<Instruction>> zextLower(const std::shared_ptr<IR::ZEXTInst> &,
-                                                      const std::shared_ptr<BasicBlock> &self) {
-        std::list<std::shared_ptr<Instruction>> insts;
-        Err::todo("InstLowering: encounter zext inst in IR");
-        return insts;
-    };
+                                                      const std::shared_ptr<BasicBlock> &self);
 
     std::list<std::shared_ptr<Instruction>> bitcastLower(const std::shared_ptr<IR::BITCASTInst> &,
                                                          const std::shared_ptr<BasicBlock> &self);

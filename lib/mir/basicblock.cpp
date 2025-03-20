@@ -42,7 +42,15 @@ std::string BasicBlock::toString_debug(liveSet liveIn, liveSet liveOut) const {
     str += "        liveOut:";
 
     for (const auto &op : liveOut) {
-        str += ' ' + op->getName() + ',';
+        if (auto precoloredop = std::dynamic_pointer_cast<PreColedOP>(op)) {
+            if (precoloredop->getBank() == RegisterBank::gpr)
+                str += " $" + enum_name(std::get<CoreRegister>(precoloredop->getColor())) + ',';
+            else if (precoloredop->getBank() == RegisterBank::spr)
+                str += " $" + enum_name(std::get<FPURegister>(precoloredop->getColor())) + ',';
+            else
+                Err::todo("dpr, qpr todo...");
+        } else
+            str += ' ' + op->getName() + ',';
     }
     str += '\n';
 

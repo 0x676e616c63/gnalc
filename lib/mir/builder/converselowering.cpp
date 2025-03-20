@@ -46,3 +46,16 @@ std::list<std::shared_ptr<Instruction>> InstLowering::bitcastLower(const std::sh
 
     return insts;
 }
+
+std::list<std::shared_ptr<Instruction>> InstLowering::zextLower(const std::shared_ptr<IR::ZEXTInst> &zext,
+                                                                const std::shared_ptr<BasicBlock> &blk) {
+    std::list<std::shared_ptr<Instruction>> insts;
+
+    ///@note zext语句主要出现在进行连续比较时
+    ///@note 将上一个比较的结果(i1)拓展为i32, 进行下一轮比较
+
+    auto origin_i1 = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(zext->getOVal()));
+    operlower.mkBind(*zext, origin_i1);
+
+    return insts;
+}
