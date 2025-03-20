@@ -30,7 +30,7 @@ class PromotePass : public PM::PassInfo<PromotePass> {
     };
     std::list<ALLOCA_INFO> alloca_infos;
     std::shared_ptr<BasicBlock> entry_block;
-    DomTree DT;
+    DomTree* pDT{};
     ALLOCA_INFO cur_info;
     std::map<std::shared_ptr<PHIInst>, std::shared_ptr<ALLOCAInst>> phi_to_alloca_map;
     std::set<std::shared_ptr<Instruction>> del_queue;

@@ -44,8 +44,13 @@ std::shared_ptr<Loop> Loop::getParent() const {
     return parent.lock();
 }
 
-bool Loop::contains(const BasicBlock *bb) const {
-    return blockset.find(bb) != blockset.end();
+bool Loop::contains(const BasicBlock *bb) const { return blockset.find(bb) != blockset.end(); }
+bool Loop::contains(const Loop *loop) const {
+    if (loop == this)
+        return true;
+    if (loop == nullptr)
+        return false;
+    return contains(loop->getParent().get());
 }
 
 BasicBlock *Loop::getHeader() const {
@@ -82,7 +87,7 @@ bool Loop::isExit(const BasicBlock *bb) const {
     if (contains(bb))
         return false;
     return std::any_of(bb->pred_begin(), bb->pred_end(),
-        [this](const auto &pred) { return !contains(pred.get()); });
+        [this](const auto &pred) { return contains(pred.get()); });
 }
 
 std::set<BasicBlock *> Loop::getExitBlocks() const {
@@ -157,6 +162,36 @@ bool Loop::isRotatedForm() const {
     return latch && isExiting(latch);
 }
 
+bool isLCSSABlock(const Loop& loop, const BasicBlock *bb) {
+    for (const auto &inst : bb->all_insts()) {
+        for (const auto &use : inst->self_uses()) {
+            auto user = std::dynamic_pointer_cast<Instruction>(use->getUser());
+            auto user_block = user->getParent().get();
+            if (auto phi_user = std::dynamic_pointer_cast<PHIInst>(user))
+                user_block = phi_user->getBlockForValue(use).get();
+            // A quick path for most uses being in the same block
+            if (user_block != bb && !loop.contains(user_block))
+                return false;
+        }
+    }
+    return true;
+}
+
+bool Loop::isLCSSAForm() const {
+    return std::all_of(loop_blocks.cbegin(), loop_blocks.cend(), [this](const BasicBlock *bb) {
+        return isLCSSABlock(*this, bb);
+    });
+}
+
+bool Loop::isRecursivelyLCSSAForm(const LoopInfo& loop_info) const {
+    // Just check every block's the innermost loop.
+    return std::all_of(loop_blocks.cbegin(), loop_blocks.cend(), [&loop_info](const BasicBlock *bb) {
+        auto loop = loop_info.getLoopFor(bb);
+        Err::gassert(loop != nullptr);
+        return isLCSSABlock(*loop, bb);
+    });
+}
+
 bool Loop::isAllOperandsLoopInvariant(const Instruction *inst) const {
     return std::all_of(inst->operand_begin(), inst->operand_end(),
         [this](const auto& val) {
@@ -166,7 +201,7 @@ bool Loop::isAllOperandsLoopInvariant(const Instruction *inst) const {
         });
 }
 
-bool Loop::delBlockForCurrLoop(const BasicBlock *bb) {
+bool Loop::delBlockForCurrLoop(BasicBlock *bb) {
     auto it = std::find(loop_blocks.begin(), loop_blocks.end(), bb);
     if (it == loop_blocks.end())
         return false;
@@ -206,7 +241,7 @@ bool LoopInfo::isLoopHeader(const BasicBlock *bb) const {
 
 const std::vector<std::shared_ptr<Loop>> &LoopInfo::getTopLevelLoops() const { return top_level_loops; }
 
-bool LoopInfo::delBlock(const BasicBlock *bb) {
+bool LoopInfo::delBlock(BasicBlock *bb) {
     auto it = loop_map.find(bb);
     if (it == loop_map.end())
         return false;
@@ -216,6 +251,14 @@ bool LoopInfo::delBlock(const BasicBlock *bb) {
 
     loop_map.erase(bb);
     return true;
+}
+
+void LoopInfo::addBlock(const std::shared_ptr<Loop> &loop, BasicBlock *bb) {
+    auto it = loop_map.find(bb);
+    if (it != loop_map.end())
+        Err::gassert(it->second->contains(loop.get()), "Block is already in loop");
+    loop_map[bb] = loop;
+    loop->addBlock(bb);
 }
 
 LoopInfo::const_iterator LoopInfo::begin() const { return top_level_loops.begin(); }

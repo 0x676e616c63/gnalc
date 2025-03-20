@@ -11,9 +11,10 @@
 
 namespace IR {
 class LoopAnalysis;
-
+class LoopInfo;
 class Loop : public std::enable_shared_from_this<Loop> {
     friend class LoopAnalysis;
+    friend class LoopInfo;
     std::vector<std::shared_ptr<Loop>> sub_loops;
     std::list<BasicBlock*> loop_blocks; // First is the header
     std::set<const BasicBlock*> blockset;
@@ -86,6 +87,7 @@ public:
     std::shared_ptr<Loop> getParent() const;
 
     bool contains(const BasicBlock* bb) const;
+    bool contains(const Loop* loop) const;
     BasicBlock* getHeader() const;
     BasicBlock* getPreHeader() const;
 
@@ -118,12 +120,17 @@ public:
     bool hasDedicatedExits() const;
     bool isSimplifyForm() const;
     bool isRotatedForm() const;
+    bool isLCSSAForm() const;
+    bool isRecursivelyLCSSAForm(const LoopInfo& loop_info) const;
 
     bool isAllOperandsLoopInvariant(const Instruction* inst) const;
 
-    bool delBlockForCurrLoop(const BasicBlock* bb);
-    void addBlock(BasicBlock* bb);
     void moveToHeader(const BasicBlock* bb);
+
+private:
+    // These functions won't update LoopInfo, client should call LoopInfo's addBlock/delBlock
+    void addBlock(BasicBlock* bb);
+    bool delBlockForCurrLoop(BasicBlock* bb);
 };
 
 class LoopInfo {
@@ -154,7 +161,8 @@ public:
     bool isLoopHeader(const BasicBlock* bb) const;
     const std::vector<std::shared_ptr<Loop>>& getTopLevelLoops() const;
 
-    bool delBlock(const BasicBlock* bb);
+    bool delBlock(BasicBlock* bb);
+    void addBlock(const std::shared_ptr<Loop>& loop, BasicBlock* bb);
 };
 
 class LoopAnalysis : public PM::AnalysisInfo<LoopAnalysis> {

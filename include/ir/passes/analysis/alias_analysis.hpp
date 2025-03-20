@@ -82,6 +82,9 @@ public:
 
     // Add a cloned instruction
     void addClonedInst(const Instruction *inst, const Instruction *cloned);
+
+    const auto& getRead() const { return read; }
+    const auto& getWrite() const { return write; }
 };
 
 class AliasAnalysis : public PM::AnalysisInfo<AliasAnalysis> {
@@ -101,6 +104,13 @@ private:
 // Currently there is no such function.
 bool isPureBuiltinOrSylibFunc(const FunctionDecl *fn);
 
+struct RWInfo {
+    std::vector<const Value *> read;
+    std::vector<const Value *> write;
+    bool untracked = false;
+};
+RWInfo getCallRWInfo(FAM &fam, const CALLInst *call);
+
 // Check if function is pure
 // Given the same input, always returns the same output.
 bool isPure(FAM &fam, const CALLInst *call);
@@ -110,7 +120,6 @@ bool isPure(FAM &fam, const CALLInst *call);
 // The difference is that pure function never read global variable or outer memory.
 // but this only guarantee no write to global or outer memory.
 bool hasSideEffect(FAM &fam, const CALLInst *call);
-
 } // namespace IR
 
 #endif

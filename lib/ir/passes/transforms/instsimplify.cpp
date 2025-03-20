@@ -537,7 +537,7 @@ bool InstSimplifyPass::foldGEP(const std::shared_ptr<PHIInst> &phi) {
 }
 
 bool InstSimplifyPass::isLoadSuitableForSinking(const std::shared_ptr<LOADInst> &load) {
-    auto aa_res = fam->getResult<AliasAnalysis>(*func);
+    auto& aa_res = fam->getResult<AliasAnalysis>(*func);
 
     // If there is some modify after the load in the block, we can not sink it.
     for (auto it = load->getIter(); it != load->getParent()->end(); ++it) {

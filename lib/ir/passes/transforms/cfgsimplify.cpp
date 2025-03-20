@@ -116,7 +116,7 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                         auto pre_br = pred->getBRInst();
                         unlinkBB(pred, curr);
                         linkBB(pred, dest);
-                        pre_br->replaceOperand(curr, dest);
+                        pre_br->replaceAllOperands(curr, dest);
                     }
 
                     Logger::logDebug("[CFGSimplify] on '", function.getName(),

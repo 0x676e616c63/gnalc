@@ -97,7 +97,7 @@ PM::PreservedAnalyses PrintModulePass::run(Module &module, MAM &mam) {
 }
 
 PM::PreservedAnalyses PrintLoopPass::run(Function &func, FAM &fam) {
-    auto loop_info = fam.getResult<LoopAnalysis>(func);
+    auto& loop_info = fam.getResult<LoopAnalysis>(func);
     const auto& top_levels = loop_info.getTopLevelLoops();
 
     auto print_loop = [this] (const std::shared_ptr<Loop>& loop) {

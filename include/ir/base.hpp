@@ -37,7 +37,7 @@ class Use;
 enum class ValueTrait {
     UNDEFINED,
     CONSTANT_LITERAL,  // 常量字面量
-    ORDINARY_VARIABLE, // 一般变量（包含const）
+    ORDINARY_VARIABLE, // 一般变量（包含const），也即有值的指令
     GLOBAL_VARIABLE,   // 全局变量
     FUNCTION,          // 函数
     FORMAL_PARAMETER,  // 形参（函数）
@@ -351,8 +351,6 @@ public:
     void setOperand(size_t index, const std::shared_ptr<Value> &val);
     void swapOperand(size_t a, size_t b);
 
-    bool replaceOperand(const std::shared_ptr<Value> &before, const std::shared_ptr<Value> &after);
-
     size_t getNumOperands() const;
 
     // Note:
@@ -365,6 +363,8 @@ public:
     //              %b use_list:  <use2: %0>
     bool replaceUse(const std::shared_ptr<Use> &old_use, const std::shared_ptr<Value> &new_use);
 
+    // Replace all uses of `before` with `after`
+    bool replaceAllOperands(const std::shared_ptr<Value> &before, const std::shared_ptr<Value> &after);
 protected:
     void addOperand(const std::shared_ptr<Value> &v);
 

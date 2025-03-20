@@ -69,6 +69,12 @@ std::shared_ptr<BasicBlock> breakCriticalEdge(
     const std::shared_ptr<BasicBlock>& pred, const std::shared_ptr<BasicBlock>& succ);
 // Break all critical edges in a function, return true if the function is modified.
 bool breakAllCriticalEdges(const Function& function);
+
+// Check if a phi is LCSSA phi for `target_val`
+bool isLCSSAPhi(const std::shared_ptr<PHIInst> &phi, std::shared_ptr<Value> target_val = nullptr);
+// Find if there is a LCSSA phi in `block` for `value`
+// The exit block often comes in raw pointer, so here is a raw pointer argument.
+std::shared_ptr<PHIInst> findLCSSAPhi(const BasicBlock* block, const std::shared_ptr<Value>& value);
 } // namespace IR
 
 #endif

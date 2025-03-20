@@ -13,7 +13,7 @@ bool PromotePass::iADomB(const std::shared_ptr<Instruction> &ia,
     if (ia->getParent() == ib->getParent()) {
         return ia->getIndex() < ib->getIndex();
     }
-    return DT.ADomB(ia->getParent().get(), ib->getParent().get());
+    return pDT->ADomB(ia->getParent().get(), ib->getParent().get());
 }
 
 void PromotePass::analyseAlloca() {
@@ -161,6 +161,7 @@ void PromotePass::insertPhi() {
 }
 
 void PromotePass::rename(Function &f) {
+    auto& DT = *pDT;
     if (alloca_infos.empty()) return;
     using ABPair = std::pair<std::shared_ptr<ALLOCAInst>, std::shared_ptr<BasicBlock>>;
     std::map<ABPair, std::shared_ptr<Value>> incoming_values;
@@ -265,6 +266,7 @@ void PromotePass::rename(Function &f) {
 void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_blk,
                              const std::set<std::shared_ptr<BasicBlock>>& live_in_blk,
                              std::set<std::shared_ptr<BasicBlock>>& phi_blk) {
+    auto& DT = *pDT;
     using pDTN = std::shared_ptr<DomTree::Node>;
     using DTNPair = std::pair<unsigned, pDTN>;
     // todo : why less?
@@ -375,7 +377,7 @@ void PromotePass::promoteMemoryToRegister(Function &function) {
 }
 
 PM::PreservedAnalyses PromotePass::run(Function &function, FAM &manager) {
-    DT = manager.getResult<DomTreeAnalysis>(function);
+    pDT = &manager.getResult<DomTreeAnalysis>(function);
 
     promoteMemoryToRegister(function);
 
@@ -383,7 +385,7 @@ PM::PreservedAnalyses PromotePass::run(Function &function, FAM &manager) {
     alloca_infos.clear();
     phi_to_alloca_map.clear();
     entry_block = nullptr;
-    DT = {};
+    pDT = nullptr;
     del_queue.clear();
 
     return PreserveCFGAnalyses();

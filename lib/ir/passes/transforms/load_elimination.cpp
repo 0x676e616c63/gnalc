@@ -11,9 +11,9 @@ namespace IR {
 PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
     bool load_elimination_inst_modified = false;
 
-    auto aa_res = fam.getResult<AliasAnalysis>(function);
-    auto domtree = fam.getResult<DomTreeAnalysis>(function);
-    auto postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
+    auto& aa_res = fam.getResult<AliasAnalysis>(function);
+    auto& domtree = fam.getResult<DomTreeAnalysis>(function);
+    auto& postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
     std::set<std::shared_ptr<Instruction>> unused_load;
 
     // For each load, collect all possible store/load on its dominator block as candidates.
