@@ -1,12 +1,12 @@
 %code {
-#include "ir.hpp"
+#include "../../include/ir/visitor.hpp"
 extern std::shared_ptr<IR::Module> irnode;
 extern yyy::parser::symbol_type yylex ();
 extern int yylineno;
 }
 
 %code requires {
-#include "ir.hpp"
+#include "../ir/visitor.hpp"
 }
 
 %language "C++"
@@ -105,103 +105,119 @@ InstList    : Inst
             | InstList Inst
             ;
 
-/// TODO:
+Inst    : BinaryInst
+        | CastInst
+        | FnegInst
+        | IcmpInst
+        | FcmpInst
+        | RetInst
+        | BrInst
+        | CallInst
+        | AllocaInst
+        | LoadInst
+        | StoreInst
+        | GepInst
+        | PhiInst
+        ;
 
-Inst : Assignment_Inst
-            | Non_assignment_Inst ;
+BinaryInst  : I_ID I_EQUAL BinaryOp Type Value I_COMMA Value
+            ;
 
-Assignment_Inst : Binary_assignment
-                       | Unary_assignment
-                       | Cast_assignment
-                       | Alloca_assignment
-                       | Load_assignment
-                       | Call_assignment
-                       | Phi_assignment
-                       | Gep_assignment
-                       | Icmp_assignment
-                       | Fcmp_assignment ;
+Value   : I_ID
+        | Constant
+        ;
 
-Binary_assignment : I_ID I_EQUAL I_ADD Type Value I_COMMA Value
-                  | I_ID I_EQUAL I_SUB Type Value I_COMMA Value
-                  | I_ID I_EQUAL I_MUL Type Value I_COMMA Value
-                  | I_ID I_EQUAL I_FADD Type Value I_COMMA Value
-                  | I_ID I_EQUAL I_FSUB Type Value I_COMMA Value
-                  | I_ID I_EQUAL I_FMUL Type Value I_COMMA Value
-                  | I_ID I_EQUAL I_SDIV Type Value I_COMMA Value
-                  | I_ID I_EQUAL I_FDIV Type Value I_COMMA Value
-                  | I_ID I_EQUAL I_SREM Type Value I_COMMA Value
-                  | I_ID I_EQUAL I_FREM Type Value I_COMMA Value
-                  | I_ID I_EQUAL I_AND Type Value I_COMMA Value
-                  | I_ID I_EQUAL I_OR Type Value I_COMMA Value ;
+BinaryOp    : I_ADD
+            | I_FADD
+            | I_SUB
+            | I_FSUB
+            | I_MUL
+            | I_FMUL
+            | I_DIV
+            | I_FDIV
+            | I_REM
+            | I_FREM
+            ;
 
-Unary_assignment : I_ID I_EQUAL I_FNEG Type Value ;
+FnegInst    : I_ID I_EQUAL I_FNEG Type Value
+            ;
 
-Cast_assignment : I_ID I_EQUAL I_ZEXT Type Value I_TO Type
-                | I_ID I_EQUAL I_FPTOSI Type Value I_TO Type
-                | I_ID I_EQUAL I_SITOFP Type Value I_TO Type
-                | I_ID I_EQUAL I_BITCAST Type Value I_TO Type ;
+CastInst    : I_ID I_EQUAL CastOp Type Value I_TO Type
+            ;
 
-Alloca_assignment : I_ID I_EQUAL I_ALLOCA Type ;
+CastOp  : I_FPTOSI
+        | I_SITOFP
+        | I_ZEXT
+        | I_BITCAST
+        ;
 
-Load_assignment : I_ID I_EQUAL I_LOAD Type I_COMMA Value ;
+IcmpInst    : I_ID I_EQUAL I_ICMP IcmpOp Type Value I_COMMA Value
+            ;
 
-Call_assignment : I_ID I_EQUAL I_CALL Type I_ID I_LPAR Arg_list I_RPAR ;
+IcmpOp  : I_EQ
+        | I_NE
+        | I_SGT
+        | I_SGE
+        | I_SLT
+        | I_SLE
+        ;
 
-Phi_assignment : I_ID I_EQUAL I_PHI Type Phi_list ;
+FcmpInst    : I_ID I_EQUAL I_FCMP FcmpOp Type Value I_COMMA Value
+            ;
 
-Phi_list : Phi_pair
-         | Phi_list I_COMMA Phi_pair ;
+FcmpOp  : I_OEQ
+        | I_OGT
+        | I_OGE
+        | I_OLT
+        | I_OLE
+        | I_ONE
+        | I_ORD
+        ;
 
-Phi_pair : I_LSQUARE Value I_COMMA I_ID I_RSQUARE ;
+RetInst : I_RET Type Value
+        | I_RET I_VOID
+        ;
 
-Gep_assignment : I_ID I_EQUAL I_GEP Type I_COMMA Value I_COMMA Index_list ;
+BrInst  : I_BR I_LABEL I_ID
+        | I_BR Type Value I_COMMA I_LABEL I_ID I_COMMA I_LABEL I_ID
+        ;
 
-Index_list : Value
-           | Index_list I_COMMA Value ;
+CallInst    : I_CALL Type Value I_LPAR ArgList I_RPAR
+            | I_ID I_EQUAL I_CALL Type Value I_LPAR ArgList I_RPAR
+            | I_TAIL I_CALL Type Value I_LPAR ArgList I_RPAR
+            | I_ID I_EQUAL I_TAIL I_CALL Type Value I_LPAR ArgList I_RPAR
+            ;
 
-Icmp_assignment : I_ID I_EQUAL I_ICMP Icmp_pred Type Value I_COMMA Value ;
+ArgList : ArgList I_COMMA Arg
+        | Arg
+        ;
 
-Icmp_pred : I_EQ
-          | I_NE
-          | I_SGT
-          | I_SGE
-          | I_SLT
-          | I_SLE ;
+Arg : Type I_NOUNDEF Value
+    ;
 
-Fcmp_assignment : I_ID I_EQUAL I_FCMP Fcmp_pred Type Value I_COMMA Value ;
+AllocaInst  : I_ID I_EQUAL I_ALLOCA Type I_COMMA I_ALIGN IRNUM_INT
+            ;
 
-Fcmp_pred : I_OEQ
-          | I_OGT
-          | I_OGE
-          | I_OLT
-          | I_OLE
-          | I_ONE
-          | I_ORD ;
+LoadInst    : I_ID I_EQUAL I_LOAD Type I_COMMA Type Value I_COMMA I_ALIGN IRNUM_INT
+            ;
 
-Non_assignment_Inst : Store_Inst
-                           | Void_call ;
+StoreInst   : I_STORE Type Value I_COMMA Type Value I_COMMA I_ALIGN IRNUM_INT
+            ;
 
-Store_Inst : I_STORE Type Value I_COMMA Value ;
+GepInst : I_ID I_EQUAL I_GEP Type I_COMMA Type Value IndexList
+        ;
 
-Void_call : I_CALL I_VOID I_ID I_LPAR Arg_list I_RPAR ;
+IndexList   : I_COMMA Type Value
+            | IndexList I_COMMA Type Value ;
 
-Arg_list : /* Empty */
-         | Arg_list I_COMMA Value ;
+PhiInst : I_ID I_EQUAL I_PHI Type PhiOpers ;
 
-Value : I_ID
-      | Constant ;
+PhiOpers    : PhiOper
+            | PhiOpers I_COMMA PhiOper
+            ;
 
-Constant : IRNUM_INT
-         | IRNUM_FLOAT ;
-
-Terminator : Ret_Inst
-           | Br_Inst ;
-
-Ret_Inst : I_RET Type Value
-                | I_RET I_VOID ;
-
-Br_Inst : I_BR I_LABEL I_ID
-               | I_BR Type Value I_COMMA I_LABEL I_ID I_COMMA I_LABEL I_ID ;
+PhiOper : I_LSQUARE Value I_COMMA Value I_RSQUARE
+        ;
 
 %%
 

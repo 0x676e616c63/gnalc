@@ -19,7 +19,7 @@
 #include "../../include/codegen/brainfk/bftrans.hpp"
 #endif
 
-#ifdef GNALC_EXTENSION_TPO
+#ifdef GNALC_EXTENSION_TPO // in CMakeLists.txt
 
 #endif
 
