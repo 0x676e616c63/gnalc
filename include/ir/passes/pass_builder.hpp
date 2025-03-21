@@ -25,6 +25,7 @@ struct OptInfo {
     bool lcssa{false};
     bool licm{false};
     bool loop_unroll{false};
+    bool indvars{false};
     bool jump_threading{false};
 
     bool tree_shaking{false};

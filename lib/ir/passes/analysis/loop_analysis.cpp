@@ -86,8 +86,16 @@ bool Loop::isExiting(const BasicBlock *bb) const {
 bool Loop::isExit(const BasicBlock *bb) const {
     if (contains(bb))
         return false;
-    return std::any_of(bb->pred_begin(), bb->pred_end(),
-        [this](const auto &pred) { return contains(pred.get()); });
+    return std::any_of(bb->pred_begin(), bb->pred_end(), [this](const auto &pred) { return contains(pred.get()); });
+}
+
+std::set<BasicBlock *> Loop::getExitingBlocks() const {
+    std::set<BasicBlock*> ret;
+    for (const auto& bb : loop_blocks) {
+        if (isExiting(bb))
+            ret.emplace(bb);
+    }
+    return ret;
 }
 
 std::set<BasicBlock *> Loop::getExitBlocks() const {

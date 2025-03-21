@@ -100,6 +100,8 @@ public:
     // Note that the exit block is not a part of the loop.
     bool isExit(const BasicBlock* bb) const;
 
+    std::set<BasicBlock*> getExitingBlocks() const;
+
     std::set<BasicBlock*> getExitBlocks() const;
 
     // Note that multiple Latches will become one after LoopSimplify

@@ -23,6 +23,7 @@ enum class SCEVExprType {
     Value, Binary
 };
 class SCEVExpr {
+    friend std::ostream& operator<<(std::ostream &os, const SCEVExpr &expr);
 public:
     struct Binary {
         enum class Op {
@@ -59,6 +60,7 @@ enum class TRECType {
 };
 // Tree of Recurrences
 class TREC {
+    friend std::ostream& operator<<(std::ostream &os, const TREC &expr);
 public:
     struct AddRec {
         TREC* base;
@@ -116,18 +118,27 @@ public:
         trec_pool.emplace_back(std::make_shared<TREC>(TREC::undef()));
         trec_pool.emplace_back(std::make_shared<TREC>(TREC::untracked()));
     }
+
+    // Input: l the current loop, n the definition of an SSA name
+    // Output: TREC for the variable defined by n within l
     TREC* analyzeEvolution(const Loop* loop, Value* val);
+
+    SCEVExpr* getTripCount(const Loop* loop);
 
 private:
     TREC* eval(TREC* trec, const Loop* loop);
 
+    // Input: h the halting loop-phi, n the definition of an SSA name
+    // Output: (exist, update), exist is true if h has been reached,
+    //         update is the reconstructed expression for the overall effect in the loop of h
     std::pair<bool, TREC*> buildUpdateExpr(const PHIInst* loop_phi, Value* val, const Loop* loop_phi_loop);
 
-    SCEVExpr* apply(const Loop* loop, TREC* trec, size_t trip_cnt);
+    TREC* apply(const Loop *loop, TREC *trec, SCEVExpr* trip_cnt);
 
-    size_t getTripCount(const Loop* loop) const;
 
-    SCEVExpr* instantiateEvolution(TREC* trec, const Loop* loop);
+    // Input: trec a symbolic TREC, l the instantiation loop
+    // Output: an instantiation of trec
+    TREC* instantiateEvolution(TREC* trec, const Loop* loop);
 
     TREC* getTRECUndef() const;
     TREC* getTRECUntracked() const;
@@ -152,7 +163,10 @@ private:
     // We reserve 2 slots to get Undef/Untracked quickly
     // [0] for Undef, [1] for Untracked
     std::vector<std::shared_ptr<TREC>> trec_pool;
+
     std::vector<std::shared_ptr<SCEVExpr>> expr_pool;
+
+    std::unordered_set<TREC*> instantiated;
 };
 
 class SCEVAnalysis : public PM::AnalysisInfo<SCEVAnalysis> {

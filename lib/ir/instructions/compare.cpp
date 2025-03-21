@@ -48,6 +48,7 @@ void ICMPInst::condFlip() {
     }
 }
 
+
 FCMPInst::FCMPInst(NameRef name, FCMPOP cond, const std::shared_ptr<Value> &lhs,
                    const std::shared_ptr<Value> &rhs)
     : Instruction(OP::FCMP, name, makeBType(IRBTYPE::I1)), cond(cond) {

@@ -19,6 +19,7 @@
 #include "../../../include/ir/passes/transforms/gvn_pre.hpp"
 #include "../../../include/ir/passes/transforms/inline.hpp"
 #include "../../../include/ir/passes/transforms/instsimplify.hpp"
+#include "../../../include/ir/passes/transforms/indvar_simplify.hpp"
 #include "../../../include/ir/passes/transforms/jump_threading.hpp"
 #include "../../../include/ir/passes/transforms/lcssa.hpp"
 #include "../../../include/ir/passes/transforms/licm.hpp"
@@ -63,6 +64,7 @@ const OptInfo o1_opt_info = {
     .lcssa = false,
     .licm = false,
     .loop_unroll = false,
+    .indvars = false,
     .jump_threading = false,
     // Module Transforms
     .tree_shaking = true,
@@ -171,6 +173,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FUNCTION_TRANSFORM(lcssa, LCSSAPass())
     FUNCTION_TRANSFORM(licm, LICMPass())
     FUNCTION_TRANSFORM(loop_unroll, LoopUnrollPass())
+    FUNCTION_TRANSFORM(indvars, IndVarSimplifyPass())
     FUNCTION_TRANSFORM(jump_threading, JumpThreadingPass())
 
 #undef FUNCTION_TRANSFORM
@@ -193,13 +196,9 @@ MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     fpm.addPass(PromotePass());
-    fpm.addPass(LoopSimplifyPass());
     fpm.addPass(NameNormalizePass(true));
-    fpm.addPass(LoopRotatePass());
-    fpm.addPass(LCSSAPass());
-    fpm.addPass(LICMPass());
+    fpm.addPass(IndVarSimplifyPass());
     fpm.addPass(VerifyPass(true));
-    fpm.addPass(NameNormalizePass(true));
 
     // // For LoopUnroll Test
     // fpm.addPass(PromotePass());

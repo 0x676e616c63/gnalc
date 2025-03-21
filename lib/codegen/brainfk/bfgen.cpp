@@ -14,18 +14,20 @@ void BF3t32bGen::visit(IR::Module &node) {
 void BF3t32bGen::visit(IR::GlobalVariable &node) { Err::todo(); }
 void BF3t32bGen::visit(IR::Function &node) {
     curr_is_main = node.getName() == "@main";
-    for (size_t i = 0; i < node.getBlocks().size(); i++) {
+    size_t i = 0;
+    for (const auto& bb : node) {
         auto curr_block_index = i + 1;
-        block_index[node.getBlocks()[i]->getName()] = curr_block_index;
+        block_index[bb->getName()] = curr_block_index;
+        ++i;
     }
 
     tape1_to(T1P_BR_TARGET);
     tape1_set(T1P_BR_TARGET, 1);
     curr_insts.addInst(BF3tInst::BEQZ1);
 
-    for (size_t i = 0; i < node.getBlocks().size(); ++i) {
+    i = 0;
+    for (const auto& bb : node) {
         auto curr_block_index = i + 1;
-        const auto &bb = node.getBlocks()[i];
 
         tape1_set(T1P_BR_TMP1, static_cast<uint32_t>(curr_block_index));
         tape1_copy(T1P_BR_TARGET, T1P_BR_TMP2);
@@ -60,6 +62,7 @@ void BF3t32bGen::visit(IR::Function &node) {
         tape1_to(T1P_BR_TMP1);
         tape1_set(T1P_BR_TMP1, 0);
         curr_insts.addInst(BF3tInst::BNEZ1);
+        ++i;
     }
 
     tape1_to(T1P_BR_TARGET);
