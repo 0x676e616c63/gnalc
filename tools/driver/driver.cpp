@@ -7,20 +7,21 @@
 #include "../../include/mir/passes/pass_builder.hpp"
 #include "../../include/mir/passes/pass_manager.hpp"
 #include "../../include/mir/passes/utilities/mirprinter.hpp"
+#include "../../include/utils/logger.hpp"
+
+#ifndef GNALC_EXTENSION_TPO // in CMakeLists.txt
 #include "../../include/parser/ast.hpp"
 #include "../../include/parser/astprinter.hpp"
 #include "../../include/parser/irgen.hpp"
 #include "../../include/parser/parser.hpp"
-#include "../../include/utils/logger.hpp"
+#else
+#include "../../include/tpo/irparsertool.hpp"
+#endif
 
 #if GNALC_EXTENSION_BRAINFK // in config.hpp
 #include "../../include/codegen/brainfk/bfgen.hpp"
 #include "../../include/codegen/brainfk/bfprinter.hpp"
 #include "../../include/codegen/brainfk/bftrans.hpp"
-#endif
-
-#ifdef GNALC_EXTENSION_TPO // in CMakeLists.txt
-
 #endif
 
 #include <fstream>
@@ -30,8 +31,6 @@
 
 #ifndef GNALC_EXTENSION_TPO
 std::shared_ptr<AST::CompUnit> node = nullptr;
-#else
-std::shared_ptr<IR::Module> irnode = nullptr;
 #endif
 extern FILE *yyin;
 
@@ -90,12 +89,13 @@ int main(int argc, char **argv) {
             only_compilation = true;
         else if (arg == "-emit-llvm")
             emit_llvm = true;
-        else if (arg == "-ast-dump")
+        else if (arg == "-ast-dump") {
 #ifdef GNALC_EXTENSION_TPO
             std::cerr << "Error: AST dump is not available in TPO mode." << std::endl;
             return -1;
 #endif
             ast_dump = true;
+        }
         else if (arg == "-fixed-point")
             fixed_point_pipeline = true;
         else if (arg == "-O1" || arg == "-O")
@@ -262,13 +262,15 @@ Extensions:
         return 0;
     }
 
-    if (!input_file.empty())
-        fclose(yyin);
-
     Parser::IRGenerator generator(input_file); // set Module's name to `input_file`
     generator.visit(*node);
 #else
+    IRParser::IRGenerator generator(input_file);
+    generator.generate();
 #endif
+
+    if (!input_file.empty())
+        fclose(yyin);
 
     IR::FAM fam;
     IR::MAM mam;

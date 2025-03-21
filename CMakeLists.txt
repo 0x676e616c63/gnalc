@@ -58,10 +58,23 @@ aux_source_directory(lib/utils GNALC_UTILS_SRC)
 # BrainFk Extension
 aux_source_directory(lib/codegen/brainfk GNALC_EXT_BFBKD_SRC)
 
+# TPO Extension
+aux_source_directory(lib/tpo GNALC_EXT_TPO_SRC)
+
 # ALL
 set(GNALC_SRC
         ${GNALC_LEXER_SRC}
         ${GNALC_PARSER_SRC}
+        ${GNALC_IR_SRC}
+        ${GNALC_MIR_SRC}
+        ${GNALC_PM_SRC}
+        ${GNALC_PTM_SRC}
+        ${GNALC_EXT_BFBKD_SRC}
+        ${GNALC_UTILS_SRC})
+
+# TPO
+set(TPO_SRC
+        ${GNALC_EXT_TPO_SRC}
         ${GNALC_IR_SRC}
         ${GNALC_MIR_SRC}
         ${GNALC_PM_SRC}
@@ -79,6 +92,10 @@ add_executable(gnalc tools/driver/driver.cpp ${GNALC_SRC})
 
 # with Arm bkd
 add_executable(gnalc_arm tools/driver/driver.cpp ${GNALC_SRC} ${GNALC_MIR_SRC})
+
+# with TPO Extension
+add_executable(tpo tools/driver/driver.cpp ${TPO_SRC})
+target_compile_definitions(tpo PRIVATE GNALC_EXTENSION_TPO)
 
 enable_testing()
 add_subdirectory(test)

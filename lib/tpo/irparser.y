@@ -1,12 +1,11 @@
 %code {
-#include "../../include/ir/visitor.hpp"
-extern std::shared_ptr<IR::Module> irnode;
+#include "../../include/tpo/irparsertool.hpp"
 extern yyy::parser::symbol_type yylex ();
 extern int yylineno;
 }
 
 %code requires {
-#include "../ir/visitor.hpp"
+#include "irparsertool.hpp"
 }
 
 %language "C++"
@@ -31,7 +30,7 @@ extern int yylineno;
 
 %%
 
-Module  : GlobalEntities
+Module  : GlobalEntities {}
         ;
 
 GlobalEntities  : GlobalEntities GlobalVariable

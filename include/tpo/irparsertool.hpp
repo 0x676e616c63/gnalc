@@ -6,7 +6,7 @@
 #include <map>
 #include "../ir/visitor.hpp"
 
-namespace IRPT {
+namespace IRParser {
     class IRPT { // IR Parser Tool
     public:
         template<typename T, typename... Args>
@@ -23,27 +23,36 @@ namespace IRPT {
         using string = std::string;
 
     private:
-        std::map<string, pF> FMap;
-        std::map<string, pGV> GVMap;
-        std::map<string, pB> BMap; // 新的function被定义时将清空
-        std::map<string, pV> VMap; // 新的function被定义时将清空
+        static std::map<string, pF> FMap;
+        static std::map<string, pGV> GVMap;
+        static std::map<string, pB> BMap; // 新的function被定义时将清空
+        static std::map<string, pV> VMap; // 新的function被定义时将清空
         /// 用于保存尚未创建却被使用的值
         /// 例如phi, br的操作数等
         /// 新的function被定义时应为空
         /// 当该string对应的value被创建时，使用replaceSelf替换
-        std::map<string, pB> TempBMap;
-        std::map<string, pV> TempVMap;
+        static std::map<string, pB> TempBMap;
+        static std::map<string, pV> TempVMap;
     public:
-        IRPT();
+        IRPT() = delete;
+        ~IRPT() = delete;
 
-        pF getF(string name);
-        pF initF(string name, pF f);
-        pB getB(string name);
-        pF initB(string name, pB b);
-        pV getV(string name);
-        pV initV(string name, pV v);
+        static pF getF(string name);
+        static pF initF(string name, pF f);
+        static pB getB(string name);
+        static pF initB(string name, pB b);
+        static pV getV(string name);
+        static pV initV(string name, pV v);
 
-        ~IRPT();
+    };
+
+    class IRGenerator {
+        static IR::Module module;
+    public:
+        IRGenerator() = default;
+        explicit IRGenerator(const std::string& module_name);
+        void generate();
+        static IR::Module &get_module() { return module; }
     };
 }
 
