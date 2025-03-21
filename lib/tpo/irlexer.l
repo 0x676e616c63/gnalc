@@ -34,9 +34,9 @@
 "fsub"          { return yyy::parser::make_I_FSUB(); }
 "mul"           { return yyy::parser::make_I_MUL(); }
 "fmul"          { return yyy::parser::make_I_FMUL(); }
-"sdiv"          { return yyy::parser::make_I_SDIV(); }
+"sdiv"          { return yyy::parser::make_I_DIV(); }
 "fdiv"          { return yyy::parser::make_I_FDIV(); }
-"srem"          { return yyy::parser::make_I_SREM(); }
+"srem"          { return yyy::parser::make_I_REM(); }
 "frem"          { return yyy::parser::make_I_FREM(); }
 "and"           { return yyy::parser::make_I_AND(); }
 "or"            { return yyy::parser::make_I_OR(); }
@@ -88,7 +88,7 @@
 "x"             { return yyy::parser::make_I_X(); }
 
 "zeroinitializer"   { return yyy::parser::make_I_ZEROINITER(); }
-"..."           { return yyy::parser::make_I_DOTDOTDOT(); // VAArg }
+"..."           { return yyy::parser::make_I_DOTDOTDOT(); /* VAArg */ }
 
 "(" { return yyy::parser::make_I_LPAR(); }
 ")" { return yyy::parser::make_I_RPAR(); }

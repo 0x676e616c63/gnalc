@@ -5,6 +5,7 @@
 #include <memory>
 #include <map>
 #include "../ir/visitor.hpp"
+using namespace IR;
 
 namespace IRParser {
     class IRPT { // IR Parser Tool
@@ -15,6 +16,7 @@ namespace IRParser {
         }
 
         using pF = std::shared_ptr<IR::Function>;
+        using pFD = std::shared_ptr<IR::FunctionDecl>;
         using pGV = std::shared_ptr<IR::GlobalVariable>;
         using pB = std::shared_ptr<IR::BasicBlock>;
         using pI = std::shared_ptr<IR::Instruction>;
@@ -31,6 +33,7 @@ namespace IRParser {
         /// 例如phi, br的操作数等
         /// 新的function被定义时应为空
         /// 当该string对应的value被创建时，使用replaceSelf替换
+        static std::map<string, pFD> TempFDMap;
         static std::map<string, pB> TempBMap;
         static std::map<string, pV> TempVMap;
     public:
@@ -44,6 +47,18 @@ namespace IRParser {
         static pV getV(string name);
         static pV initV(string name, pV v);
 
+        static std::vector<std::shared_ptr<FormalParam>> legalizeParams(
+            const std::vector<std::shared_ptr<IR::FormalParam>> &params);
+
+        static pF newFunc(std::string &name_,
+            const std::vector<std::shared_ptr<FormalParam>> &params,
+            std::shared_ptr<Type> &ret_type, ConstantPool *pool, std::vector<std::shared_ptr<BasicBlock>> &blks);
+
+        static pFD newFuncDecl(std::string &name_,
+            const std::vector<std::shared_ptr<Type>> &params,
+            std::shared_ptr<Type> &ret_type, bool is_va_arg_=false);
+
+        static pB newBB(std::string name, const std::list<pI> &insts);
     };
 
     class IRGenerator {
