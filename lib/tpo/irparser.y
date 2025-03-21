@@ -64,7 +64,7 @@ GlobalEntities  : GlobalEntities GlobalVariable         { inode.addGlobalVar($2)
                 | FunctionDeclaration                   { inode.addFunctionDecl($1); }
                 ;
 
-GlobalVariable  : I_ID I_EQUAL I_DSO_LOCAL Storage GVIniter I_COMMA I_ALIGN IRNUM_INT   { $$ = make<GlobalVariable>($4, $5->getIniterType(), $1, $5, $8); }
+GlobalVariable  : I_ID I_EQUAL I_DSO_LOCAL Storage GVIniter I_COMMA I_ALIGN IRNUM_INT   { $$ = IRPT::newGV($4, $5->getIniterType(), $1, $5, $8); }
                 ;
 
 Storage : I_CONSTANT    { $$ = STOCLASS::CONSTANT; }
@@ -119,7 +119,7 @@ DefParamList    : DefParamList I_COMMA DefParam { $$ = $1; $$.emplace_back($3); 
                 | DefParam                      { $$ = { $1 }; }
                 ;
 
-DefParam    : Type I_NOUNDEF I_ID   { $$ = make<FormalParam>($3, $1, 0); }
+DefParam    : Type I_NOUNDEF I_ID   { $$ = IRPT::vmake<FormalParam>($3, $3, $1, 0); }
             ;
 
 FunctionDefinition  : I_DEFINE I_DSO_LOCAL Type I_ID I_LPAR DefParamList I_RPAR I_LBRACKET BBList I_RBRACKET    { $$ = newFunc($4, %6, $3, &inode.getConstantPool(), $9); }
@@ -152,7 +152,7 @@ Inst    : BinaryInst    { $$ = $1; }
         | PhiInst       { $$ = $1; }
         ;
 
-BinaryInst  : I_ID I_EQUAL BinaryOp Type Value I_COMMA Value    { $$ = make<BinaryInst>($1, $3, $5, $7); }
+BinaryInst  : I_ID I_EQUAL BinaryOp Type Value I_COMMA Value    { $$ = IRPT::vmake<BinaryInst>($1, $1, $3, $5, $7); }
             ;
 
 Value   : I_ID      { $$ = IRPT::getV($1); }
@@ -171,16 +171,16 @@ BinaryOp    : I_ADD     { $$ = OP::ADD; }
             | I_FREM    { $$ = OP::FREM; }
             ;
 
-FnegInst    : I_ID I_EQUAL I_FNEG Type Value    { $$ = make<FNEGInst>($1, $5); }
+FnegInst    : I_ID I_EQUAL I_FNEG Type Value    { $$ = IRPT::vmake<FNEGInst>($1, $1, $5); }
             ;
 
-CastInst    : I_ID I_EQUAL I_FPTOSI Type Value I_TO Type    { $$ = make<FPTOSIInst>($1, $5); }
-            | I_ID I_EQUAL I_SITOFP Type Value I_TO Type    { $$ = make<SITOFPInst>($1, $5); }
-            | I_ID I_EQUAL I_ZEXT Type Value I_TO Type      { $$ = make<ZEXTInst>($1, $5, toBType($7).getInner()); }
-            | I_ID I_EQUAL I_BITCAST Type Value I_TO Type   { $$ = make<BITCASTInst>($1, $5, $7); }
+CastInst    : I_ID I_EQUAL I_FPTOSI Type Value I_TO Type    { $$ = IRPT::vmake<FPTOSIInst>($1, $1, $5); }
+            | I_ID I_EQUAL I_SITOFP Type Value I_TO Type    { $$ = IRPT::vmake<SITOFPInst>($1, $1, $5); }
+            | I_ID I_EQUAL I_ZEXT Type Value I_TO Type      { $$ = IRPT::vmake<ZEXTInst>($1, $1, $5, toBType($7).getInner()); }
+            | I_ID I_EQUAL I_BITCAST Type Value I_TO Type   { $$ = IRPT::vmake<BITCASTInst>($1, $1, $5, $7); }
             ;
 
-IcmpInst    : I_ID I_EQUAL I_ICMP IcmpOp Type Value I_COMMA Value   { $$ = make<ICMPInst>($1, $4, $6, $8); }
+IcmpInst    : I_ID I_EQUAL I_ICMP IcmpOp Type Value I_COMMA Value   { $$ = IRPT::vmake<ICMPInst>($1, $1, $4, $6, $8); }
             ;
 
 IcmpOp  : I_EQ  { $$ = ICMPOP::eq; }
@@ -191,7 +191,7 @@ IcmpOp  : I_EQ  { $$ = ICMPOP::eq; }
         | I_SLE { $$ = ICMPOP::sle; }
         ;
 
-FcmpInst    : I_ID I_EQUAL I_FCMP FcmpOp Type Value I_COMMA Value   { $$ = make<FCMPInst>($1, $4, $6, $8); }
+FcmpInst    : I_ID I_EQUAL I_FCMP FcmpOp Type Value I_COMMA Value   { $$ = IRPT::vmake<FCMPInst>($1, $1, $4, $6, $8); }
             ;
 
 FcmpOp  : I_OEQ { $$ = FCMPOP::oeq; }
@@ -203,8 +203,8 @@ FcmpOp  : I_OEQ { $$ = FCMPOP::oeq; }
         | I_ORD { $$ = FCMPOP::ord; }
         ;
 
-RetInst : I_RET Type Value  { $$ = make<RetInst>($3); }
-        | I_RET I_VOID      { $$ = make<RetInst>(); }
+RetInst : I_RET Type Value  { $$ = IRPT::make<RetInst>($3); }
+        | I_RET I_VOID      { $$ = IRPT::make<RetInst>(); }
         ;
 
 BrInst  : I_BR I_LABEL I_ID
