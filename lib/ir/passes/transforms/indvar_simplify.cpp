@@ -13,16 +13,36 @@ PM::PreservedAnalyses IndVarSimplifyPass::run(Function &function, FAM &fam) {
     for (const auto& top_level : loop_info) {
         auto ldfv = top_level->getDFVisitor();
         for (const auto& loop : ldfv) {
-            for (const auto& bb : loop->blocks()) {
-                for (const auto& inst : bb->all_insts()) {
-                    auto s = scev.analyzeEvolution(loop.get(), inst.get());
-                    std::cout << inst->getName() << ": " << *s << std::endl;
-                }
-            }
-            auto trip_cnt = scev.getTripCount(loop.get());
+            auto trip_cnt = scev.getNumberOfLatchExecutions(loop.get());
             if (trip_cnt && trip_cnt->isIRValue())
-                std::cout << "Trip Count: " << trip_cnt->getIRValue()->getName() << std::endl;
-            std::cout << "Trip Count: failed :(" << std::endl;
+                std::cout << "Latch Execution Count: " << trip_cnt->getIRValue()->getName() << std::endl;
+            else
+                std::cout << "Latch Execution Count: failed :(" << std::endl;
+        }
+    }
+    for (const auto& bb : function) {
+        for (const auto& inst : bb->all_insts()) {
+            if (isSameType(inst->getType(), makeBType(IRBTYPE::I32))) {
+                auto loop = loop_info.getLoopFor(inst->getParent().get());
+                while (loop != nullptr) {
+                    auto s = scev.getSCEVAtScope(inst.get(), nullptr);
+                    std::cout << inst->getName() << " at depth " << loop->getLoopDepth()
+                        << ": ";
+                    if (s)
+                        std::cout << *s;
+                    else
+                        std::cout << "<null>";
+                    std::cout << std::endl;
+                    loop = loop->getParent();
+                }
+                auto s = scev.getSCEVAtScope(inst.get(), nullptr);
+                std::cout << inst->getName() << " at global: ";
+                if (s)
+                    std::cout << *s;
+                else
+                    std::cout << "<null>";
+                std::cout << std::endl;
+            }
         }
     }
     return iv_simplify_inst_modified ? PreserveCFGAnalyses() : PreserveAll();

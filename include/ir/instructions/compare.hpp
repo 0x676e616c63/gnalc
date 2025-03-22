@@ -98,6 +98,17 @@ private:
         return std::make_shared<FCMPInst>(getName(), cond, getLHS(), getRHS());
     }
 };
+
+// Utilities to flip/reverse a cond
+// Flip
+// a > b -> a <= b
+// just like adding a `not` before the result.
+ICMPOP flipCond(ICMPOP cond);
+FCMPOP flipCond(FCMPOP cond);
+// Reverse
+// a > b -> a < b
+ICMPOP reverseCond(ICMPOP cond);
+FCMPOP reverseCond(FCMPOP cond);
 } // namespace IR
 
 #endif
