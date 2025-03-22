@@ -196,8 +196,10 @@ MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     fpm.addPass(PromotePass());
+    fpm.addPass(LoopSimplifyPass());
     fpm.addPass(NameNormalizePass(true));
-    fpm.addPass(IndVarSimplifyPass());
+    fpm.addPass(PrintSCEVPass(std::cerr));
+    fpm.addPass(ConstantPropagationPass());
     fpm.addPass(VerifyPass(true));
 
     // // For LoopUnroll Test

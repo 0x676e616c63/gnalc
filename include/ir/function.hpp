@@ -64,8 +64,7 @@ struct BBSuccGetter {
     }
 };
 
-class Function : public FunctionDecl,
-                 public std::enable_shared_from_this<Function> {
+class Function : public FunctionDecl {
     friend class Parser::CFGBuilder;
 private:
     std::vector<std::shared_ptr<FormalParam>> params;

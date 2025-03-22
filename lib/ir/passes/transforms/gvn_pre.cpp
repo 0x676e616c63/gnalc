@@ -352,7 +352,7 @@ std::shared_ptr<Value> GVNPREPass::phi_translate(Expr* expr, BasicBlock* pred, B
         // therefore no translation is required.
         if(phi->getParent().get() != succ)
             return expr->getIRVal();
-        return phi->getValueForBlock(pred->shared_from_this());
+        return phi->getValueForBlock(pred->as<BasicBlock>());
     }
 
     if (expr->isGlobalTemp())

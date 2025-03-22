@@ -3,6 +3,7 @@
 
 #include "../../../../include/ir/passes/analysis/live_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
+#include "../../../../include/ir/passes/analysis/scev.hpp"
 #include "../../../../include/utils/logger.hpp"
 
 namespace IR {
@@ -137,7 +138,41 @@ PM::PreservedAnalyses PrintLoopPass::run(Function &func, FAM &fam) {
 }
 
 PM::PreservedAnalyses PrintDebugMessagePass::run(Function &func, FAM &fam) {
-    writeln("[Debug Message] at '", func.getName() , "': ", message);
+    writeln("[Debug Message] at '", func.getName(), "': ", message);
+    return PreserveAll();
+}
+
+PM::PreservedAnalyses PrintSCEVPass::run(Function &function, FAM &fam) {
+    auto& scev = fam.getResult<SCEVAnalysis>(function);
+    auto& loop_info = fam.getResult<LoopAnalysis>(function);
+    writeln("SCEV Analysis Result: ");
+    for (const auto &top_level : loop_info) {
+        auto ldfv = top_level->getDFVisitor();
+        for (const auto &loop : ldfv) {
+            auto trip_cnt = scev.getNumberOfLatchExecutions(loop.get());
+            if (trip_cnt && trip_cnt->isIRValue())
+                writeln("Latch Execution Count: ", trip_cnt->getIRValue()->getName());
+            else
+                writeln("Latch Execution Count: <null> :(");
+        }
+    }
+    const DomTree& domtree = fam.getResult<DomTreeAnalysis>(function);
+    for (const auto &bb : function) {
+        for (const auto &inst : bb->all_insts()) {
+            if (!isSameType(inst->getType(), makeBType(IRBTYPE::I32)))
+                continue;
+            for (const auto &scev_block : function) {
+                if (!domtree.ADomB(bb.get(), scev_block.get()))
+                    continue;
+                auto s = scev.getSCEVAtBlock(inst.get(), scev_block.get());
+                // Since we've ensured the value is available in this block,
+                // getSCEVAtBlock should not return nullptr.
+                Err::gassert(s != nullptr);
+                if (!s->isUntracked())
+                    writeln(inst->getName(), " at block '", scev_block->getName(), "': ", *s);
+            }
+        }
+    }
     return PreserveAll();
 }
 } // namespace IR

@@ -237,7 +237,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                                 }
                             }
                         }
-                        moveInst(inst, preheader->shared_from_this(), insert_before);
+                        moveInst(inst, preheader->as<BasicBlock>(), insert_before);
                         Logger::logDebug("[LICM] on '", function.getName(), "': Hoisted an instruction '",
                                          inst->getName(), "' to basic block '", preheader->getName(), "'.");
                         licm_inst_modified = true;

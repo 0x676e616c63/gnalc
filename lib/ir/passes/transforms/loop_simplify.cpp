@@ -16,7 +16,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
         auto looppdfv = toplevel->getDFVisitor<Util::DFVOrder::PostOrder>();
 
         for (const auto &loop : looppdfv) {
-            auto header = loop->getHeader()->shared_from_this();
+            auto header = loop->getHeader()->as<BasicBlock>();
             bool curr_loop_changed = false;
             // Ensure a preheader
             auto preheader = loop->getPreHeader();
@@ -64,7 +64,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                 auto latches = loop->getLatches();
                 Err::gassert(!latches.empty());
                 for (const auto &raw_old_latch : latches) {
-                    auto old_latch = raw_old_latch->shared_from_this();
+                    auto old_latch = raw_old_latch->as<BasicBlock>();
                     auto br = old_latch->getBRInst();
                     Err::gassert(br != nullptr);
                     br->replaceAllOperands(header, new_latch);
@@ -96,7 +96,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
             // are dominated by the loop header.
             auto exits = loop->getExitBlocks();
             for (const auto &raw_exit : exits) {
-                auto exit = raw_exit->shared_from_this();
+                auto exit = raw_exit->as<BasicBlock>();
                 std::vector<std::shared_ptr<BasicBlock>> in_loop_preds;
                 bool is_dedicated = true;
                 for (const auto &ep : exit->preds()) {

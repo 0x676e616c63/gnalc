@@ -196,7 +196,7 @@ void PromotePass::rename(Function &f) {
                         for (auto pb = b;;) {
                             if (incoming_values[{alloca, pb}] == undef_val) {
                                 if (DT[pb.get()]->parent() != nullptr)
-                                    pb = DT[pb.get()]->parent()->block()->shared_from_this();
+                                    pb = DT[pb.get()]->parent()->block()->as<BasicBlock>();
                                 else {
                                     // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
                                     Logger::logWarning("[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
@@ -236,7 +236,7 @@ void PromotePass::rename(Function &f) {
                     for (auto pb = b;;) {
                         if (incoming_values[{alloca, pb}] == undef_val) {
                             if (DT[pb.get()]->parent() != nullptr)
-                                pb = DT[pb.get()]->parent()->block()->shared_from_this();
+                                pb = DT[pb.get()]->parent()->block()->as<BasicBlock>();
                             else {
                                 // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
                                 Logger::logWarning("[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");

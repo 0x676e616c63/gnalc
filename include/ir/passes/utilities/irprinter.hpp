@@ -92,6 +92,14 @@ public:
 
     PM::PreservedAnalyses run(Function &unit, FAM &manager);
 };
+
+class PrintSCEVPass : public PM::PassInfo<PrintSCEVPass>, public PrinterBase {
+public:
+    explicit PrintSCEVPass(std::ostream &outStream_)
+        : PrinterBase(outStream_, false) {}
+
+    PM::PreservedAnalyses run(Function &unit, FAM &manager);
+};
 } // namespace IR
 
 #endif

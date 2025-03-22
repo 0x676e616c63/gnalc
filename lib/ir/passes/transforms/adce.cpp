@@ -139,9 +139,9 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     // Also, if there is a virtual root, its children must also be exit blocks. Thus, the
                     // search can't terminate at the virtual root.
                     Err::gassert(found && nearest_pdom->block() != nullptr);
-                    linkBB(block, nearest_pdom->block()->shared_from_this());
+                    linkBB(block, nearest_pdom->block()->as<BasicBlock>());
                     // The new BRInst won't be iterated in `all_insts`. So no need to add it to critical.
-                    block->addInst(std::make_shared<BRInst>(nearest_pdom->block()->shared_from_this()));
+                    block->addInst(std::make_shared<BRInst>(nearest_pdom->block()->as<BasicBlock>()));
                     adce_cfg_modified = true;
                     Logger::logDebug("[ADCE]: Retargeting '",
                         block->getName(), "' to '", nearest_pdom->block()->getName());

@@ -33,9 +33,9 @@ bool LoopUnrollPass::unroll_loop(const std::shared_ptr<Loop> &loop, const int co
 
     // !hasAddressTaken() ?
 
-    const auto pre_header = loop->getPreHeader()->shared_from_this();
-    const auto header = loop->getHeader()->shared_from_this();
-    const auto latch = loop->getLatch()->shared_from_this();
+    const auto pre_header = loop->getPreHeader()->as<BasicBlock>();
+    const auto header = loop->getHeader()->as<BasicBlock>();
+    const auto latch = loop->getLatch()->as<BasicBlock>();
     const auto& blocks = loop->getBlocks();
     const auto exits = loop->getExitBlocks();
 
@@ -69,10 +69,10 @@ bool LoopUnrollPass::unroll_loop(const std::shared_ptr<Loop> &loop, const int co
     // initialize B/IMap
     // count+1是为了容纳完全展开的最后一个header或余数循环的块
     for (const auto& bb : blocks) {
-        BMap[bb->shared_from_this()] = BV(count+1, nullptr);
-        BMap[bb->shared_from_this()][0] = bb->shared_from_this();
+        BMap[bb->as<BasicBlock>()] = BV(count+1, nullptr);
+        BMap[bb->as<BasicBlock>()][0] = bb->as<BasicBlock>();
         for (int i = 1; i < count+1; i++) {
-            BMap[bb->shared_from_this()][i] = std::make_shared<BasicBlock>(bb->getName()+".unroll"+std::to_string(i));
+            BMap[bb->as<BasicBlock>()][i] = std::make_shared<BasicBlock>(bb->getName()+".unroll"+std::to_string(i));
         }
         for (auto& inst : bb->getAllInsts()) {
             IMap[inst] = IV(count+1, nullptr);
@@ -196,7 +196,7 @@ bool LoopUnrollPass::unroll_loop(const std::shared_ptr<Loop> &loop, const int co
         // process other block
         ++raw_bb_iter;
         while (raw_bb_iter != loop->block_end()) {
-            auto rb = (*raw_bb_iter)->shared_from_this(); // current raw block
+            auto rb = (*raw_bb_iter)->as<BasicBlock>(); // current raw block
             auto cb = BMap[rb][i]; // current block
 
             // link pred BB
@@ -259,10 +259,10 @@ bool LoopUnrollPass::unroll_loop(const std::shared_ptr<Loop> &loop, const int co
     }
 
     // add to function
-    auto it_after_loop = ++std::find(func.begin(), func.end(), blocks.back()->shared_from_this());
+    auto it_after_loop = ++std::find(func.begin(), func.end(), blocks.back()->as<BasicBlock>());
     for (int i = 1; i < count; i++) {
         for (auto & b : blocks) {
-            func.addBlock(it_after_loop, BMap[b->shared_from_this()][i]);
+            func.addBlock(it_after_loop, BMap[b->as<BasicBlock>()][i]);
         }
     }
     if (!partially)

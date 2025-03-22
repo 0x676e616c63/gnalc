@@ -1,4 +1,5 @@
 #include "../../../../include/ir/passes/transforms/constant_propagation.hpp"
+#include "../../../../include/ir/block_utils.hpp"
 #include "../../../../include/ir/instructions/binary.hpp"
 #include "../../../../include/ir/instructions/compare.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
@@ -6,8 +7,8 @@
 #include "../../../../include/ir/instructions/memory.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
+#include "../../../../include/ir/passes/analysis/scev.hpp"
 #include "../../../../include/ir/passes/helpers/sparse_propagation.hpp"
-#include "../../../../include/ir/block_utils.hpp"
 #include "../../../../include/utils/logger.hpp"
 #include <optional>
 
@@ -168,7 +169,8 @@ class SCCPLatticeFunc : public SCCPSolver::LatticeFunction {
     ConstantPool *constant_pool;
 
 public:
-    explicit SCCPLatticeFunc(ConstantPool *pool) : constant_pool(pool) {}
+    explicit SCCPLatticeFunc(ConstantPool *pool)
+        : constant_pool(pool) {}
 
     LatticeVal merge(LatticeVal lhs, LatticeVal rhs) const override {
         if (lhs.isNAC() || rhs.isNAC())
@@ -536,10 +538,35 @@ public:
     }
 };
 
-PM::PreservedAnalyses ConstantPropagationPass::run(Function &function,
-                                                   FAM &manager) {
+void SCEVBasedPropagation(Function& func, SCEVHandle& scev) {
+    for (const auto &bb : func) {
+        for (const auto &inst : bb->all_insts()) {
+            if (!isSameType(inst->getType(), makeBType(IRBTYPE::I32)))
+                continue;
+            auto use_list = inst->getUseList();
+            for (const auto& use : use_list) {
+                auto user_inst = use->getUser()->as<Instruction>();
+                auto user_block = user_inst->getParent().get();
+                auto s = scev.getSCEVAtBlock(inst.get(), user_block);
+                if (s && s->isExpr()) {
+                    auto expr = s->getExpr();
+                    if (expr->isIRValue() && expr->getIRValue()->getVTrait() == ValueTrait::CONSTANT_LITERAL) {
+                        user_inst->replaceUse(use, expr->getIRValue()->as<Value>());
+                        Logger::logDebug("[SCCP]: SCEV-based CP at '", func.getName(), "':'",
+                            user_block->getName() ,"': replaced '", inst->getName(),
+                            "' with '", expr->getIRValue()->getName(), "'");
+                    }
+                }
+            }
+        }
+    }
+}
+
+PM::PreservedAnalyses ConstantPropagationPass::run(Function &function, FAM &manager) {
     bool sccp_inst_modified = false;
     bool sccp_cfg_modified = false;
+
+    // SCEVBasedPropagation(function, manager.getResult<SCEVAnalysis>(function));
 
     SCCPLatticeFunc lattice_func(&function.getConstantPool());
     SCCPSolver solver(&lattice_func);

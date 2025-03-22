@@ -134,7 +134,7 @@ PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
         // Move blocks
         function.addBlock(std::next(call_block->getIter()), after_call);
         moveBlocks(cloned->begin(), cloned->end(),
-            function.shared_from_this(), std::next(call_block->getIter()));
+            function.as<Function>(), std::next(call_block->getIter()));
         inline_cfg_modified = true;
     }
 

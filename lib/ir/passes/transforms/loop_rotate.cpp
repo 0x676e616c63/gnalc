@@ -33,7 +33,7 @@ namespace IR {
 // TODO: A benchmark is needed to see whether merging is profitable
 //       when the vectorize and parallel pass is done.
 std::shared_ptr<BasicBlock> tryMergeLatchToExiting(const Loop &loop) {
-    auto latch = loop.getLatch()->shared_from_this();
+    auto latch = loop.getLatch()->as<BasicBlock>();
     if (!latch)
         return nullptr;
 
@@ -190,8 +190,8 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
             if (loop->getExitBlocks().size() != 1)
                 continue;
 
-            auto old_latch = loop->getLatch()->shared_from_this();
-            auto old_header = loop->getHeader()->shared_from_this();
+            auto old_latch = loop->getLatch()->as<BasicBlock>();
+            auto old_header = loop->getHeader()->as<BasicBlock>();
 
             // The header is exiting
             // If not, it might be possibly rotated before.
@@ -224,7 +224,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
             foldPHI(new_header);
 
             // Now the loop is suitable for rotating
-            auto old_preheader = loop->getPreHeader()->shared_from_this();
+            auto old_preheader = loop->getPreHeader()->as<BasicBlock>();
 
             // First clone Header to PreHeader
             //
@@ -491,7 +491,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
             }
 
             loop_info.delBlock(old_header.get());
-            function.delBlock(old_header->shared_from_this());
+            function.delBlock(old_header->as<BasicBlock>());
 
             num_rotated_loops++;
             loop_rotate_cfg_modified = true;

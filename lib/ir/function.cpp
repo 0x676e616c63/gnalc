@@ -41,14 +41,14 @@ Function::Function(std::string name_, const std::vector<std::shared_ptr<FormalPa
 
 void Function::addBlock(iterator it, std::shared_ptr<BasicBlock> blk) {
     Err::gassert(blk->getParent() == nullptr, "BasicBlock already has parent.");
-    blk->setParent(shared_from_this());
+    blk->setParent(as<Function>());
     blks.insert(it, std::move(blk));
     updateBBIndex();
 }
 
 void Function::addBlock(size_t index, std::shared_ptr<BasicBlock> blk) {
     Err::gassert(blk->getParent() == nullptr, "BasicBlock already has parent.");
-    blk->setParent(shared_from_this());
+    blk->setParent(as<Function>());
     blks.insert(std::next(blks.begin(), static_cast<iterator::difference_type>(index)), std::move(blk));
     updateBBIndex();
 }
@@ -56,14 +56,14 @@ void Function::addBlock(size_t index, std::shared_ptr<BasicBlock> blk) {
 void Function::addBlock(std::shared_ptr<BasicBlock> blk) {
     Err::gassert(blk->getParent() == nullptr, "BasicBlock already has parent.");
     blk->index = blks.size();
-    blk->setParent(shared_from_this());
+    blk->setParent(as<Function>());
     blks.emplace_back(std::move(blk));
 }
 
 void Function::addBlockAsEntry(const std::shared_ptr<BasicBlock> &blk) {
     Err::gassert(blk->getParent() == nullptr, "BasicBlock already has parent.");
     blk->index = 0;
-    blk->setParent(shared_from_this());
+    blk->setParent(as<Function>());
     blks.insert(blks.begin(), blk);
     updateBBIndex();
 }

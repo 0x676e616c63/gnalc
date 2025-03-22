@@ -25,7 +25,7 @@ void BasicBlock::addInst(iterator it, const std::shared_ptr<Instruction> &inst) 
     Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
     Err::gassert(inst->getOpcode() != OP::PHI, "Do not add a phi via addInst. Use addPhiInst instead.");
     insts.insert(it, inst);
-    inst->setParent(shared_from_this());
+    inst->setParent(as<BasicBlock>());
     updateInstIndex();
 }
 
@@ -35,7 +35,7 @@ void BasicBlock::addInst(size_t index, const std::shared_ptr<Instruction> &inst)
     index -= phi_insts.size();
     auto it = std::next(insts.begin(), static_cast<decltype(insts)::iterator::difference_type>(index));
     insts.insert(it, inst);
-    inst->setParent(shared_from_this());
+    inst->setParent(as<BasicBlock>());
     updateInstIndex();
 }
 
@@ -66,14 +66,14 @@ void BasicBlock::addInst(const std::shared_ptr<Instruction> &inst) {
     Err::gassert(inst->getOpcode() != OP::PHI, "Do not add a phi via addInst. Use addPhiInst instead.");
     inst->index = phi_insts.size() + insts.size();
     insts.emplace_back(inst);
-    inst->setParent(shared_from_this());
+    inst->setParent(as<BasicBlock>());
 }
 
 void BasicBlock::addInstAfterPhi(const std::shared_ptr<Instruction> &inst) {
     Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
     Err::gassert(inst->getOpcode() != OP::PHI, "Do not add a phi via addInstAfterPhi. Use addPhiInst instead.");
     insts.insert(insts.begin(), inst);
-    inst->setParent(shared_from_this());
+    inst->setParent(as<BasicBlock>());
     updateInstIndex();
 }
 
@@ -86,7 +86,7 @@ void BasicBlock::addInstBeforeTerminator(const std::shared_ptr<Instruction> &ins
     term->index = phi_insts.size() + insts.size();
     inst->index = term->index - 1;
     insts.insert(std::prev(insts.end()), inst);
-    inst->setParent(shared_from_this());
+    inst->setParent(as<BasicBlock>());
 }
 
 std::list<std::shared_ptr<BasicBlock>> BasicBlock::getPreBB() const { return Util::WeaktoSharedList(pre_bb); }
@@ -194,7 +194,7 @@ std::shared_ptr<RETInst> BasicBlock::getRETInst() const { return std::dynamic_po
 
 void BasicBlock::addPhiInst(const std::shared_ptr<PHIInst> &node) {
     phi_insts.emplace_back(node);
-    node->setParent(shared_from_this());
+    node->setParent(as<BasicBlock>());
     updateInstIndex();
 }
 

@@ -285,5 +285,7 @@ User *Use::getRawUser() const {
 
 std::shared_ptr<Value> Use::getValue() const { return val.lock(); }
 
-std::shared_ptr<User> Use::getUser() const { return user->shared_from_this(); }
+std::shared_ptr<User> Use::getUser() const {
+    return user->as<User>();
+}
 } // namespace IR

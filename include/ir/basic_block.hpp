@@ -33,8 +33,7 @@ using FunctionBBIter = std::list<std::shared_ptr<BasicBlock>>::iterator;
  * @brief BB继承自value, 其被br指令'use', 'use'了它所包含的指令
  * @note next_bb包含的BB和最后一条br指令中的相同
  */
-class BasicBlock : public Value,
-                   public std::enable_shared_from_this<BasicBlock> {
+class BasicBlock : public Value {
     friend class Parser::CFGBuilder;
     friend class Function;
     friend class PostDomTreeAnalysis;

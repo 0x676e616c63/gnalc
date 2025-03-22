@@ -70,22 +70,22 @@ public:
 private:
     std::shared_ptr<Node> root_node;
     std::unordered_map<GraphNodeT , std::shared_ptr<Node>> nodes;
-    std::unordered_map<GraphNodeT , std::unordered_map<GraphNodeT , bool>> dom_cache;
+    mutable std::unordered_map<GraphNodeT , std::unordered_map<GraphNodeT , bool>> dom_cache;
 
 public:
     auto root() const {
         return root_node;
     }
 
-    const auto& operator[](GraphNodeT graph_node) {
+    const auto& operator[](GraphNodeT graph_node) const {
         Err::gassert(nodes.count(graph_node), "No dominator tree for unreachable blocks.");
-        return nodes[graph_node];
+        return nodes.at(graph_node);
     }
 
     // todo: 在构造支配树时预计算DFS进入/离开时间戳可将支配关系判断优化为O(1)时间操作
-    bool ADomB(GraphNodeT a, GraphNodeT b) {
+    bool ADomB(GraphNodeT a, GraphNodeT b) const {
         Err::gassert(nodes.count(a) && nodes.count(b), "No dominator tree for unreachable blocks.");
-        if (nodes[a] == root_node)
+        if (nodes.at(a) == root_node)
             return true;
         if (a == b)
             return true;
@@ -103,11 +103,11 @@ public:
         dom_cache[a][b] = res;
         return res;
     }
-    GraphNodeSet getDomSet(GraphNodeT b) {
+    GraphNodeSet getDomSet(GraphNodeT b) const {
         Err::gassert(nodes.count(b), "No dominator tree for unreachable blocks.");
 
         GraphNodeSet domset = {b};
-        auto _b = nodes[b].get();
+        auto _b = nodes.at(b).get();
         do {
             _b = _b->parent;
             domset.insert(_b->bb);
@@ -116,12 +116,12 @@ public:
     }
 
     // TODO: needs optimization
-    GraphNodeSet getDomFrontier(GraphNodeT b) {
+    GraphNodeSet getDomFrontier(GraphNodeT b) const {
         Err::gassert(nodes.count(b), "No dominator tree for unreachable blocks.");
 
         GraphNodeSet DF;
         std::stack<Node *> STN;
-        STN.push(nodes[b].get());
+        STN.push(nodes.at(b).get());
 
         while (!STN.empty()) {
             const auto node = STN.top();
@@ -129,7 +129,7 @@ public:
 
             auto nextbbs = getNextGraphNodes(node->graph_node);
             for (const auto &next : nextbbs) {
-                const auto next_node = nodes[next];
+                const auto next_node = nodes.at(next);
                 if (!ADomB(b, next) || b == next)
                     DF.insert(next);
             }
@@ -140,7 +140,7 @@ public:
         return DF;
     }
 
-    void printDomTree(std::ostream& os) {
+    void printDomTree(std::ostream& os) const {
         os << "(Post)DomTree:" << std::endl;
         print(root_node, 0);
     }
@@ -154,17 +154,17 @@ public:
     }
 
 private:
-    bool ADomBImpl(GraphNodeT a, GraphNodeT b) {
-        auto _b = nodes[b].get();
+    bool ADomBImpl(GraphNodeT a, GraphNodeT b) const {
+        auto _b = nodes.at(b).get();
         while (_b != root_node.get()) {
             _b = _b->parent();
-            if (nodes[a].get() == _b)
+            if (nodes.at(a).get() == _b)
                 return true;
         }
         return false;
     }
 
-    void print(const std::shared_ptr<Node> &node, int level) {
+    void print(const std::shared_ptr<Node> &node, int level) const {
         if (node == nullptr)
             return;
         for (int i = 0; i < level; i++) {

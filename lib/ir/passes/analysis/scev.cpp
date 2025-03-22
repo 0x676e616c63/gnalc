@@ -87,21 +87,37 @@ std::optional<std::tuple<int, int>> TREC::getConstantAffineAddRec() const {
     return std::nullopt;
 }
 
+TREC *SCEVHandle::getSCEVAtBlock(Value *val, const BasicBlock *block) {
+    // consistency check for debugging
+    if (dynamic_cast<Instruction *>(val)) {
+        auto def_block = dynamic_cast<Instruction *>(val)->getParent().get();
+        if (!domtree->ADomB(def_block, const_cast<BasicBlock *>(block)))
+            return nullptr;
+    }
+    auto scope = loop_info->getLoopFor(block).get();
+    auto it = scoped_evolution[scope].find(val);
+    if (it != scoped_evolution[scope].end())
+        return it->second;
+    auto res = getSCEVAtScope(val, scope);
+    scoped_evolution[scope][val] = res;
+    return res;
+}
+
 TREC *SCEVHandle::getSCEVAtScope(Value *val, const Loop *loop) {
     if (loop != nullptr)
         return instantiateEvolution(analyzeEvolution(loop, val), loop);
 
-    if (auto inst = dynamic_cast<Instruction*>(val)) {
-        TREC* t = nullptr;
+    if (auto inst = dynamic_cast<Instruction *>(val)) {
+        TREC *t = nullptr;
         if (auto l = loop_info->getLoopFor(inst->getParent().get()))
             t = instantiateEvolution(analyzeEvolution(l.get(), val), l.get());
-        if (!t) return nullptr;
+        if (!t)
+            return getTRECUntracked();
         return eval(t, nullptr);
     }
 
     std::shared_ptr<Value> x, y;
-    if (match(val, M::Add(M::VBind(x), M::VBind(y))) ||
-        match(val, M::Sub(M::VBind(x), M::VBind(y))) ||
+    if (match(val, M::Add(M::VBind(x), M::VBind(y))) || match(val, M::Sub(M::VBind(x), M::VBind(y))) ||
         match(val, M::Mul(M::VBind(x), M::VBind(y)))) {
         TREC *tx = nullptr, *ty = nullptr;
         if (auto inst = std::dynamic_pointer_cast<Instruction>(x)) {
@@ -116,14 +132,14 @@ TREC *SCEVHandle::getSCEVAtScope(Value *val, const Loop *loop) {
             tx = getSCEVAtScope(x.get(), nullptr);
         if (!ty)
             ty = getSCEVAtScope(y.get(), nullptr);
-        auto opcode = dynamic_cast<BinaryInst*>(val)->getOpcode();
+        auto opcode = dynamic_cast<BinaryInst *>(val)->getOpcode();
         if (opcode == OP::ADD)
             return eval(getTRECAdd(tx, ty), nullptr);
         if (opcode == OP::SUB)
             return eval(getTRECSub(tx, ty), nullptr);
         if (opcode == OP::MUL)
             return eval(getTRECMul(tx, ty), nullptr);
-        return nullptr;
+        return getTRECUntracked();
     }
     if (auto phi = dynamic_cast<PHIInst *>(val)) {
         std::vector<TREC *> trecs;
@@ -134,11 +150,11 @@ TREC *SCEVHandle::getSCEVAtScope(Value *val, const Loop *loop) {
         auto res = trecs[0];
         for (const auto &trec : trecs) {
             if (res != trec)
-                return nullptr;
+                return getTRECUntracked();
         }
         return eval(res, nullptr);
     }
-    return nullptr;
+    return getTRECUntracked();
 }
 
 // Input: l the current loop, n the definition of an SSA name
@@ -149,7 +165,7 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
     // If Evolution[n] != ⊥ Then
     auto it = evolution.find(val);
     if (it != evolution.end())
-        return it->second;
+        return eval(it->second, loop);
 
     auto inst_val = dynamic_cast<Instruction *>(val);
     if (!inst_val)
@@ -268,14 +284,13 @@ std::pair<bool, TREC *> SCEVHandle::buildUpdateExpr(const PHIInst *loop_phi, Val
                 return {false, getTRECUndef()};
 
             auto s = apply(analyzeEvolution(val_phi_loop, val), getNumberOfLatchExecutions(val_phi_loop));
-            if (!s || !s->isExpr())
+            if (!s)
                 return {false, getTRECUndef()};
-            auto sexpr = s->getExpr();
-            if (sexpr->isBinary() && sexpr->getOp() == SCEVExpr::Binary::Op::Add && sexpr->getLHS()->isIRValue() &&
-                sexpr->getLHS()->getIRValue() == val_phi_invariant) {
+            if (s->isBinary() && s->getOp() == SCEVExpr::Binary::Op::Add && s->getLHS()->isIRValue() &&
+                s->getLHS()->getIRValue() == val_phi_invariant) {
                 auto [exist, update] = buildUpdateExpr(loop_phi, val_phi_invariant, loop_phi_loop);
                 if (exist)
-                    return {true, getTRECAdd(update, getSCEVExprTREC(sexpr->getRHS()))};
+                    return {true, getTRECAdd(update, getSCEVExprTREC(s->getRHS()))};
             }
             return {false, getTRECUndef()};
         }
@@ -348,8 +363,7 @@ void SCEVHandle::foldSCEVExpr(SCEVExpr *expr) const {
         foldSCEVExpr(rhs);
         if (lhs->isIRValue() && rhs->isIRValue()) {
             int x, y;
-            if (match(lhs->getIRValue(), M::I32Bind(x)) &&
-                match(rhs->getIRValue(), M::I32Bind(y))) {
+            if (match(lhs->getIRValue(), M::I32Bind(x)) && match(rhs->getIRValue(), M::I32Bind(y))) {
                 switch (expr->getOp()) {
                 case SCEVExpr::Binary::Op::Add:
                     expr->setIRValue(function->getConst(x + y).get());
@@ -369,6 +383,13 @@ void SCEVHandle::foldSCEVExpr(SCEVExpr *expr) const {
 }
 
 TREC *SCEVHandle::eval(TREC *trec, const Loop *loop) {
+    if (trec->isExpr()) {
+        foldSCEVExpr(trec->getExpr());
+        return trec;
+    }
+    if (!trec->isAddRec())
+        return trec;
+
     // First fold it.
     std::vector stack{trec};
     while (!stack.empty()) {
@@ -380,17 +401,20 @@ TREC *SCEVHandle::eval(TREC *trec, const Loop *loop) {
             stack.emplace_back(curr->getBase());
         } else if (curr->isExpr())
             foldSCEVExpr(curr->getExpr());
+        else if (curr->isUntracked())
+            return getTRECUntracked();
         else
             return trec;
     }
 
-    if (trec->isAddRec() && !trec->getLoop()->contains(loop)) {
-        auto curr = trec->getLoop();
-        while (trec && curr && !curr->contains(loop)) {
-            trec = apply(trec, getNumberOfLatchExecutions(curr));
-            curr = curr->getParent().get();
-        }
+    if (trec->getLoop() == loop)
         return trec;
+
+    if (!trec->getLoop()->contains(loop)) {
+        auto e = apply(trec, getNumberOfLatchExecutions(trec->getLoop()));
+        if (!e)
+            return trec;
+        return getSCEVExprTREC(e);
     }
 
     return trec;
@@ -403,8 +427,15 @@ template <typename T> constexpr T binomial_coefficient(T n, T p) {
     return std::tgamma(n + 1) / (std::tgamma(p + 1) * std::tgamma(n - p + 1));
 }
 
-// TODO: Symbolic representation of applied TREC
-TREC *SCEVHandle::apply(TREC *trec, SCEVExpr *trip_cnt) {
+// { c0, +, c1, +, c2, +, ..., +, cn }_x(l_x)
+//   == c0 * binomial_coe(trip_cnt, 0) + c1 * binomial_coe(trip_cnt, 1) + ...
+// Note that we reserve c0 as its original expression.
+// For example:
+// trec: { a, +, 7 } trip_cnt: 5
+// Output: (a + 35)
+// TODO: Currently we only support constant trip count and constant TREC (except the first item).
+//       Support for symbolic representation of the applied TREC should be set up in the future.
+SCEVExpr *SCEVHandle::apply(TREC *trec, SCEVExpr *trip_cnt) {
     if (!trip_cnt)
         return nullptr;
     if (!trec->isAddRec())
@@ -416,7 +447,8 @@ TREC *SCEVHandle::apply(TREC *trec, SCEVExpr *trip_cnt) {
         int constant_trip_cnt = -1;
         if (!match(trip_cnt->getIRValue(), M::I32Bind(constant_trip_cnt)))
             return nullptr;
-        if (constant_trip_cnt > 512)
+        // Avoid too big trip count
+        if (constant_trip_cnt > 1024)
             return nullptr;
         // {{ c0, c1 }, +, { c2 + c3 }} -> { c0, c1, c2, c3 }
         std::vector<SCEVExpr *> flatten;
@@ -438,13 +470,13 @@ TREC *SCEVHandle::apply(TREC *trec, SCEVExpr *trip_cnt) {
         for (size_t i = 1; i < flatten.size(); ++i) {
             int ci;
             if (!flatten[i]->isIRValue() || !match(flatten[i]->getIRValue(), M::I32Bind(ci)))
-                return trec;
+                return nullptr;
             constants.emplace_back(ci);
         }
         for (int p = 0; p < constants.size(); ++p)
-            constants[p] = binomial_coefficient(constant_trip_cnt, p + 1);
+            constants[p] *= binomial_coefficient(constant_trip_cnt, p + 1);
         auto cres = std::accumulate(constants.begin(), constants.end(), 0);
-        return getSCEVExprTREC(getSCEVExprAdd(flatten[0], getSCEVExpr(function->getConst(cres).get())));
+        return getSCEVExprAdd(flatten[0], getSCEVExpr(function->getConst(cres).get()));
     }
     return nullptr;
 }
@@ -488,7 +520,6 @@ SCEVExpr *SCEVHandle::getNumberOfLatchExecutions(const Loop *loop) {
         if (cmpop == ICMPOP::eq || cmpop == ICMPOP::ne)
             return nullptr;
 
-        Err::gassert(invariant->getVTrait() == ValueTrait::CONSTANT_LITERAL);
         auto evo = analyzeEvolution(loop, to_evo);
         auto cond = getSCEVExpr(invariant);
         // If this is a constant affine, the number of iterations can be precisely calculated.
@@ -572,9 +603,10 @@ TREC *SCEVHandle::getTRECAdd(TREC *x, TREC *y) {
     if (x->isAddRec() && y->isExpr())
         return getAddRecTREC(x->getLoop(), getTRECAdd(x->getBase(), y), x->getStep());
     if (x->isExpr() && y->isAddRec())
-        return getAddRecTREC(x->getLoop(), getTRECAdd(y->getBase(), x), y->getStep());
+        return getAddRecTREC(y->getLoop(), getTRECAdd(y->getBase(), x), y->getStep());
     Err::gassert(x->isAddRec() && y->isAddRec());
-    Err::gassert(x->getLoop() == y->getLoop(), "Cannot add AddRecs with different loops");
+    if (x->getLoop() != y->getLoop())
+        return getTRECUntracked();
     return getAddRecTREC(x->getLoop(), getTRECAdd(x->getBase(), y->getBase()), getTRECAdd(x->getStep(), y->getStep()));
 }
 TREC *SCEVHandle::getTRECSub(TREC *x, TREC *y) {
@@ -586,9 +618,10 @@ TREC *SCEVHandle::getTRECSub(TREC *x, TREC *y) {
     if (x->isAddRec() && y->isExpr())
         return getAddRecTREC(x->getLoop(), getTRECSub(x->getBase(), y), x->getStep());
     if (x->isExpr() && y->isAddRec())
-        return getAddRecTREC(x->getLoop(), getTRECSub(x, y->getBase()), y->getStep());
+        return getAddRecTREC(y->getLoop(), getTRECSub(x, y->getBase()), y->getStep());
     Err::gassert(x->isAddRec() && y->isAddRec());
-    Err::gassert(x->getLoop() == y->getLoop(), "Cannot add AddRecs with different loops");
+    if (x->getLoop() != y->getLoop())
+        return getTRECUntracked();
     return getAddRecTREC(x->getLoop(), getTRECSub(x->getBase(), y->getBase()), getTRECSub(x->getStep(), y->getStep()));
 }
 TREC *SCEVHandle::getTRECMul(TREC *x, TREC *y) {
@@ -600,9 +633,10 @@ TREC *SCEVHandle::getTRECMul(TREC *x, TREC *y) {
     if (x->isAddRec() && y->isExpr())
         return getAddRecTREC(x->getLoop(), getTRECMul(x->getBase(), y), getTRECMul(x->getStep(), y));
     if (x->isExpr() && y->isAddRec())
-        return getAddRecTREC(x->getLoop(), getTRECMul(y->getBase(), x), getTRECMul(y->getStep(), x));
+        return getAddRecTREC(y->getLoop(), getTRECMul(y->getBase(), x), getTRECMul(y->getStep(), x));
     Err::gassert(x->isAddRec() && y->isAddRec());
-    Err::gassert(x->getLoop() == y->getLoop(), "Cannot multiply AddRecs with different loops");
+    if (x->getLoop() != y->getLoop())
+        return getTRECUntracked();
     auto new_base = getTRECMul(x->getBase(), y->getBase());
     auto new_step = getTRECAdd(getTRECAdd(getTRECMul(x, y->getStep()), getTRECMul(y, x->getStep())),
                                getTRECMul(x->getStep(), y->getStep()));
@@ -660,6 +694,8 @@ SCEVExpr *SCEVHandle::getSCEVExprNeg(SCEVExpr *x) {
 }
 SCEVExpr *SCEVHandle::getSCEVExpr(Value *x) { return getPoolSCEV(std::make_shared<SCEVExpr>(x)); }
 
-SCEVHandle SCEVAnalysis::run(Function &func, FAM &fam) { return SCEVHandle(&func, &fam.getResult<LoopAnalysis>(func)); }
+SCEVHandle SCEVAnalysis::run(Function &func, FAM &fam) {
+    return SCEVHandle(&func, &fam.getResult<LoopAnalysis>(func), &fam.getResult<DomTreeAnalysis>(func));
+}
 
 } // namespace IR

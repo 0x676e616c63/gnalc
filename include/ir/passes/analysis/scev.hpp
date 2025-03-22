@@ -13,6 +13,7 @@
 
 #include "../../pattern_match.hpp"
 #include "../pass_manager.hpp"
+#include "domtree_analysis.hpp"
 #include "loop_analysis.hpp"
 
 #include <optional>
@@ -99,19 +100,27 @@ class SCEVHandle {
     friend class TREC;
 
 public:
-    SCEVHandle(Function *func, LoopInfo *loop_info_) : function(func), loop_info(loop_info_) {
+    SCEVHandle(Function *func, LoopInfo *loop_info_, DomTree* dom_tree)
+        : function(func), loop_info(loop_info_), domtree(dom_tree) {
         // We reserve 2 slots to get Undef/Untracked quickly
         // [0] for Undef, [1] for Untracked
         trec_pool.emplace_back(std::make_shared<TREC>(TREC::undef()));
         trec_pool.emplace_back(std::make_shared<TREC>(TREC::untracked()));
     }
 
-    // the outermost scope ---> 'loop == nullptr'
-    TREC *getSCEVAtScope(Value *val, const Loop *loop);
+    // Get SCEV of val at the given block.
+    // Note that if the value is not available at that block, nullptr will be returned.
+    TREC *getSCEVAtBlock(Value* val, const BasicBlock* block);
 
     SCEVExpr *getNumberOfLatchExecutions(const Loop *loop);
-
 private:
+    // Get SCEV of val at within the given scope.
+    // the outermost scope ---> 'loop == nullptr'
+    // Note that this is less safe than `getSCEVAtBlock` since it
+    // has no check for whether the value is available.
+    // TODO: Not safe so set it private. Should this be public?
+    TREC *getSCEVAtScope(Value *val, const Loop *loop);
+
     // Input: l the current loop, n the definition of an SSA name
     // Output: TREC for the variable defined by n within l
     TREC *analyzeEvolution(const Loop *loop, Value *val);
@@ -123,7 +132,7 @@ private:
     //         update is the reconstructed expression for the overall effect in the loop of h
     std::pair<bool, TREC *> buildUpdateExpr(const PHIInst *loop_phi, Value *val, const Loop *loop_phi_loop);
 
-    TREC *apply(TREC *trec, SCEVExpr *trip_cnt);
+    SCEVExpr *apply(TREC *trec, SCEVExpr *trip_cnt);
 
     // Input: trec a symbolic TREC, l the instantiation loop
     // Output: an instantiation of trec
@@ -150,8 +159,12 @@ private:
 
     Function *function;
     LoopInfo *loop_info;
+    DomTree* domtree;
 
+    // cache for analyzeEvolution
     std::map<const Value *, TREC *> evolution;
+    // cache for getSCEVAtScope
+    std::map<const Loop*, std::map<const Value *, TREC *>> scoped_evolution;
 
     // We reserve 2 slots to get Undef/Untracked quickly
     // [0] for Undef, [1] for Untracked
