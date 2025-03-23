@@ -12,8 +12,7 @@
 
 namespace IR {
 
-class NameNormalizePass : public PM::PassInfo<NameNormalizePass>,
-                          public IRVisitor {
+class NameNormalizePass : public PM::PassInfo<NameNormalizePass>, public IRVisitor {
 private:
     size_t curr_idx{0};
     bool bb_rename{false};

@@ -1,7 +1,7 @@
 #include "../../../../include/ir/passes/transforms/jump_threading.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
+#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 
 #include <deque>
 

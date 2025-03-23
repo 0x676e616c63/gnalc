@@ -19,7 +19,8 @@ ICMPOP flipCond(ICMPOP cond) {
         return ICMPOP::sge;
     case ICMPOP::sle:
         return ICMPOP::sgt;
-    default: break;
+    default:
+        break;
     }
     Err::unreachable("Invalid ICMPOP to flip");
     return cond;
@@ -41,7 +42,8 @@ FCMPOP flipCond(FCMPOP cond) {
         return FCMPOP::oeq;
     case FCMPOP::ord:
         Err::not_implemented("FCMPOP::ord flip");
-    default: break;
+    default:
+        break;
     }
     Err::unreachable("Invalid FCMPOP to flip.");
     return cond;
@@ -61,7 +63,8 @@ ICMPOP reverseCond(ICMPOP cond) {
         return ICMPOP::sgt;
     case ICMPOP::sle:
         return ICMPOP::sge;
-    default: break;
+    default:
+        break;
     }
     Err::unreachable("Invalid ICMPOP to reverse.");
     return cond;
@@ -83,54 +86,40 @@ FCMPOP reverseCond(FCMPOP cond) {
         return FCMPOP::one;
     case FCMPOP::ord:
         Err::not_implemented("FCMPOP::ord reverse");
-    default: break;
+    default:
+        break;
     }
     Err::unreachable("Invalid FCMPOP to reverse.");
     return cond;
 }
 
-ICMPInst::ICMPInst(NameRef name, ICMPOP cond, const std::shared_ptr<Value> &lhs,
-                   const std::shared_ptr<Value> &rhs)
+ICMPInst::ICMPInst(NameRef name, ICMPOP cond, const pVal &lhs, const pVal &rhs)
     : Instruction(OP::ICMP, name, makeBType(IRBTYPE::I1)), cond(cond) {
     addOperand(lhs);
     addOperand(rhs);
 }
 
-std::shared_ptr<Value> ICMPInst::getLHS() const {
-    return getOperand(0)->getValue();
-}
+pVal ICMPInst::getLHS() const { return getOperand(0)->getValue(); }
 
-std::shared_ptr<Value> ICMPInst::getRHS() const {
-    return getOperand(1)->getValue();
-}
+pVal ICMPInst::getRHS() const { return getOperand(1)->getValue(); }
 
 ICMPOP ICMPInst::getCond() const { return cond; }
 
-void ICMPInst::condFlip() {
-    cond = flipCond(cond);
-}
+void ICMPInst::condFlip() { cond = flipCond(cond); }
 
-
-FCMPInst::FCMPInst(NameRef name, FCMPOP cond, const std::shared_ptr<Value> &lhs,
-                   const std::shared_ptr<Value> &rhs)
+FCMPInst::FCMPInst(NameRef name, FCMPOP cond, const pVal &lhs, const pVal &rhs)
     : Instruction(OP::FCMP, name, makeBType(IRBTYPE::I1)), cond(cond) {
     addOperand(lhs);
     addOperand(rhs);
 }
 
-std::shared_ptr<Value> FCMPInst::getLHS() const {
-    return getOperand(0)->getValue();
-}
+pVal FCMPInst::getLHS() const { return getOperand(0)->getValue(); }
 
-std::shared_ptr<Value> FCMPInst::getRHS() const {
-    return getOperand(1)->getValue();
-}
+pVal FCMPInst::getRHS() const { return getOperand(1)->getValue(); }
 
 FCMPOP FCMPInst::getCond() const { return cond; }
 
-void FCMPInst::condFlip() {
-    cond = flipCond(cond);
-}
+void FCMPInst::condFlip() { cond = flipCond(cond); }
 
 void ICMPInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
 

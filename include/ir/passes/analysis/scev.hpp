@@ -44,10 +44,11 @@ public:
     explicit SCEVExpr(Binary::Op op, SCEVExpr *lhs, SCEVExpr *rhs)
         : type(SCEVExprType::Binary), value(Binary{op, lhs, rhs}) {}
 
-    void setIRValue(Value *ir_val) { value = ir_val;}
+    void setIRValue(Value *ir_val) { value = ir_val; }
     bool isIRValue() const { return type == SCEVExprType::Value; }
     bool isBinary() const { return type == SCEVExprType::Binary; }
-    Value *getIRValue() const { return std::get<Value *>(value); }
+    Value *getRawIRValue() const { return std::get<Value *>(value); }
+    pVal getIRValue() const { return std::get<Value *>(value)->as<Value>(); }
     SCEVExpr *getLHS() const { return std::get<Binary>(value).lhs; }
     SCEVExpr *getRHS() const { return std::get<Binary>(value).rhs; }
     Binary::Op getOp() const { return std::get<Binary>(value).op; }
@@ -100,7 +101,7 @@ class SCEVHandle {
     friend class TREC;
 
 public:
-    SCEVHandle(Function *func, LoopInfo *loop_info_, DomTree* dom_tree)
+    SCEVHandle(Function *func, LoopInfo *loop_info_, DomTree *dom_tree)
         : function(func), loop_info(loop_info_), domtree(dom_tree) {
         // We reserve 2 slots to get Undef/Untracked quickly
         // [0] for Undef, [1] for Untracked
@@ -110,9 +111,12 @@ public:
 
     // Get SCEV of val at the given block.
     // Note that if the value is not available at that block, nullptr will be returned.
-    TREC *getSCEVAtBlock(Value* val, const BasicBlock* block);
+    TREC *getSCEVAtBlock(Value *val, const BasicBlock *block);
+    TREC *getSCEVAtBlock(const pVal &val, const std::shared_ptr<BasicBlock> &block);
 
     SCEVExpr *getNumberOfLatchExecutions(const Loop *loop);
+    SCEVExpr *getNumberOfLatchExecutions(const pLoop &loop);
+
 private:
     // Get SCEV of val at within the given scope.
     // the outermost scope ---> 'loop == nullptr'
@@ -155,16 +159,16 @@ private:
     SCEVExpr *getSCEVExprMul(SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExprNeg(SCEVExpr *x);
     SCEVExpr *getSCEVExpr(Value *x);
-    void foldSCEVExpr(SCEVExpr* expr) const;
+    void foldSCEVExpr(SCEVExpr *expr) const;
 
     Function *function;
     LoopInfo *loop_info;
-    DomTree* domtree;
+    DomTree *domtree;
 
     // cache for analyzeEvolution
     std::map<const Value *, TREC *> evolution;
     // cache for getSCEVAtScope
-    std::map<const Loop*, std::map<const Value *, TREC *>> scoped_evolution;
+    std::map<const Loop *, std::map<const Value *, TREC *>> scoped_evolution;
 
     // We reserve 2 slots to get Undef/Untracked quickly
     // [0] for Undef, [1] for Untracked

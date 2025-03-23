@@ -1,26 +1,26 @@
 #ifndef GNALC_GRAPH_DOMTREE_HPP
 #define GNALC_GRAPH_DOMTREE_HPP
 
-#include <ostream>
 #include <memory>
+#include <ostream>
 #include <set>
-#include <vector>
 #include <stack>
 #include <unordered_map>
+#include <vector>
 
-#include "graph.hpp"
-#include "../utils/generic_visitor.hpp"
 #include "../utils/exception.hpp"
+#include "../utils/generic_visitor.hpp"
 #include "../utils/logger.hpp"
+#include "graph.hpp"
 
 namespace Graph {
-template <typename GraphT, bool IsPostDom>
-class GenericDomTreeBuilder;
+struct Identity {
+    template <typename T> auto operator()(T &&v) const { return std::forward<T>(v); }
+};
 
 // todo: 使用缓存的DFS优化
-template <typename GraphT, bool IsPostDom>
-class GenericDomTree {
-    friend class GenericDomTreeBuilder<GraphT, IsPostDom>;
+template <typename GraphT, bool IsPostDom, typename GraphNodeProj = Identity> class GenericDomTree {
+    template <typename, bool, typename> friend class GenericDomTreeBuilder;
 
     using GraphNodeT = typename GraphInfo<GraphT>::NodeT;
     using GraphNodeSet = std::set<GraphNodeT>;
@@ -37,47 +37,50 @@ class GenericDomTree {
         else
             return GraphInfo<GraphT>::getPreds(node);
     }
+
 public:
-    class Node {
-        friend class GenericDomTree<GraphT, IsPostDom>;
-        friend class GenericDomTreeBuilder<GraphT, IsPostDom>;
+    class Node;
+    using pNode = std::shared_ptr<Node>;
+    class Node : public std::enable_shared_from_this<Node> {
+        friend class GenericDomTree;
+        template <typename, bool, typename> friend class GenericDomTreeBuilder;
         GraphNodeT graph_node;
         Node *parent_node; // 就是idom
-        std::vector<std::shared_ptr<Node>> child_nodes;
+        std::vector<pNode> child_nodes;
         unsigned node_level = 0; // 节点层次，root是1
         unsigned node_bfs_num = 0;
 
     public:
         explicit Node(GraphNodeT bb) : graph_node(bb), parent_node(nullptr) {}
-        auto parent() const { return parent_node; }
-        const auto& children() const { return child_nodes; }
+        auto raw_parent() const { return parent_node; }
+        pNode parent() const {
+            if (parent_node)
+                return parent_node->shared_from_this();
+            return nullptr;
+        }
+        const auto &children() const { return child_nodes; }
         auto level() const { return node_level; }
         auto bfs_num() const { return node_bfs_num; }
-        const auto& block() const { return graph_node; }
-        void setBlock(GraphNodeT n) {
-            graph_node = n;
-        }
+        const auto &raw_block() const { return graph_node; }
+        auto block() const { return GraphNodeProj()(graph_node); }
+        void setBlock(GraphNodeT n) { graph_node = n; }
     };
     struct NodeChildGetter {
-        auto operator()(const std::shared_ptr<Node> &node) {
-            return node->children();
-        }
+        auto operator()(const pNode &node) { return node->children(); }
     };
-    using NodeBFVisitor = Util::GenericBFVisitor<std::shared_ptr<Node>, NodeChildGetter>;
-    template<Util::DFVOrder order = Util::DFVOrder::PreOrder>
-    using NodeDFVisitor = Util::GenericDFVisitor<std::shared_ptr<Node>, NodeChildGetter, order>;
+    using NodeBFVisitor = Util::GenericBFVisitor<pNode, NodeChildGetter>;
+    template <Util::DFVOrder order = Util::DFVOrder::PreOrder>
+    using NodeDFVisitor = Util::GenericDFVisitor<pNode, NodeChildGetter, order>;
 
 private:
-    std::shared_ptr<Node> root_node;
-    std::unordered_map<GraphNodeT , std::shared_ptr<Node>> nodes;
-    mutable std::unordered_map<GraphNodeT , std::unordered_map<GraphNodeT , bool>> dom_cache;
+    pNode root_node;
+    std::unordered_map<GraphNodeT, pNode> nodes;
+    mutable std::unordered_map<GraphNodeT, std::unordered_map<GraphNodeT, bool>> dom_cache;
 
 public:
-    auto root() const {
-        return root_node;
-    }
+    auto root() const { return root_node; }
 
-    const auto& operator[](GraphNodeT graph_node) const {
+    const auto &operator[](GraphNodeT graph_node) const {
         Err::gassert(nodes.count(graph_node), "No dominator tree for unreachable blocks.");
         return nodes.at(graph_node);
     }
@@ -140,31 +143,28 @@ public:
         return DF;
     }
 
-    void printDomTree(std::ostream& os) const {
+    void printDomTree(std::ostream &os) const {
         os << "(Post)DomTree:" << std::endl;
         print(root_node, 0);
     }
 
-    auto getBFVisitor() const {
-        return NodeBFVisitor{ root_node };
-    }
-    template<Util::DFVOrder order = Util::DFVOrder::PreOrder>
-    auto getDFVisitor() const {
-        return NodeDFVisitor<order>{ root_node };
+    auto getBFVisitor() const { return NodeBFVisitor{root_node}; }
+    template <Util::DFVOrder order = Util::DFVOrder::PreOrder> auto getDFVisitor() const {
+        return NodeDFVisitor<order>{root_node};
     }
 
 private:
     bool ADomBImpl(GraphNodeT a, GraphNodeT b) const {
         auto _b = nodes.at(b).get();
         while (_b != root_node.get()) {
-            _b = _b->parent();
+            _b = _b->raw_parent();
             if (nodes.at(a).get() == _b)
                 return true;
         }
         return false;
     }
 
-    void print(const std::shared_ptr<Node> &node, int level) const {
+    void print(const pNode &node, int level) const {
         if (node == nullptr)
             return;
         for (int i = 0; i < level; i++) {
@@ -197,8 +197,8 @@ private:
     void updateLevel() {
         unsigned l = 0;
         unsigned i = 0;
-        std::vector<std::shared_ptr<Node>> cur;
-        std::vector<std::shared_ptr<Node>> next;
+        std::vector<pNode> cur;
+        std::vector<pNode> next;
         cur.emplace_back(root_node);
         while (!cur.empty()) {
             ++l;
@@ -221,10 +221,9 @@ private:
 // https://zhuanlan.zhihu.com/p/586372481
 // https://zhuanlan.zhihu.com/p/365912693
 // todo: 快速更新
-template <typename GraphT, bool IsPostDom>
+template <typename GraphT, bool IsPostDom, typename DomTreeT = GenericDomTree<GraphT, IsPostDom>>
 class GenericDomTreeBuilder {
 public:
-    using DomTreeT = GenericDomTree<GraphT, IsPostDom>;
     using GraphNodeT = typename DomTreeT::GraphNodeT;
 
     struct DTAINFO {
@@ -311,16 +310,13 @@ public:
         for (const auto &key : info.idfn) {
             // 3个树图MD越看越迷...
             if (key == entry)
-                continue;                            // 跳过根节点
-            auto dfs_tree_node = info.node_map[key]; // DFS SPANNING TREE'S NODE
-            auto dfs_tree_parent =
-                dfs_tree_node.dfs_parent; // DFS SPANNING TREE'S PARENT NODE
-            auto cur_dom_tree_node =
-                domtree.nodes[dfs_tree_parent].get(); // DomTree's Node
-            while (info.dfn(cur_dom_tree_node->graph_node) >
-                   info.dfn(dfs_tree_node._sdom)) {
+                continue;                                                  // 跳过根节点
+            auto dfs_tree_node = info.node_map[key];                       // DFS SPANNING TREE'S NODE
+            auto dfs_tree_parent = dfs_tree_node.dfs_parent;               // DFS SPANNING TREE'S PARENT NODE
+            auto cur_dom_tree_node = domtree.nodes[dfs_tree_parent].get(); // DomTree's Node
+            while (info.dfn(cur_dom_tree_node->graph_node) > info.dfn(dfs_tree_node._sdom)) {
                 cur_dom_tree_node = cur_dom_tree_node->parent_node;
-                   }
+            }
             dfs_tree_node._idom = cur_dom_tree_node->graph_node;
             // result need to fix when idom is not equal to sdom??
             domtree.linkDTN(dfs_tree_node.bb, dfs_tree_node._idom);
@@ -328,5 +324,5 @@ public:
         domtree.updateLevel();
     }
 };
-}
+} // namespace Graph
 #endif // DOMTREE_HPP

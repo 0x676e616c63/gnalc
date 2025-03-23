@@ -1,5 +1,4 @@
-int insertsort(int b)
-{
+int insertsort(int b) {
     int a = b;
     int c = b;
     int d;

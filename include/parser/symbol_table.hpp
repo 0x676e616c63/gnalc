@@ -22,9 +22,7 @@ class SymbolTable {
 public:
     SymbolTable() {}
 
-    void initScope(std::string name = "__default_scope_name") {
-        table.emplace_back(Scope{std::move(name), {}});
-    }
+    void initScope(std::string name = "__default_scope_name") { table.emplace_back(Scope{std::move(name), {}}); }
 
     void finishScope() { table.pop_back(); }
 

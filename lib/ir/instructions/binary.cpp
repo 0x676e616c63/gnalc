@@ -5,7 +5,7 @@
 #include "../../../include/ir/visitor.hpp"
 
 namespace IR {
-std::shared_ptr<Type> OPtoTY(OP op) {
+pType OPtoTY(OP op) {
     switch (op) {
     case OP::ADD:
     case OP::SUB:
@@ -28,40 +28,25 @@ std::shared_ptr<Type> OPtoTY(OP op) {
 }
 
 // TYPE 由 OP 决定
-BinaryInst::BinaryInst(NameRef name, OP opcode,
-                       const std::shared_ptr<Value> &lhs,
-                       const std::shared_ptr<Value> &rhs)
+BinaryInst::BinaryInst(NameRef name, OP opcode, const pVal &lhs, const pVal &rhs)
     : Instruction(opcode, name, OPtoTY(opcode)) {
     addOperand(lhs);
     addOperand(rhs);
 }
 
-std::shared_ptr<Value> BinaryInst::getLHS() const {
-    return getOperand(0)->getValue();
-}
+pVal BinaryInst::getLHS() const { return getOperand(0)->getValue(); }
 
-std::shared_ptr<Value> BinaryInst::getRHS() const {
-    return getOperand(1)->getValue();
-}
+pVal BinaryInst::getRHS() const { return getOperand(1)->getValue(); }
 
-void BinaryInst::setLHS(const std::shared_ptr<Value> &lhs) {
-    setOperand(0, lhs);
-}
+void BinaryInst::setLHS(const pVal &lhs) { setOperand(0, lhs); }
 
-void BinaryInst::setRHS(const std::shared_ptr<Value> &rhs) {
-    setOperand(1, rhs);
-}
+void BinaryInst::setRHS(const pVal &rhs) { setOperand(1, rhs); }
 
 void BinaryInst::swapLHSRHS() { swapOperand(0, 1); }
 
-FNEGInst::FNEGInst(NameRef name, std::shared_ptr<Value> val)
-    : Instruction(OP::FNEG, name, makeBType(IRBTYPE::FLOAT)) {
-    addOperand(val);
-}
+FNEGInst::FNEGInst(NameRef name, pVal val) : Instruction(OP::FNEG, name, makeBType(IRBTYPE::FLOAT)) { addOperand(val); }
 
-std::shared_ptr<Value> FNEGInst::getVal() const {
-    return getOperand(0)->getValue();
-}
+pVal FNEGInst::getVal() const { return getOperand(0)->getValue(); }
 
 void BinaryInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
 void FNEGInst::accept(IRVisitor &visitor) { visitor.visit(*this); }

@@ -10,10 +10,10 @@ namespace IR {
 PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
     bool dse_inst_modified = false;
 
-    auto& aa_res = fam.getResult<AliasAnalysis>(function);
-    auto& domtree = fam.getResult<DomTreeAnalysis>(function);
-    auto& postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
-    std::set<std::shared_ptr<Instruction>> unused_store;
+    auto &aa_res = fam.getResult<AliasAnalysis>(function);
+    auto &domtree = fam.getResult<DomTreeAnalysis>(function);
+    auto &postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
+    std::set<pInst> unused_store;
 
     // For each store, collect all possible store on its post dominator block as candidates.
     // Then we consider all other blocks that the block can reach,
@@ -23,19 +23,19 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
     auto dfv = function.getDFVisitor();
     for (const auto &store_block : dfv) {
         for (auto it = store_block->begin(); it != store_block->end(); ++it) {
-            auto store = std::dynamic_pointer_cast<STOREInst>(*it);
+            auto store = (*it)->as<STOREInst>();
             if (store == nullptr)
                 continue;
-            auto store_ptr = store->getPtr().get();
+            auto store_ptr = store->getPtr();
 
             bool erased = false;
             bool killed = false;
 
             // Eliminate a store if overwritten
             for (auto inst_it = std::next(it); inst_it != store_block->end(); ++inst_it) {
-                auto modref = aa_res.getInstModRefInfo(inst_it->get(), store_ptr, fam);
-                if (auto store2 = std::dynamic_pointer_cast<STOREInst>(*inst_it)) {
-                    auto store2_ptr = store2->getPtr().get();
+                auto modref = aa_res.getInstModRefInfo(*inst_it, store_ptr, fam);
+                if (auto store2 = (*inst_it)->as<STOREInst>()) {
+                    auto store2_ptr = store2->getPtr();
                     auto aa = aa_res.getAliasInfo(store_ptr, store2_ptr);
                     if (aa == AliasInfo::MustAlias) {
                         erased = true;
@@ -59,12 +59,11 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
             // Not local memory. Reference may happen outside the function, skip it.
             if (!aa_res.isLocal(store_ptr)) {
                 auto real_store_ptr = store_ptr;
-                while (auto gep = dynamic_cast<GEPInst*>(real_store_ptr))
-                    real_store_ptr = gep->getPtr().get();
+                while (auto gep = real_store_ptr->as<GEPInst>())
+                    real_store_ptr = gep->getPtr();
                 if (real_store_ptr->getVTrait() == ValueTrait::GLOBAL_VARIABLE) {
                     std::deque worklist{real_store_ptr};
-                    while (!worklist.empty())
-                    {
+                    while (!worklist.empty()) {
                         auto curr = worklist.front();
                         worklist.pop_front();
                         for (const auto &user : curr->inst_users()) {
@@ -73,7 +72,7 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
                                 break;
                             }
                             if (user->getOpcode() == OP::GEP)
-                                worklist.emplace_back(user.get());
+                                worklist.emplace_back(user);
                         }
                         if (killed)
                             break;
@@ -82,19 +81,18 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
                         unused_store.emplace(store);
                         continue;
                     }
-                }
-                else if (real_store_ptr->getVTrait() == ValueTrait::FORMAL_PARAMETER) {
+                } else if (real_store_ptr->getVTrait() == ValueTrait::FORMAL_PARAMETER) {
                     // TODO: check caller's actual argument.
                     continue;
                 }
             }
             // local memory, check through CFG.
             else {
-                std::set<std::shared_ptr<BasicBlock>> visited;
-                std::deque<std::shared_ptr<BasicBlock>> worklist{store_block->succ_begin(), store_block->succ_end()};
+                std::set<pBlock> visited;
+                std::deque<pBlock> worklist{store_block->succ_begin(), store_block->succ_end()};
                 // STOREInst that may contribute to the elimination
-                std::vector<std::shared_ptr<STOREInst>> candidates;
-                std::vector<std::shared_ptr<Instruction>> killers;
+                std::vector<pStore> candidates;
+                std::vector<pInst> killers;
                 while (!worklist.empty()) {
                     auto store_succ = worklist.front();
                     visited.emplace(store_succ);
@@ -106,20 +104,19 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
                     // For other blocks, if it post dominates the store block, we can eliminate the store
                     // if there is a store in the post dominator block. If not, we still need to look at it
                     // to figure out if there is something could kill the opportunity.
-                    if (store_succ != store_block && postdomtree.ADomB(store_succ.get(), store_block.get())) {
+                    if (store_succ != store_block && postdomtree.ADomB(store_succ, store_block)) {
                         for (const auto &inst : *store_succ) {
                             // We only collect the first possible store in a block,
                             // So once we find one, break.
-                            if (auto store2 = std::dynamic_pointer_cast<STOREInst>(inst)) {
-                                auto store2_ptr = store2->getPtr().get();
+                            if (auto store2 = inst->as<STOREInst>()) {
+                                auto store2_ptr = store2->getPtr();
                                 auto aa = aa_res.getAliasInfo(store2_ptr, store_ptr);
                                 if (aa == AliasInfo::MustAlias) {
                                     candidates.emplace_back(store);
                                     break;
                                 }
-                            }
-                            else {
-                                auto modref = aa_res.getInstModRefInfo(inst.get(), store_ptr, fam);
+                            } else {
+                                auto modref = aa_res.getInstModRefInfo(inst, store_ptr, fam);
                                 if (modref == ModRefInfo::Ref || modref == ModRefInfo::ModRef) {
                                     killers.emplace_back(inst);
                                     break;
@@ -128,7 +125,7 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
                         }
                     } else {
                         for (const auto &inst : *store_succ) {
-                            auto modref = aa_res.getInstModRefInfo(inst.get(), store_ptr, fam);
+                            auto modref = aa_res.getInstModRefInfo(inst, store_ptr, fam);
                             if (modref == ModRefInfo::Ref || modref == ModRefInfo::ModRef) {
                                 killers.emplace_back(inst);
                                 break;
@@ -159,7 +156,7 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
                                 continue;
                             // We only collect one candidate in a block.
                             Err::gassert(candidate->getParent() != another->getParent());
-                            if (!domtree.ADomB(candidate->getParent().get(), another->getParent().get())) {
+                            if (!domtree.ADomB(candidate->getParent(), another->getParent())) {
                                 able_to_delete = false;
                                 break;
                             }
@@ -170,7 +167,7 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
                                     able_to_delete = false;
                                     break;
                                 }
-                            } else if (!postdomtree.ADomB(candidate->getParent().get(), killer->getParent().get())) {
+                            } else if (!postdomtree.ADomB(candidate->getParent(), killer->getParent())) {
                                 able_to_delete = false;
                                 break;
                             }

@@ -10,33 +10,33 @@
 #include <queue>
 #include <vector>
 
+#include "../../../../include/ir/formatter.hpp"
 #include "../../visitor.hpp"
 #include "../analysis/domtree_analysis.hpp"
-#include "../../../../include/ir/formatter.hpp"
 
 namespace IR {
 class PromotePass : public PM::PassInfo<PromotePass> {
     // Keep this to avoid interruptions
-    std::shared_ptr<Value> undef_val = std::make_shared<Value>("__reg_undef", makeBType(IRBTYPE::UNDEFINED), ValueTrait::UNDEFINED);
+    pVal undef_val = std::make_shared<Value>("__reg_undef", makeBType(IRBTYPE::UNDEFINED), ValueTrait::UNDEFINED);
     struct BLOCK_INFO {
-        std::map<unsigned, std::shared_ptr<LOADInst>> load_map;
-        std::map<unsigned, std::shared_ptr<STOREInst>> store_map;
+        std::map<unsigned, pLoad> load_map;
+        std::map<unsigned, pStore> store_map;
     };
     struct ALLOCA_INFO {
-        std::shared_ptr<ALLOCAInst> alloca;
-        std::vector<std::shared_ptr<LOADInst>> loads;
-        std::vector<std::shared_ptr<STOREInst>> stores;
-        std::map<std::shared_ptr<BasicBlock>, BLOCK_INFO> user_blocks; // load, store的父块信息map
+        pAlloca alloca;
+        std::vector<pLoad> loads;
+        std::vector<pStore> stores;
+        std::map<pBlock, BLOCK_INFO> user_blocks; // load, store的父块信息map
     };
     std::list<ALLOCA_INFO> alloca_infos;
-    std::shared_ptr<BasicBlock> entry_block;
-    DomTree* pDT{};
+    pBlock entry_block;
+    DomTree *pDT{};
     ALLOCA_INFO cur_info;
-    std::map<std::shared_ptr<PHIInst>, std::shared_ptr<ALLOCAInst>> phi_to_alloca_map;
-    std::set<std::shared_ptr<Instruction>> del_queue;
+    std::map<std::shared_ptr<PHIInst>, pAlloca> phi_to_alloca_map;
+    std::set<pInst> del_queue;
 
     // 用于判断INST的支配关系
-    bool iADomB(const std::shared_ptr<Instruction>& ia, const std::shared_ptr<Instruction>& ib);
+    bool iADomB(const pInst &ia, const pInst &ib);
 
     void analyseAlloca();
     bool removeUnusedAlloca();
@@ -47,9 +47,7 @@ class PromotePass : public PM::PassInfo<PromotePass> {
 
     // 计算迭代支配前沿
     // https://dl.acm.org/doi/pdf/10.1145/199448.199464
-    void computeIDF(const std::set<std::shared_ptr<BasicBlock>> &def_blk,
-                    const std::set<std::shared_ptr<BasicBlock>> &live_in_blk,
-                    std::set<std::shared_ptr<BasicBlock>> &phi_blk);
+    void computeIDF(const std::set<pBlock> &def_blk, const std::set<pBlock> &live_in_blk, std::set<pBlock> &phi_blk);
 
     void promoteMemoryToRegister(Function &function);
 

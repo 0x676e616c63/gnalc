@@ -24,10 +24,10 @@ private:
     FAM *fam;
     Function *func;
     std::string getTmpName();
-    bool foldBinary(const std::shared_ptr<PHIInst> &phi);
-    bool foldGEP(const std::shared_ptr<PHIInst> &phi);
-    bool foldLoad(const std::shared_ptr<PHIInst> &phi);
-    bool isLoadSuitableForSinking(const std::shared_ptr<LOADInst> &load);
+    bool foldBinary(const pPhi &phi);
+    bool foldGEP(const pPhi &phi);
+    bool foldLoad(const pPhi &phi);
+    bool isLoadSuitableForSinking(const pLoad &load);
 };
 
 } // namespace IR

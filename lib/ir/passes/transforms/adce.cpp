@@ -1,9 +1,9 @@
 #include "../../../../include/ir/passes/transforms/adce.hpp"
+#include "../../../../include/ir/block_utils.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
 #include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
-#include "../../../../include/ir/block_utils.hpp"
 
 #include <deque>
 
@@ -12,20 +12,20 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
     bool adce_inst_modified = false;
     bool adce_cfg_modified = false;
 
-    std::deque<std::shared_ptr<Instruction>> worklist;
-    std::set<std::shared_ptr<Instruction>> critical;
+    std::deque<pInst> worklist;
+    std::set<pInst> critical;
     // Mark
     for (const auto &block : function) {
         for (const auto &inst : *block) {
             if (inst->getOpcode() == OP::STORE || inst->getOpcode() == OP::RET) {
                 critical.emplace(inst);
                 worklist.emplace_back(inst);
-            } else if (auto call = std::dynamic_pointer_cast<CALLInst>(inst)) {
-                if (hasSideEffect(fam, call.get())) {
+            } else if (auto call = inst->as<CALLInst>()) {
+                if (hasSideEffect(fam, call)) {
                     critical.emplace(inst);
                     worklist.emplace_back(inst);
                 }
-            } else if (auto br = std::dynamic_pointer_cast<BRInst>(inst)) {
+            } else if (auto br = inst->as<BRInst>()) {
                 // The treatment of control-flow operations is more complex.
                 // Every jump is considered useful.
                 // Branches are considered useful only if the execution of a useful operation
@@ -38,7 +38,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
         }
     }
 
-    auto& postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
+    auto &postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
     while (!worklist.empty()) {
         auto inst = worklist.front();
         worklist.pop_front();
@@ -47,7 +47,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
 
         auto uses = inst->getOperands();
         for (const auto &use : uses) {
-            if (auto oper = std::dynamic_pointer_cast<Instruction>(use->getValue())) {
+            if (auto oper = use->getValue()->as<Instruction>()) {
                 if (critical.find(oper) == critical.end()) {
                     critical.emplace(oper);
                     worklist.emplace_back(oper);
@@ -55,14 +55,14 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
             }
         }
 
-        if (auto phi = std::dynamic_pointer_cast<PHIInst>(inst)) {
+        if (auto phi = inst->as<PHIInst>()) {
             auto phi_opers = phi->getPhiOpers();
             for (const auto &[_val, bb] : phi_opers)
                 new_alive_blocks.emplace_back(bb);
         }
 
-        for (const auto& alivebb : new_alive_blocks) {
-            auto rdf = postdomtree.getDomFrontier(alivebb.get());
+        for (const auto &alivebb : new_alive_blocks) {
+            auto rdf = postdomtree.getDomFrontier(alivebb);
             for (const auto &bb : rdf) {
                 auto br = bb->getBRInst();
                 Err::gassert(br != nullptr);
@@ -94,8 +94,8 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
     // }
     // std::cerr << std::endl;
 
-    std::set<std::shared_ptr<PHIInst>> dead_phis;
-    std::set<std::shared_ptr<Instruction>> dead;
+    std::set<pPhi> dead_phis;
+    std::set<pInst> dead;
 
     // Sweep
     for (const auto &block : function) {
@@ -104,7 +104,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
         auto all_insts = block->getAllInsts();
         for (const auto &inst : all_insts) {
             if (critical.find(inst) == critical.end()) {
-                if (auto br = std::dynamic_pointer_cast<BRInst>(inst)) {
+                if (auto br = inst->as<BRInst>()) {
                     Err::gassert(br->isConditional());
                     // Rewrite it with an unconditional BRInst
                     // to the nearest marked post dominator
@@ -116,7 +116,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     Err::gassert(dead_br);
                     block->delInst(br);
 
-                    auto nearest_pdom = postdomtree[block.get()].get();
+                    auto nearest_pdom = postdomtree[block];
                     bool found = false;
                     do {
                         nearest_pdom = nearest_pdom->parent();
@@ -139,12 +139,12 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
                     // Also, if there is a virtual root, its children must also be exit blocks. Thus, the
                     // search can't terminate at the virtual root.
                     Err::gassert(found && nearest_pdom->block() != nullptr);
-                    linkBB(block, nearest_pdom->block()->as<BasicBlock>());
+                    linkBB(block, nearest_pdom->block());
                     // The new BRInst won't be iterated in `all_insts`. So no need to add it to critical.
-                    block->addInst(std::make_shared<BRInst>(nearest_pdom->block()->as<BasicBlock>()));
+                    block->addInst(std::make_shared<BRInst>(nearest_pdom->block()));
                     adce_cfg_modified = true;
-                    Logger::logDebug("[ADCE]: Retargeting '",
-                        block->getName(), "' to '", nearest_pdom->block()->getName());
+                    Logger::logDebug("[ADCE]: Retargeting '", block->getName(), "' to '",
+                                     nearest_pdom->block()->getName());
                 } else
                     dead.emplace(inst);
             }
@@ -152,29 +152,26 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
     }
 
     auto dfv = function.getDFVisitor();
-    std::unordered_set<std::shared_ptr<BasicBlock>> reachable{dfv.begin(), dfv.end()};
+    std::unordered_set<pBlock> reachable{dfv.begin(), dfv.end()};
 
-    for (const auto& block : function) {
+    for (const auto &block : function) {
         if (reachable.find(block) == reachable.end()) {
             auto succs = block->getNextBB();
-            for (const auto& succ : succs)
+            for (const auto &succ : succs)
                 safeUnlinkBB(block, succ, dead_phis);
         }
     }
 
-    adce_cfg_modified |= function.delBlockIf([&reachable](const auto &block) {
-        return reachable.find(block) == reachable.end();
-    });
+    adce_cfg_modified |=
+        function.delBlockIf([&reachable](const auto &block) { return reachable.find(block) == reachable.end(); });
 
     for (auto &block : function) {
         // Trivially dead phi might in `dead`
-        adce_inst_modified |= block->delInstIf([&dead](const auto &inst) {
-            return dead.find(inst) != dead.end();
-        });
+        adce_inst_modified |= block->delInstIf([&dead](const auto &inst) { return dead.find(inst) != dead.end(); });
         // `dead_phis` is phis that become dead in `safeUnlink`
-        adce_inst_modified |= block->delInstIf([&dead_phis](const auto &p) {
-            return dead_phis.find(std::dynamic_pointer_cast<PHIInst>(p)) != dead_phis.end();
-        }, BasicBlock::DEL_MODE::PHI);
+        adce_inst_modified |= block->delInstIf(
+            [&dead_phis](const auto &p) { return dead_phis.find(p->template as<PHIInst>()) != dead_phis.end(); },
+            BasicBlock::DEL_MODE::PHI);
     }
 
     if (adce_cfg_modified)

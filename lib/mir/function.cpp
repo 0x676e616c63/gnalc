@@ -8,8 +8,7 @@ std::string FunctionInfo::toString() const {
     str += "maxalignment: " + std::to_string(maxAlignment) + '\n';
 
     if (hasTailCall.first)
-        str += "hasTailCall: true - @" + hasTailCall.second.lock()->getName() +
-               '\n';
+        str += "hasTailCall: true - @" + hasTailCall.second.lock()->getName() + '\n';
     else
         str += "hasTailCall: false\n";
 

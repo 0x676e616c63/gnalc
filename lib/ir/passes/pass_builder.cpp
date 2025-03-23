@@ -17,9 +17,9 @@
 #include "../../../include/ir/passes/transforms/dce.hpp"
 #include "../../../include/ir/passes/transforms/dse.hpp"
 #include "../../../include/ir/passes/transforms/gvn_pre.hpp"
+#include "../../../include/ir/passes/transforms/indvar_simplify.hpp"
 #include "../../../include/ir/passes/transforms/inline.hpp"
 #include "../../../include/ir/passes/transforms/instsimplify.hpp"
-#include "../../../include/ir/passes/transforms/indvar_simplify.hpp"
 #include "../../../include/ir/passes/transforms/jump_threading.hpp"
 #include "../../../include/ir/passes/transforms/lcssa.hpp"
 #include "../../../include/ir/passes/transforms/licm.hpp"
@@ -38,11 +38,11 @@
 #include "../../../include/ir/passes/utilities/verifier.hpp"
 
 #include <algorithm>
+#include <functional>
+#include <optional>
 #include <random>
 #include <string>
 #include <vector>
-#include <optional>
-#include <functional>
 
 namespace IR {
 
@@ -225,7 +225,7 @@ MPM PassBuilder::buildModuleDebugPipeline() {
     return mpm;
 }
 
-FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const std::string& repro) {
+FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const std::string &repro) {
     FPM fpm;
     fpm.addPass(PromotePass());
     fpm.addPass(TailRecursionEliminationPass());
@@ -234,16 +234,16 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const
     std::vector<std::pair<std::string_view, std::function<void(bool)>>> passes;
 
 #define REGISTER_FUNCTION_TRANSFORM(pass)                                                                              \
-    passes.emplace_back(pass::name(), [&fpm] (bool strict){                                                                                       \
+    passes.emplace_back(pass::name(), [&fpm](bool strict) {                                                            \
         fpm.addPass(pass());                                                                                           \
-        fpm.addPass(VerifyPass(strict));                                                                                 \
+        fpm.addPass(VerifyPass(strict));                                                                               \
     });
 
 #define REGISTER_FUNCTION_TRANSFORM2(pass1, pass2)                                                                     \
-    passes.emplace_back(pass2::name(), [&fpm] (bool strict){                                                                                       \
+    passes.emplace_back(pass2::name(), [&fpm](bool strict) {                                                           \
         fpm.addPass(pass1());                                                                                          \
         fpm.addPass(pass2());                                                                                          \
-        fpm.addPass(VerifyPass(strict));                                                                                 \
+        fpm.addPass(VerifyPass(strict));                                                                               \
     });
 
     REGISTER_FUNCTION_TRANSFORM(ReassociatePass)
@@ -286,25 +286,18 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const
         fpm.addPass(CodeGenPreparePass());
         fpm.addPass(NameNormalizePass(true));
 
-        Logger::logInfo("[FuzzTesting]: Running pipeline: '", pipeline
-            + "'. Run with '-fuzz-repro <this pipeline>' to reproduce it.");
-    }
-    else {
+        Logger::logInfo("[FuzzTesting]: Running pipeline: '",
+                        pipeline + "'. Run with '-fuzz-repro <this pipeline>' to reproduce it.");
+    } else {
         auto find_pass = [&passes, &fpm](const std::string &target) -> std::optional<std::function<void(bool)>> {
             if (target == NameNormalizePass::name()) {
-                return [&fpm](bool) {
-                    fpm.addPass(NameNormalizePass(true));
-                };
+                return [&fpm](bool) { fpm.addPass(NameNormalizePass(true)); };
             }
             if (target == PrintFunctionPass::name()) {
-                return [&fpm](bool) {
-                    fpm.addPass(PrintFunctionPass(std::cerr));
-                };
+                return [&fpm](bool) { fpm.addPass(PrintFunctionPass(std::cerr)); };
             }
             if (target == PrintModulePass::name()) {
-                return [&fpm](bool) {
-                    fpm.addPass(PrintFunctionPass(std::cerr));
-                };
+                return [&fpm](bool) { fpm.addPass(PrintFunctionPass(std::cerr)); };
             }
 
             for (const auto &[name, pass_adder] : passes) {
@@ -321,8 +314,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const
                 // Disable strict mode for debugging
                 (*p)(false);
                 curr.clear();
-            }
-            else if (ch != ' ')
+            } else if (ch != ' ')
                 curr += ch;
         }
         auto p = find_pass(curr);
@@ -337,7 +329,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const
     return fpm;
 }
 
-MPM PassBuilder::buildModuleFuzzTestingPipeline(double duplication_rate, const std::string& repro) {
+MPM PassBuilder::buildModuleFuzzTestingPipeline(double duplication_rate, const std::string &repro) {
     MPM mpm;
     mpm.addPass(makeModulePass(buildFunctionFuzzTestingPipeline(duplication_rate, repro)));
     // Disable Treeshaking in Repro mode for debugging

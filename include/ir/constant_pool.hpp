@@ -21,13 +21,10 @@ private:
 public:
     ConstantPool() = default;
 
-    std::shared_ptr<ConstantI1> getConst(bool val);
-
-    std::shared_ptr<ConstantI8> getConst(char val);
-
-    std::shared_ptr<ConstantInt> getConst(int val);
-
-    std::shared_ptr<ConstantFloat> getConst(float val);
+    pConstI1 getConst(bool val);
+    pConstI8 getConst(char val);
+    pConstI32 getConst(int val);
+    pConstF32 getConst(float val);
 
     int cleanPool();
 

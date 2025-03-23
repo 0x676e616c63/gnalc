@@ -39,8 +39,7 @@ inline std::string to_mybf_presentation(const std::string &raw) {
             ret += "BFInstruction::BNEZ";
             break;
         default:
-            std::cerr << "Warning: Ignored character '" << ch << "'"
-                      << std::endl;
+            std::cerr << "Warning: Ignored character '" << ch << "'" << std::endl;
             continue;
         }
 

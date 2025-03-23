@@ -20,7 +20,7 @@ std::ostream &operator<<(std::ostream &os, const SCEVExpr &expr) {
             Err::unreachable();
         os << "( " << *expr.getLHS() << " " << op << " " << *expr.getRHS() << " )";
     } else if (expr.isIRValue())
-        os << expr.getIRValue()->getName();
+        os << expr.getRawIRValue()->getName();
     else
         Err::unreachable();
     return os;
@@ -78,8 +78,8 @@ std::optional<std::tuple<int, int>> TREC::getConstantAffineAddRec() const {
         auto [base_expr, step_expr] = *affine;
         if (!base_expr->isIRValue() || !step_expr->isIRValue())
             return std::nullopt;
-        auto base = base_expr->getIRValue();
-        auto step = step_expr->getIRValue();
+        auto base = base_expr->getRawIRValue();
+        auto step = step_expr->getRawIRValue();
         if (base->getVTrait() == ValueTrait::CONSTANT_LITERAL && step->getVTrait() == ValueTrait::CONSTANT_LITERAL)
             return std::make_tuple(dynamic_cast<ConstantInt *>(base)->getVal(),
                                    dynamic_cast<ConstantInt *>(step)->getVal());
@@ -90,8 +90,8 @@ std::optional<std::tuple<int, int>> TREC::getConstantAffineAddRec() const {
 TREC *SCEVHandle::getSCEVAtBlock(Value *val, const BasicBlock *block) {
     // consistency check for debugging
     if (dynamic_cast<Instruction *>(val)) {
-        auto def_block = dynamic_cast<Instruction *>(val)->getParent().get();
-        if (!domtree->ADomB(def_block, const_cast<BasicBlock *>(block)))
+        auto def_block = val->as_raw<Instruction>()->getParent().get();
+        if (!domtree->ADomB(def_block, block))
             return nullptr;
     }
     auto scope = loop_info->getLoopFor(block).get();
@@ -103,28 +103,37 @@ TREC *SCEVHandle::getSCEVAtBlock(Value *val, const BasicBlock *block) {
     return res;
 }
 
+TREC *SCEVHandle::getSCEVAtBlock(const pVal &val, const pBlock &block) {
+    return getSCEVAtBlock(val.get(), block.get());
+}
+SCEVExpr *SCEVHandle::getNumberOfLatchExecutions(const pLoop &loop) { return getNumberOfLatchExecutions(loop.get()); }
+
 TREC *SCEVHandle::getSCEVAtScope(Value *val, const Loop *loop) {
     if (loop != nullptr)
         return instantiateEvolution(analyzeEvolution(loop, val), loop);
 
     if (auto inst = dynamic_cast<Instruction *>(val)) {
-        TREC *t = nullptr;
-        if (auto l = loop_info->getLoopFor(inst->getParent().get()))
-            t = instantiateEvolution(analyzeEvolution(l.get(), val), l.get());
-        if (!t)
-            return getTRECUntracked();
-        return eval(t, nullptr);
+        if (auto l = loop_info->getLoopFor(inst->getParent().get())) {
+            auto t = instantiateEvolution(analyzeEvolution(l.get(), val), l.get());
+            if (!t)
+                return getTRECUntracked();
+            return eval(t, nullptr);
+        }
     }
 
-    std::shared_ptr<Value> x, y;
-    if (match(val, M::Add(M::VBind(x), M::VBind(y))) || match(val, M::Sub(M::VBind(x), M::VBind(y))) ||
+    if (!val->as_raw<Instruction>())
+        return getSCEVExprTREC(getSCEVExpr(val));
+
+    pVal x, y;
+    if (match(val, M::Add(M::VBind(x), M::VBind(y))) ||
+        match(val, M::Sub(M::VBind(x), M::VBind(y))) ||
         match(val, M::Mul(M::VBind(x), M::VBind(y)))) {
         TREC *tx = nullptr, *ty = nullptr;
-        if (auto inst = std::dynamic_pointer_cast<Instruction>(x)) {
+        if (auto inst = x->as<Instruction>()) {
             if (auto lx = loop_info->getLoopFor(inst->getParent().get()))
                 tx = instantiateEvolution(analyzeEvolution(lx.get(), x.get()), lx.get());
         }
-        if (auto inst = std::dynamic_pointer_cast<Instruction>(y)) {
+        if (auto inst = y->as<Instruction>()) {
             if (auto ly = loop_info->getLoopFor(inst->getParent().get()))
                 ty = instantiateEvolution(analyzeEvolution(ly.get(), y.get()), ly.get());
         }
@@ -175,7 +184,7 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
 
     TREC *res = nullptr;
 
-    std::shared_ptr<Value> x, y;
+    pVal x, y;
     // Else If n matches "v = constant" Then
     if (val_loop == nullptr || loop->isLoopInvariant(val))
         res = getSCEVExprTREC(getSCEVExpr(val));
@@ -187,7 +196,7 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
     else if (match(val, M::Mul(M::VBind(x), M::VBind(y))))
         res = getTRECMul(analyzeEvolution(loop, x.get()), analyzeEvolution(loop, y.get()));
     else if (auto phi = dynamic_cast<const PHIInst *>(val)) {
-        auto phi_bb = phi->getParent().get();
+        auto phi_bb = phi->getParent();
         auto phi_opers = phi->getPhiOpers();
         // Else If n matches "v = loop-phi(a, b)" Then
         if (val_loop->getHeader() == phi_bb) {
@@ -240,7 +249,7 @@ std::pair<bool, TREC *> SCEVHandle::buildUpdateExpr(const PHIInst *loop_phi, Val
     // Else If n is a statement in an outer loop Then
     if (loop_phi_loop->isLoopInvariant(val))
         return {false, getTRECUndef()};
-    std::shared_ptr<Value> x, y;
+    pVal x, y;
     // Else If n matches "v = a + b" Then
     if (match(val, M::Add(M::VBind(x), M::VBind(y)))) {
         auto [exist_x, update_x] = buildUpdateExpr(loop_phi, x.get(), loop_phi_loop);
@@ -265,7 +274,7 @@ std::pair<bool, TREC *> SCEVHandle::buildUpdateExpr(const PHIInst *loop_phi, Val
     }
 
     if (auto val_phi = dynamic_cast<const PHIInst *>(val)) {
-        auto val_phi_bb = val_phi->getParent().get();
+        auto val_phi_bb = val_phi->getParent();
         auto val_phi_opers = val_phi->getPhiOpers();
         auto val_phi_loop = loop_info->getLoopFor(val_phi_bb).get();
 
@@ -287,7 +296,7 @@ std::pair<bool, TREC *> SCEVHandle::buildUpdateExpr(const PHIInst *loop_phi, Val
             if (!s)
                 return {false, getTRECUndef()};
             if (s->isBinary() && s->getOp() == SCEVExpr::Binary::Op::Add && s->getLHS()->isIRValue() &&
-                s->getLHS()->getIRValue() == val_phi_invariant) {
+                s->getLHS()->getRawIRValue() == val_phi_invariant) {
                 auto [exist, update] = buildUpdateExpr(loop_phi, val_phi_invariant, loop_phi_loop);
                 if (exist)
                     return {true, getTRECAdd(update, getSCEVExprTREC(s->getRHS()))};
@@ -318,7 +327,7 @@ TREC *SCEVHandle::instantiateEvolution(TREC *trec, const Loop *loop) {
 TREC *SCEVHandle::instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::unordered_set<TREC *> &instantiated) {
     // If trec is a constant c Then
     if (trec->isExpr() && trec->getExpr()->isIRValue() &&
-        trec->getExpr()->getIRValue()->getVTrait() == ValueTrait::CONSTANT_LITERAL)
+        trec->getExpr()->getRawIRValue()->getVTrait() == ValueTrait::CONSTANT_LITERAL)
         return trec;
 
     if (trec->isExpr()) {
@@ -338,7 +347,7 @@ TREC *SCEVHandle::instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::un
                 return getTRECAdd(lhs, rhs);
             }
             Err::gassert(expr->isIRValue());
-            return analyzeEvolution(loop, expr->getIRValue());
+            return analyzeEvolution(loop, expr->getRawIRValue());
         };
         return analyzeExprEvo(trec->getExpr());
     }
@@ -363,7 +372,7 @@ void SCEVHandle::foldSCEVExpr(SCEVExpr *expr) const {
         foldSCEVExpr(rhs);
         if (lhs->isIRValue() && rhs->isIRValue()) {
             int x, y;
-            if (match(lhs->getIRValue(), M::I32Bind(x)) && match(rhs->getIRValue(), M::I32Bind(y))) {
+            if (match(lhs->getRawIRValue(), M::I32Bind(x)) && match(rhs->getRawIRValue(), M::I32Bind(y))) {
                 switch (expr->getOp()) {
                 case SCEVExpr::Binary::Op::Add:
                     expr->setIRValue(function->getConst(x + y).get());
@@ -423,8 +432,15 @@ TREC *SCEVHandle::eval(TREC *trec, const Loop *loop) {
 // (n)         n!
 // ( ) == ------------
 // (p)     p!(n - p)!
-template <typename T> constexpr T binomial_coefficient(T n, T p) {
-    return std::tgamma(n + 1) / (std::tgamma(p + 1) * std::tgamma(n - p + 1));
+// https://stackoverflow.com/questions/44718971/calculate-binomial-coffeficient-very-reliably
+constexpr size_t binomial_coefficient(size_t n, size_t p) noexcept {
+    return
+      (        p> n  )? 0 :          // out of range
+      (p==0 || p==n  )? 1 :          // edge
+      (p==1 || p==n-1)? n :          // first
+      (     p+p < n  )?              // recursive:
+      (binomial_coefficient(n-1,p-1) * n)/p :       //  path to k=1   is faster
+      (binomial_coefficient(n-1,p) * n)/(n-p);      //  path to k=n-1 is faster
 }
 
 // { c0, +, c1, +, c2, +, ..., +, cn }_x(l_x)
@@ -443,9 +459,9 @@ SCEVExpr *SCEVHandle::apply(TREC *trec, SCEVExpr *trip_cnt) {
 
     // Currently we only apply the trec if the result is a compile-time constant.
     // TODO: Symbolic representation of applied TREC
-    if (trip_cnt->isIRValue() && trip_cnt->getIRValue()->getVTrait() == ValueTrait::CONSTANT_LITERAL) {
+    if (trip_cnt->isIRValue() && trip_cnt->getRawIRValue()->getVTrait() == ValueTrait::CONSTANT_LITERAL) {
         int constant_trip_cnt = -1;
-        if (!match(trip_cnt->getIRValue(), M::I32Bind(constant_trip_cnt)))
+        if (!match(trip_cnt->getRawIRValue(), M::I32Bind(constant_trip_cnt)))
             return nullptr;
         // Avoid too big trip count
         if (constant_trip_cnt > 1024)
@@ -469,7 +485,7 @@ SCEVExpr *SCEVHandle::apply(TREC *trec, SCEVExpr *trip_cnt) {
         std::vector<int> constants;
         for (size_t i = 1; i < flatten.size(); ++i) {
             int ci;
-            if (!flatten[i]->isIRValue() || !match(flatten[i]->getIRValue(), M::I32Bind(ci)))
+            if (!flatten[i]->isIRValue() || !match(flatten[i]->getRawIRValue(), M::I32Bind(ci)))
                 return nullptr;
             constants.emplace_back(ci);
         }
@@ -496,7 +512,7 @@ SCEVExpr *SCEVHandle::getNumberOfLatchExecutions(const Loop *loop) {
     auto guard = exiting->getBRInst();
     Err::gassert(guard != nullptr && guard->isConditional());
     auto cond_inst = guard->getCond();
-    if (auto icmp = std::dynamic_pointer_cast<ICMPInst>(cond_inst)) {
+    if (auto icmp = cond_inst->as<ICMPInst>()) {
         if (int x, y; match(icmp, M::Icmp(M::I32Bind(x), M::I32Bind(y)))) {
             if (x == y)
                 return nullptr;
@@ -517,7 +533,7 @@ SCEVExpr *SCEVHandle::getNumberOfLatchExecutions(const Loop *loop) {
             cmpop = reverseCond(cmpop);
         }
 
-        if (cmpop == ICMPOP::eq || cmpop == ICMPOP::ne)
+        if (cmpop == ICMPOP::eq)
             return nullptr;
 
         auto evo = analyzeEvolution(loop, to_evo);
@@ -534,14 +550,17 @@ SCEVExpr *SCEVHandle::getNumberOfLatchExecutions(const Loop *loop) {
             if ((cmpop == ICMPOP::sgt && step <= 0 && base <= cond_val) ||
                 (cmpop == ICMPOP::slt && step >= 0 && base >= cond_val) ||
                 (cmpop == ICMPOP::sge && step <= 0 && base < cond_val) ||
-                (cmpop == ICMPOP::sle && step >= 0 && base > cond_val))
+                (cmpop == ICMPOP::sle && step >= 0 && base > cond_val) ||
+                (cmpop == ICMPOP::ne && base == cond_val))
                 return getSCEVExpr(function->getConst(0).get());
 
             // Infinite
             if ((cmpop == ICMPOP::sgt && step >= 0 && base > cond_val) ||
                 (cmpop == ICMPOP::slt && step <= 0 && base < cond_val) ||
                 (cmpop == ICMPOP::sge && step >= 0 && base >= cond_val) ||
-                (cmpop == ICMPOP::sle && step <= 0 && base <= cond_val))
+                (cmpop == ICMPOP::sle && step <= 0 && base <= cond_val) ||
+                (cmpop == ICMPOP::ne && (step <= 0 && base < cond_val) ||
+                                        (step >= 0 && base > cond_val)))
                 return nullptr;
 
             // {base, +, step} <=> cond_val
@@ -552,7 +571,13 @@ SCEVExpr *SCEVHandle::getNumberOfLatchExecutions(const Loop *loop) {
             // We've handled trivial cases above, there should always be a non-negative count.
             Err::gassert(path_taken_times >= 0);
 
-            if (cmpop == ICMPOP::sge || cmpop == ICMPOP::sle)
+            if (cmpop == ICMPOP::ne) {
+                if (path_taken_times * step != cond_val - base)
+                    return nullptr;
+            }
+
+            if (path_taken_times * step != cond_val - base ||
+                cmpop == ICMPOP::sge || cmpop == ICMPOP::sle)
                 ++path_taken_times;
 
             // Do while loop executes at least once
@@ -566,7 +591,7 @@ SCEVExpr *SCEVHandle::getNumberOfLatchExecutions(const Loop *loop) {
             // Currently we only handle the cases where the step is constant 1,
             // where the trip count is simply x - a.
             auto [base, step] = *affine;
-            if (!step->isIRValue() || !match(step->getIRValue(), M::Is(1)))
+            if (!step->isIRValue() || !match(step->getRawIRValue(), M::Is(1)))
                 return nullptr;
             return getSCEVExprSub(cond, base);
         }
@@ -656,39 +681,40 @@ SCEVExpr *SCEVHandle::getPoolSCEV(const std::shared_ptr<SCEVExpr> &expr) {
 }
 
 SCEVExpr *SCEVHandle::getSCEVExprAdd(SCEVExpr *x, SCEVExpr *y) {
-    if (x->isIRValue() && match(x->getIRValue(), M::Is(0)))
+    if (x->isIRValue() && match(x->getRawIRValue(), M::Is(0)))
         return y;
-    if (y->isIRValue() && match(y->getIRValue(), M::Is(0)))
+    if (y->isIRValue() && match(y->getRawIRValue(), M::Is(0)))
         return x;
     if (x->isIRValue() && y->isIRValue()) {
         int a, b;
-        if (match(x->getIRValue(), M::I32Bind(a)) && match(y->getIRValue(), M::I32Bind(b)))
+        if (match(x->getRawIRValue(), M::I32Bind(a)) && match(y->getRawIRValue(), M::I32Bind(b)))
             return getSCEVExpr(function->getConst(a + b).get());
     }
     return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::Add, x, y));
 }
 SCEVExpr *SCEVHandle::getSCEVExprSub(SCEVExpr *x, SCEVExpr *y) {
-    if (y->isIRValue() && match(y->getIRValue(), M::Is(0)))
+    if (y->isIRValue() && match(y->getRawIRValue(), M::Is(0)))
         return x;
     if (x->isIRValue() && y->isIRValue()) {
         int a, b;
-        if (match(x->getIRValue(), M::I32Bind(a)) && match(y->getIRValue(), M::I32Bind(b)))
+        if (match(x->getRawIRValue(), M::I32Bind(a)) && match(y->getRawIRValue(), M::I32Bind(b)))
             return getSCEVExpr(function->getConst(a - b).get());
     }
     return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::Sub, x, y));
 }
 SCEVExpr *SCEVHandle::getSCEVExprMul(SCEVExpr *x, SCEVExpr *y) {
-    if ((x->isIRValue() && match(x->getIRValue(), M::Is(0))) || (y->isIRValue() && match(y->getIRValue(), M::Is(0))))
+    if ((x->isIRValue() && match(x->getRawIRValue(), M::Is(0))) ||
+        (y->isIRValue() && match(y->getRawIRValue(), M::Is(0))))
         return getSCEVExpr(function->getConst(0).get());
     if (x->isIRValue() && y->isIRValue()) {
         int a, b;
-        if (match(x->getIRValue(), M::I32Bind(a)) && match(y->getIRValue(), M::I32Bind(b)))
+        if (match(x->getRawIRValue(), M::I32Bind(a)) && match(y->getRawIRValue(), M::I32Bind(b)))
             return getSCEVExpr(function->getConst(a * b).get());
     }
     return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::Mul, x, y));
 }
 SCEVExpr *SCEVHandle::getSCEVExprNeg(SCEVExpr *x) {
-    if (int a; x->isIRValue() && match(x->getIRValue(), M::I32Bind(a)))
+    if (int a; x->isIRValue() && match(x->getRawIRValue(), M::I32Bind(a)))
         return getSCEVExpr(function->getConst(-a).get());
     return getSCEVExprSub(getSCEVExpr(function->getConst(0).get()), x);
 }

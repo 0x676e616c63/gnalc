@@ -18,48 +18,47 @@
 using namespace PatternMatch;
 
 namespace IR {
-bool isSafeToMove(const std::shared_ptr<Loop> &loop, const std::shared_ptr<Instruction> &inst,
-                  AliasAnalysisResult &aa_res, FAM &fam) {
+bool isSafeToMove(const pLoop &loop, const pInst &inst, AliasAnalysisResult &aa_res, FAM &fam) {
     // Only move what we know
     // Do not hoist cmp for codegen
     if (!match(inst, ClassesMatch<BinaryInst, FNEGInst, CALLInst, LOADInst, STOREInst, GEPInst, CastInst>{}))
         return false;
 
     // If the load's memory can be modified in the loop, give up.
-    if (auto load = std::dynamic_pointer_cast<LOADInst>(inst)) {
+    if (auto load = inst->as<LOADInst>()) {
         for (const auto &bb : loop->blocks()) {
             for (const auto &killer : *bb) {
-                auto modref = aa_res.getInstModRefInfo(killer.get(), load->getPtr().get(), fam);
+                auto modref = aa_res.getInstModRefInfo(killer, load->getPtr(), fam);
                 if (modref == ModRefInfo::Mod || modref == ModRefInfo::ModRef)
                     return false;
             }
         }
-    } else if (auto call = std::dynamic_pointer_cast<CALLInst>(inst)) {
-        if (isPure(fam, call.get()))
+    } else if (auto call = inst->as<CALLInst>()) {
+        if (isPure(fam, call))
             return true;
-        if (hasSideEffect(fam, call.get()))
+        if (hasSideEffect(fam, call))
             return false;
 
-        auto rw = getCallRWInfo(fam, call.get());
+        auto rw = getCallRWInfo(fam, call);
         if (!rw.untracked && !rw.write.empty())
             return false;
         if (rw.read.empty())
             return true;
 
-        for (const auto& read : rw.read) {
+        for (const auto &read : rw.read) {
             for (const auto &bb : loop->blocks()) {
                 for (const auto &killer : *bb) {
-                    auto modref = aa_res.getInstModRefInfo(killer.get(), read, fam);
+                    auto modref = aa_res.getInstModRefInfo(killer, read, fam);
                     if (modref == ModRefInfo::Mod || modref == ModRefInfo::ModRef)
                         return false;
                 }
             }
         }
         return true;
-    } else if (auto store = std::dynamic_pointer_cast<STOREInst>(inst)) {
+    } else if (auto store = inst->as<STOREInst>()) {
         for (const auto &bb : loop->blocks()) {
             for (const auto &killer : *bb) {
-                auto modref = aa_res.getInstModRefInfo(killer.get(), store->getPtr().get(), fam);
+                auto modref = aa_res.getInstModRefInfo(killer, store->getPtr(), fam);
                 if (modref == ModRefInfo::Ref || modref == ModRefInfo::ModRef)
                     return false;
                 // If there are multiple store, the sunk store will overwrite them.
@@ -73,35 +72,35 @@ bool isSafeToMove(const std::shared_ptr<Loop> &loop, const std::shared_ptr<Instr
     return true;
 }
 
-bool noUseInLoop(const std::shared_ptr<Loop> &loop, const std::shared_ptr<Instruction> &inst) {
-    Err::gassert(loop->contains(inst->getParent().get()), "The instruction is not defined in the loop.");
+bool noUseInLoop(const pLoop &loop, const pInst &inst) {
+    Err::gassert(loop->contains(inst->getParent()), "The instruction is not defined in the loop.");
     return std::all_of(inst->user_begin(), inst->user_end(), [&loop](const auto &user) {
-        auto user_inst = std::dynamic_pointer_cast<Instruction>(user);
-        return !loop->contains(user_inst->getParent().get());
+        auto user_inst = user->template as<Instruction>();
+        return !loop->contains(user_inst->getParent());
     });
 }
 
 PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
-    auto& domtree = fam.getResult<DomTreeAnalysis>(function);
-    auto& postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
-    auto& loop_info = fam.getResult<LoopAnalysis>(function);
-    auto& aa_res = fam.getResult<AliasAnalysis>(function);
+    auto &domtree = fam.getResult<DomTreeAnalysis>(function);
+    auto &postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
+    auto &loop_info = fam.getResult<LoopAnalysis>(function);
+    auto &aa_res = fam.getResult<AliasAnalysis>(function);
 
     bool licm_inst_modified = false;
 
     // Record the index in a Reverse Post Order Traversal.
     // This can make it easier to traverse basic blocks in a loop in a certain order.
     auto bbrpodfv = function.getDFVisitor<Util::DFVOrder::ReversePostOrder>();
-    std::map<BasicBlock *, size_t> rpo_index;
+    std::map<pBlock, size_t> rpo_index;
     for (size_t i = 0; i < bbrpodfv.size(); ++i)
-        rpo_index[bbrpodfv[i].get()] = i;
+        rpo_index[bbrpodfv[i]] = i;
 
     for (const auto &top_level : loop_info) {
         // Do a post order traversal of the loop tree, so that we can move instructions in one go.
         auto lpdfv = top_level->getDFVisitor<Util::DFVOrder::PostOrder>();
         for (const auto &loop : lpdfv) {
             Err::gassert(loop->isLCSSAForm(), "Expected LCSSA form in LICM.");
-            std::vector<BasicBlock *> loop_blocks{loop->block_begin(), loop->block_end()};
+            auto loop_blocks = loop->getBlocks();
             //
             // Sink
             //
@@ -110,49 +109,48 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                 std::sort(loop_blocks.begin(), loop_blocks.end(),
                           [&rpo_index](const auto &a, const auto &b) { return rpo_index[a] > rpo_index[b]; });
                 for (const auto &bb : loop_blocks) {
-                    std::set<std::shared_ptr<Instruction>> dead_insts;
+                    std::set<pInst> dead_insts;
                     // Sink instructions that near the exit first
-                    for (const auto& inst : Util::reverse(*bb)) {
-                        if (isSafeToMove(loop, inst, aa_res, fam)
-                            && noUseInLoop(loop, inst)
-                            && loop->isAllOperandsLoopInvariant(inst.get())) {
+                    for (const auto &inst : Util::reverse(*bb)) {
+                        if (isSafeToMove(loop, inst, aa_res, fam) && noUseInLoop(loop, inst) &&
+                            loop->isAllOperandsLoopInvariant(inst)) {
                             // Sink instructions to the exit blocks that dominated by it.
                             // Keep track of the instructions we sunk.
                             // exit block -> new version
-                            std::map<BasicBlock *, std::shared_ptr<Instruction>> sunk_insts;
+                            std::map<pBlock, pInst> sunk_insts;
                             auto exits = loop->getExitBlocks();
                             for (const auto &exit : exits) {
                                 if (domtree.ADomB(bb, exit)) {
                                     auto sunk = makeClone(inst);
                                     if (inst->getType()->getTrait() == IRCTYPE::PTR)
-                                        aa_res.addClonedInst(inst.get(), sunk.get());
+                                        aa_res.addClonedInst(inst, sunk);
                                     sunk->setName(inst->getName() + ".licm.s" + std::to_string(name_cnt++));
                                     exit->addInstAfterPhi(sunk);
                                     sunk_insts[exit] = sunk;
 
                                     // Rewrite the sunk instruction's uses to keep LCSSA Form
                                     auto operands = sunk->getOperands();
-                                    for (const auto& use : operands) {
-                                        if (auto oper = std::dynamic_pointer_cast<Instruction>(use->getValue())) {
-                                            auto oper_inst_block = oper->getParent().get();
+                                    for (const auto &use : operands) {
+                                        if (auto oper = use->getValue()->as<Instruction>()) {
+                                            auto oper_inst_block = oper->getParent();
                                             if (loop->contains(oper_inst_block)) {
                                                 // See if there is what we want already.
                                                 auto avail_phi = findLCSSAPhi(oper_inst_block, oper);
                                                 if (avail_phi == nullptr) {
                                                     avail_phi = std::make_shared<PHIInst>(
-                                                       "%licm.p" + std::to_string(name_cnt++), oper->getType());
-                                                    for (const auto& pred : exit->preds())
+                                                        "%licm.p" + std::to_string(name_cnt++), oper->getType());
+                                                    for (const auto &pred : exit->preds())
                                                         avail_phi->addPhiOper(oper, pred);
                                                     exit->addPhiInst(avail_phi);
                                                     if (oper->getType()->getTrait() == IRCTYPE::PTR)
-                                                        aa_res.addClonedInst(oper.get(), avail_phi.get());
+                                                        aa_res.addClonedInst(oper, avail_phi);
                                                 }
                                                 sunk->replaceUse(use, avail_phi);
                                             }
                                         }
                                     }
                                     Logger::logDebug("[LICM] on '", function.getName(), "': Sunk an instruction '",
-                                        inst->getName(), "' to exit '", exit->getName(), "'.");
+                                                     inst->getName(), "' to exit '", exit->getName(), "'.");
                                 }
                             }
 
@@ -161,18 +159,18 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                                 continue;
 
                             for (const auto &user : inst->inst_users()) {
-                                auto user_block = user->getParent().get();
+                                auto user_block = user->getParent();
                                 // A quick path for most uses being in the same block
-                                if (user_block == inst->getParent().get() || loop->contains(user_block))
+                                if (user_block == inst->getParent() || loop->contains(user_block))
                                     continue;
 
                                 // Outside Loop Use
-                                auto phi = std::dynamic_pointer_cast<PHIInst>(user);
+                                auto phi = user->as<PHIInst>();
                                 Err::gassert(phi != nullptr, "Expected LCSSA form in LICM.");
                                 auto exit_block = phi->getParent();
-                                Err::gassert(loop->isExit(exit_block.get()), "Expected LCSSA form in LICM.");
+                                Err::gassert(loop->isExit(exit_block), "Expected LCSSA form in LICM.");
 
-                                const auto &sunk = sunk_insts[exit_block.get()];
+                                const auto &sunk = sunk_insts[exit_block];
                                 Err::gassert(sunk != nullptr);
 
                                 // Since we've ensured the exit is dedicated, the exit
@@ -206,18 +204,18 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                     // hoisting them is not safe.
                     if (!postdomtree.ADomB(bb, preheader))
                         continue;
-                    std::set<std::shared_ptr<Instruction>> to_hoist;
+                    std::set<pInst> to_hoist;
                     for (const auto &inst : *bb) {
                         if (isSafeToMove(loop, inst, aa_res, fam)) {
-                            auto invariant = std::all_of(
-                                inst->operand_begin(), inst->operand_end(), [&loop, to_hoist](const auto &val) {
-                                    if (auto inst = std::dynamic_pointer_cast<Instruction>(val)) {
-                                        if (to_hoist.count(inst))
-                                            return true;
-                                        return !loop->contains(inst->getParent().get());
-                                    }
-                                    return true;
-                                });
+                            auto invariant = std::all_of(inst->operand_begin(), inst->operand_end(),
+                                                         [&loop, to_hoist](const auto &val) {
+                                                             if (auto inst = val->template as<Instruction>()) {
+                                                                 if (to_hoist.count(inst))
+                                                                     return true;
+                                                                 return !loop->contains(inst->getParent());
+                                                             }
+                                                             return true;
+                                                         });
                             if (invariant)
                                 to_hoist.emplace(inst);
                         }
@@ -228,8 +226,8 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                         auto insert_before = preheader->getTerminator()->getIter();
                         if (auto br = preheader->getBRInst()) {
                             if (br->isConditional()) {
-                                if (auto cond_inst = std::dynamic_pointer_cast<Instruction>(br->getCond())) {
-                                    if (cond_inst->getParent().get() == preheader)
+                                if (auto cond_inst = br->getCond()->as<Instruction>()) {
+                                    if (cond_inst->getParent() == preheader)
                                         insert_before = cond_inst->getIter();
                                     else
                                         Logger::logWarning("Cond '", cond_inst->getName(),
@@ -237,7 +235,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                                 }
                             }
                         }
-                        moveInst(inst, preheader->as<BasicBlock>(), insert_before);
+                        moveInst(inst, preheader, insert_before);
                         Logger::logDebug("[LICM] on '", function.getName(), "': Hoisted an instruction '",
                                          inst->getName(), "' to basic block '", preheader->getName(), "'.");
                         licm_inst_modified = true;

@@ -3,8 +3,7 @@
 
 namespace IR {
 namespace detail {
-template <typename T, IRBTYPE IRType>
-void BasicConstant<T, IRType>::accept(IRVisitor &visitor) {
+template <typename T, IRBTYPE IRType> void BasicConstant<T, IRType>::accept(IRVisitor &visitor) {
     visitor.visit(*this);
 }
 } // namespace detail

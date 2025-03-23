@@ -118,8 +118,7 @@ int main(int argc, char **argv) {
         OPT_ARG("--treeshaking", "--no-treeshaking", tree_shaking)
 #undef OPT_ARG
         // Debug options:
-        else if (arg == "-fuzz")
-            fuzz_testing = true;
+        else if (arg == "-fuzz") fuzz_testing = true;
         else if (arg == "-fuzz-rate") {
             ++i;
             if (i >= argc) {
@@ -129,8 +128,7 @@ int main(int argc, char **argv) {
             fuzz_testing = true;
             try {
                 fuzz_testing_duplication_rate = std::stod(argv[i]);
-            }
-            catch (std::invalid_argument&) {
+            } catch (std::invalid_argument &) {
                 std::cerr << "Error: Invalid fuzz duplication rate. Expected a floating point." << std::endl;
                 return -1;
             }
@@ -143,22 +141,18 @@ int main(int argc, char **argv) {
             }
             fuzz_testing = true;
             fuzz_testing_repro = argv[i];
-        } else if (arg == "-debug-pipeline")
-            debug_pipeline = true;
-        else if (arg == "--ann")
-            opt_info.advance_name_norm = true;
-        else if (arg == "--verify")
-            opt_info.verify = true;
+        }
+        else if (arg == "-debug-pipeline") debug_pipeline = true;
+        else if (arg == "--ann") opt_info.advance_name_norm = true;
+        else if (arg == "--verify") opt_info.verify = true;
         else if (arg == "--strict") {
             opt_info.verify = true;
             opt_info.abort_when_verify_failed = true;
         }
 #if GNALC_EXTENSION_BRAINFK
         // Extensions:
-        else if (arg == "-mbrainfk")
-            bf_target = true;
-        else if (arg == "-mbrainfk-3tape")
-            bf3t_target = true;
+        else if (arg == "-mbrainfk") bf_target = true;
+        else if (arg == "-mbrainfk-3tape") bf3t_target = true;
 #endif
 
         else if (arg == "-h" || arg == "--help") {

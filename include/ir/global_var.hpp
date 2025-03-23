@@ -6,10 +6,8 @@
 #include <vector>
 
 namespace IR {
-
 // storage_class
-enum class STOCLASS { GLOBAL,
-                      CONSTANT };
+enum class STOCLASS { GLOBAL, CONSTANT };
 
 // IR GlobalVariable Initializer
 // int i;
@@ -19,31 +17,30 @@ enum class STOCLASS { GLOBAL,
 // int arri[2][2] = {{1, 2}, {3, 4}};
 class GVIniter {
 private:
-    std::shared_ptr<Type> initer_type;
-    bool is_zero; // is zeroinitializer, 对于array就输出zeroinitializer,
-                  // 不是array就输出0
-    std::shared_ptr<Value>
-        constval;                       // 只针对非array的情况!!! 内容只能是ConstantInt or Float
+    pType initer_type;
+    bool is_zero;                       // is zeroinitializer, 对于array就输出zeroinitializer,
+                                        // 不是array就输出0
+    pVal constval;                      // 只针对非array的情况!!! 内容只能是ConstantInt or Float
     std::vector<GVIniter> inner_initer; // isarray == true
 public:
     GVIniter() = delete;
-    GVIniter(std::shared_ptr<Type> _ty);                              // zeroinit
-    GVIniter(std::shared_ptr<Type> _ty, std::shared_ptr<Value> _con); // i32 1
-    GVIniter(std::shared_ptr<Type> _ty,
+    GVIniter(pType _ty);            // zeroinit
+    GVIniter(pType _ty, pVal _con); // i32 1
+    GVIniter(pType _ty,
              std::vector<GVIniter> _inner_initer); // [2 x [2 x i32]] [...]
 
-    const std::shared_ptr<IR::Type> &getIniterType() const;
+    const pType &getIniterType() const;
     bool isZero() const;
     bool isArray() const;
 
-    std::shared_ptr<IR::Value> &getConstVal(); // 此处暂时先用非const的引用传递
-    const std::shared_ptr<IR::Value> &getConstVal() const;
+    pVal &getConstVal(); // 此处暂时先用非const的引用传递
+    const pVal &getConstVal() const;
 
     const std::vector<GVIniter> &getInnerIniter() const;
 
-    GVIniter &addIniter(std::shared_ptr<Type> _ty, std::shared_ptr<Value> _con);
+    GVIniter &addIniter(pType _ty, pVal _con);
 
-    GVIniter &addIniter(std::shared_ptr<Type> _ty);
+    GVIniter &addIniter(pType _ty);
 
     void normalizeZero();
 
@@ -64,17 +61,16 @@ public:
 class GlobalVariable : public Value {
 private:
     STOCLASS storage_class;
-    std::shared_ptr<Type> vtype; // 表示的variable的类型
+    pType vtype; // 表示的variable的类型
     GVIniter initer;
     int align;
 
 public:
-    GlobalVariable(STOCLASS _sc, std::shared_ptr<Type> _ty, std::string _name,
-                   GVIniter _initer,
+    GlobalVariable(STOCLASS _sc, pType _ty, std::string _name, GVIniter _initer,
                    int _align = 4); // 对于无初始值的，使用第一种构造方式
 
     STOCLASS getStorageClass() const;
-    const std::shared_ptr<Type> &getVarType() const;
+    const pType &getVarType() const;
     bool isArray() const;
     const GVIniter &getIniter() const;
     int getAlign() const;
