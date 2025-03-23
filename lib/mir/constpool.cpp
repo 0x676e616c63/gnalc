@@ -7,7 +7,8 @@ std::shared_ptr<ConstObj> ConstPool::getConstant(const std::string &imme) {
 
     auto it = pool.find(temp);
     if (it == pool.end()) {
-        std::shared_ptr<ConstObj> constant = std::make_shared<ConstObj>(pool.size(), imme);
+        std::shared_ptr<ConstObj> constant =
+            std::make_shared<ConstObj>(pool.size(), imme);
         it = pool.emplace(temp, constant).first;
     }
 

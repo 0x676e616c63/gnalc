@@ -43,18 +43,18 @@ void VarPool::addValue(const IR::Value &val, std::shared_ptr<Operand> Value) {
     pool[wrapper] = std::move(Value);
 }
 
-void VarPool::addLoaded(const ConstObj &obj, std::shared_ptr<BindOnVirOP> Value) { load_map[obj] = std::move(Value); }
+void VarPool::addLoaded(const ConstObj &obj, std::shared_ptr<BindOnVirOP> Value) {
+    load_map[obj] = std::move(Value);
+}
 
 std::shared_ptr<BindOnVirOP> VarPool::addValue_anonymously(bool isFloat) {
     std::string name = '%' + std::to_string(pool.size());
 
     std::shared_ptr<IR::Value> val;
     if (!isFloat)
-        val = std::make_shared<IR::Value>(std::move(name), IR::makeBType(IR::IRBTYPE::I32),
-                                          IR::ValueTrait::ORDINARY_VARIABLE);
+        val = std::make_shared<IR::Value>(std::move(name), IR::makeBType(IR::IRBTYPE::I32), IR::ValueTrait::ORDINARY_VARIABLE);
     else
-        val = std::make_shared<IR::Value>(std::move(name), IR::makeBType(IR::IRBTYPE::FLOAT),
-                                          IR::ValueTrait::ORDINARY_VARIABLE);
+        val = std::make_shared<IR::Value>(std::move(name), IR::makeBType(IR::IRBTYPE::FLOAT), IR::ValueTrait::ORDINARY_VARIABLE);
 
     std::shared_ptr<BindOnVirOP> Value;
     if (!isFloat)
@@ -71,8 +71,7 @@ std::shared_ptr<StackADROP> VarPool::addStackValue_anonymously(const std::shared
     std::string name = '%' + std::to_string(pool.size());
 
     ///@warning 这里的val虽然应该是ptr, 但是是用Btype初始化的
-    auto val = std::make_shared<IR::Value>(std::move(name), IR::makeBType(IR::IRBTYPE::I32),
-                                           IR::ValueTrait::ORDINARY_VARIABLE);
+    auto val = std::make_shared<IR::Value>(std::move(name), IR::makeBType(IR::IRBTYPE::I32), IR::ValueTrait::ORDINARY_VARIABLE);
 
     auto Value = std::make_shared<StackADROP>(obj, val->getName(), 0, getValue(CoreRegister::r7));
 

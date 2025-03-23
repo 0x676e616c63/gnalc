@@ -12,15 +12,21 @@ using namespace MIR;
 struct splited {
     unsigned int exp1;
     unsigned int exp2;
-    enum class oper { singlePos, singleNeg, addPos, addNeg, sub, none } cul;
+    enum class oper { singlePos,
+                      singleNeg,
+                      addPos,
+                      addNeg,
+                      sub,
+                      none } cul;
 };
 
 splited SplitTo2PowX(int);
 
-std::list<std::shared_ptr<Instruction>> mulOpt(const std::shared_ptr<BindOnVirOP> &target,
-                                               const std::shared_ptr<IR::Value> &virRegVal,
-                                               const std::shared_ptr<IR::ConstantInt> &constVal,
-                                               OperandLowering &operlower);
+std::list<std::shared_ptr<Instruction>>
+mulOpt(const std::shared_ptr<BindOnVirOP> &target,
+       const std::shared_ptr<IR::Value> &virRegVal,
+       const std::shared_ptr<IR::ConstantInt> &constVal,
+       OperandLowering &operlower);
 
 struct multiplication {
     int mul;
@@ -29,13 +35,15 @@ struct multiplication {
 
 multiplication ChooseMultipler(int);
 
-std::list<std::shared_ptr<Instruction>> divOpt(const std::shared_ptr<BindOnVirOP> &target,
-                                               const std::shared_ptr<IR::Value> &virRegVal,
-                                               const std::shared_ptr<IR::ConstantInt> &constVal,
-                                               OperandLowering &operlower);
+std::list<std::shared_ptr<Instruction>>
+divOpt(const std::shared_ptr<BindOnVirOP> &target,
+       const std::shared_ptr<IR::Value> &virRegVal,
+       const std::shared_ptr<IR::ConstantInt> &constVal,
+       OperandLowering &operlower);
 //仅在除数为常数时使用, 参考资料https://thysrael.github.io/posts/4848be12, Division by Invariant Integers using Multiplication(论文)
 
-std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::shared_ptr<IR::BinaryInst> &binary) {
+std::list<std::shared_ptr<Instruction>>
+InstLowering::binaryLower(const std::shared_ptr<IR::BinaryInst> &binary) {
     auto target = operlower.mkOP(*binary, RegisterBank::gpr);
 
     auto op = binary->getOpcode();
@@ -60,7 +68,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
 
             auto constOP = operlower.fastFind(constVal);
 
-            auto mov = std::make_shared<movInst>(SourceOperandType::i32, target, constOP);
+            auto mov = std::make_shared<movInst>(SourceOperandType::i32, target,
+                                                 constOP);
             insts.emplace_back(mov);
         }
         // ===================
@@ -69,8 +78,10 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
         else if (rconst) {
             int constVal = rconst->getVal();
 
-            auto regOP = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
-            auto constOP = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(constVal));
+            auto regOP = std::dynamic_pointer_cast<BindOnVirOP>(
+                operlower.fastFind(lval));
+            auto constOP = std::dynamic_pointer_cast<ConstantIDX>(
+                operlower.fastFind(constVal));
 
             ///@brief 判断是否超出范围, 加一条movInst, 此时需要一个新的中继操作数
             if (constOP->getConst()->isEncoded()) {
@@ -79,17 +90,20 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
                 auto relay = pair.second;
 
                 if (!pair.first) {
-                    auto mov = std::make_shared<movInst>(SourceOperandType::i32, relay, constOP);
+                    auto mov = std::make_shared<movInst>(SourceOperandType::i32,
+                                                         relay, constOP);
                     insts.emplace_back(mov);
                 }
 
-                auto add =
-                    std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::rr, target, regOP, relay, nullptr);
+                auto add = std::make_shared<binaryImmInst>(
+                    OpCode::ADD, SourceOperandType::rr, target, regOP, relay,
+                    nullptr);
 
                 insts.emplace_back(add);
             } else {
-                auto add = std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, target, regOP, constOP,
-                                                           nullptr);
+                auto add = std::make_shared<binaryImmInst>(
+                    OpCode::ADD, SourceOperandType::ri, target, regOP, constOP,
+                    nullptr);
                 insts.emplace_back(add);
             }
         }
@@ -99,8 +113,10 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
         else if (lconst) {
             int constVal = lconst->getVal();
 
-            auto regOP = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rval));
-            auto constOP = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(constVal));
+            auto regOP = std::dynamic_pointer_cast<BindOnVirOP>(
+                operlower.fastFind(rval));
+            auto constOP = std::dynamic_pointer_cast<ConstantIDX>(
+                operlower.fastFind(constVal));
 
             ///@brief 判断是否超出范围, 加一条movInst, 此时需要一个新的中继操作数
             if (constOP->getConst()->isEncoded()) {
@@ -109,16 +125,19 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
                 auto relay = pair.second;
 
                 if (!pair.first) {
-                    auto mov = std::make_shared<movInst>(SourceOperandType::i32, relay, constOP);
+                    auto mov = std::make_shared<movInst>(SourceOperandType::i32,
+                                                         relay, constOP);
                     insts.emplace_back(mov);
                 }
 
-                auto add =
-                    std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::rr, target, regOP, relay, nullptr);
+                auto add = std::make_shared<binaryImmInst>(
+                    OpCode::ADD, SourceOperandType::rr, target, regOP, relay,
+                    nullptr);
                 insts.emplace_back(add);
             } else {
-                auto add = std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, target, regOP, constOP,
-                                                           nullptr);
+                auto add = std::make_shared<binaryImmInst>(
+                    OpCode::ADD, SourceOperandType::ri, target, regOP, constOP,
+                    nullptr);
                 insts.emplace_back(add);
             }
         }
@@ -126,10 +145,13 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
         // 4. 无常量
         // ===================
         else {
-            auto rop = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rval));
-            auto lop = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
+            auto rop = std::dynamic_pointer_cast<BindOnVirOP>(
+                operlower.fastFind(rval));
+            auto lop = std::dynamic_pointer_cast<BindOnVirOP>(
+                operlower.fastFind(lval));
 
-            auto add = std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::rr, target, rop, lop, nullptr);
+            auto add = std::make_shared<binaryImmInst>(
+                OpCode::ADD, SourceOperandType::rr, target, rop, lop, nullptr);
             insts.emplace_back(add);
         }
 
@@ -149,7 +171,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
             int constVal = lconst->getVal() - rconst->getVal();
             auto constOP = operlower.fastFind(constVal);
 
-            auto mov = std::make_shared<movInst>(SourceOperandType::i32, target, constOP);
+            auto mov = std::make_shared<movInst>(SourceOperandType::i32, target,
+                                                 constOP);
             insts.emplace_back(mov);
         }
         // ===================
@@ -158,8 +181,10 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
         else if (rconst) {
             int constVal = rconst->getVal();
 
-            auto regOP = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
-            auto constOP = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(constVal));
+            auto regOP = std::dynamic_pointer_cast<BindOnVirOP>(
+                operlower.fastFind(lval));
+            auto constOP = std::dynamic_pointer_cast<ConstantIDX>(
+                operlower.fastFind(constVal));
 
             ///@brief 判断是否超出范围, 加一条movInst, 此时需要一个新的中继操作数
             if (constOP->getConst()->isEncoded()) {
@@ -167,17 +192,20 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
                 auto relay = pair.second;
 
                 if (!pair.first) {
-                    auto mov = std::make_shared<movInst>(SourceOperandType::i32, relay, constOP);
+                    auto mov = std::make_shared<movInst>(SourceOperandType::i32,
+                                                         relay, constOP);
                     insts.emplace_back(mov);
                 }
 
-                auto sub =
-                    std::make_shared<binaryImmInst>(OpCode::SUB, SourceOperandType::rr, target, regOP, relay, nullptr);
+                auto sub = std::make_shared<binaryImmInst>(
+                    OpCode::SUB, SourceOperandType::rr, target, regOP, relay,
+                    nullptr);
 
                 insts.emplace_back(sub);
             } else {
-                auto sub = std::make_shared<binaryImmInst>(OpCode::SUB, SourceOperandType::ri, target, regOP, constOP,
-                                                           nullptr);
+                auto sub = std::make_shared<binaryImmInst>(
+                    OpCode::SUB, SourceOperandType::ri, target, regOP, constOP,
+                    nullptr);
                 insts.emplace_back(sub);
             }
         }
@@ -187,8 +215,10 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
         else if (lconst) {
             int constVal = lconst->getVal();
 
-            auto regOP = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rval));
-            auto constOP = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(constVal));
+            auto regOP = std::dynamic_pointer_cast<BindOnVirOP>(
+                operlower.fastFind(rval));
+            auto constOP = std::dynamic_pointer_cast<ConstantIDX>(
+                operlower.fastFind(constVal));
 
             ///@brief 判断是否超出范围, 加一条movInst, 此时需要一个新的中继操作数
             if (constOP->getConst()->isEncoded()) {
@@ -197,16 +227,19 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
                 auto relay = pair.second;
 
                 if (!pair.first) {
-                    auto mov = std::make_shared<movInst>(SourceOperandType::i32, relay, constOP);
+                    auto mov = std::make_shared<movInst>(SourceOperandType::i32,
+                                                         relay, constOP);
                     insts.emplace_back(mov);
                 }
 
-                auto rsb =
-                    std::make_shared<binaryImmInst>(OpCode::RSB, SourceOperandType::rr, target, regOP, relay, nullptr);
+                auto rsb = std::make_shared<binaryImmInst>(
+                    OpCode::RSB, SourceOperandType::rr, target, regOP, relay,
+                    nullptr);
                 insts.emplace_back(rsb);
             } else {
-                auto rsb = std::make_shared<binaryImmInst>(OpCode::RSB, SourceOperandType::ri, target, regOP, constOP,
-                                                           nullptr);
+                auto rsb = std::make_shared<binaryImmInst>(
+                    OpCode::RSB, SourceOperandType::ri, target, regOP, constOP,
+                    nullptr);
                 insts.emplace_back(rsb);
             }
         }
@@ -214,10 +247,13 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
         // 4. 无常量
         // ===================
         else {
-            auto rop = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rval));
-            auto lop = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
+            auto rop = std::dynamic_pointer_cast<BindOnVirOP>(
+                operlower.fastFind(rval));
+            auto lop = std::dynamic_pointer_cast<BindOnVirOP>(
+                operlower.fastFind(lval));
 
-            auto sub = std::make_shared<binaryImmInst>(OpCode::SUB, SourceOperandType::rr, target, rop, lop, nullptr);
+            auto sub = std::make_shared<binaryImmInst>(
+                OpCode::SUB, SourceOperandType::rr, target, rop, lop, nullptr);
             insts.emplace_back(sub);
         }
     }
@@ -236,7 +272,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
             int constVal = lconst->getVal() * rconst->getVal();
             auto constOP = operlower.fastFind(constVal);
 
-            auto mov = std::make_shared<movInst>(SourceOperandType::i32, target, constOP);
+            auto mov = std::make_shared<movInst>(SourceOperandType::i32, target,
+                                                 constOP);
             insts.emplace_back(mov);
         }
         // ===================
@@ -246,20 +283,25 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
             int constVal = rconst->getVal();
 
             if (SplitTo2PowX(constVal).cul != splited::oper::none) {
-                insts.splice(insts.end(), mulOpt(target, lval, rconst, operlower));
+                insts.splice(insts.end(),
+                             mulOpt(target, lval, rconst, operlower));
 
             } else {
-                auto regOP = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
-                auto constOP = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(constVal));
+                auto regOP = std::dynamic_pointer_cast<BindOnVirOP>(
+                    operlower.fastFind(lval));
+                auto constOP = std::dynamic_pointer_cast<ConstantIDX>(
+                    operlower.fastFind(constVal));
 
                 auto pair = operlower.LoadedFind(constVal);
                 auto relay = pair.second;
                 if (!pair.first) {
-                    auto mov = std::make_shared<movInst>(SourceOperandType::i32, relay, constOP);
+                    auto mov = std::make_shared<movInst>(SourceOperandType::i32,
+                                                         relay, constOP);
                     insts.emplace_back(mov);
                 }
 
-                auto mul = std::make_shared<binaryInst>(OpCode::MUL, SourceOperandType::rr, target, regOP, relay);
+                auto mul = std::make_shared<binaryInst>(
+                    OpCode::MUL, SourceOperandType::rr, target, regOP, relay);
 
                 insts.emplace_back(mul);
             }
@@ -271,19 +313,24 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
             int constVal = lconst->getVal();
 
             if (SplitTo2PowX(constVal).cul != splited::oper::none) {
-                insts.splice(insts.end(), mulOpt(target, rval, lconst, operlower));
+                insts.splice(insts.end(),
+                             mulOpt(target, rval, lconst, operlower));
             } else {
-                auto regOP = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rval));
-                auto constOP = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(constVal));
+                auto regOP = std::dynamic_pointer_cast<BindOnVirOP>(
+                    operlower.fastFind(rval));
+                auto constOP = std::dynamic_pointer_cast<ConstantIDX>(
+                    operlower.fastFind(constVal));
 
                 auto pair = operlower.LoadedFind(constVal);
                 auto relay = pair.second;
                 if (!pair.first) {
-                    auto mov = std::make_shared<movInst>(SourceOperandType::i32, relay, constOP);
+                    auto mov = std::make_shared<movInst>(SourceOperandType::i32,
+                                                         relay, constOP);
                     insts.emplace_back(mov);
                 }
 
-                auto mul = std::make_shared<binaryInst>(OpCode::MUL, SourceOperandType::rr, target, regOP, relay);
+                auto mul = std::make_shared<binaryInst>(
+                    OpCode::MUL, SourceOperandType::rr, target, regOP, relay);
 
                 insts.emplace_back(mul);
             }
@@ -292,10 +339,13 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
         // 4. 无常量
         // ===================
         else {
-            auto rop = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rval));
-            auto lop = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
+            auto rop = std::dynamic_pointer_cast<BindOnVirOP>(
+                operlower.fastFind(rval));
+            auto lop = std::dynamic_pointer_cast<BindOnVirOP>(
+                operlower.fastFind(lval));
 
-            auto mul = std::make_shared<binaryInst>(OpCode::MUL, SourceOperandType::rr, target, rop, lop);
+            auto mul = std::make_shared<binaryInst>(
+                OpCode::MUL, SourceOperandType::rr, target, rop, lop);
             insts.emplace_back(mul);
         }
     }
@@ -314,7 +364,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
             int constVal = lconst->getVal() / rconst->getVal();
             auto constOP = operlower.fastFind(constVal);
 
-            auto mov = std::make_shared<movInst>(SourceOperandType::i32, target, constOP);
+            auto mov = std::make_shared<movInst>(SourceOperandType::i32, target,
+                                                 constOP);
             insts.emplace_back(mov);
         }
         // ===================
@@ -331,17 +382,21 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
         else if (lconst) {
             int constVal = lconst->getVal();
 
-            auto regOP = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rval));
-            auto constOP = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(constVal));
+            auto regOP = std::dynamic_pointer_cast<BindOnVirOP>(
+                operlower.fastFind(rval));
+            auto constOP = std::dynamic_pointer_cast<ConstantIDX>(
+                operlower.fastFind(constVal));
 
             auto pair = operlower.LoadedFind(constVal);
             auto relay = pair.second;
             if (!pair.first) {
-                auto mov = std::make_shared<movInst>(SourceOperandType::i32, relay, constOP);
+                auto mov = std::make_shared<movInst>(SourceOperandType::i32,
+                                                     relay, constOP);
                 insts.emplace_back(mov);
             }
 
-            auto sdiv = std::make_shared<binaryInst>(OpCode::SDIV, SourceOperandType::rr, target, relay, regOP);
+            auto sdiv = std::make_shared<binaryInst>(
+                OpCode::SDIV, SourceOperandType::rr, target, relay, regOP);
 
             insts.emplace_back(sdiv);
         }
@@ -349,10 +404,13 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
         // 4. 无常量
         // ===================
         else {
-            auto rop = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rval));
-            auto lop = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
+            auto rop = std::dynamic_pointer_cast<BindOnVirOP>(
+                operlower.fastFind(rval));
+            auto lop = std::dynamic_pointer_cast<BindOnVirOP>(
+                operlower.fastFind(lval));
 
-            auto sdiv = std::make_shared<binaryInst>(OpCode::SDIV, SourceOperandType::rr, target, rop, lop);
+            auto sdiv = std::make_shared<binaryInst>(
+                OpCode::SDIV, SourceOperandType::rr, target, rop, lop);
             insts.emplace_back(sdiv);
         }
     }
@@ -370,43 +428,52 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
         std::shared_ptr<BindOnVirOP> divisor;
 
         if (rconst) {
-            auto constOP = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(rconst->getVal()));
+            auto constOP = std::dynamic_pointer_cast<ConstantIDX>(
+                operlower.fastFind(rconst->getVal()));
 
             auto pair = operlower.LoadedFind(rconst->getVal());
             auto relay = pair.second;
             if (!pair.first) {
-                auto mov = std::make_shared<movInst>(SourceOperandType::i32, relay, constOP);
+                auto mov = std::make_shared<movInst>(SourceOperandType::i32,
+                                                     relay, constOP);
                 insts.emplace_back(mov);
             }
 
             divisor = relay;
         } else {
-            divisor = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rval));
+            divisor = std::dynamic_pointer_cast<BindOnVirOP>(
+                operlower.fastFind(rval));
         }
 
         if (lconst) {
-            auto constOP = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(lconst->getVal()));
+            auto constOP = std::dynamic_pointer_cast<ConstantIDX>(
+                operlower.fastFind(lconst->getVal()));
 
             auto pair = operlower.LoadedFind(lconst->getVal());
             auto relay = pair.second;
             if (!pair.first) {
-                auto mov = std::make_shared<movInst>(SourceOperandType::i32, relay, constOP);
+                auto mov = std::make_shared<movInst>(SourceOperandType::i32,
+                                                     relay, constOP);
                 insts.emplace_back(mov);
             }
             dividend = relay;
         } else {
-            dividend = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
+            dividend = std::dynamic_pointer_cast<BindOnVirOP>(
+                operlower.fastFind(lval));
         }
 
         // ====================
         // step2: sdiv + mls
         // ====================
-        auto quotient = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto quotient =
+            operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
 
-        auto sdiv = std::make_shared<binaryInst>(OpCode::SDIV, SourceOperandType::rr, quotient, dividend, divisor);
+        auto sdiv = std::make_shared<binaryInst>(
+            OpCode::SDIV, SourceOperandType::rr, quotient, dividend, divisor);
 
         auto mls =
-            std::make_shared<ternaryInst>(OpCode::MLS, SourceOperandType::rrr, target, quotient, divisor, dividend);
+            std::make_shared<ternaryInst>(OpCode::MLS, SourceOperandType::rrr,
+                                          target, quotient, divisor, dividend);
         insts.emplace_back(sdiv);
         insts.emplace_back(mls);
 
@@ -468,10 +535,11 @@ splited SplitTo2PowX(int multiplier) {
     return twin;
 }
 
-std::list<std::shared_ptr<Instruction>> mulOpt(const std::shared_ptr<BindOnVirOP> &target,
-                                               const std::shared_ptr<IR::Value> &virRegVal,
-                                               const std::shared_ptr<IR::ConstantInt> &constVal,
-                                               OperandLowering &operlower) {
+std::list<std::shared_ptr<Instruction>>
+mulOpt(const std::shared_ptr<BindOnVirOP> &target,
+       const std::shared_ptr<IR::Value> &virRegVal,
+       const std::shared_ptr<IR::ConstantInt> &constVal,
+       OperandLowering &operlower) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     int multipler = constVal->getVal();
@@ -480,21 +548,27 @@ std::list<std::shared_ptr<Instruction>> mulOpt(const std::shared_ptr<BindOnVirOP
     if (split.cul == splited::oper::singlePos) {
         // lsl Rd, Rm, #imme
         auto shitfimme = operlower.fastFind((int)split.exp1);
-        auto mulval = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(virRegVal));
+        auto mulval = std::dynamic_pointer_cast<BindOnVirOP>(
+            operlower.fastFind(virRegVal));
 
         auto lsl =
-            std::make_shared<binaryImmInst>(OpCode::LSL, SourceOperandType::ri, target, mulval, shitfimme, nullptr);
+            std::make_shared<binaryImmInst>(OpCode::LSL, SourceOperandType::ri,
+                                            target, mulval, shitfimme, nullptr);
         insts.emplace_back(lsl);
     } else if (split.cul == splited::oper::singleNeg) {
         // neg Rd, Rm
         // lsl Rd, Rm, #imme
         auto shitfimme = operlower.fastFind((int)split.exp1);
-        auto mulval = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(virRegVal));
-        auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto mulval = std::dynamic_pointer_cast<BindOnVirOP>(
+            operlower.fastFind(virRegVal));
+        auto relay =
+            operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
 
-        auto neg = std::make_shared<unaryInst>(OpCode::NEG, SourceOperandType::r, relay, mulval);
+        auto neg = std::make_shared<unaryInst>(
+            OpCode::NEG, SourceOperandType::r, relay, mulval);
         auto lsl =
-            std::make_shared<binaryImmInst>(OpCode::LSL, SourceOperandType::ri, target, relay, shitfimme, nullptr);
+            std::make_shared<binaryImmInst>(OpCode::LSL, SourceOperandType::ri,
+                                            target, relay, shitfimme, nullptr);
         insts.emplace_back(neg);
         insts.emplace_back(lsl);
     } else if (split.cul == splited::oper::addPos) {
@@ -502,13 +576,17 @@ std::list<std::shared_ptr<Instruction>> mulOpt(const std::shared_ptr<BindOnVirOP
         // add Rd, Rm, Rn, LSL #imme2
         auto shiftimme1 = operlower.fastFind((int)split.exp1);
         auto shiftimme2 = operlower.fastFind((int)split.exp2);
-        auto mulval = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(virRegVal));
-        auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto mulval = std::dynamic_pointer_cast<BindOnVirOP>(
+            operlower.fastFind(virRegVal));
+        auto relay =
+            operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
 
         auto lsl =
-            std::make_shared<binaryImmInst>(OpCode::LSL, SourceOperandType::ri, relay, mulval, shiftimme1, nullptr);
-        auto add = std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::rsi, target, relay, mulval,
-                                                   std::make_shared<ShiftOP>(split.exp2, ShiftOP::inlineShift::lsl));
+            std::make_shared<binaryImmInst>(OpCode::LSL, SourceOperandType::ri,
+                                            relay, mulval, shiftimme1, nullptr);
+        auto add = std::make_shared<binaryImmInst>(
+            OpCode::ADD, SourceOperandType::rsi, target, relay, mulval,
+            std::make_shared<ShiftOP>(split.exp2, ShiftOP::inlineShift::lsl));
         insts.emplace_back(lsl);
         insts.emplace_back(add);
 
@@ -518,15 +596,21 @@ std::list<std::shared_ptr<Instruction>> mulOpt(const std::shared_ptr<BindOnVirOP
         // add Rd, Rm, Rn, LSL #imme2
         auto shiftimme1 = operlower.fastFind((int)split.exp1);
         auto shiftimme2 = operlower.fastFind((int)split.exp2);
-        auto mulval = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(virRegVal));
-        auto neg_relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
-        auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto mulval = std::dynamic_pointer_cast<BindOnVirOP>(
+            operlower.fastFind(virRegVal));
+        auto neg_relay =
+            operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto relay =
+            operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
 
-        auto neg = std::make_shared<unaryInst>(OpCode::NEG, SourceOperandType::r, neg_relay, mulval);
-        auto lsl =
-            std::make_shared<binaryImmInst>(OpCode::LSL, SourceOperandType::ri, relay, neg_relay, shiftimme1, nullptr);
-        auto add = std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::rsi, target, relay, neg_relay,
-                                                   std::make_shared<ShiftOP>(split.exp2, ShiftOP::inlineShift::lsl));
+        auto neg = std::make_shared<unaryInst>(
+            OpCode::NEG, SourceOperandType::r, neg_relay, mulval);
+        auto lsl = std::make_shared<binaryImmInst>(
+            OpCode::LSL, SourceOperandType::ri, relay, neg_relay, shiftimme1,
+            nullptr);
+        auto add = std::make_shared<binaryImmInst>(
+            OpCode::ADD, SourceOperandType::rsi, target, relay, neg_relay,
+            std::make_shared<ShiftOP>(split.exp2, ShiftOP::inlineShift::lsl));
         insts.emplace_back(neg);
         insts.emplace_back(lsl);
         insts.emplace_back(add);
@@ -536,14 +620,18 @@ std::list<std::shared_ptr<Instruction>> mulOpt(const std::shared_ptr<BindOnVirOP
             // sub Rd, Rm, Rn, LSL #imme2
             auto shiftimme1 = operlower.fastFind((int)split.exp1);
             auto shiftimme2 = operlower.fastFind((int)split.exp2);
-            auto mulvir = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(virRegVal));
-            auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+            auto mulvir = std::dynamic_pointer_cast<BindOnVirOP>(
+                operlower.fastFind(virRegVal));
+            auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32),
+                                        RegisterBank::gpr);
 
-            auto lsl =
-                std::make_shared<binaryImmInst>(OpCode::LSL, SourceOperandType::r, relay, mulvir, shiftimme1, nullptr);
-            auto sub =
-                std::make_shared<binaryImmInst>(OpCode::SUB, SourceOperandType::rsi, target, relay, mulvir,
-                                                std::make_shared<ShiftOP>(split.exp2, ShiftOP::inlineShift::lsl));
+            auto lsl = std::make_shared<binaryImmInst>(
+                OpCode::LSL, SourceOperandType::r, relay, mulvir, shiftimme1,
+                nullptr);
+            auto sub = std::make_shared<binaryImmInst>(
+                OpCode::SUB, SourceOperandType::rsi, target, relay, mulvir,
+                std::make_shared<ShiftOP>(split.exp2,
+                                          ShiftOP::inlineShift::lsl));
             insts.emplace_back(lsl);
             insts.emplace_back(sub);
         } else {
@@ -552,17 +640,23 @@ std::list<std::shared_ptr<Instruction>> mulOpt(const std::shared_ptr<BindOnVirOP
             // sub Rd, Rm, Rn, LSL #imme1
             auto shiftimme1 = operlower.fastFind((int)split.exp1);
             auto shiftimme2 = operlower.fastFind((int)split.exp2);
-            auto mulvir = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(virRegVal));
-            auto neg_relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
-            auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+            auto mulvir = std::dynamic_pointer_cast<BindOnVirOP>(
+                operlower.fastFind(virRegVal));
+            auto neg_relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32),
+                                            RegisterBank::gpr);
+            auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32),
+                                        RegisterBank::gpr);
 
-            auto neg = std::make_shared<unaryInst>(OpCode::NEG, SourceOperandType::r, neg_relay, mulvir);
+            auto neg = std::make_shared<unaryInst>(
+                OpCode::NEG, SourceOperandType::r, neg_relay, mulvir);
 
-            auto lsl = std::make_shared<binaryImmInst>(OpCode::LSL, SourceOperandType::r, relay, neg_relay, shiftimme2,
-                                                       nullptr);
-            auto sub =
-                std::make_shared<binaryImmInst>(OpCode::SUB, SourceOperandType::rsi, target, relay, neg_relay,
-                                                std::make_shared<ShiftOP>(split.exp1, ShiftOP::inlineShift::lsl));
+            auto lsl = std::make_shared<binaryImmInst>(
+                OpCode::LSL, SourceOperandType::r, relay, neg_relay, shiftimme2,
+                nullptr);
+            auto sub = std::make_shared<binaryImmInst>(
+                OpCode::SUB, SourceOperandType::rsi, target, relay, neg_relay,
+                std::make_shared<ShiftOP>(split.exp1,
+                                          ShiftOP::inlineShift::lsl));
             insts.emplace_back(neg);
             insts.emplace_back(lsl);
             insts.emplace_back(sub);
@@ -577,7 +671,9 @@ multiplication ChooseMultipler(int divisor) {
     int shift = log_2;
 
     size_t low = (std::size_t(1) << (32 + shift)) / divisor;
-    size_t high = ((std::size_t(1) << (32 + shift)) + (std::size_t(1) << (shift + 1))) / divisor;
+    size_t high =
+        ((std::size_t(1) << (32 + shift)) + (std::size_t(1) << (shift + 1))) /
+        divisor;
 
     while ((low >> 1) < (high >> 1) && shift > 0) {
         low >>= 1;
@@ -589,20 +685,24 @@ multiplication ChooseMultipler(int divisor) {
     return multiplication{(int)high, shift};
 }
 
-std::list<std::shared_ptr<Instruction>> divOpt(const std::shared_ptr<BindOnVirOP> &target,
-                                               const std::shared_ptr<IR::Value> &virRegVal,
-                                               const std::shared_ptr<IR::ConstantInt> &constVal,
-                                               OperandLowering &operlower) {
+std::list<std::shared_ptr<Instruction>>
+divOpt(const std::shared_ptr<BindOnVirOP> &target,
+       const std::shared_ptr<IR::Value> &virRegVal,
+       const std::shared_ptr<IR::ConstantInt> &constVal,
+       OperandLowering &operlower) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     int divisor_const = constVal->getVal();
-    auto dividend = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(virRegVal));
+    auto dividend =
+        std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(virRegVal));
 
     // neg Rd, Rm
     if (divisor_const < 0) {
-        auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto relay =
+            operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
 
-        auto neg = std::make_shared<unaryInst>(OpCode::NEG, SourceOperandType::r, relay, dividend);
+        auto neg = std::make_shared<unaryInst>(
+            OpCode::NEG, SourceOperandType::r, relay, dividend);
 
         dividend = relay;
         divisor_const = std::abs(divisor_const);
@@ -616,22 +716,29 @@ std::list<std::shared_ptr<Instruction>> divOpt(const std::shared_ptr<BindOnVirOP
         // asr	target, temp3, #log2(divisor)
         auto exp = ctz_wrapper(divisor_const);
 
-        auto relay1 = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
-        auto relay2 = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
-        auto relay3 = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto relay1 =
+            operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto relay2 =
+            operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto relay3 =
+            operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
 
         auto const_31 = operlower.fastFind(31);
         auto const_lsr_shift = operlower.fastFind(32 - exp);
         auto const_asr_shift = operlower.fastFind(exp);
 
-        auto asr1 =
-            std::make_shared<binaryImmInst>(OpCode::ASR, SourceOperandType::ri, relay1, dividend, const_31, nullptr);
-        auto lsr = std::make_shared<binaryImmInst>(OpCode::LSR, SourceOperandType::ri, relay2, relay1, const_lsr_shift,
-                                                   nullptr);
+        auto asr1 = std::make_shared<binaryImmInst>(
+            OpCode::ASR, SourceOperandType::ri, relay1, dividend, const_31,
+            nullptr);
+        auto lsr = std::make_shared<binaryImmInst>(
+            OpCode::LSR, SourceOperandType::ri, relay2, relay1, const_lsr_shift,
+            nullptr);
         auto add =
-            std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::rr, relay3, dividend, relay2, nullptr);
-        auto asr2 = std::make_shared<binaryImmInst>(OpCode::ASR, SourceOperandType::ri, target, relay3, const_asr_shift,
-                                                    nullptr);
+            std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::rr,
+                                            relay3, dividend, relay2, nullptr);
+        auto asr2 = std::make_shared<binaryImmInst>(
+            OpCode::ASR, SourceOperandType::ri, target, relay3, const_asr_shift,
+            nullptr);
         insts.emplace_back(asr1);
         insts.emplace_back(lsr);
         insts.emplace_back(add);
@@ -646,33 +753,41 @@ std::list<std::shared_ptr<Instruction>> divOpt(const std::shared_ptr<BindOnVirOP
             const_mul = operlower.fastFind(multipler.mul);
         auto shift = operlower.fastFind(multipler.shift);
 
-        auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
-        auto mov = std::make_shared<movInst>(SourceOperandType::i, relay, const_mul);
+        auto relay =
+            operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto mov =
+            std::make_shared<movInst>(SourceOperandType::i, relay, const_mul);
         insts.emplace_back(mov);
 
-        auto relay2 = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto relay2 =
+            operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
         if (multipler.mul > 0x80000000) {
             // smmla temp2, dividend, temp1, dividend
-            auto smmla =
-                std::make_shared<ternaryInst>(OpCode::SMMLA, SourceOperandType::rrr, relay2, dividend, relay, dividend);
+            auto smmla = std::make_shared<ternaryInst>(
+                OpCode::SMMLA, SourceOperandType::rrr, relay2, dividend, relay,
+                dividend);
             insts.emplace_back(smmla);
         } else {
             // smmul temp2, dividend, temp1
-            auto smmul = std::make_shared<binaryInst>(OpCode::SMMUL, SourceOperandType::rr, relay2, dividend, relay);
+            auto smmul = std::make_shared<binaryInst>(
+                OpCode::SMMUL, SourceOperandType::rr, relay2, dividend, relay);
         }
 
         // asr temp3, temp2, #shift (shift为0时, 此条省略)
         // add target, temp3, dividend, LSR #31
         if (multipler.shift) {
-            auto relay3 = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
-            auto asr =
-                std::make_shared<binaryImmInst>(OpCode::ASR, SourceOperandType::ri, relay3, relay2, shift, nullptr);
+            auto relay3 = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32),
+                                         RegisterBank::gpr);
+            auto asr = std::make_shared<binaryImmInst>(
+                OpCode::ASR, SourceOperandType::ri, relay3, relay2, shift,
+                nullptr);
             insts.emplace_back(asr);
             relay2 = relay3;
         }
 
-        auto add = std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::rsi, target, relay2, dividend,
-                                                   std::make_shared<ShiftOP>(31, ShiftOP::inlineShift::lsr));
+        auto add = std::make_shared<binaryImmInst>(
+            OpCode::ADD, SourceOperandType::rsi, target, relay2, dividend,
+            std::make_shared<ShiftOP>(31, ShiftOP::inlineShift::lsr));
         insts.emplace_back(add);
     }
 

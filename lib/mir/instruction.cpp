@@ -12,8 +12,10 @@ std::string Instruction::toString() {
     str += enum_name(std::get<OpCode>(opcode));
 
     str += enum_name(condition);
-    if (flashFlag && std::get<OpCode>(opcode) != OpCode::CMN && std::get<OpCode>(opcode) != OpCode::CMP &&
-        std::get<OpCode>(opcode) != OpCode::TST && std::get<OpCode>(opcode) != OpCode::TEQ)
+    if (flashFlag && std::get<OpCode>(opcode) != OpCode::CMN &&
+        std::get<OpCode>(opcode) != OpCode::CMP &&
+        std::get<OpCode>(opcode) != OpCode::TST &&
+        std::get<OpCode>(opcode) != OpCode::TEQ)
         str += 'S';
 
     str += enum_name(tptrait) + ' ';
