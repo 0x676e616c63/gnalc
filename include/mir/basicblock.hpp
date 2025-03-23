@@ -37,8 +37,7 @@ public:
         return insts.size();
     }
 
-    unsigned int
-    addInsts_front(std::list<std::shared_ptr<Instruction>> _insts) {
+    unsigned int addInsts_front(std::list<std::shared_ptr<Instruction>> _insts) {
         if (!_insts.empty())
             insts.splice(insts.begin(), _insts);
         return insts.size();
@@ -53,9 +52,7 @@ public:
         return LiveOut.size();
     }
 
-    std::list<std::shared_ptr<BasicBlock>> getPreds() const {
-        return MIR::WeaktoSharedList(pres);
-    }
+    std::list<std::shared_ptr<BasicBlock>> getPreds() const { return MIR::WeaktoSharedList(pres); }
     std::list<std::shared_ptr<BasicBlock>> getSuccs() const { return MIR::WeaktoSharedList(succs); }
 
     unsigned int addPred(const std::shared_ptr<BasicBlock> &_pre) {
@@ -71,19 +68,18 @@ public:
 
     void delSucc(std::shared_ptr<BasicBlock> succ);
 
-    std::list<std::shared_ptr<Instruction>> &
-    getInsts() { return insts; }
+    std::list<std::shared_ptr<Instruction>> &getInsts() { return insts; }
 
-    std::unordered_set<std::shared_ptr<BindOnVirOP>> &getLiveIn() {
-        return LiveIn;
-    }
-    std::unordered_set<std::shared_ptr<BindOnVirOP>> &getLiveOut() {
-        return LiveOut;
-    }
+    std::unordered_set<std::shared_ptr<BindOnVirOP>> &getLiveIn() { return LiveIn; }
+    std::unordered_set<std::shared_ptr<BindOnVirOP>> &getLiveOut() { return LiveOut; }
 
     void delInst(std::shared_ptr<Instruction>);
 
     std::string toString() const override;
+
+    using liveSet = std::unordered_set<std::shared_ptr<Operand>>;
+    std::string toString_debug(liveSet liveIn, liveSet liveOut) const;
+
     ~BasicBlock() override = default;
 };
 

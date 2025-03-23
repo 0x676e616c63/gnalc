@@ -8,16 +8,30 @@
 
 using namespace MIR;
 
-std::list<std::shared_ptr<Instruction>>
-InstLowering::brLower(const std::shared_ptr<IR::BRInst> &br) {
+std::list<std::shared_ptr<Instruction>> InstLowering::brLower(const std::shared_ptr<IR::BRInst> &br,
+                                                              const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     if (!br->isConditional()) {
         // b label
         auto Dest = br->getDest();
-        auto b_true =
-            std::make_shared<branchInst>(OpCode::B, Dest, Dest->getName());
+        auto b_true = std::make_shared<branchInst>(OpCode::B, Dest, Dest->getName());
         insts.emplace_back(b_true);
+    } else if (auto constcond = std::dynamic_pointer_cast<IR::ConstantI1>(br->getCond())) {
+        //   虽然奇怪但是确实有这种IR
+        //   br i1 1, label %true, label %false
+        //   br i1 0, label %true, label %false
+        auto trueDest = br->getTrueDest();
+        auto falseDest = br->getFalseDest();
+        auto boolean = constcond->getVal();
+
+        if (boolean) {
+            auto b_true = std::make_shared<branchInst>(OpCode::B, trueDest, trueDest->getName());
+            insts.emplace_back(b_true);
+        } else {
+            auto b_false = std::make_shared<branchInst>(OpCode::B, trueDest, falseDest->getName());
+            insts.emplace_back(b_false);
+        }
     } else {
         auto cond = br->getCond();
         auto trueDest = br->getTrueDest();
@@ -26,16 +40,12 @@ InstLowering::brLower(const std::shared_ptr<IR::BRInst> &br) {
         // teq (BindOnVirOP)cond, #0x1
         // b<eq> label_true
         // b label_false
-        auto boolVal =
-            std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(cond));
+        auto boolVal = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(cond));
         auto trueVal = operlower.fastFind(1); // #0x1
-        auto teq = std::make_shared<compareInst>(
-            OpCode::TEQ, SourceOperandType::rr, boolVal, trueVal);
-        auto b_true = std::make_shared<branchInst>(OpCode::B, trueDest,
-                                                   trueDest->getName());
+        auto teq = std::make_shared<compareInst>(OpCode::TEQ, SourceOperandType::rr, boolVal, trueVal);
+        auto b_true = std::make_shared<branchInst>(OpCode::B, trueDest, trueDest->getName());
         b_true->setCondCodeFlag(CondCodeFlag::eq);
-        auto b_false = std::make_shared<branchInst>(OpCode::B, falseDest,
-                                                    falseDest->getName());
+        auto b_false = std::make_shared<branchInst>(OpCode::B, falseDest, falseDest->getName());
         // b_false.condflag : AL
         insts.emplace_back(teq);
         insts.emplace_back(b_true);
@@ -45,8 +55,8 @@ InstLowering::brLower(const std::shared_ptr<IR::BRInst> &br) {
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>>
-InstLowering::retLower(const std::shared_ptr<IR::RETInst> &ret) {
+std::list<std::shared_ptr<Instruction>> InstLowering::retLower(const std::shared_ptr<IR::RETInst> &ret,
+                                                               const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     auto retType = ret->getRetBType();
@@ -54,44 +64,48 @@ InstLowering::retLower(const std::shared_ptr<IR::RETInst> &ret) {
     if (retType != IR::IRBTYPE::FLOAT) {
         // mov $r0, %retVal
         auto retVal = operlower.fastFind(ret->getRetVal()); // 可能是常量
-        auto mov = std::make_shared<movInst>(
-            SourceOperandType::i, operlower.getPreColored(CoreRegister::r0),
-            retVal);
+
+        SourceOperandType optype;
+        if (std::dynamic_pointer_cast<ConstantIDX>(retVal))
+            optype = SourceOperandType::i;
+        else
+            optype = SourceOperandType::r;
+
+        auto mov = std::make_shared<movInst>(optype, operlower.getPreColored(CoreRegister::r0), retVal);
         insts.emplace_back(mov);
     } else {
         auto pair = std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32);
 
-        if (auto ret_const = std::dynamic_pointer_cast<IR::ConstantFloat>(
-                ret->getRetVal())) {
-            auto retVal = std::dynamic_pointer_cast<ConstantIDX>(
-                operlower.fastFind(ret_const->getVal()));
+        if (auto ret_const = std::dynamic_pointer_cast<IR::ConstantFloat>(ret->getRetVal())) {
+            auto retVal = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(ret_const->getVal()));
 
             if (retVal->getConst()->isEncoded()) {
                 // mov %tmp #imme
                 // vmov $s0, %tmp
-                auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32),
-                                            RegisterBank::gpr);
-                auto mov = std::make_shared<movInst>(SourceOperandType::i,
-                                                     relay, retVal);
-                auto vmov = std::make_shared<Vmov>(
-                    SourceOperandType::r,
-                    operlower.getPreColored(FPURegister::s0), relay, pair);
+                auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+                auto mov = std::make_shared<movInst>(SourceOperandType::i, relay, retVal);
+                auto vmov =
+                    std::make_shared<Vmov>(SourceOperandType::r, operlower.getPreColored(FPURegister::s0), relay, pair);
                 insts.emplace_back(mov);
                 insts.emplace_back(vmov);
             } else {
                 // vmov $s0, %retVal
-                auto vmov = std::make_shared<Vmov>(
-                    SourceOperandType::i,
-                    operlower.getPreColored(FPURegister::s0), retVal, pair);
+                auto vmov = std::make_shared<Vmov>(SourceOperandType::i, operlower.getPreColored(FPURegister::s0),
+                                                   retVal, pair);
                 insts.emplace_back(vmov);
             }
         } else {
             // vmov $s0, %retVal
 
             auto retVal = operlower.fastFind(ret->getRetVal());
-            auto vmov = std::make_shared<Vmov>(
-                SourceOperandType::r, operlower.getPreColored(FPURegister::s0),
-                retVal, pair);
+
+            SourceOperandType optype;
+            if (std::dynamic_pointer_cast<ConstantIDX>(retVal))
+                optype = SourceOperandType::i;
+            else
+                optype = SourceOperandType::r;
+
+            auto vmov = std::make_shared<Vmov>(optype, operlower.getPreColored(FPURegister::s0), retVal, pair);
 
             insts.emplace_back(vmov);
         }
@@ -103,8 +117,8 @@ InstLowering::retLower(const std::shared_ptr<IR::RETInst> &ret) {
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>>
-InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
+std::list<std::shared_ptr<Instruction>> InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call,
+                                                                const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     auto func = call->getFunc();
@@ -123,27 +137,23 @@ InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
         auto type = arg->getType();
         if (auto btype = IR::toBType(type)) {
             /// @brief int / float
-            if (btype->getInner() == IR::IRBTYPE::I32 ||
-                btype->getInner() == IR::IRBTYPE::I8 ||
+            if (btype->getInner() == IR::IRBTYPE::I32 || btype->getInner() == IR::IRBTYPE::I8 ||
                 btype->getInner() == IR::IRBTYPE::I1) {
                 // 传参的时候I几都一样, 尤其是用寄存器的时候
                 if (cnt <= 4) {
                     // mov $rx, %arg
-                    auto reg =
-                        operlower.getPreColored(static_cast<CoreRegister>(cnt));
+                    auto reg = operlower.getPreColored(static_cast<CoreRegister>(cnt));
 
-                    if (auto arg_const =
-                            std::dynamic_pointer_cast<IR::ConstantInt>(arg)) {
-                        auto const_arg =
-                            operlower.fastFind(arg_const->getVal());
-                        auto mov = std::make_shared<movInst>(
-                            SourceOperandType::ri, reg, const_arg);
-                        insts.emplace_back(mov);
-
+                    if (auto arg_const = std::dynamic_pointer_cast<IR::ConstantInt>(arg)) {
+                        // auto const_arg = operlower.fastFind(arg_const->getVal());
+                        // auto mov = std::make_shared<movInst>(SourceOperandType::i32, reg, const_arg);
+                        // insts.emplace_back(mov);
+                        auto const_arg = operlower.LoadedFind(arg_const->getVal(), blk);
+                        auto copy = std::make_shared<COPY>(reg, const_arg);
+                        insts.emplace_back(copy);
                     } else {
                         auto arg_in_reg = operlower.fastFind(arg);
-                        auto mov = std::make_shared<movInst>(
-                            SourceOperandType::rr, reg, arg_in_reg);
+                        auto mov = std::make_shared<movInst>(SourceOperandType::r, reg, arg_in_reg);
                         insts.emplace_back(mov);
                     }
 
@@ -151,64 +161,46 @@ InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
                     // (mov %arg, #arg)
                     // str %arg, [sp, #offset]
                     std::shared_ptr<BindOnVirOP> arg_in_reg;
-                    if (auto arg_const =
-                            std::dynamic_pointer_cast<IR::ConstantInt>(arg)) {
-                        arg_in_reg = operlower.mkOP(*arg, RegisterBank::gpr);
-                        auto const_arg =
-                            operlower.fastFind(arg_const->getVal());
+                    if (auto arg_const = std::dynamic_pointer_cast<IR::ConstantInt>(arg)) {
+                        // arg_in_reg = operlower.mkOP(*arg, RegisterBank::gpr);
+                        // auto const_arg = operlower.fastFind(arg_const->getVal());
 
-                        auto mov = std::make_shared<movInst>(
-                            SourceOperandType::ri, arg_in_reg, const_arg);
-                        insts.emplace_back(mov);
+                        // auto mov = std::make_shared<movInst>(SourceOperandType::r, arg_in_reg, const_arg);
+                        // insts.emplace_back(mov);
+                        arg_in_reg = operlower.LoadedFind(arg_const->getVal(), blk);
                     } else {
-                        arg_in_reg = std::dynamic_pointer_cast<BindOnVirOP>(
-                            operlower.fastFind(arg));
+                        arg_in_reg = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(arg));
                     }
 
-                    auto str = std::make_shared<strInst>(SourceOperandType::ra,
-                                                         4, arg_in_reg,
-                                                         operlower.mkStackOP());
+                    auto str = std::make_shared<strInst>(SourceOperandType::ra, 4, arg_in_reg, operlower.mkStackOP());
                     insts.emplace_back(str);
                 }
                 ++cnt;
             } else if (btype->getInner() == IR::IRBTYPE::FLOAT) {
 
-                auto reg =
-                    operlower.getPreColored(static_cast<FPURegister>(fcnt));
-                if (auto arg_const =
-                        std::dynamic_pointer_cast<IR::ConstantFloat>(arg)) {
+                auto reg = operlower.getPreColored(static_cast<FPURegister>(fcnt));
+                if (auto arg_const = std::dynamic_pointer_cast<IR::ConstantFloat>(arg)) {
 
                     // (mov %tmp, #Encoded)
                     // vmov $sx, %tmp
-                    auto const_arg = std::dynamic_pointer_cast<ConstantIDX>(
-                        operlower.fastFind(arg_const->getVal()));
+                    auto const_arg = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(arg_const->getVal()));
                     if (const_arg->getConst()->isEncoded()) {
-                        auto arg_in_reg = operlower.mkOP(
-                            IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+                        auto arg_in_reg = operlower.LoadedFind(arg_const->getVal(), blk);
 
-                        auto mov = std::make_shared<movInst>(
-                            SourceOperandType::ri, arg_in_reg, const_arg);
-                        auto pair = std::make_pair(bitType::DEFAULT32,
-                                                   bitType::DEFAULT32);
-                        auto vmov = std::make_shared<Vmov>(
-                            SourceOperandType::r, reg, arg_in_reg, pair);
-                        insts.emplace_back(mov);
+                        auto pair = std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32);
+                        auto vmov = std::make_shared<Vmov>(SourceOperandType::r, reg, arg_in_reg, pair);
                         insts.emplace_back(vmov);
                     } else {
-                        auto pair = std::make_pair(bitType::DEFAULT32,
-                                                   bitType::DEFAULT32);
-                        auto vmov = std::make_shared<Vmov>(
-                            SourceOperandType::ri, reg, const_arg, pair);
+                        auto pair = std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32);
+                        auto vmov = std::make_shared<Vmov>(SourceOperandType::ri, reg, const_arg, pair);
                         insts.emplace_back(vmov);
                     }
 
                 } else {
                     // vmov $sx, %tmp
-                    auto pair =
-                        std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32);
+                    auto pair = std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32);
                     auto arg_in_reg = operlower.fastFind(arg);
-                    auto vmov = std::make_shared<Vmov>(SourceOperandType::r,
-                                                       reg, arg_in_reg, pair);
+                    auto vmov = std::make_shared<Vmov>(SourceOperandType::r, reg, arg_in_reg, pair);
                 }
 
                 ++fcnt;
@@ -217,55 +209,42 @@ InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
         } else {
             /// @brief 指针类
             std::shared_ptr<BindOnVirOP> arg_in_reg;
-            std::shared_ptr<BaseADROP> ptr =
-                std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(arg));
+            std::shared_ptr<BaseADROP> ptr = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(arg));
 
             if (ptr->getConstOffset() == 0)
                 arg_in_reg = ptr;
             else {
-                auto const_offset = std::dynamic_pointer_cast<ConstantIDX>(
-                    operlower.fastFind((int)ptr->getConstOffset()));
+                auto const_offset =
+                    std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind((int)ptr->getConstOffset()));
                 auto base = ptr->getBase();
-                auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32),
-                                            RegisterBank::gpr);
+                auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
                 arg_in_reg = relay;
                 if (const_offset->getConst()->isEncoded()) {
                     // mov %tmp2, #constOffset
                     // add %tmp, %base, %tmp2
-                    auto relay2 = operlower.mkOP(
-                        IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
-                    auto mov = std::make_shared<movInst>(SourceOperandType::ri,
-                                                         relay2, const_offset);
+                    auto relay2 = operlower.LoadedFind(std::get<int>(const_offset->getConst()->getLiteral()), blk);
 
-                    auto add = std::make_shared<binaryImmInst>(
-                        OpCode::ADD, SourceOperandType::rr, relay, base, relay2,
-                        nullptr);
-                    insts.emplace_back(mov);
+                    auto add = std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::rr, relay, base, relay2,
+                                                               nullptr);
                     insts.emplace_back(add);
                 } else {
                     // add %tmp, %base, #constOffset
 
-                    auto add = std::make_shared<binaryImmInst>(
-                        OpCode::ADD, SourceOperandType::ri, relay, base,
-                        const_offset, nullptr);
+                    auto add = std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, relay, base,
+                                                               const_offset, nullptr);
                     insts.emplace_back(add);
                 }
             }
 
             if (cnt <= 4) {
                 // mov $rx, %loc
-                auto reg =
-                    operlower.getPreColored(static_cast<CoreRegister>(cnt));
+                auto reg = operlower.getPreColored(static_cast<CoreRegister>(cnt));
 
-                auto mov = std::make_shared<movInst>(SourceOperandType::r, reg,
-                                                     arg_in_reg);
+                auto mov = std::make_shared<movInst>(SourceOperandType::r, reg, arg_in_reg);
                 insts.emplace_back(mov);
-
             } else {
                 // str %loc, [sp, #offset]
-                auto str = std::make_shared<strInst>(SourceOperandType::ra, 4,
-                                                     arg_in_reg,
-                                                     operlower.mkStackOP());
+                auto str = std::make_shared<strInst>(SourceOperandType::ra, 4, arg_in_reg, operlower.mkStackOP());
                 insts.emplace_back(str);
             }
             ++cnt;
@@ -275,16 +254,22 @@ InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
     // =====================
     // step2: call
     // =====================
-    auto bl_call =
-        std::make_shared<branchInst>(OpCode::BL, func, func->getName());
+    std::shared_ptr<BindOnVirOP> target;
+    auto retType = IR::toBType(functype->getRet());
+    unsigned int RetValType = -1;
+    if (retType->getInner() == IR::IRBTYPE::VOID)
+        RetValType = 0;
+    else if (retType->getInner() == IR::IRBTYPE::FLOAT)
+        RetValType = 2;
+    else // float
+        RetValType = 1;
+    auto bl_call = std::make_shared<branchInst>(OpCode::BL, func, func->getName(), RetValType);
 
     insts.emplace_back(bl_call);
 
     // =====================
     // step3: 接收返回值
     // =====================
-    std::shared_ptr<BindOnVirOP> target;
-    auto retType = IR::toBType(functype->getRet());
     if (retType->getInner() == IR::IRBTYPE::I32) {
         target = operlower.mkOP(*call, RegisterBank::gpr);
         auto reg = operlower.getPreColored(CoreRegister::r0);
@@ -294,8 +279,7 @@ InstLowering::callLower(const std::shared_ptr<IR::CALLInst> &call) {
         target = operlower.mkOP(*call, RegisterBank::spr);
         auto reg = operlower.getPreColored(FPURegister::s0);
         auto pair = std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32);
-        auto vmov =
-            std::make_shared<Vmov>(SourceOperandType::r, target, reg, pair);
+        auto vmov = std::make_shared<Vmov>(SourceOperandType::r, target, reg, pair);
         insts.emplace_back(vmov);
     } else if (retType->getInner() == IR::IRBTYPE::VOID) {
         // nothing

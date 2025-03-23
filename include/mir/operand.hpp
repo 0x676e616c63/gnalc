@@ -109,7 +109,14 @@ public:
     BindOnVirOP() = delete;
     explicit BindOnVirOP(RegisterBank _bank) : Operand(OperandTrait::BindOnVirRegister), bank(_bank) {}
     BindOnVirOP(RegisterBank _bank, std::string _name)
-        : Operand(OperandTrait::BindOnVirRegister, std::move(_name)), bank(_bank) {}
+        : Operand(OperandTrait::BindOnVirRegister, std::move(_name)), bank(_bank) {
+        if (bank == RegisterBank::gpr) {
+            color = CoreRegister::none;
+        } else if (bank == RegisterBank::spr) {
+            color = FPURegister::none;
+        }
+        ///@todo dpr, qpr
+    }
 
     explicit BindOnVirOP(CoreRegister _color)
         : Operand(OperandTrait::PreColored), bank(RegisterBank::gpr), color(_color) {}
@@ -117,7 +124,8 @@ public:
         : Operand(OperandTrait::PreColored), bank(RegisterBank::spr), color(_color) {} // for PreColored
 
     explicit BindOnVirOP(std::string _name)
-        : Operand(OperandTrait::BaseAddress, std::move(_name)), bank(RegisterBank::gpr) {} // for BaseADROP
+        : Operand(OperandTrait::BaseAddress, std::move(_name)), bank(RegisterBank::gpr), color(CoreRegister::none) {
+    } // for BaseADROP
 
     const std::variant<CoreRegister, FPURegister> &getColor() { return color; };
 
@@ -159,7 +167,7 @@ protected:
     /// @note 最后codegen时, 需要判断constOffset的大小
     int constOffset = 0;
 
-    /// @brief 单向的依赖
+    /// @brief 单向的依赖, 若无额外的依赖, 则设置为其自身(方便寄存器分配)
     std::weak_ptr<BindOnVirOP> varOffset; // base
 
 public:

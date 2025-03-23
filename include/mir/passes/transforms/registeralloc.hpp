@@ -1,8 +1,7 @@
 #pragma once
 #ifndef GNALC_MIRTOOLS_REGISTERALLOC_HPP
 #define GNALC_MIRTOOLS_REGISTERALLOC_HPP
-#define CORE_REGISTER_MAX_NUM 12
-#define FPU_REGISTER_MAX_NUM 32
+#include "../../../../include/config/config.hpp"
 #include "../../module.hpp"
 #include "../analysis/live_analysis.hpp"
 #include "../pass_manager.hpp"
@@ -39,7 +38,7 @@ public:
 
 protected:
     // datas
-    Function *Func; // 用裸指针是因为不清楚是栈上还是堆上的内存
+    Function *Func{}; // 用裸指针是因为不清楚是栈上还是堆上的内存
 
     OperSet precolored{};
     OperSet initial{};
@@ -68,7 +67,7 @@ protected:
     std::unordered_map<OperP, Moves> moveList;
     std::map<OperP, OperP> alias;
     // color
-    unsigned int K = CORE_REGISTER_MAX_NUM;
+    unsigned int K = Config::MIR::CORE_REGISTER_MAX_NUM;
 
 protected:
     /// procedures
@@ -104,10 +103,11 @@ protected:
     // 土制函数及数据结构
 
     ///@note 填充initial 和 precolored
-    bool isInitialed = false;
+    ///@bug 由于FAM特性, 不同Function使用相同Pass时, 简单数据不会清空, 所以需要在run中手动置空
+    bool isInitialed;
 
     ///@note 活跃分析以及信息
-    LiveAnalysis liveAnalysis;
+    Liveness liveinfo;
 
     ///@note 变量池
     VarPool *varpool;
@@ -157,12 +157,17 @@ protected:
     /// @note selectspill时使用的启发式算法
     OperP heuristicSpill();
     std::map<OperP, unsigned int> intervalLengths;
+
     /// @note 选择合适的方式溢出, 将原变量替换为一套临时变量(相当于弃用原变量)
     virtual Nodes spill_tryOpt(const OperP &);
     virtual Nodes spill_classic(const OperP &);
     Nodes spill_opt(const OperP &);
+
     ///@note 用于溢出优化的浮点寄存器, 只出不进
     std::vector<unsigned int> availableSRegisters;
+
+    ///@note 溢出次数(包含opt)
+    unsigned int spilltimes = 0;
 };
 
 class NeonRAPass : public RAPass {
@@ -171,7 +176,7 @@ public:
 
 protected:
     // datas
-    unsigned int K = FPU_REGISTER_MAX_NUM;
+    unsigned int K = Config::MIR::FPU_REGISTER_MAX_NUM;
 
 protected:
     // procedures

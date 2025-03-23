@@ -31,8 +31,11 @@ RAPass::Nodes RAPass::getUse(const InstP &inst) {
     Nodes uses;
     for (int i = 1; i < 5; ++i) {
         auto op = inst->getSourceOP(i);
-        if (std::dynamic_pointer_cast<BindOnVirOP>(op) &&
-            std::dynamic_pointer_cast<BindOnVirOP>(op)->getBank() == RegisterBank::gpr)
+
+        if (auto ptr = std::dynamic_pointer_cast<BaseADROP>(op)) {
+            uses.insert(ptr->getBase()); // maybe itself
+        } else if (auto vir = std::dynamic_pointer_cast<BindOnVirOP>(op) &&
+                              std::dynamic_pointer_cast<BindOnVirOP>(op)->getBank() == RegisterBank::gpr)
             uses.insert(op);
     }
 
@@ -42,9 +45,13 @@ RAPass::Nodes RAPass::getUse(const InstP &inst) {
 RAPass::Nodes RAPass::getDef(const InstP &inst) {
     Nodes defs;
 
-    if (std::dynamic_pointer_cast<BindOnVirOP>(inst->getTargetOP()) &&
-        std::dynamic_pointer_cast<BindOnVirOP>(inst->getTargetOP())->getBank() == RegisterBank::gpr)
-        defs.insert(inst->getTargetOP());
+    auto op = inst->getTargetOP();
+
+    if (auto ptr = std::dynamic_pointer_cast<BaseADROP>(op)) {
+        defs.insert(ptr->getBase()); // maybe itself
+    } else if (auto vir = std::dynamic_pointer_cast<BindOnVirOP>(op) &&
+                          std::dynamic_pointer_cast<BindOnVirOP>(op)->getBank() == RegisterBank::gpr)
+        defs.insert(op);
 
     return defs;
 }
@@ -52,26 +59,30 @@ RAPass::Nodes RAPass::getDef(const InstP &inst) {
 OperP RAPass::heuristicSpill() {
     const double Weight_IntervalLength = 2.5;
     const double Weight_Degree = 3;
-    const double extra_Weight_ForNotPtr = -50;
+    const double extra_Weight_ForNotPtr = +60;
 
     ///@note 计算溢出权重
     double weight_max = 0;
     OperP spilled = nullptr;
-    for (const auto &op : spilledNodes) {
-        double weight = liveAnalysis.getInfo().intervalLengths[op] * Weight_IntervalLength; // narrowing convert here
+    for (const auto &op : spillWorkList) {
+        double weight = liveinfo.intervalLengths[op] * Weight_IntervalLength; // narrowing convert here
         weight += degree[op] * Weight_Degree;
         if (!std::dynamic_pointer_cast<BaseADROP>(op))
             weight += extra_Weight_ForNotPtr;
 
-        if (weight > weight_max)
+        if (weight >= weight_max) {
             spilled = op;
+            weight_max = weight;
+        }
     }
-
+    Err::gassert(spilled != nullptr, "spilled is nullptr");
     return spilled;
 }
 
 ///@note 返回用于替换的小区间虚拟寄存器
 RAPass::Nodes RAPass::spill_tryOpt(const OperP &op) {
+    ++spilltimes;
+
     if (availableSRegisters.empty())
         return spill_classic(op);
     else
@@ -278,8 +289,9 @@ RAPass::Nodes RAPass::spill_classic(const OperP &op) {
 
     // 溢出的栈空间
     auto stackspace = std::make_shared<FrameObj>(FrameTrait::Spill, 4);
+    stackspace->setId(Func->editInfo().StackObjs.size());
     Func->editInfo().StackObjs.emplace_back(stackspace);
-    auto stackaddr = varpool->addStackValue_anonymously(stackspace); // base = r7
+    auto stackaddr = varpool->addStackValue_anonymously(stackspace); // base = sp
 
     for (const auto &blk : Func->getBlocks()) {
         auto &insts = blk->getInsts();
@@ -491,13 +503,17 @@ NeonRAPass::Nodes NeonRAPass::getDef(const InstP &inst) {
     return defs;
 }
 
-NeonRAPass::Nodes NeonRAPass::spill_tryOpt(const OperP &op) { return spill_classic(op); }
+NeonRAPass::Nodes NeonRAPass::spill_tryOpt(const OperP &op) {
+    ++spilltimes;
+    return spill_classic(op);
+}
 
 NeonRAPass::Nodes NeonRAPass::spill_classic(const OperP &op) {
     Nodes stageValues;
 
     // 溢出的栈空间
     auto stackspace = std::make_shared<FrameObj>(FrameTrait::Spill, 4);
+    stackspace->setId(Func->editInfo().StackObjs.size());
     Func->editInfo().StackObjs.emplace_back(stackspace);
     auto stackaddr = varpool->addStackValue_anonymously(stackspace);
 

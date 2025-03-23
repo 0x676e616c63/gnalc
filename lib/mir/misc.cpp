@@ -58,11 +58,9 @@ void MIR::GlobalObj::mkInitializer(const IR::GVIniter &midEnd_GVIniter) {
             initializer.emplace_back(false, 4); // sizeof(int) or sizeof(float)
         else {
             // IR's Global Variable must be ConstantInt or ConstantFloat
-            if (auto ci32 = std::dynamic_pointer_cast<IR::ConstantInt>(
-                    midEnd_GVIniter.getConstVal())) {
+            if (auto ci32 = std::dynamic_pointer_cast<IR::ConstantInt>(midEnd_GVIniter.getConstVal())) {
                 initializer.emplace_back(true, ci32->getVal());
-            } else if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(
-                           midEnd_GVIniter.getConstVal())) {
+            } else if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(midEnd_GVIniter.getConstVal())) {
                 initializer.emplace_back(true, cf->getVal());
             } else
                 Err::unreachable("Invalid GlobalVariable's initializer");
@@ -186,7 +184,7 @@ std::string MIR::ConstObj::toString() const {
     } else if (literal.index() == 4) {
 
         str += "'" + std::to_string(std::get<char>(literal)) + "'";
-        str += ", type = chr";
+        str += ", type = int8";
     } else if (literal.index() == 5) {
         // hex
         std::ostringstream hex_ss;

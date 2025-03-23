@@ -16,7 +16,7 @@ std::shared_ptr<Operand> VarPool::getValue(const IR::Value &val) {
 
 std::shared_ptr<PreColedOP> VarPool::getValue(CoreRegister _color) {
     std::shared_ptr<PreColedOP> ptr;
-    if (gpr_pool[_color]) {
+    if (gpr_pool.find(_color) != gpr_pool.end()) {
         ptr = gpr_pool[_color];
         return ptr;
     } else {
@@ -28,7 +28,7 @@ std::shared_ptr<PreColedOP> VarPool::getValue(CoreRegister _color) {
 
 std::shared_ptr<PreColedOP> VarPool::getValue(FPURegister _color) {
     std::shared_ptr<PreColedOP> ptr;
-    if (spr_pool[_color]) {
+    if (spr_pool.find(_color) != spr_pool.end()) {
         ptr = spr_pool[_color];
         return ptr;
     } else {
@@ -43,8 +43,10 @@ void VarPool::addValue(const IR::Value &val, std::shared_ptr<Operand> Value) {
     pool[wrapper] = std::move(Value);
 }
 
-void VarPool::addLoaded(const ConstObj &obj, std::shared_ptr<BindOnVirOP> Value) {
-    load_map[obj] = std::move(Value);
+void VarPool::addLoaded(const ConstObj &obj, const std::shared_ptr<BindOnVirOP> &Value,
+                        const std::shared_ptr<BasicBlock> &blk) {
+    const2vir[obj] = Value;
+    const2blks[obj].insert(blk);
 }
 
 std::shared_ptr<BindOnVirOP> VarPool::addValue_anonymously(bool isFloat) {
@@ -52,9 +54,11 @@ std::shared_ptr<BindOnVirOP> VarPool::addValue_anonymously(bool isFloat) {
 
     std::shared_ptr<IR::Value> val;
     if (!isFloat)
-        val = std::make_shared<IR::Value>(std::move(name), IR::makeBType(IR::IRBTYPE::I32), IR::ValueTrait::ORDINARY_VARIABLE);
+        val = std::make_shared<IR::Value>(std::move(name), IR::makeBType(IR::IRBTYPE::I32),
+                                          IR::ValueTrait::ORDINARY_VARIABLE);
     else
-        val = std::make_shared<IR::Value>(std::move(name), IR::makeBType(IR::IRBTYPE::FLOAT), IR::ValueTrait::ORDINARY_VARIABLE);
+        val = std::make_shared<IR::Value>(std::move(name), IR::makeBType(IR::IRBTYPE::FLOAT),
+                                          IR::ValueTrait::ORDINARY_VARIABLE);
 
     std::shared_ptr<BindOnVirOP> Value;
     if (!isFloat)
@@ -71,9 +75,10 @@ std::shared_ptr<StackADROP> VarPool::addStackValue_anonymously(const std::shared
     std::string name = '%' + std::to_string(pool.size());
 
     ///@warning 这里的val虽然应该是ptr, 但是是用Btype初始化的
-    auto val = std::make_shared<IR::Value>(std::move(name), IR::makeBType(IR::IRBTYPE::I32), IR::ValueTrait::ORDINARY_VARIABLE);
+    auto val = std::make_shared<IR::Value>(std::move(name), IR::makeBType(IR::IRBTYPE::I32),
+                                           IR::ValueTrait::ORDINARY_VARIABLE);
 
-    auto Value = std::make_shared<StackADROP>(obj, val->getName(), 0, getValue(CoreRegister::r7));
+    auto Value = std::make_shared<StackADROP>(obj, val->getName(), 0, getValue(CoreRegister::sp));
 
     addValue(*val, Value);
 

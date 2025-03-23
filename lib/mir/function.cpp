@@ -8,8 +8,7 @@ std::string FunctionInfo::toString() const {
     str += "maxalignment: " + std::to_string(maxAlignment) + '\n';
 
     if (hasTailCall.first)
-        str += "hasTailCall: true - @" + hasTailCall.second.lock()->getName() +
-               '\n';
+        str += "hasTailCall: true - @" + hasTailCall.second.lock()->getName() + '\n';
     else
         str += "hasTailCall: false\n";
 
@@ -18,6 +17,8 @@ std::string FunctionInfo::toString() const {
         str += obj->toString();
         str += '\n';
     }
+
+    str += "spilltimes: " + std::to_string(spilltimes) + '\n';
 
     return str;
 }
@@ -34,6 +35,23 @@ std::string Function::toString() const {
     for (const auto &basicblock : blocks) {
         str += "    ";
         str += basicblock->toString() + '\n';
+    }
+
+    return str;
+}
+
+std::string Function::toString_Debug() {
+    std::string str;
+
+    str += "name: " + getName() + '\n';
+
+    str += info.toString();
+
+    str += "body:\n";
+
+    for (auto &basicblock : blocks) {
+        str += "    ";
+        str += basicblock->toString_debug(info.liveinfo.liveIn[basicblock], info.liveinfo.liveOut[basicblock]) + '\n';
     }
 
     return str;

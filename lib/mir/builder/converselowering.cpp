@@ -3,8 +3,8 @@
 
 using namespace MIR;
 
-std::list<std::shared_ptr<Instruction>>
-InstLowering::fptosiLower(const std::shared_ptr<IR::FPTOSIInst> &fptosi) {
+std::list<std::shared_ptr<Instruction>> InstLowering::fptosiLower(const std::shared_ptr<IR::FPTOSIInst> &fptosi,
+                                                                  const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     // 类型转换应该不会有常数
@@ -19,8 +19,8 @@ InstLowering::fptosiLower(const std::shared_ptr<IR::FPTOSIInst> &fptosi) {
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>>
-InstLowering::sitofpLower(const std::shared_ptr<IR::SITOFPInst> &sitofp) {
+std::list<std::shared_ptr<Instruction>> InstLowering::sitofpLower(const std::shared_ptr<IR::SITOFPInst> &sitofp,
+                                                                  const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     // 类型转换应该不会有常数
@@ -35,14 +35,27 @@ InstLowering::sitofpLower(const std::shared_ptr<IR::SITOFPInst> &sitofp) {
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>>
-InstLowering::bitcastLower(const std::shared_ptr<IR::BITCASTInst> &bitcast) {
+std::list<std::shared_ptr<Instruction>> InstLowering::bitcastLower(const std::shared_ptr<IR::BITCASTInst> &bitcast,
+                                                                   const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     /// bitcast 用于转换不同类型的指针, 但是对于后端来说
     /// 对指针的类型并不敏感, 实质上都是地址
     auto origin_ptr = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(bitcast->getOVal()));
     operlower.mkBind(*bitcast, origin_ptr);
+
+    return insts;
+}
+
+std::list<std::shared_ptr<Instruction>> InstLowering::zextLower(const std::shared_ptr<IR::ZEXTInst> &zext,
+                                                                const std::shared_ptr<BasicBlock> &blk) {
+    std::list<std::shared_ptr<Instruction>> insts;
+
+    ///@note zext语句主要出现在进行连续比较时
+    ///@note 将上一个比较的结果(i1)拓展为i32, 进行下一轮比较
+
+    auto origin_i1 = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(zext->getOVal()));
+    operlower.mkBind(*zext, origin_i1);
 
     return insts;
 }
