@@ -67,15 +67,15 @@ void Const2Reg::runOneach(std::unordered_set<BlkP> blks, const ConstObj &constob
 
         while (LCA != node) {
             if (LCA->level() > node->level()) {
-                LCA = LCA->parent();
+                LCA = LCA->raw_parent();
                 continue;
             }
             if (LCA->level() < node->level()) {
-                node = node->parent();
+                node = node->raw_parent();
                 continue;
             }
             if (LCA->level() == node->level() && LCA != node) {
-                LCA = LCA->parent();
+                LCA = LCA->raw_parent();
             }
         }
     }
