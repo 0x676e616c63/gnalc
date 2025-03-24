@@ -124,6 +124,83 @@ size_t Function::getInstCount() const {
     return ret;
 }
 
+void Function::updateCFG() {
+    for (const auto &bb : blks) {
+        bb->pre_bb.clear();
+        bb->next_bb.clear();
+    }
+    for (auto blk_it = begin(); blk_it != end(); ++blk_it) {
+        if ((*blk_it)->getInsts().empty())
+            continue;
+        switch (auto end_inst = (*blk_it)->getTerminator(); end_inst->getOpcode()) {
+        case OP::BR: {
+            if (const auto inst = end_inst->as<BRInst>(); inst->isConditional()) {
+                linkBB(*blk_it, inst->getTrueDest());
+                linkBB(*blk_it, inst->getFalseDest());
+            } else {
+                linkBB(*blk_it, inst->getDest());
+            }
+            break;
+        }
+        case OP::RET:
+            break;
+        default:
+            auto next_blk = std::next(blk_it);
+            if (next_blk != end()) {
+                linkBB(*blk_it, *next_blk);
+            }
+            break;
+        }
+    }
+}
+
+void Function::updateAndCheckCFG() {
+    updateCFG();
+
+    // link完了之后，遍历基本块，查找空块和不可达的块并删除
+    for (auto it = begin(); it != end();) {
+        // 删除不可达块
+        if ((*it)->getNumPreds() == 0 && it != begin()) {
+            for (const auto &nextbb : (*it)->succs()) {
+                Util::WeakListDel(nextbb->pre_bb, *it);
+            }
+            it = blks.erase(it);
+            continue;
+        }
+        // 删除空块
+        if ((*it)->getInsts().empty()) {
+            // 遍历user去替换为他的prebb中的br
+            // 非结尾块的情况，prebb的br替换为惟一nextbb
+            if ((*it)->getNumSuccs() == 1) {
+                auto nxt = *(*it)->succ_begin();
+                for (const auto &prebb : (*it)->preds()) {
+                    if (auto brinst = prebb->getBRInst()) {
+                        Err::gassert(brinst != nullptr, "CFGBuilder::linker(): can't cast BRInst");
+                        brinst->replaceAllOperands(*it, nxt); // 改 br
+                    }
+                    Util::WeakListReplace(prebb->next_bb, *it, nxt); // 改nextbb
+                    Util::WeakListReplace(nxt->pre_bb, *it, prebb);  // 改prebb
+                }
+                it = blks.erase(it);
+            } else if ((*it)->getNumSuccs() == 0) {
+                // 结尾块
+                if (getType()->as<FunctionType>()->getRet()->as<BType>()->getInner() ==
+                    IRBTYPE::VOID) {
+                    (*it)->addInst(std::make_shared<RETInst>());
+                } else {
+                    Err::unreachable("CFGBuilder::linker(): invalid function type.");
+                }
+                ++it;
+            } else {
+                Err::unreachable("CFGBuilder::linker(): empty block has "
+                                 "multiple next block.");
+            }
+            continue;
+        }
+        ++it;
+    }
+}
+
 void Function::updateBBIndex() {
     size_t i = 0;
     for (const auto &blk : blks) {
