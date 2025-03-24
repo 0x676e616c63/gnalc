@@ -9,13 +9,13 @@
 #include "../../include/mir/passes/utilities/mirprinter.hpp"
 #include "../../include/utils/logger.hpp"
 
-#ifndef GNALC_EXTENSION_TPO // in CMakeLists.txt
+#ifndef GNALC_EXTENSION_GGC // in CMakeLists.txt
 #include "../../include/parser/ast.hpp"
 #include "../../include/parser/astprinter.hpp"
 #include "../../include/parser/irgen.hpp"
 #include "../../include/parser/parser.hpp"
 #else
-#include "../../include/tpo/irparsertool.hpp"
+#include "../../include/ggc/irparsertool.hpp"
 #endif
 
 #if GNALC_EXTENSION_BRAINFK // in config.hpp
@@ -29,7 +29,7 @@
 #include <memory>
 #include <string>
 
-#ifndef GNALC_EXTENSION_TPO
+#ifndef GNALC_EXTENSION_GGC
 std::shared_ptr<AST::CompUnit> node = nullptr;
 #endif
 extern FILE *yyin;
@@ -90,8 +90,8 @@ int main(int argc, char **argv) {
         else if (arg == "-emit-llvm")
             emit_llvm = true;
         else if (arg == "-ast-dump") {
-#ifdef GNALC_EXTENSION_TPO
-            std::cerr << "Error: AST dump is not available in TPO mode." << std::endl;
+#ifdef GNALC_EXTENSION_GGC
+            std::cerr << "Error: AST dump is not available in GGC mode." << std::endl;
             return -1;
 #endif
             ast_dump = true;
@@ -168,10 +168,10 @@ int main(int argc, char **argv) {
 #endif
 
         else if (arg == "-h" || arg == "--help") {
-#ifndef GNALC_EXTENSION_TPO
+#ifndef GNALC_EXTENSION_GGC
             std::cout << "OVERVIEW: gnalc compiler\n\nUSAGE: gnalc [options] file\n\n";
 #else
-            std::cout << "OVERVIEW: tpo - an extension of the gnalc compiler\n\nUSAGE: tpo [options] file\n\n";
+            std::cout << "OVERVIEW: ggc - an extension of the gnalc compiler\n\nUSAGE: ggc [options] <ggfile>\n\n";
 #endif
             std::cout <<
                 R"(OPTIONS:
@@ -181,7 +181,7 @@ General options:
   -S                      - Only run compilation steps
   -O,-O1                  - Optimization level 1
   -emit-llvm              - Use the LLVM representation for assembler and object files
-  -ast-dump               - Build ASTs and then debug dump them. (Unavailable in TPO mode)
+  -ast-dump               - Build ASTs and then debug dump them. (Unavailable in GGC mode)
   -fixed-point            - Enable the fixed point optimization pipeline. (Ignore other optimization options)
   --log <log-level>       - Enable compiler logger. Available log-level: debug, info, none
   -h, --help              - Display available options
@@ -245,7 +245,7 @@ Extensions:
         }
     }
 
-#ifndef GNALC_EXTENSION_TPO
+#ifndef GNALC_EXTENSION_GGC
     yy::parser parser;
     if (parser.parse()) {
         std::cerr << "Syntax Error" << std::endl;

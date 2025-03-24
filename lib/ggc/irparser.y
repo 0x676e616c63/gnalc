@@ -1,5 +1,5 @@
 %code {
-#include "../../include/tpo/irparsertool.hpp"
+#include "../../include/ggc/irparsertool.hpp"
 extern yyy::parser::symbol_type yylex ();
 extern int yylineno;
 IR::Module& inode = IRParser::IRGenerator::get_module();
@@ -29,27 +29,27 @@ using namespace IR;
 %token <int> IRNUM_INT
 %token <float> IRNUM_FLOAT
 
-%type <std::shared_ptr<GlobalVariable>> GlobalVariable
-%type <std::shared_ptr<FunctionDecl>> FunctionDeclaration
-%type <std::shared_ptr<Function>> FunctionDefinition
+%type <pGlobalVar> GlobalVariable
+%type <pFuncDecl> FunctionDeclaration
+%type <pFunc> FunctionDefinition
 %type <STOCLASS> Storage
-%type <std::shared_ptr<Type>> Type BType PtrType ArrayType DeclParam
-%type <std::vector<std::shared_ptr<Type>>> DeclParamList
-%type <std::shared_ptr<Value>> Constant Value Arg
-%type <std::vector<std::shared_ptr<Value>>> ArgList IndexList
+%type <pType> Type BType PtrType ArrayType DeclParam
+%type <std::vector<pType>> DeclParamList
+%type <pVal> Constant Value Arg
+%type <std::vector<pVal>> ArgList IndexList
 %type <GVIniter> GVIniter
 %type <std::vector<GVIniter>> GVIniters
-%type <std::vector<std::shared_ptr<FormalParam>>> DefParamList
-%type <std::shared_ptr<FormalParam>> DefParam
-%type <std::vector<std::shared_ptr<BasicBlock>>> BBList
-%type <std::shared_ptr<BasicBlock>> BB
-%type <std::list<std::shared_ptr<Instruction>>> InstList
-%type <std::shared_ptr<Instruction>> Inst BinaryInst FnegInst CastInst IcmpInst FcmpInst RetInst BrInst CallInst AllocaInst LoadInst StoreInst GepInst PhiInst
+%type <std::vector<pFormalParam>> DefParamList
+%type <pFormalParam> DefParam
+%type <std::vector<pBlock>> BBList
+%type <pBlock> BB
+%type <std::list<pInst>> InstList
+%type <pInst> Inst BinaryInst FnegInst CastInst IcmpInst FcmpInst RetInst BrInst CallInst AllocaInst LoadInst StoreInst GepInst PhiInst
 %type <OP> BinaryOp
 %type <ICMPOP> IcmpOp
 %type <FCMPOP> FcmpOp
-%type <std::vector<std::pair<std::shared_ptr<Value>, std::shared_ptr<BasicBlock>>>> PhiOpers
-%type <std::pair<std::shared_ptr<Value>, std::shared_ptr<BasicBlock>>> PhiOper
+%type <std::vector<std::pair<pVal, pBlock>>> PhiOpers
+%type <std::pair<pVal, pBlock>> PhiOper
 
 %%
 
