@@ -14,28 +14,28 @@ namespace IRParser {
         using string = std::string;
 
     private:
-        static std::map<string, pGlobalVar> GVMap; // 所有的GV都在定义后使用
-        static std::map<string, pFunc> FMap; // 所有的Func都在定义后使用
-        static std::map<string, pFuncDecl> UFDMap; // Undefined FuncDecl Map, 由于其总是在文件末尾，故最后进行替换
-        static std::map<string, pBlock> BMap; // 新的function被定义时将清空
-        static std::map<string, pVal> VMap; // 新的function被定义时将清空
+        std::map<string, pGlobalVar> GVMap; // 所有的GV都在定义后使用
+        std::map<string, pFunc> FMap; // 所有的Func都在定义后使用
+        std::map<string, pFuncDecl> UFDMap; // Undefined FuncDecl Map, 由于其总是在文件末尾，故最后进行替换
+        std::map<string, pBlock> BMap; // 新的function被定义时将清空
+        std::map<string, pVal> VMap; // 新的function被定义时将清空
         /// 用于保存Undefined却被使用的值
         /// 例如phi, br的操作数等
-        static std::map<string, pBlock> UBMap;
-        static std::map<string, pVal> UVMap;
+        std::map<string, pBlock> UBMap;
+        std::map<string, pVal> UVMap;
     public:
-        IRPT() = delete;
-        ~IRPT() = delete;
+        IRPT() = default;
+        ~IRPT() = default;
 
         // 普通make, 用于无值指令
         template<typename T, typename... Args>
-        static std::shared_ptr<T> make(Args&&... args) {
+        std::shared_ptr<T> make(Args&&... args) {
             return std::make_shared<T>(std::forward<Args>(args)...);
         }
 
         // value's make, 添加至vmap, newVal
         template<typename T, typename... Args>
-        static std::shared_ptr<T> vmake(const string& id, Args&&... args) {
+        std::shared_ptr<T> vmake(const string& id, Args&&... args) {
             auto &v = VMap[id];
             Err::gassert(v==nullptr, "Value is redefined!");
             auto raw_v = std::make_shared<T>(std::forward<Args>(args)...);
@@ -43,27 +43,26 @@ namespace IRParser {
             return raw_v;
         }
 
+        pFuncDecl getF(const string& name);
+        pBlock getB(const string& name);
+        pVal getV(const string &name); // 可获取GV或普通Value
 
-        static pFuncDecl getF(const string& name);
-        static pBlock getB(const string& name);
-        static pVal getV(const string &name); // 可获取GV或普通Value
+        std::vector<pFormalParam> legalizeParams(const std::vector<pFormalParam> &params);
 
-        static std::vector<pFormalParam> legalizeParams(const std::vector<pFormalParam> &params);
+        pGlobalVar newGV(STOCLASS _sc, const pType& _ty, const string& _name, const GVIniter& _initer, int _align = 4);
 
-        static pGlobalVar newGV(STOCLASS _sc, const pType& _ty, const string& _name, const GVIniter& _initer, int _align = 4);
-
-        static pFunc newFunc(string &name_,
+        pFunc newFunc(string &name_,
             const std::vector<pFormalParam> &params,
             pType &ret_type, ConstantPool *pool, std::vector<pBlock> &blks);
 
         // replace all Undefined Function Declaration
-        static pFuncDecl newFuncDecl(string &name_,
+        pFuncDecl newFuncDecl(string &name_,
             const std::vector<pType> &params,
             pType &ret_type, bool is_va_arg_=false);
 
-        static pBlock newBB(string name, const std::list<pInst> &insts);
+        pBlock newBB(string name, const std::list<pInst> &insts);
 
-        static pPhi newPhi(const string &name, pType &ty, const std::vector<std::pair<pVal, pBlock>> &phiopers);
+        pPhi newPhi(const string &name, pType &ty, const std::vector<std::pair<pVal, pBlock>> &phiopers);
     };
 
     class IRGenerator {

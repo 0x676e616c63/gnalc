@@ -45,7 +45,7 @@
 #ifndef YY_YY_INCLUDE_GGC_IRPARSER_HPP_INCLUDED
 # define YY_YY_INCLUDE_GGC_IRPARSER_HPP_INCLUDED
 // "%code requires" blocks.
-#line 10 "irparser.y"
+#line 11 "irparser.y"
 
 #include "irparsertool.hpp"
 
@@ -188,7 +188,7 @@
 # define YYDEBUG 0
 #endif
 
-#line 21 "irparser.y"
+#line 22 "irparser.y"
 namespace yyy {
 #line 194 "../../include/ggc/irparser.hpp"
 
@@ -3315,7 +3315,7 @@ switch (yykind)
   }
 
 
-#line 21 "irparser.y"
+#line 22 "irparser.y"
 } // yyy
 #line 3321 "../../include/ggc/irparser.hpp"
 

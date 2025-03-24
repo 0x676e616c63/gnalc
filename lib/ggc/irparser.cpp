@@ -50,8 +50,9 @@ extern int yylineno;
 IR::Module& inode = IRParser::IRGenerator::get_module();
 using namespace IRParser;
 using namespace IR;
+IRPT tool;
 
-#line 55 "irparser.cpp"
+#line 56 "irparser.cpp"
 
 
 #ifndef YY_
@@ -123,9 +124,9 @@ using namespace IR;
 #define YYERROR         goto yyerrorlab
 #define YYRECOVERING()  (!!yyerrstatus_)
 
-#line 21 "irparser.y"
+#line 22 "irparser.y"
 namespace yyy {
-#line 129 "irparser.cpp"
+#line 130 "irparser.cpp"
 
   /// Build a parser object.
   parser::parser ()
@@ -1094,697 +1095,697 @@ namespace yyy {
           switch (yyn)
             {
   case 2: // Module: GlobalEntities
-#line 56 "irparser.y"
+#line 57 "irparser.y"
                          {}
-#line 1100 "irparser.cpp"
+#line 1101 "irparser.cpp"
     break;
 
   case 3: // GlobalEntities: GlobalEntities GlobalVariable
-#line 59 "irparser.y"
+#line 60 "irparser.y"
                                                         { inode.addGlobalVar(yystack_[0].value.as < pGlobalVar > ()); }
-#line 1106 "irparser.cpp"
+#line 1107 "irparser.cpp"
     break;
 
   case 4: // GlobalEntities: GlobalEntities FunctionDefinition
-#line 60 "irparser.y"
+#line 61 "irparser.y"
                                                         { inode.addFunction(yystack_[0].value.as < pFunc > ()); }
-#line 1112 "irparser.cpp"
+#line 1113 "irparser.cpp"
     break;
 
   case 5: // GlobalEntities: GlobalEntities FunctionDeclaration
-#line 61 "irparser.y"
+#line 62 "irparser.y"
                                                         { inode.addFunctionDecl(yystack_[0].value.as < pFuncDecl > ()); }
-#line 1118 "irparser.cpp"
+#line 1119 "irparser.cpp"
     break;
 
   case 6: // GlobalEntities: GlobalVariable
-#line 62 "irparser.y"
+#line 63 "irparser.y"
                                                         { inode.addGlobalVar(yystack_[0].value.as < pGlobalVar > ()); }
-#line 1124 "irparser.cpp"
+#line 1125 "irparser.cpp"
     break;
 
   case 7: // GlobalEntities: FunctionDefinition
-#line 63 "irparser.y"
+#line 64 "irparser.y"
                                                         { inode.addFunction(yystack_[0].value.as < pFunc > ()); }
-#line 1130 "irparser.cpp"
+#line 1131 "irparser.cpp"
     break;
 
   case 8: // GlobalEntities: FunctionDeclaration
-#line 64 "irparser.y"
+#line 65 "irparser.y"
                                                         { inode.addFunctionDecl(yystack_[0].value.as < pFuncDecl > ()); }
-#line 1136 "irparser.cpp"
+#line 1137 "irparser.cpp"
     break;
 
   case 9: // GlobalVariable: I_ID I_EQUAL I_DSO_LOCAL Storage GVIniter I_COMMA I_ALIGN IRNUM_INT
-#line 67 "irparser.y"
-                                                                                        { yylhs.value.as < pGlobalVar > () = IRPT::IRPT::newGV(yystack_[4].value.as < STOCLASS > (), yystack_[3].value.as < GVIniter > ().getIniterType(), yystack_[7].value.as < std::string > (), yystack_[3].value.as < GVIniter > (), yystack_[0].value.as < int > ()); }
-#line 1142 "irparser.cpp"
+#line 68 "irparser.y"
+                                                                                        { yylhs.value.as < pGlobalVar > () = tool.newGV(yystack_[4].value.as < STOCLASS > (), yystack_[3].value.as < GVIniter > ().getIniterType(), yystack_[7].value.as < std::string > (), yystack_[3].value.as < GVIniter > (), yystack_[0].value.as < int > ()); }
+#line 1143 "irparser.cpp"
     break;
 
   case 10: // Storage: I_CONSTANT
-#line 70 "irparser.y"
+#line 71 "irparser.y"
                         { yylhs.value.as < STOCLASS > () = STOCLASS::CONSTANT; }
-#line 1148 "irparser.cpp"
+#line 1149 "irparser.cpp"
     break;
 
   case 11: // Storage: I_GLOBAL
-#line 71 "irparser.y"
+#line 72 "irparser.y"
                         { yylhs.value.as < STOCLASS > () = STOCLASS::GLOBAL; }
-#line 1154 "irparser.cpp"
+#line 1155 "irparser.cpp"
     break;
 
   case 12: // Type: BType
-#line 74 "irparser.y"
+#line 75 "irparser.y"
                     { yylhs.value.as < pType > () = yystack_[0].value.as < pType > (); }
-#line 1160 "irparser.cpp"
+#line 1161 "irparser.cpp"
     break;
 
   case 13: // Type: PtrType
-#line 75 "irparser.y"
+#line 76 "irparser.y"
                     { yylhs.value.as < pType > () = yystack_[0].value.as < pType > (); }
-#line 1166 "irparser.cpp"
+#line 1167 "irparser.cpp"
     break;
 
   case 14: // Type: ArrayType
-#line 76 "irparser.y"
+#line 77 "irparser.y"
                     { yylhs.value.as < pType > () = yystack_[0].value.as < pType > (); }
-#line 1172 "irparser.cpp"
+#line 1173 "irparser.cpp"
     break;
 
   case 15: // BType: I_I1
-#line 79 "irparser.y"
+#line 80 "irparser.y"
                     { yylhs.value.as < pType > () = makeBType(IRBTYPE::I1); }
-#line 1178 "irparser.cpp"
+#line 1179 "irparser.cpp"
     break;
 
   case 16: // BType: I_I8
-#line 80 "irparser.y"
+#line 81 "irparser.y"
                     { yylhs.value.as < pType > () = makeBType(IRBTYPE::I8); }
-#line 1184 "irparser.cpp"
+#line 1185 "irparser.cpp"
     break;
 
   case 17: // BType: I_I32
-#line 81 "irparser.y"
+#line 82 "irparser.y"
                     { yylhs.value.as < pType > () = makeBType(IRBTYPE::I32); }
-#line 1190 "irparser.cpp"
+#line 1191 "irparser.cpp"
     break;
 
   case 18: // BType: I_FLOAT
-#line 82 "irparser.y"
+#line 83 "irparser.y"
                     { yylhs.value.as < pType > () = makeBType(IRBTYPE::FLOAT); }
-#line 1196 "irparser.cpp"
+#line 1197 "irparser.cpp"
     break;
 
   case 19: // BType: I_VOID
-#line 83 "irparser.y"
+#line 84 "irparser.y"
                     { yylhs.value.as < pType > () = makeBType(IRBTYPE::VOID); }
-#line 1202 "irparser.cpp"
+#line 1203 "irparser.cpp"
     break;
 
   case 20: // PtrType: Type I_STAR
-#line 86 "irparser.y"
+#line 87 "irparser.y"
                         { yylhs.value.as < pType > () = makePtrType(yystack_[1].value.as < pType > ()); }
-#line 1208 "irparser.cpp"
+#line 1209 "irparser.cpp"
     break;
 
   case 21: // ArrayType: I_LSQUARE IRNUM_INT I_X Type I_RBRACKET
-#line 89 "irparser.y"
+#line 90 "irparser.y"
                                                         { yylhs.value.as < pType > () = makeArrayType(yystack_[1].value.as < pType > (), yystack_[3].value.as < int > ()); }
-#line 1214 "irparser.cpp"
+#line 1215 "irparser.cpp"
     break;
 
   case 22: // Constant: IRNUM_INT
-#line 92 "irparser.y"
+#line 93 "irparser.y"
                             { yylhs.value.as < pVal > () = inode.getConst(yystack_[0].value.as < int > ()); }
-#line 1220 "irparser.cpp"
+#line 1221 "irparser.cpp"
     break;
 
   case 23: // Constant: IRNUM_FLOAT
-#line 93 "irparser.y"
+#line 94 "irparser.y"
                             { yylhs.value.as < pVal > () = inode.getConst(yystack_[0].value.as < float > ()); }
-#line 1226 "irparser.cpp"
+#line 1227 "irparser.cpp"
     break;
 
   case 24: // GVIniter: Type I_ZEROINITER
-#line 96 "irparser.y"
+#line 97 "irparser.y"
                                                     { yylhs.value.as < GVIniter > () = GVIniter(yystack_[1].value.as < pType > ()); }
-#line 1232 "irparser.cpp"
+#line 1233 "irparser.cpp"
     break;
 
   case 25: // GVIniter: Type I_LSQUARE GVIniters I_RSQUARE
-#line 97 "irparser.y"
+#line 98 "irparser.y"
                                                     { yylhs.value.as < GVIniter > () = GVIniter(yystack_[3].value.as < pType > (), yystack_[1].value.as < std::vector<GVIniter> > ()); }
-#line 1238 "irparser.cpp"
+#line 1239 "irparser.cpp"
     break;
 
   case 26: // GVIniter: Type Constant
-#line 98 "irparser.y"
+#line 99 "irparser.y"
                                                     { yylhs.value.as < GVIniter > () = GVIniter(yystack_[1].value.as < pType > (), yystack_[0].value.as < pVal > ()); }
-#line 1244 "irparser.cpp"
+#line 1245 "irparser.cpp"
     break;
 
   case 27: // GVIniters: GVIniter
-#line 101 "irparser.y"
+#line 102 "irparser.y"
                                             { yylhs.value.as < std::vector<GVIniter> > () = { yystack_[0].value.as < GVIniter > () }; }
-#line 1250 "irparser.cpp"
+#line 1251 "irparser.cpp"
     break;
 
   case 28: // GVIniters: GVIniters I_COMMA GVIniter
-#line 102 "irparser.y"
+#line 103 "irparser.y"
                                             { yylhs.value.as < std::vector<GVIniter> > () = yystack_[2].value.as < std::vector<GVIniter> > (); yylhs.value.as < std::vector<GVIniter> > ().emplace_back(yystack_[0].value.as < GVIniter > ()); }
-#line 1256 "irparser.cpp"
+#line 1257 "irparser.cpp"
     break;
 
   case 29: // FunctionDeclaration: I_DECLARE Type I_ID I_LPAR DeclParamList I_RPAR
-#line 105 "irparser.y"
-                                                                                    { yylhs.value.as < pFuncDecl > () = IRPT::newFuncDecl(yystack_[3].value.as < std::string > (), yystack_[1].value.as < std::vector<pType> > (), yystack_[4].value.as < pType > ()); }
-#line 1262 "irparser.cpp"
+#line 106 "irparser.y"
+                                                                                    { yylhs.value.as < pFuncDecl > () = tool.newFuncDecl(yystack_[3].value.as < std::string > (), yystack_[1].value.as < std::vector<pType> > (), yystack_[4].value.as < pType > ()); }
+#line 1263 "irparser.cpp"
     break;
 
   case 30: // FunctionDeclaration: I_DECLARE Type I_ID I_LPAR DeclParamList I_DOTDOTDOT I_RPAR
-#line 106 "irparser.y"
-                                                                                    { yylhs.value.as < pFuncDecl > () = IRPT::newFuncDecl(yystack_[4].value.as < std::string > (), yystack_[2].value.as < std::vector<pType> > (), yystack_[5].value.as < pType > (), true); }
-#line 1268 "irparser.cpp"
+#line 107 "irparser.y"
+                                                                                    { yylhs.value.as < pFuncDecl > () = tool.newFuncDecl(yystack_[4].value.as < std::string > (), yystack_[2].value.as < std::vector<pType> > (), yystack_[5].value.as < pType > (), true); }
+#line 1269 "irparser.cpp"
     break;
 
   case 31: // FunctionDeclaration: I_DECLARE Type I_ID I_LPAR I_RPAR
-#line 107 "irparser.y"
-                                                                                    { yylhs.value.as < pFuncDecl > () = IRPT::newFuncDecl(yystack_[2].value.as < std::string > (), {}, yystack_[3].value.as < pType > ()); }
-#line 1274 "irparser.cpp"
+#line 108 "irparser.y"
+                                                                                    { yylhs.value.as < pFuncDecl > () = tool.newFuncDecl(yystack_[2].value.as < std::string > (), {}, yystack_[3].value.as < pType > ()); }
+#line 1275 "irparser.cpp"
     break;
 
   case 32: // FunctionDeclaration: I_DECLARE Type I_ID I_LPAR I_DOTDOTDOT I_RPAR
-#line 108 "irparser.y"
-                                                                                    { yylhs.value.as < pFuncDecl > () = IRPT::newFuncDecl(yystack_[3].value.as < std::string > (), {}, yystack_[4].value.as < pType > (), true); }
-#line 1280 "irparser.cpp"
+#line 109 "irparser.y"
+                                                                                    { yylhs.value.as < pFuncDecl > () = tool.newFuncDecl(yystack_[3].value.as < std::string > (), {}, yystack_[4].value.as < pType > (), true); }
+#line 1281 "irparser.cpp"
     break;
 
   case 33: // DeclParamList: DeclParamList I_COMMA DeclParam
-#line 111 "irparser.y"
+#line 112 "irparser.y"
                                                     { yylhs.value.as < std::vector<pType> > () = yystack_[2].value.as < std::vector<pType> > (); yylhs.value.as < std::vector<pType> > ().emplace_back(yystack_[0].value.as < pType > ()); }
-#line 1286 "irparser.cpp"
+#line 1287 "irparser.cpp"
     break;
 
   case 34: // DeclParamList: DeclParam
-#line 112 "irparser.y"
+#line 113 "irparser.y"
                                                     { yylhs.value.as < std::vector<pType> > () = { yystack_[0].value.as < pType > () }; }
-#line 1292 "irparser.cpp"
+#line 1293 "irparser.cpp"
     break;
 
   case 35: // DeclParam: Type I_NOUNDEF
-#line 115 "irparser.y"
+#line 116 "irparser.y"
                                 { yylhs.value.as < pType > () = yystack_[1].value.as < pType > (); }
-#line 1298 "irparser.cpp"
+#line 1299 "irparser.cpp"
     break;
 
   case 36: // DefParamList: DefParamList I_COMMA DefParam
-#line 118 "irparser.y"
+#line 119 "irparser.y"
                                                 { yylhs.value.as < std::vector<pFormalParam> > () = yystack_[2].value.as < std::vector<pFormalParam> > (); yylhs.value.as < std::vector<pFormalParam> > ().emplace_back(yystack_[0].value.as < pFormalParam > ()); }
-#line 1304 "irparser.cpp"
+#line 1305 "irparser.cpp"
     break;
 
   case 37: // DefParamList: DefParam
-#line 119 "irparser.y"
+#line 120 "irparser.y"
                                                 { yylhs.value.as < std::vector<pFormalParam> > () = { yystack_[0].value.as < pFormalParam > () }; }
-#line 1310 "irparser.cpp"
+#line 1311 "irparser.cpp"
     break;
 
   case 38: // DefParam: Type I_NOUNDEF I_ID
-#line 122 "irparser.y"
-                                    { yylhs.value.as < pFormalParam > () = IRPT::vmake<FormalParam>(yystack_[0].value.as < std::string > (), yystack_[0].value.as < std::string > (), yystack_[2].value.as < pType > (), 0); }
-#line 1316 "irparser.cpp"
+#line 123 "irparser.y"
+                                    { yylhs.value.as < pFormalParam > () = tool.vmake<FormalParam>(yystack_[0].value.as < std::string > (), yystack_[0].value.as < std::string > (), yystack_[2].value.as < pType > (), 0); }
+#line 1317 "irparser.cpp"
     break;
 
   case 39: // FunctionDefinition: I_DEFINE I_DSO_LOCAL Type I_ID I_LPAR DefParamList I_RPAR I_LBRACKET BBList I_RBRACKET
-#line 125 "irparser.y"
-                                                                                                                { yylhs.value.as < pFunc > () = IRPT::newFunc(yystack_[6].value.as < std::string > (), yystack_[4].value.as < std::vector<pFormalParam> > (), yystack_[7].value.as < pType > (), &inode.getConstantPool(), yystack_[1].value.as < std::vector<pBlock> > ()); }
-#line 1322 "irparser.cpp"
+#line 126 "irparser.y"
+                                                                                                                { yylhs.value.as < pFunc > () = tool.newFunc(yystack_[6].value.as < std::string > (), yystack_[4].value.as < std::vector<pFormalParam> > (), yystack_[7].value.as < pType > (), &inode.getConstantPool(), yystack_[1].value.as < std::vector<pBlock> > ()); }
+#line 1323 "irparser.cpp"
     break;
 
   case 40: // FunctionDefinition: I_DEFINE I_DSO_LOCAL Type I_ID I_LPAR I_RPAR I_LBRACKET BBList I_RBRACKET
-#line 126 "irparser.y"
-                                                                                                                { yylhs.value.as < pFunc > () = IRPT::newFunc(yystack_[5].value.as < std::string > (), {}, yystack_[6].value.as < pType > (), &inode.getConstantPool(), yystack_[1].value.as < std::vector<pBlock> > ()); }
-#line 1328 "irparser.cpp"
+#line 127 "irparser.y"
+                                                                                                                { yylhs.value.as < pFunc > () = tool.newFunc(yystack_[5].value.as < std::string > (), {}, yystack_[6].value.as < pType > (), &inode.getConstantPool(), yystack_[1].value.as < std::vector<pBlock> > ()); }
+#line 1329 "irparser.cpp"
     break;
 
   case 41: // BBList: BB
-#line 129 "irparser.y"
+#line 130 "irparser.y"
                         { yylhs.value.as < std::vector<pBlock> > () = { yystack_[0].value.as < pBlock > () }; }
-#line 1334 "irparser.cpp"
+#line 1335 "irparser.cpp"
     break;
 
   case 42: // BBList: BBList BB
-#line 130 "irparser.y"
+#line 131 "irparser.y"
                         { yylhs.value.as < std::vector<pBlock> > () = yystack_[1].value.as < std::vector<pBlock> > (); yylhs.value.as < std::vector<pBlock> > ().emplace_back(yystack_[0].value.as < pBlock > ()); }
-#line 1340 "irparser.cpp"
+#line 1341 "irparser.cpp"
     break;
 
   case 43: // BB: I_BLKID InstList
-#line 133 "irparser.y"
-                        { yylhs.value.as < pBlock > () = IRPT::newBB(yystack_[1].value.as < std::string > (), yystack_[0].value.as < std::list<pInst> > ()); }
-#line 1346 "irparser.cpp"
+#line 134 "irparser.y"
+                        { yylhs.value.as < pBlock > () = tool.newBB(yystack_[1].value.as < std::string > (), yystack_[0].value.as < std::list<pInst> > ()); }
+#line 1347 "irparser.cpp"
     break;
 
   case 44: // InstList: Inst
-#line 136 "irparser.y"
+#line 137 "irparser.y"
                             { yylhs.value.as < std::list<pInst> > () = { yystack_[0].value.as < pInst > () }; }
-#line 1352 "irparser.cpp"
+#line 1353 "irparser.cpp"
     break;
 
   case 45: // InstList: InstList Inst
-#line 137 "irparser.y"
+#line 138 "irparser.y"
                             { yylhs.value.as < std::list<pInst> > () = yystack_[1].value.as < std::list<pInst> > (); yylhs.value.as < std::list<pInst> > ().emplace_back(yystack_[0].value.as < pInst > ()); }
-#line 1358 "irparser.cpp"
+#line 1359 "irparser.cpp"
     break;
 
   case 46: // Inst: BinaryInst
-#line 140 "irparser.y"
+#line 141 "irparser.y"
                         { yylhs.value.as < pInst > () = yystack_[0].value.as < pInst > (); }
-#line 1364 "irparser.cpp"
+#line 1365 "irparser.cpp"
     break;
 
   case 47: // Inst: CastInst
-#line 141 "irparser.y"
+#line 142 "irparser.y"
                         { yylhs.value.as < pInst > () = yystack_[0].value.as < pInst > (); }
-#line 1370 "irparser.cpp"
+#line 1371 "irparser.cpp"
     break;
 
   case 48: // Inst: FnegInst
-#line 142 "irparser.y"
+#line 143 "irparser.y"
                         { yylhs.value.as < pInst > () = yystack_[0].value.as < pInst > (); }
-#line 1376 "irparser.cpp"
+#line 1377 "irparser.cpp"
     break;
 
   case 49: // Inst: IcmpInst
-#line 143 "irparser.y"
+#line 144 "irparser.y"
                         { yylhs.value.as < pInst > () = yystack_[0].value.as < pInst > (); }
-#line 1382 "irparser.cpp"
+#line 1383 "irparser.cpp"
     break;
 
   case 50: // Inst: FcmpInst
-#line 144 "irparser.y"
+#line 145 "irparser.y"
                         { yylhs.value.as < pInst > () = yystack_[0].value.as < pInst > (); }
-#line 1388 "irparser.cpp"
+#line 1389 "irparser.cpp"
     break;
 
   case 51: // Inst: RetInst
-#line 145 "irparser.y"
+#line 146 "irparser.y"
                         { yylhs.value.as < pInst > () = yystack_[0].value.as < pInst > (); }
-#line 1394 "irparser.cpp"
+#line 1395 "irparser.cpp"
     break;
 
   case 52: // Inst: BrInst
-#line 146 "irparser.y"
+#line 147 "irparser.y"
                         { yylhs.value.as < pInst > () = yystack_[0].value.as < pInst > (); }
-#line 1400 "irparser.cpp"
+#line 1401 "irparser.cpp"
     break;
 
   case 53: // Inst: CallInst
-#line 147 "irparser.y"
+#line 148 "irparser.y"
                         { yylhs.value.as < pInst > () = yystack_[0].value.as < pInst > (); }
-#line 1406 "irparser.cpp"
+#line 1407 "irparser.cpp"
     break;
 
   case 54: // Inst: AllocaInst
-#line 148 "irparser.y"
+#line 149 "irparser.y"
                         { yylhs.value.as < pInst > () = yystack_[0].value.as < pInst > (); }
-#line 1412 "irparser.cpp"
+#line 1413 "irparser.cpp"
     break;
 
   case 55: // Inst: LoadInst
-#line 149 "irparser.y"
+#line 150 "irparser.y"
                         { yylhs.value.as < pInst > () = yystack_[0].value.as < pInst > (); }
-#line 1418 "irparser.cpp"
+#line 1419 "irparser.cpp"
     break;
 
   case 56: // Inst: StoreInst
-#line 150 "irparser.y"
+#line 151 "irparser.y"
                         { yylhs.value.as < pInst > () = yystack_[0].value.as < pInst > (); }
-#line 1424 "irparser.cpp"
+#line 1425 "irparser.cpp"
     break;
 
   case 57: // Inst: GepInst
-#line 151 "irparser.y"
+#line 152 "irparser.y"
                         { yylhs.value.as < pInst > () = yystack_[0].value.as < pInst > (); }
-#line 1430 "irparser.cpp"
+#line 1431 "irparser.cpp"
     break;
 
   case 58: // Inst: PhiInst
-#line 152 "irparser.y"
+#line 153 "irparser.y"
                         { yylhs.value.as < pInst > () = yystack_[0].value.as < pInst > (); }
-#line 1436 "irparser.cpp"
+#line 1437 "irparser.cpp"
     break;
 
   case 59: // BinaryInst: I_ID I_EQUAL BinaryOp Type Value I_COMMA Value
-#line 155 "irparser.y"
-                                                                { yylhs.value.as < pInst > () = IRPT::vmake<BinaryInst>(yystack_[6].value.as < std::string > (), yystack_[6].value.as < std::string > (), yystack_[4].value.as < OP > (), yystack_[2].value.as < pVal > (), yystack_[0].value.as < pVal > ()); }
-#line 1442 "irparser.cpp"
+#line 156 "irparser.y"
+                                                                { yylhs.value.as < pInst > () = tool.vmake<BinaryInst>(yystack_[6].value.as < std::string > (), yystack_[6].value.as < std::string > (), yystack_[4].value.as < OP > (), yystack_[2].value.as < pVal > (), yystack_[0].value.as < pVal > ()); }
+#line 1443 "irparser.cpp"
     break;
 
   case 60: // Value: I_ID
-#line 158 "irparser.y"
-                    { yylhs.value.as < pVal > () = IRPT::getV(yystack_[0].value.as < std::string > ()); }
-#line 1448 "irparser.cpp"
+#line 159 "irparser.y"
+                    { yylhs.value.as < pVal > () = tool.getV(yystack_[0].value.as < std::string > ()); }
+#line 1449 "irparser.cpp"
     break;
 
   case 61: // Value: Constant
-#line 159 "irparser.y"
+#line 160 "irparser.y"
                     { yylhs.value.as < pVal > () = yystack_[0].value.as < pVal > (); }
-#line 1454 "irparser.cpp"
+#line 1455 "irparser.cpp"
     break;
 
   case 62: // BinaryOp: I_ADD
-#line 162 "irparser.y"
+#line 163 "irparser.y"
                         { yylhs.value.as < OP > () = OP::ADD; }
-#line 1460 "irparser.cpp"
+#line 1461 "irparser.cpp"
     break;
 
   case 63: // BinaryOp: I_FADD
-#line 163 "irparser.y"
+#line 164 "irparser.y"
                         { yylhs.value.as < OP > () = OP::FADD; }
-#line 1466 "irparser.cpp"
+#line 1467 "irparser.cpp"
     break;
 
   case 64: // BinaryOp: I_SUB
-#line 164 "irparser.y"
+#line 165 "irparser.y"
                         { yylhs.value.as < OP > () = OP::SUB; }
-#line 1472 "irparser.cpp"
+#line 1473 "irparser.cpp"
     break;
 
   case 65: // BinaryOp: I_FSUB
-#line 165 "irparser.y"
+#line 166 "irparser.y"
                         { yylhs.value.as < OP > () = OP::FSUB; }
-#line 1478 "irparser.cpp"
+#line 1479 "irparser.cpp"
     break;
 
   case 66: // BinaryOp: I_MUL
-#line 166 "irparser.y"
+#line 167 "irparser.y"
                         { yylhs.value.as < OP > () = OP::MUL; }
-#line 1484 "irparser.cpp"
+#line 1485 "irparser.cpp"
     break;
 
   case 67: // BinaryOp: I_FMUL
-#line 167 "irparser.y"
+#line 168 "irparser.y"
                         { yylhs.value.as < OP > () = OP::FMUL; }
-#line 1490 "irparser.cpp"
+#line 1491 "irparser.cpp"
     break;
 
   case 68: // BinaryOp: I_DIV
-#line 168 "irparser.y"
+#line 169 "irparser.y"
                         { yylhs.value.as < OP > () = OP::DIV; }
-#line 1496 "irparser.cpp"
+#line 1497 "irparser.cpp"
     break;
 
   case 69: // BinaryOp: I_FDIV
-#line 169 "irparser.y"
+#line 170 "irparser.y"
                         { yylhs.value.as < OP > () = OP::FDIV; }
-#line 1502 "irparser.cpp"
+#line 1503 "irparser.cpp"
     break;
 
   case 70: // BinaryOp: I_REM
-#line 170 "irparser.y"
+#line 171 "irparser.y"
                         { yylhs.value.as < OP > () = OP::REM; }
-#line 1508 "irparser.cpp"
+#line 1509 "irparser.cpp"
     break;
 
   case 71: // BinaryOp: I_FREM
-#line 171 "irparser.y"
+#line 172 "irparser.y"
                         { yylhs.value.as < OP > () = OP::FREM; }
-#line 1514 "irparser.cpp"
+#line 1515 "irparser.cpp"
     break;
 
   case 72: // FnegInst: I_ID I_EQUAL I_FNEG Type Value
-#line 174 "irparser.y"
-                                                { yylhs.value.as < pInst > () = IRPT::vmake<FNEGInst>(yystack_[4].value.as < std::string > (), yystack_[4].value.as < std::string > (), yystack_[0].value.as < pVal > ()); }
-#line 1520 "irparser.cpp"
+#line 175 "irparser.y"
+                                                { yylhs.value.as < pInst > () = tool.vmake<FNEGInst>(yystack_[4].value.as < std::string > (), yystack_[4].value.as < std::string > (), yystack_[0].value.as < pVal > ()); }
+#line 1521 "irparser.cpp"
     break;
 
   case 73: // CastInst: I_ID I_EQUAL I_FPTOSI Type Value I_TO Type
-#line 177 "irparser.y"
-                                                            { yylhs.value.as < pInst > () = IRPT::vmake<FPTOSIInst>(yystack_[6].value.as < std::string > (), yystack_[6].value.as < std::string > (), yystack_[2].value.as < pVal > ()); }
-#line 1526 "irparser.cpp"
+#line 178 "irparser.y"
+                                                            { yylhs.value.as < pInst > () = tool.vmake<FPTOSIInst>(yystack_[6].value.as < std::string > (), yystack_[6].value.as < std::string > (), yystack_[2].value.as < pVal > ()); }
+#line 1527 "irparser.cpp"
     break;
 
   case 74: // CastInst: I_ID I_EQUAL I_SITOFP Type Value I_TO Type
-#line 178 "irparser.y"
-                                                            { yylhs.value.as < pInst > () = IRPT::vmake<SITOFPInst>(yystack_[6].value.as < std::string > (), yystack_[6].value.as < std::string > (), yystack_[2].value.as < pVal > ()); }
-#line 1532 "irparser.cpp"
+#line 179 "irparser.y"
+                                                            { yylhs.value.as < pInst > () = tool.vmake<SITOFPInst>(yystack_[6].value.as < std::string > (), yystack_[6].value.as < std::string > (), yystack_[2].value.as < pVal > ()); }
+#line 1533 "irparser.cpp"
     break;
 
   case 75: // CastInst: I_ID I_EQUAL I_ZEXT Type Value I_TO Type
-#line 179 "irparser.y"
-                                                            { yylhs.value.as < pInst > () = IRPT::vmake<ZEXTInst>(yystack_[6].value.as < std::string > (), yystack_[6].value.as < std::string > (), yystack_[2].value.as < pVal > (), toBType(yystack_[0].value.as < pType > ())->getInner()); }
-#line 1538 "irparser.cpp"
+#line 180 "irparser.y"
+                                                            { yylhs.value.as < pInst > () = tool.vmake<ZEXTInst>(yystack_[6].value.as < std::string > (), yystack_[6].value.as < std::string > (), yystack_[2].value.as < pVal > (), toBType(yystack_[0].value.as < pType > ())->getInner()); }
+#line 1539 "irparser.cpp"
     break;
 
   case 76: // CastInst: I_ID I_EQUAL I_BITCAST Type Value I_TO Type
-#line 180 "irparser.y"
-                                                            { yylhs.value.as < pInst > () = IRPT::vmake<BITCASTInst>(yystack_[6].value.as < std::string > (), yystack_[6].value.as < std::string > (), yystack_[2].value.as < pVal > (), yystack_[0].value.as < pType > ()); }
-#line 1544 "irparser.cpp"
+#line 181 "irparser.y"
+                                                            { yylhs.value.as < pInst > () = tool.vmake<BITCASTInst>(yystack_[6].value.as < std::string > (), yystack_[6].value.as < std::string > (), yystack_[2].value.as < pVal > (), yystack_[0].value.as < pType > ()); }
+#line 1545 "irparser.cpp"
     break;
 
   case 77: // IcmpInst: I_ID I_EQUAL I_ICMP IcmpOp Type Value I_COMMA Value
-#line 183 "irparser.y"
-                                                                    { yylhs.value.as < pInst > () = IRPT::vmake<ICMPInst>(yystack_[7].value.as < std::string > (), yystack_[7].value.as < std::string > (), yystack_[4].value.as < ICMPOP > (), yystack_[2].value.as < pVal > (), yystack_[0].value.as < pVal > ()); }
-#line 1550 "irparser.cpp"
+#line 184 "irparser.y"
+                                                                    { yylhs.value.as < pInst > () = tool.vmake<ICMPInst>(yystack_[7].value.as < std::string > (), yystack_[7].value.as < std::string > (), yystack_[4].value.as < ICMPOP > (), yystack_[2].value.as < pVal > (), yystack_[0].value.as < pVal > ()); }
+#line 1551 "irparser.cpp"
     break;
 
   case 78: // IcmpOp: I_EQ
-#line 186 "irparser.y"
+#line 187 "irparser.y"
                 { yylhs.value.as < ICMPOP > () = ICMPOP::eq; }
-#line 1556 "irparser.cpp"
+#line 1557 "irparser.cpp"
     break;
 
   case 79: // IcmpOp: I_NE
-#line 187 "irparser.y"
+#line 188 "irparser.y"
                 { yylhs.value.as < ICMPOP > () = ICMPOP::ne; }
-#line 1562 "irparser.cpp"
+#line 1563 "irparser.cpp"
     break;
 
   case 80: // IcmpOp: I_SGT
-#line 188 "irparser.y"
+#line 189 "irparser.y"
                 { yylhs.value.as < ICMPOP > () = ICMPOP::sgt; }
-#line 1568 "irparser.cpp"
+#line 1569 "irparser.cpp"
     break;
 
   case 81: // IcmpOp: I_SGE
-#line 189 "irparser.y"
+#line 190 "irparser.y"
                 { yylhs.value.as < ICMPOP > () = ICMPOP::sge; }
-#line 1574 "irparser.cpp"
+#line 1575 "irparser.cpp"
     break;
 
   case 82: // IcmpOp: I_SLT
-#line 190 "irparser.y"
+#line 191 "irparser.y"
                 { yylhs.value.as < ICMPOP > () = ICMPOP::slt; }
-#line 1580 "irparser.cpp"
+#line 1581 "irparser.cpp"
     break;
 
   case 83: // IcmpOp: I_SLE
-#line 191 "irparser.y"
+#line 192 "irparser.y"
                 { yylhs.value.as < ICMPOP > () = ICMPOP::sle; }
-#line 1586 "irparser.cpp"
+#line 1587 "irparser.cpp"
     break;
 
   case 84: // FcmpInst: I_ID I_EQUAL I_FCMP FcmpOp Type Value I_COMMA Value
-#line 194 "irparser.y"
-                                                                    { yylhs.value.as < pInst > () = IRPT::vmake<FCMPInst>(yystack_[7].value.as < std::string > (), yystack_[7].value.as < std::string > (), yystack_[4].value.as < FCMPOP > (), yystack_[2].value.as < pVal > (), yystack_[0].value.as < pVal > ()); }
-#line 1592 "irparser.cpp"
+#line 195 "irparser.y"
+                                                                    { yylhs.value.as < pInst > () = tool.vmake<FCMPInst>(yystack_[7].value.as < std::string > (), yystack_[7].value.as < std::string > (), yystack_[4].value.as < FCMPOP > (), yystack_[2].value.as < pVal > (), yystack_[0].value.as < pVal > ()); }
+#line 1593 "irparser.cpp"
     break;
 
   case 85: // FcmpOp: I_OEQ
-#line 197 "irparser.y"
+#line 198 "irparser.y"
                 { yylhs.value.as < FCMPOP > () = FCMPOP::oeq; }
-#line 1598 "irparser.cpp"
+#line 1599 "irparser.cpp"
     break;
 
   case 86: // FcmpOp: I_OGT
-#line 198 "irparser.y"
+#line 199 "irparser.y"
                 { yylhs.value.as < FCMPOP > () = FCMPOP::ogt; }
-#line 1604 "irparser.cpp"
+#line 1605 "irparser.cpp"
     break;
 
   case 87: // FcmpOp: I_OGE
-#line 199 "irparser.y"
+#line 200 "irparser.y"
                 { yylhs.value.as < FCMPOP > () = FCMPOP::oge; }
-#line 1610 "irparser.cpp"
+#line 1611 "irparser.cpp"
     break;
 
   case 88: // FcmpOp: I_OLT
-#line 200 "irparser.y"
+#line 201 "irparser.y"
                 { yylhs.value.as < FCMPOP > () = FCMPOP::olt; }
-#line 1616 "irparser.cpp"
+#line 1617 "irparser.cpp"
     break;
 
   case 89: // FcmpOp: I_OLE
-#line 201 "irparser.y"
+#line 202 "irparser.y"
                 { yylhs.value.as < FCMPOP > () = FCMPOP::ole; }
-#line 1622 "irparser.cpp"
+#line 1623 "irparser.cpp"
     break;
 
   case 90: // FcmpOp: I_ONE
-#line 202 "irparser.y"
+#line 203 "irparser.y"
                 { yylhs.value.as < FCMPOP > () = FCMPOP::one; }
-#line 1628 "irparser.cpp"
+#line 1629 "irparser.cpp"
     break;
 
   case 91: // FcmpOp: I_ORD
-#line 203 "irparser.y"
+#line 204 "irparser.y"
                 { yylhs.value.as < FCMPOP > () = FCMPOP::ord; }
-#line 1634 "irparser.cpp"
+#line 1635 "irparser.cpp"
     break;
 
   case 92: // RetInst: I_RET RETType Value
-#line 206 "irparser.y"
-                               { yylhs.value.as < pInst > () = IRPT::make<RETInst>(yystack_[0].value.as < pVal > ()); }
-#line 1640 "irparser.cpp"
+#line 207 "irparser.y"
+                               { yylhs.value.as < pInst > () = tool.make<RETInst>(yystack_[0].value.as < pVal > ()); }
+#line 1641 "irparser.cpp"
     break;
 
   case 93: // RetInst: I_RET I_VOID
-#line 207 "irparser.y"
-                            { yylhs.value.as < pInst > () = IRPT::make<RETInst>(); }
-#line 1646 "irparser.cpp"
+#line 208 "irparser.y"
+                            { yylhs.value.as < pInst > () = tool.make<RETInst>(); }
+#line 1647 "irparser.cpp"
     break;
 
   case 94: // RETType: I_I1
-#line 210 "irparser.y"
+#line 211 "irparser.y"
                     { yylhs.value.as < pType > () = makeBType(IRBTYPE::I1); }
-#line 1652 "irparser.cpp"
+#line 1653 "irparser.cpp"
     break;
 
   case 95: // RETType: I_I8
-#line 211 "irparser.y"
+#line 212 "irparser.y"
                     { yylhs.value.as < pType > () = makeBType(IRBTYPE::I8); }
-#line 1658 "irparser.cpp"
+#line 1659 "irparser.cpp"
     break;
 
   case 96: // RETType: I_I32
-#line 212 "irparser.y"
+#line 213 "irparser.y"
                     { yylhs.value.as < pType > () = makeBType(IRBTYPE::I32); }
-#line 1664 "irparser.cpp"
+#line 1665 "irparser.cpp"
     break;
 
   case 97: // RETType: I_FLOAT
-#line 213 "irparser.y"
+#line 214 "irparser.y"
                     { yylhs.value.as < pType > () = makeBType(IRBTYPE::FLOAT); }
-#line 1670 "irparser.cpp"
+#line 1671 "irparser.cpp"
     break;
 
   case 98: // BrInst: I_BR I_LABEL I_ID
-#line 216 "irparser.y"
-                                                                    { yylhs.value.as < pInst > () = IRPT::make<BRInst>(IRPT::getB(yystack_[0].value.as < std::string > ())); }
-#line 1676 "irparser.cpp"
+#line 217 "irparser.y"
+                                                                    { yylhs.value.as < pInst > () = tool.make<BRInst>(tool.getB(yystack_[0].value.as < std::string > ())); }
+#line 1677 "irparser.cpp"
     break;
 
   case 99: // BrInst: I_BR Type Value I_COMMA I_LABEL I_ID I_COMMA I_LABEL I_ID
-#line 217 "irparser.y"
-                                                                    { yylhs.value.as < pInst > () = IRPT::make<BRInst>(yystack_[6].value.as < pVal > (), IRPT::getB(yystack_[3].value.as < std::string > ()), IRPT::getB(yystack_[0].value.as < std::string > ())); }
-#line 1682 "irparser.cpp"
+#line 218 "irparser.y"
+                                                                    { yylhs.value.as < pInst > () = tool.make<BRInst>(yystack_[6].value.as < pVal > (), tool.getB(yystack_[3].value.as < std::string > ()), tool.getB(yystack_[0].value.as < std::string > ())); }
+#line 1683 "irparser.cpp"
     break;
 
   case 100: // CallInst: I_CALL Type I_ID I_LPAR ArgList I_RPAR
-#line 220 "irparser.y"
-                                                                            { yylhs.value.as < pInst > () = IRPT::make<CALLInst>(IRPT::getF(yystack_[3].value.as < std::string > ()), yystack_[1].value.as < std::vector<pVal> > ()); }
-#line 1688 "irparser.cpp"
+#line 221 "irparser.y"
+                                                                            { yylhs.value.as < pInst > () = tool.make<CALLInst>(tool.getF(yystack_[3].value.as < std::string > ()), yystack_[1].value.as < std::vector<pVal> > ()); }
+#line 1689 "irparser.cpp"
     break;
 
   case 101: // CallInst: I_ID I_EQUAL I_CALL Type I_ID I_LPAR ArgList I_RPAR
-#line 221 "irparser.y"
-                                                                            { yylhs.value.as < pInst > () = IRPT::vmake<CALLInst>(yystack_[7].value.as < std::string > (), yystack_[7].value.as < std::string > (), IRPT::getF(yystack_[3].value.as < std::string > ()), yystack_[1].value.as < std::vector<pVal> > ()); }
-#line 1694 "irparser.cpp"
+#line 222 "irparser.y"
+                                                                            { yylhs.value.as < pInst > () = tool.vmake<CALLInst>(yystack_[7].value.as < std::string > (), yystack_[7].value.as < std::string > (), tool.getF(yystack_[3].value.as < std::string > ()), yystack_[1].value.as < std::vector<pVal> > ()); }
+#line 1695 "irparser.cpp"
     break;
 
   case 102: // CallInst: I_TAIL I_CALL Type I_ID I_LPAR ArgList I_RPAR
-#line 222 "irparser.y"
-                                                                            { yylhs.value.as < pInst > () = IRPT::make<CALLInst>(IRPT::getF(yystack_[3].value.as < std::string > ()), yystack_[1].value.as < std::vector<pVal> > ()); }
-#line 1700 "irparser.cpp"
+#line 223 "irparser.y"
+                                                                            { yylhs.value.as < pInst > () = tool.make<CALLInst>(tool.getF(yystack_[3].value.as < std::string > ()), yystack_[1].value.as < std::vector<pVal> > ()); }
+#line 1701 "irparser.cpp"
     break;
 
   case 103: // CallInst: I_ID I_EQUAL I_TAIL I_CALL Type I_ID I_LPAR ArgList I_RPAR
-#line 223 "irparser.y"
-                                                                            { yylhs.value.as < pInst > () = IRPT::vmake<CALLInst>(yystack_[8].value.as < std::string > (), yystack_[8].value.as < std::string > (), IRPT::getF(yystack_[3].value.as < std::string > ()), yystack_[1].value.as < std::vector<pVal> > ()); }
-#line 1706 "irparser.cpp"
+#line 224 "irparser.y"
+                                                                            { yylhs.value.as < pInst > () = tool.vmake<CALLInst>(yystack_[8].value.as < std::string > (), yystack_[8].value.as < std::string > (), tool.getF(yystack_[3].value.as < std::string > ()), yystack_[1].value.as < std::vector<pVal> > ()); }
+#line 1707 "irparser.cpp"
     break;
 
   case 104: // ArgList: ArgList I_COMMA Arg
-#line 226 "irparser.y"
+#line 227 "irparser.y"
                                 { yylhs.value.as < std::vector<pVal> > () = yystack_[2].value.as < std::vector<pVal> > (); yylhs.value.as < std::vector<pVal> > ().emplace_back(yystack_[0].value.as < pVal > ()); }
-#line 1712 "irparser.cpp"
+#line 1713 "irparser.cpp"
     break;
 
   case 105: // ArgList: Arg
-#line 227 "irparser.y"
+#line 228 "irparser.y"
                                 { yylhs.value.as < std::vector<pVal> > () = { yystack_[0].value.as < pVal > () }; }
-#line 1718 "irparser.cpp"
+#line 1719 "irparser.cpp"
     break;
 
   case 106: // Arg: Type I_NOUNDEF Value
-#line 230 "irparser.y"
+#line 231 "irparser.y"
                             { yylhs.value.as < pVal > () = yystack_[0].value.as < pVal > (); }
-#line 1724 "irparser.cpp"
+#line 1725 "irparser.cpp"
     break;
 
   case 107: // AllocaInst: I_ID I_EQUAL I_ALLOCA Type I_COMMA I_ALIGN IRNUM_INT
-#line 233 "irparser.y"
-                                                                    { yylhs.value.as < pInst > () = IRPT::vmake<ALLOCAInst>(yystack_[6].value.as < std::string > (), yystack_[6].value.as < std::string > (), yystack_[3].value.as < pType > (), yystack_[0].value.as < int > ()); }
-#line 1730 "irparser.cpp"
+#line 234 "irparser.y"
+                                                                    { yylhs.value.as < pInst > () = tool.vmake<ALLOCAInst>(yystack_[6].value.as < std::string > (), yystack_[6].value.as < std::string > (), yystack_[3].value.as < pType > (), yystack_[0].value.as < int > ()); }
+#line 1731 "irparser.cpp"
     break;
 
   case 108: // LoadInst: I_ID I_EQUAL I_LOAD Type I_COMMA Type Value I_COMMA I_ALIGN IRNUM_INT
-#line 236 "irparser.y"
-                                                                                    { yylhs.value.as < pInst > () = IRPT::vmake<LOADInst>(yystack_[9].value.as < std::string > (), yystack_[9].value.as < std::string > (), yystack_[3].value.as < pVal > (), yystack_[0].value.as < int > ()); }
-#line 1736 "irparser.cpp"
+#line 237 "irparser.y"
+                                                                                    { yylhs.value.as < pInst > () = tool.vmake<LOADInst>(yystack_[9].value.as < std::string > (), yystack_[9].value.as < std::string > (), yystack_[3].value.as < pVal > (), yystack_[0].value.as < int > ()); }
+#line 1737 "irparser.cpp"
     break;
 
   case 109: // StoreInst: I_STORE Type Value I_COMMA Type Value I_COMMA I_ALIGN IRNUM_INT
-#line 239 "irparser.y"
-                                                                                { yylhs.value.as < pInst > () = IRPT::make<STOREInst>(yystack_[6].value.as < pVal > (), yystack_[3].value.as < pVal > (), yystack_[0].value.as < int > ()); }
-#line 1742 "irparser.cpp"
+#line 240 "irparser.y"
+                                                                                { yylhs.value.as < pInst > () = tool.make<STOREInst>(yystack_[6].value.as < pVal > (), yystack_[3].value.as < pVal > (), yystack_[0].value.as < int > ()); }
+#line 1743 "irparser.cpp"
     break;
 
   case 110: // GepInst: I_ID I_EQUAL I_GEP Type I_COMMA Type Value IndexList
-#line 242 "irparser.y"
-                                                                { yylhs.value.as < pInst > () = IRPT::vmake<GEPInst>(yystack_[7].value.as < std::string > (), yystack_[7].value.as < std::string > (), yystack_[1].value.as < pVal > (), yystack_[0].value.as < std::vector<pVal> > ()); }
-#line 1748 "irparser.cpp"
+#line 243 "irparser.y"
+                                                                { yylhs.value.as < pInst > () = tool.vmake<GEPInst>(yystack_[7].value.as < std::string > (), yystack_[7].value.as < std::string > (), yystack_[1].value.as < pVal > (), yystack_[0].value.as < std::vector<pVal> > ()); }
+#line 1749 "irparser.cpp"
     break;
 
   case 111: // IndexList: I_COMMA Type Value
-#line 245 "irparser.y"
+#line 246 "irparser.y"
                                             { yylhs.value.as < std::vector<pVal> > () = { yystack_[0].value.as < pVal > () }; }
-#line 1754 "irparser.cpp"
+#line 1755 "irparser.cpp"
     break;
 
   case 112: // IndexList: IndexList I_COMMA Type Value
-#line 246 "irparser.y"
+#line 247 "irparser.y"
                                             { yylhs.value.as < std::vector<pVal> > () = yystack_[3].value.as < std::vector<pVal> > (); yylhs.value.as < std::vector<pVal> > ().emplace_back(yystack_[0].value.as < pVal > ()); }
-#line 1760 "irparser.cpp"
+#line 1761 "irparser.cpp"
     break;
 
   case 113: // PhiInst: I_ID I_EQUAL I_PHI Type PhiOpers
-#line 249 "irparser.y"
-                                            { yylhs.value.as < pInst > () = IRPT::newPhi(yystack_[4].value.as < std::string > (), yystack_[1].value.as < pType > (), yystack_[0].value.as < std::vector<std::pair<pVal, pBlock>> > ()); }
-#line 1766 "irparser.cpp"
+#line 250 "irparser.y"
+                                            { yylhs.value.as < pInst > () = tool.newPhi(yystack_[4].value.as < std::string > (), yystack_[1].value.as < pType > (), yystack_[0].value.as < std::vector<std::pair<pVal, pBlock>> > ()); }
+#line 1767 "irparser.cpp"
     break;
 
   case 114: // PhiOpers: PhiOper
-#line 252 "irparser.y"
+#line 253 "irparser.y"
                                         { yylhs.value.as < std::vector<std::pair<pVal, pBlock>> > () = { yystack_[0].value.as < std::pair<pVal, pBlock> > () }; }
-#line 1772 "irparser.cpp"
+#line 1773 "irparser.cpp"
     break;
 
   case 115: // PhiOpers: PhiOpers I_COMMA PhiOper
-#line 253 "irparser.y"
+#line 254 "irparser.y"
                                         { yylhs.value.as < std::vector<std::pair<pVal, pBlock>> > () = yystack_[2].value.as < std::vector<std::pair<pVal, pBlock>> > (); yylhs.value.as < std::vector<std::pair<pVal, pBlock>> > ().emplace_back(yystack_[0].value.as < std::pair<pVal, pBlock> > ()); }
-#line 1778 "irparser.cpp"
+#line 1779 "irparser.cpp"
     break;
 
   case 116: // PhiOper: I_LSQUARE Value I_COMMA I_ID I_RSQUARE
-#line 256 "irparser.y"
-                                                    { yylhs.value.as < std::pair<pVal, pBlock> > () = std::make_pair(yystack_[3].value.as < pVal > (), IRPT::getB(yystack_[1].value.as < std::string > ())); }
-#line 1784 "irparser.cpp"
+#line 257 "irparser.y"
+                                                    { yylhs.value.as < std::pair<pVal, pBlock> > () = std::make_pair(yystack_[3].value.as < pVal > (), tool.getB(yystack_[1].value.as < std::string > ())); }
+#line 1785 "irparser.cpp"
     break;
 
 
-#line 1788 "irparser.cpp"
+#line 1789 "irparser.cpp"
 
             default:
               break;
@@ -2228,18 +2229,18 @@ namespace yyy {
   const short
   parser::yyrline_[] =
   {
-       0,    56,    56,    59,    60,    61,    62,    63,    64,    67,
-      70,    71,    74,    75,    76,    79,    80,    81,    82,    83,
-      86,    89,    92,    93,    96,    97,    98,   101,   102,   105,
-     106,   107,   108,   111,   112,   115,   118,   119,   122,   125,
-     126,   129,   130,   133,   136,   137,   140,   141,   142,   143,
-     144,   145,   146,   147,   148,   149,   150,   151,   152,   155,
-     158,   159,   162,   163,   164,   165,   166,   167,   168,   169,
-     170,   171,   174,   177,   178,   179,   180,   183,   186,   187,
-     188,   189,   190,   191,   194,   197,   198,   199,   200,   201,
-     202,   203,   206,   207,   210,   211,   212,   213,   216,   217,
-     220,   221,   222,   223,   226,   227,   230,   233,   236,   239,
-     242,   245,   246,   249,   252,   253,   256
+       0,    57,    57,    60,    61,    62,    63,    64,    65,    68,
+      71,    72,    75,    76,    77,    80,    81,    82,    83,    84,
+      87,    90,    93,    94,    97,    98,    99,   102,   103,   106,
+     107,   108,   109,   112,   113,   116,   119,   120,   123,   126,
+     127,   130,   131,   134,   137,   138,   141,   142,   143,   144,
+     145,   146,   147,   148,   149,   150,   151,   152,   153,   156,
+     159,   160,   163,   164,   165,   166,   167,   168,   169,   170,
+     171,   172,   175,   178,   179,   180,   181,   184,   187,   188,
+     189,   190,   191,   192,   195,   198,   199,   200,   201,   202,
+     203,   204,   207,   208,   211,   212,   213,   214,   217,   218,
+     221,   222,   223,   224,   227,   228,   231,   234,   237,   240,
+     243,   246,   247,   250,   253,   254,   257
   };
 
   void
@@ -2270,11 +2271,11 @@ namespace yyy {
 #endif // YYDEBUG
 
 
-#line 21 "irparser.y"
+#line 22 "irparser.y"
 } // yyy
-#line 2276 "irparser.cpp"
+#line 2277 "irparser.cpp"
 
-#line 259 "irparser.y"
+#line 260 "irparser.y"
 
 
 /* void setFileName(const char *name) {

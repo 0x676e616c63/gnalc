@@ -4,13 +4,13 @@ using namespace IRParser;
 
 Module IRGenerator::module;
 
-std::map<IRPT::string, pGlobalVar> IRPT::GVMap;
-std::map<IRPT::string, pFunc> IRPT::FMap;
-std::map<IRPT::string, pFuncDecl> IRPT::UFDMap;
-std::map<IRPT::string, pBlock> IRPT::BMap;
-std::map<IRPT::string, pVal> IRPT::VMap;
-std::map<IRPT::string, pBlock> IRPT::UBMap;
-std::map<IRPT::string, pVal> IRPT::UVMap;
+// std::map<IRPT::string, pGlobalVar> IRPT::GVMap;
+// std::map<IRPT::string, pFunc> IRPT::FMap;
+// std::map<IRPT::string, pFuncDecl> IRPT::UFDMap;
+// std::map<IRPT::string, pBlock> IRPT::BMap;
+// std::map<IRPT::string, pVal> IRPT::VMap;
+// std::map<IRPT::string, pBlock> IRPT::UBMap;
+// std::map<IRPT::string, pVal> IRPT::UVMap;
 
 IRGenerator::IRGenerator(const std::string &module_name) {
     module.setName(module_name);
@@ -91,12 +91,12 @@ pFunc IRPT::newFunc(std::string &name_, const std::vector<pFormalParam> &params,
     }
     for ( auto& [s, v] : UVMap ) {
         auto real_value = VMap[s];
-        Err::gassert(real_value==nullptr, "real_value is not defined!");
+        Err::gassert(real_value!=nullptr, "real_value is not defined!");
         v->replaceSelf(real_value);
     }
     for ( auto& [s, b] : UBMap ) {
         auto real_block = BMap[s];
-        Err::gassert(real_block==nullptr, "real_block is not defined!");
+        Err::gassert(real_block!=nullptr, "real_block is not defined!");
         b->replaceSelf(real_block);
     }
     VMap.clear();
