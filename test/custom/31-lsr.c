@@ -7,4 +7,7 @@ int main(){
         putch(j);
         i = i + 2;
     }
+    putch(i);
+    putch(j);
+    return 0;
 }

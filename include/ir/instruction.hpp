@@ -85,7 +85,7 @@ class Instruction : public User {
 
 private:
     OP opcode;
-    std::weak_ptr<BasicBlock> parent = {}; // 隶属的basic block
+    wpBlock parent = {}; // 隶属的basic block
     size_t index = 0;
 
 public:

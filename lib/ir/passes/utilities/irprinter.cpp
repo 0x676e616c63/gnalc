@@ -146,8 +146,8 @@ PM::PreservedAnalyses PrintSCEVPass::run(Function &function, FAM &fam) {
         auto ldfv = top_level->getDFVisitor();
         for (const auto &loop : ldfv) {
             auto trip_cnt = scev.getNumberOfLatchExecutions(loop);
-            if (trip_cnt && trip_cnt->isIRValue())
-                writeln("Latch Execution Count: ", trip_cnt->getIRValue()->getName());
+            if (trip_cnt)
+                writeln("Latch Execution Count: ", *trip_cnt);
             else
                 writeln("Latch Execution Count: <null> :(");
         }

@@ -16,21 +16,21 @@ using namespace PatternMatch;
 namespace IR::M {
 inline auto Val() { return ClassMatch<Value>{}; }
 
-inline auto VBind(Value *&v) { return ClassMatchBind<Value, Value *>{v}; }
+inline auto Bind(Value *&v) { return ClassMatchBind<Value, Value *>{v}; }
 
-inline auto VBind(pVal &v) { return ClassMatchBind<Value, pVal>{v}; }
+inline auto Bind(pVal &v) { return ClassMatchBind<Value, pVal>{v}; }
 
 inline auto Inst() { return ClassMatch<Instruction>{}; }
 
-inline auto IBind(Instruction *&v) { return ClassMatchBind<Instruction, Instruction *>{v}; }
+inline auto Bind(Instruction *&v) { return ClassMatchBind<Instruction, Instruction *>{v}; }
 
-inline auto IBind(pInst &v) { return ClassMatchBind<Instruction, pInst>{v}; }
+inline auto Bind(pInst &v) { return ClassMatchBind<Instruction, pInst>{v}; }
 
 inline auto Block() { return ClassMatch<BasicBlock>{}; }
 
-inline auto BBind(BasicBlock *&v) { return ClassMatchBind<BasicBlock, BasicBlock *>{v}; }
+inline auto Bind(BasicBlock *&v) { return ClassMatchBind<BasicBlock, BasicBlock *>{v}; }
 
-inline auto BBind(pBlock &v) { return ClassMatchBind<BasicBlock, pBlock>{v}; }
+inline auto Bind(pBlock &v) { return ClassMatchBind<BasicBlock, pBlock>{v}; }
 
 template <typename SubPattern> struct OneUseMatch {
     SubPattern sub_pattern;
@@ -55,13 +55,13 @@ template <typename T> struct ConstantProj {
     template <typename U> T operator()(const U &u) { return u->getVal(); }
 };
 
-inline auto I1Bind(bool &a) { return ClassMatchBind<ConstantI1, bool, ConstantProj<bool>>{a}; }
+inline auto Bind(bool &a) { return ClassMatchBind<ConstantI1, bool, ConstantProj<bool>>{a}; }
 
-inline auto I1Bind(char &a) { return ClassMatchBind<ConstantI8, char, ConstantProj<char>>{a}; }
+inline auto Bind(char &a) { return ClassMatchBind<ConstantI8, char, ConstantProj<char>>{a}; }
 
-inline auto I32Bind(int &a) { return ClassMatchBind<ConstantInt, int, ConstantProj<int>>{a}; }
+inline auto Bind(int &a) { return ClassMatchBind<ConstantInt, int, ConstantProj<int>>{a}; }
 
-inline auto F32Bind(float &a) { return ClassMatchBind<ConstantFloat, float, ConstantProj<float>>{a}; }
+inline auto Bind(float &a) { return ClassMatchBind<ConstantFloat, float, ConstantProj<float>>{a}; }
 
 // Imagine something like
 //

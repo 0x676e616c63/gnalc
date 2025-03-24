@@ -38,6 +38,9 @@ public:
         PM::PreservedAnalyses pa = PM::PreservedAnalyses::all();
         // Keep this forward traversal. Some pass (e.g. Inline) rely on this
         for (const auto &func : m.getFunctions()) {
+            // Skip unused functions. (maybe inlined)
+            if (func->getUseCount() == 0 && func->getName() != "@main")
+                continue;
             PM::PreservedAnalyses curr_pa = function_pass->run(*func, fam);
             fam.invalidate(*func, curr_pa);
             pa.retain(curr_pa);

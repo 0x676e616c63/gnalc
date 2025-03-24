@@ -18,7 +18,7 @@ class Loop : public std::enable_shared_from_this<Loop> {
     std::vector<pLoop> sub_loops;
     std::list<BasicBlock *> loop_blocks; // First is the header
     std::set<const BasicBlock *> blockset;
-    std::weak_ptr<Loop> parent;
+    wpLoop parent;
 
     void setParent(const pLoop &p);
 

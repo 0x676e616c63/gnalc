@@ -54,7 +54,7 @@ enum class ValueTrait {
 // User 内部存有 shared_ptr<Use>, 即 operands
 // Value 内部存有 weak_ptr<Use>, 即 use_list
 //
-// Use 存有一个 std::weak_ptr<Value> 和 User*
+// Use 存有一个 wpVal 和 User*
 //
 // 由于 Use 只存储了 裸指针 以及 weak_ptr，User 和 Value 之间并没有在内存上的所有关系。
 // 两大 User, 即 Instruction 和 Constant，其内存分别由 BasicBlock 和 ConstantPool 管理
@@ -88,11 +88,11 @@ class Use : public std::enable_shared_from_this<Use> {
     friend class Value;
 
 private:
-    std::weak_ptr<Value> val;
+    wpVal val;
     User *user;
 
     // PRIVATE because we want to ensure the use is inited.
-    Use(std::weak_ptr<Value> v, User *u);
+    Use(wpVal v, User *u);
     void init();
 
     // PRIVATE because only Value::delUse(User*) should invoke this.
@@ -111,7 +111,7 @@ class Value : public NameC, public std::enable_shared_from_this<Value> {
     friend class Use;
 
 private:
-    std::list<std::weak_ptr<Use>> use_list; // Use隶属于User
+    std::list<wpUse> use_list; // Use隶属于User
     pType vtype;                            // value's type
     ValueTrait trait = ValueTrait::UNDEFINED;
 
@@ -155,7 +155,7 @@ public:
     pType getType() const;
 
     std::list<pUse> getUseList() const;
-    std::list<std::weak_ptr<Use>> &getRUseList();
+    std::list<wpUse> &getRUseList();
 
     // i.e. Replace all uses with, RAUW
     void replaceSelf(const pVal &new_value) const;
@@ -262,7 +262,7 @@ public:
 
 private:
     // PRIVATE because we want to ensure use is only modified by User.
-    void addUse(const std::weak_ptr<Use> &use);
+    void addUse(const wpUse &use);
 
     // Why not user:
     //   A User can have multiple identical operand,

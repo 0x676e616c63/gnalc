@@ -113,6 +113,7 @@ int main(int argc, char **argv) {
         OPT_ARG("--licm", "--no-licm", licm)
         OPT_ARG("--loopunroll", "--no-loopunroll", loop_unroll)
         OPT_ARG("--indvars", "--no-indvars", indvars)
+        OPT_ARG("--lsr", "--no-lsr", loop_strength_reduce)
         OPT_ARG("--jumpthreading", "--no-jumpthreading", jump_threading)
         // Module Transforms
         OPT_ARG("--treeshaking", "--no-treeshaking", tree_shaking)
@@ -191,6 +192,7 @@ Optimizations available:
   --lcssa              - Canonicalize loops to The Loop Closed SSA Form
   --loopunroll         - Unroll loops
   --indvars            - Simplify induction variables
+  --lsr                - Loop Strength Reduction
   --jumpthreading      - Jump Threading
   --treeshaking        - Shake off unused functions, function declarations and global variables
 

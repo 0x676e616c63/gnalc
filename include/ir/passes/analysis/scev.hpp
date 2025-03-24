@@ -5,6 +5,8 @@
 //       https://www.researchgate.net/profile/Georges-Andre-Silber/publication/267701684_Fast_Recognition_of_Scalar_Evolutions_on_Three-Address_SSA_Code/links/545e44ca0cf27487b44f08d0/Fast-Recognition-of-Scalar-Evolutions-on-Three-Address-SSA-Code.pdf
 //   - "Induction Variable Analysis with Delayed Abstractions":
 //       https://link.springer.com/content/pdf/10.1007/11587514_15.pdf
+//   - "The SSA Representation Framework: Semantics, Analyses and GCC Implementation."
+//       https://theses.hal.science/pastel-00002281/#:~:text=From%20a%20practical%20point%20of%20view%2C%20we%20present,an%20industrial%20compiler%3A%20the%20GNU%20Compiler%20Collection%20%28GCC%29.
 //   - "Scalar evolution技术与i^n求和优化"
 //       https://www.cnblogs.com/gnuemacs/p/14167695.html
 #pragma once
@@ -53,8 +55,9 @@ public:
     SCEVExpr *getRHS() const { return std::get<Binary>(value).rhs; }
     Binary::Op getOp() const { return std::get<Binary>(value).op; }
 };
-enum class TRECType { AddRec, Expr, Undefined, Untracked };
+enum class TRECType { AddRec, Peeled, Expr, Undefined, Untracked };
 // Tree of Recurrences
+// Note that we do not support Periodic Evolution.
 class TREC {
     friend std::ostream &operator<<(std::ostream &os, const TREC &expr);
 
@@ -69,26 +72,48 @@ public:
         }
     };
 
+    struct Peeled {
+        SCEVExpr *first; // No evolution in loop
+        TREC *rest;
+        const Loop* loop;
+
+        bool operator==(const Peeled &other) const {
+            return first == other.first && rest == other.rest && loop == other.loop;
+        }
+    };
+
 private:
     TRECType type;
-    std::variant<std::monostate, SCEVExpr *, AddRec> value;
+    std::variant<std::monostate, SCEVExpr *, AddRec, Peeled> value;
 
 public:
     explicit TREC(TRECType type_) : type(type_) { Err::gassert(type != TRECType::Expr); }
     explicit TREC(SCEVExpr *scev_expr) : value(scev_expr), type(TRECType::Expr) {}
 
     explicit TREC(AddRec rec) : value(rec), type(TRECType::AddRec) {}
+    explicit TREC(Peeled rec) : value(rec), type(TRECType::Peeled) {}
 
     static TREC undef() { return TREC(TRECType::Undefined); }
     static TREC untracked() { return TREC(TRECType::Untracked); }
     static TREC expr(SCEVExpr *i) { return TREC(i); }
+
+    // For expr
     SCEVExpr *getExpr() const;
+
+    // For AddRec
     TREC *getBase() const;
     TREC *getStep() const;
+
+    // For PeeledTREC
+    SCEVExpr *getFirst() const;
+    TREC *getRest() const;
+
+    // For AddRec and PeeledTREC
     const Loop *getLoop() const;
 
     bool isExpr() const;
     bool isAddRec() const;
+    bool isPeeled() const;
     bool isUntracked() const;
     bool isUndef() const;
 
@@ -146,18 +171,24 @@ private:
     TREC *getTRECUndef() const;
     TREC *getTRECUntracked() const;
     TREC *getPoolTREC(const std::shared_ptr<TREC> &trec);
-    TREC *getSCEVExprTREC(SCEVExpr *expr);
+    TREC *getExprTREC(SCEVExpr *expr);
+    // Convenient wrapper for getSCEVExprTREC(getSCEVExpr(x))
+    TREC *getIRValTREC(Value *x);
     TREC *getAddRecTREC(const Loop *loop, TREC *base, TREC *step);
+    TREC *getPeeledTREC(const Loop *loop, SCEVExpr *first, TREC *rest);
     TREC *getTRECAdd(TREC *x, TREC *y);
     TREC *getTRECSub(TREC *x, TREC *y);
     TREC *getTRECMul(TREC *x, TREC *y);
     TREC *getTRECNeg(TREC *x);
+    TREC *unifyPeeledTREC(TREC *peeled);
+    void foldTREC(TREC *trec);
 
     SCEVExpr *getPoolSCEV(const std::shared_ptr<SCEVExpr> &expr);
     SCEVExpr *getSCEVExprAdd(SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExprSub(SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExprMul(SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExprNeg(SCEVExpr *x);
+    SCEVExpr *getSCEVExpr(int x);
     SCEVExpr *getSCEVExpr(Value *x);
     void foldSCEVExpr(SCEVExpr *expr) const;
 
