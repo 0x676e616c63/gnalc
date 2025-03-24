@@ -99,6 +99,7 @@ pFunc IRPT::newFunc(std::string &name_, const std::vector<pFormalParam> &params,
         Err::gassert(real_block!=nullptr, "real_block is not defined!");
         b->replaceSelf(real_block);
     }
+    f->updateAndCheckCFG();
     VMap.clear();
     BMap.clear();
     UBMap.clear();
