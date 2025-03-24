@@ -1,6 +1,6 @@
 %{
 
-#include "ggc/irparser.hpp"
+#include "../../include/ggc/irparser.hpp"
 #include <cstdlib> // just for atoi, atof, strtol, strtof
 #define YY_DECL yyy::parser::symbol_type yylex ()
 

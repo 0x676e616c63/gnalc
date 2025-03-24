@@ -13,12 +13,12 @@ using namespace IR;
 
 %language "C++"
 %require "3.8.1"
-%header "include/tpo/parser.hpp"
+%header "../../include/ggc/irparser.hpp"
 %define api.token.raw
 %define api.token.constructor
 %define api.value.type variant
 %define parse.assert
-%define api.namespace yyy
+%define api.namespace {yyy}
 
 %token I_RET I_BR I_FNEG I_ADD I_FADD I_SUB I_FSUB I_MUL I_FMUL I_DIV I_FDIV I_REM I_FREM I_AND I_OR I_ALLOCA I_LOAD I_STORE I_GEP I_FPTOSI I_SITOFP I_ZEXT I_BITCAST I_ICMP I_FCMP I_PHI I_CALL
 %token I_DEFINE I_DECLARE I_DSO_LOCAL I_GLOBAL I_CONSTANT I_ALIGN I_NOUNDEF I_LABEL I_TAIL I_TO
@@ -33,7 +33,7 @@ using namespace IR;
 %type <pFuncDecl> FunctionDeclaration
 %type <pFunc> FunctionDefinition
 %type <STOCLASS> Storage
-%type <pType> Type BType PtrType ArrayType DeclParam
+%type <pType> Type BType PtrType ArrayType DeclParam RETType
 %type <std::vector<pType>> DeclParamList
 %type <pVal> Constant Value Arg
 %type <std::vector<pVal>> ArgList IndexList
@@ -64,7 +64,7 @@ GlobalEntities  : GlobalEntities GlobalVariable         { inode.addGlobalVar($2)
                 | FunctionDeclaration                   { inode.addFunctionDecl($1); }
                 ;
 
-GlobalVariable  : I_ID I_EQUAL I_DSO_LOCAL Storage GVIniter I_COMMA I_ALIGN IRNUM_INT   { $$ = IRPT::newGV($4, $5->getIniterType(), $1, $5, $8); }
+GlobalVariable  : I_ID I_EQUAL I_DSO_LOCAL Storage GVIniter I_COMMA I_ALIGN IRNUM_INT   { $$ = IRPT::IRPT::newGV($4, $5.getIniterType(), $1, $5, $8); }
                 ;
 
 Storage : I_CONSTANT    { $$ = STOCLASS::CONSTANT; }
@@ -102,10 +102,10 @@ GVIniters   : GVIniter                      { $$ = { $1 }; }
             | GVIniters I_COMMA GVIniter    { $$ = $1; $$.emplace_back($3); }
             ;
 
-FunctionDeclaration : I_DECLARE Type I_ID I_LPAR DeclParamList I_RPAR               { $$ = newFuncDecl($3, $5, $2); }
-                    | I_DECLARE Type I_ID I_LPAR DeclParamList I_DOTDOTDOT I_RPAR   { $$ = newFuncDecl($3, $5, $2, true); }
-                    | I_DECLARE Type I_ID I_LPAR I_RPAR                             { $$ = newFuncDecl($3, {}, $2); }
-                    | I_DECLARE Type I_ID I_LPAR I_DOTDOTDOT I_RPAR                 { $$ = newFuncDecl($3, {}, $2, true); }
+FunctionDeclaration : I_DECLARE Type I_ID I_LPAR DeclParamList I_RPAR               { $$ = IRPT::newFuncDecl($3, $5, $2); }
+                    | I_DECLARE Type I_ID I_LPAR DeclParamList I_DOTDOTDOT I_RPAR   { $$ = IRPT::newFuncDecl($3, $5, $2, true); }
+                    | I_DECLARE Type I_ID I_LPAR I_RPAR                             { $$ = IRPT::newFuncDecl($3, {}, $2); }
+                    | I_DECLARE Type I_ID I_LPAR I_DOTDOTDOT I_RPAR                 { $$ = IRPT::newFuncDecl($3, {}, $2, true); }
                     ;
 
 DeclParamList   : DeclParamList I_COMMA DeclParam   { $$ = $1; $$.emplace_back($3); }
@@ -122,15 +122,15 @@ DefParamList    : DefParamList I_COMMA DefParam { $$ = $1; $$.emplace_back($3); 
 DefParam    : Type I_NOUNDEF I_ID   { $$ = IRPT::vmake<FormalParam>($3, $3, $1, 0); }
             ;
 
-FunctionDefinition  : I_DEFINE I_DSO_LOCAL Type I_ID I_LPAR DefParamList I_RPAR I_LBRACKET BBList I_RBRACKET    { $$ = newFunc($4, %6, $3, &inode.getConstantPool(), $9); }
-                    | I_DEFINE I_DSO_LOCAL Type I_ID I_LPAR I_RPAR I_LBRACKET BBList I_RBRACKET                 { $$ = newFunc($4, {}, $3, &inode.getConstantPool(), $8); }
+FunctionDefinition  : I_DEFINE I_DSO_LOCAL Type I_ID I_LPAR DefParamList I_RPAR I_LBRACKET BBList I_RBRACKET    { $$ = IRPT::newFunc($4, $6, $3, &inode.getConstantPool(), $9); }
+                    | I_DEFINE I_DSO_LOCAL Type I_ID I_LPAR I_RPAR I_LBRACKET BBList I_RBRACKET                 { $$ = IRPT::newFunc($4, {}, $3, &inode.getConstantPool(), $8); }
                     ;
 
 BBList  : BB            { $$ = { $1 }; }
         | BBList BB     { $$ = $1; $$.emplace_back($2); }
         ;
 
-BB  : I_BLKID InstList  { $$ = newBB($1, $2); }
+BB  : I_BLKID InstList  { $$ = IRPT::newBB($1, $2); }
     ;
 
 InstList    : Inst          { $$ = { $1 }; }
@@ -176,7 +176,7 @@ FnegInst    : I_ID I_EQUAL I_FNEG Type Value    { $$ = IRPT::vmake<FNEGInst>($1,
 
 CastInst    : I_ID I_EQUAL I_FPTOSI Type Value I_TO Type    { $$ = IRPT::vmake<FPTOSIInst>($1, $1, $5); }
             | I_ID I_EQUAL I_SITOFP Type Value I_TO Type    { $$ = IRPT::vmake<SITOFPInst>($1, $1, $5); }
-            | I_ID I_EQUAL I_ZEXT Type Value I_TO Type      { $$ = IRPT::vmake<ZEXTInst>($1, $1, $5, toBType($7).getInner()); }
+            | I_ID I_EQUAL I_ZEXT Type Value I_TO Type      { $$ = IRPT::vmake<ZEXTInst>($1, $1, $5, toBType($7)->getInner()); }
             | I_ID I_EQUAL I_BITCAST Type Value I_TO Type   { $$ = IRPT::vmake<BITCASTInst>($1, $1, $5, $7); }
             ;
 
@@ -184,7 +184,7 @@ IcmpInst    : I_ID I_EQUAL I_ICMP IcmpOp Type Value I_COMMA Value   { $$ = IRPT:
             ;
 
 IcmpOp  : I_EQ  { $$ = ICMPOP::eq; }
-        | I_NE  { $$ = ICMPOP::nw; }
+        | I_NE  { $$ = ICMPOP::ne; }
         | I_SGT { $$ = ICMPOP::sgt; }
         | I_SGE { $$ = ICMPOP::sge; }
         | I_SLT { $$ = ICMPOP::slt; }
@@ -203,58 +203,65 @@ FcmpOp  : I_OEQ { $$ = FCMPOP::oeq; }
         | I_ORD { $$ = FCMPOP::ord; }
         ;
 
-RetInst : I_RET Type Value  { $$ = IRPT::make<RetInst>($3); }
-        | I_RET I_VOID      { $$ = IRPT::make<RetInst>(); }
+RetInst : I_RET RETType Value  { $$ = IRPT::make<RETInst>($3); }
+        | I_RET I_VOID      { $$ = IRPT::make<RETInst>(); }
         ;
 
-BrInst  : I_BR I_LABEL I_ID
-        | I_BR Type Value I_COMMA I_LABEL I_ID I_COMMA I_LABEL I_ID
+RETType : I_I1      { $$ = makeBType(IRBTYPE::I1); }
+        | I_I8      { $$ = makeBType(IRBTYPE::I8); }
+        | I_I32     { $$ = makeBType(IRBTYPE::I32); }
+        | I_FLOAT   { $$ = makeBType(IRBTYPE::FLOAT); }
         ;
 
-CallInst    : I_CALL Type Value I_LPAR ArgList I_RPAR
-            | I_ID I_EQUAL I_CALL Type Value I_LPAR ArgList I_RPAR
-            | I_TAIL I_CALL Type Value I_LPAR ArgList I_RPAR
-            | I_ID I_EQUAL I_TAIL I_CALL Type Value I_LPAR ArgList I_RPAR
+BrInst  : I_BR I_LABEL I_ID                                         { $$ = IRPT::make<BRInst>(IRPT::getB($3)); }
+        | I_BR Type Value I_COMMA I_LABEL I_ID I_COMMA I_LABEL I_ID { $$ = IRPT::make<BRInst>($3, IRPT::getB($6), IRPT::getB($9)); }
+        ;
+
+CallInst    : I_CALL Type I_ID I_LPAR ArgList I_RPAR                        { $$ = IRPT::make<CALLInst>(IRPT::getF($3), $5); }
+            | I_ID I_EQUAL I_CALL Type I_ID I_LPAR ArgList I_RPAR           { $$ = IRPT::vmake<CALLInst>($1, $1, IRPT::getF($5), $7); }
+            | I_TAIL I_CALL Type I_ID I_LPAR ArgList I_RPAR                 { $$ = IRPT::make<CALLInst>(IRPT::getF($4), $6); }
+            | I_ID I_EQUAL I_TAIL I_CALL Type I_ID I_LPAR ArgList I_RPAR    { $$ = IRPT::vmake<CALLInst>($1, $1, IRPT::getF($6), $8); }
             ;
 
-ArgList : ArgList I_COMMA Arg
-        | Arg
+ArgList : ArgList I_COMMA Arg   { $$ = $1; $$.emplace_back($3); }
+        | Arg                   { $$ = { $1 }; }
         ;
 
-Arg : Type I_NOUNDEF Value
+Arg : Type I_NOUNDEF Value  { $$ = $3; }
     ;
 
-AllocaInst  : I_ID I_EQUAL I_ALLOCA Type I_COMMA I_ALIGN IRNUM_INT
+AllocaInst  : I_ID I_EQUAL I_ALLOCA Type I_COMMA I_ALIGN IRNUM_INT  { $$ = IRPT::vmake<ALLOCAInst>($1, $1, $4, $7); }
             ;
 
-LoadInst    : I_ID I_EQUAL I_LOAD Type I_COMMA Type Value I_COMMA I_ALIGN IRNUM_INT
+LoadInst    : I_ID I_EQUAL I_LOAD Type I_COMMA Type Value I_COMMA I_ALIGN IRNUM_INT { $$ = IRPT::vmake<LOADInst>($1, $1, $7, $10); }
             ;
 
-StoreInst   : I_STORE Type Value I_COMMA Type Value I_COMMA I_ALIGN IRNUM_INT
+StoreInst   : I_STORE Type Value I_COMMA Type Value I_COMMA I_ALIGN IRNUM_INT   { $$ = IRPT::make<STOREInst>($3, $6, $9); }
             ;
 
-GepInst : I_ID I_EQUAL I_GEP Type I_COMMA Type Value IndexList
+GepInst : I_ID I_EQUAL I_GEP Type I_COMMA Type Value IndexList  { $$ = IRPT::vmake<GEPInst>($1, $1, $7, $8); }
         ;
 
-IndexList   : I_COMMA Type Value
-            | IndexList I_COMMA Type Value ;
-
-PhiInst : I_ID I_EQUAL I_PHI Type PhiOpers
-        ;
-
-PhiOpers    : PhiOper
-            | PhiOpers I_COMMA PhiOper
+IndexList   : I_COMMA Type Value            { $$ = { $3 }; }
+            | IndexList I_COMMA Type Value  { $$ = $1; $$.emplace_back($4); }
             ;
 
-PhiOper : I_LSQUARE Value I_COMMA Value I_RSQUARE
+PhiInst : I_ID I_EQUAL I_PHI Type PhiOpers  { $$ = IRPT::newPhi($1, $4, $5); }
+        ;
+
+PhiOpers    : PhiOper                   { $$ = { $1 }; }
+            | PhiOpers I_COMMA PhiOper  { $$ = $1; $$.emplace_back($3); }
+            ;
+
+PhiOper : I_LSQUARE Value I_COMMA I_ID I_RSQUARE    { $$ = std::make_pair($2, IRPT::getB($4)); }
         ;
 
 %%
 
-void setFileName(const char *name) {
+/* void setFileName(const char *name) {
   strcpy(filename, name);
   freopen(filename, "r", stdin);
-}
+} */
 
 void
 yyy::parser::error (const std::string& msg) { 
