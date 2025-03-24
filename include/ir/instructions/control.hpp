@@ -9,6 +9,7 @@
 
 #include "../function.hpp"
 #include "../instruction.hpp"
+#include "../type_alias.hpp"
 #include <vector>
 
 namespace IR {
@@ -17,20 +18,20 @@ namespace IR {
 // ret void                 ; Return from void function
 class RETInst : public Instruction {
 private:
-    std::shared_ptr<BType> ret_type; // 此处直接使用BType
+    pBType ret_type; // 此处直接使用BType
 public:
     RETInst(); // for void
-    RETInst(std::shared_ptr<Value> ret_val);
+    RETInst(pVal ret_val);
 
     bool isVoid() const;
-    std::shared_ptr<Value> getRetVal() const;
+    pVal getRetVal() const;
     IRBTYPE getRetBType() const;
-    std::shared_ptr<BType> getRetType() const;
+    pBType getRetType() const;
 
     void accept(IRVisitor &visitor) override;
 
 private:
-    std::shared_ptr<Value> cloneImpl() const override {
+    pVal cloneImpl() const override {
         if (isVoid())
             return std::make_shared<RETInst>();
         return std::make_shared<RETInst>(getRetVal());
@@ -52,17 +53,14 @@ class BRInst : public Instruction {
 public:
     // arg的user是BBArgList
     class BBArgList : public User {
-        std::shared_ptr<BasicBlock> block; // operands只存args
+        pBlock block; // operands只存args
     public:
         BBArgList() = delete;
-        BBArgList(const std::shared_ptr<BasicBlock> &block,
-                  const std::vector<std::shared_ptr<Value>> &args);
+        BBArgList(const pBlock &block, const std::vector<pVal> &args);
 
-        std::shared_ptr<BRInst> getBr() const;
-        std::vector<std::shared_ptr<Value>> _getArgs() const;
-        void accept(IRVisitor &visitor) override {
-            Err::not_implemented("BBArgList::visit");
-        }
+        pBr getBr() const;
+        std::vector<pVal> _getArgs() const;
+        void accept(IRVisitor &visitor) override { Err::not_implemented("BBArgList::visit"); }
     };
 
 private:
@@ -72,10 +70,8 @@ private:
 public:
     // Make a BRInst
     // Make sure to linkBB to update CFG.
-    explicit BRInst(const std::shared_ptr<BasicBlock> &_dest);
-    BRInst(const std::shared_ptr<Value> &cond,
-           const std::shared_ptr<BasicBlock> &_true_dest,
-           const std::shared_ptr<BasicBlock> &_false_dest);
+    explicit BRInst(const pBlock &_dest);
+    BRInst(const pVal &cond, const pBlock &_true_dest, const pBlock &_false_dest);
 
     // Make it unconditional.
     // Make sure to unlinkBB to update CFG.
@@ -83,31 +79,28 @@ public:
     void dropTrueDest();
 
     bool isConditional() const;
-    std::shared_ptr<Value> getCond() const;
-    std::shared_ptr<BasicBlock> getDest() const;
-    std::shared_ptr<BasicBlock> getTrueDest() const;
-    std::shared_ptr<BasicBlock> getFalseDest() const;
+    pVal getCond() const;
+    pBlock getDest() const;
+    pBlock getTrueDest() const;
+    pBlock getFalseDest() const;
 
-    void setBBArgs(
-        const std::vector<std::shared_ptr<Value>> &args); // just for uncond
-    void setBBArgs(
-        const std::vector<std::shared_ptr<Value>> &t_args,
-        const std::vector<std::shared_ptr<Value>> &f_args); // just for cond
-    std::vector<std::shared_ptr<Value>> getBBArgs() const;
-    std::vector<std::shared_ptr<Value>> getTrueBBArgs() const;
-    std::vector<std::shared_ptr<Value>> getFalseBBArgs() const;
+    void setBBArgs(const std::vector<pVal> &args); // just for uncond
+    void setBBArgs(const std::vector<pVal> &t_args,
+                   const std::vector<pVal> &f_args); // just for cond
+    std::vector<pVal> getBBArgs() const;
+    std::vector<pVal> getTrueBBArgs() const;
+    std::vector<pVal> getFalseBBArgs() const;
 
     void accept(IRVisitor &visitor) override;
 
 private:
-    std::shared_ptr<Value> cloneImpl() const override {
-        std::shared_ptr<BRInst> ret;
+    pVal cloneImpl() const override {
+        pBr ret;
         if (isConditional()) {
             ret = std::make_shared<BRInst>(getCond(), getTrueDest(), getFalseDest());
             if (set_args)
                 ret->setBBArgs(getTrueBBArgs(), getFalseBBArgs());
-        }
-        else {
+        } else {
             ret = std::make_shared<BRInst>(getDest());
             if (set_args)
                 ret->setBBArgs(getBBArgs());
@@ -126,19 +119,18 @@ class CALLInst : public Instruction {
 private:
     // std::shared_ptr<WeakUse> func;
     bool is_tail_call = false;
+
 public:
     // func储存到func, args储存到operands中
-    CALLInst(const std::shared_ptr<FunctionDecl> &func,
-             const std::vector<std::shared_ptr<Value>> &args); // for void
-    CALLInst(NameRef name, const std::shared_ptr<FunctionDecl> &func,
-             const std::vector<std::shared_ptr<Value>> &args);
+    CALLInst(const pFuncDecl &func,
+             const std::vector<pVal> &args); // for void
+    CALLInst(NameRef name, const pFuncDecl &func, const std::vector<pVal> &args);
 
     bool isVoid() const;
     // bool isNoName();
     std::string getFuncName() const;
-    std::shared_ptr<FunctionDecl>
-    getFunc() const; // WeakValue转换为SharedFunction
-    std::vector<std::shared_ptr<Value>> getArgs() const;
+    pFuncDecl getFunc() const; // WeakValue转换为SharedFunction
+    std::vector<pVal> getArgs() const;
 
     void accept(IRVisitor &visitor) override;
 
@@ -146,7 +138,7 @@ public:
     bool isTailCall() const;
 
 private:
-    std::shared_ptr<Value> cloneImpl() const override {
+    pVal cloneImpl() const override {
         if (isVoid()) {
             auto ret = std::make_shared<CALLInst>(getFunc(), getArgs());
             if (is_tail_call)

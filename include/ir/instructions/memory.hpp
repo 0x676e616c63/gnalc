@@ -11,6 +11,7 @@
 #define GNALC_IR_INSTRUCTION_MEMORY_HPP
 
 #include "../instruction.hpp"
+#include "../type_alias.hpp"
 #include <vector>
 
 namespace IR {
@@ -21,22 +22,20 @@ namespace IR {
 // getBaseType() 即返回 <type>
 class ALLOCAInst : public Instruction {
 private:
-    std::shared_ptr<Type> basetype;
+    pType basetype;
     int align = 4;
 
 public:
-    ALLOCAInst(NameRef name, std::shared_ptr<Type> btype, int _align = 4);
+    ALLOCAInst(NameRef name, pType btype, int _align = 4);
 
-    std::shared_ptr<Type> getBaseType() const;
+    pType getBaseType() const;
     bool isArray() const;
     int getAlign() const;
 
     void accept(IRVisitor &visitor) override;
 
 private:
-    std::shared_ptr<Value> cloneImpl() const override {
-        return std::make_shared<ALLOCAInst>(getName(), basetype, align);
-    }
+    pVal cloneImpl() const override { return std::make_shared<ALLOCAInst>(getName(), basetype, align); }
 };
 
 // <result> = load [volatile] <ty>, ptr <pointer>[, align <alignment>]......
@@ -46,17 +45,15 @@ private:
     int align = 4;
 
 public:
-    LOADInst(NameRef name, const std::shared_ptr<Value> &_ptr, int _align = 4);
+    LOADInst(NameRef name, const pVal &_ptr, int _align = 4);
 
-    std::shared_ptr<Value> getPtr() const;
+    pVal getPtr() const;
     int getAlign() const;
 
     void accept(IRVisitor &visitor) override;
 
 private:
-    std::shared_ptr<Value> cloneImpl() const override {
-        return std::make_shared<LOADInst>(getName(), getPtr(), align);
-    }
+    pVal cloneImpl() const override { return std::make_shared<LOADInst>(getName(), getPtr(), align); }
 };
 
 // store [volatile] <ty> <value>, ptr <pointer>[, align <alignment>]......
@@ -65,20 +62,17 @@ class STOREInst : public Instruction {
     int align = 4;
 
 public:
-    STOREInst(const std::shared_ptr<Value> &_value,
-              const std::shared_ptr<Value> &_ptr, int _align = 4);
+    STOREInst(const pVal &_value, const pVal &_ptr, int _align = 4);
 
-    std::shared_ptr<Type> getBaseType() const;
-    std::shared_ptr<Value> getValue() const;
-    std::shared_ptr<Value> getPtr() const;
+    pType getBaseType() const;
+    pVal getValue() const;
+    pVal getPtr() const;
     int getAlign() const;
 
     void accept(IRVisitor &visitor) override;
 
 private:
-    std::shared_ptr<Value> cloneImpl() const override {
-        return std::make_shared<STOREInst>(getValue(), getPtr(), align);
-    }
+    pVal cloneImpl() const override { return std::make_shared<STOREInst>(getValue(), getPtr(), align); }
 };
 
 // <result> = getelementptr <ty>, ptr <ptrval> {, <ty> <idx>}*
@@ -89,19 +83,15 @@ private:
 // getBaseType() 返回 <ty>
 class GEPInst : public Instruction {
 public:
-    GEPInst(NameRef name, const std::shared_ptr<Value> &_ptr,
-            const std::shared_ptr<Value> &idx1,
-            const std::shared_ptr<Value> &idx2);
+    GEPInst(NameRef name, const pVal &_ptr, const pVal &idx1, const pVal &idx2);
 
-    GEPInst(NameRef name, const std::shared_ptr<Value> &_ptr,
-            const std::shared_ptr<Value> &idx);
+    GEPInst(NameRef name, const pVal &_ptr, const pVal &idx);
 
-    GEPInst(NameRef name, const std::shared_ptr<Value> &_ptr,
-        const std::vector<std::shared_ptr<Value>> &idxs);
+    GEPInst(NameRef name, const pVal &_ptr, const std::vector<pVal> &idxs);
 
-    std::shared_ptr<Type> getBaseType() const;
-    std::shared_ptr<Value> getPtr() const;
-    std::vector<std::shared_ptr<Value>> getIdxs() const;
+    pType getBaseType() const;
+    pVal getPtr() const;
+    std::vector<pVal> getIdxs() const;
 
     // Check if all the indices are constant.
     bool isConstantOffset() const;
@@ -110,9 +100,7 @@ public:
 
     void accept(IRVisitor &visitor) override;
 
-    std::shared_ptr<Value> cloneImpl() const override {
-        return std::make_shared<GEPInst>(getName(), getPtr(), getIdxs());
-    }
+    pVal cloneImpl() const override { return std::make_shared<GEPInst>(getName(), getPtr(), getIdxs()); }
 };
 
 } // namespace IR

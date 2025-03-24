@@ -1,11 +1,11 @@
 
 
 int func(int i) {
-	int a = 1;
+    int a = 1;
     int n = 4;
     int j = 0;
     while (j < n) {
-//        putch(a);
+        //        putch(a);
         a = a + i;
         j = j + 1;
         if (j > n) {

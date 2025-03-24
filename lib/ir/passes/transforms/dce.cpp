@@ -10,8 +10,8 @@ namespace IR {
 PM::PreservedAnalyses DCEPass::run(Function &function, FAM &fam) {
     bool dce_inst_modified = false;
 
-    std::set<std::shared_ptr<Instruction>> visited;
-    std::deque<std::shared_ptr<Instruction>> worklist;
+    std::set<pInst> visited;
+    std::deque<pInst> worklist;
 
     for (const auto &block : function) {
         for (const auto &phi : block->phis())
@@ -29,15 +29,15 @@ PM::PreservedAnalyses DCEPass::run(Function &function, FAM &fam) {
         visited.emplace(inst);
 
         if (inst->getUseCount() == 0) {
-            if (auto call = std::dynamic_pointer_cast<CALLInst>(inst)) {
-                if (hasSideEffect(fam, call.get()))
+            if (auto call = inst->as<CALLInst>()) {
+                if (hasSideEffect(fam, call))
                     continue;
             }
             inst->getParent()->delInst(inst);
             dce_inst_modified = true;
             if (inst->getOpcode() != OP::PHI) {
                 for (const auto &use : inst->getOperands()) {
-                    if (auto i = std::dynamic_pointer_cast<Instruction>(use->getValue())) {
+                    if (auto i = use->getValue()->as<Instruction>()) {
                         if (visited.find(i) == visited.end())
                             worklist.emplace_back(i);
                     }

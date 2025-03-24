@@ -25,6 +25,7 @@ struct OptInfo {
     bool lcssa{false};
     bool licm{false};
     bool loop_unroll{false};
+    bool indvars{false};
     bool jump_threading{false};
 
     bool tree_shaking{false};
@@ -48,8 +49,8 @@ public:
     static MPM buildModuleDebugPipeline();
 
     // Reproduce or Produce a Fuzz Testing Pipeline.
-    static FPM buildFunctionFuzzTestingPipeline(double duplication_rate = 1.0, const std::string& repro = "");
-    static MPM buildModuleFuzzTestingPipeline(double duplication_rate = 1.0, const std::string& repro = "");
+    static FPM buildFunctionFuzzTestingPipeline(double duplication_rate = 1.0, const std::string &repro = "");
+    static MPM buildModuleFuzzTestingPipeline(double duplication_rate = 1.0, const std::string &repro = "");
 
     static void registerModuleAnalyses(MAM &);
     static void registerFunctionAnalyses(FAM &);

@@ -29,8 +29,7 @@ IR::ICMPOP getReverse(IR::ICMPOP _cond) {
     return IR::ICMPOP::eq;
 }
 
-void setMovCond(const std::shared_ptr<movInst> &mov_true,
-                const std::shared_ptr<movInst> &mov_false, IR::ICMPOP cond) {
+void setMovCond(const std::shared_ptr<movInst> &mov_true, const std::shared_ptr<movInst> &mov_false, IR::ICMPOP cond) {
     switch (cond) {
     case IR::ICMPOP::eq:
         mov_true->setCondCodeFlag(CondCodeFlag::eq);
@@ -59,8 +58,7 @@ void setMovCond(const std::shared_ptr<movInst> &mov_true,
     }
 }
 
-void setMovCond(const std::shared_ptr<movInst> &mov_true,
-                const std::shared_ptr<movInst> &mov_false, IR::FCMPOP cond) {
+void setMovCond(const std::shared_ptr<movInst> &mov_true, const std::shared_ptr<movInst> &mov_false, IR::FCMPOP cond) {
     switch (cond) {
     case IR::FCMPOP::oeq:
         mov_true->setCondCodeFlag(CondCodeFlag::eq);
@@ -91,8 +89,8 @@ void setMovCond(const std::shared_ptr<movInst> &mov_true,
     }
 }
 
-std::list<std::shared_ptr<Instruction>>
-InstLowering::icmpLower(const std::shared_ptr<IR::ICMPInst> &icmp) {
+std::list<std::shared_ptr<Instruction>> InstLowering::icmpLower(const std::shared_ptr<IR::ICMPInst> &icmp,
+                                                                const std::shared_ptr<BasicBlock> &blk) {
     ///@note 原始的LLVM IR的 icmp/fcmp 之后就是对应跳转指令
     ///@note 然而在优化之后就不一定, 比较和跳转之间可能存在刷新符号位的指令
     ///@note 所以使用带条件的mov保证所有情况下都正常执行, 后续数据流窥孔中再考虑合并为常见情况
@@ -117,17 +115,12 @@ InstLowering::icmpLower(const std::shared_ptr<IR::ICMPInst> &icmp) {
         auto constlval = operlower.fastFind(lconst->getVal());
         auto constrval = operlower.fastFind(rconst->getVal());
 
-        auto relaylval =
-            operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
-        auto mov_lval = std::make_shared<movInst>(SourceOperandType::ri,
-                                                  relaylval, constlval);
-        auto relayrval =
-            operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
-        auto mov_rval = std::make_shared<movInst>(SourceOperandType::ri,
-                                                  relayrval, constrval);
+        auto relaylval = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto mov_lval = std::make_shared<movInst>(SourceOperandType::ri, relaylval, constlval);
+        auto relayrval = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto mov_rval = std::make_shared<movInst>(SourceOperandType::ri, relayrval, constrval);
 
-        auto cmp = std::make_shared<compareInst>(
-            OpCode::CMP, SourceOperandType::rr, relaylval, relayrval);
+        auto cmp = std::make_shared<compareInst>(OpCode::CMP, SourceOperandType::rr, relaylval, relayrval);
 
         insts.emplace_back(mov_lval);
         insts.emplace_back(mov_rval);
@@ -138,32 +131,25 @@ InstLowering::icmpLower(const std::shared_ptr<IR::ICMPInst> &icmp) {
     // 2. lval为常数, 考虑加movt/w或者变换比较逻辑
     // =================
     else if (lconst) {
-        auto constlval = std::dynamic_pointer_cast<ConstantIDX>(
-            operlower.fastFind(lconst->getVal()));
-        auto virrval =
-            std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rval));
+        auto constlval = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(lconst->getVal()));
+        auto virrval = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rval));
 
         if (!constlval->getConst()->isEncoded()) {
             // 变换逻辑, 交换顺序
             cond = getReverse(cond);
             std::swap(lval, rval);
 
-            auto virlval = std::dynamic_pointer_cast<BindOnVirOP>(
-                operlower.fastFind(lval));
+            auto virlval = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
             auto constrval = operlower.fastFind(rval);
 
-            auto cmp = std::make_shared<compareInst>(
-                OpCode::CMP, SourceOperandType::ri, virlval, constrval);
+            auto cmp = std::make_shared<compareInst>(OpCode::CMP, SourceOperandType::ri, virlval, constrval);
 
             insts.emplace_back(cmp);
         } else {
             // 加 mov
-            auto relaylval = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32),
-                                            RegisterBank::gpr);
-            auto mov_lval = std::make_shared<movInst>(SourceOperandType::ri,
-                                                      relaylval, constlval);
-            auto cmp = std::make_shared<compareInst>(
-                OpCode::CMP, SourceOperandType::rr, relaylval, virrval);
+            auto relaylval = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+            auto mov_lval = std::make_shared<movInst>(SourceOperandType::ri, relaylval, constlval);
+            auto cmp = std::make_shared<compareInst>(OpCode::CMP, SourceOperandType::rr, relaylval, virrval);
 
             insts.emplace_back(mov_lval);
             insts.emplace_back(cmp);
@@ -174,21 +160,19 @@ InstLowering::icmpLower(const std::shared_ptr<IR::ICMPInst> &icmp) {
     // 3. rval为常数, 考虑可能添加movt/w
     // =================
     else if (rconst) {
-        auto constrval = std::dynamic_pointer_cast<ConstantIDX>(
-            operlower.fastFind(rconst->getVal()));
-        auto virlval =
-            std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
+        auto constrval = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(rconst->getVal()));
+        auto virlval = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
 
         if (constrval->getConst()->isEncoded()) {
             // 加 mov
-            auto relayrval = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32),
-                                            RegisterBank::gpr);
-            auto mov_rval = std::make_shared<movInst>(SourceOperandType::ri,
-                                                      relayrval, constrval);
-            auto cmp = std::make_shared<compareInst>(
-                OpCode::CMP, SourceOperandType::rr, virlval, relayrval);
+            auto relayrval = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+            auto mov_rval = std::make_shared<movInst>(SourceOperandType::ri, relayrval, constrval);
+            auto cmp = std::make_shared<compareInst>(OpCode::CMP, SourceOperandType::rr, virlval, relayrval);
 
             insts.emplace_back(mov_rval);
+            insts.emplace_back(cmp);
+        } else {
+            auto cmp = std::make_shared<compareInst>(OpCode::CMP, SourceOperandType::ri, virlval, constrval);
             insts.emplace_back(cmp);
         }
     }
@@ -197,13 +181,10 @@ InstLowering::icmpLower(const std::shared_ptr<IR::ICMPInst> &icmp) {
     // 4. 都不是常数
     // =================
     else {
-        auto virlval =
-            std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
-        auto virrval =
-            std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rval));
+        auto virlval = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
+        auto virrval = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rval));
 
-        auto cmp = std::make_shared<compareInst>(
-            OpCode::CMP, SourceOperandType::rr, virlval, virrval);
+        auto cmp = std::make_shared<compareInst>(OpCode::CMP, SourceOperandType::rr, virlval, virrval);
 
         insts.emplace_back(cmp);
     }
@@ -214,10 +195,8 @@ InstLowering::icmpLower(const std::shared_ptr<IR::ICMPInst> &icmp) {
     auto bool_true = operlower.fastFind(1);
     auto bool_false = operlower.fastFind(0);
 
-    auto mov_true =
-        std::make_shared<movInst>(SourceOperandType::ri, boolVal, bool_true);
-    auto mov_false =
-        std::make_shared<movInst>(SourceOperandType::ri, boolVal, bool_false);
+    auto mov_true = std::make_shared<movInst>(SourceOperandType::ri, boolVal, bool_true);
+    auto mov_false = std::make_shared<movInst>(SourceOperandType::ri, boolVal, bool_false);
 
     setMovCond(mov_true, mov_false, cond);
 
@@ -226,7 +205,8 @@ InstLowering::icmpLower(const std::shared_ptr<IR::ICMPInst> &icmp) {
     return insts;
 }
 
-std::list<std::shared_ptr<Instruction>> InstLowering::fcmpLower(const std::shared_ptr<IR::FCMPInst> &fcmp) {
+std::list<std::shared_ptr<Instruction>> InstLowering::fcmpLower(const std::shared_ptr<IR::FCMPInst> &fcmp,
+                                                                const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
     /// @note 比较两个float
@@ -307,10 +287,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::fcmpLower(const std::share
     auto bool_true = operlower.fastFind(1);
     auto bool_false = operlower.fastFind(0);
 
-    auto mov_true =
-        std::make_shared<movInst>(SourceOperandType::ri, boolVal, bool_true);
-    auto mov_false =
-        std::make_shared<movInst>(SourceOperandType::ri, boolVal, bool_false);
+    auto mov_true = std::make_shared<movInst>(SourceOperandType::ri, boolVal, bool_true);
+    auto mov_false = std::make_shared<movInst>(SourceOperandType::ri, boolVal, bool_false);
 
     setMovCond(mov_true, mov_false, cond);
 

@@ -10,6 +10,40 @@
 
 namespace MIR {
 
+///@note 存储live info & 填写映射表 & 计算interval ranges & 算loop counts
+struct Liveness {
+    std::map<std::shared_ptr<BasicBlock>, std::unordered_set<std::shared_ptr<Operand>>> liveIn;
+    std::map<std::shared_ptr<BasicBlock>, std::unordered_set<std::shared_ptr<Operand>>> liveOut;
+
+    enum class relatedType { Use, Def };
+
+    struct tempHash {
+        std::size_t operator()(const std::shared_ptr<Operand> &ptr) const {
+            return std::hash<size_t>()((size_t)(ptr.get()));
+        }
+
+        std::size_t operator()(const std::shared_ptr<Instruction> &ptr) const {
+            return std::hash<size_t>()((size_t)(ptr.get()));
+        }
+    };
+
+    std::map<std::shared_ptr<Operand>,
+             std::unordered_set<std::pair<std::shared_ptr<Instruction>, relatedType>, tempHash>, tempHash>
+        use_def_Insts;
+
+    std::map<std::shared_ptr<Operand>, size_t> intervalLengths;
+
+    std::map<std::shared_ptr<Operand>, size_t> loopCounts;
+
+    void clear() {
+        liveIn.clear();
+        liveOut.clear();
+        use_def_Insts.clear();
+        intervalLengths.clear();
+        loopCounts.clear();
+    }
+};
+
 class Function;
 
 /// @warning Infos只选可能有用的
@@ -31,9 +65,12 @@ public:                                                   // 接口太多, 还�
     VarPool &getPool() { return varpool; }
     const VarPool &getPool() const { return varpool; }
 
+    Liveness liveinfo;
+
     ///@note 因为pass之间无法传递数据, 所以这个信息只能耦合在这个地方
     ///@note 其次, 这是全局的available, 因为图着色的分析不深入到单个inst
     std::vector<unsigned int> availableSRegisters;
+    unsigned int spilltimes = 0;
 
 public:
     FunctionInfo() = default;
@@ -52,8 +89,7 @@ private:
 
 public:
     Function() = delete;
-    explicit Function(std::string _name)
-        : Value(ValueTrait::Function, std::move(_name)) {}
+    explicit Function(std::string _name) : Value(ValueTrait::Function, std::move(_name)) {}
 
     FunctionInfo getInfo() const { return info; }
     FunctionInfo &editInfo() { return info; }
@@ -70,6 +106,8 @@ public:
     const std::list<std::shared_ptr<BasicBlock>> &getBlocks() { return blocks; }
 
     std::string toString() const override;
+
+    std::string toString_Debug();
     ~Function() override = default;
 };
 

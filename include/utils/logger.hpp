@@ -13,8 +13,7 @@ class Logger {
         T on_destroy;
 
     public:
-        explicit LoggerGuard(T on_destroy)
-            : on_destroy(std::move(on_destroy)) {}
+        explicit LoggerGuard(T on_destroy) : on_destroy(std::move(on_destroy)) {}
         ~LoggerGuard() { on_destroy(); }
     };
 

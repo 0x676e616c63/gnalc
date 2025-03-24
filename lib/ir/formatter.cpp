@@ -127,16 +127,14 @@ std::string IRFormatter::formatValue(Value &val) {
             for (const auto &rinst : cond_value.getRHSInsts())
                 ret += "  " + formatInst(*rinst) + "\n";
             ret += "  ; and value";
-            ret += "  " + formatValue(*cond_value.getRHS()) + " && " +
-                   formatValue(*cond_value.getLHS());
+            ret += "  " + formatValue(*cond_value.getRHS()) + " && " + formatValue(*cond_value.getLHS());
             return ret;
         } else if (cond_value.getCondType() == CONDTY::OR) {
             ret += "; or rhs insts\n";
             for (const auto &rinst : cond_value.getRHSInsts())
                 ret += "  " + formatInst(*rinst) + "\n";
             ret += "  ; or value";
-            ret += "  " + formatValue(*cond_value.getRHS()) + " || " +
-                   formatValue(*cond_value.getLHS());
+            ret += "  " + formatValue(*cond_value.getRHS()) + " || " + formatValue(*cond_value.getLHS());
             return ret;
         } else
             return "  ; unsupported cond value";
@@ -151,7 +149,7 @@ std::string IRFormatter::formatBB(BasicBlock &bb) {
 }
 
 std::string IRFormatter::formatFunc(Function &func) {
-    auto fn_type = toFunctionType(func.getType());
+    auto fn_type = func.getType()->as<FunctionType>();
     auto ret_type = fn_type->getRet();
 
     std::string ret;
@@ -160,7 +158,7 @@ std::string IRFormatter::formatFunc(Function &func) {
     ret += ret_type->toString() + " " + func.getName();
     ret += "(";
 
-    const auto& params = func.getParams();
+    const auto &params = func.getParams();
     for (auto it = params.begin(); it != params.end(); it++) {
         ret += (*it)->getType()->toString() + " noundef " + (*it)->getName();
         if (std::next(it) != func.getParams().end()) {
@@ -173,7 +171,7 @@ std::string IRFormatter::formatFunc(Function &func) {
 }
 
 std::string IRFormatter::formatFuncDecl(FunctionDecl &func) {
-    auto fn_type = toFunctionType(func.getType());
+    auto fn_type = func.getType()->as<FunctionType>();
     auto ret_type = fn_type->getRet();
 
     std::string ret;
@@ -181,8 +179,7 @@ std::string IRFormatter::formatFuncDecl(FunctionDecl &func) {
     ret += ret_type->toString() + " " + func.getName();
     ret += "(";
 
-    for (auto it = fn_type->getParams().begin();
-         it != fn_type->getParams().end(); it++) {
+    for (auto it = fn_type->getParams().begin(); it != fn_type->getParams().end(); it++) {
         ret += (*it)->toString() + " noundef";
         if (std::next(it) != fn_type->getParams().end() || fn_type->isVAArg()) {
             ret += ", ";
@@ -391,9 +388,9 @@ std::string IRFormatter::fALLOCAInst(ALLOCAInst &inst) {
     // if (inst.isStatic()) {
     ret += inst.getBaseType()->toString();
     // } else {
-        // ret += IRFormatter::formatIRTYPE(inst.getBaseType());
-        // ret += ", ";
-        // ret += IRFormatter::formatValue(*(inst.getNumElements()));
+    // ret += IRFormatter::formatIRTYPE(inst.getBaseType());
+    // ret += ", ";
+    // ret += IRFormatter::formatValue(*(inst.getNumElements()));
     // }
     ret += ", align ";
     ret += std::to_string(inst.getAlign());
@@ -449,7 +446,7 @@ std::string IRFormatter::fPHIInst(PHIInst &inst) {
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
     ret += inst.getType()->toString() + " ";
     auto opers = inst.getPhiOpers();
-    for (auto it = opers.begin(); ; ) {
+    for (auto it = opers.begin();;) {
         ret += "[ ";
         ret += it->value->getName();
         ret += ", ";

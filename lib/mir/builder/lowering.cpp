@@ -1,6 +1,7 @@
 #include "../../../include/mir/builder/lowering.hpp"
 #include "../../../include/mir/instructions/copy.hpp"
 #include "../../../include/mir/instructions/memory.hpp"
+#include <iostream>
 
 using namespace MIR;
 
@@ -23,8 +24,9 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
 
     func->editInfo().args = midEnd_function.getParams().size();
 
-    OperandLowering operlower{midEnd_function.getInstCount() + func->getInfo().args, module.getConstPool(),
-                              func->editInfo().varpool, func->editInfo().StackObjs};
+    OperandLowering operlower{
+        midEnd_function.getInstCount() + midEnd_function.getBlocks().size() + func->getInfo().args,
+        module.getConstPool(), func->editInfo().varpool, func->editInfo().StackObjs}; // first: med_val_cnt
 
     /// @brief 函数参数加载到varpool里, 并且适当添加ldr指令
     unsigned int cnt = 0;  // int 或者 地址(数组退化而来)
@@ -78,9 +80,12 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
         }
     }
 
-    /// @brief blocklowering
-    for (auto &midEnd_bb : midEnd_function.getBlocks()) {
+    ///@brief 获取逆后序blks
+    auto blocks = midEnd_function.getDFVisitor<Util::DFVOrder::ReversePostOrder>();
+
+    for (auto &midEnd_bb : blocks) {
         auto basicblock = lower(*midEnd_bb, operlower);
+
         if (func->getBlocks().empty()) {
             basicblock->addInsts_front(arg_insts);
         }
@@ -99,9 +104,6 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
         for (auto &midEnd_succ : midEnd_bb->getNextBB()) {
             backEnd_bb->addSucc(func->getBlock(midEnd_succ->getName()));
         }
-
-        /// @brief 填LiveIn, LiveOuts
-        /// @todo
     }
 
     return func;
@@ -115,90 +117,91 @@ std::shared_ptr<BasicBlock> Lowering::lower(const IR::BasicBlock &midEnd_bb, Ope
 
     ///@note lowering 中没有填写pres, succs以及活跃信息, 应该在phi消除中会填
 
-    for (auto &midEnd_inst : midEnd_bb.getInsts()) {
-        auto insts = instlower(midEnd_inst);
+    for (auto &midEnd_inst : midEnd_bb.getAllInsts()) {
+        auto insts = instlower(midEnd_inst, basicblock);
         basicblock->addInsts_back(insts);
     }
 
     return basicblock;
 }
 
-std::list<std::shared_ptr<Instruction>> InstLowering::operator()(const std::shared_ptr<IR::Instruction> &midEnd_inst) {
+std::list<std::shared_ptr<Instruction>> InstLowering::operator()(const std::shared_ptr<IR::Instruction> &midEnd_inst,
+                                                                 const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
     if (auto binary = std::dynamic_pointer_cast<IR::BinaryInst>(midEnd_inst)) {
         if (IR::toBType(binary->getType())->getInner() == IR::IRBTYPE::I32)
-            insts = binaryLower(binary);
+            insts = binaryLower(binary, blk);
         else {
-            insts = binaryLower_v(binary);
+            insts = binaryLower_v(binary, blk);
         }
     } else if (auto icmp = std::dynamic_pointer_cast<IR::ICMPInst>(midEnd_inst)) {
 
-        insts = icmpLower(icmp);
+        insts = icmpLower(icmp, blk);
 
     } else if (auto fcmp = std::dynamic_pointer_cast<IR::FCMPInst>(midEnd_inst)) {
 
-        insts = fcmpLower(fcmp);
+        insts = fcmpLower(fcmp, blk);
 
     } else if (auto ret = std::dynamic_pointer_cast<IR::RETInst>(midEnd_inst)) {
 
-        insts = retLower(ret);
+        insts = retLower(ret, blk);
 
     } else if (auto br = std::dynamic_pointer_cast<IR::BRInst>(midEnd_inst)) {
 
-        insts = brLower(br);
+        insts = brLower(br, blk);
 
     } else if (auto call = std::dynamic_pointer_cast<IR::CALLInst>(midEnd_inst)) {
 
-        insts = callLower(call);
+        insts = callLower(call, blk);
 
     } else if (auto fptosi = std::dynamic_pointer_cast<IR::FPTOSIInst>(midEnd_inst)) {
 
-        insts = fptosiLower(fptosi);
+        insts = fptosiLower(fptosi, blk);
 
     } else if (auto sitofp = std::dynamic_pointer_cast<IR::SITOFPInst>(midEnd_inst)) {
 
-        insts = sitofpLower(sitofp);
+        insts = sitofpLower(sitofp, blk);
 
     } else if (auto zext = std::dynamic_pointer_cast<IR::ZEXTInst>(midEnd_inst)) {
 
-        insts = zextLower(zext);
+        insts = zextLower(zext, blk);
 
     } else if (auto bitcast = std::dynamic_pointer_cast<IR::BITCASTInst>(midEnd_inst)) {
 
-        insts = bitcastLower(bitcast);
+        insts = bitcastLower(bitcast, blk);
 
     } else if (auto alloca = std::dynamic_pointer_cast<IR::ALLOCAInst>(midEnd_inst)) {
 
-        insts = allocaLower(alloca);
+        insts = allocaLower(alloca, blk);
 
     } else if (auto load = std::dynamic_pointer_cast<IR::LOADInst>(midEnd_inst)) {
         if (std::dynamic_pointer_cast<IR::PtrType>(load->getType())) {
-            insts = loadLower_p(load);
+            insts = loadLower_p(load, blk);
         } else if (std::dynamic_pointer_cast<IR::BType>(load->getType())->getInner() == IR::IRBTYPE::I32) {
-            insts = loadLower(load);
+            insts = loadLower(load, blk);
         } else {
-            insts = loadLower_v(load);
+            insts = loadLower_v(load, blk);
         }
     } else if (auto store = std::dynamic_pointer_cast<IR::STOREInst>(midEnd_inst)) {
         /// @warning Btype, PtrType
         if (std::dynamic_pointer_cast<IR::PtrType>(store->getBaseType())) { // getValue->getType
-            insts = storeLower_p(store);
+            insts = storeLower_p(store, blk);
         } else if (std::dynamic_pointer_cast<IR::BType>(store->getBaseType())->getInner() == IR::IRBTYPE::I32) {
-            insts = storeLower(store);
+            insts = storeLower(store, blk);
         } else {
-            insts = storeLower_v(store);
+            insts = storeLower_v(store, blk);
         }
     } else if (auto gep = std::dynamic_pointer_cast<IR::GEPInst>(midEnd_inst)) {
         // if (std::dynamic_pointer_cast<IR::BType>(gep->getPtr()->getType())) ///@bug ???
-        //     insts = gepLower(gep);
+        //     insts = gepLower(gep, blk);
         // else
-        //     insts = gepLower_p(gep);
+        //     insts = gepLower_p(gep, blk);
 
-        insts = gepLower(gep);
+        insts = gepLower(gep, blk);
 
     } else if (auto phi = std::dynamic_pointer_cast<IR::PHIInst>(midEnd_inst)) {
 
-        insts = phiLower(phi);
+        insts = phiLower(phi, blk);
 
     } else {
         Err::unreachable("instLowering: unknown IR instruction");
@@ -246,14 +249,74 @@ std::shared_ptr<Operand> OperandLowering::fastFind(const std::shared_ptr<IR::Val
         return constOper;
     }
 
-    // else
     else {
         Err::unreachable("operLower: fast find an operand failed");
+    }
+    return nullptr; // just to make clang happy
+}
+
+std::shared_ptr<Operand> OperandLowering::search_phi(const IR::Value &midEnd_phi_val) {
+    if (auto ptr = varpool.getValue(midEnd_phi_val))
+        return ptr;
+    else
         return nullptr;
+}
+
+std::shared_ptr<Operand> OperandLowering::fastFind_phi(const std::shared_ptr<IR::Value> &midEnd_phi_val) {
+    /// variablePool find
+    if (auto ptr = varpool.getValue(*midEnd_phi_val))
+        return ptr;
+
+    /// constPool find or insert, 但实际上似乎用不到, 因为对是否是常量的判断提前到instlower了
+    if (auto ci1 = std::dynamic_pointer_cast<IR::ConstantI1>(midEnd_phi_val)) {
+
+        auto constPtr = constpool.getConstant(ci1->getVal());
+        auto constOper = std::make_shared<ConstantIDX>(constPtr);
+        return constOper;
+
+    } else if (auto ci8 = std::dynamic_pointer_cast<IR::ConstantI8>(midEnd_phi_val)) {
+
+        auto constPtr = constpool.getConstant(ci8->getVal());
+        auto constOper = std::make_shared<ConstantIDX>(constPtr);
+        return constOper;
+
+    } else if (auto ci32 = std::dynamic_pointer_cast<IR::ConstantInt>(midEnd_phi_val)) {
+
+        auto constPtr = constpool.getConstant(ci32->getVal());
+        auto constOper = std::make_shared<ConstantIDX>(constPtr);
+        return constOper;
+
+    } else if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(midEnd_phi_val)) {
+
+        auto constPtr = constpool.getConstant(cf->getVal());
+        auto constOper = std::make_shared<ConstantIDX>(constPtr);
+        return constOper;
+
+    } else if (auto glb = std::dynamic_pointer_cast<IR::GlobalVariable>(midEnd_phi_val)) {
+        auto constPtr = constpool.getConstant(glb->getName());
+        auto constOper = std::make_shared<ConstantIDX>(constPtr);
+        return constOper;
+    }
+    ///@note 顺序遍历blk时, 遇到存在循环的CFG和phi, 极有可能出现use before def的情况
+    else {
+        ///@note 这里可以考虑加一个能打印的warning
+        if (auto btype = std::dynamic_pointer_cast<IR::BType>(midEnd_phi_val->getType())) {
+            if (btype->getInner() == IR::IRBTYPE::I32) {
+                return mkOP(*midEnd_phi_val, RegisterBank::gpr);
+            } else if (btype->getInner() == IR::IRBTYPE::FLOAT) {
+                return mkOP(*midEnd_phi_val, RegisterBank::spr);
+            } else {
+                Err::unreachable("phiLower: target value with unknown btype");
+            }
+        } else {
+            return mkBaseOP(*midEnd_phi_val);
+        }
+        return nullptr; // just make clang happy
     }
 }
 
 std::shared_ptr<BindOnVirOP> OperandLowering::mkOP(const std::shared_ptr<IR::Type> &type, RegisterBank bank) {
+
     auto virtual_val = std::make_shared<IR::Value>("%" + std::to_string(varpool.size() + med_val_cnt + 1), type,
                                                    IR::ValueTrait::ORDINARY_VARIABLE);
     auto ptr = std::make_shared<BindOnVirOP>(bank, virtual_val->getName());
@@ -263,6 +326,10 @@ std::shared_ptr<BindOnVirOP> OperandLowering::mkOP(const std::shared_ptr<IR::Typ
 }
 
 std::shared_ptr<BindOnVirOP> OperandLowering::mkOP(const IR::Value &val, RegisterBank bank) {
+    // 处理phi时提前添加的def
+    if (auto phi_mk = std::dynamic_pointer_cast<BindOnVirOP>(search_phi(val)))
+        return phi_mk;
+
     auto ptr = std::make_shared<BindOnVirOP>(bank, val.getName());
     varpool.addValue(val, ptr);
     return ptr;
@@ -335,7 +402,11 @@ std::shared_ptr<BaseADROP> OperandLowering::mkBaseOP(const IR::Value &val, const
 }
 
 std::shared_ptr<BaseADROP> OperandLowering::mkBaseOP(const IR::Value &val) {
+    if (auto phi_mk = std::dynamic_pointer_cast<BaseADROP>(search_phi(val)))
+        return phi_mk;
+
     auto ptr = std::make_shared<BaseADROP>(BaseAddressTrait::Runtime, val.getName(), 0, nullptr);
+    ptr->setBase(ptr);
 
     varpool.addValue(val, ptr);
 
@@ -344,11 +415,13 @@ std::shared_ptr<BaseADROP> OperandLowering::mkBaseOP(const IR::Value &val) {
 
 std::shared_ptr<StackADROP> OperandLowering::mkStackOP(const IR::Value &val, unsigned int size) {
     auto obj = std::make_shared<FrameObj>(FrameTrait::Alloca, size);
+    obj->setId(StackObjs.size());
+
     StackObjs.emplace_back(obj);
 
-    auto r7 = getPreColored(CoreRegister::r7);
+    auto sp = getPreColored(CoreRegister::sp);
 
-    std::shared_ptr<StackADROP> ptr = std::make_shared<StackADROP>(obj, val.getName(), 0, r7);
+    std::shared_ptr<StackADROP> ptr = std::make_shared<StackADROP>(obj, val.getName(), 0, sp);
 
     varpool.addValue(val, ptr);
     return ptr;
@@ -356,6 +429,7 @@ std::shared_ptr<StackADROP> OperandLowering::mkStackOP(const IR::Value &val, uns
 
 std::shared_ptr<StackADROP> OperandLowering::mkStackOP(unsigned int seq) {
     auto obj = std::make_shared<FrameObj>(FrameTrait::Arg, 4);
+    obj->setId(StackObjs.size());
     StackObjs.emplace_back(obj);
 
     auto sp = getPreColored(CoreRegister::sp);
@@ -367,6 +441,7 @@ std::shared_ptr<StackADROP> OperandLowering::mkStackOP(unsigned int seq) {
 
 std::shared_ptr<StackADROP> OperandLowering::mkStackOP() {
     auto obj = std::make_shared<FrameObj>(FrameTrait::Spill, 4);
+    obj->setId(StackObjs.size());
     StackObjs.emplace_back(obj);
 
     auto sp = getPreColored(CoreRegister::sp);

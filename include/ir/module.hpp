@@ -14,10 +14,9 @@
 namespace Parser {
 class CFGBuilder;
 class IRGenerator;
-}
+} // namespace Parser
 
 namespace IR {
-
 /**
  * @brief 此处默认无需考虑全局变量与函数之间的相对位置
  *
@@ -26,14 +25,15 @@ namespace IR {
 class Module : public NameC {
     friend class Parser::CFGBuilder;
     friend class Parser::IRGenerator;
+
 private:
     // Keep `constant_pool` the first member to make it destructs last
     // See: https://en.cppreference.com/w/cpp/language/destructor
     IR::ConstantPool constant_pool;
 
-    std::vector<std::shared_ptr<GlobalVariable>> global_vars;
-    std::vector<std::shared_ptr<Function>> funcs;
-    std::vector<std::shared_ptr<FunctionDecl>> func_decls;
+    std::vector<pGlobalVar> global_vars;
+    std::vector<pFunc> funcs;
+    std::vector<pFuncDecl> func_decls;
 
 public:
     using const_iterator = decltype(funcs)::const_iterator;
@@ -42,27 +42,24 @@ public:
     Module() = default;
     explicit Module(std::string _name) : NameC(std::move(_name)) {}
 
-    void addGlobalVar(std::shared_ptr<GlobalVariable> global_var);
-    const std::vector<std::shared_ptr<GlobalVariable>> &getGlobalVars() const;
-    bool delGlobalVar(const std::shared_ptr<GlobalVariable>& target);
+    void addGlobalVar(pGlobalVar global_var);
+    const std::vector<pGlobalVar> &getGlobalVars() const;
+    bool delGlobalVar(const pGlobalVar &target);
 
-    void addFunction(std::shared_ptr<Function> func);
-    const std::vector<std::shared_ptr<Function>> &getFunctions() const;
-    bool delFunction(const std::shared_ptr<Function>& target);
+    void addFunction(pFunc func);
+    const std::vector<pFunc> &getFunctions() const;
+    bool delFunction(const pFunc &target);
 
-    void addFunctionDecl(std::shared_ptr<FunctionDecl> func);
-    const std::vector<std::shared_ptr<FunctionDecl>> &getFunctionDecls() const;
-    bool delFunctionDecl(const std::shared_ptr<FunctionDecl>& target);
+    void addFunctionDecl(pFuncDecl func);
+    const std::vector<pFuncDecl> &getFunctionDecls() const;
+    bool delFunctionDecl(const pFuncDecl &target);
 
     ConstantPool &getConstantPool();
 
     void removeUnusedFuncDecls();
     void removeUnusedFuncs();
 
-    template<typename T>
-    auto getConst(T&& val) {
-        return constant_pool.getConst(std::forward<T>(val));
-    }
+    template <typename T> auto getConst(T &&val) { return constant_pool.getConst(std::forward<T>(val)); }
 
     const_iterator begin() const;
     const_iterator end() const;

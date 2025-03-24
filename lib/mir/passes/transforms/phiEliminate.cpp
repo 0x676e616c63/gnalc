@@ -14,6 +14,10 @@ PM::PreservedAnalyses PhiEliminatePass::run(Module &bkd_module, MAM &mam) {
         RunOnFunc(phi_func);
     }
 
+    for (const auto &pair : delList) {
+        pair.second->delInst(pair.first);
+    }
+
     return PM::PreservedAnalyses::all();
 }
 
@@ -40,8 +44,8 @@ std::vector<std::pair<OperP, OperP>> PhiEliminatePass::findPair(const BlkP &blk,
             dst_src_vec.emplace_back(target, phioper.val);
         }
 
-        ///@brief 删除PhiInst
-        succ->delInst(phiInst);
+        ///@brief 准备删除PhiInst
+        delList.insert(std::make_pair(phiInst, succ));
     }
 
     return dst_src_vec;
@@ -51,17 +55,14 @@ void PhiEliminatePass::MkWorkList() {
     auto &func_list = module->getFuncs();
 
     for (const auto &func : func_list) {
-        PhiFunction func_phi{{}};
+        PhiFunction func_phi;
         for (const auto &blk : func->getBlocks()) {
-            if (!blk->containPhi)
-                continue;
-            else {
-                ///@note 只遍历succ应该就行
-                for (const auto &succ : blk->getSuccs()) {
-                    PhiBlkPairs blk_phipairs{func, blk, succ};
-                    blk_phipairs.pairs = std::move(findPair(blk, succ));
-                    func_phi.PhiList.emplace_back(blk_phipairs);
-                }
+            for (const auto &succ : blk->getSuccs()) {
+                if (!succ->containPhi)
+                    continue;
+                PhiBlkPairs blk_phipairs{func, blk, succ};
+                blk_phipairs.pairs = std::move(findPair(blk, succ));
+                func_phi.PhiList.emplace_back(blk_phipairs);
             }
         }
 
@@ -102,11 +103,12 @@ OperP PhiEliminatePass::addCOYPInst(const BlkP &emitBlk, const OperP &dst, const
 
     Err::gassert(std::dynamic_pointer_cast<BindOnVirOP>(dst) != nullptr, "dst operand is a const value");
 
-    auto &varpool = func->getInfo().getPool();
+    auto &varpool = func->editInfo().getPool();
 
     auto bank = std::dynamic_pointer_cast<BindOnVirOP>(dst)->getBank();
 
-    auto stagedVal = std::make_shared<BindOnVirOP>(bank, '%' + std::to_string(varpool.size()));
+    auto stagedVal = std::make_shared<BindOnVirOP>(
+        bank, '%' + std::to_string(varpool.size() + func->getBlocks().size() + func->getInfo().args)); // 注意计数
 
     ///@brief 用undefined是考虑到可能是双字或者四字数据
     auto temp_midVal = std::make_shared<IR::Value>(stagedVal->getName(), IR::makeBType(IR::IRBTYPE::UNDEFINED),
@@ -164,7 +166,6 @@ void PhiEliminatePass::RunOnBlkPair(const PhiBlkPairs &process) {
         unsigned int indegree = 0; // 由于phi函数性质, 这个地方要么0要么1
     };
 
-    ///@note 为了方便处理, 用id取代操作数指针作为图中的别名, 学GPT5.0的
     std::map<OperP, unsigned int> mapping;
     std::vector<Node> graph(vec.size());
 
@@ -191,10 +192,10 @@ void PhiEliminatePass::RunOnBlkPair(const PhiBlkPairs &process) {
             queue.push(i);
     }
 
-    ///@brief 核心算法, 祖传代码
-    std::map<OperP, OperP> StagedMap; // find a stagedR by src
+    // find a stagedR by src
+    std::map<OperP, OperP> StagedMap;
 
-    BlkP emitBlk = splitCriticalEgde(pred, succ, func);
+    BlkP emitBlk = splitCriticalEgde(pred, succ, func); // 中端做过了
     if (!emitBlk)
         emitBlk = pred; // not a critical edge
 
@@ -213,14 +214,15 @@ void PhiEliminatePass::RunOnBlkPair(const PhiBlkPairs &process) {
             }
 
             if (graph[idx].indegree) {
-
+                ///@note 可能会出现一种比较极端的情况, %0 = phi [... ...], ..., [%0, ...]
+                ///@note 理论上由于单赋值, 所以不需要做什么, 但是算法会还是会插入一个stage, 以及一个冗余的copy
                 Err::gassert(graph[idx].indegree == 1, "indegree must be 1");
                 graph[idx].indegree = 0;
-                auto stagedVal = addCOYPInst(emitBlk, dst, func); // push_from_branch
+                auto stagedVal = addCOYPInst(emitBlk, dst, func); // push_before_branch
                 StagedMap[dst] = stagedVal;
             }
 
-            pushBeforeBranch(emitBlk, dst, src);
+            pushBeforeBranch(emitBlk, src, dst); ///@bug, src和dst可能还需要再考虑一下
 
             auto &node = graph[idx];
             for (auto nxt : node.nxt) {

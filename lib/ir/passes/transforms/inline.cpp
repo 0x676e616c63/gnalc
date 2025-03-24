@@ -1,6 +1,6 @@
 #include "../../../../include/ir/passes/transforms/inline.hpp"
-#include "../../../../include/ir/block_utils.hpp"
 #include "../../../../include/config/config.hpp"
+#include "../../../../include/ir/block_utils.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
 #include "../../../../include/ir/instructions/memory.hpp"
 #include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
@@ -11,9 +11,9 @@
 namespace IR {
 // FIXME: Inline Cost Calculation
 bool shouldBeInlined(const Function &fn) {
-    for (const auto& bb : fn) {
-        for (const auto& inst : *bb) {
-            if (auto call = std::dynamic_pointer_cast<CALLInst>(inst)) {
+    for (const auto &bb : fn) {
+        for (const auto &inst : *bb) {
+            if (auto call = inst->as<CALLInst>()) {
                 if (call->getFunc().get() == &fn)
                     return false;
             }
@@ -27,20 +27,20 @@ bool shouldBeInlined(const Function &fn) {
 PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
     bool inline_cfg_modified = false;
 
-    std::vector<std::shared_ptr<CALLInst>> to_inline;
-    for (const auto& bb : function) {
-        for (const auto& inst : *bb) {
-            if (auto call = std::dynamic_pointer_cast<CALLInst>(inst)) {
-                auto callee_def = std::dynamic_pointer_cast<Function>(call->getFunc());
+    std::vector<pCall> to_inline;
+    for (const auto &bb : function) {
+        for (const auto &inst : *bb) {
+            if (auto call = inst->as<CALLInst>()) {
+                auto callee_def = call->getFunc()->as<Function>();
                 if (callee_def != nullptr && shouldBeInlined(*callee_def))
                     to_inline.emplace_back(call);
             }
         }
     }
 
-    for (const auto& call : to_inline) {
+    for (const auto &call : to_inline) {
         auto call_block = call->getParent();
-        auto candidate = std::dynamic_pointer_cast<Function>(call->getFunc());
+        auto candidate = call->getFunc()->as<Function>();
         Err::gassert(candidate != nullptr);
         auto cloned = makeClone(candidate);
 
@@ -48,14 +48,14 @@ PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
         auto entry = function.getBlocks().front();
         auto cloned_entry = cloned->getBlocks().front();
         cloned_entry->setName(cloned_entry->getName() + ".inline.entry" + std::to_string(name_cnt++));
-        std::vector<std::shared_ptr<ALLOCAInst>> allocas;
-        for (const auto& inst : *cloned_entry) {
-            if (auto alloc = std::dynamic_pointer_cast<ALLOCAInst>(inst))
+        std::vector<pAlloca> allocas;
+        for (const auto &inst : *cloned_entry) {
+            if (auto alloc = inst->as<ALLOCAInst>())
                 allocas.emplace_back(alloc);
             else
                 break;
         }
-        for (const auto& alloc : allocas) {
+        for (const auto &alloc : allocas) {
             // Note that the call_block might be entry block.
             // Inserting alloca before `entry->begin()` rather than `entry->end()`
             // can make sure the alloca is in the entry block after splitting.
@@ -68,10 +68,10 @@ PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
         Err::gassert(call_block->getInsts().back() == call);
 
         // Replace RETInst with BRInst
-        std::vector<std::pair<std::shared_ptr<BasicBlock>, std::shared_ptr<Value>>> return_info;
-        for (const auto& cloned_bb : *cloned) {
+        std::vector<std::pair<pBlock, pVal>> return_info;
+        for (const auto &cloned_bb : *cloned) {
             auto term = cloned_bb->getInsts().back();
-            if (auto ret = std::dynamic_pointer_cast<RETInst>(term)) {
+            if (auto ret = term->as<RETInst>()) {
                 if (!ret->isVoid())
                     return_info.emplace_back(cloned_bb, ret->getRetVal());
                 else
@@ -85,7 +85,7 @@ PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
         if (!call->isVoid()) {
             if (return_info.size() > 1) {
                 auto common = return_info[0].second;
-                for (const auto& [bb, val] : return_info) {
+                for (const auto &[bb, val] : return_info) {
                     if (val != common) {
                         common = nullptr;
                         break;
@@ -93,17 +93,15 @@ PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
                 }
                 if (common != nullptr)
                     call->replaceSelf(common);
-                else
-                {
-                    auto ret_phi = std::make_shared<PHIInst>(
-                        "%inline.phi" + std::to_string(name_cnt++), call->getType());
-                    for (const auto& [bb, val] : return_info)
+                else {
+                    auto ret_phi =
+                        std::make_shared<PHIInst>("%inline.phi" + std::to_string(name_cnt++), call->getType());
+                    for (const auto &[bb, val] : return_info)
                         ret_phi->addPhiOper(val, bb);
                     call->replaceSelf(ret_phi);
                     after_call->addPhiInst(ret_phi);
                 }
-            }
-            else {
+            } else {
                 Err::gassert(return_info.size() == 1);
                 call->replaceSelf(return_info[0].second);
             }
@@ -116,25 +114,24 @@ PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
 
         // Replace parameters with actual arguments.
         auto actual_args = call->getArgs();
-        for (const auto& param : cloned->getParams())
+        for (const auto &param : cloned->getParams())
             param->replaceSelf(actual_args[param->getIndex()]);
 
         // Fix CFG
         auto original_succs = call_block->getNextBB();
-        for (const auto& succ : original_succs) {
+        for (const auto &succ : original_succs) {
             unlinkBB(call_block, succ);
             linkBB(after_call, succ);
-            for (const auto& phi : succ->phis())
+            for (const auto &phi : succ->phis())
                 phi->replaceAllOperands(call_block, after_call);
         }
         linkBB(call_block, cloned_entry);
-        for (const auto& [bb, val] : return_info)
+        for (const auto &[bb, val] : return_info)
             linkBB(bb, after_call);
 
         // Move blocks
         function.addBlock(std::next(call_block->getIter()), after_call);
-        moveBlocks(cloned->begin(), cloned->end(),
-            function.shared_from_this(), std::next(call_block->getIter()));
+        moveBlocks(cloned->begin(), cloned->end(), function.as<Function>(), std::next(call_block->getIter()));
         inline_cfg_modified = true;
     }
 

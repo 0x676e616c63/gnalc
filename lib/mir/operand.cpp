@@ -49,7 +49,7 @@ std::string BaseADROP::toString() const {
     }
 
     if (!varOffset.expired())
-        str += " + " + varOffset.lock()->toString();
+        str += ": " + varOffset.lock()->toString();
 
     if (constOffset)
         str += " + " + std::to_string(constOffset);
@@ -107,7 +107,7 @@ std::string StackADROP::toString() const {
         auto base = varOffset.lock(); // self
 
         if (std::get<CoreRegister>(base->getColor()) != CoreRegister::none) // 一定是gpr
-            str += ": $" + enum_name(std::get<CoreRegister>(base->getColor()));
+            str += " + $" + enum_name(std::get<CoreRegister>(base->getColor()));
 
         if (constOffset)
             str += " + " + std::to_string(constOffset);
@@ -116,14 +116,14 @@ std::string StackADROP::toString() const {
         return str;
     }
 
-    if (!varOffset.expired() && !std::dynamic_pointer_cast<PreColedOP>(getBase())) {
-        // not sp/r7
-        auto varPtr = varOffset.lock();
+    if (!varOffset.expired()) {
+        // could be sp/r7
+        auto varPtr = getBase();
 
         if (std::get<CoreRegister>(varPtr->getColor()) != CoreRegister::none)
-            str += ": $" + enum_name(std::get<CoreRegister>(varPtr->getColor()));
+            str += " + $" + enum_name(std::get<CoreRegister>(varPtr->getColor()));
         else
-            str += ": " + varPtr->getName();
+            str += "+ " + varPtr->getName();
     }
     if (constOffset)
         str += " + " + std::to_string(constOffset);

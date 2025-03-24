@@ -66,7 +66,7 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
     if (fatal_error_cnt == 0) {
         // Check CFG
         auto fndfv = function.getDFVisitor();
-        std::set<std::shared_ptr<BasicBlock>> reachable_blocks{fndfv.begin(), fndfv.end()};
+        std::set<pBlock> reachable_blocks{fndfv.begin(), fndfv.end()};
         const auto &entry = function.getBlocks().front();
         if (entry->getNumPreds() != 0) {
             Logger::logCritical("[VerifyPass]: Entry BasicBlock '", entry->getName(), "' has predecessors.");
@@ -94,8 +94,8 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                     ++fatal_error_cnt;
                 }
             } else if (term->getOpcode() == OP::BR) {
-                auto br = std::dynamic_pointer_cast<BRInst>(term);
-                std::vector<std::shared_ptr<BasicBlock>> real_succs;
+                auto br = term->as<BRInst>();
+                std::vector<pBlock> real_succs;
                 if (br->isConditional()) {
                     if (bb->getNumSuccs() != 2) {
                         Logger::logCritical("[VerifyPass]: BasicBlock '", bb->getName(),
@@ -168,7 +168,7 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                 for (const auto &user : inst->inst_users()) {
                     if (user->getOpcode() != OP::PHI) {
                         if ((bb == user->getParent() && inst->getIndex() > user->getIndex()) ||
-                            !domtree.ADomB(bb.get(), user->getParent().get())) {
+                            !domtree.ADomB(bb, user->getParent())) {
                             Logger::logCritical("[VerifyPass]: Instruction '", inst->getName(),
                                                 "' does not dominate its use in '", user->getName(), "'.");
                             ++fatal_error_cnt;
@@ -182,10 +182,10 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
     // Check loop info
     if (fatal_error_cnt == 0) {
         auto loop_info = fam.getResult<LoopAnalysis>(function);
-        for (const auto& top_level : loop_info) {
+        for (const auto &top_level : loop_info) {
             auto lpdfv = top_level->getDFVisitor();
-            for (const auto& loop : lpdfv) {
-                for (const auto& bb : loop->blocks()) {
+            for (const auto &loop : lpdfv) {
+                for (const auto &bb : loop->blocks()) {
                     for (auto p = loop; p != nullptr; p = p->getParent()) {
                         if (!p->contains(bb)) {
                             Logger::logCritical("[VerifyPass]: BasicBlock '", bb->getName(), "' in '",
@@ -197,7 +197,6 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
             }
         }
     }
-
 
     if (fatal_error_cnt != 0) {
         Logger::logCritical("[VerifyPass] on '", function.getName(), "': Found ", fatal_error_cnt, " fatal error(s).");

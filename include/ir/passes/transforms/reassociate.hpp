@@ -18,49 +18,48 @@ public:
     using Rank = unsigned int;
     static constexpr Rank NotRank = std::numeric_limits<Rank>::max();
     struct ValueEntry {
-        std::shared_ptr<Value> op;
+        pVal op;
         Rank rank;
     };
 
     struct ExprTreeNode {
         using WeightT = size_t;
-        std::shared_ptr<Value> value;
+        pVal value;
         WeightT weight;
     };
+
 private:
-    std::map<std::shared_ptr<Value>, Rank> valueRankMap;
-    std::map<std::shared_ptr<BasicBlock>, Rank> bbRankMap;
-    std::set<std::shared_ptr<Instruction>> redoSet;
+    std::map<pVal, Rank> valueRankMap;
+    std::map<pBlock, Rank> bbRankMap;
+    std::set<pInst> redoSet;
     Function *func{};
     bool optModified{};
     size_t name_cnt = 0;
 
-    Rank getRank(const std::shared_ptr<Value> &v);
+    Rank getRank(const pVal &v);
 
-    std::shared_ptr<Value> removeFactor(const std::shared_ptr<Value> &v, const std::shared_ptr<Value> &factor);
+    pVal removeFactor(const pVal &v, const pVal &factor);
 
-    std::shared_ptr<Value> optMul(const std::shared_ptr<BinaryInst> &binary,
-                              std::vector<ValueEntry> &ops);
+    pVal optMul(const pBinary &binary, std::vector<ValueEntry> &ops);
 
-    std::shared_ptr<Value> optAdd(const std::shared_ptr<BinaryInst> &root,
-                                  std::vector<ValueEntry> &ops);
+    pVal optAdd(const pBinary &root, std::vector<ValueEntry> &ops);
 
-    std::shared_ptr<Value> optExpr(const std::shared_ptr<BinaryInst> &root,
-                               std::vector<ValueEntry> &ops);
+    pVal optExpr(const pBinary &root, std::vector<ValueEntry> &ops);
 
-    void rewriteExpr(const std::shared_ptr<BinaryInst> &root, std::vector<ValueEntry> &ops);
+    void rewriteExpr(const pBinary &root, std::vector<ValueEntry> &ops);
 
-    std::vector<ExprTreeNode> analyzeExprTree(const std::shared_ptr<BinaryInst> &root);
+    std::vector<ExprTreeNode> analyzeExprTree(const pBinary &root);
 
-    void reassociateExpression(const std::shared_ptr<BinaryInst> &inst);
+    void reassociateExpression(const pBinary &inst);
 
-    std::shared_ptr<BinaryInst> neg2mul(const std::shared_ptr<Instruction> &neg);
+    pBinary neg2mul(const pInst &neg);
 
-    std::shared_ptr<Instruction> canonInst(const std::shared_ptr<Instruction>& inst);
+    pInst canonInst(const pInst &inst);
 
-    void optInst(const std::shared_ptr<Instruction> &inst);
+    void optInst(const pInst &inst);
 
     void reset();
+
 public:
     PM::PreservedAnalyses run(Function &function, FAM &manager);
 };

@@ -8,6 +8,6 @@
 #include "../../function.hpp"
 
 namespace IR {
-std::shared_ptr<Value> foldConstant(ConstantPool &cpool, const std::shared_ptr<Value> &raw);
+pVal foldConstant(ConstantPool &cpool, const pVal &raw);
 } // namespace IR
 #endif

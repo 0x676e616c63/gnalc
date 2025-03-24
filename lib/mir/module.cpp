@@ -21,9 +21,15 @@ std::string Module::toString() const {
     }
 
     ///@brief functions
+    // for (const auto &func : funcs) {
+    //     str += "\n---\n";
+    //     str += func->toString();
+    //     str += '\n';
+    // }
+
     for (const auto &func : funcs) {
         str += "\n---\n";
-        str += func->toString();
+        str += func->toString_Debug();
         str += '\n';
     }
     return str;

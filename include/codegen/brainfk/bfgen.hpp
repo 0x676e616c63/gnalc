@@ -39,8 +39,7 @@ public:
 
         void addInst(BF3tInst inst) { insts.emplace_back(inst); }
 
-        template <typename First, typename... Rest>
-        void addInst(First &&first, Rest &&...rest) {
+        template <typename First, typename... Rest> void addInst(First &&first, Rest &&...rest) {
             addInst(std::forward<First>(first));
             addInst(std::forward<Rest>(rest)...);
         }
@@ -61,8 +60,8 @@ private:
 
 public:
     BF3t32bGen()
-        : tape1_pos(0), tape3_pos(0), tape1_avail_pos(32), tape2_avail_pos(0),
-          tape3_avail_pos(1), curr_is_main(false) {}
+        : tape1_pos(0), tape3_pos(0), tape1_avail_pos(32), tape2_avail_pos(0), tape3_avail_pos(1), curr_is_main(false) {
+    }
 
     void visit(IR::Module &node) override;
     void visit(IR::GlobalVariable &node) override;

@@ -9,22 +9,22 @@
 
 #include "../constant.hpp"
 #include "../instruction.hpp"
+#include "../type_alias.hpp"
 #include <memory>
 
 namespace IR {
 
 class CastInst : public Instruction {
 private:
-    std::shared_ptr<Type> dest_type;
+    pType dest_type;
 
 public:
-    CastInst(OP opcode_, NameRef name, const std::shared_ptr<Value> &origin_val,
-             const std::shared_ptr<Type> &dest_type);
+    CastInst(OP opcode_, NameRef name, const pVal &origin_val, const pType &dest_type);
 
-    std::shared_ptr<Value> getOVal() const;
+    pVal getOVal() const;
 
-    std::shared_ptr<Type> getOType() const;
-    std::shared_ptr<Type> getTType() const;
+    pType getOType() const;
+    pType getTType() const;
 
     void accept(IRVisitor &visitor) override;
 };
@@ -33,56 +33,47 @@ public:
 // 默认全为float to i32
 class FPTOSIInst : public CastInst {
 public:
-    FPTOSIInst(NameRef name, const std::shared_ptr<Value> &origin_val);
+    FPTOSIInst(NameRef name, const pVal &origin_val);
 
     void accept(IRVisitor &visitor) override;
 
 private:
-    std::shared_ptr<Value> cloneImpl() const override {
-        return std::make_shared<FPTOSIInst>(getName(), getOVal());
-    }
+    pVal cloneImpl() const override { return std::make_shared<FPTOSIInst>(getName(), getOVal()); }
 };
 
 // <result> = sitofp <ty> <value> to <ty2>
 class SITOFPInst : public CastInst {
 public:
-    SITOFPInst(NameRef name, const std::shared_ptr<Value> &origin_val);
+    SITOFPInst(NameRef name, const pVal &origin_val);
 
     void accept(IRVisitor &visitor) override;
 
 private:
-    std::shared_ptr<Value> cloneImpl() const override {
-        return std::make_shared<SITOFPInst>(getName(), getOVal());
-    }
+    pVal cloneImpl() const override { return std::make_shared<SITOFPInst>(getName(), getOVal()); }
 };
 
 // <result> = zext <ty> <value> to <ty2>
 class ZEXTInst : public CastInst {
 public:
-    ZEXTInst(NameRef name, const std::shared_ptr<Value> &origin_val,
-             IRBTYPE dest_type);
+    ZEXTInst(NameRef name, const pVal &origin_val, IRBTYPE dest_type);
 
     void accept(IRVisitor &visitor) override;
 
 private:
-    std::shared_ptr<Value> cloneImpl() const override {
-        return std::make_shared<ZEXTInst>(getName(),
-            getOVal(), toBType(getTType())->getInner());
+    pVal cloneImpl() const override {
+        return std::make_shared<ZEXTInst>(getName(), getOVal(), getTType()->as<BType>()->getInner());
     }
 };
 
 // <result> = bitcast <ty> <value> to <ty2>
 class BITCASTInst : public CastInst {
 public:
-    BITCASTInst(NameRef name, const std::shared_ptr<Value> &origin_val,
-                const std::shared_ptr<Type> &dest_type);
+    BITCASTInst(NameRef name, const pVal &origin_val, const pType &dest_type);
 
     void accept(IRVisitor &visitor) override;
 
 private:
-    std::shared_ptr<Value> cloneImpl() const override {
-        return std::make_shared<BITCASTInst>(getName(), getOVal(), getTType());
-    }
+    pVal cloneImpl() const override { return std::make_shared<BITCASTInst>(getName(), getOVal(), getTType()); }
 };
 
 } // namespace IR

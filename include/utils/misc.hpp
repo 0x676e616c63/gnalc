@@ -2,10 +2,10 @@
 #ifndef GNALC_UTILS_MISC_HPP
 #define GNALC_UTILS_MISC_HPP
 
-#include <string_view>
-#include <type_traits>
 #include <list>
 #include <memory>
+#include <string_view>
+#include <type_traits>
 
 #include "exception.hpp"
 
@@ -15,8 +15,7 @@ template <class... Ts> struct overloaded : Ts... {
 };
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
-template <typename T, template <typename...> typename Primary>
-struct is_specialization_of : public std::false_type {};
+template <typename T, template <typename...> typename Primary> struct is_specialization_of : public std::false_type {};
 
 template <template <typename...> typename Primary, typename... Args>
 struct is_specialization_of<Primary<Args...>, Primary> : public std::true_type {};
@@ -31,8 +30,7 @@ template <typename T> struct remove_cvref {
 template <typename T> using remove_cvref_t = typename remove_cvref<T>::type;
 
 // C++20's source_location may be better.
-template <typename getTypeNameArgument>
-std::string_view getTypeName() {
+template <typename getTypeNameArgument> std::string_view getTypeName() {
 #if defined(__clang__) || defined(__GNUC__)
     std::string_view name = __PRETTY_FUNCTION__;
     // std::string_view Util::getTypeName() [getTypeNameArgument = <What we want>]

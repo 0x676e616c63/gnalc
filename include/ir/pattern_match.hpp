@@ -16,82 +16,52 @@ using namespace PatternMatch;
 namespace IR::M {
 inline auto Val() { return ClassMatch<Value>{}; }
 
-inline auto VBind(Value *&v) {
-    return ClassMatchBind<Value, Value *>{v};
-}
+inline auto VBind(Value *&v) { return ClassMatchBind<Value, Value *>{v}; }
 
-inline auto VBind(std::shared_ptr<Value> &v) {
-    return ClassMatchBind<Value, std::shared_ptr<Value>>{v};
-}
+inline auto VBind(pVal &v) { return ClassMatchBind<Value, pVal>{v}; }
 
 inline auto Inst() { return ClassMatch<Instruction>{}; }
 
-inline auto IBind(Instruction *&v) {
-    return ClassMatchBind<Instruction, Instruction *>{v};
-}
+inline auto IBind(Instruction *&v) { return ClassMatchBind<Instruction, Instruction *>{v}; }
 
-inline auto IBind(std::shared_ptr<Instruction> &v) {
-    return ClassMatchBind<Instruction, std::shared_ptr<Instruction>>{v};
-}
+inline auto IBind(pInst &v) { return ClassMatchBind<Instruction, pInst>{v}; }
 
 inline auto Block() { return ClassMatch<BasicBlock>{}; }
 
-inline auto BBind(BasicBlock *&v) {
-    return ClassMatchBind<BasicBlock, BasicBlock *>{v};
-}
+inline auto BBind(BasicBlock *&v) { return ClassMatchBind<BasicBlock, BasicBlock *>{v}; }
 
-inline auto BBind(std::shared_ptr<BasicBlock> &v) {
-    return ClassMatchBind<BasicBlock, std::shared_ptr<BasicBlock>>{v};
-}
+inline auto BBind(pBlock &v) { return ClassMatchBind<BasicBlock, pBlock>{v}; }
 
 template <typename SubPattern> struct OneUseMatch {
     SubPattern sub_pattern;
 
     explicit OneUseMatch(const SubPattern &sub_pattern_) : sub_pattern(sub_pattern_) {}
 
-    template <typename T>
-    bool match(const T &v) const {
+    template <typename T> bool match(const T &v) const {
         auto cast = PatternMatch::detail::ptrCast<Value>(v);
         return cast && cast->getUseCount() == 1 && sub_pattern.match(cast);
     }
 };
 
-template <typename T>
-auto OneUse(const T& sub_pattern) {
-    return OneUseMatch(sub_pattern);
-}
+template <typename T> auto OneUse(const T &sub_pattern) { return OneUseMatch(sub_pattern); }
 
 inline auto I1() { return ClassMatch<ConstantI1>{}; }
 inline auto I8() { return ClassMatch<ConstantI8>{}; }
 inline auto I32() { return ClassMatch<ConstantInt>{}; }
 inline auto F32() { return ClassMatch<ConstantFloat>{}; }
-inline auto Const() {
-    return ClassesMatch<ConstantI1, ConstantI8, ConstantInt, ConstantFloat>{};
-}
+inline auto Const() { return ClassesMatch<ConstantI1, ConstantI8, ConstantInt, ConstantFloat>{}; }
 
-template <typename T>
-struct ConstantProj {
-    template <typename U>
-    T operator()(const U &u) {
-        return u->getVal();
-    }
+template <typename T> struct ConstantProj {
+    template <typename U> T operator()(const U &u) { return u->getVal(); }
 };
 
-inline auto I1Bind(bool &a) {
-    return ClassMatchBind<ConstantI1, bool, ConstantProj<bool>>{a};
-}
+inline auto I1Bind(bool &a) { return ClassMatchBind<ConstantI1, bool, ConstantProj<bool>>{a}; }
 
-inline auto I1Bind(char &a) {
-    return ClassMatchBind<ConstantI8, char, ConstantProj<char>>{a};
-}
+inline auto I1Bind(char &a) { return ClassMatchBind<ConstantI8, char, ConstantProj<char>>{a}; }
 
-inline auto I32Bind(int &a) {
-    return ClassMatchBind<ConstantInt, int, ConstantProj<int>>{a};
-}
+inline auto I32Bind(int &a) { return ClassMatchBind<ConstantInt, int, ConstantProj<int>>{a}; }
 
-inline auto F32Bind(float &a) {
-    return ClassMatchBind<ConstantFloat, float, ConstantProj<float>>{a};
-}
+inline auto F32Bind(float &a) { return ClassMatchBind<ConstantFloat, float, ConstantProj<float>>{a}; }
 
 // Imagine something like
 //
@@ -107,83 +77,61 @@ inline auto F32Bind(float &a) {
 // This, however, requires the `M::Is` to take a reference as its parameter
 // and transfer that reference to the predicate. Thus, when `M::Is`'s predicate is invoked
 // by `InstMatch::match`, the desired value has already been bound by `M::VBind`.
-inline auto Is(const Value*& v) {
-    return ClassMatchIf<Value>{[&v](const Value &b) {
-        return v == &b;
-    }};
+inline auto Is(const Value *&v) {
+    return ClassMatchIf<Value>{[&v](const Value &b) { return v == &b; }};
 }
 
-inline auto Is(const std::shared_ptr<Value> &v) {
-    return ClassMatchIf<Value>{[&v](const Value &b) {
-        return v.get() == &b;
-    }};
+inline auto Is(const pVal &v) {
+    return ClassMatchIf<Value>{[&v](const Value &b) { return v.get() == &b; }};
 }
 
-inline auto Is(const bool& a) {
-    return ClassMatchIf<ConstantI1>{[&a](const ConstantI1 &b) {
-        return a == b.getVal();
-    }};
+inline auto Is(const bool &a) {
+    return ClassMatchIf<ConstantI1>{[&a](const ConstantI1 &b) { return a == b.getVal(); }};
 }
 
-inline auto Is(const char& a) {
-    return ClassMatchIf<ConstantI8>{[&a](const ConstantI8 &b) {
-        return a == b.getVal();
-    }};
+inline auto Is(const char &a) {
+    return ClassMatchIf<ConstantI8>{[&a](const ConstantI8 &b) { return a == b.getVal(); }};
 }
 
-inline auto Is(const int& a) {
-    return ClassMatchIf<ConstantInt>{[&a](const ConstantInt &b) {
-        return a == b.getVal();
-    }};
+inline auto Is(const int &a) {
+    return ClassMatchIf<ConstantInt>{[&a](const ConstantInt &b) { return a == b.getVal(); }};
 }
 
-inline auto Is(const float& a) {
-    return ClassMatchIf<ConstantFloat>{[&a](const ConstantFloat &b) {
-        return a == b.getVal();
-    }};
+inline auto Is(const float &a) {
+    return ClassMatchIf<ConstantFloat>{[&a](const ConstantFloat &b) { return a == b.getVal(); }};
 }
 
 struct IRInstInfo {
     using InstType = Instruction;
     using OpcodeType = OP;
     struct NumOperandsGetter {
-        size_t operator()(const Instruction &inst) {
-            return inst.getNumOperands();
-        }
+        size_t operator()(const Instruction &inst) { return inst.getNumOperands(); }
     };
     struct OperandGetter {
-        auto operator()(const Instruction &inst, size_t idx) {
-            return inst.getOperand(idx)->getValue();
-        }
+        auto operator()(const Instruction &inst, size_t idx) { return inst.getOperand(idx)->getValue(); }
     };
     struct OpcodeGetter {
-        OP operator()(const Instruction &inst) {
-            return inst.getOpcode();
-        }
+        OP operator()(const Instruction &inst) { return inst.getOpcode(); }
     };
 };
 
 struct SharedPtrValueProj {
-    Value *operator()(const std::shared_ptr<Value> &u) {
-        return u.get();
-    }
+    Value *operator()(const pVal &u) { return u.get(); }
 };
 
 // Match Inst and Operand
-#define MAKE_INST_MATCH2(pattern_name, opcode, num0, num1)                                                   \
-    template <typename... OperandPatterns>                                                                   \
-    auto pattern_name(OperandPatterns &&...ops) {                                                            \
-        static_assert(sizeof...(OperandPatterns) == (num0) || sizeof...(OperandPatterns) == (num1),          \
-                      "Number of operands mismatched");                                                      \
-        return InstMatch<IRInstInfo, OP::opcode, OperandPatterns...>(std::forward<OperandPatterns>(ops)...); \
+#define MAKE_INST_MATCH2(pattern_name, opcode, num0, num1)                                                             \
+    template <typename... OperandPatterns> auto pattern_name(OperandPatterns &&...ops) {                               \
+        static_assert(sizeof...(OperandPatterns) == (num0) || sizeof...(OperandPatterns) == (num1),                    \
+                      "Number of operands mismatched");                                                                \
+        return InstMatch<IRInstInfo, OP::opcode, OperandPatterns...>(std::forward<OperandPatterns>(ops)...);           \
     }
 
 #define MAKE_INST_MATCH(pattern_name, opcode, num0) MAKE_INST_MATCH2(pattern_name, opcode, num0, num0)
 
-#define MAKE_INST_MATCH_ANY(pattern_name, opcode)                                                            \
-    template <typename... OperandPatterns>                                                                   \
-    auto pattern_name(OperandPatterns &&...ops) {                                                            \
-        return InstMatch<IRInstInfo, OP::opcode, OperandPatterns...>(std::forward<OperandPatterns>(ops)...); \
+#define MAKE_INST_MATCH_ANY(pattern_name, opcode)                                                                      \
+    template <typename... OperandPatterns> auto pattern_name(OperandPatterns &&...ops) {                               \
+        return InstMatch<IRInstInfo, OP::opcode, OperandPatterns...>(std::forward<OperandPatterns>(ops)...);           \
     }
 
 MAKE_INST_MATCH2(Ret, RET, 0, 1)
