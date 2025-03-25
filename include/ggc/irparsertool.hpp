@@ -51,6 +51,8 @@ namespace IRParser {
 
         std::vector<pFormalParam> legalizeParams(const std::vector<pFormalParam> &params);
 
+        static float hexToFloat(const string &hex);
+
         pGlobalVar newGV(STOCLASS _sc, const pType& _ty, const string& _name, const GVIniter& _initer, int _align = 4);
 
         pFunc newFunc(string &name_,
@@ -65,6 +67,9 @@ namespace IRParser {
         pBlock newBB(string name, const std::list<pInst> &insts);
 
         pPhi newPhi(const string &name, pType &ty, const std::vector<std::pair<pVal, pBlock>> &phiopers);
+
+        static void refactorAllInst(const Module& module);
+
         private:
         void replaceUF(const string &name_, const pFuncDecl& fd);
     };

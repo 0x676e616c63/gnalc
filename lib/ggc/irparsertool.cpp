@@ -6,14 +6,6 @@ Module IRGenerator::module;
 
 extern IRPT tool;
 
-// std::map<IRPT::string, pGlobalVar> IRPT::GVMap;
-// std::map<IRPT::string, pFunc> IRPT::FMap;
-// std::map<IRPT::string, pFuncDecl> IRPT::UFDMap;
-// std::map<IRPT::string, pBlock> IRPT::BMap;
-// std::map<IRPT::string, pVal> IRPT::VMap;
-// std::map<IRPT::string, pBlock> IRPT::UBMap;
-// std::map<IRPT::string, pVal> IRPT::UVMap;
-
 IRGenerator::IRGenerator(const std::string &module_name) {
     module.setName(module_name);
 }
@@ -26,6 +18,7 @@ int IRGenerator::generate() {
         return 1;
     }
     tool.clean();
+    // IRPT::refactorAllInst(module);
     return 0;
 }
 
@@ -85,6 +78,15 @@ std::vector<pFormalParam> IRPT::legalizeParams(const std::vector<pFormalParam> &
         param->setIndex(i++);
     }
     return params;
+}
+
+float IRPT::hexToFloat(const string &hex) {
+    union {
+        double d;
+        uint64_t l;
+    } u;
+    u.l = std::stoul(hex, nullptr, 16);
+    return u.d;
 }
 
 pGlobalVar IRPT::newGV(STOCLASS _sc, const pType& _ty, const std::string& _name, const GVIniter& _initer, int _align) {
@@ -170,6 +172,23 @@ void IRPT::replaceUF(const string &name_, const pFuncDecl& fd) {
                  inst->vtype->as<BType>()->getInner() != IRBTYPE::VOID)
             ? ValueTrait::ORDINARY_VARIABLE
             : ValueTrait::VOID_INSTRUCTION;
+            }
+        }
+    }
+}
+
+void IRPT::refactorAllInst(const Module& module) {
+    for (auto &func : module.getFunctions()) {
+        for (auto &blk : func->getBlocks()) {
+            for (auto it = blk->phi_begin(); it != blk->phi_end(); ++it) {
+                pPhi new_inst = (*it)->clone()->as<PHIInst>();
+                (*it)->replaceSelf(new_inst);
+                *it = new_inst;
+            }
+            for (auto it = blk->begin(); it != blk->end(); ++it) {
+                pInst new_inst = (*it)->clone()->as<Instruction>();
+                (*it)->replaceSelf(new_inst);
+                *it = new_inst;
             }
         }
     }

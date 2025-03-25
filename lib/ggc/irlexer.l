@@ -18,12 +18,7 @@
 [%@][-a-zA-Z$._0-9]*        { return yyy::parser::make_I_ID(yytext); }
 
 [\+-]?(0|([1-9][0-9]*)) { return yyy::parser::make_IRNUM_INT((int)atoi(yytext)); }
-0[0-7]+ { return yyy::parser::make_IRNUM_INT((int)strtol(yytext, NULL, 8)); }
-0[xX][0-9a-fA-F]+ { return yyy::parser::make_IRNUM_INT((int)strtol(yytext, NULL, 16)); }
-
-[\+-]?(([0-9]+\.[0-9]*)|([0-9]*\.[0-9]+))([eE][\+-]?[0-9]+)? { return yyy::parser::make_IRNUM_FLOAT((float)atof(yytext)); }
-[\+-]?[0-9]+[eE][\+-]?[0-9]+ { return yyy::parser::make_IRNUM_FLOAT((float)atof(yytext)); }
-0[xX](([0-9a-fA-F]+)|([0-9a-fA-F]+\.[0-9a-fA-F]*)|([0-9a-fA-F]*\.[0-9a-fA-F]+))[pP][\+-]?[0-9]+ { return yyy::parser::make_IRNUM_FLOAT((float)strtof(yytext, NULL)); }
+0[xX][0-9a-fA-F]+ { return yyy::parser::make_IRNUM_FLOAT((float)IRParser::IRPT::hexToFloat(yytext)); }
 
 "ret"           { return yyy::parser::make_I_RET(); }
 "br"            { return yyy::parser::make_I_BR(); }
