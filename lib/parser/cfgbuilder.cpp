@@ -18,7 +18,7 @@ void CFGBuilder::build(IR::Module &module) {
                                                      &cur_linear_func->getConstantPool());
         Err::gassert(cur_linear_func != nullptr, "Expected Linear IR.");
         divider();
-        linker();
+        cur_making_func->updateAndCheckCFG();
 
         f->replaceSelf(cur_making_func);
 
@@ -96,76 +96,6 @@ void CFGBuilder::newWh(const std::shared_ptr<WHILEInst> &whinst) {
 
     _while_cond_for_continue.pop();
     _while_end_for_break.pop();
-}
-
-// link basic blocks by prevBB and nextBB
-void CFGBuilder::linker() {
-    for (auto blk_it = cur_making_func->begin(); blk_it != cur_making_func->end(); ++blk_it) {
-        if ((*blk_it)->getInsts().empty())
-            continue;
-        switch (auto end_inst = (*blk_it)->getTerminator(); end_inst->getOpcode()) {
-        case OP::BR: {
-            if (const auto inst = end_inst->as<BRInst>(); inst->isConditional()) {
-                linkBB(*blk_it, inst->getTrueDest());
-                linkBB(*blk_it, inst->getFalseDest());
-            } else {
-                linkBB(*blk_it, inst->getDest());
-            }
-            break;
-        }
-        case OP::RET:
-            break;
-        default:
-            auto next_blk = std::next(blk_it);
-            if (next_blk != cur_making_func->end()) {
-                linkBB(*blk_it, *next_blk);
-            }
-            break;
-        }
-    }
-
-    // link完了之后，遍历基本块，查找空块和不可达的块并删除
-    for (auto it = cur_making_func->begin(); it != cur_making_func->end();) {
-        // 删除不可达块
-        if ((*it)->getNumPreds() == 0 && it != cur_making_func->begin()) {
-            for (const auto &nextbb : (*it)->succs()) {
-                Util::WeakListDel(nextbb->pre_bb, *it);
-            }
-            it = cur_making_func->blks.erase(it);
-            continue;
-        }
-        // 删除空块
-        if ((*it)->getInsts().empty()) {
-            // 遍历user去替换为他的prebb中的br
-            // 非结尾块的情况，prebb的br替换为惟一nextbb
-            if ((*it)->getNumSuccs() == 1) {
-                auto nxt = *(*it)->succ_begin();
-                for (const auto &prebb : (*it)->preds()) {
-                    if (auto brinst = prebb->getBRInst()) {
-                        Err::gassert(brinst != nullptr, "CFGBuilder::linker(): can't cast BRInst");
-                        brinst->replaceAllOperands(*it, nxt); // 改 br
-                    }
-                    Util::WeakListReplace(prebb->next_bb, *it, nxt); // 改nextbb
-                    Util::WeakListReplace(nxt->pre_bb, *it, prebb);  // 改prebb
-                }
-                it = cur_making_func->blks.erase(it);
-            } else if ((*it)->getNumSuccs() == 0) {
-                // 结尾块
-                if (cur_linear_func->getType()->as<FunctionType>()->getRet()->as<BType>()->getInner() ==
-                    IRBTYPE::VOID) {
-                    (*it)->addInst(std::make_shared<RETInst>());
-                } else {
-                    Err::unreachable("CFGBuilder::linker(): invalid function type.");
-                }
-                ++it;
-            } else {
-                Err::unreachable("CFGBuilder::linker(): empty block has "
-                                 "multiple next block.");
-            }
-            continue;
-        }
-        ++it;
-    }
 }
 
 bool CFGBuilder::adder(std::vector<pInst>::const_iterator &it, const std::vector<pInst>::const_iterator &end,

@@ -29,6 +29,12 @@
 #include "type.hpp"
 #include "type_alias.hpp"
 
+#ifdef GNALC_EXTENSION_GGC
+namespace IRParser {
+    class IRPT;
+}
+#endif
+
 namespace IR {
 // 用于标识 IR::Value 的特征
 enum class ValueTrait {
@@ -109,6 +115,9 @@ class Instruction;
 class Value : public NameC, public std::enable_shared_from_this<Value> {
     friend class User;
     friend class Use;
+#ifdef GNALC_EXTENSION_GGC
+    friend class IRParser::IRPT;
+#endif
 
 private:
     std::list<wpUse> use_list; // Use隶属于User
