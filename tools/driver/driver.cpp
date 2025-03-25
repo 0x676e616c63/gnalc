@@ -262,7 +262,10 @@ Extensions:
     generator.visit(*node);
 #else
     IRParser::IRGenerator generator(input_file);
-    generator.generate();
+    if (generator.generate()) {
+        std::cerr << "Syntax Error" << std::endl;
+        return -1;
+    }
 #endif
 
     if (!input_file.empty())

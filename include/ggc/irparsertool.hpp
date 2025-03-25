@@ -27,6 +27,8 @@ namespace IRParser {
         IRPT() = default;
         ~IRPT() = default;
 
+        void clean();
+
         // 普通make, 用于无值指令
         template<typename T, typename... Args>
         std::shared_ptr<T> make(Args&&... args) {

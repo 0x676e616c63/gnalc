@@ -4,6 +4,8 @@ using namespace IRParser;
 
 Module IRGenerator::module;
 
+extern IRPT tool;
+
 // std::map<IRPT::string, pGlobalVar> IRPT::GVMap;
 // std::map<IRPT::string, pFunc> IRPT::FMap;
 // std::map<IRPT::string, pFuncDecl> IRPT::UFDMap;
@@ -19,10 +21,21 @@ IRGenerator::IRGenerator(const std::string &module_name) {
 int IRGenerator::generate() {
     yyy::parser parser;
     if (parser.parse()) {
-        std::cerr << "Syntax Error" << std::endl;
-        return -1;
+        tool.clean();
+        return 1;
     }
+    tool.clean();
     return 0;
+}
+
+void IRPT::clean() {
+    GVMap.clear();
+    FMap.clear();
+    UFDMap.clear();
+    BMap.clear();
+    VMap.clear();
+    UBMap.clear();
+    UVMap.clear();
 }
 
 pFuncDecl IRPT::getF(const string& name) {
