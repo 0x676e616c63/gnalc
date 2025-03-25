@@ -23,7 +23,7 @@ private:
     pVal constval;                      // 只针对非array的情况!!! 内容只能是ConstantInt or Float
     std::vector<GVIniter> inner_initer; // isarray == true
 public:
-    GVIniter() = delete;
+    GVIniter() = default;
     GVIniter(pType _ty);            // zeroinit
     GVIniter(pType _ty, pVal _con); // i32 1
     GVIniter(pType _ty,

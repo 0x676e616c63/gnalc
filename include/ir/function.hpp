@@ -163,6 +163,9 @@ public:
 
     size_t getInstCount() const;
 
+    void updateCFG();
+    void updateAndCheckCFG();
+
 private:
     void updateBBIndex();
     void updateAllIndex();

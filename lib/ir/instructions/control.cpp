@@ -113,7 +113,9 @@ void BRInst::dropTrueDest() {
 
 CALLInst::CALLInst(const pFuncDecl &func, const std::vector<pVal> &args)
     : Instruction(OP::CALL, "__call", makeBType(IRBTYPE::VOID)) {
+#ifndef GNALC_EXTENSION_GGC
     Err::gassert(func->getType()->as<FunctionType>()->getRet()->as<BType>()->getInner() == IRBTYPE::VOID);
+#endif
     addOperand(func);
     for (const auto &valptr : args)
         addOperand(valptr);
