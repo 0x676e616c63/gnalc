@@ -17,12 +17,12 @@
 [-a-zA-Z$._0-9]*[^\n]":"    { return yyy::parser::make_I_BLKID(yytext); }
 [%@][-a-zA-Z$._0-9]*        { return yyy::parser::make_I_ID(yytext); }
 
-0|([1-9][0-9]*) { return yyy::parser::make_IRNUM_INT((int)atoi(yytext)); }
+[\+-]?(0|([1-9][0-9]*)) { return yyy::parser::make_IRNUM_INT((int)atoi(yytext)); }
 0[0-7]+ { return yyy::parser::make_IRNUM_INT((int)strtol(yytext, NULL, 8)); }
 0[xX][0-9a-fA-F]+ { return yyy::parser::make_IRNUM_INT((int)strtol(yytext, NULL, 16)); }
 
-(([0-9]+\.[0-9]*)|([0-9]*\.[0-9]+))([eE][\+-]?[0-9]+)? { return yyy::parser::make_IRNUM_FLOAT((float)atof(yytext)); }
-[0-9]+[eE][\+-]?[0-9]+ { return yyy::parser::make_IRNUM_FLOAT((float)atof(yytext)); }
+[\+-]?(([0-9]+\.[0-9]*)|([0-9]*\.[0-9]+))([eE][\+-]?[0-9]+)? { return yyy::parser::make_IRNUM_FLOAT((float)atof(yytext)); }
+[\+-]?[0-9]+[eE][\+-]?[0-9]+ { return yyy::parser::make_IRNUM_FLOAT((float)atof(yytext)); }
 0[xX](([0-9a-fA-F]+)|([0-9a-fA-F]+\.[0-9a-fA-F]*)|([0-9a-fA-F]*\.[0-9a-fA-F]+))[pP][\+-]?[0-9]+ { return yyy::parser::make_IRNUM_FLOAT((float)strtof(yytext, NULL)); }
 
 "ret"           { return yyy::parser::make_I_RET(); }
@@ -99,5 +99,5 @@
 "," { return yyy::parser::make_I_COMMA(); }
 "=" { return yyy::parser::make_I_EQUAL(); }
 
-. { /* yyerror("invalid character"); */ }
+. { std::cerr << "Unrecognized token: " << yytext << std::endl; }
 %%

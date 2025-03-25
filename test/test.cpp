@@ -114,7 +114,8 @@ int main(int argc, char *argv[]) {
 
             if (cfg::only_frontend) {
                 auto gnalc_irgen = [&gnalc_params](const std::string &newsy, const std::string &outll) {
-                    return format("{} -S {} -o {} -emit-llvm{}", cfg::gnalc_path, newsy, outll, gnalc_params);
+                    // return format("{} -S {} -o {} -emit-llvm{}", cfg::gnalc_path, newsy, outll, gnalc_params);
+                    return format("{} -S -emit-llvm --log none {} | ../ggc -S -emit-llvm -o {}{}", cfg::gnalc_path, newsy, outll, gnalc_params);
                 };
                 data.ir_asm_gen = gnalc_irgen;
 

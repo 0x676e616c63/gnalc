@@ -470,6 +470,7 @@ namespace yyy {
       char dummy14[sizeof (pType)];
 
       // Constant
+      // TypeValue
       // Value
       // Arg
       char dummy15[sizeof (pVal)];
@@ -734,28 +735,29 @@ namespace yyy {
         S_InstList = 94,                         // InstList
         S_Inst = 95,                             // Inst
         S_BinaryInst = 96,                       // BinaryInst
-        S_Value = 97,                            // Value
-        S_BinaryOp = 98,                         // BinaryOp
-        S_FnegInst = 99,                         // FnegInst
-        S_CastInst = 100,                        // CastInst
-        S_IcmpInst = 101,                        // IcmpInst
-        S_IcmpOp = 102,                          // IcmpOp
-        S_FcmpInst = 103,                        // FcmpInst
-        S_FcmpOp = 104,                          // FcmpOp
-        S_RetInst = 105,                         // RetInst
-        S_RETType = 106,                         // RETType
-        S_BrInst = 107,                          // BrInst
-        S_CallInst = 108,                        // CallInst
-        S_ArgList = 109,                         // ArgList
-        S_Arg = 110,                             // Arg
-        S_AllocaInst = 111,                      // AllocaInst
-        S_LoadInst = 112,                        // LoadInst
-        S_StoreInst = 113,                       // StoreInst
-        S_GepInst = 114,                         // GepInst
-        S_IndexList = 115,                       // IndexList
-        S_PhiInst = 116,                         // PhiInst
-        S_PhiOpers = 117,                        // PhiOpers
-        S_PhiOper = 118                          // PhiOper
+        S_TypeValue = 97,                        // TypeValue
+        S_Value = 98,                            // Value
+        S_BinaryOp = 99,                         // BinaryOp
+        S_FnegInst = 100,                        // FnegInst
+        S_CastInst = 101,                        // CastInst
+        S_IcmpInst = 102,                        // IcmpInst
+        S_IcmpOp = 103,                          // IcmpOp
+        S_FcmpInst = 104,                        // FcmpInst
+        S_FcmpOp = 105,                          // FcmpOp
+        S_RetInst = 106,                         // RetInst
+        S_RETType = 107,                         // RETType
+        S_BrInst = 108,                          // BrInst
+        S_CallInst = 109,                        // CallInst
+        S_ArgList = 110,                         // ArgList
+        S_Arg = 111,                             // Arg
+        S_AllocaInst = 112,                      // AllocaInst
+        S_LoadInst = 113,                        // LoadInst
+        S_StoreInst = 114,                       // StoreInst
+        S_GepInst = 115,                         // GepInst
+        S_IndexList = 116,                       // IndexList
+        S_PhiInst = 117,                         // PhiInst
+        S_PhiOpers = 118,                        // PhiOpers
+        S_PhiOper = 119                          // PhiOper
       };
     };
 
@@ -865,6 +867,7 @@ namespace yyy {
         break;
 
       case symbol_kind::S_Constant: // Constant
+      case symbol_kind::S_TypeValue: // TypeValue
       case symbol_kind::S_Value: // Value
       case symbol_kind::S_Arg: // Arg
         value.move< pVal > (std::move (that.value));
@@ -1316,6 +1319,7 @@ switch (yykind)
         break;
 
       case symbol_kind::S_Constant: // Constant
+      case symbol_kind::S_TypeValue: // TypeValue
       case symbol_kind::S_Value: // Value
       case symbol_kind::S_Arg: // Arg
         value.template destroy< pVal > ();
@@ -2705,13 +2709,13 @@ switch (yykind)
     // YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
     // Performed when YYTABLE does not specify something else to do.  Zero
     // means the default is an error.
-    static const signed char yydefact_[];
+    static const unsigned char yydefact_[];
 
     // YYPGOTO[NTERM-NUM].
     static const short yypgoto_[];
 
     // YYDEFGOTO[NTERM-NUM].
-    static const unsigned char yydefgoto_[];
+    static const short yydefgoto_[];
 
     // YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
     // positive, shift that token.  If negative, reduce the rule whose
@@ -2960,8 +2964,8 @@ switch (yykind)
     /// Constants.
     enum
     {
-      yylast_ = 272,     ///< Last index in yytable_.
-      yynnts_ = 45,  ///< Number of nonterminal symbols.
+      yylast_ = 305,     ///< Last index in yytable_.
+      yynnts_ = 46,  ///< Number of nonterminal symbols.
       yyfinal_ = 21 ///< Termination state number.
     };
 
@@ -3059,6 +3063,7 @@ switch (yykind)
         break;
 
       case symbol_kind::S_Constant: // Constant
+      case symbol_kind::S_TypeValue: // TypeValue
       case symbol_kind::S_Value: // Value
       case symbol_kind::S_Arg: // Arg
         value.copy< pVal > (YY_MOVE (that.value));
@@ -3208,6 +3213,7 @@ switch (yykind)
         break;
 
       case symbol_kind::S_Constant: // Constant
+      case symbol_kind::S_TypeValue: // TypeValue
       case symbol_kind::S_Value: // Value
       case symbol_kind::S_Arg: // Arg
         value.move< pVal > (YY_MOVE (s.value));
@@ -3317,7 +3323,7 @@ switch (yykind)
 
 #line 22 "irparser.y"
 } // yyy
-#line 3321 "../../include/ggc/irparser.hpp"
+#line 3327 "../../include/ggc/irparser.hpp"
 
 
 

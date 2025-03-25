@@ -20,6 +20,7 @@ IRPT tool;
 %define api.value.type variant
 %define parse.assert
 %define api.namespace {yyy}
+/* %define parse.trace */
 
 %token I_RET I_BR I_FNEG I_ADD I_FADD I_SUB I_FSUB I_MUL I_FMUL I_DIV I_FDIV I_REM I_FREM I_AND I_OR I_ALLOCA I_LOAD I_STORE I_GEP I_FPTOSI I_SITOFP I_ZEXT I_BITCAST I_ICMP I_FCMP I_PHI I_CALL
 %token I_DEFINE I_DECLARE I_DSO_LOCAL I_GLOBAL I_CONSTANT I_ALIGN I_NOUNDEF I_LABEL I_TAIL I_TO
@@ -36,7 +37,7 @@ IRPT tool;
 %type <STOCLASS> Storage
 %type <pType> Type BType PtrType ArrayType DeclParam RETType
 %type <std::vector<pType>> DeclParamList
-%type <pVal> Constant Value Arg
+%type <pVal> Constant Value Arg TypeValue
 %type <std::vector<pVal>> ArgList IndexList
 %type <GVIniter> GVIniter
 %type <std::vector<GVIniter>> GVIniters
@@ -87,11 +88,11 @@ BType   : I_I1      { $$ = makeBType(IRBTYPE::I1); }
 PtrType : Type I_STAR   { $$ = makePtrType($1); }
         ;
 
-ArrayType   : I_LSQUARE IRNUM_INT I_X Type I_RBRACKET   { $$ = makeArrayType($4, $2); }
+ArrayType   : I_LSQUARE IRNUM_INT I_X Type I_RSQUARE   { $$ = makeArrayType($4, $2); }
             ;
 
-Constant    : IRNUM_INT     { $$ = inode.getConst($1); }
-            | IRNUM_FLOAT   { $$ = inode.getConst($1); }
+Constant    : IRNUM_INT     { $$ = inode.getConst(int($1)); }
+            | IRNUM_FLOAT   { $$ = inode.getConst(float($1)); }
             ;
 
 GVIniter    : Type I_ZEROINITER                     { $$ = GVIniter($1); }
@@ -156,6 +157,13 @@ Inst    : BinaryInst    { $$ = $1; }
 BinaryInst  : I_ID I_EQUAL BinaryOp Type Value I_COMMA Value    { $$ = tool.vmake<BinaryInst>($1, $1, $3, $5, $7); }
             ;
 
+TypeValue   : Type I_ID                     { $$ = tool.getV($2); }
+            | I_I1 IRNUM_INT                { $$ = inode.getConst(bool($2)); }
+            | I_I8 IRNUM_INT                { $$ = inode.getConst(char($2)); }
+            | I_I32 IRNUM_INT               { $$ = inode.getConst(int($2)); }
+            | I_FLOAT IRNUM_FLOAT           { $$ = inode.getConst(float($2)); }
+            ;
+
 Value   : I_ID      { $$ = tool.getV($1); }
         | Constant  { $$ = $1; }
         ;
@@ -172,13 +180,13 @@ BinaryOp    : I_ADD     { $$ = OP::ADD; }
             | I_FREM    { $$ = OP::FREM; }
             ;
 
-FnegInst    : I_ID I_EQUAL I_FNEG Type Value    { $$ = tool.vmake<FNEGInst>($1, $1, $5); }
+FnegInst    : I_ID I_EQUAL I_FNEG TypeValue     { $$ = tool.vmake<FNEGInst>($1, $1, $4); }
             ;
 
 CastInst    : I_ID I_EQUAL I_FPTOSI Type Value I_TO Type    { $$ = tool.vmake<FPTOSIInst>($1, $1, $5); }
             | I_ID I_EQUAL I_SITOFP Type Value I_TO Type    { $$ = tool.vmake<SITOFPInst>($1, $1, $5); }
-            | I_ID I_EQUAL I_ZEXT Type Value I_TO Type      { $$ = tool.vmake<ZEXTInst>($1, $1, $5, toBType($7)->getInner()); }
-            | I_ID I_EQUAL I_BITCAST Type Value I_TO Type   { $$ = tool.vmake<BITCASTInst>($1, $1, $5, $7); }
+            | I_ID I_EQUAL I_ZEXT TypeValue I_TO Type       { $$ = tool.vmake<ZEXTInst>($1, $1, $4, toBType($6)->getInner()); }
+            | I_ID I_EQUAL I_BITCAST TypeValue I_TO Type    { $$ = tool.vmake<BITCASTInst>($1, $1, $4, $6); }
             ;
 
 IcmpInst    : I_ID I_EQUAL I_ICMP IcmpOp Type Value I_COMMA Value   { $$ = tool.vmake<ICMPInst>($1, $1, $4, $6, $8); }
@@ -204,18 +212,16 @@ FcmpOp  : I_OEQ { $$ = FCMPOP::oeq; }
         | I_ORD { $$ = FCMPOP::ord; }
         ;
 
-RetInst : I_RET RETType Value  { $$ = tool.make<RETInst>($3); }
-        | I_RET I_VOID      { $$ = tool.make<RETInst>(); }
+RetInst : I_RET RETType Value   { $$ = tool.make<RETInst>($3); }
+        | I_RET I_VOID          { $$ = tool.make<RETInst>(); }
         ;
 
-RETType : I_I1      { $$ = makeBType(IRBTYPE::I1); }
-        | I_I8      { $$ = makeBType(IRBTYPE::I8); }
-        | I_I32     { $$ = makeBType(IRBTYPE::I32); }
+RETType : I_I32     { $$ = makeBType(IRBTYPE::I32); }
         | I_FLOAT   { $$ = makeBType(IRBTYPE::FLOAT); }
         ;
 
 BrInst  : I_BR I_LABEL I_ID                                         { $$ = tool.make<BRInst>(tool.getB($3)); }
-        | I_BR Type Value I_COMMA I_LABEL I_ID I_COMMA I_LABEL I_ID { $$ = tool.make<BRInst>($3, tool.getB($6), tool.getB($9)); }
+        | I_BR TypeValue I_COMMA I_LABEL I_ID I_COMMA I_LABEL I_ID  { $$ = tool.make<BRInst>($2, tool.getB($5), tool.getB($8)); }
         ;
 
 CallInst    : I_CALL Type I_ID I_LPAR ArgList I_RPAR                        { $$ = tool.make<CALLInst>(tool.getF($3), $5); }
@@ -226,21 +232,31 @@ CallInst    : I_CALL Type I_ID I_LPAR ArgList I_RPAR                        { $$
 
 ArgList : ArgList I_COMMA Arg   { $$ = $1; $$.emplace_back($3); }
         | Arg                   { $$ = { $1 }; }
+        |                       { $$ = {}; }
         ;
 
-Arg : Type I_NOUNDEF Value  { $$ = $3; }
+Arg : I_I1 I_NOUNDEF IRNUM_INT      { $$ = inode.getConst(bool($3)); }
+    | I_I8 I_NOUNDEF IRNUM_INT      { $$ = inode.getConst(char($3)); }
+    | I_I32 I_NOUNDEF IRNUM_INT     { $$ = inode.getConst(int($3)); }
+    | I_FLOAT I_NOUNDEF IRNUM_FLOAT { $$ = inode.getConst(float($3)); }
+    | I_I1 I_NOUNDEF I_ID           { $$ = tool.getV($3); }
+    | I_I8 I_NOUNDEF I_ID           { $$ = tool.getV($3); }
+    | I_I32 I_NOUNDEF I_ID          { $$ = tool.getV($3); }
+    | I_FLOAT I_NOUNDEF I_ID        { $$ = tool.getV($3); }
+    | PtrType I_NOUNDEF I_ID        { $$ = tool.getV($3); }
+    | ArrayType I_NOUNDEF I_ID      { $$ = tool.getV($3); }
     ;
 
 AllocaInst  : I_ID I_EQUAL I_ALLOCA Type I_COMMA I_ALIGN IRNUM_INT  { $$ = tool.vmake<ALLOCAInst>($1, $1, $4, $7); }
             ;
 
-LoadInst    : I_ID I_EQUAL I_LOAD Type I_COMMA Type Value I_COMMA I_ALIGN IRNUM_INT { $$ = tool.vmake<LOADInst>($1, $1, $7, $10); }
+LoadInst    : I_ID I_EQUAL I_LOAD Type I_COMMA TypeValue I_COMMA I_ALIGN IRNUM_INT  { $$ = tool.vmake<LOADInst>($1, $1, $6, $9); }
             ;
 
-StoreInst   : I_STORE Type Value I_COMMA Type Value I_COMMA I_ALIGN IRNUM_INT   { $$ = tool.make<STOREInst>($3, $6, $9); }
+StoreInst   : I_STORE TypeValue I_COMMA TypeValue I_COMMA I_ALIGN IRNUM_INT { $$ = tool.make<STOREInst>($2, $4, $7); }
             ;
 
-GepInst : I_ID I_EQUAL I_GEP Type I_COMMA Type Value IndexList  { $$ = tool.vmake<GEPInst>($1, $1, $7, $8); }
+GepInst : I_ID I_EQUAL I_GEP Type I_COMMA TypeValue IndexList   { $$ = tool.vmake<GEPInst>($1, $1, $6, $7); }
         ;
 
 IndexList   : I_COMMA Type Value            { $$ = { $3 }; }

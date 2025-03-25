@@ -20,6 +20,7 @@ IRGenerator::IRGenerator(const std::string &module_name) {
 
 int IRGenerator::generate() {
     yyy::parser parser;
+    // parser.set_debug_level(1);
     if (parser.parse()) {
         tool.clean();
         return 1;
@@ -123,13 +124,24 @@ pFunc IRPT::newFunc(std::string &name_, const std::vector<pFormalParam> &params,
 pFuncDecl IRPT::newFuncDecl(std::string &name_, const std::vector<pType> &params,
                                 pType &ret_type, bool is_va_arg_) {
     pFuncDecl fd;
-    if (name_ == "@memset") {
+    if (name_.find("memset") != std::string::npos) {
         fd = make<FunctionDecl>(name_, params, ret_type, is_va_arg_, true, false);
     } else {
         fd = make<FunctionDecl>(name_, params, ret_type, is_va_arg_, false, true);
     }
     if (const auto it = UFDMap.find(name_); it != UFDMap.end()) {
         it->second->replaceSelf(fd);
+        for (auto user : fd->users()) {
+            auto inst = user->as<Instruction>();
+            if (inst->getOpcode() == OP::CALL) {
+                inst->vtype = fd->getType()->as<FunctionType>()->getRet();
+                inst->trait =  inst->vtype->getTrait() != IRCTYPE::BASIC ||
+                (inst->vtype->getTrait() == IRCTYPE::BASIC && inst->vtype->as<BType>()->getInner() != IRBTYPE::UNDEFINED &&
+                 inst->vtype->as<BType>()->getInner() != IRBTYPE::VOID)
+            ? ValueTrait::ORDINARY_VARIABLE
+            : ValueTrait::VOID_INSTRUCTION;
+            }
+        }
     }
     return fd;
 }
