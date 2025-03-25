@@ -16,6 +16,8 @@ std::ostream &operator<<(std::ostream &os, const SCEVExpr &expr) {
             op = "-";
         else if (expr.getOp() == SCEVExpr::Binary::Op::Mul)
             op = "*";
+        else if (expr.getOp() == SCEVExpr::Binary::Op::Div)
+            op = "/";
         else
             Err::unreachable();
         os << "( " << *expr.getLHS() << " " << op << " " << *expr.getRHS() << " )";
@@ -40,6 +42,39 @@ std::ostream &operator<<(std::ostream &os, const TREC &trec) {
     else
         Err::unreachable();
     return os;
+}
+
+// TODO: reuse instructions
+pVal SCEVExpr::expand(const pBlock& block, BasicBlock::iterator insert_before) const {
+    static size_t name_cnt = 0;
+    if (isIRValue())
+        return getIRValue();
+    if (isBinary()) {
+        auto lhs = getLHS()->expand(block, insert_before);
+        auto rhs = getRHS()->expand(block, insert_before);
+        OP ir_op = OP::ADD;
+        switch (getOp()) {
+        case Binary::Op::Add:
+            ir_op = OP::ADD;
+            break;
+        case Binary::Op::Sub:
+            ir_op = OP::SUB;
+            break;
+        case Binary::Op::Mul:
+            ir_op = OP::MUL;
+            break;
+        case Binary::Op::Div:
+            ir_op = OP::DIV;
+            break;
+        default:
+            Err::unreachable();
+        }
+        auto inst = std::make_shared<BinaryInst>("%scev" + std::to_string(name_cnt++), ir_op, lhs, rhs);
+        block->addInst(insert_before, inst);
+        return inst;
+    }
+    Err::unreachable();
+    return nullptr;
 }
 
 SCEVExpr *TREC::getExpr() const {
@@ -102,7 +137,6 @@ std::optional<std::tuple<int, int>> TREC::getConstantAffineAddRec() const {
 }
 
 TREC *SCEVHandle::getSCEVAtBlock(Value *val, const BasicBlock *block) {
-    // consistency check for debugging
     if (dynamic_cast<Instruction *>(val)) {
         auto def_block = val->as_raw<Instruction>()->getParent().get();
         if (!domtree->ADomB(def_block, block))
@@ -120,7 +154,7 @@ TREC *SCEVHandle::getSCEVAtBlock(Value *val, const BasicBlock *block) {
 TREC *SCEVHandle::getSCEVAtBlock(const pVal &val, const pBlock &block) {
     return getSCEVAtBlock(val.get(), block.get());
 }
-SCEVExpr *SCEVHandle::getNumberOfLatchExecutions(const pLoop &loop) { return getNumberOfLatchExecutions(loop.get()); }
+SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const pLoop &loop) { return getBackEdgeTakenCount(loop.get()); }
 
 TREC *SCEVHandle::getSCEVAtScope(Value *val, const Loop *loop) {
     if (loop != nullptr)
@@ -318,14 +352,17 @@ std::pair<bool, TREC *> SCEVHandle::buildUpdateExpr(const PHIInst *loop_phi, Val
             if (loop_phi_loop->isLoopInvariant(val_phi_invariant))
                 return {false, getTRECUndef()};
 
-            auto s = apply(analyzeEvolution(val_phi_loop, val), getNumberOfLatchExecutions(val_phi_loop));
+            auto s = apply(analyzeEvolution(val_phi_loop, val), getBackEdgeTakenCount(val_phi_loop));
             if (!s)
                 return {false, getTRECUndef()};
-            if (s->isBinary() && s->getOp() == SCEVExpr::Binary::Op::Add && s->getLHS()->isIRValue() &&
-                s->getLHS()->getRawIRValue() == val_phi_invariant) {
+            if (s->isBinary() && s->getLHS()->isIRValue() && s->getLHS()->getRawIRValue() == val_phi_variant) {
                 auto [exist, update] = buildUpdateExpr(loop_phi, val_phi_invariant, loop_phi_loop);
-                if (exist)
-                    return {true, getTRECAdd(update, getExprTREC(s->getRHS()))};
+                if (exist) {
+                    if (s->getOp() == SCEVExpr::Binary::Op::Add)
+                        return {true, getTRECAdd(update, getExprTREC(s->getRHS()))};
+                    if (s->getOp() == SCEVExpr::Binary::Op::Sub)
+                        return {true, getTRECAdd(update, getExprTREC(getSCEVExprNeg(s->getRHS())))};
+                }
             }
             return {false, getTRECUndef()};
         }
@@ -399,23 +436,67 @@ void SCEVHandle::foldSCEVExpr(SCEVExpr *expr) const {
         auto rhs = expr->getRHS();
         foldSCEVExpr(lhs);
         foldSCEVExpr(rhs);
-        if (lhs->isIRValue() && rhs->isIRValue()) {
-            int x, y;
-            if (match(lhs->getRawIRValue(), M::Bind(x)) &&
-                match(rhs->getRawIRValue(), M::Bind(y))) {
-                switch (expr->getOp()) {
-                case SCEVExpr::Binary::Op::Add:
-                    expr->setIRValue(function->getConst(x + y).get());
-                    break;
-                case SCEVExpr::Binary::Op::Sub:
-                    expr->setIRValue(function->getConst(x - y).get());
-                    break;
-                case SCEVExpr::Binary::Op::Mul:
-                    expr->setIRValue(function->getConst(x * y).get());
-                    break;
-                default:
-                    Err::unreachable();
-                }
+
+        pConstI32 lhs_ci, rhs_ci;
+        if (lhs->isIRValue())
+            lhs_ci = lhs->getRawIRValue()->as<ConstantInt>();
+        if (rhs->isIRValue())
+            rhs_ci = rhs->getRawIRValue()->as<ConstantInt>();
+
+        if (lhs_ci && lhs_ci->getVal() == 0) {
+            if (expr->getOp() == SCEVExpr::Binary::Op::Add) {
+                *expr = *rhs;
+                return;
+            }
+            if (expr->getOp() == SCEVExpr::Binary::Op::Mul) {
+                expr->setIRValue(function->getConst(0).get());
+                return;
+            }
+        }
+
+        if (rhs_ci && rhs_ci->getVal() == 0) {
+            if (expr->getOp() == SCEVExpr::Binary::Op::Add || expr->getOp() == SCEVExpr::Binary::Op::Sub) {
+                *expr = *lhs;
+                return;
+            }
+            if (expr->getOp() == SCEVExpr::Binary::Op::Mul) {
+                expr->setIRValue(function->getConst(0).get());
+                return;
+            }
+        }
+
+        if (lhs_ci && lhs_ci->getVal() == 1) {
+            if (expr->getOp() == SCEVExpr::Binary::Op::Mul) {
+                *expr = *rhs;
+                return;
+            }
+        }
+
+        if (rhs_ci && rhs_ci->getVal() == 1) {
+            if (expr->getOp() == SCEVExpr::Binary::Op::Mul) {
+                *expr = *lhs;
+                return;
+            }
+        }
+
+        if (lhs_ci && rhs_ci) {
+            int x = lhs_ci->getVal();
+            int y = rhs_ci->getVal();
+            switch (expr->getOp()) {
+            case SCEVExpr::Binary::Op::Add:
+                expr->setIRValue(function->getConst(x + y).get());
+                break;
+            case SCEVExpr::Binary::Op::Sub:
+                expr->setIRValue(function->getConst(x - y).get());
+                break;
+            case SCEVExpr::Binary::Op::Mul:
+                expr->setIRValue(function->getConst(x * y).get());
+                break;
+            case SCEVExpr::Binary::Op::Div:
+                expr->setIRValue(function->getConst(x / y).get());
+                break;
+            default:
+                Err::unreachable();
             }
         }
     }
@@ -435,9 +516,9 @@ TREC *SCEVHandle::eval(TREC *trec, const Loop *loop) {
         return trec;
 
     if (!trec->getLoop()->contains(loop)) {
-        auto e = apply(trec, getNumberOfLatchExecutions(trec->getLoop()));
+        auto e = apply(trec, getBackEdgeTakenCount(trec->getLoop()));
         if (!e)
-            return trec;
+            return getTRECUntracked();
         return getExprTREC(e);
     }
 
@@ -469,69 +550,121 @@ template <typename T> constexpr T binomial_coefficient(T n, T p) noexcept {
     return binomial_coefficient(n - 1, p) * n / (n - p);
 }
 
+// Compute the Symbolic Representation of the Binomial Coefficient
+// binomial_coefficient(n, p) = (n * (n - 1) * ... * (n - p + 1)) / p!
+// TODO: Needs optimization.
+SCEVExpr *SCEVHandle::computeSymbolicBinomialCoefficient(SCEVExpr *n, int p) {
+    if (p > 1024)
+        return nullptr;
+
+    if (p == 1)
+        return n;
+
+    if (int n_val; n->isIRValue() && match(n->getRawIRValue(), M::Bind(n_val)))
+        return getSCEVExpr(binomial_coefficient(n_val, p));
+
+    SCEVExpr *numerator = n;
+    for (int i = 1; i < p; ++i)
+        numerator = getSCEVExprMul(numerator, getSCEVExprSub(n, getSCEVExpr(i)));
+
+    int denominator = 1;
+    for (int i = 2; i <= p; ++i)
+        denominator *= i;
+
+    return getSCEVExprDiv(numerator, getSCEVExpr(denominator));
+}
+
 // { c0, +, c1, +, c2, +, ..., +, cn }_x(l_x)
 //   == c0 * binomial_coe(trip_cnt, 0) + c1 * binomial_coe(trip_cnt, 1) + ...
 // Note that we reserve c0 as its original expression.
 // For example:
 // trec: { a, +, 7 } trip_cnt: 5
 // Output: (a + 35)
-// TODO: Currently we only support constant trip count and constant TREC (except the first item).
-//       Support for symbolic representation of the applied TREC should be set up in the future.
 SCEVExpr *SCEVHandle::apply(TREC *trec, SCEVExpr *trip_cnt) {
     if (!trip_cnt)
         return nullptr;
 
     if (trec->isPeeled()) {
-        if (match(trip_cnt->getRawIRValue(), M::Is(1)))
-                return trec->getFirst();
-        return apply(trec->getRest(), getSCEVExprSub(trip_cnt, getSCEVExpr(1)));
+        if (!trip_cnt->isIRValue())
+            return nullptr;
+        int trip_cnt_val;
+        if (!match(trip_cnt->getRawIRValue(), M::Bind(trip_cnt_val)))
+            return nullptr;
+        if (trip_cnt_val == 1)
+            return trec->getFirst();
+        return apply(trec->getRest(), getSCEVExpr(trip_cnt_val - 1));
     }
 
     if (!trec->isAddRec())
         return nullptr;
 
-    // Currently we only apply the trec if the result is a compile-time constant.
-    // TODO: Symbolic representation of applied TREC
-    if (trip_cnt->isIRValue() && trip_cnt->getRawIRValue()->getVTrait() == ValueTrait::CONSTANT_LITERAL) {
-        int constant_trip_cnt = -1;
-        if (!match(trip_cnt->getRawIRValue(), M::Bind(constant_trip_cnt)))
+    // First flatten the TREC
+    // {{ c0, c1 }, +, { c2 + c3 }} -> { c0, c1, c2, c3 }
+    std::vector<SCEVExpr *> flatten;
+    std::vector stack{trec};
+    while (!stack.empty()) {
+        auto curr = stack.back();
+        stack.pop_back();
+
+        if (curr->isAddRec()) {
+            stack.emplace_back(curr->getStep());
+            stack.emplace_back(curr->getBase());
+        } else if (curr->isExpr())
+            flatten.emplace_back(curr->getExpr());
+        // TODO: Support Peeled TREC here.
+        else
+            return nullptr;
+    }
+
+    // If the result is a compile-time constant, calculate it.
+    auto constant_res = [&]() -> SCEVExpr * {
+        if (!trip_cnt->isIRValue())
+            return nullptr;
+
+        int trip_cnt_val;
+        if (!match(trip_cnt->getRawIRValue(), M::Bind(trip_cnt_val)))
             return nullptr;
         // Avoid too big trip count
-        if (constant_trip_cnt > 1024)
+        if (trip_cnt_val > 1024)
             return nullptr;
-        // {{ c0, c1 }, +, { c2 + c3 }} -> { c0, c1, c2, c3 }
-        std::vector<SCEVExpr *> flatten;
-        std::vector stack{trec};
-        while (!stack.empty()) {
-            auto curr = stack.back();
-            stack.pop_back();
 
-            if (curr->isAddRec()) {
-                stack.emplace_back(curr->getStep());
-                stack.emplace_back(curr->getBase());
-            } else if (curr->isExpr())
-                flatten.emplace_back(curr->getExpr());
-            else
-                return nullptr;
-        }
-
-        std::vector<int> constants;
+        std::vector<int> worklist;
+        // Note that we skipped flatten[0]
         for (size_t i = 1; i < flatten.size(); ++i) {
             int ci;
-            if (!flatten[i]->isIRValue() || !match(flatten[i]->getRawIRValue(), M::Bind(ci)))
+            if (!flatten[i]->isIRValue() ||
+                !match(flatten[i]->getRawIRValue(), M::Bind(ci)))
                 return nullptr;
-            constants.emplace_back(ci);
+            worklist.emplace_back(ci);
         }
-        for (int p = 0; p < constants.size(); ++p)
-            constants[p] *= binomial_coefficient(constant_trip_cnt, p + 1);
-        auto cres = std::accumulate(constants.begin(), constants.end(), 0);
+
+        for (int p = 0; p < worklist.size(); ++p)
+            worklist[p] *= binomial_coefficient(trip_cnt_val, p + 1);
+        auto cres = std::accumulate(worklist.begin(), worklist.end(), 0);
         return getSCEVExprAdd(flatten[0], getSCEVExpr(cres));
+    }();
+
+    // The result is not constants
+    // Get the symbolic representation of the applied TREC
+    if (constant_res != nullptr)
+        return constant_res;
+
+    std::vector<SCEVExpr *> worklist;
+    for (int p = 1; p < flatten.size(); ++p) {
+        auto coe = computeSymbolicBinomialCoefficient(trip_cnt, p);
+        if (!coe)
+            return nullptr;
+        worklist.emplace_back(getSCEVExprMul(coe, flatten[p]));
     }
-    return nullptr;
+
+    SCEVExpr *res = worklist[0];
+    for (size_t i = 1; i < worklist.size(); ++i)
+        res = getSCEVExprAdd(res, worklist[i]);
+    return getSCEVExprAdd(flatten[0], res);
 }
 
-// TODO: Symbolic trip count
-SCEVExpr *SCEVHandle::getNumberOfLatchExecutions(const Loop *loop) {
+// FIXME: See if there is overflow
+SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop) {
     auto latch = loop->getLatch();
     Err::gassert(latch != nullptr, "Expected LoopSimplified Form.");
 
@@ -560,14 +693,12 @@ SCEVExpr *SCEVHandle::getNumberOfLatchExecutions(const Loop *loop) {
         // If the RHS is not an invariant, reverse it.
         if (!loop->isLoopInvariant(invariant)) {
             // Give up if there is no invariant in the cmp.
+            // TODO: Don't give up
             if (!loop->isLoopInvariant(to_evo))
                 return nullptr;
             std::swap(to_evo, invariant);
             cmpop = reverseCond(cmpop);
         }
-
-        if (cmpop == ICMPOP::eq)
-            return nullptr;
 
         auto evo = analyzeEvolution(loop, to_evo);
         auto cond = getSCEVExpr(invariant);
@@ -579,58 +710,102 @@ SCEVExpr *SCEVHandle::getNumberOfLatchExecutions(const Loop *loop) {
             auto [base, step] = *constant_affine;
             auto cond_val = constant_cond->getVal();
 
+            if (cmpop == ICMPOP::eq) {
+                if (base == cond_val && step != 0)
+                    return getSCEVExpr(1);
+                if (base != cond_val)
+                    return getSCEVExpr(0);
+                return nullptr;
+            }
+
+            if (cmpop == ICMPOP::sge) {
+                cmpop = ICMPOP::sgt;
+                cond_val -= 1;
+            } else if (cmpop == ICMPOP::sle) {
+                cmpop = ICMPOP::slt;
+                cond_val -= 1;
+            }
+
             // Trivial cases
             if ((cmpop == ICMPOP::sgt && step <= 0 && base <= cond_val) ||
-                (cmpop == ICMPOP::slt && step >= 0 && base >= cond_val) ||
-                (cmpop == ICMPOP::sge && step <= 0 && base < cond_val) ||
-                (cmpop == ICMPOP::sle && step >= 0 && base > cond_val) ||
-                (cmpop == ICMPOP::ne && base == cond_val))
+                (cmpop == ICMPOP::slt && step >= 0 && base >= cond_val) || (cmpop == ICMPOP::ne && base == cond_val))
                 return getSCEVExpr(0);
 
             // Infinite
             if ((cmpop == ICMPOP::sgt && step >= 0 && base > cond_val) ||
                 (cmpop == ICMPOP::slt && step <= 0 && base < cond_val) ||
-                (cmpop == ICMPOP::sge && step >= 0 && base >= cond_val) ||
-                (cmpop == ICMPOP::sle && step <= 0 && base <= cond_val) ||
-                (cmpop == ICMPOP::ne && (step <= 0 && base < cond_val) ||
-                (step >= 0 && base > cond_val)))
+                (cmpop == ICMPOP::ne && (step <= 0 && base < cond_val) || (step >= 0 && base > cond_val)))
                 return nullptr;
 
             // {base, +, step} <=> cond_val
             // base + n * step <=> cond_val
             // n <=> (cond_val - base) / step
-            int path_taken_times = (cond_val - base) / step;
+            auto divres = std::div(cond_val - base, step);
+            int path_taken_cnt = divres.quot;
+            int remainder = divres.rem;
 
             // We've handled trivial cases above, there should always be a non-negative count.
-            Err::gassert(path_taken_times >= 0);
+            Err::gassert(path_taken_cnt >= 0);
 
-            if (cmpop == ICMPOP::ne) {
-                if (path_taken_times * step != cond_val - base)
+            if (remainder != 0) {
+                if (cmpop == ICMPOP::ne)
                     return nullptr;
+                ++path_taken_cnt;
             }
 
-            if (path_taken_times * step != cond_val - base || cmpop == ICMPOP::sge || cmpop == ICMPOP::sle)
-                ++path_taken_times;
-
-            // Do while loop executes at least once
-            if (latch_exiting)
-                ++path_taken_times;
-            return getSCEVExpr(path_taken_times);
+            return getSCEVExpr(path_taken_cnt);
         }
         // Not a constant affine + constant cond
         // { a, +, b } < x ---> ( x - a ) / b
         if (auto affine = evo->getAffineAddRec()) {
-            // Currently we only handle the cases where the step is constant 1/-1,
-            // where the trip count is simply (x - a)/(a - x).
             auto [base, step] = *affine;
+
             if (!step->isIRValue())
                 return nullptr;
-            if (match(step->getRawIRValue(), M::Is(1)))
+
+            // If the step is not constant, give up.
+            int step_val;
+            if (!match(step->getRawIRValue(), M::Bind(step_val)))
+                return nullptr;
+
+            if (cmpop == ICMPOP::eq) {
+                if (base == cond && step_val != 0)
+                    return getSCEVExpr(1);
+                if (base != cond)
+                    return getSCEVExpr(0);
+                return nullptr;
+            }
+
+            if (cmpop == ICMPOP::sge) {
+                cmpop = ICMPOP::sgt;
+                cond = getSCEVExprSub(cond, getSCEVExpr(1));
+            } else if (cmpop == ICMPOP::sle) {
+                cmpop = ICMPOP::slt;
+                cond = getSCEVExprSub(cond, getSCEVExpr(1));
+            }
+
+            // See if the step is constant 1/-1, where the trip count is simply (x - a)/(a - x).
+            if (step_val == 1)
                 return getSCEVExprSub(cond, base);
-            if (match(step->getRawIRValue(), M::Is(-1)))
+            if (step_val == -1)
                 return getSCEVExprSub(base, cond);
-            return nullptr;
+
+            // Otherwise, compute a symbolic trip count.
+            // Avoid `!=`, since there can be remainders.
+            if (cmpop == ICMPOP::ne)
+                return nullptr;
+
+            // If the step can be negative or zero, give up
+            if (step_val == 0 || step_val < 0)
+                return nullptr;
+
+            // Since step > 0,
+            // ceil ((cond - base) / step) == floor((cond - base + (step - 1)) / step)
+            auto delta = getSCEVExprSub(cond, base);
+            auto step_minus_1 = getSCEVExprSub(step, getSCEVExpr(1));
+            return getSCEVExprDiv(getSCEVExprAdd(delta, step_minus_1), step);
         }
+        return nullptr;
     }
     return nullptr;
 }
@@ -784,6 +959,11 @@ SCEVExpr *SCEVHandle::getSCEVExprMul(SCEVExpr *x, SCEVExpr *y) {
     if ((x->isIRValue() && match(x->getRawIRValue(), M::Is(0))) ||
         (y->isIRValue() && match(y->getRawIRValue(), M::Is(0))))
         return getSCEVExpr(0);
+    if (x->isIRValue() && match(x->getRawIRValue(), M::Is(1)))
+        return y;
+    if (y->isIRValue() && match(y->getRawIRValue(), M::Is(1)))
+        return x;
+
     if (x->isIRValue() && y->isIRValue()) {
         int a, b;
         if (match(x->getRawIRValue(), M::Bind(a)) &&
@@ -791,6 +971,17 @@ SCEVExpr *SCEVHandle::getSCEVExprMul(SCEVExpr *x, SCEVExpr *y) {
             return getSCEVExpr(a * b);
     }
     return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::Mul, x, y));
+}
+SCEVExpr *SCEVHandle::getSCEVExprDiv(SCEVExpr *x, SCEVExpr *y) {
+    if (x->isIRValue() && match(x->getRawIRValue(), M::Is(0)))
+        return getSCEVExpr(0);
+    if (x->isIRValue() && y->isIRValue()) {
+        int a, b;
+        if (match(x->getRawIRValue(), M::Bind(a)) &&
+            match(y->getRawIRValue(), M::Bind(b)))
+            return getSCEVExpr(a / b);
+    }
+    return getPoolSCEV(std::make_shared<SCEVExpr>(SCEVExpr::Binary::Op::Div, x, y));
 }
 SCEVExpr *SCEVHandle::getSCEVExprNeg(SCEVExpr *x) {
     if (int a; x->isIRValue() && match(x->getRawIRValue(), M::Bind(a)))

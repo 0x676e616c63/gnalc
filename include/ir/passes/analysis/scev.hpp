@@ -6,7 +6,7 @@
 //   - "Induction Variable Analysis with Delayed Abstractions":
 //       https://link.springer.com/content/pdf/10.1007/11587514_15.pdf
 //   - "The SSA Representation Framework: Semantics, Analyses and GCC Implementation."
-//       https://theses.hal.science/pastel-00002281/#:~:text=From%20a%20practical%20point%20of%20view%2C%20we%20present,an%20industrial%20compiler%3A%20the%20GNU%20Compiler%20Collection%20%28GCC%29.
+//       https://theses.hal.science/pastel-00002281/
 //   - "Scalar evolution技术与i^n求和优化"
 //       https://www.cnblogs.com/gnuemacs/p/14167695.html
 #pragma once
@@ -28,7 +28,7 @@ class SCEVExpr {
 
 public:
     struct Binary {
-        enum class Op { Add, Sub, Mul };
+        enum class Op { Add, Sub, Mul, Div };
         Op op;
         SCEVExpr *lhs;
         SCEVExpr *rhs;
@@ -54,6 +54,10 @@ public:
     SCEVExpr *getLHS() const { return std::get<Binary>(value).lhs; }
     SCEVExpr *getRHS() const { return std::get<Binary>(value).rhs; }
     Binary::Op getOp() const { return std::get<Binary>(value).op; }
+
+    // Expand the SCEV Expression. Returns the expanded IR Value.
+    // New instructions will be inserted before `insert_before`.
+    pVal expand(const pBlock& block, BasicBlock::iterator insert_before) const;
 };
 enum class TRECType { AddRec, Peeled, Expr, Undefined, Untracked };
 // Tree of Recurrences
@@ -139,8 +143,10 @@ public:
     TREC *getSCEVAtBlock(Value *val, const BasicBlock *block);
     TREC *getSCEVAtBlock(const pVal &val, const std::shared_ptr<BasicBlock> &block);
 
-    SCEVExpr *getNumberOfLatchExecutions(const Loop *loop);
-    SCEVExpr *getNumberOfLatchExecutions(const pLoop &loop);
+    // Get the exact value of the single backegde taken count
+    // Nullptr is returned if there are multiple backegdes.
+    SCEVExpr *getBackEdgeTakenCount(const Loop *loop);
+    SCEVExpr *getBackEdgeTakenCount(const pLoop &loop);
 
 private:
     // Get SCEV of val at within the given scope.
@@ -161,6 +167,7 @@ private:
     //         update is the reconstructed expression for the overall effect in the loop of h
     std::pair<bool, TREC *> buildUpdateExpr(const PHIInst *loop_phi, Value *val, const Loop *loop_phi_loop);
 
+    SCEVExpr* computeSymbolicBinomialCoefficient(SCEVExpr* n, int p);
     SCEVExpr *apply(TREC *trec, SCEVExpr *trip_cnt);
 
     // Input: trec a symbolic TREC, l the instantiation loop
@@ -187,6 +194,7 @@ private:
     SCEVExpr *getSCEVExprAdd(SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExprSub(SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExprMul(SCEVExpr *x, SCEVExpr *y);
+    SCEVExpr *getSCEVExprDiv(SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExprNeg(SCEVExpr *x);
     SCEVExpr *getSCEVExpr(int x);
     SCEVExpr *getSCEVExpr(Value *x);

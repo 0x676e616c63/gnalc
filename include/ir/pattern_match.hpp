@@ -115,10 +115,6 @@ struct IRInstInfo {
     };
 };
 
-struct SharedPtrValueProj {
-    Value *operator()(const pVal &u) { return u.get(); }
-};
-
 // Match Inst and Operand
 #define MAKE_INST_MATCH2(pattern_name, opcode, num0, num1)                                                             \
     template <typename... OperandPatterns> auto pattern_name(OperandPatterns &&...ops) {                               \

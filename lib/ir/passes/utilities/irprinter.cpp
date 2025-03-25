@@ -145,11 +145,11 @@ PM::PreservedAnalyses PrintSCEVPass::run(Function &function, FAM &fam) {
     for (const auto &top_level : loop_info) {
         auto ldfv = top_level->getDFVisitor();
         for (const auto &loop : ldfv) {
-            auto trip_cnt = scev.getNumberOfLatchExecutions(loop);
+            auto trip_cnt = scev.getBackEdgeTakenCount(loop);
             if (trip_cnt)
-                writeln("Latch Execution Count: ", *trip_cnt);
+                writeln("BackEdgeTakenCount: ", *trip_cnt);
             else
-                writeln("Latch Execution Count: <null> :(");
+                writeln("BackEdgeTakenCount: <null> :(");
         }
     }
     const DomTree &domtree = fam.getResult<DomTreeAnalysis>(function);

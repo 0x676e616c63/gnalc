@@ -1,13 +1,14 @@
-int main(){
-    int i = 0;
-    int j = 0;
-    while (i < 10)
+int sum(int a, int b)
+{
+    int ret = 0;
+    while(a < b)
     {
-        j = 3 * i + 1;
-        putch(j);
-        i = i + 2;
+        ret = ret + a;
+        a = a + 1;
     }
-    putch(i);
-    putch(j);
+    return ret;
+}
+int main(){
+    sum(1, 2);
     return 0;
 }
