@@ -32,7 +32,7 @@ int IRGenerator::generate() {
 void IRPT::clean() {
     GVMap.clear();
     FMap.clear();
-    UFDMap.clear();
+    UFMap.clear();
     BMap.clear();
     VMap.clear();
     UBMap.clear();
@@ -42,7 +42,7 @@ void IRPT::clean() {
 pFuncDecl IRPT::getF(const string& name) {
     const auto it = FMap.find(name);
     if (it == FMap.end()) {
-        auto &f = UFDMap[name];
+        auto &f = UFMap[name];
         if (f == nullptr) {
             f = make<FunctionDecl>("UNDEFFUNC", std::vector<pType>{}, makeBType(IRBTYPE::UNDEFINED), false, false, false);
         }
@@ -113,6 +113,7 @@ pFunc IRPT::newFunc(std::string &name_, const std::vector<pFormalParam> &params,
         Err::gassert(real_block!=nullptr, "real_block is not defined!");
         b->replaceSelf(real_block);
     }
+    replaceUF(name_, f);
     f->updateAndCheckCFG();
     VMap.clear();
     BMap.clear();
@@ -129,20 +130,7 @@ pFuncDecl IRPT::newFuncDecl(std::string &name_, const std::vector<pType> &params
     } else {
         fd = make<FunctionDecl>(name_, params, ret_type, is_va_arg_, false, true);
     }
-    if (const auto it = UFDMap.find(name_); it != UFDMap.end()) {
-        it->second->replaceSelf(fd);
-        for (auto user : fd->users()) {
-            auto inst = user->as<Instruction>();
-            if (inst->getOpcode() == OP::CALL) {
-                inst->vtype = fd->getType()->as<FunctionType>()->getRet();
-                inst->trait =  inst->vtype->getTrait() != IRCTYPE::BASIC ||
-                (inst->vtype->getTrait() == IRCTYPE::BASIC && inst->vtype->as<BType>()->getInner() != IRBTYPE::UNDEFINED &&
-                 inst->vtype->as<BType>()->getInner() != IRBTYPE::VOID)
-            ? ValueTrait::ORDINARY_VARIABLE
-            : ValueTrait::VOID_INSTRUCTION;
-            }
-        }
-    }
+    replaceUF(name_, fd);
     return fd;
 }
 
@@ -168,4 +156,21 @@ pPhi IRPT::newPhi(const string &name, pType &ty, const std::vector<std::pair<pVa
         p->addPhiOper(v, b);
     }
     return p;
+}
+
+void IRPT::replaceUF(const string &name_, const pFuncDecl& fd) {
+    if (const auto it = UFMap.find(name_); it != UFMap.end()) {
+        it->second->replaceSelf(fd);
+        for (auto user : fd->users()) {
+            auto inst = user->as<Instruction>();
+            if (inst->getOpcode() == OP::CALL) {
+                inst->vtype = fd->getType()->as<FunctionType>()->getRet();
+                inst->trait =  inst->vtype->getTrait() != IRCTYPE::BASIC ||
+                (inst->vtype->getTrait() == IRCTYPE::BASIC && inst->vtype->as<BType>()->getInner() != IRBTYPE::UNDEFINED &&
+                 inst->vtype->as<BType>()->getInner() != IRBTYPE::VOID)
+            ? ValueTrait::ORDINARY_VARIABLE
+            : ValueTrait::VOID_INSTRUCTION;
+            }
+        }
+    }
 }

@@ -16,7 +16,7 @@ namespace IRParser {
     private:
         std::map<string, pGlobalVar> GVMap; // 所有的GV都在定义后使用
         std::map<string, pFunc> FMap; // 所有的Func都在定义后使用
-        std::map<string, pFuncDecl> UFDMap; // Undefined FuncDecl Map, 由于其总是在文件末尾，故最后进行替换
+        std::map<string, pFuncDecl> UFMap; // Undefined Func Map, 包含递归的Func和FuncDecl
         std::map<string, pBlock> BMap; // 新的function被定义时将清空
         std::map<string, pVal> VMap; // 新的function被定义时将清空
         /// 用于保存Undefined却被使用的值
@@ -65,6 +65,8 @@ namespace IRParser {
         pBlock newBB(string name, const std::list<pInst> &insts);
 
         pPhi newPhi(const string &name, pType &ty, const std::vector<std::pair<pVal, pBlock>> &phiopers);
+        private:
+        void replaceUF(const string &name_, const pFuncDecl& fd);
     };
 
     class IRGenerator {
