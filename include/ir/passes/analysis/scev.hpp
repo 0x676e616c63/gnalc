@@ -46,7 +46,10 @@ public:
     explicit SCEVExpr(Binary::Op op, SCEVExpr *lhs, SCEVExpr *rhs)
         : type(SCEVExprType::Binary), value(Binary{op, lhs, rhs}) {}
 
-    void setIRValue(Value *ir_val) { value = ir_val; }
+    void setIRValue(Value *ir_val) {
+        value = ir_val;
+        type = SCEVExprType::Value;
+    }
     bool isIRValue() const { return type == SCEVExprType::Value; }
     bool isBinary() const { return type == SCEVExprType::Binary; }
     Value *getRawIRValue() const { return std::get<Value *>(value); }

@@ -464,42 +464,6 @@ void SCEVHandle::foldSCEVExpr(SCEVExpr *expr) const {
         if (rhs->isIRValue())
             rhs_ci = rhs->getRawIRValue()->as<ConstantInt>();
 
-        if (lhs_ci && lhs_ci->getVal() == 0) {
-            if (expr->getOp() == SCEVExpr::Binary::Op::Add) {
-                *expr = *rhs;
-                return;
-            }
-            if (expr->getOp() == SCEVExpr::Binary::Op::Mul) {
-                expr->setIRValue(function->getConst(0).get());
-                return;
-            }
-        }
-
-        if (rhs_ci && rhs_ci->getVal() == 0) {
-            if (expr->getOp() == SCEVExpr::Binary::Op::Add || expr->getOp() == SCEVExpr::Binary::Op::Sub) {
-                *expr = *lhs;
-                return;
-            }
-            if (expr->getOp() == SCEVExpr::Binary::Op::Mul) {
-                expr->setIRValue(function->getConst(0).get());
-                return;
-            }
-        }
-
-        if (lhs_ci && lhs_ci->getVal() == 1) {
-            if (expr->getOp() == SCEVExpr::Binary::Op::Mul) {
-                *expr = *rhs;
-                return;
-            }
-        }
-
-        if (rhs_ci && rhs_ci->getVal() == 1) {
-            if (expr->getOp() == SCEVExpr::Binary::Op::Mul) {
-                *expr = *lhs;
-                return;
-            }
-        }
-
         if (lhs_ci && rhs_ci) {
             int x = lhs_ci->getVal();
             int y = rhs_ci->getVal();
@@ -518,6 +482,45 @@ void SCEVHandle::foldSCEVExpr(SCEVExpr *expr) const {
                 break;
             default:
                 Err::unreachable();
+            }
+            return;
+        }
+
+        if (lhs_ci) {
+            if (lhs_ci->getVal() == 0) {
+                if (expr->getOp() == SCEVExpr::Binary::Op::Add) {
+                    *expr = *rhs;
+                    return;
+                }
+                if (expr->getOp() == SCEVExpr::Binary::Op::Mul) {
+                    expr->setIRValue(function->getConst(0).get());
+                    return;
+                }
+            }
+            if (lhs_ci->getVal() == 1) {
+                if (expr->getOp() == SCEVExpr::Binary::Op::Mul) {
+                    *expr = *rhs;
+                    return;
+                }
+            }
+        }
+
+        if (rhs_ci) {
+            if (rhs_ci->getVal() == 0) {
+                if (expr->getOp() == SCEVExpr::Binary::Op::Add || expr->getOp() == SCEVExpr::Binary::Op::Sub) {
+                    *expr = *lhs;
+                    return;
+                }
+                if (expr->getOp() == SCEVExpr::Binary::Op::Mul) {
+                    expr->setIRValue(function->getConst(0).get());
+                    return;
+                }
+            }
+            if (rhs_ci->getVal() == 1) {
+                if (expr->getOp() == SCEVExpr::Binary::Op::Mul) {
+                    *expr = *lhs;
+                    return;
+                }
             }
         }
     }
@@ -736,7 +739,7 @@ SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop) {
                 cond_val -= 1;
             } else if (cmpop == ICMPOP::sle) {
                 cmpop = ICMPOP::slt;
-                cond_val -= 1;
+                cond_val += 1;
             }
 
             // Trivial cases
@@ -794,7 +797,7 @@ SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop) {
                 cond = getSCEVExprSub(cond, getSCEVExpr(1));
             } else if (cmpop == ICMPOP::sle) {
                 cmpop = ICMPOP::slt;
-                cond = getSCEVExprSub(cond, getSCEVExpr(1));
+                cond = getSCEVExprAdd(cond, getSCEVExpr(1));
             }
 
             // See if the step is constant 1/-1, where the trip count is simply (x - a)/(a - x).
