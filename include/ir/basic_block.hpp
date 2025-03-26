@@ -7,6 +7,7 @@
 #define GNALC_IR_BASIC_BLOCK_HPP
 
 #include "../utils/iterator.hpp"
+#include "../utils/generic_visitor.hpp"
 #include "base.hpp"
 #include "instruction.hpp"
 #include "instructions/phi.hpp"
@@ -44,6 +45,9 @@ class BasicBlock : public Value {
     wpFunc parent;
     size_t index = 0;
 
+    struct BBSuccGetter {
+        auto operator()(const pBlock &bb) { return bb->getNextBB(); }
+    };
 public:
     using iterator = decltype(insts)::iterator;
     using const_iterator = decltype(insts)::const_iterator;
@@ -51,6 +55,14 @@ public:
     using const_reverse_iterator = decltype(insts)::const_reverse_iterator;
     using phi_const_iterator = decltype(phi_insts)::const_iterator;
     using phi_iterator = decltype(phi_insts)::iterator;
+    using CFGBFVisitor = Util::GenericBFVisitor<pBlock, BBSuccGetter>;
+    template <Util::DFVOrder order> using CFGDFVisitor = Util::GenericDFVisitor<pBlock, BBSuccGetter, order>;
+
+    auto getBFVisitor() { return CFGBFVisitor(as<BasicBlock>()); }
+
+    template <Util::DFVOrder order = Util::DFVOrder::PreOrder> auto getDFVisitor() {
+        return CFGDFVisitor<order>(as<BasicBlock>());
+    }
 
     explicit BasicBlock(std::string _name);
     BasicBlock(std::string _name, std::list<pInst> _insts);

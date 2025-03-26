@@ -372,8 +372,8 @@ public:
     //              %b use_list:  <use2: %0>
     bool replaceUse(const pUse &old_use, const pVal &new_use);
 
-    // Replace all uses of `before` with `after`
-    bool replaceAllOperands(const pVal &before, const pVal &after);
+    // Replace all uses of `before` with `after`, return the number of the replaced operands
+    size_t replaceAllOperands(const pVal &before, const pVal &after);
 
 protected:
     void addOperand(const pVal &v);

@@ -54,10 +54,6 @@ public:
     SCEVExpr *getLHS() const { return std::get<Binary>(value).lhs; }
     SCEVExpr *getRHS() const { return std::get<Binary>(value).rhs; }
     Binary::Op getOp() const { return std::get<Binary>(value).op; }
-
-    // Expand the SCEV Expression. Returns the expanded IR Value.
-    // New instructions will be inserted before `insert_before`.
-    pVal expand(const pBlock& block, BasicBlock::iterator insert_before) const;
 };
 enum class TRECType { AddRec, Peeled, Expr, Undefined, Untracked };
 // Tree of Recurrences
@@ -141,14 +137,23 @@ public:
     // Get SCEV of val at the given block.
     // Note that if the value is not available at that block, nullptr will be returned.
     TREC *getSCEVAtBlock(Value *val, const BasicBlock *block);
-    TREC *getSCEVAtBlock(const pVal &val, const std::shared_ptr<BasicBlock> &block);
+    TREC *getSCEVAtBlock(const pVal &val, const pBlock &block);
 
     // Get the exact value of the single backegde taken count
     // Nullptr is returned if there are multiple backegdes.
     SCEVExpr *getBackEdgeTakenCount(const Loop *loop);
     SCEVExpr *getBackEdgeTakenCount(const pLoop &loop);
 
+    // Expand the SCEV Expression. Returns the expanded IR Value.
+    // New instructions will be inserted before `insert_before`.
+    // If the expression contains loop invariant values that are not available
+    // at that block, (i.e. the block is not dominated by the invariant's define block)
+    // nullptr will be returned.
+    pVal expandSCEVExpr(SCEVExpr* expr, const pBlock& block, BasicBlock::iterator insert_before) const;
 private:
+    pVal expandSCEVExprImpl(SCEVExpr* expr, const pBlock& block,
+        BasicBlock::iterator insert_before, std::map<SCEVExpr*, pVal>& inserted) const;
+
     // Get SCEV of val at within the given scope.
     // the outermost scope ---> 'loop == nullptr'
     // Note that this is less safe than `getSCEVAtBlock` since it

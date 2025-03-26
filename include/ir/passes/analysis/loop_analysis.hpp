@@ -78,7 +78,9 @@ public:
     explicit Loop(BasicBlock *bb);
 
     pLoop getParent() const;
+    pFunc getParentFunction() const;
 
+    const std::set<const BasicBlock *>& getBlockSet() const;
     bool contains(const BasicBlock *bb) const;
     bool contains(const Loop *loop) const;
     bool contains(const pBlock &bb) const;
@@ -142,6 +144,8 @@ private:
     // These functions won't update LoopInfo, client should call LoopInfo's addBlock/delBlock
     void addBlock(BasicBlock *bb);
     bool delBlockForCurrLoop(BasicBlock *bb);
+    bool delSubLoop(const Loop* loop);
+    void addSubLoop(const pLoop &loop);
 };
 
 class LoopInfo {
@@ -177,6 +181,14 @@ public:
 
     bool delBlock(BasicBlock *bb);
     bool delBlock(const pBlock &bb);
+
+    // Deletes a loop and all its blocks
+    bool delLoop(Loop *loop);
+    bool delLoop(const pLoop &loop);
+
+    // Break up a loop, without deleting its blocks
+    bool breakLoop(Loop *loop);
+    bool breakLoop(const pLoop& loop);
 
     void addBlock(const pLoop &loop, BasicBlock *bb);
     void addBlock(const pLoop &loop, const pBlock &bb);

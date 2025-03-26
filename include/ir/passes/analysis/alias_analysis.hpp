@@ -125,12 +125,20 @@ SharedRWInfo getCallRWInfo(FAM &fam, const pCall &call);
 bool isPure(FAM &fam, const CALLInst *call);
 bool isPure(FAM &fam, const pCall &call);
 
-// Check if function has side effect
+// Check if the call instruction has side effect
 // It don't change the outer scope, but its output may change even with same input.
 // The difference is that pure function never read global variable or outer memory.
 // but this only guarantee no write to global or outer memory.
 bool hasSideEffect(FAM &fam, const CALLInst *call);
 bool hasSideEffect(FAM &fam, const pCall &call);
+
+// Check if the basic block has side effect
+bool hasSideEffect(FAM &fam, BasicBlock* block);
+bool hasSideEffect(FAM &fam, const pBlock& block);
+
+// Check if the loop has side effect
+bool hasSideEffect(FAM &fam, const Loop* loop);
+bool hasSideEffect(FAM &fam, const pLoop& loop);
 } // namespace IR
 
 #endif

@@ -36,9 +36,9 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                 linkBB(new_preheader, header);
 
                 for (const auto &phi : header->phis()) {
-                    auto phi_operands = phi->getPhiOpers();
+                    auto phi_opers = phi->getPhiOpers();
                     auto new_phi = std::make_shared<PHIInst>("%ls.phi" + std::to_string(name_cnt++), phi->getType());
-                    for (const auto &[val, bb] : phi_operands) {
+                    for (const auto &[val, bb] : phi_opers) {
                         if (loop->contains(bb))
                             continue;
                         phi->delPhiOperByBlock(bb);
@@ -71,9 +71,9 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                     linkBB(old_latch, new_latch);
                 }
                 for (const auto &phi : header->phis()) {
-                    auto phi_operands = phi->getPhiOpers();
+                    auto phi_opers = phi->getPhiOpers();
                     auto new_phi = std::make_shared<PHIInst>("%ls.phi" + std::to_string(name_cnt++), phi->getType());
-                    for (const auto &[val, bb] : phi_operands) {
+                    for (const auto &[val, bb] : phi_opers) {
                         if (bb == preheader)
                             continue;
                         phi->delPhiOperByBlock(bb);
@@ -117,10 +117,10 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                         linkBB(in_loop_pred, new_exit);
                     }
                     for (const auto &phi : exit->phis()) {
-                        auto phi_operands = phi->getPhiOpers();
+                        auto phi_opers = phi->getPhiOpers();
                         auto new_phi =
                             std::make_shared<PHIInst>("%ls.phi" + std::to_string(name_cnt++), phi->getType());
-                        for (const auto &[val, bb] : phi_operands) {
+                        for (const auto &[val, bb] : phi_opers) {
                             if (!loop->contains(bb))
                                 continue;
                             phi->delPhiOperByBlock(bb);

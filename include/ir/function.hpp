@@ -53,10 +53,6 @@ private:
     pVal cloneImpl() const override { return std::make_shared<FormalParam>(getName(), getType(), index); }
 };
 
-struct BBSuccGetter {
-    auto operator()(const pBlock &bb) { return bb->getNextBB(); }
-};
-
 class Function : public FunctionDecl {
     friend class Parser::CFGBuilder;
 
@@ -68,9 +64,6 @@ private:
     // 后面需要再说
     // int vreg_idx = 0;
 public:
-    using CFGBFVisitor = Util::GenericBFVisitor<pBlock, BBSuccGetter>;
-    template <Util::DFVOrder order> using CFGDFVisitor = Util::GenericDFVisitor<pBlock, BBSuccGetter, order>;
-
     using iterator = decltype(blks)::iterator;
     using const_iterator = decltype(blks)::const_iterator;
     using reverse_iterator = decltype(blks)::reverse_iterator;
@@ -153,10 +146,10 @@ public:
 
     void accept(IRVisitor &visitor) override;
 
-    auto getBFVisitor() const { return CFGBFVisitor(blks.front()); }
+    auto getBFVisitor() const { return BasicBlock::CFGBFVisitor(blks.front()); }
 
     template <Util::DFVOrder order = Util::DFVOrder::PreOrder> auto getDFVisitor() const {
-        return CFGDFVisitor<order>(blks.front());
+        return BasicBlock::CFGDFVisitor<order>(blks.front());
     }
 
     std::vector<pBlock> getExitBBs() const;

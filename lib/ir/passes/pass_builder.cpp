@@ -24,6 +24,7 @@
 #include "../../../include/ir/passes/transforms/lcssa.hpp"
 #include "../../../include/ir/passes/transforms/licm.hpp"
 #include "../../../include/ir/passes/transforms/load_elimination.hpp"
+#include "../../../include/ir/passes/transforms/loop_elimination.hpp"
 #include "../../../include/ir/passes/transforms/loop_rotate.hpp"
 #include "../../../include/ir/passes/transforms/loop_simplify.hpp"
 #include "../../../include/ir/passes/transforms/loop_strength_reduce.hpp"
@@ -67,6 +68,7 @@ const OptInfo o1_opt_info = {
     .loop_unroll = false,
     .indvars = false,
     .loop_strength_reduce = false,
+    .loopelim = false,
     .jump_threading = false,
     // Module Transforms
     .tree_shaking = true,
@@ -202,12 +204,13 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     fpm.addPass(LoopSimplifyPass());
     fpm.addPass(LoopRotatePass());
     fpm.addPass(NameNormalizePass(true));
-    fpm.addPass(PrintSCEVPass(std::cerr));
-    fpm.addPass(LoopStrengthReducePass());
-    fpm.addPass(BreakCriticalEdgesPass());
-    fpm.addPass(GVNPREPass());
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(VerifyPass(true));
+    // fpm.addPass(PrintFunctionPass(std::cerr));
+    // fpm.addPass(PrintSCEVPass(std::cerr));
+    fpm.addPass(LoopEliminationPass());
+    // fpm.addPass(PrintSCEVPass(std::cerr));
+    // fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(VerifyPass(false));
+    fpm.addPass(NameNormalizePass(true));
 
     // // For LoopUnroll Test
     // fpm.addPass(PromotePass());

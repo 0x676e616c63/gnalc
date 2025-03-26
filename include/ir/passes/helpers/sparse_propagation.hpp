@@ -149,12 +149,10 @@ private:
     void markFeasible(const Edge &e) { feasible_edges.insert(e); }
 
     void visitPHI(const pPhi &phi) {
-        auto incomings = phi->getPhiOpers();
-
         auto phi_key = InfoT::getKeyFromValue(phi);
         auto phi_lattice = getVal(phi_key);
 
-        for (const auto &in : incomings) {
+        for (const auto &in : phi->incomings()) {
             if (!isFeasible(in.block, phi->getParent()))
                 continue;
 

@@ -1,4 +1,5 @@
 #include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
+#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 
 #include "../../../../include/config/config.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
@@ -231,7 +232,7 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
         for (const auto &curr : dfv) {
             for (const auto &phi : curr->phis()) {
                 if (phi->getType()->getTrait() == IRCTYPE::PTR) {
-                    for (const auto &oper : phi->getPhiOpers())
+                    for (const auto &oper : phi->incomings())
                         changed |= res.insertPotentialAlias(phi.get(), oper.value.get());
                 }
             }
@@ -494,4 +495,47 @@ SharedRWInfo getCallRWInfo(FAM &fam, const pCall &call) {
 }
 bool isPure(FAM &fam, const pCall &call) { return isPure(fam, call.get()); }
 bool hasSideEffect(FAM &fam, const pCall &call) { return hasSideEffect(fam, call.get()); }
+
+bool hasSideEffect(FAM &fam, BasicBlock* block) {
+    auto& aa_res = fam.getResult<AliasAnalysis>(*block->getParent());
+    for (const auto &inst : block->all_insts()) {
+        if (auto call = inst->as<CALLInst>()) {
+            if (hasSideEffect(fam, call))
+                return true;
+        }
+        else if (auto store = inst->as<STOREInst>()) {
+            auto store_ptr = store->getPtr();
+
+            if (!aa_res.isLocal(store_ptr))
+                return true;
+
+            const auto& cfgdfv = block->getDFVisitor();
+            for (const auto& child : cfgdfv) {
+                for (const auto& child_inst : *child) {
+                    auto modref = aa_res.getInstModRefInfo(child_inst, store_ptr, fam);
+                    if (modref == ModRefInfo::ModRef || modref == ModRefInfo::Ref)
+                        return true;
+                }
+            }
+        }
+        else if (inst->is<RETInst>() || inst->is<ALLOCAInst>())
+            return true;
+    }
+    return false;
+}
+bool hasSideEffect(FAM &fam, const pBlock& block) {
+    return hasSideEffect(fam, block.get());
+}
+
+// Check if the loop has side effect
+bool hasSideEffect(FAM &fam, const Loop* loop) {
+    for (const auto &block : loop->blocks()) {
+        if (hasSideEffect(fam, block))
+            return true;
+    }
+    return false;
+}
+bool hasSideEffect(FAM &fam, const pLoop& loop) {
+    return hasSideEffect(fam, loop.get());
+}
 } // namespace IR

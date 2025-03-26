@@ -41,6 +41,13 @@ template <typename GraphT, bool IsPostDom, typename GraphNodeProj = Identity> cl
 public:
     class Node;
     using pNode = std::shared_ptr<Node>;
+    struct NodeChildGetter {
+        auto operator()(const pNode &node) { return node->children(); }
+    };
+    using NodeBFVisitor = Util::GenericBFVisitor<pNode, NodeChildGetter>;
+    template <Util::DFVOrder order = Util::DFVOrder::PreOrder>
+    using NodeDFVisitor = Util::GenericDFVisitor<pNode, NodeChildGetter, order>;
+
     class Node : public std::enable_shared_from_this<Node> {
         friend class GenericDomTree;
         template <typename, bool, typename> friend class GenericDomTreeBuilder;
@@ -64,13 +71,12 @@ public:
         const auto &raw_block() const { return graph_node; }
         auto block() const { return GraphNodeProj()(graph_node); }
         void setBlock(GraphNodeT n) { graph_node = n; }
+
+        auto getBFVisitor() { return NodeBFVisitor{ this->shared_from_this() }; }
+        template <Util::DFVOrder order = Util::DFVOrder::PreOrder> auto getDFVisitor() {
+            return NodeDFVisitor<order>{ this->shared_from_this() };
+        }
     };
-    struct NodeChildGetter {
-        auto operator()(const pNode &node) { return node->children(); }
-    };
-    using NodeBFVisitor = Util::GenericBFVisitor<pNode, NodeChildGetter>;
-    template <Util::DFVOrder order = Util::DFVOrder::PreOrder>
-    using NodeDFVisitor = Util::GenericDFVisitor<pNode, NodeChildGetter, order>;
 
 private:
     pNode root_node;

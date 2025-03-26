@@ -56,8 +56,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
         }
 
         if (auto phi = inst->as<PHIInst>()) {
-            auto phi_opers = phi->getPhiOpers();
-            for (const auto &[_val, bb] : phi_opers)
+            for (const auto &[_val, bb] : phi->incomings())
                 new_alive_blocks.emplace_back(bb);
         }
 

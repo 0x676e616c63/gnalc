@@ -152,17 +152,17 @@ User::~User() {
     }
 }
 
-bool User::replaceAllOperands(const pVal &before, const pVal &after) {
+size_t User::replaceAllOperands(const pVal &before, const pVal &after) {
     if (before == after)
-        return false;
-    bool found = false;
+        return 0;
+    size_t cnt = 0;
     for (const auto &use : operand_uses_list) {
         if (use->getValue() == before) {
             replaceUse(use, after);
-            found = true;
+            ++cnt;
         }
     }
-    return found;
+    return cnt;
 }
 
 bool User::replaceUse(const pUse &old_use, const pVal &new_value) {

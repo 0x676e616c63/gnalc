@@ -27,6 +27,7 @@ struct OptInfo {
     bool loop_unroll{false};
     bool indvars{false};
     bool loop_strength_reduce{false};
+    bool loopelim{false};
     bool jump_threading{false};
 
     bool tree_shaking{false};

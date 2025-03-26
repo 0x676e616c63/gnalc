@@ -3,9 +3,8 @@
 #define GNALC_IR_BLOCK_UTILS_HPP
 
 #include "basic_block.hpp"
-#include "instruction.hpp"
+#include "passes/pass_manager.hpp"
 #include "instructions/control.hpp"
-#include "instructions/phi.hpp"
 
 #include <memory>
 #include <set>
@@ -31,10 +30,27 @@ void unlinkBB(const pBlock &prebb, const pBlock &nxtbb);
 //     To help `delInstIf` check if we delete right instructions,
 //     we return them to be gathered and deleted at once.
 //
-// WARNING: This function won't delete instructions. The BRInst or PHIInst requires the caller to delete.
+// WARNING: This function won't delete dead instructions unless `perform_dce` is set.
+//          But the BRInst or PHIInst requires the caller to delete.
 //          When `safeUnlinkBB` is called within a function, the returned dead phis should be
 //          gathered for all basic blocks, and deleted at once.
-bool safeUnlinkBB(const pBlock &prebb, const pBlock &nxtbb, std::set<pPhi> &dead_phis);
+struct UnlinkOptions {
+    friend bool safeUnlinkBB(const pBlock &prebb, const pBlock &nxtbb, std::set<pPhi> &dead_phis, UnlinkOptions options);
+private:
+    bool perform_dce = false;
+    FAM *fam = nullptr;
+
+    UnlinkOptions(bool perform_dce_, FAM* fam_) : perform_dce(perform_dce_), fam(fam_) {}
+public:
+    static UnlinkOptions performDCE(FAM* fam) {
+        return {true, fam};
+    }
+    static UnlinkOptions unlinkOnly() {
+        return { false, nullptr };
+    }
+};
+bool safeUnlinkBB(const pBlock &prebb, const pBlock &nxtbb,
+    std::set<pPhi> &dead_phis, UnlinkOptions options = UnlinkOptions::unlinkOnly());
 
 // Move `bb` to `new_func`'s `location`
 // This deletes `bb` from its parent, and insert it before `new_func`'s location
@@ -63,6 +79,19 @@ bool breakAllCriticalEdges(const Function &function);
 bool isLCSSAPhi(const pPhi &phi, pVal target_val = nullptr);
 // Find if there is a LCSSA phi in `block` for `value`
 pPhi findLCSSAPhi(const pBlock &block, const pVal &value);
+
+// Eliminate dead instructions through use-def chain from the worklist
+bool eliminateDeadInsts(FAM& fam, std::vector<pInst>& worklist);
+bool eliminateDeadInsts(FAM &fam, const pInst &inst);
+
+// In LoopSimplified Form, the header has two predecessors, one is the preheader, the other is the latch.
+// The phis in header are induction variables, the two incoming values, from the preheader and the latch,
+// must be loop invariant and variant respectively.
+// Note that the invariant one is the initial value of that induction variable.
+// This function returns the invariant and variant values in the phi.
+// Return Value: (invariant, variant)
+std::tuple<pVal, pVal> analyzeHeaderPhi(const pLoop &loop, const pPhi &header_phi);
+std::tuple<Value *, Value *> analyzeHeaderPhi(const Loop *loop, const PHIInst *header_phi);
 } // namespace IR
 
 #endif

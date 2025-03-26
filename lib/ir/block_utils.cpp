@@ -1,5 +1,7 @@
 #include "../../include/ir/block_utils.hpp"
-
+#include "../../include/ir/passes/analysis/loop_analysis.hpp"
+#include "../../include/ir/passes/analysis/alias_analysis.hpp"
+#include "../../include/ir/instructions/memory.hpp"
 #include "../../include/utils/logger.hpp"
 
 #include <algorithm>
@@ -19,7 +21,7 @@ void unlinkBB(const pBlock &prebb, const pBlock &nxtbb) {
     Err::gassert(ok);
 }
 
-bool safeUnlinkBB(const pBlock &prebb, const pBlock &nxtbb, std::set<pPhi> &dead_phis) {
+bool safeUnlinkBB(const pBlock &prebb, const pBlock &nxtbb, std::set<pPhi> &dead_phis, UnlinkOptions options) {
     bool need_to_remove_br = false;
     // Unlink CFG
     unlinkBB(prebb, nxtbb);
@@ -28,12 +30,15 @@ bool safeUnlinkBB(const pBlock &prebb, const pBlock &nxtbb, std::set<pPhi> &dead
     auto br = prebb->getBRInst();
     Err::gassert(br != nullptr);
     if (br->isConditional()) {
+        auto cond = br->getCond();
         if (br->getTrueDest() == nxtbb)
             br->dropTrueDest();
         else {
             Err::gassert(br->getFalseDest() == nxtbb, "The given block is not a successor.");
             br->dropFalseDest();
         }
+        if (options.perform_dce && cond->is<Instruction>())
+            eliminateDeadInsts(*options.fam, cond->as<Instruction>());
     } else {
         Err::gassert(br->getDest() == nxtbb, "The given block is not a successor.");
         // Well, the block has no successor, this might because we are deleting unreachable blocks.
@@ -91,17 +96,28 @@ bool safeUnlinkBB(const pBlock &prebb, const pBlock &nxtbb, std::set<pPhi> &dead
     // bb2:
     for (const auto &phi : nxtbb->phis()) {
         // Delete the phi operand from the unlinked `prebb`
-        if (phi->delPhiOperByBlock(prebb)) {
-            // Simplify PHI
-            auto opers = phi->getPhiOpers();
-            if (opers.size() == 1) {
-                // Only one operand, check if it is self-reference.
-                // If it is self-reference, replaceSelf makes no sense.
-                if (opers[0].value != phi)
-                    phi->replaceSelf(opers[0].value);
-                dead_phis.emplace(phi);
-            } else if (opers.empty())
-                dead_phis.emplace(phi);
+        auto phi_opers = phi->getPhiOpers();
+        for (const auto &[v, b] : phi_opers) {
+            if (b == prebb) {
+                auto ok = phi->delPhiOperByBlock(prebb);
+                Err::gassert(ok);
+                // Simplify PHI
+                auto opers = phi->getPhiOpers();
+                if (opers.size() == 1) {
+                    // Only one operand, check if it is self-reference.
+                    // If it is self-reference, replaceSelf makes no sense.
+                    if (opers[0].value != phi)
+                        phi->replaceSelf(opers[0].value);
+                    dead_phis.emplace(phi);
+                } else if (opers.empty())
+                    dead_phis.emplace(phi);
+
+                if (options.perform_dce) {
+                    if (auto inst = v->as<Instruction>())
+                        eliminateDeadInsts(*options.fam, inst);
+                }
+                break;
+            }
         }
     }
     return need_to_remove_br;
@@ -158,8 +174,7 @@ void removeIdenticalPhi(const pBlock &bb) {
     std::vector<std::pair<pPhi, std::vector<ValBBPair>>> phi_info;
     for (const auto &phi : bb->phis()) {
         phi_info.emplace_back(phi, std::vector<ValBBPair>{});
-        auto phi_opers = phi->getPhiOpers();
-        for (const auto &[v, b] : phi_opers)
+        for (const auto &[v, b] : phi->incomings())
             phi_info.back().second.emplace_back(v, b);
         std::sort(phi_info.back().second.begin(), phi_info.back().second.end());
     }
@@ -250,5 +265,56 @@ pPhi findLCSSAPhi(const pBlock &block, const pVal &value) {
             return phi;
     }
     return nullptr;
+}
+
+bool eliminateDeadInsts(FAM& fam, std::vector<pInst>& worklist) {
+    std::set<pInst> visited;
+    bool modified = false;
+    while (!worklist.empty()) {
+        auto inst = worklist.back();
+        worklist.pop_back();
+        visited.emplace(inst);
+
+        if (inst->getUseCount() == 0) {
+            if (auto call = inst->as<CALLInst>()) {
+                if (hasSideEffect(fam, call))
+                    continue;
+            }
+            else if (inst->is<STOREInst>())
+                continue;
+            // Delete it in place to release its uses.
+            if (inst->getParent())
+                inst->getParent()->delInst(inst);
+            modified = true;
+            for (const auto &operand : inst->operands()) {
+                if (auto i = operand->as<Instruction>()) {
+                    if (visited.find(i) == visited.end())
+                        worklist.emplace_back(i);
+                }
+            }
+        }
+    }
+    return modified;
+}
+bool eliminateDeadInsts(FAM &fam, const pInst &inst) {
+    std::vector worklist{inst};
+    return eliminateDeadInsts(fam, worklist);
+}
+
+std::tuple<Value *, Value *> analyzeHeaderPhi(const Loop *loop, const PHIInst *header_phi) {
+    auto phi_opers = header_phi->getPhiOpers();
+    Err::gassert(phi_opers.size() == 2, "Expected LoopSimplified Form");
+    auto invariant = phi_opers[0].value.get();
+    auto variant = phi_opers[1].value.get();
+    if (!loop->isLoopInvariant(invariant))
+        std::swap(invariant, variant);
+    Err::gassert(loop->isLoopInvariant(invariant) && !loop->isLoopInvariant(variant),
+                 "Expected LoopSimplified Form");
+    return std::make_tuple(invariant, variant);
+}
+
+std::tuple<pVal, pVal> analyzeHeaderPhi(const pLoop &loop, const pPhi &header_phi) {
+    auto [invariant, variant] = analyzeHeaderPhi(loop.get(), header_phi.get());
+    return std::make_tuple(invariant->as<Value>(), variant->as<Value>());
 }
 } // namespace IR

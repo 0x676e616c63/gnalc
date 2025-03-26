@@ -1,3 +1,4 @@
+#include "../../../include/ir/basic_block.hpp"
 #include "../../../include/ir/instructions/phi.hpp"
 #include "../../../include/ir/visitor.hpp"
 
@@ -5,6 +6,43 @@
 
 namespace IR {
 PHIInst::PHIInst(NameRef name, const pType &_type) : Instruction(OP::PHI, name, _type) {}
+
+PHIInst::PhiOperIterator::PhiOperIterator(InnerIterT iter_) : iter(iter_) {}
+
+PHIInst::PhiOperIterator &PHIInst::PhiOperIterator::operator++() {
+    ++iter;
+    ++iter;
+    return *this;
+}
+PHIInst::PhiOperIterator PHIInst::PhiOperIterator::operator++(int) {
+    auto ret = PhiOperIterator{iter};
+    ++iter;
+    ++iter;
+    return ret;
+}
+
+PHIInst::PhiOperIterator &PHIInst::PhiOperIterator::operator--() {
+    --iter;
+    --iter;
+    return *this;
+}
+
+PHIInst::PhiOperIterator PHIInst::PhiOperIterator::operator--(int) {
+    auto ret = PhiOperIterator{iter};
+    --iter;
+    --iter;
+    return ret;
+}
+
+bool PHIInst::PhiOperIterator::operator==(PhiOperIterator other) const { return iter == other.iter; }
+bool PHIInst::PhiOperIterator::operator!=(PhiOperIterator other) const { return iter != other.iter; }
+
+PHIInst::PhiOper PHIInst::PhiOperIterator::operator*() const {
+    auto val = *iter;
+    auto block = (*std::next(iter))->as<BasicBlock>();
+    Err::gassert(val != nullptr && block != nullptr, "PhiOperIterator: invalid operand");
+    return PhiOper{val, block};
+}
 
 pVal PHIInst::getValueForBlock(const pBlock &block) const {
     if (block == nullptr)

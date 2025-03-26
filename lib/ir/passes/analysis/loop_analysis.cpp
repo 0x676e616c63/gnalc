@@ -41,6 +41,8 @@ Loop::Loop(BasicBlock *bb) {
 }
 
 pLoop Loop::getParent() const { return parent.lock(); }
+pFunc Loop::getParentFunction() const { return getHeader()->getParent(); }
+const std::set<const BasicBlock *> &Loop::getBlockSet() const { return blockset; }
 
 bool Loop::contains(const BasicBlock *bb) const { return blockset.find(bb) != blockset.end(); }
 bool Loop::contains(const Loop *loop) const {
@@ -158,7 +160,12 @@ bool Loop::hasDedicatedExits() const {
     });
 }
 
-bool Loop::isSimplifyForm() const { return getPreHeader() && getLatch() && hasDedicatedExits(); }
+bool Loop::isSimplifyForm() const {
+    // auto ph = getPreHeader();
+    // auto latch = getLatch();
+    // auto dedi = hasDedicatedExits();
+    return getRawPreHeader() && getRawLatch() && hasDedicatedExits();
+}
 
 bool Loop::isRotatedForm() const {
     auto latch = getLatch();
@@ -214,6 +221,20 @@ bool Loop::delBlockForCurrLoop(BasicBlock *bb) {
     return true;
 }
 
+bool Loop::delSubLoop(const Loop *loop) {
+    for (auto it = sub_loops.begin(); it != sub_loops.end(); ++it) {
+        if (it->get() == loop) {
+            sub_loops.erase(it);
+            return true;
+        }
+    }
+    return false;
+}
+
+void Loop::addSubLoop(const pLoop &loop) {
+    sub_loops.emplace_back(loop);
+}
+
 void Loop::addBlock(BasicBlock *bb) {
     loop_blocks.emplace_back(bb);
     blockset.insert(bb);
@@ -233,8 +254,18 @@ void Loop::moveToHeader(const BasicBlock *bb) {
 
 bool Loop::contains(const pBlock &bb) const { return contains(bb.get()); }
 bool Loop::contains(const pLoop &loop) const { return contains(loop.get()); }
-pBlock Loop::getHeader() const { return getRawHeader()->as<BasicBlock>(); }
-pBlock Loop::getPreHeader() const { return getRawPreHeader()->as<BasicBlock>(); }
+pBlock Loop::getHeader() const {
+    auto rh = getRawHeader();
+    if (!rh)
+        return nullptr;
+    return rh->as<BasicBlock>();
+}
+pBlock Loop::getPreHeader() const {
+    auto rph = getRawPreHeader();
+    if (!rph)
+        return nullptr;
+    return rph->as<BasicBlock>();
+}
 bool Loop::isLatch(const pBlock &bb) const { return isLatch(bb.get()); }
 bool Loop::isExiting(const pBlock &bb) const { return isExiting(bb.get()); }
 bool Loop::isExit(const pBlock &bb) const { return isExit(bb.get()); }
@@ -255,11 +286,17 @@ std::set<pBlock> Loop::getExitBlocks() const {
 std::vector<pBlock> Loop::getLatches() const {
     auto res = getRawLatches();
     std::vector<pBlock> ret;
+    ret.reserve(res.size());
     for (const auto &r : res)
         ret.emplace_back(r->as<BasicBlock>());
     return ret;
 }
-pBlock Loop::getLatch() const { return getRawLatch()->as<BasicBlock>(); }
+pBlock Loop::getLatch() const {
+    auto rl = getRawLatch();
+    if (!rl)
+        return nullptr;
+    return rl->as<BasicBlock>();
+}
 
 bool Loop::isLoopInvariant(const pVal &val) const { return isLoopInvariant(val.get()); }
 bool Loop::isAllOperandsLoopInvariant(const pInst &inst) const { return isAllOperandsLoopInvariant(inst.get()); }
@@ -296,7 +333,66 @@ bool LoopInfo::delBlock(BasicBlock *bb) {
 }
 
 bool LoopInfo::delBlock(const pBlock &bb) { return delBlock(bb.get()); }
-void LoopInfo::addBlock(const pLoop &loop, const pBlock &bb) { addBlock(loop, bb.get()); }
+
+bool LoopInfo::delLoop(Loop *loop) {
+    for (const auto& subloop : *loop)
+        delLoop(subloop);
+
+    bool modified = false;
+    auto loop_blocks = loop->getRawBlocks();
+    for (const auto& block : loop_blocks)
+        modified |= delBlock(block);
+    auto parent = loop->getParent();
+    if (parent)
+        modified |= parent->delSubLoop(loop);
+    else {
+        for (auto it = top_level_loops.begin(); it != top_level_loops.end(); ++it) {
+            if (it->get() == loop) {
+                top_level_loops.erase(it);
+                return true;
+            }
+        }
+    }
+    return modified;
+}
+bool LoopInfo::delLoop(const pLoop &loop) { return delLoop(loop.get()); }
+
+bool LoopInfo::breakLoop(Loop *loop) {
+    bool modified = false;
+    auto parent = loop->getParent();
+    if (parent) {
+        for (const auto& block : loop->blocks()) {
+            if (loop_map[block].get() == loop)
+                loop_map[block] = parent;
+        }
+        for (const auto& subloop : *loop)
+            parent->addSubLoop(subloop);
+        modified |= parent->delSubLoop(loop);
+    }
+    else {
+        auto loop_blocks = loop->getRawBlocks();
+        for (const auto& block : loop_blocks) {
+            if (loop_map[block].get() == loop)
+                loop_map.erase(block);
+        }
+        for (const auto& subloop : *loop)
+            top_level_loops.emplace_back(subloop);
+
+        // Deleting will release it.
+        for (auto it = top_level_loops.begin(); it != top_level_loops.end(); ++it) {
+            if (it->get() == loop) {
+                top_level_loops.erase(it);
+                modified = true;
+                break;
+            }
+        }
+    }
+    return modified;
+}
+
+bool LoopInfo::breakLoop(const pLoop& loop) {
+    return breakLoop(loop.get());
+}
 
 void LoopInfo::addBlock(const pLoop &loop, BasicBlock *bb) {
     auto it = loop_map.find(bb);
@@ -305,6 +401,7 @@ void LoopInfo::addBlock(const pLoop &loop, BasicBlock *bb) {
     loop_map[bb] = loop;
     loop->addBlock(bb);
 }
+void LoopInfo::addBlock(const pLoop &loop, const pBlock &bb) { addBlock(loop, bb.get()); }
 
 LoopInfo::const_iterator LoopInfo::begin() const { return top_level_loops.begin(); }
 LoopInfo::const_iterator LoopInfo::end() const { return top_level_loops.end(); }
