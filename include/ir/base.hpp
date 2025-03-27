@@ -161,6 +161,26 @@ public:
         return dynamic_cast<T *>(this);
     }
 
+    template <typename T> T& as_ref() & {
+        static_assert(std::is_base_of_v<Value, T>, "Expected a derived type.");
+        return dynamic_cast<T &>(*this);
+    }
+
+    template <typename T> const T& as_ref() const & {
+        static_assert(std::is_base_of_v<Value, T>, "Expected a derived type.");
+        return dynamic_cast<const T &>(*this);
+    }
+
+    template <typename T> T&& as_ref() && {
+        static_assert(std::is_base_of_v<Value, T>, "Expected a derived type.");
+        return dynamic_cast<T &&>(*this);
+    }
+
+    template <typename T> const T&& as_ref() const && {
+        static_assert(std::is_base_of_v<Value, T>, "Expected a derived type.");
+        return dynamic_cast<const T &&>(*this);
+    }
+
     template <typename ...Args> bool is() const {
         static_assert((std::is_base_of_v<Value, Args> || ...), "Expected a derived type.");
         return ((as_raw<Args>() != nullptr) || ...);

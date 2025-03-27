@@ -94,7 +94,7 @@ bool LiveAnalysis::processInst(const Instruction *inst) {
                     updated = true;
         break;
     case OP::RET: {
-        auto cinst = dynamic_cast<const RETInst *>(inst);
+        auto cinst = inst->as_raw<RETInst>();
         Err::gassert(cinst != nullptr, "Liveana::processInst: RETInst cast failed.");
         if (!cinst->isVoid())
             if (cinst->getRetVal()->getVTrait() != ValueTrait::CONSTANT_LITERAL)
@@ -103,7 +103,7 @@ bool LiveAnalysis::processInst(const Instruction *inst) {
         break;
     }
     case OP::BR: {
-        auto cinst = dynamic_cast<const BRInst *>(inst);
+        auto cinst = inst->as_raw<BRInst>();
         Err::gassert(cinst != nullptr, "Liveana::processInst: BRInst cast failed.");
         if (cinst->isConditional())
             if (cinst->getCond()->getVTrait() != ValueTrait::CONSTANT_LITERAL)
@@ -115,7 +115,7 @@ bool LiveAnalysis::processInst(const Instruction *inst) {
         break;
     }
     case OP::CALL: {
-        auto cinst = dynamic_cast<const CALLInst *>(inst);
+        auto cinst = inst->as_raw<CALLInst>();
         Err::gassert(cinst != nullptr, "Liveana::processInst: CALLInst cast failed.");
         for (auto &val : cinst->getArgs())
             if (val->getVTrait() != ValueTrait::CONSTANT_LITERAL)

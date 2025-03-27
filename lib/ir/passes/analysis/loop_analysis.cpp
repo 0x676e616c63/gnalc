@@ -202,7 +202,7 @@ bool Loop::isRecursivelyLCSSAForm(const LoopInfo &loop_info) const {
 }
 
 bool Loop::isLoopInvariant(const Value *val) const {
-    if (auto inst = dynamic_cast<const Instruction *>(val))
+    if (auto inst = val->as_raw<Instruction>())
         return !contains(inst->getParent().get());
     return true;
 }

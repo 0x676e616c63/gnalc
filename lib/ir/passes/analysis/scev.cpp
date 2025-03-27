@@ -99,14 +99,14 @@ std::optional<std::tuple<int, int>> TREC::getConstantAffineAddRec() const {
         auto base = base_expr->getRawIRValue();
         auto step = step_expr->getRawIRValue();
         if (base->getVTrait() == ValueTrait::CONSTANT_LITERAL && step->getVTrait() == ValueTrait::CONSTANT_LITERAL)
-            return std::make_tuple(dynamic_cast<ConstantInt *>(base)->getVal(),
-                                   dynamic_cast<ConstantInt *>(step)->getVal());
+            return std::make_tuple(base->as_raw<ConstantInt>()->getVal(),
+                                   step->as_raw<ConstantInt>()->getVal());
     }
     return std::nullopt;
 }
 
 TREC *SCEVHandle::getSCEVAtBlock(Value *val, const BasicBlock *block) {
-    if (dynamic_cast<Instruction *>(val)) {
+    if (val->is<Instruction>()) {
         auto def_block = val->as_raw<Instruction>()->getParent().get();
         if (!domtree->ADomB(def_block, block))
             return nullptr;
@@ -194,7 +194,7 @@ TREC *SCEVHandle::getSCEVAtScope(Value *val, const Loop *loop) {
     if (loop != nullptr)
         return instantiateEvolution(analyzeEvolution(loop, val), loop);
 
-    if (auto inst = dynamic_cast<Instruction *>(val)) {
+    if (auto inst = val->as_raw<Instruction>()) {
         if (auto l = loop_info->getLoopFor(inst->getParent().get())) {
             auto t = instantiateEvolution(analyzeEvolution(l.get(), val), l.get());
             if (!t)
@@ -223,7 +223,7 @@ TREC *SCEVHandle::getSCEVAtScope(Value *val, const Loop *loop) {
             tx = getSCEVAtScope(x.get(), nullptr);
         if (!ty)
             ty = getSCEVAtScope(y.get(), nullptr);
-        auto opcode = dynamic_cast<BinaryInst *>(val)->getOpcode();
+        auto opcode = val->as_raw<BinaryInst>()->getOpcode();
         if (opcode == OP::ADD)
             return eval(getTRECAdd(tx, ty), nullptr);
         if (opcode == OP::SUB)
@@ -232,7 +232,7 @@ TREC *SCEVHandle::getSCEVAtScope(Value *val, const Loop *loop) {
             return eval(getTRECMul(tx, ty), nullptr);
         return getTRECUntracked();
     }
-    if (auto phi = dynamic_cast<PHIInst *>(val)) {
+    if (auto phi = val->as_raw<PHIInst>()) {
         std::vector<TREC *> trecs;
         for (const auto &[phi_val, _bb] : phi->incomings()) {
             auto phi_val_evo = getSCEVAtScope(phi_val.get(), nullptr);
@@ -258,7 +258,7 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
     if (it != evolution.end())
         return eval(it->second, loop);
 
-    auto inst_val = dynamic_cast<Instruction *>(val);
+    auto inst_val = val->as_raw<Instruction>();
     if (!inst_val)
         return getIRValTREC(val);
 
@@ -277,7 +277,7 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
         res = getTRECSub(analyzeEvolution(loop, x.get()), analyzeEvolution(loop, y.get()));
     else if (match(val, M::Mul(M::Bind(x), M::Bind(y))))
         res = getTRECMul(analyzeEvolution(loop, x.get()), analyzeEvolution(loop, y.get()));
-    else if (auto phi = dynamic_cast<const PHIInst *>(val)) {
+    else if (auto phi = val->as_raw<PHIInst>()) {
         auto phi_bb = phi->getParent();
         // Else If n matches "v = loop-phi(a, b)" Then
         if (val_loop->getHeader() == phi_bb) {
@@ -351,7 +351,7 @@ std::pair<bool, TREC *> SCEVHandle::buildUpdateExpr(const PHIInst *loop_phi, Val
         return {false, getTRECUndef()};
     }
 
-    if (auto val_phi = dynamic_cast<const PHIInst *>(val)) {
+    if (auto val_phi = val->as_raw<PHIInst>()) {
         auto val_phi_bb = val_phi->getParent();
         auto val_phi_loop = loop_info->getLoopFor(val_phi_bb).get();
 
@@ -720,7 +720,7 @@ SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop) {
         auto cond = getSCEVExpr(invariant);
         // If this is a constant affine, the number of iterations can be precisely calculated.
         // { 0, +, 1 } < x ---> (x - 0) / 1 ---> x iterations
-        auto constant_cond = dynamic_cast<ConstantInt *>(invariant);
+        auto constant_cond = invariant->as_raw<ConstantInt>();
         auto constant_affine = evo->getConstantAffineAddRec();
         if (constant_affine && constant_cond) {
             auto [base, step] = *constant_affine;
