@@ -115,8 +115,7 @@ bool eliminateLoop(FAM& fam, Function &func, const pLoop &loop, LoopInfo& loop_i
         BasicBlock::DEL_MODE::PHI);
 
     // Release dead phi's uses
-    for (const auto& phi : dead_phis)
-        eliminateDeadInsts(fam, phi);
+    eliminateDeadInsts(dead_phis, &fam);
 
     // Log before delLoop
     {
@@ -174,8 +173,7 @@ bool breakSingleTripRotatedLoop(FAM& fam, const pLoop &loop, SCEVHandle &scev, L
             [&dead_phis](const auto &p) { return dead_phis.find(p->template as<PHIInst>()) != dead_phis.end(); },
             BasicBlock::DEL_MODE::PHI);
         // Release dead phi's uses
-        for (const auto& phi : dead_phis)
-            eliminateDeadInsts(fam, phi);
+        eliminateDeadInsts(dead_phis, &fam);
 
         loop_info.breakLoop(loop);
 

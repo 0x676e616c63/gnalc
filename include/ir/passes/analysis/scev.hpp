@@ -153,6 +153,12 @@ public:
     // at that block, (i.e. the block is not dominated by the invariant's define block)
     // nullptr will be returned.
     pVal expandSCEVExpr(SCEVExpr* expr, const pBlock& block, BasicBlock::iterator insert_before) const;
+    // Convenient Wrapper for expanding SCEVExpr at the end of the block
+    pVal expandSCEVExpr(SCEVExpr* expr, const pBlock& block) const;
+
+    // Expand a AddRec on Loop.
+    // Returns ( phi, base value, update )
+    pPhi expandAddRec(TREC *addrec, const pLoop& loop);
 private:
     pVal expandSCEVExprImpl(SCEVExpr* expr, const pBlock& block,
         BasicBlock::iterator insert_before, std::map<SCEVExpr*, pVal>& inserted) const;

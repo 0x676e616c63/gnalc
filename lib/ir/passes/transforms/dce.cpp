@@ -23,7 +23,7 @@ PM::PreservedAnalyses DCEPass::run(Function &function, FAM &fam) {
         }
     }
 
-    dce_inst_modified |= eliminateDeadInsts(fam, worklist);
+    dce_inst_modified |= eliminateDeadInsts(worklist, &fam);
 
     return dce_inst_modified ? PreserveCFGAnalyses() : PreserveAll();
 }

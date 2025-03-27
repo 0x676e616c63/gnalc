@@ -30,15 +30,15 @@ bool safeUnlinkBB(const pBlock &prebb, const pBlock &nxtbb, std::set<pPhi> &dead
     auto br = prebb->getBRInst();
     Err::gassert(br != nullptr);
     if (br->isConditional()) {
-        auto cond = br->getCond();
+        auto cond_inst = br->getCond()->as<Instruction>();
         if (br->getTrueDest() == nxtbb)
             br->dropTrueDest();
         else {
             Err::gassert(br->getFalseDest() == nxtbb, "The given block is not a successor.");
             br->dropFalseDest();
         }
-        if (options.perform_dce && cond->is<Instruction>())
-            eliminateDeadInsts(*options.fam, cond->as<Instruction>());
+        if (options.perform_dce && cond_inst)
+            eliminateDeadInsts(std::move(cond_inst), options.fam);
     } else {
         Err::gassert(br->getDest() == nxtbb, "The given block is not a successor.");
         // Well, the block has no successor, this might because we are deleting unreachable blocks.
@@ -114,7 +114,7 @@ bool safeUnlinkBB(const pBlock &prebb, const pBlock &nxtbb, std::set<pPhi> &dead
 
                 if (options.perform_dce) {
                     if (auto inst = v->as<Instruction>())
-                        eliminateDeadInsts(*options.fam, inst);
+                        eliminateDeadInsts(std::move(inst), options.fam);
                 }
                 break;
             }
@@ -267,7 +267,7 @@ pPhi findLCSSAPhi(const pBlock &block, const pVal &value) {
     return nullptr;
 }
 
-bool eliminateDeadInsts(FAM& fam, std::vector<pInst>& worklist) {
+bool eliminateDeadInsts(std::vector<pInst>& worklist, FAM *fam) {
     std::set<pInst> visited;
     bool modified = false;
     while (!worklist.empty()) {
@@ -275,16 +275,26 @@ bool eliminateDeadInsts(FAM& fam, std::vector<pInst>& worklist) {
         worklist.pop_back();
         visited.emplace(inst);
 
-        if (inst->getUseCount() == 0) {
-            if (auto call = inst->as<CALLInst>()) {
-                if (hasSideEffect(fam, call))
-                    continue;
+        size_t alive_user_cnt = 0;
+        for (const auto& user : inst->inst_users()) {
+            if (user->getParent() != nullptr)
+                ++alive_user_cnt;
+        }
+
+        if (alive_user_cnt == 0) {
+            if (fam) {
+                if (auto call = inst->as<CALLInst>()) {
+                    if (hasSideEffect(*fam, call))
+                        continue;
+                }
             }
-            else if (inst->is<STOREInst>())
+
+            if (inst->is<STOREInst>())
                 continue;
-            // Delete it in place to release its uses.
+
             if (inst->getParent())
                 inst->getParent()->delInst(inst);
+
             modified = true;
             for (const auto &operand : inst->operands()) {
                 if (auto i = operand->as<Instruction>()) {
@@ -296,9 +306,15 @@ bool eliminateDeadInsts(FAM& fam, std::vector<pInst>& worklist) {
     }
     return modified;
 }
-bool eliminateDeadInsts(FAM &fam, const pInst &inst) {
-    std::vector worklist{inst};
-    return eliminateDeadInsts(fam, worklist);
+
+bool eliminateDeadInsts(pInst inst, FAM *fam) {
+    std::vector worklist{ std::move(inst) };
+    return eliminateDeadInsts(worklist, fam);
+}
+
+bool eliminateDeadInsts(const std::set<pPhi>& dead_phis, FAM *fam) {
+    std::vector<pInst> worklist{ dead_phis.begin(), dead_phis.end() };
+    return eliminateDeadInsts(worklist, fam);
 }
 
 std::tuple<Value *, Value *> analyzeHeaderPhi(const Loop *loop, const PHIInst *header_phi) {

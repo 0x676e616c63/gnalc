@@ -129,12 +129,16 @@ pVal SCEVHandle::expandSCEVExpr(SCEVExpr *expr, const pBlock &block, BasicBlock:
     std::map<SCEVExpr *, pVal> inserted;
     auto ret = expandSCEVExprImpl(expr, block, insert_before, inserted);
     if (ret == nullptr) {
-        for (const auto& [k, v] : inserted) {
+        for (const auto &[k, v] : inserted) {
             auto inst = v->as<Instruction>();
             block->delFirstOfInst(inst);
         }
     }
     return ret;
+}
+
+pVal SCEVHandle::expandSCEVExpr(SCEVExpr *expr, const pBlock &block) const {
+    return expandSCEVExpr(expr, block, block->getTerminator()->getIter());
 }
 
 pVal SCEVHandle::expandSCEVExprImpl(SCEVExpr *expr, const pBlock &block, BasicBlock::iterator insert_before,
@@ -180,7 +184,7 @@ pVal SCEVHandle::expandSCEVExprImpl(SCEVExpr *expr, const pBlock &block, BasicBl
         default:
             Err::unreachable();
         }
-        auto inst = std::make_shared<BinaryInst>("%scev." + std::to_string(name_cnt++), ir_op, lhs, rhs);
+        auto inst = std::make_shared<BinaryInst>("%scev.e" + std::to_string(name_cnt++), ir_op, lhs, rhs);
         inserted[expr] = inst;
         block->addInst(insert_before, inst);
         return inst;
@@ -189,34 +193,79 @@ pVal SCEVHandle::expandSCEVExprImpl(SCEVExpr *expr, const pBlock &block, BasicBl
     return nullptr;
 }
 
+pPhi SCEVHandle::expandAddRec(TREC *addrec, const pLoop &loop) {
+    static size_t name_cnt = 0;
+    Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplified Form");
+    if (!addrec->isAddRec())
+        return nullptr;
+
+    // Only handle single exit
+    if (loop->getExitBlocks().size() != 1)
+        return nullptr;
+
+    auto preheader = loop->getPreHeader();
+    auto header = loop->getHeader();
+    auto latch = loop->getLatch();
+    auto base = addrec->getBase();
+    auto step = addrec->getStep();
+
+    if (!step->isExpr())
+        return nullptr;
+    auto step_expr = step->getExpr();
+
+    auto base_expr = eval(base, loop_info->getLoopFor(preheader).get());
+    if (!base_expr->isExpr())
+        return nullptr;
+    auto base_val = expandSCEVExpr(base_expr->getExpr(), preheader);
+    if (!base_val)
+        return nullptr;
+
+    auto step_val = expandSCEVExpr(step_expr, latch);
+    if (!step_val && base_val->is<Instruction>()) {
+        eliminateDeadInsts(base_val->as<Instruction>());
+        return nullptr;
+    }
+
+    auto update = std::make_shared<BinaryInst>("%scev.a" + std::to_string(name_cnt++),
+        OP::ADD, base_val, step_val);
+
+    auto insert_pos = latch->getTerminator()->getIter();
+    latch->addInst(insert_pos, update);
+
+    auto indvar = std::make_shared<PHIInst>("%scev.p" + std::to_string(name_cnt++), base_val->getType());
+    indvar->addPhiOper(base_val, preheader);
+    indvar->addPhiOper(update, latch);
+    header->addPhiInst(indvar);
+
+    return indvar;
+}
+
 
 TREC *SCEVHandle::getSCEVAtScope(Value *val, const Loop *loop) {
     if (loop != nullptr)
         return instantiateEvolution(analyzeEvolution(loop, val), loop);
 
-    if (auto inst = val->as_raw<Instruction>()) {
-        if (auto l = loop_info->getLoopFor(inst->getParent().get())) {
-            auto t = instantiateEvolution(analyzeEvolution(l.get(), val), l.get());
-            if (!t)
-                return getTRECUntracked();
-            return eval(t, nullptr);
-        }
-    }
-
-    if (!val->as_raw<Instruction>())
+    auto inst = val->as_raw<Instruction>();
+    if (!inst)
         return getIRValTREC(val);
+    if (auto l = loop_info->getLoopFor(inst->getParent().get())) {
+        auto t = instantiateEvolution(analyzeEvolution(l.get(), val), l.get());
+        if (!t)
+            return getTRECUntracked();
+        return eval(t, nullptr);
+    }
 
     pVal x, y;
     if (match(val, M::Add(M::Bind(x), M::Bind(y))) ||
         match(val, M::Sub(M::Bind(x), M::Bind(y))) ||
         match(val, M::Mul(M::Bind(x), M::Bind(y)))) {
         TREC *tx = nullptr, *ty = nullptr;
-        if (auto inst = x->as<Instruction>()) {
-            if (auto lx = loop_info->getLoopFor(inst->getParent().get()))
+        if (auto inst_x = x->as<Instruction>()) {
+            if (auto lx = loop_info->getLoopFor(inst_x->getParent().get()))
                 tx = instantiateEvolution(analyzeEvolution(lx.get(), x.get()), lx.get());
         }
-        if (auto inst = y->as<Instruction>()) {
-            if (auto ly = loop_info->getLoopFor(inst->getParent().get()))
+        if (auto inst_y = y->as<Instruction>()) {
+            if (auto ly = loop_info->getLoopFor(inst_y->getParent().get()))
                 ty = instantiateEvolution(analyzeEvolution(ly.get(), y.get()), ly.get());
         }
         if (!tx)

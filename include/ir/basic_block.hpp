@@ -104,12 +104,14 @@ public:
 
     enum class DEL_MODE { ALL, PHI, NON_PHI };
     // With use-def check, remove all matched.
-    // The instruction must have no users.
+    // The instruction must have no users in any basic block.
+    // Note that it can have users that have no parent.
     bool delInst(const pInst &inst, DEL_MODE mode = DEL_MODE::ALL);
 
     // Delete instructions that satisfied: `pred(inst) == true`
     // Requires the target instruction have no users than expiring users.
-    // "expiring users": users that are being deleted. (pred(inst->getUsers()) == true)
+    // "expiring users": users that are being deleted or have no parent.
+    // (inst.getParent() == nullptr || pred(inst->getUsers()) == true)
     // In other word, If pred(a) == true, pred(a->users) must be true
     template <typename Pred> bool delInstIf(Pred pred, const DEL_MODE mode = DEL_MODE::ALL) {
         bool found = false;
@@ -117,7 +119,7 @@ public:
             for (auto it = phi_insts.begin(); it != phi_insts.end();) {
                 if (pred(*it)) {
                     for (const auto &user : (*it)->inst_users()) {
-                        Err::gassert(pred(user),
+                        Err::gassert(user->getParent() == nullptr || pred(user),
                                      "BasicBlock::delInstIf(): Cannot delete a Phi without deleting its User.");
                     }
                     (*it)->setParent(nullptr);
@@ -131,7 +133,7 @@ public:
             for (auto it = insts.begin(); it != insts.end();) {
                 if (pred(*it)) {
                     for (const auto &user : (*it)->inst_users()) {
-                        Err::gassert(pred(user),
+                        Err::gassert(user->getParent()== nullptr || pred(user),
                                      "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
                     }
                     (*it)->setParent(nullptr);

@@ -80,7 +80,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline() {
     // Reassociate does not converge, set a threshold
     auto make_arithmetic = [] {
         PM::FixedPointPM<Function> arithmetic(10);
-        arithmetic.addPass(ReassociatePass());
+        // arithmetic.addPass(ReassociatePass());
         arithmetic.addPass(InstSimplifyPass());
         arithmetic.addPass(ConstantPropagationPass());
         arithmetic.addPass(DCEPass());
@@ -95,7 +95,6 @@ FPM PassBuilder::buildFunctionFixedPointPipeline() {
         cleanup.addPass(BreakCriticalEdgesPass());
         cleanup.addPass(GVNPREPass());
         cleanup.addPass(DCEPass());
-        cleanup.addPass(ADCEPass());
         cleanup.addPass(LoadEliminationPass());
         cleanup.addPass(DSEPass());
         return cleanup;
@@ -116,6 +115,8 @@ FPM PassBuilder::buildFunctionFixedPointPipeline() {
     fpm.addPass(make_arithmetic());
     fpm.addPass(CFGSimplifyPass());
     fpm.addPass(make_clean());
+    // ADCE is time-consuming
+    fpm.addPass(ADCEPass());
     fpm.addPass(CFGSimplifyPass());
     fpm.addPass(CodeGenPreparePass());
     fpm.addPass(NameNormalizePass(true));
@@ -201,20 +202,21 @@ MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     fpm.addPass(PromotePass());
-    // fpm.addPass(LoopSimplifyPass());
-    // fpm.addPass(LoopRotatePass());
-    // fpm.addPass(NameNormalizePass(true));
-    // // fpm.addPass(PrintFunctionPass(std::cerr));
-    // fpm.addPass(PrintSCEVPass(std::cerr));
+    fpm.addPass(LoopSimplifyPass());
+    fpm.addPass(LoopRotatePass());
+    fpm.addPass(NameNormalizePass(true));
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(PrintSCEVPass(std::cerr));
+    fpm.addPass(LoopStrengthReducePass());
     // fpm.addPass(LoopEliminationPass());
     // // fpm.addPass(PrintSCEVPass(std::cerr));
     // // fpm.addPass(CFGSimplifyPass());
     // fpm.addPass(InlinePass());
     // fpm.addPass(ConstantPropagationPass());
     // fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(BreakCriticalEdgesPass());
-    fpm.addPass(NameNormalizePass(true));
-    fpm.addPass(GVNPREPass());
+    // fpm.addPass(BreakCriticalEdgesPass());
+    // fpm.addPass(NameNormalizePass(true));
+    // fpm.addPass(GVNPREPass());
     fpm.addPass(VerifyPass(false));
 
     // // For LoopUnroll Test
@@ -261,7 +263,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const
         fpm.addPass(VerifyPass(strict));                                                                               \
     });
 
-    REGISTER_FUNCTION_TRANSFORM(ReassociatePass)
+    // REGISTER_FUNCTION_TRANSFORM(ReassociatePass)
     REGISTER_FUNCTION_TRANSFORM(ConstantPropagationPass)
     REGISTER_FUNCTION_TRANSFORM(ADCEPass)
     REGISTER_FUNCTION_TRANSFORM(InstSimplifyPass)

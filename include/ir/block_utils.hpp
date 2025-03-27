@@ -81,8 +81,11 @@ bool isLCSSAPhi(const pPhi &phi, pVal target_val = nullptr);
 pPhi findLCSSAPhi(const pBlock &block, const pVal &value);
 
 // Eliminate dead instructions through use-def chain from the worklist
-bool eliminateDeadInsts(FAM& fam, std::vector<pInst>& worklist);
-bool eliminateDeadInsts(FAM &fam, const pInst &inst);
+// If fam is nullptr, this function won't eliminate dead non-side-effect function call.
+bool eliminateDeadInsts(std::vector<pInst>& worklist, FAM *fam = nullptr);
+bool eliminateDeadInsts(pInst inst, FAM *fam = nullptr);
+// Convenient wrapper for safeUnlinkBB
+bool eliminateDeadInsts(const std::set<pPhi>& dead_phis, FAM *fam = nullptr);
 
 // In LoopSimplified Form, the header has two predecessors, one is the preheader, the other is the latch.
 // The phis in header are induction variables, the two incoming values, from the preheader and the latch,
