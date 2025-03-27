@@ -11,7 +11,6 @@
 
 // The following translation is based on RacistCat's work.
 // RacistCat's GitHub: https://github.com/RacistCat
-// He must be a genius.
 
 namespace BrainFk {
 // Source Repo: https://github.com/RacistCat/32-bit-brainfuck

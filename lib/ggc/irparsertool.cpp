@@ -1,4 +1,6 @@
 #include "../../include/ggc/irparsertool.hpp"
+
+#include "../../include/config/config.hpp"
 #include "../../include/ggc/irparser.hpp"
 using namespace IRParser;
 
@@ -127,7 +129,7 @@ pFunc IRPT::newFunc(std::string &name_, const std::vector<pFormalParam> &params,
 pFuncDecl IRPT::newFuncDecl(std::string &name_, const std::vector<pType> &params,
                                 pType &ret_type, bool is_va_arg_) {
     pFuncDecl fd;
-    if (name_.find("memset") != std::string::npos) {
+    if (name_ == "@" + std::string{Config::IR::BUILTIN_MEMSET}) {
         fd = make<FunctionDecl>(name_, params, ret_type, is_va_arg_, true, false);
     } else {
         fd = make<FunctionDecl>(name_, params, ret_type, is_va_arg_, false, true);

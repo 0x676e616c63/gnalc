@@ -1,8 +1,8 @@
+#include "../../../../include/ir/passes/transforms/loop_elimination.hpp"
 #include "../../../../include/ir/block_utils.hpp"
 #include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/scev.hpp"
-#include "../../../../include/ir/passes/transforms/loop_elimination.hpp"
 
 namespace IR {
 // If all values defined in the loop have no uses outside the loop, or uses outside the loop
@@ -36,10 +36,11 @@ bool isSafeAndProfitableToEliminate(const pLoop &loop, FAM &fam, SCEVHandle &sce
     return true;
 }
 
+// If SCEV can figure out the exit values used outside the loop, replace them with expanded SCEVExpr.
 // Propagating exit values can release some uses outside the loop, thus possibly
 // let the loop unused and able to eliminate.
-// If SCEV can figure out the exit values used outside the loop, replace them with expanded SCEVExpr.
-bool propagateExitValues(Loop &loop, SCEVHandle &scev) {
+// It don't expand non-constant SCEVExpr if the `onlyConstant` is set.
+bool propagateExitValues(Loop &loop, SCEVHandle &scev, bool onlyConstant) {
     bool modified = false;
 
     auto header = loop.getHeader();
@@ -59,6 +60,9 @@ bool propagateExitValues(Loop &loop, SCEVHandle &scev) {
             auto s = scev.getSCEVAtBlock(inst, user_block);
             if (s && s->isExpr()) {
                 auto expr = s->getExpr();
+                if (onlyConstant &&
+                    (!expr->isIRValue() || expr->getIRValue()->getVTrait() != ValueTrait::CONSTANT_LITERAL))
+                    continue;
                 auto exit_value = scev.expandSCEVExpr(expr, user_block, user_inst->getIter());
                 if (exit_value != nullptr) {
                     user_inst->replaceUse(use, exit_value);
@@ -135,6 +139,7 @@ bool eliminateLoop(FAM& fam, Function &func, const pLoop &loop, LoopInfo& loop_i
     return true;
 }
 
+// Break the backedge if it is never taken.
 bool breakSingleTripRotatedLoop(FAM& fam, const pLoop &loop, SCEVHandle &scev, LoopInfo& loop_info) {
     auto latch = loop->getLatch();
     if (!loop->isExiting(latch))
@@ -198,10 +203,18 @@ PM::PreservedAnalyses LoopEliminationPass::run(Function &function, FAM &fam) {
                 continue;
             }
 
+            // Expanding non-constant SCEVExpr will generate many IR Instructions,
+            // which can be a pessimization if the original loop can not be eliminated.
+            // Thus, we use `isSafeAndProfitableToEliminate` to see if expanding non-constant SCEVExprs
+            // can lead to the elimination of the loop. If not, we only expand constants.
+            // Note that propagating constant values are always profitable,
+            // since they can always expose more optimization opportunities.
             if (isSafeAndProfitableToEliminate(loop, fam, scev)) {
-                loop_elim_inst_modified |= propagateExitValues(*loop, scev);
+                loop_elim_inst_modified |= propagateExitValues(*loop, scev, false);
                 loop_elim_cfg_modified |= eliminateLoop(fam ,function, loop, loop_info);
             }
+            else
+                loop_elim_inst_modified |= propagateExitValues(*loop, scev, true);
         }
     }
 
