@@ -21,7 +21,7 @@ PM::PreservedAnalyses TailRecursionEliminationPass::run(Function &function, FAM 
                 if (call->getFunc().get() == &function)
                     worklist.emplace_back(call, ret);
                 else
-                    call->setTailCall();
+                    call->setTailCall(true);
             }
         }
     }

@@ -141,7 +141,7 @@ std::vector<pVal> CALLInst::getArgs() const {
     return ret;
 }
 
-void CALLInst::setTailCall() { is_tail_call = true; }
+void CALLInst::setTailCall(bool is_tail_call_) { is_tail_call = is_tail_call_; }
 
 bool CALLInst::isTailCall() const { return is_tail_call; }
 

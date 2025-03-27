@@ -36,6 +36,7 @@
 #include "../../../../include/ir/instructions/compare.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
 #include "../../../../include/ir/instructions/memory.hpp"
+#include "../analysis/domtree_analysis.hpp"
 #include "../pass_manager.hpp"
 
 #include <algorithm>
@@ -62,12 +63,25 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
             // Also, it might influence codegen.
             // Eq, Ne, Gt, Lt, Ge, Le,
 
+            // Cast
+            Fptosi,
+            Sitofp,
+            Zext,
+            Bitcast,
+
+            // Call
+            PureFuncCall,
+
             // Getelementptr
             Gep,
 
             // Constant, GlobalVariable, FormalParam, Local array ALLOCAInst
-            // They do not change within the function.
+            // They are available in all basic blocks.
             GlobalTemp,
+
+            // Non-pure Function calls, Load
+            // They can only be used in blocks where they are available.
+            LocalTemp,
 
             // PHIInst, their ValueKind might be designated to its operands when inserting
             Phi,
@@ -88,6 +102,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         const std::vector<ValueKind> &getExprOperands() const;
 
         bool isGlobalTemp() const;
+        bool isLocalTemp() const;
         bool isPhi() const;
 
         pVal getIRVal() const;
@@ -225,6 +240,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         std::map<Expr *, ValueKind> expr_table;
         ValueKind kind_cnt = 0;
         bool too_deeply_nested_expr_detected = false;
+        FAM* fam;
 
     public:
         bool should_quit_for_too_deeply_nested_expr() const { return too_deeply_nested_expr_detected; }
@@ -234,6 +250,11 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
             expr_pool.clear();
             kind_cnt = 0;
             too_deeply_nested_expr_detected = false;
+            fam = nullptr;
+        }
+
+        void setFAM(FAM* fam_) {
+            fam = fam_;
         }
 
         ValueKind getKindOrInsert(Expr *expr);
@@ -273,6 +294,10 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
 
     size_t name_cnt = 0;
 
+    FAM* fam;
+    DomTree* domtree;
+    PostDomTree* postdomtree;
+
     std::map<BasicBlock *, KindIRValSet> phi_translate_map;
     pVal phi_translate(Expr *expr, BasicBlock *pred, BasicBlock *succ);
 
@@ -285,6 +310,9 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         new_set_map.clear();
         phi_translate_map.clear();
         name_cnt = 0;
+        fam = nullptr;
+        domtree = nullptr;
+        postdomtree = nullptr;
     }
 
     // For debug

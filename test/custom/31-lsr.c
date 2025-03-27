@@ -15,6 +15,11 @@ int main(){
     putch(fun(5));
     putch(fun(7));
     putch(fun(9));
+    int a = getch();
+    int b = getch();
+    int c = getch();
+    putch(a + b);
+    putch(a + b);
     return 0;
 }
 

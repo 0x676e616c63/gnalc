@@ -44,6 +44,14 @@ PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
         Err::gassert(candidate != nullptr);
         auto cloned = makeClone(candidate);
 
+        // CALLInsts in inlined functions can not be tail call.
+        for (const auto& cloned_bb : *cloned) {
+            for (const auto& cloned_inst : *cloned_bb) {
+                if (auto cloned_call = cloned_inst->as<CALLInst>())
+                    cloned_call->setTailCall(false);
+            }
+        }
+
         // Move alloca
         auto entry = function.getBlocks().front();
         auto cloned_entry = cloned->getBlocks().front();

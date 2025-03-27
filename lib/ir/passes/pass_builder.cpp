@@ -201,19 +201,21 @@ MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     fpm.addPass(PromotePass());
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(LoopRotatePass());
-    fpm.addPass(NameNormalizePass(true));
-    // fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(PrintSCEVPass(std::cerr));
-    fpm.addPass(LoopEliminationPass());
+    // fpm.addPass(LoopSimplifyPass());
+    // fpm.addPass(LoopRotatePass());
+    // fpm.addPass(NameNormalizePass(true));
+    // // fpm.addPass(PrintFunctionPass(std::cerr));
     // fpm.addPass(PrintSCEVPass(std::cerr));
+    // fpm.addPass(LoopEliminationPass());
+    // // fpm.addPass(PrintSCEVPass(std::cerr));
+    // // fpm.addPass(CFGSimplifyPass());
+    // fpm.addPass(InlinePass());
+    // fpm.addPass(ConstantPropagationPass());
     // fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(InlinePass());
-    fpm.addPass(ConstantPropagationPass());
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(VerifyPass(false));
+    fpm.addPass(BreakCriticalEdgesPass());
     fpm.addPass(NameNormalizePass(true));
+    fpm.addPass(GVNPREPass());
+    fpm.addPass(VerifyPass(false));
 
     // // For LoopUnroll Test
     // fpm.addPass(PromotePass());

@@ -7,10 +7,15 @@
 
 /**
  * 目前的继承结构：
- * Value -> User -> Instruction
- *   |---> GlobalVariable
+ * Value
+ *   |--> User
+ *   |     |--> Instruction
+ *   |     |--> BBArgList (not implemented currently, 25.3.27)
+ *   |--> GlobalVariable
  *   |--> BasicBlock
- *   |--> Function
+ *   |--> FunctionDecl
+ *   |--> BasicConstant<xxx>
+ *   |--> FormalParam
  */
 
 #pragma once
@@ -60,7 +65,7 @@ enum class ValueTrait {
 // User 内部存有 shared_ptr<Use>, 即 operands
 // Value 内部存有 weak_ptr<Use>, 即 use_list
 //
-// Use 存有一个 wpVal 和 User*
+// Use 存有一个 weak_ptr<Value> 和 User*
 //
 // 由于 Use 只存储了 裸指针 以及 weak_ptr，User 和 Value 之间并没有在内存上的所有关系。
 // 两大 User, 即 Instruction 和 Constant，其内存分别由 BasicBlock 和 ConstantPool 管理
@@ -156,9 +161,9 @@ public:
         return dynamic_cast<T *>(this);
     }
 
-    template <typename T> bool is() const {
-        static_assert(std::is_base_of_v<Value, T>, "Expected a derived type.");
-        return as_raw<T>() != nullptr;
+    template <typename ...Args> bool is() const {
+        static_assert((std::is_base_of_v<Value, Args> || ...), "Expected a derived type.");
+        return ((as_raw<Args>() != nullptr) || ...);
     }
 
     pType getType() const;

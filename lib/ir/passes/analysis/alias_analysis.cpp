@@ -61,6 +61,27 @@ std::optional<std::tuple<const Value *, size_t>> getGepTotalOffset(const GEPInst
             return std::make_tuple(gv, offset);
         else if (auto fp = dynamic_cast<FormalParam *>(base_ptr))
             return std::make_tuple(fp, offset);
+        else if (auto phi = dynamic_cast<PHIInst *>(base_ptr)) {
+            const Value* common_base = nullptr;
+            size_t common_offset = 0;
+            for (const auto& [phi_gep, bb] : phi->incomings()) {
+                if (!phi_gep->is<GEPInst>())
+                    return std::nullopt;
+                auto opt = getGepTotalOffset(phi_gep->as_raw<GEPInst>());
+                if (!opt.has_value())
+                    return std::nullopt;
+                auto [phi_base, phi_offset] = *opt;
+                if (common_base == nullptr) { // first
+                    common_base = phi_base;
+                    common_offset = phi_offset;
+                }
+                else {
+                    if (phi_base != common_base || phi_offset != common_offset)
+                        return std::nullopt;
+                }
+            }
+            return std::make_tuple(common_base, common_offset);
+        }
         else
             Err::unreachable();
     }
@@ -379,7 +400,10 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
 
 bool isPureBuiltinOrSylibFunc(const FunctionDecl *fn) { return false; }
 
+// This should not have cache since call's argument is mutable.
 RWInfo getCallRWInfo(FAM &fam, CALLInst *call) {
+    auto guard = Logger::scopeDisable();
+
     auto callee = call->getFunc().get();
     if (isPureBuiltinOrSylibFunc(callee))
         return {};
@@ -447,41 +471,75 @@ RWInfo getCallRWInfo(FAM &fam, CALLInst *call) {
     return {read_ret, write_ret, false};
 }
 
-bool isPure(FAM &fam, const CALLInst *call) {
-    auto callee = call->getFunc().get();
-    // Recognized pure functions
-    if (isPureBuiltinOrSylibFunc(callee))
-        return true;
+// The following two functions:
+//   bool isPure(FAM &fam, FunctionDecl *call)
+//   bool hasSideEffect(FAM &fam, FunctionDecl *call)
+// checks a function's property.
+// For a function, its purity or side effect can not change during optimization.
+// But for BasicBlock/Loop or a CALLInst's RWInfo, there are no such guarantee.
+// Therefore, only those two functions have cache.
+// Though AliasAnalysis can be invalidated during transforms, their cache never expires.
+bool isPure(FAM& fam, FunctionDecl* decl) {
+    static std::unordered_map<const FunctionDecl*, bool> cache;
+    auto guard = Logger::scopeDisable();
 
-    auto callee_def = dynamic_cast<Function *>(callee);
+    auto it = cache.find(decl);
+    if (it != cache.end())
+        return it->second;
+
+    // Recognized pure functions
+    if (isPureBuiltinOrSylibFunc(decl))
+        return cache[decl] = true;
+
+    auto callee_def = dynamic_cast<Function *>(decl);
     // Unknown builtin/sylib
     if (callee_def == nullptr)
-        return false;
+        return cache[decl] = false;
 
     auto call_res = fam.getResult<AliasAnalysis>(*callee_def);
     if (call_res.hasSylibCall() || call_res.hasUntrackedCall())
-        return false;
-    return call_res.getFunctionModRefInfo() == ModRefInfo::NoModRef;
+        return cache[decl] = false;
+    return cache[decl] = (call_res.getFunctionModRefInfo() == ModRefInfo::NoModRef);
+}
+bool isPure(FAM &fam, const pFuncDecl &decl) {
+    return isPure(fam, decl.get());
+}
+
+bool isPure(FAM &fam, const CALLInst *call) {
+    return isPure(fam, call->getFunc());
+}
+bool isPure(FAM &fam, const pCall &call) { return isPure(fam, call.get()); }
+
+bool hasSideEffect(FAM& fam, FunctionDecl* decl) {
+    static std::unordered_map<const FunctionDecl*, bool> cache;
+    auto guard = Logger::scopeDisable();
+    auto it = cache.find(decl);
+    if (it != cache.end())
+        return it->second;
+
+    // Recognized pure functions
+    if (isPureBuiltinOrSylibFunc(decl))
+        return cache[decl] = false;
+
+    auto callee_def = dynamic_cast<Function *>(decl);
+    // Unknown builtin/sylib
+    if (callee_def == nullptr)
+        return cache[decl] = true;
+
+    auto call_res = fam.getResult<AliasAnalysis>(*callee_def);
+    if (call_res.hasSylibCall() || call_res.hasUntrackedCall())
+        return cache[decl] = true;
+    return cache[decl] = (call_res.getFunctionModRefInfo() == ModRefInfo::Mod ||
+           call_res.getFunctionModRefInfo() == ModRefInfo::ModRef);
+}
+bool hasSideEffect(FAM &fam, const pFuncDecl &decl) {
+    return hasSideEffect(fam, decl.get());
 }
 
 bool hasSideEffect(FAM &fam, const CALLInst *call) {
-    auto callee = call->getFunc().get();
-
-    // Recognized pure functions
-    if (isPureBuiltinOrSylibFunc(callee))
-        return false;
-
-    auto callee_def = dynamic_cast<Function *>(callee);
-    // Unknown builtin/sylib
-    if (callee_def == nullptr)
-        return true;
-
-    auto call_res = fam.getResult<AliasAnalysis>(*callee_def);
-    if (call_res.hasSylibCall() || call_res.hasUntrackedCall())
-        return true;
-    return call_res.getFunctionModRefInfo() == ModRefInfo::Mod ||
-           call_res.getFunctionModRefInfo() == ModRefInfo::ModRef;
+    return hasSideEffect(fam, call->getFunc());
 }
+bool hasSideEffect(FAM &fam, const pCall &call) { return hasSideEffect(fam, call.get()); }
 
 SharedRWInfo getCallRWInfo(FAM &fam, const pCall &call) {
     auto rwinfo = getCallRWInfo(fam, call.get());
@@ -493,10 +551,9 @@ SharedRWInfo getCallRWInfo(FAM &fam, const pCall &call) {
         write.emplace_back(w->as<Value>());
     return {read, write, rwinfo.untracked};
 }
-bool isPure(FAM &fam, const pCall &call) { return isPure(fam, call.get()); }
-bool hasSideEffect(FAM &fam, const pCall &call) { return hasSideEffect(fam, call.get()); }
 
 bool hasSideEffect(FAM &fam, BasicBlock* block) {
+    auto guard = Logger::scopeDisable();
     auto& aa_res = fam.getResult<AliasAnalysis>(*block->getParent());
     for (const auto &inst : block->all_insts()) {
         if (auto call = inst->as<CALLInst>()) {

@@ -122,6 +122,8 @@ SharedRWInfo getCallRWInfo(FAM &fam, const pCall &call);
 
 // Check if function is pure
 // Given the same input, always returns the same output.
+bool isPure(FAM& fam, FunctionDecl* decl);
+bool isPure(FAM &fam, const pFuncDecl &decl);
 bool isPure(FAM &fam, const CALLInst *call);
 bool isPure(FAM &fam, const pCall &call);
 
@@ -129,6 +131,8 @@ bool isPure(FAM &fam, const pCall &call);
 // It don't change the outer scope, but its output may change even with same input.
 // The difference is that pure function never read global variable or outer memory.
 // but this only guarantee no write to global or outer memory.
+bool hasSideEffect(FAM& fam, FunctionDecl* decl);
+bool hasSideEffect(FAM &fam, const pFuncDecl &decl);
 bool hasSideEffect(FAM &fam, const CALLInst *call);
 bool hasSideEffect(FAM &fam, const pCall &call);
 

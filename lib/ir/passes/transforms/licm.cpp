@@ -9,19 +9,16 @@
 #include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
-#include "../../../../include/ir/pattern_match.hpp"
 
 #include <algorithm>
 #include <string>
 #include <vector>
 
-using namespace PatternMatch;
-
 namespace IR {
 bool isSafeToMove(const pLoop &loop, const pInst &inst, AliasAnalysisResult &aa_res, FAM &fam) {
     // Only move what we know
     // Do not hoist cmp for codegen
-    if (!match(inst, ClassesMatch<BinaryInst, FNEGInst, CALLInst, LOADInst, STOREInst, GEPInst, CastInst>{}))
+    if (!inst->is<BinaryInst, FNEGInst, CALLInst, LOADInst, STOREInst, GEPInst, CastInst>())
         return false;
 
     // If the load's memory can be modified in the loop, give up.
@@ -61,7 +58,7 @@ bool isSafeToMove(const pLoop &loop, const pInst &inst, AliasAnalysisResult &aa_
                 auto modref = aa_res.getInstModRefInfo(killer, store->getPtr(), fam);
                 if (modref == ModRefInfo::Ref || modref == ModRefInfo::ModRef)
                     return false;
-                // If there are multiple store, the sunk store will overwrite them.
+                // If there are multiple store, the sunk store might overwrite them.
                 // FIXME: If we can prove this store is bound to execute after every other store,
                 //        sunk it is safe.
                 if (modref == ModRefInfo::Mod && killer != store)
@@ -182,7 +179,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                             }
                             dead_insts.emplace(inst);
                             for (const auto &[exit, sunk] : sunk_insts) {
-                                if (!match(sunk, ClassesMatch<STOREInst, CALLInst>{}) && sunk->getUseCount() == 0)
+                                if (!sunk->is<STOREInst, CALLInst>() && sunk->getUseCount() == 0)
                                     dead_insts.emplace(sunk);
                             }
                             licm_inst_modified = true;
