@@ -15,12 +15,6 @@ PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) 
             Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplified Form");
             if (loop->getExitBlocks().size() != 1)
                 continue;
-            std::set<pInst> indvars;
-            for (const auto& phi : loop->getRawHeader()->phis()) {
-                auto [inv, var] = analyzeHeaderPhi(loop, phi);
-                if (var->is<Instruction>())
-                    indvars.emplace(inv->as<Instruction>());
-            }
             for (const auto& bb : loop->blocks()) {
                 auto insts = bb->getInsts();
                 for (const auto& inst : insts) {
@@ -40,7 +34,6 @@ PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) 
                             if (auto phi = scev.expandAddRec(evo, loop)) {
                                 auto use_list = curr->getUseList();
                                 curr->replaceSelf(phi);
-                                // Move it to avoid extending its lifetime
                                 eliminateDeadInsts(curr);
                                 lsr_inst_modified = true;
                             }

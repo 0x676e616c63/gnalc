@@ -2,6 +2,7 @@
 
 #include "../../../../include/ir/block_utils.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <numeric>
 #include <string>
@@ -442,11 +443,14 @@ std::pair<bool, TREC *> SCEVHandle::buildUpdateExpr(const PHIInst *loop_phi, Val
 // Input: trec a symbolic TREC, l the instantiation loop
 // Output: an instantiation of trec
 TREC *SCEVHandle::instantiateEvolution(TREC *trec, const Loop *loop) {
-    std::unordered_set<TREC *> temp;
-    return instantiateEvolutionImpl(trec, loop, temp);
+    static std::vector<std::unordered_set<TREC *>> temp;
+    temp.emplace_back();
+    auto ret = instantiateEvolutionImpl(trec, loop, temp);
+    temp.pop_back();
+    return ret;
 }
 
-TREC *SCEVHandle::instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::unordered_set<TREC *> &instantiated) {
+TREC *SCEVHandle::instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::vector<std::unordered_set<TREC *>> &instantiated) {
     // If trec is a constant c Then
     if (trec->isExpr() && trec->getExpr()->isIRValue() &&
         trec->getExpr()->getRawIRValue()->getVTrait() == ValueTrait::CONSTANT_LITERAL)
@@ -455,9 +459,10 @@ TREC *SCEVHandle::instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::un
     if (trec->isExpr()) {
         // Else If trec is a variable already instantiated Then
         // TODO: resolve mixers
-        if (instantiated.count(trec))
+        if (std::any_of(instantiated.begin(), instantiated.end(),
+            [trec](const auto &set) { return set.count(trec); }))
             return getTRECUntracked();
-        instantiated.emplace(trec);
+        instantiated.back().emplace(trec);
 
         // Else If trec is a variable v Then
         std::function<TREC *(SCEVExpr *)> analyzeExprEvo;
@@ -482,7 +487,8 @@ TREC *SCEVHandle::instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::un
     if (trec->isPeeled()) {
         auto i1 = instantiateEvolutionImpl(getExprTREC(trec->getFirst()), loop, instantiated);
         auto i2 = instantiateEvolutionImpl(trec->getRest(), loop, instantiated);
-        Err::gassert(i1->isExpr(), "Peeled TREC's first value must be invariant to loop.");
+        if (!i1->isExpr())
+            return getTRECUntracked();
         return unifyPeeledTREC(getPeeledTREC(trec->getLoop(), i1->getExpr(), i2));
     }
 

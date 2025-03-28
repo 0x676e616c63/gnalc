@@ -56,7 +56,7 @@ bool Loop::contains(const Loop *loop) const {
 BasicBlock *Loop::getRawHeader() const { return loop_blocks.front(); }
 
 BasicBlock *Loop::getRawPreHeader() const {
-    auto header = getHeader();
+    auto header = getRawHeader();
     BasicBlock *preheader = nullptr;
     for (const auto &pred : header->preds()) {
         if (contains(pred.get()))

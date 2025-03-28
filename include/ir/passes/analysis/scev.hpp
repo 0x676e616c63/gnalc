@@ -187,7 +187,7 @@ private:
     // Input: trec a symbolic TREC, l the instantiation loop
     // Output: an instantiation of trec
     TREC *instantiateEvolution(TREC *trec, const Loop *loop);
-    TREC *instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::unordered_set<TREC *> &instantiated);
+    TREC *instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::vector<std::unordered_set<TREC *>> &instantiated);
 
     TREC *getTRECUndef() const;
     TREC *getTRECUntracked() const;
