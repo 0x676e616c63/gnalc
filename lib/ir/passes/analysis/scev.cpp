@@ -1,5 +1,6 @@
 #include "../../../../include/ir/passes/analysis/scev.hpp"
 
+#include "../../../../include/ir/pattern_match.hpp"
 #include "../../../../include/ir/block_utils.hpp"
 
 #include <algorithm>
@@ -227,20 +228,84 @@ pPhi SCEVHandle::expandAddRec(TREC *addrec, const pLoop &loop) {
         return nullptr;
     }
 
-    auto update = std::make_shared<BinaryInst>("%scev.a" + std::to_string(name_cnt++),
-        OP::ADD, base_val, step_val);
-
-    auto insert_pos = latch->getTerminator()->getIter();
-    latch->addInst(insert_pos, update);
-
     auto indvar = std::make_shared<PHIInst>("%scev.p" + std::to_string(name_cnt++), base_val->getType());
+    auto update = std::make_shared<BinaryInst>("%scev.a" + std::to_string(name_cnt++), OP::ADD, indvar, step_val);
+
     indvar->addPhiOper(base_val, preheader);
     indvar->addPhiOper(update, latch);
     header->addPhiInst(indvar);
 
+    auto insert_pos = latch->getTerminator()->getIter();
+    latch->addInst(insert_pos, update);
+
     return indvar;
 }
 
+std::optional<size_t> SCEVHandle::estimateExpansionCost(SCEVExpr *expr, const pBlock &block) const {
+    std::set<SCEVExpr *> visited;
+    return estimateExpansionCostImpl(expr, block, visited);
+}
+
+std::optional<size_t> SCEVHandle::estimateExpansionCostImpl(SCEVExpr *expr, const pBlock &block,
+                                        std::set<SCEVExpr *> &visited) const {
+    auto it = visited.find(expr);
+    if (it != visited.end())
+        return 0;
+
+    if (expr->isIRValue()) {
+        auto ir_val = expr->getIRValue();
+        if (auto inst = ir_val->as<Instruction>()) {
+            if (!domtree->ADomB(inst->getParent(), block))
+                return std::nullopt;
+        }
+        return 0;
+    }
+    if (expr->isBinary()) {
+        auto lhs = estimateExpansionCostImpl(expr->getLHS(), block, visited);
+        if (!lhs)
+            return std::nullopt;
+        auto rhs = estimateExpansionCostImpl(expr->getRHS(), block, visited);
+        if (!rhs)
+            return std::nullopt;
+        visited.emplace(expr);
+        return *lhs + *rhs + 1;
+    }
+    return std::nullopt;
+}
+
+std::optional<size_t> SCEVHandle::estimateExpansionCost(TREC *addrec, const pLoop &loop) {
+    Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplified Form");
+    if (!addrec->isAddRec())
+        return std::nullopt;
+
+    // Only handle single exit
+    if (loop->getExitBlocks().size() != 1)
+        return std::nullopt;
+
+    auto preheader = loop->getPreHeader();
+    auto header = loop->getHeader();
+    auto latch = loop->getLatch();
+    auto base = addrec->getBase();
+    auto step = addrec->getStep();
+
+    if (!step->isExpr())
+        return std::nullopt;
+    auto step_expr = step->getExpr();
+
+    auto base_expr = eval(base, loop_info->getLoopFor(preheader).get());
+    if (!base_expr->isExpr())
+        return std::nullopt;
+    auto base_val = estimateExpansionCost(base_expr->getExpr(), preheader);
+    if (!base_val)
+        return std::nullopt;
+
+    auto step_val = estimateExpansionCost(step_expr, latch);
+    if (!step_val)
+        return std::nullopt;
+
+    // Base + Step + Update + Phi
+    return *base_val + *step_val + 2;
+}
 
 TREC *SCEVHandle::getSCEVAtScope(Value *val, const Loop *loop) {
     if (loop != nullptr)
@@ -470,7 +535,17 @@ TREC *SCEVHandle::instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::ve
             if (expr->isBinary()) {
                 auto lhs = analyzeExprEvo(expr->getLHS());
                 auto rhs = analyzeExprEvo(expr->getRHS());
-                return getTRECAdd(lhs, rhs);
+                switch (expr->getOp()) {
+                    case SCEVExpr::Binary::Op::Add:
+                        return getTRECAdd(lhs, rhs);
+                    case SCEVExpr::Binary::Op::Sub:
+                        return getTRECSub(lhs, rhs);
+                    case SCEVExpr::Binary::Op::Mul:
+                        return getTRECMul(lhs, rhs);
+                default:
+                        Err::unreachable();
+                }
+                return getTRECUntracked();
             }
             Err::gassert(expr->isIRValue());
             return analyzeEvolution(loop, expr->getRawIRValue());

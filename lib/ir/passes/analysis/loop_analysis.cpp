@@ -302,6 +302,13 @@ bool Loop::isLoopInvariant(const pVal &val) const { return isLoopInvariant(val.g
 bool Loop::isAllOperandsLoopInvariant(const pInst &inst) const { return isAllOperandsLoopInvariant(inst.get()); }
 void Loop::moveToHeader(const pBlock &bb) { moveToHeader(bb.get()); }
 
+size_t Loop::getInstCount() const {
+    size_t ret = 0;
+    for (const auto &bb : loop_blocks)
+        ret += bb->getAllInstCount();
+    return ret;
+}
+
 pLoop LoopInfo::getLoopFor(const BasicBlock *bb) const {
     auto it = loop_map.find(bb);
     if (it != loop_map.end())

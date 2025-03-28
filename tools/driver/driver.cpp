@@ -127,6 +127,7 @@ int main(int argc, char **argv) {
         OPT_ARG("--indvars", "--no-indvars", indvars)
         OPT_ARG("--lsr", "--no-lsr", loop_strength_reduce)
         OPT_ARG("--loopelim", "--no-loopelim", loopelim)
+        OPT_ARG("--sroa", "--no-sroa", sroa)
         OPT_ARG("--jumpthreading", "--no-jumpthreading", jump_threading)
         // Module Transforms
         OPT_ARG("--treeshaking", "--no-treeshaking", tree_shaking)
@@ -201,14 +202,15 @@ Optimizations available:
   --reassociate        - Reassociate commutative expressions
   --instsimplify       - Simplify instructions
   --inline             - Inline suitable functions
-  --loopsimplify       - Canonicalize loops to The Loop Simplify Form
-  --looprotate         - Canonicalize loops to The Rotated Loop Form
-  --lcssa              - Canonicalize loops to The Loop Closed SSA Form
+  --loopsimplify       - Canonicalize loops to the Loop Simplify Form
+  --looprotate         - Canonicalize loops to the Rotated Loop Form
+  --lcssa              - Canonicalize loops to the Loop Closed SSA Form
   --loopunroll         - Unroll loops
   --indvars            - Simplify induction variables
-  --lsr                - Loop Strength Reduction
-  --loopelim           - Loop Elimination
-  --jumpthreading      - Jump Threading
+  --lsr                - Loop strength reduction
+  --loopelim           - Loop elimination
+  --sroa               - Scalar replacement of aggregates
+  --jumpthreading      - Jump threading
   --treeshaking        - Shake off unused functions, function declarations and global variables
 
 Debug options:

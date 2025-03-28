@@ -1,8 +1,10 @@
-#include "../../../../include/ir/passes/transforms/loop_elimination.hpp"
+#include "../../../../include/config/config.hpp"
 #include "../../../../include/ir/block_utils.hpp"
 #include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/scev.hpp"
+#include "../../../../include/ir/pattern_match.hpp"
+#include "../../../../include/ir/passes/transforms/loop_elimination.hpp"
 
 namespace IR {
 // If all values defined in the loop have no uses outside the loop, or uses outside the loop
@@ -17,6 +19,7 @@ bool isSafeAndProfitableToEliminate(const pLoop &loop, FAM &fam, SCEVHandle &sce
     if (hasSideEffect(fam, loop))
         return false;
 
+    size_t cost = 0;
     for (const auto &block : loop->blocks()) {
         for (const auto &inst : block->all_insts()) {
             for (const auto &user : inst->inst_users()) {
@@ -25,14 +28,23 @@ bool isSafeAndProfitableToEliminate(const pLoop &loop, FAM &fam, SCEVHandle &sce
                     // Skip Phi. SCEVExpr can not be expanded before phi.
                     if (!user->is<PHIInst>()) {
                         auto s = scev.getSCEVAtBlock(inst, user_block);
-                        if (s && s->isExpr())
+                        if (s && s->isExpr()) {
+                            auto e = scev.estimateExpansionCost(s->getExpr(), user_block);
+                            if (!e)
+                                return false;
+                            cost += *e;
                             continue;
+                        }
                     }
                     return false;
                 }
             }
         }
     }
+
+    if (cost > loop->getInstCount() * Config::IR::LOOP_ELIMINATION_EXPANSION_COST_RATIO)
+        return false;
+
     return true;
 }
 

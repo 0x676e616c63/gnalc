@@ -32,6 +32,7 @@
 #include "../../../include/ir/passes/transforms/mem2reg.hpp"
 #include "../../../include/ir/passes/transforms/namenormalizer.hpp"
 #include "../../../include/ir/passes/transforms/reassociate.hpp"
+#include "../../../include/ir/passes/transforms/sroa.hpp"
 #include "../../../include/ir/passes/transforms/tail_recursion_elimination.hpp"
 #include "../../../include/ir/passes/transforms/tree_shaking.hpp"
 
@@ -207,17 +208,9 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     fpm.addPass(NameNormalizePass(true));
     // fpm.addPass(PrintFunctionPass(std::cerr));
     // fpm.addPass(PrintSCEVPass(std::cerr));
-    // fpm.addPass(LoopStrengthReducePass());
     fpm.addPass(LoopEliminationPass());
-    // // fpm.addPass(PrintSCEVPass(std::cerr));
-    // // fpm.addPass(CFGSimplifyPass());
-    // fpm.addPass(InlinePass());
-    // fpm.addPass(ConstantPropagationPass());
-    // fpm.addPass(CFGSimplifyPass());
-    // fpm.addPass(BreakCriticalEdgesPass());
-    // fpm.addPass(NameNormalizePass(true));
-    // fpm.addPass(GVNPREPass());
-    fpm.addPass(VerifyPass(false));
+    fpm.addPass(LoopStrengthReducePass());
+    fpm.addPass(VerifyPass(true));
 
     // // For LoopUnroll Test
     // fpm.addPass(PromotePass());

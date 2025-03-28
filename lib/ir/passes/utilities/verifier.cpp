@@ -204,6 +204,6 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
             std::abort();
     }
 
-    return PM::PreservedAnalyses::all();
+    return PreserveAll();
 }
 } // namespace IR

@@ -140,6 +140,8 @@ public:
     void moveToHeader(const BasicBlock *bb);
     void moveToHeader(const pBlock &bb);
 
+    size_t getInstCount() const;
+
 private:
     // These functions won't update LoopInfo, client should call LoopInfo's addBlock/delBlock
     void addBlock(BasicBlock *bb);

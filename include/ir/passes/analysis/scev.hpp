@@ -13,7 +13,6 @@
 #ifndef GNALC_IR_PASSES_ANALYSIS_SCEV_HPP
 #define GNALC_IR_PASSES_ANALYSIS_SCEV_HPP
 
-#include "../../pattern_match.hpp"
 #include "../pass_manager.hpp"
 #include "domtree_analysis.hpp"
 #include "loop_analysis.hpp"
@@ -159,9 +158,19 @@ public:
     // Expand a AddRec on Loop.
     // Returns ( phi, base value, update )
     pPhi expandAddRec(TREC *addrec, const pLoop& loop);
+
+    // Estimates the number of instructions that would be generated during SCEV expansion.
+    // std::nullopt will be returned if the expansion is not possible.
+    // Note: This is a conservative (over-approximated) estimation
+    //       since GVN-PRE may eliminate some redundant instructions.
+    std::optional<size_t> estimateExpansionCost(SCEVExpr* expr, const pBlock& block) const;
+    std::optional<size_t> estimateExpansionCost(TREC* addrec, const pLoop& loop);
 private:
     pVal expandSCEVExprImpl(SCEVExpr* expr, const pBlock& block,
         BasicBlock::iterator insert_before, std::map<SCEVExpr*, pVal>& inserted) const;
+
+    std::optional<size_t> estimateExpansionCostImpl(SCEVExpr* expr, const pBlock& block,
+        std::set<SCEVExpr*>& visited) const;
 
     // Get SCEV of val at within the given scope.
     // the outermost scope ---> 'loop == nullptr'

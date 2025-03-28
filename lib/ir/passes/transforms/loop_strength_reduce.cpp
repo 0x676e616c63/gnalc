@@ -1,8 +1,10 @@
 #include "../../../../include/ir/passes/transforms/loop_strength_reduce.hpp"
 
+#include "../../../../include/config/config.hpp"
 #include "../../../../include/ir/block_utils.hpp"
 #include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/scev.hpp"
+#include "../../../../include/ir/pattern_match.hpp"
 
 namespace IR {
 PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) {
@@ -31,9 +33,13 @@ PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) 
                         }
                         auto evo = scev.getSCEVAtBlock(curr.get(), bb);
                         if (evo && evo->isAddRec()) {
+                            auto cost = scev.estimateExpansionCost(evo, loop);
+                            if (!cost || *cost > Config::IR::LSR_EXPANSION_THRESHOLD)
+                                continue;
                             if (auto phi = scev.expandAddRec(evo, loop)) {
                                 auto use_list = curr->getUseList();
                                 curr->replaceSelf(phi);
+                                Logger::logDebug("[LSR]: expanded AddRec for '", curr->getName(), "'.");
                                 eliminateDeadInsts(curr);
                                 lsr_inst_modified = true;
                             }
