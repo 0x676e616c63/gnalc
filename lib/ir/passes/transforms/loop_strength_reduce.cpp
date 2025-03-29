@@ -25,6 +25,8 @@ PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) 
                         // Get the root of the arithmetic tree
                         while (curr->getUseCount() == 1) {
                             auto user = curr->getSingleUser()->as<Instruction>();
+                            if (!user->is<BinaryInst>())
+                                break;
                             auto user_evo = scev.getSCEVAtBlock(user.get(), bb);
                             if (user_evo && user_evo->isAddRec())
                                 curr = user;
@@ -33,10 +35,10 @@ PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) 
                         }
                         auto evo = scev.getSCEVAtBlock(curr.get(), bb);
                         if (evo && evo->isAddRec()) {
-                            auto cost = scev.estimateExpansionCost(evo, loop);
+                            auto cost = scev.estimateExpansionCost(evo);
                             if (!cost || *cost > Config::IR::LSR_EXPANSION_THRESHOLD)
                                 continue;
-                            if (auto phi = scev.expandAddRec(evo, loop)) {
+                            if (auto phi = scev.expandAddRec(evo)) {
                                 auto use_list = curr->getUseList();
                                 curr->replaceSelf(phi);
                                 Logger::logDebug("[LSR]: expanded AddRec for '", curr->getName(), "'.");

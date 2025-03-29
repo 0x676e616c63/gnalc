@@ -55,6 +55,9 @@ public:
     pVal getIRValue() const { return std::get<Value *>(value)->as<Value>(); }
     SCEVExpr *getLHS() const { return std::get<Binary>(value).lhs; }
     SCEVExpr *getRHS() const { return std::get<Binary>(value).rhs; }
+    void swapOperands() {
+        std::swap(std::get<Binary>(value).lhs, std::get<Binary>(value).rhs);
+    }
     Binary::Op getOp() const { return std::get<Binary>(value).op; }
 };
 enum class TRECType { AddRec, Peeled, Expr, Undefined, Untracked };
@@ -146,6 +149,10 @@ public:
     SCEVExpr *getBackEdgeTakenCount(const Loop *loop);
     SCEVExpr *getBackEdgeTakenCount(const pLoop &loop);
 
+    // Get the exact value of a loop's trip count
+    SCEVExpr *getTripCount(const Loop *loop);
+    SCEVExpr *getTripCount(const pLoop &loop);
+
     // Expand the SCEV Expression. Returns the expanded IR Value.
     // New instructions will be inserted before `insert_before`.
     // If the expression contains loop invariant values that are not available
@@ -157,14 +164,14 @@ public:
 
     // Expand a AddRec on Loop.
     // Returns ( phi, base value, update )
-    pPhi expandAddRec(TREC *addrec, const pLoop& loop);
+    pPhi expandAddRec(TREC *addrec);
 
     // Estimates the number of instructions that would be generated during SCEV expansion.
     // std::nullopt will be returned if the expansion is not possible.
     // Note: This is a conservative (over-approximated) estimation
     //       since GVN-PRE may eliminate some redundant instructions.
     std::optional<size_t> estimateExpansionCost(SCEVExpr* expr, const pBlock& block) const;
-    std::optional<size_t> estimateExpansionCost(TREC* addrec, const pLoop& loop);
+    std::optional<size_t> estimateExpansionCost(TREC* addrec);
 private:
     pVal expandSCEVExprImpl(SCEVExpr* expr, const pBlock& block,
         BasicBlock::iterator insert_before, std::map<SCEVExpr*, pVal>& inserted) const;
@@ -221,7 +228,7 @@ private:
     SCEVExpr *getSCEVExprNeg(SCEVExpr *x);
     SCEVExpr *getSCEVExpr(int x);
     SCEVExpr *getSCEVExpr(Value *x);
-    void foldSCEVExpr(SCEVExpr *expr) const;
+    void foldSCEVExpr(SCEVExpr *expr);
 
     Function *function;
     LoopInfo *loop_info;
