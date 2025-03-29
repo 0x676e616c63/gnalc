@@ -8,13 +8,14 @@ using namespace MIR;
 
 bool RAPass::isMoveInstruction(const InstP &inst) {
     auto use = std::dynamic_pointer_cast<BindOnVirOP>(inst->getSourceOP(1));
-    auto def = std::dynamic_pointer_cast<BindOnVirOP>(inst->getTargetOP());
+    auto def = inst->getTargetOP();
 
     if (use == nullptr)
         return false;
 
     if (!std::dynamic_pointer_cast<NeonInstruction>(inst)) {
-        if (std::get<OpCode>(inst->getOpCode()) == OpCode::MOV || std::get<OpCode>(inst->getOpCode()) == OpCode::COPY) {
+        if (std::get<OpCode>(inst->getOpCode()) == OpCode::MOV || std::get<OpCode>(inst->getOpCode()) == OpCode::MVN ||
+            std::get<OpCode>(inst->getOpCode()) == OpCode::COPY) {
             return true;
         }
     } else {
@@ -29,6 +30,17 @@ bool RAPass::isMoveInstruction(const InstP &inst) {
 
 RAPass::Nodes RAPass::getUse(const InstP &inst) {
     Nodes uses;
+
+    if (std::get<OpCode>(inst->getOpCode()) == OpCode::BL || std::get<OpCode>(inst->getOpCode()) == OpCode::BLX) {
+        auto &varpool = Func->editInfo().getPool();
+
+        for (int rx = 0; rx < 4; ++rx) {
+            uses.insert(varpool.getValue(static_cast<CoreRegister>(rx))); // r0, r1, r2, r3
+        }
+
+        return uses;
+    }
+
     for (int i = 1; i < 5; ++i) {
         auto op = inst->getSourceOP(i);
 
@@ -83,7 +95,7 @@ OperP RAPass::heuristicSpill() {
 RAPass::Nodes RAPass::spill_tryOpt(const OperP &op) {
     ++spilltimes;
 
-    if (availableSRegisters.empty())
+    if (availableSRegisters->empty())
         return spill_classic(op);
     else
         return spill_opt(op);
@@ -93,8 +105,9 @@ RAPass::Nodes RAPass::spill_opt(const OperP &op) {
     Nodes stageValues;
 
     // 溢出的FPU寄存器
-    auto fpu = availableSRegisters.back();
-    availableSRegisters.pop_back();
+    auto fpu = *(availableSRegisters->begin()); // 尽量用caller saved
+    availableSRegisters->erase(availableSRegisters->begin());
+
     auto fpuRegister = varpool->getValue(static_cast<FPURegister>(fpu));
     auto type_pair = std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32);
 
@@ -296,7 +309,7 @@ RAPass::Nodes RAPass::spill_classic(const OperP &op) {
     for (const auto &blk : Func->getBlocks()) {
         auto &insts = blk->getInsts();
         for (auto inst_it = insts.begin(); inst_it != insts.end();) {
-            bool insert_before = false;
+            // bool insert_before = false;
             bool insert_after = false;
             auto inst = *inst_it;
 
@@ -308,7 +321,7 @@ RAPass::Nodes RAPass::spill_classic(const OperP &op) {
                 Err::gassert(base != nullptr, "base register is NULL");
 
                 if (base->getBase() == op) { // 需要setBase()
-                    insert_before = true;
+                    // insert_before = true;
 
                     auto read_stage = varpool->addValue_anonymously(false);
                     base->setBase(read_stage); // 弃用原基址寄存器(修改原指令)
@@ -320,7 +333,7 @@ RAPass::Nodes RAPass::spill_classic(const OperP &op) {
                 }
 
                 if (index == op) { // maybe nullptr
-                    insert_before = true;
+                    // insert_before = true;
 
                     auto read_stage = varpool->addValue_anonymously(false);
                     ldr->setIndexReg(read_stage); // 修改原指令
@@ -349,7 +362,7 @@ RAPass::Nodes RAPass::spill_classic(const OperP &op) {
                 Err::gassert(base != nullptr, "base register is NULL");
 
                 if (use == op) {
-                    insert_before = true;
+                    // insert_before = true;
 
                     auto read_stage = varpool->addValue_anonymously(false);
                     str->setSourceOP(1, read_stage); // 修改原指令
@@ -360,7 +373,7 @@ RAPass::Nodes RAPass::spill_classic(const OperP &op) {
                 }
 
                 if (base->getBase() == op) { // 需要setBase()
-                    insert_before = true;
+                    // insert_before = true;
 
                     auto read_stage = varpool->addValue_anonymously(false);
                     base->setBase(read_stage); // 弃用原基址寄存器(修改原指令)
@@ -372,7 +385,7 @@ RAPass::Nodes RAPass::spill_classic(const OperP &op) {
                 }
 
                 if (index == op) { // maybe nullptr
-                    insert_before = true;
+                    // insert_before = true;
 
                     auto read_stage = varpool->addValue_anonymously(false);
                     str->setIndexReg(read_stage); // 修改原指令
@@ -389,7 +402,7 @@ RAPass::Nodes RAPass::spill_classic(const OperP &op) {
                 Err::gassert(base != nullptr, "base register is NULL");
 
                 if (base->getBase() == op) { // 需要setBase()
-                    insert_before = true;
+                    // insert_before = true;
 
                     auto read_stage = varpool->addValue_anonymously(false);
                     base->setBase(read_stage); // 弃用原基址寄存器(修改原指令)
@@ -401,7 +414,7 @@ RAPass::Nodes RAPass::spill_classic(const OperP &op) {
                 }
 
                 if (index == op) { // maybe nullptr
-                    insert_before = true;
+                    // insert_before = true;
 
                     auto read_stage = varpool->addValue_anonymously(false);
                     ldr->setIndexReg(read_stage); // 修改原指令
@@ -417,7 +430,7 @@ RAPass::Nodes RAPass::spill_classic(const OperP &op) {
                 Err::gassert(base != nullptr, "base register is NULL");
 
                 if (base->getBase() == op) { // 需要setBase()
-                    insert_before = true;
+                    // insert_before = true;
 
                     auto read_stage = varpool->addValue_anonymously(false);
                     base->setBase(read_stage); // 弃用原基址寄存器(修改原指令)
@@ -429,7 +442,7 @@ RAPass::Nodes RAPass::spill_classic(const OperP &op) {
                 }
 
                 if (index == op) { // maybe nullptr
-                    insert_before = true;
+                    // insert_before = true;
 
                     auto read_stage = varpool->addValue_anonymously(false);
                     str->setIndexReg(read_stage); // 修改原指令
@@ -443,7 +456,7 @@ RAPass::Nodes RAPass::spill_classic(const OperP &op) {
                 auto defs = getDef(inst);
 
                 if (uses.find(op) != uses.end()) {
-                    insert_before = true;
+                    // insert_before = true;
 
                     auto read_stage = varpool->addValue_anonymously(false);
                     auto ldr_new = std::make_shared<ldrInst>(SourceOperandType::rsi, 4, read_stage, stackaddr);
@@ -479,8 +492,38 @@ RAPass::Nodes RAPass::spill_classic(const OperP &op) {
     return stageValues;
 }
 
+bool NeonRAPass::isMoveInstruction(const InstP &inst) {
+    /// vmov sx, sy
+
+    auto use = std::dynamic_pointer_cast<BindOnVirOP>(inst->getSourceOP(1));
+    auto def = std::dynamic_pointer_cast<BindOnVirOP>(inst->getTargetOP());
+
+    if (use == nullptr)
+        return false;
+
+    if (std::dynamic_pointer_cast<NeonInstruction>(inst)) {
+        if (std::get<NeonOpCode>(inst->getOpCode()) == NeonOpCode::VMOV) {
+            if (use->getBank() == def->getBank())
+                return true;
+        }
+    }
+
+    return false;
+}
+
 NeonRAPass::Nodes NeonRAPass::getUse(const InstP &inst) {
     NeonRAPass::Nodes uses;
+
+    if (std::get<OpCode>(inst->getOpCode()) == OpCode::BL || std::get<OpCode>(inst->getOpCode()) == OpCode::BLX) {
+        auto &varpool = Func->editInfo().getPool();
+
+        for (int sx = 0; sx < 16; ++sx) {
+            uses.insert(varpool.getValue(static_cast<FPURegister>(sx)));
+        }
+
+        return uses;
+    }
+
     for (int i = 1; i < 5; ++i) {
         auto op = inst->getSourceOP(i);
         if (std::dynamic_pointer_cast<BindOnVirOP>(op) &&

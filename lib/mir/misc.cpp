@@ -21,7 +21,7 @@ std::string MIR::FrameObj::toString() const {
 
 std::string MIR::GlobalObj::toString() const {
     std::string str;
-    variant_toString visitor;
+    variant_const_toString visitor;
 
     str += "- {";
 
@@ -29,7 +29,7 @@ std::string MIR::GlobalObj::toString() const {
     str += ", size = " + std::to_string(size);
 
     str += ", initial: [";
-    for (auto &init : initializer) {
+    for (const auto &init : initializer) {
         if (init.first) {
             str += std::visit(visitor, init.second);
         } else {
@@ -131,7 +131,9 @@ bool isImmCanBeEncodedInText(float imme) {
 
 MIR::ConstObj::ConstObj(unsigned int _id, int imme) : id(_id) {
     auto imm = static_cast<unsigned int>(imme);
-    if (isImmCanBeEncodedInText(imm)) {
+    if (imme <= -1 && imme >= -257) {
+        literal = imme;
+    } else if (isImmCanBeEncodedInText(imm)) {
         literal = imme;
     } else {
         ///@brief turn into movw/movt
@@ -155,6 +157,8 @@ MIR::ConstObj::ConstObj(unsigned int _id, float imme) : id(_id) {
 
 MIR::ConstObj::ConstObj(unsigned int _id, bool imme) : id(_id), literal(imme) {}
 MIR::ConstObj::ConstObj(unsigned int _id, char imme) : id(_id), literal(imme) {}
+
+// std::string MIR::ConstObj::getStr() {}
 
 std::string MIR::ConstObj::toString() const {
     std::string str;

@@ -9,8 +9,11 @@
 #include "../../../include/mir/passes/transforms/const2reg.hpp"
 #include "../../../include/mir/passes/transforms/peephole.hpp"
 #include "../../../include/mir/passes/transforms/phiEliminate.hpp"
+#include "../../../include/mir/passes/transforms/postRAstackformat.hpp"
 #include "../../../include/mir/passes/transforms/preRAlegalize.hpp"
 #include "../../../include/mir/passes/transforms/registeralloc.hpp"
+#include "../../../include/mir/passes/transforms/uselessBlkEli.hpp"
+#include "../../../include/mir/passes/transforms/uselessMovEli.hpp"
 
 namespace MIR {
 
@@ -26,11 +29,16 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     }
 
     fpm.addPass(PreRALegalize()); // necessary
-    fpm.addPass(Const2Reg());
+    fpm.addPass(Const2Reg());     // necessary
 
-    // fpm.addPass(NeonRAPass()); // pass name 还有问题
+    fpm.addPass(NeonRAPass()); // necessary
+    fpm.addPass(RAPass());     // necessary
 
-    fpm.addPass(RAPass()); // necessary
+    fpm.addPass(postRAstackformat());
+
+    fpm.addPass(uselessMovEli());
+    fpm.addPass(uselessBlkEli());
+
     return fpm;
 }
 

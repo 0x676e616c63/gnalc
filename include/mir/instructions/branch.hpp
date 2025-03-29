@@ -14,8 +14,8 @@ class branchInst : public Instruction {
 private:
     std::variant<std::shared_ptr<IR::BasicBlock>,
                  std::shared_ptr<IR::FunctionDecl>> Dest; // 为PhiEliminate准备
-    std::string JmpTo;
-    unsigned RetValType; // only BL or BLX: 0(void), 1(int), 2(float)
+    std::string JmpTo;                                    // with @ or %
+    unsigned RetValType;                                  // only BL or BLX: 0(void), 1(int), 2(float)
 
 public:
     branchInst() = delete;
@@ -29,6 +29,8 @@ public:
     void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override {}
 
     auto getDest() { return Dest; }
+    auto getJmpTo() { return JmpTo; }
+    void changeJmpTo(std::string _newJmpTo) { JmpTo = _newJmpTo; }
     bool isJmpToBlock() { return Dest.index() == 0; }
     bool isJmpToFunc() { return Dest.index() == 1; }
     unsigned int getRetValType() const { return RetValType; }

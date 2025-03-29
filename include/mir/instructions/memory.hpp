@@ -7,15 +7,13 @@
 
 namespace MIR {
 
-class movInst : public Instruction {
+class movInst : public Instruction { // mov mvn
 private:
     std::shared_ptr<Operand> SourceOperand; // ConstPoolValue, BindOnVirRegister
 public:
     movInst() = delete;
-    movInst(SourceOperandType _tptrait, std::shared_ptr<BindOnVirOP> TargetOP_,
-            std::shared_ptr<Operand> SourceOperand_)
-        : Instruction(OpCode::MOV, _tptrait),
-          SourceOperand(std::move(SourceOperand_)) {
+    movInst(SourceOperandType _tptrait, std::shared_ptr<BindOnVirOP> TargetOP_, std::shared_ptr<Operand> SourceOperand_)
+        : Instruction(OpCode::MOV, _tptrait), SourceOperand(std::move(SourceOperand_)) {
         addTargetOP(std::move(TargetOP_));
     }
 
@@ -34,22 +32,17 @@ private:
 
 public:
     strInst() = delete;
-    strInst(SourceOperandType _tptrait, unsigned int _size,
-            std::shared_ptr<BindOnVirOP> SourceOperand_,
+    strInst(SourceOperandType _tptrait, unsigned int _size, std::shared_ptr<BindOnVirOP> SourceOperand_,
             std::shared_ptr<BaseADROP> MemoryAddr_)
-        : Instruction(OpCode::STR, _tptrait),
-          SourceOperand(std::move(SourceOperand_)),
+        : Instruction(OpCode::STR, _tptrait), SourceOperand(std::move(SourceOperand_)),
           MemoryAddr(std::move(MemoryAddr_)), size(_size) {
         addTargetOP(nullptr);
     }
 
-    strInst(SourceOperandType _tptrait, unsigned int _size,
-            std::shared_ptr<BindOnVirOP> SourceOperand_,
+    strInst(SourceOperandType _tptrait, unsigned int _size, std::shared_ptr<BindOnVirOP> SourceOperand_,
             std::shared_ptr<BaseADROP> MemoryAddr_, std::shared_ptr<BindOnVirOP> IndexReg_)
-        : Instruction(OpCode::STR, _tptrait),
-          SourceOperand(std::move(SourceOperand_)),
-          MemoryAddr(std::move(MemoryAddr_)),
-          IndexReg(std::move(IndexReg_)), size(_size) {
+        : Instruction(OpCode::STR, _tptrait), SourceOperand(std::move(SourceOperand_)),
+          MemoryAddr(std::move(MemoryAddr_)), IndexReg(std::move(IndexReg_)), size(_size) {
         addTargetOP(nullptr);
     }
 
@@ -71,19 +64,16 @@ private:
 
 public:
     ldrInst() = delete;
-    ldrInst(SourceOperandType _tptrait, unsigned int _size,
-            std::shared_ptr<BindOnVirOP> TargetOP_,
+    ldrInst(SourceOperandType _tptrait, unsigned int _size, std::shared_ptr<BindOnVirOP> TargetOP_,
             std::shared_ptr<BaseADROP> MemoryAddr_)
-        : Instruction(OpCode::LDR, _tptrait),
-          MemoryAddr(std::move(MemoryAddr_)), size(_size) {
+        : Instruction(OpCode::LDR, _tptrait), MemoryAddr(std::move(MemoryAddr_)), size(_size) {
         addTargetOP(std::move(TargetOP_));
     }
 
-    ldrInst(SourceOperandType _tptrait, unsigned int _size,
-            std::shared_ptr<BindOnVirOP> TargetOP_,
+    ldrInst(SourceOperandType _tptrait, unsigned int _size, std::shared_ptr<BindOnVirOP> TargetOP_,
             std::shared_ptr<BaseADROP> MemoryAddr_, std::shared_ptr<BindOnVirOP> IndexReg_)
-        : Instruction(OpCode::LDR, _tptrait),
-          MemoryAddr(std::move(MemoryAddr_)), IndexReg(std::move(IndexReg_)), size(_size) {
+        : Instruction(OpCode::LDR, _tptrait), MemoryAddr(std::move(MemoryAddr_)), IndexReg(std::move(IndexReg_)),
+          size(_size) {
         addTargetOP(std::move(TargetOP_));
     }
 

@@ -18,22 +18,21 @@ public:
     Module() = delete;
     explicit Module(std::string _name) : Value(ValueTrait::Module, std::move(_name)) {}
 
-    void addGlobal(const std::shared_ptr<GlobalObj> &_glo) {
-        GlobalVals.emplace_back(_glo);
-    }
+    void addGlobal(const std::shared_ptr<GlobalObj> &_glo) { GlobalVals.emplace_back(_glo); }
 
-    void addFunc(const std::shared_ptr<Function> &_func) {
-        funcs.emplace_back(_func);
-    }
+    void addFunc(const std::shared_ptr<Function> &_func) { funcs.emplace_back(_func); }
 
     std::list<std::shared_ptr<Function>> &getFuncs() { return funcs; }
 
-    template <typename T_variant>
-    std::shared_ptr<ConstObj> getConst(const T_variant &_val) {
+    template <typename T_variant> std::shared_ptr<ConstObj> getConst(const T_variant &_val) {
         constpool.getConstant(_val);
     }
 
     ConstPool &getConstPool() { return constpool; }
+
+    const auto &getGlobalVals() const { return GlobalVals; }
+
+    const auto &getFunctions() const { return funcs; }
 
     std::string toString() const override;
 };

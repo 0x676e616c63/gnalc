@@ -53,7 +53,8 @@ struct OperandLowering {
 
     ConstPool &constpool;
     VarPool &varpool;
-    std::vector<std::shared_ptr<FrameObj>> &StackObjs;
+    unsigned arg_in_use; // function中将会使用的过程调用的参数的最大数
+    std::deque<std::shared_ptr<FrameObj>> &StackObjs;
 
     /// when use
     std::shared_ptr<Operand> fastFind(const std::shared_ptr<IR::Value> &);
@@ -123,6 +124,8 @@ struct OperandLowering {
     std::shared_ptr<StackADROP> mkStackOP(const IR::Value &, unsigned int size);
     // 开辟栈空间(arg fix-stack)
     std::shared_ptr<StackADROP> mkStackOP(unsigned int seq);
+    // 开辟栈空间(arg)
+    std::shared_ptr<StackADROP> mkStackOP_arg(unsigned int seq);
     // 开辟栈空间(spill)
     std::shared_ptr<StackADROP> mkStackOP();
 };
@@ -147,6 +150,9 @@ struct InstLowering {
 
     std::list<std::shared_ptr<Instruction>> callLower(const std::shared_ptr<IR::CALLInst> &,
                                                       const std::shared_ptr<BasicBlock> &self);
+
+    std::list<std::shared_ptr<Instruction>> callLower_memset(const std::shared_ptr<IR::CALLInst> &,
+                                                             const std::shared_ptr<BasicBlock> &self);
 
     std::list<std::shared_ptr<Instruction>> zextLower(const std::shared_ptr<IR::ZEXTInst> &,
                                                       const std::shared_ptr<BasicBlock> &self);

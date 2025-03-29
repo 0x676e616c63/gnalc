@@ -54,6 +54,80 @@ public:
     std::string toString() override;
     ~PHI() override = default;
 };
+
+class calleesaveInst : public Instruction {
+private:
+    std::set<unsigned> reg_list;
+    bool isCoreReg;
+
+public:
+    calleesaveInst() = delete;
+
+    calleesaveInst(OpCode _opcode, std::set<unsigned> _set, bool _isCoreReg)
+        : Instruction(_opcode, SourceOperandType::r), reg_list(std::move(_set)), isCoreReg(_isCoreReg) {}
+
+    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override = 0;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override = 0;
+
+    const std::set<unsigned> &getRegList() const { return reg_list; }
+
+    bool isCore() const { return isCoreReg; }
+
+    std::string toString() override;
+};
+
+class PUSH : public calleesaveInst {
+private:
+public:
+    PUSH() = delete;
+
+    explicit PUSH(std::set<unsigned> set) : calleesaveInst(OpCode::PUSH, std::move(set), true){};
+
+    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override { return nullptr; };
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override {};
+
+    ~PUSH() override = default;
+};
+
+class POP : public calleesaveInst {
+private:
+public:
+    POP() = delete;
+
+    explicit POP(std::set<unsigned> set) : calleesaveInst(OpCode::POP, std::move(set), true){};
+
+    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override { return nullptr; }
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override {};
+
+    ~POP() override = default;
+};
+
+class VPUSH : public calleesaveInst {
+private:
+public:
+    VPUSH() = delete;
+
+    explicit VPUSH(std::set<unsigned> set) : calleesaveInst(OpCode::VPUSH, std::move(set), false){};
+
+    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override { return nullptr; }
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override {};
+
+    ~VPUSH() override = default;
+};
+
+class VPOP : public calleesaveInst {
+private:
+public:
+    VPOP() = delete;
+
+    explicit VPOP(std::set<unsigned> set) : calleesaveInst(OpCode::VPOP, std::move(set), false){};
+
+    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override { return nullptr; }
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override {};
+
+    ~VPOP() override = default;
+};
+
 } // namespace MIR
 
 #endif

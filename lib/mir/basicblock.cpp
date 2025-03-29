@@ -57,6 +57,28 @@ std::string BasicBlock::toString_debug(liveSet liveIn, liveSet liveOut) const {
     return str;
 }
 
+unsigned int BasicBlock::addPred(const std::shared_ptr<BasicBlock> &_pre) {
+    auto lambda = [&_pre](const auto &blk_ptr) {
+        Err::gassert(!blk_ptr.expired(), "blk in pres already released!");
+        return blk_ptr.lock() == _pre;
+    };
+
+    if (std::find_if(pres.begin(), pres.end(), lambda) == pres.end())
+        pres.emplace_back(_pre);
+
+    return pres.size();
+}
+unsigned int BasicBlock::addSucc(const std::shared_ptr<BasicBlock> &_succ) {
+    auto lambda = [&_succ](const auto &blk_ptr) {
+        Err::gassert(!blk_ptr.expired(), "blk in pres already released!");
+        return blk_ptr.lock() == _succ;
+    };
+
+    if (std::find_if(succs.begin(), succs.end(), lambda) == succs.end())
+        succs.emplace_back(_succ);
+    return succs.size();
+}
+
 void BasicBlock::delPred(std::shared_ptr<BasicBlock> pred) {
     auto lambda = [&pred](const auto &blk_ptr) {
         Err::gassert(!blk_ptr.expired(), "blk in pres already released!");
@@ -81,6 +103,30 @@ void BasicBlock::delSucc(std::shared_ptr<BasicBlock> succ) {
     Err::gassert(it != succs.end(), "cannot find corresponding blk in succs");
 
     succs.erase(it);
+}
+
+void BasicBlock::delPred_try(std::shared_ptr<BasicBlock> pred) {
+    auto lambda = [&pred](const auto &blk_ptr) {
+        Err::gassert(!blk_ptr.expired(), "blk in pres already released!");
+        return blk_ptr.lock() == pred;
+    };
+
+    auto it = std::find_if(pres.begin(), pres.end(), lambda);
+
+    if (it != pres.end())
+        pres.erase(it);
+}
+
+void BasicBlock::delSucc_try(std::shared_ptr<BasicBlock> succ) {
+    auto lambda = [&succ](const auto &blk_ptr) {
+        Err::gassert(!blk_ptr.expired(), "blk in succs already released!");
+        return blk_ptr.lock() == succ;
+    };
+
+    auto it = std::find_if(succs.begin(), succs.end(), lambda);
+
+    if (it != succs.end())
+        succs.erase(it);
 }
 
 void BasicBlock::delInst(std::shared_ptr<Instruction> inst) {

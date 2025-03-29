@@ -1,4 +1,5 @@
 #include "../../../include/mir/builder/lowering.hpp"
+#include "../../../include/mir/instructions/branch.hpp"
 #include "../../../include/mir/instructions/copy.hpp"
 #include "../../../include/mir/instructions/memory.hpp"
 #include <iostream>
@@ -20,13 +21,15 @@ void Lowering::operator()(const IR::Module &midEnd_module) {
 }
 
 std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
-    std::shared_ptr<Function> func = std::make_shared<Function>(midEnd_function.getName());
+    std::shared_ptr<Function> func = std::make_shared<Function>(midEnd_function.getName(), module.getConstPool());
 
     func->editInfo().args = midEnd_function.getParams().size();
+    // func->editInfo().constpool = module.getConstPool();
 
-    OperandLowering operlower{
-        midEnd_function.getInstCount() + midEnd_function.getBlocks().size() + func->getInfo().args,
-        module.getConstPool(), func->editInfo().varpool, func->editInfo().StackObjs}; // first: med_val_cnt
+    OperandLowering operlower{midEnd_function.getInstCount() + midEnd_function.getBlocks().size() +
+                                  func->getInfo().args,
+                              module.getConstPool(), func->editInfo().varpool, func->editInfo().arg_in_use,
+                              func->editInfo().StackObjs}; // first: med_val_cnt
 
     /// @brief 函数参数加载到varpool里, 并且适当添加ldr指令
     unsigned int cnt = 0;  // int 或者 地址(数组退化而来)
@@ -80,23 +83,34 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
         }
     }
 
+    auto begin_blk = *(midEnd_function.getBlocks().begin());
+
+    auto br = std::make_shared<branchInst>(OpCode::B, begin_blk, begin_blk->getName());
+    arg_insts.emplace_back(br);
+
+    ///@brief 打包到initialize blk
+    auto initialize_blk = std::make_shared<BasicBlock>("%initialize", false);
+    initialize_blk->addInsts_front(arg_insts);
+    func->addBlock("%initialize", initialize_blk);
+
     ///@brief 获取逆后序blks
     auto blocks = midEnd_function.getDFVisitor<Util::DFVOrder::ReversePostOrder>();
 
     for (auto &midEnd_bb : blocks) {
         auto basicblock = lower(*midEnd_bb, operlower);
 
-        if (func->getBlocks().empty()) {
-            basicblock->addInsts_front(arg_insts);
-        }
         /// @brief 构建block_list, block_pool
         func->addBlock(midEnd_bb->getName(), basicblock);
     }
 
+    /// @brief 填写block的前驱后继关系
+    initialize_blk->addSucc(func->getBlock(blocks.begin()->get()->getName()));
+    auto original = *(std::next(func->getBlocks().begin()));
+    original->addPred(initialize_blk);
+
     for (const auto &midEnd_bb : midEnd_function.getBlocks()) {
         auto backEnd_bb = func->getBlock(midEnd_bb->getName());
 
-        /// @brief 填写block的前驱后继关系
         for (auto &midEnd_pre : midEnd_bb->getPreBB()) {
             backEnd_bb->addPred(func->getBlock(midEnd_pre->getName()));
         }
@@ -119,7 +133,7 @@ std::shared_ptr<BasicBlock> Lowering::lower(const IR::BasicBlock &midEnd_bb, Ope
 
     for (auto &midEnd_inst : midEnd_bb.getAllInsts()) {
         auto insts = instlower(midEnd_inst, basicblock);
-        basicblock->addInsts_back(insts);
+        basicblock->addInsts_back(insts); // maybe empty
     }
 
     return basicblock;
@@ -144,6 +158,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::operator()(const std::shar
 
     } else if (auto ret = std::dynamic_pointer_cast<IR::RETInst>(midEnd_inst)) {
 
+        blk->isRetBlk = true;
         insts = retLower(ret, blk);
 
     } else if (auto br = std::dynamic_pointer_cast<IR::BRInst>(midEnd_inst)) {
@@ -221,13 +236,13 @@ std::shared_ptr<Operand> OperandLowering::fastFind(const std::shared_ptr<IR::Val
     /// constPool find or insert, 但实际上似乎用不到, 因为对是否是常量的判断提前到instlower了
     if (auto ci1 = std::dynamic_pointer_cast<IR::ConstantI1>(midEnd_val)) {
 
-        auto constPtr = constpool.getConstant(ci1->getVal());
+        auto constPtr = constpool.getConstant((int)ci1->getVal()); ///
         auto constOper = std::make_shared<ConstantIDX>(constPtr);
         return constOper;
 
     } else if (auto ci8 = std::dynamic_pointer_cast<IR::ConstantI8>(midEnd_val)) {
 
-        auto constPtr = constpool.getConstant(ci8->getVal());
+        auto constPtr = constpool.getConstant((int)ci8->getVal()); ///
         auto constOper = std::make_shared<ConstantIDX>(constPtr);
         return constOper;
 
@@ -270,13 +285,13 @@ std::shared_ptr<Operand> OperandLowering::fastFind_phi(const std::shared_ptr<IR:
     /// constPool find or insert, 但实际上似乎用不到, 因为对是否是常量的判断提前到instlower了
     if (auto ci1 = std::dynamic_pointer_cast<IR::ConstantI1>(midEnd_phi_val)) {
 
-        auto constPtr = constpool.getConstant(ci1->getVal());
+        auto constPtr = constpool.getConstant((int)ci1->getVal()); ///
         auto constOper = std::make_shared<ConstantIDX>(constPtr);
         return constOper;
 
     } else if (auto ci8 = std::dynamic_pointer_cast<IR::ConstantI8>(midEnd_phi_val)) {
 
-        auto constPtr = constpool.getConstant(ci8->getVal());
+        auto constPtr = constpool.getConstant((int)ci8->getVal()); ///
         auto constOper = std::make_shared<ConstantIDX>(constPtr);
         return constOper;
 
@@ -428,13 +443,35 @@ std::shared_ptr<StackADROP> OperandLowering::mkStackOP(const IR::Value &val, uns
 }
 
 std::shared_ptr<StackADROP> OperandLowering::mkStackOP(unsigned int seq) {
-    auto obj = std::make_shared<FrameObj>(FrameTrait::Arg, 4);
+    auto obj = std::make_shared<FrameObj>(FrameTrait::FixStack, 4, seq);
     obj->setId(StackObjs.size());
     StackObjs.emplace_back(obj);
 
     auto sp = getPreColored(CoreRegister::sp);
 
-    std::shared_ptr<StackADROP> ptr = std::make_shared<StackADROP>(obj, "%fix-stack." + std::to_string(seq - 4), 0, sp);
+    std::shared_ptr<StackADROP> ptr = std::make_shared<StackADROP>(obj, "%fix-stack." + std::to_string(seq), 0, sp);
+
+    return ptr;
+}
+
+std::shared_ptr<StackADROP> OperandLowering::mkStackOP_arg(unsigned int seq) {
+    std::shared_ptr<FrameObj> obj = nullptr;
+    for (auto &_obj : StackObjs) {
+        if (_obj->getTrait() == FrameTrait::Arg && _obj->getSeq() == seq) {
+            obj = _obj;
+            break;
+        }
+    }
+
+    if (!obj) {
+        obj = std::make_shared<FrameObj>(FrameTrait::Arg, 4, seq);
+        obj->setId(StackObjs.size());
+        StackObjs.emplace_back(obj);
+    }
+
+    auto sp = getPreColored(CoreRegister::sp);
+
+    std::shared_ptr<StackADROP> ptr = std::make_shared<StackADROP>(obj, "%arg." + std::to_string(seq), 0, sp);
 
     return ptr;
 }

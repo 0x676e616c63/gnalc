@@ -1,4 +1,5 @@
 #include "../../../include/mir/instructions/copy.hpp"
+#include "../../../include/mirtools/enum_name.hpp"
 
 using namespace MIR;
 
@@ -36,6 +37,20 @@ std::string PHI::toString() {
         str += PhiOper.val->toString() + ", ";
         str += '%' + PhiOper.pre + " ], ";
     }
+    str += '\n';
+
+    return str;
+}
+
+std::string calleesaveInst::toString() {
+    std::string str;
+
+    str += enum_name(std::get<OpCode>(opcode)) + ' ';
+
+    for (const auto &reg : getRegList()) {
+        str += "$" + enum_name(static_cast<CoreRegister>(reg)) + " ,";
+    }
+    str += '\n';
 
     return str;
 }

@@ -38,7 +38,7 @@ public:
 
 protected:
     // datas
-    Function *Func{}; // 用裸指针是因为不清楚是栈上还是堆上的内存
+    Function *Func{};
 
     OperSet precolored{};
     OperSet initial{};
@@ -113,7 +113,7 @@ protected:
     VarPool *varpool;
 
     ///@note 判断是否是 "move"指令
-    bool isMoveInstruction(const InstP &);
+    virtual bool isMoveInstruction(const InstP &);
 
     ///@note get函数需要过滤
     virtual Nodes getUse(const InstP &);
@@ -164,7 +164,7 @@ protected:
     Nodes spill_opt(const OperP &);
 
     ///@note 用于溢出优化的浮点寄存器, 只出不进
-    std::vector<unsigned int> availableSRegisters;
+    std::set<unsigned int> *availableSRegisters;
 
     ///@note 溢出次数(包含opt)
     unsigned int spilltimes = 0;
@@ -183,11 +183,12 @@ protected:
     void AssignColors() override;
 
 protected:
+    bool isMoveInstruction(const InstP &) override;
     Nodes getUse(const InstP &) override;
     Nodes getDef(const InstP &) override;
     Nodes spill_tryOpt(const OperP &) override;
     Nodes spill_classic(const OperP &) override;
-    std::vector<unsigned int> availableSRegisters;
+    std::set<unsigned int> availableSRegisters;
 };
 
 } // namespace MIR

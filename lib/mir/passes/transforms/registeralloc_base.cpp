@@ -7,14 +7,26 @@
 using namespace MIR;
 
 PM::PreservedAnalyses RAPass::run(Function &bkd_function, FAM &fam) {
-    Func = &bkd_function;                                       ///@bug
-    availableSRegisters = Func->editInfo().availableSRegisters; ///@bug
+    Func = &bkd_function;                                          ///@bug
+    availableSRegisters = &(Func->editInfo().availableSRegisters); ///@bug
     varpool = &(Func->editInfo().varpool);
     liveinfo = fam.getResult<LiveAnalysis>(bkd_function);
 
     isInitialed = false;
 
+    Func->editInfo().regdit_s.insert({
+        0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15,
+        16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+    });
+
     Main();
+
+    ///@bug
+    // Func->editInfo().regdit_s.erase(availableSRegisters->begin(), availableSRegisters->end());
+
+    for (auto item : *availableSRegisters) {
+        Func->editInfo().regdit_s.erase(item);
+    }
 
     Func->editInfo().spilltimes += spilltimes;
     /// debug用
@@ -370,6 +382,14 @@ void RAPass::AssignColors() {
 
         std::iota(okColors.begin(), okColors.end(), 0);
 
+        if (Func->getInfo().maxAlignment == 16) {
+            ///@brief 此时需要一个栈底寄存器: r7
+            auto it = std::find_if(okColors.begin(), okColors.end(), [&](const auto &num) { return num == 7; }); // r7
+            if (it != okColors.end())
+                okColors.erase(it);
+            Func->editInfo().regdit.insert(7); // r7
+        }
+
         for (const auto &w : adjList[n]) {
             if (getUnion<OperP>(coloredNodes, precolored).count(GetAlias(w))) {
                 auto w_a = GetAlias(w);
@@ -391,12 +411,13 @@ void RAPass::AssignColors() {
 
         if (okColors.empty()) {
             addBySet(spilledNodes, Nodes{n});
-        } else if (std::dynamic_pointer_cast<PreColedOP>(n) != nullptr) {
-            /// Iterated Register Coalescing会将预着色寄存器一起放入图中
+        } else if (auto precolored = std::dynamic_pointer_cast<PreColedOP>(n)) {
+            /// Iterated Register Coalescing会将预着色寄存器一起放入图中, 所以这里不再处理
+            Func->editInfo().regdit.insert(static_cast<unsigned int>(std::get<CoreRegister>(precolored->getColor())));
         } else {
             addBySet(coloredNodes, Nodes{n});
-            auto c = *(okColors.begin());
-            // auto c = okColors.back(); // 对于通用寄存器, 尽量避开r0-r3分配, 倒着分配或者从r4开始
+            auto c = *(okColors.begin()); // 多用caller saved
+            Func->editInfo().regdit.insert(c);
 
             auto n_reg = std::dynamic_pointer_cast<BindOnVirOP>(n);
 
@@ -487,14 +508,15 @@ OperP RAPass::GetAlias(OperP n) {
     return n;
 }
 
-PM::PreservedAnalyses NeonRAPass::run(Function &bkd_function, FAM &) {
+PM::PreservedAnalyses NeonRAPass::run(Function &bkd_function, FAM &fam) {
     Func = &bkd_function;
     varpool = &(Func->editInfo().varpool);
+    liveinfo = fam.getResult<LiveAnalysis>(bkd_function);
 
     isInitialed = false;
 
-    availableSRegisters.resize(32);
-    std::iota(availableSRegisters.begin(), availableSRegisters.end(), 0);
+    for (int i = 0; i < 32; ++i)
+        availableSRegisters.insert(i);
 
     Main();
 
@@ -535,8 +557,8 @@ void NeonRAPass::AssignColors() {
             /// Iterated Register Coalescing会将预着色寄存器一起放入图中
         } else {
             addBySet(coloredNodes, Nodes{n});
-            // auto c = *(okColors.begin());
-            auto c = okColors.back();
+            auto c = *(okColors.begin());
+            // auto c = okColors.back();
 
             auto n_reg = std::dynamic_pointer_cast<BindOnVirOP>(n);
             Err::gassert(n_reg != nullptr, "try assign color for a none virReg op");

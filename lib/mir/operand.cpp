@@ -6,7 +6,7 @@
 using namespace MIR;
 
 std::string PreColedOP::toString() const {
-    variant_visitor visitor;
+    variant_reg_toString visitor;
     ///@bug 注意调试
     std::string str = "$" + std::visit(visitor, color);
 

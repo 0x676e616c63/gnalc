@@ -12,11 +12,9 @@
 #include <string>
 
 namespace MIR {
-template <typename T>
-std::string enum_name(T t) = delete;
+template <typename T> std::string enum_name(T t) = delete;
 
-template <>
-inline std::string enum_name<FrameTrait>(FrameTrait t) {
+template <> inline std::string enum_name<FrameTrait>(FrameTrait t) {
     switch (t) {
     case FrameTrait::Alloca:
         return "Alloca";
@@ -24,17 +22,20 @@ inline std::string enum_name<FrameTrait>(FrameTrait t) {
         return "Spill";
     case FrameTrait::Arg:
         return "Arg";
-    case FrameTrait::RetAddress:
-        return "RetAddress";
+    case FrameTrait::CalleeSaved:
+        return "CalleeSaved";
     case FrameTrait::LastFramePtr:
         return "LastFramePtr";
+    case FrameTrait::FixStack:
+        return "FixStk";
+    case FrameTrait::Padding:
+        return "padding";
     }
     Err::unreachable();
     return "unknown FrameTrait";
 }
 
-template <>
-inline std::string enum_name<RegisterBank>(RegisterBank t) {
+template <> inline std::string enum_name<RegisterBank>(RegisterBank t) {
     switch (t) {
     case RegisterBank::gpr:
         return "gpr";
@@ -49,8 +50,7 @@ inline std::string enum_name<RegisterBank>(RegisterBank t) {
     return "unknown RegisterBank";
 }
 
-template <>
-inline std::string enum_name<ShiftOP::inlineShift>(ShiftOP::inlineShift t) {
+template <> inline std::string enum_name<ShiftOP::inlineShift>(ShiftOP::inlineShift t) {
     switch (t) {
     case ShiftOP::inlineShift::asr:
         return "asr";
@@ -67,8 +67,7 @@ inline std::string enum_name<ShiftOP::inlineShift>(ShiftOP::inlineShift t) {
     return "unknown inlineShift";
 }
 
-template <>
-inline std::string enum_name<CoreRegister>(CoreRegister t) {
+template <> inline std::string enum_name<CoreRegister>(CoreRegister t) {
     switch (t) {
     // case CoreRegister::none:          return "none";
     case CoreRegister::r0:
@@ -114,8 +113,7 @@ inline std::string enum_name<CoreRegister>(CoreRegister t) {
     return "unknown CoreRegister";
 }
 
-template <>
-inline std::string enum_name<FPURegister>(FPURegister t) {
+template <> inline std::string enum_name<FPURegister>(FPURegister t) {
     switch (t) {
         // case FPURegister::none:          return "none";
     case FPURegister::s0:
@@ -189,8 +187,7 @@ inline std::string enum_name<FPURegister>(FPURegister t) {
     return "unknown FPURegister";
 }
 
-template <>
-inline std::string enum_name<CondCodeFlag>(CondCodeFlag t) {
+template <> inline std::string enum_name<CondCodeFlag>(CondCodeFlag t) {
     switch (t) {
     case CondCodeFlag::AL:
         return "";
@@ -213,11 +210,12 @@ inline std::string enum_name<CondCodeFlag>(CondCodeFlag t) {
     }
 }
 
-template <>
-inline std::string enum_name<OpCode>(OpCode t) {
+template <> inline std::string enum_name<OpCode>(OpCode t) {
     switch (t) {
     case OpCode::MOV:
         return "MOV";
+    case OpCode::MVN:
+        return "MVN";
     case OpCode::STR:
         return "STR";
     case OpCode::LDR:
@@ -290,6 +288,14 @@ inline std::string enum_name<OpCode>(OpCode t) {
         return "TEQ";
     case OpCode::COPY:
         return "COPY";
+    case OpCode::PUSH:
+        return "PUSH";
+    case OpCode::POP:
+        return "POP";
+    case OpCode::VPUSH:
+        return "VPUSH";
+    case OpCode::VPOP:
+        return "VPOP";
     case OpCode::RET:
         return "RET";
     case OpCode::PHI:
@@ -299,8 +305,7 @@ inline std::string enum_name<OpCode>(OpCode t) {
     return "unknown OpCode";
 }
 
-template <>
-inline std::string enum_name<NeonOpCode>(NeonOpCode t) {
+template <> inline std::string enum_name<NeonOpCode>(NeonOpCode t) {
     switch (t) {
     case NeonOpCode::VMOV:
         return "VMOV";
@@ -339,8 +344,7 @@ inline std::string enum_name<NeonOpCode>(NeonOpCode t) {
     return "unknown NeonOperCode";
 }
 
-template <>
-inline std::string enum_name<bitType>(bitType t) {
+template <> inline std::string enum_name<bitType>(bitType t) {
     switch (t) {
     case bitType::DEFAULT32:
         return "32";
@@ -351,8 +355,7 @@ inline std::string enum_name<bitType>(bitType t) {
     }
 }
 
-template <>
-inline std::string enum_name<SourceOperandType>(SourceOperandType t) {
+template <> inline std::string enum_name<SourceOperandType>(SourceOperandType t) {
     switch (t) {
     case SourceOperandType::a:
         return "a";
@@ -381,6 +384,24 @@ inline std::string enum_name<SourceOperandType>(SourceOperandType t) {
     }
     Err::unreachable();
     return "unknown SourceOperandType";
+}
+
+template <> inline std::string enum_name<std::pair<bitType, bitType>>(std::pair<bitType, bitType> t) {
+    std::string str;
+
+    if (t.first == bitType::DEFAULT32 && t.second == bitType::DEFAULT32) {
+        str = ".32";
+    } else if (t.first == bitType::f32 && t.second == bitType::DEFAULT32) {
+        str = ".f32";
+    } else if (t.first == bitType::s32 && t.second == bitType::f32) {
+        str = ".s32.f32";
+    } else if (t.first == bitType::f32 && t.second == bitType::s32) {
+        str = ".f32.s32";
+    } else {
+        Err::todo("NeonInstruction::bitTage: unknown bitwides");
+    }
+
+    return str;
 }
 
 } // namespace MIR

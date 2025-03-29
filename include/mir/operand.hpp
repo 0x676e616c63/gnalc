@@ -82,7 +82,6 @@ enum class OperandTrait {
     BaseAddress,
     ShiftImme,
     ConstantPoolValue,
-    JmpLabel,
 };
 
 class Operand : public Value {
@@ -239,6 +238,8 @@ public:
     ShiftOP(unsigned _imme, ShiftOP::inlineShift _shiftCode)
         : imme(_imme), shiftCode(_shiftCode), Operand(OperandTrait::ShiftImme) {}
 
+    unsigned getShiftImme() const { return imme; }
+
     std::string toString() const final;
     ~ShiftOP() override = default;
 };
@@ -252,7 +253,7 @@ public:
     explicit ConstantIDX(const std::shared_ptr<ConstObj> &_constant)
         : Operand(OperandTrait::ConstantPoolValue), constant(_constant) {}
 
-    const std::shared_ptr<ConstObj> &getConst() { return constant; }
+    const std::shared_ptr<ConstObj> &getConst() const { return constant; }
 
     std::string toString() const final;
     ~ConstantIDX() override = default;

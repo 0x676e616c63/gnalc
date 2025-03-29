@@ -122,6 +122,10 @@ std::list<std::shared_ptr<Instruction>> InstLowering::callLower(const std::share
     std::list<std::shared_ptr<Instruction>> insts;
 
     auto func = call->getFunc();
+
+    if (func->getName() == "@llvm.memset.p0i8.i32")
+        return callLower_memset(call, blk);
+
     auto functype = IR::toFunctionType(func->getType());
 
     // auto &types = functype->getParams();
@@ -139,7 +143,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::callLower(const std::share
             /// @brief int / float
             if (btype->getInner() == IR::IRBTYPE::I32 || btype->getInner() == IR::IRBTYPE::I8 ||
                 btype->getInner() == IR::IRBTYPE::I1) {
-                // 传参的时候I几都一样, 尤其是用寄存器的时候
+                // 传参的时候i几都一样, 尤其是用寄存器的时候
                 if (cnt <= 4) {
                     // mov $rx, %arg
                     auto reg = operlower.getPreColored(static_cast<CoreRegister>(cnt));
@@ -172,7 +176,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::callLower(const std::share
                         arg_in_reg = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(arg));
                     }
 
-                    auto str = std::make_shared<strInst>(SourceOperandType::ra, 4, arg_in_reg, operlower.mkStackOP());
+                    auto str =
+                        std::make_shared<strInst>(SourceOperandType::ra, 4, arg_in_reg, operlower.mkStackOP_arg(cnt));
                     insts.emplace_back(str);
                 }
                 ++cnt;
@@ -244,7 +249,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::callLower(const std::share
                 insts.emplace_back(mov);
             } else {
                 // str %loc, [sp, #offset]
-                auto str = std::make_shared<strInst>(SourceOperandType::ra, 4, arg_in_reg, operlower.mkStackOP());
+                auto str =
+                    std::make_shared<strInst>(SourceOperandType::ra, 4, arg_in_reg, operlower.mkStackOP_arg(cnt));
                 insts.emplace_back(str);
             }
             ++cnt;
@@ -286,6 +292,48 @@ std::list<std::shared_ptr<Instruction>> InstLowering::callLower(const std::share
     } else {
         Err::unreachable("unknown ret value type detected!");
     }
+
+    ///@warning 原理上, call的前后需要r0~r3, s0~s15的保护和恢复指令
+    ///@warning 但是实际上可以在活跃性分析时, 将call标记为将use r0~r3s0~s15寄存器
+    ///@warning 以便RA时在冲突图中表达, RA将会避免为跨越call的虚拟寄存器分配r0~r3s0~s15
+    ///@warning 没有跨越call的使用, 自然无需保护和恢复指令
+
+    return insts;
+}
+
+///@brief @llvm.memset 和 gnu libc在形制上有差别
+std::list<std::shared_ptr<Instruction>> InstLowering::callLower_memset(const std::shared_ptr<IR::CALLInst> &call_memset,
+                                                                       const std::shared_ptr<BasicBlock> &self) {
+    std::list<std::shared_ptr<Instruction>> insts;
+
+    auto func = call_memset->getFunc();
+    auto functype = IR::toFunctionType(func->getType());
+
+    // auto &types = functype->getParams();
+    auto params = call_memset->getArgs();
+
+    for (int i = 0; i < 3; ++i) {
+        SourceOperandType optype;
+
+        auto &param = params[i]; // i32 or ptr
+
+        std::shared_ptr<Operand> sourceop = nullptr;
+        if (auto const_param = std::dynamic_pointer_cast<IR::ConstantInt>(param)) {
+            sourceop = operlower.LoadedFind(const_param->getVal(), self);
+            optype = SourceOperandType::i32;
+        } else {
+            sourceop = operlower.fastFind(param);
+            optype = SourceOperandType::r;
+        }
+
+        auto mov = std::make_shared<movInst>(optype, operlower.getPreColored(static_cast<CoreRegister>(i)), sourceop);
+        insts.emplace_back(mov);
+    }
+
+    auto call = std::make_shared<branchInst>(OpCode::BL, func, "@memset", 0);
+    insts.emplace_back(call);
+
+    // no return
 
     return insts;
 }

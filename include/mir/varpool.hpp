@@ -59,7 +59,7 @@ public:
         auto obj = std::make_shared<ConstObj>(cnt, literal);
 
         auto op = addValue_anonymously(false);
-        addLoaded(*obj, op, blk); // obj 析构?
+        addLoaded(*obj, op, blk); // obj 析构? blk 析构?
         return {op, obj};         // a new const obj maybe in use ?
     }
 
@@ -72,7 +72,7 @@ public:
     }
 
     const auto &getConst2Vir() { return const2vir; }
-    const auto &getConst2blks() { return const2blks; }
+    const auto &getConst2blks() { return const2blks; } // blks use current constant
 
     void addValue(const IR::Value &, std::shared_ptr<Operand>); // Def
 
