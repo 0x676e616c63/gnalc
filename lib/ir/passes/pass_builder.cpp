@@ -204,18 +204,35 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     fpm.addPass(PromotePass());
     // fpm.addPass(InlinePass());
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(LoopRotatePass());
-    // fpm.addPass(BreakCriticalEdgesPass());
-    // fpm.addPass(GVNPREPass());
+    // auto make_clean = [] {
+    //     PM::FixedPointPM<Function> cleanup;
+    //     cleanup.addPass(InstSimplifyPass());
+    //     cleanup.addPass(ConstantPropagationPass());
+    //     cleanup.addPass(BreakCriticalEdgesPass());
+    //     cleanup.addPass(GVNPREPass());
+    //     cleanup.addPass(DCEPass());
+    //     cleanup.addPass(LoadEliminationPass());
+    //     cleanup.addPass(DSEPass());
+    //     return cleanup;
+    // };
+    // fpm.addPass(make_clean());
+    // fpm.addPass(InlinePass());
+    // fpm.addPass(LoopSimplifyPass());
+    // fpm.addPass(LoopRotatePass());
+    fpm.addPass(BreakCriticalEdgesPass());
     fpm.addPass(NameNormalizePass(true));
-    // fpm.addPass(PrintFunctionPass(std::cerr));
-    // fpm.addPass(PrintSCEVPass(std::cerr));
-    fpm.addPass(LoopEliminationPass());
-    fpm.addPass(LoopStrengthReducePass());
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(GVNPREPass(true));
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(DCEPass());
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    // // fpm.addPass(PrintFunctionPass(std::cerr));
+    // // fpm.addPass(PrintSCEVPass(std::cerr));
+    // fpm.addPass(LoopEliminationPass());
+    // fpm.addPass(LoopStrengthReducePass());
     // fpm.addPass(ConstantPropagationPass());
     // fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(VerifyPass(true));
+    fpm.addPass(VerifyPass(false));
 
     // // For LoopUnroll Test
     // fpm.addPass(PromotePass());

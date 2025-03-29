@@ -138,25 +138,48 @@ void moveBlocks(FunctionBBIter beg, FunctionBBIter end, const pFunc &new_func) {
     moveBlocks(beg, end, new_func, new_func->end());
 }
 
-void foldPHI(const pBlock &bb, bool preserve_lcssa) {
-    std::set<pInst> dead_phis;
+pVal getCommonValue(const pPhi &phi) {
+    auto phi_opers = phi->getPhiOpers();
+    Err::gassert(!phi_opers.empty());
+    pVal common_value = phi_opers[0].value;
+    for (const auto &[v, b] : phi_opers) {
+        if (common_value != v)
+            return nullptr;
+    }
+    return common_value;
+}
+
+bool isIdenticalPhi(const pPhi &phi1, const pPhi &phi2) {
+    if (phi1 == phi2)
+        return true;
+    if (phi1->getNumOperands() != phi2->getNumOperands())
+        return false;
+    for (const auto &[v1, b1] : phi1->incomings()) {
+        bool found = false;
+        for (const auto &[v2, b2] : phi2->incomings()) {
+            if (v1 == v2 && b1 == b2) {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+            return false;
+    }
+    return true;
+}
+
+bool foldPHI(const pBlock &bb, bool preserve_lcssa) {
+    std::set<pPhi> dead_phis;
     for (const auto &phi : bb->phis()) {
         if (phi->getUseCount() == 0) {
             dead_phis.emplace(phi);
             continue;
         }
-        auto phi_opers = phi->getPhiOpers();
-        Err::gassert(!phi_opers.empty());
-        if (preserve_lcssa && phi_opers.size() == 1)
+
+        if (preserve_lcssa)
             continue;
-        pVal common_value = phi_opers[0].value;
-        for (const auto &[v, b] : phi_opers) {
-            if (common_value != v) {
-                common_value = nullptr;
-                break;
-            }
-        }
-        if (common_value != nullptr) {
+
+        if (auto common_value = getCommonValue(phi)) {
             if (common_value == phi)
                 Logger::logWarning("IR::foldPHI: Skipped self-reference phi.");
             else {
@@ -165,11 +188,10 @@ void foldPHI(const pBlock &bb, bool preserve_lcssa) {
             }
         }
     }
-    bb->delInstIf([&dead_phis](const auto &inst) { return dead_phis.find(inst) != dead_phis.end(); },
-                  BasicBlock::DEL_MODE::PHI);
+    return eliminateDeadInsts(dead_phis);
 }
 
-void removeIdenticalPhi(const pBlock &bb) {
+bool removeIdenticalPhi(const pBlock &bb) {
     using ValBBPair = std::pair<pVal, pBlock>;
     std::vector<std::pair<pPhi, std::vector<ValBBPair>>> phi_info;
     for (const auto &phi : bb->phis()) {
@@ -190,8 +212,8 @@ void removeIdenticalPhi(const pBlock &bb) {
             }
         }
     }
-    bb->delInstIf([&dead_phis](const auto &inst) { return dead_phis.find(inst) != dead_phis.end(); },
-                  BasicBlock::DEL_MODE::PHI);
+    return bb->delInstIf([&dead_phis](const auto &inst)
+        { return dead_phis.find(inst) != dead_phis.end(); }, BasicBlock::DEL_MODE::PHI);
 }
 
 pBlock breakCriticalEdge(const pBlock &pred, const pBlock &succ) {
