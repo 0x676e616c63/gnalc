@@ -6,6 +6,7 @@
 #include "../../../include/ir/passes/analysis/domtree_analysis.hpp"
 #include "../../../include/ir/passes/analysis/live_analysis.hpp"
 #include "../../../include/ir/passes/analysis/loop_analysis.hpp"
+#include "../../../include/ir/passes/analysis/scev.hpp"
 
 // Transforms
 #include "../../../include/ir/passes/transforms/adce.hpp"
@@ -16,18 +17,22 @@
 #include "../../../include/ir/passes/transforms/dce.hpp"
 #include "../../../include/ir/passes/transforms/dse.hpp"
 #include "../../../include/ir/passes/transforms/gvn_pre.hpp"
+#include "../../../include/ir/passes/transforms/indvar_simplify.hpp"
 #include "../../../include/ir/passes/transforms/inline.hpp"
 #include "../../../include/ir/passes/transforms/instsimplify.hpp"
 #include "../../../include/ir/passes/transforms/jump_threading.hpp"
 #include "../../../include/ir/passes/transforms/lcssa.hpp"
 #include "../../../include/ir/passes/transforms/licm.hpp"
 #include "../../../include/ir/passes/transforms/load_elimination.hpp"
+#include "../../../include/ir/passes/transforms/loop_elimination.hpp"
 #include "../../../include/ir/passes/transforms/loop_rotate.hpp"
 #include "../../../include/ir/passes/transforms/loop_simplify.hpp"
+#include "../../../include/ir/passes/transforms/loop_strength_reduce.hpp"
 #include "../../../include/ir/passes/transforms/loop_unroll.hpp"
 #include "../../../include/ir/passes/transforms/mem2reg.hpp"
 #include "../../../include/ir/passes/transforms/namenormalizer.hpp"
 #include "../../../include/ir/passes/transforms/reassociate.hpp"
+#include "../../../include/ir/passes/transforms/sroa.hpp"
 #include "../../../include/ir/passes/transforms/tail_recursion_elimination.hpp"
 #include "../../../include/ir/passes/transforms/tree_shaking.hpp"
 
@@ -36,11 +41,11 @@
 #include "../../../include/ir/passes/utilities/verifier.hpp"
 
 #include <algorithm>
+#include <functional>
+#include <optional>
 #include <random>
 #include <string>
 #include <vector>
-#include <optional>
-#include <functional>
 
 namespace IR {
 
@@ -62,6 +67,9 @@ const OptInfo o1_opt_info = {
     .lcssa = false,
     .licm = false,
     .loop_unroll = false,
+    .indvars = false,
+    .loop_strength_reduce = false,
+    .loopelim = false,
     .jump_threading = false,
     // Module Transforms
     .tree_shaking = true,
@@ -73,7 +81,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline() {
     // Reassociate does not converge, set a threshold
     auto make_arithmetic = [] {
         PM::FixedPointPM<Function> arithmetic(10);
-        arithmetic.addPass(ReassociatePass());
+        // arithmetic.addPass(ReassociatePass());
         arithmetic.addPass(InstSimplifyPass());
         arithmetic.addPass(ConstantPropagationPass());
         arithmetic.addPass(DCEPass());
@@ -88,7 +96,6 @@ FPM PassBuilder::buildFunctionFixedPointPipeline() {
         cleanup.addPass(BreakCriticalEdgesPass());
         cleanup.addPass(GVNPREPass());
         cleanup.addPass(DCEPass());
-        cleanup.addPass(ADCEPass());
         cleanup.addPass(LoadEliminationPass());
         cleanup.addPass(DSEPass());
         return cleanup;
@@ -109,6 +116,8 @@ FPM PassBuilder::buildFunctionFixedPointPipeline() {
     fpm.addPass(make_arithmetic());
     fpm.addPass(CFGSimplifyPass());
     fpm.addPass(make_clean());
+    // ADCE is time-consuming
+    fpm.addPass(ADCEPass());
     fpm.addPass(CFGSimplifyPass());
     fpm.addPass(CodeGenPreparePass());
     fpm.addPass(NameNormalizePass(true));
@@ -170,6 +179,8 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FUNCTION_TRANSFORM(lcssa, LCSSAPass())
     FUNCTION_TRANSFORM(licm, LICMPass())
     FUNCTION_TRANSFORM(loop_unroll, LoopUnrollPass())
+    FUNCTION_TRANSFORM(indvars, IndVarSimplifyPass())
+    FUNCTION_TRANSFORM(loop_strength_reduce, LoopStrengthReducePass())
     FUNCTION_TRANSFORM(jump_threading, JumpThreadingPass())
 
 #undef FUNCTION_TRANSFORM
@@ -192,13 +203,19 @@ MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     fpm.addPass(PromotePass());
+    // fpm.addPass(InlinePass());
     fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(NameNormalizePass(true));
     fpm.addPass(LoopRotatePass());
-    fpm.addPass(LCSSAPass());
-    fpm.addPass(LICMPass());
-    fpm.addPass(VerifyPass(true));
+    // fpm.addPass(BreakCriticalEdgesPass());
+    // fpm.addPass(GVNPREPass());
     fpm.addPass(NameNormalizePass(true));
+    // fpm.addPass(PrintFunctionPass(std::cerr));
+    // fpm.addPass(PrintSCEVPass(std::cerr));
+    fpm.addPass(LoopEliminationPass());
+    fpm.addPass(LoopStrengthReducePass());
+    // fpm.addPass(ConstantPropagationPass());
+    // fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(VerifyPass(true));
 
     // // For LoopUnroll Test
     // fpm.addPass(PromotePass());
@@ -223,7 +240,7 @@ MPM PassBuilder::buildModuleDebugPipeline() {
     return mpm;
 }
 
-FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const std::string& repro) {
+FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const std::string &repro) {
     FPM fpm;
     fpm.addPass(PromotePass());
     fpm.addPass(TailRecursionEliminationPass());
@@ -232,19 +249,19 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const
     std::vector<std::pair<std::string_view, std::function<void(bool)>>> passes;
 
 #define REGISTER_FUNCTION_TRANSFORM(pass)                                                                              \
-    passes.emplace_back(pass::name(), [&fpm] (bool strict){                                                                                       \
+    passes.emplace_back(pass::name(), [&fpm](bool strict) {                                                            \
         fpm.addPass(pass());                                                                                           \
-        fpm.addPass(VerifyPass(strict));                                                                                 \
+        fpm.addPass(VerifyPass(strict));                                                                               \
     });
 
 #define REGISTER_FUNCTION_TRANSFORM2(pass1, pass2)                                                                     \
-    passes.emplace_back(pass2::name(), [&fpm] (bool strict){                                                                                       \
+    passes.emplace_back(pass2::name(), [&fpm](bool strict) {                                                           \
         fpm.addPass(pass1());                                                                                          \
         fpm.addPass(pass2());                                                                                          \
-        fpm.addPass(VerifyPass(strict));                                                                                 \
+        fpm.addPass(VerifyPass(strict));                                                                               \
     });
 
-    REGISTER_FUNCTION_TRANSFORM(ReassociatePass)
+    // REGISTER_FUNCTION_TRANSFORM(ReassociatePass)
     REGISTER_FUNCTION_TRANSFORM(ConstantPropagationPass)
     REGISTER_FUNCTION_TRANSFORM(ADCEPass)
     REGISTER_FUNCTION_TRANSFORM(InstSimplifyPass)
@@ -284,25 +301,18 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const
         fpm.addPass(CodeGenPreparePass());
         fpm.addPass(NameNormalizePass(true));
 
-        Logger::logInfo("[FuzzTesting]: Running pipeline: '", pipeline
-            + "'. Run with '-fuzz-repro <this pipeline>' to reproduce it.");
-    }
-    else {
+        Logger::logInfo("[FuzzTesting]: Running pipeline: '",
+                        pipeline + "'. Run with '-fuzz-repro <this pipeline>' to reproduce it.");
+    } else {
         auto find_pass = [&passes, &fpm](const std::string &target) -> std::optional<std::function<void(bool)>> {
             if (target == NameNormalizePass::name()) {
-                return [&fpm](bool) {
-                    fpm.addPass(NameNormalizePass(true));
-                };
+                return [&fpm](bool) { fpm.addPass(NameNormalizePass(true)); };
             }
             if (target == PrintFunctionPass::name()) {
-                return [&fpm](bool) {
-                    fpm.addPass(PrintFunctionPass(std::cerr));
-                };
+                return [&fpm](bool) { fpm.addPass(PrintFunctionPass(std::cerr)); };
             }
             if (target == PrintModulePass::name()) {
-                return [&fpm](bool) {
-                    fpm.addPass(PrintFunctionPass(std::cerr));
-                };
+                return [&fpm](bool) { fpm.addPass(PrintFunctionPass(std::cerr)); };
             }
 
             for (const auto &[name, pass_adder] : passes) {
@@ -319,8 +329,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const
                 // Disable strict mode for debugging
                 (*p)(false);
                 curr.clear();
-            }
-            else if (ch != ' ')
+            } else if (ch != ' ')
                 curr += ch;
         }
         auto p = find_pass(curr);
@@ -335,7 +344,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const
     return fpm;
 }
 
-MPM PassBuilder::buildModuleFuzzTestingPipeline(double duplication_rate, const std::string& repro) {
+MPM PassBuilder::buildModuleFuzzTestingPipeline(double duplication_rate, const std::string &repro) {
     MPM mpm;
     mpm.addPass(makeModulePass(buildFunctionFuzzTestingPipeline(duplication_rate, repro)));
     // Disable Treeshaking in Repro mode for debugging
@@ -356,6 +365,7 @@ void PassBuilder::registerFunctionAnalyses(FAM &fam) {
     FUNCTION_ANALYSIS(PostDomTreeAnalysis())
     FUNCTION_ANALYSIS(AliasAnalysis())
     FUNCTION_ANALYSIS(LoopAnalysis())
+    FUNCTION_ANALYSIS(SCEVAnalysis())
 
 #undef FUNCTION_ANALYSIS
 }

@@ -27,9 +27,7 @@ class ConstantProxy {
     friend class ConstantProxyHash;
 
 private:
-    std::variant<std::shared_ptr<ConstantI1>, std::shared_ptr<ConstantI8>,
-                 std::shared_ptr<ConstantInt>, std::shared_ptr<ConstantFloat>>
-        value;
+    std::variant<pConstI1, pConstI8, pConstI32, pConstF32> value;
 
     ConstantPool *pool;
 
@@ -40,17 +38,12 @@ public:
     ConstantProxy(ConstantProxy &&) = default;
     ConstantProxy &operator=(ConstantProxy &&) = default;
 
-    explicit ConstantProxy(ConstantPool *pool_,
-                           std::shared_ptr<ConstantI1> value_);
-    explicit ConstantProxy(ConstantPool *pool_,
-                           std::shared_ptr<ConstantI8> value_);
-    explicit ConstantProxy(ConstantPool *pool_,
-                           std::shared_ptr<ConstantInt> value_);
-    explicit ConstantProxy(ConstantPool *pool_,
-                           std::shared_ptr<ConstantFloat> value_);
+    explicit ConstantProxy(ConstantPool *pool_, pConstI1 value_);
+    explicit ConstantProxy(ConstantPool *pool_, pConstI8 value_);
+    explicit ConstantProxy(ConstantPool *pool_, pConstI32 value_);
+    explicit ConstantProxy(ConstantPool *pool_, pConstF32 value_);
 
-    explicit ConstantProxy(ConstantPool *pool_,
-                           const std::shared_ptr<Value> &value_);
+    explicit ConstantProxy(ConstantPool *pool_, const pVal &value_);
 
     explicit ConstantProxy(ConstantPool *pool_, bool value_);
     explicit ConstantProxy(ConstantPool *pool_, char value_);
@@ -100,7 +93,6 @@ public:
     bool operator<=(const ConstantProxy &rhs) const;
     bool operator>=(const ConstantProxy &rhs) const;
 
-
     bool operator==(const ConstantProxy &rhs) const;
     bool operator!=(const ConstantProxy &rhs) const;
     bool operator==(bool rhs) const;
@@ -127,12 +119,12 @@ public:
     bool operator>(float rhs) const;
     bool operator<(float rhs) const;
 
-    std::shared_ptr<ConstantI1> getConstantI1() const;
-    std::shared_ptr<ConstantI8> getConstantI8() const;
-    std::shared_ptr<ConstantInt> getConstantInt() const;
-    std::shared_ptr<ConstantFloat> getConstantFloat() const;
+    pConstI1 getConstantI1() const;
+    pConstI8 getConstantI8() const;
+    pConstI32 getConstantInt() const;
+    pConstF32 getConstantFloat() const;
 
-    std::shared_ptr<Value> getConstant() const;
+    pVal getConstant() const;
 
     bool get_i1() const;
     char get_i8() const;

@@ -18,7 +18,7 @@ Liveness LiveAnalysis::run(Function &f, FAM &fam) {
 bool LiveAnalysis::processFunc(const Function *func) {
     auto dfvisitor = func->getDFVisitor();
     bool updated = false;
-    for (const auto& bb : dfvisitor) {
+    for (const auto &bb : dfvisitor) {
         for (const auto &nxtbb : bb->succs())
             for (auto &livevar : liveness.getLiveIn(nxtbb.get()))
                 if (liveness.getLiveOut(bb.get()).insert(livevar).second)
@@ -39,11 +39,9 @@ bool LiveAnalysis::processBB(const BasicBlock *bb) {
     for (auto it = all.rbegin(); it != all.rend(); ++it) {
         if (processInst((*it).get())) {
             updated = true;
-            Logger::logDebug("LiveAnalyser: Updated insts " + (*it)->getName() +
-                             " in bb");
+            Logger::logDebug("LiveAnalyser: Updated insts " + (*it)->getName() + " in bb");
             if (std::next(it) != all.rend()) {
-                liveness.getLiveOut(std::next(it)->get()) =
-                    liveness.getLiveIn(it->get());
+                liveness.getLiveOut(std::next(it)->get()) = liveness.getLiveIn(it->get());
             } else {
                 break;
             }
@@ -85,9 +83,7 @@ bool LiveAnalysis::processInst(const Instruction *inst) {
 
         for (auto &use : inst->getOperands())
             if (use->getValue()->getVTrait() != ValueTrait::CONSTANT_LITERAL)
-                if (liveness.getLiveIn(inst)
-                        .insert(use->getValue().get())
-                        .second) {
+                if (liveness.getLiveIn(inst).insert(use->getValue().get()).second) {
                     // Logger::logDebug("Added live-in: " +
                     // use->getValue()->getName());
                     updated = true;
@@ -98,26 +94,20 @@ bool LiveAnalysis::processInst(const Instruction *inst) {
                     updated = true;
         break;
     case OP::RET: {
-        auto cinst = dynamic_cast<const RETInst *>(inst);
-        Err::gassert(cinst != nullptr,
-                     "Liveana::processInst: RETInst cast failed.");
+        auto cinst = inst->as_raw<RETInst>();
+        Err::gassert(cinst != nullptr, "Liveana::processInst: RETInst cast failed.");
         if (!cinst->isVoid())
             if (cinst->getRetVal()->getVTrait() != ValueTrait::CONSTANT_LITERAL)
-                if (liveness.getLiveIn(cinst)
-                        .insert(cinst->getRetVal().get())
-                        .second)
+                if (liveness.getLiveIn(cinst).insert(cinst->getRetVal().get()).second)
                     updated = true;
         break;
     }
     case OP::BR: {
-        auto cinst = dynamic_cast<const BRInst *>(inst);
-        Err::gassert(cinst != nullptr,
-                     "Liveana::processInst: BRInst cast failed.");
+        auto cinst = inst->as_raw<BRInst>();
+        Err::gassert(cinst != nullptr, "Liveana::processInst: BRInst cast failed.");
         if (cinst->isConditional())
             if (cinst->getCond()->getVTrait() != ValueTrait::CONSTANT_LITERAL)
-                if (liveness.getLiveIn(cinst)
-                        .insert(cinst->getCond().get())
-                        .second)
+                if (liveness.getLiveIn(cinst).insert(cinst->getCond().get()).second)
                     updated = true;
         for (auto &val : liveness.getLiveOut(inst))
             if (liveness.getLiveIn(inst).insert(val).second)
@@ -125,9 +115,8 @@ bool LiveAnalysis::processInst(const Instruction *inst) {
         break;
     }
     case OP::CALL: {
-        auto cinst = dynamic_cast<const CALLInst *>(inst);
-        Err::gassert(cinst != nullptr,
-                     "Liveana::processInst: CALLInst cast failed.");
+        auto cinst = inst->as_raw<CALLInst>();
+        Err::gassert(cinst != nullptr, "Liveana::processInst: CALLInst cast failed.");
         for (auto &val : cinst->getArgs())
             if (val->getVTrait() != ValueTrait::CONSTANT_LITERAL)
                 if (liveness.getLiveIn(inst).insert(val.get()).second)
@@ -149,9 +138,7 @@ bool LiveAnalysis::processInst(const Instruction *inst) {
     case OP::STORE:
         for (auto &use : inst->getOperands())
             if (use->getValue()->getVTrait() != ValueTrait::CONSTANT_LITERAL)
-                if (liveness.getLiveIn(inst)
-                        .insert(use->getValue().get())
-                        .second)
+                if (liveness.getLiveIn(inst).insert(use->getValue().get()).second)
                     updated = true;
         for (auto &val : liveness.getLiveOut(inst))
             if (liveness.getLiveIn(inst).insert(val).second)

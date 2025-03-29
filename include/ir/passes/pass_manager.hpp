@@ -13,8 +13,7 @@ extern template class AnalysisManager<IR::Function>;
 extern template class PassManager<IR::Module>;
 extern template class PassManager<IR::Function>;
 
-extern template class InnerAnalysisManagerProxy<AnalysisManager<IR::Function>,
-                                                IR::Module>;
+extern template class InnerAnalysisManagerProxy<AnalysisManager<IR::Function>, IR::Module>;
 } // namespace PM
 
 namespace IR {
@@ -31,8 +30,7 @@ public:
     using FunctionPassConceptT = PM::PassConcept<Function, FAM>;
     std::unique_ptr<FunctionPassConceptT> function_pass;
 
-    explicit ModulePassWrapper(std::unique_ptr<FunctionPassConceptT> pass_)
-        : function_pass(std::move(pass_)) {}
+    explicit ModulePassWrapper(std::unique_ptr<FunctionPassConceptT> pass_) : function_pass(std::move(pass_)) {}
 
     PM::PreservedAnalyses run(Module &m, MAM &mam) const {
         FAM &fam = mam.getResult<FAMProxy>(m).getManager();
@@ -40,6 +38,13 @@ public:
         PM::PreservedAnalyses pa = PM::PreservedAnalyses::all();
         // Keep this forward traversal. Some pass (e.g. Inline) rely on this
         for (const auto &func : m.getFunctions()) {
+            // No need to skip unused functions now.
+            // Note that passes (includes inline) is running in a post order of functions,
+            // so there are actually no redundant pass running.
+            // Actually this only makes debugging passes harder. :(
+            // // Skip unused functions. (maybe inlined)
+            // if (func->getUseCount() == 0 && func->getName() != "@main")
+            //     continue;
             PM::PreservedAnalyses curr_pa = function_pass->run(*func, fam);
             fam.invalidate(*func, curr_pa);
             pa.retain(curr_pa);
@@ -52,9 +57,8 @@ public:
 
 template <typename FunctionPassT> auto makeModulePass(FunctionPassT &&pass) {
     using FunctionPassModelT = PM::PassModel<Function, FunctionPassT, FAM>;
-    return ModulePassWrapper(
-        std::unique_ptr<ModulePassWrapper::FunctionPassConceptT>(
-            new FunctionPassModelT(std::forward<FunctionPassT>(pass))));
+    return ModulePassWrapper(std::unique_ptr<ModulePassWrapper::FunctionPassConceptT>(
+        new FunctionPassModelT(std::forward<FunctionPassT>(pass))));
 }
 
 PM::PreservedAnalyses PreserveAll();

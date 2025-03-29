@@ -61,6 +61,9 @@ aux_source_directory(lib/codegen/brainfk GNALC_EXT_BFBKD_SRC)
 # ArmV7 printer
 aux_source_directory(lib/codegen/armv7 GNALC_ARMV7BKD_SRC) 
 
+# GGC Extension
+aux_source_directory(lib/ggc GNALC_EXT_GGC_SRC)
+
 # ALL
 set(GNALC_SRC
         ${GNALC_LEXER_SRC}
@@ -73,6 +76,27 @@ set(GNALC_SRC
         ${GNALC_ARMV7BKD_SRC}
         ${GNALC_UTILS_SRC})
 
+# GGC
+set(GGC_SRC
+        ${GNALC_EXT_GGC_SRC}
+        ${GNALC_IR_SRC}
+        ${GNALC_MIR_SRC}
+        ${GNALC_PM_SRC}
+        ${GNALC_PTM_SRC}
+        ${GNALC_EXT_BFBKD_SRC}
+        ${GNALC_ARMV7BKD_SRC}
+        ${GNALC_UTILS_SRC})
+
+# GGC
+set(GGC_SRC
+        ${GNALC_EXT_GGC_SRC}
+        ${GNALC_IR_SRC}
+        ${GNALC_MIR_SRC}
+        ${GNALC_PM_SRC}
+        ${GNALC_PTM_SRC}
+        ${GNALC_EXT_BFBKD_SRC}
+        ${GNALC_UTILS_SRC})
+
 # debug driver
 add_executable(pmtest tools/driver/debug/pmtest.cpp ${GNALC_SRC})
 add_executable(generic_visitor_test tools/driver/debug/generic_visitor_test.cpp ${GNALC_SRC})
@@ -80,6 +104,10 @@ add_executable(bfhelper tools/driver/debug/bfhelper.cpp)
 
 # main driver
 add_executable(gnalc tools/driver/driver.cpp ${GNALC_SRC})
+
+# with GGC Extension
+add_executable(ggc tools/driver/driver.cpp ${GGC_SRC})
+target_compile_definitions(ggc PRIVATE GNALC_EXTENSION_GGC)
 
 enable_testing()
 add_subdirectory(test)

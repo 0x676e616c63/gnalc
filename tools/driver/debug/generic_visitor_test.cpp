@@ -26,10 +26,10 @@ int main() {
 
     IR::FAM fam;
     IR::FPM fpm;
-    fam.registerPass([]{return IR::LiveAnalysis();});
+    fam.registerPass([] { return IR::LiveAnalysis(); });
     fpm.addPass(IR::NameNormalizePass(true));
     fpm.addPass(IR::PrintFunctionPass(std::cout, true));
-    for (auto& r : irgen.get_module())
+    for (auto &r : irgen.get_module())
         fpm.run(*r, fam);
     return 0;
 }

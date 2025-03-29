@@ -9,8 +9,8 @@
 //   - The loop body (the header's non-exit successor) has the header as its only predecessor.
 // can be rotated as the graph below.
 //
-//                    ---------------------      
-//                   |                    |      
+//                    ---------------------
+//                   |                    |
 //                   v     (New Header)   |                          (New Header)
 //  PreHeader ---> Header ---> Body ---> Latch    <to>    PreHeader ---> Body ---> Latch
 //                  |                                         |           ^         |
@@ -29,6 +29,7 @@ namespace IR {
 class LoopRotatePass : public PM::PassInfo<LoopRotatePass> {
 public:
     PM::PreservedAnalyses run(Function &function, FAM &manager);
+
 private:
     size_t name_cnt = 0;
 };

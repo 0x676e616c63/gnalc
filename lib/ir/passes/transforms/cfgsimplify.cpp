@@ -1,9 +1,9 @@
 #include "../../../../include/ir/passes/transforms/cfgsimplify.hpp"
+#include "../../../../include/ir/block_utils.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
 #include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
-#include "../../../../include/ir/block_utils.hpp"
 
 #include <deque>
 
@@ -11,7 +11,7 @@ namespace IR {
 PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
     bool cfgsimplify_cfg_modified = false;
 
-    std::set<std::shared_ptr<BasicBlock>> dead_blocks;
+    std::set<pBlock> dead_blocks;
     bool modified = true;
     while (modified) {
         modified = false;
@@ -42,19 +42,19 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                     unlinkBB(curr, br->getFalseDest());
                     br->dropFalseDest();
 
-                    const auto& dest_phis = br->getDest()->phis();
-                    for (const auto& phi : dest_phis)
+                    const auto &dest_phis = br->getDest()->phis();
+                    for (const auto &phi : dest_phis)
                         phi->delPhiOperByBlock(curr);
 
                     modified = true;
-                    Logger::logDebug("[CFGSimplify] on '", function.getName(),
-                                     "': drop BRInst of BasicBlock '", curr->getName(), "' 's identical destination");
+                    Logger::logDebug("[CFGSimplify] on '", function.getName(), "': drop BRInst of BasicBlock '",
+                                     curr->getName(), "' 's identical destination");
                 }
             } else {
                 auto dest = br->getDest();
                 bool curr_is_used_by_phi = false;
                 for (const auto &user : curr->users()) {
-                    if (auto phi = std::dynamic_pointer_cast<PHIInst>(user)) {
+                    if (auto phi = user->as<PHIInst>()) {
                         if (dead_blocks.find(phi->getParent()) == dead_blocks.end()) {
                             curr_is_used_by_phi = true;
                             break;
@@ -119,8 +119,8 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                         pre_br->replaceAllOperands(curr, dest);
                     }
 
-                    Logger::logDebug("[CFGSimplify] on '", function.getName(),
-                        "': Remove empty BasicBlock '", curr->getName(), "'.");
+                    Logger::logDebug("[CFGSimplify] on '", function.getName(), "': Remove empty BasicBlock '",
+                                     curr->getName(), "'.");
 
                     dead_blocks.emplace(curr);
                     modified = true;
@@ -154,8 +154,8 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                         linkBB(curr, dest_succ);
                     }
 
-                    Logger::logDebug("[CFGSimplify] on '", function.getName(),
-                                     "': Combined BasicBlock '", curr->getName(), "' and '", dest->getName(), "'.");
+                    Logger::logDebug("[CFGSimplify] on '", function.getName(), "': Combined BasicBlock '",
+                                     curr->getName(), "' and '", dest->getName(), "'.");
 
                     // Since `dest` only has one incoming block, and all phi has been replaced,
                     // deleting `curr`'s br will make it have no users, so it's a safe delete.
@@ -197,8 +197,8 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                         for (const auto &phi : dest_succ1->phis())
                             phi->addPhiOper(phi->getValueForBlock(dest), curr);
 
-                        Logger::logDebug("[CFGSimplify] on '", function.getName(),
-                                         "': Hoisted Branch of '", dest->getName(), "' to '", curr->getName(), "'.");
+                        Logger::logDebug("[CFGSimplify] on '", function.getName(), "': Hoisted Branch of '",
+                                         dest->getName(), "' to '", curr->getName(), "'.");
                         modified = true;
                     }
                 }
@@ -208,9 +208,7 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
         cfgsimplify_cfg_modified |= modified;
     }
 
-    function.delBlockIf([&dead_blocks](const auto& bb) {
-        return dead_blocks.find(bb) != dead_blocks.end();
-    });
+    function.delBlockIf([&dead_blocks](const auto &bb) { return dead_blocks.find(bb) != dead_blocks.end(); });
 
     return cfgsimplify_cfg_modified ? PreserveNone() : PreserveAll();
 }

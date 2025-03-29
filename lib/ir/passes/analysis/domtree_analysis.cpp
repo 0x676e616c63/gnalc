@@ -1,7 +1,6 @@
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
 #include "../../../../include/utils/logger.hpp"
 
-
 namespace IR {
 PM::UniqueKey DomTreeAnalysis::Key;
 PM::UniqueKey PostDomTreeAnalysis::Key;
@@ -48,7 +47,8 @@ void PostDomTreeAnalysis::setExit(const Function &f) {
 }
 
 void PostDomTreeAnalysis::restoreCFG() const {
-    if (!is_exit_virtual) return;
+    if (!is_exit_virtual)
+        return;
     for (const auto &real_exit : exit->preds()) {
         real_exit->next_bb.clear();
     }

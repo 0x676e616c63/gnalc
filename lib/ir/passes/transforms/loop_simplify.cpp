@@ -11,12 +11,12 @@ namespace IR {
 PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
     bool loop_simplify_cfg_modified = false;
 
-    auto& loop_info = fam.getResult<LoopAnalysis>(function);
+    auto &loop_info = fam.getResult<LoopAnalysis>(function);
     for (const auto &toplevel : loop_info) {
         auto looppdfv = toplevel->getDFVisitor<Util::DFVOrder::PostOrder>();
 
         for (const auto &loop : looppdfv) {
-            auto header = loop->getHeader()->shared_from_this();
+            auto header = loop->getHeader();
             bool curr_loop_changed = false;
             // Ensure a preheader
             auto preheader = loop->getPreHeader();
@@ -24,7 +24,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                 auto new_preheader = std::make_shared<BasicBlock>("%ls.ph" + std::to_string(name_cnt++));
                 auto header_preds = header->getPreBB();
                 for (const auto &pred : header_preds) {
-                    if (!loop->contains(pred.get())) {
+                    if (!loop->contains(pred)) {
                         auto br = pred->getBRInst();
                         Err::gassert(br != nullptr);
                         br->replaceAllOperands(header, new_preheader);
@@ -36,10 +36,10 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                 linkBB(new_preheader, header);
 
                 for (const auto &phi : header->phis()) {
-                    auto phi_operands = phi->getPhiOpers();
+                    auto phi_opers = phi->getPhiOpers();
                     auto new_phi = std::make_shared<PHIInst>("%ls.phi" + std::to_string(name_cnt++), phi->getType());
-                    for (const auto &[val, bb] : phi_operands) {
-                        if (loop->contains(bb.get()))
+                    for (const auto &[val, bb] : phi_opers) {
+                        if (loop->contains(bb))
                             continue;
                         phi->delPhiOperByBlock(bb);
                         new_phi->addPhiOper(val, bb);
@@ -50,8 +50,8 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                 foldPHI(new_preheader);
                 function.addBlock(header->getIter(), new_preheader);
                 if (!loop->isOutermost())
-                    loop_info.addBlock(loop->getParent(), new_preheader.get());
-                preheader = new_preheader.get();
+                    loop_info.addBlock(loop->getParent(), new_preheader);
+                preheader = new_preheader;
                 curr_loop_changed = true;
             }
 
@@ -63,8 +63,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                 linkBB(new_latch, header);
                 auto latches = loop->getLatches();
                 Err::gassert(!latches.empty());
-                for (const auto &raw_old_latch : latches) {
-                    auto old_latch = raw_old_latch->shared_from_this();
+                for (const auto &old_latch : latches) {
                     auto br = old_latch->getBRInst();
                     Err::gassert(br != nullptr);
                     br->replaceAllOperands(header, new_latch);
@@ -72,10 +71,10 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                     linkBB(old_latch, new_latch);
                 }
                 for (const auto &phi : header->phis()) {
-                    auto phi_operands = phi->getPhiOpers();
+                    auto phi_opers = phi->getPhiOpers();
                     auto new_phi = std::make_shared<PHIInst>("%ls.phi" + std::to_string(name_cnt++), phi->getType());
-                    for (const auto &[val, bb] : phi_operands) {
-                        if (bb.get() == preheader)
+                    for (const auto &[val, bb] : phi_opers) {
+                        if (bb == preheader)
                             continue;
                         phi->delPhiOperByBlock(bb);
                         new_phi->addPhiOper(val, bb);
@@ -85,8 +84,8 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                 }
                 foldPHI(new_latch);
                 function.addBlock(std::next(latches.back()->getIter()), new_latch);
-                loop_info.addBlock(loop, new_latch.get());
-                latch = new_latch.get();
+                loop_info.addBlock(loop, new_latch);
+                latch = new_latch;
                 curr_loop_changed = true;
             }
 
@@ -95,12 +94,11 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
             // that is outside the loop. This implies that all exit blocks
             // are dominated by the loop header.
             auto exits = loop->getExitBlocks();
-            for (const auto &raw_exit : exits) {
-                auto exit = raw_exit->shared_from_this();
-                std::vector<std::shared_ptr<BasicBlock>> in_loop_preds;
+            for (const auto &exit : exits) {
+                std::vector<pBlock> in_loop_preds;
                 bool is_dedicated = true;
                 for (const auto &ep : exit->preds()) {
-                    if (loop->contains(ep.get()))
+                    if (loop->contains(ep))
                         in_loop_preds.emplace_back(ep);
                     else
                         is_dedicated = false;
@@ -119,11 +117,11 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                         linkBB(in_loop_pred, new_exit);
                     }
                     for (const auto &phi : exit->phis()) {
-                        auto phi_operands = phi->getPhiOpers();
+                        auto phi_opers = phi->getPhiOpers();
                         auto new_phi =
                             std::make_shared<PHIInst>("%ls.phi" + std::to_string(name_cnt++), phi->getType());
-                        for (const auto &[val, bb] : phi_operands) {
-                            if (!loop->contains(bb.get()))
+                        for (const auto &[val, bb] : phi_opers) {
+                            if (!loop->contains(bb))
                                 continue;
                             phi->delPhiOperByBlock(bb);
                             new_phi->addPhiOper(val, bb);
@@ -134,9 +132,9 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                     foldPHI(new_exit);
                     function.addBlock(std::next(exit->getIter()), new_exit);
 
-                    auto exit_loop = loop_info.getLoopFor(exit.get());
+                    auto exit_loop = loop_info.getLoopFor(exit);
                     if (exit_loop)
-                        loop_info.addBlock(exit_loop, new_exit.get());
+                        loop_info.addBlock(exit_loop, new_exit);
                     curr_loop_changed = true;
                 }
             }

@@ -8,9 +8,9 @@
 #define GNALC_IR_INSTRUCTIONS_BINARY_HPP
 
 #include "../instruction.hpp"
+#include "../type_alias.hpp"
 
 namespace IR {
-
 // type 由op决定
 // 例如 %3 = add i32 %1, %2
 // name = "%3"
@@ -19,38 +19,33 @@ namespace IR {
 // operands = [%1, %2]
 class BinaryInst : public Instruction {
 public:
-    BinaryInst(NameRef name, OP opcode, const std::shared_ptr<Value> &lhs, const std::shared_ptr<Value> &rhs);
+    BinaryInst(NameRef name, OP opcode, const pVal &lhs, const pVal &rhs);
 
-    std::shared_ptr<Value> getLHS() const;
-    std::shared_ptr<Value> getRHS() const;
+    pVal getLHS() const;
+    pVal getRHS() const;
 
-    void setLHS(const std::shared_ptr<Value> &lhs);
-    void setRHS(const std::shared_ptr<Value> &rhs);
+    void setLHS(const pVal &lhs);
+    void setRHS(const pVal &rhs);
     void swapLHSRHS();
 
     void accept(IRVisitor &visitor) override;
 
 private:
-    std::shared_ptr<Value> cloneImpl() const override {
-        return std::make_shared<BinaryInst>
-        (getName(), getOpcode(), getLHS(), getRHS());
-    }
+    pVal cloneImpl() const override { return std::make_shared<BinaryInst>(getName(), getOpcode(), getLHS(), getRHS()); }
 };
 
 // OP = FNEG, type = f32
 // <result> = fneg [fast-math flags]* <ty> <op1>
 class FNEGInst : public Instruction {
 public:
-    FNEGInst(NameRef name, std::shared_ptr<Value> val);
+    FNEGInst(NameRef name, pVal val);
 
-    std::shared_ptr<Value> getVal() const;
+    pVal getVal() const;
 
     void accept(IRVisitor &visitor) override;
 
 private:
-    std::shared_ptr<Value> cloneImpl() const override {
-        return std::make_shared<FNEGInst>(getName(), getVal());
-    }
+    pVal cloneImpl() const override { return std::make_shared<FNEGInst>(getName(), getVal()); }
 };
 } // namespace IR
 

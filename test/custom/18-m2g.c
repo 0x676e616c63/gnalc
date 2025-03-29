@@ -39,7 +39,6 @@ int main() {
 //    return sum;
 //}
 
-
 //int a, b, d;
 //
 //int set_a(int val) { a = val; return a; }
@@ -85,7 +84,6 @@ int main() {
 //    return 0;
 //}
 
-
 //int doubleWhile() {
 //    int i;
 //    i = 5;
@@ -104,7 +102,6 @@ int main() {
 //int main() {
 //    return doubleWhile();
 //}
-
 
 //int whileIf() {
 //    int a;
@@ -125,7 +122,6 @@ int main() {
 //    }
 //    return (b);
 //}
-
 
 //int main(){
 //    int i = 0;

@@ -2,20 +2,19 @@
 #ifndef GNALC_IR_PASSES_ANALYSIS_DOMTREE_ANALYSIS_HPP
 #define GNALC_IR_PASSES_ANALYSIS_DOMTREE_ANALYSIS_HPP
 
-#include "../../../utils/generic_visitor.hpp"
 #include "../../../graph/domtree.hpp"
+#include "../../../utils/generic_visitor.hpp"
 #include "../pass_manager.hpp"
 
 #include <memory>
+#include <queue>
 #include <stack>
 #include <string>
 #include <vector>
-#include <queue>
 
 namespace Graph {
-template<>
-struct GraphInfo<IR::BasicBlock*> {
-    using NodeT = IR::BasicBlock*;
+template <> struct GraphInfo<IR::BasicBlock *> {
+    using NodeT = IR::BasicBlock *;
     static std::vector<IR::BasicBlock *> getPreds(const IR::BasicBlock *bb) {
         std::vector<IR::BasicBlock *> ret;
         for (const auto &r : bb->preds())
@@ -29,15 +28,59 @@ struct GraphInfo<IR::BasicBlock*> {
         return ret;
     }
 };
-}
+} // namespace Graph
 
 namespace IR {
 namespace detail {
-using DomTreeBuilder = Graph::GenericDomTreeBuilder<BasicBlock*, false>;
-using PostDomTreeBuilder = Graph::GenericDomTreeBuilder<BasicBlock*, true>;
+struct SharedProj {
+    pBlock operator()(BasicBlock *bb) const {
+        if (bb)
+            return bb->as<BasicBlock>();
+        return nullptr;
+    }
+};
+template <bool IsPostDom> class IRGenericDomTree : public Graph::GenericDomTree<BasicBlock *, IsPostDom, SharedProj> {
+    using Base = Graph::GenericDomTree<BasicBlock *, IsPostDom, SharedProj>;
+
+public:
+    const auto &operator[](const BasicBlock *block) const { return Base::operator[](const_cast<BasicBlock *>(block)); }
+
+    bool ADomB(const BasicBlock *a, const BasicBlock *b) const {
+        return Base::ADomB(const_cast<BasicBlock *>(a), const_cast<BasicBlock *>(b));
+    }
+
+    std::set<BasicBlock *> getDomSet(const BasicBlock *b) const { return Base::getDomSet(const_cast<BasicBlock *>(b)); }
+    // TODO: needs optimization
+    std::set<BasicBlock *> getDomFrontier(const BasicBlock *b) const {
+        return Base::getDomFrontier(const_cast<BasicBlock *>(b));
+    }
+
+    const auto &operator[](const pBlock &block) const { return Base::operator[](block.get()); }
+
+    bool ADomB(const pBlock &a, const pBlock &b) const { return Base::ADomB(a.get(), b.get()); }
+
+    std::set<pBlock> getDomSet(const pBlock &b) const {
+        auto res = Base::getDomSet(b.get());
+        std::set<pBlock> ret;
+        for (const auto &r : res)
+            ret.emplace(r->template as<BasicBlock>());
+        return ret;
+    }
+    // TODO: needs optimization
+    std::set<pBlock> getDomFrontier(const pBlock &b) const {
+        auto res = Base::getDomFrontier(b.get());
+        std::set<pBlock> ret;
+        for (const auto &r : res)
+            ret.emplace(r->template as<BasicBlock>());
+        return ret;
+    }
+};
+
+using DomTreeBuilder = Graph::GenericDomTreeBuilder<BasicBlock *, false, IRGenericDomTree<false>>;
+using PostDomTreeBuilder = Graph::GenericDomTreeBuilder<BasicBlock *, true, IRGenericDomTree<true>>;
 } // namespace detail
-using DomTree = Graph::GenericDomTree<BasicBlock*, false>;
-using PostDomTree = Graph::GenericDomTree<BasicBlock*, true>;
+using DomTree = detail::IRGenericDomTree<false>;
+using PostDomTree = detail::IRGenericDomTree<true>;
 
 class DomTreeAnalysis : public PM::AnalysisInfo<DomTreeAnalysis> {
 public:
@@ -57,7 +100,7 @@ public:
     PostDomTree run(Function &f, FAM &fam);
 
 private:
-    std::shared_ptr<BasicBlock> exit = nullptr;
+    pBlock exit = nullptr;
     bool is_exit_virtual = false;
     void setExit(const Function &f); // 用于在CFG中连接虚拟根和真出口节点
     void restoreCFG() const;         // 用于计算完成后清除出口块对虚拟根节点的CFG边

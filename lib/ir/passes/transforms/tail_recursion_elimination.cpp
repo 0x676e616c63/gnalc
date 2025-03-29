@@ -9,11 +9,11 @@ namespace IR {
 PM::PreservedAnalyses TailRecursionEliminationPass::run(Function &function, FAM &manager) {
     bool tailopt_cfg_modified = false;
     auto exitbbs = function.getExitBBs();
-    std::vector<std::pair<std::shared_ptr<CALLInst>, std::shared_ptr<RETInst> > > worklist;
+    std::vector<std::pair<pCall, pRet>> worklist;
     for (const auto &block : exitbbs) {
         for (auto iter = block->begin(); std::next(iter) != block->end(); ++iter) {
-            auto call = std::dynamic_pointer_cast<CALLInst>(*iter);
-            auto ret = std::dynamic_pointer_cast<RETInst>(*std::next(iter));
+            auto call = (*iter)->as<CALLInst>();
+            auto ret = (*std::next(iter))->as<RETInst>();
             if (call != nullptr && ret != nullptr && ((call->isVoid() && ret->isVoid()) || ret->getRetVal() == call)) {
                 // Tail position: (ret immediately follows call and ret uses value of call or is void)
                 // If call->func == function, tail recursion.
@@ -21,7 +21,7 @@ PM::PreservedAnalyses TailRecursionEliminationPass::run(Function &function, FAM 
                 if (call->getFunc().get() == &function)
                     worklist.emplace_back(call, ret);
                 else
-                    call->setTailCall();
+                    call->setTailCall(true);
             }
         }
     }
@@ -31,15 +31,16 @@ PM::PreservedAnalyses TailRecursionEliminationPass::run(Function &function, FAM 
         // Otherwise we create a new block as the new entry block
         auto oldEntryBlock = *function.begin();
 
-        std::vector<std::shared_ptr<ALLOCAInst>> allocas;
+        std::vector<pAlloca> allocas;
         for (const auto &inst : *oldEntryBlock) {
-            if (auto alloc = std::dynamic_pointer_cast<ALLOCAInst>(inst))
+            if (auto alloc = inst->as<ALLOCAInst>())
                 allocas.emplace_back(alloc);
-            else break;
+            else
+                break;
         }
 
         auto newEntryBlock = std::make_shared<BasicBlock>("%tre.bb" + std::to_string(name_cnt++));
-        for (const auto& alloc : allocas)
+        for (const auto &alloc : allocas)
             moveInst(alloc, newEntryBlock, newEntryBlock->begin());
 
         newEntryBlock->addInst(std::make_shared<BRInst>(oldEntryBlock));
@@ -48,17 +49,16 @@ PM::PreservedAnalyses TailRecursionEliminationPass::run(Function &function, FAM 
 
         // replace params with PHI
         auto &params = function.getParams();
-        std::vector<std::shared_ptr<PHIInst> > param_phis;
+        std::vector<pPhi> param_phis;
         for (const auto &param : params) {
-            auto phiInst = std::make_shared<PHIInst>(
-                "%tre.fp" + std::to_string(name_cnt++), param->getType());
+            auto phiInst = std::make_shared<PHIInst>("%tre.fp" + std::to_string(name_cnt++), param->getType());
             param->replaceSelf(phiInst);
             phiInst->addPhiOper(param, newEntryBlock);
             param_phis.emplace_back(phiInst);
         }
-        for (const auto &[call,ret] : worklist) {
+        for (const auto &[call, ret] : worklist) {
             auto exit_block = call->getParent();
-            const auto& args = call->getArgs();
+            const auto &args = call->getArgs();
             for (size_t i = 0; i < args.size(); ++i)
                 param_phis[i]->addPhiOper(args[i], exit_block);
 
@@ -80,4 +80,4 @@ PM::PreservedAnalyses TailRecursionEliminationPass::run(Function &function, FAM 
     return tailopt_cfg_modified ? PreserveNone() : PreserveAll();
 }
 
-}
+} // namespace IR

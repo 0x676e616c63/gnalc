@@ -8,6 +8,7 @@
 #define GNALC_IR_INSTRUCTIONS_COMPARE_HPP
 
 #include "../instruction.hpp"
+#include "../type_alias.hpp"
 
 namespace IR {
 // eq: equal
@@ -28,12 +29,11 @@ private:
     ICMPOP cond;
 
 public:
-    ICMPInst(NameRef name, ICMPOP cond, const std::shared_ptr<Value> &lhs,
-             const std::shared_ptr<Value> &rhs);
+    ICMPInst(NameRef name, ICMPOP cond, const pVal &lhs, const pVal &rhs);
 
-    std::shared_ptr<Value> getLHS() const;
+    pVal getLHS() const;
 
-    std::shared_ptr<Value> getRHS() const;
+    pVal getRHS() const;
 
     ICMPOP getCond() const;
 
@@ -42,9 +42,7 @@ public:
     void accept(IRVisitor &visitor) override;
 
 private:
-    std::shared_ptr<Value> cloneImpl() const override {
-        return std::make_shared<ICMPInst>(getName(), cond, getLHS(), getRHS());
-    }
+    pVal cloneImpl() const override { return std::make_shared<ICMPInst>(getName(), cond, getLHS(), getRHS()); }
 };
 
 // false: no comparison, always returns false
@@ -80,12 +78,11 @@ private:
     FCMPOP cond;
 
 public:
-    FCMPInst(NameRef name, FCMPOP cond, const std::shared_ptr<Value> &lhs,
-             const std::shared_ptr<Value> &rhs);
+    FCMPInst(NameRef name, FCMPOP cond, const pVal &lhs, const pVal &rhs);
 
-    std::shared_ptr<Value> getLHS() const;
+    pVal getLHS() const;
 
-    std::shared_ptr<Value> getRHS() const;
+    pVal getRHS() const;
 
     FCMPOP getCond() const;
 
@@ -94,10 +91,19 @@ public:
     void accept(IRVisitor &visitor) override;
 
 private:
-    std::shared_ptr<Value> cloneImpl() const override {
-        return std::make_shared<FCMPInst>(getName(), cond, getLHS(), getRHS());
-    }
+    pVal cloneImpl() const override { return std::make_shared<FCMPInst>(getName(), cond, getLHS(), getRHS()); }
 };
+
+// Utilities to flip/reverse a cond
+// Flip
+// a > b -> a <= b
+// just like adding a `not` before the result.
+ICMPOP flipCond(ICMPOP cond);
+FCMPOP flipCond(FCMPOP cond);
+// Reverse
+// a > b -> a < b
+ICMPOP reverseCond(ICMPOP cond);
+FCMPOP reverseCond(FCMPOP cond);
 } // namespace IR
 
 #endif

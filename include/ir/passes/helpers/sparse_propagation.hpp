@@ -38,43 +38,37 @@ namespace IR {
 // InfoT should provide:
 //     InfoT::UNDEF;     Indicating the top of the lattice.
 //     InfoT::NAC;       Indicating the bottom of the lattice.
-//     KeyT InfoT::getKeyFromValue(const std::shared_ptr<Value>& val);    Getting a KeyT from an IR::Value
-//     std::shared_ptr<Value> InfoT::getValueFromKey(const KeyT& val);    Getting an IR::Value from a KeyT
-template <typename KeyT, typename ValT, typename InfoT>
-class SparsePropagationSolver {
+//     KeyT InfoT::getKeyFromValue(const pValue& val);    Getting a KeyT from an IR::Value
+//     pValue InfoT::getValueFromKey(const KeyT& val);    Getting an IR::Value from a KeyT
+template <typename KeyT, typename ValT, typename InfoT> class SparsePropagationSolver {
 public:
     class LatticeFunction {
     public:
         virtual ValT merge(ValT lhs, ValT rhs) const = 0;
-        virtual void transfer(const std::shared_ptr<Instruction> &inst,
-                              std::unordered_map<KeyT, ValT> &changes,
+        virtual void transfer(const pInst &inst, std::unordered_map<KeyT, ValT> &changes,
                               SparsePropagationSolver &solver) const = 0;
         virtual ConstantProxy getValueFromLatticeVal(const ValT &v) const = 0;
-        virtual ValT computeLatticeVal(const KeyT& key) const = 0;
+        virtual ValT computeLatticeVal(const KeyT &key) const = 0;
         virtual ~LatticeFunction() = default;
     };
 
     struct Edge {
-        std::shared_ptr<BasicBlock> src;
-        std::shared_ptr<BasicBlock> dest;
-        bool operator<(const Edge &rhs) const {
-            return src == rhs.src ? dest < rhs.dest : src < rhs.src;
-        }
-        Edge(std::shared_ptr<BasicBlock> src, std::shared_ptr<BasicBlock> dest)
-            : src(std::move(src)), dest(std::move(dest)) {}
+        pBlock src;
+        pBlock dest;
+        bool operator<(const Edge &rhs) const { return src == rhs.src ? dest < rhs.dest : src < rhs.src; }
+        Edge(pBlock src, pBlock dest) : src(std::move(src)), dest(std::move(dest)) {}
     };
 
 private:
     std::set<Edge> feasible_edges;
     std::deque<Edge> cfg_worklist;
-    std::deque<std::shared_ptr<Instruction>> ssa_worklist;
+    std::deque<pInst> ssa_worklist;
 
     std::unordered_map<KeyT, ValT> lattice_map;
     LatticeFunction *lattice_func;
 
 public:
-    explicit SparsePropagationSolver(LatticeFunction *func_)
-        : lattice_func(func_) {}
+    explicit SparsePropagationSolver(LatticeFunction *func_) : lattice_func(func_) {}
 
     void clear() {
         cfg_worklist.clear();
@@ -93,7 +87,7 @@ public:
                 ssa_worklist.pop_front();
 
                 if (curr->getOpcode() == OP::PHI)
-                    visitPHI(std::dynamic_pointer_cast<PHIInst>(curr));
+                    visitPHI(curr->as<PHIInst>());
                 else if (countFeasibleInEdge(curr->getParent()))
                     visitInst(curr);
             }
@@ -114,14 +108,13 @@ public:
                         visitInst(inst);
                 }
 
-                if (curr.dest->getNumSuccs() == 1 &&
-                    !isFeasible(curr.dest, *curr.dest->succ_begin()))
+                if (curr.dest->getNumSuccs() == 1 && !isFeasible(curr.dest, *curr.dest->succ_begin()))
                     cfg_worklist.emplace_back(curr.dest, *curr.dest->succ_begin());
             }
         }
     }
 
-    ValT getVal(const KeyT& key) {
+    ValT getVal(const KeyT &key) {
         auto it = lattice_map.find(key);
         if (it != lattice_map.end())
             return it->second;
@@ -130,21 +123,14 @@ public:
 
     const auto &get_map() const { return lattice_map; }
 
-    bool isFeasible(const std::shared_ptr<BasicBlock> &src,
-                    const std::shared_ptr<BasicBlock> &dest) const {
-        return isFeasible(Edge(src, dest));
-    }
+    bool isFeasible(const pBlock &src, const pBlock &dest) const { return isFeasible(Edge(src, dest)); }
 
-    bool isFeasible(const Edge &e) const {
-        return feasible_edges.find(e) != feasible_edges.end();
-    }
+    bool isFeasible(const Edge &e) const { return feasible_edges.find(e) != feasible_edges.end(); }
 
-    size_t countFeasibleInEdge(const std::shared_ptr<BasicBlock> &bb) const {
-        if (bb->getNumPreds() == 0)  // Entry node
+    size_t countFeasibleInEdge(const pBlock &bb) const {
+        if (bb->getNumPreds() == 0) // Entry node
             return isFeasible(nullptr, bb) ? 1 : 0;
-        return std::count_if(
-            bb->pred_begin(), bb->pred_end(),
-            [&bb, this](auto &&in) { return isFeasible(in, bb); });
+        return std::count_if(bb->pred_begin(), bb->pred_end(), [&bb, this](auto &&in) { return isFeasible(in, bb); });
     }
 
 private:
@@ -155,20 +141,18 @@ private:
 
         lattice_map[key] = std::move(val);
 
-        std::shared_ptr<Value> changed_value = InfoT::getValueFromKey(key);
+        pVal changed_value = InfoT::getValueFromKey(key);
         for (const auto &user : changed_value->inst_users())
             ssa_worklist.emplace_back(user);
     }
 
     void markFeasible(const Edge &e) { feasible_edges.insert(e); }
 
-    void visitPHI(const std::shared_ptr<PHIInst> &phi) {
-        auto incomings = phi->getPhiOpers();
-
+    void visitPHI(const pPhi &phi) {
         auto phi_key = InfoT::getKeyFromValue(phi);
         auto phi_lattice = getVal(phi_key);
 
-        for (const auto &in : incomings) {
+        for (const auto &in : phi->incomings()) {
             if (!isFeasible(in.block, phi->getParent()))
                 continue;
 
@@ -184,27 +168,22 @@ private:
         updateVal(phi_key, phi_lattice);
     }
 
-    void visitInst(const std::shared_ptr<Instruction> &inst) {
+    void visitInst(const pInst &inst) {
         Err::gassert(inst->getOpcode() != OP::PHI);
-        if (auto br_inst = std::dynamic_pointer_cast<BRInst>(inst);
-            br_inst && br_inst->isConditional()) {
+        if (auto br_inst = inst->as<BRInst>(); br_inst && br_inst->isConditional()) {
             auto cond_key = InfoT::getKeyFromValue(br_inst->getCond());
             auto cond_lattice = getVal(cond_key);
             if (cond_lattice == InfoT::NAC || cond_lattice == InfoT::UNDEF) {
-                cfg_worklist.emplace_back(br_inst->getParent(),
-                                          br_inst->getTrueDest());
-                cfg_worklist.emplace_back(br_inst->getParent(),
-                                          br_inst->getFalseDest());
+                cfg_worklist.emplace_back(br_inst->getParent(), br_inst->getTrueDest());
+                cfg_worklist.emplace_back(br_inst->getParent(), br_inst->getFalseDest());
             }
             // To ensure it contains a ConstantI1, we use `proxy.get_i1()`
             // rather than `proxy == true`. If it does not contain a ConstantI1,
             // an exception will be thrown.
             else if (lattice_func->getValueFromLatticeVal(cond_lattice).get_i1())
-                cfg_worklist.emplace_back(br_inst->getParent(),
-                                          br_inst->getTrueDest());
+                cfg_worklist.emplace_back(br_inst->getParent(), br_inst->getTrueDest());
             else
-                cfg_worklist.emplace_back(br_inst->getParent(),
-                                          br_inst->getFalseDest());
+                cfg_worklist.emplace_back(br_inst->getParent(), br_inst->getFalseDest());
         } else if (inst->getVTrait() != ValueTrait::VOID_INSTRUCTION) {
             auto inst_key = InfoT::getKeyFromValue(inst);
             auto inst_lattice = getVal(inst_key);

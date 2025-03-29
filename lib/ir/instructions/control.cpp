@@ -5,28 +5,23 @@
 #include <algorithm>
 
 namespace IR {
-RETInst::RETInst()
-    : Instruction(OP::RET, "__ret", makeBType(IRBTYPE::UNDEFINED)),
-      ret_type(makeBType(IRBTYPE::VOID)) {}
+RETInst::RETInst() : Instruction(OP::RET, "__ret", makeBType(IRBTYPE::UNDEFINED)), ret_type(makeBType(IRBTYPE::VOID)) {}
 
-RETInst::RETInst(std::shared_ptr<Value> ret_val)
-    : Instruction(OP::RET, "__ret", makeBType(IRBTYPE::UNDEFINED)),
-      ret_type(toBType(ret_val->getType())) {
+RETInst::RETInst(pVal ret_val)
+    : Instruction(OP::RET, "__ret", makeBType(IRBTYPE::UNDEFINED)), ret_type(ret_val->getType()->as<BType>()) {
     addOperand(ret_val);
 }
 
-bool RETInst::isVoid() const {
-    return toBType(ret_type)->getInner() == IRBTYPE::VOID;
-}
+bool RETInst::isVoid() const { return ret_type->as<BType>()->getInner() == IRBTYPE::VOID; }
 
-std::shared_ptr<Value> RETInst::getRetVal() const {
+pVal RETInst::getRetVal() const {
     Err::gassert(!isVoid(), "RETInst::getRetVal: RETInst is void.");
     return getOperand(0)->getValue();
 }
 
 IRBTYPE RETInst::getRetBType() const { return toBType(ret_type)->getInner(); }
 
-std::shared_ptr<BType> RETInst::getRetType() const { return ret_type; }
+pBType RETInst::getRetType() const { return ret_type; }
 
 // BRInst operands:
 // Conditional
@@ -36,17 +31,12 @@ std::shared_ptr<BType> RETInst::getRetType() const { return ret_type; }
 // dest | dest_args
 //   0        1
 
-BRInst::BRInst(const std::shared_ptr<BasicBlock> &_dest)
-    : Instruction(OP::BR, "__br", makeBType(IRBTYPE::UNDEFINED)),
-      conditional(false) {
+BRInst::BRInst(const pBlock &_dest) : Instruction(OP::BR, "__br", makeBType(IRBTYPE::UNDEFINED)), conditional(false) {
     addOperand(_dest);
 }
 
-BRInst::BRInst(const std::shared_ptr<Value> &cond,
-               const std::shared_ptr<BasicBlock> &_true_dest,
-               const std::shared_ptr<BasicBlock> &_false_dest)
-    : Instruction(OP::BR, "__br", makeBType(IRBTYPE::UNDEFINED)),
-      conditional(true) {
+BRInst::BRInst(const pVal &cond, const pBlock &_true_dest, const pBlock &_false_dest)
+    : Instruction(OP::BR, "__br", makeBType(IRBTYPE::UNDEFINED)), conditional(true) {
     addOperand(cond);
     addOperand(_true_dest);
     addOperand(_false_dest);
@@ -54,57 +44,53 @@ BRInst::BRInst(const std::shared_ptr<Value> &cond,
 
 bool BRInst::isConditional() const { return conditional; }
 
-std::shared_ptr<Value> BRInst::getCond() const {
+pVal BRInst::getCond() const {
     Err::gassert(conditional, "BRInst is not conditional.");
     return getOperand(0)->getValue();
 }
-std::shared_ptr<BasicBlock> BRInst::getDest() const {
+pBlock BRInst::getDest() const {
     Err::gassert(!conditional, "BRInst is conditional.");
-    return std::dynamic_pointer_cast<BasicBlock>(getOperand(0)->getValue());
+    return getOperand(0)->getValue()->as<BasicBlock>();
 }
-std::shared_ptr<BasicBlock> BRInst::getTrueDest() const {
+pBlock BRInst::getTrueDest() const {
     Err::gassert(conditional, "BRInst is not conditional.");
-    return std::dynamic_pointer_cast<BasicBlock>(getOperand(1)->getValue());
+    return getOperand(1)->getValue()->as<BasicBlock>();
 }
 
-std::shared_ptr<BasicBlock> BRInst::getFalseDest() const {
+pBlock BRInst::getFalseDest() const {
     Err::gassert(conditional, "BRInst is not conditional.");
-    return std::dynamic_pointer_cast<BasicBlock>(getOperand(2)->getValue());
+    return getOperand(2)->getValue()->as<BasicBlock>();
 }
 
-void BRInst::setBBArgs(const std::vector<std::shared_ptr<Value>> &args) {
+void BRInst::setBBArgs(const std::vector<pVal> &args) {
     Err::gassert(!conditional, "BRInst is conditional.");
     addOperand(std::make_shared<BBArgList>(getDest(), args));
     set_args = true;
 }
 
-void BRInst::setBBArgs(const std::vector<std::shared_ptr<Value>> &t_args,
-                       const std::vector<std::shared_ptr<Value>> &f_args) {
+void BRInst::setBBArgs(const std::vector<pVal> &t_args, const std::vector<pVal> &f_args) {
     Err::gassert(conditional, "BRInst is not conditional.");
     addOperand(std::make_shared<BBArgList>(getTrueDest(), t_args));
     addOperand(std::make_shared<BBArgList>(getFalseDest(), f_args));
     set_args = true;
 }
 
-std::vector<std::shared_ptr<Value>> BRInst::getBBArgs() const {
+std::vector<pVal> BRInst::getBBArgs() const {
     Err::gassert(!conditional, "BRInst is conditional.");
     Err::gassert(set_args, "BRInst is not set args.");
-    return (std::dynamic_pointer_cast<BBArgList>(getOperand(1)->getValue())
-                ->_getArgs());
+    return getOperand(1)->getValue()->as<BBArgList>()->_getArgs();
 }
 
-std::vector<std::shared_ptr<Value>> BRInst::getTrueBBArgs() const {
+std::vector<pVal> BRInst::getTrueBBArgs() const {
     Err::gassert(conditional, "BRInst is not conditional.");
     Err::gassert(set_args, "BRInst is not set args.");
-    return std::dynamic_pointer_cast<BBArgList>(getOperand(3)->getValue())
-        ->_getArgs();
+    return getOperand(3)->getValue()->as<BBArgList>()->_getArgs();
 }
 
-std::vector<std::shared_ptr<Value>> BRInst::getFalseBBArgs() const {
+std::vector<pVal> BRInst::getFalseBBArgs() const {
     Err::gassert(conditional, "BRInst is not conditional.");
     Err::gassert(set_args, "BRInst is not set args.");
-    return std::dynamic_pointer_cast<BBArgList>(getOperand(4)->getValue())
-        ->_getArgs();
+    return getOperand(4)->getValue()->as<BBArgList>()->_getArgs();
 }
 
 void BRInst::dropFalseDest() {
@@ -125,49 +111,39 @@ void BRInst::dropTrueDest() {
     delOperand(0);
 }
 
-CALLInst::CALLInst(const std::shared_ptr<FunctionDecl> &func,
-                   const std::vector<std::shared_ptr<Value>> &args)
+CALLInst::CALLInst(const pFuncDecl &func, const std::vector<pVal> &args)
     : Instruction(OP::CALL, "__call", makeBType(IRBTYPE::VOID)) {
-    Err::gassert(
-        toBType(toFunctionType(func->getType())->getRet())->getInner() ==
-        IRBTYPE::VOID);
+#ifndef GNALC_EXTENSION_GGC
+    Err::gassert(func->getType()->as<FunctionType>()->getRet()->as<BType>()->getInner() == IRBTYPE::VOID);
+#endif
     addOperand(func);
     for (const auto &valptr : args)
         addOperand(valptr);
 }
 
-CALLInst::CALLInst(NameRef name, const std::shared_ptr<FunctionDecl> &func,
-                   const std::vector<std::shared_ptr<Value>> &args)
-    : Instruction(OP::CALL, name, toFunctionType(func->getType())->getRet()) {
+CALLInst::CALLInst(NameRef name, const pFuncDecl &func, const std::vector<pVal> &args)
+    : Instruction(OP::CALL, name, func->getType()->as<FunctionType>()->getRet()) {
     addOperand(func);
     for (const auto &valptr : args)
         addOperand(valptr);
 }
 
-bool CALLInst::isVoid() const {
-    return toBType(getType())->getInner() == IRBTYPE::VOID;
-}
+bool CALLInst::isVoid() const { return toBType(getType())->getInner() == IRBTYPE::VOID; }
 
 std::string CALLInst::getFuncName() const { return getFunc()->getName(); }
 
-std::shared_ptr<FunctionDecl> CALLInst::getFunc() const {
-    return std::dynamic_pointer_cast<FunctionDecl>(getOperand(0)->getValue());
-}
+pFuncDecl CALLInst::getFunc() const { return getOperand(0)->getValue()->as<FunctionDecl>(); }
 
-std::vector<std::shared_ptr<Value>> CALLInst::getArgs() const {
-    std::vector<std::shared_ptr<Value>> ret;
+std::vector<pVal> CALLInst::getArgs() const {
+    std::vector<pVal> ret;
     for (auto it = operand_begin() + 1; it != operand_end(); ++it)
         ret.emplace_back(*it);
     return ret;
 }
 
-void CALLInst::setTailCall() {
-    is_tail_call = true;
-}
+void CALLInst::setTailCall(bool is_tail_call_) { is_tail_call = is_tail_call_; }
 
-bool CALLInst::isTailCall() const {
-    return is_tail_call;
-}
+bool CALLInst::isTailCall() const { return is_tail_call; }
 
 void RETInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
@@ -175,21 +151,16 @@ void BRInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
 void CALLInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
-BRInst::BBArgList::BBArgList(const std::shared_ptr<BasicBlock> &block,
-                             const std::vector<std::shared_ptr<Value>> &args)
-    : User("__bb_arg_list", makeBType(IRBTYPE::UNDEFINED),
-           ValueTrait::BB_ARG_LIST),
-      block(block) {
+BRInst::BBArgList::BBArgList(const pBlock &block, const std::vector<pVal> &args)
+    : User("__bb_arg_list", makeBType(IRBTYPE::UNDEFINED), ValueTrait::BB_ARG_LIST), block(block) {
     for (const auto &arg : args)
         addOperand(arg);
 }
 
-std::shared_ptr<BRInst> BRInst::BBArgList::getBr() const {
-    return std::dynamic_pointer_cast<BRInst>(*operand_begin());
-}
+pBr BRInst::BBArgList::getBr() const { return (*operand_begin())->as<BRInst>(); }
 
-std::vector<std::shared_ptr<Value>> BRInst::BBArgList::_getArgs() const {
-    std::vector<std::shared_ptr<Value>> ret;
+std::vector<pVal> BRInst::BBArgList::_getArgs() const {
+    std::vector<pVal> ret;
     for (const auto &operand : getOperands())
         ret.emplace_back(operand->getValue());
     return ret;

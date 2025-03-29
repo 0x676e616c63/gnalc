@@ -1,26 +1,24 @@
 #include "../../../../include/ir/passes/transforms/mem2reg.hpp"
 #include "../../../../include/utils/exception.hpp"
 
-#include <stack>
 #include <algorithm>
+#include <stack>
 
 #include "../../../../include/ir/instructions/phi.hpp"
 #include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 
 namespace IR {
-bool PromotePass::iADomB(const std::shared_ptr<Instruction> &ia,
-                         const std::shared_ptr<Instruction> &ib) {
+bool PromotePass::iADomB(const pInst &ia, const pInst &ib) {
     if (ia->getParent() == ib->getParent()) {
         return ia->getIndex() < ib->getIndex();
     }
-    return pDT->ADomB(ia->getParent().get(), ib->getParent().get());
+    return pDT->ADomB(ia->getParent(), ib->getParent());
 }
 
 void PromotePass::analyseAlloca() {
     for (const auto &inst : entry_block->getInsts()) {
         if (inst->getOpcode() == OP::ALLOCA) {
-            const auto alloca_inst =
-                std::dynamic_pointer_cast<ALLOCAInst>(inst);
+            const auto alloca_inst = inst->as<ALLOCAInst>();
             ALLOCA_INFO info = {alloca_inst};
             bool promotable = true;
             // 遍历所有User, 只接受LOAD, STORE语句
@@ -28,23 +26,23 @@ void PromotePass::analyseAlloca() {
                 // Attention: 这里前提是所有的ORDINARY_VARIABLE都是INSTRUCTION
                 if (user->getVTrait() == ValueTrait::ORDINARY_VARIABLE ||
                     user->getVTrait() == ValueTrait::VOID_INSTRUCTION) {
-                    auto inst_user = std::dynamic_pointer_cast<Instruction>(user);
+                    auto inst_user = user->as<Instruction>();
                     if (inst_user->getOpcode() == OP::LOAD) {
-                        auto load = std::dynamic_pointer_cast<LOADInst>(inst_user);
+                        auto load = inst_user->as<LOADInst>();
                         info.loads.emplace_back(load);
                         info.user_blocks[load->getParent()].load_map[inst_user->getIndex()] = load;
                     } else if (inst_user->getOpcode() == OP::STORE) {
-                        auto store = std::dynamic_pointer_cast<STOREInst>(inst_user);
+                        auto store = inst_user->as<STOREInst>();
                         info.stores.emplace_back(store);
                         info.user_blocks[store->getParent()].store_map[inst_user->getIndex()] = store;
                     } else {
                         promotable = false;
                         break;
                     }
-                    } else {
-                        promotable = false;
-                        break;
-                    }
+                } else {
+                    promotable = false;
+                    break;
+                }
             }
             if (promotable) {
                 alloca_infos.emplace_back(info);
@@ -86,8 +84,8 @@ bool PromotePass::rewriteSingleStoreAlloca() {
 
 bool PromotePass::promoteSingleBlockAlloca() {
     if (cur_info.user_blocks.size() == 1) {
-        for (auto & load : cur_info.loads) {
-            auto it =  cur_info.user_blocks[load->getParent()].store_map.lower_bound(load->getIndex());
+        for (auto &load : cur_info.loads) {
+            auto it = cur_info.user_blocks[load->getParent()].store_map.lower_bound(load->getIndex());
             if (it == cur_info.user_blocks[load->getParent()].store_map.begin()) {
                 Logger::logWarning("[M2R] promoteSingleBlockAlloca(): store map is empty or load before store.");
                 return false;
@@ -110,9 +108,9 @@ bool PromotePass::promoteSingleBlockAlloca() {
 }
 
 void PromotePass::insertPhi() {
-    std::queue<std::shared_ptr<BasicBlock>> tmp_work_queue; // 临时处理队列
-    std::set<std::shared_ptr<BasicBlock>> live_in_blocks;   // 即需要传递alloca值的块
-    std::set<std::shared_ptr<BasicBlock>> define_blocks;    // 定义块
+    std::queue<pBlock> tmp_work_queue; // 临时处理队列
+    std::set<pBlock> live_in_blocks;   // 即需要传递alloca值的块
+    std::set<pBlock> define_blocks;    // 定义块
 
     // 初步处理 user_block
     for (const auto &[b, i] : cur_info.user_blocks) {
@@ -139,8 +137,7 @@ void PromotePass::insertPhi() {
             continue;
 
         for (const auto &p : b->preds()) {
-            if (auto i = cur_info.user_blocks.find(p);
-                i != cur_info.user_blocks.end()) {
+            if (auto i = cur_info.user_blocks.find(p); i != cur_info.user_blocks.end()) {
                 if (!i->second.store_map.empty())
                     // if p is a def block...
                     continue;
@@ -149,29 +146,31 @@ void PromotePass::insertPhi() {
         }
     }
 
-    std::set<std::shared_ptr<BasicBlock>> phi_blocks;
+    std::set<pBlock> phi_blocks;
     computeIDF(define_blocks, live_in_blocks, phi_blocks);
 
     unsigned version = 0;
-    for (const auto& bb : phi_blocks) {
-        auto node = std::make_shared<PHIInst>(cur_info.alloca->getName() + "." + std::to_string(++version), cur_info.alloca->getBaseType());
+    for (const auto &bb : phi_blocks) {
+        auto node = std::make_shared<PHIInst>(cur_info.alloca->getName() + "." + std::to_string(++version),
+                                              cur_info.alloca->getBaseType());
         bb->addPhiInst(node);
         phi_to_alloca_map[node] = cur_info.alloca;
     }
 }
 
 void PromotePass::rename(Function &f) {
-    auto& DT = *pDT;
-    if (alloca_infos.empty()) return;
-    using ABPair = std::pair<std::shared_ptr<ALLOCAInst>, std::shared_ptr<BasicBlock>>;
-    std::map<ABPair, std::shared_ptr<Value>> incoming_values;
+    auto &DT = *pDT;
+    if (alloca_infos.empty())
+        return;
+    using ABPair = std::pair<std::shared_ptr<ALLOCAInst>, pBlock>;
+    std::map<ABPair, pVal> incoming_values;
     for (auto &info : alloca_infos) {
         for (auto &b : f.getBlocks())
             incoming_values[{info.alloca, b}] = undef_val;
     }
 
-    std::stack<std::shared_ptr<BasicBlock>> work_stack;
-    std::set<std::shared_ptr<BasicBlock>> visited;
+    std::stack<pBlock> work_stack;
+    std::set<pBlock> visited;
     work_stack.push(entry_block);
     while (!work_stack.empty()) {
         const auto b = work_stack.top();
@@ -181,71 +180,73 @@ void PromotePass::rename(Function &f) {
 
         //  process load store and phi
         for (const auto &i : b->phis()) {
-            if (del_queue.count(i)) continue;
-            incoming_values[{phi_to_alloca_map[std::dynamic_pointer_cast<PHIInst>(i)], b}] = i;
+            if (del_queue.count(i))
+                continue;
+            incoming_values[{phi_to_alloca_map[i->as<PHIInst>()], b}] = i;
         }
-        for (const auto& i : b->getInsts()) {
-            if (del_queue.count(i)) continue;
+        for (const auto &i : b->getInsts()) {
+            if (del_queue.count(i))
+                continue;
             switch (i->getOpcode()) {
-                case OP::LOAD:
-                    if (!incoming_values.count({std::dynamic_pointer_cast<ALLOCAInst>(
-                            std::dynamic_pointer_cast<LOADInst>(i)->getPtr()), b})) break;
-                    // 用于在替换前检查是否是undef_val, 若是则沿cfg向上查找非undef的值
-                    if (auto alloca = std::dynamic_pointer_cast<ALLOCAInst>(
-                        std::dynamic_pointer_cast<LOADInst>(i)->getPtr()); incoming_values[{alloca, b}] == undef_val) {
-                        for (auto pb = b;;) {
-                            if (incoming_values[{alloca, pb}] == undef_val) {
-                                if (DT[pb.get()]->parent() != nullptr)
-                                    pb = DT[pb.get()]->parent()->block()->shared_from_this();
-                                else {
-                                    // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
-                                    Logger::logWarning("[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
-                                    incoming_values[{alloca, b}] = f.getConst(0);
-                                    break;
-                                }
-                            } else {
-                                incoming_values[{alloca, b}] = incoming_values[{alloca, pb}];
-                                Err::gassert(incoming_values[{alloca, b}] != nullptr, "PromotePass::rename(): Incoming value is null!");
-                                break;
-                            }
-                        }
-                    }
-                    i->replaceSelf(
-                        incoming_values[{std::dynamic_pointer_cast<ALLOCAInst>(
-                            std::dynamic_pointer_cast<LOADInst>(i)->getPtr()), b}]);
-                    del_queue.insert(i);
+            case OP::LOAD:
+                if (!incoming_values.count({i->as<LOADInst>()->getPtr()->as<ALLOCAInst>(), b}))
                     break;
-                case OP::STORE:
-                    if (!incoming_values.count({std::dynamic_pointer_cast<ALLOCAInst>(
-                            std::dynamic_pointer_cast<STOREInst>(i)->getPtr()), b})) break;
-                    incoming_values[{std::dynamic_pointer_cast<ALLOCAInst>(
-                            std::dynamic_pointer_cast<STOREInst>(i)->getPtr()), b}] = std::dynamic_pointer_cast<
-                                STOREInst>(i)->getValue();
-                    del_queue.insert(i);
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        for (const auto &n : b->succs()) {
-            // process phi in next block
-            for (const auto & phi_node : n->phis()) {
                 // 用于在替换前检查是否是undef_val, 若是则沿cfg向上查找非undef的值
-                if (auto alloca = phi_to_alloca_map[phi_node]; incoming_values[{alloca, b}] == undef_val) {
+                if (auto alloca = i->as<LOADInst>()->getPtr()->as<ALLOCAInst>();
+                    incoming_values[{alloca, b}] == undef_val) {
                     for (auto pb = b;;) {
                         if (incoming_values[{alloca, pb}] == undef_val) {
-                            if (DT[pb.get()]->parent() != nullptr)
-                                pb = DT[pb.get()]->parent()->block()->shared_from_this();
+                            if (DT[pb]->parent() != nullptr)
+                                pb = DT[pb]->parent()->block();
                             else {
                                 // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
-                                Logger::logWarning("[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
+                                Logger::logWarning(
+                                    "[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
                                 incoming_values[{alloca, b}] = f.getConst(0);
                                 break;
                             }
                         } else {
                             incoming_values[{alloca, b}] = incoming_values[{alloca, pb}];
-                            Err::gassert(incoming_values[{alloca, b}] != nullptr, "PromotePass::rename(): Incoming value is null!");
+                            Err::gassert(incoming_values[{alloca, b}] != nullptr,
+                                         "PromotePass::rename(): Incoming value is null!");
+                            break;
+                        }
+                    }
+                }
+                i->replaceSelf(incoming_values[{i->as<LOADInst>()->getPtr()->as<ALLOCAInst>(), b}]);
+                del_queue.insert(i);
+                break;
+            case OP::STORE:
+                if (!incoming_values.count({i->as<STOREInst>()->getPtr()->as<ALLOCAInst>(), b}))
+                    break;
+                incoming_values[{i->as<STOREInst>()->getPtr()->as<ALLOCAInst>(), b}] = i->as<STOREInst>()->getValue();
+                del_queue.insert(i);
+                break;
+            default:
+                break;
+            }
+        }
+
+        for (const auto &n : b->succs()) {
+            // process phi in next block
+            for (const auto &phi_node : n->phis()) {
+                // 用于在替换前检查是否是undef_val, 若是则沿cfg向上查找非undef的值
+                if (auto alloca = phi_to_alloca_map[phi_node]; incoming_values[{alloca, b}] == undef_val) {
+                    for (auto pb = b;;) {
+                        if (incoming_values[{alloca, pb}] == undef_val) {
+                            if (DT[pb]->parent() != nullptr)
+                                pb = DT[pb]->parent()->block();
+                            else {
+                                // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
+                                Logger::logWarning(
+                                    "[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
+                                incoming_values[{alloca, b}] = f.getConst(0);
+                                break;
+                            }
+                        } else {
+                            incoming_values[{alloca, b}] = incoming_values[{alloca, pb}];
+                            Err::gassert(incoming_values[{alloca, b}] != nullptr,
+                                         "PromotePass::rename(): Incoming value is null!");
                             break;
                         }
                     }
@@ -263,22 +264,21 @@ void PromotePass::rename(Function &f) {
 }
 
 // 大部分参考LLVM实现了...
-void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_blk,
-                             const std::set<std::shared_ptr<BasicBlock>>& live_in_blk,
-                             std::set<std::shared_ptr<BasicBlock>>& phi_blk) {
-    auto& DT = *pDT;
+void PromotePass::computeIDF(const std::set<pBlock> &def_blk, const std::set<pBlock> &live_in_blk,
+                             std::set<pBlock> &phi_blk) {
+    auto &DT = *pDT;
     using pDTN = std::shared_ptr<DomTree::Node>;
     using DTNPair = std::pair<unsigned, pDTN>;
     // todo : why less?
     std::priority_queue<DTNPair, std::vector<DTNPair>, std::less<>> PQ; // DT节点优先队列
     for (const auto &b : def_blk) {
-        PQ.emplace((DTNPair){DT[b.get()]->bfs_num(), DT[b.get()]});
+        PQ.emplace((DTNPair){DT[b]->bfs_num(), DT[b]});
     }
 
     std::set<pDTN> visited_pq;
     std::set<pDTN> visited_stn; // subtree node queue (work list in llvm)
 
-    // std::set<std::shared_ptr<BasicBlock>> idf; // JUST FOR TEST DomTree::getDF()
+    // std::set<pBlock> idf; // JUST FOR TEST DomTree::getDF()
 
     // process every def nodes, find dom frontier
     while (!PQ.empty()) {
@@ -306,10 +306,10 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
             STN.pop();
 
             // process succ node in cfg
-            for (const auto& next : node->block()->succs()) {
-                auto next_node = DT[next.get()];
+            for (const auto &next : node->block()->succs()) {
+                auto next_node = DT[next];
 
-                if (next_node->parent() == node.get())
+                if (next_node->parent() == node)
                     continue;
 
                 if (next_node->level() > root->level())
@@ -326,7 +326,7 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
                     PQ.emplace((DTNPair){next_node->bfs_num(), next_node});
             }
 
-            for (const auto& dom_child : node->children())
+            for (const auto &dom_child : node->children())
                 if (visited_stn.insert(dom_child).second)
                     STN.push(dom_child);
         }
@@ -342,16 +342,13 @@ void PromotePass::computeIDF(const std::set<std::shared_ptr<BasicBlock>>& def_bl
 void PromotePass::promoteMemoryToRegister(Function &function) {
     entry_block = function.getBlocks().front();
 
-    Err::gassert(entry_block->getNumPreds() == 0,
-        "First block is not entry block");
+    Err::gassert(entry_block->getNumPreds() == 0, "First block is not entry block");
 
     analyseAlloca();
 
-    for (auto it = alloca_infos.begin(); it != alloca_infos.end(); ) {
+    for (auto it = alloca_infos.begin(); it != alloca_infos.end();) {
         cur_info = *it;
-        if (removeUnusedAlloca() ||
-            rewriteSingleStoreAlloca() ||
-            promoteSingleBlockAlloca()) {
+        if (removeUnusedAlloca() || rewriteSingleStoreAlloca() || promoteSingleBlockAlloca()) {
             it = alloca_infos.erase(it);
         } else {
             insertPhi();
@@ -369,11 +366,11 @@ void PromotePass::promoteMemoryToRegister(Function &function) {
     //     }
     //     inst->getParent()->delFirstOfInst(inst);
     // }
-    std::set<std::shared_ptr<BasicBlock>> del_inst_blocks;
-    for (const auto& inst : del_queue)
+    std::set<pBlock> del_inst_blocks;
+    for (const auto &inst : del_queue)
         del_inst_blocks.insert(inst->getParent());
-    for (const auto& blk : del_inst_blocks)
-        blk->delInstIf([this](const auto& inst){ return del_queue.count(inst); }, BasicBlock::DEL_MODE::ALL);
+    for (const auto &blk : del_inst_blocks)
+        blk->delInstIf([this](const auto &inst) { return del_queue.count(inst); }, BasicBlock::DEL_MODE::ALL);
 }
 
 PM::PreservedAnalyses PromotePass::run(Function &function, FAM &manager) {
@@ -390,4 +387,4 @@ PM::PreservedAnalyses PromotePass::run(Function &function, FAM &manager) {
 
     return PreserveCFGAnalyses();
 }
-}// namespace IR
+} // namespace IR

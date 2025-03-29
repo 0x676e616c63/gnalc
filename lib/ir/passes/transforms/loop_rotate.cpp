@@ -32,8 +32,8 @@ namespace IR {
 //
 // TODO: A benchmark is needed to see whether merging is profitable
 //       when the vectorize and parallel pass is done.
-std::shared_ptr<BasicBlock> tryMergeLatchToExiting(const Loop &loop) {
-    auto latch = loop.getLatch()->shared_from_this();
+pBlock tryMergeLatchToExiting(const Loop &loop) {
+    auto latch = loop.getLatch();
     if (!latch)
         return nullptr;
 
@@ -44,16 +44,14 @@ std::shared_ptr<BasicBlock> tryMergeLatchToExiting(const Loop &loop) {
         switch (inst->getOpcode()) {
         case OP::GEP:
             // Constant offset is cheap
-            if (!std::dynamic_pointer_cast<GEPInst>(inst)->isConstantOffset())
+            if (!inst->as<GEPInst>()->isConstantOffset())
                 return nullptr;
             continue;
 
         case OP::ADD:
         case OP::SUB:
-            if (!match(inst, M::Add(M::Val(), M::Is(1))) &&
-                !match(inst, M::Add(M::Is(1), M::Val())) &&
-                !match(inst, M::Sub(M::Val(), M::Is(1))) &&
-                !match(inst, M::Sub(M::Is(1), M::Val())))
+            if (!match(inst, M::Add(M::Val(), M::Is(1))) && !match(inst, M::Add(M::Is(1), M::Val())) &&
+                !match(inst, M::Sub(M::Val(), M::Is(1))) && !match(inst, M::Sub(M::Is(1), M::Val())))
                 return nullptr;
             continue;
 
@@ -75,7 +73,7 @@ std::shared_ptr<BasicBlock> tryMergeLatchToExiting(const Loop &loop) {
 
     const auto &single_pred = *latch->pred_begin();
     if (single_pred == latch // Don't merge single block loop
-        || !loop.isExiting(single_pred.get()))
+        || !loop.isExiting(single_pred))
         return nullptr;
 
     auto jmp = latch->getBRInst();
@@ -100,35 +98,32 @@ std::shared_ptr<BasicBlock> tryMergeLatchToExiting(const Loop &loop) {
     // Don't mess up the consecutive cmp and br for better codegen
     //   %cond = icmp ...
     //   br %cond ...
-    if (auto cond_inst = std::dynamic_pointer_cast<Instruction>(pred_br->getCond())) {
+    if (auto cond_inst = pred_br->getCond()->as<Instruction>()) {
         if (cond_inst->getParent() == single_pred)
             moveInsts(latch->begin(), latch->end(), single_pred, cond_inst->getIter());
         else
-            Logger::logWarning("Cond '", cond_inst->getName(),
-                "' and BRInst are in separate block.");
-    }
-    else
+            Logger::logWarning("Cond '", cond_inst->getName(), "' and BRInst are in separate block.");
+    } else
         moveInsts(latch->begin(), latch->end(), single_pred, pred_br->getIter());
 
     return latch;
 }
 
 struct RenameData {
-    RenameData(const std::shared_ptr<Instruction> &old_header_inst_,
-               const std::shared_ptr<Value> &old_preheader_replacement_,
-               const std::shared_ptr<Value> &new_header_replacement_)
+    RenameData(const pInst &old_header_inst_, const pVal &old_preheader_replacement_,
+               const pVal &new_header_replacement_)
         : old_header(old_header_inst_), old_preheader(old_preheader_replacement_), new_header(new_header_replacement_) {
     }
 
-    std::shared_ptr<Instruction> old_header;
-    std::shared_ptr<Value> old_preheader;
-    std::shared_ptr<Value> new_header;
+    pInst old_header;
+    pVal old_preheader;
+    pVal new_header;
 };
 
 PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
     bool loop_rotate_cfg_modified = false;
 
-    auto& loop_info = fam.getResult<LoopAnalysis>(function);
+    auto &loop_info = fam.getResult<LoopAnalysis>(function);
 
     size_t num_rotated_loops = 0;
     for (const auto &toplevel : loop_info) {
@@ -138,15 +133,14 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
 
             bool latch_merged = false;
             if (auto dead_latch = tryMergeLatchToExiting(*loop)) {
-                loop_info.delBlock(dead_latch.get());
+                loop_info.delBlock(dead_latch);
                 if (dead_latch->getNumPreds() == 0)
                     function.delBlock(dead_latch);
                 loop_rotate_cfg_modified = true;
                 latch_merged = true;
             }
 
-            Err::gassert(loop->isSimplifyForm(),
-                "Expected LoopSimplified Form in LoopRotate");
+            Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplified Form in LoopRotate");
 
             // We don't rotate Single/Two block(s) loops
             if (loop->getBlocks().size() == 1 || loop->getBlocks().size() == 2)
@@ -155,7 +149,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
             // Rotate it!
             //
             //                   ---------------------
-            //                  |                    |                                      
+            //                  |                    |
             //                  v     (New Header)   |                             (New Header)
             // PreHeader ---> Header ---> Body ---> Latch     <to>      PreHeader ---> Body ---> Latch
             //                 |                                            |           ^         |
@@ -190,28 +184,28 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
             if (loop->getExitBlocks().size() != 1)
                 continue;
 
-            auto old_latch = loop->getLatch()->shared_from_this();
-            auto old_header = loop->getHeader()->shared_from_this();
+            auto old_latch = loop->getLatch();
+            auto old_header = loop->getHeader();
 
             // The header is exiting
             // If not, it might be possibly rotated before.
             auto old_header_br = old_header->getBRInst();
-            if (!old_header_br || !old_header_br->isConditional() || !loop->isExiting(old_header.get()))
+            if (!old_header_br || !old_header_br->isConditional() || !loop->isExiting(old_header))
                 continue;
 
             // We expect the Header has two successors, one is the loop body and the other is the exit.
             auto header_exit = old_header_br->getTrueDest();
             auto new_header = old_header_br->getFalseDest();
-            if (loop->contains(header_exit.get()))
+            if (loop->contains(header_exit))
                 std::swap(header_exit, new_header);
 
-            Err::gassert(*loop->getExitBlocks().begin() == header_exit.get());
+            Err::gassert(*loop->getExitBlocks().begin() == header_exit);
 
             if (header_exit->getNumPreds() != 1)
                 continue;
 
             // We rotate only if the latch is not exiting.
-            if (loop->isExiting(old_latch.get()))
+            if (loop->isExiting(old_latch))
                 continue;
 
             // The header has two successors, one is the exit and one is the body.
@@ -224,7 +218,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
             foldPHI(new_header);
 
             // Now the loop is suitable for rotating
-            auto old_preheader = loop->getPreHeader()->shared_from_this();
+            auto old_preheader = loop->getPreHeader();
 
             // First clone Header to PreHeader
             //
@@ -237,7 +231,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
 
             // Keep track of the values in the old Header, old PreHeader and the new Header (original Loop Body)
             std::vector<RenameData> rename_datas;
-            auto find_rename_data = [&rename_datas](const std::shared_ptr<Instruction> &inst) -> RenameData * {
+            auto find_rename_data = [&rename_datas](const pInst &inst) -> RenameData * {
                 auto it = std::find_if(rename_datas.begin(), rename_datas.end(),
                                        [&inst](const RenameData &rd) { return rd.old_header == inst; });
                 if (it == rename_datas.end())
@@ -264,7 +258,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                 for (const auto &use : operands) {
                     auto usee = use->getValue();
                     if (usee->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
-                        auto usee_inst = std::dynamic_pointer_cast<Instruction>(usee);
+                        auto usee_inst = usee->as<Instruction>();
                         Err::gassert(usee_inst != nullptr);
                         if (auto rd = find_rename_data(usee_inst))
                             cloned_inst->replaceUse(use, rd->old_preheader);
@@ -278,7 +272,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                 bool used_outside_header_but_in_loop = false;
                 for (const auto &user : inst->inst_users()) {
                     auto parent = user->getParent();
-                    if (parent != old_header && loop->contains(parent.get())) {
+                    if (parent != old_header && loop->contains(parent)) {
                         used_outside_header_but_in_loop = true;
                         break;
                     }
@@ -300,7 +294,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                 auto use_list = rd.old_header->getUseList();
 
                 for (const auto &use : use_list) {
-                    auto user_inst = std::dynamic_pointer_cast<Instruction>(use->getUser());
+                    auto user_inst = use->getUser()->as<Instruction>();
                     auto user_block = user_inst->getParent();
 
                     // If the use is in the old Header, we don't need to update them except it is a phi.
@@ -309,7 +303,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                     // However, after rotating, the old Header only has one predecessor which is the latch.
                     // So the values flow to them should be replaced with the new Header's version through the latch.
                     if (user_block == old_header) {
-                        if (auto user_phi = std::dynamic_pointer_cast<PHIInst>(user_inst)) {
+                        if (auto user_phi = user_inst->as<PHIInst>()) {
                             Err::gassert(user_phi->getNumOperands() == 4 && user_phi->hasBlock(old_preheader) &&
                                          user_phi->hasBlock(old_latch));
                             if (user_phi->hasBlock(new_header) && user_phi->getValueForBlock(new_header) == user_inst)
@@ -318,7 +312,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                         }
                     }
                     // If the use is in the loop but not the old Header, replace them with the new Header's version.
-                    else if (loop->contains(user_block.get())) {
+                    else if (loop->contains(user_block)) {
                         if (user_inst != rd.new_header)
                             user_inst->replaceAllOperands(rd.old_header, rd.new_header);
                     }
@@ -330,18 +324,18 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                     // Replace the use with the phi which merges the old PreHeader's version and the old Header's version.
                     else {
                         if (user_block == header_exit && user_inst->getOpcode() == OP::PHI) {
-                            auto user_phi = std::dynamic_pointer_cast<PHIInst>(user_inst);
+                            auto user_phi = user_inst->as<PHIInst>();
                             user_phi->addPhiOper(rd.old_preheader, old_preheader);
                         } else {
                             // Scanning all phis to figure out if the phi we want already exists.
-                            std::shared_ptr<PHIInst> avail_phi;
+                            pPhi avail_phi;
                             for (const auto &phi : header_exit->getPhiInsts()) {
                                 if (phi->hasBlock(old_header) && phi->hasBlock(old_preheader) &&
                                     phi->getValueForBlock(old_header) == rd.old_header &&
                                     phi->getValueForBlock(old_preheader) == rd.old_preheader) {
                                     avail_phi = phi;
                                     break;
-                                    }
+                                }
                             }
                             // If not, just create one at the exit block.
                             if (!avail_phi) {
@@ -365,7 +359,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                 // just take care of the old PreHeader
                 if (!phi->hasBlock(old_preheader)) {
                     auto val = phi->getValueForBlock(old_header);
-                    auto inst = std::dynamic_pointer_cast<Instruction>(val);
+                    auto inst = val->as<Instruction>();
                     if (!inst)
                         phi->addPhiOper(val, old_preheader);
                     else if (auto rd = find_rename_data(inst))
@@ -387,7 +381,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
             foldPHI(old_header);
 
             // Update Loop Info
-            loop->moveToHeader(new_header.get());
+            loop->moveToHeader(new_header);
 
             // Now the preheader's BRInst is cloned from header, but its `cond`
             // may become constant if it is a phi before. If so, we fold it into an unconditional BRInst.
@@ -402,21 +396,21 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
             if (auto fold = foldConstant(function.getConstantPool(), ph_br_cond)) {
                 if (fold != ph_br_cond) {
                     ph_br_cond->replaceSelf(fold);
-                    auto condi = std::dynamic_pointer_cast<Instruction>(ph_br_cond);
+                    auto condi = ph_br_cond->as<Instruction>();
                     old_preheader->delInst(condi);
                     ph_br_cond = fold;
                 }
             }
-            if (auto ci1 = std::dynamic_pointer_cast<ConstantI1>(ph_br_cond)) {
-                std::set<std::shared_ptr<PHIInst>> dead_phis;
+            if (auto ci1 = ph_br_cond->as<ConstantI1>()) {
+                std::set<pPhi> dead_phis;
                 if ((ci1 && cloned_ph_br->getTrueDest() == new_header) ||
                     (!ci1 && cloned_ph_br->getFalseDest() == new_header)) {
                     safeUnlinkBB(old_preheader, header_exit, dead_phis);
                     preheader_br_is_conditional = false;
-                    }
+                }
                 header_exit->delInstIf(
                     [&dead_phis](const auto &inst) {
-                        return dead_phis.find(std::dynamic_pointer_cast<PHIInst>(inst)) != dead_phis.end();
+                        return dead_phis.find(inst->template as<PHIInst>()) != dead_phis.end();
                     },
                     BasicBlock::DEL_MODE::PHI);
             }
@@ -443,7 +437,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                 function.addBlock(new_header->getIter(), new_preheader);
 
                 if (!loop->isOutermost())
-                    loop_info.addBlock(loop->getParent(), new_preheader.get());
+                    loop_info.addBlock(loop->getParent(), new_preheader);
 
                 // Dedicated Exits
                 // Note that the exit could be an exit block for multiple nested loops
@@ -463,14 +457,14 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                 // In practice, this is the same as critical edges breaking.
                 auto exit_preds = header_exit->getPreBB();
                 for (const auto &exit_pred : exit_preds) {
-                    const auto &exit_pred_loop = loop_info.getLoopFor(exit_pred.get());
+                    const auto &exit_pred_loop = loop_info.getLoopFor(exit_pred);
                     // We only split exiting edges
-                    if (!exit_pred_loop || exit_pred_loop->contains(header_exit.get()))
+                    if (!exit_pred_loop || exit_pred_loop->contains(header_exit))
                         continue;
                     auto new_bb = breakCriticalEdge(exit_pred, header_exit);
                     new_bb->setName("%lr.exit" + std::to_string(name_cnt++));
-                    if (auto exit_loop = loop_info.getLoopFor(header_exit.get()))
-                        loop_info.addBlock(exit_loop, new_bb.get());
+                    if (auto exit_loop = loop_info.getLoopFor(header_exit))
+                        loop_info.addBlock(exit_loop, new_bb);
                 }
             }
 
@@ -490,8 +484,8 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                     phi->replaceAllOperands(old_header, old_latch);
             }
 
-            loop_info.delBlock(old_header.get());
-            function.delBlock(old_header->shared_from_this());
+            loop_info.delBlock(old_header);
+            function.delBlock(old_header);
 
             num_rotated_loops++;
             loop_rotate_cfg_modified = true;

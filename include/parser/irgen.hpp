@@ -4,23 +4,23 @@
 
 #include "../config/config.hpp"
 #include "../ir/module.hpp"
-#include "symbol_table.hpp"
 #include "ast.hpp"
 #include "cfgbuilder.hpp"
+#include "symbol_table.hpp"
 
 namespace Parser {
 
 class IRGenerator : public AST::ASTVisitor {
     IR::Module module;
-    std::shared_ptr<IR::Value> curr_val;
-    std::vector<std::shared_ptr<IR::Instruction>> curr_insts;
+    IR::pVal curr_val;
+    std::vector<IR::pInst> curr_insts;
     std::shared_ptr<IR::LinearFunction> curr_func;
     SymbolTable symbol_table;
     bool is_making_lval{false}; // TODO: more sensible
 
     struct Initializer {
         using list_t = std::vector<Initializer>;
-        using val_t = std::variant<int, float, std::shared_ptr<IR::Value>>;
+        using val_t = std::variant<int, float, IR::pVal>;
         std::variant<std::monostate, list_t, val_t> initializer;
         IR::IRBTYPE base_type;
         Initializer *parent;
@@ -29,8 +29,7 @@ class IRGenerator : public AST::ASTVisitor {
         explicit Initializer(Initializer *parent_, IR::IRBTYPE btype);
         explicit Initializer(int a, Initializer *parent_);
         explicit Initializer(float a, Initializer *parent_);
-        explicit Initializer(std::shared_ptr<IR::Value> a,
-                             Initializer *parent_);
+        explicit Initializer(IR::pVal a, Initializer *parent_);
 
         bool isList() const;
 
@@ -39,8 +38,7 @@ class IRGenerator : public AST::ASTVisitor {
         template <typename T> void add(T &&a) {
             Err::gassert(isList());
             Initializer tmp(std::forward<T>(a), this);
-            Err::gassert(base_type == tmp.base_type ||
-                             base_type == IR::IRBTYPE::UNDEFINED,
+            Err::gassert(base_type == tmp.base_type || base_type == IR::IRBTYPE::UNDEFINED,
                          "Initializer type inconsistent.");
             base_type = tmp.base_type;
             std::get<list_t>(initializer).emplace_back(tmp);
@@ -72,7 +70,7 @@ class IRGenerator : public AST::ASTVisitor {
 
 public:
     IRGenerator() = default;
-    explicit IRGenerator(const std::string& module_name);
+    explicit IRGenerator(const std::string &module_name);
     void visit(AST::CompUnit &node) override;
     void visit(AST::VarDef &node) override;
     void visit(AST::DeclStmt &node) override;
@@ -103,10 +101,8 @@ public:
 
 private:
     // Throw exception if failed
-    std::shared_ptr<IR::Value> type_cast(const std::shared_ptr<IR::Value> &val,
-                                         const std::shared_ptr<IR::Type> &dest);
-    std::shared_ptr<IR::Value> type_cast(const std::shared_ptr<IR::Value> &val,
-                                         IR::IRBTYPE dest);
+    IR::pVal type_cast(const IR::pVal &val, const std::shared_ptr<IR::Type> &dest);
+    IR::pVal type_cast(const IR::pVal &val, IR::IRBTYPE dest);
 };
 
 } // namespace Parser

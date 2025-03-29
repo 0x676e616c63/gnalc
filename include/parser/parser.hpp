@@ -127,14 +127,12 @@ using namespace AST;
 /* Suppress an incorrect diagnostic about yylval being uninitialized.  */
 #if defined __GNUC__ && !defined __ICC && 406 <= __GNUC__ * 100 + __GNUC_MINOR__
 #if __GNUC__ * 100 + __GNUC_MINOR__ < 407
-#define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN                                    \
-    _Pragma("GCC diagnostic push")                                             \
-        _Pragma("GCC diagnostic ignored \"-Wuninitialized\"")
+#define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN                                                                            \
+    _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wuninitialized\"")
 #else
-#define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN                                    \
-    _Pragma("GCC diagnostic push")                                             \
-        _Pragma("GCC diagnostic ignored \"-Wuninitialized\"")                  \
-            _Pragma("GCC diagnostic ignored \"-Wmaybe-uninitialized\"")
+#define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN                                                                            \
+    _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wuninitialized\"")                               \
+        _Pragma("GCC diagnostic ignored \"-Wmaybe-uninitialized\"")
 #endif
 #define YY_IGNORE_MAYBE_UNINITIALIZED_END _Pragma("GCC diagnostic pop")
 #else
@@ -149,9 +147,7 @@ using namespace AST;
 #endif
 
 #if defined __cplusplus && defined __GNUC__ && !defined __ICC && 6 <= __GNUC__
-#define YY_IGNORE_USELESS_CAST_BEGIN                                           \
-    _Pragma("GCC diagnostic push")                                             \
-        _Pragma("GCC diagnostic ignored \"-Wuseless-cast\"")
+#define YY_IGNORE_USELESS_CAST_BEGIN _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wuseless-cast\"")
 #define YY_IGNORE_USELESS_CAST_END _Pragma("GCC diagnostic pop")
 #endif
 #ifndef YY_IGNORE_USELESS_CAST_BEGIN
@@ -193,8 +189,7 @@ class parser {
 public:
 #ifdef YYSTYPE
 #ifdef __GNUC__
-#pragma GCC message                                                            \
-    "bison: do not #define YYSTYPE in C++, use %define api.value.type"
+#pragma GCC message "bison: do not #define YYSTYPE in C++, use %define api.value.type"
 #endif
     typedef YYSTYPE value_type;
 #else
@@ -212,8 +207,7 @@ public:
         value_type() YY_NOEXCEPT : yyraw_(), yytypeid_(YY_NULLPTR) {}
 
         /// Construct and fill.
-        template <typename T>
-        value_type(YY_RVREF(T) t) : yytypeid_(&typeid(T)) {
+        template <typename T> value_type(YY_RVREF(T) t) : yytypeid_(&typeid(T)) {
             YY_ASSERT(sizeof(T) <= size);
             new (yyas_<T>()) T(YY_MOVE(t));
         }
@@ -314,9 +308,7 @@ public:
 #endif
 
         /// Copy the content of \a that to this.
-        template <typename T> void copy(const self_type &that) {
-            emplace<T>(that.as<T>());
-        }
+        template <typename T> void copy(const self_type &that) { emplace<T>(that.as<T>()); }
 
         /// Destroy the stored \a T.
         template <typename T> void destroy() {
@@ -623,8 +615,7 @@ public:
 
             case symbol_kind::S_ConstAS:         // ConstAS
             case symbol_kind::S_ArraySubscripts: // ArraySubscripts
-                value.move<std::shared_ptr<ArraySubscript>>(
-                    std::move(that.value));
+                value.move<std::shared_ptr<ArraySubscript>>(std::move(that.value));
                 break;
 
             case symbol_kind::S_Block:      // Block
@@ -706,135 +697,93 @@ public:
 #endif
 
 #if 201103L <= YY_CPLUSPLUS
-        basic_symbol(typename Base::kind_type t, AST::dtype &&v)
-            : Base(t), value(std::move(v)) {}
+        basic_symbol(typename Base::kind_type t, AST::dtype &&v) : Base(t), value(std::move(v)) {}
 #else
-        basic_symbol(typename Base::kind_type t, const AST::dtype &v)
-            : Base(t), value(v) {}
+        basic_symbol(typename Base::kind_type t, const AST::dtype &v) : Base(t), value(v) {}
 #endif
 
 #if 201103L <= YY_CPLUSPLUS
-        basic_symbol(typename Base::kind_type t, AST::float32 &&v)
-            : Base(t), value(std::move(v)) {}
+        basic_symbol(typename Base::kind_type t, AST::float32 &&v) : Base(t), value(std::move(v)) {}
 #else
-        basic_symbol(typename Base::kind_type t, const AST::float32 &v)
-            : Base(t), value(v) {}
+        basic_symbol(typename Base::kind_type t, const AST::float32 &v) : Base(t), value(v) {}
 #endif
 
 #if 201103L <= YY_CPLUSPLUS
-        basic_symbol(typename Base::kind_type t, AST::int32 &&v)
-            : Base(t), value(std::move(v)) {}
+        basic_symbol(typename Base::kind_type t, AST::int32 &&v) : Base(t), value(std::move(v)) {}
 #else
-        basic_symbol(typename Base::kind_type t, const AST::int32 &v)
-            : Base(t), value(v) {}
+        basic_symbol(typename Base::kind_type t, const AST::int32 &v) : Base(t), value(v) {}
 #endif
 
 #if 201103L <= YY_CPLUSPLUS
-        basic_symbol(typename Base::kind_type t, AST::string &&v)
-            : Base(t), value(std::move(v)) {}
+        basic_symbol(typename Base::kind_type t, AST::string &&v) : Base(t), value(std::move(v)) {}
 #else
-        basic_symbol(typename Base::kind_type t, const AST::string &v)
-            : Base(t), value(v) {}
+        basic_symbol(typename Base::kind_type t, const AST::string &v) : Base(t), value(v) {}
 #endif
 
 #if 201103L <= YY_CPLUSPLUS
-        basic_symbol(typename Base::kind_type t,
-                     std::shared_ptr<ArraySubscript> &&v)
-            : Base(t), value(std::move(v)) {}
+        basic_symbol(typename Base::kind_type t, std::shared_ptr<ArraySubscript> &&v) : Base(t), value(std::move(v)) {}
 #else
-        basic_symbol(typename Base::kind_type t,
-                     const std::shared_ptr<ArraySubscript> &v)
-            : Base(t), value(v) {}
+        basic_symbol(typename Base::kind_type t, const std::shared_ptr<ArraySubscript> &v) : Base(t), value(v) {}
 #endif
 
 #if 201103L <= YY_CPLUSPLUS
-        basic_symbol(typename Base::kind_type t, std::shared_ptr<CompStmt> &&v)
-            : Base(t), value(std::move(v)) {}
+        basic_symbol(typename Base::kind_type t, std::shared_ptr<CompStmt> &&v) : Base(t), value(std::move(v)) {}
 #else
-        basic_symbol(typename Base::kind_type t,
-                     const std::shared_ptr<CompStmt> &v)
-            : Base(t), value(v) {}
+        basic_symbol(typename Base::kind_type t, const std::shared_ptr<CompStmt> &v) : Base(t), value(v) {}
 #endif
 
 #if 201103L <= YY_CPLUSPLUS
-        basic_symbol(typename Base::kind_type t, std::shared_ptr<CompUnit> &&v)
-            : Base(t), value(std::move(v)) {}
+        basic_symbol(typename Base::kind_type t, std::shared_ptr<CompUnit> &&v) : Base(t), value(std::move(v)) {}
 #else
-        basic_symbol(typename Base::kind_type t,
-                     const std::shared_ptr<CompUnit> &v)
-            : Base(t), value(v) {}
+        basic_symbol(typename Base::kind_type t, const std::shared_ptr<CompUnit> &v) : Base(t), value(v) {}
 #endif
 
 #if 201103L <= YY_CPLUSPLUS
-        basic_symbol(typename Base::kind_type t, std::shared_ptr<DeclStmt> &&v)
-            : Base(t), value(std::move(v)) {}
+        basic_symbol(typename Base::kind_type t, std::shared_ptr<DeclStmt> &&v) : Base(t), value(std::move(v)) {}
 #else
-        basic_symbol(typename Base::kind_type t,
-                     const std::shared_ptr<DeclStmt> &v)
-            : Base(t), value(v) {}
+        basic_symbol(typename Base::kind_type t, const std::shared_ptr<DeclStmt> &v) : Base(t), value(v) {}
 #endif
 
 #if 201103L <= YY_CPLUSPLUS
-        basic_symbol(typename Base::kind_type t, std::shared_ptr<Exp> &&v)
-            : Base(t), value(std::move(v)) {}
+        basic_symbol(typename Base::kind_type t, std::shared_ptr<Exp> &&v) : Base(t), value(std::move(v)) {}
 #else
-        basic_symbol(typename Base::kind_type t, const std::shared_ptr<Exp> &v)
-            : Base(t), value(v) {}
+        basic_symbol(typename Base::kind_type t, const std::shared_ptr<Exp> &v) : Base(t), value(v) {}
 #endif
 
 #if 201103L <= YY_CPLUSPLUS
-        basic_symbol(typename Base::kind_type t, std::shared_ptr<FuncDef> &&v)
-            : Base(t), value(std::move(v)) {}
+        basic_symbol(typename Base::kind_type t, std::shared_ptr<FuncDef> &&v) : Base(t), value(std::move(v)) {}
 #else
-        basic_symbol(typename Base::kind_type t,
-                     const std::shared_ptr<FuncDef> &v)
-            : Base(t), value(v) {}
+        basic_symbol(typename Base::kind_type t, const std::shared_ptr<FuncDef> &v) : Base(t), value(v) {}
 #endif
 
 #if 201103L <= YY_CPLUSPLUS
-        basic_symbol(typename Base::kind_type t,
-                     std::shared_ptr<FuncFParam> &&v)
-            : Base(t), value(std::move(v)) {}
+        basic_symbol(typename Base::kind_type t, std::shared_ptr<FuncFParam> &&v) : Base(t), value(std::move(v)) {}
 #else
-        basic_symbol(typename Base::kind_type t,
-                     const std::shared_ptr<FuncFParam> &v)
-            : Base(t), value(v) {}
+        basic_symbol(typename Base::kind_type t, const std::shared_ptr<FuncFParam> &v) : Base(t), value(v) {}
 #endif
 
 #if 201103L <= YY_CPLUSPLUS
-        basic_symbol(typename Base::kind_type t,
-                     std::shared_ptr<FuncRParam> &&v)
-            : Base(t), value(std::move(v)) {}
+        basic_symbol(typename Base::kind_type t, std::shared_ptr<FuncRParam> &&v) : Base(t), value(std::move(v)) {}
 #else
-        basic_symbol(typename Base::kind_type t,
-                     const std::shared_ptr<FuncRParam> &v)
-            : Base(t), value(v) {}
+        basic_symbol(typename Base::kind_type t, const std::shared_ptr<FuncRParam> &v) : Base(t), value(v) {}
 #endif
 
 #if 201103L <= YY_CPLUSPLUS
-        basic_symbol(typename Base::kind_type t, std::shared_ptr<InitVal> &&v)
-            : Base(t), value(std::move(v)) {}
+        basic_symbol(typename Base::kind_type t, std::shared_ptr<InitVal> &&v) : Base(t), value(std::move(v)) {}
 #else
-        basic_symbol(typename Base::kind_type t,
-                     const std::shared_ptr<InitVal> &v)
-            : Base(t), value(v) {}
+        basic_symbol(typename Base::kind_type t, const std::shared_ptr<InitVal> &v) : Base(t), value(v) {}
 #endif
 
 #if 201103L <= YY_CPLUSPLUS
-        basic_symbol(typename Base::kind_type t, std::shared_ptr<Stmt> &&v)
-            : Base(t), value(std::move(v)) {}
+        basic_symbol(typename Base::kind_type t, std::shared_ptr<Stmt> &&v) : Base(t), value(std::move(v)) {}
 #else
-        basic_symbol(typename Base::kind_type t, const std::shared_ptr<Stmt> &v)
-            : Base(t), value(v) {}
+        basic_symbol(typename Base::kind_type t, const std::shared_ptr<Stmt> &v) : Base(t), value(v) {}
 #endif
 
 #if 201103L <= YY_CPLUSPLUS
-        basic_symbol(typename Base::kind_type t, std::shared_ptr<VarDef> &&v)
-            : Base(t), value(std::move(v)) {}
+        basic_symbol(typename Base::kind_type t, std::shared_ptr<VarDef> &&v) : Base(t), value(std::move(v)) {}
 #else
-        basic_symbol(typename Base::kind_type t,
-                     const std::shared_ptr<VarDef> &v)
-            : Base(t), value(v) {}
+        basic_symbol(typename Base::kind_type t, const std::shared_ptr<VarDef> &v) : Base(t), value(v) {}
 #endif
 
         /// Destroy the symbol.
@@ -945,9 +894,7 @@ public:
 
 #if YYDEBUG || 0
         /// The user-facing name of this symbol.
-        const char *name() const YY_NOEXCEPT {
-            return parser::symbol_name(this->kind());
-        }
+        const char *name() const YY_NOEXCEPT { return parser::symbol_name(this->kind()); }
 #endif // #if YYDEBUG || 0
 
         /// Backward compatibility (Bison 3.6).
@@ -1027,8 +974,7 @@ public:
 #endif
         {
 #if !defined _MSC_VER || defined __clang__
-            YY_ASSERT(tok == token::YYEOF ||
-                      (token::YYerror <= tok && tok <= token::Y_FLOAT));
+            YY_ASSERT(tok == token::YYEOF || (token::YYerror <= tok && tok <= token::Y_FLOAT));
 #endif
         }
 #if 201103L <= YY_CPLUSPLUS
@@ -1167,13 +1113,9 @@ public:
     static symbol_type make_Y_BREAK() { return symbol_type(token::Y_BREAK); }
 #endif
 #if 201103L <= YY_CPLUSPLUS
-    static symbol_type make_Y_CONTINUE() {
-        return symbol_type(token::Y_CONTINUE);
-    }
+    static symbol_type make_Y_CONTINUE() { return symbol_type(token::Y_CONTINUE); }
 #else
-    static symbol_type make_Y_CONTINUE() {
-        return symbol_type(token::Y_CONTINUE);
-    }
+    static symbol_type make_Y_CONTINUE() { return symbol_type(token::Y_CONTINUE); }
 #endif
 #if 201103L <= YY_CPLUSPLUS
     static symbol_type make_Y_RETURN() { return symbol_type(token::Y_RETURN); }
@@ -1221,13 +1163,9 @@ public:
     static symbol_type make_Y_GREAT() { return symbol_type(token::Y_GREAT); }
 #endif
 #if 201103L <= YY_CPLUSPLUS
-    static symbol_type make_Y_GREATEQ() {
-        return symbol_type(token::Y_GREATEQ);
-    }
+    static symbol_type make_Y_GREATEQ() { return symbol_type(token::Y_GREATEQ); }
 #else
-    static symbol_type make_Y_GREATEQ() {
-        return symbol_type(token::Y_GREATEQ);
-    }
+    static symbol_type make_Y_GREATEQ() { return symbol_type(token::Y_GREATEQ); }
 #endif
 #if 201103L <= YY_CPLUSPLUS
     static symbol_type make_Y_NOTEQ() { return symbol_type(token::Y_NOTEQ); }
@@ -1270,40 +1208,24 @@ public:
     static symbol_type make_Y_RPAR() { return symbol_type(token::Y_RPAR); }
 #endif
 #if 201103L <= YY_CPLUSPLUS
-    static symbol_type make_Y_LBRACKET() {
-        return symbol_type(token::Y_LBRACKET);
-    }
+    static symbol_type make_Y_LBRACKET() { return symbol_type(token::Y_LBRACKET); }
 #else
-    static symbol_type make_Y_LBRACKET() {
-        return symbol_type(token::Y_LBRACKET);
-    }
+    static symbol_type make_Y_LBRACKET() { return symbol_type(token::Y_LBRACKET); }
 #endif
 #if 201103L <= YY_CPLUSPLUS
-    static symbol_type make_Y_RBRACKET() {
-        return symbol_type(token::Y_RBRACKET);
-    }
+    static symbol_type make_Y_RBRACKET() { return symbol_type(token::Y_RBRACKET); }
 #else
-    static symbol_type make_Y_RBRACKET() {
-        return symbol_type(token::Y_RBRACKET);
-    }
+    static symbol_type make_Y_RBRACKET() { return symbol_type(token::Y_RBRACKET); }
 #endif
 #if 201103L <= YY_CPLUSPLUS
-    static symbol_type make_Y_LSQUARE() {
-        return symbol_type(token::Y_LSQUARE);
-    }
+    static symbol_type make_Y_LSQUARE() { return symbol_type(token::Y_LSQUARE); }
 #else
-    static symbol_type make_Y_LSQUARE() {
-        return symbol_type(token::Y_LSQUARE);
-    }
+    static symbol_type make_Y_LSQUARE() { return symbol_type(token::Y_LSQUARE); }
 #endif
 #if 201103L <= YY_CPLUSPLUS
-    static symbol_type make_Y_RSQUARE() {
-        return symbol_type(token::Y_RSQUARE);
-    }
+    static symbol_type make_Y_RSQUARE() { return symbol_type(token::Y_RSQUARE); }
 #else
-    static symbol_type make_Y_RSQUARE() {
-        return symbol_type(token::Y_RSQUARE);
-    }
+    static symbol_type make_Y_RSQUARE() { return symbol_type(token::Y_RSQUARE); }
 #endif
 #if 201103L <= YY_CPLUSPLUS
     static symbol_type make_Y_COMMA() { return symbol_type(token::Y_COMMA); }
@@ -1311,13 +1233,9 @@ public:
     static symbol_type make_Y_COMMA() { return symbol_type(token::Y_COMMA); }
 #endif
 #if 201103L <= YY_CPLUSPLUS
-    static symbol_type make_Y_SEMICOLON() {
-        return symbol_type(token::Y_SEMICOLON);
-    }
+    static symbol_type make_Y_SEMICOLON() { return symbol_type(token::Y_SEMICOLON); }
 #else
-    static symbol_type make_Y_SEMICOLON() {
-        return symbol_type(token::Y_SEMICOLON);
-    }
+    static symbol_type make_Y_SEMICOLON() { return symbol_type(token::Y_SEMICOLON); }
 #endif
 #if 201103L <= YY_CPLUSPLUS
     static symbol_type make_Y_FLOAT() { return symbol_type(token::Y_FLOAT); }
@@ -1325,31 +1243,19 @@ public:
     static symbol_type make_Y_FLOAT() { return symbol_type(token::Y_FLOAT); }
 #endif
 #if 201103L <= YY_CPLUSPLUS
-    static symbol_type make_num_INT(AST::int32 v) {
-        return symbol_type(token::num_INT, std::move(v));
-    }
+    static symbol_type make_num_INT(AST::int32 v) { return symbol_type(token::num_INT, std::move(v)); }
 #else
-    static symbol_type make_num_INT(const AST::int32 &v) {
-        return symbol_type(token::num_INT, v);
-    }
+    static symbol_type make_num_INT(const AST::int32 &v) { return symbol_type(token::num_INT, v); }
 #endif
 #if 201103L <= YY_CPLUSPLUS
-    static symbol_type make_num_FLOAT(AST::float32 v) {
-        return symbol_type(token::num_FLOAT, std::move(v));
-    }
+    static symbol_type make_num_FLOAT(AST::float32 v) { return symbol_type(token::num_FLOAT, std::move(v)); }
 #else
-    static symbol_type make_num_FLOAT(const AST::float32 &v) {
-        return symbol_type(token::num_FLOAT, v);
-    }
+    static symbol_type make_num_FLOAT(const AST::float32 &v) { return symbol_type(token::num_FLOAT, v); }
 #endif
 #if 201103L <= YY_CPLUSPLUS
-    static symbol_type make_Y_ID(AST::string v) {
-        return symbol_type(token::Y_ID, std::move(v));
-    }
+    static symbol_type make_Y_ID(AST::string v) { return symbol_type(token::Y_ID, std::move(v)); }
 #else
-    static symbol_type make_Y_ID(const AST::string &v) {
-        return symbol_type(token::Y_ID, v);
-    }
+    static symbol_type make_Y_ID(const AST::string &v) { return symbol_type(token::Y_ID, v); }
 #endif
 
 private:
@@ -1439,16 +1345,14 @@ private:
     /// \brief Display a symbol kind, value and location.
     /// \param yyo    The output stream.
     /// \param yysym  The symbol.
-    template <typename Base>
-    void yy_print_(std::ostream &yyo, const basic_symbol<Base> &yysym) const;
+    template <typename Base> void yy_print_(std::ostream &yyo, const basic_symbol<Base> &yysym) const;
 #endif
 
     /// \brief Reclaim the memory associated to a symbol.
     /// \param yymsg     Why this token is reclaimed.
     ///                  If null, print nothing.
     /// \param yysym     The symbol.
-    template <typename Base>
-    void yy_destroy_(const char *yymsg, basic_symbol<Base> &yysym) const;
+    template <typename Base> void yy_destroy_(const char *yymsg, basic_symbol<Base> &yysym) const;
 
 private:
     /// Type access provider for state based symbols.
@@ -1526,9 +1430,7 @@ private:
         /// Random access.
         ///
         /// Index 0 returns the topmost element.
-        const T &operator[](index_type i) const {
-            return seq_[size_type(size() - 1 - i)];
-        }
+        const T &operator[](index_type i) const { return seq_[size_type(size() - 1 - i)]; }
 
         /// Random access.
         ///
@@ -1564,13 +1466,9 @@ private:
         /// Present a slice of the top of a stack.
         class slice {
         public:
-            slice(const stack &stack, index_type range) YY_NOEXCEPT
-                : stack_(stack),
-                  range_(range) {}
+            slice(const stack &stack, index_type range) YY_NOEXCEPT : stack_(stack), range_(range) {}
 
-            const T &operator[](index_type i) const {
-                return stack_[range_ - i];
-            }
+            const T &operator[](index_type i) const { return stack_[range_ - i]; }
 
         private:
             const stack &stack_;
@@ -1620,14 +1518,10 @@ private:
     };
 };
 
-inline parser::symbol_kind_type parser::yytranslate_(int t) YY_NOEXCEPT {
-    return static_cast<symbol_kind_type>(t);
-}
+inline parser::symbol_kind_type parser::yytranslate_(int t) YY_NOEXCEPT { return static_cast<symbol_kind_type>(t); }
 
 // basic_symbol.
-template <typename Base>
-parser::basic_symbol<Base>::basic_symbol(const basic_symbol &that)
-    : Base(that), value() {
+template <typename Base> parser::basic_symbol<Base>::basic_symbol(const basic_symbol &that) : Base(that), value() {
     switch (this->kind()) {
     case symbol_kind::S_Type: // Type
         value.copy<AST::dtype>(YY_MOVE(that.value));
@@ -1717,19 +1611,15 @@ parser::basic_symbol<Base>::basic_symbol(const basic_symbol &that)
     }
 }
 
-template <typename Base>
-parser::symbol_kind_type
-parser::basic_symbol<Base>::type_get() const YY_NOEXCEPT {
+template <typename Base> parser::symbol_kind_type parser::basic_symbol<Base>::type_get() const YY_NOEXCEPT {
     return this->kind();
 }
 
-template <typename Base>
-bool parser::basic_symbol<Base>::empty() const YY_NOEXCEPT {
+template <typename Base> bool parser::basic_symbol<Base>::empty() const YY_NOEXCEPT {
     return this->kind() == symbol_kind::S_YYEMPTY;
 }
 
-template <typename Base>
-void parser::basic_symbol<Base>::move(basic_symbol &s) {
+template <typename Base> void parser::basic_symbol<Base>::move(basic_symbol &s) {
     super_type::move(s);
     switch (this->kind()) {
     case symbol_kind::S_Type: // Type
@@ -1824,34 +1714,23 @@ void parser::basic_symbol<Base>::move(basic_symbol &s) {
 inline parser::by_kind::by_kind() YY_NOEXCEPT : kind_(symbol_kind::S_YYEMPTY) {}
 
 #if 201103L <= YY_CPLUSPLUS
-inline parser::by_kind::by_kind(by_kind &&that) YY_NOEXCEPT
-    : kind_(that.kind_) {
-    that.clear();
-}
+inline parser::by_kind::by_kind(by_kind &&that) YY_NOEXCEPT : kind_(that.kind_) { that.clear(); }
 #endif
 
-inline parser::by_kind::by_kind(const by_kind &that) YY_NOEXCEPT
-    : kind_(that.kind_) {}
+inline parser::by_kind::by_kind(const by_kind &that) YY_NOEXCEPT : kind_(that.kind_) {}
 
-inline parser::by_kind::by_kind(token_kind_type t) YY_NOEXCEPT
-    : kind_(yytranslate_(t)) {}
+inline parser::by_kind::by_kind(token_kind_type t) YY_NOEXCEPT : kind_(yytranslate_(t)) {}
 
-inline void parser::by_kind::clear() YY_NOEXCEPT {
-    kind_ = symbol_kind::S_YYEMPTY;
-}
+inline void parser::by_kind::clear() YY_NOEXCEPT { kind_ = symbol_kind::S_YYEMPTY; }
 
 inline void parser::by_kind::move(by_kind &that) {
     kind_ = that.kind_;
     that.clear();
 }
 
-inline parser::symbol_kind_type parser::by_kind::kind() const YY_NOEXCEPT {
-    return kind_;
-}
+inline parser::symbol_kind_type parser::by_kind::kind() const YY_NOEXCEPT { return kind_; }
 
-inline parser::symbol_kind_type parser::by_kind::type_get() const YY_NOEXCEPT {
-    return this->kind();
-}
+inline parser::symbol_kind_type parser::by_kind::type_get() const YY_NOEXCEPT { return this->kind(); }
 
 } // namespace yy
 #line 2443 "include/parser/parser.hpp"

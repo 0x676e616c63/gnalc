@@ -7,11 +7,16 @@
 #include "../../include/mir/passes/pass_builder.hpp"
 #include "../../include/mir/passes/pass_manager.hpp"
 #include "../../include/mir/passes/utilities/mirprinter.hpp"
+#include "../../include/utils/logger.hpp"
+
+#ifndef GNALC_EXTENSION_GGC // in CMakeLists.txt
 #include "../../include/parser/ast.hpp"
 #include "../../include/parser/astprinter.hpp"
 #include "../../include/parser/irgen.hpp"
 #include "../../include/parser/parser.hpp"
-#include "../../include/utils/logger.hpp"
+#else
+#include "../../include/ggc/irparsertool.hpp"
+#endif
 
 #if GNALC_EXTENSION_BRAINFK // in config.hpp
 #include "../../include/codegen/brainfk/bfgen.hpp"
@@ -26,7 +31,9 @@
 #include <memory>
 #include <string>
 
+#ifndef GNALC_EXTENSION_GGC
 std::shared_ptr<AST::CompUnit> node = nullptr;
+#endif
 extern FILE *yyin;
 
 int main(int argc, char **argv) {
@@ -87,9 +94,13 @@ int main(int argc, char **argv) {
             emit_llvm = true;
         else if (arg == "-emit-llc")
             emit_llc = true;
-        else if (arg == "-ast-dump")
+        else if (arg == "-ast-dump") {
+#ifdef GNALC_EXTENSION_GGC
+            std::cerr << "Error: AST dump is not available in GGC mode." << std::endl;
+            return -1;
+#endif
             ast_dump = true;
-        else if (arg == "-fixed-point")
+        } else if (arg == "-fixed-point")
             fixed_point_pipeline = true;
         else if (arg == "-O1" || arg == "-O")
             opt_info = IR::o1_opt_info;
@@ -117,6 +128,10 @@ int main(int argc, char **argv) {
         OPT_ARG("--lcssa", "--no-lcssa", lcssa)
         OPT_ARG("--licm", "--no-licm", licm)
         OPT_ARG("--loopunroll", "--no-loopunroll", loop_unroll)
+        OPT_ARG("--indvars", "--no-indvars", indvars)
+        OPT_ARG("--lsr", "--no-lsr", loop_strength_reduce)
+        OPT_ARG("--loopelim", "--no-loopelim", loopelim)
+        OPT_ARG("--sroa", "--no-sroa", sroa)
         OPT_ARG("--jumpthreading", "--no-jumpthreading", jump_threading)
         // Module Transforms
         OPT_ARG("--treeshaking", "--no-treeshaking", tree_shaking)
@@ -160,19 +175,20 @@ int main(int argc, char **argv) {
 #endif
 
         else if (arg == "-h" || arg == "--help") {
+#ifndef GNALC_EXTENSION_GGC
+            std::cout << "OVERVIEW: gnalc compiler\n\nUSAGE: gnalc [options] file\n\n";
+#else
+            std::cout << "OVERVIEW: ggc - an extension of the gnalc compiler\n\nUSAGE: ggc [options] <ggfile>\n\n";
+#endif
             std::cout <<
-                R"(OVERVIEW: gnalc compiler
-
-USAGE: gnalc [options] file
-
-OPTIONS:
+                R"(OPTIONS:
 
 General options:
   -o <file>               - Write output to <file>
   -S                      - Only run compilation steps
   -O,-O1                  - Optimization level 1
   -emit-llvm              - Use the LLVM representation for assembler and object files
-  -ast-dump               - Build ASTs and then debug dump them
+  -ast-dump               - Build ASTs and then debug dump them. (Unavailable in GGC mode)
   -fixed-point            - Enable the fixed point optimization pipeline. (Ignore other optimization options)
   --log <log-level>       - Enable compiler logger. Available log-level: debug, info, none
   -h, --help              - Display available options
@@ -190,11 +206,15 @@ Optimizations available:
   --reassociate        - Reassociate commutative expressions
   --instsimplify       - Simplify instructions
   --inline             - Inline suitable functions
-  --loopsimplify       - Canonicalize loops to The Loop Simplify Form
-  --looprotate         - Canonicalize loops to The Rotated Loop Form
-  --lcssa              - Canonicalize loops to The Loop Closed SSA Form
+  --loopsimplify       - Canonicalize loops to the Loop Simplify Form
+  --looprotate         - Canonicalize loops to the Rotated Loop Form
+  --lcssa              - Canonicalize loops to the Loop Closed SSA Form
   --loopunroll         - Unroll loops
-  --jumpthreading      - Jump Threading
+  --indvars            - Simplify induction variables
+  --lsr                - Loop strength reduction
+  --loopelim           - Loop elimination
+  --sroa               - Scalar replacement of aggregates
+  --jumpthreading      - Jump threading
   --treeshaking        - Shake off unused functions, function declarations and global variables
 
 Debug options:
@@ -235,6 +255,7 @@ Extensions:
         }
     }
 
+#ifndef GNALC_EXTENSION_GGC
     yy::parser parser;
     if (parser.parse()) {
         std::cerr << "Syntax Error" << std::endl;
@@ -247,11 +268,18 @@ Extensions:
         return 0;
     }
 
-    if (!input_file.empty())
-        fclose(yyin);
-
     Parser::IRGenerator generator(input_file); // set Module's name to `input_file`
     generator.visit(*node);
+#else
+    IRParser::IRGenerator generator(input_file);
+    if (generator.generate()) {
+        std::cerr << "Syntax Error" << std::endl;
+        return -1;
+    }
+#endif
+
+    if (!input_file.empty())
+        fclose(yyin);
 
     IR::FAM fam;
     IR::MAM mam;

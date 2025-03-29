@@ -121,22 +121,20 @@ std::string IRFormatter::formatCMPOP(FCMPOP cond) {
 std::string IRFormatter::formatValue(Value &val) {
     if (val.getVTrait() == ValueTrait::CONDHELPER) {
         std::string ret;
-        auto &cond_value = dynamic_cast<CONDValue &>(val);
+        auto &cond_value = val.as_ref<CONDValue>();
         if (cond_value.getCondType() == CONDTY::AND) {
             ret += "; and rhs insts\n";
             for (const auto &rinst : cond_value.getRHSInsts())
                 ret += "  " + formatInst(*rinst) + "\n";
             ret += "  ; and value";
-            ret += "  " + formatValue(*cond_value.getRHS()) + " && " +
-                   formatValue(*cond_value.getLHS());
+            ret += "  " + formatValue(*cond_value.getRHS()) + " && " + formatValue(*cond_value.getLHS());
             return ret;
         } else if (cond_value.getCondType() == CONDTY::OR) {
             ret += "; or rhs insts\n";
             for (const auto &rinst : cond_value.getRHSInsts())
                 ret += "  " + formatInst(*rinst) + "\n";
             ret += "  ; or value";
-            ret += "  " + formatValue(*cond_value.getRHS()) + " || " +
-                   formatValue(*cond_value.getLHS());
+            ret += "  " + formatValue(*cond_value.getRHS()) + " || " + formatValue(*cond_value.getLHS());
             return ret;
         } else
             return "  ; unsupported cond value";
@@ -151,7 +149,7 @@ std::string IRFormatter::formatBB(BasicBlock &bb) {
 }
 
 std::string IRFormatter::formatFunc(Function &func) {
-    auto fn_type = toFunctionType(func.getType());
+    auto fn_type = func.getType()->as<FunctionType>();
     auto ret_type = fn_type->getRet();
 
     std::string ret;
@@ -160,7 +158,7 @@ std::string IRFormatter::formatFunc(Function &func) {
     ret += ret_type->toString() + " " + func.getName();
     ret += "(";
 
-    const auto& params = func.getParams();
+    const auto &params = func.getParams();
     for (auto it = params.begin(); it != params.end(); it++) {
         ret += (*it)->getType()->toString() + " noundef " + (*it)->getName();
         if (std::next(it) != func.getParams().end()) {
@@ -173,7 +171,7 @@ std::string IRFormatter::formatFunc(Function &func) {
 }
 
 std::string IRFormatter::formatFuncDecl(FunctionDecl &func) {
-    auto fn_type = toFunctionType(func.getType());
+    auto fn_type = func.getType()->as<FunctionType>();
     auto ret_type = fn_type->getRet();
 
     std::string ret;
@@ -181,8 +179,7 @@ std::string IRFormatter::formatFuncDecl(FunctionDecl &func) {
     ret += ret_type->toString() + " " + func.getName();
     ret += "(";
 
-    for (auto it = fn_type->getParams().begin();
-         it != fn_type->getParams().end(); it++) {
+    for (auto it = fn_type->getParams().begin(); it != fn_type->getParams().end(); it++) {
         ret += (*it)->toString() + " noundef";
         if (std::next(it) != fn_type->getParams().end() || fn_type->isVAArg()) {
             ret += ", ";
@@ -236,37 +233,37 @@ std::string IRFormatter::formatInst(Instruction &inst) {
     case OP::FDIV:
     case OP::REM:
     case OP::FREM:
-        return IRFormatter::fBinaryInst(dynamic_cast<BinaryInst &>(inst));
+        return IRFormatter::fBinaryInst(inst.as_ref<BinaryInst>());
     case OP::FPTOSI:
     case OP::SITOFP:
     case OP::ZEXT:
     case OP::BITCAST:
-        return IRFormatter::fCastInst(dynamic_cast<CastInst &>(inst));
+        return IRFormatter::fCastInst(inst.as_ref<CastInst>());
     case OP::FNEG:
-        return IRFormatter::fFNEGInst(dynamic_cast<FNEGInst &>(inst));
+        return IRFormatter::fFNEGInst(inst.as_ref<FNEGInst>());
     case OP::ICMP:
-        return IRFormatter::fICMPInst(dynamic_cast<ICMPInst &>(inst));
+        return IRFormatter::fICMPInst(inst.as_ref<ICMPInst>());
     case OP::FCMP:
-        return IRFormatter::fFCMPInst(dynamic_cast<FCMPInst &>(inst));
+        return IRFormatter::fFCMPInst(inst.as_ref<FCMPInst>());
     case OP::RET:
-        return IRFormatter::fRETInst(dynamic_cast<RETInst &>(inst));
+        return IRFormatter::fRETInst(inst.as_ref<RETInst>());
     case OP::BR:
-        return IRFormatter::fBRInst(dynamic_cast<BRInst &>(inst));
+        return IRFormatter::fBRInst(inst.as_ref<BRInst>());
     case OP::CALL:
-        return IRFormatter::fCALLInst(dynamic_cast<CALLInst &>(inst));
+        return IRFormatter::fCALLInst(inst.as_ref<CALLInst>());
     case OP::ALLOCA:
-        return IRFormatter::fALLOCAInst(dynamic_cast<ALLOCAInst &>(inst));
+        return IRFormatter::fALLOCAInst(inst.as_ref<ALLOCAInst>());
     case OP::LOAD:
-        return IRFormatter::fLOADInst(dynamic_cast<LOADInst &>(inst));
+        return IRFormatter::fLOADInst(inst.as_ref<LOADInst>());
     case OP::STORE:
-        return IRFormatter::fSTOREInst(dynamic_cast<STOREInst &>(inst));
+        return IRFormatter::fSTOREInst(inst.as_ref<STOREInst>());
     case OP::GEP:
-        return IRFormatter::fGEPInst(dynamic_cast<GEPInst &>(inst));
+        return IRFormatter::fGEPInst(inst.as_ref<GEPInst>());
     case OP::PHI:
-        return IRFormatter::fPHIInst(dynamic_cast<PHIInst &>(inst));
+        return IRFormatter::fPHIInst(inst.as_ref<PHIInst>());
 
     case OP::HELPER:
-        return IRFormatter::fHELPERInst(dynamic_cast<HELPERInst &>(inst));
+        return IRFormatter::fHELPERInst(inst.as_ref<HELPERInst>());
 
     default:
         return "unknown instruction";
@@ -391,9 +388,9 @@ std::string IRFormatter::fALLOCAInst(ALLOCAInst &inst) {
     // if (inst.isStatic()) {
     ret += inst.getBaseType()->toString();
     // } else {
-        // ret += IRFormatter::formatIRTYPE(inst.getBaseType());
-        // ret += ", ";
-        // ret += IRFormatter::formatValue(*(inst.getNumElements()));
+    // ret += IRFormatter::formatIRTYPE(inst.getBaseType());
+    // ret += ", ";
+    // ret += IRFormatter::formatValue(*(inst.getNumElements()));
     // }
     ret += ", align ";
     ret += std::to_string(inst.getAlign());
@@ -449,7 +446,7 @@ std::string IRFormatter::fPHIInst(PHIInst &inst) {
     ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
     ret += inst.getType()->toString() + " ";
     auto opers = inst.getPhiOpers();
-    for (auto it = opers.begin(); ; ) {
+    for (auto it = opers.begin();;) {
         ret += "[ ";
         ret += it->value->getName();
         ret += ", ";
@@ -467,7 +464,7 @@ std::string IRFormatter::fPHIInst(PHIInst &inst) {
 std::string IRFormatter::fHELPERInst(HELPERInst &inst) {
     switch (inst.getHlpType()) {
     case HELPERTY::IF: {
-        auto &if_inst = dynamic_cast<IFInst &>(inst);
+        auto &if_inst = inst.as_ref<IFInst>();
         std::string ret = "; if cond value\n";
         ret += "  " + formatValue(*if_inst.getCond()) + "\n";
         ret += "  ; if body insts\n";
@@ -483,7 +480,7 @@ std::string IRFormatter::fHELPERInst(HELPERInst &inst) {
         return ret;
     } break;
     case HELPERTY::WHILE: {
-        auto &while_inst = dynamic_cast<WHILEInst &>(inst);
+        auto &while_inst = inst.as_ref<WHILEInst>();
         std::string ret = "; while cond insts\n";
         for (const auto &cond_inst : while_inst.getCondInsts())
             ret += "  " + formatInst(*cond_inst) + "\n";

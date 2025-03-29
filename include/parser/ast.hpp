@@ -33,14 +33,14 @@ class FuncDef;        // 函数定义
 class FuncFParam;     // 形参
 
 // 下列为具有值的Expression，相互引用时，统一用Exp（若满足不了需求再改为varient）
-class Exp;      // 以下具有值的节点的基类，继承自ASTNode
-class DeclRef;  // 变量声明引用：VarRef, FuncRef(callexp), array;
-class ArrayExp; // 数组表达式，例如a[2]
-class CallExp;  // 函数调用表达式
+class Exp;        // 以下具有值的节点的基类，继承自ASTNode
+class DeclRef;    // 变量声明引用：VarRef, FuncRef(callexp), array;
+class ArrayExp;   // 数组表达式，例如a[2]
+class CallExp;    // 函数调用表达式
 class FuncRParam; // 仅应用于CallExp, 具有链式结构，不太好抽象成Exp
-class BinaryOp; // 包含 ExpOp, CondOp
+class BinaryOp;   // 包含 ExpOp, CondOp
 class UnaryOp;
-class ParenExp; // 括号表达式
+class ParenExp;   // 括号表达式
 class IntLiteral; // 数值字面量，num包装了一下。之后可能直接替代num
 class FloatLiteral;
 
@@ -99,9 +99,7 @@ private:
 public:
     CompUnit(const std::shared_ptr<ASTNode> &node) { nodes.push_back(node); }
 
-    void addNode(const std::shared_ptr<ASTNode> &node) {
-        nodes.push_back(node);
-    }
+    void addNode(const std::shared_ptr<ASTNode> &node) { nodes.push_back(node); }
     auto &getNodes() const { return nodes; }
 
     void accept(ASTVisitor &visitor) override { visitor.visit(*this); }
@@ -110,8 +108,7 @@ public:
 // 此模板将 用next维护的节点链表 转化为
 // vector，例如：DeclStmt中的VarDef。因此，这种链表关系被两个对象维护：上一个节点和上级节点。
 template <typename T>
-void addNodesToVector(const std::shared_ptr<T> &head,
-                      std::vector<std::shared_ptr<T>> &outVector) {
+void addNodesToVector(const std::shared_ptr<T> &head, std::vector<std::shared_ptr<T>> &outVector) {
     std::shared_ptr<T> current = head;
     while (current != nullptr) {
         outVector.push_back(current);
@@ -135,21 +132,16 @@ public:
 
     // 构建函数参考：parser.y:95:VarDef
     VarDef(string id) : id(id) {}
-    VarDef(string id, const std::shared_ptr<ArraySubscript> &ss)
-        : id(id), _array(true) {
+    VarDef(string id, const std::shared_ptr<ArraySubscript> &ss) : id(id), _array(true) {
         addNodesToVector(ss, subscripts);
     }
-    VarDef(string id, const std::shared_ptr<InitVal> &initval)
-        : id(id), _inited(true), initval(initval) {}
-    VarDef(string id, const std::shared_ptr<ArraySubscript> &ss,
-           const std::shared_ptr<InitVal> &initval)
+    VarDef(string id, const std::shared_ptr<InitVal> &initval) : id(id), _inited(true), initval(initval) {}
+    VarDef(string id, const std::shared_ptr<ArraySubscript> &ss, const std::shared_ptr<InitVal> &initval)
         : id(id), _array(true), _inited(true), initval(initval) {
         addNodesToVector(ss, subscripts);
     }
 
-    void setType(dtype t) {
-        type = t;
-    } // 仅对此vardef赋类型，整个链的在上级declstmt中赋
+    void setType(dtype t) { type = t; } // 仅对此vardef赋类型，整个链的在上级declstmt中赋
     void setConst() { _const = true; } // 和上面相同
 
     // // 添加至vardefs链
@@ -177,8 +169,7 @@ private:
 
 public:
     // 参考：ConstDecl, VarDecl
-    DeclStmt(bool const_, dtype t, const std::shared_ptr<VarDef> &vardef)
-        : _const(const_), type(t) {
+    DeclStmt(bool const_, dtype t, const std::shared_ptr<VarDef> &vardef) : _const(const_), type(t) {
         addNodesToVector(vardef, vardefs);
         setAllType(t);
         if (const_)
@@ -220,20 +211,16 @@ public:
 class InitVal : public ASTNode {
 private:
     bool _list = false;
-    bool _empty_list =
-        false; // 为了简化，该项仅在_list启用时有效，即单exp时也为false
+    bool _empty_list = false; // 为了简化，该项仅在_list启用时有效，即单exp时也为false
     std::shared_ptr<Exp> exp = nullptr;
     std::vector<std::shared_ptr<InitVal>> inner;
 
 public:
-    std::shared_ptr<InitVal> next =
-        nullptr; // 它的上级节点为VarDef，或者InitVal
+    std::shared_ptr<InitVal> next = nullptr; // 它的上级节点为VarDef，或者InitVal
 
     InitVal(const std::shared_ptr<Exp> &exp) : exp(exp) {}
     InitVal() : _list(true), _empty_list(true) {}
-    InitVal(const std::shared_ptr<InitVal> &iv) : _list(true) {
-        addNodesToVector(iv, inner);
-    }
+    InitVal(const std::shared_ptr<InitVal> &iv) : _list(true) { addNodesToVector(iv, inner); }
 
     /**
      * @brief 添加至InitVals链
@@ -288,8 +275,7 @@ private:
 public:
     FuncDef(dtype t, string id, const std::shared_ptr<CompStmt> &body)
         : type(t), id(id), body(body), _empty_param(true) {}
-    FuncDef(dtype t, string id, const std::shared_ptr<FuncFParam> &param,
-            const std::shared_ptr<CompStmt> &body)
+    FuncDef(dtype t, string id, const std::shared_ptr<FuncFParam> &param, const std::shared_ptr<CompStmt> &body)
         : type(t), id(id), body(body) {
         addNodesToVector(param, params);
     }
@@ -317,8 +303,7 @@ private:
     string id;
     bool _array = false;
     bool _one_dim = false;
-    std::vector<std::shared_ptr<ArraySubscript>>
-        subscripts; // 为了简便，从有实际值的第二维算起
+    std::vector<std::shared_ptr<ArraySubscript>> subscripts; // 为了简便，从有实际值的第二维算起
 
 public:
     std::shared_ptr<FuncFParam> next = nullptr;
@@ -326,9 +311,7 @@ public:
     FuncFParam(dtype t, string id) : type(t), id(id) {}
     FuncFParam(dtype t, string id, bool one_dim) // 必须为true
         : type(t), id(id), _array(true), _one_dim(true) {}
-    FuncFParam(dtype t, string id,
-               const std::shared_ptr<ArraySubscript> &subscript)
-        : type(t), id(id), _array(true) {
+    FuncFParam(dtype t, string id, const std::shared_ptr<ArraySubscript> &subscript) : type(t), id(id), _array(true) {
         addNodesToVector(subscript, subscripts);
     }
 
@@ -380,9 +363,7 @@ private:
     std::vector<std::shared_ptr<ArraySubscript>> indices; // index
 
 public:
-    ArrayExp(const std::shared_ptr<DeclRef> &ref,
-             const std::shared_ptr<ArraySubscript> &index)
-        : ref(ref) {
+    ArrayExp(const std::shared_ptr<DeclRef> &ref, const std::shared_ptr<ArraySubscript> &index) : ref(ref) {
         addNodesToVector(index, indices);
     }
 
@@ -401,11 +382,8 @@ private:
     std::vector<std::shared_ptr<FuncRParam>> paras;
 
 public:
-    CallExp(const std::shared_ptr<DeclRef> &ref)
-        : ref(ref), _empty_para(true) {}
-    CallExp(const std::shared_ptr<DeclRef> &ref,
-            const std::shared_ptr<FuncRParam> &para)
-        : ref(ref) {
+    CallExp(const std::shared_ptr<DeclRef> &ref) : ref(ref), _empty_para(true) {}
+    CallExp(const std::shared_ptr<DeclRef> &ref, const std::shared_ptr<FuncRParam> &para) : ref(ref) {
         addNodesToVector(para, paras);
     }
 
@@ -463,9 +441,7 @@ private:
     std::shared_ptr<Exp> rhs = nullptr;
 
 public:
-    BinaryOp(BiOp op, const std::shared_ptr<Exp> &lhs,
-             const std::shared_ptr<Exp> &rhs)
-        : op(op), lhs(lhs), rhs(rhs) {}
+    BinaryOp(BiOp op, const std::shared_ptr<Exp> &lhs, const std::shared_ptr<Exp> &rhs) : op(op), lhs(lhs), rhs(rhs) {}
 
     BiOp getOp() const { return op; }
     auto &getLHS() const { return lhs; }
@@ -555,10 +531,8 @@ private:
     std::shared_ptr<Stmt> else_body = nullptr;
 
 public:
-    IfStmt(const std::shared_ptr<Exp> &cond, const std::shared_ptr<Stmt> &body)
-        : cond(cond), body(body) {}
-    IfStmt(const std::shared_ptr<Exp> &cond, const std::shared_ptr<Stmt> &body,
-           const std::shared_ptr<Stmt> &else_body)
+    IfStmt(const std::shared_ptr<Exp> &cond, const std::shared_ptr<Stmt> &body) : cond(cond), body(body) {}
+    IfStmt(const std::shared_ptr<Exp> &cond, const std::shared_ptr<Stmt> &body, const std::shared_ptr<Stmt> &else_body)
         : cond(cond), body(body), else_body(else_body), _else(true) {}
 
     bool hasElse() const { return _else; }
@@ -575,9 +549,7 @@ private:
     std::shared_ptr<Stmt> body = nullptr;
 
 public:
-    WhileStmt(const std::shared_ptr<Exp> &cond,
-              const std::shared_ptr<Stmt> &body)
-        : cond(cond), body(body) {}
+    WhileStmt(const std::shared_ptr<Exp> &cond, const std::shared_ptr<Stmt> &body) : cond(cond), body(body) {}
 
     auto &getCond() const { return cond; }
     auto &getBody() const { return body; }
@@ -613,8 +585,7 @@ private:
 
 public:
     ReturnStmt() : _void(true) {}
-    ReturnStmt(const std::shared_ptr<Exp> &return_val)
-        : return_val(return_val) {}
+    ReturnStmt(const std::shared_ptr<Exp> &return_val) : return_val(return_val) {}
 
     bool isVoid() const { return _void; }
     auto &getReturnVal() const { return return_val; }

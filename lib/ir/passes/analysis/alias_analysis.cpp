@@ -1,4 +1,5 @@
 #include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
+#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 
 #include "../../../../include/config/config.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
@@ -12,7 +13,7 @@
 namespace IR {
 PM::UniqueKey AliasAnalysis::Key;
 
-bool AliasAnalysisResult::insertPotentialAlias(const Value *target, const Value *alias) {
+bool AliasAnalysisResult::insertPotentialAlias(Value *target, Value *alias) {
     Err::gassert(target->getType()->getTrait() == IRCTYPE::PTR);
 
     auto &info = ptr_info[target];
@@ -33,7 +34,7 @@ bool AliasAnalysisResult::insertPotentialAlias(const Value *target, const Value 
     }
     return false;
 }
-AliasAnalysisResult::PtrInfo AliasAnalysisResult::getPtrInfo(const Value *ptr) const {
+AliasAnalysisResult::PtrInfo AliasAnalysisResult::getPtrInfo(Value *ptr) const {
     Err::gassert(ptr->getType()->getTrait() == IRCTYPE::PTR);
     if (ptr->getVTrait() == ValueTrait::GLOBAL_VARIABLE) {
         return PtrInfo{.untracked_array = false, .global_var = true, .potential_alias = {ptr}};
@@ -52,21 +53,42 @@ std::optional<std::tuple<const Value *, size_t>> getGepTotalOffset(const GEPInst
             return std::nullopt;
         offset += gep->getConstantOffset();
         auto base_ptr = gep->getPtr().get();
-        if (auto base_gep = dynamic_cast<const GEPInst *>(base_ptr))
+        if (auto base_gep = base_ptr->as_raw<GEPInst>())
             gep = base_gep;
-        else if (auto alloca = dynamic_cast<const ALLOCAInst *>(base_ptr))
+        else if (auto alloca = base_ptr->as_raw<ALLOCAInst>())
             return std::make_tuple(alloca, offset);
-        else if (auto gv = dynamic_cast<GlobalVariable *>(base_ptr))
+        else if (auto gv = base_ptr->as_raw<GlobalVariable>())
             return std::make_tuple(gv, offset);
-        else if (auto fp = dynamic_cast<FormalParam *>(base_ptr))
+        else if (auto fp = base_ptr->as_raw<FormalParam>())
             return std::make_tuple(fp, offset);
+        else if (auto phi = base_ptr->as_raw<PHIInst>()) {
+            const Value* common_base = nullptr;
+            size_t common_offset = 0;
+            for (const auto& [phi_gep, bb] : phi->incomings()) {
+                if (!phi_gep->is<GEPInst>())
+                    return std::nullopt;
+                auto opt = getGepTotalOffset(phi_gep->as_raw<GEPInst>());
+                if (!opt.has_value())
+                    return std::nullopt;
+                auto [phi_base, phi_offset] = *opt;
+                if (common_base == nullptr) { // first
+                    common_base = phi_base;
+                    common_offset = phi_offset;
+                }
+                else {
+                    if (phi_base != common_base || phi_offset != common_offset)
+                        return std::nullopt;
+                }
+            }
+            return std::make_tuple(common_base, common_offset);
+        }
         else
             Err::unreachable();
     }
     return std::nullopt;
 }
 
-AliasInfo AliasAnalysisResult::getAliasInfo(const Value *v1, const Value *v2) const {
+AliasInfo AliasAnalysisResult::getAliasInfo(Value *v1, Value *v2) const {
     Err::gassert(v1->getType()->getTrait() == IRCTYPE::PTR && v2->getType()->getTrait() == IRCTYPE::PTR);
 
     if (v1 == v2)
@@ -78,8 +100,8 @@ AliasInfo AliasAnalysisResult::getAliasInfo(const Value *v1, const Value *v2) co
     if (info1.untracked_array && info2.untracked_array)
         return AliasInfo::MayAlias;
 
-    auto gep1 = dynamic_cast<const GEPInst *>(v1);
-    auto gep2 = dynamic_cast<const GEPInst *>(v2);
+    auto gep1 = v1->as_raw<GEPInst>();
+    auto gep2 = v2->as_raw<GEPInst>();
     // If all gep and no phi involves
     if (gep1 && gep2 && info1.potential_alias.size() == 1 && info2.potential_alias.size() == 1) {
         auto opt1 = getGepTotalOffset(gep1);
@@ -104,27 +126,27 @@ AliasInfo AliasAnalysisResult::getAliasInfo(const Value *v1, const Value *v2) co
 
     return AliasInfo::NoAlias;
 }
-bool AliasAnalysisResult::isLocal(const Value *v) const {
+bool AliasAnalysisResult::isLocal(Value *v) const {
     auto info = getPtrInfo(v);
     return !info.global_var && !info.untracked_array;
 }
 
-ModRefInfo AliasAnalysisResult::getInstModRefInfo(const Instruction *inst, const Value *location, FAM &fam) const {
+ModRefInfo AliasAnalysisResult::getInstModRefInfo(Instruction *inst, Value *location, FAM &fam) const {
     Err::gassert(location->getType()->getTrait() == IRCTYPE::PTR);
 
-    if (auto load = dynamic_cast<const LOADInst *>(inst)) {
+    if (auto load = inst->as_raw<LOADInst>()) {
         auto aa = getAliasInfo(load->getPtr().get(), location);
         if (aa == AliasInfo::NoAlias)
             return ModRefInfo::NoModRef;
         else
             return ModRefInfo::Ref;
-    } else if (auto store = dynamic_cast<const STOREInst *>(inst)) {
+    } else if (auto store = inst->as_raw<STOREInst>()) {
         auto aa = getAliasInfo(store->getPtr().get(), location);
         if (aa == AliasInfo::NoAlias)
             return ModRefInfo::NoModRef;
         else
             return ModRefInfo::Mod;
-    } else if (auto call = dynamic_cast<const CALLInst *>(inst)) {
+    } else if (auto call = inst->as_raw<CALLInst>()) {
         auto rwinfo = getCallRWInfo(fam, call);
         if (rwinfo.untracked)
             return ModRefInfo::ModRef;
@@ -182,9 +204,20 @@ ModRefInfo AliasAnalysisResult::getFunctionModRefInfo() const {
 bool AliasAnalysisResult::hasUntrackedCall() const { return has_untracked_call; }
 bool AliasAnalysisResult::hasSylibCall() const { return has_sylib_call; }
 
-void AliasAnalysisResult::addClonedInst(const Instruction *inst, const Instruction *cloned) {
+void AliasAnalysisResult::addClonedInst(Instruction *inst, Instruction *cloned) {
     Err::gassert(ptr_info.count(inst), "No such instruction registered.");
     ptr_info[cloned] = ptr_info[inst];
+}
+
+AliasInfo AliasAnalysisResult::getAliasInfo(const pVal &v1, const pVal &v2) const {
+    return getAliasInfo(v1.get(), v2.get());
+}
+bool AliasAnalysisResult::isLocal(const pVal &v) const { return isLocal(v.get()); }
+ModRefInfo AliasAnalysisResult::getInstModRefInfo(const pInst &inst, const pVal &location, FAM &fam) const {
+    return getInstModRefInfo(inst.get(), location.get(), fam);
+}
+void AliasAnalysisResult::addClonedInst(const pInst &inst, const pInst &cloned) {
+    addClonedInst(inst.get(), cloned.get());
 }
 
 AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
@@ -204,7 +237,7 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
 
     // Local Alloca
     for (const auto &inst : *entry) {
-        if (auto alloca = std::dynamic_pointer_cast<ALLOCAInst>(inst)) {
+        if (auto alloca = inst->as<ALLOCAInst>()) {
             if (alloca->getBaseType()->getTrait() == IRCTYPE::ARRAY) {
                 res.ptr_info[alloca.get()] = AliasAnalysisResult::PtrInfo{
                     .untracked_array = false, .global_var = false, .potential_alias = {alloca.get()}};
@@ -220,19 +253,19 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
         for (const auto &curr : dfv) {
             for (const auto &phi : curr->phis()) {
                 if (phi->getType()->getTrait() == IRCTYPE::PTR) {
-                    for (const auto &oper : phi->getPhiOpers())
+                    for (const auto &oper : phi->incomings())
                         changed |= res.insertPotentialAlias(phi.get(), oper.value.get());
                 }
             }
             for (const auto &inst : *curr) {
                 if (inst->getType()->getTrait() == IRCTYPE::PTR) {
-                    if (auto alloca = std::dynamic_pointer_cast<ALLOCAInst>(inst)) {
+                    if (auto alloca = inst->as<ALLOCAInst>()) {
                         // We've handled it above
                         continue;
                     }
-                    if (auto gep = std::dynamic_pointer_cast<GEPInst>(inst)) {
+                    if (auto gep = inst->as<GEPInst>()) {
                         changed |= res.insertPotentialAlias(gep.get(), gep->getPtr().get());
-                    } else if (auto bitcast = std::dynamic_pointer_cast<BITCASTInst>(inst)) {
+                    } else if (auto bitcast = inst->as<BITCASTInst>()) {
                         Err::gassert(bitcast->getOVal()->getType()->getTrait() == IRCTYPE::PTR);
                         changed |= res.insertPotentialAlias(bitcast.get(), bitcast->getOVal().get());
                     } else
@@ -245,23 +278,23 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
     // ModRef
     for (const auto &bb : func) {
         for (const auto &inst : *bb) {
-            if (auto load = std::dynamic_pointer_cast<LOADInst>(inst)) {
+            if (auto load = inst->as<LOADInst>()) {
                 auto ptralias = res.getPtrInfo(load->getPtr().get()).potential_alias;
                 for (const auto &mayalias : ptralias) {
                     if (mayalias->getVTrait() == ValueTrait::GLOBAL_VARIABLE ||
                         mayalias->getVTrait() == ValueTrait::FORMAL_PARAMETER)
                         res.read.insert(mayalias);
                 }
-            } else if (auto store = std::dynamic_pointer_cast<STOREInst>(inst)) {
+            } else if (auto store = inst->as<STOREInst>()) {
                 auto ptralias = res.getPtrInfo(store->getPtr().get()).potential_alias;
                 for (const auto &mayalias : ptralias) {
                     if (mayalias->getVTrait() == ValueTrait::GLOBAL_VARIABLE ||
                         mayalias->getVTrait() == ValueTrait::FORMAL_PARAMETER)
                         res.write.insert(mayalias);
                 }
-            } else if (auto call = std::dynamic_pointer_cast<CALLInst>(inst)) {
+            } else if (auto call = inst->as<CALLInst>()) {
                 auto callee = call->getFunc().get();
-                if (auto callee_def = dynamic_cast<Function *>(callee)) {
+                if (auto callee_def = callee->as_raw<Function>()) {
                     // SysY enforces strict definition-before-use for functions,
                     // but with no support for function declarations.
                     // This implies that mutual recursion (fn0 -> fn1 -> fn0) is impossible.
@@ -278,7 +311,7 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
                             if (callee_aa.getPtrInfo(write).global_var)
                                 res.write.insert(write);
                             else if (callee_aa.getPtrInfo(write).untracked_array) {
-                                auto fp = dynamic_cast<const FormalParam *>(write);
+                                auto fp = write->as_raw<FormalParam>();
                                 auto actual = call->getArgs()[fp->getIndex()].get();
                                 auto actual_alias = res.getPtrInfo(actual).potential_alias;
                                 for (const auto &mayalias : actual_alias) {
@@ -293,7 +326,7 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
                             if (callee_aa.getPtrInfo(read).global_var)
                                 res.read.insert(read);
                             else if (callee_aa.getPtrInfo(read).untracked_array) {
-                                auto fp = dynamic_cast<const FormalParam *>(read);
+                                auto fp = read->as_raw<FormalParam>();
                                 auto actual = call->getArgs()[fp->getIndex()].get();
                                 auto actual_alias = res.getPtrInfo(actual).potential_alias;
                                 for (const auto &mayalias : actual_alias) {
@@ -367,12 +400,15 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
 
 bool isPureBuiltinOrSylibFunc(const FunctionDecl *fn) { return false; }
 
-RWInfo getCallRWInfo(FAM &fam, const CALLInst *call) {
+// This should not have cache since call's argument is mutable.
+RWInfo getCallRWInfo(FAM &fam, CALLInst *call) {
+    auto guard = Logger::scopeDisable();
+
     auto callee = call->getFunc().get();
     if (isPureBuiltinOrSylibFunc(callee))
         return {};
 
-    auto callee_def = dynamic_cast<Function *>(callee);
+    auto callee_def = callee->as_raw<Function>();
     // Unknown builtin/sylib
     if (callee_def == nullptr) {
         if (callee->getName() == "@getint" || callee->getName() == "@getch" || callee->getName() == "@getfloat" ||
@@ -386,38 +422,38 @@ RWInfo getCallRWInfo(FAM &fam, const CALLInst *call) {
         // void putarray(int n, int a[]);
         if (callee->getName() == "@putarray" || callee->getName() == "@putfarray" || callee->getName() == "@putf") {
             auto actual_args = call->getArgs();
-            std::vector<const Value *> read;
+            std::vector<Value *> read;
             for (auto &r : actual_args) {
                 if (r->getType()->getTrait() == IRCTYPE::PTR)
                     read.emplace_back(r.get());
             }
-            return { .read = read, .write = {}, .untracked = false };
+            return {.read = read, .write = {}, .untracked = false};
         }
 
         if (callee->getName() == "@" + std::string{Config::IR::BUILTIN_MEMSET}) {
             auto actual_args = call->getArgs();
-            std::vector<const Value *> write;
+            std::vector<Value *> write;
             for (auto &r : actual_args) {
                 if (r->getType()->getTrait() == IRCTYPE::PTR)
                     write.emplace_back(r.get());
             }
-            return { .read = {}, .write = write, .untracked = false };
+            return {.read = {}, .write = write, .untracked = false};
         }
 
         Logger::logWarning("[AliasAnalysis]: Unrecognized function '", callee->getName(), "'.");
-        return { .untracked = true };
+        return {.untracked = true};
     }
 
     auto callee_aa = fam.getResult<AliasAnalysis>(*callee_def);
 
-    std::vector<const Value *> write_ret;
-    std::vector<const Value *> read_ret;
+    std::vector<Value *> write_ret;
+    std::vector<Value *> read_ret;
     for (auto write : callee_aa.getWrite()) {
         if (write->getVTrait() == ValueTrait::GLOBAL_VARIABLE)
             write_ret.emplace_back(write);
         else {
             Err::gassert(write->getVTrait() == ValueTrait::FORMAL_PARAMETER);
-            auto fp = dynamic_cast<const FormalParam *>(write);
+            auto fp = write->as_raw<FormalParam>();
             auto actual = call->getArgs()[fp->getIndex()].get();
             write_ret.emplace_back(actual);
         }
@@ -427,7 +463,7 @@ RWInfo getCallRWInfo(FAM &fam, const CALLInst *call) {
             read_ret.emplace_back(read);
         else {
             Err::gassert(read->getVTrait() == ValueTrait::FORMAL_PARAMETER);
-            auto fp = dynamic_cast<const FormalParam *>(read);
+            auto fp = read->as_raw<FormalParam>();
             auto actual = call->getArgs()[fp->getIndex()].get();
             read_ret.emplace_back(actual);
         }
@@ -435,39 +471,128 @@ RWInfo getCallRWInfo(FAM &fam, const CALLInst *call) {
     return {read_ret, write_ret, false};
 }
 
-bool isPure(FAM &fam, const CALLInst *call) {
-    auto callee = call->getFunc().get();
-    // Recognized pure functions
-    if (isPureBuiltinOrSylibFunc(callee))
-        return true;
+// The following two functions:
+//   bool isPure(FAM &fam, FunctionDecl *call)
+//   bool hasSideEffect(FAM &fam, FunctionDecl *call)
+// checks a function's property.
+// For a function, its purity or side effect can not change during optimization.
+// But for BasicBlock/Loop or a CALLInst's RWInfo, there are no such guarantee.
+// Therefore, only those two functions have cache.
+// Though AliasAnalysis can be invalidated during transforms, their cache never expires.
+bool isPure(FAM& fam, FunctionDecl* decl) {
+    static std::unordered_map<const FunctionDecl*, bool> cache;
+    auto guard = Logger::scopeDisable();
 
-    auto callee_def = dynamic_cast<Function *>(callee);
+    auto it = cache.find(decl);
+    if (it != cache.end())
+        return it->second;
+
+    // Recognized pure functions
+    if (isPureBuiltinOrSylibFunc(decl))
+        return cache[decl] = true;
+
+    auto callee_def = decl->as_raw<Function>();
     // Unknown builtin/sylib
     if (callee_def == nullptr)
-        return false;
+        return cache[decl] = false;
 
     auto call_res = fam.getResult<AliasAnalysis>(*callee_def);
     if (call_res.hasSylibCall() || call_res.hasUntrackedCall())
-        return false;
-    return call_res.getFunctionModRefInfo() == ModRefInfo::NoModRef;
+        return cache[decl] = false;
+    return cache[decl] = (call_res.getFunctionModRefInfo() == ModRefInfo::NoModRef);
+}
+bool isPure(FAM &fam, const pFuncDecl &decl) {
+    return isPure(fam, decl.get());
+}
+
+bool isPure(FAM &fam, const CALLInst *call) {
+    return isPure(fam, call->getFunc());
+}
+bool isPure(FAM &fam, const pCall &call) { return isPure(fam, call.get()); }
+
+bool hasSideEffect(FAM& fam, FunctionDecl* decl) {
+    static std::unordered_map<const FunctionDecl*, bool> cache;
+    auto guard = Logger::scopeDisable();
+    auto it = cache.find(decl);
+    if (it != cache.end())
+        return it->second;
+
+    // Recognized pure functions
+    if (isPureBuiltinOrSylibFunc(decl))
+        return cache[decl] = false;
+
+    auto callee_def = decl->as_raw<Function>();
+    // Unknown builtin/sylib
+    if (callee_def == nullptr)
+        return cache[decl] = true;
+
+    auto call_res = fam.getResult<AliasAnalysis>(*callee_def);
+    if (call_res.hasSylibCall() || call_res.hasUntrackedCall())
+        return cache[decl] = true;
+    return cache[decl] = (call_res.getFunctionModRefInfo() == ModRefInfo::Mod ||
+           call_res.getFunctionModRefInfo() == ModRefInfo::ModRef);
+}
+bool hasSideEffect(FAM &fam, const pFuncDecl &decl) {
+    return hasSideEffect(fam, decl.get());
 }
 
 bool hasSideEffect(FAM &fam, const CALLInst *call) {
-    auto callee = call->getFunc().get();
+    return hasSideEffect(fam, call->getFunc());
+}
+bool hasSideEffect(FAM &fam, const pCall &call) { return hasSideEffect(fam, call.get()); }
 
-    // Recognized pure functions
-    if (isPureBuiltinOrSylibFunc(callee))
-        return false;
+SharedRWInfo getCallRWInfo(FAM &fam, const pCall &call) {
+    auto rwinfo = getCallRWInfo(fam, call.get());
+    std::vector<pVal> write;
+    std::vector<pVal> read;
+    for (auto r : rwinfo.read)
+        read.emplace_back(r->as<Value>());
+    for (auto w : rwinfo.write)
+        write.emplace_back(w->as<Value>());
+    return {read, write, rwinfo.untracked};
+}
 
-    auto callee_def = dynamic_cast<Function *>(callee);
-    // Unknown builtin/sylib
-    if (callee_def == nullptr)
-        return true;
+bool hasSideEffect(FAM &fam, BasicBlock* block) {
+    auto guard = Logger::scopeDisable();
+    auto& aa_res = fam.getResult<AliasAnalysis>(*block->getParent());
+    for (const auto &inst : block->all_insts()) {
+        if (auto call = inst->as<CALLInst>()) {
+            if (hasSideEffect(fam, call))
+                return true;
+        }
+        else if (auto store = inst->as<STOREInst>()) {
+            auto store_ptr = store->getPtr();
 
-    auto call_res = fam.getResult<AliasAnalysis>(*callee_def);
-    if (call_res.hasSylibCall() || call_res.hasUntrackedCall())
-        return true;
-    return call_res.getFunctionModRefInfo() == ModRefInfo::Mod ||
-           call_res.getFunctionModRefInfo() == ModRefInfo::ModRef;
+            if (!aa_res.isLocal(store_ptr))
+                return true;
+
+            const auto& cfgdfv = block->getDFVisitor();
+            for (const auto& child : cfgdfv) {
+                for (const auto& child_inst : *child) {
+                    auto modref = aa_res.getInstModRefInfo(child_inst, store_ptr, fam);
+                    if (modref == ModRefInfo::ModRef || modref == ModRefInfo::Ref)
+                        return true;
+                }
+            }
+        }
+        else if (inst->is<RETInst>() || inst->is<ALLOCAInst>())
+            return true;
+    }
+    return false;
+}
+bool hasSideEffect(FAM &fam, const pBlock& block) {
+    return hasSideEffect(fam, block.get());
+}
+
+// Check if the loop has side effect
+bool hasSideEffect(FAM &fam, const Loop* loop) {
+    for (const auto &block : loop->blocks()) {
+        if (hasSideEffect(fam, block))
+            return true;
+    }
+    return false;
+}
+bool hasSideEffect(FAM &fam, const pLoop& loop) {
+    return hasSideEffect(fam, loop.get());
 }
 } // namespace IR
