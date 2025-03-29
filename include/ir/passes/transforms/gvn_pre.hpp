@@ -46,7 +46,9 @@ namespace IR {
 class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     using ValueKind = size_t;
 
+    class NumberTable;
     class Expr {
+        friend class NumberTable;
         friend std::ostream &operator<<(std::ostream &os, const Expr &expr);
 
     public:
@@ -83,7 +85,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
             // They can only be used in blocks where they are available.
             LocalTemp,
 
-            // PHIInst, their ValueKind might be designated to its operands when inserting
+            // PHIInst
             Phi,
         };
 
@@ -122,7 +124,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     class KindIRValSet {
         friend std::ostream &operator<<(std::ostream &os, const KindIRValSet &set);
 
-        std::map<ValueKind, pVal> values;
+        std::unordered_map<ValueKind, pVal> values;
 
     public:
         using const_iterator = decltype(values)::const_iterator;
@@ -188,27 +190,30 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     class KindExprSet {
         friend std::ostream &operator<<(std::ostream &os, const KindExprSet &set);
         std::vector<std::pair<ValueKind, Expr *>> values; // vector to keep topological sort
+        std::unordered_set<ValueKind> kindset;
     public:
         using const_iterator = decltype(values)::const_iterator;
         using iterator = decltype(values)::iterator;
 
         bool insert(ValueKind kind, Expr *e) {
             Err::gassert(kind != NotValueKind);
-            auto it = std::find_if(values.begin(), values.end(), [&kind](const auto &p) { return p.first == kind; });
-            if (it == values.end()) {
-                values.emplace_back(kind, e);
-                return true;
-            }
-            return false;
+            if (kindset.count(kind))
+                return false;
+            kindset.insert(kind);
+            values.emplace_back(kind, e);
+            return true;
         }
 
         bool contains(ValueKind kind) const {
             Err::gassert(kind != NotValueKind);
-            return std::any_of(values.begin(), values.end(), [kind](const auto &v) { return v.first == kind; });
+            return kindset.count(kind);
         }
 
         bool erase(ValueKind kind) {
             Err::gassert(kind != NotValueKind);
+            if (!kindset.count(kind))
+                return false;
+            kindset.erase(kind);
             for (auto it = values.begin(); it != values.end(); ++it) {
                 if (it->first == kind) {
                     values.erase(it);
@@ -236,18 +241,42 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
 
     class NumberTable {
         friend std::ostream &operator<<(std::ostream &os, const NumberTable &table);
-        std::vector<std::shared_ptr<Expr>> expr_pool;
-        std::map<Expr *, ValueKind> expr_table;
+        struct ExprHasher {
+            // https://stackoverflow.com/questions/20511347/a-good-hash-function-for-a-vector/72073933#72073933
+            size_t operator()(const std::shared_ptr<Expr> &expr) const {
+                const auto& vec = expr->operands;
+                size_t seed = vec.size();
+                for(auto x : vec) {
+                    x = ((x >> 16) ^ x) * 0x45d9f3b;
+                    x = ((x >> 16) ^ x) * 0x45d9f3b;
+                    x = (x >> 16) ^ x;
+                    seed ^= x + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+                }
+                return seed;
+            }
+        };
+        struct ExprCmp {
+            bool operator()(const std::shared_ptr<Expr> &a, const std::shared_ptr<Expr> &b) const {
+                return *a == *b;
+            }
+        };
+        std::unordered_set<std::shared_ptr<Expr>, ExprHasher, ExprCmp> expr_pool;
+        // DO NOT use std::shared_ptr<Value> as unordered_map's key, the cache can be very large,
+        // std::shared_ptr's cost can be unacceptable.
+        std::unordered_map<Value *, Expr*> get_expr_cache;
+        std::unordered_map<Expr *, ValueKind> expr_table;
         ValueKind kind_cnt = 0;
         bool too_deeply_nested_expr_detected = false;
         FAM* fam;
 
     public:
-        bool should_quit_for_too_deeply_nested_expr() const { return too_deeply_nested_expr_detected; }
+        NumberTable() = default;
+        bool shouldQuitForTooDeeplyNestedExpr() const { return too_deeply_nested_expr_detected; }
 
         void clear() {
             expr_table.clear();
             expr_pool.clear();
+            get_expr_cache.clear();
             kind_cnt = 0;
             too_deeply_nested_expr_detected = false;
             fam = nullptr;
@@ -260,11 +289,15 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         ValueKind getKindOrInsert(Expr *expr);
 
         ValueKind getKindOrInsert(const pVal &value, KindExprSet &exp_gen, size_t nested_expr_cnt = 0);
+        ValueKind getKindOrInsert(const pVal &value, size_t nested_expr_cnt = 0);
         Expr *getExprOrInsert(const pVal &inst, KindExprSet &exp_gen, size_t nested_expr_cnt = 0);
+        Expr *getExprOrInsert(const pVal &inst, size_t nested_expr_cnt = 0);
 
-        void setPhiKind(const pPhi &inst, ValueKind kind);
+        void setPhiKind(const pPhi &phi, ValueKind kind);
 
         bool empty() const { return expr_table.empty(); }
+
+        void invalidateExprCache(const pVal& v);
 
     private:
         Expr *getExprFromPool(const std::shared_ptr<Expr> &item);
@@ -278,19 +311,19 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     // Since we won't delete or add blocks, use BasicBlock* is ok.
 
     // AVAIL_OUT = canon(AVAIL IN[b] ∪ PHI_GEN(b) ∪ TMP_GEN(b))
-    std::map<BasicBlock *, LeaderSet> avail_out_map;
+    std::unordered_map<BasicBlock *, LeaderSet> avail_out_map;
 
     // ANTIC_IN = clean(canon_expr(ANTIC_OUT[b] ∪ EXP_GEN[b] − TMP_GEN(b)))
-    std::map<BasicBlock *, AntiLeaderSet> antic_in_map;
+    std::unordered_map<BasicBlock *, AntiLeaderSet> antic_in_map;
 
     // ANTIC_OUT
-    std::map<BasicBlock *, AntiLeaderSet> antic_out_map;
+    std::unordered_map<BasicBlock *, AntiLeaderSet> antic_out_map;
 
     // EXP_GEN: temporaries and non-simple
-    std::map<BasicBlock *, KindExprSet> exp_gen_map;
+    std::unordered_map<BasicBlock *, KindExprSet> exp_gen_map;
 
     // NEW_SET when inserting
-    std::map<BasicBlock *, KindIRValSet> new_set_map;
+    std::unordered_map<BasicBlock *, KindIRValSet> new_set_map;
 
     size_t name_cnt = 0;
 
@@ -298,8 +331,17 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     DomTree* domtree;
     PostDomTree* postdomtree;
 
-    std::map<BasicBlock *, KindIRValSet> phi_translate_map;
-    pVal phi_translate(Expr *expr, BasicBlock *pred, BasicBlock *succ);
+    std::unordered_map<BasicBlock *, KindIRValSet> phi_translate_map;
+    using PhiTranslateKey = std::tuple<Expr*, BasicBlock*, BasicBlock*>;
+    struct PhiTranslateKeyHasher {
+        size_t operator()(const PhiTranslateKey &key) const {
+            return std::hash<Expr*>()(std::get<0>(key)) ^ std::hash<BasicBlock*>()(std::get<1>(key)) ^
+                   std::hash<BasicBlock*>()(std::get<2>(key));
+        }
+    };
+    std::unordered_map<PhiTranslateKey, pVal, PhiTranslateKeyHasher> phi_translate_cache;
+    void invalidatePhiTranslateCache(BasicBlock *pred);
+    pVal phiTranslate(Expr *expr, BasicBlock *pred, BasicBlock *succ);
 
     void reset() {
         table.clear();
@@ -309,6 +351,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         exp_gen_map.clear();
         new_set_map.clear();
         phi_translate_map.clear();
+        phi_translate_cache.clear();
         name_cnt = 0;
         fam = nullptr;
         domtree = nullptr;
@@ -322,7 +365,11 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     friend std::ostream &operator<<(std::ostream &os, const KindExprSet &set);
     friend std::ostream &operator<<(std::ostream &os, const GVNPREPass &gvnpre);
 
+    bool enable_debug_output = false;
 public:
+    explicit GVNPREPass(bool enable_debug_output_ = false)
+        : fam(nullptr), domtree(nullptr), postdomtree(nullptr),
+            enable_debug_output(enable_debug_output_) {}
     PM::PreservedAnalyses run(Function &function, FAM &manager);
 };
 } // namespace IR

@@ -422,11 +422,9 @@ public:
                 }
             }
             if (++round > threshold) {
-                if (!threshold_explicitly_set) {
-                    Logger::logWarning(
-                        "[FixedPointPM]: Default Fixed point iteration threshold reached. Check the pipeline!"
-                        "To disable this message, set the threshold explicitly.");
-                }
+                Err::gassert (threshold_explicitly_set,
+                        "Default Fixed point iteration threshold reached. Check the pipeline!"
+                            " To disable this message, set the threshold explicitly.");
                 break;
             }
         }
