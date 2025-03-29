@@ -3,40 +3,30 @@
 #include "../../include/ir/visitor.hpp"
 
 namespace IR {
-GVIniter::GVIniter(std::shared_ptr<Type> _ty)
-    : initer_type(std::move(_ty)), is_zero(true) {}
+GVIniter::GVIniter(pType _ty) : initer_type(std::move(_ty)), is_zero(true) {}
 
-GVIniter::GVIniter(std::shared_ptr<Type> _ty, std::shared_ptr<Value> _con)
+GVIniter::GVIniter(pType _ty, std::shared_ptr<Value> _con)
     : initer_type(std::move(_ty)), is_zero(false), constval(_con) {}
 
-GVIniter::GVIniter(std::shared_ptr<Type> _ty,
-                   std::vector<GVIniter> _inner_initer)
-    : initer_type(std::move(_ty)), is_zero(false), inner_initer(_inner_initer) {
-}
+GVIniter::GVIniter(pType _ty, std::vector<GVIniter> _inner_initer)
+    : initer_type(std::move(_ty)), is_zero(false), inner_initer(_inner_initer) {}
 
-const std::shared_ptr<IR::Type> &GVIniter::getIniterType() const {
-    return initer_type;
-}
+const pType &GVIniter::getIniterType() const { return initer_type; }
 
 bool GVIniter::isZero() const { return is_zero; }
 
-bool GVIniter::isArray() const {
-    return initer_type->getTrait() == IRCTYPE::ARRAY;
-}
+bool GVIniter::isArray() const { return initer_type->getTrait() == IRCTYPE::ARRAY; }
 
-const std::shared_ptr<IR::Value> &GVIniter::getConstVal() const {
-    return constval;
-}
+const pVal &GVIniter::getConstVal() const { return constval; }
 
-GVIniter &GVIniter::addIniter(std::shared_ptr<Type> _ty,
-                              std::shared_ptr<Value> _con) {
+GVIniter &GVIniter::addIniter(pType _ty, pVal _con) {
     Err::gassert(isArray());
     is_zero = false;
     inner_initer.emplace_back(std::move(_ty), std::move(_con));
     return inner_initer.back();
 }
 
-GVIniter &GVIniter::addIniter(std::shared_ptr<Type> _ty) {
+GVIniter &GVIniter::addIniter(pType _ty) {
     Err::gassert(isArray());
     is_zero = false;
     inner_initer.emplace_back(std::move(_ty));
@@ -66,13 +56,12 @@ void GVIniter::normalizeZero() {
     else {
         bool inner_is_zero = true;
         for (auto &&r : inner_initer) {
-            if (auto ci = std::dynamic_pointer_cast<ConstantInt>(r.constval)) {
+            if (auto ci = r.constval->as<ConstantInt>()) {
                 if (ci->getVal() != 0) {
                     inner_is_zero = false;
                     break;
                 }
-            } else if (auto cf = std::dynamic_pointer_cast<ConstantFloat>(
-                           r.constval)) {
+            } else if (auto cf = r.constval->as<ConstantFloat>()) {
                 if (cf->getVal() != 0) {
                     inner_is_zero = false;
                     break;
@@ -91,25 +80,17 @@ void GVIniter::normalizeZero() {
 
 GVIniter::~GVIniter() {}
 
-GlobalVariable::GlobalVariable(STOCLASS _sc, std::shared_ptr<Type> _ty,
-                               std::string _name, GVIniter _initer, int _align)
-    : storage_class(_sc), vtype(std::move(_ty)),
-      Value(std::move(_name), makePtrType(_ty), ValueTrait::GLOBAL_VARIABLE),
+GlobalVariable::GlobalVariable(STOCLASS _sc, pType _ty, std::string _name, GVIniter _initer, int _align)
+    : storage_class(_sc), vtype(std::move(_ty)), Value(std::move(_name), makePtrType(_ty), ValueTrait::GLOBAL_VARIABLE),
       initer(_initer), align(_align) {}
 
 STOCLASS GlobalVariable::getStorageClass() const { return storage_class; }
 
-const std::shared_ptr<Type> &GlobalVariable::getVarType() const {
-    return vtype;
-}
+const pType &GlobalVariable::getVarType() const { return vtype; }
 
-bool GlobalVariable::isArray() const {
-    return vtype->getTrait() == IRCTYPE::ARRAY;
-}
+bool GlobalVariable::isArray() const { return vtype->getTrait() == IRCTYPE::ARRAY; }
 
-const std::vector<GVIniter> &GVIniter::getInnerIniter() const {
-    return inner_initer;
-}
+const std::vector<GVIniter> &GVIniter::getInnerIniter() const { return inner_initer; }
 
 const GVIniter &GlobalVariable::getIniter() const { return initer; }
 
@@ -127,8 +108,7 @@ std::string GVIniter::toString() const {
             ret += " zeroinitializer";
         } else {
             ret += " [";
-            for (auto it = inner_initer.begin(); it != inner_initer.end();
-                 it++) {
+            for (auto it = inner_initer.begin(); it != inner_initer.end(); it++) {
                 ret += it->toString();
                 if (std::next(it) != inner_initer.end()) {
                     ret += ", ";

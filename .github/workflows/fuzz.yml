@@ -1,0 +1,48 @@
+name: Gnalc Test - Fuzz
+on:
+  push:
+    branches: [ "main", "ci", "iropt" ]
+    paths:
+      - 'lib/**'
+      - 'include/**'
+      - '.github/workflows/fuzz.yml'
+  pull_request:
+    branches: [ "main", "ci", "iropt" ]
+    paths:
+      - 'lib/**'
+      - 'include/**'
+      - '.github/workflows/fuzz.yml'
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup LLVM
+        uses: ZhongRuoyu/setup-llvm@v0
+        with:
+          llvm-version: 18
+
+      - uses: actions/checkout@v4
+
+      - name: Get test data
+        run: git submodule update --init --recursive
+
+      - name: Configure CMake
+        run: mkdir ${{github.workspace}}/build && cd ${{github.workspace}}/build && cmake ..
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: make gnalc gnalc_test -j$(nproc)
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: ctest -C ${{env.BUILD_TYPE}} -R fuzz
+
+      - name: Check
+        working-directory: ${{github.workspace}}/build
+        if: ${{ failure() }}
+        run: cat Testing/Temporary/LastTest.log

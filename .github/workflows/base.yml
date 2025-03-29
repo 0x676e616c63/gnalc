@@ -2,9 +2,17 @@ name: Gnalc Test - Base
 
 on:
   push:
-    branches: [ "main", "ci", "iropt" ]
+    branches: [ "main", "ci" ]
+    paths:
+      - 'lib/**'
+      - 'include/**'
+      - '.github/workflows/base.yml'
   pull_request:
-    branches: [ "main", "ci", "iropt" ]
+    branches: [ "main", "ci" ]
+    paths:
+      - 'lib/**'
+      - 'include/**'
+      - '.github/workflows/base.yml'
 
 env:
   BUILD_TYPE: Release

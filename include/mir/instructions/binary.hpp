@@ -1,8 +1,29 @@
-#include <utility>
+#pragma once
+#ifndef GNALC_MIR_BINARY_HPP
+#define GNALC_MIR_BINARY_HPP
 
 #include "../instruction.hpp"
+#include <utility>
 
 namespace MIR {
+
+class unaryInst : public Instruction {
+private:
+    std::shared_ptr<BindOnVirOP> SourceOperand_1;
+
+public:
+    unaryInst() = delete;
+    unaryInst(OpCode _unaryOpCode, SourceOperandType _tptrait, std::shared_ptr<BindOnVirOP> TargetOperand_,
+              std::shared_ptr<BindOnVirOP> SourceOperand_1_)
+        : Instruction(_unaryOpCode, _tptrait), SourceOperand_1(std::move(SourceOperand_1_)) {
+        addTargetOP(std::move(TargetOperand_));
+    }
+
+    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
+
+    ~unaryInst() override = default;
+};
 
 class binaryInst : public Instruction {
 private:
@@ -11,20 +32,39 @@ private:
 
 public:
     binaryInst() = delete;
-    binaryInst(OpCode _binaryOpCode, SourceOperandType _tptrait,
-               std::shared_ptr<BindOnVirOP> TargetOperand_,
-               std::shared_ptr<BindOnVirOP> SourceOperand_1_,
-               std::shared_ptr<BindOnVirOP> SourceOperand_2_)
-        : Instruction(_binaryOpCode, _tptrait),
-          SourceOperand_1(std::move(SourceOperand_1_)),
+    binaryInst(OpCode _binaryOpCode, SourceOperandType _tptrait, std::shared_ptr<BindOnVirOP> TargetOperand_,
+               std::shared_ptr<BindOnVirOP> SourceOperand_1_, std::shared_ptr<BindOnVirOP> SourceOperand_2_)
+        : Instruction(_binaryOpCode, _tptrait), SourceOperand_1(std::move(SourceOperand_1_)),
           SourceOperand_2(std::move(SourceOperand_2_)) {
         addTargetOP(std::move(TargetOperand_));
     }
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
-    bool Check() override;
-    // std::string toString() override;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
+
     ~binaryInst() override = default;
+};
+
+class ternaryInst : public Instruction {
+private:
+    std::shared_ptr<BindOnVirOP> SourceOperand_1;
+    std::shared_ptr<BindOnVirOP> SourceOperand_2;
+    std::shared_ptr<BindOnVirOP> SourceOperand_3;
+
+public:
+    ternaryInst() = delete;
+    ternaryInst(OpCode _ternaryOpCode, SourceOperandType _tptrait, std::shared_ptr<BindOnVirOP> TargetOperand_,
+                std::shared_ptr<BindOnVirOP> SourceOperand_1_, std::shared_ptr<BindOnVirOP> SourceOperand_2_,
+                std::shared_ptr<BindOnVirOP> SourceOperand_3_)
+        : Instruction(_ternaryOpCode, _tptrait), SourceOperand_1(std::move(SourceOperand_1_)),
+          SourceOperand_2(std::move(SourceOperand_2_)), SourceOperand_3(std::move(SourceOperand_3_)) {
+        addTargetOP(std::move(TargetOperand_));
+    }
+
+    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
+
+    ~ternaryInst() override = default;
 };
 
 class binaryImmInst : public Instruction {
@@ -35,42 +75,41 @@ private:
 
 public:
     binaryImmInst() = delete;
-    binaryImmInst(OpCode _binaryOpCode, SourceOperandType _tptrait,
-                  std::shared_ptr<BindOnVirOP> TargetOperand_,
-                  std::shared_ptr<BindOnVirOP> SourceOperand_1_,
-                  std::shared_ptr<Operand> SourceOperand_2_,
+    binaryImmInst(OpCode _binaryOpCode, SourceOperandType _tptrait, std::shared_ptr<BindOnVirOP> TargetOperand_,
+                  std::shared_ptr<BindOnVirOP> SourceOperand_1_, std::shared_ptr<Operand> SourceOperand_2_,
                   std::shared_ptr<ShiftOP> SourceOperand_3_)
-        : Instruction(_binaryOpCode, _tptrait),
-          SourceOperand_1(std::move(SourceOperand_1_)),
-          SourceOperand_2(std::move(SourceOperand_2_)),
-          SourceOperand_3(std::move(SourceOperand_3_)) {
+        : Instruction(_binaryOpCode, _tptrait), SourceOperand_1(std::move(SourceOperand_1_)),
+          SourceOperand_2(std::move(SourceOperand_2_)), SourceOperand_3(std::move(SourceOperand_3_)) {
         addTargetOP(std::move(TargetOperand_));
     }
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
-    bool Check() override;
-    // std::string toString() override;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
+
     ~binaryImmInst() override = default;
 };
 
 class compareInst : public Instruction {
 private:
     std::shared_ptr<BindOnVirOP> SourceOperand_1;
-    std::shared_ptr<BindOnVirOP> SourceOperand_2;
+    std::shared_ptr<Operand> SourceOperand_2;
 
 public:
-    compareInst(OpCode _cmpOpCode,
-                std::shared_ptr<BindOnVirOP> SourceOperand_1_,
-                std::shared_ptr<BindOnVirOP> SourceOperand_2_)
-        : Instruction(_cmpOpCode, SourceOperandType::rr),
-          SourceOperand_1(std::move(SourceOperand_1_)),
+    compareInst() = delete;
+    compareInst(OpCode _cmpOpCode, SourceOperandType _tptrait, std::shared_ptr<BindOnVirOP> SourceOperand_1_,
+                std::shared_ptr<Operand> SourceOperand_2_)
+        : Instruction(_cmpOpCode, _tptrait), SourceOperand_1(std::move(SourceOperand_1_)),
           SourceOperand_2(std::move(SourceOperand_2_)) {
         addTargetOP(nullptr);
+        setFlash();
     };
+
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
-    bool Check() override;
-    // std::string toString() override;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
+
     ~compareInst() override = default;
 };
 
 } // namespace MIR
+
+#endif

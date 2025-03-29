@@ -10,8 +10,8 @@
 #ifndef GNALC_IR_PASSES_TRANSFORMS_DSE_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_DSE_HPP
 
-#include "../pass_manager.hpp"
 #include "../../../../include/ir/instructions/memory.hpp"
+#include "../pass_manager.hpp"
 
 namespace IR {
 class DSEPass : public PM::PassInfo<DSEPass> {

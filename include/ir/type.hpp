@@ -12,9 +12,9 @@
 #include <vector>
 
 #include "../utils/exception.hpp"
+#include "type_alias.hpp"
 
 namespace IR {
-
 /**
  * @brief IR BASIC TYPE只包含简单Type类型，亦是Value的类型
  */
@@ -49,18 +49,37 @@ inline size_t getBytes(IRBTYPE type) {
     return 0;
 }
 
-class Type;
-class BType;
-class PtrType;
-class ArrayType;
-class FunctionType;
-
-class Type {
+class Type : public std::enable_shared_from_this<Type> {
 public:
     virtual ~Type() = default;
     virtual IRCTYPE getTrait() const = 0;
     virtual std::string toString() const = 0;
     virtual size_t getBytes() const = 0;
+
+    template <typename T> std::shared_ptr<const T> as() const {
+        static_assert(std::is_base_of_v<Type, T>, "Expected a derived type.");
+        return std::dynamic_pointer_cast<const T>(shared_from_this());
+    }
+
+    template <typename T> const T *as_raw() const {
+        static_assert(std::is_base_of_v<Type, T>, "Expected a derived type.");
+        return dynamic_cast<const T *>(this);
+    }
+
+    template <typename T> std::shared_ptr<T> as() {
+        static_assert(std::is_base_of_v<Type, T>, "Expected a derived type.");
+        return std::dynamic_pointer_cast<T>(shared_from_this());
+    }
+
+    template <typename T> T *as_raw() {
+        static_assert(std::is_base_of_v<Type, T>, "Expected a derived type.");
+        return dynamic_cast<T *>(this);
+    }
+
+    template <typename T> bool is() const {
+        static_assert(std::is_base_of_v<Type, T>, "Expected a derived type.");
+        return as_raw<T>() != nullptr;
+    }
 };
 
 /**
@@ -104,29 +123,25 @@ public:
 
 class PtrType : public Type {
 protected:
-    std::shared_ptr<Type> element_type;
+    pType element_type;
 
 public:
-    PtrType(std::shared_ptr<Type> element_type_)
-        : element_type(std::move(element_type_)) {}
+    PtrType(pType element_type_) : element_type(std::move(element_type_)) {}
     const auto &getElmType() const { return element_type; }
 
     IRCTYPE getTrait() const override { return IRCTYPE::PTR; }
 
-    std::string toString() const override {
-        return element_type->toString() + "*";
-    }
+    std::string toString() const override { return element_type->toString() + "*"; }
     size_t getBytes() const override { return 8; }
 };
 
 class ArrayType : public Type {
 protected:
-    std::shared_ptr<Type> element_type;
+    pType element_type;
     size_t size;
 
 public:
-    ArrayType(std::shared_ptr<Type> element_type_, size_t size)
-        : element_type(std::move(element_type_)), size(size) {}
+    ArrayType(pType element_type_, size_t size) : element_type(std::move(element_type_)), size(size) {}
 
     const auto &getElmType() const { return element_type; }
 
@@ -143,25 +158,21 @@ public:
 
 class FunctionType : public Type {
 protected:
-    std::shared_ptr<Type> ret;
-    std::vector<std::shared_ptr<Type>> params;
+    pType ret;
+    std::vector<pType> params;
     bool is_va_arg;
 
 public:
-    FunctionType(std::vector<std::shared_ptr<Type>> params_,
-                 std::shared_ptr<Type> ret_, bool is_va_arg_)
-        : params(std::move(params_)), ret(std::move(ret_)),
-          is_va_arg(is_va_arg_) {}
+    FunctionType(std::vector<pType> params_, pType ret_, bool is_va_arg_)
+        : params(std::move(params_)), ret(std::move(ret_)), is_va_arg(is_va_arg_) {}
 
     IRCTYPE getTrait() const override { return IRCTYPE::FUNCTION; }
 
     bool isVAArg() const { return is_va_arg; }
 
-    const std::vector<std::shared_ptr<Type>> &getParams() const {
-        return params;
-    }
+    const std::vector<pType> &getParams() const { return params; }
 
-    const std::shared_ptr<Type> &getRet() const { return ret; }
+    const pType &getRet() const { return ret; }
 
     std::string toString() const override {
         Err::not_implemented("Function type to string.");
@@ -176,28 +187,25 @@ public:
 
 // 以下为一些辅助函数，类型不匹配会抛出exception
 
-std::shared_ptr<BType> makeBType(IRBTYPE bty);
-std::shared_ptr<PtrType> makePtrType(std::shared_ptr<Type> ele_ty);
-std::shared_ptr<ArrayType> makeArrayType(std::shared_ptr<Type> ele_ty,
-                                         size_t size);
-std::shared_ptr<FunctionType>
-makeFunctionType(std::vector<std::shared_ptr<Type>> params,
-                 std::shared_ptr<Type> ret, bool is_va_arg);
+pBType makeBType(IRBTYPE bty);
+pPtrType makePtrType(pType ele_ty);
+pArrayType makeArrayType(pType ele_ty, size_t size);
+pFuncType makeFunctionType(std::vector<pType> params, pType ret, bool is_va_arg);
 
 // 若类型不正确会返回nullptr
-std::shared_ptr<BType> toBType(const std::shared_ptr<Type> &ty);
-std::shared_ptr<PtrType> toPtrType(const std::shared_ptr<Type> &ty);
-std::shared_ptr<ArrayType> toArrayType(const std::shared_ptr<Type> &ty);
-std::shared_ptr<FunctionType> toFunctionType(const std::shared_ptr<Type> &ty);
+pBType toBType(const pType &ty);
+pPtrType toPtrType(const pType &ty);
+pArrayType toArrayType(const pType &ty);
+pFuncType toFunctionType(const pType &ty);
 
 // 返回PTR, ARRAY的element_type; BType 会返回 nullptr
-std::shared_ptr<Type> getElm(const std::shared_ptr<Type> &ty);
+pType getElm(const pType &ty);
 
-bool isSameType(const std::shared_ptr<Type>& a, const std::shared_ptr<Type>& b);
+bool isSameType(const pType &a, const pType &b);
 
 /***********下列内容为NameClass相关**********/
 
-using NameRef = const std::string&; // 赋值名字时改为str::string, 用move传值；引用名字时使用该类型别名
+using NameRef = const std::string &; // 赋值名字时改为str::string, 用move传值；引用名字时使用该类型别名
 
 // move传值
 // C means class

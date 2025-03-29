@@ -12,6 +12,7 @@ struct OptInfo {
     bool sccp{false};
     bool dce{false};
     bool adce{false};
+    bool cfgsimplify{false};
     bool dse{false};
     bool loadelim{false};
     bool gvnpre{false};
@@ -24,6 +25,10 @@ struct OptInfo {
     bool lcssa{false};
     bool licm{false};
     bool loop_unroll{false};
+    bool indvars{false};
+    bool loop_strength_reduce{false};
+    bool loopelim{false};
+    bool sroa{false};
     bool jump_threading{false};
 
     bool tree_shaking{false};
@@ -37,8 +42,18 @@ extern const OptInfo o1_opt_info;
 
 class PassBuilder {
 public:
+    static FPM buildFunctionFixedPointPipeline();
+    static MPM buildModuleFixedPointPipeline();
+
     static FPM buildFunctionPipeline(OptInfo opt_info);
     static MPM buildModulePipeline(OptInfo opt_info);
+
+    static FPM buildFunctionDebugPipeline();
+    static MPM buildModuleDebugPipeline();
+
+    // Reproduce or Produce a Fuzz Testing Pipeline.
+    static FPM buildFunctionFuzzTestingPipeline(double duplication_rate = 1.0, const std::string &repro = "");
+    static MPM buildModuleFuzzTestingPipeline(double duplication_rate = 1.0, const std::string &repro = "");
 
     static void registerModuleAnalyses(MAM &);
     static void registerFunctionAnalyses(FAM &);

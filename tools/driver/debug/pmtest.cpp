@@ -24,6 +24,7 @@ public:
         std::cout << "TestAnalysis::run: func_name: " << func.getName() << std::endl;
         return TestResult{};
     }
+
 private:
     friend AnalysisInfo<TestAnalysis>;
     static PM::UniqueKey Key;
@@ -33,7 +34,7 @@ PM::UniqueKey TestAnalysis::Key;
 
 class TestFunctionPass : public PM::PassInfo<TestFunctionPass> {
 public:
-    PM::PreservedAnalyses run(IR::Function& f, IR::FAM& fam) {
+    PM::PreservedAnalyses run(IR::Function &f, IR::FAM &fam) {
         std::cout << "TestFunctionPass::run: func_name: " << f.getName() << std::endl;
         auto res = fam.getResult<TestAnalysis>(f);
         std::cout << "Got result: " << res.get() << std::endl;
@@ -43,7 +44,7 @@ public:
 
 class TestNoPreservedFunctionPass : public PM::PassInfo<TestNoPreservedFunctionPass> {
 public:
-    PM::PreservedAnalyses run(IR::Function& f, IR::FAM& fam) {
+    PM::PreservedAnalyses run(IR::Function &f, IR::FAM &fam) {
         std::cout << "TestNoPreservedFunctionPass::run: func_name: " << f.getName() << std::endl;
         auto res = fam.getResult<TestAnalysis>(f);
         std::cout << "Got result: " << res.get() << std::endl;
@@ -68,7 +69,7 @@ int main() {
     IR::FPM fpm;
     IR::MAM mam;
     IR::MPM mpm;
-    fam.registerPass([]{return TestAnalysis();});
+    fam.registerPass([] { return TestAnalysis(); });
     fpm.addPass(TestFunctionPass());
     fpm.addPass(TestFunctionPass());
     fpm.addPass(TestNoPreservedFunctionPass());

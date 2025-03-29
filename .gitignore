@@ -16,3 +16,13 @@ build
 .vscode
 testdata
 comp-test
+gnalc_arm
+gnalc
+test.c
+test.ll
+test copy.ll
+test.s
+.gdb_history
+test copy.s
+functional25
+gnalc_stripped

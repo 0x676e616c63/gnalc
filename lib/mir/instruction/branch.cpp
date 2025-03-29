@@ -3,9 +3,12 @@
 
 using namespace MIR;
 
-bool branchInst::Check() {
-    if (tptrait != SourceOperandType::cp)
-        return false;
-    else
-        return true;
+std::string branchInst::toString() {
+    std::string str;
+    str += enum_name(std::get<OpCode>(opcode));
+    str += enum_name(getCondCodeFlag());
+    str += ' ';
+    str += JmpTo + '\n';
+
+    return str;
 }

@@ -7,34 +7,45 @@
 
 /**
  * 目前的继承结构：
- * Value -> User -> Instruction
- *   |---> GlobalVariable
+ * Value
+ *   |--> User
+ *   |     |--> Instruction
+ *   |     |--> BBArgList (not implemented currently, 25.3.27)
+ *   |--> GlobalVariable
  *   |--> BasicBlock
- *   |--> Function
+ *   |--> FunctionDecl
+ *   |--> BasicConstant<xxx>
+ *   |--> FormalParam
  */
 
 #pragma once
 #ifndef GNALC_IR_BASE_HPP
 #define GNALC_IR_BASE_HPP
 
+#include <iterator>
 #include <list>
 #include <set>
 
 #include <cinttypes>
 #include <cstdint>
 
+#include "../utils/iterator.hpp"
+#include "../utils/misc.hpp"
 #include "type.hpp"
+#include "type_alias.hpp"
+
+#ifdef GNALC_EXTENSION_GGC
+namespace IRParser {
+    class IRPT;
+}
+#endif
 
 namespace IR {
-class Value;
-class User;
-class Use;
-
 // 用于标识 IR::Value 的特征
 enum class ValueTrait {
     UNDEFINED,
     CONSTANT_LITERAL,  // 常量字面量
-    ORDINARY_VARIABLE, // 一般变量（包含const）
+    ORDINARY_VARIABLE, // 一般变量（包含const），也即有值的指令
     GLOBAL_VARIABLE,   // 全局变量
     FUNCTION,          // 函数
     FORMAL_PARAMETER,  // 形参（函数）
@@ -54,7 +65,7 @@ enum class ValueTrait {
 // User 内部存有 shared_ptr<Use>, 即 operands
 // Value 内部存有 weak_ptr<Use>, 即 use_list
 //
-// Use 存有一个 std::weak_ptr<Value> 和 User*
+// Use 存有一个 weak_ptr<Value> 和 User*
 //
 // 由于 Use 只存储了 裸指针 以及 weak_ptr，User 和 Value 之间并没有在内存上的所有关系。
 // 两大 User, 即 Instruction 和 Constant，其内存分别由 BasicBlock 和 ConstantPool 管理
@@ -81,14 +92,41 @@ enum class ValueTrait {
 // 但是 weak_ptr<Use> 确实也没啥大问题，而且还能避免 User 忘记删除 Value 的 use_list，
 // 因为这样会导致该 weak_ptr<Use> expired。
 // 所以暂时不改也没问题。
+//
 
-class Value : public NameC {
+class Use : public std::enable_shared_from_this<Use> {
     friend class User;
-    friend class Use;
+    friend class Value;
 
 private:
-    std::list<std::weak_ptr<Use>> use_list; // Use隶属于User
-    std::shared_ptr<Type> vtype;            // value's type
+    wpVal val;
+    User *user;
+
+    // PRIVATE because we want to ensure the use is inited.
+    Use(wpVal v, User *u);
+    void init();
+
+    // PRIVATE because only Value::delUse(User*) should invoke this.
+    // Because getUser() will call User::shared_from_this,
+    // but when User is being destructed, that won't work.
+    User *getRawUser() const;
+
+public:
+    pVal getValue() const;
+    pUser getUser() const;
+};
+
+class Instruction;
+class Value : public NameC, public std::enable_shared_from_this<Value> {
+    friend class User;
+    friend class Use;
+#ifdef GNALC_EXTENSION_GGC
+    friend class IRParser::IRPT;
+#endif
+
+private:
+    std::list<wpUse> use_list; // Use隶属于User
+    pType vtype;                            // value's type
     ValueTrait trait = ValueTrait::UNDEFINED;
 
 public:
@@ -101,28 +139,70 @@ public:
     Value(Value &&other) = delete;
     Value &operator=(Value &&other) = delete;
 
-    Value(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait);
+    Value(std::string _name, pType _vtype, ValueTrait _vtrait);
 
-    std::shared_ptr<Type> getType() const;
+    template <typename T> std::shared_ptr<const T> as() const {
+        static_assert(std::is_base_of_v<Value, T>, "Expected a derived type.");
+        return std::dynamic_pointer_cast<const T>(shared_from_this());
+    }
 
-    std::list<std::shared_ptr<Use>> getUseList() const;
-    std::list<std::weak_ptr<Use>> &getRUseList();
+    template <typename T> const T *as_raw() const {
+        static_assert(std::is_base_of_v<Value, T>, "Expected a derived type.");
+        return dynamic_cast<const T *>(this);
+    }
+
+    template <typename T> std::shared_ptr<T> as() {
+        static_assert(std::is_base_of_v<Value, T>, "Expected a derived type.");
+        return std::dynamic_pointer_cast<T>(shared_from_this());
+    }
+
+    template <typename T> T *as_raw() {
+        static_assert(std::is_base_of_v<Value, T>, "Expected a derived type.");
+        return dynamic_cast<T *>(this);
+    }
+
+    template <typename T> T& as_ref() & {
+        static_assert(std::is_base_of_v<Value, T>, "Expected a derived type.");
+        return dynamic_cast<T &>(*this);
+    }
+
+    template <typename T> const T& as_ref() const & {
+        static_assert(std::is_base_of_v<Value, T>, "Expected a derived type.");
+        return dynamic_cast<const T &>(*this);
+    }
+
+    template <typename T> T&& as_ref() && {
+        static_assert(std::is_base_of_v<Value, T>, "Expected a derived type.");
+        return dynamic_cast<T &&>(*this);
+    }
+
+    template <typename T> const T&& as_ref() const && {
+        static_assert(std::is_base_of_v<Value, T>, "Expected a derived type.");
+        return dynamic_cast<const T &&>(*this);
+    }
+
+    template <typename ...Args> bool is() const {
+        static_assert((std::is_base_of_v<Value, Args> || ...), "Expected a derived type.");
+        return ((as_raw<Args>() != nullptr) || ...);
+    }
+
+    pType getType() const;
+
+    std::list<pUse> getUseList() const;
+    std::list<wpUse> &getRUseList();
 
     // i.e. Replace all uses with, RAUW
-    void replaceSelf(const std::shared_ptr<Value> &new_value) const;
+    void replaceSelf(const pVal &new_value) const;
 
-    virtual void accept(class IRVisitor &visitor) {
-        Err::not_implemented("Value::accept");
-    }
+    virtual void accept(class IRVisitor &visitor) { Err::not_implemented("Value::accept"); }
 
     // Warning: this MUST NOT be called by another clone. (Except Function::cloneImpl)
     // Note that Instruction's clone only don't clone their operands.
     // Only Function's clone will return an independent function with independent instructions.
-    std::shared_ptr<Value> clone() const {
+    pVal clone() const {
         auto cloned = cloneImpl();
         auto raw = cloned.get();
-        Err::gassert(raw != nullptr && typeid(*raw) == typeid(*this),
-            "Derived class should override this correctly.");
+        Err::gassert(raw != nullptr && typeid(*raw) == typeid(*this), "Derived class should override this correctly.");
         return cloned;
     }
 
@@ -132,17 +212,99 @@ public:
 
     size_t getUseCount() const;
 
+    template <typename DownCastUserTo = User> class UserIterator {
+    private:
+        using InnerIterT = decltype(use_list)::const_iterator;
+        InnerIterT iter;
+
+    public:
+        using difference_type = InnerIterT::difference_type;
+        using value_type = std::shared_ptr<DownCastUserTo>;
+        using pointer = std::shared_ptr<DownCastUserTo> *;
+        using reference = std::shared_ptr<DownCastUserTo> &;
+        using iterator_category = InnerIterT::iterator_category;
+
+        explicit UserIterator(InnerIterT iter_) : iter(iter_) {}
+
+        UserIterator &operator++() {
+            ++iter;
+            return *this;
+        }
+        UserIterator operator++(int) { return UseIterator{iter++}; }
+
+        UserIterator &operator--() {
+            --iter;
+            return *this;
+        }
+        UserIterator operator--(int) { return UserIterator{iter--}; }
+
+        bool operator==(UserIterator other) const { return iter == other.iter; }
+        bool operator!=(UserIterator other) const { return iter != other.iter; }
+        std::shared_ptr<DownCastUserTo> operator*() const {
+            if constexpr (std::is_same_v<DownCastUserTo, User>)
+                return iter->lock()->getUser();
+            else {
+                auto ret = std::dynamic_pointer_cast<DownCastUserTo>(iter->lock()->getUser());
+                Err::gassert(ret != nullptr, "Value::UserIterator: Cannot downcast current user to '" +
+                                                 std::string{Util::getTypeName<DownCastUserTo>()} + "'.");
+                return ret;
+            }
+        }
+    };
+
+    UserIterator<> user_begin() const;
+    UserIterator<> user_end() const;
+
+    // Currently all users are instructions
+    UserIterator<Instruction> inst_user_begin() const;
+    UserIterator<Instruction> inst_user_end() const;
+
+    auto users() const { return Util::make_iterator_range(user_begin(), user_end()); }
+
+    auto inst_users() const { return Util::make_iterator_range(inst_user_begin(), inst_user_end()); }
+
+    class UseIterator {
+    private:
+        using InnerIterT = decltype(use_list)::const_iterator;
+        InnerIterT iter;
+
+    public:
+        using difference_type = InnerIterT::difference_type;
+        using value_type = pUse;
+        using pointer = pUse *;
+        using reference = pUse &;
+        using iterator_category = InnerIterT::iterator_category;
+
+        explicit UseIterator(InnerIterT iter_);
+
+        UseIterator &operator++();
+        UseIterator operator++(int);
+        UseIterator &operator--();
+        UseIterator operator--(int);
+
+        bool operator==(UseIterator other) const;
+        bool operator!=(UseIterator other) const;
+        pUse operator*() const;
+    };
+
+    UseIterator self_uses_begin() const;
+    UseIterator self_uses_end() const;
+
+    auto self_uses() const { return Util::make_iterator_range(self_uses_begin(), self_uses_end()); }
+
+    pUser getSingleUser() const;
+
 private:
     // PRIVATE because we want to ensure use is only modified by User.
-    void addUse(const std::weak_ptr<Use> &use);
+    void addUse(const wpUse &use);
 
     // Why not user:
     //   A User can have multiple identical operand,
     //   thus having multiple Uses. Though having identical Value,
     //   they are independent object, and their address is unique.
-    bool delUse(const std::shared_ptr<Use> &target);
+    bool delUse(const pUse &target);
 
-    virtual std::shared_ptr<Value> cloneImpl() const {
+    virtual pVal cloneImpl() const {
         Err::not_implemented("Value::cloneImpl");
         return nullptr;
     }
@@ -150,62 +312,80 @@ private:
 
 // Helper template
 template <typename T>
-auto makeClone(const std::shared_ptr<T>& value)
-    -> std::enable_if_t<std::is_base_of_v<Value, T>, std::shared_ptr<T>>
-{
+auto makeClone(const std::shared_ptr<T> &value) -> std::enable_if_t<std::is_base_of_v<Value, T>, std::shared_ptr<T>> {
     return std::dynamic_pointer_cast<T>(value->clone());
 }
-
-class Use : public std::enable_shared_from_this<Use> {
-    friend class User;
-    friend class Value;
-
-private:
-    std::weak_ptr<Value> val;
-    User *user;
-
-    // PRIVATE because we want to ensure the use is inited.
-    Use(std::weak_ptr<Value> v, User *u);
-    void init();
-
-    // PRIVATE because only Value::delUse(User*) should invoke this.
-    // Because getUser() will call User::shared_from_this,
-    // but when User is being destructed, that won't work.
-    User *getRawUser() const;
-
-public:
-    std::shared_ptr<Value> getValue() const;
-    std::shared_ptr<User> getUser() const;
-};
 
 /**
  * @brief User是Use的所有者，User的Operands由Use中的val来保存
  */
-class User : public Value, public std::enable_shared_from_this<User> {
+class User : public Value {
 private:
     // operands 设为 private, 防止子类误用，因为删除 operand 需要处理 use 关系
     // operands 里的 Use 中的 val 是实际的操作数
-    std::vector<std::shared_ptr<Use>> operands;
+    std::vector<pUse> operand_uses_list;
 
 public:
+    using UseIterator = decltype(operand_uses_list)::const_iterator;
+    UseIterator operand_use_begin() const;
+    UseIterator operand_use_end() const;
+
+    auto operand_uses() const { return Util::make_iterator_range(operand_use_begin(), operand_use_end()); }
+
+    class OperandIterator {
+    private:
+        using InnerIterT = decltype(operand_uses_list)::const_iterator;
+        InnerIterT iter;
+
+    public:
+        using difference_type = InnerIterT::difference_type;
+        using value_type = pVal;
+        using pointer = pVal *;
+        using reference = pVal &;
+        using iterator_category = InnerIterT::iterator_category;
+
+        explicit OperandIterator(InnerIterT iter_);
+
+        OperandIterator &operator++();
+        OperandIterator operator++(int);
+        OperandIterator &operator--();
+        OperandIterator operator--(int);
+
+        OperandIterator &operator+=(difference_type n);
+        OperandIterator &operator-=(difference_type n);
+        OperandIterator operator+(difference_type n) const;
+        OperandIterator operator-(difference_type n) const;
+        bool operator<(OperandIterator other) const;
+        bool operator>(OperandIterator other) const;
+        bool operator<=(OperandIterator other) const;
+        bool operator>=(OperandIterator other) const;
+        difference_type operator-(OperandIterator other) const;
+
+        bool operator==(OperandIterator other) const;
+        bool operator!=(OperandIterator other) const;
+        pVal operator*() const;
+    };
+
+    OperandIterator operand_begin() const;
+    OperandIterator operand_end() const;
+
+    auto operands() const { return Util::make_iterator_range(operand_begin(), operand_end()); }
+
     User() = delete;
     ~User() override;
 
-    User(std::string _name, std::shared_ptr<Type> _vtype, ValueTrait _vtrait);
+    User(std::string _name, pType _vtype, ValueTrait _vtrait);
 
     void accept(IRVisitor &visitor) override = 0;
 
     // In general, passes should avoid direct manipulation of operands through these
     // functions unless the intent is to perform such operations in a generic manner.
-    const std::vector<std::shared_ptr<Use>> &getOperands() const;
-    const std::shared_ptr<Use> &getOperand(size_t index) const;
-    void setOperand(size_t index, const std::shared_ptr<Value>& val);
+    const std::vector<pUse> &getOperands() const;
+    const pUse &getOperand(size_t index) const;
+    void setOperand(size_t index, const pVal &val);
     void swapOperand(size_t a, size_t b);
 
-    bool replaceOperand(const std::shared_ptr<Value> &before, const std::shared_ptr<Value> &after);
-
     size_t getNumOperands() const;
-
 
     // Note:
     // Replace Use shouldn't compare Use's user/value.
@@ -215,13 +395,15 @@ public:
     // If we only care about Use's user/value, we might end up with:
     //              %0 operands: <use0: %a> <use1: %b>
     //              %b use_list:  <use2: %0>
-    bool replaceUse(const std::shared_ptr<Use> &old_use,
-                    const std::shared_ptr<Value> &new_use);
+    bool replaceUse(const pUse &old_use, const pVal &new_use);
+
+    // Replace all uses of `before` with `after`, return the number of the replaced operands
+    size_t replaceAllOperands(const pVal &before, const pVal &after);
 
 protected:
-    void addOperand(const std::shared_ptr<Value> &v);
+    void addOperand(const pVal &v);
 
-    bool delOperand(const std::shared_ptr<Value> &v);
+    bool delOperand(const pVal &v);
     bool delOperand(NameRef name);
     bool delOperand(size_t index);
 
@@ -229,17 +411,16 @@ protected:
     // Returns true if deleted.
     template <typename Pred> bool delOperandIf(Pred pred) {
         bool found = false;
-        for (auto it = operands.begin(); it != operands.end();) {
+        for (auto it = operand_uses_list.begin(); it != operand_uses_list.end();) {
             auto curr_val = (*it)->getValue();
             // `curr_val` can be nullptr if the operands have been destroyed,
             // but that shouldn't happen when the User is alive.
             // But in `~User()`, that is ok.
-            Err::gassert(curr_val != nullptr,
-                "User's operands has been destroyed unexpectedly.");
+            Err::gassert(curr_val != nullptr, "User's operands has been destroyed unexpectedly.");
             if (pred(curr_val)) {
                 auto ok = curr_val->delUse(*it);
                 Err::gassert(ok);
-                it = operands.erase(it);
+                it = operand_uses_list.erase(it);
                 found = true;
             } else {
                 ++it;
@@ -249,9 +430,7 @@ protected:
     }
 };
 
-template <typename T> std::string toIRString(T value) {
-    return std::to_string(value);
-}
+template <typename T> std::string toIRString(T value) { return std::to_string(value); }
 
 // Maybe there is some historical reasons :(
 // See https://llvm.org/docs/LangRef.html and https://groups.google.com/g/llvm-dev/c/IlqV3TbSk6M?pli=1

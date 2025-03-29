@@ -1,9 +1,5 @@
-int side_effect()
-{
-    putch(48);
-}
-int no_side_effect()
-{
+int side_effect() { putch(48); }
+int no_side_effect() {
     int s = 2;
     return 1;
 }

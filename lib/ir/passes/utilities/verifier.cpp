@@ -4,6 +4,7 @@
 #include "../../../../include/ir/instructions/control.hpp"
 #include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
+#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 #include "../../../../include/utils/logger.hpp"
 
 #include <algorithm>
@@ -15,8 +16,7 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
     size_t fatal_error_cnt = 0;
     // Check use-def
     for (const auto &bb : function) {
-        auto all_insts = bb->getAllInsts();
-        for (const auto &inst : all_insts) {
+        for (const auto &inst : bb->all_insts()) {
             if (inst->getParent() == nullptr) {
                 Logger::logCritical("[VerifyPass]: Instruction '", inst->getName(),
                                     "''s parent pointer is nullptr. But it is in '", bb->getName(), "'.");
@@ -66,47 +66,48 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
     if (fatal_error_cnt == 0) {
         // Check CFG
         auto fndfv = function.getDFVisitor();
-        std::set<std::shared_ptr<BasicBlock>> reachable_blocks{fndfv.begin(), fndfv.end()};
+        std::set<pBlock> reachable_blocks{fndfv.begin(), fndfv.end()};
         const auto &entry = function.getBlocks().front();
-        if (!entry->getPreBB().empty()) {
+        if (entry->getNumPreds() != 0) {
             Logger::logCritical("[VerifyPass]: Entry BasicBlock '", entry->getName(), "' has predecessors.");
             ++fatal_error_cnt;
         }
 
         for (const auto &bb : function) {
-            if (reachable_blocks.find(bb) == reachable_blocks.end())
-                Logger::logWarning("[VerifyPass]: Unreachable BasicBlock '", bb->getName(), "' detected.");
+            if (reachable_blocks.find(bb) == reachable_blocks.end()) {
+                Logger::logCritical("[VerifyPass]: Unreachable BasicBlock '", bb->getName(), "' detected.");
+                ++fatal_error_cnt;
+            }
 
             const auto &insts = bb->getInsts();
-            auto succs = bb->getNextBB();
             if (insts.empty()) {
                 ++fatal_error_cnt;
                 Logger::logCritical("[VerifyPass]: Empty BasicBlock '", bb->getName(), "' detected.");
-                if (!succs.empty())
+                if (bb->getNumSuccs() != 0)
                     Logger::logCritical("[VerifyPass]: Empty BasicBlock '", bb->getName(), "' has successors.");
                 continue;
             }
             auto term = insts.back();
             if (term->getOpcode() == OP::RET) {
-                if (!succs.empty()) {
+                if (bb->getNumSuccs() != 0) {
                     Logger::logCritical("[VerifyPass]: Exit BasicBlock '", bb->getName(), "' has successors.");
                     ++fatal_error_cnt;
                 }
             } else if (term->getOpcode() == OP::BR) {
-                auto br = std::dynamic_pointer_cast<BRInst>(term);
-                std::vector<std::shared_ptr<BasicBlock>> real_succs;
+                auto br = term->as<BRInst>();
+                std::vector<pBlock> real_succs;
                 if (br->isConditional()) {
-                    if (succs.size() != 2) {
+                    if (bb->getNumSuccs() != 2) {
                         Logger::logCritical("[VerifyPass]: BasicBlock '", bb->getName(),
-                                            "' terminated with conditional branch but has ", succs.size(),
+                                            "' terminated with conditional branch but has ", bb->getNumSuccs(),
                                             " successors.");
                         ++fatal_error_cnt;
                     }
                     real_succs = {br->getTrueDest(), br->getFalseDest()};
                 } else {
-                    if (succs.size() != 1) {
+                    if (bb->getNumSuccs() != 1) {
                         Logger::logCritical("[VerifyPass]: BasicBlock '", bb->getName(),
-                                            "' terminated with unconditional branch but has ", succs.size(),
+                                            "' terminated with unconditional branch but has ", bb->getNumSuccs(),
                                             " successors.");
                         ++fatal_error_cnt;
                     }
@@ -114,14 +115,13 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                 }
 
                 for (const auto &succ : real_succs) {
-                    auto pre = succ->getPreBB();
-                    if (std::find(pre.cbegin(), pre.cend(), bb) == pre.end()) {
+                    if (std::find(succ->pred_begin(), succ->pred_end(), bb) == succ->pred_end()) {
                         Logger::logCritical("[VerifyPass]: Missing predecessor in BasicBlock '", succ->getName(), "'.");
                         ++fatal_error_cnt;
                     }
                 }
 
-                for (const auto &succ : succs) {
+                for (const auto &succ : bb->succs()) {
                     if (std::find(real_succs.cbegin(), real_succs.cend(), succ) == real_succs.end()) {
                         Logger::logCritical("[VerifyPass]: BasicBlock '", bb->getName(), "' has wrong successor: '",
                                             succ->getName(), "'.");
@@ -133,8 +133,7 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
 
         // Check PhiNode
         for (const auto &bb : function) {
-            auto prebbs = bb->getPreBB();
-            auto phi_insts = bb->getPhiInsts();
+            auto phi_insts = bb->phis();
             for (const auto &phi_inst : phi_insts) {
                 auto phi_opers = phi_inst->getPhiOpers();
                 if (phi_opers.empty()) {
@@ -143,13 +142,13 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                     continue;
                 }
 
-                if (phi_inst->getPhiOpers().size() != prebbs.size()) {
+                if (phi_inst->getPhiOpers().size() != bb->getNumPreds()) {
                     Logger::logCritical("[VerifyPass]: PhiInst '", phi_inst->getName(),
                                         "' has wrong number of operands.");
                     ++fatal_error_cnt;
                 }
 
-                for (const auto &pre : prebbs) {
+                for (const auto &pre : bb->preds()) {
                     if (std::find_if(phi_opers.cbegin(), phi_opers.cend(), [&pre](const PHIInst::PhiOper &oper) {
                             return oper.block == pre;
                         }) == phi_opers.cend()) {
@@ -158,36 +157,18 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                         ++fatal_error_cnt;
                     }
                 }
-
-                std::shared_ptr<Value> common_value = phi_opers[0].value;
-                for (const auto &[val, bb] : phi_opers) {
-                    if (std::find(prebbs.cbegin(), prebbs.cend(), bb) == prebbs.end()) {
-                        Logger::logCritical("[VerifyPass]: PHIInst '", phi_inst->getName(), "' has wrong operand '[ ",
-                                            val->getName(), ", ", bb->getName(), " ]'.");
-                        ++fatal_error_cnt;
-                    }
-                    if (val != common_value)
-                        common_value = nullptr;
-                }
-                if (common_value != nullptr) {
-                    Logger::logWarning("[VerifyPass]: PHIInst '", phi_inst->getName(), "' has identical operands.");
-                }
             }
         }
-    } else
-        Logger::logWarning("[VerifyPass]: Skipped some check due to previous fatal error(s).");
+    }
 
     if (fatal_error_cnt == 0) {
         auto domtree = fam.getResult<DomTreeAnalysis>(function);
         for (const auto &bb : function) {
-            auto all_insts = bb->getAllInsts();
-            for (const auto &inst : all_insts) {
-                auto uselist = inst->getUseList();
-                for (const auto &use : uselist) {
-                    auto user = std::dynamic_pointer_cast<Instruction>(use->getUser());
+            for (const auto &inst : bb->all_insts()) {
+                for (const auto &user : inst->inst_users()) {
                     if (user->getOpcode() != OP::PHI) {
                         if ((bb == user->getParent() && inst->getIndex() > user->getIndex()) ||
-                            !domtree.ADomB(bb.get(), user->getParent().get())) {
+                            !domtree.ADomB(bb, user->getParent())) {
                             Logger::logCritical("[VerifyPass]: Instruction '", inst->getName(),
                                                 "' does not dominate its use in '", user->getName(), "'.");
                             ++fatal_error_cnt;
@@ -196,8 +177,26 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                 }
             }
         }
-    } else
-        Logger::logWarning("[VerifyPass]: Skipped some check due to previous fatal error(s).");
+    }
+
+    // Check loop info
+    if (fatal_error_cnt == 0) {
+        auto loop_info = fam.getResult<LoopAnalysis>(function);
+        for (const auto &top_level : loop_info) {
+            auto lpdfv = top_level->getDFVisitor();
+            for (const auto &loop : lpdfv) {
+                for (const auto &bb : loop->blocks()) {
+                    for (auto p = loop; p != nullptr; p = p->getParent()) {
+                        if (!p->contains(bb)) {
+                            Logger::logCritical("[VerifyPass]: BasicBlock '", bb->getName(), "' in '",
+                                                loop->getHeader()->getName(), "'. But is not in loop '",
+                                                p->getHeader()->getName(), "'.");
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     if (fatal_error_cnt != 0) {
         Logger::logCritical("[VerifyPass] on '", function.getName(), "': Found ", fatal_error_cnt, " fatal error(s).");
@@ -205,6 +204,6 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
             std::abort();
     }
 
-    return PM::PreservedAnalyses::all();
+    return PreserveAll();
 }
 } // namespace IR

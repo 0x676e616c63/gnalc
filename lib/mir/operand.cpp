@@ -13,47 +13,123 @@ std::string PreColedOP::toString() const {
     return str;
 }
 
-void BindOnVirOP::setColor(unsigned int newcolor) {
-    if (bank == RegisterBank::gpr)
+std::string BindOnVirOP::toString() const {
+    std::string str = getName();
 
-        color = static_cast<CoreRegister>(newcolor);
-
-    else if (bank == RegisterBank::gprnopc) {
-
-        Err::gassert(static_cast<CoreRegister>(newcolor) != CoreRegister::pc,
-                     "MIR::BindOnVirOP::setColor(unsigned int): color "
-                     "assignment conflict!");
-
-        color = static_cast<CoreRegister>(newcolor);
-
-    } else if (bank == RegisterBank::spr)
-
-        color = static_cast<FPURegister>(newcolor);
-
-    else if (bank == RegisterBank::dpr) {
-        /// @note to be continued
+    if (bank == RegisterBank::gpr && std::get<CoreRegister>(color) != CoreRegister::none) {
+        str += ":$" + enum_name(std::get<CoreRegister>(color));
+    } else if (bank == RegisterBank::spr && std::get<FPURegister>(color) != FPURegister::none) {
+        str += ":$" + enum_name(std::get<FPURegister>(color));
+    } else {
+        str += ':' + enum_name(bank);
     }
+
+    ///@todo dpr, qpr...
+
+    return str;
 }
 
-std::string BindOnVirOP::toString() const {
+std::string BaseADROP::toString() const {
+    /// %1:gpr(#Runtime + [varOffset] + 16)
     std::string str = getName() + ':' + enum_name(bank);
+
+    str += "(#Rt";
+
+    if (!varOffset.expired() && varOffset.lock().get() == this) {
+        auto base = varOffset.lock(); // self
+
+        if (std::get<CoreRegister>(base->getColor()) != CoreRegister::none) // 一定是gpr
+            str += ": $" + enum_name(std::get<CoreRegister>(base->getColor()));
+
+        if (constOffset)
+            str += " + " + std::to_string(constOffset);
+
+        str += ')';
+        return str;
+    }
+
+    if (!varOffset.expired())
+        str += ": " + varOffset.lock()->toString();
+
+    if (constOffset)
+        str += " + " + std::to_string(constOffset);
+
+    str += ")";
 
     return str;
 }
 
 std::string GlobalADROP::toString() const {
-    /// %1:gpr(%global.aaa + 16)
+    /// %1:gpr(#Global.aaa + [varOffset] + 16)
+
     std::string str = getName() + ':' + enum_name(bank);
-    str += "(%global." + global_name;
-    str += " + " + std::to_string(constOffset) + ')';
+
+    str += "(#Glo." + global_name;
+
+    // 元始天尊
+    if (!varOffset.expired() && varOffset.lock().get() == this) {
+        auto base = varOffset.lock(); // self
+
+        if (std::get<CoreRegister>(base->getColor()) != CoreRegister::none) // 一定是gpr
+            str += ": $" + enum_name(std::get<CoreRegister>(base->getColor()));
+
+        if (constOffset)
+            str += " + " + std::to_string(constOffset);
+
+        str += ')';
+        return str;
+    }
+
+    if (!varOffset.expired()) {
+        auto varPtr = varOffset.lock();
+
+        if (std::get<CoreRegister>(varPtr->getColor()) != CoreRegister::none)
+            str += ": $" + enum_name(std::get<CoreRegister>(varPtr->getColor()));
+        else
+            str += ": " + varPtr->getName();
+    }
+
+    if (constOffset)
+        str += " + " + std::to_string(constOffset);
+
+    str += ")";
+
     return str;
 }
 
 std::string StackADROP::toString() const {
-    /// %1:gpr(%stack.bbb + 16)
+    /// %1:gpr(#Stack.bbb + [varOffset] + 16)
     std::string str = getName() + ':' + enum_name(bank);
-    str += "(%stack." + std::to_string(idx);
-    str += " + " + std::to_string(constOffset) + ')';
+
+    str += "(#Stk." + std::to_string(obj->getId());
+
+    if (!varOffset.expired() && varOffset.lock().get() == this) {
+        auto base = varOffset.lock(); // self
+
+        if (std::get<CoreRegister>(base->getColor()) != CoreRegister::none) // 一定是gpr
+            str += " + $" + enum_name(std::get<CoreRegister>(base->getColor()));
+
+        if (constOffset)
+            str += " + " + std::to_string(constOffset);
+
+        str += ')';
+        return str;
+    }
+
+    if (!varOffset.expired()) {
+        // could be sp/r7
+        auto varPtr = getBase();
+
+        if (std::get<CoreRegister>(varPtr->getColor()) != CoreRegister::none)
+            str += " + $" + enum_name(std::get<CoreRegister>(varPtr->getColor()));
+        else
+            str += "+ " + varPtr->getName();
+    }
+    if (constOffset)
+        str += " + " + std::to_string(constOffset);
+
+    str += ")";
+
     return str;
 }
 

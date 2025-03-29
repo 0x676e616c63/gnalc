@@ -11,29 +11,33 @@
 
 namespace IR {
 class LoopAnalysis;
-
+class LoopInfo;
 class Loop : public std::enable_shared_from_this<Loop> {
     friend class LoopAnalysis;
-    std::vector<std::shared_ptr<Loop>> sub_loops;
-    std::list<BasicBlock*> blocks; // First is the header
-    std::set<const BasicBlock*> blockset;
-    std::weak_ptr<Loop> parent;
+    friend class LoopInfo;
+    std::vector<pLoop> sub_loops;
+    std::list<BasicBlock *> loop_blocks; // First is the header
+    std::set<const BasicBlock *> blockset;
+    wpLoop parent;
 
-    void setParent(const std::shared_ptr<Loop>& p);
+    void setParent(const pLoop &p);
+
 public:
     struct SubLoopsGetter {
-        auto operator()(const std::shared_ptr<Loop> &node) {
-            return node->getSubLoops();
-        }
+        auto operator()(const pLoop &node) { return node->getSubLoops(); }
     };
-    using LoopBFVisitor = Util::GenericBFVisitor<std::shared_ptr<Loop>, SubLoopsGetter>;
-    template<Util::DFVOrder order>
-    using LoopDFVisitor = Util::GenericDFVisitor<std::shared_ptr<Loop>, SubLoopsGetter, order>;
+    using LoopBFVisitor = Util::GenericBFVisitor<pLoop, SubLoopsGetter>;
+    template <Util::DFVOrder order> using LoopDFVisitor = Util::GenericDFVisitor<pLoop, SubLoopsGetter, order>;
 
     using iterator = decltype(sub_loops)::iterator;
     using const_iterator = decltype(sub_loops)::const_iterator;
     using reverse_iterator = decltype(sub_loops)::reverse_iterator;
     using const_reverse_iterator = decltype(sub_loops)::const_reverse_iterator;
+
+    using block_iterator = decltype(loop_blocks)::iterator;
+    using block_const_iterator = decltype(loop_blocks)::const_iterator;
+    using block_reverse_iterator = decltype(loop_blocks)::reverse_iterator;
+    using block_const_reverse_iterator = decltype(loop_blocks)::const_reverse_iterator;
 
     const_iterator begin() const;
     const_iterator end() const;
@@ -49,59 +53,108 @@ public:
     const_reverse_iterator crbegin() const;
     const_reverse_iterator crend() const;
 
-    auto getBFVisitor() {
-        return LoopBFVisitor{ shared_from_this() };
+    block_const_iterator block_begin() const;
+    block_const_iterator block_end() const;
+    block_iterator block_begin();
+    block_iterator block_end();
+    block_const_iterator block_cbegin() const;
+    block_const_iterator block_cend() const;
+
+    block_const_reverse_iterator block_rbegin() const;
+    block_const_reverse_iterator block_rend() const;
+    block_reverse_iterator block_rbegin();
+    block_reverse_iterator block_rend();
+    block_const_reverse_iterator block_crbegin() const;
+    block_const_reverse_iterator block_crend() const;
+
+    auto blocks() const { return Util::make_iterator_range(block_begin(), block_end()); }
+
+    auto getBFVisitor() { return LoopBFVisitor{shared_from_this()}; }
+
+    template <Util::DFVOrder order = Util::DFVOrder::PreOrder> auto getDFVisitor() {
+        return LoopDFVisitor<order>{shared_from_this()};
     }
 
-    template<Util::DFVOrder order = Util::DFVOrder::PreOrder>
-    auto getDFVisitor() {
-        return LoopDFVisitor<order>{ shared_from_this() };
-    }
+    explicit Loop(BasicBlock *bb);
 
-    explicit Loop(BasicBlock* bb);
+    pLoop getParent() const;
+    pFunc getParentFunction() const;
 
-    std::shared_ptr<Loop> getParent() const;
+    const std::set<const BasicBlock *>& getBlockSet() const;
+    bool contains(const BasicBlock *bb) const;
+    bool contains(const Loop *loop) const;
+    bool contains(const pBlock &bb) const;
+    bool contains(const pLoop &loop) const;
+    pBlock getHeader() const;
+    BasicBlock *getRawHeader() const;
+    pBlock getPreHeader() const;
+    BasicBlock *getRawPreHeader() const;
 
-    bool contains(const BasicBlock* bb) const;
-    BasicBlock* getHeader() const;
-    BasicBlock* getPreHeader() const;
-
-    bool isLatch(const BasicBlock* bb) const;
+    bool isLatch(const BasicBlock *bb) const;
+    bool isLatch(const pBlock &bb) const;
 
     // Note that an exiting block is a block which points to the exit block.
     // In other words, the exiting block is in the loop.
-    bool isExiting(const BasicBlock* bb) const;
+    bool isExiting(const BasicBlock *bb) const;
+    bool isExiting(const pBlock &bb) const;
 
-    std::set<BasicBlock*> getExitBlocks() const;
+    // Note that the exit block is not a part of the loop.
+    bool isExit(const BasicBlock *bb) const;
+    bool isExit(const pBlock &bb) const;
+
+    std::set<pBlock> getExitingBlocks() const;
+    std::set<BasicBlock *> getRawExitingBlocks() const;
+
+    std::set<pBlock> getExitBlocks() const;
+    std::set<BasicBlock *> getRawExitBlocks() const;
 
     // Note that multiple Latches will become one after LoopSimplify
-    std::vector<BasicBlock*> getLatches() const;
+    std::vector<pBlock> getLatches() const;
+    std::vector<BasicBlock *> getRawLatches() const;
     // If there is only one latch, return it.
-    BasicBlock* getLatch() const;
+    pBlock getLatch() const;
+    BasicBlock *getRawLatch() const;
 
     bool isOutermost() const;
     bool isInnermost() const;
-    std::shared_ptr<Loop> getOutermostLoop();
+    pLoop getOutermostLoop();
 
-    const std::vector<std::shared_ptr<Loop>>& getSubLoops() const;
+    const std::vector<pLoop> &getSubLoops() const;
 
-    const std::list<BasicBlock*>& getBlocks() const;
+    const std::list<BasicBlock *> &getRawBlocks() const;
+    std::vector<pBlock> getBlocks() const;
 
     size_t getLoopDepth() const;
 
     bool hasDedicatedExits() const;
     bool isSimplifyForm() const;
     bool isRotatedForm() const;
+    bool isLCSSAForm() const;
+    bool isRecursivelyLCSSAForm(const LoopInfo &loop_info) const;
 
-    bool delBlockForCurrLoop(const BasicBlock* bb);
-    void addBlock(BasicBlock* bb);
-    void moveToHeader(const BasicBlock* bb);
+    bool isLoopInvariant(const Value *val) const;
+    bool isLoopInvariant(const pVal &val) const;
+    bool isAllOperandsLoopInvariant(const Instruction *inst) const;
+    bool isAllOperandsLoopInvariant(const pInst &inst) const;
+
+    void moveToHeader(const BasicBlock *bb);
+    void moveToHeader(const pBlock &bb);
+
+    size_t getInstCount() const;
+
+private:
+    // These functions won't update LoopInfo, client should call LoopInfo's addBlock/delBlock
+    void addBlock(BasicBlock *bb);
+    bool delBlockForCurrLoop(BasicBlock *bb);
+    bool delSubLoop(const Loop* loop);
+    void addSubLoop(const pLoop &loop);
 };
 
 class LoopInfo {
     friend class LoopAnalysis;
-    std::vector<std::shared_ptr<Loop>> top_level_loops;
-    std::map<const BasicBlock*, std::shared_ptr<Loop>> loop_map;
+    std::vector<pLoop> top_level_loops;
+    std::map<const BasicBlock *, pLoop> loop_map;
+
 public:
     using iterator = decltype(top_level_loops)::iterator;
     using const_iterator = decltype(top_level_loops)::const_iterator;
@@ -122,11 +175,25 @@ public:
     const_reverse_iterator crbegin() const;
     const_reverse_iterator crend() const;
 
-    std::shared_ptr<Loop> getLoopFor(const BasicBlock* bb) const;
-    bool isLoopHeader(const BasicBlock* bb) const;
-    const std::vector<std::shared_ptr<Loop>>& getTopLevelLoops() const;
+    pLoop getLoopFor(const BasicBlock *bb) const;
+    pLoop getLoopFor(const pBlock &bb) const;
+    bool isLoopHeader(const BasicBlock *bb) const;
+    bool isLoopHeader(const pBlock &bb) const;
+    const std::vector<pLoop> &getTopLevelLoops() const;
 
-    bool delBlock(const BasicBlock* bb);
+    bool delBlock(BasicBlock *bb);
+    bool delBlock(const pBlock &bb);
+
+    // Deletes a loop and all its blocks
+    bool delLoop(Loop *loop);
+    bool delLoop(const pLoop &loop);
+
+    // Break up a loop, without deleting its blocks
+    bool breakLoop(Loop *loop);
+    bool breakLoop(const pLoop& loop);
+
+    void addBlock(const pLoop &loop, BasicBlock *bb);
+    void addBlock(const pLoop &loop, const pBlock &bb);
 };
 
 class LoopAnalysis : public PM::AnalysisInfo<LoopAnalysis> {

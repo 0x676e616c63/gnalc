@@ -2,14 +2,13 @@
 
 using namespace MIR;
 
-std::string MIR::FunctionInfo::toString() const {
+std::string FunctionInfo::toString() const {
     std::string str;
 
     str += "maxalignment: " + std::to_string(maxAlignment) + '\n';
 
     if (hasTailCall.first)
-        str += "hasTailCall: true - @" + hasTailCall.second.lock()->getName() +
-               '\n';
+        str += "hasTailCall: true - @" + hasTailCall.second.lock()->getName() + '\n';
     else
         str += "hasTailCall: false\n";
 
@@ -19,22 +18,12 @@ std::string MIR::FunctionInfo::toString() const {
         str += '\n';
     }
 
-    str += "constreferance: \n";
-    for (const auto &Const : ConstPool) {
-        str += Const->toString();
-        str += '\n';
-    }
-
-    str += "liveins: \n";
-    for (const auto &arg : LiveIns) {
-        str += arg->toString();
-        str += '\n';
-    }
+    str += "spilltimes: " + std::to_string(spilltimes) + '\n';
 
     return str;
 }
 
-std::string MIR::Function::toString() const {
+std::string Function::toString() const {
     std::string str;
 
     str += "name: " + getName() + '\n';
@@ -45,8 +34,24 @@ std::string MIR::Function::toString() const {
 
     for (const auto &basicblock : blocks) {
         str += "    ";
-        str += basicblock->toString();
-        str += '\n';
+        str += basicblock->toString() + '\n';
+    }
+
+    return str;
+}
+
+std::string Function::toString_Debug() {
+    std::string str;
+
+    str += "name: " + getName() + '\n';
+
+    str += info.toString();
+
+    str += "body:\n";
+
+    for (auto &basicblock : blocks) {
+        str += "    ";
+        str += basicblock->toString_debug(info.liveinfo.liveIn[basicblock], info.liveinfo.liveOut[basicblock]) + '\n';
     }
 
     return str;

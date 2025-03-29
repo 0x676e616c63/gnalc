@@ -16,18 +16,17 @@ int main(int argc, char *argv[]) {
     auto print_help = [&argv] {
         println("Usage: {} [options]", argv[0]);
         println("Options:");
-        println("  -a, --all                : Run all tests, regardless of "
-                "failure.");
-        println("  -b, --backend            : Test backend.");
-        println("  -s, --skip [name_prefix] : Skip test whose name has such "
-                "prefix.");
-        println("  -r, --run  [name_prefix] : Only run test whose name has "
-                "such prefix.");
-        println("  -p, --para [param]       : Run with gnalc parameter.");
-        println("  -h, --help               : Print this help and exit.");
+        println("  -a, --all                  Run all tests, regardless of failure.");
+        println("  -b, --backend              Test backend.");
+        println("  -s, --skip   [name_prefix] Skip test whose name has such prefix.");
+        println("  -r, --run    [name_prefix] Only run test whose name has such prefix.");
+        println("  -e, --resume [name_prefix] Start from test whose name have such prefix.");
+        println("  -p, --para [param]         Run with gnalc parameter.");
+        println("  -h, --help                 Print this help and exit.");
     };
     RunSet skip;
     SkipSet run;
+    std::string resume_pattern;
     std::string gnalc_params;
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
@@ -59,6 +58,14 @@ int main(int argc, char *argv[]) {
             }
             run.emplace_back(Rule{argv[i + 1], {}});
             ++i;
+        } else if (arg == "--resume" || arg == "-e") {
+            if (i + 1 >= argc || argv[i + 1][0] == '-') {
+                println("Error: Expected a name.");
+                print_help();
+                return -1;
+            }
+            resume_pattern = argv[i + 1];
+            ++i;
         } else if (arg == "--help" || arg == "-h") {
             print_help();
             return 0;
@@ -74,6 +81,7 @@ int main(int argc, char *argv[]) {
     println("GNALC test started.");
     size_t passed = 0;
     size_t curr_test_cnt = 0;
+    bool have_resumed = resume_pattern.empty();
     std::vector<std::string> failed_tests;
 
     create_directories(cfg::global_temp_dir);
@@ -82,39 +90,42 @@ int main(int argc, char *argv[]) {
 
     for (auto &&curr_test_dir : cfg::subdirs) {
         auto test_files = gather_test_files(curr_test_dir, run, skip);
+        if (test_files.empty())
+            continue;
 
         auto curr_temp_dir = cfg::global_temp_dir + "/" + curr_test_dir;
         create_directories(curr_temp_dir);
 
-
         for (const auto &sy : test_files) {
+            if (!have_resumed) {
+                if (!begins_with(sy.path().stem(), resume_pattern))
+                    continue;
+                have_resumed = true;
+            }
+
             print("<{}> Test {}", curr_test_cnt++, sy.path().stem());
             // Expected
-            auto testcase_out = sy.path().parent_path().string() + "/" +
-                    sy.path().stem().string() + ".out";
+            auto testcase_out = sy.path().parent_path().string() + "/" + sy.path().stem().string() + ".out";
             auto expected_syout = read_file(testcase_out);
             fix_newline(expected_syout);
 
-
             // Run
-            TestData data{
-                .sy = sy,
-                .sylib = sylib_to_link,
-                .temp_dir = curr_temp_dir,
-                .mode_id = "gnalc_test"
-            };
+            TestData data{.sy = sy, .sylib = sylib_to_link, .temp_dir = curr_temp_dir, .mode_id = "gnalc_test"};
 
             if (cfg::only_frontend) {
-                auto gnalc_irgen = [&gnalc_params](const std::string& newsy, const std::string& outll) {
-                    return format("{} -S {} -o {} -emit-llvm{}",
-                                            cfg::gnalc_path, newsy, outll, gnalc_params);
+                auto gnalc_irgen = [&gnalc_params](const std::string &newsy, const std::string &outll) {
+#ifndef GNALC_TEST_GGC
+                    return format("{} -S {} -o {} -emit-llvm{}", cfg::gnalc_path, newsy, outll, gnalc_params);
+#else
+                    auto outgg = outll+".gg";
+                    return format("{} -S -emit-llvm {} -o {} && ../ggc -S -emit-llvm {} -o {}{}", cfg::gnalc_path, newsy, outgg, outgg, outll, gnalc_params);
+#endif
                 };
                 data.ir_asm_gen = gnalc_irgen;
 
             } else {
-                auto gnalc_asmgen = [&gnalc_params](const std::string& newsy, const std::string& outs) {
-                    return format("{} -S{} -o {} {}",
-                           cfg::gnalc_path, gnalc_params, outs, newsy);
+                auto gnalc_asmgen = [&gnalc_params](const std::string &newsy, const std::string &outs) {
+                    return format("{} -S{} -o {} {}", cfg::gnalc_path, gnalc_params, outs, newsy);
                     // Test
                     // return format("arm-linux-gnueabihf-gcc -S -o {} -xc {}", outs, newsy);
                 };
@@ -153,8 +164,7 @@ finish:
         println("Failed tests: ");
         for (const auto &f : failed_tests)
             println("|  {}", f);
-        println("[\033[0;32;31mTEST FAILED\033[m] {} tests failed!",
-                failed_tests.size());
+        println("[\033[0;32;31mTEST FAILED\033[m] {} tests failed!", failed_tests.size());
         return -1;
     }
     return 0;

@@ -24,9 +24,8 @@ private:
     bool is_sylib;
 
 public:
-    FunctionDecl(std::string name_, std::vector<std::shared_ptr<Type>> params,
-                 std::shared_ptr<Type> ret_type, bool is_va_arg_,
-                 bool is_builtin_, bool is_sylib_);
+    FunctionDecl(std::string name_, std::vector<pType> params, pType ret_type, bool is_va_arg_, bool is_builtin_,
+                 bool is_sylib_);
 
     void accept(IRVisitor &visitor) override;
 
@@ -42,9 +41,8 @@ class FormalParam : public Value {
     size_t index;
 
 public:
-    explicit FormalParam(std::string name, std::shared_ptr<Type> ty, size_t index_)
-        : Value(std::move(name), std::move(ty), ValueTrait::FORMAL_PARAMETER),
-          index(index_) {}
+    explicit FormalParam(std::string name, pType ty, size_t index_)
+        : Value(std::move(name), std::move(ty), ValueTrait::FORMAL_PARAMETER), index(index_) {}
 
     size_t getIndex() const { return index; }
     void setIndex(size_t index_) { index = index_; }
@@ -52,86 +50,76 @@ public:
     void accept(IRVisitor &visitor) override;
 
 private:
-    std::shared_ptr<Value> cloneImpl() const override {
-        return std::make_shared<FormalParam>(getName(), getType(), index);
-    }
+    pVal cloneImpl() const override { return std::make_shared<FormalParam>(getName(), getType(), index); }
 };
 
-struct BBSuccGetter {
-    auto operator()(const std::shared_ptr<BasicBlock>& bb)
-    {
-        return bb->getNextBB();
-    }
-};
-
-class Function : public FunctionDecl,
-                 public std::enable_shared_from_this<Function> {
+class Function : public FunctionDecl {
     friend class Parser::CFGBuilder;
+
 private:
-    std::vector<std::shared_ptr<FormalParam>> params;
-    std::list<std::shared_ptr<BasicBlock>> blks;
+    std::vector<pFormalParam> params;
+    std::list<pBlock> blks;
     ConstantPool *constant_pool;
 
     // 后面需要再说
     // int vreg_idx = 0;
 public:
-    using CFGBFVisitor = Util::GenericBFVisitor<std::shared_ptr<BasicBlock>, BBSuccGetter>;
-    template<Util::DFVOrder order>
-    using CFGDFVisitor = Util::GenericDFVisitor<std::shared_ptr<BasicBlock>, BBSuccGetter, order>;
-
     using iterator = decltype(blks)::iterator;
     using const_iterator = decltype(blks)::const_iterator;
     using reverse_iterator = decltype(blks)::reverse_iterator;
     using const_reverse_iterator = decltype(blks)::const_reverse_iterator;
 
-    Function(std::string name_,
-             const std::vector<std::shared_ptr<FormalParam>> &params,
-             std::shared_ptr<Type> ret_type, ConstantPool *pool);
+    Function(std::string name_, const std::vector<pFormalParam> &params, pType ret_type, ConstantPool *pool);
 
-    void addBlock(iterator it, std::shared_ptr<BasicBlock> blk);
-    void addBlock(size_t index, std::shared_ptr<BasicBlock> blk);
-    void addBlock(std::shared_ptr<BasicBlock> blk);
+    void addBlock(iterator it, pBlock blk);
+    void addBlock(size_t index, pBlock blk);
+    void addBlock(pBlock blk);
 
     // Add the given block as the entry block
     // Caller should take care of the CFG.
-    void addBlockAsEntry(const std::shared_ptr<BasicBlock>& blk);
+    void addBlockAsEntry(const pBlock &blk);
 
     // No check. Only deletes the first matched
-    bool delFirstOfBlock(const std::shared_ptr<BasicBlock> &blk);
+    bool delFirstOfBlock(const pBlock &blk);
 
     // Delete a Block
     // Requires the target block have no predecessors or successors
-    bool delBlock(const std::shared_ptr<BasicBlock> &blk);
+    bool delBlock(const pBlock &blk);
 
     // Delete blocks that satisfied: `pred(block) == true`
     // Requires the target block have no predecessors or successors
     // In other word, If pred(a) == true, pred(a->user->getPre/NextBB()) must be true
     template <typename Pred> bool delBlockIf(Pred pred) {
+        // Do check first because after erasing the predecessors might get expired.
+        for (const auto &bb : blks) {
+            if (pred(bb)) {
+                for (const auto &prebb : bb->preds()) {
+                    Err::gassert(pred(prebb), "Cannot delete a block that have predecessors");
+                }
+                for (const auto &nextbb : bb->succs()) {
+                    Err::gassert(pred(nextbb), "Cannot delete a block that have successors");
+                }
+            }
+        }
+
         bool found = false;
         for (auto it = blks.begin(); it != blks.end();) {
             if (pred(*it)) {
-                for (const auto &prebb : (*it)->getPreBB()) {
-                    Err::gassert(pred(prebb),
-                        "Cannot delete a block that have predecessors");
-                }
-                for (const auto &nextbb : (*it)->getNextBB()) {
-                    Err::gassert(pred(nextbb),
-                        "Cannot delete a block that have successors");
-                }
                 (*it)->setParent(nullptr);
                 it = blks.erase(it);
                 found = true;
             } else
                 ++it;
         }
-        if (found) updateBBIndex();
+        if (found)
+            updateBBIndex();
         return found;
     }
 
-    const std::vector<std::shared_ptr<FormalParam>> &getParams() const;
+    const std::vector<pFormalParam> &getParams() const;
 
     // usually we can use range-based for instead of this
-    const std::list<std::shared_ptr<BasicBlock>> &getBlocks() const;
+    const std::list<pBlock> &getBlocks() const;
 
     const_iterator begin() const;
     const_iterator end() const;
@@ -154,38 +142,35 @@ public:
 
     ConstantPool &getConstantPool();
 
-    template<typename T>
-    auto getConst(T&& val) {
-        return constant_pool->getConst(std::forward<T>(val));
-    }
+    template <typename T> auto getConst(T &&val) { return constant_pool->getConst(std::forward<T>(val)); }
 
     void accept(IRVisitor &visitor) override;
 
-    auto getBFVisitor() const {
-        return CFGBFVisitor(blks.front());
+    auto getBFVisitor() const { return BasicBlock::CFGBFVisitor(blks.front()); }
+
+    template <Util::DFVOrder order = Util::DFVOrder::PreOrder> auto getDFVisitor() const {
+        return BasicBlock::CFGDFVisitor<order>(blks.front());
     }
 
-    template<Util::DFVOrder order = Util::DFVOrder::PreOrder>
-    auto getDFVisitor() const {
-        return CFGDFVisitor<order>(blks.front());
-    }
-
-    std::vector<std::shared_ptr<BasicBlock>> getExitBBs() const;
+    std::vector<pBlock> getExitBBs() const;
 
     size_t getInstCount() const;
+
+    void updateCFG();
+    void updateAndCheckCFG();
 
 private:
     void updateBBIndex();
     void updateAllIndex();
 
-    std::shared_ptr<Value> cloneImpl() const override;
+    pVal cloneImpl() const override;
 };
 
 // 基本块划分前的过渡
 // IRGenerator 生成之后， CFGBuilder 之前
 class LinearFunction : public Function {
 private:
-    std::vector<std::shared_ptr<Instruction>> insts;
+    std::vector<pInst> insts;
 
 public:
     using iterator = decltype(insts)::iterator;
@@ -193,13 +178,11 @@ public:
     using reverse_iterator = decltype(insts)::reverse_iterator;
     using const_reverse_iterator = decltype(insts)::const_reverse_iterator;
 
-    LinearFunction(std::string name_,
-                   const std::vector<std::shared_ptr<FormalParam>> &params,
-                   std::shared_ptr<Type> ret_type, ConstantPool *pool)
+    LinearFunction(std::string name_, const std::vector<pFormalParam> &params, pType ret_type, ConstantPool *pool)
         : Function(std::move(name_), params, std::move(ret_type), pool) {}
 
     // usually we can use range-based for instead of these
-    const std::vector<std::shared_ptr<Instruction>> &getInsts() const;
+    const std::vector<pInst> &getInsts() const;
 
     const_iterator begin() const;
     const_iterator end() const;
@@ -215,8 +198,8 @@ public:
     const_reverse_iterator crbegin() const;
     const_reverse_iterator crend() const;
 
-    void addInst(std::shared_ptr<Instruction> inst);
-    void appendInsts(std::vector<std::shared_ptr<Instruction>> insts_);
+    void addInst(pInst inst);
+    void appendInsts(std::vector<pInst> insts_);
 
     void accept(IRVisitor &visitor) override;
 };

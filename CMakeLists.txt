@@ -11,7 +11,8 @@ option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 #      - https://github.com/vadimcn/codelldb/issues/415
 #      - https://bugzilla.redhat.com/show_bug.cgi?id=1740927
 # Well, there are still some bugs, but fewer than before.
-add_compile_options("-g" "-fstandalone-debug")
+add_compile_options("-g" "-fstandalone-debug" )
+add_link_options("-rdynamic")
 
 if (ENABLE_ASAN)
         message(STATUS "AddressSanitizer enabled")
@@ -34,6 +35,17 @@ aux_source_directory(lib/ir/passes/helpers GNALC_IR_SRC)
 aux_source_directory(lib/ir/passes/transforms GNALC_IR_SRC)
 aux_source_directory(lib/ir/passes/utilities GNALC_IR_SRC)
 
+# MIR
+aux_source_directory(lib/mir GNALC_MIR_SRC)
+aux_source_directory(lib/mir/builder GNALC_MIR_SRC)
+aux_source_directory(lib/mirtools GNALC_MIR_SRC)
+aux_source_directory(lib/mir/instruction GNALC_MIR_SRC)
+aux_source_directory(lib/mir/SIMDinstruction GNALC_MIR_SRC)
+aux_source_directory(lib/mir/passes GNALC_MIR_SRC)
+aux_source_directory(lib/mir/passes/analysis GNALC_MIR_SRC)
+aux_source_directory(lib/mir/passes/transforms GNALC_MIR_SRC)
+aux_source_directory(lib/mir/passes/utilities GNALC_MIR_SRC)
+
 # Pass Manager
 aux_source_directory(lib/pass_manager GNALC_PM_SRC)
 
@@ -46,11 +58,25 @@ aux_source_directory(lib/utils GNALC_UTILS_SRC)
 # BrainFk Extension
 aux_source_directory(lib/codegen/brainfk GNALC_EXT_BFBKD_SRC)
 
+# GGC Extension
+aux_source_directory(lib/ggc GNALC_EXT_GGC_SRC)
+
 # ALL
 set(GNALC_SRC
         ${GNALC_LEXER_SRC}
         ${GNALC_PARSER_SRC}
         ${GNALC_IR_SRC}
+        ${GNALC_MIR_SRC}
+        ${GNALC_PM_SRC}
+        ${GNALC_PTM_SRC}
+        ${GNALC_EXT_BFBKD_SRC}
+        ${GNALC_UTILS_SRC})
+
+# GGC
+set(GGC_SRC
+        ${GNALC_EXT_GGC_SRC}
+        ${GNALC_IR_SRC}
+        ${GNALC_MIR_SRC}
         ${GNALC_PM_SRC}
         ${GNALC_PTM_SRC}
         ${GNALC_EXT_BFBKD_SRC}
@@ -63,6 +89,10 @@ add_executable(bfhelper tools/driver/debug/bfhelper.cpp)
 
 # main driver
 add_executable(gnalc tools/driver/driver.cpp ${GNALC_SRC})
+
+# with GGC Extension
+add_executable(ggc tools/driver/driver.cpp ${GGC_SRC})
+target_compile_definitions(ggc PRIVATE GNALC_EXTENSION_GGC)
 
 enable_testing()
 add_subdirectory(test)

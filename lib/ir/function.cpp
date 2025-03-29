@@ -2,16 +2,14 @@
 #include "../../include/ir/visitor.hpp"
 
 #include <algorithm>
+#include <map>
 #include <numeric>
 
 namespace IR {
-FunctionDecl::FunctionDecl(std::string name_,
-                           std::vector<std::shared_ptr<Type>> params,
-                           std::shared_ptr<Type> ret_type, bool is_va_arg_,
+FunctionDecl::FunctionDecl(std::string name_, std::vector<pType> params, pType ret_type, bool is_va_arg_,
                            bool is_builtin_, bool is_sylib_)
-    : Value( std::move(name_),
-          makeFunctionType(std::move(params), std::move(ret_type), is_va_arg_),
-          ValueTrait::FUNCTION),
+    : Value(std::move(name_), makeFunctionType(std::move(params), std::move(ret_type), is_va_arg_),
+            ValueTrait::FUNCTION),
       is_builtin(is_builtin_), is_sylib(is_sylib_) {
     Err::gassert(!is_builtin_ || !is_sylib_);
 }
@@ -25,49 +23,46 @@ bool FunctionDecl::isBuiltin() const { return is_builtin; }
 FunctionDecl::~FunctionDecl() = default;
 void FormalParam::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
-std::vector<std::shared_ptr<Type>>
-get_params_type(const std::vector<std::shared_ptr<FormalParam>> &p) {
-    std::vector<std::shared_ptr<Type>> params_type;
-    std::transform(p.begin(), p.end(), std::back_inserter(params_type),
-                   [](auto &&v) { return v->getType(); });
+std::vector<pType> get_params_type(const std::vector<pFormalParam> &p) {
+    std::vector<pType> params_type;
+    std::transform(p.begin(), p.end(), std::back_inserter(params_type), [](auto &&v) { return v->getType(); });
     return params_type;
 }
 
-Function::Function(std::string name_, const std::vector<std::shared_ptr<FormalParam>> &params_,
-                   std::shared_ptr<Type> ret_type, ConstantPool *pool_)
+Function::Function(std::string name_, const std::vector<pFormalParam> &params_, pType ret_type, ConstantPool *pool_)
     : FunctionDecl(std::move(name_), get_params_type(params_), std::move(ret_type), false, false, false),
       params(params_), constant_pool(pool_) {}
 
-void Function::addBlock(iterator it, std::shared_ptr<BasicBlock> blk) {
+void Function::addBlock(iterator it, pBlock blk) {
     Err::gassert(blk->getParent() == nullptr, "BasicBlock already has parent.");
-    blk->setParent(shared_from_this());
+    blk->setParent(as<Function>());
     blks.insert(it, std::move(blk));
     updateBBIndex();
 }
 
-void Function::addBlock(size_t index, std::shared_ptr<BasicBlock> blk) {
+void Function::addBlock(size_t index, pBlock blk) {
     Err::gassert(blk->getParent() == nullptr, "BasicBlock already has parent.");
-    blk->setParent(shared_from_this());
+    blk->setParent(as<Function>());
     blks.insert(std::next(blks.begin(), static_cast<iterator::difference_type>(index)), std::move(blk));
     updateBBIndex();
 }
 
-void Function::addBlock(std::shared_ptr<BasicBlock> blk) {
+void Function::addBlock(pBlock blk) {
     Err::gassert(blk->getParent() == nullptr, "BasicBlock already has parent.");
     blk->index = blks.size();
-    blk->setParent(shared_from_this());
+    blk->setParent(as<Function>());
     blks.emplace_back(std::move(blk));
 }
 
-void Function::addBlockAsEntry(const std::shared_ptr<BasicBlock> &blk) {
+void Function::addBlockAsEntry(const pBlock &blk) {
     Err::gassert(blk->getParent() == nullptr, "BasicBlock already has parent.");
     blk->index = 0;
-    blk->setParent(shared_from_this());
+    blk->setParent(as<Function>());
     blks.insert(blks.begin(), blk);
     updateBBIndex();
 }
 
-bool Function::delFirstOfBlock(const std::shared_ptr<BasicBlock> &blk) {
+bool Function::delFirstOfBlock(const pBlock &blk) {
     for (auto it = blks.begin(); it != blks.end(); ++it) {
         if (*it == blk) {
             blk->setParent(nullptr);
@@ -79,17 +74,13 @@ bool Function::delFirstOfBlock(const std::shared_ptr<BasicBlock> &blk) {
     return false;
 }
 
-bool Function::delBlock(const std::shared_ptr<BasicBlock> &blk) {
+bool Function::delBlock(const pBlock &blk) {
     return delBlockIf([&blk](auto &&b) { return b == blk; });
 }
 
-const std::vector<std::shared_ptr<FormalParam>> &Function::getParams() const {
-    return params;
-}
+const std::vector<pFormalParam> &Function::getParams() const { return params; }
 
-const std::list<std::shared_ptr<BasicBlock>> &Function::getBlocks() const {
-    return blks;
-}
+const std::list<pBlock> &Function::getBlocks() const { return blks; }
 
 Function::const_iterator Function::begin() const { return blks.begin(); }
 
@@ -117,10 +108,10 @@ Function::const_reverse_iterator Function::crend() const { return blks.crend(); 
 
 ConstantPool &Function::getConstantPool() { return *constant_pool; }
 
-std::vector<std::shared_ptr<BasicBlock>> Function::getExitBBs() const {
-    std::vector<std::shared_ptr<BasicBlock>> ret;
+std::vector<pBlock> Function::getExitBBs() const {
+    std::vector<pBlock> ret;
     for (const auto &bb : blks) {
-        if (bb->getNextBB().empty())
+        if (bb->getNumSuccs() == 0)
             ret.emplace_back(bb);
     }
     return ret;
@@ -131,6 +122,83 @@ size_t Function::getInstCount() const {
     for (const auto &bb : blks)
         ret += bb->getAllInstCount();
     return ret;
+}
+
+void Function::updateCFG() {
+    for (const auto &bb : blks) {
+        bb->pre_bb.clear();
+        bb->next_bb.clear();
+    }
+    for (auto blk_it = begin(); blk_it != end(); ++blk_it) {
+        if ((*blk_it)->getInsts().empty())
+            continue;
+        switch (auto end_inst = (*blk_it)->getTerminator(); end_inst->getOpcode()) {
+        case OP::BR: {
+            if (const auto inst = end_inst->as<BRInst>(); inst->isConditional()) {
+                linkBB(*blk_it, inst->getTrueDest());
+                linkBB(*blk_it, inst->getFalseDest());
+            } else {
+                linkBB(*blk_it, inst->getDest());
+            }
+            break;
+        }
+        case OP::RET:
+            break;
+        default:
+            auto next_blk = std::next(blk_it);
+            if (next_blk != end()) {
+                linkBB(*blk_it, *next_blk);
+            }
+            break;
+        }
+    }
+}
+
+void Function::updateAndCheckCFG() {
+    updateCFG();
+
+    // link完了之后，遍历基本块，查找空块和不可达的块并删除
+    for (auto it = begin(); it != end();) {
+        // 删除不可达块
+        if ((*it)->getNumPreds() == 0 && it != begin()) {
+            for (const auto &nextbb : (*it)->succs()) {
+                Util::WeakListDel(nextbb->pre_bb, *it);
+            }
+            it = blks.erase(it);
+            continue;
+        }
+        // 删除空块
+        if ((*it)->getInsts().empty()) {
+            // 遍历user去替换为他的prebb中的br
+            // 非结尾块的情况，prebb的br替换为惟一nextbb
+            if ((*it)->getNumSuccs() == 1) {
+                auto nxt = *(*it)->succ_begin();
+                for (const auto &prebb : (*it)->preds()) {
+                    if (auto brinst = prebb->getBRInst()) {
+                        Err::gassert(brinst != nullptr, "CFGBuilder::linker(): can't cast BRInst");
+                        brinst->replaceAllOperands(*it, nxt); // 改 br
+                    }
+                    Util::WeakListReplace(prebb->next_bb, *it, nxt); // 改nextbb
+                    Util::WeakListReplace(nxt->pre_bb, *it, prebb);  // 改prebb
+                }
+                it = blks.erase(it);
+            } else if ((*it)->getNumSuccs() == 0) {
+                // 结尾块
+                if (getType()->as<FunctionType>()->getRet()->as<BType>()->getInner() ==
+                    IRBTYPE::VOID) {
+                    (*it)->addInst(std::make_shared<RETInst>());
+                } else {
+                    Err::unreachable("CFGBuilder::linker(): invalid function type.");
+                }
+                ++it;
+            } else {
+                Err::unreachable("CFGBuilder::linker(): empty block has "
+                                 "multiple next block.");
+            }
+            continue;
+        }
+        ++it;
+    }
 }
 
 void Function::updateBBIndex() {
@@ -149,44 +217,42 @@ void Function::updateAllIndex() {
 }
 
 // FIXME: BB PARAM not available
-std::shared_ptr<Value> Function::cloneImpl() const {
+pVal Function::cloneImpl() const {
     // left is old, right is new
-    std::map<std::shared_ptr<BasicBlock>, std::shared_ptr<BasicBlock>> old2new_bb;
-    std::map<std::shared_ptr<Instruction>, std::shared_ptr<Instruction>> old2new_inst;
-    std::map<std::shared_ptr<FormalParam>, std::shared_ptr<FormalParam>> old2new_param;
+    std::map<pBlock, pBlock> old2new_bb;
+    std::map<pInst, pInst> old2new_inst;
+    std::map<pFormalParam, pFormalParam> old2new_param;
 
-    std::vector<std::shared_ptr<FormalParam>> cloned_params;
+    std::vector<pFormalParam> cloned_params;
     for (const auto &param : params) {
         auto cloned_param = makeClone(param);
         cloned_params.emplace_back(cloned_param);
         old2new_param[param] = cloned_param;
     }
 
-    auto cloned_fn = std::make_shared<Function>(getName(), cloned_params,
-        toFunctionType(getType())->getRet(), constant_pool);
+    auto cloned_fn =
+        std::make_shared<Function>(getName(), cloned_params, getType()->as<FunctionType>()->getRet(), constant_pool);
 
     for (const auto &blk : blks) {
         auto cloned_bb = std::make_shared<BasicBlock>(blk->getName() + ".cloned");
-        for (auto& phi : blk->getPhiInsts()) {
+        for (auto &phi : blk->phis()) {
             auto cloned_phi = makeClone(phi);
             cloned_bb->addPhiInst(cloned_phi);
             old2new_inst[phi] = cloned_phi;
         }
-        for (auto& inst : *blk) {
+        for (auto &inst : *blk) {
             auto cloned_inst = makeClone(inst);
             cloned_bb->addInst(cloned_inst);
             old2new_inst[inst] = cloned_inst;
         }
 
-        auto prebb = blk->getPreBB();
-        auto nxtbb = blk->getNextBB();
-        for (const auto& p : prebb)
+        for (const auto &p : blk->preds())
             cloned_bb->addPreBB(p);
-        for (const auto& n : nxtbb)
+        for (const auto &n : blk->succs())
             cloned_bb->addNextBB(n);
 
-        std::vector<std::shared_ptr<Value>> cloned_bbparams;
-        for (const auto& p : blk->getBBParams())
+        std::vector<pVal> cloned_bbparams;
+        for (const auto &p : blk->getBBParams())
             cloned_bbparams.emplace_back(makeClone(p));
         cloned_bb->setBBParam(cloned_bbparams);
 
@@ -194,28 +260,25 @@ std::shared_ptr<Value> Function::cloneImpl() const {
         cloned_fn->addBlock(cloned_bb);
     }
 
-    for (const auto& cloned_bb : cloned_fn->blks) {
-        for (auto& p : cloned_bb->pre_bb)
+    for (const auto &cloned_bb : cloned_fn->blks) {
+        for (auto &p : cloned_bb->pre_bb)
             p = old2new_bb[p.lock()];
-        for (auto& n : cloned_bb->next_bb)
+        for (auto &n : cloned_bb->next_bb)
             n = old2new_bb[n.lock()];
 
-        auto all_insts = cloned_bb->getAllInsts();
-        for (const auto& inst : all_insts) {
+        for (const auto &inst : cloned_bb->all_insts()) {
             auto operands = inst->getOperands();
-            for (const auto& use : operands) {
+            for (const auto &use : operands) {
                 auto usee = use->getValue();
                 if (usee->getVTrait() == ValueTrait::BASIC_BLOCK) {
-                    auto usee_blk = std::dynamic_pointer_cast<BasicBlock>(usee);
+                    auto usee_blk = usee->as<BasicBlock>();
                     Err::gassert(usee_blk != nullptr);
                     inst->replaceUse(use, old2new_bb[usee_blk]);
-                }
-                else if (usee->getVTrait() == ValueTrait::FORMAL_PARAMETER) {
-                    auto usee_fp = std::dynamic_pointer_cast<FormalParam>(usee);
+                } else if (usee->getVTrait() == ValueTrait::FORMAL_PARAMETER) {
+                    auto usee_fp = usee->as<FormalParam>();
                     inst->replaceUse(use, old2new_param[usee_fp]);
-                }
-                else if (usee->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
-                    auto usee_inst = std::dynamic_pointer_cast<Instruction>(usee);
+                } else if (usee->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
+                    auto usee_inst = usee->as<Instruction>();
                     Err::gassert(usee_inst != nullptr);
                     inst->replaceUse(use, old2new_inst[usee_inst]);
                 }
@@ -229,20 +292,13 @@ std::shared_ptr<Value> Function::cloneImpl() const {
 
 void Function::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
-void LinearFunction::addInst(std::shared_ptr<Instruction> inst) {
-    insts.emplace_back(std::move(inst));
+void LinearFunction::addInst(pInst inst) { insts.emplace_back(std::move(inst)); }
+
+void LinearFunction::appendInsts(std::vector<pInst> insts_) {
+    insts.insert(insts.end(), std::make_move_iterator(insts_.begin()), std::make_move_iterator(insts_.end()));
 }
 
-void LinearFunction::appendInsts(
-    std::vector<std::shared_ptr<Instruction>> insts_) {
-    insts.insert(insts.end(), std::make_move_iterator(insts_.begin()),
-                 std::make_move_iterator(insts_.end()));
-}
-
-const std::vector<std::shared_ptr<Instruction>> &
-LinearFunction::getInsts() const {
-    return insts;
-}
+const std::vector<pInst> &LinearFunction::getInsts() const { return insts; }
 
 LinearFunction::const_iterator LinearFunction::begin() const { return insts.begin(); }
 

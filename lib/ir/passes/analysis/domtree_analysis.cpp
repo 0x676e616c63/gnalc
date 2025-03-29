@@ -1,7 +1,6 @@
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
 #include "../../../../include/utils/logger.hpp"
 
-
 namespace IR {
 PM::UniqueKey DomTreeAnalysis::Key;
 PM::UniqueKey PostDomTreeAnalysis::Key;
@@ -21,7 +20,7 @@ PostDomTree PostDomTreeAnalysis::run(Function &f, FAM &fam) {
     if (is_exit_virtual) {
         // If the root is virtual, then it is linked to a virtual block that is going to destructs
         // when `exit = nullptr`
-        builder.domtree.root->bb = nullptr;
+        builder.domtree.root()->setBlock(nullptr);
     }
     restoreCFG();
     exit = nullptr;
@@ -48,8 +47,9 @@ void PostDomTreeAnalysis::setExit(const Function &f) {
 }
 
 void PostDomTreeAnalysis::restoreCFG() const {
-    if (!is_exit_virtual) return;
-    for (const auto &real_exit : exit->getPreBB()) {
+    if (!is_exit_virtual)
+        return;
+    for (const auto &real_exit : exit->preds()) {
         real_exit->next_bb.clear();
     }
     exit->pre_bb.clear();
