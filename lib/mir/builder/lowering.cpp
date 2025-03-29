@@ -6,6 +6,12 @@
 
 using namespace MIR;
 
+void OperandLowering::mkBind(const IR::Value &mid, const std::shared_ptr<BindOnVirOP> &bkd) {
+    varpool.addValue(mid, bkd);
+}
+
+Module &Lowering::getModule() { return module; }
+
 Lowering::Lowering(const IR::Module &midEnd_module) : module(midEnd_module.getName()) { (*this)(midEnd_module); }
 
 void Lowering::operator()(const IR::Module &midEnd_module) {

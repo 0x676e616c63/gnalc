@@ -31,23 +31,23 @@ private:
 
 public:
     FrameObj() = delete;
-    FrameObj(FrameTrait _ftrait, size_t _size) : ftrait(_ftrait), size(_size) {}
-    FrameObj(FrameTrait _ftrait, size_t _size, unsigned _seq) : ftrait(_ftrait), size(_size), seq(_seq) {}
+    FrameObj(FrameTrait _ftrait, size_t _size);
+    FrameObj(FrameTrait _ftrait, size_t _size, unsigned _seq);
 
-    void setOffset(size_t _offset) { offset = _offset; }
-    size_t getOffset() const { return offset; }
+    void setOffset(size_t _offset);
+    size_t getOffset() const;
 
-    FrameTrait getTrait() { return ftrait; }
+    FrameTrait getTrait();
 
-    void setId(unsigned int _id) { id = _id; }
-    unsigned int getId() const { return id; }
+    void setId(unsigned int _id);
+    unsigned int getId() const;
 
-    size_t getSize() const { return size; }
+    size_t getSize() const;
 
-    void setAliagnment(unsigned _aliagnment) { aliagnment = _aliagnment; }
-    unsigned getAliagnment() { return aliagnment; }
+    void setAliagnment(unsigned _aliagnment);
+    unsigned getAliagnment();
 
-    unsigned getSeq() { return seq; }
+    unsigned getSeq();
 
     std::string toString() const; // printf info
     ~FrameObj() = default;
@@ -65,20 +65,20 @@ private:
     std::list<std::pair<bool, std::variant<int, float, size_t>>> initializer;
 
 public:
-    GlobalObj();
+    GlobalObj() = delete;
     explicit GlobalObj(const IR::GlobalVariable &);
 
     void mkInitializer(const IR::GVIniter &);
 
     void initializerMerge(); // 合并相邻的零散的0
 
-    void setAlignment(unsigned _alignment) { alignment = _alignment; };
+    void setAlignment(unsigned _alignment);
 
-    std::string getName() const { return name; }
+    std::string getName() const;
 
-    unsigned getAlignment() const { return alignment; }
+    unsigned getAlignment() const;
 
-    const auto &getInitializer() const { return initializer; }
+    const std::list<std::pair<bool, std::variant<int, float, size_t>>> &getInitializer() const;
 
     std::string toString() const;
     ~GlobalObj() = default;
@@ -98,26 +98,26 @@ private:
 
 public:
     ConstObj() = delete;
-    ConstObj(unsigned int _id, std::string _glo) : id(_id), literal(std::move(_glo)) {}
+    ConstObj(unsigned int _id, std::string _glo);
     explicit ConstObj(unsigned int _id, float imme);
     explicit ConstObj(unsigned int _id, int imme);
     explicit ConstObj(unsigned int _id, bool imme);
     explicit ConstObj(unsigned int _id, char imme);
 
-    bool isGlo() const { return literal.index() == 0; }
-    bool isImme() const { return literal.index() != 0; }
-    bool isEncoded() const { return literal.index() == 5; }
-    bool isFloat() const { return literal.index() == 2; }
+    bool isGlo() const;
+    bool isImme() const;
+    bool isEncoded() const;
+    bool isFloat() const;
 
-    void setId(unsigned int _id) { id = _id; }
-    unsigned int getId() const { return id; }
+    void setId(unsigned int _id);
+    unsigned int getId() const;
 
-    unsigned int getType() { return literal.index(); }
+    unsigned int getType();
     // std::string getStr();
 
-    bool operator==(const ConstObj &other) const { return other.literal == literal; }
+    bool operator==(const ConstObj &other) const;
 
-    auto getLiteral() const { return literal; }
+    auto getLiteral() const { return literal; } // deduce type
 
     std::string toString() const; // printf info
     ~ConstObj() = default;

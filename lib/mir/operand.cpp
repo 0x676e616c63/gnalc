@@ -5,13 +5,47 @@
 
 using namespace MIR;
 
+Operand::Operand(OperandTrait _otrait) : Value(ValueTrait::Operand), otrait(_otrait) {}
+Operand::Operand(OperandTrait _otrait, std::string _name)
+    : Value(ValueTrait::Operand, std::move(_name)), otrait(_otrait) {}
+OperandTrait Operand::getOperandTrait() const { return otrait; }
+
+PreColedOP::PreColedOP(CoreRegister _color) : BindOnVirOP(_color) {}
+PreColedOP::PreColedOP(FPURegister _color) : BindOnVirOP(_color) {}
+
 std::string PreColedOP::toString() const {
     variant_reg_toString visitor;
-    ///@bug 注意调试
+
     std::string str = "$" + std::visit(visitor, color);
 
     return str;
 }
+
+BindOnVirOP::BindOnVirOP(RegisterBank _bank) : Operand(OperandTrait::BindOnVirRegister), bank(_bank) {}
+BindOnVirOP::BindOnVirOP(RegisterBank _bank, std::string _name)
+    : Operand(OperandTrait::BindOnVirRegister, std::move(_name)), bank(_bank) {
+    if (bank == RegisterBank::gpr) {
+        color = CoreRegister::none;
+    } else if (bank == RegisterBank::spr) {
+        color = FPURegister::none;
+    }
+    ///@todo dpr, qpr
+}
+
+BindOnVirOP::BindOnVirOP(CoreRegister _color)
+    : Operand(OperandTrait::PreColored), bank(RegisterBank::gpr), color(_color) {}
+BindOnVirOP::BindOnVirOP(FPURegister _color)
+    : Operand(OperandTrait::PreColored), bank(RegisterBank::spr), color(_color) {} // for PreColored
+
+BindOnVirOP::BindOnVirOP(std::string _name)
+    : Operand(OperandTrait::BaseAddress, std::move(_name)), bank(RegisterBank::gpr), color(CoreRegister::none) {
+} // for BaseADROP
+
+const std::variant<CoreRegister, FPURegister> &BindOnVirOP::getColor() { return color; };
+
+RegisterBank BindOnVirOP::getRegisterBank() { return bank; }
+
+RegisterBank BindOnVirOP::getBank() const { return bank; }
 
 std::string BindOnVirOP::toString() const {
     std::string str = getName();
@@ -27,6 +61,25 @@ std::string BindOnVirOP::toString() const {
     ///@todo dpr, qpr...
 
     return str;
+}
+
+BaseADROP::BaseADROP(BaseAddressTrait _btrait, std::string _name, int _constOffset,
+                     const std::shared_ptr<BindOnVirOP> &_varOffset)
+    : BindOnVirOP(std::move(_name)), btrait(_btrait), constOffset(_constOffset), varOffset(_varOffset) {}
+
+int BaseADROP::getConstOffset() const { return constOffset; }
+void BaseADROP::setConstOffset(int newOffset) { constOffset = newOffset; }
+
+BaseAddressTrait BaseADROP::getTrait() { return btrait; }
+
+void BaseADROP::setBase(const std::shared_ptr<BindOnVirOP> &_varOffset) { varOffset = _varOffset; }
+
+std::shared_ptr<BindOnVirOP> BaseADROP::getBase() const {
+    if (!varOffset.expired()) {
+        return varOffset.lock();
+    } else {
+        return nullptr;
+    }
 }
 
 std::string BaseADROP::toString() const {
@@ -58,6 +111,13 @@ std::string BaseADROP::toString() const {
 
     return str;
 }
+
+GlobalADROP::GlobalADROP(std::string _global_name, std::string _name, int _offset,
+                         const std::shared_ptr<BindOnVirOP> &_varOffset)
+    : BaseADROP(BaseAddressTrait::Global, std::move(_name), _offset, _varOffset),
+      global_name(std::move(_global_name)){};
+
+std::string GlobalADROP::getGloName() const { return global_name; }
 
 std::string GlobalADROP::toString() const {
     /// %1:gpr(#Global.aaa + [varOffset] + 16)
@@ -97,6 +157,12 @@ std::string GlobalADROP::toString() const {
     return str;
 }
 
+StackADROP::StackADROP(std::shared_ptr<FrameObj> _obj, std::string _name, int _offset,
+                       const std::shared_ptr<BindOnVirOP> &_varOffset)
+    : BaseADROP(BaseAddressTrait::Local, std::move(_name), _offset, _varOffset), obj(std::move(_obj)) {}
+
+std::shared_ptr<FrameObj> StackADROP::getObj() { return obj; }
+
 std::string StackADROP::toString() const {
     /// %1:gpr(#Stack.bbb + [varOffset] + 16)
     std::string str = getName() + ':' + enum_name(bank);
@@ -133,6 +199,11 @@ std::string StackADROP::toString() const {
     return str;
 }
 
+ShiftOP::ShiftOP(unsigned _imme, ShiftOP::inlineShift _shiftCode)
+    : imme(_imme), shiftCode(_shiftCode), Operand(OperandTrait::ShiftImme) {}
+
+unsigned ShiftOP::getShiftImme() const { return imme; }
+
 std::string ShiftOP::toString() const {
     std::string str;
     str += "%inlineshift-";
@@ -141,6 +212,11 @@ std::string ShiftOP::toString() const {
 
     return str;
 }
+
+ConstantIDX::ConstantIDX(const std::shared_ptr<ConstObj> &_constant)
+    : Operand(OperandTrait::ConstantPoolValue), constant(_constant) {}
+
+const std::shared_ptr<ConstObj> &ConstantIDX::getConst() const { return constant; }
 
 std::string ConstantIDX::toString() const {
     std::string str = "%const." + std::to_string(constant->getId());

@@ -22,59 +22,23 @@ public:
     const bool containPhi{};
     bool isRetBlk = false;
 
-    BasicBlock() : Value(ValueTrait::BasicBlock) {}
-    BasicBlock(std::string _name, bool _isContailPhi)
-        : Value(ValueTrait::BasicBlock, std::move(_name)), containPhi(_isContailPhi) {}
+    BasicBlock();
+    BasicBlock(std::string _name, bool _isContailPhi);
 
-    unsigned int addInst(const std::shared_ptr<Instruction> &_inst) {
-        Err::gassert(_inst != nullptr, "try addInst a nullptr inst");
-        insts.emplace_back(_inst);
-        return insts.size();
-    }
+    unsigned int addInst(const std::shared_ptr<Instruction> &_inst);
 
-    unsigned int addInsts_back(std::list<std::shared_ptr<Instruction>> _insts) {
-        // Err::gassert(!_insts.empty(), "try addInsts_back a empty inst list");
-        if (!_insts.empty())
-            insts.splice(insts.end(), _insts);
-        return insts.size();
-    }
+    unsigned int addInsts_back(std::list<std::shared_ptr<Instruction>> _insts);
 
-    unsigned int addInsts_front(std::list<std::shared_ptr<Instruction>> _insts) {
-        Err::gassert(!_insts.empty(), "try addInsts_front a empty inst list");
-        insts.splice(insts.begin(), _insts);
-        return insts.size();
-    }
+    unsigned int addInsts_front(std::list<std::shared_ptr<Instruction>> _insts);
 
-    unsigned int addInsts_beforebranch(std::list<std::shared_ptr<Instruction>> _insts) {
-        ///@note the last branch inst
+    unsigned int addInsts_beforebranch(std::list<std::shared_ptr<Instruction>> _insts);
 
-        Err::gassert(!_insts.empty(), "try addInsts_beforebranch a empty inst list");
+    unsigned int addLiveIn(const std::shared_ptr<BindOnVirOP> &_livein);
 
-        auto branch = insts.back(); // b, b{cond}, bl, bx, RET ...
+    unsigned int addLiveOut(const std::shared_ptr<BindOnVirOP> &_liveout);
 
-        Err::gassert(std::get<OpCode>(branch->getOpCode()) == OpCode::B ||
-                         std::get<OpCode>(branch->getOpCode()) == OpCode::BL ||
-                         std::get<OpCode>(branch->getOpCode()) == OpCode::BX_RET ||
-                         std::get<OpCode>(branch->getOpCode()) == OpCode::BX_SET_SWI ||
-                         std::get<OpCode>(branch->getOpCode()) == OpCode::BLX ||
-                         std::get<OpCode>(branch->getOpCode()) == OpCode::RET,
-                     "blk branch inst corrupted");
-
-        insts.splice(std::prev(insts.end()), _insts);
-        return insts.size();
-    }
-
-    unsigned int addLiveIn(const std::shared_ptr<BindOnVirOP> &_livein) {
-        LiveIn.insert(_livein);
-        return LiveIn.size();
-    }
-    unsigned int addLiveOut(const std::shared_ptr<BindOnVirOP> &_liveout) {
-        LiveOut.insert(_liveout);
-        return LiveOut.size();
-    }
-
-    std::list<std::shared_ptr<BasicBlock>> getPreds() const { return MIR::WeaktoSharedList(pres); }
-    std::list<std::shared_ptr<BasicBlock>> getSuccs() const { return MIR::WeaktoSharedList(succs); }
+    std::list<std::shared_ptr<BasicBlock>> getPreds() const;
+    std::list<std::shared_ptr<BasicBlock>> getSuccs() const;
 
     unsigned int addPred(const std::shared_ptr<BasicBlock> &_pre);
     unsigned int addSucc(const std::shared_ptr<BasicBlock> &_succ);
@@ -85,12 +49,13 @@ public:
     void delPred_try(std::shared_ptr<BasicBlock> pred);
     void delSucc_try(std::shared_ptr<BasicBlock> succ);
 
-    std::list<std::shared_ptr<Instruction>> &getInsts() { return insts; }
+    std::list<std::shared_ptr<Instruction>> &getInsts();
 
-    const std::list<std::shared_ptr<Instruction>> &getInsts() const { return insts; }
+    const std::list<std::shared_ptr<Instruction>> &getInsts() const;
 
-    std::unordered_set<std::shared_ptr<BindOnVirOP>> &getLiveIn() { return LiveIn; }
-    std::unordered_set<std::shared_ptr<BindOnVirOP>> &getLiveOut() { return LiveOut; }
+    std::unordered_set<std::shared_ptr<BindOnVirOP>> &getLiveIn();
+
+    std::unordered_set<std::shared_ptr<BindOnVirOP>> &getLiveOut();
 
     void delInst(std::shared_ptr<Instruction>);
 

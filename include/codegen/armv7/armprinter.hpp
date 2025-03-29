@@ -8,6 +8,8 @@
 #include <iostream>
 
 namespace MIR {
+/// @warning 不同机器制表符 '\t' 的宽度可能不同
+/// @todo 目前只有mov用上了条件执行
 class ARMPrinter {
 private:
     Function const *cur_func;

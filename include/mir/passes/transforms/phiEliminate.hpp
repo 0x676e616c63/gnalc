@@ -33,9 +33,7 @@ private:
     std::map<BlkP, std::map<BlkP, BlkP>> getMidBlk; // mid = getMidBlk[pred][succ];
 
     struct tempHash {
-        std::size_t operator()(const std::pair<InstP, BlkP> &pair) const {
-            return std::hash<size_t>()((size_t)(pair.first.get()) ^ (size_t)(pair.second.get()));
-        }
+        std::size_t operator()(const std::pair<InstP, BlkP> &pair) const;
     };
 
     std::unordered_set<std::pair<InstP, BlkP>, tempHash> delList;

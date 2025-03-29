@@ -3,6 +3,11 @@
 
 using namespace MIR;
 
+COPY::COPY(std::shared_ptr<BindOnVirOP> TargetOP_, std::shared_ptr<Operand> SourceOperand_)
+    : Instruction(OpCode::COPY, SourceOperandType::r), SourceOperand(std::move(SourceOperand_)) {
+    addTargetOP(std::move(TargetOP_));
+}
+
 std::shared_ptr<Operand> COPY::getSourceOP(unsigned int seq) {
     if (seq == 1)
         return SourceOperand;
@@ -18,6 +23,13 @@ void COPY::setSourceOP(unsigned int seq, std::shared_ptr<Operand> ptr_new) {
     }
 }
 
+PhiOper::PhiOper(std::shared_ptr<Operand> _val, std::string _pre) : val(std::move(_val)), pre(std::move(_pre)) {}
+
+PHI::PHI(std::shared_ptr<BindOnVirOP> TargetOP_, std::vector<PhiOper> _list)
+    : SourceOperands(std::move(_list)), Instruction(OpCode::PHI, SourceOperandType::rr) {
+    addTargetOP(std::move(TargetOP_));
+}
+
 std::shared_ptr<Operand> PHI::getSourceOP(unsigned int seq) {
     if (seq > SourceOperands.size()) {
         return nullptr;
@@ -25,6 +37,10 @@ std::shared_ptr<Operand> PHI::getSourceOP(unsigned int seq) {
         return SourceOperands[seq - 1].val;
     }
 }
+
+void PHI::setSourceOP(unsigned int seq, std::shared_ptr<Operand>) {};
+
+std::vector<PhiOper> PHI::getPhiOper() const { return SourceOperands; }
 
 std::string PHI::toString() {
     std::string str;
@@ -42,6 +58,13 @@ std::string PHI::toString() {
     return str;
 }
 
+calleesaveInst::calleesaveInst(OpCode _opcode, std::set<unsigned> _set, bool _isCoreReg)
+    : Instruction(_opcode, SourceOperandType::r), reg_list(std::move(_set)), isCoreReg(_isCoreReg) {}
+
+const std::set<unsigned> &calleesaveInst::getRegList() const { return reg_list; }
+
+bool calleesaveInst::isCore() const { return isCoreReg; }
+
 std::string calleesaveInst::toString() {
     std::string str;
 
@@ -54,3 +77,26 @@ std::string calleesaveInst::toString() {
 
     return str;
 }
+
+PUSH::PUSH(std::set<unsigned> set) : calleesaveInst(OpCode::PUSH, std::move(set), true){};
+
+std::shared_ptr<Operand> PUSH::getSourceOP(unsigned int seq) { return nullptr; };
+
+void PUSH::setSourceOP(unsigned int seq, std::shared_ptr<Operand>) {};
+
+POP::POP(std::set<unsigned> set) : calleesaveInst(OpCode::POP, std::move(set), true){};
+
+std::shared_ptr<Operand> POP::getSourceOP(unsigned int seq) { return nullptr; }
+
+void POP::setSourceOP(unsigned int seq, std::shared_ptr<Operand>) {};
+
+VPUSH::VPUSH(std::set<unsigned> set) : calleesaveInst(OpCode::VPUSH, std::move(set), false){};
+
+std::shared_ptr<Operand> VPUSH::getSourceOP(unsigned int seq) { return nullptr; }
+void VPUSH::setSourceOP(unsigned int seq, std::shared_ptr<Operand>) {};
+
+VPOP::VPOP(std::set<unsigned> set) : calleesaveInst(OpCode::VPOP, std::move(set), false){};
+
+std::shared_ptr<Operand> VPOP::getSourceOP(unsigned int seq) { return nullptr; }
+
+void VPOP::setSourceOP(unsigned int seq, std::shared_ptr<Operand>) {};

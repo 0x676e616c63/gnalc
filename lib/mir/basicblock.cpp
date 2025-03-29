@@ -3,59 +3,59 @@
 
 using namespace MIR;
 
-std::string BasicBlock::toString() const {
-    std::string str;
-    str += getName() + ":\n";
+BasicBlock::BasicBlock() : Value(ValueTrait::BasicBlock) {}
+BasicBlock::BasicBlock(std::string _name, bool _isContailPhi)
+    : Value(ValueTrait::BasicBlock, std::move(_name)), containPhi(_isContailPhi) {}
 
-    for (const auto &inst : insts) {
-        str += "        ";
-        str += inst->toString();
-    }
-
-    return str;
+unsigned int BasicBlock::addInst(const std::shared_ptr<Instruction> &_inst) {
+    Err::gassert(_inst != nullptr, "try addInst a nullptr inst");
+    insts.emplace_back(_inst);
+    return insts.size();
 }
 
-std::string BasicBlock::toString_debug(liveSet liveIn, liveSet liveOut) const {
-    std::string str;
-
-    str += getName() + ":\n";
-
-    str += "        liveIn:";
-    for (const auto &op : liveIn) {
-        if (auto precoloredop = std::dynamic_pointer_cast<PreColedOP>(op)) {
-            if (precoloredop->getBank() == RegisterBank::gpr)
-                str += " $" + enum_name(std::get<CoreRegister>(precoloredop->getColor())) + ',';
-            else if (precoloredop->getBank() == RegisterBank::spr)
-                str += " $" + enum_name(std::get<FPURegister>(precoloredop->getColor())) + ',';
-            else
-                Err::todo("dpr, qpr todo...");
-        } else
-            str += ' ' + op->getName() + ',';
-    }
-    str += '\n';
-
-    for (const auto &inst : insts) {
-        str += "            ";
-        str += inst->toString();
-    }
-
-    str += "        liveOut:";
-
-    for (const auto &op : liveOut) {
-        if (auto precoloredop = std::dynamic_pointer_cast<PreColedOP>(op)) {
-            if (precoloredop->getBank() == RegisterBank::gpr)
-                str += " $" + enum_name(std::get<CoreRegister>(precoloredop->getColor())) + ',';
-            else if (precoloredop->getBank() == RegisterBank::spr)
-                str += " $" + enum_name(std::get<FPURegister>(precoloredop->getColor())) + ',';
-            else
-                Err::todo("dpr, qpr todo...");
-        } else
-            str += ' ' + op->getName() + ',';
-    }
-    str += '\n';
-
-    return str;
+unsigned int BasicBlock::addInsts_back(std::list<std::shared_ptr<Instruction>> _insts) {
+    // Err::gassert(!_insts.empty(), "try addInsts_back a empty inst list");
+    if (!_insts.empty())
+        insts.splice(insts.end(), _insts);
+    return insts.size();
 }
+
+unsigned int BasicBlock::addInsts_front(std::list<std::shared_ptr<Instruction>> _insts) {
+    Err::gassert(!_insts.empty(), "try addInsts_front a empty inst list");
+    insts.splice(insts.begin(), _insts);
+    return insts.size();
+}
+
+unsigned int BasicBlock::addInsts_beforebranch(std::list<std::shared_ptr<Instruction>> _insts) {
+    ///@note the last branch inst
+
+    Err::gassert(!_insts.empty(), "try addInsts_beforebranch a empty inst list");
+
+    auto branch = insts.back(); // b, b{cond}, bl, bx, RET ...
+
+    Err::gassert(std::get<OpCode>(branch->getOpCode()) == OpCode::B ||
+                     std::get<OpCode>(branch->getOpCode()) == OpCode::BL ||
+                     std::get<OpCode>(branch->getOpCode()) == OpCode::BX_RET ||
+                     std::get<OpCode>(branch->getOpCode()) == OpCode::BX_SET_SWI ||
+                     std::get<OpCode>(branch->getOpCode()) == OpCode::BLX ||
+                     std::get<OpCode>(branch->getOpCode()) == OpCode::RET,
+                 "blk branch inst corrupted");
+
+    insts.splice(std::prev(insts.end()), _insts);
+    return insts.size();
+}
+
+unsigned int BasicBlock::addLiveIn(const std::shared_ptr<BindOnVirOP> &_livein) {
+    LiveIn.insert(_livein);
+    return LiveIn.size();
+}
+unsigned int BasicBlock::addLiveOut(const std::shared_ptr<BindOnVirOP> &_liveout) {
+    LiveOut.insert(_liveout);
+    return LiveOut.size();
+}
+
+std::list<std::shared_ptr<BasicBlock>> BasicBlock::getPreds() const { return MIR::WeaktoSharedList(pres); }
+std::list<std::shared_ptr<BasicBlock>> BasicBlock::getSuccs() const { return MIR::WeaktoSharedList(succs); }
 
 unsigned int BasicBlock::addPred(const std::shared_ptr<BasicBlock> &_pre) {
     auto lambda = [&_pre](const auto &blk_ptr) {
@@ -129,6 +129,13 @@ void BasicBlock::delSucc_try(std::shared_ptr<BasicBlock> succ) {
         succs.erase(it);
 }
 
+std::list<std::shared_ptr<Instruction>> &BasicBlock::getInsts() { return insts; }
+
+const std::list<std::shared_ptr<Instruction>> &BasicBlock::getInsts() const { return insts; }
+
+std::unordered_set<std::shared_ptr<BindOnVirOP>> &BasicBlock::getLiveIn() { return LiveIn; }
+std::unordered_set<std::shared_ptr<BindOnVirOP>> &BasicBlock::getLiveOut() { return LiveOut; }
+
 void BasicBlock::delInst(std::shared_ptr<Instruction> inst) {
     auto it =
         std::find_if(insts.begin(), insts.end(), [&inst](const auto &another_inst) { return another_inst == inst; });
@@ -136,4 +143,58 @@ void BasicBlock::delInst(std::shared_ptr<Instruction> inst) {
     Err::gassert(it != insts.end(), "cannot find corresponding inst in blk insts");
 
     insts.erase(it);
+}
+
+std::string BasicBlock::toString() const {
+    std::string str;
+    str += getName() + ":\n";
+
+    for (const auto &inst : insts) {
+        str += "        ";
+        str += inst->toString();
+    }
+
+    return str;
+}
+
+std::string BasicBlock::toString_debug(liveSet liveIn, liveSet liveOut) const {
+    std::string str;
+
+    str += getName() + ":\n";
+
+    str += "        liveIn:";
+    for (const auto &op : liveIn) {
+        if (auto precoloredop = std::dynamic_pointer_cast<PreColedOP>(op)) {
+            if (precoloredop->getBank() == RegisterBank::gpr)
+                str += " $" + enum_name(std::get<CoreRegister>(precoloredop->getColor())) + ',';
+            else if (precoloredop->getBank() == RegisterBank::spr)
+                str += " $" + enum_name(std::get<FPURegister>(precoloredop->getColor())) + ',';
+            else
+                Err::todo("dpr, qpr todo...");
+        } else
+            str += ' ' + op->getName() + ',';
+    }
+    str += '\n';
+
+    for (const auto &inst : insts) {
+        str += "            ";
+        str += inst->toString();
+    }
+
+    str += "        liveOut:";
+
+    for (const auto &op : liveOut) {
+        if (auto precoloredop = std::dynamic_pointer_cast<PreColedOP>(op)) {
+            if (precoloredop->getBank() == RegisterBank::gpr)
+                str += " $" + enum_name(std::get<CoreRegister>(precoloredop->getColor())) + ',';
+            else if (precoloredop->getBank() == RegisterBank::spr)
+                str += " $" + enum_name(std::get<FPURegister>(precoloredop->getColor())) + ',';
+            else
+                Err::todo("dpr, qpr todo...");
+        } else
+            str += ' ' + op->getName() + ',';
+    }
+    str += '\n';
+
+    return str;
 }

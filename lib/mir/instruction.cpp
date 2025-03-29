@@ -3,6 +3,23 @@
 
 using namespace MIR;
 
+Instruction::Instruction(OpCode _opcode, SourceOperandType _tptrait) : opcode(_opcode), tptrait(_tptrait) {}
+Instruction::Instruction(NeonOpCode _opcode, SourceOperandType _tptrait) : opcode(_opcode), tptrait(_tptrait) {}
+
+std::variant<OpCode, NeonOpCode> Instruction::getOpCode() const { return opcode; }
+
+void Instruction::addTargetOP(std::shared_ptr<BindOnVirOP> TargetOperand_) {
+    TargetOperand = std::move(TargetOperand_);
+}
+
+const std::shared_ptr<BindOnVirOP> &Instruction::getTargetOP() const { return TargetOperand; };
+
+CondCodeFlag Instruction::getCondCodeFlag() const { return condition; }
+void Instruction::setCondCodeFlag(CondCodeFlag newFlag) { condition = newFlag; }
+
+void Instruction::setFlash() { flashFlag = true; }
+bool Instruction::isSetFlash() const { return flashFlag; }
+
 std::string Instruction::toString() {
     std::string str;
 
@@ -33,6 +50,11 @@ std::string Instruction::toString() {
 }
 
 // std::string bitTage(std::pair<bitType, bitType> dataTypes) {}
+NeonInstruction::NeonInstruction(NeonOpCode _opcode, SourceOperandType _type,
+                                 const std::pair<bitType, bitType> &_dataTypes)
+    : Instruction(_opcode, _type), dataTypes(_dataTypes) {}
+
+std::pair<bitType, bitType> NeonInstruction::getDataTypes() const { return dataTypes; }
 
 std::string NeonInstruction::toString() {
     std::string str;

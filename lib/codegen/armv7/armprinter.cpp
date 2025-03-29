@@ -91,22 +91,28 @@ std::string lowercase(const std::string &s) {
 }
 
 void ARMPrinter::printout(const std::shared_ptr<Instruction> &inst) {
-    const std::string inst_template = "    "; // indent
-    outStream << inst_template;
-
     ///@note need help
     if (instTryHelp(inst))
         return;
 
+    const std::string inst_template = "    "; // head indent
+    outStream << inst_template;
+
     ///@note operator code
-    outStream << lowercase(std::visit(visitor_op, inst->getOpCode()) + enum_name(inst->getCondCodeFlag()))
-              << (inst->isSetFlash() ? "s" : std::string{} /* empty */);
+    auto opcode = inst->getOpCode();
+    outStream << lowercase(std::visit(visitor_op, opcode) + enum_name(inst->getCondCodeFlag()))
+              << (inst->isSetFlash() && opcode.index() == 0 && std::get<OpCode>(opcode) != OpCode::CMP &&
+                          std::get<OpCode>(opcode) != OpCode::CMN && std::get<OpCode>(opcode) != OpCode::TST &&
+                          std::get<OpCode>(opcode) != OpCode::TEQ
+                      ? "s"
+                      : std::string{} /* empty */);
 
     ///@note data type pair for Neon
     if (const auto &neon = std::dynamic_pointer_cast<NeonInstruction>(inst)) {
         outStream << enum_name(neon->getDataTypes());
     }
-    outStream << "    ";
+    // outStream << "    ";
+    outStream << "\t";
 
     ///@note target op
     std::string operands; // str
@@ -205,6 +211,8 @@ bool ARMPrinter::movInstHelper(const std::shared_ptr<movInst> &mov) {
     ///@todo      |---> movw/movt
     ///@todo      |---> mvn -1 ~ -257
 
+    outStream << "    "; // head indent
+
     auto target = mov->getTargetOP();
     auto source = mov->getSourceOP(1);
 
@@ -220,22 +228,37 @@ bool ARMPrinter::movInstHelper(const std::shared_ptr<movInst> &mov) {
         // movt    r3, #:upper16:arr2
         auto val_str = std::get<std::string>(constant->getLiteral()).substr(1); // no '@'
 
-        outStream << "movw     " + reg_str + ", #:lower16:" + val_str + '\n';
-        outStream << "    movt     " + reg_str + ", #:upper16:" + val_str + '\n';
+        // outStream << "movw    " + reg_str + ", #:lower16:" + val_str + '\n';
+        // outStream << "    movt    " + reg_str + ", #:upper16:" + val_str + '\n';
+        outStream << "movw\t" + reg_str + ", #:lower16:" + val_str + '\n';
+        outStream << "    movt\t" + reg_str + ", #:upper16:" + val_str + '\n';
     } else if (constant->isEncoded()) { // float
         // movw/movt
         auto lower = std::to_string(std::get<Encoding>(constant->getLiteral()).first);
         auto upper = std::to_string(std::get<Encoding>(constant->getLiteral()).second);
 
-        outStream << "movw    " + reg_str + ", #" + lower + '\n';
-        outStream << "    movt    " + reg_str + ", #" + upper + '\n';
+        // outStream << "movw    " + reg_str + ", #" + lower + '\n';
+        // outStream << "    movt    " + reg_str + ", #" + upper + '\n';
+        outStream << "movw\t" + reg_str + ", #" + lower + '\n';
+        outStream << "    movt\t" + reg_str + ", #" + upper + '\n';
     } else { // legal int
         auto int32 = std::get<int>(constant->getLiteral());
 
-        if (int32 < 0)
-            outStream << "mvn    " + reg_str + ", #" + std::to_string(std::abs(int32) - 1) + '\n';
-        else
-            outStream << "mov    " + reg_str + ", #" + std::to_string(int32) + '\n';
+        // if (int32 < 0) {
+        //     outStream << "mvn    " + reg_str + ", #" + std::to_string(std::abs(int32) - 1);
+        //     outStream << "    ; move " + std::to_string(int32); // comment
+        //     outStream << '\n';
+        // } else
+        //     outStream << "mov" enum_name(mov->getCondCodeFlag()) + '    ' + reg_str + ", #" + std::to_string(int32) + '\n';
+
+        if (int32 < 0) {
+            outStream << "mvn\t" + reg_str + ", #" + std::to_string(std::abs(int32) - 1);
+
+            outStream << "\t; move " + std::to_string(int32); // comment
+            outStream << '\n';
+        } else
+            outStream << "mov" + lowercase(enum_name(mov->getCondCodeFlag())) + '\t' + reg_str + ", #" +
+                             std::to_string(int32) + '\n';
     }
 
     return true;
@@ -248,7 +271,10 @@ void ARMPrinter::calleesaveHelper(const std::shared_ptr<Instruction> &inst) {
     if (reg_list.empty())
         return;
 
-    outStream << lowercase(enum_name(std::get<OpCode>(inst->getOpCode()))) << "    ";
+    outStream << "    "; // head indent
+
+    // outStream << lowercase(enum_name(std::get<OpCode>(inst->getOpCode()))) << "    ";
+    outStream << lowercase(enum_name(std::get<OpCode>(inst->getOpCode()))) << '\t';
 
     outStream << "{ ";
 
@@ -262,7 +288,10 @@ void ARMPrinter::calleesaveHelper(const std::shared_ptr<Instruction> &inst) {
     outStream << push_pop_list.substr(0, push_pop_list.size() - 2) << "}\n";
 }
 
-void ARMPrinter::vmrsHelper() { outStream << "vmrs    APSR_nzcv, FPSCR\n"; }
+void ARMPrinter::vmrsHelper() {
+    // outStream << "    vmrs    APSR_nzcv, FPSCR\n";
+    outStream << "    vmrs\tAPSR_nzcv, FPSCR\n";
+}
 
 std::string addressingTemplate(const std::shared_ptr<Operand> &_baseReg, const std::shared_ptr<Operand> &_idxReg,
                                const std::shared_ptr<Operand> &_shift) {
@@ -287,47 +316,58 @@ std::string addressingTemplate(const std::shared_ptr<Operand> &_baseReg, const s
 
 void ARMPrinter::memoryHelper(const std::shared_ptr<Instruction> &inst) {
 
-    // 完全体展示: ldr Rd, [Rn, Rm, LSL #n, #imm] ; Rd = *(Rn + Rm << n + imm)
+    // 可能的完全体展示: ldr Rd, [Rn, Rm, LSL #n, #imm] ; Rd = *(Rn + Rm << n + imm)
+    outStream << "    "; // head indent
 
     if (auto ldr = std::dynamic_pointer_cast<ldrInst>(inst)) {
         auto target = ldr->getTargetOP();
 
-        outStream << "ldr    " << enum_name(std::get<CoreRegister>(target->getColor())) << ", "; // default .word
+        // outStream << "ldr    " << enum_name(std::get<CoreRegister>(target->getColor())) << ", "; // default .word
+        outStream << "ldr\t" << enum_name(std::get<CoreRegister>(target->getColor())) << ", "; // default .word
 
         outStream << '[' << addressingTemplate(ldr->getSourceOP(1), ldr->getSourceOP(2), nullptr) << "]\n";
 
     } else if (auto str = std::dynamic_pointer_cast<strInst>(inst)) {
         auto source = std::dynamic_pointer_cast<BindOnVirOP>(str->getSourceOP(1));
 
-        outStream << "str    " << enum_name(std::get<CoreRegister>(source->getColor())) << ", ";
+        // outStream << "str    " << enum_name(std::get<CoreRegister>(source->getColor())) << ", ";
+        outStream << "str\t" << enum_name(std::get<CoreRegister>(source->getColor())) << ", ";
 
         outStream << '[' << addressingTemplate(str->getSourceOP(2), str->getSourceOP(3), nullptr) << "]\n";
 
     } else if (auto vldr = std::dynamic_pointer_cast<Vldr>(inst)) {
         auto target = vldr->getTargetOP();
 
-        outStream << "vldr.32    " << enum_name(std::get<FPURegister>(target->getColor())) << ", "; // default .word
+        // outStream << "vldr.32    " << enum_name(std::get<FPURegister>(target->getColor())) << ", "; // default .word
+        outStream << "vldr.32\t" << enum_name(std::get<FPURegister>(target->getColor())) << ", "; // default .word
 
         outStream << '[' << addressingTemplate(vldr->getSourceOP(1), vldr->getSourceOP(2), nullptr) << "]\n";
 
     } else if (auto vstr = std::dynamic_pointer_cast<Vstr>(inst)) {
         auto source = std::dynamic_pointer_cast<BindOnVirOP>(str->getSourceOP(1));
 
-        outStream << "vstr.32    " << enum_name(std::get<FPURegister>(source->getColor())) << ", ";
+        // outStream << "vstr.32    " << enum_name(std::get<FPURegister>(source->getColor())) << ", ";
+        outStream << "vstr.32\t" << enum_name(std::get<FPURegister>(source->getColor())) << ", ";
 
         outStream << '[' << addressingTemplate(str->getSourceOP(2), str->getSourceOP(3), nullptr) << "]\n";
     }
 }
 
 void ARMPrinter::branchHelper(const std::shared_ptr<Instruction> &inst) {
+    outStream << "    "; // head indent
+
     auto opcode = std::get<OpCode>(inst->getOpCode());
     auto branch = std::dynamic_pointer_cast<branchInst>(inst);
 
-    outStream << lowercase(enum_name(opcode)) << lowercase(enum_name(branch->getCondCodeFlag())) << "    "; // no {s}
+    // outStream << lowercase(enum_name(opcode)) << lowercase(enum_name(branch->getCondCodeFlag())) << "    "; // no {s}
+    outStream << lowercase(enum_name(opcode)) << lowercase(enum_name(branch->getCondCodeFlag())) << '\t'; // no {s}
 
     auto jmpto = branch->isJmpToFunc() ? branch->getJmpTo().substr(1)
                                        : cur_func->getName().substr(1) + "_blk_" + branch->getJmpTo().substr(1);
     outStream << jmpto << "\n\n";
 }
 
-void ARMPrinter::retHelper() { outStream << "bx    lr\n\n"; }
+void ARMPrinter::retHelper() {
+    // outStream << "    bx    lr\n\n";
+    outStream << "    bx\tlr\n\n";
+}

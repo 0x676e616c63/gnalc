@@ -133,24 +133,23 @@ protected:
 
 public:
     Instruction() = delete;
-    Instruction(OpCode _opcode, SourceOperandType _tptrait) : opcode(_opcode), tptrait(_tptrait) {}
-    Instruction(NeonOpCode _opcode, SourceOperandType _tptrait) : opcode(_opcode), tptrait(_tptrait) {}
+    Instruction(OpCode _opcode, SourceOperandType _tptrait);
+    Instruction(NeonOpCode _opcode, SourceOperandType _tptrait);
 
-    std::variant<OpCode, NeonOpCode> getOpCode() const { return opcode; }
+    std::variant<OpCode, NeonOpCode> getOpCode() const;
 
-    void addTargetOP(std::shared_ptr<BindOnVirOP> TargetOperand_) { TargetOperand = std::move(TargetOperand_); }
-
-    const std::shared_ptr<BindOnVirOP> &getTargetOP() const { return TargetOperand; };
+    void addTargetOP(std::shared_ptr<BindOnVirOP> TargetOperand_);
+    const std::shared_ptr<BindOnVirOP> &getTargetOP() const;
 
     /// @note from 1
     virtual std::shared_ptr<Operand> getSourceOP(unsigned int seq) = 0;
     virtual void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) = 0;
 
-    CondCodeFlag getCondCodeFlag() const { return condition; }
-    void setCondCodeFlag(CondCodeFlag newFlag) { condition = newFlag; }
+    CondCodeFlag getCondCodeFlag() const;
+    void setCondCodeFlag(CondCodeFlag newFlag);
 
-    void setFlash() { flashFlag = true; }
-    bool isSetFlash() const { return flashFlag; }
+    void setFlash();
+    bool isSetFlash() const;
 
     virtual std::string toString();
     virtual ~Instruction() = default;
@@ -173,13 +172,12 @@ protected:
 private:
 public:
     NeonInstruction() = delete;
-    NeonInstruction(NeonOpCode _opcode, SourceOperandType _type, const std::pair<bitType, bitType> &_dataTypes)
-        : Instruction(_opcode, _type), dataTypes(_dataTypes) {}
+    NeonInstruction(NeonOpCode _opcode, SourceOperandType _type, const std::pair<bitType, bitType> &_dataTypes);
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override = 0;
     void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override = 0;
 
-    auto getDataTypes() const { return dataTypes; }
+    std::pair<bitType, bitType> getDataTypes() const;
 
     std::string toString() override;
     ~NeonInstruction() override = default;

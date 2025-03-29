@@ -101,7 +101,7 @@ struct OperandLowering {
     template <typename T_Reg> std::shared_ptr<PreColedOP> getPreColored(T_Reg color) { return varpool.getValue(color); }
     /// 绑定, 一个 MIR::Operand 可能对应 IR::Value
     /// 常见于对于后端来说没必要的转换
-    void mkBind(const IR::Value &mid, const std::shared_ptr<BindOnVirOP> &bkd) { varpool.addValue(mid, bkd); }
+    void mkBind(const IR::Value &mid, const std::shared_ptr<BindOnVirOP> &bkd);
 
     /// def时建立键值对
     std::shared_ptr<BindOnVirOP> mkOP(const IR::Value &, RegisterBank);
@@ -219,7 +219,7 @@ public:
     std::shared_ptr<Function> lower(const IR::Function &);
     std::shared_ptr<BasicBlock> lower(const IR::BasicBlock &, OperandLowering &);
 
-    Module &getModule() { return module; }
+    Module &getModule();
     ~Lowering() = default;
 };
 

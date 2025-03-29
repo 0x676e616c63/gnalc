@@ -3,6 +3,12 @@
 
 using namespace MIR;
 
+unaryInst::unaryInst(OpCode _unaryOpCode, SourceOperandType _tptrait, std::shared_ptr<BindOnVirOP> TargetOperand_,
+                     std::shared_ptr<BindOnVirOP> SourceOperand_1_)
+    : Instruction(_unaryOpCode, _tptrait), SourceOperand_1(std::move(SourceOperand_1_)) {
+    addTargetOP(std::move(TargetOperand_));
+}
+
 std::shared_ptr<Operand> unaryInst::getSourceOP(unsigned int seq) {
     if (seq == 1)
         return SourceOperand_1;
@@ -19,6 +25,13 @@ void unaryInst::setSourceOP(unsigned int seq, std::shared_ptr<Operand> ptr_new) 
     } else {
         Err::unreachable("set operand index out of ");
     }
+}
+
+binaryInst::binaryInst(OpCode _binaryOpCode, SourceOperandType _tptrait, std::shared_ptr<BindOnVirOP> TargetOperand_,
+                       std::shared_ptr<BindOnVirOP> SourceOperand_1_, std::shared_ptr<BindOnVirOP> SourceOperand_2_)
+    : Instruction(_binaryOpCode, _tptrait), SourceOperand_1(std::move(SourceOperand_1_)),
+      SourceOperand_2(std::move(SourceOperand_2_)) {
+    addTargetOP(std::move(TargetOperand_));
 }
 
 std::shared_ptr<Operand> binaryInst::getSourceOP(unsigned int seq) {
@@ -40,6 +53,14 @@ void binaryInst::setSourceOP(unsigned int seq, std::shared_ptr<Operand> ptr_new)
     }
 }
 
+ternaryInst::ternaryInst(OpCode _ternaryOpCode, SourceOperandType _tptrait, std::shared_ptr<BindOnVirOP> TargetOperand_,
+                         std::shared_ptr<BindOnVirOP> SourceOperand_1_, std::shared_ptr<BindOnVirOP> SourceOperand_2_,
+                         std::shared_ptr<BindOnVirOP> SourceOperand_3_)
+    : Instruction(_ternaryOpCode, _tptrait), SourceOperand_1(std::move(SourceOperand_1_)),
+      SourceOperand_2(std::move(SourceOperand_2_)), SourceOperand_3(std::move(SourceOperand_3_)) {
+    addTargetOP(std::move(TargetOperand_));
+}
+
 std::shared_ptr<Operand> ternaryInst::getSourceOP(unsigned int seq) {
     if (seq == 1)
         return SourceOperand_1;
@@ -59,6 +80,14 @@ void ternaryInst::setSourceOP(unsigned int seq, std::shared_ptr<Operand> ptr_new
     } else {
         Err::unreachable("set operand index out of ");
     }
+}
+
+binaryImmInst::binaryImmInst(OpCode _binaryOpCode, SourceOperandType _tptrait,
+                             std::shared_ptr<BindOnVirOP> TargetOperand_, std::shared_ptr<BindOnVirOP> SourceOperand_1_,
+                             std::shared_ptr<Operand> SourceOperand_2_, std::shared_ptr<ShiftOP> SourceOperand_3_)
+    : Instruction(_binaryOpCode, _tptrait), SourceOperand_1(std::move(SourceOperand_1_)),
+      SourceOperand_2(std::move(SourceOperand_2_)), SourceOperand_3(std::move(SourceOperand_3_)) {
+    addTargetOP(std::move(TargetOperand_));
 }
 
 std::shared_ptr<Operand> binaryImmInst::getSourceOP(unsigned int seq) {
@@ -87,6 +116,14 @@ void binaryImmInst::setSourceOP(unsigned int seq, std::shared_ptr<Operand> ptr_n
         Err::unreachable("set operand index out of ");
     }
 }
+
+compareInst::compareInst(OpCode _cmpOpCode, SourceOperandType _tptrait, std::shared_ptr<BindOnVirOP> SourceOperand_1_,
+                         std::shared_ptr<Operand> SourceOperand_2_)
+    : Instruction(_cmpOpCode, _tptrait), SourceOperand_1(std::move(SourceOperand_1_)),
+      SourceOperand_2(std::move(SourceOperand_2_)) {
+    addTargetOP(nullptr);
+    setFlash();
+};
 
 std::shared_ptr<Operand> compareInst::getSourceOP(unsigned int seq) {
     if (seq == 1)

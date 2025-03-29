@@ -21,10 +21,11 @@ private:
 
 public:
     Value() = delete;
-    explicit Value(ValueTrait _vtrait) : IR::NameC(), vtrait(_vtrait) {}
-    Value(ValueTrait _vtrait, std::string _name)
-        : IR::NameC(std::move(_name)), vtrait(_vtrait) {}
-    ValueTrait getValueTrait() const { return vtrait; }
+    explicit Value(ValueTrait _vtrait);
+
+    Value(ValueTrait _vtrait, std::string _name);
+
+    ValueTrait getValueTrait() const;
 
     virtual std::string toString() const = 0;
     virtual ~Value() = default;

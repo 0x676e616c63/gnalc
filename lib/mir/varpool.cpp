@@ -2,6 +2,16 @@
 
 using namespace MIR;
 
+bool VarPool::IRValueWrapper::operator==(const IRValueWrapper &another) const {
+    return &(this->val) == &(another.val); // 比较地址
+}
+
+size_t VarPool::VarPoolHash::operator()(const IRValueWrapper &val) const {
+    return std::hash<std::string>()(val.val.getName()); // Value名唯一
+}
+
+size_t VarPool::LoadMapHash::operator()(const ConstObj &obj) const { return (size_t)obj.getId(); }
+
 std::shared_ptr<Operand> VarPool::getValue(const IR::Value &val) {
     IRValueWrapper wrapper{val};
 
@@ -37,6 +47,17 @@ std::shared_ptr<PreColedOP> VarPool::getValue(FPURegister _color) {
         return ptr;
     }
 }
+
+std::shared_ptr<BindOnVirOP> VarPool::getLoaded(const ConstObj &obj, const std::shared_ptr<BasicBlock> &blk) {
+    if (const2blks.find(obj) == const2blks.end() || const2vir.find(obj) == const2vir.end())
+        return nullptr;
+
+    const2blks[obj].insert(blk);
+    return const2vir[obj];
+}
+
+// const auto &VarPool::getConst2Vir() { return const2vir; }
+// const auto &VarPool::getConst2blks() { return const2blks; }
 
 void VarPool::addValue(const IR::Value &val, std::shared_ptr<Operand> Value) {
     IRValueWrapper wrapper{val};
@@ -84,3 +105,5 @@ std::shared_ptr<StackADROP> VarPool::addStackValue_anonymously(const std::shared
 
     return Value;
 }
+
+size_t VarPool::size() const { return pool.size(); }

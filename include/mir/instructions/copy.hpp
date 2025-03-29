@@ -15,10 +15,7 @@ private:
 
 public:
     COPY() = delete;
-    COPY(std::shared_ptr<BindOnVirOP> TargetOP_, std::shared_ptr<Operand> SourceOperand_)
-        : Instruction(OpCode::COPY, SourceOperandType::r), SourceOperand(std::move(SourceOperand_)) {
-        addTargetOP(std::move(TargetOP_));
-    }
+    COPY(std::shared_ptr<BindOnVirOP> TargetOP_, std::shared_ptr<Operand> SourceOperand_);
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
     void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
@@ -31,7 +28,7 @@ public:
     const std::shared_ptr<Operand> val;
     const std::string pre; // isel中简单处理
     PhiOper() = delete;
-    PhiOper(std::shared_ptr<Operand> _val, std::string _pre) : val(std::move(_val)), pre(std::move(_pre)) {}
+    PhiOper(std::shared_ptr<Operand> _val, std::string _pre);
 
     ~PhiOper() = default;
 };
@@ -42,15 +39,11 @@ private:
 
 public:
     PHI() = delete;
-    PHI(std::shared_ptr<BindOnVirOP> TargetOP_, std::vector<PhiOper> _list)
-        : SourceOperands(std::move(_list)), Instruction(OpCode::PHI, SourceOperandType::rr) {
-        addTargetOP(std::move(TargetOP_));
-    }
-
+    PHI(std::shared_ptr<BindOnVirOP> TargetOP_, std::vector<PhiOper> _list);
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
-    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override {};
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
 
-    std::vector<PhiOper> getPhiOper() const { return SourceOperands; }
+    std::vector<PhiOper> getPhiOper() const;
     std::string toString() override;
     ~PHI() override = default;
 };
@@ -63,15 +56,13 @@ private:
 public:
     calleesaveInst() = delete;
 
-    calleesaveInst(OpCode _opcode, std::set<unsigned> _set, bool _isCoreReg)
-        : Instruction(_opcode, SourceOperandType::r), reg_list(std::move(_set)), isCoreReg(_isCoreReg) {}
-
+    calleesaveInst(OpCode _opcode, std::set<unsigned> _set, bool _isCoreReg);
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override = 0;
     void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override = 0;
 
-    const std::set<unsigned> &getRegList() const { return reg_list; }
+    const std::set<unsigned> &getRegList() const;
 
-    bool isCore() const { return isCoreReg; }
+    bool isCore() const;
 
     std::string toString() override;
 };
@@ -81,10 +72,10 @@ private:
 public:
     PUSH() = delete;
 
-    explicit PUSH(std::set<unsigned> set) : calleesaveInst(OpCode::PUSH, std::move(set), true){};
+    explicit PUSH(std::set<unsigned> set);
 
-    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override { return nullptr; };
-    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override {};
+    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
 
     ~PUSH() override = default;
 };
@@ -94,10 +85,10 @@ private:
 public:
     POP() = delete;
 
-    explicit POP(std::set<unsigned> set) : calleesaveInst(OpCode::POP, std::move(set), true){};
+    explicit POP(std::set<unsigned> set);
 
-    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override { return nullptr; }
-    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override {};
+    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
 
     ~POP() override = default;
 };
@@ -107,10 +98,10 @@ private:
 public:
     VPUSH() = delete;
 
-    explicit VPUSH(std::set<unsigned> set) : calleesaveInst(OpCode::VPUSH, std::move(set), false){};
+    explicit VPUSH(std::set<unsigned> set);
 
-    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override { return nullptr; }
-    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override {};
+    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
 
     ~VPUSH() override = default;
 };
@@ -120,10 +111,10 @@ private:
 public:
     VPOP() = delete;
 
-    explicit VPOP(std::set<unsigned> set) : calleesaveInst(OpCode::VPOP, std::move(set), false){};
+    explicit VPOP(std::set<unsigned> set);
 
-    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override { return nullptr; }
-    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override {};
+    std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
+    void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
 
     ~VPOP() override = default;
 };

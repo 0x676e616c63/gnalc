@@ -6,6 +6,10 @@
 
 namespace MIR {
 
+std::size_t PhiEliminatePass::tempHash::operator()(const std::pair<InstP, BlkP> &pair) const {
+    return std::hash<size_t>()((size_t)(pair.first.get()) ^ (size_t)(pair.second.get()));
+}
+
 PM::PreservedAnalyses PhiEliminatePass::run(Module &bkd_module, MAM &mam) {
     module = &bkd_module;
 

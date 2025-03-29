@@ -12,23 +12,20 @@ private:
     struct IRValueWrapper {
         /// @brief 为IR::Value添加 operator ==
         const IR::Value &val;
-        bool operator==(const IRValueWrapper &another) const {
-            return &(this->val) == &(another.val); // 比较地址
-        }
+        bool operator==(const IRValueWrapper &another) const;
     };
 
     struct VarPoolHash {
-        size_t operator()(const IRValueWrapper &val) const {
-            return std::hash<std::string>()(val.val.getName()); // Value名唯一
-        }
+        size_t operator()(const IRValueWrapper &val) const;
     };
 
     std::unordered_map<IRValueWrapper, std::shared_ptr<Operand>, VarPoolHash> pool;
 
     // for const2reg
     struct LoadMapHash {
-        size_t operator()(const ConstObj &obj) const { return (size_t)obj.getId(); }
+        size_t operator()(const ConstObj &obj) const;
     };
+
     std::unordered_map<ConstObj, std::shared_ptr<BindOnVirOP>, LoadMapHash> const2vir;
 
     std::unordered_map<ConstObj, std::unordered_set<std::shared_ptr<BasicBlock>>, LoadMapHash> const2blks;
@@ -63,16 +60,10 @@ public:
         return {op, obj};         // a new const obj maybe in use ?
     }
 
-    std::shared_ptr<BindOnVirOP> getLoaded(const ConstObj &obj, const std::shared_ptr<BasicBlock> &blk) {
-        if (const2blks.find(obj) == const2blks.end() || const2vir.find(obj) == const2vir.end())
-            return nullptr;
-
-        const2blks[obj].insert(blk);
-        return const2vir[obj];
-    }
+    std::shared_ptr<BindOnVirOP> getLoaded(const ConstObj &obj, const std::shared_ptr<BasicBlock> &blk);
 
     const auto &getConst2Vir() { return const2vir; }
-    const auto &getConst2blks() { return const2blks; } // blks use current constant
+    const auto &getConst2blks() { return const2blks; }
 
     void addValue(const IR::Value &, std::shared_ptr<Operand>); // Def
 
@@ -82,7 +73,7 @@ public:
     addStackValue_anonymously(const std::shared_ptr<FrameObj> &); // 用于获得一个空的栈空间(4bytes)
                                                                   // 寄存器分配用
     void addLoaded(const ConstObj &, const std::shared_ptr<BindOnVirOP> &, const std::shared_ptr<BasicBlock> &);
-    size_t size() const { return pool.size(); }
+    size_t size() const;
 
     ~VarPool() = default;
 };

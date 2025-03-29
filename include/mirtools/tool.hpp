@@ -13,24 +13,20 @@
 namespace MIR {
 
 struct variant_const_toString {
-    std::string operator()(const int &val) const { return std::to_string(val); }
-    std::string operator()(const size_t &val) const { return std::to_string(val); }
-    std::string operator()(const float &val) const {
-        float stage = val;
-        return std::to_string(*reinterpret_cast<unsigned *>(&stage));
-        // turn to encoding format
-    }
+    std::string operator()(const int &val) const;
+    std::string operator()(const size_t &val) const;
+    std::string operator()(const float &val) const;
 };
 
 struct variant_opcode_toString {
-    std::string operator()(const OpCode &opcode) const { return enum_name(opcode); }
-    std::string operator()(const NeonOpCode &opcode) const { return enum_name(opcode); }
+    std::string operator()(const OpCode &opcode) const;
+    std::string operator()(const NeonOpCode &opcode) const;
 };
 
 struct variant_reg_toString {
 
-    std::string operator()(CoreRegister emVal) { return enum_name(emVal); }
-    std::string operator()(FPURegister emVal) { return enum_name(emVal); }
+    std::string operator()(CoreRegister emVal);
+    std::string operator()(FPURegister emVal);
 
 }; // for std::visit() when come into an enum type
 

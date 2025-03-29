@@ -20,13 +20,9 @@ struct Liveness {
     enum class relatedType { Use, Def };
 
     struct tempHash {
-        std::size_t operator()(const std::shared_ptr<Operand> &ptr) const {
-            return std::hash<size_t>()((size_t)(ptr.get()));
-        }
+        std::size_t operator()(const std::shared_ptr<Operand> &ptr) const;
 
-        std::size_t operator()(const std::shared_ptr<Instruction> &ptr) const {
-            return std::hash<size_t>()((size_t)(ptr.get()));
-        }
+        std::size_t operator()(const std::shared_ptr<Instruction> &ptr) const;
     };
 
     std::map<std::shared_ptr<Operand>,
@@ -66,8 +62,8 @@ public:                                                   // 接口太多, 还�
     unsigned arg_in_use;
     unsigned int args; // livein args
 
-    VarPool &getPool() { return varpool; }
-    const VarPool &getPool() const { return varpool; }
+    VarPool &getPool();
+    const VarPool &getPool() const;
 
     Liveness liveinfo;
 
@@ -81,7 +77,7 @@ public:                                                   // 接口太多, 还�
     unsigned int spilltimes = 0;
 
 public:
-    explicit FunctionInfo(ConstPool &_constpool) : constpool(_constpool) {}
+    explicit FunctionInfo(ConstPool &_constpool);
 
     std::string toString() const; // print info
     ~FunctionInfo() = default;
@@ -97,24 +93,18 @@ private:
 
 public:
     Function() = delete;
-    explicit Function(std::string _name, ConstPool &_constpool)
-        : Value(ValueTrait::Function, std::move(_name)), info(FunctionInfo{_constpool}) {}
+    explicit Function(std::string _name, ConstPool &_constpool);
 
-    FunctionInfo getInfo() const { return info; }
-    FunctionInfo &editInfo() { return info; }
+    FunctionInfo getInfo() const;
+    FunctionInfo &editInfo();
 
-    void addBlock(const std::string &_block_name, const std::shared_ptr<BasicBlock> &_block) {
-        blocks.emplace_back(_block);
-        blockpool[_block_name] = _block;
-    }
+    void addBlock(const std::string &_block_name, const std::shared_ptr<BasicBlock> &_block);
 
-    // void delBlock(const std::string &_name);
+    std::shared_ptr<BasicBlock> getBlock(const std::string &_name);
 
-    std::shared_ptr<BasicBlock> getBlock(const std::string &_name) { return blockpool[_name]; }
+    const std::list<std::shared_ptr<BasicBlock>> &getBlocks() const;
 
-    const std::list<std::shared_ptr<BasicBlock>> &getBlocks() const { return blocks; }
-
-    // std::list<std::shared_ptr<BasicBlock>> &getBlocks() { return blocks; }
+    void delBlock(std::shared_ptr<BasicBlock>);
 
     std::string toString() const override;
 

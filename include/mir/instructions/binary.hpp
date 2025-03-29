@@ -14,10 +14,7 @@ private:
 public:
     unaryInst() = delete;
     unaryInst(OpCode _unaryOpCode, SourceOperandType _tptrait, std::shared_ptr<BindOnVirOP> TargetOperand_,
-              std::shared_ptr<BindOnVirOP> SourceOperand_1_)
-        : Instruction(_unaryOpCode, _tptrait), SourceOperand_1(std::move(SourceOperand_1_)) {
-        addTargetOP(std::move(TargetOperand_));
-    }
+              std::shared_ptr<BindOnVirOP> SourceOperand_1_);
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
     void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
@@ -33,11 +30,7 @@ private:
 public:
     binaryInst() = delete;
     binaryInst(OpCode _binaryOpCode, SourceOperandType _tptrait, std::shared_ptr<BindOnVirOP> TargetOperand_,
-               std::shared_ptr<BindOnVirOP> SourceOperand_1_, std::shared_ptr<BindOnVirOP> SourceOperand_2_)
-        : Instruction(_binaryOpCode, _tptrait), SourceOperand_1(std::move(SourceOperand_1_)),
-          SourceOperand_2(std::move(SourceOperand_2_)) {
-        addTargetOP(std::move(TargetOperand_));
-    }
+               std::shared_ptr<BindOnVirOP> SourceOperand_1_, std::shared_ptr<BindOnVirOP> SourceOperand_2_);
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
     void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
@@ -55,11 +48,7 @@ public:
     ternaryInst() = delete;
     ternaryInst(OpCode _ternaryOpCode, SourceOperandType _tptrait, std::shared_ptr<BindOnVirOP> TargetOperand_,
                 std::shared_ptr<BindOnVirOP> SourceOperand_1_, std::shared_ptr<BindOnVirOP> SourceOperand_2_,
-                std::shared_ptr<BindOnVirOP> SourceOperand_3_)
-        : Instruction(_ternaryOpCode, _tptrait), SourceOperand_1(std::move(SourceOperand_1_)),
-          SourceOperand_2(std::move(SourceOperand_2_)), SourceOperand_3(std::move(SourceOperand_3_)) {
-        addTargetOP(std::move(TargetOperand_));
-    }
+                std::shared_ptr<BindOnVirOP> SourceOperand_3_);
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
     void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
@@ -77,11 +66,7 @@ public:
     binaryImmInst() = delete;
     binaryImmInst(OpCode _binaryOpCode, SourceOperandType _tptrait, std::shared_ptr<BindOnVirOP> TargetOperand_,
                   std::shared_ptr<BindOnVirOP> SourceOperand_1_, std::shared_ptr<Operand> SourceOperand_2_,
-                  std::shared_ptr<ShiftOP> SourceOperand_3_)
-        : Instruction(_binaryOpCode, _tptrait), SourceOperand_1(std::move(SourceOperand_1_)),
-          SourceOperand_2(std::move(SourceOperand_2_)), SourceOperand_3(std::move(SourceOperand_3_)) {
-        addTargetOP(std::move(TargetOperand_));
-    }
+                  std::shared_ptr<ShiftOP> SourceOperand_3_);
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
     void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
@@ -97,12 +82,7 @@ private:
 public:
     compareInst() = delete;
     compareInst(OpCode _cmpOpCode, SourceOperandType _tptrait, std::shared_ptr<BindOnVirOP> SourceOperand_1_,
-                std::shared_ptr<Operand> SourceOperand_2_)
-        : Instruction(_cmpOpCode, _tptrait), SourceOperand_1(std::move(SourceOperand_1_)),
-          SourceOperand_2(std::move(SourceOperand_2_)) {
-        addTargetOP(nullptr);
-        setFlash();
-    };
+                std::shared_ptr<Operand> SourceOperand_2_);
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
     void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
