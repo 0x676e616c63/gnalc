@@ -84,17 +84,6 @@ set(GGC_SRC
         ${GNALC_PM_SRC}
         ${GNALC_PTM_SRC}
         ${GNALC_EXT_BFBKD_SRC}
-        ${GNALC_ARMV7BKD_SRC}
-        ${GNALC_UTILS_SRC})
-
-# GGC
-set(GGC_SRC
-        ${GNALC_EXT_GGC_SRC}
-        ${GNALC_IR_SRC}
-        ${GNALC_MIR_SRC}
-        ${GNALC_PM_SRC}
-        ${GNALC_PTM_SRC}
-        ${GNALC_EXT_BFBKD_SRC}
         ${GNALC_UTILS_SRC})
 
 # debug driver
