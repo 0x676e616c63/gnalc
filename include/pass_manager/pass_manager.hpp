@@ -32,6 +32,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <chrono>
 
 namespace PM {
 class alignas(8) UniqueKey {};
@@ -234,9 +235,15 @@ public:
         auto &pass = passes.find(pass_id)->second;
         if (inserted) {
             auto &res = results[&unit];
+
+            auto start = std::chrono::high_resolution_clock::now();
             res.emplace_back(pass_id, pass->run(unit, *this));
+            auto end = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> duration = end - start;
+
             it->second = std::prev(res.end());
-            Logger::logInfo("[AM]: Running '", pass->name(), "' on '", unit.getName(), "'");
+            Logger::logInfo("[AM]: Finished '", pass->name(), "' on '", unit.getName(),
+                "'.(elapsed time: ", duration.count(), "s)");
         } else
             Logger::logInfo("[AM]: Get cached '", pass->name(), "' on '", unit.getName(), "'");
 
@@ -253,10 +260,16 @@ public:
 
         auto &pass = passes.find(pass_id)->second;
         auto &res = results[&unit];
-        res.emplace_back(pass_id, pass->run(unit, *this));
-        it->second = std::prev(res.end());
-        Logger::logInfo("[AM]: Running '", pass->name(), "' on '", unit.getName(), "'");
 
+        auto start = std::chrono::high_resolution_clock::now();
+        res.emplace_back(pass_id, pass->run(unit, *this));
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration = end - start;
+
+        it->second = std::prev(res.end());
+
+        Logger::logInfo("[AM]: Finished '", pass->name(), "' on '", unit.getName(),
+            "'.(fresh result, elapsed time: ", duration.count(), "s)");
         is_getting_fresh_result = false;
 
         using ResultModel = AnalysisResultModel<typename PassT::Result>;
@@ -330,24 +343,31 @@ public:
 
     PreservedAnalyses run(UnitT &unit, AnalysisManager<UnitT> &am) {
         PreservedAnalyses pa = PreservedAnalyses::all();
-
         for (auto &pass : passes) {
             if constexpr (detail::hasGetInstCountV<UnitT>) {
                 auto old_inst_cnt = unit.getInstCount();
 
+                auto start = std::chrono::high_resolution_clock::now();
                 PreservedAnalyses curr_pa = pass->run(unit, am);
+                auto end = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> duration = end - start;
+
                 am.invalidate(unit, curr_pa);
                 pa.retain(curr_pa);
-
                 auto new_inst_cnt = unit.getInstCount();
                 Logger::logInfo("[PM]: Finished '", pass->name(), "' on '", unit.getName(), "'.(inst: ", old_inst_cnt,
-                                " -> ", new_inst_cnt, ")");
+                                " -> ", new_inst_cnt, ", elapsed time: ", duration.count(), "s)");
             } else {
+                auto start = std::chrono::high_resolution_clock::now();
                 PreservedAnalyses curr_pa = pass->run(unit, am);
+                auto end = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> duration = end - start;
+
                 am.invalidate(unit, curr_pa);
                 pa.retain(curr_pa);
 
-                Logger::logInfo("[PM]: Finished '", pass->name(), "' on '", unit.getName(), "'.");
+                Logger::logInfo("[PM]: Finished '", pass->name(), "' on '",
+                    unit.getName(), "'.(elapsed time: ", duration.count(), "s)");
             }
         }
 
