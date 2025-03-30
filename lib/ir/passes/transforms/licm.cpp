@@ -126,7 +126,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                                     sunk_insts[exit] = sunk;
 
                                     // Rewrite the sunk instruction's uses to keep LCSSA Form
-                                    auto operands = sunk->getOperands();
+                                    auto operands = sunk->getRawOperands();
                                     for (const auto &use : operands) {
                                         if (auto oper = use->getValue()->as<Instruction>()) {
                                             auto oper_inst_block = oper->getParent();

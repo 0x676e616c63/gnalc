@@ -66,7 +66,7 @@ bool LCSSAPass::formLCSSAOnInsts(std::deque<pInst> &worklist) {
     auto &domtree = *pdomtree;
     auto &loop_info = *ploop_info;
     bool modified = false;
-    std::vector<pUse> uses_to_rewrite;
+    std::vector<Use*> uses_to_rewrite;
     std::map<const DomTree::Node *, pVal> available_values;
     while (!worklist.empty()) {
         uses_to_rewrite.clear();
@@ -110,7 +110,7 @@ bool LCSSAPass::formLCSSAOnInsts(std::deque<pInst> &worklist) {
                 for (const auto &pred : exit->preds()) {
                     avail_phi->addPhiOper(curr_inst, pred);
                     if (!loop->contains(pred)) {
-                        uses_to_rewrite.emplace_back(*std::prev(std::prev(avail_phi->operand_use_end())));
+                        uses_to_rewrite.emplace_back(std::prev(std::prev(avail_phi->getOperands().end()))->get());
                     }
                 }
                 exit->addPhiInst(avail_phi);

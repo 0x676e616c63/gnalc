@@ -267,7 +267,7 @@ pVal Function::cloneImpl() const {
             n = old2new_bb[n.lock()];
 
         for (const auto &inst : cloned_bb->all_insts()) {
-            auto operands = inst->getOperands();
+            auto operands = inst->getRawOperands();
             for (const auto &use : operands) {
                 auto usee = use->getValue();
                 if (usee->getVTrait() == ValueTrait::BASIC_BLOCK) {

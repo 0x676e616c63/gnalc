@@ -62,15 +62,14 @@ enum class ValueTrait {
 // User 即使用 Value 的对象，由于 Instruction 含有 Operand, 他是 User
 // Use 则是串联 Value 以及 User 的对象
 //
-// User 内部存有 shared_ptr<Use>, 即 operands
-// Value 内部存有 weak_ptr<Use>, 即 use_list
+// User 内部存有 unique_ptr<Use>, 即 operands
+// Value 内部存有 Use*, 即 use_list
 //
 // Use 存有一个 weak_ptr<Value> 和 User*
 //
 // 由于 Use 只存储了 裸指针 以及 weak_ptr，User 和 Value 之间并没有在内存上的所有关系。
 // 两大 User, 即 Instruction 和 Constant，其内存分别由 BasicBlock 和 ConstantPool 管理
 //
-// 这样设计 Use 是为了方便转换出 shared_ptr
 // Use 存 User* 而不是 weak_ptr<User> 的原因是，
 // User 通常是通过 make_shared 创建，调用 User 的构造函数时，User 并未由 shared_ptr 管理，
 // 所以此时还不能调用 User 的 weak_from_this/shared_from_this。
@@ -78,21 +77,10 @@ enum class ValueTrait {
 // 这样延后了 shared_from_this 的调用时机，从而正确运行。
 // 而 Value 则无需考虑此事，构造 User 时，Value 通常已有 shared_ptr 管理 (在 BasicBlock 或者 ConstantPool)
 //
-// 值得注意的是，Use 的构造函数设为了 private，
-// 这是因为 User 通过 make_shared 构造 Use 时，需要添加 Use 的 weak_ptr 到 Value 的 use_list
-// 而调用 Use 的构造函数时，Use 并没有 shared_ptr 管理，不能调用
-// weak_from_this/shared_from_this， 需要稍后调用 Use::init() 再添加。
-// 设为 private 可以防止其他地方误用，该构造函数只应当被 User 调用，并由它调用 Use::init().
+// Use 存 weak_ptr<Value> 是为了观察 Value 是否已经被释放。 由于 Value 和 User 的释放顺序是不确定的，
+// User 析构时， 如果 Value 未被释放，需要调用 Value 的 delUse。而如果已经释放，则无需处理。
 //
 // addUse/delUse 也设为了 private，这是因为 Value 的 use_list 由 User 添加，也应当由 User 删除。
-//
-// TODO:
-// Value 存 weak_ptr<Use> 起初是为了避免循环引用，但现在看来似乎改为
-// shared_ptr<Use> 也无妨, 因为 Use 只存了 weak_ptr<Value>。
-// 但是 weak_ptr<Use> 确实也没啥大问题，而且还能避免 User 忘记删除 Value 的 use_list，
-// 因为这样会导致该 weak_ptr<Use> expired。
-// 所以暂时不改也没问题。
-//
 
 class Use : public std::enable_shared_from_this<Use> {
     friend class User;
@@ -101,17 +89,10 @@ class Use : public std::enable_shared_from_this<Use> {
 private:
     wpVal val;
     User *user;
-
-    // PRIVATE because we want to ensure the use is inited.
     Use(wpVal v, User *u);
-    void init();
-
-    // PRIVATE because only Value::delUse(User*) should invoke this.
-    // Because getUser() will call User::shared_from_this,
-    // but when User is being destructed, that won't work.
     User *getRawUser() const;
-
 public:
+    Use() = default;
     pVal getValue() const;
     pUser getUser() const;
 };
@@ -125,7 +106,7 @@ class Value : public NameC, public std::enable_shared_from_this<Value> {
 #endif
 
 private:
-    std::list<wpUse> use_list; // Use隶属于User
+    std::list<Use*> use_list;               // Use隶属于User
     pType vtype;                            // value's type
     ValueTrait trait = ValueTrait::UNDEFINED;
 
@@ -188,8 +169,7 @@ public:
 
     pType getType() const;
 
-    std::list<pUse> getUseList() const;
-    std::list<wpUse> &getRUseList();
+    const std::list<Use*>& getUseList() const;
 
     // i.e. Replace all uses with, RAUW
     void replaceSelf(const pVal &new_value) const;
@@ -242,9 +222,9 @@ public:
         bool operator!=(UserIterator other) const { return iter != other.iter; }
         std::shared_ptr<DownCastUserTo> operator*() const {
             if constexpr (std::is_same_v<DownCastUserTo, User>)
-                return iter->lock()->getUser();
+                return (*iter)->getUser();
             else {
-                auto ret = std::dynamic_pointer_cast<DownCastUserTo>(iter->lock()->getUser());
+                auto ret = std::dynamic_pointer_cast<DownCastUserTo>((*iter)->getUser());
                 Err::gassert(ret != nullptr, "Value::UserIterator: Cannot downcast current user to '" +
                                                  std::string{Util::getTypeName<DownCastUserTo>()} + "'.");
                 return ret;
@@ -263,32 +243,10 @@ public:
 
     auto inst_users() const { return Util::make_iterator_range(inst_user_begin(), inst_user_end()); }
 
-    class UseIterator {
-    private:
-        using InnerIterT = decltype(use_list)::const_iterator;
-        InnerIterT iter;
 
-    public:
-        using difference_type = InnerIterT::difference_type;
-        using value_type = pUse;
-        using pointer = pUse *;
-        using reference = pUse &;
-        using iterator_category = InnerIterT::iterator_category;
-
-        explicit UseIterator(InnerIterT iter_);
-
-        UseIterator &operator++();
-        UseIterator operator++(int);
-        UseIterator &operator--();
-        UseIterator operator--(int);
-
-        bool operator==(UseIterator other) const;
-        bool operator!=(UseIterator other) const;
-        pUse operator*() const;
-    };
-
-    UseIterator self_uses_begin() const;
-    UseIterator self_uses_end() const;
+    using UseIterator = decltype(use_list)::const_iterator;
+    UseIterator self_uses_begin() const { return use_list.begin(); }
+    UseIterator self_uses_end() const { return use_list.end(); }
 
     auto self_uses() const { return Util::make_iterator_range(self_uses_begin(), self_uses_end()); }
 
@@ -296,13 +254,13 @@ public:
 
 private:
     // PRIVATE because we want to ensure use is only modified by User.
-    void addUse(const wpUse &use);
+    void addUse(Use* use);
 
     // Why not user:
     //   A User can have multiple identical operand,
     //   thus having multiple Uses. Though having identical Value,
     //   they are independent object, and their address is unique.
-    bool delUse(const pUse &target);
+    bool delUse(Use* target);
 
     virtual pVal cloneImpl() const {
         Err::not_implemented("Value::cloneImpl");
@@ -323,7 +281,8 @@ class User : public Value {
 private:
     // operands 设为 private, 防止子类误用，因为删除 operand 需要处理 use 关系
     // operands 里的 Use 中的 val 是实际的操作数
-    std::vector<pUse> operand_uses_list;
+    // 性能考虑， 使用 unique_ptr
+    std::vector<std::unique_ptr<Use>> operand_uses_list;
 
 public:
     using UseIterator = decltype(operand_uses_list)::const_iterator;
@@ -380,8 +339,9 @@ public:
 
     // In general, passes should avoid direct manipulation of operands through these
     // functions unless the intent is to perform such operations in a generic manner.
-    const std::vector<pUse> &getOperands() const;
-    const pUse &getOperand(size_t index) const;
+    const std::vector<std::unique_ptr<Use>> &getOperands() const;
+    std::vector<Use*> getRawOperands() const;
+    Use* getOperand(size_t index) const;
     void setOperand(size_t index, const pVal &val);
     void swapOperand(size_t a, size_t b);
 
@@ -395,7 +355,8 @@ public:
     // If we only care about Use's user/value, we might end up with:
     //              %0 operands: <use0: %a> <use1: %b>
     //              %b use_list:  <use2: %0>
-    bool replaceUse(const pUse &old_use, const pVal &new_use);
+    bool replaceUse(Use* old_use, const pVal &new_use);
+    bool replaceUse(const std::unique_ptr<Use>& old_use, const pVal &new_use);
 
     // Replace all uses of `before` with `after`, return the number of the replaced operands
     size_t replaceAllOperands(const pVal &before, const pVal &after);
@@ -418,7 +379,7 @@ protected:
             // But in `~User()`, that is ok.
             Err::gassert(curr_val != nullptr, "User's operands has been destroyed unexpectedly.");
             if (pred(curr_val)) {
-                auto ok = curr_val->delUse(*it);
+                auto ok = curr_val->delUse(it->get());
                 Err::gassert(ok);
                 it = operand_uses_list.erase(it);
                 found = true;

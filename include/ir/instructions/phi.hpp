@@ -65,7 +65,7 @@ public:
     PHIInst(NameRef name, const pType &_type);
 
     pVal getValueForBlock(const pBlock &block) const;
-    pBlock getBlockForValue(const std::shared_ptr<Use> &use) const;
+    pBlock getBlockForValue(Use* use) const;
 
     void addPhiOper(const pVal &val, const pBlock &blk);
 
