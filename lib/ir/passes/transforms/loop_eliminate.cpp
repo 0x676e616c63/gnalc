@@ -77,7 +77,7 @@ bool propagateExitValues(Loop &loop, SCEVHandle &scev, bool onlyConstant) {
                     continue;
                 auto exit_value = scev.expandSCEVExpr(expr, user_block, user_inst->getIter());
                 if (exit_value != nullptr) {
-                    user_inst->replaceUse(use, exit_value);
+                    use->setValue(exit_value);
                     modified = true;
                     Logger::logDebug("[LoopElimination] at block '", user_block->getName(), "': replaced '",
                                      inst->getName(), "' with '", exit_value->getName(), "'");
@@ -170,7 +170,7 @@ bool breakSingleTripRotatedLoop(FAM& fam, const pLoop &loop, SCEVHandle &scev, L
                 auto user = use->getUser()->as<Instruction>();
                 if (!loop->contains(user->getParent())) {
                     auto [invariant, variant] = analyzeHeaderPhi(loop, phi);
-                    user->replaceUse(use, variant);
+                    use->setValue(variant);
                 }
             }
         }

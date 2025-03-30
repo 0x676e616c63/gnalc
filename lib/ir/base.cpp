@@ -46,11 +46,9 @@ const std::list<Use*>& Value::getUseList() const {
 
 void Value::replaceSelf(const pVal &new_value) const {
     Err::gassert(this != new_value.get(), "Replace with an identical value doesn't make sense.");
-    auto shared_use_list = getUseList();
-    for (const auto &use : shared_use_list) {
-        bool ok = use->getUser()->replaceUse(use, new_value);
-        Err::gassert(ok);
-    }
+    auto ulist = getUseList();
+    for (const auto &use : ulist)
+        use->setValue(new_value);
 }
 
 Value::~Value() = default;
@@ -130,29 +128,11 @@ size_t User::replaceAllOperands(const pVal &before, const pVal &after) {
     size_t cnt = 0;
     for (const auto &use : operand_uses_list) {
         if (use->getValue() == before) {
-            replaceUse(use.get(), after);
+            use->setValue(after);
             ++cnt;
         }
     }
     return cnt;
-}
-
-bool User::replaceUse(Use *old_use, const pVal &new_value) {
-    Err::gassert(old_use->getValue() != new_value, "Replace with an identical value doesn't make sense.");
-    for (auto &use : operand_uses_list) {
-        if (use.get() == old_use) {
-            auto ok = use->getValue()->delUse(use.get());
-            Err::gassert(ok, "The use has been released unexpectedly.");
-            // Don't `make_shared` because the constructor is private.
-            use = std::unique_ptr<Use>(new Use(new_value, use->getUser().get()));
-            return true;
-        }
-    }
-    Err::unreachable("User::replaceOneUse(): old use notfound.");
-    return false;
-}
-bool User::replaceUse(const std::unique_ptr<Use> &old_use, const pVal &new_use) {
-    return replaceUse(old_use.get(), new_use);
 }
 
 User::User(std::string _name, pType _vtype, ValueTrait _vtrait) : Value(std::move(_name), std::move(_vtype), _vtrait) {}
@@ -167,6 +147,7 @@ void User::addOperand(const pVal &v) {
 const std::vector<std::unique_ptr<Use>> &User::getOperands() const { return operand_uses_list; }
 std::vector<Use *> User::getRawOperands() const {
     std::vector<Use *> ret;
+    ret.reserve(operand_uses_list.size());
     for (const auto &use : operand_uses_list)
         ret.emplace_back(use.get());
     return ret;
@@ -216,4 +197,10 @@ User *Use::getRawUser() const { return user; }
 pVal Use::getValue() const { return val.lock(); }
 
 pUser Use::getUser() const { return user->as<User>(); }
+
+void Use::setValue(const pVal &v) {
+    val.lock()->delUse(this);
+    v->addUse(this);
+    val = v;
+}
 } // namespace IR

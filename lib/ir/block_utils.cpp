@@ -290,41 +290,49 @@ pPhi findLCSSAPhi(const pBlock &block, const pVal &value) {
 }
 
 bool eliminateDeadInsts(std::vector<pInst>& worklist, FAM *fam) {
-    std::set<pInst> visited;
+    std::unordered_set<pInst> visited;
+    std::unordered_set<pInst> eliminated;
+    std::unordered_set<BasicBlock*> todo_blocks;
     bool modified = false;
     while (!worklist.empty()) {
         auto inst = worklist.back();
         worklist.pop_back();
         visited.emplace(inst);
 
-        size_t alive_user_cnt = 0;
+        bool is_dead = true;
         for (const auto& user : inst->inst_users()) {
-            if (user->getParent() != nullptr)
-                ++alive_user_cnt;
-        }
-
-        if (alive_user_cnt == 0) {
-            if (fam) {
-                if (auto call = inst->as<CALLInst>()) {
-                    if (hasSideEffect(*fam, call))
-                        continue;
-                }
-            }
-
-            if (inst->is<STOREInst>())
-                continue;
-
-            if (inst->getParent())
-                inst->getParent()->delInst(inst);
-
-            modified = true;
-            for (const auto &operand : inst->operands()) {
-                if (auto i = operand->as<Instruction>()) {
-                    if (visited.find(i) == visited.end())
-                        worklist.emplace_back(i);
-                }
+            if (!eliminated.count(user)) {
+                is_dead = false;
+                break;
             }
         }
+        if (!is_dead)
+            continue;
+
+        if (inst->is<STOREInst>())
+            continue;
+
+        if (fam) {
+            if (auto call = inst->as<CALLInst>()) {
+                if (hasSideEffect(*fam, call))
+                    continue;
+            }
+        }
+
+        eliminated.emplace(inst);
+        todo_blocks.emplace(inst->getParent().get());
+
+        for (const auto &operand : inst->operands()) {
+            if (auto i = operand->as<Instruction>()) {
+                if (!visited.count(i))
+                    worklist.emplace_back(i);
+            }
+        }
+    }
+
+    for (const auto &block : todo_blocks) {
+        modified |= block->delInstIf([&eliminated](const auto &inst)
+            { return eliminated.count(inst); });
     }
     return modified;
 }

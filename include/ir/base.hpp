@@ -95,6 +95,7 @@ public:
     Use() = default;
     pVal getValue() const;
     pUser getUser() const;
+    void setValue(const pVal& v);
 };
 
 class Instruction;
@@ -243,7 +244,6 @@ public:
 
     auto inst_users() const { return Util::make_iterator_range(inst_user_begin(), inst_user_end()); }
 
-
     using UseIterator = decltype(use_list)::const_iterator;
     UseIterator self_uses_begin() const { return use_list.begin(); }
     UseIterator self_uses_end() const { return use_list.end(); }
@@ -289,7 +289,7 @@ public:
     UseIterator operand_use_begin() const;
     UseIterator operand_use_end() const;
 
-    auto operand_uses() const { return Util::make_iterator_range(operand_use_begin(), operand_use_end()); }
+    const auto& operand_uses() const { return operand_uses_list; }
 
     class OperandIterator {
     private:
@@ -346,17 +346,6 @@ public:
     void swapOperand(size_t a, size_t b);
 
     size_t getNumOperands() const;
-
-    // Note:
-    // Replace Use shouldn't compare Use's user/value.
-    // Considering: %0 = gep ptr %a, i32 %b, i32 %b
-    //              %0 operands: <use0: %a> <use1: %b> <use2: %b>
-    //              %b use_list:  <use1: %0> <use2: %0>
-    // If we only care about Use's user/value, we might end up with:
-    //              %0 operands: <use0: %a> <use1: %b>
-    //              %b use_list:  <use2: %0>
-    bool replaceUse(Use* old_use, const pVal &new_use);
-    bool replaceUse(const std::unique_ptr<Use>& old_use, const pVal &new_use);
 
     // Replace all uses of `before` with `after`, return the number of the replaced operands
     size_t replaceAllOperands(const pVal &before, const pVal &after);

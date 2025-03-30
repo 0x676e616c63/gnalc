@@ -126,7 +126,7 @@ bool LCSSAPass::formLCSSAOnInsts(std::deque<pInst> &worklist) {
                 user_bb = phi->getBlockForValue(use);
 
             auto val = getValueForBlock(*loop, domtree[user_bb].get(), curr_inst, available_values);
-            user_inst->replaceUse(use, val);
+            use->setValue(val);
             modified = true;
         }
 

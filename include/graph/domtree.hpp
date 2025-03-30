@@ -57,6 +57,9 @@ public:
         std::vector<pNode> child_nodes;
         unsigned node_level = 0; // 节点层次，root是1
         unsigned node_bfs_num = 0;
+        // DFS Timestamp
+        unsigned node_dfs_in = 0;
+        unsigned node_dfs_out = 0;
 
     public:
         explicit Node(GraphNodeT bb) : graph_node(bb), parent_node(nullptr) {}
@@ -69,6 +72,8 @@ public:
         const auto &children() const { return child_nodes; }
         auto level() const { return node_level; }
         auto bfs_num() const { return node_bfs_num; }
+        auto dfs_in() const { return node_dfs_in; }
+        auto dfs_out() const { return node_dfs_out; }
         const auto &raw_block() const { return graph_node; }
         auto block() const { return GraphNodeProj()(graph_node); }
         void setBlock(GraphNodeT n) { graph_node = n; }
@@ -82,7 +87,6 @@ public:
 private:
     pNode root_node;
     std::unordered_map<GraphNodeT, pNode> nodes;
-    mutable std::unordered_map<GraphNodeT, std::unordered_map<GraphNodeT, bool>> dom_cache;
     mutable std::unordered_map<GraphNodeT, GraphNodeSet> df_cache;
 public:
     auto root() const { return root_node; }
@@ -92,26 +96,14 @@ public:
         return nodes.at(graph_node);
     }
 
-    // todo: 在构造支配树时预计算DFS进入/离开时间戳可将支配关系判断优化为O(1)时间操作
     bool ADomB(GraphNodeT a, GraphNodeT b) const {
-        // Err::gassert(nodes.count(a) && nodes.count(b), "No dominator tree for unreachable blocks.");
         if (a == b)
             return true;
-
-        auto node_a = nodes.at(a).get();
-        if (node_a == root_node.get())
-            return true;
-
-        auto a_dom_cache = dom_cache[a];
-
-        auto it1 = a_dom_cache.find(b);
-        if (it1 != a_dom_cache.end())
-            return it1->second;
-
-        auto res = ADomBImpl(node_a, nodes.at(b).get());
-        a_dom_cache[b] = res;
-        return res;
+        auto node_a = nodes.at(a);
+        auto node_b = nodes.at(b);
+        return node_a->dfs_in() <= node_b->dfs_in() && node_a->dfs_out() >= node_b->dfs_out();
     }
+
     GraphNodeSet getDomSet(GraphNodeT b) const {
         // Err::gassert(nodes.count(b), "No dominator tree for unreachable blocks.");
 
@@ -165,15 +157,6 @@ public:
     }
 
 private:
-    bool ADomBImpl(Node* node_a, Node* node_b) const {
-        while (node_b != root_node.get()) {
-            node_b = node_b->raw_parent();
-            if (node_a == node_b)
-                return true;
-        }
-        return false;
-    }
-
     void print(const pNode &node, int level) const {
         if (node == nullptr)
             return;
@@ -215,12 +198,30 @@ private:
             for (const auto &n : cur) {
                 n->node_level = l;
                 n->node_bfs_num = ++i;
-                for (auto &c : n->child_nodes) {
+                for (auto &c : n->child_nodes)
                     next.emplace_back(c);
-                }
             }
             cur = next;
             next.clear();
+        }
+    }
+
+    void updateDFSInOut() {
+        if (!root_node) return;
+        unsigned timestamp = 0;
+        std::vector<std::pair<pNode, bool>> stack;
+        stack.emplace_back(root_node, false);
+        while (!stack.empty()) {
+            auto [node, visited] = stack.back();
+            stack.pop_back();
+
+            if (!visited) {
+                node->node_dfs_in = ++timestamp;
+                stack.emplace_back(node, true);
+                for (auto it = node->child_nodes.rbegin(); it != node->child_nodes.rend(); ++it)
+                    stack.emplace_back(*it, false);
+            } else
+                node->node_dfs_out = ++timestamp;
         }
     }
 };
@@ -332,6 +333,7 @@ public:
             domtree.linkDTN(dfs_tree_node.bb, dfs_tree_node._idom);
         }
         domtree.updateLevel();
+        domtree.updateDFSInOut();
     }
 };
 } // namespace Graph

@@ -96,6 +96,11 @@ FPM PassBuilder::buildFunctionFixedPointPipeline() {
         cleanup.addPass(BreakCriticalEdgesPass());
         cleanup.addPass(GVNPREPass());
         cleanup.addPass(DCEPass());
+        return cleanup;
+    };
+
+    auto make_mem_clean = [] {
+        PM::FixedPointPM<Function> cleanup;
         cleanup.addPass(LoadEliminationPass());
         cleanup.addPass(DSEPass());
         return cleanup;
@@ -116,6 +121,9 @@ FPM PassBuilder::buildFunctionFixedPointPipeline() {
     fpm.addPass(make_arithmetic());
     fpm.addPass(CFGSimplifyPass());
     fpm.addPass(make_clean());
+    // Simplify Blocks to make LoadElim faster.
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(make_mem_clean());
     // ADCE is time-consuming
     fpm.addPass(ADCEPass());
     fpm.addPass(CFGSimplifyPass());
