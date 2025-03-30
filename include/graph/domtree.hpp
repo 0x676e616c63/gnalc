@@ -3,9 +3,10 @@
 
 #include <memory>
 #include <ostream>
-#include <set>
 #include <stack>
+#include <unordered_set>
 #include <unordered_map>
+#include <cmath>
 #include <vector>
 
 #include "../utils/exception.hpp"
@@ -23,7 +24,7 @@ template <typename GraphT, bool IsPostDom, typename GraphNodeProj = Identity> cl
     template <typename, bool, typename> friend class GenericDomTreeBuilder;
 
     using GraphNodeT = typename GraphInfo<GraphT>::NodeT;
-    using GraphNodeSet = std::set<GraphNodeT>;
+    using GraphNodeSet = std::unordered_set<GraphNodeT>;
 
     static auto getNextGraphNodes(GraphNodeT node) {
         if constexpr (IsPostDom)
@@ -82,38 +83,37 @@ private:
     pNode root_node;
     std::unordered_map<GraphNodeT, pNode> nodes;
     mutable std::unordered_map<GraphNodeT, std::unordered_map<GraphNodeT, bool>> dom_cache;
-
+    mutable std::unordered_map<GraphNodeT, GraphNodeSet> df_cache;
 public:
     auto root() const { return root_node; }
 
     const auto &operator[](GraphNodeT graph_node) const {
-        Err::gassert(nodes.count(graph_node), "No dominator tree for unreachable blocks.");
+        // Err::gassert(nodes.count(graph_node), "No dominator tree for unreachable blocks.");
         return nodes.at(graph_node);
     }
 
     // todo: 在构造支配树时预计算DFS进入/离开时间戳可将支配关系判断优化为O(1)时间操作
     bool ADomB(GraphNodeT a, GraphNodeT b) const {
-        Err::gassert(nodes.count(a) && nodes.count(b), "No dominator tree for unreachable blocks.");
-        if (nodes.at(a) == root_node)
-            return true;
+        // Err::gassert(nodes.count(a) && nodes.count(b), "No dominator tree for unreachable blocks.");
         if (a == b)
             return true;
 
-        auto it1 = dom_cache[a].find(b);
-        if (it1 != dom_cache[a].end())
+        auto node_a = nodes.at(a).get();
+        if (node_a == root_node.get())
+            return true;
+
+        auto a_dom_cache = dom_cache[a];
+
+        auto it1 = a_dom_cache.find(b);
+        if (it1 != a_dom_cache.end())
             return it1->second;
 
-        // If b dominates a, a cannot dominates b.
-        auto it2 = dom_cache[b].find(a);
-        if (it2 != dom_cache[b].end() && it2->second)
-            return false;
-
-        auto res = ADomBImpl(a, b);
-        dom_cache[a][b] = res;
+        auto res = ADomBImpl(node_a, nodes.at(b).get());
+        a_dom_cache[b] = res;
         return res;
     }
     GraphNodeSet getDomSet(GraphNodeT b) const {
-        Err::gassert(nodes.count(b), "No dominator tree for unreachable blocks.");
+        // Err::gassert(nodes.count(b), "No dominator tree for unreachable blocks.");
 
         GraphNodeSet domset = {b};
         auto _b = nodes.at(b).get();
@@ -126,7 +126,11 @@ public:
 
     // TODO: needs optimization
     GraphNodeSet getDomFrontier(GraphNodeT b) const {
-        Err::gassert(nodes.count(b), "No dominator tree for unreachable blocks.");
+        // Err::gassert(nodes.count(b), "No dominator tree for unreachable blocks.");
+
+        auto it = df_cache.find(b);
+        if (it != df_cache.end())
+            return it->second;
 
         GraphNodeSet DF;
         std::stack<Node *> STN;
@@ -146,6 +150,7 @@ public:
             for (const auto &dom_child : node->children())
                 STN.push(dom_child.get());
         }
+        df_cache[b] = DF;
         return DF;
     }
 
@@ -160,11 +165,10 @@ public:
     }
 
 private:
-    bool ADomBImpl(GraphNodeT a, GraphNodeT b) const {
-        auto _b = nodes.at(b).get();
-        while (_b != root_node.get()) {
-            _b = _b->raw_parent();
-            if (nodes.at(a).get() == _b)
+    bool ADomBImpl(Node* node_a, Node* node_b) const {
+        while (node_b != root_node.get()) {
+            node_b = node_b->raw_parent();
+            if (node_a == node_b)
                 return true;
         }
         return false;

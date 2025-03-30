@@ -27,16 +27,7 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                 ++fatal_error_cnt;
             }
 
-            auto ruselist = inst->getRUseList();
-            for (const auto &weak_use : ruselist) {
-                if (weak_use.expired()) {
-                    Logger::logCritical("[VerifierPass]: Expired use detected in '", inst->getName(),
-                                        "' This should be deleted by its user.");
-                    ++fatal_error_cnt;
-                }
-            }
-            auto operands = inst->getOperands();
-            for (const auto &operand : operands) {
+            for (const auto &operand : inst->operand_uses()) {
                 if (operand->getValue() == nullptr) {
                     Logger::logCritical("[VerifyPass]: Operand got destroyed while its user '", inst->getName(),
                                         "' is alive.");
@@ -44,10 +35,9 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                     continue;
                 }
 
-                auto oper_uselist = operand->getValue()->getRUseList();
                 bool found_curr_use = false;
-                for (const auto &weak_use : oper_uselist) {
-                    if (!weak_use.expired() && weak_use.lock() == operand) {
+                for (const auto &use : operand->getValue()->self_uses()) {
+                    if (use == operand.get()) {
                         found_curr_use = true;
                         break;
                     }

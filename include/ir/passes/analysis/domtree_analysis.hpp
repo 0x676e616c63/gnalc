@@ -17,12 +17,14 @@ template <> struct GraphInfo<IR::BasicBlock *> {
     using NodeT = IR::BasicBlock *;
     static std::vector<IR::BasicBlock *> getPreds(const IR::BasicBlock *bb) {
         std::vector<IR::BasicBlock *> ret;
+        ret.reserve(bb->getNumPreds());
         for (const auto &r : bb->preds())
             ret.emplace_back(r.get());
         return ret;
     }
     static std::vector<IR::BasicBlock *> getSuccs(const IR::BasicBlock *bb) {
         std::vector<IR::BasicBlock *> ret;
+        ret.reserve(bb->getNumSuccs());
         for (const auto &r : bb->succs())
             ret.emplace_back(r.get());
         return ret;

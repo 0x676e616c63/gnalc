@@ -254,7 +254,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
             for (const auto &inst : *old_header) {
                 auto cloned_inst = makeClone(inst);
                 cloned_inst->setName(inst->getName() + ".clonedlr");
-                auto operands = cloned_inst->getOperands();
+                auto operands = cloned_inst->getRawOperands();
                 for (const auto &use : operands) {
                     auto usee = use->getValue();
                     if (usee->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
