@@ -26,13 +26,13 @@
 #include "../utils/logger.hpp"
 #include "../utils/misc.hpp"
 
+#include <chrono>
 #include <list>
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
 #include <vector>
-#include <chrono>
 
 namespace PM {
 class alignas(8) UniqueKey {};
@@ -243,7 +243,7 @@ public:
 
             it->second = std::prev(res.end());
             Logger::logInfo("[AM]: Finished '", pass->name(), "' on '", unit.getName(),
-                "'.(elapsed time: ", duration.count(), "s)");
+                            "'.(elapsed time: ", duration.count(), "s)");
         } else
             Logger::logInfo("[AM]: Get cached '", pass->name(), "' on '", unit.getName(), "'");
 
@@ -269,7 +269,7 @@ public:
         it->second = std::prev(res.end());
 
         Logger::logInfo("[AM]: Finished '", pass->name(), "' on '", unit.getName(),
-            "'.(fresh result, elapsed time: ", duration.count(), "s)");
+                        "'.(fresh result, elapsed time: ", duration.count(), "s)");
         is_getting_fresh_result = false;
 
         using ResultModel = AnalysisResultModel<typename PassT::Result>;
@@ -366,8 +366,8 @@ public:
                 am.invalidate(unit, curr_pa);
                 pa.retain(curr_pa);
 
-                Logger::logInfo("[PM]: Finished '", pass->name(), "' on '",
-                    unit.getName(), "'.(elapsed time: ", duration.count(), "s)");
+                Logger::logInfo("[PM]: Finished '", pass->name(), "' on '", unit.getName(),
+                                "'.(elapsed time: ", duration.count(), "s)");
             }
         }
 
@@ -421,7 +421,11 @@ public:
                 if constexpr (detail::hasGetInstCountV<UnitT>) {
                     auto old_inst_cnt = unit.getInstCount();
 
+                    auto start = std::chrono::high_resolution_clock::now();
                     PreservedAnalyses curr_pa = pass->run(unit, am);
+                    auto end = std::chrono::high_resolution_clock::now();
+                    std::chrono::duration<double> duration = end - start;
+
                     if (!ignoring_change)
                         modified |= !curr_pa.allPreserved();
                     am.invalidate(unit, curr_pa);
@@ -429,22 +433,27 @@ public:
 
                     auto new_inst_cnt = unit.getInstCount();
                     Logger::logInfo("[FixedPointPM] at round ", round, ": Finished '", pass->name(), "' on '",
-                                    unit.getName(), "'.(inst: ", old_inst_cnt, " -> ", new_inst_cnt, ")");
+                                    unit.getName(), "'.(inst: ", old_inst_cnt, " -> ", new_inst_cnt,
+                                    ", elapsed time: ", duration.count(), "s)");
                 } else {
+                    auto start = std::chrono::high_resolution_clock::now();
                     PreservedAnalyses curr_pa = pass->run(unit, am);
+                    auto end = std::chrono::high_resolution_clock::now();
+                    std::chrono::duration<double> duration = end - start;
+
                     if (!ignoring_change)
                         modified |= !curr_pa.allPreserved();
                     am.invalidate(unit, curr_pa);
                     pa.retain(curr_pa);
 
                     Logger::logInfo("[FixedPointPM] at round ", round, ": Finished '", pass->name(), "' on '",
-                                    unit.getName(), "'.");
+                                    unit.getName(), "'.(elapsed time: ", duration.count(), "s)");
                 }
             }
             if (++round > threshold) {
-                Err::gassert (threshold_explicitly_set,
-                        "Default Fixed point iteration threshold reached. Check the pipeline!"
-                            " To disable this message, set the threshold explicitly.");
+                Err::gassert(threshold_explicitly_set,
+                             "Default Fixed point iteration threshold reached. Check the pipeline!"
+                             " To disable this message, set the threshold explicitly.");
                 break;
             }
         }
