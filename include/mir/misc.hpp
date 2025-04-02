@@ -24,7 +24,7 @@ private:
     unsigned int id{};
 
     size_t size;
-    long long offset{}; // 相对与sp或者fp或者r7
+    int offset; // 相对与sp或者fp或者r7
     FrameTrait ftrait;
     unsigned int aliagnment = 4; // 4, 8, 16
     unsigned seq = -1;           // sequence of the arg on stack
@@ -34,8 +34,8 @@ public:
     FrameObj(FrameTrait _ftrait, size_t _size);
     FrameObj(FrameTrait _ftrait, size_t _size, unsigned _seq);
 
-    void setOffset(size_t _offset);
-    size_t getOffset() const;
+    void setOffset(int _offset);
+    int getOffset() const;
 
     FrameTrait getTrait();
 

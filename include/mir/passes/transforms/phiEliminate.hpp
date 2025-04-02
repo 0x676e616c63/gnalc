@@ -44,9 +44,9 @@ private:
     void RunOnBlkPair(const PhiBlkPairs &); // core
 
     // push_before_branch
-    OperP addCOYPInst(const BlkP &, const OperP &, const FuncP &);
+    OperP addCOYPInst(const BlkP &src, std::string dest, const OperP &, const FuncP &);
 
-    void pushBeforeBranch(const BlkP &, const OperP &dst, const OperP &src);
+    void pushBeforeBranch(const BlkP &, std::string, const OperP &dst, const OperP &src);
 
     // judge whether pred and succ connected by critical edge
     BlkP splitCriticalEgde(const BlkP &pred, const BlkP &succ, const FuncP &);

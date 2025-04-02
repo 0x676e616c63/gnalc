@@ -30,7 +30,7 @@ public:
 private:
     // inst helpers
     bool instTryHelp(const std::shared_ptr<Instruction> &);
-    bool movInstHelper(const std::shared_ptr<movInst> &);
+    bool movInstHelper(const std::shared_ptr<Instruction> &);
     void calleesaveHelper(const std::shared_ptr<Instruction> &);
     void vmrsHelper();
     void memoryHelper(const std::shared_ptr<Instruction> &);

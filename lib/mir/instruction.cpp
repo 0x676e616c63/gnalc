@@ -64,13 +64,13 @@ std::string NeonInstruction::toString() {
 
     str += enum_name(std::get<NeonOpCode>(getOpCode()));
 
+    str += enum_name(tptrait);
+
     str += enum_name(getCondCodeFlag()); ///
 
-    str += enum_name(dataTypes);
+    str += enum_name(dataTypes) + ' ';
 
     /// Neon指令没有S标记
-
-    str += '-' + enum_name(tptrait) + ' ';
 
     if (getSourceOP(1)) {
         str += getSourceOP(1)->toString() + ' ';

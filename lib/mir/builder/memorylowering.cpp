@@ -90,19 +90,33 @@ std::list<std::shared_ptr<Instruction>> InstLowering::gepLower(const std::shared
     /// gep 将数组退化为对应类型的指针, 所以其实也算是一种converse?
 
     auto ptr = gep->getPtr();
-    auto idx = gep->getIdxs()[1];
-    int perElemSize = std::dynamic_pointer_cast<IR::ArrayType>(gep->getBaseType())->getElmType()->getBytes();
+    ///@note 使用指针时为[0], 使用数组时为[1]
+    // auto idx = gep->getIdxs().size() == 1 ? gep->getIdxs()[0] : gep->getIdxs()[1];
+    // int perElemSize = std::dynamic_pointer_cast<IR::ArrayType>(gep->getBaseType())->getElmType()->getBytes();
+    IR::pVal idx;
+    unsigned perElemSize;
 
-    /// 一共四种情况, ptr是否是全局变量, idx是否是常量
+    if (auto arraytype = gep->getBaseType()->as<IR::ArrayType>()) {
+        idx = gep->getIdxs()[1];
+        perElemSize = arraytype->getElmType()->getBytes();
+    } else if (auto btype = gep->getBaseType()->as<IR::BType>()) {
+        idx = gep->getIdxs()[0];
+        perElemSize = 4;
+    } else {
+        Err::unreachable("gep unknown base val type");
+    }
+
+    /// 一共四种情况, ptr是否是全局变量
 
     std::shared_ptr<BaseADROP> baseOP;
     if (auto global_ptr = std::dynamic_pointer_cast<IR::GlobalVariable>(ptr)) {
-        baseOP = std::dynamic_pointer_cast<BaseADROP>(operlower.LoadedFind(global_ptr->getName(), blk));
+        baseOP = operlower.LoadedFind(global_ptr->getName(), blk)->as<BaseADROP>();
         Err::gassert(baseOP != nullptr, "find a loaded global ptr failed");
     } else {
         baseOP = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(ptr));
     }
 
+    /// idx是否是常量
     if (auto const_idx = std::dynamic_pointer_cast<IR::ConstantInt>(idx)) {
         auto add_offset = const_idx->getVal() * perElemSize;
         operlower.mkBaseOP(*gep, baseOP, add_offset);
@@ -111,7 +125,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::gepLower(const std::shared
         // add (%BindOnVirOP)relay2, %(BindOnVirOP)baseOP, %relay1
         // 这里add之后可以考虑做一个窥孔, 将相应的ldr改成基址变址寻址
         auto relay1 = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
-        auto relay2 = operlower.mkBaseOP(*gep, baseOP, 0);
+        auto relay2 = operlower.mkBaseOP(*gep, baseOP);
 
         auto mul_insts = mulOpt(relay1, idx, std::make_shared<IR::ConstantInt>(perElemSize), operlower, blk);
         insts.insert(insts.end(), mul_insts.begin(), mul_insts.end());

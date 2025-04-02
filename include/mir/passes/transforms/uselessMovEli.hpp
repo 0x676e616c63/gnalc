@@ -3,6 +3,7 @@
 #define GNALC_MIR_PASSES_TRANSFORMS_USELESSMOVELI_HPP
 
 #include "../pass_manager.hpp"
+#include "registeralloc.hpp"
 
 namespace MIR {
 
@@ -10,14 +11,16 @@ namespace MIR {
 
 class uselessMovEli : public PM::PassInfo<uselessMovEli> {
 public:
-    PM::PreservedAnalyses run(Function &Function, FAM &manager);
+    PM::PreservedAnalyses run(Function &func, FAM &fam);
+
+    friend class RAPass;
 
 private:
     Function *function;
 
-    void impl();
+    void impl(Function &);
 
-    bool isUseless(const InstP &);
+    static bool isUseless(const InstP &);
 };
 
 }; // namespace MIR

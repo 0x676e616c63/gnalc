@@ -47,15 +47,19 @@ void postRAstackformat::FrameGenerate() {
 }
 
 void postRAstackformat::frameObjSort() {
+    if (objs->empty())
+        return;
+
     ///@todo 排列栈空间, 保证对齐, 尝试提高缓存率
 
     ///@brief 重排Alloca和spill变量(local), 满足SIMD额外的对齐要求
-    auto args_end = objs->begin();                  // 后一位, 不是args
-    auto calleesave_begin = std::prev(objs->end()); // 第一个, 是calleesave
+    unsigned args_end = 0;                        // 后一位, 是args
+    unsigned calleesave_begin = objs->size() - 1; // 第一个前一个, 不是calleesave
 
-    auto current = objs->begin();
-    for (; current != objs->end();) {
-        auto &obj = *current;
+    unsigned current = 0;
+    std::set<std::shared_ptr<FrameObj>> fixStkMoved; // 防止循环移动
+    for (; current != objs->size() - 1;) {
+        auto &obj = (*objs)[current];
         auto tmp = current;
 
         switch (obj->getTrait()) {
@@ -65,7 +69,8 @@ void postRAstackformat::frameObjSort() {
             break;
         case FrameTrait::Arg:
             ///@note mov to the head
-            std::iter_swap(args_end, current);
+            // std::iter_swap(args_end, current);
+            std::swap((*objs)[args_end], obj);
             ++args_end;
             ++current;
             break;
@@ -75,15 +80,23 @@ void postRAstackformat::frameObjSort() {
             if (current >= calleesave_begin) {
                 ++current;
             } else {
-                std::iter_swap(current, calleesave_begin);
+                std::swap(obj, (*objs)[calleesave_begin]);
                 --calleesave_begin;
             }
             break;
         case FrameTrait::FixStack:
             ///@note after calleesaved and padding, be aware of seq
-            ++current;
-            objs->insert(std::prev(objs->end()), *tmp);
-            objs->erase(tmp);
+
+            if (fixStkMoved.find(obj) != fixStkMoved.end()) {
+                ++current;
+            } else {
+                objs->emplace_back(obj);
+                objs->erase(objs->begin() + current);
+                --calleesave_begin; // FixStack需要在calleesave之后
+                fixStkMoved.insert(obj);
+                // ++current;
+            }
+            break;
         default:
             break;
         }
@@ -94,30 +107,29 @@ void postRAstackformat::frameObjSort() {
         unsigned padding_size = *maxAlignment - (func->getInfo().arg_in_use % *maxAlignment);
         auto paddingObj = std::make_shared<FrameObj>(FrameTrait::Padding, padding_size);
         paddingObj->setId(objs->size());
-        objs->insert(std::prev(calleesave_begin), paddingObj);
+        objs->insert(objs->begin() + calleesave_begin - 1, paddingObj);
     }
 
     ///@brief local_begin, local_end内重排
 
     auto QWORD_begin = args_end;
     auto DWORD_begin = args_end;
-    auto WORD_end = std::prev(calleesave_begin);
+    auto WORD_end = calleesave_begin - 1;
     ///@note DWORD_begin 和 WORD_begin 可能相同, 此时只有一个local量
 
     for (; DWORD_begin < WORD_end;) {
-        auto &obj = *DWORD_begin;
-        auto tmp = DWORD_begin;
+        auto obj = (*objs)[DWORD_begin];
 
         switch (obj->getAliagnment()) {
         case 4:
-            std::iter_swap(DWORD_begin, WORD_end);
+            std::swap(DWORD_begin, WORD_end);
             --WORD_end;
             break;
         case 8:
             ++DWORD_begin;
             break;
         case 16:
-            std::iter_swap(WORD_end, QWORD_begin);
+            std::swap(WORD_end, QWORD_begin);
             ++WORD_end;
             ++QWORD_begin;
             break;
@@ -169,7 +181,7 @@ void postRAstackformat::frameObjImpl() {
             current_size += obj->getSize();
         } else {
             Err::gassert(obj->getSeq() != -1, "fix-stack obj corrupted.");
-            obj->setOffset((calleeSavedSize + obj->getSeq() - 4) * -1);
+            obj->setOffset((obj->getSeq() - 4) * 4 * -1); // 能看懂就行, 反正也不用
         }
         ///@note 方便debug
         obj->setId(cnt++);
@@ -189,14 +201,18 @@ void postRAstackformat::Leagalize() {
 
     for (unsigned i = 0; i < 4; ++i)
         calleeSave.erase(i);
+
+    if (func->getInfo().hasCall)
+        calleeSave.insert(static_cast<int>(CoreRegister::lr));
+
     for (unsigned i = 0; i < 16; ++i)
         calleeSave_s.erase(i);
 
-    auto push = std::make_shared<PUSH>(calleeSave);
-    auto push_v = std::make_shared<VPUSH>(calleeSave_s);
+    auto push = make<PUSH>(calleeSave);
+    auto push_v = make<VPUSH>(calleeSave_s);
 
-    if (func->getName() != "@main")
-        initialize_blk->addInsts_front({push, push_v});
+    // if (func->getName() != "@main" || func->getInfo().hasCall)
+    initialize_blk->addInsts_front({push, push_v});
 
     ///@note mov ... ldr ... (extract args)
 
@@ -250,7 +266,7 @@ void postRAstackformat::Leagalize() {
     auto vpop = std::make_shared<VPOP>(calleeSave_s);
     auto pop = std::make_shared<POP>(calleeSave);
 
-    if (func->getName() != "@main") {
+    if (func->getName() != "@main" || func->getInfo().hasCall) {
         insts.emplace_back(vpop);
         insts.emplace_back(pop);
     }

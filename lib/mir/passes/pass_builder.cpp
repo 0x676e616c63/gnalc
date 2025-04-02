@@ -36,7 +36,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
 
     fpm.addPass(postRAstackformat());
 
-    fpm.addPass(uselessMovEli());
+    // fpm.addPass(uselessMovEli());
     fpm.addPass(uselessBlkEli());
 
     return fpm;

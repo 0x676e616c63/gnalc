@@ -31,6 +31,8 @@ public:
 
     unsigned int addInsts_front(std::list<std::shared_ptr<Instruction>> _insts);
 
+    unsigned int addInsts_beforebranch(std::string, std::list<std::shared_ptr<Instruction>>);
+
     unsigned int addInsts_beforebranch(std::list<std::shared_ptr<Instruction>> _insts);
 
     unsigned int addLiveIn(const std::shared_ptr<BindOnVirOP> &_livein);

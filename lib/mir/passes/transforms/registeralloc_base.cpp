@@ -1,4 +1,5 @@
 #include "../../../../include/mir/passes/transforms/registeralloc.hpp"
+#include "../../../../include/mir/passes/transforms/uselessMovEli.hpp"
 #include <algorithm>
 #include <numeric>
 #include <random>
@@ -21,6 +22,7 @@ PM::PreservedAnalyses RAPass::run(Function &bkd_function, FAM &fam) {
     varpool = &(Func->editInfo().varpool);
     liveinfo = fam.getResult<LiveAnalysis>(bkd_function);
 
+    spilltimes = 0;
     isInitialed = false;
 
     Func->editInfo().regdit_s.insert({
@@ -63,6 +65,7 @@ void RAPass::Main() {
 
     if (!spilledNodes.empty()) {
         ReWriteProgram();
+
         Main();
     }
 }
@@ -88,10 +91,12 @@ void RAPass::AddEdge(const OperP &u, const OperP &v) {
 void RAPass::Build() {
     ///@note MkInitial
     if (!isInitialed) {
+
         ///@note 在原算法基础上, 顺便填写initial 和 precolored
         ///@note 只有第一次才这么做
         for (const auto &blk : Func->getBlocks()) {
             for (const auto &inst : blk->getInsts()) {
+
                 const auto &use = getUse(inst);
                 const auto &def = getDef(inst);
 
@@ -123,12 +128,13 @@ void RAPass::Build() {
         for (auto inst_it = insts.rbegin(); inst_it != insts.rend(); ++inst_it) {
             const auto &inst = *inst_it;
 
+            // if (uselessMovEli::isUseless(inst))
+            //     continue;
+
             const auto &use = getUse(inst);
             const auto &def = getDef(inst);
 
-            if (isMoveInstruction(inst)) { // 广义的move inst
-                ///@note 理论上如果是callinst, 需要在这里专门设置对参数的冲突
-                ///@note 但是由于指令选择时翻译了装载参数的语句, 所以这里可以不管了
+            if (isMoveInstruction(inst)) {
                 delBySet(live, use);
 
                 for (const auto &n : getUnion<OperP>(def, use)) {

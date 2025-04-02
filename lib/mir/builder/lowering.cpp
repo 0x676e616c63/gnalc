@@ -17,7 +17,7 @@ Lowering::Lowering(const IR::Module &midEnd_module) : module(midEnd_module.getNa
 void Lowering::operator()(const IR::Module &midEnd_module) {
     ///@brief 处理全局变量
     for (auto &midEnd_glo : midEnd_module.getGlobalVars()) {
-        std::shared_ptr<GlobalObj> obj = std::make_shared<GlobalObj>(*midEnd_glo);
+        auto obj = std::make_shared<GlobalObj>(*midEnd_glo);
         module.addGlobal(obj);
     }
 
@@ -27,15 +27,16 @@ void Lowering::operator()(const IR::Module &midEnd_module) {
 }
 
 std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
-    std::shared_ptr<Function> func = std::make_shared<Function>(midEnd_function.getName(), module.getConstPool());
+    auto func = std::make_shared<Function>(midEnd_function.getName(), module.getConstPool(),
+                                           midEnd_function.getInstCount() + midEnd_function.getBlocks().size() +
+                                               midEnd_function.getParams().size());
+    cur_func = func.get();
 
     func->editInfo().args = midEnd_function.getParams().size();
     // func->editInfo().constpool = module.getConstPool();
 
-    OperandLowering operlower{midEnd_function.getInstCount() + midEnd_function.getBlocks().size() +
-                                  func->getInfo().args,
-                              module.getConstPool(), func->editInfo().varpool, func->editInfo().arg_in_use,
-                              func->editInfo().StackObjs}; // first: med_val_cnt
+    OperandLowering operlower{func->getInfo().varpool.countbase, module.getConstPool(), func->editInfo().varpool,
+                              func->editInfo().arg_in_use, func->editInfo().StackObjs}; // first: med_val_cnt
 
     /// @brief 函数参数加载到varpool里, 并且适当添加ldr指令
     unsigned int cnt = 0;  // int 或者 地址(数组退化而来)
@@ -46,7 +47,7 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
         auto arg_type = arg->getType();
 
         if (std::dynamic_pointer_cast<IR::PtrType>(arg_type)) {
-            if (cnt <= 4) {
+            if (cnt < 4) {
                 auto arg_in_reg = operlower.getPreColored(static_cast<CoreRegister>(cnt));
                 // auto val = operlower.mkOP(*arg, RegisterBank::gpr);
                 auto val = operlower.mkBaseOP(*arg);
@@ -55,13 +56,13 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
             } else {
                 // 参数在内存中
                 auto val = operlower.mkBaseOP(*arg);
-                auto arg_in_stack = operlower.mkStackOP(cnt);
+                auto arg_in_stack = operlower.mkStackOP(cnt); // from 0
                 auto ldr = std::make_shared<ldrInst>(SourceOperandType::a, 4, val, arg_in_stack);
                 arg_insts.emplace_back(ldr);
             }
             ++cnt;
         } else if (std::dynamic_pointer_cast<IR::BType>(arg_type)->getInner() == IR::IRBTYPE::I32) {
-            if (cnt <= 4) {
+            if (cnt < 4) {
                 auto arg_in_reg = operlower.getPreColored(static_cast<CoreRegister>(cnt));
                 auto val = operlower.mkOP(*arg, RegisterBank::gpr);
                 auto copy = std::make_shared<COPY>(val, arg_in_reg);
@@ -69,13 +70,13 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
             } else {
                 // 参数在内存中
                 auto val = operlower.mkOP(*arg, RegisterBank::gpr);
-                auto arg_in_stack = operlower.mkStackOP(cnt);
+                auto arg_in_stack = operlower.mkStackOP(cnt); // frame 0
                 auto ldr = std::make_shared<ldrInst>(SourceOperandType::a, 4, val, arg_in_stack);
                 arg_insts.emplace_back(ldr);
             }
             ++cnt;
         } else if (std::dynamic_pointer_cast<IR::BType>(arg_type)->getInner() == IR::IRBTYPE::FLOAT) {
-            if (fcnt <= 32) {
+            if (fcnt < 32) {
                 auto arg_in_freg = operlower.getPreColored(static_cast<CoreRegister>(cnt));
                 auto val = operlower.mkOP(*arg, RegisterBank::spr);
                 auto copy = std::make_shared<COPY>(val, arg_in_freg);
@@ -133,8 +134,7 @@ std::shared_ptr<BasicBlock> Lowering::lower(const IR::BasicBlock &midEnd_bb, Ope
     std::shared_ptr<BasicBlock> basicblock =
         std::make_shared<BasicBlock>(midEnd_bb.getName(), !(midEnd_bb.getPhiInsts().empty())); // 最终的asm中可能重名
 
-    InstLowering instlower{operlower};
-
+    InstLowering instlower{operlower, cur_func};
     ///@note lowering 中没有填写pres, succs以及活跃信息, 应该在phi消除中会填
 
     for (auto &midEnd_inst : midEnd_bb.getAllInsts()) {
@@ -174,6 +174,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::operator()(const std::shar
     } else if (auto call = std::dynamic_pointer_cast<IR::CALLInst>(midEnd_inst)) {
 
         insts = callLower(call, blk);
+        cur_func->editInfo().hasCall = true;
 
     } else if (auto fptosi = std::dynamic_pointer_cast<IR::FPTOSIInst>(midEnd_inst)) {
 

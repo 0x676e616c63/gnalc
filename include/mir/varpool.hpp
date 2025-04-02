@@ -35,7 +35,9 @@ private:
     std::unordered_map<FPURegister, std::shared_ptr<PreColedOP>> spr_pool;
 
 public:
-    VarPool() = default;
+    VarPool() = delete;
+
+    VarPool(size_t _countbase) : countbase(_countbase) {}
 
     std::shared_ptr<Operand> getValue(const IR::Value &); // Use
 
@@ -55,7 +57,12 @@ public:
         }
         auto obj = std::make_shared<ConstObj>(cnt, literal);
 
-        auto op = addValue_anonymously(false);
+        std::shared_ptr<MIR::BindOnVirOP> op;
+
+        // if (std::remove_cv_t<std::remove_reference_t<decltype(literal)>> == typeid(std::string))
+        //     op =
+
+        op = addValue_anonymously(false);
         addLoaded(*obj, op, blk); // obj 析构? blk 析构?
         return {op, obj};         // a new const obj maybe in use ?
     }
@@ -73,7 +80,10 @@ public:
     addStackValue_anonymously(const std::shared_ptr<FrameObj> &); // 用于获得一个空的栈空间(4bytes)
                                                                   // 寄存器分配用
     void addLoaded(const ConstObj &, const std::shared_ptr<BindOnVirOP> &, const std::shared_ptr<BasicBlock> &);
+
     size_t size() const;
+
+    const size_t countbase;
 
     ~VarPool() = default;
 };

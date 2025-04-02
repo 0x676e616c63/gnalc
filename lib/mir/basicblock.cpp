@@ -1,4 +1,5 @@
 #include "../../include/mir/basicblock.hpp"
+#include "../../include/mir/instructions/branch.hpp"
 #include <algorithm>
 
 using namespace MIR;
@@ -21,15 +22,34 @@ unsigned int BasicBlock::addInsts_back(std::list<std::shared_ptr<Instruction>> _
 }
 
 unsigned int BasicBlock::addInsts_front(std::list<std::shared_ptr<Instruction>> _insts) {
-    Err::gassert(!_insts.empty(), "try addInsts_front a empty inst list");
     insts.splice(insts.begin(), _insts);
     return insts.size();
 }
 
-unsigned int BasicBlock::addInsts_beforebranch(std::list<std::shared_ptr<Instruction>> _insts) {
-    ///@note the last branch inst
+unsigned int BasicBlock::addInsts_beforebranch(std::string label, std::list<std::shared_ptr<Instruction>> _insts) {
+    ///@note 依然假设对指定块的跳转只有一条branch
 
-    Err::gassert(!_insts.empty(), "try addInsts_beforebranch a empty inst list");
+    for (auto it = insts.rbegin(); it != insts.rend(); ++it) {
+        auto &inst = *it;
+
+        if (inst->getOpCode().index() != 0 || std::get<OpCode>(inst->getOpCode()) != OpCode::B)
+            continue;
+
+        auto branch = std::dynamic_pointer_cast<branchInst>(inst);
+
+        if (branch->getJmpTo() != label)
+            continue;
+
+        insts.splice(it.base(), _insts);
+    }
+
+    return insts.size();
+}
+
+unsigned int BasicBlock::addInsts_beforebranch(std::list<std::shared_ptr<Instruction>> _insts) {
+    ///@note the last branch inst, I mean...
+
+    // Err::gassert(!_insts.empty(), "try addInsts_beforebranch a empty inst list");
 
     auto branch = insts.back(); // b, b{cond}, bl, bx, RET ...
 

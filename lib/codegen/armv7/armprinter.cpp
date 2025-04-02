@@ -131,9 +131,11 @@ void ARMPrinter::printout(const std::shared_ptr<Instruction> &inst) {
             operands += std::visit(visitor_reg, std::dynamic_pointer_cast<BindOnVirOP>(sourceOp)->getColor()) + ", ";
             break;
         case OperandTrait::BaseAddress: // {v}ldr, {v}str
-            // 计算偏移
-            operands +=
-                std::visit(visitor_reg, std::dynamic_pointer_cast<BaseADROP>(sourceOp)->getBase()->getColor()) + ", ";
+            // gep计算偏移
+            {
+                auto basereg = sourceOp->as<BaseADROP>();
+                operands += enum_name(std::get<CoreRegister>(basereg->getBase()->getColor())) + ", ";
+            }
             break;
         case OperandTrait::ConstantPoolValue: {
             auto constval = std::dynamic_pointer_cast<ConstantIDX>(sourceOp);
@@ -165,11 +167,13 @@ void ARMPrinter::printout(const std::shared_ptr<Instruction> &inst) {
 }
 
 bool ARMPrinter::instTryHelp(const std::shared_ptr<Instruction> &inst) {
-    if (auto mov = std::dynamic_pointer_cast<movInst>(inst)) {
-        return movInstHelper(mov); // maybe false;
-
-    } else if (inst->getOpCode().index() == 0) {
+    if (inst->getOpCode().index() == 0) {
         auto opcode = std::get<OpCode>(inst->getOpCode());
+
+        if (opcode == OpCode::MOV || opcode == OpCode::COPY) {
+            return movInstHelper(inst);
+        }
+
         if (opcode >= OpCode::PUSH && opcode <= OpCode::VPOP) {
             calleesaveHelper(inst);
             return true;
@@ -203,7 +207,38 @@ bool ARMPrinter::instTryHelp(const std::shared_ptr<Instruction> &inst) {
     return false;
 }
 
-bool ARMPrinter::movInstHelper(const std::shared_ptr<movInst> &mov) {
+std::string addressingTemplate(const std::shared_ptr<Operand> &_baseReg, const std::shared_ptr<Operand> &_idxReg,
+                               const std::shared_ptr<Operand> &_shift) {
+    auto baseReg = std::dynamic_pointer_cast<BaseADROP>(_baseReg);
+    auto idxReg = std::dynamic_pointer_cast<BindOnVirOP>(_idxReg);
+    auto shift = std::dynamic_pointer_cast<ShiftOP>(_shift);
+
+    std::string str;
+    str += enum_name(std::get<CoreRegister>(baseReg->getBase()->getColor())) + ", ";
+
+    if (idxReg)
+        str += enum_name(std::get<CoreRegister>(idxReg->getColor())) + ", ";
+
+    if (shift)
+        str += lowercase(enum_name(shift->shiftCode)) + '#' + std::to_string(shift->getShiftImme()) + ", ";
+
+    int constoffset = baseReg->getConstOffset();
+    if (constoffset || baseReg->getTrait() == BaseAddressTrait::Local) {
+        if (auto stkReg = baseReg->as<StackADROP>()) {
+            ///@warning 有可能会超过4095常数寻址极限
+            auto asmoffset = constoffset + stkReg->getObj()->getOffset();
+
+            ///@todo sub sp, sp, #imme, add sp, sp, #imme
+            Err::gassert(asmoffset < 4096, "codegen: stack addressing const offset > 4095");
+            str += '#' + std::to_string(asmoffset) + ", ";
+        } else if (constoffset)
+            str += '#' + std::to_string(constoffset) + ", ";
+    }
+
+    return str.substr(0, str.size() - 2);
+}
+
+bool ARMPrinter::movInstHelper(const std::shared_ptr<Instruction> &mov) {
     ///@todo 1  sourceOP is constant ?
     ///@todo 2.1 判断类型: 地址, float, int
     ///@todo 2.2 地址, float--> movw/movt
@@ -216,10 +251,40 @@ bool ARMPrinter::movInstHelper(const std::shared_ptr<movInst> &mov) {
     auto target = mov->getTargetOP();
     auto source = mov->getSourceOP(1);
 
-    if (std::dynamic_pointer_cast<BindOnVirOP>(source)) // reg
-        return false;
+    if (auto basereg = source->as<BaseADROP>()) {
+        // 将一个寻址操作数转移到另一个寄存器
+        // 一般是传参使用
 
-    auto constant = std::dynamic_pointer_cast<ConstantIDX>(source)->getConst();
+        if (basereg->getTrait() != BaseAddressTrait::Local) {
+            outStream << "mov\t" << enum_name(std::get<CoreRegister>(target->getColor())) << ", ";
+            outStream << enum_name(std::get<CoreRegister>(basereg->getBase()->getColor())) << '\n';
+            return true;
+        }
+
+        auto stkreg = basereg->as<StackADROP>();
+        auto stkoffset = stkreg->getObj()->getOffset();
+
+        ///@todo sub sp, sp, #imme, add sp, sp, #imme
+        Err::gassert(stkoffset >= 0 && stkoffset < 1024,
+                     "codegen: mov stack addressing const offset > 1023"); // 8 bits 位图
+
+        outStream << "add\t" << enum_name(std::get<CoreRegister>(target->getColor())) << ", ";
+        outStream << enum_name(std::get<CoreRegister>(basereg->getBase()->getColor())) << ", ";
+        outStream << '#' + std::to_string(stkoffset) << '\n';
+
+        return true;
+    }
+
+    if (auto reg = source->as<BindOnVirOP>()) // reg
+    {
+        outStream << "mov\t";
+        outStream << enum_name(std::get<CoreRegister>(target->getColor())) << ", ";
+        outStream << enum_name(std::get<CoreRegister>(reg->getColor())) << '\n';
+
+        return true;
+    }
+
+    auto constant = source->as<ConstantIDX>()->getConst();
 
     auto reg_str = enum_name(std::get<CoreRegister>(target->getColor()));
 
@@ -232,7 +297,7 @@ bool ARMPrinter::movInstHelper(const std::shared_ptr<movInst> &mov) {
         // outStream << "    movt    " + reg_str + ", #:upper16:" + val_str + '\n';
         outStream << "movw\t" + reg_str + ", #:lower16:" + val_str + '\n';
         outStream << "    movt\t" + reg_str + ", #:upper16:" + val_str + '\n';
-    } else if (constant->isEncoded()) { // float
+    } else if (constant->isEncoded()) { // float, int
         // movw/movt
         auto lower = std::to_string(std::get<Encoding>(constant->getLiteral()).first);
         auto upper = std::to_string(std::get<Encoding>(constant->getLiteral()).second);
@@ -271,12 +336,18 @@ void ARMPrinter::calleesaveHelper(const std::shared_ptr<Instruction> &inst) {
     if (reg_list.empty())
         return;
 
+    if (cur_func->getName() == "@main") {
+        if (cur_func->getInfo().hasCall)
+            outStream << "    push\t{lr}\n";
+        return;
+    }
+
     outStream << "    "; // head indent
 
     // outStream << lowercase(enum_name(std::get<OpCode>(inst->getOpCode()))) << "    ";
     outStream << lowercase(enum_name(std::get<OpCode>(inst->getOpCode()))) << '\t';
 
-    outStream << "{ ";
+    outStream << "{";
 
     std::string push_pop_list;
     for (const auto &reg : reg_list) {
@@ -291,27 +362,6 @@ void ARMPrinter::calleesaveHelper(const std::shared_ptr<Instruction> &inst) {
 void ARMPrinter::vmrsHelper() {
     // outStream << "    vmrs    APSR_nzcv, FPSCR\n";
     outStream << "    vmrs\tAPSR_nzcv, FPSCR\n";
-}
-
-std::string addressingTemplate(const std::shared_ptr<Operand> &_baseReg, const std::shared_ptr<Operand> &_idxReg,
-                               const std::shared_ptr<Operand> &_shift) {
-    auto baseReg = std::dynamic_pointer_cast<BaseADROP>(_baseReg);
-    auto idxReg = std::dynamic_pointer_cast<BindOnVirOP>(_idxReg);
-    auto shift = std::dynamic_pointer_cast<ShiftOP>(_shift);
-
-    std::string str;
-    str += enum_name(std::get<CoreRegister>(baseReg->getBase()->getColor())) + ", ";
-
-    if (idxReg)
-        str += enum_name(std::get<CoreRegister>(idxReg->getColor())) + ", ";
-
-    if (shift)
-        str += lowercase(enum_name(shift->shiftCode)) + '#' + std::to_string(shift->getShiftImme()) + ", ";
-
-    if (auto constoffset = baseReg->getConstOffset())
-        str += '#' + std::to_string(constoffset) + ", ";
-
-    return str.substr(0, str.size() - 2);
 }
 
 void ARMPrinter::memoryHelper(const std::shared_ptr<Instruction> &inst) {

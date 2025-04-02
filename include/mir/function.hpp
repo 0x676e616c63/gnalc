@@ -77,7 +77,7 @@ public:                                                   // 接口太多, 还�
     unsigned int spilltimes = 0;
 
 public:
-    explicit FunctionInfo(ConstPool &_constpool);
+    explicit FunctionInfo(ConstPool &_constpool, size_t _countbase);
 
     std::string toString() const; // print info
     ~FunctionInfo() = default;
@@ -93,7 +93,7 @@ private:
 
 public:
     Function() = delete;
-    explicit Function(std::string _name, ConstPool &_constpool);
+    explicit Function(std::string _name, ConstPool &_constpool, size_t _countbase);
 
     FunctionInfo getInfo() const;
     FunctionInfo &editInfo();

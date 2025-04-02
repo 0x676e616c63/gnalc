@@ -70,9 +70,17 @@ std::string calleesaveInst::toString() {
 
     str += enum_name(std::get<OpCode>(opcode)) + ' ';
 
-    for (const auto &reg : getRegList()) {
-        str += "$" + enum_name(static_cast<CoreRegister>(reg)) + " ,";
-    }
+    if (reg_list.empty())
+        str += "none";
+
+    if (isCoreReg)
+        for (const auto &reg : reg_list) {
+            str += "$" + enum_name(static_cast<CoreRegister>(reg)) + ", ";
+        }
+    else
+        for (const auto &reg : reg_list) {
+            str += "$" + enum_name(static_cast<FPURegister>(reg)) + ", ";
+        }
     str += '\n';
 
     return str;
@@ -93,6 +101,7 @@ void POP::setSourceOP(unsigned int seq, std::shared_ptr<Operand>) {};
 VPUSH::VPUSH(std::set<unsigned> set) : calleesaveInst(OpCode::VPUSH, std::move(set), false){};
 
 std::shared_ptr<Operand> VPUSH::getSourceOP(unsigned int seq) { return nullptr; }
+
 void VPUSH::setSourceOP(unsigned int seq, std::shared_ptr<Operand>) {};
 
 VPOP::VPOP(std::set<unsigned> set) : calleesaveInst(OpCode::VPOP, std::move(set), false){};

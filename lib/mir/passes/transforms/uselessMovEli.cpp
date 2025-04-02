@@ -3,16 +3,16 @@
 using namespace MIR;
 
 PM::PreservedAnalyses uselessMovEli::run(Function &func, FAM &fam) {
-    function = &func;
+    // function = &func;
 
-    impl();
+    impl(func);
 
     return PM::PreservedAnalyses::all();
 }
 
-void uselessMovEli::impl() {
+void uselessMovEli::impl(Function &function) {
 
-    for (const auto &blk : function->getBlocks()) {
+    for (const auto &blk : function.getBlocks()) {
 
         auto &insts = blk->getInsts();
         for (auto it = insts.begin(); it != insts.end();) {
@@ -44,6 +44,9 @@ bool uselessMovEli::isUseless(const InstP &inst) {
         if (std::get<CoreRegister>(target->getColor()) != std::get<CoreRegister>(source->getColor()))
             return false;
 
+        if (std::get<CoreRegister>(target->getColor()) == CoreRegister::none)
+            return false; // to fit RA
+
     } else {
         auto op = std::get<NeonOpCode>(opcode);
 
@@ -57,8 +60,13 @@ bool uselessMovEli::isUseless(const InstP &inst) {
             return false;
 
         ///@note 理论上应该再检查dataTypePair...
+        if (target->getColor().index() != 1 || source->getColor().index() != 1)
+            return false;
 
         if (std::get<FPURegister>(target->getColor()) != std::get<FPURegister>(source->getColor()))
+            return false;
+
+        if (std::get<FPURegister>(target->getColor()) == FPURegister::none)
             return false;
     }
 

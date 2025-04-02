@@ -75,7 +75,7 @@ void PhiEliminatePass::MkWorkList() {
     }
 }
 
-void PhiEliminatePass::pushBeforeBranch(const BlkP &emitBlk, const OperP &dst, const OperP &src) {
+void PhiEliminatePass::pushBeforeBranch(const BlkP &emitBlk, std::string destBlk, const OperP &dst, const OperP &src) {
 
     Err::gassert(std::dynamic_pointer_cast<BindOnVirOP>(dst) != nullptr, "dst operand is a const value");
 
@@ -88,11 +88,14 @@ void PhiEliminatePass::pushBeforeBranch(const BlkP &emitBlk, const OperP &dst, c
     for (auto it = instList.begin(); it != instList.end(); ++it) {
         auto &inst = *it;
 
-        if (!std::dynamic_pointer_cast<branchInst>(inst))
-            continue;
-
-        instList.insert(it, copy); // before
-        return;
+        if (auto b = std::dynamic_pointer_cast<branchInst>(inst)) {
+            if (std::get<OpCode>(b->getOpCode()) != OpCode::B || b->getJmpTo() != destBlk)
+                continue;
+            else {
+                instList.insert(it, copy);
+                return; // 假设一个块到另一个块只存在一个对应的跳转指令
+            }
+        }
     }
 
     Err::unreachable("pushBeforeBranch didn't find a branch inst");
@@ -102,7 +105,7 @@ void PhiEliminatePass::pushBeforeBranch(const BlkP &emitBlk, const OperP &dst, c
 // COPY stageR dst(暂存)
 // COPY dst, src(runOnGraph中插入)
 // push_before_branch
-OperP PhiEliminatePass::addCOYPInst(const BlkP &emitBlk, const OperP &dst, const FuncP &func) {
+OperP PhiEliminatePass::addCOYPInst(const BlkP &emitBlk, std::string destBlk, const OperP &dst, const FuncP &func) {
     ///@brief 设置stageR
 
     Err::gassert(std::dynamic_pointer_cast<BindOnVirOP>(dst) != nullptr, "dst operand is a const value");
@@ -120,7 +123,7 @@ OperP PhiEliminatePass::addCOYPInst(const BlkP &emitBlk, const OperP &dst, const
     varpool.addValue(*temp_midVal, stagedVal);
 
     ///@brief push_before_branch
-    pushBeforeBranch(emitBlk, stagedVal, dst);
+    pushBeforeBranch(emitBlk, destBlk, stagedVal, dst);
 
     return stagedVal;
 }
@@ -160,6 +163,8 @@ void PhiEliminatePass::RunOnFunc(PhiFunction &func) {
 }
 
 void PhiEliminatePass::RunOnBlkPair(const PhiBlkPairs &process) {
+    ///@note 每次只处理一对blks
+
     auto func = process.func;
     BlkP pred = process.src;
     BlkP succ = process.dst;
@@ -222,11 +227,11 @@ void PhiEliminatePass::RunOnBlkPair(const PhiBlkPairs &process) {
                 ///@note 理论上由于单赋值, 所以不需要做什么, 但是算法会还是会插入一个stage, 以及一个冗余的copy
                 Err::gassert(graph[idx].indegree == 1, "indegree must be 1");
                 graph[idx].indegree = 0;
-                auto stagedVal = addCOYPInst(emitBlk, dst, func); // push_before_branch
+                auto stagedVal = addCOYPInst(emitBlk, succ->getName(), dst, func); // push_before_branch
                 StagedMap[dst] = stagedVal;
             }
 
-            pushBeforeBranch(emitBlk, src, dst); ///@bug, src和dst可能还需要再考虑一下
+            pushBeforeBranch(emitBlk, succ->getName(), src, dst); ///@bug, src和dst可能还需要再考虑一下
 
             auto &node = graph[idx];
             for (auto nxt : node.nxt) {

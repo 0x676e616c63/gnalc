@@ -11,8 +11,8 @@ using namespace MIR;
 FrameObj::FrameObj(FrameTrait _ftrait, size_t _size) : ftrait(_ftrait), size(_size) {}
 FrameObj::FrameObj(FrameTrait _ftrait, size_t _size, unsigned _seq) : ftrait(_ftrait), size(_size), seq(_seq) {}
 
-void FrameObj::setOffset(size_t _offset) { offset = _offset; }
-size_t FrameObj::getOffset() const { return offset; }
+void FrameObj::setOffset(int _offset) { offset = _offset; }
+int FrameObj::getOffset() const { return offset; }
 
 FrameTrait FrameObj::getTrait() { return ftrait; }
 

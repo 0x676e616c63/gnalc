@@ -71,7 +71,7 @@ void VarPool::addLoaded(const ConstObj &obj, const std::shared_ptr<BindOnVirOP> 
 }
 
 std::shared_ptr<BindOnVirOP> VarPool::addValue_anonymously(bool isFloat) {
-    std::string name = '%' + std::to_string(pool.size());
+    std::string name = '%' + std::to_string(countbase + pool.size() + 1);
 
     std::shared_ptr<IR::Value> val;
     if (!isFloat)
@@ -93,7 +93,7 @@ std::shared_ptr<BindOnVirOP> VarPool::addValue_anonymously(bool isFloat) {
 }
 
 std::shared_ptr<StackADROP> VarPool::addStackValue_anonymously(const std::shared_ptr<FrameObj> &obj) {
-    std::string name = '%' + std::to_string(pool.size());
+    std::string name = '%' + std::to_string(countbase + pool.size() + 1);
 
     ///@warning 这里的val虽然应该是ptr, 但是是用Btype初始化的
     auto val = std::make_shared<IR::Value>(std::move(name), IR::makeBType(IR::IRBTYPE::I32),

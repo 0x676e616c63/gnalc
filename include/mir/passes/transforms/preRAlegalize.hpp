@@ -17,6 +17,7 @@ public:
 private:
     Function *func; // 不清楚栈上还是堆上
     VarPool *varpool;
+    std::set<BaseP> constClearSet; // 常量偏移需清空的寻址操作数
 
     void runOnBlk(const BlkP &);
     void runOnInst(const BlkP &, const InstP &);

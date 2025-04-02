@@ -20,7 +20,7 @@ void unaryInst::setSourceOP(unsigned int seq, std::shared_ptr<Operand> ptr_new) 
 
     if (seq == 1) {
         auto ptr_new_reg = std::dynamic_pointer_cast<BindOnVirOP>(ptr_new);
-        Err::gassert(ptr_new_reg != nullptr, "set a new operand failed");
+        // Err::gassert(ptr_new_reg != nullptr, "set a new operand failed");
         SourceOperand_1 = ptr_new_reg;
     } else {
         Err::unreachable("set operand index out of ");
@@ -46,7 +46,7 @@ std::shared_ptr<Operand> binaryInst::getSourceOP(unsigned int seq) {
 void binaryInst::setSourceOP(unsigned int seq, std::shared_ptr<Operand> ptr_new) {
     if (seq == 1 || seq == 2) {
         auto ptr_new_reg = std::dynamic_pointer_cast<BindOnVirOP>(ptr_new);
-        Err::gassert(ptr_new_reg != nullptr, "set a new operand failed");
+        // Err::gassert(ptr_new_reg != nullptr, "set a new operand failed");
         SourceOperand_1 = ptr_new_reg;
     } else {
         Err::unreachable("set operand index out of ");
@@ -75,7 +75,7 @@ std::shared_ptr<Operand> ternaryInst::getSourceOP(unsigned int seq) {
 void ternaryInst::setSourceOP(unsigned int seq, std::shared_ptr<Operand> ptr_new) {
     if (seq == 1 || seq == 2 || seq == 3) {
         auto ptr_new_reg = std::dynamic_pointer_cast<BindOnVirOP>(ptr_new);
-        Err::gassert(ptr_new_reg != nullptr, "set a new operand failed");
+        // Err::gassert(ptr_new_reg != nullptr, "set a new operand failed");
         SourceOperand_1 = ptr_new_reg;
     } else {
         Err::unreachable("set operand index out of ");
@@ -104,13 +104,13 @@ std::shared_ptr<Operand> binaryImmInst::getSourceOP(unsigned int seq) {
 void binaryImmInst::setSourceOP(unsigned int seq, std::shared_ptr<Operand> ptr_new) {
     if (seq == 1) {
         auto ptr_new_reg = std::dynamic_pointer_cast<BindOnVirOP>(ptr_new);
-        Err::gassert(ptr_new_reg != nullptr, "set a new operand failed");
+        // Err::gassert(ptr_new_reg != nullptr, "set a new operand failed");
         SourceOperand_1 = ptr_new_reg;
     } else if (seq == 2) {
         SourceOperand_2 = ptr_new;
     } else if (seq == 3) {
         auto ptr_new_shift = std::dynamic_pointer_cast<ShiftOP>(ptr_new);
-        Err::gassert(ptr_new_shift != nullptr, "set a new operand failed");
+        // Err::gassert(ptr_new_shift != nullptr, "set a new operand failed");
         SourceOperand_3 = ptr_new_shift;
     } else {
         Err::unreachable("set operand index out of ");
@@ -136,7 +136,7 @@ std::shared_ptr<Operand> compareInst::getSourceOP(unsigned int seq) {
 void compareInst::setSourceOP(unsigned int seq, std::shared_ptr<Operand> ptr_new) {
     if (seq == 1) {
         auto ptr_new_reg = std::dynamic_pointer_cast<BindOnVirOP>(ptr_new);
-        Err::gassert(ptr_new_reg != nullptr, "set a new operand failed");
+        // Err::gassert(ptr_new_reg != nullptr, "set a new operand failed");
         SourceOperand_1 = ptr_new_reg;
     } else if (seq == 2) {
         SourceOperand_2 = ptr_new;

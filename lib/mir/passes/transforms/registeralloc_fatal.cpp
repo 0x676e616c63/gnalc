@@ -31,6 +31,17 @@ bool RAPass::isMoveInstruction(const InstP &inst) {
 RAPass::Nodes RAPass::getUse(const InstP &inst) {
     Nodes uses;
 
+    if (inst->getOpCode().index() == 1) {
+        Err::gassert(std::get<NeonOpCode>(inst->getOpCode()) == NeonOpCode::VMOV, "no neon inst but vmov expected");
+
+        auto sourceop = inst->getSourceOP(1)->as<BindOnVirOP>();
+
+        if (sourceop->getBank() == RegisterBank::gpr)
+            uses.insert(sourceop);
+
+        return uses;
+    }
+
     if (std::get<OpCode>(inst->getOpCode()) == OpCode::BL || std::get<OpCode>(inst->getOpCode()) == OpCode::BLX) {
         auto &varpool = Func->editInfo().getPool();
 
@@ -57,18 +68,23 @@ RAPass::Nodes RAPass::getUse(const InstP &inst) {
 RAPass::Nodes RAPass::getDef(const InstP &inst) {
     Nodes defs;
 
-    auto op = inst->getTargetOP();
+    auto op = inst->getTargetOP(); // spr maybe
+
+    if (!op)
+        return defs;
 
     if (auto ptr = std::dynamic_pointer_cast<BaseADROP>(op)) {
         defs.insert(ptr->getBase()); // maybe itself
-    } else if (auto vir = std::dynamic_pointer_cast<BindOnVirOP>(op) &&
-                          std::dynamic_pointer_cast<BindOnVirOP>(op)->getBank() == RegisterBank::gpr)
+    } else if (std::dynamic_pointer_cast<BindOnVirOP>(op) &&
+               std::dynamic_pointer_cast<BindOnVirOP>(op)->getBank() == RegisterBank::gpr)
         defs.insert(op);
 
     return defs;
 }
 
 OperP RAPass::heuristicSpill() {
+    ///@note 实现的关键在于, 不要重复溢出上一次溢出得到的小区间操作数
+
     const double Weight_IntervalLength = 2.5;
     const double Weight_Degree = 3;
     const double extra_Weight_ForNotPtr = +60;
@@ -77,7 +93,11 @@ OperP RAPass::heuristicSpill() {
     double weight_max = 0;
     OperP spilled = nullptr;
     for (const auto &op : spillWorkList) {
-        double weight = liveinfo.intervalLengths[op] * Weight_IntervalLength; // narrowing convert here
+        double weight = 0;
+
+        // if (liveinfo.intervalLengths.find(op) != liveinfo.intervalLengths.end())
+        weight += liveinfo.intervalLengths[op] * Weight_IntervalLength; // narrowing convert here
+
         weight += degree[op] * Weight_Degree;
         if (!std::dynamic_pointer_cast<BaseADROP>(op))
             weight += extra_Weight_ForNotPtr;

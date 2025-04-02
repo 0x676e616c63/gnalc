@@ -69,7 +69,8 @@ template <> inline std::string enum_name<ShiftOP::inlineShift>(ShiftOP::inlineSh
 
 template <> inline std::string enum_name<CoreRegister>(CoreRegister t) {
     switch (t) {
-    // case CoreRegister::none:          return "none";
+    // case CoreRegister::none: // maybe used in debug
+    //     return "none";
     case CoreRegister::r0:
         return "r0";
     case CoreRegister::r1:

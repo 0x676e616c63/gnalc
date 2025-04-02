@@ -15,10 +15,15 @@ std::shared_ptr<Operand> branchInst::getSourceOP(unsigned int seq) { return null
 void branchInst::setSourceOP(unsigned int seq, std::shared_ptr<Operand>) {}
 
 std::variant<std::shared_ptr<IR::BasicBlock>, std::shared_ptr<IR::FunctionDecl>> branchInst::getDest() { return Dest; }
+
 std::string branchInst::getJmpTo() { return JmpTo; }
+
 void branchInst::changeJmpTo(std::string _newJmpTo) { JmpTo = _newJmpTo; }
+
 bool branchInst::isJmpToBlock() { return Dest.index() == 0; }
+
 bool branchInst::isJmpToFunc() { return Dest.index() == 1; }
+
 unsigned int branchInst::getRetValType() const { return RetValType; }
 
 std::string branchInst::toString() {
@@ -34,6 +39,7 @@ std::string branchInst::toString() {
 RET::RET() : Instruction(OpCode::RET, SourceOperandType::cp) {}
 
 std::shared_ptr<Operand> RET::getSourceOP(unsigned int seq) { return nullptr; }
+
 void RET::setSourceOP(unsigned int seq, std::shared_ptr<Operand>) {} // 为了过编译只能先do nothing
 
 std::string RET::toString() { return "RET\n"; }

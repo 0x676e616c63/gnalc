@@ -35,10 +35,11 @@ std::string FunctionInfo::toString() const {
     return str;
 }
 
-FunctionInfo::FunctionInfo(ConstPool &_constpool) : constpool(_constpool) {}
+FunctionInfo::FunctionInfo(ConstPool &_constpool, size_t _countbase)
+    : constpool(_constpool), varpool(VarPool{_countbase}) {}
 
-Function::Function(std::string _name, ConstPool &_constpool)
-    : Value(ValueTrait::Function, std::move(_name)), info(FunctionInfo{_constpool}) {}
+Function::Function(std::string _name, ConstPool &_constpool, size_t _countbase)
+    : Value(ValueTrait::Function, std::move(_name)), info(FunctionInfo{_constpool, _countbase}) {}
 
 FunctionInfo Function::getInfo() const { return info; }
 FunctionInfo &Function::editInfo() { return info; }

@@ -142,6 +142,7 @@ void LiveAnalysis::runOnInst(const InstP &inst, std::unordered_set<OperP> &livei
         case OpCode::MLA:
         case OpCode::MLS:
         case OpCode::SMULL:
+        case OpCode::SMMUL:
         case OpCode::SMMLA:
         case OpCode::SMMLS:
         case OpCode::TST:

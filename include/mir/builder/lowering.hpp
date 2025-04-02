@@ -66,7 +66,8 @@ struct OperandLowering {
     /// 仅返回注册过的存有字面量的virop, 在fix-pass中补全mov
     template <typename T_variant>
     std::shared_ptr<BindOnVirOP> LoadedFind(const T_variant &constVal, const std::shared_ptr<BasicBlock> &blk) {
-        auto constPtr = constpool.getConstant(constVal); // constobj ptr
+        auto constPtr = constpool.getConstant(constVal); // get wrapper
+
         ///@note getLoaded 用于访问load池
         auto loadPtr = varpool.getLoaded(*constPtr, blk); // maybe nullptr
         if (loadPtr != nullptr)
@@ -132,6 +133,7 @@ struct OperandLowering {
 
 struct InstLowering {
     OperandLowering operlower;
+    Function *cur_func;
 
     std::list<std::shared_ptr<Instruction>> operator()(const std::shared_ptr<IR::Instruction> &,
                                                        const std::shared_ptr<BasicBlock> &self);
@@ -210,6 +212,7 @@ struct InstLowering {
 class Lowering {
 private:
     Module module;
+    Function *cur_func;
 
 public:
     Lowering() = delete;
