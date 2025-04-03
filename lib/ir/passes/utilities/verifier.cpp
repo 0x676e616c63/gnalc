@@ -1,14 +1,11 @@
-#include "../../../../include/ir/passes/utilities/verifier.hpp"
-
-#include "../../../../include/config/config.hpp"
-#include "../../../../include/ir/instructions/control.hpp"
-#include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
-#include "../../../../include/utils/logger.hpp"
+#include "ir/passes/utilities/verifier.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
+#include "utils/logger.hpp"
 
 #include <algorithm>
-#include <string>
 #include <vector>
 
 namespace IR {

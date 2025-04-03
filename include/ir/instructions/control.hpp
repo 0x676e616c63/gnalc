@@ -7,9 +7,9 @@
 #ifndef GNALC_IR_INSTRUCTIONS_CONTROL_HPP
 #define GNALC_IR_INSTRUCTIONS_CONTROL_HPP
 
-#include "../function.hpp"
-#include "../instruction.hpp"
-#include "../type_alias.hpp"
+#include "ir/function.hpp"
+#include "ir/instruction.hpp"
+#include "ir/type_alias.hpp"
 #include <vector>
 
 namespace IR {

@@ -1,5 +1,5 @@
-#include "../../include/ir/function.hpp"
-#include "../../include/ir/visitor.hpp"
+#include "ir/function.hpp"
+#include "ir/visitor.hpp"
 
 #include <algorithm>
 #include <map>

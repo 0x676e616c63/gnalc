@@ -1,6 +1,6 @@
-#include "../../../include/config/config.hpp"
+#include "config/config.hpp"
 #if GNALC_EXTENSION_BRAINFK
-#include "../../../include/codegen/brainfk/bfmodule.hpp"
+#include "codegen/brainfk/bfmodule.hpp"
 
 namespace BrainFk {
 const std::vector<BFInst> &BFModule::getInstructions() const { return instructions; }

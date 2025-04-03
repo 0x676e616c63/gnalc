@@ -1,14 +1,8 @@
-/**
- * @attention update: 使用 `Use` 类来管理操作数
- * @attention NO NULL WARNING
- */
+#include "ir/base.hpp"
+#include "ir/instructions/phi.hpp"
+#include "utils/exception.hpp"
+
 #include <algorithm>
-
-#include "../../include/ir/base.hpp"
-
-#include "../../include/ir/instructions/phi.hpp"
-#include "../../include/utils/exception.hpp"
-
 #include <functional>
 
 namespace IR {

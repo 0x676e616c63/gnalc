@@ -1,44 +1,45 @@
-#include "../../../include/ir/passes/pass_builder.hpp"
-#include "../../../include/ir/passes/pass_manager.hpp"
+#include "ir/passes/pass_builder.hpp"
+#include "ir/passes/pass_manager.hpp"
 
 // Analysis
-#include "../../../include/ir/passes/analysis/alias_analysis.hpp"
-#include "../../../include/ir/passes/analysis/domtree_analysis.hpp"
-#include "../../../include/ir/passes/analysis/live_analysis.hpp"
-#include "../../../include/ir/passes/analysis/loop_analysis.hpp"
-#include "../../../include/ir/passes/analysis/scev.hpp"
+#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/live_analysis.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
+#include "ir/passes/analysis/scev.hpp"
 
 // Transforms
-#include "../../../include/ir/passes/transforms/adce.hpp"
-#include "../../../include/ir/passes/transforms/break_critical_edges.hpp"
-#include "../../../include/ir/passes/transforms/cfgsimplify.hpp"
-#include "../../../include/ir/passes/transforms/codegen_prepare.hpp"
-#include "../../../include/ir/passes/transforms/constant_propagation.hpp"
-#include "../../../include/ir/passes/transforms/dce.hpp"
-#include "../../../include/ir/passes/transforms/dse.hpp"
-#include "../../../include/ir/passes/transforms/gvn_pre.hpp"
-#include "../../../include/ir/passes/transforms/indvar_simplify.hpp"
-#include "../../../include/ir/passes/transforms/inline.hpp"
-#include "../../../include/ir/passes/transforms/instsimplify.hpp"
-#include "../../../include/ir/passes/transforms/jump_threading.hpp"
-#include "../../../include/ir/passes/transforms/lcssa.hpp"
-#include "../../../include/ir/passes/transforms/licm.hpp"
-#include "../../../include/ir/passes/transforms/load_elimination.hpp"
-#include "../../../include/ir/passes/transforms/loop_elimination.hpp"
-#include "../../../include/ir/passes/transforms/loop_rotate.hpp"
-#include "../../../include/ir/passes/transforms/loop_simplify.hpp"
-#include "../../../include/ir/passes/transforms/loop_strength_reduce.hpp"
-#include "../../../include/ir/passes/transforms/loop_unroll.hpp"
-#include "../../../include/ir/passes/transforms/mem2reg.hpp"
-#include "../../../include/ir/passes/transforms/namenormalizer.hpp"
-#include "../../../include/ir/passes/transforms/reassociate.hpp"
-#include "../../../include/ir/passes/transforms/sroa.hpp"
-#include "../../../include/ir/passes/transforms/tail_recursion_elimination.hpp"
-#include "../../../include/ir/passes/transforms/tree_shaking.hpp"
+#include "ir/passes/transforms/adce.hpp"
+#include "ir/passes/transforms/break_critical_edges.hpp"
+#include "ir/passes/transforms/cfgsimplify.hpp"
+#include "ir/passes/transforms/codegen_prepare.hpp"
+#include "ir/passes/transforms/constant_propagation.hpp"
+#include "ir/passes/transforms/dce.hpp"
+#include "ir/passes/transforms/dse.hpp"
+#include "ir/passes/transforms/gvn_pre.hpp"
+#include "ir/passes/transforms/indvar_simplify.hpp"
+#include "ir/passes/transforms/inline.hpp"
+#include "ir/passes/transforms/instsimplify.hpp"
+#include "ir/passes/transforms/jump_threading.hpp"
+#include "ir/passes/transforms/lcssa.hpp"
+#include "ir/passes/transforms/licm.hpp"
+#include "ir/passes/transforms/load_elimination.hpp"
+#include "ir/passes/transforms/loop_elimination.hpp"
+#include "ir/passes/transforms/loop_rotate.hpp"
+#include "ir/passes/transforms/loop_simplify.hpp"
+#include "ir/passes/transforms/loop_strength_reduce.hpp"
+#include "ir/passes/transforms/loop_unroll.hpp"
+#include "ir/passes/transforms/mem2reg.hpp"
+#include "ir/passes/transforms/namenormalizer.hpp"
+#include "ir/passes/transforms/reassociate.hpp"
+#include "ir/passes/transforms/slp_vectorizer.hpp"
+#include "ir/passes/transforms/sroa.hpp"
+#include "ir/passes/transforms/tail_recursion_elimination.hpp"
+#include "ir/passes/transforms/tree_shaking.hpp"
 
 // Utilities
-#include "../../../include/ir/passes/utilities/irprinter.hpp"
-#include "../../../include/ir/passes/utilities/verifier.hpp"
+#include "ir/passes/utilities/irprinter.hpp"
+#include "ir/passes/utilities/verifier.hpp"
 
 #include <algorithm>
 #include <functional>
@@ -70,6 +71,7 @@ const OptInfo o1_opt_info = {
     .indvars = false,
     .loop_strength_reduce = false,
     .loopelim = false,
+    .slp_vectorizer = false,
     .jump_threading = false,
     // Module Transforms
     .tree_shaking = true,

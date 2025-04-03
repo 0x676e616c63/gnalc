@@ -22,9 +22,9 @@
 #ifndef GNALC_PASS_MANAGER_PASS_MANAGER_HPP
 #define GNALC_PASS_MANAGER_PASS_MANAGER_HPP
 
-#include "../utils/exception.hpp"
-#include "../utils/logger.hpp"
-#include "../utils/misc.hpp"
+#include "utils/exception.hpp"
+#include "utils/logger.hpp"
+#include "utils/misc.hpp"
 
 #include <chrono>
 #include <list>

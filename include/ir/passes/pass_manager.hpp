@@ -2,9 +2,9 @@
 #ifndef GNALC_IR_PASSES_PASS_MANAGER_HPP
 #define GNALC_IR_PASSES_PASS_MANAGER_HPP
 
-#include "../../ir/function.hpp"
-#include "../../ir/module.hpp"
-#include "../../pass_manager/pass_manager.hpp"
+#include "ir/function.hpp"
+#include "ir/module.hpp"
+#include "pass_manager/pass_manager.hpp"
 
 namespace PM {
 extern template class AnalysisManager<IR::Module>;

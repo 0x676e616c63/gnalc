@@ -3,6 +3,7 @@
 #define GNALC_IR_GLOBAL_VAR_HPP
 
 #include "base.hpp"
+
 #include <vector>
 
 namespace IR {

@@ -1,6 +1,3 @@
-/**
- * @todo may need symbol table
- */
 #pragma once
 #ifndef GNALC_IR_MODULE_HPP
 #define GNALC_IR_MODULE_HPP
@@ -9,6 +6,7 @@
 #include "constant_pool.hpp"
 #include "function.hpp"
 #include "global_var.hpp"
+
 #include <memory>
 
 namespace Parser {

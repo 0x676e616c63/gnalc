@@ -6,12 +6,9 @@
 //
 //             instruction == value == register
 //
-//       We have no `mov` in IR, and in fact we have no temporaries mentioned in the paper.
-//       All the instructions are treated as expressions or blackbox registers.
-//       Consequently, in this implementation, the TMP_GEN and PHI_GEN
-//       mentioned in the paper are intentionally omitted.
-//       (This is based on my own understanding. While initial testing shows correct redundancy elimination,
-//        I am not very sure the correctness.)
+//       We have no `mov` in IR, all the instructions are treated as expressions or blackbox registers.
+//       Consequently, in this implementation, the TMP_GEN and PHI_GEN mentioned in the paper
+//       are intentionally omitted.
 //
 // See:
 //     - Thomas VanDrunen and Antony L. Hosking "Value-based Partial Redundancy Elimination":
@@ -22,9 +19,6 @@
 //           source: https://github.com/I-mikan-I/ssa-compiler
 //     - LLVM:
 //           GVN.cpp: https://github.com/llvm/llvm-project/blob/main/llvm/lib/Transforms/Scalar/GVN.cpp#L2911
-//     - GCC:
-//           GCC Wiki: https://gcc.gnu.org/wiki/GVN-PRE
-//           tree-ssa-pre.cc: https://github.com/gcc-mirror/gcc/blob/master/gcc/tree-ssa-pre.cc
 //
 // TODO: Restrictions should be applied on hoisting to avoid excessive register pressure
 // TODO: Load elimination? https://blog.llvm.org/2009/12/introduction-to-load-elimination-in-gvn.html
@@ -32,12 +26,11 @@
 #ifndef GNALC_IR_PASSES_TRANSFORMS_GVN_PRE_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_GVN_PRE_HPP
 
-#include "../../../../include/ir/instructions/binary.hpp"
-#include "../../../../include/ir/instructions/compare.hpp"
-#include "../../../../include/ir/instructions/control.hpp"
-#include "../../../../include/ir/instructions/memory.hpp"
-#include "../analysis/domtree_analysis.hpp"
-#include "../pass_manager.hpp"
+#include "ir/instructions/binary.hpp"
+#include "ir/instructions/compare.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/pass_manager.hpp"
 
 #include <algorithm>
 #include <limits>

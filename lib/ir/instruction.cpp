@@ -1,7 +1,7 @@
-#include <utility>
+#include "ir/instruction.hpp"
+#include "ir/visitor.hpp"
 
-#include "../../include/ir/instruction.hpp"
-#include "../../include/ir/visitor.hpp"
+#include <utility>
 
 namespace IR {
 

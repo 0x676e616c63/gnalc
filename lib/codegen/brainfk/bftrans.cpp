@@ -1,9 +1,8 @@
-#include "../../../include/config/config.hpp"
+#include "config/config.hpp"
 #if GNALC_EXTENSION_BRAINFK
-#include "../../../include/utils/exception.hpp"
-
-#include "../../../include/codegen/brainfk/bfmodule.hpp"
-#include "../../../include/codegen/brainfk/bftrans.hpp"
+#include "utils/exception.hpp"
+#include "codegen/brainfk/bfmodule.hpp"
+#include "codegen/brainfk/bftrans.hpp"
 
 #include <vector>
 

@@ -1,10 +1,11 @@
 // Simple Implementation of DCE, only deleting useless instructions.
-// A more effective implementation of ADCE is required.
+// This is a wrapper for `eliminateDeadInsts` in block_utils.hpp.
+// Note that it is much faster than ADCE, though not as effective.
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_DCE_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_DCE_HPP
 
-#include "../pass_manager.hpp"
+#include "ir/passes/pass_manager.hpp"
 
 namespace IR {
 class DCEPass : public PM::PassInfo<DCEPass> {

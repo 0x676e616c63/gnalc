@@ -1,13 +1,12 @@
-// Loop Analysis
+// Loop Analysis Module
+// Follows the loop terminology from LLVM: https://llvm.org/docs/LoopTerminology.html
 // Note that this only calculate natural loop.
 #pragma once
 #ifndef GNALC_IR_PASSES_ANALYSIS_LOOP_ANALYSIS_HPP
 #define GNALC_IR_PASSES_ANALYSIS_LOOP_ANALYSIS_HPP
 
-#include "../../base.hpp"
-#include "../pass_manager.hpp"
-
-#include <unordered_map>
+#include "ir/base.hpp"
+#include "ir/passes/pass_manager.hpp"
 
 namespace IR {
 class LoopAnalysis;

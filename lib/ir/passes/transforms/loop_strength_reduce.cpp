@@ -1,10 +1,9 @@
-#include "../../../../include/ir/passes/transforms/loop_strength_reduce.hpp"
-
-#include "../../../../include/config/config.hpp"
-#include "../../../../include/ir/block_utils.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/scev.hpp"
-#include "../../../../include/ir/pattern_match.hpp"
+#include "ir/passes/transforms/loop_strength_reduce.hpp"
+#include "ir/block_utils.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
+#include "ir/passes/analysis/scev.hpp"
+#include "ir/pattern_match.hpp"
+#include "config/config.hpp"
 
 namespace IR {
 PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) {

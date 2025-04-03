@@ -1,8 +1,8 @@
-#include "../../include/ir/block_utils.hpp"
-#include "../../include/ir/passes/analysis/loop_analysis.hpp"
-#include "../../include/ir/passes/analysis/alias_analysis.hpp"
-#include "../../include/ir/instructions/memory.hpp"
-#include "../../include/utils/logger.hpp"
+#include "ir/block_utils.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
+#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/instructions/memory.hpp"
+#include "utils/logger.hpp"
 
 #include <algorithm>
 #include <list>

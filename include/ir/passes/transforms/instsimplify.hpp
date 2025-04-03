@@ -8,9 +8,8 @@
 #ifndef GNALC_IR_PASSES_TRANSFORMS_INSTSIMPLIFY_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_INSTSIMPLIFY_HPP
 
-#include "../../instructions/memory.hpp"
-#include "../analysis/alias_analysis.hpp"
-#include "../pass_manager.hpp"
+#include "ir/instructions/memory.hpp"
+#include "ir/passes/pass_manager.hpp"
 
 namespace IR {
 class InstSimplifyPass : public PM::PassInfo<InstSimplifyPass> {

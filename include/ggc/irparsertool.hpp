@@ -4,8 +4,8 @@
 
 #include <memory>
 #include <map>
-#include "../ir/type_alias.hpp"
-#include "../ir/visitor.hpp"
+#include "ir/type_alias.hpp"
+#include "ir/visitor.hpp"
 using namespace IR;
 
 namespace IRParser {

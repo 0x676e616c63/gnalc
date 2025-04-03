@@ -1,8 +1,6 @@
 /**
  * @file base.hpp
- * @brief IR base class: Value User Use...
- *
- * @attention 指针问题
+ * @brief IR base class: Value User Use
  */
 
 /**
@@ -22,17 +20,15 @@
 #ifndef GNALC_IR_BASE_HPP
 #define GNALC_IR_BASE_HPP
 
-#include <iterator>
-#include <list>
-#include <set>
+#include "type.hpp"
+#include "type_alias.hpp"
+#include "utils/iterator.hpp"
+#include "utils/misc.hpp"
 
 #include <cinttypes>
 #include <cstdint>
-
-#include "../utils/iterator.hpp"
-#include "../utils/misc.hpp"
-#include "type.hpp"
-#include "type_alias.hpp"
+#include <iterator>
+#include <list>
 
 #ifdef GNALC_EXTENSION_GGC
 namespace IRParser {

@@ -1,6 +1,4 @@
-#include "../../../../include/ir/passes/transforms/namenormalizer.hpp"
-
-#include "../../../../include/config/config.hpp"
+#include "ir/passes/transforms/namenormalizer.hpp"
 
 namespace IR {
 PM::PreservedAnalyses NameNormalizePass::run(Function &function, FAM &manager) {

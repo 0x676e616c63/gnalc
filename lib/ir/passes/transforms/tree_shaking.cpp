@@ -1,6 +1,5 @@
-#include "../../../../include/ir/passes/transforms/tree_shaking.hpp"
-
-#include "../../../../include/ir/instructions/memory.hpp"
+#include "ir/passes/transforms/tree_shaking.hpp"
+#include "ir/instructions/memory.hpp"
 
 #include <vector>
 

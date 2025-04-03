@@ -7,8 +7,8 @@
 #ifndef GNALC_IR_INSTRUCTIONS_BINARY_HPP
 #define GNALC_IR_INSTRUCTIONS_BINARY_HPP
 
-#include "../instruction.hpp"
-#include "../type_alias.hpp"
+#include "ir/instruction.hpp"
+#include "ir/type_alias.hpp"
 
 namespace IR {
 // type 由op决定

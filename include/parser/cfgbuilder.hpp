@@ -1,5 +1,5 @@
 /**
- * @brief 基本块划分，生成CFG
+ * @brief 基本块划分，生成CFG，在 IRGenerator 中调用
  * @attention !!!需要尽量确保第一个BB是entry, 最后一个是return
  */
 
@@ -8,12 +8,12 @@
 #ifndef GNALC_PARSER_CFGBUILDER_HPP
 #define GNALC_PARSER_CFGBUILDER_HPP
 
-#include "../ir/base.hpp"
-#include "../ir/basic_block.hpp"
-#include "../ir/function.hpp"
-#include "../ir/instructions/control.hpp"
-#include "../ir/instructions/helper.hpp"
-#include "../ir/module.hpp"
+#include "ir/base.hpp"
+#include "ir/basic_block.hpp"
+#include "ir/function.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/instructions/helper.hpp"
+#include "ir/module.hpp"
 
 #include <stack>
 

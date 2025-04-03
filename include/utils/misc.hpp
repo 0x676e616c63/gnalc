@@ -2,12 +2,12 @@
 #ifndef GNALC_UTILS_MISC_HPP
 #define GNALC_UTILS_MISC_HPP
 
+#include "exception.hpp"
+
 #include <list>
 #include <memory>
 #include <string_view>
 #include <type_traits>
-
-#include "exception.hpp"
 
 namespace Util {
 template <class... Ts> struct overloaded : Ts... {

@@ -1,14 +1,14 @@
 /**
  * @brief compare instruction
- * @brief icmp fcmp
+ * @brief icmp, fcmp
  */
 
 #pragma once
 #ifndef GNALC_IR_INSTRUCTIONS_COMPARE_HPP
 #define GNALC_IR_INSTRUCTIONS_COMPARE_HPP
 
-#include "../instruction.hpp"
-#include "../type_alias.hpp"
+#include "ir/instruction.hpp"
+#include "ir/type_alias.hpp"
 
 namespace IR {
 // eq: equal

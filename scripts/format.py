@@ -2,7 +2,6 @@ import os
 import subprocess
 import sys
 
-
 def get_git_root():
     result = subprocess.run(["git", "rev-parse", "--show-toplevel"], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                             text=True, check=True)

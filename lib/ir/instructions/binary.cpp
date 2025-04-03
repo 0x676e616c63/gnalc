@@ -1,8 +1,5 @@
-//
-// Created by BEE172 on 24-12-5.
-//
-#include "../../../include/ir/instructions/binary.hpp"
-#include "../../../include/ir/visitor.hpp"
+#include "ir/instructions/binary.hpp"
+#include "ir/visitor.hpp"
 
 namespace IR {
 pType OPtoTY(OP op) {

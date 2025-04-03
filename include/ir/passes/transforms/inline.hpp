@@ -9,7 +9,7 @@
 #ifndef GNALC_IR_PASSES_TRANSFORMS_INLINE_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_INLINE_HPP
 
-#include "../pass_manager.hpp"
+#include "ir/passes/pass_manager.hpp"
 
 namespace IR {
 class InlinePass : public PM::PassInfo<InlinePass> {

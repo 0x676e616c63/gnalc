@@ -6,28 +6,20 @@
 //    - LLVM SparseSolver
 //          SparsePropagation.h:
 //          https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Analysis/SparsePropagation.h
-//    - The opcache optimizer
-//          Author's blog: https://www.npopov.com/2022/05/22/The-opcache-optimizer.html
-//          scdf.c: https://github.com/php/php-src/blob/cc506a81e17c3e059d44b560213ed914f8199ed5/Zend/Optimizer/scdf.c
-//          sccp.c: https://github.com/php/php-src/blob/cc506a81e17c3e059d44b560213ed914f8199ed5/Zend/Optimizer/sccp.c
-//    - QBE
-//          Official Website: https://c9x.me/compile/
-//          fold.c (Unofficial GitHub Mirror): https://github.com/caozhanhao/qbe/blob/master/fold.c
 #pragma once
 #ifndef GNALC_IR_PASSES_HELPER_SPARSE_PROPAGATION_HPP
 #define GNALC_IR_PASSES_HELPER_SPARSE_PROPAGATION_HPP
+
+#include "ir/base.hpp"
+#include "ir/basic_block.hpp"
+#include "ir/function.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/instructions/phi.hpp"
 
 #include <algorithm>
 #include <deque>
 #include <unordered_map>
 #include <utility>
-
-#include "../../../utils/logger.hpp"
-#include "../../base.hpp"
-#include "../../basic_block.hpp"
-#include "../../function.hpp"
-#include "../../instructions/control.hpp"
-#include "../../instructions/phi.hpp"
 
 namespace IR {
 // Generic Sparse Conditional Property Propagation
