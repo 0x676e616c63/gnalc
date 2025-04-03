@@ -2,6 +2,7 @@
 #include "../../../include/mir/SIMDinstruction/memory.hpp"
 #include "../../../include/mir/instructions/branch.hpp"
 #include "../../../include/mir/instructions/copy.hpp"
+#include "../../../include/mir/misc.hpp"
 
 #include <algorithm>
 
@@ -265,8 +266,8 @@ bool ARMPrinter::movInstHelper(const std::shared_ptr<Instruction> &mov) {
         auto stkoffset = stkreg->getObj()->getOffset();
 
         ///@todo sub sp, sp, #imme, add sp, sp, #imme
-        Err::gassert(stkoffset >= 0 && stkoffset < 1024,
-                     "codegen: mov stack addressing const offset > 1023"); // 8 bits 位图
+        Err::gassert(stkoffset >= 0 && stkoffset < 1025,
+                     "codegen: mov stack addressing const offset > 1024"); // 8 bits 位图
 
         outStream << "add\t" << enum_name(std::get<CoreRegister>(target->getColor())) << ", ";
         outStream << enum_name(std::get<CoreRegister>(basereg->getBase()->getColor())) << ", ";

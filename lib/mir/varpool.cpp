@@ -56,6 +56,20 @@ std::shared_ptr<BindOnVirOP> VarPool::getLoaded(const ConstObj &obj, const std::
     return const2vir[obj];
 }
 
+bool VarPool::isLoad(const std::shared_ptr<Operand> &op) {
+    auto reg = op->as<BindOnVirOP>();
+
+    if (!reg)
+        return false;
+
+    for (auto &[obj, vir] : const2vir) {
+        if (vir == op)
+            return true;
+    }
+
+    return false;
+}
+
 // const auto &VarPool::getConst2Vir() { return const2vir; }
 // const auto &VarPool::getConst2blks() { return const2blks; }
 

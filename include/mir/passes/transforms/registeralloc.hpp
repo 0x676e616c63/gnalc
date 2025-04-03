@@ -65,7 +65,7 @@ protected:
 
 protected:
     /// procedures
-    void Main();
+    void Main(FAM &);
     // void LivenessAnalysis();
     void Build();
     void MkWorkList(); //

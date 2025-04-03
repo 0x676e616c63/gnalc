@@ -84,10 +84,12 @@ RAPass::Nodes RAPass::getDef(const InstP &inst) {
 
 OperP RAPass::heuristicSpill() {
     ///@note 实现的关键在于, 不要重复溢出上一次溢出得到的小区间操作数
+    ///@note 优化的关键在于, 合理设置权重值
 
+    ///@brief 炼丹中...
     const double Weight_IntervalLength = 2.5;
     const double Weight_Degree = 3;
-    const double extra_Weight_ForNotPtr = +60;
+    const double extra_Weight_ForNotPtr = +30; // origin: 60
 
     ///@note 计算溢出权重
     double weight_max = 0;
@@ -99,7 +101,7 @@ OperP RAPass::heuristicSpill() {
         weight += liveinfo.intervalLengths[op] * Weight_IntervalLength; // narrowing convert here
 
         weight += degree[op] * Weight_Degree;
-        if (!std::dynamic_pointer_cast<BaseADROP>(op))
+        if (!std::dynamic_pointer_cast<BaseADROP>(op) && !varpool->isLoad(op))
             weight += extra_Weight_ForNotPtr;
 
         if (weight >= weight_max) {
@@ -111,7 +113,6 @@ OperP RAPass::heuristicSpill() {
     return spilled;
 }
 
-///@note 返回用于替换的小区间虚拟寄存器
 RAPass::Nodes RAPass::spill_tryOpt(const OperP &op) {
     ++spilltimes;
 

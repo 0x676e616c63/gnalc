@@ -12,6 +12,19 @@
 
 namespace MIR {
 
+constexpr inline int popcount_wrapper(unsigned val) { return __builtin_popcount(val); }
+
+constexpr inline int clz_wrapper(unsigned val) { return __builtin_clz(val); }
+
+constexpr inline int ctz_wrapper(unsigned val) { return __builtin_ctz(val); }
+
+bool isImmCanBeEncodedInText(unsigned int);
+
+///@note 获取一个大于imme的最小8bits位图数
+int ceilEncoded(int);
+
+bool isImmCanBeEncodedInText(float);
+
 struct variant_const_toString {
     std::string operator()(const int &val) const;
     std::string operator()(const size_t &val) const;
@@ -31,12 +44,6 @@ struct variant_reg_toString {
 }; // for std::visit() when come into an enum type
 
 // extern std::map<IR::OP, MIR::OpCode> OPmap;
-
-constexpr int popcount_wrapper(unsigned val) { return __builtin_popcount(val); }
-
-constexpr int clz_wrapper(unsigned val) { return __builtin_clz(val); }
-
-constexpr int ctz_wrapper(unsigned val) { return __builtin_ctz(val); }
 
 ///@note 般的中端的同名检查, 但是根据clang-tidy的提示去掉了const
 template <typename T> std::list<std::shared_ptr<T>> WeaktoSharedList(const std::list<std::weak_ptr<T>> &weak_list) {

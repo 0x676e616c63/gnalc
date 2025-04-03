@@ -94,13 +94,20 @@ std::list<std::shared_ptr<Instruction>> InstLowering::gepLower(const std::shared
     // auto idx = gep->getIdxs().size() == 1 ? gep->getIdxs()[0] : gep->getIdxs()[1];
     // int perElemSize = std::dynamic_pointer_cast<IR::ArrayType>(gep->getBaseType())->getElmType()->getBytes();
     IR::pVal idx;
+    auto idxs = gep->getIdxs();
     unsigned perElemSize;
 
     if (auto arraytype = gep->getBaseType()->as<IR::ArrayType>()) {
-        idx = gep->getIdxs()[1];
-        perElemSize = arraytype->getElmType()->getBytes();
+        if (idxs.size() == 1) {
+            idx = idxs[0];
+            perElemSize = arraytype->getBytes();
+        } else {
+            idx = idxs[1];
+            perElemSize = arraytype->getElmType()->getBytes();
+        }
+
     } else if (auto btype = gep->getBaseType()->as<IR::BType>()) {
-        idx = gep->getIdxs()[0];
+        idx = idxs[0];
         perElemSize = 4;
     } else {
         Err::unreachable("gep unknown base val type");

@@ -68,6 +68,9 @@ public:
     }
 
     std::shared_ptr<BindOnVirOP> getLoaded(const ConstObj &obj, const std::shared_ptr<BasicBlock> &blk);
+    void addLoaded(const ConstObj &, const std::shared_ptr<BindOnVirOP> &, const std::shared_ptr<BasicBlock> &);
+
+    bool isLoad(const std::shared_ptr<Operand> &); // 是否是一个装载地址/常数的寄存器
 
     const auto &getConst2Vir() { return const2vir; }
     const auto &getConst2blks() { return const2blks; }
@@ -79,7 +82,6 @@ public:
     std::shared_ptr<StackADROP>
     addStackValue_anonymously(const std::shared_ptr<FrameObj> &); // 用于获得一个空的栈空间(4bytes)
                                                                   // 寄存器分配用
-    void addLoaded(const ConstObj &, const std::shared_ptr<BindOnVirOP> &, const std::shared_ptr<BasicBlock> &);
 
     size_t size() const;
 

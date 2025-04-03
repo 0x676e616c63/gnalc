@@ -92,7 +92,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
             else
                 reg_2 = constOP;
 
-            sub = make<binaryImmInst>((rconst != nullptr ? OpCode::RSB : OpCode::SUB),
+            sub = make<binaryImmInst>((rconst != nullptr ? OpCode::SUB : OpCode::RSB),
                                       (constOP ? SourceOperandType::ri : SourceOperandType::rr), target, reg_1, reg_2,
                                       nullptr);
         }

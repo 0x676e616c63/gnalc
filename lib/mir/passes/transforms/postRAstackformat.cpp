@@ -211,14 +211,13 @@ void postRAstackformat::Leagalize() {
     auto push = make<PUSH>(calleeSave);
     auto push_v = make<VPUSH>(calleeSave_s);
 
-    // if (func->getName() != "@main" || func->getInfo().hasCall)
     initialize_blk->addInsts_front({push, push_v});
-
-    ///@note mov ... ldr ... (extract args)
 
     ///@brief insert front: create new stack
     Err::gassert(*stackSize < 2147483648, "stacksize larger than 2^31 - 1");
-    auto stack_size = std::make_shared<ConstantIDX>(constpool->getConstant((int)*stackSize)); // maybe invalid
+
+    ///@note 所获取的栈大小会比实际上的大, 不过不影响寻址
+    auto stack_size = std::make_shared<ConstantIDX>(constpool->getConstant(ceilEncoded((int)*stackSize)));
 
     if (*maxAlignment == 16) {
         ///@brief stage sp

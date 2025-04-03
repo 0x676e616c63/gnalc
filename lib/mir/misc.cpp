@@ -134,31 +134,6 @@ const std::list<std::pair<bool, std::variant<int, float, size_t>>> &GlobalObj::g
     return initializer;
 }
 
-bool isImmCanBeEncodedInText(unsigned int imme) {
-    if (imme < 256)
-        return true; // 防止 >> 32 产生ud
-
-    for (int shift = 1; shift <= 32; shift += 2) {
-        if ((((imme << shift) | (imme >> (32 - shift))) & ~0xff) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool isImmCanBeEncodedInText(float imme) {
-    float eps = 1e-14f;
-    float a = imme * 128;
-    for (int r = 0; r < 8; ++r) {
-        for (int n = 16; n < 32; ++n) {
-            if ((std::abs(((float)(n * (1 << (7 - r))) - a)) < eps) ||
-                (std::abs(((float)(n * (1 << (7 - r))) + a)) < eps))
-                return true;
-        }
-    }
-    return false;
-}
-
 ConstObj::ConstObj(unsigned int _id, std::string _glo) : id(_id), literal(std::move(_glo)) {}
 
 ConstObj::ConstObj(unsigned int _id, int imme) : id(_id) {

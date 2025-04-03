@@ -1,6 +1,7 @@
 #include "../../../include/mir/builder/lowering.hpp"
 #include "../../../include/mir/instructions/binary.hpp"
 #include "../../../include/mir/instructions/memory.hpp"
+#include "../../../include/mirtools/tool.hpp"
 
 namespace MIR {
 
