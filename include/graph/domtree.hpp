@@ -3,9 +3,10 @@
 
 #include <memory>
 #include <ostream>
-#include <set>
 #include <stack>
+#include <unordered_set>
 #include <unordered_map>
+#include <cmath>
 #include <vector>
 
 #include "../utils/exception.hpp"
@@ -23,7 +24,7 @@ template <typename GraphT, bool IsPostDom, typename GraphNodeProj = Identity> cl
     template <typename, bool, typename> friend class GenericDomTreeBuilder;
 
     using GraphNodeT = typename GraphInfo<GraphT>::NodeT;
-    using GraphNodeSet = std::set<GraphNodeT>;
+    using GraphNodeSet = std::unordered_set<GraphNodeT>;
 
     static auto getNextGraphNodes(GraphNodeT node) {
         if constexpr (IsPostDom)
@@ -56,6 +57,9 @@ public:
         std::vector<pNode> child_nodes;
         unsigned node_level = 0; // 节点层次，root是1
         unsigned node_bfs_num = 0;
+        // DFS Timestamp
+        unsigned node_dfs_in = 0;
+        unsigned node_dfs_out = 0;
 
     public:
         explicit Node(GraphNodeT bb) : graph_node(bb), parent_node(nullptr) {}
@@ -68,6 +72,8 @@ public:
         const auto &children() const { return child_nodes; }
         auto level() const { return node_level; }
         auto bfs_num() const { return node_bfs_num; }
+        auto dfs_in() const { return node_dfs_in; }
+        auto dfs_out() const { return node_dfs_out; }
         const auto &raw_block() const { return graph_node; }
         auto block() const { return GraphNodeProj()(graph_node); }
         void setBlock(GraphNodeT n) { graph_node = n; }
@@ -81,39 +87,25 @@ public:
 private:
     pNode root_node;
     std::unordered_map<GraphNodeT, pNode> nodes;
-    mutable std::unordered_map<GraphNodeT, std::unordered_map<GraphNodeT, bool>> dom_cache;
-
+    mutable std::unordered_map<GraphNodeT, GraphNodeSet> df_cache;
 public:
     auto root() const { return root_node; }
 
     const auto &operator[](GraphNodeT graph_node) const {
-        Err::gassert(nodes.count(graph_node), "No dominator tree for unreachable blocks.");
+        // Err::gassert(nodes.count(graph_node), "No dominator tree for unreachable blocks.");
         return nodes.at(graph_node);
     }
 
-    // todo: 在构造支配树时预计算DFS进入/离开时间戳可将支配关系判断优化为O(1)时间操作
     bool ADomB(GraphNodeT a, GraphNodeT b) const {
-        Err::gassert(nodes.count(a) && nodes.count(b), "No dominator tree for unreachable blocks.");
-        if (nodes.at(a) == root_node)
-            return true;
         if (a == b)
             return true;
-
-        auto it1 = dom_cache[a].find(b);
-        if (it1 != dom_cache[a].end())
-            return it1->second;
-
-        // If b dominates a, a cannot dominates b.
-        auto it2 = dom_cache[b].find(a);
-        if (it2 != dom_cache[b].end() && it2->second)
-            return false;
-
-        auto res = ADomBImpl(a, b);
-        dom_cache[a][b] = res;
-        return res;
+        auto node_a = nodes.at(a);
+        auto node_b = nodes.at(b);
+        return node_a->dfs_in() <= node_b->dfs_in() && node_a->dfs_out() >= node_b->dfs_out();
     }
+
     GraphNodeSet getDomSet(GraphNodeT b) const {
-        Err::gassert(nodes.count(b), "No dominator tree for unreachable blocks.");
+        // Err::gassert(nodes.count(b), "No dominator tree for unreachable blocks.");
 
         GraphNodeSet domset = {b};
         auto _b = nodes.at(b).get();
@@ -126,7 +118,11 @@ public:
 
     // TODO: needs optimization
     GraphNodeSet getDomFrontier(GraphNodeT b) const {
-        Err::gassert(nodes.count(b), "No dominator tree for unreachable blocks.");
+        // Err::gassert(nodes.count(b), "No dominator tree for unreachable blocks.");
+
+        auto it = df_cache.find(b);
+        if (it != df_cache.end())
+            return it->second;
 
         GraphNodeSet DF;
         std::stack<Node *> STN;
@@ -146,6 +142,7 @@ public:
             for (const auto &dom_child : node->children())
                 STN.push(dom_child.get());
         }
+        df_cache[b] = DF;
         return DF;
     }
 
@@ -160,16 +157,6 @@ public:
     }
 
 private:
-    bool ADomBImpl(GraphNodeT a, GraphNodeT b) const {
-        auto _b = nodes.at(b).get();
-        while (_b != root_node.get()) {
-            _b = _b->raw_parent();
-            if (nodes.at(a).get() == _b)
-                return true;
-        }
-        return false;
-    }
-
     void print(const pNode &node, int level) const {
         if (node == nullptr)
             return;
@@ -211,12 +198,30 @@ private:
             for (const auto &n : cur) {
                 n->node_level = l;
                 n->node_bfs_num = ++i;
-                for (auto &c : n->child_nodes) {
+                for (auto &c : n->child_nodes)
                     next.emplace_back(c);
-                }
             }
             cur = next;
             next.clear();
+        }
+    }
+
+    void updateDFSInOut() {
+        if (!root_node) return;
+        unsigned timestamp = 0;
+        std::vector<std::pair<pNode, bool>> stack;
+        stack.emplace_back(root_node, false);
+        while (!stack.empty()) {
+            auto [node, visited] = stack.back();
+            stack.pop_back();
+
+            if (!visited) {
+                node->node_dfs_in = ++timestamp;
+                stack.emplace_back(node, true);
+                for (auto it = node->child_nodes.rbegin(); it != node->child_nodes.rend(); ++it)
+                    stack.emplace_back(*it, false);
+            } else
+                node->node_dfs_out = ++timestamp;
         }
     }
 };
@@ -328,6 +333,7 @@ public:
             domtree.linkDTN(dfs_tree_node.bb, dfs_tree_node._idom);
         }
         domtree.updateLevel();
+        domtree.updateDFSInOut();
     }
 };
 } // namespace Graph

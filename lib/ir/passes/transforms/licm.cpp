@@ -126,8 +126,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                                     sunk_insts[exit] = sunk;
 
                                     // Rewrite the sunk instruction's uses to keep LCSSA Form
-                                    auto operands = sunk->getOperands();
-                                    for (const auto &use : operands) {
+                                    for (const auto &use : sunk->operand_uses()) {
                                         if (auto oper = use->getValue()->as<Instruction>()) {
                                             auto oper_inst_block = oper->getParent();
                                             if (loop->contains(oper_inst_block)) {
@@ -142,7 +141,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                                                     if (oper->getType()->getTrait() == IRCTYPE::PTR)
                                                         aa_res.addClonedInst(oper, avail_phi);
                                                 }
-                                                sunk->replaceUse(use, avail_phi);
+                                                use->setValue(avail_phi);
                                             }
                                         }
                                     }

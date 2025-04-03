@@ -10,10 +10,8 @@ class User;
 class Use;
 using pVal = std::shared_ptr<Value>;
 using pUser = std::shared_ptr<User>;
-using pUse = std::shared_ptr<Use>;
 using wpVal = std::weak_ptr<Value>;
 using wpUser = std::weak_ptr<User>;
-using wpUse = std::weak_ptr<Use>;
 
 // binary
 class BinaryInst;

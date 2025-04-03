@@ -254,14 +254,13 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
             for (const auto &inst : *old_header) {
                 auto cloned_inst = makeClone(inst);
                 cloned_inst->setName(inst->getName() + ".clonedlr");
-                auto operands = cloned_inst->getOperands();
-                for (const auto &use : operands) {
+                for (const auto &use : cloned_inst->operand_uses()) {
                     auto usee = use->getValue();
                     if (usee->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
                         auto usee_inst = usee->as<Instruction>();
                         Err::gassert(usee_inst != nullptr);
                         if (auto rd = find_rename_data(usee_inst))
-                            cloned_inst->replaceUse(use, rd->old_preheader);
+                            use->setValue(rd->old_preheader);
                     }
                 }
                 old_preheader->addInst(cloned_inst);

@@ -20,11 +20,14 @@ OP Instruction::getOpcode() const { return opcode; }
 
 pBlock Instruction::getParent() const { return parent.lock(); }
 
-size_t Instruction::getIndex() const { return index; }
+size_t Instruction::getIndex() const {
+    getParent()->updateInstIndex();
+    return index;
+}
 
 BBInstIter Instruction::getIter() const {
     Err::gassert(getOpcode() != OP::PHI);
-    auto ret = std::next(parent.lock()->begin(), index - parent.lock()->getPhiCount());
+    auto ret = std::next(parent.lock()->begin(), getIndex() - parent.lock()->getPhiCount());
     Err::gassert(ret->get() == this);
     return ret;
 }

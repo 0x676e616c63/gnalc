@@ -138,25 +138,48 @@ void moveBlocks(FunctionBBIter beg, FunctionBBIter end, const pFunc &new_func) {
     moveBlocks(beg, end, new_func, new_func->end());
 }
 
-void foldPHI(const pBlock &bb, bool preserve_lcssa) {
-    std::set<pInst> dead_phis;
+pVal getCommonValue(const pPhi &phi) {
+    auto phi_opers = phi->getPhiOpers();
+    Err::gassert(!phi_opers.empty());
+    pVal common_value = phi_opers[0].value;
+    for (const auto &[v, b] : phi_opers) {
+        if (common_value != v)
+            return nullptr;
+    }
+    return common_value;
+}
+
+bool isIdenticalPhi(const pPhi &phi1, const pPhi &phi2) {
+    if (phi1 == phi2)
+        return true;
+    if (phi1->getNumOperands() != phi2->getNumOperands())
+        return false;
+    for (const auto &[v1, b1] : phi1->incomings()) {
+        bool found = false;
+        for (const auto &[v2, b2] : phi2->incomings()) {
+            if (v1 == v2 && b1 == b2) {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+            return false;
+    }
+    return true;
+}
+
+bool foldPHI(const pBlock &bb, bool preserve_lcssa) {
+    std::set<pPhi> dead_phis;
     for (const auto &phi : bb->phis()) {
         if (phi->getUseCount() == 0) {
             dead_phis.emplace(phi);
             continue;
         }
-        auto phi_opers = phi->getPhiOpers();
-        Err::gassert(!phi_opers.empty());
-        if (preserve_lcssa && phi_opers.size() == 1)
+
+        if (preserve_lcssa)
             continue;
-        pVal common_value = phi_opers[0].value;
-        for (const auto &[v, b] : phi_opers) {
-            if (common_value != v) {
-                common_value = nullptr;
-                break;
-            }
-        }
-        if (common_value != nullptr) {
+
+        if (auto common_value = getCommonValue(phi)) {
             if (common_value == phi)
                 Logger::logWarning("IR::foldPHI: Skipped self-reference phi.");
             else {
@@ -165,11 +188,10 @@ void foldPHI(const pBlock &bb, bool preserve_lcssa) {
             }
         }
     }
-    bb->delInstIf([&dead_phis](const auto &inst) { return dead_phis.find(inst) != dead_phis.end(); },
-                  BasicBlock::DEL_MODE::PHI);
+    return eliminateDeadInsts(dead_phis);
 }
 
-void removeIdenticalPhi(const pBlock &bb) {
+bool removeIdenticalPhi(const pBlock &bb) {
     using ValBBPair = std::pair<pVal, pBlock>;
     std::vector<std::pair<pPhi, std::vector<ValBBPair>>> phi_info;
     for (const auto &phi : bb->phis()) {
@@ -190,8 +212,8 @@ void removeIdenticalPhi(const pBlock &bb) {
             }
         }
     }
-    bb->delInstIf([&dead_phis](const auto &inst) { return dead_phis.find(inst) != dead_phis.end(); },
-                  BasicBlock::DEL_MODE::PHI);
+    return bb->delInstIf([&dead_phis](const auto &inst)
+        { return dead_phis.find(inst) != dead_phis.end(); }, BasicBlock::DEL_MODE::PHI);
 }
 
 pBlock breakCriticalEdge(const pBlock &pred, const pBlock &succ) {
@@ -268,41 +290,49 @@ pPhi findLCSSAPhi(const pBlock &block, const pVal &value) {
 }
 
 bool eliminateDeadInsts(std::vector<pInst>& worklist, FAM *fam) {
-    std::set<pInst> visited;
+    std::unordered_set<pInst> visited;
+    std::unordered_set<pInst> eliminated;
+    std::unordered_set<BasicBlock*> todo_blocks;
     bool modified = false;
     while (!worklist.empty()) {
         auto inst = worklist.back();
         worklist.pop_back();
         visited.emplace(inst);
 
-        size_t alive_user_cnt = 0;
+        bool is_dead = true;
         for (const auto& user : inst->inst_users()) {
-            if (user->getParent() != nullptr)
-                ++alive_user_cnt;
-        }
-
-        if (alive_user_cnt == 0) {
-            if (fam) {
-                if (auto call = inst->as<CALLInst>()) {
-                    if (hasSideEffect(*fam, call))
-                        continue;
-                }
-            }
-
-            if (inst->is<STOREInst>())
-                continue;
-
-            if (inst->getParent())
-                inst->getParent()->delInst(inst);
-
-            modified = true;
-            for (const auto &operand : inst->operands()) {
-                if (auto i = operand->as<Instruction>()) {
-                    if (visited.find(i) == visited.end())
-                        worklist.emplace_back(i);
-                }
+            if (!eliminated.count(user)) {
+                is_dead = false;
+                break;
             }
         }
+        if (!is_dead)
+            continue;
+
+        if (inst->is<STOREInst>())
+            continue;
+
+        if (fam) {
+            if (auto call = inst->as<CALLInst>()) {
+                if (hasSideEffect(*fam, call))
+                    continue;
+            }
+        }
+
+        eliminated.emplace(inst);
+        todo_blocks.emplace(inst->getParent().get());
+
+        for (const auto &operand : inst->operands()) {
+            if (auto i = operand->as<Instruction>()) {
+                if (!visited.count(i))
+                    worklist.emplace_back(i);
+            }
+        }
+    }
+
+    for (const auto &block : todo_blocks) {
+        modified |= block->delInstIf([&eliminated](const auto &inst)
+            { return eliminated.count(inst); });
     }
     return modified;
 }

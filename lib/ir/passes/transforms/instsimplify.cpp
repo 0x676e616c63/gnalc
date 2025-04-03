@@ -21,7 +21,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
 
     // First simplify basic instruction patterns without adding any instruction
     for (const auto &bb : function) {
-        foldPHI(bb, preserve_lcssa);
+        instsimplify_inst_modified |= foldPHI(bb, preserve_lcssa);
         for (const auto &inst : *bb) {
             // Fold Constant
             auto fold = foldConstant(function.getConstantPool(), inst);

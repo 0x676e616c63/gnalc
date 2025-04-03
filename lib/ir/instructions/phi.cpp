@@ -56,10 +56,11 @@ pVal PHIInst::getValueForBlock(const pBlock &block) const {
     return nullptr;
 }
 
-pBlock PHIInst::getBlockForValue(const std::shared_ptr<Use> &use) const {
+pBlock PHIInst::getBlockForValue(Use* use) const {
     Err::gassert(use->getValue()->getVTrait() != ValueTrait::BASIC_BLOCK);
-    for (auto it = operand_use_begin(); it != operand_use_end(); ++it) {
-        if (*it == use)
+    const auto& operands = getOperands();
+    for (auto it = operands.begin(); it != operands.end(); ++it) {
+        if (it->get() == use)
             return (*(it + 1))->getValue()->as<BasicBlock>();
     }
     return nullptr;

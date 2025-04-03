@@ -96,6 +96,11 @@ FPM PassBuilder::buildFunctionFixedPointPipeline() {
         cleanup.addPass(BreakCriticalEdgesPass());
         cleanup.addPass(GVNPREPass());
         cleanup.addPass(DCEPass());
+        return cleanup;
+    };
+
+    auto make_mem_clean = [] {
+        PM::FixedPointPM<Function> cleanup;
         cleanup.addPass(LoadEliminationPass());
         cleanup.addPass(DSEPass());
         return cleanup;
@@ -116,6 +121,9 @@ FPM PassBuilder::buildFunctionFixedPointPipeline() {
     fpm.addPass(make_arithmetic());
     fpm.addPass(CFGSimplifyPass());
     fpm.addPass(make_clean());
+    // Simplify Blocks to make LoadElim faster.
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(make_mem_clean());
     // ADCE is time-consuming
     fpm.addPass(ADCEPass());
     fpm.addPass(CFGSimplifyPass());
@@ -201,21 +209,65 @@ MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
 }
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
+    auto make_arithmetic = [] {
+        PM::FixedPointPM<Function> arithmetic;
+        arithmetic.addPass(InstSimplifyPass());
+        arithmetic.addPass(ConstantPropagationPass());
+        arithmetic.addPass(DCEPass());
+        arithmetic.addPass(ADCEPass());
+        return arithmetic;
+    };
+
+    auto make_clean = [] {
+        PM::FixedPointPM<Function> cleanup;
+        cleanup.addPass(InstSimplifyPass());
+        cleanup.addPass(ConstantPropagationPass());
+        cleanup.addPass(BreakCriticalEdgesPass());
+        cleanup.addPass(GVNPREPass());
+        cleanup.addPass(DCEPass());
+        return cleanup;
+    };
+
+    auto make_mem_clean = [] {
+        PM::FixedPointPM<Function> cleanup;
+        cleanup.addPass(LoadEliminationPass());
+        cleanup.addPass(DSEPass());
+        return cleanup;
+    };
+
+    auto make_ipo = [] {
+        FPM ipo;
+        ipo.addPass(TailRecursionEliminationPass());
+        ipo.addPass(InlinePass());
+        return ipo;
+    };
+
     FPM fpm;
+    fpm.addPass(NameNormalizePass(true));
     fpm.addPass(PromotePass());
-    // fpm.addPass(InlinePass());
+    fpm.addPass(make_ipo());
+    fpm.addPass(make_clean());
+    fpm.addPass(make_arithmetic());
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(make_clean());
+    // Simplify Blocks to make LoadElim faster.
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(make_mem_clean());
+    // ADCE is time-consuming
+    fpm.addPass(ADCEPass());
+    fpm.addPass(CFGSimplifyPass());
     fpm.addPass(LoopSimplifyPass());
     fpm.addPass(LoopRotatePass());
-    // fpm.addPass(BreakCriticalEdgesPass());
-    // fpm.addPass(GVNPREPass());
-    fpm.addPass(NameNormalizePass(true));
-    // fpm.addPass(PrintFunctionPass(std::cerr));
-    // fpm.addPass(PrintSCEVPass(std::cerr));
+    fpm.addPass(LCSSAPass());
+    fpm.addPass(LICMPass());
+    fpm.addPass(LoopSimplifyPass());
     fpm.addPass(LoopEliminationPass());
     fpm.addPass(LoopStrengthReducePass());
-    // fpm.addPass(ConstantPropagationPass());
-    // fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(VerifyPass(true));
+    fpm.addPass(make_clean());
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(make_mem_clean());
+    fpm.addPass(NameNormalizePass(true));
+
 
     // // For LoopUnroll Test
     // fpm.addPass(PromotePass());

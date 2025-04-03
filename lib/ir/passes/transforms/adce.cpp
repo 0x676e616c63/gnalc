@@ -45,7 +45,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
 
         std::vector new_alive_blocks{inst->getParent()};
 
-        auto uses = inst->getOperands();
+        auto uses = inst->getRawOperands();
         for (const auto &use : uses) {
             if (auto oper = use->getValue()->as<Instruction>()) {
                 if (critical.find(oper) == critical.end()) {
