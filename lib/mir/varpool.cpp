@@ -1,4 +1,4 @@
-#include "../../include/mir/varpool.hpp"
+#include "mir/varpool.hpp"
 
 using namespace MIR;
 

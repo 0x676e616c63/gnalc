@@ -1,5 +1,5 @@
-#include "../../../include/mir/builder/lowering.hpp"
-#include "../../../include/mir/instructions/copy.hpp"
+#include "mir/builder/lowering.hpp"
+#include "mir/instructions/copy.hpp"
 
 using namespace MIR;
 

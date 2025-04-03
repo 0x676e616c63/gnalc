@@ -1,11 +1,10 @@
 #pragma once
-#ifndef GNALC_MIR_PASSES_TRANSFORMS_LEGALIZE_HPP
-#define GNALC_MIR_PASSES_TRANSFORMS_LEGALIZE_HPP
+#ifndef GNALC_MIR_PASSES_TRANSFORMS_PRERALEGALIZE_HPP
+#define GNALC_MIR_PASSES_TRANSFORMS_PRERALEGALIZE_HPP
 
-#include "../../SIMDinstruction/memory.hpp"
-#include "../../instructions/memory.hpp"
-#include "../pass_manager.hpp"
-#include <optional>
+#include "mir/SIMDinstruction/memory.hpp"
+#include "mir/instructions/memory.hpp"
+#include "mir/passes/pass_manager.hpp"
 
 namespace MIR {
 

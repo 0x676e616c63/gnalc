@@ -1,6 +1,6 @@
-#include "../../../../include/mir/SIMDinstruction/memory.hpp"
-#include "../../../../include/mir/instructions/memory.hpp"
-#include "../../../../include/mir/passes/transforms/registeralloc.hpp"
+#include "mir/SIMDinstruction/memory.hpp"
+#include "mir/instructions/memory.hpp"
+#include "mir/passes/transforms/registeralloc.hpp"
 #include <random>
 #include <utility>
 

@@ -1,6 +1,9 @@
-#include <utility>
+#pragma once
+#ifndef GNALC_MIR_SIMDINSTRUCTION_MEMORY_HPP
+#define GNALC_MIR_SIMDINSTRUCTION_MEMORY_HPP
 
-#include "../instruction.hpp"
+#include "mir/instruction.hpp"
+#include <utility>
 
 using namespace MIR;
 
@@ -57,3 +60,4 @@ public:
 
     ~Vstr() override = default;
 };
+#endif

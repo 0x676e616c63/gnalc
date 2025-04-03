@@ -1,5 +1,5 @@
-#include "../../include/mir/instruction.hpp"
-#include "../../include/mirtools/enum_name.hpp"
+#include "mir/instruction.hpp"
+#include "mirtools/enum_name.hpp"
 
 using namespace MIR;
 

@@ -4,10 +4,10 @@
 #ifndef GNALC_MIRTOOLS_ENUM_NAME_HPP
 #define GNALC_MIRTOOLS_ENUM_NAME_HPP
 
-#include "../mir/instruction.hpp"
-#include "../mir/misc.hpp"
-#include "../mir/operand.hpp"
-#include "../utils/exception.hpp"
+#include "mir/instruction.hpp"
+#include "mir/misc.hpp"
+#include "mir/operand.hpp"
+#include "utils/exception.hpp"
 
 #include <string>
 

@@ -1,13 +1,12 @@
 #pragma once
-#ifndef GNALC_MIR_BRANCH_HPP
-#define GNALC_MIR_BRANCH_HPP
+#ifndef GNALC_MIR_INSTRUCTIONS_BRANCH_HPP
+#define GNALC_MIR_INSTRUCTIONS_BRANCH_HPP
 
-#include "../../ir/basic_block.hpp"
-#include "../../ir/function.hpp"
-#include "../basicblock.hpp"
-#include "../function.hpp"
-#include "../instruction.hpp"
-#include <utility>
+#include "ir/basic_block.hpp"
+#include "ir/function.hpp"
+#include "mir/basicblock.hpp"
+#include "mir/function.hpp"
+#include "mir/instruction.hpp"
 
 namespace MIR {
 class branchInst : public Instruction {

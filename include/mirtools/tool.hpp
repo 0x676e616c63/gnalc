@@ -2,21 +2,18 @@
 #ifndef GNALC_MIRTOOLS_TOOL_HPP
 #define GNALC_MIRTOOLS_TOOL_HPP
 
-#include "../../include/ir/instruction.hpp"
-#include "../../include/mir/instruction.hpp"
+#include "mir/instruction.hpp"
 #include "enum_name.hpp"
 
-#include <map>
 #include <string>
-#include <variant>
 
 namespace MIR {
 
-constexpr inline int popcount_wrapper(unsigned val) { return __builtin_popcount(val); }
+constexpr int popcount_wrapper(unsigned val) { return __builtin_popcount(val); }
 
-constexpr inline int clz_wrapper(unsigned val) { return __builtin_clz(val); }
+constexpr int clz_wrapper(unsigned val) { return __builtin_clz(val); }
 
-constexpr inline int ctz_wrapper(unsigned val) { return __builtin_ctz(val); }
+constexpr int ctz_wrapper(unsigned val) { return __builtin_ctz(val); }
 
 bool isImmCanBeEncodedInText(unsigned int);
 

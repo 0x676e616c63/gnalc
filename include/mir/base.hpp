@@ -1,7 +1,8 @@
 #pragma once
 #ifndef GNALC_MIR_BASE_HPP
 #define GNALC_MIR_BASE_HPP
-#include "../ir/type.hpp"
+
+#include <memory>
 #include <string>
 
 namespace MIR {
@@ -15,11 +16,24 @@ enum class ValueTrait {
     Operand,
 };
 
+class NameC {
+private:
+    std::string name;
+
+public:
+    NameC() = default;
+    explicit NameC(std::string _name) : name(std::move(_name)) {}
+
+    void setName(std::string _name) { name = std::move(_name); }
+    bool isName(const std::string& _name) const { return _name == name; }
+    std::string getName() const { return name; }
+};
+
 template <typename T, typename... Args> std::shared_ptr<T> make(Args &&...args) {
     return std::make_shared<T>(std::forward<Args>(args)...);
 }
 
-class Value : public IR::NameC, public std::enable_shared_from_this<Value> {
+class Value : public NameC, public std::enable_shared_from_this<Value> {
 private:
     ValueTrait vtrait;
 

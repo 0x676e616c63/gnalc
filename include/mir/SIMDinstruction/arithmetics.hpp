@@ -1,4 +1,8 @@
-#include "../instruction.hpp"
+#pragma once
+#ifndef GNALC_MIR_SIMDINSTRUCTION_ARITHMETICS_HPP
+#define GNALC_MIR_SIMDINSTRUCTION_ARITHMETICS_HPP
+
+#include "mir/instruction.hpp"
 
 using namespace MIR;
 
@@ -62,3 +66,4 @@ public:
     std::string toString() override;
     ~Vmrs() override = default;
 };
+#endif

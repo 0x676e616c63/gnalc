@@ -2,9 +2,7 @@
 #ifndef GNALC_MIR_PASSES_ANALYSIS_LIVE_ANALYSIS_HPP
 #define GNALC_MIR_PASSES_ANALYSIS_LIVE_ANALYSIS_HPP
 
-#include "../../base.hpp"
-#include "../pass_manager.hpp"
-#include <map>
+#include "mir/passes/pass_manager.hpp"
 
 namespace MIR {
 

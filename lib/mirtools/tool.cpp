@@ -1,4 +1,4 @@
-#include "../../include/mirtools/tool.hpp"
+#include "mirtools/tool.hpp"
 
 namespace MIR {
 

@@ -1,14 +1,17 @@
 #pragma once
 #ifndef GNALC_MIR_FUNCTION_HPP
 #define GNALC_MIR_FUNCTION_HPP
-#include <deque>
-#include <utility>
 
 #include "base.hpp"
 #include "basicblock.hpp"
 #include "constpool.hpp"
 #include "misc.hpp"
 #include "varpool.hpp"
+
+#include <deque>
+#include <map>
+#include <set>
+#include <utility>
 
 namespace MIR {
 

@@ -1,19 +1,19 @@
-#include "../../../include/mir/passes/pass_builder.hpp"
-#include "../../../include/mir/passes/pass_manager.hpp"
+#include "mir/passes/pass_builder.hpp"
+#include "mir/passes/pass_manager.hpp"
 
 // Analysis
-#include "../../../include/mir/passes/analysis/domtree_analysis.hpp"
-#include "../../../include/mir/passes/analysis/live_analysis.hpp"
+#include "mir/passes/analysis/domtree_analysis.hpp"
+#include "mir/passes/analysis/live_analysis.hpp"
 
 // Transforms
-#include "../../../include/mir/passes/transforms/const2reg.hpp"
-#include "../../../include/mir/passes/transforms/peephole.hpp"
-#include "../../../include/mir/passes/transforms/phiEliminate.hpp"
-#include "../../../include/mir/passes/transforms/postRAstackformat.hpp"
-#include "../../../include/mir/passes/transforms/preRAlegalize.hpp"
-#include "../../../include/mir/passes/transforms/registeralloc.hpp"
-#include "../../../include/mir/passes/transforms/uselessBlkEli.hpp"
-#include "../../../include/mir/passes/transforms/uselessMovEli.hpp"
+#include "mir/passes/transforms/const2reg.hpp"
+#include "mir/passes/transforms/peephole.hpp"
+#include "mir/passes/transforms/phiEliminate.hpp"
+#include "mir/passes/transforms/postRAstackformat.hpp"
+#include "mir/passes/transforms/preRAlegalize.hpp"
+#include "mir/passes/transforms/registeralloc.hpp"
+#include "mir/passes/transforms/uselessBlkEli.hpp"
+#include "mir/passes/transforms/uselessMovEli.hpp"
 
 namespace MIR {
 

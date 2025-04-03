@@ -2,8 +2,8 @@
 #ifndef GNALC_PASSES_TRANSFORMS_PHIELIMINATE_HPP
 #define GNALC_PASSES_TRANSFORMS_PHIELIMINATE_HPP
 
-#include "../../module.hpp"
-#include "../pass_manager.hpp"
+#include "mir/module.hpp"
+#include "mir/passes/pass_manager.hpp"
 
 namespace MIR {
 

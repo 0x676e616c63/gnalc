@@ -1,5 +1,6 @@
-#include "../../../../include/mir/passes/transforms/registeralloc.hpp"
-#include "../../../../include/mir/passes/transforms/uselessMovEli.hpp"
+#include "mir/passes/transforms/registeralloc.hpp"
+#include "mir/passes/transforms/uselessMovEli.hpp"
+#include "mir/passes/analysis/live_analysis.hpp"
 #include <algorithm>
 #include <numeric>
 #include <random>

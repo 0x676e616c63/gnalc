@@ -1,7 +1,9 @@
 #pragma once
-#ifndef GNALC_MIRTOOLS_POSTRASTACKFORMAT_HPP
-#define GNALC_MIRTOOLS_POSTRASTACKFORMAT_HPP
-#include "../pass_manager.hpp"
+#ifndef GNALC_MIR_PASSES_TRANSFORMS_POSTRASTACKFORMAT_HPP
+#define GNALC_MIR_PASSES_TRANSFORMS_POSTRASTACKFORMAT_HPP
+
+#include "mir/passes/pass_manager.hpp"
+
 #include <deque>
 
 ///@note 栈帧生成pass(PostRApass)

@@ -1,4 +1,4 @@
-#include "../../include/mir/constpool.hpp"
+#include "mir/constpool.hpp"
 
 using namespace MIR;
 
