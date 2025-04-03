@@ -19,6 +19,11 @@ pArrayType makeArrayType(pType ele_ty, size_t size) {
     return std::make_shared<ArrayType>(std::move(ele_ty), size);
 }
 
+pVecType makeVectorType(pType ele_ty, size_t size) {
+    Err::gassert(ele_ty != nullptr, "makeArrayType(): Element type is nullptr.");
+    return std::make_shared<VectorType>(std::move(ele_ty), size);
+}
+
 pFuncType makeFunctionType(std::vector<pType> params, pType ret, bool is_va_arg) {
     Err::gassert(!std::any_of(params.begin(), params.end(), [](auto &&p) { return p == nullptr; }),
                  "makeFunctionType(): Param type is nullptr");
@@ -32,12 +37,16 @@ pPtrType toPtrType(const pType &ty) { return ty->as<PtrType>(); }
 
 pArrayType toArrayType(const pType &ty) { return ty->as<ArrayType>(); }
 
+pVecType toVectorType(const pType &ty) { return ty->as<VectorType>(); }
+
 pFuncType toFunctionType(const pType &ty) { return ty->as<FunctionType>(); }
 
 pType getElm(const pType &ty) {
     switch (ty->getTrait()) {
     case IRCTYPE::ARRAY:
         return ty->as<ArrayType>()->getElmType();
+    case IRCTYPE::VECTOR:
+        return ty->as<VectorType>()->getElmType();
     case IRCTYPE::PTR:
         return ty->as<PtrType>()->getElmType();
     default:
@@ -59,6 +68,12 @@ bool isSameType(const pType &a, const pType &b) {
         auto b_arrty = b->as<ArrayType>();
         return isSameType(a_arrty->getElmType(), b_arrty->getElmType()) &&
                a_arrty->getArraySize() == b_arrty->getArraySize();
+    }
+    if (a->getTrait() == IRCTYPE::VECTOR) {
+        auto a_arrty = a->as<VectorType>();
+        auto b_arrty = b->as<VectorType>();
+        return isSameType(a_arrty->getElmType(), b_arrty->getElmType()) &&
+               a_arrty->getVectorSize() == b_arrty->getVectorSize();
     }
     if (a->getTrait() == IRCTYPE::PTR) {
         auto a_pty = a->as<PtrType>();

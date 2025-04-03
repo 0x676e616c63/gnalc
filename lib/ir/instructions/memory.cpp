@@ -20,9 +20,17 @@ LOADInst::LOADInst(NameRef name, const pVal &_ptr, int _align)
     addOperand(_ptr);
 }
 
+LOADInst::LOADInst(NameRef name, size_t n, const pVal &_ptr, int _align)
+    : Instruction(OP::LOAD, name, makeVectorType(getElm(_ptr->getType()), n)), align(_align) {
+}
+
 pVal LOADInst::getPtr() const { return getOperand(0)->getValue(); }
 
 int LOADInst::getAlign() const { return align; }
+
+bool LOADInst::isVectorLoad() const {
+    return getType()->getTrait() == IRCTYPE::VECTOR;
+}
 
 STOREInst::STOREInst(const pVal &_value, const pVal &_ptr, int _align)
     : Instruction(OP::STORE, "__store", makeBType(IRBTYPE::UNDEFINED)), align(_align) {
@@ -37,6 +45,10 @@ pVal STOREInst::getValue() const { return getOperand(0)->getValue(); }
 pVal STOREInst::getPtr() const { return getOperand(1)->getValue(); }
 
 int STOREInst::getAlign() const { return align; }
+
+bool STOREInst::isVectorStore() const {
+    return getValue()->getType()->getTrait() == IRCTYPE::VECTOR;
+}
 
 // 这是 gep 本身的类型，不是它的 BaseType，只辅助构造函数使用，所以只在 memory.cpp 里定义。
 pType getGEPType(pType gep_ptr_type, size_t idx_size) {

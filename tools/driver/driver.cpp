@@ -127,6 +127,7 @@ int main(int argc, char **argv) {
         OPT_ARG("--indvars", "--no-indvars", indvars)
         OPT_ARG("--lsr", "--no-lsr", loop_strength_reduce)
         OPT_ARG("--loopelim", "--no-loopelim", loopelim)
+        OPT_ARG("--slp-vectorizer", "--no-slp-vectorizer", slp_vectorizer)
         OPT_ARG("--sroa", "--no-sroa", sroa)
         OPT_ARG("--jumpthreading", "--no-jumpthreading", jump_threading)
         // Module Transforms
@@ -209,6 +210,7 @@ Optimizations available:
   --indvars            - Simplify induction variables
   --lsr                - Loop strength reduction
   --loopelim           - Loop elimination
+  --slp-vectorizer     - SLP vectorizer
   --sroa               - Scalar replacement of aggregates
   --jumpthreading      - Jump threading
   --treeshaking        - Shake off unused functions, function declarations and global variables

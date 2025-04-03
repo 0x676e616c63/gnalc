@@ -32,6 +32,7 @@
 #include "../../../include/ir/passes/transforms/mem2reg.hpp"
 #include "../../../include/ir/passes/transforms/namenormalizer.hpp"
 #include "../../../include/ir/passes/transforms/reassociate.hpp"
+#include "../../../include/ir/passes/transforms/slp_vectorizer.hpp"
 #include "../../../include/ir/passes/transforms/sroa.hpp"
 #include "../../../include/ir/passes/transforms/tail_recursion_elimination.hpp"
 #include "../../../include/ir/passes/transforms/tree_shaking.hpp"
@@ -70,6 +71,7 @@ const OptInfo o1_opt_info = {
     .indvars = false,
     .loop_strength_reduce = false,
     .loopelim = false,
+    .slp_vectorizer = false,
     .jump_threading = false,
     // Module Transforms
     .tree_shaking = true,
