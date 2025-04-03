@@ -1,7 +1,4 @@
-/**
- * @brief maybe unused
- */
-#include "../../include/ir/type.hpp"
+#include "ir/type.hpp"
 
 #include <algorithm>
 

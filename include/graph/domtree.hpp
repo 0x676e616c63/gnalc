@@ -9,9 +9,9 @@
 #include <cmath>
 #include <vector>
 
-#include "../utils/exception.hpp"
-#include "../utils/generic_visitor.hpp"
-#include "../utils/logger.hpp"
+#include "utils/exception.hpp"
+#include "utils/generic_visitor.hpp"
+#include "utils/logger.hpp"
 #include "graph.hpp"
 
 namespace Graph {

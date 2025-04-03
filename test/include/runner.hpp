@@ -2,6 +2,7 @@
 #define GNALC_TEST_RUNNER_HPP
 
 #include "utils.hpp"
+
 #include <filesystem>
 #include <functional>
 #include <string>

@@ -48,12 +48,12 @@
 #ifndef GNALC_CODEGEN_BRAINFK_BFGEN_HPP
 #define GNALC_CODEGEN_BRAINFK_BFGEN_HPP
 
-#include "../../config/config.hpp"
+#include "config/config.hpp"
 #if GNALC_EXTENSION_BRAINFK
 
 #include <map>
 
-#include "../../ir/visitor.hpp"
+#include "ir/visitor.hpp"
 #include "bfmodule.hpp"
 
 namespace BrainFk {

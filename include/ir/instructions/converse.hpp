@@ -1,15 +1,15 @@
 /**
  * @brief Conversion Operations
- * @brief fptosi, sitofp
+ * @brief fptosi, sitofp, bitcast, zext
  */
 
 #pragma once
 #ifndef GNALC_IR_INSTRUCTIONS_CONVERSE_HPP
 #define GNALC_IR_INSTRUCTIONS_CONVERSE_HPP
 
-#include "../constant.hpp"
-#include "../instruction.hpp"
-#include "../type_alias.hpp"
+#include "ir/instruction.hpp"
+#include "ir/type_alias.hpp"
+
 #include <memory>
 
 namespace IR {

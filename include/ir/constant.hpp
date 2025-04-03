@@ -1,6 +1,5 @@
 /**
- * @brief 常量字面值包装到Value
- * @todo 实现方式优化
+ * @brief 常量字面值的 IR Value 表示
  */
 
 #pragma once

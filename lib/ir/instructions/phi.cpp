@@ -1,8 +1,6 @@
-#include "../../../include/ir/basic_block.hpp"
-#include "../../../include/ir/instructions/phi.hpp"
-#include "../../../include/ir/visitor.hpp"
-
-#include <algorithm>
+#include "ir/basic_block.hpp"
+#include "ir/instructions/phi.hpp"
+#include "ir/visitor.hpp"
 
 namespace IR {
 PHIInst::PHIInst(NameRef name, const pType &_type) : Instruction(OP::PHI, name, _type) {}

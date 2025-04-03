@@ -1,9 +1,8 @@
-#include "../../../include/config/config.hpp"
+#include "config/config.hpp"
 #if GNALC_EXTENSION_BRAINFK
-#include "../../../include/codegen/brainfk/bfbuiltins.hpp"
-#include "../../../include/codegen/brainfk/bfgen.hpp"
-#include "../../../include/codegen/brainfk/bfmodule.hpp"
-#include "../../../include/utils/logger.hpp"
+#include "codegen/brainfk/bfgen.hpp"
+#include "codegen/brainfk/bfmodule.hpp"
+#include "utils/logger.hpp"
 
 namespace BrainFk {
 void BF3t32bGen::visit(IR::Module &node) {

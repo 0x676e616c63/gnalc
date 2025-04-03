@@ -1,10 +1,10 @@
-#include "../../../../include/config/config.hpp"
-#include "../../../../include/ir/block_utils.hpp"
-#include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/scev.hpp"
-#include "../../../../include/ir/pattern_match.hpp"
-#include "../../../../include/ir/passes/transforms/loop_elimination.hpp"
+#include "ir/passes/transforms/loop_elimination.hpp"
+#include "ir/block_utils.hpp"
+#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
+#include "ir/passes/analysis/scev.hpp"
+#include "ir/pattern_match.hpp"
+#include "config/config.hpp"
 
 namespace IR {
 // If all values defined in the loop have no uses outside the loop, or uses outside the loop

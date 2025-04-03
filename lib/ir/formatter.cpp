@@ -1,5 +1,14 @@
-#include "../../include/ir/formatter.hpp"
-#include "../../include/utils/logger.hpp"
+#include "ir/formatter.hpp"
+#include "ir/function.hpp"
+#include "ir/instructions/binary.hpp"
+#include "ir/instructions/compare.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/instructions/converse.hpp"
+#include "ir/instructions/memory.hpp"
+#include "ir/instructions/phi.hpp"
+#include "utils/logger.hpp"
+
+#include <string>
 
 namespace IR {
 std::string IRFormatter::formatSTOCLASS(STOCLASS cls) {

@@ -5,8 +5,8 @@
 #ifndef GNALC_IR_PASSES_ANALYSIS_ALIAS_ANALYSIS_HPP
 #define GNALC_IR_PASSES_ANALYSIS_ALIAS_ANALYSIS_HPP
 
-#include "../../instructions/control.hpp"
-#include "../pass_manager.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/passes/pass_manager.hpp"
 
 namespace IR {
 class AliasAnalysis;

@@ -20,7 +20,7 @@ if (ENABLE_ASAN)
         add_link_options(-fsanitize=address)
 endif()
 
-#include_directories(include)
+include_directories(include)
 
 # Frontend
 aux_source_directory(lib/lexer GNALC_LEXER_SRC)
@@ -84,7 +84,6 @@ set(GGC_SRC
 
 # debug driver
 add_executable(pmtest tools/driver/debug/pmtest.cpp ${GNALC_SRC})
-add_executable(generic_visitor_test tools/driver/debug/generic_visitor_test.cpp ${GNALC_SRC})
 add_executable(bfhelper tools/driver/debug/bfhelper.cpp)
 
 # main driver

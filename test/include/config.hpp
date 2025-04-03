@@ -1,10 +1,10 @@
 #pragma once
-#ifndef GNALC_CONFIG_HPP
-#define GNALC_CONFIG_HPP
-
-#include <string>
+#ifndef GNALC_TEST_CONFIG_HPP
+#define GNALC_TEST_CONFIG_HPP
 
 #include "utils.hpp"
+
+#include <string>
 
 namespace Test::cfg {
 // Commandline args

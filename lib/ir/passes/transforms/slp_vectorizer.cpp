@@ -1,4 +1,4 @@
-#include "../../../../include/ir/passes/transforms/slp_vectorizer.hpp"
+#include "ir/passes/transforms/slp_vectorizer.hpp"
 
 namespace IR {
 PM::PreservedAnalyses SLPVectorizerPass::run(Function &function, FAM &fam) {

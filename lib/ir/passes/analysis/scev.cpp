@@ -1,7 +1,7 @@
-#include "../../../../include/ir/passes/analysis/scev.hpp"
-
-#include "../../../../include/ir/pattern_match.hpp"
-#include "../../../../include/ir/block_utils.hpp"
+#include "ir/passes/analysis/scev.hpp"
+#include "ir/instructions/compare.hpp"
+#include "ir/pattern_match.hpp"
+#include "ir/block_utils.hpp"
 
 #include <algorithm>
 #include <cmath>

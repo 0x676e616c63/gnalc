@@ -1,8 +1,9 @@
+// TODO
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_INDVAR_SIMPLIFY_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_INDVAR_SIMPLIFY_HPP
 
-#include "../pass_manager.hpp"
+#include "ir/passes/pass_manager.hpp"
 
 namespace IR {
 class IndVarSimplifyPass : public PM::PassInfo<IndVarSimplifyPass> {

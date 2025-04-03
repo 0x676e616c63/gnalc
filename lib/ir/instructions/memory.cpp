@@ -1,9 +1,7 @@
-#include "../../../include/ir/instructions/memory.hpp"
-#include "../../../include/ir/visitor.hpp"
+#include "ir/instructions/memory.hpp"
+#include "ir/visitor.hpp"
 
 #include <algorithm>
-#include <cassert>
-#include <stdexcept>
 
 namespace IR {
 ALLOCAInst::ALLOCAInst(NameRef name, pType btype, int _align)

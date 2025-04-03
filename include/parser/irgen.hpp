@@ -2,11 +2,11 @@
 #define GNALC_PARSER_IRGEN_HPP
 #pragma once
 
-#include "../config/config.hpp"
-#include "../ir/module.hpp"
 #include "ast.hpp"
 #include "cfgbuilder.hpp"
 #include "symbol_table.hpp"
+#include "ir/module.hpp"
+#include "config/config.hpp"
 
 namespace Parser {
 

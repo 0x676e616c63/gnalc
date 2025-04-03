@@ -2,12 +2,10 @@
 #ifndef GNALC_IR_FUNCTION_HPP
 #define GNALC_IR_FUNCTION_HPP
 
-#include "../utils/generic_visitor.hpp"
 #include "base.hpp"
 #include "basic_block.hpp"
 #include "constant_pool.hpp"
-#include "instruction.hpp"
-#include "instructions/phi.hpp"
+#include "utils/generic_visitor.hpp"
 
 #include <memory>
 #include <utility>

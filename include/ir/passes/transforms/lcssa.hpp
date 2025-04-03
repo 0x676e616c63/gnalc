@@ -32,9 +32,9 @@
 #ifndef GNALC_IR_PASSES_TRANSFORMS_LCSSA_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_LCSSA_HPP
 
-#include "../analysis/domtree_analysis.hpp"
-#include "../analysis/loop_analysis.hpp"
-#include "../pass_manager.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
+#include "ir/passes/pass_manager.hpp"
 
 namespace IR {
 class LCSSAPass : public PM::PassInfo<LCSSAPass> {

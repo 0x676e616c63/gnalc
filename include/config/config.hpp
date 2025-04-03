@@ -3,7 +3,7 @@
 #define GNALC_CONFIG_CONFIG_HPP
 
 // Extension
-#define GNALC_EXTENSION_BRAINFK 0
+#define GNALC_EXTENSION_BRAINFK 1
 
 namespace Config::IR {
 // IRGenerator

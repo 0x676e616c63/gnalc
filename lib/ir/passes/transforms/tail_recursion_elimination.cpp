@@ -1,9 +1,6 @@
-//
-// Created by edragain on 2/9/25.
-//
-#include "../../../../include/ir/passes/transforms/tail_recursion_elimination.hpp"
-#include "../../../../include/ir/instructions/control.hpp"
-#include "../../../../include/ir/instructions/memory.hpp"
+#include "ir/passes/transforms/tail_recursion_elimination.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/instructions/memory.hpp"
 
 namespace IR {
 PM::PreservedAnalyses TailRecursionEliminationPass::run(Function &function, FAM &manager) {

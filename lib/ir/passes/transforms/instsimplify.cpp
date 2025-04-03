@@ -1,10 +1,12 @@
-#include "../../../../include/ir/passes/transforms/instsimplify.hpp"
-#include "../../../../include/ir/base.hpp"
-#include "../../../../include/ir/block_utils.hpp"
-#include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
-#include "../../../../include/ir/passes/helpers/constant_fold.hpp"
-#include "../../../../include/ir/pattern_match.hpp"
+#include "ir/passes/transforms/instsimplify.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/passes/helpers/constant_fold.hpp"
+#include "ir/instructions/compare.hpp"
+#include "ir/instructions/converse.hpp"
+#include "ir/base.hpp"
+#include "ir/block_utils.hpp"
+#include "ir/pattern_match.hpp"
 
 #include <algorithm>
 #include <memory>

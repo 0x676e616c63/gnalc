@@ -1,6 +1,6 @@
-#include "../../include/ir/basic_block.hpp"
-#include "../../include/ir/visitor.hpp"
-#include "../../include/utils/misc.hpp"
+#include "ir/basic_block.hpp"
+#include "ir/visitor.hpp"
+#include "utils/misc.hpp"
 
 #include <list>
 #include <utility>

@@ -11,7 +11,7 @@
 #ifndef GNALC_IR_PASSES_UTILITIES_VERIFIER_HPP
 #define GNALC_IR_PASSES_UTILITIES_VERIFIER_HPP
 
-#include "../pass_manager.hpp"
+#include "ir/passes/pass_manager.hpp"
 
 namespace IR {
 class VerifyPass : public PM::PassInfo<VerifyPass> {

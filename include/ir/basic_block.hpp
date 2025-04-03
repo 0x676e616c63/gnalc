@@ -1,17 +1,17 @@
 /**
- * @attention BB的uselist内是调用它的br，而不是它的父函数
+ * @attention BasicBlock 的 use_list 内是调用它的 BRInst，而不是它的父函数
  */
 
 #pragma once
 #ifndef GNALC_IR_BASIC_BLOCK_HPP
 #define GNALC_IR_BASIC_BLOCK_HPP
 
-#include "../utils/iterator.hpp"
-#include "../utils/generic_visitor.hpp"
 #include "base.hpp"
+#include "type_alias.hpp"
 #include "instruction.hpp"
 #include "instructions/phi.hpp"
-#include "type_alias.hpp"
+#include "utils/iterator.hpp"
+#include "utils/generic_visitor.hpp"
 
 #include <memory>
 #include <variant>

@@ -1,5 +1,5 @@
 /**
- * @brief 包含通用的Type, Name类
+ * @brief 包含通用的 Type, Name 类
  */
 
 #pragma once
@@ -11,8 +11,8 @@
 #include <utility>
 #include <vector>
 
-#include "../utils/exception.hpp"
 #include "type_alias.hpp"
+#include "utils/exception.hpp"
 
 namespace IR {
 /**

@@ -4,7 +4,7 @@
 #ifndef GNALC_IR_PASSES_TRANSFORMS_TREE_SHAKING_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_TREE_SHAKING_HPP
 
-#include "../pass_manager.hpp"
+#include "ir/passes/pass_manager.hpp"
 
 namespace IR {
 class TreeShakingPass : public PM::PassInfo<TreeShakingPass> {

@@ -2,7 +2,7 @@
 #ifndef GNALC_CODEGEN_BRAINFK_BFTRANS_HPP
 #define GNALC_CODEGEN_BRAINFK_BFTRANS_HPP
 
-#include "../../config/config.hpp"
+#include "config/config.hpp"
 #if GNALC_EXTENSION_BRAINFK
 
 #include <vector>
