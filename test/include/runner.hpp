@@ -36,7 +36,8 @@ inline std::string make_pathname(const std::string &raw) {
     return ret;
 }
 
-inline TestResult run_test(const TestData &data, bool only_run_frontend = cfg::only_frontend) {
+inline TestResult run_test(const TestData &data, size_t times = 1, bool only_run_frontend = cfg::only_frontend) {
+    Err::gassert(times != 0);
     auto testcase_in = data.sy.path().parent_path().string() + "/" + data.sy.path().stem().string() + ".in";
     auto out_file_id = format("{}_{}", data.sy.path().stem().string(), make_pathname(data.mode_id));
     auto outtime = format("{}/{}.time", data.temp_dir, out_file_id);
@@ -86,14 +87,17 @@ inline TestResult run_test(const TestData &data, bool only_run_frontend = cfg::o
     println("|  Running '{}' link command: '{}'", data.mode_id, link_command);
     std::system(link_command.c_str());
     println("|  Running '{}' execute command: '{}'", data.mode_id, exec_command);
-    std::system(exec_command.c_str());
 
-    auto syout = read_file(output);
-    fix_newline(syout);
-
-    auto time_elased = parse_time(read_file(outtime));
-
-    return {out_source, syout, time_elased};
+    std::string syout;
+    size_t time_elapsed = 0;
+    for (int i = 0; i < times; i++) {
+        std::system(exec_command.c_str());
+        syout = read_file(output);
+        fix_newline(syout);
+        time_elapsed += parse_time(read_file(outtime));
+    }
+    time_elapsed /= times;
+    return {out_source, syout, time_elapsed};
 }
 
 inline std::string prepare_sylib(const std::string &global_tmp_dir, bool only_run_frontend = cfg::only_frontend) {

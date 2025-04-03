@@ -261,8 +261,6 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
             }
         };
         std::unordered_set<std::shared_ptr<Expr>, ExprHasher, ExprCmp> expr_pool;
-        // DO NOT use std::shared_ptr<Value> as unordered_map's key, the cache can be very large,
-        // std::shared_ptr's cost can be unacceptable.
         std::unordered_map<Value *, Expr*> get_expr_cache;
         std::unordered_map<Expr *, ValueKind> expr_table;
         ValueKind kind_cnt = 0;

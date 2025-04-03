@@ -36,7 +36,7 @@ struct RatioData {
     double ratio;
 };
 
-void write_benchmark_result_to(const BenchmarkData &data, std::ostream &out) {
+void write_benchmark_result_to(const BenchmarkData &data, std::ostream &out, const std::vector<TestData>& failed) {
     println(out, "Benchmark results:");
     std::vector<RatioData> times;
     size_t total1 = 0;
@@ -84,26 +84,38 @@ void write_benchmark_result_to(const BenchmarkData &data, std::ostream &out) {
     println(out, "'{}': {}us", data.mode2, total2);
     println(out, "On average, '{}' is {}x faster than '{}'.", data.mode2, average_ratio, data.mode1);
 
-    println(out, "Fastest:");
-    println(out, "{}: {}x", max->testcase, max->ratio);
+    if (max != times.end()) {
+        println(out, "Fastest:");
+        println(out, "{}: {}x", max->testcase, max->ratio);
+    }
 
-    println(out, "Slowest:");
-    println(out, "{}: {}x", min->testcase, min->ratio);
+    if (min != times.end()) {
+        println(out, "Slowest:");
+        println(out, "{}: {}x", min->testcase, min->ratio);
+    }
+
+    if (!failed.empty()) {
+        println(out, "WARNING: {} tests failed!", failed.size());
+        println(out, "Failed tests: ");
+        for (const auto &f : failed)
+            println(out, "| testcase: {} | mode: {}", f.sy.path().string(), f.mode_id);
+    }
 }
 
 BenchmarkData benchmark_data;
+std::vector<TestData> failed_tests;
 
 void sighandler(int) {
-    write_benchmark_result_to(benchmark_data, std::cout);
+    write_benchmark_result_to(benchmark_data, std::cout, failed_tests);
     auto path = format("{}/{}_vs_{}", cfg::global_benchmark_temp_dir, make_pathname(benchmark_data.mode2),
                        make_pathname(benchmark_data.mode1));
     std::ofstream output_file(path);
-    write_benchmark_result_to(benchmark_data, output_file);
+    write_benchmark_result_to(benchmark_data, output_file, failed_tests);
     println("Benchmark result saved to {}", path);
     exit(-1);
 }
 
-auto a_tmp = benchmark_data.mode1 = "clang-o2";
+auto a_tmp = benchmark_data.mode1 = "clang-o3";
 TestData get_mode1_data(const directory_entry &sy, const std::string &sylib_to_link, const std::string &curr_temp_dir) {
     auto clang_irgen = [](const std::string &newsy, const std::string &outll) {
         auto ret = format(
@@ -111,7 +123,7 @@ TestData get_mode1_data(const directory_entry &sy, const std::string &sylib_to_l
             "putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, float "
             "a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define starttime() "
             "_sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
-            " && clang -O2 -Xclang -disable-O0-optnone -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null",
+            " && clang -O3 -Xclang -disable-O0-optnone -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null",
             newsy, newsy, outll);
 
         return ret;
@@ -123,6 +135,7 @@ TestData get_mode1_data(const directory_entry &sy, const std::string &sylib_to_l
                     .mode_id = benchmark_data.mode1,
                     .ir_asm_gen = clang_irgen};
 }
+
 
 // auto a_tmp = benchmark_data.mode1 = "clang-o2-llvm";
 // TestData get_mode1_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
@@ -167,11 +180,11 @@ TestData get_mode1_data(const directory_entry &sy, const std::string &sylib_to_l
 //     };
 // }
 
-// auto a_tmp = benchmark_data.mode1 = "gnalc-oldsccp";
+// auto a_tmp = benchmark_data.mode1 = "example";
 // TestData get_mode1_data(const directory_entry& sy, const std::string& sylib_to_link, const std::string& curr_temp_dir) {
-//     auto gnalc_irgen = [](const std::string& newsy, const std::string& outll) {
-//         return format("../gnalc-old -S {} -o {} -emit-llvm --mem2reg --sccp",
-//                                 newsy, outll);
+//     auto example_irgen = [](const std::string& newsy, const std::string& outll) {
+//         return format("./example -t llvm {} -O3 -o {} && sed 's/@starttime/@_sysy_starttime/' {} -i && sed 's/@stoptime/@_sysy_stoptime/' {} -i",
+//                                 newsy, outll, outll, outll);
 //     };
 //
 //     return TestData{
@@ -179,14 +192,14 @@ TestData get_mode1_data(const directory_entry &sy, const std::string &sylib_to_l
 //         .sylib = sylib_to_link,
 //         .temp_dir = curr_temp_dir,
 //         .mode_id = benchmark_data.mode1,
-//         .ir_asm_gen = gnalc_irgen
+//         .ir_asm_gen = example_irgen
 //     };
 // }
 
-auto b_tmp = benchmark_data.mode2 = "gnalc-O1";
+auto b_tmp = benchmark_data.mode2 = "gnalc-fixed";
 TestData get_mode2_data(const directory_entry &sy, const std::string &sylib_to_link, const std::string &curr_temp_dir) {
     auto gnalc_irgen = [](const std::string &newsy, const std::string &outll) {
-        return format("../gnalc -S {} -o {} -emit-llvm -O1", newsy, outll);
+        return format("../gnalc -S {} -o {} -emit-llvm -fixed-point", newsy, outll);
     };
 
     return TestData{.sy = sy,
@@ -241,10 +254,12 @@ int main(int argc, char *argv[]) {
     auto print_help = [&argv]() {
         println("Usage: {} [options]", argv[0]);
         println("Options:");
-        println("  -s, --skip   [name_prefix] Skip test whose name has such prefix.");
-        println("  -r, --run    [name_prefix] Only run test whose name has such prefix.");
-        println("  -e, --resume [name_prefix] Start from test whose name have such prefix.");
-        println("  -h, --help                 Print this help and exit.");
+        println("  -a, --all                   Run all tests, regardless of failure.");
+        println("  -b, --backend               With backend.");
+        println("  -s, --skip    [name_prefix] Skip test whose name has such prefix.");
+        println("  -r, --run     [name_prefix] Only run test whose name has such prefix.");
+        println("  -e, --resume  [name_prefix] Start from test whose name have such prefix.");
+        println("  -h, --help                  Print this help and exit.");
     };
 
     std::string resume_pattern;
@@ -253,7 +268,11 @@ int main(int argc, char *argv[]) {
 
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
-        if (arg == "--skip" || arg == "-s") {
+        if (arg == "--all" || arg == "-a")
+            cfg::stop_on_error = false;
+        else if (arg == "--backend" || arg == "-b")
+            cfg::only_frontend = false;
+        else if (arg == "--skip" || arg == "-s") {
             if (!run.empty()) {
                 println("Error: '--run' conflicts with '--skip'.");
                 return -1;
@@ -302,8 +321,6 @@ int main(int argc, char *argv[]) {
     size_t passed = 0;
     size_t curr_test_cnt = 0;
     bool have_resumed = resume_pattern.empty();
-    // Well, there shouldn't be any "failed" tests for clang, but just in case.
-    std::vector<TestData> failed_tests;
 
     create_directories(cfg::global_benchmark_temp_dir);
 
@@ -335,36 +352,37 @@ int main(int argc, char *argv[]) {
             auto data1 = get_mode1_data(sy, sylib_to_link, curr_temp_dir);
             auto data2 = get_mode2_data(sy, sylib_to_link, curr_temp_dir);
 
-            auto res1 = run_test(data1);
-            auto res2 = run_test(data2);
+            auto res1 = run_test(data1, 3);
+            auto res2 = run_test(data2, 3);
 
-            bool failed = false;
-            if (res1.output != expected_syout) {
+            bool success_1 = res1.output == expected_syout;
+            bool success_2 = res2.output == expected_syout;
+
+            if (!success_1) {
                 println("\n|  [\033[0;32;31mFAILED\033[m] Expected '{}' but got "
-                        "'{}'.",
-                        expected_syout, res1.output);
+                        "'{}'. | mode: {}",
+                        expected_syout, res1.output, data1.mode_id);
                 failed_tests.emplace_back(data1);
-                failed = true;
             }
-            if (res2.output != expected_syout) {
+            if (!success_2) {
                 println("\n|  [\033[0;32;31mFAILED\033[m] Expected '{}' but got "
-                        "'{}'.",
-                        expected_syout, res2.output);
+                        "'{}'. | mode: {}",
+                        expected_syout, res2.output, data2.mode_id);
                 failed_tests.emplace_back(data2);
-                failed = true;
             }
 
             benchmark_data.results1.emplace_back(
-                BenchmarkData::Item{.data = data1, .res = res1, .success = res1.output == expected_syout});
+                BenchmarkData::Item{ .data = data1, .res = res1, .success = success_1 });
             benchmark_data.results2.emplace_back(
-                BenchmarkData::Item{.data = data2, .res = res2, .success = res2.output == expected_syout});
+                BenchmarkData::Item{ .data = data2, .res = res2, .success = success_2 });
 
-            if (!failed) {
+            if (success_1 && success_2) {
                 println("     [\033[0;32;32mFINISHED\033[m]");
                 ++passed;
             } else {
                 println("----------");
-                goto finish;
+                if (cfg::stop_on_error)
+                    goto finish;
             }
         }
     }
@@ -385,11 +403,11 @@ finish:
     }
 
     println("");
-    write_benchmark_result_to(benchmark_data, std::cout);
+    write_benchmark_result_to(benchmark_data, std::cout, failed_tests);
     auto path = format("{}/{}_vs_{}", cfg::global_benchmark_temp_dir, make_pathname(benchmark_data.mode2),
                        make_pathname(benchmark_data.mode1));
     std::ofstream output_file(path);
-    write_benchmark_result_to(benchmark_data, output_file);
+    write_benchmark_result_to(benchmark_data, output_file, failed_tests);
     println("Benchmark result saved to {}", path);
     return 0;
 }
