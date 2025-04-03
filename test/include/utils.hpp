@@ -8,6 +8,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <iostream>
+#include <fstream>
 
 namespace Test {
 inline std::string generate_unique_temp_dir() {
