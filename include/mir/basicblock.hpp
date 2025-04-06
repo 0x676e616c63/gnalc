@@ -1,7 +1,7 @@
 #pragma once
 #ifndef GNALC_MIR_BASICBLOCK_HPP
 #define GNALC_MIR_BASICBLOCK_HPP
-#include "../mirtools/tool.hpp"
+#include "mirtools/tool.hpp"
 #include "base.hpp"
 #include "instruction.hpp"
 #include <list>

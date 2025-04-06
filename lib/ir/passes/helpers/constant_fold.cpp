@@ -1,11 +1,10 @@
-#include "../../../../include/ir/passes/helpers/constant_fold.hpp"
-
-#include "../../../../include/ir/base.hpp"
-#include "../../../../include/ir/basic_block.hpp"
-#include "../../../../include/ir/function.hpp"
-#include "../../../../include/ir/instructions/binary.hpp"
-#include "../../../../include/ir/instructions/compare.hpp"
-#include "../../../../include/ir/instructions/converse.hpp"
+#include "ir/passes/helpers/constant_fold.hpp"
+#include "ir/base.hpp"
+#include "ir/basic_block.hpp"
+#include "ir/function.hpp"
+#include "ir/instructions/binary.hpp"
+#include "ir/instructions/compare.hpp"
+#include "ir/instructions/converse.hpp"
 
 namespace IR {
 

@@ -1,8 +1,6 @@
-#include "../../../include/ir/basic_block.hpp"
-#include "../../../include/ir/instructions/phi.hpp"
-#include "../../../include/ir/visitor.hpp"
-
-#include <algorithm>
+#include "ir/basic_block.hpp"
+#include "ir/instructions/phi.hpp"
+#include "ir/visitor.hpp"
 
 namespace IR {
 PHIInst::PHIInst(NameRef name, const pType &_type) : Instruction(OP::PHI, name, _type) {}
@@ -56,10 +54,11 @@ pVal PHIInst::getValueForBlock(const pBlock &block) const {
     return nullptr;
 }
 
-pBlock PHIInst::getBlockForValue(const std::shared_ptr<Use> &use) const {
+pBlock PHIInst::getBlockForValue(Use* use) const {
     Err::gassert(use->getValue()->getVTrait() != ValueTrait::BASIC_BLOCK);
-    for (auto it = operand_use_begin(); it != operand_use_end(); ++it) {
-        if (*it == use)
+    const auto& operands = getOperands();
+    for (auto it = operands.begin(); it != operands.end(); ++it) {
+        if (it->get() == use)
             return (*(it + 1))->getValue()->as<BasicBlock>();
     }
     return nullptr;

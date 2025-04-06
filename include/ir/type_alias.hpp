@@ -10,10 +10,8 @@ class User;
 class Use;
 using pVal = std::shared_ptr<Value>;
 using pUser = std::shared_ptr<User>;
-using pUse = std::shared_ptr<Use>;
 using wpVal = std::weak_ptr<Value>;
 using wpUser = std::weak_ptr<User>;
-using wpUse = std::weak_ptr<Use>;
 
 // binary
 class BinaryInst;
@@ -113,11 +111,13 @@ class Type;
 class BType;
 class PtrType;
 class ArrayType;
+class VectorType;
 class FunctionType;
 using pType = std::shared_ptr<Type>;
 using pBType = std::shared_ptr<BType>;
 using pPtrType = std::shared_ptr<PtrType>;
 using pArrayType = std::shared_ptr<ArrayType>;
+using pVecType = std::shared_ptr<VectorType>;
 using pFuncType = std::shared_ptr<FunctionType>;
 
 // loop

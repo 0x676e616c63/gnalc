@@ -63,11 +63,15 @@ void moveBlocks(FunctionBBIter beg, FunctionBBIter end, const pFunc &new_func);
 // Since phi can have another phi as its operand,
 // the following two functions should be called in a Reverse Post Order.
 
+// See if this phi have a common value for every predecessor. (i.e. LCSSA phi)
+pVal getCommonValue(const pPhi &phi);
+// See if two phi is the same
+bool isIdenticalPhi(const pPhi &phi1, const pPhi &phi2);
 // Replace single entry or same value phi with its operand
 // This also deletes trivially dead phis with no user.
-void foldPHI(const pBlock &bb, bool preserve_lcssa = false);
+bool foldPHI(const pBlock &bb, bool preserve_lcssa = false);
 // Remove phi with identical operands
-void removeIdenticalPhi(const pBlock &bb);
+bool removeIdenticalPhi(const pBlock &bb);
 
 // Break critical edges,
 // returns the generated basic block if there is a critical edge, or nullptr for not.

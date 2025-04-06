@@ -1,4 +1,4 @@
-#include "../../../../include/mir/passes/transforms/preRAlegalize.hpp"
+#include "mir/passes/transforms/preRAlegalize.hpp"
 #include <algorithm>
 
 using namespace MIR;

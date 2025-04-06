@@ -1,27 +1,27 @@
-#include "../../include/config/config.hpp"
+#include "config/config.hpp"
 
-#include "../../include/ir/passes/pass_builder.hpp"
-#include "../../include/ir/passes/pass_manager.hpp"
-#include "../../include/ir/passes/utilities/irprinter.hpp"
-#include "../../include/mir/builder/lowering.hpp"
-#include "../../include/mir/passes/pass_builder.hpp"
-#include "../../include/mir/passes/pass_manager.hpp"
-#include "../../include/mir/passes/utilities/mirprinter.hpp"
-#include "../../include/utils/logger.hpp"
+#include "ir/passes/pass_builder.hpp"
+#include "ir/passes/pass_manager.hpp"
+#include "ir/passes/utilities/irprinter.hpp"
+#include "mir/builder/lowering.hpp"
+#include "mir/passes/pass_builder.hpp"
+#include "mir/passes/pass_manager.hpp"
+#include "mir/passes/utilities/mirprinter.hpp"
+#include "utils/logger.hpp"
 
 #ifndef GNALC_EXTENSION_GGC // in CMakeLists.txt
-#include "../../include/parser/ast.hpp"
-#include "../../include/parser/astprinter.hpp"
-#include "../../include/parser/irgen.hpp"
-#include "../../include/parser/parser.hpp"
+#include "parser/ast.hpp"
+#include "parser/astprinter.hpp"
+#include "parser/irgen.hpp"
+#include "parser/parser.hpp"
 #else
-#include "../../include/ggc/irparsertool.hpp"
+#include "ggc/irparsertool.hpp"
 #endif
 
 #if GNALC_EXTENSION_BRAINFK // in config.hpp
-#include "../../include/codegen/brainfk/bfgen.hpp"
-#include "../../include/codegen/brainfk/bfprinter.hpp"
-#include "../../include/codegen/brainfk/bftrans.hpp"
+#include "codegen/brainfk/bfgen.hpp"
+#include "codegen/brainfk/bfprinter.hpp"
+#include "codegen/brainfk/bftrans.hpp"
 #endif
 
 #include "../../include/codegen/armv7/armprinter.hpp"
@@ -131,6 +131,7 @@ int main(int argc, char **argv) {
         OPT_ARG("--indvars", "--no-indvars", indvars)
         OPT_ARG("--lsr", "--no-lsr", loop_strength_reduce)
         OPT_ARG("--loopelim", "--no-loopelim", loopelim)
+        OPT_ARG("--slp-vectorizer", "--no-slp-vectorizer", slp_vectorizer)
         OPT_ARG("--sroa", "--no-sroa", sroa)
         OPT_ARG("--jumpthreading", "--no-jumpthreading", jump_threading)
         // Module Transforms
@@ -213,6 +214,7 @@ Optimizations available:
   --indvars            - Simplify induction variables
   --lsr                - Loop strength reduction
   --loopelim           - Loop elimination
+  --slp-vectorizer     - SLP vectorizer
   --sroa               - Scalar replacement of aggregates
   --jumpthreading      - Jump threading
   --treeshaking        - Shake off unused functions, function declarations and global variables

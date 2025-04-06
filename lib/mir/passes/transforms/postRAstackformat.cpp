@@ -1,8 +1,8 @@
-#include "../../../../include/mir/passes/transforms/postRAstackformat.hpp"
-#include "../../../../include/mir/instructions/binary.hpp"
-#include "../../../../include/mir/instructions/copy.hpp"
-#include "../../../../include/mir/instructions/memory.hpp"
-#include "../../../../include/mir/passes/analysis/live_analysis.hpp"
+#include "mir/passes/transforms/postRAstackformat.hpp"
+#include "mir/instructions/binary.hpp"
+#include "mir/instructions/copy.hpp"
+#include "mir/instructions/memory.hpp"
+#include "mir/passes/analysis/live_analysis.hpp"
 
 using namespace MIR;
 

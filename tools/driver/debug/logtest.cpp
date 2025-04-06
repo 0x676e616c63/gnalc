@@ -1,4 +1,4 @@
-#include "../../../include/utils/logger.hpp"
+#include "utils/logger.hpp"
 #include <string>
 
 int main(int argc, char *argv[]) {

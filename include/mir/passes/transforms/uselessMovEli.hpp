@@ -2,7 +2,7 @@
 #ifndef GNALC_MIR_PASSES_TRANSFORMS_USELESSMOVELI_HPP
 #define GNALC_MIR_PASSES_TRANSFORMS_USELESSMOVELI_HPP
 
-#include "../pass_manager.hpp"
+#include "mir/passes/pass_manager.hpp"
 #include "registeralloc.hpp"
 
 namespace MIR {

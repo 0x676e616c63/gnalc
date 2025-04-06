@@ -5,8 +5,8 @@
 #ifndef GNALC_IR_PASSES_ANALYSIS_ALIAS_ANALYSIS_HPP
 #define GNALC_IR_PASSES_ANALYSIS_ALIAS_ANALYSIS_HPP
 
-#include "../../instructions/control.hpp"
-#include "../pass_manager.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/passes/pass_manager.hpp"
 
 namespace IR {
 class AliasAnalysis;
@@ -28,7 +28,7 @@ public:
         // Maybe alias
         // Only GlobalVariables or FormalArguments or ALLOCA
         // NO GEP or BITCAST here.
-        std::set<Value *> potential_alias;
+        std::unordered_set<Value *> potential_alias;
     };
 
 private:
@@ -39,8 +39,8 @@ private:
     std::unordered_map<Value *, PtrInfo> ptr_info;
 
     // Function's Mod/Ref info, only GlobalVariables and FormalArguments
-    std::set<Value *> read;
-    std::set<Value *> write;
+    std::unordered_set<Value *> read;
+    std::unordered_set<Value *> write;
 
     // Some call we don't know
     // This may happen when we add runtime parallel lib or something.
@@ -60,6 +60,13 @@ private:
     // this function generates one for global variable.
     PtrInfo getPtrInfo(Value *ptr) const;
 
+    using AliasCacheKey = std::tuple<Value *, Value *>;
+    struct AliasCacheHash {
+        size_t operator()(const AliasCacheKey &key) const {
+            return std::hash<Value *>()(std::get<0>(key)) ^ std::hash<Value *>()(std::get<1>(key));
+        }
+    };
+    mutable std::unordered_map<AliasCacheKey, AliasInfo, AliasCacheHash> alias_cache;
 public:
     // v1 and v2 must be pointers
     AliasInfo getAliasInfo(Value *v1, Value *v2) const;

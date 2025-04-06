@@ -1,9 +1,8 @@
-#include "../../../../include/ir/passes/transforms/lcssa.hpp"
-
-#include "../../../../include/ir/block_utils.hpp"
-#include "../../../../include/ir/instructions/control.hpp"
-#include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
+#include "ir/passes/transforms/lcssa.hpp"
+#include "ir/block_utils.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
 
 #include <deque>
 
@@ -66,7 +65,7 @@ bool LCSSAPass::formLCSSAOnInsts(std::deque<pInst> &worklist) {
     auto &domtree = *pdomtree;
     auto &loop_info = *ploop_info;
     bool modified = false;
-    std::vector<pUse> uses_to_rewrite;
+    std::vector<Use*> uses_to_rewrite;
     std::map<const DomTree::Node *, pVal> available_values;
     while (!worklist.empty()) {
         uses_to_rewrite.clear();
@@ -110,7 +109,7 @@ bool LCSSAPass::formLCSSAOnInsts(std::deque<pInst> &worklist) {
                 for (const auto &pred : exit->preds()) {
                     avail_phi->addPhiOper(curr_inst, pred);
                     if (!loop->contains(pred)) {
-                        uses_to_rewrite.emplace_back(*std::prev(std::prev(avail_phi->operand_use_end())));
+                        uses_to_rewrite.emplace_back(std::prev(std::prev(avail_phi->getOperands().end()))->get());
                     }
                 }
                 exit->addPhiInst(avail_phi);
@@ -126,7 +125,7 @@ bool LCSSAPass::formLCSSAOnInsts(std::deque<pInst> &worklist) {
                 user_bb = phi->getBlockForValue(use);
 
             auto val = getValueForBlock(*loop, domtree[user_bb].get(), curr_inst, available_values);
-            user_inst->replaceUse(use, val);
+            use->setValue(val);
             modified = true;
         }
 

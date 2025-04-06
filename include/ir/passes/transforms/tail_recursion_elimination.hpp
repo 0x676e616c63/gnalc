@@ -11,9 +11,8 @@
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_TAIL_RECURISON_ELIMINATION_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_TAIL_RECURISON_ELIMINATION_HPP
-#include "../../../../include/ir/instructions/control.hpp"
-#include "../../../pass_manager/pass_manager.hpp"
-#include "../pass_manager.hpp"
+
+#include "ir/passes/pass_manager.hpp"
 
 namespace IR {
 class TailRecursionEliminationPass : public PM::PassInfo<TailRecursionEliminationPass> {

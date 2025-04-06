@@ -1,11 +1,8 @@
-#include "../../../../include/ir/passes/transforms/cfgsimplify.hpp"
-#include "../../../../include/ir/block_utils.hpp"
-#include "../../../../include/ir/instructions/control.hpp"
-#include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
-
-#include <deque>
+#include "ir/passes/transforms/cfgsimplify.hpp"
+#include "ir/block_utils.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
 
 namespace IR {
 PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {

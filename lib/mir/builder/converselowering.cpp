@@ -1,6 +1,6 @@
-#include "../../../include/mir/SIMDinstruction/arithmetics.hpp"
 #include "../../../include/mir/SIMDinstruction/memory.hpp"
-#include "../../../include/mir/builder/lowering.hpp"
+#include "mir/SIMDinstruction/arithmetics.hpp"
+#include "mir/builder/lowering.hpp"
 
 using namespace MIR;
 

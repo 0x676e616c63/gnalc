@@ -1,7 +1,5 @@
-#include "../../../../include/ir/passes/transforms/sroa.hpp"
-#include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
-
-#include <vector>
+#include "ir/passes/transforms/sroa.hpp"
+#include "ir/passes/analysis/alias_analysis.hpp"
 
 namespace IR {
 PM::PreservedAnalyses SROAPass::run(Function &function, FAM &fam) {

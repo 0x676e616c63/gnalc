@@ -1,10 +1,9 @@
-#include "../../../include/ir/passes/pass_manager.hpp"
-#include "../../../include/ir/passes/transforms/namenormalizer.hpp"
-#include "../../../include/ir/passes/utilities/irprinter.hpp"
-#include "../../../include/parser/ast.hpp"
-#include "../../../include/parser/irgen.hpp"
-#include "../../../include/parser/parser.hpp"
-#include "../../../include/utils/logger.hpp"
+#include "ir/passes/pass_manager.hpp"
+#include "ir/passes/transforms/namenormalizer.hpp"
+#include "ir/passes/utilities/irprinter.hpp"
+#include "parser/ast.hpp"
+#include "parser/irgen.hpp"
+#include "parser/parser.hpp"
 
 #include <fstream>
 #include <iostream>

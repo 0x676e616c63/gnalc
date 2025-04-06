@@ -1,7 +1,7 @@
-#include "../../include/ggc/irparsertool.hpp"
+#include "ggc/irparsertool.hpp"
+#include "ggc/irparser.hpp"
+#include "config/config.hpp"
 
-#include "../../include/config/config.hpp"
-#include "../../include/ggc/irparser.hpp"
 using namespace IRParser;
 
 Module IRGenerator::module;

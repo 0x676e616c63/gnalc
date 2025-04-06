@@ -1,7 +1,7 @@
-#include "../../../../include/mir/passes/transforms/phiEliminate.hpp"
+#include "mir/passes/transforms/phiEliminate.hpp"
 #include "../../../../include/mir/instructions/binary.hpp"
-#include "../../../../include/mir/instructions/branch.hpp"
-#include "../../../../include/mir/instructions/copy.hpp"
+#include "mir/instructions/branch.hpp"
+#include "mir/instructions/copy.hpp"
 #include <forward_list>
 #include <queue>
 

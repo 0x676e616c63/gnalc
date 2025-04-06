@@ -1,5 +1,5 @@
-#include "../../../../include/mir/passes/analysis/live_analysis.hpp"
-#include "../../../../include/mir/instructions/branch.hpp"
+#include "mir/passes/analysis/live_analysis.hpp"
+#include "mir/instructions/branch.hpp"
 #include <stack>
 
 using namespace MIR;

@@ -1,13 +1,11 @@
-#include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
+#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
+#include "config/config.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/instructions/converse.hpp"
+#include "ir/instructions/memory.hpp"
+#include "utils/logger.hpp"
 
-#include "../../../../include/config/config.hpp"
-#include "../../../../include/ir/instructions/control.hpp"
-#include "../../../../include/ir/instructions/converse.hpp"
-#include "../../../../include/ir/instructions/memory.hpp"
-#include "../../../../include/utils/logger.hpp"
-
-#include <deque>
 #include <optional>
 
 namespace IR {
@@ -94,11 +92,17 @@ AliasInfo AliasAnalysisResult::getAliasInfo(Value *v1, Value *v2) const {
     if (v1 == v2)
         return AliasInfo::MustAlias;
 
+    auto cache_key = std::make_tuple(v1, v2);
+    if (auto it = alias_cache.find(cache_key); it != alias_cache.end())
+        return it->second;
+    if (auto it = alias_cache.find(std::make_tuple(v2, v1)); it != alias_cache.end())
+        return it->second;
+
     auto info1 = getPtrInfo(v1);
     auto info2 = getPtrInfo(v2);
 
     if (info1.untracked_array && info2.untracked_array)
-        return AliasInfo::MayAlias;
+        return alias_cache[cache_key] = AliasInfo::MayAlias;
 
     auto gep1 = v1->as_raw<GEPInst>();
     auto gep2 = v2->as_raw<GEPInst>();
@@ -112,19 +116,19 @@ AliasInfo AliasAnalysisResult::getAliasInfo(Value *v1, Value *v2) const {
             // They are all constant offset, and all based on ALLOCAInst or GlobalVariable
             // If the base and offset are identical, the gep must alias.
             if (base1 == base2 && offset1 == offset2)
-                return AliasInfo::MustAlias;
-            return AliasInfo::NoAlias;
+                return alias_cache[cache_key] = AliasInfo::MustAlias;
+            return alias_cache[cache_key] = AliasInfo::NoAlias;
         }
     }
 
     for (auto p1 : info1.potential_alias) {
         for (auto p2 : info2.potential_alias) {
             if (p1 == p2)
-                return AliasInfo::MayAlias;
+                return alias_cache[cache_key] = AliasInfo::MayAlias;
         }
     }
 
-    return AliasInfo::NoAlias;
+    return alias_cache[cache_key] =  AliasInfo::NoAlias;
 }
 bool AliasAnalysisResult::isLocal(Value *v) const {
     auto info = getPtrInfo(v);

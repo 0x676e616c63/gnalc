@@ -1,8 +1,9 @@
 #pragma once
 #ifndef GNALC_MIR_INSTRUCTION_HPP
 #define GNALC_MIR_INSTRUCTION_HPP
-#include "base.hpp"
+
 #include "operand.hpp"
+
 #include <memory>
 
 namespace MIR {

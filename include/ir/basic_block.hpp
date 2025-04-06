@@ -1,17 +1,17 @@
 /**
- * @attention BB的uselist内是调用它的br，而不是它的父函数
+ * @attention BasicBlock 的 use_list 内是调用它的 BRInst，而不是它的父函数
  */
 
 #pragma once
 #ifndef GNALC_IR_BASIC_BLOCK_HPP
 #define GNALC_IR_BASIC_BLOCK_HPP
 
-#include "../utils/iterator.hpp"
-#include "../utils/generic_visitor.hpp"
 #include "base.hpp"
+#include "type_alias.hpp"
 #include "instruction.hpp"
 #include "instructions/phi.hpp"
-#include "type_alias.hpp"
+#include "utils/iterator.hpp"
+#include "utils/generic_visitor.hpp"
 
 #include <memory>
 #include <variant>
@@ -33,6 +33,7 @@ using FunctionBBIter = std::list<pBlock>::iterator;
 class BasicBlock : public Value {
     friend class Parser::CFGBuilder;
     friend class Function;
+    friend class Instruction;
     friend class PostDomTreeAnalysis;
     friend void linkBB(const pBlock &prebb, const pBlock &nxtbb);
     friend void unlinkBB(const pBlock &prebb, const pBlock &nxtbb);
@@ -44,6 +45,10 @@ class BasicBlock : public Value {
     std::vector<pVal> bb_params;
     wpFunc parent;
     size_t index = 0;
+    // Warning: BasicBlock's index is updated in an eager way,
+    //          while Instructions are lazily updated for performance.
+    // Delay update until Instruction's getIndex()
+    bool inst_index_valid = false;
 
     struct BBSuccGetter {
         auto operator()(const pBlock &bb) { return bb->getNextBB(); }
@@ -144,7 +149,7 @@ public:
             }
         }
         if (found)
-            updateInstIndex();
+            inst_index_valid = false;
         return found;
     }
 
@@ -307,7 +312,7 @@ private:
     void addNextBB(const pBlock &bb);
     bool delPreBB(const pBlock &bb);
     bool delNextBB(const pBlock &bb);
-    void updateInstIndex() const;
+    void updateInstIndex();
 };
 } // namespace IR
 

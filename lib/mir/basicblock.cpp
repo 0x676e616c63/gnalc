@@ -1,5 +1,5 @@
-#include "../../include/mir/basicblock.hpp"
-#include "../../include/mir/instructions/branch.hpp"
+#include "mir/basicblock.hpp"
+#include "mir/instructions/branch.hpp"
 #include <algorithm>
 
 using namespace MIR;

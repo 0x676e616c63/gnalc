@@ -6,10 +6,10 @@
 #ifndef GNALC_IR_INSTRUCTIONS_PHI_HPP
 #define GNALC_IR_INSTRUCTIONS_PHI_HPP
 
-#include <utility>
+#include "ir/instruction.hpp"
+#include "ir/type_alias.hpp"
 
-#include "../instruction.hpp"
-#include "../type_alias.hpp"
+#include <utility>
 
 namespace IR {
 // PHI_INST --USE-> {val, blk}
@@ -65,7 +65,7 @@ public:
     PHIInst(NameRef name, const pType &_type);
 
     pVal getValueForBlock(const pBlock &block) const;
-    pBlock getBlockForValue(const std::shared_ptr<Use> &use) const;
+    pBlock getBlockForValue(Use* use) const;
 
     void addPhiOper(const pVal &val, const pBlock &blk);
 

@@ -1,17 +1,15 @@
 /**
  * @brief Memory Access and Addressing Operations
  * @brief alloca, load, store, getelementptr(gep)
- *
- * @todo 这之中的一些向量处理语法没有给出，例如<result> = getelementptr <ty>, <N
- * x ptr> <ptrval>, <vector index type> <idx>
  */
 
 #pragma once
 #ifndef GNALC_IR_INSTRUCTION_MEMORY_HPP
 #define GNALC_IR_INSTRUCTION_MEMORY_HPP
 
-#include "../instruction.hpp"
-#include "../type_alias.hpp"
+#include "ir/instruction.hpp"
+#include "ir/type_alias.hpp"
+
 #include <vector>
 
 namespace IR {
@@ -47,8 +45,13 @@ private:
 public:
     LOADInst(NameRef name, const pVal &_ptr, int _align = 4);
 
+    // Vector Load,  < n x elem_type(ptr) >
+    LOADInst(NameRef name, size_t n, const pVal &_ptr, int _align = 4);
+
     pVal getPtr() const;
     int getAlign() const;
+
+    bool isVectorLoad() const;
 
     void accept(IRVisitor &visitor) override;
 
@@ -68,6 +71,8 @@ public:
     pVal getValue() const;
     pVal getPtr() const;
     int getAlign() const;
+
+    bool isVectorStore() const;
 
     void accept(IRVisitor &visitor) override;
 

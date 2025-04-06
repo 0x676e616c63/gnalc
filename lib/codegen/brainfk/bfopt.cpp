@@ -1,7 +1,7 @@
-#include "../../../include/config/config.hpp"
+#include "config/config.hpp"
 #if GNALC_EXTENSION_BRAINFK
-#include "../../../include/codegen/brainfk/bfmodule.hpp"
-#include "../../../include/codegen/brainfk/bfopt.hpp"
+#include "codegen/brainfk/bfmodule.hpp"
+#include "codegen/brainfk/bfopt.hpp"
 
 namespace BrainFk {}
 #endif

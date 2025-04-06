@@ -1,7 +1,7 @@
-#include "../../../../include/ir/passes/analysis/live_analysis.hpp"
-#include "../../../../include/ir/base.hpp"
-#include "../../../../include/ir/instructions/control.hpp"
-#include "../../../../include/utils/logger.hpp"
+#include "ir/passes/analysis/live_analysis.hpp"
+#include "ir/base.hpp"
+#include "ir/instructions/control.hpp"
+#include "utils/logger.hpp"
 
 #include <string>
 

@@ -6,11 +6,12 @@
 //
 // TODO: Current implementation is time-consuming.
 //       Consider adopting MemorySSA-based analysis to enhance optimization efficiency.
+// FIXME: Extend this to support loops
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_LOAD_ELIMINATION_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_LOAD_ELIMINATION_HPP
 
-#include "../pass_manager.hpp"
+#include "ir/passes/pass_manager.hpp"
 
 namespace IR {
 class LoadEliminationPass : public PM::PassInfo<LoadEliminationPass> {

@@ -1,9 +1,8 @@
-#include "../../../../include/ir/passes/transforms/load_elimination.hpp"
-
-#include "../../../../include/ir/instructions/memory.hpp"
-#include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
+#include "ir/passes/transforms/load_elimination.hpp"
+#include "ir/instructions/memory.hpp"
+#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
 
 #include <algorithm>
 
@@ -14,7 +13,7 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
     auto &aa_res = fam.getResult<AliasAnalysis>(function);
     auto &domtree = fam.getResult<DomTreeAnalysis>(function);
     auto &postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
-    std::set<pInst> unused_load;
+    std::unordered_set<pInst> unused_load;
 
     // For each load, collect all possible store/load on its dominator block as candidates.
     // Then we consider all other blocks that can reach the load block,
@@ -91,7 +90,7 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
             // and, of those dominates the load block, collect all the possible candidates.
             // Finally, find the one that post dominates all other candidates and killers,
             // which is the most recent update on that memory.
-            std::set<pBlock> visited;
+            std::unordered_set<pBlock> visited;
             std::deque<pBlock> worklist{load_block->pred_begin(), load_block->pred_end()};
             // LOADInst/STOREInst that may contribute to the elimination
             std::vector<pInst> candidates;

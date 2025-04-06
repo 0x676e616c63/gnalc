@@ -1,15 +1,13 @@
-#include "../../../../include/ir/passes/transforms/loop_rotate.hpp"
-
-#include "../../../../include/ir/block_utils.hpp"
-#include "../../../../include/ir/instructions/binary.hpp"
-#include "../../../../include/ir/instructions/control.hpp"
-#include "../../../../include/ir/instructions/converse.hpp"
-#include "../../../../include/ir/instructions/memory.hpp"
-#include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
-#include "../../../../include/ir/passes/helpers/constant_fold.hpp"
-#include "../../../../include/ir/pattern_match.hpp"
-#include "../../../../include/pattern_match/pattern_match.hpp"
+#include "ir/passes/transforms/loop_rotate.hpp"
+#include "ir/block_utils.hpp"
+#include "ir/instructions/binary.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/instructions/memory.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
+#include "ir/passes/helpers/constant_fold.hpp"
+#include "ir/pattern_match.hpp"
+#include "pattern_match/pattern_match.hpp"
 
 #include <algorithm>
 #include <deque>
@@ -254,14 +252,13 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
             for (const auto &inst : *old_header) {
                 auto cloned_inst = makeClone(inst);
                 cloned_inst->setName(inst->getName() + ".clonedlr");
-                auto operands = cloned_inst->getOperands();
-                for (const auto &use : operands) {
+                for (const auto &use : cloned_inst->operand_uses()) {
                     auto usee = use->getValue();
                     if (usee->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
                         auto usee_inst = usee->as<Instruction>();
                         Err::gassert(usee_inst != nullptr);
                         if (auto rd = find_rename_data(usee_inst))
-                            cloned_inst->replaceUse(use, rd->old_preheader);
+                            use->setValue(rd->old_preheader);
                     }
                 }
                 old_preheader->addInst(cloned_inst);

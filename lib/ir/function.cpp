@@ -1,5 +1,5 @@
-#include "../../include/ir/function.hpp"
-#include "../../include/ir/visitor.hpp"
+#include "ir/function.hpp"
+#include "ir/visitor.hpp"
 
 #include <algorithm>
 #include <map>
@@ -267,20 +267,19 @@ pVal Function::cloneImpl() const {
             n = old2new_bb[n.lock()];
 
         for (const auto &inst : cloned_bb->all_insts()) {
-            auto operands = inst->getOperands();
-            for (const auto &use : operands) {
+            for (const auto &use : inst->operand_uses()) {
                 auto usee = use->getValue();
                 if (usee->getVTrait() == ValueTrait::BASIC_BLOCK) {
                     auto usee_blk = usee->as<BasicBlock>();
                     Err::gassert(usee_blk != nullptr);
-                    inst->replaceUse(use, old2new_bb[usee_blk]);
+                    use->setValue(old2new_bb[usee_blk]);
                 } else if (usee->getVTrait() == ValueTrait::FORMAL_PARAMETER) {
                     auto usee_fp = usee->as<FormalParam>();
-                    inst->replaceUse(use, old2new_param[usee_fp]);
+                    use->setValue(old2new_param[usee_fp]);
                 } else if (usee->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
                     auto usee_inst = usee->as<Instruction>();
                     Err::gassert(usee_inst != nullptr);
-                    inst->replaceUse(use, old2new_inst[usee_inst]);
+                    use->setValue(old2new_inst[usee_inst]);
                 }
             }
             inst->setName(inst->getName() + ".cloned");

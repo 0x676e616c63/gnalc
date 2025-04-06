@@ -1,17 +1,17 @@
-#include <algorithm>
-#include <functional>
+#include "config/config.hpp"
+#include "ir/constant.hpp"
+#include "ir/instructions/binary.hpp"
+#include "ir/instructions/compare.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/instructions/converse.hpp"
+#include "ir/instructions/helper.hpp"
+#include "ir/instructions/memory.hpp"
+#include "ir/module.hpp"
+#include "parser/irgen.hpp"
+#include "utils/logger.hpp"
 
-#include "../../include/config/config.hpp"
-#include "../../include/ir/constant.hpp"
-#include "../../include/ir/instructions/binary.hpp"
-#include "../../include/ir/instructions/compare.hpp"
-#include "../../include/ir/instructions/control.hpp"
-#include "../../include/ir/instructions/converse.hpp"
-#include "../../include/ir/instructions/helper.hpp"
-#include "../../include/ir/instructions/memory.hpp"
-#include "../../include/ir/module.hpp"
-#include "../../include/parser/irgen.hpp"
-#include "../../include/utils/logger.hpp"
+#include <algorithm>
+#include <functional>      
 
 using namespace AST;
 namespace Parser {

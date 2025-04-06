@@ -1,8 +1,6 @@
-#include "../../../include/ir/instructions/control.hpp"
-#include "../../../include/ir/visitor.hpp"
-#include "../../../include/utils/exception.hpp"
-
-#include <algorithm>
+#include "ir/instructions/control.hpp"
+#include "ir/visitor.hpp"
+#include "utils/exception.hpp"
 
 namespace IR {
 RETInst::RETInst() : Instruction(OP::RET, "__ret", makeBType(IRBTYPE::UNDEFINED)), ret_type(makeBType(IRBTYPE::VOID)) {}

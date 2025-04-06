@@ -1,4 +1,4 @@
-#include "../../include/mir/function.hpp"
+#include "mir/function.hpp"
 #include <algorithm>
 
 using namespace MIR;

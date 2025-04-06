@@ -1,8 +1,7 @@
-#include "../../include/mir/misc.hpp"
-#include "../../include/ir/constant.hpp"
-#include "../../include/mirtools/enum_name.hpp"
-#include "../../include/mirtools/tool.hpp"
-#include <cctype>
+#include "mir/misc.hpp"
+#include "ir/constant.hpp"
+#include "mirtools/enum_name.hpp"
+#include "mirtools/tool.hpp"
 #include <iomanip>
 #include <sstream>
 

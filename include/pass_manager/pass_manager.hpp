@@ -22,10 +22,11 @@
 #ifndef GNALC_PASS_MANAGER_PASS_MANAGER_HPP
 #define GNALC_PASS_MANAGER_PASS_MANAGER_HPP
 
-#include "../utils/exception.hpp"
-#include "../utils/logger.hpp"
-#include "../utils/misc.hpp"
+#include "utils/exception.hpp"
+#include "utils/logger.hpp"
+#include "utils/misc.hpp"
 
+#include <chrono>
 #include <list>
 #include <map>
 #include <memory>
@@ -234,9 +235,15 @@ public:
         auto &pass = passes.find(pass_id)->second;
         if (inserted) {
             auto &res = results[&unit];
+
+            auto start = std::chrono::high_resolution_clock::now();
             res.emplace_back(pass_id, pass->run(unit, *this));
+            auto end = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> duration = end - start;
+
             it->second = std::prev(res.end());
-            Logger::logInfo("[AM]: Running '", pass->name(), "' on '", unit.getName(), "'");
+            Logger::logInfo("[AM]: Finished '", pass->name(), "' on '", unit.getName(),
+                            "'.(elapsed time: ", duration.count(), "s)");
         } else
             Logger::logInfo("[AM]: Get cached '", pass->name(), "' on '", unit.getName(), "'");
 
@@ -253,10 +260,16 @@ public:
 
         auto &pass = passes.find(pass_id)->second;
         auto &res = results[&unit];
-        res.emplace_back(pass_id, pass->run(unit, *this));
-        it->second = std::prev(res.end());
-        Logger::logInfo("[AM]: Running '", pass->name(), "' on '", unit.getName(), "'");
 
+        auto start = std::chrono::high_resolution_clock::now();
+        res.emplace_back(pass_id, pass->run(unit, *this));
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration = end - start;
+
+        it->second = std::prev(res.end());
+
+        Logger::logInfo("[AM]: Finished '", pass->name(), "' on '", unit.getName(),
+                        "'.(fresh result, elapsed time: ", duration.count(), "s)");
         is_getting_fresh_result = false;
 
         using ResultModel = AnalysisResultModel<typename PassT::Result>;
@@ -330,24 +343,31 @@ public:
 
     PreservedAnalyses run(UnitT &unit, AnalysisManager<UnitT> &am) {
         PreservedAnalyses pa = PreservedAnalyses::all();
-
         for (auto &pass : passes) {
             if constexpr (detail::hasGetInstCountV<UnitT>) {
                 auto old_inst_cnt = unit.getInstCount();
 
+                auto start = std::chrono::high_resolution_clock::now();
                 PreservedAnalyses curr_pa = pass->run(unit, am);
+                auto end = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> duration = end - start;
+
                 am.invalidate(unit, curr_pa);
                 pa.retain(curr_pa);
-
                 auto new_inst_cnt = unit.getInstCount();
                 Logger::logInfo("[PM]: Finished '", pass->name(), "' on '", unit.getName(), "'.(inst: ", old_inst_cnt,
-                                " -> ", new_inst_cnt, ")");
+                                " -> ", new_inst_cnt, ", elapsed time: ", duration.count(), "s)");
             } else {
+                auto start = std::chrono::high_resolution_clock::now();
                 PreservedAnalyses curr_pa = pass->run(unit, am);
+                auto end = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> duration = end - start;
+
                 am.invalidate(unit, curr_pa);
                 pa.retain(curr_pa);
 
-                Logger::logInfo("[PM]: Finished '", pass->name(), "' on '", unit.getName(), "'.");
+                Logger::logInfo("[PM]: Finished '", pass->name(), "' on '", unit.getName(),
+                                "'.(elapsed time: ", duration.count(), "s)");
             }
         }
 
@@ -401,7 +421,11 @@ public:
                 if constexpr (detail::hasGetInstCountV<UnitT>) {
                     auto old_inst_cnt = unit.getInstCount();
 
+                    auto start = std::chrono::high_resolution_clock::now();
                     PreservedAnalyses curr_pa = pass->run(unit, am);
+                    auto end = std::chrono::high_resolution_clock::now();
+                    std::chrono::duration<double> duration = end - start;
+
                     if (!ignoring_change)
                         modified |= !curr_pa.allPreserved();
                     am.invalidate(unit, curr_pa);
@@ -409,24 +433,27 @@ public:
 
                     auto new_inst_cnt = unit.getInstCount();
                     Logger::logInfo("[FixedPointPM] at round ", round, ": Finished '", pass->name(), "' on '",
-                                    unit.getName(), "'.(inst: ", old_inst_cnt, " -> ", new_inst_cnt, ")");
+                                    unit.getName(), "'.(inst: ", old_inst_cnt, " -> ", new_inst_cnt,
+                                    ", elapsed time: ", duration.count(), "s)");
                 } else {
+                    auto start = std::chrono::high_resolution_clock::now();
                     PreservedAnalyses curr_pa = pass->run(unit, am);
+                    auto end = std::chrono::high_resolution_clock::now();
+                    std::chrono::duration<double> duration = end - start;
+
                     if (!ignoring_change)
                         modified |= !curr_pa.allPreserved();
                     am.invalidate(unit, curr_pa);
                     pa.retain(curr_pa);
 
                     Logger::logInfo("[FixedPointPM] at round ", round, ": Finished '", pass->name(), "' on '",
-                                    unit.getName(), "'.");
+                                    unit.getName(), "'.(elapsed time: ", duration.count(), "s)");
                 }
             }
             if (++round > threshold) {
-                if (!threshold_explicitly_set) {
-                    Logger::logWarning(
-                        "[FixedPointPM]: Default Fixed point iteration threshold reached. Check the pipeline!"
-                        "To disable this message, set the threshold explicitly.");
-                }
+                Err::gassert(threshold_explicitly_set,
+                             "Default Fixed point iteration threshold reached. Check the pipeline!"
+                             " To disable this message, set the threshold explicitly.");
                 break;
             }
         }

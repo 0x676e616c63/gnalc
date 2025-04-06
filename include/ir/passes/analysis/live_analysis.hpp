@@ -1,15 +1,17 @@
 /**
- * @brief live varable analysis
- * @brief 对instruction分析，记录livein, liveout.
- * @brief basicblock对其包含的instruction.begin->livein, end->liveout做转发
+ * @brief live variable analysis
+ * @brief 对 instruction 分析，记录 livein, liveout
+ * @brief basicblock 对其包含的 instruction.begin->livein, end->liveout 做转发
+ *
+ * (这个针对 IR 的 analysis 似乎没用？目前没有 pass 需要这个 analysis. 后端有针对 MIR 的 LiveAnalysis.)
  */
 
 #pragma once
 #ifndef GNALC_IR_PASSES_ANALYSIS_LIVE_ANALYSIS_HPP
 #define GNALC_IR_PASSES_ANALYSIS_LIVE_ANALYSIS_HPP
 
-#include "../../base.hpp"
-#include "../pass_manager.hpp"
+#include "ir/base.hpp"
+#include "ir/passes/pass_manager.hpp"
 
 #include <unordered_map>
 

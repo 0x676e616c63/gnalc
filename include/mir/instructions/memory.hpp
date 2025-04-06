@@ -1,9 +1,8 @@
 #pragma once
-#ifndef GNALC_MIR_MEMORY_HPP
-#define GNALC_MIR_MEMORY_HPP
+#ifndef GNALC_MIR_INSTRUCTIONS_MEMORY_HPP
+#define GNALC_MIR_INSTRUCTIONS_MEMORY_HPP
 
-#include "../instruction.hpp"
-#include <utility>
+#include "mir/instruction.hpp"
 
 namespace MIR {
 

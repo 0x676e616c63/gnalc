@@ -6,28 +6,20 @@
 //    - LLVM SparseSolver
 //          SparsePropagation.h:
 //          https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Analysis/SparsePropagation.h
-//    - The opcache optimizer
-//          Author's blog: https://www.npopov.com/2022/05/22/The-opcache-optimizer.html
-//          scdf.c: https://github.com/php/php-src/blob/cc506a81e17c3e059d44b560213ed914f8199ed5/Zend/Optimizer/scdf.c
-//          sccp.c: https://github.com/php/php-src/blob/cc506a81e17c3e059d44b560213ed914f8199ed5/Zend/Optimizer/sccp.c
-//    - QBE
-//          Official Website: https://c9x.me/compile/
-//          fold.c (Unofficial GitHub Mirror): https://github.com/caozhanhao/qbe/blob/master/fold.c
 #pragma once
 #ifndef GNALC_IR_PASSES_HELPER_SPARSE_PROPAGATION_HPP
 #define GNALC_IR_PASSES_HELPER_SPARSE_PROPAGATION_HPP
+
+#include "ir/base.hpp"
+#include "ir/basic_block.hpp"
+#include "ir/function.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/instructions/phi.hpp"
 
 #include <algorithm>
 #include <deque>
 #include <unordered_map>
 #include <utility>
-
-#include "../../../utils/logger.hpp"
-#include "../../base.hpp"
-#include "../../basic_block.hpp"
-#include "../../function.hpp"
-#include "../../instructions/control.hpp"
-#include "../../instructions/phi.hpp"
 
 namespace IR {
 // Generic Sparse Conditional Property Propagation
@@ -53,14 +45,23 @@ public:
     };
 
     struct Edge {
-        pBlock src;
-        pBlock dest;
-        bool operator<(const Edge &rhs) const { return src == rhs.src ? dest < rhs.dest : src < rhs.src; }
-        Edge(pBlock src, pBlock dest) : src(std::move(src)), dest(std::move(dest)) {}
+        BasicBlock* src;
+        BasicBlock* dest;
+        Edge(BasicBlock* src, BasicBlock* dest) : src(src), dest(dest) {}
     };
 
 private:
-    std::set<Edge> feasible_edges;
+    struct EdgeHash {
+        size_t operator()(const Edge &e) const {
+            return std::hash<BasicBlock*>()(e.src) ^ std::hash<BasicBlock*>()(e.dest);
+        }
+    };
+    struct EdgeCmp {
+        bool operator()(const Edge &lhs, const Edge &rhs) const { return lhs.src == rhs.src && lhs.dest == rhs.dest; }
+    };
+    std::unordered_set<Edge, EdgeHash, EdgeCmp> feasible_edges;
+    // A cache for faster `countFeasibleInEdge`
+    std::unordered_set<BasicBlock*> known_all_incoming_feasible;
     std::deque<Edge> cfg_worklist;
     std::deque<pInst> ssa_worklist;
 
@@ -79,7 +80,7 @@ public:
     void solve(Function &target) {
         clear();
 
-        cfg_worklist.emplace_back(nullptr, *target.begin());
+        cfg_worklist.emplace_back(nullptr, target.begin()->get());
 
         while (!cfg_worklist.empty() || !ssa_worklist.empty()) {
             while (!ssa_worklist.empty()) {
@@ -88,7 +89,7 @@ public:
 
                 if (curr->getOpcode() == OP::PHI)
                     visitPHI(curr->as<PHIInst>());
-                else if (countFeasibleInEdge(curr->getParent()))
+                else if (countFeasibleInEdge(curr->getParent().get()))
                     visitInst(curr);
             }
 
@@ -108,8 +109,8 @@ public:
                         visitInst(inst);
                 }
 
-                if (curr.dest->getNumSuccs() == 1 && !isFeasible(curr.dest, *curr.dest->succ_begin()))
-                    cfg_worklist.emplace_back(curr.dest, *curr.dest->succ_begin());
+                if (curr.dest->getNumSuccs() == 1 && !isFeasible(curr.dest, (*curr.dest->succ_begin()).get()))
+                    cfg_worklist.emplace_back(curr.dest, (*curr.dest->succ_begin()).get());
             }
         }
     }
@@ -123,14 +124,22 @@ public:
 
     const auto &get_map() const { return lattice_map; }
 
-    bool isFeasible(const pBlock &src, const pBlock &dest) const { return isFeasible(Edge(src, dest)); }
+    bool isFeasible(BasicBlock* src, BasicBlock* dest) const { return isFeasible(Edge(src, dest)); }
 
     bool isFeasible(const Edge &e) const { return feasible_edges.find(e) != feasible_edges.end(); }
 
-    size_t countFeasibleInEdge(const pBlock &bb) const {
+    size_t countFeasibleInEdge(BasicBlock* bb) {
+        auto it = known_all_incoming_feasible.find(bb);
+        if (it != known_all_incoming_feasible.end())
+            return bb->getNumPreds();
+
         if (bb->getNumPreds() == 0) // Entry node
             return isFeasible(nullptr, bb) ? 1 : 0;
-        return std::count_if(bb->pred_begin(), bb->pred_end(), [&bb, this](auto &&in) { return isFeasible(in, bb); });
+        auto ret = std::count_if(bb->pred_begin(), bb->pred_end(),
+            [&bb, this](auto &&in) { return isFeasible(in.get(), bb); });
+        if (ret == bb->getNumPreds())
+            known_all_incoming_feasible.emplace(bb);
+        return ret;
     }
 
 private:
@@ -153,7 +162,7 @@ private:
         auto phi_lattice = getVal(phi_key);
 
         for (const auto &in : phi->incomings()) {
-            if (!isFeasible(in.block, phi->getParent()))
+            if (!isFeasible(in.block.get(), phi->getParent().get()))
                 continue;
 
             auto in_key = InfoT::getKeyFromValue(in.value);
@@ -170,20 +179,20 @@ private:
 
     void visitInst(const pInst &inst) {
         Err::gassert(inst->getOpcode() != OP::PHI);
-        if (auto br_inst = inst->as<BRInst>(); br_inst && br_inst->isConditional()) {
+        if (auto br_inst = inst->as_raw<BRInst>(); br_inst && br_inst->isConditional()) {
             auto cond_key = InfoT::getKeyFromValue(br_inst->getCond());
             auto cond_lattice = getVal(cond_key);
             if (cond_lattice == InfoT::NAC || cond_lattice == InfoT::UNDEF) {
-                cfg_worklist.emplace_back(br_inst->getParent(), br_inst->getTrueDest());
-                cfg_worklist.emplace_back(br_inst->getParent(), br_inst->getFalseDest());
+                cfg_worklist.emplace_back(br_inst->getParent().get(), br_inst->getTrueDest().get());
+                cfg_worklist.emplace_back(br_inst->getParent().get(), br_inst->getFalseDest().get());
             }
             // To ensure it contains a ConstantI1, we use `proxy.get_i1()`
             // rather than `proxy == true`. If it does not contain a ConstantI1,
             // an exception will be thrown.
             else if (lattice_func->getValueFromLatticeVal(cond_lattice).get_i1())
-                cfg_worklist.emplace_back(br_inst->getParent(), br_inst->getTrueDest());
+                cfg_worklist.emplace_back(br_inst->getParent().get(), br_inst->getTrueDest().get());
             else
-                cfg_worklist.emplace_back(br_inst->getParent(), br_inst->getFalseDest());
+                cfg_worklist.emplace_back(br_inst->getParent().get(), br_inst->getFalseDest().get());
         } else if (inst->getVTrait() != ValueTrait::VOID_INSTRUCTION) {
             auto inst_key = InfoT::getKeyFromValue(inst);
             auto inst_lattice = getVal(inst_key);

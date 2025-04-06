@@ -1,12 +1,12 @@
 /**
- * @attention 默认删除块中break; continue; 后的所有指令
+ * @attention 默认删除块中 break; continue; 后的所有指令
  **/
 
-#include "../../include/parser/cfgbuilder.hpp"
-#include "../../include/ir/instructions/control.hpp"
-#include "../../include/ir/instructions/helper.hpp"
-#include "../../include/ir/type_alias.hpp"
-#include "../../include/utils/misc.hpp"
+#include "parser/cfgbuilder.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/instructions/helper.hpp"
+#include "ir/type_alias.hpp"
+#include "utils/misc.hpp"
 
 using namespace IR;
 namespace Parser {

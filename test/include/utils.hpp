@@ -1,13 +1,15 @@
 #ifndef GNALC_TEST_UTILS_HPP
 #define GNALC_TEST_UTILS_HPP
 
+#include "utils/exception.hpp"
+
 #include <chrono>
 #include <ctime>
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include "../include/utils/exception.hpp"
+#include <iostream>
+#include <fstream>
 
 namespace Test {
 inline std::string generate_unique_temp_dir() {

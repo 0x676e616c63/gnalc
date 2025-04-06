@@ -1,15 +1,13 @@
+// DomTree
+// This is a wrapper pass for Graph::GenericDomTreeBuilder
 #pragma once
 #ifndef GNALC_IR_PASSES_ANALYSIS_DOMTREE_ANALYSIS_HPP
 #define GNALC_IR_PASSES_ANALYSIS_DOMTREE_ANALYSIS_HPP
 
-#include "../../../graph/domtree.hpp"
-#include "../../../utils/generic_visitor.hpp"
-#include "../pass_manager.hpp"
+#include "graph/domtree.hpp"
+#include "ir/passes/pass_manager.hpp"
 
 #include <memory>
-#include <queue>
-#include <stack>
-#include <string>
 #include <vector>
 
 namespace Graph {
@@ -17,12 +15,14 @@ template <> struct GraphInfo<IR::BasicBlock *> {
     using NodeT = IR::BasicBlock *;
     static std::vector<IR::BasicBlock *> getPreds(const IR::BasicBlock *bb) {
         std::vector<IR::BasicBlock *> ret;
+        ret.reserve(bb->getNumPreds());
         for (const auto &r : bb->preds())
             ret.emplace_back(r.get());
         return ret;
     }
     static std::vector<IR::BasicBlock *> getSuccs(const IR::BasicBlock *bb) {
         std::vector<IR::BasicBlock *> ret;
+        ret.reserve(bb->getNumSuccs());
         for (const auto &r : bb->succs())
             ret.emplace_back(r.get());
         return ret;

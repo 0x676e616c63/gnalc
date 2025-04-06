@@ -2,7 +2,7 @@
 #ifndef GNALC_MIR_PASSES_TRANSFORMS_USELESSBLKELI_HPP
 #define GNALC_MIR_PASSES_TRANSFORMS_USELESSBLKELI_HPP
 
-#include "../pass_manager.hpp"
+#include "mir/passes/pass_manager.hpp"
 
 namespace MIR {
 class uselessBlkEli : public PM::PassInfo<uselessBlkEli> {

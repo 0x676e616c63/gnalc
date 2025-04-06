@@ -1,12 +1,10 @@
 #pragma once
-#ifndef GNALC_MIRTOOLS_REGISTERALLOC_HPP
-#define GNALC_MIRTOOLS_REGISTERALLOC_HPP
-#include "../../../../include/config/config.hpp"
-#include "../../module.hpp"
-#include "../analysis/live_analysis.hpp"
-#include "../pass_manager.hpp"
+#ifndef GNALC_MIR_PASSES_TRANSFORMS_REGISTERALLOC_HPP
+#define GNALC_MIR_PASSES_TRANSFORMS_REGISTERALLOC_HPP
+#include "config/config.hpp"
+#include "mir/module.hpp"
+#include "mir/passes/pass_manager.hpp"
 #include <optional>
-#include <stdarg.h>
 
 namespace MIR {
 

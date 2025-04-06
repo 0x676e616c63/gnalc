@@ -1,12 +1,9 @@
-#include "../../../../include/ir/passes/transforms/inline.hpp"
-#include "../../../../include/config/config.hpp"
-#include "../../../../include/ir/block_utils.hpp"
-#include "../../../../include/ir/instructions/control.hpp"
-#include "../../../../include/ir/instructions/memory.hpp"
-#include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
-
-#include <deque>
+#include "ir/passes/transforms/inline.hpp"
+#include "config/config.hpp"
+#include "ir/block_utils.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/instructions/memory.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
 
 namespace IR {
 // FIXME: Inline Cost Calculation

@@ -1,5 +1,5 @@
-#include "../../../../include/mir/passes/transforms/const2reg.hpp"
-#include "../../../../include/mir/instructions/memory.hpp"
+#include "mir/passes/transforms/const2reg.hpp"
+#include "mir/instructions/memory.hpp"
 
 using namespace MIR;
 

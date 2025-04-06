@@ -5,6 +5,7 @@
 #include "../../../include/mir/misc.hpp"
 
 #include <algorithm>
+#include <sstream>
 
 using namespace MIR;
 

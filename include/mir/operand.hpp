@@ -4,7 +4,6 @@
 #include "base.hpp"
 #include "misc.hpp"
 #include <string>
-#include <utility>
 #include <variant>
 
 namespace MIR {

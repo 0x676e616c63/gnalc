@@ -1,10 +1,9 @@
 #pragma once
 #ifndef GNALC_MIR_FRAME_HPP
 #define GNALC_MIR_FRAME_HPP
-#include "../ir/global_var.hpp"
+#include "ir/global_var.hpp"
 #include "base.hpp"
 #include <list>
-#include <sstream>
 #include <variant>
 
 namespace MIR {

@@ -1,4 +1,4 @@
-#include "../../../include/mir/instructions/memory.hpp"
+#include "mir/instructions/memory.hpp"
 
 using namespace MIR;
 

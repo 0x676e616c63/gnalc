@@ -1,10 +1,10 @@
-#include "../../../../include/config/config.hpp"
-#include "../../../../include/ir/block_utils.hpp"
-#include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/scev.hpp"
-#include "../../../../include/ir/pattern_match.hpp"
-#include "../../../../include/ir/passes/transforms/loop_elimination.hpp"
+#include "ir/passes/transforms/loop_elimination.hpp"
+#include "ir/block_utils.hpp"
+#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
+#include "ir/passes/analysis/scev.hpp"
+#include "ir/pattern_match.hpp"
+#include "config/config.hpp"
 
 namespace IR {
 // If all values defined in the loop have no uses outside the loop, or uses outside the loop
@@ -77,7 +77,7 @@ bool propagateExitValues(Loop &loop, SCEVHandle &scev, bool onlyConstant) {
                     continue;
                 auto exit_value = scev.expandSCEVExpr(expr, user_block, user_inst->getIter());
                 if (exit_value != nullptr) {
-                    user_inst->replaceUse(use, exit_value);
+                    use->setValue(exit_value);
                     modified = true;
                     Logger::logDebug("[LoopElimination] at block '", user_block->getName(), "': replaced '",
                                      inst->getName(), "' with '", exit_value->getName(), "'");
@@ -170,7 +170,7 @@ bool breakSingleTripRotatedLoop(FAM& fam, const pLoop &loop, SCEVHandle &scev, L
                 auto user = use->getUser()->as<Instruction>();
                 if (!loop->contains(user->getParent())) {
                     auto [invariant, variant] = analyzeHeaderPhi(loop, phi);
-                    user->replaceUse(use, variant);
+                    use->setValue(variant);
                 }
             }
         }

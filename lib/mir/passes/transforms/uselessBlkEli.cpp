@@ -1,5 +1,5 @@
-#include "../../../../include/mir/passes/transforms/uselessBlkEli.hpp"
-#include "../../../../include/mir/instructions/branch.hpp"
+#include "mir/passes/transforms/uselessBlkEli.hpp"
+#include "mir/instructions/branch.hpp"
 
 using namespace MIR;
 

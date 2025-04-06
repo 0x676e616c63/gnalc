@@ -1,14 +1,12 @@
-#include "../../../../include/ir/passes/transforms/licm.hpp"
-
-#include "../../../../include/ir/block_utils.hpp"
-#include "../../../../include/ir/instructions/binary.hpp"
-#include "../../../../include/ir/instructions/compare.hpp"
-#include "../../../../include/ir/instructions/control.hpp"
-#include "../../../../include/ir/instructions/converse.hpp"
-#include "../../../../include/ir/instructions/memory.hpp"
-#include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
+#include "ir/passes/transforms/licm.hpp"
+#include "ir/block_utils.hpp"
+#include "ir/instructions/binary.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/instructions/converse.hpp"
+#include "ir/instructions/memory.hpp"
+#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
 
 #include <algorithm>
 #include <string>
@@ -126,8 +124,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                                     sunk_insts[exit] = sunk;
 
                                     // Rewrite the sunk instruction's uses to keep LCSSA Form
-                                    auto operands = sunk->getOperands();
-                                    for (const auto &use : operands) {
+                                    for (const auto &use : sunk->operand_uses()) {
                                         if (auto oper = use->getValue()->as<Instruction>()) {
                                             auto oper_inst_block = oper->getParent();
                                             if (loop->contains(oper_inst_block)) {
@@ -142,7 +139,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                                                     if (oper->getType()->getTrait() == IRCTYPE::PTR)
                                                         aa_res.addClonedInst(oper, avail_phi);
                                                 }
-                                                sunk->replaceUse(use, avail_phi);
+                                                use->setValue(avail_phi);
                                             }
                                         }
                                     }

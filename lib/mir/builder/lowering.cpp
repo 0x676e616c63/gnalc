@@ -1,7 +1,7 @@
-#include "../../../include/mir/builder/lowering.hpp"
-#include "../../../include/mir/instructions/branch.hpp"
-#include "../../../include/mir/instructions/copy.hpp"
-#include "../../../include/mir/instructions/memory.hpp"
+#include "mir/builder/lowering.hpp"
+#include "mir/instructions/branch.hpp"
+#include "mir/instructions/copy.hpp"
+#include "mir/instructions/memory.hpp"
 #include <iostream>
 
 using namespace MIR;

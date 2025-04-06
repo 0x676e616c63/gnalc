@@ -23,7 +23,7 @@
 #ifndef GNALC_IR_PASSES_TRANSFORMS_LOOP_ROTATE_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_LOOP_ROTATE_HPP
 
-#include "../pass_manager.hpp"
+#include "ir/passes/pass_manager.hpp"
 
 namespace IR {
 class LoopRotatePass : public PM::PassInfo<LoopRotatePass> {

@@ -1,6 +1,6 @@
-#include "../../include/ir/basic_block.hpp"
-#include "../../include/ir/visitor.hpp"
-#include "../../include/utils/misc.hpp"
+#include "ir/basic_block.hpp"
+#include "ir/visitor.hpp"
+#include "utils/misc.hpp"
 
 #include <list>
 #include <utility>
@@ -26,7 +26,7 @@ void BasicBlock::addInst(iterator it, const pInst &inst) {
     Err::gassert(inst->getOpcode() != OP::PHI, "Do not add a phi via addInst. Use addPhiInst instead.");
     insts.insert(it, inst);
     inst->setParent(as<BasicBlock>());
-    updateInstIndex();
+    inst_index_valid = false;
 }
 
 void BasicBlock::addInst(size_t index, const pInst &inst) {
@@ -36,7 +36,7 @@ void BasicBlock::addInst(size_t index, const pInst &inst) {
     auto it = std::next(insts.begin(), static_cast<decltype(insts)::iterator::difference_type>(index));
     insts.insert(it, inst);
     inst->setParent(as<BasicBlock>());
-    updateInstIndex();
+    inst_index_valid = false;
 }
 
 void BasicBlock::addPreBB(const pBlock &bb) { pre_bb.emplace_back(bb); }
@@ -74,7 +74,7 @@ void BasicBlock::addInstAfterPhi(const pInst &inst) {
     Err::gassert(inst->getOpcode() != OP::PHI, "Do not add a phi via addInstAfterPhi. Use addPhiInst instead.");
     insts.insert(insts.begin(), inst);
     inst->setParent(as<BasicBlock>());
-    updateInstIndex();
+    inst_index_valid = false;
 }
 
 // FIXME: add it before BRInst's cond.
@@ -107,12 +107,15 @@ std::list<pInst> BasicBlock::getAllInsts() const {
     return all;
 }
 
-void BasicBlock::updateInstIndex() const {
-    size_t i = 0;
-    for (const auto &inst : phi_insts)
-        inst->index = i++;
-    for (const auto &inst : insts)
-        inst->index = i++;
+void BasicBlock::updateInstIndex() {
+    if (!inst_index_valid) {
+        size_t i = 0;
+        for (const auto &inst : phi_insts)
+            inst->index = i++;
+        for (const auto &inst : insts)
+            inst->index = i++;
+        inst_index_valid = true;
+    }
 }
 
 FunctionBBIter BasicBlock::getIter() const { return std::next(parent.lock()->begin(), index); }
@@ -122,7 +125,7 @@ bool BasicBlock::delFirstOfInst(const pInst &inst) {
         if (*it == inst) {
             inst->setParent(nullptr);
             insts.erase(it);
-            updateInstIndex();
+            inst_index_valid = false;
             return true;
         }
     }
@@ -134,7 +137,7 @@ bool BasicBlock::delFirstOfPhiInst(const pPhi &inst) {
         if (*it == inst) {
             inst->setParent(nullptr);
             phi_insts.erase(it);
-            updateInstIndex();
+            inst_index_valid = false;
             return true;
         }
     }
@@ -195,7 +198,7 @@ pRet BasicBlock::getRETInst() const { return getTerminator()->as<RETInst>(); }
 void BasicBlock::addPhiInst(const pPhi &node) {
     phi_insts.emplace_back(node);
     node->setParent(as<BasicBlock>());
-    updateInstIndex();
+    inst_index_valid = false;
 }
 
 unsigned BasicBlock::getPhiCount() const { return phi_insts.size(); }

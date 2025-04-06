@@ -1,7 +1,7 @@
 #pragma once
 #ifndef GNALC_MIR_VARPOOL_HPP
 #define GNALC_MIR_VARPOOL_HPP
-#include "../ir/base.hpp"
+#include "ir/base.hpp"
 #include "basicblock.hpp"
 #include "operand.hpp"
 #include <unordered_map>

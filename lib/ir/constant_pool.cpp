@@ -1,6 +1,5 @@
-#include "../../include/ir/constant_pool.hpp"
-
-#include "../../include/utils/logger.hpp"
+#include "ir/constant_pool.hpp"
+#include "utils/logger.hpp"
 
 namespace IR {
 pConstI1 ConstantPool::getConst(bool val) {

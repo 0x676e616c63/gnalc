@@ -1,11 +1,12 @@
-#include "../../../../include/ir/passes/transforms/mem2reg.hpp"
-#include "../../../../include/utils/exception.hpp"
+#include "ir/passes/transforms/mem2reg.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
+#include "ir/instructions/phi.hpp"
+#include "ir/instructions/memory.hpp"
+#include "utils/exception.hpp"
 
 #include <algorithm>
 #include <stack>
-
-#include "../../../../include/ir/instructions/phi.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
+#include <queue>
 
 namespace IR {
 bool PromotePass::iADomB(const pInst &ia, const pInst &ib) {

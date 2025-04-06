@@ -1,12 +1,10 @@
-#include "../../../include/mir/SIMDinstruction/arithmetics.hpp"
 #include "../../../include/mir/SIMDinstruction/memory.hpp"
-#include "../../../include/mir/builder/lowering.hpp"
-#include "../../../include/mir/instructions/binary.hpp"
-#include "../../../include/mir/instructions/branch.hpp"
-#include "../../../include/mir/instructions/copy.hpp"
-#include "../../../include/mir/instructions/memory.hpp"
-#include "../../../include/mirtools/tool.hpp"
-#include <cassert>
+#include "mir/SIMDinstruction/arithmetics.hpp"
+#include "mir/builder/lowering.hpp"
+#include "mir/instructions/binary.hpp"
+#include "mir/instructions/branch.hpp"
+#include "mir/instructions/copy.hpp"
+#include "mirtools/tool.hpp"
 
 using namespace MIR;
 
