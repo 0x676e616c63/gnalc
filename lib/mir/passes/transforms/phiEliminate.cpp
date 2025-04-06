@@ -1,5 +1,5 @@
 #include "mir/passes/transforms/phiEliminate.hpp"
-#include "../../../../include/mir/instructions/binary.hpp"
+#include "mir/instructions/binary.hpp"
 #include "mir/instructions/branch.hpp"
 #include "mir/instructions/copy.hpp"
 #include <forward_list>

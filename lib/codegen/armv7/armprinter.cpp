@@ -1,8 +1,8 @@
-#include "../../../include/codegen/armv7/armprinter.hpp"
-#include "../../../include/mir/SIMDinstruction/memory.hpp"
-#include "../../../include/mir/instructions/branch.hpp"
-#include "../../../include/mir/instructions/copy.hpp"
-#include "../../../include/mir/misc.hpp"
+#include "codegen/armv7/armprinter.hpp"
+#include "mir/SIMDinstruction/memory.hpp"
+#include "mir/instructions/branch.hpp"
+#include "mir/instructions/copy.hpp"
+#include "mir/misc.hpp"
 
 #include <algorithm>
 #include <sstream>

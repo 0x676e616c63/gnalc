@@ -2,9 +2,9 @@
 #ifndef GNALC_CODEGEN_ARMV7_ARMPRINTER_HPP
 #define GNALC_CODEGEN_ARMV7_ARMPRINTER_HPP
 
-#include "../../../include/mir/instructions/memory.hpp"
-#include "../../../include/mirtools/tool.hpp"
-#include "../../mir/module.hpp"
+#include "mir/instructions/memory.hpp"
+#include "mir/module.hpp"
+#include "mirtools/tool.hpp"
 #include <iostream>
 
 namespace MIR {
