@@ -29,6 +29,8 @@ public:
 
 private:
     Module *module;
+    FuncP cur_func;
+    VarPool *cur_varpool;
     std::vector<PhiFunction> processList;
     std::map<BlkP, std::map<BlkP, BlkP>> getMidBlk; // mid = getMidBlk[pred][succ];
 
@@ -46,7 +48,7 @@ private:
     // push_before_branch
     OperP addCOYPInst(const BlkP &src, std::string dest, const OperP &, const FuncP &);
 
-    void pushBeforeBranch(const BlkP &, std::string, const OperP &dst, const OperP &src);
+    void pushBeforeBranch(const BlkP &, std::string, const OperP &dst, OperP src);
 
     // judge whether pred and succ connected by critical edge
     BlkP splitCriticalEgde(const BlkP &pred, const BlkP &succ, const FuncP &);

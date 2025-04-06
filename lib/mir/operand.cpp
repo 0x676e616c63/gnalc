@@ -222,3 +222,18 @@ std::string ConstantIDX::toString() const {
     std::string str = "%const." + std::to_string(constant->getId());
     return str;
 }
+
+UnknownConstant::UnknownConstant(const std::shared_ptr<FrameObj> &_stkobj)
+    : Operand(OperandTrait::UnknonConstant), stkobj(_stkobj), offset(0) {}
+
+UnknownConstant::UnknownConstant(const std::shared_ptr<FrameObj> &_stkobj, int _offset)
+    : Operand(OperandTrait::UnknonConstant), stkobj(_stkobj), offset(_offset) {}
+
+const std::shared_ptr<FrameObj> &UnknownConstant::getStkObj() const { return stkobj; }
+
+size_t UnknownConstant::getFinalOffset() const { return stkobj->getOffset(); }
+
+std::string UnknownConstant::toString() const {
+    std::string str = "offset-of-#Stk." + std::to_string(stkobj->getId());
+    return str;
+}

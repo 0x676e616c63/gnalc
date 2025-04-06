@@ -50,7 +50,7 @@ public:
     ~Vcmp() override = default;
 };
 
-class Vmrs : public Instruction {
+class Vmrs : public NeonInstruction {
 private:
 public:
     Vmrs();

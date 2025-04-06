@@ -30,6 +30,7 @@ bool uselessMovEli::isUseless(const InstP &inst) {
     auto opcode = inst->getOpCode();
 
     if (opcode.index() == 0) {
+
         auto op = std::get<OpCode>(opcode);
 
         if (op != OpCode::MOV && op != OpCode::COPY)
@@ -40,6 +41,26 @@ bool uselessMovEli::isUseless(const InstP &inst) {
 
         if (!source)
             return false;
+
+        if (op == OpCode::COPY) {
+            if (target->getBank() != source->getBank())
+                return false;
+            auto bank = target->getBank();
+
+            switch (bank) {
+            case RegisterBank::gpr:
+                if (std::get<CoreRegister>(target->getColor()) != std::get<CoreRegister>(source->getColor()))
+                    return false;
+                break;
+            case RegisterBank::spr:
+                if (std::get<FPURegister>(target->getColor()) != std::get<FPURegister>(source->getColor()))
+                    return false;
+                break;
+            default:
+                Err::todo("dpr, qpr todo...");
+            }
+            return true; // avoid std::get<...> below
+        }
 
         if (std::get<CoreRegister>(target->getColor()) != std::get<CoreRegister>(source->getColor()))
             return false;

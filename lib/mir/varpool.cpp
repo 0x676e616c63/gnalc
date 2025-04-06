@@ -84,6 +84,15 @@ void VarPool::addLoaded(const ConstObj &obj, const std::shared_ptr<BindOnVirOP> 
     const2blks[obj].insert(blk);
 }
 
+std::shared_ptr<BindOnVirOP> VarPool::mkOP_backup(const std::shared_ptr<IR::Type> &type, RegisterBank bank) {
+    auto virtual_val = std::make_shared<IR::Value>("%" + std::to_string(size() + countbase + 1), type,
+                                                   IR::ValueTrait::ORDINARY_VARIABLE);
+    auto ptr = std::make_shared<BindOnVirOP>(bank, virtual_val->getName());
+    addValue(*virtual_val, ptr);
+
+    return ptr;
+}
+
 std::shared_ptr<BindOnVirOP> VarPool::addValue_anonymously(bool isFloat) {
     std::string name = '%' + std::to_string(countbase + pool.size() + 1);
 

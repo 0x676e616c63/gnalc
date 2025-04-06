@@ -56,6 +56,8 @@ public:                                                   // 接口太多, 还�
     size_t stackSize{};
     unsigned int maxAlignment = 8;                   // 8 or 16, 16字节对齐时需要特殊处理
     std::deque<std::shared_ptr<FrameObj>> StackObjs; // arg ret local spill
+    size_t getCurrentSize();                         // 遍历当前objs, 确定是否保留fp
+
     VarPool varpool;
     ConstPool &constpool; // get from module
 

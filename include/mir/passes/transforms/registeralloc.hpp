@@ -94,7 +94,7 @@ protected:
     OperP GetAlias(OperP);                   // 递归
 
 protected:
-    // 土制函数及数据结构
+    std::set<int> colors;
 
     ///@note 填充initial 和 precolored
     ///@bug 由于FAM特性, 不同Function使用相同Pass时, 简单数据不会清空, 所以需要在run中手动置空

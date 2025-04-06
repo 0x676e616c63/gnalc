@@ -79,7 +79,10 @@ void GlobalObj::mkInitializer(const IR::GVIniter &midEnd_GVIniter) {
         else {
             // IR's Global Variable must be ConstantInt or ConstantFloat
             if (auto ci32 = std::dynamic_pointer_cast<IR::ConstantInt>(midEnd_GVIniter.getConstVal())) {
-                initializer.emplace_back(true, ci32->getVal());
+                if (ci32->getVal())
+                    initializer.emplace_back(true, ci32->getVal());
+                else
+                    initializer.emplace_back(false, (size_t)4); // 0
             } else if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(midEnd_GVIniter.getConstVal())) {
                 initializer.emplace_back(true, cf->getVal());
             } else

@@ -35,6 +35,7 @@ private:
     void vmrsHelper();
     void memoryHelper(const std::shared_ptr<Instruction> &);
     void branchHelper(const std::shared_ptr<Instruction> &);
+    void relHelper(const std::shared_ptr<Instruction> &);
     void retHelper();
 };
 } // namespace MIR

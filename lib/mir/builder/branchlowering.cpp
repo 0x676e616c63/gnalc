@@ -217,21 +217,50 @@ std::list<std::shared_ptr<Instruction>> InstLowering::callLower(const std::share
             std::shared_ptr<BindOnVirOP> arg_in_reg;
             std::shared_ptr<BaseADROP> ptr = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(arg));
 
-            if (ptr->getConstOffset() == 0)
+            ///@brief 解除耦合模式
+            if (ptr->getTrait() == BaseAddressTrait::Local) {
+                auto stkptr = ptr->as<StackADROP>();
+                auto base = ptr->getBase();
+
+                auto relay0 = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+                auto unkwown = make<UnknownConstant>(stkptr->getObj());
+
+                auto add1 = make<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, relay0, base, unkwown,
+                                                nullptr); // 存放stk偏移展开的量
+
+                insts.emplace_back(add1);
+
+                if (stkptr->getConstOffset() != 0) {
+                    auto const_offset =
+                        std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind((int)ptr->getConstOffset()));
+
+                    auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+
+                    auto add2 =
+                        make<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, relay, base, const_offset, nullptr);
+
+                    insts.emplace_back(add2);
+
+                    arg_in_reg = relay;
+                } else {
+                    arg_in_reg = relay0;
+                }
+
+            } else if (ptr->getConstOffset() == 0)
                 arg_in_reg = ptr;
             else {
                 auto const_offset =
                     std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind((int)ptr->getConstOffset()));
                 auto base = ptr->getBase();
-                auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+                auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr); // 展开结果
                 arg_in_reg = relay;
 
-                ///@brief 解除耦合模式
+                if (ptr->getTrait() == BaseAddressTrait::Local) {
 
-                if (const_offset->getConst()->isEncoded()) {
+                } else if (const_offset->getConst()->isEncoded()) {
                     // mov %tmp2, #constOffset
                     // add %tmp, %base, %tmp2
-                    auto relay2 = operlower.LoadedFind(std::get<int>(const_offset->getConst()->getLiteral()), blk);
+                    auto relay2 = operlower.LoadedFind(ptr->getConstOffset(), blk);
 
                     auto add = std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::rr, relay, base, relay2,
                                                                nullptr);

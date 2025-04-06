@@ -116,6 +116,7 @@ void ARMPrinter::printout(const std::shared_ptr<Instruction> &inst) {
     outStream << "\t";
 
     ///@note target op
+
     std::string operands; // str
     if (const auto &targetOp = inst->getTargetOP())
         operands += std::visit(visitor_reg, targetOp->getColor()) + ", ";
@@ -132,7 +133,7 @@ void ARMPrinter::printout(const std::shared_ptr<Instruction> &inst) {
             operands += std::visit(visitor_reg, std::dynamic_pointer_cast<BindOnVirOP>(sourceOp)->getColor()) + ", ";
             break;
         case OperandTrait::BaseAddress: // {v}ldr, {v}str
-            // gep计算偏移
+            // gep计算偏移, add...
             {
                 auto basereg = sourceOp->as<BaseADROP>();
                 operands += enum_name(std::get<CoreRegister>(basereg->getBase()->getColor())) + ", ";
@@ -170,6 +171,11 @@ void ARMPrinter::printout(const std::shared_ptr<Instruction> &inst) {
 bool ARMPrinter::instTryHelp(const std::shared_ptr<Instruction> &inst) {
     if (inst->getOpCode().index() == 0) {
         auto opcode = std::get<OpCode>(inst->getOpCode());
+
+        if (opcode == OpCode::ADD && inst->getSourceOP(2)->getOperandTrait() == OperandTrait::UnknonConstant) {
+            relHelper(inst);
+            return true;
+        }
 
         if (opcode == OpCode::MOV || opcode == OpCode::COPY) {
             return movInstHelper(inst);
@@ -229,14 +235,120 @@ std::string addressingTemplate(const std::shared_ptr<Operand> &_baseReg, const s
             ///@warning 有可能会超过4095常数寻址极限
             auto asmoffset = constoffset + stkReg->getObj()->getOffset();
 
-            ///@todo sub sp, sp, #imme, add sp, sp, #imme
-            Err::gassert(asmoffset < 4096, "codegen: stack addressing const offset > 4095");
+            ///@note 此时应该有一个冗余的fp可以使用
+            Err::gassert(asmoffset <= 4095, "codegen: stack addressing const offset > 4095");
             str += '#' + std::to_string(asmoffset) + ", ";
         } else if (constoffset)
             str += '#' + std::to_string(constoffset) + ", ";
     }
 
     return str.substr(0, str.size() - 2);
+}
+
+/// @brief ldr/vldr str/vstr 翻译时没有对stkobj做专门的展开
+void addressingTemplate_stk(std::ostream &outStream, const std::shared_ptr<Instruction> &inst) {
+    if (auto ldr = std::dynamic_pointer_cast<ldrInst>(inst)) {
+        auto target = ldr->getTargetOP();
+        if (target->getOperandTrait() == OperandTrait::BaseAddress)
+            target = target->as<BaseADROP>()->getBase();
+
+        auto base = ldr->getBase()->as<StackADROP>();
+        auto idx = ldr->getSourceOP(2) ? ldr->getSourceOP(2)->as<BindOnVirOP>() : nullptr;
+        auto asmOffset = base->getObj()->getOffset() + base->getConstOffset();
+
+        if (asmOffset <= 4095) {
+            outStream << "    ldr\t" << enum_name(std::get<CoreRegister>(target->getColor())) << ", ";
+            outStream << '[' << addressingTemplate(ldr->getSourceOP(1), ldr->getSourceOP(2), nullptr) << "]\n";
+        } else {
+            outStream << "    movw\tfp, #" + std::to_string(asmOffset & 0xffff) << '\n';
+            if (asmOffset > 0xffff)
+                outStream << "    movt\tfp, #" + std::to_string((asmOffset & 0xffff0000) >> 16) << '\n';
+
+            if (idx)
+                outStream << "    add\t" + enum_name(std::get<CoreRegister>(idx->getColor())) + ", " +
+                                 enum_name(std::get<CoreRegister>(idx->getColor())) + ", fp\n";
+
+            outStream << "    ldr\t" + enum_name(std::get<CoreRegister>(target->getColor())) + ", [" +
+                             enum_name(std::get<CoreRegister>(base->getBase()->getColor())) + ", " +
+                             (idx ? enum_name(std::get<CoreRegister>(idx->getColor())) : "fp")
+                      << "]\n";
+        }
+    } else if (auto str = std::dynamic_pointer_cast<strInst>(inst)) {
+        auto source = str->getSourceOP(1)->as<BindOnVirOP>();
+        if (source->getOperandTrait() == OperandTrait::BaseAddress)
+            source = source->as<BaseADROP>()->getBase();
+        auto base = str->getBase()->as<StackADROP>();
+        auto idx = str->getSourceOP(3) ? str->getSourceOP(3)->as<BindOnVirOP>() : nullptr;
+        auto asmOffset = base->getObj()->getOffset() + base->getConstOffset();
+
+        if (asmOffset <= 4095) {
+            outStream << "    str\t" << enum_name(std::get<CoreRegister>(source->getColor())) << ", ";
+            outStream << '[' << addressingTemplate(str->getSourceOP(2), str->getSourceOP(3), nullptr) << "]\n";
+        } else {
+            outStream << "    movw\tfp, #" + std::to_string(asmOffset & 0xffff) << '\n';
+            if (asmOffset > 0xffff)
+                outStream << "    movt\tfp, #" + std::to_string((asmOffset & 0xffff0000) >> 16) << '\n';
+
+            if (idx)
+                outStream << "    add\t" + enum_name(std::get<CoreRegister>(idx->getColor())) + ", " +
+                                 enum_name(std::get<CoreRegister>(idx->getColor())) + ", fp\n";
+
+            outStream << "    str\t" + enum_name(std::get<CoreRegister>(source->getColor())) + ", [" +
+                             enum_name(std::get<CoreRegister>(base->getBase()->getColor())) + ", " +
+                             (idx ? enum_name(std::get<CoreRegister>(idx->getColor())) : "fp")
+                      << "]\n";
+        }
+    } else if (auto vldr = std::dynamic_pointer_cast<Vldr>(inst)) {
+        auto target = vldr->getTargetOP();
+        if (target->getOperandTrait() == OperandTrait::BaseAddress)
+            target = target->as<BaseADROP>()->getBase();
+        auto base = vldr->getBase()->as<StackADROP>();
+        auto idx = vldr->getSourceOP(2) ? vldr->getSourceOP(2)->as<BindOnVirOP>() : nullptr;
+        auto asmOffset = base->getObj()->getOffset() + base->getConstOffset();
+
+        if (asmOffset <= 1020) {
+            outStream << "    vldr\t" << enum_name(std::get<FPURegister>(target->getColor())) << ", ";
+            outStream << '[' << addressingTemplate(vldr->getSourceOP(1), vldr->getSourceOP(2), nullptr) << "]\n";
+        } else {
+            outStream << "    movw\tfp, #" + std::to_string(asmOffset & 0xffff) << '\n';
+            if (asmOffset > 0xffff)
+                outStream << "    movt\tfp, #" + std::to_string((asmOffset & 0xffff0000) >> 16) << '\n';
+
+            if (idx)
+                outStream << "    add\t" + enum_name(std::get<CoreRegister>(idx->getColor())) + ", " +
+                                 enum_name(std::get<CoreRegister>(idx->getColor())) + ", fp\n";
+
+            outStream << "    vldr\t" + enum_name(std::get<FPURegister>(target->getColor())) + ", [" +
+                             enum_name(std::get<CoreRegister>(base->getBase()->getColor())) + ", " +
+                             (idx ? enum_name(std::get<CoreRegister>(idx->getColor())) : "fp")
+                      << "]\n";
+        }
+    } else if (auto vstr = std::dynamic_pointer_cast<Vstr>(inst)) {
+        auto source = vstr->getSourceOP(1)->as<BindOnVirOP>();
+        if (source->getOperandTrait() == OperandTrait::BaseAddress)
+            source = source->as<BaseADROP>()->getBase();
+        auto base = vstr->getBase()->as<StackADROP>();
+        auto idx = vstr->getSourceOP(3) ? vstr->getSourceOP(3)->as<BindOnVirOP>() : nullptr;
+        auto asmOffset = base->getObj()->getOffset() + base->getConstOffset();
+
+        if (asmOffset <= 1020) {
+            outStream << "    vstr\t" << enum_name(std::get<FPURegister>(source->getColor())) << ", ";
+            outStream << '[' << addressingTemplate(vstr->getSourceOP(2), vstr->getSourceOP(3), nullptr) << "]\n";
+        } else {
+            outStream << "    movw\tfp, #" + std::to_string(asmOffset & 0xffff) << '\n';
+            if (asmOffset > 0xffff)
+                outStream << "    movt\tfp, #" + std::to_string((asmOffset & 0xffff0000) >> 16) << '\n';
+
+            if (idx)
+                outStream << "    add\t" + enum_name(std::get<CoreRegister>(idx->getColor())) + ", " +
+                                 enum_name(std::get<CoreRegister>(idx->getColor())) + ", fp\n";
+
+            outStream << "    vstr\t" + enum_name(std::get<FPURegister>(source->getColor())) + ", [" +
+                             enum_name(std::get<CoreRegister>(base->getBase()->getColor())) + ", " +
+                             (idx ? enum_name(std::get<CoreRegister>(idx->getColor())) : "fp")
+                      << "]\n";
+        }
+    }
 }
 
 bool ARMPrinter::movInstHelper(const std::shared_ptr<Instruction> &mov) {
@@ -265,22 +377,37 @@ bool ARMPrinter::movInstHelper(const std::shared_ptr<Instruction> &mov) {
         auto stkreg = basereg->as<StackADROP>();
         auto stkoffset = stkreg->getObj()->getOffset();
 
-        ///@todo sub sp, sp, #imme, add sp, sp, #imme
-        Err::gassert(stkoffset >= 0 && stkoffset < 1025,
-                     "codegen: mov stack addressing const offset > 1024"); // 8 bits 位图
+        // ///@todo sub sp, sp, #imme, add sp, sp, #imme
+        // Err::gassert(isImmCanBeEncodedInText((unsigned)stkoffset),
+        //              "codegen: mov stack addressing const offset > 1024"); // 8 bits 位图
 
-        outStream << "add\t" << enum_name(std::get<CoreRegister>(target->getColor())) << ", ";
+        if (isImmCanBeEncodedInText((unsigned)stkoffset)) {
+            outStream << "movw\tfp, #" + std::to_string(stkoffset & 0xffff) << '\n';
+            if (stkoffset > 0xffff)
+                outStream << "    movt\tfp, #" + std::to_string((stkoffset & 0xffff0000) >> 16) << '\n';
+        }
+
+        outStream << "    add\t" << enum_name(std::get<CoreRegister>(target->getColor())) << ", ";
         outStream << enum_name(std::get<CoreRegister>(basereg->getBase()->getColor())) << ", ";
-        outStream << '#' + std::to_string(stkoffset) << '\n';
+        if (isImmCanBeEncodedInText((unsigned)stkoffset))
+            outStream << "fp\n";
+        else
+            outStream << '#' + std::to_string(stkoffset) << '\n';
 
         return true;
     }
 
     if (auto reg = source->as<BindOnVirOP>()) // reg
     {
-        outStream << "mov\t";
-        outStream << enum_name(std::get<CoreRegister>(target->getColor())) << ", ";
-        outStream << enum_name(std::get<CoreRegister>(reg->getColor())) << '\n';
+        if (target->getBank() == RegisterBank::gpr) {
+            outStream << "mov\t";
+            outStream << enum_name(std::get<CoreRegister>(target->getColor())) << ", ";
+            outStream << enum_name(std::get<CoreRegister>(reg->getColor())) << '\n';
+        } else {
+            outStream << "vmov\t";
+            outStream << std::visit(visitor_reg, target->getColor()) << ", ";
+            outStream << std::visit(visitor_reg, reg->getColor()) << '\n';
+        }
 
         return true;
     }
@@ -302,6 +429,18 @@ bool ARMPrinter::movInstHelper(const std::shared_ptr<Instruction> &mov) {
         // movw/movt
         auto lower = std::to_string(std::get<Encoding>(constant->getLiteral()).first);
         auto upper = std::to_string(std::get<Encoding>(constant->getLiteral()).second);
+
+        // outStream << "movw    " + reg_str + ", #" + lower + '\n';
+        // outStream << "    movt    " + reg_str + ", #" + upper + '\n';
+        outStream << "movw\t" + reg_str + ", #" + lower + '\n';
+        outStream << "    movt\t" + reg_str + ", #" + upper + '\n';
+    } else if (constant->isFloat()) {
+        // 很罕见的情况, 一般认为在vmov中可以直接加载, 但是此处需要分开
+        auto flt = std::get<float>(constant->getLiteral());
+        auto encoding = *reinterpret_cast<unsigned *>(&flt);
+
+        auto lower = std::to_string(encoding & 0xFFFF);
+        auto upper = std::to_string((encoding & 0xFFFF0000) >> 16);
 
         // outStream << "movw    " + reg_str + ", #" + lower + '\n';
         // outStream << "    movt    " + reg_str + ", #" + upper + '\n';
@@ -333,20 +472,25 @@ bool ARMPrinter::movInstHelper(const std::shared_ptr<Instruction> &mov) {
 void ARMPrinter::calleesaveHelper(const std::shared_ptr<Instruction> &inst) {
     auto calleesave = std::dynamic_pointer_cast<calleesaveInst>(inst);
     const auto &reg_list = calleesave->getRegList();
+    auto opcode = std::get<OpCode>(inst->getOpCode());
+
+    if (cur_func->getName() == "@main") {
+        if (cur_func->getInfo().hasCall) {
+            if (opcode == OpCode::PUSH)
+                outStream << "    push\t{lr}\n";
+            else if (opcode == OpCode::POP)
+                outStream << "    pop\t{lr}\n";
+        }
+        return;
+    }
 
     if (reg_list.empty())
         return;
 
-    if (cur_func->getName() == "@main") {
-        if (cur_func->getInfo().hasCall)
-            outStream << "    push\t{lr}\n";
-        return;
-    }
-
     outStream << "    "; // head indent
 
     // outStream << lowercase(enum_name(std::get<OpCode>(inst->getOpCode()))) << "    ";
-    outStream << lowercase(enum_name(std::get<OpCode>(inst->getOpCode()))) << '\t';
+    outStream << lowercase(enum_name(opcode)) << '\t';
 
     outStream << "{";
 
@@ -368,10 +512,16 @@ void ARMPrinter::vmrsHelper() {
 void ARMPrinter::memoryHelper(const std::shared_ptr<Instruction> &inst) {
 
     // 可能的完全体展示: ldr Rd, [Rn, Rm, LSL #n, #imm] ; Rd = *(Rn + Rm << n + imm)
-    outStream << "    "; // head indent
 
     if (auto ldr = std::dynamic_pointer_cast<ldrInst>(inst)) {
         auto target = ldr->getTargetOP();
+
+        if (ldr->getBase()->getTrait() == BaseAddressTrait::Local) {
+            addressingTemplate_stk(outStream, inst);
+            return;
+        }
+
+        outStream << "    "; // head indent
 
         // outStream << "ldr    " << enum_name(std::get<CoreRegister>(target->getColor())) << ", "; // default .word
         outStream << "ldr\t" << enum_name(std::get<CoreRegister>(target->getColor())) << ", "; // default .word
@@ -381,6 +531,13 @@ void ARMPrinter::memoryHelper(const std::shared_ptr<Instruction> &inst) {
     } else if (auto str = std::dynamic_pointer_cast<strInst>(inst)) {
         auto source = std::dynamic_pointer_cast<BindOnVirOP>(str->getSourceOP(1));
 
+        if (str->getBase()->getTrait() == BaseAddressTrait::Local) {
+            addressingTemplate_stk(outStream, inst);
+            return;
+        }
+
+        outStream << "    "; // head indent
+
         // outStream << "str    " << enum_name(std::get<CoreRegister>(source->getColor())) << ", ";
         outStream << "str\t" << enum_name(std::get<CoreRegister>(source->getColor())) << ", ";
 
@@ -389,18 +546,32 @@ void ARMPrinter::memoryHelper(const std::shared_ptr<Instruction> &inst) {
     } else if (auto vldr = std::dynamic_pointer_cast<Vldr>(inst)) {
         auto target = vldr->getTargetOP();
 
+        if (vldr->getBase()->getTrait() == BaseAddressTrait::Local) {
+            addressingTemplate_stk(outStream, inst);
+            return;
+        }
+
+        outStream << "    "; // head indent
+
         // outStream << "vldr.32    " << enum_name(std::get<FPURegister>(target->getColor())) << ", "; // default .word
         outStream << "vldr.32\t" << enum_name(std::get<FPURegister>(target->getColor())) << ", "; // default .word
 
         outStream << '[' << addressingTemplate(vldr->getSourceOP(1), vldr->getSourceOP(2), nullptr) << "]\n";
 
     } else if (auto vstr = std::dynamic_pointer_cast<Vstr>(inst)) {
-        auto source = std::dynamic_pointer_cast<BindOnVirOP>(str->getSourceOP(1));
+        auto source = std::dynamic_pointer_cast<BindOnVirOP>(vstr->getSourceOP(1));
+
+        if (vstr->getBase()->getTrait() == BaseAddressTrait::Local) {
+            addressingTemplate_stk(outStream, inst);
+            return;
+        }
+
+        outStream << "    "; // head indent
 
         // outStream << "vstr.32    " << enum_name(std::get<FPURegister>(source->getColor())) << ", ";
         outStream << "vstr.32\t" << enum_name(std::get<FPURegister>(source->getColor())) << ", ";
 
-        outStream << '[' << addressingTemplate(str->getSourceOP(2), str->getSourceOP(3), nullptr) << "]\n";
+        outStream << '[' << addressingTemplate(vstr->getSourceOP(2), vstr->getSourceOP(3), nullptr) << "]\n";
     }
 }
 
@@ -416,6 +587,24 @@ void ARMPrinter::branchHelper(const std::shared_ptr<Instruction> &inst) {
     auto jmpto = branch->isJmpToFunc() ? branch->getJmpTo().substr(1)
                                        : cur_func->getName().substr(1) + "_blk_" + branch->getJmpTo().substr(1);
     outStream << jmpto << "\n\n";
+}
+
+void ARMPrinter::relHelper(const std::shared_ptr<Instruction> &inst) {
+    auto source = inst->getSourceOP(1)->as<BindOnVirOP>();
+    auto target = inst->getTargetOP();
+    auto unknown = inst->getSourceOP(2)->as<UnknownConstant>();
+    auto stkoffset = unknown->getStkObj()->getOffset();
+
+    auto reg = enum_name(std::get<CoreRegister>(target->getColor()));
+
+    if (!isImmCanBeEncodedInText((unsigned)stkoffset)) {
+        outStream << "    movw\tfp, #" + std::to_string(stkoffset & 0xffff) << '\n';
+        if (stkoffset > 0xffff)
+            outStream << "    movt\tfp, #" + std::to_string((stkoffset & 0xffff0000) >> 16) << '\n';
+        outStream << "    add\t" + reg + ", " + reg + ", fp" << '\n';
+    } else {
+        outStream << "    add\t" + reg + ", " + reg + ", #" + std::to_string(stkoffset) << '\n';
+    }
 }
 
 void ARMPrinter::retHelper() {

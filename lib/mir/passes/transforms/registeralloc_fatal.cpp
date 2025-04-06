@@ -13,14 +13,10 @@ bool RAPass::isMoveInstruction(const InstP &inst) {
     if (use == nullptr)
         return false;
 
-    if (!std::dynamic_pointer_cast<NeonInstruction>(inst)) {
+    if (inst->getOpCode().index() == 0) {
         if (std::get<OpCode>(inst->getOpCode()) == OpCode::MOV || std::get<OpCode>(inst->getOpCode()) == OpCode::MVN ||
             std::get<OpCode>(inst->getOpCode()) == OpCode::COPY) {
-            return true;
-        }
-    } else {
-        if (std::get<NeonOpCode>(inst->getOpCode()) == NeonOpCode::VMOV) {
-            if (use->getBank() == def->getBank())
+            if (use->getBank() == RegisterBank::gpr && use->getBank() == def->getBank())
                 return true;
         }
     }
@@ -32,7 +28,10 @@ RAPass::Nodes RAPass::getUse(const InstP &inst) {
     Nodes uses;
 
     if (inst->getOpCode().index() == 1) {
-        Err::gassert(std::get<NeonOpCode>(inst->getOpCode()) == NeonOpCode::VMOV, "no neon inst but vmov expected");
+        auto nopcode = std::get<NeonOpCode>(inst->getOpCode());
+
+        if (nopcode != NeonOpCode::VMOV)
+            return uses;
 
         auto sourceop = inst->getSourceOP(1)->as<BindOnVirOP>();
 
@@ -48,6 +47,9 @@ RAPass::Nodes RAPass::getUse(const InstP &inst) {
         for (int rx = 0; rx < 4; ++rx) {
             uses.insert(varpool.getValue(static_cast<CoreRegister>(rx))); // r0, r1, r2, r3
         }
+
+        if (Func->getInfo().hasCall)
+            uses.insert(varpool.getValue(static_cast<CoreRegister>(14))); // lr
 
         return uses;
     }
@@ -89,7 +91,7 @@ OperP RAPass::heuristicSpill() {
     ///@brief 炼丹中...
     const double Weight_IntervalLength = 2.5;
     const double Weight_Degree = 3;
-    const double extra_Weight_ForNotPtr = +30; // origin: 60
+    const double extra_Weight_ForNotPtr = +60; // origin: 60
 
     ///@note 计算溢出权重
     double weight_max = 0;
@@ -101,7 +103,10 @@ OperP RAPass::heuristicSpill() {
         weight += liveinfo.intervalLengths[op] * Weight_IntervalLength; // narrowing convert here
 
         weight += degree[op] * Weight_Degree;
-        if (!std::dynamic_pointer_cast<BaseADROP>(op) && !varpool->isLoad(op))
+        // if (!std::dynamic_pointer_cast<BaseADROP>(op) && !varpool->isLoad(op))
+        //     weight += extra_Weight_ForNotPtr;
+
+        if (!std::dynamic_pointer_cast<BaseADROP>(op))
             weight += extra_Weight_ForNotPtr;
 
         if (weight >= weight_max) {
@@ -524,7 +529,12 @@ bool NeonRAPass::isMoveInstruction(const InstP &inst) {
 
     if (std::dynamic_pointer_cast<NeonInstruction>(inst)) {
         if (std::get<NeonOpCode>(inst->getOpCode()) == NeonOpCode::VMOV) {
-            if (use->getBank() == def->getBank())
+            if (use->getBank() != RegisterBank::gpr && use->getBank() == def->getBank())
+                return true;
+        }
+    } else {
+        if (std::get<OpCode>(inst->getOpCode()) == OpCode::COPY) {
+            if (use->getBank() != RegisterBank::gpr && use->getBank() == def->getBank())
                 return true;
         }
     }
@@ -535,7 +545,8 @@ bool NeonRAPass::isMoveInstruction(const InstP &inst) {
 NeonRAPass::Nodes NeonRAPass::getUse(const InstP &inst) {
     NeonRAPass::Nodes uses;
 
-    if (std::get<OpCode>(inst->getOpCode()) == OpCode::BL || std::get<OpCode>(inst->getOpCode()) == OpCode::BLX) {
+    if (inst->getOpCode().index() == 0 &&
+        (std::get<OpCode>(inst->getOpCode()) == OpCode::BL || std::get<OpCode>(inst->getOpCode()) == OpCode::BLX)) {
         auto &varpool = Func->editInfo().getPool();
 
         for (int sx = 0; sx < 16; ++sx) {
@@ -559,8 +570,12 @@ NeonRAPass::Nodes NeonRAPass::getUse(const InstP &inst) {
 NeonRAPass::Nodes NeonRAPass::getDef(const InstP &inst) {
     NeonRAPass::Nodes defs;
 
-    if (std::dynamic_pointer_cast<BindOnVirOP>(inst->getTargetOP()) &&
-        std::dynamic_pointer_cast<BindOnVirOP>(inst->getTargetOP())->getBank() == RegisterBank::spr)
+    auto target = inst->getTargetOP();
+
+    if (!target)
+        return defs;
+
+    if (target->getBank() == RegisterBank::spr)
         ///@todo dpr, qpr
         defs.insert(inst->getTargetOP());
 

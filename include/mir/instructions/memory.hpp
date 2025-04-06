@@ -40,6 +40,8 @@ public:
 
     void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
 
+    std::shared_ptr<BaseADROP> getBase() const;
+
     void setBaseReg(std::shared_ptr<BaseADROP> _ptr);
 
     void setIndexReg(std::shared_ptr<BindOnVirOP> _ptr);
@@ -62,7 +64,10 @@ public:
             std::shared_ptr<BaseADROP> MemoryAddr_, std::shared_ptr<BindOnVirOP> IndexReg_);
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
+
     void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
+
+    std::shared_ptr<BaseADROP> getBase() const;
 
     void setBaseReg(std::shared_ptr<BaseADROP> _ptr);
 

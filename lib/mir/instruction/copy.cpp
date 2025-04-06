@@ -23,7 +23,7 @@ void COPY::setSourceOP(unsigned int seq, std::shared_ptr<Operand> ptr_new) {
     }
 }
 
-PhiOper::PhiOper(std::shared_ptr<Operand> _val, std::string _pre) : val(std::move(_val)), pre(std::move(_pre)) {}
+PhiOper::PhiOper(IR::pVal _val, std::string _pre) : val(std::move(_val)), pre(std::move(_pre)) {}
 
 PHI::PHI(std::shared_ptr<BindOnVirOP> TargetOP_, std::vector<PhiOper> _list)
     : SourceOperands(std::move(_list)), Instruction(OpCode::PHI, SourceOperandType::rr) {
@@ -31,18 +31,19 @@ PHI::PHI(std::shared_ptr<BindOnVirOP> TargetOP_, std::vector<PhiOper> _list)
 }
 
 std::shared_ptr<Operand> PHI::getSourceOP(unsigned int seq) {
-    if (seq > SourceOperands.size()) {
-        return nullptr;
-    } else {
-        return SourceOperands[seq - 1].val;
-    }
+    // if (seq > SourceOperands.size()) {
+    //     return nullptr;
+    // } else {
+    //     return SourceOperands[seq - 1].val;
+    // }
+    return nullptr;
 }
 
-void PHI::setSourceOP(unsigned int seq, std::shared_ptr<Operand>) {};
+void PHI::setSourceOP(unsigned int seq, std::shared_ptr<Operand>) {}; // no in use
 
 std::vector<PhiOper> PHI::getPhiOper() const { return SourceOperands; }
 
-std::string PHI::toString() {
+std::string PHI::toString() { // maybe not really in use
     std::string str;
 
     str += getTargetOP()->toString();
@@ -50,7 +51,7 @@ std::string PHI::toString() {
 
     for (const auto &PhiOper : SourceOperands) {
         str += "[ ";
-        str += PhiOper.val->toString() + ", ";
+        str += PhiOper.val->getName() + ", ";
         str += '%' + PhiOper.pre + " ], ";
     }
     str += '\n';

@@ -37,6 +37,8 @@ void Vldr::setBaseReg(std::shared_ptr<BaseADROP> _ptr) { SourceOperand_1 = std::
 
 void Vldr::setIndexReg(std::shared_ptr<BindOnVirOP> _ptr) { indexRegister = std::move(_ptr); }
 
+std::shared_ptr<BaseADROP> Vldr::getBase() const { return SourceOperand_1; };
+
 std::shared_ptr<Operand> Vldr::getSourceOP(unsigned int seq) {
     if (seq == 1) {
         return SourceOperand_1;
@@ -69,6 +71,8 @@ Vstr::Vstr(std::shared_ptr<BindOnVirOP> SourceOperand_1_, std::shared_ptr<BaseAD
 void Vstr::setBaseReg(const std::shared_ptr<BaseADROP> _ptr) { SourceOperand_1 = _ptr; }
 
 void Vstr::setIndexReg(std::shared_ptr<BindOnVirOP> _ptr) { indexRegister = std::move(_ptr); }
+
+std::shared_ptr<BaseADROP> Vstr::getBase() const { return SourceOperand_2; };
 
 std::shared_ptr<Operand> Vstr::getSourceOP(unsigned int seq) {
     if (seq == 1) {

@@ -1,4 +1,5 @@
 #include "../../include/mirtools/tool.hpp"
+#include "../../include/utils/logger.hpp"
 
 namespace MIR {
 
@@ -24,32 +25,13 @@ bool isImmCanBeEncodedInText(unsigned int imme) {
         return true; // 防止 >> 32 产生ud
 
     ///@note 感觉写麻烦了, 直接计算前导和后驱的0就行了
-    for (int shift = 1; shift <= 32; shift += 2) {
-        if ((((imme << shift) | (imme >> (32 - shift))) & ~0xff) == 0) {
-            return true;
-        }
-    }
+    unsigned ld = clz_wrapper(imme);
+    unsigned tl = ctz_wrapper(imme);
+
+    if (tl == 32 || ld + tl > 24 || ld + tl == 24 && tl % 2 == 0)
+        return true;
+
     return false;
-}
-
-///@note 获取一个大于imme的最小8bits位图数
-int ceilEncoded(int imme) {
-    Err::gassert(imme >= 0, "can not apply to a neg number");
-
-    while (true) {
-        unsigned ld = clz_wrapper(imme);
-        unsigned tl = ctz_wrapper(imme);
-
-        Err::gassert(ld, "ceil to a neg number detected");
-
-        ///@note ld 不会大于31, 在0时tl最大为32
-        if (tl == 2 || ld + tl >= 24 && (ld + tl) % 2 == 0)
-            break;
-
-        imme += 1 << tl;
-    }
-
-    return imme;
 }
 
 bool isImmCanBeEncodedInText(float imme) {
@@ -63,6 +45,31 @@ bool isImmCanBeEncodedInText(float imme) {
         }
     }
     return false;
+}
+
+///@note 获取一个大于imme的最小8bits位图数
+int ceilEncoded(int imme) {
+    if (isImmCanBeEncodedInText((unsigned int)imme))
+        return imme;
+
+    int original = imme;
+
+    while (true) {
+        unsigned ld = clz_wrapper(imme);
+        unsigned tl = ctz_wrapper(imme);
+
+        Logger::logDebug("ceil to a neg number detected: " + std::to_string(original));
+
+        Err::gassert(ld, "ceil to a neg number detected: " + std::to_string(original));
+
+        ///@note ld 不会大于31, 在0时tl最大为32
+        if (tl == 32 || ld + tl > 24 || ld + tl == 24 && tl % 2 == 0)
+            break;
+
+        imme += 1 << tl;
+    }
+
+    return imme;
 }
 
 } // namespace MIR

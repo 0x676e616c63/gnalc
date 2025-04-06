@@ -11,6 +11,14 @@ std::size_t Liveness::tempHash::operator()(const std::shared_ptr<Instruction> &p
     return std::hash<size_t>()((size_t)(ptr.get()));
 }
 
+size_t FunctionInfo::getCurrentSize() {
+    size_t size = 0;
+    for (const auto &obj : StackObjs) {
+        size += obj->getSize();
+    }
+    return size;
+}
+
 VarPool &FunctionInfo::getPool() { return varpool; }
 const VarPool &FunctionInfo::getPool() const { return varpool; }
 
@@ -73,7 +81,6 @@ std::string Function::toString() const {
 void Function::delBlock(std::shared_ptr<BasicBlock> blk) {
     auto lambda = [&blk](const auto &other) { return other == blk; };
 
-    ;
     auto it = std::find_if(blocks.begin(), blocks.end(), lambda);
 
     if (it != blocks.end())

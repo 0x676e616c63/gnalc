@@ -64,6 +64,37 @@ std::list<std::shared_ptr<Instruction>> InstLowering::storeLower(const std::shar
         val_in_reg = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(val));
     }
 
+    // ===================
+    // step1.5: val_in_reg 是否需要展开, 替换val_in_reg
+    // ===================
+    if (val_in_reg->getOperandTrait() == OperandTrait::BaseAddress) {
+        auto base_in_reg = val_in_reg->as<BaseADROP>();
+
+        auto val_in_reg = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+
+        if (base_in_reg->getTrait() == BaseAddressTrait::Local) {
+            auto stk_in_reg = base_in_reg->as<StackADROP>();
+            auto unknown = make<UnknownConstant>(stk_in_reg->getObj());
+            auto add1 =
+                make<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, val_in_reg, val_in_reg, unknown, nullptr);
+            insts.emplace_back(add1);
+        }
+        if (base_in_reg->getConstOffset()) {
+            auto constoffset = operlower.fastFind(base_in_reg->getConstOffset())->as<ConstantIDX>();
+            std::shared_ptr<binaryImmInst> add2;
+
+            if (!constoffset->getConst()->isEncoded())
+                add2 = make<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, val_in_reg, val_in_reg, constoffset,
+                                           nullptr);
+            else
+                add2 = make<binaryImmInst>(OpCode::ADD, SourceOperandType::rr, val_in_reg, val_in_reg,
+                                           operlower.LoadedFind(base_in_reg->getConstOffset(), blk), nullptr);
+
+            insts.emplace_back(add2);
+        }
+    }
+    // ps: 经过这步操作之后, str中的source1应该能从BaseAddress降格至一般reg
+
     // ==================
     // step2: ptr是否是全局变量
     // ==================
@@ -129,16 +160,37 @@ std::list<std::shared_ptr<Instruction>> InstLowering::gepLower(const std::shared
         operlower.mkBaseOP(*gep, baseOP, add_offset);
     } else {
         // mul %relay1, %var_idx, #perElemsize ; 带优化, 计算偏移大小
-        // add (%BindOnVirOP)relay2, %(BindOnVirOP)baseOP, %relay1
+        // add (%BindOnVirOP)target, %(BindOnVirOP)baseOP, %relay1
         // 这里add之后可以考虑做一个窥孔, 将相应的ldr改成基址变址寻址
         auto relay1 = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
-        auto relay2 = operlower.mkBaseOP(*gep, baseOP);
+        auto target = operlower.mkBaseOP(*gep, baseOP); // base = self, offset = 0
 
         auto mul_insts = mulOpt(relay1, idx, std::make_shared<IR::ConstantInt>(perElemSize), operlower, blk);
         insts.insert(insts.end(), mul_insts.begin(), mul_insts.end());
 
-        auto add = std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::rr, relay2, baseOP, relay1, nullptr);
+        auto add = std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::rr, target, baseOP->getBase(),
+                                                   relay1, nullptr);
         insts.emplace_back(add);
+
+        if (auto constoffset = baseOP->getConstOffset()) {
+            std::shared_ptr<binaryImmInst> add1;
+            if (isImmCanBeEncodedInText((unsigned)constoffset)) {
+                auto constobj = operlower.fastFind(constoffset);
+                add1 = make<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, target, target, constobj, nullptr);
+            } else {
+                add1 = make<binaryImmInst>(OpCode::ADD, SourceOperandType::rr, target, target,
+                                           operlower.LoadedFind(constoffset, blk), nullptr);
+            }
+
+            insts.emplace_back(add1);
+        }
+
+        // if (baseOP->getTrait() == BaseAddressTrait::Local) {
+        //     auto stkop = baseOP->as<StackADROP>();
+        //     auto unknonw = make<UnknownConstant>(stkop->getObj());
+        //     auto add2 = make<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, target, target, unknonw, nullptr);
+        //     insts.emplace_back(add2);
+        // }
     }
 
     return insts;

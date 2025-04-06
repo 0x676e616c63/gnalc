@@ -77,7 +77,7 @@ struct OperandLowering {
             /// create a new obj
             using U_variant = std::remove_cv_t<std::remove_reference_t<T_variant>>;
             if constexpr (std::is_same_v<U_variant, float>) {
-                loadPtr = mkOP(IR::makeBType(IR::IRBTYPE::FLOAT), RegisterBank::spr);
+                loadPtr = mkOP(IR::makeBType(IR::IRBTYPE::FLOAT), RegisterBank::gpr);
                 varpool.addLoaded(*constPtr, loadPtr, blk);
             } else if constexpr (std::is_same_v<U_variant, int>) {
                 loadPtr = mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
@@ -189,6 +189,9 @@ struct InstLowering {
 
     std::list<std::shared_ptr<Instruction>> binaryLower_v(const std::shared_ptr<IR::BinaryInst> &,
                                                           const std::shared_ptr<BasicBlock> &self);
+
+    std::list<std::shared_ptr<Instruction>> fnegLower(const std::shared_ptr<IR::FNEGInst> &,
+                                                      const std::shared_ptr<BasicBlock> &self);
 
     std::list<std::shared_ptr<Instruction>> loadLower_v(const std::shared_ptr<IR::LOADInst> &,
                                                         const std::shared_ptr<BasicBlock> &self);

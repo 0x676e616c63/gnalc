@@ -1,4 +1,5 @@
 #include "../../../include/mir/SIMDinstruction/arithmetics.hpp"
+#include "../../../include/mir/SIMDinstruction/memory.hpp"
 #include "../../../include/mir/builder/lowering.hpp"
 #include "../../../include/mir/instructions/binary.hpp"
 #include "../../../include/mir/instructions/branch.hpp"
@@ -228,14 +229,22 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower_v(const std::s
     std::shared_ptr<BindOnVirOP> oper1;
     std::shared_ptr<BindOnVirOP> oper2;
 
-    auto lconst = rval->as<IR::ConstantInt>();
-    auto rconst = lval->as<IR::ConstantFloat>();
+    auto lconst = lval->as<IR::ConstantFloat>();
+    auto rconst = rval->as<IR::ConstantFloat>();
 
     if (lconst) {
         float const_float = lconst->getVal();
 
         auto relay = operlower.LoadedFind(const_float, blk);
-        oper1 = relay;
+        ///@note vmov ...
+        auto relay_v = operlower.mkOP(IR::makeBType(IR::IRBTYPE::FLOAT), RegisterBank::spr);
+
+        auto vmov =
+            make<Vmov>(SourceOperandType::r, relay_v, relay, std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32));
+
+        insts.emplace_back(vmov);
+
+        oper1 = relay_v;
     } else {
         oper1 = operlower.fastFind(lval)->as<BindOnVirOP>();
     }
@@ -244,15 +253,21 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower_v(const std::s
         float const_float = rconst->getVal();
 
         auto relay = operlower.LoadedFind(const_float, blk);
-        oper2 = relay;
+
+        auto relay_v = operlower.mkOP(IR::makeBType(IR::IRBTYPE::FLOAT), RegisterBank::spr);
+
+        auto vmov =
+            make<Vmov>(SourceOperandType::r, relay_v, relay, std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32));
+
+        insts.emplace_back(vmov);
+
+        oper2 = relay_v;
     } else {
-        if (rval)
-            oper2 = operlower.fastFind(rval)->as<BindOnVirOP>();
-        else // FNEG
-            oper2 = nullptr;
+        oper2 = operlower.fastFind(rval)->as<BindOnVirOP>();
     }
 
     /// vxxx %target, %oper1, %oper2
+    Err::gassert(oper1->getBank() == RegisterBank::spr && oper2->getBank() == RegisterBank::spr, "get wrong oper");
 
     auto datapair = std::make_pair(bitType::f32, bitType::DEFAULT32);
     switch (op) {
@@ -295,6 +310,25 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower_v(const std::s
     default:
         Err::unreachable("instLower: binarylower_v encountered unknown IR::OP");
     }
+
+    return insts;
+}
+
+std::list<std::shared_ptr<Instruction>> InstLowering::fnegLower(const std::shared_ptr<IR::FNEGInst> &fneg,
+                                                                const std::shared_ptr<BasicBlock> &blk) {
+    std::list<std::shared_ptr<Instruction>> insts;
+    auto target = operlower.mkOP(*fneg, RegisterBank::spr);
+
+    auto op = fneg->getOpcode();
+
+    std::shared_ptr<IR::Value> lval = fneg->getVal();
+
+    auto oper = operlower.fastFind(lval)->as<BindOnVirOP>();
+
+    auto datapair = std::make_pair(bitType::f32, bitType::DEFAULT32);
+
+    auto vneg = make<Vunary>(MIR::NeonOpCode::VNEG, target, oper, datapair); // oper2 = nullptr
+    insts.emplace_back(vneg);
 
     return insts;
 }

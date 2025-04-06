@@ -24,7 +24,7 @@ public:
     std::list<std::shared_ptr<Function>> &getFuncs();
 
     template <typename T_variant> std::shared_ptr<ConstObj> getConst(const T_variant &_val) {
-        constpool.getConstant(_val);
+        return constpool.getConstant(_val);
     }
 
     ConstPool &getConstPool();

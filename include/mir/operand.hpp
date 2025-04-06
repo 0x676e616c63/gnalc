@@ -27,6 +27,7 @@ enum class CoreRegister {
     r13,
     r14,
     r15,
+    fp = r11,
     ip = r12,
     sp = r13,
     lr = r14,
@@ -82,6 +83,7 @@ enum class OperandTrait {
     BaseAddress,
     ShiftImme,
     ConstantPoolValue,
+    UnknonConstant,
 };
 
 class Operand : public Value {
@@ -233,6 +235,25 @@ public:
 
     std::string toString() const final;
     ~ConstantIDX() override = default;
+};
+
+/// @brief 用于存储尚未知晓的stkobj的偏移量
+class UnknownConstant : public Operand {
+private:
+    std::shared_ptr<FrameObj> stkobj;
+    int offset; // 便于结合到寻址
+
+public:
+    UnknownConstant() = delete;
+    explicit UnknownConstant(const std::shared_ptr<FrameObj> &_stkobj);
+    UnknownConstant(const std::shared_ptr<FrameObj> &_stkobj, int _offset);
+
+    const std::shared_ptr<FrameObj> &getStkObj() const;
+
+    size_t getFinalOffset() const;
+
+    std::string toString() const final;
+    ~UnknownConstant() override = default;
 };
 
 } // namespace MIR

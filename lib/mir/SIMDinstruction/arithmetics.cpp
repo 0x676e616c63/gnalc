@@ -82,7 +82,9 @@ void Vcmp::setSourceOP(unsigned int seq, std::shared_ptr<Operand> ptr_new) {
     }
 }
 
-Vmrs::Vmrs() : Instruction(NeonOpCode::VMRS, SourceOperandType::cp) {}
+Vmrs::Vmrs()
+    : NeonInstruction(NeonOpCode::VMRS, SourceOperandType::cp, std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32)) {
+}
 
 std::shared_ptr<Operand> Vmrs::getSourceOP(unsigned int seq) { return nullptr; }
 

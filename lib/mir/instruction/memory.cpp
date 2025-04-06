@@ -69,6 +69,8 @@ void strInst::setSourceOP(unsigned int seq, std::shared_ptr<Operand> ptr_new) {
 
 void strInst::setBaseReg(std::shared_ptr<BaseADROP> _ptr) { MemoryAddr = std::move(_ptr); }
 
+std::shared_ptr<BaseADROP> strInst::getBase() const { return MemoryAddr; }
+
 void strInst::setIndexReg(std::shared_ptr<BindOnVirOP> _ptr) { IndexReg = std::move(_ptr); }
 
 ldrInst::ldrInst(SourceOperandType _tptrait, unsigned int _size, std::shared_ptr<BindOnVirOP> TargetOP_,
@@ -109,5 +111,7 @@ void ldrInst::setSourceOP(unsigned int seq, std::shared_ptr<Operand> ptr_new) {
 }
 
 void ldrInst::setBaseReg(std::shared_ptr<BaseADROP> _ptr) { MemoryAddr = std::move(_ptr); }
+
+std::shared_ptr<BaseADROP> ldrInst::getBase() const { return MemoryAddr; }
 
 void ldrInst::setIndexReg(std::shared_ptr<BindOnVirOP> _ptr) { IndexReg = std::move(_ptr); }

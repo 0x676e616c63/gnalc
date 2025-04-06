@@ -256,7 +256,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::fcmpLower(const std::share
             // auto mov = std::make_shared<movInst>(SourceOperandType::ri, relay, constVal);
 
             auto pair = std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32);
-            auto vmov = std::make_shared<Vmov>(SourceOperandType::r, relay2, relay, pair);
+            auto vmov = std::make_shared<Vmov>(SourceOperandType::r, relay2, relay, pair); // twice mov
             pair = std::make_pair(bitType::f32, bitType::DEFAULT32);
             auto vcmp = std::make_shared<Vcmp>(NeonOpCode::VCMP, virVal, relay2, pair);
             auto vmrs = std::make_shared<Vmrs>();

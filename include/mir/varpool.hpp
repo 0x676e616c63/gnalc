@@ -50,8 +50,10 @@ public:
     getLoaded(const T_variant &literal, const std::shared_ptr<BasicBlock> &blk) {
         unsigned int cnt = 0;
         for (const auto &[const_obj, ptr] : const2vir) {
-            if (literal ==
-                std::get<std::remove_cv_t<std::remove_reference_t<decltype(literal)>>>(const_obj.getLiteral()))
+            if (std::holds_alternative<std::remove_cv_t<std::remove_reference_t<decltype(literal)>>>(
+                    const_obj.getLiteral()) &&
+                literal ==
+                    std::get<std::remove_cv_t<std::remove_reference_t<decltype(literal)>>>(const_obj.getLiteral()))
                 return {getLoaded(const_obj, blk), nullptr};
             ++cnt;
         }
@@ -76,6 +78,8 @@ public:
     const auto &getConst2blks() { return const2blks; }
 
     void addValue(const IR::Value &, std::shared_ptr<Operand>); // Def
+
+    std::shared_ptr<BindOnVirOP> mkOP_backup(const std::shared_ptr<IR::Type> &, RegisterBank);
 
     std::shared_ptr<BindOnVirOP> addValue_anonymously(bool isFloat); // 用于添加一个新的BindOnVirOP
 

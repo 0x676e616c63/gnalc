@@ -25,7 +25,8 @@ std::list<OperP> LiveAnalysis::extractUse(const InstP &inst) {
 }
 
 OperP LiveAnalysis::extractDef(const InstP &inst) {
-    if (std::get<OpCode>(inst->getOpCode()) != OpCode::BL && std::get<OpCode>(inst->getOpCode()) != OpCode::BLX)
+    if (inst->getOpCode().index() != 0 ||
+        std::get<OpCode>(inst->getOpCode()) != OpCode::BL && std::get<OpCode>(inst->getOpCode()) != OpCode::BLX)
         // 30, 31
         return inst->getTargetOP();
     else { // function call

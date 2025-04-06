@@ -94,7 +94,7 @@ template <> inline std::string enum_name<CoreRegister>(CoreRegister t) {
     case CoreRegister::r10:
         return "r10";
     case CoreRegister::r11:
-        return "r11";
+        return "fp";
     // case CoreRegister::r12:          return "r12";
     // case CoreRegister::r13:          return "r13";
     // case CoreRegister::r14:          return "r14";

@@ -103,12 +103,12 @@ void postRAstackformat::frameObjSort() {
     }
 
     ///@brief fix-alignment, maybe needed a padding
-    if (func->getInfo().arg_in_use % 2 != 0) {
-        unsigned padding_size = *maxAlignment - (func->getInfo().arg_in_use % *maxAlignment);
-        auto paddingObj = std::make_shared<FrameObj>(FrameTrait::Padding, padding_size);
-        paddingObj->setId(objs->size());
-        objs->insert(objs->begin() + calleesave_begin - 1, paddingObj);
-    }
+    // if (func->getInfo().arg_in_use % 2 != 0) {
+    //     unsigned padding_size = *maxAlignment - (func->getInfo().arg_in_use % *maxAlignment);
+    //     auto paddingObj = std::make_shared<FrameObj>(FrameTrait::Padding, padding_size);
+    //     paddingObj->setId(objs->size());
+    //     objs->insert(objs->begin() + calleesave_begin - 1, paddingObj);
+    // }
 
     ///@brief local_begin, local_end内重排
 

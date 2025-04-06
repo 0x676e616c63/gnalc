@@ -25,10 +25,10 @@ public:
 
 class PhiOper {
 public:
-    const std::shared_ptr<Operand> val;
+    const IR::pVal val;
     const std::string pre; // isel中简单处理
     PhiOper() = delete;
-    PhiOper(std::shared_ptr<Operand> _val, std::string _pre);
+    PhiOper(IR::pVal _val, std::string _pre);
 
     ~PhiOper() = default;
 };

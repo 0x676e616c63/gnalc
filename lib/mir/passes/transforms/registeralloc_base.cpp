@@ -17,10 +17,26 @@ std::size_t RAPass::EdgeHash::operator()(const Edge &_edge) const {
 }
 
 PM::PreservedAnalyses RAPass::run(Function &bkd_function, FAM &fam) {
-    Func = &bkd_function;                                          ///@bug
-    availableSRegisters = &(Func->editInfo().availableSRegisters); ///@bug
+    Func = &bkd_function;
+    availableSRegisters = &(Func->editInfo().availableSRegisters);
     varpool = &(Func->editInfo().varpool);
-    // liveinfo = fam.getResult<LiveAnalysis>(bkd_function); // flush in liveinfo in Main(fam)
+
+    colors.insert({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12});
+
+    if (Func->editInfo().hasCall) {
+        ++K; // +lr, 在call处设置use
+        colors.insert(14);
+    }
+
+    if (Func->editInfo().getCurrentSize() <= 512) { // 给溢出留出一半的冗余, 应该足够...
+        ++K;                                        // +fp
+        colors.insert(11);
+    }
+
+    if (Func->editInfo().maxAlignment >= 16) {
+        --K; // no r7
+        colors.erase(7);
+    }
 
     spilltimes = 0;
     isInitialed = false;
@@ -396,17 +412,7 @@ void RAPass::AssignColors() {
     while (!selectStack.empty()) {
         auto n = selectStack.back();
         selectStack.pop_back();
-        std::vector<unsigned int> okColors(K);
-
-        std::iota(okColors.begin(), okColors.end(), 0);
-
-        if (Func->getInfo().maxAlignment == 16) {
-            ///@brief 此时需要一个栈底寄存器: r7
-            auto it = std::find_if(okColors.begin(), okColors.end(), [&](const auto &num) { return num == 7; }); // r7
-            if (it != okColors.end())
-                okColors.erase(it);
-            Func->editInfo().regdit.insert(7); // r7
-        }
+        std::vector<unsigned int> okColors(colors.begin(), colors.end());
 
         for (const auto &w : adjList[n]) {
             if (getUnion<OperP>(coloredNodes, precolored).count(GetAlias(w))) {
@@ -581,13 +587,14 @@ void NeonRAPass::AssignColors() {
             auto n_reg = std::dynamic_pointer_cast<BindOnVirOP>(n);
             Err::gassert(n_reg != nullptr, "try assign color for a none virReg op");
 
-            n_reg->setColor(static_cast<CoreRegister>(c));
+            n_reg->setColor(static_cast<FPURegister>(c));
 
             ///@note 排除available
             auto it = std::find_if(availableSRegisters.begin(), availableSRegisters.end(),
                                    [&c](const auto &item) { return item == c; });
 
-            availableSRegisters.erase(it);
+            if (it != availableSRegisters.end())
+                availableSRegisters.erase(it);
         }
     }
 
