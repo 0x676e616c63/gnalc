@@ -39,8 +39,9 @@ void ARMPrinter::printout(const Module &module) {
 void ARMPrinter::printout(const GlobalObj &global) {
     ///@brief announce to assembler and linker: name and alignment
     auto name = global.getName().substr(1);
-    const std::string global_template =
-        ".global " + name + '\n' + name + ":\n" + "    .align " + std::to_string(global.getAlignment()) + '\n';
+    // const std::string global_template =
+    //     ".global " + name + '\n' + name + ":\n" + "    .align " + std::to_string(global.getAlignment()) + '\n';
+    const std::string global_template = ".global " + name + '\n' + name + ":\n";
 
     outStream << global_template;
 
@@ -452,7 +453,6 @@ bool ARMPrinter::movInstHelper(const std::shared_ptr<Instruction> &mov) {
 
         // if (int32 < 0) {
         //     outStream << "mvn    " + reg_str + ", #" + std::to_string(std::abs(int32) - 1);
-        //     outStream << "    ; move " + std::to_string(int32); // comment
         //     outStream << '\n';
         // } else
         //     outStream << "mov" enum_name(mov->getCondCodeFlag()) + '    ' + reg_str + ", #" + std::to_string(int32) + '\n';
@@ -460,7 +460,6 @@ bool ARMPrinter::movInstHelper(const std::shared_ptr<Instruction> &mov) {
         if (int32 < 0) {
             outStream << "mvn\t" + reg_str + ", #" + std::to_string(std::abs(int32) - 1);
 
-            outStream << "\t; move " + std::to_string(int32); // comment
             outStream << '\n';
         } else
             outStream << "mov" + lowercase(enum_name(mov->getCondCodeFlag())) + '\t' + reg_str + ", #" +

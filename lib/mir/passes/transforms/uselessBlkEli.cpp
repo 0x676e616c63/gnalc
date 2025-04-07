@@ -38,7 +38,7 @@ bool uselessBlkEli::isUseless(const BlkP &blk) {
 
 void uselessBlkEli::blkConsolidate(const BlkP &blk) {
     ///@brief 1. 访问preds, 改写branch和对应的Succ
-    ///@brief 2. 访问succs, 删除对应Pred
+    ///@brief 2. 访问succs, 删除对应Pred, 更新为新Preds
     ///@brief 3. 移除blk
 
     auto blk_label = blk->getName();
@@ -61,7 +61,10 @@ void uselessBlkEli::blkConsolidate(const BlkP &blk) {
 
         pred->delSucc_try(blk);
         pred->addSucc(succ); // maybe exist already
+
+        succ->addPred(pred);
     }
+    succ->delPred(blk);
 
     func->delBlock(blk);
 }

@@ -3,10 +3,10 @@
 
 #include "utils.hpp"
 
+#include <algorithm>
 #include <filesystem>
 #include <functional>
 #include <string>
-#include <algorithm>
 
 namespace Test {
 
@@ -122,8 +122,8 @@ inline std::string prepare_sylib(const std::string &global_tmp_dir, bool only_ru
         auto sylibo = global_tmp_dir + "/sylib.o";
         sylib_to_link = global_tmp_dir + "/sylib.a";
 
-        std::string lib_command =
-            format("clang -c {} -o {} && ar rcs {} {}", cfg::sylibc, sylibo, sylib_to_link, sylibo);
+        std::string lib_command = format("clang -c {} --target=arm-linux-gnueabihf -o {} && ar rcs {} {}", cfg::sylibc,
+                                         sylibo, sylib_to_link, sylibo);
 
         println("Running '{}'.", lib_command);
         std::system(lib_command.c_str());

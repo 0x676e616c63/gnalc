@@ -25,22 +25,24 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
     // ====================
     // 1. 常量拦截
     // ====================
-    if (rconst && lconst) {
-        int constVal = rconst->getVal() + lconst->getVal();
-
-        auto result = operlower.LoadedFind(constVal, blk); // 预加载的字面量
-
-        /// 一般认为 copy 很有机会消除
-        auto copy = make<COPY>(target, result);
-        insts.emplace_back(copy);
-
-        return insts;
-    }
+    // ... ...
 
     // ====================
     // 转化为 add
     // ====================
     if (op == IR::OP::ADD) {
+        if (rconst && lconst) {
+            int constVal = lconst->getVal() + rconst->getVal();
+
+            auto result = operlower.LoadedFind(constVal, blk); // 预加载的字面量
+
+            /// 一般认为 copy 很有机会消除
+            auto copy = make<COPY>(target, result);
+            insts.emplace_back(copy);
+
+            return insts;
+        }
+
         std::shared_ptr<MIR::binaryImmInst> add = nullptr;
 
         // 2. 某个操作数为常量
@@ -75,6 +77,18 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
     // 转化为 sub / rsb
     // ====================
     else if (op == IR::OP::SUB) {
+        if (rconst && lconst) {
+            int constVal = lconst->getVal() - rconst->getVal();
+
+            auto result = operlower.LoadedFind(constVal, blk); // 预加载的字面量
+
+            /// 一般认为 copy 很有机会消除
+            auto copy = make<COPY>(target, result);
+            insts.emplace_back(copy);
+
+            return insts;
+        }
+
         std::shared_ptr<MIR::binaryImmInst> sub; // sub or rsb
 
         // 2. 一个操作数为常量
@@ -109,6 +123,18 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
     // 转化为 mul / mov + mul
     // ==================
     else if (op == IR::OP::MUL) {
+        if (rconst && lconst) {
+            int constVal = lconst->getVal() * rconst->getVal();
+
+            auto result = operlower.LoadedFind(constVal, blk); // 预加载的字面量
+
+            /// 一般认为 copy 很有机会消除
+            auto copy = make<COPY>(target, result);
+            insts.emplace_back(copy);
+
+            return insts;
+        }
+
         std::shared_ptr<MIR::binaryInst> mul;
 
         // 2. 第二操作数为常量, 选择优化
@@ -141,6 +167,18 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
     // 转化为 sdiv / mov + sdiv
     // =================
     else if (op == IR::OP::DIV) {
+        if (rconst && lconst) {
+            int constVal = lconst->getVal() / rconst->getVal();
+
+            auto result = operlower.LoadedFind(constVal, blk); // 预加载的字面量
+
+            /// 一般认为 copy 很有机会消除
+            auto copy = make<COPY>(target, result);
+            insts.emplace_back(copy);
+
+            return insts;
+        }
+
         std::shared_ptr<MIR::binaryInst> sdiv;
         // ===================
         // 2. 第二操作数为常量, 除常数优化
@@ -179,6 +217,17 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
     // 转换为 若干mov(如果需要) + sdiv + mls
     // ==================
     else if (op == IR::OP::REM) {
+        if (rconst && lconst) {
+            int constVal = lconst->getVal() % rconst->getVal();
+
+            auto result = operlower.LoadedFind(constVal, blk); // 预加载的字面量
+
+            /// 一般认为 copy 很有机会消除
+            auto copy = make<COPY>(target, result);
+            insts.emplace_back(copy);
+
+            return insts;
+        }
 
         std::shared_ptr<BindOnVirOP> dividend;
         std::shared_ptr<BindOnVirOP> divisor;
