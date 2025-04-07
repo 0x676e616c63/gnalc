@@ -39,6 +39,18 @@ void postRAstackformat::FrameGenerate() {
         *maxAlignment = std::max(*maxAlignment, obj->getAliagnment());
     }
 
+    ///@brief 处理栈对齐
+    if (*maxAlignment == 8 && *stackSize % 8 != 0) {
+        auto pad_obj = make<FrameObj>(FrameTrait::Padding, 4);
+        objs->emplace_back(pad_obj);
+        *stackSize += 4;
+    } else if (*maxAlignment == 16 && *stackSize % 16 != 0) {
+        auto pad_obj = make<FrameObj>(FrameTrait::Padding, 16 - (*stackSize % 16));
+        objs->emplace_back(pad_obj);
+        *stackSize += 16 - (*stackSize % 16);
+    }
+
+    ///@brief 保存时依然注意对齐
     frameSaveANDPadding();
 
     frameObjSort();
@@ -148,9 +160,14 @@ void postRAstackformat::frameObjSort() {
 
 void postRAstackformat::frameSaveANDPadding() {
     // save lr/RA
-    if (func->getInfo().hasCall) {
-        calleeSavedSize += 4;
-    }
+    for (unsigned i = 0; i < 4; ++i)
+        regdit->erase(i);
+
+    if (func->getInfo().hasCall)
+        regdit->insert(static_cast<int>(CoreRegister::lr));
+
+    for (unsigned i = 0; i < 16; ++i)
+        regdit_s->erase(i);
 
     ///@warning 大小不计入stk obj
     calleeSavedSize += regdit->size() * 4;
@@ -168,6 +185,7 @@ void postRAstackformat::frameSaveANDPadding() {
         auto paddingObj = std::make_shared<FrameObj>(FrameTrait::Padding, 4);
         paddingObj->setId(objs->size());
         objs->insert(std::prev(objs->end()), paddingObj);
+        *stackSize += 4;
     }
 }
 
@@ -198,15 +216,6 @@ void postRAstackformat::Leagalize() {
     ///@brief insert-after: add sp, sp, #rest_stk_size
     std::set<unsigned> calleeSave = *regdit;
     std::set<unsigned> calleeSave_s = *regdit_s;
-
-    for (unsigned i = 0; i < 4; ++i)
-        calleeSave.erase(i);
-
-    if (func->getInfo().hasCall)
-        calleeSave.insert(static_cast<int>(CoreRegister::lr));
-
-    for (unsigned i = 0; i < 16; ++i)
-        calleeSave_s.erase(i);
 
     auto push = make<PUSH>(calleeSave);
     auto push_v = make<VPUSH>(calleeSave_s);

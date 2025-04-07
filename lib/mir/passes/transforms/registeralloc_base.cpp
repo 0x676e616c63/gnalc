@@ -1,6 +1,6 @@
+#include "mir/passes/analysis/live_analysis.hpp"
 #include "mir/passes/transforms/registeralloc.hpp"
 #include "mir/passes/transforms/uselessMovEli.hpp"
-#include "mir/passes/analysis/live_analysis.hpp"
 #include <algorithm>
 #include <numeric>
 #include <random>
@@ -95,6 +95,10 @@ void RAPass::AddEdge(const OperP &u, const OperP &v) {
 
     if (u != v && adjSet.find(edge) == adjSet.end()) {
         adjSet.insert(std::move(edge));
+
+        // if (u->getName() == "%47" && v->getName() == "%83" || v->getName() == "%47" && u->getName() == "%83") {
+        //     int useless;
+        // }
 
         if (precolored.find(u) == precolored.end()) { // not precolored
             adjList[u].insert(v);

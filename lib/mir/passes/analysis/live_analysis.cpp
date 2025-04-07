@@ -84,14 +84,18 @@ void LiveAnalysis::runOnFunc(Function *_func) {
     }
 
     ///@brief 遍历
-    for (const auto &blk : dfsSeqPost) {
-        for (auto &succ : blk->getSuccs()) {
-            for (auto &livevar : liveinfo.liveIn[succ]) { // skip the end block
-                ///@brief liveout of a blk
-                liveinfo.liveOut[blk].insert(livevar);
+    bool change = true;
+    while (change) {
+        change = false;
+        for (const auto &blk : dfsSeqPost) {
+            for (auto &succ : blk->getSuccs()) {
+                for (auto &livevar : liveinfo.liveIn[succ]) { // skip the end block
+                    ///@brief liveout of a blk
+                    change |= liveinfo.liveOut[blk].insert(livevar).second;
+                }
             }
+            runOnBlk(blk); // 从liveout计算livein
         }
-        runOnBlk(blk);
     }
 }
 
@@ -110,7 +114,7 @@ void LiveAnalysis::runOnBlk(const BlkP &blk) {
         }
     }
 
-    ///@brief livein of a blk
+    ///@brief renew livein of a blk
     liveinfo.liveIn[blk] = instLiveIn[*(blk->getInsts().begin())];
 }
 

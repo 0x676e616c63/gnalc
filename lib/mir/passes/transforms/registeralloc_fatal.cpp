@@ -48,7 +48,7 @@ RAPass::Nodes RAPass::getUse(const InstP &inst) {
             uses.insert(varpool.getValue(static_cast<CoreRegister>(rx))); // r0, r1, r2, r3
         }
 
-        if (Func->getInfo().hasCall)
+        if (Func->getInfo().hasCall) // 虽然但是, 这个判断显得没有必要
             uses.insert(varpool.getValue(static_cast<CoreRegister>(14))); // lr
 
         return uses;
@@ -71,6 +71,20 @@ RAPass::Nodes RAPass::getDef(const InstP &inst) {
     Nodes defs;
 
     auto op = inst->getTargetOP(); // spr maybe
+
+    if (inst->getOpCode().index() == 0 &&
+        (std::get<OpCode>(inst->getOpCode()) == OpCode::BL || std::get<OpCode>(inst->getOpCode()) == OpCode::BLX)) {
+        auto &varpool = Func->editInfo().getPool();
+
+        for (int rx = 0; rx < 4; ++rx) {
+            defs.insert(varpool.getValue(static_cast<CoreRegister>(rx))); // r0, r1, r2, r3
+        }
+
+        if (Func->getInfo().hasCall)
+            defs.insert(varpool.getValue(static_cast<CoreRegister>(14))); // lr
+
+        return defs;
+    }
 
     if (!op)
         return defs;

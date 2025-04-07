@@ -596,14 +596,15 @@ void ARMPrinter::relHelper(const std::shared_ptr<Instruction> &inst) {
     auto stkoffset = unknown->getStkObj()->getOffset();
 
     auto reg = enum_name(std::get<CoreRegister>(target->getColor()));
+    auto source_reg = enum_name(std::get<CoreRegister>(source->getColor()));
 
     if (!isImmCanBeEncodedInText((unsigned)stkoffset)) {
         outStream << "    movw\tfp, #" + std::to_string(stkoffset & 0xffff) << '\n';
         if (stkoffset > 0xffff)
             outStream << "    movt\tfp, #" + std::to_string((stkoffset & 0xffff0000) >> 16) << '\n';
-        outStream << "    add\t" + reg + ", " + reg + ", fp" << '\n';
+        outStream << "    add\t" + reg + ", " + source_reg + ", fp" << '\n';
     } else {
-        outStream << "    add\t" + reg + ", " + reg + ", #" + std::to_string(stkoffset) << '\n';
+        outStream << "    add\t" + reg + ", " + source_reg + ", #" + std::to_string(stkoffset) << '\n';
     }
 }
 

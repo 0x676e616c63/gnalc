@@ -69,7 +69,8 @@ inline TestResult run_test(const TestData &data, size_t times = 1, bool only_run
 
         ir_asm_gen_command = data.ir_asm_gen(newsy, out_source);
 
-        link_command = format("{} {} {} -o {}", cfg::gcc_arm_command, out_source, data.sylib, outexec);
+        link_command =
+            format("{} {} {} -fno-PIC -fno-PIE -static -o {}", cfg::gcc_arm_command, out_source, data.sylib, outexec);
 
         exec_command = format("{} {} < {} > {} 2>{}", cfg::qemu_arm_command, outexec,
                               std::filesystem::exists(testcase_in) ? testcase_in : "/dev/null", output, outtime);

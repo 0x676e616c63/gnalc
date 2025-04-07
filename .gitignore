@@ -32,3 +32,4 @@ test.elf
 list.txt
 sylib.a
 sylib.o
+*.png
