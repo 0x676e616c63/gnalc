@@ -231,17 +231,19 @@ std::string addressingTemplate(const std::shared_ptr<Operand> &_baseReg, const s
     if (shift)
         str += lowercase(enum_name(shift->shiftCode)) + '#' + std::to_string(shift->getShiftImme()) + ", ";
 
-    int constoffset = baseReg->getConstOffset();
-    if (constoffset || baseReg->getTrait() == BaseAddressTrait::Local) {
-        if (auto stkReg = baseReg->as<StackADROP>()) {
-            ///@warning 有可能会超过4095常数寻址极限
-            auto asmoffset = constoffset + stkReg->getObj()->getOffset();
+    int constoffset = baseReg->getConstOffset(); // 我不明白(凯申音)
+    if (idxReg == nullptr && shift == nullptr) {
+        if (constoffset || baseReg->getTrait() == BaseAddressTrait::Local) {
+            if (auto stkReg = baseReg->as<StackADROP>()) {
+                ///@warning 有可能会超过4095常数寻址极限
+                auto asmoffset = constoffset + stkReg->getObj()->getOffset();
 
-            ///@note 此时应该有一个冗余的fp可以使用
-            Err::gassert(asmoffset <= 4095, "codegen: stack addressing const offset > 4095");
-            str += '#' + std::to_string(asmoffset) + ", ";
-        } else if (constoffset)
-            str += '#' + std::to_string(constoffset) + ", ";
+                ///@note 此时应该有一个冗余的fp可以使用
+                Err::gassert(asmoffset <= 4095, "codegen: stack addressing const offset > 4095");
+                str += '#' + std::to_string(asmoffset) + ", ";
+            } else if (constoffset)
+                str += '#' + std::to_string(constoffset) + ", ";
+        }
     }
 
     return str.substr(0, str.size() - 2);

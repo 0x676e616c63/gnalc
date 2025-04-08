@@ -1,4 +1,5 @@
 #include "mir/passes/transforms/preRAlegalize.hpp"
+#include "mir/instructions/binary.hpp"
 #include <algorithm>
 
 using namespace MIR;
@@ -79,6 +80,14 @@ void PreRALegalize::addInstBefore(const BlkP &blk, const std::shared_ptr<ldrInst
 
     auto [ptr, const_op] = varpool->getLoaded(offset, blk);
 
+    if (auto stk = baseReg->as<StackADROP>()) {
+        auto idxrelay = varpool->mkOP_backup(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto unknown = make<UnknownConstant>(stk->getObj());
+        auto add = make<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, idxrelay, ptr, unknown, nullptr);
+        insts.insert(it, add);
+        ptr = idxrelay;
+    }
+
     ldr->setIndexReg(ptr);
 }
 void PreRALegalize::addInstBefore(const BlkP &blk, const std::shared_ptr<strInst> &str) {
@@ -91,6 +100,14 @@ void PreRALegalize::addInstBefore(const BlkP &blk, const std::shared_ptr<strInst
     constClearSet.insert(baseReg);
 
     auto [ptr, const_op] = varpool->getLoaded(offset, blk);
+
+    if (auto stk = baseReg->as<StackADROP>()) {
+        auto idxrelay = varpool->mkOP_backup(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto unknown = make<UnknownConstant>(stk->getObj());
+        auto add = make<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, idxrelay, ptr, unknown, nullptr);
+        insts.insert(it, add);
+        ptr = idxrelay;
+    }
 
     str->setIndexReg(ptr);
 }
@@ -105,6 +122,14 @@ void PreRALegalize::addInstBefore(const BlkP &blk, const std::shared_ptr<Vldr> &
 
     auto [ptr, const_op] = varpool->getLoaded(offset, blk);
 
+    if (auto stk = baseReg->as<StackADROP>()) {
+        auto idxrelay = varpool->mkOP_backup(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto unknown = make<UnknownConstant>(stk->getObj());
+        auto add = make<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, idxrelay, ptr, unknown, nullptr);
+        insts.insert(it, add);
+        ptr = idxrelay;
+    }
+
     Vldr->setIndexReg(ptr);
 }
 void PreRALegalize::addInstBefore(const BlkP &blk, const std::shared_ptr<Vstr> &Vstr) {
@@ -117,6 +142,14 @@ void PreRALegalize::addInstBefore(const BlkP &blk, const std::shared_ptr<Vstr> &
     constClearSet.insert(baseReg);
 
     auto [ptr, const_op] = varpool->getLoaded(offset, blk);
+
+    if (auto stk = baseReg->as<StackADROP>()) {
+        auto idxrelay = varpool->mkOP_backup(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+        auto unknown = make<UnknownConstant>(stk->getObj());
+        auto add = make<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, idxrelay, ptr, unknown, nullptr);
+        insts.insert(it, add);
+        ptr = idxrelay;
+    }
 
     Vstr->setIndexReg(ptr);
 }

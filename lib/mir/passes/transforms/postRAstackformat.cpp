@@ -163,11 +163,16 @@ void postRAstackformat::frameSaveANDPadding() {
     for (unsigned i = 0; i < 4; ++i)
         regdit->erase(i);
 
-    if (func->getInfo().hasCall)
-        regdit->insert(static_cast<int>(CoreRegister::lr));
-
     for (unsigned i = 0; i < 16; ++i)
         regdit_s->erase(i);
+
+    if (func->getName() == "@main") {
+        regdit->clear();
+        regdit_s->clear();
+    }
+
+    if (func->getInfo().hasCall)
+        regdit->insert(static_cast<int>(CoreRegister::lr));
 
     ///@warning 大小不计入stk obj
     calleeSavedSize += regdit->size() * 4;

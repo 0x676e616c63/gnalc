@@ -65,6 +65,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::storeLower(const std::shar
 
     // ===================
     // step1.5: val_in_reg 是否需要展开, 替换val_in_reg
+    // 应该用不到(交给store_p), 但还是留在这里
     // ===================
     if (val_in_reg->getOperandTrait() == OperandTrait::BaseAddress) {
         auto base_in_reg = val_in_reg->as<BaseADROP>();
@@ -264,8 +265,9 @@ std::list<std::shared_ptr<Instruction>> InstLowering::loadLower_p(const std::sha
 
     ///@brief load获得的值为一个指针
     ///@brief 由于基本类型只有int float, 所以load ptr应该不会是全局变量
+    ///@brief target 为 #Rt
     std::shared_ptr<BaseADROP> ptr = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(load->getPtr()));
-    std::shared_ptr<BaseADROP> target = operlower.mkBaseOP(*load, ptr);
+    std::shared_ptr<BaseADROP> target = operlower.mkBaseOP(*load);
 
     // ldr %target, [%ptr]
     auto ldr = std::make_shared<ldrInst>(SourceOperandType::ra, 4, target, ptr);
@@ -278,10 +280,39 @@ std::list<std::shared_ptr<Instruction>> InstLowering::storeLower_p(const std::sh
                                                                    const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
-    ///@brief store的指针值不为常数
+    ///@brief store的指针值不为常数, 无需多余判断
 
     std::shared_ptr<BaseADROP> value = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(store->getValue()));
     std::shared_ptr<BaseADROP> ptr = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(store->getPtr()));
+
+    // ===================
+    // step0: value 是否需要展开, 替换value
+    // ===================
+    if (value->getOperandTrait() == OperandTrait::BaseAddress) {
+        auto base_in_reg = value->as<BaseADROP>();
+
+        auto value = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+
+        if (base_in_reg->getTrait() == BaseAddressTrait::Local) {
+            auto stk_in_reg = base_in_reg->as<StackADROP>();
+            auto unknown = make<UnknownConstant>(stk_in_reg->getObj());
+            auto add1 = make<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, value, value, unknown, nullptr);
+            insts.emplace_back(add1);
+        }
+        if (base_in_reg->getConstOffset()) {
+            auto constoffset = operlower.fastFind(base_in_reg->getConstOffset())->as<ConstantIDX>();
+            std::shared_ptr<binaryImmInst> add2;
+
+            if (!constoffset->getConst()->isEncoded())
+                add2 = make<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, value, value, constoffset, nullptr);
+            else
+                add2 = make<binaryImmInst>(OpCode::ADD, SourceOperandType::rr, value, value,
+                                           operlower.LoadedFind(base_in_reg->getConstOffset(), blk), nullptr);
+
+            insts.emplace_back(add2);
+        }
+    }
+    // ps: 经过这步操作之后, str中的source1应该能从BaseAddress降格至一般reg
 
     auto str = std::make_shared<strInst>(SourceOperandType::ra, 4, value, ptr);
     insts.emplace_back(str);
