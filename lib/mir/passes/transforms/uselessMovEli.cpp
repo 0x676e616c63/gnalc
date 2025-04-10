@@ -37,10 +37,17 @@ bool uselessMovEli::isUseless(const InstP &inst) {
             return false;
 
         auto target = inst->getTargetOP();
+
+        if (target->getOperandTrait() == OperandTrait::BaseAddress)
+            target = target->as<BaseADROP>()->getBase();
+
         auto source = std::dynamic_pointer_cast<BindOnVirOP>(inst->getSourceOP(1));
 
         if (!source)
             return false;
+
+        if (source->getOperandTrait() == OperandTrait::BaseAddress)
+            source = source->as<BaseADROP>()->getBase();
 
         if (op == OpCode::COPY) {
             if (target->getBank() != source->getBank())

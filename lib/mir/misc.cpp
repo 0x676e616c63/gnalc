@@ -140,7 +140,7 @@ ConstObj::ConstObj(unsigned int _id, std::string _glo) : id(_id), literal(std::m
 
 ConstObj::ConstObj(unsigned int _id, int imme) : id(_id) {
     auto imm = static_cast<unsigned int>(imme);
-    if (imme <= -1 && imme >= -257) {
+    if (imme < 0 && imme > -257) {
         literal = imme;
     } else if (isImmCanBeEncodedInText(imm)) {
         literal = imme;

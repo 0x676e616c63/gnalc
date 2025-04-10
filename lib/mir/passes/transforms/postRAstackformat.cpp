@@ -18,6 +18,8 @@ PM::PreservedAnalyses postRAstackformat::run(Function &function, FAM &fam) {
     stackSize = &(func->editInfo().stackSize);
     maxAlignment = &(func->editInfo().maxAlignment);
 
+    calleeSavedSize = 0;
+
     FrameGenerate();
 
     Leagalize();
@@ -204,7 +206,7 @@ void postRAstackformat::frameObjImpl() {
             current_size += obj->getSize();
         } else {
             Err::gassert(obj->getSeq() != -1, "fix-stack obj corrupted.");
-            obj->setOffset((obj->getSeq() - 4) * 4 * -1); // 能看懂就行, 反正也不用
+            obj->setOffset(*stackSize + calleeSavedSize + (obj->getSeq() - 4) * 4); // 先push, 后取arg
         }
         ///@note 方便debug
         obj->setId(cnt++);
@@ -219,13 +221,6 @@ void postRAstackformat::Leagalize() {
     ///@note only arg-load instruction in %initialize
     ///@brief insert-front: callee-saved insts( push {...} )
     ///@brief insert-after: add sp, sp, #rest_stk_size
-    std::set<unsigned> calleeSave = *regdit;
-    std::set<unsigned> calleeSave_s = *regdit_s;
-
-    auto push = make<PUSH>(calleeSave);
-    auto push_v = make<VPUSH>(calleeSave_s);
-
-    initialize_blk->addInsts_front({push, push_v});
 
     ///@brief insert front: create new stack
     Err::gassert(*stackSize < 2147483648, "stacksize larger than 2^31 - 1");
@@ -248,16 +243,24 @@ void postRAstackformat::Leagalize() {
         auto sub =
             std::make_shared<binaryImmInst>(OpCode::SUB, SourceOperandType::ri, varpool->getValue(CoreRegister::sp),
                                             varpool->getValue(CoreRegister::sp), stack_size, nullptr);
-        initialize_blk->addInsts_beforebranch({mov, bic, sub});
+        initialize_blk->addInsts_front({mov, bic, sub});
 
     } else if (*maxAlignment == 8) {
         auto sub =
             std::make_shared<binaryImmInst>(OpCode::SUB, SourceOperandType::ri, varpool->getValue(CoreRegister::sp),
                                             varpool->getValue(CoreRegister::sp), stack_size, nullptr);
-        initialize_blk->addInsts_beforebranch({sub});
+        initialize_blk->addInsts_front({sub});
     } else {
         Err::unreachable("bad stack alignment");
     }
+
+    std::set<unsigned> calleeSave = *regdit;
+    std::set<unsigned> calleeSave_s = *regdit_s;
+
+    auto push = make<PUSH>(calleeSave);
+    auto push_v = make<VPUSH>(calleeSave_s);
+
+    initialize_blk->addInsts_front({push, push_v}); ///@warning
 
     ///@brief stack recoveray
     std::list<InstP> insts;

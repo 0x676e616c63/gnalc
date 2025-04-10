@@ -49,8 +49,6 @@ unsigned int BasicBlock::addInsts_beforebranch(std::string label, std::list<std:
 unsigned int BasicBlock::addInsts_beforebranch(std::list<std::shared_ptr<Instruction>> _insts) {
     ///@note the last branch inst, I mean...
 
-    // Err::gassert(!_insts.empty(), "try addInsts_beforebranch a empty inst list");
-
     auto branch = insts.back(); // b, b{cond}, bl, bx, RET ...
 
     Err::gassert(std::get<OpCode>(branch->getOpCode()) == OpCode::B ||

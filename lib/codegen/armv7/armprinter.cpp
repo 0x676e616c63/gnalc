@@ -158,7 +158,7 @@ void ARMPrinter::printout(const std::shared_ptr<Instruction> &inst) {
         } break;
         case OperandTrait::ShiftImme: {
             auto shift = std::dynamic_pointer_cast<ShiftOP>(sourceOp);
-            operands += enum_name(shift->shiftCode) + '#' + std::to_string(shift->getShiftImme()) + ", ";
+            operands += enum_name(shift->shiftCode) + " #" + std::to_string(shift->getShiftImme()) + ", ";
         } break;
         default:
             Err::unreachable("unknown operand trait");
@@ -260,7 +260,7 @@ void addressingTemplate_stk(std::ostream &outStream, const std::shared_ptr<Instr
         auto idx = ldr->getSourceOP(2) ? ldr->getSourceOP(2)->as<BindOnVirOP>() : nullptr;
         auto asmOffset = base->getObj()->getOffset() + base->getConstOffset();
 
-        if (asmOffset <= 4095) {
+        if (asmOffset <= 4095 || idx) { // 如果有变址寻址, 则确信已经妥善处理
             outStream << "    ldr\t" << enum_name(std::get<CoreRegister>(target->getColor())) << ", ";
             outStream << '[' << addressingTemplate(ldr->getSourceOP(1), ldr->getSourceOP(2), nullptr) << "]\n";
         } else {
@@ -268,9 +268,9 @@ void addressingTemplate_stk(std::ostream &outStream, const std::shared_ptr<Instr
             if (asmOffset > 0xffff)
                 outStream << "    movt\tfp, #" + std::to_string((asmOffset & 0xffff0000) >> 16) << '\n';
 
-            if (idx)
-                outStream << "    add\t" + enum_name(std::get<CoreRegister>(idx->getColor())) + ", " +
-                                 enum_name(std::get<CoreRegister>(idx->getColor())) + ", fp\n";
+            // if (idx)
+            //     outStream << "    add\t" + enum_name(std::get<CoreRegister>(idx->getColor())) + ", " +
+            //                      enum_name(std::get<CoreRegister>(idx->getColor())) + ", fp\n";
 
             outStream << "    ldr\t" + enum_name(std::get<CoreRegister>(target->getColor())) + ", [" +
                              enum_name(std::get<CoreRegister>(base->getBase()->getColor())) + ", " +
@@ -285,7 +285,7 @@ void addressingTemplate_stk(std::ostream &outStream, const std::shared_ptr<Instr
         auto idx = str->getSourceOP(3) ? str->getSourceOP(3)->as<BindOnVirOP>() : nullptr;
         auto asmOffset = base->getObj()->getOffset() + base->getConstOffset();
 
-        if (asmOffset <= 4095) {
+        if (asmOffset <= 4095 || idx) {
             outStream << "    str\t" << enum_name(std::get<CoreRegister>(source->getColor())) << ", ";
             outStream << '[' << addressingTemplate(str->getSourceOP(2), str->getSourceOP(3), nullptr) << "]\n";
         } else {
@@ -293,9 +293,9 @@ void addressingTemplate_stk(std::ostream &outStream, const std::shared_ptr<Instr
             if (asmOffset > 0xffff)
                 outStream << "    movt\tfp, #" + std::to_string((asmOffset & 0xffff0000) >> 16) << '\n';
 
-            if (idx)
-                outStream << "    add\t" + enum_name(std::get<CoreRegister>(idx->getColor())) + ", " +
-                                 enum_name(std::get<CoreRegister>(idx->getColor())) + ", fp\n";
+            // if (idx)
+            //     outStream << "    add\t" + enum_name(std::get<CoreRegister>(idx->getColor())) + ", " +
+            //                      enum_name(std::get<CoreRegister>(idx->getColor())) + ", fp\n";
 
             outStream << "    str\t" + enum_name(std::get<CoreRegister>(source->getColor())) + ", [" +
                              enum_name(std::get<CoreRegister>(base->getBase()->getColor())) + ", " +
@@ -310,7 +310,7 @@ void addressingTemplate_stk(std::ostream &outStream, const std::shared_ptr<Instr
         auto idx = vldr->getSourceOP(2) ? vldr->getSourceOP(2)->as<BindOnVirOP>() : nullptr;
         auto asmOffset = base->getObj()->getOffset() + base->getConstOffset();
 
-        if (asmOffset <= 1020) {
+        if (asmOffset <= 1020 || idx) {
             outStream << "    vldr\t" << enum_name(std::get<FPURegister>(target->getColor())) << ", ";
             outStream << '[' << addressingTemplate(vldr->getSourceOP(1), vldr->getSourceOP(2), nullptr) << "]\n";
         } else {
@@ -318,9 +318,9 @@ void addressingTemplate_stk(std::ostream &outStream, const std::shared_ptr<Instr
             if (asmOffset > 0xffff)
                 outStream << "    movt\tfp, #" + std::to_string((asmOffset & 0xffff0000) >> 16) << '\n';
 
-            if (idx)
-                outStream << "    add\t" + enum_name(std::get<CoreRegister>(idx->getColor())) + ", " +
-                                 enum_name(std::get<CoreRegister>(idx->getColor())) + ", fp\n";
+            // if (idx)
+            //     outStream << "    add\t" + enum_name(std::get<CoreRegister>(idx->getColor())) + ", " +
+            //                      enum_name(std::get<CoreRegister>(idx->getColor())) + ", fp\n";
 
             outStream << "    vldr\t" + enum_name(std::get<FPURegister>(target->getColor())) + ", [" +
                              enum_name(std::get<CoreRegister>(base->getBase()->getColor())) + ", " +
@@ -335,7 +335,7 @@ void addressingTemplate_stk(std::ostream &outStream, const std::shared_ptr<Instr
         auto idx = vstr->getSourceOP(3) ? vstr->getSourceOP(3)->as<BindOnVirOP>() : nullptr;
         auto asmOffset = base->getObj()->getOffset() + base->getConstOffset();
 
-        if (asmOffset <= 1020) {
+        if (asmOffset <= 1020 || idx) {
             outStream << "    vstr\t" << enum_name(std::get<FPURegister>(source->getColor())) << ", ";
             outStream << '[' << addressingTemplate(vstr->getSourceOP(2), vstr->getSourceOP(3), nullptr) << "]\n";
         } else {
@@ -343,9 +343,9 @@ void addressingTemplate_stk(std::ostream &outStream, const std::shared_ptr<Instr
             if (asmOffset > 0xffff)
                 outStream << "    movt\tfp, #" + std::to_string((asmOffset & 0xffff0000) >> 16) << '\n';
 
-            if (idx)
-                outStream << "    add\t" + enum_name(std::get<CoreRegister>(idx->getColor())) + ", " +
-                                 enum_name(std::get<CoreRegister>(idx->getColor())) + ", fp\n";
+            // if (idx)
+            //     outStream << "    add\t" + enum_name(std::get<CoreRegister>(idx->getColor())) + ", " +
+            //                      enum_name(std::get<CoreRegister>(idx->getColor())) + ", fp\n";
 
             outStream << "    vstr\t" + enum_name(std::get<FPURegister>(source->getColor())) + ", [" +
                              enum_name(std::get<CoreRegister>(base->getBase()->getColor())) + ", " +

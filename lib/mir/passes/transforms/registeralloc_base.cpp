@@ -22,7 +22,8 @@ PM::PreservedAnalyses RAPass::run(Function &bkd_function, FAM &fam) {
     availableSRegisters = &(Func->editInfo().availableSRegisters);
     varpool = &(Func->editInfo().varpool);
 
-    colors.insert({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12});
+    // colors.insert({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12});
+    colors.insert({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}); // r12/ip, 尽量不使用, memset, putint等可能使用并且不会恢复
 
     if (Func->editInfo().hasCall) {
         ++K; // +lr, 在call处设置use
@@ -205,14 +206,14 @@ void RAPass::MkWorkList() {
 void RAPass::Simplify() {
     ///@note 理论上论文这里也是一种启发式算法: 从simplifyWorkList随便取出一个
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<std::size_t> dist(0, simplifyWorkList.size() - 1);
-    std::size_t randomIdx = dist(gen);
+    // std::random_device rd;
+    // std::mt19937 gen(rd());
+    // std::uniform_int_distribution<std::size_t> dist(0, simplifyWorkList.size() - 1);
+    // std::size_t randomIdx = dist(gen);
 
     auto it = simplifyWorkList.begin();
 
-    std::advance(it, randomIdx);
+    // std::advance(it, randomIdx);
 
     const auto n = *it;
 
@@ -263,14 +264,14 @@ void RAPass::EnableMoves(const Nodes &nodes) {
 
 void RAPass::Coalesce() {
     ///@note 依然是启发式地随便弄一个
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<std::size_t> dist(0, worklistMoves.size() - 1);
-    std::size_t randomIdx = dist(gen);
+    // std::random_device rd;
+    // std::mt19937 gen(rd());
+    // std::uniform_int_distribution<std::size_t> dist(0, worklistMoves.size() - 1);
+    // std::size_t randomIdx = dist(gen);
 
     auto it = worklistMoves.begin();
 
-    std::advance(it, randomIdx);
+    // std::advance(it, randomIdx);
     auto m = *it;
     worklistMoves.erase(m);
 
@@ -362,14 +363,14 @@ void RAPass::Combine(const OperP &u, const OperP &v) {
 
 void RAPass::Freeze() {
     ///@note 启发式随便找 x 3
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<std::size_t> dist(0, freezeWorkList.size() - 1);
-    std::size_t randomIdx = dist(gen);
+    // std::random_device rd;
+    // std::mt19937 gen(rd());
+    // std::uniform_int_distribution<std::size_t> dist(0, freezeWorkList.size() - 1);
+    // std::size_t randomIdx = dist(gen);
 
     auto it = freezeWorkList.begin();
 
-    std::advance(it, randomIdx);
+    // std::advance(it, randomIdx);
 
     auto u = *it;
 

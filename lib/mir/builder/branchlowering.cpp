@@ -215,7 +215,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::callLower(const std::share
         } else {
             /// @brief 指针类
             std::shared_ptr<BindOnVirOP> arg_in_reg;
-            std::shared_ptr<BaseADROP> ptr = std::dynamic_pointer_cast<BaseADROP>(operlower.fastFind(arg));
+            std::shared_ptr<BaseADROP> ptr = operlower.fastFind(arg)->as<BaseADROP>();
 
             ///@brief 解除耦合模式
             if (ptr->getTrait() == BaseAddressTrait::Local) {
@@ -226,18 +226,24 @@ std::list<std::shared_ptr<Instruction>> InstLowering::callLower(const std::share
                 auto unkwown = make<UnknownConstant>(stkptr->getObj());
 
                 auto add1 = make<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, relay0, base, unkwown,
-                                                nullptr); // 存放stk偏移展开的量
+                                                nullptr); // 存放stk偏移展开的量, base = $sp
 
                 insts.emplace_back(add1);
 
+                ///@todo
+
                 if (stkptr->getConstOffset() != 0) {
                     auto const_offset =
-                        std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind((int)ptr->getConstOffset()));
+                        std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(ptr->getConstOffset()));
+
+                    std::shared_ptr<Operand> source2 = const_offset;
+                    if (const_offset->getConst()->isEncoded())
+                        source2 = operlower.LoadedFind(ptr->getConstOffset(), blk);
 
                     auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
 
                     auto add2 =
-                        make<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, relay, base, const_offset, nullptr);
+                        make<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, relay, relay0, source2, nullptr);
 
                     insts.emplace_back(add2);
 
@@ -349,23 +355,37 @@ std::list<std::shared_ptr<Instruction>> InstLowering::callLower_memset(const std
     auto &param_ptr = params[0];
     auto ptr_arg = operlower.fastFind(param_ptr)->as<BaseADROP>();
     auto _r0 = operlower.getPreColored(CoreRegister::r0);
-    if (!ptr_arg->getConstOffset()) {
+    if (!ptr_arg->getConstOffset() && ptr_arg->getTrait() != BaseAddressTrait::Local) {
         auto mov = make<movInst>(SourceOperandType::r, _r0, ptr_arg);
         insts.emplace_back(mov);
     } else {
+        /// mov r0, %arg_0 展开
+
         auto base = ptr_arg->getBase();
         auto constant = (int)ptr_arg->getConstOffset();
         auto const_offset = operlower.fastFind(constant)->as<ConstantIDX>();
-        std::shared_ptr<MIR::binaryImmInst> add;
+        std::shared_ptr<binaryImmInst> add1 = nullptr;
+        std::shared_ptr<binaryImmInst> add2 = nullptr;
 
-        ///@brief 解除耦合模式
+        ///@brief stk 展开
+        if (auto stk = ptr_arg->as<StackADROP>()) {
+            auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+            auto unknown = make<UnknownConstant>(stk->getObj());
 
-        if (!const_offset->getConst()->isEncoded())
-            add = make<binaryImmInst>(OpCode::ADD, SourceOperandType::rr, _r0, base, const_offset, nullptr);
+            auto add1 = make<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, relay, base, unknown, nullptr);
+            insts.emplace_back(add1);
+
+            base = relay;
+        }
+
+        ///@brief 加偏移
+
+        if (!const_offset->getConst()->isEncoded()) // maybe const = 0
+            add2 = make<binaryImmInst>(OpCode::ADD, SourceOperandType::rr, _r0, base, const_offset, nullptr);
         else
-            add = make<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, _r0, base,
-                                      operlower.LoadedFind(constant, self), nullptr);
-        insts.emplace_back(add);
+            add2 = make<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, _r0, base,
+                                       operlower.LoadedFind(constant, self), nullptr);
+        insts.emplace_back(add2);
     }
 
     for (int i = 1; i < 3; ++i) {
