@@ -28,6 +28,10 @@ void Const2Reg::mkConst2Reg(const ConstObj &constobj, const BindOnP &constvir, B
     std::shared_ptr<movInst> mov;
     auto constobj_ptr = std::make_shared<ConstObj>(constobj);
 
+    if (constvir->getName() == "%662") {
+        int useless;
+    }
+
     if (constobj.isGlo())
         mov = std::make_shared<movInst>(SourceOperandType::a, constvir, std::make_shared<ConstantIDX>(constobj_ptr));
     else

@@ -18,7 +18,7 @@ public:
     // explicit LiveAnalysis(Function &_func) noexcept : func(&_func) {}
 
     void runOnFunc(Function *_func);
-    void runOnBlk(const BlkP &);
+    bool runOnBlk(const BlkP &);
     void runOnInst(const InstP &inst, std::unordered_set<OperP> &livein, std::unordered_set<OperP> &liveout);
 
     std::list<OperP> extractUse(const InstP &inst);

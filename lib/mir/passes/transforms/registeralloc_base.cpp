@@ -1,6 +1,5 @@
 #include "mir/passes/analysis/live_analysis.hpp"
 #include "mir/passes/transforms/registeralloc.hpp"
-#include "mir/passes/transforms/uselessMovEli.hpp"
 #include <algorithm>
 #include <numeric>
 #include <random>
@@ -97,10 +96,6 @@ void RAPass::AddEdge(const OperP &u, const OperP &v) {
     if (u != v && adjSet.find(edge) == adjSet.end()) {
         adjSet.insert(std::move(edge));
 
-        // if (u->getName() == "%47" && v->getName() == "%83" || v->getName() == "%47" && u->getName() == "%83") {
-        //     int useless;
-        // }
-
         if (precolored.find(u) == precolored.end()) { // not precolored
             adjList[u].insert(v);
             ++degree[u];
@@ -128,11 +123,9 @@ void RAPass::Build() {
                 for (const auto &n : getUnion<OperP>(def, use)) {
                     if (std::dynamic_pointer_cast<PreColedOP>(n)) {
                         precolored.insert(n);
-                        degree[n] = -1; // 可能多次赋值
+                        degree[n] = -1; // 此处可能多次赋值
                     } else if (auto addr = std::dynamic_pointer_cast<BaseADROP>(n)) {
-                        if (!std::dynamic_pointer_cast<PreColedOP>(addr->getBase())) {
-                            ///@warning 如果寻址范围大于4096字节, 可能需要再加一个pass
-                            ///@warning 或者更改指令选择
+                        if (n->getOperandTrait() != OperandTrait::PreColored) {
                             initial.insert(addr->getBase());
                         }
                     } else if (std::dynamic_pointer_cast<BindOnVirOP>(n))

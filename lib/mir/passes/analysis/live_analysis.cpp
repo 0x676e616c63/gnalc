@@ -26,10 +26,16 @@ std::list<OperP> LiveAnalysis::extractUse(const InstP &inst) {
 
 OperP LiveAnalysis::extractDef(const InstP &inst) {
     if (inst->getOpCode().index() != 0 ||
-        std::get<OpCode>(inst->getOpCode()) != OpCode::BL && std::get<OpCode>(inst->getOpCode()) != OpCode::BLX)
+        std::get<OpCode>(inst->getOpCode()) != OpCode::BL && std::get<OpCode>(inst->getOpCode()) != OpCode::BLX) {
+        auto target = inst->getTargetOP();
+
+        if (target && target->getOperandTrait() == OperandTrait::BaseAddress)
+            return target->as<BaseADROP>()->getBase();
+
+        return target;
+
+    } else { // function call
         // 30, 31
-        return inst->getTargetOP();
-    else { // function call
         auto &varpool = func->editInfo().getPool();
         auto call = std::dynamic_pointer_cast<branchInst>(inst);
 
@@ -63,7 +69,7 @@ void LiveAnalysis::runOnFunc(Function *_func) {
     ///@warning 我们必须假设第一个blk就是root
     const auto &blks = func->getBlocks();
 
-    std::vector<BlkP> dfsSeqPost;
+    std::vector<BlkP> postDfsSeq;
     std::set<BlkP> visited{*(blks.begin())};
     std::deque<std::pair<BlkP, bool>> s{{*(blks.begin()), false}};
 
@@ -72,7 +78,7 @@ void LiveAnalysis::runOnFunc(Function *_func) {
         s.pop_back();
 
         if (isProcessed)
-            dfsSeqPost.emplace_back(curr);
+            postDfsSeq.emplace_back(curr);
         else {
             s.emplace_back(curr, true);
             const auto &children = curr->getSuccs();
@@ -87,19 +93,20 @@ void LiveAnalysis::runOnFunc(Function *_func) {
     bool change = true;
     while (change) {
         change = false;
-        for (const auto &blk : dfsSeqPost) {
+        for (const auto &blk : postDfsSeq) {
             for (auto &succ : blk->getSuccs()) {
                 for (auto &livevar : liveinfo.liveIn[succ]) { // skip the end block
                     ///@brief liveout of a blk
                     change |= liveinfo.liveOut[blk].insert(livevar).second;
                 }
             }
-            runOnBlk(blk); // 从liveout计算livein
+            change |= runOnBlk(blk); // 从liveout计算livein
         }
     }
 }
 
-void LiveAnalysis::runOnBlk(const BlkP &blk) {
+bool LiveAnalysis::runOnBlk(const BlkP &blk) {
+
     std::map<InstP, std::unordered_set<OperP>> instLiveIn;  // tmp
     std::map<InstP, std::unordered_set<OperP>> instLiveOut; // tmp
 
@@ -115,7 +122,11 @@ void LiveAnalysis::runOnBlk(const BlkP &blk) {
     }
 
     ///@brief renew livein of a blk
+    if (liveinfo.liveIn[blk] == instLiveIn[*(blk->getInsts().begin())])
+        return false;
+
     liveinfo.liveIn[blk] = instLiveIn[*(blk->getInsts().begin())];
+    return true;
 }
 
 void LiveAnalysis::runOnInst(const InstP &inst, std::unordered_set<OperP> &livein, std::unordered_set<OperP> &liveout) {
@@ -155,11 +166,12 @@ void LiveAnalysis::runOnInst(const InstP &inst, std::unordered_set<OperP> &livei
         case OpCode::COPY:
         case OpCode::CMP:
         case OpCode::CMN:
-        case OpCode::BL:  // $r0 or $s0
-        case OpCode::BLX: // $r0 or $s0
             ///@todo 将use加到livein; 传递liveout; 记录interval range
             for (auto &use_op : use) {
-                livein.insert(use_op); // add
+                livein.insert(use_op);
+
+                if (auto base = use_op->as<BaseADROP>())
+                    livein.insert(base->getBase());
 
                 // interval range
                 if (liveinfo.intervalLengths.find(use_op) == liveinfo.intervalLengths.end())
@@ -169,14 +181,18 @@ void LiveAnalysis::runOnInst(const InstP &inst, std::unordered_set<OperP> &livei
             }
 
             for (auto &live_out : liveout) {
-                if (live_out == def)
+                if (live_out == def || (def && def->getOperandTrait() == OperandTrait::BaseAddress &&
+                                        live_out == def->as<BaseADROP>()->getBase()))
                     continue;
+
                 livein.insert(live_out); // pass livein
             }
             break;
         case OpCode::PHI:
             Err::unreachable("no phi-inst expected in this pass");
             break;
+        case OpCode::BL:
+        case OpCode::BLX:
         case OpCode::B:
         case OpCode::BX_RET:
         case OpCode::BX_SET_SWI:
@@ -209,6 +225,8 @@ void LiveAnalysis::runOnInst(const InstP &inst, std::unordered_set<OperP> &livei
             for (auto &use_op : use) {
                 livein.insert(use_op); // add
 
+                if (auto base = use_op->as<BaseADROP>())
+                    livein.insert(base->getBase());
                 // interval range
                 if (liveinfo.intervalLengths.find(use_op) == liveinfo.intervalLengths.end())
                     liveinfo.intervalLengths[use_op] = 1;

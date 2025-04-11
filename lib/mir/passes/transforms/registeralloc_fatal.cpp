@@ -30,14 +30,30 @@ RAPass::Nodes RAPass::getUse(const InstP &inst) {
     if (inst->getOpCode().index() == 1) {
         auto nopcode = std::get<NeonOpCode>(inst->getOpCode());
 
-        if (nopcode != NeonOpCode::VMOV)
-            return uses;
+        switch (nopcode) {
+        case NeonOpCode::VMOV: {
+            auto sourceop = inst->getSourceOP(1)->as<BindOnVirOP>();
 
-        auto sourceop = inst->getSourceOP(1)->as<BindOnVirOP>();
-
-        if (sourceop->getBank() == RegisterBank::gpr)
+            if (sourceop->getBank() == RegisterBank::gpr)
+                uses.insert(sourceop);
+        } break;
+        case NeonOpCode::VLDR: {
+            auto sourceop = inst->getSourceOP(1)->as<BaseADROP>()->getBase();
             uses.insert(sourceop);
 
+            if (auto idxReg = inst->getSourceOP(2))
+                uses.insert(idxReg);
+        } break;
+        case NeonOpCode::VSTR: {
+            auto sourceop = inst->getSourceOP(2)->as<BaseADROP>()->getBase();
+            uses.insert(sourceop);
+
+            if (auto idxReg = inst->getSourceOP(3))
+                uses.insert(sourceop);
+        } break;
+        default:
+            break;
+        }
         return uses;
     }
 
@@ -89,10 +105,9 @@ RAPass::Nodes RAPass::getDef(const InstP &inst) {
     if (!op)
         return defs;
 
-    if (auto ptr = std::dynamic_pointer_cast<BaseADROP>(op)) {
+    if (auto ptr = op->as<BaseADROP>()) {
         defs.insert(ptr->getBase()); // maybe itself
-    } else if (std::dynamic_pointer_cast<BindOnVirOP>(op) &&
-               std::dynamic_pointer_cast<BindOnVirOP>(op)->getBank() == RegisterBank::gpr)
+    } else if (op->as<BindOnVirOP>() && op->as<BindOnVirOP>()->getBank() == RegisterBank::gpr)
         defs.insert(op);
 
     return defs;
@@ -153,6 +168,11 @@ RAPass::Nodes RAPass::spill_opt(const OperP &op) {
 
     for (const auto &blk : Func->getBlocks()) {
         auto &insts = blk->getInsts();
+
+        if (blk->getName() == "%50" && op->getName() == "%662") {
+            int useless;
+        }
+
         for (auto inst_it = insts.begin(); inst_it != insts.end();) {
             bool insert_before = false;
             bool insert_after = false;
@@ -165,7 +185,16 @@ RAPass::Nodes RAPass::spill_opt(const OperP &op) {
 
                 Err::gassert(base != nullptr, "base register is NULL");
 
-                if (base->getBase() == op) { // 需要setBase()
+                if (base == op) {
+                    ///@warning
+                    insert_before = true;
+                    auto read_stage = varpool->addPtr_anonymously(); // getBase = self
+                    ldr->setSourceOP(1, read_stage);
+                    stageValues.insert(read_stage);
+                    auto vmov_new = std::make_shared<Vmov>(SourceOperandType::rr, read_stage, fpuRegister, type_pair);
+
+                    insts.insert(inst_it, vmov_new);
+                } else if (base->getBase() == op) { // 需要setBase()
                     insert_before = true;
 
                     auto read_stage = varpool->addValue_anonymously(false);
@@ -205,7 +234,16 @@ RAPass::Nodes RAPass::spill_opt(const OperP &op) {
 
                 Err::gassert(base != nullptr, "base register is NULL");
 
-                if (use == op) {
+                if (base == op) {
+                    ///@warning
+                    insert_before = true;
+                    auto read_stage = varpool->addPtr_anonymously(); // getBase = self
+                    str->setSourceOP(2, read_stage);
+                    stageValues.insert(read_stage);
+                    auto vmov_new = std::make_shared<Vmov>(SourceOperandType::rr, read_stage, fpuRegister, type_pair);
+
+                    insts.insert(inst_it, vmov_new);
+                } else if (use == op) {
                     insert_before = true;
 
                     auto read_stage = varpool->addValue_anonymously(false);
@@ -244,7 +282,16 @@ RAPass::Nodes RAPass::spill_opt(const OperP &op) {
 
                 Err::gassert(base != nullptr, "base register is NULL");
 
-                if (base->getBase() == op) { // 需要setBase()
+                if (base == op) {
+                    ///@warning
+                    insert_before = true;
+                    auto read_stage = varpool->addPtr_anonymously(); // getBase = self
+                    vldr->setSourceOP(1, read_stage);
+                    stageValues.insert(read_stage);
+                    auto vmov_new = std::make_shared<Vmov>(SourceOperandType::rr, read_stage, fpuRegister, type_pair);
+
+                    insts.insert(inst_it, vmov_new);
+                } else if (base->getBase() == op) { // 需要setBase()
                     insert_before = true;
 
                     auto read_stage = varpool->addValue_anonymously(false);
@@ -271,7 +318,16 @@ RAPass::Nodes RAPass::spill_opt(const OperP &op) {
 
                 Err::gassert(base != nullptr, "base register is NULL");
 
-                if (base->getBase() == op) { // 需要setBase()
+                if (base == op) {
+                    ///@warning
+                    insert_before = true;
+                    auto read_stage = varpool->addPtr_anonymously(); // getBase = self
+                    vstr->setSourceOP(2, read_stage);
+                    stageValues.insert(read_stage);
+                    auto vmov_new = std::make_shared<Vmov>(SourceOperandType::rr, read_stage, fpuRegister, type_pair);
+
+                    insts.insert(inst_it, vmov_new);
+                } else if (base->getBase() == op) { // 需要setBase()
                     insert_before = true;
 
                     auto read_stage = varpool->addValue_anonymously(false);
@@ -360,7 +416,15 @@ RAPass::Nodes RAPass::spill_classic(const OperP &op) {
 
                 Err::gassert(base != nullptr, "base register is NULL");
 
-                if (base->getBase() == op) { // 需要setBase()
+                if (base == op) {
+                    ///@warning
+                    auto read_stage = varpool->addPtr_anonymously(); // getBase = self
+                    ldr->setSourceOP(1, read_stage);
+                    stageValues.insert(read_stage);
+                    auto ldr_new = std::make_shared<ldrInst>(SourceOperandType::rsi, 4, read_stage, stackaddr);
+
+                    insts.insert(inst_it, ldr_new);
+                } else if (base->getBase() == op) {
                     // insert_before = true;
 
                     auto read_stage = varpool->addValue_anonymously(false);
@@ -401,7 +465,15 @@ RAPass::Nodes RAPass::spill_classic(const OperP &op) {
 
                 Err::gassert(base != nullptr, "base register is NULL");
 
-                if (use == op) {
+                if (base == op) {
+                    ///@warning
+                    auto read_stage = varpool->addPtr_anonymously(); // getBase = self
+                    str->setSourceOP(2, read_stage);
+                    stageValues.insert(read_stage);
+                    auto ldr_new = std::make_shared<ldrInst>(SourceOperandType::rsi, 4, read_stage, stackaddr);
+
+                    insts.insert(inst_it, ldr_new);
+                } else if (use == op) {
                     // insert_before = true;
 
                     auto read_stage = varpool->addValue_anonymously(false);
@@ -441,7 +513,15 @@ RAPass::Nodes RAPass::spill_classic(const OperP &op) {
 
                 Err::gassert(base != nullptr, "base register is NULL");
 
-                if (base->getBase() == op) { // 需要setBase()
+                if (base == op) {
+                    ///@warning
+                    auto read_stage = varpool->addPtr_anonymously(); // getBase = self
+                    vldr->setSourceOP(1, read_stage);
+                    stageValues.insert(read_stage);
+                    auto ldr_new = std::make_shared<ldrInst>(SourceOperandType::rsi, 4, read_stage, stackaddr);
+
+                    insts.insert(inst_it, ldr_new);
+                } else if (base->getBase() == op) { // 需要setBase()
                     // insert_before = true;
 
                     auto read_stage = varpool->addValue_anonymously(false);
@@ -469,7 +549,15 @@ RAPass::Nodes RAPass::spill_classic(const OperP &op) {
 
                 Err::gassert(base != nullptr, "base register is NULL");
 
-                if (base->getBase() == op) { // 需要setBase()
+                if (base == op) {
+                    ///@warning
+                    auto read_stage = varpool->addPtr_anonymously(); // getBase = self
+                    vstr->setSourceOP(2, read_stage);
+                    stageValues.insert(read_stage);
+                    auto ldr_new = std::make_shared<ldrInst>(SourceOperandType::rsi, 4, read_stage, stackaddr);
+
+                    insts.insert(inst_it, ldr_new);
+                } else if (base->getBase() == op) { // 需要setBase()
                     // insert_before = true;
 
                     auto read_stage = varpool->addValue_anonymously(false);

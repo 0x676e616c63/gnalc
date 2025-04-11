@@ -1,8 +1,8 @@
 #pragma once
 #ifndef GNALC_MIR_VARPOOL_HPP
 #define GNALC_MIR_VARPOOL_HPP
-#include "ir/base.hpp"
 #include "basicblock.hpp"
+#include "ir/base.hpp"
 #include "operand.hpp"
 #include <unordered_map>
 
@@ -83,6 +83,7 @@ public:
 
     std::shared_ptr<BindOnVirOP> addValue_anonymously(bool isFloat); // 用于添加一个新的BindOnVirOP
 
+    std::shared_ptr<BaseADROP> addPtr_anonymously();
     std::shared_ptr<StackADROP>
     addStackValue_anonymously(const std::shared_ptr<FrameObj> &); // 用于获得一个空的栈空间(4bytes)
                                                                   // 寄存器分配用

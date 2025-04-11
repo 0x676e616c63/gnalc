@@ -115,6 +115,19 @@ std::shared_ptr<BindOnVirOP> VarPool::addValue_anonymously(bool isFloat) {
     return Value;
 }
 
+std::shared_ptr<BaseADROP> VarPool::addPtr_anonymously() {
+    std::string name = '%' + std::to_string(countbase + pool.size() + 1);
+
+    auto val = std::make_shared<IR::Value>(name, IR::makeBType(IR::IRBTYPE::I32), IR::ValueTrait::ORDINARY_VARIABLE);
+
+    auto Value = make<BaseADROP>(BaseAddressTrait::Runtime, name, 0, nullptr);
+    Value->setBase(Value);
+
+    addValue(*val, Value);
+
+    return Value;
+}
+
 std::shared_ptr<StackADROP> VarPool::addStackValue_anonymously(const std::shared_ptr<FrameObj> &obj) {
     std::string name = '%' + std::to_string(countbase + pool.size() + 1);
 
