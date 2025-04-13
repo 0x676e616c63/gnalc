@@ -25,8 +25,9 @@ std::list<OperP> LiveAnalysis::extractUse(const InstP &inst) {
 }
 
 OperP LiveAnalysis::extractDef(const InstP &inst) {
-    if (inst->getOpCode().index() != 0 ||
+    if (inst->getOpCode().index() == 1 ||
         std::get<OpCode>(inst->getOpCode()) != OpCode::BL && std::get<OpCode>(inst->getOpCode()) != OpCode::BLX) {
+
         auto target = inst->getTargetOP();
 
         if (target && target->getOperandTrait() == OperandTrait::BaseAddress)

@@ -12,7 +12,7 @@ using namespace MIR;
 void ARMPrinter::printout(const Module &module) {
     ///@brief compile info
 
-    const std::string compile_template = ".arch armv7ve\n.fpu vfpv3 -d16\n\n";
+    const std::string compile_template = ".arch armv7ve\n.fpu neon-vfpv4\n\n";
     outStream << compile_template;
 
     ///@brief bss section(actually no bss variable along in sysy)
@@ -310,22 +310,31 @@ void addressingTemplate_stk(std::ostream &outStream, const std::shared_ptr<Instr
         auto idx = vldr->getSourceOP(2) ? vldr->getSourceOP(2)->as<BindOnVirOP>() : nullptr;
         auto asmOffset = base->getObj()->getOffset() + base->getConstOffset();
 
-        if (asmOffset <= 1020 || idx) {
+        if (asmOffset <= 1020) {
             outStream << "    vldr\t" << enum_name(std::get<FPURegister>(target->getColor())) << ", ";
             outStream << '[' << addressingTemplate(vldr->getSourceOP(1), vldr->getSourceOP(2), nullptr) << "]\n";
+            ///@note vldr->getSourceOP(2) should be nullptr
         } else {
-            outStream << "    movw\tfp, #" + std::to_string(asmOffset & 0xffff) << '\n';
-            if (asmOffset > 0xffff)
-                outStream << "    movt\tfp, #" + std::to_string((asmOffset & 0xffff0000) >> 16) << '\n';
+            // outStream << "    movw\tfp, #" + std::to_string(asmOffset & 0xffff) << '\n';
+            // if (asmOffset > 0xffff)
+            //     outStream << "    movt\tfp, #" + std::to_string((asmOffset & 0xffff0000) >> 16) << '\n';
+            if (isImmCanBeEncodedInText((unsigned)asmOffset))
+                outStream << "    add\t, fp, sp, #" + std::to_string(asmOffset) + '\n';
+            else {
+                outStream << "    movw\tfp, #" + std::to_string(asmOffset & 0xffff) << '\n';
+                if (asmOffset > 0xffff)
+                    outStream << "    movt\tfp, #" + std::to_string((asmOffset & 0xffff0000) >> 16) << '\n';
+                outStream << "    add\t fp, sp, fp\n";
+            }
 
             // if (idx)
             //     outStream << "    add\t" + enum_name(std::get<CoreRegister>(idx->getColor())) + ", " +
             //                      enum_name(std::get<CoreRegister>(idx->getColor())) + ", fp\n";
 
-            outStream << "    vldr\t" + enum_name(std::get<FPURegister>(target->getColor())) + ", [" +
-                             enum_name(std::get<CoreRegister>(base->getBase()->getColor())) + ", " +
-                             (idx ? enum_name(std::get<CoreRegister>(idx->getColor())) : "fp")
-                      << "]\n";
+            if (idx)
+                outStream << "    add\tfp, fp, " + enum_name(std::get<CoreRegister>(idx->getColor())) + '\n';
+
+            outStream << "    vldr\t" + enum_name(std::get<FPURegister>(target->getColor())) + ", [fp]\n";
         }
     } else if (auto vstr = std::dynamic_pointer_cast<Vstr>(inst)) {
         auto source = vstr->getSourceOP(1)->as<BindOnVirOP>();
@@ -335,22 +344,31 @@ void addressingTemplate_stk(std::ostream &outStream, const std::shared_ptr<Instr
         auto idx = vstr->getSourceOP(3) ? vstr->getSourceOP(3)->as<BindOnVirOP>() : nullptr;
         auto asmOffset = base->getObj()->getOffset() + base->getConstOffset();
 
-        if (asmOffset <= 1020 || idx) {
+        if (asmOffset <= 1020) {
             outStream << "    vstr\t" << enum_name(std::get<FPURegister>(source->getColor())) << ", ";
             outStream << '[' << addressingTemplate(vstr->getSourceOP(2), vstr->getSourceOP(3), nullptr) << "]\n";
         } else {
-            outStream << "    movw\tfp, #" + std::to_string(asmOffset & 0xffff) << '\n';
-            if (asmOffset > 0xffff)
-                outStream << "    movt\tfp, #" + std::to_string((asmOffset & 0xffff0000) >> 16) << '\n';
+            // outStream << "    movw\tfp, #" + std::to_string(asmOffset & 0xffff) << '\n';
+            // if (asmOffset > 0xffff)
+            //     outStream << "    movt\tfp, #" + std::to_string((asmOffset & 0xffff0000) >> 16) << '\n';
+
+            if (isImmCanBeEncodedInText((unsigned)asmOffset))
+                outStream << "    add\t, fp, sp, #" + std::to_string(asmOffset) + '\n';
+            else {
+                outStream << "    movw\tfp, #" + std::to_string(asmOffset & 0xffff) << '\n';
+                if (asmOffset > 0xffff)
+                    outStream << "    movt\tfp, #" + std::to_string((asmOffset & 0xffff0000) >> 16) << '\n';
+                outStream << "    add\t fp, sp, fp\n";
+            }
 
             // if (idx)
             //     outStream << "    add\t" + enum_name(std::get<CoreRegister>(idx->getColor())) + ", " +
             //                      enum_name(std::get<CoreRegister>(idx->getColor())) + ", fp\n";
 
-            outStream << "    vstr\t" + enum_name(std::get<FPURegister>(source->getColor())) + ", [" +
-                             enum_name(std::get<CoreRegister>(base->getBase()->getColor())) + ", " +
-                             (idx ? enum_name(std::get<CoreRegister>(idx->getColor())) : "fp")
-                      << "]\n";
+            if (idx)
+                outStream << "    add\tfp, fp, " + enum_name(std::get<CoreRegister>(idx->getColor())) + '\n';
+
+            outStream << "    vstr\t" + enum_name(std::get<FPURegister>(source->getColor())) + ", [fp]\n";
         }
     }
 }

@@ -32,7 +32,7 @@ RAPass::Nodes RAPass::getUse(const InstP &inst) {
 
         switch (nopcode) {
         case NeonOpCode::VMOV: {
-            auto sourceop = inst->getSourceOP(1)->as<BindOnVirOP>();
+            auto sourceop = inst->getSourceOP(1)->as<BindOnVirOP>(); // vmov 一般不接受常量
 
             if (sourceop->getBank() == RegisterBank::gpr)
                 uses.insert(sourceop);
@@ -54,6 +54,7 @@ RAPass::Nodes RAPass::getUse(const InstP &inst) {
         default:
             break;
         }
+
         return uses;
     }
 
@@ -103,7 +104,7 @@ RAPass::Nodes RAPass::getDef(const InstP &inst) {
     }
 
     if (!op)
-        return defs;
+        return defs; // empty
 
     if (auto ptr = op->as<BaseADROP>()) {
         defs.insert(ptr->getBase()); // maybe itself
@@ -624,7 +625,7 @@ bool NeonRAPass::isMoveInstruction(const InstP &inst) {
     /// vmov sx, sy
 
     auto use = std::dynamic_pointer_cast<BindOnVirOP>(inst->getSourceOP(1));
-    auto def = std::dynamic_pointer_cast<BindOnVirOP>(inst->getTargetOP());
+    auto def = inst->getTargetOP();
 
     if (use == nullptr)
         return false;
@@ -679,7 +680,7 @@ NeonRAPass::Nodes NeonRAPass::getDef(const InstP &inst) {
 
     if (target->getBank() == RegisterBank::spr)
         ///@todo dpr, qpr
-        defs.insert(inst->getTargetOP());
+        defs.insert(target);
 
     return defs;
 }

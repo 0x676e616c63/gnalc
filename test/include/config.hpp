@@ -43,7 +43,7 @@ const std::string sylibc = "../../test/sylib/sylib.c";
 const std::string test_data = "../../test/contest";
 // const std::vector subdirs = {"functional",    "performance",       "h_functional",
 //                              "h_performance", "final/performance", "final/h_performance"};
-const std::vector subdirs = {"functional"};
+const std::vector subdirs = {"functional", "performance"};
 const std::vector benchmark_subdirs = {"performance", "h_performance", "final/performance", "final/h_performance"};
 } // namespace Test::cfg
 

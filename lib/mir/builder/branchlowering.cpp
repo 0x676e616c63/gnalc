@@ -207,6 +207,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::callLower(const std::share
                     auto pair = std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32);
                     auto arg_in_reg = operlower.fastFind(arg);
                     auto vmov = std::make_shared<Vmov>(SourceOperandType::r, reg, arg_in_reg, pair);
+                    insts.emplace_back(vmov);
                 }
 
                 ++fcnt;

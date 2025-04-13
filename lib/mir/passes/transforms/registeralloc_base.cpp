@@ -20,6 +20,7 @@ PM::PreservedAnalyses RAPass::run(Function &bkd_function, FAM &fam) {
     Func = &bkd_function;
     availableSRegisters = &(Func->editInfo().availableSRegisters);
     varpool = &(Func->editInfo().varpool);
+    initial.clear();
 
     // colors.insert({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12});
     colors.insert({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}); // r12/ip, 尽量不使用, memset, putint等可能使用并且不会恢复
@@ -112,8 +113,6 @@ void RAPass::Build() {
     ///@note MkInitial
     if (!isInitialed) {
 
-        ///@note 在原算法基础上, 顺便填写initial 和 precolored
-        ///@note 只有第一次才这么做
         for (const auto &blk : Func->getBlocks()) {
             for (const auto &inst : blk->getInsts()) {
 
@@ -121,16 +120,15 @@ void RAPass::Build() {
                 const auto &def = getDef(inst);
 
                 for (const auto &n : getUnion<OperP>(def, use)) {
-                    if (std::dynamic_pointer_cast<PreColedOP>(n)) {
+                    if (auto pre = std::dynamic_pointer_cast<PreColedOP>(n)) {
                         precolored.insert(n);
                         degree[n] = -1; // 此处可能多次赋值
                     } else if (auto addr = std::dynamic_pointer_cast<BaseADROP>(n)) {
-                        if (n->getOperandTrait() != OperandTrait::PreColored) {
+                        if (n->getOperandTrait() != OperandTrait::PreColored) // not sp or address in arg
                             initial.insert(addr->getBase());
-                        }
-                    } else if (std::dynamic_pointer_cast<BindOnVirOP>(n))
+                    } else if (auto reg = std::dynamic_pointer_cast<BindOnVirOP>(n)) {
                         initial.insert(n);
-                    else
+                    } else
                         Err::unreachable("trying to alloc register for a constant");
                 }
             }
@@ -411,6 +409,11 @@ void RAPass::AssignColors() {
     while (!selectStack.empty()) {
         auto n = selectStack.back();
         selectStack.pop_back();
+
+        // Err::gassert(n->as<BindOnVirOP>() != nullptr && n->as<BindOnVirOP>()->getBank() == RegisterBank::gpr &&
+        //                  n->as<BindOnVirOP>()->getColor().index() != 1,
+        //              "try assign color to a fpu reg in normal ra :" + n->toString());
+
         std::vector<unsigned int> okColors(colors.begin(), colors.end());
 
         for (const auto &w : adjList[n]) {
@@ -436,7 +439,9 @@ void RAPass::AssignColors() {
             addBySet(spilledNodes, Nodes{n});
         } else if (auto precolored = std::dynamic_pointer_cast<PreColedOP>(n)) {
             /// Iterated Register Coalescing会将预着色寄存器一起放入图中, 所以这里不再处理
-            Func->editInfo().regdit.insert(static_cast<unsigned int>(std::get<CoreRegister>(precolored->getColor())));
+            if (precolored->getColor().index() == 0)
+                Func->editInfo().regdit.insert(
+                    static_cast<unsigned int>(std::get<CoreRegister>(precolored->getColor())));
         } else {
             addBySet(coloredNodes, Nodes{n});
             auto c = *(okColors.begin()); // 多用caller saved
@@ -554,6 +559,10 @@ void NeonRAPass::AssignColors() {
     while (!selectStack.empty()) {
         auto n = selectStack.back();
         selectStack.pop_back();
+
+        // Err::gassert(n->as<BindOnVirOP>() != nullptr && n->as<BindOnVirOP>()->getBank() == RegisterBank::spr,
+        //              "try assign a core reg in NeonRa: " + n->toString());
+
         std::vector<unsigned int> okColors(K);
 
         std::iota(okColors.begin(), okColors.end(), 0);

@@ -333,7 +333,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower_v(const std::s
         insts.emplace_back(vmul);
     } break;
     case IR::OP::FDIV: {
-        auto vdiv = make<Vbinary>(MIR::NeonOpCode::VMUL, target, oper1, oper2, datapair);
+        auto vdiv = make<Vbinary>(MIR::NeonOpCode::VDIV, target, oper1, oper2, datapair);
         insts.emplace_back(vdiv);
     } break;
     case IR::OP::FNEG: {

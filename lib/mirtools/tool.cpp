@@ -58,8 +58,6 @@ int ceilEncoded(int imme) {
         unsigned ld = clz_wrapper(imme);
         unsigned tl = ctz_wrapper(imme);
 
-        Logger::logDebug("ceil to a neg number detected: " + std::to_string(original));
-
         Err::gassert(ld, "ceil to a neg number detected: " + std::to_string(original));
 
         ///@note ld 不会大于31, 在0时tl最大为32

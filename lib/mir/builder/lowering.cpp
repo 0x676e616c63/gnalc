@@ -76,17 +76,19 @@ std::shared_ptr<Function> Lowering::lower(const IR::Function &midEnd_function) {
             }
             ++cnt;
         } else if (std::dynamic_pointer_cast<IR::BType>(arg_type)->getInner() == IR::IRBTYPE::FLOAT) {
-            if (fcnt < 32) {
-                auto arg_in_freg = operlower.getPreColored(static_cast<FPURegister>(cnt));
+            if (fcnt < 16) {
+                ///@note 由于sylib中函数参数比较简单, 所以这里有关浮点数的调用规约就简单处理, 并不严格按照AAPCS规则
+
+                auto arg_in_freg = operlower.getPreColored(static_cast<FPURegister>(fcnt));
                 auto val = operlower.mkOP(*arg, RegisterBank::spr);
                 auto copy = std::make_shared<COPY>(val, arg_in_freg);
                 arg_insts.emplace_back(copy);
             } else {
-                Err::unreachable("functionLower: too many float args for functioon");
+                Err::unreachable("functionLower: too many float args for function(more than 16)");
             }
             ++fcnt;
         } else {
-            Err::unreachable("functionLower: unknown arg type encountered!");
+            Err::unreachable("functionLower: unknown arg type!");
         }
     }
 

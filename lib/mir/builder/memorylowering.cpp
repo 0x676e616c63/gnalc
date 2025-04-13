@@ -185,7 +185,9 @@ std::list<std::shared_ptr<Instruction>> InstLowering::gepLower(const std::shared
             insts.emplace_back(add1);
         }
 
-        // if (baseOP->getTrait() == BaseAddressTrait::Local) {
+        // ///@brief 基址为sp, 需要展开
+        // if (baseOP->getTrait() == BaseAddressTrait::Local &&
+        //     baseOP->getBase() == operlower.getPreColored(CoreRegister::sp)) {
         //     auto stkop = baseOP->as<StackADROP>();
         //     auto unknonw = make<UnknownConstant>(stkop->getObj());
         //     auto add2 = make<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, target, target, unknonw, nullptr);
