@@ -38,7 +38,7 @@ inline std::string make_pathname(const std::string &raw) {
     return ret;
 }
 
-inline TestResult run_test(const TestData &data, size_t times = 1, bool only_run_frontend = cfg::only_frontend) {
+inline TestResult run_test(const TestData &data, bool only_run_frontend, size_t times = 1) {
     Err::gassert(times != 0);
     auto testcase_in = data.sy.path().parent_path().string() + "/" + data.sy.path().stem().string() + ".in";
     auto out_file_id = format("{}_{}", data.sy.path().stem().string(), make_pathname(data.mode_id));
@@ -83,7 +83,7 @@ inline TestResult run_test(const TestData &data, size_t times = 1, bool only_run
     exec_command += R"(;/bin/echo -e "\n"$? >> )" + output;
 
     println("");
-    println("|  Running '{}' {} command: '{}'", data.mode_id, cfg::only_frontend ? "irgen" : "asmgen",
+    println("|  Running '{}' {} command: '{}'", data.mode_id, only_run_frontend ? "irgen" : "asmgen",
             ir_asm_gen_command);
     std::system(ir_asm_gen_command.c_str());
     println("|  Running '{}' link command: '{}'", data.mode_id, link_command);
@@ -102,7 +102,7 @@ inline TestResult run_test(const TestData &data, size_t times = 1, bool only_run
     return {out_source, syout, time_elapsed};
 }
 
-inline std::string prepare_sylib(const std::string &global_tmp_dir, bool only_run_frontend = cfg::only_frontend) {
+inline std::string prepare_sylib(const std::string &global_tmp_dir, bool only_run_frontend) {
     std::string sylib_to_link;
     if (only_run_frontend) {
         sylib_to_link = global_tmp_dir + "/sylib.ll";

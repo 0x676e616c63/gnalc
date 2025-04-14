@@ -7,10 +7,6 @@
 #include <string>
 
 namespace Test::cfg {
-// Commandline args
-inline bool stop_on_error = true;
-inline bool only_frontend = true;
-
 // See `docs/gnalc-test.md` to get prepared.
 
 //

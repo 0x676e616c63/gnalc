@@ -263,13 +263,14 @@ int main(int argc, char *argv[]) {
     std::string resume_pattern;
     RunSet run;
     SkipSet skip;
-
+    bool stop_on_error = true;
+    bool only_frontend = true;
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
         if (arg == "--all" || arg == "-a")
-            cfg::stop_on_error = false;
+            stop_on_error = false;
         else if (arg == "--backend" || arg == "-b")
-            cfg::only_frontend = false;
+            only_frontend = false;
         else if (arg == "--skip" || arg == "-s") {
             if (!run.empty()) {
                 println("Error: '--run' conflicts with '--skip'.");
@@ -322,7 +323,7 @@ int main(int argc, char *argv[]) {
 
     create_directories(cfg::global_benchmark_temp_dir);
 
-    std::string sylib_to_link = prepare_sylib(cfg::global_benchmark_temp_dir); // .ll or .a
+    std::string sylib_to_link = prepare_sylib(cfg::global_benchmark_temp_dir, only_frontend); // .ll or .a
 
     for (auto &&curr_test_dir : cfg::benchmark_subdirs) {
         auto test_files = gather_test_files(curr_test_dir, run, skip);
@@ -350,8 +351,8 @@ int main(int argc, char *argv[]) {
             auto data1 = get_mode1_data(sy, sylib_to_link, curr_temp_dir);
             auto data2 = get_mode2_data(sy, sylib_to_link, curr_temp_dir);
 
-            auto res1 = run_test(data1, 3);
-            auto res2 = run_test(data2, 3);
+            auto res1 = run_test(data1, only_frontend, 3);
+            auto res2 = run_test(data2, only_frontend, 3);
 
             bool success_1 = res1.output == expected_syout;
             bool success_2 = res2.output == expected_syout;
@@ -379,7 +380,7 @@ int main(int argc, char *argv[]) {
                 ++passed;
             } else {
                 println("----------");
-                if (cfg::stop_on_error)
+                if (stop_on_error)
                     goto finish;
             }
         }
