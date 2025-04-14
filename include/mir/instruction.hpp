@@ -1,15 +1,16 @@
 #pragma once
 #ifndef GNALC_MIR_INSTRUCTION_HPP
 #define GNALC_MIR_INSTRUCTION_HPP
-#include "base.hpp"
+
 #include "operand.hpp"
+
 #include <memory>
 
 namespace MIR {
 
 enum class OpCode {
     MOV, // 最后codgen的时候再替换movw/movt
-    // MVN,
+    MVN,
 
     STR, // strd(需要8字节对齐), str, strh, strb
     LDR, // ldrd(同上), ldr, ldrh, ldrb
@@ -23,7 +24,7 @@ enum class OpCode {
     AND,
     EOR,
     ORN,
-    BIC,
+    BIC, // 低位清零
     ASR,
     LSL,
     LSR,
@@ -55,6 +56,10 @@ enum class OpCode {
     TST,
     TEQ,
 
+    PUSH,
+    POP,
+    VPUSH,
+    VPOP,
     COPY,
     PHI,
     RET, // 具体ret方法将视情况而定
@@ -129,23 +134,23 @@ protected:
 
 public:
     Instruction() = delete;
-    Instruction(OpCode _opcode, SourceOperandType _tptrait) : opcode(_opcode), tptrait(_tptrait) {}
-    Instruction(NeonOpCode _opcode, SourceOperandType _tptrait) : opcode(_opcode), tptrait(_tptrait) {}
+    Instruction(OpCode _opcode, SourceOperandType _tptrait);
+    Instruction(NeonOpCode _opcode, SourceOperandType _tptrait);
 
-    std::variant<OpCode, NeonOpCode> getOpCode() { return opcode; }
+    std::variant<OpCode, NeonOpCode> getOpCode() const;
 
-    void addTargetOP(std::shared_ptr<BindOnVirOP> TargetOperand_) { TargetOperand = std::move(TargetOperand_); }
-
-    const std::shared_ptr<BindOnVirOP> &getTargetOP() { return TargetOperand; };
+    void addTargetOP(std::shared_ptr<BindOnVirOP> TargetOperand_);
+    const std::shared_ptr<BindOnVirOP> &getTargetOP() const;
 
     /// @note from 1
     virtual std::shared_ptr<Operand> getSourceOP(unsigned int seq) = 0;
     virtual void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) = 0;
 
-    CondCodeFlag getCondCodeFlag() { return condition; }
-    void setCondCodeFlag(CondCodeFlag newFlag) { condition = newFlag; }
+    CondCodeFlag getCondCodeFlag() const;
+    void setCondCodeFlag(CondCodeFlag newFlag);
 
-    void setFlash() { flashFlag = true; }
+    void setFlash();
+    bool isSetFlash() const;
 
     virtual std::string toString();
     virtual ~Instruction() = default;
@@ -168,11 +173,12 @@ protected:
 private:
 public:
     NeonInstruction() = delete;
-    NeonInstruction(NeonOpCode _opcode, SourceOperandType _type, const std::pair<bitType, bitType> &_dataTypes)
-        : Instruction(_opcode, _type), dataTypes(_dataTypes) {}
+    NeonInstruction(NeonOpCode _opcode, SourceOperandType _type, const std::pair<bitType, bitType> &_dataTypes);
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override = 0;
     void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override = 0;
+
+    std::pair<bitType, bitType> getDataTypes() const;
 
     std::string toString() override;
     ~NeonInstruction() override = default;

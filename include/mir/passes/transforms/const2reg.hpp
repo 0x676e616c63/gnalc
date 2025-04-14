@@ -1,10 +1,10 @@
 #pragma once
-#ifndef GNALC_MIRTOOLS_CONST2REG_HPP
-#define GNALC_MIRTOOLS_CONST2REG_HPP
-#include "../../../../include/config/config.hpp"
-#include "../../module.hpp"
-#include "../analysis/domtree_analysis.hpp"
-#include "../pass_manager.hpp"
+#ifndef GNALC_MIR_PASSES_TRANSFROMS_CONST2REG_HPP
+#define GNALC_MIR_PASSES_TRANSFROMS_CONST2REG_HPP
+
+#include "mir/module.hpp"
+#include "mir/passes/analysis/domtree_analysis.hpp"
+#include "mir/passes/pass_manager.hpp"
 
 ///@note 这是一个专门用于加载int/float/dataSectionAddress(统称为const)的自创backend pass
 ///@note 暂且命名为const2reg

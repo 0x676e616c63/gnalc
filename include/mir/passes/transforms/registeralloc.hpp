@@ -1,12 +1,10 @@
 #pragma once
-#ifndef GNALC_MIRTOOLS_REGISTERALLOC_HPP
-#define GNALC_MIRTOOLS_REGISTERALLOC_HPP
-#include "../../../../include/config/config.hpp"
-#include "../../module.hpp"
-#include "../analysis/live_analysis.hpp"
-#include "../pass_manager.hpp"
+#ifndef GNALC_MIR_PASSES_TRANSFORMS_REGISTERALLOC_HPP
+#define GNALC_MIR_PASSES_TRANSFORMS_REGISTERALLOC_HPP
+#include "config/config.hpp"
+#include "mir/module.hpp"
+#include "mir/passes/pass_manager.hpp"
 #include <optional>
-#include <stdarg.h>
 
 namespace MIR {
 
@@ -20,25 +18,19 @@ public:
     struct Edge {
         OperP u, v;
 
-        bool operator==(const Edge &another) const {
-            return (another.u == u && another.v == v) || (another.u == v && another.v == u);
-        }
+        bool operator==(const Edge &another) const;
     };
 
     struct EdgeHash {
-        std::size_t operator()(const Edge &_edge) const {
-            return std::hash<std::size_t>()((size_t)(_edge.v.get()) ^ (size_t)(_edge.u.get()));
-            // 这么写可能合理, 但这么写合理不太可能
-        }
+        std::size_t operator()(const Edge &_edge) const;
     };
 
 public:
-    ///@todo 需要往这个Pass传一个浮点寄存器的占用表
     virtual PM::PreservedAnalyses run(Function &, FAM &);
 
 protected:
     // datas
-    Function *Func{}; // 用裸指针是因为不清楚是栈上还是堆上的内存
+    Function *Func{};
 
     OperSet precolored{};
     OperSet initial{};
@@ -71,7 +63,7 @@ protected:
 
 protected:
     /// procedures
-    void Main();
+    void Main(FAM &);
     // void LivenessAnalysis();
     void Build();
     void MkWorkList(); //
@@ -100,7 +92,7 @@ protected:
     OperP GetAlias(OperP);                   // 递归
 
 protected:
-    // 土制函数及数据结构
+    std::set<int> colors;
 
     ///@note 填充initial 和 precolored
     ///@bug 由于FAM特性, 不同Function使用相同Pass时, 简单数据不会清空, 所以需要在run中手动置空
@@ -113,7 +105,7 @@ protected:
     VarPool *varpool;
 
     ///@note 判断是否是 "move"指令
-    bool isMoveInstruction(const InstP &);
+    virtual bool isMoveInstruction(const InstP &);
 
     ///@note get函数需要过滤
     virtual Nodes getUse(const InstP &);
@@ -164,7 +156,7 @@ protected:
     Nodes spill_opt(const OperP &);
 
     ///@note 用于溢出优化的浮点寄存器, 只出不进
-    std::vector<unsigned int> availableSRegisters;
+    std::set<unsigned int> *availableSRegisters;
 
     ///@note 溢出次数(包含opt)
     unsigned int spilltimes = 0;
@@ -183,11 +175,12 @@ protected:
     void AssignColors() override;
 
 protected:
+    bool isMoveInstruction(const InstP &) override;
     Nodes getUse(const InstP &) override;
     Nodes getDef(const InstP &) override;
     Nodes spill_tryOpt(const OperP &) override;
     Nodes spill_classic(const OperP &) override;
-    std::vector<unsigned int> availableSRegisters;
+    std::set<unsigned int> availableSRegisters;
 };
 
 } // namespace MIR

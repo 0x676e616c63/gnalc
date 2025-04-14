@@ -2,8 +2,8 @@
 #ifndef GNALC_PASSES_TRANSFORMS_PHIELIMINATE_HPP
 #define GNALC_PASSES_TRANSFORMS_PHIELIMINATE_HPP
 
-#include "../../module.hpp"
-#include "../pass_manager.hpp"
+#include "mir/module.hpp"
+#include "mir/passes/pass_manager.hpp"
 
 namespace MIR {
 
@@ -29,13 +29,13 @@ public:
 
 private:
     Module *module;
+    FuncP cur_func;
+    VarPool *cur_varpool;
     std::vector<PhiFunction> processList;
     std::map<BlkP, std::map<BlkP, BlkP>> getMidBlk; // mid = getMidBlk[pred][succ];
 
     struct tempHash {
-        std::size_t operator()(const std::pair<InstP, BlkP> &pair) const {
-            return std::hash<size_t>()((size_t)(pair.first.get()) ^ (size_t)(pair.second.get()));
-        }
+        std::size_t operator()(const std::pair<InstP, BlkP> &pair) const;
     };
 
     std::unordered_set<std::pair<InstP, BlkP>, tempHash> delList;
@@ -46,9 +46,9 @@ private:
     void RunOnBlkPair(const PhiBlkPairs &); // core
 
     // push_before_branch
-    OperP addCOYPInst(const BlkP &, const OperP &, const FuncP &);
+    OperP addCOYPInst(const BlkP &src, std::string dest, const OperP &, const FuncP &);
 
-    void pushBeforeBranch(const BlkP &, const OperP &dst, const OperP &src);
+    void pushBeforeBranch(const BlkP &, std::string, const OperP &dst, OperP src);
 
     // judge whether pred and succ connected by critical edge
     BlkP splitCriticalEgde(const BlkP &pred, const BlkP &succ, const FuncP &);

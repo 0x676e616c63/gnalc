@@ -4,8 +4,6 @@
 
 #include "pass_manager.hpp"
 
-#include <string>
-
 namespace MIR {
 struct OptInfo {
     bool peephole = false;      // func pass

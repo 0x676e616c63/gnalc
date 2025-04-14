@@ -1,4 +1,4 @@
-#include "../../../../include/mir/passes/utilities/mirprinter.hpp"
+#include "mir/passes/utilities/mirprinter.hpp"
 
 using namespace MIR;
 

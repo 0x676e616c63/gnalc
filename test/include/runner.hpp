@@ -3,10 +3,10 @@
 
 #include "utils.hpp"
 
+#include <algorithm>
 #include <filesystem>
 #include <functional>
 #include <string>
-#include <algorithm>
 
 namespace Test {
 
@@ -69,7 +69,8 @@ inline TestResult run_test(const TestData &data, bool only_run_frontend, size_t 
 
         ir_asm_gen_command = data.ir_asm_gen(newsy, out_source);
 
-        link_command = format("{} {} {} -o {}", cfg::gcc_arm_command, out_source, data.sylib, outexec);
+        link_command =
+            format("{} {} {} -fno-PIC -fno-PIE -static -o {}", cfg::gcc_arm_command, out_source, data.sylib, outexec);
 
         exec_command = format("{} {} < {} > {} 2>{}", cfg::qemu_arm_command, outexec,
                               std::filesystem::exists(testcase_in) ? testcase_in : "/dev/null", output, outtime);
@@ -122,8 +123,8 @@ inline std::string prepare_sylib(const std::string &global_tmp_dir, bool only_ru
         auto sylibo = global_tmp_dir + "/sylib.o";
         sylib_to_link = global_tmp_dir + "/sylib.a";
 
-        std::string lib_command =
-            format("clang -c {} -o {} && ar rcs {} {}", cfg::sylibc, sylibo, sylib_to_link, sylibo);
+        std::string lib_command = format("clang -c {} --target=arm-linux-gnueabihf -o {} && ar rcs {} {}", cfg::sylibc,
+                                         sylibo, sylib_to_link, sylibo);
 
         println("Running '{}'.", lib_command);
         std::system(lib_command.c_str());

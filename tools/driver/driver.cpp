@@ -24,6 +24,8 @@
 #include "codegen/brainfk/bftrans.hpp"
 #endif
 
+#include "../../include/codegen/armv7/armprinter.hpp"
+
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -45,6 +47,7 @@ int main(int argc, char **argv) {
     // Options
     bool only_compilation = false;              // -S
     bool emit_llvm = false;                     // -emit-llvm
+    bool emit_llc = false;                      // -emit-llc
     bool ast_dump = false;                      // -ast-dump
     bool fixed_point_pipeline = false;          // -fixed-point
     bool fuzz_testing = false;                  // -fuzz
@@ -89,14 +92,15 @@ int main(int argc, char **argv) {
             only_compilation = true;
         else if (arg == "-emit-llvm")
             emit_llvm = true;
+        else if (arg == "-emit-llc")
+            emit_llc = true;
         else if (arg == "-ast-dump") {
 #ifdef GNALC_EXTENSION_GGC
             std::cerr << "Error: AST dump is not available in GGC mode." << std::endl;
             return -1;
 #endif
             ast_dump = true;
-        }
-        else if (arg == "-fixed-point")
+        } else if (arg == "-fixed-point")
             fixed_point_pipeline = true;
         else if (arg == "-O1" || arg == "-O")
             opt_info = IR::o1_opt_info;
@@ -344,14 +348,19 @@ Extensions:
 
     auto bkd_mpm = MIR::PassBuilder::buildModulePipeline(bkd_opt_info);
 
-    if (only_compilation) {
+    if (emit_llc) {
         bkd_mpm.addPass(MIR::PrintModulePass(*poutstream));
         bkd_mpm.run(lower.getModule(), bkd_mam);
         return 0;
     }
 
     bkd_mpm.run(lower.getModule(), bkd_mam);
-    Err::todo("ARM Assembler");
+
+    // Assembler
+    if (only_compilation) {
+        MIR::ARMPrinter armv7gen(outfile);
+        armv7gen.printout(lower.getModule());
+    }
 
     return 0;
 }

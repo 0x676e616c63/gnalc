@@ -58,6 +58,9 @@ aux_source_directory(lib/utils GNALC_UTILS_SRC)
 # BrainFk Extension
 aux_source_directory(lib/codegen/brainfk GNALC_EXT_BFBKD_SRC)
 
+# ArmV7 printer
+aux_source_directory(lib/codegen/armv7 GNALC_ARMV7BKD_SRC) 
+
 # GGC Extension
 aux_source_directory(lib/ggc GNALC_EXT_GGC_SRC)
 
@@ -70,6 +73,7 @@ set(GNALC_SRC
         ${GNALC_PM_SRC}
         ${GNALC_PTM_SRC}
         ${GNALC_EXT_BFBKD_SRC}
+        ${GNALC_ARMV7BKD_SRC}
         ${GNALC_UTILS_SRC})
 
 # GGC

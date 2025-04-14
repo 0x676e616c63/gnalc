@@ -4,7 +4,6 @@
 #include "base.hpp"
 #include "misc.hpp"
 #include <string>
-#include <utility>
 #include <variant>
 
 namespace MIR {
@@ -27,6 +26,7 @@ enum class CoreRegister {
     r13,
     r14,
     r15,
+    fp = r11,
     ip = r12,
     sp = r13,
     lr = r14,
@@ -82,7 +82,7 @@ enum class OperandTrait {
     BaseAddress,
     ShiftImme,
     ConstantPoolValue,
-    JmpLabel,
+    UnknonConstant,
 };
 
 class Operand : public Value {
@@ -91,9 +91,9 @@ private:
 
 public:
     Operand() = delete;
-    explicit Operand(OperandTrait _otrait) : Value(ValueTrait::Operand), otrait(_otrait) {}
-    Operand(OperandTrait _otrait, std::string _name) : Value(ValueTrait::Operand, std::move(_name)), otrait(_otrait) {}
-    OperandTrait getOperandTrait() const { return otrait; }
+    explicit Operand(OperandTrait _otrait);
+    Operand(OperandTrait _otrait, std::string _name);
+    OperandTrait getOperandTrait() const;
 
     std::string toString() const override = 0;
     ~Operand() override = default;
@@ -107,33 +107,21 @@ protected:
 
 public:
     BindOnVirOP() = delete;
-    explicit BindOnVirOP(RegisterBank _bank) : Operand(OperandTrait::BindOnVirRegister), bank(_bank) {}
-    BindOnVirOP(RegisterBank _bank, std::string _name)
-        : Operand(OperandTrait::BindOnVirRegister, std::move(_name)), bank(_bank) {
-        if (bank == RegisterBank::gpr) {
-            color = CoreRegister::none;
-        } else if (bank == RegisterBank::spr) {
-            color = FPURegister::none;
-        }
-        ///@todo dpr, qpr
-    }
+    explicit BindOnVirOP(RegisterBank _bank);
+    BindOnVirOP(RegisterBank _bank, std::string _name);
 
-    explicit BindOnVirOP(CoreRegister _color)
-        : Operand(OperandTrait::PreColored), bank(RegisterBank::gpr), color(_color) {}
-    explicit BindOnVirOP(FPURegister _color)
-        : Operand(OperandTrait::PreColored), bank(RegisterBank::spr), color(_color) {} // for PreColored
+    explicit BindOnVirOP(CoreRegister _color);
+    explicit BindOnVirOP(FPURegister _color); // for PreColored
 
-    explicit BindOnVirOP(std::string _name)
-        : Operand(OperandTrait::BaseAddress, std::move(_name)), bank(RegisterBank::gpr), color(CoreRegister::none) {
-    } // for BaseADROP
+    explicit BindOnVirOP(std::string _name); // for BaseADROP
 
-    const std::variant<CoreRegister, FPURegister> &getColor() { return color; };
+    const std::variant<CoreRegister, FPURegister> &getColor();
 
-    template <typename T_Reg> void setColor(T_Reg newColor) { color = newColor; }
+    template <typename T_Reg> void setColor(T_Reg newColor) { color = newColor; };
 
-    RegisterBank getRegisterBank() { return bank; }
+    RegisterBank getRegisterBank();
 
-    RegisterBank getBank() const { return bank; }
+    RegisterBank getBank() const;
 
     std::string toString() const override;
     ~BindOnVirOP() override = default;
@@ -142,8 +130,8 @@ public:
 class PreColedOP : public BindOnVirOP {
 public:
     PreColedOP() = delete;
-    explicit PreColedOP(CoreRegister _color) : BindOnVirOP(_color) {}
-    explicit PreColedOP(FPURegister _color) : BindOnVirOP(_color) {}
+    explicit PreColedOP(CoreRegister _color);
+    explicit PreColedOP(FPURegister _color);
 
     std::string toString() const final;
     ~PreColedOP() override = default;
@@ -173,23 +161,16 @@ protected:
 public:
     BaseADROP() = delete;
     BaseADROP(BaseAddressTrait _btrait, std::string _name, int _constOffset,
-              const std::shared_ptr<BindOnVirOP> &_varOffset)
-        : BindOnVirOP(std::move(_name)), btrait(_btrait), constOffset(_constOffset), varOffset(_varOffset) {}
+              const std::shared_ptr<BindOnVirOP> &_varOffset);
 
-    int getConstOffset() const { return constOffset; }
-    void setConstOffset(int newOffset) { constOffset = newOffset; }
+    int getConstOffset() const;
+    void setConstOffset(int newOffset);
 
-    BaseAddressTrait getTrait() { return btrait; }
+    BaseAddressTrait getTrait();
 
-    void setBase(const std::shared_ptr<BindOnVirOP> &_varOffset) { varOffset = _varOffset; }
+    void setBase(const std::shared_ptr<BindOnVirOP> &_varOffset);
 
-    std::shared_ptr<BindOnVirOP> getBase() const {
-        if (!varOffset.expired()) {
-            return varOffset.lock();
-        } else {
-            return nullptr;
-        }
-    }
+    std::shared_ptr<BindOnVirOP> getBase() const;
 
     std::string toString() const override;
     ~BaseADROP() override = default;
@@ -202,11 +183,9 @@ private:
 public:
     GlobalADROP() = delete;
     GlobalADROP(std::string _global_name, std::string _name, int _offset,
-                const std::shared_ptr<BindOnVirOP> &_varOffset)
-        : BaseADROP(BaseAddressTrait::Global, std::move(_name), _offset, _varOffset),
-          global_name(std::move(_global_name)){};
+                const std::shared_ptr<BindOnVirOP> &_varOffset);
 
-    std::string getGloName() const { return global_name; }
+    std::string getGloName() const;
 
     std::string toString() const final;
     ~GlobalADROP() override = default;
@@ -219,10 +198,9 @@ private:
 public:
     StackADROP() = delete;
     StackADROP(std::shared_ptr<FrameObj> _obj, std::string _name, int _offset,
-               const std::shared_ptr<BindOnVirOP> &_varOffset)
-        : BaseADROP(BaseAddressTrait::Local, std::move(_name), _offset, _varOffset), obj(std::move(_obj)) {}
+               const std::shared_ptr<BindOnVirOP> &_varOffset);
 
-    std::shared_ptr<FrameObj> getObj() { return obj; }
+    std::shared_ptr<FrameObj> getObj();
 
     std::string toString() const final;
     ~StackADROP() override = default;
@@ -236,8 +214,9 @@ public:
     enum class inlineShift { asr, lsl, lsr, ror, rrx } shiftCode;
 
     ShiftOP() = delete;
-    ShiftOP(unsigned _imme, ShiftOP::inlineShift _shiftCode)
-        : imme(_imme), shiftCode(_shiftCode), Operand(OperandTrait::ShiftImme) {}
+    ShiftOP(unsigned _imme, ShiftOP::inlineShift _shiftCode);
+
+    unsigned getShiftImme() const;
 
     std::string toString() const final;
     ~ShiftOP() override = default;
@@ -249,13 +228,31 @@ private:
 
 public:
     ConstantIDX() = delete;
-    explicit ConstantIDX(const std::shared_ptr<ConstObj> &_constant)
-        : Operand(OperandTrait::ConstantPoolValue), constant(_constant) {}
+    explicit ConstantIDX(const std::shared_ptr<ConstObj> &_constant);
 
-    const std::shared_ptr<ConstObj> &getConst() { return constant; }
+    const std::shared_ptr<ConstObj> &getConst() const;
 
     std::string toString() const final;
     ~ConstantIDX() override = default;
+};
+
+/// @brief 用于存储尚未知晓的stkobj的偏移量
+class UnknownConstant : public Operand {
+private:
+    std::shared_ptr<FrameObj> stkobj;
+    int offset; // 便于结合到寻址
+
+public:
+    UnknownConstant() = delete;
+    explicit UnknownConstant(const std::shared_ptr<FrameObj> &_stkobj);
+    UnknownConstant(const std::shared_ptr<FrameObj> &_stkobj, int _offset);
+
+    const std::shared_ptr<FrameObj> &getStkObj() const;
+
+    size_t getFinalOffset() const;
+
+    std::string toString() const final;
+    ~UnknownConstant() override = default;
 };
 
 } // namespace MIR

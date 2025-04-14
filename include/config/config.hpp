@@ -41,8 +41,8 @@ constexpr auto LSR_EXPANSION_THRESHOLD = 5;
 
 namespace Config::MIR {
 // Register Allocation
-constexpr auto CORE_REGISTER_MAX_NUM = 12;
+constexpr auto CORE_REGISTER_MAX_NUM = 12; // r0 ~ r10 and ip, most probably fp(r11), sometimes lr(r14)
 constexpr auto FPU_REGISTER_MAX_NUM = 32;
-}
+} // namespace Config::MIR
 
 #endif

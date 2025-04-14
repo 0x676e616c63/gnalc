@@ -1,5 +1,6 @@
-#include "../../../include/mir/SIMDinstruction/arithmetics.hpp"
-#include "../../../include/mir/builder/lowering.hpp"
+#include "mir/SIMDinstruction/arithmetics.hpp"
+#include "mir/SIMDinstruction/memory.hpp"
+#include "mir/builder/lowering.hpp"
 
 using namespace MIR;
 
@@ -7,14 +8,18 @@ std::list<std::shared_ptr<Instruction>> InstLowering::fptosiLower(const std::sha
                                                                   const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
-    // 类型转换应该不会有常数
     // vcvt.s32.f32
     auto target = operlower.mkOP(*fptosi, RegisterBank::gpr);
     auto origin = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(fptosi->getOVal()));
 
+    auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::spr);
+
     auto pair = std::make_pair(bitType::s32, bitType::f32);
-    auto vcvt_s32_f32 = std::make_shared<Vunary>(NeonOpCode::VCVT, target, origin, pair);
+    auto vcvt_s32_f32 = std::make_shared<Vunary>(NeonOpCode::VCVT, relay, origin, pair);
     insts.emplace_back(vcvt_s32_f32);
+
+    auto vmov = make<Vmov>(SourceOperandType::r, target, relay, std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32));
+    insts.emplace_back(vmov);
 
     return insts;
 }
@@ -23,13 +28,17 @@ std::list<std::shared_ptr<Instruction>> InstLowering::sitofpLower(const std::sha
                                                                   const std::shared_ptr<BasicBlock> &blk) {
     std::list<std::shared_ptr<Instruction>> insts;
 
-    // 类型转换应该不会有常数
     // vcvt.f32.s32
-    auto target = operlower.mkOP(*sitofp, RegisterBank::gpr);
-    auto origin = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(sitofp->getOVal()));
+    auto target = operlower.mkOP(*sitofp, RegisterBank::spr);
+    auto origin = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(sitofp->getOVal())); // gpr
+
+    auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::spr);
+
+    auto vmov = make<Vmov>(SourceOperandType::r, relay, origin, std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32));
+    insts.emplace_back(vmov);
 
     auto pair = std::make_pair(bitType::f32, bitType::s32);
-    auto vcvt_f32_s32 = std::make_shared<Vunary>(NeonOpCode::VCVT, target, origin, pair);
+    auto vcvt_f32_s32 = std::make_shared<Vunary>(NeonOpCode::VCVT, target, relay, pair);
     insts.emplace_back(vcvt_f32_s32);
 
     return insts;

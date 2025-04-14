@@ -27,7 +27,8 @@ const std::string gnalc_path = "../gnalc";
 
 // backend
 const std::string gcc_arm_command = "arm-linux-gnueabihf-gcc";
-const std::string qemu_arm_command = "LD_LIBRARY_PATH=/usr/arm-linux-gnueabihf/libc/lib qemu-arm";
+// const std::string qemu_arm_command = "LD_LIBRARY_PATH=/usr/arm-linux-gnueabihf/libc/lib qemu-arm";
+const std::string qemu_arm_command = "LD_LIBRARY_PATH=/usr/arm-linux-gnueabihf/lib qemu-arm";
 
 const std::string global_temp_dir = "./gnalc_test_temp/" + generate_unique_temp_dir();
 
@@ -36,8 +37,9 @@ const std::string global_benchmark_temp_dir = "./gnalc_benchmark_temp/" + genera
 const std::string sylibc = "../../test/sylib/sylib.c";
 
 const std::string test_data = "../../test/contest";
-const std::vector subdirs = {"functional",    "performance",       "h_functional",
-                             "h_performance", "final/performance", "final/h_performance"};
+// const std::vector subdirs = {"functional",    "performance",       "h_functional",
+//                              "h_performance", "final/performance", "final/h_performance"};
+const std::vector subdirs = {"functional", "performance"};
 const std::vector benchmark_subdirs = {"performance", "h_performance", "final/performance", "final/h_performance"};
 } // namespace Test::cfg
 

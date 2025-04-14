@@ -1,12 +1,31 @@
-#include "../../include/mir/misc.hpp"
-#include "../../include/ir/constant.hpp"
-#include "../../include/mirtools/enum_name.hpp"
-#include "../../include/mirtools/tool.hpp"
-#include <cctype>
+#include "mir/misc.hpp"
+#include "ir/constant.hpp"
+#include "mirtools/enum_name.hpp"
+#include "mirtools/tool.hpp"
 #include <iomanip>
 #include <sstream>
 
-std::string MIR::FrameObj::toString() const {
+using namespace MIR;
+
+FrameObj::FrameObj(FrameTrait _ftrait, size_t _size) : ftrait(_ftrait), size(_size) {}
+FrameObj::FrameObj(FrameTrait _ftrait, size_t _size, unsigned _seq) : ftrait(_ftrait), size(_size), seq(_seq) {}
+
+void FrameObj::setOffset(int _offset) { offset = _offset; }
+int FrameObj::getOffset() const { return offset; }
+
+FrameTrait FrameObj::getTrait() { return ftrait; }
+
+void FrameObj::setId(unsigned int _id) { id = _id; }
+unsigned int FrameObj::getId() const { return id; }
+
+size_t FrameObj::getSize() const { return size; }
+
+void FrameObj::setAliagnment(unsigned _aliagnment) { aliagnment = _aliagnment; }
+unsigned FrameObj::getAliagnment() { return aliagnment; }
+
+unsigned FrameObj::getSeq() { return seq; }
+
+std::string FrameObj::toString() const {
     std::string str;
     str += "- {";
 
@@ -19,9 +38,9 @@ std::string MIR::FrameObj::toString() const {
     return str;
 }
 
-std::string MIR::GlobalObj::toString() const {
+std::string GlobalObj::toString() const {
     std::string str;
-    variant_toString visitor;
+    variant_const_toString visitor;
 
     str += "- {";
 
@@ -29,7 +48,7 @@ std::string MIR::GlobalObj::toString() const {
     str += ", size = " + std::to_string(size);
 
     str += ", initial: [";
-    for (auto &init : initializer) {
+    for (const auto &init : initializer) {
         if (init.first) {
             str += std::visit(visitor, init.second);
         } else {
@@ -43,14 +62,14 @@ std::string MIR::GlobalObj::toString() const {
     return str;
 }
 
-MIR::GlobalObj::GlobalObj(const IR::GlobalVariable &midEnd_Glo) {
+GlobalObj::GlobalObj(const IR::GlobalVariable &midEnd_Glo) {
     name = midEnd_Glo.getName();
     size = midEnd_Glo.getIniter().getIniterType()->getBytes();
     mkInitializer(midEnd_Glo.getIniter());
     initializerMerge();
 }
 
-void MIR::GlobalObj::mkInitializer(const IR::GVIniter &midEnd_GVIniter) {
+void GlobalObj::mkInitializer(const IR::GVIniter &midEnd_GVIniter) {
     ///@brief flat midEnd GVIniter
 
     if (!midEnd_GVIniter.isArray()) {
@@ -59,7 +78,10 @@ void MIR::GlobalObj::mkInitializer(const IR::GVIniter &midEnd_GVIniter) {
         else {
             // IR's Global Variable must be ConstantInt or ConstantFloat
             if (auto ci32 = std::dynamic_pointer_cast<IR::ConstantInt>(midEnd_GVIniter.getConstVal())) {
-                initializer.emplace_back(true, ci32->getVal());
+                if (ci32->getVal())
+                    initializer.emplace_back(true, ci32->getVal());
+                else
+                    initializer.emplace_back(false, (size_t)4); // 0
             } else if (auto cf = std::dynamic_pointer_cast<IR::ConstantFloat>(midEnd_GVIniter.getConstVal())) {
                 initializer.emplace_back(true, cf->getVal());
             } else
@@ -83,7 +105,7 @@ void MIR::GlobalObj::mkInitializer(const IR::GVIniter &midEnd_GVIniter) {
     }
 }
 
-void MIR::GlobalObj::initializerMerge() {
+void GlobalObj::initializerMerge() {
     for (auto it = initializer.begin(); it != initializer.end();) {
         if (it->first) // true
             ++it;
@@ -104,34 +126,23 @@ void MIR::GlobalObj::initializerMerge() {
     }
 }
 
-bool isImmCanBeEncodedInText(unsigned int imme) {
-    if (imme < 256)
-        return true; // 防止 >> 32 产生ud
+void GlobalObj::setAlignment(unsigned _alignment) { alignment = _alignment; };
 
-    for (int shift = 1; shift <= 32; shift += 2) {
-        if ((((imme << shift) | (imme >> (32 - shift))) & ~0xff) == 0) {
-            return true;
-        }
-    }
-    return false;
+std::string GlobalObj::getName() const { return name; }
+
+unsigned GlobalObj::getAlignment() const { return alignment; }
+
+const std::list<std::pair<bool, std::variant<int, float, size_t>>> &GlobalObj::getInitializer() const {
+    return initializer;
 }
 
-bool isImmCanBeEncodedInText(float imme) {
-    float eps = 1e-14f;
-    float a = imme * 128;
-    for (int r = 0; r < 8; ++r) {
-        for (int n = 16; n < 32; ++n) {
-            if ((std::abs(((float)(n * (1 << (7 - r))) - a)) < eps) ||
-                (std::abs(((float)(n * (1 << (7 - r))) + a)) < eps))
-                return true;
-        }
-    }
-    return false;
-}
+ConstObj::ConstObj(unsigned int _id, std::string _glo) : id(_id), literal(std::move(_glo)) {}
 
-MIR::ConstObj::ConstObj(unsigned int _id, int imme) : id(_id) {
+ConstObj::ConstObj(unsigned int _id, int imme) : id(_id) {
     auto imm = static_cast<unsigned int>(imme);
-    if (isImmCanBeEncodedInText(imm)) {
+    if (imme < 0 && imme > -257) {
+        literal = imme;
+    } else if (isImmCanBeEncodedInText(imm)) {
         literal = imme;
     } else {
         ///@brief turn into movw/movt
@@ -141,7 +152,7 @@ MIR::ConstObj::ConstObj(unsigned int _id, int imme) : id(_id) {
     }
 }
 
-MIR::ConstObj::ConstObj(unsigned int _id, float imme) : id(_id) {
+ConstObj::ConstObj(unsigned int _id, float imme) : id(_id) {
     if (isImmCanBeEncodedInText(imme)) {
         literal = imme;
     } else {
@@ -153,10 +164,25 @@ MIR::ConstObj::ConstObj(unsigned int _id, float imme) : id(_id) {
     }
 }
 
-MIR::ConstObj::ConstObj(unsigned int _id, bool imme) : id(_id), literal(imme) {}
-MIR::ConstObj::ConstObj(unsigned int _id, char imme) : id(_id), literal(imme) {}
+ConstObj::ConstObj(unsigned int _id, bool imme) : id(_id), literal(imme) {}
+ConstObj::ConstObj(unsigned int _id, char imme) : id(_id), literal(imme) {}
 
-std::string MIR::ConstObj::toString() const {
+bool ConstObj::isGlo() const { return literal.index() == 0; }
+bool ConstObj::isImme() const { return literal.index() != 0; }
+bool ConstObj::isEncoded() const { return literal.index() == 5; }
+bool ConstObj::isFloat() const { return literal.index() == 2; }
+
+void ConstObj::setId(unsigned int _id) { id = _id; }
+unsigned int ConstObj::getId() const { return id; }
+
+unsigned int ConstObj::getType() { return literal.index(); }
+// std::string getStr();
+
+bool ConstObj::operator==(const ConstObj &other) const { return other.literal == literal; }
+
+// auto ConstObj::getLiteral() const { return literal; }
+
+std::string ConstObj::toString() const {
     std::string str;
     str += "- {";
 

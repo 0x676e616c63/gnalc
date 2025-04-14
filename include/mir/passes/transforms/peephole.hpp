@@ -2,7 +2,7 @@
 #ifndef GNALC_MIR_PASSES_TRANSFORMS_PEEPHOLE_HPP
 #define GNALC_MIR_PASSES_TRANSFORMS_PEEPHOLE_HPP
 
-#include "../pass_manager.hpp"
+#include "mir/passes/pass_manager.hpp"
 
 namespace MIR {
 class PeepHolePass : public PM::PassInfo<PeepHolePass> {
