@@ -92,6 +92,8 @@ protected:
     OperP GetAlias(OperP);                   // 递归
 
 protected:
+    void clearall();
+
     std::set<int> colors;
 
     ///@note 填充initial 和 precolored

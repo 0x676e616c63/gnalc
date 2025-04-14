@@ -13,14 +13,38 @@ bool RAPass::Edge::operator==(const Edge &another) const {
 
 std::size_t RAPass::EdgeHash::operator()(const Edge &_edge) const {
     return std::hash<std::size_t>()((size_t)(_edge.v.get()) ^ (size_t)(_edge.u.get()));
-    // 这么写可能合理, 但这么写合理不太可能
+}
+
+void RAPass::clearall() {
+    precolored.clear();
+    initial.clear();
+    simplifyWorkList.clear();
+    freezeWorkList.clear();
+    spilledNodes.clear();
+    coalescedNodes.clear();
+    spilledNodes.clear();
+    coloredNodes.clear();
+    selectStack.clear();
+    coalescedMoves.clear();
+    constrainedMoves.clear();
+    frozenMoves.clear();
+    worklistMoves.clear();
+    activeMoves.clear();
+    adjSet.clear();
+    adjList.clear();
+    degree.clear();
+    moveList.clear();
+    alias.clear();
+    colors.clear();
+    intervalLengths.clear();
 }
 
 PM::PreservedAnalyses RAPass::run(Function &bkd_function, FAM &fam) {
     Func = &bkd_function;
     availableSRegisters = &(Func->editInfo().availableSRegisters);
     varpool = &(Func->editInfo().varpool);
-    initial.clear();
+
+    clearall();
 
     // colors.insert({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12});
     colors.insert({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}); // r12/ip, 尽量不使用, memset, putint等可能使用并且不会恢复

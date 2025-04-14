@@ -34,7 +34,7 @@ RAPass::Nodes RAPass::getUse(const InstP &inst) {
         case NeonOpCode::VMOV: {
             auto sourceop = inst->getSourceOP(1)->as<BindOnVirOP>(); // vmov 一般不接受常量
 
-            if (sourceop->getBank() == RegisterBank::gpr)
+            if (sourceop && sourceop->getBank() == RegisterBank::gpr) // sometimes a valid float value
                 uses.insert(sourceop);
         } break;
         case NeonOpCode::VLDR: {
@@ -160,19 +160,27 @@ RAPass::Nodes RAPass::spill_tryOpt(const OperP &op) {
 RAPass::Nodes RAPass::spill_opt(const OperP &op) {
     Nodes stageValues;
 
-    // 溢出的FPU寄存器
-    auto fpu = *(availableSRegisters->begin()); // 尽量用caller saved
-    availableSRegisters->erase(availableSRegisters->begin());
+    // 溢出到FPU寄存器
+    unsigned fpu = -1;
+    // auto fpu = *(availableSRegisters->begin()); // 尽量用caller saved
+    // availableSRegisters->erase(availableSRegisters->begin());
+
+    while (!availableSRegisters->empty()) {
+        fpu = *(availableSRegisters->begin());
+        availableSRegisters->erase(availableSRegisters->begin());
+
+        if (fpu >= 16) // 遵守调用规约, 使用calleesave
+            break;
+    }
+
+    if (fpu < 16) // clear out the fpu regs but none can be in use
+        return spill_classic(op);
 
     auto fpuRegister = varpool->getValue(static_cast<FPURegister>(fpu));
     auto type_pair = std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32);
 
     for (const auto &blk : Func->getBlocks()) {
         auto &insts = blk->getInsts();
-
-        if (blk->getName() == "%50" && op->getName() == "%662") {
-            int useless;
-        }
 
         for (auto inst_it = insts.begin(); inst_it != insts.end();) {
             bool insert_before = false;

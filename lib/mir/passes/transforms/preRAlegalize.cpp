@@ -7,6 +7,7 @@ using namespace MIR;
 PM::PreservedAnalyses PreRALegalize::run(Function &function, FAM &manager) {
     func = &function;
     varpool = &(func->editInfo().varpool);
+    constClearSet.clear();
 
     for (auto blk : func->getBlocks()) {
         runOnBlk(blk);
