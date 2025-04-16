@@ -2,8 +2,8 @@
 #include <string>
 #include <vector>
 
-#include "include/config.hpp"
-#include "include/runner.hpp"
+#include "config.hpp"
+#include "runner.hpp"
 
 using namespace Test;
 using namespace std::filesystem;
@@ -15,10 +15,10 @@ int main(int argc, char *argv[]) {
         println("  -a, --all                  Run all tests, regardless of failure.");
         println("  -b, --backend              Test backend.");
         println("  -d, --diff                 Differential Test with clang.");
-        println("  -s, --skip   [name_prefix] Skip test whose name has such prefix.");
-        println("  -r, --run    [name_prefix] Only run test whose name has such prefix.");
-        println("  -e, --resume [name_prefix] Start from test whose name have such prefix.");
-        println("  -p, --para [param]         Run with gnalc parameter.");
+        println("  -s, --skip   [Name Prefix] Skip test whose name has such prefix.");
+        println("  -r, --run    [Name Prefix] Only run test whose name has such prefix.");
+        println("  -e, --resume [Name Prefix] Start from test whose name have such prefix.");
+        println("  -p, --para [Param]         Run with gnalc parameter.");
         println("  -l, --list                 List all tests.");
         println("  -h, --help                 Print this help and exit.");
     };
@@ -137,7 +137,8 @@ int main(int argc, char *argv[]) {
                     return format("{} -S {} -o {} -emit-llvm{}", cfg::gnalc_path, newsy, outll, gnalc_params);
 #else
                     auto outgg = outll + ".gg";
-                    return format("{} -S -emit-llvm {} -o {} && ../ggc -S -emit-llvm {} -o {}{}", cfg::gnalc_path, newsy, outgg, outgg, outll, gnalc_params);
+                    return format("{} -S -emit-llvm {} -o {} && ../ggc -S -emit-llvm {} -o {}{}", cfg::gnalc_path,
+                                  newsy, outgg, outgg, outll, gnalc_params);
 #endif
                 };
                 data.ir_asm_gen = gnalc_irgen;
@@ -151,24 +152,26 @@ int main(int argc, char *argv[]) {
                 data.ir_asm_gen = gnalc_asmgen;
             }
 
+            auto testcase_out = sy.path().parent_path().string() + "/" + sy.path().stem().string() + ".out";
             std::string expected_syout;
             if (diff_test) {
-                TestData clang_data {.sy = sy, .sylib = sylib_for_diff_testing, .temp_dir = curr_temp_dir, .mode_id = "clang_diff_test"};
+                TestData clang_data{
+                    .sy = sy, .sylib = sylib_for_diff_testing, .temp_dir = curr_temp_dir, .mode_id = "clang_diff_test"};
                 auto clang_irgen = [](const std::string &newsy, const std::string &outll) {
-                    return format(
-                        "sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int getfarray(float a[]);void "
-                        "putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, float "
-                        "a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define starttime() "
-                        "_sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
-                        " && clang -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null",
-                        newsy, newsy, outll);
+                    return format("sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int "
+                                  "getfarray(float a[]);void "
+                                  "putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void "
+                                  "putfarray(int n, float "
+                                  "a[]);void putf(char a[], ...);void _sysy_starttime(int);void "
+                                  "_sysy_stoptime(int);\\n#define starttime() "
+                                  "_sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
+                                  " && clang -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null",
+                                  newsy, newsy, outll);
                 };
                 clang_data.ir_asm_gen = clang_irgen;
                 auto diff_res = run_test(clang_data, true);
                 expected_syout = diff_res.output;
-            }
-            else {
-                auto testcase_out = sy.path().parent_path().string() + "/" + sy.path().stem().string() + ".out";
+            } else {
                 expected_syout = read_file(testcase_out);
                 fix_newline(expected_syout);
             }
@@ -179,7 +182,10 @@ int main(int argc, char *argv[]) {
             if (res.output != expected_syout) {
                 println("|  [\033[0;32;31mFAILED\033[m] Expected '{}' but got "
                         "'{}'.",
-                        expected_syout, res.output);
+                        expected_syout.size() > 1024 ? "<too long to display>" : expected_syout,
+                        res.output.size() > 1024 ? "<too long to display>" : res.output);
+                println("| expected: {}", testcase_out);
+                println("| actual:   {}", res.output_file);
                 failed_tests.emplace_back(sy.path().string());
                 if (stop_on_error) {
                     println("----------");
