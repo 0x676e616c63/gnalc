@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
     }
     time_elapsed /= times;
 
-    println("|  Output: {}", syout);
+    // println("|  Output: {}", syout);
     println("|  Average time: {}", time_elapsed);
 
     return 0;

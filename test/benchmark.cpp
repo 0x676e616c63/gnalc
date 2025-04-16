@@ -63,9 +63,9 @@ void write_benchmark_result_to(const BenchmarkData &data, std::ostream &out, con
         total2 += res2.time_elapsed;
 
         println(out, "<{}> {}:", i, test1.sy.path().stem().string());
-        // println(out, "'{}' ll output: {}", test1.mode_id, res1.source_output);
+        println(out, "'{}' compiler output: {}", test1.mode_id, res1.source_output);
         println(out, "'{}': {}us", test1.mode_id, res1.time_elapsed);
-        // println(out, "'{}' ll output: {}", test2.mode_id, res2.source_output);
+        println(out, "'{}' compiler output: {}", test2.mode_id, res2.source_output);
         println(out, "'{}': {}us", test2.mode_id, res2.time_elapsed);
         println(out, "'{}' is {}x faster than '{}'.", test2.mode_id, ratio(res1.time_elapsed, res2.time_elapsed),
                 test1.mode_id);
@@ -181,10 +181,10 @@ TestData get_mode1_data(const directory_entry& sy, const std::string& sylib_to_l
 // }
 
 
-auto b_tmp = benchmark_data.mode2 = "gnalc-fixed";
+auto b_tmp = benchmark_data.mode2 = "gnalc-fixed-withloop";
 TestData get_mode2_data(const directory_entry &sy, const std::string &sylib_to_link, const std::string &curr_temp_dir) {
     auto gnalc_irgen = [](const std::string &newsy, const std::string &outll) {
-        return format("../gnalc -S {} -o {} -emit-llvm -fixed-point", newsy, outll);
+        return format("../gnalc -S {} -o {} -emit-llvm -debug-pipeline", newsy, outll);
     };
 
     return TestData{.sy = sy,
@@ -244,6 +244,7 @@ int main(int argc, char *argv[]) {
         println("  -s, --skip    [name_prefix] Skip test whose name has such prefix.");
         println("  -r, --run     [name_prefix] Only run test whose name has such prefix.");
         println("  -e, --resume  [name_prefix] Start from test whose name have such prefix.");
+        println("  -l, --list                  List all tests.");
         println("  -h, --help                  Print this help and exit.");
     };
 
@@ -252,12 +253,15 @@ int main(int argc, char *argv[]) {
     SkipSet skip;
     bool stop_on_error = true;
     bool only_frontend = true;
+    bool only_list = false;
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
         if (arg == "--all" || arg == "-a")
             stop_on_error = false;
         else if (arg == "--backend" || arg == "-b")
             only_frontend = false;
+        else if (arg == "--list" || arg == "-l")
+            only_list = true;
         else if (arg == "--skip" || arg == "-s") {
             if (!run.empty()) {
                 println("Error: '--run' conflicts with '--skip'.");
@@ -299,10 +303,11 @@ int main(int argc, char *argv[]) {
             return -1;
         }
     }
-
-    println("Pass benchmark started.");
-    println("Mode1: '{}'", benchmark_data.mode1);
-    println("Mode2: '{}'", benchmark_data.mode2);
+    if (!only_list) {
+        println("Pass benchmark started.");
+        println("Mode1: '{}'", benchmark_data.mode1);
+        println("Mode2: '{}'", benchmark_data.mode2);
+    }
 
     size_t passed = 0;
     size_t curr_test_cnt = 0;
@@ -310,7 +315,9 @@ int main(int argc, char *argv[]) {
 
     create_directories(cfg::global_benchmark_temp_dir);
 
-    std::string sylib_to_link = prepare_sylib(cfg::global_benchmark_temp_dir, only_frontend); // .ll or .a
+    std::string sylib_to_link;
+    if (!only_list)
+        sylib_to_link = prepare_sylib(cfg::global_benchmark_temp_dir, only_frontend); // .ll or .a
 
     for (auto &&curr_test_dir : cfg::benchmark_subdirs) {
         auto test_files = gather_test_files(curr_test_dir, run, skip);
@@ -328,6 +335,11 @@ int main(int argc, char *argv[]) {
             }
 
             print("<{}> Test {}", curr_test_cnt++, sy.path().stem());
+
+            if (only_list) {
+                println(": {}", sy.path());
+                continue;
+            }
 
             // Expected
             auto testcase_out = sy.path().parent_path().string() + "/" + sy.path().stem().string() + ".out";
@@ -372,6 +384,9 @@ int main(int argc, char *argv[]) {
             }
         }
     }
+
+    if (only_list)
+        return 0;
 
 finish:
     println("Finished running {} tests.", curr_test_cnt);

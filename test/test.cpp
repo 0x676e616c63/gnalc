@@ -19,6 +19,7 @@ int main(int argc, char *argv[]) {
         println("  -r, --run    [name_prefix] Only run test whose name has such prefix.");
         println("  -e, --resume [name_prefix] Start from test whose name have such prefix.");
         println("  -p, --para [param]         Run with gnalc parameter.");
+        println("  -l, --list                 List all tests.");
         println("  -h, --help                 Print this help and exit.");
     };
     RunSet skip;
@@ -28,6 +29,7 @@ int main(int argc, char *argv[]) {
     bool diff_test = false;
     bool stop_on_error = true;
     bool only_frontend = true;
+    bool only_list = false;
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
         if (arg == "--all" || arg == "-a")
@@ -36,6 +38,8 @@ int main(int argc, char *argv[]) {
             only_frontend = false;
         else if (arg == "--diff" || arg == "-d")
             diff_test = true;
+        else if (arg == "--list" || arg == "-l")
+            only_list = true;
         else if (arg == "--skip" || arg == "-s") {
             if (!run.empty()) {
                 println("Error: '--run' conflicts with '--skip'.");
@@ -80,7 +84,8 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    println("GNALC test started.");
+    if (!only_list)
+        println("GNALC test started.");
     size_t passed = 0;
     size_t curr_test_cnt = 0;
     bool have_resumed = resume_pattern.empty();
@@ -88,11 +93,13 @@ int main(int argc, char *argv[]) {
 
     create_directories(cfg::global_temp_dir);
 
-    std::string sylib_to_link = prepare_sylib(cfg::global_temp_dir, only_frontend); // .ll or .a
+    std::string sylib_to_link;
+    if (!only_list)
+        sylib_to_link = prepare_sylib(cfg::global_temp_dir, only_frontend); // .ll or .a
 
     // Differential use frontend mode since it only requires llvm toolset.
     std::string sylib_for_diff_testing;
-    if (diff_test) {
+    if (!only_list && diff_test) {
         if (only_frontend)
             sylib_for_diff_testing = sylib_to_link;
         else
@@ -115,6 +122,11 @@ int main(int argc, char *argv[]) {
             }
 
             print("<{}> Test {}", curr_test_cnt++, sy.path().stem());
+
+            if (only_list) {
+                println(": {}", sy.path());
+                continue;
+            }
 
             // Run
             TestData data{.sy = sy, .sylib = sylib_to_link, .temp_dir = curr_temp_dir, .mode_id = "gnalc_test"};
@@ -180,6 +192,9 @@ int main(int argc, char *argv[]) {
             println("----------");
         }
     }
+
+    if (only_list)
+        return 0;
 
 finish:
     println("Finished running {} tests.", curr_test_cnt);
