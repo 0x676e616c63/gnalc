@@ -103,6 +103,8 @@ void PhiEliminatePass::pushBeforeBranch(const BlkP &emitBlk, std::string destBlk
     ///@brief 寻址操作数展开
     if (src->getOperandTrait() == OperandTrait::BaseAddress) {
         auto addressing = src->as<BaseADROP>();
+        ///@bug 应当根据BaseADR的不同进行分类, 而不是直接弄一个新的
+        ///@bug 但add1, add2都没有时, 应当考虑别的方式
         auto relay = cur_varpool->mkOP_backup(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
         InstP add1 = nullptr;
         InstP add2 = nullptr;
@@ -128,7 +130,8 @@ void PhiEliminatePass::pushBeforeBranch(const BlkP &emitBlk, std::string destBlk
             insts.emplace_back(add2);
         }
 
-        src = relay;
+        if (add1 || add2) // patch
+            src = relay;
     }
 
     auto dst_reg = dst->as<BindOnVirOP>();
