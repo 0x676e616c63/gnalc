@@ -225,8 +225,11 @@ void postRAstackformat::Leagalize() {
     ///@brief insert front: create new stack
     Err::gassert(*stackSize < 2147483648, "stacksize larger than 2^31 - 1");
 
-    ///@note 所获取的栈大小会比实际上的大, 不过不影响寻址
-    auto stack_size = std::make_shared<ConstantIDX>(constpool->getConstant(ceilEncoded((int)*stackSize)));
+    ///@note 所获取的栈大小会比实际上的大, 并且注意保持对齐
+    int real_stack_size = ceilEncoded((int)(*stackSize), *maxAlignment);
+    int fix_stack_size = (*maxAlignment - ((real_stack_size + calleeSavedSize) % *maxAlignment)) % *maxAlignment;
+
+    auto stack_size = std::make_shared<ConstantIDX>(constpool->getConstant(real_stack_size));
 
     if (*maxAlignment == 16) {
         ///@brief stage sp
@@ -243,13 +246,20 @@ void postRAstackformat::Leagalize() {
         auto sub =
             std::make_shared<binaryImmInst>(OpCode::SUB, SourceOperandType::ri, varpool->getValue(CoreRegister::sp),
                                             varpool->getValue(CoreRegister::sp), stack_size, nullptr);
-        initialize_blk->addInsts_front({mov, bic, sub});
 
+        auto sub_fix = std::make_shared<binaryImmInst>( // maybe eli by dce
+            OpCode::SUB, SourceOperandType::ri, varpool->getValue(CoreRegister::sp),
+            varpool->getValue(CoreRegister::sp), make<ConstantIDX>(constpool->getConstant(fix_stack_size)), nullptr);
+
+        initialize_blk->addInsts_front({mov, bic, sub, sub_fix});
     } else if (*maxAlignment == 8) {
         auto sub =
             std::make_shared<binaryImmInst>(OpCode::SUB, SourceOperandType::ri, varpool->getValue(CoreRegister::sp),
                                             varpool->getValue(CoreRegister::sp), stack_size, nullptr);
-        initialize_blk->addInsts_front({sub});
+        auto sub_fix = std::make_shared<binaryImmInst>( // maybe eli by dce
+            OpCode::SUB, SourceOperandType::ri, varpool->getValue(CoreRegister::sp),
+            varpool->getValue(CoreRegister::sp), make<ConstantIDX>(constpool->getConstant(fix_stack_size)), nullptr);
+        initialize_blk->addInsts_front({sub, sub_fix});
     } else {
         Err::unreachable("bad stack alignment");
     }
@@ -274,7 +284,12 @@ void postRAstackformat::Leagalize() {
             std::make_shared<binaryImmInst>(OpCode::ADD, SourceOperandType::ri, varpool->getValue(CoreRegister::sp),
                                             varpool->getValue(CoreRegister::sp), stack_size, nullptr);
 
+        auto add_fix = std::make_shared<binaryImmInst>(
+            OpCode::ADD, SourceOperandType::ri, varpool->getValue(CoreRegister::sp),
+            varpool->getValue(CoreRegister::sp), make<ConstantIDX>(constpool->getConstant(fix_stack_size)), nullptr);
+
         insts.emplace_back(add);
+        insts.emplace_back(add_fix); // maybe not in use
     } else {
         Err::unreachable("bad stack alignment");
     }

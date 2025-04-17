@@ -70,4 +70,50 @@ int ceilEncoded(int imme) {
     return imme;
 }
 
+int ceilEncoded(int imme, unsigned alignment) {
+    if (isImmCanBeEncodedInText((unsigned int)imme))
+        return imme;
+
+    int original = imme;
+
+    while (true) {
+        unsigned ld = clz_wrapper(imme);
+        unsigned tl = ctz_wrapper(imme);
+
+        Err::gassert(ld, "ceil to a neg number detected: " + std::to_string(original));
+
+        ///@note ld 不会大于31, 在0时tl最大为32
+        if (tl == 32 || ld + tl > 24 || ld + tl == 24 && tl % 2 == 0)
+            if (imme % alignment == 0)
+                break;
+
+        imme += 1 << tl;
+    }
+
+    return imme;
+}
+
+int ceilEncoded(int imme, int exsist, unsigned alignment) {
+    if (isImmCanBeEncodedInText((unsigned int)(imme)))
+        return imme;
+
+    int original = imme;
+
+    while (true) {
+        unsigned ld = clz_wrapper(imme);
+        unsigned tl = ctz_wrapper(imme);
+
+        Err::gassert(ld, "ceil to a neg number detected: " + std::to_string(original));
+
+        ///@note ld 不会大于31, 在0时tl最大为32
+        if (tl == 32 || ld + tl > 24 || ld + tl == 24 && tl % 2 == 0)
+            if ((imme + exsist) % alignment == 0)
+                break;
+
+        imme += 1 << tl;
+    }
+
+    return imme;
+}
+
 } // namespace MIR

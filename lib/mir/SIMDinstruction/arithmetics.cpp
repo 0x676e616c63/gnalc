@@ -90,4 +90,4 @@ std::shared_ptr<Operand> Vmrs::getSourceOP(unsigned int seq) { return nullptr; }
 
 void Vmrs::setSourceOP(unsigned int seq, std::shared_ptr<Operand>) {}
 
-std::string Vmrs::toString() { return "vmrs APSR_nzcv, FPSCR"; }
+std::string Vmrs::toString() { return "vmrs APSR_nzcv, FPSCR\n"; }

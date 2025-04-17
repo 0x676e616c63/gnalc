@@ -2,8 +2,8 @@
 #ifndef GNALC_MIRTOOLS_TOOL_HPP
 #define GNALC_MIRTOOLS_TOOL_HPP
 
-#include "mir/instruction.hpp"
 #include "enum_name.hpp"
+#include "mir/instruction.hpp"
 
 #include <string>
 
@@ -18,7 +18,9 @@ constexpr int ctz_wrapper(unsigned val) { return __builtin_ctz(val); }
 bool isImmCanBeEncodedInText(unsigned int);
 
 ///@note 获取一个大于imme的最小8bits位图数
-int ceilEncoded(int);
+int ceilEncoded(int, unsigned);
+int ceilEncoded(int, unsigned);
+int ceilEncoded(int, int, unsigned);
 
 bool isImmCanBeEncodedInText(float);
 

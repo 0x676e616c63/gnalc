@@ -115,6 +115,10 @@ bool LiveAnalysis::runOnBlk(const BlkP &blk) {
 
     instLiveOut[insts.back()] = liveinfo.liveOut[blk];
 
+    if (func->getName() == "@main" && blk->getName() == "%42") {
+        int useless;
+    }
+
     for (auto it = insts.rbegin(); it != insts.rend(); ++it) {
         runOnInst(*it, instLiveIn[*it], instLiveOut[*it]);
         if (it != std::prev(insts.rend())) {
@@ -222,6 +226,7 @@ void LiveAnalysis::runOnInst(const InstP &inst, std::unordered_set<OperP> &livei
         case NeonOpCode::VDIV:
         case NeonOpCode::VNEG:
         case NeonOpCode::VCVT:
+        case NeonOpCode::VCMP:
             ///@todo 将use加到livein; 传递liveout; 记录interval range
             for (auto &use_op : use) {
                 livein.insert(use_op); // add
@@ -240,6 +245,10 @@ void LiveAnalysis::runOnInst(const InstP &inst, std::unordered_set<OperP> &livei
                     continue;
                 livein.insert(live_out); // pass
             }
+            break;
+        case NeonOpCode::VMRS:
+            ///@brief pass liveout to livein
+            livein = liveout;
             break;
         case NeonOpCode::VADDV:
         case NeonOpCode::VMAXV:

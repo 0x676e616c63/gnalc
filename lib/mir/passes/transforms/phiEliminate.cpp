@@ -42,18 +42,18 @@ std::vector<std::pair<OperP, OperP>> PhiEliminatePass::findPair(const BlkP &blk,
         const auto target = phiInst->getTargetOP();
         const auto &phiOpers = phiInst->getPhiOper();
 
+        ///@brief 重新翻译phi IR op
         for (auto &phioper : phiOpers) {
             if (phioper.pre != blk_name)
                 continue;
 
-            // dst_src_vec.emplace_back(target, phioper.val);
-            // 重新获取MIR操作数
             const auto &ir_op = phioper.val;
             OperP mir_op = nullptr;
 
             if (auto i32 = ir_op->as<IR::ConstantInt>()) {
                 mir_op = cur_varpool->getLoaded(i32->getVal(), blk).first;
             } else if (auto f32 = ir_op->as<IR::ConstantFloat>()) {
+                ///@note notice that we got a gpr reg here
                 mir_op = cur_varpool->getLoaded(f32->getVal(), blk).first;
             } else {
                 mir_op = cur_varpool->getValue(*ir_op);
@@ -131,7 +131,21 @@ void PhiEliminatePass::pushBeforeBranch(const BlkP &emitBlk, std::string destBlk
         src = relay;
     }
 
-    auto copy = std::make_shared<COPY>(std::dynamic_pointer_cast<BindOnVirOP>(dst), src);
+    auto dst_reg = dst->as<BindOnVirOP>();
+    Err::gassert(dst_reg != nullptr, "phiEli: dst op(" + dst_reg->toString() + ") is not bind on reg bank");
+
+    /// @note when copy a constant float to phioper, copy spr, gpr may happen
+    // Err::gassert(src->as<BindOnVirOP>() == nullptr || src->as<BindOnVirOP>()->getBank() == dst_reg->getBank(),
+    //              "phiEli: copy ops dosen't match");
+    // Err::gassert(src->as<BindOnVirOP>() == nullptr || !(src->as<BindOnVirOP>()->getBank() == RegisterBank::spr &&
+    //                                                     dst_reg->getBank() == RegisterBank::gpr),
+    //              "phiEli: copy ops dosen't match");
+
+    if (src->getName() == "%37" && dst->getName() == "%7") {
+        int useless;
+    }
+
+    auto copy = std::make_shared<COPY>(dst_reg, src);
     insts.emplace_back(copy);
     ///@brief 插入到branch之前
 

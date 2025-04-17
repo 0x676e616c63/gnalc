@@ -44,7 +44,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
 
 MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
     MPM mpm;
-    mpm.addPass(PhiEliminatePass()); // necessary
+    mpm.addPass(PhiEliminatePass()); // immediately after isel
     mpm.addPass(makeModulePass(buildFunctionPipeline(opt_info)));
     return mpm;
 }
