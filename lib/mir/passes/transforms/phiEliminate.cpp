@@ -239,11 +239,12 @@ void PhiEliminatePass::RunOnBlkPair(const PhiBlkPairs &process) {
     auto func = process.func;
     BlkP pred = process.src;
     BlkP succ = process.dst;
-    auto vec = process.pairs;
+    auto vec = process.pairs; // dst, src
 
     struct Node {
-        std::forward_list<unsigned int> nxt;
-        unsigned int indegree = 0; // 由于phi函数性质, 这个地方要么0要么1
+        // 从目的寄存器指向源寄存器
+        std::forward_list<unsigned int> nxt; // 指向该Node的源寄存器
+        unsigned int indegree = 0;           // 由于phi函数性质, 这个地方要么0要么1
     };
 
     std::map<OperP, unsigned int> mapping;
@@ -251,7 +252,7 @@ void PhiEliminatePass::RunOnBlkPair(const PhiBlkPairs &process) {
 
     ///@brief 填充mapping
     for (int i = 0; i < vec.size(); ++i) {
-        mapping[vec[i].second] = i;
+        mapping[vec[i].second] = i; // input with src
     }
 
     ///@brief 填充graph
@@ -260,8 +261,11 @@ void PhiEliminatePass::RunOnBlkPair(const PhiBlkPairs &process) {
             unsigned int src = i;
             auto dst = mapping[vec[i].first];
 
-            graph[src].nxt.push_front(dst);
-            ++graph[dst].indegree;
+            // graph[src].nxt.push_front(dst);
+            // ++graph[dst].indegree; ///@bug
+
+            graph[dst].nxt.push_front(src);
+            ++graph[src].indegree;
         }
     }
 
@@ -287,7 +291,8 @@ void PhiEliminatePass::RunOnBlkPair(const PhiBlkPairs &process) {
         auto visit = [&](unsigned idx) {
             ++i;
 
-            auto [src, dst] = vec[idx];
+            // auto [src, dst] = vec[idx];
+            auto [dst, src] = vec[idx];
 
             if (StagedMap.find(src) != StagedMap.end()) {
                 src = StagedMap[src]; // 无需stage(暂时不需要)
@@ -297,23 +302,26 @@ void PhiEliminatePass::RunOnBlkPair(const PhiBlkPairs &process) {
                 ///@note 可能会出现一种比较极端的情况, %0 = phi [... ...], ..., [%0, ...]
                 ///@note 理论上由于单赋值, 所以不需要做什么, 但是算法会还是会插入一个stage, 以及一个冗余的copy
                 Err::gassert(graph[idx].indegree == 1, "indegree must be 1");
+                Logger::logDebug("phiEli: need a stage by " + dst->toString());
+
                 graph[idx].indegree = 0;
                 auto stagedVal = addCOYPInst(emitBlk, succ->getName(), dst, func); // push_before_branch
                 StagedMap[dst] = stagedVal;
             }
 
-            pushBeforeBranch(emitBlk, succ->getName(), src, dst); ///@bug, src和dst可能还需要再考虑一下
+            pushBeforeBranch(emitBlk, succ->getName(), dst, src); ///@bug, src和dst可能还需要再考虑一下
 
             auto &node = graph[idx];
-            for (auto nxt : node.nxt) {
+            for (auto nxt : node.nxt) { // 源操作数
                 auto &nxt_node = graph[nxt];
+                // Err::gassert(nxt_node.indegree == 1, "phiEli: source phi op is not 1 indegree");
                 --nxt_node.indegree;
                 if (nxt_node.indegree == 0)
                     queue.push(nxt);
             }
         };
 
-        ///@brief topo sort
+        ///@brief topo sorted
         while (!queue.empty()) {
             unsigned cur_node = queue.front();
             queue.pop();

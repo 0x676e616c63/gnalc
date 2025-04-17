@@ -24,7 +24,6 @@ bool isImmCanBeEncodedInText(unsigned int imme) {
     if (imme < 256)
         return true; // 防止 >> 32 产生ud
 
-    ///@note 感觉写麻烦了, 直接计算前导和后驱的0就行了
     unsigned ld = clz_wrapper(imme);
     unsigned tl = ctz_wrapper(imme);
 

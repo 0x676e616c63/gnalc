@@ -136,13 +136,14 @@ const std::list<std::pair<bool, std::variant<int, float, size_t>>> &GlobalObj::g
     return initializer;
 }
 
-ConstObj::ConstObj(unsigned int _id, std::string _glo) : id(_id), literal(std::move(_glo)) {}
+ConstObj::ConstObj(unsigned int _id, std::string _glo) : id(_id), literal(_glo), original(_glo) {}
 
-ConstObj::ConstObj(unsigned int _id, int imme) : id(_id) {
+ConstObj::ConstObj(unsigned int _id, int imme) : id(_id), original(imme) {
     auto imm = static_cast<unsigned int>(imme);
-    if (imme < 0 && imme > -257) {
-        literal = imme;
-    } else if (isImmCanBeEncodedInText(imm)) {
+    // if (imme < 0 && imme > -257) {
+    //     literal = imme;
+    // } // 仅适用于mov指令
+    if (isImmCanBeEncodedInText(imm)) {
         literal = imme;
     } else {
         ///@brief turn into movw/movt
@@ -152,7 +153,7 @@ ConstObj::ConstObj(unsigned int _id, int imme) : id(_id) {
     }
 }
 
-ConstObj::ConstObj(unsigned int _id, float imme) : id(_id) {
+ConstObj::ConstObj(unsigned int _id, float imme) : id(_id), original(imme) {
     if (isImmCanBeEncodedInText(imme)) {
         literal = imme;
     } else {
@@ -164,8 +165,8 @@ ConstObj::ConstObj(unsigned int _id, float imme) : id(_id) {
     }
 }
 
-ConstObj::ConstObj(unsigned int _id, bool imme) : id(_id), literal(imme) {}
-ConstObj::ConstObj(unsigned int _id, char imme) : id(_id), literal(imme) {}
+ConstObj::ConstObj(unsigned int _id, bool imme) : id(_id), literal(imme), original(imme) {}
+ConstObj::ConstObj(unsigned int _id, char imme) : id(_id), literal(imme), original(imme) {}
 
 bool ConstObj::isGlo() const { return literal.index() == 0; }
 bool ConstObj::isImme() const { return literal.index() != 0; }

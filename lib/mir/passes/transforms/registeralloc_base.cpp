@@ -50,7 +50,6 @@ PM::PreservedAnalyses RAPass::run(Function &bkd_function, FAM &fam) {
     clearall();
 
     colors.insert({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12}); // 将 r12/ip 标记为callersave
-    // colors.insert({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
     if (Func->editInfo().hasCall) {
         ++K; // +lr, 在call处设置use
         colors.insert(14);

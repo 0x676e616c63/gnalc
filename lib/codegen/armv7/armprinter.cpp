@@ -452,7 +452,8 @@ bool ARMPrinter::movInstHelper(const std::shared_ptr<Instruction> &mov) {
         // outStream << "    movt    " + reg_str + ", #:upper16:" + val_str + '\n';
         outStream << "movw\t" + reg_str + ", #:lower16:" + val_str + '\n';
         outStream << "    movt\t" + reg_str + ", #:upper16:" + val_str + '\n';
-    } else if (constant->isEncoded()) { // float, int
+    } else if (constant->isEncoded() || (!constant->isFloat() && std::get<int>(constant->getLiteral()) > -257 &&
+                                         std::get<int>(constant->getLiteral()) < 0)) { // float, neg int
         // movw/movt
         auto lower = std::to_string(std::get<Encoding>(constant->getLiteral()).first);
         auto upper = std::to_string(std::get<Encoding>(constant->getLiteral()).second);
