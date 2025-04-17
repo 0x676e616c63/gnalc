@@ -19,6 +19,8 @@
 //           source: https://github.com/I-mikan-I/ssa-compiler
 //     - LLVM:
 //           GVN.cpp: https://github.com/llvm/llvm-project/blob/main/llvm/lib/Transforms/Scalar/GVN.cpp#L2911
+//     - GCC:
+ //           GCC Wiki: https://gcc.gnu.org/wiki/GVN-PRE
 //
 // TODO: Restrictions should be applied on hoisting to avoid excessive register pressure
 // TODO: Load elimination? https://blog.llvm.org/2009/12/introduction-to-load-elimination-in-gvn.html

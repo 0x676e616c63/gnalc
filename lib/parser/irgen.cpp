@@ -1012,9 +1012,7 @@ void IRGenerator::visit(ReturnStmt &node) {
     }
 }
 
-IR::pVal
-IRGenerator::type_cast(const IR::pVal &val,
-                       const IR::pType &dest) {
+IR::pVal IRGenerator::type_cast(const IR::pVal &val, const IR::pType &dest) {
     if (isSameType(dest, val->getType()))
         return val;
 
@@ -1051,9 +1049,7 @@ IRGenerator::type_cast(const IR::pVal &val,
 // I32 <-> FLOAT
 // I32 <-> I1
 // FLOAT <-> I1
-IR::pVal
-IRGenerator::type_cast(const IR::pVal &val,
-                       IR::IRBTYPE dest) {
+IR::pVal IRGenerator::type_cast(const IR::pVal &val, IR::IRBTYPE dest) {
     const std::string bad_cast_err = "Cannot cast type from '" +
                                      val->getType()->toString() + "' to '" +
                                      IR::makeBType(dest)->toString() + "'.";
