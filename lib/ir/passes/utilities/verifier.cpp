@@ -144,6 +144,14 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                         ++fatal_error_cnt;
                     }
                 }
+
+                for (const auto &[v, b] : phi_opers) {
+                    if (!isSameType(v->getType(), phi_inst->getType())) {
+                        Logger::logCritical("[VerifyPass]: PHIInst '", phi_inst->getName(), "' has wrong operand type for '",
+                                            v->getName(), "'.");
+                        ++fatal_error_cnt;
+                    }
+                }
             }
         }
     }

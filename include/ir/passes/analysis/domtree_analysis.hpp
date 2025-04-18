@@ -75,10 +75,9 @@ public:
         return ret;
     }
 };
-
-using DomTreeBuilder = Graph::GenericDomTreeBuilder<BasicBlock *, false, IRGenericDomTree<false>>;
-using PostDomTreeBuilder = Graph::GenericDomTreeBuilder<BasicBlock *, true, IRGenericDomTree<true>>;
 } // namespace detail
+using DomTreeBuilder = Graph::GenericDomTreeBuilder<BasicBlock *, false, detail::IRGenericDomTree<false>>;
+using PostDomTreeBuilder = Graph::GenericDomTreeBuilder<BasicBlock *, true, detail::IRGenericDomTree<true>>;
 using DomTree = detail::IRGenericDomTree<false>;
 using PostDomTree = detail::IRGenericDomTree<true>;
 

@@ -53,6 +53,23 @@ void register_example_24_1() {
 }
 
 // Only Frontend
+// Requires: ./example_exes/example_24_2
+void register_example_24_2() {
+    Entry entry{
+        .ir_gen =
+            [](const std::string &newsy, const std::string &outll) {
+                return format("./example_exes/example_24_2 -S {} -ll {} -O1", newsy, outll);
+            },
+        .asm_gen =
+            [](const std::string &newsy, const std::string &outs) {
+                Err::not_implemented("Benchmark for example_24_2 backend");
+                return "";
+            },
+    };
+    BenchmarkRegistry::register_benchmark("example_24_2", entry);
+}
+
+// Only Frontend
 // Requires: clang
 void register_clang_o3() {
     Entry entry{
@@ -90,7 +107,8 @@ void register_gcc_o3() {
         .asm_gen =
             [](const std::string &newsy, const std::string &outs) {
                 return format(
-                    "sed -i '1i\\extern \"C\"{ int getint(),getch(),getarray(int a[]);float getfloat();int getfarray(float "
+                    "sed -i '1i\\extern \"C\"{ int getint(),getch(),getarray(int a[]);float getfloat();int "
+                    "getfarray(float "
                     "a[]);void "
                     "putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, "
                     "float "
@@ -139,6 +157,7 @@ void Test::register_all_benchmarks() {
     register_example_23();
     register_example_24();
     register_example_24_1();
+    register_example_24_2();
     register_clang_o3();
     register_gcc_o3();
     register_gnalc_mem2reg();

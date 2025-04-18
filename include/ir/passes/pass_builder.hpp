@@ -29,7 +29,6 @@ struct OptInfo {
     bool loop_strength_reduce{false};
     bool loopelim{false};
     bool slp_vectorizer{false};
-    bool sroa{false};
     bool jump_threading{false};
 
     bool tree_shaking{false};

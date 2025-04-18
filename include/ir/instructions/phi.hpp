@@ -11,10 +11,15 @@
 
 #include <utility>
 
+namespace IRParser {
+class IRPT;
+}
+
 namespace IR {
 // PHI_INST --USE-> {val, blk}
 // %result = phi <type> [ <val1>, <block1> ], [ <val2>, <block2> ], ...
 class PHIInst : public Instruction {
+    friend class IRParser::IRPT;
 public:
     // [ <val1>, <block1> ]
     // 只有 getPhiOpers, PhiOperIterator::operator* 会构造
@@ -78,6 +83,9 @@ public:
     void accept(IRVisitor &visitor) override;
 
 private:
+    // For IR Parser
+    void addPhiOperNoCheck(const pVal &val, const pBlock &blk);
+
     pVal cloneImpl() const override {
         auto cloned = std::make_shared<PHIInst>(getName(), getType());
         auto opers = getPhiOpers();

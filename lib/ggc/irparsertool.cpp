@@ -157,7 +157,7 @@ pBlock IRPT::newBB(std::string name, const std::list<pInst> &insts) {
 pPhi IRPT::newPhi(const string &name, pType &ty, const std::vector<std::pair<pVal, pBlock>>& phiopers) {
     auto p = vmake<PHIInst>(name, name, ty);
     for (auto& [v, b] : phiopers) {
-        p->addPhiOper(v, b);
+        p->addPhiOperNoCheck(v, b);
     }
     return p;
 }

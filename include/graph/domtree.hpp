@@ -19,7 +19,6 @@ struct Identity {
     template <typename T> auto operator()(T &&v) const { return std::forward<T>(v); }
 };
 
-// todo: 使用缓存的DFS优化
 template <typename GraphT, bool IsPostDom, typename GraphNodeProj = Identity> class GenericDomTree {
     template <typename, bool, typename> friend class GenericDomTreeBuilder;
 
