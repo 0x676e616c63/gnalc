@@ -331,8 +331,10 @@ bool eliminateDeadInsts(std::vector<pInst>& worklist, FAM *fam) {
     }
 
     for (const auto &block : todo_blocks) {
-        modified |= block->delInstIf([&eliminated](const auto &inst)
-            { return eliminated.count(inst); });
+        if (block) {
+            modified |= block->delInstIf([&eliminated](const auto &inst)
+               { return eliminated.count(inst); });
+        }
     }
     return modified;
 }

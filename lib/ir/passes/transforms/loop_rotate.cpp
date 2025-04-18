@@ -433,8 +433,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
 
                 function.addBlock(new_header->getIter(), new_preheader);
 
-                if (!loop->isOutermost())
-                    loop_info.addBlock(loop->getParent(), new_preheader);
+                loop_info.discoverNonHeaderBlock(new_preheader);
 
                 // Dedicated Exits
                 // Note that the exit could be an exit block for multiple nested loops
@@ -460,8 +459,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                         continue;
                     auto new_bb = breakCriticalEdge(exit_pred, header_exit);
                     new_bb->setName("%lr.exit" + std::to_string(name_cnt++));
-                    if (auto exit_loop = loop_info.getLoopFor(header_exit))
-                        loop_info.addBlock(exit_loop, new_bb);
+                    loop_info.discoverNonHeaderBlock(new_bb);
                 }
             }
 

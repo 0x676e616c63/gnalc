@@ -193,6 +193,8 @@ public:
 
     void addBlock(const pLoop &loop, BasicBlock *bb);
     void addBlock(const pLoop &loop, const pBlock &bb);
+    void discoverNonHeaderBlock(BasicBlock *bb);
+    void discoverNonHeaderBlock(const pBlock &bb);
 };
 
 class LoopAnalysis : public PM::AnalysisInfo<LoopAnalysis> {

@@ -410,6 +410,34 @@ void LoopInfo::addBlock(const pLoop &loop, BasicBlock *bb) {
 }
 void LoopInfo::addBlock(const pLoop &loop, const pBlock &bb) { addBlock(loop, bb.get()); }
 
+void LoopInfo::discoverNonHeaderBlock(BasicBlock *bb) {
+    Err::gassert(!loop_map.count(bb), "Block already discovered.");
+    pLoop innermost;
+    // All predecessors are in the loop
+    for (const auto& pred : bb->preds()) {
+        auto curr_loop = getLoopFor(pred);
+        if (!curr_loop)
+            return;
+        if (!innermost || curr_loop->contains(innermost))
+            innermost = curr_loop;
+    }
+    if (!innermost)
+        return;
+    // At least one successor is in the loop
+    bool in_loop = false;
+    for (const auto& succ : bb->succs()) {
+        auto curr_loop = getLoopFor(succ);
+        if (curr_loop && curr_loop->contains(innermost)) {
+            innermost = curr_loop;
+            in_loop = true;
+            break;
+        }
+    }
+    if (in_loop && innermost)
+        addBlock(innermost, bb);
+}
+void LoopInfo::discoverNonHeaderBlock(const pBlock &bb) { discoverNonHeaderBlock(bb.get()); }
+
 LoopInfo::const_iterator LoopInfo::begin() const { return top_level_loops.begin(); }
 LoopInfo::const_iterator LoopInfo::end() const { return top_level_loops.end(); }
 LoopInfo::iterator LoopInfo::begin() { return top_level_loops.begin(); }

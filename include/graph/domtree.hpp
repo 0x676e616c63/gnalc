@@ -91,7 +91,6 @@ public:
     auto root() const { return root_node; }
 
     const auto &operator[](GraphNodeT graph_node) const {
-        // Err::gassert(nodes.count(graph_node), "No dominator tree for unreachable blocks.");
         return nodes.at(graph_node);
     }
 
@@ -104,8 +103,6 @@ public:
     }
 
     GraphNodeSet getDomSet(GraphNodeT b) const {
-        // Err::gassert(nodes.count(b), "No dominator tree for unreachable blocks.");
-
         GraphNodeSet domset = {b};
         auto _b = nodes.at(b).get();
         do {
@@ -117,8 +114,6 @@ public:
 
     // TODO: needs optimization
     GraphNodeSet getDomFrontier(GraphNodeT b) const {
-        // Err::gassert(nodes.count(b), "No dominator tree for unreachable blocks.");
-
         auto it = df_cache.find(b);
         if (it != df_cache.end())
             return it->second;
