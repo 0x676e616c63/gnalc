@@ -3,8 +3,8 @@ project(gnalc)
 
 set(CMAKE_CXX_STANDARD 17)
 include_directories(include)
+include_directories(../include)
 
-add_compile_options("-g" "-fstandalone-debug")
 add_link_options("-rdynamic")
 
 add_executable(pass_benchmark benchmark.cpp benchmark_registry.cpp)

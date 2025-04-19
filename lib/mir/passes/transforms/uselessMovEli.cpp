@@ -3,7 +3,7 @@
 using namespace MIR;
 
 PM::PreservedAnalyses uselessMovEli::run(Function &func, FAM &fam) {
-    // function = &func;
+    function = &func;
 
     impl(func);
 
@@ -69,11 +69,12 @@ bool uselessMovEli::isUseless(const InstP &inst) {
             return true; // avoid std::get<...> below
         }
 
+        // mov
         if (std::get<CoreRegister>(target->getColor()) != std::get<CoreRegister>(source->getColor()))
             return false;
 
         if (std::get<CoreRegister>(target->getColor()) == CoreRegister::none)
-            return false; // to fit RA
+            return false; // to fit RA, not in use now
 
     } else {
         auto op = std::get<NeonOpCode>(opcode);

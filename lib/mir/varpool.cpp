@@ -80,6 +80,8 @@ void VarPool::addValue(const IR::Value &val, std::shared_ptr<Operand> Value) {
 
 void VarPool::addLoaded(const ConstObj &obj, const std::shared_ptr<BindOnVirOP> &Value,
                         const std::shared_ptr<BasicBlock> &blk) {
+
+    Err::gassert(const2vir[obj] == nullptr, "lowering: addLoaded for an already loaded constobj");
     const2vir[obj] = Value;
     const2blks[obj].insert(blk);
 }

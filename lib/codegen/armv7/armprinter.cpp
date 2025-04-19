@@ -272,6 +272,7 @@ void addressingTemplate_stk(std::ostream &outStream, const std::shared_ptr<Instr
             //     outStream << "    add\t" + enum_name(std::get<CoreRegister>(idx->getColor())) + ", " +
             //                      enum_name(std::get<CoreRegister>(idx->getColor())) + ", fp\n";
 
+            ///@note 此处的fp作为变址寄存器
             outStream << "    ldr\t" + enum_name(std::get<CoreRegister>(target->getColor())) + ", [" +
                              enum_name(std::get<CoreRegister>(base->getBase()->getColor())) + ", " +
                              (idx ? enum_name(std::get<CoreRegister>(idx->getColor())) : "fp")
@@ -297,6 +298,7 @@ void addressingTemplate_stk(std::ostream &outStream, const std::shared_ptr<Instr
             //     outStream << "    add\t" + enum_name(std::get<CoreRegister>(idx->getColor())) + ", " +
             //                      enum_name(std::get<CoreRegister>(idx->getColor())) + ", fp\n";
 
+            ///@note 此处的fp作为变址寄存器
             outStream << "    str\t" + enum_name(std::get<CoreRegister>(source->getColor())) + ", [" +
                              enum_name(std::get<CoreRegister>(base->getBase()->getColor())) + ", " +
                              (idx ? enum_name(std::get<CoreRegister>(idx->getColor())) : "fp")
@@ -310,32 +312,34 @@ void addressingTemplate_stk(std::ostream &outStream, const std::shared_ptr<Instr
         auto idx = vldr->getSourceOP(2) ? vldr->getSourceOP(2)->as<BindOnVirOP>() : nullptr;
         auto asmOffset = base->getObj()->getOffset() + base->getConstOffset();
 
-        if (asmOffset <= 1020) {
+        ///@note Neon或者VFP的vldr/vstr不支持变址寻址
+
+        if (asmOffset <= 1020 && idx == nullptr) {
             outStream << "    vldr\t" << enum_name(std::get<FPURegister>(target->getColor())) << ", ";
-            outStream << '[' << addressingTemplate(vldr->getSourceOP(1), vldr->getSourceOP(2), nullptr) << "]\n";
-            ///@note vldr->getSourceOP(2) should be nullptr
+            outStream << '[' << addressingTemplate(vldr->getSourceOP(1), nullptr, nullptr) << "]\n";
         } else {
-            // outStream << "    movw\tfp, #" + std::to_string(asmOffset & 0xffff) << '\n';
-            // if (asmOffset > 0xffff)
-            //     outStream << "    movt\tfp, #" + std::to_string((asmOffset & 0xffff0000) >> 16) << '\n';
+            ///@brief 将asmOffset, base, idx集合到预留的fp寄存器
+
+            ///@note asmoffset, maybe mov fp, #0
             if (isImmCanBeEncodedInText((unsigned)asmOffset))
-                outStream << "    add\t, fp, sp, #" + std::to_string(asmOffset) + '\n';
+                outStream << "    mov\tfp, #" + std::to_string(asmOffset) + '\n';
             else {
                 outStream << "    movw\tfp, #" + std::to_string(asmOffset & 0xffff) << '\n';
                 if (asmOffset > 0xffff)
                     outStream << "    movt\tfp, #" + std::to_string((asmOffset & 0xffff0000) >> 16) << '\n';
-                outStream << "    add\t fp, sp, fp\n";
             }
 
-            // if (idx)
-            //     outStream << "    add\t" + enum_name(std::get<CoreRegister>(idx->getColor())) + ", " +
-            //                      enum_name(std::get<CoreRegister>(idx->getColor())) + ", fp\n";
+            ///@note base
+            outStream << "    add\t fp, fp, " + enum_name(std::get<CoreRegister>(base->getColor())) + '\n';
 
+            ///@note idx
             if (idx)
-                outStream << "    add\tfp, fp, " + enum_name(std::get<CoreRegister>(idx->getColor())) + '\n';
+                outStream << "    add\t fp, fp, " + enum_name(std::get<CoreRegister>(idx->getColor())) + '\n';
 
+            ///@note vldr
             outStream << "    vldr\t" + enum_name(std::get<FPURegister>(target->getColor())) + ", [fp]\n";
         }
+
     } else if (auto vstr = std::dynamic_pointer_cast<Vstr>(inst)) {
         auto source = vstr->getSourceOP(1)->as<BindOnVirOP>();
         if (source->getOperandTrait() == OperandTrait::BaseAddress)
@@ -344,30 +348,31 @@ void addressingTemplate_stk(std::ostream &outStream, const std::shared_ptr<Instr
         auto idx = vstr->getSourceOP(3) ? vstr->getSourceOP(3)->as<BindOnVirOP>() : nullptr;
         auto asmOffset = base->getObj()->getOffset() + base->getConstOffset();
 
-        if (asmOffset <= 1020) {
-            outStream << "    vstr\t" << enum_name(std::get<FPURegister>(source->getColor())) << ", ";
-            outStream << '[' << addressingTemplate(vstr->getSourceOP(2), vstr->getSourceOP(3), nullptr) << "]\n";
-        } else {
-            // outStream << "    movw\tfp, #" + std::to_string(asmOffset & 0xffff) << '\n';
-            // if (asmOffset > 0xffff)
-            //     outStream << "    movt\tfp, #" + std::to_string((asmOffset & 0xffff0000) >> 16) << '\n';
+        ///@note Neon或者VFP的vldr/vstr不支持变址寻址
 
+        if (asmOffset <= 1020 && idx == nullptr) {
+            outStream << "    vstr\t" << enum_name(std::get<FPURegister>(source->getColor())) << ", ";
+            outStream << '[' << addressingTemplate(vstr->getSourceOP(2), nullptr, nullptr) << "]\n";
+        } else {
+            ///@brief 将asmOffset, base, idx集合到预留的fp寄存器
+
+            ///@note asmoffset, maybe mov fp, #0
             if (isImmCanBeEncodedInText((unsigned)asmOffset))
-                outStream << "    add\t, fp, sp, #" + std::to_string(asmOffset) + '\n';
+                outStream << "    mov\tfp, #" + std::to_string(asmOffset) + '\n';
             else {
                 outStream << "    movw\tfp, #" + std::to_string(asmOffset & 0xffff) << '\n';
                 if (asmOffset > 0xffff)
                     outStream << "    movt\tfp, #" + std::to_string((asmOffset & 0xffff0000) >> 16) << '\n';
-                outStream << "    add\t fp, sp, fp\n";
             }
 
-            // if (idx)
-            //     outStream << "    add\t" + enum_name(std::get<CoreRegister>(idx->getColor())) + ", " +
-            //                      enum_name(std::get<CoreRegister>(idx->getColor())) + ", fp\n";
+            ///@note base
+            outStream << "    add\t fp, fp, " + enum_name(std::get<CoreRegister>(base->getColor())) + '\n';
 
+            ///@note idx
             if (idx)
-                outStream << "    add\tfp, fp, " + enum_name(std::get<CoreRegister>(idx->getColor())) + '\n';
+                outStream << "    add\t fp, fp, " + enum_name(std::get<CoreRegister>(idx->getColor())) + '\n';
 
+            ///@note vstr
             outStream << "    vstr\t" + enum_name(std::get<FPURegister>(source->getColor())) + ", [fp]\n";
         }
     }
@@ -447,7 +452,8 @@ bool ARMPrinter::movInstHelper(const std::shared_ptr<Instruction> &mov) {
         // outStream << "    movt    " + reg_str + ", #:upper16:" + val_str + '\n';
         outStream << "movw\t" + reg_str + ", #:lower16:" + val_str + '\n';
         outStream << "    movt\t" + reg_str + ", #:upper16:" + val_str + '\n';
-    } else if (constant->isEncoded()) { // float, int
+    } else if (constant->isEncoded() || (!constant->isFloat() && std::get<int>(constant->getLiteral()) > -257 &&
+                                         std::get<int>(constant->getLiteral()) < 0)) { // float, neg int
         // movw/movt
         auto lower = std::to_string(std::get<Encoding>(constant->getLiteral()).first);
         auto upper = std::to_string(std::get<Encoding>(constant->getLiteral()).second);

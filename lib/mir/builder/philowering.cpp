@@ -30,7 +30,8 @@ std::list<std::shared_ptr<Instruction>> InstLowering::phiLower(const std::shared
     std::vector<PhiOper> phioperList;
     for (const auto &midEnd_oper : PhiOpers) {
         // 可能是一个常数, 一个虚拟寄存器, 或者找不到(存在循环的CFG中极有可能)
-        // 所以这里暂时存中断IR, 在phi消除中转为MIR
+        // 所以这里暂时存中端IR, 在phi消除中转为MIR
+        // int, float, pointer, constantI32, constantFloat
         auto oper = PhiOper(midEnd_oper.value, midEnd_oper.block->getName());
 
         phioperList.push_back(oper);

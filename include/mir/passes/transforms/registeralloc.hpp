@@ -30,27 +30,27 @@ public:
 
 protected:
     // datas
-    Function *Func{};
+    Function *Func;
 
-    OperSet precolored{};
-    OperSet initial{};
+    OperSet precolored;
+    OperSet initial;
 
-    WorkList simplifyWorkList{};
-    WorkList freezeWorkList{};
-    WorkList spillWorkList{};
+    WorkList simplifyWorkList;
+    WorkList freezeWorkList;
+    WorkList spillWorkList;
 
-    Nodes coalescedNodes{};
-    Nodes spilledNodes{};
-    Nodes coloredNodes{};
+    Nodes coalescedNodes;
+    Nodes spilledNodes;
+    Nodes coloredNodes;
 
     // Operands wait to be colored
-    std::vector<std::shared_ptr<Operand>> selectStack{};
+    std::vector<std::shared_ptr<Operand>> selectStack;
 
-    Moves coalescedMoves{};
-    Moves constrainedMoves{};
-    Moves frozenMoves{};
-    Moves worklistMoves{};
-    Moves activeMoves{};
+    Moves coalescedMoves;
+    Moves constrainedMoves;
+    Moves frozenMoves;
+    Moves worklistMoves;
+    Moves activeMoves;
 
     // others
     std::unordered_set<Edge, EdgeHash> adjSet;
@@ -92,10 +92,10 @@ protected:
     OperP GetAlias(OperP);                   // 递归
 
 protected:
+    void clearall();
+
     std::set<int> colors;
 
-    ///@note 填充initial 和 precolored
-    ///@bug 由于FAM特性, 不同Function使用相同Pass时, 简单数据不会清空, 所以需要在run中手动置空
     bool isInitialed;
 
     ///@note 活跃分析以及信息
@@ -148,14 +148,14 @@ protected:
 
     /// @note selectspill时使用的启发式算法
     OperP heuristicSpill();
-    std::map<OperP, unsigned int> intervalLengths;
+    // std::map<OperP, unsigned int> intervalLengths;
 
     /// @note 选择合适的方式溢出, 将原变量替换为一套临时变量(相当于弃用原变量)
     virtual Nodes spill_tryOpt(const OperP &);
     virtual Nodes spill_classic(const OperP &);
     Nodes spill_opt(const OperP &);
 
-    ///@note 用于溢出优化的浮点寄存器, 只出不进
+    ///@note 用于溢出优化的浮点寄存器
     std::set<unsigned int> *availableSRegisters;
 
     ///@note 溢出次数(包含opt)

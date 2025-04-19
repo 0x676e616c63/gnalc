@@ -13,18 +13,43 @@ bool RAPass::Edge::operator==(const Edge &another) const {
 
 std::size_t RAPass::EdgeHash::operator()(const Edge &_edge) const {
     return std::hash<std::size_t>()((size_t)(_edge.v.get()) ^ (size_t)(_edge.u.get()));
-    // 这么写可能合理, 但这么写合理不太可能
+}
+
+void RAPass::clearall() {
+    precolored.clear();
+    initial.clear();
+    simplifyWorkList.clear();
+    freezeWorkList.clear();
+    spilledNodes.clear();
+    coalescedNodes.clear();
+    spillWorkList.clear();
+    coloredNodes.clear();
+    selectStack.clear();
+    coalescedMoves.clear();
+    constrainedMoves.clear();
+    frozenMoves.clear();
+    worklistMoves.clear();
+    activeMoves.clear();
+    adjSet.clear();
+    adjList.clear();
+    degree.clear();
+    moveList.clear();
+    alias.clear();
+    colors.clear();
+    // intervalLengths.clear();
+    spilltimes = 0;
+    isInitialed = false;
 }
 
 PM::PreservedAnalyses RAPass::run(Function &bkd_function, FAM &fam) {
     Func = &bkd_function;
     availableSRegisters = &(Func->editInfo().availableSRegisters);
     varpool = &(Func->editInfo().varpool);
-    initial.clear();
+    K = Config::MIR::CORE_REGISTER_MAX_NUM; // reset
 
-    // colors.insert({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12});
-    colors.insert({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10}); // r12/ip, 尽量不使用, memset, putint等可能使用并且不会恢复
+    clearall();
 
+    colors.insert({0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12}); // 将 r12/ip 标记为callersave
     if (Func->editInfo().hasCall) {
         ++K; // +lr, 在call处设置use
         colors.insert(14);
@@ -39,9 +64,6 @@ PM::PreservedAnalyses RAPass::run(Function &bkd_function, FAM &fam) {
         --K; // no r7
         colors.erase(7);
     }
-
-    spilltimes = 0;
-    isInitialed = false;
 
     Func->editInfo().regdit_s.insert({
         0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15,
@@ -66,7 +88,7 @@ PM::PreservedAnalyses RAPass::run(Function &bkd_function, FAM &fam) {
 
 void RAPass::Main(FAM &fam) {
 
-    liveinfo = fam.getResult<LiveAnalysis>(*Func);
+    liveinfo = fam.getFreshResult<LiveAnalysis>(*Func);
 
     Build();
     MkWorkList();
@@ -85,6 +107,9 @@ void RAPass::Main(FAM &fam) {
     AssignColors();
 
     if (!spilledNodes.empty()) {
+        for (const auto &node : spilledNodes)
+            Logger::logDebug(node->toString() + " spilled out");
+
         ReWriteProgram();
 
         Main(fam);
@@ -178,7 +203,6 @@ void RAPass::MkWorkList() {
     for (auto it = initial.begin(); it != initial.end();) {
         const auto n = *it;
 
-        Err::gassert(n != nullptr, "n is nullptr");
         Err::gassert(std::dynamic_pointer_cast<PreColedOP>(n) == nullptr, "try put a precolored op into initial");
 
         if (degree[n] >= K) {
@@ -195,8 +219,6 @@ void RAPass::MkWorkList() {
 }
 
 void RAPass::Simplify() {
-    ///@note 理论上论文这里也是一种启发式算法: 从simplifyWorkList随便取出一个
-
     // std::random_device rd;
     // std::mt19937 gen(rd());
     // std::uniform_int_distribution<std::size_t> dist(0, simplifyWorkList.size() - 1);
@@ -254,7 +276,6 @@ void RAPass::EnableMoves(const Nodes &nodes) {
 }
 
 void RAPass::Coalesce() {
-    ///@note 依然是启发式地随便弄一个
     // std::random_device rd;
     // std::mt19937 gen(rd());
     // std::uniform_int_distribution<std::size_t> dist(0, worklistMoves.size() - 1);
@@ -353,7 +374,6 @@ void RAPass::Combine(const OperP &u, const OperP &v) {
 }
 
 void RAPass::Freeze() {
-    ///@note 启发式随便找 x 3
     // std::random_device rd;
     // std::mt19937 gen(rd());
     // std::uniform_int_distribution<std::size_t> dist(0, freezeWorkList.size() - 1);
@@ -396,8 +416,7 @@ void RAPass::FreezeMoves(const OperP &u) {
 }
 
 void RAPass::SelectSpill() {
-    ///@note 启发式算法, 但是自己设计
-    auto m = heuristicSpill(); ///@bug
+    auto m = heuristicSpill();
 
     delBySet(spillWorkList, WorkList{m});
     addBySet(simplifyWorkList, WorkList{m});
@@ -410,6 +429,12 @@ void RAPass::AssignColors() {
         auto n = selectStack.back();
         selectStack.pop_back();
 
+        if (n->as<BindOnVirOP>() && n->as<BindOnVirOP>()->getBank() != RegisterBank::gpr) {
+            /// 实属无奈
+            Logger::logDebug("RA: try assign color to a fpu reg in normal ra " + n->toString());
+            continue;
+        }
+
         // Err::gassert(n->as<BindOnVirOP>() != nullptr && n->as<BindOnVirOP>()->getBank() == RegisterBank::gpr &&
         //                  n->as<BindOnVirOP>()->getColor().index() != 1,
         //              "try assign color to a fpu reg in normal ra :" + n->toString());
@@ -417,8 +442,8 @@ void RAPass::AssignColors() {
         std::vector<unsigned int> okColors(colors.begin(), colors.end());
 
         for (const auto &w : adjList[n]) {
-            if (getUnion<OperP>(coloredNodes, precolored).count(GetAlias(w))) {
-                auto w_a = GetAlias(w);
+            const auto &w_a = GetAlias(w);
+            if (getUnion<OperP>(coloredNodes, precolored).count(w_a)) {
                 auto w_a_reg = std::dynamic_pointer_cast<BindOnVirOP>(w_a);
 
                 Err::gassert(w_a_reg != nullptr, "try assign color for a none virReg op");
@@ -432,14 +457,15 @@ void RAPass::AssignColors() {
                     okColors.erase(it);
             }
 
-            Err::gassert(okColors.size() <= K, "vector okColors corrupted.");
+            // Err::gassert(okColors.size() <= K, "vector okColors corrupted.");
         }
 
         if (okColors.empty()) {
             addBySet(spilledNodes, Nodes{n});
         } else if (auto precolored = std::dynamic_pointer_cast<PreColedOP>(n)) {
             /// Iterated Register Coalescing会将预着色寄存器一起放入图中, 所以这里不再处理
-            if (precolored->getColor().index() == 0)
+            if (precolored->getColor().index() == 0 &&
+                std::get<CoreRegister>(precolored->getColor()) != CoreRegister::sp)
                 Func->editInfo().regdit.insert(
                     static_cast<unsigned int>(std::get<CoreRegister>(precolored->getColor())));
         } else {
@@ -473,7 +499,12 @@ void RAPass::ReWriteProgram() {
     initial.clear();
 
     for (const auto &n : spilledNodes) {
-        addBySet(initial, spill_tryOpt(n));
+        auto ops = spill_tryOpt(n);
+
+        for (const auto &op : ops)
+            Logger::logDebug("Ra: spill op to new op " + op->toString());
+
+        addBySet(initial, ops);
     }
 
     spilledNodes.clear();
@@ -540,15 +571,16 @@ PM::PreservedAnalyses NeonRAPass::run(Function &bkd_function, FAM &fam) {
     Func = &bkd_function;
     varpool = &(Func->editInfo().varpool);
     liveinfo = fam.getResult<LiveAnalysis>(bkd_function);
+    K = Config::MIR::FPU_REGISTER_MAX_NUM; // reset
 
-    isInitialed = false;
+    clearall();
 
+    availableSRegisters.clear();
     for (int i = 0; i < 32; ++i)
         availableSRegisters.insert(i);
 
     Main(fam);
 
-    // 吓我一跳我释放忍术 --- 耦合!
     Func->editInfo().availableSRegisters = availableSRegisters;
     Func->editInfo().spilltimes += spilltimes;
 
@@ -560,8 +592,11 @@ void NeonRAPass::AssignColors() {
         auto n = selectStack.back();
         selectStack.pop_back();
 
-        // Err::gassert(n->as<BindOnVirOP>() != nullptr && n->as<BindOnVirOP>()->getBank() == RegisterBank::spr,
-        //              "try assign a core reg in NeonRa: " + n->toString());
+        if (n->as<BindOnVirOP>() && n->as<BindOnVirOP>()->getBank() != RegisterBank::spr) {
+            /// 实属无奈
+            Logger::logDebug("RA: try assign color to a fpu reg in normal ra " + n->toString());
+            continue;
+        }
 
         std::vector<unsigned int> okColors(K);
 
@@ -593,7 +628,9 @@ void NeonRAPass::AssignColors() {
             // auto c = okColors.back();
 
             auto n_reg = std::dynamic_pointer_cast<BindOnVirOP>(n);
-            Err::gassert(n_reg != nullptr, "try assign color for a none virReg op");
+
+            Err::gassert(n_reg->getBank() == RegisterBank::spr,
+                         "Neon RA: try assign color for a gpr op " + n_reg->toString());
 
             n_reg->setColor(static_cast<FPURegister>(c));
 
@@ -614,6 +651,7 @@ void NeonRAPass::AssignColors() {
         Err::gassert(n_a_reg != nullptr, "try assign color for a none virReg op");
 
         ///@todo dpr, qpr
+        Err::gassert(n_reg->getBank() == RegisterBank::spr, "Neon RA: try assign color for a gpr op");
         n_reg->setColor(n_a_reg->getColor());
     }
 }

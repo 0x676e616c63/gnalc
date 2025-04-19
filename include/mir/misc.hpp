@@ -1,8 +1,8 @@
 #pragma once
 #ifndef GNALC_MIR_FRAME_HPP
 #define GNALC_MIR_FRAME_HPP
-#include "ir/global_var.hpp"
 #include "base.hpp"
+#include "ir/global_var.hpp"
 #include <list>
 #include <variant>
 
@@ -94,6 +94,7 @@ private:
     /// @brief std::string代表常量地址, 仅在mov中出现
     ///@note float 需要转化为科学计数法
     std::variant<std::string, int, float, bool, char, Encoding> literal;
+    std::variant<std::string, int, float> original;
 
 public:
     ConstObj() = delete;
@@ -116,7 +117,8 @@ public:
 
     bool operator==(const ConstObj &other) const;
 
-    auto getLiteral() const { return literal; } // deduce type
+    auto getLiteral() const { return literal; }
+    auto getOriginal() const { return original; }
 
     std::string toString() const; // printf info
     ~ConstObj() = default;

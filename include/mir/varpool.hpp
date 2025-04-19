@@ -49,20 +49,17 @@ public:
     std::pair<std::shared_ptr<BindOnVirOP>, std::shared_ptr<ConstObj>>
     getLoaded(const T_variant &literal, const std::shared_ptr<BasicBlock> &blk) {
         unsigned int cnt = 0;
+
         for (const auto &[const_obj, ptr] : const2vir) {
-            if (std::holds_alternative<std::remove_cv_t<std::remove_reference_t<decltype(literal)>>>(
-                    const_obj.getLiteral()) &&
-                literal ==
-                    std::get<std::remove_cv_t<std::remove_reference_t<decltype(literal)>>>(const_obj.getLiteral()))
-                return {getLoaded(const_obj, blk), nullptr};
+            // if (std::holds_alternative<T_variant>(const_obj.getLiteral()))
+            if (std::holds_alternative<T_variant>(const_obj.getOriginal()))
+                if (literal == std::get<T_variant>(const_obj.getOriginal()))
+                    return {getLoaded(const_obj, blk), nullptr};
             ++cnt;
         }
         auto obj = std::make_shared<ConstObj>(cnt, literal);
 
         std::shared_ptr<MIR::BindOnVirOP> op;
-
-        // if (std::remove_cv_t<std::remove_reference_t<decltype(literal)>> == typeid(std::string))
-        //     op =
 
         op = addValue_anonymously(false);
         addLoaded(*obj, op, blk); // obj 析构? blk 析构?

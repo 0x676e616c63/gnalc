@@ -34,7 +34,7 @@ RAPass::Nodes RAPass::getUse(const InstP &inst) {
         case NeonOpCode::VMOV: {
             auto sourceop = inst->getSourceOP(1)->as<BindOnVirOP>(); // vmov 一般不接受常量
 
-            if (sourceop->getBank() == RegisterBank::gpr)
+            if (sourceop && sourceop->getBank() == RegisterBank::gpr) // sometimes a valid float value
                 uses.insert(sourceop);
         } break;
         case NeonOpCode::VLDR: {
@@ -55,6 +55,10 @@ RAPass::Nodes RAPass::getUse(const InstP &inst) {
             break;
         }
 
+        for (auto use : uses)
+            Err::gassert(use->as<BindOnVirOP>()->getBank() == RegisterBank::gpr,
+                         "Ra::getUse: get a spr val " + use->toString());
+
         return uses;
     }
 
@@ -64,22 +68,30 @@ RAPass::Nodes RAPass::getUse(const InstP &inst) {
         for (int rx = 0; rx < 4; ++rx) {
             uses.insert(varpool.getValue(static_cast<CoreRegister>(rx))); // r0, r1, r2, r3
         }
+        uses.insert(varpool.getValue(static_cast<CoreRegister>(12))); // ip
 
         if (Func->getInfo().hasCall) // 虽然但是, 这个判断显得没有必要
             uses.insert(varpool.getValue(static_cast<CoreRegister>(14))); // lr
+
+        for (const auto &use : uses)
+            Err::gassert(use->as<BindOnVirOP>()->getBank() == RegisterBank::gpr,
+                         "Ra::getUse: get a spr val " + use->toString());
 
         return uses;
     }
 
     for (int i = 1; i < 5; ++i) {
-        auto op = inst->getSourceOP(i);
+        auto op = inst->getSourceOP(i); // nullptr maybe
 
         if (auto ptr = std::dynamic_pointer_cast<BaseADROP>(op)) {
             uses.insert(ptr->getBase()); // maybe itself
-        } else if (auto vir = std::dynamic_pointer_cast<BindOnVirOP>(op) &&
-                              std::dynamic_pointer_cast<BindOnVirOP>(op)->getBank() == RegisterBank::gpr)
+        } else if (op && op->as<BindOnVirOP>() && op->as<BindOnVirOP>()->getBank() == RegisterBank::gpr)
             uses.insert(op);
     }
+
+    for (const auto &use : uses)
+        Err::gassert(use->as<BindOnVirOP>()->getBank() == RegisterBank::gpr,
+                     "Ra::getUse: get a spr val " + use->toString());
 
     return uses;
 }
@@ -97,8 +109,14 @@ RAPass::Nodes RAPass::getDef(const InstP &inst) {
             defs.insert(varpool.getValue(static_cast<CoreRegister>(rx))); // r0, r1, r2, r3
         }
 
+        defs.insert(varpool.getValue(static_cast<CoreRegister>(12))); // ip
+
         if (Func->getInfo().hasCall)
             defs.insert(varpool.getValue(static_cast<CoreRegister>(14))); // lr
+
+        for (const auto &def : defs)
+            Err::gassert(def->as<BindOnVirOP>()->getBank() == RegisterBank::gpr,
+                         "Ra::getDef: get a spr val " + def->toString());
 
         return defs;
     }
@@ -111,6 +129,10 @@ RAPass::Nodes RAPass::getDef(const InstP &inst) {
     } else if (op->as<BindOnVirOP>() && op->as<BindOnVirOP>()->getBank() == RegisterBank::gpr)
         defs.insert(op);
 
+    for (const auto &def : defs)
+        Err::gassert(def->as<BindOnVirOP>()->getBank() == RegisterBank::gpr,
+                     "Ra::getDef: get a spr val " + def->toString());
+
     return defs;
 }
 
@@ -119,7 +141,7 @@ OperP RAPass::heuristicSpill() {
     ///@note 优化的关键在于, 合理设置权重值
 
     ///@brief 炼丹中...
-    const double Weight_IntervalLength = 2.5;
+    const double Weight_IntervalLength = 5;
     const double Weight_Degree = 3;
     const double extra_Weight_ForNotPtr = +60; // origin: 60
 
@@ -127,6 +149,7 @@ OperP RAPass::heuristicSpill() {
     double weight_max = 0;
     OperP spilled = nullptr;
     for (const auto &op : spillWorkList) {
+
         double weight = 0;
 
         // if (liveinfo.intervalLengths.find(op) != liveinfo.intervalLengths.end())
@@ -160,19 +183,27 @@ RAPass::Nodes RAPass::spill_tryOpt(const OperP &op) {
 RAPass::Nodes RAPass::spill_opt(const OperP &op) {
     Nodes stageValues;
 
-    // 溢出的FPU寄存器
-    auto fpu = *(availableSRegisters->begin()); // 尽量用caller saved
-    availableSRegisters->erase(availableSRegisters->begin());
+    // 溢出到FPU寄存器
+    unsigned fpu = -1;
+    // auto fpu = *(availableSRegisters->begin()); // 尽量用caller saved
+    // availableSRegisters->erase(availableSRegisters->begin());
+
+    while (!availableSRegisters->empty()) {
+        fpu = *(availableSRegisters->begin());
+        availableSRegisters->erase(availableSRegisters->begin());
+
+        if (fpu >= 16) // 遵守调用规约, 使用calleesave
+            break;
+    }
+
+    if (fpu < 16) // clear out the fpu regs but none can be in use
+        return spill_classic(op);
 
     auto fpuRegister = varpool->getValue(static_cast<FPURegister>(fpu));
     auto type_pair = std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32);
 
     for (const auto &blk : Func->getBlocks()) {
         auto &insts = blk->getInsts();
-
-        if (blk->getName() == "%50" && op->getName() == "%662") {
-            int useless;
-        }
 
         for (auto inst_it = insts.begin(); inst_it != insts.end();) {
             bool insert_before = false;
@@ -674,6 +705,16 @@ NeonRAPass::Nodes NeonRAPass::getDef(const InstP &inst) {
     NeonRAPass::Nodes defs;
 
     auto target = inst->getTargetOP();
+
+    if (inst->getOpCode().index() == 0 &&
+        (std::get<OpCode>(inst->getOpCode()) == OpCode::BL || std::get<OpCode>(inst->getOpCode()) == OpCode::BLX)) {
+        auto &varpool = Func->editInfo().getPool();
+
+        for (int sx = 0; sx < 16; ++sx) {
+            defs.insert(varpool.getValue(static_cast<FPURegister>(sx)));
+        }
+        return defs;
+    }
 
     if (!target)
         return defs;

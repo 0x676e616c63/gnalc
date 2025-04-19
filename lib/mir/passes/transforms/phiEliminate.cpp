@@ -42,18 +42,18 @@ std::vector<std::pair<OperP, OperP>> PhiEliminatePass::findPair(const BlkP &blk,
         const auto target = phiInst->getTargetOP();
         const auto &phiOpers = phiInst->getPhiOper();
 
+        ///@brief 重新翻译phi IR op
         for (auto &phioper : phiOpers) {
             if (phioper.pre != blk_name)
                 continue;
 
-            // dst_src_vec.emplace_back(target, phioper.val);
-            // 重新获取MIR操作数
             const auto &ir_op = phioper.val;
             OperP mir_op = nullptr;
 
             if (auto i32 = ir_op->as<IR::ConstantInt>()) {
                 mir_op = cur_varpool->getLoaded(i32->getVal(), blk).first;
             } else if (auto f32 = ir_op->as<IR::ConstantFloat>()) {
+                ///@note notice that we got a gpr reg here
                 mir_op = cur_varpool->getLoaded(f32->getVal(), blk).first;
             } else {
                 mir_op = cur_varpool->getValue(*ir_op);
@@ -103,6 +103,8 @@ void PhiEliminatePass::pushBeforeBranch(const BlkP &emitBlk, std::string destBlk
     ///@brief 寻址操作数展开
     if (src->getOperandTrait() == OperandTrait::BaseAddress) {
         auto addressing = src->as<BaseADROP>();
+        ///@bug 应当根据BaseADR的不同进行分类, 而不是直接弄一个新的
+        ///@bug 但add1, add2都没有时, 应当考虑别的方式
         auto relay = cur_varpool->mkOP_backup(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
         InstP add1 = nullptr;
         InstP add2 = nullptr;
@@ -128,10 +130,25 @@ void PhiEliminatePass::pushBeforeBranch(const BlkP &emitBlk, std::string destBlk
             insts.emplace_back(add2);
         }
 
-        src = relay;
+        if (add1 || add2) // patch
+            src = relay;
     }
 
-    auto copy = std::make_shared<COPY>(std::dynamic_pointer_cast<BindOnVirOP>(dst), src);
+    auto dst_reg = dst->as<BindOnVirOP>();
+    Err::gassert(dst_reg != nullptr, "phiEli: dst op(" + dst_reg->toString() + ") is not bind on reg bank");
+
+    /// @note when copy a constant float to phioper, copy spr, gpr may happen
+    // Err::gassert(src->as<BindOnVirOP>() == nullptr || src->as<BindOnVirOP>()->getBank() == dst_reg->getBank(),
+    //              "phiEli: copy ops dosen't match");
+    // Err::gassert(src->as<BindOnVirOP>() == nullptr || !(src->as<BindOnVirOP>()->getBank() == RegisterBank::spr &&
+    //                                                     dst_reg->getBank() == RegisterBank::gpr),
+    //              "phiEli: copy ops dosen't match");
+
+    if (src->getName() == "%37" && dst->getName() == "%7") {
+        int useless;
+    }
+
+    auto copy = std::make_shared<COPY>(dst_reg, src);
     insts.emplace_back(copy);
     ///@brief 插入到branch之前
 
@@ -222,11 +239,12 @@ void PhiEliminatePass::RunOnBlkPair(const PhiBlkPairs &process) {
     auto func = process.func;
     BlkP pred = process.src;
     BlkP succ = process.dst;
-    auto vec = process.pairs;
+    auto vec = process.pairs; // dst, src
 
     struct Node {
-        std::forward_list<unsigned int> nxt;
-        unsigned int indegree = 0; // 由于phi函数性质, 这个地方要么0要么1
+        // 从目的寄存器指向源寄存器
+        std::forward_list<unsigned int> nxt; // 指向该Node的源寄存器
+        unsigned int indegree = 0;           // 由于phi函数性质, 这个地方要么0要么1
     };
 
     std::map<OperP, unsigned int> mapping;
@@ -234,7 +252,7 @@ void PhiEliminatePass::RunOnBlkPair(const PhiBlkPairs &process) {
 
     ///@brief 填充mapping
     for (int i = 0; i < vec.size(); ++i) {
-        mapping[vec[i].second] = i;
+        mapping[vec[i].second] = i; // input with src
     }
 
     ///@brief 填充graph
@@ -243,8 +261,11 @@ void PhiEliminatePass::RunOnBlkPair(const PhiBlkPairs &process) {
             unsigned int src = i;
             auto dst = mapping[vec[i].first];
 
-            graph[src].nxt.push_front(dst);
-            ++graph[dst].indegree;
+            // graph[src].nxt.push_front(dst);
+            // ++graph[dst].indegree; ///@bug
+
+            graph[dst].nxt.push_front(src);
+            ++graph[src].indegree;
         }
     }
 
@@ -270,7 +291,8 @@ void PhiEliminatePass::RunOnBlkPair(const PhiBlkPairs &process) {
         auto visit = [&](unsigned idx) {
             ++i;
 
-            auto [src, dst] = vec[idx];
+            // auto [src, dst] = vec[idx];
+            auto [dst, src] = vec[idx];
 
             if (StagedMap.find(src) != StagedMap.end()) {
                 src = StagedMap[src]; // 无需stage(暂时不需要)
@@ -280,23 +302,26 @@ void PhiEliminatePass::RunOnBlkPair(const PhiBlkPairs &process) {
                 ///@note 可能会出现一种比较极端的情况, %0 = phi [... ...], ..., [%0, ...]
                 ///@note 理论上由于单赋值, 所以不需要做什么, 但是算法会还是会插入一个stage, 以及一个冗余的copy
                 Err::gassert(graph[idx].indegree == 1, "indegree must be 1");
+                Logger::logDebug("phiEli: need a stage by " + dst->toString());
+
                 graph[idx].indegree = 0;
                 auto stagedVal = addCOYPInst(emitBlk, succ->getName(), dst, func); // push_before_branch
                 StagedMap[dst] = stagedVal;
             }
 
-            pushBeforeBranch(emitBlk, succ->getName(), src, dst); ///@bug, src和dst可能还需要再考虑一下
+            pushBeforeBranch(emitBlk, succ->getName(), dst, src); ///@bug, src和dst可能还需要再考虑一下
 
             auto &node = graph[idx];
-            for (auto nxt : node.nxt) {
+            for (auto nxt : node.nxt) { // 源操作数
                 auto &nxt_node = graph[nxt];
+                // Err::gassert(nxt_node.indegree == 1, "phiEli: source phi op is not 1 indegree");
                 --nxt_node.indegree;
                 if (nxt_node.indegree == 0)
                     queue.push(nxt);
             }
         };
 
-        ///@brief topo sort
+        ///@brief topo sorted
         while (!queue.empty()) {
             unsigned cur_node = queue.front();
             queue.pop();
