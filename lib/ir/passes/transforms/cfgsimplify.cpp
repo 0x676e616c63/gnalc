@@ -36,7 +36,7 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                     // replace the branch with a jump
 
                     // Two identical successors -> One successor
-                    unlinkBB(curr, br->getFalseDest());
+                    unlinkOneEdge(curr, br->getFalseDest());
                     br->dropFalseDest();
 
                     const auto &dest_phis = br->getDest()->phis();
@@ -44,8 +44,8 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                         phi->delPhiOperByBlock(curr);
 
                     modified = true;
-                    // Logger::logDebug("[CFGSimplify] on '", function.getName(), "': drop BRInst of BasicBlock '",
-                    //                  curr->getName(), "' 's identical destination");
+                    Logger::logDebug("[CFGSimplify] on '", function.getName(), "': drop BRInst of BasicBlock '",
+                                     curr->getName(), "' 's identical destination");
                 }
             } else {
                 auto dest = br->getDest();
@@ -111,10 +111,14 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                         auto prebbs = curr->getPreBB();
                         for (const auto &pred : prebbs) {
                             auto pre_br = pred->getBRInst();
-                            unlinkBB(pred, curr);
+                            unlinkOneEdge(pred, curr);
                             linkBB(pred, dest);
-                            bool ok = pre_br->replaceAllOperands(curr, dest);
-                            Err::gassert(ok);
+
+                            // Note that if there are multiple identical CFG edges,
+                            // this replace can fail since it might have be replaced in the
+                            // last iteration. So don't check.
+                            // Besides, VerifyPass will check CFG later.
+                            pre_br->replaceAllOperands(curr, dest);
 
                             for (const auto& phi : dest->phis())
                                 phi->addPhiOper(phi->getValueForBlock(curr), pred);
@@ -123,9 +127,9 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                         for (const auto& phi : dest->phis())
                             phi->delPhiOperByBlock(curr);
 
-                        //
-                        // Logger::logDebug("[CFGSimplify] on '", function.getName(), "': Remove empty BasicBlock '",
-                        //                  curr->getName(), "'.");
+
+                        Logger::logDebug("[CFGSimplify] on '", function.getName(), "': Remove empty BasicBlock '",
+                                         curr->getName(), "'.");
 
                         dead_blocks.emplace(curr);
                         modified = true;
@@ -159,9 +163,9 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                         unlinkBB(dest, dest_succ);
                         linkBB(curr, dest_succ);
                     }
-                    //
-                    // Logger::logDebug("[CFGSimplify] on '", function.getName(), "': Combined BasicBlock '",
-                    //                  curr->getName(), "' and '", dest->getName(), "'.");
+
+                    Logger::logDebug("[CFGSimplify] on '", function.getName(), "': Combined BasicBlock '",
+                                     curr->getName(), "' and '", dest->getName(), "'.");
 
                     // Since `dest` only has one incoming block, and all phi has been replaced,
                     // deleting `curr`'s br will make it have no users, so it's a safe delete.
@@ -203,8 +207,8 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                         for (const auto &phi : dest_succ1->phis())
                             phi->addPhiOper(phi->getValueForBlock(dest), curr);
 
-                        // Logger::logDebug("[CFGSimplify] on '", function.getName(), "': Hoisted Branch of '",
-                        //                  dest->getName(), "' to '", curr->getName(), "'.");
+                        Logger::logDebug("[CFGSimplify] on '", function.getName(), "': Hoisted Branch of '",
+                                         dest->getName(), "' to '", curr->getName(), "'.");
                         modified = true;
                     }
                 }

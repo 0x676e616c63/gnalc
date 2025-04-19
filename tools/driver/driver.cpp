@@ -49,12 +49,13 @@ int main(int argc, char **argv) {
     bool emit_llvm = false;                     // -emit-llvm
     bool emit_llc = false;                      // -emit-llc
     bool ast_dump = false;                      // -ast-dump
+    bool o1_pipeline = false;                   // -O, -O1
     bool fixed_point_pipeline = false;          // -fixed-point
     bool fuzz_testing = false;                  // -fuzz
     double fuzz_testing_duplication_rate = 1.0; // -fuzz-rate
     std::string fuzz_testing_repro;             // -fuzz-repro
     bool debug_pipeline = false;                // -debug-pipeline
-    IR::OptInfo opt_info;                       // --xxx
+    IR::CliOptions cli_opt_options;                    // --xxx, --no-xxx
     MIR::OptInfo bkd_opt_info;
 
 #if GNALC_EXTENSION_BRAINFK
@@ -103,12 +104,11 @@ int main(int argc, char **argv) {
         } else if (arg == "-fixed-point")
             fixed_point_pipeline = true;
         else if (arg == "-O1" || arg == "-O")
-            opt_info = IR::o1_opt_info;
+            o1_pipeline = true;
 
 #define OPT_ARG(cli_arg, cli_no_arg, opt_name)                                                                         \
-    else if (arg == (cli_arg)) opt_info.opt_name = true;                                                               \
-    else if (arg == (cli_no_arg)) opt_info.opt_name = false;
-
+    else if (arg == (cli_arg)) cli_opt_options.opt_name = IR::CliOptions::Status::Enable;                                                               \
+    else if (arg == (cli_no_arg)) cli_opt_options.opt_name = IR::CliOptions::Status::Disable;
         // Optimizations available:
         // Function Transforms
         OPT_ARG("--mem2reg", "--no-mem2reg", mem2reg)
@@ -123,9 +123,6 @@ int main(int argc, char **argv) {
         OPT_ARG("--reassociate", "--no-reassociate", reassociate)
         OPT_ARG("--instsimplify", "--no-instsimplify", instsimplify)
         OPT_ARG("--inline", "--no-inline", inliner)
-        OPT_ARG("--loopsimplify", "--no-loopsimplify", loop_simplify)
-        OPT_ARG("--looprotate", "--no-looprotate", loop_rotate)
-        OPT_ARG("--lcssa", "--no-lcssa", lcssa)
         OPT_ARG("--licm", "--no-licm", licm)
         OPT_ARG("--loopunroll", "--no-loopunroll", loop_unroll)
         OPT_ARG("--indvars", "--no-indvars", indvars)
@@ -162,11 +159,11 @@ int main(int argc, char **argv) {
             fuzz_testing_repro = argv[i];
         }
         else if (arg == "-debug-pipeline") debug_pipeline = true;
-        else if (arg == "--ann") opt_info.advance_name_norm = true;
-        else if (arg == "--verify") opt_info.verify = true;
+        else if (arg == "--ann") cli_opt_options.advance_name_norm = true;
+        else if (arg == "--verify") cli_opt_options.verify = IR::CliOptions::Status::Enable;
         else if (arg == "--strict") {
-            opt_info.verify = true;
-            opt_info.abort_when_verify_failed = true;
+            cli_opt_options.verify = IR::CliOptions::Status::Enable;
+            cli_opt_options.abort_when_verify_failed = true;
         }
 #if GNALC_EXTENSION_BRAINFK
         // Extensions:
@@ -189,7 +186,7 @@ General options:
   -O,-O1                  - Optimization level 1
   -emit-llvm              - Use the LLVM representation for assembler and object files
   -ast-dump               - Build ASTs and then debug dump them. (Unavailable in GGC mode)
-  -fixed-point            - Enable the fixed point optimization pipeline. (Ignore other optimization options)
+  -fixed-point            - Enable the fixed point optimization pipeline.
   --log <log-level>       - Enable compiler logger. Available log-level: debug, info, none
   -h, --help              - Display available options
 
@@ -206,9 +203,6 @@ Optimizations available:
   --reassociate        - Reassociate commutative expressions
   --instsimplify       - Simplify instructions
   --inline             - Inline suitable functions
-  --loopsimplify       - Canonicalize loops to the Loop Simplify Form
-  --looprotate         - Canonicalize loops to the Rotated Loop Form
-  --lcssa              - Canonicalize loops to the Loop Closed SSA Form
   --loopunroll         - Unroll loops
   --indvars            - Simplify induction variables
   --lsr                - Loop strength reduction
@@ -287,15 +281,24 @@ Extensions:
     IR::PassBuilder::registerModuleAnalyses(mam);
     IR::PassBuilder::registerProxies(fam, mam);
 
+    IR::PMOptions pm_options{};
+    if (o1_pipeline || fixed_point_pipeline) {
+        if (cli_opt_options.verify == IR::CliOptions::Status::Default)
+            cli_opt_options.verify = IR::CliOptions::Status::Disable;
+        pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::EnableIfDefault);
+    }
+    else
+        pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::DisableIfDefault);
+
     IR::MPM mpm;
     if (debug_pipeline)
         mpm = IR::PassBuilder::buildModuleDebugPipeline();
     else if (fuzz_testing)
         mpm = IR::PassBuilder::buildModuleFuzzTestingPipeline(fuzz_testing_duplication_rate, fuzz_testing_repro);
     else if (fixed_point_pipeline)
-        mpm = IR::PassBuilder::buildModuleFixedPointPipeline();
+        mpm = IR::PassBuilder::buildModuleFixedPointPipeline(pm_options);
     else
-        mpm = IR::PassBuilder::buildModulePipeline(opt_info);
+        mpm = IR::PassBuilder::buildModulePipeline(pm_options);
 
     std::ostream *poutstream = &std::cout;
     std::ofstream outfile;

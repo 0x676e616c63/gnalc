@@ -18,19 +18,39 @@ void unlinkBB(const pBlock &prebb, const pBlock &nxtbb) {
     {
         size_t cnt = 0;
         for (const auto &succ : prebb->succs()) {
-            if (succ == nxtbb) {
+            if (succ == nxtbb)
                 cnt++;
-                break;
-            }
         }
         Err::gassert(cnt != 0, "No such edge.");
         if (cnt > 1)
-            Logger::logDebug("unlinkBB: Multiple edges detected.");
+            Logger::logWarning("unlinkBB: Multiple edges detected, but only unlinked one. "
+                               "Note that this function will be deprecated in future.");
     }
     bool ok = prebb->delNextBB(nxtbb);
     Err::gassert(ok);
     ok = nxtbb->delPreBB(prebb);
     Err::gassert(ok);
+}
+
+void unlinkOneEdge(const pBlock &prebb, const pBlock &nxtbb) {
+    bool ok = prebb->delNextBB(nxtbb);
+    Err::gassert(ok);
+    ok = nxtbb->delPreBB(prebb);
+    Err::gassert(ok);
+}
+size_t unlinkAllEdges(const pBlock &prebb, const pBlock &nxtbb) {
+    size_t cnt = 0;
+    while (prebb->delNextBB(nxtbb))
+        cnt++;
+    Err::gassert(cnt != 0, "No such edge.");
+
+    size_t ret = cnt;
+
+    while (nxtbb->delPreBB(prebb))
+        cnt--;
+    Err::gassert(cnt == 0, "Invalid CFG.");
+
+    return ret;
 }
 
 bool safeUnlinkBB(const pBlock &prebb, const pBlock &nxtbb, std::set<pPhi> &dead_phis, UnlinkOptions options) {

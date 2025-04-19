@@ -49,131 +49,144 @@
 
 namespace IR {
 
-const OptInfo o1_opt_info = {
-    // Function Transforms
-    .mem2reg = true,
-    .sccp = true,
-    .dce = true,
-    .adce = true,
-    .cfgsimplify = true,
-    .dse = true,
-    .gvnpre = true,
-    .tailcall = true,
-    .reassociate = true,
-    .instsimplify = true,
-    .inliner = true,
-    .loop_simplify = false,
-    .loop_rotate = false,
-    .lcssa = false,
-    .licm = false,
-    .loop_unroll = false,
-    .indvars = false,
-    .loop_strength_reduce = false,
-    .loopelim = false,
-    .slp_vectorizer = false,
-    .jump_threading = false,
-    // Module Transforms
-    .tree_shaking = true,
-    // Function Debug
-    .verify = false,
-};
+#define GNALC_IR_PASS_ENTRY(name) name(Status::Default),
+CliOptions::CliOptions() : GNALC_IR_PASS_TABLE advance_name_norm(false), abort_when_verify_failed(false) {}
+#undef GNALC_IR_PASS_ENTRY
 
-FPM PassBuilder::buildFunctionFixedPointPipeline() {
-    // Reassociate does not converge, set a threshold
-    auto make_arithmetic = [] {
-        PM::FixedPointPM<Function> arithmetic(10);
-        // arithmetic.addPass(ReassociatePass());
-        arithmetic.addPass(InstSimplifyPass());
-        arithmetic.addPass(ConstantPropagationPass());
-        arithmetic.addPass(DCEPass());
-        arithmetic.addPass(ADCEPass());
-        return arithmetic;
+PMOptions CliOptions::toPMOptions(Mode mode) const {
+    switch (mode) {
+    case Mode::DisableAnyway:
+#define GNALC_IR_PASS_ENTRY(name) .name = false,
+        return PMOptions{
+            GNALC_IR_PASS_TABLE
+            .abort_when_verify_failed = abort_when_verify_failed,
+            .advance_name_norm = advance_name_norm,
+        };
+#undef GNALC_IR_PASS_ENTRY
+
+    case Mode::EnableAnyway:
+#define GNALC_IR_PASS_ENTRY(name) .name = true,
+        return PMOptions{
+            GNALC_IR_PASS_TABLE
+            .abort_when_verify_failed = abort_when_verify_failed,
+            .advance_name_norm = advance_name_norm,
+        };
+#undef GNALC_IR_PASS_ENTRY
+
+    case Mode::EnableIfDefault:
+        return {
+#define GNALC_IR_PASS_ENTRY(name) .name = (name) != Status::Disable,
+            GNALC_IR_PASS_TABLE
+            .abort_when_verify_failed = abort_when_verify_failed,
+            .advance_name_norm = advance_name_norm,
+        };
+#undef GNALC_IR_PASS_ENTRY
+
+    case Mode::DisableIfDefault:
+        return {
+#define GNALC_IR_PASS_ENTRY(name) .name = (name) == Status::Enable,
+            GNALC_IR_PASS_TABLE
+            .abort_when_verify_failed = abort_when_verify_failed,
+            .advance_name_norm = advance_name_norm,
+        };
+#undef GNALC_IR_PASS_ENTRY
+    }
+    return {};
+}
+
+template <typename PM, typename Pass> void registerPassForOptInfo(PM &fpm, bool verify, bool strict, bool enable, Pass &&pass) {
+    if (enable) {
+        fpm.addPass(std::forward<Pass>(pass));
+        if (verify)
+            fpm.addPass(VerifyPass(strict));
+    }
+}
+
+template <typename PM, typename First, typename... Rest>
+void registerPassForOptInfo(PM &fpm, bool verify, bool strict, bool enable, First &&first, Rest &&...rest) {
+    registerPassForOptInfo(fpm, verify, strict, enable, std::forward<First>(first));
+    registerPassForOptInfo(fpm, verify, strict, enable, std::forward<Rest>(rest)...);
+}
+
+FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
+#define FUNCTION_TRANSFORM(name, ...)                                                                                  \
+    registerPassForOptInfo(fpm, options.verify, options.abort_when_verify_failed, options.name, __VA_ARGS__);
+
+    auto make_arithmetic = [&options] {
+        PM::FixedPointPM<Function> fpm(10);
+        FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
+        FUNCTION_TRANSFORM(sccp, ConstantPropagationPass());
+        FUNCTION_TRANSFORM(dce, DCEPass());
+        FUNCTION_TRANSFORM(adce, ADCEPass());
+        return fpm;
     };
 
-    auto make_clean = [] {
-        PM::FixedPointPM<Function> cleanup;
-        cleanup.addPass(InstSimplifyPass());
-        cleanup.addPass(ConstantPropagationPass());
-        cleanup.addPass(BreakCriticalEdgesPass());
-        cleanup.addPass(GVNPREPass());
-        cleanup.addPass(DCEPass());
-        return cleanup;
+    auto make_clean = [&options] {
+        PM::FixedPointPM<Function> fpm;
+        FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
+        FUNCTION_TRANSFORM(sccp, ConstantPropagationPass());
+        FUNCTION_TRANSFORM(gvnpre, BreakCriticalEdgesPass(), GVNPREPass());
+        FUNCTION_TRANSFORM(dce, DCEPass());
+        return fpm;
     };
 
-    auto make_mem_clean = [] {
-        PM::FixedPointPM<Function> cleanup;
-        cleanup.addPass(LoadEliminationPass());
-        cleanup.addPass(DSEPass());
-        return cleanup;
+    auto make_mem_clean = [&options] {
+        PM::FixedPointPM<Function> fpm;
+        FUNCTION_TRANSFORM(loadelim, LoadEliminationPass());
+        FUNCTION_TRANSFORM(dse, DSEPass());
+        return fpm;
     };
 
-    auto make_ipo = [] {
-        FPM ipo;
-        ipo.addPass(TailRecursionEliminationPass());
-        ipo.addPass(InlinePass());
-        return ipo;
+    auto make_ipo = [&options] {
+        FPM fpm;
+        FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass());
+        FUNCTION_TRANSFORM(inliner, InlinePass());
+        return fpm;
     };
 
     FPM fpm;
     fpm.addPass(NameNormalizePass(true));
-    fpm.addPass(PromotePass());
+    FUNCTION_TRANSFORM(mem2reg, PromotePass());
     fpm.addPass(make_ipo());
     fpm.addPass(make_clean());
     fpm.addPass(make_arithmetic());
-    fpm.addPass(CFGSimplifyPass());
+    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
     fpm.addPass(make_clean());
     // Simplify Blocks to make LoadElim faster.
-    fpm.addPass(CFGSimplifyPass());
+    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
     fpm.addPass(make_mem_clean());
     // ADCE is time-consuming
     fpm.addPass(ADCEPass());
-    fpm.addPass(CFGSimplifyPass());
+    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
     // Loop
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(LoopRotatePass());
-    fpm.addPass(LCSSAPass());
-    fpm.addPass(LICMPass());
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(LoopEliminationPass());
-    fpm.addPass(LoopStrengthReducePass());
+    FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
+    FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
+    FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
     fpm.addPass(make_clean());
-    fpm.addPass(CFGSimplifyPass());
+    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
     fpm.addPass(make_mem_clean());
     fpm.addPass(CodeGenPreparePass());
     fpm.addPass(NameNormalizePass(true));
 
+#undef FUNCTION_TRANSFORM
     return fpm;
 }
 
-MPM PassBuilder::buildModuleFixedPointPipeline() {
+MPM PassBuilder::buildModuleFixedPointPipeline(PMOptions options) {
     MPM mpm;
-    mpm.addPass(makeModulePass(buildFunctionFixedPointPipeline()));
+    mpm.addPass(makeModulePass(buildFunctionFixedPointPipeline(options)));
     mpm.addPass(TreeShakingPass());
     return mpm;
 }
 
-FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
+FPM PassBuilder::buildFunctionPipeline(PMOptions opt_info) {
     FPM fpm;
 
     // ANN disables the last name normalization pass.
     fpm.addPass(NameNormalizePass(true)); // bb_rename: true
 
-#define FUNCTION_TRANSFORM(name, pass)                                                                                 \
-    if (opt_info.name) {                                                                                               \
-        fpm.addPass(pass);                                                                                             \
-        if (opt_info.verify)                                                                                           \
-            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));                                                \
-    }
-
-#define FUNCTION_TRANSFORM2(name, pass1, pass2)                                                                        \
-    if (opt_info.name) {                                                                                               \
-        fpm.addPass(pass1);                                                                                            \
-        if (opt_info.verify)                                                                                           \
-            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));                                                \
-        fpm.addPass(pass2);                                                                                            \
-        if (opt_info.verify)                                                                                           \
-            fpm.addPass(VerifyPass(opt_info.abort_when_verify_failed));                                                \
-    }
+#define FUNCTION_TRANSFORM(name, ...)                                                                                  \
+    registerPassForOptInfo(fpm, opt_info.verify, opt_info.abort_when_verify_failed, opt_info.name, __VA_ARGS__);
 
     FUNCTION_TRANSFORM(mem2reg, PromotePass())
     FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass())
@@ -186,7 +199,10 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FUNCTION_TRANSFORM(dce, DCEPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
     FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
-    FUNCTION_TRANSFORM2(gvnpre, BreakCriticalEdgesPass(), GVNPREPass())
+    FUNCTION_TRANSFORM(gvnpre, BreakCriticalEdgesPass(), GVNPREPass())
+    // IMPORTANT, CFGSimplify before LoadElim can shorten
+    // the compile time significantly in certain cases
+    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
     FUNCTION_TRANSFORM(loadelim, LoadEliminationPass())
     FUNCTION_TRANSFORM(dse, DSEPass())
     FUNCTION_TRANSFORM(loadelim, LoadEliminationPass())
@@ -194,14 +210,10 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FUNCTION_TRANSFORM(loadelim, LoadEliminationPass())
     FUNCTION_TRANSFORM(dce, DCEPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
-    FUNCTION_TRANSFORM(loop_simplify, LoopSimplifyPass())
-    FUNCTION_TRANSFORM(loop_rotate, LoopRotatePass())
-    FUNCTION_TRANSFORM(lcssa, LCSSAPass())
-    FUNCTION_TRANSFORM(licm, LICMPass())
-    FUNCTION_TRANSFORM(loop_unroll, LoopUnrollPass())
-    FUNCTION_TRANSFORM(indvars, IndVarSimplifyPass())
-    FUNCTION_TRANSFORM(loop_strength_reduce, LoopStrengthReducePass())
-    FUNCTION_TRANSFORM(jump_threading, JumpThreadingPass())
+    // Loop
+    FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
+    FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
+    FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
 
 #undef FUNCTION_TRANSFORM
 
@@ -212,7 +224,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     return fpm;
 }
 
-MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
+MPM PassBuilder::buildModulePipeline(PMOptions opt_info) {
     MPM mpm;
     mpm.addPass(makeModulePass(buildFunctionPipeline(opt_info)));
     if (opt_info.tree_shaking)
@@ -286,7 +298,6 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
 
     return fpm;
 
-
     // // For LoopUnroll Test
     // fpm.addPass(PromotePass());
     // fpm.addPass(LoopSimplifyPass());
@@ -338,7 +349,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const
     REGISTER_FUNCTION_TRANSFORM(DCEPass)
     REGISTER_FUNCTION_TRANSFORM(CFGSimplifyPass)
     REGISTER_FUNCTION_TRANSFORM2(BreakCriticalEdgesPass, GVNPREPass)
-    REGISTER_FUNCTION_TRANSFORM(LoadEliminationPass)
+    REGISTER_FUNCTION_TRANSFORM2(CFGSimplifyPass, LoadEliminationPass)
     REGISTER_FUNCTION_TRANSFORM(DSEPass)
     // REGISTER_FUNCTION_TRANSFORM(LoopSimplifyPass)
     // REGISTER_FUNCTION_TRANSFORM(LoopRotatePass)

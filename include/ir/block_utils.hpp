@@ -13,7 +13,14 @@ namespace IR {
 // Only handles CFG.
 void linkBB(const pBlock &prebb, const pBlock &nxtbb);
 
+// deprecated
 void unlinkBB(const pBlock &prebb, const pBlock &nxtbb);
+
+// Use the following two instead
+// Only unlink one edge
+void unlinkOneEdge(const pBlock &prebb, const pBlock &nxtbb);
+// Unlink all such edges
+size_t unlinkAllEdges(const pBlock &prebb, const pBlock &nxtbb);
 
 // Safely disconnects two basic blocks in CFG while maintaining SSA consistency
 //
