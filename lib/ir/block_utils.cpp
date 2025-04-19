@@ -15,6 +15,18 @@ void linkBB(const pBlock &prebb, const pBlock &nxtbb) {
 }
 
 void unlinkBB(const pBlock &prebb, const pBlock &nxtbb) {
+    {
+        size_t cnt = 0;
+        for (const auto &succ : prebb->succs()) {
+            if (succ == nxtbb) {
+                cnt++;
+                break;
+            }
+        }
+        Err::gassert(cnt != 0, "No such edge.");
+        if (cnt > 1)
+            Logger::logDebug("unlinkBB: Multiple edges detected.");
+    }
     bool ok = prebb->delNextBB(nxtbb);
     Err::gassert(ok);
     ok = nxtbb->delPreBB(prebb);

@@ -70,6 +70,31 @@ void register_example_24_2() {
 }
 
 // Only Frontend
+// Requires: ./example_exes/example_24_3
+void register_example_24_3() {
+    Entry entry{
+        .ir_gen =
+            [](const std::string &newsy, const std::string &outll) {
+                return format(
+                    "./example_exes/example_24_3 -S -o {} {} "
+                    "&& echo 'declare i32 @getint() \n declare i32 @getch() \n declare i32 @getarray(i32* noundef) \n "
+                    "declare float @getfloat() \n declare i32 @getfarray(float* noundef) \n declare void @putint(i32 "
+                    "noundef) \n declare void @putch(i32 noundef) \n declare void @putarray(i32 noundef, i32* noundef) "
+                    "\n declare void @putfloat(float noundef) \n declare void @putfarray(i32 noundef, float* noundef) "
+                    "\n declare void @putf(i8* noundef, ...) \n declare void @_sysy_starttime(i32 noundef) \n declare "
+                    "void @_sysy_stoptime(i32 noundef)' >> {}",
+                    outll, newsy, outll);
+            },
+        .asm_gen =
+            [](const std::string &newsy, const std::string &outs) {
+                Err::not_implemented("Benchmark for example_24_3 backend");
+                return "";
+            },
+    };
+    BenchmarkRegistry::register_benchmark("example_24_3", entry);
+}
+
+// Only Frontend
 // Requires: clang
 void register_clang_o3() {
     Entry entry{
@@ -158,6 +183,7 @@ void Test::register_all_benchmarks() {
     register_example_24();
     register_example_24_1();
     register_example_24_2();
+    register_example_24_3();
     register_clang_o3();
     register_gcc_o3();
     register_gnalc_mem2reg();

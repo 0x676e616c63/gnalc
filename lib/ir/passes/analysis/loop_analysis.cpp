@@ -57,15 +57,19 @@ BasicBlock *Loop::getRawHeader() const { return loop_blocks.front(); }
 
 BasicBlock *Loop::getRawPreHeader() const {
     auto header = getRawHeader();
-    BasicBlock *preheader = nullptr;
+    BasicBlock *single_entering_block = nullptr;
     for (const auto &pred : header->preds()) {
         if (contains(pred.get()))
             continue;
-        if (preheader)
+        if (single_entering_block)
             return nullptr;
-        preheader = pred.get();
+        single_entering_block = pred.get();
     }
-    return preheader;
+
+    if (!single_entering_block || single_entering_block->getNumSuccs() != 1)
+        return nullptr;
+
+    return single_entering_block;
 }
 bool Loop::isLatch(const BasicBlock *bb) const {
     Err::gassert(contains(bb));

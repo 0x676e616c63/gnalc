@@ -129,13 +129,11 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
         for (const auto &loop : looppdfv) {
             Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplify Form.");
 
-            bool latch_merged = false;
             if (auto dead_latch = tryMergeLatchToExiting(*loop)) {
                 loop_info.delBlock(dead_latch);
                 if (dead_latch->getNumPreds() == 0)
                     function.delBlock(dead_latch);
                 loop_rotate_cfg_modified = true;
-                latch_merged = true;
             }
 
             Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplified Form in LoopRotate");
@@ -424,7 +422,8 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                 for (const auto &phi : new_header->getPhiInsts())
                     phi->replaceAllOperands(old_preheader, new_preheader);
 
-                cloned_ph_br->replaceAllOperands(new_header, new_preheader);
+                bool ok = cloned_ph_br->replaceAllOperands(new_header, new_preheader);
+                Err::gassert(ok);
 
                 // Fix CFG
                 unlinkBB(old_preheader, new_header);
