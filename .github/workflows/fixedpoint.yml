@@ -2,13 +2,13 @@ name: Gnalc Test - FixedPoint
 
 on:
   push:
-    branches: [ "main", "ci" ]
+    branches: [ "main", "ci", "iropt" ]
     paths:
       - 'lib/**'
       - 'include/**'
       - '.github/workflows/fixedpoint.yml'
   pull_request:
-    branches: [ "main", "ci" ]
+    branches: [ "main", "ci", "iropt" ]
     paths:
       - 'lib/**'
       - 'include/**'
