@@ -198,20 +198,22 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                     // hoisting them is not safe.
                     if (!postdomtree.ADomB(bb, preheader))
                         continue;
-                    std::set<pInst> to_hoist;
+                    // Keep the topological order.
+                    std::vector<pInst> to_hoist;
                     for (const auto &inst : *bb) {
                         if (isSafeToMove(loop, inst, aa_res, fam)) {
                             auto invariant = std::all_of(inst->operand_begin(), inst->operand_end(),
                                                          [&loop, to_hoist](const auto &val) {
                                                              if (auto inst = val->template as<Instruction>()) {
-                                                                 if (to_hoist.count(inst))
+                                                                 auto it = std::find(to_hoist.begin(), to_hoist.end(), inst);
+                                                                 if (it != to_hoist.end())
                                                                      return true;
                                                                  return !loop->contains(inst->getParent());
                                                              }
                                                              return true;
                                                          });
                             if (invariant)
-                                to_hoist.emplace(inst);
+                                to_hoist.emplace_back(inst);
                         }
                     }
 

@@ -49,7 +49,8 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                 }
                 foldPHI(new_preheader);
                 function.addBlock(header->getIter(), new_preheader);
-                loop_info.discoverNonHeaderBlock(new_preheader);
+                auto& new_dom = fam.getFreshResult<DomTreeAnalysis>(function);
+                loop_info.discoverNonHeaderBlock(new_preheader, new_dom);
                 preheader = new_preheader;
                 curr_loop_changed = true;
             }
@@ -61,7 +62,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                 new_latch->addInst(std::make_shared<BRInst>(header));
                 linkBB(new_latch, header);
                 auto latches = loop->getLatches();
-                Err::gassert(!latches.empty());
+                Err::gassert(!latches.empty(), "Invalid loop with no latches.");
                 for (const auto &old_latch : latches) {
                     auto br = old_latch->getBRInst();
                     Err::gassert(br != nullptr);
@@ -83,7 +84,8 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                 }
                 foldPHI(new_latch);
                 function.addBlock(std::next(latches.back()->getIter()), new_latch);
-                loop_info.discoverNonHeaderBlock(new_latch);
+                auto& new_dom = fam.getFreshResult<DomTreeAnalysis>(function);
+                loop_info.discoverNonHeaderBlock(new_latch, new_dom);
                 latch = new_latch;
                 curr_loop_changed = true;
             }
@@ -130,8 +132,8 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                     }
                     foldPHI(new_exit);
                     function.addBlock(std::next(exit->getIter()), new_exit);
-
-                    loop_info.discoverNonHeaderBlock(new_exit);
+                    auto& new_dom = fam.getFreshResult<DomTreeAnalysis>(function);
+                    loop_info.discoverNonHeaderBlock(new_exit, new_dom);
                     curr_loop_changed = true;
                 }
             }
@@ -142,7 +144,16 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
 
     name_cnt = 0;
 
-    return loop_simplify_cfg_modified ? PreserveNone() : PreserveCFGAnalyses();
+    if (loop_simplify_cfg_modified) {
+        PM::PreservedAnalyses pa;
+        // We get a fresh domtree after each modification of CFG,
+        // so the domtree is still valid.
+        pa.preserve<DomTreeAnalysis>();
+        pa.preserve<LoopAnalysis>();
+        return pa;
+    }
+
+    return PreserveAll();
 }
 
 } // namespace IR

@@ -56,7 +56,7 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
             if (erased)
                 continue;
 
-            // Not local memory. Reference may happen outside the function, skip it.
+            // Not local memory. Reference may happen outside the function.
             if (!aa_res.isLocal(store_ptr)) {
                 auto real_store_ptr = store_ptr;
                 while (auto gep = real_store_ptr->as<GEPInst>())

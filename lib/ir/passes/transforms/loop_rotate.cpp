@@ -433,7 +433,8 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
 
                 function.addBlock(new_header->getIter(), new_preheader);
 
-                loop_info.discoverNonHeaderBlock(new_preheader);
+                auto& new_dom = fam.getFreshResult<DomTreeAnalysis>(function);
+                loop_info.discoverNonHeaderBlock(new_preheader, new_dom);
 
                 // Dedicated Exits
                 // Note that the exit could be an exit block for multiple nested loops
@@ -459,7 +460,8 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                         continue;
                     auto new_bb = breakCriticalEdge(exit_pred, header_exit);
                     new_bb->setName("%lr.exit" + std::to_string(name_cnt++));
-                    loop_info.discoverNonHeaderBlock(new_bb);
+                    auto& new_dom2 = fam.getFreshResult<DomTreeAnalysis>(function);
+                    loop_info.discoverNonHeaderBlock(new_bb, new_dom2);
                 }
             }
 
@@ -496,7 +498,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
 
     name_cnt = 0;
 
-    return loop_rotate_cfg_modified ? PreserveLoopAnalyses() : PreserveCFGAnalyses();
+    return loop_rotate_cfg_modified ? PreserveLoopAnalyses() : PreserveAll();
 }
 
 } // namespace IR

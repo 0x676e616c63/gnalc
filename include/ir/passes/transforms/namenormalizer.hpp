@@ -12,11 +12,11 @@
 namespace IR {
 
 class NameNormalizePass : public PM::PassInfo<NameNormalizePass>, public IRVisitor {
-    size_t curr_idx{0};
-    bool bb_rename{false};
+    size_t curr_idx;
+    bool bb_rename;
 
 public:
-    explicit NameNormalizePass(bool bb_rename_) : bb_rename(bb_rename_) {}
+    explicit NameNormalizePass(bool bb_rename_ = true) : bb_rename(bb_rename_), curr_idx(0) {}
     void visit(Function &node) override;
     void visit(BasicBlock &node) override;
 
