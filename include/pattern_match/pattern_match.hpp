@@ -3,7 +3,8 @@
 #ifndef GNALC_PATTERN_MATCH_PATTERN_MATCH_HPP
 #define GNALC_PATTERN_MATCH_PATTERN_MATCH_HPP
 
-#include "../utils/misc.hpp"
+#include "utils/misc.hpp"
+
 #include <functional>
 #include <memory>
 #include <type_traits>

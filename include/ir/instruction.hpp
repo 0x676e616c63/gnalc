@@ -1,6 +1,5 @@
 /**
- * @brief 各种instruction的基类
- * @todo 关于指针的问题
+ * @brief 各种 instruction 的基类
  */
 
 #pragma once

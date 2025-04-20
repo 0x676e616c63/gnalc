@@ -1,5 +1,5 @@
-#include "../../include/ir/constant.hpp"
-#include "../../include/ir/visitor.hpp"
+#include "ir/constant.hpp"
+#include "ir/visitor.hpp"
 
 namespace IR {
 namespace detail {

@@ -1,5 +1,5 @@
-#include "../../../../include/ir/passes/transforms/codegen_prepare.hpp"
-#include "../../../../include/ir/block_utils.hpp"
+#include "ir/passes/transforms/codegen_prepare.hpp"
+#include "ir/block_utils.hpp"
 
 namespace IR {
 PM::PreservedAnalyses CodeGenPreparePass::run(Function &function, FAM &fam) {

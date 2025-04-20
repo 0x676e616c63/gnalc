@@ -7,9 +7,9 @@
 #ifndef GNALC_IR_INSTRUCTIONS_CONTROL_HPP
 #define GNALC_IR_INSTRUCTIONS_CONTROL_HPP
 
-#include "../function.hpp"
-#include "../instruction.hpp"
-#include "../type_alias.hpp"
+#include "ir/function.hpp"
+#include "ir/instruction.hpp"
+#include "ir/type_alias.hpp"
 #include <vector>
 
 namespace IR {
@@ -134,20 +134,18 @@ public:
 
     void accept(IRVisitor &visitor) override;
 
-    void setTailCall();
+    void setTailCall(bool is_tail_call_);
     bool isTailCall() const;
 
 private:
     pVal cloneImpl() const override {
         if (isVoid()) {
             auto ret = std::make_shared<CALLInst>(getFunc(), getArgs());
-            if (is_tail_call)
-                ret->setTailCall();
+            ret->setTailCall(is_tail_call);
             return ret;
         }
         auto ret = std::make_shared<CALLInst>(getFuncName(), getFunc(), getArgs());
-        if (is_tail_call)
-            ret->setTailCall();
+        ret->setTailCall(is_tail_call);
         return ret;
     }
 };

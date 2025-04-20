@@ -1,12 +1,12 @@
 /**
- * @attention 默认删除块中break; continue; 后的所有指令
+ * @attention 默认删除块中 break; continue; 后的所有指令
  **/
 
-#include "../../include/parser/cfgbuilder.hpp"
-#include "../../include/ir/instructions/control.hpp"
-#include "../../include/ir/instructions/helper.hpp"
-#include "../../include/ir/type_alias.hpp"
-#include "../../include/utils/misc.hpp"
+#include "parser/cfgbuilder.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/instructions/helper.hpp"
+#include "ir/type_alias.hpp"
+#include "utils/misc.hpp"
 
 using namespace IR;
 namespace Parser {
@@ -16,6 +16,7 @@ void CFGBuilder::build(IR::Module &module) {
         cur_making_func = std::make_shared<Function>(cur_linear_func->getName(), cur_linear_func->getParams(),
                                                      cur_linear_func->getType()->as<FunctionType>()->getRet(),
                                                      &cur_linear_func->getConstantPool());
+        cur_making_func->setParent(cur_linear_func->getParent());
         Err::gassert(cur_linear_func != nullptr, "Expected Linear IR.");
         divider();
         cur_making_func->updateAndCheckCFG();

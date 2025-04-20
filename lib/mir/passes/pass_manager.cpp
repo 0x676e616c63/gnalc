@@ -1,5 +1,5 @@
-#include "../../../include/pass_manager/pass_manager.hpp"
-#include "../../../include/mir/passes/pass_manager.hpp"
+#include "pass_manager/pass_manager.hpp"
+#include "mir/passes/pass_manager.hpp"
 
 namespace PM {
 template class AnalysisManager<MIR::Module>;

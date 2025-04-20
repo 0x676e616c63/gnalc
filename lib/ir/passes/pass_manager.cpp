@@ -1,7 +1,7 @@
-#include "../../../include/pass_manager/pass_manager.hpp"
-#include "../../../include/ir/passes/analysis/domtree_analysis.hpp"
-#include "../../../include/ir/passes/analysis/loop_analysis.hpp"
-#include "../../../include/ir/passes/pass_manager.hpp"
+#include "pass_manager/pass_manager.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
+#include "ir/passes/pass_manager.hpp"
 
 namespace PM {
 template class AnalysisManager<IR::Module>;

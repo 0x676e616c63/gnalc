@@ -1,28 +1,30 @@
-#include "../../include/config/config.hpp"
+#include "config/config.hpp"
 
-#include "../../include/ir/passes/pass_builder.hpp"
-#include "../../include/ir/passes/pass_manager.hpp"
-#include "../../include/ir/passes/utilities/irprinter.hpp"
-#include "../../include/mir/builder/lowering.hpp"
-#include "../../include/mir/passes/pass_builder.hpp"
-#include "../../include/mir/passes/pass_manager.hpp"
-#include "../../include/mir/passes/utilities/mirprinter.hpp"
-#include "../../include/utils/logger.hpp"
+#include "ir/passes/pass_builder.hpp"
+#include "ir/passes/pass_manager.hpp"
+#include "ir/passes/utilities/irprinter.hpp"
+#include "mir/builder/lowering.hpp"
+#include "mir/passes/pass_builder.hpp"
+#include "mir/passes/pass_manager.hpp"
+#include "mir/passes/utilities/mirprinter.hpp"
+#include "utils/logger.hpp"
 
 #ifndef GNALC_EXTENSION_GGC // in CMakeLists.txt
-#include "../../include/parser/ast.hpp"
-#include "../../include/parser/astprinter.hpp"
-#include "../../include/parser/irgen.hpp"
-#include "../../include/parser/parser.hpp"
+#include "parser/ast.hpp"
+#include "parser/astprinter.hpp"
+#include "parser/irgen.hpp"
+#include "parser/parser.hpp"
 #else
-#include "../../include/ggc/irparsertool.hpp"
+#include "ggc/irparsertool.hpp"
 #endif
 
 #if GNALC_EXTENSION_BRAINFK // in config.hpp
-#include "../../include/codegen/brainfk/bfgen.hpp"
-#include "../../include/codegen/brainfk/bfprinter.hpp"
-#include "../../include/codegen/brainfk/bftrans.hpp"
+#include "codegen/brainfk/bfgen.hpp"
+#include "codegen/brainfk/bfprinter.hpp"
+#include "codegen/brainfk/bftrans.hpp"
 #endif
+
+#include "../../include/codegen/armv7/armprinter.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -45,13 +47,15 @@ int main(int argc, char **argv) {
     // Options
     bool only_compilation = false;              // -S
     bool emit_llvm = false;                     // -emit-llvm
+    bool emit_llc = false;                      // -emit-llc
     bool ast_dump = false;                      // -ast-dump
+    bool o1_pipeline = false;                   // -O, -O1
     bool fixed_point_pipeline = false;          // -fixed-point
     bool fuzz_testing = false;                  // -fuzz
     double fuzz_testing_duplication_rate = 1.0; // -fuzz-rate
     std::string fuzz_testing_repro;             // -fuzz-repro
     bool debug_pipeline = false;                // -debug-pipeline
-    IR::OptInfo opt_info;                       // --xxx
+    IR::CliOptions cli_opt_options;                    // --xxx, --no-xxx
     MIR::OptInfo bkd_opt_info;
 
 #if GNALC_EXTENSION_BRAINFK
@@ -89,22 +93,22 @@ int main(int argc, char **argv) {
             only_compilation = true;
         else if (arg == "-emit-llvm")
             emit_llvm = true;
+        else if (arg == "-emit-llc")
+            emit_llc = true;
         else if (arg == "-ast-dump") {
 #ifdef GNALC_EXTENSION_GGC
             std::cerr << "Error: AST dump is not available in GGC mode." << std::endl;
             return -1;
 #endif
             ast_dump = true;
-        }
-        else if (arg == "-fixed-point")
+        } else if (arg == "-fixed-point")
             fixed_point_pipeline = true;
         else if (arg == "-O1" || arg == "-O")
-            opt_info = IR::o1_opt_info;
+            o1_pipeline = true;
 
 #define OPT_ARG(cli_arg, cli_no_arg, opt_name)                                                                         \
-    else if (arg == (cli_arg)) opt_info.opt_name = true;                                                               \
-    else if (arg == (cli_no_arg)) opt_info.opt_name = false;
-
+    else if (arg == (cli_arg)) cli_opt_options.opt_name = IR::CliOptions::Status::Enable;                                                               \
+    else if (arg == (cli_no_arg)) cli_opt_options.opt_name = IR::CliOptions::Status::Disable;
         // Optimizations available:
         // Function Transforms
         OPT_ARG("--mem2reg", "--no-mem2reg", mem2reg)
@@ -119,14 +123,14 @@ int main(int argc, char **argv) {
         OPT_ARG("--reassociate", "--no-reassociate", reassociate)
         OPT_ARG("--instsimplify", "--no-instsimplify", instsimplify)
         OPT_ARG("--inline", "--no-inline", inliner)
-        OPT_ARG("--loopsimplify", "--no-loopsimplify", loop_simplify)
-        OPT_ARG("--looprotate", "--no-looprotate", loop_rotate)
-        OPT_ARG("--lcssa", "--no-lcssa", lcssa)
         OPT_ARG("--licm", "--no-licm", licm)
         OPT_ARG("--loopunroll", "--no-loopunroll", loop_unroll)
         OPT_ARG("--indvars", "--no-indvars", indvars)
         OPT_ARG("--lsr", "--no-lsr", loop_strength_reduce)
+        OPT_ARG("--loopelim", "--no-loopelim", loopelim)
+        OPT_ARG("--slp-vectorizer", "--no-slp-vectorizer", slp_vectorizer)
         OPT_ARG("--jumpthreading", "--no-jumpthreading", jump_threading)
+        OPT_ARG("--internalize", "--no-internalize", internalize)
         // Module Transforms
         OPT_ARG("--treeshaking", "--no-treeshaking", tree_shaking)
 #undef OPT_ARG
@@ -156,11 +160,11 @@ int main(int argc, char **argv) {
             fuzz_testing_repro = argv[i];
         }
         else if (arg == "-debug-pipeline") debug_pipeline = true;
-        else if (arg == "--ann") opt_info.advance_name_norm = true;
-        else if (arg == "--verify") opt_info.verify = true;
+        else if (arg == "--ann") cli_opt_options.advance_name_norm = true;
+        else if (arg == "--verify") cli_opt_options.verify = IR::CliOptions::Status::Enable;
         else if (arg == "--strict") {
-            opt_info.verify = true;
-            opt_info.abort_when_verify_failed = true;
+            cli_opt_options.verify = IR::CliOptions::Status::Enable;
+            cli_opt_options.abort_when_verify_failed = true;
         }
 #if GNALC_EXTENSION_BRAINFK
         // Extensions:
@@ -183,7 +187,7 @@ General options:
   -O,-O1                  - Optimization level 1
   -emit-llvm              - Use the LLVM representation for assembler and object files
   -ast-dump               - Build ASTs and then debug dump them. (Unavailable in GGC mode)
-  -fixed-point            - Enable the fixed point optimization pipeline. (Ignore other optimization options)
+  -fixed-point            - Enable the fixed point optimization pipeline.
   --log <log-level>       - Enable compiler logger. Available log-level: debug, info, none
   -h, --help              - Display available options
 
@@ -200,13 +204,13 @@ Optimizations available:
   --reassociate        - Reassociate commutative expressions
   --instsimplify       - Simplify instructions
   --inline             - Inline suitable functions
-  --loopsimplify       - Canonicalize loops to The Loop Simplify Form
-  --looprotate         - Canonicalize loops to The Rotated Loop Form
-  --lcssa              - Canonicalize loops to The Loop Closed SSA Form
   --loopunroll         - Unroll loops
   --indvars            - Simplify induction variables
-  --lsr                - Loop Strength Reduction
-  --jumpthreading      - Jump Threading
+  --lsr                - Loop strength reduction
+  --loopelim           - Loop elimination
+  --slp-vectorizer     - SLP vectorizer
+  --jumpthreading      - Jump threading
+  --internalize        - Internalize global variables
   --treeshaking        - Shake off unused functions, function declarations and global variables
 
 Debug options:
@@ -279,15 +283,24 @@ Extensions:
     IR::PassBuilder::registerModuleAnalyses(mam);
     IR::PassBuilder::registerProxies(fam, mam);
 
+    IR::PMOptions pm_options{};
+    if (o1_pipeline || fixed_point_pipeline) {
+        if (cli_opt_options.verify == IR::CliOptions::Status::Default)
+            cli_opt_options.verify = IR::CliOptions::Status::Disable;
+        pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::EnableIfDefault);
+    }
+    else
+        pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::DisableIfDefault);
+
     IR::MPM mpm;
     if (debug_pipeline)
         mpm = IR::PassBuilder::buildModuleDebugPipeline();
     else if (fuzz_testing)
         mpm = IR::PassBuilder::buildModuleFuzzTestingPipeline(fuzz_testing_duplication_rate, fuzz_testing_repro);
     else if (fixed_point_pipeline)
-        mpm = IR::PassBuilder::buildModuleFixedPointPipeline();
+        mpm = IR::PassBuilder::buildModuleFixedPointPipeline(pm_options);
     else
-        mpm = IR::PassBuilder::buildModulePipeline(opt_info);
+        mpm = IR::PassBuilder::buildModulePipeline(pm_options);
 
     std::ostream *poutstream = &std::cout;
     std::ofstream outfile;
@@ -338,14 +351,19 @@ Extensions:
 
     auto bkd_mpm = MIR::PassBuilder::buildModulePipeline(bkd_opt_info);
 
-    if (only_compilation) {
+    if (emit_llc) {
         bkd_mpm.addPass(MIR::PrintModulePass(*poutstream));
         bkd_mpm.run(lower.getModule(), bkd_mam);
         return 0;
     }
 
     bkd_mpm.run(lower.getModule(), bkd_mam);
-    Err::todo("ARM Assembler");
+
+    // Assembler
+    if (only_compilation) {
+        MIR::ARMPrinter armv7gen(*poutstream);
+        armv7gen.printout(lower.getModule());
+    }
 
     return 0;
 }

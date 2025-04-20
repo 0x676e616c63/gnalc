@@ -2,7 +2,7 @@
 #ifndef GNALC_CODEGEN_BRAINFK_BFTRANS_HPP
 #define GNALC_CODEGEN_BRAINFK_BFTRANS_HPP
 
-#include "../../config/config.hpp"
+#include "config/config.hpp"
 #if GNALC_EXTENSION_BRAINFK
 
 #include <vector>
@@ -11,7 +11,6 @@
 
 // The following translation is based on RacistCat's work.
 // RacistCat's GitHub: https://github.com/RacistCat
-// He must be a genius.
 
 namespace BrainFk {
 // Source Repo: https://github.com/RacistCat/32-bit-brainfuck

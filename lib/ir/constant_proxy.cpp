@@ -1,5 +1,5 @@
-#include "../../include/ir/constant_proxy.hpp"
-#include "../../include/ir/constant_pool.hpp"
+#include "ir/constant_proxy.hpp"
+#include "ir/constant_pool.hpp"
 
 namespace IR {
 ConstantProxy::ConstantProxy(ConstantPool *pool_, pConstI1 value_) : value(std::move(value_)), pool(pool_) {}

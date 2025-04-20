@@ -3,12 +3,13 @@
 // Reference:
 // https://llvm.org/doxygen/classllvm_1_1ReassociatePass.html
 // https://llvm.org/doxygen/Reassociate_8cpp.html
+// TODO: make it converge and simpler
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_REASSOCIATE_EXPRESSIONS_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_REASSOCIATE_EXPRESSIONS_HPP
 
-#include "../../../../include/ir/instructions/binary.hpp"
-#include "../pass_manager.hpp"
+#include "ir/instructions/binary.hpp"
+#include "ir/passes/pass_manager.hpp"
 
 #include <limits>
 

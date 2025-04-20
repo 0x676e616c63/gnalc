@@ -1,6 +1,6 @@
-#include "../../../include/mir/builder/lowering.hpp"
-#include "../../../include/mir/instructions/binary.hpp"
-#include "../../../include/mir/instructions/memory.hpp"
+#include "mir/builder/lowering.hpp"
+#include "mir/instructions/binary.hpp"
+#include "mirtools/tool.hpp"
 
 namespace MIR {
 
@@ -248,14 +248,15 @@ std::list<std::shared_ptr<Instruction>> divOpt(const std::shared_ptr<BindOnVirOP
         } else {
             // smmul temp2, dividend, temp1
             auto smmul = std::make_shared<binaryInst>(OpCode::SMMUL, SourceOperandType::rr, relay2, dividend, relay);
+            insts.emplace_back(smmul);
         }
 
         // asr temp3, temp2, #shift (shift为0时, 此条省略)
         // add target, temp3, dividend, LSR #31
         if (multipler.shift) {
             auto relay3 = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
-            auto asr =
-                std::make_shared<binaryImmInst>(OpCode::ASR, SourceOperandType::ri, relay3, relay2, shift, nullptr);
+            auto asr = std::make_shared<binaryImmInst>(OpCode::ASR, SourceOperandType::ri, relay3, relay2, shift,
+                                                       nullptr); // relay2
             insts.emplace_back(asr);
             relay2 = relay3;
         }

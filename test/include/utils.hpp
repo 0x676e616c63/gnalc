@@ -1,16 +1,19 @@
+#pragma once
 #ifndef GNALC_TEST_UTILS_HPP
 #define GNALC_TEST_UTILS_HPP
+
+#include "utils/exception.hpp"
 
 #include <chrono>
 #include <ctime>
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include "../include/utils/exception.hpp"
+#include <iostream>
+#include <fstream>
 
 namespace Test {
-inline std::string generate_unique_temp_dir() {
+static std::string generate_unique_temp_dir() {
     auto systt = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     struct tm *ptm = localtime(&systt);
     char date[60] = {0};
@@ -35,8 +38,9 @@ template <typename... Args> std::string format(const std::string &fmtstr, Args &
     ret.reserve(fmtstr.size() * 2);
     size_t argidx = 0;
     for (auto ch = fmtstr.cbegin(); ch < fmtstr.cend(); ++ch) {
-        if (*ch == '{') {
-            Err::gassert(ch + 1 != fmtstr.cend() && *++ch == '}' && argidx < vec_args.size(), "Invalid format string");
+        if (*ch == '{' && ch + 1 != fmtstr.cend() && *(ch + 1) == '}') {
+            ++ch; // skip '}'
+            Err::gassert(argidx < vec_args.size(), "Invalid format string");
             ret += vec_args[argidx++];
         } else
             ret += *ch;
@@ -61,14 +65,14 @@ template <typename... Args> void print(const std::string &fmtstr, Args &&...args
     print(std::cout, fmtstr, std::forward<Args>(args)...);
 }
 
-std::string read_file(const std::string &file_name) {
+static std::string read_file(const std::string &file_name) {
     std::ifstream in(file_name);
     std::istreambuf_iterator<char> beg(in), end;
     return {beg, end};
 }
 
 // :(
-inline void fix_newline(std::string &str) {
+static void fix_newline(std::string &str) {
     for (auto &&ch : str)
         if (ch == '\r')
             ch = '\n';
@@ -85,7 +89,7 @@ inline void fix_newline(std::string &str) {
     }
 }
 
-inline bool begins_with(const std::string &a, const std::string &b) {
+static bool begins_with(const std::string &a, const std::string &b) {
     if (a.size() < b.size())
         return false;
     for (size_t i = 0; i < b.size(); ++i) {
@@ -96,12 +100,23 @@ inline bool begins_with(const std::string &a, const std::string &b) {
     return true;
 }
 
-inline size_t parse_time(const std::string &s) {
+static size_t parse_time(const std::string &s) {
     auto lastline_beg = s.rfind('\n', s.size() - 2);
     std::string lastline = s.substr(lastline_beg + 1);
     int hour, minute, second, microsecond;
     sscanf(lastline.c_str(), "TOTAL: %dH-%dM-%dS-%dus\n", &hour, &minute, &second, &microsecond);
     return hour * 3600000000 + minute * 60000000 + second * 1000000 + microsecond;
+}
+
+static std::string make_pathname(const std::string &raw) {
+    std::string ret;
+    for (const auto &c : raw) {
+        if (c == '/' || c == ' ')
+            ret += '_';
+        else
+            ret += c;
+    }
+    return ret;
 }
 } // namespace Test
 #endif // GNALC_TEST_HPP

@@ -1,4 +1,4 @@
-// Break critical edges in CFG, which is required by GVN-PRE and codegen
+// Break critical edges in CFG, which is required by GVN-PRE
 //
 // critical edges: edges from blocks with more than one successor
 //                 to blocks with more than one predecessor
@@ -9,7 +9,7 @@
 #ifndef GNALC_IR_PASSES_TRANSFORMS_BREAK_CRITICAL_EDGES_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_BREAK_CRITICAL_EDGES_HPP
 
-#include "../pass_manager.hpp"
+#include "ir/passes/pass_manager.hpp"
 
 namespace IR {
 class BreakCriticalEdgesPass : public PM::PassInfo<BreakCriticalEdgesPass> {

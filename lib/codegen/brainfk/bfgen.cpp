@@ -1,9 +1,8 @@
-#include "../../../include/config/config.hpp"
+#include "config/config.hpp"
 #if GNALC_EXTENSION_BRAINFK
-#include "../../../include/codegen/brainfk/bfbuiltins.hpp"
-#include "../../../include/codegen/brainfk/bfgen.hpp"
-#include "../../../include/codegen/brainfk/bfmodule.hpp"
-#include "../../../include/utils/logger.hpp"
+#include "codegen/brainfk/bfgen.hpp"
+#include "codegen/brainfk/bfmodule.hpp"
+#include "utils/logger.hpp"
 
 namespace BrainFk {
 void BF3t32bGen::visit(IR::Module &node) {
@@ -256,7 +255,7 @@ void BF3t32bGen::visit(IR::CALLInst &node) {
         Logger::logDebug("Tape1 Forward, now at ", tape1_pos);
         Logger::logDebug("Get Ch");
         curr_insts.addInst(BF3tInst::INPUT1);
-    } else if (node.getFuncName().substr(1) == Config::IR::BUILTIN_MEMSET) {
+    } else if (node.getFuncName() == Config::IR::BUILTIN_MEMSET) {
         // just pass
     } else
         Err::todo("More func");

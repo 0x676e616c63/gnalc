@@ -1,13 +1,9 @@
-//
-// Created by edragain on 2/12/25.
-//
-#include "../../../../include/ir/passes/transforms/reassociate.hpp"
-#include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
-#include "../../../../include/ir/passes/helpers/constant_fold.hpp"
+#include "ir/passes/transforms/reassociate.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
+#include "ir/passes/helpers/constant_fold.hpp"
 
 #include <algorithm>
-#include <limits>
 
 namespace IR {
 using Rank = ReassociatePass::Rank;

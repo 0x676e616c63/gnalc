@@ -1,8 +1,6 @@
-#include "../../../include/ir/instructions/control.hpp"
-#include "../../../include/ir/visitor.hpp"
-#include "../../../include/utils/exception.hpp"
-
-#include <algorithm>
+#include "ir/instructions/control.hpp"
+#include "ir/visitor.hpp"
+#include "utils/exception.hpp"
 
 namespace IR {
 RETInst::RETInst() : Instruction(OP::RET, "__ret", makeBType(IRBTYPE::UNDEFINED)), ret_type(makeBType(IRBTYPE::VOID)) {}
@@ -141,7 +139,7 @@ std::vector<pVal> CALLInst::getArgs() const {
     return ret;
 }
 
-void CALLInst::setTailCall() { is_tail_call = true; }
+void CALLInst::setTailCall(bool is_tail_call_) { is_tail_call = is_tail_call_; }
 
 bool CALLInst::isTailCall() const { return is_tail_call; }
 

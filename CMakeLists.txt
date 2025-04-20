@@ -11,7 +11,7 @@ option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 #      - https://github.com/vadimcn/codelldb/issues/415
 #      - https://bugzilla.redhat.com/show_bug.cgi?id=1740927
 # Well, there are still some bugs, but fewer than before.
-add_compile_options("-g" "-fstandalone-debug" )
+add_compile_options("-g" "-fstandalone-debug")
 add_link_options("-rdynamic")
 
 if (ENABLE_ASAN)
@@ -20,7 +20,7 @@ if (ENABLE_ASAN)
         add_link_options(-fsanitize=address)
 endif()
 
-#include_directories(include)
+include_directories(include)
 
 # Frontend
 aux_source_directory(lib/lexer GNALC_LEXER_SRC)
@@ -58,6 +58,9 @@ aux_source_directory(lib/utils GNALC_UTILS_SRC)
 # BrainFk Extension
 aux_source_directory(lib/codegen/brainfk GNALC_EXT_BFBKD_SRC)
 
+# ArmV7 printer
+aux_source_directory(lib/codegen/armv7 GNALC_ARMV7BKD_SRC) 
+
 # GGC Extension
 aux_source_directory(lib/ggc GNALC_EXT_GGC_SRC)
 
@@ -70,6 +73,7 @@ set(GNALC_SRC
         ${GNALC_PM_SRC}
         ${GNALC_PTM_SRC}
         ${GNALC_EXT_BFBKD_SRC}
+        ${GNALC_ARMV7BKD_SRC}
         ${GNALC_UTILS_SRC})
 
 # GGC
@@ -80,11 +84,11 @@ set(GGC_SRC
         ${GNALC_PM_SRC}
         ${GNALC_PTM_SRC}
         ${GNALC_EXT_BFBKD_SRC}
+        ${GNALC_ARMV7BKD_SRC}
         ${GNALC_UTILS_SRC})
 
 # debug driver
 add_executable(pmtest tools/driver/debug/pmtest.cpp ${GNALC_SRC})
-add_executable(generic_visitor_test tools/driver/debug/generic_visitor_test.cpp ${GNALC_SRC})
 add_executable(bfhelper tools/driver/debug/bfhelper.cpp)
 
 # main driver

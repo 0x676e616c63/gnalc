@@ -3,6 +3,7 @@
 #define GNALC_IR_GLOBAL_VAR_HPP
 
 #include "base.hpp"
+
 #include <vector>
 
 namespace IR {
@@ -33,7 +34,6 @@ public:
     bool isZero() const;
     bool isArray() const;
 
-    pVal &getConstVal(); // 此处暂时先用非const的引用传递
     const pVal &getConstVal() const;
 
     const std::vector<GVIniter> &getInnerIniter() const;

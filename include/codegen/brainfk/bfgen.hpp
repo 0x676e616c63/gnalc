@@ -1,13 +1,59 @@
+// Lowering Gnalc IR to Brainfk code
+//
+// The lowering process involves two primary stages:
+// 1. Lowering Gnalc IR to 32-bit 3-tape BF code
+// 2. Converting 32-bit 3-tape BF code to standard 8-bit 1-tape BF using the `bftrans.hpp` utility
+// The second phase leverages RacistCat's foundational work via `bftrans.hpp`.
+//
+// The 3-tape BF code provides isolated execution environments (tape1, tape2, tape3) with:
+// - Three variants for each operation (e.g., +1, +2, +3; ]1, ]2, ]3)
+// - Independent pointer positions and memory spaces
+// This design significantly simplifies the lowering process compared to 1-tape version..
+//
+// Implementation Notes:
+// This is still in a very early stage. Its generates many redundant code, which makes it very slow.
+// Besides, many instructions are not available. And it don't work with any optimization passes,
+// since all passes are written after its implementation.
+// Development is frozen for now. I am writing other parts of the compiler.
+// I'll resume it after competition if possible. May this code make sense at that time. 🙏
+//
+// Currently Supported Features:
+// - Control flow structures (branching/looping via `if`/`while`)
+// - Memory management for arrays
+// - Limited arithmetic operations (`+`/`-`)
+// - Some `sylib` function ( `getch`/`putch` )
+//
+// A simple helloworld works currently.
+// ```c
+// int main()
+// {
+//     int str[14] = { 72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33, 10 };
+//     int i = 0;
+//     while (i != 14)
+//     {
+//         putch(str[i]);
+//         i = i + 1;
+//     }
+//     return 0;
+// }
+// ```
+//
+// TODO:
+// - Implement function calling. Maybe tape3 can be used as a function call stack.
+// - Implement GlobalVariable/ICMP/BinaryOps/Phi/...
+// - Optimization.
+// - Fix trans to 8-bit BF.
+// - Maybe implement float.
 #pragma once
 #ifndef GNALC_CODEGEN_BRAINFK_BFGEN_HPP
 #define GNALC_CODEGEN_BRAINFK_BFGEN_HPP
 
-#include "../../config/config.hpp"
+#include "config/config.hpp"
 #if GNALC_EXTENSION_BRAINFK
 
 #include <map>
 
-#include "../../ir/visitor.hpp"
+#include "ir/visitor.hpp"
 #include "bfmodule.hpp"
 
 namespace BrainFk {

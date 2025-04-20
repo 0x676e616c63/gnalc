@@ -1,12 +1,9 @@
-#include "../../../../include/ir/passes/transforms/inline.hpp"
-#include "../../../../include/config/config.hpp"
-#include "../../../../include/ir/block_utils.hpp"
-#include "../../../../include/ir/instructions/control.hpp"
-#include "../../../../include/ir/instructions/memory.hpp"
-#include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
-
-#include <deque>
+#include "ir/passes/transforms/inline.hpp"
+#include "config/config.hpp"
+#include "ir/block_utils.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/instructions/memory.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
 
 namespace IR {
 // FIXME: Inline Cost Calculation
@@ -43,6 +40,14 @@ PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
         auto candidate = call->getFunc()->as<Function>();
         Err::gassert(candidate != nullptr);
         auto cloned = makeClone(candidate);
+
+        // CALLInsts in inlined functions can not be tail call.
+        for (const auto& cloned_bb : *cloned) {
+            for (const auto& cloned_inst : *cloned_bb) {
+                if (auto cloned_call = cloned_inst->as<CALLInst>())
+                    cloned_call->setTailCall(false);
+            }
+        }
 
         // Move alloca
         auto entry = function.getBlocks().front();

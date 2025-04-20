@@ -2,8 +2,8 @@
 #ifndef GNALC_MIR_PASSES_ANALYSIS_DOMTREE_ANALYSIS_HPP
 #define GNALC_MIR_PASSES_ANALYSIS_DOMTREE_ANALYSIS_HPP
 
-#include "../../../graph/domtree.hpp"
-#include "../pass_manager.hpp"
+#include "graph/domtree.hpp"
+#include "mir/passes/pass_manager.hpp"
 
 #include <memory>
 #include <vector>

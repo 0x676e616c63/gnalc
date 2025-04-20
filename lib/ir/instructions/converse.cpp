@@ -1,6 +1,6 @@
-#include "../../../include/ir/instructions/converse.hpp"
-#include "../../../include/ir/visitor.hpp"
-#include "../../../include/utils/exception.hpp"
+#include "ir/instructions/converse.hpp"
+#include "ir/visitor.hpp"
+#include "utils/exception.hpp"
 
 namespace IR {
 CastInst::CastInst(OP opcode_, NameRef name, const pVal &origin_val, const pType &dest_type_)

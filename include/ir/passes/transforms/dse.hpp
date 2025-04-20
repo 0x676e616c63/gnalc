@@ -1,8 +1,10 @@
 // Dead Store Elimination
 //
 // This pass performs a pre-order traversal of the CFG to eliminate store instructions through:
-// - Identifying stores whose values are never subsequently referenced
+// - Removing stores whose memory is never subsequently referenced
 // - Removing stores overwritten by subsequent stores without intervening reference
+// - Removing stores whose value is a previous load, and there are no
+//   intervening modification between them
 //
 // TODO: Current implementation is time-consuming.
 //       Consider adopting MemorySSA-based analysis to enhance optimization efficiency.
@@ -10,8 +12,7 @@
 #ifndef GNALC_IR_PASSES_TRANSFORMS_DSE_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_DSE_HPP
 
-#include "../../../../include/ir/instructions/memory.hpp"
-#include "../pass_manager.hpp"
+#include "ir/passes/pass_manager.hpp"
 
 namespace IR {
 class DSEPass : public PM::PassInfo<DSEPass> {

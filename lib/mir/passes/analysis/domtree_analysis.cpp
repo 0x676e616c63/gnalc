@@ -1,4 +1,4 @@
-#include "../../../../include/mir/passes/analysis/domtree_analysis.hpp"
+#include "mir/passes/analysis/domtree_analysis.hpp"
 
 namespace MIR {
 PM::UniqueKey DomTreeAnalysis::Key;

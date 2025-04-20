@@ -2,11 +2,11 @@
 #ifndef GNALC_IR_CONSTANTPOOL_HPP
 #define GNALC_IR_CONSTANTPOOL_HPP
 
-#include <unordered_set>
-
-#include "../utils/exception.hpp"
 #include "constant.hpp"
 #include "constant_proxy.hpp"
+
+#include <unordered_set>
+
 
 namespace IR {
 class ConstantPool {

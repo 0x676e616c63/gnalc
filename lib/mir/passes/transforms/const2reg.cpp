@@ -1,5 +1,5 @@
-#include "../../../../include/mir/passes/transforms/const2reg.hpp"
-#include "../../../../include/mir/instructions/memory.hpp"
+#include "mir/passes/transforms/const2reg.hpp"
+#include "mir/instructions/memory.hpp"
 
 using namespace MIR;
 
@@ -38,18 +38,30 @@ void Const2Reg::mkConst2Reg(const ConstObj &constobj, const BindOnP &constvir, B
     auto extract = [](const auto &_inst) -> std::set<OperP> {
         std::set<OperP> set;
         for (int i = 1; i < 5; ++i) {
-            if (auto op = _inst->getSourceOP(i))
+            if (auto op = _inst->getSourceOP(i)) {
+                if (auto baseop = std::dynamic_pointer_cast<BaseADROP>(op))
+                    set.insert(baseop->getBase());
+
                 set.insert(op);
+            }
         }
         return set;
     };
+
+    bool isInsert = false;
 
     for (auto it = insts.begin(); it != insts.end(); ++it) {
         auto uses = extract(*it);
         if (uses.find(constvir) != uses.end()) {
             insts.insert(it, mov);
+            isInsert = true;
             break;
         }
+    }
+
+    if (!isInsert) {
+        ///@note 直接放最前面, 因为不确定各个分支br的位置
+        blk->addInsts_front({mov});
     }
 }
 

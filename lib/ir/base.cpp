@@ -1,14 +1,8 @@
-/**
- * @attention update: 使用 `Use` 类来管理操作数
- * @attention NO NULL WARNING
- */
+#include "ir/base.hpp"
+#include "ir/instructions/phi.hpp"
+#include "utils/exception.hpp"
+
 #include <algorithm>
-
-#include "../../include/ir/base.hpp"
-
-#include "../../include/ir/instructions/phi.hpp"
-#include "../../include/utils/exception.hpp"
-
 #include <functional>
 
 namespace IR {
@@ -30,62 +24,32 @@ Value::UserIterator<> Value::user_end() const { return UserIterator{use_list.end
 Value::UserIterator<Instruction> Value::inst_user_begin() const { return UserIterator<Instruction>{use_list.begin()}; }
 Value::UserIterator<Instruction> Value::inst_user_end() const { return UserIterator<Instruction>{use_list.end()}; }
 
-Value::UseIterator::UseIterator(InnerIterT iter_) : iter(iter_) {}
-Value::UseIterator &Value::UseIterator::operator++() {
-    ++iter;
-    return *this;
-}
-Value::UseIterator Value::UseIterator::operator++(int) { return UseIterator{iter++}; }
-Value::UseIterator &Value::UseIterator::operator--() {
-    --iter;
-    return *this;
-}
-Value::UseIterator Value::UseIterator::operator--(int) { return UseIterator{iter--}; }
-bool Value::UseIterator::operator==(UseIterator other) const { return iter == other.iter; }
-bool Value::UseIterator::operator!=(UseIterator other) const { return iter != other.iter; }
-pUse Value::UseIterator::operator*() const { return iter->lock(); }
-Value::UseIterator Value::self_uses_begin() const { return UseIterator{use_list.begin()}; }
-Value::UseIterator Value::self_uses_end() const { return UseIterator{use_list.end()}; }
-
 pUser Value::getSingleUser() const {
     if (use_list.size() != 1)
         return nullptr;
-    return use_list.begin()->lock()->getUser();
+    return (*use_list.begin())->getUser();
 }
 
-void Value::addUse(const wpUse &use) {
-    Err::gassert(!use.expired());
+void Value::addUse(Use* use) {
     use_list.emplace_back(use);
 }
 
-std::list<pUse> Value::getUseList() const {
-    std::list<pUse> shared_use_list;
-    for (const auto &weak_use : use_list) {
-        auto shared_use = weak_use.lock();
-        Err::gassert(shared_use != nullptr, "Expired use should be deleted by User.");
-        if (shared_use)
-            shared_use_list.push_back(shared_use);
-    }
-    return shared_use_list;
+const std::list<Use*>& Value::getUseList() const {
+    return use_list;
 }
-
-std::list<wpUse> &Value::getRUseList() { return use_list; }
 
 void Value::replaceSelf(const pVal &new_value) const {
     Err::gassert(this != new_value.get(), "Replace with an identical value doesn't make sense.");
-    auto shared_use_list = getUseList();
-    for (const auto &use : shared_use_list) {
-        bool ok = use->getUser()->replaceUse(use, new_value);
-        Err::gassert(ok);
-    }
+    auto ulist = getUseList();
+    for (const auto &use : ulist)
+        use->setValue(new_value);
 }
 
 Value::~Value() = default;
 
-bool Value::delUse(const pUse &target) {
+bool Value::delUse(Use* target) {
     for (auto it = use_list.begin(); it != use_list.end(); ++it) {
-        Err::gassert(!it->expired(), "Expired use should be deleted by User.");
-        if (!it->expired() && it->lock() == target) {
+        if (*it == target) {
             use_list.erase(it);
             return true;
         }
@@ -147,38 +111,21 @@ User::~User() {
         // all instructions will be deleted, but not in the def-use relationship.
         if (!curr_val)
             continue;
-        auto ok = curr_val->delUse(curr);
+        auto ok = curr_val->delUse(curr.get());
         Err::gassert(ok);
     }
 }
 
-bool User::replaceAllOperands(const pVal &before, const pVal &after) {
-    if (before == after)
-        return false;
-    bool found = false;
+size_t User::replaceAllOperands(const pVal &before, const pVal &after) {
+    Err::gassert(before != after, "Replace with an identical value doesn't make sense.");
+    size_t cnt = 0;
     for (const auto &use : operand_uses_list) {
         if (use->getValue() == before) {
-            replaceUse(use, after);
-            found = true;
+            use->setValue(after);
+            ++cnt;
         }
     }
-    return found;
-}
-
-bool User::replaceUse(const pUse &old_use, const pVal &new_value) {
-    Err::gassert(old_use->getValue() != new_value, "Replace with an identical value doesn't make sense.");
-    for (auto &use : operand_uses_list) {
-        if (use == old_use) {
-            auto ok = use->getValue()->delUse(use);
-            Err::gassert(ok, "The use has been released unexpectedly.");
-            // Don't `make_shared` because the constructor is private.
-            use = pUse(new Use(new_value, use->getUser().get()));
-            use->init();
-            return true;
-        }
-    }
-    Err::unreachable("User::replaceOneUse(): old use notfound.");
-    return false;
+    return cnt;
 }
 
 User::User(std::string _name, pType _vtype, ValueTrait _vtrait) : Value(std::move(_name), std::move(_vtype), _vtrait) {}
@@ -186,21 +133,26 @@ User::User(std::string _name, pType _vtype, ValueTrait _vtrait) : Value(std::mov
 size_t User::getNumOperands() const { return operand_uses_list.size(); }
 
 void User::addOperand(const pVal &v) {
-    pUse use{new Use(v, this)};
-    use->init();
+    std::unique_ptr<Use> use{new Use(v, this)};
     operand_uses_list.emplace_back(std::move(use));
 }
 
-const std::vector<pUse> &User::getOperands() const { return operand_uses_list; }
-const pUse &User::getOperand(size_t index) const { return operand_uses_list[index]; }
+const std::vector<std::unique_ptr<Use>> &User::getOperands() const { return operand_uses_list; }
+std::vector<Use *> User::getRawOperands() const {
+    std::vector<Use *> ret;
+    ret.reserve(operand_uses_list.size());
+    for (const auto &use : operand_uses_list)
+        ret.emplace_back(use.get());
+    return ret;
+}
+Use * User::getOperand(size_t index) const { return operand_uses_list[index].get(); }
 
 void User::setOperand(size_t index, const pVal &val) {
     Err::gassert(index < operand_uses_list.size(), "index out of range");
-    auto old_use = operand_uses_list[index];
+    auto old_use = operand_uses_list[index].get();
     auto ok = old_use->getValue()->delUse(old_use);
     Err::gassert(ok);
-    pUse new_use{new Use(val, this)};
-    new_use->init();
+    std::unique_ptr<Use> new_use{new Use(val, this)};
     operand_uses_list[index] = std::move(new_use);
 }
 
@@ -221,7 +173,7 @@ bool User::delOperand(size_t index) {
     Err::gassert(index < operand_uses_list.size(), "index out of range");
     if (index >= operand_uses_list.size())
         return false;
-    auto use = operand_uses_list[index];
+    auto use = operand_uses_list[index].get();
     auto ok = use->getValue()->delUse(use);
     Err::gassert(ok);
     operand_uses_list.erase(operand_uses_list.begin() +
@@ -229,13 +181,19 @@ bool User::delOperand(size_t index) {
     return true;
 }
 
-Use::Use(wpVal v, User *u) : val(std::move(v)), user(u) {}
-
-void Use::init() { val.lock()->addUse(weak_from_this()); }
+Use::Use(wpVal v, User *u) : val(std::move(v)), user(u) {
+    val.lock()->addUse(this);
+}
 
 User *Use::getRawUser() const { return user; }
 
 pVal Use::getValue() const { return val.lock(); }
 
 pUser Use::getUser() const { return user->as<User>(); }
+
+void Use::setValue(const pVal &v) {
+    val.lock()->delUse(this);
+    v->addUse(this);
+    val = v;
+}
 } // namespace IR

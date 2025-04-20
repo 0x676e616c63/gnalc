@@ -1,4 +1,4 @@
-#include "../../../../include/mir/passes/transforms/peephole.hpp"
+#include "mir/passes/transforms/peephole.hpp"
 
 namespace MIR {
 PM::PreservedAnalyses PeepHolePass::run(Function &function, FAM &manager) {
