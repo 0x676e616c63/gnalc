@@ -102,6 +102,8 @@ public:
         return node_a->dfs_in() <= node_b->dfs_in() && node_a->dfs_out() >= node_b->dfs_out();
     }
 
+    bool isReachable(GraphNodeT a) const { return nodes.count(a); }
+
     GraphNodeSet getDomSet(GraphNodeT b) const {
         GraphNodeSet domset = {b};
         auto _b = nodes.at(b).get();
@@ -142,7 +144,7 @@ public:
 
     void printDomTree(std::ostream &os) const {
         os << "(Post)DomTree:" << std::endl;
-        print(root_node, 0);
+        print(os, root_node, 0);
     }
 
     auto getBFVisitor() const { return NodeBFVisitor{root_node}; }
@@ -151,16 +153,16 @@ public:
     }
 
 private:
-    void print(const pNode &node, int level) const {
+    void print(std::ostream &os, const pNode &node, int level) const {
         if (node == nullptr)
             return;
         for (int i = 0; i < level; i++) {
-            std::cout << "|   ";
+            os << "|   ";
         }
-        std::cout << node->bb->getName() << std::endl;
+        os << (node->graph_node ? node->graph_node->getName() : "<null>") << std::endl;
         level++;
-        for (auto &n : node->children) {
-            print(n, level);
+        for (auto &n : node->children()) {
+            print(os, n, level);
         }
     }
 

@@ -243,11 +243,10 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     fpm.addPass(PromotePass());
     fpm.addPass(TailRecursionEliminationPass());
     fpm.addPass(InlinePass());
+    fpm.addPass(InternalizePass());
     fpm.addPass(NameNormalizePass(true));
     fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(InternalizePass());
-    fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(PromotePass());
+    fpm.addPass(LoadEliminationPass());
     fpm.addPass(PrintFunctionPass(std::cerr));
     return fpm;
 

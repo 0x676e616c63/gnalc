@@ -3,9 +3,9 @@
 #include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
+#include "config/config.hpp"
 
 #include <algorithm>
-#include <config/config.hpp>
 
 namespace IR {
 PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
@@ -42,6 +42,11 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                         replaced = true;
                         Logger::logDebug("[LoadElim]: Replaced '", load->getName(), "' with '",
                             store->getName(), "''s value.");
+                        break;
+                    }
+
+                    if (aa == AliasInfo::MayAlias) {
+                        killed = true;
                         break;
                     }
                 } else if (auto load2 = (*inst_rit)->as<LOADInst>()) {
@@ -187,9 +192,35 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
             PostDomTree* real_pdom;
             PostDomTreeBuilder pdbuilder;
             if (backedge_detected) {
+                std::vector r_worklist {load_block};
+                std::unordered_set<pBlock> r_visited;
+                while (!r_worklist.empty()) {
+                    auto curr = r_worklist.back();
+                    r_visited.emplace(curr);
+                    r_worklist.pop_back();
+                    for (const auto& pred : curr->preds()) {
+                        if (!r_visited.count(pred))
+                            r_worklist.emplace_back(pred);
+                    }
+                }
+
+                std::vector<std::pair<pBlock, pBlock>> unlinked;
+                for (const auto& block : r_visited) {
+                    auto succs = block->getNextBB();
+                    for (const auto& succ : succs) {
+                        if (!r_visited.count(succ)) {
+                            unlinked.emplace_back(block, succ);
+                            unlinkOneEdge(block, succ);
+                        }
+                    }
+                }
+
                 pdbuilder.entry = load_block.get();
                 pdbuilder.analyze();
                 real_pdom = &pdbuilder.domtree;
+
+                for (const auto& pair : unlinked)
+                    linkBB(pair.first, pair.second);
             }
             else
                 real_pdom = &postdomtree;
@@ -202,6 +233,7 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
             // That is to say, it is the one we should replace the load with.
             pInst target = nullptr;
             for (const auto &candidate : candidates) {
+                Err::gassert(candidate->getParent() != load_block);
                 bool able_to_replace = true;
                 for (const auto &another : candidates) {
                     if (another == candidate)
@@ -219,9 +251,29 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                             able_to_replace = false;
                             break;
                         }
-                    } else if (!real_pdom->ADomB(candidate->getParent(), killer->getParent())) {
-                        able_to_replace = false;
-                        break;
+                    } else {
+                        if (killer->getParent() == load_block) {
+                            Err::gassert(killer->getIndex() > load->getIndex());
+                            auto succs = load_block->getNextBB();
+                            bool dom_all_succ = true;
+                            for (const auto &succ : succs) {
+                                if (!real_pdom->isReachable(succ))
+                                    continue;
+
+                                if (!real_pdom->ADomB(candidate->getParent(), succ)) {
+                                    dom_all_succ = false;
+                                    break;
+                                }
+                            }
+                            if (!dom_all_succ) {
+                                able_to_replace = false;
+                                break;
+                            }
+                        }
+                        else if (!real_pdom->ADomB(candidate->getParent(), killer->getParent())) {
+                            able_to_replace = false;
+                            break;
+                        }
                     }
                 }
                 if (able_to_replace) {
