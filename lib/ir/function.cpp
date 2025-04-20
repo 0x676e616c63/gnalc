@@ -20,6 +20,10 @@ bool FunctionDecl::isSylib() const { return is_sylib; }
 
 bool FunctionDecl::isBuiltin() const { return is_builtin; }
 
+void FunctionDecl::setParent(Module *module) { parent = module; }
+
+Module *FunctionDecl::getParent() const { return parent; }
+
 FunctionDecl::~FunctionDecl() = default;
 void FormalParam::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
@@ -184,8 +188,7 @@ void Function::updateAndCheckCFG() {
                 it = blks.erase(it);
             } else if ((*it)->getNumSuccs() == 0) {
                 // 结尾块
-                if (getType()->as<FunctionType>()->getRet()->as<BType>()->getInner() ==
-                    IRBTYPE::VOID) {
+                if (getType()->as<FunctionType>()->getRet()->as<BType>()->getInner() == IRBTYPE::VOID) {
                     (*it)->addInst(std::make_shared<RETInst>());
                 } else {
                     Err::unreachable("CFGBuilder::linker(): invalid function type.");

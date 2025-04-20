@@ -24,6 +24,7 @@ namespace IR {
     GNALC_IR_PASS_ENTRY(licm) \
     GNALC_IR_PASS_ENTRY(loop_strength_reduce) \
     GNALC_IR_PASS_ENTRY(loopelim) \
+    GNALC_IR_PASS_ENTRY(internalize) \
     GNALC_IR_PASS_ENTRY(loop_unroll) \
     GNALC_IR_PASS_ENTRY(indvars) \
     GNALC_IR_PASS_ENTRY(slp_vectorizer) \

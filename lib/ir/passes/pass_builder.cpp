@@ -20,6 +20,7 @@
 #include "ir/passes/transforms/indvar_simplify.hpp"
 #include "ir/passes/transforms/inline.hpp"
 #include "ir/passes/transforms/instsimplify.hpp"
+#include "ir/passes/transforms/internalize.hpp"
 #include "ir/passes/transforms/jump_threading.hpp"
 #include "ir/passes/transforms/lcssa.hpp"
 #include "ir/passes/transforms/licm.hpp"
@@ -141,6 +142,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
         FPM fpm;
         FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass());
         FUNCTION_TRANSFORM(inliner, InlinePass());
+        FUNCTION_TRANSFORM(internalize, InternalizePass());
         return fpm;
     };
 
@@ -148,6 +150,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
     fpm.addPass(NameNormalizePass(true));
     FUNCTION_TRANSFORM(mem2reg, PromotePass());
     fpm.addPass(make_ipo());
+    FUNCTION_TRANSFORM(mem2reg, PromotePass());
     fpm.addPass(make_clean());
     fpm.addPass(make_arithmetic());
     FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
@@ -192,6 +195,8 @@ FPM PassBuilder::buildFunctionPipeline(PMOptions opt_info) {
     FUNCTION_TRANSFORM(mem2reg, PromotePass())
     FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass())
     FUNCTION_TRANSFORM(inliner, InlinePass())
+    FUNCTION_TRANSFORM(internalize, InternalizePass())
+    FUNCTION_TRANSFORM(mem2reg, PromotePass())
     FUNCTION_TRANSFORM(sccp, ConstantPropagationPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
     FUNCTION_TRANSFORM(reassociate, ReassociatePass())
@@ -234,69 +239,16 @@ MPM PassBuilder::buildModulePipeline(PMOptions opt_info) {
 }
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
-    // Reassociate does not converge, set a threshold
-    auto make_arithmetic = [] {
-        PM::FixedPointPM<Function> arithmetic(10);
-        // arithmetic.addPass(ReassociatePass());
-        arithmetic.addPass(InstSimplifyPass());
-        arithmetic.addPass(ConstantPropagationPass());
-        arithmetic.addPass(DCEPass());
-        arithmetic.addPass(ADCEPass());
-        return arithmetic;
-    };
-
-    auto make_clean = [] {
-        PM::FixedPointPM<Function> cleanup;
-        cleanup.addPass(InstSimplifyPass());
-        cleanup.addPass(ConstantPropagationPass());
-        cleanup.addPass(BreakCriticalEdgesPass());
-        cleanup.addPass(GVNPREPass());
-        cleanup.addPass(DCEPass());
-        return cleanup;
-    };
-
-    auto make_mem_clean = [] {
-        PM::FixedPointPM<Function> cleanup;
-        cleanup.addPass(LoadEliminationPass());
-        cleanup.addPass(DSEPass());
-        return cleanup;
-    };
-
-    auto make_ipo = [] {
-        FPM ipo;
-        ipo.addPass(TailRecursionEliminationPass());
-        ipo.addPass(InlinePass());
-        return ipo;
-    };
-
     FPM fpm;
-    fpm.addPass(NameNormalizePass(true));
     fpm.addPass(PromotePass());
-    fpm.addPass(make_ipo());
-    fpm.addPass(make_clean());
-    fpm.addPass(make_arithmetic());
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(make_clean());
-    // Simplify Blocks to make LoadElim faster.
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(make_mem_clean());
-    // ADCE is time-consuming
-    fpm.addPass(ADCEPass());
-    fpm.addPass(CFGSimplifyPass());
-    // Loop
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(LoopRotatePass());
-    fpm.addPass(LCSSAPass());
-    fpm.addPass(LICMPass());
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(LoopEliminationPass());
-    fpm.addPass(LoopStrengthReducePass());
-    fpm.addPass(make_clean());
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(make_mem_clean());
-    fpm.addPass(CodeGenPreparePass());
+    fpm.addPass(TailRecursionEliminationPass());
+    fpm.addPass(InlinePass());
     fpm.addPass(NameNormalizePass(true));
-
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(InternalizePass());
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(PromotePass());
+    fpm.addPass(PrintFunctionPass(std::cerr));
     return fpm;
 
     // // For LoopUnroll Test
@@ -327,6 +279,8 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const
     fpm.addPass(PromotePass());
     fpm.addPass(TailRecursionEliminationPass());
     fpm.addPass(InlinePass());
+    fpm.addPass(InternalizePass());
+    fpm.addPass(PromotePass());
     fpm.addPass(NameNormalizePass(true));
     std::vector<std::pair<std::string_view, std::function<void(bool)>>> passes;
 

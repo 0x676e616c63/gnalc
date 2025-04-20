@@ -130,6 +130,7 @@ int main(int argc, char **argv) {
         OPT_ARG("--loopelim", "--no-loopelim", loopelim)
         OPT_ARG("--slp-vectorizer", "--no-slp-vectorizer", slp_vectorizer)
         OPT_ARG("--jumpthreading", "--no-jumpthreading", jump_threading)
+        OPT_ARG("--internalize", "--no-internalize", internalize)
         // Module Transforms
         OPT_ARG("--treeshaking", "--no-treeshaking", tree_shaking)
 #undef OPT_ARG
@@ -209,6 +210,7 @@ Optimizations available:
   --loopelim           - Loop elimination
   --slp-vectorizer     - SLP vectorizer
   --jumpthreading      - Jump threading
+  --internalize        - Internalize global variables
   --treeshaking        - Shake off unused functions, function declarations and global variables
 
 Debug options:

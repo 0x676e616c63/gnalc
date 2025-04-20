@@ -16,6 +16,7 @@ PM::PreservedAnalyses TreeShakingPass::run(Module &module, MAM &mam) {
     tree_shaking_func_modified |= !dead_fn.emplace_back();
     for (const auto &fn : dead_fn)
         module.delFunction(fn);
+    dead_fn.clear();
 
     std::vector<pFuncDecl> dead_decl;
     for (const auto &decl : module.getFunctionDecls()) {
@@ -25,6 +26,7 @@ PM::PreservedAnalyses TreeShakingPass::run(Module &module, MAM &mam) {
     tree_shaking_func_modified |= !dead_decl.emplace_back();
     for (const auto &decl : dead_decl)
         module.delFunctionDecl(decl);
+    dead_decl.clear();
 
     std::vector<pGlobalVar> dead_gv;
     for (const auto &gv : module.getGlobalVars()) {
@@ -33,6 +35,7 @@ PM::PreservedAnalyses TreeShakingPass::run(Module &module, MAM &mam) {
     }
     for (const auto &gv : dead_gv)
         module.delGlobalVar(gv);
+    dead_gv.clear();
 
     return tree_shaking_func_modified ? PreserveNone() : PreserveAll();
 }

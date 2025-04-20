@@ -8,7 +8,8 @@
 namespace Config::IR {
 // IRGenerator
 constexpr auto REGISTER_TEMP_NAME = "%%__GNALC_IR_TEMP_NAME";
-constexpr auto BUILTIN_MEMSET = "llvm.memset.p0i8.i32";
+constexpr auto BUILTIN_MEMSET = "@llvm.memset.p0i8.i32";
+constexpr auto BUILTIN_MEMCPY = "@llvm.memcpy.p0.p0.i32";
 constexpr auto LOCAL_ARRAY_MEMSET_THRESHOLD = 32;
 
 // GVN-PRE
@@ -37,6 +38,10 @@ constexpr auto LOOP_ELIMINATION_EXPANSION_COST_RATIO = 10;
 // a base + a step + an update + a phi
 // FIXME: I don't know if this threshold is reasonable.
 constexpr auto LSR_EXPANSION_THRESHOLD = 5;
+
+// Internalize
+// Avoid internalizing global variables whose size is larger than this threshold.
+constexpr auto INTERNALIZE_GLOBAL_SIZE_THRESHOLD = 1048576; // 1 MB
 } // namespace Config::IR
 
 namespace Config::MIR {

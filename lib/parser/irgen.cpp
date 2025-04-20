@@ -54,7 +54,11 @@ void IRGenerator::visit(CompUnit &node) {
 
     // builtin
     // memset (dest, val, len, isvolatile)
-    make_decl(Config::IR::BUILTIN_MEMSET, {i8ptr_type, i8_type, i32_type, i1_type}, void_type, false, true,
+    make_decl(Config::IR::BUILTIN_MEMSET + 1, {i8ptr_type, i8_type, i32_type, i1_type}, void_type, false, true,
+              false); // -> not va_arg, is builtin, and not sylib
+
+    // memcpy (dest, src, len, isvolatile)
+    make_decl(Config::IR::BUILTIN_MEMCPY + 1, {i8ptr_type, i8ptr_type, i32_type, i1_type}, void_type, false, true,
               false); // -> not va_arg, is builtin, and not sylib
 
     for (auto &n : node.getNodes()) {
@@ -70,8 +74,6 @@ void IRGenerator::visit(CompUnit &node) {
     curr_making_initializer = nullptr;
     curr_insts.clear();
     is_making_lval = false;
-
-    module.removeUnusedFuncDecls();
 }
 
 // DeclStmt: const int32
@@ -163,14 +165,14 @@ void IRGenerator::visit(VarDef &node) {
                 // If it is zero inited or exceeds the threshold, memset it.
                 if (curr_initializer.isZeroIniter() ||
                     curr_type->getBytes() > Config::IR::LOCAL_ARRAY_MEMSET_THRESHOLD) {
-                    auto builtin_memset = symbol_table.lookup(Config::IR::BUILTIN_MEMSET);
+                    auto builtin_memset = symbol_table.lookup(Config::IR::BUILTIN_MEMSET + 1);
                     auto dest = type_cast(alloca_inst, makePtrType(IR::makeBType(IR::IRBTYPE::I8)));
                     auto call_memset = std::make_shared<IR::CALLInst>(
                         builtin_memset->as<IR::FunctionDecl>(),
                         std::vector<IR::pVal>{dest,                                                     // ptr
                                               module.getConst(static_cast<char>(0)),                    // val
                                               module.getConst(static_cast<int>(curr_type->getBytes())), // length
-                                              module.getConst(false)});                                 // volatile
+                                              module.getConst(false)});                              // volatile
                     curr_insts.emplace_back(call_memset);
                     has_filled_zero = true;
                 }

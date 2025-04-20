@@ -104,7 +104,7 @@ using pInst = std::shared_ptr<Instruction>;
 
 // module
 class Module;
-using pModule = std::shared_ptr<Module>;
+// using pModule = std::shared_ptr<Module>;
 
 // type
 class Type;

@@ -156,7 +156,7 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                                 if (load->getType()->is<BType>()) {
                                     if (auto call = inst->as<CALLInst>()) {
                                         if (call->getFunc()->isBuiltin()
-                                            && call->getFuncName().substr(1) == Config::IR::BUILTIN_MEMSET) {
+                                            && call->getFuncName() == Config::IR::BUILTIN_MEMSET) {
                                             candidates.emplace_back(inst);
                                             break;
                                         }
@@ -241,7 +241,7 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                     Logger::logDebug("[LoadElim]: Replaced '", load->getName(), "' with '", target->getName(), "''s value.");
                 } else if (auto target_call = target->as<CALLInst>()) {
                     Err::gassert(load->getType()->is<BType>() && target_call->getFunc()->isBuiltin()
-                        && target_call->getFuncName().substr(1) == Config::IR::BUILTIN_MEMSET);
+                        && target_call->getFuncName() == Config::IR::BUILTIN_MEMSET);
                     if (load->getType()->as<BType>()->getInner() == IRBTYPE::I32)
                         load->replaceSelf(function.getConst(0));
                     else

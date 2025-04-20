@@ -181,9 +181,9 @@ void PromotePass::rename(Function &f) {
 
         //  process load store and phi
         for (const auto &i : b->phis()) {
-            if (del_queue.count(i))
+            if (del_queue.count(i) || !phi_to_alloca_map.count(i))
                 continue;
-            incoming_values[{phi_to_alloca_map[i->as<PHIInst>()], b}] = i;
+            incoming_values[{phi_to_alloca_map[i], b}] = i;
         }
         for (const auto &i : b->getInsts()) {
             if (del_queue.count(i))
@@ -231,6 +231,9 @@ void PromotePass::rename(Function &f) {
         for (const auto &n : b->succs()) {
             // process phi in next block
             for (const auto &phi_node : n->phis()) {
+                if (!phi_to_alloca_map.count(phi_node))
+                    continue;
+
                 // 用于在替换前检查是否是undef_val, 若是则沿cfg向上查找非undef的值
                 if (auto alloca = phi_to_alloca_map[phi_node]; incoming_values[{alloca, b}] == undef_val) {
                     for (auto pb = b;;) {

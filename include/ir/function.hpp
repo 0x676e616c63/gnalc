@@ -20,6 +20,7 @@ class FunctionDecl : public Value {
 private:
     bool is_builtin;
     bool is_sylib;
+    Module *parent;
 
 public:
     FunctionDecl(std::string name_, std::vector<pType> params, pType ret_type, bool is_va_arg_, bool is_builtin_,
@@ -29,6 +30,9 @@ public:
 
     bool isSylib() const;
     bool isBuiltin() const;
+
+    void setParent(Module *module);
+    Module *getParent() const;
 
     ~FunctionDecl() override;
 };

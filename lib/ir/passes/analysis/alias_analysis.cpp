@@ -378,7 +378,7 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
                             }
                         }
                         res.has_sylib_call = true;
-                    } else if (callee->getName() == "@" + std::string{Config::IR::BUILTIN_MEMSET}) {
+                    } else if (callee->getName() == Config::IR::BUILTIN_MEMSET) {
                         auto actual_args = call->getArgs();
                         for (const auto &actual : actual_args) {
                             if (actual->getType()->getTrait() == IRCTYPE::PTR) {
@@ -388,6 +388,21 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
                                         res.write.insert(mayalias);
                                 }
                             }
+                        }
+                    } else if (callee->getName() == Config::IR::BUILTIN_MEMCPY) {
+                        // memcpy (dest, src, len, isvolatile)
+                        auto actual_args = call->getArgs();
+                        auto dest = actual_args[0].get();
+                        auto src = actual_args[1].get();
+                        for (const auto &mayalias : res.getPtrInfo(dest).potential_alias) {
+                            if (mayalias->getVTrait() == ValueTrait::GLOBAL_VARIABLE ||
+                                mayalias->getVTrait() == ValueTrait::FORMAL_PARAMETER)
+                                res.write.insert(mayalias);
+                        }
+                        for (const auto &mayalias : res.getPtrInfo(src).potential_alias) {
+                            if (mayalias->getVTrait() == ValueTrait::GLOBAL_VARIABLE ||
+                                mayalias->getVTrait() == ValueTrait::FORMAL_PARAMETER)
+                                res.write.insert(mayalias);
                         }
                     } else {
                         // Unrecognized sylib/builtin
@@ -434,7 +449,7 @@ RWInfo getCallRWInfo(FAM &fam, CALLInst *call) {
             return {.read = read, .write = {}, .untracked = false};
         }
 
-        if (callee->getName() == "@" + std::string{Config::IR::BUILTIN_MEMSET}) {
+        if (callee->getName() == Config::IR::BUILTIN_MEMSET) {
             auto actual_args = call->getArgs();
             std::vector<Value *> write;
             for (auto &r : actual_args) {
@@ -442,6 +457,14 @@ RWInfo getCallRWInfo(FAM &fam, CALLInst *call) {
                     write.emplace_back(r.get());
             }
             return {.read = {}, .write = write, .untracked = false};
+        }
+
+        if (callee->getName() == Config::IR::BUILTIN_MEMCPY) {
+            // memcpy (dest, src, len, isvolatile)
+            auto actual_args = call->getArgs();
+            auto dest = actual_args[0].get();
+            auto src = actual_args[1].get();
+            return {.read = { src }, .write = { dest }, .untracked = false};
         }
 
         Logger::logWarning("[AliasAnalysis]: Unrecognized function '", callee->getName(), "'.");
