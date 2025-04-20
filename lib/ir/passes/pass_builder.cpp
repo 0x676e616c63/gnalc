@@ -175,7 +175,8 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
 MPM PassBuilder::buildModuleFixedPointPipeline(PMOptions options) {
     MPM mpm;
     mpm.addPass(makeModulePass(buildFunctionFixedPointPipeline(options)));
-    mpm.addPass(TreeShakingPass());
+    if (options.tree_shaking)
+        mpm.addPass(TreeShakingPass());
     return mpm;
 }
 

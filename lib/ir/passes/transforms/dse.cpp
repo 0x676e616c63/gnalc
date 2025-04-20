@@ -49,10 +49,29 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
             }
 
             // Already referenced within the block, alive, go for the next store.
-            if (killed)
+            // Or already erased, skip it.
+            if (killed || erased)
                 continue;
 
-            // Already erased, skip it.
+            // Eliminate a store if useless
+            // %1 = load ptr %x
+            // <no modification of %x>
+            // %2 = store %1 ptr %x
+            auto rit = std::make_reverse_iterator(it);
+            for (auto inst_rit = std::next(rit); inst_rit != store_block->rend(); ++inst_rit) {
+                auto modref = aa_res.getInstModRefInfo(*inst_rit, store_ptr, fam);
+                if (auto load = (*inst_rit)->as<LOADInst>()) {
+                    if (store->getValue() == load) {
+                        if (aa_res.getAliasInfo(load->getPtr(), store_ptr) == AliasInfo::MustAlias) {
+                            erased = true;
+                            unused_store.insert(store);
+                            break;
+                        }
+                    }
+                } else if (modref == ModRefInfo::Mod || modref == ModRefInfo::ModRef)
+                    break;
+            }
+
             if (erased)
                 continue;
 
@@ -98,11 +117,8 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
                     visited.emplace(store_succ);
                     worklist.pop_front();
 
-                    // If we meet the store block again, there is a back edge, and thus we should
-                    // consider the instructions that before the store we want to eliminate. If there is
-                    // a Reference on that memory, it is not safe to eliminate the store.
-                    // For other blocks, if it post dominates the store block, we can eliminate the store
-                    // if there is a store in the post dominator block. If not, we still need to look at it
+                    // If a block properly post-dominates the store block, we can eliminate the store
+                    // if there is a store in it. If not, we still need to look at it
                     // to figure out if there is something could kill the opportunity.
                     if (store_succ != store_block && postdomtree.ADomB(store_succ, store_block)) {
                         for (const auto &inst : *store_succ) {

@@ -359,7 +359,7 @@ Extensions:
 
     // Assembler
     if (only_compilation) {
-        MIR::ARMPrinter armv7gen(outfile);
+        MIR::ARMPrinter armv7gen(*poutstream);
         armv7gen.printout(lower.getModule());
     }
 
