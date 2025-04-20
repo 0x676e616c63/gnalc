@@ -180,6 +180,10 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
         for (const auto &top_level : loop_info) {
             auto lpdfv = top_level->getDFVisitor();
             for (const auto &loop : lpdfv) {
+                if (loop->getExitBlocks().empty()) {
+                    Logger::logCritical("[VerifyPass]: Endless loop '", loop->getHeader()->getName(), "' detected.");
+                    ++fatal_error_cnt;
+                }
                 for (const auto &bb : loop->blocks()) {
                     for (auto p = loop; p != nullptr; p = p->getParent()) {
                         if (!p->contains(bb)) {
@@ -190,6 +194,13 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                     }
                 }
             }
+        }
+    }
+
+    if (fatal_error_cnt == 0) {
+        if (function.getExitBBs().empty()) {
+            Logger::logCritical("[VerifyPass]: Function '", function.getName(), "' has no exit block.");
+            ++fatal_error_cnt;
         }
     }
 

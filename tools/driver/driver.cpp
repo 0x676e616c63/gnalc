@@ -181,47 +181,50 @@ int main(int argc, char **argv) {
             std::cout <<
                 R"(OPTIONS:
 
-General options:
-  -o <file>               - Write output to <file>
-  -S                      - Only run compilation steps
-  -O,-O1                  - Optimization level 1
-  -emit-llvm              - Use the LLVM representation for assembler and object files
-  -ast-dump               - Build ASTs and then debug dump them. (Unavailable in GGC mode)
-  -fixed-point            - Enable the fixed point optimization pipeline.
-  --log <log-level>       - Enable compiler logger. Available log-level: debug, info, none
-  -h, --help              - Display available options
+General Options:
+  -o <file>            - Write output to <file>
+  -S                   - Only run compilation steps (assembly generation)
+  -O,-O1               - Optimization level 1
+  -emit-llvm           - Use LLVM intermediate representation for output
+  -ast-dump            - Build and dump AST (Unavailable in GGC mode)
+  -fixed-point         - Enable fixed-point optimization pipeline
+  --log <log-level>    - Set logging level (debug|info|none)
+  -h, --help           - Display this help message
 
-Optimizations available:
+Optimizations Flags:
   --mem2reg            - Promote memory to register
   --sccp               - Sparse conditional constant propagation
   --dce                - Dead code elimination
   --adce               - Aggressive dead code elimination
-  --cfgsimplify        - Simplify control flow
+  --cfgsimplify        - Control flow graph simplification
   --dse                - Dead store elimination
   --loadelim           - Redundant load elimination
   --gvnpre             - Value-Based partial redundancy elimination (GVN-PRE)
   --tailcall           - Tail call optimization
   --reassociate        - Reassociate commutative expressions
-  --instsimplify       - Simplify instructions
-  --inline             - Inline suitable functions
-  --loopunroll         - Unroll loops
-  --indvars            - Simplify induction variables
+  --instsimplify       - Instruction simplification
+  --inline             - Function inlining
+  --loopunroll         - Loop unrolling
+  --indvars            - Induction variable simplification
   --lsr                - Loop strength reduction
   --loopelim           - Loop elimination
-  --slp-vectorizer     - SLP vectorizer
+  --slp-vectorizer     - Superword-level parallelism vectorization
   --jumpthreading      - Jump threading
   --internalize        - Internalize global variables
   --treeshaking        - Shake off unused functions, function declarations and global variables
 
 Debug options:
-  -fuzz                      - Enable fuzz testing pipeline. (Ignore other optimization options)
-  -fuzz-rate <rate: double>  - Set the duplication rate for fuzz testing pipeline.
-  -fuzz-repro <pipeline>     - Reproduce fuzz testing pipeline. Find <pipeline> in the fuzz testing log.
-  -debug-pipeline            - Builtin pipeline for debugging.
-  --no-<pass>                - Remove <pass> from pipeline, <pass> are specified by 'Optimizations available' above.
-  --ann                      - Use the advance name normalization result (after IRGen). (This disables the one at the last).
-  --verify                   - Verify IR after each pass
-  --strict                   - Enable verify and abort when verify failed
+  -fuzz                      - Enable fuzz testing pipeline
+  -fuzz-rate <rate: double>  - Set the duplication rate for fuzz testing pipeline
+  -fuzz-repro <pipeline>     - Reproduce specific fuzz pipeline. Find <pipeline> in the fuzz testing log
+  -debug-pipeline            - Use built-in debugging pipeline
+  --no-<pass>                - Disable specific optimization pass
+  --ann                      - Use the advance name normalization result (after IRGen) (This disables the one at the last)
+  --verify                   - Enable IR verification after passes
+  --strict                   - Strict mode (verify + abort on failure)
+
+Note: For -fuzz/-fixed-point/-O1 modes:
+  --<opt> flags have no effect, but --no-<opt> can disable specific passes
 )";
 
 #if GNALC_EXTENSION_BRAINFK
@@ -284,9 +287,13 @@ Extensions:
     IR::PassBuilder::registerProxies(fam, mam);
 
     IR::PMOptions pm_options{};
-    if (o1_pipeline || fixed_point_pipeline) {
-        if (cli_opt_options.verify == IR::CliOptions::Status::Default)
-            cli_opt_options.verify = IR::CliOptions::Status::Disable;
+    if (o1_pipeline || fixed_point_pipeline || fuzz_testing) {
+        if (!fuzz_testing) {
+            if (cli_opt_options.verify == IR::CliOptions::Status::Default)
+                cli_opt_options.verify = IR::CliOptions::Status::Disable;
+        }
+        else
+            cli_opt_options.abort_when_verify_failed = true;
         pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::EnableIfDefault);
     }
     else
@@ -296,7 +303,7 @@ Extensions:
     if (debug_pipeline)
         mpm = IR::PassBuilder::buildModuleDebugPipeline();
     else if (fuzz_testing)
-        mpm = IR::PassBuilder::buildModuleFuzzTestingPipeline(fuzz_testing_duplication_rate, fuzz_testing_repro);
+        mpm = IR::PassBuilder::buildModuleFuzzTestingPipeline(pm_options, fuzz_testing_duplication_rate, fuzz_testing_repro);
     else if (fixed_point_pipeline)
         mpm = IR::PassBuilder::buildModuleFixedPointPipeline(pm_options);
     else

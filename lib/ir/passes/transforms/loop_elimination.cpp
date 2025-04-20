@@ -151,7 +151,7 @@ bool eliminateLoop(FAM& fam, Function &func, const pLoop &loop, LoopInfo& loop_i
 }
 
 // Break the backedge if it is never taken.
-bool breakSingleTripRotatedLoop(FAM& fam, const pLoop &loop, SCEVHandle &scev, LoopInfo& loop_info) {
+bool breakSingleTripRotatedLoop(const pLoop &loop, SCEVHandle &scev, LoopInfo& loop_info) {
     auto latch = loop->getLatch();
     if (!loop->isExiting(latch))
         return false;
@@ -164,29 +164,12 @@ bool breakSingleTripRotatedLoop(FAM& fam, const pLoop &loop, SCEVHandle &scev, L
     // If this is a single trip rotated(do-while) loop, just break the backedge
     if (cnt && cnt->isIRValue() && match(cnt->getRawIRValue(), M::Is(0))) {
         auto header = loop->getHeader();
-        for (const auto& phi : header->phis()) {
-            auto use_list = phi->getUseList();
-            for (const auto& use : use_list) {
-                auto user = use->getUser()->as<Instruction>();
-                if (!loop->contains(user->getParent())) {
-                    auto [invariant, variant] = analyzeHeaderPhi(loop, phi);
-                    use->setValue(variant);
-                }
-            }
-        }
+        for (const auto& phi : header->phis())
+            phi->delPhiOperByBlock(latch);
 
-        auto latch_br = latch->getBRInst();
-        Err::gassert(latch_br->isConditional());
-
-        std::set<pPhi> dead_phis;
-        auto dead_br = safeUnlinkBB(latch, header, dead_phis, UnlinkOptions::performDCE(&fam));
-        Err::gassert(!dead_br);
-        header->delInstIf(
-            [&dead_phis](const auto &p) { return dead_phis.find(p->template as<PHIInst>()) != dead_phis.end(); },
-            BasicBlock::DEL_MODE::PHI);
-        // Release dead phi's uses
-        eliminateDeadInsts(dead_phis, &fam);
-
+        foldPHI(header);
+        latch->getBRInst()->dropOneDest(header);
+        unlinkBB(latch, header);
         loop_info.breakLoop(loop);
 
         Logger::logDebug("[LoopElimination]: Broke backedge from '", latch->getName(), "' to '", header->getName(),
@@ -207,8 +190,12 @@ PM::PreservedAnalyses LoopEliminationPass::run(Function &function, FAM &fam) {
     for (const auto &toplevel : toplevels) {
         auto rpodfv = toplevel->getDFVisitor<Util::DFVOrder::ReversePostOrder>();
         for (const auto &loop : rpodfv) {
+            // Skip eliminated loops.
+            if (loop->getBlocks().empty())
+                continue;
+
             Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplified Form.");
-            if (breakSingleTripRotatedLoop(fam, loop, scev, loop_info)) {
+            if (breakSingleTripRotatedLoop(loop, scev, loop_info)) {
                 loop_elim_cfg_modified = true;
                 continue;
             }

@@ -628,6 +628,10 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
 
     bool gvnpre_inst_modified = false;
 
+    // Fold LCSSA Phi for phi_translate
+    for (const auto& bb : function)
+        gvnpre_inst_modified |= foldPHI(bb, /* preserve_lcssa */ false);
+
     //
     // Step 1 - BuildSets
     //

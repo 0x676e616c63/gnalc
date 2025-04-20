@@ -59,8 +59,7 @@ PMOptions CliOptions::toPMOptions(Mode mode) const {
     case Mode::DisableAnyway:
 #define GNALC_IR_PASS_ENTRY(name) .name = false,
         return PMOptions{
-            GNALC_IR_PASS_TABLE
-            .abort_when_verify_failed = abort_when_verify_failed,
+            GNALC_IR_PASS_TABLE.abort_when_verify_failed = abort_when_verify_failed,
             .advance_name_norm = advance_name_norm,
         };
 #undef GNALC_IR_PASS_ENTRY
@@ -68,8 +67,7 @@ PMOptions CliOptions::toPMOptions(Mode mode) const {
     case Mode::EnableAnyway:
 #define GNALC_IR_PASS_ENTRY(name) .name = true,
         return PMOptions{
-            GNALC_IR_PASS_TABLE
-            .abort_when_verify_failed = abort_when_verify_failed,
+            GNALC_IR_PASS_TABLE.abort_when_verify_failed = abort_when_verify_failed,
             .advance_name_norm = advance_name_norm,
         };
 #undef GNALC_IR_PASS_ENTRY
@@ -77,8 +75,7 @@ PMOptions CliOptions::toPMOptions(Mode mode) const {
     case Mode::EnableIfDefault:
         return {
 #define GNALC_IR_PASS_ENTRY(name) .name = (name) != Status::Disable,
-            GNALC_IR_PASS_TABLE
-            .abort_when_verify_failed = abort_when_verify_failed,
+            GNALC_IR_PASS_TABLE.abort_when_verify_failed = abort_when_verify_failed,
             .advance_name_norm = advance_name_norm,
         };
 #undef GNALC_IR_PASS_ENTRY
@@ -86,8 +83,7 @@ PMOptions CliOptions::toPMOptions(Mode mode) const {
     case Mode::DisableIfDefault:
         return {
 #define GNALC_IR_PASS_ENTRY(name) .name = (name) == Status::Enable,
-            GNALC_IR_PASS_TABLE
-            .abort_when_verify_failed = abort_when_verify_failed,
+            GNALC_IR_PASS_TABLE.abort_when_verify_failed = abort_when_verify_failed,
             .advance_name_norm = advance_name_norm,
         };
 #undef GNALC_IR_PASS_ENTRY
@@ -95,7 +91,8 @@ PMOptions CliOptions::toPMOptions(Mode mode) const {
     return {};
 }
 
-template <typename PM, typename Pass> void registerPassForOptInfo(PM &fpm, bool verify, bool strict, bool enable, Pass &&pass) {
+template <typename PM, typename Pass>
+void registerPassForOptInfo(PM &fpm, bool verify, bool strict, bool enable, Pass &&pass) {
     if (enable) {
         fpm.addPass(std::forward<Pass>(pass));
         if (verify)
@@ -244,9 +241,12 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     fpm.addPass(TailRecursionEliminationPass());
     fpm.addPass(InlinePass());
     fpm.addPass(InternalizePass());
+    fpm.addPass(PromotePass());
     fpm.addPass(NameNormalizePass(true));
+    fpm.addPass(LoopSimplifyPass());
     fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(LoadEliminationPass());
+    fpm.addPass(PrintSCEVPass(std::cerr));
+    fpm.addPass(LoopEliminationPass());
     fpm.addPass(PrintFunctionPass(std::cerr));
     return fpm;
 
@@ -273,44 +273,71 @@ MPM PassBuilder::buildModuleDebugPipeline() {
     return mpm;
 }
 
-FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const std::string &repro) {
+FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double duplication_rate,
+                                                  const std::string &repro) {
     FPM fpm;
-    fpm.addPass(PromotePass());
-    fpm.addPass(TailRecursionEliminationPass());
-    fpm.addPass(InlinePass());
-    fpm.addPass(InternalizePass());
-    fpm.addPass(PromotePass());
+    if (options.mem2reg)
+        fpm.addPass(PromotePass());
+    if (options.tailcall)
+        fpm.addPass(TailRecursionEliminationPass());
+    if (options.inliner)
+        fpm.addPass(InlinePass());
+    if (options.internalize)
+        fpm.addPass(InternalizePass());
+    if (options.mem2reg)
+        fpm.addPass(PromotePass());
     fpm.addPass(NameNormalizePass(true));
-    std::vector<std::pair<std::string_view, std::function<void(bool)>>> passes;
 
-#define REGISTER_FUNCTION_TRANSFORM(pass)                                                                              \
-    passes.emplace_back(pass::name(), [&fpm](bool strict) {                                                            \
-        fpm.addPass(pass());                                                                                           \
-        fpm.addPass(VerifyPass(strict));                                                                               \
-    });
+    // (name, adder, weight)
+    std::vector<std::tuple<std::string_view, std::function<void()>, size_t>> passes;
 
-#define REGISTER_FUNCTION_TRANSFORM2(pass1, pass2)                                                                     \
-    passes.emplace_back(pass2::name(), [&fpm](bool strict) {                                                           \
-        fpm.addPass(pass1());                                                                                          \
-        fpm.addPass(pass2());                                                                                          \
-        fpm.addPass(VerifyPass(strict));                                                                               \
-    });
+#define REGISTER_FUNCTION_TRANSFORM(option, pass, weight)                                                              \
+    if (options.option)                                                                                                \
+        passes.emplace_back(                                                                                           \
+            pass::name(),                                                                                              \
+            [&fpm, &options]() {                                                                                      \
+                fpm.addPass(pass());                                                                                   \
+                if(options.verify) fpm.addPass(VerifyPass(options.abort_when_verify_failed));                                                                       \
+            },                                                                                                         \
+            weight);
+
+#define REGISTER_FUNCTION_TRANSFORM2(option, pass1, pass2, weight)                                                     \
+    if (options.option)                                                                                                \
+        passes.emplace_back(                                                                                           \
+            pass2::name(),                                                                                             \
+            [&fpm, &options]() {                                                                                      \
+                fpm.addPass(pass1());                                                                                  \
+                fpm.addPass(pass2());                                                                                  \
+                if(options.verify) fpm.addPass(VerifyPass(options.abort_when_verify_failed));                                                                     \
+            },                                                                                                         \
+            weight);
+
+#define REGISTER_FUNCTION_TRANSFORM4(option, pass1, pass2, pass3, pass4, weight)                                       \
+    if (options.option)                                                                                                \
+        passes.emplace_back(                                                                                           \
+            pass4::name(),                                                                                             \
+            [&fpm, &options]() {                                                                                      \
+                fpm.addPass(pass1());                                                                                  \
+                fpm.addPass(pass2());                                                                                  \
+                fpm.addPass(pass3());                                                                                  \
+                fpm.addPass(pass4());                                                                                  \
+                if(options.verify) fpm.addPass(VerifyPass(options.abort_when_verify_failed));                                                                        \
+            },                                                                                                         \
+            weight);
 
     // REGISTER_FUNCTION_TRANSFORM(ReassociatePass)
-    REGISTER_FUNCTION_TRANSFORM(ConstantPropagationPass)
-    REGISTER_FUNCTION_TRANSFORM(ADCEPass)
-    REGISTER_FUNCTION_TRANSFORM(InstSimplifyPass)
-    REGISTER_FUNCTION_TRANSFORM(DCEPass)
-    REGISTER_FUNCTION_TRANSFORM(CFGSimplifyPass)
-    REGISTER_FUNCTION_TRANSFORM2(BreakCriticalEdgesPass, GVNPREPass)
-    REGISTER_FUNCTION_TRANSFORM2(CFGSimplifyPass, LoadEliminationPass)
-    REGISTER_FUNCTION_TRANSFORM(DSEPass)
-    // REGISTER_FUNCTION_TRANSFORM(LoopSimplifyPass)
-    // REGISTER_FUNCTION_TRANSFORM(LoopRotatePass)
-    // REGISTER_FUNCTION_TRANSFORM(LCSSAPass)
-    // REGISTER_FUNCTION_TRANSFORM(LICMPass)
-    // REGISTER_FUNCTION_TRANSFORM(LoopUnrollPass)
-    // REGISTER_FUNCTION_TRANSFORM(JumpThreadingPass)
+    REGISTER_FUNCTION_TRANSFORM(sccp, ConstantPropagationPass, 10)
+    REGISTER_FUNCTION_TRANSFORM(adce, ADCEPass, 10)
+    REGISTER_FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass, 10)
+    REGISTER_FUNCTION_TRANSFORM(dce, DCEPass, 10)
+    REGISTER_FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass, 10)
+    REGISTER_FUNCTION_TRANSFORM2(gvnpre, BreakCriticalEdgesPass, GVNPREPass, 10)
+    REGISTER_FUNCTION_TRANSFORM2(loadelim, CFGSimplifyPass, LoadEliminationPass, 10)
+    REGISTER_FUNCTION_TRANSFORM2(dse, CFGSimplifyPass, DSEPass, 10)
+
+    REGISTER_FUNCTION_TRANSFORM2(loopelim, LoopSimplifyPass, LoopEliminationPass, 10)
+    REGISTER_FUNCTION_TRANSFORM2(loop_strength_reduce, LoopSimplifyPass, LoopStrengthReducePass, 10)
+    REGISTER_FUNCTION_TRANSFORM4(licm, LoopSimplifyPass, LoopRotatePass, LCSSAPass, LICMPass, 10)
 
     if (repro.empty()) {
         std::random_device rd;
@@ -323,9 +350,12 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const
             passes.emplace_back(passes[distrib(gen)]);
 
         std::shuffle(passes.begin(), passes.end(), std::mt19937(std::random_device()()));
+        std::stable_sort(passes.begin(), passes.end(),
+                         [](const auto &lhs, const auto &rhs) { return std::get<2>(lhs) < std::get<2>(rhs); });
+
         std::string pipeline;
-        for (const auto &[name, pass_adder] : passes) {
-            pass_adder(true);
+        for (const auto &[name, pass_adder, _w] : passes) {
+            pass_adder();
             pipeline += name;
             pipeline += ", ";
         }
@@ -339,18 +369,18 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const
         Logger::logInfo("[FuzzTesting]: Running pipeline: '",
                         pipeline + "'. Run with '-fuzz-repro <this pipeline>' to reproduce it.");
     } else {
-        auto find_pass = [&passes, &fpm](const std::string &target) -> std::optional<std::function<void(bool)>> {
+        auto find_pass = [&passes, &fpm](const std::string &target) -> std::optional<std::function<void()>> {
             if (target == NameNormalizePass::name()) {
-                return [&fpm](bool) { fpm.addPass(NameNormalizePass(true)); };
+                return [&fpm]() { fpm.addPass(NameNormalizePass(true)); };
             }
             if (target == PrintFunctionPass::name()) {
-                return [&fpm](bool) { fpm.addPass(PrintFunctionPass(std::cerr)); };
+                return [&fpm]() { fpm.addPass(PrintFunctionPass(std::cerr)); };
             }
             if (target == PrintModulePass::name()) {
-                return [&fpm](bool) { fpm.addPass(PrintFunctionPass(std::cerr)); };
+                return [&fpm]() { fpm.addPass(PrintFunctionPass(std::cerr)); };
             }
 
-            for (const auto &[name, pass_adder] : passes) {
+            for (const auto &[name, pass_adder, _w] : passes) {
                 if (target == name)
                     return pass_adder;
             }
@@ -361,15 +391,14 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const
             if (ch == ',') {
                 auto p = find_pass(curr);
                 Err::gassert(p.has_value(), "[FuzzTesting]: Unknown pass: '" + curr + "'.");
-                // Disable strict mode for debugging
-                (*p)(false);
+                (*p)();
                 curr.clear();
             } else if (ch != ' ')
                 curr += ch;
         }
         auto p = find_pass(curr);
         Err::gassert(p.has_value(), "[FuzzTesting]: Unknown pass: '" + curr + "'.");
-        (*p)(false);
+        (*p)();
         curr.clear();
 
         // fpm.addPass(NameNormalizePass(true));
@@ -379,11 +408,11 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(double duplication_rate, const
     return fpm;
 }
 
-MPM PassBuilder::buildModuleFuzzTestingPipeline(double duplication_rate, const std::string &repro) {
+MPM PassBuilder::buildModuleFuzzTestingPipeline(PMOptions options, double duplication_rate, const std::string &repro) {
     MPM mpm;
-    mpm.addPass(makeModulePass(buildFunctionFuzzTestingPipeline(duplication_rate, repro)));
+    mpm.addPass(makeModulePass(buildFunctionFuzzTestingPipeline(options, duplication_rate, repro)));
     // Disable Treeshaking in Repro mode for debugging
-    if (repro.empty())
+    if (repro.empty() && options.tree_shaking)
         mpm.addPass(TreeShakingPass());
     return mpm;
 }

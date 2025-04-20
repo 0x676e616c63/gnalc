@@ -109,6 +109,15 @@ void BRInst::dropTrueDest() {
     delOperand(0);
 }
 
+void BRInst::dropOneDest(const pBlock &bb) {
+    if (bb == getTrueDest())
+        dropTrueDest();
+    else if (bb == getFalseDest())
+        dropFalseDest();
+    else
+        Err::unreachable("BRInst::dropOneDest: Not a dest.");
+}
+
 CALLInst::CALLInst(const pFuncDecl &func, const std::vector<pVal> &args)
     : Instruction(OP::CALL, "__call", makeBType(IRBTYPE::VOID)) {
 #ifndef GNALC_EXTENSION_GGC

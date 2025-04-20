@@ -77,6 +77,7 @@ public:
     // Make sure to unlinkBB to update CFG.
     void dropFalseDest();
     void dropTrueDest();
+    void dropOneDest(const pBlock& bb);
 
     bool isConditional() const;
     pVal getCond() const;

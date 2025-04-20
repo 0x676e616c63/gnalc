@@ -1,17 +1,31 @@
-const int maxn = 18;
-const int mod = 1000000007;
-int dp[maxn][maxn][maxn][maxn][maxn][7];
-int list[200];
-
-int cns[20];
- 
-int main(){
-    int n = getint();
-    int i = 0;
-    i = 0;
-    while (i < n) {
-        list[i] = getint();
-        cns[list[i]] = cns[list[i]] + 1;
-        i = i + 1;
+int FourWhile() {
+  int a;
+  a = 5;
+  int b;
+  int c;
+  b = 6;
+  c = 7;
+  int d;
+  d = 10;
+  while (a < 20) {
+    a = a + 3;
+    while(b < 10){
+      b = b + 1;
+      while(c == 7){
+        c = c - 1;
+        while(d < 20){
+          d = d + 3;
+        }
+        d = d - 1;
+      }
+      c = c + 1;
     }
+    b = b - 2;
+  }
+  
+  return (a + (b + d) + c);
+}
+
+int main() {
+  return FourWhile();
 }

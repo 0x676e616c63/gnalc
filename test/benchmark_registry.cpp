@@ -178,6 +178,26 @@ void register_gnalc_debug() {
     BenchmarkRegistry::register_benchmark("gnalc_debug", entry);
 }
 
+void register_gnalc_fuzz3() {
+    auto entry = gnalc_register_helper("-fuzz-rate 3");
+    BenchmarkRegistry::register_benchmark("gnalc_fuzz3", entry);
+}
+
+void register_gnalc_fuzz5() {
+    auto entry = gnalc_register_helper("-fuzz-rate 5");
+    BenchmarkRegistry::register_benchmark("gnalc_fuzz5", entry);
+}
+
+void register_gnalc_fuzz10() {
+    auto entry = gnalc_register_helper("-fuzz-rate 10");
+    BenchmarkRegistry::register_benchmark("gnalc_fuzz10", entry);
+}
+
+void register_gnalc_fuzz100() {
+    auto entry = gnalc_register_helper("-fuzz-rate 100");
+    BenchmarkRegistry::register_benchmark("gnalc_fuzz100", entry);
+}
+
 void Test::register_all_benchmarks() {
     register_example_23();
     register_example_24();
@@ -190,4 +210,8 @@ void Test::register_all_benchmarks() {
     register_gnalc_o1();
     register_gnalc_fixed();
     register_gnalc_debug();
+    register_gnalc_fuzz3();
+    register_gnalc_fuzz5();
+    register_gnalc_fuzz10();
+    register_gnalc_fuzz100();
 }

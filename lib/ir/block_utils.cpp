@@ -381,20 +381,22 @@ bool eliminateDeadInsts(const std::set<pPhi>& dead_phis, FAM *fam) {
     return eliminateDeadInsts(worklist, fam);
 }
 
-std::tuple<Value *, Value *> analyzeHeaderPhi(const Loop *loop, const PHIInst *header_phi) {
+std::optional<std::tuple<Value *, Value *>> analyzeHeaderPhi(const Loop *loop, const PHIInst *header_phi) {
     auto phi_opers = header_phi->getPhiOpers();
     Err::gassert(phi_opers.size() == 2, "Expected LoopSimplified Form");
     auto invariant = phi_opers[0].value.get();
     auto variant = phi_opers[1].value.get();
     if (!loop->isLoopInvariant(invariant))
         std::swap(invariant, variant);
-    Err::gassert(loop->isLoopInvariant(invariant) && !loop->isLoopInvariant(variant),
-                 "Expected LoopSimplified Form");
+    if (!loop->isLoopInvariant(invariant) || loop->isLoopInvariant(variant))
+        return std::nullopt;
     return std::make_tuple(invariant, variant);
 }
 
-std::tuple<pVal, pVal> analyzeHeaderPhi(const pLoop &loop, const pPhi &header_phi) {
-    auto [invariant, variant] = analyzeHeaderPhi(loop.get(), header_phi.get());
+std::optional<std::tuple<pVal, pVal>> analyzeHeaderPhi(const pLoop &loop, const pPhi &header_phi) {
+    auto opt = analyzeHeaderPhi(loop.get(), header_phi.get());
+    if (!opt) return std::nullopt;
+    auto [invariant, variant] = *opt;
     return std::make_tuple(invariant->as<Value>(), variant->as<Value>());
 }
 } // namespace IR
