@@ -346,7 +346,8 @@ bool LoopInfo::delBlock(BasicBlock *bb) {
 bool LoopInfo::delBlock(const pBlock &bb) { return delBlock(bb.get()); }
 
 bool LoopInfo::delLoop(Loop *loop) {
-    for (const auto& subloop : *loop)
+    auto subloops = loop->getSubLoops();
+    for (const auto& subloop : subloops)
         delLoop(subloop);
 
     bool modified = false;

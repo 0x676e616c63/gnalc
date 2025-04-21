@@ -66,6 +66,8 @@ public:
     const_iterator cbegin() const;
     const_iterator cend() const;
 
+    size_t getInstCount() const;
+
     void accept(IRVisitor &visitor);
     ~Module() = default;
 };

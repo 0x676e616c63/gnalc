@@ -88,5 +88,12 @@ Module::iterator Module::end() { return funcs.end(); }
 Module::const_iterator Module::cbegin() const { return funcs.cbegin(); }
 Module::const_iterator Module::cend() const { return funcs.cend(); }
 
+size_t Module::getInstCount() const {
+    size_t count = 0;
+    for (const auto &func : funcs)
+        count += func->getInstCount();
+    return count;
+}
+
 void Module::accept(IRVisitor &visitor) { visitor.visit(*this); }
 }; // namespace IR
