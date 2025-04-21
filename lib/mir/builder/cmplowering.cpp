@@ -280,6 +280,15 @@ std::list<std::shared_ptr<Instruction>> InstLowering::fcmpLower(const std::share
             insts.emplace_back(vcmp);
             insts.emplace_back(vmrs);
         }
+    } else {
+        auto fop1 = operlower.fastFind(lval)->as<BindOnVirOP>();
+        auto fop2 = operlower.fastFind(rval)->as<BindOnVirOP>();
+        auto pair = std::make_pair(bitType::f32, bitType::DEFAULT32);
+        auto vcmp = std::make_shared<Vcmp>(NeonOpCode::VCMP, fop1, fop2, pair);
+        auto vmrs = std::make_shared<Vmrs>();
+
+        insts.emplace_back(vcmp);
+        insts.emplace_back(vmrs); // 拷贝fpu状态字
     }
     // ===================
     // step2: 条件mov

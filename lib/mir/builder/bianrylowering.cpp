@@ -268,6 +268,10 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower_v(const std::s
     std::list<std::shared_ptr<Instruction>> insts;
     auto target = operlower.mkOP(*binary, RegisterBank::spr);
 
+    if (target->getName() == "%104" || target->getName() == "%105") {
+        int useless;
+    }
+
     auto op = binary->getOpcode();
 
     std::shared_ptr<IR::Value> rval = binary->getRHS();

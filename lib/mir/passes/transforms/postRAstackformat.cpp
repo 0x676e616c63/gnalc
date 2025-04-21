@@ -176,6 +176,10 @@ void postRAstackformat::frameSaveANDPadding() {
     if (func->getInfo().hasCall)
         regdit->insert(static_cast<int>(CoreRegister::lr));
 
+    ///@brief 修整push之后的栈到8字节对齐
+    if (regdit->size() % 2)
+        regdit->insert(1); // 压入无用r1保持对齐
+
     ///@warning 大小不计入stk obj
     calleeSavedSize += regdit->size() * 4;
     calleeSavedSize += regdit_s->size() * 4;

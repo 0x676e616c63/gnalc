@@ -345,8 +345,8 @@ RAPass::Nodes RAPass::spill_opt(const OperP &op) {
                     insts.insert(inst_it, vmov_new);
                 }
             } else if (auto vstr = std::dynamic_pointer_cast<Vstr>(inst)) {
-                auto base = std::dynamic_pointer_cast<BaseADROP>(str->getSourceOP(2));
-                auto index = str->getSourceOP(3);
+                auto base = std::dynamic_pointer_cast<BaseADROP>(vstr->getSourceOP(2));
+                auto index = vstr->getSourceOP(3);
 
                 Err::gassert(base != nullptr, "base register is NULL");
 
@@ -374,7 +374,7 @@ RAPass::Nodes RAPass::spill_opt(const OperP &op) {
                     insert_before = true;
 
                     auto read_stage = varpool->addValue_anonymously(false);
-                    str->setIndexReg(read_stage); // 修改原指令
+                    vstr->setIndexReg(read_stage); // 修改原指令
                     stageValues.insert(read_stage);
                     auto vmov_new = std::make_shared<Vmov>(SourceOperandType::rr, read_stage, fpuRegister, type_pair);
 
@@ -576,8 +576,8 @@ RAPass::Nodes RAPass::spill_classic(const OperP &op) {
                     insts.insert(inst_it, ldr_new);
                 }
             } else if (auto vstr = std::dynamic_pointer_cast<Vstr>(inst)) {
-                auto base = std::dynamic_pointer_cast<BaseADROP>(str->getSourceOP(2));
-                auto index = str->getSourceOP(3);
+                auto base = std::dynamic_pointer_cast<BaseADROP>(vstr->getSourceOP(2));
+                auto index = vstr->getSourceOP(3);
 
                 Err::gassert(base != nullptr, "base register is NULL");
 
@@ -605,7 +605,7 @@ RAPass::Nodes RAPass::spill_classic(const OperP &op) {
                     // insert_before = true;
 
                     auto read_stage = varpool->addValue_anonymously(false);
-                    str->setIndexReg(read_stage); // 修改原指令
+                    vstr->setIndexReg(read_stage); // 修改原指令
                     stageValues.insert(read_stage);
                     auto ldr_new = std::make_shared<ldrInst>(SourceOperandType::rsi, 4, read_stage, stackaddr);
 
@@ -754,7 +754,7 @@ NeonRAPass::Nodes NeonRAPass::spill_classic(const OperP &op) {
                 insert_before = true;
                 ///@todo spr, dpr...
 
-                auto read_stage = varpool->addValue_anonymously(false);
+                auto read_stage = varpool->addValue_anonymously(true);
                 auto vldr_new = std::make_shared<Vldr>(read_stage, stackaddr,
                                                        std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32));
                 for (int i = 1; i < 5; ++i) {

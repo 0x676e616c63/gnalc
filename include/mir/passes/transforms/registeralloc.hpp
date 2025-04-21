@@ -10,10 +10,10 @@ namespace MIR {
 
 class RAPass : public PM::PassInfo<RAPass> {
 public:
-    using OperSet = std::unordered_set<std::shared_ptr<Operand>>;
-    using WorkList = std::unordered_set<std::shared_ptr<Operand>>;
-    using Nodes = std::unordered_set<std::shared_ptr<Operand>>;
-    using Moves = std::unordered_set<std::shared_ptr<Instruction>>;
+    using OperSet = std::set<std::shared_ptr<Operand>>;
+    using WorkList = std::set<std::shared_ptr<Operand>>;
+    using Nodes = std::set<std::shared_ptr<Operand>>;
+    using Moves = std::set<std::shared_ptr<Instruction>>;
 
     struct Edge {
         OperP u, v;
@@ -111,30 +111,31 @@ protected:
     virtual Nodes getUse(const InstP &);
     virtual Nodes getDef(const InstP &);
 
-    template <typename Tx, typename Ty>
-    void addBySet(std::unordered_set<Tx> &victim, const std::unordered_set<Ty> &set) {
+    template <typename Cx, typename Cy> void addBySet(Cx &victim, const Cy &set) {
+        static_assert(std::is_same_v<typename Cx::value_type, typename Cy::value_type>,
+                      "Cx Cy element types must be identical");
+
         for (const auto &ptr : set) {
             victim.insert(ptr);
         }
     }
-    template <typename Tx, typename Ty>
-    void delBySet(std::unordered_set<Tx> &victim, const std::unordered_set<Ty> &set) {
+    template <typename Cx, typename Cy> void delBySet(Cx &victim, const Cy &set) {
+        static_assert(std::is_same_v<typename Cx::value_type, typename Cy::value_type>,
+                      "Cx Cy element types must be identical");
+
         for (const auto &ptr : set) {
             victim.erase(ptr);
         }
     }
-    template <typename T, typename... Tsets> std::unordered_set<T> getUnion(Tsets... sets) {
-        std::unordered_set<T> union_set;
-        // (void)std::initializer_list<int>{(union_set.insert(sets.begin(), sets.end()), 0)...};
+
+    template <typename T, typename... Tsets> std::set<T> getUnion(Tsets... sets) {
+        std::set<T> union_set;
         (union_set.insert(sets.begin(), sets.end()), ...);
         return union_set;
     }
-    template <typename T, typename... Tsets>
-    std::unordered_set<T> getExclude(std::unordered_set<T> victim, Tsets... sets) {
-        auto exclude_set = std::move(victim);
 
-        if (exclude_set.empty())
-            return exclude_set;
+    template <typename T, typename... Tsets> std::set<T> getExclude(std::set<T> victim, Tsets... sets) {
+        auto exclude_set = std::move(victim);
 
         auto lambda = [&exclude_set](const auto &set) -> void {
             for (const auto &t : set) {

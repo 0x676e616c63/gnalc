@@ -107,8 +107,8 @@ void RAPass::Main(FAM &fam) {
     AssignColors();
 
     if (!spilledNodes.empty()) {
-        for (const auto &node : spilledNodes)
-            Logger::logDebug(node->toString() + " spilled out");
+        // for (const auto &node : spilledNodes)
+        //     Logger::logDebug(node->toString() + " spilled out");
 
         ReWriteProgram();
 
@@ -431,7 +431,7 @@ void RAPass::AssignColors() {
 
         if (n->as<BindOnVirOP>() && n->as<BindOnVirOP>()->getBank() != RegisterBank::gpr) {
             /// 实属无奈
-            Logger::logDebug("RA: try assign color to a fpu reg in normal ra " + n->toString());
+            // Logger::logDebug("RA: try assign color to a fpu reg in normal ra " + n->toString());
             continue;
         }
 
@@ -501,8 +501,8 @@ void RAPass::ReWriteProgram() {
     for (const auto &n : spilledNodes) {
         auto ops = spill_tryOpt(n);
 
-        for (const auto &op : ops)
-            Logger::logDebug("Ra: spill op to new op " + op->toString());
+        // for (const auto &op : ops)
+        //     Logger::logDebug("Ra: spill op to new op " + op->toString());
 
         addBySet(initial, ops);
     }
@@ -559,7 +559,7 @@ bool RAPass::Conservative(const Nodes &nodes) {
 }
 
 OperP RAPass::GetAlias(OperP n) {
-    if (coalescedNodes.find(n) != coloredNodes.end())
+    if (coalescedNodes.find(n) != coalescedNodes.end())
         return GetAlias(alias[n]);
 
     Err::gassert(n != nullptr, "get a nullptr alias");
@@ -594,7 +594,7 @@ void NeonRAPass::AssignColors() {
 
         if (n->as<BindOnVirOP>() && n->as<BindOnVirOP>()->getBank() != RegisterBank::spr) {
             /// 实属无奈
-            Logger::logDebug("RA: try assign color to a fpu reg in normal ra " + n->toString());
+            // Logger::logDebug("RA: try assign color to a fpu reg in normal ra " + n->toString());
             continue;
         }
 
