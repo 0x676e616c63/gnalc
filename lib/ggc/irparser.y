@@ -105,7 +105,7 @@ GVIniters   : GVIniter                      { $$ = { $1 }; }
             ;
 
 FunctionDeclaration : I_DECLARE Type I_ID I_LPAR DeclParamList I_RPAR               { $$ = tool.newFuncDecl($3, $5, $2); }
-                    | I_DECLARE Type I_ID I_LPAR DeclParamList I_DOTDOTDOT I_RPAR   { $$ = tool.newFuncDecl($3, $5, $2, true); }
+                    | I_DECLARE Type I_ID I_LPAR DeclParamList I_COMMA I_DOTDOTDOT I_RPAR   { $$ = tool.newFuncDecl($3, $5, $2, true); }
                     | I_DECLARE Type I_ID I_LPAR I_RPAR                             { $$ = tool.newFuncDecl($3, {}, $2); }
                     | I_DECLARE Type I_ID I_LPAR I_DOTDOTDOT I_RPAR                 { $$ = tool.newFuncDecl($3, {}, $2, true); }
                     ;
