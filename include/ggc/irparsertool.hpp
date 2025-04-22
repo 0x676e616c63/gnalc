@@ -49,7 +49,7 @@ namespace IRParser {
         pBlock getB(const string& name);
         pVal getV(const string &name); // 可获取GV或普通Value
 
-        std::vector<pFormalParam> legalizeParams(const std::vector<pFormalParam> &params);
+        void legalizeParams(const std::vector<pFormalParam> &params);
 
         static float hexToFloat(const string &hex);
 

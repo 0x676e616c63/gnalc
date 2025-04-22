@@ -72,12 +72,11 @@ pVal IRPT::getV(const string &name) {
     return it->second;
 }
 
-std::vector<pFormalParam> IRPT::legalizeParams(const std::vector<pFormalParam> &params) {
+void IRPT::legalizeParams(const std::vector<pFormalParam> &params) {
     int i = 0;
     for (const auto &param : params) {
         param->setIndex(i++);
     }
-    return params;
 }
 
 float IRPT::hexToFloat(const string &hex) {
@@ -101,6 +100,7 @@ pFunc IRPT::newFunc(std::string &name_, const std::vector<pFormalParam> &params,
                        std::vector<pBlock> &blks) {
     auto &f = FMap[name_];
     Err::gassert(f==nullptr, "F is redefined!");
+    legalizeParams(params);
     f = make<Function>(name_, params, ret_type, pool);
     for (const auto &blk : blks) {
         f->addBlock(blk);
