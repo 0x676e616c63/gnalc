@@ -68,8 +68,6 @@ namespace IRParser {
 
         pPhi newPhi(const string &name, pType &ty, const std::vector<std::pair<pVal, pBlock>> &phiopers);
 
-        static void refactorAllInst(const Module& module);
-
         private:
         void replaceUF(const string &name_, const pFuncDecl& fd);
     };

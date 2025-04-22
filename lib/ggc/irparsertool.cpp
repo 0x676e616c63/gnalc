@@ -20,7 +20,6 @@ int IRGenerator::generate() {
         return 1;
     }
     tool.clean();
-    // IRPT::refactorAllInst(module);
     return 0;
 }
 
@@ -174,23 +173,6 @@ void IRPT::replaceUF(const string &name_, const pFuncDecl& fd) {
                  inst->vtype->as<BType>()->getInner() != IRBTYPE::VOID)
             ? ValueTrait::ORDINARY_VARIABLE
             : ValueTrait::VOID_INSTRUCTION;
-            }
-        }
-    }
-}
-
-void IRPT::refactorAllInst(const Module& module) {
-    for (auto &func : module.getFunctions()) {
-        for (auto &blk : func->getBlocks()) {
-            for (auto it = blk->phi_begin(); it != blk->phi_end(); ++it) {
-                pPhi new_inst = (*it)->clone()->as<PHIInst>();
-                (*it)->replaceSelf(new_inst);
-                *it = new_inst;
-            }
-            for (auto it = blk->begin(); it != blk->end(); ++it) {
-                pInst new_inst = (*it)->clone()->as<Instruction>();
-                (*it)->replaceSelf(new_inst);
-                *it = new_inst;
             }
         }
     }
