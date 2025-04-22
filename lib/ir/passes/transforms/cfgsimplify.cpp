@@ -1,11 +1,8 @@
-#include "../../../../include/ir/passes/transforms/cfgsimplify.hpp"
-#include "../../../../include/ir/block_utils.hpp"
-#include "../../../../include/ir/instructions/control.hpp"
-#include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
-
-#include <deque>
+#include "ir/passes/transforms/cfgsimplify.hpp"
+#include "ir/block_utils.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
 
 namespace IR {
 PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
@@ -39,7 +36,7 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                     // replace the branch with a jump
 
                     // Two identical successors -> One successor
-                    unlinkBB(curr, br->getFalseDest());
+                    unlinkOneEdge(curr, br->getFalseDest());
                     br->dropFalseDest();
 
                     const auto &dest_phis = br->getDest()->phis();
@@ -52,18 +49,9 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                 }
             } else {
                 auto dest = br->getDest();
-                bool curr_is_used_by_phi = false;
-                for (const auto &user : curr->users()) {
-                    if (auto phi = user->as<PHIInst>()) {
-                        if (dead_blocks.find(phi->getParent()) == dead_blocks.end()) {
-                            curr_is_used_by_phi = true;
-                            break;
-                        }
-                    }
-                }
                 // Don't bother with entry block. They must not have predecessors.
                 // Even if the dest only has one predecessor, it should be handled in case3, not here.
-                if (curr->getIndex() != 0 && curr->getAllInstCount() == 1 && !curr_is_used_by_phi) {
+                if (curr->getIndex() != 0 && curr->getAllInstCount() == 1) {
                     // curr is empty
                     // 2. Remove an Empty Block
                     // curr contains only a jump
@@ -100,30 +88,52 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                     //   %a = phi [ %b, %bb0 ], [ %c, %bb0 ]
                     //
                     // Obviously, the PHIInst is broken.
-                    //
-                    // To get around it, we only do this if the empty block `curr` is not used by PHIInst.
-                    // This could, however, eliminate some optimization opportunities that are safe.
-                    // But most of the time they will be handled by other passes.
-                    // For example:
-                    // If the `%a` is `phi [ %c, %bb0 ], [ %c, %bb1 ]`
-                    // We would miss the chance to eliminate block `%bb1` here.
-                    // However, the inst simplify pass will optimize away such redundant PHI nodes.
-                    unlinkBB(curr, dest);
+                    // To get around it, we only do this if dest does not have any identical
+                    // predecessor with curr or curr is not used by any PHIInst.
 
-                    // Don't search by use list, dead blocks hasn't been destroyed.
-                    auto prebbs = curr->getPreBB();
-                    for (const auto &pred : prebbs) {
-                        auto pre_br = pred->getBRInst();
-                        unlinkBB(pred, curr);
-                        linkBB(pred, dest);
-                        pre_br->replaceAllOperands(curr, dest);
+                    bool is_safe_to_remove = [&] {
+                        if (dest->getPhiCount() == 0)
+                            return true;
+
+                        for (const auto& curr_pred : curr->preds()) {
+                            for (const auto& dest_pred : dest->preds()) {
+                                if (curr_pred == dest_pred)
+                                    return false;
+                            }
+                        }
+                        return true;
+                    }();
+
+                    if (is_safe_to_remove) {
+                        unlinkBB(curr, dest);
+
+                        // Don't search by use list, dead blocks hasn't been destroyed.
+                        auto prebbs = curr->getPreBB();
+                        for (const auto &pred : prebbs) {
+                            auto pre_br = pred->getBRInst();
+                            unlinkOneEdge(pred, curr);
+                            linkBB(pred, dest);
+
+                            // Note that if there are multiple identical CFG edges,
+                            // this replace can fail since it might have be replaced in the
+                            // last iteration. So don't check.
+                            // Besides, VerifyPass will check CFG later.
+                            pre_br->replaceAllOperands(curr, dest);
+
+                            for (const auto& phi : dest->phis())
+                                phi->addPhiOper(phi->getValueForBlock(curr), pred);
+                        }
+
+                        for (const auto& phi : dest->phis())
+                            phi->delPhiOperByBlock(curr);
+
+
+                        Logger::logDebug("[CFGSimplify] on '", function.getName(), "': Remove empty BasicBlock '",
+                                         curr->getName(), "'.");
+
+                        dead_blocks.emplace(curr);
+                        modified = true;
                     }
-
-                    Logger::logDebug("[CFGSimplify] on '", function.getName(), "': Remove empty BasicBlock '",
-                                     curr->getName(), "'.");
-
-                    dead_blocks.emplace(curr);
-                    modified = true;
                 }
                 // If curr is deleted, we can't combine them. So it's `else if` rather than `if`
                 else if (dest->getNumPreds() == 1) {

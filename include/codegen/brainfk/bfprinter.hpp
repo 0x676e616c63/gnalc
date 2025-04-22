@@ -2,7 +2,7 @@
 #ifndef GNALC_CODEGEN_BRAINFK_BFPRINTER_HPP
 #define GNALC_CODEGEN_BRAINFK_BFPRINTER_HPP
 
-#include "../../config/config.hpp"
+#include "config/config.hpp"
 #if GNALC_EXTENSION_BRAINFK
 
 #include <iostream>

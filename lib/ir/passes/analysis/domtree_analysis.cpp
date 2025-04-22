@@ -1,19 +1,19 @@
-#include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
-#include "../../../../include/utils/logger.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
+#include "utils/logger.hpp"
 
 namespace IR {
 PM::UniqueKey DomTreeAnalysis::Key;
 PM::UniqueKey PostDomTreeAnalysis::Key;
 
 DomTree DomTreeAnalysis::run(Function &f, FAM &fam) {
-    detail::DomTreeBuilder builder;
+    DomTreeBuilder builder;
     builder.entry = f.getBlocks().front().get();
     builder.analyze();
     return builder.domtree;
 }
 
 PostDomTree PostDomTreeAnalysis::run(Function &f, FAM &fam) {
-    detail::PostDomTreeBuilder builder;
+    PostDomTreeBuilder builder;
     setExit(f);
     builder.entry = exit.get();
     builder.analyze();

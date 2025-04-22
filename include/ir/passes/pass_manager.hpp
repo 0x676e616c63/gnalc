@@ -2,9 +2,9 @@
 #ifndef GNALC_IR_PASSES_PASS_MANAGER_HPP
 #define GNALC_IR_PASSES_PASS_MANAGER_HPP
 
-#include "../../ir/function.hpp"
-#include "../../ir/module.hpp"
-#include "../../pass_manager/pass_manager.hpp"
+#include "ir/function.hpp"
+#include "ir/module.hpp"
+#include "pass_manager/pass_manager.hpp"
 
 namespace PM {
 extern template class AnalysisManager<IR::Module>;
@@ -38,9 +38,13 @@ public:
         PM::PreservedAnalyses pa = PM::PreservedAnalyses::all();
         // Keep this forward traversal. Some pass (e.g. Inline) rely on this
         for (const auto &func : m.getFunctions()) {
-            // Skip unused functions. (maybe inlined)
-            if (func->getUseCount() == 0 && func->getName() != "@main")
-                continue;
+            // No need to skip unused functions now.
+            // Note that passes (includes inline) is running in a post order of functions,
+            // so there are actually no redundant pass running.
+            // Actually this only makes debugging passes harder. :(
+            // // Skip unused functions. (maybe inlined)
+            // if (func->getUseCount() == 0 && func->getName() != "@main")
+            //     continue;
             PM::PreservedAnalyses curr_pa = function_pass->run(*func, fam);
             fam.invalidate(*func, curr_pa);
             pa.retain(curr_pa);

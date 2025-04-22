@@ -1,7 +1,7 @@
 /**
  * @brief dtype, num
- * @todo dtype设计为类？考虑到诸如PrintType等可能封装起来更好些
- * @todo num重新设计...总觉得用起来别扭
+ * @todo dtype 设计为类？考虑到诸如 PrintType 等可能封装起来更好些
+ * @todo num 重新设计...总觉得用起来别扭
  */
 
 #ifndef GNALC_PARSER_BASETYPE_HPP

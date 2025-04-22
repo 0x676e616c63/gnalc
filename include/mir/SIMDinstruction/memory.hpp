@@ -1,6 +1,9 @@
-#include <utility>
+#pragma once
+#ifndef GNALC_MIR_SIMDINSTRUCTION_MEMORY_HPP
+#define GNALC_MIR_SIMDINSTRUCTION_MEMORY_HPP
 
-#include "../instruction.hpp"
+#include "mir/instruction.hpp"
+#include <utility>
 
 using namespace MIR;
 
@@ -10,13 +13,8 @@ private:
 
 public:
     Vmov() = delete;
-    Vmov(SourceOperandType _type, std::shared_ptr<BindOnVirOP> TargetOP_,
-         std::shared_ptr<Operand> SourceOperand_1_,
-         std::pair<bitType, bitType> _dataTypes)
-        : NeonInstruction(NeonOpCode::VMOV, _type, _dataTypes),
-          SourceOperand_1(std::move(SourceOperand_1_)) {
-        addTargetOP(std::move(TargetOP_));
-    }
+    Vmov(SourceOperandType _type, std::shared_ptr<BindOnVirOP> TargetOP_, std::shared_ptr<Operand> SourceOperand_1_,
+         std::pair<bitType, bitType> _dataTypes);
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
     void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
@@ -30,16 +28,13 @@ private:
 
 public:
     Vldr() = delete;
-    Vldr(std::shared_ptr<BindOnVirOP> TargetOP_,
-         std::shared_ptr<BaseADROP> SourceOperand_1_,
-         std::pair<bitType, bitType> _dataTypes)
-        : NeonInstruction(NeonOpCode::VLDR, SourceOperandType::a, _dataTypes),
-          SourceOperand_1(std::move(SourceOperand_1_)) {
-        addTargetOP(std::move(TargetOP_));
-    }
-    void setBaseReg(std::shared_ptr<BaseADROP> _ptr) { SourceOperand_1 = std::move(_ptr); }
+    Vldr(std::shared_ptr<BindOnVirOP> TargetOP_, std::shared_ptr<BaseADROP> SourceOperand_1_,
+         std::pair<bitType, bitType> _dataTypes);
 
-    void setIndexReg(std::shared_ptr<BindOnVirOP> _ptr) { indexRegister = std::move(_ptr); }
+    void setBaseReg(std::shared_ptr<BaseADROP> _ptr);
+    void setIndexReg(std::shared_ptr<BindOnVirOP> _ptr);
+
+    std::shared_ptr<BaseADROP> getBase() const;
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
     void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
@@ -55,19 +50,18 @@ private:
 
 public:
     Vstr() = delete;
-    Vstr(std::shared_ptr<BindOnVirOP> SourceOperand_1_,
-         std::shared_ptr<BaseADROP> SourceOperand_2_,
-         std::pair<bitType, bitType> _dataTypes)
-        : NeonInstruction(NeonOpCode::VSTR, SourceOperandType::ra, _dataTypes),
-          SourceOperand_1(std::move(SourceOperand_1_)),
-          SourceOperand_2(std::move(SourceOperand_2_)) {}
+    Vstr(std::shared_ptr<BindOnVirOP> SourceOperand_1_, std::shared_ptr<BaseADROP> SourceOperand_2_,
+         std::pair<bitType, bitType> _dataTypes);
 
-    void setBaseReg(const std::shared_ptr<BaseADROP> _ptr) { SourceOperand_1 = _ptr; }
+    void setBaseReg(const std::shared_ptr<BaseADROP> _ptr);
 
-    void setIndexReg(std::shared_ptr<BindOnVirOP> _ptr) { indexRegister = std::move(_ptr); }
+    void setIndexReg(std::shared_ptr<BindOnVirOP> _ptr);
+
+    std::shared_ptr<BaseADROP> getBase() const;
 
     std::shared_ptr<Operand> getSourceOP(unsigned int seq) override;
     void setSourceOP(unsigned int seq, std::shared_ptr<Operand>) override;
 
     ~Vstr() override = default;
 };
+#endif

@@ -1,12 +1,11 @@
 #pragma once
-#ifndef GNALC_PASSES_UTILITIES_MIRPRINTER_HPP
-#define GNALC_PASSES_UTILITIES_MIRPRINTER_HPP
+#ifndef GNALC_MIR_PASSES_UTILITIES_MIRPRINTER_HPP
+#define GNALC_MIR_PASSES_UTILITIES_MIRPRINTER_HPP
 
-#include "../../module.hpp"
-#include "../pass_manager.hpp"
+#include "mir/module.hpp"
+#include "mir/passes/pass_manager.hpp"
 
 #include <fstream>
-#include <iostream>
 
 namespace MIR {
 class PrintBase {

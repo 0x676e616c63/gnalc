@@ -1,13 +1,9 @@
-#include <algorithm>
 #include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <map>
 #include <string>
 #include <vector>
 
-#include "include/config.hpp"
-#include "include/runner.hpp"
+#include "config.hpp"
+#include "runner.hpp"
 
 using namespace Test;
 using namespace std::filesystem;
@@ -18,22 +14,32 @@ int main(int argc, char *argv[]) {
         println("Options:");
         println("  -a, --all                  Run all tests, regardless of failure.");
         println("  -b, --backend              Test backend.");
-        println("  -s, --skip   [name_prefix] Skip test whose name has such prefix.");
-        println("  -r, --run    [name_prefix] Only run test whose name has such prefix.");
-        println("  -e, --resume [name_prefix] Start from test whose name have such prefix.");
-        println("  -p, --para [param]         Run with gnalc parameter.");
+        println("  -d, --diff                 Differential Test with clang.");
+        println("  -s, --skip   [Name Prefix] Skip test whose name has such prefix.");
+        println("  -r, --run    [Name Prefix] Only run test whose name has such prefix.");
+        println("  -e, --resume [Name Prefix] Start from test whose name have such prefix.");
+        println("  -p, --para [Param]         Run with gnalc parameter.");
+        println("  -l, --list                 List all tests.");
         println("  -h, --help                 Print this help and exit.");
     };
     RunSet skip;
     SkipSet run;
     std::string resume_pattern;
     std::string gnalc_params;
+    bool diff_test = false;
+    bool stop_on_error = true;
+    bool only_frontend = true;
+    bool only_list = false;
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
         if (arg == "--all" || arg == "-a")
-            cfg::stop_on_error = false;
+            stop_on_error = false;
         else if (arg == "--backend" || arg == "-b")
-            cfg::only_frontend = false;
+            only_frontend = false;
+        else if (arg == "--diff" || arg == "-d")
+            diff_test = true;
+        else if (arg == "--list" || arg == "-l")
+            only_list = true;
         else if (arg == "--skip" || arg == "-s") {
             if (!run.empty()) {
                 println("Error: '--run' conflicts with '--skip'.");
@@ -78,7 +84,8 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    println("GNALC test started.");
+    if (!only_list)
+        println("GNALC test started.");
     size_t passed = 0;
     size_t curr_test_cnt = 0;
     bool have_resumed = resume_pattern.empty();
@@ -86,7 +93,18 @@ int main(int argc, char *argv[]) {
 
     create_directories(cfg::global_temp_dir);
 
-    std::string sylib_to_link = prepare_sylib(cfg::global_temp_dir); // .ll or .a
+    std::string sylib_to_link;
+    if (!only_list)
+        sylib_to_link = prepare_sylib(cfg::global_temp_dir, only_frontend); // .ll or .a
+
+    // Differential use frontend mode since it only requires llvm toolset.
+    std::string sylib_for_diff_testing;
+    if (!only_list && diff_test) {
+        if (only_frontend)
+            sylib_for_diff_testing = sylib_to_link;
+        else
+            sylib_for_diff_testing = prepare_sylib(cfg::global_temp_dir, true);
+    }
 
     for (auto &&curr_test_dir : cfg::subdirs) {
         auto test_files = gather_test_files(curr_test_dir, run, skip);
@@ -104,21 +122,23 @@ int main(int argc, char *argv[]) {
             }
 
             print("<{}> Test {}", curr_test_cnt++, sy.path().stem());
-            // Expected
-            auto testcase_out = sy.path().parent_path().string() + "/" + sy.path().stem().string() + ".out";
-            auto expected_syout = read_file(testcase_out);
-            fix_newline(expected_syout);
+
+            if (only_list) {
+                println(": {}", sy.path());
+                continue;
+            }
 
             // Run
             TestData data{.sy = sy, .sylib = sylib_to_link, .temp_dir = curr_temp_dir, .mode_id = "gnalc_test"};
 
-            if (cfg::only_frontend) {
+            if (only_frontend) {
                 auto gnalc_irgen = [&gnalc_params](const std::string &newsy, const std::string &outll) {
 #ifndef GNALC_TEST_GGC
                     return format("{} -S {} -o {} -emit-llvm{}", cfg::gnalc_path, newsy, outll, gnalc_params);
 #else
-                    auto outgg = outll+".gg";
-                    return format("{} -S -emit-llvm {} -o {} && ../ggc -S -emit-llvm {} -o {}{}", cfg::gnalc_path, newsy, outgg, outgg, outll, gnalc_params);
+                    auto outgg = outll + ".gg";
+                    return format("{} -S -emit-llvm {} -o {} && ../ggc -S -emit-llvm {} -o {}{}", cfg::gnalc_path,
+                                  newsy, outgg, outgg, outll, gnalc_params);
 #endif
                 };
                 data.ir_asm_gen = gnalc_irgen;
@@ -132,15 +152,42 @@ int main(int argc, char *argv[]) {
                 data.ir_asm_gen = gnalc_asmgen;
             }
 
+            auto testcase_out = sy.path().parent_path().string() + "/" + sy.path().stem().string() + ".out";
+            std::string expected_syout;
+            if (diff_test) {
+                TestData clang_data{
+                    .sy = sy, .sylib = sylib_for_diff_testing, .temp_dir = curr_temp_dir, .mode_id = "clang_diff_test"};
+                auto clang_irgen = [](const std::string &newsy, const std::string &outll) {
+                    return format("sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int "
+                                  "getfarray(float a[]);void "
+                                  "putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void "
+                                  "putfarray(int n, float "
+                                  "a[]);void putf(char a[], ...);void _sysy_starttime(int);void "
+                                  "_sysy_stoptime(int);\\n#define starttime() "
+                                  "_sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
+                                  " && clang -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null",
+                                  newsy, newsy, outll);
+                };
+                clang_data.ir_asm_gen = clang_irgen;
+                auto diff_res = run_test(clang_data, true);
+                expected_syout = diff_res.output;
+            } else {
+                expected_syout = read_file(testcase_out);
+                fix_newline(expected_syout);
+            }
+
             // Check
-            auto res = run_test(data);
+            auto res = run_test(data, only_frontend);
 
             if (res.output != expected_syout) {
                 println("|  [\033[0;32;31mFAILED\033[m] Expected '{}' but got "
                         "'{}'.",
-                        expected_syout, res.output);
+                        expected_syout.size() > 1024 ? "<too long to display>" : expected_syout,
+                        res.output.size() > 1024 ? "<too long to display>" : res.output);
+                println("| expected: {}", testcase_out);
+                println("| actual:   {}", res.output_file);
                 failed_tests.emplace_back(sy.path().string());
-                if (cfg::stop_on_error) {
+                if (stop_on_error) {
                     println("----------");
                     goto finish;
                 }
@@ -151,6 +198,9 @@ int main(int argc, char *argv[]) {
             println("----------");
         }
     }
+
+    if (only_list)
+        return 0;
 
 finish:
     println("Finished running {} tests.", curr_test_cnt);

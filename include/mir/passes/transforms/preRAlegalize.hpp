@@ -1,11 +1,10 @@
 #pragma once
-#ifndef GNALC_MIR_PASSES_TRANSFORMS_LEGALIZE_HPP
-#define GNALC_MIR_PASSES_TRANSFORMS_LEGALIZE_HPP
+#ifndef GNALC_MIR_PASSES_TRANSFORMS_PRERALEGALIZE_HPP
+#define GNALC_MIR_PASSES_TRANSFORMS_PRERALEGALIZE_HPP
 
-#include "../../SIMDinstruction/memory.hpp"
-#include "../../instructions/memory.hpp"
-#include "../pass_manager.hpp"
-#include <optional>
+#include "mir/SIMDinstruction/memory.hpp"
+#include "mir/instructions/memory.hpp"
+#include "mir/passes/pass_manager.hpp"
 
 namespace MIR {
 
@@ -17,6 +16,7 @@ public:
 private:
     Function *func; // 不清楚栈上还是堆上
     VarPool *varpool;
+    std::set<BaseP> constClearSet; // 常量偏移需清空的寻址操作数
 
     void runOnBlk(const BlkP &);
     void runOnInst(const BlkP &, const InstP &);

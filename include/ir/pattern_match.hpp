@@ -2,15 +2,11 @@
 #ifndef GNALC_IR_PATTERN_PATTERN_MATCH_HPP
 #define GNALC_IR_PATTERN_PATTERN_MATCH_HPP
 
-#include "../pattern_match/pattern_match.hpp"
 #include "base.hpp"
 #include "constant.hpp"
+#include "pattern_match/pattern_match.hpp"
 #include "instructions/binary.hpp"
-#include "instructions/compare.hpp"
 #include "instructions/control.hpp"
-#include "instructions/converse.hpp"
-#include "instructions/memory.hpp"
-#include "instructions/phi.hpp"
 
 using namespace PatternMatch;
 namespace IR::M {
@@ -113,10 +109,6 @@ struct IRInstInfo {
     struct OpcodeGetter {
         OP operator()(const Instruction &inst) { return inst.getOpcode(); }
     };
-};
-
-struct SharedPtrValueProj {
-    Value *operator()(const pVal &u) { return u.get(); }
 };
 
 // Match Inst and Operand

@@ -1,6 +1,8 @@
-#include "../../include/ir/block_utils.hpp"
-
-#include "../../include/utils/logger.hpp"
+#include "ir/block_utils.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
+#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/instructions/memory.hpp"
+#include "utils/logger.hpp"
 
 #include <algorithm>
 #include <list>
@@ -13,13 +15,45 @@ void linkBB(const pBlock &prebb, const pBlock &nxtbb) {
 }
 
 void unlinkBB(const pBlock &prebb, const pBlock &nxtbb) {
+    {
+        size_t cnt = 0;
+        for (const auto &succ : prebb->succs()) {
+            if (succ == nxtbb)
+                cnt++;
+        }
+        Err::gassert(cnt != 0, "No such edge.");
+        if (cnt > 1)
+            Logger::logWarning("unlinkBB: Multiple edges detected, but only unlinked one. "
+                               "Note that this function will be deprecated in future.");
+    }
     bool ok = prebb->delNextBB(nxtbb);
     Err::gassert(ok);
     ok = nxtbb->delPreBB(prebb);
     Err::gassert(ok);
 }
 
-bool safeUnlinkBB(const pBlock &prebb, const pBlock &nxtbb, std::set<pPhi> &dead_phis) {
+void unlinkOneEdge(const pBlock &prebb, const pBlock &nxtbb) {
+    bool ok = prebb->delNextBB(nxtbb);
+    Err::gassert(ok);
+    ok = nxtbb->delPreBB(prebb);
+    Err::gassert(ok);
+}
+size_t unlinkAllEdges(const pBlock &prebb, const pBlock &nxtbb) {
+    size_t cnt = 0;
+    while (prebb->delNextBB(nxtbb))
+        cnt++;
+    Err::gassert(cnt != 0, "No such edge.");
+
+    size_t ret = cnt;
+
+    while (nxtbb->delPreBB(prebb))
+        cnt--;
+    Err::gassert(cnt == 0, "Invalid CFG.");
+
+    return ret;
+}
+
+bool safeUnlinkBB(const pBlock &prebb, const pBlock &nxtbb, std::set<pPhi> &dead_phis, UnlinkOptions options) {
     bool need_to_remove_br = false;
     // Unlink CFG
     unlinkBB(prebb, nxtbb);
@@ -28,12 +62,15 @@ bool safeUnlinkBB(const pBlock &prebb, const pBlock &nxtbb, std::set<pPhi> &dead
     auto br = prebb->getBRInst();
     Err::gassert(br != nullptr);
     if (br->isConditional()) {
+        auto cond_inst = br->getCond()->as<Instruction>();
         if (br->getTrueDest() == nxtbb)
             br->dropTrueDest();
         else {
             Err::gassert(br->getFalseDest() == nxtbb, "The given block is not a successor.");
             br->dropFalseDest();
         }
+        if (options.perform_dce && cond_inst)
+            eliminateDeadInsts(std::move(cond_inst), options.fam);
     } else {
         Err::gassert(br->getDest() == nxtbb, "The given block is not a successor.");
         // Well, the block has no successor, this might because we are deleting unreachable blocks.
@@ -91,17 +128,28 @@ bool safeUnlinkBB(const pBlock &prebb, const pBlock &nxtbb, std::set<pPhi> &dead
     // bb2:
     for (const auto &phi : nxtbb->phis()) {
         // Delete the phi operand from the unlinked `prebb`
-        if (phi->delPhiOperByBlock(prebb)) {
-            // Simplify PHI
-            auto opers = phi->getPhiOpers();
-            if (opers.size() == 1) {
-                // Only one operand, check if it is self-reference.
-                // If it is self-reference, replaceSelf makes no sense.
-                if (opers[0].value != phi)
-                    phi->replaceSelf(opers[0].value);
-                dead_phis.emplace(phi);
-            } else if (opers.empty())
-                dead_phis.emplace(phi);
+        auto phi_opers = phi->getPhiOpers();
+        for (const auto &[v, b] : phi_opers) {
+            if (b == prebb) {
+                auto ok = phi->delPhiOperByBlock(prebb);
+                Err::gassert(ok);
+                // Simplify PHI
+                auto opers = phi->getPhiOpers();
+                if (opers.size() == 1) {
+                    // Only one operand, check if it is self-reference.
+                    // If it is self-reference, replaceSelf makes no sense.
+                    if (opers[0].value != phi)
+                        phi->replaceSelf(opers[0].value);
+                    dead_phis.emplace(phi);
+                } else if (opers.empty())
+                    dead_phis.emplace(phi);
+
+                if (options.perform_dce) {
+                    if (auto inst = v->as<Instruction>())
+                        eliminateDeadInsts(std::move(inst), options.fam);
+                }
+                break;
+            }
         }
     }
     return need_to_remove_br;
@@ -122,25 +170,48 @@ void moveBlocks(FunctionBBIter beg, FunctionBBIter end, const pFunc &new_func) {
     moveBlocks(beg, end, new_func, new_func->end());
 }
 
-void foldPHI(const pBlock &bb, bool preserve_lcssa) {
-    std::set<pInst> dead_phis;
+pVal getCommonValue(const pPhi &phi) {
+    auto phi_opers = phi->getPhiOpers();
+    Err::gassert(!phi_opers.empty());
+    pVal common_value = phi_opers[0].value;
+    for (const auto &[v, b] : phi_opers) {
+        if (common_value != v)
+            return nullptr;
+    }
+    return common_value;
+}
+
+bool isIdenticalPhi(const pPhi &phi1, const pPhi &phi2) {
+    if (phi1 == phi2)
+        return true;
+    if (phi1->getNumOperands() != phi2->getNumOperands())
+        return false;
+    for (const auto &[v1, b1] : phi1->incomings()) {
+        bool found = false;
+        for (const auto &[v2, b2] : phi2->incomings()) {
+            if (v1 == v2 && b1 == b2) {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+            return false;
+    }
+    return true;
+}
+
+bool foldPHI(const pBlock &bb, bool preserve_lcssa) {
+    std::set<pPhi> dead_phis;
     for (const auto &phi : bb->phis()) {
         if (phi->getUseCount() == 0) {
             dead_phis.emplace(phi);
             continue;
         }
-        auto phi_opers = phi->getPhiOpers();
-        Err::gassert(!phi_opers.empty());
-        if (preserve_lcssa && phi_opers.size() == 1)
+
+        if (preserve_lcssa)
             continue;
-        pVal common_value = phi_opers[0].value;
-        for (const auto &[v, b] : phi_opers) {
-            if (common_value != v) {
-                common_value = nullptr;
-                break;
-            }
-        }
-        if (common_value != nullptr) {
+
+        if (auto common_value = getCommonValue(phi)) {
             if (common_value == phi)
                 Logger::logWarning("IR::foldPHI: Skipped self-reference phi.");
             else {
@@ -149,17 +220,15 @@ void foldPHI(const pBlock &bb, bool preserve_lcssa) {
             }
         }
     }
-    bb->delInstIf([&dead_phis](const auto &inst) { return dead_phis.find(inst) != dead_phis.end(); },
-                  BasicBlock::DEL_MODE::PHI);
+    return eliminateDeadInsts(dead_phis);
 }
 
-void removeIdenticalPhi(const pBlock &bb) {
+bool removeIdenticalPhi(const pBlock &bb) {
     using ValBBPair = std::pair<pVal, pBlock>;
     std::vector<std::pair<pPhi, std::vector<ValBBPair>>> phi_info;
     for (const auto &phi : bb->phis()) {
         phi_info.emplace_back(phi, std::vector<ValBBPair>{});
-        auto phi_opers = phi->getPhiOpers();
-        for (const auto &[v, b] : phi_opers)
+        for (const auto &[v, b] : phi->incomings())
             phi_info.back().second.emplace_back(v, b);
         std::sort(phi_info.back().second.begin(), phi_info.back().second.end());
     }
@@ -175,8 +244,8 @@ void removeIdenticalPhi(const pBlock &bb) {
             }
         }
     }
-    bb->delInstIf([&dead_phis](const auto &inst) { return dead_phis.find(inst) != dead_phis.end(); },
-                  BasicBlock::DEL_MODE::PHI);
+    return bb->delInstIf([&dead_phis](const auto &inst)
+        { return dead_phis.find(inst) != dead_phis.end(); }, BasicBlock::DEL_MODE::PHI);
 }
 
 pBlock breakCriticalEdge(const pBlock &pred, const pBlock &succ) {
@@ -250,5 +319,82 @@ pPhi findLCSSAPhi(const pBlock &block, const pVal &value) {
             return phi;
     }
     return nullptr;
+}
+
+bool eliminateDeadInsts(std::vector<pInst>& worklist, FAM *fam) {
+    std::unordered_set<pInst> visited;
+    std::unordered_set<pInst> eliminated;
+    std::unordered_set<BasicBlock*> todo_blocks;
+    bool modified = false;
+    while (!worklist.empty()) {
+        auto inst = worklist.back();
+        worklist.pop_back();
+        visited.emplace(inst);
+
+        bool is_dead = true;
+        for (const auto& user : inst->inst_users()) {
+            if (!eliminated.count(user)) {
+                is_dead = false;
+                break;
+            }
+        }
+        if (!is_dead)
+            continue;
+
+        if (inst->is<STOREInst>())
+            continue;
+
+        if (fam) {
+            if (auto call = inst->as<CALLInst>()) {
+                if (hasSideEffect(*fam, call))
+                    continue;
+            }
+        }
+
+        eliminated.emplace(inst);
+        todo_blocks.emplace(inst->getParent().get());
+
+        for (const auto &operand : inst->operands()) {
+            if (auto i = operand->as<Instruction>()) {
+                if (!visited.count(i))
+                    worklist.emplace_back(i);
+            }
+        }
+    }
+
+    for (const auto &block : todo_blocks) {
+        if (block) {
+            modified |= block->delInstIf([&eliminated](const auto &inst)
+               { return eliminated.count(inst); });
+        }
+    }
+    return modified;
+}
+
+bool eliminateDeadInsts(pInst inst, FAM *fam) {
+    std::vector worklist{ std::move(inst) };
+    return eliminateDeadInsts(worklist, fam);
+}
+
+bool eliminateDeadInsts(const std::set<pPhi>& dead_phis, FAM *fam) {
+    std::vector<pInst> worklist{ dead_phis.begin(), dead_phis.end() };
+    return eliminateDeadInsts(worklist, fam);
+}
+
+std::tuple<Value *, Value *> analyzeHeaderPhi(const Loop *loop, const PHIInst *header_phi) {
+    auto phi_opers = header_phi->getPhiOpers();
+    Err::gassert(phi_opers.size() == 2, "Expected LoopSimplified Form");
+    auto invariant = phi_opers[0].value.get();
+    auto variant = phi_opers[1].value.get();
+    if (!loop->isLoopInvariant(invariant))
+        std::swap(invariant, variant);
+    Err::gassert(loop->isLoopInvariant(invariant) && !loop->isLoopInvariant(variant),
+                 "Expected LoopSimplified Form");
+    return std::make_tuple(invariant, variant);
+}
+
+std::tuple<pVal, pVal> analyzeHeaderPhi(const pLoop &loop, const pPhi &header_phi) {
+    auto [invariant, variant] = analyzeHeaderPhi(loop.get(), header_phi.get());
+    return std::make_tuple(invariant->as<Value>(), variant->as<Value>());
 }
 } // namespace IR

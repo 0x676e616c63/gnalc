@@ -13,6 +13,7 @@
 #pragma once
 
 #include "basetype.hpp"
+
 #include <memory>
 #include <vector>
 // #include <variant>
@@ -56,7 +57,7 @@ class ReturnStmt;
 
 class ASTNode {
 public:
-    virtual void accept(class ASTVisitor &visitor) = 0; // 支持访问者模式
+    virtual void accept(ASTVisitor &visitor) = 0; // 支持访问者模式
     virtual ~ASTNode() = default;
 };
 

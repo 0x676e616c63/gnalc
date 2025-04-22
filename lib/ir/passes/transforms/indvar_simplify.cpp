@@ -1,6 +1,5 @@
-#include "../../../../include/ir/passes/transforms/indvar_simplify.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/scev.hpp"
+#include "ir/passes/transforms/indvar_simplify.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
 
 namespace IR {
 PM::PreservedAnalyses IndVarSimplifyPass::run(Function &function, FAM &fam) {

@@ -46,10 +46,10 @@ public:
     reference operator[](size_t i) { return worklist[i]; }
 
     [[nodiscard]] size_t size() const { return worklist.size(); }
-    [[nodiscard]] iterator begin() const { return worklist.begin(); }
-    [[nodiscard]] iterator end() const { return worklist.end(); }
-    [[nodiscard]] const_iterator begin() { return worklist.begin(); }
-    [[nodiscard]] const_iterator end() { return worklist.end(); }
+    [[nodiscard]] iterator begin() { return worklist.begin(); }
+    [[nodiscard]] iterator end() { return worklist.end(); }
+    [[nodiscard]] const_iterator begin() const { return worklist.begin(); }
+    [[nodiscard]] const_iterator end() const { return worklist.end(); }
     [[nodiscard]] const_iterator cbegin() const { return worklist.cbegin(); }
     [[nodiscard]] const_iterator cend() const { return worklist.cend(); }
     [[nodiscard]] reverse_iterator rbegin() { return worklist.rbegin(); }
@@ -142,10 +142,10 @@ public:
     reference operator[](size_t i) { return worklist[i]; }
 
     [[nodiscard]] size_t size() const { return worklist.size(); }
-    [[nodiscard]] iterator begin() const { return worklist.begin(); }
-    [[nodiscard]] iterator end() const { return worklist.end(); }
-    [[nodiscard]] const_iterator begin() { return worklist.begin(); }
-    [[nodiscard]] const_iterator end() { return worklist.end(); }
+    [[nodiscard]] iterator begin() { return worklist.begin(); }
+    [[nodiscard]] iterator end() { return worklist.end(); }
+    [[nodiscard]] const_iterator begin() const { return worklist.begin(); }
+    [[nodiscard]] const_iterator end() const { return worklist.end(); }
     [[nodiscard]] const_iterator cbegin() const { return worklist.cbegin(); }
     [[nodiscard]] const_iterator cend() const { return worklist.cend(); }
     [[nodiscard]] reverse_iterator rbegin() { return worklist.rbegin(); }

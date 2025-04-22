@@ -26,4 +26,13 @@ test.s
 test copy.s
 functional25
 gnalc_stripped
+test.llc
+test.elf
+/qemu-9.2.0
+list.txt
+sylib.a
+sylib.o
+*.png
+test copy.llc
+sylib.s
 .cache

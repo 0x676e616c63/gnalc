@@ -30,5 +30,19 @@ private:
     BegIterT begin_it;
     EndIterT end_it;
 };
+
+template <typename T> struct drop_front {
+    using BegIterT = decltype(std::begin(std::declval<T>()));
+    using EndIterT = decltype(std::end(std::declval<T>()));
+    explicit drop_front(const T &range, size_t i = 1)
+        : begin_it(std::next(std::begin(range), i)), end_it(std::end(range)) {}
+
+    auto begin() const { return begin_it; }
+    auto end() const { return end_it; }
+
+private:
+    BegIterT begin_it;
+    EndIterT end_it;
+};
 } // namespace Util
 #endif

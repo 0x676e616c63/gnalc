@@ -1,8 +1,8 @@
-#include "../../../include/config/config.hpp"
+#include "config/config.hpp"
 #if GNALC_EXTENSION_BRAINFK
-#include "../../../include/codegen/brainfk/bfmodule.hpp"
-#include "../../../include/codegen/brainfk/bfprinter.hpp"
-#include "../../../include/utils/exception.hpp"
+#include "codegen/brainfk/bfmodule.hpp"
+#include "codegen/brainfk/bfprinter.hpp"
+#include "utils/exception.hpp"
 
 namespace BrainFk {
 void BFPrinter::printout(const BFModule &module) {

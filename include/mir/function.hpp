@@ -1,12 +1,17 @@
 #pragma once
 #ifndef GNALC_MIR_FUNCTION_HPP
 #define GNALC_MIR_FUNCTION_HPP
-#include <utility>
 
 #include "base.hpp"
 #include "basicblock.hpp"
+#include "constpool.hpp"
 #include "misc.hpp"
 #include "varpool.hpp"
+
+#include <deque>
+#include <map>
+#include <set>
+#include <utility>
 
 namespace MIR {
 
@@ -18,13 +23,9 @@ struct Liveness {
     enum class relatedType { Use, Def };
 
     struct tempHash {
-        std::size_t operator()(const std::shared_ptr<Operand> &ptr) const {
-            return std::hash<size_t>()((size_t)(ptr.get()));
-        }
+        std::size_t operator()(const std::shared_ptr<Operand> &ptr) const;
 
-        std::size_t operator()(const std::shared_ptr<Instruction> &ptr) const {
-            return std::hash<size_t>()((size_t)(ptr.get()));
-        }
+        std::size_t operator()(const std::shared_ptr<Instruction> &ptr) const;
     };
 
     std::map<std::shared_ptr<Operand>,
@@ -51,29 +52,37 @@ class FunctionInfo {
 public:                                                   // 接口太多, 还不如直接访问
     std::pair<bool, std::weak_ptr<Function>> hasTailCall; // TCO优化
 
-    bool hasCall = false; // 除了TC之外的调用, 可以视情况节省一两条指令
+    bool hasCall = false; // 是否是过程调用的叶结点
 
     bool isPureFunc = false;
 
     size_t stackSize{};
-    unsigned int maxAlignment = 4;
-    std::vector<std::shared_ptr<FrameObj>> StackObjs; // arg ret local spill
+    unsigned int maxAlignment = 8;                   // 8 or 16, 16字节对齐时需要特殊处理
+    std::deque<std::shared_ptr<FrameObj>> StackObjs; // arg ret local spill
+    size_t getCurrentSize();                         // 遍历当前objs, 确定是否保留fp
+
     VarPool varpool;
+    ConstPool &constpool; // get from module
 
-    unsigned int args;
+    unsigned arg_in_use;
+    unsigned int args; // livein args
 
-    VarPool &getPool() { return varpool; }
-    const VarPool &getPool() const { return varpool; }
+    VarPool &getPool();
+    const VarPool &getPool() const;
 
     Liveness liveinfo;
 
     ///@note 因为pass之间无法传递数据, 所以这个信息只能耦合在这个地方
     ///@note 其次, 这是全局的available, 因为图着色的分析不深入到单个inst
-    std::vector<unsigned int> availableSRegisters;
+    std::set<unsigned int> availableSRegisters;
+
+    std::set<unsigned int> regdit;
+    std::set<unsigned int> regdit_s;
+
     unsigned int spilltimes = 0;
 
 public:
-    FunctionInfo() = default;
+    explicit FunctionInfo(ConstPool &_constpool, size_t _countbase);
 
     std::string toString() const; // print info
     ~FunctionInfo() = default;
@@ -89,21 +98,18 @@ private:
 
 public:
     Function() = delete;
-    explicit Function(std::string _name) : Value(ValueTrait::Function, std::move(_name)) {}
+    explicit Function(std::string _name, ConstPool &_constpool, size_t _countbase);
 
-    FunctionInfo getInfo() const { return info; }
-    FunctionInfo &editInfo() { return info; }
+    FunctionInfo getInfo() const;
+    FunctionInfo &editInfo();
 
-    void addBlock(const std::string &_block_name, const std::shared_ptr<BasicBlock> &_block) {
-        blocks.emplace_back(_block);
-        blockpool[_block_name] = _block;
-    }
+    void addBlock(const std::string &_block_name, const std::shared_ptr<BasicBlock> &_block);
 
-    // void delBlock(const std::string &_name);
+    std::shared_ptr<BasicBlock> getBlock(const std::string &_name);
 
-    std::shared_ptr<BasicBlock> getBlock(const std::string &_name) { return blockpool[_name]; }
+    const std::list<std::shared_ptr<BasicBlock>> &getBlocks() const;
 
-    const std::list<std::shared_ptr<BasicBlock>> &getBlocks() { return blocks; }
+    void delBlock(std::shared_ptr<BasicBlock>);
 
     std::string toString() const override;
 

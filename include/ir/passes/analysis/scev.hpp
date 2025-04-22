@@ -1,20 +1,20 @@
 // Scalar Evolution
 // This implementation only handles integers.
+// FIXME: Potential Overflow.
 // See:
 //   - "Fast Recognition of Scalar Evolutions on Three-Address SSA Code":
 //       https://www.researchgate.net/profile/Georges-Andre-Silber/publication/267701684_Fast_Recognition_of_Scalar_Evolutions_on_Three-Address_SSA_Code/links/545e44ca0cf27487b44f08d0/Fast-Recognition-of-Scalar-Evolutions-on-Three-Address-SSA-Code.pdf
 //   - "Induction Variable Analysis with Delayed Abstractions":
 //       https://link.springer.com/content/pdf/10.1007/11587514_15.pdf
 //   - "The SSA Representation Framework: Semantics, Analyses and GCC Implementation."
-//       https://theses.hal.science/pastel-00002281/#:~:text=From%20a%20practical%20point%20of%20view%2C%20we%20present,an%20industrial%20compiler%3A%20the%20GNU%20Compiler%20Collection%20%28GCC%29.
+//       https://theses.hal.science/pastel-00002281/
 //   - "Scalar evolution技术与i^n求和优化"
 //       https://www.cnblogs.com/gnuemacs/p/14167695.html
 #pragma once
 #ifndef GNALC_IR_PASSES_ANALYSIS_SCEV_HPP
 #define GNALC_IR_PASSES_ANALYSIS_SCEV_HPP
 
-#include "../../pattern_match.hpp"
-#include "../pass_manager.hpp"
+#include "ir/passes/pass_manager.hpp"
 #include "domtree_analysis.hpp"
 #include "loop_analysis.hpp"
 
@@ -28,7 +28,7 @@ class SCEVExpr {
 
 public:
     struct Binary {
-        enum class Op { Add, Sub, Mul };
+        enum class Op { Add, Sub, Mul, Div };
         Op op;
         SCEVExpr *lhs;
         SCEVExpr *rhs;
@@ -46,13 +46,19 @@ public:
     explicit SCEVExpr(Binary::Op op, SCEVExpr *lhs, SCEVExpr *rhs)
         : type(SCEVExprType::Binary), value(Binary{op, lhs, rhs}) {}
 
-    void setIRValue(Value *ir_val) { value = ir_val; }
+    void setIRValue(Value *ir_val) {
+        value = ir_val;
+        type = SCEVExprType::Value;
+    }
     bool isIRValue() const { return type == SCEVExprType::Value; }
     bool isBinary() const { return type == SCEVExprType::Binary; }
     Value *getRawIRValue() const { return std::get<Value *>(value); }
     pVal getIRValue() const { return std::get<Value *>(value)->as<Value>(); }
     SCEVExpr *getLHS() const { return std::get<Binary>(value).lhs; }
     SCEVExpr *getRHS() const { return std::get<Binary>(value).rhs; }
+    void swapOperands() {
+        std::swap(std::get<Binary>(value).lhs, std::get<Binary>(value).rhs);
+    }
     Binary::Op getOp() const { return std::get<Binary>(value).op; }
 };
 enum class TRECType { AddRec, Peeled, Expr, Undefined, Untracked };
@@ -137,12 +143,43 @@ public:
     // Get SCEV of val at the given block.
     // Note that if the value is not available at that block, nullptr will be returned.
     TREC *getSCEVAtBlock(Value *val, const BasicBlock *block);
-    TREC *getSCEVAtBlock(const pVal &val, const std::shared_ptr<BasicBlock> &block);
+    TREC *getSCEVAtBlock(const pVal &val, const pBlock &block);
 
-    SCEVExpr *getNumberOfLatchExecutions(const Loop *loop);
-    SCEVExpr *getNumberOfLatchExecutions(const pLoop &loop);
+    // Get the exact value of the single backegde taken count
+    // Nullptr is returned if there are multiple backegdes.
+    SCEVExpr *getBackEdgeTakenCount(const Loop *loop);
+    SCEVExpr *getBackEdgeTakenCount(const pLoop &loop);
 
+    // Get the exact value of a loop's trip count
+    SCEVExpr *getTripCount(const Loop *loop);
+    SCEVExpr *getTripCount(const pLoop &loop);
+
+    // Expand the SCEV Expression. Returns the expanded IR Value.
+    // New instructions will be inserted before `insert_before`.
+    // If the expression contains loop invariant values that are not available
+    // at that block, (i.e. the block is not dominated by the invariant's define block)
+    // nullptr will be returned.
+    pVal expandSCEVExpr(SCEVExpr* expr, const pBlock& block, BasicBlock::iterator insert_before) const;
+    // Convenient Wrapper for expanding SCEVExpr at the end of the block
+    pVal expandSCEVExpr(SCEVExpr* expr, const pBlock& block) const;
+
+    // Expand a AddRec on Loop.
+    // Returns ( phi, base value, update )
+    pPhi expandAddRec(TREC *addrec);
+
+    // Estimates the number of instructions that would be generated during SCEV expansion.
+    // std::nullopt will be returned if the expansion is not possible.
+    // Note: This is a conservative (over-approximated) estimation
+    //       since GVN-PRE may eliminate some redundant instructions.
+    std::optional<size_t> estimateExpansionCost(SCEVExpr* expr, const pBlock& block) const;
+    std::optional<size_t> estimateExpansionCost(TREC* addrec);
 private:
+    pVal expandSCEVExprImpl(SCEVExpr* expr, const pBlock& block,
+        BasicBlock::iterator insert_before, std::map<SCEVExpr*, pVal>& inserted) const;
+
+    std::optional<size_t> estimateExpansionCostImpl(SCEVExpr* expr, const pBlock& block,
+        std::set<SCEVExpr*>& visited) const;
+
     // Get SCEV of val at within the given scope.
     // the outermost scope ---> 'loop == nullptr'
     // Note that this is less safe than `getSCEVAtBlock` since it
@@ -161,12 +198,13 @@ private:
     //         update is the reconstructed expression for the overall effect in the loop of h
     std::pair<bool, TREC *> buildUpdateExpr(const PHIInst *loop_phi, Value *val, const Loop *loop_phi_loop);
 
+    SCEVExpr* computeSymbolicBinomialCoefficient(SCEVExpr* n, int p);
     SCEVExpr *apply(TREC *trec, SCEVExpr *trip_cnt);
 
     // Input: trec a symbolic TREC, l the instantiation loop
     // Output: an instantiation of trec
     TREC *instantiateEvolution(TREC *trec, const Loop *loop);
-    TREC *instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::unordered_set<TREC *> &instantiated);
+    TREC *instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::vector<std::unordered_set<TREC *>> &instantiated);
 
     TREC *getTRECUndef() const;
     TREC *getTRECUntracked() const;
@@ -187,10 +225,11 @@ private:
     SCEVExpr *getSCEVExprAdd(SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExprSub(SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExprMul(SCEVExpr *x, SCEVExpr *y);
+    SCEVExpr *getSCEVExprDiv(SCEVExpr *x, SCEVExpr *y);
     SCEVExpr *getSCEVExprNeg(SCEVExpr *x);
     SCEVExpr *getSCEVExpr(int x);
     SCEVExpr *getSCEVExpr(Value *x);
-    void foldSCEVExpr(SCEVExpr *expr) const;
+    void foldSCEVExpr(SCEVExpr *expr);
 
     Function *function;
     LoopInfo *loop_info;

@@ -2,8 +2,8 @@
 #ifndef GNALC_PARSER_SYMBOL_TABLE_HPP
 #define GNALC_PARSER_SYMBOL_TABLE_HPP
 
-#include "../ir/base.hpp"
-#include "../utils/exception.hpp"
+#include "ir/base.hpp"
+#include "utils/exception.hpp"
 
 #include <map>
 #include <string>
@@ -20,7 +20,7 @@ class SymbolTable {
     std::vector<Scope> table;
 
 public:
-    SymbolTable() {}
+    SymbolTable() = default;
 
     void initScope(std::string name = "__default_scope_name") { table.emplace_back(Scope{std::move(name), {}}); }
 
@@ -31,7 +31,7 @@ public:
         table.back().scope.emplace(std::move(name), std::move(value));
     }
 
-    std::shared_ptr<IR::Value> lookup(const std::string &name) const {
+    IR::pVal lookup(const std::string &name) const {
         for (auto it = table.rbegin(); it != table.rend(); ++it) {
             if (auto f = it->scope.find(name); f != it->scope.end())
                 return f->second;

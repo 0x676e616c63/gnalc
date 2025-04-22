@@ -1,4 +1,11 @@
 // Proxy for IR Constants, providing easy interface through type erasure.
+// Warning:
+//   1. This is not a part of the IR, due to its "dynamic" type. (NOT a derived
+//      class from `IR::Value`)
+//   2. If type mismatched, ONLY `operator==`/`operator!=` returns false/true,
+//      other operators will throw an exception.
+//   3. It depends on ConstantPool only in operators that generates new
+//   constant.
 #pragma once
 #ifndef GNALC_IR_CONSTANT_PROXY_HPP
 #define GNALC_IR_CONSTANT_PROXY_HPP
@@ -10,23 +17,12 @@
 #include <memory>
 #include <variant>
 
-#include "../utils/misc.hpp"
-
 namespace IR {
 class ConstantPool;
 class ConstantProxyHash;
-// Proxy for IR Constants, providing easy interface through type erasure.
-// Warning:
-//   1. This is not a part of the IR, due to its "dynamic" type. (NOT a derived
-//      class from `IR::Value`)
-//   2. If type mismatched, ONLY `operator==`/`operator!=` returns false/true,
-//      other operators will throw an exception.
-//   3. It depends on ConstantPool only in operators that generates new
-//   constant.
 class ConstantProxy {
     friend class ConstantProxyHash;
 
-private:
     std::variant<pConstI1, pConstI8, pConstI32, pConstF32> value;
 
     ConstantPool *pool;

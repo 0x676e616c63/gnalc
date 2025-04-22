@@ -1,27 +1,22 @@
-#include "../../../../include/ir/passes/transforms/licm.hpp"
-
-#include "../../../../include/ir/block_utils.hpp"
-#include "../../../../include/ir/instructions/binary.hpp"
-#include "../../../../include/ir/instructions/compare.hpp"
-#include "../../../../include/ir/instructions/control.hpp"
-#include "../../../../include/ir/instructions/converse.hpp"
-#include "../../../../include/ir/instructions/memory.hpp"
-#include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
-#include "../../../../include/ir/pattern_match.hpp"
+#include "ir/passes/transforms/licm.hpp"
+#include "ir/block_utils.hpp"
+#include "ir/instructions/binary.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/instructions/converse.hpp"
+#include "ir/instructions/memory.hpp"
+#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
 
 #include <algorithm>
 #include <string>
 #include <vector>
 
-using namespace PatternMatch;
-
 namespace IR {
 bool isSafeToMove(const pLoop &loop, const pInst &inst, AliasAnalysisResult &aa_res, FAM &fam) {
     // Only move what we know
     // Do not hoist cmp for codegen
-    if (!match(inst, ClassesMatch<BinaryInst, FNEGInst, CALLInst, LOADInst, STOREInst, GEPInst, CastInst>{}))
+    if (!inst->is<BinaryInst, FNEGInst, CALLInst, LOADInst, STOREInst, GEPInst, CastInst>())
         return false;
 
     // If the load's memory can be modified in the loop, give up.
@@ -61,7 +56,7 @@ bool isSafeToMove(const pLoop &loop, const pInst &inst, AliasAnalysisResult &aa_
                 auto modref = aa_res.getInstModRefInfo(killer, store->getPtr(), fam);
                 if (modref == ModRefInfo::Ref || modref == ModRefInfo::ModRef)
                     return false;
-                // If there are multiple store, the sunk store will overwrite them.
+                // If there are multiple store, the sunk store might overwrite them.
                 // FIXME: If we can prove this store is bound to execute after every other store,
                 //        sunk it is safe.
                 if (modref == ModRefInfo::Mod && killer != store)
@@ -129,8 +124,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                                     sunk_insts[exit] = sunk;
 
                                     // Rewrite the sunk instruction's uses to keep LCSSA Form
-                                    auto operands = sunk->getOperands();
-                                    for (const auto &use : operands) {
+                                    for (const auto &use : sunk->operand_uses()) {
                                         if (auto oper = use->getValue()->as<Instruction>()) {
                                             auto oper_inst_block = oper->getParent();
                                             if (loop->contains(oper_inst_block)) {
@@ -145,7 +139,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                                                     if (oper->getType()->getTrait() == IRCTYPE::PTR)
                                                         aa_res.addClonedInst(oper, avail_phi);
                                                 }
-                                                sunk->replaceUse(use, avail_phi);
+                                                use->setValue(avail_phi);
                                             }
                                         }
                                     }
@@ -182,7 +176,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                             }
                             dead_insts.emplace(inst);
                             for (const auto &[exit, sunk] : sunk_insts) {
-                                if (!match(sunk, ClassesMatch<STOREInst, CALLInst>{}) && sunk->getUseCount() == 0)
+                                if (!sunk->is<STOREInst, CALLInst>() && sunk->getUseCount() == 0)
                                     dead_insts.emplace(sunk);
                             }
                             licm_inst_modified = true;
@@ -204,20 +198,22 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                     // hoisting them is not safe.
                     if (!postdomtree.ADomB(bb, preheader))
                         continue;
-                    std::set<pInst> to_hoist;
+                    // Keep the topological order.
+                    std::vector<pInst> to_hoist;
                     for (const auto &inst : *bb) {
                         if (isSafeToMove(loop, inst, aa_res, fam)) {
                             auto invariant = std::all_of(inst->operand_begin(), inst->operand_end(),
                                                          [&loop, to_hoist](const auto &val) {
                                                              if (auto inst = val->template as<Instruction>()) {
-                                                                 if (to_hoist.count(inst))
+                                                                 auto it = std::find(to_hoist.begin(), to_hoist.end(), inst);
+                                                                 if (it != to_hoist.end())
                                                                      return true;
                                                                  return !loop->contains(inst->getParent());
                                                              }
                                                              return true;
                                                          });
                             if (invariant)
-                                to_hoist.emplace(inst);
+                                to_hoist.emplace_back(inst);
                         }
                     }
 

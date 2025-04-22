@@ -2,11 +2,11 @@
 #define GNALC_UTILS_EXCEPTION_HPP
 #pragma once
 
+#include "stacktrace.hpp"
+
 #include <cstdint>
 #include <stdexcept>
 #include <string>
-
-#include "stacktrace.hpp"
 
 #if __has_builtin(__builtin_FILE) && __has_builtin(__builtin_FUNCTION) && __has_builtin(__builtin_LINE)
 #define GNALC_SOURCE_LOCATION_ENABLE

@@ -1,25 +1,18 @@
+/**
+* @brief 将 IR 输出为格式化文本，Printer 的辅助类，亦可作调试用
+*/
 #ifndef GNALC_IR_FORMATTER_HPP
 #define GNALC_IR_FORMATTER_HPP
 
 #pragma once
 #include "base.hpp"
 #include "global_var.hpp"
-#include "instructions/binary.hpp"
 #include "instructions/compare.hpp"
-#include "instructions/control.hpp"
-#include "instructions/converse.hpp"
 #include "instructions/helper.hpp"
-#include "instructions/memory.hpp"
-#include "instructions/phi.hpp"
+
 #include <string>
 
 namespace IR {
-/**
- * @brief 将IR输出为格式化文本，Printer的辅助类，亦可作调试用
- * @attention
- * 由于目前一些类中的get函数都是非const的，因此暂时未将下列函数的参数声明为const
- * @todo 指针问题；const和非const函数；
- */
 class IRFormatter {
 public:
     static std::string formatSTOCLASS(STOCLASS cls);
@@ -30,8 +23,6 @@ public:
 
     static std::string formatValue(Value &val); // -> i32 %a
     static std::string formatBB(BasicBlock &bb);
-    // static std::string formatConstInt(ConstantInt& ci); // 和formatValue重了
-    // static std::string formatConstFloat(ConstantFloat& cf);
     static std::string formatFunc(Function &func); // define dso_local void @fu(i32 noundef %a, i32 noundef %b)
     static std::string formatFuncDecl(FunctionDecl &func);
     static std::string formatGV(GlobalVariable &gv);

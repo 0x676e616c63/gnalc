@@ -1,7 +1,10 @@
+#pragma once
 #ifndef GNALC_TEST_RUNNER_HPP
 #define GNALC_TEST_RUNNER_HPP
 
 #include "utils.hpp"
+
+#include <algorithm>
 #include <filesystem>
 #include <functional>
 #include <string>
@@ -11,6 +14,7 @@ namespace Test {
 struct TestResult {
     std::string source_output; // .ll or .s
     std::string output;
+    std::string output_file;
     size_t time_elapsed;
 };
 
@@ -25,18 +29,8 @@ struct TestData {
     std::function<std::string(const std::string &, const std::string &)> ir_asm_gen;
 };
 
-inline std::string make_pathname(const std::string &raw) {
-    std::string ret;
-    for (const auto &c : raw) {
-        if (c == '/' || c == ' ')
-            ret += '_';
-        else
-            ret += c;
-    }
-    return ret;
-}
-
-inline TestResult run_test(const TestData &data, bool only_run_frontend = cfg::only_frontend) {
+static TestResult run_test(const TestData &data, bool only_run_frontend, size_t times = 1) {
+    Err::gassert(times != 0);
     auto testcase_in = data.sy.path().parent_path().string() + "/" + data.sy.path().stem().string() + ".in";
     auto out_file_id = format("{}_{}", data.sy.path().stem().string(), make_pathname(data.mode_id));
     auto outtime = format("{}/{}.time", data.temp_dir, out_file_id);
@@ -66,7 +60,8 @@ inline TestResult run_test(const TestData &data, bool only_run_frontend = cfg::o
 
         ir_asm_gen_command = data.ir_asm_gen(newsy, out_source);
 
-        link_command = format("{} {} {} -o {}", cfg::gcc_arm_command, out_source, data.sylib, outexec);
+        link_command =
+            format("{} {} {} -fno-PIC -fno-PIE -static -o {}", cfg::gcc_arm_command, out_source, data.sylib, outexec);
 
         exec_command = format("{} {} < {} > {} 2>{}", cfg::qemu_arm_command, outexec,
                               std::filesystem::exists(testcase_in) ? testcase_in : "/dev/null", output, outtime);
@@ -80,23 +75,33 @@ inline TestResult run_test(const TestData &data, bool only_run_frontend = cfg::o
     exec_command += R"(;/bin/echo -e "\n"$? >> )" + output;
 
     println("");
-    println("|  Running '{}' {} command: '{}'", data.mode_id, cfg::only_frontend ? "irgen" : "asmgen",
+    println("|  Running '{}' {} command: '{}'", data.mode_id, only_run_frontend ? "irgen" : "asmgen",
             ir_asm_gen_command);
-    std::system(ir_asm_gen_command.c_str());
+
+    if (std::system(ir_asm_gen_command.c_str()) != 0)
+        return { "", "compiler error", "", 0 };
+
     println("|  Running '{}' link command: '{}'", data.mode_id, link_command);
-    std::system(link_command.c_str());
+    if (std::system(link_command.c_str()) != 0)
+        return { out_source, "linker error", "", 0 };
+
     println("|  Running '{}' execute command: '{}'", data.mode_id, exec_command);
-    std::system(exec_command.c_str());
 
-    auto syout = read_file(output);
-    fix_newline(syout);
+    std::string syout;
+    size_t time_elapsed = 0;
+    for (int i = 0; i < times; i++) {
+        if (std::system(exec_command.c_str()) != 0)
+            return { out_source, "exec error", "", time_elapsed };
 
-    auto time_elased = parse_time(read_file(outtime));
-
-    return {out_source, syout, time_elased};
+        syout = read_file(output);
+        fix_newline(syout);
+        time_elapsed += parse_time(read_file(outtime));
+    }
+    time_elapsed /= times;
+    return {out_source, syout, output, time_elapsed };
 }
 
-inline std::string prepare_sylib(const std::string &global_tmp_dir, bool only_run_frontend = cfg::only_frontend) {
+static std::string prepare_sylib(const std::string &global_tmp_dir, bool only_run_frontend) {
     std::string sylib_to_link;
     if (only_run_frontend) {
         sylib_to_link = global_tmp_dir + "/sylib.ll";
@@ -116,8 +121,8 @@ inline std::string prepare_sylib(const std::string &global_tmp_dir, bool only_ru
         auto sylibo = global_tmp_dir + "/sylib.o";
         sylib_to_link = global_tmp_dir + "/sylib.a";
 
-        std::string lib_command =
-            format("clang -c {} -o {} && ar rcs {} {}", cfg::sylibc, sylibo, sylib_to_link, sylibo);
+        std::string lib_command = format("{} -c {} -o {} && ar rcs {} {}", cfg::gcc_arm_command,
+            cfg::sylibc, sylibo, sylib_to_link, sylibo);
 
         println("Running '{}'.", lib_command);
         std::system(lib_command.c_str());
@@ -133,7 +138,7 @@ struct Rule {
 // (Pattern, matched results)
 using RunSet = std::vector<Rule>;
 using SkipSet = std::vector<Rule>;
-inline std::vector<std::filesystem::directory_entry> gather_test_files(const std::string &curr_test_dir, RunSet &run,
+static std::vector<std::filesystem::directory_entry> gather_test_files(const std::string &curr_test_dir, RunSet &run,
                                                                        SkipSet &skip) {
     std::vector<std::filesystem::directory_entry> test_files;
 
@@ -170,7 +175,7 @@ inline std::vector<std::filesystem::directory_entry> gather_test_files(const std
     return test_files;
 }
 
-inline void print_run_skip_status(const RunSet &run, const SkipSet &skip) {
+static void print_run_skip_status(const RunSet &run, const SkipSet &skip) {
     if (!skip.empty()) {
         std::vector<std::string> skipped_tests;
         for (auto &&r : skip)

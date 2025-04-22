@@ -1,17 +1,17 @@
-#include "../../../../include/ir/passes/transforms/dce.hpp"
-#include "../../../../include/ir/instructions/control.hpp"
-#include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
+#include "ir/passes/transforms/dce.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
+#include "ir/block_utils.hpp"
 
-#include <deque>
+#include <vector>
 
 namespace IR {
 PM::PreservedAnalyses DCEPass::run(Function &function, FAM &fam) {
     bool dce_inst_modified = false;
 
-    std::set<pInst> visited;
-    std::deque<pInst> worklist;
+    std::vector<pInst> worklist;
 
     for (const auto &block : function) {
         for (const auto &phi : block->phis())
@@ -23,30 +23,8 @@ PM::PreservedAnalyses DCEPass::run(Function &function, FAM &fam) {
         }
     }
 
-    while (!worklist.empty()) {
-        auto inst = worklist.front();
-        worklist.pop_front();
-        visited.emplace(inst);
-
-        if (inst->getUseCount() == 0) {
-            if (auto call = inst->as<CALLInst>()) {
-                if (hasSideEffect(fam, call))
-                    continue;
-            }
-            inst->getParent()->delInst(inst);
-            dce_inst_modified = true;
-            if (inst->getOpcode() != OP::PHI) {
-                for (const auto &use : inst->getOperands()) {
-                    if (auto i = use->getValue()->as<Instruction>()) {
-                        if (visited.find(i) == visited.end())
-                            worklist.emplace_back(i);
-                    }
-                }
-            }
-        }
-    }
+    dce_inst_modified |= eliminateDeadInsts(worklist, &fam);
 
     return dce_inst_modified ? PreserveCFGAnalyses() : PreserveAll();
 }
-
 } // namespace IR

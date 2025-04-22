@@ -1,16 +1,17 @@
 /**
- * @attention BB的uselist内是调用它的br，而不是它的父函数
+ * @attention BasicBlock 的 use_list 内是调用它的 BRInst，而不是它的父函数
  */
 
 #pragma once
 #ifndef GNALC_IR_BASIC_BLOCK_HPP
 #define GNALC_IR_BASIC_BLOCK_HPP
 
-#include "../utils/iterator.hpp"
 #include "base.hpp"
+#include "type_alias.hpp"
 #include "instruction.hpp"
 #include "instructions/phi.hpp"
-#include "type_alias.hpp"
+#include "utils/iterator.hpp"
+#include "utils/generic_visitor.hpp"
 
 #include <memory>
 #include <variant>
@@ -32,9 +33,20 @@ using FunctionBBIter = std::list<pBlock>::iterator;
 class BasicBlock : public Value {
     friend class Parser::CFGBuilder;
     friend class Function;
+    friend class Instruction;
     friend class PostDomTreeAnalysis;
     friend void linkBB(const pBlock &prebb, const pBlock &nxtbb);
+
+    // This should be deprecated in the future.
+    // When there are multiple identical edges between two BBs, this function
+    // can be error-prone.
     friend void unlinkBB(const pBlock &prebb, const pBlock &nxtbb);
+
+    // Use the following two instead
+    // Only unlink one edge
+    friend void unlinkOneEdge(const pBlock &prebb, const pBlock &nxtbb);
+    // Unlink all such edges
+    friend size_t unlinkAllEdges(const pBlock &prebb, const pBlock &nxtbb);
 
     std::list<wpBlock> pre_bb;  // 前驱
     std::list<wpBlock> next_bb; // 后继
@@ -43,7 +55,14 @@ class BasicBlock : public Value {
     std::vector<pVal> bb_params;
     wpFunc parent;
     size_t index = 0;
+    // Warning: BasicBlock's index is updated in an eager way,
+    //          while Instructions are lazily updated for performance.
+    // Delay update until Instruction's getIndex()
+    bool inst_index_valid = false;
 
+    struct BBSuccGetter {
+        auto operator()(const pBlock &bb) { return bb->getNextBB(); }
+    };
 public:
     using iterator = decltype(insts)::iterator;
     using const_iterator = decltype(insts)::const_iterator;
@@ -51,6 +70,14 @@ public:
     using const_reverse_iterator = decltype(insts)::const_reverse_iterator;
     using phi_const_iterator = decltype(phi_insts)::const_iterator;
     using phi_iterator = decltype(phi_insts)::iterator;
+    using CFGBFVisitor = Util::GenericBFVisitor<pBlock, BBSuccGetter>;
+    template <Util::DFVOrder order> using CFGDFVisitor = Util::GenericDFVisitor<pBlock, BBSuccGetter, order>;
+
+    auto getBFVisitor() { return CFGBFVisitor(as<BasicBlock>()); }
+
+    template <Util::DFVOrder order = Util::DFVOrder::PreOrder> auto getDFVisitor() {
+        return CFGDFVisitor<order>(as<BasicBlock>());
+    }
 
     explicit BasicBlock(std::string _name);
     BasicBlock(std::string _name, std::list<pInst> _insts);
@@ -92,12 +119,14 @@ public:
 
     enum class DEL_MODE { ALL, PHI, NON_PHI };
     // With use-def check, remove all matched.
-    // The instruction must have no users.
+    // The instruction must have no users in any basic block.
+    // Note that it can have users that have no parent.
     bool delInst(const pInst &inst, DEL_MODE mode = DEL_MODE::ALL);
 
     // Delete instructions that satisfied: `pred(inst) == true`
     // Requires the target instruction have no users than expiring users.
-    // "expiring users": users that are being deleted. (pred(inst->getUsers()) == true)
+    // "expiring users": users that are being deleted or have no parent.
+    // (inst.getParent() == nullptr || pred(inst->getUsers()) == true)
     // In other word, If pred(a) == true, pred(a->users) must be true
     template <typename Pred> bool delInstIf(Pred pred, const DEL_MODE mode = DEL_MODE::ALL) {
         bool found = false;
@@ -105,7 +134,7 @@ public:
             for (auto it = phi_insts.begin(); it != phi_insts.end();) {
                 if (pred(*it)) {
                     for (const auto &user : (*it)->inst_users()) {
-                        Err::gassert(pred(user),
+                        Err::gassert(user->getParent() == nullptr || pred(user),
                                      "BasicBlock::delInstIf(): Cannot delete a Phi without deleting its User.");
                     }
                     (*it)->setParent(nullptr);
@@ -119,7 +148,7 @@ public:
             for (auto it = insts.begin(); it != insts.end();) {
                 if (pred(*it)) {
                     for (const auto &user : (*it)->inst_users()) {
-                        Err::gassert(pred(user),
+                        Err::gassert(user->getParent()== nullptr || pred(user),
                                      "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
                     }
                     (*it)->setParent(nullptr);
@@ -130,7 +159,7 @@ public:
             }
         }
         if (found)
-            updateInstIndex();
+            inst_index_valid = false;
         return found;
     }
 
@@ -293,7 +322,7 @@ private:
     void addNextBB(const pBlock &bb);
     bool delPreBB(const pBlock &bb);
     bool delNextBB(const pBlock &bb);
-    void updateInstIndex() const;
+    void updateInstIndex();
 };
 } // namespace IR
 

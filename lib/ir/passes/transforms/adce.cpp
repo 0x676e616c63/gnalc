@@ -1,9 +1,9 @@
-#include "../../../../include/ir/passes/transforms/adce.hpp"
-#include "../../../../include/ir/block_utils.hpp"
-#include "../../../../include/ir/instructions/control.hpp"
-#include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
+#include "ir/passes/transforms/adce.hpp"
+#include "ir/block_utils.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
 
 #include <deque>
 
@@ -45,7 +45,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
 
         std::vector new_alive_blocks{inst->getParent()};
 
-        auto uses = inst->getOperands();
+        auto uses = inst->getRawOperands();
         for (const auto &use : uses) {
             if (auto oper = use->getValue()->as<Instruction>()) {
                 if (critical.find(oper) == critical.end()) {
@@ -56,8 +56,7 @@ PM::PreservedAnalyses ADCEPass::run(Function &function, FAM &fam) {
         }
 
         if (auto phi = inst->as<PHIInst>()) {
-            auto phi_opers = phi->getPhiOpers();
-            for (const auto &[_val, bb] : phi_opers)
+            for (const auto &[_val, bb] : phi->incomings())
                 new_alive_blocks.emplace_back(bb);
         }
 

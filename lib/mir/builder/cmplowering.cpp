@@ -1,11 +1,10 @@
-#include "../../../include/mir/SIMDinstruction/arithmetics.hpp"
-#include "../../../include/mir/SIMDinstruction/memory.hpp"
-#include "../../../include/mir/builder/lowering.hpp"
-#include "../../../include/mir/instructions/binary.hpp"
-#include "../../../include/mir/instructions/branch.hpp"
-#include "../../../include/mir/instructions/copy.hpp"
-#include "../../../include/mir/instructions/memory.hpp"
-#include "../../../include/mirtools/tool.hpp"
+#include "mir/SIMDinstruction/arithmetics.hpp"
+#include "mir/SIMDinstruction/memory.hpp"
+#include "mir/builder/lowering.hpp"
+#include "mir/instructions/binary.hpp"
+#include "mir/instructions/branch.hpp"
+#include "mir/instructions/memory.hpp"
+#include "mirtools/tool.hpp"
 #include <algorithm>
 
 using namespace MIR;
@@ -229,18 +228,18 @@ std::list<std::shared_ptr<Instruction>> InstLowering::fcmpLower(const std::share
         // mov %tmp::spr, #imme
         // vmov %tmp2, %tmp
         // vcmp.f32 %virVal, %tmp2
-        float immeVal;
+        float imme;
         std::shared_ptr<ConstantIDX> constVal;
         std::shared_ptr<BindOnVirOP> virVal;
 
         if (rconst) {
-            immeVal = rconst->getVal();
+            imme = rconst->getVal();
             virVal = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(lval));
-            constVal = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(rconst->getVal()));
+            constVal = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(imme));
         } else {
-            immeVal = rconst->getVal();
+            imme = lconst->getVal();
             virVal = std::dynamic_pointer_cast<BindOnVirOP>(operlower.fastFind(rval));
-            constVal = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(lconst->getVal()));
+            constVal = std::dynamic_pointer_cast<ConstantIDX>(operlower.fastFind(imme));
         }
 
         if (constVal->getConst()->isEncoded()) {
@@ -249,17 +248,19 @@ std::list<std::shared_ptr<Instruction>> InstLowering::fcmpLower(const std::share
             // vcmp.f32 %virVal, %tmp2
             // vmrs ...
 
-            auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+            // auto relay = operlower.mkOP(IR::makeBType(IR::IRBTYPE::I32), RegisterBank::gpr);
+            auto relay = operlower.LoadedFind(imme, blk);
             auto relay2 = operlower.mkOP(IR::makeBType(IR::IRBTYPE::FLOAT), RegisterBank::spr);
 
-            auto mov = std::make_shared<movInst>(SourceOperandType::ri, relay, constVal);
+            // auto mov = std::make_shared<movInst>(SourceOperandType::ri, relay, constVal);
+
             auto pair = std::make_pair(bitType::DEFAULT32, bitType::DEFAULT32);
-            auto vmov = std::make_shared<Vmov>(SourceOperandType::r, relay2, relay, pair);
+            auto vmov = std::make_shared<Vmov>(SourceOperandType::r, relay2, relay, pair); // twice mov
             pair = std::make_pair(bitType::f32, bitType::DEFAULT32);
             auto vcmp = std::make_shared<Vcmp>(NeonOpCode::VCMP, virVal, relay2, pair);
             auto vmrs = std::make_shared<Vmrs>();
 
-            insts.emplace_back(mov);
+            // insts.emplace_back(mov);
             insts.emplace_back(vmov);
             insts.emplace_back(vcmp);
             insts.emplace_back(vmrs);

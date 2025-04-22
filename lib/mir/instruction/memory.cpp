@@ -1,6 +1,12 @@
-#include "../../../include/mir/instructions/memory.hpp"
+#include "mir/instructions/memory.hpp"
 
 using namespace MIR;
+
+movInst::movInst(SourceOperandType _tptrait, std::shared_ptr<BindOnVirOP> TargetOP_,
+                 std::shared_ptr<Operand> SourceOperand_)
+    : Instruction(OpCode::MOV, _tptrait), SourceOperand(std::move(SourceOperand_)) {
+    addTargetOP(std::move(TargetOP_));
+}
 
 std::shared_ptr<Operand> movInst::getSourceOP(unsigned int seq) {
     if (seq == 1)
@@ -15,6 +21,20 @@ void movInst::setSourceOP(unsigned int seq, std::shared_ptr<Operand> ptr_new) {
     } else {
         Err::unreachable("set operand index out of ");
     }
+}
+
+strInst::strInst(SourceOperandType _tptrait, unsigned int _size, std::shared_ptr<BindOnVirOP> SourceOperand_,
+                 std::shared_ptr<BaseADROP> MemoryAddr_)
+    : Instruction(OpCode::STR, _tptrait), SourceOperand(std::move(SourceOperand_)), MemoryAddr(std::move(MemoryAddr_)),
+      size(_size) {
+    addTargetOP(nullptr);
+}
+
+strInst::strInst(SourceOperandType _tptrait, unsigned int _size, std::shared_ptr<BindOnVirOP> SourceOperand_,
+                 std::shared_ptr<BaseADROP> MemoryAddr_, std::shared_ptr<BindOnVirOP> IndexReg_)
+    : Instruction(OpCode::STR, _tptrait), SourceOperand(std::move(SourceOperand_)), MemoryAddr(std::move(MemoryAddr_)),
+      IndexReg(std::move(IndexReg_)), size(_size) {
+    addTargetOP(nullptr);
 }
 
 std::shared_ptr<Operand> strInst::getSourceOP(unsigned int seq) {
@@ -47,6 +67,25 @@ void strInst::setSourceOP(unsigned int seq, std::shared_ptr<Operand> ptr_new) {
     }
 }
 
+void strInst::setBaseReg(std::shared_ptr<BaseADROP> _ptr) { MemoryAddr = std::move(_ptr); }
+
+std::shared_ptr<BaseADROP> strInst::getBase() const { return MemoryAddr; }
+
+void strInst::setIndexReg(std::shared_ptr<BindOnVirOP> _ptr) { IndexReg = std::move(_ptr); }
+
+ldrInst::ldrInst(SourceOperandType _tptrait, unsigned int _size, std::shared_ptr<BindOnVirOP> TargetOP_,
+                 std::shared_ptr<BaseADROP> MemoryAddr_)
+    : Instruction(OpCode::LDR, _tptrait), MemoryAddr(std::move(MemoryAddr_)), size(_size) {
+    addTargetOP(std::move(TargetOP_));
+}
+
+ldrInst::ldrInst(SourceOperandType _tptrait, unsigned int _size, std::shared_ptr<BindOnVirOP> TargetOP_,
+                 std::shared_ptr<BaseADROP> MemoryAddr_, std::shared_ptr<BindOnVirOP> IndexReg_)
+    : Instruction(OpCode::LDR, _tptrait), MemoryAddr(std::move(MemoryAddr_)), IndexReg(std::move(IndexReg_)),
+      size(_size) {
+    addTargetOP(std::move(TargetOP_));
+}
+
 std::shared_ptr<Operand> ldrInst::getSourceOP(unsigned int seq) {
     if (seq == 1) {
         return MemoryAddr;
@@ -70,3 +109,9 @@ void ldrInst::setSourceOP(unsigned int seq, std::shared_ptr<Operand> ptr_new) {
         Err::unreachable("set operand index out of ");
     }
 }
+
+void ldrInst::setBaseReg(std::shared_ptr<BaseADROP> _ptr) { MemoryAddr = std::move(_ptr); }
+
+std::shared_ptr<BaseADROP> ldrInst::getBase() const { return MemoryAddr; }
+
+void ldrInst::setIndexReg(std::shared_ptr<BindOnVirOP> _ptr) { IndexReg = std::move(_ptr); }

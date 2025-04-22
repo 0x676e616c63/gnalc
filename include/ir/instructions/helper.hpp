@@ -1,16 +1,16 @@
 /**
- * @brief 由于采取的IR生成策略是先生成指令流，再划分基本块，故定义一些LLVM
- * IR中没有的指令用于辅助标记
+ * @brief 由于采取的 IR 生成策略是先生成指令流，再划分基本块，故定义一些辅助指令用于基本块划分
+ *        这些指令在 IRGenerator 内的 CFGBuilder 执行完之后将被移除，后续优化与此无关
  */
 
 #pragma once
 #ifndef GNALC_IR_INSTRUCTIONS_HELPER_HPP
 #define GNALC_IR_INSTRUCTIONS_HELPER_HPP
 
-#include <utility>
+#include "ir/instruction.hpp"
+#include "ir/type_alias.hpp"
 
-#include "../instruction.hpp"
-#include "../type_alias.hpp"
+#include <utility>
 
 namespace IR {
 enum class HELPERTY { IF, WHILE, BREAK, CONTINUE };

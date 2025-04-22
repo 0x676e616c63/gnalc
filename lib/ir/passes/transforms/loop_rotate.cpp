@@ -1,15 +1,13 @@
-#include "../../../../include/ir/passes/transforms/loop_rotate.hpp"
-
-#include "../../../../include/ir/block_utils.hpp"
-#include "../../../../include/ir/instructions/binary.hpp"
-#include "../../../../include/ir/instructions/control.hpp"
-#include "../../../../include/ir/instructions/converse.hpp"
-#include "../../../../include/ir/instructions/memory.hpp"
-#include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
-#include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
-#include "../../../../include/ir/passes/helpers/constant_fold.hpp"
-#include "../../../../include/ir/pattern_match.hpp"
-#include "../../../../include/pattern_match/pattern_match.hpp"
+#include "ir/passes/transforms/loop_rotate.hpp"
+#include "ir/block_utils.hpp"
+#include "ir/instructions/binary.hpp"
+#include "ir/instructions/control.hpp"
+#include "ir/instructions/memory.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
+#include "ir/passes/helpers/constant_fold.hpp"
+#include "ir/pattern_match.hpp"
+#include "pattern_match/pattern_match.hpp"
 
 #include <algorithm>
 #include <deque>
@@ -131,13 +129,11 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
         for (const auto &loop : looppdfv) {
             Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplify Form.");
 
-            bool latch_merged = false;
             if (auto dead_latch = tryMergeLatchToExiting(*loop)) {
                 loop_info.delBlock(dead_latch);
                 if (dead_latch->getNumPreds() == 0)
                     function.delBlock(dead_latch);
                 loop_rotate_cfg_modified = true;
-                latch_merged = true;
             }
 
             Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplified Form in LoopRotate");
@@ -254,14 +250,13 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
             for (const auto &inst : *old_header) {
                 auto cloned_inst = makeClone(inst);
                 cloned_inst->setName(inst->getName() + ".clonedlr");
-                auto operands = cloned_inst->getOperands();
-                for (const auto &use : operands) {
+                for (const auto &use : cloned_inst->operand_uses()) {
                     auto usee = use->getValue();
                     if (usee->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
                         auto usee_inst = usee->as<Instruction>();
                         Err::gassert(usee_inst != nullptr);
                         if (auto rd = find_rename_data(usee_inst))
-                            cloned_inst->replaceUse(use, rd->old_preheader);
+                            use->setValue(rd->old_preheader);
                     }
                 }
                 old_preheader->addInst(cloned_inst);
@@ -427,7 +422,8 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                 for (const auto &phi : new_header->getPhiInsts())
                     phi->replaceAllOperands(old_preheader, new_preheader);
 
-                cloned_ph_br->replaceAllOperands(new_header, new_preheader);
+                bool ok = cloned_ph_br->replaceAllOperands(new_header, new_preheader);
+                Err::gassert(ok);
 
                 // Fix CFG
                 unlinkBB(old_preheader, new_header);
@@ -436,8 +432,8 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
 
                 function.addBlock(new_header->getIter(), new_preheader);
 
-                if (!loop->isOutermost())
-                    loop_info.addBlock(loop->getParent(), new_preheader);
+                auto& new_dom = fam.getFreshResult<DomTreeAnalysis>(function);
+                loop_info.discoverNonHeaderBlock(new_preheader, new_dom);
 
                 // Dedicated Exits
                 // Note that the exit could be an exit block for multiple nested loops
@@ -463,8 +459,8 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                         continue;
                     auto new_bb = breakCriticalEdge(exit_pred, header_exit);
                     new_bb->setName("%lr.exit" + std::to_string(name_cnt++));
-                    if (auto exit_loop = loop_info.getLoopFor(header_exit))
-                        loop_info.addBlock(exit_loop, new_bb);
+                    auto& new_dom2 = fam.getFreshResult<DomTreeAnalysis>(function);
+                    loop_info.discoverNonHeaderBlock(new_bb, new_dom2);
                 }
             }
 
@@ -501,7 +497,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
 
     name_cnt = 0;
 
-    return loop_rotate_cfg_modified ? PreserveLoopAnalyses() : PreserveCFGAnalyses();
+    return loop_rotate_cfg_modified ? PreserveLoopAnalyses() : PreserveAll();
 }
 
 } // namespace IR

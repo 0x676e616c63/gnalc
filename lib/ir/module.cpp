@@ -1,5 +1,5 @@
-#include "../../include/ir/module.hpp"
-#include "../../include/ir/visitor.hpp"
+#include "ir/module.hpp"
+#include "ir/visitor.hpp"
 
 #include <algorithm>
 
@@ -19,7 +19,10 @@ bool Module::delGlobalVar(const pGlobalVar &target) {
     return false;
 }
 
-void Module::addFunction(pFunc func) { funcs.emplace_back(std::move(func)); }
+void Module::addFunction(pFunc func) {
+    func->setParent(this);
+    funcs.emplace_back(std::move(func));
+}
 
 const std::vector<pFunc> &Module::getFunctions() const { return funcs; }
 
@@ -27,13 +30,17 @@ bool Module::delFunction(const pFunc &target) {
     for (auto it = funcs.begin(); it != funcs.end(); ++it) {
         if (*it == target) {
             funcs.erase(it);
+            target->setParent(nullptr);
             return true;
         }
     }
     return false;
 }
 
-void Module::addFunctionDecl(pFuncDecl func_decl) { func_decls.emplace_back(std::move(func_decl)); }
+void Module::addFunctionDecl(pFuncDecl func_decl) {
+    func_decl->setParent(this);
+    func_decls.emplace_back(std::move(func_decl));
+}
 
 const std::vector<pFuncDecl> &Module::getFunctionDecls() const { return func_decls; }
 
@@ -41,14 +48,28 @@ bool Module::delFunctionDecl(const pFuncDecl &target) {
     for (auto it = func_decls.begin(); it != func_decls.end(); ++it) {
         if (*it == target) {
             func_decls.erase(it);
+            target->setParent(nullptr);
             return true;
         }
     }
     return false;
 }
 
+pFuncDecl Module::lookupFunction(const std::string &name) {
+    for (const auto &func_decl : func_decls) {
+        if (func_decl->isName(name))
+            return func_decl;
+    }
+    for (const auto &func : funcs) {
+        if (func->isName(name))
+            return func;
+    }
+    return nullptr;
+}
+
 ConstantPool &Module::getConstantPool() { return constant_pool; }
 
+// No need to set their parent to nullptr since they are going to be released.
 void Module::removeUnusedFuncDecls() {
     func_decls.erase(
         std::remove_if(func_decls.begin(), func_decls.end(), [](auto &&p) { return p->getUseCount() == 0; }),

@@ -3,11 +3,13 @@
 #ifndef GNALC_IR_PASSES_HELPER_CONSTANT_FOLD_HPP
 #define GNALC_IR_PASSES_HELPER_CONSTANT_FOLD_HPP
 
-#include "../../base.hpp"
-#include "../../basic_block.hpp"
-#include "../../function.hpp"
+#include "ir/base.hpp"
+#include "ir/basic_block.hpp"
+#include "ir/function.hpp"
 
 namespace IR {
+// Returns a constant, or the same value if failed.
+// It does NOT perform any substitution.
 pVal foldConstant(ConstantPool &cpool, const pVal &raw);
 } // namespace IR
 #endif

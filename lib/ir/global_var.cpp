@@ -1,6 +1,6 @@
-#include "../../include/ir/global_var.hpp"
-#include "../../include/ir/formatter.hpp"
-#include "../../include/ir/visitor.hpp"
+#include "ir/global_var.hpp"
+#include "ir/formatter.hpp"
+#include "ir/visitor.hpp"
 
 namespace IR {
 GVIniter::GVIniter(pType _ty) : initer_type(std::move(_ty)), is_zero(true) {}

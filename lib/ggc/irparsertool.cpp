@@ -1,5 +1,7 @@
-#include "../../include/ggc/irparsertool.hpp"
-#include "../../include/ggc/irparser.hpp"
+#include "ggc/irparsertool.hpp"
+#include "ggc/irparser.hpp"
+#include "config/config.hpp"
+
 using namespace IRParser;
 
 Module IRGenerator::module;
@@ -127,7 +129,7 @@ pFunc IRPT::newFunc(std::string &name_, const std::vector<pFormalParam> &params,
 pFuncDecl IRPT::newFuncDecl(std::string &name_, const std::vector<pType> &params,
                                 pType &ret_type, bool is_va_arg_) {
     pFuncDecl fd;
-    if (name_.find("memset") != std::string::npos) {
+    if (name_ == Config::IR::BUILTIN_MEMSET) {
         fd = make<FunctionDecl>(name_, params, ret_type, is_va_arg_, true, false);
     } else {
         fd = make<FunctionDecl>(name_, params, ret_type, is_va_arg_, false, true);
@@ -155,7 +157,7 @@ pBlock IRPT::newBB(std::string name, const std::list<pInst> &insts) {
 pPhi IRPT::newPhi(const string &name, pType &ty, const std::vector<std::pair<pVal, pBlock>>& phiopers) {
     auto p = vmake<PHIInst>(name, name, ty);
     for (auto& [v, b] : phiopers) {
-        p->addPhiOper(v, b);
+        p->addPhiOperNoCheck(v, b);
     }
     return p;
 }

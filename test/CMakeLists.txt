@@ -2,10 +2,14 @@ cmake_minimum_required(VERSION 3.10)
 project(gnalc)
 
 set(CMAKE_CXX_STANDARD 17)
+include_directories(include)
 include_directories(../include)
 
-add_executable(pass_benchmark benchmark.cpp)
+add_link_options("-rdynamic")
+
+add_executable(pass_benchmark benchmark.cpp benchmark_registry.cpp)
 add_executable(gnalc_test test.cpp)
+add_executable(timer timer.cpp)
 add_test(NAME base COMMAND gnalc_test)
 add_test(NAME o1 COMMAND gnalc_test -p -O1)
 add_test(NAME fixedpoint COMMAND gnalc_test -p -fixed-point)

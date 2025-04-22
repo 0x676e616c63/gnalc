@@ -1,5 +1,5 @@
 /**
- * @brief 包含通用的Type, Name类
+ * @brief 包含通用的 Type, Name 类
  */
 
 #pragma once
@@ -11,8 +11,8 @@
 #include <utility>
 #include <vector>
 
-#include "../utils/exception.hpp"
 #include "type_alias.hpp"
+#include "utils/exception.hpp"
 
 namespace IR {
 /**
@@ -30,16 +30,14 @@ enum class IRBTYPE {
 /**
  * @brief IR COMPOUND TYPE 包含复杂结构类型
  */
-enum class IRCTYPE { BASIC, PTR, ARRAY, FUNCTION };
+enum class IRCTYPE { BASIC, PTR, ARRAY, VECTOR, FUNCTION };
 
 inline size_t getBytes(IRBTYPE type) {
     switch (type) {
     case IRBTYPE::I1:
-        return 1;
     case IRBTYPE::I8:
         return 1;
     case IRBTYPE::I32:
-        return 4;
     case IRBTYPE::FLOAT:
         return 4;
     default:
@@ -83,8 +81,7 @@ public:
 };
 
 /**
- * @brief 简单结构Type，完全是函数的返回类型
- * @attention bty 不应为 PTR
+ * @brief 简单结构 Type，完全是函数的返回类型
  */
 class BType : public Type {
 protected:
@@ -126,7 +123,7 @@ protected:
     pType element_type;
 
 public:
-    PtrType(pType element_type_) : element_type(std::move(element_type_)) {}
+    explicit PtrType(pType element_type_) : element_type(std::move(element_type_)) {}
     const auto &getElmType() const { return element_type; }
 
     IRCTYPE getTrait() const override { return IRCTYPE::PTR; }
@@ -151,6 +148,30 @@ public:
 
     std::string toString() const override {
         return "[" + std::to_string(size) + " x " + element_type->toString() + "]";
+    }
+
+    size_t getBytes() const override { return size * element_type->getBytes(); }
+};
+
+class VectorType : public Type {
+protected:
+    pType element_type;
+    size_t size;
+
+public:
+    VectorType(pType element_type_, size_t size)
+        : element_type(std::move(element_type_)), size(size) {
+        Err::gassert(size != 0, "Vector size cannot be 0.");
+    }
+
+    const auto &getElmType() const { return element_type; }
+
+    size_t getVectorSize() const { return size; }
+
+    IRCTYPE getTrait() const override { return IRCTYPE::VECTOR; }
+
+    std::string toString() const override {
+        return "<" + std::to_string(size) + " x " + element_type->toString() + ">";
     }
 
     size_t getBytes() const override { return size * element_type->getBytes(); }
@@ -185,20 +206,20 @@ public:
     }
 };
 
-// 以下为一些辅助函数，类型不匹配会抛出exception
-
 pBType makeBType(IRBTYPE bty);
 pPtrType makePtrType(pType ele_ty);
 pArrayType makeArrayType(pType ele_ty, size_t size);
+pVecType makeVectorType(pType ele_ty, size_t size);
 pFuncType makeFunctionType(std::vector<pType> params, pType ret, bool is_va_arg);
 
-// 若类型不正确会返回nullptr
+// 若类型不正确会返回 nullptr, 同 ty->as<T>()
 pBType toBType(const pType &ty);
 pPtrType toPtrType(const pType &ty);
 pArrayType toArrayType(const pType &ty);
+pVecType toVectorType(const pType &ty);
 pFuncType toFunctionType(const pType &ty);
 
-// 返回PTR, ARRAY的element_type; BType 会返回 nullptr
+// 返回 PTR, ARRAY, VECTOR 的 element_type; BType 会返回 nullptr
 pType getElm(const pType &ty);
 
 bool isSameType(const pType &a, const pType &b);
@@ -218,7 +239,7 @@ public:
     explicit NameC(std::string _name) : name(std::move(_name)) {}
 
     void setName(std::string _name) { name = std::move(_name); }
-    bool isName(NameRef _name) { return _name == name; }
+    bool isName(NameRef _name) const { return _name == name; }
     std::string getName() const { return name; }
 };
 } // namespace IR
