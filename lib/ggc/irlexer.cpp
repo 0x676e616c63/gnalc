@@ -1,3 +1,4 @@
+#ifdef GNALC_EXTENSION_GGC
 #line 2 "irlexer.cpp"
 
 #line 4 "irlexer.cpp"
@@ -2633,5 +2634,4 @@ void yyfree (void * ptr )
 #define YYTABLES_NAME "yytables"
 
 #line 98 "irlexer.l"
-
-
+#endif

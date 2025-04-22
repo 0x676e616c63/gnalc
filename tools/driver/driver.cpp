@@ -18,7 +18,7 @@
 #include "ggc/irparsertool.hpp"
 #endif
 
-#if GNALC_EXTENSION_BRAINFK // in config.hpp
+#ifdef GNALC_EXTENSION_BRAINFK // in CMakeLists.txt
 #include "codegen/brainfk/bfgen.hpp"
 #include "codegen/brainfk/bfprinter.hpp"
 #include "codegen/brainfk/bftrans.hpp"
@@ -370,7 +370,10 @@ Extensions:
     if (only_compilation) {
         MIR::ARMPrinter armv7gen(*poutstream);
         armv7gen.printout(lower.getModule());
+        return 0;
     }
+
+    Err::todo("Assembler");
 
     return 0;
 }

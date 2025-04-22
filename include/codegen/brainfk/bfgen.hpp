@@ -44,17 +44,15 @@
 // - Optimization.
 // - Fix trans to 8-bit BF.
 // - Maybe implement float.
+#ifdef GNALC_EXTENSION_BRAINFK
 #pragma once
 #ifndef GNALC_CODEGEN_BRAINFK_BFGEN_HPP
 #define GNALC_CODEGEN_BRAINFK_BFGEN_HPP
 
-#include "config/config.hpp"
-#if GNALC_EXTENSION_BRAINFK
-
-#include <map>
-
 #include "ir/visitor.hpp"
 #include "bfmodule.hpp"
+
+#include <map>
 
 namespace BrainFk {
 // This generates 3 tape 32-bit brainfuck

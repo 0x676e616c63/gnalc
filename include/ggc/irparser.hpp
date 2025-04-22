@@ -1,3 +1,4 @@
+#ifdef GNALC_EXTENSION_GGC
 // A Bison parser, made by GNU Bison 3.8.2.
 
 // Skeleton interface for Bison LALR(1) parsers in C++
@@ -3329,3 +3330,4 @@ switch (yykind)
 
 
 #endif // !YY_YY_INCLUDE_GGC_IRPARSER_HPP_INCLUDED
+#endif

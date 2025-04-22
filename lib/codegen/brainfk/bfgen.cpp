@@ -1,5 +1,5 @@
+#ifdef GNALC_EXTENSION_BRAINFK
 #include "config/config.hpp"
-#if GNALC_EXTENSION_BRAINFK
 #include "codegen/brainfk/bfgen.hpp"
 #include "codegen/brainfk/bfmodule.hpp"
 #include "utils/logger.hpp"

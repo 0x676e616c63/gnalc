@@ -2,9 +2,6 @@
 #ifndef GNALC_CONFIG_CONFIG_HPP
 #define GNALC_CONFIG_CONFIG_HPP
 
-// Extension
-#define GNALC_EXTENSION_BRAINFK 0
-
 namespace Config::IR {
 // IRGenerator
 constexpr auto REGISTER_TEMP_NAME = "%%__GNALC_IR_TEMP_NAME";

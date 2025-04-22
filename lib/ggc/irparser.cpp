@@ -1,3 +1,4 @@
+#ifdef GNALC_EXTENSION_GGC
 // A Bison parser, made by GNU Bison 3.8.2.
 
 // Skeleton implementation for Bison LALR(1) parsers in C++
@@ -2387,3 +2388,4 @@ void
 yyy::parser::error (const std::string& msg) { 
       std::cerr << "Error: " << msg << std::endl; 
 }
+#endif

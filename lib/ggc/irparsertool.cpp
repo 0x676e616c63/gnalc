@@ -1,3 +1,4 @@
+#ifdef GNALC_EXTENSION_GGC
 #include "ggc/irparsertool.hpp"
 #include "ggc/irparser.hpp"
 #include "config/config.hpp"
@@ -177,3 +178,4 @@ void IRPT::replaceUF(const string &name_, const pFuncDecl& fd) {
         }
     }
 }
+#endif
