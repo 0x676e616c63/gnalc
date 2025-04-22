@@ -1,5 +1,3 @@
-#include "config/config.hpp"
-
 #include "ir/passes/pass_builder.hpp"
 #include "ir/passes/pass_manager.hpp"
 #include "ir/passes/utilities/irprinter.hpp"

@@ -185,6 +185,10 @@ PM::PreservedAnalyses LoopEliminationPass::run(Function &function, FAM &fam) {
     auto &scev = fam.getResult<SCEVAnalysis>(function);
     auto &loop_info = fam.getResult<LoopAnalysis>(function);
 
+    // Fold LCSSA Phi for SCEV Expansion
+    for (const auto& bb : function)
+        loop_elim_inst_modified |= foldPHI(bb, /* preserve_lcssa */ false);
+
     // Since we might delete loops, make a temporary object.
     auto toplevels = loop_info.getTopLevelLoops();
     for (const auto &toplevel : toplevels) {

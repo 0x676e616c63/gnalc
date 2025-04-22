@@ -98,6 +98,8 @@ void registerPassForOptInfo(PM &fpm, bool verify, bool strict, bool enable, Pass
         if (verify)
             fpm.addPass(VerifyPass(strict));
     }
+    else
+        Logger::logDebug("[PB]: '", Pass::name(), "' disabled.");
 }
 
 template <typename PM, typename First, typename... Rest>
@@ -120,18 +122,35 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
     };
 
     auto make_clean = [&options] {
-        PM::FixedPointPM<Function> fpm;
-        FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
-        FUNCTION_TRANSFORM(sccp, ConstantPropagationPass());
-        FUNCTION_TRANSFORM(gvnpre, BreakCriticalEdgesPass(), GVNPREPass());
-        FUNCTION_TRANSFORM(dce, DCEPass());
-        return fpm;
-    };
+        auto make_basic_clean = [&options] {
+            PM::FixedPointPM<Function> fpm;
+            FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
+            FUNCTION_TRANSFORM(sccp, ConstantPropagationPass());
+            FUNCTION_TRANSFORM(gvnpre, BreakCriticalEdgesPass(), GVNPREPass());
+            FUNCTION_TRANSFORM(dce, DCEPass());
+            return fpm;
+        };
 
-    auto make_mem_clean = [&options] {
-        PM::FixedPointPM<Function> fpm;
-        FUNCTION_TRANSFORM(loadelim, LoadEliminationPass());
-        FUNCTION_TRANSFORM(dse, DSEPass());
+        auto make_cfg_clean = [&options] {
+            PM::FixedPointPM<Function> fpm;
+            FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
+            FUNCTION_TRANSFORM(adce, ADCEPass())
+            return fpm;
+        };
+
+        auto make_mem_clean = [&options] {
+            PM::FixedPointPM<Function> fpm;
+            FUNCTION_TRANSFORM(loadelim, LoadEliminationPass());
+            FUNCTION_TRANSFORM(dse, DSEPass());
+            return fpm;
+        };
+        FPM fpm;
+        fpm.addPass(make_basic_clean());
+
+        PM::FixedPointPM<Function> fixed;
+        fixed.addPass(make_cfg_clean());
+        fixed.addPass(make_mem_clean());
+        fpm.addPass(std::move(fixed));
         return fpm;
     };
 
@@ -140,6 +159,15 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
         FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass());
         FUNCTION_TRANSFORM(inliner, InlinePass());
         FUNCTION_TRANSFORM(internalize, InternalizePass());
+        FUNCTION_TRANSFORM(mem2reg, PromotePass());
+        return fpm;
+    };
+
+    auto make_loop = [&options] {
+        FPM fpm;
+        FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
+        FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
+        FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
         return fpm;
     };
 
@@ -147,24 +175,10 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
     fpm.addPass(NameNormalizePass(true));
     FUNCTION_TRANSFORM(mem2reg, PromotePass());
     fpm.addPass(make_ipo());
-    FUNCTION_TRANSFORM(mem2reg, PromotePass());
     fpm.addPass(make_clean());
     fpm.addPass(make_arithmetic());
-    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
+    fpm.addPass(make_loop());
     fpm.addPass(make_clean());
-    // Simplify Blocks to make LoadElim faster.
-    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
-    fpm.addPass(make_mem_clean());
-    // ADCE is time-consuming
-    fpm.addPass(ADCEPass());
-    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
-    // Loop
-    FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
-    FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
-    FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
-    fpm.addPass(make_clean());
-    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
-    fpm.addPass(make_mem_clean());
     fpm.addPass(CodeGenPreparePass());
     fpm.addPass(NameNormalizePass(true));
 
