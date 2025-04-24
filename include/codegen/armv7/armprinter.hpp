@@ -4,7 +4,7 @@
 
 #include "mir/instructions/memory.hpp"
 #include "mir/module.hpp"
-#include "mirtools/tool.hpp"
+#include "mirtools-old/tool.hpp"
 #include <iostream>
 
 namespace MIR {

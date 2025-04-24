@@ -1,10 +1,10 @@
 #pragma once
-#ifndef GNALC_ARMV8_MIR_PASSES_PASS_BUILDER_HPP
-#define GNALC_ARMV8_MIR_PASSES_PASS_BUILDER_HPP
+#ifndef GNALC_MIR_PASSES_PASS_BUILDER_HPP
+#define GNALC_MIR_PASSES_PASS_BUILDER_HPP
 
 #include "pass_manager.hpp"
 
-namespace MIR_new {
+namespace MIR {
 struct OptInfo {
     bool peephole = false;      // func pass
     bool phiEliminate = true;   // module pass
@@ -23,5 +23,5 @@ public:
     static void registerFunctionAnalyses(FAM &);
     static void registerProxies(FAM &, MAM &);
 };
-} // namespace MIR_new
+} // namespace MIR
 #endif

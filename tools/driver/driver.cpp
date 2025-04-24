@@ -3,10 +3,10 @@
 #include "ir/passes/pass_builder.hpp"
 #include "ir/passes/pass_manager.hpp"
 #include "ir/passes/utilities/irprinter.hpp"
-#include "mir/builder/lowering.hpp"
-#include "mir/passes/pass_builder.hpp"
-#include "mir/passes/pass_manager.hpp"
-#include "mir/passes/utilities/mirprinter.hpp"
+#include "mir-old/builder/lowering.hpp"
+#include "mir-old/passes/pass_builder.hpp"
+#include "mir-old/passes/pass_manager.hpp"
+#include "mir-old/passes/utilities/mirprinter.hpp"
 #include "utils/logger.hpp"
 
 #ifndef GNALC_EXTENSION_GGC // in CMakeLists.txt

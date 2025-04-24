@@ -1,0 +1,18 @@
+transform文件夹下的passes有比较严格的顺序
+1. lowering.hpp: lower to Generic MIR
+2. isel.hpp: instruction selection
+3. registercoalesce.hpp: register coalesce
+4. peephole.hpp: peephole opt
+5. PreRAlegalize.hpp: Pre-RA legalization
+6. PreRAscheduling.hpp: Pre-RA scheduling, minimize register pressure
+7. RA.hpp: register allocation
+8. stackgenerate.hpp: legalize stack objects, stack -> sp
+9. tco.hpp: ICF & Tail duplication
+10. PostRAscheduling.hpp: post-RA scheduling, minimize cycles
+11. codelayout.hpp: code layout opt
+12. dce.hpp: remove unreachable block/continuous goto/unused label/peephole
+13. CFGsimplify.hpp: CFG simplify
+14. PostRAlegalize.hpp: post legalization
+15. 
+
+其中 3, 4, 6, 9, 10, 11, 12, 13 是性能优化, 不是必要的
