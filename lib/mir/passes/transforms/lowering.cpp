@@ -104,7 +104,7 @@ void LoweringContext::emitInstBeforeBr(const MIRInst_p_l &inst) { // insts ?
 
     auto insert_it = insts.end();
     for (auto it = insts.begin(); it != insts.end(); ++it) {
-        if (it->get()->opcode() == OpC::InstBranch) {
+        if (it->get()->isGeneric() && it->get()->opcode<OpC>() == OpC::InstBranch) {
             insert_it = it;
             break;
         }
@@ -122,7 +122,7 @@ void LoweringContext::emitInstBeforeBr(const MIRInst_p &inst) {
 
     auto insert_it = insts.end();
     for (auto it = insts.begin(); it != insts.end(); ++it) {
-        if (it->get()->opcode() == OpC::InstBranch) {
+        if (it->get()->isGeneric() && it->get()->opcode<OpC>() == OpC::InstBranch) {
             insert_it = it;
             break;
         }
@@ -170,7 +170,7 @@ MIRModule &MIR_new::loweringModule(const IRModule_p &module, CodeGenContext &ctx
         globals.push_back(make<MIRGlobal>(layout.codeAlignment, mfunc));
         mModule->addFunc(mfunc);
 
-        globalMap.emplace(func->getName(), mfunc); // with prefix
+        globalMap.emplace(func->getName(), mfunc); // map with prefix
     }
 
     for (auto &globalval : globalvals) {
@@ -284,6 +284,7 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
     // target
     // layout
 
+    // lower blks, deal with entry and exit
     for (auto &blk : func->getDFVisitor<Util::DFVOrder::ReversePostOrder>()) {
         auto mblk = make<MIRBlk>(blk->getName(), mfunc);
         mfunc->blks().emplace_back(mblk);
@@ -299,6 +300,15 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
             auto vreg = ctx.newVReg(inst->getType());
             ctx.addOperand(inst, vreg);
         }
+    }
+
+    auto entry = func->getBlocks().front();
+    auto mblk = blkMap.at(entry);
+    mfunc->setEntryBlk(mblk); // entry blk
+
+    for (auto &blk : func->getExitBBs()) {
+        auto mblk = blkMap.at(blk);
+        mfunc->addExitBlk(mblk);
     }
 
     // solve pass-down args
@@ -376,7 +386,7 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
         }
     }
 
-    ///@todo not implement yet
+    ///@todo bug check
     ctx.emitPhi();
 }
 

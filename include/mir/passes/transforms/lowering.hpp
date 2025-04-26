@@ -47,7 +47,7 @@ private:
     std::map<string, MIRGlobal_p> &mGlobalMap;
     // mFPLoadedConstantCache
     std::map<unsigned, MIROperand_p> mConstMap;
-    std::map<IRVal_p, MIROperand_p> &mValMap;
+    std::map<IRVal_p, MIROperand_p> &mValMap; // isa, vreg
 
     std::vector<PhiOperPair> phiOpers;
 

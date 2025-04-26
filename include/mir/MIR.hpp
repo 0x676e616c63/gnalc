@@ -120,7 +120,7 @@ using OpC = MIRGenericInst;
 enum class MIRRegStatue { alive = 0, dead = 1 };
 
 struct MIRReg {
-    unsigned reg; // 0 ~ 30
+    unsigned reg; // vreg id, ISAreg
     MIRRegStatue flag = MIRRegStatue::alive;
 
     explicit MIRReg(unsigned _reg) noexcept : reg(_reg) {}
@@ -153,8 +153,6 @@ using MIRRelocable_p = std::shared_ptr<MIRRelocable>;
 using MIRRelocable_wp = std::weak_ptr<MIRRelocable>;
 
 class MIROperand;
-using MIROperand_p = std::shared_ptr<MIROperand>;
-using MIROperand_wp = std::weak_ptr<MIROperand>;
 
 constexpr uint32_t VRegBegin = 0b0101U << 28;
 constexpr uint32_t StkObjBegin = 0b1010U << 28;
@@ -182,6 +180,14 @@ public:
     };
     long imme() const { return std::get<long>(mOperand); }
     unsigned reg() const { return std::get<MIRReg_p>(mOperand)->reg; }
+    unsigned idVReg() const {
+        Err::gassert(isVirtualReg(reg()), "MIROperand::idVReg: *this is not a VReg");
+        return reg();
+    }
+    unsigned isa() const {
+        Err::gassert(isISAReg(reg()), "MIROperand::idVReg: *this is not a ISA");
+        return reg();
+    }
     auto regFlag() const { return std::get<MIRReg_p>(mOperand)->flag; }
     auto &regFlag() { return std::get<MIRReg_p>(mOperand)->flag; }
     double prob() const { return std::get<double>(mOperand); }
@@ -203,12 +209,19 @@ public:
         return make<MIROperand>(encoding, type);
     }
 
+    /// @note asISAReg 和 asVReg 使用构型相同的MIRReg, 区别在于范围不同
+    /// @note VReg 的起始位置会大于 ISAReg
+    /// @note asISAReg 一般直接传入ARMReg的值, 构造出的Operand不存常量/变量池
+    /// @note asVReg 一般由ctx传递id
+    /// @note ISA序号, 或者VReg id, 都由reg()获得, 可以考虑在此基础上进一步具象化和检查
     static MIROperand_p asISAReg(unsigned reg, OpT type) {
         Err::gassert(isISAReg(reg), "MIROperand::asISAReg: input reg doesnt match");
         return make<MIROperand>(make<MIRReg>(reg), type);
     }
 
-    static MIROperand_p asVReg(unsigned reg, OpT type) { return make<MIROperand>(make<MIRReg>(reg + VRegBegin), type); }
+    static MIROperand_p asVReg(unsigned reg, OpT type) {
+        return make<MIROperand>(make<MIRReg>(reg + VRegBegin), type); // auto add VRegBegin here
+    }
 
     static MIROperand_p asStkObj(unsigned reg, OpT type) {
         return make<MIROperand>(make<MIRReg>(reg + StkObjBegin), type);
@@ -218,6 +231,12 @@ public:
 
     static MIROperand_p asProb(double prob) { return make<MIROperand>(prob, OpT::special); }
 
+    // simple verify
+    constexpr bool isVRegOrISAReg() {
+        return isReg() &&
+               (isVirtualReg(std::get<MIRReg_p>(mOperand)->reg) || isISAReg(std::get<MIRReg_p>(mOperand)->reg));
+    }
+
     virtual ~MIROperand() = default;
 };
 
@@ -226,17 +245,24 @@ public:
     static constexpr unsigned maxOpCnt = 7;
 
 private:
-    OpC mOpcode;
+    std::variant<OpC, ARMOpC> mOpcode;
     ///@note <0>代表def, 如果为nullptr, 代表指令没有def, 或者是需要用WZR/XZR占位
     std::array<MIROperand_p, maxOpCnt> mOperands;
     explicit MIRInst(OpC opcode) noexcept : mOpcode(opcode){};
+    explicit MIRInst(ARMOpC opcode) noexcept : mOpcode(opcode){};
 
 public:
     template <typename... Args> static std::shared_ptr<MIRInst> make(Args &&...args) {
         return std::shared_ptr<MIRInst>(new MIRInst(std::forward<Args>(args)...));
     }
 
-    OpC opcode() const { return mOpcode; }
+    template <typename T> T opcode() const {
+        Err::gassert(std::is_same_v<T, OpC> || std::is_same_v<T, ARMOpC>, " MIRInst::opcode: warning typename");
+        return std::get<T>(mOpcode); // wrong variant idx maybe ?
+    }
+
+    bool isGeneric() const { return mOpcode.index() == 0; }
+
     MIRInst &resetOpcode(OpC opcode) {
         mOpcode = opcode;
         return *this;
@@ -254,10 +280,6 @@ public:
     virtual ~MIRInst() = default;
 };
 
-using MIRInst_p = std::shared_ptr<MIRInst>;
-using MIRInst_wp = std::weak_ptr<MIRInst>;
-using MIRInst_p_l = std::list<MIRInst_p>;
-
 enum class StkObjUsage {
     Arg, // pass to sub func
     CalleeArg,
@@ -274,31 +296,47 @@ struct StkObj {
     StkObjUsage usage;
 };
 
-class MIRFunction;
-using MIRFunction_p = std::shared_ptr<MIRFunction>;
-using MIRFunction_wp = std::weak_ptr<MIRFunction>;
-class MIRBlk;
-using MIRBlk_p = std::shared_ptr<MIRBlk>;
-using MIRBlk_wp = std::weak_ptr<MIRBlk>;
-using MIRBlk_p_l = std::list<MIRBlk_p>;
-
 class MIRFunction : public MIRRelocable {
 private:
     MIRBlk_p_l mBlks;
+
+    MIRBlk_p mEntryBlk;
+    MIRBlk_p_l mExitBlks;
+
     std::map<MIROperand_p, StkObj> mStkObjs;
-    std::vector<MIROperand> mArgs;
+    std::vector<MIROperand_p> mArgs;
+
+    // infos
+    bool leafFunc = true;
+    uint64_t calleesaveRegisters = 0ULL;
+    bool largeStk = false; // may use fp(X29)
 
 public:
     explicit MIRFunction(const string &sym) noexcept : MIRRelocable(sym) {}
+
     MIROperand_p addStkObj(CodeGenContext &ctx, unsigned size, unsigned alignmant, int offset, StkObjUsage);
+    void setEntryBlk(MIRBlk_p blk) { mEntryBlk = blk; }
+    void addExitBlk(MIRBlk_p blk) { mExitBlks.emplace_back(blk); }
 
     auto &blks() { return mBlks; }
+    auto &EntryBlk() { return mEntryBlk; }
+    auto &ExitBlks() { return mExitBlks; }
     auto &Args() { return mArgs; }
     auto &StkObjs() { return mStkObjs; }
 
     const auto &blks() const { return mBlks; }
+    const auto &EntryBlk() const { return mEntryBlk; }
+    const auto &ExitBlks() const { return mExitBlks; }
     const auto &Args() const { return mArgs; }
     const auto &StkObjs() const { return mStkObjs; }
+
+    bool isLeafFunc() const { return leafFunc; }
+    uint64_t calleeSaveRegs() const { return calleesaveRegisters; }
+    bool isLargeStk() const { return largeStk; }
+
+    void affirmNotLeafFunc() { leafFunc = false; }
+    uint64_t &calleeSaveRegs() { return calleesaveRegisters; }
+    void affirmLargeStk() { largeStk = true; }
 
     bool isFunc() const override { return true; }
 
@@ -390,11 +428,11 @@ public:
 class MIRGlobal : public std::enable_shared_from_this<MIRGlobal> {
 private:
     std::size_t alignment;
-    MIRRelocable_p reloc; // func, blk, data, bss
+    MIRRelocable_p mreloc; // func, blk, data, bss
 
 public:
     MIRGlobal(std::size_t _alignment, MIRRelocable_p _reloc) noexcept
-        : alignment(_alignment), reloc(std::move(_reloc)) {}
+        : alignment(_alignment), mreloc(std::move(_reloc)) {}
 
     template <typename T> std::shared_ptr<T> as() {
         Err::gassert(std::is_base_of_v<MIRGlobal, T>, "MIRGlobal::as(): Expected a derived type.");
@@ -405,6 +443,9 @@ public:
         Err::gassert(std::is_base_of_v<MIRGlobal, T>, "MIRGlobal::as(): Expected a derived type.");
         return std::dynamic_pointer_cast<const T>(shared_from_this());
     }
+
+    auto &reloc() { return mreloc; }
+    const auto &reloc() const { return mreloc; }
 
     ~MIRGlobal() = default;
 };
