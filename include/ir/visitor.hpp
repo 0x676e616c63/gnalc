@@ -18,6 +18,7 @@
 #include "instructions/helper.hpp"
 #include "instructions/memory.hpp"
 #include "instructions/phi.hpp"
+#include "instructions/vector.hpp"
 #include "module.hpp"
 
 namespace IR {
@@ -37,6 +38,8 @@ public:
     virtual void visit(ConstantI8 &node) { Err::not_implemented("IRVisitor::visit(ConstantI8&)"); }
     virtual void visit(ConstantInt &node) { Err::not_implemented("IRVisitor::visit(ConstantInt&)"); }
     virtual void visit(ConstantFloat &node) { Err::not_implemented("IRVisitor::visit(ConstantFloat&)"); }
+    virtual void visit(ConstantIntVector &node) { Err::not_implemented("IRVisitor::visit(ConstantIntVector&)"); }
+    virtual void visit(ConstantFloatVector &node) { Err::not_implemented("IRVisitor::visit(ConstantFloatVector&)"); }
     virtual void visit(BinaryInst &node) { Err::not_implemented("IRVisitor::visit(BinaryInst&)"); }
     virtual void visit(FNEGInst &node) { Err::not_implemented("IRVisitor::visit(FNEGInst&)"); }
     virtual void visit(ICMPInst &node) { Err::not_implemented("IRVisitor::visit(ICMPInst&)"); }
@@ -57,6 +60,9 @@ public:
     virtual void visit(STOREInst &node) { Err::not_implemented("IRVisitor::visit(STOREInst&)"); }
     virtual void visit(GEPInst &node) { Err::not_implemented("IRVisitor::visit(GEPInst&)"); }
     virtual void visit(PHIInst &node) { Err::not_implemented("IRVisitor::visit(PHIInst&)"); }
+    virtual void visit(EXTRACTInst &node) { Err::not_implemented("IRVisitor::visit(EXTRACTInst&)"); }
+    virtual void visit(INSERTInst &node) { Err::not_implemented("IRVisitor::visit(INSERTInst&)"); }
+    virtual void visit(SHUFFLEInst &node) { Err::not_implemented("IRVisitor::visit(SHUFFLEInst&)"); }
 
     virtual ~IRVisitor() = default;
 };

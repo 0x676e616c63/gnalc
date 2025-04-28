@@ -43,6 +43,9 @@ private:
     static std::string fSTOREInst(STOREInst &inst);
     static std::string fGEPInst(GEPInst &inst);
     static std::string fPHIInst(PHIInst &inst);
+    static std::string fEXTRACTInst(EXTRACTInst &inst);
+    static std::string fINSERTInst(INSERTInst &inst);
+    static std::string fSHUFFLEInst(SHUFFLEInst &inst);
 
     static std::string fHELPERInst(HELPERInst &inst);
 };

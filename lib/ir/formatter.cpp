@@ -6,6 +6,7 @@
 #include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
 #include "ir/instructions/phi.hpp"
+#include "ir/instructions/vector.hpp"
 #include "utils/logger.hpp"
 
 #include <string>
@@ -79,8 +80,14 @@ std::string IRFormatter::formatOp(OP op) {
         return "getelementptr";
     case OP::PHI:
         return "phi";
+    case OP::EXTRACT:
+        return "extractelement";
+    case  OP::INSERT:
+        return "insertelement";
+    case OP::SHUFFLE:
+        return "shufflevector";
     default:
-        Logger::logDebug("ERR: Unknown OP");
+        Err::unreachable("ERR: Unknown OP");
         return "UNKNOWNOP";
     }
 }
@@ -207,7 +214,7 @@ std::string IRFormatter::formatGV(GlobalVariable &gv) {
     ret += gv.getName();
     ret += " = ";
     ret += "dso_local ";
-    ret += IRFormatter::formatSTOCLASS(gv.getStorageClass()) + " ";
+    ret += formatSTOCLASS(gv.getStorageClass()) + " ";
 
     // 最外层的initer的类型即为gv的类型，就在initer中递归print了
     // // type
@@ -215,12 +222,12 @@ std::string IRFormatter::formatGV(GlobalVariable &gv) {
     //     for (int size : gv.getArraySize()) {
     //         ret += "[" + std::to_string(size) + " x ";
     //     }
-    //     ret += IRFormatter::formatIRTYPE(gv.getVarType());
+    //     ret += formatIRTYPE(gv.getVarType());
     //     for (int i = 0; i < gv.getArraySize().size(); i++) {
     //         ret += "]";
     //     }
     // } else {
-    //     ret += IRFormatter::formatIRTYPE(gv.getVarType());
+    //     ret += formatIRTYPE(gv.getVarType());
     // }
     // ret += " ";
 
@@ -242,37 +249,43 @@ std::string IRFormatter::formatInst(Instruction &inst) {
     case OP::FDIV:
     case OP::REM:
     case OP::FREM:
-        return IRFormatter::fBinaryInst(inst.as_ref<BinaryInst>());
+        return fBinaryInst(inst.as_ref<BinaryInst>());
     case OP::FPTOSI:
     case OP::SITOFP:
     case OP::ZEXT:
     case OP::BITCAST:
-        return IRFormatter::fCastInst(inst.as_ref<CastInst>());
+        return fCastInst(inst.as_ref<CastInst>());
     case OP::FNEG:
-        return IRFormatter::fFNEGInst(inst.as_ref<FNEGInst>());
+        return fFNEGInst(inst.as_ref<FNEGInst>());
     case OP::ICMP:
-        return IRFormatter::fICMPInst(inst.as_ref<ICMPInst>());
+        return fICMPInst(inst.as_ref<ICMPInst>());
     case OP::FCMP:
-        return IRFormatter::fFCMPInst(inst.as_ref<FCMPInst>());
+        return fFCMPInst(inst.as_ref<FCMPInst>());
     case OP::RET:
-        return IRFormatter::fRETInst(inst.as_ref<RETInst>());
+        return fRETInst(inst.as_ref<RETInst>());
     case OP::BR:
-        return IRFormatter::fBRInst(inst.as_ref<BRInst>());
+        return fBRInst(inst.as_ref<BRInst>());
     case OP::CALL:
-        return IRFormatter::fCALLInst(inst.as_ref<CALLInst>());
+        return fCALLInst(inst.as_ref<CALLInst>());
     case OP::ALLOCA:
-        return IRFormatter::fALLOCAInst(inst.as_ref<ALLOCAInst>());
+        return fALLOCAInst(inst.as_ref<ALLOCAInst>());
     case OP::LOAD:
-        return IRFormatter::fLOADInst(inst.as_ref<LOADInst>());
+        return fLOADInst(inst.as_ref<LOADInst>());
     case OP::STORE:
-        return IRFormatter::fSTOREInst(inst.as_ref<STOREInst>());
+        return fSTOREInst(inst.as_ref<STOREInst>());
     case OP::GEP:
-        return IRFormatter::fGEPInst(inst.as_ref<GEPInst>());
+        return fGEPInst(inst.as_ref<GEPInst>());
     case OP::PHI:
-        return IRFormatter::fPHIInst(inst.as_ref<PHIInst>());
+        return fPHIInst(inst.as_ref<PHIInst>());
+    case OP::EXTRACT:
+        return fEXTRACTInst(inst.as_ref<EXTRACTInst>());
+    case OP::INSERT:
+        return fINSERTInst(inst.as_ref<INSERTInst>());
+    case OP::SHUFFLE:
+        return fSHUFFLEInst(inst.as_ref<SHUFFLEInst>());
 
     case OP::HELPER:
-        return IRFormatter::fHELPERInst(inst.as_ref<HELPERInst>());
+        return fHELPERInst(inst.as_ref<HELPERInst>());
 
     default:
         return "unknown instruction";
@@ -283,7 +296,7 @@ std::string IRFormatter::fBinaryInst(BinaryInst &inst) {
     std::string ret;
     ret += inst.getName();
     ret += " = ";
-    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
+    ret += formatOp(inst.getOpcode()) + " ";
     ret += inst.getType()->toString() + " ";
     ret += inst.getLHS()->getName();
     ret += ", ";
@@ -295,7 +308,7 @@ std::string IRFormatter::fFNEGInst(FNEGInst &inst) {
     std::string ret;
     ret += inst.getName();
     ret += " = ";
-    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
+    ret += formatOp(inst.getOpcode()) + " ";
     ret += inst.getType()->toString() + " ";
     ret += inst.getVal()->getName();
     return ret;
@@ -305,8 +318,8 @@ std::string IRFormatter::fICMPInst(ICMPInst &inst) {
     std::string ret;
     ret += inst.getName();
     ret += " = ";
-    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
-    ret += IRFormatter::formatCMPOP(inst.getCond()) + " ";
+    ret += formatOp(inst.getOpcode()) + " ";
+    ret += formatCMPOP(inst.getCond()) + " ";
     ret += inst.getLHS()->getType()->toString() + " ";
     ret += inst.getLHS()->getName();
     ret += ", ";
@@ -318,8 +331,8 @@ std::string IRFormatter::fFCMPInst(FCMPInst &inst) {
     std::string ret;
     ret += inst.getName();
     ret += " = ";
-    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
-    ret += IRFormatter::formatCMPOP(inst.getCond()) + " ";
+    ret += formatOp(inst.getOpcode()) + " ";
+    ret += formatCMPOP(inst.getCond()) + " ";
     ret += inst.getLHS()->getType()->toString() + " ";
     ret += inst.getLHS()->getName();
     ret += ", ";
@@ -329,20 +342,20 @@ std::string IRFormatter::fFCMPInst(FCMPInst &inst) {
 
 std::string IRFormatter::fRETInst(RETInst &inst) {
     std::string ret;
-    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
+    ret += formatOp(inst.getOpcode()) + " ";
     if (inst.isVoid()) {
         ret += "void";
     } else {
-        ret += IRFormatter::formatValue(*(inst.getRetVal()));
+        ret += formatValue(*(inst.getRetVal()));
     }
     return ret;
 }
 
 std::string IRFormatter::fBRInst(BRInst &inst) {
     std::string ret;
-    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
+    ret += formatOp(inst.getOpcode()) + " ";
     if (inst.isConditional()) {
-        ret += IRFormatter::formatValue(*(inst.getCond())); // TYPE i1?
+        ret += formatValue(*(inst.getCond())); // TYPE i1?
         ret += ", label ";
         ret += inst.getTrueDest()->getName();
         ret += ", label ";
@@ -362,7 +375,7 @@ std::string IRFormatter::fCALLInst(CALLInst &inst) {
     }
     if (inst.isTailCall())
         ret += "tail ";
-    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
+    ret += formatOp(inst.getOpcode()) + " ";
     ret += inst.getType()->toString() + " ";
     ret += inst.getFuncName();
     ret += "(";
@@ -381,7 +394,7 @@ std::string IRFormatter::fCastInst(CastInst &inst) {
     std::string ret;
     ret += inst.getName();
     ret += " = ";
-    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
+    ret += formatOp(inst.getOpcode()) + " ";
     ret += inst.getOType()->toString() + " ";
     ret += inst.getOVal()->getName();
     ret += " to ";
@@ -393,13 +406,13 @@ std::string IRFormatter::fALLOCAInst(ALLOCAInst &inst) {
     std::string ret;
     ret += inst.getName();
     ret += " = ";
-    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
+    ret += formatOp(inst.getOpcode()) + " ";
     // if (inst.isStatic()) {
     ret += inst.getBaseType()->toString();
     // } else {
-    // ret += IRFormatter::formatIRTYPE(inst.getBaseType());
+    // ret += formatIRTYPE(inst.getBaseType());
     // ret += ", ";
-    // ret += IRFormatter::formatValue(*(inst.getNumElements()));
+    // ret += formatValue(*(inst.getNumElements()));
     // }
     ret += ", align ";
     ret += std::to_string(inst.getAlign());
@@ -410,9 +423,9 @@ std::string IRFormatter::fLOADInst(LOADInst &inst) {
     std::string ret;
     ret += inst.getName();
     ret += " = ";
-    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
+    ret += formatOp(inst.getOpcode()) + " ";
     ret += inst.getType()->toString() + ", ";
-    ret += IRFormatter::formatValue(*(inst.getPtr()));
+    ret += formatValue(*(inst.getPtr()));
     ret += ", align ";
     ret += std::to_string(inst.getAlign());
     return ret;
@@ -420,10 +433,10 @@ std::string IRFormatter::fLOADInst(LOADInst &inst) {
 
 std::string IRFormatter::fSTOREInst(STOREInst &inst) {
     std::string ret;
-    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
-    ret += IRFormatter::formatValue(*(inst.getValue()));
+    ret += formatOp(inst.getOpcode()) + " ";
+    ret += formatValue(*(inst.getValue()));
     ret += ", ";
-    ret += IRFormatter::formatValue(*(inst.getPtr()));
+    ret += formatValue(*(inst.getPtr()));
     ret += ", align ";
     ret += std::to_string(inst.getAlign());
     return ret;
@@ -434,15 +447,15 @@ std::string IRFormatter::fGEPInst(GEPInst &inst) {
     ret += inst.getName();
     ret += " = ";
 
-    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
+    ret += formatOp(inst.getOpcode()) + " ";
     ret += inst.getBaseType()->toString();
 
     ret += ", ";
-    ret += IRFormatter::formatValue(*(inst.getPtr()));
+    ret += formatValue(*(inst.getPtr()));
 
-    for (auto idx : inst.getIdxs()) {
+    for (const auto& idx : inst.getIdxs()) {
         ret += ", ";
-        ret += IRFormatter::formatValue(*idx);
+        ret += formatValue(*idx);
     }
 
     return ret;
@@ -452,7 +465,7 @@ std::string IRFormatter::fPHIInst(PHIInst &inst) {
     std::string ret;
     ret += inst.getName();
     ret += " = ";
-    ret += IRFormatter::formatOp(inst.getOpcode()) + " ";
+    ret += formatOp(inst.getOpcode()) + " ";
     ret += inst.getType()->toString() + " ";
     auto opers = inst.getPhiOpers();
     for (auto it = opers.begin();;) {
@@ -467,6 +480,38 @@ std::string IRFormatter::fPHIInst(PHIInst &inst) {
             ret += ", ";
         }
     }
+    return ret;
+}
+
+std::string IRFormatter::fEXTRACTInst(EXTRACTInst &inst) {
+    std::string ret;
+    ret += inst.getName();
+    ret += " = ";
+    ret += formatOp(inst.getOpcode()) + " ";
+    ret += formatValue(*inst.getVector()) + ", ";
+    ret += formatValue(*inst.getIdx());
+    return ret;
+}
+
+std::string IRFormatter::fINSERTInst(INSERTInst &inst) {
+    std::string ret;
+    ret += inst.getName();
+    ret += " = ";
+    ret += formatOp(inst.getOpcode()) + " ";
+    ret += formatValue(*inst.getVector()) + ", ";
+    ret += formatValue(*inst.getElm()) + ", ";
+    ret += formatValue(*inst.getIdx());
+    return ret;
+}
+
+std::string IRFormatter::fSHUFFLEInst(SHUFFLEInst &inst) {
+    std::string ret;
+    ret += inst.getName();
+    ret += " = ";
+    ret += formatOp(inst.getOpcode()) + " ";
+    ret += formatValue(*inst.getVector1()) + ", ";
+    ret += formatValue(*inst.getVector2()) + ", ";
+    ret += formatValue(*inst.getMask());
     return ret;
 }
 

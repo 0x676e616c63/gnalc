@@ -33,9 +33,9 @@
 #include "ir/passes/transforms/mem2reg.hpp"
 #include "ir/passes/transforms/namenormalizer.hpp"
 #include "ir/passes/transforms/reassociate.hpp"
-#include "ir/passes/transforms/slp_vectorizer.hpp"
 #include "ir/passes/transforms/tail_recursion_elimination.hpp"
 #include "ir/passes/transforms/tree_shaking.hpp"
+#include "ir/passes/transforms/vectorizer.hpp"
 
 // Utilities
 #include "ir/passes/utilities/irprinter.hpp"

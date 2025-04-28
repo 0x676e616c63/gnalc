@@ -26,7 +26,7 @@ private:
     bool foldBinary(const pPhi &phi);
     bool foldGEP(const pPhi &phi);
     bool foldLoad(const pPhi &phi);
-    bool isLoadSuitableForSinking(const pLoad &load);
+    bool isLoadSuitableForSinking(const pLoad &load) const;
 };
 
 } // namespace IR

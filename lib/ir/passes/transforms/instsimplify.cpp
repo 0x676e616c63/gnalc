@@ -534,17 +534,17 @@ bool InstSimplifyPass::foldGEP(const pPhi &phi) {
     return true;
 }
 
-bool InstSimplifyPass::isLoadSuitableForSinking(const pLoad &load) {
+bool InstSimplifyPass::isLoadSuitableForSinking(const pLoad &load) const {
     auto &aa_res = fam->getResult<AliasAnalysis>(*func);
 
-    // If there is some modify after the load in the block, we can not sink it.
+    // If there is some modifying after the load in the block, we cannot sink it.
     for (auto it = load->getIter(); it != load->getParent()->end(); ++it) {
         auto modref = aa_res.getInstModRefInfo(*it, load->getPtr(), *fam);
         if (modref == ModRefInfo::Mod || modref == ModRefInfo::ModRef)
             return false;
     }
 
-    // If the load has its address taken, ( which means the user of that memory are all store/load )
+    // If the load has its address taken, (which means the user of that memory is all store/loads )
     // it's not profitable to sink it. Because we may promote it to register later.
     if (auto alloc = load->getPtr()->as<ALLOCAInst>()) {
         bool isAddressTaken = false;

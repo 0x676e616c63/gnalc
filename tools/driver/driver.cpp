@@ -126,7 +126,7 @@ int main(int argc, char **argv) {
         OPT_ARG("--indvars", "--no-indvars", indvars)
         OPT_ARG("--lsr", "--no-lsr", loop_strength_reduce)
         OPT_ARG("--loopelim", "--no-loopelim", loopelim)
-        OPT_ARG("--slp-vectorizer", "--no-slp-vectorizer", slp_vectorizer)
+        OPT_ARG("--vectorizer", "--no-vectorizer", vectorizer)
         OPT_ARG("--jumpthreading", "--no-jumpthreading", jump_threading)
         OPT_ARG("--internalize", "--no-internalize", internalize)
         // Module Transforms
@@ -206,7 +206,7 @@ Optimizations Flags:
   --indvars            - Induction variable simplification
   --lsr                - Loop strength reduction
   --loopelim           - Loop elimination
-  --slp-vectorizer     - Superword-level parallelism vectorization
+  --vectorizer         - Vectorizer
   --jumpthreading      - Jump threading
   --internalize        - Internalize global variables
   --treeshaking        - Shake off unused functions, function declarations and global variables

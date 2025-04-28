@@ -57,6 +57,11 @@ enum class OP {
     // Function Call
     CALL,
 
+    // Vector
+    EXTRACT,
+    INSERT,
+    SHUFFLE,
+
     // Helper for easy IRGen, pruned after CFGBuilder
     HELPER
 };
