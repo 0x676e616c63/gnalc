@@ -63,6 +63,8 @@ public:
     const_reverse_iterator crbegin() const { return inner_values.crbegin(); }
     const_reverse_iterator crend() const { return inner_values.crend(); }
 
+    auto size() const { return inner_values.size(); }
+
     void accept(IRVisitor &visitor) override;
 };
 } // namespace detail
