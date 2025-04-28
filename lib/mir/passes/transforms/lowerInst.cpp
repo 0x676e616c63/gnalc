@@ -159,7 +159,7 @@ void MIR_new::lowerInst(IR::pIcmp icmp, LoweringContext &ctx) {
 void MIR_new::lowerInst(IR::pFcmp fcmp, LoweringContext &ctx) {
     auto def = ctx.newVReg(fcmp->getType());
 
-    ctx.emitInst(MIRInst::make(OpC::InstICmp)
+    ctx.emitInst(MIRInst::make(OpC::InstFCmp)
                      ->setOperand<0>(def)
                      ->setOperand<1>(ctx.mapOperand(fcmp->getLHS()))
                      ->setOperand<2>(ctx.mapOperand(fcmp->getRHS()))
@@ -295,6 +295,7 @@ void LoweringContext::emitPhi() {
         auto succ = ctx.CurrentBlk();
         ctx.setCurrentBlk(pred);
 
+        // src maybe a constant
         ctx.emitInstBeforeBr(MIRInst::make(chooseCopyOpC(dst, src))->setOperand<0>(dst)->setOperand<1>(src));
 
         ctx.setCurrentBlk(succ);

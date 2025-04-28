@@ -1,7 +1,7 @@
 transform文件夹下的passes有比较严格的顺序
-1. lowering.hpp: lower to Generic MIR
-2. isel.hpp: instruction selection
-3. registercoalesce.hpp: register coalesce
+1. lowering.hpp: lower to Generic MIR                                   ok
+2. isel.hpp: instruction selection                                      模式匹配还没有
+3. registercoalesce.hpp: register coalesce                              省了
 4. peephole.hpp: peephole opt
 5. PreRAlegalize.hpp: Pre-RA legalization
 6. PreRAscheduling.hpp: Pre-RA scheduling, minimize register pressure

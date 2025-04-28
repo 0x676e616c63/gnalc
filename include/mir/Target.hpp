@@ -17,7 +17,8 @@ template <typename T> bool is12ImmeWithProbShift(T imm) {
     ///@warning use in ADD/SUB/CMP/CMN
 
     Err::gassert(!std::is_same_v<T, float>, "is12ImmeWithShift: fadd/fsub dont support a imme");
-    Err::gassert(std::is_same_v<T, int> || std::is_same_v<T, unsigned>, "is12ImmeWithShift: cant convert to encode");
+    Err::gassert(std::is_same_v<T, int> || std::is_same_v<T, unsigned> || std::is_same_v<T, long>,
+                 "is12ImmeWithShift: cant convert to encode");
 
     unsigned imme = static_cast<unsigned>(imm);
 
@@ -214,6 +215,8 @@ class MIRBlk;
 using MIRBlk_p = std::shared_ptr<MIRBlk>;
 using MIRBlk_wp = std::weak_ptr<MIRBlk>;
 using MIRBlk_p_l = std::list<MIRBlk_p>;
+class StkObj;
+class MIRJmpTable;
 
 class TargetFrameInfo { // armv8(A64)
 public:
@@ -234,19 +237,48 @@ public:
     constexpr size_t getStackPointerAlignment() const { return 16; };
 };
 
+class ISelContext;
+struct CodeGenContext;
+
+struct InstLegalizeContext {
+    MIRInst_p minst;
+    MIRInst_p_l insts;
+    MIRInst_p_l::iterator iter;
+    CodeGenContext &ctx;
+};
+
+class TargetISelInfo {
+public:
+    TargetISelInfo() = default;
+
+    bool isLegalGenericInst(MIRInst_p) const;
+    bool matchAndSel(MIRInst_p, ISelContext &, bool allow) const;
+    bool legalizeInst(MIRInst_p minst, ISelContext &ctx) const;
+    bool matchAndSelectImpl(MIRInst_p minst, ISelContext &ctx) const;
+    void postLegalizeInst(const InstLegalizeContext &);
+    void postLegalizeInst(const InstLegalizeContext &, MIRInst_p_l &);
+    void preLegalizeInst(const InstLegalizeContext &);
+    void legalizeInstWithStackOperand(const InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const;
+
+    ~TargetISelInfo() = default;
+};
+
 struct CodeGenContext {
     const Target &target;
 
     const TargetFrameInfo &frameInfo;
+    const TargetISelInfo &iselInfo;
+    // const TargetInstInfo &instInfo;
 
     unsigned idx = 0;
     unsigned nextId() { return ++idx; }
 
-    unsigned idx_l = 0;
+    unsigned idx_l = 0; // label
     string nextBlkLable(const string &func_name) {
         return func_name + "_blk_" + std::to_string(idx_l++); // rename
     }
 };
+
 }; // namespace MIR_new
 
 #endif

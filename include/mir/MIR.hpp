@@ -25,13 +25,14 @@ template <typename T, typename... Args> std::unique_ptr<T> makeu(const Args... a
 
 enum class OperandType {
     Bool,  // cmp/fcmp result maybe use many times
+    Int,   // when use reg adjustment
     Int32, // original int32, or extend from int8, int16
     Int64,
     Ptr = Int64,
     Intvec,
     Float32,
     Floatvec,
-    special, // prob, alignment, load/store size
+    special, // prob, alignment, load/store size...
     High32,
     Low32,
     // Arm only now
@@ -97,14 +98,11 @@ enum class MIRGenericInst {
     InstSExt,
     InstZExt,
     InstTrunc,
-    InstF2U,
     InstF2S,
-    InstU2F,
     InstS2F,
-    InstFCast,
     // Misc
     InstCopy,   // vreg to vreg
-    InstSelect, // CSEL/FSEL <Reg>, <Reg>, <Reg>, <cond>, ir `
+    InstSelect, // CSEL/FSEL <dst_Reg>, <Reg>, <Reg>, <cond>
     InstLoadGlobalAddress,
     InstLoadImm, // const to vreg
     InstLoadStackObjectAddr,
@@ -192,9 +190,12 @@ public:
     auto &regFlag() { return std::get<MIRReg_p>(mOperand)->flag; }
     double prob() const { return std::get<double>(mOperand); }
 
+    ///@note int, float, condflag
     bool isImme() const { return std::holds_alternative<long>(mOperand); }
     bool isUnused() const { return std::holds_alternative<std::monostate>(mOperand); }
     bool isReg() const { return std::holds_alternative<MIRReg_p>(mOperand); }
+    bool isVReg() const { return isVirtualReg(reg()); }
+    bool isISA() const { return isISAReg(reg()); }
     bool isReloc() const { return std::holds_alternative<MIRRelocable_p>(mOperand); }
     bool isProb() const { return std::holds_alternative<double>(mOperand); }
 
@@ -233,8 +234,8 @@ public:
 
     // simple verify
     constexpr bool isVRegOrISAReg() {
-        return isReg() &&
-               (isVirtualReg(std::get<MIRReg_p>(mOperand)->reg) || isISAReg(std::get<MIRReg_p>(mOperand)->reg));
+        return isReg() && (isVirtualReg(std::get<MIRReg_p>(mOperand)->reg) ||
+                           isISAReg(std::get<MIRReg_p>(mOperand)->reg)); // not invaild
     }
 
     virtual ~MIROperand() = default;
@@ -270,12 +271,26 @@ public:
 
     bool checkOp(unsigned idx) const { return !mOperands[idx]->isUnused(); }
     MIROperand_p &getOp(unsigned idx) { return mOperands[idx]; }
+    MIROperand_p &getDef() { return mOperands[0]; }
+    MIROperand_p &ensureDef() {
+        Err::gassert(mOperands[0] != nullptr, "MIRInst::ensureDef: def is nullptr");
+        return mOperands[0];
+    }
+
+    unsigned getUseNr() const;
+
+    unsigned getDefNr() const;
+
+    unsigned getOpNr() const;
 
     template <unsigned idx> std::shared_ptr<MIRInst> setOperand(const MIROperand_p &operand) {
         Err::gassert(idx < maxOpCnt, "MIRInst: set a op out of range");
         mOperands[idx] = operand;
         return shared_from_this();
     }
+
+    auto &operands() { return mOperands; }
+    const auto &operands() const { return mOperands; }
 
     virtual ~MIRInst() = default;
 };
@@ -412,6 +427,7 @@ public:
     ~MIRDataStorage() override = default;
 };
 
+/// @brief 跳转表, 如swtich语句, 向量函数表等
 class MIRJmpTable : public MIRRelocable {
 private:
     std::vector<MIRRelocable_wp> msyms{};

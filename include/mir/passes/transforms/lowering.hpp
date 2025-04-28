@@ -83,7 +83,14 @@ public:
         auto mconst = mConstMap.at(imme_idx);
 
         if (!mconst) {
-            mconst = MIROperand::asImme<T>(imme);
+            if constexpr (std::is_same_v<T, int>) {
+                mconst = MIROperand::asImme<T>(imme, OpT::Int32);
+            } else if constexpr (std::is_same_v<T, float>) {
+                mconst = MIROperand::asImme<T>(imme, OpT::Float32);
+            } else if constexpr (std::is_same_v<T, Cond>) {
+                mconst = MIROperand::asImme<T>(imme, OpT::CondFlag);
+            }
+
             mConstMap.emplace(imme_idx, mconst);
         }
 
@@ -115,7 +122,9 @@ public:
     ~LoweringContext() = default;
 };
 
-MIRModule &loweringModule(const IRModule_p &module, CodeGenContext &ctx, IR::FAM &);
+///@note implement entry
+///@note how to pass a IR::FAM
+MIRModule &loweringModule(const IRModule_p &module, CodeGenContext &ctx, IR::FAM &fam);
 
 MIRGlobal_p loweringGlobal(const IR::GlobalVariable &);
 

@@ -8,3 +8,26 @@ MIROperand_p MIRFunction::addStkObj(CodeGenContext &ctx, unsigned size, unsigned
     mStkObjs.emplace(new_stk, StkObj{size, alignmant, offset, usage}); // stkobj改成map, 和老mir不一样
     return new_stk;
 }
+
+unsigned MIRInst::getUseNr() const {
+    unsigned cnt = 0;
+
+    for (unsigned i = 1; i < MIRInst::maxOpCnt; ++i) { // skip def
+        if (mOperands[i]) {
+            ++cnt;
+        }
+    }
+
+    return cnt;
+}
+
+unsigned MIRInst::getDefNr() const {
+    ///@note currently only 0 or 1
+    if (mOperands[0] == nullptr) {
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+unsigned MIRInst::getOpNr() const { return getUseNr() + getDefNr(); }
