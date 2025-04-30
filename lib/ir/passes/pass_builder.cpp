@@ -252,16 +252,11 @@ MPM PassBuilder::buildModulePipeline(PMOptions opt_info) {
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     fpm.addPass(PromotePass());
-    fpm.addPass(TailRecursionEliminationPass());
-    fpm.addPass(InlinePass());
-    fpm.addPass(InternalizePass());
-    fpm.addPass(PromotePass());
+    fpm.addPass(ConstantPropagationPass());
+    fpm.addPass(GVNPREPass());
     fpm.addPass(NameNormalizePass(true));
-    fpm.addPass(LoopSimplifyPass());
     fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(PrintSCEVPass(std::cerr));
-    fpm.addPass(LoopEliminationPass());
-    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(VectorizerPass());
     return fpm;
 
     // // For LoopUnroll Test

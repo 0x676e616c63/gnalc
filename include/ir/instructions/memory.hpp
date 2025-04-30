@@ -50,6 +50,7 @@ public:
 
     pVal getPtr() const;
     int getAlign() const;
+    void setAlign(int a);
 
     bool isVectorLoad() const;
 
@@ -71,6 +72,7 @@ public:
     pVal getValue() const;
     pVal getPtr() const;
     int getAlign() const;
+    void setAlign(int a);
 
     bool isVectorStore() const;
 
