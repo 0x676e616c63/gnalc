@@ -51,8 +51,8 @@ PM::PreservedAnalyses InternalizePass::run(Function &function, FAM &fam) {
 
             // Already internalized
             if (auto call = inst_user->as<CALLInst>()) {
-                if (call->getFuncName() == Config::IR::BUILTIN_MEMCPY ||
-                    call->getFuncName() == Config::IR::BUILTIN_MEMSET) {
+                if (call->getFuncName() == Config::IR::MEMCPY_INTRINSIC_NAME ||
+                    call->getFuncName() == Config::IR::MEMSET_INTRINSIC_NAME) {
                     safe_to_internalize = false;
                     break;
                 }
@@ -83,7 +83,7 @@ PM::PreservedAnalyses InternalizePass::run(Function &function, FAM &fam) {
         if (global_var->isArray()) {
             auto initer = global_var->getIniter();
             if (initer.isZero()) {
-                auto builtin_memset = module->lookupFunction(Config::IR::BUILTIN_MEMSET);
+                auto builtin_memset = module->lookupFunction(Config::IR::MEMSET_INTRINSIC_NAME);
                 auto call_memset = std::make_shared<CALLInst>(
                     builtin_memset,
                     std::vector<pVal>{alloca_inst,                                           // ptr
@@ -92,7 +92,7 @@ PM::PreservedAnalyses InternalizePass::run(Function &function, FAM &fam) {
                                       function.getConst(false)});
                 entry->addInst(insert_before, call_memset);
             } else {
-                auto builtin_memcpy = module->lookupFunction(Config::IR::BUILTIN_MEMCPY);
+                auto builtin_memcpy = module->lookupFunction(Config::IR::MEMCPY_INTRINSIC_NAME);
                 auto call_memcpy = std::make_shared<CALLInst>(
                     builtin_memcpy,
                     std::vector<pVal>{alloca_inst,                                           // ptr

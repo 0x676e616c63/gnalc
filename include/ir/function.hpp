@@ -9,6 +9,7 @@
 
 #include <memory>
 #include <utility>
+#include <set>
 #include <vector>
 
 namespace Parser {
@@ -16,20 +17,39 @@ class CFGBuilder;
 }
 
 namespace IR {
+enum class FuncAttr {
+    // user defined functions
+    NotBuiltin,
+
+    // Sylib
+    isSylib,
+
+    // Intrinsic
+    isIntrinsic,
+    isMemsetIntrinsic,
+    isMemcpyIntrinsic,
+    isSIMDIntrinsic,
+
+    // Only Builtin Functions
+    // For user-defined functions, use AliasAnalysis instead.
+    builtinHasMemRead,
+    builtinHasMemWrite,
+};
 class FunctionDecl : public Value {
 private:
-    bool is_builtin;
-    bool is_sylib;
+    std::set<FuncAttr> func_attrs;
     Module *parent;
 
 public:
-    FunctionDecl(std::string name_, std::vector<pType> params, pType ret_type, bool is_va_arg_, bool is_builtin_,
-                 bool is_sylib_);
+    FunctionDecl(std::string name_, std::vector<pType> params, pType ret_type,
+        bool is_va_arg_, std::set<FuncAttr> attrs = {});
 
     void accept(IRVisitor &visitor) override;
 
     bool isSylib() const;
-    bool isBuiltin() const;
+    bool isIntrinsic() const;
+
+    bool hasAttr(FuncAttr attr) const;
 
     void setParent(Module *module);
     Module *getParent() const;

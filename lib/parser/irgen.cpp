@@ -1,3 +1,4 @@
+#include "parser/irgen.hpp"
 #include "config/config.hpp"
 #include "ir/constant.hpp"
 #include "ir/instructions/binary.hpp"
@@ -7,11 +8,10 @@
 #include "ir/instructions/helper.hpp"
 #include "ir/instructions/memory.hpp"
 #include "ir/module.hpp"
-#include "parser/irgen.hpp"
 #include "utils/logger.hpp"
 
 #include <algorithm>
-#include <functional>      
+#include <functional>
 
 using namespace AST;
 namespace Parser {
@@ -28,38 +28,46 @@ void IRGenerator::visit(CompUnit &node) {
     auto i32ptr_type = IR::makePtrType(i32_type);
     auto f32_type = IR::makeBType(IR::IRBTYPE::FLOAT);
     auto f32ptr_type = IR::makePtrType(f32_type);
-    // Warning: defaults to make Sylib function
     auto make_decl = [this](const std::string &name, std::vector<IR::pType> params, IR::pType ret,
-                            bool is_va_arg = false, bool is_builtin = false, bool is_sylib = true) {
+                            std::set<IR::FuncAttr> attrs, bool is_va_arg = false) {
         auto fn = std::make_shared<IR::FunctionDecl>("@" + name, std::move(params), std::move(ret), is_va_arg,
-                                                     is_builtin, is_sylib);
+                                                     std::move(attrs));
         symbol_table.insert(name, fn);
         module.addFunctionDecl(fn);
     };
 
     // sylib
-    make_decl("getint", {}, i32_type);
-    make_decl("getch", {}, i32_type);
-    make_decl("getarray", {i32ptr_type}, i32_type);
-    make_decl("getfloat", {}, f32_type);
-    make_decl("getfarray", {f32ptr_type}, i32_type);
-    make_decl("putint", {i32_type}, void_type);
-    make_decl("putch", {i32_type}, void_type);
-    make_decl("putarray", {i32_type, i32ptr_type}, void_type);
-    make_decl("putfloat", {f32_type}, void_type);
-    make_decl("putfarray", {i32_type, f32ptr_type}, void_type);
-    make_decl("putf", {i8ptr_type}, void_type, true); // VAArg
-    make_decl("_sysy_starttime", {i32_type}, void_type);
-    make_decl("_sysy_stoptime", {i32_type}, void_type);
+    make_decl("getint", {}, i32_type, {IR::FuncAttr::isSylib});
+    make_decl("getch", {}, i32_type, {IR::FuncAttr::isSylib});
+    make_decl("getfloat", {}, f32_type, {IR::FuncAttr::isSylib});
+    make_decl("putint", {i32_type}, void_type, {IR::FuncAttr::isSylib});
+    make_decl("putch", {i32_type}, void_type, {IR::FuncAttr::isSylib});
+    make_decl("putfloat", {f32_type}, void_type, {IR::FuncAttr::isSylib});
+    make_decl("_sysy_starttime", {i32_type}, void_type, {IR::FuncAttr::isSylib});
+    make_decl("_sysy_stoptime", {i32_type}, void_type, {IR::FuncAttr::isSylib});
+
+    make_decl("getarray", {i32ptr_type}, i32_type,
+        {IR::FuncAttr::isSylib, IR::FuncAttr::builtinHasMemWrite});
+    make_decl("getfarray", {f32ptr_type}, i32_type,
+        {IR::FuncAttr::isSylib, IR::FuncAttr::builtinHasMemWrite});
+    make_decl("putarray", {i32_type, i32ptr_type}, void_type,
+        {IR::FuncAttr::isSylib, IR::FuncAttr::builtinHasMemRead});
+    make_decl("putfarray", {i32_type, f32ptr_type}, void_type,
+              {IR::FuncAttr::isSylib, IR::FuncAttr::builtinHasMemRead});
+    make_decl("putf", {i8ptr_type}, void_type,
+        {IR::FuncAttr::isSylib, IR::FuncAttr::builtinHasMemRead}, true); // VAArg
 
     // builtin
     // memset (dest, val, len, isvolatile)
-    make_decl(Config::IR::BUILTIN_MEMSET + 1, {i8ptr_type, i8_type, i32_type, i1_type}, void_type, false, true,
-              false); // -> not va_arg, is builtin, and not sylib
+    make_decl(Config::IR::MEMSET_INTRINSIC_NAME + 1,
+        {i8ptr_type, i8_type, i32_type, i1_type}, void_type,
+              {IR::FuncAttr::isIntrinsic, IR::FuncAttr::isMemsetIntrinsic, IR::FuncAttr::builtinHasMemWrite});
 
     // memcpy (dest, src, len, isvolatile)
-    make_decl(Config::IR::BUILTIN_MEMCPY + 1, {i8ptr_type, i8ptr_type, i32_type, i1_type}, void_type, false, true,
-              false); // -> not va_arg, is builtin, and not sylib
+    make_decl(Config::IR::MEMCPY_INTRINSIC_NAME + 1,
+        {i8ptr_type, i8ptr_type, i32_type, i1_type}, void_type,
+              {IR::FuncAttr::isIntrinsic, IR::FuncAttr::isMemcpyIntrinsic,
+                  IR::FuncAttr::builtinHasMemWrite, IR::FuncAttr::builtinHasMemRead});
 
     for (auto &n : node.getNodes()) {
         n->accept(*this);
@@ -165,14 +173,14 @@ void IRGenerator::visit(VarDef &node) {
                 // If it is zero inited or exceeds the threshold, memset it.
                 if (curr_initializer.isZeroIniter() ||
                     curr_type->getBytes() > Config::IR::LOCAL_ARRAY_MEMSET_THRESHOLD) {
-                    auto builtin_memset = symbol_table.lookup(Config::IR::BUILTIN_MEMSET + 1);
+                    auto builtin_memset = symbol_table.lookup(Config::IR::MEMSET_INTRINSIC_NAME + 1);
                     auto dest = type_cast(alloca_inst, makePtrType(IR::makeBType(IR::IRBTYPE::I8)));
                     auto call_memset = std::make_shared<IR::CALLInst>(
                         builtin_memset->as<IR::FunctionDecl>(),
                         std::vector<IR::pVal>{dest,                                                     // ptr
                                               module.getConst(static_cast<char>(0)),                    // val
                                               module.getConst(static_cast<int>(curr_type->getBytes())), // length
-                                              module.getConst(false)});                              // volatile
+                                              module.getConst(false)});                                 // volatile
                     curr_insts.emplace_back(call_memset);
                     has_filled_zero = true;
                 }

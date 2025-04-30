@@ -5,8 +5,8 @@
 namespace Config::IR {
 // IRGenerator
 constexpr auto REGISTER_TEMP_NAME = "%%__GNALC_IR_TEMP_NAME";
-constexpr auto BUILTIN_MEMSET = "@llvm.memset.p0i8.i32";
-constexpr auto BUILTIN_MEMCPY = "@llvm.memcpy.p0.p0.i32";
+constexpr auto MEMSET_INTRINSIC_NAME = "@llvm.memset.p0i8.i32";
+constexpr auto MEMCPY_INTRINSIC_NAME = "@llvm.memcpy.p0.p0.i32";
 constexpr auto LOCAL_ARRAY_MEMSET_THRESHOLD = 32;
 
 // GVN-PRE

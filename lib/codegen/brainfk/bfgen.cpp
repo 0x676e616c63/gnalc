@@ -255,7 +255,7 @@ void BF3t32bGen::visit(IR::CALLInst &node) {
         Logger::logDebug("Tape1 Forward, now at ", tape1_pos);
         Logger::logDebug("Get Ch");
         curr_insts.addInst(BF3tInst::INPUT1);
-    } else if (node.getFuncName() == Config::IR::BUILTIN_MEMSET) {
+    } else if (node.getFuncName() == Config::IR::MEMSET_INTRINSIC_NAME) {
         // just pass
     } else
         Err::todo("More func");

@@ -44,7 +44,7 @@ template <typename T> constexpr auto isVecTypeImpl() {
 
 template <typename T> constexpr auto isFloatTypeImpl() {
     using TT = Util::remove_cvref_t<T>;
-    return std::is_same_v<TT, pConstF32>;
+    return std::is_same_v<TT, pConstF32> || std::is_same_v<TT, pConstF32Vec>;
 }
 
 #define isTypeMatched(a, b) isTypeMatchedImpl<decltype(a), decltype(b)>()
@@ -91,9 +91,15 @@ ConstantProxy ConstantProxy::operator*(const ConstantProxy &rhs) const {
     Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool && pool != nullptr);
     return std::visit(
         [this](const auto &lhs, const auto &rhs) -> ConstantProxy {
-            if constexpr (!isTypeMatched(lhs, rhs) || isVecType(lhs)) {
+            if constexpr (!isTypeMatched(lhs, rhs)) {
                 Err::unreachable();
                 return ConstantProxy(nullptr, 0);
+            } else if constexpr (isVecType(lhs)) {
+                Err::gassert(lhs->size() == rhs->size());
+                auto ret = lhs->getVector();
+                for (size_t i = 0; i < ret.size(); ++i)
+                    ret[i] *= (*rhs)[i];
+                return ConstantProxy(pool, ret);
             } else
                 return ConstantProxy(pool, lhs->getVal() * rhs->getVal());
         },
@@ -104,9 +110,15 @@ ConstantProxy ConstantProxy::operator/(const ConstantProxy &rhs) const {
     Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool && pool != nullptr);
     return std::visit(
         [this](const auto &lhs, const auto &rhs) -> ConstantProxy {
-            if constexpr (!isTypeMatched(lhs, rhs) || isVecType(lhs)) {
+            if constexpr (!isTypeMatched(lhs, rhs)) {
                 Err::unreachable();
                 return ConstantProxy(nullptr, 0);
+            } else if constexpr (isVecType(lhs)) {
+                Err::gassert(lhs->size() == rhs->size());
+                auto ret = lhs->getVector();
+                for (size_t i = 0; i < ret.size(); ++i)
+                    ret[i] /= (*rhs)[i];
+                return ConstantProxy(pool, ret);
             } else
                 return ConstantProxy(pool, lhs->getVal() / rhs->getVal());
         },
@@ -116,9 +128,15 @@ ConstantProxy ConstantProxy::operator%(const ConstantProxy &rhs) const {
     Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool && pool != nullptr);
     return std::visit(
         [this](const auto &lhs, const auto &rhs) -> ConstantProxy {
-            if constexpr (!isTypeMatched(lhs, rhs) || isVecType(lhs) || isFloatType(lhs)) {
+            if constexpr (!isTypeMatched(lhs, rhs) || isFloatType(lhs)) {
                 Err::unreachable();
                 return ConstantProxy(nullptr, 0);
+            } else if constexpr (isVecType(lhs)) {
+                Err::gassert(lhs->size() == rhs->size());
+                auto ret = lhs->getVector();
+                for (size_t i = 0; i < ret.size(); ++i)
+                    ret[i] %= (*rhs)[i];
+                return ConstantProxy(pool, ret);
             } else
                 return ConstantProxy(pool, lhs->getVal() % rhs->getVal());
         },

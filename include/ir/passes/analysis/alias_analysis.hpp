@@ -63,7 +63,9 @@ private:
     using AliasCacheKey = std::tuple<Value *, Value *>;
     struct AliasCacheHash {
         size_t operator()(const AliasCacheKey &key) const {
-            return std::hash<Value *>()(std::get<0>(key)) ^ std::hash<Value *>()(std::get<1>(key));
+            auto seed = std::hash<Value *>()(std::get<0>(key));
+            Util::hashSeedCombine(seed, std::hash<Value *>()(std::get<1>(key)));
+            return seed;
         }
     };
     mutable std::unordered_map<AliasCacheKey, AliasInfo, AliasCacheHash> alias_cache;
@@ -109,10 +111,6 @@ private:
     friend AnalysisInfo<AliasAnalysis>;
     static PM::UniqueKey Key;
 };
-
-// These functions can be treated as pure function (NoModRef)
-// Currently there is no such function.
-bool isPureBuiltinOrSylibFunc(const FunctionDecl *fn);
 
 struct RWInfo {
     std::vector<Value *> read;

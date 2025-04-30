@@ -160,8 +160,8 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                                 // FIXME: VectorType here.
                                 if (load->getType()->is<BType>()) {
                                     if (auto call = inst->as<CALLInst>()) {
-                                        if (call->getFunc()->isBuiltin()
-                                            && call->getFuncName() == Config::IR::BUILTIN_MEMSET) {
+                                        if (call->getFunc()->isIntrinsic()
+                                            && call->getFuncName() == Config::IR::MEMSET_INTRINSIC_NAME) {
                                             candidates.emplace_back(inst);
                                             break;
                                         }
@@ -292,8 +292,8 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                     unused_load.emplace(load);
                     Logger::logDebug("[LoadElim]: Replaced '", load->getName(), "' with '", target->getName(), "''s value.");
                 } else if (auto target_call = target->as<CALLInst>()) {
-                    Err::gassert(load->getType()->is<BType>() && target_call->getFunc()->isBuiltin()
-                        && target_call->getFuncName() == Config::IR::BUILTIN_MEMSET);
+                    Err::gassert(load->getType()->is<BType>() && target_call->getFunc()->isIntrinsic()
+                        && target_call->getFuncName() == Config::IR::MEMSET_INTRINSIC_NAME);
                     if (load->getType()->as<BType>()->getInner() == IRBTYPE::I32)
                         load->replaceSelf(function.getConst(0));
                     else

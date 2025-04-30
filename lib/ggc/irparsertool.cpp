@@ -129,7 +129,7 @@ pFunc IRPT::newFunc(std::string &name_, const std::vector<pFormalParam> &params,
 pFuncDecl IRPT::newFuncDecl(std::string &name_, const std::vector<pType> &params,
                                 pType &ret_type, bool is_va_arg_) {
     pFuncDecl fd;
-    if (name_ == Config::IR::BUILTIN_MEMSET || name_ == Config::IR::BUILTIN_MEMCPY) {
+    if (name_ == Config::IR::MEMSET_INTRINSIC_NAME || name_ == Config::IR::MEMCPY_INTRINSIC_NAME) {
         fd = make<FunctionDecl>(name_, params, ret_type, is_va_arg_, true, false);
     } else {
         fd = make<FunctionDecl>(name_, params, ret_type, is_va_arg_, false, true);

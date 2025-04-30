@@ -51,7 +51,7 @@ bool isSafeAndProfitableToEliminate(const pLoop &loop, FAM &fam, SCEVHandle &sce
 // If SCEV can figure out the exit values used outside the loop, replace them with expanded SCEVExpr.
 // Propagating exit values can release some uses outside the loop, thus possibly
 // let the loop unused and able to eliminate.
-// It don't expand non-constant SCEVExpr if the `onlyConstant` is set.
+// It doesn't expand non-constant SCEVExpr if the `onlyConstant` is set.
 bool propagateExitValues(Loop &loop, SCEVHandle &scev, bool onlyConstant) {
     bool modified = false;
 
