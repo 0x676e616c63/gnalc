@@ -4,6 +4,7 @@
 namespace IR {
 EXTRACTInst::EXTRACTInst(NameRef name, const pVal &vector, const pVal &idx)
     : Instruction(OP::EXTRACT, name, getElm(vector->getType())) {
+    Err::gassert(vector->getType()->is<VectorType>(), "Vector type expected");
     addOperand(vector);
     addOperand(idx);
 }
@@ -13,6 +14,7 @@ pVal EXTRACTInst::getIdx() const { return getOperand(1)->getValue(); }
 
 INSERTInst::INSERTInst(NameRef name, const pVal &vector, const pVal &element, const pVal &idx)
     : Instruction(OP::INSERT, name, vector->getType()) {
+    Err::gassert(vector->getType()->is<VectorType>(), "Vector type expected");
     addOperand(vector);
     addOperand(element);
     addOperand(idx);
@@ -25,7 +27,7 @@ size_t getVecSize(const pVal &v) { return v->getType()->as<VectorType>()->getVec
 
 SHUFFLEInst::SHUFFLEInst(NameRef name, const pVal &v1, const pVal &v2, const pConstI32Vec &mask)
     : Instruction(OP::SHUFFLE, name, makeVectorType(getElm(v1->getType()), getVecSize(mask))) {
-    Err::gassert(v1->getType()->is<VectorType>());
+    Err::gassert(v1->getType()->is<VectorType>(), "Vector type expected");
     Err::gassert(isSameType(v1->getType(), v2->getType()));
     for (auto i : *mask)
         Err::gassert(i >= 0 && i < getVecSize(v1) * 2);

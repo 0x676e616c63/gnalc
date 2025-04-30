@@ -388,10 +388,12 @@ bool ConstantProxy::operator==(const ConstantProxy &rhs) const {
         return false;
     return std::visit(
         [this](const auto &lhs, const auto &rhs) -> bool {
-            if constexpr (!isTypeMatched(lhs, rhs) || isVecType(lhs)) {
+            if constexpr (!isTypeMatched(lhs, rhs)) {
                 Err::unreachable();
                 return false;
-            } else
+            } else if constexpr(isVecType(lhs))
+                return lhs->getVector() == rhs->getVector();
+            else
                 return lhs->getVal() == rhs->getVal();
         },
         value, rhs.value);

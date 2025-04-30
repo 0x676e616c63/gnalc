@@ -41,7 +41,8 @@ public:
     using const_reverse_iterator = typename std::vector<ValueT>::const_reverse_iterator;
 
     explicit BasicConstantVector(const std::vector<ValueT> &value_)
-        : Value(toIRString(value_), makeBType(IRType), ValueTrait::CONSTANT_LITERAL), inner_values(value_) {}
+        : Value(toIRString(value_), makeVectorType(makeBType(IRType), value_.size()),
+            ValueTrait::CONSTANT_LITERAL), inner_values(value_) {}
 
     const auto &getVector() const { return inner_values; }
 

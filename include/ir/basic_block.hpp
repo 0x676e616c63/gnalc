@@ -148,7 +148,7 @@ public:
             for (auto it = insts.begin(); it != insts.end();) {
                 if (pred(*it)) {
                     for (const auto &user : (*it)->inst_users()) {
-                        Err::gassert(user->getParent()== nullptr || pred(user),
+                        Err::gassert(user->getParent() == nullptr || pred(user),
                                      "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
                     }
                     (*it)->setParent(nullptr);

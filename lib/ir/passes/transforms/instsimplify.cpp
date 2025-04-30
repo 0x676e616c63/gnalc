@@ -21,7 +21,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
     this->fam = &fam;
     this->func = &function;
 
-    // First simplify basic instruction patterns without adding any instruction
+    // First, simplify basic instruction patterns without adding any instruction
     for (const auto &bb : function) {
         instsimplify_inst_modified |= foldPHI(bb, preserve_lcssa);
         for (const auto &inst : *bb) {

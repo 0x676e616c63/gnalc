@@ -32,8 +32,9 @@ enum class FuncAttr {
 
     // Only Builtin Functions
     // For user-defined functions, use AliasAnalysis instead.
-    builtinHasMemRead,
-    builtinHasMemWrite,
+    builtinMemReadOnly,
+    builtinMemWriteOnly,
+    builtinMemReadWrite,
 };
 class FunctionDecl : public Value {
 private:

@@ -257,6 +257,8 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     fpm.addPass(NameNormalizePass(true));
     fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(VectorizerPass());
+    fpm.addPass(VerifyPass());
+    fpm.addPass(DCEPass());
     return fpm;
 
     // // For LoopUnroll Test

@@ -47,27 +47,26 @@ void IRGenerator::visit(CompUnit &node) {
     make_decl("_sysy_stoptime", {i32_type}, void_type, {IR::FuncAttr::isSylib});
 
     make_decl("getarray", {i32ptr_type}, i32_type,
-        {IR::FuncAttr::isSylib, IR::FuncAttr::builtinHasMemWrite});
+        {IR::FuncAttr::isSylib, IR::FuncAttr::builtinMemWriteOnly});
     make_decl("getfarray", {f32ptr_type}, i32_type,
-        {IR::FuncAttr::isSylib, IR::FuncAttr::builtinHasMemWrite});
+        {IR::FuncAttr::isSylib, IR::FuncAttr::builtinMemWriteOnly});
     make_decl("putarray", {i32_type, i32ptr_type}, void_type,
-        {IR::FuncAttr::isSylib, IR::FuncAttr::builtinHasMemRead});
+        {IR::FuncAttr::isSylib, IR::FuncAttr::builtinMemReadOnly});
     make_decl("putfarray", {i32_type, f32ptr_type}, void_type,
-              {IR::FuncAttr::isSylib, IR::FuncAttr::builtinHasMemRead});
+              {IR::FuncAttr::isSylib, IR::FuncAttr::builtinMemReadOnly});
     make_decl("putf", {i8ptr_type}, void_type,
-        {IR::FuncAttr::isSylib, IR::FuncAttr::builtinHasMemRead}, true); // VAArg
+        {IR::FuncAttr::isSylib, IR::FuncAttr::builtinMemReadOnly}, true); // VAArg
 
     // builtin
     // memset (dest, val, len, isvolatile)
     make_decl(Config::IR::MEMSET_INTRINSIC_NAME + 1,
         {i8ptr_type, i8_type, i32_type, i1_type}, void_type,
-              {IR::FuncAttr::isIntrinsic, IR::FuncAttr::isMemsetIntrinsic, IR::FuncAttr::builtinHasMemWrite});
+              {IR::FuncAttr::isIntrinsic, IR::FuncAttr::isMemsetIntrinsic, IR::FuncAttr::builtinMemWriteOnly});
 
     // memcpy (dest, src, len, isvolatile)
     make_decl(Config::IR::MEMCPY_INTRINSIC_NAME + 1,
         {i8ptr_type, i8ptr_type, i32_type, i1_type}, void_type,
-              {IR::FuncAttr::isIntrinsic, IR::FuncAttr::isMemcpyIntrinsic,
-                  IR::FuncAttr::builtinHasMemWrite, IR::FuncAttr::builtinHasMemRead});
+              {IR::FuncAttr::isIntrinsic, IR::FuncAttr::isMemcpyIntrinsic, IR::FuncAttr::builtinMemReadWrite});
 
     for (auto &n : node.getNodes()) {
         n->accept(*this);

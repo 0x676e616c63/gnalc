@@ -348,7 +348,7 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
                     if (callee->hasAttr(FuncAttr::isSylib))
                         res.has_sylib_call = true;
 
-                    if (!callee->hasAttr(FuncAttr::builtinHasMemRead) && !callee->hasAttr(FuncAttr::builtinHasMemWrite))
+                    if (!callee->hasAttr(FuncAttr::builtinMemReadOnly) && !callee->hasAttr(FuncAttr::builtinMemWriteOnly))
                         continue;
 
                     // For memcpy intrinsic, a more precise analysis is available.
@@ -366,7 +366,7 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
                                 mayalias->getVTrait() == ValueTrait::FORMAL_PARAMETER)
                                 res.write.insert(mayalias);
                         }
-                    } else if (callee->hasAttr(FuncAttr::builtinHasMemWrite)) {
+                    } else if (callee->hasAttr(FuncAttr::builtinMemWriteOnly)) {
                         auto actual_args = call->getArgs();
                         for (const auto &actual : actual_args) {
                             if (actual->getType()->getTrait() == IRCTYPE::PTR) {
@@ -377,7 +377,7 @@ AliasAnalysisResult AliasAnalysis::run(Function &func, FAM &fam) {
                                 }
                             }
                         }
-                    } else if (callee->hasAttr(FuncAttr::builtinHasMemRead)) {
+                    } else if (callee->hasAttr(FuncAttr::builtinMemReadOnly)) {
                         auto actual_args = call->getArgs();
                         for (const auto &actual : actual_args) {
                             if (actual->getType()->getTrait() == IRCTYPE::PTR) {
@@ -424,13 +424,13 @@ RWInfo getCallRWInfo(FAM &fam, CALLInst *call) {
                 arg_ptrs.emplace_back(r.get());
         }
 
-        if (callee->hasAttr(FuncAttr::builtinHasMemWrite))
+        if (callee->hasAttr(FuncAttr::builtinMemWriteOnly))
             return {.read = {}, .write = arg_ptrs, .untracked = false};
 
-        if (callee->hasAttr(FuncAttr::builtinHasMemRead))
+        if (callee->hasAttr(FuncAttr::builtinMemReadOnly))
             return {.read = arg_ptrs, .write = {}, .untracked = false};
 
-        if (!callee->hasAttr(FuncAttr::builtinHasMemRead) && !callee->hasAttr(FuncAttr::builtinHasMemWrite))
+        if (!callee->hasAttr(FuncAttr::builtinMemReadOnly) && !callee->hasAttr(FuncAttr::builtinMemWriteOnly))
             return {};
 
         return {.untracked = true};
@@ -467,26 +467,26 @@ RWInfo getCallRWInfo(FAM &fam, CALLInst *call) {
 //   bool isPure(FAM &fam, FunctionDecl *call)
 //   bool hasSideEffect(FAM &fam, FunctionDecl *call)
 // checks a function's property.
-// For a function, its purity or side effect can not change during optimization.
-// But for BasicBlock/Loop or a CALLInst's RWInfo, there are no such guarantee.
+// For a function, its purity or side effect cannot change during optimization.
+// But for BasicBlock/Loop or a CALLInst's RWInfo, there is no such guarantee.
 // Therefore, only those two functions have cache.
 // Though AliasAnalysis can be invalidated during transforms, their cache never expires.
 bool isPure(FAM &fam, FunctionDecl *decl) {
     static std::unordered_map<const FunctionDecl *, bool> cache;
     auto guard = Logger::scopeDisable();
 
-    auto it = cache.find(decl);
-    if (it != cache.end())
-        return it->second;
-
     // Recognized pure functions
     if (decl->hasAttr(FuncAttr::isSIMDIntrinsic))
-        return cache[decl] = true;
+        return true;
 
     auto callee_def = decl->as_raw<Function>();
     // Unknown builtin/sylib
     if (callee_def == nullptr)
         return cache[decl] = false;
+
+    auto it = cache.find(decl);
+    if (it != cache.end())
+        return it->second;
 
     auto call_res = fam.getResult<AliasAnalysis>(*callee_def);
     if (call_res.hasSylibCall() || call_res.hasUntrackedCall())
@@ -501,18 +501,19 @@ bool isPure(FAM &fam, const pCall &call) { return isPure(fam, call.get()); }
 bool hasSideEffect(FAM &fam, FunctionDecl *decl) {
     static std::unordered_map<const FunctionDecl *, bool> cache;
     auto guard = Logger::scopeDisable();
-    auto it = cache.find(decl);
-    if (it != cache.end())
-        return it->second;
 
     // Recognized pure functions
     if (decl->hasAttr(FuncAttr::isSIMDIntrinsic))
-        return cache[decl] = false;
+        return false;
 
     auto callee_def = decl->as_raw<Function>();
     // Unknown builtin/sylib
     if (callee_def == nullptr)
-        return cache[decl] = true;
+        return true;
+
+    auto it = cache.find(decl);
+    if (it != cache.end())
+        return it->second;
 
     auto call_res = fam.getResult<AliasAnalysis>(*callee_def);
     if (call_res.hasSylibCall() || call_res.hasUntrackedCall())

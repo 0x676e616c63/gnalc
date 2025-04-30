@@ -11,7 +11,8 @@ FunctionDecl::FunctionDecl(std::string name_, std::vector<pType> params, pType r
                            std::set<FuncAttr> attrs)
     : Value(std::move(name_), makeFunctionType(std::move(params), std::move(ret_type), is_va_arg_),
             ValueTrait::FUNCTION), func_attrs(std::move(attrs)) {
-    Err::gassert(!hasAttr(FuncAttr::isSylib) || !hasAttr(FuncAttr::isIntrinsic));
+    Err::gassert(!(hasAttr(FuncAttr::isSylib) && hasAttr(FuncAttr::isIntrinsic)));
+    Err::gassert(!(hasAttr(FuncAttr::builtinMemReadOnly) && hasAttr(FuncAttr::builtinMemWriteOnly)));
 
     // user defined functions
     if (func_attrs.empty())
