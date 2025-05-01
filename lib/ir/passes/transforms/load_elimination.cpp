@@ -3,7 +3,6 @@
 #include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
-#include "config/config.hpp"
 
 #include <algorithm>
 
@@ -18,7 +17,7 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
 
     // For each load, collect all possible store/load on its proper dominator block as candidates.
     // Then we consider all other blocks that can reach the load block,
-    // instructions in them serves as a killer if it may modify the load's memory.
+    // instructions in them serve as a killer if it may modify the load's memory.
     // If one candidate must execute after the rest of candidates and all killers,
     // it is the most recent update on the load's memory. And we can replace the load with it.
     auto pdfv = function.getDFVisitor<Util::DFVOrder::PostOrder>();
@@ -40,8 +39,8 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                         load->replaceSelf(store->getValue());
                         unused_load.insert(load);
                         replaced = true;
-                        Logger::logDebug("[LoadElim]: Replaced '", load->getName(), "' with '",
-                            store->getName(), "''s value.");
+                        Logger::logDebug("[LoadElim]: Replaced '", load->getName(), "' with '", store->getName(),
+                                         "''s value.");
                         break;
                     }
 
@@ -56,13 +55,29 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                         load->replaceSelf(load2);
                         unused_load.insert(load);
                         replaced = true;
-                        Logger::logDebug("[LoadElim]: Replaced '", load->getName(), "' with '",
-                            load2->getName(), "'.");
+                        Logger::logDebug("[LoadElim]: Replaced '", load->getName(), "' with '", load2->getName(), "'.");
                         break;
                     }
                 } else {
                     auto modref = aa_res.getInstModRefInfo(*inst_rit, load_ptr, fam);
                     if (modref == ModRefInfo::Mod || modref == ModRefInfo::ModRef) {
+                        // FIXME: VectorType here.
+                        if (load->getType()->is<BType>()) {
+                            if (auto call = (*inst_rit)->as<CALLInst>()) {
+                                if (call->getFunc()->isIntrinsic() &&
+                                    call->getFunc()->hasAttr(FuncAttr::isMemsetIntrinsic)) {
+                                    if (load->getType()->as<BType>()->getInner() == IRBTYPE::I32)
+                                        load->replaceSelf(function.getConst(0));
+                                    else
+                                        load->replaceSelf(function.getConst(0.0f));
+                                    unused_load.insert(load);
+                                    replaced = true;
+                                    Logger::logDebug("[LoadElim]: Replaced '", load->getName(), "' with zero.");
+                                    break;
+                                }
+                            }
+                        }
+
                         killed = true;
                         break;
                     }
@@ -81,12 +96,12 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
             // check other blocks to collect candidates and killers.
             //
             // We consider every block that could reach the load block
-            // to collect all the possible killer, and, of those properly dominates the load block,
+            // to collect all the possible killers, and, of those properly dominates the load block,
             // collect all the possible candidates.
             //
             // Finally, find the most recent load/store on the load's memory. And replace the
             // load with that load/store. The key is to find the candidate that must execute
-            // after every other candidates and killers. IOW, in the post-dominator tree rooted
+            // after every other candidate and killers. IOW, in the post-dominator tree rooted
             // at the load block, find the candidate that post dominates all other candidates
             // and killers.
             //
@@ -160,8 +175,8 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                                 // FIXME: VectorType here.
                                 if (load->getType()->is<BType>()) {
                                     if (auto call = inst->as<CALLInst>()) {
-                                        if (call->getFunc()->isIntrinsic()
-                                            && call->getFuncName() == Config::IR::MEMSET_INTRINSIC_NAME) {
+                                        if (call->getFunc()->isIntrinsic() &&
+                                            call->getFunc()->hasAttr(FuncAttr::isMemsetIntrinsic)) {
                                             candidates.emplace_back(inst);
                                             break;
                                         }
@@ -189,25 +204,25 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                 }
             }
 
-            PostDomTree* real_pdom;
+            PostDomTree *real_pdom;
             PostDomTreeBuilder pdbuilder;
             if (backedge_detected) {
-                std::vector r_worklist {load_block};
+                std::vector r_worklist{load_block};
                 std::unordered_set<pBlock> r_visited;
                 while (!r_worklist.empty()) {
                     auto curr = r_worklist.back();
                     r_visited.emplace(curr);
                     r_worklist.pop_back();
-                    for (const auto& pred : curr->preds()) {
+                    for (const auto &pred : curr->preds()) {
                         if (!r_visited.count(pred))
                             r_worklist.emplace_back(pred);
                     }
                 }
 
                 std::vector<std::pair<pBlock, pBlock>> unlinked;
-                for (const auto& block : r_visited) {
+                for (const auto &block : r_visited) {
                     auto succs = block->getNextBB();
-                    for (const auto& succ : succs) {
+                    for (const auto &succ : succs) {
                         if (!r_visited.count(succ)) {
                             unlinked.emplace_back(block, succ);
                             unlinkOneEdge(block, succ);
@@ -219,16 +234,15 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                 pdbuilder.analyze();
                 real_pdom = &pdbuilder.domtree;
 
-                for (const auto& pair : unlinked)
+                for (const auto &pair : unlinked)
                     linkBB(pair.first, pair.second);
-            }
-            else
+            } else
                 real_pdom = &postdomtree;
 
-            // Note that we have collect possible store/load in a post order.
+            // Note that we have collected possible store/load in a post order.
             // In other word, candidates.back() is the earliest one in control flow.
             // Then we do forward traversal of the candidates. If one candidate
-            // post dominates all other candidate and killers,
+            // post dominates all other candidates and killers,
             // it is the most recent update on the load's memory.
             // That is to say, it is the one we should replace the load with.
             pInst target = nullptr;
@@ -269,8 +283,7 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                                 able_to_replace = false;
                                 break;
                             }
-                        }
-                        else if (!real_pdom->ADomB(candidate->getParent(), killer->getParent())) {
+                        } else if (!real_pdom->ADomB(candidate->getParent(), killer->getParent())) {
                             able_to_replace = false;
                             break;
                         }
@@ -290,10 +303,11 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                 } else if (auto target_store = target->as<STOREInst>()) {
                     load->replaceSelf(target_store->getValue());
                     unused_load.emplace(load);
-                    Logger::logDebug("[LoadElim]: Replaced '", load->getName(), "' with '", target->getName(), "''s value.");
+                    Logger::logDebug("[LoadElim]: Replaced '", load->getName(), "' with '", target->getName(),
+                                     "''s value.");
                 } else if (auto target_call = target->as<CALLInst>()) {
-                    Err::gassert(load->getType()->is<BType>() && target_call->getFunc()->isIntrinsic()
-                        && target_call->getFuncName() == Config::IR::MEMSET_INTRINSIC_NAME);
+                    Err::gassert(load->getType()->is<BType>() && target_call->getFunc()->isIntrinsic() &&
+                                 target_call->getFunc()->hasAttr(FuncAttr::isMemsetIntrinsic));
                     if (load->getType()->as<BType>()->getInner() == IRBTYPE::I32)
                         load->replaceSelf(function.getConst(0));
                     else
