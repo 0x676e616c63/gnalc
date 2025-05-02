@@ -24,6 +24,7 @@ private:
         std::vector<pInst> stmts;
         std::unordered_set<pInst> stmt_set;
 
+        Pack() = default;
         Pack(const pInst& a, const pInst& b);
         Pack(const Pack& a, const Pack& b);
 
@@ -34,7 +35,14 @@ private:
         pInst getRight() const;
         size_t size() const;
 
+        // Truncate the pack to the given size.
+        // Return the pack got truncated.
+        Pack truncate(size_t size);
+
         const pInst& front() const;
+
+    private:
+        void update_front();
     };
 
     pBlock curr_block;
@@ -53,6 +61,8 @@ private:
     void findAdjacentReferences();
     void extendPackList();
     void combinePacks();
+    void rearrangePack();
+    void fixArrayAlign();
     void splitDependencyCycle();
     pVal gatherVector(Pack* user_pack, const std::function<pVal(const pInst&)>& proj);
     std::vector<Pack*> computeTopologicalOrder();

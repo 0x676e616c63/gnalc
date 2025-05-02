@@ -50,7 +50,11 @@ std::optional<std::tuple<const Value *, size_t>> getGepTotalOffset(const GEPInst
         if (!gep->isConstantOffset())
             return std::nullopt;
         offset += gep->getConstantOffset();
+
         auto base_ptr = gep->getPtr().get();
+        if (auto bitcast = base_ptr->as_raw<BITCASTInst>())
+            base_ptr = bitcast->getOVal().get();
+
         if (auto base_gep = base_ptr->as_raw<GEPInst>())
             gep = base_gep;
         else if (auto alloca = base_ptr->as_raw<ALLOCAInst>())

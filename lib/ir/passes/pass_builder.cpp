@@ -252,19 +252,15 @@ MPM PassBuilder::buildModulePipeline(PMOptions opt_info) {
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     fpm.addPass(PromotePass());
-    fpm.addPass(NameNormalizePass(true));
     fpm.addPass(ConstantPropagationPass());
+    fpm.addPass(BreakCriticalEdgesPass());
     fpm.addPass(GVNPREPass());
-    // fpm.addPass(VectorizerPass());
-    // fpm.addPass(VerifyPass());
-    fpm.addPass(DSEPass());
-    fpm.addPass(LoadEliminationPass());
-    fpm.addPass(DSEPass());
-    fpm.addPass(ConstantPropagationPass());
-    fpm.addPass(DCEPass());
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(NameNormalizePass(true));
     fpm.addPass(PrintFunctionPass(std::cerr));
-
-    fpm.addPass(DSEPass());
+    fpm.addPass(VectorizerPass());
+    fpm.addPass(VerifyPass());
+    fpm.addPass(DCEPass());
     fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(NameNormalizePass());
     return fpm;

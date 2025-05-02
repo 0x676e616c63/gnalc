@@ -13,7 +13,7 @@ namespace IR {
 std::ostream &operator<<(std::ostream &os, const VectorizerPass::Pack &expr) {
     for (auto it = expr.stmts.begin(); it != expr.stmts.end(); ++it) {
         const auto &stmt = *it;
-        os << IRFormatter::formatOp(stmt->getOpcode()) << " " << stmt->getName() << " idx-" << stmt->getIndex();
+        os << IRFormatter::formatOp(stmt->getOpcode()) << " " << stmt->getName() << " addr-" << stmt.get();
         if (it != expr.stmts.end() - 1)
             os << ", ";
     }
@@ -66,6 +66,8 @@ bool hasMemoryRef(const pInst &inst) { return inst->getOpcode() == OP::STORE || 
 bool isVectorizable(const pInst &inst) {
     return inst->getOpcode() == OP::LOAD || inst->getOpcode() == OP::STORE || inst->is<BinaryInst>();
 }
+
+
 
 // Check if two pointers are adjacent, e.g. a[i], a[i + 1]
 // FIXME: Improve precision. Currently only match a[0][i], a[0][i + 1] for debug
@@ -154,14 +156,12 @@ void setAlign(const pInst &inst, int align) {
 }
 
 VectorizerPass::Pack::Pack(const pInst &stmt1, const pInst &stmt2) : stmts({stmt1, stmt2}), stmt_set({stmt1, stmt2}) {
-    front_inst = *std::min_element(stmts.begin(), stmts.end(),
-                                   [](const pInst &a, const pInst &b) { return a->getIndex() < b->getIndex(); });
+    update_front();
 }
 VectorizerPass::Pack::Pack(const Pack &a, const Pack &b) : stmts(a.stmts), stmt_set(a.stmt_set) {
     stmts.insert(stmts.end(), b.stmts.begin(), b.stmts.end());
     stmt_set.insert(b.stmt_set.begin(), b.stmt_set.end());
-    front_inst = *std::min_element(stmts.begin(), stmts.end(),
-                                   [](const pInst &a, const pInst &b) { return a->getIndex() < b->getIndex(); });
+    update_front();
 }
 
 bool VectorizerPass::Pack::contains(const pInst &stmt) const { return stmt_set.count(stmt); }
@@ -177,7 +177,30 @@ pInst VectorizerPass::Pack::getRight() const {
 }
 size_t VectorizerPass::Pack::size() const { return stmts.size(); }
 
+VectorizerPass::Pack VectorizerPass::Pack::truncate(size_t size) {
+    Err::gassert(size < stmts.size(), "Invalid size");
+    std::vector<pInst> ret_stmts;
+    std::unordered_set<pInst> ret_stmt_set;
+    for (size_t i = size; i < stmts.size(); ++i) {
+        ret_stmts.emplace_back(stmts[i]);
+        ret_stmt_set.emplace(stmts[i]);
+        stmt_set.erase(stmts[i]);
+    }
+    stmts.erase(stmts.begin() + size, stmts.end());
+    update_front();
+
+    Pack ret;
+    ret.stmts = ret_stmts;
+    ret.stmt_set = ret_stmt_set;
+    ret.update_front();
+    return ret;
+}
+
 const pInst &VectorizerPass::Pack::front() const { return front_inst; }
+void VectorizerPass::Pack::update_front() {
+    front_inst = *std::min_element(stmts.begin(), stmts.end(),
+                                   [](const pInst &a, const pInst &b) { return a->getIndex() < b->getIndex(); });
+}
 
 // Check if two instructions can be packed together.
 bool VectorizerPass::stmtCanPack(const pInst &stmt1, const pInst &stmt2, int align) {
@@ -234,6 +257,9 @@ bool VectorizerPass::followUseDefs(const Pack &pack) {
             continue;
         if (x1->getParent() != curr_block || x2->getParent() != curr_block)
             continue;
+        // Adjacent load/store has already been packed. The load/store here can't be adjacent.
+        if (x1->is<LOADInst, STOREInst>() || x2->is<LOADInst, STOREInst>())
+            continue;
         if (stmtCanPack(x1, x2, align)) {
             if (estimateSavings(x1, x2) >= 0) {
                 pack_set.emplace_back(x1, x2);
@@ -262,6 +288,9 @@ bool VectorizerPass::followDefUses(const Pack &pack) {
             if (user1 == user2)
                 continue;
             if (user2->getParent() != curr_block)
+                continue;
+            // Adjacent load/store has already been packed. The load/store here can't be adjacent.
+            if (user1->is<LOADInst, STOREInst>() || user2->is<LOADInst, STOREInst>())
                 continue;
             if (stmtCanPack(user1, user2, align)) {
                 auto est = estimateSavings(user1, user2);
@@ -338,6 +367,37 @@ void VectorizerPass::combinePacks() {
 
     while (one_pass())
         ;
+}
+
+// Split packs to 2/4-sized packs
+void VectorizerPass::rearrangePack() {
+    std::vector<Pack> new_packs;
+    for (auto it = pack_set.begin(); it != pack_set.end(); ++it) {
+        if (it->size() == 2 || it->size() == 4)
+            continue;
+
+        if (it->size() == 3 || it->size() == 5) {
+            it->truncate(it->size() - 1);
+            return;
+        }
+
+        Err::gassert(it->size() >= 6);
+        auto tail = it->truncate(4);
+        while (tail.size() > 4) {
+            new_packs.emplace_back(tail);
+            tail = new_packs.back().truncate(4);
+        }
+        if (tail.size() == 3)
+            tail.truncate(2);
+        if (tail.size() == 2 || tail.size() == 4)
+            new_packs.emplace_back(tail);
+    }
+    for (auto &pack : new_packs)
+        pack_set.emplace_back(pack);
+}
+
+void VectorizerPass::fixArrayAlign() {
+    // TODO: fix array alignment
 }
 
 // Calculate the use-def chain for pack scheduling
@@ -685,11 +745,16 @@ PM::PreservedAnalyses VectorizerPass::run(Function &function, FAM &fam) {
     for (const auto &block : function) {
         curr_block = block;
         findAdjacentReferences();
+        Logger::logDebug("[Vectorizer] on '", function.getName(), " AFTER FindAdj:\n", *this);
         extendPackList();
-        Logger::logDebug("[Vectorizer] on '", function.getName(), " AFTER EXTEND:\n", *this);
+        Logger::logDebug("[Vectorizer] on '", function.getName(), " AFTER Extend:\n", *this);
         combinePacks();
+        Logger::logDebug("[Vectorizer] on '", function.getName(), " AFTER Combine:\n", *this);
+        rearrangePack();
+        fixArrayAlign();
+        Logger::logDebug("[Vectorizer] on '", function.getName(), " AFTER Rearrange:\n", *this);
         vectorizer_inst_modified |= schedule();
-        Logger::logDebug("[Vectorizer] on '", function.getName(), ":\n", *this);
+        Logger::logDebug("[Vectorizer] on '", function.getName(), " Done:\n", *this);
         cleanup();
     }
 
