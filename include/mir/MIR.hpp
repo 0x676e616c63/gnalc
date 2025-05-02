@@ -1,10 +1,11 @@
 #pragma once
-#ifndef GNALC_ARMV8_MIR_MIR_HPP
-#define GNALC_ARMV8_MIR_MIR_HPP
+#ifndef GNALC_ARMV8_MIR_HPP
+#define GNALC_ARMV8_MIR_HPP
 
 #include "ir/base.hpp"
 #include "ir/instructions/compare.hpp"
 #include "mir/Target.hpp"
+#include <algorithm>
 #include <array>
 #include <map>
 #include <utility>
@@ -14,9 +15,8 @@ namespace MIR_new {
 
 // using string = std::string;
 
-template <typename T, typename... Args> std::shared_ptr<T> make(const Args... args) {
-
-    return std::make_shared<T>(args...);
+template <typename T, typename... Args> std::shared_ptr<T> make(Args &&...args) {
+    return std::make_shared<T>(std::forward<Args>(args)...);
 }
 
 template <typename T, typename... Args> std::unique_ptr<T> makeu(const Args... args) {
@@ -24,8 +24,8 @@ template <typename T, typename... Args> std::unique_ptr<T> makeu(const Args... a
 }
 
 enum class OperandType {
-    Bool,  // cmp/fcmp result maybe use many times
-    Int,   // when use reg adjustment
+    Int, // when use reg adjustment
+    Int16,
     Int32, // original int32, or extend from int8, int16
     Int64,
     Ptr = Int64,
@@ -43,16 +43,37 @@ enum class OperandType {
 
 using OpT = OperandType;
 
+inline unsigned getBitWide(OpT type) {
+    switch (type) {
+    case OpT::Int:
+        // use int when opt or legal with unclear type, extend the bitwide
+        return 16;
+    case OpT::Int16:
+        return 2;
+    case OpT::High32:
+    case OpT::Low32:
+    case OpT::Int32:
+    case OpT::Float32:
+        return 4;
+    case OpT::Int64:
+        return 8;
+    case OpT::Intvec:
+    case OpT::Floatvec:
+        return 16;
+    default:
+        Err::unreachable("getBitWide: type not support a bitwide");
+    }
+    return 4; // just to make gnalc happy
+}
+
 enum MIRInstCond : unsigned { AL, EQ, NE, LT, GT, LE, GE };
 
 using Cond = MIRInstCond;
 
 enum class MIRGenericInst {
     // control-flow
-    InstJump,   // reloc
     InstBranch, // cond, reloc, prob
-    InstUnreachable,
-    // Memory
+    // Memory, get by gep, no const offset
     InstLoad,
     InstStore,
     // Arithmetic
@@ -69,12 +90,8 @@ enum class MIRGenericInst {
     // Signed Div/Rem
     InstSDiv,
     InstSRem,
-    // MinMax
-    InstSMin,
-    InstSMax,
     // Int Unary
     InstNeg,
-    InstAbs,
     // FP
     InstFAdd,
     InstFSub,
@@ -82,8 +99,6 @@ enum class MIRGenericInst {
     InstFDiv,
     InstFRem,
     InstFNeg,
-    InstFAbs,
-    InstFFma,
     // vector, at most 4
     InstVAdd,
     InstVSub,
@@ -93,11 +108,7 @@ enum class MIRGenericInst {
     // Comparison
     InstICmp, // dst, lhs, rhs, op
     InstFCmp, // dst, lhs, rhs, op
-    InstTst,  // ANDS WZR, Wx, ...
     // Conversion
-    InstSExt,
-    InstZExt,
-    InstTrunc,
     InstF2S,
     InstS2F,
     // Misc
@@ -132,7 +143,7 @@ struct MIRReg {
 using MIRReg_p = std::shared_ptr<MIRReg>;
 using MIRReg_wp = std::weak_ptr<MIRReg>;
 
-class MIRRelocable {
+class MIRRelocable : public std::enable_shared_from_this<MIRRelocable> {
 private:
     string mSym;
 
@@ -143,6 +154,18 @@ public:
 
     virtual bool isFunc() const { return false; }
     virtual bool isBlk() const { return false; }
+    virtual bool isData() const { return false; }
+    virtual bool isBss() const { return true; }
+
+    template <typename T> std::shared_ptr<T> as() {
+        Err::gassert(std::is_base_of_v<MIRRelocable, T>, "MIRRelocable::as(): Expected a derived type.");
+        return std::dynamic_pointer_cast<T>(shared_from_this());
+    }
+
+    template <typename T> std::shared_ptr<const T> as() const {
+        Err::gassert(std::is_base_of_v<MIRRelocable, T>, "MIRRelocable::as(): Expected a derived type.");
+        return std::dynamic_pointer_cast<const T>(shared_from_this());
+    }
 
     virtual ~MIRRelocable() = default;
 };
@@ -162,8 +185,7 @@ constexpr inline bool isStkObj(uint32_t x) { return (x & StkObjBegin) == StkObjB
 
 class MIROperand {
 private:
-    std::variant<std::monostate, MIRReg_p, MIRRelocable_p, unsigned, double> mOperand{
-        std::monostate{}}; // double mean prob, used by branch/jmp prediction
+    std::variant<std::monostate, MIRReg_p, MIRRelocable_p, unsigned, uint64_t, double> mOperand{std::monostate{}};
     OpT mType = OpT::special;
 
 public:
@@ -176,7 +198,8 @@ public:
         Err::gassert(mOperand.index() != 0, "MIROperand: mOperand is nerver initialized");
         return std::get<T>(mOperand);
     };
-    long imme() const { return std::get<long>(mOperand); }
+    unsigned imme() const { return std::get<unsigned>(mOperand); }
+    uint64_t immeEx() const { return std::get<uint64_t>(mOperand); }
     unsigned reg() const { return std::get<MIRReg_p>(mOperand)->reg; }
     unsigned idVReg() const {
         Err::gassert(isVirtualReg(reg()), "MIROperand::idVReg: *this is not a VReg");
@@ -186,16 +209,23 @@ public:
         Err::gassert(isISAReg(reg()), "MIROperand::idVReg: *this is not a ISA");
         return reg();
     }
+    const auto &stkobj() const {
+        Err::gassert(isStkObj(reg()), "MIROperand::idVReg: *this is not a ISA");
+        return std::get<MIRReg_p>(mOperand)->reg;
+    }
     auto regFlag() const { return std::get<MIRReg_p>(mOperand)->flag; }
     auto &regFlag() { return std::get<MIRReg_p>(mOperand)->flag; }
+    MIRRelocable_p relocable() { return std::get<MIRRelocable_p>(mOperand); }
     double prob() const { return std::get<double>(mOperand); }
 
     ///@note int, float, condflag
-    bool isImme() const { return std::holds_alternative<long>(mOperand); }
+    bool isImme() const { return std::holds_alternative<unsigned>(mOperand); }
+    bool isExImme() const { return std::holds_alternative<uint64_t>(mOperand); }
     bool isUnused() const { return std::holds_alternative<std::monostate>(mOperand); }
     bool isReg() const { return std::holds_alternative<MIRReg_p>(mOperand); }
     bool isVReg() const { return isVirtualReg(reg()); }
     bool isISA() const { return isISAReg(reg()); }
+    bool isStack() const { return isStkObj(reg()); }
     bool isReloc() const { return std::holds_alternative<MIRRelocable_p>(mOperand); }
     bool isProb() const { return std::holds_alternative<double>(mOperand); }
 
@@ -205,10 +235,18 @@ public:
     bool operator!=(const MIROperand &other) const { return mOperand != other.mOperand; }
 
     template <typename T> static MIROperand_p asImme(T val, OpT type) {
-        Err::gassert(std::is_integral_v<T> || std::is_floating_point_v<T>, "MIROperand::asImme: template match failed");
-        unsigned encoding = *reinterpret_cast<unsigned *>(&val); // int float...
-        return make<MIROperand>(encoding, type);
+        if constexpr (std::is_same_v<T, int> || std::is_same_v<T, float>) {
+            unsigned encoding = *reinterpret_cast<unsigned *>(&val);
+            return make<MIROperand>(encoding, type);
+        } else if constexpr (std::is_same_v<T, uint64_t>) {
+            return make<MIROperand>(val, type); //
+        } else {
+            Err::unreachable("MIROperand::asImme: template match failed");
+        }
+        return nullptr; // just to make gnalc happy
     }
+
+    // builder begin
 
     /// @note asISAReg 和 asVReg 使用构型相同的MIRReg, 区别在于范围不同
     /// @note VReg 的起始位置会大于 ISAReg
@@ -232,10 +270,27 @@ public:
 
     static MIROperand_p asProb(double prob) { return make<MIROperand>(prob, OpT::special); }
 
-    // simple verify
+    // builder end
+
+    // simple type verify
     constexpr bool isVRegOrISAReg() {
         return isReg() && (isVirtualReg(std::get<MIRReg_p>(mOperand)->reg) ||
                            isISAReg(std::get<MIRReg_p>(mOperand)->reg)); // not invaild
+    }
+
+    // use in registeralloc
+    ///@note we directly chang reg of MIRReg
+    void assignColor(unsigned color) {
+        Err::gassert(isVReg(), "assignColor: try assign color to a non-reg");
+        Err::gassert(color >= ARMReg::X0 && color <= ARMReg::V30, "assignColor: unknonw reg color");
+        Err::gassert(color >= ARMReg::V0 && (mType == OpT::Float32 || mType == OpT::Floatvec || mType == OpT::Intvec) ||
+                         color <= ARMReg::X29 &&
+                             (mType == OpT::Int16 || mType == OpT::Int32 || mType == OpT::Int64 || mType == OpT::Int),
+                     "assignColor: register bank dont match mtype");
+
+        auto &VReg = std::get<MIRReg_p>(mOperand);
+
+        VReg->reg = color; // assigned here
     }
 
     virtual ~MIROperand() = default;
@@ -269,10 +324,23 @@ public:
         return *this;
     }
 
+    MIRInst &resetOpcode(ARMOpC opcode) {
+        mOpcode = opcode;
+        return *this;
+    }
+
     bool checkOp(unsigned idx) const { return !mOperands[idx]->isUnused(); }
     MIROperand_p &getOp(unsigned idx) { return mOperands[idx]; }
+    template <unsigned idx> MIROperand_p &getOp() { return mOperands[idx]; }
+    const MIROperand_p &getOp(unsigned idx) const { return mOperands[idx]; }
+    template <unsigned idx> const MIROperand_p &getOp() const { return mOperands[idx]; }
     MIROperand_p &getDef() { return mOperands[0]; }
     MIROperand_p &ensureDef() {
+        Err::gassert(mOperands[0] != nullptr, "MIRInst::ensureDef: def is nullptr");
+        return mOperands[0];
+    }
+    const MIROperand_p &getDef() const { return mOperands[0]; }
+    const MIROperand_p &ensureDef() const {
         Err::gassert(mOperands[0] != nullptr, "MIRInst::ensureDef: def is nullptr");
         return mOperands[0];
     }
@@ -292,11 +360,21 @@ public:
     auto &operands() { return mOperands; }
     const auto &operands() const { return mOperands; }
 
+    // to modify
+    void replace(MIROperand_p _old, MIROperand_p _new) {
+        auto it =
+            std::find_if(mOperands.begin(), mOperands.end(), [&](const MIROperand_p &ath) { return ath == _old; });
+
+        Err::gassert(it != mOperands.end(), "MIRInst::replace: cant find op");
+
+        *it = _new;
+    }
+
     virtual ~MIRInst() = default;
 };
 
 enum class StkObjUsage {
-    Arg, // pass to sub func
+    Arg, // pass to the current func
     CalleeArg,
     CalleeSave,
     Local,
@@ -309,6 +387,15 @@ struct StkObj {
     unsigned maxAlignment;
     int offset; // positive?
     StkObjUsage usage;
+    std::variant<std::monostate, unsigned> arg_idx;
+
+    StkObj(unsigned s, unsigned a, int o, StkObjUsage u)
+        : size(s), maxAlignment(a), offset(o), usage(u), arg_idx{std::monostate{}} {}
+
+    StkObj(unsigned s, unsigned a, int o, StkObjUsage u, unsigned sq)
+        : size(s), maxAlignment(a), offset(o), usage(u), arg_idx(sq) {}
+
+    ~StkObj() = default;
 };
 
 class MIRFunction : public MIRRelocable {
@@ -324,12 +411,20 @@ private:
     // infos
     bool leafFunc = true;
     uint64_t calleesaveRegisters = 0ULL;
+    size_t spilled = 0LL;
     bool largeStk = false; // may use fp(X29)
+    unsigned stkSize = 0LL;
+
+    // context
+    CodeGenContext &ctx;
 
 public:
-    explicit MIRFunction(const string &sym) noexcept : MIRRelocable(sym) {}
+    MIRFunction() = delete;
+    MIRFunction(const string &sym, CodeGenContext &_ctx) noexcept : MIRRelocable(sym), ctx(_ctx) {}
 
     MIROperand_p addStkObj(CodeGenContext &ctx, unsigned size, unsigned alignmant, int offset, StkObjUsage);
+    MIROperand_p addStkObj(CodeGenContext &ctx, unsigned size, unsigned alignmant, int offset, StkObjUsage,
+                           unsigned seq); // for arg on stk
     void setEntryBlk(MIRBlk_p blk) { mEntryBlk = blk; }
     void addExitBlk(MIRBlk_p blk) { mExitBlks.emplace_back(blk); }
 
@@ -353,7 +448,22 @@ public:
     uint64_t &calleeSaveRegs() { return calleesaveRegisters; }
     void affirmLargeStk() { largeStk = true; }
 
+    size_t &spill() { return spilled; }
+    size_t spill() const { return spilled; }
+
+    auto &CodeGenContext() { return ctx; }
+    const auto &CodeGenContext() const { return ctx; }
+
+    bool isProgramEntry() {
+        return getmSym() == "main"; //
+    }
+
+    void modifyStkSize(unsigned _size) { stkSize = _size; }
+    unsigned stackSize() const { return stkSize; }
+
     bool isFunc() const override { return true; }
+
+    string getName() const { return getmSym(); }
 
     ~MIRFunction() override = default;
 };
@@ -363,6 +473,9 @@ private:
     MIRFunction_wp mFunction;
     MIRInst_p_l mInsts;
     double mTripCount = 0.0;
+
+    std::list<MIRBlk_p> mpreds;
+    std::list<MIRBlk_p> msuccs;
 
 public:
     MIRBlk() = delete;
@@ -380,18 +493,31 @@ public:
     double TripCount() const { return mTripCount; }
     void setTripCount(double trip) { mTripCount = trip; }
 
+    void addPred(const MIRBlk_p &pred) { mpreds.emplace_back(pred); }
+    void addSucc(const MIRBlk_p &succ) { msuccs.emplace_back(succ); }
+
+    auto &preds() { return mpreds; }
+    auto &succs() { return msuccs; }
+
+    const auto &preds() const { return mpreds; }
+    const auto &succs() const { return msuccs; }
+
     ~MIRBlk() override = default;
 };
 
 class MIRBssStorage : public MIRRelocable {
 private:
-    unsigned size;
+    unsigned msize;
     unsigned alignment;
 
 public:
     MIRBssStorage() = delete;
     MIRBssStorage(const string &sym, unsigned _size, unsigned _alignment) noexcept
-        : MIRRelocable(sym), size(_size), alignment(_alignment) {}
+        : MIRRelocable(sym), msize(_size), alignment(_alignment) {}
+
+    bool isBss() const override { return true; }
+    unsigned align() const { return alignment; }
+    unsigned size() const { return msize; }
 
     ~MIRBssStorage() override = default;
 };
@@ -400,6 +526,7 @@ struct MIRStorage {
     /// @note size_t to record 0 size, to solve sparse arrays
     std::variant<std::monostate, int, float, size_t> mstore;
     const auto &store() const { return mstore; }
+
     template <typename T> const auto &store() const {
         Err::gassert(mstore.index() != 0, "MIRStorage: store val is never initialized");
         return std::get<T>(mstore);
@@ -415,7 +542,7 @@ public:
 private:
     unsigned alignment;
     std::vector<MIRStorage> datas{}; // 没有结构体的情况下, vec内类型一致
-    bool readOnly = false;
+    bool readOnly = false;           // not impl
 
 public:
     MIRDataStorage(const string &sym, const std::vector<MIRStorage> &_datas, unsigned _alignment) noexcept
@@ -423,6 +550,12 @@ public:
     MIRDataStorage(const string &sym, const std::vector<MIRStorage> &_datas, unsigned _alignment,
                    bool _readOnly) noexcept
         : MIRRelocable(sym), datas{_datas}, alignment(_alignment), readOnly(_readOnly) {}
+
+    bool isData() const override { return true; }
+
+    unsigned align() const { return alignment; }
+    auto &getDatas() { return datas; }
+    const auto &getDatas() const { return datas; }
 
     ~MIRDataStorage() override = default;
 };
@@ -441,7 +574,7 @@ public:
     ~MIRJmpTable() override = default;
 };
 
-class MIRGlobal : public std::enable_shared_from_this<MIRGlobal> {
+class MIRGlobal { // reloc 之外包了层align
 private:
     std::size_t alignment;
     MIRRelocable_p mreloc; // func, blk, data, bss
@@ -449,16 +582,6 @@ private:
 public:
     MIRGlobal(std::size_t _alignment, MIRRelocable_p _reloc) noexcept
         : alignment(_alignment), mreloc(std::move(_reloc)) {}
-
-    template <typename T> std::shared_ptr<T> as() {
-        Err::gassert(std::is_base_of_v<MIRGlobal, T>, "MIRGlobal::as(): Expected a derived type.");
-        return std::dynamic_pointer_cast<T>(shared_from_this());
-    }
-
-    template <typename T> std::shared_ptr<const T> as() const {
-        Err::gassert(std::is_base_of_v<MIRGlobal, T>, "MIRGlobal::as(): Expected a derived type.");
-        return std::dynamic_pointer_cast<const T>(shared_from_this());
-    }
 
     auto &reloc() { return mreloc; }
     const auto &reloc() const { return mreloc; }
@@ -471,12 +594,18 @@ using MIRGlobal_p = std::shared_ptr<MIRGlobal>;
 class MIRModule {
 private:
     const Target &mtarget;
+    CodeGenContext &ctx;
     std::vector<MIRGlobal_p> mglobals{};
 
     std::vector<MIRFunction_p> mFuncs{}; // for function pass
 
+    string name; // for MAM
+
 public:
-    explicit MIRModule(const Target &target) : mtarget{target}, mglobals{} {}
+    MIRModule() = delete;
+
+    MIRModule(const Target &target, CodeGenContext &_ctx, const string &_name)
+        : mtarget{target}, mglobals{}, ctx(_ctx), name(_name) {}
 
     auto &globals() { return mglobals; }
     const auto &globals() const { return mglobals; }
@@ -488,8 +617,12 @@ public:
 
     void addFunc(MIRFunction_p func) { mFuncs.emplace_back(func); }
 
+    string getName() const { return name; }
+
     ~MIRModule() = default;
 };
+
+using MIRModule_p = std::shared_ptr<MIRModule>;
 
 }; // namespace MIR_new
 

@@ -1,5 +1,5 @@
-#include "mir/Target.hpp"
 #include "mir/MIR.hpp"
+#include "mir/Target.hpp"
 #include "mir/passes/transforms/lowering.hpp"
 
 using namespace MIR_new;
@@ -19,7 +19,7 @@ void TargetFrameInfo::emitCall(IR::pCall callinst, LoweringContext &ctx) const {
 
     int gprCnt = 0, sprCnt = 0;
     int passByRegBase = 0x10000000;
-    int passBySprRegBase = 0x20; // x<0 - 31> + XZR
+    int passBySprRegBase = 0x21; // 0 ~ 32
 
     ///@note ptr和int类共享gpr, 但是ptr需要x<>, 但int只需要w<>
     for (auto &arg : callinst->getArgs()) {
@@ -121,13 +121,24 @@ void TargetFrameInfo::emitCall(IR::pCall callinst, LoweringContext &ctx) const {
 
         MIROperand_p marg = MIROperand::asISAReg(isa, mtype);
 
-        ctx.emitCopy(marg, mval);
+        ctx.emitCopy(marg, mval); // choose copy code auto
     }
 
     ///@note emit call(bl)
     auto mval = callinst->isVoid() ? nullptr : ctx.newVReg(getType(callinst));
 
-    ctx.emitInst(MIRInst::make(ARMOpC::BL)->setOperand<0>(mval)->setOperand<1>(MIROperand::asReloc(mcallee->reloc())));
+    ///@todo emit tcp
+    ctx.emitInst(MIRInst::make(ARMOpC::BL)
+                     ->setOperand<0>(nullptr)
+                     ->setOperand<1>(MIROperand::asReloc(mcallee->reloc()))
+                     ->setOperand<2>(MIROperand::asImme(callinst->isTailCall() ? 1 : 0, OpT::special)));
+
+    auto mtype = getType(callinst);
+
+    ctx.emitInst(MIRInst::make(OpC::InstCopyFromReg)
+                     ->setOperand<0>(mval)
+                     ->setOperand<1>(MIROperand::asISAReg(mtype == OpT::Float32 ? ARMReg::V0 : ARMReg::X0, mtype)));
+    ///@todo vectorize
 
     ctx.addOperand(callinst, mval);
 }
@@ -159,6 +170,7 @@ void TargetFrameInfo::emitPrologue(MIRFunction_p mfunc, LoweringContext &ctx) co
         default:
             Err::unreachable("emitPrologue: unknown type");
         }
+        return 4; // just to make gnalc happy
     };
 
     // LAMBDA END
@@ -217,7 +229,6 @@ void TargetFrameInfo::emitPrologue(MIRFunction_p mfunc, LoweringContext &ctx) co
             continue;
         }
 
-        ///@warning 这里的offset是相对于刚进入函数, 没有开栈的sp/fp而言
         auto stkobj = mfunc->addStkObj(ctx.CodeGenCtx(), size, align, offset, StkObjUsage::Arg);
 
         ctx.emitInst(MIRInst::make(OpC::InstLoadRegFromStack)->setOperand<0>(arg)->setOperand<1>(stkobj));
@@ -255,14 +266,15 @@ void TargetFrameInfo::emitReturn(IR::pRet retinst, LoweringContext &ctx) const {
 
 bool TargetFrameInfo::isCallerSaved(const MIROperand &op) const {
     const auto reg = op.reg();
-    return (reg >= ARMReg::X0 && reg <= ARMReg::X7) || (reg >= ARMReg::V0 && reg <= ARMReg::V15);
+    return inRange(static_cast<ARMReg>(reg), ARMReg::X0, ARMReg::X18) ||
+           inRange(static_cast<ARMReg>(reg), ARMReg::V0, ARMReg::V15);
 }
 
 bool TargetFrameInfo::isCalleeSaved(const MIROperand &op) const {
     return !isCallerSaved(op); //
 }
 
-void TargetFrameInfo::emitPostSAPrologue(MIRBlk_p entry, LoweringContext &ctx, unsigned stkSize) const {
+void TargetFrameInfo::emitPostSAPrologue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const {
     ///@note 在callleesave保存前插入开栈指令
     ///@note stksize需要把寄存器保存的空间也计算在内
     ///@note 如果栈内没有局部变量, 可以考虑去掉sub, 给stp加pre-indexing
@@ -286,7 +298,7 @@ void TargetFrameInfo::emitPostSAPrologue(MIRBlk_p entry, LoweringContext &ctx, u
     ARMInstTemplate::registerDec(insts, iter, ARMReg::SP, stkSize);
 }
 
-void TargetFrameInfo::emitPostSAEpilogue(MIRBlk_p entry, LoweringContext &ctx, unsigned stkSize) const {
+void TargetFrameInfo::emitPostSAEpilogue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const {
     ///@note 恢复寄存器后插入栈回收指令
     ///@note 同上, 可以优化为 ldp x29, x30, [sp], 16
 
@@ -307,39 +319,18 @@ void TargetFrameInfo::emitPostSAEpilogue(MIRBlk_p entry, LoweringContext &ctx, u
     ARMInstTemplate::registerInc(insts, iter, ARMReg::SP, stkSize);
 }
 
-void TargetFrameInfo::insertPrologueEpilogue(MIRFunction_p mfunc, std::set<MIROperand_p> calleeSaves,
-                                             LoweringContext &ctx) const {
+void TargetFrameInfo::insertPrologueEpilogue(MIRFunction *mfunc, CodeGenContext &ctx) const {
 
     // 30 + 1 + 1 + 31 = 63 < 64
-    // X<>: 0 ~ 30, SP: 31, PC: 32, V<>: 33~63
-    uint64_t &logicRule = mfunc->calleeSaveRegs();
-
-    constexpr std::array<size_t, 63> regBits = [] {
-        std::array<size_t, 63> arr{};
-        for (size_t i = 0; i < 63; ++i) {
-            arr[i] = 1ULL << i;
-        }
-        return arr;
-    }();
-
-    if (mfunc->isLeafFunc()) {
-        logicRule |= regBits[ARMReg::LR];
-    }
-
-    if (mfunc->isLargeStk()) {
-        logicRule |= regBits[ARMReg::FP];
-    }
-
-    for (auto &mreg : calleeSaves) {
-        logicRule |= regBits[mreg->isa()];
-    }
+    // X<>: 0 ~ 30, SP: 31, PC: 32, V<>: 33~64
+    const uint64_t &bitmap = mfunc->calleeSaveRegs();
 
     // insert prologue
     auto &mblk_entry = mfunc->EntryBlk();
 
     auto &insts = mblk_entry->Insts();
 
-    insts.emplace_front(MIRInst::make(ARMOpC::PUSH)->setOperand<1>(MIROperand::asImme(logicRule, OpT::special)));
+    insts.emplace_front(MIRInst::make(ARMOpC::PUSH)->setOperand<1>(MIROperand::asImme(bitmap, OpT::special))); // immeEx
 
     // insert epilogue
     for (auto &mblk_exit : mfunc->ExitBlks()) {
@@ -350,6 +341,6 @@ void TargetFrameInfo::insertPrologueEpilogue(MIRFunction_p mfunc, std::set<MIROp
 
         auto it = std::prev(insts.end());
 
-        insts.insert(it, MIRInst::make(ARMOpC::POP)->setOperand<1>(MIROperand::asImme(logicRule, OpT::special)));
+        insts.insert(it, MIRInst::make(ARMOpC::POP)->setOperand<1>(MIROperand::asImme(bitmap, OpT::special)));
     }
 }

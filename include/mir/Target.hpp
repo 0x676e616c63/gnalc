@@ -13,6 +13,37 @@ using string = std::string;
 
 ///@note armv8没有了armv7中通用的8位旋转立即数, 取而代之的是一大堆规则不同的立即数
 
+inline bool isFitMemInstX(int offset) { return offset >= 0 && offset <= 32760 && offset % 8 == 0; }
+
+inline bool isFitMemInstW(int offset) { return offset >= 0 && offset <= 16380 && offset % 4 == 0; }
+
+inline bool isFitMemInstQ(int offset) { return offset >= 0 && offset <= 65520 && offset % 16 == 0; }
+
+inline bool isFitMemInstD(int offset) { return offset >= 0 && offset <= 32760 && offset % 8 == 0; }
+
+inline bool isFitMemInstS(int offset) { return offset >= 0 && offset <= 16380 && offset % 4 == 0; }
+
+inline bool isFitMemInstU(int offset) {
+    ///@note ldur/stur dont need offset to be aligned
+    return offset < 256 && offset > -257;
+}
+
+inline bool isFitMemInst(int offset, unsigned bitwide) {
+    switch (bitwide) {
+    case 16:
+        return isFitMemInstQ(offset);
+    case 8:
+        return isFitMemInstX(offset);
+    case 4:
+        return isFitMemInstW(offset);
+    default:
+        Err::unreachable("isFitMemInst: bitwide of " + std::to_string(bitwide) + " not supported");
+    }
+    return false; // just to make gnalc happy
+}
+
+///@todo vectoer ld1/ld2/ld3
+
 template <typename T> bool is12ImmeWithProbShift(T imm) {
     ///@warning use in ADD/SUB/CMP/CMN
 
@@ -52,7 +83,7 @@ template <typename T> bool isBitMaskImme(T imm) {
         Err::unreachable("iBitMaskImme: cant convert to encode");
     }
 
-    auto imme = static_case<size_t>(imm);
+    auto imme = static_cast<size_t>(imm);
 
     unsigned pattern_len = 1;
 
@@ -135,8 +166,8 @@ enum ARMReg : uint32_t {
     X30,
     LR = X30,
     SP, // 并非X31
-    PC, // 并非X32
-    V0, // 33U
+    /* PC */
+    V0, // 32U
     V1,
     V2,
     V3,
@@ -167,15 +198,33 @@ enum ARMReg : uint32_t {
     V28,
     V29,
     V30,
+    V31,
 };
 
 enum ARMOpC : uint32_t {
-    BL,   // call
-    RET,  // ret
-    PUSH, // implement with losts of stp in codegen
-    POP,  // implement with losts of ldp in codegen
-    INC,  // implement with add #imme (with imme legalize)
-    DEC,  // implement with sub #imme (with imme legalize)
+    LDR,
+    STR,
+    LDUR,
+    STUR,
+    LD1,
+    LD2,
+    LD3,
+    ST1,
+    ST2,
+    ST3,
+    CSET,     // cond set
+    CBNZ,     // compare and branch if not zero
+    ADRP_LDR, // load page of address then load address
+    MOV,      // not suggested, I mean really
+    MOVZ,     // mov and zero the rest bits
+    MOVK,     // mov and keep the rest bits
+    MOVF,     // fmov
+    BL,       // func call, remember to mark tail call
+    RET,      // ret, with link register
+    PUSH,     // implement with losts of stp in codegen
+    POP,      // implement with losts of ldp in codegen
+    INC,      // implement with add #imme (with imme legalize)
+    DEC,      // implement with sub #imme (with imme legalize)
 };
 
 class MIRInst;
@@ -204,7 +253,6 @@ public:
 };
 
 class LoweringContext; // defined in lowering.hpp
-class MIRFunction;
 class MIROperand;
 using MIROperand_p = std::shared_ptr<MIROperand>;
 using MIROperand_wp = std::weak_ptr<MIROperand>;
@@ -218,6 +266,9 @@ using MIRBlk_p_l = std::list<MIRBlk_p>;
 class StkObj;
 class MIRJmpTable;
 
+class ISelContext;
+struct CodeGenContext;
+
 class TargetFrameInfo { // armv8(A64)
 public:
     TargetFrameInfo() = default;
@@ -227,18 +278,16 @@ public:
     void emitPrologue(MIRFunction_p, LoweringContext &) const;
     void emitReturn(IR::pRet, LoweringContext &) const;
 
-    void emitPostSAPrologue(MIRBlk_p, LoweringContext &, unsigned) const;
-    void emitPostSAEpilogue(MIRBlk_p, LoweringContext &, unsigned) const;
-    void insertPrologueEpilogue(MIRFunction_p, std::set<MIROperand_p>, LoweringContext &) const;
+    void emitPostSAPrologue(MIRBlk_p, CodeGenContext &, unsigned) const;
+    void emitPostSAEpilogue(MIRBlk_p, CodeGenContext &, unsigned) const;
+    ///@note 这里最好重写一下
+    void insertPrologueEpilogue(MIRFunction *, CodeGenContext &) const;
 
     bool isCallerSaved(const MIROperand &op) const;
     bool isCalleeSaved(const MIROperand &op) const;
 
     constexpr size_t getStackPointerAlignment() const { return 16; };
 };
-
-class ISelContext;
-struct CodeGenContext;
 
 struct InstLegalizeContext {
     MIRInst_p minst;
@@ -255,10 +304,10 @@ public:
     bool matchAndSel(MIRInst_p, ISelContext &, bool allow) const;
     bool legalizeInst(MIRInst_p minst, ISelContext &ctx) const;
     bool matchAndSelectImpl(MIRInst_p minst, ISelContext &ctx) const;
-    void postLegalizeInst(const InstLegalizeContext &);
-    void postLegalizeInst(const InstLegalizeContext &, MIRInst_p_l &);
-    void preLegalizeInst(const InstLegalizeContext &);
-    void legalizeInstWithStackOperand(const InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const;
+    void postLegalizeInst(InstLegalizeContext &);
+    void postLegalizeInst(InstLegalizeContext &, MIRInst_p_l &);
+    void preLegalizeInst(InstLegalizeContext &);
+    void legalizeInstWithStackOperand(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const;
 
     ~TargetISelInfo() = default;
 };
@@ -266,8 +315,8 @@ public:
 struct CodeGenContext {
     const Target &target;
 
-    const TargetFrameInfo &frameInfo;
-    const TargetISelInfo &iselInfo;
+    TargetISelInfo &iselInfo;
+    TargetFrameInfo &frameInfo;
     // const TargetInstInfo &instInfo;
 
     unsigned idx = 0;

@@ -1,6 +1,9 @@
 #include "mir/passes/transforms/lowering.hpp"
+#include "ir/instructions/binary.hpp"
+#include "ir/instructions/control.hpp"
 #include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
+#include "ir/instructions/phi.hpp"
 #include "ir/module.hpp"
 #include "ir/type.hpp"
 #include "mir/passes/transforms/isel.hpp"
@@ -15,10 +18,9 @@ LoweringContext::LoweringContext(MIRModule &module, CodeGenContext &codeGenCtx, 
     mPtrType = OpT::Int64;
 }
 
-OpT btypeConvert(const IR::BType &type) {
+OpT MIR_new::btypeConvert(const IR::BType &type) {
     switch (type.getInner()) {
     case IR::IRBTYPE::I1:
-        return OpT::Bool;
     case IR::IRBTYPE::I8:
     case IR::IRBTYPE::I32:
         return OpT::Int32;
@@ -27,6 +29,7 @@ OpT btypeConvert(const IR::BType &type) {
     default:
         Err::unreachable("btypeConvert: try convert invalid btype");
     }
+    return OpT::Int; // just to make clang happy
 }
 
 MIRBlk_p LoweringContext::mapBlk(const IRBlk_p &blk) const { return mBlkMap.at(blk); }
@@ -34,10 +37,13 @@ MIRBlk_p LoweringContext::mapBlk(const IRBlk_p &blk) const { return mBlkMap.at(b
 MIRGlobal_p LoweringContext::mapGlobal(const string &global) const { return mGlobalMap.at(global); }
 
 MIROperand_p LoweringContext::mapOperand(const IRVal_p &value) {
-    if (value->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL) {
-        return mValMap.at(value);
-    } else {
+    if (value->getVTrait() == IR::ValueTrait::ORDINARY_VARIABLE) {
 
+        // get from mValMap
+        return mValMap.at(value);
+    } else if (value->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL) {
+
+        // get from mConstantMap
         if (auto ci32 = value->as<IR::ConstantInt>()) {
             auto imme = ci32->getVal();
             return mapOperand(imme);
@@ -47,7 +53,23 @@ MIROperand_p LoweringContext::mapOperand(const IRVal_p &value) {
         }
 
         ///@todo vectorize
+    } else if (auto value_glo = value->as<IR::GlobalVariable>()) {
+
+        // get from mValMap, but would insert loadInst
+        ///@brief   adrp    x0, :got:arr
+        ///@brief   ldr     x0, [x0, :got_lo12:arr]
+
+        auto mReloc = mGlobalMap.at(value_glo->getName());
+
+        auto mglo = MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Int64);
+
+        emitInst(
+            MIRInst::make(ARMOpC::ADRP_LDR)->setOperand<0>(mglo)->setOperand<1>(MIROperand::asReloc(mReloc->reloc())));
+
+        return mglo;
     }
+
+    return nullptr; // just to make clang happy
 }
 
 MIROperand_p LoweringContext::newVReg(const std::shared_ptr<IR::Type> &type) {
@@ -58,6 +80,9 @@ MIROperand_p LoweringContext::newVReg(const std::shared_ptr<IR::Type> &type) {
         return newVReg(*(type->as<IR::BType>()));
     case IR::IRCTYPE::PTR:
         return newVReg(*(type->as<IR::PtrType>()));
+    default:
+        Err::todo("LoweringContext::newVReg: vec and func");
+        return nullptr;
     }
 }
 
@@ -152,38 +177,44 @@ void LoweringContext::addOperand(const IRVal_p &val, const MIROperand_p &mval) {
     mValMap.emplace(val, mval);
 }
 
-MIRModule &MIR_new::loweringModule(const IRModule_p &module, CodeGenContext &ctx, IR::FAM &fam) {
-    std::map<string, MIRGlobal_p> globalMap; // 不同与LoweringCtx的map
+///@note entry
+MIRModule_p MIR_new::loweringModule(const IRModule &module, CodeGenContext &ctx) {
+    std::map<string, MIRGlobal_p> globalMap;
 
     const auto &layout = ctx.target.dataLayOut;
 
-    auto mModule = make<MIRModule>(ctx.target);
+    auto mModule = make<MIRModule>(ctx.target, ctx, module.getName());
 
     ///@brief 翻译全局的各种符号, 函数 + 全局变量
-    auto &globalvals = module->getGlobalVars();
+    ///@note
+    auto &globalvals = module.getGlobalVars();
     auto &globals = mModule->globals();
-    for (auto &func : *module) {
+    for (auto &func : module) {
         ///@note here we dont have to handle func declare
 
         string sym = func->getName().substr(1); // delete prefix '@'
-        auto mfunc = make<MIRFunction>(sym);
+        auto mfunc = make<MIRFunction>(sym, ctx);
         globals.push_back(make<MIRGlobal>(layout.codeAlignment, mfunc));
         mModule->addFunc(mfunc);
 
-        globalMap.emplace(func->getName(), mfunc); // map with prefix
+        globalMap.emplace(func->getName(), make<MIRGlobal>(layout.codeAlignment, mfunc)); // map with prefix
     }
 
     for (auto &globalval : globalvals) {
-        mModule->globals().emplace_back(MIR_new::loweringGlobal(*globalval));
+        auto mglo = MIR_new::loweringGlobal(*globalval);
+        mModule->globals().emplace_back(mglo);
+        globalMap.emplace(globalval->getName(), mglo); // map with prefix
     }
 
     ///@todo pre-lowering legalize(on module)
 
     ///@brief 1. lowering to Generic MIR
-    for (auto &func : *module) {
-        auto mfunc = globalMap.at(func->getName())->as<MIRFunction>();
-        loweringFunction(mfunc, func, ctx, *mModule, globalMap, fam);
+    for (auto &func : module) {
+        auto mfunc = globalMap.at(func->getName())->reloc()->as<MIRFunction>();
+        loweringFunction(mfunc, func, ctx, *mModule, globalMap);
     }
+
+    return mModule;
 }
 
 MIRGlobal_p MIR_new::loweringGlobal(const IR::GlobalVariable &global) {
@@ -271,10 +302,7 @@ MIRGlobal_p MIR_new::loweringGlobal(const IR::GlobalVariable &global) {
 }
 
 void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContext &codeGenCtx, MIRModule &mModule,
-                               std::map<string, MIRGlobal_p> globalMap, IR::FAM &fam) {
-
-    auto &domTree = fam.getResult<IR::DomTreeAnalysis>(*func);
-    auto &liveRange = fam.getResult<IR::LiveAnalysis>(*func);
+                               std::map<string, MIRGlobal_p> globalMap) {
 
     std::map<IRBlk_p, MIRBlk_p> blkMap;
     std::map<IRVal_p, MIROperand_p> valMap;
@@ -299,6 +327,18 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
 
             auto vreg = ctx.newVReg(inst->getType());
             ctx.addOperand(inst, vreg);
+        }
+    }
+
+    // lowering blk succs, preds
+    for (auto &blk : func->getDFVisitor<Util::DFVOrder::ReversePostOrder>()) {
+        auto &mblk = blkMap.at(blk);
+
+        for (auto &pred : blk->getPreBB()) {
+            mblk->addPred(blkMap.at(pred));
+        }
+        for (auto &succ : blk->getNextBB()) {
+            mblk->addSucc(blkMap.at(succ));
         }
     }
 
@@ -330,7 +370,7 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
             // stk obj
             auto ptype = alloca->getType();
             auto stkobjStore =
-                mfunc->addStkObj(codeGenCtx, ptype->getBytes(), alloca->getAlign(), 0, StkObjUsage::Local);
+                mfunc->addStkObj(codeGenCtx, ptype->getBytes(), alloca->getAlign(), 0, StkObjUsage::Local); // get vreg
 
             storeMap.emplace(inst, stkobjStore);
 
@@ -338,7 +378,7 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
             auto ptr = ctx.newVReg(OpT::Ptr);
             auto copy_stk_adr = MIRInst::make(OpC::InstLoadStackObjectAddr);
             copy_stk_adr->setOperand<0>(ptr);
-            copy_stk_adr->setOperand<1>(stkobjStore);
+            copy_stk_adr->setOperand<1>(stkobjStore); // no const offset here
 
             ctx.emitInst(copy_stk_adr);
             ctx.addOperand(alloca, ptr);
@@ -353,7 +393,7 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
         auto mblk = blkMap.at(blk);
         ctx.setCurrentBlk(mblk);
         for (auto &inst : blk->getAllInsts()) {
-            MIR_new::lowerInst(inst, ctx, domTree, liveRange);
+            MIR_new::lowerInst(inst, ctx);
         }
     }
 
@@ -370,12 +410,12 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
 
             for (auto &use_phi : inst->getPhiOpers()) {
                 auto &mblk_src = blkMap.at(use_phi.block);
-                auto &use = use_phi.value;
+                auto &use = valMap.at(use_phi.value);
 
                 if (tmpBlkMap.count(use_phi.block)) {
                     tmpBlkMap.at(use_phi.block).pairs.emplace_back(def, use);
                 } else {
-                    tmpBlkMap.emplace(PhiOperPair{mblk_dst, mblk_src, {}});
+                    tmpBlkMap.emplace(use_phi.block, PhiOperPair{mblk_dst, mblk_src, {}});
                     tmpBlkMap.at(use_phi.block).pairs.emplace_back(def, use);
                 }
             }
@@ -390,8 +430,9 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
     ctx.emitPhi();
 }
 
-void lowerInst(IRInst_p inst, LoweringContext &ctx, IR::DomTreeAnalysis::Result &domTree,
-               IR::LiveAnalysis::Result &liveRange) {
+void MIR_new::lowerInst(IRInst_p inst, LoweringContext &ctx) {
+
+    ///@todo maybe irgen can add select inst
 
     using OP = IR::OP;
     switch (inst->getOpcode()) {
@@ -408,45 +449,47 @@ void lowerInst(IRInst_p inst, LoweringContext &ctx, IR::DomTreeAnalysis::Result 
     case OP::FADD:
     case OP::FSUB:
     case OP::FMUL:
-    case OP::FDIV:
-        lowerInst(inst->as<IR::BinaryInst>(), ctx);
+        MIR_new::lowerInst(inst->as<IR::BinaryInst>(), ctx);
         break;
     case OP::DIV:
     case OP::REM:
-        lowerInst(inst->as<IR::BinaryInst>(), ctx, domTree, liveRange);
+    case OP::FDIV:
+    case OP::FREM:
+        ///@todo predict range of numbers
+        MIR_new::lowerInst(inst->as<IR::BinaryInst>(), ctx);
         break;
     case OP::FNEG:
-        lowerInst(inst->as<IR::FNEGInst>(), ctx);
+        MIR_new::lowerInst(inst->as<IR::FNEGInst>(), ctx);
         break;
     case OP::ICMP:
-        lowerInst(inst->as<IR::ICMPInst>(), ctx);
+        MIR_new::lowerInst(inst->as<IR::ICMPInst>(), ctx);
         break;
     case OP::FCMP:
-        lowerInst(inst->as<IR::FCMPInst>(), ctx);
+        MIR_new::lowerInst(inst->as<IR::FCMPInst>(), ctx);
         break;
     case OP::RET:
-        lowerInst(inst->as<IR::RETInst>(), ctx);
+        MIR_new::lowerInst(inst->as<IR::RETInst>(), ctx);
         break;
     case OP::BR:
-        lowerInst(inst->as<IR::BRInst>(), ctx);
+        MIR_new::lowerInst(inst->as<IR::BRInst>(), ctx);
         break;
     case OP::LOAD:
-        lowerInst(inst->as<IR::LOADInst>(), ctx, inst->as<IR::LOADInst>()->getAlign());
+        MIR_new::lowerInst(inst->as<IR::LOADInst>(), ctx, inst->as<IR::LOADInst>()->getAlign());
         break;
     case OP::STORE:
-        lowerInst(inst->as<IR::STOREInst>(), ctx, inst->as<IR::STOREInst>()->getAlign());
+        MIR_new::lowerInst(inst->as<IR::STOREInst>(), ctx, inst->as<IR::STOREInst>()->getAlign());
         break;
     case OP::ZEXT:
     case OP::BITCAST:
     case OP::SITOFP:
     case OP::FPTOSI:
-        lowerInst(inst->as<IR::CastInst>(), ctx);
+        MIR_new::lowerInst(inst->as<IR::CastInst>(), ctx);
         break;
     case OP::GEP:
-        lowerInst(inst->as<IR::GEPInst>(), ctx);
+        MIR_new::lowerInst(inst->as<IR::GEPInst>(), ctx);
         break;
     case OP::CALL:
-        lowerInst(inst->as<IR::CALLInst>(), ctx);
+        MIR_new::lowerInst(inst->as<IR::CALLInst>(), ctx);
         break;
     default:
         Err::unreachable("lowerInst: unrecognized IR::OP");

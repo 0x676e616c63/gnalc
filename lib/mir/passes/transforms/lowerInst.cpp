@@ -3,7 +3,6 @@
 #include "ir/instructions/memory.hpp"
 #include "mir/passes/transforms/isel.hpp"
 #include "mir/passes/transforms/lowering.hpp"
-#include "mir/tools.hpp"
 #include <forward_list>
 #include <queue>
 
@@ -59,12 +58,13 @@ OpC MIR_new::IROpCodeConvert(IR::OP op) {
         return OpC::InstCopy;
     case OP::PHI:
         Err::unreachable("IROpCodeConvert: PHI should not be convert");
-    case OP::CALL:
-        ///@todo
-        return OpC::InstJump;
     case OP::HELPER:
         Err::unreachable("IROpCodeConvert: HELPER should not be convert");
+    default:
+        Err::unreachable("IROpCodeConvert: op should be handled manully");
     }
+
+    return OpC::InstAdd; // just make clang happy
 }
 
 Cond MIR_new::IRCondConvert(IR::ICMPOP cond) {
@@ -102,6 +102,7 @@ Cond MIR_new::IRCondConvert(IR::FCMPOP cond) {
     case FCMPOP::ord:
         Err::unreachable("IRCondConvert: ord unexpected");
     }
+    return AL; // just make clang happy
 }
 
 void MIR_new::lowerInst(IR::pBinary binary, LoweringContext &ctx) {
@@ -116,22 +117,22 @@ void MIR_new::lowerInst(IR::pBinary binary, LoweringContext &ctx) {
     ctx.addOperand(binary, def);
 }
 
-void MIR_new::lowerInst(IR::pBinary binary, LoweringContext &ctx, IR::DomTreeAnalysis::Result &domTree,
-                        IR::LiveAnalysis::Result &liveRange) {
-    auto lhs = binary->getLHS();
-    auto rhs = binary->getRHS();
+// void MIR_new::lowerInst(IR::pBinary binary, LoweringContext &ctx, IR::DomTreeAnalysis::Result &domTree,
+//                         IR::LiveAnalysis::Result &liveRange) {
+//     auto lhs = binary->getLHS();
+//     auto rhs = binary->getRHS();
 
-    auto mop = MIR_new::IROpCodeConvert(binary->getOpcode());
+//     auto mop = MIR_new::IROpCodeConvert(binary->getOpcode());
 
-    auto def = ctx.newVReg(binary->getType());
+//     auto def = ctx.newVReg(binary->getType());
 
-    ///@todo 通过Dom和liveRange, 分析被除数和除数的可能取值上限, 并加入到op3, op4
+//     ///@todo 通过Dom和liveRange, 分析被除数和除数的可能取值上限, 并加入到op3, op4
 
-    ctx.emitInst(
-        MIRInst::make(mop)->setOperand<0>(def)->setOperand<1>(ctx.mapOperand(lhs))->setOperand<2>(ctx.mapOperand(rhs)));
+//     ctx.emitInst(
+//         MIRInst::make(mop)->setOperand<0>(def)->setOperand<1>(ctx.mapOperand(lhs))->setOperand<2>(ctx.mapOperand(rhs)));
 
-    ctx.addOperand(binary, def);
-}
+//     ctx.addOperand(binary, def);
+// }
 
 void MIR_new::lowerInst(IR::pFneg fneg, LoweringContext &ctx) {
     auto def = ctx.newVReg(fneg->getType());
@@ -145,11 +146,12 @@ void MIR_new::lowerInst(IR::pIcmp icmp, LoweringContext &ctx) {
     auto def = ctx.newVReg(icmp->getType());
 
     ctx.emitInst(MIRInst::make(OpC::InstICmp)
-                     ->setOperand<0>(def)
+                     ->setOperand<0>(nullptr)
                      ->setOperand<1>(ctx.mapOperand(icmp->getLHS()))
-                     ->setOperand<2>(ctx.mapOperand(icmp->getRHS()))
-                     ->setOperand<3>(ctx.mapOperand(IRCondConvert(icmp->getCond()))));
-    ///@note codegen时, 根据情况添加CSET指令
+                     ->setOperand<2>(ctx.mapOperand(icmp->getRHS())));
+
+    ctx.emitInst(
+        MIRInst::make(ARMOpC::CSET)->setOperand<0>(def)->setOperand<1>(ctx.mapOperand(IRCondConvert(icmp->getCond()))));
 
     ///@note condflag 加入到常量池
 
@@ -160,10 +162,12 @@ void MIR_new::lowerInst(IR::pFcmp fcmp, LoweringContext &ctx) {
     auto def = ctx.newVReg(fcmp->getType());
 
     ctx.emitInst(MIRInst::make(OpC::InstFCmp)
-                     ->setOperand<0>(def)
+                     ->setOperand<0>(nullptr)
                      ->setOperand<1>(ctx.mapOperand(fcmp->getLHS()))
-                     ->setOperand<2>(ctx.mapOperand(fcmp->getRHS()))
-                     ->setOperand<3>(ctx.mapOperand(IRCondConvert(fcmp->getCond()))));
+                     ->setOperand<2>(ctx.mapOperand(fcmp->getRHS())));
+
+    ctx.emitInst(
+        MIRInst::make(ARMOpC::CSET)->setOperand<0>(def)->setOperand<1>(ctx.mapOperand(IRCondConvert(fcmp->getCond()))));
 
     ctx.addOperand(fcmp, def);
 }
@@ -191,19 +195,16 @@ void MIR_new::lowerInst(IR::pBr br, LoweringContext &ctx) {
         // cmp/fcmp (previously lowered)
         // CSET <reg>, <cond> ; int or float
         // ... (in most casese, flag dont change, but be aware)
-        //
+        // CBNZ w<>, label
 
         auto blk_true = ctx.mapBlk(br->getTrueDest());
         auto blk_false = ctx.mapBlk(br->getFalseDest());
-        auto use = ctx.mapOperand(br->getCond());
+        auto use = ctx.mapOperand(br->getCond()); // cond: IR::pVal
 
-        ctx.emitInst(MIRInst::make(OpC::InstTst)->setOperand<0>(nullptr)->setOperand<1>(use));
-        ///@note codegen时, 视情况删除该ANDS
-
-        ctx.emitInst(MIRInst::make(OpC::InstBranch)
+        ctx.emitInst(MIRInst::make(ARMOpC::CBNZ)
                          ->setOperand<0>(nullptr)
-                         ->setOperand<1>(MIROperand::asReloc(blk_true))
-                         ->setOperand<2>(ctx.mapOperand(EQ))
+                         ->setOperand<1>(use)
+                         ->setOperand<2>(MIROperand::asReloc(blk_true))
                          ->setOperand<3>(MIROperand::asProb(0.5)));
         ///@note blk op 不放入变量池
 
@@ -240,7 +241,8 @@ void MIR_new::lowerInst(IR::pStore store, LoweringContext &ctx, size_t size) {
     ctx.emitInst(MIRInst::make(OpC::InstStore)
                      ->setOperand<0>(nullptr)
                      ->setOperand<1>(ctx.mapOperand(store->getValue()))
-                     ->setOperand<2>(ctx.mapOperand(store->getPtr())));
+                     ->setOperand<2>(ctx.mapOperand(store->getPtr()))
+                     ->setOperand<3>(MIROperand::asImme(size, OpT::special)));
 }
 
 void MIR_new::lowerInst(IR::pCast cast, LoweringContext &ctx) {
@@ -259,7 +261,7 @@ void MIR_new::lowerInst(IR::pGep gep, LoweringContext &ctx) {
     auto base = gep->getPtr();
 
     if (auto idx_const = idx->as<IR::ConstantInt>()) {
-        def_ptr = ctx.newVReg(gep->getType()); // return to Int64
+        def_ptr = ctx.newVReg(gep->getType()); // return Int64
         ctx.emitInst(MIRInst::make(OpC::InstAdd)
                          ->setOperand<0>(def_ptr)
                          ->setOperand<1>(ctx.mapOperand(base))
@@ -276,7 +278,7 @@ void MIR_new::lowerInst(IR::pGep gep, LoweringContext &ctx) {
         ctx.emitInst(MIRInst::make(OpC::InstAdd)
                          ->setOperand<0>(def_ptr)
                          ->setOperand<1>(ctx.mapOperand(base))
-                         ->setOperand<2>(ctx.mapOperand(moffset)));
+                         ->setOperand<2>(moffset));
     }
 
     ctx.addOperand(gep, def_ptr);
@@ -299,12 +301,16 @@ void LoweringContext::emitPhi() {
         ctx.emitInstBeforeBr(MIRInst::make(chooseCopyOpC(dst, src))->setOperand<0>(dst)->setOperand<1>(src));
 
         ctx.setCurrentBlk(succ);
+
+        return;
     };
 
     auto addCopy = [&ctx, &emitPhiCopy](MIROperand_p dst, MIRBlk_p pred) -> MIROperand_p {
         auto stageVal = ctx.newVReg(dst->type());
 
         emitPhiCopy(stageVal, dst, pred); // very carefully
+
+        return stageVal;
     };
 
     // LAMBDA_END
@@ -315,7 +321,10 @@ void LoweringContext::emitPhi() {
         unsigned indegree = 0;
     };
 
-    for (auto &[mblk_succ, mblk_pred, pairs] : phiOpers) {
+    for (auto &phiOper : phiOpers) {
+        auto &mblk_succ = phiOper.blk_dst;
+        auto &mblk_pred = phiOper.blk_src;
+        auto &pairs = phiOper.pairs;
 
         auto len = pairs.size();
         std::map<MIROperand_p, unsigned> mapping; // ptr to idx
@@ -355,7 +364,9 @@ void LoweringContext::emitPhi() {
                 ///@note 遍历src
                 ++i;
 
-                auto [dst, src] = pairs[idx];
+                auto &pair = pairs[idx];
+                auto dst = pair.first;
+                auto src = pair.second;
 
                 if (stagedMap.count(src)) {
                     src = stagedMap.at(src);
@@ -365,7 +376,7 @@ void LoweringContext::emitPhi() {
                     ///@note 可能会出现一种比较极端的情况, %0 = phi [... ...], ..., [%0, ...]
                     ///@note 理论上由于单赋值, 所以不需要做什么, 但是算法会还是会插入一个stage, 以及一个冗余的copy
                     Err::gassert(graph.at(idx).indegree == 1, "emitPhi::visit: indegree must be 1 here");
-                    Logger::logDebug("emitPhi::visit: need a stage by %" + dst->reg());
+                    Logger::logDebug("emitPhi::visit: need a stage by %" + std::to_string(dst->reg()));
 
                     graph[idx].indegree = 0;
                     auto stagedVal = addCopy(dst, mblk_pred);

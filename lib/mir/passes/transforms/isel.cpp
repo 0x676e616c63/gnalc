@@ -15,12 +15,23 @@ OpC MIR_new::chooseCopyOpC(const MIROperand_p &dst, const MIROperand_p &src) {
         return OpC::InstCopyFromReg;
     } else if (dst->isVReg() && src->isVReg()) {
         return OpC::InstCopy;
+    } else {
+        Err::unreachable("chooseCopyOpC: dont match any copy op");
     }
+    return OpC::InstCopy; // just make clang happy
+}
+
+PM::PreservedAnalyses ISel::run(MIRFunction &mfunc, FAM &fam) {
+    ISelContext isel(mfunc.CodeGenContext());
+
+    isel.impl(&mfunc);
+
+    return PM::PreservedAnalyses::all();
 }
 
 ///@note 关键是 iselInfo.matchAndSelect
 ///@todo 现阶段没有matchOpt的情况下, 基本上没有replace
-void ISelContext::impl(MIRFunction_p mfunc) {
+void ISelContext::impl(MIRFunction *mfunc) {
     auto &iselInfo = mCodeGenCtx.iselInfo;
     bool allowComplexPattern = false;
     bool tryOptLegal = false;
@@ -130,7 +141,7 @@ void ISelContext::impl(MIRFunction_p mfunc) {
 
         for (auto &mblk : mfunc->blks()) {
             // remove old insts;
-            mblk->Insts().remove_if([&](const MIRInst_p &minst) -> bool { return mDelWorkList.count(minst); });
+            mblk->Insts().remove_if([&](const MIRInst_p &minst) -> bool { return mDelWorkList.count(minst); }); // 谓词
 
             // replace defs
             for (auto &minst : mblk->Insts()) {
@@ -220,11 +231,7 @@ MIRInst_p_l ISelContext::getInsts() const { return mCurrentBlk->Insts(); }
 
 MIRInst_p_l::iterator ISelContext::getCurrentPos() const { return mInstInsertPos; }
 
-void ISelContext::delInst(MIRInst_p minst) {
-    auto minsts = mCurrentBlk->Insts();
-    auto it = std::find(minsts.begin(), minsts.end(), minst);
-    minsts.erase(it);
-}
+void ISelContext::delInst(MIRInst_p minst) { mDelWorkList.emplace(minst); }
 
 void ISelContext::replaceOperand(const MIROperand_p &_old, const MIROperand_p &_new) {
     Err::gassert(_old->isReg() && _new->isReg(), "replaceOperand: not regs");

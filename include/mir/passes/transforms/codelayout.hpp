@@ -1,0 +1,7 @@
+#pragma once
+#ifndef GNALC_ARMV8_MIR_TRANSFORMS_CODELAYOUT_HPP
+#define GNALC_ARMV8_MIR_TRANSFORMS_CODELAYOUT_HPP
+
+///@todo opt
+
+#endif

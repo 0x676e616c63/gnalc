@@ -6,7 +6,6 @@
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/live_analysis.hpp"
 #include "ir/passes/pass_manager.hpp"
-#include "mir/MIR.hpp"
 #include "mir/passes/pass_manager.hpp"
 #include <memory>
 
@@ -123,19 +122,18 @@ public:
 };
 
 ///@note implement entry
-///@note how to pass a IR::FAM
-MIRModule &loweringModule(const IRModule_p &module, CodeGenContext &ctx, IR::FAM &fam);
+MIRModule_p loweringModule(const IRModule &module, CodeGenContext &ctx);
 
 MIRGlobal_p loweringGlobal(const IR::GlobalVariable &);
 
-void loweringFunction(MIRFunction_p, IRFunc_p, CodeGenContext &, MIRModule &, std::map<string, MIRGlobal_p>, IR::FAM &);
+void loweringFunction(MIRFunction_p, IRFunc_p, CodeGenContext &, MIRModule &, std::map<string, MIRGlobal_p>);
 
-void lowerInst(IR::pInst &, LoweringContext &, IR::DomTreeAnalysis::Result &, IR::LiveAnalysis::Result &);
+void lowerInst(IR::pInst, LoweringContext &);
 
 // more detially
 void lowerInst(IR::pBinary, LoweringContext &);
-void lowerInst(IR::pBinary, LoweringContext &, IR::DomTreeAnalysis::Result &,
-               IR::LiveAnalysis::Result &); // sdiv / srem
+// void lowerInst(IR::pBinary, LoweringContext &, IR::DomTreeAnalysis::Result &,
+//                IR::LiveAnalysis::Result &); // sdiv / srem
 void lowerInst(IR::pFneg, LoweringContext &);
 void lowerInst(IR::pIcmp, LoweringContext &);
 void lowerInst(IR::pFcmp, LoweringContext &);

@@ -103,8 +103,6 @@ bool TargetISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     case OpC::InstOr:
     case OpC::InstXor:
         Err::todo("legalizeInst: bitwise op not implement yet");
-    case OpC::InstTst: // ANDS WZR, Wx, ...
-        break;
     case OpC::InstShl:
     case OpC::InstLShr:
     case OpC::InstAShr: {
@@ -126,50 +124,198 @@ bool TargetISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
             minst->setOperand<2>(loadImm(rhs));
         }
     } break;
-    case OpC::InstSRem:
-        Err::unreachable("legalizeInst: SRem should be lower before");
-        break;
-    case OpC::InstSMin:
-    case OpC::InstSMax:
-        Err::todo("legalizeInst: min/max op not implement yet");
     case OpC::InstNeg: {
         auto lhs = minst->getOp(1);
         Err::gassert(!lhs->isImme(), "legalizeInst: can not neg a imme");
     } break;
-    case OpC::InstAbs:
-        Err::todo("legalizeInst: abs op not implement yet");
     case OpC::InstFAdd:
     case OpC::InstFSub:
     case OpC::InstFMul:
-    case OpC::InstFDiv:
-    case OpC::InstFRem:
-        Err::unreachable("legalizeInst: FRem should be lower before");
-    case OpC::InstSExt:
-    case OpC::InstZExt:
-    case OpC::InstTrunc:
-        Err::todo("legalizeInst: bitwise convert op not implement yet");
+    case OpC::InstFDiv: {
+        auto lhs = minst->getOp(1);
+        auto rhs = minst->getOp(2);
+        if (lhs->isImme()) {
+            minst->setOperand<1>(loadImm(lhs));
+        }
+        if (rhs->isImme()) {
+            minst->setOperand<2>(loadImm(rhs));
+        }
+    } break;
+    case OpC::InstSRem: {
+        auto def = minst->getDef();
+        auto lhs = minst->getOp(1);
+        auto rhs = minst->getOp(2);
+
+        auto minst_div = ctx.newInst(OpC::InstSDiv);
+        auto minst_mul = ctx.newInst(OpC::InstMul);
+        auto minst_sub = ctx.newInst(OpC::InstSub);
+
+        auto result1 = MIROperand::asVReg(ctx.codeGenCtx().nextId(), OpT::Int32);
+        auto result2 = MIROperand::asVReg(ctx.codeGenCtx().nextId(), OpT::Int32);
+        minst_div->setOperand<0>(result1)->setOperand<1>(lhs)->setOperand<2>(rhs);
+        minst_mul->setOperand<0>(result2)->setOperand<1>(result1)->setOperand<2>(rhs);
+        minst_sub->setOperand<0>(def)->setOperand<1>(lhs)->setOperand<2>(result2);
+
+        ctx.delInst(minst); // add to list, handle later
+        modified |= true;
+    } break;
+    case OpC::InstFRem: {
+        auto def = minst->getDef();
+        auto lhs = minst->getOp(1);
+        auto rhs = minst->getOp(2);
+
+        auto minst_fdiv = ctx.newInst(OpC::InstFDiv);
+        auto minst_fmul = ctx.newInst(OpC::InstFMul);
+        auto minst_fsub = ctx.newInst(OpC::InstFSub);
+
+        auto result1 = MIROperand::asVReg(ctx.codeGenCtx().nextId(), OpT::Float32);
+        auto result2 = MIROperand::asVReg(ctx.codeGenCtx().nextId(), OpT::Float32);
+        minst_fdiv->setOperand<0>(result1)->setOperand<1>(lhs)->setOperand<2>(rhs);
+        minst_fmul->setOperand<0>(result2)->setOperand<1>(result1)->setOperand<2>(rhs);
+        minst_fsub->setOperand<0>(def)->setOperand<1>(lhs)->setOperand<2>(result2);
+
+        ctx.delInst(minst); // add to list, handle later
+        modified |= true;
+    } break;
     case OpC::InstF2S:
         break;
     case OpC::InstS2F:
         break;
     default:
         ///@note 各种copy, 内存访问没有合法化
+        break;
     }
+    return modified;
+}
+void TargetISelInfo::postLegalizeInst(InstLegalizeContext &) {
+    ///@todo
 }
 
-// void TargetISelInfo::postLegalizeInst(const InstLegalizeContext &) {
-//     ///@todo
-// }
+void TargetISelInfo::postLegalizeInst(InstLegalizeContext &, MIRInst_p_l &) {
+    ///@todo
+}
 
-// void TargetISelInfo::postLegalizeInst(const InstLegalizeContext &, MIRInst_p_l &) {
-//     ///@todo
-// }
+void TargetISelInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
+    ///@todo handle select inst if we really have one
 
-// void TargetISelInfo::preLegalizeInst(const InstLegalizeContext &) {
-//     ///@todo
-// }
+    auto &ctx = _ctx.ctx; // codegen context
+    auto &iter = _ctx.iter;
+    auto minst = *_ctx.iter;
+    auto &minsts = _ctx.insts;
 
-// void TargetISelInfo::legalizeInstWithStackOperand(const InstLegalizeContext &ctx, MIROperand_p,
-//                                                   const StkObj &obj) const {
-//     ///@todo
-// }
+    if (!minst->isGeneric()) {
+        return;
+    }
+
+    switch (minst->opcode<OpC>()) {
+    case OpC::InstSelect:
+        Err::todo("preLegalizeInst: select inst not support yet");
+    case OpC::InstLoadGlobalAddress: {
+        auto &def = minst->getDef();
+
+    } break;
+    case OpC::InstLoadImm:
+    case OpC::InstLoadImmToReg: {
+        auto &def = minst->getDef();
+        auto &imme = minst->getOp(1);
+
+        Err::gassert(def->isReg() && imme->isImme(), "preLegalizeInst: op type dont fit inst opc");
+
+        auto imm = static_cast<unsigned>(imme->imme());
+
+        ///@note movz(lo) + movk(hi) + fmov
+
+        auto dst = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
+
+        auto movz = MIRInst::make(ARMOpC::MOVZ)
+                        ->setOperand<0>(dst)
+                        ->setOperand<1>(MIROperand::asImme(imm & 0XFFFF, OpT::Int16));
+
+        minsts.insert(iter, movz);
+
+        auto movk = MIRInst::make(ARMOpC::MOVK)
+                        ->setOperand<0>(dst)
+                        ->setOperand<1>(MIROperand::asImme(imm >> 16, OpT::Int16))
+                        ->setOperand<2>(MIROperand::asImme(16, OpT::special));
+
+        minsts.insert(iter, movk);
+
+        if (def->type() == OpT::Float32) {
+            auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Float32);
+
+            auto movf = MIRInst::make(ARMOpC::MOVF)->setOperand<0>(fdst)->setOperand<1>(dst);
+
+            minsts.insert(iter, movf);
+
+            dst = fdst;
+        }
+        ///@todo vectorize
+
+        ///@brief rewrite
+        minst->resetOpcode(minst->opcode<OpC>() == OpC::InstLoadImm ? OpC::InstCopy : OpC::InstCopyToReg);
+
+        minst->setOperand<1>(dst);
+
+    } break;
+    default:
+        break;
+    }
+
+    return;
+}
+void TargetISelInfo::legalizeInstWithStackOperand(InstLegalizeContext &_ctx, MIROperand_p mop,
+                                                  const StkObj &obj) const {
+
+    ///@warning armv8的交叉装载ld1, ld2, ld3不支持变址寻址, 甚至不支持常量偏移
+    ///@warning ld1 {V<>.4s} 又和 ldr q<> 作用一致, 而后者支持变址寻址, 只是不显式指示加载类型
+    ///@warning ld2 ld3 除非专门的处理数字信号的样例, 不然根本用不上
+
+    auto &[minst, minsts, iter, ctx] = _ctx;
+
+    auto &offset = obj.offset;
+
+    if (isFitMemInst(offset, getBitWide(mop->type()))) {
+        if (minst->opcode<OpC>() != OpC::InstStoreRegToStack && minst->opcode<OpC>() != OpC::InstStore) {
+            minst->setOperand<2>(MIROperand::asImme(offset, OpT::Int64));
+            minst->resetOpcode(ARMOpC::LDR);
+        } else {
+            minst->setOperand<3>(MIROperand::asImme(offset, OpT::Int64));
+            minst->resetOpcode(ARMOpC::STR);
+        }
+        return;
+    }
+
+    ///@note scratch 用于变址寻址
+    auto scratch = MIROperand::asISAReg(ARMReg::FP, OpT::Int64);
+
+    ///@note 将偏移加到scratch, 由于偏移可以是64位, 所以这里最多有4次movz/movk
+    auto imme = offset;
+    auto movz = MIRInst::make(ARMOpC::MOVZ)
+                    ->setOperand<0>(scratch)
+                    ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16));
+    minsts.insert(iter, movz);
+
+    imme >>= 16;
+    unsigned times = 1;
+    while (imme != 0) {
+        auto movk = MIRInst::make(ARMOpC::MOVK)
+                        ->setOperand<0>(scratch)
+                        ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16))
+                        ->setOperand<2>(MIROperand::asImme(16, OpT::special));
+        minsts.insert(iter, movk);
+
+        ++times;
+        imme >>= 16;
+    }
+
+    ///@todo ldur/stur
+    if (minst->opcode<OpC>() != OpC::InstStoreRegToStack && minst->opcode<OpC>() != OpC::InstStore) {
+        minst->setOperand<2>(scratch); // just a mark for codegen
+        minst->resetOpcode(ARMOpC::LDR);
+    } else {
+        minst->setOperand<3>(scratch);
+        minst->resetOpcode(ARMOpC::STR);
+    }
+
+    return;
+}

@@ -6,10 +6,7 @@
 
 namespace MIR_new {
 struct OptInfo {
-    bool peephole = false;      // func pass
-    bool phiEliminate = true;   // module pass
-    bool preRAleagalize = true; // func pass
-    bool RA = true;             // func pass
+    ///@todo
 };
 
 extern const OptInfo o1_opt_info;

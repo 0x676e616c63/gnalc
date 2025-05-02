@@ -1,18 +1,19 @@
 transform文件夹下的passes有比较严格的顺序
-1. lowering.hpp: lower to Generic MIR                                   ok
+1. lowering.hpp: lower to Generic MIR                                   done
 2. isel.hpp: instruction selection                                      模式匹配还没有
 3. registercoalesce.hpp: register coalesce                              省了
-4. peephole.hpp: peephole opt
-5. PreRAlegalize.hpp: Pre-RA legalization
-6. PreRAscheduling.hpp: Pre-RA scheduling, minimize register pressure
-7. RA.hpp: register allocation
-8. stackgenerate.hpp: legalize stack objects, stack -> sp
-9. tco.hpp: ICF & Tail duplication
-10. PostRAscheduling.hpp: post-RA scheduling, minimize cycles
-11. codelayout.hpp: code layout opt
-12. dce.hpp: remove unreachable block/continuous goto/unused label/peephole
-13. CFGsimplify.hpp: CFG simplify
-14. PostRAlegalize.hpp: post legalization
-15. 
+4. peephole.hpp: peephole opt                                           todo
+5. PreRAlegalize.hpp: Pre-RA legalization                               done
+6. PreRAscheduling.hpp: Pre-RA scheduling, minimize register pressure   todo
+7. RA.hpp: register allocation                                          done
+8. stackgenerate.hpp: legalize stack objects, stack -> sp               done
+9. tro.hpp: 
+10. ICF_TailDup.hpp: TCF & Tail duplication
+11. PostRAscheduling.hpp: post-RA scheduling, minimize cycles
+12. codelayout.hpp: code layout opt
+13. dce.hpp: remove unreachable block/continuous goto/unused label/peephole
+14. CFGsimplify.hpp: CFG simplify
+15. PostRAlegalize.hpp: post legalization                               doing
+16. 
 
-其中 3, 4, 6, 9, 10, 11, 12, 13 是性能优化, 不是必要的
+其中 3, 4, 6, 9, 10, 11, 12, 13, 14 是性能优化, 不是必要的

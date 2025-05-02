@@ -2,12 +2,17 @@
 #ifndef GNALC_ARMV8_MIR_TRANSFORMS_ISEL_HPP
 #define GNALC_ARMV8_MIR_TRANSFORMS_ISEL_HPP
 
-#include "mir/MIR.hpp"
+#include "mir/passes/pass_manager.hpp"
 #include <set>
 
 namespace MIR_new {
 
 OpC chooseCopyOpC(const MIROperand_p &dst, const MIROperand_p &src);
+
+class ISel : public PM::PassInfo<ISel> {
+public:
+    PM::PreservedAnalyses run(MIRFunction &, FAM &);
+};
 
 class ISelContext {
 private:
@@ -24,7 +29,8 @@ private:
 
 public:
     explicit ISelContext(CodeGenContext &codeGenCtx) : mCodeGenCtx(codeGenCtx) {}
-    void impl(MIRFunction_p);
+
+    void impl(MIRFunction *mfunc);
 
     ///@note just a new inst insert somewhere, set ops yourself
     MIRInst_p newInst(OpC);
