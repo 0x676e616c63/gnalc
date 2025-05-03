@@ -21,6 +21,9 @@ enum class FuncAttr {
     // user defined functions
     NotBuiltin,
 
+    // Typically this is a main function
+    ExecuteExactlyOnce,
+
     // Sylib
     isSylib,
 
@@ -51,6 +54,7 @@ public:
     bool isIntrinsic() const;
 
     bool hasAttr(FuncAttr attr) const;
+    void addAttr(FuncAttr attr);
 
     void setParent(Module *module);
     Module *getParent() const;

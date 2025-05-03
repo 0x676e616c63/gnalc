@@ -2,7 +2,7 @@
 
 #include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
-#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/passes/analysis/basic_alias_analysis.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 
@@ -12,7 +12,7 @@ namespace IR {
 PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
     bool dse_inst_modified = false;
 
-    auto &aa_res = fam.getResult<AliasAnalysis>(function);
+    auto &aa_res = fam.getResult<BasicAliasAnalysis>(function);
     auto &domtree = fam.getResult<DomTreeAnalysis>(function);
     auto &postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
     std::set<pInst> unused_store;

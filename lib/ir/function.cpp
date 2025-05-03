@@ -19,8 +19,9 @@ FunctionDecl::FunctionDecl(std::string name_, std::vector<pType> params, pType r
         func_attrs.emplace(FuncAttr::NotBuiltin);
 }
 
-bool FunctionDecl::hasAttr(FuncAttr attr) const {
-    return func_attrs.count(attr);
+bool FunctionDecl::hasAttr(FuncAttr attr) const { return func_attrs.count(attr); }
+void FunctionDecl::addAttr(FuncAttr attr) {
+    func_attrs.emplace(attr);
 }
 
 void FunctionDecl::accept(IRVisitor &visitor) { visitor.visit(*this); }

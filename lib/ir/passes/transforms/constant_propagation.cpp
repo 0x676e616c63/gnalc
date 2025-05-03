@@ -464,11 +464,7 @@ public:
         } else if (auto load = inst->as<LOADInst>()) {
             changes[inst] = LatticeInfo::NAC;
         } else if (auto call = inst->as<CALLInst>()) {
-            if (call->getFuncName() == "@getch") {
-                changes[inst].setConstantRange(
-                    ValueRange(ConstantProxy(constant_pool, -1), ConstantProxy(constant_pool, 256)));
-            } else
-                changes[inst] = LatticeInfo::NAC;
+            changes[inst] = LatticeInfo::NAC;
         } else if (auto bit = inst->as<BITCASTInst>()) {
             changes[inst] = LatticeInfo::NAC;
         } else if (inst->getOpcode() == OP::BR || inst->getOpcode() == OP::PHI)

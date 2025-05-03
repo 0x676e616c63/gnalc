@@ -2,7 +2,8 @@
 #include "ir/passes/pass_manager.hpp"
 
 // Analysis
-#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/passes/analysis/basic_alias_analysis.hpp"
+#include "ir/passes/analysis/loop_alias_analysis.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/live_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
@@ -442,7 +443,8 @@ void PassBuilder::registerFunctionAnalyses(FAM &fam) {
     FUNCTION_ANALYSIS(LiveAnalysis())
     FUNCTION_ANALYSIS(DomTreeAnalysis())
     FUNCTION_ANALYSIS(PostDomTreeAnalysis())
-    FUNCTION_ANALYSIS(AliasAnalysis())
+    FUNCTION_ANALYSIS(BasicAliasAnalysis())
+    FUNCTION_ANALYSIS(LoopAliasAnalysis())
     FUNCTION_ANALYSIS(LoopAnalysis())
     FUNCTION_ANALYSIS(SCEVAnalysis())
 

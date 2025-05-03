@@ -5,6 +5,7 @@
 #include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
 #include "ir/instructions/vector.hpp"
+#include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/pattern_match.hpp"
 
 #include <algorithm>
@@ -220,7 +221,7 @@ bool setBaseAlign(pVal ptr, int align, Function* curr_func) {
         // If setBaseAlign is called from a CALLInst in a callee function,
         // the caller function have not run PromotePass. (since the callee is always prior to
         // the caller in the function list, due to the absence of function declarations).
-        // So the load usually be formal parameter in the caller function, which is a
+        // Typically, the LOADInst is loading formal parameter in the caller function, which is a
         // pointer from the caller's caller.
         // For example,
         // define dso_local i32 @foo(i32* noundef %0) {
@@ -298,7 +299,7 @@ VectorizerPass::Pack VectorizerPass::Pack::truncate(size_t size) {
 const pInst &VectorizerPass::Pack::front() const { return stmts.front(); }
 
 // Check if two instructions can be packed together.
-bool VectorizerPass::stmtCanPack(const pInst &stmt1, const pInst &stmt2, int align) {
+bool VectorizerPass::stmtCanPack(const pInst &stmt1, const pInst &stmt2) {
     // Skip Non-vectorizable
     if (!isVectorizable(stmt1) || !isVectorizable(stmt2))
         return false;
@@ -306,6 +307,42 @@ bool VectorizerPass::stmtCanPack(const pInst &stmt1, const pInst &stmt2, int ali
     // Only isomorphic instructions can be packed
     if (!isIsomorphic(stmt1, stmt2))
         return false;
+
+    // Ensure no intervening memory reference/modification
+    //
+    // %a = load xxx, i
+    // store xxx, i + 1
+    // %b = load i + 1
+    // ----  or  ----
+    // store xxx, i
+    // %a = load i + 1
+    // store xxx, i + 1
+    if (hasMemoryRef(stmt1)) {
+        Err::gassert(hasMemoryRef(stmt2), "Not isomorphic.");
+
+        auto it = stmt1->getIter();
+        auto end = stmt2->getIter();
+        if (stmt1->getIndex() > stmt2->getIndex())
+            std::swap(it, end);
+        it = std::next(it);
+        if (stmt1->is<LOADInst>()) {
+            auto ptr = (*end)->as<LOADInst>()->getPtr();
+            for (; it != end; ++it) {
+                auto modref = aa_res->getInstModRefInfo(*it, ptr, *fam);
+                if (modref == ModRefInfo::Mod || modref == ModRefInfo::ModRef)
+                    return false;
+            }
+        }
+        else if (stmt1->is<STOREInst>()) {
+            auto ptr = (*end)->as<STOREInst>()->getPtr();
+            for (; it != end; ++it) {
+                auto modref = aa_res->getInstModRefInfo(*it, ptr, *fam);
+                if (modref == ModRefInfo::Ref || modref == ModRefInfo::ModRef)
+                    return false;
+            }
+        }
+    }
+
 
     // Ensure no use-def dependency
     if (!isIndependent(stmt1, stmt2))
@@ -322,15 +359,7 @@ bool VectorizerPass::stmtCanPack(const pInst &stmt1, const pInst &stmt2, int ali
             return false;
     }
 
-    // Alignment consistency
-    auto align1 = getAlign(stmt1);
-    auto align2 = getAlign(stmt2);
-    if (align1 == -1 || align1 == 4 || align1 == align) {
-        if (align2 == -1 || align2 == 4 || align2 == align + ElementSize)
-            return true;
-    }
-
-    return false;
+    return true;
 }
 
 // Estimate the savings of packing two instructions.
@@ -342,7 +371,6 @@ bool VectorizerPass::followUseDefs(const Pack &pack) {
     Err::gassert(pack.isPair());
     auto stmt1 = pack.getLeft();
     auto stmt2 = pack.getRight();
-    auto align = getAlign(stmt1);
 
     bool modified = false;
     for (size_t i = 0; i < stmt1->getNumOperands(); ++i) {
@@ -355,11 +383,9 @@ bool VectorizerPass::followUseDefs(const Pack &pack) {
         // Adjacent load/store has already been packed. The load/store here can't be adjacent.
         if (x1->is<LOADInst, STOREInst>() || x2->is<LOADInst, STOREInst>())
             continue;
-        if (stmtCanPack(x1, x2, align)) {
+        if (stmtCanPack(x1, x2)) {
             if (estimateSavings(x1, x2) >= 0) {
                 pack_set.emplace_back(x1, x2);
-                setAlign(x1, align);
-                setAlign(x2, align);
                 modified = true;
             }
         }
@@ -387,7 +413,7 @@ bool VectorizerPass::followDefUses(const Pack &pack) {
             // Adjacent load/store has already been packed. The load/store here can't be adjacent.
             if (user1->is<LOADInst, STOREInst>() || user2->is<LOADInst, STOREInst>())
                 continue;
-            if (stmtCanPack(user1, user2, align)) {
+            if (stmtCanPack(user1, user2)) {
                 auto est = estimateSavings(user1, user2);
                 if (est > savings) {
                     savings = est;
@@ -400,8 +426,6 @@ bool VectorizerPass::followDefUses(const Pack &pack) {
 
     if (x1 && x2 && savings >= 0) {
         pack_set.emplace_back(x1, x2);
-        setAlign(x1, align);
-        setAlign(x2, align);
         return true;
     }
     return false;
@@ -418,8 +442,7 @@ void VectorizerPass::findAdjacentReferences() {
                 continue;
 
             if (isInstAdjacent(inst, candidate)) {
-                auto align = getAlign(inst);
-                if (stmtCanPack(inst, candidate, align))
+                if (stmtCanPack(inst, candidate))
                     pack_set.emplace_back(inst, candidate);
             }
         }
@@ -777,7 +800,10 @@ bool VectorizerPass::schedule() {
             auto bitcast = std::make_shared<BITCASTInst>("%slp.bc" + std::to_string(name_cnt++), load->getPtr(),
                                                          makePtrType(makeVectorType(load->getType(), curr->size())));
             auto vec_load =
-                std::make_shared<LOADInst>("%slp.ld" + std::to_string(name_cnt++), bitcast, ElementSize * curr->size());
+                std::make_shared<LOADInst>("%slp.ld" + std::to_string(name_cnt++), bitcast,
+                    // FIXME
+                     4);
+                    // ElementSize * curr->size());
             curr_block->addInst(load->getIter(), bitcast);
             curr_block->addInst(load->getIter(), vec_load);
             scheduled_packs[curr] = vec_load;
@@ -787,7 +813,10 @@ bool VectorizerPass::schedule() {
                 std::make_shared<BITCASTInst>("%slp.bc" + std::to_string(name_cnt++), store->getPtr(),
                                               makePtrType(makeVectorType(store->getValue()->getType(), curr->size())));
             auto val = gatherVector(curr, [](const pInst &store) { return store->as<STOREInst>()->getValue(); });
-            auto vec_store = std::make_shared<STOREInst>(val, bitcast, ElementSize * curr->size());
+            auto vec_store = std::make_shared<STOREInst>(val, bitcast,
+                // FIXME
+                4);
+                // ElementSize * curr->size());
             curr_block->addInst(store->getIter(), bitcast);
             curr_block->addInst(store->getIter(), vec_store);
             scheduled_packs[curr] = nullptr;
@@ -854,15 +883,20 @@ void VectorizerPass::reset() {
     name_cnt = 0;
     curr_func = nullptr;
     curr_block = nullptr;
+    fam = nullptr;
+    aa_res = nullptr;
     pack_set.clear();
     operand_pack_map.clear();
     user_pack_map.clear();
 }
 
-PM::PreservedAnalyses VectorizerPass::run(Function &function, FAM &fam) {
+PM::PreservedAnalyses VectorizerPass::run(Function &function, FAM &manager) {
     bool vectorizer_inst_modified = false;
 
     curr_func = &function;
+    aa_res = &manager.getResult<BasicAliasAnalysis>(function);
+    fam = &manager;
+
     for (const auto &block : function) {
         curr_block = block;
         findAdjacentReferences();
@@ -873,7 +907,8 @@ PM::PreservedAnalyses VectorizerPass::run(Function &function, FAM &fam) {
         Logger::logDebug("[Vectorizer] on '", function.getName(), " AFTER Combine:\n", *this);
         rearrangePack();
         Logger::logDebug("[Vectorizer] on '", function.getName(), " AFTER Rearrange:\n", *this);
-        fixArrayAlign();
+        // FIXME
+        // fixArrayAlign();
         Logger::logDebug("[Vectorizer] on '", function.getName(), " AFTER FixAlign:\n", *this);
         vectorizer_inst_modified |= schedule();
         Logger::logDebug("[Vectorizer] on '", function.getName(), " Done:\n", *this);

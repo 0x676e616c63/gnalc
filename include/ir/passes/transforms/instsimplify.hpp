@@ -1,7 +1,5 @@
 // Inst Simplify Pass
 // Common peephole optimizations on Instructions through algebraic simplification and strength reduction
-// This pass recognize common instruction patterns using the PatternMatch utility
-// and simplify them while maintaining program semantics.
 //
 // Note that this pass would destroy the LCSSA form unless `preserve_lcssa` is set.
 #pragma once

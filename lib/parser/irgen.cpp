@@ -405,6 +405,7 @@ void IRGenerator::visit(FuncDef &node) {
         Err::gassert(ret_type == IR::IRBTYPE::I32, "Invalid main.");
         if (curr_insts.empty() || curr_insts.back()->getOpcode() != IR::OP::RET)
             curr_insts.emplace_back(std::make_shared<IR::RETInst>(module.getConst(0)));
+        curr_func->addAttr(IR::FuncAttr::ExecuteExactlyOnce);
     } else if (curr_insts.empty() || curr_insts.back()->getOpcode() != IR::OP::RET) {
         if (ret_type == IR::IRBTYPE::VOID)
             curr_insts.emplace_back(std::make_shared<IR::RETInst>());

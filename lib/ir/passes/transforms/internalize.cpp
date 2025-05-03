@@ -21,8 +21,9 @@ bool isReachableFromAToB(Function* a, Function* b) {
 }
 
 PM::PreservedAnalyses InternalizePass::run(Function &function, FAM &fam) {
-    // Only do this on main since they execute exactly once.
-    if (function.getName() != "@main")
+    // Internalize is safe if the functions execute exactly once.
+    // Typically, this is a main function.
+    if (!function.hasAttr(FuncAttr::ExecuteExactlyOnce))
         return PreserveAll();
 
     bool internalize_inst_modified = false;
@@ -51,8 +52,8 @@ PM::PreservedAnalyses InternalizePass::run(Function &function, FAM &fam) {
 
             // Already internalized
             if (auto call = inst_user->as<CALLInst>()) {
-                if (call->getFuncName() == Config::IR::MEMCPY_INTRINSIC_NAME ||
-                    call->getFuncName() == Config::IR::MEMSET_INTRINSIC_NAME) {
+                if (call->getFunc()->hasAttr(FuncAttr::isMemcpyIntrinsic) ||
+                    call->getFunc()->hasAttr(FuncAttr::isMemsetIntrinsic)) {
                     safe_to_internalize = false;
                     break;
                 }

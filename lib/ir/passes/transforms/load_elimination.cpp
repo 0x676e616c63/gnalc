@@ -1,6 +1,6 @@
 #include "ir/passes/transforms/load_elimination.hpp"
 #include "ir/instructions/memory.hpp"
-#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/passes/analysis/basic_alias_analysis.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 
@@ -10,7 +10,7 @@ namespace IR {
 PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
     bool load_elimination_inst_modified = false;
 
-    auto &aa_res = fam.getResult<AliasAnalysis>(function);
+    auto &aa_res = fam.getResult<BasicAliasAnalysis>(function);
     auto &domtree = fam.getResult<DomTreeAnalysis>(function);
     auto &postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
     std::unordered_set<pInst> unused_load;

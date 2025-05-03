@@ -1,6 +1,6 @@
 #include "ir/passes/transforms/instsimplify.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
-#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/passes/analysis/basic_alias_analysis.hpp"
 #include "ir/passes/helpers/constant_fold.hpp"
 #include "ir/instructions/compare.hpp"
 #include "ir/instructions/converse.hpp"
@@ -535,7 +535,7 @@ bool InstSimplifyPass::foldGEP(const pPhi &phi) {
 }
 
 bool InstSimplifyPass::isLoadSuitableForSinking(const pLoad &load) const {
-    auto &aa_res = fam->getResult<AliasAnalysis>(*func);
+    auto &aa_res = fam->getResult<BasicAliasAnalysis>(*func);
 
     // If there is some modifying after the load in the block, we cannot sink it.
     for (auto it = load->getIter(); it != load->getParent()->end(); ++it) {

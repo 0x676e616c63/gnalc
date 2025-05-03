@@ -10,6 +10,7 @@
 #ifndef GNALC_IR_PASSES_TRANSFORMS_VECTORIZER_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_VECTORIZER_HPP
 
+#include "ir/passes/analysis/basic_alias_analysis.hpp"
 #include "ir/passes/pass_manager.hpp"
 
 namespace IR {
@@ -44,6 +45,8 @@ private:
 
     Function* curr_func;
     pBlock curr_block;
+    FAM* fam;
+    BasicAAResult* aa_res;
     std::list<Pack> pack_set;
     size_t name_cnt;
 
@@ -53,7 +56,7 @@ private:
     std::unordered_map<const Pack*, pInst> scheduled_packs;
     void computePackUseDef();
 
-    bool stmtCanPack(const pInst& a, const pInst& b, int align);
+    bool stmtCanPack(const pInst& a, const pInst& b);
     int estimateSavings(const pInst &stmt1, const pInst &stmt2);
 
     bool followUseDefs(const Pack& pack);
