@@ -117,8 +117,7 @@ User::~User() {
 }
 
 size_t User::replaceAllOperands(const pVal &before, const pVal &after) {
-    if (before == after)
-        return 0;
+    Err::gassert(before != after, "Replace with an identical value doesn't make sense.");
     size_t cnt = 0;
     for (const auto &use : operand_uses_list) {
         if (use->getValue() == before) {

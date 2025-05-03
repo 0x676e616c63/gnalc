@@ -1,5 +1,3 @@
-#include "config/config.hpp"
-
 #include "ir/passes/pass_builder.hpp"
 #include "ir/passes/pass_manager.hpp"
 #include "ir/passes/utilities/irprinter.hpp"
@@ -15,7 +13,7 @@
 #include "ggc/irparsertool.hpp"
 #endif
 
-#if GNALC_EXTENSION_BRAINFK // in config.hpp
+#ifdef GNALC_EXTENSION_BRAINFK // in CMakeLists.txt
 #include "codegen/brainfk/bfgen.hpp"
 #include "codegen/brainfk/bfprinter.hpp"
 #include "codegen/brainfk/bftrans.hpp"
@@ -57,12 +55,13 @@ int main(int argc, char **argv) {
     bool emit_llvm = false;                     // -emit-llvm
     bool emit_llc = false;                      // -emit-llc
     bool ast_dump = false;                      // -ast-dump
+    bool o1_pipeline = false;                   // -O, -O1
     bool fixed_point_pipeline = false;          // -fixed-point
     bool fuzz_testing = false;                  // -fuzz
     double fuzz_testing_duplication_rate = 1.0; // -fuzz-rate
     std::string fuzz_testing_repro;             // -fuzz-repro
     bool debug_pipeline = false;                // -debug-pipeline
-    IR::OptInfo opt_info;                       // --xxx
+    IR::CliOptions cli_opt_options;             // --xxx, --no-xxx
 
 #if GNALC_EXTENSION_A32
     MIR::OptInfo bkd_opt_info_A32;
@@ -117,12 +116,11 @@ int main(int argc, char **argv) {
         } else if (arg == "-fixed-point")
             fixed_point_pipeline = true;
         else if (arg == "-O1" || arg == "-O")
-            opt_info = IR::o1_opt_info;
+            o1_pipeline = true;
 
 #define OPT_ARG(cli_arg, cli_no_arg, opt_name)                                                                         \
-    else if (arg == (cli_arg)) opt_info.opt_name = true;                                                               \
-    else if (arg == (cli_no_arg)) opt_info.opt_name = false;
-
+    else if (arg == (cli_arg)) cli_opt_options.opt_name = IR::CliOptions::Status::Enable;                              \
+    else if (arg == (cli_no_arg)) cli_opt_options.opt_name = IR::CliOptions::Status::Disable;
         // Optimizations available:
         // Function Transforms
         OPT_ARG("--mem2reg", "--no-mem2reg", mem2reg)
@@ -137,17 +135,14 @@ int main(int argc, char **argv) {
         OPT_ARG("--reassociate", "--no-reassociate", reassociate)
         OPT_ARG("--instsimplify", "--no-instsimplify", instsimplify)
         OPT_ARG("--inline", "--no-inline", inliner)
-        OPT_ARG("--loopsimplify", "--no-loopsimplify", loop_simplify)
-        OPT_ARG("--looprotate", "--no-looprotate", loop_rotate)
-        OPT_ARG("--lcssa", "--no-lcssa", lcssa)
         OPT_ARG("--licm", "--no-licm", licm)
         OPT_ARG("--loopunroll", "--no-loopunroll", loop_unroll)
         OPT_ARG("--indvars", "--no-indvars", indvars)
         OPT_ARG("--lsr", "--no-lsr", loop_strength_reduce)
         OPT_ARG("--loopelim", "--no-loopelim", loopelim)
-        OPT_ARG("--slp-vectorizer", "--no-slp-vectorizer", slp_vectorizer)
-        OPT_ARG("--sroa", "--no-sroa", sroa)
+        OPT_ARG("--vectorizer", "--no-vectorizer", vectorizer)
         OPT_ARG("--jumpthreading", "--no-jumpthreading", jump_threading)
+        OPT_ARG("--internalize", "--no-internalize", internalize)
         // Module Transforms
         OPT_ARG("--treeshaking", "--no-treeshaking", tree_shaking)
 #undef OPT_ARG
@@ -177,11 +172,11 @@ int main(int argc, char **argv) {
             fuzz_testing_repro = argv[i];
         }
         else if (arg == "-debug-pipeline") debug_pipeline = true;
-        else if (arg == "--ann") opt_info.advance_name_norm = true;
-        else if (arg == "--verify") opt_info.verify = true;
+        else if (arg == "--ann") cli_opt_options.advance_name_norm = true;
+        else if (arg == "--verify") cli_opt_options.verify = IR::CliOptions::Status::Enable;
         else if (arg == "--strict") {
-            opt_info.verify = true;
-            opt_info.abort_when_verify_failed = true;
+            cli_opt_options.verify = IR::CliOptions::Status::Enable;
+            cli_opt_options.abort_when_verify_failed = true;
         }
 #if GNALC_EXTENSION_BRAINFK
         // Extensions:
@@ -202,50 +197,50 @@ int main(int argc, char **argv) {
             std::cout <<
                 R"(OPTIONS:
 
-General options:
-  -o <file>               - Write output to <file>
-  -S                      - Only run compilation steps
-  -O,-O1                  - Optimization level 1
-  -emit-llvm              - Use the LLVM representation for assembler and object files
-  -ast-dump               - Build ASTs and then debug dump them. (Unavailable in GGC mode)
-  -fixed-point            - Enable the fixed point optimization pipeline. (Ignore other optimization options)
-  --log <log-level>       - Enable compiler logger. Available log-level: debug, info, none
-  -h, --help              - Display available options
+General Options:
+  -o <file>            - Write output to <file>
+  -S                   - Only run compilation steps (assembly generation)
+  -O,-O1               - Optimization level 1
+  -emit-llvm           - Use LLVM intermediate representation for output
+  -ast-dump            - Build and dump AST (Unavailable in GGC mode)
+  -fixed-point         - Enable fixed-point optimization pipeline
+  --log <log-level>    - Set logging level (debug|info|none)
+  -h, --help           - Display this help message
 
-Optimizations available:
+Optimizations Flags:
   --mem2reg            - Promote memory to register
   --sccp               - Sparse conditional constant propagation
   --dce                - Dead code elimination
   --adce               - Aggressive dead code elimination
-  --cfgsimplify        - Simplify control flow
+  --cfgsimplify        - Control flow graph simplification
   --dse                - Dead store elimination
   --loadelim           - Redundant load elimination
   --gvnpre             - Value-Based partial redundancy elimination (GVN-PRE)
   --tailcall           - Tail call optimization
   --reassociate        - Reassociate commutative expressions
-  --instsimplify       - Simplify instructions
-  --inline             - Inline suitable functions
-  --loopsimplify       - Canonicalize loops to the Loop Simplify Form
-  --looprotate         - Canonicalize loops to the Rotated Loop Form
-  --lcssa              - Canonicalize loops to the Loop Closed SSA Form
-  --loopunroll         - Unroll loops
-  --indvars            - Simplify induction variables
+  --instsimplify       - Instruction simplification
+  --inline             - Function inlining
+  --loopunroll         - Loop unrolling
+  --indvars            - Induction variable simplification
   --lsr                - Loop strength reduction
   --loopelim           - Loop elimination
-  --slp-vectorizer     - SLP vectorizer
-  --sroa               - Scalar replacement of aggregates
+  --vectorizer         - Vectorizer
   --jumpthreading      - Jump threading
+  --internalize        - Internalize global variables
   --treeshaking        - Shake off unused functions, function declarations and global variables
 
 Debug options:
-  -fuzz                      - Enable fuzz testing pipeline. (Ignore other optimization options)
-  -fuzz-rate <rate: double>  - Set the duplication rate for fuzz testing pipeline.
-  -fuzz-repro <pipeline>     - Reproduce fuzz testing pipeline. Find <pipeline> in the fuzz testing log.
-  -debug-pipeline            - Builtin pipeline for debugging.
-  --no-<pass>                - Remove <pass> from pipeline, <pass> are specified by 'Optimizations available' above.
-  --ann                      - Use the advance name normalization result (after IRGen). (This disables the one at the last).
-  --verify                   - Verify IR after each pass
-  --strict                   - Enable verify and abort when verify failed
+  -fuzz                      - Enable fuzz testing pipeline
+  -fuzz-rate <rate: double>  - Set the duplication rate for fuzz testing pipeline
+  -fuzz-repro <pipeline>     - Reproduce specific fuzz pipeline. Find <pipeline> in the fuzz testing log
+  -debug-pipeline            - Use built-in debugging pipeline
+  --no-<pass>                - Disable specific optimization pass
+  --ann                      - Use the advance name normalization result (after IRGen) (This disables the one at the last)
+  --verify                   - Enable IR verification after passes
+  --strict                   - Strict mode (verify + abort on failure)
+
+Note: For -fuzz/-fixed-point/-O1 modes:
+  --<opt> flags have no effect, but --no-<opt> can disable specific passes
 )";
 
 #if GNALC_EXTENSION_BRAINFK
@@ -307,15 +302,27 @@ Extensions:
     IR::PassBuilder::registerModuleAnalyses(mam);
     IR::PassBuilder::registerProxies(fam, mam);
 
+    IR::PMOptions pm_options{};
+    if (o1_pipeline || fixed_point_pipeline || fuzz_testing) {
+        if (!fuzz_testing) {
+            if (cli_opt_options.verify == IR::CliOptions::Status::Default)
+                cli_opt_options.verify = IR::CliOptions::Status::Disable;
+        } else
+            cli_opt_options.abort_when_verify_failed = true;
+        pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::EnableIfDefault);
+    } else
+        pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::DisableIfDefault);
+
     IR::MPM mpm;
     if (debug_pipeline)
         mpm = IR::PassBuilder::buildModuleDebugPipeline();
     else if (fuzz_testing)
-        mpm = IR::PassBuilder::buildModuleFuzzTestingPipeline(fuzz_testing_duplication_rate, fuzz_testing_repro);
+        mpm = IR::PassBuilder::buildModuleFuzzTestingPipeline(pm_options, fuzz_testing_duplication_rate,
+                                                              fuzz_testing_repro);
     else if (fixed_point_pipeline)
-        mpm = IR::PassBuilder::buildModuleFixedPointPipeline();
+        mpm = IR::PassBuilder::buildModuleFixedPointPipeline(pm_options);
     else
-        mpm = IR::PassBuilder::buildModulePipeline(opt_info);
+        mpm = IR::PassBuilder::buildModulePipeline(pm_options);
 
     std::ostream *poutstream = &std::cout;
     std::ofstream outfile;
@@ -378,7 +385,7 @@ Extensions:
 
         // Assembler
         if (only_compilation) {
-            MIR::ARMPrinter armv7gen(outfile);
+            MIR::ARMPrinter armv7gen(*poutstream);
             armv7gen.printout(lower.getModule());
         }
 
@@ -411,6 +418,7 @@ Extensions:
     if (only_compilation) {
         MIR_new::ARMA64Printer armv8gen(outfile);
         armv8gen.printout(*mModule);
+        return 0;
     }
 
     return 0;

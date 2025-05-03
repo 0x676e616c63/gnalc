@@ -1,3 +1,4 @@
+#ifdef GNALC_EXTENSION_GGC
 // A Bison parser, made by GNU Bison 3.8.2.
 
 // Skeleton interface for Bison LALR(1) parsers in C++
@@ -2964,7 +2965,7 @@ switch (yykind)
     /// Constants.
     enum
     {
-      yylast_ = 305,     ///< Last index in yytable_.
+      yylast_ = 310,     ///< Last index in yytable_.
       yynnts_ = 46,  ///< Number of nonterminal symbols.
       yyfinal_ = 21 ///< Termination state number.
     };
@@ -3329,3 +3330,4 @@ switch (yykind)
 
 
 #endif // !YY_YY_INCLUDE_GGC_IRPARSER_HPP_INCLUDED
+#endif

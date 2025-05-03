@@ -85,5 +85,44 @@ bool WeakListReplace(std::list<std::weak_ptr<T>> &weak_list, const std::shared_p
     Err::gassert(found, "WeakListReplace(): element not found.");
     return found;
 }
+
+template <typename T> void hashSeedCombine(size_t &seed, T x) { seed ^= x + 0x9e3779b9 + (seed << 6) + (seed >> 2); }
+
+template <typename Container>
+std::enable_if_t<std::is_integral_v<typename remove_cvref_t<Container>::value_type> &&
+                     sizeof(typename remove_cvref_t<Container>::value_type) == 4,
+                 size_t>
+vectorHash(Container &&vec) {
+    size_t seed = vec.size();
+    for (auto x : vec) {
+        x = ((x >> 16) ^ x) * 0x45d9f3b;
+        x = ((x >> 16) ^ x) * 0x45d9f3b;
+        x = (x >> 16) ^ x;
+        hashSeedCombine(seed, x);
+    }
+    return seed;
+}
+template <typename Container>
+std::enable_if_t<std::is_integral_v<typename remove_cvref_t<Container>::value_type> &&
+                     sizeof(typename remove_cvref_t<Container>::value_type) == 8,
+                 size_t>
+vectorHash(Container &&vec) {
+    size_t seed = vec.size();
+    for (auto x : vec) {
+        x = ((x >> 30) ^ x) * 0xbf58476d1ce4e5b9;
+        x = ((x >> 27) ^ x) * 0x94d049bb133111eb;
+        x = (x >> 31) ^ x;
+        hashSeedCombine(seed, x);
+    }
+    return seed;
+}
+template <typename Container>
+std::enable_if_t<!std::is_integral_v<typename remove_cvref_t<Container>::value_type>, size_t>
+vectorHash(Container &&vec) {
+    size_t seed = vec.size();
+    for (auto x : vec)
+        hashSeedCombine(seed, std::hash<typename remove_cvref_t<Container>::value_type>()(x));
+    return seed;
+}
 } // namespace Util
 #endif

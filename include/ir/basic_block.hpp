@@ -36,7 +36,17 @@ class BasicBlock : public Value {
     friend class Instruction;
     friend class PostDomTreeAnalysis;
     friend void linkBB(const pBlock &prebb, const pBlock &nxtbb);
+
+    // This should be deprecated in the future.
+    // When there are multiple identical edges between two BBs, this function
+    // can be error-prone.
     friend void unlinkBB(const pBlock &prebb, const pBlock &nxtbb);
+
+    // Use the following two instead
+    // Only unlink one edge
+    friend void unlinkOneEdge(const pBlock &prebb, const pBlock &nxtbb);
+    // Unlink all such edges
+    friend size_t unlinkAllEdges(const pBlock &prebb, const pBlock &nxtbb);
 
     std::list<wpBlock> pre_bb;  // 前驱
     std::list<wpBlock> next_bb; // 后继
@@ -138,7 +148,7 @@ public:
             for (auto it = insts.begin(); it != insts.end();) {
                 if (pred(*it)) {
                     for (const auto &user : (*it)->inst_users()) {
-                        Err::gassert(user->getParent()== nullptr || pred(user),
+                        Err::gassert(user->getParent() == nullptr || pred(user),
                                      "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
                     }
                     (*it)->setParent(nullptr);

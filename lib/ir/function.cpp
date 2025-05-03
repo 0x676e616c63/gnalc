@@ -4,21 +4,38 @@
 #include <algorithm>
 #include <map>
 #include <numeric>
+#include <utility>
 
 namespace IR {
 FunctionDecl::FunctionDecl(std::string name_, std::vector<pType> params, pType ret_type, bool is_va_arg_,
-                           bool is_builtin_, bool is_sylib_)
+                           std::set<FuncAttr> attrs)
     : Value(std::move(name_), makeFunctionType(std::move(params), std::move(ret_type), is_va_arg_),
-            ValueTrait::FUNCTION),
-      is_builtin(is_builtin_), is_sylib(is_sylib_) {
-    Err::gassert(!is_builtin_ || !is_sylib_);
+            ValueTrait::FUNCTION), func_attrs(std::move(attrs)) {
+    Err::gassert(!(hasAttr(FuncAttr::isSylib) && hasAttr(FuncAttr::isIntrinsic)));
+    Err::gassert(!(hasAttr(FuncAttr::builtinMemReadOnly) && hasAttr(FuncAttr::builtinMemWriteOnly)));
+
+    // user defined functions
+    if (func_attrs.empty())
+        func_attrs.emplace(FuncAttr::NotBuiltin);
+}
+
+bool FunctionDecl::hasAttr(FuncAttr attr) const {
+    return func_attrs.count(attr);
 }
 
 void FunctionDecl::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
-bool FunctionDecl::isSylib() const { return is_sylib; }
+bool FunctionDecl::isSylib() const {
+    return hasAttr(FuncAttr::isSylib);
+}
 
-bool FunctionDecl::isBuiltin() const { return is_builtin; }
+bool FunctionDecl::isIntrinsic() const {
+    return hasAttr(FuncAttr::isIntrinsic);
+}
+
+void FunctionDecl::setParent(Module *module) { parent = module; }
+
+Module *FunctionDecl::getParent() const { return parent; }
 
 FunctionDecl::~FunctionDecl() = default;
 void FormalParam::accept(IRVisitor &visitor) { visitor.visit(*this); }
@@ -30,7 +47,7 @@ std::vector<pType> get_params_type(const std::vector<pFormalParam> &p) {
 }
 
 Function::Function(std::string name_, const std::vector<pFormalParam> &params_, pType ret_type, ConstantPool *pool_)
-    : FunctionDecl(std::move(name_), get_params_type(params_), std::move(ret_type), false, false, false),
+    : FunctionDecl(std::move(name_), get_params_type(params_), std::move(ret_type), false),
       params(params_), constant_pool(pool_) {}
 
 void Function::addBlock(iterator it, pBlock blk) {
@@ -184,8 +201,7 @@ void Function::updateAndCheckCFG() {
                 it = blks.erase(it);
             } else if ((*it)->getNumSuccs() == 0) {
                 // 结尾块
-                if (getType()->as<FunctionType>()->getRet()->as<BType>()->getInner() ==
-                    IRBTYPE::VOID) {
+                if (getType()->as<FunctionType>()->getRet()->as<BType>()->getInner() == IRBTYPE::VOID) {
                     (*it)->addInst(std::make_shared<RETInst>());
                 } else {
                     Err::unreachable("CFGBuilder::linker(): invalid function type.");

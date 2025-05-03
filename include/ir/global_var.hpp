@@ -34,7 +34,6 @@ public:
     bool isZero() const;
     bool isArray() const;
 
-    pVal &getConstVal(); // 此处暂时先用非const的引用传递
     const pVal &getConstVal() const;
 
     const std::vector<GVIniter> &getInnerIniter() const;
@@ -75,6 +74,7 @@ public:
     bool isArray() const;
     const GVIniter &getIniter() const;
     int getAlign() const;
+    void setAlign(int a);
 
     void accept(IRVisitor &visitor) override;
     ~GlobalVariable() override;

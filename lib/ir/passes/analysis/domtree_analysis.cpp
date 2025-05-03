@@ -6,14 +6,14 @@ PM::UniqueKey DomTreeAnalysis::Key;
 PM::UniqueKey PostDomTreeAnalysis::Key;
 
 DomTree DomTreeAnalysis::run(Function &f, FAM &fam) {
-    detail::DomTreeBuilder builder;
+    DomTreeBuilder builder;
     builder.entry = f.getBlocks().front().get();
     builder.analyze();
     return builder.domtree;
 }
 
 PostDomTree PostDomTreeAnalysis::run(Function &f, FAM &fam) {
-    detail::PostDomTreeBuilder builder;
+    PostDomTreeBuilder builder;
     setExit(f);
     builder.entry = exit.get();
     builder.analyze();

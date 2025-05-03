@@ -35,12 +35,11 @@ static const std::string global_temp_dir = "./gnalc_test_temp/" + generate_uniqu
 static const std::string global_benchmark_temp_dir = "./gnalc_benchmark_temp/" + generate_unique_temp_dir();
 
 static const std::string sylibc = "../../test/sylib/sylib.c";
+// static const std::string sylibc = "sylib.c";
 
 static const std::string test_data = "../../test/contest";
-static const std::vector subdirs = {
-    "functional", "performance", "h_functional",
-    // "h_performance", "final/performance", "final/h_performance"
-};
+static const std::vector subdirs = {"functional",    "performance",       "h_functional",
+                                    "h_performance", "final/performance", "final/h_performance"};
 // const std::vector subdirs = {"functional", "performance"};
 static const std::vector benchmark_subdirs = {"performance", "h_performance", "final/performance",
                                               "final/h_performance"};

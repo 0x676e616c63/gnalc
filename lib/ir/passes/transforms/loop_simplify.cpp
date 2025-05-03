@@ -20,6 +20,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
             if (!preheader) {
                 auto new_preheader = std::make_shared<BasicBlock>("%ls.ph" + std::to_string(name_cnt++));
                 auto header_preds = header->getPreBB();
+                bool ph_linked = false;
                 for (const auto &pred : header_preds) {
                     if (!loop->contains(pred)) {
                         auto br = pred->getBRInst();
@@ -27,8 +28,10 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                         br->replaceAllOperands(header, new_preheader);
                         unlinkBB(pred, header);
                         linkBB(pred, new_preheader);
+                        ph_linked = true;
                     }
                 }
+                Err::gassert(ph_linked, "Invalid Loop Header.");
                 new_preheader->addInst(std::make_shared<BRInst>(header));
                 linkBB(new_preheader, header);
 
@@ -46,8 +49,8 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                 }
                 foldPHI(new_preheader);
                 function.addBlock(header->getIter(), new_preheader);
-                if (!loop->isOutermost())
-                    loop_info.addBlock(loop->getParent(), new_preheader);
+                auto& new_dom = fam.getFreshResult<DomTreeAnalysis>(function);
+                loop_info.discoverNonHeaderBlock(new_preheader, new_dom);
                 preheader = new_preheader;
                 curr_loop_changed = true;
             }
@@ -59,7 +62,7 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                 new_latch->addInst(std::make_shared<BRInst>(header));
                 linkBB(new_latch, header);
                 auto latches = loop->getLatches();
-                Err::gassert(!latches.empty());
+                Err::gassert(!latches.empty(), "Invalid loop with no latches.");
                 for (const auto &old_latch : latches) {
                     auto br = old_latch->getBRInst();
                     Err::gassert(br != nullptr);
@@ -81,7 +84,8 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                 }
                 foldPHI(new_latch);
                 function.addBlock(std::next(latches.back()->getIter()), new_latch);
-                loop_info.addBlock(loop, new_latch);
+                auto& new_dom = fam.getFreshResult<DomTreeAnalysis>(function);
+                loop_info.discoverNonHeaderBlock(new_latch, new_dom);
                 latch = new_latch;
                 curr_loop_changed = true;
             }
@@ -128,10 +132,8 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
                     }
                     foldPHI(new_exit);
                     function.addBlock(std::next(exit->getIter()), new_exit);
-
-                    auto exit_loop = loop_info.getLoopFor(exit);
-                    if (exit_loop)
-                        loop_info.addBlock(exit_loop, new_exit);
+                    auto& new_dom = fam.getFreshResult<DomTreeAnalysis>(function);
+                    loop_info.discoverNonHeaderBlock(new_exit, new_dom);
                     curr_loop_changed = true;
                 }
             }
@@ -142,7 +144,16 @@ PM::PreservedAnalyses LoopSimplifyPass::run(Function &function, FAM &fam) {
 
     name_cnt = 0;
 
-    return loop_simplify_cfg_modified ? PreserveNone() : PreserveCFGAnalyses();
+    if (loop_simplify_cfg_modified) {
+        PM::PreservedAnalyses pa;
+        // We get a fresh domtree after each modification of CFG,
+        // so the domtree is still valid.
+        pa.preserve<DomTreeAnalysis>();
+        pa.preserve<LoopAnalysis>();
+        return pa;
+    }
+
+    return PreserveAll();
 }
 
 } // namespace IR

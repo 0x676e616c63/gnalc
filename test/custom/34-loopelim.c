@@ -22,7 +22,8 @@ int main(){
     putch(sum(60));
     return 0;
 }
-// Inline first
+// SCEV Expansion Test
+// run Inline first
 // expected:
 //   call void @putch(i32 noundef 153)
 //   call void @putch(i32 noundef 153)

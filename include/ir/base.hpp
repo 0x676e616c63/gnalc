@@ -395,6 +395,28 @@ template <> inline std::string toIRString(float value) {
 }
 
 inline std::string toIRString(const std::string &value) { return value; }
+
+inline std::string toIRString(const std::vector<int> &value) {
+    std::string ret = "<";
+    for (auto it = value.begin(); it != value.end(); ++it) {
+        ret += "i32 " + toIRString(*it);
+        if (it != value.end() - 1)
+            ret += ", ";
+    }
+    ret += ">";
+    return ret;
+}
+
+inline std::string toIRString(const std::vector<float> &value) {
+    std::string ret = "<";
+    for (auto it = value.begin(); it != value.end(); ++it) {
+        ret += "float " + toIRString(*it);
+        if (it != value.end() - 1)
+            ret += ", ";
+    }
+    ret += ">";
+    return ret;
+}
 } // namespace IR
 
 #endif

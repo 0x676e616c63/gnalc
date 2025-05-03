@@ -330,9 +330,6 @@ public:
 
     template <typename PassT> std::enable_if_t<!std::is_same_v<PassT, PassManager>> addPass(PassT &&pass) {
         using PassModelT = PassModel<UnitT, PassT, AnalysisManager<UnitT>>;
-        // comment from LLVM:
-        // Do not use make_unique or emplace_back, they cause too many template
-        // instantiations, causing terrible compile times.
         passes.push_back(std::unique_ptr<PassConceptT>(new PassModelT(std::forward<PassT>(pass))));
     }
 
@@ -453,7 +450,7 @@ public:
             if (++round > threshold) {
                 Err::gassert(threshold_explicitly_set,
                              "Default Fixed point iteration threshold reached. Check the pipeline!"
-                             " To disable this message, set the threshold explicitly.");
+                             " If this is intentionally, set the threshold explicitly.");
                 break;
             }
         }

@@ -129,13 +129,11 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
         for (const auto &loop : looppdfv) {
             Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplify Form.");
 
-            bool latch_merged = false;
             if (auto dead_latch = tryMergeLatchToExiting(*loop)) {
                 loop_info.delBlock(dead_latch);
                 if (dead_latch->getNumPreds() == 0)
                     function.delBlock(dead_latch);
                 loop_rotate_cfg_modified = true;
-                latch_merged = true;
             }
 
             Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplified Form in LoopRotate");
@@ -424,7 +422,8 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                 for (const auto &phi : new_header->getPhiInsts())
                     phi->replaceAllOperands(old_preheader, new_preheader);
 
-                cloned_ph_br->replaceAllOperands(new_header, new_preheader);
+                bool ok = cloned_ph_br->replaceAllOperands(new_header, new_preheader);
+                Err::gassert(ok);
 
                 // Fix CFG
                 unlinkBB(old_preheader, new_header);
@@ -433,8 +432,8 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
 
                 function.addBlock(new_header->getIter(), new_preheader);
 
-                if (!loop->isOutermost())
-                    loop_info.addBlock(loop->getParent(), new_preheader);
+                auto& new_dom = fam.getFreshResult<DomTreeAnalysis>(function);
+                loop_info.discoverNonHeaderBlock(new_preheader, new_dom);
 
                 // Dedicated Exits
                 // Note that the exit could be an exit block for multiple nested loops
@@ -460,8 +459,8 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                         continue;
                     auto new_bb = breakCriticalEdge(exit_pred, header_exit);
                     new_bb->setName("%lr.exit" + std::to_string(name_cnt++));
-                    if (auto exit_loop = loop_info.getLoopFor(header_exit))
-                        loop_info.addBlock(exit_loop, new_bb);
+                    auto& new_dom2 = fam.getFreshResult<DomTreeAnalysis>(function);
+                    loop_info.discoverNonHeaderBlock(new_bb, new_dom2);
                 }
             }
 
@@ -498,7 +497,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
 
     name_cnt = 0;
 
-    return loop_rotate_cfg_modified ? PreserveLoopAnalyses() : PreserveCFGAnalyses();
+    return loop_rotate_cfg_modified ? PreserveLoopAnalyses() : PreserveAll();
 }
 
 } // namespace IR

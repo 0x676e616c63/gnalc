@@ -70,6 +70,12 @@ void PHIInst::addPhiOper(const pVal &val, const pBlock &blk) {
     addOperand(blk);
 }
 
+void PHIInst::addPhiOperNoCheck(const pVal &val, const pBlock &blk) {
+    addOperand(val);
+    addOperand(blk);
+}
+
+
 std::vector<PHIInst::PhiOper> PHIInst::getPhiOpers() const {
     std::vector<PhiOper> ret;
     for (auto it = operand_begin(); it != operand_end(); ++it) {

@@ -612,15 +612,8 @@ Value* GVNPREPass::phiTranslate(Expr *expr, BasicBlock *pred, BasicBlock *succ) 
     return translated_inst.get();
 }
 
-void GVNPREPass::invalidatePhiTranslateCache(BasicBlock *pred) {
-    std::vector<PhiTranslateKey> to_erase;
-    for (const auto& [k, v] : phi_translate_cache) {
-        auto [expr, pred_cache, succ_cache] = k;
-        if (pred_cache == pred)
-            to_erase.emplace_back(k);
-    }
-    for (const auto& k : to_erase)
-        phi_translate_cache.erase(k);
+void GVNPREPass::invalidatePhiTranslateCache() {
+    phi_translate_cache.clear();
 }
 
 PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
@@ -634,6 +627,10 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     }
 
     bool gvnpre_inst_modified = false;
+
+    // Fold LCSSA Phi for phi_translate
+    for (const auto& bb : function)
+        gvnpre_inst_modified |= foldPHI(bb, /* preserve_lcssa */ false);
 
     //
     // Step 1 - BuildSets
@@ -876,7 +873,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                                 Err::gassert(hoisted_inst != nullptr && hoisted_inst->getParent() == nullptr,
                                              "Hoisted instruction actually avail.");
                                 pred->addInstBeforeTerminator(hoisted_inst);
-                                invalidatePhiTranslateCache(pred.get());
+                                invalidatePhiTranslateCache();
                                 auto ok = avail_out_map[pred.get()].insert(hoisted_kind, hoisted_ir_val);
                                 Err::gassert(ok);
                                 ok = exp_gen_map[pred.get()].insert(
@@ -909,7 +906,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                         else {
                             gvnpre_inst_modified = true;
                             curr->raw_block()->addPhiInst(phi);
-                            invalidatePhiTranslateCache(curr->raw_block());
+                            invalidatePhiTranslateCache();
                             inserted_phis.emplace_back(phi);
                             table.setPhiKind(phi.get(), kind_to_hoist);
                             avail_out_map[curr->raw_block()].update(kind_to_hoist, phi.get());

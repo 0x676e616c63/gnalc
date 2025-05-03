@@ -25,6 +25,9 @@ public:
     pConstI8 getConst(char val);
     pConstI32 getConst(int val);
     pConstF32 getConst(float val);
+    pConstI32Vec getConst(const std::vector<int>& val);
+    pConstF32Vec getConst(const std::vector<float>& val);
+
 
     int cleanPool();
 

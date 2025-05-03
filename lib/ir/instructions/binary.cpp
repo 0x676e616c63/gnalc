@@ -2,31 +2,8 @@
 #include "ir/visitor.hpp"
 
 namespace IR {
-pType OPtoTY(OP op) {
-    switch (op) {
-    case OP::ADD:
-    case OP::SUB:
-    case OP::MUL:
-    case OP::DIV:
-    case OP::REM:
-        return makeBType(IRBTYPE::I32);
-    case OP::FADD:
-    case OP::FSUB:
-    case OP::FMUL:
-    case OP::FDIV:
-    case OP::FREM:
-        return makeBType(IRBTYPE::FLOAT);
-    case OP::AND:
-    case OP::OR:
-        return makeBType(IRBTYPE::I1);
-    default:
-        return makeBType(IRBTYPE::UNDEFINED);
-    }
-}
-
-// TYPE 由 OP 决定
 BinaryInst::BinaryInst(NameRef name, OP opcode, const pVal &lhs, const pVal &rhs)
-    : Instruction(opcode, name, OPtoTY(opcode)) {
+    : Instruction(opcode, name, lhs->getType()) {
     addOperand(lhs);
     addOperand(rhs);
 }

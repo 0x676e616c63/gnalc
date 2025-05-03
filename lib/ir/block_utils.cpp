@@ -15,10 +15,42 @@ void linkBB(const pBlock &prebb, const pBlock &nxtbb) {
 }
 
 void unlinkBB(const pBlock &prebb, const pBlock &nxtbb) {
+    {
+        size_t cnt = 0;
+        for (const auto &succ : prebb->succs()) {
+            if (succ == nxtbb)
+                cnt++;
+        }
+        Err::gassert(cnt != 0, "No such edge.");
+        if (cnt > 1)
+            Logger::logWarning("unlinkBB: Multiple edges detected, but only unlinked one. "
+                               "Note that this function will be deprecated in future.");
+    }
     bool ok = prebb->delNextBB(nxtbb);
     Err::gassert(ok);
     ok = nxtbb->delPreBB(prebb);
     Err::gassert(ok);
+}
+
+void unlinkOneEdge(const pBlock &prebb, const pBlock &nxtbb) {
+    bool ok = prebb->delNextBB(nxtbb);
+    Err::gassert(ok);
+    ok = nxtbb->delPreBB(prebb);
+    Err::gassert(ok);
+}
+size_t unlinkAllEdges(const pBlock &prebb, const pBlock &nxtbb) {
+    size_t cnt = 0;
+    while (prebb->delNextBB(nxtbb))
+        cnt++;
+    Err::gassert(cnt != 0, "No such edge.");
+
+    size_t ret = cnt;
+
+    while (nxtbb->delPreBB(prebb))
+        cnt--;
+    Err::gassert(cnt == 0, "Invalid CFG.");
+
+    return ret;
 }
 
 bool safeUnlinkBB(const pBlock &prebb, const pBlock &nxtbb, std::set<pPhi> &dead_phis, UnlinkOptions options) {
@@ -331,8 +363,10 @@ bool eliminateDeadInsts(std::vector<pInst>& worklist, FAM *fam) {
     }
 
     for (const auto &block : todo_blocks) {
-        modified |= block->delInstIf([&eliminated](const auto &inst)
-            { return eliminated.count(inst); });
+        if (block) {
+            modified |= block->delInstIf([&eliminated](const auto &inst)
+               { return eliminated.count(inst); });
+        }
     }
     return modified;
 }
@@ -347,20 +381,22 @@ bool eliminateDeadInsts(const std::set<pPhi>& dead_phis, FAM *fam) {
     return eliminateDeadInsts(worklist, fam);
 }
 
-std::tuple<Value *, Value *> analyzeHeaderPhi(const Loop *loop, const PHIInst *header_phi) {
+std::optional<std::tuple<Value *, Value *>> analyzeHeaderPhi(const Loop *loop, const PHIInst *header_phi) {
     auto phi_opers = header_phi->getPhiOpers();
     Err::gassert(phi_opers.size() == 2, "Expected LoopSimplified Form");
     auto invariant = phi_opers[0].value.get();
     auto variant = phi_opers[1].value.get();
     if (!loop->isLoopInvariant(invariant))
         std::swap(invariant, variant);
-    Err::gassert(loop->isLoopInvariant(invariant) && !loop->isLoopInvariant(variant),
-                 "Expected LoopSimplified Form");
+    if (!loop->isLoopInvariant(invariant) || loop->isLoopInvariant(variant))
+        return std::nullopt;
     return std::make_tuple(invariant, variant);
 }
 
-std::tuple<pVal, pVal> analyzeHeaderPhi(const pLoop &loop, const pPhi &header_phi) {
-    auto [invariant, variant] = analyzeHeaderPhi(loop.get(), header_phi.get());
+std::optional<std::tuple<pVal, pVal>> analyzeHeaderPhi(const pLoop &loop, const pPhi &header_phi) {
+    auto opt = analyzeHeaderPhi(loop.get(), header_phi.get());
+    if (!opt) return std::nullopt;
+    auto [invariant, variant] = *opt;
     return std::make_tuple(invariant->as<Value>(), variant->as<Value>());
 }
 } // namespace IR

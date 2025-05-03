@@ -17,8 +17,6 @@ class IRGenerator;
 namespace IR {
 /**
  * @brief 此处默认无需考虑全局变量与函数之间的相对位置
- *
- * @todo 更改容器类型！
  */
 class Module : public NameC {
     friend class Parser::CFGBuilder;
@@ -52,6 +50,8 @@ public:
     const std::vector<pFuncDecl> &getFunctionDecls() const;
     bool delFunctionDecl(const pFuncDecl &target);
 
+    pFuncDecl lookupFunction(const std::string &name);
+
     ConstantPool &getConstantPool();
 
     void removeUnusedFuncDecls();
@@ -65,6 +65,8 @@ public:
     iterator end();
     const_iterator cbegin() const;
     const_iterator cend() const;
+
+    size_t getInstCount() const;
 
     void accept(IRVisitor &visitor);
     ~Module() = default;

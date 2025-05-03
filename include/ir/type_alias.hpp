@@ -45,6 +45,14 @@ using pSitofp = std::shared_ptr<SITOFPInst>;
 using pZext = std::shared_ptr<ZEXTInst>;
 using pBitcast = std::shared_ptr<BITCASTInst>;
 
+// vector
+class EXTRACTInst;
+class INSERTInst;
+class SHUFFLEInst;
+using pExtract = std::shared_ptr<EXTRACTInst>;
+using pInsert = std::shared_ptr<INSERTInst>;
+using pShuffle = std::shared_ptr<SHUFFLEInst>;
+
 // helper
 class HELPERInst;
 class CONDValue;
@@ -104,7 +112,7 @@ using pInst = std::shared_ptr<Instruction>;
 
 // module
 class Module;
-using pModule = std::shared_ptr<Module>;
+// using pModule = std::shared_ptr<Module>;
 
 // type
 class Type;

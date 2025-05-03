@@ -1,9 +1,7 @@
+#ifdef GNALC_EXTENSION_BRAINFK
 #pragma once
 #ifndef GNALC_CODEGEN_BRAINFK_BFBUILTINS_HPP
 #define GNALC_CODEGEN_BRAINFK_BFBUILTINS_HPP
-
-#include "config/config.hpp"
-#if GNALC_EXTENSION_BRAINFK
 
 #include "bfmodule.hpp"
 

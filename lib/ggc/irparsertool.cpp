@@ -1,3 +1,4 @@
+#ifdef GNALC_EXTENSION_GGC
 #include "ggc/irparsertool.hpp"
 #include "ggc/irparser.hpp"
 #include "config/config.hpp"
@@ -20,7 +21,6 @@ int IRGenerator::generate() {
         return 1;
     }
     tool.clean();
-    // IRPT::refactorAllInst(module);
     return 0;
 }
 
@@ -74,12 +74,11 @@ pVal IRPT::getV(const string &name) {
     return it->second;
 }
 
-std::vector<pFormalParam> IRPT::legalizeParams(const std::vector<pFormalParam> &params) {
+void IRPT::legalizeParams(const std::vector<pFormalParam> &params) {
     int i = 0;
     for (const auto &param : params) {
         param->setIndex(i++);
     }
-    return params;
 }
 
 float IRPT::hexToFloat(const string &hex) {
@@ -103,6 +102,7 @@ pFunc IRPT::newFunc(std::string &name_, const std::vector<pFormalParam> &params,
                        std::vector<pBlock> &blks) {
     auto &f = FMap[name_];
     Err::gassert(f==nullptr, "F is redefined!");
+    legalizeParams(params);
     f = make<Function>(name_, params, ret_type, pool);
     for (const auto &blk : blks) {
         f->addBlock(blk);
@@ -129,7 +129,7 @@ pFunc IRPT::newFunc(std::string &name_, const std::vector<pFormalParam> &params,
 pFuncDecl IRPT::newFuncDecl(std::string &name_, const std::vector<pType> &params,
                                 pType &ret_type, bool is_va_arg_) {
     pFuncDecl fd;
-    if (name_ == "@" + std::string{Config::IR::BUILTIN_MEMSET}) {
+    if (name_ == Config::IR::MEMSET_INTRINSIC_NAME || name_ == Config::IR::MEMCPY_INTRINSIC_NAME) {
         fd = make<FunctionDecl>(name_, params, ret_type, is_va_arg_, true, false);
     } else {
         fd = make<FunctionDecl>(name_, params, ret_type, is_va_arg_, false, true);
@@ -157,7 +157,7 @@ pBlock IRPT::newBB(std::string name, const std::list<pInst> &insts) {
 pPhi IRPT::newPhi(const string &name, pType &ty, const std::vector<std::pair<pVal, pBlock>>& phiopers) {
     auto p = vmake<PHIInst>(name, name, ty);
     for (auto& [v, b] : phiopers) {
-        p->addPhiOper(v, b);
+        p->addPhiOperNoCheck(v, b);
     }
     return p;
 }
@@ -178,20 +178,4 @@ void IRPT::replaceUF(const string &name_, const pFuncDecl& fd) {
         }
     }
 }
-
-void IRPT::refactorAllInst(const Module& module) {
-    for (auto &func : module.getFunctions()) {
-        for (auto &blk : func->getBlocks()) {
-            for (auto it = blk->phi_begin(); it != blk->phi_end(); ++it) {
-                pPhi new_inst = (*it)->clone()->as<PHIInst>();
-                (*it)->replaceSelf(new_inst);
-                *it = new_inst;
-            }
-            for (auto it = blk->begin(); it != blk->end(); ++it) {
-                pInst new_inst = (*it)->clone()->as<Instruction>();
-                (*it)->replaceSelf(new_inst);
-                *it = new_inst;
-            }
-        }
-    }
-}
+#endif

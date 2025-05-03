@@ -7,13 +7,21 @@
 #include "instructions/control.hpp"
 
 #include <memory>
+#include <optional>
 #include <set>
 
 namespace IR {
 // Only handles CFG.
 void linkBB(const pBlock &prebb, const pBlock &nxtbb);
 
+// deprecated
 void unlinkBB(const pBlock &prebb, const pBlock &nxtbb);
+
+// Use the following two instead
+// Only unlink one edge
+void unlinkOneEdge(const pBlock &prebb, const pBlock &nxtbb);
+// Unlink all such edges
+size_t unlinkAllEdges(const pBlock &prebb, const pBlock &nxtbb);
 
 // Safely disconnects two basic blocks in CFG while maintaining SSA consistency
 //
@@ -92,13 +100,15 @@ bool eliminateDeadInsts(pInst inst, FAM *fam = nullptr);
 bool eliminateDeadInsts(const std::set<pPhi>& dead_phis, FAM *fam = nullptr);
 
 // In LoopSimplified Form, the header has two predecessors, one is the preheader, the other is the latch.
-// The phis in header are induction variables, the two incoming values, from the preheader and the latch,
-// must be loop invariant and variant respectively.
+// The phis in header are usually induction variables, the two incoming values,
+// from the preheader and the latch, are loop invariant and variant respectively.
 // Note that the invariant one is the initial value of that induction variable.
 // This function returns the invariant and variant values in the phi.
 // Return Value: (invariant, variant)
-std::tuple<pVal, pVal> analyzeHeaderPhi(const pLoop &loop, const pPhi &header_phi);
-std::tuple<Value *, Value *> analyzeHeaderPhi(const Loop *loop, const PHIInst *header_phi);
+// However, in certain cases, (after TailCallOpt), the two incoming values can both be invariant.
+// In this case, the function returns std::nullopt.
+std::optional<std::tuple<pVal, pVal>> analyzeHeaderPhi(const pLoop &loop, const pPhi &header_phi);
+std::optional<std::tuple<Value *, Value *>> analyzeHeaderPhi(const Loop *loop, const PHIInst *header_phi);
 } // namespace IR
 
 #endif

@@ -26,6 +26,18 @@ pConstF32 ConstantPool::getConst(float val) {
     return it->getConstantFloat();
 }
 
+pConstI32Vec ConstantPool::getConst(const std::vector<int> &val) {
+    ConstantProxy proxy(this, std::make_shared<ConstantIntVector>(val));
+    auto [it, inserted] = pool.insert(proxy);
+    return it->getConstantIntVector();
+}
+
+pConstF32Vec ConstantPool::getConst(const std::vector<float> &val) {
+    ConstantProxy proxy(this, std::make_shared<ConstantFloatVector>(val));
+    auto [it, inserted] = pool.insert(proxy);
+    return it->getConstantFloatVector();
+}
+
 int ConstantPool::cleanPool() {
     int count = 0;
     for (auto it = pool.begin(); it != pool.end();) {

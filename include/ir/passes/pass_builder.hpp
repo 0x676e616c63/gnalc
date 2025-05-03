@@ -7,54 +7,79 @@
 #include <string>
 
 namespace IR {
-struct OptInfo {
-    bool mem2reg{false};
-    bool sccp{false};
-    bool dce{false};
-    bool adce{false};
-    bool cfgsimplify{false};
-    bool dse{false};
-    bool loadelim{false};
-    bool gvnpre{false};
-    bool tailcall{false};
-    bool reassociate{false};
-    bool instsimplify{false};
-    bool inliner{false}; // Avoid conflict with C++ keyword `inline`
-    bool loop_simplify{false};
-    bool loop_rotate{false};
-    bool lcssa{false};
-    bool licm{false};
-    bool loop_unroll{false};
-    bool indvars{false};
-    bool loop_strength_reduce{false};
-    bool loopelim{false};
-    bool slp_vectorizer{false};
-    bool sroa{false};
-    bool jump_threading{false};
+// name
+#define GNALC_IR_PASS_TABLE \
+    GNALC_IR_PASS_ENTRY(mem2reg) \
+    GNALC_IR_PASS_ENTRY(sccp) \
+    GNALC_IR_PASS_ENTRY(dce) \
+    GNALC_IR_PASS_ENTRY(adce) \
+    GNALC_IR_PASS_ENTRY(cfgsimplify) \
+    GNALC_IR_PASS_ENTRY(dse) \
+    GNALC_IR_PASS_ENTRY(loadelim) \
+    GNALC_IR_PASS_ENTRY(gvnpre) \
+    GNALC_IR_PASS_ENTRY(tailcall) \
+    GNALC_IR_PASS_ENTRY(reassociate) \
+    GNALC_IR_PASS_ENTRY(instsimplify) \
+    GNALC_IR_PASS_ENTRY(inliner) \
+    GNALC_IR_PASS_ENTRY(licm) \
+    GNALC_IR_PASS_ENTRY(loop_strength_reduce) \
+    GNALC_IR_PASS_ENTRY(loopelim) \
+    GNALC_IR_PASS_ENTRY(internalize) \
+    GNALC_IR_PASS_ENTRY(loop_unroll) \
+    GNALC_IR_PASS_ENTRY(indvars) \
+    GNALC_IR_PASS_ENTRY(vectorizer) \
+    GNALC_IR_PASS_ENTRY(jump_threading) \
+    GNALC_IR_PASS_ENTRY(tree_shaking) \
+    GNALC_IR_PASS_ENTRY(verify) \
 
-    bool tree_shaking{false};
+struct PMOptions {
+#define GNALC_IR_PASS_ENTRY(name) bool name;
+    GNALC_IR_PASS_TABLE
+#undef GNALC_IR_PASS_ENTRY
 
-    bool advance_name_norm{false};
-    bool verify{true}; // Defaults to verify in development.
-    bool abort_when_verify_failed{false};
+    bool abort_when_verify_failed;
+
+    // Only for plain mode
+    bool advance_name_norm;
+
+    PMOptions() = default;
 };
 
-extern const OptInfo o1_opt_info;
+struct CliOptions {
+    enum class Status { Default, Enable, Disable };
+#define GNALC_IR_PASS_ENTRY(name) Status name;
+    GNALC_IR_PASS_TABLE
+#undef GNALC_IR_PASS_ENTRY
+
+    bool advance_name_norm;
+    bool abort_when_verify_failed;
+
+
+    enum class Mode {
+        EnableIfDefault,
+        DisableIfDefault,
+        DisableAnyway,
+        EnableAnyway,
+    };
+    PMOptions toPMOptions(Mode mode) const;
+
+    CliOptions();
+};
 
 class PassBuilder {
 public:
-    static FPM buildFunctionFixedPointPipeline();
-    static MPM buildModuleFixedPointPipeline();
+    static FPM buildFunctionFixedPointPipeline(PMOptions options);
+    static MPM buildModuleFixedPointPipeline(PMOptions options);
 
-    static FPM buildFunctionPipeline(OptInfo opt_info);
-    static MPM buildModulePipeline(OptInfo opt_info);
+    static FPM buildFunctionPipeline(PMOptions options);
+    static MPM buildModulePipeline(PMOptions options);
 
     static FPM buildFunctionDebugPipeline();
     static MPM buildModuleDebugPipeline();
 
     // Reproduce or Produce a Fuzz Testing Pipeline.
-    static FPM buildFunctionFuzzTestingPipeline(double duplication_rate = 1.0, const std::string &repro = "");
-    static MPM buildModuleFuzzTestingPipeline(double duplication_rate = 1.0, const std::string &repro = "");
+    static FPM buildFunctionFuzzTestingPipeline(PMOptions options, double duplication_rate = 1.0, const std::string &repro = "");
+    static MPM buildModuleFuzzTestingPipeline(PMOptions options, double duplication_rate = 1.0, const std::string &repro = "");
 
     static void registerModuleAnalyses(MAM &);
     static void registerFunctionAnalyses(FAM &);

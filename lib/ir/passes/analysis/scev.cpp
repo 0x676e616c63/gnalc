@@ -400,8 +400,9 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
     else if (auto phi = val->as_raw<PHIInst>()) {
         auto phi_bb = phi->getParent();
         // Else If n matches "v = loop-phi(a, b)" Then
-        if (val_loop->getHeader() == phi_bb) {
-            auto [invariant, variant] = analyzeHeaderPhi(val_loop, phi);
+        bool is_loop_phi = val_loop->getHeader() == phi_bb && analyzeHeaderPhi(val_loop, phi).has_value();
+        if (is_loop_phi) {
+            auto [invariant, variant] = *analyzeHeaderPhi(val_loop, phi);
 
             auto [exist, update] = buildUpdateExpr(phi, variant, val_loop);
             if (!exist)
@@ -451,19 +452,23 @@ std::pair<bool, TREC *> SCEVHandle::buildUpdateExpr(const PHIInst *loop_phi, Val
     // Else If n matches "v = a + b" Then
     if (match(val, M::Add(M::Bind(x), M::Bind(y)))) {
         auto [exist_x, update_x] = buildUpdateExpr(loop_phi, x.get(), loop_phi_loop);
+        auto [exist_y, update_y] = buildUpdateExpr(loop_phi, y.get(), loop_phi_loop);
+        if (exist_x && exist_y)
+            return {false, getTRECUndef()};
         if (exist_x)
             return {true, getTRECAdd(update_x, getIRValTREC(y.get()))};
-        auto [exist_y, update_y] = buildUpdateExpr(loop_phi, y.get(), loop_phi_loop);
         if (exist_y)
             return {true, getTRECAdd(update_y, getIRValTREC(x.get()))};
         return {false, getTRECUndef()};
     } else if (match(val, M::Sub(M::Bind(x), M::Bind(y)))) {
         auto [exist_x, update_x] = buildUpdateExpr(loop_phi, x.get(), loop_phi_loop);
+        auto [exist_y, update_y] = buildUpdateExpr(loop_phi, y.get(), loop_phi_loop);
+        if (exist_x && exist_y)
+            return {false, getTRECUndef()};
         if (exist_x) {
             auto neg = getSCEVExprNeg(getSCEVExpr(y.get()));
             return {true, getTRECAdd(update_x, getExprTREC(neg))};
         }
-        auto [exist_y, update_y] = buildUpdateExpr(loop_phi, y.get(), loop_phi_loop);
         if (exist_y) {
             auto neg = getTRECNeg(update_y);
             return {true, getTRECAdd(neg, getIRValTREC(x.get()))};
@@ -476,8 +481,10 @@ std::pair<bool, TREC *> SCEVHandle::buildUpdateExpr(const PHIInst *loop_phi, Val
         auto val_phi_loop = loop_info->getLoopFor(val_phi_bb).get();
 
         // Else If n matches "v = loop-phi(a, b)" Then
-        if (val_phi_loop && val_phi_loop->getHeader() == val_phi_bb) {
-            auto [val_phi_invariant, val_phi_variant] = analyzeHeaderPhi(val_phi_loop, val_phi);
+        bool is_loop_phi = val_phi_loop && val_phi_loop->getHeader() == val_phi_bb &&
+            analyzeHeaderPhi(val_phi_loop, val_phi).has_value();
+        if (is_loop_phi) {
+            auto [val_phi_invariant, val_phi_variant] = *analyzeHeaderPhi(val_phi_loop, val_phi);
 
             if (loop_phi_loop->isLoopInvariant(val_phi_invariant))
                 return {false, getTRECUndef()};
@@ -547,6 +554,8 @@ TREC *SCEVHandle::instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::ve
                         return getTRECSub(lhs, rhs);
                     case SCEVExpr::Binary::Op::Mul:
                         return getTRECMul(lhs, rhs);
+                    case SCEVExpr::Binary::Op::Div:
+                        return getTRECUntracked();
                 default:
                         Err::unreachable();
                 }
@@ -988,8 +997,9 @@ SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop) {
             if (cmpop == ICMPOP::eq) {
                 if (base == cond && step_val != 0)
                     return getSCEVExpr(1);
-                if (base != cond)
-                    return getSCEVExpr(0);
+                // If base != cond, we are not sure whether base equals cond or not at runtime.
+                // if (base != cond)
+                //     return getSCEVExpr(0);
                 return nullptr;
             }
 

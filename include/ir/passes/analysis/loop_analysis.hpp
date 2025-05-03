@@ -5,6 +5,7 @@
 #ifndef GNALC_IR_PASSES_ANALYSIS_LOOP_ANALYSIS_HPP
 #define GNALC_IR_PASSES_ANALYSIS_LOOP_ANALYSIS_HPP
 
+#include "domtree_analysis.hpp"
 #include "ir/base.hpp"
 #include "ir/passes/pass_manager.hpp"
 
@@ -193,6 +194,8 @@ public:
 
     void addBlock(const pLoop &loop, BasicBlock *bb);
     void addBlock(const pLoop &loop, const pBlock &bb);
+    void discoverNonHeaderBlock(BasicBlock *bb, const DomTree& domtree);
+    void discoverNonHeaderBlock(const pBlock &bb, const DomTree& domtree);
 };
 
 class LoopAnalysis : public PM::AnalysisInfo<LoopAnalysis> {

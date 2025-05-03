@@ -57,15 +57,19 @@ BasicBlock *Loop::getRawHeader() const { return loop_blocks.front(); }
 
 BasicBlock *Loop::getRawPreHeader() const {
     auto header = getRawHeader();
-    BasicBlock *preheader = nullptr;
+    BasicBlock *single_entering_block = nullptr;
     for (const auto &pred : header->preds()) {
         if (contains(pred.get()))
             continue;
-        if (preheader)
+        if (single_entering_block)
             return nullptr;
-        preheader = pred.get();
+        single_entering_block = pred.get();
     }
-    return preheader;
+
+    if (!single_entering_block || single_entering_block->getNumSuccs() != 1)
+        return nullptr;
+
+    return single_entering_block;
 }
 bool Loop::isLatch(const BasicBlock *bb) const {
     Err::gassert(contains(bb));
@@ -342,7 +346,8 @@ bool LoopInfo::delBlock(BasicBlock *bb) {
 bool LoopInfo::delBlock(const pBlock &bb) { return delBlock(bb.get()); }
 
 bool LoopInfo::delLoop(Loop *loop) {
-    for (const auto& subloop : *loop)
+    auto subloops = loop->getSubLoops();
+    for (const auto& subloop : subloops)
         delLoop(subloop);
 
     bool modified = false;
@@ -403,12 +408,33 @@ bool LoopInfo::breakLoop(const pLoop& loop) {
 
 void LoopInfo::addBlock(const pLoop &loop, BasicBlock *bb) {
     auto it = loop_map.find(bb);
-    if (it != loop_map.end())
-        Err::gassert(it->second->contains(loop.get()), "Block is already in loop");
+    if (it != loop_map.end()) {
+        if (loop->contains(it->second))
+            return;
+        Err::gassert(it->second->contains(loop),
+            "Can not add block to two disjunctive loops.");
+    }
     loop_map[bb] = loop;
     loop->addBlock(bb);
 }
 void LoopInfo::addBlock(const pLoop &loop, const pBlock &bb) { addBlock(loop, bb.get()); }
+
+void LoopInfo::discoverNonHeaderBlock(BasicBlock *bb, const DomTree &domtree) {
+    Err::gassert(!loop_map.count(bb), "Block already discovered.");
+    std::vector<pLoop> possible_loops;
+    for (const auto& succ : bb->succs()) {
+        for (auto l = getLoopFor(succ.get()); l != nullptr; l = l->getParent())
+            possible_loops.emplace_back(l);
+    }
+
+    for (const auto& loop : possible_loops) {
+        if (domtree.ADomB(loop->getRawHeader(), bb))
+            addBlock(loop, bb);
+    }
+}
+void LoopInfo::discoverNonHeaderBlock(const pBlock &bb, const DomTree &domtree) {
+    discoverNonHeaderBlock(bb.get(), domtree);
+}
 
 LoopInfo::const_iterator LoopInfo::begin() const { return top_level_loops.begin(); }
 LoopInfo::const_iterator LoopInfo::end() const { return top_level_loops.end(); }

@@ -59,6 +59,8 @@ public:
 
     bool ADomB(const pBlock &a, const pBlock &b) const { return Base::ADomB(a.get(), b.get()); }
 
+    bool isReachable(const pBlock &a) const { return Base::isReachable(a.get()); }
+
     std::set<pBlock> getDomSet(const pBlock &b) const {
         auto res = Base::getDomSet(b.get());
         std::set<pBlock> ret;
@@ -75,10 +77,9 @@ public:
         return ret;
     }
 };
-
-using DomTreeBuilder = Graph::GenericDomTreeBuilder<BasicBlock *, false, IRGenericDomTree<false>>;
-using PostDomTreeBuilder = Graph::GenericDomTreeBuilder<BasicBlock *, true, IRGenericDomTree<true>>;
 } // namespace detail
+using DomTreeBuilder = Graph::GenericDomTreeBuilder<BasicBlock *, false, detail::IRGenericDomTree<false>>;
+using PostDomTreeBuilder = Graph::GenericDomTreeBuilder<BasicBlock *, true, detail::IRGenericDomTree<true>>;
 using DomTree = detail::IRGenericDomTree<false>;
 using PostDomTree = detail::IRGenericDomTree<true>;
 

@@ -35,4 +35,4 @@ sylib.o
 *.png
 test copy.llc
 sylib.s
-debug.txt
+.cache

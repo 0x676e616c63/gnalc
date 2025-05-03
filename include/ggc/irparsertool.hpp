@@ -1,3 +1,4 @@
+#ifdef GNALC_EXTENSION_GGC
 #pragma once
 #ifndef GNALC_GGC_IRPARSERTOOL_H
 #define GNALC_GGC_IRPARSERTOOL_H
@@ -49,7 +50,7 @@ namespace IRParser {
         pBlock getB(const string& name);
         pVal getV(const string &name); // 可获取GV或普通Value
 
-        std::vector<pFormalParam> legalizeParams(const std::vector<pFormalParam> &params);
+        void legalizeParams(const std::vector<pFormalParam> &params);
 
         static float hexToFloat(const string &hex);
 
@@ -68,8 +69,6 @@ namespace IRParser {
 
         pPhi newPhi(const string &name, pType &ty, const std::vector<std::pair<pVal, pBlock>> &phiopers);
 
-        static void refactorAllInst(const Module& module);
-
         private:
         void replaceUF(const string &name_, const pFuncDecl& fd);
     };
@@ -85,4 +84,5 @@ namespace IRParser {
     };
 }
 
+#endif
 #endif

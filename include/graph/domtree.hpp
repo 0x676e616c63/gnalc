@@ -19,7 +19,6 @@ struct Identity {
     template <typename T> auto operator()(T &&v) const { return std::forward<T>(v); }
 };
 
-// todo: 使用缓存的DFS优化
 template <typename GraphT, bool IsPostDom, typename GraphNodeProj = Identity> class GenericDomTree {
     template <typename, bool, typename> friend class GenericDomTreeBuilder;
 
@@ -92,7 +91,6 @@ public:
     auto root() const { return root_node; }
 
     const auto &operator[](GraphNodeT graph_node) const {
-        // Err::gassert(nodes.count(graph_node), "No dominator tree for unreachable blocks.");
         return nodes.at(graph_node);
     }
 
@@ -104,9 +102,9 @@ public:
         return node_a->dfs_in() <= node_b->dfs_in() && node_a->dfs_out() >= node_b->dfs_out();
     }
 
-    GraphNodeSet getDomSet(GraphNodeT b) const {
-        // Err::gassert(nodes.count(b), "No dominator tree for unreachable blocks.");
+    bool isReachable(GraphNodeT a) const { return nodes.count(a); }
 
+    GraphNodeSet getDomSet(GraphNodeT b) const {
         GraphNodeSet domset = {b};
         auto _b = nodes.at(b).get();
         do {
@@ -118,8 +116,6 @@ public:
 
     // TODO: needs optimization
     GraphNodeSet getDomFrontier(GraphNodeT b) const {
-        // Err::gassert(nodes.count(b), "No dominator tree for unreachable blocks.");
-
         auto it = df_cache.find(b);
         if (it != df_cache.end())
             return it->second;
@@ -148,7 +144,7 @@ public:
 
     void printDomTree(std::ostream &os) const {
         os << "(Post)DomTree:" << std::endl;
-        print(root_node, 0);
+        print(os, root_node, 0);
     }
 
     auto getBFVisitor() const { return NodeBFVisitor{root_node}; }
@@ -157,16 +153,16 @@ public:
     }
 
 private:
-    void print(const pNode &node, int level) const {
+    void print(std::ostream &os, const pNode &node, int level) const {
         if (node == nullptr)
             return;
         for (int i = 0; i < level; i++) {
-            std::cout << "|   ";
+            os << "|   ";
         }
-        std::cout << node->bb->getName() << std::endl;
+        os << (node->graph_node ? node->graph_node->getName() : "<null>") << std::endl;
         level++;
-        for (auto &n : node->children) {
-            print(n, level);
+        for (auto &n : node->children()) {
+            print(os, n, level);
         }
     }
 

@@ -51,7 +51,7 @@ bool isSafeAndProfitableToEliminate(const pLoop &loop, FAM &fam, SCEVHandle &sce
 // If SCEV can figure out the exit values used outside the loop, replace them with expanded SCEVExpr.
 // Propagating exit values can release some uses outside the loop, thus possibly
 // let the loop unused and able to eliminate.
-// It don't expand non-constant SCEVExpr if the `onlyConstant` is set.
+// It doesn't expand non-constant SCEVExpr if the `onlyConstant` is set.
 bool propagateExitValues(Loop &loop, SCEVHandle &scev, bool onlyConstant) {
     bool modified = false;
 
@@ -151,7 +151,7 @@ bool eliminateLoop(FAM& fam, Function &func, const pLoop &loop, LoopInfo& loop_i
 }
 
 // Break the backedge if it is never taken.
-bool breakSingleTripRotatedLoop(FAM& fam, const pLoop &loop, SCEVHandle &scev, LoopInfo& loop_info) {
+bool breakSingleTripRotatedLoop(const pLoop &loop, SCEVHandle &scev, LoopInfo& loop_info) {
     auto latch = loop->getLatch();
     if (!loop->isExiting(latch))
         return false;
@@ -164,29 +164,12 @@ bool breakSingleTripRotatedLoop(FAM& fam, const pLoop &loop, SCEVHandle &scev, L
     // If this is a single trip rotated(do-while) loop, just break the backedge
     if (cnt && cnt->isIRValue() && match(cnt->getRawIRValue(), M::Is(0))) {
         auto header = loop->getHeader();
-        for (const auto& phi : header->phis()) {
-            auto use_list = phi->getUseList();
-            for (const auto& use : use_list) {
-                auto user = use->getUser()->as<Instruction>();
-                if (!loop->contains(user->getParent())) {
-                    auto [invariant, variant] = analyzeHeaderPhi(loop, phi);
-                    use->setValue(variant);
-                }
-            }
-        }
+        for (const auto& phi : header->phis())
+            phi->delPhiOperByBlock(latch);
 
-        auto latch_br = latch->getBRInst();
-        Err::gassert(latch_br->isConditional());
-
-        std::set<pPhi> dead_phis;
-        auto dead_br = safeUnlinkBB(latch, header, dead_phis, UnlinkOptions::performDCE(&fam));
-        Err::gassert(!dead_br);
-        header->delInstIf(
-            [&dead_phis](const auto &p) { return dead_phis.find(p->template as<PHIInst>()) != dead_phis.end(); },
-            BasicBlock::DEL_MODE::PHI);
-        // Release dead phi's uses
-        eliminateDeadInsts(dead_phis, &fam);
-
+        foldPHI(header);
+        latch->getBRInst()->dropOneDest(header);
+        unlinkBB(latch, header);
         loop_info.breakLoop(loop);
 
         Logger::logDebug("[LoopElimination]: Broke backedge from '", latch->getName(), "' to '", header->getName(),
@@ -202,13 +185,21 @@ PM::PreservedAnalyses LoopEliminationPass::run(Function &function, FAM &fam) {
     auto &scev = fam.getResult<SCEVAnalysis>(function);
     auto &loop_info = fam.getResult<LoopAnalysis>(function);
 
+    // Fold LCSSA Phi for SCEV Expansion
+    for (const auto& bb : function)
+        loop_elim_inst_modified |= foldPHI(bb, /* preserve_lcssa */ false);
+
     // Since we might delete loops, make a temporary object.
     auto toplevels = loop_info.getTopLevelLoops();
     for (const auto &toplevel : toplevels) {
         auto rpodfv = toplevel->getDFVisitor<Util::DFVOrder::ReversePostOrder>();
         for (const auto &loop : rpodfv) {
+            // Skip eliminated loops.
+            if (loop->getBlocks().empty())
+                continue;
+
             Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplified Form.");
-            if (breakSingleTripRotatedLoop(fam, loop, scev, loop_info)) {
+            if (breakSingleTripRotatedLoop(loop, scev, loop_info)) {
                 loop_elim_cfg_modified = true;
                 continue;
             }

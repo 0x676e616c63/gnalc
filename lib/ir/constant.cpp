@@ -6,10 +6,16 @@ namespace detail {
 template <typename T, IRBTYPE IRType> void BasicConstant<T, IRType>::accept(IRVisitor &visitor) {
     visitor.visit(*this);
 }
+
+template <typename ValueT, IRBTYPE IRType> void BasicConstantVector<ValueT, IRType>::accept(IRVisitor &visitor) {
+    visitor.visit(*this);
+}
 } // namespace detail
 
 template void ConstantI1::accept(IRVisitor &visitor);
 template void ConstantI8::accept(IRVisitor &visitor);
 template void ConstantInt::accept(IRVisitor &visitor);
 template void ConstantFloat::accept(IRVisitor &visitor);
+template void ConstantIntVector::accept(IRVisitor &visitor);
+template void ConstantFloatVector::accept(IRVisitor &visitor);
 } // namespace IR
