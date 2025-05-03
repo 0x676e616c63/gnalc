@@ -280,7 +280,6 @@ public:
 
     void emitPostSAPrologue(MIRBlk_p, CodeGenContext &, unsigned) const;
     void emitPostSAEpilogue(MIRBlk_p, CodeGenContext &, unsigned) const;
-    ///@note 这里最好重写一下
     void insertPrologueEpilogue(MIRFunction *, CodeGenContext &) const;
 
     bool isCallerSaved(const MIROperand &op) const;

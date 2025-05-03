@@ -232,7 +232,9 @@ void MIR_new::lowerInst(IR::pLoad load, LoweringContext &ctx, size_t size) {
     ctx.emitInst(MIRInst::make(OpC::InstLoad)
                      ->setOperand<0>(def)
                      ->setOperand<1>(ctx.mapOperand(load->getPtr()))
-                     ->setOperand<2>(MIROperand::asImme(size, OpT::special)));
+                     // idx or imme
+                     // shift code
+                     ->setOperand<4>(MIROperand::asImme(size, OpT::special)));
 
     ctx.addOperand(load, def);
 }
@@ -242,7 +244,9 @@ void MIR_new::lowerInst(IR::pStore store, LoweringContext &ctx, size_t size) {
                      ->setOperand<0>(nullptr)
                      ->setOperand<1>(ctx.mapOperand(store->getValue()))
                      ->setOperand<2>(ctx.mapOperand(store->getPtr()))
-                     ->setOperand<3>(MIROperand::asImme(size, OpT::special)));
+                     // idx or imme
+                     // shift code
+                     ->setOperand<5>(MIROperand::asImme(size, OpT::special)));
 }
 
 void MIR_new::lowerInst(IR::pCast cast, LoweringContext &ctx) {
@@ -257,7 +261,15 @@ void MIR_new::lowerInst(IR::pGep gep, LoweringContext &ctx) {
     MIROperand_p def_ptr = nullptr;
 
     auto idx = gep->getIdxs().back();
-    auto persize = static_cast<int>(gep->getBaseType()->getBytes()); // just  to avoid clang-tidy warning
+    int persize;
+    if (auto arrayType = gep->getBaseType()->as<IR::ArrayType>()) {
+        persize = arrayType->getElmType()->getBytes();
+    } else if (auto ptrType = gep->getBaseType()->as<IR::PtrType>()) {
+        persize = ptrType->getElmType()->getBytes();
+    } else {
+        Err::unreachable("lowerInst(IR::pGep, LoweringContext &): unknown base type");
+    }
+
     auto base = gep->getPtr();
 
     if (auto idx_const = idx->as<IR::ConstantInt>()) {

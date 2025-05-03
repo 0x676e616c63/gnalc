@@ -221,7 +221,7 @@ MIRGlobal_p MIR_new::loweringGlobal(const IR::GlobalVariable &global) {
     MIRGlobal_p ret = nullptr;
     MIRRelocable_p inner = nullptr;
     auto initer = global.getIniter();
-    auto sym = global.getName();
+    auto sym = global.getName().substr(1); // not prefix
     auto align = global.getAlign();
 
     if (initer.isZero()) {
@@ -374,14 +374,7 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
 
             storeMap.emplace(inst, stkobjStore);
 
-            // ptr to stk obj
-            auto ptr = ctx.newVReg(OpT::Ptr);
-            auto copy_stk_adr = MIRInst::make(OpC::InstLoadStackObjectAddr);
-            copy_stk_adr->setOperand<0>(ptr);
-            copy_stk_adr->setOperand<1>(stkobjStore); // no const offset here
-
-            ctx.emitInst(copy_stk_adr);
-            ctx.addOperand(alloca, ptr);
+            ctx.addOperand(alloca, stkobjStore); // stkobjStore
         } else {
             break;
         }

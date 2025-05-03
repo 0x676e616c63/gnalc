@@ -78,7 +78,7 @@ void TargetFrameInfo::emitCall(IR::pCall callinst, LoweringContext &ctx) const {
             mval = reg;
         }
 
-        ctx.emitInst(MIRInst::make(OpC::InstStoreRegToStack)->setOperand<0>(mval)->setOperand<1>(obj));
+        ctx.emitInst(MIRInst::make(OpC::InstStoreRegToStack)->setOperand<1>(mval)->setOperand<2>(obj));
     }
 
     // LAMBDA BEGIN

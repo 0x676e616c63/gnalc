@@ -34,23 +34,51 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l minsts, MIRInst_
 
     if (minst->isGeneric()) {
         switch (minst->opcode<OpC>()) {
-        case OpC::InstLoadRegFromStack:
-        case OpC::InstLoad:
-        case OpC::InstLoadStackObjectAddr: {
+        case OpC::InstLoad: {
             InstLegalizeContext ctx{minst, minsts, iter, _ctx};
 
-            auto mop = minst->getOp(1);
-            auto &obj = mfunc->StkObjs().at(mop);
+            auto mop = minst->ensureDef();
+            auto mstkop = minst->getOp(1);
+
+            if (mfunc->StkObjs().count(mstkop)) {
+                auto &obj = mfunc->StkObjs().at(mstkop);
+                _ctx.iselInfo.legalizeInstWithStackOperand(ctx, mop, obj);
+            } else {
+                // no offset
+                minst->resetOpcode(ARMOpC::LDR);
+            }
+
+        } break;
+        case OpC::InstLoadRegFromStack: {
+            InstLegalizeContext ctx{minst, minsts, iter, _ctx};
+
+            auto mop = minst->ensureDef();
+            auto mstkop = minst->getOp(1);
+            auto &obj = mfunc->StkObjs().at(mstkop);
 
             _ctx.iselInfo.legalizeInstWithStackOperand(ctx, mop, obj);
         } break;
 
-        case OpC::InstStore:
+        case OpC::InstStore: {
+            InstLegalizeContext ctx{minst, minsts, iter, _ctx};
+
+            auto mop = minst->getOp(1);
+            auto mstkop = minst->getOp(2);
+
+            if (mfunc->StkObjs().count(mstkop)) {
+                auto &obj = mfunc->StkObjs().at(mstkop);
+                _ctx.iselInfo.legalizeInstWithStackOperand(ctx, mop, obj);
+            } else {
+                minst->resetOpcode(ARMOpC::STR);
+            }
+
+        } break;
         case OpC::InstStoreRegToStack: {
             InstLegalizeContext ctx{minst, minsts, iter, _ctx};
 
-            auto mop = minst->getOp(2);
-            auto &obj = mfunc->StkObjs().at(mop);
+            auto mop = minst->getOp(1);
+            auto mstkop = minst->getOp(2);
+            auto &obj = mfunc->StkObjs().at(mstkop);
 
             _ctx.iselInfo.legalizeInstWithStackOperand(ctx, mop, obj);
         } break;

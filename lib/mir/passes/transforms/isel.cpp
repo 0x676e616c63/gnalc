@@ -15,6 +15,8 @@ OpC MIR_new::chooseCopyOpC(const MIROperand_p &dst, const MIROperand_p &src) {
         return OpC::InstCopyFromReg;
     } else if (dst->isVReg() && src->isVReg()) {
         return OpC::InstCopy;
+    } else if (dst->isVReg() && src->isStack()) {
+        return OpC::InstCopy; // used in cast
     } else {
         Err::unreachable("chooseCopyOpC: dont match any copy op");
     }
@@ -67,7 +69,7 @@ void ISelContext::impl(MIRFunction *mfunc) {
                 for (int i = 1; i - 1 < minst->getUseNr(); ++i) {
                     auto mop = minst->getOp(i);
 
-                    if (mop->isVReg()) {
+                    if (mop && mop->isVReg()) {
                         if (!mUseCnt.count(mop)) {
                             mUseCnt[mop] = 1;
                         } else {
@@ -146,14 +148,10 @@ void ISelContext::impl(MIRFunction *mfunc) {
             // replace defs
             for (auto &minst : mblk->Insts()) {
 
-                // if (mReplaceBlkWorkList.count(minst)) {
-                //     continue;
-                // }
-
                 for (auto idx = 1U; idx <= minst->getUseNr(); ++idx) {
                     auto &use = minst->getOp(idx);
 
-                    if (use->isReg() && mReplaceMap.count(use)) {
+                    if (use && use->isReg() && mReplaceMap.count(use)) {
                         use = mReplaceMap.at(use);
                     }
                 }

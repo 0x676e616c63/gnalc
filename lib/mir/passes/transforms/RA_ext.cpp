@@ -39,8 +39,9 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getUse(const MIRInst_p &minst) {
 
         auto use = minst->getOp(idx);
 
-        if (use->isVRegOrISAReg() && (use->type() == OpT::Int16 || use->type() == OpT::Int32 ||
-                                      use->type() == OpT::Int64 || use->type() == OpT::Int)) {
+        if (use && use->isVRegOrISAReg() &&
+            (use->type() == OpT::Int16 || use->type() == OpT::Int32 || use->type() == OpT::Int64 ||
+             use->type() == OpT::Int)) {
             uses.emplace(use);
         }
     }
@@ -147,7 +148,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
 
             if (auto it_op = defs.find(mop); it_op != defs.end()) {
                 auto writeStage = MIROperand::asVReg(ctx.nextId(), mop->type());
-                auto minst_store = MIRInst::make(OpC::InstStore)->setOperand<1>(writeStage);
+                auto minst_store = MIRInst::make(OpC::InstStore)->setOperand<1>(writeStage)->setOperand<2>(stkobj);
 
                 minsts.insert(std::next(it), minst_store);
 
@@ -195,7 +196,7 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getUse(const MIRInst_p &minst)
 
         auto use = minst->getOp(idx);
 
-        if (use->isVRegOrISAReg() &&
+        if (use && use->isVRegOrISAReg() &&
             (use->type() == OpT::Float32 || use->type() == OpT::Floatvec || use->type() == OpT::Intvec)) {
             uses.emplace(use);
         }

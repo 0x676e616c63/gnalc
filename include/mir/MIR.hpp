@@ -74,8 +74,8 @@ enum class MIRGenericInst {
     // control-flow
     InstBranch, // cond, reloc, prob
     // Memory, get by gep, no const offset
-    InstLoad,
-    InstStore,
+    InstLoad,  // <def> <base> <idx> <shift> <size_attr>
+    InstStore, // <nullptr> <use> <base> <idx> <shift> <size_attr>
     // Arithmetic
     InstAdd,
     InstSub,
@@ -235,7 +235,8 @@ public:
     bool operator!=(const MIROperand &other) const { return mOperand != other.mOperand; }
 
     template <typename T> static MIROperand_p asImme(T val, OpT type) {
-        if constexpr (std::is_same_v<T, int> || std::is_same_v<T, float> || std::is_same_v<T, unsigned>) {
+        if constexpr (std::is_same_v<T, int> || std::is_same_v<T, float> || std::is_same_v<T, unsigned> ||
+                      std::is_same_v<T, Cond>) {
             unsigned encoding = *reinterpret_cast<unsigned *>(&val);
             return make<MIROperand>(encoding, type);
         } else if constexpr (std::is_same_v<T, uint64_t>) {

@@ -237,7 +237,7 @@ void TargetISelInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
             auto movk = MIRInst::make(ARMOpC::MOVK)
                             ->setOperand<0>(dst)
                             ->setOperand<1>(MIROperand::asImme(imm >> 16, OpT::Int16))
-                            ->setOperand<2>(MIROperand::asImme(16 | 0x40000000, OpT::special)); // lsr
+                            ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special)); // lsl only
 
             minsts.insert(iter, movk);
         }
@@ -277,7 +277,7 @@ void TargetISelInfo::legalizeInstWithStackOperand(InstLegalizeContext &_ctx, MIR
     auto &offset = obj.offset;
 
     if (isFitMemInst(offset, getBitWide(mop->type()))) {
-        if (minst->opcode<OpC>() != OpC::InstStoreRegToStack && minst->opcode<OpC>() != OpC::InstStore) {
+        if (minst->opcode<OpC>() == OpC::InstLoadRegFromStack || minst->opcode<OpC>() == OpC::InstLoad) {
             minst->setOperand<2>(MIROperand::asImme(offset, OpT::Int64));
             minst->resetOpcode(ARMOpC::LDR);
         } else {
@@ -303,7 +303,7 @@ void TargetISelInfo::legalizeInstWithStackOperand(InstLegalizeContext &_ctx, MIR
         auto movk = MIRInst::make(ARMOpC::MOVK)
                         ->setOperand<0>(scratch)
                         ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16))
-                        ->setOperand<2>(MIROperand::asImme(16, OpT::special));
+                        ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special)); // lsl only
         minsts.insert(iter, movk);
 
         ++times;
@@ -311,7 +311,7 @@ void TargetISelInfo::legalizeInstWithStackOperand(InstLegalizeContext &_ctx, MIR
     }
 
     ///@todo ldur/stur
-    if (minst->opcode<OpC>() != OpC::InstStoreRegToStack && minst->opcode<OpC>() != OpC::InstStore) {
+    if (minst->opcode<OpC>() == OpC::InstLoadRegFromStack || minst->opcode<OpC>() == OpC::InstLoad) {
         minst->setOperand<2>(scratch); // just a mark for codegen
         minst->resetOpcode(ARMOpC::LDR);
     } else {

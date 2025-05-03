@@ -124,12 +124,12 @@ string ARMA64Printer::memoryPrinter(const MIRInst &minst) {
 
     if (minst.opcode<ARMOpC>() == ARMOpC::LDR) {
         op1 = minst.ensureDef();
-        base = minst.getOp(1);
+        base = minst.getOp(1)->isISA() ? minst.getOp(1) : MIROperand::asISAReg(ARMReg::SP, OpT::Int64);
         idx = minst.getOp(2);
         shift = minst.getOp(3);
     } else if (minst.opcode<ARMOpC>() == ARMOpC::STR) {
         op1 = minst.getOp(1);
-        base = minst.getOp(2);
+        base = minst.getOp(2)->isISA() ? minst.getOp(2) : MIROperand::asISAReg(ARMReg::SP, OpT::Int64);
         idx = minst.getOp(3);
         shift = minst.getOp(4);
     }
@@ -186,7 +186,7 @@ string ARMA64Printer::csetPrinter(const MIRInst &minst) {
     string str;
 
     str += "cset\t";
-    str += Reg2S(def->isa(), 4) + '\t';
+    str += Reg2S(def->isa(), 4) + ",\t";
     str += Cond2S(static_cast<Cond>(cond));
 
     return str;
@@ -212,7 +212,7 @@ string ARMA64Printer::ADRP_LDRPrinter(const MIRInst &minst) {
     string reg = Reg2S(def->isa(), getBitWide(def->type())); // 8
 
     str += "adrp\t" + reg + ", :got:" + label + '\n';
-    str += "ldr\t" + reg + "[" + reg + ", :got_lo12:" + label + "]";
+    str += "    ldr\t" + reg + ", [" + reg + ", :got_lo12:" + label + "]"; // indent
 
     return str;
 }
@@ -234,15 +234,15 @@ string ARMA64Printer::movPrinter(const MIRInst &minst) {
 
     // shift
     if (shift) {
+        str += ",\t";
+
         unsigned imme = shift->imme();
         unsigned shift_op = imme >> 30;
 
         if (shift_op == 0) {
             str += "lsl ";
-        } else if (shift_op == 1) {
-            str += "lsr ";
-        } else if (shift_op == 2) {
-            str += "asr ";
+        } else {
+            Err::unreachable("movPrinter: only 'LSL' shift is permitted at operand 2");
         }
 
         str += '#' + std::to_string(imme % 0b100000);

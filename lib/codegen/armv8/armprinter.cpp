@@ -82,6 +82,7 @@ void ARMA64Printer::printout(const std::vector<MIRGlobal_p> &mGlobals) {
         }
     }
 
+    outStream << '\n';
     return;
 }
 
@@ -220,7 +221,7 @@ void ARMA64Printer::printout(const MIRInst &minst) {
             outStream << blPrinter(minst);
             break;
         case ARMOpC::RET:
-            outStream << "RET\n";
+            outStream << "ret\n";
             break;
         case ARMOpC::PUSH:
         case ARMOpC::POP:
