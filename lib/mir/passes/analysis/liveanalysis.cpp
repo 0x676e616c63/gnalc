@@ -11,7 +11,13 @@ Liveness LiveAnalysis::run(MIRFunction &mfunc, FAM &fam) {
 }
 
 Liveness LiveAnalysisImpl::runImpl(MIRFunction &mfunc) {
-    liveinfo->clear();
+
+    if (liveinfo != std::nullopt) {
+        liveinfo->clear();
+    } else {
+        liveinfo = std::make_optional<Liveness>();
+    }
+
     runOnFunc(mfunc);
     return liveinfo.value();
 }
@@ -115,13 +121,14 @@ std::list<MIROperand_p> LiveAnalysisImpl::extractUses(const MIRInst_p &minst) {
     for (auto it = std::next(mops.begin()); it != mops.end(); ++it) {
         auto use = *it;
 
-        if (use->isReg()) {
+        if (use && use->isReg()) {
             uses.emplace_back(use);
         }
     }
 
     return uses;
 }
+
 MIROperand_p LiveAnalysisImpl::extractDef(const MIRInst_p &minst) {
     return minst->getDef(); //
 }

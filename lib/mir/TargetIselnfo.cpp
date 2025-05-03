@@ -229,16 +229,18 @@ void TargetISelInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
 
         auto movz = MIRInst::make(ARMOpC::MOVZ)
                         ->setOperand<0>(dst)
-                        ->setOperand<1>(MIROperand::asImme(imm & 0XFFFF, OpT::Int16));
+                        ->setOperand<1>(MIROperand::asImme(imm & 0XFFFF, OpT::Int16)); // low 16
 
         minsts.insert(iter, movz);
 
-        auto movk = MIRInst::make(ARMOpC::MOVK)
-                        ->setOperand<0>(dst)
-                        ->setOperand<1>(MIROperand::asImme(imm >> 16, OpT::Int16))
-                        ->setOperand<2>(MIROperand::asImme(16, OpT::special));
+        if (imm > 0XFFFF) {
+            auto movk = MIRInst::make(ARMOpC::MOVK)
+                            ->setOperand<0>(dst)
+                            ->setOperand<1>(MIROperand::asImme(imm >> 16, OpT::Int16))
+                            ->setOperand<2>(MIROperand::asImme(16 | 0x40000000, OpT::special)); // lsr
 
-        minsts.insert(iter, movk);
+            minsts.insert(iter, movk);
+        }
 
         if (def->type() == OpT::Float32) {
             auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Float32);

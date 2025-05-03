@@ -93,14 +93,22 @@ string ARMA64Printer::copyPrinter(const MIRInst &minst) {
 
     ///@todo vectorize
     if (all_equal_pairs(defType, OpT::Int32, useType, OpT::Int32)) {
-        str += "mov\t" + Reg2S(def->isa(), 4) + '\t' + Reg2S(use->isa(), 4);
+
+        str += "mov\t" + Reg2S(def->isa(), 4) + ",\t" + Reg2S(use->isa(), 4);
+
     } else if (all_equal_pairs(defType, OpT::Int64, useType, OpT::Int64)) {
-        str += "mov\t" + Reg2S(def->isa(), 8) + '\t' + Reg2S(use->isa(), 8);
+
+        str += "mov\t" + Reg2S(def->isa(), 8) + ",\t" + Reg2S(use->isa(), 8);
+
     } else if (all_equal_pairs(defType, OpT::Int, useType, OpT::Int)) {
-        str += "mov\t" + Reg2S(def->isa(), 8) + '\t' + Reg2S(use->isa(), 8);
+
+        str += "mov\t" + Reg2S(def->isa(), 8) + ",\t" + Reg2S(use->isa(), 8);
+
     } else if (all_equal_pairs(defType, OpT::Int32, useType, OpT::Float32) ||
                all_equal_pairs(defType, OpT::Float32, useType, OpT::Int32)) {
-        str += "fmov\t" + Reg2S(def->isa(), 8) + '\t' + Reg2S(use->isa(), 8);
+
+        str += "fmov\t" + Reg2S(def->isa(), 8) + ",\t" + Reg2S(use->isa(), 8);
+
     } else {
         Err::todo("copyPrinter: vectorize todo");
     }
@@ -212,6 +220,7 @@ string ARMA64Printer::ADRP_LDRPrinter(const MIRInst &minst) {
 string ARMA64Printer::movPrinter(const MIRInst &minst) {
     const auto &def = minst.ensureDef();
     const auto &use = minst.getOp(1);
+    const auto &shift = minst.getOp(2);
 
     string str;
     str += ARMOpC2S(minst.opcode<ARMOpC>()) + '\t';
@@ -221,6 +230,22 @@ string ARMA64Printer::movPrinter(const MIRInst &minst) {
         str += '#' + std::to_string(use->imme());
     } else {
         str += Reg2S(use->isa(), getBitWide(use->type()));
+    }
+
+    // shift
+    if (shift) {
+        unsigned imme = shift->imme();
+        unsigned shift_op = imme >> 30;
+
+        if (shift_op == 0) {
+            str += "lsl ";
+        } else if (shift_op == 1) {
+            str += "lsr ";
+        } else if (shift_op == 2) {
+            str += "asr ";
+        }
+
+        str += '#' + std::to_string(imme % 0b100000);
     }
 
     return str;
@@ -353,6 +378,7 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
 string ARMA64Printer::adjustPrinter(const MIRInst &minst) {
     const auto &def = minst.ensureDef();
     const auto &use = minst.getOp(1);
+    const auto &offset = minst.getOp(2);
 
     string str;
     if (minst.opcode<ARMOpC>() == ARMOpC::INC) {
@@ -362,11 +388,12 @@ string ARMA64Printer::adjustPrinter(const MIRInst &minst) {
     }
 
     str += Reg2S(def->isa(), getBitWide(def->type())) + ", "; // int
+    str += Reg2S(use->isa(), getBitWide(use->type())) + ", ";
 
-    if (use->isImme()) {
-        str += '#' + std::to_string(use->imme());
+    if (offset->isImme()) {
+        str += '#' + std::to_string(offset->imme());
     } else {
-        str += Reg2S(use->isa(), getBitWide(use->type())); // int
+        str += Reg2S(offset->isa(), getBitWide(offset->type())); // int
     }
 
     return str;

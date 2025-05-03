@@ -79,9 +79,9 @@ public:
                      "mapOperand: try mapping an unknown type const");
         auto imme_idx = static_cast<unsigned>(imme);
 
-        auto mconst = mConstMap.at(imme_idx);
+        MIROperand_p mconst = nullptr;
 
-        if (!mconst) {
+        if (!mConstMap.count(imme_idx)) {
             if constexpr (std::is_same_v<T, int>) {
                 mconst = MIROperand::asImme<T>(imme, OpT::Int32);
             } else if constexpr (std::is_same_v<T, float>) {
@@ -91,8 +91,9 @@ public:
             }
 
             mConstMap.emplace(imme_idx, mconst);
+        } else {
+            mconst = mConstMap.at(imme_idx);
         }
-
         return mconst;
     }
 

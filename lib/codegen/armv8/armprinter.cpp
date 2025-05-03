@@ -17,7 +17,8 @@ void ARMA64Printer::printout(const MIRModule &mModule) {
 
     printout(mModule.globals());
 
-    outStream << ".text\n.arm\n";
+    // outStream << ".text\n.arm\n\n";
+    outStream << ".text\n\n";
 
     for (auto &mfunc : mModule.funcs()) {
         printout(*mfunc);

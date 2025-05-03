@@ -155,7 +155,7 @@ public:
     virtual bool isFunc() const { return false; }
     virtual bool isBlk() const { return false; }
     virtual bool isData() const { return false; }
-    virtual bool isBss() const { return true; }
+    virtual bool isBss() const { return false; }
 
     template <typename T> std::shared_ptr<T> as() {
         Err::gassert(std::is_base_of_v<MIRRelocable, T>, "MIRRelocable::as(): Expected a derived type.");
@@ -223,9 +223,9 @@ public:
     bool isExImme() const { return std::holds_alternative<uint64_t>(mOperand); }
     bool isUnused() const { return std::holds_alternative<std::monostate>(mOperand); }
     bool isReg() const { return std::holds_alternative<MIRReg_p>(mOperand); }
-    bool isVReg() const { return isVirtualReg(reg()); }
-    bool isISA() const { return isISAReg(reg()); }
-    bool isStack() const { return isStkObj(reg()); }
+    bool isVReg() const { return isReg() && isVirtualReg(reg()); }
+    bool isISA() const { return isReg() && isISAReg(reg()); }
+    bool isStack() const { return isReg() && isStkObj(reg()); }
     bool isReloc() const { return std::holds_alternative<MIRRelocable_p>(mOperand); }
     bool isProb() const { return std::holds_alternative<double>(mOperand); }
 
@@ -235,7 +235,7 @@ public:
     bool operator!=(const MIROperand &other) const { return mOperand != other.mOperand; }
 
     template <typename T> static MIROperand_p asImme(T val, OpT type) {
-        if constexpr (std::is_same_v<T, int> || std::is_same_v<T, float>) {
+        if constexpr (std::is_same_v<T, int> || std::is_same_v<T, float> || std::is_same_v<T, unsigned>) {
             unsigned encoding = *reinterpret_cast<unsigned *>(&val);
             return make<MIROperand>(encoding, type);
         } else if constexpr (std::is_same_v<T, uint64_t>) {

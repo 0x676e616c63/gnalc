@@ -287,7 +287,7 @@ void TargetFrameInfo::emitPostSAPrologue(MIRBlk_p entry, CodeGenContext &ctx, un
 
     auto iter = insts.end();
     for (auto it = insts.begin(); it != insts.end(); ++it) {
-        if (it->get()->opcode<ARMOpC>() == ARMOpC::PUSH) {
+        if (!it->get()->isGeneric() && it->get()->opcode<ARMOpC>() == ARMOpC::PUSH) {
             iter = it;
             break;
         }
@@ -307,7 +307,7 @@ void TargetFrameInfo::emitPostSAEpilogue(MIRBlk_p entry, CodeGenContext &ctx, un
 
     auto iter = insts.end();
     for (auto it = insts.begin(); it != insts.end(); ++it) {
-        if (it->get()->opcode<ARMOpC>() == ARMOpC::POP) {
+        if (!it->get()->isGeneric() && it->get()->opcode<ARMOpC>() == ARMOpC::POP) {
             iter = std::next(it);
             find = true;
             break;

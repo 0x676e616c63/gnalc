@@ -314,7 +314,7 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
 
     // lower blks, deal with entry and exit
     for (auto &blk : func->getDFVisitor<Util::DFVOrder::ReversePostOrder>()) {
-        auto mblk = make<MIRBlk>(blk->getName(), mfunc);
+        auto mblk = make<MIRBlk>(mfunc->getmSym() + '_' + blk->getName().substr(1), mfunc);
         mfunc->blks().emplace_back(mblk);
 
         blkMap.emplace(blk, mblk);

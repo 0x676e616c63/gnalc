@@ -66,6 +66,7 @@ public:
     }; // pass by value
 
     std::list<MIROperand_p> extractUses(const MIRInst_p &minst);
+
     MIROperand_p extractDef(const MIRInst_p &minst);
 };
 

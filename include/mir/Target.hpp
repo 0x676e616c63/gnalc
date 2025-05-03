@@ -290,9 +290,9 @@ public:
 };
 
 struct InstLegalizeContext {
-    MIRInst_p minst;
-    MIRInst_p_l insts;
-    MIRInst_p_l::iterator iter;
+    MIRInst_p &minst;
+    MIRInst_p_l &insts;
+    MIRInst_p_l::iterator &iter;
     CodeGenContext &ctx;
 };
 
@@ -322,10 +322,10 @@ struct CodeGenContext {
     unsigned idx = 0;
     unsigned nextId() { return ++idx; }
 
-    unsigned idx_l = 0; // label
-    string nextBlkLable(const string &func_name) {
-        return func_name + "_blk_" + std::to_string(idx_l++); // rename
-    }
+    // unsigned idx_l = 0; // label
+    // string nextBlkLable(const string &func_name) {
+    //     return func_name + "_blk_" + std::to_string(idx_l++); // rename
+    // }
 };
 
 }; // namespace MIR_new

@@ -160,7 +160,7 @@ void ISelContext::impl(MIRFunction *mfunc) {
 
                 auto &def = minst->getDef();
 
-                if (def->isReg() && mReplaceMap.count(def)) {
+                if (def && def->isReg() && mReplaceMap.count(def)) {
                     def = mReplaceMap.at(def);
                 }
             }
