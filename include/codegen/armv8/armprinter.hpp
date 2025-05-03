@@ -3,7 +3,7 @@
 #define GNALC_CODEGEN_ARMV8_ARMPRINTER_HPP
 
 #include "mir/MIR.hpp"
-#include "mir/Target.hpp"
+#include "mir/info.hpp"
 #include <iostream>
 
 namespace MIR_new {

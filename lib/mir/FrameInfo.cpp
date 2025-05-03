@@ -1,18 +1,32 @@
 #include "mir/MIR.hpp"
-#include "mir/Target.hpp"
+#include "mir/info.hpp"
 #include "mir/passes/transforms/lowering.hpp"
 
 using namespace MIR_new;
 
-void TargetFrameInfo::emitCall(IR::pCall callinst, LoweringContext &ctx) const {
-    ///@note TCO, TCR
+void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const {
+    ///@todo TCO, TCR
     ctx.CurrentBlk()->getFunction()->affirmNotLeafFunc();
 
     auto callee = callinst->getFunc();
-    auto mcallee = ctx.mapGlobal(callee->getName());
+
+    using Attr = IR::FuncAttr;
+    if (callee->hasAttr(Attr::isMemsetIntrinsic)) {
+        handleMemset(callinst, ctx);
+        return;
+    } else if (callee->hasAttr(Attr::isMemcpyIntrinsic)) {
+        handleMemcpy(callinst, ctx);
+        return;
+    } else if (callee->hasAttr(Attr::isSIMDIntrinsic)) {
+        Err::todo("handleCallEntry: simd todo");
+    }
+
+    ///@brief callee->hasAttr(Attr::NotBuiltin)
+    auto mcallee = callee->hasAttr(Attr::isSylib) ? ctx.mapGlobal(callee->getName()) : handleLib(callinst, ctx);
+
     auto mcaller = ctx.CurrentBlk()->getFunction();
 
-    const auto &layOut = ctx.CodeGenCtx().target.dataLayOut;
+    const auto &layOut = ctx.CodeGenCtx().infos.dataLayOut;
 
     unsigned stkOffset = 0U; // stk offset
     std::vector<int> offsets;
@@ -74,11 +88,11 @@ void TargetFrameInfo::emitCall(IR::pCall callinst, LoweringContext &ctx) const {
 
         if (!mval->isVRegOrISAReg()) { // constant
             auto reg = ctx.newVReg(mval->type());
-            ctx.emitCopy(reg, mval);
+            ctx.addCopy(reg, mval);
             mval = reg;
         }
 
-        ctx.emitInst(MIRInst::make(OpC::InstStoreRegToStack)->setOperand<1>(mval)->setOperand<2>(obj));
+        ctx.newInst(MIRInst::make(OpC::InstStoreRegToStack)->setOperand<1>(mval)->setOperand<2>(obj));
     }
 
     // LAMBDA BEGIN
@@ -121,30 +135,90 @@ void TargetFrameInfo::emitCall(IR::pCall callinst, LoweringContext &ctx) const {
 
         MIROperand_p marg = MIROperand::asISAReg(isa, mtype);
 
-        ctx.emitCopy(marg, mval); // choose copy code auto
+        ctx.addCopy(marg, mval); // choose copy code auto
     }
 
     ///@note emit call(bl)
     auto mval = callinst->isVoid() ? nullptr : ctx.newVReg(getType(callinst));
 
     ///@todo emit tcp
-    ctx.emitInst(MIRInst::make(ARMOpC::BL)
-                     ->setOperand<0>(nullptr)
-                     ->setOperand<1>(MIROperand::asReloc(mcallee->reloc()))
-                     ->setOperand<2>(MIROperand::asImme(callinst->isTailCall() ? 1 : 0, OpT::special)));
+    ctx.newInst(MIRInst::make(ARMOpC::BL)
+                    ->setOperand<0>(nullptr)
+                    ->setOperand<1>(MIROperand::asReloc(mcallee->reloc()))
+                    ->setOperand<2>(MIROperand::asImme(callinst->isTailCall() ? 1 : 0, OpT::special)));
 
     auto mtype = getType(callinst);
 
-    ctx.emitInst(MIRInst::make(OpC::InstCopyFromReg)
-                     ->setOperand<0>(mval)
-                     ->setOperand<1>(MIROperand::asISAReg(mtype == OpT::Float32 ? ARMReg::V0 : ARMReg::X0, mtype)));
+    ctx.newInst(MIRInst::make(OpC::InstCopyFromReg)
+                    ->setOperand<0>(mval)
+                    ->setOperand<1>(MIROperand::asISAReg(mtype == OpT::Float32 ? ARMReg::V0 : ARMReg::X0, mtype)));
     ///@todo vectorize
 
     ctx.addOperand(callinst, mval);
 }
 
+MIRGlobal_p FrameInfo::handleLib(IR::pCall callinst, LoweringContext &ctx) const {
+    const auto &layout = ctx.CodeGenCtx().infos.dataLayOut;
+
+    auto callee = callinst->getFunc();
+    auto mfunc_declare = make<MIRFunction>(callee->getName().substr(1), ctx.CodeGenCtx());
+    auto mcallee = make<MIRGlobal>(layout.codeAlignment, mfunc_declare);
+
+    return mcallee;
+}
+
+void FrameInfo::handleMemset(IR::pCall callinst, LoweringContext &ctx) const {
+    const auto &layout = ctx.CodeGenCtx().infos.dataLayOut;
+
+    auto callee = callinst->getFunc();
+    // turn LLVM builtin into Glibc stdlib
+    auto mfunc_declare = make<MIRFunction>("memset", ctx.CodeGenCtx());
+    auto mcallee = make<MIRGlobal>(layout.codeAlignment, mfunc_declare);
+
+    ///@note arg in ISAreg
+    auto args = callinst->getArgs();
+
+    ctx.addCopy(MIROperand::asISAReg(ARMReg::X0, OpT::Int64), ctx.mapOperand(args[0]));
+    ctx.addCopy(MIROperand::asISAReg(ARMReg::X1, OpT::Int32), ctx.mapOperand(args[1]));
+    ctx.addCopy(MIROperand::asISAReg(ARMReg::X2, OpT::Int32), ctx.mapOperand(args[2]));
+
+    ///@note emit call(bl)
+    ///@todo emit tcp
+    ctx.newInst(MIRInst::make(ARMOpC::BL)
+                    ->setOperand<0>(nullptr)
+                    ->setOperand<1>(MIROperand::asReloc(mcallee->reloc()))
+                    ->setOperand<2>(MIROperand::asImme(callinst->isTailCall() ? 1 : 0, OpT::special)));
+
+    // non-return;
+}
+
+void FrameInfo::handleMemcpy(IR::pCall callinst, LoweringContext &ctx) const {
+    const auto &layout = ctx.CodeGenCtx().infos.dataLayOut;
+
+    auto callee = callinst->getFunc();
+    // turn LLVM builtin into Glibc stdlib
+    auto mfunc_declare = make<MIRFunction>("memcpy", ctx.CodeGenCtx());
+    auto mcallee = make<MIRGlobal>(layout.codeAlignment, mfunc_declare);
+
+    ///@note arg in ISAreg
+    auto args = callinst->getArgs();
+
+    ctx.addCopy(MIROperand::asISAReg(ARMReg::X0, OpT::Int64), ctx.mapOperand(args[0]));
+    ctx.addCopy(MIROperand::asISAReg(ARMReg::X1, OpT::Int64), ctx.mapOperand(args[1]));
+    ctx.addCopy(MIROperand::asISAReg(ARMReg::X2, OpT::Int32), ctx.mapOperand(args[2]));
+
+    ///@note emit call(bl)
+    ///@todo emit tcp
+    ctx.newInst(MIRInst::make(ARMOpC::BL)
+                    ->setOperand<0>(nullptr)
+                    ->setOperand<1>(MIROperand::asReloc(mcallee->reloc()))
+                    ->setOperand<2>(MIROperand::asImme(callinst->isTailCall() ? 1 : 0, OpT::special)));
+
+    // non-return;
+}
+
 /// @note load args from reg or stk
-void TargetFrameInfo::emitPrologue(MIRFunction_p mfunc, LoweringContext &ctx) const {
+void FrameInfo::makePrologue(MIRFunction_p mfunc, LoweringContext &ctx) const {
     const auto &args = mfunc->Args();
     unsigned stkoffset = 0L;
 
@@ -168,7 +242,7 @@ void TargetFrameInfo::emitPrologue(MIRFunction_p mfunc, LoweringContext &ctx) co
         case OpT::Floatvec:
             return 16;
         default:
-            Err::unreachable("emitPrologue: unknown type");
+            Err::unreachable("makePrologue: unknown type");
         }
         return 4; // just to make gnalc happy
     };
@@ -216,7 +290,7 @@ void TargetFrameInfo::emitPrologue(MIRFunction_p mfunc, LoweringContext &ctx) co
 
         MIROperand_p msrc = MIROperand::asISAReg(isa, mtype);
 
-        ctx.emitCopy(arg, msrc);
+        ctx.addCopy(arg, msrc);
     }
 
     for (int i = 0; i < args.size(); ++i) {
@@ -231,15 +305,15 @@ void TargetFrameInfo::emitPrologue(MIRFunction_p mfunc, LoweringContext &ctx) co
 
         auto stkobj = mfunc->addStkObj(ctx.CodeGenCtx(), size, align, offset, StkObjUsage::Arg);
 
-        ctx.emitInst(MIRInst::make(OpC::InstLoadRegFromStack)->setOperand<0>(arg)->setOperand<1>(stkobj));
+        ctx.newInst(MIRInst::make(OpC::InstLoadRegFromStack)->setOperand<0>(arg)->setOperand<1>(stkobj));
         // addOperand already
     }
 }
 
-void TargetFrameInfo::emitReturn(IR::pRet retinst, LoweringContext &ctx) const {
+void FrameInfo::makeReturn(IR::pRet retinst, LoweringContext &ctx) const {
 
     if (retinst->getType()->as<IR::BType>()->getInner() == IR::IRBTYPE::VOID) {
-        ctx.emitInst(MIRInst::make(ARMOpC::RET));
+        ctx.newInst(MIRInst::make(ARMOpC::RET));
     } else {
         auto mval = ctx.mapOperand(retinst->getRetVal());
         auto type = retinst->getRetVal()->getType();
@@ -259,22 +333,22 @@ void TargetFrameInfo::emitReturn(IR::pRet retinst, LoweringContext &ctx) const {
 
         auto mret = MIROperand::asISAReg(isa, mtype);
 
-        ctx.emitCopy(mret, mval);
+        ctx.addCopy(mret, mval);
     }
-    ctx.emitInst(MIRInst::make(ARMOpC::RET)); // just use ret
+    ctx.newInst(MIRInst::make(ARMOpC::RET)); // just use ret
 }
 
-bool TargetFrameInfo::isCallerSaved(const MIROperand &op) const {
+bool FrameInfo::isCallerSaved(const MIROperand &op) const {
     const auto reg = op.reg();
     return inRange(static_cast<ARMReg>(reg), ARMReg::X0, ARMReg::X18) ||
            inRange(static_cast<ARMReg>(reg), ARMReg::V0, ARMReg::V15);
 }
 
-bool TargetFrameInfo::isCalleeSaved(const MIROperand &op) const {
+bool FrameInfo::isCalleeSaved(const MIROperand &op) const {
     return !isCallerSaved(op); //
 }
 
-void TargetFrameInfo::emitPostSAPrologue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const {
+void FrameInfo::makePostSAPrologue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const {
     ///@note 在callleesave保存前插入开栈指令
     ///@note stksize需要把寄存器保存的空间也计算在内
     ///@note 如果栈内没有局部变量, 可以考虑去掉sub, 给stp加pre-indexing
@@ -293,12 +367,12 @@ void TargetFrameInfo::emitPostSAPrologue(MIRBlk_p entry, CodeGenContext &ctx, un
         }
     }
 
-    Err::gassert(iter != insts.end(), "emitPostSAPrologue: cant find reg save insts");
+    Err::gassert(iter != insts.end(), "makePostSAPrologue: cant find reg save insts");
 
     ARMInstTemplate::registerDec(insts, iter, ARMReg::SP, stkSize);
 }
 
-void TargetFrameInfo::emitPostSAEpilogue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const {
+void FrameInfo::makePostSAEpilogue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const {
     ///@note 恢复寄存器后插入栈回收指令
     ///@note 同上, 可以优化为 ldp x29, x30, [sp], 16
 
@@ -314,12 +388,12 @@ void TargetFrameInfo::emitPostSAEpilogue(MIRBlk_p entry, CodeGenContext &ctx, un
         }
     }
 
-    Err::gassert(find, "emitPostSAEpilogue: cant find reg recover insts");
+    Err::gassert(find, "makePostSAEpilogue: cant find reg recover insts");
 
     ARMInstTemplate::registerInc(insts, iter, ARMReg::SP, stkSize);
 }
 
-void TargetFrameInfo::insertPrologueEpilogue(MIRFunction *mfunc, CodeGenContext &ctx) const {
+void FrameInfo::insertPrologueEpilogue(MIRFunction *mfunc, CodeGenContext &ctx) const {
 
     // 30 + 1 + 1 + 31 = 63 < 64
     // X<>: 0 ~ 30, SP: 31, PC: 32, V<>: 33~64

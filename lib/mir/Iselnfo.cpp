@@ -3,7 +3,7 @@
 
 using namespace MIR_new;
 
-bool TargetISelInfo::isLegalGenericInst(MIRInst_p minst) const {
+bool ISelInfo::isLegalGenericInst(MIRInst_p minst) const {
     Err::gassert(minst->isGeneric(), "isLegalGenericInst: minst is not a generic mir");
 
     switch (minst->opcode<OpC>()) {
@@ -19,15 +19,15 @@ bool TargetISelInfo::isLegalGenericInst(MIRInst_p minst) const {
     }
 }
 
-bool TargetISelInfo::matchAndSel(MIRInst_p minst, ISelContext &ctx, bool allow) const {
+bool ISelInfo::match(MIRInst_p minst, ISelContext &ctx, bool allow) const {
     bool ret = legalizeInst(minst, ctx); // not impl yet
 
     ///@todo do something when allow is true
 
-    return ret | matchAndSelectImpl(minst, ctx);
+    return ret | matchImpl(minst, ctx);
 }
 
-bool TargetISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
+bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     bool modified = false;
 
     // LAMBDA BEGIN
@@ -187,15 +187,15 @@ bool TargetISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     }
     return modified;
 }
-void TargetISelInfo::postLegalizeInst(InstLegalizeContext &) {
+void ISelInfo::postLegalizeInst(InstLegalizeContext &) {
     ///@todo
 }
 
-void TargetISelInfo::postLegalizeInst(InstLegalizeContext &, MIRInst_p_l &) {
+void ISelInfo::postLegalizeInst(InstLegalizeContext &, MIRInst_p_l &) {
     ///@todo
 }
 
-void TargetISelInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
+void ISelInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
     ///@todo handle select inst if we really have one
 
     auto &ctx = _ctx.ctx; // codegen context
@@ -265,8 +265,7 @@ void TargetISelInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
 
     return;
 }
-void TargetISelInfo::legalizeInstWithStackOperand(InstLegalizeContext &_ctx, MIROperand_p mop,
-                                                  const StkObj &obj) const {
+void ISelInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop, const StkObj &obj) const {
 
     ///@warning armv8的交叉装载ld1, ld2, ld3不支持变址寻址, 甚至不支持常量偏移
     ///@warning ld1 {V<>.4s} 又和 ldr q<> 作用一致, 而后者支持变址寻址, 只是不显式指示加载类型
@@ -274,7 +273,7 @@ void TargetISelInfo::legalizeInstWithStackOperand(InstLegalizeContext &_ctx, MIR
 
     auto &[minst, minsts, iter, ctx] = _ctx;
 
-    auto &offset = obj.offset;
+    auto offset = obj.offset;
 
     if (isFitMemInst(offset, getBitWide(mop->type()))) {
         if (minst->opcode<OpC>() == OpC::InstLoadRegFromStack || minst->opcode<OpC>() == OpC::InstLoad) {
@@ -314,10 +313,91 @@ void TargetISelInfo::legalizeInstWithStackOperand(InstLegalizeContext &_ctx, MIR
     if (minst->opcode<OpC>() == OpC::InstLoadRegFromStack || minst->opcode<OpC>() == OpC::InstLoad) {
         minst->setOperand<2>(scratch); // just a mark for codegen
         minst->resetOpcode(ARMOpC::LDR);
-    } else {
+    } else if (minst->opcode<OpC>() == OpC::InstStoreRegToStack || minst->opcode<OpC>() == OpC::InstStore) {
         minst->setOperand<3>(scratch);
         minst->resetOpcode(ARMOpC::STR);
     }
 
+    return;
+}
+
+void ISelInfo::legalizeWithStkGep(InstLegalizeContext &_ctx, MIROperand_p mop, const StkObj &obj) const {
+
+    auto &[minst, minsts, iter, ctx] = _ctx;
+    int offset = obj.offset;
+
+    if (minst->getOp(2)->isImme()) {
+        offset += minst->getOp(2)->imme();
+
+        if (is12ImmeWithProbShift(offset)) {
+            minst->resetOpcode(OpC::InstAdd);
+            minst->setOperand<1>(MIROperand::asISAReg(ARMReg::SP, OpT::Int64));
+            minst->setOperand<2>(MIROperand::asImme(offset, OpT::Int64));
+            return;
+        }
+
+        auto imme = offset;
+        auto scratch = MIROperand::asISAReg(ARMReg::FP, OpT::Int64);
+
+        auto movz = MIRInst::make(ARMOpC::MOVZ)
+                        ->setOperand<0>(scratch)
+                        ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16));
+        minsts.insert(iter, movz);
+
+        imme >>= 16;
+        unsigned times = 1;
+        while (imme != 0) {
+            auto movk = MIRInst::make(ARMOpC::MOVK)
+                            ->setOperand<0>(scratch)
+                            ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16))
+                            ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special));
+            minsts.insert(iter, movk);
+
+            ++times;
+            imme >>= 16;
+        }
+
+        minst->resetOpcode(OpC::InstAdd);
+        minst->setOperand<1>(MIROperand::asISAReg(ARMReg::SP, OpT::Int64));
+        minst->setOperand<2>(scratch);
+    } else {
+
+        if (is12ImmeWithProbShift(offset)) {
+            minsts.insert(iter, MIRInst::make(OpC::InstAdd)
+                                    ->setOperand<0>(mop)
+                                    ->setOperand<1>(mop)
+                                    ->setOperand<2>(MIROperand::asImme(offset, OpT::Int64)));
+            minst->resetOpcode(OpC::InstAdd);
+            minst->setOperand<1>(MIROperand::asISAReg(ARMReg::SP, OpT::Int64));
+            return;
+        }
+
+        auto imme = offset;
+        auto scratch = MIROperand::asISAReg(ARMReg::FP, OpT::Int64);
+
+        auto movz = MIRInst::make(ARMOpC::MOVZ)
+                        ->setOperand<0>(scratch)
+                        ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16));
+        minsts.insert(iter, movz);
+
+        imme >>= 16;
+        unsigned times = 1;
+        while (imme != 0) {
+            auto movk = MIRInst::make(ARMOpC::MOVK)
+                            ->setOperand<0>(scratch)
+                            ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16))
+                            ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special));
+            minsts.insert(iter, movk);
+
+            ++times;
+            imme >>= 16;
+        }
+
+        minsts.insert(iter,
+                      MIRInst::make(OpC::InstAdd)->setOperand<0>(mop)->setOperand<1>(mop)->setOperand<2>(scratch));
+
+        minst->resetOpcode(OpC::InstAdd);
+        minst->setOperand<1>(MIROperand::asISAReg(ARMReg::SP, OpT::Int64));
+    }
     return;
 }

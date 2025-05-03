@@ -1,8 +1,8 @@
-#include "mir/Target.hpp"
+#include "mir/info.hpp"
 
 using namespace MIR_new;
 
-bool TargetISelInfo::matchAndSelectImpl(MIRInst_p  /*minst*/, ISelContext & /*ctx*/) const {
+bool ISelInfo::matchImpl(MIRInst_p /*minst*/, ISelContext & /*ctx*/) const {
     ///@todo not implement yet
     return false;
 }

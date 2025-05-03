@@ -109,10 +109,10 @@ void MIR_new::lowerInst(IR::pBinary binary, LoweringContext &ctx) {
     auto mop = MIR_new::IROpCodeConvert(binary->getOpcode());
     auto def = ctx.newVReg(binary->getType());
 
-    ctx.emitInst(MIRInst::make(mop)
-                     ->setOperand<0>(def)
-                     ->setOperand<1>(ctx.mapOperand(binary->getLHS()))
-                     ->setOperand<2>(ctx.mapOperand(binary->getRHS())));
+    ctx.newInst(MIRInst::make(mop)
+                    ->setOperand<0>(def)
+                    ->setOperand<1>(ctx.mapOperand(binary->getLHS()))
+                    ->setOperand<2>(ctx.mapOperand(binary->getRHS())));
 
     ctx.addOperand(binary, def);
 }
@@ -128,7 +128,7 @@ void MIR_new::lowerInst(IR::pBinary binary, LoweringContext &ctx) {
 
 //     ///@todo 通过Dom和liveRange, 分析被除数和除数的可能取值上限, 并加入到op3, op4
 
-//     ctx.emitInst(
+//     ctx.newInst(
 //         MIRInst::make(mop)->setOperand<0>(def)->setOperand<1>(ctx.mapOperand(lhs))->setOperand<2>(ctx.mapOperand(rhs)));
 
 //     ctx.addOperand(binary, def);
@@ -137,7 +137,7 @@ void MIR_new::lowerInst(IR::pBinary binary, LoweringContext &ctx) {
 void MIR_new::lowerInst(IR::pFneg fneg, LoweringContext &ctx) {
     auto def = ctx.newVReg(fneg->getType());
 
-    ctx.emitInst(MIRInst::make(OpC::InstFNeg)->setOperand<0>(def)->setOperand<1>(ctx.mapOperand(fneg->getVal())));
+    ctx.newInst(MIRInst::make(OpC::InstFNeg)->setOperand<0>(def)->setOperand<1>(ctx.mapOperand(fneg->getVal())));
 
     ctx.addOperand(fneg, def);
 }
@@ -145,12 +145,12 @@ void MIR_new::lowerInst(IR::pFneg fneg, LoweringContext &ctx) {
 void MIR_new::lowerInst(IR::pIcmp icmp, LoweringContext &ctx) {
     auto def = ctx.newVReg(icmp->getType());
 
-    ctx.emitInst(MIRInst::make(OpC::InstICmp)
-                     ->setOperand<0>(nullptr)
-                     ->setOperand<1>(ctx.mapOperand(icmp->getLHS()))
-                     ->setOperand<2>(ctx.mapOperand(icmp->getRHS())));
+    ctx.newInst(MIRInst::make(OpC::InstICmp)
+                    ->setOperand<0>(nullptr)
+                    ->setOperand<1>(ctx.mapOperand(icmp->getLHS()))
+                    ->setOperand<2>(ctx.mapOperand(icmp->getRHS())));
 
-    ctx.emitInst(
+    ctx.newInst(
         MIRInst::make(ARMOpC::CSET)->setOperand<0>(def)->setOperand<1>(ctx.mapOperand(IRCondConvert(icmp->getCond()))));
 
     ///@note condflag 加入到常量池
@@ -161,18 +161,18 @@ void MIR_new::lowerInst(IR::pIcmp icmp, LoweringContext &ctx) {
 void MIR_new::lowerInst(IR::pFcmp fcmp, LoweringContext &ctx) {
     auto def = ctx.newVReg(fcmp->getType());
 
-    ctx.emitInst(MIRInst::make(OpC::InstFCmp)
-                     ->setOperand<0>(nullptr)
-                     ->setOperand<1>(ctx.mapOperand(fcmp->getLHS()))
-                     ->setOperand<2>(ctx.mapOperand(fcmp->getRHS())));
+    ctx.newInst(MIRInst::make(OpC::InstFCmp)
+                    ->setOperand<0>(nullptr)
+                    ->setOperand<1>(ctx.mapOperand(fcmp->getLHS()))
+                    ->setOperand<2>(ctx.mapOperand(fcmp->getRHS())));
 
-    ctx.emitInst(
+    ctx.newInst(
         MIRInst::make(ARMOpC::CSET)->setOperand<0>(def)->setOperand<1>(ctx.mapOperand(IRCondConvert(fcmp->getCond()))));
 
     ctx.addOperand(fcmp, def);
 }
 
-void MIR_new::lowerInst(IR::pRet ret, LoweringContext &ctx) { ctx.CodeGenCtx().frameInfo.emitReturn(ret, ctx); }
+void MIR_new::lowerInst(IR::pRet ret, LoweringContext &ctx) { ctx.CodeGenCtx().frameInfo.makeReturn(ret, ctx); }
 
 void MIR_new::lowerInst(IR::pBr br, LoweringContext &ctx) {
 
@@ -184,11 +184,11 @@ void MIR_new::lowerInst(IR::pBr br, LoweringContext &ctx) {
         auto blk_true = ctx.mapBlk(br->getDest());
         auto use = ctx.mapOperand(br->getCond());
 
-        ctx.emitInst(MIRInst::make(OpC::InstBranch)
-                         ->setOperand<0>(nullptr)
-                         ->setOperand<1>(MIROperand::asReloc(blk_true))
-                         ->setOperand<2>(ctx.mapOperand(EQ))
-                         ->setOperand<3>(MIROperand::asProb(0.5)));
+        ctx.newInst(MIRInst::make(OpC::InstBranch)
+                        ->setOperand<0>(nullptr)
+                        ->setOperand<1>(MIROperand::asReloc(blk_true))
+                        ->setOperand<2>(ctx.mapOperand(EQ))
+                        ->setOperand<3>(MIROperand::asProb(0.5)));
     };
 
     const auto emitBranchCond = [&]() {
@@ -201,18 +201,18 @@ void MIR_new::lowerInst(IR::pBr br, LoweringContext &ctx) {
         auto blk_false = ctx.mapBlk(br->getFalseDest());
         auto use = ctx.mapOperand(br->getCond()); // cond: IR::pVal
 
-        ctx.emitInst(MIRInst::make(ARMOpC::CBNZ)
-                         ->setOperand<0>(nullptr)
-                         ->setOperand<1>(use)
-                         ->setOperand<2>(MIROperand::asReloc(blk_true))
-                         ->setOperand<3>(MIROperand::asProb(0.5)));
+        ctx.newInst(MIRInst::make(ARMOpC::CBNZ)
+                        ->setOperand<0>(nullptr)
+                        ->setOperand<1>(use)
+                        ->setOperand<2>(MIROperand::asReloc(blk_true))
+                        ->setOperand<3>(MIROperand::asProb(0.5)));
         ///@note blk op 不放入变量池
 
-        ctx.emitInst(MIRInst::make(OpC::InstBranch)
-                         ->setOperand<0>(nullptr)
-                         ->setOperand<1>(MIROperand::asReloc(blk_false))
-                         ->setOperand<2>(ctx.mapOperand(AL))
-                         ->setOperand<3>(MIROperand::asProb(0.5)));
+        ctx.newInst(MIRInst::make(OpC::InstBranch)
+                        ->setOperand<0>(nullptr)
+                        ->setOperand<1>(MIROperand::asReloc(blk_false))
+                        ->setOperand<2>(ctx.mapOperand(AL))
+                        ->setOperand<3>(MIROperand::asProb(0.5)));
     };
 
     ///@todo 分支概率预测 T/F, 现阶段所有分支概率均为0.5
@@ -229,30 +229,30 @@ void MIR_new::lowerInst(IR::pBr br, LoweringContext &ctx) {
 void MIR_new::lowerInst(IR::pLoad load, LoweringContext &ctx, size_t size) {
     auto def = ctx.newVReg(load->getType());
 
-    ctx.emitInst(MIRInst::make(OpC::InstLoad)
-                     ->setOperand<0>(def)
-                     ->setOperand<1>(ctx.mapOperand(load->getPtr()))
-                     // idx or imme
-                     // shift code
-                     ->setOperand<4>(MIROperand::asImme(size, OpT::special)));
+    ctx.newInst(MIRInst::make(OpC::InstLoad)
+                    ->setOperand<0>(def)
+                    ->setOperand<1>(ctx.mapOperand(load->getPtr()))
+                    // idx or imme
+                    // shift code
+                    ->setOperand<4>(MIROperand::asImme(size, OpT::special)));
 
     ctx.addOperand(load, def);
 }
 
 void MIR_new::lowerInst(IR::pStore store, LoweringContext &ctx, size_t size) {
-    ctx.emitInst(MIRInst::make(OpC::InstStore)
-                     ->setOperand<0>(nullptr)
-                     ->setOperand<1>(ctx.mapOperand(store->getValue()))
-                     ->setOperand<2>(ctx.mapOperand(store->getPtr()))
-                     // idx or imme
-                     // shift code
-                     ->setOperand<5>(MIROperand::asImme(size, OpT::special)));
+    ctx.newInst(MIRInst::make(OpC::InstStore)
+                    ->setOperand<0>(nullptr)
+                    ->setOperand<1>(ctx.mapOperand(store->getValue()))
+                    ->setOperand<2>(ctx.mapOperand(store->getPtr()))
+                    // idx or imme
+                    // shift code
+                    ->setOperand<5>(MIROperand::asImme(size, OpT::special)));
 }
 
 void MIR_new::lowerInst(IR::pCast cast, LoweringContext &ctx) {
     auto def = ctx.newVReg(cast->getType());
 
-    ctx.emitCopy(def, ctx.mapOperand(cast->getOVal()));
+    ctx.addCopy(def, ctx.mapOperand(cast->getOVal()));
 
     ctx.addOperand(cast, def);
 }
@@ -274,33 +274,50 @@ void MIR_new::lowerInst(IR::pGep gep, LoweringContext &ctx) {
 
     if (auto idx_const = idx->as<IR::ConstantInt>()) {
         def_ptr = ctx.newVReg(gep->getType()); // return Int64
-        ctx.emitInst(MIRInst::make(OpC::InstAdd)
-                         ->setOperand<0>(def_ptr)
-                         ->setOperand<1>(ctx.mapOperand(base))
-                         ->setOperand<2>(ctx.mapOperand<int>(persize * idx_const->getVal())));
+        auto offset = persize * idx_const->getVal();
+        auto use_ptr = ctx.mapOperand(base);
+
+        if (use_ptr->isStack()) {
+            ctx.newInst(MIRInst::make(OpC::InstAddSP)
+                            ->setOperand<0>(def_ptr)
+                            ->setOperand<1>(use_ptr)
+                            ->setOperand<2>(ctx.mapOperand<int>(offset)));
+        } else if (offset) {
+            ctx.newInst(MIRInst::make(OpC::InstAdd)
+                            ->setOperand<0>(def_ptr)
+                            ->setOperand<1>(use_ptr)
+                            ->setOperand<2>(ctx.mapOperand<int>(offset)));
+        } else {
+            ctx.addCopy(def_ptr, use_ptr);
+        }
+
     } else {
-        auto moffset = ctx.newVReg(OpT::Int32);
-        ctx.emitInst(MIRInst::make(OpC::InstMul)
-                         ->setOperand<0>(moffset)
-                         ->setOperand<1>(ctx.mapOperand(idx))
-                         ->setOperand<2>(ctx.mapOperand<int>(persize)));
+        auto moffset = ctx.newVReg(OpT::Int64); // dont allow add x<>, x<>, w<>
+        ctx.newInst(MIRInst::make(OpC::InstMul)
+                        ->setOperand<0>(moffset)
+                        ->setOperand<1>(ctx.mapOperand(idx))
+                        ->setOperand<2>(ctx.mapOperand<int>(persize)));
 
         auto def_ptr = ctx.newVReg(gep->getType());
+        auto use_ptr = ctx.mapOperand(base);
 
-        ctx.emitInst(MIRInst::make(OpC::InstAdd)
-                         ->setOperand<0>(def_ptr)
-                         ->setOperand<1>(ctx.mapOperand(base))
-                         ->setOperand<2>(moffset));
+        if (use_ptr->isStack()) {
+            ctx.newInst(
+                MIRInst::make(OpC::InstAddSP)->setOperand<0>(def_ptr)->setOperand<1>(use_ptr)->setOperand<2>(moffset));
+        } else {
+            ctx.newInst(
+                MIRInst::make(OpC::InstAdd)->setOperand<0>(def_ptr)->setOperand<1>(use_ptr)->setOperand<2>(moffset));
+        }
     }
 
     ctx.addOperand(gep, def_ptr);
 }
 
 void MIR_new::lowerInst(IR::pCall call, LoweringContext &ctx) {
-    ctx.CodeGenCtx().frameInfo.emitCall(call, ctx); //
+    ctx.CodeGenCtx().frameInfo.handleCallEntry(call, ctx); //
 }
 
-void LoweringContext::emitPhi() {
+void LoweringContext::elimPhi() {
     auto &ctx = *this; // 虽然有点怪
 
     // LAMBDA_BEGIN
@@ -310,7 +327,7 @@ void LoweringContext::emitPhi() {
         ctx.setCurrentBlk(pred);
 
         // src maybe a constant
-        ctx.emitInstBeforeBr(MIRInst::make(chooseCopyOpC(dst, src))->setOperand<0>(dst)->setOperand<1>(src));
+        ctx.addInstBeforeBr(MIRInst::make(chooseCopyOpC(dst, src))->setOperand<0>(dst)->setOperand<1>(src));
 
         ctx.setCurrentBlk(succ);
 
@@ -387,8 +404,8 @@ void LoweringContext::emitPhi() {
                 if (graph.at(idx).indegree) {
                     ///@note 可能会出现一种比较极端的情况, %0 = phi [... ...], ..., [%0, ...]
                     ///@note 理论上由于单赋值, 所以不需要做什么, 但是算法会还是会插入一个stage, 以及一个冗余的copy
-                    Err::gassert(graph.at(idx).indegree == 1, "emitPhi::visit: indegree must be 1 here");
-                    Logger::logDebug("emitPhi::visit: need a stage by %" + std::to_string(dst->reg()));
+                    Err::gassert(graph.at(idx).indegree == 1, "elimPhi::visit: indegree must be 1 here");
+                    Logger::logDebug("elimPhi::visit: need a stage by %" + std::to_string(dst->reg()));
 
                     graph[idx].indegree = 0;
                     auto stagedVal = addCopy(dst, mblk_pred);
@@ -400,7 +417,7 @@ void LoweringContext::emitPhi() {
                 auto &node = graph[idx];
                 for (auto nxt : node.nxt) {
                     auto &nxt_node = graph[nxt];
-                    Err::gassert(nxt_node.indegree == 1, "emitPhi: src op is not 1 indegree");
+                    Err::gassert(nxt_node.indegree == 1, "elimPhi: src op is not 1 indegree");
                     --nxt_node.indegree;
                     if (nxt_node.indegree == 0) {
                         queue.push(nxt);

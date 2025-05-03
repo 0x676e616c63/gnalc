@@ -247,7 +247,7 @@ struct DataLayOut {
     const unsigned storeAlignment;
 };
 
-class Target {
+class BkdInfos {
 public:
     const DataLayOut dataLayOut;
 };
@@ -263,25 +263,33 @@ class MIRBlk;
 using MIRBlk_p = std::shared_ptr<MIRBlk>;
 using MIRBlk_wp = std::weak_ptr<MIRBlk>;
 using MIRBlk_p_l = std::list<MIRBlk_p>;
+class MIRGlobal;
+using MIRGlobal_p = std::shared_ptr<MIRGlobal>;
 class StkObj;
 class MIRJmpTable;
 
 class ISelContext;
 struct CodeGenContext;
 
-class TargetFrameInfo { // armv8(A64)
+class FrameInfo { // armv8(A64)
 public:
-    TargetFrameInfo() = default;
-    ~TargetFrameInfo() = default;
+    FrameInfo() = default;
+    ~FrameInfo() = default;
 
-    void emitCall(IR::pCall, LoweringContext &) const;
-    void emitPrologue(MIRFunction_p, LoweringContext &) const;
-    void emitReturn(IR::pRet, LoweringContext &) const;
+    void handleCallEntry(IR::pCall, LoweringContext &) const;
+    MIRGlobal_p handleLib(IR::pCall, LoweringContext &) const;
+    void handleMemset(IR::pCall, LoweringContext &) const;
+    void handleMemcpy(IR::pCall, LoweringContext &) const;
+    // void handleSIMD(IR::pCall, LoweringContext&) const;
 
-    void emitPostSAPrologue(MIRBlk_p, CodeGenContext &, unsigned) const;
-    void emitPostSAEpilogue(MIRBlk_p, CodeGenContext &, unsigned) const;
+    void makePrologue(MIRFunction_p, LoweringContext &) const;
+    void makeReturn(IR::pRet, LoweringContext &) const;
+
+    void makePostSAPrologue(MIRBlk_p, CodeGenContext &, unsigned) const;
+    void makePostSAEpilogue(MIRBlk_p, CodeGenContext &, unsigned) const;
     void insertPrologueEpilogue(MIRFunction *, CodeGenContext &) const;
 
+    ///@note not used
     bool isCallerSaved(const MIROperand &op) const;
     bool isCalleeSaved(const MIROperand &op) const;
 
@@ -295,27 +303,28 @@ struct InstLegalizeContext {
     CodeGenContext &ctx;
 };
 
-class TargetISelInfo {
+class ISelInfo {
 public:
-    TargetISelInfo() = default;
+    ISelInfo() = default;
 
     bool isLegalGenericInst(MIRInst_p) const;
-    bool matchAndSel(MIRInst_p, ISelContext &, bool allow) const;
+    bool match(MIRInst_p, ISelContext &, bool allow) const;
     bool legalizeInst(MIRInst_p minst, ISelContext &ctx) const;
-    bool matchAndSelectImpl(MIRInst_p minst, ISelContext &ctx) const;
+    bool matchImpl(MIRInst_p minst, ISelContext &ctx) const;
     void postLegalizeInst(InstLegalizeContext &);
     void postLegalizeInst(InstLegalizeContext &, MIRInst_p_l &);
     void preLegalizeInst(InstLegalizeContext &);
-    void legalizeInstWithStackOperand(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const;
+    void legalizeWithStkOp(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const;
+    void legalizeWithStkGep(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const;
 
-    ~TargetISelInfo() = default;
+    ~ISelInfo() = default;
 };
 
 struct CodeGenContext {
-    const Target &target;
+    const BkdInfos &infos;
 
-    TargetISelInfo &iselInfo;
-    TargetFrameInfo &frameInfo;
+    ISelInfo &iselInfo;
+    FrameInfo &frameInfo;
     // const TargetInstInfo &instInfo;
 
     unsigned idx = 0;

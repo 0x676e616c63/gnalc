@@ -107,13 +107,13 @@ public:
     MIROperand_p newVReg(const IR::VectorType &);
     MIROperand_p newVReg(const OpT &);
 
-    void emitInst(const MIRInst_p &);
-    void emitCopy(const MIROperand_p &dst, const MIROperand_p &src);
-    void emitInstBeforeBr(const MIRInst_p_l &);
-    void emitInstBeforeBr(const MIRInst_p &);
+    void newInst(const MIRInst_p &);
+    void addCopy(const MIROperand_p &dst, const MIROperand_p &src);
+    void addInstBeforeBr(const MIRInst_p_l &);
+    void addInstBeforeBr(const MIRInst_p &);
 
     void addPhiOpers(PhiOperPair &pairs) { phiOpers.emplace_back(pairs); }
-    void emitPhi();
+    void elimPhi();
 
     MIRBlk_p addBlkAfter();
 

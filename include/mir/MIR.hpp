@@ -4,7 +4,7 @@
 
 #include "ir/base.hpp"
 #include "ir/instructions/compare.hpp"
-#include "mir/Target.hpp"
+#include "mir/info.hpp"
 #include <algorithm>
 #include <array>
 #include <map>
@@ -78,6 +78,7 @@ enum class MIRGenericInst {
     InstStore, // <nullptr> <use> <base> <idx> <shift> <size_attr>
     // Arithmetic
     InstAdd,
+    InstAddSP,
     InstSub,
     InstMul,
     // Bitwise
@@ -590,11 +591,9 @@ public:
     ~MIRGlobal() = default;
 };
 
-using MIRGlobal_p = std::shared_ptr<MIRGlobal>;
-
 class MIRModule {
 private:
-    const Target &mtarget;
+    const BkdInfos &mtarget;
     CodeGenContext &ctx;
     std::vector<MIRGlobal_p> mglobals{};
 
@@ -605,13 +604,13 @@ private:
 public:
     MIRModule() = delete;
 
-    MIRModule(const Target &target, CodeGenContext &_ctx, const string &_name)
-        : mtarget{target}, mglobals{}, ctx(_ctx), name(_name) {}
+    MIRModule(const BkdInfos &infos, CodeGenContext &_ctx, const string &_name)
+        : mtarget{infos}, mglobals{}, ctx(_ctx), name(_name) {}
 
     auto &globals() { return mglobals; }
     const auto &globals() const { return mglobals; }
 
-    const Target &getTarget() const { return mtarget; }
+    const BkdInfos &getTarget() const { return mtarget; }
 
     auto &funcs() { return mFuncs; }
     const auto &funcs() const { return mFuncs; }

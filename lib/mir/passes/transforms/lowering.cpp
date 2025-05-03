@@ -63,7 +63,7 @@ MIROperand_p LoweringContext::mapOperand(const IRVal_p &value) {
 
         auto mglo = MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Int64);
 
-        emitInst(
+        newInst(
             MIRInst::make(ARMOpC::ADRP_LDR)->setOperand<0>(mglo)->setOperand<1>(MIROperand::asReloc(mReloc->reloc())));
 
         return mglo;
@@ -108,20 +108,20 @@ MIROperand_p LoweringContext::newVReg(const OpT &type) {
     return MIROperand::asVReg(mCodeGenCtx.nextId(), type); //
 }
 
-void LoweringContext::emitInst(const MIRInst_p &inst) {
+void LoweringContext::newInst(const MIRInst_p &inst) {
     auto &insts = mCurrentBlk->Insts();
     insts.emplace_back(inst);
 }
 
-void LoweringContext::emitCopy(const MIROperand_p &dst, const MIROperand_p &src) {
+void LoweringContext::addCopy(const MIROperand_p &dst, const MIROperand_p &src) {
     auto inst = MIRInst::make(chooseCopyOpC(dst, src));
     inst->setOperand<0>(dst);
     inst->setOperand<1>(src);
 
-    emitInst(inst);
+    newInst(inst);
 }
 
-void LoweringContext::emitInstBeforeBr(const MIRInst_p_l &inst) { // insts ?
+void LoweringContext::addInstBeforeBr(const MIRInst_p_l &inst) { // insts ?
     ///@note 此处需要假设blk的所有跳转均位于blk的尾部
 
     auto &mblk = mCurrentBlk;
@@ -135,12 +135,12 @@ void LoweringContext::emitInstBeforeBr(const MIRInst_p_l &inst) { // insts ?
         }
     }
 
-    Err::gassert(insert_it != insts.end(), "emitInstBeforeBr: cant find a branch inst");
+    Err::gassert(insert_it != insts.end(), "addInstBeforeBr: cant find a branch inst");
 
     insts.insert(insert_it, inst.begin(), inst.end());
 }
 
-void LoweringContext::emitInstBeforeBr(const MIRInst_p &inst) {
+void LoweringContext::addInstBeforeBr(const MIRInst_p &inst) {
 
     auto &mblk = mCurrentBlk;
     auto &insts = mblk->Insts();
@@ -153,7 +153,7 @@ void LoweringContext::emitInstBeforeBr(const MIRInst_p &inst) {
         }
     }
 
-    Err::gassert(insert_it != insts.end(), "emitInstBeforeBr: cant find a branch inst");
+    Err::gassert(insert_it != insts.end(), "addInstBeforeBr: cant find a branch inst");
 
     insts.insert(insert_it, inst);
 }
@@ -181,9 +181,9 @@ void LoweringContext::addOperand(const IRVal_p &val, const MIROperand_p &mval) {
 MIRModule_p MIR_new::loweringModule(const IRModule &module, CodeGenContext &ctx) {
     std::map<string, MIRGlobal_p> globalMap;
 
-    const auto &layout = ctx.target.dataLayOut;
+    const auto &layout = ctx.infos.dataLayOut;
 
-    auto mModule = make<MIRModule>(ctx.target, ctx, module.getName());
+    auto mModule = make<MIRModule>(ctx.infos, ctx, module.getName());
 
     ///@brief 翻译全局的各种符号, 函数 + 全局变量
     ///@note
@@ -309,7 +309,7 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
     std::map<IRVal_p, MIROperand_p> storeMap;
     LoweringContext ctx(mModule, codeGenCtx, blkMap, globalMap, valMap);
 
-    // target
+    // infos
     // layout
 
     // lower blks, deal with entry and exit
@@ -361,7 +361,7 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
 
     // emit prologue
     ctx.setCurrentBlk(mfunc->blks().front()); // entry blk
-    codeGenCtx.frameInfo.emitPrologue(mfunc, ctx);
+    codeGenCtx.frameInfo.makePrologue(mfunc, ctx);
 
     // deal with alloca
     /// @todo ctx.set...?
@@ -420,7 +420,7 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
     }
 
     ///@todo bug check
-    ctx.emitPhi();
+    ctx.elimPhi();
 }
 
 void MIR_new::lowerInst(IRInst_p inst, LoweringContext &ctx) {

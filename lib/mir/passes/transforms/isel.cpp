@@ -123,7 +123,7 @@ void ISelContext::impl(MIRFunction *mfunc) {
 
                     ///@note 尝试模式匹配更换MIR(重点)
                     if ((tryOptLegal || isIllegal) &&
-                        iselInfo.matchAndSel(minst, *this, allowComplexPattern)) { // allow is passed by value
+                        iselInfo.match(minst, *this, allowComplexPattern)) { // allow is passed by value
                         modified = true;
                         if (allowComplexPattern) {
                             break;

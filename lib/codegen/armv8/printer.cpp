@@ -17,12 +17,11 @@ string ARMA64Printer::branchPrinter(const MIRInst &minst) {
 
 string ARMA64Printer::binaryPrinter(const MIRInst &minst) {
     const auto &def = minst.ensureDef();
-    const auto &lhs = minst.getOp(1);
+    ///@note deal gep add
+    const auto &lhs = minst.getOp(1)->isISA() ? minst.getOp(1) : MIROperand::asISAReg(ARMReg::SP, OpT::Int64);
     const auto &rhs = minst.getOp(2);
     auto op = minst.opcode<OpC>();
     auto bitWide = getBitWide(def->type());
-
-    ///@note when add an offset to ptr: add x<>, x<>, w<>?
 
     string str;
     str += OpC2S(op) + '\t';

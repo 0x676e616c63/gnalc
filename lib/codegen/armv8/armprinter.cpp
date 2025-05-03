@@ -123,6 +123,8 @@ void ARMA64Printer::printout(const MIRInst &minst) {
         case OpC::InstStore:
             Err::unreachable("ARMA64Printer::printout(const MIRInst &): should be legalized in preRAlegalize");
             break;
+        case OpC::InstAddSP:
+            Err::unreachable("ARMA64Printer::printout(const MIRInst &): should be legalized in postRAlegalize");
         case OpC::InstAdd:
         case OpC::InstSub:
         case OpC::InstMul:

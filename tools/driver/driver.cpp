@@ -394,10 +394,10 @@ Extensions:
 #endif
 
     mpm.run(generator.get_module(), mam);
-    MIR_new::Target target{};
-    MIR_new::TargetISelInfo isel{};
-    MIR_new::TargetFrameInfo frame{};
-    MIR_new::CodeGenContext ctx{target, isel, frame};
+    MIR_new::BkdInfos infos{};
+    MIR_new::ISelInfo isel{};
+    MIR_new::FrameInfo frame{};
+    MIR_new::CodeGenContext ctx{infos, isel, frame};
     auto mModule = MIR_new::loweringModule(generator.get_module(), ctx);
 
     MIR_new::FAM bkd_fam;
@@ -416,7 +416,7 @@ Extensions:
     bkd_mpm.run(*mModule, bkd_mam);
 
     if (only_compilation) {
-        MIR_new::ARMA64Printer armv8gen(outfile);
+        MIR_new::ARMA64Printer armv8gen(*poutstream);
         armv8gen.printout(*mModule);
         return 0;
     }

@@ -429,12 +429,15 @@ void RegisterAllocImpl::AssignColors() {
     }
 
     for (const auto &n : coalescedNodes) {
-        ///@note 有没有可能重复assign color?
+
         auto n_a = GetAlias(n);
         Err::gassert(n->isVRegOrISAReg(), "AssignColors: try assign color for a none virReg op");
         Err::gassert(n_a->isVRegOrISAReg(), "AssignColors: try assign color for a none virReg op");
 
-        n->assignColor(n_a->reg());
+        ///@note 可能重复assign color?
+        if (!n->isISA()) {
+            n->assignColor(n_a->reg());
+        }
     }
 }
 
