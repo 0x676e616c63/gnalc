@@ -40,13 +40,13 @@ private:
         Pack truncate(size_t size);
 
         const pInst& front() const;
-
-    private:
-        void update_front();
     };
 
+    Function* curr_func;
     pBlock curr_block;
     std::list<Pack> pack_set;
+    size_t name_cnt;
+
     // Use for Packs
     std::unordered_map<const Pack*, std::vector<Pack*>> user_pack_map;
     std::unordered_map<const Pack*, std::vector<Pack*>> operand_pack_map;

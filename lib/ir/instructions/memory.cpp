@@ -8,6 +8,7 @@ ALLOCAInst::ALLOCAInst(NameRef name, pType btype, int _align)
     : Instruction(OP::ALLOCA, name, makePtrType(btype)), basetype(std::move(btype)), align(_align) {}
 
 int ALLOCAInst::getAlign() const { return align; }
+void ALLOCAInst::setAlign(int a) { align = a; }
 
 bool ALLOCAInst::isArray() const { return basetype->getTrait() == IRCTYPE::ARRAY; }
 

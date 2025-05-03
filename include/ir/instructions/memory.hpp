@@ -29,6 +29,7 @@ public:
     pType getBaseType() const;
     bool isArray() const;
     int getAlign() const;
+    void setAlign(int a);
 
     void accept(IRVisitor &visitor) override;
 

@@ -74,6 +74,7 @@ public:
     bool isArray() const;
     const GVIniter &getIniter() const;
     int getAlign() const;
+    void setAlign(int a);
 
     void accept(IRVisitor &visitor) override;
     ~GlobalVariable() override;

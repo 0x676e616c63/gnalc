@@ -63,6 +63,8 @@ class IRGenerator : public AST::ASTVisitor {
         bool isZeroIniter() const;
 
         val_t getZeroValue() const;
+
+        size_t countNonZeroBytes() const;
     };
 
     Initializer curr_initializer;
