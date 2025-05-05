@@ -1,6 +1,7 @@
 #pragma once
 #ifndef GNALC_CONFIG_CONFIG_HPP
 #define GNALC_CONFIG_CONFIG_HPP
+#define GNALC_EXTENSION_A32 0
 
 namespace Config::IR {
 // IRGenerator
@@ -43,8 +44,14 @@ constexpr auto INTERNALIZE_GLOBAL_SIZE_THRESHOLD = 1048576; // 1 MB
 
 namespace Config::MIR {
 // Register Allocation
-constexpr auto CORE_REGISTER_MAX_NUM = 12; // r0 ~ r10 and ip, most probably fp(r11), sometimes lr(r14)
+constexpr auto CORE_REGISTER_MAX_NUM = 12; // r0 ~ r10 , with ip. most probably fp(r11), sometimes lr(r14)
 constexpr auto FPU_REGISTER_MAX_NUM = 32;
 } // namespace Config::MIR
+
+namespace Config::MIR_new {
+// Register Allocation
+constexpr auto CORE_REGISTER_MAX_NUM = 30; // X0 ~ X29
+constexpr auto FPU_REGISTER_MAX_NUM = 32;  // V0 ~ V30
+} // namespace Config::MIR_new
 
 #endif

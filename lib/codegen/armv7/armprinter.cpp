@@ -1,8 +1,8 @@
 #include "codegen/armv7/armprinter.hpp"
-#include "mir/SIMDinstruction/memory.hpp"
-#include "mir/instructions/branch.hpp"
-#include "mir/instructions/copy.hpp"
-#include "mir/misc.hpp"
+#include "mirA32/SIMDinstruction/memory.hpp"
+#include "mirA32/instructions/branch.hpp"
+#include "mirA32/instructions/copy.hpp"
+#include "mirA32/misc.hpp"
 
 #include <algorithm>
 #include <sstream>
@@ -502,10 +502,17 @@ void ARMPrinter::calleesaveHelper(const std::shared_ptr<Instruction> &inst) {
 
     if (cur_func->getName() == "@main") {
         if (cur_func->getInfo().hasCall) {
-            if (opcode == OpCode::PUSH)
-                outStream << "    push\t{lr}\n";
-            else if (opcode == OpCode::POP)
-                outStream << "    pop\t{lr}\n";
+            if (opcode == OpCode::PUSH) {
+                if (cur_func->getInfo().regdit.size() != 1)
+                    outStream << "    push\t{r1, lr}\n"; // pad for other call
+                else
+                    outStream << "    push\t{lr}\n";
+            } else if (opcode == OpCode::POP) {
+                if (cur_func->getInfo().regdit.size() != 1)
+                    outStream << "    pop\t{r1, lr}\n";
+                else
+                    outStream << "    pop\t{lr}\n";
+            }
         }
         return;
     }

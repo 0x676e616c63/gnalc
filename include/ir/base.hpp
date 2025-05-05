@@ -32,7 +32,7 @@
 
 #ifdef GNALC_EXTENSION_GGC
 namespace IRParser {
-    class IRPT;
+class IRPT;
 }
 #endif
 
@@ -87,11 +87,12 @@ private:
     User *user;
     Use(wpVal v, User *u);
     User *getRawUser() const;
+
 public:
     Use() = default;
     pVal getValue() const;
     pUser getUser() const;
-    void setValue(const pVal& v);
+    void setValue(const pVal &v);
 };
 
 class Instruction;
@@ -103,8 +104,8 @@ class Value : public NameC, public std::enable_shared_from_this<Value> {
 #endif
 
 private:
-    std::list<Use*> use_list;               // Use隶属于User
-    pType vtype;                            // value's type
+    std::list<Use *> use_list; // Use隶属于User
+    pType vtype;               // value's type
     ValueTrait trait = ValueTrait::UNDEFINED;
 
 public:
@@ -139,34 +140,34 @@ public:
         return dynamic_cast<T *>(this);
     }
 
-    template <typename T> T& as_ref() & {
+    template <typename T> T &as_ref() & {
         static_assert(std::is_base_of_v<Value, T>, "Expected a derived type.");
         return dynamic_cast<T &>(*this);
     }
 
-    template <typename T> const T& as_ref() const & {
+    template <typename T> const T &as_ref() const & {
         static_assert(std::is_base_of_v<Value, T>, "Expected a derived type.");
         return dynamic_cast<const T &>(*this);
     }
 
-    template <typename T> T&& as_ref() && {
+    template <typename T> T &&as_ref() && {
         static_assert(std::is_base_of_v<Value, T>, "Expected a derived type.");
         return dynamic_cast<T &&>(*this);
     }
 
-    template <typename T> const T&& as_ref() const && {
+    template <typename T> const T &&as_ref() const && {
         static_assert(std::is_base_of_v<Value, T>, "Expected a derived type.");
         return dynamic_cast<const T &&>(*this);
     }
 
-    template <typename ...Args> bool is() const {
+    template <typename... Args> bool is() const {
         static_assert((std::is_base_of_v<Value, Args> || ...), "Expected a derived type.");
         return ((as_raw<Args>() != nullptr) || ...);
     }
 
     pType getType() const;
 
-    const std::list<Use*>& getUseList() const;
+    const std::list<Use *> &getUseList() const;
 
     // i.e. Replace all uses with, RAUW
     void replaceSelf(const pVal &new_value) const;
@@ -250,13 +251,13 @@ public:
 
 private:
     // PRIVATE because we want to ensure use is only modified by User.
-    void addUse(Use* use);
+    void addUse(Use *use);
 
     // Why not user:
     //   A User can have multiple identical operand,
     //   thus having multiple Uses. Though having identical Value,
     //   they are independent object, and their address is unique.
-    bool delUse(Use* target);
+    bool delUse(Use *target);
 
     virtual pVal cloneImpl() const {
         Err::not_implemented("Value::cloneImpl");
@@ -285,7 +286,7 @@ public:
     UseIterator operand_use_begin() const;
     UseIterator operand_use_end() const;
 
-    const auto& operand_uses() const { return operand_uses_list; }
+    const auto &operand_uses() const { return operand_uses_list; }
 
     class OperandIterator {
     private:
@@ -336,8 +337,8 @@ public:
     // In general, passes should avoid direct manipulation of operands through these
     // functions unless the intent is to perform such operations in a generic manner.
     const std::vector<std::unique_ptr<Use>> &getOperands() const;
-    std::vector<Use*> getRawOperands() const;
-    Use* getOperand(size_t index) const;
+    std::vector<Use *> getRawOperands() const;
+    Use *getOperand(size_t index) const;
     void setOperand(size_t index, const pVal &val);
     void swapOperand(size_t a, size_t b);
 

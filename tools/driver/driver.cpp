@@ -1,10 +1,7 @@
 #include "ir/passes/pass_builder.hpp"
 #include "ir/passes/pass_manager.hpp"
 #include "ir/passes/utilities/irprinter.hpp"
-#include "mir/builder/lowering.hpp"
-#include "mir/passes/pass_builder.hpp"
-#include "mir/passes/pass_manager.hpp"
-#include "mir/passes/utilities/mirprinter.hpp"
+
 #include "utils/logger.hpp"
 
 #ifndef GNALC_EXTENSION_GGC // in CMakeLists.txt
@@ -22,7 +19,18 @@
 #include "codegen/brainfk/bftrans.hpp"
 #endif
 
-#include "../../include/codegen/armv7/armprinter.hpp"
+#if GNALC_EXTENSION_A32 // in config.hpp
+#include "codegen/armv7/armprinter.hpp"
+#include "mirA32/builder/lowering.hpp"
+#include "mirA32/passes/pass_builder.hpp"
+#include "mirA32/passes/pass_manager.hpp"
+#include "mirA32/passes/utilities/mirprinter.hpp"
+#endif
+
+#include "codegen/armv8/armprinter.hpp"
+#include "mir/passes/pass_builder.hpp"
+#include "mir/passes/pass_manager.hpp"
+#include "mir/passes/transforms/lowering.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -53,8 +61,14 @@ int main(int argc, char **argv) {
     double fuzz_testing_duplication_rate = 1.0; // -fuzz-rate
     std::string fuzz_testing_repro;             // -fuzz-repro
     bool debug_pipeline = false;                // -debug-pipeline
-    IR::CliOptions cli_opt_options;                    // --xxx, --no-xxx
-    MIR::OptInfo bkd_opt_info;
+    IR::CliOptions cli_opt_options;             // --xxx, --no-xxx
+
+#if GNALC_EXTENSION_A32
+    MIR::OptInfo bkd_opt_info_A32;
+    bool A32_target = false; // -march=armv7
+#endif
+
+    MIR_new::OptInfo bkd_opt_info;
 
 #if GNALC_EXTENSION_BRAINFK
     bool bf_target = false;   // -mbrainfk
@@ -105,7 +119,7 @@ int main(int argc, char **argv) {
             o1_pipeline = true;
 
 #define OPT_ARG(cli_arg, cli_no_arg, opt_name)                                                                         \
-    else if (arg == (cli_arg)) cli_opt_options.opt_name = IR::CliOptions::Status::Enable;                                                               \
+    else if (arg == (cli_arg)) cli_opt_options.opt_name = IR::CliOptions::Status::Enable;                              \
     else if (arg == (cli_no_arg)) cli_opt_options.opt_name = IR::CliOptions::Status::Disable;
         // Optimizations available:
         // Function Transforms
@@ -168,6 +182,10 @@ int main(int argc, char **argv) {
         // Extensions:
         else if (arg == "-mbrainfk") bf_target = true;
         else if (arg == "-mbrainfk-3tape") bf3t_target = true;
+#endif
+
+#if GNALC_EXTENSION_A32
+        else if (arg == "-march=armv7" || arg == "-march=armv7-a") A32_target = true;
 #endif
 
         else if (arg == "-h" || arg == "--help") {
@@ -289,19 +307,18 @@ Extensions:
         if (!fuzz_testing) {
             if (cli_opt_options.verify == IR::CliOptions::Status::Default)
                 cli_opt_options.verify = IR::CliOptions::Status::Disable;
-        }
-        else
+        } else
             cli_opt_options.abort_when_verify_failed = true;
         pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::EnableIfDefault);
-    }
-    else
+    } else
         pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::DisableIfDefault);
 
     IR::MPM mpm;
     if (debug_pipeline)
         mpm = IR::PassBuilder::buildModuleDebugPipeline();
     else if (fuzz_testing)
-        mpm = IR::PassBuilder::buildModuleFuzzTestingPipeline(pm_options, fuzz_testing_duplication_rate, fuzz_testing_repro);
+        mpm = IR::PassBuilder::buildModuleFuzzTestingPipeline(pm_options, fuzz_testing_duplication_rate,
+                                                              fuzz_testing_repro);
     else if (fixed_point_pipeline)
         mpm = IR::PassBuilder::buildModuleFixedPointPipeline(pm_options);
     else
@@ -343,35 +360,66 @@ Extensions:
     }
 #endif
 
+#if GNALC_EXTENSION_A32
+    if (A32_target) {
+        mpm.run(generator.get_module(), mam);
+
+        MIR::Lowering lower(generator.get_module());
+
+        MIR::FAM bkd_fam;
+        MIR::MAM bkd_mam;
+
+        MIR::PassBuilder::registerFunctionAnalyses(bkd_fam);
+        MIR::PassBuilder::registerModuleAnalyses(bkd_mam);
+        MIR::PassBuilder::registerProxies(bkd_fam, bkd_mam);
+
+        auto bkd_mpm = MIR::PassBuilder::buildModulePipeline(bkd_opt_info_A32);
+
+        if (emit_llc) {
+            bkd_mpm.addPass(MIR::PrintModulePass(*poutstream));
+            bkd_mpm.run(lower.getModule(), bkd_mam);
+            return 0;
+        }
+
+        bkd_mpm.run(lower.getModule(), bkd_mam);
+
+        // Assembler
+        if (only_compilation) {
+            MIR::ARMPrinter armv7gen(*poutstream);
+            armv7gen.printout(lower.getModule());
+        }
+
+        return 0;
+    }
+#endif
+
     mpm.run(generator.get_module(), mam);
+    MIR_new::BkdInfos infos{};
+    MIR_new::ISelInfo isel{};
+    MIR_new::FrameInfo frame{};
+    MIR_new::CodeGenContext ctx{infos, isel, frame};
+    auto mModule = MIR_new::loweringModule(generator.get_module(), ctx);
 
-    MIR::Lowering lower(generator.get_module());
+    MIR_new::FAM bkd_fam;
+    MIR_new::MAM bkd_mam;
 
-    MIR::FAM bkd_fam;
-    MIR::MAM bkd_mam;
+    MIR_new::PassBuilder::registerFunctionAnalyses(bkd_fam);
+    MIR_new::PassBuilder::registerModuleAnalyses(bkd_mam);
+    MIR_new::PassBuilder::registerProxies(bkd_fam, bkd_mam);
 
-    MIR::PassBuilder::registerFunctionAnalyses(bkd_fam);
-    MIR::PassBuilder::registerModuleAnalyses(bkd_mam);
-    MIR::PassBuilder::registerProxies(bkd_fam, bkd_mam);
-
-    auto bkd_mpm = MIR::PassBuilder::buildModulePipeline(bkd_opt_info);
+    auto bkd_mpm = MIR_new::PassBuilder::buildModulePipeline(bkd_opt_info);
 
     if (emit_llc) {
-        bkd_mpm.addPass(MIR::PrintModulePass(*poutstream));
-        bkd_mpm.run(lower.getModule(), bkd_mam);
-        return 0;
+        Err::todo("mir dumper not impl");
     }
 
-    bkd_mpm.run(lower.getModule(), bkd_mam);
+    bkd_mpm.run(*mModule, bkd_mam);
 
-    // Assembler
     if (only_compilation) {
-        MIR::ARMPrinter armv7gen(*poutstream);
-        armv7gen.printout(lower.getModule());
+        MIR_new::ARMA64Printer armv8gen(*poutstream);
+        armv8gen.printout(*mModule);
         return 0;
     }
-
-    Err::todo("Assembler");
 
     return 0;
 }

@@ -1,14 +1,14 @@
 #pragma once
-#ifndef GNALC_MIR_PASSES_TRANSFORMS_PEEPHOLE_HPP
-#define GNALC_MIR_PASSES_TRANSFORMS_PEEPHOLE_HPP
+#ifndef GNALC_ARMV8_MIR_TRANSFORMS_PEEPHOLE_HPP
+#define GNALC_ARMV8_MIR_TRANSFORMS_PEEPHOLE_HPP
 
-#include "mir/passes/pass_manager.hpp"
+///@todo opt
 
-namespace MIR {
-class PeepHolePass : public PM::PassInfo<PeepHolePass> {
-public:
-    PM::PreservedAnalyses run(Function &function, FAM &manager);
-};
+namespace MIR_new {
 
-} // namespace MIR
+///@todo need put in a fam
+// bool GenericPeepholeImpl(MIRFunction &, CodeGenContext &); // return isModified
+
+}; // namespace MIR_new
+
 #endif
