@@ -11,6 +11,7 @@
 #define GNALC_IR_PASSES_TRANSFORMS_VECTORIZER_HPP
 
 #include "ir/passes/analysis/basic_alias_analysis.hpp"
+#include "ir/passes/analysis/loop_alias_analysis.hpp"
 #include "ir/passes/pass_manager.hpp"
 
 namespace IR {
@@ -24,6 +25,7 @@ private:
         pInst front_inst;
         std::vector<pInst> stmts;
         std::unordered_set<pInst> stmt_set;
+        int align = 4;
 
         Pack() = default;
         Pack(const pInst& a, const pInst& b);
@@ -41,12 +43,14 @@ private:
         Pack truncate(size_t size);
 
         const pInst& front() const;
+        const pInst& back() const;
     };
 
     Function* curr_func;
     pBlock curr_block;
     FAM* fam;
-    BasicAAResult* aa_res;
+    BasicAAResult* basic_aa;
+    LoopAAResult* loop_aa;
     std::list<Pack> pack_set;
     size_t name_cnt;
 
@@ -65,7 +69,7 @@ private:
     void extendPackList();
     void combinePacks();
     void rearrangePack();
-    void fixArrayAlign();
+    void extendAlign();
     void splitDependencyCycle();
     pVal gatherVector(Pack* user_pack, const std::function<pVal(const pInst&)>& proj);
     std::vector<Pack*> computeTopologicalOrder();

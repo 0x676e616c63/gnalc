@@ -1,5 +1,6 @@
 // Basic Alias Analysis
-// An inter-procedural field-insensitive alias analysis.
+// An partial inter-procedural field-insensitive alias analysis.
+// The ModRef result is inter-procedural, while the Alias result is intra-procedural.
 // For a more accurate result, see Loop-oriented Alias Analysis in 'lpa.hpp'.
 //
 // Warning: This pass must be run after PromotePass, since it do NOT handle pointers over scalar values.

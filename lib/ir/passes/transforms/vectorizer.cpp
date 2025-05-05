@@ -6,6 +6,7 @@
 #include "ir/instructions/memory.hpp"
 #include "ir/instructions/vector.hpp"
 #include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/passes/analysis/loop_alias_analysis.hpp"
 #include "ir/pattern_match.hpp"
 
 #include <algorithm>
@@ -68,62 +69,14 @@ bool isVectorizable(const pInst &inst) {
     return inst->getOpcode() == OP::LOAD || inst->getOpcode() == OP::STORE || inst->is<BinaryInst>();
 }
 
-// Check if two pointers are adjacent, e.g. a[i], a[i + 1]
-// FIXME: Improve precision. Currently only match a[0][i], a[0][i + 1] for debug
-bool isPtrAdjacent(const pVal &ptr1, const pVal &ptr2) {
-    auto gep1 = ptr1->as<GEPInst>();
-    auto gep2 = ptr2->as<GEPInst>();
-    if (!gep1 || !gep2 || gep1->getPtr() != gep2->getPtr())
-        return false;
-    auto idx1 = gep1->getIdxs();
-    auto idx2 = gep2->getIdxs();
-    if (idx1.size() != idx2.size())
-        return false;
-    for (size_t i = 0; i < idx1.size() - 1; ++i)
-        if (idx1[i] != idx2[i])
-            return false;
-
-    const auto &offset1 = idx1.back();
-    const auto &offset2 = idx2.back();
-
-    // c, c + 1
-    int ci32;
-    if (match(offset1, M::Bind(ci32)) && match(offset2, M::Is(ci32 + 1)))
-        return true;
-
-    // x, x + 1
-    if (match(offset2, M::Add(M::Is(offset1), M::Is(1))) || match(offset2, M::Add(M::Is(1), M::Is(offset1))))
-        return true;
-
-    // x - 1, x
-    if (match(offset1, M::Sub(M::Is(offset2), M::Is(1))))
-        return true;
-
-    // x + c, x + c + 1
-    pVal base;
-    if (match(offset1, M::Add(M::Bind(base), M::Bind(ci32))) || match(offset1, M::Add(M::Bind(ci32), M::Bind(base)))) {
-        if (match(offset2, M::Add(M::Is(base), M::Is(ci32 + 1))) ||
-            match(offset2, M::Add(M::Is(ci32 + 1), M::Is(base))))
-            return true;
-    }
-
-    // x + (c - 1), x + c
-    if (match(offset2, M::Add(M::Bind(base), M::Bind(ci32))) || match(offset2, M::Add(M::Bind(ci32), M::Bind(base)))) {
-        if (match(offset1, M::Add(M::Is(base), M::Is(ci32 - 1))) ||
-            match(offset1, M::Add(M::Is(ci32 - 1), M::Is(base))))
-            return true;
-    }
-    return false;
-}
-
 // Check if the load/store is adjacent.
-bool isInstAdjacent(const pInst &inst1, const pInst &inst2) {
+bool isInstAdjacent(const pInst &inst1, const pInst &inst2, LoopAAResult& loop_aa) {
     if (inst1->is<LOADInst>() && inst2->is<LOADInst>()) {
         if (!isSameType(inst1->getType(), inst2->getType()))
             return false;
         auto ptr1 = inst1->as<LOADInst>()->getPtr();
         auto ptr2 = inst2->as<LOADInst>()->getPtr();
-        return isPtrAdjacent(ptr1, ptr2);
+        return loop_aa.isV2NextToV1(ptr1, ptr2);
     }
 
     if (inst1->is<STOREInst>() && inst2->is<STOREInst>()) {
@@ -131,7 +84,7 @@ bool isInstAdjacent(const pInst &inst1, const pInst &inst2) {
         auto store2 = inst2->as<STOREInst>();
         if (!isSameType(store1->getValue()->getType(), store2->getValue()->getType()))
             return false;
-        return isPtrAdjacent(store1->getPtr(), store2->getPtr());
+        return loop_aa.isV2NextToV1(store1->getPtr(), store2->getPtr());
     }
 
     return false;
@@ -157,7 +110,7 @@ void setAlign(const pInst &inst, int align) {
 }
 
 // Warning: This could change Allocas in other functions
-bool setBaseAlign(pVal ptr, int align, Function* curr_func) {
+bool trySetBaseAlign(pVal ptr, int align, Function* curr_func) {
     while (true) {
         if (auto bitcast = ptr->as<BITCASTInst>())
             ptr = bitcast->getOVal();
@@ -181,7 +134,7 @@ bool setBaseAlign(pVal ptr, int align, Function* curr_func) {
                 auto call = user->as<CALLInst>();
                 Err::gassert(call != nullptr, "Expected a call user");
                 Function* caller_func = call->getParent()->getParent().get();
-                all_success &= setBaseAlign(call->getArgs()[fp->getIndex()], align, caller_func);
+                all_success &= trySetBaseAlign(call->getArgs()[fp->getIndex()], align, caller_func);
             }
 
             // Restore the original alignment
@@ -191,7 +144,7 @@ bool setBaseAlign(pVal ptr, int align, Function* curr_func) {
                     if (i >= orig_aligns.size()) break;
                     auto call = user->as<CALLInst>();
                     Function* caller_func = call->getParent()->getParent().get();
-                    all_success &= setBaseAlign(call->getArgs()[fp->getIndex()], orig_aligns[i], caller_func);
+                    all_success &= trySetBaseAlign(call->getArgs()[fp->getIndex()], orig_aligns[i], caller_func);
                     ++i;
                 }
                 return false;
@@ -204,7 +157,7 @@ bool setBaseAlign(pVal ptr, int align, Function* curr_func) {
             std::vector<int> orig_aligns;
             for (const auto &[phi_ptr, bb] : phi->incomings()) {
                 orig_aligns.emplace_back(getAlign(phi_ptr->as<Instruction>()));
-                all_success &= setBaseAlign(phi_ptr, align, curr_func);
+                all_success &= trySetBaseAlign(phi_ptr, align, curr_func);
                 if (!all_success) break;
             }
 
@@ -212,7 +165,7 @@ bool setBaseAlign(pVal ptr, int align, Function* curr_func) {
             if (!all_success) {
                 auto phi_opers = phi->getPhiOpers();
                 for (size_t i = 0; i < orig_aligns.size(); ++i)
-                    setBaseAlign(phi_opers[i].value, orig_aligns[i], curr_func);
+                    trySetBaseAlign(phi_opers[i].value, orig_aligns[i], curr_func);
                 return false;
             }
 
@@ -259,9 +212,10 @@ bool setBaseAlign(pVal ptr, int align, Function* curr_func) {
     return false;
 }
 
-VectorizerPass::Pack::Pack(const pInst &stmt1, const pInst &stmt2) : stmts({stmt1, stmt2}), stmt_set({stmt1, stmt2}) {
-}
-VectorizerPass::Pack::Pack(const Pack &a, const Pack &b) : stmts(a.stmts), stmt_set(a.stmt_set) {
+VectorizerPass::Pack::Pack(const pInst &stmt1, const pInst &stmt2)
+    : stmts({stmt1, stmt2}), stmt_set({stmt1, stmt2}) {}
+VectorizerPass::Pack::Pack(const Pack &a, const Pack &b)
+: stmts(a.stmts), stmt_set(a.stmt_set), align(a.align > b.align ? b.align : a.align) {
     stmts.insert(stmts.end(), b.stmts.begin(), b.stmts.end());
     stmt_set.insert(b.stmt_set.begin(), b.stmt_set.end());
 }
@@ -293,10 +247,12 @@ VectorizerPass::Pack VectorizerPass::Pack::truncate(size_t size) {
     Pack ret;
     ret.stmts = ret_stmts;
     ret.stmt_set = ret_stmt_set;
+    ret.align = 4;
     return ret;
 }
 
 const pInst &VectorizerPass::Pack::front() const { return stmts.front(); }
+const pInst &VectorizerPass::Pack::back() const { return stmts.back(); }
 
 // Check if two instructions can be packed together.
 bool VectorizerPass::stmtCanPack(const pInst &stmt1, const pInst &stmt2) {
@@ -328,7 +284,7 @@ bool VectorizerPass::stmtCanPack(const pInst &stmt1, const pInst &stmt2) {
         if (stmt1->is<LOADInst>()) {
             auto ptr = (*end)->as<LOADInst>()->getPtr();
             for (; it != end; ++it) {
-                auto modref = aa_res->getInstModRefInfo(*it, ptr, *fam);
+                auto modref = basic_aa->getInstModRefInfo(*it, ptr, *fam);
                 if (modref == ModRefInfo::Mod || modref == ModRefInfo::ModRef)
                     return false;
             }
@@ -336,7 +292,7 @@ bool VectorizerPass::stmtCanPack(const pInst &stmt1, const pInst &stmt2) {
         else if (stmt1->is<STOREInst>()) {
             auto ptr = (*end)->as<STOREInst>()->getPtr();
             for (; it != end; ++it) {
-                auto modref = aa_res->getInstModRefInfo(*it, ptr, *fam);
+                auto modref = basic_aa->getInstModRefInfo(*it, ptr, *fam);
                 if (modref == ModRefInfo::Ref || modref == ModRefInfo::ModRef)
                     return false;
             }
@@ -441,7 +397,7 @@ void VectorizerPass::findAdjacentReferences() {
             if (inst == candidate || !hasMemoryRef(candidate))
                 continue;
 
-            if (isInstAdjacent(inst, candidate)) {
+            if (isInstAdjacent(inst, candidate, *loop_aa)) {
                 if (stmtCanPack(inst, candidate))
                     pack_set.emplace_back(inst, candidate);
             }
@@ -514,19 +470,24 @@ void VectorizerPass::rearrangePack() {
         pack_set.emplace_back(pack);
 }
 
-void VectorizerPass::fixArrayAlign() {
-    for (auto it = pack_set.begin(); it != pack_set.end();) {
-        const auto& pack = *it;
-        bool align_set = true;
+void VectorizerPass::extendAlign() {
+    for (auto& pack : pack_set) {
+        int expected = ElementSize * pack.size();
+        pVal ptr;
         if (auto load = pack.front()->as<LOADInst>())
-            align_set = setBaseAlign(load->getPtr(), ElementSize * pack.size(), curr_func);
+            ptr = load->getPtr();
         else if (auto store = pack.front()->as<STOREInst>())
-            align_set = setBaseAlign(store->getPtr(), ElementSize * pack.size(), curr_func);
-
-        if (!align_set)
-            it = pack_set.erase(it);
+            ptr = store->getPtr();
         else
-            ++it;
+            continue;
+
+        auto align_on_base = loop_aa->getAlignOnBase(ptr);
+        if (align_on_base >= expected) {
+            bool align_set = trySetBaseAlign(ptr, expected, curr_func);
+            pack.align = align_set ? expected : 4;
+        }
+        else
+            pack.align = 4;
     }
 }
 
@@ -690,7 +651,7 @@ pVal VectorizerPass::gatherVector(Pack *user_pack, const std::function<pVal(cons
         return true;
     }();
 
-    auto insert_before = user_pack->front()->getIter();
+    auto insert_before = user_pack->back()->getIter();
     // Shuffle
     if (emit_shuffle) {
         Err::gassert(vectors_to_shuffle.size() == 1 || vectors_to_shuffle.size() == 2);
@@ -796,16 +757,14 @@ bool VectorizerPass::schedule() {
 
     auto rpo = computeTopologicalOrder();
     for (const auto &curr : rpo) {
+        auto insert_before = curr->back()->getIter();
         if (auto load = curr->front()->as<LOADInst>()) {
             auto bitcast = std::make_shared<BITCASTInst>("%slp.bc" + std::to_string(name_cnt++), load->getPtr(),
                                                          makePtrType(makeVectorType(load->getType(), curr->size())));
             auto vec_load =
-                std::make_shared<LOADInst>("%slp.ld" + std::to_string(name_cnt++), bitcast,
-                    // FIXME
-                     4);
-                    // ElementSize * curr->size());
-            curr_block->addInst(load->getIter(), bitcast);
-            curr_block->addInst(load->getIter(), vec_load);
+                std::make_shared<LOADInst>("%slp.ld" + std::to_string(name_cnt++), bitcast, curr->align);
+            curr_block->addInst(insert_before, bitcast);
+            curr_block->addInst(insert_before, vec_load);
             scheduled_packs[curr] = vec_load;
             modified = true;
         } else if (auto store = curr->front()->as<STOREInst>()) {
@@ -813,12 +772,9 @@ bool VectorizerPass::schedule() {
                 std::make_shared<BITCASTInst>("%slp.bc" + std::to_string(name_cnt++), store->getPtr(),
                                               makePtrType(makeVectorType(store->getValue()->getType(), curr->size())));
             auto val = gatherVector(curr, [](const pInst &store) { return store->as<STOREInst>()->getValue(); });
-            auto vec_store = std::make_shared<STOREInst>(val, bitcast,
-                // FIXME
-                4);
-                // ElementSize * curr->size());
-            curr_block->addInst(store->getIter(), bitcast);
-            curr_block->addInst(store->getIter(), vec_store);
+            auto vec_store = std::make_shared<STOREInst>(val, bitcast, curr->align);
+            curr_block->addInst(insert_before, bitcast);
+            curr_block->addInst(insert_before, vec_store);
             scheduled_packs[curr] = nullptr;
             modified = true;
         } else if (auto binary = curr->front()->as<BinaryInst>()) {
@@ -826,7 +782,7 @@ bool VectorizerPass::schedule() {
             auto rhs = gatherVector(curr, [](const pInst &binary) { return binary->as<BinaryInst>()->getRHS(); });
             auto vec_binary =
                 std::make_shared<BinaryInst>("%slp.bin" + std::to_string(name_cnt++), binary->getOpcode(), lhs, rhs);
-            curr_block->addInst(binary->getIter(), vec_binary);
+            curr_block->addInst(insert_before, vec_binary);
             scheduled_packs[curr] = vec_binary;
             modified = true;
         } else
@@ -884,7 +840,8 @@ void VectorizerPass::reset() {
     curr_func = nullptr;
     curr_block = nullptr;
     fam = nullptr;
-    aa_res = nullptr;
+    basic_aa = nullptr;
+    loop_aa = nullptr;
     pack_set.clear();
     operand_pack_map.clear();
     user_pack_map.clear();
@@ -894,7 +851,8 @@ PM::PreservedAnalyses VectorizerPass::run(Function &function, FAM &manager) {
     bool vectorizer_inst_modified = false;
 
     curr_func = &function;
-    aa_res = &manager.getResult<BasicAliasAnalysis>(function);
+    basic_aa = &manager.getResult<BasicAliasAnalysis>(function);
+    loop_aa = &manager.getResult<LoopAliasAnalysis>(function);
     fam = &manager;
 
     for (const auto &block : function) {
@@ -907,9 +865,8 @@ PM::PreservedAnalyses VectorizerPass::run(Function &function, FAM &manager) {
         Logger::logDebug("[Vectorizer] on '", function.getName(), " AFTER Combine:\n", *this);
         rearrangePack();
         Logger::logDebug("[Vectorizer] on '", function.getName(), " AFTER Rearrange:\n", *this);
-        // FIXME
-        // fixArrayAlign();
-        Logger::logDebug("[Vectorizer] on '", function.getName(), " AFTER FixAlign:\n", *this);
+        extendAlign();
+        Logger::logDebug("[Vectorizer] on '", function.getName(), " AFTER ExtendAlign:\n", *this);
         vectorizer_inst_modified |= schedule();
         Logger::logDebug("[Vectorizer] on '", function.getName(), " Done:\n", *this);
         cleanup();

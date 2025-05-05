@@ -257,6 +257,7 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     fpm.addPass(BreakCriticalEdgesPass());
     fpm.addPass(GVNPREPass());
     fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(LoopSimplifyPass());
     fpm.addPass(NameNormalizePass(true));
     fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(VectorizerPass());
