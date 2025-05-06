@@ -56,8 +56,6 @@ void RegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
 
     auto &spilled = mfunc->spill();
     spilled += spilltimes;
-
-    return;
 }
 
 void RegisterAllocImpl::Main(FAM &fam) {
@@ -137,9 +135,6 @@ void RegisterAllocImpl::Build() {
 
         for (auto inst_it = insts.rbegin(); inst_it != insts.rend(); ++inst_it) {
             const auto &inst = *inst_it;
-
-            // if (uselessMovEli::isUseless(inst))
-            //     continue;
 
             const auto &use = getUse(inst);
             const auto &def = getDef(inst);
@@ -409,6 +404,8 @@ void RegisterAllocImpl::AssignColors() {
             auto &calleesave = mfunc->calleeSaveRegs();
             calleesave |= 1 << n->reg(); // marked
 
+        } else if (n->isStack()) {
+            // 不知道为什么这里有stkop
         } else if (okColors.empty()) {
 
             addBySet(spilledNodes, Nodes{n});

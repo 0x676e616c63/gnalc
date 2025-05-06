@@ -17,8 +17,6 @@ void PostRAlegalizeImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     for (auto &mblk : mfunc->blks()) {
         runOnBlk(mblk, mfunc->CodeGenContext());
     }
-
-    return;
 }
 
 void PostRAlegalizeImpl::runOnBlk(MIRBlk_p mblk, CodeGenContext &ctx) {
@@ -44,8 +42,7 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l &minsts, MIRInst
                 auto &obj = mfunc->StkObjs().at(mstkop);
                 _ctx.iselInfo.legalizeWithStkGep(ctx, mop, obj);
             } else {
-                // no offset
-                minst->resetOpcode(ARMOpC::LDR);
+                Err::unreachable("PostRAlegalizeImpl::runOnInst: instAddSP with out a stk ptr");
             }
 
         } break;
@@ -102,6 +99,4 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l &minsts, MIRInst
             return;
         }
     }
-
-    return;
 }

@@ -138,7 +138,7 @@ struct MIRReg {
 
     bool operator==(const MIRReg &other) const { return reg == other.reg; }
     bool operator!=(const MIRReg &other) const { return reg != other.reg; }
-    bool isAlive() const { return flag == MIRRegStatue::alive; }
+    [[nodiscard]] bool isAlive() const { return flag == MIRRegStatue::alive; }
 };
 
 using MIRReg_p = std::shared_ptr<MIRReg>;
@@ -194,7 +194,7 @@ public:
 
     template <typename mOperand_t> constexpr MIROperand(mOperand_t op, OpT type) : mOperand(op), mType(type) {}
 
-    const auto &mOp() const { return mOperand; }
+    [[nodiscard]] const auto &mOp() const { return mOperand; }
     template <typename T> const auto &mOp() const {
         Err::gassert(mOperand.index() != 0, "MIROperand: mOperand is nerver initialized");
         return std::get<T>(mOperand);
@@ -276,8 +276,8 @@ public:
 
     // simple type verify
     constexpr bool isVRegOrISAReg() {
-        return isReg() && (isVirtualReg(std::get<MIRReg_p>(mOperand)->reg) ||
-                           isISAReg(std::get<MIRReg_p>(mOperand)->reg)); // not invaild
+        return isReg() && ((isVirtualReg(std::get<MIRReg_p>(mOperand)->reg) ||
+                            isISAReg(std::get<MIRReg_p>(mOperand)->reg))); // not invaild
     }
 
     // use in registeralloc

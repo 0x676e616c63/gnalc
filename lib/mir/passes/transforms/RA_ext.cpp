@@ -42,6 +42,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getUse(const MIRInst_p &minst) {
         if (use && use->isVRegOrISAReg() &&
             (use->type() == OpT::Int16 || use->type() == OpT::Int32 || use->type() == OpT::Int64 ||
              use->type() == OpT::Int)) {
+
             uses.emplace(use);
         }
     }
@@ -66,6 +67,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getDef(const MIRInst_p &minst) {
 
         if ((def->type() == OpT::Int16 || def->type() == OpT::Int32 || def->type() == OpT::Int64 ||
              def->type() == OpT::Int)) {
+
             defs.emplace(def);
         }
     }

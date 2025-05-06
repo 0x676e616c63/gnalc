@@ -22,7 +22,7 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
     }
 
     ///@brief callee->hasAttr(Attr::NotBuiltin)
-    auto mcallee = callee->hasAttr(Attr::isSylib) ? ctx.mapGlobal(callee->getName()) : handleLib(callinst, ctx);
+    auto mcallee = callee->hasAttr(Attr::isSylib) ? handleLib(callinst, ctx) : ctx.mapGlobal(callee->getName());
 
     auto mcaller = ctx.CurrentBlk()->getFunction();
 
@@ -78,6 +78,8 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
         const auto arg = args[i];
         auto mval = ctx.mapOperand(arg); // vreg or imme
         const auto size = static_cast<unsigned>(arg->getType()->getBytes());
+
+        ///@todo 细化align, 避免栈空间浪费
         const auto align = 8U;
 
         if (offset >= passByRegBase) {
@@ -147,14 +149,17 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
                     ->setOperand<1>(MIROperand::asReloc(mcallee->reloc()))
                     ->setOperand<2>(MIROperand::asImme(callinst->isTailCall() ? 1 : 0, OpT::special)));
 
-    auto mtype = getType(callinst);
+    if (mval) {
+        ///@brief return not a void
+        auto mtype = getType(callinst);
 
-    ctx.newInst(MIRInst::make(OpC::InstCopyFromReg)
-                    ->setOperand<0>(mval)
-                    ->setOperand<1>(MIROperand::asISAReg(mtype == OpT::Float32 ? ARMReg::V0 : ARMReg::X0, mtype)));
-    ///@todo vectorize
+        ctx.newInst(MIRInst::make(OpC::InstCopyFromReg)
+                        ->setOperand<0>(mval)
+                        ->setOperand<1>(MIROperand::asISAReg(mtype == OpT::Float32 ? ARMReg::V0 : ARMReg::X0, mtype)));
+        ///@todo vectorize
 
-    ctx.addOperand(callinst, mval);
+        ctx.addOperand(callinst, mval);
+    }
 }
 
 MIRGlobal_p FrameInfo::handleLib(IR::pCall callinst, LoweringContext &ctx) const {

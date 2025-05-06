@@ -373,7 +373,7 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
             auto stkobjStore =
                 mfunc->addStkObj(codeGenCtx, ptype->getBytes(), alloca->getAlign(), 0, StkObjUsage::Local); // get vreg
 
-            storeMap.emplace(inst, stkobjStore);
+            storeMap.emplace(alloca, stkobjStore);
 
             ctx.addOperand(alloca, stkobjStore); // stkobjStore
         } else {
@@ -424,16 +424,12 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
     ctx.elimPhi();
 }
 
-void MIR_new::lowerInst(IRInst_p inst, LoweringContext &ctx) {
+void MIR_new::lowerInst(const IRInst_p &inst, LoweringContext &ctx) {
 
     ///@todo maybe irgen can add select inst
 
     using OP = IR::OP;
     switch (inst->getOpcode()) {
-    case OP::ALLOCA:
-        break;
-    case OP::PHI:
-        break;
     case OP::ADD:
     case OP::SUB:
     case OP::MUL:
