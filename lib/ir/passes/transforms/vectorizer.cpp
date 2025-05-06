@@ -23,9 +23,8 @@ std::ostream &operator<<(std::ostream &os, const VectorizerPass::Pack &expr) {
 }
 std::ostream &operator<<(std::ostream &os, const VectorizerPass &vec) {
     os << "For BasicBlock '" << vec.curr_block->getName() << "':\n";
-    size_t i = 0;
     for (const auto &pack : vec.pack_set)
-        os << "Pack " << i++ << ": " << pack << "\n";
+        os << "Pack " << pack.id << ": " << pack << "\n";
     return os;
 }
 
@@ -70,7 +69,7 @@ bool isVectorizable(const pInst &inst) {
 }
 
 // Check if the load/store is adjacent.
-bool isInstAdjacent(const pInst &inst1, const pInst &inst2, LoopAAResult& loop_aa) {
+bool isInstAdjacent(const pInst &inst1, const pInst &inst2, LoopAAResult &loop_aa) {
     if (inst1->is<LOADInst>() && inst2->is<LOADInst>()) {
         if (!isSameType(inst1->getType(), inst2->getType()))
             return false;
@@ -110,7 +109,7 @@ void setAlign(const pInst &inst, int align) {
 }
 
 // Warning: This could change Allocas in other functions
-bool trySetBaseAlign(pVal ptr, int align, Function* curr_func) {
+bool trySetBaseAlign(pVal ptr, int align, Function *curr_func) {
     while (true) {
         if (auto bitcast = ptr->as<BITCASTInst>())
             ptr = bitcast->getOVal();
@@ -120,20 +119,18 @@ bool trySetBaseAlign(pVal ptr, int align, Function* curr_func) {
             if (alloc->getAlign() < align)
                 alloc->setAlign(align);
             return true;
-        }
-        else if (auto gv = ptr->as<GlobalVariable>()) {
+        } else if (auto gv = ptr->as<GlobalVariable>()) {
             if (gv->getAlign() < align)
                 gv->setAlign(align);
             return true;
-        }
-        else if (auto fp = ptr->as<FormalParam>()) {
+        } else if (auto fp = ptr->as<FormalParam>()) {
             bool all_success = true;
             std::vector<int> orig_aligns;
 
             for (auto user : curr_func->inst_users()) {
                 auto call = user->as<CALLInst>();
                 Err::gassert(call != nullptr, "Expected a call user");
-                Function* caller_func = call->getParent()->getParent().get();
+                Function *caller_func = call->getParent()->getParent().get();
                 all_success &= trySetBaseAlign(call->getArgs()[fp->getIndex()], align, caller_func);
             }
 
@@ -141,9 +138,10 @@ bool trySetBaseAlign(pVal ptr, int align, Function* curr_func) {
             if (!all_success) {
                 size_t i = 0;
                 for (auto user : curr_func->inst_users()) {
-                    if (i >= orig_aligns.size()) break;
+                    if (i >= orig_aligns.size())
+                        break;
                     auto call = user->as<CALLInst>();
-                    Function* caller_func = call->getParent()->getParent().get();
+                    Function *caller_func = call->getParent()->getParent().get();
                     all_success &= trySetBaseAlign(call->getArgs()[fp->getIndex()], orig_aligns[i], caller_func);
                     ++i;
                 }
@@ -151,14 +149,14 @@ bool trySetBaseAlign(pVal ptr, int align, Function* curr_func) {
             }
 
             return true;
-        }
-        else if (auto phi = ptr->as<PHIInst>()) {
+        } else if (auto phi = ptr->as<PHIInst>()) {
             bool all_success = true;
             std::vector<int> orig_aligns;
             for (const auto &[phi_ptr, bb] : phi->incomings()) {
                 orig_aligns.emplace_back(getAlign(phi_ptr->as<Instruction>()));
                 all_success &= trySetBaseAlign(phi_ptr, align, curr_func);
-                if (!all_success) break;
+                if (!all_success)
+                    break;
             }
 
             // Restore the original alignment
@@ -188,9 +186,10 @@ bool trySetBaseAlign(pVal ptr, int align, Function* curr_func) {
         else if (auto load = ptr->as<LOADInst>()) {
             Err::gassert(load->getType()->is<PtrType>());
             auto fp_alloca = load->getPtr()->as<ALLOCAInst>();
-            if (!fp_alloca) return false;
+            if (!fp_alloca)
+                return false;
             // Find the first store that stores the formal parameter
-            auto fp_val = [&] () -> pVal {
+            auto fp_val = [&]() -> pVal {
                 auto entry = curr_func->getBlocks().front();
                 for (auto &inst : *entry) {
                     if (auto fp_store = inst->as<STOREInst>()) {
@@ -205,17 +204,16 @@ bool trySetBaseAlign(pVal ptr, int align, Function* curr_func) {
             if (!fp_val)
                 return false;
             ptr = fp_val;
-        }
-        else
+        } else
             Err::unreachable("Unknown Pointer");
     }
     return false;
 }
 
-VectorizerPass::Pack::Pack(const pInst &stmt1, const pInst &stmt2)
-    : stmts({stmt1, stmt2}), stmt_set({stmt1, stmt2}) {}
-VectorizerPass::Pack::Pack(const Pack &a, const Pack &b)
-: stmts(a.stmts), stmt_set(a.stmt_set), align(a.align > b.align ? b.align : a.align) {
+VectorizerPass::Pack::Pack(size_t id_, const pInst &stmt1, const pInst &stmt2)
+    : stmts({stmt1, stmt2}), stmt_set({stmt1, stmt2}), id(id_) {}
+VectorizerPass::Pack::Pack(size_t id_, const Pack &a, const Pack &b)
+    : stmts(a.stmts), stmt_set(a.stmt_set), align(a.align > b.align ? b.align : a.align), id(id_) {
     stmts.insert(stmts.end(), b.stmts.begin(), b.stmts.end());
     stmt_set.insert(b.stmt_set.begin(), b.stmt_set.end());
 }
@@ -233,7 +231,7 @@ pInst VectorizerPass::Pack::getRight() const {
 }
 size_t VectorizerPass::Pack::size() const { return stmts.size(); }
 
-VectorizerPass::Pack VectorizerPass::Pack::truncate(size_t size) {
+VectorizerPass::Pack VectorizerPass::Pack::truncate(size_t size, size_t id_) {
     Err::gassert(size < stmts.size(), "Invalid size");
     std::vector<pInst> ret_stmts;
     std::unordered_set<pInst> ret_stmt_set;
@@ -248,6 +246,7 @@ VectorizerPass::Pack VectorizerPass::Pack::truncate(size_t size) {
     ret.stmts = ret_stmts;
     ret.stmt_set = ret_stmt_set;
     ret.align = 4;
+    ret.id = id_;
     return ret;
 }
 
@@ -288,8 +287,7 @@ bool VectorizerPass::stmtCanPack(const pInst &stmt1, const pInst &stmt2) {
                 if (modref == ModRefInfo::Mod || modref == ModRefInfo::ModRef)
                     return false;
             }
-        }
-        else if (stmt1->is<STOREInst>()) {
+        } else if (stmt1->is<STOREInst>()) {
             auto ptr = (*end)->as<STOREInst>()->getPtr();
             for (; it != end; ++it) {
                 auto modref = basic_aa->getInstModRefInfo(*it, ptr, *fam);
@@ -298,7 +296,6 @@ bool VectorizerPass::stmtCanPack(const pInst &stmt1, const pInst &stmt2) {
             }
         }
     }
-
 
     // Ensure no use-def dependency
     if (!isIndependent(stmt1, stmt2))
@@ -318,9 +315,15 @@ bool VectorizerPass::stmtCanPack(const pInst &stmt1, const pInst &stmt2) {
     return true;
 }
 
-// Estimate the savings of packing two instructions.
-// TODO: Cost Model
-int VectorizerPass::estimateSavings(const pInst &stmt1, const pInst &stmt2) { return 0; }
+VectorizerPass::Pack *VectorizerPass::stmtInPack(const pInst &stmt) {
+    for (auto &pack : pack_set) {
+        for (const auto &cand : pack.stmts) {
+            if (cand == stmt)
+                return &pack;
+        }
+    }
+    return nullptr;
+}
 
 // Investigate the operands of the pack
 bool VectorizerPass::followUseDefs(const Pack &pack) {
@@ -340,10 +343,8 @@ bool VectorizerPass::followUseDefs(const Pack &pack) {
         if (x1->is<LOADInst, STOREInst>() || x2->is<LOADInst, STOREInst>())
             continue;
         if (stmtCanPack(x1, x2)) {
-            if (estimateSavings(x1, x2) >= 0) {
-                pack_set.emplace_back(x1, x2);
-                modified = true;
-            }
+            pack_set.emplace_back(pack_id++, x1, x2);
+            modified = true;
         }
     }
     return modified;
@@ -354,10 +355,7 @@ bool VectorizerPass::followDefUses(const Pack &pack) {
     Err::gassert(pack.isPair());
     auto stmt1 = pack.getLeft();
     auto stmt2 = pack.getRight();
-    auto align = getAlign(stmt1);
-    int savings = -1;
 
-    pInst x1, x2;
     for (const auto &user1 : stmt1->inst_users()) {
         if (user1->getParent() != curr_block)
             continue;
@@ -370,20 +368,13 @@ bool VectorizerPass::followDefUses(const Pack &pack) {
             if (user1->is<LOADInst, STOREInst>() || user2->is<LOADInst, STOREInst>())
                 continue;
             if (stmtCanPack(user1, user2)) {
-                auto est = estimateSavings(user1, user2);
-                if (est > savings) {
-                    savings = est;
-                    x1 = user1;
-                    x2 = user2;
-                }
+                // FIXME: Need Cost Model Here ?
+                pack_set.emplace_back(pack_id++, user1, user2);
+                return true;
             }
         }
     }
 
-    if (x1 && x2 && savings >= 0) {
-        pack_set.emplace_back(x1, x2);
-        return true;
-    }
     return false;
 }
 
@@ -399,10 +390,12 @@ void VectorizerPass::findAdjacentReferences() {
 
             if (isInstAdjacent(inst, candidate, *loop_aa)) {
                 if (stmtCanPack(inst, candidate))
-                    pack_set.emplace_back(inst, candidate);
+                    pack_set.emplace_back(pack_id++, inst, candidate);
             }
         }
     }
+    if constexpr (log_step_by_step)
+        Logger::logDebug("[SLP] on '", curr_func->getName(), " AFTER FindAdj:\n", *this);
 }
 
 // Extend the PackSet through the use-def chain.
@@ -416,6 +409,8 @@ void VectorizerPass::extendPackList() {
             modified |= followDefUses(pack);
         }
     }
+    if constexpr (log_step_by_step)
+        Logger::logDebug("[SLP] on '", curr_func->getName(), " AFTER Extend:\n", *this);
 }
 
 // Combine packs if possible, e.g.
@@ -428,7 +423,7 @@ void VectorizerPass::combinePacks() {
                     continue;
                 if (it1->stmts.back() == it2->stmts.front()) {
                     it1->stmts.pop_back();
-                    Pack to_insert(*it1, *it2);
+                    Pack to_insert(pack_id++, *it1, *it2);
                     pack_set.erase(it1);
                     pack_set.erase(it2);
                     pack_set.emplace_back(to_insert);
@@ -441,6 +436,9 @@ void VectorizerPass::combinePacks() {
 
     while (one_pass())
         ;
+
+    if constexpr (log_step_by_step)
+        Logger::logDebug("[SLP] on '", curr_func->getName(), " AFTER Combine:\n", *this);
 }
 
 // Split packs to 2/4-sized packs
@@ -451,27 +449,121 @@ void VectorizerPass::rearrangePack() {
             continue;
 
         if (pack.size() == 3 || pack.size() == 5) {
-            pack.truncate(pack.size() - 1);
+            pack.truncate(pack.size() - 1, pack_id++);
             continue;
         }
 
         Err::gassert(pack.size() >= 6);
-        auto tail = pack.truncate(4);
+        auto tail = pack.truncate(4, pack_id++);
         while (tail.size() > 4) {
             new_packs.emplace_back(tail);
-            tail = new_packs.back().truncate(4);
+            tail = new_packs.back().truncate(4, pack_id++);
         }
         if (tail.size() == 3)
-            tail.truncate(2);
+            tail.truncate(2, pack_id++);
         if (tail.size() == 2 || tail.size() == 4)
             new_packs.emplace_back(tail);
     }
     for (auto &pack : new_packs)
         pack_set.emplace_back(pack);
+
+    if constexpr (log_step_by_step)
+        Logger::logDebug("[SLP] on '", curr_func->getName(), " AFTER Rearrange:\n", *this);
+}
+
+// For an instruction, collect all its users in post order.
+// Returns: (has cycle, users in post order)
+//
+//                                   e
+//                                   |
+//                                  uses
+//                                   |
+//       a -- uses --> b -- uses --> c
+//         -- uses --> d
+//
+// Given c, Returns: (false, [c, b, a, e])
+std::pair<bool, std::vector<pInst>> collectUserTreeInBlock(const pInst &seed) {
+    std::vector worklist{seed};
+    std::unordered_set visited{seed};
+    bool has_cycle = false;
+    std::vector<pInst> ret;
+    while (!worklist.empty()) {
+        auto curr = worklist.back();
+        worklist.pop_back();
+        visited.emplace(curr);
+
+        ret.emplace_back(curr);
+
+        for (auto inst_user : curr->inst_users()) {
+            if (inst_user->getParent() != seed->getParent())
+                continue;
+
+            if (!visited.count(inst_user))
+                worklist.emplace_back(inst_user);
+            else
+                has_cycle = true;
+        }
+    }
+
+    return {has_cycle, ret};
+}
+
+// FIXME: Need Optimization.
+void VectorizerPass::removeUnschedulable() {
+    auto one_pass = [&] {
+        for (auto it = pack_set.begin(); it != pack_set.end(); ++it) {
+            const auto &pack = *it;
+            auto should_remove = [&] {
+                for (const auto &inst : pack.stmts) {
+                    const auto [has_cycle, users] = collectUserTreeInBlock(inst);
+                    if (has_cycle)
+                        return true;
+
+                    if (!users.empty())
+                        continue;
+
+                    for (const auto &user : users) {
+                        if (user->getIndex() > pack.back()->getIndex() || stmtInPack(user))
+                            continue;
+
+                        // They can't be scheduled.
+                        if (auto call = user->as<CALLInst>()) {
+                            if (hasSideEffect(*fam, call->getFunc()))
+                                return true;
+                            continue;
+                        }
+
+                        if (!user->is<BinaryInst, FNEGInst, GEPInst, CastInst>())
+                            return true;
+                    }
+                }
+                return false;
+            }();
+
+            if (should_remove) {
+                pack_set.erase(it);
+                return true;
+            }
+        }
+        return false;
+    };
+
+    while (one_pass())
+        ;
+
+    if constexpr (log_step_by_step)
+        Logger::logDebug("[SLP] on '", curr_func->getName(), " AFTER RemoveUnsch:\n", *this);
+}
+
+void VectorizerPass::removeUnprofitable() {
+    // TODO: Cost Model
+
+    if constexpr (log_step_by_step)
+        Logger::logDebug("[SLP] on '", curr_func->getName(), " AFTER RemoveUnpro:\n", *this);
 }
 
 void VectorizerPass::extendAlign() {
-    for (auto& pack : pack_set) {
+    for (auto &pack : pack_set) {
         int expected = ElementSize * pack.size();
         pVal ptr;
         if (auto load = pack.front()->as<LOADInst>())
@@ -485,10 +577,12 @@ void VectorizerPass::extendAlign() {
         if (align_on_base >= expected) {
             bool align_set = trySetBaseAlign(ptr, expected, curr_func);
             pack.align = align_set ? expected : 4;
-        }
-        else
+        } else
             pack.align = 4;
     }
+
+    if constexpr (log_step_by_step)
+        Logger::logDebug("[SLP] on '", curr_func->getName(), " AFTER ExtendAlign:\n", *this);
 }
 
 // Calculate the use-def chain for pack scheduling
@@ -678,15 +772,23 @@ pVal VectorizerPass::gatherVector(Pack *user_pack, const std::function<pVal(cons
             v2 = cpool.getConst(std::vector(v1_type->getVectorSize(), 0));
         }
         auto shuffle =
-            std::make_shared<SHUFFLEInst>("%slp.sh" + std::to_string(name_cnt++),
-                v1, v2, cpool.getConst(mask));
+            std::make_shared<SHUFFLEInst>("%slp.sh" + std::to_string(name_cnt++), v1, v2, cpool.getConst(mask));
         curr_block->addInst(insert_before, shuffle);
         return shuffle;
     }
 
     // Extract and Insert
-    std::vector base_vector(user_pack->size(), 0);
-    pVal base_val = cpool.getConst(base_vector);
+    pVal base_val;
+    auto btype = expected[0]->getType()->as<BType>()->getInner();
+    if (btype == IRBTYPE::I32) {
+        std::vector base_vector(user_pack->size(), 0);
+        base_val = cpool.getConst(base_vector);
+    } else if (btype == IRBTYPE::FLOAT) {
+        std::vector base_vector(user_pack->size(), 0.0f);
+        base_val = cpool.getConst(base_vector);
+    } else
+        Err::not_implemented("Vectorizer for '" + expected[0]->getType()->toString() + "'.");
+
     for (size_t i = 0; i < expected.size(); ++i) {
         auto to_insert = expected[i];
         if (auto inst = to_insert->as<Instruction>()) {
@@ -696,11 +798,14 @@ pVal VectorizerPass::gatherVector(Pack *user_pack, const std::function<pVal(cons
                         continue;
                     for (size_t j = 0; j < cand->size(); ++j) {
                         if (cand->stmts[j] == inst) {
-                            auto extract =
-                                std::make_shared<EXTRACTInst>("%slp.ex" + std::to_string(name_cnt++), scheduled_packs[cand],
-                                                              cpool.getConst(static_cast<int>(j)));
+                            auto sched_vec = scheduled_packs[cand];
+                            auto extract = std::make_shared<EXTRACTInst>(
+                                "%slp.ex" + std::to_string(name_cnt++), sched_vec, cpool.getConst(static_cast<int>(j)));
                             curr_block->addInst(insert_before, extract);
                             to_insert = extract;
+                            // Err::gassert(sched_vec->getIndex() < extract->getIndex());
+                            if (sched_vec->getIndex() >= extract->getIndex())
+                                Logger::logCritical("[SLP]: ", user_pack->id, " -> ", cand->id);
                             return;
                         }
                     }
@@ -746,6 +851,14 @@ std::vector<VectorizerPass::Pack *> VectorizerPass::computeTopologicalOrder() {
         }
     }
     std::reverse(worklist.begin(), worklist.end());
+
+    if (log_step_by_step) {
+        std::string order;
+        for (const auto &w : worklist)
+            order += std::to_string(w->id) + ", ";
+        Logger::logDebug("[SLP]: Topological Order: ", order);
+    }
+
     return worklist;
 }
 
@@ -761,8 +874,7 @@ bool VectorizerPass::schedule() {
         if (auto load = curr->front()->as<LOADInst>()) {
             auto bitcast = std::make_shared<BITCASTInst>("%slp.bc" + std::to_string(name_cnt++), load->getPtr(),
                                                          makePtrType(makeVectorType(load->getType(), curr->size())));
-            auto vec_load =
-                std::make_shared<LOADInst>("%slp.ld" + std::to_string(name_cnt++), bitcast, curr->align);
+            auto vec_load = std::make_shared<LOADInst>("%slp.ld" + std::to_string(name_cnt++), bitcast, curr->align);
             curr_block->addInst(insert_before, bitcast);
             curr_block->addInst(insert_before, vec_load);
             scheduled_packs[curr] = vec_load;
@@ -817,10 +929,32 @@ bool VectorizerPass::schedule() {
                         curr_block->addInst(std::next(vec->getIter()), extract);
                     }
                     use->setValue(extract);
+
+                    // Move the use after the def, we've ensured the safety in removeUnschedulable.
+                    if (user->getParent() == curr_block && user->getIndex() < extract->getIndex()) {
+                        std::vector<pInst> worklist;
+                        auto [cycle, user_po] = collectUserTreeInBlock(user);
+                        Err::gassert(!cycle);
+                        auto move_before = std::next(extract->getIter());
+                        for (const auto &moving_user : user_po) {
+                            // Only move down
+                            if (moving_user->getIndex() > user->getIndex())
+                                continue;
+
+                            curr_block->delFirstOfInst(moving_user);
+                            curr_block->addInst(move_before, moving_user);
+                            Logger::logDebug("[SLP]: In BasicBlock '", curr_block->getName(), "': Moving '",
+                                             moving_user->getName(), "' before '", (*move_before)->getName(), "'.");
+                        }
+                    }
                 }
             }
         }
     }
+
+    if constexpr (log_step_by_step)
+        Logger::logDebug("[SLP] on '", curr_func->getName(), " Done:\n", *this);
+
     return modified;
 }
 
@@ -837,6 +971,7 @@ void VectorizerPass::cleanup() {
 
 void VectorizerPass::reset() {
     name_cnt = 0;
+    pack_id = 0;
     curr_func = nullptr;
     curr_block = nullptr;
     fam = nullptr;
@@ -858,17 +993,13 @@ PM::PreservedAnalyses VectorizerPass::run(Function &function, FAM &manager) {
     for (const auto &block : function) {
         curr_block = block;
         findAdjacentReferences();
-        Logger::logDebug("[Vectorizer] on '", function.getName(), " AFTER FindAdj:\n", *this);
         extendPackList();
-        Logger::logDebug("[Vectorizer] on '", function.getName(), " AFTER Extend:\n", *this);
         combinePacks();
-        Logger::logDebug("[Vectorizer] on '", function.getName(), " AFTER Combine:\n", *this);
         rearrangePack();
-        Logger::logDebug("[Vectorizer] on '", function.getName(), " AFTER Rearrange:\n", *this);
+        removeUnprofitable();
+        removeUnschedulable();
         extendAlign();
-        Logger::logDebug("[Vectorizer] on '", function.getName(), " AFTER ExtendAlign:\n", *this);
         vectorizer_inst_modified |= schedule();
-        Logger::logDebug("[Vectorizer] on '", function.getName(), " Done:\n", *this);
         cleanup();
     }
 

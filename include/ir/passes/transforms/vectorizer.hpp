@@ -19,6 +19,7 @@ class VectorizerPass : public PM::PassInfo<VectorizerPass> {
 private:
     // Currently we only vectorize int and float, so the element size is a constant 4.
     static constexpr int ElementSize = 4;
+    static constexpr bool log_step_by_step = true;
 
     struct Pack {
         // Cache front instruction for speed.
@@ -26,10 +27,11 @@ private:
         std::vector<pInst> stmts;
         std::unordered_set<pInst> stmt_set;
         int align = 4;
+        size_t id;
 
         Pack() = default;
-        Pack(const pInst& a, const pInst& b);
-        Pack(const Pack& a, const Pack& b);
+        Pack(size_t id, const pInst& a, const pInst& b);
+        Pack(size_t id, const Pack& a, const Pack& b);
 
         bool contains(const pInst& stmt) const;
 
@@ -40,7 +42,7 @@ private:
 
         // Truncate the pack to the given size.
         // Return the pack got truncated.
-        Pack truncate(size_t size);
+        Pack truncate(size_t size, size_t id);
 
         const pInst& front() const;
         const pInst& back() const;
@@ -53,6 +55,7 @@ private:
     LoopAAResult* loop_aa;
     std::list<Pack> pack_set;
     size_t name_cnt;
+    size_t pack_id;
 
     // Use for Packs
     std::unordered_map<const Pack*, std::vector<Pack*>> user_pack_map;
@@ -61,7 +64,8 @@ private:
     void computePackUseDef();
 
     bool stmtCanPack(const pInst& a, const pInst& b);
-    int estimateSavings(const pInst &stmt1, const pInst &stmt2);
+
+    Pack* stmtInPack(const pInst& stmt);
 
     bool followUseDefs(const Pack& pack);
     bool followDefUses(const Pack& pack);
@@ -69,6 +73,8 @@ private:
     void extendPackList();
     void combinePacks();
     void rearrangePack();
+    void removeUnschedulable();
+    void removeUnprofitable();
     void extendAlign();
     void splitDependencyCycle();
     pVal gatherVector(Pack* user_pack, const std::function<pVal(const pInst&)>& proj);
