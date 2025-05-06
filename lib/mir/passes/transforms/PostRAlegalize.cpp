@@ -23,13 +23,13 @@ void PostRAlegalizeImpl::impl(MIRFunction &_mfunc, FAM &fam) {
 
 void PostRAlegalizeImpl::runOnBlk(MIRBlk_p mblk, CodeGenContext &ctx) {
 
-    auto minsts = mblk->Insts();
+    auto &minsts = mblk->Insts();
     for (auto iter = minsts.begin(); iter != minsts.end(); ++iter) {
         runOnInst(*iter, minsts, iter, ctx);
     }
 }
 
-void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l minsts, MIRInst_p_l::iterator iter,
+void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l &minsts, MIRInst_p_l::iterator &iter,
                                    CodeGenContext &_ctx) {
 
     if (minst->isGeneric()) {

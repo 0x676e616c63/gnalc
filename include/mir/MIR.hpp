@@ -412,7 +412,7 @@ private:
 
     // infos
     bool leafFunc = true;
-    uint64_t calleesaveRegisters = 0ULL;
+    uint64_t calleesaveRegisters = 0x60000000ULL; // fp & lr (default)
     size_t spilled = 0LL;
     bool largeStk = false; // may use fp(X29)
     unsigned stkSize = 0LL;

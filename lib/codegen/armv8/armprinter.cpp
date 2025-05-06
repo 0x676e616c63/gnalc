@@ -86,13 +86,14 @@ void ARMA64Printer::printout(const std::vector<MIRGlobal_p> &mGlobals) {
     return;
 }
 
-void ARMA64Printer::printout(const MIRFunction &mfunc) {
-    const auto &sym = mfunc.getmSym();
+void ARMA64Printer::printout(const MIRFunction &_mfunc) {
+    const auto &sym = _mfunc.getmSym();
+    mfunc = &_mfunc;
 
     outStream << ".globl " + sym + '\n';
     outStream << sym + ":\n";
 
-    for (auto &mblk : mfunc.blks()) {
+    for (auto &mblk : _mfunc.blks()) {
         printout(*mblk);
     }
 }

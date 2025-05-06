@@ -151,9 +151,10 @@ string ARMA64Printer::memoryPrinter(const MIRInst &minst) {
             str += '#' + std::to_string(idx->imme());
         } else if (idx->isISA()) {
             str += Reg2S(idx->isa(), 8);
-            str += ", ";
 
             if (shift) {
+                str += ", ";
+
                 unsigned imme = shift->imme();
                 unsigned shift_op = imme >> 30;
 

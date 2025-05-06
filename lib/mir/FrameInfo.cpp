@@ -42,18 +42,18 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
         ///@todo 由于Armv8的s<>和v<>是同一个寄存器组的不同视图, 所以这里理论上可以实现用寄存器传递向量参数
         if (type->getTrait() == IR::IRCTYPE::PTR) {
             if (gprCnt < 8) {
-                offsets.push_back(passByRegBase + gprCnt++);
+                offsets.push_back(passByRegBase + (gprCnt++));
                 continue;
             }
         } else if (type->getTrait() == IR::IRCTYPE::BASIC) {
             if (type->as<IR::BType>()->getInner() == IR::IRBTYPE::FLOAT) {
                 if (sprCnt < 16) {
-                    offsets.push_back(passByRegBase + passBySprRegBase + sprCnt++);
+                    offsets.push_back(passByRegBase + passBySprRegBase + (sprCnt++));
                     continue;
                 }
             } else {
                 if (gprCnt < 8) {
-                    offsets.push_back(passByRegBase + gprCnt++);
+                    offsets.push_back(passByRegBase + (gprCnt++));
                     continue;
                 }
             }
@@ -80,8 +80,8 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
         const auto size = static_cast<unsigned>(arg->getType()->getBytes());
         const auto align = 8U;
 
-        if (offset > passByRegBase) {
-            continue;
+        if (offset >= passByRegBase) {
+            continue; // arg in regs
         }
 
         const auto obj = mcaller->addStkObj(ctx.CodeGenCtx(), size, align, offset, StkObjUsage::CalleeArg);
@@ -125,7 +125,7 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
         auto mval = ctx.mapOperand(arg);
 
         if (offset < passByRegBase) {
-            continue;
+            continue; // arg on stk
         }
 
         auto isa = isSpr(offset) ? ARMReg::V0 + static_cast<uint32_t>(offset - passByRegBase - passBySprRegBase)
@@ -275,7 +275,7 @@ void FrameInfo::makePrologue(MIRFunction_p mfunc, LoweringContext &ctx) const {
     }
 
     for (int i = 0; i < args.size(); ++i) {
-        const auto &offset = offsets[i];
+        auto offset = offsets[i];
         auto &arg = args[i];
 
         if (offset < passByRegBase) {
@@ -299,7 +299,7 @@ void FrameInfo::makePrologue(MIRFunction_p mfunc, LoweringContext &ctx) const {
         auto size = getBytes(arg->type());
         auto align = size;
 
-        if (offset > passByRegBase) {
+        if (offset >= passByRegBase) {
             continue;
         }
 
@@ -369,6 +369,7 @@ void FrameInfo::makePostSAPrologue(MIRBlk_p entry, CodeGenContext &ctx, unsigned
 
     Err::gassert(iter != insts.end(), "makePostSAPrologue: cant find reg save insts");
 
+    // stk space recover
     ARMInstTemplate::registerDec(insts, iter, ARMReg::SP, stkSize);
 }
 
@@ -390,12 +391,13 @@ void FrameInfo::makePostSAEpilogue(MIRBlk_p entry, CodeGenContext &ctx, unsigned
 
     Err::gassert(find, "makePostSAEpilogue: cant find reg recover insts");
 
+    // stk space gen
     ARMInstTemplate::registerInc(insts, iter, ARMReg::SP, stkSize);
 }
 
 void FrameInfo::insertPrologueEpilogue(MIRFunction *mfunc, CodeGenContext &ctx) const {
 
-    // 30 + 1 + 1 + 31 = 63 < 64
+    // 30 + 1 + 1 + 32 = 64
     // X<>: 0 ~ 30, SP: 31, PC: 32, V<>: 33~64
     const uint64_t &bitmap = mfunc->calleeSaveRegs();
 

@@ -15,7 +15,7 @@ void ARMInstTemplate::registerInc(MIRInst_p_l minsts, MIRInst_p_l::iterator it, 
         ///@warning 所以这里用FP(X29)取代ip的工作, 反正也没有动态栈
         auto scratchReg = MIROperand::asISAReg(ARMReg::X29, OpT::Int);
 
-        auto minst_loadImm = MIRInst::make(OpC::InstLoadImmToReg)->setOperand<0>(scratchReg)->setOperand<1>(mimme);
+        auto minst_loadImm = MIRInst::make(ARMOpC::MOVZ)->setOperand<0>(scratchReg)->setOperand<1>(mimme);
 
         minsts.insert(it, minst_loadImm);
         mimme = scratchReg;
@@ -36,7 +36,7 @@ void ARMInstTemplate::registerDec(MIRInst_p_l minsts, MIRInst_p_l::iterator it, 
     if (!is12ImmeWithProbShift(amount)) {
         auto scratchReg = MIROperand::asISAReg(ARMReg::X29, OpT::Int);
 
-        auto minst_loadImm = MIRInst::make(OpC::InstLoadImmToReg)->setOperand<0>(scratchReg)->setOperand<1>(mimme);
+        auto minst_loadImm = MIRInst::make(ARMOpC::MOVZ)->setOperand<0>(scratchReg)->setOperand<1>(mimme);
 
         minsts.insert(it, minst_loadImm);
         mimme = scratchReg;

@@ -37,7 +37,8 @@ MIRBlk_p LoweringContext::mapBlk(const IRBlk_p &blk) const { return mBlkMap.at(b
 MIRGlobal_p LoweringContext::mapGlobal(const string &global) const { return mGlobalMap.at(global); }
 
 MIROperand_p LoweringContext::mapOperand(const IRVal_p &value) {
-    if (value->getVTrait() == IR::ValueTrait::ORDINARY_VARIABLE) {
+    if (value->getVTrait() == IR::ValueTrait::ORDINARY_VARIABLE ||
+        value->getVTrait() == IR::ValueTrait::FORMAL_PARAMETER) {
 
         // get from mValMap
         return mValMap.at(value);

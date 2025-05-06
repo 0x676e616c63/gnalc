@@ -31,7 +31,7 @@ string Reg2S(uint32_t isa, unsigned bitWide) {
 
     auto reg = static_cast<ARMReg>(isa);
 
-    if (inRange(reg, ARMReg::X0, ARMReg::X29)) {
+    if (inRange(reg, ARMReg::X0, ARMReg::X28)) {
         if (bitWide <= 4) {
             str += 'w';
         } else {
@@ -39,6 +39,8 @@ string Reg2S(uint32_t isa, unsigned bitWide) {
         }
 
         str += std::to_string(isa);
+    } else if (reg == ARMReg::FP) {
+        str += "fp";
     } else if (reg == ARMReg::LR) {
         str += "lr";
     } else if (reg == ARMReg::SP) {

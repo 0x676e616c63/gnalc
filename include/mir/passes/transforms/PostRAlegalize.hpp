@@ -18,7 +18,7 @@ private:
 public:
     void impl(MIRFunction &, FAM &);
     void runOnBlk(MIRBlk_p, CodeGenContext &ctx);
-    void runOnInst(MIRInst_p, MIRInst_p_l, MIRInst_p_l::iterator, CodeGenContext &ctx);
+    void runOnInst(MIRInst_p, MIRInst_p_l &, MIRInst_p_l::iterator &, CodeGenContext &ctx);
 };
 
 }; // namespace MIR_new

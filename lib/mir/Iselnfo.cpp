@@ -198,10 +198,7 @@ void ISelInfo::postLegalizeInst(InstLegalizeContext &, MIRInst_p_l &) {
 void ISelInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
     ///@todo handle select inst if we really have one
 
-    auto &ctx = _ctx.ctx; // codegen context
-    auto &iter = _ctx.iter;
-    auto minst = *_ctx.iter;
-    auto &minsts = _ctx.insts;
+    auto &[minst, minsts, iter, ctx] = _ctx;
 
     if (!minst->isGeneric()) {
         return;
@@ -294,6 +291,7 @@ void ISelInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop, co
     auto movz = MIRInst::make(ARMOpC::MOVZ)
                     ->setOperand<0>(scratch)
                     ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16));
+
     minsts.insert(iter, movz);
 
     imme >>= 16;
