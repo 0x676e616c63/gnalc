@@ -369,7 +369,7 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
     for (auto &inst : func->getBlocks().front()->getInsts()) {
         if (auto alloca = inst->as<IR::ALLOCAInst>()) {
             // stk obj
-            auto ptype = alloca->getType();
+            auto ptype = alloca->getBaseType(); // basetype not getType
             auto stkobjStore =
                 mfunc->addStkObj(codeGenCtx, ptype->getBytes(), alloca->getAlign(), 0, StkObjUsage::Local); // get vreg
 
@@ -430,6 +430,12 @@ void MIR_new::lowerInst(const IRInst_p &inst, LoweringContext &ctx) {
 
     using OP = IR::OP;
     switch (inst->getOpcode()) {
+    case OP::ALLOCA:
+        // dont touch this
+        break;
+    case OP::PHI:
+        // dont touch this
+        break;
     case OP::ADD:
     case OP::SUB:
     case OP::MUL:

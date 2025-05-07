@@ -325,7 +325,11 @@ void ISelInfo::legalizeWithStkGep(InstLegalizeContext &_ctx, MIROperand_p mop, c
     int offset = obj.offset;
 
     if (minst->getOp(2)->isImme()) {
-        offset += minst->getOp(2)->imme();
+        offset += static_cast<unsigned>(minst->getOp(2)->imme());
+
+        if (offset == 40) {
+            int useless;
+        }
 
         if (is12ImmeWithProbShift(offset)) {
             minst->resetOpcode(OpC::InstAdd);

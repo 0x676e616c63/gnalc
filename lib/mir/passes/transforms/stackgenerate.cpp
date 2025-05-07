@@ -51,11 +51,12 @@ void StackGenerateImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     for (auto i = 0; i < 64; ++i, calleesaves >>= 1) {
 
         if (static_cast<ARMReg>(i) == ARMReg::V0) {
+            ///@note start to stage V<>, make it ailgn
             allocationBase += allocationBase % 16 ? 8 : 0;
         }
 
         if (static_cast<ARMReg>(i) < ARMReg::V0 && calleesaves % 2) {
-            allocationBase += 8;
+            allocationBase += 8; // X<>
         } else if (static_cast<ARMReg>(i) >= ARMReg::V0 && calleesaves % 2) {
             allocationBase += 16;
         }

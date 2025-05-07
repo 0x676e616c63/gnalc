@@ -9,7 +9,7 @@ void ARMA64Printer::printout(const MIRModule &mModule) {
     // cpu
     outStream << ".cpu cortex-a53\n";
     // fpu
-    outStream << ".fpu neon-fp-armv8\n";
+    // outStream << ".fpu neon-fp-armv8\n";
     // crypto
     outStream << ".arch_extension crypto\n";
 
@@ -31,6 +31,8 @@ void ARMA64Printer::printout(const std::vector<MIRGlobal_p> &mGlobals) {
     ///@note 现在的全局变量是未初始化放在一起, 初始化的放在一起
     ///@todo 变量之间做padding, 避免跨越cache line
 
+    auto log2 = [](unsigned pow) { return ctz_wrapper(pow); };
+
     outStream << ".data\n";
 
     // handle zeroes
@@ -46,9 +48,9 @@ void ARMA64Printer::printout(const std::vector<MIRGlobal_p> &mGlobals) {
         const auto &size = mbss->size();
 
         outStream << ".global " + sym + '\n';
+        outStream << "    .align\t" + std::to_string(log2(align)) + '\n';
         outStream << sym + ":\n";
-        outStream << "    .align\t" + std::to_string(align) + '\n';
-        outStream << "    .zero\t" + std::to_string(size) + '\n';
+        outStream << "    .zero\t" + std::to_string(size) + "\n\n";
     }
 
     for (auto &mGlo : mGlobals) {
@@ -63,8 +65,8 @@ void ARMA64Printer::printout(const std::vector<MIRGlobal_p> &mGlobals) {
         const auto &datas = mdata->getDatas();
 
         outStream << ".global " + sym + '\n';
+        outStream << ".align\t" + std::to_string(log2(align)) + '\n';
         outStream << sym + ":\n";
-        outStream << "    .align\t" + std::to_string(align) + '\n';
 
         for (const auto &data : datas) {
 
@@ -80,6 +82,7 @@ void ARMA64Printer::printout(const std::vector<MIRGlobal_p> &mGlobals) {
                 Err::unreachable("ARMA64Printer::printout(const std::vector<MIRGlobal_p>&): MIRStorage corrupted");
             }
         }
+        outStream << '\n';
     }
 
     outStream << '\n';
