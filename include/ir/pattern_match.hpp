@@ -61,7 +61,7 @@ inline auto Bind(float &a) { return ClassMatchBind<ConstantFloat, float, Constan
 
 // Imagine something like
 //
-//   match(inst, M::Sub(M::VBind(x), M::Is(x))
+//   match(inst, M::Sub(M::Bind(x), M::Is(x))
 //
 // Though the evaluation order in C++ is undefined, and the `M::Is` can be invoked first,
 // that doesn't matter. Because the Binding (`M::VBind`) and predicate (`M::Is`) expressions
@@ -69,10 +69,10 @@ inline auto Bind(float &a) { return ClassMatchBind<ConstantFloat, float, Constan
 // not during expression construction.
 //
 // Also, in `InstMatch`, parameters are matched in the order they appear in the `match()` expression,
-// which guarantees `M::VBind` operations execute before dependent `M::Is` checks.
+// which guarantees `M::Bind` operations execute before dependent `M::Is` checks.
 // This, however, requires the `M::Is` to take a reference as its parameter
 // and transfer that reference to the predicate. Thus, when `M::Is`'s predicate is invoked
-// by `InstMatch::match`, the desired value has already been bound by `M::VBind`.
+// by `InstMatch::match`, the desired value has already been bound by reference in `M::Bind`.
 inline auto Is(const Value *&v) {
     return ClassMatchIf<Value>{[&v](const Value &b) { return v == &b; }};
 }
@@ -111,7 +111,7 @@ struct IRInstInfo {
     };
 };
 
-// Match Inst and Operand
+// Match Inst and Operand, with compile-time checks for instruction operand patterns.
 #define MAKE_INST_MATCH2(pattern_name, opcode, num0, num1)                                                             \
     template <typename... OperandPatterns> auto pattern_name(OperandPatterns &&...ops) {                               \
         static_assert(sizeof...(OperandPatterns) == (num0) || sizeof...(OperandPatterns) == (num1),                    \

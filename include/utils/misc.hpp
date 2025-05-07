@@ -15,6 +15,8 @@ template <class... Ts> struct overloaded : Ts... {
 };
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
+// Black magic from unaccepted C++ proposal, WG21 P2098R0
+// See: https://www.open-std.org/JTC1/SC22/WG21/docs/papers/2020/p2098r0.pdf
 template <typename T, template <typename...> typename Primary> struct is_specialization_of : public std::false_type {};
 
 template <template <typename...> typename Primary, typename... Args>
