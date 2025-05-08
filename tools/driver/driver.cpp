@@ -251,7 +251,16 @@ Extensions:
   -mbrainfk-3tape      - Translate SySy to 3-tape brainfk
 )";
 #endif
-            std::cout << std::flush;
+            // 0x676e616c63
+            auto magic = "\x67\x6e\x61\x6c\x63";
+            std::cout << "This " << magic << " has Super Loong Powers." << std::endl;
+            return 0;
+        }
+        else if (arg == "loong") {
+            std::cout <<
+#include "loong.txt"
+
+                      << "\n...\"Have you loonged today?\"..." << std::endl;
             return 0;
         }
         else input_file = argv[i];
