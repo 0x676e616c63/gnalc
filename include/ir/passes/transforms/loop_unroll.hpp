@@ -10,35 +10,71 @@
 #define GNALC_IR_PASSES_TRANSFORMS_LOOP_UNROLL_HPP
 
 #include "ir/passes/pass_manager.hpp"
-// #include "config/config.hpp"
+#include "config/config.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
 
 // 之后放到config
-// constexpr auto LOOP_UNROLLING_PEELING_COUNT = 5;
-constexpr auto LOOP_UNROLLING_FULLY_UNROLL_THRESHOLD = 10;
-constexpr auto LOOP_UNROLLING_RUNTIME_UNROLL_COUNT = 5;
-// MAY NEED UNROLL COST THRESHOLD
+constexpr unsigned LOOP_UNROLLING_PEEL_COUNT = 10; // 循环剥皮最大次数
+constexpr unsigned LOOP_UNROLLING_FULLY_UNROLL_SIZE = 400; // trip_count * size 小于此值次数的循环将被完全展开
+constexpr unsigned LOOP_UNROLLING_FULLY_UNROLL_COUNT = 8; // trip_count小于此值次数的循环将被完全展开
+constexpr unsigned LOOP_UNROLLING_RUNTIME_UNROLL_SIZE = 200; // 运行时展开后最大大小
+constexpr unsigned LOOP_UNROLLING_RUNTIME_UNROLL_COUNT = 8; // 运行时展开最大次数
+constexpr unsigned LOOP_UNROLLING_PARTIALLY_UNROLL_SIZE = 200;
+constexpr unsigned LOOP_UNROLLING_PARTIALLY_UNROLL_COUNT = 8;
+constexpr unsigned LOOP_UNROLLING_MAX_PROCESS_SIZE = 100; // 最大循环大小，超过此值的循环将不被展开，至少为上述size的1/2
 
 namespace IR {
-class Loop;
-
 class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
-    static constexpr auto fut = LOOP_UNROLLING_FULLY_UNROLL_THRESHOLD; // 完全展开阈值，小于此值次数的循环将被完全展开
-    static constexpr auto rui = LOOP_UNROLLING_RUNTIME_UNROLL_COUNT;   // 运行时展开（部分展开）强度
+    enum class UnrollType { FULLY, PARTIALLY, RUNTIME };
+    struct UnrollOption {
+        bool peel;
+        unsigned peel_count;
+        bool unroll;
+        UnrollType unroll_type;
+        unsigned unroll_count;
+        bool has_remainder;
+        unsigned remainder;
 
-    // UNROLL MODE
-    enum class UM { DISABLE, FULLY, PARTIALLY };
+        void disable() {
+            peel = false;
+            unroll = false;
+        }
 
-    // UNROLL LOOP INFO
-    struct ULI {
-        UM um;
-        int count;          // 展开次数
-        bool has_remainder; // （仅用于运行时展开）是否有余数
-        // TODO ...
+        void enable_peel(const unsigned _count) {
+            peel = true;
+            peel_count = _count;
+        }
+
+        void enable_fully(const unsigned _count) {
+            unroll = true;
+            unroll_type = UnrollType::FULLY;
+            unroll_count = _count;
+        }
+
+        void enable_partially(const unsigned _count, const unsigned _remainder = 0) {
+            unroll = true;
+            unroll_type = UnrollType::PARTIALLY;
+            unroll_count = _count;
+            has_remainder = (_remainder!=0);
+            remainder = _remainder;
+        }
+
+        void enable_runtime(const unsigned _count) {
+            unroll = true;
+            unroll_type = UnrollType::RUNTIME;
+            unroll_count = _count;
+            has_remainder = true;
+        }
+
+        bool fully() const { return unroll_type == UnrollType::FULLY; }
+        bool partially() const { return unroll_type == UnrollType::PARTIALLY; }
+        bool runtime() const { return unroll_type == UnrollType::RUNTIME; }
     };
 
-    ULI unroll_analyze(const pLoop &loop);
-    bool peel_loop(const pLoop &loop); // 如果一个循环被剥离，则会被标记为不再检查进一步展开
-    bool unroll_loop(const pLoop &loop, int count, bool partially, bool has_remainder, Function &func);
+    void analyze(const pLoop &loop, UnrollOption &option, LoopInfo& LI, Function &func, DomTree &DT);
+    bool peel(const pLoop &loop, const UnrollOption &option, Function &func);
+    bool unroll(const pLoop &loop, const UnrollOption &option, Function &func);
 
 public:
     PM::PreservedAnalyses run(Function &function, FAM &manager);

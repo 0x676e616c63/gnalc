@@ -1,38 +1,102 @@
 #include "ir/passes/transforms/loop_unroll.hpp"
 #include "ir/block_utils.hpp"
-#include "ir/instructions/control.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 
 #include <algorithm>
 
+#include "ir/passes/analysis/scev.hpp"
+
 namespace IR {
-LoopUnrollPass::ULI LoopUnrollPass::unroll_analyze(const pLoop &loop) {
+void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& LI, Function &FC, DomTree &DT) {
+    if (!(loop->isSimplifyForm() && loop->isLCSSAForm())) {
+        option.disable();
+        return;
+    }
+
+    // 不展开过大循环
+    unsigned inst_size = 0;
+    for (const auto &bb : loop->blocks()) {
+        inst_size += bb->getAllInstCount();
+    }
+    if (inst_size > LOOP_UNROLLING_MAX_PROCESS_SIZE) {
+        option.disable();
+        return;
+    }
+
+    // 限制多出口循环展开，暂时只处理单出口
+    if (loop->getExitBlocks().size() != 1) {
+        option.disable();
+        return;
+    }
+
+    // TODO: 不处理含调用的循环
+
+    auto SCEVH = SCEVHandle(&FC, &LI, &DT);
+    const auto TC = SCEVH.getTripCount(loop);
+    if (TC == nullptr) {
+        option.disable();
+        return;
+    }
+
+    if (TC->isIRValue() && TC->getIRValue()->is<ConstantInt>()) {
+        // 常量展开策略
+        const auto trip_count = TC->getIRValue()->as<ConstantInt>()->getVal();
+        if (trip_count <= LOOP_UNROLLING_FULLY_UNROLL_COUNT && trip_count * inst_size <= LOOP_UNROLLING_MAX_PROCESS_SIZE) {
+            option.enable_fully(trip_count);
+            return;
+        }
+        const auto count1 = LOOP_UNROLLING_PARTIALLY_UNROLL_SIZE / inst_size;
+        if (count1 <= LOOP_UNROLLING_PARTIALLY_UNROLL_COUNT) {
+            option.enable_partially(count1, trip_count % count1);
+            return;
+        }
+        option.enable_partially(LOOP_UNROLLING_PARTIALLY_UNROLL_COUNT, trip_count % LOOP_UNROLLING_PARTIALLY_UNROLL_COUNT);
+        return;
+    } else {
+        // 变量展开策略
+
+    }
+
+
     // TODO
-    return {UM::FULLY, 4, false};
+    option.disable();
 }
 
-bool LoopUnrollPass::peel_loop(const pLoop &loop) {
+bool LoopUnrollPass::peel(const pLoop &loop, const UnrollOption &option, Function &func) {
     // TODO
-    return false;
-}
-
-bool LoopUnrollPass::unroll_loop(const pLoop &loop, const int count, bool partially, bool has_remainder,
-                                 Function &func) {
-    if (count < 2)
+    if (!option.peel) {
         return false;
+    }
+    return true;
+}
 
-    if (!partially && has_remainder)
+bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Function &func) {
+    if (!option.unroll) {
+        return false;
+    }
+
+    if (option.unroll_count < 2) {
+        return false;
+    }
+
+    if (option.fully() && option.has_remainder) {
         Err::error("unexpected arguments");
-
-    if (!loop->getPreHeader())
         return false;
+    }
 
-    if (!loop->getLatch())
+    // todo: need?
+    if (!loop->getPreHeader()) {
         return false;
+    }
+
+    if (!loop->getLatch()) {
+        return false;
+    }
 
     // !hasAddressTaken() ?
 
+    const auto count = option.unroll_count;
     const auto pre_header = loop->getPreHeader();
     const auto header = loop->getHeader();
     const auto latch = loop->getLatch();
@@ -51,7 +115,7 @@ bool LoopUnrollPass::unroll_loop(const pLoop &loop, const int count, bool partia
     std::map<pI, IV> IMap;
 
     // Return IMap[inst][i] or inst.
-    auto IMapFind = [&](pI inst, const int i) {
+    auto IMapFind = [&](pI inst, const unsigned i) {
         if (const auto it = IMap.find(inst); it != IMap.end()) {
             return it->second[i];
         }
@@ -59,7 +123,7 @@ bool LoopUnrollPass::unroll_loop(const pLoop &loop, const int count, bool partia
     };
 
     // Return BMap[block][i] or block.
-    auto BMapFind = [&](pB block, const int i) {
+    auto BMapFind = [&](pB block, const unsigned i) {
         if (const auto it = BMap.find(block); it != BMap.end()) {
             return it->second[i];
         }
@@ -109,31 +173,34 @@ bool LoopUnrollPass::unroll_loop(const pLoop &loop, const int count, bool partia
     linkBB(last_latch, header);
 
     // clone other inst
-    auto CloneNonPhiInst = [&](const pB &raw, const pB &cur, const int i) {
+    auto CloneNonPhiInst = [&](const pB &raw, const pB &cur, const unsigned i) {
         for (const auto &inst : *raw) {
             const auto new_inst = makeClone(inst);
             new_inst->setName(inst->getName() + ".unroll" + std::to_string(i));
             IMap[inst][i] = new_inst;
-            if (inst->getOpcode() == OP::BR)
+            if (inst->getOpcode() == OP::BR) {
                 for (auto value : inst->operands()) {
                     if (value->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
                         new_inst->replaceAllOperands(value, IMapFind(value->as<Instruction>(), i));
                     } else if (value->getVTrait() == ValueTrait::BASIC_BLOCK) {
-                        new_inst->replaceAllOperands(value, BMapFind(value->as<BasicBlock>(), i));
+                        if (auto nv = BMapFind(value->as<BasicBlock>(), i); nv != value) {
+                            new_inst->replaceAllOperands(value, nv);
+                        }
                     }
                 }
-            else
+            } else {
                 for (auto value : inst->operands()) {
                     if (value->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
                         new_inst->replaceAllOperands(value, IMapFind(value->as<Instruction>(), i));
                     }
                 }
+            }
             cur->addInst(new_inst);
         }
     };
 
     // process exiting block, update exit block's phi
-    auto ProcessExitingBlock = [&](const pB &raw, const pB &cur, const int i) {
+    auto ProcessExitingBlock = [&](const pB &raw, const pB &cur, const unsigned i) {
         if (loop->isExiting(raw)) {
             for (auto succ : raw->succs()) {
                 if (exits.count(succ)) {
@@ -158,7 +225,7 @@ bool LoopUnrollPass::unroll_loop(const pLoop &loop, const int count, bool partia
     };
 
     // Clone header to BMap[header][i], update exit block's phi.
-    auto CloneHeaderBlock = [&](const int i) {
+    auto CloneHeaderBlock = [&](const unsigned i) {
         const auto &rh = header;     // raw header
         const auto ch = BMap[rh][i]; // current header
 
@@ -214,10 +281,10 @@ bool LoopUnrollPass::unroll_loop(const pLoop &loop, const int count, bool partia
                     // val, blk, val, blk...
                     auto v = *it;
                     if (v->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
-                        phi->replaceAllOperands(v, IMapFind(v->as<Instruction>(), i));
+                        new_phi->replaceAllOperands(v, IMapFind(v->as<Instruction>(), i));
                     }
                     v = *++it;
-                    phi->replaceAllOperands(v, BMap[v->as<BasicBlock>()][i]);
+                    new_phi->replaceAllOperands(v, BMap[v->as<BasicBlock>()][i]);
                 }
                 cb->addPhiInst(new_phi);
             }
@@ -230,27 +297,34 @@ bool LoopUnrollPass::unroll_loop(const pLoop &loop, const int count, bool partia
     }
 
     // 针对特定展开策略进行分支优化
+    bool is_dowhile = loop->isExiting(loop->getLatch());
     // Fully Unroll
-    if (!partially) {
-        unlinkBB(last_latch, header);
-        CloneHeaderBlock(count); // 包含link last_latch-->last_header
-        BMap[header][count]->getBRInst()->dropTrueDest();
+    if (option.fully()) {
+        if (is_dowhile) {
+            last_latch->getBRInst()->dropOneDest(header);
+        } else {
+            unlinkBB(last_latch, header);
+            CloneHeaderBlock(count);
+            BMap[header][count]->getBRInst()->dropTrueDest();
+        }
     }
 
     // 修改latches的br: br header --> br next_header; last_latch特殊处理
-    // ATTENTION: 此步之后修改了原loop的inst, 一些lambda函数可能失效
-    for (int i = 0; i < count - 1; i++)
+    // ATTENTION: 此步之后修改了原loop的inst
+    for (int i = 0; i < count - 1; i++) {
         BMap[latch][i]->getBRInst()->replaceAllOperands(BMap[header][i], BMap[header][i + 1]);
-    if (partially)
+    }
+    if (option.partially()) {
         last_latch->getBRInst()->replaceAllOperands(BMap[header][count - 1], header);
-    else
+    } else if (!is_dowhile) {
         last_latch->getBRInst()->replaceAllOperands(BMap[header][count - 1], BMap[header][count]);
+    }
 
     // process raw header's phi node:
     // For partially: [%x, latch] --> [%xx, last_latch]
     // For fully: delete [%x, latch]
     for (const auto &phi : header->phis()) {
-        if (partially) {
+        if (option.partially()) {
             auto phi_value_from_loop = phi->getValueForBlock(latch);
             phi->replaceAllOperands(phi_value_from_loop, IMapFind(phi_value_from_loop->as<Instruction>(), count - 1));
             phi->replaceAllOperands(latch, last_latch);
@@ -266,8 +340,9 @@ bool LoopUnrollPass::unroll_loop(const pLoop &loop, const int count, bool partia
             func.addBlock(it_after_loop, BMap[b][i]);
         }
     }
-    if (!partially)
+    if (option.fully() && !is_dowhile) {
         func.addBlock(it_after_loop, BMap[header][count]);
+    }
 
     // Fold branches for iterations where we know that they will exit or not exit.
 
@@ -282,21 +357,20 @@ bool LoopUnrollPass::unroll_loop(const pLoop &loop, const int count, bool partia
 
 PM::PreservedAnalyses LoopUnrollPass::run(Function &function, FAM &fam) {
     bool modified = false;
-    const auto &LI = fam.getResult<LoopAnalysis>(function);
+    auto &LI = fam.getResult<LoopAnalysis>(function);
 
-    if (LI.getTopLevelLoops().empty())
+    if (LI.getTopLevelLoops().empty()) {
         return PreserveAll();
+    }
 
     // TODO: 改为逆后序
     for (auto &loop : LI) {
-        if (!(loop->isSimplifyForm() && loop->isLCSSAForm()))
-            continue;
-
-        const auto info = unroll_analyze(loop);
-        if (info.um == UM::DISABLE)
-            continue;
-
-        modified = unroll_loop(loop, info.count, info.um == UM::PARTIALLY, info.has_remainder, function);
+        auto &DT = fam.getFreshResult<DomTreeAnalysis>(function);
+        UnrollOption option;
+        analyze(loop, option, LI, function, DT);
+        auto peeled = peel(loop, option, function);
+        auto unrolled = unroll(loop, option, function);
+        modified = modified || peeled || unrolled;
     }
 
     return modified ? PreserveNone() : PreserveAll();
