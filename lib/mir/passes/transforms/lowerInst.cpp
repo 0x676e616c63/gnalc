@@ -201,9 +201,18 @@ void MIR_new::lowerInst(const IR::pBr &br, LoweringContext &ctx) {
 
         auto blk_true = ctx.mapBlk(br->getTrueDest());
         auto blk_false = ctx.mapBlk(br->getFalseDest());
-        auto use = ctx.mapOperand(br->getCond()); // cond: IR::pVal
+        auto use = ctx.mapOperand(br->getCond()); // val or const
 
-        if (use) {
+        if (auto const_cond = br->getCond()->as<IR::ConstantI1>()) {
+
+            ctx.newInst(MIRInst::make(OpC::InstBranch)
+                            ->setOperand<0>(nullptr)
+                            ->setOperand<1>(MIROperand::asReloc(const_cond->getVal() ? blk_true : blk_false))
+                            ->setOperand<2>(ctx.mapOperand(AL))
+                            ->setOperand<3>(MIROperand::asProb(1.0)));
+        }
+
+        else if (use && !use->isImme()) {
             ctx.newInst(MIRInst::make(ARMOpC::CBNZ)
                             ->setOperand<0>(nullptr)
                             ->setOperand<1>(use)
@@ -216,15 +225,6 @@ void MIR_new::lowerInst(const IR::pBr &br, LoweringContext &ctx) {
                             ->setOperand<2>(ctx.mapOperand(AL))
                             ->setOperand<3>(MIROperand::asProb(0.5)));
         } ///@note blk op 不放入变量池
-
-        if (auto const_cond = br->getCond()->as<IR::ConstantI1>()) {
-
-            ctx.newInst(MIRInst::make(OpC::InstBranch)
-                            ->setOperand<0>(nullptr)
-                            ->setOperand<1>(MIROperand::asReloc(const_cond->getVal() ? blk_true : blk_false))
-                            ->setOperand<2>(ctx.mapOperand(AL))
-                            ->setOperand<3>(MIROperand::asProb(1.0)));
-        }
     };
 
     ///@todo 分支概率预测 T/F, 现阶段所有分支概率均为0.5
@@ -264,6 +264,7 @@ void MIR_new::lowerInst(const IR::pStore &store, LoweringContext &ctx, size_t si
 void MIR_new::lowerInst(const IR::pCast &cast, LoweringContext &ctx) {
     auto def = ctx.newVReg(cast->getType());
 
+    ///@note ctx.mapOperand(cast->getOVal()) may get a stk op
     ctx.addCopy(def, ctx.mapOperand(cast->getOVal()));
 
     ctx.addOperand(cast, def);
@@ -278,6 +279,8 @@ void MIR_new::lowerInst(const IR::pGep &gep, LoweringContext &ctx) {
         persize = arrayType->getElmType()->getBytes();
     } else if (auto ptrType = gep->getBaseType()->as<IR::PtrType>()) {
         persize = ptrType->getElmType()->getBytes();
+    } else if (auto bType = gep->getBaseType()->as<IR::BType>()) {
+        persize = bType->getBytes();
     } else {
         Err::unreachable("lowerInst(IR::pGep, LoweringContext &): unknown base type");
     }

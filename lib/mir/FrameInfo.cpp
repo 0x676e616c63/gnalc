@@ -57,15 +57,18 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
                     continue;
                 }
             }
+        } else {
+            Err::unreachable("handleCallEntry: unknown arg type");
         }
         ///@todo vectorize
 
         ///@note 可能的size为4, 8, 16(vector)
         const auto align = static_cast<unsigned>(arg->getType()->getBytes());
         auto minisize = 4U; // avoid clang-tidy warning
-        unsigned size = std::max(size, align);
+        // unsigned size = std::max(size, align); // ? 这竟然没检查出来 ?
+        unsigned size = std::max(minisize, align);
 
-        stkOffset = (stkOffset + align - 1) / align * align; // 强制对齐
+        stkOffset = ((stkOffset + align - 1) / align) * align; // 强制对齐
         offsets.emplace_back(stkOffset);
         stkOffset += size;
     }
@@ -317,7 +320,10 @@ void FrameInfo::makePrologue(MIRFunction_p mfunc, LoweringContext &ctx) const {
 
 void FrameInfo::makeReturn(IR::pRet retinst, LoweringContext &ctx) const {
 
-    if (retinst->getType()->as<IR::BType>()->getInner() == IR::IRBTYPE::VOID) {
+    // if (retinst->getType()->as<IR::BType>()->getInner() == IR::IRBTYPE::VOID) {
+    //     ctx.newInst(MIRInst::make(ARMOpC::RET));
+    // }
+    if (retinst->getRetBType() == IR::IRBTYPE::VOID) {
         ctx.newInst(MIRInst::make(ARMOpC::RET));
     } else {
         auto mval = ctx.mapOperand(retinst->getRetVal());
@@ -339,8 +345,8 @@ void FrameInfo::makeReturn(IR::pRet retinst, LoweringContext &ctx) const {
         auto mret = MIROperand::asISAReg(isa, mtype);
 
         ctx.addCopy(mret, mval);
+        ctx.newInst(MIRInst::make(ARMOpC::RET)); // just use ret
     }
-    ctx.newInst(MIRInst::make(ARMOpC::RET)); // just use ret
 }
 
 bool FrameInfo::isCallerSaved(const MIROperand &op) const {

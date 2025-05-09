@@ -48,7 +48,7 @@ void ARMA64Printer::printout(const std::vector<MIRGlobal_p> &mGlobals) {
         const auto &size = mbss->size();
 
         outStream << ".global " + sym + '\n';
-        outStream << "    .align\t" + std::to_string(log2(align)) + '\n';
+        outStream << ".align\t" + std::to_string(log2(align)) + '\n';
         outStream << sym + ":\n";
         outStream << "    .zero\t" + std::to_string(size) + "\n\n";
     }

@@ -70,7 +70,7 @@ enum MIRInstCond : unsigned { AL, EQ, NE, LT, GT, LE, GE };
 
 using Cond = MIRInstCond;
 
-enum class MIRGenericInst {
+enum class MIRGenericInst : uint32_t {
     // control-flow
     InstBranch, // cond, reloc, prob
     // Memory, get by gep, no const offset
@@ -113,14 +113,15 @@ enum class MIRGenericInst {
     InstF2S,
     InstS2F,
     // Misc
-    InstCopy,   // vreg to vreg
-    InstSelect, // CSEL/FSEL <dst_Reg>, <Reg>, <Reg>, <cond>
+    InstCopyStkPtr,  // use in stk ptr type cast, not a real copy
+    InstCopy,        ///copy: vreg to vreg
+    InstCopyFromReg, ///copy: precolored to vreg
+    InstCopyToReg,   ///copy: vreg to precolored
+    InstSelect,
     InstLoadGlobalAddress,
-    InstLoadImm, // const to vreg
+    InstLoadImm,
     InstLoadStackObjectAddr,
-    InstCopyFromReg,  // precolored to vreg
-    InstCopyToReg,    // vreg to precolored
-    InstLoadImmToReg, // const to precolored
+    InstLoadImmToReg,
     InstLoadRegFromStack,
     InstStoreRegToStack,
 };
@@ -189,6 +190,13 @@ private:
     std::variant<std::monostate, MIRReg_p, MIRRelocable_p, unsigned, uint64_t, double> mOperand{std::monostate{}};
     OpT mType = OpT::special;
 
+    static std::map<unsigned, std::map<OpT, MIROperand_p>> ISApool;
+
+    unsigned recover = -1; // assign之后用于保存原有的VReg, debug用
+public:
+    void setRecover(unsigned id) { recover = id; }
+    unsigned getRecover() const { return recover; }
+
 public:
     constexpr MIROperand() = default;
 
@@ -256,8 +264,16 @@ public:
     /// @note asVReg 一般由ctx传递id
     /// @note ISA序号, 或者VReg id, 都由reg()获得, 可以考虑在此基础上进一步具象化和检查
     static MIROperand_p asISAReg(unsigned reg, OpT type) {
-        Err::gassert(isISAReg(reg), "MIROperand::asISAReg: input reg doesnt match");
-        return make<MIROperand>(make<MIRReg>(reg), type);
+        Err::gassert(isISAReg(reg), "MIROperand::asISAReg: input reg doesnt match: " + std::to_string(reg));
+
+        if (ISApool.count(reg) && ISApool.at(reg).count(type)) {
+            return ISApool[reg][type];
+        } else {
+            auto newISA = make<MIROperand>(make<MIRReg>(reg), type);
+            newISA->setRecover(reg);
+            ISApool[reg][type] = newISA;
+            return newISA;
+        }
     }
 
     static MIROperand_p asVReg(unsigned reg, OpT type) {
@@ -292,6 +308,7 @@ public:
 
         auto &VReg = std::get<MIRReg_p>(mOperand);
 
+        recover = VReg->reg;
         VReg->reg = color; // assigned here
     }
 
@@ -369,7 +386,7 @@ public:
 
         Err::gassert(it != mOperands.end(), "MIRInst::replace: cant find op");
 
-        *it = _new;
+        *it = std::move(_new);
     }
 
     virtual ~MIRInst() = default;

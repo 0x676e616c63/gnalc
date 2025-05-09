@@ -53,7 +53,7 @@ template <typename T> bool is12ImmeWithProbShift(T imm) {
 
     unsigned imme = static_cast<unsigned>(imm);
 
-    if (imme < 4096 || (imme >> 12) < 4096) {
+    if (imme < 4096 || (imme % 0x1000 == 0 && (imme >> 12) < 4096)) {
         return true;
     } else {
         return false;
@@ -349,6 +349,7 @@ public:
     void preLegalizeInst(InstLegalizeContext &);
     void legalizeWithStkOp(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const;
     void legalizeWithStkGep(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const;
+    void legalizeWithStkPtrCast(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const;
 
     ~ISelInfo() = default;
 };

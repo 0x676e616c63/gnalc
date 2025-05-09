@@ -2,6 +2,8 @@
 
 using namespace MIR_new;
 
+std::map<unsigned, std::map<OpT, MIROperand_p>> MIROperand::ISApool; // to alloc mems
+
 MIROperand_p MIRFunction::addStkObj(struct CodeGenContext &ctx, unsigned size, unsigned alignmant, int offset,
                                     StkObjUsage usage) {
     MIROperand_p new_stk = MIROperand::asStkObj(ctx.nextId(), OpT::Int64);

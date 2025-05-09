@@ -46,9 +46,21 @@ MIROperand_p LoweringContext::mapOperand(const IRVal_p &value) {
 
         // get from mConstantMap
         if (auto ci32 = value->as<IR::ConstantInt>()) {
+
             auto imme = ci32->getVal();
             return mapOperand(imme);
+        }
+        ///@note extent i1, i8 const to i32
+        else if (auto ci1 = value->as<IR::ConstantI1>()) {
+
+            auto imme = static_cast<int>(ci1->getVal());
+            return mapOperand(imme);
+        } else if (auto ci8 = value->as<IR::ConstantI8>()) {
+
+            auto imme = static_cast<int>(ci8->getVal());
+            return mapOperand(imme);
         } else if (auto cf32 = value->as<IR::ConstantFloat>()) {
+
             auto imme = cf32->getVal();
             return mapOperand(imme);
         }

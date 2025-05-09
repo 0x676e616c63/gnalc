@@ -409,14 +409,10 @@ Extensions:
 
     auto bkd_mpm = MIR_new::PassBuilder::buildModulePipeline(bkd_opt_info);
 
-    if (emit_llc) {
-        Err::todo("mir dumper not impl");
-    }
-
     bkd_mpm.run(*mModule, bkd_mam);
 
     if (only_compilation) {
-        MIR_new::ARMA64Printer armv8gen(*poutstream);
+        MIR_new::ARMA64Printer armv8gen(*poutstream, emit_llc ? true : false);
         armv8gen.printout(*mModule);
         return 0;
     }

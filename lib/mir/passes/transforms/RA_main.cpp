@@ -48,7 +48,8 @@ void RegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     clearall();
 
     colors.insert({
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+        0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14,
+        15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, // no fp
     });
 
     ///@note remember to modify bitmap of mfunc when assign colors
@@ -56,6 +57,8 @@ void RegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
 
     auto &spilled = mfunc->spill();
     spilled += spilltimes;
+
+    Logger::logInfo("RegisterAllocImpl: " + mfunc->getName() + " spilled times: " + std::to_string(spilltimes));
 }
 
 void RegisterAllocImpl::Main(FAM &fam) {
@@ -88,7 +91,11 @@ void RegisterAllocImpl::Main(FAM &fam) {
 void RegisterAllocImpl::AddEdge(const MIROperand_p &u, const MIROperand_p &v) {
     Edge edge{u, v};
 
-    if (u != v && adjSet.find(edge) == adjSet.end()) {
+    if (u->reg() == 1342178233 || v->reg() == 1342178233) {
+        int debug;
+    }
+
+    if (u != v && !adjSet.count(edge)) {
         adjSet.insert(std::move(edge));
 
         if (precolored.find(u) == precolored.end()) { // not precolored
@@ -115,8 +122,8 @@ void RegisterAllocImpl::Build() {
 
                 for (const auto &n : getUnion<MIROperand_p>(def, use)) {
                     if (n->isISA()) {
-                        precolored.insert(n);
-                        degree[n] = -1; // 此处可能多次赋值
+                        precolored.insert(n); // 仅此一处
+                        degree[n] = -1;
                     } else if (n->isVReg()) {
                         initial.insert(n);
                     } else {
@@ -153,6 +160,12 @@ void RegisterAllocImpl::Build() {
 
             for (const auto &d : def) {
                 for (const auto &l : live) {
+
+                    if (spilltimes && inst->isGeneric() && inst->opcode<OpC>() == OpC::InstLoad && l->isISA() &&
+                        l->isa() == ARMReg::X18 && d->reg() == 1342178233) {
+                        int useless;
+                    }
+
                     AddEdge(l, d);
                 }
             }
@@ -377,47 +390,40 @@ void RegisterAllocImpl::AssignColors() {
         std::vector<unsigned int> okColors(colors.begin(), colors.end());
 
         for (const auto &w : adjList[n]) { // choose a color not assigned
+
             const auto &w_a = GetAlias(w);
+
             if (getUnion<MIROperand_p>(coloredNodes, precolored).count(w_a)) {
 
                 Err::gassert(w_a->isVRegOrISAReg(), "try assign color for a none virReg op");
 
                 ///@note erase isa(precolored)
 
-                if (!w_a->isISA()) {
-                    continue; // not a precolored or not assigned yet
-                }
-
-                auto reg = w_a->reg();
-
-                ///@warning 事实上, 根据之前的经验, 这里似乎可能出现其他bank的reg, 但似乎不影响正确性
+                auto reg = w_a->isa();
 
                 auto it =
                     std::find_if(okColors.begin(), okColors.end(), [&](const unsigned &_reg) { return _reg == reg; });
-                okColors.erase(it);
+
+                if (it != okColors.end()) {
+                    okColors.erase(it);
+                }
             }
         }
 
-        if (n->isISA()) {
-            /// Iterated Register Coalescing会将预着色寄存器一起放入图中, 所以这里不再处理
-            ///@note 注意这里调换了判断顺序
+        if (okColors.empty()) {
+            addBySet(spilledNodes, Nodes{n});
+        } else if (n->isISA()) {
             auto &calleesave = mfunc->calleeSaveRegs();
             calleesave |= 1 << n->reg(); // marked
-
         } else if (n->isStack()) {
-            // 不知道为什么这里有stkop
-        } else if (okColors.empty()) {
-
-            addBySet(spilledNodes, Nodes{n});
-
+            ;
         } else {
+
             addBySet(coloredNodes, Nodes{n});
-            auto c = okColors.front(); // 多用caller saved
+            auto c = okColors.front();
 
             auto &calleesave = mfunc->calleeSaveRegs();
             calleesave |= 1 << c; // marked
-
-            // auto n_reg = std::dynamic_pointer_cast<BindOnVirOP>(n);
 
             Err::gassert(n->isVReg(), "AssignColors: try assign to a non-reg");
 
@@ -440,7 +446,6 @@ void RegisterAllocImpl::AssignColors() {
 
 void RegisterAllocImpl::ReWriteProgram() {
     initial.clear();
-
     for (const auto &n : spilledNodes) {
         auto ops_new = spill(n);
 
@@ -523,5 +528,5 @@ void VectorRegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     auto &spilled = mfunc->spill();
     spilled += spilltimes;
 
-    return;
+    Logger::logInfo("VectorRegisterAllocImpl: " + mfunc->getName() + " spilled times: " + std::to_string(spilltimes));
 }

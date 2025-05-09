@@ -14,7 +14,10 @@ bool RegisterAllocImpl::isMoveInstruction(const MIRInst_p &minst) {
 
         auto mtype = minst->getDef()->type();
         if (mtype == OpT::Int16 || mtype == OpT::Int32 || mtype == OpT::Int64 || mtype == OpT::Int) {
-            return true;
+
+            if (!minst->getOp(1)->isImme()) { // chk use
+                return true;
+            }
         }
     }
 
@@ -126,8 +129,8 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
 
     Nodes stageValues{};
 
-    auto stkobj =
-        mfunc->addStkObj(mfunc->CodeGenContext(), getSize(mop->type()), getSize(mop->type()), 0, StkObjUsage::Spill);
+    auto mtype = mop->type();
+    auto stkobj = mfunc->addStkObj(mfunc->CodeGenContext(), getSize(mtype), getSize(mtype), 0, StkObjUsage::Spill);
 
     for (auto &mblk : mfunc->blks()) {
         auto &minsts = mblk->Insts();
@@ -137,30 +140,38 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
             auto defs = getDef(minst);
 
             if (auto it_op = uses.find(mop); it_op != uses.end()) {
-                auto readStage = MIROperand::asVReg(ctx.nextId(), mop->type());
+                auto readStage = MIROperand::asVReg(ctx.nextId(), mtype);
                 auto minst_load = MIRInst::make(OpC::InstLoad)->setOperand<0>(readStage)->setOperand<1>(stkobj);
 
                 minsts.insert(it, minst_load);
 
-                minst->replace(*it_op, readStage);
+                minst->replace(mop, readStage);
 
-                stageValues.insert(readStage);
-                continue;
+                stageValues.emplace(readStage);
+
+                // isReadStaged = true;
             }
 
             if (auto it_op = defs.find(mop); it_op != defs.end()) {
-                auto writeStage = MIROperand::asVReg(ctx.nextId(), mop->type());
+                auto writeStage = MIROperand::asVReg(ctx.nextId(), mtype);
                 auto minst_store = MIRInst::make(OpC::InstStore)->setOperand<1>(writeStage)->setOperand<2>(stkobj);
 
                 minsts.insert(std::next(it), minst_store);
 
-                minst->replace(*it_op, writeStage);
+                minst->replace(mop, writeStage);
 
-                stageValues.insert(writeStage);
-                continue;
+                stageValues.emplace(writeStage);
             }
+
+            // if (isWriteStaged) {
+            //     std::advance(it, 2);
+            // } else {
+            //     ++it;
+            // }
         }
     }
+
+    // Err::gassert(stageValues.size(), "spill: get no spill on a spilled Node");
 
     return stageValues;
 }
@@ -176,7 +187,9 @@ bool VectorRegisterAllocImpl::isMoveInstruction(const MIRInst_p &minst) {
 
         auto mtype = minst->getDef()->type();
         if (mtype == OpT::Float32 || mtype == OpT::Floatvec || mtype == OpT::Intvec) {
-            return true;
+            if (!minst->getOp(1)->isImme()) { // chk use
+                return true;
+            }
         }
     }
 

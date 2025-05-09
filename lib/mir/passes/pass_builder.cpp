@@ -34,6 +34,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     fpm.addPass(RegisterAlloc());
     fpm.addPass(StackGenerate());
     fpm.addPass(PostRAlegalize());
+    fpm.addPass(GenericPeephole());
 
     return fpm;
 }

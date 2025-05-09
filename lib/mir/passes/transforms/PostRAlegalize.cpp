@@ -1,4 +1,5 @@
 #include "mir/passes/transforms/PostRAlegalize.hpp"
+#include "mir/passes/transforms/peephole.hpp"
 
 using namespace MIR_new;
 
@@ -32,6 +33,20 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l &minsts, MIRInst
 
     if (minst->isGeneric()) {
         switch (minst->opcode<OpC>()) {
+        case OpC::InstCopyStkPtr: {
+            InstLegalizeContext ctx{minst, minsts, iter, _ctx};
+
+            auto mop = minst->ensureDef();
+            auto mstkop = minst->getOp(1);
+
+            if (mfunc->StkObjs().count(mstkop)) {
+                auto &obj = mfunc->StkObjs().at(mstkop);
+                _ctx.iselInfo.legalizeWithStkPtrCast(ctx, mop, obj);
+            } else {
+                Err::unreachable("PostRAlegalizeImpl::runOnInst: instAddSP without a stk ptr");
+            }
+
+        } break;
         case OpC::InstAddSP: {
             InstLegalizeContext ctx{minst, minsts, iter, _ctx};
 
@@ -42,7 +57,7 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l &minsts, MIRInst
                 auto &obj = mfunc->StkObjs().at(mstkop);
                 _ctx.iselInfo.legalizeWithStkGep(ctx, mop, obj);
             } else {
-                Err::unreachable("PostRAlegalizeImpl::runOnInst: instAddSP with out a stk ptr");
+                Err::unreachable("PostRAlegalizeImpl::runOnInst: instAddSP without a stk ptr");
             }
 
         } break;
