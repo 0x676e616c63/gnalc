@@ -1,11 +1,13 @@
 #include "ir/passes/transforms/loop_unroll.hpp"
+#include "ir/base.hpp"
 #include "ir/block_utils.hpp"
+#include "ir/instructions/phi.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
-
+#include "ir/passes/analysis/scev.hpp"
+#include "utils/exception.hpp"
 #include <algorithm>
 
-#include "ir/passes/analysis/scev.hpp"
 
 namespace IR {
 void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& LI, Function &FC, DomTree &DT) {
@@ -131,7 +133,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
     };
 
     // initialize B/IMap
-    // count+1是为了容纳完全展开的最后一个header或余数循环的块
+    // count+1是为了容纳完全展开的while循环的最后一个header或余数循环的块
     for (const auto &bb : blocks) {
         BMap[bb] = BV(count + 1, nullptr);
         BMap[bb][0] = bb;
@@ -168,9 +170,10 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
 
     // process raw loop
     // 断开了latch[0]->header[0]的cfg边, 添加了latch[count-1]->header[0]
-    const auto &last_latch = BMap[latch][count - 1];
-    unlinkBB(latch, header);
-    linkBB(last_latch, header);
+    // 之后统一 updateCFG()
+    // const auto &last_latch = BMap[latch][count - 1];
+    // unlinkBB(latch, header);
+    // linkBB(last_latch, header);
 
     // clone other inst
     auto CloneNonPhiInst = [&](const pB &raw, const pB &cur, const unsigned i) {
@@ -204,7 +207,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         if (loop->isExiting(raw)) {
             for (auto succ : raw->succs()) {
                 if (exits.count(succ)) {
-                    linkBB(cur, succ);
+                    // linkBB(cur, succ);
                     for (auto &phi : succ->phis()) {
                         auto pov = phi->getPhiOpers();
                         for (auto &phi_oper : pov) {
@@ -230,7 +233,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         const auto ch = BMap[rh][i]; // current header
 
         // latch[n-1]-->header[i]
-        linkBB(BMap[latch][i - 1], ch);
+        // linkBB(BMap[latch][i - 1], ch);
 
         // clone header's phi, replace with previous part's value
         for (auto &phi : rh->phis()) {
@@ -251,7 +254,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         }
 
         CloneNonPhiInst(rh, ch, i);
-        ProcessExitingBlock(rh, ch, i);
+        // ProcessExitingBlock(rh, ch, i);
     };
 
     // clone blocks, link blocks, update phi...
@@ -268,9 +271,9 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             auto cb = BMap[rb][i];                      // current block
 
             // link pred BB
-            for (auto pred : rb->preds()) {
-                linkBB(BMap[pred][i], cb);
-            }
+            // for (auto pred : rb->preds()) {
+            //     linkBB(BMap[pred][i], cb);
+            // }
 
             // clone phi
             for (const auto &phi : rb->phis()) {
@@ -290,35 +293,161 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             }
 
             CloneNonPhiInst(rb, cb, i);
-            ProcessExitingBlock(rb, cb, i);
+            // ProcessExitingBlock(rb, cb, i);
 
             ++raw_bb_iter;
         }
     }
 
-    // 针对特定展开策略进行分支优化
     bool is_dowhile = loop->isExiting(loop->getLatch());
-    // Fully Unroll
-    if (option.fully()) {
-        if (is_dowhile) {
-            last_latch->getBRInst()->dropOneDest(header);
-        } else {
-            unlinkBB(last_latch, header);
-            CloneHeaderBlock(count);
-            BMap[header][count]->getBRInst()->dropTrueDest();
+    const auto last_latch = BMap[latch][count - 1];
+
+    // just for one exit:
+    const auto exiting = is_dowhile ? latch : header;
+    Err::gassert(loop->getExitBlocks().size() == 1, "LoopUnroll: Multiple Exit.");
+    const auto exitb = *(loop->getExitBlocks().begin());
+
+    // clone remiander to BMap[b][count]
+    // 此处只处理常量部分展开的余数循环，尚未修改迭代变量！
+    if (option.partially() && option.has_remainder) {
+        auto rem = option.remainder;
+        auto raw_bb_iter = loop->block_begin();
+
+        // process header
+        {
+            const auto &rh = header;     // raw header
+            const auto ch = BMap[rh][count]; // current header
+
+            // clone inst and create phi
+            for (auto &phi : rh->phis()) {
+                const auto new_phi = std::make_shared<PHIInst>(phi->getName() + ".remainder", phi->getType());
+                IMap[phi][count] = new_phi;
+                ch->addPhiInst(new_phi);
+            }
+            CloneNonPhiInst(rh, ch, count);
+        }
+
+        // process other block
+        ++raw_bb_iter;
+        while (raw_bb_iter != loop->block_end()) {
+            auto rb = (*raw_bb_iter)->as<BasicBlock>(); // current raw block
+            auto cb = BMap[rb][count];                      // current block
+
+            // clone phi
+            for (const auto &phi : rb->phis()) {
+                auto new_phi = makeClone(phi);
+                new_phi->setName(phi->getName() + ".remainder");
+                IMap[phi][count] = new_phi;
+                for (auto it = phi->operand_begin(); it != phi->operand_end(); ++it) {
+                    // val, blk, val, blk...
+                    auto v = *it;
+                    if (v->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
+                        new_phi->replaceAllOperands(v, IMapFind(v->as<Instruction>(), count));
+                    }
+                    v = *++it;
+                    new_phi->replaceAllOperands(v, BMap[v->as<BasicBlock>()][count]);
+                }
+                cb->addPhiInst(new_phi);
+            }
+
+            CloneNonPhiInst(rb, cb, count);
+            ++raw_bb_iter;
+        }
+
+        auto rem_pre_header = is_dowhile ? last_latch : header;
+        unsigned rem_pre_header_count = is_dowhile ? count-1 : 0;
+        // add rem header's phi's phioper: from latch, from raw header or last latch(if is dowhile)
+        for (auto &phi : header->phis()) {
+            auto rem_phi = IMap[phi][count]->as<PHIInst>();
+            auto phi_value_from_latch = phi->getValueForBlock(latch);
+            auto phi_value_from_ph = phi->getValueForBlock(pre_header); // rem loop's preheader in raw loop
+
+            if (phi_value_from_latch->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
+                // Instruction情况
+                rem_phi->addPhiOper(IMapFind(phi_value_from_latch->as<Instruction>(), count), BMap[latch][count]);
+            } else {
+                // 其他情况：常量、全局变量
+                rem_phi->addPhiOper(phi_value_from_latch, BMap[latch][count]);
+            }
+
+            if (phi_value_from_ph->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
+                rem_phi->addPhiOper(IMapFind(phi_value_from_ph->as<Instruction>(), rem_pre_header_count), rem_pre_header);
+            } else {
+                rem_phi->addPhiOper(phi_value_from_ph, rem_pre_header);
+            }
+        }
+
+        ProcessExitingBlock(exiting, BMap[exiting][count], count);
+    }
+
+    // clone last header to BMap[header][count]
+    if (option.fully() && !is_dowhile) {
+        CloneHeaderBlock(count);
+    }
+
+
+    // 处理展开后循环内的跳转关系：丢弃内部退出跳转，更新br-->next_header or new Exiting Block(when dowhile or has remiander)
+    // 1. Drop
+    if (is_dowhile) {
+        for (int i = 0; i < count-1; i++) {
+            BMap[latch][i]->getBRInst()->dropOneDest(exitb);
+        }
+    } else {
+        for (int i = 1; i < count; i++) {
+            BMap[header][i]->getBRInst()->dropOneDest(exitb);
         }
     }
+    // 2. Update
+    for (int i = 0; i < count-1; i++) {
+        BMap[latch][i]->getBRInst()->replaceAllOperands(BMap[header][i], BMap[header][i + 1]);
+    }
+    if (option.fully()) {
+        if (is_dowhile) {
+            BMap[latch][count-1]->getBRInst()->replaceAllOperands(BMap[header][count-1], exitb);
+        } else {
+            BMap[latch][count-1]->getBRInst()->replaceAllOperands(BMap[header][count-1], BMap[header][count]);
+            BMap[latch][count]->getBRInst()->replaceAllOperands(BMap[header][count], exitb);
+        }
+    } else if (option.partially()) {
+        BMap[latch][count-1]->getBRInst()->replaceAllOperands(BMap[header][count-1], header);
+    } else {
+        Err::not_implemented();
+    }
+
+
+    // 针对特定展开策略进行分支优化
+    // if (option.fully()) {
+    //     if (is_dowhile) {
+
+    //     }
+    // } else if (option.partially()) {
+
+    // } else if (option.runtime()) {
+
+    // } else {
+    //     Err::unreachable();
+    // }
+
+    // Fully Unroll
+    // if (option.fully()) {
+    //     if (is_dowhile) {
+    //         last_latch->getBRInst()->dropOneDest(header);
+    //     } else {
+    //         CloneHeaderBlock(count);
+    //         BMap[header][count]->getBRInst()->dropTrueDest();
+    //     }
+    // }
 
     // 修改latches的br: br header --> br next_header; last_latch特殊处理
     // ATTENTION: 此步之后修改了原loop的inst
-    for (int i = 0; i < count - 1; i++) {
-        BMap[latch][i]->getBRInst()->replaceAllOperands(BMap[header][i], BMap[header][i + 1]);
-    }
-    if (option.partially()) {
-        last_latch->getBRInst()->replaceAllOperands(BMap[header][count - 1], header);
-    } else if (!is_dowhile) {
-        last_latch->getBRInst()->replaceAllOperands(BMap[header][count - 1], BMap[header][count]);
-    }
+    // for (int i = 0; i < count - 1; i++) {
+    //     BMap[latch][i]->getBRInst()->replaceAllOperands(BMap[header][i], BMap[header][i + 1]);
+    // }
+    // if (option.partially()) {
+    //     last_latch->getBRInst()->replaceAllOperands(BMap[header][count - 1], header);
+    // } else if (option.fully() && !is_dowhile) {
+    //     last_latch->getBRInst()->replaceAllOperands(BMap[header][count - 1], BMap[header][count]);
+    // }
 
     // process raw header's phi node:
     // For partially: [%x, latch] --> [%xx, last_latch]
@@ -344,13 +473,10 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         func.addBlock(it_after_loop, BMap[header][count]);
     }
 
-    // Fold branches for iterations where we know that they will exit or not exit.
-
     // process runtime unroll
 
-    // process reminder
-
     // optimize new cfg
+    func.updateAndCheckCFG();
 
     return true;
 }
