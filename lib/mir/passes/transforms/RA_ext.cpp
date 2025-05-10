@@ -12,8 +12,10 @@ bool RegisterAllocImpl::isMoveInstruction(const MIRInst_p &minst) {
 
     if (mopcode == OpC::InstCopy || mopcode == OpC::InstCopyFromReg || mopcode == OpC::InstCopyToReg) {
 
-        auto mtype = minst->getDef()->type();
-        if (mtype == OpT::Int16 || mtype == OpT::Int32 || mtype == OpT::Int64 || mtype == OpT::Int) {
+        auto mtype = minst->ensureDef()->type();
+        auto mtype2 = minst->getOp(1)->type();
+        if ((mtype == OpT::Int16 || mtype == OpT::Int32 || mtype == OpT::Int64 || mtype == OpT::Int) &&
+            (mtype2 == OpT::Int16 || mtype2 == OpT::Int32 || mtype2 == OpT::Int64 || mtype2 == OpT::Int)) {
 
             if (!minst->getOp(1)->isImme()) { // chk use
                 return true;
@@ -148,8 +150,6 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
                 minst->replace(mop, readStage);
 
                 stageValues.emplace(readStage);
-
-                // isReadStaged = true;
             }
 
             if (auto it_op = defs.find(mop); it_op != defs.end()) {
@@ -162,12 +162,6 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
 
                 stageValues.emplace(writeStage);
             }
-
-            // if (isWriteStaged) {
-            //     std::advance(it, 2);
-            // } else {
-            //     ++it;
-            // }
         }
     }
 
@@ -185,8 +179,10 @@ bool VectorRegisterAllocImpl::isMoveInstruction(const MIRInst_p &minst) {
 
     if (mopcode == OpC::InstCopy || mopcode == OpC::InstCopyFromReg || mopcode == OpC::InstCopyToReg) {
 
-        auto mtype = minst->getDef()->type();
-        if (mtype == OpT::Float32 || mtype == OpT::Floatvec || mtype == OpT::Intvec) {
+        auto mtype = minst->ensureDef()->type();
+        auto mtype2 = minst->getOp(1)->type();
+        if ((mtype == OpT::Float32 || mtype == OpT::Floatvec || mtype == OpT::Intvec) &&
+            (mtype2 == OpT::Float32 || mtype2 == OpT::Floatvec || mtype2 == OpT::Intvec)) {
             if (!minst->getOp(1)->isImme()) { // chk use
                 return true;
             }

@@ -121,37 +121,50 @@ protected:
     template <typename Cx, typename Cy> void addBySet(Cx &victim, const Cy &set) {
         static_assert(std::is_same_v<typename Cx::value_type, typename Cy::value_type>,
                       "Cx Cy element types must be identical");
-
         for (const auto &ptr : set) {
             victim.insert(ptr);
         }
     }
+
     template <typename Cx, typename Cy> void delBySet(Cx &victim, const Cy &set) {
         static_assert(std::is_same_v<typename Cx::value_type, typename Cy::value_type>,
                       "Cx Cy element types must be identical");
-
         for (const auto &ptr : set) {
             victim.erase(ptr);
         }
     }
 
-    template <typename T, typename... Tsets> std::set<T> getUnion(Tsets... sets) {
-        std::set<T> union_set;
-        (union_set.insert(sets.begin(), sets.end()), ...);
-        return union_set;
+    // template <typename T, typename... Tsets> std::set<T> getUnion(Tsets... sets) {
+    //     std::set<T> union_set;
+    //     (union_set.insert(sets.begin(), sets.end()), ...);
+    //     return union_set;
+    // }
+
+    template <typename T, typename... Tsets> std::set<T> getUnion(const Tsets &...sets) {
+        std::unordered_set<T> temp;
+        (temp.insert(sets.begin(), sets.end()), ...);
+        return {temp.begin(), temp.end()};
     }
 
-    template <typename T, typename... Tsets> std::set<T> getExclude(std::set<T> victim, Tsets... sets) {
-        auto exclude_set = std::move(victim);
+    // template <typename T, typename... Tsets> std::set<T> getExclude(std::set<T> victim, Tsets... sets) {
+    //     auto exclude_set = std::move(victim);
 
-        auto lambda = [&exclude_set](const auto &set) -> void {
-            for (const auto &t : set) {
-                exclude_set.erase(t);
-            }
-        };
+    //     auto lambda = [&exclude_set](const auto &set) -> void {
+    //         for (const auto &t : set) {
+    //             exclude_set.erase(t);
+    //         }
+    //     };
 
-        (lambda(sets), ...);
-        return exclude_set;
+    //     (lambda(sets), ...);
+    //     return exclude_set;
+    // }
+
+    template <typename T, typename... Tsets> std::set<T> getExclude(const std::set<T> &victim, const Tsets &...sets) {
+        auto exclude_union = getUnion<T>(sets...);
+        std::set<T> result;
+        std::set_difference(victim.begin(), victim.end(), exclude_union.begin(), exclude_union.end(),
+                            std::inserter(result, result.end()));
+        return result;
     }
 
     /// @note selectspill时使用的启发式算法
@@ -161,6 +174,13 @@ protected:
 
     ///@note 溢出次数(包含opt)
     unsigned int spilltimes = 0;
+
+protected:
+    /// debug
+    auto find_if(const Nodes &set, unsigned recover) {
+        return std::find_if(set.begin(), set.end(),
+                            [&recover](const MIROperand_p &mop) { return mop->getRecover() == recover; });
+    };
 };
 
 class VectorRegisterAllocImpl : public RegisterAllocImpl {

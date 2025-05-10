@@ -41,14 +41,12 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
             minst->setOperand<1>(rhs);
             minst->setOperand<2>(lhs);
             modified |= true;
-        } else if (lhs->isImme() && rhs->isImme()) {
-            Err::unreachable("legalizeInst::trySwapOps: lhs and rhs are immes");
         } else {
             modified |= false;
         }
     };
 
-    auto loadImm = [&](MIROperand_p mop) -> MIROperand_p {
+    auto loadImm = [&](const MIROperand_p &mop) -> MIROperand_p {
         auto mop_new = MIROperand::asVReg(ctx.codeGenCtx().nextId(), mop->type());
 
         ctx.newInst(OpC::InstLoadImm)->setOperand<0>(mop_new)->setOperand<1>(mop);
@@ -80,6 +78,11 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
             minst->setOperand<2>(loadImm(rhs));
         }
 
+        auto lhs = minst->getOp(1);
+        if (lhs->isImme()) {
+            minst->setOperand<1>(loadImm(lhs));
+        }
+
     } break;
     case OpC::InstSub: {
         auto lhs = minst->getOp(1);
@@ -93,7 +96,6 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         }
     } break;
     case OpC::InstFCmp: {
-        ///@todo 这里需要验证
         auto lhs = minst->getOp(1);
         if (lhs->isImme()) {
             minst->setOperand<1>(loadImm(lhs));
@@ -105,10 +107,15 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         }
     } break;
     case OpC::InstMul: {
-        trySwapOps(minst);
+        trySwapOps(minst); // 没用似乎
         auto rhs = minst->getOp(2);
         if (rhs->isImme()) {
             minst->setOperand<2>(loadImm(rhs));
+        }
+
+        auto lhs = minst->getOp(1);
+        if (lhs->isImme()) {
+            minst->setOperand<1>(loadImm(lhs));
         }
     } break;
     case OpC::InstAnd:
@@ -219,13 +226,12 @@ void ISelInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
     switch (minst->opcode<OpC>()) {
     case OpC::InstSelect:
         Err::todo("preLegalizeInst: select inst not support yet");
-    case OpC::InstLoadGlobalAddress: {
-        auto &def = minst->getDef();
-
-    } break;
+    case OpC::InstLoadGlobalAddress:
+        /// nothing
+        break;
     case OpC::InstLoadImm:
     case OpC::InstLoadImmToReg: {
-        auto &def = minst->getDef();
+        auto &def = minst->ensureDef();
         auto &imme = minst->getOp(1);
 
         Err::gassert(def->isReg() && imme->isImme(), "preLegalizeInst: op type dont fit inst opc");

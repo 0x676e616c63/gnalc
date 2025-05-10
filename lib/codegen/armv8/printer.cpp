@@ -45,7 +45,7 @@ string ARMA64Printer::unaryPrinter(const MIRInst &minst) {
     string str;
     str += OpC2S(op) + '\t';
     str += reg2s(def, bitWide) + ",\t";
-    str += reg2s(lhs, bitWide) + ",\t";
+    str += reg2s(lhs, bitWide);
 
     return str;
 }
@@ -54,10 +54,11 @@ string ARMA64Printer::cmpPrinter(const MIRInst &minst) {
 
     const auto &lhs = minst.getOp(1);
     const auto &rhs = minst.getOp(2);
+    auto op = minst.opcode<OpC>();
 
     string str;
 
-    str += "cmp\t" + reg2s(lhs, getBitWide(lhs->type())) + ",\t";
+    str += OpC2S(op) + '\t' + reg2s(lhs, getBitWide(lhs->type())) + ",\t";
 
     if (rhs->isISA()) {
         str += reg2s(rhs, getBitWide(rhs->type()));
@@ -99,15 +100,20 @@ string ARMA64Printer::copyPrinter(const MIRInst &minst) {
         str += "mov\t" + reg2s(def, 8) + ",\t" + reg2s(use, 8);
 
     } else if (all_equal_pairs(defType, OpT::Int, useType, OpT::Int)) {
-
+        ///@note 最坏打算
         str += "mov\t" + reg2s(def, 8) + ",\t" + reg2s(use, 8);
 
     } else if (all_equal_pairs(defType, OpT::Int32, useType, OpT::Float32) ||
                all_equal_pairs(defType, OpT::Float32, useType, OpT::Int32)) {
 
-        str += "fmov\t" + reg2s(def, 8) + ",\t" + reg2s(use, 8);
+        str += "fmov\t" + reg2s(def, 4) + ",\t" + reg2s(use, 4);
+
+    } else if (all_equal_pairs(defType, OpT::Float32, useType, OpT::Float32)) {
+
+        str += "fmov\t" + reg2s(def, 4) + ",\t" + reg2s(use, 4);
 
     } else {
+        ///@todo vector regs 需要提供v<>寄存器的视图方式
         Err::todo("copyPrinter: vectorize todo");
     }
 
@@ -280,8 +286,8 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
                     lastReg = i;
                 } else {
                     str += "stp\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Int64), 8) + ", " +
-                           reg2s(MIROperand::asISAReg(lastReg, OpT::Int64), 8) + ", " + "[sp, #" +
-                           std::to_string(offset) + "]\n    ";
+                           reg2s(MIROperand::asISAReg(i, OpT::Int64), 8) + ", " + "[sp, #" + std::to_string(offset) +
+                           "]\n    ";
 
                     lastReg = -1;
                     offset += 16;
@@ -305,7 +311,7 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
                     lastReg = i;
                 } else {
                     str += "stp\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec), 16) + ", " +
-                           reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec), 16) + ", " + "[sp, #" +
+                           reg2s(MIROperand::asISAReg(i, OpT::Floatvec), 16) + ", " + "[sp, #" +
                            std::to_string(offset) + "]\n    ";
 
                     lastReg = -1;
@@ -336,8 +342,8 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
                     lastReg = i;
                 } else {
                     str += "ldp\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Int64), 8) + ", " +
-                           reg2s(MIROperand::asISAReg(lastReg, OpT::Int64), 8) + ", " + "[sp, #" +
-                           std::to_string(offset) + "]\n    ";
+                           reg2s(MIROperand::asISAReg(i, OpT::Int64), 8) + ", " + "[sp, #" + std::to_string(offset) +
+                           "]\n    ";
 
                     lastReg = -1;
                     offset += 16;
@@ -361,7 +367,7 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
                     lastReg = i;
                 } else {
                     str += "ldp\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec), 16) + ", " +
-                           reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec), 16) + ", " + "[sp, #" +
+                           reg2s(MIROperand::asISAReg(i, OpT::Floatvec), 16) + ", " + "[sp, #" +
                            std::to_string(offset) + "]\n    ";
 
                     lastReg = -1;
@@ -374,8 +380,8 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
             str += "ldr\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec), 16) + ", " + "[sp, " +
                    std::to_string(offset) + "]\n";
 
-            lastReg = -1;
-            offset += 16;
+            // lastReg = -1;
+            // offset += 16;
         }
     }
 

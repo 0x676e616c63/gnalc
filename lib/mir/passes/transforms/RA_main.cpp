@@ -91,10 +91,6 @@ void RegisterAllocImpl::Main(FAM &fam) {
 void RegisterAllocImpl::AddEdge(const MIROperand_p &u, const MIROperand_p &v) {
     Edge edge{u, v};
 
-    if (u->reg() == 1342178233 || v->reg() == 1342178233) {
-        int debug;
-    }
-
     if (u != v && !adjSet.count(edge)) {
         adjSet.insert(std::move(edge));
 
@@ -393,6 +389,7 @@ void RegisterAllocImpl::AssignColors() {
 
             const auto &w_a = GetAlias(w);
 
+            ///@todo 有个bug这里需要修
             if (getUnion<MIROperand_p>(coloredNodes, precolored).count(w_a)) {
 
                 Err::gassert(w_a->isVRegOrISAReg(), "try assign color for a none virReg op");

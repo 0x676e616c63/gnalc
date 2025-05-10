@@ -109,6 +109,10 @@ void MIR_new::lowerInst(const IR::pBinary &binary, LoweringContext &ctx) {
     auto mop = MIR_new::IROpCodeConvert(binary->getOpcode());
     auto def = ctx.newVReg(binary->getType());
 
+    if (def->getRecover() == 1342177370) {
+        int debug;
+    }
+
     ctx.newInst(MIRInst::make(mop)
                     ->setOperand<0>(def)
                     ->setOperand<1>(ctx.mapOperand(binary->getLHS()))
@@ -264,8 +268,15 @@ void MIR_new::lowerInst(const IR::pStore &store, LoweringContext &ctx, size_t si
 void MIR_new::lowerInst(const IR::pCast &cast, LoweringContext &ctx) {
     auto def = ctx.newVReg(cast->getType());
 
-    ///@note ctx.mapOperand(cast->getOVal()) may get a stk op
-    ctx.addCopy(def, ctx.mapOperand(cast->getOVal()));
+    using OP = IR::OP;
+    if (cast->getOpcode() == OP::SITOFP) {
+        ctx.newInst(MIRInst::make(OpC::InstS2F)->setOperand<0>(def)->setOperand<1>(ctx.mapOperand(cast->getOVal())));
+    } else if (cast->getOpcode() == OP::FPTOSI) {
+        ctx.newInst(MIRInst::make(OpC::InstF2S)->setOperand<0>(def)->setOperand<1>(ctx.mapOperand(cast->getOVal())));
+    } else {
+        ///@note ctx.mapOperand(cast->getOVal()) may get a stk op
+        ctx.addCopy(def, ctx.mapOperand(cast->getOVal()));
+    }
 
     ctx.addOperand(cast, def);
 }

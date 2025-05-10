@@ -78,7 +78,7 @@ public:
         Err::gassert(std::is_same_v<T, int> || std::is_same_v<T, float> || std::is_same_v<T, Cond>,
                      "mapOperand: try mapping an unknown type const");
 
-        ///@warning dont add cond to constMap
+        ///@warning dont add cond to constMap, not necessary
         if constexpr (std::is_same_v<T, Cond>) {
             MIROperand_p mconst = MIROperand::asImme<T>(imme, OpT::CondFlag);
             return mconst;
@@ -88,18 +88,37 @@ public:
 
         MIROperand_p mconst = nullptr;
 
-        if (!mConstMap.count(imme_idx)) {
+        //
+        auto make_new = [&]() {
             if constexpr (std::is_same_v<T, int>) {
                 mconst = MIROperand::asImme<T>(imme, OpT::Int32);
             } else if constexpr (std::is_same_v<T, float>) {
                 mconst = MIROperand::asImme<T>(imme, OpT::Float32);
             }
-
             mConstMap.emplace(imme_idx, mconst);
+
+            return mconst;
+        };
+        //
+
+        if (!mConstMap.count(imme_idx)) {
+            return make_new();
         } else {
             mconst = mConstMap.at(imme_idx);
+
+            if constexpr (std::is_same_v<T, int>) {
+                if (mconst->type() != OpT::Int32) {
+                    return make_new();
+                }
+            } else if constexpr (std::is_same_v<T, float>) {
+                if (mconst->type() != OpT::Float32) {
+                    return make_new();
+                }
+            }
+
+            return mconst;
         }
-        return mconst;
+        //
     }
 
     void setCurrentBlk(MIRBlk_p blk) { mCurrentBlk = std::move(blk); }

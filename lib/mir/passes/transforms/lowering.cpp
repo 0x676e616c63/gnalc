@@ -291,6 +291,8 @@ MIRGlobal_p MIR_new::loweringGlobal(const IR::GlobalVariable &global) {
         auto merge = [](MIRStorage &pre, MIRStorage &nxt) {
             size_t new_size = pre.isSize() ? pre.store<size_t>() : 4LL;
             new_size += nxt.isSize() ? nxt.store<size_t>() : 4LL;
+
+            pre.mstore = new_size; // .zero ...
         };
 
         // LAMBDA_END
@@ -298,10 +300,12 @@ MIRGlobal_p MIR_new::loweringGlobal(const IR::GlobalVariable &global) {
         recursive(initer);
 
         ///@note merge the neighbor sizeStores
-        for (auto it = datas.begin(); it != datas.end() && std::next(it) != datas.end(); ++it) {
+        for (auto it = datas.begin(); it != datas.end() && std::next(it) != datas.end();) {
             if (isStoreZero(it) && isStoreZero(std::next(it))) {
                 merge(*it, *std::next(it));
                 datas.erase(std::next(it));
+            } else {
+                ++it;
             }
         }
 
@@ -416,7 +420,27 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
 
             for (auto &use_phi : inst->getPhiOpers()) {
                 auto &mblk_src = blkMap.at(use_phi.block);
-                auto &use = valMap.at(use_phi.value);
+
+                MIR_new::MIROperand_p use;
+                if (valMap.count(use_phi.value)) {
+                    use = valMap.at(use_phi.value);
+                } else {
+                    auto &phiop = use_phi.value;
+                    Err::gassert(phiop->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL,
+                                 "lowerFunc: cant map a phi op");
+                    ///@todo vectorize
+                    if (auto ci1 = phiop->as<IR::ConstantI1>()) {
+                        use = MIROperand::asImme(ci1->getVal(), OpT::Int32);
+                    } else if (auto ci8 = phiop->as<IR::ConstantI8>()) {
+                        use = MIROperand::asImme(ci8->getVal(), OpT::Int32);
+                    } else if (auto ci32 = phiop->as<IR::ConstantInt>()) {
+                        use = MIROperand::asImme(ci32->getVal(), OpT::Int32);
+                    } else if (auto f32 = phiop->as<IR::ConstantFloat>()) {
+                        use = MIROperand::asImme(f32->getVal(), OpT::Float32);
+                    } else {
+                        Err::unreachable("unexpected phiop type");
+                    }
+                }
 
                 if (tmpBlkMap.count(use_phi.block)) {
                     tmpBlkMap.at(use_phi.block).pairs.emplace_back(def, use);

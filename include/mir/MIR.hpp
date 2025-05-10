@@ -194,7 +194,7 @@ private:
 
     unsigned recover = -1; // assign之后用于保存原有的VReg, debug用
 public:
-    void setRecover(unsigned id) { recover = id; }
+    void setRecover(unsigned id) { recover = id; } // for constructors
     unsigned getRecover() const { return recover; }
 
 public:
@@ -234,6 +234,8 @@ public:
     bool isReg() const { return std::holds_alternative<MIRReg_p>(mOperand); }
     bool isVReg() const { return isReg() && isVirtualReg(reg()); }
     bool isISA() const { return isReg() && isISAReg(reg()); }
+    // for RA
+    bool isPreColored() const { return isReg() && isISA() && isISAReg(recover); }
     bool isStack() const { return isReg() && isStkObj(reg()); }
     bool isReloc() const { return std::holds_alternative<MIRRelocable_p>(mOperand); }
     bool isProb() const { return std::holds_alternative<double>(mOperand); }
@@ -277,7 +279,10 @@ public:
     }
 
     static MIROperand_p asVReg(unsigned reg, OpT type) {
-        return make<MIROperand>(make<MIRReg>(reg + VRegBegin), type); // auto add VRegBegin here
+        auto vreg = make<MIROperand>(make<MIRReg>(reg + VRegBegin), type); // auto add VRegBegin here
+
+        vreg->setRecover(reg + VRegBegin);
+        return vreg;
     }
 
     static MIROperand_p asStkObj(unsigned reg, OpT type) {
