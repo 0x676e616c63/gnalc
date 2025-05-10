@@ -61,6 +61,9 @@ aux_source_directory(lib/pattern_match GNALC_PTM_SRC)
 # Utilities
 aux_source_directory(lib/utils GNALC_UTILS_SRC)
 
+# Expr Solver
+aux_source_directory(lib/expr_solver GNALC_EXPR_SOLVER_SRC)
+
 # BrainFk Extension
 aux_source_directory(lib/codegen/brainfk GNALC_EXT_BFBKD_SRC)
 
@@ -98,6 +101,7 @@ set(GGC_SRC
         ${GNALC_UTILS_SRC})
 
 # debug driver
+add_executable(expr_solver tools/driver/debug/expr_solver.cpp ${GNALC_EXPR_SOLVER_SRC} ${GNALC_UTILS_SRC})
 add_executable(pmtest tools/driver/debug/pmtest.cpp ${GNALC_SRC})
 add_executable(bfhelper tools/driver/debug/bfhelper.cpp)
 target_compile_definitions(bfhelper PRIVATE GNALC_EXTENSION_BRAINFK)
