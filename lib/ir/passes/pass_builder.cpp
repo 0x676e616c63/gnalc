@@ -172,6 +172,12 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
         return fpm;
     };
 
+    auto make_vectorizer = [&options] {
+        FPM fpm;
+        FUNCTION_TRANSFORM(vectorizer, LoopSimplifyPass(), VectorizerPass())
+        return fpm;
+    };
+
     FPM fpm;
     fpm.addPass(NameNormalizePass(true));
     FUNCTION_TRANSFORM(mem2reg, PromotePass());
@@ -179,6 +185,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
     fpm.addPass(make_clean());
     fpm.addPass(make_arithmetic());
     fpm.addPass(make_loop());
+    // fpm.addPass(make_vectorizer());
     fpm.addPass(make_clean());
     fpm.addPass(CodeGenPreparePass());
     fpm.addPass(NameNormalizePass(true));
