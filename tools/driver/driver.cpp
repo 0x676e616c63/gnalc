@@ -253,7 +253,7 @@ Extensions:
 #endif
             // 0x676e616c63
             auto magic = "\x67\x6e\x61\x6c\x63";
-            std::cout << "This " << magic << " has Super Loong Powers." << std::endl;
+            std::cout << "\nThis " << magic << " has Super Loong Powers." << std::endl;
             return 0;
         }
         else if (arg == "loong") {

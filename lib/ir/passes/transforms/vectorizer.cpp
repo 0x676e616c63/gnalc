@@ -31,32 +31,40 @@ std::ostream &operator<<(std::ostream &os, const VectorizerPass &vec) {
 // Check if instructions are isomorphic.
 bool isIsomorphic(const pInst &stmt1, const pInst &stmt2) { return stmt1->getOpcode() == stmt2->getOpcode(); }
 
-// Check if there is use-def dependency between two instructions.
-bool isIndependent(const pInst &stmt1, const pInst &stmt2) {
-    auto AhasUseToB = [](const pInst &a, const pInst &b) {
-        std::vector<pVal> worklist;
-        for (const auto &oper : a->operands())
-            worklist.emplace_back(oper);
+bool AhasUseToB(const pInst &a, const pInst &b) {
+    std::vector<pVal> worklist;
+    for (const auto &oper : a->operands())
+        worklist.emplace_back(oper);
 
-        std::unordered_set<pVal> visited;
-        while (!worklist.empty()) {
-            auto curr = worklist.back();
-            worklist.pop_back();
-            visited.emplace(curr);
+    std::unordered_set<pVal> visited;
+    while (!worklist.empty()) {
+        auto curr = worklist.back();
+        worklist.pop_back();
+        visited.emplace(curr);
 
-            if (curr == b)
-                return true;
+        if (curr == b)
+            return true;
 
-            if (auto curr_user = curr->as<User>()) {
-                for (const auto &oper : curr_user->operands()) {
-                    if (!visited.count(oper))
-                        worklist.emplace_back(oper);
-                }
+        if (auto curr_user = curr->as<User>()) {
+            for (const auto &oper : curr_user->operands()) {
+                if (!visited.count(oper))
+                    worklist.emplace_back(oper);
             }
         }
-        return false;
-    };
+    }
+    return false;
+}
 
+struct InstPairHash {
+    size_t operator()(const std::pair<pInst, pInst> &pair) const {
+        size_t seed = std::hash<pInst>()(pair.first);
+        Util::hashSeedCombine(seed, std::hash<pInst>()(pair.second));
+        return seed;
+    }
+};
+
+// Check if there is use-def dependency between two instructions.
+bool isIndependent(const pInst &stmt1, const pInst &stmt2) {
     return !AhasUseToB(stmt2, stmt1) && !AhasUseToB(stmt1, stmt2);
 }
 
@@ -252,6 +260,12 @@ VectorizerPass::Pack VectorizerPass::Pack::truncate(size_t size, size_t id_) {
 
 const pInst &VectorizerPass::Pack::front() const { return stmts.front(); }
 const pInst &VectorizerPass::Pack::back() const { return stmts.back(); }
+
+const pInst &VectorizerPass::Pack::pos_index_back() const {
+    return *std::max_element(stmts.begin(), stmts.end(), [](const pInst &a, const pInst &b) {
+        return a->getIndex() < b->getIndex();
+    });
+}
 
 // Check if two instructions can be packed together.
 bool VectorizerPass::stmtCanPack(const pInst &stmt1, const pInst &stmt2) {
@@ -472,70 +486,85 @@ void VectorizerPass::rearrangePack() {
 }
 
 // For an instruction, collect all its users in post order.
-// Returns: (has cycle, users in post order)
+// Returns: (has phi, users in post order)
 //
-//                                   e
-//                                   |
-//                                  uses
-//                                   |
 //       a -- uses --> b -- uses --> c
 //         -- uses --> d
 //
-// Given c, Returns: (false, [c, b, a, e])
-std::pair<bool, std::vector<pInst>> collectUserTreeInBlock(const pInst &seed) {
+// Given a, Returns: (false, [a, b, c, d])
+std::pair<bool, std::vector<pInst>> collectOperandTreeInBlock(const pInst &seed) {
     std::vector worklist{seed};
     std::unordered_set visited{seed};
-    bool has_cycle = false;
+    bool has_phi = false;
     std::vector<pInst> ret;
     while (!worklist.empty()) {
         auto curr = worklist.back();
         worklist.pop_back();
-        visited.emplace(curr);
 
+        visited.emplace(curr);
         ret.emplace_back(curr);
 
-        for (auto inst_user : curr->inst_users()) {
-            if (inst_user->getParent() != seed->getParent())
+        if (curr->is<PHIInst>())
+            has_phi = true;
+
+        for (auto oper : curr->operands()) {
+            auto inst_oper = oper->as<Instruction>();
+            if (!inst_oper || inst_oper->getParent() != seed->getParent())
                 continue;
 
-            if (!visited.count(inst_user))
-                worklist.emplace_back(inst_user);
-            else
-                has_cycle = true;
+            if (!visited.count(inst_oper))
+                worklist.emplace_back(inst_oper);
         }
     }
 
-    return {has_cycle, ret};
+    return {has_phi, ret};
+}
+
+bool isDisjoint(const VectorizerPass::Pack &pack1, const VectorizerPass::Pack &pack2) {
+    return pack1.back()->getIndex() < pack2.front()->getIndex() ||
+        pack2.back()->getIndex() < pack1.front()->getIndex();
 }
 
 // FIXME: Need Optimization.
 void VectorizerPass::removeUnschedulable() {
-    auto one_pass = [&] {
+    // If packs with use-def dependency is not disjoint, remove one.
+    auto joint_one_pass = [&] {
+        for (auto it1 = pack_set.begin(); it1 != pack_set.end(); ++it1) {
+            for (auto it2 = pack_set.begin(); it2 != pack_set.end(); ++it2) {
+                if (it1 == it2)
+                    continue;
+
+                auto should_remove = [&] {
+                    if (!isDisjoint(*it1, *it2)) {
+                        for (const auto &inst : it1->stmts) {
+                            for (const auto& inst2 : it2->stmts)
+                                if (!isIndependent(inst, inst2))
+                                    return true;
+                        }
+                    }
+                    return false;
+                }();
+                if (should_remove) {
+                    // FIXME: Remove which one?
+                    pack_set.erase(it1);
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+    while (joint_one_pass())
+        ;
+
+
+    auto no_phi_one_pass = [&] {
         for (auto it = pack_set.begin(); it != pack_set.end(); ++it) {
             const auto &pack = *it;
             auto should_remove = [&] {
                 for (const auto &inst : pack.stmts) {
-                    const auto [has_cycle, users] = collectUserTreeInBlock(inst);
-                    if (has_cycle)
+                    const auto [has_phi, users] = collectOperandTreeInBlock(inst);
+                    if (has_phi)
                         return true;
-
-                    if (!users.empty())
-                        continue;
-
-                    for (const auto &user : users) {
-                        if (user->getIndex() > pack.back()->getIndex() || stmtInPack(user))
-                            continue;
-
-                        // They can't be scheduled.
-                        if (auto call = user->as<CALLInst>()) {
-                            if (hasSideEffect(*fam, call->getFunc()))
-                                return true;
-                            continue;
-                        }
-
-                        if (!user->is<BinaryInst, FNEGInst, GEPInst, CastInst>())
-                            return true;
-                    }
                 }
                 return false;
             }();
@@ -548,7 +577,7 @@ void VectorizerPass::removeUnschedulable() {
         return false;
     };
 
-    while (one_pass())
+    while (no_phi_one_pass())
         ;
 
     if constexpr (log_step_by_step)
@@ -745,7 +774,7 @@ pVal VectorizerPass::gatherVector(Pack *user_pack, const std::function<pVal(cons
         return true;
     }();
 
-    auto insert_before = user_pack->back()->getIter();
+    auto insert_before = user_pack->pos_index_back()->getIter();
     // Shuffle
     if (emit_shuffle) {
         Err::gassert(vectors_to_shuffle.size() == 1 || vectors_to_shuffle.size() == 2);
@@ -803,9 +832,7 @@ pVal VectorizerPass::gatherVector(Pack *user_pack, const std::function<pVal(cons
                                 "%slp.ex" + std::to_string(name_cnt++), sched_vec, cpool.getConst(static_cast<int>(j)));
                             curr_block->addInst(insert_before, extract);
                             to_insert = extract;
-                            // Err::gassert(sched_vec->getIndex() < extract->getIndex());
-                            if (sched_vec->getIndex() >= extract->getIndex())
-                                Logger::logCritical("[SLP]: ", user_pack->id, " -> ", cand->id);
+                            Err::gassert(sched_vec->getIndex() < extract->getIndex());
                             return;
                         }
                     }
@@ -870,7 +897,7 @@ bool VectorizerPass::schedule() {
 
     auto rpo = computeTopologicalOrder();
     for (const auto &curr : rpo) {
-        auto insert_before = curr->back()->getIter();
+        auto insert_before = curr->pos_index_back()->getIter();
         if (auto load = curr->front()->as<LOADInst>()) {
             auto bitcast = std::make_shared<BITCASTInst>("%slp.bc" + std::to_string(name_cnt++), load->getPtr(),
                                                          makePtrType(makeVectorType(load->getType(), curr->size())));
@@ -933,18 +960,26 @@ bool VectorizerPass::schedule() {
                     // Move the use after the def, we've ensured the safety in removeUnschedulable.
                     if (user->getParent() == curr_block && user->getIndex() < extract->getIndex()) {
                         std::vector<pInst> worklist;
-                        auto [cycle, user_po] = collectUserTreeInBlock(user);
-                        Err::gassert(!cycle);
-                        auto move_before = std::next(extract->getIter());
-                        for (const auto &moving_user : user_po) {
-                            // Only move down
-                            if (moving_user->getIndex() > user->getIndex())
+                        auto [has_phi, opers] = collectOperandTreeInBlock(extract);
+                        std::sort(opers.begin(), opers.end(),
+                        [](const pInst &a, const pInst &b) { return a->getIndex() > b->getIndex(); });
+                        Err::gassert(!has_phi);
+                        auto move_before = user->getIter();
+                        auto move_before_index = user->getIndex();
+                        for (const auto &moving_oper : opers) {
+                            // Only move forward
+                            if (moving_oper->getIndex() < move_before_index)
                                 continue;
 
-                            curr_block->delFirstOfInst(moving_user);
-                            curr_block->addInst(move_before, moving_user);
+                            Err::gassert(!moving_oper->is<PHIInst>());
+                            curr_block->delFirstOfInst(moving_oper);
+                            curr_block->addInst(move_before, moving_oper);
+
                             Logger::logDebug("[SLP]: In BasicBlock '", curr_block->getName(), "': Moving '",
-                                             moving_user->getName(), "' before '", (*move_before)->getName(), "'.");
+                                             moving_oper->getName(), "' before '", (*move_before)->getName(), "'.");
+
+                            move_before = moving_oper->getIter();
+                            move_before_index = moving_oper->getIndex();
                         }
                     }
                 }

@@ -46,6 +46,8 @@ private:
 
         const pInst& front() const;
         const pInst& back() const;
+
+        const pInst& pos_index_back() const;
     };
 
     Function* curr_func;
@@ -83,6 +85,7 @@ private:
     void cleanup();
     void reset();
 
+    friend bool isDisjoint(const Pack &, const Pack &);
     friend std::ostream &operator<<(std::ostream &os, const Pack &expr);
     friend std::ostream &operator<<(std::ostream &os, const VectorizerPass &expr);
 public:
