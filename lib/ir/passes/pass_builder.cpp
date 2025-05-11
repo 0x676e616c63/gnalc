@@ -174,7 +174,9 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
 
     auto make_vectorizer = [&options] {
         FPM fpm;
+        fpm.addPass(PrintFunctionPass(std::cerr));
         FUNCTION_TRANSFORM(vectorizer, LoopSimplifyPass(), VectorizerPass())
+        fpm.addPass(PrintFunctionPass(std::cerr));
         return fpm;
     };
 
