@@ -23,13 +23,14 @@ template <typename T, typename... Args> std::unique_ptr<T> makeu(const Args... a
     return std::make_unique<T>(args...);
 }
 
-enum class OperandType {
-    Int, // when use reg adjustment
+enum class OperandType : uint32_t {
+    Int, // X<> 默认位宽
     Int16,
     Int32, // original int32, or extend from int8, int16
     Int64,
     Ptr = Int64,
     Intvec,
+    Float, // V<> 默认位宽
     Float32,
     Floatvec,
     special, // prob, alignment, load/store size...
@@ -45,11 +46,11 @@ using OpT = OperandType;
 
 inline unsigned getBitWide(OpT type) {
     switch (type) {
-    case OpT::Int:
-        // use int when opt or legal with unclear type, extend the bitwide
-        return 16;
+    case OpT::Int: // default length
+    case OpT::Float:
+        return 8;
     case OpT::Int16:
-        return 2;
+        return 2; // mei yong
     case OpT::High32:
     case OpT::Low32:
     case OpT::Int32:
@@ -64,6 +65,11 @@ inline unsigned getBitWide(OpT type) {
         Err::unreachable("getBitWide: type not support a bitwide");
     }
     return 4; // just to make gnalc happy
+}
+
+// 默认位宽寄存器向短位宽寄存器兼容
+template <typename... OpT> inline unsigned getBitWideChoosen(OpT... types) {
+    return (std::min({getBitWide(types)...})); //
 }
 
 enum MIRInstCond : unsigned { AL, EQ, NE, LT, GT, LE, GE };
@@ -186,11 +192,15 @@ constexpr inline bool isVirtualReg(uint32_t x) { return (x & VRegBegin) == VRegB
 constexpr inline bool isStkObj(uint32_t x) { return (x & StkObjBegin) == StkObjBegin; }
 
 class MIROperand {
+public:
+    static std::map<unsigned, MIROperand_p> ISApool; // isa 为了保证单例模式所以只能使用默认位宽
+
 private:
     std::variant<std::monostate, MIRReg_p, MIRRelocable_p, unsigned, uint64_t, double> mOperand{std::monostate{}};
-    OpT mType = OpT::special;
-
-    static std::map<unsigned, std::map<OpT, MIROperand_p>> ISApool;
+    OpT mType = OpT::special; // 不得不说把mType放这儿真是个败笔
+                              // 没有默认位宽会破坏isaRegs单例,
+                              // 存在默认位宽codeGen又需要判定位宽
+                              // 不如mirA32直接位宽信息放在inst里
 
     unsigned recover = -1; // assign之后用于保存原有的VReg, debug用
 public:
@@ -246,10 +256,12 @@ public:
     bool operator!=(const MIROperand &other) const { return mOperand != other.mOperand; }
 
     template <typename T> static MIROperand_p asImme(T val, OpT type) {
-        if constexpr (std::is_same_v<T, int> || std::is_same_v<T, float> || std::is_same_v<T, unsigned> ||
-                      std::is_same_v<T, Cond>) {
+        if constexpr (std::is_same_v<T, int> || std::is_same_v<T, unsigned> || std::is_same_v<T, Cond>) {
             unsigned encoding = *reinterpret_cast<unsigned *>(&val);
-            return make<MIROperand>(encoding, type);
+            return make<MIROperand>(encoding, OpT::Int64); // instadd and instaddsp
+        } else if constexpr (std::is_same_v<T, float>) {
+            unsigned encoding = *reinterpret_cast<unsigned *>(&val);
+            return make<MIROperand>(encoding, OpT::Float32);
         } else if constexpr (std::is_same_v<T, uint64_t>) {
             return make<MIROperand>(val, type); //
         } else {
@@ -268,12 +280,13 @@ public:
     static MIROperand_p asISAReg(unsigned reg, OpT type) {
         Err::gassert(isISAReg(reg), "MIROperand::asISAReg: input reg doesnt match: " + std::to_string(reg));
 
-        if (ISApool.count(reg) && ISApool.at(reg).count(type)) {
-            return ISApool[reg][type];
+        if (ISApool.count(reg)) {
+            return ISApool[reg];
         } else {
-            auto newISA = make<MIROperand>(make<MIRReg>(reg), type);
+            auto newISA =
+                make<MIROperand>(make<MIRReg>(reg), inRange(type, OpT::Int, OpT::Int64) ? OpT::Int : OpT::Float);
             newISA->setRecover(reg);
-            ISApool[reg][type] = newISA;
+            ISApool[reg] = newISA;
             return newISA;
         }
     }

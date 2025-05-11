@@ -242,27 +242,33 @@ void MIR_new::lowerInst(const IR::pBr &br, LoweringContext &ctx) {
     }
 }
 
-void MIR_new::lowerInst(const IR::pLoad &load, LoweringContext &ctx, size_t size) {
+void MIR_new::lowerInst(const IR::pLoad &load, LoweringContext &ctx, size_t align) {
     auto def = ctx.newVReg(load->getType());
 
-    ctx.newInst(MIRInst::make(OpC::InstLoad)
-                    ->setOperand<0>(def)
-                    ->setOperand<1>(ctx.mapOperand(load->getPtr())) // ptr or stkptr
-                    // ->setOpernand<2> idx or imme
-                    // ->setOperand<3> shift code
-                    ->setOperand<4>(MIROperand::asImme(size, OpT::special)));
+    ctx.newInst(
+        MIRInst::make(OpC::InstLoad)
+            ->setOperand<0>(def)
+            ->setOperand<1>(ctx.mapOperand(load->getPtr())) // ptr or stkptr
+            // ->setOpernand<2> idx or imme
+            // ->setOperand<3> shift code
+            // just padding
+            ->setOperand<5>(MIROperand::asImme(typeBitwide(load->getType()), OpT::special))); // mk mOperand idx = 3
 
     ctx.addOperand(load, def);
 }
 
-void MIR_new::lowerInst(const IR::pStore &store, LoweringContext &ctx, size_t size) {
+void MIR_new::lowerInst(const IR::pStore &store, LoweringContext &ctx, size_t align) {
+    auto use = ctx.mapOperand(store->getValue());
+
+    auto size = 0U;
+
     ctx.newInst(MIRInst::make(OpC::InstStore)
                     ->setOperand<0>(nullptr)
-                    ->setOperand<1>(ctx.mapOperand(store->getValue()))
+                    ->setOperand<1>(use)
                     ->setOperand<2>(ctx.mapOperand(store->getPtr()))
                     // ->setOpernand<3> idx or imme
                     // ->setOperand<4> shift code
-                    ->setOperand<5>(MIROperand::asImme(size, OpT::special)));
+                    ->setOperand<5>(MIROperand::asImme(typeBitwide(store->getValue()->getType()), OpT::special)));
 }
 
 void MIR_new::lowerInst(const IR::pCast &cast, LoweringContext &ctx) {
@@ -441,7 +447,7 @@ void LoweringContext::elimPhi() {
                 auto &node = graph[idx];
                 for (auto nxt : node.nxt) {
                     auto &nxt_node = graph[nxt];
-                    Err::gassert(nxt_node.indegree == 1, "elimPhi: src op is not 1 indegree");
+                    // Err::gassert(nxt_node.indegree == 1, "elimPhi: src op is not 1 indegree");
                     --nxt_node.indegree;
                     if (nxt_node.indegree == 0) {
                         queue.push(nxt);

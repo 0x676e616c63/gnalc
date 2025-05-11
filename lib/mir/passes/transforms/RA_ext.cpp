@@ -59,7 +59,8 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getDef(const MIRInst_p &minst) {
     Nodes defs;
 
     if (!minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::BL) {
-        for (int i = 0; i < 18; ++i) {
+
+        for (int i = 0; i < 19; ++i) {
             defs.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i), OpT::Int));
         }
 
@@ -129,7 +130,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
 
     ++spilltimes;
 
-    Nodes stageValues{};
+    Nodes stageValues;
 
     auto mtype = mop->type();
     auto stkobj = mfunc->addStkObj(mfunc->CodeGenContext(), getSize(mtype), getSize(mtype), 0, StkObjUsage::Spill);
@@ -143,7 +144,10 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
 
             if (auto it_op = uses.find(mop); it_op != uses.end()) {
                 auto readStage = MIROperand::asVReg(ctx.nextId(), mtype);
-                auto minst_load = MIRInst::make(OpC::InstLoad)->setOperand<0>(readStage)->setOperand<1>(stkobj);
+                auto minst_load = MIRInst::make(OpC::InstLoad)
+                                      ->setOperand<0>(readStage)
+                                      ->setOperand<1>(stkobj)
+                                      ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special));
 
                 minsts.insert(it, minst_load);
 
@@ -154,7 +158,10 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
 
             if (auto it_op = defs.find(mop); it_op != defs.end()) {
                 auto writeStage = MIROperand::asVReg(ctx.nextId(), mtype);
-                auto minst_store = MIRInst::make(OpC::InstStore)->setOperand<1>(writeStage)->setOperand<2>(stkobj);
+                auto minst_store = MIRInst::make(OpC::InstStore)
+                                       ->setOperand<1>(writeStage)
+                                       ->setOperand<2>(stkobj)
+                                       ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special));
 
                 minsts.insert(std::next(it), minst_store);
 
@@ -165,7 +172,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
         }
     }
 
-    // Err::gassert(stageValues.size(), "spill: get no spill on a spilled Node");
+    // Err::gassert(stageValues.size(), "spill: get no spill on a spilled Node: " + std::to_string(mop->getRecover()));
 
     return stageValues;
 }
@@ -197,7 +204,7 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getUse(const MIRInst_p &minst)
 
     if (!minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::BL) {
         for (int i = 0; i < 16; ++i) {
-            uses.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i + 32U), OpT::Int));
+            uses.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i + 32U), OpT::Float));
         }
 
         return uses;
@@ -221,7 +228,7 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getDef(const MIRInst_p &minst)
 
     if (!minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::BL) {
         for (int i = 0; i < 16; ++i) {
-            defs.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i + 32U), OpT::Float32));
+            defs.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i + 32U), OpT::Float));
         }
 
         return defs;

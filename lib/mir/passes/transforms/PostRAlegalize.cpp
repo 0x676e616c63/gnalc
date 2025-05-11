@@ -73,6 +73,7 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l &minsts, MIRInst
             } else {
                 // no offset
                 minst->resetOpcode(ARMOpC::LDR);
+                Err::gassert(minst->getOp(5) != nullptr, "PostRAlegalizeImpl::runOnInst: InstLoad info lack");
             }
 
         } break;
@@ -97,6 +98,7 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l &minsts, MIRInst
                 _ctx.iselInfo.legalizeWithStkOp(ctx, mop, obj);
             } else {
                 minst->resetOpcode(ARMOpC::STR);
+                Err::gassert(minst->getOp(5) != nullptr, "PostRAlegalizeImpl::runOnInst: InstLoad info lack");
             }
 
         } break;

@@ -32,6 +32,20 @@ OpT MIR_new::btypeConvert(const IR::BType &type) {
     return OpT::Int; // just to make clang happy
 }
 
+unsigned MIR_new::typeBitwide(const IR::pType &type) {
+    if (auto btype = type->as<IR::BType>()) {
+        return 4;
+    } else if (auto ptrtype = type->as<IR::PtrType>()) {
+        return 8;
+    } else if (auto vectype = type->as<IR::VectorType>()) {
+        Err::todo("typeBitwide: vec todo");
+        // return 16;
+    } else if (auto arraytype = type->as<IR::ArrayType>()) {
+        Err::unreachable("typeBitwide: array type not supported");
+    }
+    return 8; // just make clang happy
+}
+
 MIRBlk_p LoweringContext::mapBlk(const IRBlk_p &blk) const { return mBlkMap.at(blk); }
 
 MIRGlobal_p LoweringContext::mapGlobal(const string &global) const { return mGlobalMap.at(global); }

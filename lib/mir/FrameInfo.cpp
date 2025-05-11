@@ -97,7 +97,10 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
             mval = reg;
         }
 
-        ctx.newInst(MIRInst::make(OpC::InstStoreRegToStack)->setOperand<1>(mval)->setOperand<2>(obj));
+        ctx.newInst(MIRInst::make(OpC::InstStoreRegToStack)
+                        ->setOperand<1>(mval)
+                        ->setOperand<2>(obj)
+                        ->setOperand<5>(MIROperand::asImme(getBitWide(mval->type()), OpT::special)));
     }
 
     // LAMBDA BEGIN
@@ -313,7 +316,10 @@ void FrameInfo::makePrologue(MIRFunction_p mfunc, LoweringContext &ctx) const {
 
         auto stkobj = mfunc->addStkObj(ctx.CodeGenCtx(), size, align, offset, StkObjUsage::Arg);
 
-        ctx.newInst(MIRInst::make(OpC::InstLoadRegFromStack)->setOperand<0>(arg)->setOperand<1>(stkobj));
+        ctx.newInst(MIRInst::make(OpC::InstLoadRegFromStack)
+                        ->setOperand<0>(arg)
+                        ->setOperand<1>(stkobj)
+                        ->setOperand<5>(MIROperand::asImme(getBitWide(arg->type()), OpT::special)));
         // addOperand already
     }
 }

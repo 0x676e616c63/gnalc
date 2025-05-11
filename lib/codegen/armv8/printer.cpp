@@ -20,7 +20,7 @@ string ARMA64Printer::binaryPrinter(const MIRInst &minst) {
     const auto &lhs = minst.getOp(1)->isISA() ? minst.getOp(1) : MIROperand::asISAReg(ARMReg::SP, OpT::Int64);
     const auto &rhs = minst.getOp(2);
     auto op = minst.opcode<OpC>();
-    auto bitWide = getBitWide(def->type());
+    auto bitWide = getBitWideChoosen(def->type(), lhs->type(), rhs->type());
 
     string str;
     str += OpC2S(op) + '\t';
@@ -40,7 +40,7 @@ string ARMA64Printer::unaryPrinter(const MIRInst &minst) {
     const auto &def = minst.ensureDef();
     const auto &lhs = minst.getOp(1);
     auto op = minst.opcode<OpC>();
-    auto bitWide = getBitWide(def->type());
+    auto bitWide = getBitWideChoosen(def->type(), lhs->type());
 
     string str;
     str += OpC2S(op) + '\t';
@@ -55,13 +55,14 @@ string ARMA64Printer::cmpPrinter(const MIRInst &minst) {
     const auto &lhs = minst.getOp(1);
     const auto &rhs = minst.getOp(2);
     auto op = minst.opcode<OpC>();
+    auto bitWide = getBitWideChoosen(lhs->type(), rhs->type());
 
     string str;
 
-    str += OpC2S(op) + '\t' + reg2s(lhs, getBitWide(lhs->type())) + ",\t";
+    str += OpC2S(op) + '\t' + reg2s(lhs, bitWide) + ",\t";
 
     if (rhs->isISA()) {
-        str += reg2s(rhs, getBitWide(rhs->type()));
+        str += reg2s(rhs, bitWide);
     } else { // constant
         str += '#' + std::to_string(rhs->imme());
     }
@@ -72,11 +73,12 @@ string ARMA64Printer::cmpPrinter(const MIRInst &minst) {
 string ARMA64Printer::convertPrinter(const MIRInst &minst) {
     const auto &def = minst.ensureDef();
     const auto &use = minst.getOp(1);
+    auto bitWide = getBitWideChoosen(def->type(), use->type());
 
     string str;
     str += OpC2S(minst.opcode<OpC>()) + '\t';
-    str += reg2s(def, getBitWide(def->type())) + ",\t";
-    str += reg2s(use, getBitWide(use->type()));
+    str += reg2s(def, bitWide) + ",\t";
+    str += reg2s(use, bitWide);
 
     return str;
 }
@@ -90,31 +92,18 @@ string ARMA64Printer::copyPrinter(const MIRInst &minst) {
 
     string str;
 
-    ///@todo vectorize
-    if (all_equal_pairs(defType, OpT::Int32, useType, OpT::Int32)) {
+    auto bitWide = getBitWideChoosen(defType, useType);
 
-        str += "mov\t" + reg2s(def, 4) + ",\t" + reg2s(use, 4);
-
-    } else if (all_equal_pairs(defType, OpT::Int64, useType, OpT::Int64)) {
-
-        str += "mov\t" + reg2s(def, 8) + ",\t" + reg2s(use, 8);
-
-    } else if (all_equal_pairs(defType, OpT::Int, useType, OpT::Int)) {
-        ///@note 最坏打算
-        str += "mov\t" + reg2s(def, 8) + ",\t" + reg2s(use, 8);
-
-    } else if (all_equal_pairs(defType, OpT::Int32, useType, OpT::Float32) ||
-               all_equal_pairs(defType, OpT::Float32, useType, OpT::Int32)) {
-
-        str += "fmov\t" + reg2s(def, 4) + ",\t" + reg2s(use, 4);
-
-    } else if (all_equal_pairs(defType, OpT::Float32, useType, OpT::Float32)) {
-
-        str += "fmov\t" + reg2s(def, 4) + ",\t" + reg2s(use, 4);
-
-    } else {
+    if (inRange(defType, OpT::Int, OpT::Int64) && inRange(useType, OpT::Float, OpT::Floatvec) ||
+        inRange(useType, OpT::Int, OpT::Int64) && inRange(defType, OpT::Float, OpT::Floatvec) ||
+        inRange(useType, OpT::Float, OpT::Floatvec) && inRange(defType, OpT::Float, OpT::Floatvec)) {
+        str += "fmov\t" + reg2s(def, bitWide) + ",\t" + reg2s(use, bitWide);
+    } else if (defType == OpT::Intvec || defType == OpT::Floatvec || useType == OpT::Intvec ||
+               useType == OpT::Floatvec) {
         ///@todo vector regs 需要提供v<>寄存器的视图方式
         Err::todo("copyPrinter: vectorize todo");
+    } else {
+        str += "mov\t" + reg2s(def, bitWide) + ",\t" + reg2s(use, bitWide);
     }
 
     return str;
@@ -125,6 +114,8 @@ string ARMA64Printer::memoryPrinter(const MIRInst &minst) {
     MIROperand_p base = nullptr;
     MIROperand_p idx = nullptr; // isa or imme
     MIROperand_p shift = nullptr;
+
+    auto memSize = minst.getOp(5)->imme();
 
     if (minst.opcode<ARMOpC>() == ARMOpC::LDR) {
         op1 = minst.ensureDef();
@@ -142,7 +133,7 @@ string ARMA64Printer::memoryPrinter(const MIRInst &minst) {
 
     str += ARMOpC2S(minst.opcode<ARMOpC>()) + '\t';
 
-    str += reg2s(op1, getBitWide(op1->type())) + ",\t";
+    str += reg2s(op1, memSize) + ",\t";
 
     str += '[';
     // base
@@ -226,15 +217,16 @@ string ARMA64Printer::movPrinter(const MIRInst &minst) {
     const auto &def = minst.ensureDef();
     const auto &use = minst.getOp(1);
     const auto &shift = minst.getOp(2);
+    auto bitWide = getBitWideChoosen(def->type(), use->type());
 
     string str;
     str += ARMOpC2S(minst.opcode<ARMOpC>()) + '\t';
-    str += reg2s(def, getBitWide(def->type())) + ",\t";
+    str += reg2s(def, bitWide) + ",\t";
 
     if (use->isImme()) {
         str += '#' + std::to_string(use->imme());
     } else {
-        str += reg2s(use, getBitWide(use->type()));
+        str += reg2s(use, bitWide);
     }
 
     // shift
@@ -392,6 +384,7 @@ string ARMA64Printer::adjustPrinter(const MIRInst &minst) {
     const auto &def = minst.ensureDef();
     const auto &use = minst.getOp(1);
     const auto &offset = minst.getOp(2);
+    auto bitWide = getBitWideChoosen(def->type(), use->type());
 
     string str;
     if (minst.opcode<ARMOpC>() == ARMOpC::INC) {
@@ -400,13 +393,13 @@ string ARMA64Printer::adjustPrinter(const MIRInst &minst) {
         str += "sub\t";
     }
 
-    str += reg2s(def, getBitWide(def->type())) + ", "; // int
-    str += reg2s(use, getBitWide(use->type())) + ", ";
+    str += reg2s(def, bitWide) + ", "; // int
+    str += reg2s(use, bitWide) + ", ";
 
     if (offset->isImme()) {
         str += '#' + std::to_string(offset->imme());
     } else {
-        str += reg2s(offset, getBitWide(offset->type())); // int
+        str += reg2s(offset, bitWide); // int
     }
 
     return str;

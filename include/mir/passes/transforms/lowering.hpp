@@ -24,8 +24,8 @@ using IRGlobal_p = std::shared_ptr<IRGlobal>;
 using IRModule = IR::Module;
 using IRModule_p = std::shared_ptr<IRModule>;
 
-// 中端类型转为后端类型, 虽然放在这里有些突兀
 OpT btypeConvert(const IR::BType &);
+unsigned typeBitwide(const IR::pType &);
 OpC IROpCodeConvert(IR::OP);
 Cond IRCondConvert(IR::ICMPOP);
 Cond IRCondConvert(IR::FCMPOP);

@@ -94,12 +94,12 @@ void RegisterAllocImpl::AddEdge(const MIROperand_p &u, const MIROperand_p &v) {
     if (u != v && !adjSet.count(edge)) {
         adjSet.insert(std::move(edge));
 
-        if (precolored.find(u) == precolored.end()) { // not precolored
+        if (!u->isISA()) { // not precolored
             adjList[u].insert(v);
             ++degree[u];
         }
 
-        if (precolored.find(v) == precolored.end()) {
+        if (!v->isISA()) {
             adjList[v].insert(u);
             ++degree[v];
         }
@@ -117,8 +117,8 @@ void RegisterAllocImpl::Build() {
                 const auto &def = getDef(inst);
 
                 for (const auto &n : getUnion<MIROperand_p>(def, use)) {
-                    if (n->isISA()) {
-                        precolored.insert(n); // 仅此一处
+                    if (n->isISA()) { ///@note 也可以使用isPreColored()
+                        precolored.insert(n);
                         degree[n] = -1;
                     } else if (n->isVReg()) {
                         initial.insert(n);
@@ -156,12 +156,6 @@ void RegisterAllocImpl::Build() {
 
             for (const auto &d : def) {
                 for (const auto &l : live) {
-
-                    if (spilltimes && inst->isGeneric() && inst->opcode<OpC>() == OpC::InstLoad && l->isISA() &&
-                        l->isa() == ARMReg::X18 && d->reg() == 1342178233) {
-                        int useless;
-                    }
-
                     AddEdge(l, d);
                 }
             }
@@ -252,6 +246,12 @@ void RegisterAllocImpl::Coalesce() {
     auto x_a = GetAlias(x);
     auto y_a = GetAlias(y);
 
+    if (x_a->getRecover() == 1342177283 && y_a->getRecover() == 2 ||
+        x_a->getRecover() == 2 && y_a->getRecover() == 1342177283) {
+        // mov $x2, $1342177283
+        int debug;
+    }
+
     Edge edge{nullptr, nullptr};
     if (precolored.find(y_a) != precolored.end()) {
         edge.u = y_a, edge.v = x_a;
@@ -259,18 +259,23 @@ void RegisterAllocImpl::Coalesce() {
         edge.u = x_a, edge.v = y_a;
     }
 
-    auto &u = edge.u;
-    auto &v = edge.v;
+    auto &u = edge.u; // $x2
+    auto &v = edge.v; // %1342177283
     if (u == v) {
+        // 两边相同, 标记为合并的move
         addBySet(coalescedMoves, Moves{m});
         AddWorkList(u);
-    } else if (precolored.find(v) != precolored.end() || adjSet.find(edge) != adjSet.end()) {
+    } else if (precolored.count(v) || adjSet.count(edge)) { ///@todo 这个位置应该是冲突的
+        // 两边都precolored, 或者 copyISAToVReg
+        // 两边冲突
+        // 标记为限制合并
+
         addBySet(constrainedMoves, Moves{m});
         AddWorkList(u);
         AddWorkList(v);
     }
     ///@note 将论文的一个if-else拆成了两个
-    else if (precolored.find(u) != precolored.end()) {
+    else if (precolored.count(u)) {
         ///@note George check
 
         bool flag = true;
@@ -287,8 +292,7 @@ void RegisterAllocImpl::Coalesce() {
             goto __Combine_giveup;
         }
 
-    } else if (precolored.find(u) == precolored.end() &&
-               Conservative(getUnion<MIROperand_p>(Adjacent(u), Adjacent(v)))) {
+    } else if (!precolored.count(u) && Conservative(getUnion<MIROperand_p>(Adjacent(u), Adjacent(v)))) {
     ///@note Briggs check
     __Combine_try:
         addBySet(coalescedMoves, Moves{m});
@@ -389,8 +393,13 @@ void RegisterAllocImpl::AssignColors() {
 
             const auto &w_a = GetAlias(w);
 
-            ///@todo 有个bug这里需要修
+            if (n->getRecover() == 1342177344 && w_a->getRecover() == 1342177339 ||
+                n->getRecover() == 1342177339 && w_a->getRecover() == 1342177344) {
+                int debug;
+            }
+
             if (getUnion<MIROperand_p>(coloredNodes, precolored).count(w_a)) {
+                // if (w_a->isISA()) {
 
                 Err::gassert(w_a->isVRegOrISAReg(), "try assign color for a none virReg op");
 
@@ -431,10 +440,16 @@ void RegisterAllocImpl::AssignColors() {
     for (const auto &n : coalescedNodes) {
 
         auto n_a = GetAlias(n);
+
+        if (n->getRecover() == 1342177344 || n->getRecover() == 1342177339) {
+            int debug;
+        }
+
         Err::gassert(n->isVRegOrISAReg(), "AssignColors: try assign color for a none virReg op");
         Err::gassert(n_a->isVRegOrISAReg(), "AssignColors: try assign color for a none virReg op");
 
         ///@note 可能重复assign color?
+
         if (!n->isISA()) {
             n->assignColor(n_a->reg());
         }
@@ -481,7 +496,7 @@ bool RegisterAllocImpl::MoveRelated(const MIROperand_p &n) { return !NodeMoves(n
 bool RegisterAllocImpl::OK(const MIROperand_p &t, const MIROperand_p &r) {
     if (degree[t] < K) {
         return true;
-    } else if (precolored.find(t) != precolored.end()) {
+    } else if (t->isISA()) {
         return true;
     } else if (adjSet.find(Edge{t, r}) != adjSet.end()) {
         return true;
