@@ -1,0 +1,124 @@
+; Module: /mnt/g/dev/gnalc/test/custom/29-loopunrolling.c
+
+
+define dso_local i32 @func(i32 noundef %0) {
+1:
+  br label %2
+
+2:
+  %3 = phi i32 [ 0, %1 ], [ %6.unroll7, %5.unroll7 ]
+  %4 = icmp slt i32 %3, 65527
+  br i1 %4, label %5, label %2.remainder
+
+5:
+  call void @putch(i32 noundef 1)
+  %6 = add i32 %3, 1
+  br label %2.unroll1
+
+2.unroll1:
+  %3.unroll1 = phi i32 [ %6, %5 ]
+  %4.unroll1 = icmp slt i32 %3.unroll1, 65535
+  br label %5.unroll1
+
+5.unroll1:
+  call void @putch(i32 noundef 1)
+  %6.unroll1 = add i32 %3.unroll1, 1
+  br label %2.unroll2
+
+2.unroll2:
+  %3.unroll2 = phi i32 [ %6.unroll1, %5.unroll1 ]
+  %4.unroll2 = icmp slt i32 %3.unroll2, 65535
+  br label %5.unroll2
+
+5.unroll2:
+  call void @putch(i32 noundef 1)
+  %6.unroll2 = add i32 %3.unroll2, 1
+  br label %2.unroll3
+
+2.unroll3:
+  %3.unroll3 = phi i32 [ %6.unroll2, %5.unroll2 ]
+  %4.unroll3 = icmp slt i32 %3.unroll3, 65535
+  br label %5.unroll3
+
+5.unroll3:
+  call void @putch(i32 noundef 1)
+  %6.unroll3 = add i32 %3.unroll3, 1
+  br label %2.unroll4
+
+2.unroll4:
+  %3.unroll4 = phi i32 [ %6.unroll3, %5.unroll3 ]
+  %4.unroll4 = icmp slt i32 %3.unroll4, 65535
+  br label %5.unroll4
+
+5.unroll4:
+  call void @putch(i32 noundef 1)
+  %6.unroll4 = add i32 %3.unroll4, 1
+  br label %2.unroll5
+
+2.unroll5:
+  %3.unroll5 = phi i32 [ %6.unroll4, %5.unroll4 ]
+  %4.unroll5 = icmp slt i32 %3.unroll5, 65535
+  br label %5.unroll5
+
+5.unroll5:
+  call void @putch(i32 noundef 1)
+  %6.unroll5 = add i32 %3.unroll5, 1
+  br label %2.unroll6
+
+2.unroll6:
+  %3.unroll6 = phi i32 [ %6.unroll5, %5.unroll5 ]
+  %4.unroll6 = icmp slt i32 %3.unroll6, 65535
+  br label %5.unroll6
+
+5.unroll6:
+  call void @putch(i32 noundef 1)
+  %6.unroll6 = add i32 %3.unroll6, 1
+  br label %2.unroll7
+
+2.unroll7:
+  %3.unroll7 = phi i32 [ %6.unroll6, %5.unroll6 ]
+  %4.unroll7 = icmp slt i32 %3.unroll7, 65535
+  br label %5.unroll7
+
+5.unroll7:
+  call void @putch(i32 noundef 1)
+  %6.unroll7 = add i32 %3.unroll7, 1
+  br label %2
+
+2.remainder:
+  %3.remainder = phi i32 [ %6.remainder, %5.remainder ], [ 0, %2 ]
+  %4.remainder = icmp slt i32 %3.remainder, 65535
+  br i1 %4.remainder, label %5.remainder, label %7
+
+5.remainder:
+  call void @putch(i32 noundef 1)
+  %6.remainder = add i32 %3.remainder, 1
+  br label %2.remainder
+
+7:
+  ret i32 1
+
+}
+
+define dso_local i32 @main() {
+0:
+  %1 = call i32 @func(i32 noundef 7)
+  ret i32 %1
+
+}
+
+declare i32 @getint()
+declare i32 @getch()
+declare float @getfloat()
+declare void @putint(i32 noundef)
+declare void @putch(i32 noundef)
+declare void @putfloat(float noundef)
+declare void @_sysy_starttime(i32 noundef)
+declare void @_sysy_stoptime(i32 noundef)
+declare i32 @getarray(i32* noundef)
+declare i32 @getfarray(float* noundef)
+declare void @putarray(i32 noundef, i32* noundef)
+declare void @putfarray(i32 noundef, float* noundef)
+declare void @putf(i8* noundef, ...)
+declare void @llvm.memset.p0i8.i32(i8* noundef, i8 noundef, i32 noundef, i1 noundef)
+declare void @llvm.memcpy.p0.p0.i32(i8* noundef, i8* noundef, i32 noundef, i1 noundef)

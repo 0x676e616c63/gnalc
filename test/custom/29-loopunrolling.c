@@ -2,7 +2,7 @@
 
 int func(int i) {
     int a = 1;
-    int n = 8;
+    int n = 65535;
     int j = 0;
     while (j < n) {
         putch(a);

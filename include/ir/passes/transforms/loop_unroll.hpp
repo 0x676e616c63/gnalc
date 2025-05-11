@@ -35,6 +35,8 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
         unsigned unroll_count;
         bool has_remainder;
         unsigned remainder;
+        pVal new_count;
+        pVal raw_count;
 
         void disable() {
             peel = false;
@@ -52,12 +54,13 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
             unroll_count = _count;
         }
 
-        void enable_partially(const unsigned _count, const unsigned _remainder = 0) {
+        void enable_partially(const unsigned _count, const unsigned _remainder = 0, const pVal _new_count = nullptr) {
             unroll = true;
             unroll_type = UnrollType::PARTIALLY;
             unroll_count = _count;
             has_remainder = (_remainder!=0);
             remainder = _remainder;
+            new_count = _new_count;
         }
 
         void enable_runtime(const unsigned _count) {
