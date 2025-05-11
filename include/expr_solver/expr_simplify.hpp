@@ -12,6 +12,8 @@ class ExprSimplifier {
 public:
     explicit ExprSimplifier(ExprPool *pool) : pool(pool) {}
 
+    Expr *match(Expr *expr);
+
     Expr *simplify(Expr *expr);
 };
 
