@@ -63,6 +63,7 @@ public:
     virtual void visit(EXTRACTInst &node) { Err::not_implemented("IRVisitor::visit(EXTRACTInst&)"); }
     virtual void visit(INSERTInst &node) { Err::not_implemented("IRVisitor::visit(INSERTInst&)"); }
     virtual void visit(SHUFFLEInst &node) { Err::not_implemented("IRVisitor::visit(SHUFFLEInst&)"); }
+    virtual void visit(SELECTInst &node) { Err::not_implemented("IRVisitor::visit(SELECTInst&)"); }
 
     virtual ~IRVisitor() = default;
 };

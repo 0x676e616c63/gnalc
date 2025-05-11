@@ -152,11 +152,31 @@ void CALLInst::setTailCall(bool is_tail_call_) { is_tail_call = is_tail_call_; }
 
 bool CALLInst::isTailCall() const { return is_tail_call; }
 
+SELECTInst::SELECTInst(NameRef name, const pVal &cond, const pVal &true_val, const pVal &false_val)
+: Instruction(OP::SELECT, name, true_val->getType()) {
+    Err::gassert(isSameType(true_val->getType(), false_val->getType()));
+    addOperand(cond);
+    addOperand(true_val);
+    addOperand(false_val);
+}
+pVal SELECTInst::getCond() const {
+    return getOperand(0)->getValue();
+}
+pVal SELECTInst::getTrueVal() const {
+    return getOperand(1)->getValue();
+}
+pVal SELECTInst::getFalseVal() const {
+    return getOperand(2)->getValue();
+}
+
+
 void RETInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
 void BRInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
 void CALLInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
+
+void SELECTInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
 BRInst::BBArgList::BBArgList(const pBlock &block, const std::vector<pVal> &args)
     : User("__bb_arg_list", makeBType(IRBTYPE::UNDEFINED), ValueTrait::BB_ARG_LIST), block(block) {

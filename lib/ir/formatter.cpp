@@ -86,6 +86,8 @@ std::string IRFormatter::formatOp(OP op) {
         return "insertelement";
     case OP::SHUFFLE:
         return "shufflevector";
+    case OP::SELECT:
+        return "select";
     default:
         Err::unreachable("ERR: Unknown OP");
         return "UNKNOWNOP";
@@ -132,6 +134,10 @@ std::string IRFormatter::formatCMPOP(FCMPOP cond) {
         Logger::logDebug("ERR: Unknown FCMPOP");
         return "UNKNOWNFCMPOP";
     }
+}
+std::string IRFormatter::formatHELPERTY(HELPERTY hlpty) {
+    Err::not_implemented("HELPERTY");
+    return "";
 }
 
 std::string IRFormatter::formatValue(Value &val) {
@@ -512,6 +518,17 @@ std::string IRFormatter::fSHUFFLEInst(SHUFFLEInst &inst) {
     ret += formatValue(*inst.getVector1()) + ", ";
     ret += formatValue(*inst.getVector2()) + ", ";
     ret += formatValue(*inst.getMask());
+    return ret;
+}
+
+std::string IRFormatter::fSELECTInst(SELECTInst &inst) {
+    std::string ret;
+    ret += inst.getName();
+    ret += " = ";
+    ret += formatOp(inst.getOpcode()) + " ";
+    ret += formatValue(*inst.getCond()) + ", ";
+    ret += formatValue(*inst.getTrueVal()) + ", ";
+    ret += formatValue(*inst.getFalseVal());
     return ret;
 }
 
