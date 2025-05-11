@@ -1,41 +1,74 @@
+int M;
+int L;
+int N;
 
-int relu_reg(int a)
+int tran(float a0[],float a1[], float a2[],float b0[],float b1[],float b2[],float c0[],float c1[],float c2[])
 {
-    if (a > 0x7F) return 0x7F;
-    if (a < 0) return 0;
-    return a;
-}
+    int i;
+    i=0;
+    c1[2]=a2[1];
+    c2[1]=a1[2];
+    c0[1]=a1[0];
+    c0[2]=a2[0];
+    c1[0]=a0[1];
+    c2[0]=a0[2];
+    c1[1]=a1[1];
+    c2[2]=a2[2];
+    c0[0]=a0[0];
 
-int model(int a[][5])
-{
-    if (+ relu_reg( + a[0][0] *   85 + a[0][1] *   23 + a[0][2] *  -82 + a[0][3] * -103 + a[0][4] * -123 + a[1][0] *   64 + a[1][1] * -120 + a[1][2] *   50 + a[1][3] *  -59 + a[1][4] *   47 + a[2][0] * -111 + a[2][1] *  -67 + a[2][2] * -106 + a[2][3] *  -75 + a[2][4] * -102 + a[3][0] *   34 + a[3][1] *  -39 + a[3][2] *   65 + a[3][3] *   47 + a[3][4] *  113 + a[4][0] *  110 + a[4][1] *   47 + a[4][2] *   -4 + a[4][3] *   80 + a[4][4] *   46) *   39
-        > 0)
-        return 1;
     return 0;
+
 }
 
 int main()
 {
-    int N = getint();
-    int a[5][5];
-    while (N > 0) {
-        int i = 0;
-        while (i < 5) {
-            int j = 0;
-            while (j < 5) {
-                a[i][j] = getint();
-                j = j + 1;
-            }
-            i = i + 1;
-        }
-        if (model(a)) {
-            // cat
-            putch(99); putch(97); putch(116); putch(10);
-        } else {
-            // dog
-            putch(100); putch(111); putch(103); putch(10);
-        }
-        N = N - 1;
+    N=3;
+    M=3;
+    L=3;
+    float a0[3], a1[3], a2[3], b0[3], b1[3], b2[3], c0[6], c1[3], c2[3];
+    int i;
+    i=0;
+    while(i<M)
+    {
+        a0[i]=i;
+        a1[i]=i;
+        a2[i]=i;
+        b0[i]=i;
+        b1[i]=i;
+        b2[i]=i;
+        i=i+1;
     }
+    i=tran( a0, a1,  a2, b0, b1, b2, c0, c1, c2);
+    int x;
+    while(i<N)
+    {
+        x = c0[i];
+        putint(x);
+       
+        i=i+1;
+    }
+    x = 10;
+    putch(x);
+    i=0;
+    while(i<N)
+    {
+        x = c1[i];
+        putint(x);
+       
+        i=i+1;
+    }
+    x = 10;
+    i=0;
+    putch(x);
+    while(i<N)
+    {
+        x = c2[i];
+        putint(x);
+       
+        i=i+1;
+    }
+    x = 10;
+    putch(x);
+
     return 0;
 }

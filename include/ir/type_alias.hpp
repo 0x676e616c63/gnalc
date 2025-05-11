@@ -29,9 +29,11 @@ using pFcmp = std::shared_ptr<FCMPInst>;
 class RETInst;
 class BRInst;
 class CALLInst;
+class SELECTInst;
 using pRet = std::shared_ptr<RETInst>;
 using pBr = std::shared_ptr<BRInst>;
 using pCall = std::shared_ptr<CALLInst>;
+using pSelect = std::shared_ptr<SELECTInst>;
 
 // converse
 class CastInst;

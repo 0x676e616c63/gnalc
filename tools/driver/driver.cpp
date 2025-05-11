@@ -128,6 +128,7 @@ int main(int argc, char **argv) {
         OPT_ARG("--dce", "--no-dce", dce)
         OPT_ARG("--adce", "--no-adce", adce)
         OPT_ARG("--cfgsimplify", "--no-cfgsimplify", cfgsimplify)
+        OPT_ARG("--ifconv", "--no-ifconv", if_conversion)
         OPT_ARG("--dse", "--no-dse", dse)
         OPT_ARG("--loadelim", "--no-loadelim", loadelim)
         OPT_ARG("--gvnpre", "--no-gvnpre", gvnpre)
@@ -213,6 +214,7 @@ Optimizations Flags:
   --dce                - Dead code elimination
   --adce               - Aggressive dead code elimination
   --cfgsimplify        - Control flow graph simplification
+  --ifconv             - Simple If-Conversion performed on IR
   --dse                - Dead store elimination
   --loadelim           - Redundant load elimination
   --gvnpre             - Value-Based partial redundancy elimination (GVN-PRE)

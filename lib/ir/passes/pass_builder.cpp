@@ -39,6 +39,7 @@
 #include "ir/passes/transforms/vectorizer.hpp"
 
 // Utilities
+#include "ir/passes/transforms/if_conversion.hpp"
 #include "ir/passes/utilities/irprinter.hpp"
 #include "ir/passes/utilities/verifier.hpp"
 
@@ -174,7 +175,9 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
 
     auto make_vectorizer = [&options] {
         FPM fpm;
+        fpm.addPass(PrintFunctionPass(std::cerr));
         FUNCTION_TRANSFORM(vectorizer, LoopSimplifyPass(), VectorizerPass())
+        fpm.addPass(PrintFunctionPass(std::cerr));
         return fpm;
     };
 
@@ -259,20 +262,28 @@ MPM PassBuilder::buildModulePipeline(PMOptions opt_info) {
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
+    // If-conversion
     fpm.addPass(PromotePass());
-    fpm.addPass(ConstantPropagationPass());
-    fpm.addPass(BreakCriticalEdgesPass());
-    fpm.addPass(GVNPREPass());
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(NameNormalizePass(true));
+    fpm.addPass(NameNormalizePass());
     fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(VectorizerPass());
-    fpm.addPass(VerifyPass());
-    fpm.addPass(DCEPass());
+    fpm.addPass(IfConversionPass());
     fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(NameNormalizePass());
     return fpm;
+    // Vectorizer
+    // fpm.addPass(PromotePass());
+    // fpm.addPass(ConstantPropagationPass());
+    // fpm.addPass(BreakCriticalEdgesPass());
+    // fpm.addPass(GVNPREPass());
+    // fpm.addPass(CFGSimplifyPass());
+    // fpm.addPass(LoopSimplifyPass());
+    // fpm.addPass(NameNormalizePass(true));
+    // fpm.addPass(PrintFunctionPass(std::cerr));
+    // fpm.addPass(VectorizerPass());
+    // fpm.addPass(VerifyPass());
+    // fpm.addPass(DCEPass());
+    // fpm.addPass(PrintFunctionPass(std::cerr));
+    // fpm.addPass(NameNormalizePass());
 
     // // For LoopUnroll Test
     // fpm.addPass(PromotePass());

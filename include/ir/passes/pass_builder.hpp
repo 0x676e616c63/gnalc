@@ -14,6 +14,7 @@ namespace IR {
     GNALC_IR_PASS_ENTRY(dce) \
     GNALC_IR_PASS_ENTRY(adce) \
     GNALC_IR_PASS_ENTRY(cfgsimplify) \
+    GNALC_IR_PASS_ENTRY(if_conversion) \
     GNALC_IR_PASS_ENTRY(dse) \
     GNALC_IR_PASS_ENTRY(loadelim) \
     GNALC_IR_PASS_ENTRY(gvnpre) \

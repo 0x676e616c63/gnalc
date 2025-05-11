@@ -151,6 +151,21 @@ private:
     }
 };
 
+class SELECTInst: public Instruction {
+public:
+    SELECTInst(NameRef name, const pVal &cond, const pVal &true_val, const pVal &false_val);
+
+    pVal getCond() const;
+    pVal getTrueVal() const;
+    pVal getFalseVal() const;
+
+    void accept(IRVisitor &visitor) override;
+
+private:
+    pVal cloneImpl() const override {
+        return std::make_shared<SELECTInst>(getName(), getCond(), getTrueVal(), getFalseVal());
+    }
+};
 } // namespace IR
 
 #endif
