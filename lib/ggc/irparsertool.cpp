@@ -39,7 +39,8 @@ pFuncDecl IRPT::getF(const string& name) {
     if (it == FMap.end()) {
         auto &f = UFMap[name];
         if (f == nullptr) {
-            f = make<FunctionDecl>("UNDEFFUNC", std::vector<pType>{}, makeBType(IRBTYPE::UNDEFINED), false, false, false);
+            // Temporary function declaration for placeholder use
+            f = make<FunctionDecl>("UNDEFFUNC", std::vector<pType>{}, makeBType(IRBTYPE::UNDEFINED), false);
         }
         return f;
     }
@@ -130,9 +131,11 @@ pFuncDecl IRPT::newFuncDecl(std::string &name_, const std::vector<pType> &params
                                 pType &ret_type, bool is_va_arg_) {
     pFuncDecl fd;
     if (name_ == Config::IR::MEMSET_INTRINSIC_NAME || name_ == Config::IR::MEMCPY_INTRINSIC_NAME) {
-        fd = make<FunctionDecl>(name_, params, ret_type, is_va_arg_, true, false);
+        // TODO: Need Fix Attribute
+        fd = make<FunctionDecl>(name_, params, ret_type, is_va_arg_, std::set<FuncAttr>{FuncAttr::isIntrinsic});
     } else {
-        fd = make<FunctionDecl>(name_, params, ret_type, is_va_arg_, false, true);
+        // For other FuncDecls
+        fd = make<FunctionDecl>(name_, params, ret_type, is_va_arg_, std::set<FuncAttr>{FuncAttr::isSylib});
     }
     replaceUF(name_, fd);
     return fd;

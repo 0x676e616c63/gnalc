@@ -95,6 +95,7 @@ set(GGC_SRC
         ${GNALC_PM_SRC}
         ${GNALC_PTM_SRC}
         ${GNALC_ARMV7BKD_SRC}
+        ${GNALC_ARMV8BKD_SRC}
         ${GNALC_UTILS_SRC})
 
 # debug driver
