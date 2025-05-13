@@ -32,8 +32,10 @@ int main() {
     ExprSimplifier esim(&epool);
     auto parsed = eparser.parse("2x + 3 * yz * {pi} / 6");
     auto simplified = esim.simplify(parsed);
-
     std::cout << "Parsed Expr: " << *parsed << "\nAfter Simplify: " << *simplified << std::endl;
+    auto parsed1 = eparser.parse("2 * x * 3 * y");
+    auto simplified1 = esim.simplify(parsed1);
+    std::cout << "Parsed Expr: " << *parsed1 << "\nAfter Simplify: " << *simplified1 << std::endl;
 
     return 0;
 }
