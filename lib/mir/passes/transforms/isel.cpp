@@ -16,7 +16,9 @@ OpC MIR_new::chooseCopyOpC(const MIROperand_p &dst, const MIROperand_p &src) {
     } else if (dst->isVReg() && src->isVReg()) {
         return OpC::InstCopy;
     } else if (dst->isVReg() && src->isStack()) {
-        return OpC::InstCopyStkPtr; // used in type convert and cast
+        return OpC::InstCopyStkPtr;
+    } else if (dst->isISA() && src->isStack()) {
+        return OpC::InstCopyStkPtr;
     } else {
         Err::unreachable("chooseCopyOpC: dont match any copy op");
     }

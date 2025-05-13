@@ -293,7 +293,10 @@ void MIR_new::lowerInst(const IR::pGep &gep, LoweringContext &ctx) {
     auto idx = gep->getIdxs().back();
     int persize;
     if (auto arrayType = gep->getBaseType()->as<IR::ArrayType>()) {
-        persize = arrayType->getElmType()->getBytes();
+        if (gep->getIdxs().size() != 1)
+            persize = arrayType->getElmType()->getBytes();
+        else // move through sub arrays
+            persize = arrayType->getArraySize() * arrayType->getElmType()->getBytes();
     } else if (auto ptrType = gep->getBaseType()->as<IR::PtrType>()) {
         persize = ptrType->getElmType()->getBytes();
     } else if (auto bType = gep->getBaseType()->as<IR::BType>()) {

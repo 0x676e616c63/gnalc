@@ -441,9 +441,9 @@ void ISelInfo::legalizeWithStkGep(InstLegalizeContext &_ctx, MIROperand_p mop, c
                                 ->setOperand<2>(mop));
 
         minst->resetOpcode(OpC::InstAdd);
+        minst->setOperand<0>(mop);
         minst->setOperand<1>(mop);
-        minst->setOperand<2>(mop);
-        minst->setOperand<3>(scratch);
+        minst->setOperand<2>(scratch);
     }
     return;
 }

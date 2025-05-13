@@ -47,8 +47,9 @@ using OpT = OperandType;
 inline unsigned getBitWide(OpT type) {
     switch (type) {
     case OpT::Int: // default length
-    case OpT::Float:
         return 8;
+    case OpT::Float:
+        return 16;
     case OpT::Int16:
         return 2; // mei yong
     case OpT::High32:
@@ -317,7 +318,7 @@ public:
     // use in registeralloc
     ///@note we directly chang reg of MIRReg
     void assignColor(unsigned color) {
-        Err::gassert(isVReg(), "assignColor: try assign color to a non-reg");
+        // Err::gassert(isVReg(), "assignColor: try assign color to a non-reg");
         Err::gassert(color >= ARMReg::X0 && color <= ARMReg::V30, "assignColor: unknonw reg color");
         Err::gassert(color >= ARMReg::V0 && (mType == OpT::Float32 || mType == OpT::Floatvec || mType == OpT::Intvec) ||
                          color <= ARMReg::X29 &&
