@@ -1,34 +1,18 @@
-
-
-int func(int i) {
-    int a = 1;
-    int n = 65535;
-    int j = 0;
-    while (j < n) {
-        putch(a);
-        // a = a + i;
-        j = j + 1;
+int doubleWhile() {
+  int i;
+  i = 5;
+  int j;
+  j = 7;
+  while (i < 100) {
+    i = i + 30;
+    while(j < 100){
+      j = j + 6;
     }
-    return a;
+    j = j - 100;
+  }
+  return (j);
 }
 
 int main() {
-   int a = func(7);
-   return a;
+  return doubleWhile();
 }
-
-//int func(int i) {
-//	int a[6] = {1, 2, 3, 4, 5, 6};
-//    int n = 6;
-//    int j = 0;
-//    while (j < n) {
-//        a[j] = a[j] + i;
-//        j = j + 1;
-//    }
-//    return a[3];
-//}
-//
-// int main() {
-//     int a = func(7);
-//     return a;
-// }

@@ -291,13 +291,14 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     // fpm.addPass(LoopRotatePass());
     // fpm.addPass(LCSSAPass());
     // fpm.addPass(NameNormalizePass(true));
+    // // fpm.addPass(PrintFunctionPass(std::cerr));
     // fpm.addPass(LoopUnrollPass());
     // fpm.addPass(InstSimplifyPass());
     // fpm.addPass(BreakCriticalEdgesPass());
     // fpm.addPass(GVNPREPass());
     // fpm.addPass(ConstantPropagationPass());
     // fpm.addPass(CFGSimplifyPass());
-    // fpm.addPass(PrintLoopPass(std::cout));
+    // // fpm.addPass(PrintLoopPass(std::cout));
     // fpm.addPass(VerifyPass(true));
     return fpm;
 }

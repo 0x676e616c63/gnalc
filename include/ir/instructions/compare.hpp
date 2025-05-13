@@ -26,6 +26,7 @@ enum class ICMPOP { eq, ne, sgt, sge, slt, sle };
 // @attention ：默认op1和op2类型一致，均为i32
 class ICMPInst : public Instruction {
 private:
+    friend class LoopUnrollPass;
     ICMPOP cond;
 
 public:

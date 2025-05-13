@@ -14,29 +14,28 @@
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 
-// 之后放到config
-constexpr unsigned LOOP_UNROLLING_PEEL_COUNT = 10; // 循环剥皮最大次数
-constexpr unsigned LOOP_UNROLLING_FULLY_UNROLL_SIZE = 400; // trip_count * size 小于此值次数的循环将被完全展开
-constexpr unsigned LOOP_UNROLLING_FULLY_UNROLL_COUNT = 8; // trip_count小于此值次数的循环将被完全展开
-constexpr unsigned LOOP_UNROLLING_RUNTIME_UNROLL_SIZE = 200; // 运行时展开后最大大小
-constexpr unsigned LOOP_UNROLLING_RUNTIME_UNROLL_COUNT = 8; // 运行时展开最大次数
-constexpr unsigned LOOP_UNROLLING_PARTIALLY_UNROLL_SIZE = 200;
-constexpr unsigned LOOP_UNROLLING_PARTIALLY_UNROLL_COUNT = 8;
-constexpr unsigned LOOP_UNROLLING_MAX_PROCESS_SIZE = 100; // 最大循环大小，超过此值的循环将不被展开，至少为上述size的1/2
-
 namespace IR {
 class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
+    static constexpr unsigned PEC = Config::IR::LOOP_UNROLLING_PEEL_COUNT;
+    static constexpr unsigned FUS = Config::IR::LOOP_UNROLLING_FULLY_UNROLL_SIZE;
+    static constexpr unsigned FUC = Config::IR::LOOP_UNROLLING_FULLY_UNROLL_COUNT;
+    static constexpr unsigned PUS = Config::IR::LOOP_UNROLLING_PARTIALLY_UNROLL_SIZE;
+    static constexpr unsigned PUC = Config::IR::LOOP_UNROLLING_PARTIALLY_UNROLL_COUNT;
+    static constexpr unsigned RUS = Config::IR::LOOP_UNROLLING_RUNTIME_UNROLL_SIZE;
+    static constexpr unsigned RUC = Config::IR::LOOP_UNROLLING_RUNTIME_UNROLL_COUNT;
+    static constexpr unsigned MPS = Config::IR::LOOP_UNROLLING_MAX_PROCESS_SIZE;
+
     enum class UnrollType { FULLY, PARTIALLY, RUNTIME };
     struct UnrollOption {
-        bool peel;
-        unsigned peel_count;
-        bool unroll;
+        bool peel = false;
+        unsigned peel_count = 0;
+        bool unroll = false;
         UnrollType unroll_type;
-        unsigned unroll_count;
-        bool has_remainder;
-        unsigned remainder;
-        pVal new_count;
-        pVal raw_count;
+        unsigned unroll_count = 0;
+        bool has_remainder = false;
+        unsigned remainder = 0;
+        pVal new_trip_countv; // For partially unroll with remainder, new trip count value in unroll loop
+        pVal raw_trip_countv; // For constant trip count, raw trip count value in original loop
 
         void disable() {
             peel = false;
@@ -54,13 +53,18 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
             unroll_count = _count;
         }
 
-        void enable_partially(const unsigned _count, const unsigned _remainder = 0, const pVal _new_count = nullptr) {
+        void enable_partially(const unsigned _count) {
             unroll = true;
             unroll_type = UnrollType::PARTIALLY;
             unroll_count = _count;
+            has_remainder = false;
+        }
+
+        void set_remainder(const unsigned _remainder, const pVal _new_trip_countv) {
+            Err::gassert(unroll_type == UnrollType::PARTIALLY, "UnrollOption: set_remainder(): unroll_type is not PARTIALLY.");
             has_remainder = (_remainder!=0);
             remainder = _remainder;
-            new_count = _new_count;
+            new_trip_countv = _new_trip_countv;
         }
 
         void enable_runtime(const unsigned _count) {

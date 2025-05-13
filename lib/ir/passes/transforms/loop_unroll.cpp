@@ -2,6 +2,7 @@
 #include "ir/base.hpp"
 #include "ir/block_utils.hpp"
 #include "ir/instruction.hpp"
+#include "ir/instructions/compare.hpp"
 #include "ir/instructions/phi.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
@@ -22,7 +23,7 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
     for (const auto &bb : loop->blocks()) {
         inst_size += bb->getAllInstCount();
     }
-    if (inst_size > LOOP_UNROLLING_MAX_PROCESS_SIZE) {
+    if (inst_size > MPS) {
         option.disable();
         return;
     }
@@ -33,7 +34,15 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
         return;
     }
 
-    // TODO: 不处理含调用的循环
+    // 不处理含调用的循环, Disable for test
+    // for (const auto &bb : loop->blocks()) {
+    //     for (const auto &inst : *bb) {
+    //         if (inst->getOpcode() == OP::CALL) {
+    //             option.disable();
+    //             return;
+    //         }
+    //     }
+    // }
 
     auto SCEVH = SCEVHandle(&FC, &LI, &DT);
     const auto TC = SCEVH.getTripCount(loop);
@@ -44,33 +53,52 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
 
     if (TC->isIRValue() && TC->getIRValue()->is<ConstantInt>()) {
         // 常量展开策略
-        option.raw_count = TC->getIRValue();
-        const auto trip_count = TC->getIRValue()->as<ConstantInt>()->getVal();
-        if (trip_count <= LOOP_UNROLLING_FULLY_UNROLL_COUNT && trip_count * inst_size <= LOOP_UNROLLING_MAX_PROCESS_SIZE) {
-            option.enable_fully(trip_count);
+        option.raw_trip_countv = TC->getIRValue();
+        const auto trip_countn = TC->getIRValue()->as<ConstantInt>()->getVal();
+
+        // For fully unroll
+        if (trip_countn <= FUC && trip_countn*inst_size <= FUS) {
+            option.enable_fully(trip_countn);
             return;
         }
-        const auto count1 = LOOP_UNROLLING_PARTIALLY_UNROLL_SIZE / inst_size;
-        if (count1 <= LOOP_UNROLLING_PARTIALLY_UNROLL_COUNT) {
-            /// TODO: MORE CONDITIONS
-            unsigned remainder = trip_count % count1;
-            int nc = trip_count - remainder - 1;
-            auto new_count = FC.getConst(nc);
-            option.enable_partially(count1, remainder, new_count);
+
+        // For partially unroll
+        {
+            auto unroll_factor = PUS / inst_size;
+            unroll_factor = std::min(unroll_factor, PUC);
+            unsigned remainder = trip_countn % unroll_factor;
+            option.enable_partially(unroll_factor);
+
+            if (remainder != 0) {
+                {
+                    // Check if loop's exit condition is eq or ne
+                    if (auto eb = loop->getExitingBlocks(); eb.size() == 1) {
+                        if (auto cd = eb.begin()->get()->getBRInst()->getCond()->as<Instruction>(); cd->getOpcode() == OP::ICMP) {
+                            if (auto icmpop = cd->as<ICMPInst>()->getCond(); icmpop == ICMPOP::eq || icmpop == ICMPOP::ne) {
+                                option.disable();
+                                return;
+                            }
+                        } else {
+                            Err::unreachable();
+                        }
+                    } else {
+                        Err::unreachable();
+                    }
+                }
+
+                // Caculate new trip count
+                /// TODO: FIX
+                unsigned int nc = trip_countn / unroll_factor * unroll_factor;
+                auto new_countv = FC.getConst(static_cast<int>(nc));
+                option.set_remainder(remainder, new_countv);
+            }
             return;
         }
-        unsigned remainder = trip_count % LOOP_UNROLLING_PARTIALLY_UNROLL_COUNT;
-        int nc = trip_count - remainder - 1;
-        auto new_count = FC.getConst(nc);
-        option.enable_partially(LOOP_UNROLLING_PARTIALLY_UNROLL_COUNT, remainder, new_count);
-        return;
     } else {
         // 变量展开策略
-
+        // TODO
     }
 
-
-    // TODO
     option.disable();
 }
 
@@ -96,7 +124,6 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         return false;
     }
 
-    // todo: need?
     if (!loop->getPreHeader()) {
         return false;
     }
@@ -105,7 +132,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         return false;
     }
 
-    // !hasAddressTaken() ?
+    // !hasAddressTaken()
 
     const auto count = option.unroll_count;
     const auto pre_header = loop->getPreHeader();
@@ -178,13 +205,6 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
     /// the value of the latch from the previous cloned part. The operands of the PHI node in exit blocks will be
     /// expanded with the value of the cloned exiting block.
 
-    // process raw loop
-    // 断开了latch[0]->header[0]的cfg边, 添加了latch[count-1]->header[0]
-    // 之后统一 updateCFG()
-    // const auto &last_latch = BMap[latch][count - 1];
-    // unlinkBB(latch, header);
-    // linkBB(last_latch, header);
-
     // clone other inst
     auto CloneNonPhiInst = [&](const pB &raw, const pB &cur, const unsigned i) {
         for (const auto &inst : *raw) {
@@ -221,7 +241,6 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         if (loop->isExiting(raw)) {
             for (auto succ : raw->succs()) {
                 if (exits.count(succ)) {
-                    // linkBB(cur, succ);
                     for (auto &phi : succ->phis()) {
                         auto pov = phi->getPhiOpers();
                         for (auto &phi_oper : pov) {
@@ -246,9 +265,6 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         const auto &rh = header;     // raw header
         const auto ch = BMap[rh][i]; // current header
 
-        // latch[n-1]-->header[i]
-        // linkBB(BMap[latch][i - 1], ch);
-
         // clone header's phi, replace with previous part's value
         for (auto &phi : rh->phis()) {
             auto phi_value_from_loop = phi->getValueForBlock(latch);
@@ -268,7 +284,6 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         }
 
         CloneNonPhiInst(rh, ch, i);
-        // ProcessExitingBlock(rh, ch, i);
     };
 
     // clone blocks, link blocks, update phi...
@@ -283,11 +298,6 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         while (raw_bb_iter != loop->block_end()) {
             auto rb = (*raw_bb_iter)->as<BasicBlock>(); // current raw block
             auto cb = BMap[rb][i];                      // current block
-
-            // link pred BB
-            // for (auto pred : rb->preds()) {
-            //     linkBB(BMap[pred][i], cb);
-            // }
 
             // clone phi
             for (const auto &phi : rb->phis()) {
@@ -307,7 +317,6 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             }
 
             CloneNonPhiInst(rb, cb, i);
-            // ProcessExitingBlock(rb, cb, i);
 
             ++raw_bb_iter;
         }
@@ -317,13 +326,13 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
     const auto last_latch = BMap[latch][count - 1];
 
     // just for one exit:
-    const auto exiting = is_dowhile ? latch : header;
+    const auto raw_loop_exiting = is_dowhile ? latch : header;
+    const auto unrolled_loop_exiting = is_dowhile ? last_latch : header;
     Err::gassert(loop->getExitBlocks().size() == 1, "LoopUnroll: Multiple Exit.");
     const auto exitb = *(loop->getExitBlocks().begin());
 
     // clone remainder to BMap[b][count]
-    // 此处只处理常量部分展开的余数循环，尚未修改迭代变量！
-    /// TODO: 修改迭代变量
+    // 此处只处理常量部分展开的余数循环
     if (option.partially() && option.has_remainder) {
         auto rem = option.remainder;
         auto raw_bb_iter = loop->block_begin();
@@ -369,7 +378,6 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             ++raw_bb_iter;
         }
 
-        auto rem_pre_header = is_dowhile ? last_latch : header;
         // add rem header's phi's phioper: from latch, from raw header or last latch(if is dowhile)
         for (auto &phi : header->phis()) {
             auto rem_phi = IMap[phi][count]->as<PHIInst>();
@@ -385,25 +393,41 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             }
 
             // 1. For dowhile: from last loop
-            // 2. For while: from frist loop's phi?
-            if (phi_value_from_ph->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
-                if (is_dowhile) {
+            // 2. For while: from frist loop's phi
+            if (is_dowhile) {
+                if (phi_value_from_ph->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
                     rem_phi->addPhiOper(IMapFind(phi_value_from_ph->as<Instruction>(), count-1), last_latch);
                 } else {
-                    // todo: maybe wrong
-                    rem_phi->addPhiOper(phi, header);
+                    rem_phi->addPhiOper(phi_value_from_ph, last_latch);
                 }
             } else {
-                rem_phi->addPhiOper(phi_value_from_ph, rem_pre_header);
+                rem_phi->addPhiOper(phi, header);
             }
         }
 
-        ProcessExitingBlock(exiting, BMap[exiting][count], count);
-
-        // Change loop's trip count
-        auto br = exiting->getBRInst();
+        // Change loop's iterative boundary
+        auto br = unrolled_loop_exiting->getBRInst();
         if (br->isConditional()) {
-            br->getCond()->as<Instruction>()->replaceAllOperands(option.raw_count, option.new_count);
+            auto cond = br->getCond()->as<Instruction>();
+            if (cond->getOpcode() == OP::ICMP) {
+                auto icmp = cond->as<ICMPInst>();
+                icmp->replaceAllOperands(option.raw_trip_countv, option.new_trip_countv);
+                // 此处给展开循环的判断条件改为非等，防止多执行
+                switch (icmp->getCond()) {
+                    case ICMPOP::sgt:
+                    case ICMPOP::sge:
+                        icmp->cond = ICMPOP::sgt;
+                        break;
+                    case ICMPOP::slt:
+                    case ICMPOP::sle:
+                        icmp->cond = ICMPOP::slt;
+                        break;
+                    default:
+                        Err::unreachable();
+                }
+            } else {
+                Err::unreachable();
+            }
         } else {
             Err::unreachable();
         }
@@ -426,7 +450,6 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                 // Err::unreachable();
             }
         } else {
-            // Maybe unused
             Err::unreachable();
         }
         for (auto &phi : exitb->phis()) {
