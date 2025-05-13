@@ -86,8 +86,8 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
                     }
                 }
 
-                // Caculate new trip count
-                /// TODO: FIX
+                // Calculate new trip count
+                /// TODO: NEED FIX
                 unsigned int nc = trip_countn / unroll_factor * unroll_factor;
                 auto new_countv = FC.getConst(static_cast<int>(nc));
                 option.set_remainder(remainder, new_countv);
@@ -138,13 +138,34 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
     const auto pre_header = loop->getPreHeader();
     const auto header = loop->getHeader();
     const auto latch = loop->getLatch();
-    const auto &blocks = loop->getBlocks();
+    const auto loop_blocks = loop->getBlocks();
     const auto exits = loop->getExitBlocks();
 
     using pB = pBlock;
     using pI = pInst;
     using BV = std::vector<pB>;
     using IV = std::vector<pI>;
+
+    std::vector<pB> blocks;
+    {
+        // LOOP BLOCK DFS ON CFG
+        std::set<pB> visited;
+        std::stack<pB> stack;
+        stack.push(header);
+        while (!stack.empty()) {
+            pB b = stack.top();
+            stack.pop();
+            if (visited.count(b)) continue;
+            visited.insert(b);
+            blocks.push_back(b);
+            for (auto succ : b->succs()) {
+                if (!visited.count(succ) && !exits.count(succ)) {
+                    stack.push(succ);
+                }
+            }
+        }
+    }
+
 
     // 新旧BB, Inst映射，用于快速查找
     // <raw, new_vector>
@@ -153,11 +174,13 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
     std::map<pI, IV> IMap;
 
     // Return IMap[inst][i] or inst.
-    auto IMapFind = [&](pI inst, const unsigned i) {
+    auto IMapFind = [&](const pI &inst, const unsigned i) {
+        auto ret = inst;
         if (const auto it = IMap.find(inst); it != IMap.end()) {
-            return it->second[i];
+            ret =  it->second[i];
         }
-        return inst;
+        Err::gassert(ret != nullptr, "IMapFind: inst is nullptr.");
+        return ret;
     };
 
     // Return BMap[block][i] or block.
@@ -288,14 +311,14 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
 
     // clone blocks, link blocks, update phi...
     for (int i = 1; i < count; i++) {
-        auto raw_bb_iter = loop->block_begin();
+        auto raw_bb_iter = blocks.begin();
 
         // process header
         CloneHeaderBlock(i);
 
         // process other block
         ++raw_bb_iter;
-        while (raw_bb_iter != loop->block_end()) {
+        while (raw_bb_iter != blocks.end()) {
             auto rb = (*raw_bb_iter)->as<BasicBlock>(); // current raw block
             auto cb = BMap[rb][i];                      // current block
 
@@ -304,6 +327,31 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                 auto new_phi = makeClone(phi);
                 new_phi->setName(phi->getName() + ".unroll" + std::to_string(i));
                 IMap[phi][i] = new_phi;
+                // for (auto it = phi->operand_begin(); it != phi->operand_end(); ++it) {
+                //     // val, blk, val, blk...
+                //     auto v = *it;
+                //     if (v->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
+                //         new_phi->replaceAllOperands(v, IMapFind(v->as<Instruction>(), i));
+                //     }
+                //     v = *++it;
+                //     new_phi->replaceAllOperands(v, BMap[v->as<BasicBlock>()][i]);
+                // }
+                cb->addPhiInst(new_phi);
+            }
+
+            CloneNonPhiInst(rb, cb, i);
+
+            ++raw_bb_iter;
+        }
+
+        // update phi oper
+        raw_bb_iter = blocks.begin();
+        ++raw_bb_iter;
+        while (raw_bb_iter != blocks.end()) {
+            auto rb = (*raw_bb_iter)->as<BasicBlock>();
+            auto cb = BMap[rb][i];
+            for (const auto &phi : rb->phis()) {
+                auto new_phi = IMap[phi][i];
                 for (auto it = phi->operand_begin(); it != phi->operand_end(); ++it) {
                     // val, blk, val, blk...
                     auto v = *it;
@@ -313,11 +361,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                     v = *++it;
                     new_phi->replaceAllOperands(v, BMap[v->as<BasicBlock>()][i]);
                 }
-                cb->addPhiInst(new_phi);
             }
-
-            CloneNonPhiInst(rb, cb, i);
-
             ++raw_bb_iter;
         }
     }
@@ -335,7 +379,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
     // 此处只处理常量部分展开的余数循环
     if (option.partially() && option.has_remainder) {
         auto rem = option.remainder;
-        auto raw_bb_iter = loop->block_begin();
+        auto raw_bb_iter = blocks.begin();
 
         // process header
         {
@@ -353,7 +397,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
 
         // process other block
         ++raw_bb_iter;
-        while (raw_bb_iter != loop->block_end()) {
+        while (raw_bb_iter != blocks.end()) {
             auto rb = (*raw_bb_iter)->as<BasicBlock>(); // current raw block
             auto cb = BMap[rb][count];                      // current block
 
@@ -411,6 +455,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             auto cond = br->getCond()->as<Instruction>();
             if (cond->getOpcode() == OP::ICMP) {
                 auto icmp = cond->as<ICMPInst>();
+                // TODO : NEED FIX
                 icmp->replaceAllOperands(option.raw_trip_countv, option.new_trip_countv);
                 // 此处给展开循环的判断条件改为非等，防止多执行
                 switch (icmp->getCond()) {
@@ -446,11 +491,12 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             } else if (br->getFalseDest() == exitb) {
                 br->dropFalseDest();
             } else {
-                // Somewhere I droped, Somewhere not, it needs to be fixed.
+                // Somewhere I dropped, Somewhere not, it needs to be fixed.
                 // Err::unreachable();
             }
         } else {
-            Err::unreachable();
+            // Somewhere I dropped, Somewhere not, it needs to be fixed.
+            // Err::unreachable();
         }
         for (auto &phi : exitb->phis()) {
             phi->delPhiOperByBlock(target);
