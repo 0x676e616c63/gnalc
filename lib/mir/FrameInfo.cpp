@@ -386,7 +386,6 @@ void FrameInfo::makePostSAPrologue(MIRBlk_p entry, CodeGenContext &ctx, unsigned
 
     Err::gassert(iter != insts.end(), "makePostSAPrologue: cant find reg save insts");
 
-    // stk space recover
     ARMInstTemplate::registerDec(insts, iter, ARMReg::SP, stkSize);
 }
 

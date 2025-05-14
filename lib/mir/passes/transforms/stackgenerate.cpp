@@ -34,6 +34,7 @@ void StackGenerateImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     mkQWordAlign();
 
     // callee-save
+    mfunc->modifyBegCalleeSave(allocationBase);
 
     auto &bitmap = mfunc->calleeSaveRegs();
     bitmap &= 0xffff00007ff80000;
@@ -49,7 +50,6 @@ void StackGenerateImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     auto calleesaves = bitmap;
 
     for (auto i = 0; i < 64; ++i, calleesaves >>= 1) {
-
         if (static_cast<ARMReg>(i) == ARMReg::V0) {
             ///@note start to stage V<>, make it ailgn
             allocationBase += allocationBase % 16 ? 8 : 0;

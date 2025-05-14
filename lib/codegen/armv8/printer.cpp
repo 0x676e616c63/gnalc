@@ -266,7 +266,7 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
 
     if (minst.opcode<ARMOpC>() == ARMOpC::PUSH) {
         int lastReg = -1;
-        int offset = 0;
+        int offset = mfunc->begCalleeSave();
         for (int i = 0; i < 32; ++i, bitMap >>= 1) {
 
             if (i == ARMReg::SP) {
@@ -322,7 +322,7 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
 
     } else {
         int lastReg = -1;
-        int offset = 0;
+        int offset = mfunc->begCalleeSave();
         for (int i = 0; i < 32; ++i, bitMap >>= 1) {
 
             if (i == ARMReg::SP) {

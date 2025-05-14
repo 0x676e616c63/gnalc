@@ -343,9 +343,6 @@ public:
     bool isLegalGenericInst(MIRInst_p) const;
     bool match(MIRInst_p, ISelContext &, bool allow) const;
     bool legalizeInst(MIRInst_p minst, ISelContext &ctx) const;
-    bool matchImpl(MIRInst_p minst, ISelContext &ctx) const;
-    void postLegalizeInst(InstLegalizeContext &);
-    void postLegalizeInst(InstLegalizeContext &, MIRInst_p_l &);
     void preLegalizeInst(InstLegalizeContext &);
     void legalizeWithStkOp(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const;
     void legalizeWithStkGep(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const;

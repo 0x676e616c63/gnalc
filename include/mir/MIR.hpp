@@ -452,6 +452,7 @@ private:
     size_t spilled = 0LL;
     bool largeStk = false; // may use fp(X29)
     unsigned stkSize = 0LL;
+    unsigned calleeSave = 0LL;
 
     // context
     CodeGenContext &ctx;
@@ -498,6 +499,9 @@ public:
 
     void modifyStkSize(unsigned _size) { stkSize = _size; }
     unsigned stackSize() const { return stkSize; }
+
+    void modifyBegCalleeSave(unsigned _size) { calleeSave = _size; }
+    unsigned begCalleeSave() const { return calleeSave; }
 
     bool isFunc() const override { return true; }
 

@@ -206,13 +206,6 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     }
     return modified;
 }
-void ISelInfo::postLegalizeInst(InstLegalizeContext &) {
-    ///@todo
-}
-
-void ISelInfo::postLegalizeInst(InstLegalizeContext &, MIRInst_p_l &) {
-    ///@todo
-}
 
 void ISelInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
     ///@todo handle select inst if we really have one
