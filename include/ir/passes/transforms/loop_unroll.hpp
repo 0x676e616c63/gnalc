@@ -17,13 +17,17 @@
 namespace IR {
 class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
     static constexpr unsigned PEC = Config::IR::LOOP_UNROLLING_PEEL_COUNT;
-    static constexpr unsigned FUS = Config::IR::LOOP_UNROLLING_FULLY_UNROLL_SIZE;
-    static constexpr unsigned FUC = Config::IR::LOOP_UNROLLING_FULLY_UNROLL_COUNT;
+    static constexpr unsigned FUS = -1;
+    static constexpr unsigned FUC = -1;
     static constexpr unsigned PUS = Config::IR::LOOP_UNROLLING_PARTIALLY_UNROLL_SIZE;
     static constexpr unsigned PUC = Config::IR::LOOP_UNROLLING_PARTIALLY_UNROLL_COUNT;
     static constexpr unsigned RUS = Config::IR::LOOP_UNROLLING_RUNTIME_UNROLL_SIZE;
     static constexpr unsigned RUC = Config::IR::LOOP_UNROLLING_RUNTIME_UNROLL_COUNT;
-    static constexpr unsigned MPS = Config::IR::LOOP_UNROLLING_MAX_PROCESS_SIZE;
+    static constexpr unsigned MPS = -1;
+    static constexpr bool ENABLE_PEELING = false;
+    static constexpr bool ENABLE_FULLY_UNROLL = false;
+    static constexpr bool ENABLE_PARTIALLY_UNROLL = true;
+    static constexpr bool ENABLE_RUNTIME_UNROLL = false;
 
     enum class UnrollType { FULLY, PARTIALLY, RUNTIME };
     struct UnrollOption {

@@ -57,13 +57,15 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
         const auto trip_countn = TC->getIRValue()->as<ConstantInt>()->getVal();
 
         // For fully unroll
-        if (trip_countn <= FUC && trip_countn*inst_size <= FUS) {
-            option.enable_fully(trip_countn);
-            return;
+        if (ENABLE_FULLY_UNROLL) {
+            if (trip_countn <= FUC && trip_countn*inst_size <= FUS) {
+                option.enable_fully(trip_countn);
+                return;
+            }
         }
 
         // For partially unroll
-        {
+        if (ENABLE_PARTIALLY_UNROLL) {
             auto unroll_factor = PUS / inst_size;
             unroll_factor = std::min(unroll_factor, PUC);
             unsigned remainder = trip_countn % unroll_factor;
@@ -96,7 +98,9 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
         }
     } else {
         // 变量展开策略
-        // TODO
+        if (ENABLE_RUNTIME_UNROLL) {
+            // TODO
+        }
     }
 
     option.disable();
@@ -183,6 +187,13 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         return ret;
     };
 
+    auto IMapFindAndReplaceOperand = [&](const pI &inst, const pVal &rawv, const unsigned i) {
+        auto result = IMapFind(rawv->as<Instruction>(), i);
+        if (result != rawv) {
+            inst->replaceAllOperands(rawv, result);
+        }
+    };
+
     // Return BMap[block][i] or block.
     auto BMapFind = [&](pB block, const unsigned i) {
         if (const auto it = BMap.find(block); it != BMap.end()) {
@@ -241,7 +252,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             if (inst->getOpcode() == OP::BR) {
                 for (auto value : inst->operands()) {
                     if (value->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
-                        new_inst->replaceAllOperands(value, IMapFind(value->as<Instruction>(), i));
+                        IMapFindAndReplaceOperand(new_inst, value, i);
                     } else if (value->getVTrait() == ValueTrait::BASIC_BLOCK) {
                         if (auto nv = BMapFind(value->as<BasicBlock>(), i); nv != value) {
                             new_inst->replaceAllOperands(value, nv);
@@ -251,7 +262,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             } else {
                 for (auto value : inst->operands()) {
                     if (value->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
-                        new_inst->replaceAllOperands(value, IMapFind(value->as<Instruction>(), i));
+                        IMapFindAndReplaceOperand(new_inst, value, i);
                     }
                 }
             }
@@ -331,7 +342,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                 //     // val, blk, val, blk...
                 //     auto v = *it;
                 //     if (v->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
-                //         new_phi->replaceAllOperands(v, IMapFind(v->as<Instruction>(), i));
+                //         IMapFindAndReplaceOperand(new_phi, v, i);
                 //     }
                 //     v = *++it;
                 //     new_phi->replaceAllOperands(v, BMap[v->as<BasicBlock>()][i]);
@@ -356,7 +367,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                     // val, blk, val, blk...
                     auto v = *it;
                     if (v->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
-                        new_phi->replaceAllOperands(v, IMapFind(v->as<Instruction>(), i));
+                        IMapFindAndReplaceOperand(new_phi, v, i);
                     }
                     v = *++it;
                     new_phi->replaceAllOperands(v, BMap[v->as<BasicBlock>()][i]);
@@ -410,7 +421,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                     // val, blk, val, blk...
                     auto v = *it;
                     if (v->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
-                        new_phi->replaceAllOperands(v, IMapFind(v->as<Instruction>(), count));
+                        IMapFindAndReplaceOperand(new_phi, v, count);
                     }
                     v = *++it;
                     new_phi->replaceAllOperands(v, BMap[v->as<BasicBlock>()][count]);
@@ -562,7 +573,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
     for (const auto &phi : header->phis()) {
         if (option.partially()) {
             auto phi_value_from_loop = phi->getValueForBlock(latch);
-            phi->replaceAllOperands(phi_value_from_loop, IMapFind(phi_value_from_loop->as<Instruction>(), count - 1));
+            IMapFindAndReplaceOperand(phi, phi_value_from_loop, count - 1);
             phi->replaceAllOperands(latch, last_latch);
         } else if (option.fully()) {
             phi->delPhiOperByBlock(latch);
