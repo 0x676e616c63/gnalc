@@ -1,6 +1,7 @@
 #include "ir/passes/transforms/loop_unroll.hpp"
 #include "ir/base.hpp"
 #include "ir/block_utils.hpp"
+#include "ir/formatter.hpp"
 #include "ir/instruction.hpp"
 #include "ir/instructions/compare.hpp"
 #include "ir/instructions/phi.hpp"
@@ -14,22 +15,22 @@
 namespace IR {
 void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& LI, Function &FC, DomTree &DT) {
     if (!(loop->isSimplifyForm() && loop->isLCSSAForm())) {
+        Logger::logInfo("Unroll disabled because the loop is not SimplifyForm or LCSSAForm.");
         option.disable();
         return;
     }
 
     // 不展开过大循环
-    unsigned inst_size = 0;
-    for (const auto &bb : loop->blocks()) {
-        inst_size += bb->getAllInstCount();
-    }
+    unsigned inst_size = loop->getInstCount();
     if (inst_size > MPS) {
+        Logger::logInfo("Unroll disabled because the loop is larger than MAX_PROCESS_SIZE.");
         option.disable();
         return;
     }
 
     // 限制多出口循环展开，暂时只处理单出口
     if (loop->getExitBlocks().size() != 1) {
+        Logger::logInfo("Unroll disabled because the loop has multiple exits.");
         option.disable();
         return;
     }
@@ -38,6 +39,7 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
     // for (const auto &bb : loop->blocks()) {
     //     for (const auto &inst : *bb) {
     //         if (inst->getOpcode() == OP::CALL) {
+    //             Logger::logInfo("Unroll disabled because the loop has CALLInst.");
     //             option.disable();
     //             return;
     //         }
@@ -47,14 +49,21 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
     auto SCEVH = SCEVHandle(&FC, &LI, &DT);
     const auto TC = SCEVH.getTripCount(loop);
     if (TC == nullptr) {
+        Logger::logInfo("Unroll disabled because the loop can't get trip count.");
         option.disable();
         return;
     }
 
     if (TC->isIRValue() && TC->getIRValue()->is<ConstantInt>()) {
         // 常量展开策略
-        option.raw_trip_countv = TC->getIRValue();
         const auto trip_countn = TC->getIRValue()->as<ConstantInt>()->getVal();
+
+        /// TODO: Fully unroll when trip_count == 1
+        if (trip_countn < 2) {
+            Logger::logInfo("Unroll disabled because the loop's trip count < 2");
+            option.disable();
+            return;
+        }
 
         // For fully unroll
         if (ENABLE_FULLY_UNROLL) {
@@ -69,6 +78,14 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
             auto unroll_factor = PUS / inst_size;
             unroll_factor = std::min(unroll_factor, PUC);
             unsigned remainder = trip_countn % unroll_factor;
+
+            if (trip_countn < unroll_factor) {
+                Logger::logInfo("Unroll disabled because the loop's trip count < unroll_factor.");
+                option.disable();
+                return;
+            }
+
+            Logger::logDebug("Partially unrolling: factor: " + std::to_string(unroll_factor) + ", remainder: " + std::to_string(remainder) + ", trip_count: " + std::to_string(trip_countn));
             option.enable_partially(unroll_factor);
 
             if (remainder != 0) {
@@ -77,6 +94,7 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
                     if (auto eb = loop->getExitingBlocks(); eb.size() == 1) {
                         if (auto cd = eb.begin()->get()->getBRInst()->getCond()->as<Instruction>(); cd->getOpcode() == OP::ICMP) {
                             if (auto icmpop = cd->as<ICMPInst>()->getCond(); icmpop == ICMPOP::eq || icmpop == ICMPOP::ne) {
+                                Logger::logInfo("Unroll disabled because the loop's exit condition is '==' or '!=' while it has remainder.");
                                 option.disable();
                                 return;
                             }
@@ -88,11 +106,59 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
                     }
                 }
 
-                // Calculate new trip count
-                /// TODO: NEED FIX
-                unsigned int nc = trip_countn / unroll_factor * unroll_factor;
-                auto new_countv = FC.getConst(static_cast<int>(nc));
-                option.set_remainder(remainder, new_countv);
+                {
+                    // Calculate new boundary
+                    /// TODO: NEED FIX
+                    pVal iter_variable, raw_boundary_value;
+                    if (loop->getExitingBlocks().size() == 1) {
+                        auto exiting_br_cond = (*loop->getExitingBlocks().begin())->getBRInst()->getCond();
+                        if (exiting_br_cond->is<ICMPInst>()) {
+                            auto icmp = exiting_br_cond->as<ICMPInst>();
+                            bool lhs_is_var = !loop->isLoopInvariant(icmp->getLHS());
+                            bool rhs_is_var = !loop->isLoopInvariant(icmp->getRHS());
+                            if (lhs_is_var && rhs_is_var) {
+                                Err::not_implemented("Both handles are variable.");
+                            } else if (lhs_is_var) {
+                                iter_variable = icmp->getLHS();
+                                raw_boundary_value = icmp->getRHS();
+                            } else if (rhs_is_var) {
+                                iter_variable = icmp->getRHS();
+                                raw_boundary_value = icmp->getLHS();
+                            } else {
+                                Err::unreachable();
+                            }
+                        } else {
+                            Logger::logInfo("Unroll disabled because the loop's exit condition is not ICMPInst.");
+                            option.disable();
+                            return;
+                        }
+                    } else {
+                        Err::not_implemented();
+                        Logger::logInfo("Unroll disabled because the loop has multiple exits.");
+                        option.disable();
+                        return;
+                    }
+
+                    Logger::logDebug("Get iter variable: "+ IRFormatter::formatValue(*iter_variable));
+                    Logger::logDebug("Get raw boundary value: "+ IRFormatter::formatValue(*raw_boundary_value));
+                    if (!raw_boundary_value->is<ConstantInt>()) {
+                        Logger::logInfo("Unroll disabled because the loop's boundary is not constant integer.");
+                        option.disable();
+                        return;
+                    }
+
+                    auto trecp = SCEVH.getSCEVAtBlock(iter_variable, loop->getHeader());
+                    if (!trecp || !trecp->isAddRec()) {
+                        Logger::logInfo("Unroll disabled because the loop's iter_variable's TREC is not AddRec or can't get.");
+                        option.disable();
+                        return;
+                    }
+                    auto [base, step] = trecp->getConstantAffineAddRec().value();
+                    int new_boundary_num = base + step * unroll_factor * (trip_countn / unroll_factor);
+                    Logger::logDebug("Get base: "+ std::to_string(base) + ", step: "+ std::to_string(step) + ", new_boundary_num: "+ std::to_string(new_boundary_num));
+                    auto new_boundary_value = FC.getConst(new_boundary_num);
+                    option.set_remainder(remainder, raw_boundary_value, new_boundary_value);
+                }
             }
             return;
         }
@@ -103,6 +169,7 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
         }
     }
 
+    Logger::logInfo("Unroll disabled because of some default reasons.");
     option.disable();
 }
 
@@ -467,7 +534,8 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             if (cond->getOpcode() == OP::ICMP) {
                 auto icmp = cond->as<ICMPInst>();
                 // TODO : NEED FIX
-                icmp->replaceAllOperands(option.raw_trip_countv, option.new_trip_countv);
+                if (option.raw_boundary_value != option.new_boundary_value)
+                    icmp->replaceAllOperands(option.raw_boundary_value, option.new_boundary_value);
                 // 此处给展开循环的判断条件改为非等，防止多执行
                 switch (icmp->getCond()) {
                     case ICMPOP::sgt:

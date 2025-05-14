@@ -38,8 +38,8 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
         unsigned unroll_count = 0;
         bool has_remainder = false;
         unsigned remainder = 0;
-        pVal new_trip_countv; // For partially unroll with remainder, new trip count value in unroll loop
-        pVal raw_trip_countv; // For constant trip count, raw trip count value in original loop
+        pVal raw_boundary_value; // For partially unroll with remainder, raw boundary value in unroll loop
+        pVal new_boundary_value; // For partially unroll with remainder, new boundary value in unroll loop
 
         void disable() {
             peel = false;
@@ -64,11 +64,12 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
             has_remainder = false;
         }
 
-        void set_remainder(const unsigned _remainder, const pVal _new_trip_countv) {
+        void set_remainder(const unsigned _remainder, const pVal _rawbv, const pVal _newbv) {
             Err::gassert(unroll_type == UnrollType::PARTIALLY, "UnrollOption: set_remainder(): unroll_type is not PARTIALLY.");
             has_remainder = (_remainder!=0);
             remainder = _remainder;
-            new_trip_countv = _new_trip_countv;
+            raw_boundary_value = _rawbv;
+            new_boundary_value = _newbv;
         }
 
         void enable_runtime(const unsigned _count) {
