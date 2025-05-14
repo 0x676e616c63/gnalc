@@ -3,22 +3,29 @@
 // control flow into data-driven logic.
 //
 // For example,
+// IR:
 // bb0:                                           bb0:
-//   cond = cmp xxx, xxx                            br bb3
+//   cond = cmp xxx, xxx                            br bb1
 //   br cond, bb1, bb2
-// bb1:
-//   br bb3                           --->
-// bb2:
-//   br bb3
-// bb3:                                           bb3:
-//   val = phi [v1, bb1], [v2, bb2]                 cond = cmp xxx, xxx
-//                                                  val = select cond, v2, v1
-//
-// Or a more general case:
-// TODO
+// bb1:                                           bb1:
+//   ; something                                    ; something
+//   br bb3                           --->          cond = cmp xxx, xxx
+// bb3:                                             vs = select cond, v1, v0
+//   val = phi [v0, bb0], [v1, bb1]                 br bb3
+//                                                bb3:                  
+//                                                    val = phi [vs, bb1]
+// CFG:
+//  bb0 ---> bb1 ---> bb3               bb0 ---> bb1 ---> bb3
+//   |                 ^                        (select)
+//   |                 |       --->
+//   |-----------------
 //
 // Note that this only do simple if-conversion, and does not handle more complex cases.
 // More complex cases are handled in MIR.
+//
+// Reference:
+//   - "Partial Control-Flow Linearization" (TODO, currently not implemented)
+//       https://compilers.cs.uni-saarland.de/papers/moll_parlin_pldi18.pdf
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_IF_CONVERSION_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_IF_CONVERSION_HPP
@@ -29,6 +36,9 @@ namespace IR {
 class IfConversionPass : public PM::PassInfo<IfConversionPass> {
 public:
     PM::PreservedAnalyses run(Function &function, FAM &manager);
+
+private:
+    size_t name_cnt = 0;
 };
 
 } // namespace IR

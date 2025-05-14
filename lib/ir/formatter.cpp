@@ -289,6 +289,8 @@ std::string IRFormatter::formatInst(Instruction &inst) {
         return fINSERTInst(inst.as_ref<INSERTInst>());
     case OP::SHUFFLE:
         return fSHUFFLEInst(inst.as_ref<SHUFFLEInst>());
+    case OP::SELECT:
+        return fSELECTInst(inst.as_ref<SELECTInst>());
 
     case OP::HELPER:
         return fHELPERInst(inst.as_ref<HELPERInst>());

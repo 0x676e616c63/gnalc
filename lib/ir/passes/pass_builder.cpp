@@ -136,6 +136,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
         auto make_cfg_clean = [&options] {
             PM::FixedPointPM<Function> fpm;
             FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
+            FUNCTION_TRANSFORM(if_conversion, IfConversionPass())
             FUNCTION_TRANSFORM(adce, ADCEPass())
             return fpm;
         };
@@ -227,6 +228,8 @@ FPM PassBuilder::buildFunctionPipeline(PMOptions opt_info) {
     FUNCTION_TRANSFORM(dce, DCEPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
     FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
+    FUNCTION_TRANSFORM(if_conversion, IfConversionPass())
+    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
     FUNCTION_TRANSFORM(gvnpre, BreakCriticalEdgesPass(), GVNPREPass())
     // IMPORTANT, CFGSimplify before LoadElim can shorten
     // the compile time significantly in certain cases
@@ -264,6 +267,7 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     // If-conversion
     fpm.addPass(PromotePass());
+    fpm.addPass(CFGSimplifyPass());
     fpm.addPass(NameNormalizePass());
     fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(IfConversionPass());

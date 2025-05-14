@@ -57,6 +57,8 @@ constexpr unsigned LOOP_UNROLLING_RUNTIME_UNROLL_COUNT = 8;
 // 执行展开的最大循环大小，至多为上述各个 size 的 1/2
 constexpr unsigned LOOP_UNROLLING_MAX_PROCESS_SIZE = 100;
 
+// If Conversion
+constexpr auto IF_CONVERSION_DUPLICATION_THRESHOLD = 4;
 } // namespace Config::IR
 
 namespace Config::MIR {

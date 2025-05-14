@@ -396,8 +396,8 @@ public:
                 changes[inst] = LatticeInfo::NAC;
         } else if (inst->is<ALLOCAInst, GEPInst, LOADInst, CALLInst, BITCASTInst>())
             changes[inst] = LatticeInfo::NAC;
-        else if (inst->getOpcode() == OP::BR || inst->getOpcode() == OP::PHI)
-            Err::unreachable("Transfer on br or phi.");
+        else if (inst->is<BRInst, PHIInst, SELECTInst>())
+            Err::unreachable("Transfer on br, phi or select.");
         else
             Err::unreachable("Unknown instruction.");
     }

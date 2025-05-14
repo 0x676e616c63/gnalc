@@ -79,6 +79,8 @@ public:
     void dropTrueDest();
     void dropOneDest(const pBlock& bb);
 
+    bool hasDest(const pBlock& bb);
+
     bool isConditional() const;
     pVal getCond() const;
     pBlock getDest() const;
