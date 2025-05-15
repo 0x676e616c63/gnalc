@@ -48,7 +48,8 @@ Expr *ExprPool::getFromPool(Expr *e) {
     auto it = index.find(e);
     if (it != index.end())
         return *it;
-    pool.emplace_back(std::make_unique<Expr>(*e));
-    return pool.back().get();
+    auto x = pool.emplace_back(std::make_unique<Expr>(*e)).get();
+    index.emplace(x);
+    return x;
 }
 } // namespace ExprSolver

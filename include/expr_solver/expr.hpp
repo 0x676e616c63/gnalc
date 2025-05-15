@@ -72,6 +72,11 @@ class ExprPool {
             if (expr->isSym())
                 return std::hash<std::string>()(expr->getSymID());
 
+            if (expr->isConstant())
+                return std::hash<int>()(expr->getConstVal());
+
+            Err::gassert(expr->isBinary(), "Invalid Expr Type");
+
             size_t seed = std::hash<Expr *>()(expr->getLHS());
             Util::hashSeedCombine(seed, std::hash<Expr *>()(expr->getRHS()));
             Util::hashSeedCombine(seed, std::hash<Op>()(expr->op()));
@@ -92,7 +97,6 @@ public:
 private:
     Expr *getFromPool(Expr *e);
 };
-
 } // namespace ExprSolver
 
 #endif

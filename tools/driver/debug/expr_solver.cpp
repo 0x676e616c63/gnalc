@@ -6,39 +6,53 @@
 
 using namespace ExprSolver;
 
-void test_expr(ExprPool *epool) {
-
-    auto x = epool->getSymbol("x");
-    auto y = epool->getSymbol("y");
-    auto c1 = epool->getConstant(1);
-    auto c2 = epool->getConstant(2);
-    auto x_add_1 = epool->getBinary(Op::Add, x, c1);
-    auto y_sub_2 = epool->getBinary(Op::Sub, y, c2);
-    auto x_add_1_add_y_sub_2 = epool->getBinary(Op::Add, x_add_1, y_sub_2);
-
-    ExprSimplifier esim(epool);
-
-    std::cout << "x + 1 + y - 2:\nBefore Simplify: " << *x_add_1_add_y_sub_2
-        << "\nAfter Simplify:" << *esim.simplify(x_add_1_add_y_sub_2) << std::endl;
-}
-
+struct TestCase {
+    std::string raw;
+    std::string expected;
+};
 
 int main() {
     ExprPool epool;
-
-    // test_expr(&epool);
     // x,y,z for single-char symbol
     // {pi} for multiple-char symbol
     ExprParser eparser(&epool);
     ExprSimplifier esim(&epool);
-    auto parsed = eparser.parse("2x + 3 * yz * {pi} / 6");
-    auto simplified = esim.simplify(parsed);
-    std::cout << "Parsed Expr: " << *parsed << "\nAfter Simplify: " << *simplified << std::endl;
-    auto parsed1 = eparser.parse("2 * x * 3 * y");
-    auto simplified1 = esim.simplify(parsed1);
-    std::cout << "Parsed Expr: " << *parsed1 << "\nAfter Simplify: " << *simplified1 << std::endl;
-    auto parsed2 = eparser.parse("(x * 7) * 9 / 7 - x * 9");
-    auto simplified2 = esim.simplify(parsed2);
-    std::cout << "Parsed Expr: " << *parsed2 << "\nAfter Simplify: " << *simplified2 << std::endl;
+
+    std::vector<TestCase> testcases = {
+        {"x * 0", "0"},
+        {"0 / x", "0"},
+        {"x / 1", "x"},
+        {"(x + 0) * y", "xy"},
+        {"-x + x", "0"},
+        {"2 * x + 3 * x", "5x"},
+        {"x + x + x", "3x"},
+        {"2 * y + 3 * y", "5y"},
+        {"3 + 5", "8"},
+        {"2 * (3 + 4)", "14"},
+        {"(a + b) - (b + a)", "0"},
+        {"(x - y) + (y - x)", "0"},
+        {"(x * 7) * 9 / 7 - x * 9", "0"},
+        {"2 * x * 3 * y", "6(xy)"}, // TODO, (6x)y, 6xy and 6(xy)
+        {"x + 1 - 1", "x"},
+    };
+
+    size_t failed_cnt = 0;
+    for (const auto &[raw, expected] : testcases) {
+        auto raw_expr = eparser.parse(raw);
+        auto simplified = esim.simplify(raw_expr);
+        auto expected_expr = eparser.parse(expected);
+        if (simplified != expected_expr) {
+            ++failed_cnt;
+            std::cout << "Failed on '" << raw << "'" << std::endl;
+            std::cout << "Expected: '" << *expected_expr << "'" << std::endl;
+            std::cout << "Got: '" << *simplified << "'" << std::endl;
+            std::cout << "---------------------------" << std::endl;
+        }
+    }
+    if (failed_cnt > 0) {
+        std::cout << failed_cnt << " tests failed" << std::endl;
+        return 1;
+    }
+    std::cout << "All tests passed" << std::endl;
     return 0;
 }
