@@ -147,7 +147,7 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
                         return;
                     }
 
-                    auto trecp = SCEVH.getSCEVAtBlock(iter_variable, loop->getHeader());
+                    auto trecp = SCEVH.getSCEVAtBlock(iter_variable, iter_variable->as<Instruction>()->getParent());
                     if (!trecp || !trecp->isAddRec()) {
                         Logger::logInfo("Unroll disabled because the loop's iter_variable's TREC is not AddRec or can't get.");
                         option.disable();
@@ -247,10 +247,11 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
     // Return IMap[inst][i] or inst.
     auto IMapFind = [&](const pI &inst, const unsigned i) {
         auto ret = inst;
+        Err::gassert(ret != nullptr, "IMapFind: inst is nullptr.");
         if (const auto it = IMap.find(inst); it != IMap.end()) {
             ret =  it->second[i];
+            Err::gassert(ret != nullptr, "IMapFind: Result is nullptr.");
         }
-        Err::gassert(ret != nullptr, "IMapFind: inst is nullptr.");
         return ret;
     };
 
@@ -457,7 +458,6 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
     // 此处只处理常量部分展开的余数循环
     if (option.partially() && option.has_remainder) {
         auto rem = option.remainder;
-        auto raw_bb_iter = blocks.begin();
 
         // process header
         {
@@ -474,6 +474,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         }
 
         // process other block
+        auto raw_bb_iter = blocks.begin();
         ++raw_bb_iter;
         while (raw_bb_iter != blocks.end()) {
             auto rb = (*raw_bb_iter)->as<BasicBlock>(); // current raw block
@@ -484,6 +485,21 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                 auto new_phi = makeClone(phi);
                 new_phi->setName(phi->getName() + ".remainder");
                 IMap[phi][count] = new_phi;
+                cb->addPhiInst(new_phi);
+            }
+
+            CloneNonPhiInst(rb, cb, count);
+            ++raw_bb_iter;
+        }
+
+        // update phi oper
+        raw_bb_iter = blocks.begin();
+        ++raw_bb_iter;
+        while (raw_bb_iter != blocks.end()) {
+            auto rb = (*raw_bb_iter)->as<BasicBlock>();
+            auto cb = BMap[rb][count];
+            for (const auto &phi : rb->phis()) {
+                auto new_phi = IMap[phi][count];
                 for (auto it = phi->operand_begin(); it != phi->operand_end(); ++it) {
                     // val, blk, val, blk...
                     auto v = *it;
@@ -493,10 +509,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                     v = *++it;
                     new_phi->replaceAllOperands(v, BMap[v->as<BasicBlock>()][count]);
                 }
-                cb->addPhiInst(new_phi);
             }
-
-            CloneNonPhiInst(rb, cb, count);
             ++raw_bb_iter;
         }
 

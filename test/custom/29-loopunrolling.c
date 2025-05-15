@@ -1,55 +1,37 @@
-int FourWhile() {
-    int a;
-    a = 5;
-    int b;
-    int c;
-    b = 6;
-    c = 7;
-    int d;
-    d = 10;
-    while (a < 20) {
-        a = a + 3;
-        while(b < 10){
-            b = b + 1;
-            while(c == 7){
-                c = c - 1;
-                while(d < 20){
-                    d = d + 3;
-                }
-                d = d - 1;
-            }
-            c = c + 1;
+// 65_color.sy
+// 77_substr.sy
+// 94_nested_loops.sy
+
+int a = -1, b = 1;
+
+int inc_a()
+{
+    int b = a;
+    b = b + 1;
+    a = b;
+    return a;
+}
+
+int main()
+{
+    int k = 5;
+    while (k >= 0) {
+        if (inc_a() && inc_a() && inc_a()) {
+            putint(a); putch(32); putint(b); putch(10);
         }
-        b = b - 2;
+        if (inc_a() < 14 || inc_a() && inc_a() - inc_a() + 1) {
+            putint(a); putch(10);
+            b = b * 2;
+        } else {
+            inc_a();
+        }
+        k = k - 1;
     }
-
-    return (a + (b + d) + c);
+    putint(a); putch(32); putint(b); putch(10);
+    return a;
 }
 
-int main() {
-    return FourWhile();
-}
 
-// // Can't get trec
-// int main() {
-//     int i = 4;
-//     int j = 0;
-//     int k = 0;
-//     while (i < 19) {
-//         while (j < 100) {
-//             while (k < 100) {
-//                 k = k + 1;
-//             }
-//             j = j + 1;
-//         }
-//         putint(i);
-//         i = i + 1;
-//     }
-//     putint(i);
-//     return 0;
-// }
-
-// // Can't get trec
 // // Very slowly run ConstantPropagationPass when fully unroll
 // // 52_scope
 // int a = 7;
