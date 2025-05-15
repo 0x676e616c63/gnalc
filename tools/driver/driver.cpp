@@ -55,8 +55,9 @@ int main(int argc, char **argv) {
     bool emit_llvm = false;                     // -emit-llvm
     bool emit_llc = false;                      // -emit-llc
     bool ast_dump = false;                      // -ast-dump
-    bool o1_pipeline = false;                   // -O, -O1
-    bool fixed_point_pipeline = false;          // -fixed-point
+    bool std_pipeline = false;                  // -std-pipeline
+    bool fixed_point_pipeline = false;          // -O, -O1, -fixed-point
+    bool o0_optnone = false;                    // -O0
     bool fuzz_testing = false;                  // -fuzz
     double fuzz_testing_duplication_rate = 1.0; // -fuzz-rate
     std::string fuzz_testing_repro;             // -fuzz-repro
@@ -113,14 +114,16 @@ int main(int argc, char **argv) {
             return -1;
 #endif
             ast_dump = true;
-        } else if (arg == "-fixed-point")
+        } else if (arg == "-O1" || arg == "-O" || arg == "-fixed-point")
             fixed_point_pipeline = true;
-        else if (arg == "-O1" || arg == "-O")
-            o1_pipeline = true;
+        else if (arg == "-O0")
+            o0_optnone = true;
+        else if (arg == "-std-pipeline")
+            std_pipeline = true;
 
 #define OPT_ARG(cli_arg, cli_no_arg, opt_name)                                                                         \
-    else if (arg == (cli_arg)) cli_opt_options.opt_name = IR::CliOptions::Status::Enable;                              \
-    else if (arg == (cli_no_arg)) cli_opt_options.opt_name = IR::CliOptions::Status::Disable;
+    else if (arg == (cli_arg)) cli_opt_options.opt_name.enable();                                                      \
+    else if (arg == (cli_no_arg)) cli_opt_options.opt_name.disable();
         // Optimizations available:
         // Function Transforms
         OPT_ARG("--mem2reg", "--no-mem2reg", mem2reg)
@@ -174,9 +177,9 @@ int main(int argc, char **argv) {
         }
         else if (arg == "-debug-pipeline") debug_pipeline = true;
         else if (arg == "--ann") cli_opt_options.advance_name_norm = true;
-        else if (arg == "--verify") cli_opt_options.verify = IR::CliOptions::Status::Enable;
+        else if (arg == "--verify") cli_opt_options.verify.enable();
         else if (arg == "--strict") {
-            cli_opt_options.verify = IR::CliOptions::Status::Enable;
+            cli_opt_options.verify.enable();
             cli_opt_options.abort_when_verify_failed = true;
         }
 #if GNALC_EXTENSION_BRAINFK
@@ -201,10 +204,10 @@ int main(int argc, char **argv) {
 General Options:
   -o <file>            - Write output to <file>
   -S                   - Only run compilation steps (assembly generation)
-  -O,-O1               - Optimization level 1
+  -O0                  - Optimization level 0 (disable all optimization)
+  -O,-O1, -fixed-point - Optimization level 1 (fixed-point pipeline)
   -emit-llvm           - Use LLVM intermediate representation for output
   -ast-dump            - Build and dump AST (Unavailable in GGC mode)
-  -fixed-point         - Enable fixed-point optimization pipeline
   --log <log-level>    - Set logging level (debug|info|none)
   -h, --help           - Display this help message
 
@@ -241,7 +244,7 @@ Debug options:
   --verify                   - Enable IR verification after passes
   --strict                   - Strict mode (verify + abort on failure)
 
-Note: For -fuzz/-fixed-point/-O1 modes:
+Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
   --<opt> flags have no effect, but --no-<opt> can disable specific passes
 )";
 
@@ -269,8 +272,16 @@ Extensions:
     }
 
     if (!only_compilation) {
-        std::cerr << "Error: Gnalc currently only supports '-S' mode." << std::endl;
-        return -1;
+        std::cerr << "Warning: Gnalc currently only supports '-S' mode."
+                     " Only run compilation steps currently." << std::endl;
+    }
+
+    {
+        std::vector<bool> check = {o0_optnone, std_pipeline, fuzz_testing, fixed_point_pipeline, debug_pipeline};
+        if (std::count(check.begin(), check.end(), true) > 1) {
+            std::cerr << "Error: Multiple pipelines specified." << std::endl;
+            return -1;
+        }
     }
 
     if (!input_file.empty()) {
@@ -314,15 +325,23 @@ Extensions:
     IR::PassBuilder::registerProxies(fam, mam);
 
     IR::PMOptions pm_options{};
-    if (o1_pipeline || fixed_point_pipeline || fuzz_testing) {
-        if (!fuzz_testing) {
-            if (cli_opt_options.verify == IR::CliOptions::Status::Default)
-                cli_opt_options.verify = IR::CliOptions::Status::Disable;
-        } else
-            cli_opt_options.abort_when_verify_failed = true;
+    if (o0_optnone)
+        pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::DisableAnyway);
+    else if (fuzz_testing) {
+        cli_opt_options.abort_when_verify_failed = true;
+        cli_opt_options.verify.enableIfDefault();
         pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::EnableIfDefault);
-    } else
+    } else if (std_pipeline || fixed_point_pipeline) {
+        cli_opt_options.verify.disableIfDefault();
+        pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::EnableIfDefault);
+    } else {
+        cli_opt_options.verify.disableIfDefault();
+        cli_opt_options.mem2reg.enableIfDefault();
+        cli_opt_options.sccp.enableIfDefault();
+        cli_opt_options.adce.enableIfDefault();
+        cli_opt_options.cfgsimplify.enableIfDefault();
         pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::DisableIfDefault);
+    }
 
     IR::MPM mpm;
     if (debug_pipeline)

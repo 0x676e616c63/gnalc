@@ -58,31 +58,74 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
                 continue;
             }
 
-            REPLACE(M::Add(M::Bind(x), M::Is(0)), x)                          // x + 0 = x
-            REPLACE(M::Add(M::Is(0), M::Bind(x)), x)                          // 0 + x -> x
-            REPLACE(M::Sub(M::Bind(x), M::Is(0)), x)                          // x - 0 = x
-            REPLACE(M::Div(M::Bind(x), M::Is(1)), x)                          // x / 1 = x
-            REPLACE(M::Mul(M::Bind(x), M::Is(1)), x)                          // x * 1 = x
-            REPLACE(M::Mul(M::Is(1), M::Bind(x)), x)                          // 1 * x = x
-            REPLACE(M::Fmul(M::Bind(x), M::Is(1.0f)), x)                      // x * 1.0f = x
-            REPLACE(M::Fmul(M::Is(1.0f), M::Bind(x)), x)                      // 1.0f * x = x
-            REPLACE(M::Sub(M::Bind(x), M::Is(x)), i32_zero)                   // x - x = 0
-            REPLACE(M::Fsub(M::Bind(x), M::Is(x)), f32_zero)                  // x - x = 0.0f
-            REPLACE(M::Mul(M::Val(), M::Is(0)), i32_zero)                     // x * 0 = 0
-            REPLACE(M::Mul(M::Is(0), M::Val()), i32_zero)                     // 0 * x = 0
-            REPLACE(M::Div(M::Is(0), M::Val()), i32_zero)                     // 0 / x = 0
-            REPLACE(M::Rem(M::Is(0), M::Val()), i32_zero)                     // 0 % x = 0
-            REPLACE(M::Rem(M::Val(), M::Is(1)), i32_zero)                     // x % 1 = 0
-            REPLACE(M::Div(M::Bind(x), M::Is(x)), i32_one)                    // x / x = 1
-            REPLACE(M::Fdiv(M::Bind(x), M::Is(x)), f32_one)                   // x / x = 1.0f
-            REPLACE(M::Add(M::Bind(x), M::Sub(M::Is(0), M::Is(x))), i32_zero) // x + -x = 0
-            REPLACE(M::Fadd(M::Bind(x), M::Fneg(M::Is(x))), f32_zero)         // x + -x = 0.0f
-            REPLACE(M::Icmp(M::Bind(x), M::Is(x)),
-                    isTrueWhenEqual(x->as<ICMPInst>()->getCond()) ? i1_true : i1_false) // icmp x, x
-            REPLACE(M::Fcmp(M::Bind(x), M::Is(x)),
-                    isTrueWhenEqual(x->as<FCMPInst>()->getCond()) ? i1_true : i1_false) // fcmp x, x
-            REPLACE(M::Add(M::Bind(x), M::Sub(M::Bind(y), M::Is(x))), y)                // x + (y - x) = y
-            REPLACE(M::Add(M::Sub(M::Bind(y), M::Bind(x)), M::Is(x)), y)                // (y - x) + x = y
+            // x + 0 = x
+            REPLACE(M::Add(M::Bind(x), M::Is(0)), x)
+
+            // 0 + x -> x
+            REPLACE(M::Add(M::Is(0), M::Bind(x)), x)
+
+            // x - 0 = x
+            REPLACE(M::Sub(M::Bind(x), M::Is(0)), x)
+
+            // x / 1 = x
+            REPLACE(M::Div(M::Bind(x), M::Is(1)), x)
+
+            // x * 1 = x
+            REPLACE(M::Mul(M::Bind(x), M::Is(1)), x)
+
+            // 1 * x = x
+            REPLACE(M::Mul(M::Is(1), M::Bind(x)), x)
+
+            // x * 1.0f = x
+            REPLACE(M::Fmul(M::Bind(x), M::Is(1.0f)), x)
+
+            // 1.0f * x = x
+            REPLACE(M::Fmul(M::Is(1.0f), M::Bind(x)), x)
+
+            // x - x = 0
+            REPLACE(M::Sub(M::Bind(x), M::Is(x)), i32_zero)
+
+            // x - x = 0.0f
+            REPLACE(M::Fsub(M::Bind(x), M::Is(x)), f32_zero)
+
+            // x * 0 = 0
+            REPLACE(M::Mul(M::Val(), M::Is(0)), i32_zero)
+
+            // 0 * x = 0
+            REPLACE(M::Mul(M::Is(0), M::Val()), i32_zero)
+
+            // 0 / x = 0
+            REPLACE(M::Div(M::Is(0), M::Val()), i32_zero)
+
+            // 0 % x = 0
+            REPLACE(M::Rem(M::Is(0), M::Val()), i32_zero)
+
+            // x % 1 = 0
+            REPLACE(M::Rem(M::Val(), M::Is(1)), i32_zero)
+
+            // x / x = 1
+            REPLACE(M::Div(M::Bind(x), M::Is(x)), i32_one)
+
+            // x / x = 1.0f
+            REPLACE(M::Fdiv(M::Bind(x), M::Is(x)), f32_one)
+
+            // x + -x = 0
+            REPLACE(M::Add(M::Bind(x), M::Sub(M::Is(0), M::Is(x))), i32_zero)
+
+            // x + -x = 0.0f
+            REPLACE(M::Fadd(M::Bind(x), M::Fneg(M::Is(x))), f32_zero)
+
+            // x + (y - x) = y
+            REPLACE(M::Add(M::Bind(x), M::Sub(M::Bind(y), M::Is(x))), y)
+
+            // (y - x) + x = y
+            REPLACE(M::Add(M::Sub(M::Bind(y), M::Bind(x)), M::Is(x)), y)
+
+            // icmp x, x
+            REPLACE(M::Icmp(M::Bind(x), M::Is(x)), isTrueWhenEqual(x->as<ICMPInst>()->getCond()) ? i1_true : i1_false)
+
+            // fcmp x, x
+            REPLACE(M::Fcmp(M::Bind(x), M::Is(x)), isTrueWhenEqual(x->as<FCMPInst>()->getCond()) ? i1_true : i1_false)
         }
     }
 

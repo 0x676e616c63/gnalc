@@ -3,9 +3,9 @@
 
 // Analysis
 #include "ir/passes/analysis/basic_alias_analysis.hpp"
-#include "ir/passes/analysis/loop_alias_analysis.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/live_analysis.hpp"
+#include "ir/passes/analysis/loop_alias_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
 
@@ -52,7 +52,7 @@
 
 namespace IR {
 
-#define GNALC_IR_PASS_ENTRY(name) name(Status::Default),
+#define GNALC_IR_PASS_ENTRY(name) name(StatusType::Default),
 CliOptions::CliOptions() : GNALC_IR_PASS_TABLE advance_name_norm(false), abort_when_verify_failed(false) {}
 #undef GNALC_IR_PASS_ENTRY
 
@@ -76,7 +76,7 @@ PMOptions CliOptions::toPMOptions(Mode mode) const {
 
     case Mode::EnableIfDefault:
         return {
-#define GNALC_IR_PASS_ENTRY(name) .name = (name) != Status::Disable,
+#define GNALC_IR_PASS_ENTRY(name) .name = !(name).isDisable(),
             GNALC_IR_PASS_TABLE.abort_when_verify_failed = abort_when_verify_failed,
             .advance_name_norm = advance_name_norm,
         };
@@ -84,7 +84,7 @@ PMOptions CliOptions::toPMOptions(Mode mode) const {
 
     case Mode::DisableIfDefault:
         return {
-#define GNALC_IR_PASS_ENTRY(name) .name = (name) == Status::Enable,
+#define GNALC_IR_PASS_ENTRY(name) .name = (name).isEnable(),
             GNALC_IR_PASS_TABLE.abort_when_verify_failed = abort_when_verify_failed,
             .advance_name_norm = advance_name_norm,
         };
@@ -99,8 +99,7 @@ void registerPassForOptInfo(PM &fpm, bool verify, bool strict, bool enable, Pass
         fpm.addPass(std::forward<Pass>(pass));
         if (verify)
             fpm.addPass(VerifyPass(strict));
-    }
-    else
+    } else
         Logger::logDebug("[PB]: '", Pass::name(), "' disabled.");
 }
 
@@ -219,11 +218,10 @@ FPM PassBuilder::buildFunctionPipeline(PMOptions opt_info) {
     FUNCTION_TRANSFORM(mem2reg, PromotePass())
     FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass())
     FUNCTION_TRANSFORM(inliner, InlinePass())
-    FUNCTION_TRANSFORM(internalize, InternalizePass())
-    FUNCTION_TRANSFORM(mem2reg, PromotePass())
+    FUNCTION_TRANSFORM(internalize, InternalizePass(), PromotePass())
     FUNCTION_TRANSFORM(sccp, ConstantPropagationPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
-    FUNCTION_TRANSFORM(reassociate, ReassociatePass())
+    // FUNCTION_TRANSFORM(reassociate, ReassociatePass())
     FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass())
     FUNCTION_TRANSFORM(sccp, ConstantPropagationPass())
     FUNCTION_TRANSFORM(dce, DCEPass())
@@ -268,11 +266,13 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     // If-conversion
     fpm.addPass(PromotePass());
-    fpm.addPass(CFGSimplifyPass());
     fpm.addPass(NameNormalizePass());
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(CFGSimplifyPass());
     fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(IfConversionPass());
     fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(CFGSimplifyPass());
     fpm.addPass(NameNormalizePass());
     return fpm;
     // Vectorizer
@@ -336,9 +336,10 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
     if (options.option)                                                                                                \
         passes.emplace_back(                                                                                           \
             pass::name(),                                                                                              \
-            [&fpm, &options]() {                                                                                      \
+            [&fpm, &options]() {                                                                                       \
                 fpm.addPass(pass());                                                                                   \
-                if(options.verify) fpm.addPass(VerifyPass(options.abort_when_verify_failed));                                                                       \
+                if (options.verify)                                                                                    \
+                    fpm.addPass(VerifyPass(options.abort_when_verify_failed));                                         \
             },                                                                                                         \
             weight);
 
@@ -346,10 +347,11 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
     if (options.option)                                                                                                \
         passes.emplace_back(                                                                                           \
             pass2::name(),                                                                                             \
-            [&fpm, &options]() {                                                                                      \
+            [&fpm, &options]() {                                                                                       \
                 fpm.addPass(pass1());                                                                                  \
                 fpm.addPass(pass2());                                                                                  \
-                if(options.verify) fpm.addPass(VerifyPass(options.abort_when_verify_failed));                                                                     \
+                if (options.verify)                                                                                    \
+                    fpm.addPass(VerifyPass(options.abort_when_verify_failed));                                         \
             },                                                                                                         \
             weight);
 
@@ -357,12 +359,13 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
     if (options.option)                                                                                                \
         passes.emplace_back(                                                                                           \
             pass4::name(),                                                                                             \
-            [&fpm, &options]() {                                                                                      \
+            [&fpm, &options]() {                                                                                       \
                 fpm.addPass(pass1());                                                                                  \
                 fpm.addPass(pass2());                                                                                  \
                 fpm.addPass(pass3());                                                                                  \
                 fpm.addPass(pass4());                                                                                  \
-                if(options.verify) fpm.addPass(VerifyPass(options.abort_when_verify_failed));                                                                        \
+                if (options.verify)                                                                                    \
+                    fpm.addPass(VerifyPass(options.abort_when_verify_failed));                                         \
             },                                                                                                         \
             weight);
 

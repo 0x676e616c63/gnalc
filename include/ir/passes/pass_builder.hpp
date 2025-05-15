@@ -47,7 +47,28 @@ struct PMOptions {
 };
 
 struct CliOptions {
-    enum class Status { Default, Enable, Disable };
+    enum class StatusType { Default, Enable, Disable };
+
+    class Status {
+        StatusType type;
+    public:
+        Status(StatusType type) : type(type) {}
+        void enable() { type = StatusType::Enable; }
+        void disable() { type = StatusType::Enable; }
+        void reset() { type = StatusType::Default; }
+        operator StatusType() const { return type; }
+        bool isDefault() const { return type == StatusType::Default; }
+        bool isEnable() const { return type == StatusType::Enable; }
+        bool isDisable() const { return type == StatusType::Disable; }
+        void enableIfDefault() {
+            if (type == StatusType::Default)
+                type = StatusType::Enable;
+        }
+        void disableIfDefault() {
+            if (type == StatusType::Default)
+                type = StatusType::Disable;
+        }
+    };
 #define GNALC_IR_PASS_ENTRY(name) Status name;
     GNALC_IR_PASS_TABLE
 #undef GNALC_IR_PASS_ENTRY
@@ -69,12 +90,14 @@ struct CliOptions {
 
 class PassBuilder {
 public:
+    // -O1, -fixed-point
     static FPM buildFunctionFixedPointPipeline(PMOptions options);
     static MPM buildModuleFixedPointPipeline(PMOptions options);
 
     static FPM buildFunctionPipeline(PMOptions options);
     static MPM buildModulePipeline(PMOptions options);
 
+    // -debug-pipeline
     static FPM buildFunctionDebugPipeline();
     static MPM buildModuleDebugPipeline();
 
