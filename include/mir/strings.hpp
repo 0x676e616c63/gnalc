@@ -102,7 +102,7 @@ inline string Reg2SDebug(const MIROperand_p &mop, unsigned bitWide) {
         str += '$';
 
         if (inRange(recover, static_cast<unsigned>(ARMReg::X0), static_cast<unsigned>(ARMReg::X28))) {
-            str += 'x' + std::to_string(isa);
+            str += 'x' + std::to_string(isa) + '[' + std::to_string(bitWide) + ']';
         } else if (recover == ARMReg::FP) {
             str += "fp";
         } else if (recover == ARMReg::LR) {
@@ -113,7 +113,7 @@ inline string Reg2SDebug(const MIROperand_p &mop, unsigned bitWide) {
             str += 'v' + std::to_string(isa - 32);
         }
     } else {
-        str += '%' + std::to_string(recover);
+        str += '%' + std::to_string(recover) + '[' + std::to_string(bitWide) + ']';
     }
 
     str += ')';

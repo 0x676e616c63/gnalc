@@ -70,7 +70,18 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     }
 
     break;
-    case OpC::InstICmp:
+    case OpC::InstICmp: {
+        // trySwapOps(minst); // 这里交换之后尾随的cset也要变条件, 总之就是这个位置很难办(难办? 难办就别办了)
+        auto rhs = minst->getOp(2);
+        if (rhs->isImme() && !is12ImmeWithProbShift(rhs->imme())) {
+            minst->setOperand<2>(loadImm(rhs));
+        }
+
+        auto lhs = minst->getOp(1);
+        if (lhs->isImme()) {
+            minst->setOperand<1>(loadImm(lhs));
+        }
+    }
     case OpC::InstAdd: {
         trySwapOps(minst);
         auto rhs = minst->getOp(2);
@@ -237,14 +248,14 @@ void ISelInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
 
         auto movz = MIRInst::make(ARMOpC::MOVZ)
                         ->setOperand<0>(dst)
-                        ->setOperand<1>(MIROperand::asImme(imm & 0XFFFF, OpT::Int16)); // low 16
+                        ->setOperand<1>(MIROperand::asImme(imm & 0XFFFF, OpT::Int32));
 
         minsts.insert(iter, movz);
 
         if (imm > 0XFFFF) {
             auto movk = MIRInst::make(ARMOpC::MOVK)
                             ->setOperand<0>(dst)
-                            ->setOperand<1>(MIROperand::asImme(imm >> 16, OpT::Int16))
+                            ->setOperand<1>(MIROperand::asImme(imm >> 16, OpT::Int32))
                             ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special)); // lsl only
 
             minsts.insert(iter, movk);
@@ -283,15 +294,15 @@ void ISelInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop, co
 
     auto offset = obj.offset;
 
-    if (isFitMemInst(offset, getBitWide(mop->type()))) {
+    Err::gassert(minst->getOp(5) != nullptr, "PostRAlegalizeImpl::runOnInst: InstLoad/InstStore info lack");
+
+    if (isFitMemInst(offset, minst->getOp(5)->imme())) {
         if (minst->opcode<OpC>() == OpC::InstLoadRegFromStack || minst->opcode<OpC>() == OpC::InstLoad) {
             minst->setOperand<2>(MIROperand::asImme(offset, OpT::Int64));
             minst->resetOpcode(ARMOpC::LDR);
-            Err::gassert(minst->getOp(5) != nullptr, "PostRAlegalizeImpl::runOnInst: InstLoad info lack");
         } else {
             minst->setOperand<3>(MIROperand::asImme(offset, OpT::Int64));
             minst->resetOpcode(ARMOpC::STR);
-            Err::gassert(minst->getOp(5) != nullptr, "PostRAlegalizeImpl::runOnInst: InstLoad info lack");
         }
         return;
     }
@@ -324,11 +335,9 @@ void ISelInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop, co
     if (minst->opcode<OpC>() == OpC::InstLoadRegFromStack || minst->opcode<OpC>() == OpC::InstLoad) {
         minst->setOperand<2>(scratch); // just a mark for codegen
         minst->resetOpcode(ARMOpC::LDR);
-        Err::gassert(minst->getOp(5) != nullptr, "PostRAlegalizeImpl::runOnInst: InstLoad info lack");
     } else if (minst->opcode<OpC>() == OpC::InstStoreRegToStack || minst->opcode<OpC>() == OpC::InstStore) {
         minst->setOperand<3>(scratch);
         minst->resetOpcode(ARMOpC::STR);
-        Err::gassert(minst->getOp(5) != nullptr, "PostRAlegalizeImpl::runOnInst: InstLoad info lack");
     }
 
     return;

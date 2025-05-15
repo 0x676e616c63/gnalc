@@ -62,34 +62,68 @@ void RegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
 }
 
 void RegisterAllocImpl::Main(FAM &fam) {
-    liveinfo = fam.getFreshResult<LiveAnalysis>(*mfunc);
+    // liveinfo = fam.getFreshResult<LiveAnalysis>(*mfunc);
 
-    Build();
-    MkWorkList();
+    // Build();
+    // MkWorkList();
 
-    while (!simplifyWorkList.empty() || !worklistMoves.empty() || !freezeWorkList.empty() || !spillWorkList.empty()) {
-        if (!simplifyWorkList.empty()) {
-            Simplify();
-        } else if (!worklistMoves.empty()) {
-            Coalesce();
-        } else if (!freezeWorkList.empty()) {
-            Freeze();
-        } else if (!spillWorkList.empty()) {
-            SelectSpill();
+    // while (!simplifyWorkList.empty() || !worklistMoves.empty() || !freezeWorkList.empty() || !spillWorkList.empty()) {
+    //     if (!simplifyWorkList.empty()) {
+    //         Simplify();
+    //     } else if (!worklistMoves.empty()) {
+    //         Coalesce();
+    //     } else if (!freezeWorkList.empty()) {
+    //         Freeze();
+    //     } else if (!spillWorkList.empty()) {
+    //         SelectSpill();
+    //     }
+    // }
+
+    // AssignColors();
+
+    // if (!spilledNodes.empty()) {
+    //     ReWriteProgram();
+
+    //     Main(fam);
+    // }
+
+    ///@note this will be easier to read flame graph
+    do {
+
+        if (isInitialed) {
+            ReWriteProgram();
         }
-    }
 
-    AssignColors();
+        liveinfo = fam.getFreshResult<LiveAnalysis>(*mfunc);
 
-    if (!spilledNodes.empty()) {
-        ReWriteProgram();
+        Build(); // set isInitialed as true
+        MkWorkList();
 
-        Main(fam);
-    }
+        while (!simplifyWorkList.empty() || !worklistMoves.empty() || !freezeWorkList.empty() ||
+               !spillWorkList.empty()) {
+            if (!simplifyWorkList.empty()) {
+                Simplify();
+            } else if (!worklistMoves.empty()) {
+                Coalesce();
+            } else if (!freezeWorkList.empty()) {
+                Freeze();
+            } else if (!spillWorkList.empty()) {
+                SelectSpill();
+            }
+        }
+
+        AssignColors();
+
+    } while (!spilledNodes.empty());
 }
 
 void RegisterAllocImpl::AddEdge(const MIROperand_p &u, const MIROperand_p &v) {
     Edge edge{u, v};
+
+    if (K == Config::MIR_new::CORE_REGISTER_MAX_NUM &&
+        (u->getRecover() == ARMReg::V0 || v->getRecover() == ARMReg::V0)) {
+        int debug;
+    }
 
     if (u != v && !adjSet.count(edge)) {
         adjSet.insert(std::move(edge));
@@ -116,12 +150,16 @@ void RegisterAllocImpl::Build() {
                 const auto &use = getUse(inst);
                 const auto &def = getDef(inst);
 
-                for (const auto &n : getUnion<MIROperand_p>(def, use)) {
+                for (const auto &n : getUnion<MIROperand_p, false>(def, use)) {
                     if (n->isISA()) { ///@note 也可以使用isPreColored()
-                        precolored.insert(n);
-                        degree[n] = -1;
+                        if (n->isa() <= ARMReg::FP) {
+                            precolored.insert(n);
+                            degree[n] = -1;
+                        }
                     } else if (n->isVReg()) {
-                        initial.insert(n);
+                        if (isCore(n)) {
+                            initial.insert(n);
+                        }
                     } else {
                         Err::unreachable("trying to alloc register for a constant");
                     }
@@ -134,6 +172,15 @@ void RegisterAllocImpl::Build() {
     for (const auto &blk : mfunc->blks()) {
 
         auto live = liveinfo.liveOut[blk];
+
+        for (auto it = live.begin(); it != live.end();) {
+            if (isExt(*it)) {
+                it = live.erase(it);
+            } else {
+                ++it;
+            }
+        }
+
         const auto &insts = blk->Insts();
 
         for (auto inst_it = insts.rbegin(); inst_it != insts.rend(); ++inst_it) {
@@ -145,8 +192,13 @@ void RegisterAllocImpl::Build() {
             if (isMoveInstruction(inst)) {
                 delBySet(live, use);
 
-                for (const auto &n : getUnion<MIROperand_p>(def, use)) {
+                for (const auto &n : getUnion<MIROperand_p, false>(def, use)) {
                     addBySet(moveList[n], Moves{inst});
+                }
+
+                if (K == Config::MIR_new::CORE_REGISTER_MAX_NUM &&
+                    (inst->getOp(0)->getRecover() == ARMReg::V0 || inst->getOp(1)->getRecover() == ARMReg::V0)) {
+                    int debug;
                 }
 
                 addBySet(worklistMoves, Moves{inst});
@@ -170,15 +222,11 @@ void RegisterAllocImpl::MkWorkList() {
     for (auto it = initial.begin(); it != initial.end();) {
         const auto n = *it;
 
-        if (n->getRecover() == 1342177929) {
-            int debug;
-        }
-
         if (degree[n] >= K) {
             addBySet(spillWorkList, WorkList{n});
         } else if (MoveRelated(n)) {
             addBySet(freezeWorkList, WorkList{n});
-        } else {
+        } else if (isCore(n)) {
             addBySet(simplifyWorkList, WorkList{n});
         }
 
@@ -226,7 +274,7 @@ void RegisterAllocImpl::DecrementDegree(const MIROperand_p &m) {
 void RegisterAllocImpl::EnableMoves(const Nodes &nodes) {
     for (const auto &n : nodes) {
         for (const auto &m : NodeMoves(n)) {
-            if (activeMoves.find(m) != activeMoves.end()) {
+            if (activeMoves.count(m)) {
                 delBySet(activeMoves, Moves{m});
                 addBySet(worklistMoves, Moves{m});
             }
@@ -321,9 +369,6 @@ void RegisterAllocImpl::Combine(const MIROperand_p &u, const MIROperand_p &v) {
     addBySet(coalescedNodes, Nodes{v});
     alias[v] = u;
 
-    ///@note nodeMoves[u] := nodeMoves[u] ∪ nodeMoves[v]
-    ///@note 有充分的理由认为论文写错了, 因为根本没有声明nodeMoves
-    ///@note 应该是moveList
     addBySet(moveList[u], moveList[v]);
 
     for (const auto &t : Adjacent(v)) {
@@ -366,7 +411,7 @@ void RegisterAllocImpl::FreezeMoves(const MIROperand_p &u) {
 
         addBySet(frozenMoves, Moves{m});
 
-        if (NodeMoves(v).empty() && degree[v] < K) {
+        if (NodeMovesEmpty(v) && degree[v] < K) {
             delBySet(freezeWorkList, WorkList{v});
             addBySet(simplifyWorkList, WorkList{v});
         }
@@ -389,23 +434,13 @@ void RegisterAllocImpl::AssignColors() {
 
         std::vector<unsigned int> okColors(colors.begin(), colors.end());
 
-        if (n->getRecover() == 1342177929) {
-            int debug;
-        }
-
         for (const auto &w : adjList[n]) { // choose a color not assigned
 
             auto w_a = GetAlias(w);
 
-            if (w_a->getRecover() == 1342178265 && n->getRecover() == 1342177929) {
-                int debug;
-            }
-
-            if (getUnion<MIROperand_p>(coloredNodes, precolored).count(w_a)) {
+            if (isInUnion<MIROperand_p>(w_a, coloredNodes, precolored)) { ///@todo 这个判断是性能瓶颈
 
                 Err::gassert(w_a->isVRegOrISAReg(), "try assign color for a none virReg op");
-
-                ///@note erase isa(precolored)
 
                 auto reg = w_a->isa();
 
@@ -416,10 +451,6 @@ void RegisterAllocImpl::AssignColors() {
                     okColors.erase(it);
                 }
             }
-        }
-
-        if (n->getRecover() == 1342177929) {
-            int debug;
         }
 
         if (okColors.empty()) {
@@ -440,6 +471,7 @@ void RegisterAllocImpl::AssignColors() {
             ///@note maybe override
             // Err::gassert(n->isVReg(), "AssignColors: try assign to a non-reg");
 
+            // if (!n->isPreColored())
             n->assignColor(c);
         }
     }
@@ -452,6 +484,7 @@ void RegisterAllocImpl::AssignColors() {
         Err::gassert(n_a->isVRegOrISAReg(), "AssignColors: try assign color for a none virReg op");
 
         ///@warning 直接override?
+        // if (!n->isPreColored())
         n->assignColor(n_a->reg());
     }
 }
@@ -479,19 +512,31 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::Adjacent(const MIROperand_p &n) {
 RegisterAllocImpl::Moves RegisterAllocImpl::NodeMoves(const MIROperand_p &n) {
     Err::gassert(n != nullptr, "n is nullptr");
 
-    auto set = getUnion<MIRInst_p>(activeMoves, worklistMoves);
+    auto set = getUnion<MIRInst_p, false>(activeMoves, worklistMoves);
 
     Moves movs{};
 
     for (const auto &p : set) {
-        if (moveList[n].find(p) != moveList[n].end())
+        if (moveList[n].count(p))
             movs.insert(p);
     }
 
     return movs;
 }
 
-bool RegisterAllocImpl::MoveRelated(const MIROperand_p &n) { return !NodeMoves(n).empty(); }
+bool RegisterAllocImpl::NodeMovesEmpty(const MIROperand_p &n) {
+    Err::gassert(n != nullptr, "n is nullptr");
+
+    for (const auto &rp : moveList[n]) {
+        if (activeMoves.count(rp) || worklistMoves.count(rp)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool RegisterAllocImpl::MoveRelated(const MIROperand_p &n) { return !NodeMovesEmpty(n); }
 
 bool RegisterAllocImpl::OK(const MIROperand_p &t, const MIROperand_p &r) {
     if (degree[t] < K) {
@@ -541,4 +586,94 @@ void VectorRegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     spilled += spilltimes;
 
     Logger::logInfo("VectorRegisterAllocImpl: " + mfunc->getName() + " spilled times: " + std::to_string(spilltimes));
+}
+
+void VectorRegisterAllocImpl::Build() {
+    ///@note MkInitial
+    if (!isInitialed) {
+
+        for (const auto &blk : mfunc->blks()) {
+            for (const auto &inst : blk->Insts()) {
+
+                const auto &use = getUse(inst);
+                const auto &def = getDef(inst);
+
+                for (const auto &n : getUnion<MIROperand_p, false>(def, use)) {
+                    if (n->isISA()) { ///@note 也可以使用isPreColored()
+                        if (n->isa() >= ARMReg::V0) {
+                            precolored.insert(n);
+                            degree[n] = -1;
+                        }
+                    } else if (n->isVReg()) {
+                        if (isExt(n)) {
+                            initial.insert(n);
+                        }
+                    } else {
+                        Err::unreachable("trying to alloc register for a constant");
+                    }
+                }
+            }
+        }
+    }
+    isInitialed = true;
+
+    for (const auto &blk : mfunc->blks()) {
+
+        auto live = liveinfo.liveOut[blk];
+
+        for (auto it = live.begin(); it != live.end();) {
+            if (isCore(*it)) {
+                it = live.erase(it);
+            } else {
+                ++it;
+            }
+        }
+
+        const auto &insts = blk->Insts();
+
+        for (auto inst_it = insts.rbegin(); inst_it != insts.rend(); ++inst_it) {
+            const auto &inst = *inst_it;
+
+            const auto &use = getUse(inst);
+            const auto &def = getDef(inst);
+
+            if (isMoveInstruction(inst)) {
+                delBySet(live, use);
+
+                for (const auto &n : getUnion<MIROperand_p, false>(def, use)) {
+                    addBySet(moveList[n], Moves{inst});
+                }
+
+                addBySet(worklistMoves, Moves{inst});
+            }
+
+            addBySet(live, def);
+
+            for (const auto &d : def) {
+                for (const auto &l : live) {
+                    AddEdge(l, d);
+                }
+            }
+
+            delBySet(live, def);
+            addBySet(live, use);
+        }
+    }
+}
+
+void VectorRegisterAllocImpl::MkWorkList() {
+    for (auto it = initial.begin(); it != initial.end();) {
+        const auto n = *it;
+
+        if (degree[n] >= K) {
+            addBySet(spillWorkList, WorkList{n});
+        } else if (MoveRelated(n)) {
+            addBySet(freezeWorkList, WorkList{n});
+        } else if (isExt(n)) {
+            addBySet(simplifyWorkList, WorkList{n});
+        }
+
+        it = std::next(it);
+        delBySet(initial, WorkList{n});
+    }
 }

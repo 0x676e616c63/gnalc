@@ -12,10 +12,7 @@ bool RegisterAllocImpl::isMoveInstruction(const MIRInst_p &minst) {
 
     if (mopcode == OpC::InstCopy || mopcode == OpC::InstCopyFromReg || mopcode == OpC::InstCopyToReg) {
 
-        auto mtype = minst->ensureDef()->type();
-        auto mtype2 = minst->getOp(1)->type();
-        if ((mtype == OpT::Int16 || mtype == OpT::Int32 || mtype == OpT::Int64 || mtype == OpT::Int) &&
-            (mtype2 == OpT::Int16 || mtype2 == OpT::Int32 || mtype2 == OpT::Int64 || mtype2 == OpT::Int)) {
+        if (isCore(minst->ensureDef()) && isCore(minst->getOp(1))) {
 
             if (!minst->getOp(1)->isImme()) { // chk use
                 return true;
@@ -33,9 +30,6 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getUse(const MIRInst_p &minst) {
         for (int i = 0; i < 18; ++i) {
             uses.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i), OpT::Int));
         }
-
-        // 虽然一般也不会assign LR
-        uses.emplace(MIROperand::asISAReg(ARMReg::LR, OpT::Int));
 
         return uses;
     }
@@ -63,8 +57,6 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getDef(const MIRInst_p &minst) {
         for (int i = 0; i < 19; ++i) {
             defs.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i), OpT::Int));
         }
-
-        defs.emplace(MIROperand::asISAReg(ARMReg::LR, OpT::Int));
 
         return defs;
     }
@@ -172,8 +164,6 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
         }
     }
 
-    // Err::gassert(stageValues.size(), "spill: get no spill on a spilled Node: " + std::to_string(mop->getRecover()));
-
     return stageValues;
 }
 
@@ -188,8 +178,8 @@ bool VectorRegisterAllocImpl::isMoveInstruction(const MIRInst_p &minst) {
 
         auto mtype = minst->ensureDef()->type();
         auto mtype2 = minst->getOp(1)->type();
-        if ((mtype == OpT::Float32 || mtype == OpT::Floatvec || mtype == OpT::Intvec) &&
-            (mtype2 == OpT::Float32 || mtype2 == OpT::Floatvec || mtype2 == OpT::Intvec)) {
+        if ((mtype == OpT::Float32 || mtype == OpT::Floatvec || mtype == OpT::Intvec || mtype == OpT::Float) &&
+            (mtype2 == OpT::Float32 || mtype2 == OpT::Floatvec || mtype2 == OpT::Intvec || mtype2 == OpT::Float)) {
             if (!minst->getOp(1)->isImme()) { // chk use
                 return true;
             }
@@ -215,7 +205,8 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getUse(const MIRInst_p &minst)
         auto use = minst->getOp(idx);
 
         if (use && use->isVRegOrISAReg() &&
-            (use->type() == OpT::Float32 || use->type() == OpT::Floatvec || use->type() == OpT::Intvec)) {
+            (use->type() == OpT::Float || use->type() == OpT::Float32 || use->type() == OpT::Floatvec ||
+             use->type() == OpT::Intvec)) {
             uses.emplace(use);
         }
     }
@@ -236,7 +227,8 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getDef(const MIRInst_p &minst)
 
     if (auto def = minst->getDef()) {
 
-        if ((def->type() == OpT::Float32 || def->type() == OpT::Intvec || def->type() == OpT::Floatvec)) {
+        if ((def->type() == OpT::Float || def->type() == OpT::Float32 || def->type() == OpT::Intvec ||
+             def->type() == OpT::Floatvec)) {
             defs.emplace(def);
         }
     }

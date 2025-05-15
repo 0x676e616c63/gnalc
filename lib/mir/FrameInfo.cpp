@@ -157,7 +157,7 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
 
     if (mval) {
         ///@brief return not a void
-        auto mtype = getType(callinst);
+        auto mtype = getType(callinst); // todo: ret val vectorize
 
         ctx.newInst(MIRInst::make(OpC::InstCopyFromReg)
                         ->setOperand<0>(mval)
