@@ -105,6 +105,11 @@ FCMPOP flipCond(FCMPOP cond);
 // a > b -> a < b
 ICMPOP reverseCond(ICMPOP cond);
 FCMPOP reverseCond(FCMPOP cond);
+
+bool isFalseWhenEqual(ICMPOP cond);
+bool isTrueWhenEqual(ICMPOP cond);
+bool isFalseWhenEqual(FCMPOP cond);
+bool isTrueWhenEqual(FCMPOP cond);
 } // namespace IR
 
 #endif

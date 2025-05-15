@@ -14,7 +14,6 @@
 #include <list>
 #include <vector>
 
-using namespace PatternMatch;
 namespace IR {
 // First try to simplify the loop: merging the latch into exit
 // Typically this is a post-increment and merging is much better than duplicating the header.

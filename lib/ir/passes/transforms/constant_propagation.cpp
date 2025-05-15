@@ -15,8 +15,6 @@
 
 #include <optional>
 
-using namespace PatternMatch;
-
 namespace IR {
 // [ min, max )
 // struct ValueRange {

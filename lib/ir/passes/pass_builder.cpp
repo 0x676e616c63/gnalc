@@ -171,6 +171,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
         FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
         FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
         FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
+        // FUNCTION_TRANSFORM(loop_unroll, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LoopUnrollPass())
         return fpm;
     };
 
