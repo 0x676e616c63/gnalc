@@ -1,29 +1,31 @@
 #include "expr_solver/expr_simplify.hpp"
 #include "expr_solver/expr.hpp"
+#include "expr_solver/expr_match.hpp"
 
 namespace ExprSolver {
 
 Expr *ExprSimplifier::simplify(Expr *expr) {
 
     Expr *before = expr;
-    Expr *res = match(expr);
+    Expr *res = rewrite(expr);
     int cnt = 0;
     while (res != before && cnt <= 20) {
         //FIXME can we reach the fix point?
         before = res;
-        res = match(res);
+        res = rewrite(res);
         cnt += 1;
     }
     return res;
 }
 
-Expr *ExprSimplifier::match(Expr *expr) {
+Expr *ExprSimplifier::rewrite(Expr *expr) {
+    Expr *x, *y;
+    int a, b;
 
     // 0 + t = t
-    if (expr->isBinary() && expr->op() == Op::Add && expr->getLHS()->isConstant() && expr->getLHS()->getConstVal() ==
-        0) {
-        return expr->getRHS();
-    }
+    if (match(expr, Add(Is(0), Bind(x)), Add(Bind(x), Is(0))))
+        return x;
+
     // t + 0 = t
     if (expr->isBinary() && expr->op() == Op::Add && expr->getRHS()->isConstant() && expr->getRHS()->getConstVal() ==
         0) {
@@ -96,15 +98,15 @@ Expr *ExprSimplifier::match(Expr *expr) {
     }
     // R7: t1 + (t2 + t3) = (t1 + t2) + t3
     if (expr->isBinary() && expr->getRHS()->isBinary() && expr->op() == Op::Add && expr->getRHS()->op() == Op::Add) {
-        Expr *t3 = match(expr->getRHS()->getRHS());
-        Expr *t1_add_t2 = match(pool->getBinary(Op::Add, expr->getLHS(), expr->getRHS()->getLHS()));
+        Expr *t3 = rewrite(expr->getRHS()->getRHS());
+        Expr *t1_add_t2 = rewrite(pool->getBinary(Op::Add, expr->getLHS(), expr->getRHS()->getLHS()));
         return pool->getBinary(Op::Add, t1_add_t2, t3);
     }
 
     // R8: t1 * (t2 * t3) = (t1 * t2) * t3
     if (expr->isBinary() && expr->getRHS()->isBinary() && expr->op() == Op::Mul && expr->getRHS()->op() == Op::Mul) {
-        Expr *t3 = match(expr->getRHS()->getRHS());
-        Expr *t1_mul_t2 = match(pool->getBinary(Op::Mul, expr->getLHS(), expr->getRHS()->getLHS()));
+        Expr *t3 = rewrite(expr->getRHS()->getRHS());
+        Expr *t1_mul_t2 = rewrite(pool->getBinary(Op::Mul, expr->getLHS(), expr->getRHS()->getLHS()));
         return pool->getBinary(Op::Mul, t1_mul_t2, t3);
     }
 
@@ -270,8 +272,8 @@ Expr *ExprSimplifier::match(Expr *expr) {
     }
     // otherwise
     if (expr->isBinary()) {
-        Expr *t1 = match(expr->getLHS());
-        Expr *t2 = match(expr->getRHS());
+        Expr *t1 = rewrite(expr->getLHS());
+        Expr *t2 = rewrite(expr->getRHS());
         return pool->getBinary(expr->op(), t1, t2);
     }
     return expr;
