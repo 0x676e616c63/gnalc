@@ -54,7 +54,7 @@ struct CliOptions {
     public:
         Status(StatusType type) : type(type) {}
         void enable() { type = StatusType::Enable; }
-        void disable() { type = StatusType::Enable; }
+        void disable() { type = StatusType::Disable; }
         void reset() { type = StatusType::Default; }
         operator StatusType() const { return type; }
         bool isDefault() const { return type == StatusType::Default; }
