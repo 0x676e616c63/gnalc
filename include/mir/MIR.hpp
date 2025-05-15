@@ -23,13 +23,14 @@ template <typename T, typename... Args> std::unique_ptr<T> makeu(const Args... a
     return std::make_unique<T>(args...);
 }
 
-enum class OperandType {
-    Int, // when use reg adjustment
+enum class OperandType : uint32_t {
+    Int, // X<> 默认位宽
     Int16,
     Int32, // original int32, or extend from int8, int16
     Int64,
     Ptr = Int64,
     Intvec,
+    Float, // V<> 默认位宽
     Float32,
     Floatvec,
     special, // prob, alignment, load/store size...
@@ -45,11 +46,12 @@ using OpT = OperandType;
 
 inline unsigned getBitWide(OpT type) {
     switch (type) {
-    case OpT::Int:
-        // use int when opt or legal with unclear type, extend the bitwide
+    case OpT::Int: // default length
+        return 8;
+    case OpT::Float:
         return 16;
     case OpT::Int16:
-        return 2;
+        return 2; // mei yong
     case OpT::High32:
     case OpT::Low32:
     case OpT::Int32:
@@ -66,11 +68,16 @@ inline unsigned getBitWide(OpT type) {
     return 4; // just to make gnalc happy
 }
 
+// 默认位宽寄存器向短位宽寄存器兼容
+template <typename... OpT> inline unsigned getBitWideChoosen(OpT... types) {
+    return (std::min({getBitWide(types)...})); //
+}
+
 enum MIRInstCond : unsigned { AL, EQ, NE, LT, GT, LE, GE };
 
 using Cond = MIRInstCond;
 
-enum class MIRGenericInst {
+enum class MIRGenericInst : uint32_t {
     // control-flow
     InstBranch, // cond, reloc, prob
     // Memory, get by gep, no const offset
@@ -113,14 +120,15 @@ enum class MIRGenericInst {
     InstF2S,
     InstS2F,
     // Misc
-    InstCopy,   // vreg to vreg
-    InstSelect, // CSEL/FSEL <dst_Reg>, <Reg>, <Reg>, <cond>
+    InstCopyStkPtr,  // use in stk ptr type cast, not a real copy
+    InstCopy,        ///copy: vreg to vreg
+    InstCopyFromReg, ///copy: precolored to vreg
+    InstCopyToReg,   ///copy: vreg to precolored
+    InstSelect,
     InstLoadGlobalAddress,
-    InstLoadImm, // const to vreg
+    InstLoadImm,
     InstLoadStackObjectAddr,
-    InstCopyFromReg,  // precolored to vreg
-    InstCopyToReg,    // vreg to precolored
-    InstLoadImmToReg, // const to precolored
+    InstLoadImmToReg,
     InstLoadRegFromStack,
     InstStoreRegToStack,
 };
@@ -138,7 +146,7 @@ struct MIRReg {
 
     bool operator==(const MIRReg &other) const { return reg == other.reg; }
     bool operator!=(const MIRReg &other) const { return reg != other.reg; }
-    bool isAlive() const { return flag == MIRRegStatue::alive; }
+    [[nodiscard]] bool isAlive() const { return flag == MIRRegStatue::alive; }
 };
 
 using MIRReg_p = std::shared_ptr<MIRReg>;
@@ -185,16 +193,27 @@ constexpr inline bool isVirtualReg(uint32_t x) { return (x & VRegBegin) == VRegB
 constexpr inline bool isStkObj(uint32_t x) { return (x & StkObjBegin) == StkObjBegin; }
 
 class MIROperand {
+public:
+    static std::map<unsigned, MIROperand_p> ISApool; // isa 为了保证单例模式所以只能使用默认位宽
+
 private:
     std::variant<std::monostate, MIRReg_p, MIRRelocable_p, unsigned, uint64_t, double> mOperand{std::monostate{}};
-    OpT mType = OpT::special;
+    OpT mType = OpT::special; // 不得不说把mType放这儿真是个败笔
+                              // 没有默认位宽会破坏isaRegs单例,
+                              // 存在默认位宽codeGen又需要判定位宽
+                              // 不如mirA32直接位宽信息放在inst里
+
+    unsigned recover = -1; // assign之后用于保存原有的VReg, debug用
+public:
+    void setRecover(unsigned id) { recover = id; } // for constructors
+    unsigned getRecover() const { return recover; }
 
 public:
     constexpr MIROperand() = default;
 
     template <typename mOperand_t> constexpr MIROperand(mOperand_t op, OpT type) : mOperand(op), mType(type) {}
 
-    const auto &mOp() const { return mOperand; }
+    [[nodiscard]] const auto &mOp() const { return mOperand; }
     template <typename T> const auto &mOp() const {
         Err::gassert(mOperand.index() != 0, "MIROperand: mOperand is nerver initialized");
         return std::get<T>(mOperand);
@@ -226,6 +245,8 @@ public:
     bool isReg() const { return std::holds_alternative<MIRReg_p>(mOperand); }
     bool isVReg() const { return isReg() && isVirtualReg(reg()); }
     bool isISA() const { return isReg() && isISAReg(reg()); }
+    // for RA
+    bool isPreColored() const { return isReg() && isISA() && isISAReg(recover); }
     bool isStack() const { return isReg() && isStkObj(reg()); }
     bool isReloc() const { return std::holds_alternative<MIRRelocable_p>(mOperand); }
     bool isProb() const { return std::holds_alternative<double>(mOperand); }
@@ -236,10 +257,12 @@ public:
     bool operator!=(const MIROperand &other) const { return mOperand != other.mOperand; }
 
     template <typename T> static MIROperand_p asImme(T val, OpT type) {
-        if constexpr (std::is_same_v<T, int> || std::is_same_v<T, float> || std::is_same_v<T, unsigned> ||
-                      std::is_same_v<T, Cond>) {
+        if constexpr (std::is_same_v<T, int> || std::is_same_v<T, unsigned> || std::is_same_v<T, Cond>) {
             unsigned encoding = *reinterpret_cast<unsigned *>(&val);
-            return make<MIROperand>(encoding, type);
+            return make<MIROperand>(encoding, OpT::Int64); // instadd and instaddsp
+        } else if constexpr (std::is_same_v<T, float>) {
+            unsigned encoding = *reinterpret_cast<unsigned *>(&val);
+            return make<MIROperand>(encoding, OpT::Float32);
         } else if constexpr (std::is_same_v<T, uint64_t>) {
             return make<MIROperand>(val, type); //
         } else {
@@ -256,12 +279,24 @@ public:
     /// @note asVReg 一般由ctx传递id
     /// @note ISA序号, 或者VReg id, 都由reg()获得, 可以考虑在此基础上进一步具象化和检查
     static MIROperand_p asISAReg(unsigned reg, OpT type) {
-        Err::gassert(isISAReg(reg), "MIROperand::asISAReg: input reg doesnt match");
-        return make<MIROperand>(make<MIRReg>(reg), type);
+        Err::gassert(isISAReg(reg), "MIROperand::asISAReg: input reg doesnt match: " + std::to_string(reg));
+
+        if (ISApool.count(reg)) {
+            return ISApool[reg];
+        } else {
+            auto newISA =
+                make<MIROperand>(make<MIRReg>(reg), inRange(type, OpT::Int, OpT::Int64) ? OpT::Int : OpT::Float);
+            newISA->setRecover(reg);
+            ISApool[reg] = newISA;
+            return newISA;
+        }
     }
 
     static MIROperand_p asVReg(unsigned reg, OpT type) {
-        return make<MIROperand>(make<MIRReg>(reg + VRegBegin), type); // auto add VRegBegin here
+        auto vreg = make<MIROperand>(make<MIRReg>(reg + VRegBegin), type); // auto add VRegBegin here
+
+        vreg->setRecover(reg + VRegBegin);
+        return vreg;
     }
 
     static MIROperand_p asStkObj(unsigned reg, OpT type) {
@@ -276,14 +311,14 @@ public:
 
     // simple type verify
     constexpr bool isVRegOrISAReg() {
-        return isReg() && (isVirtualReg(std::get<MIRReg_p>(mOperand)->reg) ||
-                           isISAReg(std::get<MIRReg_p>(mOperand)->reg)); // not invaild
+        return isReg() && ((isVirtualReg(std::get<MIRReg_p>(mOperand)->reg) ||
+                            isISAReg(std::get<MIRReg_p>(mOperand)->reg))); // not invaild
     }
 
     // use in registeralloc
     ///@note we directly chang reg of MIRReg
     void assignColor(unsigned color) {
-        Err::gassert(isVReg(), "assignColor: try assign color to a non-reg");
+        // Err::gassert(isVReg(), "assignColor: try assign color to a non-reg");
         Err::gassert(color >= ARMReg::X0 && color <= ARMReg::V30, "assignColor: unknonw reg color");
         Err::gassert(color >= ARMReg::V0 && (mType == OpT::Float32 || mType == OpT::Floatvec || mType == OpT::Intvec) ||
                          color <= ARMReg::X29 &&
@@ -292,6 +327,7 @@ public:
 
         auto &VReg = std::get<MIRReg_p>(mOperand);
 
+        recover = VReg->reg;
         VReg->reg = color; // assigned here
     }
 
@@ -369,7 +405,7 @@ public:
 
         Err::gassert(it != mOperands.end(), "MIRInst::replace: cant find op");
 
-        *it = _new;
+        *it = std::move(_new);
     }
 
     virtual ~MIRInst() = default;
@@ -412,10 +448,11 @@ private:
 
     // infos
     bool leafFunc = true;
-    uint64_t calleesaveRegisters = 0ULL;
+    uint64_t calleesaveRegisters = 0x60000000ULL; // fp & lr (default)
     size_t spilled = 0LL;
     bool largeStk = false; // may use fp(X29)
     unsigned stkSize = 0LL;
+    unsigned calleeSave = 0LL;
 
     // context
     CodeGenContext &ctx;
@@ -462,6 +499,9 @@ public:
 
     void modifyStkSize(unsigned _size) { stkSize = _size; }
     unsigned stackSize() const { return stkSize; }
+
+    void modifyBegCalleeSave(unsigned _size) { calleeSave = _size; }
+    unsigned begCalleeSave() const { return calleeSave; }
 
     bool isFunc() const override { return true; }
 

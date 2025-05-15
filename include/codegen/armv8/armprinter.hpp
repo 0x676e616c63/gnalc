@@ -4,6 +4,7 @@
 
 #include "mir/MIR.hpp"
 #include "mir/info.hpp"
+#include "mir/strings.hpp"
 #include <iostream>
 
 namespace MIR_new {
@@ -11,9 +12,21 @@ class ARMA64Printer {
 private:
     MIRFunction const *mfunc;
     std::ostream &outStream;
+    bool debug;
+
+    using RegPrinter = std::string (*)(const MIROperand_p &, unsigned int);
+
+    RegPrinter reg2s;
 
 public:
-    explicit ARMA64Printer(std::ostream &outStream_) : outStream(outStream_) {}
+    ARMA64Printer(std::ostream &outStream_, bool ifDebug = false) : outStream(outStream_), debug(ifDebug) {
+
+        if (ifDebug) {
+            reg2s = &Reg2SDebug;
+        } else {
+            reg2s = &Reg2S;
+        }
+    }
 
     void printout(const MIRModule &);
     void printout(const std::vector<MIRGlobal_p> &);

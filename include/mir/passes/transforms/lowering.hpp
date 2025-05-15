@@ -24,8 +24,8 @@ using IRGlobal_p = std::shared_ptr<IRGlobal>;
 using IRModule = IR::Module;
 using IRModule_p = std::shared_ptr<IRModule>;
 
-// 中端类型转为后端类型, 虽然放在这里有些突兀
 OpT btypeConvert(const IR::BType &);
+unsigned typeBitwide(const IR::pType &);
 OpC IROpCodeConvert(IR::OP);
 Cond IRCondConvert(IR::ICMPOP);
 Cond IRCondConvert(IR::FCMPOP);
@@ -61,40 +61,64 @@ public:
     CodeGenContext &CodeGenCtx() { return mCodeGenCtx; }
 
     MIRModule &Module() { return mModule; }
-    const MIRModule &Module() const { return mModule; }
+    [[nodiscard]] const MIRModule &Module() const { return mModule; }
 
     auto &BlkMap() { return mBlkMap; }
-    const auto &BlkMap() const { return mBlkMap; }
-    MIRBlk_p mapBlk(const IRBlk_p &) const;
+    [[nodiscard]] const auto &BlkMap() const { return mBlkMap; }
+    [[nodiscard]] MIRBlk_p mapBlk(const IRBlk_p &) const;
 
     auto &GlobalMap() { return mGlobalMap; }
-    const auto &GlobalMap() const { return mGlobalMap; }
-    MIRGlobal_p mapGlobal(const string &) const;
+    [[nodiscard]] const auto &GlobalMap() const { return mGlobalMap; }
+    [[nodiscard]] MIRGlobal_p mapGlobal(const string &) const;
 
     auto &ValMap() { return mValMap; }
-    const auto &ValMap() const { return mValMap; }
+    [[nodiscard]] const auto &ValMap() const { return mValMap; }
     MIROperand_p mapOperand(const IRVal_p &); // not const to fit as a constpool
     template <typename T> MIROperand_p mapOperand(T imme) {
         Err::gassert(std::is_same_v<T, int> || std::is_same_v<T, float> || std::is_same_v<T, Cond>,
                      "mapOperand: try mapping an unknown type const");
+
+        ///@warning dont add cond to constMap, not necessary
+        if constexpr (std::is_same_v<T, Cond>) {
+            MIROperand_p mconst = MIROperand::asImme<T>(imme, OpT::CondFlag);
+            return mconst;
+        }
+
         auto imme_idx = static_cast<unsigned>(imme);
 
         MIROperand_p mconst = nullptr;
 
-        if (!mConstMap.count(imme_idx)) {
+        //
+        auto make_new = [&]() {
             if constexpr (std::is_same_v<T, int>) {
                 mconst = MIROperand::asImme<T>(imme, OpT::Int32);
             } else if constexpr (std::is_same_v<T, float>) {
                 mconst = MIROperand::asImme<T>(imme, OpT::Float32);
-            } else if constexpr (std::is_same_v<T, Cond>) {
-                mconst = MIROperand::asImme<T>(imme, OpT::CondFlag);
             }
-
             mConstMap.emplace(imme_idx, mconst);
+
+            return mconst;
+        };
+        //
+
+        if (!mConstMap.count(imme_idx)) {
+            return make_new();
         } else {
             mconst = mConstMap.at(imme_idx);
+
+            if constexpr (std::is_same_v<T, int>) {
+                if (mconst->type() != OpT::Int32) {
+                    return make_new();
+                }
+            } else if constexpr (std::is_same_v<T, float>) {
+                if (mconst->type() != OpT::Float32) {
+                    return make_new();
+                }
+            }
+
+            return mconst;
         }
-        return mconst;
+        //
     }
 
     void setCurrentBlk(MIRBlk_p blk) { mCurrentBlk = std::move(blk); }
@@ -129,22 +153,22 @@ MIRGlobal_p loweringGlobal(const IR::GlobalVariable &);
 
 void loweringFunction(MIRFunction_p, IRFunc_p, CodeGenContext &, MIRModule &, std::map<string, MIRGlobal_p>);
 
-void lowerInst(IR::pInst, LoweringContext &);
+void lowerInst(const IR::pInst &, LoweringContext &);
 
 // more detially
-void lowerInst(IR::pBinary, LoweringContext &);
+void lowerInst(const IR::pBinary &, LoweringContext &);
 // void lowerInst(IR::pBinary, LoweringContext &, IR::DomTreeAnalysis::Result &,
 //                IR::LiveAnalysis::Result &); // sdiv / srem
-void lowerInst(IR::pFneg, LoweringContext &);
-void lowerInst(IR::pIcmp, LoweringContext &);
-void lowerInst(IR::pFcmp, LoweringContext &);
-void lowerInst(IR::pRet, LoweringContext &);
-void lowerInst(IR::pBr, LoweringContext &);
-void lowerInst(IR::pLoad, LoweringContext &, size_t);
-void lowerInst(IR::pStore, LoweringContext &, size_t);
-void lowerInst(IR::pCast, LoweringContext &); // copy
-void lowerInst(IR::pGep, LoweringContext &);
-void lowerInst(IR::pCall, LoweringContext &);
+void lowerInst(const IR::pFneg &, LoweringContext &);
+void lowerInst(const IR::pIcmp &, LoweringContext &);
+void lowerInst(const IR::pFcmp &, LoweringContext &);
+void lowerInst(const IR::pRet &, LoweringContext &);
+void lowerInst(const IR::pBr &, LoweringContext &);
+void lowerInst(const IR::pLoad &, LoweringContext &, size_t);
+void lowerInst(const IR::pStore &, LoweringContext &, size_t);
+void lowerInst(const IR::pCast &, LoweringContext &); // copy
+void lowerInst(const IR::pGep &, LoweringContext &);
+void lowerInst(const IR::pCall &, LoweringContext &);
 
 }; // namespace MIR_new
 

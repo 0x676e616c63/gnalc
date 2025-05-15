@@ -19,7 +19,7 @@ public:
     using OperSet = std::set<MIROperand_p>;
     using WorkList = std::set<MIROperand_p>;
     using Nodes = std::set<MIROperand_p>;
-    using Moves = std::set<MIRInst_p>;
+    using Moves = std::unordered_set<MIRInst_p>;
 
     struct Edge {
         MIROperand_p u, v;
@@ -28,7 +28,6 @@ public:
 
     struct EdgeHash {
         std::size_t operator()(const Edge &_edge) const {
-            /// 这tm还不如不修
             return std::hash<std::size_t>()(static_cast<std::size_t>(reinterpret_cast<uintptr_t>(_edge.v.get())) ^
                                             static_cast<std::size_t>(reinterpret_cast<uintptr_t>(_edge.u.get())));
         }
@@ -36,7 +35,8 @@ public:
 
 public:
     virtual void impl(MIRFunction &, FAM &);
-    RegisterAllocImpl() = default;
+    RegisterAllocImpl() : K(Config::MIR_new::CORE_REGISTER_MAX_NUM) {}
+    explicit RegisterAllocImpl(int fpuRegCnt) : K(fpuRegCnt) {}
     virtual ~RegisterAllocImpl() = default;
 
 protected:
@@ -66,17 +66,17 @@ protected:
     std::unordered_set<Edge, EdgeHash> adjSet;
     std::map<MIROperand_p, OperSet> adjList;
     std::map<MIROperand_p, unsigned int> degree; // precolored will be initialize with -1
-    std::map<MIROperand_p, Moves> moveList;
+    std::unordered_map<MIROperand_p, Moves> moveList;
     std::map<MIROperand_p, MIROperand_p> alias;
     // color
-    unsigned int K = Config::MIR_new::CORE_REGISTER_MAX_NUM;
+    unsigned int K;
 
 protected:
     /// procedures
     void Main(FAM &);
     // void LivenessAnalysis();
-    void Build();
-    void MkWorkList(); //
+    virtual void Build();
+    virtual void MkWorkList(); //
     void AddEdge(const MIROperand_p &, const MIROperand_p &);
     void Simplify();
     void DecrementDegree(const MIROperand_p &);
@@ -93,7 +93,7 @@ protected:
 
 protected:
     /// function
-    Nodes Adjacent(const MIROperand_p &);
+    inline Nodes Adjacent(const MIROperand_p &);
     Moves NodeMoves(const MIROperand_p &);
     bool MoveRelated(const MIROperand_p &);
 
@@ -114,67 +114,116 @@ protected:
     ///@note 判断是否是 "move"指令
     virtual bool isMoveInstruction(const MIRInst_p &);
 
+    /// speed up
+    bool NodeMovesEmpty(const MIROperand_p &);
+
     ///@note get函数需要过滤
     virtual Nodes getUse(const MIRInst_p &);
     virtual Nodes getDef(const MIRInst_p &);
 
+    bool isCore(const MIROperand_p &n) {
+        if ((n->type() == OpT::Int16 || n->type() == OpT::Int32 || n->type() == OpT::Int64 || n->type() == OpT::Int)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    bool isExt(const MIROperand_p &n) {
+        if (n->type() == OpT::Float || n->type() == OpT::Float32 || n->type() == OpT::Floatvec ||
+            n->type() == OpT::Intvec) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     template <typename Cx, typename Cy> void addBySet(Cx &victim, const Cy &set) {
         static_assert(std::is_same_v<typename Cx::value_type, typename Cy::value_type>,
                       "Cx Cy element types must be identical");
-
         for (const auto &ptr : set) {
             victim.insert(ptr);
         }
     }
+
     template <typename Cx, typename Cy> void delBySet(Cx &victim, const Cy &set) {
         static_assert(std::is_same_v<typename Cx::value_type, typename Cy::value_type>,
                       "Cx Cy element types must be identical");
-
         for (const auto &ptr : set) {
             victim.erase(ptr);
         }
     }
 
-    template <typename T, typename... Tsets> std::set<T> getUnion(Tsets... sets) {
-        std::set<T> union_set;
-        (union_set.insert(sets.begin(), sets.end()), ...);
-        return union_set;
+    template <typename T, bool inOrder = true, typename... Tsets> auto getUnion(const Tsets &...sets) {
+        if constexpr (!inOrder) {
+            std::unordered_set<T> temp;
+            (temp.insert(sets.begin(), sets.end()), ...);
+            return temp;
+        } else {
+            std::set<T> set;
+
+            (set.insert(sets.begin(), sets.end()), ...);
+
+            return set;
+        }
     }
 
-    template <typename T, typename... Tsets> std::set<T> getExclude(std::set<T> victim, Tsets... sets) {
-        auto exclude_set = std::move(victim);
+    template <typename T> auto getUnion(const std::set<T> &set1, const std::set<T> &set2) {
+        std::set<T> set;
 
-        auto lambda = [&exclude_set](const auto &set) -> void {
-            for (const auto &t : set) {
-                exclude_set.erase(t);
+        std::set_union(set1.begin(), set1.end(), set2.begin(), set2.end(), std::inserter(set, set.begin()));
+
+        return set;
+    }
+
+    template <typename T, typename... Tsets> bool isInUnion(const T &elem, const Tsets &...sets) {
+        return (sets.count(elem) | ...);
+    }
+
+    template <typename T, bool inOrder = true, typename... Tsets>
+    auto getExclude(const std::set<T> &victim, const Tsets &...sets) {
+        if constexpr (inOrder) {
+            auto exclude_union = getUnion<T>(sets...);
+            std::set<T> result;
+            std::set_difference(victim.begin(), victim.end(), exclude_union.begin(), exclude_union.end(),
+                                std::inserter(result, result.end()));
+            return result;
+        } else {
+            auto exclude_unioon = getUnion<T, false>(sets...);
+            std::unordered_set<T> result;
+            for (const auto &elem : exclude_unioon) {
+                if (!victim.count(elem)) {
+                    result.insert(elem);
+                }
             }
-        };
-
-        (lambda(sets), ...);
-        return exclude_set;
+            return result;
+        }
     }
 
-    /// @note selectspill时使用的启发式算法
     MIROperand_p heuristicSpill();
 
     virtual Nodes spill(const MIROperand_p &);
 
-    ///@note 溢出次数(包含opt)
     unsigned int spilltimes = 0;
+
+protected:
+    /// debug
+    auto find_if(const Nodes &set, unsigned recover) {
+        return std::find_if(set.begin(), set.end(),
+                            [&recover](const MIROperand_p &mop) { return mop->getRecover() == recover; });
+    };
 };
 
 class VectorRegisterAllocImpl : public RegisterAllocImpl {
 
 public:
     void impl(MIRFunction &, FAM &) override;
-    VectorRegisterAllocImpl() = default;
+    VectorRegisterAllocImpl() : RegisterAllocImpl(Config::MIR_new::FPU_REGISTER_MAX_NUM) {}
     ~VectorRegisterAllocImpl() override = default;
 
 protected:
-    unsigned int K = Config::MIR_new::FPU_REGISTER_MAX_NUM;
-
-protected:
-    // dont need to override AssignColors now
+    void Build() override;
+    void MkWorkList() override;
 
 protected:
     bool isMoveInstruction(const MIRInst_p &) override;
@@ -182,7 +231,6 @@ protected:
     Nodes getDef(const MIRInst_p &) override;
     // Nodes spill(const MIROperand_p &) override; //
 };
-
 }; // namespace MIR_new
 
 #endif
