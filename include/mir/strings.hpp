@@ -6,7 +6,7 @@
 
 namespace MIR_new {
 
-string Cond2S(Cond cond) {
+inline string Cond2S(Cond cond) {
     switch (cond) {
     case Cond::AL:
         return "";
@@ -25,13 +25,15 @@ string Cond2S(Cond cond) {
     }
 }
 
-string Reg2S(uint32_t isa, unsigned bitWide) {
+inline string Reg2S(const MIROperand_p &mop, unsigned bitWide) {
+    auto isa = mop->isa();
+
     Err::gassert(isISAReg(isa), "Reg2S: not a isa reg");
     string str;
 
     auto reg = static_cast<ARMReg>(isa);
 
-    if (inRange(reg, ARMReg::X0, ARMReg::X29)) {
+    if (inRange(reg, ARMReg::X0, ARMReg::X28)) {
         if (bitWide <= 4) {
             str += 'w';
         } else {
@@ -39,6 +41,8 @@ string Reg2S(uint32_t isa, unsigned bitWide) {
         }
 
         str += std::to_string(isa);
+    } else if (reg == ARMReg::FP) {
+        str += "fp";
     } else if (reg == ARMReg::LR) {
         str += "lr";
     } else if (reg == ARMReg::SP) {
@@ -52,13 +56,72 @@ string Reg2S(uint32_t isa, unsigned bitWide) {
             str += 'q';
         }
 
-        str += std::to_string(isa - 33);
+        str += std::to_string(isa - 32);
     }
 
     return str;
 }
 
-string OpC2S(OpC op) {
+inline string Reg2SDebug(const MIROperand_p &mop, unsigned bitWide) {
+    auto isa = mop->isa();
+
+    Err::gassert(isISAReg(isa), "Reg2S: not a isa reg");
+    string str;
+
+    auto reg = static_cast<ARMReg>(isa);
+
+    if (inRange(reg, ARMReg::X0, ARMReg::X28)) {
+        if (bitWide <= 4) {
+            str += 'w';
+        } else {
+            str += 'x';
+        }
+
+        str += std::to_string(isa);
+    } else if (reg == ARMReg::FP) {
+        str += "fp";
+    } else if (reg == ARMReg::LR) {
+        str += "lr";
+    } else if (reg == ARMReg::SP) {
+        str += "sp";
+    } else if (inRange(reg, ARMReg::V0, ARMReg::V31)) {
+        if (bitWide <= 4) {
+            str += 's';
+        } else if (bitWide == 8) {
+            str += 'd';
+        } else {
+            str += 'q';
+        }
+
+        str += std::to_string(isa - 32);
+    }
+
+    str += '(';
+
+    if (auto recover = mop->getRecover(); recover < 64) {
+        str += '$';
+
+        if (inRange(recover, static_cast<unsigned>(ARMReg::X0), static_cast<unsigned>(ARMReg::X28))) {
+            str += 'x' + std::to_string(isa) + '[' + std::to_string(bitWide) + ']';
+        } else if (recover == ARMReg::FP) {
+            str += "fp";
+        } else if (recover == ARMReg::LR) {
+            str += "lr";
+        } else if (recover == ARMReg::SP) {
+            str += "sp";
+        } else if (inRange(recover, static_cast<unsigned>(ARMReg::V0), static_cast<unsigned>(ARMReg::V31))) {
+            str += 'v' + std::to_string(isa - 32);
+        }
+    } else {
+        str += '%' + std::to_string(recover) + '[' + std::to_string(bitWide) + ']';
+    }
+
+    str += ')';
+
+    return str;
+}
+
+inline string OpC2S(OpC op) {
     switch (op) {
     case OpC::InstAdd:
         return "add";
@@ -107,7 +170,7 @@ string OpC2S(OpC op) {
     return ""; // just to make clang happy
 }
 
-string ARMOpC2S(ARMOpC op) {
+inline string ARMOpC2S(ARMOpC op) {
     switch (op) {
     case LDR:
         return "ldr";

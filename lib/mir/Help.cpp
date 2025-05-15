@@ -13,12 +13,27 @@ void ARMInstTemplate::registerInc(MIRInst_p_l minsts, MIRInst_p_l::iterator it, 
         ///@note 用于存储临时数据, 辅助长跳转...
         ///@warning armv8没有对应的过程间寄存器
         ///@warning 所以这里用FP(X29)取代ip的工作, 反正也没有动态栈
-        auto scratchReg = MIROperand::asISAReg(ARMReg::X29, OpT::Int);
+        auto scratch = MIROperand::asISAReg(ARMReg::FP, OpT::Int64);
+        auto imme = amount;
+        auto movz = MIRInst::make(ARMOpC::MOVZ)
+                        ->setOperand<0>(scratch)
+                        ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16));
 
-        auto minst_loadImm = MIRInst::make(OpC::InstLoadImmToReg)->setOperand<0>(scratchReg)->setOperand<1>(mimme);
+        minsts.insert(it, movz);
 
-        minsts.insert(it, minst_loadImm);
-        mimme = scratchReg;
+        imme >>= 16;
+        unsigned times = 1;
+        while (imme != 0) {
+            auto movk = MIRInst::make(ARMOpC::MOVK)
+                            ->setOperand<0>(scratch)
+                            ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16))
+                            ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special)); // lsl only
+            minsts.insert(it, movk);
+
+            ++times;
+            imme >>= 16;
+        }
+        mimme = scratch;
     }
 
     auto misa = MIROperand::asISAReg(isa, OpT::Int);
@@ -34,12 +49,27 @@ void ARMInstTemplate::registerDec(MIRInst_p_l minsts, MIRInst_p_l::iterator it, 
     MIROperand_p mimme = MIROperand::asImme(amount, OpT::Int);
 
     if (!is12ImmeWithProbShift(amount)) {
-        auto scratchReg = MIROperand::asISAReg(ARMReg::X29, OpT::Int);
+        auto scratch = MIROperand::asISAReg(ARMReg::FP, OpT::Int64);
+        auto imme = amount;
+        auto movz = MIRInst::make(ARMOpC::MOVZ)
+                        ->setOperand<0>(scratch)
+                        ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16));
 
-        auto minst_loadImm = MIRInst::make(OpC::InstLoadImmToReg)->setOperand<0>(scratchReg)->setOperand<1>(mimme);
+        minsts.insert(it, movz);
 
-        minsts.insert(it, minst_loadImm);
-        mimme = scratchReg;
+        imme >>= 16;
+        unsigned times = 1;
+        while (imme != 0) {
+            auto movk = MIRInst::make(ARMOpC::MOVK)
+                            ->setOperand<0>(scratch)
+                            ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16))
+                            ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special)); // lsl only
+            minsts.insert(it, movk);
+
+            ++times;
+            imme >>= 16;
+        }
+        mimme = scratch;
     }
 
     auto misa = MIROperand::asISAReg(isa, OpT::Int);

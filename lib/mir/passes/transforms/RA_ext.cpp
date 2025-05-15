@@ -12,9 +12,11 @@ bool RegisterAllocImpl::isMoveInstruction(const MIRInst_p &minst) {
 
     if (mopcode == OpC::InstCopy || mopcode == OpC::InstCopyFromReg || mopcode == OpC::InstCopyToReg) {
 
-        auto mtype = minst->getDef()->type();
-        if (mtype == OpT::Int16 || mtype == OpT::Int32 || mtype == OpT::Int64 || mtype == OpT::Int) {
-            return true;
+        if (isCore(minst->ensureDef()) && isCore(minst->getOp(1))) {
+
+            if (!minst->getOp(1)->isImme()) { // chk use
+                return true;
+            }
         }
     }
 
@@ -29,9 +31,6 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getUse(const MIRInst_p &minst) {
             uses.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i), OpT::Int));
         }
 
-        // 虽然一般也不会assign LR
-        uses.emplace(MIROperand::asISAReg(ARMReg::LR, OpT::Int));
-
         return uses;
     }
 
@@ -42,6 +41,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getUse(const MIRInst_p &minst) {
         if (use && use->isVRegOrISAReg() &&
             (use->type() == OpT::Int16 || use->type() == OpT::Int32 || use->type() == OpT::Int64 ||
              use->type() == OpT::Int)) {
+
             uses.emplace(use);
         }
     }
@@ -53,11 +53,10 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getDef(const MIRInst_p &minst) {
     Nodes defs;
 
     if (!minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::BL) {
-        for (int i = 0; i < 18; ++i) {
+
+        for (int i = 0; i < 19; ++i) {
             defs.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i), OpT::Int));
         }
-
-        defs.emplace(MIROperand::asISAReg(ARMReg::LR, OpT::Int));
 
         return defs;
     }
@@ -66,6 +65,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getDef(const MIRInst_p &minst) {
 
         if ((def->type() == OpT::Int16 || def->type() == OpT::Int32 || def->type() == OpT::Int64 ||
              def->type() == OpT::Int)) {
+
             defs.emplace(def);
         }
     }
@@ -122,10 +122,10 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
 
     ++spilltimes;
 
-    Nodes stageValues{};
+    Nodes stageValues;
 
-    auto stkobj =
-        mfunc->addStkObj(mfunc->CodeGenContext(), getSize(mop->type()), getSize(mop->type()), 0, StkObjUsage::Spill);
+    auto mtype = mop->type();
+    auto stkobj = mfunc->addStkObj(mfunc->CodeGenContext(), getSize(mtype), getSize(mtype), 0, StkObjUsage::Spill);
 
     for (auto &mblk : mfunc->blks()) {
         auto &minsts = mblk->Insts();
@@ -135,27 +135,31 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
             auto defs = getDef(minst);
 
             if (auto it_op = uses.find(mop); it_op != uses.end()) {
-                auto readStage = MIROperand::asVReg(ctx.nextId(), mop->type());
-                auto minst_load = MIRInst::make(OpC::InstLoad)->setOperand<0>(readStage)->setOperand<1>(stkobj);
+                auto readStage = MIROperand::asVReg(ctx.nextId(), mtype);
+                auto minst_load = MIRInst::make(OpC::InstLoad)
+                                      ->setOperand<0>(readStage)
+                                      ->setOperand<1>(stkobj)
+                                      ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special));
 
                 minsts.insert(it, minst_load);
 
-                minst->replace(*it_op, readStage);
+                minst->replace(mop, readStage);
 
-                stageValues.insert(readStage);
-                continue;
+                stageValues.emplace(readStage);
             }
 
             if (auto it_op = defs.find(mop); it_op != defs.end()) {
-                auto writeStage = MIROperand::asVReg(ctx.nextId(), mop->type());
-                auto minst_store = MIRInst::make(OpC::InstStore)->setOperand<1>(writeStage)->setOperand<2>(stkobj);
+                auto writeStage = MIROperand::asVReg(ctx.nextId(), mtype);
+                auto minst_store = MIRInst::make(OpC::InstStore)
+                                       ->setOperand<1>(writeStage)
+                                       ->setOperand<2>(stkobj)
+                                       ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special));
 
                 minsts.insert(std::next(it), minst_store);
 
-                minst->replace(*it_op, writeStage);
+                minst->replace(mop, writeStage);
 
-                stageValues.insert(writeStage);
-                continue;
+                stageValues.emplace(writeStage);
             }
         }
     }
@@ -172,9 +176,13 @@ bool VectorRegisterAllocImpl::isMoveInstruction(const MIRInst_p &minst) {
 
     if (mopcode == OpC::InstCopy || mopcode == OpC::InstCopyFromReg || mopcode == OpC::InstCopyToReg) {
 
-        auto mtype = minst->getDef()->type();
-        if (mtype == OpT::Float32 || mtype == OpT::Floatvec || mtype == OpT::Intvec) {
-            return true;
+        auto mtype = minst->ensureDef()->type();
+        auto mtype2 = minst->getOp(1)->type();
+        if ((mtype == OpT::Float32 || mtype == OpT::Floatvec || mtype == OpT::Intvec || mtype == OpT::Float) &&
+            (mtype2 == OpT::Float32 || mtype2 == OpT::Floatvec || mtype2 == OpT::Intvec || mtype2 == OpT::Float)) {
+            if (!minst->getOp(1)->isImme()) { // chk use
+                return true;
+            }
         }
     }
 
@@ -186,7 +194,7 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getUse(const MIRInst_p &minst)
 
     if (!minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::BL) {
         for (int i = 0; i < 16; ++i) {
-            uses.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i + 32U), OpT::Int));
+            uses.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i + 32U), OpT::Float));
         }
 
         return uses;
@@ -197,7 +205,8 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getUse(const MIRInst_p &minst)
         auto use = minst->getOp(idx);
 
         if (use && use->isVRegOrISAReg() &&
-            (use->type() == OpT::Float32 || use->type() == OpT::Floatvec || use->type() == OpT::Intvec)) {
+            (use->type() == OpT::Float || use->type() == OpT::Float32 || use->type() == OpT::Floatvec ||
+             use->type() == OpT::Intvec)) {
             uses.emplace(use);
         }
     }
@@ -210,7 +219,7 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getDef(const MIRInst_p &minst)
 
     if (!minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::BL) {
         for (int i = 0; i < 16; ++i) {
-            defs.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i + 32U), OpT::Float32));
+            defs.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i + 32U), OpT::Float));
         }
 
         return defs;
@@ -218,7 +227,8 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getDef(const MIRInst_p &minst)
 
     if (auto def = minst->getDef()) {
 
-        if ((def->type() == OpT::Float32 || def->type() == OpT::Intvec || def->type() == OpT::Floatvec)) {
+        if ((def->type() == OpT::Float || def->type() == OpT::Float32 || def->type() == OpT::Intvec ||
+             def->type() == OpT::Floatvec)) {
             defs.emplace(def);
         }
     }

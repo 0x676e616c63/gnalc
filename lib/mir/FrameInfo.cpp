@@ -22,7 +22,7 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
     }
 
     ///@brief callee->hasAttr(Attr::NotBuiltin)
-    auto mcallee = callee->hasAttr(Attr::isSylib) ? ctx.mapGlobal(callee->getName()) : handleLib(callinst, ctx);
+    auto mcallee = callee->hasAttr(Attr::isSylib) ? handleLib(callinst, ctx) : ctx.mapGlobal(callee->getName());
 
     auto mcaller = ctx.CurrentBlk()->getFunction();
 
@@ -42,30 +42,33 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
         ///@todo 由于Armv8的s<>和v<>是同一个寄存器组的不同视图, 所以这里理论上可以实现用寄存器传递向量参数
         if (type->getTrait() == IR::IRCTYPE::PTR) {
             if (gprCnt < 8) {
-                offsets.push_back(passByRegBase + gprCnt++);
+                offsets.push_back(passByRegBase + (gprCnt++));
                 continue;
             }
         } else if (type->getTrait() == IR::IRCTYPE::BASIC) {
             if (type->as<IR::BType>()->getInner() == IR::IRBTYPE::FLOAT) {
                 if (sprCnt < 16) {
-                    offsets.push_back(passByRegBase + passBySprRegBase + sprCnt++);
+                    offsets.push_back(passByRegBase + passBySprRegBase + (sprCnt++));
                     continue;
                 }
             } else {
                 if (gprCnt < 8) {
-                    offsets.push_back(passByRegBase + gprCnt++);
+                    offsets.push_back(passByRegBase + (gprCnt++));
                     continue;
                 }
             }
+        } else {
+            Err::unreachable("handleCallEntry: unknown arg type");
         }
         ///@todo vectorize
 
         ///@note 可能的size为4, 8, 16(vector)
         const auto align = static_cast<unsigned>(arg->getType()->getBytes());
         auto minisize = 4U; // avoid clang-tidy warning
-        unsigned size = std::max(size, align);
+        // unsigned size = std::max(size, align); // ? 这竟然没检查出来 ?
+        unsigned size = std::max(minisize, align);
 
-        stkOffset = (stkOffset + align - 1) / align * align; // 强制对齐
+        stkOffset = ((stkOffset + align - 1) / align) * align; // 强制对齐
         offsets.emplace_back(stkOffset);
         stkOffset += size;
     }
@@ -78,10 +81,12 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
         const auto arg = args[i];
         auto mval = ctx.mapOperand(arg); // vreg or imme
         const auto size = static_cast<unsigned>(arg->getType()->getBytes());
+
+        ///@todo 细化align, 避免栈空间浪费
         const auto align = 8U;
 
-        if (offset > passByRegBase) {
-            continue;
+        if (offset >= passByRegBase) {
+            continue; // arg in regs
         }
 
         const auto obj = mcaller->addStkObj(ctx.CodeGenCtx(), size, align, offset, StkObjUsage::CalleeArg);
@@ -92,7 +97,10 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
             mval = reg;
         }
 
-        ctx.newInst(MIRInst::make(OpC::InstStoreRegToStack)->setOperand<1>(mval)->setOperand<2>(obj));
+        ctx.newInst(MIRInst::make(OpC::InstStoreRegToStack)
+                        ->setOperand<1>(mval)
+                        ->setOperand<2>(obj)
+                        ->setOperand<5>(MIROperand::asImme(getBitWide(mval->type()), OpT::special)));
     }
 
     // LAMBDA BEGIN
@@ -125,7 +133,7 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
         auto mval = ctx.mapOperand(arg);
 
         if (offset < passByRegBase) {
-            continue;
+            continue; // arg on stk
         }
 
         auto isa = isSpr(offset) ? ARMReg::V0 + static_cast<uint32_t>(offset - passByRegBase - passBySprRegBase)
@@ -147,14 +155,17 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
                     ->setOperand<1>(MIROperand::asReloc(mcallee->reloc()))
                     ->setOperand<2>(MIROperand::asImme(callinst->isTailCall() ? 1 : 0, OpT::special)));
 
-    auto mtype = getType(callinst);
+    if (mval) {
+        ///@brief return not a void
+        auto mtype = getType(callinst); // todo: ret val vectorize
 
-    ctx.newInst(MIRInst::make(OpC::InstCopyFromReg)
-                    ->setOperand<0>(mval)
-                    ->setOperand<1>(MIROperand::asISAReg(mtype == OpT::Float32 ? ARMReg::V0 : ARMReg::X0, mtype)));
-    ///@todo vectorize
+        ctx.newInst(MIRInst::make(OpC::InstCopyFromReg)
+                        ->setOperand<0>(mval)
+                        ->setOperand<1>(MIROperand::asISAReg(mtype == OpT::Float32 ? ARMReg::V0 : ARMReg::X0, mtype)));
+        ///@todo vectorize
 
-    ctx.addOperand(callinst, mval);
+        ctx.addOperand(callinst, mval);
+    }
 }
 
 MIRGlobal_p FrameInfo::handleLib(IR::pCall callinst, LoweringContext &ctx) const {
@@ -275,7 +286,7 @@ void FrameInfo::makePrologue(MIRFunction_p mfunc, LoweringContext &ctx) const {
     }
 
     for (int i = 0; i < args.size(); ++i) {
-        const auto &offset = offsets[i];
+        auto offset = offsets[i];
         auto &arg = args[i];
 
         if (offset < passByRegBase) {
@@ -299,20 +310,26 @@ void FrameInfo::makePrologue(MIRFunction_p mfunc, LoweringContext &ctx) const {
         auto size = getBytes(arg->type());
         auto align = size;
 
-        if (offset > passByRegBase) {
+        if (offset >= passByRegBase) {
             continue;
         }
 
         auto stkobj = mfunc->addStkObj(ctx.CodeGenCtx(), size, align, offset, StkObjUsage::Arg);
 
-        ctx.newInst(MIRInst::make(OpC::InstLoadRegFromStack)->setOperand<0>(arg)->setOperand<1>(stkobj));
+        ctx.newInst(MIRInst::make(OpC::InstLoadRegFromStack)
+                        ->setOperand<0>(arg)
+                        ->setOperand<1>(stkobj)
+                        ->setOperand<5>(MIROperand::asImme(getBitWide(arg->type()), OpT::special)));
         // addOperand already
     }
 }
 
 void FrameInfo::makeReturn(IR::pRet retinst, LoweringContext &ctx) const {
 
-    if (retinst->getType()->as<IR::BType>()->getInner() == IR::IRBTYPE::VOID) {
+    // if (retinst->getType()->as<IR::BType>()->getInner() == IR::IRBTYPE::VOID) {
+    //     ctx.newInst(MIRInst::make(ARMOpC::RET));
+    // }
+    if (retinst->getRetBType() == IR::IRBTYPE::VOID) {
         ctx.newInst(MIRInst::make(ARMOpC::RET));
     } else {
         auto mval = ctx.mapOperand(retinst->getRetVal());
@@ -334,8 +351,8 @@ void FrameInfo::makeReturn(IR::pRet retinst, LoweringContext &ctx) const {
         auto mret = MIROperand::asISAReg(isa, mtype);
 
         ctx.addCopy(mret, mval);
+        ctx.newInst(MIRInst::make(ARMOpC::RET)); // just use ret
     }
-    ctx.newInst(MIRInst::make(ARMOpC::RET)); // just use ret
 }
 
 bool FrameInfo::isCallerSaved(const MIROperand &op) const {
@@ -390,12 +407,13 @@ void FrameInfo::makePostSAEpilogue(MIRBlk_p entry, CodeGenContext &ctx, unsigned
 
     Err::gassert(find, "makePostSAEpilogue: cant find reg recover insts");
 
+    // stk space gen
     ARMInstTemplate::registerInc(insts, iter, ARMReg::SP, stkSize);
 }
 
 void FrameInfo::insertPrologueEpilogue(MIRFunction *mfunc, CodeGenContext &ctx) const {
 
-    // 30 + 1 + 1 + 31 = 63 < 64
+    // 30 + 1 + 1 + 32 = 64
     // X<>: 0 ~ 30, SP: 31, PC: 32, V<>: 33~64
     const uint64_t &bitmap = mfunc->calleeSaveRegs();
 

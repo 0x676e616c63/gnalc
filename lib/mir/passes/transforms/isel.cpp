@@ -16,7 +16,9 @@ OpC MIR_new::chooseCopyOpC(const MIROperand_p &dst, const MIROperand_p &src) {
     } else if (dst->isVReg() && src->isVReg()) {
         return OpC::InstCopy;
     } else if (dst->isVReg() && src->isStack()) {
-        return OpC::InstCopy; // used in cast
+        return OpC::InstCopyStkPtr;
+    } else if (dst->isISA() && src->isStack()) {
+        return OpC::InstCopyStkPtr;
     } else {
         Err::unreachable("chooseCopyOpC: dont match any copy op");
     }
@@ -121,9 +123,7 @@ void ISelContext::impl(MIRFunction *mfunc) {
 
                     hasIllegal |= isIllegal;
 
-                    ///@note 尝试模式匹配更换MIR(重点)
-                    if ((tryOptLegal || isIllegal) &&
-                        iselInfo.match(minst, *this, allowComplexPattern)) { // allow is passed by value
+                    if ((tryOptLegal || isIllegal) && iselInfo.match(minst, *this, allowComplexPattern)) {
                         modified = true;
                         if (allowComplexPattern) {
                             break;

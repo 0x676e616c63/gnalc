@@ -1,4 +1,5 @@
 #include "mir/passes/transforms/PostRAlegalize.hpp"
+#include "mir/passes/transforms/peephole.hpp"
 
 using namespace MIR_new;
 
@@ -17,23 +18,40 @@ void PostRAlegalizeImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     for (auto &mblk : mfunc->blks()) {
         runOnBlk(mblk, mfunc->CodeGenContext());
     }
-
-    return;
 }
 
 void PostRAlegalizeImpl::runOnBlk(MIRBlk_p mblk, CodeGenContext &ctx) {
 
-    auto minsts = mblk->Insts();
+    auto &minsts = mblk->Insts();
+
+    if (mblk->getmSym() == "KMP_54") {
+        int debug;
+    }
+
     for (auto iter = minsts.begin(); iter != minsts.end(); ++iter) {
         runOnInst(*iter, minsts, iter, ctx);
     }
 }
 
-void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l minsts, MIRInst_p_l::iterator iter,
+void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l &minsts, MIRInst_p_l::iterator &iter,
                                    CodeGenContext &_ctx) {
 
     if (minst->isGeneric()) {
         switch (minst->opcode<OpC>()) {
+        case OpC::InstCopyStkPtr: {
+            InstLegalizeContext ctx{minst, minsts, iter, _ctx};
+
+            auto mop = minst->ensureDef();
+            auto mstkop = minst->getOp(1);
+
+            if (mfunc->StkObjs().count(mstkop)) {
+                auto &obj = mfunc->StkObjs().at(mstkop);
+                _ctx.iselInfo.legalizeWithStkPtrCast(ctx, mop, obj);
+            } else {
+                Err::unreachable("PostRAlegalizeImpl::runOnInst: instAddSP without a stk ptr");
+            }
+
+        } break;
         case OpC::InstAddSP: {
             InstLegalizeContext ctx{minst, minsts, iter, _ctx};
 
@@ -44,8 +62,7 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l minsts, MIRInst_
                 auto &obj = mfunc->StkObjs().at(mstkop);
                 _ctx.iselInfo.legalizeWithStkGep(ctx, mop, obj);
             } else {
-                // no offset
-                minst->resetOpcode(ARMOpC::LDR);
+                Err::unreachable("PostRAlegalizeImpl::runOnInst: instAddSP without a stk ptr");
             }
 
         } break;
@@ -61,6 +78,7 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l minsts, MIRInst_
             } else {
                 // no offset
                 minst->resetOpcode(ARMOpC::LDR);
+                Err::gassert(minst->getOp(5) != nullptr, "PostRAlegalizeImpl::runOnInst: InstLoad info lack");
             }
 
         } break;
@@ -85,6 +103,7 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l minsts, MIRInst_
                 _ctx.iselInfo.legalizeWithStkOp(ctx, mop, obj);
             } else {
                 minst->resetOpcode(ARMOpC::STR);
+                Err::gassert(minst->getOp(5) != nullptr, "PostRAlegalizeImpl::runOnInst: InstLoad info lack");
             }
 
         } break;
@@ -102,6 +121,4 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l minsts, MIRInst_
             return;
         }
     }
-
-    return;
 }

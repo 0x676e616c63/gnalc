@@ -32,12 +32,27 @@ OpT MIR_new::btypeConvert(const IR::BType &type) {
     return OpT::Int; // just to make clang happy
 }
 
+unsigned MIR_new::typeBitwide(const IR::pType &type) {
+    if (auto btype = type->as<IR::BType>()) {
+        return 4;
+    } else if (auto ptrtype = type->as<IR::PtrType>()) {
+        return 8;
+    } else if (auto vectype = type->as<IR::VectorType>()) {
+        Err::todo("typeBitwide: vec todo");
+        // return 16;
+    } else if (auto arraytype = type->as<IR::ArrayType>()) {
+        Err::unreachable("typeBitwide: array type not supported");
+    }
+    return 8; // just make clang happy
+}
+
 MIRBlk_p LoweringContext::mapBlk(const IRBlk_p &blk) const { return mBlkMap.at(blk); }
 
 MIRGlobal_p LoweringContext::mapGlobal(const string &global) const { return mGlobalMap.at(global); }
 
 MIROperand_p LoweringContext::mapOperand(const IRVal_p &value) {
-    if (value->getVTrait() == IR::ValueTrait::ORDINARY_VARIABLE) {
+    if (value->getVTrait() == IR::ValueTrait::ORDINARY_VARIABLE ||
+        value->getVTrait() == IR::ValueTrait::FORMAL_PARAMETER) {
 
         // get from mValMap
         return mValMap.at(value);
@@ -45,9 +60,21 @@ MIROperand_p LoweringContext::mapOperand(const IRVal_p &value) {
 
         // get from mConstantMap
         if (auto ci32 = value->as<IR::ConstantInt>()) {
+
             auto imme = ci32->getVal();
             return mapOperand(imme);
+        }
+        ///@note extent i1, i8 const to i32
+        else if (auto ci1 = value->as<IR::ConstantI1>()) {
+
+            auto imme = static_cast<int>(ci1->getVal());
+            return mapOperand(imme);
+        } else if (auto ci8 = value->as<IR::ConstantI8>()) {
+
+            auto imme = static_cast<int>(ci8->getVal());
+            return mapOperand(imme);
         } else if (auto cf32 = value->as<IR::ConstantFloat>()) {
+
             auto imme = cf32->getVal();
             return mapOperand(imme);
         }
@@ -278,6 +305,8 @@ MIRGlobal_p MIR_new::loweringGlobal(const IR::GlobalVariable &global) {
         auto merge = [](MIRStorage &pre, MIRStorage &nxt) {
             size_t new_size = pre.isSize() ? pre.store<size_t>() : 4LL;
             new_size += nxt.isSize() ? nxt.store<size_t>() : 4LL;
+
+            pre.mstore = new_size; // .zero ...
         };
 
         // LAMBDA_END
@@ -285,10 +314,12 @@ MIRGlobal_p MIR_new::loweringGlobal(const IR::GlobalVariable &global) {
         recursive(initer);
 
         ///@note merge the neighbor sizeStores
-        for (auto it = datas.begin(); it != datas.end() && std::next(it) != datas.end(); ++it) {
+        for (auto it = datas.begin(); it != datas.end() && std::next(it) != datas.end();) {
             if (isStoreZero(it) && isStoreZero(std::next(it))) {
                 merge(*it, *std::next(it));
                 datas.erase(std::next(it));
+            } else {
+                ++it;
             }
         }
 
@@ -368,11 +399,11 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
     for (auto &inst : func->getBlocks().front()->getInsts()) {
         if (auto alloca = inst->as<IR::ALLOCAInst>()) {
             // stk obj
-            auto ptype = alloca->getType();
+            auto ptype = alloca->getBaseType(); // basetype not getType
             auto stkobjStore =
                 mfunc->addStkObj(codeGenCtx, ptype->getBytes(), alloca->getAlign(), 0, StkObjUsage::Local); // get vreg
 
-            storeMap.emplace(inst, stkobjStore);
+            storeMap.emplace(alloca, stkobjStore);
 
             ctx.addOperand(alloca, stkobjStore); // stkobjStore
         } else {
@@ -403,7 +434,27 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
 
             for (auto &use_phi : inst->getPhiOpers()) {
                 auto &mblk_src = blkMap.at(use_phi.block);
-                auto &use = valMap.at(use_phi.value);
+
+                MIR_new::MIROperand_p use;
+                if (valMap.count(use_phi.value)) {
+                    use = valMap.at(use_phi.value);
+                } else {
+                    auto &phiop = use_phi.value;
+                    Err::gassert(phiop->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL,
+                                 "lowerFunc: cant map a phi op");
+                    ///@todo vectorize
+                    if (auto ci1 = phiop->as<IR::ConstantI1>()) {
+                        use = MIROperand::asImme(ci1->getVal(), OpT::Int32);
+                    } else if (auto ci8 = phiop->as<IR::ConstantI8>()) {
+                        use = MIROperand::asImme(ci8->getVal(), OpT::Int32);
+                    } else if (auto ci32 = phiop->as<IR::ConstantInt>()) {
+                        use = MIROperand::asImme(ci32->getVal(), OpT::Int32);
+                    } else if (auto f32 = phiop->as<IR::ConstantFloat>()) {
+                        use = MIROperand::asImme(f32->getVal(), OpT::Float32);
+                    } else {
+                        Err::unreachable("unexpected phiop type");
+                    }
+                }
 
                 if (tmpBlkMap.count(use_phi.block)) {
                     tmpBlkMap.at(use_phi.block).pairs.emplace_back(def, use);
@@ -423,15 +474,17 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
     ctx.elimPhi();
 }
 
-void MIR_new::lowerInst(IRInst_p inst, LoweringContext &ctx) {
+void MIR_new::lowerInst(const IRInst_p &inst, LoweringContext &ctx) {
 
     ///@todo maybe irgen can add select inst
 
     using OP = IR::OP;
     switch (inst->getOpcode()) {
     case OP::ALLOCA:
+        // dont touch this
         break;
     case OP::PHI:
+        // dont touch this
         break;
     case OP::ADD:
     case OP::SUB:
