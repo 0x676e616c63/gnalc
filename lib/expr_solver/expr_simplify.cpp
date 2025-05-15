@@ -18,28 +18,29 @@ Expr *ExprSimplifier::simplify(Expr *expr) {
 }
 
 Expr *ExprSimplifier::match(Expr *expr) {
-    // t + 0 = t
-    if (expr->isBinary() && expr->op() == Op::Add && expr->getLHS()->getConstVal() == 0) {
+
+    // 0 + t = t
+    if (expr->isBinary() && expr->op() == Op::Add && expr->getLHS()->isConstant() &&expr->getLHS()->getConstVal() == 0) {
         return expr->getRHS();
     }
-    // 0 + t = t
-    if (expr->isBinary() && expr->op() == Op::Add && expr->getRHS()->getConstVal() == 0) {
+    // t + 0 = t
+    if (expr->isBinary() && expr->op() == Op::Add && expr->getRHS()->isConstant() && expr->getRHS()->getConstVal() == 0) {
         return expr->getLHS();
     }
     // t - 0 = t
-    if (expr->isBinary() && expr->op() == Op::Sub && expr->getRHS()->getConstVal() == 0) {
+    if (expr->isBinary() && expr->op() == Op::Sub && expr->getRHS()->isConstant() &&expr->getRHS()->getConstVal() == 0) {
         return expr->getLHS();
     }
     // t / 1 = t
-    if (expr->isBinary() && expr->op() == Op::Div && expr->getRHS()->getConstVal() == 1) {
+    if (expr->isBinary() && expr->op() == Op::Div &&expr->getRHS()->isConstant() && expr->getRHS()->getConstVal() == 1) {
         return expr->getLHS();
     }
     // t * 1 = t
-    if (expr->isBinary() && expr->op() == Op::Mul && expr->getRHS()->getConstVal() == 1) {
+    if (expr->isBinary() && expr->op() == Op::Mul && expr->getRHS()->isConstant() && expr->getRHS()->getConstVal() == 1) {
         return expr->getLHS();
     }
     // 1 * t = t
-    if (expr->isBinary() && expr->op() == Op::Mul && expr->getLHS()->getConstVal() == 1) {
+    if (expr->isBinary() && expr->op() == Op::Mul && expr->getLHS()->isConstant() && expr->getLHS()->getConstVal() == 1) {
         return expr->getRHS();
     }
     // t - t = 0
@@ -47,23 +48,23 @@ Expr *ExprSimplifier::match(Expr *expr) {
         return pool->getConstant(0);
     }
     // t * 0 = 0
-    if (expr->isBinary() && expr->op() == Op::Mul && expr->getRHS()->getConstVal() == 0) {
+    if (expr->isBinary() && expr->op() == Op::Mul && expr->getRHS()->isConstant()&&expr->getRHS()->getConstVal() == 0) {
         return pool->getConstant(0);
     }
     // 0 * t = 0
-    if (expr->isBinary() && expr->op() == Op::Mul && expr->getLHS()->getConstVal() == 0) {
+    if (expr->isBinary() && expr->op() == Op::Mul && expr->getLHS()->isConstant() && expr->getLHS()->getConstVal() == 0) {
         return pool->getConstant(0);
     }
     // 0 / t = 0
-    if (expr->isBinary() && expr->op() == Op::Div && expr->getLHS()->getConstVal() == 0) {
+    if (expr->isBinary() && expr->op() == Op::Div && expr->getLHS()->isConstant() &&expr->getLHS()->getConstVal() == 0) {
         return pool->getConstant(0);
     }
     // 0 % t = 0
-    if (expr->isBinary() && expr->op() == Op::Mod && expr->getLHS()->getConstVal() == 0) {
+    if (expr->isBinary() && expr->op() == Op::Mod && expr->getLHS()->isConstant() &&expr->getLHS()->getConstVal() == 0) {
         return pool->getConstant(0);
     }
     // t % 1 = 0
-    if (expr->isBinary() && expr->op() == Op::Div && expr->getRHS()->getConstVal() == 1) {
+    if (expr->isBinary() && expr->op() == Op::Div && expr->getRHS()->isConstant()&& expr->getRHS()->getConstVal() == 1) {
         return pool->getConstant(0);
     }
     // R1: c1 + c2 = (c1+c2)
@@ -251,7 +252,7 @@ Expr *ExprSimplifier::match(Expr *expr) {
     // ((t * c2) + c1 ) / c2 -> t + c1 / c2
     if (expr->isBinary() && expr->op() == Op::Div && expr->getLHS()->isBinary() && expr->getLHS()->op() == Op::Add &&
         expr->getLHS()->getLHS()->isBinary() && expr->getLHS()->getLHS()->op() == Op::Mul
-        && expr->getRHS() == expr->getLHS()->getLHS()->getRHS() && expr->getLHS()->getLHS()->getRHS()->isConstant &&
+        && expr->getRHS() == expr->getLHS()->getLHS()->getRHS() && expr->getLHS()->getLHS()->getRHS()->isConstant() &&
         expr->getLHS()->getRHS()->isConstant()) {
         Expr *c = pool->getConstant(expr->getLHS()->getRHS()->getConstVal() / expr->getRHS()->getConstVal());
         return pool->getBinary(

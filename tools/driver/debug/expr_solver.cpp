@@ -19,13 +19,14 @@ void test_expr(ExprPool *epool) {
     ExprSimplifier esim(epool);
 
     std::cout << "x + 1 + y - 2:\nBefore Simplify: " << *x_add_1_add_y_sub_2
-              << "\nAfter Simplify:" << *esim.simplify(x_add_1_add_y_sub_2) << std::endl;
+        << "\nAfter Simplify:" << *esim.simplify(x_add_1_add_y_sub_2) << std::endl;
 }
+
 
 int main() {
     ExprPool epool;
 
-    test_expr(&epool);
+    // test_expr(&epool);
     // x,y,z for single-char symbol
     // {pi} for multiple-char symbol
     ExprParser eparser(&epool);
@@ -36,6 +37,8 @@ int main() {
     auto parsed1 = eparser.parse("2 * x * 3 * y");
     auto simplified1 = esim.simplify(parsed1);
     std::cout << "Parsed Expr: " << *parsed1 << "\nAfter Simplify: " << *simplified1 << std::endl;
-
+    auto parsed2 = eparser.parse("(x * 7) * 9 / 7 - x * 9");
+    auto simplified2 = esim.simplify(parsed2);
+    std::cout << "Parsed Expr: " << *parsed2 << "\nAfter Simplify: " << *simplified2 << std::endl;
     return 0;
 }
