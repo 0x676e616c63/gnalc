@@ -62,30 +62,6 @@ void RegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
 }
 
 void RegisterAllocImpl::Main(FAM &fam) {
-    // liveinfo = fam.getFreshResult<LiveAnalysis>(*mfunc);
-
-    // Build();
-    // MkWorkList();
-
-    // while (!simplifyWorkList.empty() || !worklistMoves.empty() || !freezeWorkList.empty() || !spillWorkList.empty()) {
-    //     if (!simplifyWorkList.empty()) {
-    //         Simplify();
-    //     } else if (!worklistMoves.empty()) {
-    //         Coalesce();
-    //     } else if (!freezeWorkList.empty()) {
-    //         Freeze();
-    //     } else if (!spillWorkList.empty()) {
-    //         SelectSpill();
-    //     }
-    // }
-
-    // AssignColors();
-
-    // if (!spilledNodes.empty()) {
-    //     ReWriteProgram();
-
-    //     Main(fam);
-    // }
 
     ///@note this will be easier to read flame graph
     do {
@@ -438,7 +414,7 @@ void RegisterAllocImpl::AssignColors() {
 
             auto w_a = GetAlias(w);
 
-            if (isInUnion<MIROperand_p>(w_a, coloredNodes, precolored)) { ///@todo 这个判断是性能瓶颈
+            if (isInUnion<MIROperand_p>(w_a, coloredNodes, precolored)) {
 
                 Err::gassert(w_a->isVRegOrISAReg(), "try assign color for a none virReg op");
 
@@ -457,7 +433,7 @@ void RegisterAllocImpl::AssignColors() {
             addBySet(spilledNodes, Nodes{n});
         } else if (precolored.count(n)) {
             auto &calleesave = mfunc->calleeSaveRegs();
-            calleesave |= 1 << n->reg(); // marked
+            calleesave |= 1LL << n->reg(); // marked
         } else if (n->isStack()) {
             ;
         } else {
@@ -466,7 +442,7 @@ void RegisterAllocImpl::AssignColors() {
             auto c = okColors.front();
 
             auto &calleesave = mfunc->calleeSaveRegs();
-            calleesave |= 1 << c; // marked
+            calleesave |= 1LL << c; // marked
 
             ///@note maybe override
             // Err::gassert(n->isVReg(), "AssignColors: try assign to a non-reg");
@@ -483,8 +459,12 @@ void RegisterAllocImpl::AssignColors() {
         Err::gassert(n->isVRegOrISAReg(), "AssignColors: try assign color for a none virReg op");
         Err::gassert(n_a->isVRegOrISAReg(), "AssignColors: try assign color for a none virReg op");
 
+        auto &calleesave = mfunc->calleeSaveRegs();
+        calleesave |= 1LL << n_a->reg();
+
         ///@warning 直接override?
         // if (!n->isPreColored())
+
         n->assignColor(n_a->reg());
     }
 }
@@ -512,12 +492,15 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::Adjacent(const MIROperand_p &n) {
 RegisterAllocImpl::Moves RegisterAllocImpl::NodeMoves(const MIROperand_p &n) {
     Err::gassert(n != nullptr, "n is nullptr");
 
-    auto set = getUnion<MIRInst_p, false>(activeMoves, worklistMoves);
-
     Moves movs{};
 
-    for (const auto &p : set) {
-        if (moveList[n].count(p))
+    for (const auto &p : activeMoves) {
+        if (moveList[n].count(p)) //
+            movs.insert(p);
+    }
+
+    for (const auto &p : worklistMoves) {
+        if (moveList[n].count(p)) //
             movs.insert(p);
     }
 

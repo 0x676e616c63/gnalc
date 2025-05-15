@@ -16,7 +16,7 @@ struct Liveness {
 
     std::map<MIROperand_p, std::set<std::pair<MIRInst_p, relatedType>>> use_def_insts;
 
-    std::map<MIROperand_p, size_t> intervalLengths;
+    std::unordered_map<MIROperand_p, size_t> intervalLengths;
 
     ///@todo loop cnt not impl
     std::map<MIROperand_p, size_t> loopCnts;

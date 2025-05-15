@@ -19,7 +19,7 @@ public:
     using OperSet = std::set<MIROperand_p>;
     using WorkList = std::set<MIROperand_p>;
     using Nodes = std::set<MIROperand_p>;
-    using Moves = std::set<MIRInst_p>;
+    using Moves = std::unordered_set<MIRInst_p>;
 
     struct Edge {
         MIROperand_p u, v;
@@ -66,7 +66,7 @@ protected:
     std::unordered_set<Edge, EdgeHash> adjSet;
     std::map<MIROperand_p, OperSet> adjList;
     std::map<MIROperand_p, unsigned int> degree; // precolored will be initialize with -1
-    std::map<MIROperand_p, Moves> moveList;
+    std::unordered_map<MIROperand_p, Moves> moveList;
     std::map<MIROperand_p, MIROperand_p> alias;
     // color
     unsigned int K;
@@ -93,7 +93,7 @@ protected:
 
 protected:
     /// function
-    Nodes Adjacent(const MIROperand_p &);
+    inline Nodes Adjacent(const MIROperand_p &);
     Moves NodeMoves(const MIROperand_p &);
     bool MoveRelated(const MIROperand_p &);
 
@@ -180,12 +180,24 @@ protected:
         return (sets.count(elem) | ...);
     }
 
-    template <typename T, typename... Tsets> std::set<T> getExclude(const std::set<T> &victim, const Tsets &...sets) {
-        auto exclude_union = getUnion<T>(sets...);
-        std::set<T> result;
-        std::set_difference(victim.begin(), victim.end(), exclude_union.begin(), exclude_union.end(),
-                            std::inserter(result, result.end()));
-        return result;
+    template <typename T, bool inOrder = true, typename... Tsets>
+    auto getExclude(const std::set<T> &victim, const Tsets &...sets) {
+        if constexpr (inOrder) {
+            auto exclude_union = getUnion<T>(sets...);
+            std::set<T> result;
+            std::set_difference(victim.begin(), victim.end(), exclude_union.begin(), exclude_union.end(),
+                                std::inserter(result, result.end()));
+            return result;
+        } else {
+            auto exclude_unioon = getUnion<T, false>(sets...);
+            std::unordered_set<T> result;
+            for (const auto &elem : exclude_unioon) {
+                if (!victim.count(elem)) {
+                    result.insert(elem);
+                }
+            }
+            return result;
+        }
     }
 
     MIROperand_p heuristicSpill();

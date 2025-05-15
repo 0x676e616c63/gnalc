@@ -297,7 +297,7 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
             offset += 8;
         }
 
-        offset += offset % 16 ? 8 : 0; // align
+        offset += offset % 16 ? 0 : 8; // align
 
         for (int i = 32; i < 65; ++i, bitMap >>= 1) {
             if (bitMap & 1) {
