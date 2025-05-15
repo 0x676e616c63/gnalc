@@ -16,7 +16,7 @@ constexpr auto LOCAL_ARRAY_MEMSET_THRESHOLD = 32;
 // Maximum number of blocks
 constexpr auto GVNPRE_SKIP_BLOCK_THRESHOLD = 1000;
 // Maximum allowed expression nesting depth
-constexpr auto GVNPRE_SKIP_NESTED_EXPR_THRESHOLD = 1000;
+constexpr auto GVNPRE_SKIP_NESTED_EXPR_THRESHOLD = 128;
 
 // Function Inline
 constexpr auto FUNCTION_INLINE_INST_THRESHOLD = 1000;
