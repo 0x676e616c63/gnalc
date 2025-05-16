@@ -265,16 +265,16 @@ MPM PassBuilder::buildModulePipeline(PMOptions opt_info) {
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     // If-conversion
-    fpm.addPass(PromotePass());
-    fpm.addPass(NameNormalizePass());
-    fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(IfConversionPass());
-    fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(NameNormalizePass());
-    return fpm;
+    // fpm.addPass(PromotePass());
+    // fpm.addPass(NameNormalizePass());
+    // fpm.addPass(PrintFunctionPass(std::cerr));
+    // fpm.addPass(CFGSimplifyPass());
+    // fpm.addPass(PrintFunctionPass(std::cerr));
+    // fpm.addPass(IfConversionPass());
+    // fpm.addPass(PrintFunctionPass(std::cerr));
+    // fpm.addPass(CFGSimplifyPass());
+    // fpm.addPass(NameNormalizePass());
+    // return fpm;
     // Vectorizer
     // fpm.addPass(PromotePass());
     // fpm.addPass(ConstantPropagationPass());
@@ -290,20 +290,21 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     // fpm.addPass(PrintFunctionPass(std::cerr));
     // fpm.addPass(NameNormalizePass());
 
-    // // For LoopUnroll Test
-    // fpm.addPass(PromotePass());
-    // fpm.addPass(InlinePass());
-    // fpm.addPass(LoopSimplifyPass());
-    // fpm.addPass(LoopRotatePass());
-    // fpm.addPass(LCSSAPass());
-    // fpm.addPass(LoopUnrollPass());
-    // fpm.addPass(InstSimplifyPass());
-    // fpm.addPass(BreakCriticalEdgesPass());
-    // fpm.addPass(GVNPREPass());
-    // fpm.addPass(ConstantPropagationPass());
-    // fpm.addPass(CFGSimplifyPass());
-    // fpm.addPass(NameNormalizePass(true));
-    // fpm.addPass(VerifyPass(true));
+    // For LoopUnroll Test
+    fpm.addPass(PromotePass());
+    fpm.addPass(InlinePass());
+    fpm.addPass(LoopSimplifyPass());
+    fpm.addPass(LoopRotatePass());
+    fpm.addPass(LCSSAPass());
+    fpm.addPass(LoopUnrollPass());
+    fpm.addPass(InstSimplifyPass());
+    fpm.addPass(BreakCriticalEdgesPass());
+    fpm.addPass(GVNPREPass());
+    fpm.addPass(ConstantPropagationPass());
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(DCEPass());
+    fpm.addPass(NameNormalizePass(true));
+    fpm.addPass(VerifyPass(true));
 
     // // For LoopUnroll Debug
     // fpm.addPass(PromotePass());

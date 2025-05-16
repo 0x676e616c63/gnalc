@@ -19,8 +19,8 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
     static constexpr unsigned PEC = Config::IR::LOOP_UNROLLING_PEEL_COUNT;
     static constexpr unsigned FUS = -1;
     static constexpr unsigned FUC = -1;
-    static constexpr unsigned PUS = Config::IR::LOOP_UNROLLING_PARTIALLY_UNROLL_SIZE;
-    static constexpr unsigned PUC = Config::IR::LOOP_UNROLLING_PARTIALLY_UNROLL_COUNT;
+    static constexpr unsigned PUS = -1;
+    static constexpr unsigned PUC = 4;
     static constexpr unsigned RUS = Config::IR::LOOP_UNROLLING_RUNTIME_UNROLL_SIZE;
     static constexpr unsigned RUC = Config::IR::LOOP_UNROLLING_RUNTIME_UNROLL_COUNT;
     static constexpr unsigned MPS = -1;

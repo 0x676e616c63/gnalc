@@ -78,6 +78,11 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
         if (ENABLE_PARTIALLY_UNROLL) {
             // Calculate unroll factor
             auto unroll_factor = PUS / inst_size;
+            if (unroll_factor == 0) {
+                Logger::logInfo("[LoopUnroll] Unroll disabled because the unroll_factor is 0!");
+                option.disable();
+                return;
+            }
             unroll_factor = std::min(unroll_factor, PUC);
             unsigned remainder = trip_countn % unroll_factor;
 
