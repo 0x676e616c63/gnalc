@@ -1,36 +1,8 @@
-// 65_color.sy
-// 77_substr.sy
-// 94_nested_loops.sy
-
-int a = -1, b = 1;
-
-int inc_a()
-{
-    int b = a;
-    b = b + 1;
-    a = b;
-    return a;
-}
-
-int main()
-{
-    int k = 5;
-    while (k >= 0) {
-        if (inc_a() && inc_a() && inc_a()) {
-            putint(a); putch(32); putint(b); putch(10);
-        }
-        if (inc_a() < 14 || inc_a() && inc_a() - inc_a() + 1) {
-            putint(a); putch(10);
-            b = b * 2;
-        } else {
-            inc_a();
-        }
-        k = k - 1;
-    }
-    putint(a); putch(32); putint(b); putch(10);
-    return a;
-}
-
+// v 65_color.sy
+// v 77_substr.sy
+// v 94_nested_loops.sy
+// 82_long_func
+// 28_side_effect2
 
 // // Very slowly run ConstantPropagationPass when fully unroll
 // // 52_scope
