@@ -171,7 +171,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
         FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
         FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
         FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
-        // FUNCTION_TRANSFORM(loop_unroll, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LoopUnrollPass())
+        FUNCTION_TRANSFORM(loop_unroll, LoopSimplifyPass(), LCSSAPass(), LoopUnrollPass())
         return fpm;
     };
 
@@ -245,6 +245,13 @@ FPM PassBuilder::buildFunctionPipeline(PMOptions opt_info) {
     FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
     FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
     FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
+    FUNCTION_TRANSFORM(loop_unroll, LoopSimplifyPass(), LCSSAPass(), LoopUnrollPass())
+
+    FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass())
+    FUNCTION_TRANSFORM(sccp, SCCPPass())
+    FUNCTION_TRANSFORM(dce, DCEPass())
+    FUNCTION_TRANSFORM(adce, ADCEPass())
+    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
 
 #undef FUNCTION_TRANSFORM
 
@@ -354,6 +361,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
     // (name, adder, weight)
     std::vector<std::tuple<std::string_view, std::function<void()>, size_t>> passes;
 
+    // FIXME, too many marcos
 #define REGISTER_FUNCTION_TRANSFORM(option, pass, weight)                                                              \
     if (options.option)                                                                                                \
         passes.emplace_back(                                                                                           \
@@ -372,6 +380,19 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
             [&fpm, &options]() {                                                                                       \
                 fpm.addPass(pass1());                                                                                  \
                 fpm.addPass(pass2());                                                                                  \
+                if (options.verify)                                                                                    \
+                    fpm.addPass(VerifyPass(options.abort_when_verify_failed));                                         \
+            },                                                                                                         \
+            weight);
+
+#define REGISTER_FUNCTION_TRANSFORM3(option, pass1, pass2, pass3, weight)                                              \
+    if (options.option)                                                                                                \
+        passes.emplace_back(                                                                                           \
+            pass3::name(),                                                                                             \
+            [&fpm, &options]() {                                                                                       \
+                fpm.addPass(pass1());                                                                                  \
+                fpm.addPass(pass2());                                                                                  \
+                fpm.addPass(pass3());                                                                                  \
                 if (options.verify)                                                                                    \
                     fpm.addPass(VerifyPass(options.abort_when_verify_failed));                                         \
             },                                                                                                         \
@@ -404,6 +425,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
     REGISTER_FUNCTION_TRANSFORM2(loopelim, LoopSimplifyPass, LoopEliminationPass, 10)
     REGISTER_FUNCTION_TRANSFORM2(loop_strength_reduce, LoopSimplifyPass, LoopStrengthReducePass, 10)
     REGISTER_FUNCTION_TRANSFORM4(licm, LoopSimplifyPass, LoopRotatePass, LCSSAPass, LICMPass, 10)
+    REGISTER_FUNCTION_TRANSFORM3(loop_unroll, LoopSimplifyPass, LCSSAPass, LoopUnrollPass, 10)
 
     if (repro.empty()) {
         std::random_device rd;
