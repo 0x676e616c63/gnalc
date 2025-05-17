@@ -277,7 +277,6 @@ Expr *ExprSimplifier::rewrite(Expr *expr) {
     if (expr->isBinary()) {
         t1 = rewrite(expr->getLHS());
         t2 = rewrite(expr->getRHS());
-        std::cout << *t1 << " " << *t2 << std::endl;
         return pool->getBinary(expr->op(), t1, t2);
     }
     return expr;
