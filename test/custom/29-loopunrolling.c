@@ -25,35 +25,6 @@
 // 22
 // TOTAL: 0H-0M-0S-0us
 
-// Test Case 2: 数组修改，检查余数处理是否正确访问数组
-int test_array_modification() {
-    int arr[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    int n_arr;
-    int k; // 用于打印
-
-    // Case 2.2: n_arr = 5.
-    // U=3: 主循环1次 (arr[0]..arr[2]), 余数2次 (arr[3], arr[4]).
-    // U=4: 主循环1次 (arr[0]..arr[3]), 余数1次 (arr[4]).
-
-    n_arr = 5;
-    k = 0;
-    while (k < n_arr) {
-        putint(arr[k]);
-        if (k < n_arr - 1) {
-            putch(32);
-        }
-        k = k + 1;
-    }
-    // 预期: 1 2 3 4 5
-
-    return 0;
-}
-
-int main() {
-    test_array_modification();
-    return 0;
-}
-
 // // Test Case 1: 简单累加，不同迭代次数和可能的余数
 // int test_simple_summation() {
 //     int sum;

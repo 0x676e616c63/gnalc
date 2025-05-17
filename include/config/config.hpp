@@ -42,19 +42,13 @@ constexpr auto LSR_EXPANSION_THRESHOLD = 5;
 constexpr auto INTERNALIZE_GLOBAL_SIZE_THRESHOLD = 1048576; // 1 MB
 
 // Loop Unroll
-// 循环剥皮最大次数
 constexpr unsigned LOOP_UNROLLING_PEEL_COUNT = 10;
-// trip_count*size 小于此值次数的循环将被完全展开
 constexpr unsigned LOOP_UNROLLING_FULLY_UNROLL_SIZE = 400;
-// trip_count 小于此值次数的循环将被完全展开
 constexpr unsigned LOOP_UNROLLING_FULLY_UNROLL_COUNT = 8;
 constexpr unsigned LOOP_UNROLLING_PARTIALLY_UNROLL_SIZE = 200;
 constexpr unsigned LOOP_UNROLLING_PARTIALLY_UNROLL_COUNT = 8;
-// 运行时展开最大大小
 constexpr unsigned LOOP_UNROLLING_RUNTIME_UNROLL_SIZE = 200;
-// 运行时展开最大次数
 constexpr unsigned LOOP_UNROLLING_RUNTIME_UNROLL_COUNT = 8;
-// 执行展开的最大循环大小，至多为上述各个 size 的 1/2
 constexpr unsigned LOOP_UNROLLING_MAX_PROCESS_SIZE = 100;
 
 // If Conversion

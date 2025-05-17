@@ -16,16 +16,16 @@
 
 namespace IR {
 class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
-    static constexpr unsigned PEC = Config::IR::LOOP_UNROLLING_PEEL_COUNT;
-    static constexpr unsigned FUS = -1;
-    static constexpr unsigned FUC = -1;
-    static constexpr unsigned PUS = -1;
-    static constexpr unsigned PUC = 7;
-    static constexpr unsigned RUS = Config::IR::LOOP_UNROLLING_RUNTIME_UNROLL_SIZE;
-    static constexpr unsigned RUC = Config::IR::LOOP_UNROLLING_RUNTIME_UNROLL_COUNT;
-    static constexpr unsigned MPS = -1;
+    static constexpr unsigned PEC = Config::IR::LOOP_UNROLLING_PEEL_COUNT; // 循环剥皮最大次数
+    static constexpr unsigned FUS = -1; // // trip_count*size 小于此值次数的循环可能被完全展开
+    static constexpr unsigned FUC = 16; // trip_count 小于此值次数且满足上个条件的循环将被完全展开
+    static constexpr unsigned PUS = -1; // 部分展开后最大大小
+    static constexpr unsigned PUC = 8; // 部分展开最大次数
+    static constexpr unsigned RUS = Config::IR::LOOP_UNROLLING_RUNTIME_UNROLL_SIZE; // 运行时展开后最大大小
+    static constexpr unsigned RUC = Config::IR::LOOP_UNROLLING_RUNTIME_UNROLL_COUNT; // 运行时展开最大次数
+    static constexpr unsigned MPS = -1; // 执行展开的最大循环大小，至多为上述各个 size 的 1/2
     static constexpr bool ENABLE_PEELING = false;
-    static constexpr bool ENABLE_FULLY_UNROLL = false;
+    static constexpr bool ENABLE_FULLY_UNROLL = true;
     static constexpr bool ENABLE_PARTIALLY_UNROLL = true;
     static constexpr bool ENABLE_RUNTIME_UNROLL = false;
 
@@ -64,7 +64,7 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
             has_remainder = false;
         }
 
-        void set_remainder(const unsigned _remainder, const pVal _rawbv, const pVal _newbv) {
+        void set_remainder(const unsigned _remainder, const pVal& _rawbv, const pVal &_newbv) {
             Err::gassert(unroll_type == UnrollType::PARTIALLY, "UnrollOption: set_remainder(): unroll_type is not PARTIALLY.");
             has_remainder = (_remainder!=0);
             remainder = _remainder;

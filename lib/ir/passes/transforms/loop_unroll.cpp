@@ -35,7 +35,7 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
         return;
     }
 
-    // 不处理含调用的循环, Disable for test
+    // 不处理含调用的循环, Disable
     // for (const auto &bb : loop->blocks()) {
     //     for (const auto &inst : *bb) {
     //         if (inst->getOpcode() == OP::CALL) {
@@ -58,7 +58,7 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
         // 常量展开策略
         const auto trip_countn = TC->getIRValue()->as<ConstantInt>()->getVal();
 
-        /// TODO: Fully unroll when trip_count == 1
+        /// TODO: Fully unroll when trip_count == 1?
         if (trip_countn < 2) {
             Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's trip count < 2");
             option.disable();
@@ -77,6 +77,7 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
         // For partially unroll
         if (ENABLE_PARTIALLY_UNROLL) {
             // Calculate unroll factor
+            /// TODO: May need optimize
             auto unroll_factor = PUS / inst_size;
             if (unroll_factor == 0) {
                 Logger::logInfo("[LoopUnroll] Unroll disabled because the unroll_factor is 0!");
@@ -87,7 +88,7 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
             unsigned remainder = trip_countn % unroll_factor;
 
             if (trip_countn < unroll_factor) {
-                Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's trip count < unroll_factor.");
+                Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's trip count < unroll_factor, may need to fully unroll?");
                 option.disable();
                 return;
             }
@@ -115,7 +116,7 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
 
                 {
                     // Calculate new boundary
-                    /// TODO: Why 2?
+                    /// TODO: Why need both boundray+-1 and >= to >(or <= to <)?
                     pVal iter_variable, raw_boundary_value;
                     if (loop->getExitingBlocks().size() == 1) {
                         auto exiting_br_cond = (*loop->getExitingBlocks().begin())->getBRInst()->getCond();
@@ -155,13 +156,24 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
                     }
 
                     auto trecp = SCEVH.getSCEVAtBlock(iter_variable, iter_variable->as<Instruction>()->getParent());
-                    if (!trecp || !trecp->isAddRec()) {
-                        Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's iter_variable's TREC is not AddRec or can't get.");
+                    if (!trecp) {
+                        Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable's TREC.");
                         option.disable();
                         return;
                     }
+                    if (!trecp->isAddRec()) {
+                        Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's iter_variable's TREC is not AddRec.");
+                        option.disable();
+                        return;
+                    }
+
                     auto [base, step] = trecp->getConstantAffineAddRec().value();
-                    int new_boundary_num = base + step * unroll_factor * (trip_countn / unroll_factor) + (step>0?-1:1);
+                    int new_boundary_num;
+                    if (loop->isExiting(loop->getLatch())) {
+                        new_boundary_num = base + step * unroll_factor * (trip_countn / unroll_factor - 1) + (step>0?-1:1);
+                    } else {
+                        new_boundary_num = base + step * unroll_factor * (trip_countn / unroll_factor) + (step>0?-1:1);
+                    }
                     Logger::logDebug("[LoopUnroll] Get base: "+ std::to_string(base) + ", step: "+ std::to_string(step) + ", new_boundary_num: "+ std::to_string(new_boundary_num));
                     auto new_boundary_value = FC.getConst(new_boundary_num);
                     option.set_remainder(remainder, raw_boundary_value, new_boundary_value);
@@ -169,12 +181,19 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
             }
             return;
         }
+
+        Logger::logInfo("[LoopUnroll] Needs to fully or partially unroll but both are disabled...");
+        option.disable();
+        return;
     } else {
         // 变量展开策略
         if (ENABLE_RUNTIME_UNROLL) {
             // TODO
         }
-        Logger::logInfo("[LoopUnroll] Needs to runtime unroll but has not been implemented yet...");
+
+        Logger::logInfo("[LoopUnroll] Needs to runtime unroll but disabled...");
+        option.disable();
+        return;
     }
 
     Logger::logInfo("[LoopUnroll] Unroll disabled because of some default reasons.");
@@ -545,7 +564,6 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             auto cond = br->getCond()->as<Instruction>();
             if (cond->getOpcode() == OP::ICMP) {
                 auto icmp = cond->as<ICMPInst>();
-                // TODO : NEED FIX
                 if (option.raw_boundary_value != option.new_boundary_value)
                     icmp->replaceAllOperands(option.raw_boundary_value, option.new_boundary_value);
                 // 此处给展开循环的判断条件改为非等，防止多执行
@@ -582,11 +600,11 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             } else if (br->getFalseDest() == exitb) {
                 br->dropFalseDest();
             } else {
-                // Somewhere I dropped, Somewhere not, it needs to be fixed.
+                /// TODO: Somewhere I dropped, Somewhere not, it may needs to be fixed.
                 // Err::unreachable();
             }
         } else {
-            // Somewhere I dropped, Somewhere not, it needs to be fixed.
+            //// TODO: Somewhere I dropped, Somewhere not, it may needs to be fixed.
             // Err::unreachable();
         }
         for (auto &phi : exitb->phis()) {
@@ -693,7 +711,7 @@ PM::PreservedAnalyses LoopUnrollPass::run(Function &function, FAM &fam) {
         return PreserveAll();
     }
 
-    // TODO: 修改遍历顺序
+    /// TODO: 修改遍历顺序，目前只处理外层循环
     for (auto &loop : LI) {
         auto &DT = fam.getFreshResult<DomTreeAnalysis>(function);
         UnrollOption option;
