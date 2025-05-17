@@ -269,10 +269,11 @@ Expr *ExprSimplifier::rewrite(Expr *expr) {
     if (match(expr, Add(Sub(Bind(t1), Bind(t2)), Sub(Bind(t3), Bind(t4)))) && t1 == t4 && t2 == t3) {
         return pool->getConstant(0);
     }
-    //
-    // if (match(expr, Mul(Mul(Bind(c1), Bind(x)), Bind(y))) && c1->isConstant()) {
-    //     return pool->getBinary(Op::Mul, c1, pool->getBinary(Op::Mul, x, y));
-    // }
+    // (c1 * x) / c2 = (c1 / c2) * x when c1 % c2 == 0
+    if (match(expr, Div(Mul(Bind(c1), Bind(x)), Bind(c2))) && c1->isConstant() && c2->isConstant() && (c1->getConstVal() % c2->getConstVal() == 0)) {
+        return pool->getBinary(Op::Mul,pool->getConstant(c1->getConstVal() / c2->getConstVal()),x);
+    }
+
     // otherwise
     if (expr->isBinary()) {
         t1 = rewrite(expr->getLHS());
