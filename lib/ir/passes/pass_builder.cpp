@@ -293,18 +293,21 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
 
     // For LoopUnroll Test
     fpm.addPass(PromotePass());
-    fpm.addPass(InlinePass());
+    // fpm.addPass(InlinePass());
     fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(LoopRotatePass());
-    fpm.addPass(LCSSAPass());
-    fpm.addPass(LoopUnrollPass());
-    fpm.addPass(InstSimplifyPass());
-    fpm.addPass(BreakCriticalEdgesPass());
-    fpm.addPass(GVNPREPass());
-    fpm.addPass(SCCPPass());
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(DCEPass());
     fpm.addPass(NameNormalizePass(true));
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(LoopRotatePass());
+    // fpm.addPass(LCSSAPass());
+    fpm.addPass(PrintSCEVPass(std::cerr));
+    // fpm.addPass(LoopUnrollPass());
+    // fpm.addPass(InstSimplifyPass());
+    // fpm.addPass(BreakCriticalEdgesPass());
+    // fpm.addPass(GVNPREPass());
+    // fpm.addPass(SCCPPass());
+    // fpm.addPass(CFGSimplifyPass());
+    // fpm.addPass(DCEPass());
+    // fpm.addPass(NameNormalizePass(true));
     fpm.addPass(VerifyPass(true));
 
     // // For LoopUnroll Debug

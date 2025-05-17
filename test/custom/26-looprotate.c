@@ -1,15 +1,16 @@
-//test break
 int main() {
-    int i;
-    i = 0;
-    int sum;
-    sum = 0;
-    while (i < 100) {
-        if (i == 50) {
-            break;
+    int a;
+    a = 21;
+    int b;
+    b = 6;
+    while (a < 20) {
+        a = a + 3;
+        if (b < 10) {
+            b = b + 1;
         }
-        sum = sum + i;
-        i = i + 1;
+        b = b - 2;
     }
-    return sum;
+
+    putint(a + b);
+    return 0;
 }

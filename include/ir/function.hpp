@@ -18,7 +18,7 @@ class CFGBuilder;
 
 namespace IR {
 enum class FuncAttr {
-    // user defined functions
+    // User defined functions
     NotBuiltin,
 
     // Typically this is a main function
@@ -26,6 +26,10 @@ enum class FuncAttr {
 
     // Sylib
     isSylib,
+
+    // Width
+    PromoteFromChar,
+    TruncateToChar,
 
     // Intrinsic
     isIntrinsic,
