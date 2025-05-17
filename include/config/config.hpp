@@ -39,7 +39,7 @@ constexpr auto LSR_EXPANSION_THRESHOLD = 5;
 
 // Internalize
 // Avoid internalizing global variables whose size is larger than this threshold.
-constexpr auto INTERNALIZE_GLOBAL_SIZE_THRESHOLD = 1048576; // 1 MB
+constexpr auto INTERNALIZE_GLOBAL_SIZE_THRESHOLD = 1024 * 1024; // 1 MB
 
 // Loop Unroll
 constexpr unsigned LOOP_UNROLLING_PEEL_COUNT = 10;
