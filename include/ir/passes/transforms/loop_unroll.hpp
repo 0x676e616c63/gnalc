@@ -17,13 +17,13 @@
 namespace IR {
 class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
     static constexpr unsigned PEC = Config::IR::LOOP_UNROLLING_PEEL_COUNT; // 循环剥皮最大次数
-    static constexpr unsigned FUS = -1; // // trip_count*size 小于此值次数的循环可能被完全展开
-    static constexpr unsigned FUC = 16; // trip_count 小于此值次数且满足上个条件的循环将被完全展开
-    static constexpr unsigned PUS = -1; // 部分展开后最大大小
-    static constexpr unsigned PUC = 8; // 部分展开最大次数
+    static constexpr unsigned FUS = Config::IR::LOOP_UNROLLING_FULLY_UNROLL_SIZE; // // trip_count*size 小于此值次数的循环可能被完全展开
+    static constexpr unsigned FUC = Config::IR::LOOP_UNROLLING_FULLY_UNROLL_COUNT; // trip_count 小于此值次数且满足上个条件的循环将被完全展开
+    static constexpr unsigned PUS = Config::IR::LOOP_UNROLLING_PARTIALLY_UNROLL_SIZE; // 部分展开后最大大小
+    static constexpr unsigned PUC = Config::IR::LOOP_UNROLLING_PARTIALLY_UNROLL_COUNT; // 部分展开最大次数
     static constexpr unsigned RUS = Config::IR::LOOP_UNROLLING_RUNTIME_UNROLL_SIZE; // 运行时展开后最大大小
     static constexpr unsigned RUC = Config::IR::LOOP_UNROLLING_RUNTIME_UNROLL_COUNT; // 运行时展开最大次数
-    static constexpr unsigned MPS = -1; // 执行展开的最大循环大小，至多为上述各个 size 的 1/2
+    static constexpr unsigned MPS = Config::IR::LOOP_UNROLLING_MAX_PROCESS_SIZE; // 执行展开的最大循环大小，至多为上述各个 size 的 1/2
     static constexpr bool ENABLE_PEELING = false;
     static constexpr bool ENABLE_FULLY_UNROLL = true;
     static constexpr bool ENABLE_PARTIALLY_UNROLL = true;

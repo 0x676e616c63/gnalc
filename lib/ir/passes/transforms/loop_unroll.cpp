@@ -711,14 +711,15 @@ PM::PreservedAnalyses LoopUnrollPass::run(Function &function, FAM &fam) {
         return PreserveAll();
     }
 
-    /// TODO: 修改遍历顺序，目前只处理外层循环
-    for (auto &loop : LI) {
-        auto &DT = fam.getFreshResult<DomTreeAnalysis>(function);
-        UnrollOption option;
-        analyze(loop, option, LI, function, DT);
-        auto peeled = peel(loop, option, function);
-        auto unrolled = unroll(loop, option, function);
-        modified = modified || peeled || unrolled;
+    for (auto &toploop : LI) {
+        for (auto &loop : toploop->getDFVisitor<Util::DFVOrder::PostOrder>()) {
+            auto &DT = fam.getFreshResult<DomTreeAnalysis>(function);
+            UnrollOption option;
+            analyze(loop, option, LI, function, DT);
+            auto peeled = peel(loop, option, function);
+            auto unrolled = unroll(loop, option, function);
+            modified = modified || peeled || unrolled;
+        }
     }
 
     return modified ? PreserveNone() : PreserveAll();

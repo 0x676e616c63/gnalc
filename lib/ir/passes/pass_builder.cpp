@@ -171,7 +171,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
         FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
         FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
         FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
-        FUNCTION_TRANSFORM(loop_unroll, LoopSimplifyPass(), LCSSAPass(), LoopUnrollPass())
+        // FUNCTION_TRANSFORM(loop_unroll, LoopSimplifyPass(), LCSSAPass(), LoopUnrollPass())
         return fpm;
     };
 
@@ -425,7 +425,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
     REGISTER_FUNCTION_TRANSFORM2(loopelim, LoopSimplifyPass, LoopEliminationPass, 10)
     REGISTER_FUNCTION_TRANSFORM2(loop_strength_reduce, LoopSimplifyPass, LoopStrengthReducePass, 10)
     REGISTER_FUNCTION_TRANSFORM4(licm, LoopSimplifyPass, LoopRotatePass, LCSSAPass, LICMPass, 10)
-    REGISTER_FUNCTION_TRANSFORM3(loop_unroll, LoopSimplifyPass, LCSSAPass, LoopUnrollPass, 10)
+    // REGISTER_FUNCTION_TRANSFORM3(loop_unroll, LoopSimplifyPass, LCSSAPass, LoopUnrollPass, 10)
 
     if (repro.empty()) {
         std::random_device rd;
