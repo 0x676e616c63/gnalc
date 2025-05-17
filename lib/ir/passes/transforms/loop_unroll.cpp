@@ -237,9 +237,10 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             if (visited.count(b)) continue;
             visited.insert(b);
             blocks.push_back(b);
-            for (auto succ : b->succs()) {
-                if (!visited.count(succ) && !exits.count(succ)) {
-                    stack.push(succ);
+            auto succb = b->getNextBB();
+            for (auto it = succb.rbegin(); it != succb.rend(); ++it) {
+                if (!visited.count(*it) && !exits.count(*it)) {
+                    stack.push(*it);
                 }
             }
         }
@@ -516,7 +517,6 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         for (auto &phi : header->phis()) {
             auto rem_phi = IMap[phi][count]->as<PHIInst>();
             auto phi_value_from_latch = phi->getValueForBlock(latch);
-            auto phi_value_from_ph = phi->getValueForBlock(pre_header); // rem loop's preheader in raw loop
 
             if (phi_value_from_latch->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
                 // Instruction情况
@@ -529,10 +529,10 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             // 1. For dowhile: from last loop
             // 2. For while: from frist loop's phi
             if (is_dowhile) {
-                if (phi_value_from_ph->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
-                    rem_phi->addPhiOper(IMapFind(phi_value_from_ph->as<Instruction>(), count-1), last_latch);
+                if (phi_value_from_latch->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
+                    rem_phi->addPhiOper(IMapFind(phi_value_from_latch->as<Instruction>(), count-1), last_latch);
                 } else {
-                    rem_phi->addPhiOper(phi_value_from_ph, last_latch);
+                    rem_phi->addPhiOper(phi_value_from_latch, last_latch);
                 }
             } else {
                 rem_phi->addPhiOper(phi, header);
