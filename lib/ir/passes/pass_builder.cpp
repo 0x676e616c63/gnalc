@@ -14,7 +14,6 @@
 #include "ir/passes/transforms/break_critical_edges.hpp"
 #include "ir/passes/transforms/cfgsimplify.hpp"
 #include "ir/passes/transforms/codegen_prepare.hpp"
-#include "ir/passes/transforms/constant_propagation.hpp"
 #include "ir/passes/transforms/dce.hpp"
 #include "ir/passes/transforms/dse.hpp"
 #include "ir/passes/transforms/gvn_pre.hpp"
@@ -34,11 +33,13 @@
 #include "ir/passes/transforms/mem2reg.hpp"
 #include "ir/passes/transforms/namenormalizer.hpp"
 #include "ir/passes/transforms/reassociate.hpp"
+#include "ir/passes/transforms/sccp.hpp"
 #include "ir/passes/transforms/tail_recursion_elimination.hpp"
 #include "ir/passes/transforms/tree_shaking.hpp"
 #include "ir/passes/transforms/vectorizer.hpp"
 
 // Utilities
+#include "ir/passes/analysis/range_analysis.hpp"
 #include "ir/passes/transforms/if_conversion.hpp"
 #include "ir/passes/utilities/irprinter.hpp"
 #include "ir/passes/utilities/verifier.hpp"
@@ -116,7 +117,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
     auto make_arithmetic = [&options] {
         PM::FixedPointPM<Function> fpm(10);
         FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
-        FUNCTION_TRANSFORM(sccp, ConstantPropagationPass());
+        FUNCTION_TRANSFORM(sccp, SCCPPass());
         FUNCTION_TRANSFORM(dce, DCEPass());
         FUNCTION_TRANSFORM(adce, ADCEPass());
         return fpm;
@@ -126,7 +127,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
         auto make_basic_clean = [&options] {
             PM::FixedPointPM<Function> fpm;
             FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
-            FUNCTION_TRANSFORM(sccp, ConstantPropagationPass());
+            FUNCTION_TRANSFORM(sccp, SCCPPass());
             FUNCTION_TRANSFORM(gvnpre, BreakCriticalEdgesPass(), GVNPREPass());
             FUNCTION_TRANSFORM(dce, DCEPass());
             return fpm;
@@ -219,11 +220,11 @@ FPM PassBuilder::buildFunctionPipeline(PMOptions opt_info) {
     FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass())
     FUNCTION_TRANSFORM(inliner, InlinePass())
     FUNCTION_TRANSFORM(internalize, InternalizePass(), PromotePass())
-    FUNCTION_TRANSFORM(sccp, ConstantPropagationPass())
+    FUNCTION_TRANSFORM(sccp, SCCPPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
     // FUNCTION_TRANSFORM(reassociate, ReassociatePass())
     FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass())
-    FUNCTION_TRANSFORM(sccp, ConstantPropagationPass())
+    FUNCTION_TRANSFORM(sccp, SCCPPass())
     FUNCTION_TRANSFORM(dce, DCEPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
     FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
@@ -300,7 +301,7 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     fpm.addPass(InstSimplifyPass());
     fpm.addPass(BreakCriticalEdgesPass());
     fpm.addPass(GVNPREPass());
-    fpm.addPass(ConstantPropagationPass());
+    fpm.addPass(SCCPPass());
     fpm.addPass(CFGSimplifyPass());
     fpm.addPass(DCEPass());
     fpm.addPass(NameNormalizePass(true));
@@ -388,7 +389,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
             weight);
 
     // REGISTER_FUNCTION_TRANSFORM(ReassociatePass)
-    REGISTER_FUNCTION_TRANSFORM(sccp, ConstantPropagationPass, 10)
+    REGISTER_FUNCTION_TRANSFORM(sccp, SCCPPass, 10)
     REGISTER_FUNCTION_TRANSFORM(adce, ADCEPass, 10)
     REGISTER_FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass, 10)
     REGISTER_FUNCTION_TRANSFORM(dce, DCEPass, 10)
@@ -493,6 +494,7 @@ void PassBuilder::registerFunctionAnalyses(FAM &fam) {
     FUNCTION_ANALYSIS(LoopAliasAnalysis())
     FUNCTION_ANALYSIS(LoopAnalysis())
     FUNCTION_ANALYSIS(SCEVAnalysis())
+    FUNCTION_ANALYSIS(RangeAnalysis())
 
 #undef FUNCTION_ANALYSIS
 }
