@@ -40,12 +40,12 @@ static const std::string sylibc = "../../test/sylib/sylib.c";
 // static const std::string sylibc = "sylib.c";
 
 static const std::string test_data = "../../test/contest";
-// static const std::vector subdirs = {"functional",    "performance",       "h_functional",
-//                                     "h_performance", "final/performance", "final/h_performance"};
-const std::vector subdirs = {
-    "functional",
-    "performance",
-};
+static const std::vector subdirs = {"functional",    "performance",       "h_functional",
+                                    "h_performance", "final/performance", "final/h_performance"};
+// const std::vector subdirs = {
+//     "functional",
+//     "performance",
+// };
 static const std::vector benchmark_subdirs = {"performance", "h_performance", "final/performance",
                                               "final/h_performance"};
 } // namespace Test::cfg

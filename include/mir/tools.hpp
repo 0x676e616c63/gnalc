@@ -2,8 +2,12 @@
 #ifndef GNALC_ARMV8_MIR_TOOLS_HPP
 #define GNALC_ARMV8_MIR_TOOLS_HPP
 
+#include "utils/exception.hpp"
 #include <cstddef>
+#include <memory>
 #include <tuple>
+
+#define nop (void)0
 
 inline int popcounter_wrapper(unsigned short vic) { return __builtin_popcount(static_cast<unsigned>(vic)); }
 
@@ -27,7 +31,6 @@ template <typename T> T rotate_shift_right(T value, int n) {
     const int total_bits = sizeof(T) * 8;
 
     n = (n % total_bits + total_bits) % total_bits;
-
     return (value >> n) | (value << (total_bits - n));
 }
 
@@ -42,6 +45,15 @@ template <typename... Args> bool all_equal_pairs(Args &&...args) {
     auto tuple = std::make_tuple(std::forward<Args>(args)...);
     constexpr std::size_t N = sizeof...(Args);
     return all_equal_pairs_impl(tuple, std::make_index_sequence<N / 2>{});
+}
+
+template <typename T> std::shared_ptr<T> wp2p(std::weak_ptr<T> wp) {
+    if (wp.expired()) {
+        // 可能是本身就没有而不是expired
+        return nullptr;
+    } else {
+        return wp.lock();
+    }
 }
 
 #endif

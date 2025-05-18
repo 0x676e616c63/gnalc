@@ -48,6 +48,7 @@ public:
     [[nodiscard]] string movPrinter(const MIRInst &);
     [[nodiscard]] string blPrinter(const MIRInst &);
     [[nodiscard]] string calleePrinter(const MIRInst &);
+    [[nodiscard]] string calleePrinter_legacy(const MIRInst &);
     [[nodiscard]] string adjustPrinter(const MIRInst &);
 };
 }; // namespace MIR_new

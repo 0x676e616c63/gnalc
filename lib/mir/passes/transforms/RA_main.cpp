@@ -96,11 +96,6 @@ void RegisterAllocImpl::Main(FAM &fam) {
 void RegisterAllocImpl::AddEdge(const MIROperand_p &u, const MIROperand_p &v) {
     Edge edge{u, v};
 
-    if (K == Config::MIR_new::CORE_REGISTER_MAX_NUM &&
-        (u->getRecover() == ARMReg::V0 || v->getRecover() == ARMReg::V0)) {
-        int debug;
-    }
-
     if (u != v && !adjSet.count(edge)) {
         adjSet.insert(std::move(edge));
 
@@ -170,11 +165,6 @@ void RegisterAllocImpl::Build() {
 
                 for (const auto &n : getUnion<MIROperand_p, false>(def, use)) {
                     addBySet(moveList[n], Moves{inst});
-                }
-
-                if (K == Config::MIR_new::CORE_REGISTER_MAX_NUM &&
-                    (inst->getOp(0)->getRecover() == ARMReg::V0 || inst->getOp(1)->getRecover() == ARMReg::V0)) {
-                    int debug;
                 }
 
                 addBySet(worklistMoves, Moves{inst});
