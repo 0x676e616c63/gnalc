@@ -191,6 +191,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
     fpm.addPass(make_arithmetic());
     fpm.addPass(make_loop());
     // fpm.addPass(make_vectorizer());
+    // fpm.addPass(make_clean());
     fpm.addPass(make_clean());
     fpm.addPass(CodeGenPreparePass());
     fpm.addPass(NameNormalizePass(true));
