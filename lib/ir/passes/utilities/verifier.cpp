@@ -180,6 +180,10 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
         for (const auto &top_level : loop_info) {
             auto lpdfv = top_level->getDFVisitor();
             for (const auto &loop : lpdfv) {
+                if (loop->getBlocks().size() != loop->getBlockSet().size()) {
+                    Logger::logCritical("[VerifyPass]: Loop '", loop->getHeader()->getName(),
+                                        "' has duplicate blocks.");
+                }
                 if (loop->getExitBlocks().empty()) {
                     Logger::logCritical("[VerifyPass]: Endless loop '", loop->getHeader()->getName(), "' detected.");
                     ++fatal_error_cnt;

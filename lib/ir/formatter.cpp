@@ -244,6 +244,26 @@ std::string IRFormatter::formatGV(GlobalVariable &gv) {
 }
 
 std::string IRFormatter::formatInst(Instruction &inst) {
+    // For Quick Debug
+    for(const auto& use : inst.operand_uses()) {
+        if (use->getValue() == nullptr) {
+            Logger::logCritical("[IRFormatter]: Operand got destroyed while its user '", inst.getName(), "' is alive.");
+            std::string alive_opers;
+            for (const auto& oper : inst.operand_uses()) {
+                if (oper->getValue())
+                    alive_opers += formatValue(*oper->getValue()) + ", ";
+                else
+                    alive_opers += "<null>, ";
+            }
+            if (!alive_opers.empty()) {
+                // Remove trailing ', '
+                alive_opers.pop_back();
+                alive_opers.pop_back();
+            }
+            return "  ;Bad Inst '" + inst.getName() + "', operands: " + alive_opers;
+        }
+    }
+
     switch (inst.getOpcode()) {
     case OP::ADD:
     case OP::FADD:
