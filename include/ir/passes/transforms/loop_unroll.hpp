@@ -29,21 +29,34 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
     static constexpr bool ENABLE_PARTIALLY_UNROLL = true;
     static constexpr bool ENABLE_RUNTIME_UNROLL = false;
 
-    enum class UnrollType { FULLY, PARTIALLY, RUNTIME };
+    enum class UnrollType { UNDEF, FULLY, PARTIALLY, RUNTIME };
     struct UnrollOption {
+        // For peel
         bool peel = false;
         unsigned peel_count = 0;
+
+        // For unroll
         bool unroll = false;
-        UnrollType unroll_type;
+        UnrollType unroll_type = UnrollType::UNDEF;
         unsigned unroll_count = 0;
         bool has_remainder = false;
         unsigned remainder = 0;
-        pVal raw_boundary_value; // For partially unroll with remainder, raw boundary value in unroll loop
-        pVal new_boundary_value; // For partially unroll with remainder, new boundary value in unroll loop
+        pVal raw_boundary_value = nullptr; // For partially unroll with remainder, raw boundary value in unroll loop
+        pVal new_boundary_value = nullptr; // For partially unroll with remainder, new boundary value in unroll loop
+
+        // // For cost analysis
+        // unsigned raw_size = 0;
+        // unsigned estimated_raw_size = 0; // 预估子循环展开后的原始大小
+        // unsigned estimated_unroll_size = 0;
+        //
+        // // Misc
+        // bool is_dowhile = false;
+        // pLoop loop = nullptr;
 
         void disable() {
             peel = false;
             unroll = false;
+            // estimated_unroll_size = raw_size;
         }
 
         void enable_peel(const unsigned _count) {
@@ -55,6 +68,7 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
             unroll = true;
             unroll_type = UnrollType::FULLY;
             unroll_count = _count;
+            // estimated_unroll_size = _count * raw_size;
         }
 
         void enable_partially(const unsigned _count) {
@@ -62,6 +76,7 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
             unroll_type = UnrollType::PARTIALLY;
             unroll_count = _count;
             has_remainder = false;
+            // estimated_unroll_size = _count * raw_size;
         }
 
         void set_remainder(const unsigned _remainder, const pVal& _rawbv, const pVal &_newbv) {
@@ -70,6 +85,7 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
             remainder = _remainder;
             raw_boundary_value = _rawbv;
             new_boundary_value = _newbv;
+            // estimated_unroll_size += raw_size;
         }
 
         void enable_runtime(const unsigned _count) {
@@ -84,7 +100,7 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
         bool runtime() const { return unroll_type == UnrollType::RUNTIME; }
     };
 
-    void analyze(const pLoop &loop, UnrollOption &option, LoopInfo& LI, Function &func, DomTree &DT);
+    void analyze(const pLoop &loop, UnrollOption &option, LoopInfo& LI, Function &FC, DomTree &DT);
     bool peel(const pLoop &loop, const UnrollOption &option, Function &func);
     bool unroll(const pLoop &loop, const UnrollOption &option, Function &func);
 

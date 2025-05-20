@@ -705,20 +705,44 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
 
 PM::PreservedAnalyses LoopUnrollPass::run(Function &function, FAM &fam) {
     bool modified = false;
-    auto &LI = fam.getResult<LoopAnalysis>(function);
+    bool last_round_modified = false;
+    auto RLI = fam.getResult<LoopAnalysis>(function);
 
-    if (LI.getTopLevelLoops().empty()) {
+    if (RLI.getTopLevelLoops().empty()) {
         return PreserveAll();
     }
 
-    for (auto &toploop : LI) {
-        for (auto &loop : toploop->getDFVisitor<Util::DFVOrder::PostOrder>()) {
-            auto &DT = fam.getFreshResult<DomTreeAnalysis>(function);
+    unsigned all_loop_size = 0;
+    for (auto &toploop : RLI) {
+        all_loop_size += toploop->getInstCount();
+    }
+    Logger::logInfo("[LoopUnroll] All loop size: "+std::to_string(all_loop_size));
+    if (all_loop_size > 300) {
+        Logger::logInfo("[LoopUnroll] Unroll disabled because the func's loops are too big!");
+        return PreserveAll();
+    }
+
+    for (auto &toploop : RLI) {
+        auto dfvisitor = toploop->getDFVisitor<Util::DFVOrder::PostOrder>();
+        for (auto &rawloop : dfvisitor) {
+            if (!rawloop->isInnermost()) {
+                // TODO: 暂时只处理最内层循环
+                continue;
+            }
+            LoopInfo NLI;
+            if (last_round_modified) {
+                NLI = fam.getFreshResult<LoopAnalysis>(function);
+            } else {
+                NLI = fam.getResult<LoopAnalysis>(function);
+            }
+            auto loop = NLI.getLoopFor(rawloop->getHeader());
+            auto &DT = fam.getResult<DomTreeAnalysis>(function);
             UnrollOption option;
-            analyze(loop, option, LI, function, DT);
+            analyze(loop, option, NLI, function, DT);
             auto peeled = peel(loop, option, function);
             auto unrolled = unroll(loop, option, function);
-            modified = modified || peeled || unrolled;
+            last_round_modified = peeled || unrolled;
+            modified = modified || last_round_modified;
         }
     }
 
