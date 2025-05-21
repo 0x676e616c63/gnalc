@@ -1,75 +1,21 @@
-#include "ir/passes/transforms/constant_propagation.hpp"
 #include "ir/block_utils.hpp"
 #include "ir/instructions/binary.hpp"
 #include "ir/instructions/compare.hpp"
 #include "ir/instructions/control.hpp"
 #include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
+#include "ir/instructions/vector.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "ir/passes/helpers/sparse_propagation.hpp"
+#include "ir/passes/transforms/sccp.hpp"
+#include "ir/pattern_match.hpp"
+#include "pattern_match/pattern_match.hpp"
 #include "utils/logger.hpp"
 
 #include <optional>
 
 namespace IR {
-// [ min, max )
-// struct ValueRange {
-//     ConstantProxy min;
-//     ConstantProxy max;
-//
-//     ValueRange(const ConstantProxy &a) : min(a), max(a) {}
-//     ValueRange(ConstantProxy min_, ConstantProxy max_) : min(std::move(min_)), max(std::move(max_)) {}
-//
-//     bool overlap(const ValueRange &item) const { return min <= item.max && max >= item.min; }
-//
-//     std::optional<ConstantProxy> getExactConstant() const {
-//         if (min == max)
-//             return min;
-//         return std::nullopt;
-//     }
-//
-//     std::pair<int, int> getIntRange() const { return {min.get_int(), max.get_int()}; }
-//
-//     std::pair<float, float> getFloatRange() const { return {min.get_float(), max.get_float()}; }
-//
-//     bool operator==(const ValueRange &item) const { return min == item.min && max == item.max; }
-//
-//     ValueRange operator+(const ValueRange &item) const { return {min + item.min, max + item.max}; }
-//     ValueRange operator-(const ValueRange &item) const { return {min - item.max, max - item.min}; }
-//     ValueRange operator-() const { return {-max, -min}; }
-//     ValueRange operator*(const ValueRange &item) const {
-//         auto p = std::min(std::min(min * item.min, max * item.min), std::min(min * item.max, max * item.max));
-//         auto q = std::max(std::max(min * item.min, max * item.min), std::max(min * item.max, max * item.max));
-//         return {p, q};
-//     }
-//     ValueRange operator/(const ValueRange &item) const {
-//         auto p = std::min(std::min(min / item.min, max / item.min), std::min(min / item.max, max / item.max));
-//         auto q = std::max(std::max(min / item.min, max / item.min), std::max(min / item.max, max / item.max));
-//         return {p, q};
-//     }
-//
-//     bool containsZero() const {
-//         if (auto min_ci32 = min.getConstant()->as<ConstantInt>()) {
-//             auto max_ci32 = max.getConstant()->as<ConstantInt>();
-//             return min_ci32->getVal() <= 0 && max_ci32->getVal() >= 0;
-//         }
-//         if (auto min_cf32 = min.getConstant()->as<ConstantFloat>()) {
-//             auto max_cf32 = max.getConstant()->as<ConstantFloat>();
-//             return min_cf32->getVal() <= 0.0f && max_cf32->getVal() >= 0.0f;
-//         }
-//         if (auto min_ci8 = min.getConstant()->as<ConstantI8>()) {
-//             auto max_ci8 = max.getConstant()->as<ConstantI8>();
-//             return min_ci8->getVal() <= 0 && max_ci8->getVal() >= 0;
-//         }
-//         if (auto min_ci1 = min.getConstant()->as<ConstantI1>()) {
-//             auto max_ci1 = max.getConstant()->as<ConstantI1>();
-//             return !min_ci1->getVal() || !max_ci1->getVal();
-//         }
-//         return true;
-//     }
-// };
-
 class LatticeVal {
 public:
     enum class Type {
@@ -284,15 +230,15 @@ public:
                 changes[inst] = LatticeInfo::NAC;
         } else if (auto fptosi = inst->as<FPTOSIInst>()) {
             auto val = solver.getVal(LatticeInfo::getKeyFromValue(fptosi->getOVal()));
-            if (val.isConstant()) {
+            if (val.isConstant())
                 changes[inst].setCProxy(ConstantProxy(cpool, static_cast<int>(val.cproxy().get_float())));
-            } else if (val.isNAC())
+            else if (val.isNAC())
                 changes[inst] = LatticeInfo::NAC;
         } else if (auto sitofp = inst->as<SITOFPInst>()) {
             auto val = solver.getVal(LatticeInfo::getKeyFromValue(sitofp->getOVal()));
-            if (val.isConstant()) {
+            if (val.isConstant())
                 changes[inst].setCProxy(ConstantProxy(cpool, static_cast<float>(val.cproxy().get_int())));
-            } else if (val.isNAC())
+            else if (val.isNAC())
                 changes[inst] = LatticeInfo::NAC;
         } else if (auto zext = inst->as<ZEXTInst>()) {
             auto val = solver.getVal(LatticeInfo::getKeyFromValue(zext->getOVal()));
@@ -319,10 +265,80 @@ public:
                 }
             } else if (val.isNAC())
                 changes[inst] = LatticeInfo::NAC;
+        } else if (auto insert = inst->as<INSERTInst>()) {
+            auto vec = solver.getVal(LatticeInfo::getKeyFromValue(insert->getVector()));
+            auto elm = solver.getVal(LatticeInfo::getKeyFromValue(insert->getElm()));
+            if (vec.isConstant() && elm.isConstant()) {
+                auto index = insert->getIdx()->as<ConstantInt>()->getVal();
+
+                auto elmcval = elm.cproxy().getConstant();
+                int elm_ci;
+                float elm_cf;
+                if (match(elmcval, M::Bind(elm_ci))) {
+                    auto vec_ci = vec.cproxy().get_i32_vector();
+                    vec_ci[index] = elm_ci;
+                    changes[inst].setCProxy(ConstantProxy(cpool, vec_ci));
+                } else if (match(elmcval, M::Bind(elm_cf))) {
+                    auto vec_cf = vec.cproxy().get_f32_vector();
+                    vec_cf[index] = elm_cf;
+                    changes[inst].setCProxy(ConstantProxy(cpool, vec_cf));
+                } else
+                    Err::unreachable("Unknown vector");
+            } else if (vec.isNAC() || elm.isNAC())
+                changes[inst] = LatticeInfo::NAC;
+        } else if (auto extract = inst->as<EXTRACTInst>()) {
+            auto vec = solver.getVal(LatticeInfo::getKeyFromValue(extract->getVector()));
+            if (vec.isConstant()) {
+                auto index = extract->getIdx()->as<ConstantInt>()->getVal();
+                auto btype = getElm(vec.cproxy().getConstant()->getType())->as<BType>();
+                Err::gassert(btype != nullptr, "Unknown vector");
+                if (btype->getInner() == IRBTYPE::I32) {
+                    auto vec_ci = vec.cproxy().get_i32_vector();
+                    changes[insert] = LatticeVal(ConstantProxy(cpool, vec_ci[index]));
+                } else if (btype->getInner() == IRBTYPE::FLOAT) {
+                    auto vec_cf = vec.cproxy().get_f32_vector();
+                    changes[insert] = LatticeVal(ConstantProxy(cpool, vec_cf[index]));
+                } else
+                    Err::unreachable("Unknown vector");
+            } else if (vec.isNAC())
+                changes[inst] = LatticeInfo::NAC;
+        } else if (auto shuffle = inst->as<SHUFFLEInst>()) {
+            auto vec1 = solver.getVal(LatticeInfo::getKeyFromValue(shuffle->getVector1()));
+            auto vec2 = solver.getVal(LatticeInfo::getKeyFromValue(shuffle->getVector2()));
+            if (vec1.isConstant() && vec2.isConstant()) {
+                auto mask = shuffle->getMask()->as<ConstantIntVector>()->getVector();
+                auto btype = getElm(vec1.cproxy().getConstant()->getType())->as<BType>();
+                Err::gassert(btype != nullptr, "Unknown vector");
+                if (btype->getInner() == IRBTYPE::I32) {
+                    auto vec1_ci = vec1.cproxy().get_i32_vector();
+                    auto vec2_ci = vec2.cproxy().get_i32_vector();
+                    std::vector<int> res;
+                    for (auto m : mask) {
+                        if (m < vec1_ci.size())
+                            res.push_back(vec1_ci[m]);
+                        else
+                            res.push_back(vec2_ci[m - vec1_ci.size()]);
+                    }
+                    changes[inst].setCProxy(ConstantProxy(cpool, res));
+                } else if (btype->getInner() == IRBTYPE::FLOAT) {
+                    auto vec1_cf = vec1.cproxy().get_f32_vector();
+                    auto vec2_cf = vec2.cproxy().get_f32_vector();
+                    std::vector<float> res;
+                    for (auto m : mask) {
+                        if (m < vec1_cf.size())
+                            res.push_back(vec1_cf[m]);
+                        else
+                            res.push_back(vec2_cf[m - vec1_cf.size()]);
+                    }
+                    changes[inst].setCProxy(ConstantProxy(cpool, res));
+                } else
+                    Err::unreachable("Unknown vector");
+            } else if (vec1.isNAC() || vec2.isNAC())
+                changes[inst] = LatticeInfo::NAC;
         } else if (inst->is<ALLOCAInst, GEPInst, LOADInst, CALLInst, BITCASTInst>())
             changes[inst] = LatticeInfo::NAC;
-        else if (inst->getOpcode() == OP::BR || inst->getOpcode() == OP::PHI)
-            Err::unreachable("Transfer on br or phi.");
+        else if (inst->is<BRInst, PHIInst, SELECTInst>())
+            Err::unreachable("Transfer on br, phi or select.");
         else
             Err::unreachable("Unknown instruction.");
     }
@@ -338,7 +354,7 @@ public:
     }
 };
 
-PM::PreservedAnalyses ConstantPropagationPass::run(Function &function, FAM &manager) {
+PM::PreservedAnalyses SCCPPass::run(Function &function, FAM &manager) {
     bool sccp_inst_modified = false;
     bool sccp_cfg_modified = false;
 

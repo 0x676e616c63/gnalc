@@ -86,6 +86,8 @@ std::string IRFormatter::formatOp(OP op) {
         return "insertelement";
     case OP::SHUFFLE:
         return "shufflevector";
+    case OP::SELECT:
+        return "select";
     default:
         Err::unreachable("ERR: Unknown OP");
         return "UNKNOWNOP";
@@ -132,6 +134,10 @@ std::string IRFormatter::formatCMPOP(FCMPOP cond) {
         Logger::logDebug("ERR: Unknown FCMPOP");
         return "UNKNOWNFCMPOP";
     }
+}
+std::string IRFormatter::formatHELPERTY(HELPERTY hlpty) {
+    Err::not_implemented("HELPERTY");
+    return "";
 }
 
 std::string IRFormatter::formatValue(Value &val) {
@@ -238,6 +244,26 @@ std::string IRFormatter::formatGV(GlobalVariable &gv) {
 }
 
 std::string IRFormatter::formatInst(Instruction &inst) {
+    // For Quick Debug
+    for(const auto& use : inst.operand_uses()) {
+        if (use->getValue() == nullptr) {
+            Logger::logCritical("[IRFormatter]: Operand got destroyed while its user '", inst.getName(), "' is alive.");
+            std::string alive_opers;
+            for (const auto& oper : inst.operand_uses()) {
+                if (oper->getValue())
+                    alive_opers += formatValue(*oper->getValue()) + ", ";
+                else
+                    alive_opers += "<null>, ";
+            }
+            if (!alive_opers.empty()) {
+                // Remove trailing ', '
+                alive_opers.pop_back();
+                alive_opers.pop_back();
+            }
+            return "  ;Bad Inst '" + inst.getName() + "', operands: " + alive_opers;
+        }
+    }
+
     switch (inst.getOpcode()) {
     case OP::ADD:
     case OP::FADD:
@@ -283,6 +309,8 @@ std::string IRFormatter::formatInst(Instruction &inst) {
         return fINSERTInst(inst.as_ref<INSERTInst>());
     case OP::SHUFFLE:
         return fSHUFFLEInst(inst.as_ref<SHUFFLEInst>());
+    case OP::SELECT:
+        return fSELECTInst(inst.as_ref<SELECTInst>());
 
     case OP::HELPER:
         return fHELPERInst(inst.as_ref<HELPERInst>());
@@ -512,6 +540,17 @@ std::string IRFormatter::fSHUFFLEInst(SHUFFLEInst &inst) {
     ret += formatValue(*inst.getVector1()) + ", ";
     ret += formatValue(*inst.getVector2()) + ", ";
     ret += formatValue(*inst.getMask());
+    return ret;
+}
+
+std::string IRFormatter::fSELECTInst(SELECTInst &inst) {
+    std::string ret;
+    ret += inst.getName();
+    ret += " = ";
+    ret += formatOp(inst.getOpcode()) + " ";
+    ret += formatValue(*inst.getCond()) + ", ";
+    ret += formatValue(*inst.getTrueVal()) + ", ";
+    ret += formatValue(*inst.getFalseVal());
     return ret;
 }
 

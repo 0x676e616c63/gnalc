@@ -1,8 +1,8 @@
-#include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/basic_alias_analysis.hpp"
 #include "ir/instructions/control.hpp"
 #include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
+#include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "utils/logger.hpp"
 
@@ -82,6 +82,27 @@ std::optional<std::tuple<const Value *, size_t>> getGepTotalOffset(const GEPInst
                 }
             }
             return std::make_tuple(common_base, common_offset);
+        } else if (auto select = base_ptr->as_raw<SELECTInst>()) {
+            auto true_val = select->getTrueVal().get();
+            auto false_val = select->getFalseVal().get();
+            if (!true_val->is<GEPInst>() || !false_val->is<GEPInst>())
+                return std::nullopt;
+
+            auto true_opt = getGepTotalOffset(true_val->as_raw<GEPInst>());
+            if (!true_opt)
+                return std::nullopt;
+
+            auto false_opt = getGepTotalOffset(false_val->as_raw<GEPInst>());
+            if (!false_opt)
+                return std::nullopt;
+
+            auto [true_base, true_offset] = *true_opt;
+            auto [false_base, false_offset] = *false_opt;
+
+            if (true_base != false_base || true_offset != false_offset)
+                return std::nullopt;
+
+            return std::make_tuple(true_base, true_offset);
         } else
             Err::unreachable();
     }
@@ -215,16 +236,12 @@ void BasicAAResult::addClonedInst(Instruction *inst, Instruction *cloned) {
     ptr_info[cloned] = ptr_info[inst];
 }
 
-AliasInfo BasicAAResult::getAliasInfo(const pVal &v1, const pVal &v2) const {
-    return getAliasInfo(v1.get(), v2.get());
-}
+AliasInfo BasicAAResult::getAliasInfo(const pVal &v1, const pVal &v2) const { return getAliasInfo(v1.get(), v2.get()); }
 bool BasicAAResult::isLocal(const pVal &v) const { return isLocal(v.get()); }
 ModRefInfo BasicAAResult::getInstModRefInfo(const pInst &inst, const pVal &location, FAM &fam) const {
     return getInstModRefInfo(inst.get(), location.get(), fam);
 }
-void BasicAAResult::addClonedInst(const pInst &inst, const pInst &cloned) {
-    addClonedInst(inst.get(), cloned.get());
-}
+void BasicAAResult::addClonedInst(const pInst &inst, const pInst &cloned) { addClonedInst(inst.get(), cloned.get()); }
 
 BasicAAResult BasicAliasAnalysis::run(Function &func, FAM &fam) {
     BasicAAResult res;
@@ -234,8 +251,8 @@ BasicAAResult BasicAliasAnalysis::run(Function &func, FAM &fam) {
     for (const auto &curr : func.getParams()) {
         auto curr_trait = curr->getType()->getTrait();
         if (curr_trait == IRCTYPE::PTR) {
-            res.ptr_info[curr.get()] = BasicAAResult::PtrInfo{
-                .untracked_array = true, .global_var = false, .potential_alias = {curr.get()}};
+            res.ptr_info[curr.get()] =
+                BasicAAResult::PtrInfo{.untracked_array = true, .global_var = false, .potential_alias = {curr.get()}};
         }
     }
 
@@ -274,6 +291,9 @@ BasicAAResult BasicAliasAnalysis::run(Function &func, FAM &fam) {
                     } else if (auto bitcast = inst->as<BITCASTInst>()) {
                         Err::gassert(bitcast->getOVal()->getType()->getTrait() == IRCTYPE::PTR);
                         changed |= res.insertPotentialAlias(bitcast.get(), bitcast->getOVal().get());
+                    } else if (auto select = inst->as<SELECTInst>()) {
+                        changed |= res.insertPotentialAlias(select.get(), select->getTrueVal().get());
+                        changed |= res.insertPotentialAlias(select.get(), select->getFalseVal().get());
                     } else
                         Err::unreachable("Unknown ptr type");
                 }
@@ -352,7 +372,8 @@ BasicAAResult BasicAliasAnalysis::run(Function &func, FAM &fam) {
                     if (callee->hasAttr(FuncAttr::isSylib))
                         res.has_sylib_call = true;
 
-                    if (!callee->hasAttr(FuncAttr::builtinMemReadOnly) && !callee->hasAttr(FuncAttr::builtinMemWriteOnly))
+                    if (!callee->hasAttr(FuncAttr::builtinMemReadOnly) &&
+                        !callee->hasAttr(FuncAttr::builtinMemWriteOnly))
                         continue;
 
                     // For memcpy intrinsic, a more precise analysis is available.

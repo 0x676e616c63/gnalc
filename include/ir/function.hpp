@@ -8,8 +8,8 @@
 #include "utils/generic_visitor.hpp"
 
 #include <memory>
-#include <utility>
 #include <set>
+#include <utility>
 #include <vector>
 
 namespace Parser {
@@ -18,7 +18,7 @@ class CFGBuilder;
 
 namespace IR {
 enum class FuncAttr {
-    // user defined functions
+    // User defined functions
     NotBuiltin,
 
     // Typically this is a main function
@@ -26,6 +26,10 @@ enum class FuncAttr {
 
     // Sylib
     isSylib,
+
+    // Width
+    PromoteFromChar,
+    TruncateToChar,
 
     // Intrinsic
     isIntrinsic,
@@ -42,11 +46,11 @@ enum class FuncAttr {
 class FunctionDecl : public Value {
 private:
     std::set<FuncAttr> func_attrs;
-    Module *parent;
+    Module *parent{};
 
 public:
-    FunctionDecl(std::string name_, std::vector<pType> params, pType ret_type,
-        bool is_va_arg_, std::set<FuncAttr> attrs = {});
+    FunctionDecl(std::string name_, std::vector<pType> params, pType ret_type, bool is_va_arg_,
+                 std::set<FuncAttr> attrs = {});
 
     void accept(IRVisitor &visitor) override;
 
@@ -55,6 +59,7 @@ public:
 
     bool hasAttr(FuncAttr attr) const;
     void addAttr(FuncAttr attr);
+    const std::set<FuncAttr> &getAttrs() const;
 
     void setParent(Module *module);
     Module *getParent() const;
@@ -96,7 +101,8 @@ public:
     using reverse_iterator = decltype(blks)::reverse_iterator;
     using const_reverse_iterator = decltype(blks)::const_reverse_iterator;
 
-    Function(std::string name_, const std::vector<pFormalParam> &params, pType ret_type, ConstantPool *pool);
+    Function(std::string name_, const std::vector<pFormalParam> &params, pType ret_type, ConstantPool *pool,
+             std::set<FuncAttr> attrs = {});
 
     void addBlock(iterator it, pBlock blk);
     void addBlock(size_t index, pBlock blk);

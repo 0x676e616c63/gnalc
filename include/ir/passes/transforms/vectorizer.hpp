@@ -48,6 +48,7 @@ private:
         const pInst& back() const;
 
         const pInst& pos_index_back() const;
+        const pInst& pos_index_front() const;
     };
 
     Function* curr_func;

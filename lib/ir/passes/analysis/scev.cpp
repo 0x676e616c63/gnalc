@@ -819,7 +819,8 @@ SCEVExpr *SCEVHandle::apply(TREC *trec, SCEVExpr *trip_cnt) {
         int trip_cnt_val;
         if (!match(trip_cnt->getRawIRValue(), M::Bind(trip_cnt_val)))
             return nullptr;
-        if (trip_cnt_val == 1)
+        // Before the first iteration, the value is `first`
+        if (trip_cnt_val == 0)
             return trec->getFirst();
         return apply(trec->getRest(), getSCEVExpr(trip_cnt_val - 1));
     }

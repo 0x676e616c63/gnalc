@@ -193,7 +193,26 @@ private:
                 cfg_worklist.emplace_back(br_inst->getParent().get(), br_inst->getTrueDest().get());
             else
                 cfg_worklist.emplace_back(br_inst->getParent().get(), br_inst->getFalseDest().get());
-        } else if (inst->getVTrait() != ValueTrait::VOID_INSTRUCTION) {
+        } else if (auto select = inst->as_raw<SELECTInst>()) {
+            auto select_key = InfoT::getKeyFromValue(inst);
+            auto cond_key = InfoT::getKeyFromValue(select->getCond());
+            auto cond_lattice = getVal(cond_key);
+            if (cond_lattice == InfoT::NAC)
+                updateVal(select_key, InfoT::NAC);
+            else if (cond_lattice != InfoT::UNDEF) {
+                if (lattice_func->getValueFromLatticeVal(cond_lattice).get_i1()) {
+                    auto true_key = InfoT::getKeyFromValue(select->getTrueVal());
+                    auto true_lattice = getVal(true_key);
+                    updateVal(select_key, true_lattice);
+                }
+                else {
+                    auto false_key = InfoT::getKeyFromValue(select->getFalseVal());
+                    auto false_lattice = getVal(false_key);
+                    updateVal(select_key, false_lattice);
+                }
+            }
+        }
+        else if (inst->getVTrait() != ValueTrait::VOID_INSTRUCTION) {
             auto inst_key = InfoT::getKeyFromValue(inst);
             auto inst_lattice = getVal(inst_key);
 

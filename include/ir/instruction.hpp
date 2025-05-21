@@ -51,6 +51,9 @@ enum class OP {
     ICMP,
     FCMP,
 
+    // Select
+    SELECT,
+
     // Phi Node
     PHI,
 

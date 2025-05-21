@@ -8,7 +8,6 @@
 
 #include <numeric>
 
-using namespace PatternMatch;
 namespace IR {
 PM::UniqueKey LoopAliasAnalysis::Key;
 

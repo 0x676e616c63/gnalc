@@ -13,6 +13,8 @@ using string = std::string;
 
 ///@note armv8没有了armv7中通用的8位旋转立即数, 取而代之的是一大堆规则不同的立即数
 
+inline bool isFitPairMemInst(int offset) { return offset >= -512 && offset <= 504; } //@warning 此处没有检查对齐
+
 inline bool isFitMemInstX(int offset) { return offset >= 0 && offset <= 32760 && offset % 8 == 0; }
 
 inline bool isFitMemInstW(int offset) { return offset >= 0 && offset <= 16380 && offset % 4 == 0; }
@@ -53,7 +55,7 @@ template <typename T> bool is12ImmeWithProbShift(T imm) {
 
     unsigned imme = static_cast<unsigned>(imm);
 
-    if (imme < 4096 || (imme >> 12) < 4096) {
+    if (imme < 4096 || (imme % 0x1000 == 0 && (imme >> 12) < 4096)) {
         return true;
     } else {
         return false;
@@ -298,9 +300,42 @@ public:
 
 struct InstLegalizeContext {
     MIRInst_p &minst;
-    MIRInst_p_l &insts;
+    MIRInst_p_l &minsts;
     MIRInst_p_l::iterator &iter;
     CodeGenContext &ctx;
+
+    InstLegalizeContext(MIRInst_p &minst, MIRInst_p_l &insts, MIRInst_p_l::iterator &iter, CodeGenContext &ctx)
+        : minst(minst), minsts(insts), iter(iter), ctx(ctx) {}
+
+    InstLegalizeContext(const InstLegalizeContext &) = delete;
+    InstLegalizeContext &operator=(const InstLegalizeContext &) = delete;
+
+    InstLegalizeContext(InstLegalizeContext &&) = delete;
+    InstLegalizeContext &operator=(InstLegalizeContext &&) = delete;
+
+    template <size_t I> auto &get() {
+        if constexpr (I == 0) {
+            return minst;
+        } else if constexpr (I == 1) {
+            return minsts;
+        } else if constexpr (I == 2) {
+            return iter;
+        } else if constexpr (I == 3) {
+            return ctx;
+        }
+    }
+
+    template <size_t I> const auto &get() const {
+        if constexpr (I == 0) {
+            return minst;
+        } else if constexpr (I == 1) {
+            return minsts;
+        } else if constexpr (I == 2) {
+            return iter;
+        } else if constexpr (I == 3) {
+            return ctx;
+        }
+    }
 };
 
 class ISelInfo {
@@ -310,12 +345,10 @@ public:
     bool isLegalGenericInst(MIRInst_p) const;
     bool match(MIRInst_p, ISelContext &, bool allow) const;
     bool legalizeInst(MIRInst_p minst, ISelContext &ctx) const;
-    bool matchImpl(MIRInst_p minst, ISelContext &ctx) const;
-    void postLegalizeInst(InstLegalizeContext &);
-    void postLegalizeInst(InstLegalizeContext &, MIRInst_p_l &);
     void preLegalizeInst(InstLegalizeContext &);
     void legalizeWithStkOp(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const;
     void legalizeWithStkGep(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const;
+    void legalizeWithStkPtrCast(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const;
 
     ~ISelInfo() = default;
 };
@@ -337,5 +370,15 @@ struct CodeGenContext {
 };
 
 }; // namespace MIR_new
+
+namespace std {
+
+template <> struct tuple_size<MIR_new::InstLegalizeContext> : integral_constant<std::size_t, 4> {};
+
+template <size_t I> struct tuple_element<I, MIR_new::InstLegalizeContext> {
+    using type = decltype((declval<MIR_new::InstLegalizeContext>().get<I>())); // extra brasses
+};
+
+}; // namespace std
 
 #endif

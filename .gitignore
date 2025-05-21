@@ -36,3 +36,6 @@ sylib.o
 test copy.llc
 sylib.s
 .cache
+test_bug.ll
+test_no_bug.ll
+perf.out

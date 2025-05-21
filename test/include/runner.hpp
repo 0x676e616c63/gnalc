@@ -60,8 +60,7 @@ static TestResult run_test(const TestData &data, bool only_run_frontend, size_t 
 
         ir_asm_gen_command = data.ir_asm_gen(newsy, out_source);
 
-        link_command =
-            format("{} {} {} -fno-PIC -fno-PIE -static -o {}", cfg::gcc_arm_command, out_source, data.sylib, outexec);
+        link_command = format("{} {} {} -o {}", cfg::gcc_arm_command, out_source, data.sylib, outexec);
 
         exec_command = format("{} {} < {} > {} 2>{}", cfg::qemu_arm_command, outexec,
                               std::filesystem::exists(testcase_in) ? testcase_in : "/dev/null", output, outtime);
@@ -79,11 +78,11 @@ static TestResult run_test(const TestData &data, bool only_run_frontend, size_t 
             ir_asm_gen_command);
 
     if (std::system(ir_asm_gen_command.c_str()) != 0)
-        return { "", "compiler error", "", 0 };
+        return {"", "compiler error", "", 0};
 
     println("|  Running '{}' link command: '{}'", data.mode_id, link_command);
     if (std::system(link_command.c_str()) != 0)
-        return { out_source, "linker error", "", 0 };
+        return {out_source, "linker error", "", 0};
 
     println("|  Running '{}' execute command: '{}'", data.mode_id, exec_command);
 
@@ -91,14 +90,14 @@ static TestResult run_test(const TestData &data, bool only_run_frontend, size_t 
     size_t time_elapsed = 0;
     for (int i = 0; i < times; i++) {
         if (std::system(exec_command.c_str()) != 0)
-            return { out_source, "exec error", "", time_elapsed };
+            return {out_source, "exec error", "", time_elapsed};
 
         syout = read_file(output);
         fix_newline(syout);
         time_elapsed += parse_time(read_file(outtime));
     }
     time_elapsed /= times;
-    return {out_source, syout, output, time_elapsed };
+    return {out_source, syout, output, time_elapsed};
 }
 
 static std::string prepare_sylib(const std::string &global_tmp_dir, bool only_run_frontend) {
@@ -121,8 +120,8 @@ static std::string prepare_sylib(const std::string &global_tmp_dir, bool only_ru
         auto sylibo = global_tmp_dir + "/sylib.o";
         sylib_to_link = global_tmp_dir + "/sylib.a";
 
-        std::string lib_command = format("{} -c {} -o {} && ar rcs {} {}", cfg::gcc_arm_command,
-            cfg::sylibc, sylibo, sylib_to_link, sylibo);
+        std::string lib_command =
+            format("{} -c {} -o {} && ar rcs {} {}", cfg::gcc_arm_command, cfg::sylibc, sylibo, sylib_to_link, sylibo);
 
         println("Running '{}'.", lib_command);
         std::system(lib_command.c_str());

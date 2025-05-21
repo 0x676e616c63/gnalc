@@ -18,6 +18,10 @@ ConstantProxy::ConstantProxy(ConstantPool *pool_, const pVal &value_) : pool(poo
         value = ci32;
     else if (auto cf32 = value_->as<ConstantFloat>())
         value = cf32;
+    else if (auto vec_ci32 = value_->as<ConstantIntVector>())
+        value = vec_ci32;
+    else if (auto vec_cf32 = value_->as<ConstantFloatVector>())
+        value = vec_cf32;
     else
         Err::unreachable("Not a constant");
 }

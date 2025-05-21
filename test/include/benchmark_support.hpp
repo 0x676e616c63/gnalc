@@ -31,7 +31,8 @@ struct RatioData {
     double ratio;
 };
 
-static void write_benchmark_result_to(const BenchmarkData &data, std::ostream &out, const std::vector<TestData>& failed) {
+static void write_benchmark_result_to(const BenchmarkData &data, std::ostream &out,
+                                      const std::vector<TestData> &failed) {
     println(out, "Benchmark results:");
     std::vector<RatioData> times;
     size_t total1 = 0;
@@ -70,24 +71,21 @@ static void write_benchmark_result_to(const BenchmarkData &data, std::ostream &o
         println(out, "----------");
     }
 
-    auto [min, max] = std::minmax_element(times.begin(), times.end(),
-                                          [](const RatioData &a, const RatioData &b) { return a.ratio < b.ratio; });
-
     auto average_ratio = ratio(total1, total2);
     println(out, "Total time:");
     println(out, "'{}': {}us", data.mode1, total1);
     println(out, "'{}': {}us", data.mode2, total2);
     println(out, "On average, '{}' is {}x faster than '{}'.", data.mode2, average_ratio, data.mode1);
 
-    if (max != times.end()) {
-        println(out, "Fastest:");
-        println(out, "{}: {}x", max->testcase, max->ratio);
-    }
+    std::sort(times.begin(), times.end(), [](const RatioData &a, const RatioData &b) { return a.ratio < b.ratio; });
 
-    if (min != times.end()) {
-        println(out, "Slowest:");
-        println(out, "{}: {}x", min->testcase, min->ratio);
-    }
+    println(out, "Fastest 10:");
+    for (int i = times.size() - 1; i >= times.size() - 10 && i >= 0; --i)
+        println(out, "{}: {}x", times[i].testcase, times[i].ratio);
+
+    println(out, "Slowest 10:");
+    for (size_t i = 0; i < 10 && i < times.size(); ++i)
+        println(out, "{}: {}x", times[i].testcase, times[i].ratio);
 
     if (!failed.empty()) {
         println(out, "WARNING: {} tests failed!", failed.size());
@@ -104,10 +102,9 @@ struct BenchmarkRegistry {
         ir_asm_gen_t asm_gen;
     };
 
-    static void register_benchmark(const std::string &mode_id, const Entry& entry) {
-        auto& instance = BenchmarkRegistry::get();
-        Err::gassert(!instance.index.count(mode_id),
-            "Benchmark already registered: " + mode_id + ".");
+    static void register_benchmark(const std::string &mode_id, const Entry &entry) {
+        auto &instance = BenchmarkRegistry::get();
+        Err::gassert(!instance.index.count(mode_id), "Benchmark already registered: " + mode_id + ".");
         instance.index.emplace(mode_id, get().benchmarks.size());
         instance.benchmarks.emplace_back(mode_id, entry);
     }
@@ -121,32 +118,31 @@ struct BenchmarkRegistry {
         bool only_frontend;
     };
 
-    static TestData get_test_data(const TestInfo& info) {
-        const auto& instance = BenchmarkRegistry::get();
+    static TestData get_test_data(const TestInfo &info) {
+        const auto &instance = BenchmarkRegistry::get();
         auto it = instance.index.find(info.mode_id);
         Err::gassert(it != instance.index.end(), "Benchmark not found: " + info.mode_id + ".");
 
-        const auto& entry = instance.benchmarks[it->second].second;
-        return TestData {
-            .sy = info.sy,
-            .sylib = info.sylib,
-            .temp_dir = info.temp_dir,
-            .mode_id = info.mode_id,
-            .ir_asm_gen = info.only_frontend ? entry.ir_gen : entry.asm_gen
-        };
+        const auto &entry = instance.benchmarks[it->second].second;
+        return TestData{.sy = info.sy,
+                        .sylib = info.sylib,
+                        .temp_dir = info.temp_dir,
+                        .mode_id = info.mode_id,
+                        .ir_asm_gen = info.only_frontend ? entry.ir_gen : entry.asm_gen};
     }
 
     BenchmarkRegistry(const BenchmarkRegistry &) = delete;
     BenchmarkRegistry &operator=(const BenchmarkRegistry &) = delete;
 
     static auto entries() {
-        auto& instance = get();
+        auto &instance = get();
         std::vector<std::string> ret;
         ret.reserve(instance.benchmarks.size());
-        for (const auto& [k, v] : instance.benchmarks)
+        for (const auto &[k, v] : instance.benchmarks)
             ret.emplace_back(k);
         return ret;
     }
+
 private:
     static BenchmarkRegistry &get() {
         static BenchmarkRegistry instance;

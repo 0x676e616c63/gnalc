@@ -44,6 +44,11 @@ template <typename Cand, typename Pattern> bool match(const Cand &candidate, con
     return pattern.match(candidate);
 }
 
+template <typename Cand, typename ...Patterns>
+bool match(const Cand &candidate, const Patterns &...patterns) {
+    return (match(candidate, patterns) && ...);
+}
+
 // The following is generic matches, which is designed to be wrapped for IR/MIR conveniently.
 // Client code can also write its own Pattern from scratch.
 // A Pattern should contain a template function `match` that returns a bool,

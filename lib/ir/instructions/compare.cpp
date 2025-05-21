@@ -90,6 +90,49 @@ FCMPOP reverseCond(FCMPOP cond) {
     return cond;
 }
 
+bool isFalseWhenEqual(ICMPOP cond) {
+    switch (cond) {
+    case ICMPOP::ne:
+    case ICMPOP::sgt:
+    case ICMPOP::slt:
+        return true;
+    default:
+        return false;
+    }
+    return false;
+}
+bool isTrueWhenEqual(ICMPOP cond) {
+    switch (cond) {
+    case ICMPOP::eq:
+    case ICMPOP::sge:
+    case ICMPOP::sle:
+        return true;
+    default:
+        return false;
+    }
+    return false;
+}
+bool isFalseWhenEqual(FCMPOP cond) {
+    switch (cond) {
+    case FCMPOP::one:
+    case FCMPOP::ogt:
+    case FCMPOP::olt:
+        return true;
+    default:
+        return false;
+    }
+}
+bool isTrueWhenEqual(FCMPOP cond) {
+    switch (cond) {
+    case FCMPOP::oeq:
+    case FCMPOP::oge:
+    case FCMPOP::ole:
+        return true;
+    default:
+        return false;
+    }
+}
+
 ICMPInst::ICMPInst(NameRef name, ICMPOP cond, const pVal &lhs, const pVal &rhs)
     : Instruction(OP::ICMP, name, makeBType(IRBTYPE::I1)), cond(cond) {
     addOperand(lhs);

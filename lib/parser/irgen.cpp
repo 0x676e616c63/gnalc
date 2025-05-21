@@ -39,10 +39,10 @@ void IRGenerator::visit(CompUnit &node) {
 
     // sylib
     make_decl("getint", {}, i32_type, {IR::FuncAttr::isSylib});
-    make_decl("getch", {}, i32_type, {IR::FuncAttr::isSylib});
+    make_decl("getch", {}, i32_type, {IR::FuncAttr::isSylib, IR::FuncAttr::PromoteFromChar});
     make_decl("getfloat", {}, f32_type, {IR::FuncAttr::isSylib});
     make_decl("putint", {i32_type}, void_type, {IR::FuncAttr::isSylib});
-    make_decl("putch", {i32_type}, void_type, {IR::FuncAttr::isSylib});
+    make_decl("putch", {i32_type}, void_type, {IR::FuncAttr::isSylib, IR::FuncAttr::TruncateToChar});
     make_decl("putfloat", {f32_type}, void_type, {IR::FuncAttr::isSylib});
     make_decl("_sysy_starttime", {i32_type}, void_type, {IR::FuncAttr::isSylib});
     make_decl("_sysy_stoptime", {i32_type}, void_type, {IR::FuncAttr::isSylib});

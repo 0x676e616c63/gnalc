@@ -73,7 +73,14 @@ bool hasMemoryRef(const pInst &inst) { return inst->getOpcode() == OP::STORE || 
 
 // Currently we only conside load/store and binary instructions
 bool isVectorizable(const pInst &inst) {
-    return inst->getOpcode() == OP::LOAD || inst->getOpcode() == OP::STORE || inst->is<BinaryInst>();
+    if (auto load = inst->as<LOADInst>())
+        return load->getType()->is<BType>();
+    if (auto store = inst->as<STOREInst>())
+        return store->getValue()->getType()->is<BType>();
+    if (auto binary = inst->as<BinaryInst>())
+        return binary->getType()->is<BType>();
+
+    return false;
 }
 
 // Check if the load/store is adjacent.
@@ -262,9 +269,13 @@ const pInst &VectorizerPass::Pack::front() const { return stmts.front(); }
 const pInst &VectorizerPass::Pack::back() const { return stmts.back(); }
 
 const pInst &VectorizerPass::Pack::pos_index_back() const {
-    return *std::max_element(stmts.begin(), stmts.end(), [](const pInst &a, const pInst &b) {
-        return a->getIndex() < b->getIndex();
-    });
+    return *std::max_element(stmts.begin(), stmts.end(),
+                             [](const pInst &a, const pInst &b) { return a->getIndex() < b->getIndex(); });
+}
+
+const pInst &VectorizerPass::Pack::pos_index_front() const {
+    return *std::min_element(stmts.begin(), stmts.end(),
+                             [](const pInst &a, const pInst &b) { return a->getIndex() < b->getIndex(); });
 }
 
 // Check if two instructions can be packed together.
@@ -521,8 +532,8 @@ std::pair<bool, std::vector<pInst>> collectOperandTreeInBlock(const pInst &seed)
 }
 
 bool isDisjoint(const VectorizerPass::Pack &pack1, const VectorizerPass::Pack &pack2) {
-    return pack1.back()->getIndex() < pack2.front()->getIndex() ||
-        pack2.back()->getIndex() < pack1.front()->getIndex();
+    return pack1.pos_index_back()->getIndex() < pack2.pos_index_front()->getIndex() ||
+           pack2.pos_index_back()->getIndex() < pack1.pos_index_front()->getIndex();
 }
 
 // FIXME: Need Optimization.
@@ -536,9 +547,9 @@ void VectorizerPass::removeUnschedulable() {
 
                 auto should_remove = [&] {
                     if (!isDisjoint(*it1, *it2)) {
-                        for (const auto &inst : it1->stmts) {
-                            for (const auto& inst2 : it2->stmts)
-                                if (!isIndependent(inst, inst2))
+                        for (const auto &inst1 : it1->stmts) {
+                            for (const auto &inst2 : it2->stmts)
+                                if (!isIndependent(inst1, inst2))
                                     return true;
                         }
                     }
@@ -547,6 +558,7 @@ void VectorizerPass::removeUnschedulable() {
                 if (should_remove) {
                     // FIXME: Remove which one?
                     pack_set.erase(it1);
+                    // pack_set.erase(it2);
                     return true;
                 }
             }
@@ -555,7 +567,6 @@ void VectorizerPass::removeUnschedulable() {
     };
     while (joint_one_pass())
         ;
-
 
     auto no_phi_one_pass = [&] {
         for (auto it = pack_set.begin(); it != pack_set.end(); ++it) {
@@ -832,7 +843,7 @@ pVal VectorizerPass::gatherVector(Pack *user_pack, const std::function<pVal(cons
                                 "%slp.ex" + std::to_string(name_cnt++), sched_vec, cpool.getConst(static_cast<int>(j)));
                             curr_block->addInst(insert_before, extract);
                             to_insert = extract;
-                            Err::gassert(sched_vec->getIndex() < extract->getIndex());
+                            // Err::gassert(sched_vec->getIndex() < extract->getIndex());
                             return;
                         }
                     }
@@ -962,7 +973,7 @@ bool VectorizerPass::schedule() {
                         std::vector<pInst> worklist;
                         auto [has_phi, opers] = collectOperandTreeInBlock(extract);
                         std::sort(opers.begin(), opers.end(),
-                        [](const pInst &a, const pInst &b) { return a->getIndex() > b->getIndex(); });
+                                  [](const pInst &a, const pInst &b) { return a->getIndex() > b->getIndex(); });
                         Err::gassert(!has_phi);
                         auto move_before = user->getIter();
                         auto move_before_index = user->getIndex();

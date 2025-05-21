@@ -34,24 +34,29 @@ void StackGenerateImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     mkQWordAlign();
 
     // callee-save
+    mfunc->modifyBegCalleeSave(allocationBase);
 
     auto &bitmap = mfunc->calleeSaveRegs();
     bitmap &= 0xffff00007ff80000;
 
-    if (mfunc->isLeafFunc() || mfunc->isProgramEntry()) {
-        bitmap &= 0x60000000;
+    if (mfunc->isProgramEntry()) {
+        bitmap &= 0x60000000; // lr, fp only
+    }
+
+    if (mfunc->isLeafFunc()) {
+        bitmap &= 0x20000000; // fp only
     }
 
     auto calleesaves = bitmap;
 
     for (auto i = 0; i < 64; ++i, calleesaves >>= 1) {
-
         if (static_cast<ARMReg>(i) == ARMReg::V0) {
+            ///@note start to stage V<>, make it ailgn
             allocationBase += allocationBase % 16 ? 8 : 0;
         }
 
         if (static_cast<ARMReg>(i) < ARMReg::V0 && calleesaves % 2) {
-            allocationBase += 8;
+            allocationBase += 8; // X<>
         } else if (static_cast<ARMReg>(i) >= ARMReg::V0 && calleesaves % 2) {
             allocationBase += 16;
         }
