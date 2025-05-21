@@ -6,6 +6,8 @@
 
 namespace MIR_new {
 
+///@note 某些一眼丁真的优化
+
 class GenericPeephole : public PM::PassInfo<GenericPeephole> {
 public:
     PM::PreservedAnalyses run(MIRFunction &, FAM &);

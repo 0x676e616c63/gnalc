@@ -109,10 +109,6 @@ void MIR_new::lowerInst(const IR::pBinary &binary, LoweringContext &ctx) {
     auto mop = MIR_new::IROpCodeConvert(binary->getOpcode());
     auto def = ctx.newVReg(binary->getType());
 
-    if (def->getRecover() == 1342177370) {
-        int debug;
-    }
-
     ctx.newInst(MIRInst::make(mop)
                     ->setOperand<0>(def)
                     ->setOperand<1>(ctx.mapOperand(binary->getLHS()))
@@ -209,11 +205,33 @@ void MIR_new::lowerInst(const IR::pBr &br, LoweringContext &ctx) {
 
         if (auto const_cond = br->getCond()->as<IR::ConstantI1>()) {
 
+            auto &true_blk_true = const_cond->getVal() ? blk_true : blk_false;
+            auto &true_blk_false = const_cond->getVal() ? blk_false : blk_true;
+
             ctx.newInst(MIRInst::make(OpC::InstBranch)
                             ->setOperand<0>(nullptr)
-                            ->setOperand<1>(MIROperand::asReloc(const_cond->getVal() ? blk_true : blk_false))
+                            ->setOperand<1>(MIROperand::asReloc(true_blk_true))
                             ->setOperand<2>(ctx.mapOperand(AL))
                             ->setOperand<3>(MIROperand::asProb(1.0)));
+
+            ///@brief 仅保留实质上的msucc
+            auto &msuccs = ctx.CurrentBlk()->succs();
+
+            auto rm_it =
+                std::find_if(msuccs.begin(), msuccs.end(), [&](const auto &msucc) { return msucc == true_blk_false; });
+
+            Err::gassert(rm_it != msuccs.end(), "msuccs corrupted");
+            msuccs.erase(rm_it);
+
+            ///@brief 删除mpred
+            auto &mpreds = true_blk_false->preds();
+
+            rm_it = std::find_if(mpreds.begin(), mpreds.end(),
+                                 [&ctx](const auto &mpred) { return ctx.CurrentBlk() == mpred; });
+
+            Err::gassert(rm_it != mpreds.end(), "mpreds corrupted");
+            mpreds.erase(rm_it);
+
         }
 
         else if (use && !use->isImme()) {

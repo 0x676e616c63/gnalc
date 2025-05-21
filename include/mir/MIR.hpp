@@ -319,7 +319,7 @@ public:
     ///@note we directly chang reg of MIRReg
     void assignColor(unsigned color) {
         // Err::gassert(isVReg(), "assignColor: try assign color to a non-reg");
-        Err::gassert(color >= ARMReg::X0 && color <= ARMReg::V30, "assignColor: unknonw reg color");
+        Err::gassert(color >= ARMReg::X0 && color <= ARMReg::V31, "assignColor: unknonw reg color");
         Err::gassert(color >= ARMReg::V0 && (mType == OpT::Float32 || mType == OpT::Floatvec || mType == OpT::Intvec) ||
                          color <= ARMReg::X29 &&
                              (mType == OpT::Int16 || mType == OpT::Int32 || mType == OpT::Int64 || mType == OpT::Int),
@@ -494,7 +494,7 @@ public:
     const auto &CodeGenContext() const { return ctx; }
 
     bool isProgramEntry() {
-        return getmSym() == "main"; //
+        return getmSym() == "main"; // 求放过
     }
 
     void modifyStkSize(unsigned _size) { stkSize = _size; }
@@ -519,10 +519,15 @@ private:
     std::list<MIRBlk_p> mpreds;
     std::list<MIRBlk_p> msuccs;
 
+    // mprv, mnxt 表示虚拟地址的临近
+    MIRBlk_wp mprv;
+    MIRBlk_wp mnxt;
+
 public:
     MIRBlk() = delete;
-    MIRBlk(const string &sym, MIRFunction_wp _mFunction) noexcept
-        : MIRRelocable(sym), mFunction{std::move(_mFunction)} {}
+
+    MIRBlk(const string &sym, MIRFunction_wp _mFunction, MIRBlk_p _prv = nullptr, MIRBlk_p _nxt = nullptr) noexcept
+        : MIRRelocable(sym), mFunction{std::move(_mFunction)}, mprv(_prv), mnxt(_nxt) {}
 
     MIRFunction_p getFunction() const {
         Err::gassert(!mFunction.expired(), "MIRBlk: function reference corrupted");
@@ -543,6 +548,30 @@ public:
 
     const auto &preds() const { return mpreds; }
     const auto &succs() const { return msuccs; }
+
+    auto prv() { return wp2p(mprv); }
+    auto nxt() { return wp2p(mnxt); }
+
+    const auto prv() const { return wp2p(mprv); }
+    const auto nxt() const { return wp2p(mnxt); }
+
+    void resetPrv(const MIRBlk_p &_prv) { mprv = _prv; }
+    void resetNxt(const MIRBlk_p &_nxt) { mnxt = _nxt; }
+
+    void brReplace(const MIRBlk_p &old_succ, const MIRBlk_p &new_succ) {
+
+        auto it = std::find_if(mInsts.begin(), mInsts.end(), [&old_succ, &new_succ](const MIRInst_p &minst) {
+            if (minst->isGeneric() && minst->opcode<OpC>() == OpC::InstBranch &&
+                minst->getOp(1)->relocable() == old_succ) {
+
+                minst->setOperand<1>(MIROperand::asReloc(new_succ));
+                return true;
+            }
+            return false;
+        });
+
+        Err::gassert(it != mInsts.end(), "MIRBlk: cant find old succ");
+    }
 
     ~MIRBlk() override = default;
 };

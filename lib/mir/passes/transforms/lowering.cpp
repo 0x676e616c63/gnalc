@@ -340,9 +340,6 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
     std::map<IRVal_p, MIROperand_p> storeMap;
     LoweringContext ctx(mModule, codeGenCtx, blkMap, globalMap, valMap);
 
-    // infos
-    // layout
-
     // lower blks, deal with entry and exit
     for (auto &blk : func->getDFVisitor<Util::DFVOrder::ReversePostOrder>()) {
         auto mblk = make<MIRBlk>(mfunc->getmSym() + '_' + blk->getName().substr(1), mfunc);
@@ -350,19 +347,17 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
 
         blkMap.emplace(blk, mblk);
 
-        ///@note bkdv2.0 的经验是: lowering phi 时只 lowering def, use先存为ir形式
-        ///@note 等 phiEli pass 时, 通过变量池 varpool 映射 ir op 到正确的 mir op
-        ///@note 在lowering inst之前提前获取phiInst的def
         for (auto &inst : blk->getPhiInsts()) {
-            ///@todo 记录blk_src, blk_dst, op_src, op_dst
 
             auto vreg = ctx.newVReg(inst->getType());
             ctx.addOperand(inst, vreg);
         }
     }
 
-    // lowering blk succs, preds
-    for (auto &blk : func->getDFVisitor<Util::DFVOrder::ReversePostOrder>()) {
+    // lowering blk succs, preds(...)
+    auto blks = func->getDFVisitor<Util::DFVOrder::ReversePostOrder>();
+    for (auto it = blks.begin(); it != blks.end(); ++it) {
+        auto &blk = *it;
         auto &mblk = blkMap.at(blk);
 
         for (auto &pred : blk->getPreBB()) {
@@ -370,6 +365,14 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
         }
         for (auto &succ : blk->getNextBB()) {
             mblk->addSucc(blkMap.at(succ));
+        }
+
+        if (blks.size() > 1) {
+            auto mprv = it != blks.begin() ? blkMap.at(*std::prev(it)) : nullptr;
+            auto mnxt = it != std::prev(blks.end()) ? blkMap.at(*std::next(it)) : nullptr;
+
+            mblk->resetPrv(mprv);
+            mblk->resetNxt(mnxt);
         }
     }
 
@@ -395,7 +398,6 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
     codeGenCtx.frameInfo.makePrologue(mfunc, ctx);
 
     // deal with alloca
-    /// @todo ctx.set...?
     for (auto &inst : func->getBlocks().front()->getInsts()) {
         if (auto alloca = inst->as<IR::ALLOCAInst>()) {
             // stk obj
@@ -412,7 +414,6 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
     }
 
     // lower regular insts
-
     for (auto &blk : func->getDFVisitor<Util::DFVOrder::ReversePostOrder>()) {
         auto mblk = blkMap.at(blk);
         ctx.setCurrentBlk(mblk);

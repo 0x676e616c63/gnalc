@@ -31,10 +31,12 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     // lowering
     fpm.addPass(ISel());
     fpm.addPass(PreRAlegalize());
+    fpm.addPass(CFGsimplifyBeforeRA());
     fpm.addPass(RegisterAlloc());
     fpm.addPass(StackGenerate());
-    fpm.addPass(PostRAlegalize());
     fpm.addPass(GenericPeephole());
+    fpm.addPass(CFGsimplifyAfterRA());
+    fpm.addPass(PostRAlegalize());
 
     return fpm;
 }

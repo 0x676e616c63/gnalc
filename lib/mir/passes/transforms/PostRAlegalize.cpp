@@ -24,10 +24,6 @@ void PostRAlegalizeImpl::runOnBlk(MIRBlk_p mblk, CodeGenContext &ctx) {
 
     auto &minsts = mblk->Insts();
 
-    if (mblk->getmSym() == "KMP_54") {
-        int debug;
-    }
-
     for (auto iter = minsts.begin(); iter != minsts.end(); ++iter) {
         runOnInst(*iter, minsts, iter, ctx);
     }

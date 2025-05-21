@@ -13,6 +13,8 @@ using string = std::string;
 
 ///@note armv8没有了armv7中通用的8位旋转立即数, 取而代之的是一大堆规则不同的立即数
 
+inline bool isFitPairMemInst(int offset) { return offset >= -512 && offset <= 504; } //@warning 此处没有检查对齐
+
 inline bool isFitMemInstX(int offset) { return offset >= 0 && offset <= 32760 && offset % 8 == 0; }
 
 inline bool isFitMemInstW(int offset) { return offset >= 0 && offset <= 16380 && offset % 4 == 0; }

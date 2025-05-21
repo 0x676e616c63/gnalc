@@ -264,11 +264,13 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
 
     string str;
 
-    Err::gassert(isFitMemInstX(mfunc->begCalleeSave()), "calleePrinter: too large stk todo...");
+    if (!isFitPairMemInst(mfunc->begCalleeSave())) {
+        return calleePrinter_legacy(minst);
+    }
 
     if (minst.opcode<ARMOpC>() == ARMOpC::PUSH) {
         int lastReg = -1;
-        int offset = static_cast<unsigned>(mfunc->begCalleeSave());
+        int offset = mfunc->begCalleeSave();
         for (int i = 0; i < 32; ++i, bitMap >>= 1) {
 
             if (i == ARMReg::SP) {
@@ -297,7 +299,7 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
             offset += 8;
         }
 
-        offset += offset % 16 ? 0 : 8; // align
+        offset += offset % 16 ? 8 : 0; // align
 
         for (int i = 32; i < 65; ++i, bitMap >>= 1) {
             if (bitMap & 1) {
@@ -353,7 +355,7 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
             offset += 8;
         }
 
-        offset += offset % 16 ? 0 : 8; // align
+        offset += offset % 16 ? 8 : 0; // align
 
         for (int i = 32; i < 65; ++i, bitMap >>= 1) {
             if (bitMap & 1) {
@@ -376,6 +378,38 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
 
             // lastReg = -1;
             // offset += 16;
+        }
+    }
+
+    return str;
+}
+
+string ARMA64Printer::calleePrinter_legacy(const MIRInst &minst) {
+    auto bitMap = minst.getOp(1)->immeEx();
+    int offset = mfunc->begCalleeSave();
+
+    string str;
+
+    // 再多就只能苦一苦fp了
+    Err::gassert(isFitMemInstX(mfunc->begCalleeSave()), "calleePrinter: too large stk todo..."); // NOLINT
+
+    if (minst.opcode<ARMOpC>() == ARMOpC::PUSH) {
+        for (int i = 0; i < 32; bitMap >>= 1, ++i) {
+            if (bitMap & 1) {
+                str += "str\t" + reg2s(MIROperand::asISAReg(i, OpT::Int64), 8) + ", [sp, " + std::to_string(offset) +
+                       ']' + "\n    ";
+                offset += 8;
+            }
+        }
+
+        offset += offset % 16 ? 8 : 0; // align
+
+        for (int i = 32; i < 65; ++i, bitMap <<= 1) {
+            if (bitMap & 1) {
+                str += "str\t" + reg2s(MIROperand::asISAReg(i, OpT::Floatvec), 16) + ", [sp, " +
+                       std::to_string(offset) + ']' + "\n    ";
+                offset += 16;
+            }
         }
     }
 
