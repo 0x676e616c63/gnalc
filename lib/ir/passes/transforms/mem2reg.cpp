@@ -1,12 +1,12 @@
 #include "ir/passes/transforms/mem2reg.hpp"
-#include "ir/passes/analysis/loop_analysis.hpp"
-#include "ir/instructions/phi.hpp"
 #include "ir/instructions/memory.hpp"
+#include "ir/instructions/phi.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
 #include "utils/exception.hpp"
 
 #include <algorithm>
-#include <stack>
 #include <queue>
+#include <stack>
 
 namespace IR {
 bool PromotePass::iADomB(const pInst &ia, const pInst &ib) {
@@ -202,8 +202,15 @@ void PromotePass::rename(Function &f) {
                             else {
                                 // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
                                 Logger::logWarning(
-                                    "[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
-                                incoming_values[{alloca, b}] = f.getConst(0);
+                                    "[M2R] rename(): Value are not defined for all dominance nodes! Use zero instead.");
+                                auto btype = alloca->getBaseType()->as<BType>();
+                                Err::gassert(btype != nullptr && (btype->getInner() == IRBTYPE::I32 ||
+                                                                  btype->getInner() == IRBTYPE::FLOAT),
+                                             "Unexpected load type in mem2reg.");
+                                if (btype->getInner() == IRBTYPE::I32)
+                                    incoming_values[{alloca, b}] = f.getConst(0);
+                                else
+                                    incoming_values[{alloca, b}] = f.getConst(0.0f);
                                 break;
                             }
                         } else {
@@ -243,8 +250,15 @@ void PromotePass::rename(Function &f) {
                             else {
                                 // Err::error("PromotePass::rename(): IDOM is nullptr! Maybe node is root.");
                                 Logger::logWarning(
-                                    "[M2R] rename(): Value are not defined for all dominance nodes! Use 0 instead.");
-                                incoming_values[{alloca, b}] = f.getConst(0);
+                                    "[M2R] rename(): Value are not defined for all dominance nodes! Use zero instead.");
+                                auto btype = alloca->getBaseType()->as<BType>();
+                                Err::gassert(btype != nullptr && (btype->getInner() == IRBTYPE::I32 ||
+                                                                  btype->getInner() == IRBTYPE::FLOAT),
+                                             "Unexpected load type in mem2reg.");
+                                if (btype->getInner() == IRBTYPE::I32)
+                                    incoming_values[{alloca, b}] = f.getConst(0);
+                                else
+                                    incoming_values[{alloca, b}] = f.getConst(0.0f);
                                 break;
                             }
                         } else {
