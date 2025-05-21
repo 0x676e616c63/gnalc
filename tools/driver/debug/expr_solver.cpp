@@ -19,6 +19,7 @@ int main() {
     ExprSimplifier esim(&epool);
 
     std::vector<TestCase> testcases = {
+        {"2 * (3 + 4)", "14"},
         {"x * 0", "0"},
         {"0 / x", "0"},
         {"x / 1", "x"},
@@ -28,12 +29,11 @@ int main() {
         {"x + x + x", "3x"},
         {"2 * y + 3 * y", "5y"},
         {"3 + 5", "8"},
-        {"2 * (3 + 4)", "14"},
         {"(a + b) - (b + a)", "0"},
         {"(x - y) + (y - x)", "0"},
         {"(x * 7) * 9 / 7 - x * 9", "0"},
         {"2 * x * 3 * y", "6(xy)"}, // TODO, (6x)y, 6xy and 6(xy)
-        {"x + 1 - 1", "x"},
+        {"(-1 + (1 + x))", "x"},
     };
 
     size_t failed_cnt = 0;

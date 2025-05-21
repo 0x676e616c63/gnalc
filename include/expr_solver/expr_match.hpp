@@ -76,7 +76,10 @@ template <typename T> struct ConstantProj {
 
 inline auto Bind(Expr *&expr) { return detail::BindMatch(expr); }
 
-inline auto Bind(int &i) {
+inline auto CBind(Expr *&expr) {
+    return detail::BindMatch(expr, [](Expr *e) { return e->isConstant(); });
+}
+inline auto CBind(int &i) {
     return detail::BindMatch<int, detail::ConstantProj<int>>(i, [](Expr *e) { return e->isConstant(); });
 }
 
@@ -84,7 +87,7 @@ inline auto Is(const int &i) {
     return detail::PredMatch([&i](Expr *e) { return e->isConstant() && e->getConstVal() == i; });
 }
 
-inline auto Is(const Expr *&e) {
+inline auto Is(const Expr *const &e) {
     return detail::PredMatch([&e](Expr *cand) { return cand == e; });
 }
 

@@ -60,28 +60,28 @@ Expr *ExprSimplifier::rewrite(Expr *expr) {
     if (match(expr, Div(Is(0), Bind(x)), Mod(Is(0), Bind(x)), Mod(Bind(x), Is(1))))
         return pool->getConstant(0);
     // R1: c1 + c2 = (c1+c2)
-    if (match(expr, Add(Bind(c1), Bind(c2))) && c1->isConstant() && c2->isConstant()) {
-        return pool->getConstant(c1->getConstVal() + c2->getConstVal());
+    if (match(expr, Add(CBind(a), CBind(b)))) {
+        return pool->getConstant(a + b);
     }
     // R2: t + c = c + t
-    if (match(expr, Add(Bind(x), Bind(c1))) && c1->isConstant()) {
-        return pool->getBinary(Op::Add, c1, x);
+    if (match(expr, Add(Bind(x), CBind(y)))) {
+        return pool->getBinary(Op::Add, y, x);
     }
-    // R3: c1 * c2 = (c1*c2)
-    if (match(expr, Mul(Bind(c1), Bind(c2))) && c1->isConstant() && c2->isConstant()) {
-        return pool->getConstant(c1->getConstVal() * c2->getConstVal());
+    // R3: c1 * c2 = (c1 * c2)
+    if (match(expr, Mul(CBind(a), CBind(b)))) {
+        return pool->getConstant(a * b);
     }
     // R4: t * c = c * t
-    if (match(expr, Mul(Bind(x), Bind(c1))) && c1->isConstant()) {
+    if (match(expr, Mul(Bind(x), CBind(c1)))) {
         return pool->getBinary(Op::Mul, c1, x);
     }
     // R5: c1 - c2 = (c1-c2)
-    if (match(expr, Sub(Bind(c1), Bind(c2))) && c1->isConstant() && c2->isConstant()) {
-        return pool->getConstant(c1->getConstVal() - c2->getConstVal());
+    if (match(expr, Sub(CBind(a), CBind(b)))) {
+        return pool->getConstant(a - b);
     }
     // R6: t - c = -c + t
-    if (match(expr, Sub(Bind(x), Bind(c1))) && c1->isConstant()) {
-        return pool->getBinary(Op::Add, pool->getConstant(-c1->getConstVal()), x);
+    if (match(expr, Sub(Bind(x), CBind(a)))) {
+        return pool->getBinary(Op::Add, pool->getConstant(-a), x);
     }
 
     // R7: t1 + (t2 + t3) = (t1 + t2) + t3
@@ -91,62 +91,62 @@ Expr *ExprSimplifier::rewrite(Expr *expr) {
     }
 
     // R8: t1 * (t2 * t3) = (t1 * t2) * t3
-    // if (match(expr, Mul(Bind(t1), Mul(Bind(t2), Bind(t3))))) {
-    //     Expr *lhs = pool->getBinary(Op::Mul, t1, t2);
-    //     return pool->getBinary(Op::Mul, lhs, t3);
-    // }
-
-    // R9: (c1 + t) + c2 = (c1+c2) + t
-    if (match(expr, Add(Add(Bind(c1), Bind(x)), Bind(c2))) && c1->isConstant() && c2->isConstant()) {
-        return pool->getBinary(Op::Add, pool->getConstant(c1->getConstVal() + c2->getConstVal()), x);
+    if (match(expr, Mul(Bind(t1), Mul(Bind(t2), Bind(t3))))) {
+        Expr *lhs = pool->getBinary(Op::Mul, t1, t2);
+        return pool->getBinary(Op::Mul, lhs, t3);
     }
 
-    // R10: (c1 * t) * c2 = (c1*c2) * t
-    if (match(expr, Mul(Mul(Bind(c1), Bind(x)), Bind(c2))) && c1->isConstant() && c2->isConstant()) {
-        return pool->getBinary(Op::Mul, pool->getConstant(c1->getConstVal() * c2->getConstVal()), x);
-    }
-    // ex: c1 * (c2 * t) = (c1*c2) * t
-    if (match(expr, Mul(Bind(c1), Mul(Bind(c2), Bind(x)))) && c1->isConstant() && c2->isConstant()) {
-        return pool->getBinary(Op::Mul, pool->getConstant(c1->getConstVal() * c2->getConstVal()), x);
+    // R9: (c1 + t) + c2 = (c1 + c2) + t
+    if (match(expr, Add(Add(CBind(a), Bind(x)), CBind(b)))) {
+        return pool->getBinary(Op::Add, pool->getConstant(a + b), x);
     }
 
-    // R11: (c1 + t) * c2 = (c1*c2) + (c2*t)
-    if (match(expr, Mul(Add(Bind(c1), Bind(x)), Bind(c2))) && c1->isConstant() && c2->isConstant()) {
-        Expr *lhs = pool->getConstant(c1->getConstVal() * c2->getConstVal());
-        Expr *rhs = pool->getBinary(Op::Mul, c1, x);
+    // R10: (c1 * t) * c2 = (c1 * c2) * t
+    if (match(expr, Mul(Mul(CBind(a), Bind(x)), CBind(b)))) {
+        return pool->getBinary(Op::Mul, pool->getConstant(a * b), x);
+    }
+    // ex: c1 * (c2 * t) = (c1 * c2) * t
+    if (match(expr, Mul(CBind(a), Mul(CBind(b), Bind(x))))) {
+        return pool->getBinary(Op::Mul, pool->getConstant(a * b), x);
+    }
+
+    // R11: (c1 + t) * c2 = (c1 * c2) + (c2 * t)
+    if (match(expr, Mul(Add(CBind(a), Bind(x)), CBind(b)))) {
+        Expr *lhs = pool->getConstant(a * b);
+        Expr *rhs = pool->getBinary(Op::Mul, pool->getConstant(a), x);
         return pool->getBinary(Op::Add, lhs, rhs);
     }
 
-    // R12: c1 * (c2 + t) = (c1*c2) + (c1*t)
-    if (match(expr, Mul(Bind(c1), Add(Bind(c2), Bind(x)))) && c1->isConstant() && c2->isConstant()) {
-        Expr *lhs = pool->getConstant(c1->getConstVal() * c2->getConstVal());
-        Expr *rhs = pool->getBinary(Op::Mul, c1, x);
+    // R12: c1 * (c2 + t) = (c1 * c2) + (c1*t)
+    if (match(expr, Mul(CBind(a), Add(CBind(b), Bind(x))))) {
+        Expr *lhs = pool->getConstant(a * b);
+        Expr *rhs = pool->getBinary(Op::Mul, pool->getConstant(a), x);
         return pool->getBinary(Op::Add, lhs, rhs);
     }
 
     // R13: (t1 + t2) * c = (c * t1) + (c * t2)
-    if (match(expr, Mul(Add(Bind(x), Bind(y)), Bind(c1))) && c1->isConstant()) {
-        Expr *lhs = pool->getBinary(Op::Mul, c1, x);
+    if (match(expr, Mul(Add(Bind(x), Bind(y)), CBind(c1)))) {
+        Expr *lhs = pool->getBinary(Op::Mul, pool->getConstant(a), x);
         Expr *rhs = pool->getBinary(Op::Mul, c1, y);
         return pool->getBinary(Op::Add, lhs, rhs);
     }
 
     // R14: c * (t1 + t2) = (c * t1) + (c * t2)
-    if (match(expr, Mul(Bind(c1), Add(Bind(x), Bind(y)))) && c1->isConstant()) {
+    if (match(expr, Mul(CBind(c1), Add(Bind(x), Bind(y))))) {
         Expr *lhs = pool->getBinary(Op::Mul, c1, x);
         Expr *rhs = pool->getBinary(Op::Mul, c1, y);
         return pool->getBinary(Op::Add, lhs, rhs);
     }
 
     // R15: (t1 - t2) * c = (c * t1) - (c * t2)
-    if (match(expr, Mul(Sub(Bind(x), Bind(y)), Bind(c1))) && c1->isConstant()) {
+    if (match(expr, Mul(Sub(Bind(x), Bind(y)), CBind(c1)))) {
         Expr *lhs = pool->getBinary(Op::Mul, c1, x);
         Expr *rhs = pool->getBinary(Op::Mul, c1, y);
         return pool->getBinary(Op::Sub, lhs, rhs);
     }
 
     // R16: c * (t1 - t2) = (c * t1) - (c * t2)
-    if (match(expr, Mul(Bind(c1), Sub(Bind(x), Bind(y)))) && c1->isConstant()) {
+    if (match(expr, Mul(CBind(c1), Sub(Bind(x), Bind(y))))) {
         Expr *lhs = pool->getBinary(Op::Mul, c1, x);
         Expr *rhs = pool->getBinary(Op::Mul, c1, y);
         return pool->getBinary(Op::Sub, lhs, rhs);
@@ -180,98 +180,95 @@ Expr *ExprSimplifier::rewrite(Expr *expr) {
         return pool->getBinary(Op::Sub, lhs, rhs);
     }
 
-    // (c1 + t1) + (c2 + t2) = (c1+c2) + (t1+t2)
-    if (match(expr, Add(Add(Bind(c1), Bind(t1)), Add(Bind(c2), Bind(t2)))) && c1->isConstant() && c2->isConstant()) {
-        Expr *lhs = pool->getConstant(c1->getConstVal() + c2->getConstVal());
+    // (c1 + t1) + (c2 + t2) = (c1 + c2) + (t1 + t2)
+    if (match(expr, Add(Add(CBind(a), Bind(t1)), Add(CBind(b), Bind(t2))))) {
+        Expr *lhs = pool->getConstant(a + b);
         Expr *rhs = pool->getBinary(Op::Add, t1, t2);
         return pool->getBinary(Op::Add, lhs, rhs);
     }
 
     // (c * t1) * t2 = c * (t1 * t2)
-    if (match(expr, Mul(Mul(Bind(c1), Bind(t1)), Bind(t2))) && c1->isConstant()) {
+    if (match(expr, Mul(Mul(CBind(c1), Bind(t1)), Bind(t2)))) {
         return pool->getBinary(Op::Mul, c1, pool->getBinary(Op::Mul, t1, t2));
     }
 
-    // (c1 * t) / c2 = t / (c2/c1) only when c2/c1 is integer
-    if (match(expr, Div(Mul(Bind(c1), Bind(x)), Bind(c2))) && c1->isConstant() && c2->isConstant() && (
-            c2->getConstVal() % c1->getConstVal()) == 0) {
-        return pool->getBinary(Op::Div, x, pool->getConstant(c2->getConstVal() / c1->getConstVal()));
+    // (c1 * t) / c2 = t * (c2 / c1) only when c2 / c1 is integer
+    if (match(expr, Div(Mul(CBind(a), Bind(x)), CBind(b))) && a % b == 0) {
+        return pool->getBinary(Op::Mul, x, pool->getConstant(a / b));
     }
 
     // ((t * c2) + c1 ) / c2 -> t + c1 / c2
-    if (match(expr, Div(Add(Mul(Bind(x), Bind(c2)), Bind(c1)), Bind(t2))) && c2 == t2 && c2->isConstant() && c1->
-        isConstant()) {
-        return pool->getBinary(Op::Add, x, pool->getConstant(c1->getConstVal() / c2->getConstVal()));
+    if (match(expr, Div(Add(Mul(Bind(x), CBind(b)), CBind(a)), Is(b)))) {
+        return pool->getBinary(Op::Add, x, pool->getConstant(a / b));
     }
     // (c1 - t) + c2 = (c1 + c2) - t
-    if (match(expr, Add(Sub(Bind(c1), Bind(x)), Bind(c2))) && c1->isConstant() && c2->isConstant()) {
-        return pool->getBinary(Op::Sub, pool->getConstant(c1->getConstVal() + c2->getConstVal()), x);
+    if (match(expr, Add(Sub(CBind(a), Bind(x)), CBind(b)))) {
+        return pool->getBinary(Op::Sub, pool->getConstant(a + b), x);
     }
 
     // c1 - (t + c2) -> (c1 - c2) - t
-    if (match(expr, Sub(Bind(c1), Add(Bind(x), Bind(c2)))) && c1->isConstant() && c2->isConstant()) {
-        return pool->getBinary(Op::Sub, pool->getConstant(c1->getConstVal() - c2->getConstVal()), x);
+    if (match(expr, Sub(CBind(a), Add(Bind(x), CBind(b))))) {
+        return pool->getBinary(Op::Sub, pool->getConstant(a - b), x);
     }
 
     // t + ( _ - t) = _
-    if (match(expr, Add(Bind(t1), Sub(Bind(x), Bind(t2)))) && t1 == t2) {
+    if (match(expr, Add(Bind(t1), Sub(Bind(x), Is(t1))))) {
         return x;
     }
 
     // ( _ - t) + t = _
-    if (match(expr, Add(Sub(Bind(x), Bind(t1)), Bind(t2))) && t1 == t2) {
+    if (match(expr, Add(Sub(Bind(x), Bind(t1)), Is(t1)))) {
         return x;
     }
 
     // t1 / (t1 * _ ) -> 1 / _
-    if (match(expr, Div(Bind(t1), Mul(Bind(t2), Bind(x)))) && t1 == t2) {
+    if (match(expr, Div(Bind(t1), Mul(Is(t1), Bind(x))))) {
         return pool->getBinary(Op::Div, pool->getConstant(1), x);
     }
 
     // t1 / ( _ * t1 ) -> 1 / _
-    if (match(expr, Div(Bind(t1), Mul(Bind(x), Bind(t2)))) && t1 == t2) {
+    if (match(expr, Div(Bind(t1), Mul(Bind(x), Is(t1))))) {
         return pool->getBinary(Op::Div, pool->getConstant(1), x);
     }
 
     // (t / c1) / c2  -> t / (c1 * c2)
-    if (match(expr, Div(Div(Bind(x), Bind(c1)), Bind(c2))) && c1->isConstant() && c2->isConstant()) {
-        return pool->getBinary(Op::Div, x, pool->getConstant(c1->getConstVal() * c2->getConstVal()));
+    if (match(expr, Div(Div(Bind(x), CBind(a)), CBind(b)))) {
+        return pool->getBinary(Op::Div, x, pool->getConstant(a * b));
     }
 
     // (t1 - (t1 % t2)) / t2 -> t1 / t2
-    if (match(expr, Div(Sub(Bind(t1), Mod(Bind(x), Bind(t2))), Bind(y))) && t1 == x && t2 == y) {
+    if (match(expr, Div(Sub(Bind(t1), Mod(Is(t1), Bind(t2))), Is(t2)))) {
         return pool->getBinary(Op::Div, t1, t2);
     }
 
-    // (c1 * x) + (c2 * x) -> (c1+c2) * x
-    if (match(expr, Add(Mul(Bind(c1), Bind(x)), Mul(Bind(c2), Bind(y)))) && x == y && c1->isConstant() && c2->
-        isConstant()) {
-        return pool->getBinary(Op::Mul, pool->getConstant(c1->getConstVal() + c2->getConstVal()), x);
+    // (c1 * x) + (c2 * x) -> (c1 + c2) * x
+    if (match(expr, Add(Mul(CBind(a), Bind(x)), Mul(CBind(b), Is(x))))) {
+        return pool->getBinary(Op::Mul, pool->getConstant(a + b), x);
     }
     // x + x = 2 * x
-    if (match(expr, Add(Bind(x), Bind(y))) && x == y) {
+    if (match(expr, Add(Bind(x), Is(x)))) {
         return pool->getBinary(Op::Mul, pool->getConstant(2), x);
     }
-    // c * x + x -> (c+1) * x
-    if (match(expr, Add(Mul(Bind(c1), Bind(x)), Bind(y))) && x == y && c1->isConstant()) {
-        return pool->getBinary(Op::Mul, pool->getConstant(c1->getConstVal() + 1), x);
+    // c * x + x -> (c + 1) * x
+    if (match(expr, Add(Mul(CBind(a), Bind(x)), Is(x)))) {
+        return pool->getBinary(Op::Mul, pool->getConstant(a + 1), x);
     }
 
-    // x + c * x -> (c+1) * x
-    if (match(expr, Add(Bind(x), Mul(Bind(c1), Bind(y)))) && x == y && c1->isConstant()) {
-        return pool->getBinary(Op::Mul, pool->getConstant(c1->getConstVal() + 1), x);
+    // x + c * x -> (c + 1) * x
+    if (match(expr, Add(Bind(x), Mul(CBind(a), Is(x))))) {
+        return pool->getBinary(Op::Mul, pool->getConstant(a + 1), x);
     }
     // (a + b) - (b + a) = 0
-    if (match(expr, Sub(Add(Bind(t1), Bind(t2)), Add(Bind(t3), Bind(t4)))) && t1 == t4 && t2 == t3) {
+    if (match(expr, Sub(Add(Bind(t1), Bind(t2)), Add(Is(t2), Is(t1))))) {
         return pool->getConstant(0);
     }
     // (x - y) + (y - x) = 0
-    if (match(expr, Add(Sub(Bind(t1), Bind(t2)), Sub(Bind(t3), Bind(t4)))) && t1 == t4 && t2 == t3) {
+    if (match(expr, Add(Sub(Bind(t1), Bind(t2)), Sub(Is(t2), Is(t1))))) {
         return pool->getConstant(0);
     }
     // (c1 * x) / c2 = (c1 / c2) * x when c1 % c2 == 0
-    if (match(expr, Div(Mul(Bind(c1), Bind(x)), Bind(c2))) && c1->isConstant() && c2->isConstant() && (c1->getConstVal() % c2->getConstVal() == 0)) {
-        return pool->getBinary(Op::Mul,pool->getConstant(c1->getConstVal() / c2->getConstVal()),x);
+    if (match(expr, Div(Mul(CBind(a), Bind(x)), CBind(b))) && a % b == 0) {
+        return pool->getBinary(Op::Mul,pool->getConstant(a / b),x);
     }
 
     // otherwise
