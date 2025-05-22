@@ -4,7 +4,7 @@
 #include "ir/instructions/control.hpp"
 #include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
-#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/passes/analysis/basic_alias_analysis.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 
@@ -13,7 +13,7 @@
 #include <vector>
 
 namespace IR {
-bool isSafeToMove(const pLoop &loop, const pInst &inst, AliasAnalysisResult &aa_res, FAM &fam) {
+bool isSafeToMove(const pLoop &loop, const pInst &inst, BasicAAResult &aa_res, FAM &fam) {
     // Only move what we know
     // Do not hoist cmp for codegen
     if (!inst->is<BinaryInst, FNEGInst, CALLInst, LOADInst, STOREInst, GEPInst, CastInst>())
@@ -79,7 +79,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
     auto &domtree = fam.getResult<DomTreeAnalysis>(function);
     auto &postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
     auto &loop_info = fam.getResult<LoopAnalysis>(function);
-    auto &aa_res = fam.getResult<AliasAnalysis>(function);
+    auto &aa_res = fam.getResult<BasicAliasAnalysis>(function);
 
     bool licm_inst_modified = false;
 

@@ -7,7 +7,7 @@
 
 namespace IR {
 
-bool isReachableFromAToB(Function* a, Function* b) {
+bool isReachableFromAToB(Function *a, Function *b) {
     if (a == b)
         return true;
     for (const auto &user : b->inst_users()) {
@@ -21,8 +21,9 @@ bool isReachableFromAToB(Function* a, Function* b) {
 }
 
 PM::PreservedAnalyses InternalizePass::run(Function &function, FAM &fam) {
-    // Only do this on main since they execute exactly once.
-    if (function.getName() != "@main")
+    // Internalize is safe if the functions execute exactly once.
+    // Typically, this is a main function.
+    if (!function.hasAttr(FuncAttr::ExecuteExactlyOnce))
         return PreserveAll();
 
     bool internalize_inst_modified = false;
@@ -51,8 +52,8 @@ PM::PreservedAnalyses InternalizePass::run(Function &function, FAM &fam) {
 
             // Already internalized
             if (auto call = inst_user->as<CALLInst>()) {
-                if (call->getFuncName() == Config::IR::MEMCPY_INTRINSIC_NAME ||
-                    call->getFuncName() == Config::IR::MEMSET_INTRINSIC_NAME) {
+                if (call->getFunc()->hasAttr(FuncAttr::isMemcpyIntrinsic) ||
+                    call->getFunc()->hasAttr(FuncAttr::isMemsetIntrinsic)) {
                     safe_to_internalize = false;
                     break;
                 }
@@ -66,7 +67,7 @@ PM::PreservedAnalyses InternalizePass::run(Function &function, FAM &fam) {
         auto alloca_inst = std::make_shared<ALLOCAInst>(name, type);
 
         auto use_list = global_var->getUseList();
-        for (const auto& use : use_list) {
+        for (const auto &use : use_list) {
             auto user_func = use->getUser()->as<Instruction>()->getParent()->getParent().get();
             if (user_func == &function)
                 use->setValue(alloca_inst);
@@ -110,13 +111,15 @@ PM::PreservedAnalyses InternalizePass::run(Function &function, FAM &fam) {
                     init_val = function.getConst(0.0f);
                 else
                     init_val = function.getConst(0);
-            }
-            else
+            } else
                 init_val = initer.getConstVal();
             Err::gassert(init_val != nullptr, "Invalid Global Variable");
             auto store_inst = std::make_shared<STOREInst>(init_val, alloca_inst);
             entry->addInst(insert_before, store_inst);
         }
+
+        Logger::logDebug("[Internalize]: Internalized global variable '", global_var->getName(), "' to '",
+                         function.getName(), "'.");
 
         internalize_inst_modified = true;
     }

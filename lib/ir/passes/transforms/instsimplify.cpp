@@ -1,11 +1,11 @@
 #include "ir/passes/transforms/instsimplify.hpp"
-#include "ir/passes/analysis/domtree_analysis.hpp"
-#include "ir/passes/analysis/alias_analysis.hpp"
-#include "ir/passes/helpers/constant_fold.hpp"
-#include "ir/instructions/compare.hpp"
-#include "ir/instructions/converse.hpp"
 #include "ir/base.hpp"
 #include "ir/block_utils.hpp"
+#include "ir/instructions/compare.hpp"
+#include "ir/instructions/converse.hpp"
+#include "ir/passes/analysis/basic_alias_analysis.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/helpers/constant_fold.hpp"
 #include "ir/pattern_match.hpp"
 
 #include <algorithm>
@@ -13,13 +13,39 @@
 #include <string>
 #include <vector>
 
-using namespace PatternMatch;
-
 namespace IR {
+template <typename NewInst> void replaceInstHelper(const pInst &inst, const NewInst &i) {
+    inst->replaceSelf(i);
+    inst->getParent()->addInst(inst->getIndex(), i);
+}
+
+template <typename NewInst, typename... NewInsts>
+void replaceInstHelper(const pInst &inst, const NewInst &new_inst, const NewInsts &...new_insts) {
+    inst->getParent()->addInst(inst->getIndex(), new_inst);
+    replaceInstHelper(inst, new_insts...);
+}
+
 PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
     bool instsimplify_inst_modified = false;
     this->fam = &fam;
     this->func = &function;
+
+    pVal x, y, z;
+    int c1, c2, c3;
+    float fc1, fc2, fc3;
+    auto i32_zero = function.getConst(0);
+    auto i32_one = function.getConst(1);
+    auto f32_zero = function.getConst(0.0f);
+    auto f32_one = function.getConst(1.0f);
+    auto i1_true = function.getConst(true);
+    auto i1_false = function.getConst(false);
+
+#define REPLACE(pattern, replacement)                                                                                  \
+    if (match(inst, (pattern))) {                                                                                      \
+        inst->replaceSelf((replacement));                                                                              \
+        instsimplify_inst_modified = true;                                                                             \
+        continue;                                                                                                      \
+    }
 
     // First, simplify basic instruction patterns without adding any instruction
     for (const auto &bb : function) {
@@ -31,89 +57,75 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
                 inst->replaceSelf(fold);
                 continue;
             }
-            pVal x;
-            // x + 0 -> x
+
+            // x + 0 = x
+            REPLACE(M::Add(M::Bind(x), M::Is(0)), x)
+
             // 0 + x -> x
-            // x - 0 -> x
-            // x / 1 -> x
-            // x * 1 -> x
-            // 1 * x -> x
-            // x * 1.0f -> x
-            // 1.0f * x -> x
-            if (match(inst, M::Add(M::Bind(x), M::Is(0))) ||
-                match(inst, M::Add(M::Is(0), M::Bind(x))) ||
-                match(inst, M::Sub(M::Bind(x), M::Is(0))) ||
-                match(inst, M::Div(M::Bind(x), M::Is(1))) ||
-                match(inst, M::Mul(M::Bind(x), M::Is(1))) ||
-                match(inst, M::Mul(M::Is(1), M::Bind(x))) ||
-                match(inst, M::Fmul(M::Bind(x), M::Is(1.0f))) ||
-                match(inst, M::Fmul(M::Is(1.0f), M::Bind(x)))) {
-                inst->replaceSelf(x);
-                instsimplify_inst_modified = true;
-            }
+            REPLACE(M::Add(M::Is(0), M::Bind(x)), x)
+
+            // x - 0 = x
+            REPLACE(M::Sub(M::Bind(x), M::Is(0)), x)
+
+            // x / 1 = x
+            REPLACE(M::Div(M::Bind(x), M::Is(1)), x)
+
+            // x * 1 = x
+            REPLACE(M::Mul(M::Bind(x), M::Is(1)), x)
+
+            // 1 * x = x
+            REPLACE(M::Mul(M::Is(1), M::Bind(x)), x)
+
+            // x * 1.0f = x
+            REPLACE(M::Fmul(M::Bind(x), M::Is(1.0f)), x)
+
+            // 1.0f * x = x
+            REPLACE(M::Fmul(M::Is(1.0f), M::Bind(x)), x)
+
             // x - x = 0
-            else if (match(inst, M::Sub(M::Bind(x), M::Is(x)))) {
-                inst->replaceSelf(function.getConst(0));
-                instsimplify_inst_modified = true;
-            } else if (match(inst, M::Fsub(M::Bind(x), M::Is(x)))) {
-                inst->replaceSelf(function.getConst(0.0f));
-                instsimplify_inst_modified = true;
-            }
+            REPLACE(M::Sub(M::Bind(x), M::Is(x)), i32_zero)
+
+            // x - x = 0.0f
+            REPLACE(M::Fsub(M::Bind(x), M::Is(x)), f32_zero)
+
             // x * 0 = 0
+            REPLACE(M::Mul(M::Val(), M::Is(0)), i32_zero)
+
             // 0 * x = 0
+            REPLACE(M::Mul(M::Is(0), M::Val()), i32_zero)
+
             // 0 / x = 0
+            REPLACE(M::Div(M::Is(0), M::Val()), i32_zero)
+
             // 0 % x = 0
+            REPLACE(M::Rem(M::Is(0), M::Val()), i32_zero)
+
             // x % 1 = 0
-            else if (match(inst, M::Mul(M::Val(), M::Is(0))) ||
-                     match(inst, M::Mul(M::Is(0), M::Val())) ||
-                     match(inst, M::Div(M::Is(0), M::Val())) ||
-                     match(inst, M::Rem(M::Is(0), M::Val())) ||
-                     match(inst, M::Rem(M::Val(), M::Is(1)))) {
-                inst->replaceSelf(function.getConst(0));
-                instsimplify_inst_modified = true;
-            }
-            // icmp x, x -> true/false
-            else if (match(inst, M::Icmp(M::Bind(x), M::Is(x)))) {
-                auto icmp = inst->as<ICMPInst>();
-                auto ci1true = function.getConst(true);
-                auto ci1false = function.getConst(false);
-                switch (icmp->getCond()) {
-                case ICMPOP::eq:
-                case ICMPOP::sge:
-                case ICMPOP::sle:
-                    inst->replaceSelf(ci1true);
-                    instsimplify_inst_modified = true;
-                    break;
-                case ICMPOP::ne:
-                case ICMPOP::sgt:
-                case ICMPOP::slt:
-                    inst->replaceSelf(ci1false);
-                    instsimplify_inst_modified = true;
-                    break;
-                }
-            }
-            // fcmp x, x -> true/false
-            else if (match(inst, M::Fcmp(M::Bind(x), M::Is(x)))) {
-                auto fcmp = inst->as<FCMPInst>();
-                auto ci1true = function.getConst(true);
-                auto ci1false = function.getConst(false);
-                switch (fcmp->getCond()) {
-                case FCMPOP::oeq:
-                case FCMPOP::oge:
-                case FCMPOP::ole:
-                    inst->replaceSelf(ci1true);
-                    instsimplify_inst_modified = true;
-                    break;
-                case FCMPOP::one:
-                case FCMPOP::ogt:
-                case FCMPOP::olt:
-                    inst->replaceSelf(ci1false);
-                    instsimplify_inst_modified = true;
-                    break;
-                default:
-                    break;
-                }
-            }
+            REPLACE(M::Rem(M::Val(), M::Is(1)), i32_zero)
+
+            // x / x = 1
+            REPLACE(M::Div(M::Bind(x), M::Is(x)), i32_one)
+
+            // x / x = 1.0f
+            REPLACE(M::Fdiv(M::Bind(x), M::Is(x)), f32_one)
+
+            // x + -x = 0
+            REPLACE(M::Add(M::Bind(x), M::Sub(M::Is(0), M::Is(x))), i32_zero)
+
+            // x + -x = 0.0f
+            REPLACE(M::Fadd(M::Bind(x), M::Fneg(M::Is(x))), f32_zero)
+
+            // x + (y - x) = y
+            REPLACE(M::Add(M::Bind(x), M::Sub(M::Bind(y), M::Is(x))), y)
+
+            // (y - x) + x = y
+            REPLACE(M::Add(M::Sub(M::Bind(y), M::Bind(x)), M::Is(x)), y)
+
+            // icmp x, x
+            REPLACE(M::Icmp(M::Bind(x), M::Is(x)), isTrueWhenEqual(x->as<ICMPInst>()->getCond()) ? i1_true : i1_false)
+
+            // fcmp x, x
+            REPLACE(M::Fcmp(M::Bind(x), M::Is(x)), isTrueWhenEqual(x->as<FCMPInst>()->getCond()) ? i1_true : i1_false)
         }
     }
 
@@ -128,252 +140,178 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
                 worklist.emplace_back(inst);
         }
     }
+
+#define REWRITE_BEG(...) if (match(inst, __VA_ARGS__)) {
+
+#define REWRITE_END(...)                                                                                               \
+    replaceInstHelper(inst, __VA_ARGS__);                                                                              \
+    instsimplify_inst_modified = true;                                                                                 \
+    continue;                                                                                                          \
+    }
+
     while (!worklist.empty()) {
         auto inst = worklist.back();
         worklist.pop_back();
 
-        pVal x, y, z;
-        int c1 = 0, c2 = 0;
-        float fc1 = -0.0f;
-
         // (c1 - x) + c2 -> (c1 + c2) - x
-        if (match(inst, M::Add(M::Sub(M::Bind(c1), M::Bind(x)), M::Bind(c2)))) {
-            auto sub = std::make_shared<BinaryInst>(getTmpName(), OP::SUB, function.getConst(c1 + c2), x);
-            inst->replaceSelf(sub);
-            inst->getParent()->addInst(inst->getIndex(), sub);
-            instsimplify_inst_modified = true;
-        }
-        // x % y + ((x / y) % z) * y -> x % (y * z)
-        else if (match(inst, M::Add(M::Rem(M::Bind(x), M::Bind(y)),                       // x % y +
-                                    M::Mul(M::Rem(M::Div(M::Is(x), M::Is(y)), M::Bind(z)), // ((x / y) % z)
-                                           M::Is(y))))) {
-            // * y
-            auto mul = std::make_shared<BinaryInst>(getTmpName(), OP::MUL, y, z);
-            auto rem = std::make_shared<BinaryInst>(getTmpName(), OP::REM, x, mul);
-            inst->replaceSelf(rem);
-            inst->getParent()->addInst(inst->getIndex(), mul);
-            inst->getParent()->addInst(inst->getIndex(), rem);
-            instsimplify_inst_modified = true;
-        }
-        // x + -x = 0
-        else if (match(inst, M::Add(M::Bind(x), M::Sub(M::Is(0), M::Is(x))))) {
-            inst->replaceSelf(function.getConst(0));
-            instsimplify_inst_modified = true;
-        }
-        // x - -y -> x + y
-        else if (match(inst, M::Sub(M::Bind(x), M::Sub(M::Is(0), M::Bind(y))))) {
-            auto add = std::make_shared<BinaryInst>(getTmpName(), OP::ADD, x, y);
-            inst->replaceSelf(add);
-            inst->getParent()->addInst(inst->getIndex(), add);
-            instsimplify_inst_modified = true;
-        }
-        // c1 - (x + c2) -> (c1 - c2) - x
-        else if (match(inst, M::Sub(M::Bind(c1), M::Add(M::Bind(x), M::Bind(c2)))) ||
-                 match(inst, M::Sub(M::Bind(c1), M::Add(M::Bind(c2), M::Bind(x))))) {
-            auto sub = std::make_shared<BinaryInst>(getTmpName(), OP::SUB, function.getConst(c1 - c2), x);
-            inst->replaceSelf(sub);
-            inst->getParent()->addInst(inst->getIndex(), sub);
-            instsimplify_inst_modified = true;
-        }
-        // x + (y - x) or (y - x) + x -> y
-        else if (match(inst, M::Add(M::Bind(x), M::Sub(M::Bind(y), M::Is(x)))) ||
-                 match(inst, M::Add(M::Sub(M::Bind(y), M::Bind(x)), M::Is(x)))) {
-            inst->replaceSelf(y);
-            instsimplify_inst_modified = true;
-        }
-        // x * y - x * z -> x * (y - z)
-        else if (match(inst, M::Sub(M::Mul(M::Bind(x), M::Bind(y)), M::Mul(M::Is(x), M::Bind(z))))) {
-            auto sub = std::make_shared<BinaryInst>(getTmpName(), OP::SUB, y, z);
-            auto mul = std::make_shared<BinaryInst>(getTmpName(), OP::MUL, x, sub);
-            inst->replaceSelf(mul);
-            inst->getParent()->addInst(inst->getIndex(), sub);
-            inst->getParent()->addInst(inst->getIndex(), mul);
-            instsimplify_inst_modified = true;
-        }
-        // (x * x) - (y * y) -> (x + y) * (x - y)
-        else if (match(inst, M::Sub(M::Mul(M::Bind(x), M::Is(x)), M::Mul(M::Bind(y), M::Is(y))))) {
-            auto add = std::make_shared<BinaryInst>(getTmpName(), OP::ADD, x, y);
-            auto sub = std::make_shared<BinaryInst>(getTmpName(), OP::SUB, x, y);
-            auto mul = std::make_shared<BinaryInst>(getTmpName(), OP::MUL, add, sub);
-            inst->replaceSelf(mul);
-            inst->getParent()->addInst(inst->getIndex(), add);
-            inst->getParent()->addInst(inst->getIndex(), sub);
-            inst->getParent()->addInst(inst->getIndex(), mul);
-            instsimplify_inst_modified = true;
-        }
-        // float: -x + y -> y - x
-        else if (match(inst, M::Fadd(M::Fneg(M::Bind(x)), M::Bind(y)))) {
-            auto fsub = std::make_shared<BinaryInst>(getTmpName(), OP::FSUB, y, x);
-            inst->replaceSelf(fsub);
-            inst->getParent()->addInst(inst->getIndex(), fsub);
-            instsimplify_inst_modified = true;
-        }
-        // float: (-x * y) + z -> z - (x * y)
-        else if (match(inst, M::Fadd(M::Fmul(M::Fneg(M::Bind(x)), M::Bind(y)), M::Bind(z)))) {
-            auto fmul = std::make_shared<BinaryInst>(getTmpName(), OP::FMUL, x, y);
-            auto fsub = std::make_shared<BinaryInst>(getTmpName(), OP::FSUB, z, fmul);
-            inst->replaceSelf(fsub);
-            inst->getParent()->addInst(inst->getIndex(), fmul);
-            inst->getParent()->addInst(inst->getIndex(), fsub);
-            instsimplify_inst_modified = true;
-        }
-        // float: (-x / y) + z or (x / -y) + z -> z - (x / y)
-        else if (match(inst, M::Fadd(M::Fdiv(M::Fneg(M::Bind(x)), M::Bind(y)), M::Bind(z))) ||
-                 match(inst, M::Fadd(M::Fdiv(M::Bind(x), M::Fneg(M::Bind(y))), M::Bind(z)))) {
-            auto fdiv = std::make_shared<BinaryInst>(getTmpName(), OP::FDIV, x, y);
-            auto fsub = std::make_shared<BinaryInst>(getTmpName(), OP::FSUB, z, fdiv);
-            inst->replaceSelf(fsub);
-            inst->getParent()->addInst(inst->getIndex(), fdiv);
-            inst->getParent()->addInst(inst->getIndex(), fsub);
-            instsimplify_inst_modified = true;
-        }
-        // float: (sitofp x) + (sitofp y) -> sitofp(x + y)
-        else if (match(inst, M::Fadd(M::Sitofp(M::Bind(x)), M::Sitofp(M::Bind(y))))) {
-            auto fadd = std::make_shared<BinaryInst>(getTmpName(), OP::FADD, x, y);
-            auto sitofp = std::make_shared<SITOFPInst>(getTmpName(), fadd);
-            inst->replaceSelf(sitofp);
-            inst->getParent()->addInst(inst->getIndex(), fadd);
-            inst->getParent()->addInst(inst->getIndex(), sitofp);
-            instsimplify_inst_modified = true;
-        }
-        // float: -(x * c) -> x * -c
-        //        -(x / c) -> x / -c
-        //        -(c / x) -> -c / x
-        else if (match(inst, M::Fneg(M::OneUse(M::Inst())))) {
-            if (match(inst, M::Fneg(M::Fmul(M::Bind(x), M::Bind(fc1))))) {
-                auto fmul = std::make_shared<BinaryInst>(getTmpName(), OP::FMUL, x, function.getConst(-fc1));
-                inst->replaceSelf(fmul);
-                inst->getParent()->addInst(inst->getIndex(), fmul);
-                instsimplify_inst_modified = true;
-            }
-            if (match(inst, M::Fneg(M::Fdiv(M::Bind(x), M::Bind(fc1))))) {
-                auto fdiv = std::make_shared<BinaryInst>(getTmpName(), OP::FDIV, x, function.getConst(-fc1));
-                inst->replaceSelf(fdiv);
-                inst->getParent()->addInst(inst->getIndex(), fdiv);
-                instsimplify_inst_modified = true;
-            }
-            if (match(inst, M::Fneg(M::Fdiv(M::Bind(fc1), M::Bind(x))))) {
-                auto fdiv = std::make_shared<BinaryInst>(getTmpName(), OP::FDIV, function.getConst(-fc1), x);
-                inst->replaceSelf(fdiv);
-                inst->getParent()->addInst(inst->getIndex(), fdiv);
-                instsimplify_inst_modified = true;
-            }
-        }
-        // float: -(x * y) -> (-x * y) or -(x / y)  -> (-x / y)
-        else if (match(inst, M::Fneg(M::Fmul(M::Bind(x), M::Bind(y)))) ||
-                 match(inst, M::Fneg(M::Fdiv(M::Bind(x), M::Bind(y))))) {
-            auto fneg = std::make_shared<FNEGInst>(getTmpName(), x);
-            auto fbin = std::make_shared<BinaryInst>(getTmpName(), inst->getOpcode(), fneg, y);
-            inst->replaceSelf(fbin);
-            inst->getParent()->addInst(inst->getIndex(), fneg);
-            inst->getParent()->addInst(inst->getIndex(), fbin);
-            instsimplify_inst_modified = true;
-        }
-        // float: fsub -0.0, x → fneg x
-        else if (match(inst, M::Fsub(M::Is(-0.0f), M::Bind(x)))) {
-            auto fsub = std::make_shared<FNEGInst>(getTmpName(), x);
-            inst->replaceSelf(fsub);
-            inst->getParent()->addInst(inst->getIndex(), fsub);
-            instsimplify_inst_modified = true;
-        }
-        // float: x - (-y) -> x + y
-        else if (match(inst, M::Fsub(M::Bind(x), M::Fneg(M::Bind(y))))) {
-            auto fadd = std::make_shared<BinaryInst>(getTmpName(), OP::FADD, x, y);
-            inst->replaceSelf(fadd);
-            inst->getParent()->addInst(inst->getIndex(), fadd);
-            instsimplify_inst_modified = true;
-        }
-        // float: x - (-y * z) -> x + (y * z)
-        else if (match(inst, M::Fsub(M::Bind(x), M::Fmul(M::Fneg(M::Bind(y)), M::Bind(z))))) {
-            auto fmul = std::make_shared<BinaryInst>(getTmpName(), OP::FMUL, y, z);
-            auto fadd = std::make_shared<BinaryInst>(getTmpName(), OP::FADD, x, fmul);
-            inst->replaceSelf(fadd);
-            inst->getParent()->addInst(inst->getIndex(), fmul);
-            inst->getParent()->addInst(inst->getIndex(), fadd);
-            instsimplify_inst_modified = true;
-        }
-        // float: x - (-y / z) -> x + (y / z)
-        else if (match(inst, M::Fsub(M::Bind(x), M::Fdiv(M::Fneg(M::Bind(y)), M::Bind(z))))) {
-            auto fdiv = std::make_shared<BinaryInst>(getTmpName(), OP::FDIV, y, z);
-            auto fadd = std::make_shared<BinaryInst>(getTmpName(), OP::FADD, x, fdiv);
-            inst->replaceSelf(fadd);
-            inst->getParent()->addInst(inst->getIndex(), fdiv);
-            inst->getParent()->addInst(inst->getIndex(), fadd);
-            instsimplify_inst_modified = true;
-        }
-        // float: (x - y) - z → x - (y + z)
-        else if (match(inst, M::Fsub(M::Fsub(M::Bind(x), M::Bind(y)), M::Bind(z)))) {
-            auto fadd = std::make_shared<BinaryInst>(getTmpName(), OP::FADD, y, z);
-            auto fsub = std::make_shared<BinaryInst>(getTmpName(), OP::FSUB, x, fadd);
-            inst->replaceSelf(fsub);
-            inst->getParent()->addInst(inst->getIndex(), fadd);
-            inst->getParent()->addInst(inst->getIndex(), fsub);
-            instsimplify_inst_modified = true;
-        }
-        // float: x + -x -> 0
-        else if (match(inst, M::Fadd(M::Bind(x), M::Fneg(M::Is(x))))) {
-            inst->replaceSelf(function.getConst(-0.0f));
-            instsimplify_inst_modified = true;
-        }
+        REWRITE_BEG(M::Add(M::Sub(M::Bind(c1), M::Bind(x)), M::Bind(c2)))
+        auto sub = std::make_shared<BinaryInst>(getTmpName(), OP::SUB, function.getConst(c1 + c2), x);
+        REWRITE_END(sub)
 
-        // x * -1 or -1 * x -> sub 0 x
-        else if (match(inst, M::Mul(M::Bind(x), M::Is(-1))) ||
-                 match(inst, M::Mul(M::Is(-1), M::Bind(x)))) {
-            auto sub = std::make_shared<BinaryInst>(getTmpName(), OP::SUB, function.getConst(0), x);
-            inst->replaceSelf(sub);
-            inst->getParent()->addInst(inst->getIndex(), sub);
-            instsimplify_inst_modified = true;
-        }
+        // x % y + ((x / y) % z) * y -> x % (y * z)
+        REWRITE_BEG(M::Add(M::Rem(M::Bind(x), M::Bind(y)),                        // x % y +
+                           M::Mul(M::Rem(M::Div(M::Is(x), M::Is(y)), M::Bind(z)), // ((x / y) % z)
+                                  M::Is(y))))
+        auto mul = std::make_shared<BinaryInst>(getTmpName(), OP::MUL, y, z);
+        auto rem = std::make_shared<BinaryInst>(getTmpName(), OP::REM, x, mul);
+        REWRITE_END(mul, rem)
+
+        // x - -y -> x + y
+        REWRITE_BEG(M::Sub(M::Bind(x), M::Sub(M::Is(0), M::Bind(y))))
+        auto add = std::make_shared<BinaryInst>(getTmpName(), OP::ADD, x, y);
+        REWRITE_END(add)
+
+        // c1 - (x + c2) -> (c1 - c2) - x
+        REWRITE_BEG(M::Sub(M::Bind(c1), M::Add(M::Bind(x), M::Bind(c2))),
+                    M::Sub(M::Bind(c1), M::Add(M::Bind(c2), M::Bind(x))))
+        auto sub = std::make_shared<BinaryInst>(getTmpName(), OP::SUB, function.getConst(c1 - c2), x);
+        REWRITE_END(sub)
+
+        // x * y - x * z -> x * (y - z)
+        REWRITE_BEG(M::Sub(M::Mul(M::Bind(x), M::Bind(y)), M::Mul(M::Is(x), M::Bind(z))))
+        auto sub = std::make_shared<BinaryInst>(getTmpName(), OP::SUB, y, z);
+        auto mul = std::make_shared<BinaryInst>(getTmpName(), OP::MUL, x, sub);
+        REWRITE_END(sub, mul)
+
+        // (x * x) - (y * y) -> (x + y) * (x - y)
+        REWRITE_BEG(M::Sub(M::Mul(M::Bind(x), M::Is(x)), M::Mul(M::Bind(y), M::Is(y))))
+        auto add = std::make_shared<BinaryInst>(getTmpName(), OP::ADD, x, y);
+        auto sub = std::make_shared<BinaryInst>(getTmpName(), OP::SUB, x, y);
+        auto mul = std::make_shared<BinaryInst>(getTmpName(), OP::MUL, add, sub);
+        REWRITE_END(add, sub, mul)
+
+        // float: -x + y -> y - x
+        REWRITE_BEG(M::Fadd(M::Fneg(M::Bind(x)), M::Bind(y)))
+        auto fsub = std::make_shared<BinaryInst>(getTmpName(), OP::FSUB, y, x);
+        REWRITE_END(fsub)
+
+        // float: (-x * y) + z -> z - (x * y)
+        REWRITE_BEG(M::Fadd(M::Fmul(M::Fneg(M::Bind(x)), M::Bind(y)), M::Bind(z)))
+        auto fmul = std::make_shared<BinaryInst>(getTmpName(), OP::FMUL, x, y);
+        auto fsub = std::make_shared<BinaryInst>(getTmpName(), OP::FSUB, z, fmul);
+        REWRITE_END(fmul, fsub)
+
+        // float: (-x / y) + z or (x / -y) + z -> z - (x / y)
+        REWRITE_BEG(M::Fadd(M::Fdiv(M::Fneg(M::Bind(x)), M::Bind(y)), M::Bind(z)),
+                    M::Fadd(M::Fdiv(M::Bind(x), M::Fneg(M::Bind(y))), M::Bind(z)))
+        auto fdiv = std::make_shared<BinaryInst>(getTmpName(), OP::FDIV, x, y);
+        auto fsub = std::make_shared<BinaryInst>(getTmpName(), OP::FSUB, z, fdiv);
+        REWRITE_END(fdiv, fsub)
+
+        // float: (sitofp x) + (sitofp y) -> sitofp(x + y)
+        REWRITE_BEG(M::Fadd(M::Sitofp(M::Bind(x)), M::Sitofp(M::Bind(y))))
+        auto fadd = std::make_shared<BinaryInst>(getTmpName(), OP::FADD, x, y);
+        auto sitofp = std::make_shared<SITOFPInst>(getTmpName(), fadd);
+        REWRITE_END(fadd, sitofp)
+
+        // float: -(x * c) -> x * -c
+        REWRITE_BEG(M::Fneg(M::OneUse(M::Fmul(M::Bind(x), M::Bind(fc1)))))
+        auto fmul = std::make_shared<BinaryInst>(getTmpName(), OP::FMUL, x, function.getConst(-fc1));
+        REWRITE_END(fmul)
+
+        // float: -(x / c) -> x / -c
+        REWRITE_BEG(M::Fneg(M::OneUse(M::Fdiv(M::Bind(x), M::Bind(fc1)))))
+        auto fdiv = std::make_shared<BinaryInst>(getTmpName(), OP::FDIV, x, function.getConst(-fc1));
+        REWRITE_END(fdiv)
+
+        // float: -(c / x) -> -c / x
+        REWRITE_BEG(M::Fneg(M::OneUse(M::Fdiv(M::Bind(fc1), M::Bind(x)))))
+        auto fdiv = std::make_shared<BinaryInst>(getTmpName(), OP::FDIV, function.getConst(-fc1), x);
+        REWRITE_END(fdiv)
+
+        // float: -(x * y) -> (-x * y)
+        REWRITE_BEG(M::Fneg(M::Fmul(M::Bind(x), M::Bind(y))))
+        auto fneg = std::make_shared<FNEGInst>(getTmpName(), x);
+        auto fmul = std::make_shared<BinaryInst>(getTmpName(), OP::FMUL, fneg, y);
+        REWRITE_END(fneg, fmul)
+
+        // float: -(x / y)  -> (-x / y)
+        REWRITE_BEG(M::Fneg(M::Fdiv(M::Bind(x), M::Bind(y))))
+        auto fneg = std::make_shared<FNEGInst>(getTmpName(), x);
+        auto fdiv = std::make_shared<BinaryInst>(getTmpName(), OP::FDIV, fneg, y);
+        REWRITE_END(fneg, fdiv)
+
+        // float: fsub -0.0, x -> fneg x
+        REWRITE_BEG(M::Fsub(M::Is(-0.0f), M::Bind(x)))
+        auto fneg = std::make_shared<FNEGInst>(getTmpName(), x);
+        REWRITE_END(fneg)
+
+        // float: x - (-y) -> x + y
+        REWRITE_BEG(M::Fsub(M::Bind(x), M::Fneg(M::Bind(y))))
+        auto fadd = std::make_shared<BinaryInst>(getTmpName(), OP::FADD, x, y);
+        REWRITE_END(fadd)
+
+        // float: x - (-y * z) -> x + (y * z)
+        REWRITE_BEG(M::Fsub(M::Bind(x), M::Fmul(M::Fneg(M::Bind(y)), M::Bind(z))))
+        auto fmul = std::make_shared<BinaryInst>(getTmpName(), OP::FMUL, y, z);
+        auto fadd = std::make_shared<BinaryInst>(getTmpName(), OP::FADD, x, fmul);
+        REWRITE_END(fmul, fadd)
+
+        // float: x - (-y / z) -> x + (y / z)
+        REWRITE_BEG(M::Fsub(M::Bind(x), M::Fdiv(M::Fneg(M::Bind(y)), M::Bind(z))))
+        auto fdiv = std::make_shared<BinaryInst>(getTmpName(), OP::FDIV, y, z);
+        auto fadd = std::make_shared<BinaryInst>(getTmpName(), OP::FADD, x, fdiv);
+        REWRITE_END(fdiv, fadd)
+
+        // float: (x - y) - z -> x - (y + z)
+        REWRITE_BEG(M::Fsub(M::Fsub(M::Bind(x), M::Bind(y)), M::Bind(z)))
+        auto fadd = std::make_shared<BinaryInst>(getTmpName(), OP::FADD, y, z);
+        auto fsub = std::make_shared<BinaryInst>(getTmpName(), OP::FSUB, x, fadd);
+        REWRITE_END(fadd, fsub)
+
+        // x * -1 -> sub 0 x
+        REWRITE_BEG(M::Mul(M::Bind(x), M::Is(-1)), M::Mul(M::Is(-1), M::Bind(x)))
+        auto sub = std::make_shared<BinaryInst>(getTmpName(), OP::SUB, function.getConst(0), x);
+        REWRITE_END(sub)
+
         // float: x * -1.0f or -1.0f * x -> fneg x
-        else if (match(inst, M::Fmul(M::Bind(x), M::Is(-1.0f))) ||
-                 match(inst, M::Fmul(M::Is(-1.0f), M::Bind(x)))) {
-            auto fneg = std::make_shared<FNEGInst>(getTmpName(), x);
-            inst->replaceSelf(fneg);
-            inst->getParent()->addInst(inst->getIndex(), fneg);
-            instsimplify_inst_modified = true;
-        }
+        REWRITE_BEG(M::Fmul(M::Bind(x), M::Is(-1.0f)), M::Fmul(M::Is(-1.0f), M::Bind(x)))
+        auto fneg = std::make_shared<FNEGInst>(getTmpName(), x);
+        REWRITE_END(fneg)
+
         // -x * -y -> x * y
         // -x / -y -> x / y
         // float: -x * -y -> x * y
         //        -x / -y -> x / y
-        else if (match(inst, M::Mul(M::Sub(M::Is(0), M::Bind(x)), M::Sub(M::Is(0), M::Bind(y)))) ||
-                 match(inst, M::Div(M::Sub(M::Is(0), M::Bind(x)), M::Sub(M::Is(0), M::Bind(y)))) ||
-                 match(inst, M::Fmul(M::Fneg(M::Bind(x)), M::Fneg(M::Bind(y)))) ||
-                 match(inst, M::Fdiv(M::Fneg(M::Bind(x)), M::Fneg(M::Bind(y))))) {
-            auto binary = std::make_shared<BinaryInst>(getTmpName(), inst->getOpcode(), x, y);
-            inst->replaceSelf(binary);
-            inst->getParent()->addInst(inst->getIndex(), binary);
-            instsimplify_inst_modified = true;
-        }
+        REWRITE_BEG(M::Mul(M::Sub(M::Is(0), M::Bind(x)), M::Sub(M::Is(0), M::Bind(y))),
+                    M::Div(M::Sub(M::Is(0), M::Bind(x)), M::Sub(M::Is(0), M::Bind(y))),
+                    M::Fmul(M::Fneg(M::Bind(x)), M::Fneg(M::Bind(y))),
+                    M::Fdiv(M::Fneg(M::Bind(x)), M::Fneg(M::Bind(y))))
+        auto binary = std::make_shared<BinaryInst>(getTmpName(), inst->getOpcode(), x, y);
+        REWRITE_END(binary)
+
         // x / (x * y) -> 1 / y
-        else if (match(inst, M::Div(M::Bind(x), M::Mul(M::Is(x), M::Bind(y))))) {
-            auto div = std::make_shared<BinaryInst>(getTmpName(), OP::DIV, function.getConst(1), y);
-            inst->replaceSelf(div);
-            inst->getParent()->addInst(inst->getIndex(), div);
-            instsimplify_inst_modified = true;
-        }
+        REWRITE_BEG(M::Div(M::Bind(x), M::Mul(M::Is(x), M::Bind(y))))
+        auto div = std::make_shared<BinaryInst>(getTmpName(), OP::DIV, i32_one, y);
+        REWRITE_END(div)
+
         // (x / c1) / c2  -> x / (c1 * c2)
-        else if (match(inst, M::Div(M::Div(M::Bind(x), M::Bind(c1)), M::Bind(c2)))) {
-            auto div = std::make_shared<BinaryInst>(getTmpName(), OP::DIV, x, function.getConst(c1 * c2));
-            inst->replaceSelf(div);
-            inst->getParent()->addInst(inst->getIndex(), div);
-            instsimplify_inst_modified = true;
-        }
+        REWRITE_BEG(M::Div(M::Div(M::Bind(x), M::Bind(c1)), M::Bind(c2)))
+        auto div = std::make_shared<BinaryInst>(getTmpName(), OP::DIV, x, function.getConst(c1 * c2));
+        REWRITE_END(div)
+
         // ((x * c2) + c1) / c2 -> x + c1 / c2
-        else if (match(inst, M::Div(M::Add(M::Mul(M::Bind(x), M::Bind(c2)), M::Bind(c1)), M::Is(c2)))) {
-            auto add = std::make_shared<BinaryInst>(getTmpName(), OP::ADD, x, function.getConst(c1 / c2));
-            inst->replaceSelf(add);
-            inst->getParent()->addInst(inst->getIndex(), add);
-            instsimplify_inst_modified = true;
-        }
+        REWRITE_BEG(M::Div(M::Add(M::Mul(M::Bind(x), M::Bind(c2)), M::Bind(c1)), M::Is(c2)))
+        auto add = std::make_shared<BinaryInst>(getTmpName(), OP::ADD, x, function.getConst(c1 / c2));
+        REWRITE_END(add)
+
         // Since integer division truncates towards zero, this transformation is valid.
         // (x - (x % y)) / y -> x / y
-        else if (match(inst, M::Div(M::Sub(M::Bind(x), M::Rem(M::Is(x), M::Bind(y))), M::Is(y)))) {
-            auto div = std::make_shared<BinaryInst>(getTmpName(), OP::DIV, x, y);
-            inst->replaceSelf(div);
-            inst->getParent()->addInst(inst->getIndex(), div);
-            instsimplify_inst_modified = true;
-        } else if (inst->getOpcode() == OP::PHI) {
+        REWRITE_BEG(M::Div(M::Sub(M::Bind(x), M::Rem(M::Is(x), M::Bind(y))), M::Is(y)))
+        auto div = std::make_shared<BinaryInst>(getTmpName(), OP::DIV, x, y);
+        REWRITE_END(div)
+
+        if (inst->getOpcode() == OP::PHI) {
             auto phi = inst->as<PHIInst>();
             instsimplify_inst_modified |= foldBinary(phi);
             instsimplify_inst_modified |= foldGEP(phi);
@@ -535,7 +473,7 @@ bool InstSimplifyPass::foldGEP(const pPhi &phi) {
 }
 
 bool InstSimplifyPass::isLoadSuitableForSinking(const pLoad &load) const {
-    auto &aa_res = fam->getResult<AliasAnalysis>(*func);
+    auto &aa_res = fam->getResult<BasicAliasAnalysis>(*func);
 
     // If there is some modifying after the load in the block, we cannot sink it.
     for (auto it = load->getIter(); it != load->getParent()->end(); ++it) {
@@ -609,5 +547,7 @@ bool InstSimplifyPass::foldLoad(const pPhi &phi) {
     Logger::logDebug("[InstSimplify]: folded phi of load '", phi->getName(), "'.");
     return true;
 }
-
 } // namespace IR
+#undef REPLACE
+#undef REWRITE_BEG
+#undef REWRITE_END

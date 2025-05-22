@@ -39,10 +39,10 @@ void IRGenerator::visit(CompUnit &node) {
 
     // sylib
     make_decl("getint", {}, i32_type, {IR::FuncAttr::isSylib});
-    make_decl("getch", {}, i32_type, {IR::FuncAttr::isSylib});
+    make_decl("getch", {}, i32_type, {IR::FuncAttr::isSylib, IR::FuncAttr::PromoteFromChar});
     make_decl("getfloat", {}, f32_type, {IR::FuncAttr::isSylib});
     make_decl("putint", {i32_type}, void_type, {IR::FuncAttr::isSylib});
-    make_decl("putch", {i32_type}, void_type, {IR::FuncAttr::isSylib});
+    make_decl("putch", {i32_type}, void_type, {IR::FuncAttr::isSylib, IR::FuncAttr::TruncateToChar});
     make_decl("putfloat", {f32_type}, void_type, {IR::FuncAttr::isSylib});
     make_decl("_sysy_starttime", {i32_type}, void_type, {IR::FuncAttr::isSylib});
     make_decl("_sysy_stoptime", {i32_type}, void_type, {IR::FuncAttr::isSylib});
@@ -405,6 +405,7 @@ void IRGenerator::visit(FuncDef &node) {
         Err::gassert(ret_type == IR::IRBTYPE::I32, "Invalid main.");
         if (curr_insts.empty() || curr_insts.back()->getOpcode() != IR::OP::RET)
             curr_insts.emplace_back(std::make_shared<IR::RETInst>(module.getConst(0)));
+        curr_func->addAttr(IR::FuncAttr::ExecuteExactlyOnce);
     } else if (curr_insts.empty() || curr_insts.back()->getOpcode() != IR::OP::RET) {
         if (ret_type == IR::IRBTYPE::VOID)
             curr_insts.emplace_back(std::make_shared<IR::RETInst>());

@@ -1,65 +1,106 @@
-const int len = 20;
+const int base = 16;
 
-int main()
-{
-	int i, j, t, n, temp;
-	int mult1[len] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
-	int mult2[len] = {2, 3, 4, 2, 5, 7 ,9 ,9, 0, 1, 9, 8, 7, 6, 4, 3, 2, 1, 2, 2};
-	int len1 = len;
-	int len2 = len;
-	int c1[len + 5];
-	int c2[len + 5];
-	int result[len * 2] = {};
+int getMaxNum(int n, int arr[]){
+    int ret = 0;
+    int i = 0;
+    while (i < n){
+        if (arr[i] > ret) ret = arr[i];
+        i = i + 1;
+    }
+    return ret;
+}
 
-	i = 0;
-	while (i < len1) {
-		c1[i] = mult1[i];
-		i = i + 1;
-	}	
+int getNumPos(int num, int pos){
+    int tmp = 1;
+    int i = 0;
+    while (i < pos){
+        num = num / base;
+        i = i + 1;
+    }
+    return num % base;
+}
 
-	i = 0;
-	while (i < len2) {
-		c2[i] = mult2[i];
-		i = i + 1;
-	}	
+void radixSort(int bitround, int a[], int l, int r){
+    int head[base] = {};
+    int tail[base] = {};
+    int cnt[base] = {};
 
-	n = len1 + len2 - 1;
+    if (bitround == -1 || l + 1 >= r) return;
 
-	i = 0;
-	while (i <= n) {
-		result[i]=0;
-		i = i + 1;
-	}	 
+    {    
+        int i = l;
+        
+        while (i < r){
+            cnt[getNumPos(a[i], bitround)]
+                = cnt[getNumPos(a[i], bitround)] + 1;
+            i = i + 1;
+        }        
+        head[0] = l;
+        tail[0] = l + cnt[0];
 
-	temp=0;
+        i = 1;
+        while (i < base){
+            head[i] = tail[i - 1];
+            tail[i] = head[i] + cnt[i];
+            i = i + 1;
+        }
+        i = 0;
+        while (i < base){
+            while (head[i] < tail[i]){
+                int v = a[head[i]];
+                while (getNumPos(v, bitround) != i){
+                    int t = v;
+                    v = a[head[getNumPos(t, bitround)]];
+                    a[head[getNumPos(t, bitround)]] = t;
+                    head[getNumPos(t, bitround)] = head[getNumPos(t, bitround)] + 1;
+                }
+                a[head[i]] = v;
+                head[i] = head[i] + 1;
+            }
+            i = i + 1;
+        }
+    }
 
-	i = len2 - 1;
-	while (i > -1) {
-		t = c2[i];
-		j = len1 - 1;
-		while (j > -1) {
-			temp = result[n] + t * c1[j];
-			if(temp >= 10) {
-				result[n] = (temp);
-				result[n-1] = result[n-1] + temp / 10;
-			}
-			else
-				result[n] = temp;
-			j = j - 1;
-			n = n - 1;
-		}
-		n = n + len1 - 1;
-		i = i - 1;
-	}
+    {
+        int i = l;
+        
+        head[0] = l;
+        tail[0] = l + cnt[0];
 
-	if(result[0] != 0)
-		putint(result[0]); 
+        i = 0;
+        while (i < base){
+            if (i > 0){
+                head[i] = tail[i - 1];
+                tail[i] = head[i] + cnt[i];
+            }
+            radixSort(bitround - 1, a, head[i], tail[i]);
+            i = i + 1;
+        }
+    }
 
-	i = 1;
-	while (i <= len1 + len2 - 1) {
-		putint(result[i]); 
-		i = i + 1;
-	}
+    return;
+}
 
-	return 0;
+int a[30000010];
+int ans;
+
+int main(){
+    int n = getarray(a);
+
+    starttime();
+
+    radixSort(8, a, 0, n);
+
+    int i = 0;
+    while (i < n){
+        ans = ans + i * (a[i] % (2 + i));
+        i = i + 1;
+    }
+
+    if (ans < 0)
+        ans = -ans;
+    stoptime();
+    putint(ans);
+    putch(10);
+    return 0;
 }

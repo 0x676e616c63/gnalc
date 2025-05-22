@@ -1,31 +1,96 @@
-int FourWhile() {
-  int a;
-  a = 5;
-  int b;
-  int c;
-  b = 6;
-  c = 7;
-  int d;
-  d = 10;
-  while (a < 20) {
-    a = a + 3;
-    while(b < 10){
-      b = b + 1;
-      while(c == 7){
-        c = c - 1;
-        while(d < 20){
-          d = d + 3;
+const int global_int = 303;
+const float global_float = 3.14;
+const int space = 32;
+const int maxN=100000;
+int sorted_array[maxN];
+
+void bubble_sort(int arr[], int n) {
+  int i;
+  i = 0;
+  int j;
+  while(i < n-1){
+    j=0;
+    while( j < n-1){
+      if (arr[j] > arr[j + 1]) {
+              int temp = arr[j];
+              arr[j] = arr[j + 1];
+              arr[j + 1] = temp;
         }
-        d = d - 1;
-      }
-      c = c + 1;
+      j=j+1;
     }
-    b = b - 2;
+    i=i+1;
   }
-  
-  return (a + (b + d) + c);
+}
+
+int binary_search(int arr[], int n, int target) {
+    int low = 0;
+    int high = n - 1;
+
+    while (low <= high) {
+        int mid = (low + high) / 2;
+        if (arr[mid] == target) {
+            return mid;
+        } else if (arr[mid] < target) {
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+
+    return -1; // Target not found
+}
+
+void perform_operations() {
+    
+    int a = 10;
+    int b = 5;
+
+    // Arithmetic operations
+    int sum = a + b;
+    int diff = a - b;
+    int prod = a * b;
+    int quot = a / b;
+    int mod = a % b;
+
+    
+    putint(sum);putch(space);
+    putint(diff);putch(space);
+    putint(prod);putch(space);
+    putint(quot);putch(space);
+    putint(mod);putch(space);
+}
+
+void array_init_and_process() {
+
+    // Initialize the array with some values
+    int i=0;
+    while(i<maxN){
+      sorted_array[i] = i*10000303%maxN;
+      i=i+1;
+    }
+
+    // Perform bubble sort
+    bubble_sort(sorted_array, maxN);
+
+
+    // Search for a value
+    int target = global_int;
+    
+    int index = binary_search(sorted_array, maxN, target);
+
+    
+    putint(target);putch(space);
+    putint(index);putch(space);
 }
 
 int main() {
-  return FourWhile();
+    // Perform array initialization and processing
+    starttime();
+    array_init_and_process();
+
+    perform_operations();
+    stoptime();
+    return 0;
+    
 }
+

@@ -240,8 +240,10 @@ void Loop::addSubLoop(const pLoop &loop) {
 }
 
 void Loop::addBlock(BasicBlock *bb) {
-    loop_blocks.emplace_back(bb);
-    blockset.insert(bb);
+    if (!contains(bb)) {
+        loop_blocks.emplace_back(bb);
+        blockset.insert(bb);
+    }
     for (auto loop = getParent(); loop != nullptr; loop = loop->getParent())
         loop->addBlock(bb);
 }

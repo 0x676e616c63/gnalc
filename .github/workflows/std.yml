@@ -1,4 +1,4 @@
-name: Gnalc Test - O1
+name: Gnalc Test - Std
 
 on:
   push:
@@ -6,13 +6,13 @@ on:
     paths:
       - 'lib/**'
       - 'include/**'
-      - '.github/workflows/o1.yml'
+      - 'std.yml'
   pull_request:
     branches: [ "main", "ci" ]
     paths:
       - 'lib/**'
       - 'include/**'
-      - '.github/workflows/o1.yml'
+      - 'std.yml'
 
 env:
   BUILD_TYPE: Release
@@ -41,7 +41,7 @@ jobs:
 
       - name: Test
         working-directory: ${{github.workspace}}/build
-        run: ctest -C ${{env.BUILD_TYPE}} -R o1
+        run: ctest -C ${{env.BUILD_TYPE}} -R std
 
       - name: Check
         working-directory: ${{github.workspace}}/build

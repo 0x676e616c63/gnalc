@@ -16,7 +16,7 @@ constexpr auto LOCAL_ARRAY_MEMSET_THRESHOLD = 32;
 // Maximum number of blocks
 constexpr auto GVNPRE_SKIP_BLOCK_THRESHOLD = 1000;
 // Maximum allowed expression nesting depth
-constexpr auto GVNPRE_SKIP_NESTED_EXPR_THRESHOLD = 1000;
+constexpr auto GVNPRE_SKIP_NESTED_EXPR_THRESHOLD = 128;
 
 // Function Inline
 constexpr auto FUNCTION_INLINE_INST_THRESHOLD = 1000;
@@ -39,7 +39,20 @@ constexpr auto LSR_EXPANSION_THRESHOLD = 5;
 
 // Internalize
 // Avoid internalizing global variables whose size is larger than this threshold.
-constexpr auto INTERNALIZE_GLOBAL_SIZE_THRESHOLD = 1048576; // 1 MB
+constexpr auto INTERNALIZE_GLOBAL_SIZE_THRESHOLD = 1024 * 1024; // 1 MB
+
+// Loop Unroll
+constexpr unsigned LOOP_UNROLLING_PEEL_COUNT = 10;
+constexpr unsigned LOOP_UNROLLING_FULLY_UNROLL_SIZE = 200;
+constexpr unsigned LOOP_UNROLLING_FULLY_UNROLL_COUNT = 16;
+constexpr unsigned LOOP_UNROLLING_PARTIALLY_UNROLL_SIZE = 200;
+constexpr unsigned LOOP_UNROLLING_PARTIALLY_UNROLL_COUNT = 8;
+constexpr unsigned LOOP_UNROLLING_RUNTIME_UNROLL_SIZE = 200;
+constexpr unsigned LOOP_UNROLLING_RUNTIME_UNROLL_COUNT = 8;
+constexpr unsigned LOOP_UNROLLING_MAX_PROCESS_SIZE = 100;
+
+// If Conversion
+constexpr auto IF_CONVERSION_DUPLICATION_THRESHOLD = 4;
 } // namespace Config::IR
 
 namespace Config::MIR {

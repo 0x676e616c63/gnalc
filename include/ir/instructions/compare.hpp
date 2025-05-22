@@ -26,6 +26,7 @@ enum class ICMPOP { eq, ne, sgt, sge, slt, sle };
 // @attention ：默认op1和op2类型一致，均为i32
 class ICMPInst : public Instruction {
 private:
+    friend class LoopUnrollPass;
     ICMPOP cond;
 
 public:
@@ -104,6 +105,11 @@ FCMPOP flipCond(FCMPOP cond);
 // a > b -> a < b
 ICMPOP reverseCond(ICMPOP cond);
 FCMPOP reverseCond(FCMPOP cond);
+
+bool isFalseWhenEqual(ICMPOP cond);
+bool isTrueWhenEqual(ICMPOP cond);
+bool isFalseWhenEqual(FCMPOP cond);
+bool isTrueWhenEqual(FCMPOP cond);
 } // namespace IR
 
 #endif
