@@ -69,6 +69,10 @@ void CFGsimplifyBeforeRAImpl::i1EliDetect(MIRBlk_p &mblk) {
     for (auto it = minsts.begin(); it != minsts.end();) {
 
         auto next_ptr = [&minsts, &it]() -> MIRInst_p {
+            if (it == minsts.end()) {
+                return nullptr;
+            }
+
             ++it; // alert here
             return it == minsts.end() ? nullptr : *it;
         };
@@ -105,6 +109,7 @@ void CFGsimplifyBeforeRAImpl::i1UseConsolidate(MIRInst_p_l &minst, MIRInst_p_l::
 void CFGsimplifyAfterRAImpl::impl() {
     deadBlkEli();
     brColsure();
+    uselessCmpEli();
     brSeqRev();
     brEli();
 }
@@ -181,8 +186,8 @@ void CFGsimplifyAfterRAImpl::brColsure() {
             Err::gassert(rm_it != msuccs_mpred.end(), "brColsure: msuccs_mpred corrupted " + victim->getmSym());
 
             // 2
-            *rm_it = msucc; // replace
-            mpred->brReplace(victim, msucc);
+            *rm_it = msucc;                  // replace
+            mpred->brReplace(victim, msucc); // modify InstBranch here
 
             // 3
             msucc->preds().emplace_back(mpred);
@@ -196,6 +201,39 @@ void CFGsimplifyAfterRAImpl::brColsure() {
     mblks.erase(std::remove_if(mblks.begin(), mblks.end(),
                                [&useless_blks](const auto &mblk) { return useless_blks.count(mblk); }),
                 mblks.end());
+}
+
+void CFGsimplifyAfterRAImpl::uselessCmpEli() {
+
+    for (auto &mblk : mfunc.blks()) {
+        auto &minsts = mblk->Insts();
+
+        for (auto it = minsts.begin(); it != minsts.end();) {
+            auto next_ptr = [&minsts, &it]() -> MIRInst_p {
+                if (it == minsts.end()) {
+                    return nullptr;
+                }
+
+                ++it; // alert here
+                return it == minsts.end() ? nullptr : *it;
+            };
+
+            auto recovery = it;
+
+            if (cmp(*it) && b(next_ptr()) && b(next_ptr())) {
+                auto mblk_dst_1 = (*std::prev(it))->getOp(1)->relocable()->as<MIRBlk>();
+                auto mblk_dst_2 = (*it)->getOp(1)->relocable()->as<MIRBlk>();
+
+                if (mblk_dst_1 == mblk_dst_2) {
+                    minsts.erase(recovery, it); // 应当保留一个跳转
+                }
+
+                break;
+            }
+
+            recovery == it ? (++it, nop) : nop;
+        }
+    }
 }
 
 void CFGsimplifyAfterRAImpl::brSeqRev() {
@@ -247,6 +285,10 @@ MIRInst_p_l::iterator CFGsimplifyAfterRAImpl::patternDetect(MIRBlk_p mblk) {
     for (auto it = minsts.begin(); it != minsts.end();) {
 
         auto next_ptr = [&minsts, &it]() -> MIRInst_p {
+            if (it == minsts.end()) {
+                return nullptr;
+            }
+
             ++it; // alert here
             return it == minsts.end() ? nullptr : *it;
         };

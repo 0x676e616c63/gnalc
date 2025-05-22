@@ -13,7 +13,6 @@
 #include "mir/passes/transforms/PreRAscheduling.hpp"
 #include "mir/passes/transforms/RA.hpp"
 #include "mir/passes/transforms/codelayout.hpp"
-#include "mir/passes/transforms/dce.hpp"
 #include "mir/passes/transforms/isel.hpp"
 #include "mir/passes/transforms/lowering.hpp"
 #include "mir/passes/transforms/peephole.hpp"
@@ -29,12 +28,16 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     ///@todo opt pipeline
 
     // lowering
+    using Stage = GenericPeephole::Stage;
+
     fpm.addPass(ISel());
+    fpm.addPass(GenericPeephole(Stage::AfterIsel));
     fpm.addPass(PreRAlegalize());
     fpm.addPass(CFGsimplifyBeforeRA());
     fpm.addPass(RegisterAlloc());
+    fpm.addPass(GenericPeephole(Stage::AfterRa));
     fpm.addPass(StackGenerate());
-    fpm.addPass(GenericPeephole());
+    fpm.addPass(GenericPeephole(Stage::AfterStackGenerate));
     fpm.addPass(CFGsimplifyAfterRA());
     fpm.addPass(PostRAlegalize());
 

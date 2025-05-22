@@ -38,7 +38,7 @@ enum class OperandType : uint32_t {
     Low32,
     // Arm only now
     CondFlag, // to be very aware that many inst no long have cond exec compare to armv7
-    Shift5,
+    Shift5,   // lsl, lsr, asr
     LoadStoreShamt
 };
 

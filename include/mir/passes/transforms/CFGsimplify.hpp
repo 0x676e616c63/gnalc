@@ -57,6 +57,7 @@ public:
     inline void impl();
     void deadBlkEli();
     void brColsure();
+    void uselessCmpEli();
     void brSeqRev();
     void brEli();
 

@@ -206,6 +206,9 @@ void ARMA64Printer::printout(const MIRInst &minst) {
         case ARMOpC::ST3:
             Err::todo("ARMA64Printer::printout(const MIRInst &): vectorize todo");
             break;
+        case ARMOpC::SMULL:
+            outStream << smullPrinter(minst);
+            break;
         case ARMOpC::CSET:
             outStream << csetPrinter(minst);
             break;

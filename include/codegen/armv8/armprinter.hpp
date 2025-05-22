@@ -42,6 +42,7 @@ public:
     [[nodiscard]] string copyPrinter(const MIRInst &);
 
     [[nodiscard]] string memoryPrinter(const MIRInst &);
+    [[nodiscard]] string smullPrinter(const MIRInst &);
     [[nodiscard]] string csetPrinter(const MIRInst &);
     [[nodiscard]] string cbnzPrinter(const MIRInst &);
     [[nodiscard]] string ADRP_LDRPrinter(const MIRInst &);

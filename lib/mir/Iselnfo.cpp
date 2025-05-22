@@ -28,6 +28,7 @@ bool ISelInfo::match(MIRInst_p minst, ISelContext &ctx, bool allow) const {
     return ret;
 }
 
+// for pass isel
 bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     bool modified = false;
 
@@ -118,7 +119,7 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         }
     } break;
     case OpC::InstMul: {
-        trySwapOps(minst); // 没用似乎
+        trySwapOps(minst);
         auto rhs = minst->getOp(2);
         if (rhs->isImme()) {
             minst->setOperand<2>(loadImm(rhs));
@@ -218,6 +219,7 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     return modified;
 }
 
+// for pass preRaLeagalize
 void ISelInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
     ///@todo handle select inst if we really have one
 

@@ -1,7 +1,7 @@
 #pragma once
 #ifndef GNALC_CONFIG_CONFIG_HPP
 #define GNALC_CONFIG_CONFIG_HPP
-#define GNALC_EXTENSION_A32 0
+#define GNALC_EXTENSION_A32 1
 
 namespace Config::IR {
 // IRGenerator

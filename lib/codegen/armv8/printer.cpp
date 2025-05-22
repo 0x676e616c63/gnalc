@@ -33,6 +33,25 @@ string ARMA64Printer::binaryPrinter(const MIRInst &minst) {
         str += '#' + std::to_string(rhs->imme());
     }
 
+    // for extra shift op
+    if ((op == OpC::InstAdd || op == OpC::InstSub) && minst.getOp(3)) {
+
+        str += ",\t";
+
+        unsigned imme = minst.getOp(3)->imme();
+        unsigned shift_op = imme >> 30;
+
+        if (shift_op == 0) {
+            str += "lsl ";
+        } else if (shift_op == 1) {
+            str += "lsr ";
+        } else if (shift_op == 2) {
+            str += "asr ";
+        }
+
+        str += '#' + std::to_string(imme % 0b100000);
+    }
+
     return str;
 }
 
@@ -171,6 +190,21 @@ string ARMA64Printer::memoryPrinter(const MIRInst &minst) {
     }
 
     str += "]\n";
+
+    return str;
+}
+
+string ARMA64Printer::smullPrinter(const MIRInst &minst) {
+    string str;
+
+    const auto &def = minst.ensureDef();
+    const auto &op1 = minst.getOp(1);
+    const auto &op2 = minst.getOp(2);
+
+    str += "smull\t";
+    str += reg2s(def, 8) + ",\t";
+    str += reg2s(op1, 4) + ",\t";
+    str += reg2s(op2, 4) + '\n';
 
     return str;
 }

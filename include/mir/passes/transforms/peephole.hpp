@@ -10,6 +10,11 @@ namespace MIR_new {
 
 class GenericPeephole : public PM::PassInfo<GenericPeephole> {
 public:
+    enum Stage { AfterIsel, AfterRa, AfterStackGenerate } stage;
+
+public:
+    explicit GenericPeephole(Stage _stage) : stage(_stage) {}
+
     PM::PreservedAnalyses run(MIRFunction &, FAM &);
 };
 
@@ -51,17 +56,20 @@ public:
     };
 
 private:
+    using Stage = GenericPeephole::Stage;
+
     MIRFunction *mfunc;
     FAM *fam;
+    Stage stage;
 
 public:
-    void impl(MIRFunction &, FAM &);
+    void impl(MIRFunction &, FAM &, Stage);
     bool runOnBlk(MIRBlk_p &);
 
 private:
     // inst matches
     bool matchNop(MatchInfo &);
-    bool matchZeros(MatchInfo &);
+    bool matchArithmetic(MatchInfo &);
     bool matchFusedAdr(MatchInfo &);
 };
 

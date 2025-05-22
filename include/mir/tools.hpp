@@ -13,6 +13,8 @@ inline int popcounter_wrapper(unsigned short vic) { return __builtin_popcount(st
 
 inline int popcounter_wrapper(unsigned vic) { return __builtin_popcount(vic); }
 
+inline int popcounter_wrapper(int vic) { return __builtin_popcount(vic); }
+
 inline int popcounter_wrapper(unsigned long long vic) { return __builtin_popcountll(vic); }
 
 inline int clz_wrapper(unsigned short vic) { return __builtin_clzs(vic); }
@@ -22,6 +24,10 @@ inline int ctz_wrapper(unsigned short vic) { return __builtin_ctzs(vic); }
 inline int clz_wrapper(unsigned vic) { return __builtin_clz(vic); }
 
 inline int ctz_wrapper(unsigned vic) { return __builtin_ctz(vic); }
+
+inline int clz_wrapper(int vic) { return __builtin_clz(vic); }
+
+inline int ctz_wrapper(int vic) { return __builtin_ctz(vic); }
 
 inline int clz_wrapper(unsigned long long vic) { return __builtin_clzll(vic); }
 
@@ -54,6 +60,64 @@ template <typename T> std::shared_ptr<T> wp2p(std::weak_ptr<T> wp) {
     } else {
         return wp.lock();
     }
+}
+
+struct splited {
+    unsigned int exp1;
+    unsigned int exp2;
+    enum class oper { singlePos, singleNeg, addPos, addNeg, sub, none } cul;
+};
+
+inline splited SplitTo2PowX(int multiplier) { // unsigned
+
+    bool reverse = false;
+    splited twin{};
+    if (multiplier == 0) {
+        Err::unreachable("mulopt: try mul with zero");
+    } else if (multiplier < 0) {
+        reverse = true;
+        multiplier = std::abs(multiplier);
+    }
+
+    unsigned int cnt = popcounter_wrapper((unsigned int)multiplier);
+
+    switch (cnt) {
+    case 0:
+        Err::todo("SpilitTo2PowX: multiplier = 0");
+        break;
+    case 1:
+        twin.exp1 = ctz_wrapper(multiplier);
+        if (reverse)
+            twin.cul = splited::oper::singleNeg;
+        else
+            twin.cul = splited::oper::singlePos;
+        break;
+    case 2:
+        twin.exp1 = ctz_wrapper(multiplier);
+        multiplier = multiplier >> (twin.exp1 + 1);
+        twin.exp2 = ctz_wrapper(multiplier) + twin.exp1 + 1;
+        if (reverse)
+            twin.cul = splited::oper::addNeg;
+        else
+            twin.cul = splited::oper::addPos;
+        break;
+    default:
+        unsigned int leading = clz_wrapper(multiplier);
+        unsigned int tailing = ctz_wrapper(multiplier);
+
+        if (leading + tailing + cnt != 32) {
+            twin.cul = splited::oper::none;
+        } else {
+            twin.exp2 = tailing;
+            twin.exp1 = tailing + cnt;
+            twin.cul = splited::oper::sub;
+            if (reverse)
+                std::swap(twin.exp1, twin.exp2);
+        }
+        break;
+    }
+
+    return twin;
 }
 
 #endif
