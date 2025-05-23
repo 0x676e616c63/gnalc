@@ -16,14 +16,23 @@ private:
     struct loadInfo {
         unsigned loadedValue; // int & float
         std::set<MIRBlk_p> mblks;
-        std::set<MIRBlk_p, std::vector<std::pair<MIROperand, MIRInst_p_l::iterator>>> usedValue;
-        MIRBlk_p lca = nullptr;
+
+        std::map<MIRBlk *, std::vector<std::pair<MIROperand_p, MIRInst_p_l::iterator>>>
+            const_uses; // 不知道起什么名字好
+
+        MIRBlk *lca = nullptr;
+
+        bool operator==(const loadInfo &other) { return other.loadedValue == loadedValue; };
+    };
+
+    struct infoHash {
+        std::size_t operator()(const unsigned &constVal) const { return std::hash<unsigned>{}(constVal); }
     };
 
 private:
     MIRFunction &mfunc;
     FAM &fam;
-    std::list<loadInfo> infos;
+    std::unordered_map<unsigned, loadInfo, infoHash> infos;
 
 public:
     RedundantLoadEliImpl(MIRFunction &_mfunc, FAM &_fam) : mfunc(_mfunc), fam(_fam) {}

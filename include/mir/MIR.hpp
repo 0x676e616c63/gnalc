@@ -575,6 +575,20 @@ public:
         Err::gassert(it != mInsts.end(), "MIRBlk: cant find old succ");
     }
 
+    void addInstBeforeBr(const MIRInst_p &minst) {
+        auto it = std::find_if(mInsts.begin(), mInsts.end(), [](const MIRInst_p &minst) {
+            if (minst->isGeneric() &&
+                (minst->opcode<OpC>() == OpC::InstICmp || minst->opcode<OpC>() == OpC::InstFCmp)) {
+                ///@todo 之后可能补充其他比较语句
+                return true;
+            } else {
+                return false;
+            }
+        });
+
+        mInsts.insert(it, minst); // it 可能为 .end()
+    }
+
     ~MIRBlk() override = default;
 };
 

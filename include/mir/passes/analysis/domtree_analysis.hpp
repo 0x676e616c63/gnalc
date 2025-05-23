@@ -29,9 +29,11 @@ template <> struct GraphInfo<MIR_new::MIRBlk *> {
 } // namespace Graph
 
 namespace MIR_new {
+
 namespace detail {
 using DomTreeBuilder = Graph::GenericDomTreeBuilder<MIRBlk *, false>;
 } // namespace detail
+
 using DomTree = Graph::GenericDomTree<MIRBlk *, false>;
 
 class DomTreeAnalysis : public PM::AnalysisInfo<DomTreeAnalysis> {

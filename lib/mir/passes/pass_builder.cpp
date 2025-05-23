@@ -5,6 +5,7 @@
 #include "mir/passes/analysis/liveanalysis.hpp"
 
 // Transforms
+#include "mir/passes/analysis/domtree_analysis.hpp"
 #include "mir/passes/transforms/CFGsimplify.hpp"
 #include "mir/passes/transforms/ICF_TailDup.hpp"
 #include "mir/passes/transforms/PostRAlegalize.hpp"
@@ -12,6 +13,7 @@
 #include "mir/passes/transforms/PreRAlegalize.hpp"
 #include "mir/passes/transforms/PreRAscheduling.hpp"
 #include "mir/passes/transforms/RA.hpp"
+#include "mir/passes/transforms/RedundantLoadEli.hpp"
 #include "mir/passes/transforms/codelayout.hpp"
 #include "mir/passes/transforms/isel.hpp"
 #include "mir/passes/transforms/lowering.hpp"
@@ -32,6 +34,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
 
     fpm.addPass(ISel());
     fpm.addPass(GenericPeephole(Stage::AfterIsel));
+    fpm.addPass(RedundantLoadEli());
     fpm.addPass(PreRAlegalize());
     fpm.addPass(CFGsimplifyBeforeRA());
     fpm.addPass(RegisterAlloc());
@@ -59,7 +62,7 @@ void PassBuilder::registerFunctionAnalyses(FAM &fam) {
 #define FUNCTION_ANALYSIS(CREATE_PASS) fam.registerPass([&] { return CREATE_PASS; });
 
     FUNCTION_ANALYSIS(LiveAnalysis())
-    // FUNCTION_ANALYSIS(DomTreeAnalysis())
+    FUNCTION_ANALYSIS(DomTreeAnalysis())
     // ...
 
 #undef FUNCTION_ANALYSIS
