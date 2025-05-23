@@ -436,6 +436,8 @@ struct StkObj {
     ~StkObj() = default;
 };
 
+struct constVal {};
+
 class MIRFunction : public MIRRelocable {
 private:
     MIRBlk_p_l mBlks;

@@ -429,7 +429,12 @@ void RegisterAllocImpl::AssignColors() {
         } else {
 
             addBySet(coloredNodes, Nodes{n});
-            auto c = okColors.front();
+
+            ///@note 通过控制着色使得在一定空间范围内寄存器均匀负载
+            ///@note 由于该算法几乎没有局部性
+            ///@note 所以通过VReg的id实现简易的均衡负载
+            ///@note 因为大多数的id具有局部性
+            auto c = okColors[n->getRecover() % okColors.size()];
 
             auto &calleesave = mfunc->calleeSaveRegs();
             calleesave |= 1LL << c; // marked

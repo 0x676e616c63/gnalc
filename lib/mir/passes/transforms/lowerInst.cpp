@@ -112,7 +112,7 @@ void MIR_new::lowerInst(const IR::pBinary &binary, LoweringContext &ctx) {
     ctx.newInst(MIRInst::make(mop)
                     ->setOperand<0>(def)
                     ->setOperand<1>(ctx.mapOperand(binary->getLHS()))
-                    ->setOperand<2>(ctx.mapOperand(binary->getRHS())));
+                    ->setOperand<2>(ctx.mapOperand(binary->getRHS()))); // 可能带常数
 
     ctx.addOperand(binary, def);
 }

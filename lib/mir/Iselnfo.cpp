@@ -20,6 +20,8 @@ bool ISelInfo::isLegalGenericInst(MIRInst_p minst) const {
 }
 
 bool ISelInfo::match(MIRInst_p minst, ISelContext &ctx, bool allow) const {
+    ///@note 外部控制该函数循环执行, 直到没有新的修改
+
     bool ret = legalizeInst(minst, ctx); // not impl yet
 
     ///@todo do something when allow is true
@@ -133,7 +135,7 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     case OpC::InstAnd:
     case OpC::InstOr:
     case OpC::InstXor:
-        Err::todo("legalizeInst: bitwise op not implement yet");
+        break; // 位运算目前只有后端会用
     case OpC::InstShl:
     case OpC::InstLShr:
     case OpC::InstAShr: {
@@ -144,6 +146,7 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
             Err::gassert(rhs->imme() < 32 && rhs->imme() >= 0,
                          "legalizeInst: shift imme out of range"); // though rhs == 0 is useless
         }
+
     } break;
     case OpC::InstSDiv: {
         auto lhs = minst->getOp(1);
@@ -177,17 +180,28 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         auto lhs = minst->getOp(1);
         auto rhs = minst->getOp(2);
 
-        auto minst_div = ctx.newInst(OpC::InstSDiv);
-        auto minst_mul = ctx.newInst(OpC::InstMul);
-        auto minst_sub = ctx.newInst(OpC::InstSub);
+        if (rhs->isImme() && popcounter_wrapper(rhs->imme()) == 1) {
+            // 后边窥孔不是很方便, 所以放在这里
 
-        auto result1 = MIROperand::asVReg(ctx.codeGenCtx().nextId(), OpT::Int32);
-        auto result2 = MIROperand::asVReg(ctx.codeGenCtx().nextId(), OpT::Int32);
-        minst_div->setOperand<0>(result1)->setOperand<1>(lhs)->setOperand<2>(rhs);
-        minst_mul->setOperand<0>(result2)->setOperand<1>(result1)->setOperand<2>(rhs);
-        minst_sub->setOperand<0>(def)->setOperand<1>(lhs)->setOperand<2>(result2);
+            auto minst_and = ctx.newInst(OpC::InstAnd);
+
+            minst_and->setOperand<0>(def)->setOperand<1>(lhs)->setOperand<2>(
+                MIROperand::asImme(rhs->imme() - 1, OpT::Int32));
+
+        } else {
+            auto minst_div = ctx.newInst(OpC::InstSDiv);
+            auto minst_mul = ctx.newInst(OpC::InstMul);
+            auto minst_sub = ctx.newInst(OpC::InstSub);
+
+            auto result1 = MIROperand::asVReg(ctx.codeGenCtx().nextId(), OpT::Int32);
+            auto result2 = MIROperand::asVReg(ctx.codeGenCtx().nextId(), OpT::Int32);
+            minst_div->setOperand<0>(result1)->setOperand<1>(lhs)->setOperand<2>(rhs);
+            minst_mul->setOperand<0>(result2)->setOperand<1>(result1)->setOperand<2>(rhs);
+            minst_sub->setOperand<0>(def)->setOperand<1>(lhs)->setOperand<2>(result2);
+        }
 
         ctx.delInst(minst); // add to list, handle later
+
         modified |= true;
     } break;
     case OpC::InstFRem: {

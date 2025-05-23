@@ -295,7 +295,14 @@ MIRInst_p_l::iterator CFGsimplifyAfterRAImpl::patternDetect(MIRBlk_p mblk) {
 
         auto recovery = it;
         if (cmp(*it) && b(next_ptr()) && b(next_ptr())) {
-            return recovery;
+            auto br_true = std::prev(it);
+            auto br_false = it;
+            auto mblk_true = (*br_true)->getOp(1)->relocable()->as<MIRBlk>();
+            auto mblk_false = (*br_false)->getOp(1)->relocable()->as<MIRBlk>();
+
+            if (mblk_true == mblk->nxt()) {
+                return recovery;
+            }
         }
 
         recovery == it ? (++it, nop) : nop;

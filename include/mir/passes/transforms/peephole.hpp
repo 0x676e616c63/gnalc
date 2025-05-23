@@ -68,9 +68,9 @@ public:
 
 private:
     // inst matches
-    bool matchNop(MatchInfo &);
-    bool matchArithmetic(MatchInfo &);
-    bool matchFusedAdr(MatchInfo &);
+    bool matchNop(MatchInfo &);        // after ra
+    bool matchArithmetic(MatchInfo &); // after isel
+    bool matchFusedAdr(MatchInfo &);   // after stack generate
 };
 
 }; // namespace MIR_new
