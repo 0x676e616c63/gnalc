@@ -158,6 +158,11 @@ void ARMA64Printer::printout(const MIRInst &minst) {
         case OpC::InstVMul:
         case OpC::InstVDiv:
         case OpC::InstVHorizontalAdd:
+        case OpC::InstFPVAdd:
+        case OpC::InstFPVSub:
+        case OpC::InstFPVMul:
+        case OpC::InstFPVDiv:
+        case OpC::InstFPVHorizontalAdd:
             Err::todo("ARMA64Printer::printout(const MIRInst &): vectorize todo");
             break;
         case OpC::InstICmp:
@@ -207,7 +212,13 @@ void ARMA64Printer::printout(const MIRInst &minst) {
             Err::todo("ARMA64Printer::printout(const MIRInst &): vectorize todo");
             break;
         case ARMOpC::SMULL:
-            outStream << smullPrinter(minst);
+            outStream << smullPrinter(minst); // deal with special bitWides
+            break;
+        case ARMOpC::MADD:
+        case ARMOpC::MSUB:
+        case ARMOpC::FMADD:
+        case ARMOpC::FMSUB:
+            outStream << ternaryPrinter(minst);
             break;
         case ARMOpC::CSET:
             outStream << csetPrinter(minst);

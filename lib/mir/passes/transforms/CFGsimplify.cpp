@@ -194,8 +194,8 @@ void CFGsimplifyAfterRAImpl::brColsure() {
         }
 
         /// step 3: 仅保证正确性的做法, 不一定是最好的空间顺序
-        mprv->resetNxt(mnxt);
-        mnxt->resetPrv(mprv);
+        mprv ? mprv->resetNxt(mnxt) : nop;
+        mnxt ? mnxt->resetPrv(mprv) : nop;
     }
 
     mblks.erase(std::remove_if(mblks.begin(), mblks.end(),

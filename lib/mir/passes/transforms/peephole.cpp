@@ -145,6 +145,10 @@ bool GenericPeepholeImpl::matchArithmetic(MatchInfo &info) {
         do {
             --backiter;
 
+            if (backiter == minsts.end()) { // iter = .begin()
+                break;
+            }
+
             auto minst_back = *backiter;
             if (minst_back->isGeneric() && minst_back->opcode<OpC>() == OpC::InstLoadImm &&
                 mop2 == minst_back->ensureDef()) {

@@ -41,6 +41,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     fpm.addPass(StackGenerate());
     fpm.addPass(GenericPeephole(Stage::AfterStackGenerate));
     fpm.addPass(CFGsimplifyAfterRA());
+    fpm.addPass(PostRaScheduling());
     fpm.addPass(PostRAlegalize());
 
     return fpm;

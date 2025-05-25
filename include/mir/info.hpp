@@ -222,6 +222,7 @@ enum ARMOpC : uint32_t {
     MADD,
     MSUB,
     FMADD,
+    FMSUB,
     CSET,     // cond set
     CBNZ,     // compare and branch if not zero
     ADRP_LDR, // load page of address then load address

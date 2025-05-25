@@ -75,7 +75,7 @@ void PostRaSchedulingImpl::MkDAG(SchedulingModule &Module) {
         for (int i = 1; i <= inst->getUseNr(); ++i) {
             auto &mop = inst->getOp(i);
 
-            if (mop) {
+            if (mop && mop->isReg()) {
                 mop->isStack() ? tmp.emplace_back(ARMReg::SP) : tmp.emplace_back(mop->isa());
             }
         }
@@ -141,12 +141,10 @@ void PostRaSchedulingImpl::MkDAG(SchedulingModule &Module) {
                 }
             } else {
                 switch (inst->opcode<OpC>()) {
-                    switch (inst->opcode<OpC>()) {
-                    case OpC::InstSelect:
-                        return true;
-                    default:
-                        return false;
-                    }
+                case OpC::InstSelect:
+                    return true;
+                default:
+                    return false;
                 }
             }
         }
@@ -262,14 +260,15 @@ MIRInst_p_l SchedulingModule::scheduling() {
     // LAMBDA BEGIN
 
     auto dynamicRank = [&](MIRInst_p inst, unsigned cur_cycle) {
-        unsigned waitPenalty = 0; // need a fuzz
+        unsigned waitPenalty = 1; // need a fuzz
         return rank[inst] + (cur_cycle - readyTimes[inst]) * waitPenalty;
     };
 
     // LAMBDA END
 
-    auto &minsts = mblk->Insts();
-    for (auto &minst : minsts) {
+    auto minsts = mblk->Insts(); // ??
+    int expect_size = minsts.size();
+    for (const auto &minst : minsts) {
 
         if (degrees[minst] == 0) {
             readyInsts.emplace_back(minst);
@@ -278,20 +277,22 @@ MIRInst_p_l SchedulingModule::scheduling() {
 
     unsigned cycle = 0, lastSuccessCycle = 0;
 
-    while (newInsts.size() != minsts.size()) {
+    while (newInsts.size() < expect_size) {
         MIRInst_p_l newInReady;
 
+        ///@note 由于ALU可以双发射, 所以这里尝试两次
         for (int issue = 0; issue < multipleIssue; ++issue) {
             unsigned trySchCount = 0;
             bool success = false;
 
-            readyInsts.sort([&](const auto &l, const auto &r) { return dynamicRank(l) > dynamicRank(r); });
+            readyInsts.sort(
+                [&](const auto &l, const auto &r) { return dynamicRank(l, cycle) > dynamicRank(r, cycle); });
 
             while (trySchCount < readyInsts.size()) { // 最大尝试数量
                 auto minst = readyInsts.front();
                 readyInsts.pop_front();
 
-                if (instScheduling(minst)) { // 本质上是非常复杂的启发式, 并且是第二个
+                if (instScheduling(minst, cycle)) {
                     newInsts.emplace_back(minst);
 
                     lastSuccessCycle = 0;
@@ -319,6 +320,8 @@ MIRInst_p_l SchedulingModule::scheduling() {
         ++cycle;
         ++lastSuccessCycle;
 
+        Err::gassert(lastSuccessCycle < 256, "scheduling: deadlock occurred");
+
         for (auto &minst : newInReady) {
             ///@brief add into ready list of next cycle
             readyTimes[minst] = cycle;
@@ -329,4 +332,70 @@ MIRInst_p_l SchedulingModule::scheduling() {
     return newInsts;
 }
 
-bool SchedulingModule::instScheduling(const MIRInst_p &minst) {}
+bool SchedulingModule::instScheduling(const MIRInst_p &minst, unsigned cycle) {
+    // LAMBDA BEGIN
+
+    auto getDef = [](MIRInst_p inst) { return inst->getDef() ? inst->getDef()->reg() : -1; };
+
+    auto getUses = [](MIRInst_p inst) {
+        std::list<unsigned> tmp = {}; // register list
+        for (int i = 1; i <= inst->getUseNr(); ++i) {
+            auto &mop = inst->getOp(i);
+
+            if (mop && mop->isReg()) {
+                mop->isStack() ? tmp.emplace_back(ARMReg::SP) : tmp.emplace_back(mop->reg());
+            }
+        }
+
+        return tmp;
+    };
+
+    // LAMBDA END
+
+    auto [latency, issueCycles, resource] = schedInfo(minst->opcode());
+
+    if (!resource) {
+        ///@note 难以调度或者不应调度的inst
+        return true;
+    }
+
+    /// step1 : 检查指令发射条件
+    bool regReady = true;
+    for (auto &use : getUses(minst)) {
+        if (cycle >= RegisterResources[ARMReg(use)]) {
+            continue;
+        }
+        regReady = false;
+    }
+
+    if (!regReady) {
+        return false;
+    }
+
+    /// step2 : 检查指令所需硬件
+    bool machineReady = false;
+
+    if (resource == A53UnitALU) {
+        if (MachineResources[A53UnitALU_1] <= cycle || MachineResources[A53UnitALU_2] <= cycle) {
+            machineReady = true;
+        }
+    } else {
+        if (MachineResources[ResourcesA53(resource)] <= cycle) {
+            return true;
+        }
+    }
+
+    if (!machineReady) {
+        return false;
+    }
+
+    /// step3 : 确认发射, 修改资源预期
+
+    auto def = getDef(minst);
+
+    RegisterResources[ARMReg(def)] = cycle + latency;
+
+    MachineResources[ResourcesA53(resource)] = cycle + issueCycles;
+
+    return true;
+}

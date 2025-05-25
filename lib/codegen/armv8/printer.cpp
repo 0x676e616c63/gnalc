@@ -209,6 +209,25 @@ string ARMA64Printer::smullPrinter(const MIRInst &minst) {
     return str;
 }
 
+string ARMA64Printer::ternaryPrinter(const MIRInst &minst) {
+    string str;
+
+    const auto &def = minst.ensureDef();
+    const auto &op1 = minst.getOp(1);
+    const auto &op2 = minst.getOp(2);
+    const auto &op3 = minst.getOp(3);
+
+    auto bitWide = getBitWideChoosen(def->type(), op1->type(), op2->type(), op3->type());
+
+    str += ARMOpC2S(minst.opcode<ARMOpC>()) + '\t';
+    str += reg2s(def, bitWide) + ",\t";
+    str += reg2s(op1, bitWide) + ",\t";
+    str += reg2s(op2, bitWide) + ",\t";
+    str += reg2s(op3, bitWide) + '\n';
+
+    return str;
+}
+
 string ARMA64Printer::csetPrinter(const MIRInst &minst) {
     const auto &def = minst.ensureDef();
     const auto &cond = minst.getOp(1)->imme();
@@ -227,7 +246,7 @@ string ARMA64Printer::cbnzPrinter(const MIRInst &minst) {
     const auto &label = minst.getOp(2)->relocable()->getmSym();
 
     string str;
-    str += "cbnz\t";
+    str += "cbnz\t";                                    // nz = not zero
     str += reg2s(use, getBitWide(use->type())) + ",\t"; // 4
     str += label;
 

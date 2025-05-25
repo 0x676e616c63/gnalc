@@ -361,6 +361,8 @@ public:
         return std::get<T>(mOpcode); // wrong variant idx maybe ?
     }
 
+    auto opcode() const { return mOpcode; }
+
     bool isGeneric() const { return mOpcode.index() == 0; }
 
     MIRInst &resetOpcode(OpC opcode) {

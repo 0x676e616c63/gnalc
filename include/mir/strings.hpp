@@ -186,12 +186,28 @@ inline string ARMOpC2S(ARMOpC op) {
         return "ld2";
     case LD3:
         return "ld3";
+    case LD4:
+        return "ld4";
+    case LD5:
+        return "ld5";
     case ST1:
         return "st1";
     case ST2:
         return "st2";
     case ST3:
         return "st3";
+    case ST4:
+        return "st4";
+    case ST5:
+        return "st5";
+    case MADD:
+        return "madd";
+    case MSUB:
+        return "msub";
+    case FMADD:
+        return "fmadd";
+    case FMSUB:
+        return "fmsub";
     case MOV:
         return "mov";
     case MOVZ:

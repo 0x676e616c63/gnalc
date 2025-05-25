@@ -15,7 +15,7 @@ enum ResourcesA53 {
     A53UnitALU = 4, // 从tableGen来看, a53只有ALU相关的指令能够双发射
     A53UnitMAC = 8,
     A53UnitDiv = 16,
-    A53UnitLdSt = 32,
+    A53UnitLdSt = 32, // 似乎无需占用ALU
     A53UnitB = 64,
     A53UnitFPALU = 128,
     A53UnitFPMDS = 256,
@@ -27,7 +27,7 @@ struct InstExecInfo {
     uint32_t resourceOccupied;
 };
 
-inline InstExecInfo schedInfo(OpC opcode) {
+inline InstExecInfo schedInfoImpl(OpC opcode) {
     switch (opcode) {
     case OpC::InstAdd:
     case OpC::InstAddSP:
@@ -90,10 +90,13 @@ inline InstExecInfo schedInfo(OpC opcode) {
     }
 }
 
-inline InstExecInfo schedInfo(ARMOpC opcode) {
+inline InstExecInfo schedInfoImpl(ARMOpC opcode) {
     ///@warning 对于 LDx/STx 的处理相当粗略, 具体的latency和cycle和加载/存放的类型有很大关系
 
     switch (opcode) {
+    case ARMOpC::INC:
+    case ARMOpC::DEC:
+        return {3, 1, A53UnitALU};
     case ARMOpC::ADRP_LDR:
         return {8, 2, A53UnitLdSt};
     case ARMOpC::BL:
@@ -103,6 +106,7 @@ inline InstExecInfo schedInfo(ARMOpC opcode) {
     case ARMOpC::CSET:
         return {2, 1, A53UnitALU};
     case ARMOpC::FMADD:
+    case ARMOpC::FMSUB:
         return {10, 1, A53UnitFPMDS};
     case ARMOpC::LDR:
     case ARMOpC::STR:
@@ -136,6 +140,15 @@ inline InstExecInfo schedInfo(ARMOpC opcode) {
         return {4, 1, A53UnitMAC};
     default:
         return {0, 0, 0};
+    }
+}
+
+inline InstExecInfo schedInfo(std::variant<MIR_new::OpC, MIR_new::ARMOpC> opcode) {
+
+    if (opcode.index() == 0) {
+        return schedInfoImpl(std::get<OpC>(opcode));
+    } else {
+        return schedInfoImpl(std::get<ARMOpC>(opcode));
     }
 }
 

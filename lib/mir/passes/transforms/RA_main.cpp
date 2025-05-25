@@ -436,6 +436,7 @@ void RegisterAllocImpl::AssignColors() {
             ///@note 由于lowering是线性的方式, 所以大多数的id具有局部性
 
             auto c = okColors[n->getRecover() % okColors.size()];
+            // auto c = *okColors.begin();
 
             auto &calleesave = mfunc->calleeSaveRegs();
             calleesave |= 1LL << c; // marked

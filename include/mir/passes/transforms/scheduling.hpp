@@ -3,6 +3,7 @@
 #define GNALC_ARMV8_MIR_TRANSFORMS_SCHEDULING_HPP
 
 #include "mir/passes/pass_manager.hpp"
+#include "mir/schedA53.hpp"
 
 ///@note 指令重排分为两部分
 ///@note 寄存器分配前的重排需要减少寄存器压力
@@ -25,12 +26,13 @@ struct SchedulingModule {
     UM<MIRInst_p, US<MIRInst_p>> antideps;
     UM<MIRInst_p, int> rank;
 
-    unsigned multipleIssue = 2;
-    bool pipeA_available = true;
-    bool pipeB_available = true;
+    /// @brief available resources
+    unsigned multipleIssue = 2; // 实际上只有ALU是多发射的
+    UM<ResourcesA53, unsigned> MachineResources;
+    UM<ARMReg, unsigned> RegisterResources;
 
     MIRInst_p_l scheduling();
-    bool instScheduling(const MIRInst_p &);
+    bool instScheduling(const MIRInst_p &, unsigned);
 };
 
 class PreRaSchedulingImpl {
