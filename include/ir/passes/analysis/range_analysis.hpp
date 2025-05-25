@@ -69,6 +69,9 @@ struct Range {
         max = (std::min)(max, item.max);
         return true;
     }
+    bool contains(const Range &item) {
+        return min <= item.min && max >= item.max;
+    }
 };
 template  <typename T>
 Range<T> merge(const Range<T> &a, const Range<T> &b) {
@@ -88,9 +91,18 @@ private:
     Range<T> global;
 
     bool updateGlobal(const Range<T> &range) {
-        return global.intersect(range);
+        if (global.intersect(range)) {
+            for (auto &[bb, range] : context_map)
+                range.intersect(global);
+            return true;
+        }
+        return false;
     }
+
     bool updateContextual(const Range<T> &range, BasicBlock* bb) {
+        if (global.contains(range))
+            return false;
+
         return context_map[bb].intersect(range);
     }
 public:
@@ -153,12 +165,6 @@ private:
         }
         return int_range_map[val].updateContextual(range, bb);
     }
-    bool update(const pVal &val, const Range<int> &range) {
-        return update(val.get(), range);
-    }
-    bool update(const pVal &val, const Range<int> &range, const pBlock& bb) {
-        return update(val.get(), range, bb.get());
-    }
 
     bool update(Value* val, const Range<float> &range) {
         return float_range_map[val].updateGlobal(range);
@@ -171,19 +177,19 @@ private:
         }
         return float_range_map[val].updateContextual(range, bb);
     }
-    bool update(const pVal &val, const Range<float> &range) {
-        return update(val.get(), range);
-    }
-    bool update(const pVal &val, const Range<float> &range, const pBlock& bb) {
-        return update(val.get(), range, bb.get());
-    }
-
 };
 
 class RangeAnalysis : public PM::AnalysisInfo<RangeAnalysis> {
 public:
     RangeResult run(Function &f, FAM &fpm);
 
+private:
+    FAM * fam;
+    Function * func;
+    RangeResult res;
+    void analyzeArgument();
+    void analyzeGlobal();
+    void analyzeContextual();
 public:
     using Result = RangeResult;
 
