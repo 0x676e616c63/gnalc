@@ -35,6 +35,13 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
         return;
     }
 
+    // 不处理中间退出的循环
+    if (!loop->isExiting(loop->getHeader()) && !loop->isExiting(loop->getLatch())) {
+        Logger::logInfo("[LoopUnroll] Unroll disabled because the loop exits from the middle.");
+        option.disable();
+        return;
+    }
+
     // 不处理含调用的循环, Disable
     // for (const auto &bb : loop->blocks()) {
     //     for (const auto &inst : *bb) {
@@ -594,18 +601,13 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
 
     auto DropExitbAndItsPhiOper = [&](const pB &target) {
         auto br = target->getBRInst();
+        // Delete undeleted BR Exitb, maybe useless.
         if (br->isConditional()) {
             if (br->getTrueDest() == exitb) {
                 br->dropTrueDest();
             } else if (br->getFalseDest() == exitb) {
                 br->dropFalseDest();
-            } else {
-                /// TODO: Somewhere I dropped, Somewhere not, it may needs to be fixed.
-                // Err::unreachable();
             }
-        } else {
-            //// TODO: Somewhere I dropped, Somewhere not, it may needs to be fixed.
-            // Err::unreachable();
         }
         for (auto &phi : exitb->phis()) {
             phi->delPhiOperByBlock(target);
