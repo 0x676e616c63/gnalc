@@ -211,10 +211,17 @@ enum ARMOpC : uint32_t {
     LD1,
     LD2,
     LD3,
+    LD4,
+    LD5,
     ST1,
     ST2,
     ST3,
-    SMULL,    // smull x<>, w<>, w<>
+    ST4,
+    ST5,
+    SMULL, // smull x<>, w<>, w<>
+    MADD,
+    MSUB,
+    FMADD,
     CSET,     // cond set
     CBNZ,     // compare and branch if not zero
     ADRP_LDR, // load page of address then load address

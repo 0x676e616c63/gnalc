@@ -113,6 +113,12 @@ enum class MIRGenericInst : uint32_t {
     InstVMul,
     InstVDiv,
     InstVHorizontalAdd,
+    // fp vector, at most 4
+    InstFPVAdd,
+    InstFPVSub,
+    InstFPVMul,
+    InstFPVDiv,
+    InstFPVHorizontalAdd,
     // Comparison
     InstICmp, // dst, lhs, rhs, op
     InstFCmp, // dst, lhs, rhs, op
@@ -372,6 +378,7 @@ public:
     template <unsigned idx> MIROperand_p &getOp() { return mOperands[idx]; }
     const MIROperand_p &getOp(unsigned idx) const { return mOperands[idx]; }
     template <unsigned idx> const MIROperand_p &getOp() const { return mOperands[idx]; }
+    ///@note if you're sure about there is a def op, than use ensureDef not this one
     MIROperand_p &getDef() { return mOperands[0]; }
     MIROperand_p &ensureDef() {
         Err::gassert(mOperands[0] != nullptr, "MIRInst::ensureDef: def is nullptr");
@@ -383,6 +390,7 @@ public:
         return mOperands[0];
     }
 
+    ///@note return the max idx of use list, so the list may be padded, and remaid to use '<='
     unsigned getUseNr() const;
 
     unsigned getDefNr() const;
@@ -538,6 +546,8 @@ public:
 
     MIRInst_p_l &Insts() { return mInsts; }
     const MIRInst_p_l &Insts() const { return mInsts; }
+
+    void replaceInsts(MIRInst_p_l &new_mInsts) { std::swap(mInsts, new_mInsts); }
 
     double TripCount() const { return mTripCount; }
     void setTripCount(double trip) { mTripCount = trip; }

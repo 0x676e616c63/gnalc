@@ -9,9 +9,7 @@
 #include "mir/passes/transforms/CFGsimplify.hpp"
 #include "mir/passes/transforms/ICF_TailDup.hpp"
 #include "mir/passes/transforms/PostRAlegalize.hpp"
-#include "mir/passes/transforms/PostRAscheduling.hpp"
 #include "mir/passes/transforms/PreRAlegalize.hpp"
-#include "mir/passes/transforms/PreRAscheduling.hpp"
 #include "mir/passes/transforms/RA.hpp"
 #include "mir/passes/transforms/RedundantLoadEli.hpp"
 #include "mir/passes/transforms/codelayout.hpp"
@@ -19,6 +17,7 @@
 #include "mir/passes/transforms/lowering.hpp"
 #include "mir/passes/transforms/peephole.hpp"
 #include "mir/passes/transforms/registercoalesce.hpp"
+#include "mir/passes/transforms/scheduling.hpp"
 #include "mir/passes/transforms/stackgenerate.hpp"
 #include "mir/passes/transforms/tro.hpp"
 
