@@ -29,9 +29,9 @@ enum class OperandType : uint32_t {
     Int32, // original int32, or extend from int8, int16
     Int64,
     Ptr = Int64,
-    Intvec,
     Float, // V<> 默认位宽
     Float32,
+    Intvec,
     Floatvec,
     special, // prob, alignment, load/store size...
     High32,

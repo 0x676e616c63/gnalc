@@ -44,7 +44,7 @@ void StackGenerateImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     }
 
     if (mfunc->isLeafFunc()) {
-        bitmap &= 0x20000000;
+        bitmap &= ~0x20000000; // no lr
     }
 
     auto calleesaves = bitmap;

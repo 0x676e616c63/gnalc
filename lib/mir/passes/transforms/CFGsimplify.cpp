@@ -53,7 +53,8 @@ PM::PreservedAnalyses CFGsimplifyAfterRA::run(MIRFunction &func, FAM &fam) {
 }
 
 void CFGsimplifyBeforeRAImpl::impl() {
-    i1Eli(); //
+    i1Eli();
+    deadBlkEli();
 }
 
 void CFGsimplifyBeforeRAImpl::i1Eli() {
@@ -107,14 +108,13 @@ void CFGsimplifyBeforeRAImpl::i1UseConsolidate(MIRInst_p_l &minst, MIRInst_p_l::
 }
 
 void CFGsimplifyAfterRAImpl::impl() {
-    deadBlkEli();
     brColsure();
     uselessCmpEli();
     brSeqRev();
     brEli();
 }
 
-void CFGsimplifyAfterRAImpl::deadBlkEli() {
+void CFGsimplifyBeforeRAImpl::deadBlkEli() {
     std::unordered_set<MIRBlk_p> dead_blks;
 
     auto &mblks = mfunc.blks();

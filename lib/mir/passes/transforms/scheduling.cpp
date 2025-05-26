@@ -90,7 +90,7 @@ void PostRaSchedulingImpl::MkDAG(SchedulingModule &Module) {
             switch (inst->opcode<ARMOpC>()) {
             case ARMOpC::LDR:
             case ARMOpC::STR:
-            case ARMOpC::ADRP_LDR:
+            // case ARMOpC::ADRP: // 仅读, 无副作用
             case ARMOpC::BL:
             case ARMOpC::CBNZ:
             case ARMOpC::LD1:

@@ -23,26 +23,39 @@
 
 namespace MIR_new {
 
+const OptInfo o1_opt_info = {.peephole_afterIsel = true,
+                             .redundantLoadEli = true,
+                             .peephole_afterRa = true,
+                             .peephole_afterStackGenerate = true,
+                             .CFGsimplifyBeforeRa = true,
+                             .CFGsimplifyAfterRa = true,
+                             .PostRaScheduling = true};
+
 FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FPM fpm;
 
-    ///@todo opt pipeline
-
-    // lowering
     using Stage = GenericPeephole::Stage;
 
     fpm.addPass(ISel());
-    fpm.addPass(GenericPeephole(Stage::AfterIsel));
-    fpm.addPass(RedundantLoadEli());
+
+    if (opt_info.peephole_afterIsel)
+        fpm.addPass(GenericPeephole(Stage::AfterIsel));
+    if (opt_info.CFGsimplifyBeforeRa)
+        fpm.addPass(CFGsimplifyBeforeRA()); // 需要在RedundantLoadEli之前做, 因为
+    if (opt_info.redundantLoadEli)
+        fpm.addPass(RedundantLoadEli());
     fpm.addPass(PreRAlegalize());
-    fpm.addPass(CFGsimplifyBeforeRA());
     fpm.addPass(RegisterAlloc());
-    fpm.addPass(GenericPeephole(Stage::AfterRa));
+    if (opt_info.peephole_afterRa)
+        fpm.addPass(GenericPeephole(Stage::AfterRa));
     fpm.addPass(StackGenerate());
-    fpm.addPass(GenericPeephole(Stage::AfterStackGenerate));
-    fpm.addPass(CFGsimplifyAfterRA());
-    fpm.addPass(PostRaScheduling());
+    if (opt_info.peephole_afterStackGenerate)
+        fpm.addPass(GenericPeephole(Stage::AfterStackGenerate));
+    if (opt_info.CFGsimplifyAfterRa)
+        fpm.addPass(CFGsimplifyAfterRA());
     fpm.addPass(PostRAlegalize());
+    if (opt_info.PostRaScheduling)
+        fpm.addPass(PostRaScheduling());
 
     return fpm;
 }
@@ -69,5 +82,4 @@ void PassBuilder::registerFunctionAnalyses(FAM &fam) {
 }
 
 void PassBuilder::registerModuleAnalyses(MAM &) {}
-
 }; // namespace MIR_new

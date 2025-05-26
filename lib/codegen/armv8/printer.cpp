@@ -113,9 +113,14 @@ string ARMA64Printer::copyPrinter(const MIRInst &minst) {
 
     auto bitWide = getBitWideChoosen(defType, useType);
 
-    if (inRange(defType, OpT::Int, OpT::Int64) && inRange(useType, OpT::Float, OpT::Floatvec) ||
-        inRange(useType, OpT::Int, OpT::Int64) && inRange(defType, OpT::Float, OpT::Floatvec) ||
-        inRange(useType, OpT::Float, OpT::Floatvec) && inRange(defType, OpT::Float, OpT::Floatvec)) {
+    if (defType == OpT::Float && useType == OpT::Float) {
+        ///@note mov from an isa to another isa, maybe caused by reduntant load eliminate
+        str += "mov\t" + reg2s(def, 16, true) + ".16b,\t" + reg2s(use, 16, true) + ".16b";
+
+    } else if (inRange(defType, OpT::Int, OpT::Int64) && inRange(useType, OpT::Float, OpT::Floatvec) ||
+               inRange(useType, OpT::Int, OpT::Int64) && inRange(defType, OpT::Float, OpT::Floatvec) ||
+               inRange(useType, OpT::Float, OpT::Floatvec) && inRange(defType, OpT::Float, OpT::Floatvec)) {
+
         str += "fmov\t" + reg2s(def, bitWide) + ",\t" + reg2s(use, bitWide);
     } else if (defType == OpT::Intvec || defType == OpT::Floatvec || useType == OpT::Intvec ||
                useType == OpT::Floatvec) {
@@ -136,7 +141,18 @@ string ARMA64Printer::memoryPrinter(const MIRInst &minst) {
 
     auto memSize = minst.getOp(5)->imme();
 
+    string str;
+
     if (minst.opcode<ARMOpC>() == ARMOpC::LDR) {
+
+        if (minst.getOp(1)->isReloc()) {
+            auto reg = Reg2S(minst.ensureDef(), memSize); // adrp + ldr
+            auto label = minst.getOp(1)->relocable()->getmSym();
+            str += "ldr\t" + reg + ", [" + reg + ", :got_lo12:" + label + "]";
+
+            return str;
+        }
+
         op1 = minst.ensureDef();
         base = minst.getOp(1)->isISA() ? minst.getOp(1) : MIROperand::asISAReg(ARMReg::SP, OpT::Int64);
         idx = minst.getOp(2);
@@ -147,8 +163,6 @@ string ARMA64Printer::memoryPrinter(const MIRInst &minst) {
         idx = minst.getOp(3);
         shift = minst.getOp(4);
     }
-
-    string str;
 
     str += ARMOpC2S(minst.opcode<ARMOpC>()) + '\t';
 
@@ -253,15 +267,27 @@ string ARMA64Printer::cbnzPrinter(const MIRInst &minst) {
     return str;
 }
 
-string ARMA64Printer::ADRP_LDRPrinter(const MIRInst &minst) {
+string ARMA64Printer::AdrpPrinter(const MIRInst &minst) {
     const auto &def = minst.ensureDef();
     const auto &label = minst.getOp(1)->relocable()->getmSym();
 
     string str;
     string reg = reg2s(def, getBitWide(def->type())); // 8
 
-    str += "adrp\t" + reg + ", :got:" + label + '\n';
-    str += "    ldr\t" + reg + ", [" + reg + ", :got_lo12:" + label + "]"; // indent
+    str += "adrp\t" + reg + ", :got:" + label;
+
+    return str;
+}
+
+string ARMA64Printer::movVPrinter(const MIRInst &minst) {
+    const auto &def = minst.ensureDef();
+    const auto &use = minst.getOp(1);
+
+    auto bitWide = 16;
+
+    string str = "mov\t";
+    str += reg2s(def, bitWide, true) + ".16b,\t";
+    str += reg2s(use, bitWide, true) + ".16b";
 
     return str;
 }
@@ -296,6 +322,31 @@ string ARMA64Printer::movPrinter(const MIRInst &minst) {
         }
 
         str += '#' + std::to_string(imme % 0b100000);
+    }
+
+    return str;
+}
+
+string ARMA64Printer::fmovPrinter(const MIRInst &minst) {
+    const auto &def = minst.ensureDef();
+    const auto defType = def->type();
+    const auto &use = minst.getOp(1);
+    const auto useType = use->type();
+    const auto &shift = minst.getOp(2);
+    auto bitWide = getBitWideChoosen(defType, useType);
+
+    string str;
+
+    if (inRange(defType, OpT::Int, OpT::Int64) && inRange(useType, OpT::Float, OpT::Floatvec) ||
+        inRange(useType, OpT::Int, OpT::Int64) && inRange(defType, OpT::Float, OpT::Floatvec)) {
+
+        str += "fmov\t" + reg2s(def, bitWide) + ",\t" + reg2s(use, bitWide);
+
+    } else if (defType == OpT::Float && useType == OpT::Float) {
+        ///@note mov from an isa to another isa, maybe caused by reduntant load eliminate
+        str += "mov\t" + reg2s(def, 16, true) + ".16b,\t" + reg2s(use, 16, true) + ".16b";
+    } else {
+        Err::unreachable("fmovPrinter: failed to handle this");
     }
 
     return str;

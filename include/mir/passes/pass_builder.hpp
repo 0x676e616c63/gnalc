@@ -6,7 +6,14 @@
 
 namespace MIR_new {
 struct OptInfo {
-    ///@todo
+    ///@todo to add...
+    bool peephole_afterIsel;
+    bool redundantLoadEli;
+    bool peephole_afterRa;
+    bool peephole_afterStackGenerate;
+    bool CFGsimplifyBeforeRa;
+    bool CFGsimplifyAfterRa;
+    bool PostRaScheduling;
 };
 
 extern const OptInfo o1_opt_info;

@@ -25,7 +25,7 @@ inline string Cond2S(Cond cond) {
     }
 }
 
-inline string Reg2S(const MIROperand_p &mop, unsigned bitWide) {
+inline string Reg2S(const MIROperand_p &mop, unsigned bitWide, bool vector = false) {
     auto isa = mop->isa();
 
     Err::gassert(isISAReg(isa), "Reg2S: not a isa reg");
@@ -52,8 +52,8 @@ inline string Reg2S(const MIROperand_p &mop, unsigned bitWide) {
             str += 's';
         } else if (bitWide == 8) {
             str += 'd';
-        } else {
-            str += 'q';
+        } else if (bitWide == 16) {
+            vector ? str += 'v' : str += 'q';
         }
 
         str += std::to_string(isa - 32);
@@ -62,7 +62,7 @@ inline string Reg2S(const MIROperand_p &mop, unsigned bitWide) {
     return str;
 }
 
-inline string Reg2SDebug(const MIROperand_p &mop, unsigned bitWide) {
+inline string Reg2SDebug(const MIROperand_p &mop, unsigned bitWide, bool vector = false) {
     auto isa = mop->isa();
 
     Err::gassert(isISAReg(isa), "Reg2S: not a isa reg");
@@ -89,8 +89,8 @@ inline string Reg2SDebug(const MIROperand_p &mop, unsigned bitWide) {
             str += 's';
         } else if (bitWide == 8) {
             str += 'd';
-        } else {
-            str += 'q';
+        } else if (bitWide == 16) {
+            vector ? str += 'v' : str += 'q';
         }
 
         str += std::to_string(isa - 32);
@@ -209,6 +209,7 @@ inline string ARMOpC2S(ARMOpC op) {
     case FMSUB:
         return "fmsub";
     case MOV:
+    case MOV_V:
         return "mov";
     case MOVZ:
         return "movz";

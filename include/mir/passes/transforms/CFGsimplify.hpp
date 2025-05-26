@@ -36,6 +36,7 @@ public:
 public:
     inline void impl();
     void i1Eli();
+    void deadBlkEli();
 
 public:
     void i1EliDetect(MIRBlk_p &);
@@ -55,7 +56,6 @@ public:
 
 public:
     inline void impl();
-    void deadBlkEli();
     void brColsure();
     void uselessCmpEli();
     void brSeqRev();

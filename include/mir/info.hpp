@@ -225,8 +225,10 @@ enum ARMOpC : uint32_t {
     FMSUB,
     CSET,     // cond set
     CBNZ,     // compare and branch if not zero
-    ADRP_LDR, // load page of address then load address
+    ADRP_LDR, // 中间表示
+    ADRP,     // load page of the value
     MOV,      // not suggested, I mean really
+    MOV_V,    // use mov, but with simd regs
     MOVZ,     // mov and zero the rest bits
     MOVK,     // mov and keep the rest bits
     MOVF,     // fmov
@@ -358,6 +360,8 @@ public:
     void legalizeWithStkOp(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const;
     void legalizeWithStkGep(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const;
     void legalizeWithStkPtrCast(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const;
+    void legalizeCopy(InstLegalizeContext &ctx) const;
+    void legalizeAdrp(InstLegalizeContext &ctx) const;
 
     ~ISelInfo() = default;
 };

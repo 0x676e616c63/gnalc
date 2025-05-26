@@ -226,16 +226,19 @@ void ARMA64Printer::printout(const MIRInst &minst) {
         case ARMOpC::CBNZ:
             outStream << cbnzPrinter(minst);
             break;
-        case ARMOpC::ADRP_LDR:
-            outStream << ADRP_LDRPrinter(minst);
+        case ARMOpC::ADRP:
+            outStream << AdrpPrinter(minst);
+            break;
+        case ARMOpC::MOV_V:
+            outStream << movVPrinter(minst);
             break;
         case ARMOpC::MOV:
-            Err::unreachable("ARMA64Printer::printout(const MIRInst &): not implemented");
-            break;
         case ARMOpC::MOVZ:
         case ARMOpC::MOVK:
-        case ARMOpC::MOVF:
             outStream << movPrinter(minst);
+            break;
+        case ARMOpC::MOVF: // fmov
+            outStream << fmovPrinter(minst);
             break;
         case ARMOpC::BL:
             outStream << blPrinter(minst);

@@ -97,8 +97,8 @@ inline InstExecInfo schedInfoImpl(ARMOpC opcode) {
     case ARMOpC::INC:
     case ARMOpC::DEC:
         return {3, 1, A53UnitALU};
-    case ARMOpC::ADRP_LDR:
-        return {8, 2, A53UnitLdSt};
+    case ARMOpC::ADRP:
+        return {4, 1, A53UnitLdSt};
     case ARMOpC::BL:
         return {1, 1, A53UnitB};
     case ARMOpC::CBNZ:

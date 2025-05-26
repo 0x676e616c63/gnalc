@@ -511,3 +511,37 @@ void ISelInfo::legalizeWithStkPtrCast(InstLegalizeContext &_ctx, MIROperand_p mo
         minst->resetOpcode(ARMOpC::MOV);
     }
 }
+
+void ISelInfo::legalizeCopy(InstLegalizeContext &_ctx) const {
+    auto &[minst, minsts, iter, ctx] = _ctx;
+
+    auto &def = minst->ensureDef();
+    auto &use = minst->getOp(1);
+
+    auto defType = def->type();
+    auto useType = use->type();
+
+    ARMOpC movType;
+
+    if (inRange(defType, OpT::Int, OpT::Int64) && inRange(useType, OpT::Int, OpT::Int64)) {
+        movType = ARMOpC::MOV; // orr
+    } else if (defType == OpT::Float && useType == OpT::Float) {
+        movType = ARMOpC::MOV_V; // .16b
+    } else if (inRange(defType, OpT::Intvec, OpT::Floatvec) && inRange(useType, OpT::Intvec, OpT::Floatvec)) {
+        movType = ARMOpC::MOV_V;
+    } else {
+        movType = ARMOpC::MOVF;
+    }
+
+    minst->resetOpcode(movType);
+}
+
+void ISelInfo::legalizeAdrp(InstLegalizeContext &_ctx) const {
+    auto &[minst, minsts, iter, ctx] = _ctx;
+
+    auto def = minst->ensureDef();
+
+    minsts.insert(iter, MIRInst::make(ARMOpC::ADRP)->setOperand<0>(def)->setOperand<1>(minst->getOp(1)));
+    minst->resetOpcode(ARMOpC::LDR);
+    minst->setOperand<5>(MIROperand::asImme(5, OpT::special));
+}
