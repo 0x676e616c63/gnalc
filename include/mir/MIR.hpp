@@ -73,11 +73,16 @@ template <typename... OpT> inline unsigned getBitWideChoosen(OpT... types) {
     return (std::min({getBitWide(types)...})); //
 }
 
+// 向高位宽寄存器兼容
+template <typename... OpT> inline unsigned getBitWideChoosen_L(OpT... types) {
+    return (std::max({getBitWide(types)...})); //
+}
+
 enum MIRInstCond : unsigned { AL, EQ, NE, LT, GT, LE, GE };
 
 using Cond = MIRInstCond;
 
-enum class MIRGenericInst : uint32_t {
+enum MIRGenericInst : uint32_t {
     // control-flow
     InstBranch, // cond, reloc, prob
     // Memory, get by gep, no const offset

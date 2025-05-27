@@ -133,9 +133,11 @@ inline InstExecInfo schedInfoImpl(ARMOpC opcode) {
         return {4, 1, A53UnitMAC};
     case ARMOpC::MOV:
     case ARMOpC::MOVZ:
-    case ARMOpC::MOVF:
     case ARMOpC::MOVK:
-        return {4, 1, A53UnitALU};
+        return {2, 1, A53UnitALU};
+    case ARMOpC::MOV_V:
+    case ARMOpC::MOVF:
+        return {2, 1, A53UnitFPALU};
     case ARMOpC::SMULL:
         return {4, 1, A53UnitMAC};
     default:

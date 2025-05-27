@@ -109,6 +109,7 @@ void CFGsimplifyBeforeRAImpl::i1UseConsolidate(MIRInst_p_l &minst, MIRInst_p_l::
 
 void CFGsimplifyAfterRAImpl::impl() {
     brColsure();
+    ///@todo blk layout opt...
     uselessCmpEli();
     brSeqRev();
     brEli();

@@ -70,6 +70,7 @@ private:
     // inst matches
     bool matchNop(MatchInfo &);        // after ra
     bool matchArithmetic(MatchInfo &); // after isel
+    bool matchMA(MatchInfo &);         // after isel ( MA = Multiple and Accumulate)
     bool matchFusedAdr(MatchInfo &);   // after stack generate
 };
 

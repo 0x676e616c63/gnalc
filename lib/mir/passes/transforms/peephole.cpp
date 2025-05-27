@@ -44,7 +44,7 @@ bool GenericPeepholeImpl::runOnBlk(MIRBlk_p &mblk) {
             auto recovery = iter;
             MatchInfo info(*iter, minsts, iter);
 
-            if (matchNop(info) || matchArithmetic(info) || matchFusedAdr(info)) {
+            if (matchNop(info) || matchArithmetic(info) || matchMA(info) || matchFusedAdr(info)) {
                 modified = true;
             }
 
@@ -374,4 +374,95 @@ bool GenericPeepholeImpl::matchFusedAdr(MatchInfo &info) {
     }
 
     return false;
+}
+
+bool GenericPeepholeImpl::matchMA(MatchInfo &info) {
+    if (stage != Stage::AfterIsel) {
+        return false;
+    }
+
+    auto &minst = info.minst;
+    auto &minsts = info.minsts;
+    auto &iter = info.iter;
+    ARMOpC newOpC;
+
+    // LAMBDA BEGIN
+
+    auto isAccumulator = [&minst, &newOpC]() -> bool {
+        if (!minst->isGeneric()) {
+            return false;
+        }
+
+        if (!inSet(minst->opcode<OpC>(), OpC::InstAdd, OpC::InstSub, OpC::InstFAdd, OpC::InstFSub)) {
+            return false;
+        }
+
+        newOpC = inSetAndMap<OpC, ARMOpC>(minst->opcode<OpC>(), OpC::InstAdd, ARMOpC::MADD, OpC::InstSub, ARMOpC::MSUB,
+                                          OpC::InstFAdd, ARMOpC::FMADD, OpC::InstFSub, ARMOpC::FMSUB);
+
+        if (minst->getOp(2)->isImme()) {
+            return false;
+        }
+
+        return true;
+    };
+
+    auto isMultipled = [&iter, &minst, &minsts](unsigned idx) -> MIRInst_p_l::iterator {
+        auto &multiplication = minst->getOp(idx);
+
+        auto mul_iter = std::prev(iter);
+
+        while (mul_iter != minsts.end()) {
+
+            if ((*mul_iter)->getDef() == multiplication &&                        // NOLINT
+                (*mul_iter)->isGeneric() &&                                       // NOLINT
+                inSet((*mul_iter)->opcode<OpC>(), OpC::InstMul, OpC::InstFMul)) { // NOLINT
+                break;
+            }
+
+            --mul_iter;
+        }
+
+        return mul_iter;
+    };
+
+    // LAMBDA END
+
+    if (!isAccumulator()) {
+        return false;
+    }
+
+    MIRInst_p_l::iterator mul_iter;
+    MIROperand_p reserved = nullptr;
+
+    if (inSet(newOpC, ARMOpC::MADD, ARMOpC::FMADD)) {
+        mul_iter = isMultipled(1);
+        reserved = minst->getOp(2);
+
+        if (mul_iter == minsts.end()) {
+            mul_iter = isMultipled(2);
+            reserved = minst->getOp(1);
+        }
+
+    } else {
+        mul_iter = isMultipled(2); // subtracts the product from a third register value
+        reserved = minst->getOp(1);
+    }
+
+    if (mul_iter == minsts.end()) {
+        return false;
+    }
+
+    auto multiple_1 = (*mul_iter)->getOp(1);
+    auto multiple_2 = (*mul_iter)->getOp(2);
+
+    // minsts.erase(mul_iter); ///@todo
+
+    minst->resetOpcode(newOpC);
+
+    minst->setOperand<3>(reserved);
+    minst->setOperand<2>(multiple_2);
+    minst->setOperand<1>(multiple_1);
+
+    return true;
 }

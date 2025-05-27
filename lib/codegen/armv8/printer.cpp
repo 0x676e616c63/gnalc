@@ -231,7 +231,7 @@ string ARMA64Printer::ternaryPrinter(const MIRInst &minst) {
     const auto &op2 = minst.getOp(2);
     const auto &op3 = minst.getOp(3);
 
-    auto bitWide = getBitWideChoosen(def->type(), op1->type(), op2->type(), op3->type());
+    auto bitWide = getBitWideChoosen_L(def->type(), op1->type(), op2->type(), op3->type());
 
     str += ARMOpC2S(minst.opcode<ARMOpC>()) + '\t';
     str += reg2s(def, bitWide) + ",\t";
