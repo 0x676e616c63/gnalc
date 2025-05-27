@@ -62,7 +62,7 @@ inline string Reg2S(const MIROperand_p &mop, unsigned bitWide, bool vector = fal
     return str;
 }
 
-inline string Reg2SDebug(const MIROperand_p &mop, unsigned bitWide, bool vector = false) {
+inline string Reg2SDebug(const MIROperand_p &mop, unsigned bitWide, const CodeGenContext &ctx, bool vector = false) {
     auto isa = mop->isa();
 
     Err::gassert(isISAReg(isa), "Reg2S: not a isa reg");
@@ -113,7 +113,8 @@ inline string Reg2SDebug(const MIROperand_p &mop, unsigned bitWide, bool vector 
             str += 'v' + std::to_string(isa - 32);
         }
     } else {
-        str += '%' + std::to_string(recover) + '[' + std::to_string(bitWide) + ']';
+        str += '%' + std::to_string(recover) + '{' + std::to_string(bitWide) + '}' + '[' +
+               std::to_string(ctx.queryOp(mop)) + ']';
     }
 
     str += ')';

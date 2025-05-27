@@ -48,7 +48,7 @@ bool GenericPeepholeImpl::runOnBlk(MIRBlk_p &mblk) {
                 modified = true;
             }
 
-            recovery == iter ? (++iter, nop) : nop;
+            recovery == iter ? (void)++iter : nop;
         }
         // MATCHES END
 
@@ -98,6 +98,7 @@ bool GenericPeepholeImpl::matchNop(MatchInfo &info) {
     if (isCpy(minst) && sameReg(minst->ensureDef(), minst->getOp(1))) {
         auto diter = iter;
         ++iter;
+        (*diter)->putAllOp(mfunc->CodeGenContext());
         minsts.erase(diter);
         return true;
     } else {
@@ -183,11 +184,15 @@ bool GenericPeepholeImpl::matchArithmetic(MatchInfo &info) {
         } else if (twin.cul == oper::singlePos) {
             auto shiftimme = MIROperand::asImme(twin.exp1, OpT::Int32);
 
-            auto lsl =
-                MIRInst::make<OpC>(OpC::InstShl)->setOperand<0>(mdef)->setOperand<1>(mop1)->setOperand<2>(shiftimme);
+            auto lsl = MIRInst::make<OpC>(OpC::InstShl)
+                           ->setOperand<0>(mdef, ctx)
+                           ->setOperand<1>(mop1, ctx)
+                           ->setOperand<2>(shiftimme, ctx);
 
+            (*iter)->putAllOp(ctx);
             *iter = lsl;
 
+            (*loadIter)->putAllOp(ctx);
             minsts.erase(loadIter);
 
             return true;
@@ -196,15 +201,18 @@ bool GenericPeepholeImpl::matchArithmetic(MatchInfo &info) {
 
             auto mop1_neg = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
 
-            auto neg = MIRInst::make<OpC>(OpC::InstNeg)->setOperand<0>(mop1_neg)->setOperand<1>(mop1);
+            auto neg = MIRInst::make<OpC>(OpC::InstNeg)->setOperand<0>(mop1_neg, ctx)->setOperand<1>(mop1, ctx);
             auto lsl = MIRInst::make<OpC>(OpC::InstShl)
-                           ->setOperand<0>(mdef)
-                           ->setOperand<1>(mop1_neg)
-                           ->setOperand<2>(shiftimme);
+                           ->setOperand<0>(mdef, ctx)
+                           ->setOperand<1>(mop1_neg, ctx)
+                           ->setOperand<2>(shiftimme, ctx);
 
             minsts.insert(iter, neg);
+
+            (*iter)->putAllOp(ctx);
             *iter = lsl;
 
+            (*loadIter)->putAllOp(ctx);
             minsts.erase(loadIter);
 
             return true;
@@ -214,19 +222,22 @@ bool GenericPeepholeImpl::matchArithmetic(MatchInfo &info) {
             // auto shiftimme2 = MIROperand::asImme(twin.exp2, OpT::Int32);
 
             auto lsl = MIRInst::make<OpC>(OpC::InstShl)
-                           ->setOperand<0>(middle_result)
-                           ->setOperand<1>(mop1)
-                           ->setOperand<2>(shiftimme1);
+                           ->setOperand<0>(middle_result, ctx)
+                           ->setOperand<1>(mop1, ctx)
+                           ->setOperand<2>(shiftimme1, ctx);
 
             auto add = MIRInst::make<OpC>(OpC::InstAdd)
-                           ->setOperand<0>(mdef)
-                           ->setOperand<1>(middle_result)
-                           ->setOperand<2>(mop1)
-                           ->setOperand<3>(MIROperand::asImme(twin.exp2 | 0x00000000, OpT::special)); // lsl
+                           ->setOperand<0>(mdef, ctx)
+                           ->setOperand<1>(middle_result, ctx)
+                           ->setOperand<2>(mop1, ctx)
+                           ->setOperand<3>(MIROperand::asImme(twin.exp2 | 0x00000000, OpT::special), ctx); // lsl
 
             minsts.insert(iter, lsl);
+
+            (*iter)->putAllOp(ctx);
             *iter = add;
 
+            (*loadIter)->putAllOp(ctx);
             minsts.erase(loadIter);
 
             return true;
@@ -235,23 +246,25 @@ bool GenericPeepholeImpl::matchArithmetic(MatchInfo &info) {
             auto mop1_neg = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
             auto shiftimme1 = MIROperand::asImme(twin.exp1, OpT::Int32);
 
-            auto neg = MIRInst::make<OpC>(OpC::InstNeg)->setOperand<0>(mop1_neg)->setOperand<1>(mop1);
+            auto neg = MIRInst::make<OpC>(OpC::InstNeg)->setOperand<0>(mop1_neg, ctx)->setOperand<1>(mop1, ctx);
             auto lsl = MIRInst::make<OpC>(OpC::InstShl)
-                           ->setOperand<0>(middle_result)
-                           ->setOperand<1>(mop1_neg)
-                           ->setOperand<2>(shiftimme1);
+                           ->setOperand<0>(middle_result, ctx)
+                           ->setOperand<1>(mop1_neg, ctx)
+                           ->setOperand<2>(shiftimme1, ctx);
 
             auto add = MIRInst::make<OpC>(OpC::InstAdd)
-                           ->setOperand<0>(mdef)
-                           ->setOperand<1>(middle_result)
-                           ->setOperand<2>(mop1_neg)
-                           ->setOperand<3>(MIROperand::asImme(twin.exp2 | 0x00000000, OpT::special)); // lsl
+                           ->setOperand<0>(mdef, ctx)
+                           ->setOperand<1>(middle_result, ctx)
+                           ->setOperand<2>(mop1_neg, ctx)
+                           ->setOperand<3>(MIROperand::asImme(twin.exp2 | 0x00000000, OpT::special), ctx); // lsl
 
             minsts.insert(iter, neg);
             minsts.insert(iter, lsl);
 
+            (*iter)->putAllOp(ctx);
             *iter = add;
 
+            (*loadIter)->putAllOp(ctx);
             minsts.erase(loadIter);
 
             return true;
@@ -264,7 +277,7 @@ bool GenericPeepholeImpl::matchArithmetic(MatchInfo &info) {
             if (twin.exp2 > twin.exp1) {
                 auto mop1_neg = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
 
-                auto neg = MIRInst::make<OpC>(OpC::InstNeg)->setOperand<0>(mop1_neg)->setOperand<1>(mop1);
+                auto neg = MIRInst::make<OpC>(OpC::InstNeg)->setOperand<0>(mop1_neg, ctx)->setOperand<1>(mop1, ctx);
 
                 minsts.insert(iter, neg);
                 std::swap(shiftimme1, shiftimme2);
@@ -272,20 +285,23 @@ bool GenericPeepholeImpl::matchArithmetic(MatchInfo &info) {
             }
 
             auto lsl = MIRInst::make<OpC>(OpC::InstShl)
-                           ->setOperand<0>(middle_result)
-                           ->setOperand<1>(mop1) // maybe negative
-                           ->setOperand<2>(shiftimme1);
+                           ->setOperand<0>(middle_result, ctx)
+                           ->setOperand<1>(mop1, ctx) // maybe negative
+                           ->setOperand<2>(shiftimme1, ctx);
 
             auto sub =
                 MIRInst::make<OpC>(OpC::InstSub)
-                    ->setOperand<0>(mdef)
-                    ->setOperand<1>(middle_result)
-                    ->setOperand<2>(mop1) // maybe negative
-                    ->setOperand<3>(MIROperand::asImme(std::min(twin.exp1, twin.exp2) | 0x00000000, OpT::special));
+                    ->setOperand<0>(mdef, ctx)
+                    ->setOperand<1>(middle_result, ctx)
+                    ->setOperand<2>(mop1, ctx) // maybe negative
+                    ->setOperand<3>(MIROperand::asImme(std::min(twin.exp1, twin.exp2) | 0x00000000, OpT::special), ctx);
 
             minsts.insert(iter, lsl);
+
+            (*iter)->putAllOp(ctx);
             *iter = sub;
 
+            (*loadIter)->putAllOp(ctx);
             minsts.erase(loadIter);
 
             return true;
@@ -306,7 +322,8 @@ bool GenericPeepholeImpl::matchArithmetic(MatchInfo &info) {
         if (divisor_const < 0) {
             auto middle_result = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
 
-            auto neg = MIRInst::make<OpC>(OpC::InstNeg)->setOperand<0>(middle_result)->setOperand<1>(dividend);
+            auto neg =
+                MIRInst::make<OpC>(OpC::InstNeg)->setOperand<0>(middle_result, ctx)->setOperand<1>(dividend, ctx);
 
             minsts.insert(iter, neg);
         }
@@ -329,27 +346,31 @@ bool GenericPeepholeImpl::matchArithmetic(MatchInfo &info) {
             auto const_lsr_shift = MIROperand::asImme(32 - exp, OpT::Int32);
             auto const_asr_shift = MIROperand::asImme(exp, OpT::Int32);
 
-            auto asr1 =
-                MIRInst::make(OpC::InstAShr)->setOperand<0>(mask)->setOperand<1>(dividend)->setOperand<2>(const_31);
+            auto asr1 = MIRInst::make(OpC::InstAShr)
+                            ->setOperand<0>(mask, ctx)
+                            ->setOperand<1>(dividend, ctx)
+                            ->setOperand<2>(const_31, ctx);
 
             auto lsr = MIRInst::make(OpC::InstLShr)
-                           ->setOperand<0>(middle_result_1)
-                           ->setOperand<1>(mask)
-                           ->setOperand<2>(const_lsr_shift);
+                           ->setOperand<0>(middle_result_1, ctx)
+                           ->setOperand<1>(mask, ctx)
+                           ->setOperand<2>(const_lsr_shift, ctx);
 
             auto add = MIRInst::make(OpC::InstAdd)
-                           ->setOperand<0>(middle_result_2)
-                           ->setOperand<1>(dividend)
-                           ->setOperand<2>(middle_result_1); // 修正取舍方向
+                           ->setOperand<0>(middle_result_2, ctx)
+                           ->setOperand<1>(dividend, ctx)
+                           ->setOperand<2>(middle_result_1, ctx); // 修正取舍方向
 
             auto asr2 = MIRInst::make(OpC::InstAShr)
-                            ->setOperand<0>(mdef)
-                            ->setOperand<1>(middle_result_2)
-                            ->setOperand<2>(const_asr_shift);
+                            ->setOperand<0>(mdef, ctx)
+                            ->setOperand<1>(middle_result_2, ctx)
+                            ->setOperand<2>(const_asr_shift, ctx);
 
             minsts.insert(iter, asr1);
             minsts.insert(iter, lsr);
             minsts.insert(iter, add);
+
+            (*iter)->putAllOp(ctx);
             *iter = asr2;
 
         }
@@ -361,7 +382,9 @@ bool GenericPeepholeImpl::matchArithmetic(MatchInfo &info) {
             return false;
         }
 
+        (*loadIter)->putAllOp(ctx);
         minsts.erase(loadIter);
+
         return true;
     }
 
@@ -381,6 +404,7 @@ bool GenericPeepholeImpl::matchMA(MatchInfo &info) {
         return false;
     }
 
+    auto &ctx = mfunc->CodeGenContext();
     auto &minst = info.minst;
     auto &minsts = info.minsts;
     auto &iter = info.iter;
@@ -460,9 +484,9 @@ bool GenericPeepholeImpl::matchMA(MatchInfo &info) {
 
     minst->resetOpcode(newOpC);
 
-    minst->setOperand<3>(reserved);
-    minst->setOperand<2>(multiple_2);
-    minst->setOperand<1>(multiple_1);
+    minst->setOperand<3>(reserved, ctx);
+    minst->setOperand<2>(multiple_2, ctx);
+    minst->setOperand<1>(multiple_1, ctx);
 
     return true;
 }

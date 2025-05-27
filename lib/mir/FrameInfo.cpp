@@ -98,9 +98,9 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
         }
 
         ctx.newInst(MIRInst::make(OpC::InstStoreRegToStack)
-                        ->setOperand<1>(mval)
-                        ->setOperand<2>(obj)
-                        ->setOperand<5>(MIROperand::asImme(getBitWide(mval->type()), OpT::special)));
+                        ->setOperand<1>(mval, ctx.CodeGenCtx())
+                        ->setOperand<2>(obj, ctx.CodeGenCtx())
+                        ->setOperand<5>(MIROperand::asImme(getBitWide(mval->type()), OpT::special), ctx.CodeGenCtx()));
     }
 
     // LAMBDA BEGIN
@@ -150,18 +150,20 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
     auto mval = callinst->isVoid() ? nullptr : ctx.newVReg(getType(callinst));
 
     ///@todo emit tcp
-    ctx.newInst(MIRInst::make(ARMOpC::BL)
-                    ->setOperand<0>(nullptr)
-                    ->setOperand<1>(MIROperand::asReloc(mcallee->reloc()))
-                    ->setOperand<2>(MIROperand::asImme(callinst->isTailCall() ? 1 : 0, OpT::special)));
+    ctx.newInst(
+        MIRInst::make(ARMOpC::BL)
+            ->setOperand<0>(nullptr, ctx.CodeGenCtx())
+            ->setOperand<1>(MIROperand::asReloc(mcallee->reloc()), ctx.CodeGenCtx())
+            ->setOperand<2>(MIROperand::asImme(callinst->isTailCall() ? 1 : 0, OpT::special), ctx.CodeGenCtx()));
 
     if (mval) {
         ///@brief return not a void
         auto mtype = getType(callinst); // todo: ret val vectorize
 
         ctx.newInst(MIRInst::make(OpC::InstCopyFromReg)
-                        ->setOperand<0>(mval)
-                        ->setOperand<1>(MIROperand::asISAReg(mtype == OpT::Float32 ? ARMReg::V0 : ARMReg::X0, mtype)));
+                        ->setOperand<0>(mval, ctx.CodeGenCtx())
+                        ->setOperand<1>(MIROperand::asISAReg(mtype == OpT::Float32 ? ARMReg::V0 : ARMReg::X0, mtype),
+                                        ctx.CodeGenCtx()));
         ///@todo vectorize
 
         ctx.addOperand(callinst, mval);
@@ -195,10 +197,11 @@ void FrameInfo::handleMemset(IR::pCall callinst, LoweringContext &ctx) const {
 
     ///@note emit call(bl)
     ///@todo emit tcp
-    ctx.newInst(MIRInst::make(ARMOpC::BL)
-                    ->setOperand<0>(nullptr)
-                    ->setOperand<1>(MIROperand::asReloc(mcallee->reloc()))
-                    ->setOperand<2>(MIROperand::asImme(callinst->isTailCall() ? 1 : 0, OpT::special)));
+    ctx.newInst(
+        MIRInst::make(ARMOpC::BL)
+            ->setOperand<0>(nullptr, ctx.CodeGenCtx())
+            ->setOperand<1>(MIROperand::asReloc(mcallee->reloc()), ctx.CodeGenCtx())
+            ->setOperand<2>(MIROperand::asImme(callinst->isTailCall() ? 1 : 0, OpT::special), ctx.CodeGenCtx()));
 
     // non-return;
 }
@@ -220,10 +223,11 @@ void FrameInfo::handleMemcpy(IR::pCall callinst, LoweringContext &ctx) const {
 
     ///@note emit call(bl)
     ///@todo emit tcp
-    ctx.newInst(MIRInst::make(ARMOpC::BL)
-                    ->setOperand<0>(nullptr)
-                    ->setOperand<1>(MIROperand::asReloc(mcallee->reloc()))
-                    ->setOperand<2>(MIROperand::asImme(callinst->isTailCall() ? 1 : 0, OpT::special)));
+    ctx.newInst(
+        MIRInst::make(ARMOpC::BL)
+            ->setOperand<0>(nullptr, ctx.CodeGenCtx())
+            ->setOperand<1>(MIROperand::asReloc(mcallee->reloc()), ctx.CodeGenCtx())
+            ->setOperand<2>(MIROperand::asImme(callinst->isTailCall() ? 1 : 0, OpT::special), ctx.CodeGenCtx()));
 
     // non-return;
 }
@@ -317,9 +321,9 @@ void FrameInfo::makePrologue(MIRFunction_p mfunc, LoweringContext &ctx) const {
         auto stkobj = mfunc->addStkObj(ctx.CodeGenCtx(), size, align, offset, StkObjUsage::Arg);
 
         ctx.newInst(MIRInst::make(OpC::InstLoadRegFromStack)
-                        ->setOperand<0>(arg)
-                        ->setOperand<1>(stkobj)
-                        ->setOperand<5>(MIROperand::asImme(getBitWide(arg->type()), OpT::special)));
+                        ->setOperand<0>(arg, ctx.CodeGenCtx())
+                        ->setOperand<1>(stkobj, ctx.CodeGenCtx())
+                        ->setOperand<5>(MIROperand::asImme(getBitWide(arg->type()), OpT::special), ctx.CodeGenCtx()));
         // addOperand already
     }
 }
@@ -386,7 +390,7 @@ void FrameInfo::makePostSAPrologue(MIRBlk_p entry, CodeGenContext &ctx, unsigned
 
     Err::gassert(iter != insts.end(), "makePostSAPrologue: cant find reg save insts");
 
-    ARMInstTemplate::registerDec(insts, iter, ARMReg::SP, stkSize);
+    ARMInstTemplate::registerDec(insts, iter, ARMReg::SP, stkSize, ctx);
 }
 
 void FrameInfo::makePostSAEpilogue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const {
@@ -408,7 +412,7 @@ void FrameInfo::makePostSAEpilogue(MIRBlk_p entry, CodeGenContext &ctx, unsigned
     Err::gassert(find, "makePostSAEpilogue: cant find reg recover insts");
 
     // stk space gen
-    ARMInstTemplate::registerInc(insts, iter, ARMReg::SP, stkSize);
+    ARMInstTemplate::registerInc(insts, iter, ARMReg::SP, stkSize, ctx);
 }
 
 void FrameInfo::insertPrologueEpilogue(MIRFunction *mfunc, CodeGenContext &ctx) const {
@@ -422,7 +426,8 @@ void FrameInfo::insertPrologueEpilogue(MIRFunction *mfunc, CodeGenContext &ctx) 
 
     auto &insts = mblk_entry->Insts();
 
-    insts.emplace_front(MIRInst::make(ARMOpC::PUSH)->setOperand<1>(MIROperand::asImme(bitmap, OpT::special))); // immeEx
+    insts.emplace_front(
+        MIRInst::make(ARMOpC::PUSH)->setOperand<1>(MIROperand::asImme(bitmap, OpT::special), ctx)); // immeEx
 
     // insert epilogue
     for (auto &mblk_exit : mfunc->ExitBlks()) {
@@ -433,6 +438,6 @@ void FrameInfo::insertPrologueEpilogue(MIRFunction *mfunc, CodeGenContext &ctx) 
 
         auto it = std::prev(insts.end());
 
-        insts.insert(it, MIRInst::make(ARMOpC::POP)->setOperand<1>(MIROperand::asImme(bitmap, OpT::special)));
+        insts.insert(it, MIRInst::make(ARMOpC::POP)->setOperand<1>(MIROperand::asImme(bitmap, OpT::special), ctx));
     }
 }

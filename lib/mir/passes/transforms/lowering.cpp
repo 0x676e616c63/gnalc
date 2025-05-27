@@ -90,8 +90,9 @@ MIROperand_p LoweringContext::mapOperand(const IRVal_p &value) {
 
         auto mglo = MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Int64);
 
-        newInst(
-            MIRInst::make(ARMOpC::ADRP_LDR)->setOperand<0>(mglo)->setOperand<1>(MIROperand::asReloc(mReloc->reloc())));
+        newInst(MIRInst::make(ARMOpC::ADRP_LDR)
+                    ->setOperand<0>(mglo, mCodeGenCtx)
+                    ->setOperand<1>(MIROperand::asReloc(mReloc->reloc()), mCodeGenCtx));
 
         return mglo;
     }
@@ -142,8 +143,8 @@ void LoweringContext::newInst(const MIRInst_p &inst) {
 
 void LoweringContext::addCopy(const MIROperand_p &dst, const MIROperand_p &src) {
     auto inst = MIRInst::make(chooseCopyOpC(dst, src));
-    inst->setOperand<0>(dst);
-    inst->setOperand<1>(src);
+    inst->setOperand<0>(dst, mCodeGenCtx);
+    inst->setOperand<1>(src, mCodeGenCtx);
 
     newInst(inst);
 }

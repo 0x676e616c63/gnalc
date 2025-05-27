@@ -136,28 +136,30 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
 
             if (auto it_op = uses.find(mop); it_op != uses.end()) {
                 auto readStage = MIROperand::asVReg(ctx.nextId(), mtype);
-                auto minst_load = MIRInst::make(OpC::InstLoad)
-                                      ->setOperand<0>(readStage)
-                                      ->setOperand<1>(stkobj)
-                                      ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special));
+                auto minst_load =
+                    MIRInst::make(OpC::InstLoad)
+                        ->setOperand<0>(readStage, mfunc->CodeGenContext())
+                        ->setOperand<1>(stkobj, mfunc->CodeGenContext())
+                        ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special), mfunc->CodeGenContext());
 
                 minsts.insert(it, minst_load);
 
-                minst->replace(mop, readStage);
+                minst->replace(mop, readStage, ctx);
 
                 stageValues.emplace(readStage);
             }
 
             if (auto it_op = defs.find(mop); it_op != defs.end()) {
                 auto writeStage = MIROperand::asVReg(ctx.nextId(), mtype);
-                auto minst_store = MIRInst::make(OpC::InstStore)
-                                       ->setOperand<1>(writeStage)
-                                       ->setOperand<2>(stkobj)
-                                       ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special));
+                auto minst_store =
+                    MIRInst::make(OpC::InstStore)
+                        ->setOperand<1>(writeStage, mfunc->CodeGenContext())
+                        ->setOperand<2>(stkobj, mfunc->CodeGenContext())
+                        ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special), mfunc->CodeGenContext());
 
                 minsts.insert(std::next(it), minst_store);
 
-                minst->replace(mop, writeStage);
+                minst->replace(mop, writeStage, ctx);
 
                 stageValues.emplace(writeStage);
             }

@@ -2,7 +2,8 @@
 
 using namespace MIR_new;
 
-void ARMInstTemplate::registerInc(MIRInst_p_l minsts, MIRInst_p_l::iterator it, ARMReg isa, unsigned amount) {
+void ARMInstTemplate::registerInc(MIRInst_p_l minsts, MIRInst_p_l::iterator it, ARMReg isa, unsigned amount,
+                                  CodeGenContext &ctx) {
     ///@todo 这里如何区分位宽? 虽然不区分直接使用64位也可以
 
     MIROperand_p mimme = MIROperand::asImme(amount, OpT::Int);
@@ -16,8 +17,8 @@ void ARMInstTemplate::registerInc(MIRInst_p_l minsts, MIRInst_p_l::iterator it, 
         auto scratch = MIROperand::asISAReg(ARMReg::FP, OpT::Int64);
         auto imme = amount;
         auto movz = MIRInst::make(ARMOpC::MOVZ)
-                        ->setOperand<0>(scratch)
-                        ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16));
+                        ->setOperand<0>(scratch, ctx)
+                        ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16), ctx);
 
         minsts.insert(it, movz);
 
@@ -25,9 +26,9 @@ void ARMInstTemplate::registerInc(MIRInst_p_l minsts, MIRInst_p_l::iterator it, 
         unsigned times = 1;
         while (imme != 0) {
             auto movk = MIRInst::make(ARMOpC::MOVK)
-                            ->setOperand<0>(scratch)
-                            ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16))
-                            ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special)); // lsl only
+                            ->setOperand<0>(scratch, ctx)
+                            ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16), ctx)
+                            ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special), ctx); // lsl only
             minsts.insert(it, movk);
 
             ++times;
@@ -38,22 +39,24 @@ void ARMInstTemplate::registerInc(MIRInst_p_l minsts, MIRInst_p_l::iterator it, 
 
     auto misa = MIROperand::asISAReg(isa, OpT::Int);
 
-    auto minst_inc = MIRInst::make(ARMOpC::INC)->setOperand<0>(misa)->setOperand<1>(misa)->setOperand<2>(mimme);
+    auto minst_inc =
+        MIRInst::make(ARMOpC::INC)->setOperand<0>(misa, ctx)->setOperand<1>(misa, ctx)->setOperand<2>(mimme, ctx);
 
     minsts.insert(it, minst_inc); // ?
 
     return;
 }
 
-void ARMInstTemplate::registerDec(MIRInst_p_l minsts, MIRInst_p_l::iterator it, ARMReg isa, unsigned amount) {
+void ARMInstTemplate::registerDec(MIRInst_p_l minsts, MIRInst_p_l::iterator it, ARMReg isa, unsigned amount,
+                                  CodeGenContext &ctx) {
     MIROperand_p mimme = MIROperand::asImme(amount, OpT::Int);
 
     if (!is12ImmeWithProbShift(amount)) {
         auto scratch = MIROperand::asISAReg(ARMReg::FP, OpT::Int64);
         auto imme = amount;
         auto movz = MIRInst::make(ARMOpC::MOVZ)
-                        ->setOperand<0>(scratch)
-                        ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16));
+                        ->setOperand<0>(scratch, ctx)
+                        ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16), ctx);
 
         minsts.insert(it, movz);
 
@@ -61,9 +64,9 @@ void ARMInstTemplate::registerDec(MIRInst_p_l minsts, MIRInst_p_l::iterator it, 
         unsigned times = 1;
         while (imme != 0) {
             auto movk = MIRInst::make(ARMOpC::MOVK)
-                            ->setOperand<0>(scratch)
-                            ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16))
-                            ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special)); // lsl only
+                            ->setOperand<0>(scratch, ctx)
+                            ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16), ctx)
+                            ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special), ctx); // lsl only
             minsts.insert(it, movk);
 
             ++times;
@@ -74,20 +77,22 @@ void ARMInstTemplate::registerDec(MIRInst_p_l minsts, MIRInst_p_l::iterator it, 
 
     auto misa = MIROperand::asISAReg(isa, OpT::Int);
 
-    auto minst_inc = MIRInst::make(ARMOpC::DEC)->setOperand<0>(misa)->setOperand<1>(misa)->setOperand<2>(mimme);
+    auto minst_inc =
+        MIRInst::make(ARMOpC::DEC)->setOperand<0>(misa, ctx)->setOperand<1>(misa, ctx)->setOperand<2>(mimme, ctx);
 
     minsts.insert(it, minst_inc);
 
     return;
 }
 
-void ARMInstTemplate::registerAdjust(MIRInst_p_l minsts, MIRInst_p_l::iterator it, ARMReg isa, int amount) {
+void ARMInstTemplate::registerAdjust(MIRInst_p_l minsts, MIRInst_p_l::iterator it, ARMReg isa, int amount,
+                                     CodeGenContext &ctx) {
 
     if (amount == 0) {
-        ARMInstTemplate::registerInc(minsts, it, isa, 0);
+        ARMInstTemplate::registerInc(minsts, it, isa, 0, ctx);
     } else if (amount > 0) {
-        ARMInstTemplate::registerInc(minsts, it, isa, amount);
+        ARMInstTemplate::registerInc(minsts, it, isa, amount, ctx);
     } else {
-        ARMInstTemplate::registerDec(minsts, it, isa, std::abs(amount));
+        ARMInstTemplate::registerDec(minsts, it, isa, std::abs(amount), ctx);
     }
 }

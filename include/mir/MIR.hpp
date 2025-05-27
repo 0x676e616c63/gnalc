@@ -404,9 +404,16 @@ public:
 
     unsigned getOpNr() const;
 
-    template <unsigned idx> std::shared_ptr<MIRInst> setOperand(const MIROperand_p &operand) {
+    template <unsigned idx> std::shared_ptr<MIRInst> setOperand(const MIROperand_p &operand, CodeGenContext &ctx) {
         Err::gassert(idx < maxOpCnt, "MIRInst: set a op out of range");
+
+        auto original = mOperands[idx];
+
+        original && original->isReg() ? (void)ctx.putOp(original) : nop;
+        operand && operand->isReg() ? (void)ctx.getOp(operand) : nop;
+
         mOperands[idx] = operand;
+
         return shared_from_this();
     }
 
@@ -414,13 +421,24 @@ public:
     const auto &operands() const { return mOperands; }
 
     // to modify
-    void replace(MIROperand_p _old, MIROperand_p _new) {
+    void replace(MIROperand_p _old, MIROperand_p _new, CodeGenContext &ctx) {
         auto it =
             std::find_if(mOperands.begin(), mOperands.end(), [&](const MIROperand_p &ath) { return ath == _old; });
 
         Err::gassert(it != mOperands.end(), "MIRInst::replace: cant find op");
 
         *it = std::move(_new);
+
+        _new && _new->isReg() ? (void)ctx.getOp(_new) : nop;
+        _old && _old->isReg() ? (void)ctx.putOp(_old) : nop;
+    }
+
+    // before abundant the whole inst
+    void putAllOp(CodeGenContext &ctx) {
+
+        for (auto &mop : mOperands) {
+            ctx.putOp(mop);
+        }
     }
 
     virtual ~MIRInst() = default;
@@ -577,13 +595,13 @@ public:
     void resetPrv(const MIRBlk_p &_prv) { mprv = _prv; }
     void resetNxt(const MIRBlk_p &_nxt) { mnxt = _nxt; }
 
-    void brReplace(const MIRBlk_p &old_succ, const MIRBlk_p &new_succ) {
+    void brReplace(const MIRBlk_p &old_succ, const MIRBlk_p &new_succ, CodeGenContext &ctx) {
 
-        auto it = std::find_if(mInsts.begin(), mInsts.end(), [&old_succ, &new_succ](const MIRInst_p &minst) {
+        auto it = std::find_if(mInsts.begin(), mInsts.end(), [&](const MIRInst_p &minst) {
             if (minst->isGeneric() && minst->opcode<OpC>() == OpC::InstBranch &&
                 minst->getOp(1)->relocable() == old_succ) {
 
-                minst->setOperand<1>(MIROperand::asReloc(new_succ));
+                minst->setOperand<1>(MIROperand::asReloc(new_succ), ctx);
                 return true;
             }
             return false;
@@ -604,6 +622,12 @@ public:
         });
 
         mInsts.insert(it, minst); // it 可能为 .end()
+    }
+
+    void putAllInstOp(CodeGenContext &ctx) {
+        for (auto &minst : mInsts) {
+            minst->putAllOp(ctx);
+        }
     }
 
     ~MIRBlk() override = default;

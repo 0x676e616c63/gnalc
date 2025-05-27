@@ -16,7 +16,7 @@ private:
 
     std::string reg2s(const MIROperand_p &reg, unsigned int bitWide, bool vector = false) {
         if (debug) {
-            return Reg2SDebug(reg, bitWide, vector);
+            return Reg2SDebug(reg, bitWide, mfunc->CodeGenContext(), vector);
         } else {
             return Reg2S(reg, bitWide, vector);
         }

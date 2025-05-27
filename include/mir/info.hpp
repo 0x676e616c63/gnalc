@@ -245,11 +245,14 @@ using MIRInst_p = std::shared_ptr<MIRInst>;
 using MIRInst_wp = std::weak_ptr<MIRInst>;
 using MIRInst_p_l = std::list<MIRInst_p>;
 
+class ISelContext;
+struct CodeGenContext;
+
 ///@note use these when LoweringContent is not clear, or not in a IR lowering stage
 struct ARMInstTemplate {
-    static void registerInc(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, unsigned);
-    static void registerDec(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, unsigned);
-    static void registerAdjust(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, int);
+    static void registerInc(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, unsigned, CodeGenContext &);
+    static void registerDec(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, unsigned, CodeGenContext &);
+    static void registerAdjust(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, int, CodeGenContext &);
 };
 
 struct DataLayOut {
@@ -280,9 +283,6 @@ class MIRGlobal;
 using MIRGlobal_p = std::shared_ptr<MIRGlobal>;
 class StkObj;
 class MIRJmpTable;
-
-class ISelContext;
-struct CodeGenContext;
 
 class FrameInfo { // armv8(A64)
 public:
@@ -376,10 +376,13 @@ struct CodeGenContext {
     unsigned idx = 0;
     unsigned nextId() { return ++idx; }
 
-    // unsigned idx_l = 0; // label
-    // string nextBlkLable(const string &func_name) {
-    //     return func_name + "_blk_" + std::to_string(idx_l++); // rename
-    // }
+    std::unordered_map<MIROperand_p, unsigned> referCnt;
+
+    unsigned putOp(const MIROperand_p &mop) { return --referCnt[mop]; }
+
+    unsigned getOp(const MIROperand_p &mop) { return ++referCnt[mop]; }
+
+    unsigned queryOp(const MIROperand_p &mop) const { return referCnt.at(mop); }
 };
 
 }; // namespace MIR_new

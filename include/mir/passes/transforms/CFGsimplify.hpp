@@ -62,7 +62,7 @@ public:
     void brEli();
 
 public:
-    MIRInst_p_l::iterator patternDetect(MIRBlk_p); // ret the it of the cmp, if not , return .end()
+    MIRInst_p_l::iterator SeqRevPatternDetect(MIRBlk_p); // ret the it of the cmp, if not , return .end()
     MIROperand_p mkReverse(MIROperand_p);
 };
 
