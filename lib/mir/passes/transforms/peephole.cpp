@@ -44,7 +44,8 @@ bool GenericPeepholeImpl::runOnBlk(MIRBlk_p &mblk) {
             auto recovery = iter;
             MatchInfo info(*iter, minsts, iter);
 
-            if (matchNop(info) || matchArithmetic(info) || matchMA(info) || matchFusedAdr(info)) {
+            if (removeByReference(info) || matchNop(info) || matchArithmetic(info) || matchMA(info) ||
+                matchFusedAdr(info)) {
                 modified = true;
             }
 
@@ -61,6 +62,7 @@ bool GenericPeepholeImpl::runOnBlk(MIRBlk_p &mblk) {
 // matches impl
 
 bool GenericPeepholeImpl::matchNop(MatchInfo &info) {
+
     if (stage != Stage::AfterRa) {
         return false;
     }
@@ -98,8 +100,12 @@ bool GenericPeepholeImpl::matchNop(MatchInfo &info) {
     if (isCpy(minst) && sameReg(minst->ensureDef(), minst->getOp(1))) {
         auto diter = iter;
         ++iter;
+
         (*diter)->putAllOp(mfunc->CodeGenContext());
         minsts.erase(diter);
+
+        // reference cnt not available after this
+        mfunc->CodeGenContext().abundantReferCntAvailable();
         return true;
     } else {
         ++iter;
@@ -480,8 +486,6 @@ bool GenericPeepholeImpl::matchMA(MatchInfo &info) {
     auto multiple_1 = (*mul_iter)->getOp(1);
     auto multiple_2 = (*mul_iter)->getOp(2);
 
-    // minsts.erase(mul_iter); ///@todo
-
     minst->resetOpcode(newOpC);
 
     minst->setOperand<3>(reserved, ctx);
@@ -489,4 +493,31 @@ bool GenericPeepholeImpl::matchMA(MatchInfo &info) {
     minst->setOperand<1>(multiple_1, ctx);
 
     return true;
+}
+
+bool GenericPeepholeImpl::removeByReference(MatchInfo &info) {
+
+    auto &[minst, minsts, iter] = info;
+    auto &ctx = mfunc->CodeGenContext();
+
+    if (!ctx.isReferCntAvailable()) {
+        return false;
+    }
+
+    auto def = minst->getDef();
+
+    if (!def || !def->isVReg()) { // isa reg inst have sideEffect
+        return false;
+    }
+
+    if (ctx.queryOp(def) == 1) {
+        auto diter = iter;
+        ++iter;
+
+        (*diter)->putAllOp(ctx);
+        minsts.erase(diter);
+        return true;
+    }
+
+    return false;
 }

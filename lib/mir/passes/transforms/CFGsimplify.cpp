@@ -98,6 +98,8 @@ void CFGsimplifyBeforeRAImpl::i1UseConsolidate(MIRInst_p_l &minsts, MIRInst_p_l:
 
     Err::gassert(cmp != minsts.end() && cset != minsts.end() && cbnz != minsts.end(), "list iterator(s) corrupted");
 
+    (*cmp)->setOperand<0>(nullptr, ctx);
+
     auto cond = (*cset)->getOp(1); // MIROperand
 
     (*cset)->putAllOp(ctx);

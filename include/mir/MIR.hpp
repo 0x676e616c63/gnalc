@@ -330,7 +330,8 @@ public:
     ///@note we directly chang reg of MIRReg
     void assignColor(unsigned color) {
         // Err::gassert(isVReg(), "assignColor: try assign color to a non-reg");
-        Err::gassert(color >= ARMReg::X0 && color <= ARMReg::V31, "assignColor: unknonw reg color");
+        Err::gassert(color >= ARMReg::X0 && color <= ARMReg::V31,
+                     "assignColor: unknonw reg color " + std::to_string(color));
         Err::gassert(color >= ARMReg::V0 && (mType == OpT::Float32 || mType == OpT::Floatvec || mType == OpT::Intvec) ||
                          color <= ARMReg::X29 &&
                              (mType == OpT::Int16 || mType == OpT::Int32 || mType == OpT::Int64 || mType == OpT::Int),
@@ -437,7 +438,9 @@ public:
     void putAllOp(CodeGenContext &ctx) {
 
         for (auto &mop : mOperands) {
-            ctx.putOp(mop);
+            if (mop && mop->isReg()) {
+                ctx.putOp(mop);
+            }
         }
     }
 

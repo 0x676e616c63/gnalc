@@ -376,13 +376,18 @@ struct CodeGenContext {
     unsigned idx = 0;
     unsigned nextId() { return ++idx; }
 
+    bool referCntAvailable = true;
     std::unordered_map<MIROperand_p, unsigned> referCnt;
 
-    unsigned putOp(const MIROperand_p &mop) { return --referCnt[mop]; }
+    unsigned putOp(const MIROperand_p &mop) { return --referCnt.at(mop); }
 
     unsigned getOp(const MIROperand_p &mop) { return ++referCnt[mop]; }
 
     unsigned queryOp(const MIROperand_p &mop) const { return referCnt.at(mop); }
+
+    bool isReferCntAvailable() const { return referCntAvailable; }
+
+    void abundantReferCntAvailable() { referCntAvailable = false; }
 };
 
 }; // namespace MIR_new

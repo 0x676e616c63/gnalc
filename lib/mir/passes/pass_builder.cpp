@@ -41,7 +41,7 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     if (opt_info.peephole_afterIsel)
         fpm.addPass(GenericPeephole(Stage::AfterIsel));
     if (opt_info.CFGsimplifyBeforeRa)
-        fpm.addPass(CFGsimplifyBeforeRA()); // 需要在RedundantLoadEli之前做, 因为
+        fpm.addPass(CFGsimplifyBeforeRA());
     if (opt_info.redundantLoadEli)
         fpm.addPass(RedundantLoadEli());
     fpm.addPass(PreRAlegalize());

@@ -10,7 +10,7 @@ namespace MIR_new {
 
 class GenericPeephole : public PM::PassInfo<GenericPeephole> {
 public:
-    enum Stage { AfterIsel, AfterRa, AfterStackGenerate } stage;
+    enum Stage : uint32_t { AfterIsel, AfterRa, AfterStackGenerate } stage;
 
 public:
     explicit GenericPeephole(Stage _stage) : stage(_stage) {}
@@ -72,8 +72,9 @@ private:
     bool matchArithmetic(MatchInfo &); // after isel
     bool matchMA(MatchInfo &);         // after isel ( MA = Multiple and Accumulate)
     bool matchFusedAdr(MatchInfo &);   // after stack generate
-};
 
+    bool removeByReference(MatchInfo &);
+};
 }; // namespace MIR_new
 
 namespace std {
