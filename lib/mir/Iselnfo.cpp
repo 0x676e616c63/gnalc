@@ -269,7 +269,7 @@ void ISelInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
 
         Err::gassert(def->isReg() && imme->isImme(), "preLegalizeInst: op type dont fit inst opc");
 
-        auto imm = static_cast<unsigned>(imme->imme());
+        auto imm = static_cast<unsigned>(imme->imme()); ///@bug
 
         ///@note movz(lo) + movk(hi) + fmov
 

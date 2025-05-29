@@ -421,6 +421,10 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
         }
 
         if (lastReg != -1) {
+            if (str.size() > 4) {
+                str += "    "; // indent
+            }
+
             str += "str\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec), 16) + ", " + "[sp, " +
                    std::to_string(offset) + "]\n";
 
@@ -477,6 +481,10 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
         }
 
         if (lastReg != -1) {
+            if (str.size() > 4) {
+                str += "    "; // indent
+            }
+
             str += "ldr\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec), 16) + ", " + "[sp, " +
                    std::to_string(offset) + "]\n";
 

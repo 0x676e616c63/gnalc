@@ -44,10 +44,10 @@ bool GenericPeepholeImpl::runOnBlk(MIRBlk_p &mblk) {
             auto recovery = iter;
             MatchInfo info(*iter, minsts, iter);
 
-            if (removeByReference(info) || matchNop(info) || matchArithmetic(info) || matchMA(info) ||
-                matchFusedAdr(info)) {
+            if (removeByReference(info) || matchNop(info) || matchArithmetic(info) || matchFusedAdr(info)) {
                 modified = true;
             }
+            //|| matchMA(info)
 
             recovery == iter ? (void)++iter : nop;
         }

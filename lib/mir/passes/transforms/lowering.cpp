@@ -76,6 +76,7 @@ MIROperand_p LoweringContext::mapOperand(const IRVal_p &value) {
         } else if (auto cf32 = value->as<IR::ConstantFloat>()) {
 
             auto imme = cf32->getVal();
+
             return mapOperand(imme);
         }
 
