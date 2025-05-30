@@ -271,6 +271,10 @@ public:
     pBr getBRInst() const;
     pRet getRETInst() const;
 
+    // Returns a proper insert point at the end of this block.
+    // This preserves the consecutive CMP-BRInst pattern.
+    BBInstIter getEndInsertPoint() const;
+
     void accept(IRVisitor &visitor) override;
     ~BasicBlock() override;
 

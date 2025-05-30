@@ -239,8 +239,7 @@ pPhi SCEVHandle::expandAddRec(TREC *addrec) {
     indvar->addPhiOper(update, latch);
     header->addPhiInst(indvar);
 
-    auto insert_pos = latch->getTerminator()->getIter();
-    latch->addInst(insert_pos, update);
+    latch->addInst(latch->getEndInsertPoint(), update);
 
     return indvar;
 }

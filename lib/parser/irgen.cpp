@@ -410,7 +410,7 @@ void IRGenerator::visit(FuncDef &node) {
         if (ret_type == IR::IRBTYPE::VOID)
             curr_insts.emplace_back(std::make_shared<IR::RETInst>());
         else {
-            Logger::logDebug("Warning: control reaches end of non-void function.");
+            Logger::logWarning("Control reaches end of non-void function.");
             if (ret_type == IR::IRBTYPE::I32)
                 curr_insts.emplace_back(std::make_shared<IR::RETInst>(module.getConst(0)));
             else if (ret_type == IR::IRBTYPE::FLOAT)

@@ -279,30 +279,55 @@ MPM PassBuilder::buildModulePipeline(PMOptions opt_info) {
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
-    fpm.addPass(PromotePass());
-    fpm.addPass(TailRecursionEliminationPass());
-    fpm.addPass(InlinePass());
-    fpm.addPass(InternalizePass());
-    fpm.addPass(PromotePass());
-    fpm.addPass(NameNormalizePass(true));
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(LCSSAPass());
-    fpm.addPass(LoopUnrollPass());
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(LoadEliminationPass());
-    fpm.addPass(DCEPass());
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(LoopEliminationPass());
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(LoopRotatePass());
-    fpm.addPass(LCSSAPass());
-    fpm.addPass(LICMPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::PromotePass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::TailRecursionEliminationPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::InlinePass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::InternalizePass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::PromotePass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::NameNormalizePass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::SCCPPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::LCSSAPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::LoopUnrollPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::VerifyPass(true, true));
+
+
     fpm.addPass(NameNormalizePass(true));
     fpm.addPass(PrintFunctionPass(std::cerr));
-    // fpm.addPass(PrintSCEVPass(Util::null_stream()));
-    fpm.addPass(LoopStrengthReducePass());
+    fpm.addPass(IR::LoopStrengthReducePass());
     fpm.addPass(PrintFunctionPass(std::cerr));
+
+
+    fpm.addPass(IR::VerifyPass(true, true));
+    fpm.addPass(IR::BreakCriticalEdgesPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::GVNPREPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::ADCEPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::LoopRotatePass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::LCSSAPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::LICMPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::NameNormalizePass());
     return fpm;
+
     // If-conversion
     // fpm.addPass(PromotePass());
     // fpm.addPass(NameNormalizePass());
@@ -485,7 +510,8 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
         fpm.addPass(CodeGenPreparePass());
         fpm.addPass(NameNormalizePass(true));
 
-        Logger::logInfo("[FuzzTesting]: Running pipeline: '",
+        Logger::logInfo("[FuzzTesting]: Fuzz Testing pipeline"
+                        " (not real pipeline, omitted some passes for easier reproduction): '",
                         pipeline + "'. Run with '-fuzz-repro <this pipeline>' to reproduce it.");
     } else {
         auto find_pass = [&passes, &fpm](const std::string &target) -> std::optional<std::function<void()>> {
@@ -525,8 +551,18 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
         Logger::logInfo("[FuzzTesting]: Reproducing pipeline: ", repro);
     }
 
-    Logger::logDebug("Real Pipeline: ");
+    Logger::logInfo("[FuzzTesting]: Full Pipeline: ");
     fpm.printPipeline();
+    Logger::logInfo("[FuzzTesting]: buildFunctionDebugPipeline Helper: ");
+    auto names = fpm.getPassNames();
+    std::string debug_pipeline_message = "\n    FPM fpm;";
+    for (const auto &name : names) {
+        debug_pipeline_message += "\n    fpm.addPass(";
+        debug_pipeline_message += name;
+        debug_pipeline_message += "());";
+    }
+    debug_pipeline_message += "\n    return fpm;";
+    Logger::logInfo(debug_pipeline_message);
     return fpm;
 }
 

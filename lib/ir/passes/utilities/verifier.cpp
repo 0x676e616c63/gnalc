@@ -11,6 +11,12 @@
 namespace IR {
 PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
     size_t fatal_error_cnt = 0;
+    size_t warning_cnt = 0;
+
+    //
+    // Critical
+    //
+
     // Check use-def
     for (const auto &bb : function) {
         for (const auto &inst : bb->all_insts()) {
@@ -208,10 +214,47 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
         }
     }
 
+    //
+    // Warning
+    //
+
+    // See if every cond and BRInst are consecutive
+    if (fatal_error_cnt == 0) {
+        for (const auto &bb : function) {
+            auto br = bb->getBRInst();
+            if (!br || !br->isConditional())
+                continue;
+            if (auto cond_inst = br->getCond()->as<Instruction>()) {
+                if (cond_inst->getParent() != bb) {
+                    ++warning_cnt;
+                    Logger::logWarning("[VerifyPass]: Cond '", cond_inst->getName(), "' and BRInst are in separate block.");
+                }
+                else if (std::next(cond_inst->getIter()) != br->getIter()) {
+                    ++warning_cnt;
+                    Logger::logWarning("[VerifyPass]: Cond '", cond_inst->getName(), "' and BRInst are not consecutive.");
+                }
+                else if (cond_inst->getUseCount() != 1) {
+                    ++warning_cnt;
+                    Logger::logWarning("Cond '", cond_inst->getName(), "' has multiple uses. (possibly more than one BRInst)");
+                }
+            }
+        }
+    }
+
+    if (warning_cnt != 0) {
+        Logger::logWarning("[VerifyPass] on '", function.getName(), "': Found ", warning_cnt, " warning(s).");
+        if (abort_when_warning_raised && (!abort_when_verify_failed || fatal_error_cnt == 0))
+            std::abort();
+    }
+
     if (fatal_error_cnt != 0) {
         Logger::logCritical("[VerifyPass] on '", function.getName(), "': Found ", fatal_error_cnt, " fatal error(s).");
         if (abort_when_verify_failed)
             std::abort();
+    }
+
+    if (warning_cnt == 0 && fatal_error_cnt == 0) {
+        Logger::logInfo("[VerifyPass] on '", function.getName(), "': No issues found.");
     }
 
     return PreserveAll();

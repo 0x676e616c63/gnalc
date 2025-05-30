@@ -371,6 +371,13 @@ public:
         return pa;
     }
 
+    std::vector<std::string> getPassNames() {
+        std::vector<std::string> names;
+        for (auto &pass : passes)
+            names.emplace_back(pass->name());
+        return names;
+    }
+
     void printPipeline() {
         std::string pipeline;
         for (const auto &pass : passes)

@@ -219,19 +219,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
 
                     for (const auto &inst : to_hoist) {
                         inst->setName(inst->getName() + ".licm.h" + std::to_string(name_cnt++));
-                        auto insert_before = preheader->getTerminator()->getIter();
-                        if (auto br = preheader->getBRInst()) {
-                            if (br->isConditional()) {
-                                if (auto cond_inst = br->getCond()->as<Instruction>()) {
-                                    if (cond_inst->getParent() == preheader)
-                                        insert_before = cond_inst->getIter();
-                                    else
-                                        Logger::logWarning("Cond '", cond_inst->getName(),
-                                                           "' and BRInst are in separate block.");
-                                }
-                            }
-                        }
-                        moveInst(inst, preheader, insert_before);
+                        moveInst(inst, preheader, preheader->getEndInsertPoint());
                         Logger::logDebug("[LICM] on '", function.getName(), "': Hoisted an instruction '",
                                          inst->getName(), "' to basic block '", preheader->getName(), "'.");
                         licm_inst_modified = true;
