@@ -7,6 +7,7 @@
 #include <list>
 #include <memory>
 #include <string_view>
+#include <ostream>
 #include <type_traits>
 
 namespace Util {
@@ -125,6 +126,22 @@ vectorHash(Container &&vec) {
     for (auto x : vec)
         hashSeedCombine(seed, std::hash<typename remove_cvref_t<Container>::value_type>()(x));
     return seed;
+}
+
+// https://stackoverflow.com/questions/8243743/is-there-a-null-stdostream-implementation-in-c-or-libraries
+class NullStream : public std::ostream {
+    class NullBuffer : public std::streambuf {
+    public:
+        int overflow(int c) { return c; }
+    } m_nb;
+
+public:
+    NullStream() : std::ostream(&m_nb) {}
+};
+
+static NullStream & null_stream() {
+    static NullStream null_stream;
+    return null_stream;
 }
 } // namespace Util
 #endif

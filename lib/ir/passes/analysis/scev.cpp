@@ -416,8 +416,10 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
     else if (auto phi = val->as_raw<PHIInst>()) {
         auto phi_bb = phi->getParent();
         // Else If n matches "v = loop-phi(a, b)" Then
-        bool is_loop_phi = val_loop->getHeader() == phi_bb && analyzeHeaderPhi(val_loop, phi).has_value();
+        bool is_loop_phi = loop->getHeader() == phi_bb && analyzeHeaderPhi(val_loop, phi).has_value();
         if (is_loop_phi) {
+            // Since loop->header == phi_bb ---> loop == phi_loop
+            Err::gassert(val_loop == loop);
             auto [invariant, variant] = *analyzeHeaderPhi(val_loop, phi);
 
             auto [exist, update] = buildUpdateExpr(phi, variant, val_loop);
@@ -432,7 +434,7 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
                 res = getAddRecTREC(loop, getIRValTREC(invariant), update);
         }
         // Else If n matches "v = condition-phi(a, b)" Then
-        else {
+        else if (val_loop->getHeader() != phi_bb) {
             std::vector<TREC *> trecs;
             for (const auto &[phi_val, _bb] : phi->incomings()) {
                 auto phi_val_evo = instantiateEvolution(analyzeEvolution(loop, phi_val.get()), val_loop);
@@ -446,11 +448,14 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
                 }
             }
         }
+        else
+            res = getTRECUntracked();
     } else
         res = getTRECUntracked();
 
     Err::gassert(res != nullptr);
-    evolution[val] = res;
+    if (!res->isUntracked() && !res->isUndef())
+        evolution[val] = res;
 
     auto eval_res = eval(res, loop);
     if (loop->isLoopInvariant(val) && !eval_res->isExpr())
@@ -1183,7 +1188,7 @@ TREC *SCEVHandle::getTRECMul(TREC *x, TREC *y) {
                                getTRECMul(x->getStep(), y->getStep()));
     return getAddRecTREC(x->getLoop(), new_base, new_step);
 }
-TREC *SCEVHandle::getTRECNeg(TREC *x) { return getTRECSub(getIRValTREC(0), x); }
+TREC *SCEVHandle::getTRECNeg(TREC *x) { return getTRECSub(getExprTREC(getSCEVExpr(0)), x); }
 
 // Note that this function is called in a post order depth-first order. Thus, we don't
 // bother with recursive unification here.

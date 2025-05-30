@@ -42,13 +42,18 @@ private:
 
 public:
     bool operator==(const SCEVExpr &other) const { return type == other.type && value == other.value; }
-    explicit SCEVExpr(Value *ir_val) : value(ir_val), type(SCEVExprType::Value) {}
+    explicit SCEVExpr(Value *ir_val) : value(ir_val), type(SCEVExprType::Value) {
+        Err::gassert(ir_val != nullptr);
+    }
     explicit SCEVExpr(Binary::Op op, SCEVExpr *lhs, SCEVExpr *rhs)
-        : type(SCEVExprType::Binary), value(Binary{op, lhs, rhs}) {}
+        : type(SCEVExprType::Binary), value(Binary{op, lhs, rhs}) {
+        Err::gassert(lhs != nullptr && rhs != nullptr);
+    }
 
     void setIRValue(Value *ir_val) {
         value = ir_val;
         type = SCEVExprType::Value;
+        Err::gassert(ir_val != nullptr);
     }
     bool isIRValue() const { return type == SCEVExprType::Value; }
     bool isBinary() const { return type == SCEVExprType::Binary; }

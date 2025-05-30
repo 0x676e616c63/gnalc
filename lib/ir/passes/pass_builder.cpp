@@ -292,16 +292,15 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     fpm.addPass(LoadEliminationPass());
     fpm.addPass(DCEPass());
     fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(LCSSAPass());
     fpm.addPass(LoopEliminationPass());
     fpm.addPass(LoopSimplifyPass());
+    fpm.addPass(LoopRotatePass());
     fpm.addPass(LCSSAPass());
     fpm.addPass(LICMPass());
     fpm.addPass(NameNormalizePass(true));
     fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(PrintSCEVPass(std::cerr));
+    // fpm.addPass(PrintSCEVPass(Util::null_stream()));
     fpm.addPass(LoopStrengthReducePass());
-    fpm.addPass(ADCEPass());
     fpm.addPass(PrintFunctionPass(std::cerr));
     return fpm;
     // If-conversion
@@ -525,6 +524,9 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
 
         Logger::logInfo("[FuzzTesting]: Reproducing pipeline: ", repro);
     }
+
+    Logger::logDebug("Real Pipeline: ");
+    fpm.printPipeline();
     return fpm;
 }
 

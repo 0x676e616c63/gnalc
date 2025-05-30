@@ -370,6 +370,17 @@ public:
 
         return pa;
     }
+
+    void printPipeline() {
+        std::string pipeline;
+        for (const auto &pass : passes)
+            pipeline += std::string{pass->name()} + ", ";
+        if (!pipeline.empty()) {
+            pipeline.pop_back();
+            pipeline.pop_back();
+        }
+        Logger::logInfo("[PM]: Running pipeline: ", pipeline);
+    }
 };
 
 template <typename UnitT> class FixedPointPM : public PassInfo<FixedPointPM<UnitT>> {
@@ -456,6 +467,17 @@ public:
         }
 
         return pa;
+    }
+
+    void printPipeline() {
+        std::string pipeline;
+        for (const auto &[pass, ignoring_change] : passes)
+            pipeline += std::string{pass->name()} + (ignoring_change ? " (ignoring change), " : ", ");
+        if (!pipeline.empty()) {
+            pipeline.pop_back();
+            pipeline.pop_back();
+        }
+        Logger::logInfo("[FixedPointPM]: Running pipeline: ", pipeline);
     }
 };
 
