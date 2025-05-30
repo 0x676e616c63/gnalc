@@ -78,6 +78,13 @@ public:
 
     PM::PreservedAnalyses run(Function &unit, FAM &manager);
 };
+
+class PrintRangePass : public PM::PassInfo<PrintRangePass>, public PrinterBase {
+public:
+    explicit PrintRangePass(std::ostream &outStream_) : PrinterBase(outStream_) {}
+
+    PM::PreservedAnalyses run(Function &unit, FAM &manager);
+};
 } // namespace IR
 
 #endif

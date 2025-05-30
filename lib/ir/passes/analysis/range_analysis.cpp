@@ -7,11 +7,15 @@
 #include "ir/instructions/memory.hpp"
 #include "ir/instructions/vector.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/scev.hpp"
+#include "ir/pattern_match.hpp"
+#include "pattern_match/pattern_match.hpp"
 #include "utils/logger.hpp"
 
 #include <deque>
 #include <string>
 
+using namespace PatternMatch;
 namespace IR {
 PM::UniqueKey RangeAnalysis::Key;
 
@@ -24,7 +28,21 @@ struct InstBBPairHash {
     }
 };
 
-void RangeAnalysis::analyzeArgument() {
+void RangeAnalysis::analyzeArgument(RangeResult &res, Function *func, FAM *fam) {
+    auto is_recursive = [&]  {
+        for (const auto &inst_user : func->inst_users()) {
+            auto call = inst_user->as<CALLInst>();
+            Err::gassert(call != nullptr);
+            auto caller_func = call->getParent()->getParent();
+            if (caller_func.get() == func)
+                return true;
+        }
+        return false;
+    }();
+
+    if (is_recursive)
+        return;
+
     for (const auto &inst_user : func->inst_users()) {
         auto call = inst_user->as<CALLInst>();
         Err::gassert(call != nullptr);
@@ -47,7 +65,7 @@ void RangeAnalysis::analyzeArgument() {
     }
 }
 
-void RangeAnalysis::analyzeGlobal() {
+void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
     auto bbdfv = func->getDFVisitor();
 
     std::deque<Instruction *> worklist;
@@ -175,11 +193,19 @@ void RangeAnalysis::analyzeGlobal() {
     }
 }
 
-void RangeAnalysis::analyzeContextual() {
+void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam) {
+    auto bbdfv = func->getDFVisitor();
     auto &domtree = fam->getResult<DomTreeAnalysis>(*func);
 
     std::deque<std::pair<Instruction *, BasicBlock *>> worklist;
     std::unordered_set<std::pair<Instruction *, BasicBlock *>, InstBBPairHash> in_worklist;
+
+    for (const auto &bb : bbdfv) {
+        for (const auto &inst : *bb) {
+            if (inst->is<GEPInst, ICMPInst, FCMPInst>())
+                worklist.emplace_back(inst.get(), bb.get());
+        }
+    }
 
     auto propagateToDomUsers = [&](Value *v, BasicBlock *bb) {
         for (const auto &user : v->inst_users()) {
@@ -201,6 +227,7 @@ void RangeAnalysis::analyzeContextual() {
 
         if (modified)
             propagateToDomUsers(v, bb);
+        return modified;
     };
 
     auto updateContextualFloat = [&](Value *v, BasicBlock *bb, const Range<float> &rng) {
@@ -211,14 +238,76 @@ void RangeAnalysis::analyzeContextual() {
 
         if (modified)
             propagateToDomUsers(v, bb);
+        return modified;
     };
 
+    auto &scev = fam->getResult<SCEVAnalysis>(*func);
     while (!worklist.empty()) {
         auto [inst, bb] = worklist.front();
         worklist.pop_front();
 
         bool is_btype = inst->getType()->is<BType>();
         bool is_int = is_btype && inst->getType()->as<BType>()->getInner() == IRBTYPE::I32;
+
+        // Check SCEV
+        if (is_int) {
+            auto analyzeSCEVExpr = [](SCEVExpr *expr) {
+                if (!expr->isIRValue())
+                    return Range<int>();
+                if (int c; match(expr->getIRValue(), M::Bind(c)))
+                    return Range(c);
+                return Range<int>();
+            };
+
+            auto analyzeAddRec = [&scev](TREC *trec) {
+                if (auto addrec = trec->getConstantAffineAddRec()) {
+                    auto [base, step] = *addrec;
+                    if (auto trip_count = scev.getTripCount(trec->getLoop())) {
+                        int c;
+                        if (trip_count->isIRValue() && match(trip_count->getIRValue(), M::Bind(c))) {
+                            if (step > 0)
+                                return Range(base, base + step * c);
+                            return Range(base + step * c, base);
+                        }
+                    } else {
+                        if (step > 0)
+                            return Range(base, Range<int>::MAX);
+                        return Range(Range<int>::MIN, base);
+                    }
+                }
+                return Range<int>();
+            };
+
+            auto trec = scev.getSCEVAtBlock(inst, bb);
+            if (trec->isExpr()) {
+                if (updateContextualInt(inst, bb, analyzeSCEVExpr(trec->getExpr())))
+                    continue;
+            } else if (trec->isAddRec()) {
+                if (updateContextualInt(inst, bb, analyzeAddRec(trec)))
+                    continue;
+            } else if (trec->isPeeled()) {
+                int first_ci;
+                if (trec->getFirst()->isIRValue() && match(trec->getFirst()->getIRValue(), M::Bind(first_ci))) {
+                    if (auto trip_count = scev.getTripCount(trec->getLoop())) {
+                        int trip_cnt_ci;
+                        if (trip_count->isIRValue() && match(trip_count->getIRValue(), M::Bind(trip_cnt_ci))) {
+                            if (trip_cnt_ci > 1) {
+                                auto rest = trec->getRest();
+                                if (rest->isExpr()) {
+                                    auto rng = analyzeSCEVExpr(rest->getExpr());
+                                    if (updateContextualInt(inst, bb, merge(Range(first_ci), rng)))
+                                        continue;
+                                } else if (rest->isAddRec()) {
+                                    auto rng = analyzeAddRec(rest);
+                                    if (updateContextualInt(inst, bb, merge(Range(first_ci), rng)))
+                                        continue;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         if (auto binary = inst->as_raw<BinaryInst>()) {
             if (is_int) {
@@ -293,63 +382,6 @@ void RangeAnalysis::analyzeContextual() {
             auto lrng = res.getIntRange(lhs, bb);
             auto rrng = res.getIntRange(rhs, bb);
 
-            switch (icmp->getCond()) {
-            case ICMPOP::eq:
-                if (!lrng.overlap(rrng))
-                    res.update(icmp, Range(0));
-                else if (lrng.getExact().has_value() && rrng.getExact().has_value()) {
-                    if (*lrng.getExact() == *rrng.getExact())
-                        res.update(icmp, Range(1));
-                    else
-                        res.update(icmp, Range(0));
-                }
-                break;
-            case ICMPOP::ne:
-                if (!lrng.overlap(rrng))
-                    res.update(icmp, Range(1));
-                else if (lrng.getExact().has_value() && rrng.getExact().has_value()) {
-                    if (*lrng.getExact() == *rrng.getExact())
-                        res.update(icmp, Range(0));
-                    else
-                        res.update(icmp, Range(1));
-                }
-                break;
-            case ICMPOP::slt:
-                // lhs < rhs
-                if (lrng.max <= rrng.min)
-                    res.update(icmp, Range(1));
-                // lhs >= rhs
-                else if (lrng.min >= rrng.max - 1)
-                    res.update(icmp, Range(0));
-                break;
-            case ICMPOP::sle:
-                // lhs <= rhs
-                if (lrng.max - 1 <= rrng.min)
-                    res.update(icmp, Range(1));
-                // lhs > rhs
-                else if (lrng.min >= rrng.max)
-                    res.update(icmp, Range(0));
-                break;
-            case ICMPOP::sgt:
-                // lhs > rhs
-                if (lrng.min >= rrng.max)
-                    res.update(icmp, Range(1));
-                // lhs <= rhs
-                else if (lrng.max - 1 <= rrng.min)
-                    res.update(icmp, Range(0));
-                break;
-            case ICMPOP::sge:
-                // lhs >= rhs
-                if (lrng.min >= rrng.max - 1)
-                    res.update(icmp, Range(1));
-                // lhs < rhs
-                else if (lrng.max <= rrng.min)
-                    res.update(icmp, Range(0));
-                break;
-            default:
-                Err::unreachable();
-            }
-
             if (icmp->getUseCount() != 1)
                 Logger::logWarning("ICMPInst has multiple users");
 
@@ -375,13 +407,26 @@ void RangeAnalysis::analyzeContextual() {
                         updateContextualInt(rhs, truebb, Range(lrng.max, Range<int>::MAX));
 
                         // lhs >= rhs
-                        updateContextualInt(lhs, falsebb, Range(rrng.max - 1, Range<int>::MAX));
-                        updateContextualInt(rhs, falsebb, Range(Range<int>::MIN, lrng.min + 1));
+                        if (rrng.max == Range<int>::MAX || rrng.max == Range<int>::MIN)
+                            updateContextualInt(lhs, falsebb, Range(rrng.max, Range<int>::MAX));
+                        else
+                            updateContextualInt(lhs, falsebb, Range(rrng.max - 1, Range<int>::MAX));
+
+                        if (lrng.min == Range<int>::MAX || lrng.min == Range<int>::MIN)
+                            updateContextualInt(rhs, falsebb, Range(Range<int>::MIN, lrng.min));
+                        else
+                            updateContextualInt(rhs, falsebb, Range(Range<int>::MIN, lrng.min + 1));
                         break;
                     case ICMPOP::sle:
                         // lhs <= rhs
-                        updateContextualInt(lhs, truebb, Range(Range<int>::MIN, rrng.min + 1));
-                        updateContextualInt(rhs, truebb, Range(lrng.max - 1, Range<int>::MAX));
+                        if (rrng.min == Range<int>::MAX || rrng.min == Range<int>::MIN)
+                            updateContextualInt(lhs, truebb, Range(Range<int>::MIN, rrng.min));
+                        else
+                            updateContextualInt(lhs, truebb, Range(Range<int>::MIN, rrng.min + 1));
+                        if (lrng.max == Range<int>::MAX || lrng.max == Range<int>::MIN)
+                            updateContextualInt(rhs, truebb, Range(lrng.max, Range<int>::MAX));
+                        else
+                            updateContextualInt(rhs, truebb, Range(lrng.max - 1, Range<int>::MAX));
 
                         // lhs > rhs
                         updateContextualInt(lhs, falsebb, Range(rrng.max, Range<int>::MAX));
@@ -393,13 +438,26 @@ void RangeAnalysis::analyzeContextual() {
                         updateContextualInt(rhs, truebb, Range(Range<int>::MIN, lrng.min));
 
                         // lhs <= rhs
-                        updateContextualInt(lhs, falsebb, Range(Range<int>::MIN, rrng.min + 1));
-                        updateContextualInt(rhs, falsebb, Range(lrng.max - 1, Range<int>::MAX));
+                        if (rrng.min == Range<int>::MAX || rrng.min == Range<int>::MIN)
+                            updateContextualInt(lhs, falsebb, Range(Range<int>::MIN, rrng.min));
+                        else
+                            updateContextualInt(lhs, falsebb, Range(Range<int>::MIN, rrng.min + 1));
+                        if (lrng.max == Range<int>::MAX || lrng.max == Range<int>::MIN)
+                            updateContextualInt(rhs, falsebb, Range(lrng.max, Range<int>::MAX));
+                        else
+                            updateContextualInt(rhs, falsebb, Range(lrng.max - 1, Range<int>::MAX));
                         break;
                     case ICMPOP::sge:
                         // lhs >= rhs
-                        updateContextualInt(lhs, truebb, Range(rrng.max - 1, Range<int>::MAX));
-                        updateContextualInt(rhs, truebb, Range(Range<int>::MIN, lrng.min + 1));
+                        if (rrng.max == Range<int>::MAX || rrng.max == Range<int>::MIN)
+                            updateContextualInt(lhs, truebb, Range(rrng.max, Range<int>::MAX));
+                        else
+                            updateContextualInt(lhs, truebb, Range(rrng.max - 1, Range<int>::MAX));
+
+                        if (lrng.min == Range<int>::MAX || lrng.min == Range<int>::MIN)
+                            updateContextualInt(rhs, truebb, Range(Range<int>::MIN, lrng.min));
+                        else
+                            updateContextualInt(rhs, truebb, Range(Range<int>::MIN, lrng.min + 1));
 
                         //  lhs < rhs
                         updateContextualInt(lhs, falsebb, Range(Range<int>::MIN, rrng.min));
@@ -410,141 +468,87 @@ void RangeAnalysis::analyzeContextual() {
                     }
                 }
             }
-        } else if (auto fcmp = inst->as_raw<FCMPInst>()) {
-            auto lhs = fcmp->getLHS().get();
-            auto rhs = fcmp->getRHS().get();
-            auto lrng = res.getFloatRange(lhs, bb);
-            auto rrng = res.getFloatRange(rhs, bb);
-
-            // switch (fcmp->getCond()) {
-            // case FCMPOP::oeq:
-            //     if (!lrng.overlap(rrng))
-            //         res.update(icmp, Range(0));
-            //     else if (lrng.getExact().has_value() && rrng.getExact().has_value()) {
-            //         if (*lrng.getExact() == *rrng.getExact())
-            //             res.update(fcmp, Range(1));
-            //         else
-            //             res.update(fcmp, Range(0));
-            //     }
-            //     break;
-            // case ICMPOP::ne:
-            //     if (!lrng.overlap(rrng))
-            //         res.update(icmp, Range(1));
-            //     else if (lrng.getExact().has_value() && rrng.getExact().has_value()) {
-            //         if (*lrng.getExact() == *rrng.getExact())
-            //             res.update(icmp, Range(0));
-            //         else
-            //             res.update(icmp, Range(1));
-            //     }
-            //     break;
-            // case ICMPOP::slt:
-            //     // lhs < rhs
-            //     if (lrng.max <= rrng.min)
-            //         res.update(icmp, Range(1));
-            //     // lhs >= rhs
-            //     else if (lrng.min >= rrng.max - 1)
-            //         res.update(icmp, Range(0));
-            //     break;
-            // case ICMPOP::sle:
-            //     // lhs <= rhs
-            //     if (lrng.max - 1 <= rrng.min)
-            //         res.update(icmp, Range(1));
-            //     // lhs > rhs
-            //     else if (lrng.min >= rrng.max)
-            //         res.update(icmp, Range(0));
-            //     break;
-            // case ICMPOP::sgt:
-            //     // lhs > rhs
-            //     if (lrng.min >= rrng.max)
-            //         res.update(icmp, Range(1));
-            //     // lhs <= rhs
-            //     else if (lrng.max - 1 <= rrng.min)
-            //         res.update(icmp, Range(0));
-            //     break;
-            // case ICMPOP::sge:
-            //     // lhs >= rhs
-            //     if (lrng.min >= rrng.max - 1)
-            //         res.update(icmp, Range(1));
-            //     // lhs < rhs
-            //     else if (lrng.max <= rrng.min)
-            //         res.update(icmp, Range(0));
-            //     break;
-            // default:
-            //     Err::unreachable();
-            // }
-
-            if (fcmp->getUseCount() != 1)
-                Logger::logWarning("FCMPInst has multiple users");
-
-            for (auto inst_user : fcmp->inst_users()) {
-                if (auto user_br = inst_user->as_raw<BRInst>()) {
-                    auto truebb = user_br->getTrueDest().get();
-                    auto falsebb = user_br->getFalseDest().get();
-                    if (!domtree.ADomB(fcmp->getParent().get(), truebb) || truebb->getNumPreds() != 1)
-                        continue;
-
-                    switch (fcmp->getCond()) {
-                    case FCMPOP::oeq:
-                        updateContextualFloat(lhs, truebb, rrng);
-                        updateContextualFloat(rhs, truebb, lrng);
-                        break;
-                    case FCMPOP::one:
-                        updateContextualFloat(lhs, falsebb, rrng);
-                        updateContextualFloat(rhs, falsebb, lrng);
-                        break;
-                    case FCMPOP::olt:
-                        // lhs < rhs
-                        updateContextualFloat(lhs, truebb, Range(Range<float>::MIN, rrng.min));
-                        updateContextualFloat(rhs, truebb, Range(lrng.max, Range<float>::MAX));
-
-                        // lhs >= rhs
-                        updateContextualFloat(lhs, falsebb, Range(rrng.max - 1, Range<float>::MAX));
-                        updateContextualFloat(rhs, falsebb, Range(Range<float>::MIN, lrng.min + 1));
-                        break;
-                    case FCMPOP::ole:
-                        // lhs <= rhs
-                        updateContextualFloat(lhs, truebb, Range(Range<float>::MIN, rrng.min + 1));
-                        updateContextualFloat(rhs, truebb, Range(lrng.max - 1, Range<float>::MAX));
-
-                        // lhs > rhs
-                        updateContextualFloat(lhs, falsebb, Range(rrng.max, Range<float>::MAX));
-                        updateContextualFloat(rhs, falsebb, Range(Range<float>::MIN, lrng.min));
-                        break;
-                    case FCMPOP::ogt:
-                        // lhs > rhs
-                        updateContextualFloat(lhs, truebb, Range(rrng.max, Range<float>::MAX));
-                        updateContextualFloat(rhs, truebb, Range(Range<float>::MIN, lrng.min));
-
-                        // lhs <= rhs
-                        updateContextualFloat(lhs, falsebb, Range(Range<float>::MIN, rrng.min + 1));
-                        updateContextualFloat(rhs, falsebb, Range(lrng.max - 1, Range<float>::MAX));
-                        break;
-                    case FCMPOP::oge:
-                        // lhs >= rhs
-                        updateContextualFloat(lhs, truebb, Range(rrng.max - 1, Range<float>::MAX));
-                        updateContextualFloat(rhs, truebb, Range(Range<float>::MIN, lrng.min + 1));
-
-                        //  lhs < rhs
-                        updateContextualFloat(lhs, falsebb, Range(Range<float>::MIN, rrng.min));
-                        updateContextualFloat(rhs, falsebb, Range(lrng.max, Range<float>::MAX));
-                        break;
-                    default:
-                        Err::unreachable();
-                    }
-                }
-            }
+        }
+        // else if (auto fcmp = inst->as_raw<FCMPInst>()) {
+        //     auto lhs = fcmp->getLHS().get();
+        //     auto rhs = fcmp->getRHS().get();
+        //     auto lrng = res.getFloatRange(lhs, bb);
+        //     auto rrng = res.getFloatRange(rhs, bb);
+        //
+        //     if (fcmp->getUseCount() != 1)
+        //         Logger::logWarning("FCMPInst has multiple users");
+        //
+        //     for (auto inst_user : fcmp->inst_users()) {
+        //         if (auto user_br = inst_user->as_raw<BRInst>()) {
+        //             auto truebb = user_br->getTrueDest().get();
+        //             auto falsebb = user_br->getFalseDest().get();
+        //             if (!domtree.ADomB(fcmp->getParent().get(), truebb) || truebb->getNumPreds() != 1)
+        //                 continue;
+        //
+        //             switch (fcmp->getCond()) {
+        //             case FCMPOP::oeq:
+        //                 updateContextualFloat(lhs, truebb, rrng);
+        //                 updateContextualFloat(rhs, truebb, lrng);
+        //                 break;
+        //             case FCMPOP::one:
+        //                 updateContextualFloat(lhs, falsebb, rrng);
+        //                 updateContextualFloat(rhs, falsebb, lrng);
+        //                 break;
+        //             case FCMPOP::olt:
+        //                 // lhs < rhs
+        //                 updateContextualFloat(lhs, truebb, Range(Range<float>::MIN, rrng.min));
+        //                 updateContextualFloat(rhs, truebb, Range(lrng.max, Range<float>::MAX));
+        //
+        //                 // lhs >= rhs
+        //                 updateContextualFloat(lhs, falsebb, Range(rrng.max - 1, Range<float>::MAX));
+        //                 updateContextualFloat(rhs, falsebb, Range(Range<float>::MIN, lrng.min + 1));
+        //                 break;
+        //             case FCMPOP::ole:
+        //                 // lhs <= rhs
+        //                 updateContextualFloat(lhs, truebb, Range(Range<float>::MIN, rrng.min + 1));
+        //                 updateContextualFloat(rhs, truebb, Range(lrng.max - 1, Range<float>::MAX));
+        //
+        //                 // lhs > rhs
+        //                 updateContextualFloat(lhs, falsebb, Range(rrng.max, Range<float>::MAX));
+        //                 updateContextualFloat(rhs, falsebb, Range(Range<float>::MIN, lrng.min));
+        //                 break;
+        //             case FCMPOP::ogt:
+        //                 // lhs > rhs
+        //                 updateContextualFloat(lhs, truebb, Range(rrng.max, Range<float>::MAX));
+        //                 updateContextualFloat(rhs, truebb, Range(Range<float>::MIN, lrng.min));
+        //
+        //                 // lhs <= rhs
+        //                 updateContextualFloat(lhs, falsebb, Range(Range<float>::MIN, rrng.min + 1));
+        //                 updateContextualFloat(rhs, falsebb, Range(lrng.max - 1, Range<float>::MAX));
+        //                 break;
+        //             case FCMPOP::oge:
+        //                 // lhs >= rhs
+        //                 updateContextualFloat(lhs, truebb, Range(rrng.max - 1, Range<float>::MAX));
+        //                 updateContextualFloat(rhs, truebb, Range(Range<float>::MIN, lrng.min + 1));
+        //
+        //                 //  lhs < rhs
+        //                 updateContextualFloat(lhs, falsebb, Range(Range<float>::MIN, rrng.min));
+        //                 updateContextualFloat(rhs, falsebb, Range(lrng.max, Range<float>::MAX));
+        //                 break;
+        //             default:
+        //                 Err::unreachable();
+        //             }
+        //         }
+        //     }
+        // }
+        else if (auto gep = inst->as_raw<GEPInst>()) {
+            auto idxs = gep->getIdxs();
+            for (const auto &idx : idxs)
+                updateContextualInt(idx.get(), bb, Range(0, Range<int>::MAX));
         }
     }
 }
 
 RangeResult RangeAnalysis::run(Function &function, FAM &manager) {
-    func = &function;
-    fam = &manager;
-
-    analyzeArgument();
-    analyzeGlobal();
-    analyzeContextual();
-
+    RangeResult res;
+    analyzeArgument(res, &function, &manager);
+    analyzeGlobal(res, &function, &manager);
+    analyzeContextual(res, &function, &manager);
     return res;
 }
 } // namespace IR

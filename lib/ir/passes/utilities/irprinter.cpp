@@ -1,8 +1,9 @@
 #include "ir/passes/utilities/irprinter.hpp"
+#include "ir/formatter.hpp"
 #include "ir/passes/analysis/live_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
+#include "ir/passes/analysis/range_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
-#include "ir/formatter.hpp"
 #include "utils/logger.hpp"
 
 namespace IR {
@@ -165,6 +166,55 @@ PM::PreservedAnalyses PrintSCEVPass::run(Function &function, FAM &fam) {
                 Err::gassert(s != nullptr);
                 // if (!s->isUntracked())
                 writeln(inst->getName(), " at block '", scev_block->getName(), "': ", *s);
+            }
+        }
+    }
+    return PreserveAll();
+}
+
+PM::PreservedAnalyses PrintRangePass::run(Function &function, FAM &manager) {
+    auto &ranges = manager.getResult<RangeAnalysis>(function);
+    writeln("Range Analysis Result: ");
+    writeln("Global Ranges: ");
+    for (const auto& param : function.getParams()) {
+        if (isSameType(param->getType(), makeBType(IRBTYPE::I32))) {
+            auto r = ranges.getIntRange(param);
+            writeln(param->getName(), ": ", r);
+        } else if (isSameType(param->getType(), makeBType(IRBTYPE::FLOAT))) {
+            auto r = ranges.getFloatRange(param);
+            writeln(param->getName(), ": ", r);
+        }
+    }
+    for (const auto &bb : function) {
+        for (const auto &inst : bb->all_insts()) {
+            if (isSameType(inst->getType(), makeBType(IRBTYPE::I32))) {
+                auto r = ranges.getIntRange(inst);
+                writeln(inst->getName(), ": ", r);
+            } else if (isSameType(inst->getType(), makeBType(IRBTYPE::FLOAT))) {
+                auto r = ranges.getFloatRange(inst);
+                writeln(inst->getName(), ": ", r);
+            }
+        }
+    }
+
+    const DomTree &domtree = manager.getResult<DomTreeAnalysis>(function);
+    writeln("Contextual Ranges: ");
+    for (const auto &bb : function) {
+        for (const auto &inst : bb->all_insts()) {
+            if (isSameType(inst->getType(), makeBType(IRBTYPE::I32))) {
+                for (const auto &range_block : function) {
+                    if (!domtree.ADomB(bb, range_block))
+                        continue;
+                    auto r = ranges.getIntRange(inst, range_block);
+                    writeln(inst->getName(), " at block '", range_block->getName(), "': ", r);
+                }
+            } else if (isSameType(inst->getType(), makeBType(IRBTYPE::FLOAT))) {
+                for (const auto &range_block : function) {
+                    if (!domtree.ADomB(bb, range_block))
+                        continue;
+                    auto r = ranges.getFloatRange(inst, range_block);
+                    writeln(inst->getName(), " at block '", range_block->getName(), "': ", r);
+                }
             }
         }
     }

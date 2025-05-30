@@ -279,53 +279,18 @@ MPM PassBuilder::buildModulePipeline(PMOptions opt_info) {
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::PromotePass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::TailRecursionEliminationPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::InlinePass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::InternalizePass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::PromotePass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::NameNormalizePass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::SCCPPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LCSSAPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LoopUnrollPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::VerifyPass(true, true));
-
-
+    fpm.addPass(InlinePass());
+    fpm.addPass(PromotePass());
+    fpm.addPass(SCCPPass());
+    fpm.addPass(InstSimplifyPass());
+    fpm.addPass(ADCEPass());
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(LoopSimplifyPass());
+    fpm.addPass(VerifyPass());
     fpm.addPass(NameNormalizePass(true));
     fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(IR::LoopStrengthReducePass());
-    fpm.addPass(PrintFunctionPass(std::cerr));
-
-
-    fpm.addPass(IR::VerifyPass(true, true));
-    fpm.addPass(IR::BreakCriticalEdgesPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::GVNPREPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::ADCEPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LoopRotatePass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LCSSAPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LICMPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::NameNormalizePass());
+    fpm.addPass(PrintRangePass(std::cerr));
+    fpm.addPass(RangeAwareSimplifyPass());
     return fpm;
 
     // If-conversion
