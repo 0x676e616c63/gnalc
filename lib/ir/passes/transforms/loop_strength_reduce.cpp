@@ -64,8 +64,7 @@ PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) 
                                 Logger::logDebug("[LSR]: expanded AddRec for '", curr->getName(), "'.");
                                 eliminateDeadInsts(curr);
                                 lsr_inst_modified = true;
-
-                                debug_print_scev(function, fam);
+                                // debug_print_scev(function, fam);
                             }
                         }
                     }

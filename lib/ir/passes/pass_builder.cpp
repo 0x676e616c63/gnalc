@@ -255,7 +255,7 @@ FPM PassBuilder::buildFunctionPipeline(PMOptions opt_info) {
 
     FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass())
     FUNCTION_TRANSFORM(sccp, SCCPPass())
-    FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass())
+    // FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass())
     FUNCTION_TRANSFORM(dce, DCEPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
     FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())

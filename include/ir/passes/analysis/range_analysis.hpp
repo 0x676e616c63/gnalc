@@ -1,3 +1,4 @@
+// Contextual Value Range Analysis
 #pragma once
 #ifndef GNALC_IR_PASSES_ANALYSIS_RANGE_ANALYSIS_HPP
 #define GNALC_IR_PASSES_ANALYSIS_RANGE_ANALYSIS_HPP
@@ -125,31 +126,47 @@ class RangeResult {
 public:
     RangeResult() = default;
 
-    const Range<int>& getIntRange(Value* val) const {
+    Range<int> getIntRange(Value* val) const {
+        if (auto ci32 = val->as<ConstantInt>())
+            return Range<int>(ci32->getVal());
+        if (auto ci1 = val->as<ConstantI1>())
+            return Range<int>(ci1->getVal());
+        if (auto ci8 = val->as<ConstantI8>())
+            return Range<int>(ci8->getVal());
         return int_range_map.at(val).getGlobal();
     }
-    const Range<int>& getIntRange(const pVal &val) const {
+    Range<int> getIntRange(const pVal &val) const {
         return getIntRange(val.get());
     }
 
-    const Range<int>& getIntRange(Value* val, BasicBlock* bb) const {
+    Range<int> getIntRange(Value* val, BasicBlock* bb) const {
+        if (auto ci32 = val->as<ConstantInt>())
+            return Range<int>(ci32->getVal());
+        if (auto ci1 = val->as<ConstantI1>())
+            return Range<int>(ci1->getVal());
+        if (auto ci8 = val->as<ConstantI8>())
+            return Range<int>(ci8->getVal());
         return int_range_map.at(val).getContextual(bb);
     }
-    const Range<int>& getIntRange(const pVal &val, const pBlock& bb) const {
+    Range<int> getIntRange(const pVal &val, const pBlock& bb) const {
         return getIntRange(val.get(), bb.get());
     }
 
-    const Range<float>& getFloatRange(Value* val) const {
+    Range<float> getFloatRange(Value* val) const {
+        if (auto ci32 = val->as<ConstantFloat>())
+            return Range<float>(ci32->getVal());
         return float_range_map.at(val).getGlobal();
     }
-    const Range<float>& getFloatRange(const pVal &val) const {
+    Range<float> getFloatRange(const pVal &val) const {
         return getFloatRange(val.get());
     }
 
-    const Range<float>& getFloatRange(Value* val, BasicBlock* bb) const {
+    Range<float> getFloatRange(Value* val, BasicBlock* bb) const {
+        if (auto ci32 = val->as<ConstantFloat>())
+            return Range<float>(ci32->getVal());
         return float_range_map.at(val).getContextual(bb);
     }
-    const Range<float>& getFloatRange(const pVal &val, const pBlock& bb) const {
+    Range<float> getFloatRange(const pVal &val, const pBlock& bb) const {
         return getFloatRange(val.get(), bb.get());
     }
 
