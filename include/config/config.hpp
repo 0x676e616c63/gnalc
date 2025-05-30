@@ -35,7 +35,7 @@ constexpr auto LOOP_ELIMINATION_EXPANSION_COST_RATIO = 10;
 // We don't expand if that will insert more than `THRESHOLD` instructions.
 // a base + a step + an update + a phi
 // FIXME: I don't know if this threshold is reasonable.
-constexpr auto LSR_EXPANSION_THRESHOLD = 5;
+constexpr auto LSR_EXPANSION_THRESHOLD = 8;
 
 // Internalize
 // Avoid internalizing global variables whose size is larger than this threshold.

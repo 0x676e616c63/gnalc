@@ -41,6 +41,7 @@
 // Utilities
 #include "ir/passes/analysis/range_analysis.hpp"
 #include "ir/passes/transforms/if_conversion.hpp"
+#include "ir/passes/transforms/range_aware_simplify.hpp"
 #include "ir/passes/utilities/irprinter.hpp"
 #include "ir/passes/utilities/verifier.hpp"
 
@@ -128,6 +129,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
             PM::FixedPointPM<Function> fpm;
             FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
             FUNCTION_TRANSFORM(sccp, SCCPPass());
+            // FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass());
             FUNCTION_TRANSFORM(gvnpre, BreakCriticalEdgesPass(), GVNPREPass());
             FUNCTION_TRANSFORM(dce, DCEPass());
             return fpm;
@@ -227,6 +229,7 @@ FPM PassBuilder::buildFunctionPipeline(PMOptions opt_info) {
     // FUNCTION_TRANSFORM(reassociate, ReassociatePass())
     FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass())
     FUNCTION_TRANSFORM(sccp, SCCPPass())
+    // FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass())
     FUNCTION_TRANSFORM(dce, DCEPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
     FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
@@ -252,6 +255,7 @@ FPM PassBuilder::buildFunctionPipeline(PMOptions opt_info) {
 
     FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass())
     FUNCTION_TRANSFORM(sccp, SCCPPass())
+    FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass())
     FUNCTION_TRANSFORM(dce, DCEPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
     FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
@@ -276,10 +280,29 @@ MPM PassBuilder::buildModulePipeline(PMOptions opt_info) {
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     fpm.addPass(PromotePass());
-    fpm.addPass(NameNormalizePass());
+    fpm.addPass(TailRecursionEliminationPass());
+    fpm.addPass(InlinePass());
+    fpm.addPass(InternalizePass());
+    fpm.addPass(PromotePass());
+    fpm.addPass(NameNormalizePass(true));
+    fpm.addPass(LoopSimplifyPass());
+    fpm.addPass(LCSSAPass());
+    fpm.addPass(LoopUnrollPass());
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(LoadEliminationPass());
+    fpm.addPass(DCEPass());
+    fpm.addPass(LoopSimplifyPass());
+    fpm.addPass(LCSSAPass());
+    fpm.addPass(LoopEliminationPass());
+    fpm.addPass(LoopSimplifyPass());
+    fpm.addPass(LCSSAPass());
+    fpm.addPass(LICMPass());
+    fpm.addPass(NameNormalizePass(true));
     fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(PrintSCEVPass(std::cerr));
-    fpm.addPass(LoopEliminationPass());
+    fpm.addPass(LoopStrengthReducePass());
+    fpm.addPass(ADCEPass());
+    fpm.addPass(PrintFunctionPass(std::cerr));
     return fpm;
     // If-conversion
     // fpm.addPass(PromotePass());
@@ -434,7 +457,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
     REGISTER_FUNCTION_TRANSFORM2(loopelim, LoopSimplifyPass, LoopEliminationPass, 10)
     REGISTER_FUNCTION_TRANSFORM2(loop_strength_reduce, LoopSimplifyPass, LoopStrengthReducePass, 10)
     REGISTER_FUNCTION_TRANSFORM4(licm, LoopSimplifyPass, LoopRotatePass, LCSSAPass, LICMPass, 10)
-    // REGISTER_FUNCTION_TRANSFORM3(loop_unroll, LoopSimplifyPass, LCSSAPass, LoopUnrollPass, 10)
+    REGISTER_FUNCTION_TRANSFORM3(loop_unroll, LoopSimplifyPass, LCSSAPass, LoopUnrollPass, 10)
 
     if (repro.empty()) {
         std::random_device rd;
@@ -498,7 +521,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
         (*p)();
         curr.clear();
 
-        // fpm.addPass(NameNormalizePass(true));
+        fpm.addPass(NameNormalizePass(true));
 
         Logger::logInfo("[FuzzTesting]: Reproducing pipeline: ", repro);
     }

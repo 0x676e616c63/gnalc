@@ -173,6 +173,8 @@ public:
     //       since GVN-PRE may eliminate some redundant instructions.
     std::optional<size_t> estimateExpansionCost(SCEVExpr* expr, const pBlock& block) const;
     std::optional<size_t> estimateExpansionCost(TREC* addrec);
+
+    void forgetAll();
 private:
     pVal expandSCEVExprImpl(SCEVExpr* expr, const pBlock& block,
         BasicBlock::iterator insert_before, std::map<SCEVExpr*, pVal>& inserted) const;

@@ -312,6 +312,11 @@ std::optional<size_t> SCEVHandle::estimateExpansionCost(TREC *addrec) {
     return *base_val + *step_val + 2;
 }
 
+void SCEVHandle::forgetAll() {
+    evolution.clear();
+    scoped_evolution.clear();
+}
+
 TREC *SCEVHandle::getSCEVAtScope(Value *val, const Loop *loop) {
     if (loop != nullptr)
         return instantiateEvolution(analyzeEvolution(loop, val), loop);
@@ -373,25 +378,36 @@ TREC *SCEVHandle::getSCEVAtScope(Value *val, const Loop *loop) {
 TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
     Err::gassert(loop != nullptr);
     Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplified Form");
-    // If Evolution[n] != ⊥ Then
-    auto it = evolution.find(val);
-    if (it != evolution.end())
-        return eval(it->second, loop);
 
+    // If n matches "v = constant" Then
     auto inst_val = val->as_raw<Instruction>();
     if (!inst_val)
         return getIRValTREC(val);
 
+    // Handle LCSSA phi
+    if (auto phi = val->as<PHIInst>())
+        if (isLCSSAPhi(phi))
+            return analyzeEvolution(loop, phi->getPhiOpers().front().value.get());
+
     auto val_loop = loop_info->getLoopFor(inst_val->getParent().get()).get();
+    if (val_loop == nullptr)
+        return getIRValTREC(val);
+
+    // If Evolution[n] != ⊥ Then
+    auto it = evolution.find(val);
+    if (it != evolution.end()) {
+        auto eval_res = eval(it->second, loop);
+        // For a loop invariant, if its value can not be calculated statically,
+        // consider it as a runtime constant (or loop invariant, IRValTREC).
+        if (loop->isLoopInvariant(val) && !eval_res->isExpr())
+            return getIRValTREC(val);
+        return eval_res;
+    }
 
     TREC *res = nullptr;
-
     pVal x, y;
-    // Else If n matches "v = constant" Then
-    if (val_loop == nullptr || loop->isLoopInvariant(val))
-        res = getIRValTREC(val);
-    // Else If n matches "v = a ⊙ b" (with ⊙ ∈ {+, −, ∗}) Then
-    else if (match(val, M::Add(M::Bind(x), M::Bind(y))))
+    // If n matches "v = a ⊙ b" (with ⊙ ∈ {+, −, ∗}) Then
+    if (match(val, M::Add(M::Bind(x), M::Bind(y))))
         res = getTRECAdd(analyzeEvolution(loop, x.get()), analyzeEvolution(loop, y.get()));
     else if (match(val, M::Sub(M::Bind(x), M::Bind(y))))
         res = getTRECSub(analyzeEvolution(loop, x.get()), analyzeEvolution(loop, y.get()));
@@ -435,7 +451,11 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
 
     Err::gassert(res != nullptr);
     evolution[val] = res;
-    return eval(res, loop);
+
+    auto eval_res = eval(res, loop);
+    if (loop->isLoopInvariant(val) && !eval_res->isExpr())
+        return getIRValTREC(val);
+    return eval_res;
 }
 
 // Input: h the halting loop-phi, n the definition of an SSA name
@@ -1102,8 +1122,13 @@ TREC *SCEVHandle::getTRECAdd(TREC *x, TREC *y) {
     if(!x->isAddRec() || !y->isAddRec())
         return getTRECUntracked();
 
-    if (x->getLoop() != y->getLoop())
+    if (x->getLoop() != y->getLoop()) {
+        if (x->getLoop()->contains(y->getLoop()))
+            return getAddRecTREC(y->getLoop(), getTRECAdd(y->getBase(), x), y->getStep());
+        if (y->getLoop()->contains(x->getLoop()))
+            return getAddRecTREC(x->getLoop(), getTRECAdd(x->getBase(), y), x->getStep());
         return getTRECUntracked();
+    }
     return getAddRecTREC(x->getLoop(), getTRECAdd(x->getBase(), y->getBase()), getTRECAdd(x->getStep(), y->getStep()));
 }
 TREC *SCEVHandle::getTRECSub(TREC *x, TREC *y) {
@@ -1115,13 +1140,19 @@ TREC *SCEVHandle::getTRECSub(TREC *x, TREC *y) {
     if (x->isAddRec() && y->isExpr())
         return getAddRecTREC(x->getLoop(), getTRECSub(x->getBase(), y), x->getStep());
     if (x->isExpr() && y->isAddRec())
-        return getAddRecTREC(y->getLoop(), getTRECSub(x, y->getBase()), y->getStep());
+        return getAddRecTREC(y->getLoop(), getTRECSub(x, y->getBase()), getTRECNeg(y->getStep()));
 
     if(!x->isAddRec() || !y->isAddRec())
         return getTRECUntracked();
 
-    if (x->getLoop() != y->getLoop())
+    if (x->getLoop() != y->getLoop()) {
+        if (x->getLoop()->contains(y->getLoop()))
+            return getAddRecTREC(y->getLoop(), getTRECSub(x, y->getBase()), getTRECNeg(y->getStep()));
+        if (y->getLoop()->contains(x->getLoop()))
+            return getAddRecTREC(x->getLoop(), getTRECSub(x->getBase(), y), x->getStep());
         return getTRECUntracked();
+    }
+
     return getAddRecTREC(x->getLoop(), getTRECSub(x->getBase(), y->getBase()), getTRECSub(x->getStep(), y->getStep()));
 }
 TREC *SCEVHandle::getTRECMul(TREC *x, TREC *y) {
@@ -1140,8 +1171,13 @@ TREC *SCEVHandle::getTRECMul(TREC *x, TREC *y) {
     if(!x->isAddRec() || !y->isAddRec())
         return getTRECUntracked();
 
-    if (x->getLoop() != y->getLoop())
+    if (x->getLoop() != y->getLoop()) {
+        if (x->getLoop()->contains(y->getLoop()))
+            return getAddRecTREC(y->getLoop(), getTRECMul(y->getBase(), x), getTRECMul(y->getStep(), x));
+        if (y->getLoop()->contains(x->getLoop()))
+            return getAddRecTREC(x->getLoop(), getTRECMul(x->getBase(), y), getTRECMul(x->getStep(), y));
         return getTRECUntracked();
+    }
     auto new_base = getTRECMul(x->getBase(), y->getBase());
     auto new_step = getTRECAdd(getTRECAdd(getTRECMul(x, y->getStep()), getTRECMul(y, x->getStep())),
                                getTRECMul(x->getStep(), y->getStep()));
