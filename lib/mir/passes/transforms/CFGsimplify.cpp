@@ -53,7 +53,8 @@ PM::PreservedAnalyses CFGsimplifyAfterRA::run(MIRFunction &func, FAM &fam) {
 }
 
 void CFGsimplifyBeforeRAImpl::impl() {
-    i1Eli(); //
+    i1Eli();
+    deadBlkEli();
 }
 
 void CFGsimplifyBeforeRAImpl::i1Eli() {
@@ -69,6 +70,10 @@ void CFGsimplifyBeforeRAImpl::i1EliDetect(MIRBlk_p &mblk) {
     for (auto it = minsts.begin(); it != minsts.end();) {
 
         auto next_ptr = [&minsts, &it]() -> MIRInst_p {
+            if (it == minsts.end()) {
+                return nullptr;
+            }
+
             ++it; // alert here
             return it == minsts.end() ? nullptr : *it;
         };
@@ -79,39 +84,46 @@ void CFGsimplifyBeforeRAImpl::i1EliDetect(MIRBlk_p &mblk) {
             break;
         }
 
-        recovery == it ? (++it, nop) : nop;
+        recovery == it ? (void)++it : nop;
     }
 }
 
-void CFGsimplifyBeforeRAImpl::i1UseConsolidate(MIRInst_p_l &minst, MIRInst_p_l::iterator &cmp) {
+void CFGsimplifyBeforeRAImpl::i1UseConsolidate(MIRInst_p_l &minsts, MIRInst_p_l::iterator &cmp) {
 
     ///@brief make consolidate
+    auto &ctx = mfunc.CodeGenContext();
     auto cset = std::next(cmp);
     auto cbnz = std::next(cset);
     // auto b = std::next(cbnz);
 
-    Err::gassert(cmp != minst.end() && cset != minst.end() && cbnz != minst.end(), "list iterator(s) corrupted");
+    Err::gassert(cmp != minsts.end() && cset != minsts.end() && cbnz != minsts.end(), "list iterator(s) corrupted");
+
+    (*cmp)->setOperand<0>(nullptr, ctx);
 
     auto cond = (*cset)->getOp(1); // MIROperand
 
-    minst.erase(cset);
+    (*cset)->putAllOp(ctx);
+    minsts.erase(cset);
+
     (*cbnz)->resetOpcode(OpC::InstBranch);
-    (*cbnz)->setOperand<0>(nullptr);
-    (*cbnz)->setOperand<1>((*cbnz)->getOp(2)); // true block
-    (*cbnz)->setOperand<2>(cond);
+    (*cbnz)->setOperand<0>(nullptr, ctx);
+    (*cbnz)->setOperand<1>((*cbnz)->getOp(2), ctx); // true block
+    (*cbnz)->setOperand<2>(cond, ctx);
     // op3 = prob
 }
 
 void CFGsimplifyAfterRAImpl::impl() {
-    deadBlkEli();
     brColsure();
+    ///@todo blk layout opt...
+    uselessCmpEli();
     brSeqRev();
     brEli();
 }
 
-void CFGsimplifyAfterRAImpl::deadBlkEli() {
+void CFGsimplifyBeforeRAImpl::deadBlkEli() {
     std::unordered_set<MIRBlk_p> dead_blks;
 
+    auto &ctx = mfunc.CodeGenContext();
     auto &mblks = mfunc.blks();
 
     for (auto &mblk : mfunc.blks()) {
@@ -121,6 +133,8 @@ void CFGsimplifyAfterRAImpl::deadBlkEli() {
     }
 
     for (auto &dead_blk : dead_blks) {
+
+        dead_blk->putAllInstOp(ctx);
 
         auto mprv = dead_blk->prv();
         auto mnxt = dead_blk->nxt();
@@ -135,6 +149,7 @@ void CFGsimplifyAfterRAImpl::deadBlkEli() {
 
 void CFGsimplifyAfterRAImpl::brColsure() {
     auto &mblks = mfunc.blks();
+    auto &ctx = mfunc.CodeGenContext();
 
     std::unordered_set<MIRBlk_p> useless_blks;
 
@@ -181,16 +196,19 @@ void CFGsimplifyAfterRAImpl::brColsure() {
             Err::gassert(rm_it != msuccs_mpred.end(), "brColsure: msuccs_mpred corrupted " + victim->getmSym());
 
             // 2
-            *rm_it = msucc; // replace
-            mpred->brReplace(victim, msucc);
+            *rm_it = msucc;                       // replace
+            mpred->brReplace(victim, msucc, ctx); // modify InstBranch here
 
             // 3
             msucc->preds().emplace_back(mpred);
         }
 
         /// step 3: 仅保证正确性的做法, 不一定是最好的空间顺序
-        mprv->resetNxt(mnxt);
-        mnxt->resetPrv(mprv);
+        mprv ? mprv->resetNxt(mnxt) : nop;
+        mnxt ? mnxt->resetPrv(mprv) : nop;
+
+        /// step 4: 减少引用计数
+        victim->putAllInstOp(ctx);
     }
 
     mblks.erase(std::remove_if(mblks.begin(), mblks.end(),
@@ -198,12 +216,54 @@ void CFGsimplifyAfterRAImpl::brColsure() {
                 mblks.end());
 }
 
+void CFGsimplifyAfterRAImpl::uselessCmpEli() {
+
+    auto &ctx = mfunc.CodeGenContext();
+
+    for (auto &mblk : mfunc.blks()) {
+        auto &minsts = mblk->Insts();
+
+        for (auto it = minsts.begin(); it != minsts.end();) {
+
+            auto next_ptr = [&minsts, &it]() -> MIRInst_p {
+                if (it == minsts.end()) {
+                    return nullptr;
+                }
+
+                ++it; // alert here
+                return it == minsts.end() ? nullptr : *it;
+            };
+
+            auto recovery = it;
+
+            if (cmp(*it) && b(next_ptr()) && b(next_ptr())) {
+                auto mblk_dst_1 = (*std::prev(it))->getOp(1)->relocable()->as<MIRBlk>();
+                auto mblk_dst_2 = (*it)->getOp(1)->relocable()->as<MIRBlk>();
+
+                if (mblk_dst_1 == mblk_dst_2) {
+
+                    for (auto it_put = recovery; it_put != it; ++it_put) {
+                        (*it_put)->putAllOp(ctx);
+                    }
+
+                    minsts.erase(recovery, it); // 应当保留一个跳转
+                }
+
+                break;
+            }
+
+            recovery == it ? (void)++it : nop;
+        }
+    }
+}
+
 void CFGsimplifyAfterRAImpl::brSeqRev() {
     auto &mblks = mfunc.blks();
+    auto &ctx = mfunc.CodeGenContext();
 
     for (auto &mblk : mblks) {
 
-        if (auto cmp = patternDetect(mblk); cmp != mblk->Insts().end()) {
+        if (auto cmp = SeqRevPatternDetect(mblk); cmp != mblk->Insts().end()) {
             auto br_true = std::next(cmp);
             auto br_false = std::next(br_true);
             auto mblk_true = (*br_true)->getOp(1);
@@ -211,15 +271,16 @@ void CFGsimplifyAfterRAImpl::brSeqRev() {
             auto oldcond = (*br_true)->getOp(2);
 
             auto newcond = mkReverse(oldcond);
-            (*br_true)->setOperand<2>(newcond);
-            (*br_true)->setOperand<1>(mblk_false);
-            (*br_false)->setOperand<1>(mblk_true); // remain Cond::AL
+            (*br_true)->setOperand<2>(newcond, ctx);
+            (*br_true)->setOperand<1>(mblk_false, ctx);
+            (*br_false)->setOperand<1>(mblk_true, ctx); // remain Cond::AL
         }
     }
 }
 
 void CFGsimplifyAfterRAImpl::brEli() {
     auto &mblks = mfunc.blks();
+    auto &ctx = mfunc.CodeGenContext();
 
     for (auto &mblk : mblks) {
 
@@ -237,26 +298,38 @@ void CFGsimplifyAfterRAImpl::brEli() {
             continue;
         }
 
+        minsts.back()->putAllOp(ctx);
         minsts.pop_back();
     }
 }
 
-MIRInst_p_l::iterator CFGsimplifyAfterRAImpl::patternDetect(MIRBlk_p mblk) {
+MIRInst_p_l::iterator CFGsimplifyAfterRAImpl::SeqRevPatternDetect(MIRBlk_p mblk) {
     auto &minsts = mblk->Insts();
 
     for (auto it = minsts.begin(); it != minsts.end();) {
 
         auto next_ptr = [&minsts, &it]() -> MIRInst_p {
+            if (it == minsts.end()) {
+                return nullptr;
+            }
+
             ++it; // alert here
             return it == minsts.end() ? nullptr : *it;
         };
 
         auto recovery = it;
         if (cmp(*it) && b(next_ptr()) && b(next_ptr())) {
-            return recovery;
+            auto br_true = std::prev(it);
+            auto br_false = it;
+            auto mblk_true = (*br_true)->getOp(1)->relocable()->as<MIRBlk>();
+            auto mblk_false = (*br_false)->getOp(1)->relocable()->as<MIRBlk>();
+
+            if (mblk_true == mblk->nxt()) {
+                return recovery;
+            }
         }
 
-        recovery == it ? (++it, nop) : nop;
+        recovery == it ? (void)++it : nop;
     }
 
     return minsts.end();

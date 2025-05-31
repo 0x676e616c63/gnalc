@@ -6,7 +6,7 @@ transform文件夹下的passes有比较严格的顺序
 10. ICF_TailDup.hpp: TCF & Tail duplication
 11. PostRAscheduling.hpp: post-RA scheduling, minimize cycles
 12. codelayout.hpp: code layout opt
-13. dce.hpp: remove unreachable block/continuous goto/unused label/peephole
+13. dce.hpp: remove unreachable block/continuous goto/unused label/peephole 感觉没必要单独做一个
 14. CFGsimplify.hpp: CFG simplify
 
 其中 3, 4, 6, 9, 10, 11, 12, 13, 14 是性能优化, 不是必要的

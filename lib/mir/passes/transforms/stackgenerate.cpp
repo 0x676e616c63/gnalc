@@ -40,11 +40,11 @@ void StackGenerateImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     bitmap &= 0xffff00007ff80000;
 
     if (mfunc->isProgramEntry()) {
-        bitmap &= 0x60000000; // lr, fp only
+        bitmap &= 0x60000000;
     }
 
     if (mfunc->isLeafFunc()) {
-        bitmap &= 0x20000000; // fp only
+        bitmap &= ~0x20000000; // no lr
     }
 
     auto calleesaves = bitmap;
@@ -85,7 +85,7 @@ void StackGenerateImpl::impl(MIRFunction &_mfunc, FAM &fam) {
         obj.offset += static_cast<int>(allocationBase);
     }
 
-    // emits
+    // insert prologue/epilogue
     auto &ctx = mfunc->CodeGenContext();
 
     ctx.frameInfo.insertPrologueEpilogue(mfunc, ctx);

@@ -14,19 +14,16 @@ private:
     std::ostream &outStream;
     bool debug;
 
-    using RegPrinter = std::string (*)(const MIROperand_p &, unsigned int);
-
-    RegPrinter reg2s;
-
-public:
-    ARMA64Printer(std::ostream &outStream_, bool ifDebug = false) : outStream(outStream_), debug(ifDebug) {
-
-        if (ifDebug) {
-            reg2s = &Reg2SDebug;
+    std::string reg2s(const MIROperand_p &reg, unsigned int bitWide, bool vector = false) {
+        if (debug) {
+            return Reg2SDebug(reg, bitWide, mfunc->CodeGenContext(), vector);
         } else {
-            reg2s = &Reg2S;
+            return Reg2S(reg, bitWide, vector);
         }
     }
+
+public:
+    ARMA64Printer(std::ostream &outStream_, bool ifDebug = false) : outStream(outStream_), debug(ifDebug) {}
 
     void printout(const MIRModule &);
     void printout(const std::vector<MIRGlobal_p> &);
@@ -42,10 +39,14 @@ public:
     [[nodiscard]] string copyPrinter(const MIRInst &);
 
     [[nodiscard]] string memoryPrinter(const MIRInst &);
+    [[nodiscard]] string smullPrinter(const MIRInst &);
+    [[nodiscard]] string ternaryPrinter(const MIRInst &);
     [[nodiscard]] string csetPrinter(const MIRInst &);
     [[nodiscard]] string cbnzPrinter(const MIRInst &);
-    [[nodiscard]] string ADRP_LDRPrinter(const MIRInst &);
+    [[nodiscard]] string AdrpPrinter(const MIRInst &);
     [[nodiscard]] string movPrinter(const MIRInst &);
+    [[nodiscard]] string movVPrinter(const MIRInst &);
+    [[nodiscard]] string fmovPrinter(const MIRInst &);
     [[nodiscard]] string blPrinter(const MIRInst &);
     [[nodiscard]] string calleePrinter(const MIRInst &);
     [[nodiscard]] string calleePrinter_legacy(const MIRInst &);

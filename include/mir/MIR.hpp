@@ -29,16 +29,16 @@ enum class OperandType : uint32_t {
     Int32, // original int32, or extend from int8, int16
     Int64,
     Ptr = Int64,
-    Intvec,
     Float, // V<> 默认位宽
     Float32,
+    Intvec,
     Floatvec,
     special, // prob, alignment, load/store size...
     High32,
     Low32,
     // Arm only now
     CondFlag, // to be very aware that many inst no long have cond exec compare to armv7
-    Shift5,
+    Shift5,   // lsl, lsr, asr
     LoadStoreShamt
 };
 
@@ -73,11 +73,16 @@ template <typename... OpT> inline unsigned getBitWideChoosen(OpT... types) {
     return (std::min({getBitWide(types)...})); //
 }
 
+// 向高位宽寄存器兼容
+template <typename... OpT> inline unsigned getBitWideChoosen_L(OpT... types) {
+    return (std::max({getBitWide(types)...})); //
+}
+
 enum MIRInstCond : unsigned { AL, EQ, NE, LT, GT, LE, GE };
 
 using Cond = MIRInstCond;
 
-enum class MIRGenericInst : uint32_t {
+enum MIRGenericInst : uint32_t {
     // control-flow
     InstBranch, // cond, reloc, prob
     // Memory, get by gep, no const offset
@@ -113,6 +118,12 @@ enum class MIRGenericInst : uint32_t {
     InstVMul,
     InstVDiv,
     InstVHorizontalAdd,
+    // fp vector, at most 4
+    InstFPVAdd,
+    InstFPVSub,
+    InstFPVMul,
+    InstFPVDiv,
+    InstFPVHorizontalAdd,
     // Comparison
     InstICmp, // dst, lhs, rhs, op
     InstFCmp, // dst, lhs, rhs, op
@@ -319,7 +330,8 @@ public:
     ///@note we directly chang reg of MIRReg
     void assignColor(unsigned color) {
         // Err::gassert(isVReg(), "assignColor: try assign color to a non-reg");
-        Err::gassert(color >= ARMReg::X0 && color <= ARMReg::V31, "assignColor: unknonw reg color");
+        Err::gassert(color >= ARMReg::X0 && color <= ARMReg::V31,
+                     "assignColor: unknonw reg color " + std::to_string(color));
         Err::gassert(color >= ARMReg::V0 && (mType == OpT::Float32 || mType == OpT::Floatvec || mType == OpT::Intvec) ||
                          color <= ARMReg::X29 &&
                              (mType == OpT::Int16 || mType == OpT::Int32 || mType == OpT::Int64 || mType == OpT::Int),
@@ -355,6 +367,8 @@ public:
         return std::get<T>(mOpcode); // wrong variant idx maybe ?
     }
 
+    auto opcode() const { return mOpcode; }
+
     bool isGeneric() const { return mOpcode.index() == 0; }
 
     MIRInst &resetOpcode(OpC opcode) {
@@ -372,6 +386,7 @@ public:
     template <unsigned idx> MIROperand_p &getOp() { return mOperands[idx]; }
     const MIROperand_p &getOp(unsigned idx) const { return mOperands[idx]; }
     template <unsigned idx> const MIROperand_p &getOp() const { return mOperands[idx]; }
+    ///@note if you're sure about there is a def op, than use ensureDef not this one
     MIROperand_p &getDef() { return mOperands[0]; }
     MIROperand_p &ensureDef() {
         Err::gassert(mOperands[0] != nullptr, "MIRInst::ensureDef: def is nullptr");
@@ -383,15 +398,23 @@ public:
         return mOperands[0];
     }
 
+    ///@note return the max idx of use list, so the list may be padded, and remaid to use '<='
     unsigned getUseNr() const;
 
     unsigned getDefNr() const;
 
     unsigned getOpNr() const;
 
-    template <unsigned idx> std::shared_ptr<MIRInst> setOperand(const MIROperand_p &operand) {
+    template <unsigned idx> std::shared_ptr<MIRInst> setOperand(const MIROperand_p &operand, CodeGenContext &ctx) {
         Err::gassert(idx < maxOpCnt, "MIRInst: set a op out of range");
+
+        auto original = mOperands[idx];
+
+        original && original->isReg() ? (void)ctx.putOp(original) : nop;
+        operand && operand->isReg() ? (void)ctx.getOp(operand) : nop;
+
         mOperands[idx] = operand;
+
         return shared_from_this();
     }
 
@@ -399,13 +422,26 @@ public:
     const auto &operands() const { return mOperands; }
 
     // to modify
-    void replace(MIROperand_p _old, MIROperand_p _new) {
+    void replace(MIROperand_p _old, MIROperand_p _new, CodeGenContext &ctx) {
         auto it =
             std::find_if(mOperands.begin(), mOperands.end(), [&](const MIROperand_p &ath) { return ath == _old; });
 
         Err::gassert(it != mOperands.end(), "MIRInst::replace: cant find op");
 
         *it = std::move(_new);
+
+        _new && _new->isReg() ? (void)ctx.getOp(_new) : nop;
+        _old && _old->isReg() ? (void)ctx.putOp(_old) : nop;
+    }
+
+    // before abundant the whole inst
+    void putAllOp(CodeGenContext &ctx) {
+
+        for (auto &mop : mOperands) {
+            if (mop && mop->isReg()) {
+                ctx.putOp(mop);
+            }
+        }
     }
 
     virtual ~MIRInst() = default;
@@ -435,6 +471,8 @@ struct StkObj {
 
     ~StkObj() = default;
 };
+
+struct constVal {};
 
 class MIRFunction : public MIRRelocable {
 private:
@@ -537,6 +575,8 @@ public:
     MIRInst_p_l &Insts() { return mInsts; }
     const MIRInst_p_l &Insts() const { return mInsts; }
 
+    void replaceInsts(MIRInst_p_l &new_mInsts) { std::swap(mInsts, new_mInsts); }
+
     double TripCount() const { return mTripCount; }
     void setTripCount(double trip) { mTripCount = trip; }
 
@@ -558,19 +598,39 @@ public:
     void resetPrv(const MIRBlk_p &_prv) { mprv = _prv; }
     void resetNxt(const MIRBlk_p &_nxt) { mnxt = _nxt; }
 
-    void brReplace(const MIRBlk_p &old_succ, const MIRBlk_p &new_succ) {
+    void brReplace(const MIRBlk_p &old_succ, const MIRBlk_p &new_succ, CodeGenContext &ctx) {
 
-        auto it = std::find_if(mInsts.begin(), mInsts.end(), [&old_succ, &new_succ](const MIRInst_p &minst) {
+        auto it = std::find_if(mInsts.begin(), mInsts.end(), [&](const MIRInst_p &minst) {
             if (minst->isGeneric() && minst->opcode<OpC>() == OpC::InstBranch &&
                 minst->getOp(1)->relocable() == old_succ) {
 
-                minst->setOperand<1>(MIROperand::asReloc(new_succ));
+                minst->setOperand<1>(MIROperand::asReloc(new_succ), ctx);
                 return true;
             }
             return false;
         });
 
         Err::gassert(it != mInsts.end(), "MIRBlk: cant find old succ");
+    }
+
+    void addInstBeforeBr(const MIRInst_p &minst) {
+        auto it = std::find_if(mInsts.begin(), mInsts.end(), [](const MIRInst_p &minst) {
+            if (minst->isGeneric() &&
+                (minst->opcode<OpC>() == OpC::InstICmp || minst->opcode<OpC>() == OpC::InstFCmp)) {
+                ///@todo 之后可能补充其他比较语句
+                return true;
+            } else {
+                return false;
+            }
+        });
+
+        mInsts.insert(it, minst); // it 可能为 .end()
+    }
+
+    void putAllInstOp(CodeGenContext &ctx) {
+        for (auto &minst : mInsts) {
+            minst->putAllOp(ctx);
+        }
     }
 
     ~MIRBlk() override = default;

@@ -211,13 +211,24 @@ enum ARMOpC : uint32_t {
     LD1,
     LD2,
     LD3,
+    LD4,
+    LD5,
     ST1,
     ST2,
     ST3,
+    ST4,
+    ST5,
+    SMULL, // smull x<>, w<>, w<>
+    MADD,
+    MSUB,
+    FMADD,
+    FMSUB,
     CSET,     // cond set
     CBNZ,     // compare and branch if not zero
-    ADRP_LDR, // load page of address then load address
+    ADRP_LDR, // 中间表示
+    ADRP,     // load page of the value
     MOV,      // not suggested, I mean really
+    MOV_V,    // use mov, but with simd regs
     MOVZ,     // mov and zero the rest bits
     MOVK,     // mov and keep the rest bits
     MOVF,     // fmov
@@ -234,11 +245,14 @@ using MIRInst_p = std::shared_ptr<MIRInst>;
 using MIRInst_wp = std::weak_ptr<MIRInst>;
 using MIRInst_p_l = std::list<MIRInst_p>;
 
+class ISelContext;
+struct CodeGenContext;
+
 ///@note use these when LoweringContent is not clear, or not in a IR lowering stage
 struct ARMInstTemplate {
-    static void registerInc(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, unsigned);
-    static void registerDec(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, unsigned);
-    static void registerAdjust(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, int);
+    static void registerInc(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, unsigned, CodeGenContext &);
+    static void registerDec(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, unsigned, CodeGenContext &);
+    static void registerAdjust(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, int, CodeGenContext &);
 };
 
 struct DataLayOut {
@@ -269,9 +283,6 @@ class MIRGlobal;
 using MIRGlobal_p = std::shared_ptr<MIRGlobal>;
 class StkObj;
 class MIRJmpTable;
-
-class ISelContext;
-struct CodeGenContext;
 
 class FrameInfo { // armv8(A64)
 public:
@@ -349,6 +360,8 @@ public:
     void legalizeWithStkOp(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const;
     void legalizeWithStkGep(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const;
     void legalizeWithStkPtrCast(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const;
+    void legalizeCopy(InstLegalizeContext &ctx) const;
+    void legalizeAdrp(InstLegalizeContext &ctx) const;
 
     ~ISelInfo() = default;
 };
@@ -363,10 +376,18 @@ struct CodeGenContext {
     unsigned idx = 0;
     unsigned nextId() { return ++idx; }
 
-    // unsigned idx_l = 0; // label
-    // string nextBlkLable(const string &func_name) {
-    //     return func_name + "_blk_" + std::to_string(idx_l++); // rename
-    // }
+    bool referCntAvailable = true;
+    std::unordered_map<MIROperand_p, unsigned> referCnt;
+
+    unsigned putOp(const MIROperand_p &mop) { return --referCnt.at(mop); }
+
+    unsigned getOp(const MIROperand_p &mop) { return ++referCnt[mop]; }
+
+    unsigned queryOp(const MIROperand_p &mop) const { return referCnt.at(mop); }
+
+    bool isReferCntAvailable() const { return referCntAvailable; }
+
+    void abundantReferCntAvailable() { referCntAvailable = false; }
 };
 
 }; // namespace MIR_new

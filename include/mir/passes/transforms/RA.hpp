@@ -19,7 +19,7 @@ public:
     using OperSet = std::set<MIROperand_p>;
     using WorkList = std::set<MIROperand_p>;
     using Nodes = std::set<MIROperand_p>;
-    using Moves = std::unordered_set<MIRInst_p>;
+    using Moves = std::set<MIRInst_p>;
 
     struct Edge {
         MIROperand_p u, v;

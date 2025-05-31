@@ -4,7 +4,7 @@
 
 #include "mir/passes/pass_manager.hpp"
 
-///@note 寄存器分配前的简化: 模式匹配简化条件判断, 存在blk空间上临近时, 将条件位反转消除一次跳转
+///@note 寄存器分配前的简化: 模式匹配简化条件判断
 
 ///@note 分配后的简化: 计算跳转闭包, 再次将条件位反转消除一次跳转(有条件时)
 
@@ -36,6 +36,7 @@ public:
 public:
     inline void impl();
     void i1Eli();
+    void deadBlkEli();
 
 public:
     void i1EliDetect(MIRBlk_p &);
@@ -55,13 +56,13 @@ public:
 
 public:
     inline void impl();
-    void deadBlkEli();
     void brColsure();
+    void uselessCmpEli();
     void brSeqRev();
     void brEli();
 
 public:
-    MIRInst_p_l::iterator patternDetect(MIRBlk_p); // ret the it of the cmp, if not , return .end()
+    MIRInst_p_l::iterator SeqRevPatternDetect(MIRBlk_p); // ret the it of the cmp, if not , return .end()
     MIROperand_p mkReverse(MIROperand_p);
 };
 

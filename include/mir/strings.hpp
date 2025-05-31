@@ -25,7 +25,7 @@ inline string Cond2S(Cond cond) {
     }
 }
 
-inline string Reg2S(const MIROperand_p &mop, unsigned bitWide) {
+inline string Reg2S(const MIROperand_p &mop, unsigned bitWide, bool vector = false) {
     auto isa = mop->isa();
 
     Err::gassert(isISAReg(isa), "Reg2S: not a isa reg");
@@ -52,8 +52,8 @@ inline string Reg2S(const MIROperand_p &mop, unsigned bitWide) {
             str += 's';
         } else if (bitWide == 8) {
             str += 'd';
-        } else {
-            str += 'q';
+        } else if (bitWide == 16) {
+            vector ? str += 'v' : str += 'q';
         }
 
         str += std::to_string(isa - 32);
@@ -62,7 +62,7 @@ inline string Reg2S(const MIROperand_p &mop, unsigned bitWide) {
     return str;
 }
 
-inline string Reg2SDebug(const MIROperand_p &mop, unsigned bitWide) {
+inline string Reg2SDebug(const MIROperand_p &mop, unsigned bitWide, const CodeGenContext &ctx, bool vector = false) {
     auto isa = mop->isa();
 
     Err::gassert(isISAReg(isa), "Reg2S: not a isa reg");
@@ -89,8 +89,8 @@ inline string Reg2SDebug(const MIROperand_p &mop, unsigned bitWide) {
             str += 's';
         } else if (bitWide == 8) {
             str += 'd';
-        } else {
-            str += 'q';
+        } else if (bitWide == 16) {
+            vector ? str += 'v' : str += 'q';
         }
 
         str += std::to_string(isa - 32);
@@ -113,7 +113,8 @@ inline string Reg2SDebug(const MIROperand_p &mop, unsigned bitWide) {
             str += 'v' + std::to_string(isa - 32);
         }
     } else {
-        str += '%' + std::to_string(recover) + '[' + std::to_string(bitWide) + ']';
+        str += '%' + std::to_string(recover) + '{' + std::to_string(bitWide) + '}' + '[' +
+               std::to_string(ctx.queryOp(mop)) + ']';
     }
 
     str += ')';
@@ -186,13 +187,30 @@ inline string ARMOpC2S(ARMOpC op) {
         return "ld2";
     case LD3:
         return "ld3";
+    case LD4:
+        return "ld4";
+    case LD5:
+        return "ld5";
     case ST1:
         return "st1";
     case ST2:
         return "st2";
     case ST3:
         return "st3";
+    case ST4:
+        return "st4";
+    case ST5:
+        return "st5";
+    case MADD:
+        return "madd";
+    case MSUB:
+        return "msub";
+    case FMADD:
+        return "fmadd";
+    case FMSUB:
+        return "fmsub";
     case MOV:
+    case MOV_V:
         return "mov";
     case MOVZ:
         return "movz";

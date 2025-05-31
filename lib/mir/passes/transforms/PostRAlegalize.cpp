@@ -116,5 +116,14 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l &minsts, MIRInst
         default:
             return;
         }
+    } else {
+        switch (minst->opcode<ARMOpC>()) {
+        case ARMOpC::ADRP_LDR: {
+            InstLegalizeContext ctx{minst, minsts, iter, _ctx};
+            _ctx.iselInfo.legalizeAdrp(ctx);
+        } break;
+        default:
+            return;
+        }
     }
 }

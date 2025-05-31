@@ -158,6 +158,11 @@ void ARMA64Printer::printout(const MIRInst &minst) {
         case OpC::InstVMul:
         case OpC::InstVDiv:
         case OpC::InstVHorizontalAdd:
+        case OpC::InstFPVAdd:
+        case OpC::InstFPVSub:
+        case OpC::InstFPVMul:
+        case OpC::InstFPVDiv:
+        case OpC::InstFPVHorizontalAdd:
             Err::todo("ARMA64Printer::printout(const MIRInst &): vectorize todo");
             break;
         case OpC::InstICmp:
@@ -206,22 +211,34 @@ void ARMA64Printer::printout(const MIRInst &minst) {
         case ARMOpC::ST3:
             Err::todo("ARMA64Printer::printout(const MIRInst &): vectorize todo");
             break;
+        case ARMOpC::SMULL:
+            outStream << smullPrinter(minst); // deal with special bitWides
+            break;
+        case ARMOpC::MADD:
+        case ARMOpC::MSUB:
+        case ARMOpC::FMADD:
+        case ARMOpC::FMSUB:
+            outStream << ternaryPrinter(minst);
+            break;
         case ARMOpC::CSET:
             outStream << csetPrinter(minst);
             break;
         case ARMOpC::CBNZ:
             outStream << cbnzPrinter(minst);
             break;
-        case ARMOpC::ADRP_LDR:
-            outStream << ADRP_LDRPrinter(minst);
+        case ARMOpC::ADRP:
+            outStream << AdrpPrinter(minst);
+            break;
+        case ARMOpC::MOV_V:
+            outStream << movVPrinter(minst);
             break;
         case ARMOpC::MOV:
-            Err::unreachable("ARMA64Printer::printout(const MIRInst &): not implemented");
-            break;
         case ARMOpC::MOVZ:
         case ARMOpC::MOVK:
-        case ARMOpC::MOVF:
             outStream << movPrinter(minst);
+            break;
+        case ARMOpC::MOVF: // fmov
+            outStream << fmovPrinter(minst);
             break;
         case ARMOpC::BL:
             outStream << blPrinter(minst);

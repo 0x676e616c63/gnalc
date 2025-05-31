@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
     bool A32_target = false; // -march=armv7
 #endif
 
-    MIR_new::OptInfo bkd_opt_info;
+    MIR_new::OptInfo bkd_opt_info = MIR_new::o1_opt_info;
 
 #if GNALC_EXTENSION_BRAINFK
     bool bf_target = false;   // -mbrainfk
@@ -183,6 +183,16 @@ int main(int argc, char **argv) {
             cli_opt_options.verify.enable();
             cli_opt_options.abort_when_verify_failed = true;
         }
+
+        // backend opt options
+
+        else if (arg == "-fno-redundantLoadEli") {
+            bkd_opt_info.redundantLoadEli = false;
+        }
+        else if (arg == "-fno-PostRaScheduling") {
+            bkd_opt_info.PostRaScheduling = false;
+        }
+
 #if GNALC_EXTENSION_BRAINFK
         // Extensions:
         else if (arg == "-mbrainfk") bf_target = true;
@@ -275,7 +285,8 @@ Extensions:
 
     if (!only_compilation) {
         std::cerr << "Warning: Gnalc currently only supports '-S' mode."
-                     " Only run compilation steps currently." << std::endl;
+                     " Only run compilation steps currently."
+                  << std::endl;
     }
 
     {
@@ -444,7 +455,7 @@ Extensions:
     bkd_mpm.run(*mModule, bkd_mam);
 
     if (only_compilation) {
-        MIR_new::ARMA64Printer armv8gen(*poutstream, emit_llc ? true : false);
+        MIR_new::ARMA64Printer armv8gen(*poutstream, emit_llc);
         armv8gen.printout(*mModule);
         return 0;
     }

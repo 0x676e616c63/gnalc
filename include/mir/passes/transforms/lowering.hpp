@@ -46,6 +46,7 @@ private:
     std::map<string, MIRGlobal_p> &mGlobalMap;
     // mFPLoadedConstantCache
     std::map<unsigned, MIROperand_p> mConstMap;
+    std::map<unsigned, MIROperand_p> mSpConstMap;
     std::map<IRVal_p, MIROperand_p> &mValMap; // isa, vreg
 
     std::vector<PhiOperPair> phiOpers;
@@ -84,40 +85,34 @@ public:
             return mconst;
         }
 
-        auto imme_idx = static_cast<unsigned>(imme);
+        auto imme_tmp = imme;
+        auto imme_idx = *reinterpret_cast<unsigned *>(&imme_tmp);
 
         MIROperand_p mconst = nullptr;
 
-        //
+        /// LAMBDA BEGIN
         auto make_new = [&]() {
             if constexpr (std::is_same_v<T, int>) {
                 mconst = MIROperand::asImme<T>(imme, OpT::Int32);
+                mConstMap.emplace(imme_idx, mconst);
             } else if constexpr (std::is_same_v<T, float>) {
                 mconst = MIROperand::asImme<T>(imme, OpT::Float32);
+                mSpConstMap.emplace(imme_idx, mconst);
             }
-            mConstMap.emplace(imme_idx, mconst);
 
             return mconst;
         };
-        //
+        /// LAMBDA END
 
-        if (!mConstMap.count(imme_idx)) {
-            return make_new();
-        } else {
-            mconst = mConstMap.at(imme_idx);
+        if constexpr (std::is_same_v<T, int>) {
 
-            if constexpr (std::is_same_v<T, int>) {
-                if (mconst->type() != OpT::Int32) {
-                    return make_new();
-                }
-            } else if constexpr (std::is_same_v<T, float>) {
-                if (mconst->type() != OpT::Float32) {
-                    return make_new();
-                }
-            }
+            return mConstMap.count(imme_idx) ? mConstMap.at(imme_idx) : make_new();
 
-            return mconst;
+        } else if constexpr (std::is_same_v<T, float>) {
+
+            return mSpConstMap.count(imme_idx) ? mSpConstMap.at(imme_idx) : make_new();
         }
+
         //
     }
 
