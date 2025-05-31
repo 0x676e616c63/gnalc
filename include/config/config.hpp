@@ -53,6 +53,9 @@ constexpr unsigned LOOP_UNROLLING_MAX_PROCESS_SIZE = 100;
 
 // If Conversion
 constexpr auto IF_CONVERSION_DUPLICATION_THRESHOLD = 4;
+
+// Range Analysis
+constexpr auto RANGE_ANALYSIS_MAX_PROCESS_CNT = 32;
 } // namespace Config::IR
 
 namespace Config::MIR {

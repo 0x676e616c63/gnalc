@@ -115,6 +115,10 @@ TREC *SCEVHandle::getSCEVAtBlock(Value *val, const BasicBlock *block) {
             return nullptr;
     }
     auto scope = loop_info->getLoopFor(block).get();
+
+    if (scope && !scope->isSimplifyForm())
+        return getTRECUntracked();
+
     auto it = scoped_evolution[scope].find(val);
     if (it != scoped_evolution[scope].end())
         return it->second;
@@ -449,6 +453,13 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
         }
         else
             res = getTRECUntracked();
+    } else if (auto select = val->as_raw<SELECTInst>()) {
+        auto tevo = instantiateEvolution(analyzeEvolution(loop, select->getTrueVal().get()), val_loop);
+        auto fevo = instantiateEvolution(analyzeEvolution(loop, select->getFalseVal().get()), val_loop);
+        if (tevo == fevo)
+            res = tevo;
+        else
+            res = getTRECUntracked();
     } else
         res = getTRECUntracked();
 
@@ -534,6 +545,17 @@ std::pair<bool, TREC *> SCEVHandle::buildUpdateExpr(const PHIInst *loop_phi, Val
             if (exist)
                 return {true, getTRECUntracked()};
         }
+
+        return {false, getTRECUndef()};
+    }
+
+    if (auto select = val->as_raw<SELECTInst>()) {
+        auto [t_exist, t_update] = buildUpdateExpr(loop_phi, select->getTrueVal().get(), loop_phi_loop);
+        if (t_exist)
+            return {true, getTRECUntracked()};
+        auto [f_exist, f_update] = buildUpdateExpr(loop_phi, select->getFalseVal().get(), loop_phi_loop);
+        if (f_exist)
+            return {true, getTRECUntracked()};
 
         return {false, getTRECUndef()};
     }

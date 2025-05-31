@@ -314,6 +314,8 @@ template <typename T> constexpr bool hasGetInstCountV = hasGetInstCount<T>::valu
 } // namespace detail
 
 template <typename UnitT> class PassManager : public PassInfo<PassManager<UnitT>> {
+    template <typename UnitT2>
+    friend class FixedPointPM;
 protected:
     using PassConceptT = PassConcept<UnitT, AnalysisManager<UnitT>>;
     std::vector<std::unique_ptr<PassConceptT>> passes;

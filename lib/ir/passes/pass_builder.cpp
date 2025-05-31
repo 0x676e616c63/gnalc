@@ -21,7 +21,6 @@
 #include "ir/passes/transforms/inline.hpp"
 #include "ir/passes/transforms/instsimplify.hpp"
 #include "ir/passes/transforms/internalize.hpp"
-#include "ir/passes/transforms/jump_threading.hpp"
 #include "ir/passes/transforms/lcssa.hpp"
 #include "ir/passes/transforms/licm.hpp"
 #include "ir/passes/transforms/load_elimination.hpp"
@@ -40,6 +39,7 @@
 
 // Utilities
 #include "ir/passes/analysis/range_analysis.hpp"
+#include "ir/passes/transforms/dae.hpp"
 #include "ir/passes/transforms/if_conversion.hpp"
 #include "ir/passes/transforms/range_aware_simplify.hpp"
 #include "ir/passes/utilities/irprinter.hpp"
@@ -129,14 +129,30 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
             PM::FixedPointPM<Function> fpm;
             FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
             FUNCTION_TRANSFORM(sccp, SCCPPass());
-            // FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass());
+
+            // fpm.addPass(LoopSimplifyPass());
+            // fpm.addPass(NameNormalizePass(true));
+            // fpm.addPass(PrintFunctionPass(std::cerr));
+            // fpm.addPass(PrintSCEVPass(std::cerr));
+            // fpm.addPass(PrintRangePass(std::cerr));
+            FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass());
+            // fpm.addPass(PrintFunctionPass(std::cerr));
+
             FUNCTION_TRANSFORM(gvnpre, BreakCriticalEdgesPass(), GVNPREPass());
             FUNCTION_TRANSFORM(dce, DCEPass());
             return fpm;
         };
 
+        auto make_ipo_clean =  [&options] {
+            FPM fpm;
+            FUNCTION_TRANSFORM(dae, LoopSimplifyPass(), DAEPass());
+            return fpm;
+        };
+
         auto make_cfg_clean = [&options] {
             PM::FixedPointPM<Function> fpm;
+            FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
+            FUNCTION_TRANSFORM(sccp, SCCPPass())
             FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
             FUNCTION_TRANSFORM(if_conversion, IfConversionPass())
             FUNCTION_TRANSFORM(adce, ADCEPass())
@@ -149,13 +165,18 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
             FUNCTION_TRANSFORM(dse, DSEPass());
             return fpm;
         };
+
+        // Basic --> (CFG ---> Mem) ---> IPO ---> CFG
         FPM fpm;
         fpm.addPass(make_basic_clean());
 
         PM::FixedPointPM<Function> fixed;
         fixed.addPass(make_cfg_clean());
         fixed.addPass(make_mem_clean());
+
         fpm.addPass(std::move(fixed));
+        fpm.addPass(make_ipo_clean());
+        fpm.addPass(make_cfg_clean());
         return fpm;
     };
 
@@ -229,9 +250,10 @@ FPM PassBuilder::buildFunctionPipeline(PMOptions opt_info) {
     // FUNCTION_TRANSFORM(reassociate, ReassociatePass())
     FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass())
     FUNCTION_TRANSFORM(sccp, SCCPPass())
-    // FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass())
+    FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass())
     FUNCTION_TRANSFORM(dce, DCEPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
+    FUNCTION_TRANSFORM(dae, LoopSimplifyPass(), DAEPass())
     FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
     FUNCTION_TRANSFORM(if_conversion, IfConversionPass())
     FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
@@ -246,6 +268,8 @@ FPM PassBuilder::buildFunctionPipeline(PMOptions opt_info) {
     FUNCTION_TRANSFORM(loadelim, LoadEliminationPass())
     FUNCTION_TRANSFORM(dce, DCEPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
+    FUNCTION_TRANSFORM(dae, LoopSimplifyPass(), DAEPass())
+
     // Loop
     FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
     FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
@@ -255,9 +279,11 @@ FPM PassBuilder::buildFunctionPipeline(PMOptions opt_info) {
 
     FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass())
     FUNCTION_TRANSFORM(sccp, SCCPPass())
-    // FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass())
+    FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass())
     FUNCTION_TRANSFORM(dce, DCEPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
+    FUNCTION_TRANSFORM(dae, LoopSimplifyPass(), DAEPass())
+
     FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
 
 #undef FUNCTION_TRANSFORM
@@ -279,19 +305,20 @@ MPM PassBuilder::buildModulePipeline(PMOptions opt_info) {
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
-    fpm.addPass(InlinePass());
-    fpm.addPass(PromotePass());
-    fpm.addPass(SCCPPass());
-    fpm.addPass(InstSimplifyPass());
-    fpm.addPass(ADCEPass());
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(VerifyPass());
-    fpm.addPass(NameNormalizePass(true));
-    fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(PrintRangePass(std::cerr));
-    fpm.addPass(RangeAwareSimplifyPass());
+    fpm.addPass(IR::PromotePass());
+    fpm.addPass(IR::TailRecursionEliminationPass());
+    fpm.addPass(IR::InlinePass());
+    fpm.addPass(IR::InternalizePass());
+    fpm.addPass(IR::PromotePass());
+    fpm.addPass(IR::NameNormalizePass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::PrintFunctionPass(std::cerr));
+    fpm.addPass(IR::PrintRangePass(std::cerr));
+    fpm.addPass(IR::RangeAwareSimplifyPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::NameNormalizePass());
     return fpm;
+
 
     // If-conversion
     // fpm.addPass(PromotePass());
@@ -442,6 +469,8 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
     REGISTER_FUNCTION_TRANSFORM2(gvnpre, BreakCriticalEdgesPass, GVNPREPass, 10)
     REGISTER_FUNCTION_TRANSFORM2(loadelim, CFGSimplifyPass, LoadEliminationPass, 10)
     REGISTER_FUNCTION_TRANSFORM2(dse, CFGSimplifyPass, DSEPass, 10)
+    REGISTER_FUNCTION_TRANSFORM2(dae, LoopSimplifyPass, DAEPass, 10)
+    REGISTER_FUNCTION_TRANSFORM2(rngsimplify, LoopSimplifyPass, RangeAwareSimplifyPass, 10)
 
     REGISTER_FUNCTION_TRANSFORM2(loopelim, LoopSimplifyPass, LoopEliminationPass, 10)
     REGISTER_FUNCTION_TRANSFORM2(loop_strength_reduce, LoopSimplifyPass, LoopStrengthReducePass, 10)

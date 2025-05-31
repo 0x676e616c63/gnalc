@@ -1,98 +1,113 @@
-// float global constants
-const float RADIUS = 5.5, PI = 03.141592653589793, EPS = 1e-6;
+int n = 1000;
+int ks = 15;
+int ps = 4;
+float input[1000][1000];
+float kernel[15][15];
+float conv_output[1000][1000];
+float pooling_output[243][243];
 
-// hexadecimal float constant
-const float PI_HEX = 0x1.921fb6p+1, HEX2 = 0x.AP-3;
-
-// float constant evaluation
-const float FACT = -.33E+5, EVAL1 = PI * RADIUS * RADIUS, EVAL2 = 2 * PI_HEX * RADIUS, EVAL3 = PI * 2 * RADIUS;
-
-// float constant implicit conversion
-const float CONV1 = 233, CONV2 = 0xfff;
-const int MAX = 1e9, TWO = 2.9, THREE = 3.2, FIVE = TWO + THREE;
-
-// float -> float function
-float float_abs(float x) {
-  if (x < 0) return -x;
-  return x;
+float max(float a, float b) {
+    if (a > b) {
+        return a;
+    } else {
+        return b;
+    }
 }
 
-// int -> float function & float/int expression
-float circle_area(int radius) {
-  return (PI * radius * radius + (radius * radius) * PI) / 2;
+float exp(float x) {
+    return 1 + x + (x*x)/2 + (x*x*x)/6 + (x*x*x*x)/24;
 }
 
-// float -> float -> int function & float/int expression
-int float_eq(float a, float b) {
-  if (float_abs(a - b) < EPS) {
-    return 1 * 2. / 2;
-  } else {
-    return 0;
-  }
+float sigmoid(float x) {
+    return 1 / (1 + exp(-x));
 }
 
-void error() {
-  putch(101);
-  putch(114);
-  putch(114);
-  putch(111);
-  putch(114);
-  putch(10);
-}
+void kernel_conv_pooling(float A[][1000], float B[][1000], float C[][243], float kernel[][15], int n, int ks, int ps) {
+    int i, j, k, l;
+    float v;
+    i = 0;
+    while (i < n - ks + 1) {
+        j = 0;
+        while (j < n - ks + 1) {
+            v = 0;
+            k = 0;
+            while (k < ks) {
+                l = 0;
+                while (l < ks) {
+                    v=v+ A[i + k][j + l] * kernel[k][l];
+                    l =l+ 1;
+                }
+                k =k+ 1;
+            }
+            B[i][j] = v;
+            j =j+ 1;
+        }
+        i =i+ 1;
+    }
+    n = n - ks + 1;
+    i = 0;
+    while (i < n - ks + 1) {
+        j = 0;
+        while (j < n - ks + 1) {
+            v = 0;
+            k = 0;
+            while (k < ks) {
+                l = 0;
+                while (l < ks) {
+                    v =v+ B[i + k][j + l] * kernel[k][l];
+                    l =l+ 1;
+                }
+                k =k+ 1;
+            }
+            A[i][j] = v;
+            j =j+ 1;
+        }
+        i =i+ 1;
+    }
 
-void ok() {
-  putch(111);
-  putch(107);
-  putch(10);
-}
+    n = (n - ks + 1) / ps;
+    i = 0;
+    while (i < n) {
+        j = 0;
+        while (j < n) {
+            v = A[i * ps][j * ps];
+            k = 0;
+            while (k < ps) {
+                l = 0;
+                while (l < ps) {
+                    v = max(v, A[i * ps + k][j * ps + l]);
+                    l =l+ 1;
+                }
+                k =k+ 1;
+            }
+            C[i][j] = v;
+            j =j+ 1;
+        }
+        i =i+ 1;
+    }
 
-void assert(int cond) {
-  if (!cond) {
-    error();
-  } else {
-    ok();
-  }
-}
-
-void assert_not(int cond) {
-  if (cond) {
-    error();
-  } else {
-    ok();
-  }
+    i = 0;
+    while (i < n) {
+        v = 0;
+        j = 0;
+        while (j < n) {
+            C[i][j] = C[i][j] * sigmoid(C[i][j]);
+            j =j+ 1;
+        }
+        i =i+ 1;
+    }
 }
 
 int main() {
-  assert_not(float_eq(HEX2, FACT));
-  assert_not(float_eq(EVAL1, EVAL2));
-  assert(float_eq(EVAL2, EVAL3));
-  assert(float_eq(circle_area(RADIUS) /* f->i implicit conversion */,
-                  circle_area(FIVE)));
-  assert_not(float_eq(CONV1, CONV2) /* i->f implicit conversion */);
+    int os = (n - 2 * ks + 2) / ps;
+    getfarray(input);
+    getfarray(kernel);
 
-  // float conditional expressions
-  if (1.5) ok();
-  if (!!3.3) ok();
-  if (.0 && 3) error();
-  if (0 || 0.3) ok();
+    starttime();
+    kernel_conv_pooling(input, conv_output, pooling_output, kernel, n, ks, ps);
+    stoptime();
 
-  // float array & I/O functions
-  int i = 1, p = 0;
-  float arr[10] = {1., 2};
-  int len = getfarray(arr);
-  while (i < MAX) {
-    float input = getfloat();
-    float area = PI * input * input, area_trunc = circle_area(input);
-    arr[p] = arr[p] + input;
+    putfarray(os*os, pooling_output);
 
-    putfloat(area);
-    putch(32);
-    putint(area_trunc); // f->i implicit conversion
-    putch(10);
-
-    i = i * - -1e1;
-    p = p + 1;
-  }
-  putfarray(len, arr);
-  return 0;
+    return 0;
 }

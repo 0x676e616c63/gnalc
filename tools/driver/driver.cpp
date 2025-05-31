@@ -145,7 +145,8 @@ int main(int argc, char **argv) {
         OPT_ARG("--lsr", "--no-lsr", loop_strength_reduce)
         OPT_ARG("--loopelim", "--no-loopelim", loopelim)
         OPT_ARG("--vectorizer", "--no-vectorizer", vectorizer)
-        OPT_ARG("--jumpthreading", "--no-jumpthreading", jump_threading)
+        OPT_ARG("--rngsimplify", "--no-rngsimplify", rngsimplify)
+        OPT_ARG("--dae", "--no-dae", dae)
         OPT_ARG("--internalize", "--no-internalize", internalize)
         // Module Transforms
         OPT_ARG("--treeshaking", "--no-treeshaking", tree_shaking)
@@ -230,7 +231,8 @@ Optimizations Flags:
   --lsr                - Loop strength reduction
   --loopelim           - Loop elimination
   --vectorizer         - Vectorizer
-  --jumpthreading      - Jump threading
+  --rngsimplify        - Value range aware redundancy elimination
+  --dae                - Dead argument elimination
   --internalize        - Internalize global variables
   --treeshaking        - Shake off unused functions, function declarations and global variables
 

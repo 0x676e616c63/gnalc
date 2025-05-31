@@ -99,8 +99,20 @@ int LoopAAResult::getAlignOnBase(Value *value) const {
     return align;
 }
 
-int LoopAAResult::getAlignOnBase(const pVal& value) const {
-    return getAlignOnBase(value.get());
+int LoopAAResult::getAlignOnBase(const pVal &value) const { return getAlignOnBase(value.get()); }
+
+std::optional<std::tuple<Value *, size_t>> LoopAAResult::getBaseAndOffset(Value *value) const {
+    const auto& loc = queryPointer(value);
+    if (loc.untracked)
+        return std::nullopt;
+
+    if (loc.accesses.empty())
+        return std::make_tuple(loc.base, loc.offset);
+
+    return std::nullopt;
+}
+std::optional<std::tuple<Value *, size_t>> LoopAAResult::getBaseAndOffset(const pVal &value) const {
+    return getBaseAndOffset(value.get());
 }
 
 const LoopAAResult::LocationSet &LoopAAResult::queryPointer(Value *v) const {
@@ -179,6 +191,12 @@ LoopAAResult::LocationSet LoopAAResult::analyzePointer(Value *ptr) const {
             set.base = ptr;
             return set;
         }
+        // Don't bother with function before mem2reg
+        else if (ptr->is<LOADInst>()) {
+            set.untracked = true;
+            return set;
+        }
+        else Err::unreachable();
     }
 }
 

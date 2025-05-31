@@ -94,6 +94,11 @@ private:
     friend class PostDomTreeAnalysis;
 };
 
+struct PDTBuildContext {
+    pBlock exit = nullptr;
+    bool is_exit_virtual = false;
+};
+
 // 相对于DomTreeAnalysis而言，只需加一个虚拟出口根（若有多出口），反转一下CFG方向
 class PostDomTreeAnalysis : public PM::AnalysisInfo<PostDomTreeAnalysis> {
 public:
@@ -101,10 +106,8 @@ public:
     PostDomTree run(Function &f, FAM &fam);
 
 private:
-    pBlock exit = nullptr;
-    bool is_exit_virtual = false;
-    void setExit(const Function &f); // 用于在CFG中连接虚拟根和真出口节点
-    void restoreCFG() const;         // 用于计算完成后清除出口块对虚拟根节点的CFG边
+    void setExit(const Function &f, PDTBuildContext& ctx); // 用于在CFG中连接虚拟根和真出口节点
+    void restoreCFG(PDTBuildContext& ctx) const;         // 用于计算完成后清除出口块对虚拟根节点的CFG边
 private:
     friend AnalysisInfo<PostDomTreeAnalysis>;
     static PM::UniqueKey Key;

@@ -2,9 +2,9 @@
 // This pass does not delete functions that are inlined.
 //
 // Note that the `ModulePassWrapper` processes functions in their definition order,
-// which implicitly forms a topological order in SysY due to the absence of function
+// which implicitly forms a post order in SysY due to the absence of function
 // declarations (all functions must be defined before use).
-// This natural topological sort is also utilized in AliasAnalysis and GVN-PRE.
+// This natural post order is also utilized in AliasAnalysis and GVN-PRE.
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_INLINE_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_INLINE_HPP

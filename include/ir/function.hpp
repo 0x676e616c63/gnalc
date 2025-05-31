@@ -192,6 +192,9 @@ public:
     void updateCFG();
     void updateAndCheckCFG();
 
+    bool isRecursive() const;
+
+    bool removeParam(size_t index);
 private:
     void updateBBIndex();
     void updateAllIndex();

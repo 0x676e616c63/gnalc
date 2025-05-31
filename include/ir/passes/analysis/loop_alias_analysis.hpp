@@ -55,6 +55,9 @@ public:
     int getAlignOnBase(Value* value) const;
     int getAlignOnBase(const pVal& value) const;
 
+    std::optional<std::tuple<Value*, size_t>> getBaseAndOffset(Value* value) const;
+    std::optional<std::tuple<Value*, size_t>> getBaseAndOffset(const pVal& value) const;
+
     LoopAAResult (Function *f, SCEVHandle* scev_, LoopInfo* loop_info_)
         : scev(scev_), loop_info(loop_info_), func(f) {}
 private:

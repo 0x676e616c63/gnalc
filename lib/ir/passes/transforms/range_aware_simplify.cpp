@@ -22,16 +22,15 @@ PM::PreservedAnalyses RangeAwareSimplifyPass::run(Function &function, FAM &fam) 
                 auto inst_rng = ranges.getIntRange(inst);
                 if (auto exact = inst_rng.getExact()) {
                     inst->replaceSelf(function.getConst(*exact));
-                    Logger::logDebug("[RngSimplify]: Replaced '", inst->getName(), "' with '", *exact, "'.");
+                    Logger::logDebug("[RngSimplify]: Replaced int '", inst->getName(), "' with '", *exact, "'.");
                     rng_inst_modified = true;
                     continue;
                 }
-            }
-            else if (isSameType(inst->getType(), makeBType(IRBTYPE::FLOAT))) {
+            } else if (isSameType(inst->getType(), makeBType(IRBTYPE::FLOAT))) {
                 auto inst_rng = ranges.getFloatRange(inst);
                 if (auto exact = inst_rng.getExact()) {
                     inst->replaceSelf(function.getConst(*exact));
-                    Logger::logDebug("[RngSimplify]: Replaced '", inst->getName(), "' with '", *exact, "'.");
+                    Logger::logDebug("[RngSimplify]: Replaced float '", inst->getName(), "' with '", *exact, "'.");
                     rng_inst_modified = true;
                     continue;
                 }
@@ -43,7 +42,7 @@ PM::PreservedAnalyses RangeAwareSimplifyPass::run(Function &function, FAM &fam) 
                 auto icmp_res = [&]() -> std::optional<bool> {
                     switch (icmp->getCond()) {
                     case ICMPOP::eq:
-                        if (!lrng.overlap(rrng))
+                        if (!lrng.overlaps(rrng))
                             return false;
                         if (lrng.getExact().has_value() && rrng.getExact().has_value()) {
                             if (*lrng.getExact() == *rrng.getExact())
@@ -52,7 +51,7 @@ PM::PreservedAnalyses RangeAwareSimplifyPass::run(Function &function, FAM &fam) 
                         }
                         break;
                     case ICMPOP::ne:
-                        if (!lrng.overlap(rrng))
+                        if (!lrng.overlaps(rrng))
                             return true;
                         if (lrng.getExact().has_value() && rrng.getExact().has_value()) {
                             if (*lrng.getExact() == *rrng.getExact())
@@ -62,34 +61,34 @@ PM::PreservedAnalyses RangeAwareSimplifyPass::run(Function &function, FAM &fam) 
                         break;
                     case ICMPOP::slt:
                         // lhs < rhs
-                        if (lrng.max <= rrng.min)
+                        if (lrng.max < rrng.min)
                             return true;
                         // lhs >= rhs
-                        if (lrng.min >= rrng.max - 1)
+                        if (lrng.min >= rrng.max)
                             return false;
                         break;
                     case ICMPOP::sle:
                         // lhs <= rhs
-                        if (lrng.max - 1 <= rrng.min)
+                        if (lrng.max <= rrng.min)
                             return true;
                         // lhs > rhs
-                        if (lrng.min >= rrng.max)
+                        if (lrng.min > rrng.max)
                             return false;
                         break;
                     case ICMPOP::sgt:
                         // lhs > rhs
-                        if (lrng.min >= rrng.max)
+                        if (lrng.min > rrng.max)
                             return true;
                         // lhs <= rhs
-                        if (lrng.max - 1 <= rrng.min)
+                        if (lrng.max <= rrng.min)
                             return false;
                         break;
                     case ICMPOP::sge:
                         // lhs >= rhs
-                        if (lrng.min >= rrng.max - 1)
+                        if (lrng.min >= rrng.max)
                             return true;
                         // lhs < rhs
-                        if (lrng.max <= rrng.min)
+                        if (lrng.max < rrng.min)
                             return false;
                         break;
                     default:
@@ -113,7 +112,7 @@ PM::PreservedAnalyses RangeAwareSimplifyPass::run(Function &function, FAM &fam) 
                 auto fcmp_res = [&]() -> std::optional<bool> {
                     switch (fcmp->getCond()) {
                     case FCMPOP::oeq:
-                        if (!lrng.overlap(rrng))
+                        if (!lrng.overlaps(rrng))
                             return false;
                         if (lrng.getExact().has_value() && rrng.getExact().has_value()) {
                             if (*lrng.getExact() == *rrng.getExact())
@@ -122,7 +121,7 @@ PM::PreservedAnalyses RangeAwareSimplifyPass::run(Function &function, FAM &fam) 
                         }
                         break;
                     case FCMPOP::one:
-                        if (!lrng.overlap(rrng))
+                        if (!lrng.overlaps(rrng))
                             return true;
                         if (lrng.getExact().has_value() && rrng.getExact().has_value()) {
                             if (*lrng.getExact() == *rrng.getExact())
@@ -132,34 +131,34 @@ PM::PreservedAnalyses RangeAwareSimplifyPass::run(Function &function, FAM &fam) 
                         break;
                     case FCMPOP::olt:
                         // lhs < rhs
-                        if (lrng.max <= rrng.min)
+                        if (lrng.max < rrng.min)
                             return true;
                         // lhs >= rhs
-                        if (lrng.min >= rrng.max - 1)
+                        if (lrng.min >= rrng.max)
                             return false;
                         break;
                     case FCMPOP::ole:
                         // lhs <= rhs
-                        if (lrng.max - 1 <= rrng.min)
+                        if (lrng.max <= rrng.min)
                             return true;
                         // lhs > rhs
-                        if (lrng.min >= rrng.max)
+                        if (lrng.min > rrng.max)
                             return false;
                         break;
                     case FCMPOP::ogt:
                         // lhs > rhs
-                        if (lrng.min >= rrng.max)
+                        if (lrng.min > rrng.max)
                             return true;
                         // lhs <= rhs
-                        if (lrng.max - 1 <= rrng.min)
+                        if (lrng.max <= rrng.min)
                             return false;
                         break;
                     case FCMPOP::oge:
                         // lhs >= rhs
-                        if (lrng.min >= rrng.max - 1)
+                        if (lrng.min >= rrng.max)
                             return true;
                         // lhs < rhs
-                        if (lrng.max <= rrng.min)
+                        if (lrng.max < rrng.min)
                             return false;
                         break;
                     default:
@@ -174,7 +173,7 @@ PM::PreservedAnalyses RangeAwareSimplifyPass::run(Function &function, FAM &fam) 
                     eliminated.emplace_back(fcmp);
                     fcmp->replaceSelf(function.getConst(*fcmp_res));
                     rng_inst_modified = true;
-                    Logger::logDebug("[RngSimplify]: Replaced FCMPInst '", fcmp->getName(), "' with '",
+                    Logger::logDebug("[ RngSimplify]: Replaced FCMPInst '", fcmp->getName(), "' with '",
                                      *fcmp_res ? "true" : "false", "'.");
                 }
             }
@@ -204,6 +203,9 @@ PM::PreservedAnalyses RangeAwareSimplifyPass::run(Function &function, FAM &fam) 
         }
     }
 
+    for (const auto &i : eliminated)
+        i->getParent()->delFirstOfInst(i);
+
     // Same as SCCP
     auto dfv = function.getDFVisitor();
     std::unordered_set live(dfv.begin(), dfv.end());
@@ -222,9 +224,6 @@ PM::PreservedAnalyses RangeAwareSimplifyPass::run(Function &function, FAM &fam) 
             [&dead_phis](const auto &p) { return dead_phis.find(p->template as<PHIInst>()) != dead_phis.end(); },
             BasicBlock::DEL_MODE::PHI);
     }
-
-    for (const auto &i : eliminated)
-        i->getParent()->delFirstOfInst(i);
 
     if (rng_cfg_modified)
         return PreserveNone();

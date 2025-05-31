@@ -1,10 +1,10 @@
 #include "ir/passes/transforms/loop_elimination.hpp"
+#include "config/config.hpp"
 #include "ir/block_utils.hpp"
 #include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
 #include "ir/pattern_match.hpp"
-#include "config/config.hpp"
 
 namespace IR {
 // If all values defined in the loop have no uses outside the loop, or uses outside the loop
@@ -88,7 +88,7 @@ bool propagateExitValues(Loop &loop, SCEVHandle &scev, bool onlyConstant) {
     return modified;
 }
 
-bool eliminateLoop(FAM& fam, Function &func, const pLoop &loop, LoopInfo& loop_info) {
+bool eliminateLoop(FAM &fam, Function &func, const pLoop &loop, LoopInfo &loop_info) {
     // If there are any uses outside loop, give up.
     for (const auto &block : loop->blocks()) {
         for (const auto &inst : block->all_insts()) {
@@ -151,7 +151,7 @@ bool eliminateLoop(FAM& fam, Function &func, const pLoop &loop, LoopInfo& loop_i
 }
 
 // Break the backedge if it is never taken.
-bool breakSingleTripRotatedLoop(const pLoop &loop, SCEVHandle &scev, LoopInfo& loop_info) {
+bool breakSingleTripRotatedLoop(const pLoop &loop, SCEVHandle &scev, LoopInfo &loop_info) {
     auto latch = loop->getLatch();
     if (!loop->isExiting(latch))
         return false;
@@ -164,7 +164,7 @@ bool breakSingleTripRotatedLoop(const pLoop &loop, SCEVHandle &scev, LoopInfo& l
     // If this is a single trip rotated(do-while) loop, just break the backedge
     if (cnt && cnt->isIRValue() && match(cnt->getRawIRValue(), M::Is(0))) {
         auto header = loop->getHeader();
-        for (const auto& phi : header->phis())
+        for (const auto &phi : header->phis())
             phi->delPhiOperByBlock(latch);
 
         foldPHI(header);
@@ -173,7 +173,7 @@ bool breakSingleTripRotatedLoop(const pLoop &loop, SCEVHandle &scev, LoopInfo& l
         loop_info.breakLoop(loop);
 
         Logger::logDebug("[LoopElimination]: Broke backedge from '", latch->getName(), "' to '", header->getName(),
-                 "'");
+                         "'");
         return true;
     }
     return false;
@@ -186,8 +186,10 @@ PM::PreservedAnalyses LoopEliminationPass::run(Function &function, FAM &fam) {
     auto &loop_info = fam.getResult<LoopAnalysis>(function);
 
     // Fold LCSSA Phi for SCEV Expansion
-    for (const auto& bb : function)
+    for (const auto &bb : function) {
         loop_elim_inst_modified |= foldPHI(bb, /* preserve_lcssa */ false);
+        scev.forgetAll();
+    }
 
     // Since we might delete loops, make a temporary object.
     auto toplevels = loop_info.getTopLevelLoops();
@@ -211,11 +213,20 @@ PM::PreservedAnalyses LoopEliminationPass::run(Function &function, FAM &fam) {
             // Note that propagating constant values are always profitable,
             // since they can always expose more optimization opportunities.
             if (isSafeAndProfitableToEliminate(loop, fam, scev)) {
-                loop_elim_inst_modified |= propagateExitValues(*loop, scev, false);
-                loop_elim_cfg_modified |= eliminateLoop(fam ,function, loop, loop_info);
+                if (propagateExitValues(*loop, scev, false)) {
+                    loop_elim_inst_modified = true;
+                    scev.forgetAll();
+                }
+                if (eliminateLoop(fam, function, loop, loop_info)) {
+                    loop_elim_cfg_modified = true;
+                    scev.forgetAll();
+                }
+            } else {
+                if (propagateExitValues(*loop, scev, true)) {
+                    scev.forgetAll();
+                    loop_elim_inst_modified = true;
+                }
             }
-            else
-                loop_elim_inst_modified |= propagateExitValues(*loop, scev, true);
         }
     }
 

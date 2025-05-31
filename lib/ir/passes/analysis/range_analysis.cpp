@@ -1,4 +1,6 @@
 #include "ir/passes/analysis/range_analysis.hpp"
+
+#include "config/config.hpp"
 #include "ir/base.hpp"
 #include "ir/instructions/binary.hpp"
 #include "ir/instructions/compare.hpp"
@@ -19,6 +21,145 @@ using namespace PatternMatch;
 namespace IR {
 PM::UniqueKey RangeAnalysis::Key;
 
+IRng RangeResult::getIntRange(Value *val) const {
+    if (auto ci32 = val->as<ConstantInt>())
+        return IRng(ci32->getVal());
+    if (auto ci1 = val->as<ConstantI1>())
+        return IRng(ci1->getVal());
+    if (auto ci8 = val->as<ConstantI8>())
+        return IRng(ci8->getVal());
+    auto it = int_range_map.find(val);
+    if (it == int_range_map.end())
+        return IRng();
+    return it->second.getGlobal();
+}
+IRng RangeResult::getIntRange(const pVal &val) const { return getIntRange(val.get()); }
+
+IRng RangeResult::getIntRange(Value *val, BasicBlock *bb) const {
+    if (auto ci32 = val->as<ConstantInt>())
+        return IRng(ci32->getVal());
+    if (auto ci1 = val->as<ConstantI1>())
+        return IRng(ci1->getVal());
+    if (auto ci8 = val->as<ConstantI8>())
+        return IRng(ci8->getVal());
+    auto it = int_range_map.find(val);
+    if (it == int_range_map.end())
+        return IRng();
+    return it->second.getContextual(bb);
+}
+IRng RangeResult::getIntRange(const pVal &val, const pBlock &bb) const { return getIntRange(val.get(), bb.get()); }
+
+FRng RangeResult::getFloatRange(Value *val) const {
+    if (auto ci32 = val->as<ConstantFloat>())
+        return FRng(ci32->getVal());
+
+    auto it = float_range_map.find(val);
+    if (it == float_range_map.end())
+        return FRng();
+    return it->second.getGlobal();
+}
+FRng RangeResult::getFloatRange(const pVal &val) const { return getFloatRange(val.get()); }
+
+FRng RangeResult::getFloatRange(Value *val, BasicBlock *bb) const {
+    if (auto ci32 = val->as<ConstantFloat>())
+        return FRng(ci32->getVal());
+
+    auto it = float_range_map.find(val);
+    if (it == float_range_map.end())
+        return FRng();
+    return it->second.getContextual(bb);
+}
+FRng RangeResult::getFloatRange(const pVal &val, const pBlock &bb) const { return getFloatRange(val.get(), bb.get()); }
+
+bool RangeResult::knownNonNegative(Value *val) const {
+    if (auto ci32 = val->as<ConstantInt>())
+        return ci32->getVal() >= 0;
+    if (auto ci8 = val->as<ConstantI8>())
+        return ci8->getVal() >= 0;
+    if (auto ci1 = val->as<ConstantI1>())
+        return true;
+    if (auto cf32 = val->as<ConstantFloat>())
+        return cf32->getVal() >= 0.0f;
+
+    if (isSameType(val->getType(), makeBType(IRBTYPE::I32))) {
+        auto rng = getIntRange(val);
+        if (rng.min != IRng::MIN && rng.min >= 0)
+            return true;
+    }
+    if (isSameType(val->getType(), makeBType(IRBTYPE::FLOAT))) {
+        auto rng = getFloatRange(val);
+        if (rng.min != FRng::MIN && rng.min >= 0.0f)
+            return true;
+    }
+    return false;
+}
+bool RangeResult::knownNonNegative(const pVal &val) const { return knownNonNegative(val.get()); }
+bool RangeResult::knownNonNegative(Value *val, BasicBlock *bb) const {
+    if (auto ci32 = val->as<ConstantInt>())
+        return ci32->getVal() >= 0;
+    if (auto ci8 = val->as<ConstantI8>())
+        return ci8->getVal() >= 0;
+    if (auto ci1 = val->as<ConstantI1>())
+        return true;
+    if (auto cf32 = val->as<ConstantFloat>())
+        return cf32->getVal() >= 0.0f;
+
+    if (isSameType(val->getType(), makeBType(IRBTYPE::I32))) {
+        auto rng = getIntRange(val, bb);
+        if (rng.min != IRng::MIN && rng.min >= 0)
+            return true;
+    }
+    if (isSameType(val->getType(), makeBType(IRBTYPE::FLOAT))) {
+        auto rng = getFloatRange(val, bb);
+        if (rng.min != FRng::MIN && rng.min >= 0.0f)
+            return true;
+    }
+    return false;
+}
+bool RangeResult::knownNonNegative(const pVal &val, const pBlock &bb) const {
+    return knownNonNegative(val.get(), bb.get());
+}
+
+bool RangeResult::update(Value *val, const IRng &range) { return int_range_map[val].updateGlobal(range); }
+bool RangeResult::update(Value *val, const IRng &range, BasicBlock *bb) {
+    if (auto inst = val->as_raw<Instruction>()) {
+        if (inst->getParent().get() == bb) {
+            return update(inst, range);
+        }
+    }
+    return int_range_map[val].updateContextual(range, bb);
+}
+
+bool RangeResult::update(Value *val, const FRng &range) { return float_range_map[val].updateGlobal(range); }
+bool RangeResult::update(Value *val, const FRng &range, BasicBlock *bb) {
+    if (auto inst = val->as_raw<Instruction>()) {
+        if (inst->getParent().get() == bb) {
+            return update(inst, range);
+        }
+    }
+    return float_range_map[val].updateContextual(range, bb);
+}
+
+bool RangeResult::merge(Value *val, const IRng &range) { return int_range_map[val].mergeGlobal(range); }
+bool RangeResult::merge(Value *val, const IRng &range, BasicBlock *bb) {
+    if (auto inst = val->as_raw<Instruction>()) {
+        if (inst->getParent().get() == bb) {
+            return merge(inst, range);
+        }
+    }
+    return int_range_map[val].mergeContextual(range, bb);
+}
+
+bool RangeResult::merge(Value *val, const FRng &range) { return float_range_map[val].mergeGlobal(range); }
+bool RangeResult::merge(Value *val, const FRng &range, BasicBlock *bb) {
+    if (auto inst = val->as_raw<Instruction>()) {
+        if (inst->getParent().get() == bb) {
+            return merge(inst, range);
+        }
+    }
+    return float_range_map[val].mergeContextual(range, bb);
+}
+
 struct InstBBPairHash {
     using InstBBPair = std::pair<Instruction *, BasicBlock *>;
     size_t operator()(const InstBBPair &a) const {
@@ -29,18 +170,7 @@ struct InstBBPairHash {
 };
 
 void RangeAnalysis::analyzeArgument(RangeResult &res, Function *func, FAM *fam) {
-    auto is_recursive = [&]  {
-        for (const auto &inst_user : func->inst_users()) {
-            auto call = inst_user->as<CALLInst>();
-            Err::gassert(call != nullptr);
-            auto caller_func = call->getParent()->getParent();
-            if (caller_func.get() == func)
-                return true;
-        }
-        return false;
-    }();
-
-    if (is_recursive)
+    if (func->isRecursive())
         return;
 
     for (const auto &inst_user : func->inst_users()) {
@@ -54,9 +184,9 @@ void RangeAnalysis::analyzeArgument(RangeResult &res, Function *func, FAM *fam) 
                 if (fp->getType()->is<BType>()) {
                     auto btype = fp->getType()->as<BType>()->getInner();
                     if (btype == IRBTYPE::I32)
-                        res.update(fp.get(), caller_res.getIntRange(actual_args[fp->getIndex()]));
+                        res.merge(fp.get(), caller_res.getIntRange(actual_args[fp->getIndex()], call->getParent()));
                     else if (btype == IRBTYPE::FLOAT)
-                        res.update(fp.get(), caller_res.getFloatRange(actual_args[fp->getIndex()]));
+                        res.merge(fp.get(), caller_res.getFloatRange(actual_args[fp->getIndex()], call->getParent()));
                     else
                         Err::unreachable();
                 }
@@ -68,6 +198,7 @@ void RangeAnalysis::analyzeArgument(RangeResult &res, Function *func, FAM *fam) 
 void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
     auto bbdfv = func->getDFVisitor();
 
+    std::unordered_map<Instruction *, int> process_cnt;
     std::deque<Instruction *> worklist;
     std::unordered_set<Instruction *> in_worklist;
 
@@ -80,19 +211,25 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
 
     auto propagateToUsers = [&](const Value *v) {
         for (const auto &user : v->inst_users()) {
-            if (!in_worklist.count(user.get())) {
+            if (!in_worklist.count(user.get()) && process_cnt[user.get()] < Config::IR::RANGE_ANALYSIS_MAX_PROCESS_CNT) {
                 worklist.push_back(user.get());
                 in_worklist.emplace(user.get());
             }
         }
     };
 
-    auto updateInt = [&](Value *v, const Range<int> &rng) {
+    auto updateInt = [&](Value *v, const IRng &rng) {
+        if (!v->is<Instruction>())
+            return;
+
         if (res.update(v, rng))
             propagateToUsers(v);
     };
 
-    auto updateFloat = [&](Value *v, const Range<float> &rng) {
+    auto updateFloat = [&](Value *v, const FRng &rng) {
+        if (!v->is<Instruction>())
+            return;
+
         if (res.update(v, rng))
             propagateToUsers(v);
     };
@@ -100,6 +237,8 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
     while (!worklist.empty()) {
         auto inst = worklist.front();
         worklist.pop_front();
+        in_worklist.erase(inst);
+        ++process_cnt[inst];
 
         bool is_btype = inst->getType()->is<BType>();
         bool is_int = is_btype && inst->getType()->as<BType>()->getInner() == IRBTYPE::I32;
@@ -141,10 +280,10 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
             updateFloat(fneg, -vrng);
         } else if (auto fptosi = inst->as_raw<FPTOSIInst>()) {
             const auto &vrng = res.getFloatRange(fptosi->getOVal());
-            updateInt(fptosi, Range(static_cast<int>(vrng.min), static_cast<int>(vrng.max)));
+            updateInt(fptosi, range_cast<int>(vrng));
         } else if (auto sitofp = inst->as_raw<SITOFPInst>()) {
             const auto &vrng = res.getIntRange(sitofp->getOVal());
-            updateFloat(sitofp, Range(static_cast<float>(vrng.min), static_cast<float>(vrng.max)));
+            updateFloat(sitofp, range_cast<float>(vrng));
         } else if (auto zext = inst->as_raw<ZEXTInst>()) {
             const auto &vrng = res.getIntRange(zext->getOVal());
             updateInt(zext, vrng);
@@ -173,21 +312,21 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
             }
         } else if (auto call = inst->as_raw<CALLInst>()) {
             if (is_int && call->getFunc()->hasAttr(FuncAttr::PromoteFromChar))
-                updateInt(call, Range<int>(0, 256));
+                updateInt(call, IRng(0, 256));
             else {
                 if (is_int)
-                    updateInt(call, Range<int>());
+                    updateInt(call, IRng());
                 else
-                    updateFloat(call, Range<float>());
+                    updateFloat(call, FRng());
             }
         } else if (inst->is<ICMPInst, FCMPInst>())
-            updateInt(inst, Range<int>(0, 1));
+            updateInt(inst, IRng(0, 2));
         else {
             if (is_btype) {
                 if (is_int)
-                    updateInt(inst, Range<int>());
+                    updateInt(inst, IRng());
                 else
-                    updateFloat(inst, Range<float>());
+                    updateFloat(inst, FRng());
             }
         }
     }
@@ -197,13 +336,16 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
     auto bbdfv = func->getDFVisitor();
     auto &domtree = fam->getResult<DomTreeAnalysis>(*func);
 
+    std::unordered_map<std::pair<Instruction *, BasicBlock *>, int, InstBBPairHash> process_cnt;
     std::deque<std::pair<Instruction *, BasicBlock *>> worklist;
     std::unordered_set<std::pair<Instruction *, BasicBlock *>, InstBBPairHash> in_worklist;
 
     for (const auto &bb : bbdfv) {
         for (const auto &inst : *bb) {
-            if (inst->is<GEPInst, ICMPInst, FCMPInst>())
+            if (inst->is<GEPInst, ICMPInst, FCMPInst>()) {
                 worklist.emplace_back(inst.get(), bb.get());
+                in_worklist.emplace(inst.get(), bb.get());
+            }
         }
     }
 
@@ -213,13 +355,16 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                 continue;
 
             auto key = std::make_pair(user.get(), user->getParent().get());
-            if (!in_worklist.count(key)) {
+            if (!in_worklist.count(key) && process_cnt[key] < Config::IR::RANGE_ANALYSIS_MAX_PROCESS_CNT) {
                 worklist.emplace_back(key);
                 in_worklist.emplace(key);
             }
         }
     };
-    auto updateContextualInt = [&](Value *v, BasicBlock *bb, const Range<int> &rng) {
+    auto updateContextualInt = [&](Value *v, BasicBlock *bb, const IRng &rng) {
+        if (!v->is<Instruction>())
+            return false;
+
         auto domdfv = domtree[bb]->getBFVisitor();
         bool modified = false;
         for (auto &node : domdfv)
@@ -230,7 +375,10 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
         return modified;
     };
 
-    auto updateContextualFloat = [&](Value *v, BasicBlock *bb, const Range<float> &rng) {
+    auto updateContextualFloat = [&](Value *v, BasicBlock *bb, const FRng &rng) {
+        if (!v->is<Instruction>())
+            return false;
+
         auto domdfv = domtree[bb]->getBFVisitor();
         bool modified = false;
         for (auto &node : domdfv)
@@ -243,39 +391,62 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
 
     auto &scev = fam->getResult<SCEVAnalysis>(*func);
     while (!worklist.empty()) {
-        auto [inst, bb] = worklist.front();
+        auto pair = worklist.front();
         worklist.pop_front();
+        in_worklist.erase(pair);
+        ++process_cnt[pair];
+
+        // lambda captured structured bindings are a C++20 extension [-Wc++20-extensions]
+        auto inst = pair.first;
+        auto bb = pair.second;
 
         bool is_btype = inst->getType()->is<BType>();
         bool is_int = is_btype && inst->getType()->as<BType>()->getInner() == IRBTYPE::I32;
 
         // Check SCEV
+        // FIXME: SCEV cannot figure out complex induction variables, since its goal
+        //        is to compute the exact formula of the expression.
+        //        For induction variables that are not computable by SCEV, we still have
+        //        methods to determine whether it is non-negative.
+        //        For example, writing a SCEV-like algorithm that only figures out whether
+        //        its expression is non-negative, rather than getting a `Untracked` result too early.
+        // TODO: Extend SCEV or implement it in place.
         if (is_int) {
             auto analyzeSCEVExpr = [](SCEVExpr *expr) {
                 if (!expr->isIRValue())
-                    return Range<int>();
+                    return IRng();
                 if (int c; match(expr->getIRValue(), M::Bind(c)))
-                    return Range(c);
-                return Range<int>();
+                    return IRng(c);
+                return IRng();
             };
 
-            auto analyzeAddRec = [&scev](TREC *trec) {
-                if (auto addrec = trec->getConstantAffineAddRec()) {
-                    auto [base, step] = *addrec;
+            auto analyzeAddRec = [&scev, &bb, &res](TREC *trec) {
+                if (auto constant_addrec = trec->getConstantAffineAddRec()) {
+                    auto [base, step] = *constant_addrec;
                     if (auto trip_count = scev.getTripCount(trec->getLoop())) {
                         int c;
                         if (trip_count->isIRValue() && match(trip_count->getIRValue(), M::Bind(c))) {
+                            auto m = static_cast<IRng::Bigger>(base) +
+                                     static_cast<IRng::Bigger>(step) * static_cast<IRng::Bigger>(c);
                             if (step > 0)
-                                return Range(base, base + step * c);
-                            return Range(base + step * c, base);
+                                return IRng(base, m);
+                            return IRng(m, base);
                         }
                     } else {
                         if (step > 0)
-                            return Range(base, Range<int>::MAX);
-                        return Range(Range<int>::MIN, base);
+                            return IRng(base, IRng::MAX);
+                        return IRng(IRng::MIN, base);
+                    }
+                } else if (auto addrec = trec->getAffineAddRec()) {
+                    auto [base, step] = *addrec;
+                    if (base->isIRValue() && step->isIRValue()) {
+                        if (res.knownNonNegative(base->getRawIRValue(), bb) &&
+                            res.knownNonNegative(step->getRawIRValue(), bb)) {
+                            return IRng(0, IRng::MAX);
+                        }
                     }
                 }
-                return Range<int>();
+                return IRng();
             };
 
             auto trec = scev.getSCEVAtBlock(inst, bb);
@@ -295,11 +466,11 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                                 auto rest = trec->getRest();
                                 if (rest->isExpr()) {
                                     auto rng = analyzeSCEVExpr(rest->getExpr());
-                                    if (updateContextualInt(inst, bb, merge(Range(first_ci), rng)))
+                                    if (updateContextualInt(inst, bb, merge(IRng(first_ci), rng)))
                                         continue;
                                 } else if (rest->isAddRec()) {
                                     auto rng = analyzeAddRec(rest);
-                                    if (updateContextualInt(inst, bb, merge(Range(first_ci), rng)))
+                                    if (updateContextualInt(inst, bb, merge(IRng(first_ci), rng)))
                                         continue;
                                 }
                             }
@@ -346,10 +517,10 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
             updateContextualFloat(fneg, bb, -vrng);
         } else if (auto fptosi = inst->as_raw<FPTOSIInst>()) {
             const auto &vrng = res.getFloatRange(fptosi->getOVal().get(), bb);
-            updateContextualInt(fptosi, bb, Range(static_cast<int>(vrng.min), static_cast<int>(vrng.max)));
+            updateContextualInt(fptosi, bb, range_cast<int>(vrng));
         } else if (auto sitofp = inst->as_raw<SITOFPInst>()) {
             const auto &vrng = res.getIntRange(sitofp->getOVal().get(), bb);
-            updateContextualFloat(sitofp, bb, Range(static_cast<float>(vrng.min), static_cast<float>(vrng.max)));
+            updateContextualFloat(sitofp, bb, range_cast<float>(vrng));
         } else if (auto zext = inst->as_raw<ZEXTInst>()) {
             const auto &vrng = res.getIntRange(zext->getOVal().get(), bb);
             updateContextualInt(zext, bb, vrng);
@@ -382,164 +553,183 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
             auto lrng = res.getIntRange(lhs, bb);
             auto rrng = res.getIntRange(rhs, bb);
 
-            if (icmp->getUseCount() != 1)
-                Logger::logWarning("ICMPInst has multiple users");
-
             for (auto inst_user : icmp->inst_users()) {
                 if (auto user_br = inst_user->as_raw<BRInst>()) {
                     auto truebb = user_br->getTrueDest().get();
                     auto falsebb = user_br->getFalseDest().get();
-                    if (!domtree.ADomB(icmp->getParent().get(), truebb) || truebb->getNumPreds() != 1)
-                        continue;
+
+                    bool truebb_can_set = truebb->getNumPreds() == 1;
+                    bool falsebb_can_set = falsebb->getNumPreds() == 1;
+
+                    auto tryUpdateTrue = [&](Value *val, const IRng &rng) {
+                        if (truebb_can_set)
+                            updateContextualInt(val, truebb, rng);
+                    };
+                    auto tryUpdateFalse = [&](Value *val, const IRng &rng) {
+                        if (falsebb_can_set)
+                            updateContextualInt(val, falsebb, rng);
+                    };
 
                     switch (icmp->getCond()) {
                     case ICMPOP::eq:
-                        updateContextualInt(lhs, truebb, rrng);
-                        updateContextualInt(rhs, truebb, lrng);
+                        tryUpdateTrue(lhs, rrng);
+                        tryUpdateTrue(rhs, lrng);
                         break;
                     case ICMPOP::ne:
-                        updateContextualInt(lhs, falsebb, rrng);
-                        updateContextualInt(rhs, falsebb, lrng);
+                        tryUpdateFalse(lhs, rrng);
+                        tryUpdateFalse(rhs, lrng);
                         break;
                     case ICMPOP::slt:
                         // lhs < rhs
-                        updateContextualInt(lhs, truebb, Range(Range<int>::MIN, rrng.min));
-                        updateContextualInt(rhs, truebb, Range(lrng.max, Range<int>::MAX));
+                        if (rrng.max != IRng::MAX)
+                            tryUpdateTrue(lhs, IRng(IRng::MIN, rrng.max - 1));
+                        if (lrng.min != IRng::MIN)
+                            tryUpdateTrue(rhs, IRng(lrng.min + 1, IRng::MAX));
 
                         // lhs >= rhs
-                        if (rrng.max == Range<int>::MAX || rrng.max == Range<int>::MIN)
-                            updateContextualInt(lhs, falsebb, Range(rrng.max, Range<int>::MAX));
-                        else
-                            updateContextualInt(lhs, falsebb, Range(rrng.max - 1, Range<int>::MAX));
-
-                        if (lrng.min == Range<int>::MAX || lrng.min == Range<int>::MIN)
-                            updateContextualInt(rhs, falsebb, Range(Range<int>::MIN, lrng.min));
-                        else
-                            updateContextualInt(rhs, falsebb, Range(Range<int>::MIN, lrng.min + 1));
+                        if (rrng.min != IRng::MIN)
+                            tryUpdateFalse(lhs, IRng(rrng.min, IRng::MAX));
+                        if (lrng.max != IRng::MAX)
+                            tryUpdateFalse(rhs, IRng(IRng::MIN, lrng.max));
                         break;
                     case ICMPOP::sle:
                         // lhs <= rhs
-                        if (rrng.min == Range<int>::MAX || rrng.min == Range<int>::MIN)
-                            updateContextualInt(lhs, truebb, Range(Range<int>::MIN, rrng.min));
-                        else
-                            updateContextualInt(lhs, truebb, Range(Range<int>::MIN, rrng.min + 1));
-                        if (lrng.max == Range<int>::MAX || lrng.max == Range<int>::MIN)
-                            updateContextualInt(rhs, truebb, Range(lrng.max, Range<int>::MAX));
-                        else
-                            updateContextualInt(rhs, truebb, Range(lrng.max - 1, Range<int>::MAX));
+                        if (rrng.max != IRng::MAX)
+                            tryUpdateTrue(lhs, IRng(IRng::MIN, rrng.max));
+                        if (lrng.min != IRng::MIN)
+                            tryUpdateTrue(rhs, IRng(lrng.min, IRng::MAX));
 
                         // lhs > rhs
-                        updateContextualInt(lhs, falsebb, Range(rrng.max, Range<int>::MAX));
-                        updateContextualInt(rhs, falsebb, Range(Range<int>::MIN, lrng.min));
+                        if (rrng.min != IRng::MIN)
+                            tryUpdateFalse(lhs, IRng(rrng.min + 1, IRng::MAX));
+                        if (lrng.max != IRng::MAX)
+                            tryUpdateFalse(rhs, IRng(IRng::MIN, lrng.max - 1));
                         break;
                     case ICMPOP::sgt:
                         // lhs > rhs
-                        updateContextualInt(lhs, truebb, Range(rrng.max, Range<int>::MAX));
-                        updateContextualInt(rhs, truebb, Range(Range<int>::MIN, lrng.min));
+                        if (rrng.min != IRng::MIN)
+                            tryUpdateTrue(lhs, IRng(rrng.min + 1, IRng::MAX));
+                        if (lrng.max != IRng::MAX)
+                            tryUpdateTrue(rhs, IRng(IRng::MIN, lrng.max - 1));
 
                         // lhs <= rhs
-                        if (rrng.min == Range<int>::MAX || rrng.min == Range<int>::MIN)
-                            updateContextualInt(lhs, falsebb, Range(Range<int>::MIN, rrng.min));
-                        else
-                            updateContextualInt(lhs, falsebb, Range(Range<int>::MIN, rrng.min + 1));
-                        if (lrng.max == Range<int>::MAX || lrng.max == Range<int>::MIN)
-                            updateContextualInt(rhs, falsebb, Range(lrng.max, Range<int>::MAX));
-                        else
-                            updateContextualInt(rhs, falsebb, Range(lrng.max - 1, Range<int>::MAX));
+                        if (rrng.max != IRng::MAX)
+                            tryUpdateFalse(lhs, IRng(IRng::MIN, rrng.max));
+                        if (lrng.min != IRng::MIN)
+                            tryUpdateFalse(rhs, IRng(lrng.min, IRng::MAX));
                         break;
                     case ICMPOP::sge:
                         // lhs >= rhs
-                        if (rrng.max == Range<int>::MAX || rrng.max == Range<int>::MIN)
-                            updateContextualInt(lhs, truebb, Range(rrng.max, Range<int>::MAX));
-                        else
-                            updateContextualInt(lhs, truebb, Range(rrng.max - 1, Range<int>::MAX));
+                        if (rrng.min != IRng::MIN)
+                            tryUpdateTrue(lhs, IRng(rrng.min, IRng::MAX));
+                        if (lrng.max != IRng::MAX)
+                            tryUpdateTrue(rhs, IRng(IRng::MIN, lrng.max));
 
-                        if (lrng.min == Range<int>::MAX || lrng.min == Range<int>::MIN)
-                            updateContextualInt(rhs, truebb, Range(Range<int>::MIN, lrng.min));
-                        else
-                            updateContextualInt(rhs, truebb, Range(Range<int>::MIN, lrng.min + 1));
-
-                        //  lhs < rhs
-                        updateContextualInt(lhs, falsebb, Range(Range<int>::MIN, rrng.min));
-                        updateContextualInt(rhs, falsebb, Range(lrng.max, Range<int>::MAX));
+                        // lhs < rhs
+                        if (rrng.max != IRng::MAX)
+                            tryUpdateFalse(lhs, IRng(IRng::MIN, rrng.max - 1));
+                        if (lrng.min != IRng::MIN)
+                            tryUpdateFalse(rhs, IRng(lrng.min + 1, IRng::MAX));
                         break;
                     default:
                         Err::unreachable();
                     }
                 }
             }
-        }
-        // else if (auto fcmp = inst->as_raw<FCMPInst>()) {
-        //     auto lhs = fcmp->getLHS().get();
-        //     auto rhs = fcmp->getRHS().get();
-        //     auto lrng = res.getFloatRange(lhs, bb);
-        //     auto rrng = res.getFloatRange(rhs, bb);
-        //
-        //     if (fcmp->getUseCount() != 1)
-        //         Logger::logWarning("FCMPInst has multiple users");
-        //
-        //     for (auto inst_user : fcmp->inst_users()) {
-        //         if (auto user_br = inst_user->as_raw<BRInst>()) {
-        //             auto truebb = user_br->getTrueDest().get();
-        //             auto falsebb = user_br->getFalseDest().get();
-        //             if (!domtree.ADomB(fcmp->getParent().get(), truebb) || truebb->getNumPreds() != 1)
-        //                 continue;
-        //
-        //             switch (fcmp->getCond()) {
-        //             case FCMPOP::oeq:
-        //                 updateContextualFloat(lhs, truebb, rrng);
-        //                 updateContextualFloat(rhs, truebb, lrng);
-        //                 break;
-        //             case FCMPOP::one:
-        //                 updateContextualFloat(lhs, falsebb, rrng);
-        //                 updateContextualFloat(rhs, falsebb, lrng);
-        //                 break;
-        //             case FCMPOP::olt:
-        //                 // lhs < rhs
-        //                 updateContextualFloat(lhs, truebb, Range(Range<float>::MIN, rrng.min));
-        //                 updateContextualFloat(rhs, truebb, Range(lrng.max, Range<float>::MAX));
-        //
-        //                 // lhs >= rhs
-        //                 updateContextualFloat(lhs, falsebb, Range(rrng.max - 1, Range<float>::MAX));
-        //                 updateContextualFloat(rhs, falsebb, Range(Range<float>::MIN, lrng.min + 1));
-        //                 break;
-        //             case FCMPOP::ole:
-        //                 // lhs <= rhs
-        //                 updateContextualFloat(lhs, truebb, Range(Range<float>::MIN, rrng.min + 1));
-        //                 updateContextualFloat(rhs, truebb, Range(lrng.max - 1, Range<float>::MAX));
-        //
-        //                 // lhs > rhs
-        //                 updateContextualFloat(lhs, falsebb, Range(rrng.max, Range<float>::MAX));
-        //                 updateContextualFloat(rhs, falsebb, Range(Range<float>::MIN, lrng.min));
-        //                 break;
-        //             case FCMPOP::ogt:
-        //                 // lhs > rhs
-        //                 updateContextualFloat(lhs, truebb, Range(rrng.max, Range<float>::MAX));
-        //                 updateContextualFloat(rhs, truebb, Range(Range<float>::MIN, lrng.min));
-        //
-        //                 // lhs <= rhs
-        //                 updateContextualFloat(lhs, falsebb, Range(Range<float>::MIN, rrng.min + 1));
-        //                 updateContextualFloat(rhs, falsebb, Range(lrng.max - 1, Range<float>::MAX));
-        //                 break;
-        //             case FCMPOP::oge:
-        //                 // lhs >= rhs
-        //                 updateContextualFloat(lhs, truebb, Range(rrng.max - 1, Range<float>::MAX));
-        //                 updateContextualFloat(rhs, truebb, Range(Range<float>::MIN, lrng.min + 1));
-        //
-        //                 //  lhs < rhs
-        //                 updateContextualFloat(lhs, falsebb, Range(Range<float>::MIN, rrng.min));
-        //                 updateContextualFloat(rhs, falsebb, Range(lrng.max, Range<float>::MAX));
-        //                 break;
-        //             default:
-        //                 Err::unreachable();
-        //             }
-        //         }
-        //     }
-        // }
-        else if (auto gep = inst->as_raw<GEPInst>()) {
+        } else if (auto fcmp = inst->as_raw<FCMPInst>()) {
+            auto lhs = fcmp->getLHS().get();
+            auto rhs = fcmp->getRHS().get();
+            auto lrng = res.getFloatRange(lhs, bb);
+            auto rrng = res.getFloatRange(rhs, bb);
+
+            for (auto inst_user : fcmp->inst_users()) {
+                if (auto user_br = inst_user->as_raw<BRInst>()) {
+                    auto truebb = user_br->getTrueDest().get();
+                    auto falsebb = user_br->getFalseDest().get();
+                    bool truebb_can_set = truebb->getNumPreds() == 1;
+                    bool falsebb_can_set = falsebb->getNumPreds() == 1;
+
+                    auto tryUpdateTrue = [&](Value *val, const FRng &rng) {
+                        if (truebb_can_set)
+                            updateContextualFloat(val, truebb, rng);
+                    };
+                    auto tryUpdateFalse = [&](Value *val, const FRng &rng) {
+                        if (falsebb_can_set)
+                            updateContextualFloat(val, falsebb, rng);
+                    };
+
+                    switch (fcmp->getCond()) {
+                    case FCMPOP::oeq:
+                        tryUpdateTrue(lhs, rrng);
+                        tryUpdateTrue(rhs, lrng);
+                        break;
+                    case FCMPOP::one:
+                        tryUpdateFalse(lhs, rrng);
+                        tryUpdateFalse(rhs, lrng);
+                        break;
+                    case FCMPOP::olt:
+                        // lhs < rhs
+                        if (rrng.max != FRng::MAX)
+                            tryUpdateTrue(lhs, FRng(FRng::MIN, rrng.max - 0.01));
+                        if (lrng.min != FRng::MIN)
+                            tryUpdateTrue(rhs, FRng(lrng.min + 0.01, FRng::MAX));
+
+                        // lhs >= rhs
+                        if (rrng.min != FRng::MIN)
+                            tryUpdateFalse(lhs, FRng(rrng.min, FRng::MAX));
+                        if (lrng.max != FRng::MAX)
+                            tryUpdateFalse(rhs, FRng(FRng::MIN, lrng.max));
+                        break;
+                    case FCMPOP::ole:
+                        // lhs <= rhs
+                        if (rrng.max != FRng::MAX)
+                            tryUpdateTrue(lhs, FRng(FRng::MIN, rrng.max));
+                        if (lrng.min != FRng::MIN)
+                            tryUpdateTrue(rhs, FRng(lrng.min, FRng::MAX));
+
+                        // lhs > rhs
+                        if (rrng.min != FRng::MIN)
+                            tryUpdateFalse(lhs, FRng(rrng.min + 0.01, FRng::MAX));
+                        if (lrng.max != FRng::MAX)
+                            tryUpdateFalse(rhs, FRng(FRng::MIN, lrng.max - 0.01));
+                        break;
+                    case FCMPOP::ogt:
+                        // lhs > rhs
+                        if (rrng.min != FRng::MIN)
+                            tryUpdateTrue(lhs, FRng(rrng.min + 0.01, FRng::MAX));
+                        if (lrng.max != FRng::MAX)
+                            tryUpdateTrue(rhs, FRng(FRng::MIN, lrng.max - 0.01));
+
+                        // lhs <= rhs
+                        if (rrng.max != FRng::MAX)
+                            tryUpdateFalse(lhs, FRng(FRng::MIN, rrng.max));
+                        if (lrng.min != FRng::MIN)
+                            tryUpdateFalse(rhs, FRng(lrng.min, FRng::MAX));
+                        break;
+                    case FCMPOP::oge:
+                        // lhs >= rhs
+                        if (rrng.min != FRng::MIN)
+                            tryUpdateTrue(lhs, FRng(rrng.min, FRng::MAX));
+                        if (lrng.max != FRng::MAX)
+                            tryUpdateTrue(rhs, FRng(FRng::MIN, lrng.max));
+
+                        // lhs < rhs
+                        if (rrng.max != FRng::MAX)
+                            tryUpdateFalse(lhs, FRng(FRng::MIN, rrng.max - 0.01));
+                        if (lrng.min != FRng::MIN)
+                            tryUpdateFalse(rhs, FRng(lrng.min + 0.01, FRng::MAX));
+                        break;
+                    default:
+                        Err::unreachable();
+                    }
+                }
+            }
+        } else if (auto gep = inst->as_raw<GEPInst>()) {
             auto idxs = gep->getIdxs();
-            for (const auto &idx : idxs)
-                updateContextualInt(idx.get(), bb, Range(0, Range<int>::MAX));
+            for (const auto &idx : idxs) {
+                if (idx->is<Instruction>())
+                    updateContextualInt(idx.get(), bb, IRng(0, IRng::MAX));
+            }
         }
     }
 }

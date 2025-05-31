@@ -215,6 +215,26 @@ void Function::updateAndCheckCFG() {
     }
 }
 
+bool Function::isRecursive() const {
+    for (const auto &inst_user : inst_users()) {
+        auto call = inst_user->as<CALLInst>();
+        Err::gassert(call != nullptr);
+        auto caller_func = call->getParent()->getParent();
+        if (caller_func.get() == this)
+            return true;
+    }
+    return false;
+}
+
+bool Function::removeParam(size_t index) {
+    Err::gassert(index < params.size() && params[index]->getUseCount() == 0);
+    params.erase(params.begin() + index);
+    size_t i = 0;
+    for (const auto &param : params)
+        param->setIndex(i++);
+    return true;
+}
+
 void Function::updateBBIndex() {
     size_t i = 0;
     for (const auto &blk : blks) {

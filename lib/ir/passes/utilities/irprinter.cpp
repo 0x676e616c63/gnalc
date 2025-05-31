@@ -147,9 +147,9 @@ PM::PreservedAnalyses PrintSCEVPass::run(Function &function, FAM &fam) {
         for (const auto &loop : ldfv) {
             auto trip_cnt = scev.getTripCount(loop);
             if (trip_cnt)
-                writeln("Trip Count: ", *trip_cnt);
+                writeln("'", loop->getHeader()->getName(), "' Trip Count: ", *trip_cnt);
             else
-                writeln("Trip Count: <null> :(");
+                writeln("'", loop->getHeader()->getName(), "' Trip Count: <null> :(");
         }
     }
     const DomTree &domtree = fam.getResult<DomTreeAnalysis>(function);
@@ -205,15 +205,19 @@ PM::PreservedAnalyses PrintRangePass::run(Function &function, FAM &manager) {
                 for (const auto &range_block : function) {
                     if (!domtree.ADomB(bb, range_block))
                         continue;
-                    auto r = ranges.getIntRange(inst, range_block);
-                    writeln(inst->getName(), " at block '", range_block->getName(), "': ", r);
+                    auto context_r = ranges.getIntRange(inst, range_block);
+                    auto r = ranges.getIntRange(inst);
+                    if (r != context_r)
+                        writeln(inst->getName(), " at block '", range_block->getName(), "': ", context_r);
                 }
             } else if (isSameType(inst->getType(), makeBType(IRBTYPE::FLOAT))) {
                 for (const auto &range_block : function) {
                     if (!domtree.ADomB(bb, range_block))
                         continue;
-                    auto r = ranges.getFloatRange(inst, range_block);
-                    writeln(inst->getName(), " at block '", range_block->getName(), "': ", r);
+                    auto context_r = ranges.getFloatRange(inst, range_block);
+                    auto r = ranges.getFloatRange(inst);
+                    if (r != context_r)
+                    writeln(inst->getName(), " at block '", range_block->getName(), "': ", context_r);
                 }
             }
         }
