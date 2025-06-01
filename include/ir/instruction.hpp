@@ -73,6 +73,8 @@ enum class OP {
 using BBInstIter = std::list<pInst>::iterator;
 using BBPhiInstIter = std::list<pPhi>::iterator;
 
+using LFnInstIter = std::list<pInst>::iterator;
+
 // Warning: PHIInst MUST NOT invoke the following four `moveInst(s)`
 // Move `inst` to `new_bb`'s `location`
 // This deletes `inst` from its parent, and insert it before `new_bb`'s location
@@ -89,6 +91,7 @@ void movePhiInsts(const pBlock &src_bb, const pBlock &dest_bb);
  */
 class Instruction : public User {
     friend class BasicBlock;
+    friend class LinearFunction;
 
 private:
     OP opcode;
@@ -99,12 +102,10 @@ public:
     // 此构造方法用于初始生成时，最开始没有划分Block，故parent为空
     Instruction(OP opcode, std::string _name, const pType &_type);
 
-    void setParent(const pBlock &p);
     OP getOpcode() const;
+    void setParent(const pBlock &p);
     pBlock getParent() const;
-
     size_t getIndex() const;
-
     // Warning: PHIInst MUST NOT invoke this.
     BBInstIter getIter() const;
 

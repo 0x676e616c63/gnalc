@@ -65,8 +65,8 @@ private:
     std::stack<pBlock> _while_cond_for_continue;
     std::stack<pBlock> _while_end_for_break;
 
-    bool adder(std::vector<std::shared_ptr<Instruction>>::const_iterator &it,
-               const std::vector<std::shared_ptr<Instruction>>::const_iterator &end,
+    bool adder(std::list<pInst>::const_iterator &it,
+               const std::list<pInst>::const_iterator &end,
                bool allow_break); // 将inst加进cur_blk，返回值为是否已插入终结语句ret,
                                   // br
     void newIf(const std::shared_ptr<IFInst> &ifinst);

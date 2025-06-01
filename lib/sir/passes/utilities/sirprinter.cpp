@@ -104,6 +104,16 @@ void LinearPrinterBase::visit(Instruction &node) {
         --indentLevel;
         indent();
         writeln("}");
+    } else if (auto for_inst = node.as_raw<FORInst>()) {
+        indent();
+        write("for (", for_inst->getBase(), " to ", for_inst->getBound(), " step ", for_inst->getStep());
+        writeln(") {");
+        ++indentLevel;
+        for (auto &i : for_inst->getBodyInsts())
+            visit(*i);
+        --indentLevel;
+        indent();
+        writeln("}");
     } else if (node.is<BREAKInst>()) {
         indent();
         writeln("break");

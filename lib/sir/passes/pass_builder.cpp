@@ -5,6 +5,7 @@
 
 // Transforms
 #include "../../../include/ir/cfgbuilder.hpp"
+#include "sir/passes/transforms/while2for.hpp"
 
 #include <algorithm>
 
@@ -58,6 +59,7 @@ MPM LinearPassBuilder::buildModulePipeline(PMOptions opt_info) {
 
 LFPM LinearPassBuilder::buildFunctionDebugPipeline() {
     LFPM lfpm;
+    lfpm.addPass(While2ForPass());
     return lfpm;
 }
 

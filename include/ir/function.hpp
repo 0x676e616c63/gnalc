@@ -12,6 +12,9 @@
 #include <utility>
 #include <vector>
 
+namespace SIR {
+struct LookBehindVisitor;
+}
 namespace IR {
 enum class FuncAttr {
     // User defined functions
@@ -196,10 +199,13 @@ private:
 // 基本块划分前的过渡
 // IRGenerator 生成之后， CFGBuilder 之前
 class LinearFunction : public FunctionDecl {
+    friend class Instruction;
+    friend class SIR::LookBehindVisitor;
 private:
-    std::vector<pInst> insts;
+    std::list<pInst> insts;
     std::vector<pFormalParam> params;
     ConstantPool *constant_pool;
+    bool inst_index_valid = false;
 
 public:
     using iterator = decltype(insts)::iterator;
@@ -210,7 +216,7 @@ public:
     LinearFunction(std::string name_, const std::vector<pFormalParam> &params, pType ret_type, ConstantPool *pool);
 
     // usually we can use range-based for instead of these
-    const std::vector<pInst> &getInsts() const;
+    const std::list<pInst> &getInsts() const;
 
     const_iterator begin() const;
     const_iterator end() const;
@@ -226,17 +232,51 @@ public:
     const_reverse_iterator crbegin() const;
     const_reverse_iterator crend() const;
 
+    void addInst(iterator it, const pInst &inst);
+    void addInst(size_t index, const pInst &inst);
     void addInst(pInst inst);
-    void appendInsts(std::vector<pInst> insts_);
+    void appendInsts(std::list<pInst> insts_);
 
-    size_t getInstCount() const { return insts.size(); }
+    size_t getInstCount() const;
 
     const std::vector<pFormalParam> &getParams() const;
     ConstantPool &getConstantPool();
 
     template <typename T> auto getConst(T &&val) { return constant_pool->getConst(std::forward<T>(val)); }
 
+    bool delFirstOfInst(const pInst &inst);
+    // With use-def check, remove all matched.
+    // The instruction must have no users.
+    // Note that it can have users that have no parent.
+    bool delInst(const pInst &inst);
+
+    // Delete instructions that satisfied: `pred(inst) == true`
+    // Requires the target instruction have no users than expiring users.
+    // "expiring users": users that are being deleted or have no parent.
+    // (inst.getLinearParent() == nullptr || pred(inst->getUsers()) == true)
+    // In other word, If pred(a) == true, pred(a->users) must be true
+    template <typename Pred> bool delInstIf(Pred pred) {
+        bool found = false;
+        for (auto it = insts.begin(); it != insts.end();) {
+            if (pred(*it)) {
+                for (const auto &user : (*it)->inst_users()) {
+                    Err::gassert(pred(user),
+                                 "LinearFunction::delInstIf(): Cannot delete a Inst without deleting its User.");
+                }
+                (*it)->setParent(nullptr);
+                it = insts.erase(it);
+                found = true;
+            } else
+                ++it;
+        }
+        if (found)
+            inst_index_valid = false;
+        return found;
+    }
+
     void accept(IRVisitor &visitor) override;
+private:
+    void updateInstIndex() const;
 };
 } // namespace IR
 

@@ -13,5 +13,14 @@
 
 namespace SIR {
 using namespace IR;
-} // namespace IR
+
+using IList = std::list<pInst>;
+
+bool IListDel(IList& ilist, const pInst& val);
+bool IListReplace(IList &ilist, const pInst &old_p, const pInst &new_p);
+IList::iterator IListFind(IList& ilist, const pInst& p);
+IList::const_iterator IListFind(const IList& ilist, const pInst& p);
+IList::reverse_iterator IListRFind(IList& ilist, const pInst& p);
+IList::const_reverse_iterator IListRFind(const IList& ilist, const pInst& p);
+} // namespace SIR
 #endif

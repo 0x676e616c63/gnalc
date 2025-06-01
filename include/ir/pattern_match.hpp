@@ -4,9 +4,12 @@
 
 #include "base.hpp"
 #include "constant.hpp"
-#include "pattern_match/pattern_match.hpp"
 #include "instructions/binary.hpp"
 #include "instructions/control.hpp"
+#include "instructions/converse.hpp"
+#include "instructions/memory.hpp"
+#include "instructions/vector.hpp"
+#include "pattern_match/pattern_match.hpp"
 
 using namespace PatternMatch;
 namespace IR::M {
@@ -81,6 +84,14 @@ inline auto Is(const pVal &v) {
     return ClassMatchIf<Value>{[&v](const Value &b) { return v.get() == &b; }};
 }
 
+inline auto Is(const Instruction *&v) {
+    return ClassMatchIf<Instruction>{[&v](const Value &b) { return v == &b; }};
+}
+
+inline auto Is(const pInst &v) {
+    return ClassMatchIf<Instruction>{[&v](const Value &b) { return v.get() == &b; }};
+}
+
 inline auto Is(const bool &a) {
     return ClassMatchIf<ConstantI1>{[&a](const ConstantI1 &b) { return a == b.getVal(); }};
 }
@@ -140,7 +151,7 @@ MAKE_INST_MATCH(Fdiv, FDIV, 2)
 MAKE_INST_MATCH(Rem, REM, 2)
 MAKE_INST_MATCH(Frem, FREM, 2)
 MAKE_INST_MATCH(Alloca, ALLOCA, 0)
-MAKE_INST_MATCH(Load, LOAD, 2)
+MAKE_INST_MATCH(Load, LOAD, 1)
 MAKE_INST_MATCH(Store, STORE, 2)
 MAKE_INST_MATCH_ANY(Gep, GEP)
 MAKE_INST_MATCH(Fptosi, FPTOSI, 1)

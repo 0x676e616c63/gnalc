@@ -107,7 +107,7 @@ void CFGBuilder::newWh(const std::shared_ptr<WHILEInst> &whinst) {
     _while_end_for_break.pop();
 }
 
-bool CFGBuilder::adder(std::vector<pInst>::const_iterator &it, const std::vector<pInst>::const_iterator &end,
+bool CFGBuilder::adder(std::list<pInst>::const_iterator &it, const std::list<pInst>::const_iterator &end,
                        const bool allow_break) {
     bool inserted_terminator = false;
     for (; it != end && !inserted_terminator; ++it) {

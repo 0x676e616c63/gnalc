@@ -70,6 +70,7 @@ int main(int argc, char **argv) {
     double fuzz_testing_duplication_rate = 1.0; // -fuzz-rate
     std::string fuzz_testing_repro;             // -fuzz-repro
     bool debug_pipeline = false;                // -debug-pipeline
+    bool sir_debug_pipeline = false;            // -sir-debug-pipeline
     IR::CliOptions cli_opt_options;             // --xxx, --no-xxx
 
 #if GNALC_EXTENSION_A32
@@ -187,6 +188,7 @@ int main(int argc, char **argv) {
             fuzz_testing_repro = argv[i];
         }
         else if (arg == "-debug-pipeline") debug_pipeline = true;
+        else if (arg == "-sir-debug-pipeline") sir_debug_pipeline = true;
         else if (arg == "--ann") cli_opt_options.advance_name_norm = true;
         else if (arg == "--verify") cli_opt_options.verify.enable();
         else if (arg == "--strict") {
@@ -260,7 +262,8 @@ Debug options:
   -fuzz                      - Enable fuzz testing pipeline
   -fuzz-rate <rate: double>  - Set the duplication rate for fuzz testing pipeline
   -fuzz-repro <pipeline>     - Reproduce specific fuzz pipeline. Find <pipeline> in the fuzz testing log
-  -debug-pipeline            - Use built-in debugging pipeline
+  -debug-pipeline            - Use built-in debugging IR pipeline
+  -sir-debug-pipeline        - Use built-in debugging SIR pipeline
   --no-<pass>                - Disable specific optimization pass
   --ann                      - Use the advance name normalization result (after IRGen) (This disables the one at the last)
   --verify                   - Enable IR verification after passes
@@ -380,7 +383,9 @@ Extensions:
     SIR::LinearPassBuilder::registerProxies(sir_lfam, sir_mam);
 
     SIR::MPM sir_mpm;
-    if (fixed_point_pipeline)
+    if (sir_debug_pipeline)
+        sir_mpm = SIR::LinearPassBuilder::buildModuleDebugPipeline();
+    else if (fixed_point_pipeline)
         sir_mpm = SIR::LinearPassBuilder::buildModuleFixedPointPipeline(pm_options);
     else
         sir_mpm = SIR::LinearPassBuilder::buildModulePipeline(pm_options);

@@ -13,7 +13,7 @@ namespace Parser {
 class IRGenerator : public AST::ASTVisitor {
     IR::Module module;
     IR::pVal curr_val;
-    std::vector<IR::pInst> curr_insts;
+    std::list<IR::pInst> curr_insts;
     std::shared_ptr<IR::LinearFunction> curr_func;
     SymbolTable symbol_table;
     bool is_making_lval{false}; // TODO: more sensible

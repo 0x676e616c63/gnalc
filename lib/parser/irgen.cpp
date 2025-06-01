@@ -643,7 +643,7 @@ void IRGenerator::visit(BinaryOp &node) {
         auto lhs = curr_val;
         lhs = type_cast(lhs, IR::IRBTYPE::I1);
 
-        std::vector<IR::pInst> rhs_insts;
+        std::list<IR::pInst> rhs_insts;
         std::swap(rhs_insts, curr_insts);
 
         node.getRHS()->accept(*this);
@@ -957,9 +957,9 @@ void IRGenerator::visit(IfStmt &node) {
     auto cond = curr_val;
     cond = type_cast(cond, IR::IRBTYPE::I1);
 
-    std::vector<IR::pInst> before_if_insts;
-    std::vector<IR::pInst> body_insts;
-    std::vector<IR::pInst> else_insts;
+    std::list<IR::pInst> before_if_insts;
+    std::list<IR::pInst> body_insts;
+    std::list<IR::pInst> else_insts;
 
     std::swap(before_if_insts, curr_insts);
 
@@ -978,9 +978,9 @@ void IRGenerator::visit(IfStmt &node) {
 }
 
 void IRGenerator::visit(WhileStmt &node) {
-    std::vector<IR::pInst> before_while_insts;
-    std::vector<IR::pInst> cond_insts;
-    std::vector<IR::pInst> body_insts;
+    std::list<IR::pInst> before_while_insts;
+    std::list<IR::pInst> cond_insts;
+    std::list<IR::pInst> body_insts;
 
     std::swap(before_while_insts, curr_insts);
 
