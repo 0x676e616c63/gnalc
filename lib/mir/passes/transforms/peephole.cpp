@@ -42,13 +42,31 @@ bool GenericPeepholeImpl::runOnBlk(MIRBlk_p &mblk) {
         for (auto iter = minsts.begin(); iter != minsts.end(); /* forword iter in matches */) {
 
             auto recovery = iter;
-            MatchInfo info(*iter, minsts, iter);
+            MatchInfo info(*iter, minsts, iter); // reference
 
-            if (removeByReference(info) || matchNop(info) || matchArithmetic(info) /* || matchMA(info) */ ||
-                matchSelect(info) || matchFusedAdr(info)) {
-                modified = true;
+            if (removeByReference(info)) {
+                goto __mark_modified;
             }
+            if (matchNop(info)) {
+                goto __mark_modified;
+            }
+            if (matchArithmetic(info)) {
+                goto __mark_modified;
+            }
+            if (matchMA(info)) {
+                goto __mark_modified;
+            }
+            if (matchSelect(info)) {
+                goto __mark_modified;
+            }
+            if (matchFusedAdr(info)) {
+                goto __mark_modified;
+            }
+            goto __nxt_round;
 
+        __mark_modified:
+            modified |= true;
+        __nxt_round:
             recovery == iter ? (void)++iter : nop;
         }
         // MATCHES END
@@ -325,15 +343,6 @@ bool GenericPeepholeImpl::matchArithmetic(MatchInfo &info) {
         auto mdef = minst->ensureDef();
         auto dividend = minst->getOp(1);
 
-        if (divisor_const < 0) {
-            auto middle_result = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
-
-            auto neg =
-                MIRInst::make<OpC>(OpC::InstNeg)->setOperand<0>(middle_result, ctx)->setOperand<1>(dividend, ctx);
-
-            minsts.insert(iter, neg);
-        }
-
         ///@brief 简单位移
         if (popcounter_wrapper(divisor_const) == 1) {
             ///@note 如果能预测到被除数范围, 对于正数则不必修正结果
@@ -341,6 +350,15 @@ bool GenericPeepholeImpl::matchArithmetic(MatchInfo &info) {
             // lsr 生成修正量
             // add 修正计算结果(虽然还没算)
             // asr2 除法计算
+
+            if (divisor_const < 0) {
+                auto middle_result = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
+
+                auto neg =
+                    MIRInst::make<OpC>(OpC::InstNeg)->setOperand<0>(middle_result, ctx)->setOperand<1>(dividend, ctx);
+
+                minsts.insert(iter, neg);
+            }
 
             auto exp = ctz_wrapper(divisor_const);
 
@@ -415,12 +433,14 @@ bool GenericPeepholeImpl::matchMA(MatchInfo &info) {
             return false;
         }
 
-        if (!inSet(minst->opcode<OpC>(), OpC::InstAdd, OpC::InstSub, OpC::InstFAdd, OpC::InstFSub)) {
+        ///@warning https://ilinuxkernel.com/?p=1546
+        ///@warning fmadd and fmsub will lose accurency
+        if (!inSet(minst->opcode<OpC>(), OpC::InstAdd, OpC::InstSub /* OpC::InstFAdd, OpC::InstFSub */)) {
             return false;
         }
 
-        newOpC = inSetAndMap<OpC, ARMOpC>(minst->opcode<OpC>(), OpC::InstAdd, ARMOpC::MADD, OpC::InstSub, ARMOpC::MSUB,
-                                          OpC::InstFAdd, ARMOpC::FMADD, OpC::InstFSub, ARMOpC::FMSUB);
+        newOpC = inSetAndMap<OpC, ARMOpC>(minst->opcode<OpC>(), OpC::InstAdd, ARMOpC::MADD, OpC::InstSub, ARMOpC::MSUB
+                                          /* OpC::InstFAdd, ARMOpC::FMADD, OpC::InstFSub, ARMOpC::FMSUB */);
 
         if (minst->getOp(2)->isImme()) {
             return false;
