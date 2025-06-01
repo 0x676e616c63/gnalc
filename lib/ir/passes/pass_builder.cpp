@@ -42,6 +42,7 @@
 #include "ir/passes/transforms/dae.hpp"
 #include "ir/passes/transforms/if_conversion.hpp"
 #include "ir/passes/transforms/range_aware_simplify.hpp"
+#include "ir/passes/utilities/analysis_storer.hpp"
 #include "ir/passes/utilities/irprinter.hpp"
 #include "ir/passes/utilities/verifier.hpp"
 
@@ -217,6 +218,10 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
     fpm.addPass(make_clean());
     // fpm.addPass(make_vectorizer());
     // fpm.addPass(make_clean());
+
+    fpm.addPass(LoopSimplifyPass());
+    fpm.addPass(StoreAnalysisPass<RangeAnalysis>());
+    fpm.addPass(CFGSimplifyPass());
     fpm.addPass(CodeGenPreparePass());
     fpm.addPass(NameNormalizePass(true));
 
@@ -288,6 +293,9 @@ FPM PassBuilder::buildFunctionPipeline(PMOptions opt_info) {
 
 #undef FUNCTION_TRANSFORM
 
+    fpm.addPass(LoopSimplifyPass());
+    fpm.addPass(StoreAnalysisPass<RangeAnalysis>());
+    fpm.addPass(CFGSimplifyPass());
     fpm.addPass(CodeGenPreparePass());
     if (!opt_info.advance_name_norm)
         fpm.addPass(NameNormalizePass(true)); // bb_rename: true
@@ -305,18 +313,11 @@ MPM PassBuilder::buildModulePipeline(PMOptions opt_info) {
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
-    fpm.addPass(IR::PromotePass());
-    fpm.addPass(IR::TailRecursionEliminationPass());
-    fpm.addPass(IR::InlinePass());
-    fpm.addPass(IR::InternalizePass());
-    fpm.addPass(IR::PromotePass());
-    fpm.addPass(IR::NameNormalizePass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::PrintFunctionPass(std::cerr));
-    fpm.addPass(IR::PrintRangePass(std::cerr));
-    fpm.addPass(IR::RangeAwareSimplifyPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::NameNormalizePass());
+    fpm.addPass(PromotePass());
+    fpm.addPass(LoopSimplifyPass());
+    fpm.addPass(StoreAnalysisPass<RangeAnalysis>());
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(CodeGenPreparePass());
     return fpm;
 
 

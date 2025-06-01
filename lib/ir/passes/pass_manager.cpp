@@ -11,9 +11,16 @@ template class PassManager<IR::Module>;
 template class PassManager<IR::Function>;
 
 template class InnerAnalysisManagerProxy<AnalysisManager<IR::Function>, IR::Module>;
+
+template class AnalysisStorage<IR::Function>;
+template class AnalysisStorage<IR::Module>;
 } // namespace PM
 
 namespace IR {
+namespace Lower {
+FAS gFunctionAnalysisStorage;
+}
+
 PM::PreservedAnalyses PreserveAll() { return PM::PreservedAnalyses::all(); }
 
 PM::PreservedAnalyses PreserveNone() { return PM::PreservedAnalyses::none(); }
