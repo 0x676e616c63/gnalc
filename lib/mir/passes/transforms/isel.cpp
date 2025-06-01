@@ -33,8 +33,6 @@ PM::PreservedAnalyses ISel::run(MIRFunction &mfunc, FAM &fam) {
     return PM::PreservedAnalyses::all();
 }
 
-///@note 关键是 iselInfo.matchAndSelect
-///@todo 现阶段没有matchOpt的情况下, 基本上没有replace
 void ISelContext::impl(MIRFunction *mfunc) {
     auto &iselInfo = mCodeGenCtx.iselInfo;
     bool allowComplexPattern = false;

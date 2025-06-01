@@ -80,6 +80,7 @@ void CFGsimplifyBeforeRAImpl::i1EliDetect(MIRBlk_p &mblk) {
 
         auto recovery = it;
         if (cmp(*it) && cset(next_ptr()) && cbnz(next_ptr()) && b(next_ptr())) {
+            ///@todo cmp maybe appear not to be neighbor cset but still close to it
             i1UseConsolidate(minsts, recovery);
             break;
         }

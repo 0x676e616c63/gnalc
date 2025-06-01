@@ -209,6 +209,13 @@ inline string ARMOpC2S(ARMOpC op) {
         return "fmadd";
     case FMSUB:
         return "fmsub";
+    case CSEL:
+        return "csel";
+    case FCSEL:
+        return "fcsel";
+    case CSET_SELECT:
+    case CSET:
+        return "cset";
     case MOV:
     case MOV_V:
         return "mov";

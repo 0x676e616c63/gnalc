@@ -154,7 +154,7 @@ void MIR_new::lowerInst(const IR::pIcmp &icmp, LoweringContext &ctx) {
 
     ctx.newInst(MIRInst::make(ARMOpC::CSET)
                     ->setOperand<0>(def, ctx.CodeGenCtx())
-                    ->setOperand<1>(ctx.mapOperand(IRCondConvert(icmp->getCond())), ctx.CodeGenCtx()));
+                    ->setOperand<1>(ctx.mapOperand(IRCondConvert(icmp->getCond())), ctx.CodeGenCtx())); // cond flag
 
     ///@note condflag 加入到常量池
 
@@ -379,6 +379,17 @@ void MIR_new::lowerInst(const IR::pGep &gep, LoweringContext &ctx) {
 
 void MIR_new::lowerInst(const IR::pCall &call, LoweringContext &ctx) {
     ctx.CodeGenCtx().frameInfo.handleCallEntry(call, ctx); //
+}
+
+void MIR_new::lowerInst(const IR::pSelect &select, LoweringContext &ctx) {
+    auto def = ctx.newVReg(select->getType());
+    ctx.newInst(MIRInst::make(OpC::InstSelect)
+                    ->setOperand<0>(def, ctx.CodeGenCtx())
+                    ->setOperand<1>(ctx.mapOperand(select->getTrueVal()), ctx.CodeGenCtx())
+                    ->setOperand<2>(ctx.mapOperand(select->getFalseVal()), ctx.CodeGenCtx())
+                    ->setOperand<3>(ctx.mapOperand(select->getCond()), ctx.CodeGenCtx()));
+
+    ctx.addOperand(select, def);
 }
 
 void LoweringContext::elimPhi() {

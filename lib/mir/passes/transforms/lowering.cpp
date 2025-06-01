@@ -540,6 +540,9 @@ void MIR_new::lowerInst(const IRInst_p &inst, LoweringContext &ctx) {
     case OP::CALL:
         MIR_new::lowerInst(inst->as<IR::CALLInst>(), ctx);
         break;
+    case OP::SELECT:
+        MIR_new::lowerInst(inst->as<IR::SELECTInst>(), ctx);
+        break;
     default:
         Err::unreachable("lowerInst: unrecognized IR::OP");
     }

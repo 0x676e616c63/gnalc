@@ -44,10 +44,10 @@ bool GenericPeepholeImpl::runOnBlk(MIRBlk_p &mblk) {
             auto recovery = iter;
             MatchInfo info(*iter, minsts, iter);
 
-            if (removeByReference(info) || matchNop(info) || matchArithmetic(info) || matchFusedAdr(info)) {
+            if (removeByReference(info) || matchNop(info) || matchArithmetic(info) /* || matchMA(info) */ ||
+                matchSelect(info) || matchFusedAdr(info)) {
                 modified = true;
             }
-            //|| matchMA(info)
 
             recovery == iter ? (void)++iter : nop;
         }
@@ -397,14 +397,6 @@ bool GenericPeepholeImpl::matchArithmetic(MatchInfo &info) {
     return false;
 }
 
-bool GenericPeepholeImpl::matchFusedAdr(MatchInfo &info) {
-    if (stage != Stage::AfterStackGenerate) {
-        return false;
-    }
-
-    return false;
-}
-
 bool GenericPeepholeImpl::matchMA(MatchInfo &info) {
     if (stage != Stage::AfterIsel) {
         return false;
@@ -493,6 +485,56 @@ bool GenericPeepholeImpl::matchMA(MatchInfo &info) {
     minst->setOperand<1>(multiple_1, ctx);
 
     return true;
+}
+
+bool GenericPeepholeImpl::matchSelect(MatchInfo &info) {
+    if (stage != Stage::AfterIsel) {
+        return false;
+    }
+
+    auto &ctx = mfunc->CodeGenContext();
+    auto &minst = info.minst;
+    auto &minsts = info.minsts;
+    auto &iter = info.iter;
+
+    if (minst->isGeneric()) {
+        return false;
+    }
+
+    if (minst->opcode<ARMOpC>() != CSEL && minst->opcode<ARMOpC>() != FCSEL && minst->opcode<ARMOpC>() != CSET_SELECT) {
+        return false;
+    }
+
+    auto &cond = minst->getOp(3);
+
+    auto cset_iter = std::prev(iter);
+    while (cset_iter != minsts.end()) { // std::list only
+
+        auto &cset = *cset_iter;
+
+        if (cset->getDef() == cond) {
+            break;
+        }
+
+        cset_iter = std::prev(cset_iter);
+    }
+
+    if (cset_iter != minsts.end()) {
+        minst->setOperand<3>((*cset_iter)->getOp(1), ctx);
+
+        // cset will be delete by refercnt
+        return true;
+    }
+
+    return false;
+}
+
+bool GenericPeepholeImpl::matchFusedAdr(MatchInfo &info) {
+    if (stage != Stage::AfterStackGenerate) {
+        return false;
+    }
+
+    return false;
 }
 
 bool GenericPeepholeImpl::removeByReference(MatchInfo &info) {

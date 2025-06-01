@@ -223,21 +223,24 @@ enum ARMOpC : uint32_t {
     MSUB,
     FMADD,
     FMSUB,
-    CSET,     // cond set
-    CBNZ,     // compare and branch if not zero
-    ADRP_LDR, // 中间表示
-    ADRP,     // load page of the value
-    MOV,      // not suggested, I mean really
-    MOV_V,    // use mov, but with simd regs
-    MOVZ,     // mov and zero the rest bits
-    MOVK,     // mov and keep the rest bits
-    MOVF,     // fmov
-    BL,       // func call, remember to mark tail call
-    RET,      // ret, with link register
-    PUSH,     // implement with losts of stp in codegen
-    POP,      // implement with losts of ldp in codegen
-    INC,      // implement with add #imme (with imme legalize)
-    DEC,      // implement with sub #imme (with imme legalize)
+    CSEL,        // cond select, dont support simd
+    CSET_SELECT, // down graded from csel
+    FCSEL,       // cond fp select, dont support simd
+    CSET,        // cond set
+    CBNZ,        // compare and branch if not zero
+    ADRP_LDR,    // 中间表示
+    ADRP,        // load page of the value
+    MOV,         // not suggested, I mean really
+    MOV_V,       // use mov, but with simd regs
+    MOVZ,        // mov and zero the rest bits
+    MOVK,        // mov and keep the rest bits
+    MOVF,        // fmov
+    BL,          // func call, remember to mark tail call
+    RET,         // ret, with link register
+    PUSH,        // implement with losts of stp in codegen
+    POP,         // implement with losts of ldp in codegen
+    INC,         // implement with add #imme (with imme legalize)
+    DEC,         // implement with sub #imme (with imme legalize)
 };
 
 class MIRInst;
