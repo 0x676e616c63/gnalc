@@ -193,7 +193,7 @@ void MIR_new::lowerInst(const IR::pBr &br, LoweringContext &ctx) {
         ctx.newInst(MIRInst::make(OpC::InstBranch)
                         ->setOperand<0>(nullptr, ctx.CodeGenCtx())
                         ->setOperand<1>(MIROperand::asReloc(blk_true), ctx.CodeGenCtx())
-                        ->setOperand<2>(ctx.mapOperand(AL), ctx.CodeGenCtx())
+                        ->setOperand<2>(ctx.mapOperand(Cond::AL), ctx.CodeGenCtx())
                         ->setOperand<3>(MIROperand::asProb(1.0), ctx.CodeGenCtx()));
     };
 
@@ -215,7 +215,7 @@ void MIR_new::lowerInst(const IR::pBr &br, LoweringContext &ctx) {
             ctx.newInst(MIRInst::make(OpC::InstBranch)
                             ->setOperand<0>(nullptr, ctx.CodeGenCtx())
                             ->setOperand<1>(MIROperand::asReloc(true_blk_true), ctx.CodeGenCtx())
-                            ->setOperand<2>(ctx.mapOperand(AL), ctx.CodeGenCtx())
+                            ->setOperand<2>(ctx.mapOperand(Cond::AL), ctx.CodeGenCtx())
                             ->setOperand<3>(MIROperand::asProb(1.0), ctx.CodeGenCtx()));
 
             ///@brief 仅保留实质上的msucc
@@ -248,7 +248,7 @@ void MIR_new::lowerInst(const IR::pBr &br, LoweringContext &ctx) {
             ctx.newInst(MIRInst::make(OpC::InstBranch)
                             ->setOperand<0>(nullptr, ctx.CodeGenCtx())
                             ->setOperand<1>(MIROperand::asReloc(blk_false), ctx.CodeGenCtx())
-                            ->setOperand<2>(ctx.mapOperand(AL), ctx.CodeGenCtx())
+                            ->setOperand<2>(ctx.mapOperand(Cond::AL), ctx.CodeGenCtx())
                             ->setOperand<3>(MIROperand::asProb(0.5), ctx.CodeGenCtx()));
         } ///@note blk op 不放入变量池
     };
