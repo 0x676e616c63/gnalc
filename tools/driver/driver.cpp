@@ -1,3 +1,8 @@
+// SIR
+#include "sir/passes/pass_builder.hpp"
+#include "sir/passes/pass_manager.hpp"
+
+// IR
 #include "ir/passes/pass_builder.hpp"
 #include "ir/passes/pass_manager.hpp"
 #include "ir/passes/utilities/irprinter.hpp"
@@ -27,10 +32,12 @@
 #include "mirA32/passes/utilities/mirprinter.hpp"
 #endif
 
+// MIR
 #include "codegen/armv8/armprinter.hpp"
 #include "mir/passes/pass_builder.hpp"
 #include "mir/passes/pass_manager.hpp"
 #include "mir/passes/transforms/lowering.hpp"
+#include "sir/passes/utilities/sirprinter.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -52,6 +59,7 @@ int main(int argc, char **argv) {
 
     // Options
     bool only_compilation = false;              // -S
+    bool emit_sir = false;                      // -emit-sir
     bool emit_llvm = false;                     // -emit-llvm
     bool emit_llc = false;                      // -emit-llc
     bool ast_dump = false;                      // -ast-dump
@@ -104,6 +112,8 @@ int main(int argc, char **argv) {
             output_file = argv[i];
         } else if (arg == "-S")
             only_compilation = true;
+        else if (arg == "-emit-sir")
+            emit_sir = true;
         else if (arg == "-emit-llvm")
             emit_llvm = true;
         else if (arg == "-emit-llc")
@@ -331,11 +341,17 @@ Extensions:
     if (!input_file.empty())
         fclose(yyin);
 
-    IR::FAM fam;
-    IR::MAM mam;
-    IR::PassBuilder::registerFunctionAnalyses(fam);
-    IR::PassBuilder::registerModuleAnalyses(mam);
-    IR::PassBuilder::registerProxies(fam, mam);
+    std::ostream *poutstream = &std::cout;
+    std::ofstream outfile;
+
+    if (!output_file.empty()) {
+        outfile.open(output_file);
+        if (!outfile.is_open()) {
+            std::cerr << "Error: Failed to open output file '" << output_file << "'." << std::endl;
+            return -1;
+        }
+        poutstream = &outfile;
+    }
 
     IR::PMOptions pm_options{};
     if (o0_optnone)
@@ -356,6 +372,36 @@ Extensions:
         pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::DisableIfDefault);
     }
 
+    // SIR
+    SIR::LFAM sir_lfam;
+    SIR::MAM sir_mam;
+    SIR::LinearPassBuilder::registerFunctionAnalyses(sir_lfam);
+    SIR::LinearPassBuilder::registerModuleAnalyses(sir_mam);
+    SIR::LinearPassBuilder::registerProxies(sir_lfam, sir_mam);
+
+    SIR::MPM sir_mpm;
+    if (fixed_point_pipeline)
+        sir_mpm = SIR::LinearPassBuilder::buildModuleFixedPointPipeline(pm_options);
+    else
+        sir_mpm = SIR::LinearPassBuilder::buildModulePipeline(pm_options);
+
+    if (emit_sir) {
+        sir_mpm.addPass(SIR::PrintLinearModulePass(*poutstream));
+        sir_mpm.run(generator.get_module(), sir_mam);
+        return 0;
+    }
+
+    sir_mpm.run(generator.get_module(), sir_mam);
+    IR::CFGBuilder cfg_builder;
+    cfg_builder.build(generator.get_module());
+
+    // IR
+    IR::FAM fam;
+    IR::MAM mam;
+    IR::PassBuilder::registerFunctionAnalyses(fam);
+    IR::PassBuilder::registerModuleAnalyses(mam);
+    IR::PassBuilder::registerProxies(fam, mam);
+
     IR::MPM mpm;
     if (debug_pipeline)
         mpm = IR::PassBuilder::buildModuleDebugPipeline();
@@ -366,18 +412,6 @@ Extensions:
         mpm = IR::PassBuilder::buildModuleFixedPointPipeline(pm_options);
     else
         mpm = IR::PassBuilder::buildModulePipeline(pm_options);
-
-    std::ostream *poutstream = &std::cout;
-    std::ofstream outfile;
-
-    if (!output_file.empty()) {
-        outfile.open(output_file);
-        if (!outfile.is_open()) {
-            std::cerr << "Error: Failed to open output file '" << output_file << "'." << std::endl;
-            return -1;
-        }
-        poutstream = &outfile;
-    }
 
     if (emit_llvm) {
         mpm.addPass(IR::PrintModulePass(*poutstream));

@@ -12,17 +12,6 @@ void PrinterBase::visit(GlobalVariable &node) { writeln(IRFormatter::formatGV(no
 void PrinterBase::visit(FunctionDecl &node) { write(IRFormatter::formatFuncDecl(node)); }
 
 void PrinterBase::visit(Instruction &node) {
-    // if (printLiveInfo) {
-    //     write("  ; livein:");
-    //     for (auto &val : liveness.getLiveIn(&node))
-    //         write(" " + val->getName());
-    //     writeln("");
-    //     write("  ; liveout:");
-    //     for (auto &val : liveness.getLiveOut(&node))
-    //         write(" " + val->getName());
-    //     writeln("");
-    // }
-
     // It seems there is no nested scope, so it is a fixed indent.
     write("  ");
 
@@ -40,17 +29,6 @@ void PrinterBase::visit(Function &node) {
 }
 
 void PrinterBase::visit(BasicBlock &node) {
-    // if (printLiveInfo) {
-    //     write("; livein:");
-    //     for (auto &val : liveness.getLiveIn(&node))
-    //         write(" " + val->getName());
-    //     writeln("");
-    //     write("; liveout:");
-    //     for (auto &val : liveness.getLiveOut(&node))
-    //         write(" " + val->getName());
-    //     writeln("");
-    // }
-
     write(IRFormatter::formatBB(node));
     writeln(":");
     for (const auto &inst : node.phis())
@@ -61,17 +39,11 @@ void PrinterBase::visit(BasicBlock &node) {
 }
 
 PM::PreservedAnalyses PrintFunctionPass::run(Function &func, FAM &fam) {
-    // if (printLiveInfo)
-    //     liveness = fam.getResult<LiveAnalysis>(func);
-
     func.accept(*this);
     return PreserveAll();
 }
 
 PM::PreservedAnalyses PrintModulePass::run(Module &module, MAM &mam) {
-    // if (printLiveInfo)
-    //     Err::todo("FIXME: Module's printLiveInfo not available");
-
     writeln("; Module: " + module.getName());
     writeln("");
 

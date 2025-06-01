@@ -20,6 +20,17 @@ FunctionDecl::FunctionDecl(std::string name_, std::vector<pType> params, pType r
         func_attrs.emplace(FuncAttr::NotBuiltin);
 }
 
+bool FunctionDecl::isRecursive() const {
+    for (const auto &inst_user : inst_users()) {
+        auto call = inst_user->as<CALLInst>();
+        Err::gassert(call != nullptr);
+        auto caller_func = call->getParent()->getParent();
+        if (caller_func.get() == this)
+            return true;
+    }
+    return false;
+}
+
 bool FunctionDecl::hasAttr(FuncAttr attr) const { return func_attrs.count(attr); }
 void FunctionDecl::addAttr(FuncAttr attr) { func_attrs.emplace(attr); }
 const std::set<FuncAttr> &FunctionDecl::getAttrs() const { return func_attrs; }
@@ -215,17 +226,6 @@ void Function::updateAndCheckCFG() {
     }
 }
 
-bool Function::isRecursive() const {
-    for (const auto &inst_user : inst_users()) {
-        auto call = inst_user->as<CALLInst>();
-        Err::gassert(call != nullptr);
-        auto caller_func = call->getParent()->getParent();
-        if (caller_func.get() == this)
-            return true;
-    }
-    return false;
-}
-
 bool Function::removeParam(size_t index) {
     Err::gassert(index < params.size() && params[index]->getUseCount() == 0);
     params.erase(params.begin() + index);
@@ -325,10 +325,23 @@ pVal Function::cloneImpl() const {
 
 void Function::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
+
+LinearFunction::LinearFunction(std::string name_, const std::vector<pFormalParam> &params_, pType ret_type,
+                               ConstantPool *pool_)
+: FunctionDecl(std::move(name_), get_params_type(params_), std::move(ret_type), false, {}), params(params_),
+      constant_pool(pool_) {}
+
 void LinearFunction::addInst(pInst inst) { insts.emplace_back(std::move(inst)); }
 
 void LinearFunction::appendInsts(std::vector<pInst> insts_) {
     insts.insert(insts.end(), std::make_move_iterator(insts_.begin()), std::make_move_iterator(insts_.end()));
+}
+
+const std::vector<pFormalParam> &LinearFunction::getParams() const {
+    return params;
+}
+ConstantPool &LinearFunction::getConstantPool() {
+    return *constant_pool;
 }
 
 const std::vector<pInst> &LinearFunction::getInsts() const { return insts; }

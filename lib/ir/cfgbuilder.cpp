@@ -2,17 +2,18 @@
  * @attention 默认删除块中 break; continue; 后的所有指令
  **/
 
-#include "parser/cfgbuilder.hpp"
+#include "ir/cfgbuilder.hpp"
 #include "ir/instructions/control.hpp"
 #include "ir/instructions/helper.hpp"
+#include "ir/module.hpp"
 #include "ir/type_alias.hpp"
 #include "utils/misc.hpp"
 
 using namespace IR;
-namespace Parser {
-void CFGBuilder::build(IR::Module &module) {
-    for (auto &f : module.funcs) {
-        cur_linear_func = f->as<LinearFunction>();
+namespace IR {
+void CFGBuilder::build(Module &module) {
+    for (auto &f : module.linear_funcs) {
+        cur_linear_func = f;
         cur_making_func = std::make_shared<Function>(cur_linear_func->getName(), cur_linear_func->getParams(),
                                                      cur_linear_func->getType()->as<FunctionType>()->getRet(),
                                                      &cur_linear_func->getConstantPool(), cur_linear_func->getAttrs());
@@ -23,9 +24,16 @@ void CFGBuilder::build(IR::Module &module) {
 
         f->replaceSelf(cur_making_func);
 
-        f = cur_making_func;
-        f->updateAllIndex();
+        module.addFunction(cur_making_func);
+        cur_making_func->updateAllIndex();
     }
+
+    module.linear_funcs.clear();
+    cur_linear_func = nullptr;
+    cur_making_func = nullptr;
+    cur_blk = nullptr;
+    _while_cond_for_continue = {};
+    _while_end_for_break = {};
 }
 
 // !!!需要尽量确保第一个BB是entry, 最后一个是return
@@ -172,4 +180,4 @@ void CFGBuilder::addCondBr(const pVal &cond, const pBlock &true_blk, const pBloc
         cur_blk->addInst(std::make_shared<BRInst>(cond, true_blk, false_blk));
     }
 }
-} // namespace Parser
+} // namespace IR

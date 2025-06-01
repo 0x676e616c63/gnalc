@@ -1,9 +1,9 @@
 /**
- * @brief IR/DebugMessage/SCEV Printer
+ * @brief IR/DebugMessage/SCEV/Range Printer
  */
 #pragma once
-#ifndef GNALC_PASSES_UTILITIES_IRPRINTER_HPP
-#define GNALC_PASSES_UTILITIES_IRPRINTER_HPP
+#ifndef GNALC_IR_PASSES_UTILITIES_IRPRINTER_HPP
+#define GNALC_IR_PASSES_UTILITIES_IRPRINTER_HPP
 
 #include "ir/visitor.hpp"
 #include "ir/passes/pass_manager.hpp"

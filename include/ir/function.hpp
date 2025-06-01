@@ -12,10 +12,6 @@
 #include <utility>
 #include <vector>
 
-namespace Parser {
-class CFGBuilder;
-}
-
 namespace IR {
 enum class FuncAttr {
     // User defined functions
@@ -64,6 +60,8 @@ public:
     void setParent(Module *module);
     Module *getParent() const;
 
+    bool isRecursive() const;
+
     ~FunctionDecl() override;
 };
 
@@ -85,8 +83,9 @@ private:
     pVal cloneImpl() const override { return std::make_shared<FormalParam>(getName(), getType(), index); }
 };
 
+class CFGBuilder;
 class Function : public FunctionDecl {
-    friend class Parser::CFGBuilder;
+    friend class CFGBuilder;
 
 private:
     std::vector<pFormalParam> params;
@@ -168,11 +167,6 @@ public:
     const_reverse_iterator crbegin() const;
     const_reverse_iterator crend() const;
 
-    // 后面需要再说
-    // int getVRegIdx() { return vreg_idx++; } //
-    // 用于生成SSA时的虚拟寄存器计数，从0开始，GetIdx后++ int getVRegNum() const
-    // { return vreg_idx; } // 虚拟寄存器数量
-
     ConstantPool &getConstantPool();
 
     template <typename T> auto getConst(T &&val) { return constant_pool->getConst(std::forward<T>(val)); }
@@ -191,9 +185,6 @@ public:
 
     void updateCFG();
     void updateAndCheckCFG();
-
-    bool isRecursive() const;
-
     bool removeParam(size_t index);
 private:
     void updateBBIndex();
@@ -204,9 +195,11 @@ private:
 
 // 基本块划分前的过渡
 // IRGenerator 生成之后， CFGBuilder 之前
-class LinearFunction : public Function {
+class LinearFunction : public FunctionDecl {
 private:
     std::vector<pInst> insts;
+    std::vector<pFormalParam> params;
+    ConstantPool *constant_pool;
 
 public:
     using iterator = decltype(insts)::iterator;
@@ -214,8 +207,7 @@ public:
     using reverse_iterator = decltype(insts)::reverse_iterator;
     using const_reverse_iterator = decltype(insts)::const_reverse_iterator;
 
-    LinearFunction(std::string name_, const std::vector<pFormalParam> &params, pType ret_type, ConstantPool *pool)
-        : Function(std::move(name_), params, std::move(ret_type), pool) {}
+    LinearFunction(std::string name_, const std::vector<pFormalParam> &params, pType ret_type, ConstantPool *pool);
 
     // usually we can use range-based for instead of these
     const std::vector<pInst> &getInsts() const;
@@ -236,6 +228,13 @@ public:
 
     void addInst(pInst inst);
     void appendInsts(std::vector<pInst> insts_);
+
+    size_t getInstCount() const { return insts.size(); }
+
+    const std::vector<pFormalParam> &getParams() const;
+    ConstantPool &getConstantPool();
+
+    template <typename T> auto getConst(T &&val) { return constant_pool->getConst(std::forward<T>(val)); }
 
     void accept(IRVisitor &visitor) override;
 };

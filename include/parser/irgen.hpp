@@ -2,11 +2,11 @@
 #define GNALC_PARSER_IRGEN_HPP
 #pragma once
 
+#include "../ir/cfgbuilder.hpp"
 #include "ast.hpp"
-#include "cfgbuilder.hpp"
-#include "symbol_table.hpp"
-#include "ir/module.hpp"
 #include "config/config.hpp"
+#include "ir/module.hpp"
+#include "symbol_table.hpp"
 
 namespace Parser {
 
@@ -102,6 +102,9 @@ public:
     static constexpr auto irval_temp_name = Config::IR::REGISTER_TEMP_NAME;
 
 private:
+    size_t name_cnt = 0;
+    std::string name(const std::string& id);
+
     // Throw exception if failed
     IR::pVal type_cast(const IR::pVal &val, const std::shared_ptr<IR::Type> &dest);
     IR::pVal type_cast(const IR::pVal &val, IR::IRBTYPE dest);

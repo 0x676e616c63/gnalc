@@ -26,6 +26,12 @@ include_directories(include)
 aux_source_directory(lib/lexer GNALC_LEXER_SRC)
 aux_source_directory(lib/parser GNALC_PARSER_SRC)
 
+# SIR
+aux_source_directory(lib/sir GNALC_SIR_SRC)
+aux_source_directory(lib/sir/passes GNALC_SIR_SRC)
+aux_source_directory(lib/sir/passes/transforms GNALC_SIR_SRC)
+aux_source_directory(lib/sir/passes/utilities GNALC_SIR_SRC)
+
 # IR
 aux_source_directory(lib/ir GNALC_IR_SRC)
 aux_source_directory(lib/ir/instructions GNALC_IR_SRC)
@@ -77,6 +83,7 @@ aux_source_directory(lib/ggc GNALC_EXT_GGC_SRC)
 set(GNALC_SRC
         ${GNALC_LEXER_SRC}
         ${GNALC_PARSER_SRC}
+        ${GNALC_SIR_SRC}
         ${GNALC_IR_SRC}
         ${GNALC_MIRA32_SRC}
         ${GNALC_MIRA64_SRC}
@@ -89,6 +96,7 @@ set(GNALC_SRC
 # GGC
 set(GGC_SRC
         ${GNALC_EXT_GGC_SRC}
+        ${GNALC_SIR_SRC}
         ${GNALC_IR_SRC}
         ${GNALC_MIRA32_SRC}
         ${GNALC_MIRA64_SRC}

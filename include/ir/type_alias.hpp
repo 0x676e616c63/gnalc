@@ -99,10 +99,13 @@ using wpBlock = std::weak_ptr<BasicBlock>;
 class FunctionDecl;
 class FormalParam;
 class Function;
+class LinearFunction;
 using pFuncDecl = std::shared_ptr<FunctionDecl>;
 using pFormalParam = std::shared_ptr<FormalParam>;
 using pFunc = std::shared_ptr<Function>;
 using wpFunc = std::weak_ptr<Function>;
+using pLFunc = std::shared_ptr<LinearFunction>;
+using wpLFunc = std::shared_ptr<LinearFunction>;
 
 // global variable
 class GlobalVariable;

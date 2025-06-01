@@ -209,7 +209,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
     };
 
     FPM fpm;
-    fpm.addPass(NameNormalizePass(true));
+    fpm.addPass(VerifyPass());
     FUNCTION_TRANSFORM(mem2reg, PromotePass());
     fpm.addPass(make_ipo());
     fpm.addPass(make_clean());
@@ -240,9 +240,7 @@ MPM PassBuilder::buildModuleFixedPointPipeline(PMOptions options) {
 FPM PassBuilder::buildFunctionPipeline(PMOptions opt_info) {
     FPM fpm;
 
-    // ANN disables the last name normalization pass.
-    fpm.addPass(NameNormalizePass(true)); // bb_rename: true
-
+    fpm.addPass(VerifyPass());
 #define FUNCTION_TRANSFORM(name, ...)                                                                                  \
     registerPassForOptInfo(fpm, opt_info.verify, opt_info.abort_when_verify_failed, opt_info.name, __VA_ARGS__);
 

@@ -24,6 +24,7 @@ public:
     static std::string formatValue(Value &val); // -> i32 %a
     static std::string formatBB(BasicBlock &bb);
     static std::string formatFunc(Function &func); // define dso_local void @fu(i32 noundef %a, i32 noundef %b)
+    static std::string formatLinearFunc(LinearFunction &func); // define dso_local void @fu(i32 noundef %a, i32 noundef %b)
     static std::string formatFuncDecl(FunctionDecl &func);
     static std::string formatGV(GlobalVariable &gv);
     static std::string formatInst(Instruction &inst);
@@ -47,8 +48,6 @@ private:
     static std::string fINSERTInst(INSERTInst &inst);
     static std::string fSHUFFLEInst(SHUFFLEInst &inst);
     static std::string fSELECTInst(SELECTInst &inst);
-
-    static std::string fHELPERInst(HELPERInst &inst);
 };
 } // namespace IR
 

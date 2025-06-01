@@ -141,27 +141,6 @@ std::string IRFormatter::formatHELPERTY(HELPERTY hlpty) {
 }
 
 std::string IRFormatter::formatValue(Value &val) {
-    if (val.getVTrait() == ValueTrait::CONDHELPER) {
-        std::string ret;
-        auto &cond_value = val.as_ref<CONDValue>();
-        if (cond_value.getCondType() == CONDTY::AND) {
-            ret += "; and rhs insts\n";
-            for (const auto &rinst : cond_value.getRHSInsts())
-                ret += "  " + formatInst(*rinst) + "\n";
-            ret += "  ; and value";
-            ret += "  " + formatValue(*cond_value.getRHS()) + " && " + formatValue(*cond_value.getLHS());
-            return ret;
-        } else if (cond_value.getCondType() == CONDTY::OR) {
-            ret += "; or rhs insts\n";
-            for (const auto &rinst : cond_value.getRHSInsts())
-                ret += "  " + formatInst(*rinst) + "\n";
-            ret += "  ; or value";
-            ret += "  " + formatValue(*cond_value.getRHS()) + " || " + formatValue(*cond_value.getLHS());
-            return ret;
-        } else
-            return "  ; unsupported cond value";
-    }
-
     return val.getType()->toString() + " " + val.getName();
 }
 
@@ -170,8 +149,9 @@ std::string IRFormatter::formatBB(BasicBlock &bb) {
     return bb.getName().substr(1);
 }
 
-std::string IRFormatter::formatFunc(Function &func) {
-    auto fn_type = func.getType()->as<FunctionType>();
+template <typename T>
+std::string formatFunctionHelper(T &func) {
+    auto fn_type = func.getType()->template as<FunctionType>();
     auto ret_type = fn_type->getRet();
 
     std::string ret;
@@ -190,6 +170,13 @@ std::string IRFormatter::formatFunc(Function &func) {
 
     ret += ")";
     return ret;
+}
+
+std::string IRFormatter::formatFunc(Function &func) {
+    return formatFunctionHelper(func);
+}
+std::string IRFormatter::formatLinearFunc(LinearFunction &func) {
+    return formatFunctionHelper(func);
 }
 
 std::string IRFormatter::formatFuncDecl(FunctionDecl &func) {
@@ -313,11 +300,14 @@ std::string IRFormatter::formatInst(Instruction &inst) {
         return fSELECTInst(inst.as_ref<SELECTInst>());
 
     case OP::HELPER:
-        return fHELPERInst(inst.as_ref<HELPERInst>());
-
+        Err::not_implemented("Helper inst");
+        break;
     default:
-        return "unknown instruction";
+        Err::unreachable();
+        break;
     }
+    Err::unreachable();
+    return "error";
 }
 
 std::string IRFormatter::fBinaryInst(BinaryInst &inst) {
@@ -552,49 +542,5 @@ std::string IRFormatter::fSELECTInst(SELECTInst &inst) {
     ret += formatValue(*inst.getTrueVal()) + ", ";
     ret += formatValue(*inst.getFalseVal());
     return ret;
-}
-
-std::string IRFormatter::fHELPERInst(HELPERInst &inst) {
-    switch (inst.getHlpType()) {
-    case HELPERTY::IF: {
-        auto &if_inst = inst.as_ref<IFInst>();
-        std::string ret = "; if cond value\n";
-        ret += "  " + formatValue(*if_inst.getCond()) + "\n";
-        ret += "  ; if body insts\n";
-        for (const auto &body_inst : if_inst.getBodyInsts())
-            ret += "  " + formatInst(*body_inst) + "\n";
-        ret += "  ; if body end";
-        if (if_inst.hasElse()) {
-            ret += "\n  ; else body insts\n";
-            for (const auto &else_inst : if_inst.getElseInsts())
-                ret += "  " + formatInst(*else_inst) + "\n";
-            ret += "  ; else body end";
-        }
-        return ret;
-    } break;
-    case HELPERTY::WHILE: {
-        auto &while_inst = inst.as_ref<WHILEInst>();
-        std::string ret = "; while cond insts\n";
-        for (const auto &cond_inst : while_inst.getCondInsts())
-            ret += "  " + formatInst(*cond_inst) + "\n";
-
-        ret += "  ; while cond value\n";
-        ret += "  " + formatValue(*while_inst.getCond()) + "\n";
-
-        ret += "  ; while body insts\n";
-        for (const auto &body_inst : while_inst.getBodyInsts())
-            ret += "  " + formatInst(*body_inst) + "\n";
-
-        ret += "  ; while body end";
-        return ret;
-    } break;
-    case HELPERTY::BREAK:
-        return "; break";
-        break;
-    case HELPERTY::CONTINUE:
-        return "; continue";
-        break;
-    }
-    return "; unknown helper";
 }
 } // namespace IR
