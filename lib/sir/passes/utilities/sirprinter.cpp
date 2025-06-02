@@ -106,7 +106,8 @@ void LinearPrinterBase::visit(Instruction &node) {
         writeln("}");
     } else if (auto for_inst = node.as_raw<FORInst>()) {
         indent();
-        write("for (", for_inst->getBase(), " to ", for_inst->getBound(), " step ", for_inst->getStep());
+        write("for (", for_inst->getIndvar()->getName(), " in [", for_inst->getBase()->getName(), ", ",
+              for_inst->getBound()->getName(), ") step ", for_inst->getStep()->getName());
         writeln(") {");
         ++indentLevel;
         for (auto &i : for_inst->getBodyInsts())

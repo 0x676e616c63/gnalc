@@ -18,7 +18,7 @@
 namespace SIR {
 struct LookBehindVisitor;
 class While2ForPass;
-}
+} // namespace SIR
 namespace IR {
 enum class HELPERTY { IF, WHILE, BREAK, CONTINUE, FOR };
 
@@ -84,25 +84,26 @@ public:
 class NestedInstIterator {
 private:
     std::deque<pInst> stack;
-    void pushNestedInstructions(const std::vector<const std::list<pInst>*>& lists);
+    void pushNestedInstructions(const std::vector<const std::list<pInst> *> &lists);
+
 public:
     using iterator_category = std::input_iterator_tag;
     using value_type = pInst;
     using difference_type = std::ptrdiff_t;
-    using pointer = pInst*;
-    using reference = pInst&;
-    explicit NestedInstIterator(const pInst& helper);
+    using pointer = pInst *;
+    using reference = pInst &;
+    explicit NestedInstIterator(const pInst &helper);
     NestedInstIterator() = default;
     pInst operator*() const;
-    NestedInstIterator& operator++();
+    NestedInstIterator &operator++();
     NestedInstIterator operator++(int);
-    bool operator==(const NestedInstIterator& other) const;
-    bool operator!=(const NestedInstIterator& other) const;
+    bool operator==(const NestedInstIterator &other) const;
+    bool operator!=(const NestedInstIterator &other) const;
 };
 
-inline size_t getCondInstCount(const pVal& cond) {
+inline size_t getCondInstCount(const pVal &cond) {
     if (auto cond_v = cond->as<CONDValue>()) {
-         return cond_v->getRHSInsts().size() + getCondInstCount(cond_v->getRHS());
+        return cond_v->getRHSInsts().size() + getCondInstCount(cond_v->getRHS());
     }
     return 0;
 }
@@ -130,9 +131,7 @@ public:
     NestedInstIterator all_insts_end() { return NestedInstIterator(); }
     auto all_insts() { return Util::make_iterator_range(all_insts_begin(), all_insts_end()); }
 
-    size_t getInstCount() const {
-        return body_insts.size() + else_insts.size() + getCondInstCount(cond);
-    }
+    size_t getInstCount() const { return body_insts.size() + else_insts.size() + getCondInstCount(cond); }
     void accept(IRVisitor &visitor) override;
 };
 
@@ -178,21 +177,21 @@ public:
 class FORInst : public HELPERInst {
     friend struct SIR::LookBehindVisitor;
 
-    int base;
-    int bound;
-    int step;
+    pVal base;
+    pVal bound;
+    pVal step;
     pAlloca indvar;
     std::list<pInst> body_insts;
 
 public:
-    explicit FORInst(const pAlloca& indvar_, int base_, int bound_, int step_, std::list<pInst> body_insts_)
-        : HELPERInst(HELPERTY::FOR),  indvar(indvar_), base(base_), bound(bound_), step(step_),
-          body_insts(std::move(body_insts_)) {}
+    explicit FORInst(pAlloca indvar_, pVal base_, pVal bound_, pVal step_, std::list<pInst> body_insts_)
+        : HELPERInst(HELPERTY::FOR), indvar(std::move(indvar_)), base(std::move(base_)), bound(std::move(bound_)),
+          step(std::move(step_)), body_insts(std::move(body_insts_)) {}
 
     const pAlloca &getIndvar() { return indvar; }
-    int getBase() const { return base; }
-    int getBound() const { return bound; }
-    int getStep() const { return step; }
+    const pVal &getBase() const { return base; }
+    const pVal &getBound() const { return bound; }
+    const pVal &getStep() const { return step; }
     const std::list<pInst> &getBodyInsts() const { return body_insts; }
 
     NestedInstIterator all_insts_begin() { return NestedInstIterator(as<HELPERInst>()); }

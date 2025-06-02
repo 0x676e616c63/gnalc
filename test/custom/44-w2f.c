@@ -1,98 +1,113 @@
-int a[1000][1000];
-int b[1000][1000];
-int c[1000][1000];
-const int MAX = 2147483647;
+int n = 1000;
+int ks = 15;
+int ps = 4;
+float input[1000][1000];
+float kernel[15][15];
+float conv_output[1000][1000];
+float pooling_output[243][243];
 
-int main(){
-    int n;
-    int i;
-    int j;
-    int k;
-    int sum = 0;
-
-    i = 0;
-    while(i<1000)
-    {
-        n = getarray(a[i]);
-        if(n!=1000){
-            return n;
-        }
-        i = i + 1;
+float max(float a, float b) {
+    if (a > b) {
+        return a;
+    } else {
+        return b;
     }
-
-    starttime();
-
-    i = 0;
-    while(i<1000){
-        j = 0;
-        while(j<1000){
-            b[i][j] = a[j][i];
-            j = j+1;
-        }
-        i = i+1;
-    }
-
-    i = 0;
-    while(i<1000){
-        j = 0;
-        while(j<1000){
-            k = 0;
-            int temp = 0;
-            while(k<1000){
-                if(a[i][k]*b[k][j] % 2 == 0)
-                    temp = temp + a[i][k]*b[k][j];
-                k = k+1;
-            }
-            c[i][j] = temp;
-            j = j+1;
-        }
-        i = i+1;
-    }
-
-    i = 0;
-    while(i<1000){
-        j = 0;
-        int temp = MAX;
-        while(j<1000){
-            if(c[i][j]<temp)
-            {
-                temp = c[i][j];
-            }
-            j = j+1;
-        }
-        j = 0;
-        while(j<1000){
-            c[i][j] = temp;
-            j = j+1;
-        }
-        i = i+1;
-    }
-
-    i = 0;
-    while(i<1000){
-        j = 0;
-        int temp = MAX;
-        while(j<1000){
-            c[i][j] = -c[j][i];
-            j = j+1;
-        }
-        i = i+1;
-    }
-
-    i = 0;
-    while(i<1000){
-        j = 0;
-        int temp = MAX;
-        while(j<1000){
-            sum = sum + c[i][j];
-            j = j+1;
-        }
-        i = i+1;
-    }
-
-    stoptime();
-
-    putint(sum);
-    return 0;
 }
 
+float exp(float x) {
+    return 1 + x + (x*x)/2 + (x*x*x)/6 + (x*x*x*x)/24;
+}
+
+float sigmoid(float x) {
+    return 1 / (1 + exp(-x));
+}
+
+void kernel_conv_pooling(float A[][1000], float B[][1000], float C[][243], float kernel[][15], int n, int ks, int ps) {
+    int i, j, k, l;
+    float v;
+    i = 0;
+    while (i < n - ks + 1) {
+        j = 0;
+        while (j < n - ks + 1) {
+            v = 0;
+            k = 0;
+            while (k < ks) {
+                l = 0;
+                while (l < ks) {
+                    v=v+ A[i + k][j + l] * kernel[k][l];
+                    l =l+ 1;
+                }
+                k =k+ 1;
+            }
+            B[i][j] = v;
+            j =j+ 1;
+        }
+        i =i+ 1;
+    }
+    n = n - ks + 1;
+    i = 0;
+    while (i < n - ks + 1) {
+        j = 0;
+        while (j < n - ks + 1) {
+            v = 0;
+            k = 0;
+            while (k < ks) {
+                l = 0;
+                while (l < ks) {
+                    v =v+ B[i + k][j + l] * kernel[k][l];
+                    l =l+ 1;
+                }
+                k =k+ 1;
+            }
+            A[i][j] = v;
+            j =j+ 1;
+        }
+        i =i+ 1;
+    }
+
+    n = (n - ks + 1) / ps;
+    i = 0;
+    while (i < n) {
+        j = 0;
+        while (j < n) {
+            v = A[i * ps][j * ps];
+            k = 0;
+            while (k < ps) {
+                l = 0;
+                while (l < ps) {
+                    v = max(v, A[i * ps + k][j * ps + l]);
+                    l =l+ 1;
+                }
+                k =k+ 1;
+            }
+            C[i][j] = v;
+            j =j+ 1;
+        }
+        i =i+ 1;
+    }
+
+    i = 0;
+    while (i < n) {
+        v = 0;
+        j = 0;
+        while (j < n) {
+            C[i][j] = C[i][j] * sigmoid(C[i][j]);
+            j =j+ 1;
+        }
+        i =i+ 1;
+    }
+}
+
+int main() {
+    int os = (n - 2 * ks + 2) / ps;
+    getfarray(input);
+    getfarray(kernel);
+
+    starttime();
+    kernel_conv_pooling(input, conv_output, pooling_output, kernel, n, ks, ps);
+    stoptime();
+
+    putfarray(os*os, pooling_output);
+
+    return 0;
+}

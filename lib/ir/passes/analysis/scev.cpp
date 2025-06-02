@@ -1088,12 +1088,9 @@ SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop) {
 
 SCEVExpr *SCEVHandle::getTripCount(const Loop *loop) {
     if (auto be = getBackEdgeTakenCount(loop)) {
-        if (loop->isExiting(loop->getLatch())) {
-            auto ret = getSCEVExprAdd(be, getSCEVExpr(1));
-            foldSCEVExpr(ret);
-            return ret;
-        }
-        return be;
+        auto ret = getSCEVExprAdd(be, getSCEVExpr(1));
+        foldSCEVExpr(ret);
+        return ret;
     }
     return nullptr;
 }

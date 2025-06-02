@@ -7,7 +7,6 @@
 namespace SIR {
 struct Visitor {
     virtual ~Visitor() = default;
-
     virtual void visit(LinearFunction &lfunc) {
         for (const auto &inst : lfunc)
             visit(*inst);
@@ -28,17 +27,25 @@ struct Visitor {
         for (const auto &inst : while_inst.getBodyInsts())
             visit(*inst);
     }
-    virtual void visit(Instruction &inst) {
-        // Pass
-    }
-    virtual void visit(Value &value) {
-        // Pass
-    }
     virtual void visit(CONDValue &cond) {
         visit(*cond.getLHS());
         for (const auto &inst : cond.getRHSInsts())
             visit(*inst);
         visit(*cond.getRHS());
+    }
+
+private:
+    void visit(Instruction &inst) {
+        if (auto if_inst = inst.as_raw<IFInst>())
+            visit(*if_inst);
+        else if (auto while_inst = inst.as_raw<WHILEInst>())
+            visit(*while_inst);
+        else if (auto for_inst = inst.as_raw<FORInst>())
+            visit(*for_inst);
+    }
+    void visit(Value &value) {
+        if (auto cond_value = value.as_raw<CONDValue>())
+            visit(*cond_value);
     }
 };
 

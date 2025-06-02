@@ -30,7 +30,16 @@ void PrinterBase::visit(Function &node) {
 
 void PrinterBase::visit(BasicBlock &node) {
     write(IRFormatter::formatBB(node));
-    writeln(":");
+    write(":        ;preds = ");
+    std::string predstr;
+    for (const auto &pred : node.getPreBB())
+        predstr += pred->getName() + ", ";
+    if (!predstr.empty()) {
+        predstr.pop_back();
+        predstr.pop_back();
+    }
+    writeln(predstr);
+
     for (const auto &inst : node.phis())
         inst->Instruction::accept(*this);
     for (const auto &inst : node.getInsts())

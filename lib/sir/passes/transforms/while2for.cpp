@@ -11,19 +11,19 @@
 #include <optional>
 using namespace PatternMatch;
 namespace SIR {
-enum class UpdateType { ConstantAffine, Unknown, Invariant };
+enum class UpdateType { Affine, Unknown, Invariant };
 struct Result {
     UpdateType type;
-    int base;
-    int step;
+    pVal base;
+    pVal step;
 };
 Result analyzeUpdateExpr(IList& ilist, WHILEInst &wh, const pVal &val) {
-    if (auto ci32 = val->as<ConstantInt>())
-        return {UpdateType::Invariant, ci32->getVal(), 0};
+    if (val->getVTrait() == ValueTrait::CONSTANT_LITERAL)
+        return {UpdateType::Invariant, val, nullptr};
 
-    // Find the constant base
+    // Find the base
     auto it = std::next(IListRFind(ilist, wh.as<WHILEInst>()));
-    int base;
+    pVal base;
     auto analyzeBase = [&] {
         for (; it != ilist.rend(); ++it) {
             if (match(*it, M::Store(M::Bind(base), M::Is(val))))
@@ -31,12 +31,15 @@ Result analyzeUpdateExpr(IList& ilist, WHILEInst &wh, const pVal &val) {
 
             if ((*it)->is<HELPERInst>())
                 return false;
+
+            if (val->is<GlobalVariable>() && (*it)->is<CALLInst>())
+                return false;
         }
         return false;
     }();
 
     if (!analyzeBase)
-        return {UpdateType::Unknown, 0, 0};
+        return {UpdateType::Unknown, nullptr, nullptr};
 
     // Find the unique `write` in the loop
     pStore store;
@@ -45,30 +48,31 @@ Result analyzeUpdateExpr(IList& ilist, WHILEInst &wh, const pVal &val) {
             if (!store)
                 store = inst->as<STOREInst>();
             else
-                return {UpdateType::Unknown, 0, 0};
+                return {UpdateType::Unknown, nullptr, nullptr};
         }
     }
 
     if (!store)
-        return {UpdateType::Invariant, base, 0};
+        return {UpdateType::Invariant, base, nullptr};
 
     if (wh.getBodyInsts().back() != store)
-        return {UpdateType::Unknown, 0, 0};
+        return {UpdateType::Unknown, nullptr, nullptr};
 
-    if (int step; match(store->getValue(), M::Add(M::Load(M::Is(val)), M::Bind(step))) ||
+    if (pVal step; match(store->getValue(), M::Add(M::Load(M::Is(val)), M::Bind(step))) ||
                   match(store->getValue(), M::Add(M::Bind(step), M::Load(M::Is(val)))))
-        return {UpdateType::ConstantAffine, base, step};
+        return {UpdateType::Affine, base, step};
 
-    return {UpdateType::Unknown, 0, 0};
+    return {UpdateType::Unknown, nullptr, nullptr};
 }
 
 struct ForInfo {
     pAlloca ind;
-    int base;
-    int bound;
-    int step;
+    pVal base;
+    pVal bound;
+    pVal step;
 };
-std::optional<ForInfo> transformWhile(IList& ilist, WHILEInst &wh) {
+
+std::optional<ForInfo> transformWhile(IList& ilist, WHILEInst &wh, LinearFunction& lfunc) {
     pVal lhs, rhs;
     if (match(wh.getCond(), M::Icmp(M::Bind(lhs), M::Bind(rhs)))) {
         auto icmp = wh.getCond()->as<ICMPInst>();
@@ -80,14 +84,14 @@ std::optional<ForInfo> transformWhile(IList& ilist, WHILEInst &wh) {
         auto [lty, lbase, lstep] = analyzeUpdateExpr(ilist, wh, lhs);
         auto [rty, rbase, rstep] = analyzeUpdateExpr(ilist, wh, rhs);
 
-        if (lty == UpdateType::Invariant && rty == UpdateType::ConstantAffine) {
+        if (lty == UpdateType::Invariant && rty == UpdateType::Affine) {
             std::swap(lty, rty);
             std::swap(lbase, rbase);
             std::swap(lstep, rstep);
             cond = reverseCond(icmp->getCond());
         }
 
-        if (lty == UpdateType::ConstantAffine && rty == UpdateType::Invariant) {
+        if (lty == UpdateType::Affine && rty == UpdateType::Invariant) {
             auto ind = lhs->as<ALLOCAInst>();
             if (!ind) {
                 Logger::logDebug("[While2For]: Skipped non-alloca induction variable.");
@@ -95,10 +99,14 @@ std::optional<ForInfo> transformWhile(IList& ilist, WHILEInst &wh) {
             }
             if (cond == ICMPOP::slt || cond == ICMPOP::sgt)
                 return ForInfo{ind, lbase, rbase, lstep};
-            if (cond == ICMPOP::sle)
-                return ForInfo{ind, lbase, rbase + 1, lstep};
-            if (cond == ICMPOP::sge)
-                return ForInfo{ind, lbase, rbase - 1, lstep};
+            if (cond == ICMPOP::sle) {
+                if (int rbase_c; match(rbase, M::Bind(rbase_c)))
+                    return ForInfo{ind, lbase, lfunc.getConst(rbase_c + 1), lstep};
+            }
+            if (cond == ICMPOP::sge) {
+                if (int rbase_c; match(rbase, M::Bind(rbase_c)))
+                    return ForInfo{ind, lbase, lfunc.getConst(rbase_c - 1), lstep};
+            }
 
             Logger::logDebug("[While2For]: Skipped non-comparable condition.");
             return std::nullopt;
@@ -135,16 +143,18 @@ PM::PreservedAnalyses While2ForPass::run(LinearFunction &function, LFAM &manager
 
     size_t num_transformed = 0;
     for (auto &[ilist, while_inst] : replace_map) {
-        if (auto for_info = transformWhile(*ilist, *while_inst)) {
+        if (auto for_info = transformWhile(*ilist, *while_inst, function)) {
             auto [ind, base, bound, step] = *for_info;
             auto for_inst = std::make_shared<FORInst>(ind, base, bound, step, while_inst->getBodyInsts());
             IListReplace(*ilist, while_inst, for_inst);
             while2for_modified = true;
             ++num_transformed;
+            // Logger::logDebug("[While2For]: Transformed loop.");
         }
     }
 
-    Logger::logDebug("[While2For]: Transformed ", num_transformed, " while(s) to for.");
+    if (num_transformed != 0)
+        Logger::logDebug("[While2For]: Transformed ", num_transformed, " while(s) to for.");
 
     return while2for_modified ? PreserveNone() : PreserveAll();
 }
