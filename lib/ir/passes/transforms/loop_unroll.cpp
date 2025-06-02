@@ -64,8 +64,8 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
     if (TC->isIRValue() && TC->getIRValue()->is<ConstantInt>()) {
         // 常量展开策略
         const auto trip_countn = TC->getIRValue()->as<ConstantInt>()->getVal();
+        Logger::logDebug("[LoopUnroll] Trip count: "+ std::to_string(trip_countn));
 
-        /// TODO: Fully unroll when trip_count == 1?
         if (trip_countn < 2) {
             Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's trip count < 2");
             option.disable();
@@ -176,6 +176,7 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
 
                     auto [base, step] = trecp->getConstantAffineAddRec().value();
                     int new_boundary_num;
+                    // 或许可以按 raw_boundary_num - step * unroll_factor 来算？
                     if (loop->isExiting(loop->getLatch())) {
                         new_boundary_num = base + step * unroll_factor * (trip_countn / unroll_factor - 1) + (step>0?-1:1);
                     } else {
@@ -552,8 +553,8 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                 rem_phi->addPhiOper(phi_value_from_latch, BMap[latch][count]);
             }
 
-            // 1. For dowhile: from last loop
-            // 2. For while: from frist loop's phi
+            // 1. For dowhile: from last latch
+            // 2. For while: from first header
             if (is_dowhile) {
                 if (phi_value_from_latch->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
                     rem_phi->addPhiOper(IMapFind(phi_value_from_latch->as<Instruction>(), count-1), last_latch);
@@ -561,7 +562,13 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                     rem_phi->addPhiOper(phi_value_from_latch, last_latch);
                 }
             } else {
-                rem_phi->addPhiOper(phi, header);
+                // 注意此处的phi_value_from_latch的parent不一定是latch, 只是latch路径上的phi_value
+                if (phi_value_from_latch->getVTrait() == ValueTrait::ORDINARY_VARIABLE && phi_value_from_latch->as<Instruction>()->getParent() == header) {
+                    // 如果此phi_oper的value在header中赋值，则remainder中的对应phi_oper的value应该是原header中的值
+                    rem_phi->addPhiOper(phi_value_from_latch, header);
+                } else {
+                    rem_phi->addPhiOper(phi, header);
+                }
             }
         }
 
