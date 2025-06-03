@@ -47,6 +47,11 @@ private:
         if (auto cond_value = value.as_raw<CONDValue>())
             visit(*cond_value);
     }
+
+    template <typename T, typename ...Args>
+    static std::unique_ptr<Visitor> make(Args&& ...args) {
+        return std::make_unique<T>(std::forward<Args>(args)...);
+    }
 };
 
 struct LookBehindVisitor {
@@ -158,6 +163,10 @@ struct LookBehindVisitor {
         visit(PrevInfo::makeCondRhsInsts(&cond), *cond.getRHS());
     }
 
+    template <typename T, typename ...Args>
+    static std::unique_ptr<LookBehindVisitor> make(Args&& ...args) {
+        return std::make_unique<T>(std::forward<Args>(args)...);
+    }
 private:
     void visit(PrevInfo prev, Instruction &inst) {
         if (auto if_inst = inst.as_raw<IFInst>())

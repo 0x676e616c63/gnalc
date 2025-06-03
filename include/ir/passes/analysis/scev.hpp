@@ -14,9 +14,10 @@
 #ifndef GNALC_IR_PASSES_ANALYSIS_SCEV_HPP
 #define GNALC_IR_PASSES_ANALYSIS_SCEV_HPP
 
-#include "ir/passes/pass_manager.hpp"
 #include "domtree_analysis.hpp"
+#include "ir/passes/pass_manager.hpp"
 #include "loop_analysis.hpp"
+#include "range_analysis.hpp"
 
 #include <optional>
 
@@ -152,12 +153,12 @@ public:
 
     // Get the exact value of the single backegde taken count
     // Nullptr is returned if there are multiple backegdes.
-    SCEVExpr *getBackEdgeTakenCount(const Loop *loop);
-    SCEVExpr *getBackEdgeTakenCount(const pLoop &loop);
+    SCEVExpr *getBackEdgeTakenCount(const Loop *loop, RangeResult *ranges = nullptr);
+    SCEVExpr *getBackEdgeTakenCount(const pLoop &loop, RangeResult *ranges = nullptr);
 
-    // Get the exact value of a loop's trip count
-    SCEVExpr *getTripCount(const Loop *loop);
-    SCEVExpr *getTripCount(const pLoop &loop);
+    // Get the exact value of a loop's trip count (the execution times of the header)
+    SCEVExpr *getTripCount(const Loop *loop, RangeResult *ranges = nullptr);
+    SCEVExpr *getTripCount(const pLoop &loop, RangeResult *ranges = nullptr);
 
     // Expand the SCEV Expression. Returns the expanded IR Value.
     // New instructions will be inserted before `insert_before`.
@@ -241,6 +242,7 @@ private:
     Function *function;
     LoopInfo *loop_info;
     DomTree *domtree;
+    RangeResult *ranges;
 
     // cache for analyzeEvolution
     std::map<const Value *, TREC *> evolution;

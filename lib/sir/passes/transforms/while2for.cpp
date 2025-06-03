@@ -138,8 +138,8 @@ PM::PreservedAnalyses While2ForPass::run(LinearFunction &function, LFAM &manager
 
     While2ForVisitor::MapT replace_map;
 
-    std::unique_ptr<LookBehindVisitor> visitor = std::make_unique<While2ForVisitor>(&replace_map);
-    visitor->visit(LookBehindVisitor::PrevInfo::makeInitial(), function);
+    While2ForVisitor visitor(&replace_map);
+    function.accept(visitor);
 
     size_t num_transformed = 0;
     for (auto &[ilist, while_inst] : replace_map) {

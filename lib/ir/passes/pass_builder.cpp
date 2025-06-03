@@ -130,15 +130,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
             PM::FixedPointPM<Function> fpm;
             FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
             FUNCTION_TRANSFORM(sccp, SCCPPass());
-
-            // fpm.addPass(LoopSimplifyPass());
-            // fpm.addPass(NameNormalizePass(true));
-            // fpm.addPass(PrintFunctionPass(std::cerr));
-            // fpm.addPass(PrintSCEVPass(std::cerr));
-            // fpm.addPass(PrintRangePass(std::cerr));
             FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass());
-            // fpm.addPass(PrintFunctionPass(std::cerr));
-
             FUNCTION_TRANSFORM(gvnpre, BreakCriticalEdgesPass(), GVNPREPass());
             FUNCTION_TRANSFORM(dce, DCEPass());
             return fpm;
@@ -311,21 +303,31 @@ MPM PassBuilder::buildModulePipeline(PMOptions opt_info) {
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
-    fpm.addPass(PromotePass());
-    fpm.addPass(InlinePass());
-    fpm.addPass(InternalizePass());
-    fpm.addPass(PromotePass());
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(LoopRotatePass());
-    fpm.addPass(SCCPPass());
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(LCSSAPass());
-    fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(BreakCriticalEdgesPass());
-    fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(LoopUnrollPass());
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(NameNormalizePass());
+    fpm.addPass(IR::PromotePass());
+    fpm.addPass(IR::TailRecursionEliminationPass());
+    fpm.addPass(IR::InlinePass());
+    fpm.addPass(IR::InternalizePass());
+    fpm.addPass(IR::PromotePass());
+    fpm.addPass(IR::NameNormalizePass());
+    fpm.addPass(IR::CFGSimplifyPass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::LCSSAPass());
+    fpm.addPass(IR::LoopUnrollPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::LoopRotatePass());
+    fpm.addPass(IR::LCSSAPass());
+    fpm.addPass(IR::LICMPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::BreakCriticalEdgesPass());
+    fpm.addPass(IR::GVNPREPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::CFGSimplifyPass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::LCSSAPass());
+    fpm.addPass(IR::LoopUnrollPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::NameNormalizePass());
     return fpm;
 
     // If-conversion

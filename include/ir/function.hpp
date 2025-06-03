@@ -13,6 +13,7 @@
 #include <vector>
 
 namespace SIR {
+struct Visitor;
 struct LookBehindVisitor;
 }
 namespace IR {
@@ -275,6 +276,8 @@ public:
     }
 
     void accept(IRVisitor &visitor) override;
+    void accept(SIR::Visitor &visitor);
+    void accept(SIR::LookBehindVisitor &visitor);
 private:
     void updateInstIndex() const;
 };

@@ -100,7 +100,7 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
         bool runtime() const { return unroll_type == UnrollType::RUNTIME; }
     };
 
-    void analyze(const pLoop &loop, UnrollOption &option, LoopInfo& LI, Function &FC, DomTree &DT);
+    void analyze(const pLoop &loop, UnrollOption &option, Function &FC, FAM &fam);
     bool peel(const pLoop &loop, const UnrollOption &option, Function &func);
     bool unroll(const pLoop &loop, const UnrollOption &option, Function &func);
 

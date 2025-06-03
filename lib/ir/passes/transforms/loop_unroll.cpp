@@ -13,7 +13,7 @@
 
 
 namespace IR {
-void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& LI, Function &FC, DomTree &DT) {
+void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &FC, FAM& fam) {
     if (!(loop->isSimplifyForm() && loop->isLCSSAForm())) {
         Logger::logInfo("[LoopUnroll] Unroll disabled because the loop is not SimplifyForm or LCSSAForm.");
         option.disable();
@@ -53,8 +53,11 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
     //     }
     // }
 
-    auto SCEVH = SCEVHandle(&FC, &LI, &DT);
-    const auto TC = SCEVH.getTripCount(loop);
+
+    auto& SCEVH = fam.getResult<SCEVAnalysis>(FC);
+    auto& RNG = fam.getResult<RangeAnalysis>(FC);
+
+    const auto TC = SCEVH.getTripCount(loop, &RNG);
     if (TC == nullptr) {
         Logger::logInfo("[LoopUnroll] Unroll disabled because the loop can't get trip count.");
         option.disable();
@@ -129,8 +132,8 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, LoopInfo& 
                         auto exiting_br_cond = (*loop->getExitingBlocks().begin())->getBRInst()->getCond();
                         if (exiting_br_cond->is<ICMPInst>()) {
                             auto icmp = exiting_br_cond->as<ICMPInst>();
-                            bool lhs_is_var = !loop->isLoopInvariant(icmp->getLHS());
-                            bool rhs_is_var = !loop->isLoopInvariant(icmp->getRHS());
+                            bool lhs_is_var = !loop->isTriviallyInvariant(icmp->getLHS());
+                            bool rhs_is_var = !loop->isTriviallyInvariant(icmp->getRHS());
                             if (lhs_is_var && rhs_is_var) {
                                 Err::not_implemented("Both handles are variable.");
                             } else if (lhs_is_var) {
@@ -738,20 +741,17 @@ PM::PreservedAnalyses LoopUnrollPass::run(Function &function, FAM &fam) {
                 // TODO: 暂时只处理最内层循环
                 continue;
             }
-            LoopInfo NLI;
-            if (last_round_modified) {
-                NLI = fam.getFreshResult<LoopAnalysis>(function);
-            } else {
-                NLI = fam.getResult<LoopAnalysis>(function);
-            }
+            auto& NLI = fam.getResult<LoopAnalysis>(function);
             auto loop = NLI.getLoopFor(rawloop->getHeader());
-            auto &DT = fam.getResult<DomTreeAnalysis>(function);
             UnrollOption option;
-            analyze(loop, option, NLI, function, DT);
+            analyze(loop, option, function, fam);
             auto peeled = peel(loop, option, function);
             auto unrolled = unroll(loop, option, function);
             last_round_modified = peeled || unrolled;
             modified = modified || last_round_modified;
+
+            if (last_round_modified)
+                fam.invalidate(function, PreserveNone());
         }
     }
 

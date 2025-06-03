@@ -386,9 +386,9 @@ std::optional<std::tuple<Value *, Value *>> analyzeHeaderPhi(const Loop *loop, c
     Err::gassert(phi_opers.size() == 2, "Expected LoopSimplified Form");
     auto invariant = phi_opers[0].value.get();
     auto variant = phi_opers[1].value.get();
-    if (!loop->isLoopInvariant(invariant))
+    if (!loop->isTriviallyInvariant(invariant))
         std::swap(invariant, variant);
-    if (!loop->isLoopInvariant(invariant) || loop->isLoopInvariant(variant))
+    if (!loop->isTriviallyInvariant(invariant) || loop->isTriviallyInvariant(variant))
         return std::nullopt;
     return std::make_tuple(invariant, variant);
 }

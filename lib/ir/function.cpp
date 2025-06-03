@@ -1,5 +1,6 @@
 #include "ir/function.hpp"
 #include "ir/visitor.hpp"
+#include "sir/visitor.hpp"
 
 #include <algorithm>
 #include <map>
@@ -415,6 +416,12 @@ LinearFunction::const_reverse_iterator LinearFunction::crbegin() const { return 
 LinearFunction::const_reverse_iterator LinearFunction::crend() const { return insts.crend(); }
 
 void LinearFunction::accept(IRVisitor &visitor) { visitor.visit(*this); }
+void LinearFunction::accept(SIR::Visitor &visitor) {
+    visitor.visit(*this);
+}
+void LinearFunction::accept(SIR::LookBehindVisitor &visitor) {
+    visitor.visit(SIR::LookBehindVisitor::PrevInfo::makeInitial(), *this);
+}
 
 void LinearFunction::updateInstIndex() const {
     if (inst_index_valid)

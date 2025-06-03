@@ -115,12 +115,8 @@ TREC *SCEVHandle::getSCEVAtBlock(Value *val, const BasicBlock *block) {
             return nullptr;
     }
     auto scope = loop_info->getLoopFor(block).get();
-
-    if (scope && !scope->isSimplifyForm())
-        return getTRECUntracked();
-
     auto it = scoped_evolution[scope].find(val);
-    if (it != scoped_evolution[scope].end())
+    if (it != scoped_evolution[scope].end() && !it->second->isUntracked())
         return it->second;
     auto res = getSCEVAtScope(val, scope);
     scoped_evolution[scope][val] = res;
@@ -130,9 +126,13 @@ TREC *SCEVHandle::getSCEVAtBlock(Value *val, const BasicBlock *block) {
 TREC *SCEVHandle::getSCEVAtBlock(const pVal &val, const pBlock &block) {
     return getSCEVAtBlock(val.get(), block.get());
 }
-SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const pLoop &loop) { return getBackEdgeTakenCount(loop.get()); }
+SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const pLoop &loop, RangeResult *ranges) {
+    return getBackEdgeTakenCount(loop.get(), ranges);
+}
 
-SCEVExpr *SCEVHandle::getTripCount(const pLoop &loop) { return getTripCount(loop.get()); }
+SCEVExpr *SCEVHandle::getTripCount(const pLoop &loop, RangeResult *ranges) {
+    return getTripCount(loop.get(), ranges);
+}
 
 pVal SCEVHandle::expandSCEVExpr(SCEVExpr *expr, const pBlock &block, BasicBlock::iterator insert_before) const {
     std::map<SCEVExpr *, pVal> inserted;
@@ -205,7 +205,10 @@ pVal SCEVHandle::expandSCEVExprImpl(SCEVExpr *expr, const pBlock &block, BasicBl
 pPhi SCEVHandle::expandAddRec(TREC *addrec) {
     static size_t name_cnt = 0;
     auto loop = addrec->getLoop();
-    Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplified Form");
+
+    if (!loop->getRawPreHeader() || !loop->getRawLatch())
+        return nullptr;
+
     if (!addrec->isAddRec())
         return nullptr;
 
@@ -282,7 +285,10 @@ std::optional<size_t> SCEVHandle::estimateExpansionCostImpl(SCEVExpr *expr, cons
 
 std::optional<size_t> SCEVHandle::estimateExpansionCost(TREC *addrec) {
     auto loop = addrec->getLoop();
-    Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplified Form");
+
+    if (!loop->getRawPreHeader() || !loop->getRawLatch())
+        return std::nullopt;
+
     if (!addrec->isAddRec())
         return std::nullopt;
 
@@ -380,7 +386,8 @@ TREC *SCEVHandle::getSCEVAtScope(Value *val, const Loop *loop) {
 // Output: TREC for the variable defined by n within l
 TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
     Err::gassert(loop != nullptr);
-    Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplified Form");
+    if (!loop->getRawPreHeader() || !loop->getRawLatch())
+        return getTRECUntracked();
 
     // If n matches "v = constant" Then
     auto inst_val = val->as_raw<Instruction>();
@@ -402,7 +409,7 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
         auto eval_res = eval(it->second, loop);
         // For a loop invariant, if its value can not be calculated statically,
         // consider it as a runtime constant (or loop invariant, IRValTREC).
-        if (loop->isLoopInvariant(val) && !eval_res->isExpr())
+        if (loop->isTriviallyInvariant(val) && !eval_res->isExpr())
             return getIRValTREC(val);
         return eval_res;
     }
@@ -468,7 +475,7 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
         evolution[val] = res;
 
     auto eval_res = eval(res, loop);
-    if (loop->isLoopInvariant(val) && !eval_res->isExpr())
+    if (loop->isTriviallyInvariant(val) && !eval_res->isExpr())
         return getIRValTREC(val);
     return eval_res;
 }
@@ -481,7 +488,7 @@ std::pair<bool, TREC *> SCEVHandle::buildUpdateExpr(const PHIInst *loop_phi, Val
     if (loop_phi == val)
         return {true, getIRValTREC(function->getConst(0).get())};
     // Else If n is a statement in an outer loop Then
-    if (loop_phi_loop->isLoopInvariant(val))
+    if (loop_phi_loop->isTriviallyInvariant(val))
         return {false, getTRECUndef()};
     pVal x, y;
     // Else If n matches "v = a + b" Then
@@ -495,7 +502,8 @@ std::pair<bool, TREC *> SCEVHandle::buildUpdateExpr(const PHIInst *loop_phi, Val
         if (exist_y)
             return {true, getTRECAdd(update_y, getIRValTREC(x.get()))};
         return {false, getTRECUndef()};
-    } else if (match(val, M::Sub(M::Bind(x), M::Bind(y)))) {
+    }
+    if (match(val, M::Sub(M::Bind(x), M::Bind(y)))) {
         auto [exist_x, update_x] = buildUpdateExpr(loop_phi, x.get(), loop_phi_loop);
         auto [exist_y, update_y] = buildUpdateExpr(loop_phi, y.get(), loop_phi_loop);
         if (exist_x && exist_y)
@@ -521,7 +529,7 @@ std::pair<bool, TREC *> SCEVHandle::buildUpdateExpr(const PHIInst *loop_phi, Val
         if (is_loop_phi) {
             auto [val_phi_invariant, val_phi_variant] = *analyzeHeaderPhi(val_phi_loop, val_phi);
 
-            if (loop_phi_loop->isLoopInvariant(val_phi_invariant))
+            if (loop_phi_loop->isTriviallyInvariant(val_phi_invariant))
                 return {false, getTRECUndef()};
 
             auto s = apply(analyzeEvolution(val_phi_loop, val), getTripCount(val_phi_loop));
@@ -942,9 +950,9 @@ SCEVExpr *SCEVHandle::apply(TREC *trec, SCEVExpr *trip_cnt) {
 }
 
 // FIXME: See if there is overflow
-SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop) {
+SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop, RangeResult *ranges) {
     auto latch = loop->getLatch();
-    Err::gassert(latch != nullptr, "Expected LoopSimplified Form.");
+    Err::gassert(latch != nullptr, "Expected a latch.");
 
     auto exitings = loop->getExitingBlocks();
     if (exitings.size() != 1)
@@ -964,10 +972,10 @@ SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop) {
         auto to_evo = icmp->getLHS().get();
         auto invariant = icmp->getRHS().get();
         // If the RHS is not an invariant, reverse it.
-        if (!loop->isLoopInvariant(invariant)) {
+        if (!loop->isTriviallyInvariant(invariant)) {
             // Give up if there is no invariant in the cmp.
             // TODO: Don't give up
-            if (!loop->isLoopInvariant(to_evo))
+            if (!loop->isTriviallyInvariant(to_evo))
                 return nullptr;
             std::swap(to_evo, invariant);
             cmpop = reverseCond(cmpop);
@@ -1036,19 +1044,7 @@ SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop) {
             if (!step->isIRValue())
                 return nullptr;
 
-            // If the step is not constant, give up.
-            int step_val;
-            if (!match(step->getRawIRValue(), M::Bind(step_val)))
-                return nullptr;
-
-            if (cmpop == ICMPOP::eq) {
-                if (base == cond && step_val != 0)
-                    return getSCEVExpr(1);
-                // If base != cond, we are not sure whether base equals cond or not at runtime.
-                // if (base != cond)
-                //     return getSCEVExpr(0);
-                return nullptr;
-            }
+            auto step_ir_val = step->getRawIRValue();
 
             if (cmpop == ICMPOP::sge) {
                 cmpop = ICMPOP::sgt;
@@ -1057,20 +1053,34 @@ SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop) {
                 cmpop = ICMPOP::slt;
                 cond = getSCEVExprAdd(cond, getSCEVExpr(1));
             }
+            else if (cmpop == ICMPOP::eq) {
+                if (base == cond && !match(step_ir_val, M::Is(0)))
+                    return getSCEVExpr(1);
+                // If base != cond, we are not sure whether base equals cond or not at runtime.
+                // if (base != cond)
+                //     return getSCEVExpr(0);
+                return nullptr;
+            }
 
-            // See if the step is constant 1/-1, where the trip count is simply (x - a)/(a - x).
-            if (step_val == 1)
-                return getSCEVExprSub(cond, base);
-            if (step_val == -1)
-                return getSCEVExprSub(base, cond);
+            // If the step is a constant
+            if (int step_val; match(step_ir_val, M::Bind(step_val))) {
+                // See if the step is constant 1/-1, where the trip count is simply (x - a)/(a - x).
+                if (step_val == 1)
+                    return getSCEVExprSub(cond, base);
+                if (step_val == -1)
+                    return getSCEVExprSub(base, cond);
 
-            // Otherwise, compute a symbolic trip count.
-            // Avoid `!=`, since there can be remainders.
-            if (cmpop == ICMPOP::ne)
+                // If the step can be negative or zero, give up
+                if (step_val == 0 || step_val < 0)
+                    return nullptr;
+            }
+            // Here we only consider positive step.
+            else if (!ranges || !ranges->knownNonNegative(step_ir_val))
                 return nullptr;
 
-            // If the step can be negative or zero, give up
-            if (step_val == 0 || step_val < 0)
+            // Compute a symbolic trip count.
+            // Avoid `!=`, since there can be remainders.
+            if (cmpop == ICMPOP::ne)
                 return nullptr;
 
             // Since step > 0,
@@ -1079,6 +1089,10 @@ SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop) {
             auto step_minus_1 = getSCEVExprSub(step, getSCEVExpr(1));
             auto ret = getSCEVExprDiv(getSCEVExprAdd(delta, step_minus_1), step);
             foldSCEVExpr(ret);
+
+            if (step->getRawIRValue()->getVTrait() != ValueTrait::CONSTANT_LITERAL)
+                Logger::logDebug("[SCEV]: The step is known non-positive by RangeAnalysis.");
+
             return ret;
         }
         return nullptr;
@@ -1086,7 +1100,7 @@ SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const Loop *loop) {
     return nullptr;
 }
 
-SCEVExpr *SCEVHandle::getTripCount(const Loop *loop) {
+SCEVExpr *SCEVHandle::getTripCount(const Loop *loop, RangeResult *ranges) {
     if (auto be = getBackEdgeTakenCount(loop)) {
         if (loop->isExiting(loop->getLatch())) {
             auto ret = getSCEVExprAdd(be, getSCEVExpr(1));
@@ -1144,6 +1158,10 @@ TREC *SCEVHandle::getTRECAdd(TREC *x, TREC *y) {
         return getAddRecTREC(x->getLoop(), getTRECAdd(x->getBase(), y), x->getStep());
     if (x->isExpr() && y->isAddRec())
         return getAddRecTREC(y->getLoop(), getTRECAdd(y->getBase(), x), y->getStep());
+    if (x->isExpr() && y->isPeeled())
+        return getPeeledTREC(y->getLoop(), getSCEVExprAdd(y->getFirst(), x->getExpr()), getTRECAdd(y->getRest(), x));
+    if (x->isPeeled() && y->isExpr())
+        return getPeeledTREC(x->getLoop(), getSCEVExprAdd(x->getFirst(), y->getExpr()), getTRECAdd(x->getRest(), y));
 
     if(!x->isAddRec() || !y->isAddRec())
         return getTRECUntracked();
@@ -1167,6 +1185,10 @@ TREC *SCEVHandle::getTRECSub(TREC *x, TREC *y) {
         return getAddRecTREC(x->getLoop(), getTRECSub(x->getBase(), y), x->getStep());
     if (x->isExpr() && y->isAddRec())
         return getAddRecTREC(y->getLoop(), getTRECSub(x, y->getBase()), getTRECNeg(y->getStep()));
+    if (x->isExpr() && y->isPeeled())
+        return getPeeledTREC(y->getLoop(), getSCEVExprSub(x->getExpr(), y->getFirst()), getTRECSub(x, y->getRest()));
+    if (x->isPeeled() && y->isExpr())
+        return getPeeledTREC(x->getLoop(), getSCEVExprSub(x->getFirst(), y->getExpr()), getTRECSub(x->getRest(), y));
 
     if(!x->isAddRec() || !y->isAddRec())
         return getTRECUntracked();
@@ -1193,6 +1215,10 @@ TREC *SCEVHandle::getTRECMul(TREC *x, TREC *y) {
         return getAddRecTREC(x->getLoop(), getTRECMul(x->getBase(), y), getTRECMul(x->getStep(), y));
     if (x->isExpr() && y->isAddRec())
         return getAddRecTREC(y->getLoop(), getTRECMul(y->getBase(), x), getTRECMul(y->getStep(), x));
+    if (x->isExpr() && y->isPeeled())
+        return getPeeledTREC(y->getLoop(), getSCEVExprMul(y->getFirst(), x->getExpr()), getTRECMul(y->getRest(), x));
+    if (x->isPeeled() && y->isExpr())
+        return getPeeledTREC(x->getLoop(), getSCEVExprMul(x->getFirst(), y->getExpr()), getTRECMul(x->getRest(), y));
 
     if(!x->isAddRec() || !y->isAddRec())
         return getTRECUntracked();
@@ -1327,7 +1353,9 @@ SCEVExpr *SCEVHandle::getSCEVExpr(int x) { return getSCEVExpr(function->getConst
 SCEVExpr *SCEVHandle::getSCEVExpr(Value *x) { return getPoolSCEV(std::make_shared<SCEVExpr>(x)); }
 
 SCEVHandle SCEVAnalysis::run(Function &func, FAM &fam) {
-    return SCEVHandle(&func, &fam.getResult<LoopAnalysis>(func), &fam.getResult<DomTreeAnalysis>(func));
+    auto& loop_info = fam.getResult<LoopAnalysis>(func);
+    auto& domtree = fam.getResult<DomTreeAnalysis>(func);
+    return SCEVHandle(&func, &loop_info, &domtree);
 }
 
 } // namespace IR

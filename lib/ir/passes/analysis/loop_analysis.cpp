@@ -205,15 +205,15 @@ bool Loop::isRecursivelyLCSSAForm(const LoopInfo &loop_info) const {
     });
 }
 
-bool Loop::isLoopInvariant(const Value *val) const {
+bool Loop::isTriviallyInvariant(const Value *val) const {
     if (auto inst = val->as_raw<Instruction>())
         return !contains(inst->getParent().get());
     return true;
 }
 
-bool Loop::isAllOperandsLoopInvariant(const Instruction *inst) const {
+bool Loop::isAllOperandsTriviallyInvariant(const Instruction *inst) const {
     return std::all_of(inst->operand_begin(), inst->operand_end(),
-                       [this](const auto &val) { return isLoopInvariant(val.get()); });
+                       [this](const auto &val) { return isTriviallyInvariant(val.get()); });
 }
 
 bool Loop::delBlockForCurrLoop(BasicBlock *bb) {
@@ -304,8 +304,8 @@ pBlock Loop::getLatch() const {
     return rl->as<BasicBlock>();
 }
 
-bool Loop::isLoopInvariant(const pVal &val) const { return isLoopInvariant(val.get()); }
-bool Loop::isAllOperandsLoopInvariant(const pInst &inst) const { return isAllOperandsLoopInvariant(inst.get()); }
+bool Loop::isTriviallyInvariant(const pVal &val) const { return isTriviallyInvariant(val.get()); }
+bool Loop::isAllOperandsTriviallyInvariant(const pInst &inst) const { return isAllOperandsTriviallyInvariant(inst.get()); }
 void Loop::moveToHeader(const pBlock &bb) { moveToHeader(bb.get()); }
 
 size_t Loop::getInstCount() const {

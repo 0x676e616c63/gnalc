@@ -122,11 +122,12 @@ PM::PreservedAnalyses PrintDebugMessagePass::run(Function &func, FAM &fam) {
 PM::PreservedAnalyses PrintSCEVPass::run(Function &function, FAM &fam) {
     auto &scev = fam.getResult<SCEVAnalysis>(function);
     auto &loop_info = fam.getResult<LoopAnalysis>(function);
+    auto &ranges = fam.getResult<RangeAnalysis>(function);
     writeln("SCEV Analysis Result: ");
     for (const auto &top_level : loop_info) {
         auto ldfv = top_level->getDFVisitor();
         for (const auto &loop : ldfv) {
-            auto trip_cnt = scev.getTripCount(loop);
+            auto trip_cnt = scev.getTripCount(loop, &ranges);
             if (trip_cnt)
                 writeln("'", loop->getHeader()->getName(), "' Trip Count: ", *trip_cnt);
             else

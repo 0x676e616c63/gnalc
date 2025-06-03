@@ -108,7 +108,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                     // Sink instructions that near the exit first
                     for (const auto &inst : Util::reverse(*bb)) {
                         if (isSafeToMove(loop, inst, aa_res, fam) && noUseInLoop(loop, inst) &&
-                            loop->isAllOperandsLoopInvariant(inst)) {
+                            loop->isAllOperandsTriviallyInvariant(inst)) {
                             // Sink instructions to the exit blocks that dominated by it.
                             // Keep track of the instructions we sunk.
                             // exit block -> new version
