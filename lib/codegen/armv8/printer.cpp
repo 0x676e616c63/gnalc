@@ -55,6 +55,30 @@ string ARMA64Printer::binaryPrinter(const MIRInst &minst) {
     return str;
 }
 
+string ARMA64Printer::selectPrinter(const MIRInst &minst) {
+    const auto &def = minst.ensureDef();
+    const auto &lhs = minst.getOp(1);
+    const auto &rhs = minst.getOp(2);
+    auto op = minst.opcode<ARMOpC>();
+    const auto &cond = minst.getOp(3)->imme();
+    auto bitWide = getBitWideChoosen(def->type(), lhs->type(), rhs->type());
+
+    string str;
+
+    str += ARMOpC2S(op) + '\t';
+    if (op != ARMOpC::CSET_SELECT) {
+        str += reg2s(def, bitWide) + ",\t";
+        str += reg2s(lhs, bitWide) + ",\t";
+        str += reg2s(rhs, bitWide) + ",\t";
+        str += Cond2S(static_cast<Cond>(cond));
+    } else {
+        str += reg2s(def, bitWide) + ",\t";
+        str += Cond2S(static_cast<Cond>(cond));
+    }
+
+    return str;
+}
+
 string ARMA64Printer::unaryPrinter(const MIRInst &minst) {
     const auto &def = minst.ensureDef();
     const auto &lhs = minst.getOp(1);

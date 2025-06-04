@@ -60,8 +60,8 @@ void PostRaSchedulingImpl::MkDAG(SchedulingModule &Module) {
 
     // LAMBDA BEGIN
 
-    ///@brief v antidepand on u (u depand on v), v have to exe before u
-    ///@brief besides, in this prosedure, v means prev, u means succ
+    ///@brief v antidepand on u (u depand on v), v have to exec before u,
+    ///@brief and, in this prosedure, v means prev, u means succ
     auto newDependency = [&antideps, &degrees](MIRInst_p u, MIRInst_p v) {
         if (u != v && antideps[v].insert(u).second) {
             ++degrees[u];
@@ -128,24 +128,31 @@ void PostRaSchedulingImpl::MkDAG(SchedulingModule &Module) {
     };
 
     auto mustInOrder = [&hasSideEffect](MIRInst_p inst) -> bool {
-        if (hasSideEffect(inst)) {
-            return true;
+        // pop push call ret b cbnz
+        if (!inst->isGeneric()) {
+            switch (inst->opcode<ARMOpC>()) {
+            case ARMOpC::CSET_SELECT:
+            case ARMOpC::CSEL:
+            case ARMOpC::FCSEL:
+            case ARMOpC::CSET:
+            case ARMOpC::PUSH:
+            case ARMOpC::POP:
+            case ARMOpC::RET:
+            case ARMOpC::BL:
+            case ARMOpC::CBNZ:
+                return true;
+            default:
+                return false;
+            }
         } else {
-            if (!inst->isGeneric()) {
-                switch (inst->opcode<ARMOpC>()) {
-                case ARMOpC::CSET:
-                    return true;
-                ///@todo ARMOpC::select
-                default:
-                    return false;
-                }
-            } else {
-                switch (inst->opcode<OpC>()) {
-                case OpC::InstSelect:
-                    return true;
-                default:
-                    return false;
-                }
+            switch (inst->opcode<OpC>()) {
+            case OpC::InstSelect:
+            case OpC::InstICmp:
+            case OpC::InstFCmp:
+            case OpC::InstBranch:
+                return true;
+            default:
+                return false;
             }
         }
     };

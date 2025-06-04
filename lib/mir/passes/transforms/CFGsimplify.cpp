@@ -5,7 +5,7 @@ using namespace MIR_new;
 // LAMBDA THIS FILE ONLY BEGIN
 
 auto cmp = [](MIRInst_p minst) -> bool {
-    if (minst->isGeneric() && // NOLINT
+    if (minst && minst->isGeneric() && // NOLINT
         (minst->opcode<OpC>() == OpC::InstICmp || minst->opcode<OpC>() == OpC::InstFCmp)) {
         return true;
     }
@@ -13,21 +13,21 @@ auto cmp = [](MIRInst_p minst) -> bool {
 };
 
 auto cset = [](MIRInst_p minst) -> bool {
-    if (!minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::CSET) {
+    if (minst && !minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::CSET) {
         return true;
     }
     return false;
 };
 
 auto cbnz = [](MIRInst_p minst) -> bool {
-    if (!minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::CBNZ) {
+    if (minst && !minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::CBNZ) {
         return true;
     }
     return false;
 };
 
 auto b = [](MIRInst_p minst) -> bool {
-    if (minst->isGeneric() && minst->opcode<OpC>() == OpC::InstBranch) {
+    if (minst && minst->isGeneric() && minst->opcode<OpC>() == OpC::InstBranch) {
         ///@note 此处没有检查跳转条件
         return true;
     }
@@ -80,6 +80,7 @@ void CFGsimplifyBeforeRAImpl::i1EliDetect(MIRBlk_p &mblk) {
 
         auto recovery = it;
         if (cmp(*it) && cset(next_ptr()) && cbnz(next_ptr()) && b(next_ptr())) {
+            ///@todo cmp maybe appear not to be neighbor cset but still close to it
             i1UseConsolidate(minsts, recovery);
             break;
         }

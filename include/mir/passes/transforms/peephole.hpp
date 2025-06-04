@@ -71,6 +71,7 @@ private:
     bool matchNop(MatchInfo &);        // after ra
     bool matchArithmetic(MatchInfo &); // after isel
     bool matchMA(MatchInfo &);         // after isel ( MA = Multiple and Accumulate)
+    bool matchSelect(MatchInfo &);     // after isel
     bool matchFusedAdr(MatchInfo &);   // after stack generate
 
     bool removeByReference(MatchInfo &);

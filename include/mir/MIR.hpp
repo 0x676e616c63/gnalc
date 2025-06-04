@@ -209,12 +209,10 @@ public:
 
 private:
     std::variant<std::monostate, MIRReg_p, MIRRelocable_p, unsigned, uint64_t, double> mOperand{std::monostate{}};
-    OpT mType = OpT::special; // 不得不说把mType放这儿真是个败笔
-                              // 没有默认位宽会破坏isaRegs单例,
-                              // 存在默认位宽codeGen又需要判定位宽
-                              // 不如mirA32直接位宽信息放在inst里
+    OpT mType = OpT::special;
 
-    unsigned recover = -1; // assign之后用于保存原有的VReg, debug用
+    unsigned recover = -1;
+
 public:
     void setRecover(unsigned id) { recover = id; } // for constructors
     unsigned getRecover() const { return recover; }
@@ -605,6 +603,10 @@ public:
                 minst->getOp(1)->relocable() == old_succ) {
 
                 minst->setOperand<1>(MIROperand::asReloc(new_succ), ctx);
+                return true;
+            } else if (!minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::CBNZ &&
+                       minst->getOp(2)->relocable() == old_succ) {
+                minst->setOperand<2>(MIROperand::asReloc(new_succ), ctx);
                 return true;
             }
             return false;

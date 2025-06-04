@@ -174,7 +174,7 @@ void ARMA64Printer::printout(const MIRInst &minst) {
             outStream << convertPrinter(minst);
             break;
         case OpC::InstSelect:
-            Err::todo("ARMA64Printer::printout(const MIRInst &): select inst todo");
+            Err::unreachable("ARMA64Printer::printout(const MIRInst &): select inst not to be printed here");
             break;
         case OpC::InstCopy:
         case OpC::InstCopyFromReg:
@@ -219,6 +219,11 @@ void ARMA64Printer::printout(const MIRInst &minst) {
         case ARMOpC::FMADD:
         case ARMOpC::FMSUB:
             outStream << ternaryPrinter(minst);
+            break;
+        case ARMOpC::CSEL:
+        case ARMOpC::CSET_SELECT:
+        case ARMOpC::FCSEL:
+            outStream << selectPrinter(minst);
             break;
         case ARMOpC::CSET:
             outStream << csetPrinter(minst);

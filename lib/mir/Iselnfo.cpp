@@ -21,12 +21,7 @@ bool ISelInfo::isLegalGenericInst(MIRInst_p minst) const {
 
 bool ISelInfo::match(MIRInst_p minst, ISelContext &ctx, bool allow) const {
     ///@note 外部控制该函数循环执行, 直到没有新的修改
-
     bool ret = legalizeInst(minst, ctx); // not impl yet
-
-    ///@todo do something when allow is true
-
-    // return ret | matchImpl(minst, ctx);
     return ret;
 }
 
@@ -135,7 +130,8 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     case OpC::InstAnd:
     case OpC::InstOr:
     case OpC::InstXor:
-        break; // 位运算目前只有后端会用
+        ///@note 目前的各种位运算只有在比较特殊的情况下使用, 并且能保证合法
+        break;
     case OpC::InstShl:
     case OpC::InstLShr:
     case OpC::InstAShr: {
@@ -176,43 +172,45 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         }
     } break;
     case OpC::InstSRem: {
-        auto def = minst->getDef();
-        auto lhs = minst->getOp(1);
-        auto rhs = minst->getOp(2);
-
-        if (rhs->isImme() && popcounter_wrapper(rhs->imme()) == 1) {
-            // 后边窥孔不是很方便, 所以放在这里
-
-            auto minst_and = ctx.newInst(OpC::InstAnd);
-
-            minst_and->setOperand<0>(def, ctx.codeGenCtx())
-                ->setOperand<1>(lhs, ctx.codeGenCtx())
-                ->setOperand<2>(MIROperand::asImme(rhs->imme() - 1, OpT::Int32), ctx.codeGenCtx());
-
-        } else {
-            auto minst_div = ctx.newInst(OpC::InstSDiv);
-            auto minst_mul = ctx.newInst(OpC::InstMul);
-            auto minst_sub = ctx.newInst(OpC::InstSub);
-
-            auto result1 = MIROperand::asVReg(ctx.codeGenCtx().nextId(), OpT::Int32);
-            auto result2 = MIROperand::asVReg(ctx.codeGenCtx().nextId(), OpT::Int32);
-            minst_div->setOperand<0>(result1, ctx.codeGenCtx())
-                ->setOperand<1>(lhs, ctx.codeGenCtx())
-                ->setOperand<2>(rhs, ctx.codeGenCtx());
-            minst_mul->setOperand<0>(result2, ctx.codeGenCtx())
-                ->setOperand<1>(result1, ctx.codeGenCtx())
-                ->setOperand<2>(rhs, ctx.codeGenCtx());
-            minst_sub->setOperand<0>(def, ctx.codeGenCtx())
-                ->setOperand<1>(lhs, ctx.codeGenCtx())
-                ->setOperand<2>(result2, ctx.codeGenCtx());
-        }
 
         ctx.delInst(minst); // add to list, handle later
 
         modified |= true;
+
+        auto def = minst->getDef();
+        auto lhs = minst->getOp(1);
+        auto rhs = minst->getOp(2);
+
+        ///@todo 需要范围分析
+        // if (rhs->isImme() && popcounter_wrapper(rhs->imme()) == 1) {
+
+        //     auto minst_and = ctx.newInst(OpC::InstAnd);
+
+        //     minst_and->setOperand<0>(def, ctx.codeGenCtx())
+        //         ->setOperand<1>(lhs, ctx.codeGenCtx())
+        //         ->setOperand<2>(MIROperand::asImme(rhs->imme() - 1, OpT::Int32), ctx.codeGenCtx());
+        //     break;
+        // }
+
+        auto minst_div = ctx.newInst(OpC::InstSDiv);
+        auto minst_mul = ctx.newInst(OpC::InstMul);
+        auto minst_sub = ctx.newInst(OpC::InstSub);
+
+        auto result1 = MIROperand::asVReg(ctx.codeGenCtx().nextId(), OpT::Int32);
+        auto result2 = MIROperand::asVReg(ctx.codeGenCtx().nextId(), OpT::Int32);
+        minst_div->setOperand<0>(result1, ctx.codeGenCtx())
+            ->setOperand<1>(lhs, ctx.codeGenCtx())
+            ->setOperand<2>(rhs, ctx.codeGenCtx());
+        minst_mul->setOperand<0>(result2, ctx.codeGenCtx())
+            ->setOperand<1>(result1, ctx.codeGenCtx())
+            ->setOperand<2>(rhs, ctx.codeGenCtx());
+        minst_sub->setOperand<0>(def, ctx.codeGenCtx())
+            ->setOperand<1>(lhs, ctx.codeGenCtx())
+            ->setOperand<2>(result2, ctx.codeGenCtx());
+
     } break;
     case OpC::InstFRem: {
-        auto def = minst->getDef();
+        auto def = minst->ensureDef();
         auto lhs = minst->getOp(1);
         auto rhs = minst->getOp(2);
 
@@ -235,10 +233,49 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         ctx.delInst(minst); // add to list, handle later
         modified |= true;
     } break;
-    case OpC::InstF2S:
-        break;
-    case OpC::InstS2F:
-        break;
+    case OpC::InstSelect: {
+        auto def = minst->ensureDef();
+        auto lhs = minst->getOp(1);
+        auto rhs = minst->getOp(2);
+
+        if (inRange(def->type(), OpT::Int, OpT::Int64) && lhs->isImme() && lhs->imme() == 1 && rhs->isImme() &&
+            rhs->imme() == 0) {
+            minst->resetOpcode(ARMOpC::CSET_SELECT);
+            break;
+        }
+
+        if (inRange(def->type(), OpT::Int, OpT::Int64)) {
+            minst->resetOpcode(ARMOpC::CSEL);
+        } else {
+            minst->resetOpcode(ARMOpC::FCSEL);
+        }
+
+        if (lhs->isImme()) {
+            minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
+        }
+        if (rhs->isImme()) {
+            minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
+        }
+
+    } break;
+    case OpC::InstF2S: {
+        auto converted = minst->ensureDef();
+        auto original = minst->getOp(1);
+
+        if (original->isImme()) {
+            minst->setOperand<1>(loadImm(original), ctx.codeGenCtx());
+        }
+
+    } break;
+    case OpC::InstS2F: {
+        auto converted = minst->ensureDef();
+        auto original = minst->getOp(1);
+
+        if (original->isImme()) {
+            minst->setOperand<1>(loadImm(original), ctx.codeGenCtx());
+        }
+
+    } break;
     default:
         ///@note 各种copy, 内存访问没有合法化
         break;

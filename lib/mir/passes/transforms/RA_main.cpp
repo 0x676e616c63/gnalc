@@ -436,13 +436,9 @@ void RegisterAllocImpl::AssignColors() {
             ///@note 由于lowering是线性的方式, 所以大多数的id具有局部性
 
             auto c = okColors[n->getRecover() % okColors.size()];
-            // auto c = *okColors.begin();
 
             auto &calleesave = mfunc->calleeSaveRegs();
             calleesave |= 1LL << c; // marked
-
-            ///@note maybe override
-            // Err::gassert(n->isVReg(), "AssignColors: try assign to a non-reg");
 
             // if (!n->isPreColored())
             n->assignColor(c);
@@ -456,11 +452,13 @@ void RegisterAllocImpl::AssignColors() {
         Err::gassert(n->isVRegOrISAReg(), "AssignColors: try assign color for a none virReg op");
         Err::gassert(n_a->isVRegOrISAReg(), "AssignColors: try assign color for a none virReg op");
 
+        ///@note 我不知道为什么行, 但它就是行
+        if (n_a->isVReg()) {
+            continue;
+        }
+
         auto &calleesave = mfunc->calleeSaveRegs();
         calleesave |= 1LL << n_a->reg();
-
-        ///@warning 直接override?
-        // if (!n->isPreColored())
 
         n->assignColor(n_a->reg());
     }

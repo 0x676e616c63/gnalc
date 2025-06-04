@@ -164,6 +164,7 @@ void lowerInst(const IR::pStore &, LoweringContext &, size_t);
 void lowerInst(const IR::pCast &, LoweringContext &); // copy
 void lowerInst(const IR::pGep &, LoweringContext &);
 void lowerInst(const IR::pCall &, LoweringContext &);
+void lowerInst(const IR::pSelect &, LoweringContext &);
 
 }; // namespace MIR_new
 

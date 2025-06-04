@@ -33,6 +33,7 @@ public:
 
     [[nodiscard]] string branchPrinter(const MIRInst &);
     [[nodiscard]] string binaryPrinter(const MIRInst &);
+    [[nodiscard]] string selectPrinter(const MIRInst &);
     [[nodiscard]] string unaryPrinter(const MIRInst &);
     [[nodiscard]] string cmpPrinter(const MIRInst &);
     [[nodiscard]] string convertPrinter(const MIRInst &);

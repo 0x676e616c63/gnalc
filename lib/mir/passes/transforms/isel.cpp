@@ -33,8 +33,6 @@ PM::PreservedAnalyses ISel::run(MIRFunction &mfunc, FAM &fam) {
     return PM::PreservedAnalyses::all();
 }
 
-///@note 关键是 iselInfo.matchAndSelect
-///@todo 现阶段没有matchOpt的情况下, 基本上没有replace
 void ISelContext::impl(MIRFunction *mfunc) {
     auto &iselInfo = mCodeGenCtx.iselInfo;
     bool allowComplexPattern = false;
@@ -42,12 +40,6 @@ void ISelContext::impl(MIRFunction *mfunc) {
 
     while (true) {
         MIRInst_p minst_illegal_first = nullptr;
-
-        ///@brief stage1: 简单优化
-
-        ///@todo include "peephole.hpp"
-        ///@todo removeUnusedInsts()
-        ///@todo genericPeepholeOpt()
 
         ///@brief stage2: 构建表项
         bool modified = false;
@@ -143,7 +135,14 @@ void ISelContext::impl(MIRFunction *mfunc) {
 
         for (auto &mblk : mfunc->blks()) {
             // remove old insts;
-            mblk->Insts().remove_if([&](const MIRInst_p &minst) -> bool { return mDelWorkList.count(minst); }); // 谓词
+            mblk->Insts().remove_if([&](const MIRInst_p &minst) -> bool {
+                if (mDelWorkList.count(minst)) {
+                    minst->putAllOp(mCodeGenCtx);
+                    return true;
+                } else {
+                    return false;
+                }
+            });
 
             // replace defs
             for (auto &minst : mblk->Insts()) {
