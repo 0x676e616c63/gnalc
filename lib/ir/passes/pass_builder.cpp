@@ -41,7 +41,9 @@
 #include "ir/passes/analysis/range_analysis.hpp"
 #include "ir/passes/transforms/dae.hpp"
 #include "ir/passes/transforms/if_conversion.hpp"
+#include "ir/passes/transforms/memoization.hpp"
 #include "ir/passes/transforms/range_aware_simplify.hpp"
+#include "ir/passes/transforms/unify_exits.hpp"
 #include "ir/passes/utilities/analysis_storer.hpp"
 #include "ir/passes/utilities/irprinter.hpp"
 #include "ir/passes/utilities/verifier.hpp"
@@ -211,6 +213,8 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
     // fpm.addPass(make_vectorizer());
     // fpm.addPass(make_clean());
 
+    FUNCTION_TRANSFORM(unify_exits, UnifyExitsPass());
+
     fpm.addPass(LoopSimplifyPass());
     fpm.addPass(StoreAnalysisPass<RangeAnalysis>());
     fpm.addPass(CFGSimplifyPass());
@@ -280,6 +284,7 @@ FPM PassBuilder::buildFunctionPipeline(PMOptions opt_info) {
     FUNCTION_TRANSFORM(dae, LoopSimplifyPass(), DAEPass())
 
     FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
+    FUNCTION_TRANSFORM(unify_exits, UnifyExitsPass())
 
 #undef FUNCTION_TRANSFORM
 
@@ -303,31 +308,11 @@ MPM PassBuilder::buildModulePipeline(PMOptions opt_info) {
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
-    fpm.addPass(IR::PromotePass());
-    fpm.addPass(IR::TailRecursionEliminationPass());
-    fpm.addPass(IR::InlinePass());
-    fpm.addPass(IR::InternalizePass());
-    fpm.addPass(IR::PromotePass());
-    fpm.addPass(IR::NameNormalizePass());
-    fpm.addPass(IR::CFGSimplifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::LCSSAPass());
-    fpm.addPass(IR::LoopUnrollPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::LoopRotatePass());
-    fpm.addPass(IR::LCSSAPass());
-    fpm.addPass(IR::LICMPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::BreakCriticalEdgesPass());
-    fpm.addPass(IR::GVNPREPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::CFGSimplifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::LCSSAPass());
-    fpm.addPass(IR::LoopUnrollPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::NameNormalizePass());
+    fpm.addPass(PromotePass());
+    fpm.addPass(TailRecursionEliminationPass());
+    fpm.addPass(InlinePass());
+    // fpm.addPass(MemoizePass());
+    fpm.addPass(UnifyExitsPass());
     return fpm;
 
     // If-conversion
@@ -511,8 +496,6 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
             pipeline.pop_back();
             pipeline.pop_back();
         }
-        fpm.addPass(CodeGenPreparePass());
-        fpm.addPass(NameNormalizePass(true));
 
         Logger::logInfo("[FuzzTesting]: Fuzz Testing pipeline"
                         " (not real pipeline, omitted some passes for easier reproduction): '",
@@ -550,10 +533,12 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
         (*p)();
         curr.clear();
 
-        fpm.addPass(NameNormalizePass(true));
-
         Logger::logInfo("[FuzzTesting]: Reproducing pipeline: ", repro);
     }
+
+    fpm.addPass(UnifyExitsPass());
+    fpm.addPass(CodeGenPreparePass());
+    fpm.addPass(NameNormalizePass(true));
 
     Logger::logInfo("[FuzzTesting]: Full Pipeline: ");
     fpm.printPipeline();

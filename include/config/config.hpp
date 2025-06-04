@@ -10,6 +10,9 @@ constexpr auto MEMSET_INTRINSIC_NAME = "@llvm.memset.p0i8.i32";
 constexpr auto MEMCPY_INTRINSIC_NAME = "@llvm.memcpy.p0.p0.i32";
 constexpr auto LOCAL_ARRAY_MEMSET_THRESHOLD = 32;
 
+// Memoization
+constexpr auto MEMOIZATION_LOOKUP_INTRINSIC_NAME = "@gnalc.memoization.lookup";
+
 // GVN-PRE
 // Some operations in GVN-PRE are time-consuming,
 // so we set some thresholds to ensure acceptable compilation times.

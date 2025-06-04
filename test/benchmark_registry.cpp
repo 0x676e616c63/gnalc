@@ -3,80 +3,80 @@
 using namespace Test;
 using Entry = BenchmarkRegistry::Entry;
 
-// Requires: ./example_exes/example_23
-void register_example_23() {
+// Requires: ./example_exes/example_0
+void register_example_0() {
     Entry entry{
         .ir_gen =
             [](const std::string &newsy, const std::string &outll) {
-                return format("./example_exes/example_23 -t llvm {} -O3 -o {} && sed 's/@starttime/@_sysy_starttime/' "
+                return format("./example_exes/example_0 -t llvm {} -O3 -o {} && sed 's/@starttime/@_sysy_starttime/' "
                               "{} -i && sed 's/@stoptime/@_sysy_stoptime/' {} -i",
                               newsy, outll, outll, outll);
             },
         .asm_gen =
             [](const std::string &newsy, const std::string &outs) {
-                return format("./example_exes/example_23 -t arm {} -O3 -o {}", newsy, outs);
+                return format("./example_exes/example_0 -t arm {} -O3 -o {}", newsy, outs);
             },
     };
-    BenchmarkRegistry::register_benchmark("example_23", entry);
+    BenchmarkRegistry::register_benchmark("example_0", entry);
 }
 
-// Requires: ./example_exes/example_24/
-void register_example_24() {
+// Requires: ./example_exes/example_1/
+void register_example_1() {
     Entry entry{
         .ir_gen =
             [](const std::string &newsy, const std::string &outll) {
-                return format("java ./example_exes/example_24/src/example_24.java {} -arm {} no.s", newsy, outll);
+                return format("java ./example_exes/example_1/src/example_1.java {} -arm {} no.s", newsy, outll);
             },
         .asm_gen =
             [](const std::string &newsy, const std::string &outs) {
-                return format("java ./example_exes/example_24/src/example_24.java {} -arm {} no.ll", newsy, outs);
+                return format("java ./example_exes/example_1/src/example_1.java {} -arm {} no.ll", newsy, outs);
             },
     };
-    BenchmarkRegistry::register_benchmark("example_24", entry);
+    BenchmarkRegistry::register_benchmark("example_1", entry);
 }
 
 // Only Frontend
-// Requires: ./example_exes/example_24_1
-void register_example_24_1() {
+// Requires: ./example_exes/example_2
+void register_example_2() {
     Entry entry{
         .ir_gen =
             [](const std::string &newsy, const std::string &outll) {
-                return format("./example_exes/example_24_1 {} -llvm -o {} -O2", newsy, outll);
+                return format("./example_exes/example_2 {} -llvm -o {} -O2", newsy, outll);
             },
         .asm_gen =
             [](const std::string &newsy, const std::string &outs) {
-                Err::not_implemented("Benchmark for example_24_1 backend");
+                Err::not_implemented("Benchmark for example_2 backend");
                 return "";
             },
     };
-    BenchmarkRegistry::register_benchmark("example_24_1", entry);
+    BenchmarkRegistry::register_benchmark("example_2", entry);
 }
 
 // Only Frontend
-// Requires: ./example_exes/example_24_2
-void register_example_24_2() {
+// Requires: ./example_exes/example_3
+void register_example_3() {
     Entry entry{
         .ir_gen =
             [](const std::string &newsy, const std::string &outll) {
-                return format("./example_exes/example_24_2 -S {} -ll {} -O1", newsy, outll);
+                return format("./example_exes/example_3 -S {} -ll {} -O1", newsy, outll);
             },
         .asm_gen =
             [](const std::string &newsy, const std::string &outs) {
-                Err::not_implemented("Benchmark for example_24_2 backend");
+                Err::not_implemented("Benchmark for example_3 backend");
                 return "";
             },
     };
-    BenchmarkRegistry::register_benchmark("example_24_2", entry);
+    BenchmarkRegistry::register_benchmark("example_3", entry);
 }
 
 // Only Frontend
-// Requires: ./example_exes/example_24_3
-void register_example_24_3() {
+// Requires: ./example_exes/example_4
+void register_example_4() {
     Entry entry{
         .ir_gen =
             [](const std::string &newsy, const std::string &outll) {
                 return format(
-                    "./example_exes/example_24_3 -S -o {} {} "
+                    "./example_exes/example_4 -S -o {} {} "
                     "&& echo 'declare i32 @getint() \n declare i32 @getch() \n declare i32 @getarray(i32* noundef) \n "
                     "declare float @getfloat() \n declare i32 @getfarray(float* noundef) \n declare void @putint(i32 "
                     "noundef) \n declare void @putch(i32 noundef) \n declare void @putarray(i32 noundef, i32* noundef) "
@@ -87,11 +87,26 @@ void register_example_24_3() {
             },
         .asm_gen =
             [](const std::string &newsy, const std::string &outs) {
-                Err::not_implemented("Benchmark for example_24_3 backend");
+                Err::not_implemented("Benchmark for example_4 backend");
                 return "";
             },
     };
-    BenchmarkRegistry::register_benchmark("example_24_3", entry);
+    BenchmarkRegistry::register_benchmark("example_4", entry);
+}
+
+void register_example_5() {
+    Entry entry{
+        .ir_gen =
+            [](const std::string &newsy, const std::string &outll) {
+                Err::not_implemented("Benchmark for example_5 frontend");
+                return "";
+            },
+        .asm_gen =
+            [](const std::string &newsy, const std::string &outs) {
+                return format("./example_exes/example_5 -S -O1 {} --arm -o {}", newsy, outs);
+            },
+    };
+    BenchmarkRegistry::register_benchmark("example_5", entry);
 }
 
 // Only Frontend
@@ -199,11 +214,12 @@ void register_gnalc_fuzz100() {
 }
 
 void Test::register_all_benchmarks() {
-    register_example_23();
-    register_example_24();
-    register_example_24_1();
-    register_example_24_2();
-    register_example_24_3();
+    register_example_0();
+    register_example_1();
+    register_example_2();
+    register_example_3();
+    register_example_4();
+    register_example_5();
     register_clang_o3();
     register_gcc_o3();
     register_gnalc_mem2reg();
