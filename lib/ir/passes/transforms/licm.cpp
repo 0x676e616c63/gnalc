@@ -13,10 +13,15 @@
 #include <vector>
 
 namespace IR {
-bool isSafeToMove(const pLoop &loop, const pInst &inst, BasicAAResult &aa_res, FAM &fam) {
+// is_doing_aggressive_licm: if this move violates control flow equivalent.
+// This could lead to a better performance, but causes partial redundancy.
+bool isSafeToMove(const pLoop &loop, const pInst &inst, BasicAAResult &aa_res, FAM &fam, bool is_doing_aggressive_licm) {
     // Only move what we know
     // Do not hoist cmp for codegen
     if (!inst->is<BinaryInst, FNEGInst, CALLInst, LOADInst, STOREInst, GEPInst, CastInst>())
+        return false;
+
+    if (is_doing_aggressive_licm && inst->is<STOREInst>())
         return false;
 
     // If the load's memory can be modified in the loop, give up.
@@ -107,7 +112,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                     std::set<pInst> dead_insts;
                     // Sink instructions that near the exit first
                     for (const auto &inst : Util::reverse(*bb)) {
-                        if (isSafeToMove(loop, inst, aa_res, fam) && noUseInLoop(loop, inst) &&
+                        if (isSafeToMove(loop, inst, aa_res, fam, false) && noUseInLoop(loop, inst) &&
                             loop->isAllOperandsTriviallyInvariant(inst)) {
                             // Sink instructions to the exit blocks that dominated by it.
                             // Keep track of the instructions we sunk.
@@ -194,14 +199,18 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                 std::sort(loop_blocks.begin(), loop_blocks.end(),
                           [&rpo_index](const auto &a, const auto &b) { return rpo_index[a] < rpo_index[b]; });
                 for (const auto &bb : loop_blocks) {
+                    // Allow aggressive hoisting for better performance
+                    // FIXME: set a threshold to avoid too much duplication
                     // If this block does not post dominates the preheader,
-                    // hoisting them is not safe.
+                    // hoisting them causes duplication.
+                    bool is_doing_aggressive_licm = false;
                     if (!postdomtree.ADomB(bb, preheader))
-                        continue;
+                        is_doing_aggressive_licm = true;
+
                     // Keep the topological order.
                     std::vector<pInst> to_hoist;
                     for (const auto &inst : *bb) {
-                        if (isSafeToMove(loop, inst, aa_res, fam)) {
+                        if (isSafeToMove(loop, inst, aa_res, fam, is_doing_aggressive_licm)) {
                             auto invariant = std::all_of(inst->operand_begin(), inst->operand_end(),
                                                          [&loop, to_hoist](const auto &val) {
                                                              if (auto inst = val->template as<Instruction>()) {

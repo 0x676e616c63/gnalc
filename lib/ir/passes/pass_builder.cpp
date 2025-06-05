@@ -311,7 +311,9 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     fpm.addPass(PromotePass());
     fpm.addPass(TailRecursionEliminationPass());
     fpm.addPass(InlinePass());
-    // fpm.addPass(MemoizePass());
+    fpm.addPass(LoopSimplifyPass());
+    fpm.addPass(LCSSAPass());
+    fpm.addPass(LICMPass());
     fpm.addPass(UnifyExitsPass());
     return fpm;
 
