@@ -207,6 +207,9 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                     if (!postdomtree.ADomB(bb, preheader))
                         is_doing_aggressive_licm = true;
 
+                    if (!enable_aggressive && is_doing_aggressive_licm)
+                        continue;
+
                     // Keep the topological order.
                     std::vector<pInst> to_hoist;
                     for (const auto &inst : *bb) {
@@ -230,7 +233,8 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                         inst->setName(inst->getName() + ".licm.h" + std::to_string(name_cnt++));
                         moveInst(inst, preheader, preheader->getEndInsertPoint());
                         Logger::logDebug("[LICM] on '", function.getName(), "': Hoisted an instruction '",
-                                         inst->getName(), "' to basic block '", preheader->getName(), "'.");
+                                         inst->getName(), "' to basic block '", preheader->getName(), "'.",
+                                         is_doing_aggressive_licm ? "(aggressive)" : "");
                         licm_inst_modified = true;
                     }
                 }
