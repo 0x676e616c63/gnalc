@@ -14,6 +14,9 @@ extern template class PassManager<IR::Module>;
 extern template class PassManager<IR::Function>;
 
 extern template class InnerAnalysisManagerProxy<AnalysisManager<IR::Function>, IR::Module>;
+
+extern template class AnalysisStorage<IR::Function>;
+extern template class AnalysisStorage<IR::Module>;
 } // namespace PM
 
 namespace IR {
@@ -24,6 +27,13 @@ using MPM = PM::PassManager<Module>;
 using FPM = PM::PassManager<Function>;
 
 using FAMProxy = PM::InnerAnalysisManagerProxy<FAM, Module>;
+
+namespace Lower {
+using FAS = PM::AnalysisStorage<Function>;
+using MAS = PM::AnalysisStorage<Module>;
+
+extern FAS gFunctionAnalysisStorage;
+} // namespace Lower
 
 class ModulePassWrapper : public PM::PassInfo<ModulePassWrapper> {
 public:

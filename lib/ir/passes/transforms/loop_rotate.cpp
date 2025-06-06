@@ -95,14 +95,10 @@ pBlock tryMergeLatchToExiting(const Loop &loop) {
     // Don't mess up the consecutive cmp and br for better codegen
     //   %cond = icmp ...
     //   br %cond ...
-    if (auto cond_inst = pred_br->getCond()->as<Instruction>()) {
-        if (cond_inst->getParent() == single_pred)
-            moveInsts(latch->begin(), latch->end(), single_pred, cond_inst->getIter());
-        else
-            Logger::logWarning("Cond '", cond_inst->getName(), "' and BRInst are in separate block.");
-    } else
-        moveInsts(latch->begin(), latch->end(), single_pred, pred_br->getIter());
+    moveInsts(latch->begin(), latch->end(), single_pred, single_pred->getEndInsertPoint());
 
+    Logger::logDebug("[Loop Rotate]: Merged latch '", latch->getName(), "' to exiting block '", single_pred->getName(),
+                     "'.");
     return latch;
 }
 

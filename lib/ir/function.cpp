@@ -1,5 +1,6 @@
 #include "ir/function.hpp"
 #include "ir/visitor.hpp"
+#include "sir/visitor.hpp"
 
 #include <algorithm>
 #include <map>
@@ -18,6 +19,17 @@ FunctionDecl::FunctionDecl(std::string name_, std::vector<pType> params, pType r
     // user defined functions
     if (func_attrs.empty())
         func_attrs.emplace(FuncAttr::NotBuiltin);
+}
+
+bool FunctionDecl::isRecursive() const {
+    for (const auto &inst_user : inst_users()) {
+        auto call = inst_user->as<CALLInst>();
+        Err::gassert(call != nullptr);
+        auto caller_func = call->getParent()->getParent();
+        if (caller_func.get() == this)
+            return true;
+    }
+    return false;
 }
 
 bool FunctionDecl::hasAttr(FuncAttr attr) const { return func_attrs.count(attr); }
@@ -215,6 +227,15 @@ void Function::updateAndCheckCFG() {
     }
 }
 
+bool Function::removeParam(size_t index) {
+    Err::gassert(index < params.size() && params[index]->getUseCount() == 0);
+    params.erase(params.begin() + index);
+    size_t i = 0;
+    for (const auto &param : params)
+        param->setIndex(i++);
+    return true;
+}
+
 void Function::updateBBIndex() {
     size_t i = 0;
     for (const auto &blk : blks) {
@@ -305,13 +326,70 @@ pVal Function::cloneImpl() const {
 
 void Function::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
-void LinearFunction::addInst(pInst inst) { insts.emplace_back(std::move(inst)); }
+LinearFunction::LinearFunction(std::string name_, const std::vector<pFormalParam> &params_, pType ret_type,
+                               ConstantPool *pool_)
+    : FunctionDecl(std::move(name_), get_params_type(params_), std::move(ret_type), false, {}), params(params_),
+      constant_pool(pool_) {}
 
-void LinearFunction::appendInsts(std::vector<pInst> insts_) {
+void LinearFunction::addInst(pInst inst) {
+    inst->index = insts.size();
+    insts.emplace_back(std::move(inst));
+}
+
+void LinearFunction::addInst(iterator it, const pInst &inst) {
+    Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
+    insts.insert(it, inst);
+    inst_index_valid = false;
+}
+void LinearFunction::addInst(size_t index, const pInst &inst) {
+    Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
+    auto it = std::next(insts.begin(), static_cast<decltype(insts)::iterator::difference_type>(index));
+    insts.insert(it, inst);
+    inst_index_valid = false;
+}
+
+void LinearFunction::appendInsts(std::list<pInst> insts_) {
+    size_t i = insts.size();
+    for (auto &inst : insts_) {
+        inst->index = i++;
+    }
     insts.insert(insts.end(), std::make_move_iterator(insts_.begin()), std::make_move_iterator(insts_.end()));
 }
 
-const std::vector<pInst> &LinearFunction::getInsts() const { return insts; }
+size_t LinearFunction::getInstCount() const {
+    size_t i = 0;
+    for (const auto &inst : insts) {
+        if (auto if_inst = inst->as<IFInst>())
+            i += if_inst->getInstCount();
+        else if (auto while_inst = inst->as<WHILEInst>())
+            i += while_inst->getInstCount();
+        else if (auto for_inst = inst->as<FORInst>())
+            i += for_inst->getInstCount();
+        else
+            i++;
+    }
+    return i;
+}
+
+const std::vector<pFormalParam> &LinearFunction::getParams() const { return params; }
+ConstantPool &LinearFunction::getConstantPool() { return *constant_pool; }
+
+bool LinearFunction::delFirstOfInst(const pInst &inst) {
+    for (auto it = insts.begin(); it != insts.end(); ++it) {
+        if (*it == inst) {
+            insts.erase(it);
+            inst_index_valid = false;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool LinearFunction::delInst(const pInst &target) {
+    return delInstIf([&target](const auto &inst) { return inst == target; });
+}
+
+const std::list<pInst> &LinearFunction::getInsts() const { return insts; }
 
 LinearFunction::const_iterator LinearFunction::begin() const { return insts.begin(); }
 
@@ -338,4 +416,20 @@ LinearFunction::const_reverse_iterator LinearFunction::crbegin() const { return 
 LinearFunction::const_reverse_iterator LinearFunction::crend() const { return insts.crend(); }
 
 void LinearFunction::accept(IRVisitor &visitor) { visitor.visit(*this); }
+void LinearFunction::accept(SIR::Visitor &visitor) {
+    visitor.visit(*this);
+}
+void LinearFunction::accept(SIR::LookBehindVisitor &visitor) {
+    visitor.visit(SIR::LookBehindVisitor::PrevInfo::makeInitial(), *this);
+}
+
+void LinearFunction::updateInstIndex() const {
+    if (inst_index_valid)
+        return;
+
+    size_t i = 0;
+    for (const auto &inst : insts) {
+        inst->index = i++;
+    }
+}
 } // namespace IR

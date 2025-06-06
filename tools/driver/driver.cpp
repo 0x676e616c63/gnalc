@@ -1,3 +1,8 @@
+// SIR
+#include "sir/passes/pass_builder.hpp"
+#include "sir/passes/pass_manager.hpp"
+
+// IR
 #include "ir/passes/pass_builder.hpp"
 #include "ir/passes/pass_manager.hpp"
 #include "ir/passes/utilities/irprinter.hpp"
@@ -27,10 +32,12 @@
 #include "mirA32/passes/utilities/mirprinter.hpp"
 #endif
 
+// MIR
 #include "codegen/armv8/armprinter.hpp"
 #include "mir/passes/pass_builder.hpp"
 #include "mir/passes/pass_manager.hpp"
 #include "mir/passes/transforms/lowering.hpp"
+#include "sir/passes/utilities/sirprinter.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -52,6 +59,7 @@ int main(int argc, char **argv) {
 
     // Options
     bool only_compilation = false;              // -S
+    bool emit_sir = false;                      // -emit-sir
     bool emit_llvm = false;                     // -emit-llvm
     bool emit_llc = false;                      // -emit-llc
     bool ast_dump = false;                      // -ast-dump
@@ -62,6 +70,7 @@ int main(int argc, char **argv) {
     double fuzz_testing_duplication_rate = 1.0; // -fuzz-rate
     std::string fuzz_testing_repro;             // -fuzz-repro
     bool debug_pipeline = false;                // -debug-pipeline
+    bool sir_debug_pipeline = false;            // -sir-debug-pipeline
     IR::CliOptions cli_opt_options;             // --xxx, --no-xxx
 
 #if GNALC_EXTENSION_A32
@@ -104,6 +113,8 @@ int main(int argc, char **argv) {
             output_file = argv[i];
         } else if (arg == "-S")
             only_compilation = true;
+        else if (arg == "-emit-sir")
+            emit_sir = true;
         else if (arg == "-emit-llvm")
             emit_llvm = true;
         else if (arg == "-emit-llc")
@@ -145,7 +156,10 @@ int main(int argc, char **argv) {
         OPT_ARG("--lsr", "--no-lsr", loop_strength_reduce)
         OPT_ARG("--loopelim", "--no-loopelim", loopelim)
         OPT_ARG("--vectorizer", "--no-vectorizer", vectorizer)
-        OPT_ARG("--jumpthreading", "--no-jumpthreading", jump_threading)
+        OPT_ARG("--rngsimplify", "--no-rngsimplify", rngsimplify)
+        OPT_ARG("--dae", "--no-dae", dae)
+        OPT_ARG("--memo", "--no-memo", memo)
+        OPT_ARG("--unifyexits", "--no-unifyexits", unify_exits)
         OPT_ARG("--internalize", "--no-internalize", internalize)
         // Module Transforms
         OPT_ARG("--treeshaking", "--no-treeshaking", tree_shaking)
@@ -176,6 +190,7 @@ int main(int argc, char **argv) {
             fuzz_testing_repro = argv[i];
         }
         else if (arg == "-debug-pipeline") debug_pipeline = true;
+        else if (arg == "-sir-debug-pipeline") sir_debug_pipeline = true;
         else if (arg == "--ann") cli_opt_options.advance_name_norm = true;
         else if (arg == "--verify") cli_opt_options.verify.enable();
         else if (arg == "--strict") {
@@ -240,7 +255,10 @@ Optimizations Flags:
   --lsr                - Loop strength reduction
   --loopelim           - Loop elimination
   --vectorizer         - Vectorizer
-  --jumpthreading      - Jump threading
+  --rngsimplify        - Value range aware redundancy elimination
+  --dae                - Dead argument elimination
+  --memo               - Automatic function memoization
+  --unifyexits         - Unify function return nodes
   --internalize        - Internalize global variables
   --treeshaking        - Shake off unused functions, function declarations and global variables
 
@@ -248,7 +266,8 @@ Debug options:
   -fuzz                      - Enable fuzz testing pipeline
   -fuzz-rate <rate: double>  - Set the duplication rate for fuzz testing pipeline
   -fuzz-repro <pipeline>     - Reproduce specific fuzz pipeline. Find <pipeline> in the fuzz testing log
-  -debug-pipeline            - Use built-in debugging pipeline
+  -debug-pipeline            - Use built-in debugging IR pipeline
+  -sir-debug-pipeline        - Use built-in debugging SIR pipeline
   --no-<pass>                - Disable specific optimization pass
   --ann                      - Use the advance name normalization result (after IRGen) (This disables the one at the last)
   --verify                   - Enable IR verification after passes
@@ -329,11 +348,17 @@ Extensions:
     if (!input_file.empty())
         fclose(yyin);
 
-    IR::FAM fam;
-    IR::MAM mam;
-    IR::PassBuilder::registerFunctionAnalyses(fam);
-    IR::PassBuilder::registerModuleAnalyses(mam);
-    IR::PassBuilder::registerProxies(fam, mam);
+    std::ostream *poutstream = &std::cout;
+    std::ofstream outfile;
+
+    if (!output_file.empty()) {
+        outfile.open(output_file);
+        if (!outfile.is_open()) {
+            std::cerr << "Error: Failed to open output file '" << output_file << "'." << std::endl;
+            return -1;
+        }
+        poutstream = &outfile;
+    }
 
     IR::PMOptions pm_options{};
     if (o0_optnone)
@@ -354,6 +379,38 @@ Extensions:
         pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::DisableIfDefault);
     }
 
+    // SIR
+    SIR::LFAM sir_lfam;
+    SIR::MAM sir_mam;
+    SIR::LinearPassBuilder::registerFunctionAnalyses(sir_lfam);
+    SIR::LinearPassBuilder::registerModuleAnalyses(sir_mam);
+    SIR::LinearPassBuilder::registerProxies(sir_lfam, sir_mam);
+
+    SIR::MPM sir_mpm;
+    if (sir_debug_pipeline)
+        sir_mpm = SIR::LinearPassBuilder::buildModuleDebugPipeline();
+    else if (fixed_point_pipeline)
+        sir_mpm = SIR::LinearPassBuilder::buildModuleFixedPointPipeline(pm_options);
+    else
+        sir_mpm = SIR::LinearPassBuilder::buildModulePipeline(pm_options);
+
+    if (emit_sir) {
+        sir_mpm.addPass(SIR::PrintLinearModulePass(*poutstream));
+        sir_mpm.run(generator.get_module(), sir_mam);
+        return 0;
+    }
+
+    sir_mpm.run(generator.get_module(), sir_mam);
+    IR::CFGBuilder cfg_builder;
+    cfg_builder.build(generator.get_module());
+
+    // IR
+    IR::FAM fam;
+    IR::MAM mam;
+    IR::PassBuilder::registerFunctionAnalyses(fam);
+    IR::PassBuilder::registerModuleAnalyses(mam);
+    IR::PassBuilder::registerProxies(fam, mam);
+
     IR::MPM mpm;
     if (debug_pipeline)
         mpm = IR::PassBuilder::buildModuleDebugPipeline();
@@ -364,18 +421,6 @@ Extensions:
         mpm = IR::PassBuilder::buildModuleFixedPointPipeline(pm_options);
     else
         mpm = IR::PassBuilder::buildModulePipeline(pm_options);
-
-    std::ostream *poutstream = &std::cout;
-    std::ofstream outfile;
-
-    if (!output_file.empty()) {
-        outfile.open(output_file);
-        if (!outfile.is_open()) {
-            std::cerr << "Error: Failed to open output file '" << output_file << "'." << std::endl;
-            return -1;
-        }
-        poutstream = &outfile;
-    }
 
     if (emit_llvm) {
         mpm.addPass(IR::PrintModulePass(*poutstream));

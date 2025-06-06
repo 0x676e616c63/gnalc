@@ -140,6 +140,7 @@ public:
     void setTailCall(bool is_tail_call_);
     bool isTailCall() const;
 
+    bool removeArg(size_t index);
 private:
     pVal cloneImpl() const override {
         if (isVoid()) {

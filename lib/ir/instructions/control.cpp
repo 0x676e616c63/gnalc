@@ -158,6 +158,11 @@ void CALLInst::setTailCall(bool is_tail_call_) { is_tail_call = is_tail_call_; }
 
 bool CALLInst::isTailCall() const { return is_tail_call; }
 
+bool CALLInst::removeArg(size_t index) {
+    Err::gassert(index + 1 < getNumOperands());
+    return delOperand(index + 1);
+}
+
 SELECTInst::SELECTInst(NameRef name, const pVal &cond, const pVal &true_val, const pVal &false_val)
 : Instruction(OP::SELECT, name, true_val->getType()) {
     Err::gassert(isSameType(true_val->getType(), false_val->getType()));

@@ -14,9 +14,10 @@
 #ifndef GNALC_IR_PASSES_ANALYSIS_SCEV_HPP
 #define GNALC_IR_PASSES_ANALYSIS_SCEV_HPP
 
-#include "ir/passes/pass_manager.hpp"
 #include "domtree_analysis.hpp"
+#include "ir/passes/pass_manager.hpp"
 #include "loop_analysis.hpp"
+#include "range_analysis.hpp"
 
 #include <optional>
 
@@ -42,13 +43,18 @@ private:
 
 public:
     bool operator==(const SCEVExpr &other) const { return type == other.type && value == other.value; }
-    explicit SCEVExpr(Value *ir_val) : value(ir_val), type(SCEVExprType::Value) {}
+    explicit SCEVExpr(Value *ir_val) : value(ir_val), type(SCEVExprType::Value) {
+        Err::gassert(ir_val != nullptr);
+    }
     explicit SCEVExpr(Binary::Op op, SCEVExpr *lhs, SCEVExpr *rhs)
-        : type(SCEVExprType::Binary), value(Binary{op, lhs, rhs}) {}
+        : type(SCEVExprType::Binary), value(Binary{op, lhs, rhs}) {
+        Err::gassert(lhs != nullptr && rhs != nullptr);
+    }
 
     void setIRValue(Value *ir_val) {
         value = ir_val;
         type = SCEVExprType::Value;
+        Err::gassert(ir_val != nullptr);
     }
     bool isIRValue() const { return type == SCEVExprType::Value; }
     bool isBinary() const { return type == SCEVExprType::Binary; }
@@ -147,12 +153,12 @@ public:
 
     // Get the exact value of the single backegde taken count
     // Nullptr is returned if there are multiple backegdes.
-    SCEVExpr *getBackEdgeTakenCount(const Loop *loop);
-    SCEVExpr *getBackEdgeTakenCount(const pLoop &loop);
+    SCEVExpr *getBackEdgeTakenCount(const Loop *loop, RangeResult *ranges = nullptr);
+    SCEVExpr *getBackEdgeTakenCount(const pLoop &loop, RangeResult *ranges = nullptr);
 
-    // Get the exact value of a loop's trip count
-    SCEVExpr *getTripCount(const Loop *loop);
-    SCEVExpr *getTripCount(const pLoop &loop);
+    // Get the exact value of a loop's trip count (the execution times of the header)
+    SCEVExpr *getTripCount(const Loop *loop, RangeResult *ranges = nullptr);
+    SCEVExpr *getTripCount(const pLoop &loop, RangeResult *ranges = nullptr);
 
     // Expand the SCEV Expression. Returns the expanded IR Value.
     // New instructions will be inserted before `insert_before`.
@@ -173,6 +179,8 @@ public:
     //       since GVN-PRE may eliminate some redundant instructions.
     std::optional<size_t> estimateExpansionCost(SCEVExpr* expr, const pBlock& block) const;
     std::optional<size_t> estimateExpansionCost(TREC* addrec);
+
+    void forgetAll();
 private:
     pVal expandSCEVExprImpl(SCEVExpr* expr, const pBlock& block,
         BasicBlock::iterator insert_before, std::map<SCEVExpr*, pVal>& inserted) const;
@@ -234,6 +242,7 @@ private:
     Function *function;
     LoopInfo *loop_info;
     DomTree *domtree;
+    RangeResult *ranges;
 
     // cache for analyzeEvolution
     std::map<const Value *, TREC *> evolution;

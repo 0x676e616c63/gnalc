@@ -29,7 +29,10 @@ namespace IR {
     GNALC_IR_PASS_ENTRY(loop_unroll) \
     GNALC_IR_PASS_ENTRY(indvars) \
     GNALC_IR_PASS_ENTRY(vectorizer) \
-    GNALC_IR_PASS_ENTRY(jump_threading) \
+    GNALC_IR_PASS_ENTRY(rngsimplify) \
+    GNALC_IR_PASS_ENTRY(dae) \
+    GNALC_IR_PASS_ENTRY(memo) \
+    GNALC_IR_PASS_ENTRY(unify_exits) \
     GNALC_IR_PASS_ENTRY(tree_shaking) \
     GNALC_IR_PASS_ENTRY(verify) \
 

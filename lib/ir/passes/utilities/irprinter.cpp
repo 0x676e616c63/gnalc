@@ -1,8 +1,9 @@
 #include "ir/passes/utilities/irprinter.hpp"
+#include "ir/formatter.hpp"
 #include "ir/passes/analysis/live_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
+#include "ir/passes/analysis/range_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
-#include "ir/formatter.hpp"
 #include "utils/logger.hpp"
 
 namespace IR {
@@ -11,17 +12,6 @@ void PrinterBase::visit(GlobalVariable &node) { writeln(IRFormatter::formatGV(no
 void PrinterBase::visit(FunctionDecl &node) { write(IRFormatter::formatFuncDecl(node)); }
 
 void PrinterBase::visit(Instruction &node) {
-    // if (printLiveInfo) {
-    //     write("  ; livein:");
-    //     for (auto &val : liveness.getLiveIn(&node))
-    //         write(" " + val->getName());
-    //     writeln("");
-    //     write("  ; liveout:");
-    //     for (auto &val : liveness.getLiveOut(&node))
-    //         write(" " + val->getName());
-    //     writeln("");
-    // }
-
     // It seems there is no nested scope, so it is a fixed indent.
     write("  ");
 
@@ -39,19 +29,17 @@ void PrinterBase::visit(Function &node) {
 }
 
 void PrinterBase::visit(BasicBlock &node) {
-    // if (printLiveInfo) {
-    //     write("; livein:");
-    //     for (auto &val : liveness.getLiveIn(&node))
-    //         write(" " + val->getName());
-    //     writeln("");
-    //     write("; liveout:");
-    //     for (auto &val : liveness.getLiveOut(&node))
-    //         write(" " + val->getName());
-    //     writeln("");
-    // }
-
     write(IRFormatter::formatBB(node));
-    writeln(":");
+    write(":        ;preds = ");
+    std::string predstr;
+    for (const auto &pred : node.getPreBB())
+        predstr += pred->getName() + ", ";
+    if (!predstr.empty()) {
+        predstr.pop_back();
+        predstr.pop_back();
+    }
+    writeln(predstr);
+
     for (const auto &inst : node.phis())
         inst->Instruction::accept(*this);
     for (const auto &inst : node.getInsts())
@@ -60,17 +48,11 @@ void PrinterBase::visit(BasicBlock &node) {
 }
 
 PM::PreservedAnalyses PrintFunctionPass::run(Function &func, FAM &fam) {
-    // if (printLiveInfo)
-    //     liveness = fam.getResult<LiveAnalysis>(func);
-
     func.accept(*this);
     return PreserveAll();
 }
 
 PM::PreservedAnalyses PrintModulePass::run(Module &module, MAM &mam) {
-    // if (printLiveInfo)
-    //     Err::todo("FIXME: Module's printLiveInfo not available");
-
     writeln("; Module: " + module.getName());
     writeln("");
 
@@ -140,15 +122,16 @@ PM::PreservedAnalyses PrintDebugMessagePass::run(Function &func, FAM &fam) {
 PM::PreservedAnalyses PrintSCEVPass::run(Function &function, FAM &fam) {
     auto &scev = fam.getResult<SCEVAnalysis>(function);
     auto &loop_info = fam.getResult<LoopAnalysis>(function);
+    auto &ranges = fam.getResult<RangeAnalysis>(function);
     writeln("SCEV Analysis Result: ");
     for (const auto &top_level : loop_info) {
         auto ldfv = top_level->getDFVisitor();
         for (const auto &loop : ldfv) {
-            auto trip_cnt = scev.getTripCount(loop);
+            auto trip_cnt = scev.getTripCount(loop, &ranges);
             if (trip_cnt)
-                writeln("Trip Count: ", *trip_cnt);
+                writeln("'", loop->getHeader()->getName(), "' Trip Count: ", *trip_cnt);
             else
-                writeln("Trip Count: <null> :(");
+                writeln("'", loop->getHeader()->getName(), "' Trip Count: <null> :(");
         }
     }
     const DomTree &domtree = fam.getResult<DomTreeAnalysis>(function);
@@ -165,6 +148,59 @@ PM::PreservedAnalyses PrintSCEVPass::run(Function &function, FAM &fam) {
                 Err::gassert(s != nullptr);
                 // if (!s->isUntracked())
                 writeln(inst->getName(), " at block '", scev_block->getName(), "': ", *s);
+            }
+        }
+    }
+    return PreserveAll();
+}
+
+PM::PreservedAnalyses PrintRangePass::run(Function &function, FAM &manager) {
+    auto &ranges = manager.getResult<RangeAnalysis>(function);
+    writeln("Range Analysis Result: ");
+    writeln("Global Ranges: ");
+    for (const auto& param : function.getParams()) {
+        if (isSameType(param->getType(), makeBType(IRBTYPE::I32))) {
+            auto r = ranges.getIntRange(param);
+            writeln(param->getName(), ": ", r);
+        } else if (isSameType(param->getType(), makeBType(IRBTYPE::FLOAT))) {
+            auto r = ranges.getFloatRange(param);
+            writeln(param->getName(), ": ", r);
+        }
+    }
+    for (const auto &bb : function) {
+        for (const auto &inst : bb->all_insts()) {
+            if (isSameType(inst->getType(), makeBType(IRBTYPE::I32))) {
+                auto r = ranges.getIntRange(inst);
+                writeln(inst->getName(), ": ", r);
+            } else if (isSameType(inst->getType(), makeBType(IRBTYPE::FLOAT))) {
+                auto r = ranges.getFloatRange(inst);
+                writeln(inst->getName(), ": ", r);
+            }
+        }
+    }
+
+    const DomTree &domtree = manager.getResult<DomTreeAnalysis>(function);
+    writeln("Contextual Ranges: ");
+    for (const auto &bb : function) {
+        for (const auto &inst : bb->all_insts()) {
+            if (isSameType(inst->getType(), makeBType(IRBTYPE::I32))) {
+                for (const auto &range_block : function) {
+                    if (!domtree.ADomB(bb, range_block))
+                        continue;
+                    auto context_r = ranges.getIntRange(inst, range_block);
+                    auto r = ranges.getIntRange(inst);
+                    if (r != context_r)
+                        writeln(inst->getName(), " at block '", range_block->getName(), "': ", context_r);
+                }
+            } else if (isSameType(inst->getType(), makeBType(IRBTYPE::FLOAT))) {
+                for (const auto &range_block : function) {
+                    if (!domtree.ADomB(bb, range_block))
+                        continue;
+                    auto context_r = ranges.getFloatRange(inst, range_block);
+                    auto r = ranges.getFloatRange(inst);
+                    if (r != context_r)
+                    writeln(inst->getName(), " at block '", range_block->getName(), "': ", context_r);
+                }
             }
         }
     }

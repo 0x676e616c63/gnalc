@@ -14,44 +14,45 @@ DomTree DomTreeAnalysis::run(Function &f, FAM &fam) {
 
 PostDomTree PostDomTreeAnalysis::run(Function &f, FAM &fam) {
     PostDomTreeBuilder builder;
-    setExit(f);
-    builder.entry = exit.get();
+    PDTBuildContext ctx;
+    setExit(f, ctx);
+    builder.entry = ctx.exit.get();
     builder.analyze();
-    if (is_exit_virtual) {
+    if (ctx.is_exit_virtual) {
         // If the root is virtual, then it is linked to a virtual block that is going to destructs
         // when `exit = nullptr`
         builder.domtree.root()->setBlock(nullptr);
     }
-    restoreCFG();
-    exit = nullptr;
-    is_exit_virtual = false;
+    restoreCFG(ctx);
+    ctx.exit = nullptr;
+    ctx.is_exit_virtual = false;
     return builder.domtree;
 }
 
-void PostDomTreeAnalysis::setExit(const Function &f) {
+void PostDomTreeAnalysis::setExit(const Function &f, PDTBuildContext& ctx) {
     const auto exit_bbs = f.getExitBBs();
     if (exit_bbs.empty()) {
         Err::unreachable("PostDomTreeAnalysis::setExit(): no exit!");
     }
     if (exit_bbs.size() == 1) {
-        exit = exit_bbs.front();
-        is_exit_virtual = false;
+        ctx.exit = exit_bbs.front();
+        ctx.is_exit_virtual = false;
     } else {
-        exit = std::make_shared<BasicBlock>("VIRTUAL_EXIT_NODE");
+        ctx.exit = std::make_shared<BasicBlock>("VIRTUAL_EXIT_NODE");
         for (const auto &b : exit_bbs) {
-            b->addNextBB(exit);
-            exit->addPreBB(b);
+            b->addNextBB(ctx.exit);
+            ctx.exit->addPreBB(b);
         }
-        is_exit_virtual = true;
+        ctx.is_exit_virtual = true;
     }
 }
 
-void PostDomTreeAnalysis::restoreCFG() const {
-    if (!is_exit_virtual)
+void PostDomTreeAnalysis::restoreCFG(PDTBuildContext& ctx) const {
+    if (!ctx.is_exit_virtual)
         return;
-    for (const auto &real_exit : exit->preds()) {
+    for (const auto &real_exit : ctx.exit->preds()) {
         real_exit->next_bb.clear();
     }
-    exit->pre_bb.clear();
+    ctx.exit->pre_bb.clear();
 }
 } // namespace IR

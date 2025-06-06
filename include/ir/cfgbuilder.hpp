@@ -1,13 +1,14 @@
 /**
- * @brief 基本块划分，生成CFG，在 IRGenerator 中调用
+ * @brief 基本块划分，生成CFG
  * @attention !!!需要尽量确保第一个BB是entry, 最后一个是return
  */
 
 #pragma once
 
-#ifndef GNALC_PARSER_CFGBUILDER_HPP
-#define GNALC_PARSER_CFGBUILDER_HPP
+#ifndef GNALC_IR_PASSES_TRANSFORMS_CFGBUILDER_HPP
+#define GNALC_IR_PASSES_TRANSFORMS_CFGBUILDER_HPP
 
+#include "sir/base.hpp"
 #include "ir/base.hpp"
 #include "ir/basic_block.hpp"
 #include "ir/function.hpp"
@@ -17,8 +18,8 @@
 
 #include <stack>
 
-namespace Parser {
-// 通过Func中的insts划分基本块
+namespace IR {
+// 通过 Func 中的 insts 划分基本块
 class CFGBuilder {
 private:
     struct _idx {
@@ -58,30 +59,29 @@ private:
             lorlfidx = 1;
         }
     } nam; // new BB index or name
-    std::shared_ptr<IR::LinearFunction> cur_linear_func;
-    IR::pFunc cur_making_func;
-    IR::pBlock cur_blk;
-    std::stack<IR::pBlock> _while_cond_for_continue;
-    std::stack<IR::pBlock> _while_end_for_break;
+    std::shared_ptr<LinearFunction> cur_linear_func;
+    pFunc cur_making_func;
+    pBlock cur_blk;
+    std::stack<pBlock> _while_cond_for_continue;
+    std::stack<pBlock> _while_end_for_break;
 
-    bool adder(std::vector<std::shared_ptr<IR::Instruction>>::const_iterator &it,
-               const std::vector<std::shared_ptr<IR::Instruction>>::const_iterator &end,
+    bool adder(std::list<pInst>::const_iterator &it,
+               const std::list<pInst>::const_iterator &end,
                bool allow_break); // 将inst加进cur_blk，返回值为是否已插入终结语句ret,
                                   // br
-    void newIf(const std::shared_ptr<IR::IFInst> &ifinst);
-    void newWh(const std::shared_ptr<IR::WHILEInst> &whinst);
+    void newIf(const std::shared_ptr<IFInst> &ifinst);
+    void newWh(const std::shared_ptr<WHILEInst> &whinst);
 
-    void short_circuit_process(const std::shared_ptr<IR::CONDValue> &cond, const IR::pBlock &true_blk,
-                               const IR::pBlock &false_blk);
+    void short_circuit_process(const std::shared_ptr<CONDValue> &cond, const pBlock &true_blk,
+                               const pBlock &false_blk);
     // 包含了短路cond和普通cond两种处理
-    void addCondBr(const std::shared_ptr<IR::Value> &cond, const IR::pBlock &true_blk, const IR::pBlock &false_blk);
+    void addCondBr(const std::shared_ptr<Value> &cond, const pBlock &true_blk, const pBlock &false_blk);
     void divider();
-    void linker();
 
 public:
-    void build(IR::Module &);
+    void build(Module &);
 };
 
-} // namespace Parser
+} // namespace IR
 
 #endif

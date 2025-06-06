@@ -175,7 +175,7 @@ public:
     virtual void accept(class IRVisitor &visitor) { Err::not_implemented("Value::accept"); }
 
     // Warning: this MUST NOT be called by another clone. (Except Function::cloneImpl)
-    // Note that Instruction's clone only don't clone their operands.
+    // Note that Instruction's clone don't clone their operands.
     // Only Function's clone will return an independent function with independent instructions.
     pVal clone() const {
         auto cloned = cloneImpl();

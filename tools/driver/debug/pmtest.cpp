@@ -51,6 +51,20 @@ public:
     }
 };
 
+PM::AnalysisStorage<IR::Function> fas;
+
+
+class TestStoreAnalysisPass : public PM::PassInfo<TestStoreAnalysisPass> {
+public:
+    PM::PreservedAnalyses run(IR::Function &f, IR::FAM &fam) {
+        std::cout << "TestStoreAnalysisPass::run: func_name: " << f.getName() << std::endl;
+        auto res = fam.getResult<TestAnalysis>(f);
+        std::cout << "Stored result: " << res.get() << std::endl;
+        fas.storeResult<TestAnalysis>(f, res);
+        return PM::PreservedAnalyses::none();
+    }
+};
+
 std::shared_ptr<AST::CompUnit> node = nullptr;
 
 int main() {
@@ -75,10 +89,19 @@ int main() {
     fpm.addPass(TestNoPreservedFunctionPass());
     fpm.addPass(TestFunctionPass());
     fpm.addPass(TestFunctionPass());
+    fpm.addPass(TestStoreAnalysisPass());
     fpm.addPass(IR::NameNormalizePass(true));
     mpm.addPass(IR::makeModulePass(std::move(fpm)));
     mpm.addPass(IR::PrintModulePass(std::cout));
     mam.registerPass([&] { return IR::FAMProxy(fam); });
     mpm.run(irgen.get_module(), mam);
+
+    for (auto &func : irgen.get_module().getFunctions()) {
+        auto res = fas.getStoredResult<TestAnalysis>(*func);
+        if (res)
+            std::cout << "Got stored result: " << res->get() << std::endl;
+        else
+            std::cout << "No stored result" << std::endl;
+    }
     return 0;
 }

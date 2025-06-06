@@ -132,10 +132,11 @@ public:
     bool isLCSSAForm() const;
     bool isRecursivelyLCSSAForm(const LoopInfo &loop_info) const;
 
-    bool isLoopInvariant(const Value *val) const;
-    bool isLoopInvariant(const pVal &val) const;
-    bool isAllOperandsLoopInvariant(const Instruction *inst) const;
-    bool isAllOperandsLoopInvariant(const pInst &inst) const;
+    // Trivially Invariant: not in the loop
+    bool isTriviallyInvariant(const Value *val) const;
+    bool isTriviallyInvariant(const pVal &val) const;
+    bool isAllOperandsTriviallyInvariant(const Instruction *inst) const;
+    bool isAllOperandsTriviallyInvariant(const pInst &inst) const;
 
     void moveToHeader(const BasicBlock *bb);
     void moveToHeader(const pBlock &bb);

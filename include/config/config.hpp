@@ -10,6 +10,9 @@ constexpr auto MEMSET_INTRINSIC_NAME = "@llvm.memset.p0i8.i32";
 constexpr auto MEMCPY_INTRINSIC_NAME = "@llvm.memcpy.p0.p0.i32";
 constexpr auto LOCAL_ARRAY_MEMSET_THRESHOLD = 32;
 
+// Memoization
+constexpr auto MEMOIZATION_LOOKUP_INTRINSIC_NAME = "@gnalc.memoization.lookup";
+
 // GVN-PRE
 // Some operations in GVN-PRE are time-consuming,
 // so we set some thresholds to ensure acceptable compilation times.
@@ -35,7 +38,7 @@ constexpr auto LOOP_ELIMINATION_EXPANSION_COST_RATIO = 10;
 // We don't expand if that will insert more than `THRESHOLD` instructions.
 // a base + a step + an update + a phi
 // FIXME: I don't know if this threshold is reasonable.
-constexpr auto LSR_EXPANSION_THRESHOLD = 5;
+constexpr auto LSR_EXPANSION_THRESHOLD = 8;
 
 // Internalize
 // Avoid internalizing global variables whose size is larger than this threshold.
@@ -53,6 +56,9 @@ constexpr unsigned LOOP_UNROLLING_MAX_PROCESS_SIZE = 100;
 
 // If Conversion
 constexpr auto IF_CONVERSION_DUPLICATION_THRESHOLD = 4;
+
+// Range Analysis
+constexpr auto RANGE_ANALYSIS_MAX_PROCESS_CNT = 32;
 } // namespace Config::IR
 
 namespace Config::MIR {
