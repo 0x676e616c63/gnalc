@@ -457,6 +457,7 @@ void ISelInfo::legalizeWithStkGep(InstLegalizeContext &_ctx, MIROperand_p mop, c
             // mov %mop, %valoffset
             // add %mop, %mop, sp
             // add %mop, %mop, #stkobj_offset
+            // somewhere : str/ldr ... [%mop]
             auto var_offset = minst->getOp(2);
 
             minsts.insert(iter, MIRInst::make(OpC::InstCopy)

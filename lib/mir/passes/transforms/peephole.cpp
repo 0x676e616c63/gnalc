@@ -550,10 +550,10 @@ bool GenericPeepholeImpl::matchSelect(MatchInfo &info) {
 }
 
 bool GenericPeepholeImpl::matchFusedAdr(MatchInfo &info) {
-    if (stage != Stage::AfterStackGenerate) {
+    if (stage != Stage::AfterPostLegalize) {
         return false;
     }
-
+    ///@todo
     return false;
 }
 

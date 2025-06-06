@@ -36,27 +36,22 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
 
     using Stage = GenericPeephole::Stage;
 
-    fpm.addPass(ISel());
+    // clang-format off
+    
+                                            fpm.addPass(ISel());
+    opt_info.peephole_afterIsel ?           fpm.addPass(GenericPeephole(Stage::AfterIsel)) : nop;
+    opt_info.CFGsimplifyBeforeRa ?          fpm.addPass(CFGsimplifyBeforeRA()) : nop;
+    opt_info.redundantLoadEli ?             fpm.addPass(RedundantLoadEli()) : nop;
+                                            fpm.addPass(PreRAlegalize());
+                                            fpm.addPass(RegisterAlloc());
+    opt_info.peephole_afterRa ?             fpm.addPass(GenericPeephole(Stage::AfterRa)) : nop;
+                                            fpm.addPass(StackGenerate());
+    opt_info.peephole_afterStackGenerate ?  fpm.addPass(GenericPeephole(Stage::AfterPostLegalize)) : nop;
+    opt_info.CFGsimplifyAfterRa ?           fpm.addPass(CFGsimplifyAfterRA()) : nop;
+                                            fpm.addPass(PostRAlegalize());
+    opt_info.PostRaScheduling ?             fpm.addPass(PostRaScheduling()) : nop;
 
-    if (opt_info.peephole_afterIsel)
-        fpm.addPass(GenericPeephole(Stage::AfterIsel));
-    if (opt_info.CFGsimplifyBeforeRa)
-        fpm.addPass(CFGsimplifyBeforeRA());
-    if (opt_info.redundantLoadEli)
-        fpm.addPass(RedundantLoadEli());
-    fpm.addPass(PreRAlegalize());
-    fpm.addPass(RegisterAlloc());
-    if (opt_info.peephole_afterRa)
-        fpm.addPass(GenericPeephole(Stage::AfterRa));
-    fpm.addPass(StackGenerate());
-    if (opt_info.peephole_afterStackGenerate)
-        fpm.addPass(GenericPeephole(Stage::AfterStackGenerate));
-    if (opt_info.CFGsimplifyAfterRa)
-        fpm.addPass(CFGsimplifyAfterRA());
-    fpm.addPass(PostRAlegalize());
-    if (opt_info.PostRaScheduling)
-        fpm.addPass(PostRaScheduling());
-
+    // clang-format on
     return fpm;
 }
 
