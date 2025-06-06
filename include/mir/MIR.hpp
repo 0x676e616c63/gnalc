@@ -526,8 +526,8 @@ public:
     size_t &spill() { return spilled; }
     size_t spill() const { return spilled; }
 
-    auto &CodeGenContext() { return ctx; }
-    const auto &CodeGenContext() const { return ctx; }
+    auto &Context() { return ctx; }
+    const auto &Context() const { return ctx; }
 
     bool isProgramEntry() {
         return getmSym() == "main"; // 求放过

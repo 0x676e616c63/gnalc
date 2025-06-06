@@ -1,5 +1,3 @@
-# 使用方法 vscode CS 128 Clang-Tidy + /usr/bin/clang-tidy
-# 比 C++ Extension 的 clang-tidy 更快更准
 ---
 Checks: '-*,
         clang-analyzer-*,

@@ -16,7 +16,7 @@ void PostRAlegalizeImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     mfunc = &_mfunc;
 
     for (auto &mblk : mfunc->blks()) {
-        runOnBlk(mblk, mfunc->CodeGenContext());
+        runOnBlk(mblk, mfunc->Context());
     }
 }
 

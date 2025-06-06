@@ -9,6 +9,8 @@
 
 #define nop (void)0
 
+///@note 0 as arg of ctz/clz is ub
+
 inline int popcounter_wrapper(unsigned short vic) { return __builtin_popcount(static_cast<unsigned>(vic)); }
 
 inline int popcounter_wrapper(unsigned vic) { return __builtin_popcount(vic); }
@@ -17,21 +19,33 @@ inline int popcounter_wrapper(int vic) { return __builtin_popcount(vic); }
 
 inline int popcounter_wrapper(unsigned long long vic) { return __builtin_popcountll(vic); }
 
-inline int clz_wrapper(unsigned short vic) { return __builtin_clzs(vic); }
+inline int clz_wrapper(unsigned short vic) {
+#if defined(__clang__)
+    return vic ? __builtin_clzs(vic) : 16;
+#else
+    return vic ? __builtin_ctz((unsigned int)vic) : 16;
+#endif
+}
 
-inline int ctz_wrapper(unsigned short vic) { return __builtin_ctzs(vic); }
+inline int ctz_wrapper(unsigned short vic) {
+#if defined(__clang__)
+    return vic ? __builtin_ctzs(vic) : 0;
+#else
+    return vic ? __builtin_ctz((unsigned int)vic) : 0;
+#endif
+}
 
-inline int clz_wrapper(unsigned vic) { return __builtin_clz(vic); }
+inline int clz_wrapper(unsigned vic) { return vic ? __builtin_clz(vic) : 32; }
 
-inline int ctz_wrapper(unsigned vic) { return __builtin_ctz(vic); }
+inline int ctz_wrapper(unsigned vic) { return vic ? __builtin_ctz(vic) : 0; }
 
-inline int clz_wrapper(int vic) { return __builtin_clz(vic); }
+inline int clz_wrapper(int vic) { return vic ? __builtin_clz(vic) : 32; }
 
-inline int ctz_wrapper(int vic) { return __builtin_ctz(vic); }
+inline int ctz_wrapper(int vic) { return vic ? __builtin_ctz(vic) : 0; }
 
-inline int clz_wrapper(unsigned long long vic) { return __builtin_clzll(vic); }
+inline int clz_wrapper(unsigned long long vic) { return vic ? __builtin_clzll(vic) : 64; }
 
-inline int ctz_wrapper(unsigned long long vic) { return __builtin_ctzll(vic); }
+inline int ctz_wrapper(unsigned long long vic) { return vic ? __builtin_ctzll(vic) : 0; }
 
 template <typename T> T rotate_shift_right(T value, int n) {
     const int total_bits = sizeof(T) * 8;

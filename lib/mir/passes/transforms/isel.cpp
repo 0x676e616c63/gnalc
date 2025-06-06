@@ -26,7 +26,7 @@ OpC MIR_new::chooseCopyOpC(const MIROperand_p &dst, const MIROperand_p &src) {
 }
 
 PM::PreservedAnalyses ISel::run(MIRFunction &mfunc, FAM &fam) {
-    ISelContext isel(mfunc.CodeGenContext());
+    ISelContext isel(mfunc.Context());
 
     isel.impl(&mfunc);
 
