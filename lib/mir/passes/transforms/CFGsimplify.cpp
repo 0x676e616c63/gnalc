@@ -92,7 +92,7 @@ void CFGsimplifyBeforeRAImpl::i1EliDetect(MIRBlk_p &mblk) {
 void CFGsimplifyBeforeRAImpl::i1UseConsolidate(MIRInst_p_l &minsts, MIRInst_p_l::iterator &cmp) {
 
     ///@brief make consolidate
-    auto &ctx = mfunc.CodeGenContext();
+    auto &ctx = mfunc.Context();
     auto cset = std::next(cmp);
     auto cbnz = std::next(cset);
     // auto b = std::next(cbnz);
@@ -124,7 +124,7 @@ void CFGsimplifyAfterRAImpl::impl() {
 void CFGsimplifyBeforeRAImpl::deadBlkEli() {
     std::unordered_set<MIRBlk_p> dead_blks;
 
-    auto &ctx = mfunc.CodeGenContext();
+    auto &ctx = mfunc.Context();
     auto &mblks = mfunc.blks();
 
     for (auto &mblk : mfunc.blks()) {
@@ -150,7 +150,7 @@ void CFGsimplifyBeforeRAImpl::deadBlkEli() {
 
 void CFGsimplifyAfterRAImpl::brColsure() {
     auto &mblks = mfunc.blks();
-    auto &ctx = mfunc.CodeGenContext();
+    auto &ctx = mfunc.Context();
 
     std::unordered_set<MIRBlk_p> useless_blks;
 
@@ -219,7 +219,7 @@ void CFGsimplifyAfterRAImpl::brColsure() {
 
 void CFGsimplifyAfterRAImpl::uselessCmpEli() {
 
-    auto &ctx = mfunc.CodeGenContext();
+    auto &ctx = mfunc.Context();
 
     for (auto &mblk : mfunc.blks()) {
         auto &minsts = mblk->Insts();
@@ -260,7 +260,7 @@ void CFGsimplifyAfterRAImpl::uselessCmpEli() {
 
 void CFGsimplifyAfterRAImpl::brSeqRev() {
     auto &mblks = mfunc.blks();
-    auto &ctx = mfunc.CodeGenContext();
+    auto &ctx = mfunc.Context();
 
     for (auto &mblk : mblks) {
 
@@ -281,7 +281,7 @@ void CFGsimplifyAfterRAImpl::brSeqRev() {
 
 void CFGsimplifyAfterRAImpl::brEli() {
     auto &mblks = mfunc.blks();
-    auto &ctx = mfunc.CodeGenContext();
+    auto &ctx = mfunc.Context();
 
     for (auto &mblk : mblks) {
 

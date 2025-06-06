@@ -120,12 +120,11 @@ void RedundantLoadEliImpl::ApplyCopys() {
             // 防止误改
             info.const_uses.at(info.lca).erase(iter_lca);
         } else {
-            loaded_constVal = MIROperand::asVReg(mfunc.CodeGenContext().nextId(), OpT::Int32);
+            loaded_constVal = MIROperand::asVReg(mfunc.Context().nextId(), OpT::Int32);
 
-            info.lca->addInstBeforeBr(
-                MIRInst::make(OpC::InstLoadImm)
-                    ->setOperand<0>(loaded_constVal, mfunc.CodeGenContext())
-                    ->setOperand<1>(MIROperand::asImme(constVal, OpT::Int32), mfunc.CodeGenContext()));
+            info.lca->addInstBeforeBr(MIRInst::make(OpC::InstLoadImm)
+                                          ->setOperand<0>(loaded_constVal, mfunc.Context())
+                                          ->setOperand<1>(MIROperand::asImme(constVal, OpT::Int32), mfunc.Context()));
         }
 
         for (auto &[mblk, uses] : info.const_uses) {
@@ -143,8 +142,8 @@ void RedundantLoadEliImpl::ApplyCopys() {
                 ///@note 1. 这里的copy没法消掉
                 ///@note 2. constVal被溢出
 
-                minst_loadImm->setOperand<0>(mop, mfunc.CodeGenContext());
-                minst_loadImm->setOperand<1>(loaded_constVal, mfunc.CodeGenContext());
+                minst_loadImm->setOperand<0>(mop, mfunc.Context());
+                minst_loadImm->setOperand<1>(loaded_constVal, mfunc.Context());
             }
         }
     }

@@ -10,7 +10,7 @@ namespace MIR_new {
 
 class GenericPeephole : public PM::PassInfo<GenericPeephole> {
 public:
-    enum Stage : uint32_t { AfterIsel, AfterRa, AfterStackGenerate } stage;
+    enum Stage : uint32_t { AfterIsel, AfterRa, AfterPostLegalize } stage;
 
 public:
     explicit GenericPeephole(Stage _stage) : stage(_stage) {}

@@ -205,14 +205,14 @@ enum ARMReg : uint32_t {
 
 enum ARMOpC : uint32_t {
     LDR,
-    STR,
     LDUR,
-    STUR,
     LD1,
     LD2,
     LD3,
     LD4,
     LD5,
+    STR,
+    STUR,
     ST1,
     ST2,
     ST3,

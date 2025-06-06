@@ -119,11 +119,11 @@ bool GenericPeepholeImpl::matchNop(MatchInfo &info) {
         auto diter = iter;
         ++iter;
 
-        (*diter)->putAllOp(mfunc->CodeGenContext());
+        (*diter)->putAllOp(mfunc->Context());
         minsts.erase(diter);
 
         // reference cnt not available after this
-        mfunc->CodeGenContext().abundantReferCntAvailable();
+        mfunc->Context().abundantReferCntAvailable();
         return true;
     } else {
         ++iter;
@@ -185,7 +185,7 @@ bool GenericPeepholeImpl::matchArithmetic(MatchInfo &info) {
         return minsts.end();
     };
     // LAMBDA END
-    auto &ctx = mfunc->CodeGenContext();
+    auto &ctx = mfunc->Context();
 
     if (isMUL()) {
         auto loadIter = findLoadImmtoOp2();
@@ -420,7 +420,7 @@ bool GenericPeepholeImpl::matchMA(MatchInfo &info) {
         return false;
     }
 
-    auto &ctx = mfunc->CodeGenContext();
+    auto &ctx = mfunc->Context();
     auto &minst = info.minst;
     auto &minsts = info.minsts;
     auto &iter = info.iter;
@@ -512,7 +512,7 @@ bool GenericPeepholeImpl::matchSelect(MatchInfo &info) {
         return false;
     }
 
-    auto &ctx = mfunc->CodeGenContext();
+    auto &ctx = mfunc->Context();
     auto &minst = info.minst;
     auto &minsts = info.minsts;
     auto &iter = info.iter;
@@ -550,17 +550,17 @@ bool GenericPeepholeImpl::matchSelect(MatchInfo &info) {
 }
 
 bool GenericPeepholeImpl::matchFusedAdr(MatchInfo &info) {
-    if (stage != Stage::AfterStackGenerate) {
+    if (stage != Stage::AfterPostLegalize) {
         return false;
     }
-
+    ///@todo
     return false;
 }
 
 bool GenericPeepholeImpl::removeByReference(MatchInfo &info) {
 
     auto &[minst, minsts, iter] = info;
-    auto &ctx = mfunc->CodeGenContext();
+    auto &ctx = mfunc->Context();
 
     if (!ctx.isReferCntAvailable()) {
         return false;

@@ -86,7 +86,7 @@ void StackGenerateImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     }
 
     // insert prologue/epilogue
-    auto &ctx = mfunc->CodeGenContext();
+    auto &ctx = mfunc->Context();
 
     ctx.frameInfo.insertPrologueEpilogue(mfunc, ctx);
 

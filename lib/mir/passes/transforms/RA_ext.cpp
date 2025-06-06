@@ -103,7 +103,7 @@ MIROperand_p RegisterAllocImpl::heuristicSpill() {
 }
 
 RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
-    auto &ctx = mfunc->CodeGenContext();
+    auto &ctx = mfunc->Context();
 
     auto getSize = [](OpT type) {
         switch (type) {
@@ -125,7 +125,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
     Nodes stageValues;
 
     auto mtype = mop->type();
-    auto stkobj = mfunc->addStkObj(mfunc->CodeGenContext(), getSize(mtype), getSize(mtype), 0, StkObjUsage::Spill);
+    auto stkobj = mfunc->addStkObj(mfunc->Context(), getSize(mtype), getSize(mtype), 0, StkObjUsage::Spill);
 
     for (auto &mblk : mfunc->blks()) {
         auto &minsts = mblk->Insts();
@@ -138,9 +138,9 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
                 auto readStage = MIROperand::asVReg(ctx.nextId(), mtype);
                 auto minst_load =
                     MIRInst::make(OpC::InstLoad)
-                        ->setOperand<0>(readStage, mfunc->CodeGenContext())
-                        ->setOperand<1>(stkobj, mfunc->CodeGenContext())
-                        ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special), mfunc->CodeGenContext());
+                        ->setOperand<0>(readStage, mfunc->Context())
+                        ->setOperand<1>(stkobj, mfunc->Context())
+                        ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special), mfunc->Context());
 
                 minsts.insert(it, minst_load);
 
@@ -153,9 +153,9 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
                 auto writeStage = MIROperand::asVReg(ctx.nextId(), mtype);
                 auto minst_store =
                     MIRInst::make(OpC::InstStore)
-                        ->setOperand<1>(writeStage, mfunc->CodeGenContext())
-                        ->setOperand<2>(stkobj, mfunc->CodeGenContext())
-                        ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special), mfunc->CodeGenContext());
+                        ->setOperand<1>(writeStage, mfunc->Context())
+                        ->setOperand<2>(stkobj, mfunc->Context())
+                        ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special), mfunc->Context());
 
                 minsts.insert(std::next(it), minst_store);
 

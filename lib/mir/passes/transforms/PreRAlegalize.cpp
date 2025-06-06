@@ -3,7 +3,7 @@
 using namespace MIR_new;
 
 PM::PreservedAnalyses PreRAlegalize::run(MIRFunction &mfunc, FAM &fam) {
-    preLegalizeFuncImpl(mfunc, mfunc.CodeGenContext());
+    preLegalizeFuncImpl(mfunc, mfunc.Context());
 
     return PM::PreservedAnalyses::all();
 }
