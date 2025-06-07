@@ -246,6 +246,8 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
         std::unordered_set<std::string> discovered_names;
         for (const auto &bb : function) {
             for (const auto &inst : bb->all_insts()) {
+                if (inst->getVTrait() != ValueTrait::ORDINARY_VARIABLE)
+                    continue;
                 if (inst->getName() == "") {
                     ++warning_cnt;
                     Logger::logWarning("[VerifyPass]: Instruction '", inst->getName(), "' has no name.");
