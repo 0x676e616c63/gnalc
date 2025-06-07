@@ -20,7 +20,6 @@ bool ISelInfo::isLegalGenericInst(MIRInst_p minst) const {
 }
 
 bool ISelInfo::match(MIRInst_p minst, ISelContext &ctx, bool allow) const {
-    ///@note 外部控制该函数循环执行, 直到没有新的修改
     bool ret = legalizeInst(minst, ctx); // not impl yet
     return ret;
 }
@@ -276,6 +275,17 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         }
 
     } break;
+    case OpC::InstLoadImmToReg: {
+        // instloadImm
+        // copy2reg
+        auto def = minst->ensureDef();
+        auto imme = minst->getOp(1);
+
+        ctx.delInst(minst);
+
+        auto loaded = loadImm(imme);
+        ctx.newInst(OpC::InstCopyToReg)->setOperand<0>(def, ctx.codeGenCtx())->setOperand<1>(loaded, ctx.codeGenCtx());
+    };
     default:
         ///@note 各种copy, 内存访问没有合法化
         break;
