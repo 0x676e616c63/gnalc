@@ -481,7 +481,7 @@ void RegisterAllocImpl::ReWriteProgram() {
 }
 
 RegisterAllocImpl::Nodes RegisterAllocImpl::Adjacent(const MIROperand_p &n) {
-    return getExclude<MIROperand_p>(adjList[n], Nodes(selectStack.begin(), selectStack.end()), coalescedNodes);
+    return getExclude<MIROperand_p>(adjList[n], std::unordered_set(selectStack.begin(), selectStack.end()), coalescedNodes);
 }
 
 RegisterAllocImpl::Moves RegisterAllocImpl::NodeMoves(const MIROperand_p &n) {
@@ -489,13 +489,14 @@ RegisterAllocImpl::Moves RegisterAllocImpl::NodeMoves(const MIROperand_p &n) {
 
     Moves movs{};
 
+    const auto& moveListOfn = moveList[n];
     for (const auto &p : activeMoves) {
-        if (moveList[n].count(p)) //
+        if (moveListOfn.count(p)) //
             movs.insert(p);
     }
 
     for (const auto &p : worklistMoves) {
-        if (moveList[n].count(p)) //
+        if (moveListOfn.count(p)) //
             movs.insert(p);
     }
 

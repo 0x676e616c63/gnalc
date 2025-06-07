@@ -4,7 +4,7 @@
 
 #include "config/config.hpp"
 #include "mir/passes/analysis/liveanalysis.hpp"
-#include <set>
+#include "utils/fast_set.hpp"
 
 namespace MIR_new {
 
@@ -16,10 +16,10 @@ public:
 
 class RegisterAllocImpl {
 public:
-    using OperSet = std::set<MIROperand_p>;
-    using WorkList = std::set<MIROperand_p>;
-    using Nodes = std::set<MIROperand_p>;
-    using Moves = std::set<MIRInst_p>;
+    using OperSet = Util::FastSet<MIROperand_p>;
+    using WorkList = Util::FastSet<MIROperand_p>;
+    using Nodes = Util::FastSet<MIROperand_p>;
+    using Moves = Util::FastSet<MIRInst_p>;
 
     struct Edge {
         MIROperand_p u, v;
@@ -65,9 +65,9 @@ protected:
     // others
     std::unordered_set<Edge, EdgeHash> adjSet;
     std::map<MIROperand_p, OperSet> adjList;
-    std::map<MIROperand_p, unsigned int> degree; // precolored will be initialize with -1
+    std::unordered_map<MIROperand_p, unsigned int> degree; // precolored will be initialize with -1
     std::unordered_map<MIROperand_p, Moves> moveList;
-    std::map<MIROperand_p, MIROperand_p> alias;
+    std::unordered_map<MIROperand_p, MIROperand_p> alias;
     // color
     unsigned int K;
 
@@ -176,17 +176,23 @@ protected:
         return set;
     }
 
+    template <typename T> auto getUnion(const Util::FastSet<T> &set1, const Util::FastSet<T> &set2) {
+        return Util::fastset_union(set1, set2);
+    }
+
     template <typename T, typename... Tsets> bool isInUnion(const T &elem, const Tsets &...sets) {
         return (sets.count(elem) | ...);
     }
 
     template <typename T, bool inOrder = true, typename... Tsets>
-    auto getExclude(const std::set<T> &victim, const Tsets &...sets) {
+    auto getExclude(const Util::FastSet<T> &victim, const Tsets &...sets) {
         if constexpr (inOrder) {
-            auto exclude_union = getUnion<T>(sets...);
-            std::set<T> result;
-            std::set_difference(victim.begin(), victim.end(), exclude_union.begin(), exclude_union.end(),
-                                std::inserter(result, result.end()));
+            Util::FastSet<T> result;
+            result.reserve(victim.size());
+            for (const auto& elem : victim) {
+                if ((!sets.count(elem) && ...))
+                    result.insert(elem);
+            }
             return result;
         } else {
             auto exclude_unioon = getUnion<T, false>(sets...);
