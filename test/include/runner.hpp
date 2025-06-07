@@ -50,8 +50,6 @@ static TestResult run_test(const TestData &data, bool only_run_frontend, size_t 
 
         link_command += format("llvm-link 2>&1 {} {} -o {}", data.sylib, out_source, outbc);
 
-        // /bin/echo is the one in GNU coreutils
-        // Not the one in sh or bash.
         exec_command = format("lli {} < {} > {} 2>{}", outbc,
                               std::filesystem::exists(testcase_in) ? testcase_in : "/dev/null", output, outtime);
     } else {
@@ -71,6 +69,9 @@ static TestResult run_test(const TestData &data, bool only_run_frontend, size_t 
         //     format("{} < {} > {} 2>{}",
         //            outexec, std::filesystem::exists(testcase_in) ? testcase_in : "/dev/null", output, outtime);
     }
+
+    // /bin/echo is the one in GNU coreutils
+    // Not the one in sh or bash.
     exec_command += R"(;/bin/echo -e "\n"$? >> )" + output;
 
     println("");

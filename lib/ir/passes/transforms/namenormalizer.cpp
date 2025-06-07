@@ -30,4 +30,9 @@ void NameNormalizePass::visit(BasicBlock &node) {
     }
 }
 
+void NameNormalizePass::visit(Module &node) {
+    for (const auto &function : node)
+        function->accept(*this);
+}
+
 } // namespace IR

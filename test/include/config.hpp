@@ -30,11 +30,21 @@ namespace Test::cfg {
 static const std::string gnalc_path = "../gnalc";
 
 // backend
+
+#if defined(__aarch64__)
+// static const std::string gcc_arm_command = "arm-linux-gnueabihf-gcc";
+static const std::string gcc_arm_command = "gcc";
+
+// static const std::string qemu_arm_command = "LD_LIBRARY_PATH=/usr/arm-linux-gnueabihf/lib qemu-arm";
+static const std::string qemu_arm_command = "";
+#else
 // static const std::string gcc_arm_command = "arm-linux-gnueabihf-gcc";
 static const std::string gcc_arm_command = "aarch64-linux-gnu-gcc-13"; // 13.3.0
 
 // static const std::string qemu_arm_command = "LD_LIBRARY_PATH=/usr/arm-linux-gnueabihf/lib qemu-arm";
 static const std::string qemu_arm_command = "LD_LIBRARY_PATH=/usr/aarch64-linux-gnu/lib qemu-aarch64";
+#endif
+
 
 static const std::string global_temp_dir = "./gnalc_test_temp/" + generate_unique_temp_dir();
 

@@ -18,7 +18,6 @@ PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
 
     // auto memo_lookup = function.getParent()->lookupFunction(Config::IR::MEMOIZATION_LOOKUP_INTRINSIC_NAME);
 
-
     return memo_modified ? PreserveNone() : PreserveAll();
 }
 } // namespace IR

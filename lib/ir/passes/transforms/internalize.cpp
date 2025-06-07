@@ -1,9 +1,9 @@
 #include "ir/passes/transforms/internalize.hpp"
+#include "ir/instructions/control.hpp"
 #include "ir/instructions/memory.hpp"
+#include "config/config.hpp"
 
 #include <algorithm>
-#include <config/config.hpp>
-#include <ir/instructions/control.hpp>
 
 namespace IR {
 

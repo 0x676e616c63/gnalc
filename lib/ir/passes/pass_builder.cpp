@@ -8,6 +8,7 @@
 #include "ir/passes/analysis/loop_alias_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
+#include "ir/passes/analysis/range_analysis.hpp"
 
 // Transforms
 #include "ir/passes/transforms/adce.hpp"
@@ -36,16 +37,16 @@
 #include "ir/passes/transforms/tail_recursion_elimination.hpp"
 #include "ir/passes/transforms/tree_shaking.hpp"
 #include "ir/passes/transforms/vectorizer.hpp"
-
-// Utilities
-#include "ir/passes/analysis/range_analysis.hpp"
 #include "ir/passes/transforms/dae.hpp"
 #include "ir/passes/transforms/if_conversion.hpp"
 #include "ir/passes/transforms/memoization.hpp"
 #include "ir/passes/transforms/range_aware_simplify.hpp"
 #include "ir/passes/transforms/unify_exits.hpp"
+// Utilities
 #include "ir/passes/utilities/analysis_storer.hpp"
+#include "ir/passes/utilities/cfg_export.hpp"
 #include "ir/passes/utilities/irprinter.hpp"
+#include "ir/passes/utilities/run_test.hpp"
 #include "ir/passes/utilities/verifier.hpp"
 
 #include <algorithm>
@@ -308,13 +309,9 @@ MPM PassBuilder::buildModulePipeline(PMOptions opt_info) {
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
-    fpm.addPass(PromotePass());
-    fpm.addPass(TailRecursionEliminationPass());
-    fpm.addPass(InlinePass());
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(LCSSAPass());
-    fpm.addPass(LICMPass());
-    fpm.addPass(UnifyExitsPass());
+    fpm.addPass(IR::PromotePass());
+    fpm.addPass(IR::TailRecursionEliminationPass());
+    fpm.addPass(IR::DotCFGPass(std::cerr));
     return fpm;
 
     // If-conversion
