@@ -199,7 +199,9 @@ int main(int argc, char **argv) {
         }
 
         // backend opt options
-
+        else if (arg == "-fno-PreRaCFGsimp") {
+            bkd_opt_info.CFGsimplifyBeforeRa = false;
+        }
         else if (arg == "-fno-redundantLoadEli") {
             bkd_opt_info.redundantLoadEli = false;
         }

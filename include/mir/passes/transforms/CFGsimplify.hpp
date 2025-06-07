@@ -36,7 +36,7 @@ public:
 public:
     inline void impl();
     void i1Eli();
-    void deadBlkEli();
+    bool deadBlkEli();
 
 public:
     void i1EliDetect(MIRBlk_p &);

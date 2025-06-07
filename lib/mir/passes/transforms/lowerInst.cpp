@@ -209,6 +209,7 @@ void MIR_new::lowerInst(const IR::pBr &br, LoweringContext &ctx) {
 
         if (auto const_cond = br->getCond()->as<IR::ConstantI1>()) {
 
+            ///@note 别急, 有反转
             auto &true_blk_true = const_cond->getVal() ? blk_true : blk_false;
             auto &true_blk_false = const_cond->getVal() ? blk_false : blk_true;
 

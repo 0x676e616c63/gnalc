@@ -54,7 +54,8 @@ PM::PreservedAnalyses CFGsimplifyAfterRA::run(MIRFunction &func, FAM &fam) {
 
 void CFGsimplifyBeforeRAImpl::impl() {
     i1Eli();
-    deadBlkEli();
+    while (deadBlkEli())
+        ;
 }
 
 void CFGsimplifyBeforeRAImpl::i1Eli() {
@@ -121,7 +122,7 @@ void CFGsimplifyAfterRAImpl::impl() {
     brEli();
 }
 
-void CFGsimplifyBeforeRAImpl::deadBlkEli() {
+bool CFGsimplifyBeforeRAImpl::deadBlkEli() {
     std::unordered_set<MIRBlk_p> dead_blks;
 
     auto &ctx = mfunc.Context();
@@ -144,8 +145,26 @@ void CFGsimplifyBeforeRAImpl::deadBlkEli() {
         mnxt ? mnxt->resetPrv(mprv) : nop;
     }
 
-    mblks.erase(std::remove_if(mblks.begin(), mblks.end(), [&](const auto &mblk) { return dead_blks.count(mblk); }),
-                mblks.end());
+    if (!dead_blks.empty()) {
+
+        for (auto &dead_blk : dead_blks) {
+            auto &msuccs = dead_blk->succs();
+            for (auto &msucc : msuccs) {
+                auto rm_it = std::find_if(msucc->preds().begin(), msucc->preds().end(),
+                                          [&](auto &&mblk) { return mblk == dead_blk; });
+
+                Err::gassert(rm_it != msucc->preds().end(), "deadBlkEli: mpreds_msucc corrupted");
+
+                msucc->preds().erase(rm_it);
+            }
+        }
+        mblks.erase(std::remove_if(mblks.begin(), mblks.end(), [&](const auto &mblk) { return dead_blks.count(mblk); }),
+                    mblks.end());
+
+        return true;
+    } else {
+        return false;
+    }
 }
 
 void CFGsimplifyAfterRAImpl::brColsure() {

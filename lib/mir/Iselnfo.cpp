@@ -285,7 +285,7 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
 
         auto loaded = loadImm(imme);
         ctx.newInst(OpC::InstCopyToReg)->setOperand<0>(def, ctx.codeGenCtx())->setOperand<1>(loaded, ctx.codeGenCtx());
-    };
+    } break;
     default:
         ///@note 各种copy, 内存访问没有合法化
         break;
