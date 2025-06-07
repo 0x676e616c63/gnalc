@@ -312,7 +312,6 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     fpm.addPass(IR::PromotePass());
     fpm.addPass(IR::TailRecursionEliminationPass());
     fpm.addPass(IR::DotCFGPass(std::cerr));
-    fpm.addPass(IR::PngCFGPass("test.png"));
     return fpm;
 
     // If-conversion

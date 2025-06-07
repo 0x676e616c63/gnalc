@@ -21,6 +21,10 @@ public:
         : expected_out_path(std::move(expected_out_path_)), input_path(std::move(input_path_)), sylib_src_path(std::move(sylib_src_path_)),
           abort_when_test_failed(abort_when_test_failed_) {}
     PM::PreservedAnalyses run(Function &function, FAM &manager);
+    PM::PreservedAnalyses run(Module &module, MAM &manager);
+
+private:
+    void runImpl(const std::string& outfile_id, Module& module);
 };
 
 } // namespace IR

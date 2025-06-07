@@ -11,9 +11,7 @@
 namespace IR {
 namespace fs = std::filesystem;
 
-PM::PreservedAnalyses RunTestPass::run(Function &function, FAM &fam) {
-    static size_t name_cnt = 0;
-
+void RunTestPass::runImpl(const std::string& outfile_id, Module& module) {
     Err::gassert(!expected_out_path.empty(), "Missing expected output");
     Err::gassert(fs::exists(expected_out_path), "Expected output not found");
     Err::gassert(input_path.empty() || fs::exists(input_path), "Input file not found");
@@ -41,18 +39,14 @@ PM::PreservedAnalyses RunTestPass::run(Function &function, FAM &fam) {
         std::system(sylib_command.c_str());
     }
 
-    auto outfile_id = function.getName().substr(1) // eat '@'
-                      + "_" + std::to_string(name_cnt++);
     auto outsource = temp_dir + "/" + outfile_id + ".ll";
-
-    auto module = function.getParent();
 
     std::ofstream outsouce_stream(outsource);
     Err::gassert(outsouce_stream.good(), "Cannot open '" + outsource + "'.");
     PrintModulePass printer(outsouce_stream);
     NameNormalizePass name_normalizer(true);
-    module->accept(name_normalizer);
-    module->accept(printer);
+    module.accept(name_normalizer);
+    module.accept(printer);
 
     auto outtime = temp_dir + "/" + outfile_id + ".time";
     auto output = temp_dir + "/" + outfile_id + ".out";
@@ -86,7 +80,17 @@ PM::PreservedAnalyses RunTestPass::run(Function &function, FAM &fam) {
             std::abort();
     } else
         Logger::logInfo("[RunTest]: Test passed in ", time_elapsed, "us.");
+}
 
+PM::PreservedAnalyses RunTestPass::run(Function &function, FAM &fam) {
+    static size_t name_cnt = 0;
+    auto outfile_id = function.getName().substr(1) // eat '@'
+                  + "_" + std::to_string(name_cnt++);
+    runImpl(outfile_id, *function.getParent());
+    return PreserveAll();
+}
+PM::PreservedAnalyses RunTestPass::run(Module &module, MAM &manager) {
+    runImpl("gnalc_module", module);
     return PreserveAll();
 }
 } // namespace IR

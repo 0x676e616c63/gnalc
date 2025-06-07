@@ -15,16 +15,18 @@ public:
     explicit DotCFGPass(std::ostream &outStream_)
     : out_stream(outStream_) {}
     PM::PreservedAnalyses run(Function &function, FAM &manager);
+    PM::PreservedAnalyses run(Module &module, MAM &manager);
 };
 
 class PngCFGPass : public PM::PassInfo<PngCFGPass> {
 private:
-    std::string output_path;
+    std::string output_dir;
 
 public:
-    explicit PngCFGPass(std::string output_path_)
-        : output_path(std::move(output_path_)) {}
+    explicit PngCFGPass(std::string output_dir_)
+        : output_dir(std::move(output_dir_)) {}
     PM::PreservedAnalyses run(Function &function, FAM &manager);
+    PM::PreservedAnalyses run(Module &module, MAM &manager);
 };
 } // namespace IR
 #endif

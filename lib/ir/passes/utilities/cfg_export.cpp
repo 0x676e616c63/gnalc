@@ -1,7 +1,7 @@
 #include "ir/passes/utilities/cfg_export.hpp"
-
 #include "ir/passes/utilities/irprinter.hpp"
 
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 
@@ -75,7 +75,7 @@ void writePng(const std::string& output_path, const Function &function) {
     std::stringstream dot;
     writeDot(dot, function);
     auto dot_command = "echo '" + dot.str() + "' | ""dot -Tpng -o " + output_path;
-    Logger::logInfo("[PngCFG]: Running '", dot_command, "'.");
+    // Logger::logInfo("[PngCFG]: Running '", dot_command, "'.");
     std::system(dot_command.c_str());
 }
 
@@ -83,9 +83,28 @@ PM::PreservedAnalyses DotCFGPass::run(Function &function, FAM &fam) {
     writeDot(out_stream, function);
     return PreserveAll();
 }
+PM::PreservedAnalyses DotCFGPass::run(Module &module, MAM &mam) {
+    for (auto &function : module)
+        writeDot(out_stream, *function);
+    return PreserveAll();
+}
 
 PM::PreservedAnalyses PngCFGPass::run(Function &function, FAM &fam) {
-    writePng(output_path, function);
+    static size_t name_cnt = 0;
+    if (!fs::exists(output_dir))
+        fs::create_directory(output_dir);
+    auto path = output_dir + "/" + function.getName().substr(1) + "_" + std::to_string(name_cnt++) + ".png";
+    writePng(path, function);
+    return PreserveAll();
+}
+
+PM::PreservedAnalyses PngCFGPass::run(Module &module, MAM &manager) {
+    if (!fs::exists(output_dir))
+        fs::create_directory(output_dir);
+    for (const auto &function : module) {
+        auto path = output_dir + "/" + function->getName().substr(1) + ".png";
+        writePng(path, *function);
+    }
     return PreserveAll();
 }
 } // namespace IR
