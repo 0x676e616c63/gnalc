@@ -53,6 +53,11 @@ PM::PreservedAnalyses PrintFunctionPass::run(Function &func, FAM &fam) {
 }
 
 PM::PreservedAnalyses PrintModulePass::run(Module &module, MAM &mam) {
+    module.accept(*this);
+    return PreserveAll();
+}
+
+void PrintModulePass::visit(Module &module) {
     writeln("; Module: " + module.getName());
     writeln("");
 
@@ -70,8 +75,6 @@ PM::PreservedAnalyses PrintModulePass::run(Module &module, MAM &mam) {
         func_decl->accept(*this);
         writeln("");
     }
-
-    return PreserveAll();
 }
 
 PM::PreservedAnalyses PrintLoopPass::run(Function &func, FAM &fam) {

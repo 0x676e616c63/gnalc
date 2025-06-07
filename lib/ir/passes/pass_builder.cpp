@@ -45,6 +45,7 @@
 // Utilities
 #include "ir/passes/utilities/analysis_storer.hpp"
 #include "ir/passes/utilities/irprinter.hpp"
+#include "ir/passes/utilities/run_test.hpp"
 #include "ir/passes/utilities/verifier.hpp"
 
 #include <algorithm>
@@ -307,12 +308,36 @@ MPM PassBuilder::buildModulePipeline(PMOptions opt_info) {
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
-    fpm.addPass(PromotePass());
-    fpm.addPass(TailRecursionEliminationPass());
-    fpm.addPass(InlinePass());
-    fpm.addPass(SCCPPass());
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(MemoizePass());
+    fpm.addPass(IR::PromotePass());
+    fpm.addPass(IR::TailRecursionEliminationPass());
+    fpm.addPass(IR::RunTestPass("../test/contest/h_performance/h-2-03.out",
+        "", "../test/sylib/sylib.c"));
+    fpm.addPass(IR::InlinePass());
+    fpm.addPass(IR::InternalizePass());
+    fpm.addPass(IR::PromotePass());
+    fpm.addPass(IR::RunTestPass("../test/contest/h_performance/h-2-03.out"));
+    fpm.addPass(IR::NameNormalizePass());
+    fpm.addPass(IR::CFGSimplifyPass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::LCSSAPass());
+    fpm.addPass(IR::LoopUnrollPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::LoopRotatePass());
+    fpm.addPass(IR::LCSSAPass());
+    fpm.addPass(IR::LICMPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::BreakCriticalEdgesPass());
+    fpm.addPass(IR::GVNPREPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::CFGSimplifyPass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::LCSSAPass());
+    fpm.addPass(IR::RunTestPass("../test/contest/h_performance/h-2-03.out"));
+    fpm.addPass(IR::LoopUnrollPass());
+    fpm.addPass(IR::RunTestPass("../test/contest/h_performance/h-2-03.out"));
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::NameNormalizePass());
     return fpm;
 
     // If-conversion

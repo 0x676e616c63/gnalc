@@ -59,6 +59,9 @@ constexpr auto IF_CONVERSION_DUPLICATION_THRESHOLD = 4;
 
 // Range Analysis
 constexpr auto RANGE_ANALYSIS_MAX_PROCESS_CNT = 32;
+
+// Run Test Pass
+constexpr auto RUN_TEST_TEMP_DIR = "gnalc_run_test_pass";
 } // namespace Config::IR
 
 namespace Config::MIR {

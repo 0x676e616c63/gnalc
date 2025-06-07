@@ -52,6 +52,8 @@ public:
     explicit PrintModulePass(std::ostream &outStream_) : PrinterBase(outStream_) {}
 
     PM::PreservedAnalyses run(Module &unit, MAM &manager);
+
+    void visit(Module &node) override;
 };
 
 class PrintLoopPass : public PM::PassInfo<PrintLoopPass>, public PrinterBase {
