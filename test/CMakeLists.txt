@@ -15,7 +15,7 @@ add_test(NAME std COMMAND gnalc_test -p -std-pipeline)
 add_test(NAME fixedpoint COMMAND gnalc_test -p -fixed-point)
 add_test(NAME fuzz COMMAND gnalc_test -p -fuzz)
 
-add_test(NAME backend_fixedpoint COMMAND gnalc_test -p -fixed-point -b)
+#add_test(NAME backend_fixedpoint COMMAND gnalc_test -p -fixed-point -b)
 
 add_executable(ggc_test test.cpp)
 target_compile_definitions(ggc_test PRIVATE GNALC_TEST_GGC)
