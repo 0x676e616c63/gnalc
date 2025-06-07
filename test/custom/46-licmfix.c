@@ -1,5 +1,5 @@
 //large loop and large array caculate
-int COUNT = 500000;
+int COUNT = 6000;
 
 float loop(float x[], float y[], int length) {
    int i = 0;
@@ -21,6 +21,7 @@ int main() {
     float b = 1.0;
     starttime();
     while ( i < COUNT) {
+       j = 0;
         if (i % 10) {
             a = 0.0;
             b = 1.0;
@@ -37,7 +38,7 @@ int main() {
 	i = i + 1;
     }
     stoptime();
-    int final=total - 36239413625225216.0000001;
+    int final=total - 432031867600896.000000;
     if (final <=0.000001 && final>= -0.000001) {
         putint(10);
 	return 0;

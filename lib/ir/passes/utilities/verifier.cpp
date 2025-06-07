@@ -241,6 +241,27 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
         }
     }
 
+    // See if every instruction has unique name
+    if (fatal_error_cnt == 0) {
+        std::unordered_set<std::string> discovered_names;
+        for (const auto &bb : function) {
+            for (const auto &inst : bb->all_insts()) {
+                if (inst->getName() == "") {
+                    ++warning_cnt;
+                    Logger::logWarning("[VerifyPass]: Instruction '", inst->getName(), "' has no name.");
+                }
+                else {
+                    if (discovered_names.find(inst->getName()) != discovered_names.end()) {
+                        ++warning_cnt;
+                        Logger::logWarning("[VerifyPass]: Duplicated name '", inst->getName(), "' detected.");
+                    }
+                    else
+                        discovered_names.insert(inst->getName());
+                }
+            }
+        }
+    }
+
     if (warning_cnt != 0) {
         Logger::logWarning("[VerifyPass] on '", function.getName(), "': Found ", warning_cnt, " warning(s).");
         if (abort_when_warning_raised && (!abort_when_verify_failed || fatal_error_cnt == 0))

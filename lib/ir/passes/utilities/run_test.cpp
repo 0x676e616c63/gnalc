@@ -1,5 +1,6 @@
 #include "ir/passes/utilities/run_test.hpp"
 #include "config/config.hpp"
+#include "ir/passes/transforms/namenormalizer.hpp"
 #include "utils/test.hpp"
 
 #include "ir/passes/utilities/irprinter.hpp"
@@ -34,7 +35,7 @@ PM::PreservedAnalyses RunTestPass::run(Function &function, FAM &fam) {
         // data layout, we use `sed` to delete 'target datalayout' from the
         // sylib.ll
         auto sylib_command =
-            "clang -S -emit-llvm " + sylib_src_path + " -o " + sylib + "&& sed '/^target datalayout/d' -i " + sylib;
+            "clang -S -emit-llvm " + sylib_src_path + " -o " + sylib + " && sed '/^target datalayout/d' -i " + sylib;
 
         Logger::logInfo("[RunTest]: Running '", sylib_command, "'.");
         std::system(sylib_command.c_str());
@@ -47,8 +48,10 @@ PM::PreservedAnalyses RunTestPass::run(Function &function, FAM &fam) {
     auto module = function.getParent();
 
     std::ofstream outsouce_stream(outsource);
-    Err::gassert(outsouce_stream.good(), "Cannot open " + outsource);
+    Err::gassert(outsouce_stream.good(), "Cannot open '" + outsource + "'.");
     PrintModulePass printer(outsouce_stream);
+    NameNormalizePass name_normalizer(true);
+    module->accept(name_normalizer);
     module->accept(printer);
 
     auto outtime = temp_dir + "/" + outfile_id + ".time";

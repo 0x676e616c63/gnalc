@@ -13,14 +13,21 @@
 namespace IR {
 class IRFormatter;
 
-class PrinterBase : public IRVisitor {
+class IRPrinter : public IRVisitor {
 private:
     std::ostream &outStream;
+    bool withIndent;
 
+public:
+    explicit IRPrinter(std::ostream &outStream_, bool withIndent_ = false)
+        : outStream(outStream_), withIndent(withIndent_) {}
+
+    void visit(GlobalVariable &node) override;
+    void visit(Instruction &node) override;
+    void visit(FunctionDecl &node) override;
+    void visit(Function &node) override;
+    void visit(BasicBlock &node) override;
 protected:
-    explicit PrinterBase(std::ostream &outStream_)
-        : outStream(outStream_) {}
-
     template <typename T> void write(T &&obj) { outStream << obj; }
 
     template <typename T> void writeln(T &&obj) { outStream << obj << std::endl; }
@@ -31,59 +38,53 @@ protected:
         (outStream << ... << args);
         outStream << std::endl;
     }
-
-    void visit(GlobalVariable &node) override;
-    void visit(Instruction &node) override;
-    void visit(FunctionDecl &node) override;
-    void visit(Function &node) override;
-    void visit(BasicBlock &node) override;
 };
 
-class PrintFunctionPass : public PM::PassInfo<PrintFunctionPass>, public PrinterBase {
+class PrintFunctionPass : public PM::PassInfo<PrintFunctionPass>, public IRPrinter {
 public:
     explicit PrintFunctionPass(std::ostream &outStream_)
-        : PrinterBase(outStream_) {}
+        : IRPrinter(outStream_, true) {}
 
     PM::PreservedAnalyses run(Function &unit, FAM &manager);
 };
 
-class PrintModulePass : public PM::PassInfo<PrintModulePass>, public PrinterBase {
+class PrintModulePass : public PM::PassInfo<PrintModulePass>, public IRPrinter {
 public:
-    explicit PrintModulePass(std::ostream &outStream_) : PrinterBase(outStream_) {}
+    explicit PrintModulePass(std::ostream &outStream_) : IRPrinter(outStream_, true) {}
 
     PM::PreservedAnalyses run(Module &unit, MAM &manager);
 
     void visit(Module &node) override;
 };
 
-class PrintLoopPass : public PM::PassInfo<PrintLoopPass>, public PrinterBase {
+class PrintLoopPass : public PM::PassInfo<PrintLoopPass>, public IRPrinter {
 public:
-    explicit PrintLoopPass(std::ostream &outStream_) : PrinterBase(outStream_) {}
+    explicit PrintLoopPass(std::ostream &outStream_) : IRPrinter(outStream_, true) {}
 
     PM::PreservedAnalyses run(Function &unit, FAM &manager);
 };
 
-class PrintDebugMessagePass : public PM::PassInfo<PrintDebugMessagePass>, public PrinterBase {
+class PrintDebugMessagePass : public PM::PassInfo<PrintDebugMessagePass>, public IRPrinter {
 private:
     std::string message;
 
 public:
     explicit PrintDebugMessagePass(std::ostream &outStream_, std::string message_)
-        : PrinterBase(outStream_), message(std::move(message_)) {}
+        : IRPrinter(outStream_, true), message(std::move(message_)) {}
 
     PM::PreservedAnalyses run(Function &unit, FAM &manager);
 };
 
-class PrintSCEVPass : public PM::PassInfo<PrintSCEVPass>, public PrinterBase {
+class PrintSCEVPass : public PM::PassInfo<PrintSCEVPass>, public IRPrinter {
 public:
-    explicit PrintSCEVPass(std::ostream &outStream_) : PrinterBase(outStream_) {}
+    explicit PrintSCEVPass(std::ostream &outStream_) : IRPrinter(outStream_, true) {}
 
     PM::PreservedAnalyses run(Function &unit, FAM &manager);
 };
 
-class PrintRangePass : public PM::PassInfo<PrintRangePass>, public PrinterBase {
+class PrintRangePass : public PM::PassInfo<PrintRangePass>, public IRPrinter {
 public:
-    explicit PrintRangePass(std::ostream &outStream_) : PrinterBase(outStream_) {}
+    explicit PrintRangePass(std::ostream &outStream_) : IRPrinter(outStream_, true) {}
 
     PM::PreservedAnalyses run(Function &unit, FAM &manager);
 };

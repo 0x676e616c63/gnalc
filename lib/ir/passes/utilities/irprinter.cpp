@@ -7,18 +7,20 @@
 #include "utils/logger.hpp"
 
 namespace IR {
-void PrinterBase::visit(GlobalVariable &node) { writeln(IRFormatter::formatGV(node)); }
+void IRPrinter::visit(GlobalVariable &node) { writeln(IRFormatter::formatGV(node)); }
 
-void PrinterBase::visit(FunctionDecl &node) { write(IRFormatter::formatFuncDecl(node)); }
+void IRPrinter::visit(FunctionDecl &node) { write(IRFormatter::formatFuncDecl(node)); }
 
-void PrinterBase::visit(Instruction &node) {
-    // It seems there is no nested scope, so it is a fixed indent.
-    write("  ");
+void IRPrinter::visit(Instruction &node) {
+    if (withIndent) {
+        // It seems there is no nested scope, so it is a fixed indent.
+        write("  ");
+    }
 
     writeln(IRFormatter::formatInst(node));
 }
 
-void PrinterBase::visit(Function &node) {
+void IRPrinter::visit(Function &node) {
     write(IRFormatter::formatFunc(node));
     writeln(" {");
 
@@ -28,7 +30,7 @@ void PrinterBase::visit(Function &node) {
     writeln("}");
 }
 
-void PrinterBase::visit(BasicBlock &node) {
+void IRPrinter::visit(BasicBlock &node) {
     write(IRFormatter::formatBB(node));
     write(":        ;preds = ");
     std::string predstr;
