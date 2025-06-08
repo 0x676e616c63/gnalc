@@ -160,15 +160,6 @@ bool RangeResult::merge(Value *val, const FRng &range, BasicBlock *bb) {
     return float_range_map[val].mergeContextual(range, bb);
 }
 
-struct InstBBPairHash {
-    using InstBBPair = std::pair<Instruction *, BasicBlock *>;
-    size_t operator()(const InstBBPair &a) const {
-        size_t hash = std::hash<Instruction *>{}(a.first);
-        Util::hashSeedCombine(hash, std::hash<BasicBlock *>{}(a.second));
-        return hash;
-    }
-};
-
 void RangeAnalysis::analyzeArgument(RangeResult &res, Function *func, FAM *fam) {
     if (func->isRecursive())
         return;
@@ -336,9 +327,9 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
     auto bbdfv = func->getDFVisitor();
     auto &domtree = fam->getResult<DomTreeAnalysis>(*func);
 
-    std::unordered_map<std::pair<Instruction *, BasicBlock *>, int, InstBBPairHash> process_cnt;
+    std::unordered_map<std::pair<Instruction *, BasicBlock *>, int, Util::PairHash> process_cnt;
     std::deque<std::pair<Instruction *, BasicBlock *>> worklist;
-    std::unordered_set<std::pair<Instruction *, BasicBlock *>, InstBBPairHash> in_worklist;
+    std::unordered_set<std::pair<Instruction *, BasicBlock *>, Util::PairHash> in_worklist;
 
     for (const auto &bb : bbdfv) {
         for (const auto &inst : *bb) {

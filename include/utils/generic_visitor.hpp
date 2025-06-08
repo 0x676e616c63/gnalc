@@ -10,6 +10,7 @@
 
 #include <deque>
 #include <set>
+#include <unordered_set>
 #include <vector>
 
 namespace Util {
@@ -26,7 +27,7 @@ public:
 
     explicit GenericBFVisitor(NodeT root) {
         std::deque<NodeT> q{root};
-        std::set<NodeT> visited;
+        std::unordered_set<NodeT> visited;
         while (!q.empty()) {
             auto curr = q.front();
             q.pop_front();
@@ -76,7 +77,7 @@ public:
     explicit GenericDFVisitor(NodeT root) {
         if constexpr (order == DFVOrder::PreOrder) {
             std::deque<NodeT> s{root};
-            std::set<NodeT> visited;
+            std::unordered_set<NodeT> visited;
             while (!s.empty()) {
                 auto curr = s.back();
                 s.pop_back();
@@ -93,7 +94,7 @@ public:
         } else if constexpr (order == DFVOrder::PostOrder) {
             // Node, processed
             std::deque<std::pair<NodeT, bool>> s{{root, false}};
-            std::set<NodeT> visited{root};
+            std::unordered_set<NodeT> visited{root};
             while (!s.empty()) {
                 auto [curr, processed] = s.back();
                 s.pop_back();
