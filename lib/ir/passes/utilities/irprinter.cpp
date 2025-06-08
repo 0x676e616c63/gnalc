@@ -142,7 +142,7 @@ PM::PreservedAnalyses PrintSCEVPass::run(Function &function, FAM &fam) {
     const DomTree &domtree = fam.getResult<DomTreeAnalysis>(function);
     for (const auto &bb : function) {
         for (const auto &inst : bb->all_insts()) {
-            if (!isSameType(inst->getType(), makeBType(IRBTYPE::I32)))
+            if (!inst->getType()->isI32())
                 continue;
             for (const auto &scev_block : function) {
                 if (!domtree.ADomB(bb, scev_block))
@@ -174,7 +174,7 @@ PM::PreservedAnalyses PrintRangePass::run(Function &function, FAM &manager) {
     }
     for (const auto &bb : function) {
         for (const auto &inst : bb->all_insts()) {
-            if (isSameType(inst->getType(), makeBType(IRBTYPE::I32))) {
+            if (inst->getType()->isI32()) {
                 auto r = ranges.getIntRange(inst);
                 writeln(inst->getName(), ": ", r);
             } else if (isSameType(inst->getType(), makeBType(IRBTYPE::FLOAT))) {
@@ -188,7 +188,7 @@ PM::PreservedAnalyses PrintRangePass::run(Function &function, FAM &manager) {
     writeln("Contextual Ranges: ");
     for (const auto &bb : function) {
         for (const auto &inst : bb->all_insts()) {
-            if (isSameType(inst->getType(), makeBType(IRBTYPE::I32))) {
+            if (inst->getType()->isI32()) {
                 for (const auto &range_block : function) {
                     if (!domtree.ADomB(bb, range_block))
                         continue;

@@ -78,6 +78,14 @@ public:
         static_assert(std::is_base_of_v<Type, T>, "Expected a derived type.");
         return as_raw<T>() != nullptr;
     }
+
+    // Convenient wrapper
+    bool isI1() const;
+    bool isI8() const;
+    bool isI32() const;
+    bool isF32() const;
+    bool isVoid() const;
+    bool isUndef() const;
 };
 
 /**

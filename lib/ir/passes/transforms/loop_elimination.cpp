@@ -57,7 +57,7 @@ bool propagateExitValues(Loop &loop, SCEVHandle &scev, bool onlyConstant) {
 
     auto header = loop.getHeader();
     for (const auto &inst : header->phis()) {
-        if (!isSameType(inst->getType(), makeBType(IRBTYPE::I32)))
+        if (!inst->getType()->isI32())
             continue;
         auto use_list = inst->getUseList();
         for (const auto &use : use_list) {

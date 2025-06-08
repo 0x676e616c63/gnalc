@@ -11,7 +11,7 @@ namespace IR {
 //     const DomTree &domtree = fam.getResult<DomTreeAnalysis>(function);
 //     for (const auto &bb : function) {
 //         for (const auto &inst : bb->all_insts()) {
-//             if (!isSameType(inst->getType(), makeBType(IRBTYPE::I32)))
+//             if (!inst->getType()->isI32())
 //                 continue;
 //             for (const auto &scev_block : function) {
 //                 if (!domtree.ADomB(bb, scev_block))

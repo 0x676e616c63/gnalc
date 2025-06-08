@@ -18,7 +18,7 @@ PM::PreservedAnalyses RangeAwareSimplifyPass::run(Function &function, FAM &fam) 
     std::vector<pInst> users;
     for (auto &block : function) {
         for (auto &inst : *block) {
-            if (isSameType(inst->getType(), makeBType(IRBTYPE::I32))) {
+            if (inst->getType()->isI32()) {
                 auto inst_rng = ranges.getIntRange(inst);
                 if (auto exact = inst_rng.getExact()) {
                     inst->replaceSelf(function.getConst(*exact));

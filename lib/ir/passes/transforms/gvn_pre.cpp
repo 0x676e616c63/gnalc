@@ -315,8 +315,7 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(Value* ir_value, Kind
     }
 
     std::shared_ptr<Expr> expr;
-    if (isSameType(ir_value->getType(), makeBType(IRBTYPE::UNDEFINED)) ||
-        isSameType(ir_value->getType(), makeBType(IRBTYPE::VOID))) {
+    if (ir_value->getType()->isUndef() || ir_value->getType()->isVoid()) {
         return get_expr_cache[ir_value] = nullptr;
     }
 
@@ -349,17 +348,13 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(Value* ir_value, Kind
             }
         } else if (auto inst = ir_value->as_raw<Instruction>()) {
             std::vector<ValueKind> operands;
-            bool killed = false;
-            std::transform(inst->operand_begin(), inst->operand_end(), std::back_inserter(operands),
-                           [this, &exp_gen, &nested_expr_cnt, &killed](const auto &operand) {
-                               auto kind = getKindOrInsert(operand.get(), exp_gen, nested_expr_cnt + 1);
-                               if (kind == NotValueKind)
-                                   killed = true;
-                               return kind;
-                           });
-
-            if (killed)
-                return nullptr;
+            operands.reserve(inst->getNumOperands());
+            for (const auto &operand : inst->operands()) {
+                auto kind = getKindOrInsert(operand.get(), exp_gen, nested_expr_cnt + 1);
+                if (kind == NotValueKind)
+                    return nullptr;
+                operands.emplace_back(kind);
+            }
             if (auto binary = ir_value->as_raw<BinaryInst>()) {
                 Err::gassert(operands.size() == 2);
                 expr = std::make_shared<Expr>(binary, Expr::makeOP(binary->getOpcode()), std::move(operands));
@@ -516,19 +511,14 @@ Value* GVNPREPass::phiTranslate(Expr *expr, BasicBlock *pred, BasicBlock *succ) 
     // Make a temporarily IR::Value to get the ValueKind
     auto inst = expr->getIRVal()->as<Instruction>();
     std::vector<pVal> translated_operands;
-    bool killed = false;
-    std::transform(inst->operand_begin(), inst->operand_end(), std::back_inserter(translated_operands),
-                   [this, &pred, &succ, &killed](const auto &operand) -> pVal {
-                       auto v = phiTranslate(table.getExprOrInsert(operand.get()), pred, succ);
-                       if (v == nullptr) {
-                           killed = true;
-                           return nullptr;
-                       }
-                       return v->template as<Value>();
-                   });
+    translated_operands.reserve(inst->getNumOperands());
 
-    if (killed)
-        return phi_translate_cache[cache_key] = nullptr;
+    for (const auto &operand : inst->operands()) {
+        auto v = phiTranslate(table.getExprOrInsert(operand.get()), pred, succ);
+        if (v == nullptr)
+            return phi_translate_cache[cache_key] = nullptr;
+        translated_operands.emplace_back(v->as<Value>());
+    }
 
     pInst translated_inst;
     if (auto binary = inst->as<BinaryInst>()) {
