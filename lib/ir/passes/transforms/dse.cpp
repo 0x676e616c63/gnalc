@@ -15,7 +15,7 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
     auto &aa_res = fam.getResult<BasicAliasAnalysis>(function);
     auto &domtree = fam.getResult<DomTreeAnalysis>(function);
     auto &postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
-    std::set<pInst> unused_store;
+    std::unordered_set<pInst> unused_store;
 
     // For each store, collect all possible store on its post dominator block as candidates.
     // Then we consider all other blocks that the block can reach,
@@ -109,7 +109,7 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
             }
             // local memory, check through CFG.
             else {
-                std::set<pBlock> visited;
+                std::unordered_set<pBlock> visited;
                 std::deque<pBlock> worklist{store_block->succ_begin(), store_block->succ_end()};
                 // STOREInst that may contribute to the elimination
                 std::vector<pStore> candidates;

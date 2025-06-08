@@ -110,8 +110,8 @@ bool PromotePass::promoteSingleBlockAlloca() {
 
 void PromotePass::insertPhi() {
     std::queue<pBlock> tmp_work_queue; // 临时处理队列
-    std::set<pBlock> live_in_blocks;   // 即需要传递alloca值的块
-    std::set<pBlock> define_blocks;    // 定义块
+    std::unordered_set<pBlock> live_in_blocks;   // 即需要传递alloca值的块
+    std::unordered_set<pBlock> define_blocks;    // 定义块
 
     // 初步处理 user_block
     for (const auto &[b, i] : cur_info.user_blocks) {
@@ -147,7 +147,7 @@ void PromotePass::insertPhi() {
         }
     }
 
-    std::set<pBlock> phi_blocks;
+    std::unordered_set<pBlock> phi_blocks;
     computeIDF(define_blocks, live_in_blocks, phi_blocks);
 
     unsigned version = 0;
@@ -164,14 +164,15 @@ void PromotePass::rename(Function &f) {
     if (alloca_infos.empty())
         return;
     using ABPair = std::pair<std::shared_ptr<ALLOCAInst>, pBlock>;
-    std::map<ABPair, pVal> incoming_values;
+    std::unordered_map<ABPair, pVal, Util::PairHash> incoming_values;
+    incoming_values.reserve(alloca_infos.size() * f.getBlocks().size());
     for (auto &info : alloca_infos) {
         for (auto &b : f.getBlocks())
             incoming_values[{info.alloca, b}] = undef_val;
     }
 
     std::stack<pBlock> work_stack;
-    std::set<pBlock> visited;
+    std::unordered_set<pBlock> visited;
     work_stack.push(entry_block);
     while (!work_stack.empty()) {
         const auto b = work_stack.top();
@@ -282,8 +283,8 @@ void PromotePass::rename(Function &f) {
 }
 
 // 大部分参考LLVM实现了...
-void PromotePass::computeIDF(const std::set<pBlock> &def_blk, const std::set<pBlock> &live_in_blk,
-                             std::set<pBlock> &phi_blk) {
+void PromotePass::computeIDF(const std::unordered_set<pBlock> &def_blk, const std::unordered_set<pBlock> &live_in_blk,
+                             std::unordered_set<pBlock> &phi_blk) {
     auto &DT = *pDT;
     using pDTN = std::shared_ptr<DomTree::Node>;
     using DTNPair = std::pair<unsigned, pDTN>;
@@ -293,10 +294,13 @@ void PromotePass::computeIDF(const std::set<pBlock> &def_blk, const std::set<pBl
         PQ.emplace((DTNPair){DT[b]->bfs_num(), DT[b]});
     }
 
-    std::set<pDTN> visited_pq;
-    std::set<pDTN> visited_stn; // subtree node queue (work list in llvm)
+    std::unordered_set<pDTN> visited_pq;
+    std::unordered_set<pDTN> visited_stn; // subtree node queue (work list in llvm)
 
-    // std::set<pBlock> idf; // JUST FOR TEST DomTree::getDF()
+    visited_pq.reserve(PQ.size());
+    visited_stn.reserve(PQ.size());
+
+    // std::unordered_set<pBlock> idf; // JUST FOR TEST DomTree::getDF()
 
     // process every def nodes, find dom frontier
     while (!PQ.empty()) {
@@ -384,7 +388,7 @@ void PromotePass::promoteMemoryToRegister(Function &function) {
     //     }
     //     inst->getParent()->delFirstOfInst(inst);
     // }
-    std::set<pBlock> del_inst_blocks;
+    std::unordered_set<pBlock> del_inst_blocks;
     for (const auto &inst : del_queue)
         del_inst_blocks.insert(inst->getParent());
     for (const auto &blk : del_inst_blocks)

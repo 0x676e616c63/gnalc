@@ -46,7 +46,7 @@ RWInfo getCallRWInfo(FAM &fam, CALLInst *call) {
         return {.untracked = true};
     }
 
-    auto callee_aa = fam.getResult<BasicAliasAnalysis>(*callee_def);
+    const auto& callee_aa = fam.getResult<BasicAliasAnalysis>(*callee_def);
 
     std::vector<Value *> write_ret;
     std::vector<Value *> read_ret;
@@ -98,7 +98,7 @@ bool isPure(FAM &fam, FunctionDecl *decl) {
     if (it != cache.end())
         return it->second;
 
-    auto call_res = fam.getResult<BasicAliasAnalysis>(*callee_def);
+    const auto& call_res = fam.getResult<BasicAliasAnalysis>(*callee_def);
     if (call_res.hasSylibCall() || call_res.hasUntrackedCall())
         return cache[decl] = false;
     return cache[decl] = (call_res.getFunctionModRefInfo() == ModRefInfo::NoModRef);
@@ -125,7 +125,7 @@ bool hasSideEffect(FAM &fam, FunctionDecl *decl) {
     if (it != cache.end())
         return it->second;
 
-    auto call_res = fam.getResult<BasicAliasAnalysis>(*callee_def);
+    const auto& call_res = fam.getResult<BasicAliasAnalysis>(*callee_def);
     if (call_res.hasSylibCall() || call_res.hasUntrackedCall())
         return cache[decl] = true;
     return cache[decl] = (call_res.getFunctionModRefInfo() == ModRefInfo::Mod ||
@@ -149,7 +149,7 @@ SharedRWInfo getCallRWInfo(FAM &fam, const pCall &call) {
 
 bool hasSideEffect(FAM &fam, BasicBlock *block) {
     auto guard = Logger::scopeDisable();
-    auto &aa_res = fam.getResult<BasicAliasAnalysis>(*block->getParent());
+    const auto& aa_res = fam.getResult<BasicAliasAnalysis>(*block->getParent());
     for (const auto &inst : block->all_insts()) {
         if (auto call = inst->as<CALLInst>()) {
             if (hasSideEffect(fam, call))

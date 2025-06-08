@@ -6,6 +6,7 @@
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "utils/logger.hpp"
 
+#include <algorithm>
 #include <optional>
 
 namespace IR {
@@ -144,11 +145,15 @@ AliasInfo BasicAAResult::getAliasInfo(Value *v1, Value *v2) const {
         }
     }
 
-    for (auto p1 : info1.potential_alias) {
-        for (auto p2 : info2.potential_alias) {
-            if (p1 == p2)
-                return alias_cache[cache_key] = AliasInfo::MayAlias;
-        }
+    const auto& set1 = info1.potential_alias;
+    const auto& set2 = info2.potential_alias;
+
+    const auto& smaller = set1.size() <= set2.size() ? set1 : set2;
+    const auto& larger = set1.size() > set2.size() ? set1 : set2;
+
+    for (auto val : smaller) {
+        if (larger.find(val) != larger.end())
+            return alias_cache[cache_key] = AliasInfo::MayAlias;
     }
 
     return alias_cache[cache_key] = AliasInfo::NoAlias;
@@ -331,7 +336,7 @@ BasicAAResult BasicAliasAnalysis::run(Function &func, FAM &fam) {
                     // Given that, we only check if the `call` refers to
                     // the current function to see if it is in a recursive chain.
                     if (callee_def != &func) {
-                        auto callee_aa = fam.getResult<BasicAliasAnalysis>(*callee_def);
+                        const auto& callee_aa = fam.getResult<BasicAliasAnalysis>(*callee_def);
 
                         for (auto write : callee_aa.write) {
                             if (callee_aa.getPtrInfo(write).global_var)
