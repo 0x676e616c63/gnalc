@@ -21,8 +21,7 @@ void RedundantLoadEliImpl::MkInfo() {
     // LAMBDA BEGIN
 
     auto isLoad = [](const MIRInst_p &minst) {
-        if (minst->isGeneric() &&
-            (minst->opcode<OpC>() == OpC::InstLoadImm || minst->opcode<OpC>() == OpC::InstLoadImmToReg)) {
+        if (minst->isGeneric() && (minst->opcode<OpC>() == OpC::InstLoadImm)) {
             std::optional loaded = minst->getOp(1)->imme();
             return loaded;
         } else {
@@ -71,6 +70,7 @@ void RedundantLoadEliImpl::CulculateLCA() {
         std::vector<MIRBlk_p> stack(in_use_mblks.begin(), in_use_mblks.end());
 
         auto LCA = domTree[stack.back().get()].get(); // use raw ptr
+        stack.pop_back();
 
         while (!stack.empty()) {
             auto node = domTree[stack.back().get()].get();
@@ -97,6 +97,11 @@ void RedundantLoadEliImpl::CulculateLCA() {
     // LAMBDA END
 
     for (auto &[constVal, info] : infos) {
+
+        if (constVal == 67) {
+            int debug;
+        }
+
         getLCA(info); // fill in lca blk
     }
 }
