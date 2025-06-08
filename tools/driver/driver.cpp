@@ -161,6 +161,8 @@ int main(int argc, char **argv) {
         OPT_ARG("--memo", "--no-memo", memo)
         OPT_ARG("--unifyexits", "--no-unifyexits", unify_exits)
         OPT_ARG("--internalize", "--no-internalize", internalize)
+        OPT_ARG("--storerng", "--no-storerng", store_range)
+        OPT_ARG("--cgprepare", "--no-cgprepare", codegen_prepare)
         // Module Transforms
         OPT_ARG("--treeshaking", "--no-treeshaking", tree_shaking)
 #undef OPT_ARG
@@ -262,6 +264,8 @@ Optimizations Flags:
   --memo               - Automatic function memoization
   --unifyexits         - Unify function return nodes
   --internalize        - Internalize global variables
+  --storerng           - Store Range Analysis result. (For backend)
+  --cgprepare          - Codegen preparation
   --treeshaking        - Shake off unused functions, function declarations and global variables
 
 Debug options:
@@ -364,7 +368,7 @@ Extensions:
 
     IR::PMOptions pm_options{};
     if (o0_optnone)
-        pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::DisableAnyway);
+        pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::DisableIfDefault);
     else if (fuzz_testing) {
         cli_opt_options.abort_when_verify_failed = true;
         cli_opt_options.verify.enableIfDefault();
@@ -378,6 +382,8 @@ Extensions:
         cli_opt_options.sccp.enableIfDefault();
         cli_opt_options.adce.enableIfDefault();
         cli_opt_options.cfgsimplify.enableIfDefault();
+        cli_opt_options.store_range.enableIfDefault();
+        cli_opt_options.codegen_prepare.enableIfDefault();
         pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::DisableIfDefault);
     }
 

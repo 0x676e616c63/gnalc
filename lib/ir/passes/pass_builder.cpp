@@ -105,8 +105,7 @@ void registerPassForOptInfo(PM &fpm, bool verify, bool strict, bool enable, Pass
         fpm.addPass(std::forward<Pass>(pass));
         if (verify)
             fpm.addPass(VerifyPass(strict));
-    } else
-        Logger::logDebug("[PB]: '", Pass::name(), "' disabled.");
+    }
 }
 
 template <typename PM, typename First, typename... Rest>
@@ -215,11 +214,8 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
     // fpm.addPass(make_clean());
 
     FUNCTION_TRANSFORM(unify_exits, UnifyExitsPass());
-
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(StoreAnalysisPass<RangeAnalysis>());
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(CodeGenPreparePass());
+    FUNCTION_TRANSFORM(store_range, LoopSimplifyPass(), StoreAnalysisPass<RangeAnalysis>())
+    FUNCTION_TRANSFORM(codegen_prepare, CFGSimplifyPass(), CodeGenPreparePass())
     fpm.addPass(NameNormalizePass(true));
 
 #undef FUNCTION_TRANSFORM
@@ -287,15 +283,15 @@ FPM PassBuilder::buildFunctionPipeline(PMOptions opt_info) {
     FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
     FUNCTION_TRANSFORM(unify_exits, UnifyExitsPass())
 
+    FUNCTION_TRANSFORM(store_range, LoopSimplifyPass(), StoreAnalysisPass<RangeAnalysis>())
+    FUNCTION_TRANSFORM(codegen_prepare, CFGSimplifyPass(), CodeGenPreparePass())
+
 #undef FUNCTION_TRANSFORM
 
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(StoreAnalysisPass<RangeAnalysis>());
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(CodeGenPreparePass());
     if (!opt_info.advance_name_norm)
         fpm.addPass(NameNormalizePass(true)); // bb_rename: true
 
+    fpm.printPipeline();
     return fpm;
 }
 
@@ -535,8 +531,10 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
         Logger::logInfo("[FuzzTesting]: Reproducing pipeline: ", repro);
     }
 
-    fpm.addPass(UnifyExitsPass());
-    fpm.addPass(CodeGenPreparePass());
+    if (options.unify_exits)
+        fpm.addPass(UnifyExitsPass());
+    if (options.codegen_prepare)
+        fpm.addPass(CodeGenPreparePass());
     fpm.addPass(NameNormalizePass(true));
 
     Logger::logInfo("[FuzzTesting]: Full Pipeline: ");
