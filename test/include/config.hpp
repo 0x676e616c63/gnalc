@@ -53,6 +53,7 @@ static const std::string global_benchmark_temp_dir = "./gnalc_benchmark_temp/" +
 static const std::string sylibc = "../../test/sylib/sylib.c";
 // static const std::string sylibc = "sylib.c";
 
+static const std::string github_action_test_data = "/home/panda/gnalc/test/contest";
 static const std::string test_data = "../../test/contest";
 static const std::vector subdirs = {
     "functional",    "performance",       "h_functional",        "functional_25",      "h_functional_25",

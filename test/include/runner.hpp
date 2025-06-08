@@ -142,7 +142,7 @@ static std::vector<std::filesystem::directory_entry> gather_test_files(const std
                                                                        SkipSet &skip) {
     std::vector<std::filesystem::directory_entry> test_files;
 
-    for (const auto &p : std::filesystem::directory_iterator(cfg::test_data + "/" + curr_test_dir)) {
+    for (const auto &p : std::filesystem::directory_iterator(curr_test_dir)) {
         if (p.is_regular_file() && p.path().extension() == ".sy") {
             bool need_run = true;
 

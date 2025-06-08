@@ -167,7 +167,7 @@ int main(int argc, char *argv[]) {
         sylib_to_link = prepare_sylib(cfg::global_benchmark_temp_dir, only_frontend); // .ll or .a
 
     for (auto &&curr_test_dir : cfg::benchmark_subdirs) {
-        auto test_files = gather_test_files(curr_test_dir, run, skip);
+        auto test_files = gather_test_files(cfg::test_data + "/" + curr_test_dir, run, skip);
         if (test_files.empty())
             continue;
 

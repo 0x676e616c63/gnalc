@@ -21,6 +21,7 @@ int main(int argc, char *argv[]) {
         println("  -p, --para [Param]         Run with gnalc parameter.");
         println("  -l, --list                 List all tests.");
         println("  -h, --help                 Print this help and exit.");
+        println("  --gh-action                Github Action mode.");
     };
     RunSet skip;
     SkipSet run;
@@ -30,6 +31,7 @@ int main(int argc, char *argv[]) {
     bool stop_on_error = true;
     bool only_frontend = true;
     bool only_list = false;
+    bool in_gh_action = false;
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
         if (arg == "--all" || arg == "-a")
@@ -77,6 +79,8 @@ int main(int argc, char *argv[]) {
             return 0;
         } else if (arg == "--para" || arg == "-p") {
             gnalc_params += " " + std::string(argv[++i]);
+        } else if (arg == "--gh-action") {
+            in_gh_action = true;
         } else {
             println("Error: Unrecognized option '{}'", arg);
             print_help();
@@ -106,8 +110,9 @@ int main(int argc, char *argv[]) {
             sylib_for_diff_testing = prepare_sylib(cfg::global_temp_dir, true);
     }
 
+    auto real_test_data = in_gh_action ? cfg::github_action_test_data : cfg::test_data;
     for (auto &&curr_test_dir : cfg::subdirs) {
-        auto test_files = gather_test_files(curr_test_dir, run, skip);
+        auto test_files = gather_test_files(real_test_data + "/" + curr_test_dir, run, skip);
         if (test_files.empty())
             continue;
 
