@@ -472,80 +472,6 @@ struct StkObj {
 
 struct constVal {};
 
-class MIRFunction : public MIRRelocable {
-private:
-    MIRBlk_p_l mBlks;
-
-    MIRBlk_p mEntryBlk;
-    MIRBlk_p_l mExitBlks;
-
-    std::map<MIROperand_p, StkObj> mStkObjs;
-    std::vector<MIROperand_p> mArgs;
-
-    // infos
-    bool leafFunc = true;
-    uint64_t calleesaveRegisters = 0x60000000ULL; // fp & lr (default)
-    size_t spilled = 0LL;
-    bool largeStk = false; // may use fp(X29)
-    unsigned stkSize = 0LL;
-    unsigned calleeSave = 0LL;
-
-    // context
-    CodeGenContext &ctx;
-
-public:
-    MIRFunction() = delete;
-    MIRFunction(const string &sym, CodeGenContext &_ctx) noexcept : MIRRelocable(sym), ctx(_ctx) {}
-
-    MIROperand_p addStkObj(CodeGenContext &ctx, unsigned size, unsigned alignmant, int offset, StkObjUsage);
-    MIROperand_p addStkObj(CodeGenContext &ctx, unsigned size, unsigned alignmant, int offset, StkObjUsage,
-                           unsigned seq); // for arg on stk
-    void setEntryBlk(MIRBlk_p blk) { mEntryBlk = blk; }
-    void addExitBlk(MIRBlk_p blk) { mExitBlks.emplace_back(blk); }
-
-    auto &blks() { return mBlks; }
-    auto &EntryBlk() { return mEntryBlk; }
-    auto &ExitBlks() { return mExitBlks; }
-    auto &Args() { return mArgs; }
-    auto &StkObjs() { return mStkObjs; }
-
-    const auto &blks() const { return mBlks; }
-    const auto &EntryBlk() const { return mEntryBlk; }
-    const auto &ExitBlks() const { return mExitBlks; }
-    const auto &Args() const { return mArgs; }
-    const auto &StkObjs() const { return mStkObjs; }
-
-    bool isLeafFunc() const { return leafFunc; }
-    uint64_t calleeSaveRegs() const { return calleesaveRegisters; }
-    bool isLargeStk() const { return largeStk; }
-
-    void affirmNotLeafFunc() { leafFunc = false; }
-    uint64_t &calleeSaveRegs() { return calleesaveRegisters; }
-    void affirmLargeStk() { largeStk = true; }
-
-    size_t &spill() { return spilled; }
-    size_t spill() const { return spilled; }
-
-    auto &Context() { return ctx; }
-    const auto &Context() const { return ctx; }
-
-    bool isProgramEntry() {
-        return getmSym() == "main"; // 求放过
-    }
-
-    void modifyStkSize(unsigned _size) { stkSize = _size; }
-    unsigned stackSize() const { return stkSize; }
-
-    void modifyBegCalleeSave(unsigned _size) { calleeSave = _size; }
-    unsigned begCalleeSave() const { return calleeSave; }
-
-    bool isFunc() const override { return true; }
-
-    string getName() const { return getmSym(); }
-
-    ~MIRFunction() override = default;
-};
-
 class MIRBlk : public MIRRelocable {
 private:
     MIRFunction_wp mFunction;
@@ -636,6 +562,99 @@ public:
     }
 
     ~MIRBlk() override = default;
+
+    struct BBSuccGetter {
+        auto operator()(const MIRBlk_p &bb) { return bb->succs(); }
+    };
+    using CFGBFVisitor = Util::GenericBFVisitor<MIRBlk_p, BBSuccGetter>;
+    template <Util::DFVOrder order = Util::DFVOrder::PreOrder>
+    using CFGDFVisitor = Util::GenericDFVisitor<MIRBlk_p, BBSuccGetter, order>;
+
+    auto getBFVisitor() { return CFGBFVisitor(as<MIRBlk>()); }
+
+    template <Util::DFVOrder order = Util::DFVOrder::PreOrder> auto getDFVisitor() {
+        return CFGDFVisitor<order>(as<MIRBlk>());
+    }
+};
+
+class MIRFunction : public MIRRelocable {
+private:
+    MIRBlk_p_l mBlks;
+
+    MIRBlk_p mEntryBlk;
+    MIRBlk_p_l mExitBlks;
+
+    std::map<MIROperand_p, StkObj> mStkObjs;
+    std::vector<MIROperand_p> mArgs;
+
+    // infos
+    bool leafFunc = true;
+    uint64_t calleesaveRegisters = 0x60000000ULL; // fp & lr (default)
+    size_t spilled = 0LL;
+    bool largeStk = false; // may use fp(X29)
+    unsigned stkSize = 0LL;
+    unsigned calleeSave = 0LL;
+
+    // context
+    CodeGenContext &ctx;
+
+public:
+    MIRFunction() = delete;
+    MIRFunction(const string &sym, CodeGenContext &_ctx) noexcept : MIRRelocable(sym), ctx(_ctx) {}
+
+    MIROperand_p addStkObj(CodeGenContext &ctx, unsigned size, unsigned alignmant, int offset, StkObjUsage);
+    MIROperand_p addStkObj(CodeGenContext &ctx, unsigned size, unsigned alignmant, int offset, StkObjUsage,
+                           unsigned seq); // for arg on stk
+    void setEntryBlk(MIRBlk_p blk) { mEntryBlk = blk; }
+    void addExitBlk(MIRBlk_p blk) { mExitBlks.emplace_back(blk); }
+
+    auto &blks() { return mBlks; }
+    auto &EntryBlk() { return mEntryBlk; }
+    auto &ExitBlks() { return mExitBlks; }
+    auto &Args() { return mArgs; }
+    auto &StkObjs() { return mStkObjs; }
+
+    const auto &blks() const { return mBlks; }
+    const auto &EntryBlk() const { return mEntryBlk; }
+    const auto &ExitBlks() const { return mExitBlks; }
+    const auto &Args() const { return mArgs; }
+    const auto &StkObjs() const { return mStkObjs; }
+
+    bool isLeafFunc() const { return leafFunc; }
+    uint64_t calleeSaveRegs() const { return calleesaveRegisters; }
+    bool isLargeStk() const { return largeStk; }
+
+    void affirmNotLeafFunc() { leafFunc = false; }
+    uint64_t &calleeSaveRegs() { return calleesaveRegisters; }
+    void affirmLargeStk() { largeStk = true; }
+
+    size_t &spill() { return spilled; }
+    size_t spill() const { return spilled; }
+
+    auto &Context() { return ctx; }
+    const auto &Context() const { return ctx; }
+
+    bool isProgramEntry() {
+        return getmSym() == "main"; // 求放过
+    }
+
+    void modifyStkSize(unsigned _size) { stkSize = _size; }
+    unsigned stackSize() const { return stkSize; }
+
+    void modifyBegCalleeSave(unsigned _size) { calleeSave = _size; }
+    unsigned begCalleeSave() const { return calleeSave; }
+
+    bool isFunc() const override { return true; }
+
+    string getName() const { return getmSym(); }
+
+    ~MIRFunction() override = default;
+
+    auto getBFVisitor() const { return MIRBlk::CFGBFVisitor(mBlks.front()); }
+
+    template <Util::DFVOrder order = Util::DFVOrder::PreOrder> auto getDFVisitor() const {
+        return MIRBlk::CFGDFVisitor<order>(mBlks.front());
+    }
 };
 
 class MIRBssStorage : public MIRRelocable {

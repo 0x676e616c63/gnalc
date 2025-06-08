@@ -143,5 +143,15 @@ static NullStream & null_stream() {
     static NullStream null_stream;
     return null_stream;
 }
+
+struct PairHash {
+    template <class T1, class T2>
+    size_t operator()(const std::pair<T1, T2> &p) const
+    {
+        size_t seed = std::hash<T1>()(p.first);
+        Util::hashSeedCombine(seed, std::hash<T2>()(p.second));
+        return seed;
+    }
+};
 } // namespace Util
 #endif

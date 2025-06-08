@@ -25,39 +25,13 @@ Liveness LiveAnalysisImpl::runImpl(MIRFunction &mfunc) {
 void LiveAnalysisImpl::runOnFunc(MIRFunction &_mfunc) {
     mfunc = &_mfunc;
 
-    const auto &mblks = mfunc->blks();
-
-    std::vector<MIRBlk_p> postDFSSeq;
-    std::set<MIRBlk_p> visited{mblks.front()};
-
-    std::deque<std::pair<MIRBlk_p, bool>> s{{mblks.front(), false}};
-
-    while (!s.empty()) {
-        auto [curr, isProcessed] = s.back();
-        s.pop_back();
-
-        if (isProcessed) {
-            postDFSSeq.emplace_back(curr);
-        } else {
-            s.emplace_back(curr, true);
-
-            const auto &children = curr->succs();
-
-            for (const auto child : children) {
-                if (visited.insert(child).second) {
-                    s.emplace_back(child, false);
-                }
-            }
-        }
-    }
-
+    auto postDFSSeq = mfunc->getDFVisitor<Util::DFVOrder::PostOrder>();
     bool change = true;
-
     while (change) {
         change = false;
         for (const auto &mblk : postDFSSeq) {
-            for (auto &succ : mblk->succs()) {
-                for (auto &livevar : liveinfo->liveIn[succ]) {
+            for (const auto &succ : mblk->succs()) {
+                for (const auto &livevar : liveinfo->liveIn[succ]) {
                     change |= liveinfo->liveOut[mblk].insert(livevar).second;
                 }
             }
@@ -68,10 +42,12 @@ void LiveAnalysisImpl::runOnFunc(MIRFunction &_mfunc) {
 }
 bool LiveAnalysisImpl::runOnBlk(const MIRBlk_p &mblk) {
 
-    std::map<MIRInst_p, std::set<MIROperand_p>> instLiveIn;
-    std::map<MIRInst_p, std::set<MIROperand_p>> instLiveOut;
+    std::unordered_map<MIRInst_p, std::unordered_set<MIROperand_p>> instLiveIn;
+    std::unordered_map<MIRInst_p, std::unordered_set<MIROperand_p>> instLiveOut;
 
     const auto &minsts = mblk->Insts();
+    instLiveIn.reserve(minsts.size());
+    instLiveOut.reserve(minsts.size());
 
     instLiveOut[minsts.back()] = liveinfo->liveOut[mblk];
 
@@ -90,8 +66,8 @@ bool LiveAnalysisImpl::runOnBlk(const MIRBlk_p &mblk) {
 
     return true;
 }
-void LiveAnalysisImpl::runOnInst(const MIRInst_p &minst, std::set<MIROperand_p> &liveIn,
-                                 std::set<MIROperand_p> &liveOut) {
+void LiveAnalysisImpl::runOnInst(const MIRInst_p &minst, std::unordered_set<MIROperand_p> &liveIn,
+                                 std::unordered_set<MIROperand_p> &liveOut) {
 
     auto def = extractDef(minst);
     auto uses = extractUses(minst);
@@ -113,19 +89,16 @@ void LiveAnalysisImpl::runOnInst(const MIRInst_p &minst, std::set<MIROperand_p> 
     }
 }
 
-std::list<MIROperand_p> LiveAnalysisImpl::extractUses(const MIRInst_p &minst) {
-    std::list<MIROperand_p> uses{};
-
+std::vector<MIROperand_p> LiveAnalysisImpl::extractUses(const MIRInst_p &minst) {
+    std::vector<MIROperand_p> uses;
     const auto &mops = minst->operands();
 
-    for (auto it = std::next(mops.begin()); it != mops.end(); ++it) {
-        auto use = *it;
-
-        if (use && use->isReg()) {
-            uses.emplace_back(use);
+    size_t start = minst->getDef() ? 1 : 0;
+    for (size_t i = start; i < mops.size(); ++i) {
+        if (mops[i] && mops[i]->isReg()) {
+            uses.emplace_back(mops[i]);
         }
     }
-
     return uses;
 }
 

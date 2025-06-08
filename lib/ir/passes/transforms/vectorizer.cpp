@@ -55,14 +55,6 @@ bool AhasUseToB(const pInst &a, const pInst &b) {
     return false;
 }
 
-struct InstPairHash {
-    size_t operator()(const std::pair<pInst, pInst> &pair) const {
-        size_t seed = std::hash<pInst>()(pair.first);
-        Util::hashSeedCombine(seed, std::hash<pInst>()(pair.second));
-        return seed;
-    }
-};
-
 // Check if there is use-def dependency between two instructions.
 bool isIndependent(const pInst &stmt1, const pInst &stmt2) {
     return !AhasUseToB(stmt2, stmt1) && !AhasUseToB(stmt1, stmt2);
