@@ -73,6 +73,8 @@ public:
 using ConstantI1 = detail::BasicConstant<bool, IRBTYPE::I1>;
 using ConstantI8 = detail::BasicConstant<char, IRBTYPE::I8>;
 using ConstantInt = detail::BasicConstant<int, IRBTYPE::I32>;
+using ConstantI64 = detail::BasicConstant<int64_t, IRBTYPE::I64>;
+// using ConstantI128 = detail::BasicConstant<__int128, IRBTYPE::I128>;
 using ConstantFloat = detail::BasicConstant<float, IRBTYPE::FLOAT>;
 using ConstantIntVector = detail::BasicConstantVector<int, IRBTYPE::I32>;
 using ConstantFloatVector = detail::BasicConstantVector<float, IRBTYPE::FLOAT>;
@@ -80,6 +82,8 @@ using ConstantFloatVector = detail::BasicConstantVector<float, IRBTYPE::FLOAT>;
 using pConstI1 = std::shared_ptr<ConstantI1>;
 using pConstI8 = std::shared_ptr<ConstantI8>;
 using pConstI32 = std::shared_ptr<ConstantInt>;
+using pConstI64 = std::shared_ptr<ConstantI64>;
+// using pConstI128 = std::shared_ptr<ConstantI128>;
 using pConstF32 = std::shared_ptr<ConstantFloat>;
 using pConstI32Vec = std::shared_ptr<ConstantIntVector>;
 using pConstF32Vec = std::shared_ptr<ConstantFloatVector>;

@@ -42,10 +42,18 @@ std::string IRFormatter::formatOp(OP op) {
         return "sdiv";
     case OP::FDIV:
         return "fdiv";
-    case OP::REM:
+    case OP::SREM:
         return "srem";
+    case OP::UREM:
+        return "urem";
     case OP::FREM:
         return "frem";
+    case OP::SHL:
+        return "shl";
+    case OP::LSHR:
+        return "lshr";
+    case OP::ASHR:
+        return "ashr";
     case OP::FNEG:
         return "fneg";
     case OP::AND:
@@ -68,6 +76,8 @@ std::string IRFormatter::formatOp(OP op) {
         return "sitofp";
     case OP::ZEXT:
         return "zext";
+    case OP::SEXT:
+        return "sext";
     case OP::BITCAST:
         return "bitcast";
     case OP::ALLOCA:
@@ -82,7 +92,7 @@ std::string IRFormatter::formatOp(OP op) {
         return "phi";
     case OP::EXTRACT:
         return "extractelement";
-    case  OP::INSERT:
+    case OP::INSERT:
         return "insertelement";
     case OP::SHUFFLE:
         return "shufflevector";
@@ -140,17 +150,14 @@ std::string IRFormatter::formatHELPERTY(HELPERTY hlpty) {
     return "";
 }
 
-std::string IRFormatter::formatValue(Value &val) {
-    return val.getType()->toString() + " " + val.getName();
-}
+std::string IRFormatter::formatValue(Value &val) { return val.getType()->toString() + " " + val.getName(); }
 
 std::string IRFormatter::formatBB(BasicBlock &bb) {
     // substr to remove '%'
     return bb.getName().substr(1);
 }
 
-template <typename T>
-std::string formatFunctionHelper(T &func) {
+template <typename T> std::string formatFunctionHelper(T &func) {
     auto fn_type = func.getType()->template as<FunctionType>();
     auto ret_type = fn_type->getRet();
 
@@ -172,12 +179,8 @@ std::string formatFunctionHelper(T &func) {
     return ret;
 }
 
-std::string IRFormatter::formatFunc(Function &func) {
-    return formatFunctionHelper(func);
-}
-std::string IRFormatter::formatLinearFunc(LinearFunction &func) {
-    return formatFunctionHelper(func);
-}
+std::string IRFormatter::formatFunc(Function &func) { return formatFunctionHelper(func); }
+std::string IRFormatter::formatLinearFunc(LinearFunction &func) { return formatFunctionHelper(func); }
 
 std::string IRFormatter::formatFuncDecl(FunctionDecl &func) {
     auto fn_type = func.getType()->as<FunctionType>();
@@ -232,11 +235,11 @@ std::string IRFormatter::formatGV(GlobalVariable &gv) {
 
 std::string IRFormatter::formatInst(Instruction &inst) {
     // For Quick Debug
-    for(const auto& use : inst.operand_uses()) {
+    for (const auto &use : inst.operand_uses()) {
         if (use->getValue() == nullptr) {
             Logger::logCritical("[IRFormatter]: Operand got destroyed while its user '", inst.getName(), "' is alive.");
             std::string alive_opers;
-            for (const auto& oper : inst.operand_uses()) {
+            for (const auto &oper : inst.operand_uses()) {
                 if (oper->getValue())
                     alive_opers += formatValue(*oper->getValue()) + ", ";
                 else
@@ -260,12 +263,19 @@ std::string IRFormatter::formatInst(Instruction &inst) {
     case OP::FMUL:
     case OP::DIV:
     case OP::FDIV:
-    case OP::REM:
+    case OP::SREM:
+    case OP::UREM:
     case OP::FREM:
+    case OP::SHL:
+    case OP::LSHR:
+    case OP::ASHR:
+    case OP::AND:
+    case OP::OR:
         return fBinaryInst(inst.as_ref<BinaryInst>());
     case OP::FPTOSI:
     case OP::SITOFP:
     case OP::ZEXT:
+    case OP::SEXT:
     case OP::BITCAST:
         return fCastInst(inst.as_ref<CastInst>());
     case OP::FNEG:
@@ -471,7 +481,7 @@ std::string IRFormatter::fGEPInst(GEPInst &inst) {
     ret += ", ";
     ret += formatValue(*(inst.getPtr()));
 
-    for (const auto& idx : inst.getIdxs()) {
+    for (const auto &idx : inst.getIdxs()) {
         ret += ", ";
         ret += formatValue(*idx);
     }

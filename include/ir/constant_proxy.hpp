@@ -23,7 +23,7 @@ class ConstantProxyHash;
 class ConstantProxy {
     friend class ConstantProxyHash;
 
-    std::variant<pConstI1, pConstI8, pConstI32, pConstF32, pConstI32Vec, pConstF32Vec> value;
+    std::variant<pConstI1, pConstI8, pConstI32, pConstI64, pConstF32, pConstI32Vec, pConstF32Vec> value;
 
     ConstantPool *pool;
 
@@ -37,6 +37,7 @@ public:
     explicit ConstantProxy(ConstantPool *pool_, pConstI1 value_);
     explicit ConstantProxy(ConstantPool *pool_, pConstI8 value_);
     explicit ConstantProxy(ConstantPool *pool_, pConstI32 value_);
+    explicit ConstantProxy(ConstantPool *pool_, pConstI64 value_);
     explicit ConstantProxy(ConstantPool *pool_, pConstF32 value_);
     explicit ConstantProxy(ConstantPool *pool_, pConstI32Vec value_);
     explicit ConstantProxy(ConstantPool *pool_, pConstF32Vec value_);
@@ -46,6 +47,7 @@ public:
     explicit ConstantProxy(ConstantPool *pool_, bool value_);
     explicit ConstantProxy(ConstantPool *pool_, char value_);
     explicit ConstantProxy(ConstantPool *pool_, int value_);
+    explicit ConstantProxy(ConstantPool *pool_, int64_t value_);
     explicit ConstantProxy(ConstantPool *pool_, float value_);
     explicit ConstantProxy(ConstantPool *pool_, const std::vector<int>& value_);
     explicit ConstantProxy(ConstantPool *pool_, const std::vector<float>& value_);
@@ -58,34 +60,9 @@ public:
     ConstantProxy operator&&(const ConstantProxy &rhs) const;
     ConstantProxy operator||(const ConstantProxy &rhs) const;
 
-    ConstantProxy operator&&(bool rhs) const;
-    ConstantProxy operator||(bool rhs) const;
-
-    ConstantProxy operator+(char rhs) const;
-    ConstantProxy operator-(char rhs) const;
-    ConstantProxy operator*(char rhs) const;
-    ConstantProxy operator/(char rhs) const;
-    ConstantProxy operator%(char rhs) const;
-
-    ConstantProxy operator+(int rhs) const;
-    ConstantProxy operator-(int rhs) const;
-    ConstantProxy operator*(int rhs) const;
-    ConstantProxy operator/(int rhs) const;
-    ConstantProxy operator%(int rhs) const;
-
-    ConstantProxy operator+(float rhs) const;
-    ConstantProxy operator-(float rhs) const;
-    ConstantProxy operator*(float rhs) const;
-    ConstantProxy operator/(float rhs) const;
-
     ConstantProxy operator+() const;
     ConstantProxy operator-() const;
     ConstantProxy operator!() const;
-
-    ConstantProxy &operator++();
-    ConstantProxy &operator--();
-    ConstantProxy operator++(int);
-    ConstantProxy operator--(int);
 
     // Only Same Type
     bool operator<(const ConstantProxy &rhs) const;
@@ -95,33 +72,17 @@ public:
 
     bool operator==(const ConstantProxy &rhs) const;
     bool operator!=(const ConstantProxy &rhs) const;
+
     bool operator==(bool rhs) const;
-    bool operator!=(bool rhs) const;
     bool operator==(char rhs) const;
-    bool operator!=(char rhs) const;
     bool operator==(int rhs) const;
-    bool operator!=(int rhs) const;
+    bool operator==(int64_t rhs) const;
     bool operator==(float rhs) const;
-    bool operator!=(float rhs) const;
-
-    bool operator>=(char rhs) const;
-    bool operator<=(char rhs) const;
-    bool operator>(char rhs) const;
-    bool operator<(char rhs) const;
-
-    bool operator>=(int rhs) const;
-    bool operator<=(int rhs) const;
-    bool operator>(int rhs) const;
-    bool operator<(int rhs) const;
-
-    bool operator>=(float rhs) const;
-    bool operator<=(float rhs) const;
-    bool operator>(float rhs) const;
-    bool operator<(float rhs) const;
 
     pConstI1 getConstantI1() const;
     pConstI8 getConstantI8() const;
     pConstI32 getConstantInt() const;
+    pConstI64 getConstantI64() const;
     pConstF32 getConstantFloat() const;
     pConstI32Vec getConstantIntVector() const;
     pConstF32Vec getConstantFloatVector() const;
@@ -131,6 +92,7 @@ public:
     bool get_i1() const;
     char get_i8() const;
     int get_int() const;
+    int64_t get_i64() const;
     float get_float() const;
     std::vector<int> get_i32_vector() const;
     std::vector<float> get_f32_vector() const;

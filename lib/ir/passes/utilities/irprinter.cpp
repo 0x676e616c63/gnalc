@@ -32,15 +32,16 @@ void IRPrinter::visit(Function &node) {
 
 void IRPrinter::visit(BasicBlock &node) {
     write(IRFormatter::formatBB(node));
-    write(":        ;preds = ");
-    std::string predstr;
-    for (const auto &pred : node.getPreBB())
-        predstr += pred->getName() + ", ";
-    if (!predstr.empty()) {
+    if (node.getNumPreds() != 0) {
+        write(":        ;preds = ");
+        std::string predstr;
+        for (const auto &pred : node.getPreBB())
+            predstr += pred->getName() + ", ";
         predstr.pop_back();
         predstr.pop_back();
-    }
-    writeln(predstr);
+        writeln(predstr);
+    } else
+        writeln(":");
 
     for (const auto &inst : node.phis())
         inst->Instruction::accept(*this);
@@ -127,12 +128,13 @@ PM::PreservedAnalyses PrintDebugMessagePass::run(Function &func, FAM &fam) {
 PM::PreservedAnalyses PrintSCEVPass::run(Function &function, FAM &fam) {
     auto &scev = fam.getResult<SCEVAnalysis>(function);
     auto &loop_info = fam.getResult<LoopAnalysis>(function);
-    auto &ranges = fam.getResult<RangeAnalysis>(function);
+    // It seems the range analysis rarely enhances SCEV, but computing it is expensive.
+    // auto &ranges = fam.getResult<RangeAnalysis>(function);
     writeln("SCEV Analysis Result: ");
     for (const auto &top_level : loop_info) {
         auto ldfv = top_level->getDFVisitor();
         for (const auto &loop : ldfv) {
-            auto trip_cnt = scev.getTripCount(loop, &ranges);
+            auto trip_cnt = scev.getTripCount(loop);
             if (trip_cnt)
                 writeln("'", loop->getHeader()->getName(), "' Trip Count: ", *trip_cnt);
             else

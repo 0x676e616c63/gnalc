@@ -5,6 +5,7 @@ namespace IR {
 ConstantProxy::ConstantProxy(ConstantPool *pool_, pConstI1 value_) : value(std::move(value_)), pool(pool_) {}
 ConstantProxy::ConstantProxy(ConstantPool *pool_, pConstI8 value_) : value(std::move(value_)), pool(pool_) {}
 ConstantProxy::ConstantProxy(ConstantPool *pool_, pConstI32 value_) : value(std::move(value_)), pool(pool_) {}
+ConstantProxy::ConstantProxy(ConstantPool *pool_, pConstI64 value_) : value(std::move(value_)), pool(pool_) {}
 ConstantProxy::ConstantProxy(ConstantPool *pool_, pConstF32 value_) : value(std::move(value_)), pool(pool_) {}
 ConstantProxy::ConstantProxy(ConstantPool *pool_, pConstI32Vec value_) : value(std::move(value_)), pool(pool_) {}
 ConstantProxy::ConstantProxy(ConstantPool *pool_, pConstF32Vec value_) : value(std::move(value_)), pool(pool_) {}
@@ -16,6 +17,8 @@ ConstantProxy::ConstantProxy(ConstantPool *pool_, const pVal &value_) : pool(poo
         value = ci8;
     else if (auto ci32 = value_->as<ConstantInt>())
         value = ci32;
+    else if (auto ci64 = value_->as<ConstantI64>())
+        value = ci64;
     else if (auto cf32 = value_->as<ConstantFloat>())
         value = cf32;
     else if (auto vec_ci32 = value_->as<ConstantIntVector>())
@@ -29,6 +32,7 @@ ConstantProxy::ConstantProxy(ConstantPool *pool_, const pVal &value_) : pool(poo
 ConstantProxy::ConstantProxy(ConstantPool *pool_, bool value_) : value(pool_->getConst(value_)), pool(pool_) {}
 ConstantProxy::ConstantProxy(ConstantPool *pool_, char value_) : value(pool_->getConst(value_)), pool(pool_) {}
 ConstantProxy::ConstantProxy(ConstantPool *pool_, int value_) : value(pool_->getConst(value_)), pool(pool_) {}
+ConstantProxy::ConstantProxy(ConstantPool *pool_, int64_t value_) : value(pool_->getConst(value_)), pool(pool_) {}
 ConstantProxy::ConstantProxy(ConstantPool *pool_, float value_) : value(pool_->getConst(value_)), pool(pool_) {}
 ConstantProxy::ConstantProxy(ConstantPool *pool_, const std::vector<int> &value_)
     : value(pool_->getConst(value_)), pool(pool_) {}
@@ -172,86 +176,6 @@ ConstantProxy ConstantProxy::operator||(const ConstantProxy &rhs) const {
         value, rhs.value);
 }
 
-ConstantProxy ConstantProxy::operator&&(bool rhs) const {
-    Err::gassert(value.index() == 0 && pool != nullptr);
-    return ConstantProxy(pool, std::get<0>(value)->getVal() && rhs);
-}
-
-ConstantProxy ConstantProxy::operator||(bool rhs) const {
-    Err::gassert(value.index() == 0 && pool != nullptr);
-    return ConstantProxy(pool, std::get<0>(value)->getVal() || rhs);
-}
-
-ConstantProxy ConstantProxy::operator+(char rhs) const {
-    Err::gassert(value.index() == 1 && pool != nullptr);
-    return ConstantProxy(pool, std::get<1>(value)->getVal() + rhs);
-}
-
-ConstantProxy ConstantProxy::operator-(char rhs) const {
-    Err::gassert(value.index() == 1 && pool != nullptr);
-    return ConstantProxy(pool, std::get<1>(value)->getVal() - rhs);
-}
-
-ConstantProxy ConstantProxy::operator*(char rhs) const {
-    Err::gassert(value.index() == 1 && pool != nullptr);
-    return ConstantProxy(pool, std::get<1>(value)->getVal() * rhs);
-}
-
-ConstantProxy ConstantProxy::operator/(char rhs) const {
-    Err::gassert(value.index() == 1 && pool != nullptr);
-    return ConstantProxy(pool, std::get<1>(value)->getVal() / rhs);
-}
-
-ConstantProxy ConstantProxy::operator%(char rhs) const {
-    Err::gassert(value.index() == 1 && pool != nullptr);
-    return ConstantProxy(pool, std::get<1>(value)->getVal() % rhs);
-}
-
-ConstantProxy ConstantProxy::operator+(int rhs) const {
-    Err::gassert(value.index() == 2 && pool != nullptr);
-    return ConstantProxy(pool, std::get<2>(value)->getVal() + rhs);
-}
-
-ConstantProxy ConstantProxy::operator-(int rhs) const {
-    Err::gassert(value.index() == 2 && pool != nullptr);
-    return ConstantProxy(pool, std::get<2>(value)->getVal() - rhs);
-}
-
-ConstantProxy ConstantProxy::operator*(int rhs) const {
-    Err::gassert(value.index() == 2 && pool != nullptr);
-    return ConstantProxy(pool, std::get<2>(value)->getVal() * rhs);
-}
-
-ConstantProxy ConstantProxy::operator/(int rhs) const {
-    Err::gassert(value.index() == 2 && pool != nullptr);
-    return ConstantProxy(pool, std::get<2>(value)->getVal() / rhs);
-}
-
-ConstantProxy ConstantProxy::operator%(int rhs) const {
-    Err::gassert(value.index() == 2 && pool != nullptr);
-    return ConstantProxy(pool, std::get<2>(value)->getVal() % rhs);
-}
-
-ConstantProxy ConstantProxy::operator+(float rhs) const {
-    Err::gassert(value.index() == 3 && pool != nullptr);
-    return ConstantProxy(pool, std::get<3>(value)->getVal() + rhs);
-}
-
-ConstantProxy ConstantProxy::operator-(float rhs) const {
-    Err::gassert(value.index() == 3 && pool != nullptr);
-    return ConstantProxy(pool, std::get<3>(value)->getVal() - rhs);
-}
-
-ConstantProxy ConstantProxy::operator*(float rhs) const {
-    Err::gassert(value.index() == 3 && pool != nullptr);
-    return ConstantProxy(pool, std::get<3>(value)->getVal() * rhs);
-}
-
-ConstantProxy ConstantProxy::operator/(float rhs) const {
-    Err::gassert(value.index() == 3 && pool != nullptr);
-    return ConstantProxy(pool, std::get<3>(value)->getVal() / rhs);
-}
-
 ConstantProxy ConstantProxy::operator+() const { return *this; }
 
 ConstantProxy ConstantProxy::operator-() const {
@@ -276,62 +200,6 @@ ConstantProxy ConstantProxy::operator!() const {
                 return ConstantProxy(pool, !val->getVal());
         },
         value);
-}
-
-// Prefix
-ConstantProxy &ConstantProxy::operator++() {
-    *this = std::visit(
-        [this](const auto &val) -> ConstantProxy {
-            if constexpr (isVecType(val)) {
-                Err::unreachable();
-                return ConstantProxy(nullptr, 0);
-            } else
-                return ConstantProxy(pool, val->getVal() + 1);
-        },
-        value);
-    return *this;
-}
-
-ConstantProxy &ConstantProxy::operator--() {
-    *this = std::visit(
-        [this](const auto &val) -> ConstantProxy {
-            if constexpr (isVecType(val)) {
-                Err::unreachable();
-                return ConstantProxy(nullptr, 0);
-            } else
-                return ConstantProxy(pool, val->getVal() - 1);
-        },
-        value);
-    return *this;
-}
-
-// Postfix
-ConstantProxy ConstantProxy::operator++(int) {
-    auto old = *this;
-    *this = std::visit(
-        [this](const auto &val) -> ConstantProxy {
-            if constexpr (isVecType(val)) {
-                Err::unreachable();
-                return ConstantProxy(nullptr, 0);
-            } else
-                return ConstantProxy(pool, val->getVal() + 1);
-        },
-        value);
-    return old;
-}
-
-ConstantProxy ConstantProxy::operator--(int) {
-    auto old = *this;
-    *this = std::visit(
-        [this](const auto &val) -> ConstantProxy {
-            if constexpr (isVecType(val)) {
-                Err::unreachable();
-                return ConstantProxy(nullptr, 0);
-            } else
-                return ConstantProxy(pool, val->getVal() - 1);
-        },
-        value);
-    return old;
 }
 
 bool ConstantProxy::operator<(const ConstantProxy &rhs) const {
@@ -395,181 +263,30 @@ bool ConstantProxy::operator==(const ConstantProxy &rhs) const {
             if constexpr (!isTypeMatched(lhs, rhs)) {
                 Err::unreachable();
                 return false;
-            } else if constexpr(isVecType(lhs))
+            } else if constexpr (isVecType(lhs))
                 return lhs->getVector() == rhs->getVector();
             else
                 return lhs->getVal() == rhs->getVal();
         },
         value, rhs.value);
 }
-
-bool ConstantProxy::operator==(bool rhs) const { return value.index() == 0 && std::get<0>(value)->getVal() == rhs; }
-
-bool ConstantProxy::operator==(char rhs) const { return value.index() == 1 && std::get<1>(value)->getVal() == rhs; }
-
-bool ConstantProxy::operator==(int rhs) const { return value.index() == 2 && std::get<2>(value)->getVal() == rhs; }
-
-bool ConstantProxy::operator==(float rhs) const { return value.index() == 3 && std::get<3>(value)->getVal() == rhs; }
-bool ConstantProxy::operator!=(const ConstantProxy &rhs) const { return !(*this == rhs); }
-bool ConstantProxy::operator!=(bool rhs) const { return !(*this == rhs); }
-bool ConstantProxy::operator!=(char rhs) const { return !(*this == rhs); }
-bool ConstantProxy::operator!=(int rhs) const { return !(*this == rhs); }
-bool ConstantProxy::operator!=(float rhs) const { return !(*this == rhs); }
-
-bool ConstantProxy::operator>(char rhs) const {
-    Err::gassert(value.index() == 1);
-    return std::visit(
-        [&rhs](const auto &val) -> bool {
-            if constexpr (isVecType(val)) {
-                Err::unreachable();
-                return false;
-            } else
-                return val->getVal() > rhs;
-        },
-        value);
+bool ConstantProxy::operator!=(const ConstantProxy &rhs) const {
+    return !(*this == rhs);
 }
-
-bool ConstantProxy::operator>(int rhs) const {
-    Err::gassert(value.index() == 2);
-    return std::visit(
-        [&rhs](const auto &val) -> bool {
-            if constexpr (isVecType(val)) {
-                Err::unreachable();
-                return false;
-            } else
-                return val->getVal() > rhs;
-        },
-        value);
+bool ConstantProxy::operator==(bool rhs) const {
+    return value.index() == 0 && rhs == get_i1();
 }
-
-bool ConstantProxy::operator>(float rhs) const {
-    Err::gassert(value.index() == 3);
-    return std::visit(
-        [&rhs](const auto &val) -> bool {
-            if constexpr (isVecType(val)) {
-                Err::unreachable();
-                return false;
-            } else
-                return val->getVal() > rhs;
-        },
-        value);
+bool ConstantProxy::operator==(char rhs) const {
+    return value.index() == 1 && rhs == get_i8();
 }
-
-bool ConstantProxy::operator<(char rhs) const {
-    Err::gassert(value.index() == 1);
-    return std::visit(
-        [&rhs](const auto &val) -> bool {
-            if constexpr (isVecType(val)) {
-                Err::unreachable();
-                return false;
-            } else
-                return val->getVal() < rhs;
-        },
-        value);
+bool ConstantProxy::operator==(int rhs) const {
+    return value.index() == 2 && rhs == get_int();
 }
-
-bool ConstantProxy::operator<(int rhs) const {
-    Err::gassert(value.index() == 2);
-    return std::visit(
-        [&rhs](const auto &val) -> bool {
-            if constexpr (isVecType(val)) {
-                Err::unreachable();
-                return false;
-            } else
-                return val->getVal() < rhs;
-        },
-        value);
+bool ConstantProxy::operator==(int64_t rhs) const {
+    return value.index() == 3 && rhs == get_i64();
 }
-
-bool ConstantProxy::operator<(float rhs) const {
-    Err::gassert(value.index() == 3);
-    return std::visit(
-        [&rhs](const auto &val) -> bool {
-            if constexpr (isVecType(val)) {
-                Err::unreachable();
-                return false;
-            } else
-                return val->getVal() < rhs;
-        },
-        value);
-}
-
-bool ConstantProxy::operator>=(char rhs) const {
-    Err::gassert(value.index() == 1);
-    return std::visit(
-        [&rhs](const auto &val) -> bool {
-            if constexpr (isVecType(val)) {
-                Err::unreachable();
-                return false;
-            } else
-                return val->getVal() >= rhs;
-        },
-        value);
-}
-
-bool ConstantProxy::operator>=(int rhs) const {
-    Err::gassert(value.index() == 2);
-    return std::visit(
-        [&rhs](const auto &val) -> bool {
-            if constexpr (isVecType(val)) {
-                Err::unreachable();
-                return false;
-            } else
-                return val->getVal() >= rhs;
-        },
-        value);
-}
-
-bool ConstantProxy::operator>=(float rhs) const {
-    Err::gassert(value.index() == 3);
-    return std::visit(
-        [&rhs](const auto &val) -> bool {
-            if constexpr (isVecType(val)) {
-                Err::unreachable();
-                return false;
-            } else
-                return val->getVal() >= rhs;
-        },
-        value);
-}
-
-bool ConstantProxy::operator<=(char rhs) const {
-    Err::gassert(value.index() == 1);
-    return std::visit(
-        [&rhs](const auto &val) -> bool {
-            if constexpr (isVecType(val)) {
-                Err::unreachable();
-                return false;
-            } else
-                return val->getVal() <= rhs;
-        },
-        value);
-}
-
-bool ConstantProxy::operator<=(int rhs) const {
-    Err::gassert(value.index() == 2);
-    return std::visit(
-        [&rhs](const auto &val) -> bool {
-            if constexpr (isVecType(val)) {
-                Err::unreachable();
-                return false;
-            } else
-                return val->getVal() <= rhs;
-        },
-        value);
-}
-
-bool ConstantProxy::operator<=(float rhs) const {
-    Err::gassert(value.index() == 3);
-    return std::visit(
-        [&rhs](const auto &val) -> bool {
-            if constexpr (isVecType(val)) {
-                Err::unreachable();
-                return false;
-            } else
-                return val->getVal() <= rhs;
-        },
-        value);
+bool ConstantProxy::operator==(float rhs) const {
+    return value.index() == 4 && rhs == get_float();
 }
 
 #undef isTypeMatched
@@ -579,9 +296,10 @@ bool ConstantProxy::operator<=(float rhs) const {
 pConstI1 ConstantProxy::getConstantI1() const { return std::get<0>(value); }
 pConstI8 ConstantProxy::getConstantI8() const { return std::get<1>(value); }
 pConstI32 ConstantProxy::getConstantInt() const { return std::get<2>(value); }
-pConstF32 ConstantProxy::getConstantFloat() const { return std::get<3>(value); }
-pConstI32Vec ConstantProxy::getConstantIntVector() const { return std::get<4>(value); }
-pConstF32Vec ConstantProxy::getConstantFloatVector() const { return std::get<5>(value); }
+pConstI64 ConstantProxy::getConstantI64() const { return std::get<3>(value); }
+pConstF32 ConstantProxy::getConstantFloat() const { return std::get<4>(value); }
+pConstI32Vec ConstantProxy::getConstantIntVector() const { return std::get<5>(value); }
+pConstF32Vec ConstantProxy::getConstantFloatVector() const { return std::get<6>(value); }
 
 pVal ConstantProxy::getConstant() const {
     return std::visit([](auto &&v) -> pVal { return v; }, value);
@@ -590,9 +308,10 @@ pVal ConstantProxy::getConstant() const {
 bool ConstantProxy::get_i1() const { return std::get<0>(value)->getVal(); }
 char ConstantProxy::get_i8() const { return std::get<1>(value)->getVal(); }
 int ConstantProxy::get_int() const { return std::get<2>(value)->getVal(); }
-float ConstantProxy::get_float() const { return std::get<3>(value)->getVal(); }
-std::vector<int> ConstantProxy::get_i32_vector() const { return std::get<4>(value)->getVector(); }
-std::vector<float> ConstantProxy::get_f32_vector() const { return std::get<5>(value)->getVector(); }
+int64_t ConstantProxy::get_i64() const { return std::get<3>(value)->getVal(); }
+float ConstantProxy::get_float() const { return std::get<4>(value)->getVal(); }
+std::vector<int> ConstantProxy::get_i32_vector() const { return std::get<5>(value)->getVector(); }
+std::vector<float> ConstantProxy::get_f32_vector() const { return std::get<6>(value)->getVector(); }
 
 void ConstantProxy::setPool(ConstantPool *pool_) { pool = pool_; }
 
@@ -609,12 +328,14 @@ std::size_t ConstantProxyHash::operator()(const ConstantProxy &constant) const {
         type_name = "i32";
         break;
     case 3:
+        type_name = "i64";
+    case 4:
         type_name = "f32";
         break;
-    case 4:
+    case 5:
         type_name = "i32vec";
         break;
-    case 5:
+    case 6:
         type_name = "f32vec";
         break;
     default:

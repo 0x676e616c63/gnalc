@@ -30,7 +30,7 @@ pVal foldConstant(ConstantPool &cpool, const pVal &raw) {
                 MAKE_FOLD2(SUB, FSUB, -)
                 MAKE_FOLD2(MUL, FMUL, *)
                 MAKE_FOLD2(DIV, FDIV, /)
-                MAKE_FOLD(REM, %)
+                MAKE_FOLD(SREM, %)
 #undef MAKE_FOLD
 #undef MAKE_FOLD2
             default:

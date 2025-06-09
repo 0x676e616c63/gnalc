@@ -5,13 +5,21 @@
 
 namespace Config::IR {
 // IRGenerator
-constexpr auto REGISTER_TEMP_NAME = "%%__GNALC_IR_TEMP_NAME";
-constexpr auto MEMSET_INTRINSIC_NAME = "@llvm.memset.p0i8.i32";
-constexpr auto MEMCPY_INTRINSIC_NAME = "@llvm.memcpy.p0.p0.i32";
+constexpr auto REGISTER_TEMP_NAME = "%%__GNALC_IR_TEMP_NAME"; // deprecated
+// For a local array, if it is initialized with more than such size,
+// we will memset it to zero, rather than emitting too much store.
 constexpr auto LOCAL_ARRAY_MEMSET_THRESHOLD = 32;
 
+// Intrinsics
+// We use llvm toolchain (lli/llc) to test our optimizer. So intrinsic names
+// are the same as LLVM if possible.
+// Intrinsic for local array initialization or global variable internalization
+constexpr auto MEMSET_INTRINSIC_NAME = "@llvm.memset.p0i8.i32";
+// Intrinsic for global variable internalization
+constexpr auto MEMCPY_INTRINSIC_NAME = "@llvm.memcpy.p0.p0.i32";
+
 // Memoization
-constexpr auto MEMOIZATION_LOOKUP_INTRINSIC_NAME = "@gnalc.memoization.lookup";
+constexpr auto MEMOIZATION_LUT_SIZE = 1024;
 
 // GVN-PRE
 // Some operations in GVN-PRE are time-consuming,

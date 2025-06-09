@@ -55,9 +55,10 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
 
 
     auto& SCEVH = fam.getResult<SCEVAnalysis>(FC);
-    auto& RNG = fam.getResult<RangeAnalysis>(FC);
+    // It seems the range analysis rarely enhances SCEV, but computing it is expensive.
+    // auto& RNG = fam.getResult<RangeAnalysis>(FC);
 
-    const auto TC = SCEVH.getTripCount(loop, &RNG);
+    const auto TC = SCEVH.getTripCount(loop);
     if (TC == nullptr) {
         Logger::logInfo("[LoopUnroll] Unroll disabled because the loop can't get trip count.");
         option.disable();

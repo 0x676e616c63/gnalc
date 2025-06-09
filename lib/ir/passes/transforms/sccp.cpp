@@ -66,7 +66,7 @@ public:
     bool isZero() const {
         if (!isConstant())
             return false;
-        return cproxy() == false || cproxy() == '\0' || cproxy() == 0 || cproxy() == 0.0f;
+        return cproxy() == false || cproxy() == '\0' || cproxy() == 0 || cproxy() == static_cast<int64_t>(0) || cproxy() == 0.0f;
     }
 };
 
@@ -143,7 +143,7 @@ public:
                 else if (lhs.isConstant() && rhs.isConstant())
                     changes[inst].setCProxy(lhs.cproxy() / rhs.cproxy());
                 break;
-            case OP::REM:
+            case OP::SREM:
                 if (rhs.isZero()) {
                     Logger::logWarning("Zero divisor detected.");
                     changes[inst] = LatticeInfo::NAC;

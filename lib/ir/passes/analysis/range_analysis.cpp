@@ -246,7 +246,7 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
                     updateInt(binary, lrng * rrng);
                 else if (binary->getOpcode() == OP::DIV)
                     updateInt(binary, lrng / rrng);
-                else if (binary->getOpcode() == OP::REM)
+                else if (binary->getOpcode() == OP::SREM)
                     updateInt(binary, lrng % rrng);
                 else
                     Err::unreachable();
@@ -483,7 +483,7 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                     updateContextualInt(binary, bb, lrng * rrng);
                 else if (binary->getOpcode() == OP::DIV)
                     updateContextualInt(binary, bb, lrng / rrng);
-                else if (binary->getOpcode() == OP::REM)
+                else if (binary->getOpcode() == OP::SREM)
                     updateContextualInt(binary, bb, lrng % rrng);
                 else
                     Err::unreachable();

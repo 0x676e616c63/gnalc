@@ -78,6 +78,13 @@ void BasicBlock::addInstAfterPhi(const pInst &inst) {
     inst_index_valid = false;
 }
 
+void BasicBlock::addInstAfterAlloca(const pInst &inst) {
+    auto insert_point = insts.begin();
+    while (insert_point != insts.end() && (*insert_point)->getOpcode() == OP::ALLOCA)
+        ++insert_point;
+    addInst(insert_point, inst);
+}
+
 // FIXME: add it before BRInst's cond.
 void BasicBlock::addInstBeforeTerminator(const pInst &inst) {
     Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");

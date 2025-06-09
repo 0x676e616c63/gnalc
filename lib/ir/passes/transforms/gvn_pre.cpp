@@ -171,7 +171,7 @@ GVNPREPass::Expr::ExprOp GVNPREPass::Expr::makeOP(OP op) {
     case OP::DIV:
     case OP::FDIV:
         return ExprOp::Div;
-    case OP::REM:
+    case OP::SREM:
     case OP::FREM:
         return ExprOp::Rem;
     default:

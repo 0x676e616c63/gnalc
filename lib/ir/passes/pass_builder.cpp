@@ -307,7 +307,12 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     fpm.addPass(IR::PromotePass());
     fpm.addPass(IR::TailRecursionEliminationPass());
-    fpm.addPass(IR::DotCFGPass(std::cerr));
+    fpm.addPass(IR::InternalizePass());
+    fpm.addPass(IR::PromotePass());
+    fpm.addPass(IR::PrintFunctionPass(std::cerr));
+    fpm.addPass(IR::MemoizePass());
+    fpm.addPass(IR::PrintFunctionPass(std::cerr));
+    fpm.addPass(IR::VerifyPass());
     return fpm;
 
     // If-conversion

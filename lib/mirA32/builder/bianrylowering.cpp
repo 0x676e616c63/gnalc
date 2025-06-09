@@ -216,7 +216,7 @@ std::list<std::shared_ptr<Instruction>> InstLowering::binaryLower(const std::sha
     // ==================
     // 转换为 若干mov(如果需要) + sdiv + mls
     // ==================
-    else if (op == IR::OP::REM) {
+    else if (op == IR::OP::SREM) {
         if (rconst && lconst) {
             int constVal = lconst->getVal() % rconst->getVal();
 

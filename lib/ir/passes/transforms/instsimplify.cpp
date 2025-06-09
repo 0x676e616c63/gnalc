@@ -163,7 +163,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
                            M::Mul(M::Rem(M::Div(M::Is(x), M::Is(y)), M::Bind(z)), // ((x / y) % z)
                                   M::Is(y))))
         auto mul = std::make_shared<BinaryInst>(getTmpName(), OP::MUL, y, z);
-        auto rem = std::make_shared<BinaryInst>(getTmpName(), OP::REM, x, mul);
+        auto rem = std::make_shared<BinaryInst>(getTmpName(), OP::SREM, x, mul);
         REWRITE_END(mul, rem)
 
         // x - -y -> x + y

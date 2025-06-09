@@ -18,7 +18,6 @@ struct BenchmarkData {
     struct Item {
         TestData data;
         TestResult res;
-        std::string source_output;
         bool success{};
     };
     std::vector<Item> results1;
@@ -44,8 +43,8 @@ static void write_benchmark_result_to(const BenchmarkData &data, std::ostream &o
     auto ratio = [](auto a, auto b) { return static_cast<double>(a) / static_cast<double>(b); };
 
     for (size_t i = 0; i < data.results1.size() && i < data.results2.size(); ++i) {
-        const auto &[test1, res1, src1, success1] = data.results1[i];
-        const auto &[test2, res2, src2, success2] = data.results2[i];
+        const auto &[test1, res1, success1] = data.results1[i];
+        const auto &[test2, res2, success2] = data.results2[i];
 
         Err::gassert(test1.sy == test2.sy);
 
@@ -54,8 +53,8 @@ static void write_benchmark_result_to(const BenchmarkData &data, std::ostream &o
 
         rank.emplace_back(RankData{.testcase = test1.sy.path().stem().string(),
                                    .testcase_path = test1.sy.path(),
-                                   .compiler_output1 = src1,
-                                   .compiler_output2 = src2,
+                                   .compiler_output1 = res1.source_output,
+                                   .compiler_output2 = res2.source_output,
                                    .time1 = res1.time_elapsed,
                                    .time2 = res2.time_elapsed,
                                    .ratio = ratio(res1.time_elapsed, res2.time_elapsed)});
@@ -75,7 +74,7 @@ static void write_benchmark_result_to(const BenchmarkData &data, std::ostream &o
 
         println(out, "<{}> {}:", i, item.testcase);
         println(out, "'{}' compiler output: {}", data.mode1, item.compiler_output1);
-        println(out, "'{}': {}us", data.mode2, item.time2);
+        println(out, "'{}': {}us", data.mode1, item.time1);
         println(out, "'{}' compiler output: {}", data.mode2, item.compiler_output2);
         println(out, "'{}': {}us", data.mode2, item.time2);
         println(out, "'{}' is {}x faster than '{}'.", data.mode2, ratio(item.time1, item.time2), data.mode1);

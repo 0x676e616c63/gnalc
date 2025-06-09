@@ -780,7 +780,7 @@ void IRGenerator::visit(BinaryOp &node) {
                     }));
                 return;
             }
-            op = IR::OP::REM;
+            op = IR::OP::SREM;
             break;
         default:
             Err::unreachable();

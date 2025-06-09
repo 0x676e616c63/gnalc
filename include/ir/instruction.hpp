@@ -27,11 +27,14 @@ enum class OP {
     FMUL,
     DIV,
     FDIV,
-    REM,
+    SREM,
+    UREM,
     FREM, // not implemented in IRGen
-
-    AND, // bitwise, not implemented in IRGen
-    OR,  // bitwise, not implemented in IRGen
+    SHL,
+    LSHR,
+    ASHR,
+    AND,
+    OR,
 
     // Memory Operation
     ALLOCA,
@@ -45,6 +48,7 @@ enum class OP {
     FPTOSI,
     SITOFP,
     ZEXT,
+    SEXT,
     BITCAST,
 
     // Compare
