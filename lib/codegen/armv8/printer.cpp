@@ -172,7 +172,7 @@ string ARMA64Printer::memoryPrinter(const MIRInst &minst) {
         if (minst.getOp(1)->isReloc()) {
             auto reg = Reg2S(minst.ensureDef(), memSize); // adrp + ldr
             auto label = minst.getOp(1)->relocable()->getmSym();
-            str += "ldr\t" + reg + ", [" + reg + ", :got_lo12:" + label + "]";
+            str += "ldr\t" + reg + ", [" + reg + ", #:got_lo12:" + label + "]";
 
             return str;
         }
@@ -434,9 +434,9 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
                 if (lastReg == -1) {
                     lastReg = i;
                 } else {
-                    str += "stp\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec), 16) + ", " +
+                    str += "    stp\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec), 16) + ", " +
                            reg2s(MIROperand::asISAReg(i, OpT::Floatvec), 16) + ", " + "[sp, #" +
-                           std::to_string(offset) + "]\n    ";
+                           std::to_string(offset) + "]\n";
 
                     lastReg = -1;
                     offset += 32;
@@ -494,9 +494,9 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
                 if (lastReg == -1) {
                     lastReg = i;
                 } else {
-                    str += "ldp\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec), 16) + ", " +
+                    str += "    ldp\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec), 16) + ", " +
                            reg2s(MIROperand::asISAReg(i, OpT::Floatvec), 16) + ", " + "[sp, #" +
-                           std::to_string(offset) + "]\n    ";
+                           std::to_string(offset) + "]\n";
 
                     lastReg = -1;
                     offset += 32;
