@@ -45,7 +45,6 @@ static const std::string gcc_arm_command = "aarch64-linux-gnu-gcc-13"; // 13.3.0
 static const std::string qemu_arm_command = "LD_LIBRARY_PATH=/usr/aarch64-linux-gnu/lib qemu-aarch64";
 #endif
 
-
 static const std::string global_temp_dir = "./gnalc_test_temp/" + generate_unique_temp_dir();
 
 static const std::string global_benchmark_temp_dir = "./gnalc_benchmark_temp/" + generate_unique_temp_dir();

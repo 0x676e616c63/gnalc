@@ -94,6 +94,8 @@ void register_example_4() {
     BenchmarkRegistry::register_benchmark("example_4", entry);
 }
 
+// Only Backend
+// Requires: ./example_exes/example_5
 void register_example_5() {
     Entry entry{
         .ir_gen =

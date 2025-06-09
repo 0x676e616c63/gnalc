@@ -7,6 +7,7 @@
 #include "utils.hpp"
 
 #include <map>
+#include <optional>
 #include <string>
 
 namespace Test {
@@ -24,8 +25,11 @@ struct BenchmarkData {
     std::vector<Item> results2;
 };
 
-struct RatioData {
+struct RankData {
     std::string testcase;
+    std::string testcase_path;
+    std::string compiler_output1;
+    std::string compiler_output2;
     size_t time1;
     size_t time2;
     double ratio;
@@ -33,59 +37,60 @@ struct RatioData {
 
 static void write_benchmark_result_to(const BenchmarkData &data, std::ostream &out,
                                       const std::vector<TestData> &failed) {
-    println(out, "Benchmark results:");
-    std::vector<RatioData> times;
+    std::vector<RankData> rank;
     size_t total1 = 0;
     size_t total2 = 0;
 
     auto ratio = [](auto a, auto b) { return static_cast<double>(a) / static_cast<double>(b); };
 
     for (size_t i = 0; i < data.results1.size() && i < data.results2.size(); ++i) {
-        const auto &[test1, res1, ll1, success1] = data.results1[i];
-        const auto &[test2, res2, ll2, success2] = data.results2[i];
+        const auto &[test1, res1, src1, success1] = data.results1[i];
+        const auto &[test2, res2, src2, success2] = data.results2[i];
 
         Err::gassert(test1.sy == test2.sy);
 
-        if (!success1 || !success2) {
-            println(out, "<{}> {}:", i, test1.sy.path().stem().string());
-            println(out, "Skipped failed tests.");
-            println(out, "----------");
+        if (!success1 || !success2)
             continue;
-        }
 
-        times.emplace_back(RatioData{.testcase = test1.sy.path(),
-                                     .time1 = res1.time_elapsed,
-                                     .time2 = res2.time_elapsed,
-                                     .ratio = ratio(res1.time_elapsed, res2.time_elapsed)});
+        rank.emplace_back(RankData{.testcase = test1.sy.path().stem().string(),
+                                   .testcase_path = test1.sy.path(),
+                                   .compiler_output1 = src1,
+                                   .compiler_output2 = src2,
+                                   .time1 = res1.time_elapsed,
+                                   .time2 = res2.time_elapsed,
+                                   .ratio = ratio(res1.time_elapsed, res2.time_elapsed)});
+
         total1 += res1.time_elapsed;
         total2 += res2.time_elapsed;
-
-        println(out, "<{}> {}:", i, test1.sy.path().stem().string());
-        println(out, "'{}' compiler output: {}", test1.mode_id, res1.source_output);
-        println(out, "'{}': {}us", test1.mode_id, res1.time_elapsed);
-        println(out, "'{}' compiler output: {}", test2.mode_id, res2.source_output);
-        println(out, "'{}': {}us", test2.mode_id, res2.time_elapsed);
-        println(out, "'{}' is {}x faster than '{}'.", test2.mode_id, ratio(res1.time_elapsed, res2.time_elapsed),
-                test1.mode_id);
-
-        println(out, "----------");
     }
 
+    std::sort(rank.begin(), rank.end(), [](const RankData &a, const RankData &b) { return a.ratio < b.ratio; });
+
     auto average_ratio = ratio(total1, total2);
+
+    println(out, "Benchmark results:");
+    bool printed_divider_line = false;
+    for (size_t i = 0; i < rank.size(); ++i) {
+        const auto &item = rank[i];
+
+        println(out, "<{}> {}:", i, item.testcase);
+        println(out, "'{}' compiler output: {}", data.mode1, item.compiler_output1);
+        println(out, "'{}': {}us", data.mode2, item.time2);
+        println(out, "'{}' compiler output: {}", data.mode2, item.compiler_output2);
+        println(out, "'{}': {}us", data.mode2, item.time2);
+        println(out, "'{}' is {}x faster than '{}'.", data.mode2, ratio(item.time1, item.time2), data.mode1);
+
+        if (!printed_divider_line && i != rank.size() - 1 && rank[i + 1].ratio >= 1.0) {
+            println(out, "------------------------- 1.0x -------------------------");
+            printed_divider_line = true;
+        } else
+            println(out, "--------------------");
+    }
+
     println(out, "Total time:");
     println(out, "'{}': {}us", data.mode1, total1);
     println(out, "'{}': {}us", data.mode2, total2);
     println(out, "On average, '{}' is {}x faster than '{}'.", data.mode2, average_ratio, data.mode1);
-
-    std::sort(times.begin(), times.end(), [](const RatioData &a, const RatioData &b) { return a.ratio < b.ratio; });
-
-    println(out, "Fastest 10:");
-    for (int i = times.size() - 1; i >= times.size() - 10 && i >= 0; --i)
-        println(out, "{}: {}x", times[i].testcase, times[i].ratio);
-
-    println(out, "Slowest 10:");
-    for (size_t i = 0; i < 10 && i < times.size(); ++i)
-        println(out, "{}: {}x", times[i].testcase, times[i].ratio);
 
     if (!failed.empty()) {
         println(out, "WARNING: {} tests failed!", failed.size());
