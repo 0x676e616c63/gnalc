@@ -6,11 +6,17 @@ using namespace MIR_new;
 
 OpC MIR_new::chooseCopyOpC(const MIROperand_p &dst, const MIROperand_p &src) {
     if (dst->isISA() && src->isImme()) {
-        return OpC::InstLoadImmToReg;
+        if (inRange(dst->type(), OpT::Int, OpT::Int64))
+            return OpC::InstLoadImmToReg;
+        else if (inRange(dst->type(), OpT::Float, OpT::Float32))
+            return OpC::InstLoadFPImmToReg;
     } else if (dst->isISA() && src->isVReg()) {
         return OpC::InstCopyToReg;
     } else if (dst->isVReg() && src->isImme()) {
-        return OpC::InstLoadImm;
+        if (inRange(dst->type(), OpT::Int, OpT::Int64))
+            return OpC::InstLoadImm;
+        else if (inRange(dst->type(), OpT::Float, OpT::Float32))
+            return OpC::InstLoadFPImm;
     } else if (dst->isVReg() && src->isISA()) {
         return OpC::InstCopyFromReg;
     } else if (dst->isVReg() && src->isVReg()) {

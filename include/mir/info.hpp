@@ -4,6 +4,7 @@
 
 #include "ir/instructions/control.hpp"
 #include "mir/tools.hpp"
+#include <cstring>
 #include <string>
 
 namespace MIR_new {
@@ -46,7 +47,7 @@ inline bool isFitMemInst(int offset, unsigned bitwide) {
 
 ///@todo vectoer ld1/ld2/ld3
 
-template <typename T> bool is12ImmeWithProbShift(T imm) {
+template <typename T> inline bool is12ImmeWithProbShift(T imm) {
     ///@warning use in ADD/SUB/CMP/CMN
 
     Err::gassert(!std::is_same_v<T, float>, "is12ImmeWithShift: fadd/fsub dont support a imme");
@@ -60,6 +61,37 @@ template <typename T> bool is12ImmeWithProbShift(T imm) {
     } else {
         return false;
     }
+}
+
+inline bool isFloat8(float imm) {
+    if (imm == 0.0f) {
+        return false;
+    }
+
+    uint32_t bits;
+    std::memcpy(&bits, &imm, sizeof(float));
+
+    uint32_t exponent = (bits >> 23) & 0xFF;
+
+    if (exponent == 0) {
+        return false;
+    }
+    if (exponent == 255) {
+        return false;
+    }
+
+    int e = static_cast<int>(exponent) - 127;
+    if (e < -3 || e > 4) {
+        return false;
+    }
+
+    uint32_t fraction = bits & 0x7FFFFF;
+
+    if ((fraction & 0x7FFFF) != 0) {
+        return false;
+    }
+
+    return true;
 }
 
 template <typename T> bool isBitMaskImme(T imm) {
@@ -235,6 +267,7 @@ enum ARMOpC : uint32_t {
     MOVZ,        // mov and zero the rest bits
     MOVK,        // mov and keep the rest bits
     MOVF,        // fmov
+    MOVI,        // mov imme into simd regs
     BL,          // func call, remember to mark tail call
     RET,         // ret, with link register
     PUSH,        // implement with losts of stp in codegen

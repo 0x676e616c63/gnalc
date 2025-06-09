@@ -21,7 +21,8 @@ void RedundantLoadEliImpl::MkInfo() {
     // LAMBDA BEGIN
 
     auto isLoad = [](const MIRInst_p &minst) {
-        if (minst->isGeneric() && (minst->opcode<OpC>() == OpC::InstLoadImm)) {
+        if (minst->isGeneric() &&
+            (minst->opcode<OpC>() == OpC::InstLoadImm || minst->opcode<OpC>() == OpC::InstLoadFPImm)) {
             std::optional loaded = minst->getOp(1)->imme();
             return loaded;
         } else {
@@ -137,10 +138,8 @@ void RedundantLoadEliImpl::ApplyCopys() {
             for (auto &[mop, miter] : uses) {
                 auto &minst_loadImm = *miter;
 
-                if (minst_loadImm->opcode<OpC>() == OpC::InstLoadImm) {
+                if (inSet(minst_loadImm->opcode<OpC>(), OpC::InstLoadImm, OpC::InstLoadFPImm)) {
                     minst_loadImm->resetOpcode(OpC::InstCopy);
-                } else { // InstLoadImmToReg
-                    minst_loadImm->resetOpcode(OpC::InstCopyToReg);
                 }
 
                 ///@note 寄存器压力大时, 这里可能有两种表现
