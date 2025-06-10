@@ -103,10 +103,23 @@ bool eliminateLoop(FAM &fam, Function &func, const pLoop &loop, LoopInfo &loop_i
     auto exits = loop->getExitBlocks();
     auto exitings = loop->getExitingBlocks();
 
-    if (exits.size() != 1)
+    // A non-side-effect loop cannot be eliminated if its exit condition can
+    // affect the control flow.
+    // For example:
+    //
+    //   exiting1:
+    //     br exit0;
+    //   exiting2:
+    //     br exit0;
+    //   exit:
+    //     phi [xxx, exiting1], [yyy, exiting2]
+    //
+    // The loop itself does not have side effect, but when it exits matters.
+    if (exitings.size() != 1 || exits.size() != 1)
         return false;
 
     auto exit = *exits.begin();
+    auto exiting = *exitings.begin();
 
     auto preheader = loop->getPreHeader();
     auto header = loop->getHeader();
@@ -119,8 +132,7 @@ bool eliminateLoop(FAM &fam, Function &func, const pLoop &loop, LoopInfo &loop_i
         linkBB(preheader, exit);
     }
     std::set<pPhi> dead_phis;
-    for (const auto &exiting : exitings)
-        safeUnlinkBB(exiting, exit, dead_phis, UnlinkOptions::performDCE(&fam));
+    safeUnlinkBB(exiting, exit, dead_phis, UnlinkOptions::performDCE(&fam));
 
     exit->delInstIf(
         [&dead_phis](const auto &p) { return dead_phis.find(p->template as<PHIInst>()) != dead_phis.end(); },

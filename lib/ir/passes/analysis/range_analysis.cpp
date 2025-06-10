@@ -232,7 +232,7 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
         ++process_cnt[inst];
 
         bool is_btype = inst->getType()->is<BType>();
-        bool is_int = is_btype && inst->getType()->as<BType>()->getInner() == IRBTYPE::I32;
+        bool is_int = is_btype && inst->getType()->isInteger();
 
         if (auto binary = inst->as_raw<BinaryInst>()) {
             if (is_int) {
@@ -248,6 +248,20 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
                     updateInt(binary, lrng / rrng);
                 else if (binary->getOpcode() == OP::SREM)
                     updateInt(binary, lrng % rrng);
+                else if (binary->getOpcode() == OP::UREM)
+                    updateInt(binary, lrng.urem(rrng));
+                else if (binary->getOpcode() == OP::SHL)
+                    updateInt(binary, lrng.shl(rrng));
+                else if (binary->getOpcode() == OP::LSHR)
+                    updateInt(binary, lrng.lshr(rrng));
+                else if (binary->getOpcode() == OP::ASHR)
+                    updateInt(binary, lrng.ashr(rrng));
+                else if (binary->getOpcode() == OP::AND)
+                    updateInt(binary, lrng & rrng);
+                else if (binary->getOpcode() == OP::OR)
+                    updateInt(binary, lrng | rrng);
+                else if (binary->getOpcode() == OP::XOR)
+                    updateInt(binary, lrng ^ rrng);
                 else
                     Err::unreachable();
             } else {
@@ -278,6 +292,9 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
         } else if (auto zext = inst->as_raw<ZEXTInst>()) {
             const auto &vrng = res.getIntRange(zext->getOVal());
             updateInt(zext, vrng);
+        } else if (auto sext = inst->as_raw<SEXTInst>()) {
+            const auto &vrng = res.getIntRange(sext->getOVal());
+            updateInt(sext, vrng);
         } else if (auto phi = inst->as_raw<PHIInst>()) {
             auto phi_opers = phi->getPhiOpers();
             if (is_int) {
@@ -392,7 +409,7 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
         auto bb = pair.second;
 
         bool is_btype = inst->getType()->is<BType>();
-        bool is_int = is_btype && inst->getType()->as<BType>()->getInner() == IRBTYPE::I32;
+        bool is_int = is_btype && inst->getType()->isInteger();
 
         // Check SCEV
         // FIXME: SCEV cannot figure out complex induction variables, since its goal
@@ -485,6 +502,20 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                     updateContextualInt(binary, bb, lrng / rrng);
                 else if (binary->getOpcode() == OP::SREM)
                     updateContextualInt(binary, bb, lrng % rrng);
+                else if (binary->getOpcode() == OP::UREM)
+                    updateContextualInt(binary, bb, lrng.urem(rrng));
+                else if (binary->getOpcode() == OP::SHL)
+                    updateContextualInt(binary, bb, lrng.shl(rrng));
+                else if (binary->getOpcode() == OP::LSHR)
+                    updateContextualInt(binary, bb, lrng.lshr(rrng));
+                else if (binary->getOpcode() == OP::ASHR)
+                    updateContextualInt(binary, bb, lrng.ashr(rrng));
+                else if (binary->getOpcode() == OP::AND)
+                    updateContextualInt(binary, bb, lrng & rrng);
+                else if (binary->getOpcode() == OP::OR)
+                    updateContextualInt(binary, bb, lrng | rrng);
+                else if (binary->getOpcode() == OP::XOR)
+                    updateContextualInt(binary, bb, lrng ^ rrng);
                 else
                     Err::unreachable();
             } else {
@@ -515,6 +546,9 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
         } else if (auto zext = inst->as_raw<ZEXTInst>()) {
             const auto &vrng = res.getIntRange(zext->getOVal().get(), bb);
             updateContextualInt(zext, bb, vrng);
+        } else if (auto sext = inst->as_raw<SEXTInst>()) {
+            const auto &vrng = res.getIntRange(sext->getOVal().get(), bb);
+            updateContextualInt(sext, bb, vrng);
         } else if (auto phi = inst->as_raw<PHIInst>()) {
             auto phi_opers = phi->getPhiOpers();
             if (is_int) {

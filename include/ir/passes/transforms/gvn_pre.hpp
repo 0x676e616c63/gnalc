@@ -56,6 +56,12 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
             Mul,
             Div,
             Rem,
+            And,
+            Or,
+            Xor,
+            Shl,
+            LShr,
+            AShr,
 
             // Cmp,
             // I was not sure whether we do this pass to cmp is effective or not.
@@ -66,6 +72,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
             Fptosi,
             Sitofp,
             Zext,
+            Sext,
             Bitcast,
 
             // Call

@@ -39,8 +39,8 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                         load->replaceSelf(store->getValue());
                         unused_load.insert(load);
                         replaced = true;
-                        Logger::logDebug("[LoadElim]: Replaced '", load->getName(), "' with '", store->getName(),
-                                         "''s value.");
+                        // Logger::logDebug("[LoadElim]: Replaced '", load->getName(), "' with '", store->getName(),
+                        //                  "''s value.");
                         break;
                     }
 

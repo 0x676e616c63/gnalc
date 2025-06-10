@@ -29,6 +29,24 @@ std::ostream &operator<<(std::ostream &os, const GVNPREPass::Expr &expr) {
     case GVNPREPass::Expr::ExprOp::Rem:
         os << "v" << expr.operands[0] << " % v" << expr.operands[1];
         break;
+    case GVNPREPass::Expr::ExprOp::And:
+        os << "v" << expr.operands[0] << " & v" << expr.operands[1];
+        break;
+    case GVNPREPass::Expr::ExprOp::Or:
+        os << "v" << expr.operands[0] << " | v" << expr.operands[1];
+        break;
+    case GVNPREPass::Expr::ExprOp::Xor:
+        os << "v" << expr.operands[0] << " ^ v" << expr.operands[1];
+        break;
+    case GVNPREPass::Expr::ExprOp::Shl:
+        os << "v" << expr.operands[0] << " << v" << expr.operands[1];
+        break;
+    case GVNPREPass::Expr::ExprOp::LShr:
+        os << "v" << expr.operands[0] << " l>> v" << expr.operands[1];
+        break;
+    case GVNPREPass::Expr::ExprOp::AShr:
+        os << "v" << expr.operands[0] << " a>> v" << expr.operands[1];
+        break;
     case GVNPREPass::Expr::ExprOp::Fptosi:
         os << "fptosi " << "v" << expr.operands[0];
         break;
@@ -37,6 +55,9 @@ std::ostream &operator<<(std::ostream &os, const GVNPREPass::Expr &expr) {
         break;
     case GVNPREPass::Expr::ExprOp::Zext:
         os << "zext " << "v" << expr.operands[0] << " to " << expr.ir_value->getType()->toString();
+        break;
+    case GVNPREPass::Expr::ExprOp::Sext:
+        os << "sext " << "v" << expr.operands[0] << " to " << expr.ir_value->getType()->toString();
         break;
     case GVNPREPass::Expr::ExprOp::Bitcast:
         os << "bitcast " << "v" << expr.operands[0] << " to " << expr.ir_value->getType()->toString();
@@ -153,7 +174,7 @@ const std::vector<GVNPREPass::ValueKind> &GVNPREPass::Expr::getExprOperands() co
 bool GVNPREPass::Expr::isGlobalTemp() const { return op == ExprOp::GlobalTemp; }
 bool GVNPREPass::Expr::isLocalTemp() const { return op == ExprOp::LocalTemp; }
 bool GVNPREPass::Expr::isPhi() const { return op == ExprOp::Phi; }
-Value* GVNPREPass::Expr::getIRVal() const {
+Value *GVNPREPass::Expr::getIRVal() const {
     Err::gassert(ir_value != nullptr);
     return ir_value;
 }
@@ -171,9 +192,22 @@ GVNPREPass::Expr::ExprOp GVNPREPass::Expr::makeOP(OP op) {
     case OP::DIV:
     case OP::FDIV:
         return ExprOp::Div;
+    case OP::UREM:
     case OP::SREM:
     case OP::FREM:
         return ExprOp::Rem;
+    case OP::AND:
+        return ExprOp::And;
+    case OP::OR:
+        return ExprOp::Or;
+    case OP::XOR:
+        return ExprOp::Xor;
+    case OP::SHL:
+        return ExprOp::Shl;
+    case OP::LSHR:
+        return ExprOp::LShr;
+    case OP::ASHR:
+        return ExprOp::AShr;
     default:
         Err::unreachable("Unknown OP");
     }
@@ -224,7 +258,7 @@ bool GVNPREPass::Expr::operator==(const Expr &rhs) const {
     if (op != rhs.op)
         return false;
 
-    if (op == ExprOp::Zext || op == ExprOp::Bitcast) {
+    if (op == ExprOp::Sext || op == ExprOp::Zext || op == ExprOp::Bitcast) {
         if (!isSameType(ir_value->getType(), rhs.ir_value->getType()))
             return false;
     } else if (op == ExprOp::PureFuncCall) {
@@ -243,13 +277,13 @@ bool GVNPREPass::Expr::operator==(const Expr &rhs) const {
         //   %b = phi [ 0, %bb2 ] [ 1, %bb1 ]
         // We can not only compare their operands
         auto phi = ir_value->as<PHIInst>();
-        auto rhs_phi =  rhs.ir_value->as<PHIInst>();
+        auto rhs_phi = rhs.ir_value->as<PHIInst>();
         if (phi->getParent() != rhs_phi->getParent())
             return false;
         size_t i = 0;
-        for (const auto& [val, bb] : phi->incomings()) {
+        for (const auto &[val, bb] : phi->incomings()) {
             size_t j = 0;
-            for (const auto& [rhs_val, rhs_bb] : rhs_phi->incomings()) {
+            for (const auto &[rhs_val, rhs_bb] : rhs_phi->incomings()) {
                 if (bb == rhs_bb) {
                     if (operands[i] != rhs.operands[j])
                         return false;
@@ -265,14 +299,14 @@ bool GVNPREPass::Expr::operator==(const Expr &rhs) const {
     return operands == rhs.operands;
 }
 
-GVNPREPass::ValueKind GVNPREPass::NumberTable::getKindOrInsert(Value* value, KindExprSet &exp_gen,
+GVNPREPass::ValueKind GVNPREPass::NumberTable::getKindOrInsert(Value *value, KindExprSet &exp_gen,
                                                                size_t nested_expr_cnt) {
     auto e = getExprOrInsert(value, exp_gen, nested_expr_cnt);
     if (e == nullptr)
         return NotValueKind;
     return getKindOrInsert(e);
 }
-GVNPREPass::ValueKind GVNPREPass::NumberTable::getKindOrInsert(Value* value, size_t nested_expr_cnt) {
+GVNPREPass::ValueKind GVNPREPass::NumberTable::getKindOrInsert(Value *value, size_t nested_expr_cnt) {
     KindExprSet exp_gen_tmp;
     return getKindOrInsert(value, exp_gen_tmp, nested_expr_cnt);
 }
@@ -287,7 +321,7 @@ GVNPREPass::ValueKind GVNPREPass::NumberTable::getKindOrInsert(Expr *expr) {
     if (expr->isPhi() && !expr->getExprOperands().empty()) {
         ValueKind common = expr->getExprOperands()[0];
         bool is_common = true;
-        for (const auto& k : expr->getExprOperands()) {
+        for (const auto &k : expr->getExprOperands()) {
             if (k != common) {
                 is_common = false;
                 break;
@@ -301,7 +335,7 @@ GVNPREPass::ValueKind GVNPREPass::NumberTable::getKindOrInsert(Expr *expr) {
     return kind_cnt++;
 }
 
-GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(Value* ir_value, KindExprSet &exp_gen,
+GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(Value *ir_value, KindExprSet &exp_gen,
                                                            size_t nested_expr_cnt) {
     auto it = get_expr_cache.find(ir_value);
     if (it != get_expr_cache.end())
@@ -328,7 +362,7 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(Value* ir_value, Kind
         expr = std::make_shared<Expr>(ir_value, Expr::ExprOp::LocalTemp);
     else {
         if (auto phi = ir_value->as_raw<PHIInst>()) {
-            static std::vector<PHIInst*> visited_phis;
+            static std::vector<PHIInst *> visited_phis;
 
             if (std::any_of(visited_phis.begin(), visited_phis.end(),
                             [&phi](const auto &visited) { return visited == phi; })) {
@@ -370,6 +404,9 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(Value* ir_value, Kind
             } else if (auto zext = ir_value->as_raw<ZEXTInst>()) {
                 Err::gassert(operands.size() == 1);
                 expr = std::make_shared<Expr>(zext, Expr::ExprOp::Zext, std::move(operands));
+            } else if (auto sext = ir_value->as_raw<SEXTInst>()) {
+                Err::gassert(operands.size() == 1);
+                expr = std::make_shared<Expr>(sext, Expr::ExprOp::Sext, std::move(operands));
             } else if (auto bitcast = ir_value->as_raw<BITCASTInst>()) {
                 Err::gassert(operands.size() == 1);
                 expr = std::make_shared<Expr>(bitcast, Expr::ExprOp::Bitcast, std::move(operands));
@@ -400,20 +437,18 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(Value* ir_value, Kind
     return pool_expr;
 }
 
-GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(Value* inst, size_t nested_expr_cnt) {
+GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(Value *inst, size_t nested_expr_cnt) {
     KindExprSet exp_gen_tmp;
     return getExprOrInsert(inst, exp_gen_tmp, nested_expr_cnt);
 }
 
-void GVNPREPass::NumberTable::setPhiKind(PHIInst* phi, ValueKind kind) {
+void GVNPREPass::NumberTable::setPhiKind(PHIInst *phi, ValueKind kind) {
     invalidateExprCache(phi);
     auto expr = getExprOrInsert(phi);
     expr_table[expr] = kind;
 }
 
-void GVNPREPass::NumberTable::invalidateExprCache(Value* v) {
-    get_expr_cache.erase(v);
-}
+void GVNPREPass::NumberTable::invalidateExprCache(Value *v) { get_expr_cache.erase(v); }
 
 GVNPREPass::Expr *GVNPREPass::NumberTable::getExprFromPool(const std::shared_ptr<Expr> &item) {
     auto it = expr_pool.find(item);
@@ -441,7 +476,7 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprFromPool(const std::shared_ptr
 // Note that if the translated Expr doesn't exist, expr->getIRVal()->getParent() will be nullptr.
 // And we DO NOT update `exp_gen` in `phi_translate`.
 // When hoisted, this Inst will be added to `pred`, and the `exp_gen` will be updated.
-Value* GVNPREPass::phiTranslate(Expr *expr, BasicBlock *pred, BasicBlock *succ) {
+Value *GVNPREPass::phiTranslate(Expr *expr, BasicBlock *pred, BasicBlock *succ) {
     if (expr->isGlobalTemp())
         return expr->getIRVal();
 
@@ -532,18 +567,24 @@ Value* GVNPREPass::phiTranslate(Expr *expr, BasicBlock *pred, BasicBlock *succ) 
             std::make_shared<GEPInst>("%gvnpre.g" + std::to_string(name_cnt++), translated_ptr, translated_operands);
     } else if (auto fptosi = inst->as<FPTOSIInst>()) {
         Err::gassert(translated_operands.size() == 1);
-        translated_inst = std::make_shared<FPTOSIInst>("%gvnpre.f2i" + std::to_string(name_cnt++), translated_operands[0]);
+        translated_inst =
+            std::make_shared<FPTOSIInst>("%gvnpre.f2i" + std::to_string(name_cnt++), translated_operands[0]);
     } else if (auto sitofp = inst->as<SITOFPInst>()) {
         Err::gassert(translated_operands.size() == 1);
-        translated_inst = std::make_shared<SITOFPInst>("%gvnpre.i2f" + std::to_string(name_cnt++), translated_operands[0]);
+        translated_inst =
+            std::make_shared<SITOFPInst>("%gvnpre.i2f" + std::to_string(name_cnt++), translated_operands[0]);
     } else if (auto zext = inst->as<ZEXTInst>()) {
         Err::gassert(translated_operands.size() == 1);
-        translated_inst = std::make_shared<ZEXTInst>("%gvnpre.ze" + std::to_string(name_cnt++),
-            translated_operands[0], zext->getType()->as<BType>()->getInner());
+        translated_inst = std::make_shared<ZEXTInst>("%gvnpre.ze" + std::to_string(name_cnt++), translated_operands[0],
+                                                     zext->getType()->as<BType>()->getInner());
+    } else if (auto sext = inst->as<SEXTInst>()) {
+        Err::gassert(translated_operands.size() == 1);
+        translated_inst = std::make_shared<SEXTInst>("%gvnpre.se" + std::to_string(name_cnt++), translated_operands[0],
+                                                     sext->getType()->as<BType>()->getInner());
     } else if (auto bitcast = inst->as<BITCASTInst>()) {
         Err::gassert(translated_operands.size() == 1);
         translated_inst = std::make_shared<BITCASTInst>("%gvnpre.bc" + std::to_string(name_cnt++),
-            translated_operands[0], bitcast->getType());
+                                                        translated_operands[0], bitcast->getType());
     } else if (auto pure_func_call = inst->as<CALLInst>()) {
         Err::gassert(isPure(*fam, pure_func_call));
         auto func = translated_operands[0]->as<FunctionDecl>();
@@ -554,8 +595,7 @@ Value* GVNPREPass::phiTranslate(Expr *expr, BasicBlock *pred, BasicBlock *succ) 
 
         translated_inst =
             std::make_shared<CALLInst>("%gvnpre.c" + std::to_string(name_cnt++), func, translated_operands);
-    }
-    else
+    } else
         Err::unreachable("Unknown inst");
 
     phi_translate_gen.emplace_back(translated_inst);
@@ -602,9 +642,7 @@ Value* GVNPREPass::phiTranslate(Expr *expr, BasicBlock *pred, BasicBlock *succ) 
     return translated_inst.get();
 }
 
-void GVNPREPass::invalidatePhiTranslateCache() {
-    phi_translate_cache.clear();
-}
+void GVNPREPass::invalidatePhiTranslateCache() { phi_translate_cache.clear(); }
 
 PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     this->fam = &fam;
@@ -619,7 +657,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     bool gvnpre_inst_modified = false;
 
     // Fold LCSSA Phi for phi_translate
-    for (const auto& bb : function)
+    for (const auto &bb : function)
         gvnpre_inst_modified |= foldPHI(bb, /* preserve_lcssa */ false);
 
     //
@@ -825,7 +863,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                         continue;
 
                     // Pred -> available, translated kind, translated val
-                    std::map<BasicBlock *, std::tuple<bool, ValueKind, Value*>> translated;
+                    std::map<BasicBlock *, std::tuple<bool, ValueKind, Value *>> translated;
                     bool avail_in_at_least_one_pred = false;
                     bool killed = false;
                     for (const auto &pred : preds) {
@@ -898,15 +936,15 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                                 //
                                 // FIXME: fix phiTranslate to get rid of such 'out of date'
                                 auto pred_avail = avail_out_map[pred.get()];
-                                std::function<void(pInst&)> fix_operands;
-                                fix_operands = [&] (pInst& to_fix){
-                                    auto& operand_uses = to_fix->getOperands();
-                                    for (const auto& oper_use : operand_uses) {
+                                std::function<void(pInst &)> fix_operands;
+                                fix_operands = [&](pInst &to_fix) {
+                                    auto &operand_uses = to_fix->getOperands();
+                                    for (const auto &oper_use : operand_uses) {
                                         if (auto oper_inst = oper_use->getValue()->as<Instruction>()) {
                                             if (oper_inst->getParent() == nullptr) {
                                                 auto oper_kind = table.getKindOrInsert(oper_inst.get());
                                                 Err::gassert(pred_avail.contains(oper_kind),
-                                                    "Hoisted instruction has unexpected operand.");
+                                                             "Hoisted instruction has unexpected operand.");
                                                 auto fixed_oper = pred_avail.getValue(oper_kind);
                                                 if (auto fixed_oper_inst = fixed_oper->as<Instruction>())
                                                     fix_operands(fixed_oper_inst);
@@ -947,8 +985,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                         if (auto common_value = getCommonValue(phi)) {
                             avail_out_map[curr->raw_block()].update(kind_to_hoist, common_value.get());
                             new_set_map[curr->raw_block()].update(kind_to_hoist, common_value.get());
-                        }
-                        else {
+                        } else {
                             gvnpre_inst_modified = true;
                             curr->raw_block()->addPhiInst(phi);
                             invalidatePhiTranslateCache();
@@ -987,7 +1024,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
         debug_logger_insert_round_cnt++;
         if (enable_debug_output) {
             Logger::logDebug("[GVN-PRE] on '", function.getName(), "' AFTER INSERT ROUND ",
-               debug_logger_insert_round_cnt, ":\n", *this);
+                             debug_logger_insert_round_cnt, ":\n", *this);
         }
     }
 
