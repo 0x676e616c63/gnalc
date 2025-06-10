@@ -315,14 +315,28 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
     fpm.addPass(IR::PromotePass());
     fpm.addPass(IR::TailRecursionEliminationPass());
+    fpm.addPass(IR::InlinePass());
     fpm.addPass(IR::InternalizePass());
     fpm.addPass(IR::PromotePass());
-    fpm.addPass(IR::UnifyExitsPass());
-    fpm.addPass(IR::NameNormalizePass(true));
-    fpm.addPass(IR::PrintFunctionPass(std::cerr));
-    fpm.addPass(IR::MemoizePass());
-    fpm.addPass(IR::PrintFunctionPass(std::cerr));
-    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::NameNormalizePass());
+    fpm.addPass(IR::CFGSimplifyPass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::LCSSAPass());
+    fpm.addPass(IR::LoopUnrollPass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::LoopRotatePass());
+    fpm.addPass(IR::LCSSAPass());
+    fpm.addPass(IR::LICMPass());
+    fpm.addPass(IR::BreakCriticalEdgesPass());
+    fpm.addPass(IR::GVNPREPass());
+    fpm.addPass(IR::CFGSimplifyPass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::LCSSAPass());
+    fpm.addPass(IR::PngCFGPass("beforeurnoll"));
+    fpm.addPass(IR::LoopUnrollPass());
+    fpm.addPass(IR::PngCFGPass("afterurnoll"));
+    fpm.addPass(IR::RunTestPass("../test/contest/performance_rv_25/rv_h-2-03.out"));
+    fpm.addPass(IR::NameNormalizePass());
     return fpm;
 
     // If-conversion

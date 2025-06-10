@@ -9,7 +9,7 @@
 
 namespace IR {
 FunctionDecl::FunctionDecl(std::string name_, std::vector<pType> params, pType ret_type, bool is_va_arg_,
-                           std::set<FuncAttr> attrs)
+                           std::unordered_set<FuncAttr> attrs)
     : Value(std::move(name_), makeFunctionType(std::move(params), std::move(ret_type), is_va_arg_),
             ValueTrait::FUNCTION),
       func_attrs(std::move(attrs)) {
@@ -34,7 +34,7 @@ bool FunctionDecl::isRecursive() const {
 
 bool FunctionDecl::hasAttr(FuncAttr attr) const { return func_attrs.count(attr); }
 void FunctionDecl::addAttr(FuncAttr attr) { func_attrs.emplace(attr); }
-const std::set<FuncAttr> &FunctionDecl::getAttrs() const { return func_attrs; }
+const std::unordered_set<FuncAttr> &FunctionDecl::getAttrs() const { return func_attrs; }
 
 void FunctionDecl::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
@@ -56,7 +56,7 @@ std::vector<pType> get_params_type(const std::vector<pFormalParam> &p) {
 }
 
 Function::Function(std::string name_, const std::vector<pFormalParam> &params_, pType ret_type, ConstantPool *pool_,
-                   std::set<FuncAttr> attrs)
+                   std::unordered_set<FuncAttr> attrs)
     : FunctionDecl(std::move(name_), get_params_type(params_), std::move(ret_type), false, attrs), params(params_),
       constant_pool(pool_) {}
 

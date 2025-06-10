@@ -654,11 +654,13 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
         return PreserveAll();
     }
 
-    bool gvnpre_inst_modified = false;
+    bool gvnpre_folded_phi = false;
+    bool gvnpre_hoisted_inst = false;
+    bool gvnpre_replaced_value = false;
 
     // Fold LCSSA Phi for phi_translate
     for (const auto &bb : function)
-        gvnpre_inst_modified |= foldPHI(bb, /* preserve_lcssa */ false);
+        gvnpre_folded_phi = foldPHI(bb, /* preserve_lcssa */ false);
 
     //
     // Step 1 - BuildSets
@@ -840,6 +842,10 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
 
     std::vector<pPhi> inserted_phis;
 
+    LoopInfo* loop_info = nullptr;
+    if (disable_PRE_on_loop_backedge)
+        loop_info = &fam.getResult<LoopAnalysis>(function);
+
     // a top-down traversal of the dominator tree
     size_t debug_logger_insert_round_cnt = 0;
     modified = true;
@@ -884,6 +890,59 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
 
                     if (killed)
                         continue;
+
+                    if (disable_PRE_on_loop_backedge) {
+                        // For a typical rotated loop:
+                        //
+                        //                     (critical)
+                        //                    |----------|
+                        //                    |          |
+                        //                    V          |
+                        //  PreHeader ---> Header ---> Latch
+                        //      |                        |
+                        //      v                        |
+                        //     Exit  <--------------------
+                        //
+                        // After the critical edge has been removed:
+                        //                        (New Latch)
+                        //                      |<-- bb0 <-|
+                        //                   (*)|          |
+                        //                      V          |
+                        //    PreHeader ---> Header ---> Old Latch
+                        //        |                        |
+                        //        v                        |
+                        //       Exit  <--------------------
+                        //
+                        //  Or for a simple self-loop:
+                        //
+                        //             (critical)
+                        //             |--------                                      (*) |- bb0 <-
+                        //             V       |   (after break critical edges)           V       |
+                        //    Ph --> Header ---|   >>>>>>>>>>>>>>>>>>>>>>>>>>>>> Ph --> Header ---|
+                        //             |                                                  |
+                        //             V                                                  V
+                        //            Exit                                              Exit
+                        //
+                        // If we perform PRE on bb0 -> Header (*) edge, instructions will be
+                        // hoisted to bb0, which will let bb0 can not be eliminated afterward.
+                        // This, however, let a loop becomes a middle-exiting loop, or produces
+                        // more BRInst, which can be a pessimization.
+                        // So we provide an option to disable such PRE.
+                        auto found_backedge = [&] () -> pBlock {
+                            for (const auto &pred : preds) {
+                                auto [avail, hoisted_kind, hoisted_ir_val] = translated[pred.get()];
+                                if (!avail && loop_info->isLoopHeader(curr->raw_block()))
+                                    return pred;
+                            }
+                            return nullptr;
+                        }();
+                        if (found_backedge) {
+                            // Logger::logDebug("[GVN-PRE]: Skipped PRE on loop backedge."
+                            //                  " ('", curr->raw_block()->getName(), "' -> '",
+                            //                  found_backedge->getName(), "')");
+                            continue;
+                        }
+                    }
 
                     // If the expression is available in at least one predecessor,
                     // then we insert it in predecessors where it is not available.
@@ -986,7 +1045,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                             avail_out_map[curr->raw_block()].update(kind_to_hoist, common_value.get());
                             new_set_map[curr->raw_block()].update(kind_to_hoist, common_value.get());
                         } else {
-                            gvnpre_inst_modified = true;
+                            gvnpre_hoisted_inst = true;
                             curr->raw_block()->addPhiInst(phi);
                             invalidatePhiTranslateCache();
                             inserted_phis.emplace_back(phi);
@@ -1061,7 +1120,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                     eliminated.emplace_back(inst);
                     Logger::logDebug("[GVN-PRE] on '", function.getName(), "': '", inst->getName(), "' replaced with '",
                                      leader_value->getName(), "'.");
-                    gvnpre_inst_modified = true;
+                    gvnpre_replaced_value = true;
                 }
             }
         }
@@ -1075,11 +1134,56 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
         }
     }
 
+    // If we disabled PRE on loop backedge, some insertions will be redundant,
+    // since the original algorithm is broken.
+    // Any insertions are to satisfy the anticipation in the successors, but the
+    // successor might cannot do PRE due to backedge.
+    // For example (extended from the previous one):
+    //
+    //                                       (New Latch)
+    //                      A              |<-- bb0 <-|
+    //                      |           (*)|          |
+    //                      V              V          |
+    //         B  ----> PreHeader ---> Header ---> Old Latch
+    //                      |                        |
+    //                      v                        |
+    //                     Exit  <--------------------
+    //
+    // If Header needs something that is available in A and B,
+    // but not directly available in PreHeader and totally unavailable in bb0.
+    // Typically, GVN-PRE will:
+    //   1. Insert a Phi in the PreHeader to merge the available value from A and B.
+    //   2. Hoist the computation in the Header to bb0.
+    //   3. Insert a Phi in the Header to merge the phi inserted in step 1
+    //      and the computation hoisted in step 2.
+    // But if we disabled PRE on backedge, step 2 and 3 will not happen.
+    // Thus, the phi inserted in step 1 is fully redundant.
+    //
+    // So we eliminate the redundant phi.
+    if (disable_PRE_on_loop_backedge) {
+        std::vector<pInst> worklist;
+        worklist.reserve(inserted_phis.size());
+        for (const auto &phi : inserted_phis)
+            worklist.emplace_back(phi);
+        eliminateDeadInsts(worklist);
+        auto all_removed = [&] {
+            for (const auto &inst : inserted_phis) {
+                if (inst->getParent() != nullptr)
+                    return false;
+            }
+            return true;
+        }();
+        if (all_removed)
+            gvnpre_hoisted_inst = false;
+    }
+
     eliminateDeadInsts(eliminated, &fam);
 
     // cleanup to release temp objects
     reset();
 
-    return gvnpre_inst_modified ? PreserveCFGAnalyses() : PreserveAll();
+    if (gvnpre_folded_phi || gvnpre_replaced_value || gvnpre_hoisted_inst)
+        return PreserveCFGAnalyses();
+    return PreserveAll();
 }
 } // namespace IR

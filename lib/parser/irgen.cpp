@@ -30,7 +30,7 @@ void IRGenerator::visit(CompUnit &node) {
     auto f32_type = IR::makeBType(IR::IRBTYPE::FLOAT);
     auto f32ptr_type = IR::makePtrType(f32_type);
     auto make_decl = [this](const std::string &name, std::vector<IR::pType> params, IR::pType ret,
-                            std::set<IR::FuncAttr> attrs, bool is_va_arg = false) {
+                            std::unordered_set<IR::FuncAttr> attrs, bool is_va_arg = false) {
         auto fn = std::make_shared<IR::FunctionDecl>("@" + name, std::move(params), std::move(ret), is_va_arg,
                                                      std::move(attrs));
         symbol_table.insert(name, fn);
