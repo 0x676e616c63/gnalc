@@ -1,82 +1,111 @@
-const int mod = 998244353;
-int d;
+// reference: https://zhuanlan.zhihu.com/p/20085048
 
-int multiply(int a, int b){
-    if (b == 0) return 0;
-    if (b == 1) return a % mod;
-    int cur = multiply(a, b/2);
-    cur = (cur + cur) % mod;
-    if (b % 2 == 1) return (cur + a) % mod;
-    else return cur;
+const float e = 2.718281828459045;
+
+float my_fabs(float x) {
+  if (x > 0) return x;
+  return -x;
 }
 
-int power(int a, int b){
-    if (b == 0) return 1;
-    int cur = power(a, b/2);
-    cur = multiply(cur, cur);
-    if (b % 2 == 1) return multiply(cur, a);
-    else return cur;
-}
-const int maxlen = 2097152;
-int temp[maxlen], a[maxlen], b[maxlen], c[maxlen];
-
-int memmove(int dst[], int dst_pos, int src[], int len){
-    int i = 0;
-    while (i < len){
-        dst[dst_pos + i] = src[i];
-        i = i + 1;
-    }
-    return i;
+float my_pow(float a, int n) {
+  if (n < 0) return 1 / my_pow(a, -n);
+  float res = 1.0;
+  while (n) {
+    if (n % 2) res = res * a;
+    a = a * a;
+    n = n / 2;
+  }
+  return res;
 }
 
-int fft(int arr[], int begin_pos, int n, int w){
-    if (n == 1) return 1;
-    int i = 0;
-    while (i < n){
-        if (i % 2 == 0) temp[i / 2] = arr[i + begin_pos];
-        else temp[n / 2 + i / 2] = arr[i + begin_pos];
-        i = i + 1;
-    }
-
-    memmove(arr, begin_pos, temp, n);
-    fft(arr, begin_pos, n / 2, multiply(w, w));
-    fft(arr, begin_pos + n / 2, n / 2, multiply(w, w));
-    i = 0;
-    int wn = 1;
-    while (i < n / 2){
-        int x = arr[begin_pos + i];
-        int y = arr[begin_pos + i + n / 2];
-        arr[begin_pos + i] = (x + multiply(wn, y)) % mod;
-        arr[begin_pos + i + n / 2] = (x - multiply(wn, y) + mod) % mod;
-        wn = multiply(wn, w);
-        i = i + 1;
-    }
-    return 0;
+float my_sqrt(float x) {
+  if (x > 100) return 10.0 * my_sqrt(x / 100);
+  float t = x / 8 + 0.5 + 2 * x / (4 + x);
+  int c = 10;
+  while (c) {
+    t = (t + x / t) / 2;
+    c = c - 1;
+  }
+  return t;
 }
 
-int main(){
-    int n = getarray(a);
-    int m = getarray(b);
-    starttime();
-    d = 1;
-    while (d < n + m - 1){
-        d = d * 2;
-    }
-    fft(a, 0, d, power(3, (mod - 1) / d));
-    fft(b, 0, d, power(3, (mod - 1) / d));
+float F1(float x) { return 1 / x; }
 
-    int i = 0;
-    while (i < d){
-        a[i] = multiply(a[i], b[i]);
-        i = i + 1;
+float F2(float x) { return 1 / my_sqrt(1 - x * x); }
+
+float simpson(float a, float b, int flag) {
+  float c = a + (b - a) / 2;
+  if (flag == 1) return (F1(a) + 4 * F1(c) + F1(b)) * (b - a) / 6;
+  if (flag == 2) return (F2(a) + 4 * F2(c) + F2(b)) * (b - a) / 6;
+  return 0;
+}
+
+float asr5(float a, float b, float eps, float A, int flag) {
+  float c = a + (b - a) / 2;
+  float L = simpson(a, c, flag), R = simpson(c, b, flag);
+  if (my_fabs(L + R - A) <= 15 * eps) return L + R + (L + R - A) / 15.0;
+  return asr5(a, c, eps / 2, L, flag) + asr5(c, b, eps / 2, R, flag);
+}
+
+float asr4(float a, float b, float eps, int flag) {
+  return asr5(a, b, eps, simpson(a, b, flag), flag);
+}
+
+float eee(float x) {
+  if (x > 1e-3) {
+    float ee = eee(x / 2);
+    return ee * ee;
+  }
+  return 1 + x + x * x / 2 + my_pow(x, 3) / 6 + my_pow(x, 4) / 24 +
+         my_pow(x, 5) / 120;
+}
+
+float my_exp(float x) {
+  if (x < 0) return 1 / my_exp(-x);
+  int n = x;
+  x = x - n;
+  float e1 = my_pow(e, n);
+  float e2 = eee(x);
+  return e1 * e2;
+}
+
+float my_ln(float x) { return asr4(1, x, 1e-8, 1); }
+
+float my_log(float a, float N) { return my_ln(N) / my_ln(a); }
+
+float my_powf(float a, float x) { return my_exp(x * my_ln(a)); }
+
+int main() {
+  int num = getint();
+  while (num) {
+    float x = getfloat(), y = getfloat();
+    putfloat(my_fabs(x));
+    putch(32);
+    putfloat(my_pow(x, 2));
+    putch(32);
+    putfloat(my_sqrt(x));
+    putch(32);
+    putfloat(my_exp(x));
+    putch(32);
+    if (x > 0) {
+      putfloat(my_ln(x));
+    } else {
+      putch(45);
     }
-    fft(a, 0, d, power(3, mod-1 - (mod-1)/d));
-    i = 0;
-    while (i < d){
-        a[i] = multiply(a[i], power(d, mod-2));
-        i = i + 1;
+    putch(32);
+    if (x > 0 && y > 0) {
+      putfloat(my_log(x, y));
+    } else {
+      putch(45);
     }
-    stoptime();
-    putarray(n + m - 1, a);
-    return 0;
+    putch(32);
+    if (x > 0) {
+      putfloat(my_powf(x, y));
+    } else {
+      putch(45);
+    }
+    putch(10);
+    num = num - 1;
+  }
+  return 0;
 }

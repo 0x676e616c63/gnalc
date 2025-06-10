@@ -1,3 +1,4 @@
+#include "ir/passes/transforms/sccp.hpp"
 #include "ir/block_utils.hpp"
 #include "ir/instructions/binary.hpp"
 #include "ir/instructions/compare.hpp"
@@ -8,7 +9,6 @@
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "ir/passes/helpers/sparse_propagation.hpp"
-#include "ir/passes/transforms/sccp.hpp"
 #include "ir/pattern_match.hpp"
 #include "pattern_match/pattern_match.hpp"
 #include "utils/logger.hpp"
@@ -66,7 +66,8 @@ public:
     bool isZero() const {
         if (!isConstant())
             return false;
-        return cproxy() == false || cproxy() == '\0' || cproxy() == 0 || cproxy() == static_cast<int64_t>(0) || cproxy() == 0.0f;
+        return cproxy() == false || cproxy() == '\0' || cproxy() == 0 || cproxy() == static_cast<int64_t>(0) ||
+               cproxy() == 0.0f;
     }
 };
 
@@ -152,6 +153,15 @@ public:
                 else if (lhs.isConstant() && rhs.isConstant())
                     changes[inst].setCProxy(lhs.cproxy() % rhs.cproxy());
                 break;
+            case OP::UREM:
+                if (rhs.isZero()) {
+                    Logger::logWarning("Zero divisor detected.");
+                    changes[inst] = LatticeInfo::NAC;
+                } else if (lhs.isZero())
+                    changes[inst].setCProxy(lhs.cproxy());
+                else if (lhs.isConstant() && rhs.isConstant())
+                    changes[inst].setCProxy(lhs.cproxy().urem(rhs.cproxy()));
+                break;
             case OP::AND:
                 if ((lhs.isConstant() && lhs.cproxy() == false) || (rhs.isConstant() && rhs.cproxy() == false))
                     changes[inst].setCProxy(ConstantProxy(cpool, false));
@@ -163,6 +173,28 @@ public:
                     changes[inst].setCProxy(ConstantProxy(cpool, true));
                 else if (lhs.isConstant() && rhs.isConstant())
                     changes[inst].setCProxy(lhs.cproxy() || rhs.cproxy());
+                break;
+            case OP::XOR:
+                if (lhs.isConstant() && rhs.isConstant())
+                    changes[inst].setCProxy(lhs.cproxy() ^ rhs.cproxy());
+                break;
+            case OP::SHL:
+                if (lhs.isConstant() && rhs.isConstant())
+                    changes[inst].setCProxy(lhs.cproxy() << rhs.cproxy());
+                else if (lhs.isNAC() || rhs.isNAC())
+                    changes[inst] = LatticeInfo::NAC;
+                break;
+            case OP::LSHR:
+                if (lhs.isConstant() && rhs.isConstant())
+                    changes[inst].setCProxy(lhs.cproxy().lshr(rhs.cproxy()));
+                else if (lhs.isNAC() || rhs.isNAC())
+                    changes[inst] = LatticeInfo::NAC;
+                break;
+            case OP::ASHR:
+                if (lhs.isConstant() && rhs.isConstant())
+                    changes[inst].setCProxy(lhs.cproxy().ashr(rhs.cproxy()));
+                else if (lhs.isNAC() || rhs.isNAC())
+                    changes[inst] = LatticeInfo::NAC;
                 break;
             default:
                 Err::unreachable("Unknown binary opcode");
@@ -248,20 +280,71 @@ public:
                 switch (otype) {
                 case IRBTYPE::I1:
                     if (ttype == IRBTYPE::I8)
+                        changes[inst].setCProxy(
+                            ConstantProxy(cpool, static_cast<char>(static_cast<unsigned char>(val.cproxy().get_i1()))));
+                    else if (ttype == IRBTYPE::I32)
+                        changes[inst].setCProxy(
+                            ConstantProxy(cpool, static_cast<int>(static_cast<unsigned int>(val.cproxy().get_i1()))));
+                    else if (ttype == IRBTYPE::I64)
+                        changes[inst].setCProxy(
+                            ConstantProxy(cpool, static_cast<int64_t>(static_cast<uint64_t>(val.cproxy().get_i1()))));
+                    else
+                        Err::unreachable("Invalid type");
+                    break;
+                case IRBTYPE::I8:
+                    if (ttype == IRBTYPE::I32)
+                        changes[inst].setCProxy(
+                            ConstantProxy(cpool, static_cast<int>(static_cast<unsigned int>(val.cproxy().get_i8()))));
+                    else if (ttype == IRBTYPE::I64)
+                        changes[inst].setCProxy(
+                            ConstantProxy(cpool, static_cast<int64_t>(static_cast<uint64_t>(val.cproxy().get_i8()))));
+                    else
+                        Err::unreachable("Invalid type");
+                    break;
+                case IRBTYPE::I32:
+                    if (ttype == IRBTYPE::I64)
+                        changes[inst].setCProxy(
+                            ConstantProxy(cpool, static_cast<int64_t>(static_cast<uint64_t>(val.cproxy().get_int()))));
+                    else
+                        Err::unreachable("Invalid type");
+                    break;
+                default:
+                    Err::unreachable("Invalid type to zext.");
+                }
+            } else if (val.isNAC())
+                changes[inst] = LatticeInfo::NAC;
+        } else if (auto sext = inst->as<SEXTInst>()) {
+            auto val = solver.getVal(LatticeInfo::getKeyFromValue(sext->getOVal()));
+            auto ttype = sext->getTType()->as<BType>()->getInner();
+            auto otype = sext->getOType()->as<BType>()->getInner();
+            if (val.isConstant()) {
+                switch (otype) {
+                case IRBTYPE::I1:
+                    if (ttype == IRBTYPE::I8)
                         changes[inst].setCProxy(ConstantProxy(cpool, static_cast<char>(val.cproxy().get_i1())));
                     else if (ttype == IRBTYPE::I32)
                         changes[inst].setCProxy(ConstantProxy(cpool, static_cast<int>(val.cproxy().get_i1())));
+                    else if (ttype == IRBTYPE::I64)
+                        changes[inst].setCProxy(ConstantProxy(cpool, static_cast<int64_t>(val.cproxy().get_i1())));
                     else
                         Err::unreachable("Invalid type");
                     break;
                 case IRBTYPE::I8:
                     if (ttype == IRBTYPE::I32)
                         changes[inst].setCProxy(ConstantProxy(cpool, static_cast<int>(val.cproxy().get_i8())));
+                    else if (ttype == IRBTYPE::I64)
+                        changes[inst].setCProxy(ConstantProxy(cpool, static_cast<int64_t>(val.cproxy().get_i8())));
+                    else
+                        Err::unreachable("Invalid type");
+                    break;
+                case IRBTYPE::I32:
+                    if (ttype == IRBTYPE::I64)
+                        changes[inst].setCProxy(ConstantProxy(cpool, static_cast<int64_t>(val.cproxy().get_int())));
                     else
                         Err::unreachable("Invalid type");
                     break;
                 default:
-                    Err::unreachable("Invalid type to zext.");
+                    Err::unreachable("Invalid type to sext.");
                 }
             } else if (val.isNAC())
                 changes[inst] = LatticeInfo::NAC;

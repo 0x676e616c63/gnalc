@@ -35,6 +35,7 @@ enum class OP {
     ASHR,
     AND,
     OR,
+    XOR,
 
     // Memory Operation
     ALLOCA,

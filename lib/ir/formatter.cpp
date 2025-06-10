@@ -60,6 +60,8 @@ std::string IRFormatter::formatOp(OP op) {
         return "and";
     case OP::OR:
         return "or";
+    case OP::XOR:
+        return "xor";
     case OP::ICMP:
         return "icmp";
     case OP::FCMP:
@@ -271,6 +273,7 @@ std::string IRFormatter::formatInst(Instruction &inst) {
     case OP::ASHR:
     case OP::AND:
     case OP::OR:
+    case OP::XOR:
         return fBinaryInst(inst.as_ref<BinaryInst>());
     case OP::FPTOSI:
     case OP::SITOFP:

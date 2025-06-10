@@ -1,4 +1,6 @@
 #include "ir/passes/analysis/basic_alias_analysis.hpp"
+
+#include "config/config.hpp"
 #include "ir/instructions/control.hpp"
 #include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
@@ -222,13 +224,25 @@ ModRefInfo BasicAAResult::getFunctionModRefInfo() const {
     if (has_untracked_call)
         return ModRefInfo::ModRef;
 
-    if (read.empty() && write.empty())
+    size_t real_read = std::count_if(read.begin(), read.end(), [](auto &p) {
+        if (p->template is<GlobalVariable>() && Util::begins_with(p->getName(), Config::IR::MEMOIZATION_LUT_NAME_PREFIX))
+            return false;
+        return true;
+    });
+
+    size_t real_write = std::count_if(write.begin(), write.end(), [](auto &p) {
+        if (p->template is<GlobalVariable>() && Util::begins_with(p->getName(), Config::IR::MEMOIZATION_LUT_NAME_PREFIX))
+            return false;
+        return true;
+    });
+
+    if (real_read == 0 && real_write == 0)
         return ModRefInfo::NoModRef;
 
-    if (read.empty() && !write.empty())
+    if (real_read == 0 && real_write > 0)
         return ModRefInfo::Mod;
 
-    if (write.empty() && !read.empty())
+    if (real_read > 0 && real_write == 0)
         return ModRefInfo::Ref;
 
     return ModRefInfo::ModRef;

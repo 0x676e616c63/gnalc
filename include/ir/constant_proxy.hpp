@@ -59,6 +59,11 @@ public:
     ConstantProxy operator%(const ConstantProxy &rhs) const;
     ConstantProxy operator&&(const ConstantProxy &rhs) const;
     ConstantProxy operator||(const ConstantProxy &rhs) const;
+    ConstantProxy operator^(const ConstantProxy &rhs) const;
+    ConstantProxy operator<<(const ConstantProxy &rhs) const;
+    ConstantProxy lshr(const ConstantProxy &rhs) const;
+    ConstantProxy ashr(const ConstantProxy &rhs) const;
+    ConstantProxy urem(const ConstantProxy &rhs) const;
 
     ConstantProxy operator+() const;
     ConstantProxy operator-() const;

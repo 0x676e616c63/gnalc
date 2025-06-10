@@ -55,9 +55,15 @@ template <typename T> constexpr auto isFloatTypeImpl() {
     return std::is_same_v<TT, pConstF32> || std::is_same_v<TT, pConstF32Vec>;
 }
 
+template <typename T> constexpr auto isBoolTypeImpl() {
+    using TT = Util::remove_cvref_t<T>;
+    return std::is_same_v<TT, pConstI1>;
+}
+
 #define isTypeMatched(a, b) isTypeMatchedImpl<decltype(a), decltype(b)>()
 #define isVecType(a) isVecTypeImpl<decltype(a)>()
 #define isFloatType(a) isFloatTypeImpl<decltype(a)>()
+#define isBoolType(a) isBoolTypeImpl<decltype(a)>()
 
 ConstantProxy ConstantProxy::operator+(const ConstantProxy &rhs) const {
     Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool && pool != nullptr);
@@ -172,6 +178,91 @@ ConstantProxy ConstantProxy::operator||(const ConstantProxy &rhs) const {
                 return ConstantProxy(nullptr, 0);
             } else
                 return ConstantProxy(pool, lhs->getVal() || rhs->getVal());
+        },
+        value, rhs.value);
+}
+ConstantProxy ConstantProxy::operator^(const ConstantProxy &rhs) const {
+    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool && pool != nullptr);
+    return std::visit(
+        [this](const auto &lhs, const auto &rhs) -> ConstantProxy {
+            if constexpr (!isTypeMatched(lhs, rhs) || isVecType(lhs) || isFloatType(lhs)) {
+                Err::unreachable();
+                return ConstantProxy(nullptr, 0);
+            } else
+                return ConstantProxy(pool, lhs->getVal() ^ rhs->getVal());
+        },
+        value, rhs.value);
+}
+ConstantProxy ConstantProxy::operator<<(const ConstantProxy &rhs) const {
+    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool && pool != nullptr);
+    return std::visit(
+        [this](const auto &lhs, const auto &rhs) -> ConstantProxy {
+            if constexpr (!isTypeMatched(lhs, rhs) || isVecType(lhs) || isFloatType(lhs)) {
+                Err::unreachable();
+                return ConstantProxy(nullptr, 0);
+            } else
+                return ConstantProxy(pool, lhs->getVal() << rhs->getVal());
+        },
+        value, rhs.value);
+}
+ConstantProxy ConstantProxy::lshr(const ConstantProxy &rhs) const {
+    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool && pool != nullptr);
+    return std::visit(
+        [this](const auto &lhs, const auto &rhs) -> ConstantProxy {
+            if constexpr (!isTypeMatched(lhs, rhs) || isVecType(lhs) || isFloatType(lhs)) {
+                Err::unreachable();
+                return ConstantProxy(nullptr, 0);
+            } else {
+                if constexpr (!isBoolType(lhs)) {
+                    using T = Util::remove_cvref_t<decltype(lhs->getVal())>;
+                    auto unsigned_val = static_cast<std::make_unsigned_t<T>>(lhs->getVal());
+                    return ConstantProxy(pool, static_cast<T>(unsigned_val >> rhs->getVal()));
+                }
+                return ConstantProxy(pool, lhs->getVal() >> rhs->getVal());
+            }
+        },
+        value, rhs.value);
+}
+
+ConstantProxy ConstantProxy::ashr(const ConstantProxy &rhs) const {
+    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool && pool != nullptr);
+    return std::visit(
+        [this](const auto &lhs, const auto &rhs) -> ConstantProxy {
+            if constexpr (!isTypeMatched(lhs, rhs) || isVecType(lhs) || isFloatType(lhs)) {
+                Err::unreachable();
+                return ConstantProxy(nullptr, 0);
+            } else
+                return ConstantProxy(pool, lhs->getVal() >> rhs->getVal());
+        },
+        value, rhs.value);
+}
+
+ConstantProxy ConstantProxy::urem(const ConstantProxy &rhs) const {
+    Err::gassert(value.index() == rhs.value.index() && pool == rhs.pool && pool != nullptr);
+    return std::visit(
+        [this](const auto &lhs, const auto &rhs) -> ConstantProxy {
+            if constexpr (!isTypeMatched(lhs, rhs) || isFloatType(lhs)) {
+                Err::unreachable();
+                return ConstantProxy(nullptr, 0);
+            } else if constexpr (isVecType(lhs)) {
+                Err::gassert(lhs->size() == rhs->size());
+                auto ret = lhs->getVector();
+                for (size_t i = 0; i < ret.size(); ++i) {
+                    using T = Util::remove_cvref_t<decltype(ret[i])>;
+                    auto unsigned_val = static_cast<std::make_unsigned_t<T>>(ret[i]);
+                    auto unsigned_rhs = static_cast<std::make_unsigned_t<T>>((*rhs)[i]);
+                    ret[i] = static_cast<T>(unsigned_val % unsigned_rhs);
+                }
+                return ConstantProxy(pool, ret);
+            } else {
+                if constexpr (!isBoolType(lhs)) {
+                    using T = Util::remove_cvref_t<decltype(lhs->getVal())>;
+                    auto unsigned_val = static_cast<std::make_unsigned_t<T>>(lhs->getVal());
+                    auto unsigned_rhs = static_cast<std::make_unsigned_t<T>>(rhs->getVal());
+                    return ConstantProxy(pool, static_cast<T>(unsigned_val % unsigned_rhs));
+                }
+                return ConstantProxy(pool, lhs->getVal() % rhs->getVal());
+            }
         },
         value, rhs.value);
 }

@@ -175,12 +175,15 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
         return fpm;
     };
 
-    auto make_ipo = [&options] {
+    auto make_enabling = [&options] {
         FPM fpm;
+        FUNCTION_TRANSFORM(mem2reg, PromotePass());
         FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass());
         FUNCTION_TRANSFORM(inliner, InlinePass());
         FUNCTION_TRANSFORM(internalize, InternalizePass());
         FUNCTION_TRANSFORM(mem2reg, PromotePass());
+        FUNCTION_TRANSFORM(unify_exits, UnifyExitsPass());
+        // FUNCTION_TRANSFORM(memo, MemoizePass());
         return fpm;
     };
 
@@ -203,9 +206,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
     };
 
     FPM fpm;
-    fpm.addPass(VerifyPass());
-    FUNCTION_TRANSFORM(mem2reg, PromotePass());
-    fpm.addPass(make_ipo());
+    fpm.addPass(make_enabling());
     fpm.addPass(make_clean());
     fpm.addPass(make_arithmetic());
     fpm.addPass(make_loop());
@@ -213,7 +214,6 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
     // fpm.addPass(make_vectorizer());
     // fpm.addPass(make_clean());
 
-    FUNCTION_TRANSFORM(unify_exits, UnifyExitsPass());
     FUNCTION_TRANSFORM(store_range, LoopSimplifyPass(), StoreAnalysisPass<RangeAnalysis>())
     FUNCTION_TRANSFORM(codegen_prepare, CFGSimplifyPass(), CodeGenPreparePass())
     fpm.addPass(NameNormalizePass(true));
@@ -309,6 +309,8 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     fpm.addPass(IR::TailRecursionEliminationPass());
     fpm.addPass(IR::InternalizePass());
     fpm.addPass(IR::PromotePass());
+    fpm.addPass(IR::UnifyExitsPass());
+    fpm.addPass(IR::NameNormalizePass(true));
     fpm.addPass(IR::PrintFunctionPass(std::cerr));
     fpm.addPass(IR::MemoizePass());
     fpm.addPass(IR::PrintFunctionPass(std::cerr));

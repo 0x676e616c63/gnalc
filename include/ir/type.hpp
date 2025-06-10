@@ -92,6 +92,8 @@ public:
     bool isI64() const;
     bool isI128() const;
     bool isF32() const;
+    bool isInteger() const;
+    bool isFloatingPoint() const;
     bool isVoid() const;
     bool isUndef() const;
 };

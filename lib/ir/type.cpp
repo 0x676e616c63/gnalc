@@ -28,6 +28,12 @@ bool Type::isF32() const {
     auto a = as_raw<BType>();
     return a && a->getInner() == IRBTYPE::FLOAT;
 }
+bool Type::isInteger() const {
+    return isI1() || isI8() || isI32() || isI64() || isI128();
+}
+bool Type::isFloatingPoint() const {
+    return isF32();
+}
 bool Type::isVoid() const {
     auto a = as_raw<BType>();
     return a && a->getInner() == IRBTYPE::VOID;

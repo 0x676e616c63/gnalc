@@ -47,26 +47,22 @@ void IRGenerator::visit(CompUnit &node) {
     make_decl("_sysy_starttime", {i32_type}, void_type, {IR::FuncAttr::isSylib});
     make_decl("_sysy_stoptime", {i32_type}, void_type, {IR::FuncAttr::isSylib});
 
-    make_decl("getarray", {i32ptr_type}, i32_type,
-        {IR::FuncAttr::isSylib, IR::FuncAttr::builtinMemWriteOnly});
-    make_decl("getfarray", {f32ptr_type}, i32_type,
-        {IR::FuncAttr::isSylib, IR::FuncAttr::builtinMemWriteOnly});
+    make_decl("getarray", {i32ptr_type}, i32_type, {IR::FuncAttr::isSylib, IR::FuncAttr::builtinMemWriteOnly});
+    make_decl("getfarray", {f32ptr_type}, i32_type, {IR::FuncAttr::isSylib, IR::FuncAttr::builtinMemWriteOnly});
     make_decl("putarray", {i32_type, i32ptr_type}, void_type,
-        {IR::FuncAttr::isSylib, IR::FuncAttr::builtinMemReadOnly});
+              {IR::FuncAttr::isSylib, IR::FuncAttr::builtinMemReadOnly});
     make_decl("putfarray", {i32_type, f32ptr_type}, void_type,
               {IR::FuncAttr::isSylib, IR::FuncAttr::builtinMemReadOnly});
-    make_decl("putf", {i8ptr_type}, void_type,
-        {IR::FuncAttr::isSylib, IR::FuncAttr::builtinMemReadOnly}, true); // VAArg
+    make_decl("putf", {i8ptr_type}, void_type, {IR::FuncAttr::isSylib, IR::FuncAttr::builtinMemReadOnly},
+              true); // VAArg
 
     // builtin
     // memset (dest, val, len, isvolatile)
-    make_decl(Config::IR::MEMSET_INTRINSIC_NAME + 1,
-        {i8ptr_type, i8_type, i32_type, i1_type}, void_type,
+    make_decl(Config::IR::MEMSET_INTRINSIC_NAME + 1, {i8ptr_type, i8_type, i32_type, i1_type}, void_type,
               {IR::FuncAttr::isIntrinsic, IR::FuncAttr::isMemsetIntrinsic, IR::FuncAttr::builtinMemWriteOnly});
 
     // memcpy (dest, src, len, isvolatile)
-    make_decl(Config::IR::MEMCPY_INTRINSIC_NAME + 1,
-        {i8ptr_type, i8ptr_type, i32_type, i1_type}, void_type,
+    make_decl(Config::IR::MEMCPY_INTRINSIC_NAME + 1, {i8ptr_type, i8ptr_type, i32_type, i1_type}, void_type,
               {IR::FuncAttr::isIntrinsic, IR::FuncAttr::isMemcpyIntrinsic, IR::FuncAttr::builtinMemReadWrite});
 
     for (auto &n : node.getNodes()) {
@@ -146,7 +142,7 @@ void IRGenerator::visit(VarDef &node) {
 
     if (curr_func != nullptr) // Check if global
     {
-        auto alloca_inst = std::make_shared<IR::ALLOCAInst>("%" + node.getId(), irtype);
+        auto alloca_inst = std::make_shared<IR::ALLOCAInst>(name(node.getId() + ".def"), irtype);
         curr_func->addInst(alloca_inst); // CURR_FUNC
 
         curr_initializer.reset(node_type);
@@ -178,7 +174,7 @@ void IRGenerator::visit(VarDef &node) {
                         std::vector<IR::pVal>{dest,                                                     // ptr
                                               module.getConst(static_cast<char>(0)),                    // val
                                               module.getConst(static_cast<int>(curr_type->getBytes())), // length
-                                              module.getConst(false)});                              // volatile
+                                              module.getConst(false)});                                 // volatile
                     curr_insts.emplace_back(call_memset);
                     has_filled_zero = true;
                 }
@@ -212,9 +208,8 @@ void IRGenerator::visit(VarDef &node) {
                                     }
                                 }
 
-                                auto gep_inst =
-                                    std::make_shared<IR::GEPInst>(name("gep"), base, module.getConst(0),
-                                                                  module.getConst(static_cast<int>(i)));
+                                auto gep_inst = std::make_shared<IR::GEPInst>(name("gep"), base, module.getConst(0),
+                                                                              module.getConst(static_cast<int>(i)));
 
                                 curr_insts.emplace_back(gep_inst);
                                 init_array(elmarr_type, gep_inst);
@@ -223,9 +218,8 @@ void IRGenerator::visit(VarDef &node) {
                             for (size_t i = 0; i < arrtype->getArraySize(); ++i) {
                                 const auto &curr_init_val = flat[init_pos++];
                                 if (!(has_filled_zero && curr_init_val == curr_initializer.getZeroValue())) {
-                                    auto gep_inst =
-                                        std::make_shared<IR::GEPInst>(name("gep"), base, module.getConst(0),
-                                                                      module.getConst(static_cast<int>(i)));
+                                    auto gep_inst = std::make_shared<IR::GEPInst>(name("gep"), base, module.getConst(0),
+                                                                                  module.getConst(static_cast<int>(i)));
 
                                     auto str_inst = std::make_shared<IR::STOREInst>(toIRValue(curr_init_val), gep_inst);
                                     curr_insts.emplace_back(gep_inst);

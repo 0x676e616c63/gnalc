@@ -153,5 +153,7 @@ struct PairHash {
         return seed;
     }
 };
+
+bool begins_with(const std::string &a, const std::string &b);
 } // namespace Util
 #endif

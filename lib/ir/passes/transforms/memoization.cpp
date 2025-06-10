@@ -8,6 +8,7 @@
 #include "ir/instructions/memory.hpp"
 #include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/basic_alias_analysis.hpp"
+#include "mirA32/instruction.hpp"
 
 #include <string>
 #include <vector>
@@ -22,106 +23,166 @@ namespace IR {
 // For `func(i32, i32)`, we can use an i64 as its LUT key (`Intx2Memo`)
 // But for func(i32, i32, i32, i32, i32), only `ArbitraryMemo` is suitable.
 //
-// The key difference is how they handle the `key`.
+// The key difference is how they build the `key`.
+// Note that the key at least have one item. Identical key shall guarantee the same return value.
 class MemoPlan {
 public:
     virtual ~MemoPlan() = default;
-    virtual pVal buildKey(const pBlock &entry_front, const std::vector<pFormalParam> &args) = 0;
-    virtual pVal compareKey(const pBlock &has_val_bb, const pGep &key_gep, const pVal &curr_key) = 0;
-    virtual void storeKey(const pBlock &ret_block, const pGep &key_gep, const pVal &curr_key) = 0;
-    virtual size_t getKeyBytes() = 0;
+    virtual std::vector<pVal> buildKey(const pBlock &entry_front, const std::vector<pFormalParam> &args) = 0;
+    virtual size_t getKeyBytes(const std::vector<pFormalParam> &args) = 0;
 };
 
-class ArbitraryMemo : public MemoPlan {
+// func(int, int, int ...) -> i64 hash + args...
+class ArbitraryIntsFloatsMemo : public MemoPlan {
 public:
-    pVal buildKey(const pBlock &entry, const std::vector<pFormalParam> &args) final {
-        Err::todo();
-        return nullptr;
+    std::vector<pVal> buildKey(const pBlock &entry, const std::vector<pFormalParam> &args) final {
+        auto insert_point = entry->begin();
+        while (insert_point != entry->end() && (*insert_point)->getOpcode() == OP::ALLOCA)
+            ++insert_point;
+
+        std::vector<pInst> sexts;
+        for (size_t i = 0; i < args.size(); ++i) {
+            pVal real_arg = args[i];
+            if (real_arg->getType()->isF32()) {
+                auto f2ibc = std::make_shared<BITCASTInst>("%memo.f2ibc." + std::to_string(i), real_arg,
+                                                           makeBType(IRBTYPE::I32));
+                entry->addInst(insert_point, f2ibc);
+                real_arg = f2ibc;
+            }
+            auto sext = std::make_shared<SEXTInst>("%memo.sext" + std::to_string(i), real_arg, IRBTYPE::I64);
+            entry->addInst(insert_point, sext);
+            sexts.emplace_back(sext);
+        }
+
+        // Hash:
+        // i64 hash = args[0]
+        // for (i = 1; i < args.size(); ++i)
+        //     hash ^= args[i] << ((13 * i) % 64)
+        pInst hash_val = sexts[0];
+        for (size_t i = 1; i < sexts.size(); ++i) {
+            auto shifted =
+                std::make_shared<BinaryInst>("%memo.shift" + std::to_string(i), OP::SHL, sexts[i],
+                                             entry->getParent()->getConst(static_cast<int64_t>(13 * i % 64)));
+            hash_val = std::make_shared<BinaryInst>("%memo.xor" + std::to_string(i), OP::XOR, hash_val, shifted);
+            entry->addInst(insert_point, shifted);
+            entry->addInst(insert_point, hash_val);
+        }
+
+        std::vector<pVal> keys{hash_val};
+        for (const auto &arg : args)
+            keys.emplace_back(arg);
+
+        return keys;
     }
-    pVal compareKey(const pBlock &has_val_bb, const pGep &key_gep, const pVal &curr_key) final {
-        Err::todo();
-        return nullptr;
-    }
-    void storeKey(const pBlock &ret_block, const pGep &key_gep, const pVal &curr_key) final { Err::todo(); }
-    size_t getKeyBytes() final {
-        Err::todo();
-        return 0;
-    }
+    size_t getKeyBytes(const std::vector<pFormalParam> &args) final { return 8 + args.size() * 4; }
 };
 
-class Intx2Memo : public MemoPlan {
+// func(int) -> i32
+// func(int, int) -> i64
+// func(int, int, int) -> i64, i32
+// func(int, int, int, int) -> i64, i64
+// FIXME: i128?
+class SmallIntsFloatsMemo : public MemoPlan {
 public:
-    pVal buildKey(const pBlock &entry, const std::vector<pFormalParam> &args) final {
-        Err::gassert(args.size() == 2, "Expected two arguments.");
-        Err::gassert(args[0]->getType()->isI32() && args[1]->getType()->isI32(), "Expected two int arguments.");
+    std::vector<pVal> buildKey(const pBlock &entry, const std::vector<pFormalParam> &args) final {
+        Err::gassert(args.size() < 5);
 
-        auto sext0 = std::make_shared<SEXTInst>("%memo.sext0", args[0], IRBTYPE::I64);
-        auto sext1 = std::make_shared<SEXTInst>("%memo.sext1", args[1], IRBTYPE::I64);
+        auto insert_point = entry->begin();
+        while (insert_point != entry->end() && (*insert_point)->getOpcode() == OP::ALLOCA)
+            ++insert_point;
 
-        auto tmp = std::make_shared<BinaryInst>("%memo.tmp", OP::SHL, sext0, entry->getParent()->getConst(static_cast<int64_t>(32)));
-        auto curr_key = std::make_shared<BinaryInst>("%memo.curr_key", OP::OR, tmp, sext1);
-        entry->addInstAfterAlloca(curr_key);
-        entry->addInstAfterAlloca(tmp);
-        entry->addInstAfterAlloca(sext1);
-        entry->addInstAfterAlloca(sext0);
-        return curr_key;
+        std::vector<pVal> keys;
+        size_t i = 0;
+        for (; i + 1 < args.size(); i += 2) {
+            pVal real_arg0 = args[i];
+            pVal real_arg1 = args[i + 1];
+            if (real_arg0->getType()->isF32()) {
+                auto f2ibc = std::make_shared<BITCASTInst>("%memo.f2ibc." + std::to_string(i), real_arg0,
+                                                           makeBType(IRBTYPE::I32));
+                entry->addInst(insert_point, f2ibc);
+                real_arg0 = f2ibc;
+            }
+            if (real_arg1->getType()->isF32()) {
+                auto f2ibc = std::make_shared<BITCASTInst>("%memo.f2ibc." + std::to_string(i + 1), real_arg1,
+                                                           makeBType(IRBTYPE::I32));
+                entry->addInst(insert_point, f2ibc);
+                real_arg1 = f2ibc;
+            }
+
+            auto sext0 = std::make_shared<SEXTInst>("%memo.sext0." + std::to_string(i), real_arg0, IRBTYPE::I64);
+            auto sext1 = std::make_shared<SEXTInst>("%memo.sext1." + std::to_string(i + 1), real_arg1, IRBTYPE::I64);
+            auto shl = std::make_shared<BinaryInst>("%memo.shl." + std::to_string(i), OP::SHL, sext0,
+                                                    entry->getParent()->getConst(static_cast<int64_t>(32)));
+            auto i64_or = std::make_shared<BinaryInst>("%memo.or." + std::to_string(i), OP::OR, shl, sext1);
+            entry->addInst(insert_point, sext0);
+            entry->addInst(insert_point, sext1);
+            entry->addInst(insert_point, shl);
+            entry->addInst(insert_point, i64_or);
+            keys.emplace_back(i64_or);
+        }
+
+        for (; i < args.size(); ++i) {
+            if (args[i]->getType()->isF32()) {
+                auto f2ibc =
+                    std::make_shared<BITCASTInst>("%memo.f2ibc." + std::to_string(i), args[i], makeBType(IRBTYPE::I32));
+                entry->addInst(insert_point, f2ibc);
+                keys.emplace_back(f2ibc);
+            } else
+                keys.emplace_back(args[i]);
+        }
+
+        return keys;
     }
-
-    pVal compareKey(const pBlock &has_val_bb, const pGep &key_gep, const pVal &curr_key) final {
-        auto key_bc = std::make_shared<BITCASTInst>("%memo.key.bc", key_gep, makePtrType(makeBType(IRBTYPE::I64)));
-        auto key = std::make_shared<LOADInst>("%memo.key.ld", key_bc);
-        auto icmp = std::make_shared<ICMPInst>("%memo.found", ICMPOP::eq, key, curr_key);
-        has_val_bb->addInst(key_bc);
-        has_val_bb->addInst(key);
-        has_val_bb->addInst(icmp);
-        return icmp;
-    }
-
-    void storeKey(const pBlock &ret_block, const pGep &key_gep, const pVal &curr_key) final {
-        auto key_bc = std::make_shared<BITCASTInst>("%memo.key.bc." + ret_block->getName().substr(1), key_gep,
-                                                    makePtrType(makeBType(IRBTYPE::I64)));
-        auto store = std::make_shared<STOREInst>(curr_key, key_bc);
-        ret_block->addInstBeforeTerminator(key_bc);
-        ret_block->addInstBeforeTerminator(store);
-        return;
-    }
-
-    size_t getKeyBytes() final { return 8; }
+    size_t getKeyBytes(const std::vector<pFormalParam> &args) final { return 4 * args.size(); }
 };
 
-// Currently only support two int arguments for debug.
-// TODO: Extend it to arbitrary arguments.
 std::shared_ptr<MemoPlan> selectMemoPlan(Function &func) {
     const auto &params = func.getParams();
-    if (params.size() == 2 && params[0]->getType()->isI32() && params[1]->getType()->isI32())
-        return std::make_shared<Intx2Memo>();
 
-    // TODO: Arbitrary Plan is WIP.
-    return nullptr;
+    for (const auto &fp : params) {
+        if (!fp->getType()->isI32() && !fp->getType()->isF32())
+            return nullptr;
+    }
+
+    if (params.size() < 5)
+        return std::make_shared<SmallIntsFloatsMemo>();
+
+    return std::make_shared<ArbitraryIntsFloatsMemo>();
 }
 
 PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
     // Memoize pure recursive functions
-    if (!function.isRecursive() || !isPure(fam, &function))
+    if (!function.isRecursive())
         return PreserveAll();
+
+    if (!isPure(fam, &function)) {
+        Logger::logDebug("[Memo]: Skip non-pure recursive function '", function.getName(), "'.");
+        return PreserveAll();
+    }
 
     // Skip functions with pointer arguments
     auto params = function.getParams();
     for (const auto &fp : params) {
-        if (!fp->getType()->is<BType>())
+        if (!fp->getType()->is<BType>()) {
+            Logger::logDebug("[Memo]: Skip non-BType arguments function '", function.getName(), "'.");
             return PreserveAll();
+        }
     }
 
     auto ret_type = function.getType()->as<FunctionType>()->getRet();
     Err::gassert(ret_type->is<BType>(), "Expected BType in Ret.");
     // Skip void function
-    if (ret_type->isVoid())
+    if (ret_type->isVoid()) {
+        Logger::logDebug("[Memo]: Skip void recursive function '", function.getName(), "'.");
         return PreserveAll();
+    }
 
-    // Select the best provider
+    // Select the best plan
     auto plan = selectMemoPlan(function);
-    if (!plan)
+    if (!plan) {
+        Logger::logDebug("[Memo]: Failed to select a plan for recursive function '", function.getName(), "'.");
         return PreserveAll();
+    }
 
     // MemoLUT Entry
     // struct MemoLUTEntry {
@@ -130,11 +191,12 @@ PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
     //     RetT ret;
     // }
     // Size: 4 + sizeof(KeyT) + sizeof(RetT)
-    size_t lut_entry_size = 4 + ret_type->getBytes() + plan->getKeyBytes();
+    size_t lut_entry_size = 4 + ret_type->getBytes() + plan->getKeyBytes(params);
 
     auto lut_type = makeArrayType(makeBType(IRBTYPE::I8), lut_entry_size * Config::IR::MEMOIZATION_LUT_SIZE);
-    auto lut = std::make_shared<GlobalVariable>(STOCLASS::GLOBAL, lut_type, "@memo.lut." + function.getName().substr(1),
-                                                GVIniter(lut_type));
+    auto lut = std::make_shared<GlobalVariable>(
+        STOCLASS::GLOBAL, lut_type,
+        std::string{Config::IR::MEMOIZATION_LUT_NAME_PREFIX} + "." + function.getName().substr(1), GVIniter(lut_type));
     auto module = function.getParent();
     module->addGlobalVar(lut);
 
@@ -158,7 +220,7 @@ PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
     // entry_front:
     //   ... allocas ...
     //   %key = ... build key ...
-    //   %key_rem = srem %key, i32 lut size
+    //   %key_rem = urem %key, i32 lut size
     //   %byte_offset = mul i32 %key_rem, i32 sizeof(MemoLUTEntry)
     //   %base_gep = getelementptr [xxx x i8]* @memo.lut, i32 0, i32 %byte_offset
     //   %base_bc = bitcast i8* %base_gep to i32*
@@ -178,6 +240,7 @@ PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
     //   ...
     //
     // For every return block:
+    //   ...
     //   store i32 1, i32* %base_bc
     //   ... store key ...  ; use %key_gep here
     //   %exit_ret_gep = getelementptr i8* %base_gep, i32 (4 + sizeof(KeyT))
@@ -192,7 +255,7 @@ PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
 
     // Entry Front
     auto curr_key = plan->buildKey(function.getBlocks().front(), params);
-    auto curr_key_rem = std::make_shared<BinaryInst>("%memo.curr_keyrem", OP::UREM, curr_key,
+    auto curr_key_rem = std::make_shared<BinaryInst>("%memo.curr_keyrem", OP::UREM, curr_key[0],
                                                      function.getConst(Config::IR::MEMOIZATION_LUT_SIZE));
     auto byte_offset = std::make_shared<BinaryInst>("%memo.byte_offset", OP::MUL, curr_key_rem,
                                                     function.getConst(static_cast<int>(lut_entry_size)));
@@ -214,13 +277,34 @@ PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
     entry_front->addInst(entry_br);
 
     // Has Val BB
-    auto found = plan->compareKey(has_val_bb, key_gep, curr_key);
-    auto found_br = std::make_shared<BRInst>(found, found_bb, entry_behind);
+    pVal prev_cond = nullptr;
+    for (size_t i = 0; i < curr_key.size(); ++i) {
+        const auto &key_item = curr_key[i];
+        auto key_bc = std::make_shared<BITCASTInst>("%memo.key.bc" + std::to_string(i), key_gep,
+                                                    makePtrType(key_item->getType()));
+        auto key = std::make_shared<LOADInst>("%memo.key.ld" + std::to_string(i), key_bc);
+        pInst key_cmp;
+        if (key->getType()->isInteger())
+            key_cmp = std::make_shared<ICMPInst>("%memo.found" + std::to_string(i), ICMPOP::eq, key, key_item);
+        else
+            key_cmp = std::make_shared<FCMPInst>("%memo.found" + std::to_string(i), FCMPOP::oeq, key, key_item);
+        has_val_bb->addInst(key_bc);
+        has_val_bb->addInst(key);
+        has_val_bb->addInst(key_cmp);
+
+        if (prev_cond) {
+            auto cond_and = std::make_shared<BinaryInst>("%memo.and" + std::to_string(i), OP::AND, prev_cond, key_cmp);
+            has_val_bb->addInst(cond_and);
+            prev_cond = cond_and;
+        } else
+            prev_cond = key_cmp;
+    }
+    auto found_br = std::make_shared<BRInst>(prev_cond, found_bb, entry_behind);
     has_val_bb->addInst(found_br);
 
     // Found BB
     auto ret_gep = std::make_shared<GEPInst>("%memo.gep.ret", base_gep,
-                                             function.getConst(static_cast<int>(4 + plan->getKeyBytes())));
+                                             function.getConst(static_cast<int>(4 + plan->getKeyBytes(params))));
     auto ret_bc = std::make_shared<BITCASTInst>("%memo.bc.ret", ret_gep, makePtrType(ret_type));
     auto cached_ret = std::make_shared<LOADInst>("%memo.ret", ret_bc);
     auto ret = std::make_shared<RETInst>(cached_ret);
@@ -234,20 +318,31 @@ PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
     function.updateCFG();
 
     auto exit_bbs = function.getExitBBs();
-    for (size_t i = 0; i < exit_bbs.size(); i++) {
-        const auto &exit_bb = exit_bbs[i];
+    for (const auto & exit_bb : exit_bbs) {
         if (exit_bb == found_bb)
             continue;
 
+        // Store has_val
         auto store_has_val = std::make_shared<STOREInst>(function.getConst(1), base_bc);
         exit_bb->addInstBeforeTerminator(store_has_val);
-        plan->storeKey(exit_bb, key_gep, curr_key);
+
+        auto bbname = exit_bb->getName().substr(1);
+        // Store key
+        for (size_t j = 0; j < curr_key.size(); ++j) {
+            const auto &key_item = curr_key[j];
+            auto key_bc = std::make_shared<BITCASTInst>("%memo.bc." + bbname + ".key" + std::to_string(j), key_gep,
+                                                        makePtrType(key_item->getType()));
+            auto store = std::make_shared<STOREInst>(key_item, key_bc);
+            exit_bb->addInstBeforeTerminator(key_bc);
+            exit_bb->addInstBeforeTerminator(store);
+        }
 
         auto exit_ret = exit_bb->getRETInst();
-        auto exit_ret_gep = std::make_shared<GEPInst>("%memo.gep.ret.exit" + std::to_string(i), base_gep,
-                                                      function.getConst(static_cast<int>(4 + plan->getKeyBytes())));
-        auto exit_ret_bc =
-            std::make_shared<BITCASTInst>("%memo.bc.ret.exit" + std::to_string(i), exit_ret_gep, makePtrType(ret_type));
+        auto exit_ret_gep = std::make_shared<GEPInst>(
+            "%memo.gep.ret." + bbname, base_gep, function.getConst(static_cast<int>(4 + plan->getKeyBytes(params))));
+
+        // Store return value
+        auto exit_ret_bc = std::make_shared<BITCASTInst>("%memo.bc.ret." + bbname, exit_ret_gep, makePtrType(ret_type));
         auto str = std::make_shared<STOREInst>(exit_ret->getRetVal(), exit_ret_bc);
         exit_bb->addInstBeforeTerminator(exit_ret_gep);
         exit_bb->addInstBeforeTerminator(exit_ret_bc);
