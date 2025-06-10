@@ -144,7 +144,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
 
 #define REWRITE_BEG(...)                                                                                               \
     if (match(inst, __VA_ARGS__)) {                                                                                    \
-        Logger::logDebug("[InstSimplify]: Rewrite ", GNALC_STRINGFY(__VA_ARGS__));
+        Logger::logDebug("[InstSimplify]: Rewrite ", GNALC_STRINGFY((__VA_ARGS__)));
 
 #define REWRITE_END(...)                                                                                               \
     replaceInstHelper(inst, __VA_ARGS__);                                                                              \
