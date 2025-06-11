@@ -227,6 +227,15 @@ void BasicBlock::addPhiInst(const pPhi &node) {
     inst_index_valid = false;
 }
 
+void BasicBlock::addInsts(iterator it, const std::vector<pInst> &insts) {
+    for (const auto &inst : insts)
+        addInst(it, inst);
+}
+void BasicBlock::addInsts(const std::vector<pInst> &insts) {
+    for (const auto &inst : insts)
+        addInst(inst);
+}
+
 unsigned BasicBlock::getPhiCount() const { return phi_insts.size(); }
 
 size_t BasicBlock::getIndex() const { return index; }

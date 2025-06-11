@@ -8,8 +8,10 @@
 #include "ir/instructions/memory.hpp"
 #include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/basic_alias_analysis.hpp"
-#include "mirA32/instruction.hpp"
+#include "utils/int128.hpp"
+#include "utils/logger.hpp"
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -24,13 +26,51 @@ namespace IR {
 // But for func(i32, i32, i32, i32, i32), only `ArbitraryMemo` is suitable.
 //
 // The key difference is how they build the `key`.
-// Note that the key at least have one item. Identical key shall guarantee the same return value.
+// The return value is a list of key, the first is used as an index.
+// Identical list of key shall guarantee the same return value.
 class MemoPlan {
 public:
     virtual ~MemoPlan() = default;
     virtual std::vector<pVal> buildKey(const pBlock &entry_front, const std::vector<pFormalParam> &args) = 0;
     virtual size_t getKeyBytes(const std::vector<pFormalParam> &args) = 0;
 };
+
+pZext make_zext(const pBlock &bb, BBInstIter insert_point, const pVal &source, IRBTYPE to_type) {
+    static size_t name_cnt = 0;
+
+    auto zext = std::make_shared<ZEXTInst>("%memo.zext" + std::to_string(name_cnt++), source, to_type);
+    bb->addInst(insert_point, zext);
+    return zext;
+}
+
+pBinary make_shl(const pBlock &bb, BBInstIter insert_point, const pVal &source, int bits) {
+    static size_t name_cnt = 0;
+
+    auto shl = std::make_shared<BinaryInst>("%memo.shl" + std::to_string(name_cnt++), OP::SHL, source,
+                                            bb->getParent()->getConst(bits));
+    bb->addInst(insert_point, shl);
+    return shl;
+}
+
+pBinary make_or(const pBlock &bb, BBInstIter insert_point, const pVal &lhs, const pVal &rhs) {
+    static size_t name_cnt = 0;
+
+    auto or_val = std::make_shared<BinaryInst>("%memo.or" + std::to_string(name_cnt++), OP::OR, lhs, rhs);
+    bb->addInst(insert_point, or_val);
+    return or_val;
+}
+
+pVal cast_if_float(const pBlock &bb, BBInstIter insert_point, const pVal &source) {
+    static size_t name_cnt = 0;
+
+    if (source->getType()->isF32()) {
+        auto f2ibc =
+            std::make_shared<BITCASTInst>("%memo.f2ibc." + std::to_string(name_cnt++), source, makeBType(IRBTYPE::I32));
+        bb->addInst(insert_point, f2ibc);
+        return f2ibc;
+    }
+    return source;
+}
 
 // func(int, int, int ...) -> i64 hash + args...
 class ArbitraryIntsFloatsMemo : public MemoPlan {
@@ -40,33 +80,48 @@ public:
         while (insert_point != entry->end() && (*insert_point)->getOpcode() == OP::ALLOCA)
             ++insert_point;
 
-        std::vector<pInst> sexts;
-        for (size_t i = 0; i < args.size(); ++i) {
-            pVal real_arg = args[i];
-            if (real_arg->getType()->isF32()) {
-                auto f2ibc = std::make_shared<BITCASTInst>("%memo.f2ibc." + std::to_string(i), real_arg,
-                                                           makeBType(IRBTYPE::I32));
-                entry->addInst(insert_point, f2ibc);
-                real_arg = f2ibc;
-            }
-            auto sext = std::make_shared<SEXTInst>("%memo.sext" + std::to_string(i), real_arg, IRBTYPE::I64);
-            entry->addInst(insert_point, sext);
-            sexts.emplace_back(sext);
+        std::vector<pInst> zexts;
+        zexts.reserve(args.size());
+        for (const auto &arg : args) {
+            auto i32_arg = cast_if_float(entry, insert_point, arg);
+            auto zext = make_zext(entry, insert_point, i32_arg, IRBTYPE::I128);
+            zexts.emplace_back(zext);
         }
 
+        std::vector<pInst> shls;
+        int num_shls = (static_cast<int>(zexts.size()) / 4) * 4;
+        shls.reserve(num_shls);
+        shls.emplace_back(zexts[0]);
+        for (int i = 1; i < num_shls; ++i)
+            shls.emplace_back(make_shl(entry, insert_point, zexts[i], i * 32));
+
+        auto composed_i128_cnt = num_shls / 4;
+        std::vector<pInst> i128_args;
+        for (int i = 0; i < composed_i128_cnt; ++i) {
+            auto base_val = shls[i * 4];
+            for (int j = 1; j < 4; ++j)
+                base_val = make_or(entry, insert_point, base_val, shls[i * 4 + j]);
+            i128_args.emplace_back(base_val);
+        }
+
+        for (int i = num_shls; i < zexts.size(); ++i)
+            i128_args.emplace_back(zexts[i]);
+
         // Hash:
-        // i64 hash = args[0]
+        // i128 hash = args[0]
         // for (i = 1; i < args.size(); ++i)
-        //     hash ^= args[i] << ((13 * i) % 64)
-        pInst hash_val = sexts[0];
-        for (size_t i = 1; i < sexts.size(); ++i) {
+        //     hash ^= args[i] << ((31 * i) % 128)
+        pInst hash_val = i128_args[0];
+        for (size_t i = 1; i < zexts.size(); ++i) {
             auto shifted =
-                std::make_shared<BinaryInst>("%memo.shift" + std::to_string(i), OP::SHL, sexts[i],
-                                             entry->getParent()->getConst(static_cast<int64_t>(13 * i % 64)));
+                std::make_shared<BinaryInst>("%memo.shift" + std::to_string(i), OP::SHL, zexts[i],
+                                             entry->getParent()->getConst(static_cast<int64_t>(31 * i % 128)));
             hash_val = std::make_shared<BinaryInst>("%memo.xor" + std::to_string(i), OP::XOR, hash_val, shifted);
             entry->addInst(insert_point, shifted);
             entry->addInst(insert_point, hash_val);
         }
+
+        hash_val->setName("%memo.curr_key");
 
         std::vector<pVal> keys{hash_val};
         for (const auto &arg : args)
@@ -79,9 +134,8 @@ public:
 
 // func(int) -> i32
 // func(int, int) -> i64
-// func(int, int, int) -> i64, i32
-// func(int, int, int, int) -> i64, i64
-// FIXME: i128?
+// func(int, int, int) -> i128
+// func(int, int, int, int) -> i128
 class SmallIntsFloatsMemo : public MemoPlan {
 public:
     std::vector<pVal> buildKey(const pBlock &entry, const std::vector<pFormalParam> &args) final {
@@ -91,57 +145,45 @@ public:
         while (insert_point != entry->end() && (*insert_point)->getOpcode() == OP::ALLOCA)
             ++insert_point;
 
-        std::vector<pVal> keys;
-        size_t i = 0;
-        for (; i + 1 < args.size(); i += 2) {
-            pVal real_arg0 = args[i];
-            pVal real_arg1 = args[i + 1];
-            if (real_arg0->getType()->isF32()) {
-                auto f2ibc = std::make_shared<BITCASTInst>("%memo.f2ibc." + std::to_string(i), real_arg0,
-                                                           makeBType(IRBTYPE::I32));
-                entry->addInst(insert_point, f2ibc);
-                real_arg0 = f2ibc;
-            }
-            if (real_arg1->getType()->isF32()) {
-                auto f2ibc = std::make_shared<BITCASTInst>("%memo.f2ibc." + std::to_string(i + 1), real_arg1,
-                                                           makeBType(IRBTYPE::I32));
-                entry->addInst(insert_point, f2ibc);
-                real_arg1 = f2ibc;
-            }
+        std::vector<pVal> i32_args;
+        std::transform(args.begin(), args.end(), std::back_inserter(i32_args),
+                       [&](const pVal &arg) { return cast_if_float(entry, insert_point, arg); });
 
-            auto sext0 = std::make_shared<SEXTInst>("%memo.sext0." + std::to_string(i), real_arg0, IRBTYPE::I64);
-            auto sext1 = std::make_shared<SEXTInst>("%memo.sext1." + std::to_string(i + 1), real_arg1, IRBTYPE::I64);
-            auto shl = std::make_shared<BinaryInst>("%memo.shl." + std::to_string(i), OP::SHL, sext0,
-                                                    entry->getParent()->getConst(static_cast<int64_t>(32)));
-            auto i64_or = std::make_shared<BinaryInst>("%memo.or." + std::to_string(i), OP::OR, shl, sext1);
-            entry->addInst(insert_point, sext0);
-            entry->addInst(insert_point, sext1);
-            entry->addInst(insert_point, shl);
-            entry->addInst(insert_point, i64_or);
-            keys.emplace_back(i64_or);
-        }
+        if (i32_args.size() == 1)
+            return i32_args;
 
-        for (; i < args.size(); ++i) {
-            if (args[i]->getType()->isF32()) {
-                auto f2ibc =
-                    std::make_shared<BITCASTInst>("%memo.f2ibc." + std::to_string(i), args[i], makeBType(IRBTYPE::I32));
-                entry->addInst(insert_point, f2ibc);
-                keys.emplace_back(f2ibc);
-            } else
-                keys.emplace_back(args[i]);
-        }
+        std::vector<pVal> zexts;
+        zexts.reserve(i32_args.size());
+        std::transform(i32_args.begin(), i32_args.end(), std::back_inserter(zexts), [&](const pVal &arg) {
+            return make_zext(entry, insert_point, arg, i32_args.size() == 2 ? IRBTYPE::I64 : IRBTYPE::I128);
+        });
 
-        return keys;
+        std::vector<pVal> shls;
+        shls.reserve(zexts.size());
+        shls.emplace_back(zexts[0]);
+        for (int i = 1; i < zexts.size(); ++i)
+            shls.emplace_back(make_shl(entry, insert_point, zexts[i], i * 32));
+
+        pVal base_val = shls[0];
+        for (int i = 1; i < shls.size(); ++i)
+            base_val = make_or(entry, insert_point, base_val, shls[i]);
+
+        base_val->setName("%memo.curr_key");
+        return {base_val};
     }
-    size_t getKeyBytes(const std::vector<pFormalParam> &args) final { return 4 * args.size(); }
+    size_t getKeyBytes(const std::vector<pFormalParam> &args) final {
+        return args.size() == 3 ? 16 : (4 * args.size());
+    }
 };
 
 std::shared_ptr<MemoPlan> selectMemoPlan(Function &func) {
     const auto &params = func.getParams();
 
     for (const auto &fp : params) {
-        if (!fp->getType()->isI32() && !fp->getType()->isF32())
+        if (!fp->getType()->isI32() && !fp->getType()->isF32()) {
+            Logger::logDebug("[Memo]: Skip recursive function with unsupported args '", func.getName(), "'.");
             return nullptr;
+        }
     }
 
     if (params.size() < 5)
@@ -173,16 +215,14 @@ PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
     Err::gassert(ret_type->is<BType>(), "Expected BType in Ret.");
     // Skip void function
     if (ret_type->isVoid()) {
-        Logger::logDebug("[Memo]: Skip void recursive function '", function.getName(), "'.");
+        Logger::logDebug("[Memo]: Skip void function '", function.getName(), "'.");
         return PreserveAll();
     }
 
     // Select the best plan
     auto plan = selectMemoPlan(function);
-    if (!plan) {
-        Logger::logDebug("[Memo]: Failed to select a plan for recursive function '", function.getName(), "'.");
+    if (!plan)
         return PreserveAll();
-    }
 
     // MemoLUT Entry
     // struct MemoLUTEntry {
@@ -267,14 +307,7 @@ PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
     auto cmp = std::make_shared<ICMPInst>("%memo.cmp", ICMPOP::ne, has_val, function.getConst(0));
     auto entry_br = std::make_shared<BRInst>(cmp, has_val_bb, entry_behind);
 
-    entry_front->addInst(curr_key_rem);
-    entry_front->addInst(byte_offset);
-    entry_front->addInst(base_gep);
-    entry_front->addInst(base_bc);
-    entry_front->addInst(has_val);
-    entry_front->addInst(key_gep);
-    entry_front->addInst(cmp);
-    entry_front->addInst(entry_br);
+    entry_front->addInsts({curr_key_rem, byte_offset, base_gep, base_bc, has_val, key_gep, cmp, entry_br});
 
     // Has Val BB
     pVal prev_cond = nullptr;
@@ -288,9 +321,7 @@ PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
             key_cmp = std::make_shared<ICMPInst>("%memo.found" + std::to_string(i), ICMPOP::eq, key, key_item);
         else
             key_cmp = std::make_shared<FCMPInst>("%memo.found" + std::to_string(i), FCMPOP::oeq, key, key_item);
-        has_val_bb->addInst(key_bc);
-        has_val_bb->addInst(key);
-        has_val_bb->addInst(key_cmp);
+        has_val_bb->addInsts({key_bc, key, key_cmp});
 
         if (prev_cond) {
             auto cond_and = std::make_shared<BinaryInst>("%memo.and" + std::to_string(i), OP::AND, prev_cond, key_cmp);
@@ -308,17 +339,34 @@ PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
     auto ret_bc = std::make_shared<BITCASTInst>("%memo.bc.ret", ret_gep, makePtrType(ret_type));
     auto cached_ret = std::make_shared<LOADInst>("%memo.ret", ret_bc);
     auto ret = std::make_shared<RETInst>(cached_ret);
-    found_bb->addInst(ret_gep);
-    found_bb->addInst(ret_bc);
-    found_bb->addInst(cached_ret);
-    found_bb->addInst(ret);
+    found_bb->addInsts({ret_gep, ret_bc, cached_ret, ret});
+
+    if (emit_debug_inst) {
+        auto putch_fn = function.getParent()->lookupFunction("@putch");
+
+        // entry_front:
+        // X -> to Has Val BB, M -> Miss
+        auto front_select = std::make_shared<SELECTInst>("%memo.debug0", entry_br->getCond(),
+            function.getConst('X'), function.getConst('M'));
+        auto putch_select0 = std::make_shared<CALLInst>(putch_fn, std::vector<pVal>{front_select});
+        entry_front->addInstBeforeTerminator(front_select);
+        entry_front->addInstBeforeTerminator(putch_select0);
+
+        // has_val_bb:
+        // H -> Hit, R -> Rewrite
+        auto has_val_select = std::make_shared<SELECTInst>("%memo.debug1", found_br->getCond(), function.getConst('H'),
+            function.getConst('R'));
+        auto putch_select1 = std::make_shared<CALLInst>(putch_fn, std::vector<pVal>{has_val_select});
+        has_val_bb->addInstBeforeTerminator(has_val_select);
+        has_val_bb->addInstBeforeTerminator(putch_select1);
+    }
 
     // Attention!
     // Update CFG here so that `getExitBBs` is correct.
     function.updateCFG();
 
     auto exit_bbs = function.getExitBBs();
-    for (const auto & exit_bb : exit_bbs) {
+    for (const auto &exit_bb : exit_bbs) {
         if (exit_bb == found_bb)
             continue;
 

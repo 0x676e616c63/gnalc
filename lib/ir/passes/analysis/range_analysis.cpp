@@ -202,7 +202,8 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
 
     auto propagateToUsers = [&](const Value *v) {
         for (const auto &user : v->inst_users()) {
-            if (!in_worklist.count(user.get()) && process_cnt[user.get()] < Config::IR::RANGE_ANALYSIS_MAX_PROCESS_CNT) {
+            if (!in_worklist.count(user.get()) &&
+                process_cnt[user.get()] < Config::IR::RANGE_ANALYSIS_MAX_PROCESS_CNT) {
                 worklist.push_back(user.get());
                 in_worklist.emplace(user.get());
             }
@@ -232,7 +233,8 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
         ++process_cnt[inst];
 
         bool is_btype = inst->getType()->is<BType>();
-        bool is_int = is_btype && inst->getType()->isInteger();
+        bool is_int = is_btype && inst->getType()->isI32();
+        bool is_float = is_btype && inst->getType()->isF32();
 
         if (auto binary = inst->as_raw<BinaryInst>()) {
             if (is_int) {
@@ -264,7 +266,7 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
                     updateInt(binary, lrng ^ rrng);
                 else
                     Err::unreachable();
-            } else {
+            } else if (is_float) {
                 auto lrng = res.getFloatRange(binary->getLHS());
                 auto rrng = res.getFloatRange(binary->getRHS());
                 if (binary->getOpcode() == OP::FADD)
@@ -302,7 +304,7 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
                 for (size_t i = 1; i < phi_opers.size(); i++)
                     base = merge(base, res.getIntRange(phi_opers[i].value));
                 updateInt(phi, base);
-            } else {
+            } else if (is_float) {
                 auto base = res.getFloatRange(phi_opers[0].value);
                 for (size_t i = 1; i < phi_opers.size(); i++)
                     base = merge(base, res.getFloatRange(phi_opers[i].value));
@@ -313,7 +315,7 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
                 auto trng = res.getIntRange(select->getTrueVal());
                 auto frng = res.getIntRange(select->getFalseVal());
                 updateInt(select, merge(trng, frng));
-            } else {
+            } else if (is_float) {
                 auto trng = res.getFloatRange(select->getTrueVal());
                 auto frng = res.getFloatRange(select->getFalseVal());
                 updateFloat(select, merge(trng, frng));
@@ -324,7 +326,7 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
             else {
                 if (is_int)
                     updateInt(call, IRng());
-                else
+                else if (is_float)
                     updateFloat(call, FRng());
             }
         } else if (inst->is<ICMPInst, FCMPInst>())
@@ -333,7 +335,7 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
             if (is_btype) {
                 if (is_int)
                     updateInt(inst, IRng());
-                else
+                else if (is_float)
                     updateFloat(inst, FRng());
             }
         }
@@ -409,7 +411,8 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
         auto bb = pair.second;
 
         bool is_btype = inst->getType()->is<BType>();
-        bool is_int = is_btype && inst->getType()->isInteger();
+        bool is_int = is_btype && inst->getType()->isI32();
+        bool is_float = is_btype && inst->getType()->isF32();
 
         // Check SCEV
         // FIXME: SCEV cannot figure out complex induction variables, since its goal
@@ -518,7 +521,7 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                     updateContextualInt(binary, bb, lrng ^ rrng);
                 else
                     Err::unreachable();
-            } else {
+            } else if (is_float) {
                 auto lrng = res.getFloatRange(binary->getLHS().get(), bb);
                 auto rrng = res.getFloatRange(binary->getRHS().get(), bb);
                 if (binary->getOpcode() == OP::FADD)
@@ -556,7 +559,7 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                 for (size_t i = 1; i < phi_opers.size(); i++)
                     base = merge(base, res.getIntRange(phi_opers[i].value, phi_opers[i].block));
                 updateContextualInt(phi, bb, base);
-            } else {
+            } else if (is_float) {
                 auto base = res.getFloatRange(phi_opers[0].value, phi_opers[0].block);
                 for (size_t i = 1; i < phi_opers.size(); i++)
                     base = merge(base, res.getFloatRange(phi_opers[i].value, phi_opers[i].block));
@@ -567,7 +570,7 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                 auto trng = res.getIntRange(select->getTrueVal().get(), bb);
                 auto frng = res.getIntRange(select->getFalseVal().get(), bb);
                 updateContextualInt(select, bb, merge(trng, frng));
-            } else {
+            } else if (is_float) {
                 auto trng = res.getFloatRange(select->getTrueVal().get(), bb);
                 auto frng = res.getFloatRange(select->getFalseVal().get(), bb);
                 updateContextualFloat(select, bb, merge(trng, frng));

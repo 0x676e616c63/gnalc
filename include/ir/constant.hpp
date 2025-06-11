@@ -7,6 +7,7 @@
 #define GNALC_IR_CONSTANT_HPP
 
 #include "base.hpp"
+#include "utils/int128.hpp"
 
 #include <variant>
 
@@ -18,7 +19,7 @@ template <typename ValueT, IRBTYPE IRType> class BasicConstant : public Value {
     ValueT inner_value;
 
 public:
-    using value_type = ValueT;
+    using inner_type = ValueT;
 
     explicit BasicConstant(ValueT value_)
         : Value(toIRString(value_), makeBType(IRType), ValueTrait::CONSTANT_LITERAL), inner_value(value_) {}
@@ -34,6 +35,7 @@ template <typename ValueT, IRBTYPE IRType> class BasicConstantVector : public Va
     std::vector<ValueT> inner_values;
 
 public:
+    using inner_type = std::vector<ValueT>;
     using value_type = ValueT;
     using iterator = typename std::vector<ValueT>::iterator;
     using const_iterator = typename std::vector<ValueT>::const_iterator;
@@ -74,7 +76,7 @@ using ConstantI1 = detail::BasicConstant<bool, IRBTYPE::I1>;
 using ConstantI8 = detail::BasicConstant<char, IRBTYPE::I8>;
 using ConstantInt = detail::BasicConstant<int, IRBTYPE::I32>;
 using ConstantI64 = detail::BasicConstant<int64_t, IRBTYPE::I64>;
-// using ConstantI128 = detail::BasicConstant<__int128, IRBTYPE::I128>;
+using ConstantI128 = detail::BasicConstant<int128_t, IRBTYPE::I128>;
 using ConstantFloat = detail::BasicConstant<float, IRBTYPE::FLOAT>;
 using ConstantIntVector = detail::BasicConstantVector<int, IRBTYPE::I32>;
 using ConstantFloatVector = detail::BasicConstantVector<float, IRBTYPE::FLOAT>;
@@ -83,7 +85,7 @@ using pConstI1 = std::shared_ptr<ConstantI1>;
 using pConstI8 = std::shared_ptr<ConstantI8>;
 using pConstI32 = std::shared_ptr<ConstantInt>;
 using pConstI64 = std::shared_ptr<ConstantI64>;
-// using pConstI128 = std::shared_ptr<ConstantI128>;
+using pConstI128 = std::shared_ptr<ConstantI128>;
 using pConstF32 = std::shared_ptr<ConstantFloat>;
 using pConstI32Vec = std::shared_ptr<ConstantIntVector>;
 using pConstF32Vec = std::shared_ptr<ConstantFloatVector>;
@@ -101,6 +103,10 @@ template <typename T> auto getIRConstantTypeHelper() {
         return ConstantI8(0);
     else if constexpr (std::is_same_v<U, int>)
         return ConstantInt(0);
+    else if constexpr (std::is_same_v<U, int64_t>)
+        return ConstantI64(0);
+    else if constexpr (std::is_same_v<U, int128_t>)
+        return ConstantI128(0);
     else if constexpr (std::is_same_v<U, float>)
         return ConstantFloat(0);
 }

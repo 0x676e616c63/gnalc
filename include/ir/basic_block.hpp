@@ -90,6 +90,9 @@ public:
     void addInstAfterAlloca(const pInst &inst);
     void addPhiInst(const pPhi &node); // 插入到phi_insts
 
+    void addInsts(iterator it, const std::vector<pInst> &insts);
+    void addInsts(const std::vector<pInst> &insts);
+
     // Returns a proper insert point at the end of this block.
     // This preserves the consecutive CMP-BRInst pattern.
     BBInstIter getEndInsertPoint() const;

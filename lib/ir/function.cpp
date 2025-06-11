@@ -253,6 +253,8 @@ void Function::updateAllIndex() {
 
 // FIXME: BB PARAM not available
 pVal Function::cloneImpl() const {
+    static size_t name_cnt = 0;
+
     // left is old, right is new
     std::map<pBlock, pBlock> old2new_bb;
     std::map<pInst, pInst> old2new_inst;
@@ -269,7 +271,7 @@ pVal Function::cloneImpl() const {
         std::make_shared<Function>(getName(), cloned_params, getType()->as<FunctionType>()->getRet(), constant_pool);
 
     for (const auto &blk : blks) {
-        auto cloned_bb = std::make_shared<BasicBlock>(blk->getName() + ".cloned");
+        auto cloned_bb = std::make_shared<BasicBlock>(blk->getName() + ".dup" + std::to_string(name_cnt++));
         for (auto &phi : blk->phis()) {
             auto cloned_phi = makeClone(phi);
             cloned_bb->addPhiInst(cloned_phi);
@@ -317,7 +319,7 @@ pVal Function::cloneImpl() const {
                     use->setValue(old2new_inst[usee_inst]);
                 }
             }
-            inst->setName(inst->getName() + ".cloned");
+            inst->setName(inst->getName() + ".dup" + std::to_string(name_cnt++));
         }
     }
     cloned_fn->updateAllIndex();

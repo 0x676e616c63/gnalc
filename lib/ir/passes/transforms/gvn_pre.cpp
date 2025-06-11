@@ -143,19 +143,19 @@ std::ostream &operator<<(std::ostream &os, const GVNPREPass &gvnpre) {
 
     os << "\n\nAVAIL_OUT: \n";
     for (const auto &[block, set] : gvnpre.avail_out_map)
-        os << "Block " << block->getName() << ": \n" << set << "\n";
+        os << "Block " << block->getName() << " AVAIL_OUT: \n" << set << "\n";
 
     os << "\n\nANTIC_IN: \n";
     for (const auto &[block, set] : gvnpre.antic_in_map)
-        os << "Block " << block->getName() << ": \n" << set << "\n";
+        os << "Block " << block->getName() << " ANTIC_IN: \n" << set << "\n";
 
     os << "\n\nANTIC_OUT: \n";
     for (const auto &[block, set] : gvnpre.antic_out_map)
-        os << "Block " << block->getName() << ": \n" << set << "\n";
+        os << "Block " << block->getName() << " ANTIC_OUT: \n" << set << "\n";
 
     os << "\n\nEXP_GEN: \n";
     for (const auto &[block, set] : gvnpre.exp_gen_map)
-        os << "Block " << block->getName() << ": \n" << set << "\n";
+        os << "Block " << block->getName() << " EXP_GEN: \n" << set << "\n";
     return os;
 }
 
@@ -842,7 +842,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
 
     std::vector<pPhi> inserted_phis;
 
-    LoopInfo* loop_info = nullptr;
+    LoopInfo *loop_info = nullptr;
     if (disable_PRE_on_loop_backedge)
         loop_info = &fam.getResult<LoopAnalysis>(function);
 
@@ -852,11 +852,14 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     while (modified) {
         modified = false;
         for (const auto &curr : dfvisitor) {
+            bool curr_is_loop_header = loop_info && loop_info->isLoopHeader(curr->raw_block());
             auto preds = curr->raw_block()->getPreBB();
             if (preds.size() > 1) {
                 auto &antic_in = antic_in_map[curr->raw_block()];
 
                 for (const auto &[kind_to_hoist, expr_to_hoist] : antic_in) {
+                    static int debug = 0;
+                    ++debug;
                     // Note that new_set inherits from dominators, not predecessors. It is safe to use them
                     // in this block. In fact, if an expression is in new_set, it is guaranteed
                     // to exist in avail_out. Every recomputing in this block will be eliminated
@@ -871,6 +874,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                     // Pred -> available, translated kind, translated val
                     std::map<BasicBlock *, std::tuple<bool, ValueKind, Value *>> translated;
                     bool avail_in_at_least_one_pred = false;
+                    bool unavail_in_at_least_one_pred = false;
                     bool killed = false;
                     for (const auto &pred : preds) {
                         auto tval = phiTranslate(expr_to_hoist, pred.get(), curr->raw_block());
@@ -885,13 +889,14 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                         // the original expr's kind. The difference is solved by phiTranslate.
                         bool is_avail_in_pred = avail_out_map[pred.get()].contains(tkind);
                         avail_in_at_least_one_pred |= is_avail_in_pred;
+                        unavail_in_at_least_one_pred |= !is_avail_in_pred;
                         translated[pred.get()] = std::make_tuple(is_avail_in_pred, tkind, tval);
                     }
 
                     if (killed)
                         continue;
 
-                    if (disable_PRE_on_loop_backedge) {
+                    if (disable_PRE_on_loop_backedge && curr_is_loop_header) {
                         // For a typical rotated loop:
                         //
                         //                     (critical)
@@ -928,20 +933,84 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                         // This, however, let a loop becomes a middle-exiting loop, or produces
                         // more BRInst, which can be a pessimization.
                         // So we provide an option to disable such PRE.
-                        auto found_backedge = [&] () -> pBlock {
-                            for (const auto &pred : preds) {
-                                auto [avail, hoisted_kind, hoisted_ir_val] = translated[pred.get()];
-                                if (!avail && loop_info->isLoopHeader(curr->raw_block()))
-                                    return pred;
-                            }
-                            return nullptr;
-                        }();
-                        if (found_backedge) {
-                            // Logger::logDebug("[GVN-PRE]: Skipped PRE on loop backedge."
-                            //                  " ('", curr->raw_block()->getName(), "' -> '",
-                            //                  found_backedge->getName(), "')");
+                        if (unavail_in_at_least_one_pred)
                             continue;
-                        }
+                    }
+
+                    // Hoisting an instruction shall hoist its operands first,
+                    // we try to achieve this by hoisting them in a topological order.
+                    // However, it is not guaranteed that one's operands is always available
+                    // at this block at this point.
+                    // For example:
+                    //
+                    //   A        E
+                    //   |        |
+                    //   V        V
+                    //   B <----- D <----- F
+                    //   |
+                    //   V
+                    //   C
+                    //
+                    // E:
+                    //   %gep.e = xxx
+                    //   %bc.e = bitcast %gep.e to i32*
+                    // F:
+                    //   %gep.f = xxx
+                    //   %bc.f = bitcast %gep.f to i32*
+                    // D:
+                    //   %bc.d.phi = phi [%bc.e, %E], [%bc.f, %F]
+                    // C:
+                    //   %gep.c = xxx
+                    //   %bc.c = bitcast %gep.c to i32*
+                    //
+                    // All the gep.x and bc.x are the same.
+                    //
+                    // In this case, there exits partial redundancy in D -> B -> C,
+                    // where the gep/bc are computed twice. To eliminate it, we might want to
+                    // hoist the gep/bc to A, and create a phi in B to merge them.
+                    //
+                    // However, because D only has one phi of bitcast, which means only bitcast is directly
+                    // available in D. (Or in AVAIL_OUT[D]).
+                    // And when we try to hoist the gep at this point, we find they are
+                    // not available both in A and D. So the gep can NOT be hoisted.
+                    // Thus, we can NOT hoist the bitcast to A , since its operands, the gep,
+                    // is not directly available in D.
+                    //
+                    // This doesn't mean we can not eliminate such redundancy.
+                    // The idea comes from: one instruction available means all operands available. The
+                    // only thing we need is to create some phi nodes.
+                    // Though the bitcast is not directly available (Not in AVAIL_OUT[D]) at this point.
+                    // It is in ANTIC_IN[D], and after a few rounds of insertion, a phi will be created
+                    // in D to merge the two bitcasts in E and F.
+                    //
+                    // Therefore, if we find one's operands is not in AVAIL_OUT[curr],
+                    // wait it and try again later.
+                    if (unavail_in_at_least_one_pred) {
+                        // unavail_in_at_least_one_pred means we need insertion, and have to check the
+                        // operands
+                        auto should_skip = [&] {
+                            for (const auto &pred : preds) {
+                                auto pred_avail = avail_out_map[pred.get()];
+                                auto [avail, hoisted_kind, hoisted_ir_val] = translated[pred.get()];
+                                if (!avail) {
+                                    auto inst = hoisted_ir_val->as<Instruction>();
+                                    auto &operand_uses = inst->getOperands();
+                                    for (const auto &oper_use : operand_uses) {
+                                        if (auto oper_inst = oper_use->getValue()->as<Instruction>()) {
+                                            if (oper_inst->getParent() == nullptr) {
+                                                auto oper_kind = table.getKindOrInsert(oper_inst.get());
+                                                if (!pred_avail.contains(oper_kind))
+                                                    return true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            return false;
+                        }();
+
+                        if (should_skip)
+                            continue;
                     }
 
                     // If the expression is available in at least one predecessor,
@@ -965,7 +1034,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                                 // However, after several insertion round, many anticipated instructions
                                 // might be available due to insertion in one's dominators.
                                 // To avoid duplicate insertion, we won't hoist an instruction if
-                                // operand is available (in new_set particularly). Because a newer version
+                                // it is available (in new_set particularly). Because a newer version
                                 // is available in certain dominator.
                                 // Thus, some hoisted instructions that have uses to such unhoisted
                                 // instructions must be fixed here.
@@ -1003,7 +1072,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                                             if (oper_inst->getParent() == nullptr) {
                                                 auto oper_kind = table.getKindOrInsert(oper_inst.get());
                                                 Err::gassert(pred_avail.contains(oper_kind),
-                                                             "Hoisted instruction has unexpected operand.");
+                                                             "Hoisting an instruction before its operands.");
                                                 auto fixed_oper = pred_avail.getValue(oper_kind);
                                                 if (auto fixed_oper_inst = fixed_oper->as<Instruction>())
                                                     fix_operands(fixed_oper_inst);

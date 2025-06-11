@@ -22,6 +22,8 @@
 
 #include "type.hpp"
 #include "type_alias.hpp"
+#include "utils/int128.hpp"
+#include "utils/int128.hpp"
 #include "utils/iterator.hpp"
 #include "utils/misc.hpp"
 
@@ -378,6 +380,10 @@ protected:
 };
 
 template <typename T> std::string toIRString(T value) { return std::to_string(value); }
+
+template <> inline std::string toIRString(int128_t value) {
+    return Int128ToString(value);
+}
 
 // Maybe there is some historical reasons :(
 // See https://llvm.org/docs/LangRef.html and https://groups.google.com/g/llvm-dev/c/IlqV3TbSk6M?pli=1

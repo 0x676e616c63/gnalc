@@ -180,14 +180,19 @@ void register_gnalc_mem2reg() {
     BenchmarkRegistry::register_benchmark("gnalc_mem2reg", entry);
 }
 
-void register_gnalc_o1() {
-    auto entry = gnalc_register_helper("-O1");
-    BenchmarkRegistry::register_benchmark("gnalc_o1", entry);
+void register_gnalc_std() {
+    auto entry = gnalc_register_helper("-std-pipeline");
+    BenchmarkRegistry::register_benchmark("gnalc_std", entry);
 }
 
 void register_gnalc_fixed() {
     auto entry = gnalc_register_helper("-fixed-point");
     BenchmarkRegistry::register_benchmark("gnalc_fixed", entry);
+}
+
+void register_gnalc_fixed_no_memo() {
+    auto entry = gnalc_register_helper("-fixed-point --no-memo");
+    BenchmarkRegistry::register_benchmark("gnalc_fixed_no_memo", entry);
 }
 
 void register_gnalc_debug() {
@@ -225,8 +230,9 @@ void Test::register_all_benchmarks() {
     register_clang_o3();
     register_gcc_o3();
     register_gnalc_mem2reg();
-    register_gnalc_o1();
+    register_gnalc_std();
     register_gnalc_fixed();
+    register_gnalc_fixed_no_memo();
     register_gnalc_debug();
     register_gnalc_fuzz3();
     register_gnalc_fuzz5();
