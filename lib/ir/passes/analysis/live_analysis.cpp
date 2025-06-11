@@ -39,7 +39,7 @@ bool LiveAnalysis::processBB(const BasicBlock *bb) {
     for (auto it = all.rbegin(); it != all.rend(); ++it) {
         if (processInst((*it).get())) {
             updated = true;
-            Logger::logDebug("LiveAnalyser: Updated insts " + (*it)->getName() + " in bb");
+            // Logger::logDebug("LiveAnalyser: Updated insts " + (*it)->getName() + " in bb");
             if (std::next(it) != all.rend()) {
                 liveness.getLiveOut(std::next(it)->get()) = liveness.getLiveIn(it->get());
             } else {
@@ -145,7 +145,14 @@ bool LiveAnalysis::processInst(const Instruction *inst) {
                 updated = true;
         break;
     case OP::PHI:
-        Err::todo("phiinst liveana need to do");
+        for (auto &use : inst->getOperands())
+            if (use->getValue()->getVTrait() == ValueTrait::ORDINARY_VARIABLE)
+                if (liveness.getLiveIn(inst).insert(use->getValue().get()).second)
+                    updated = true;
+        for (auto &val : liveness.getLiveOut(inst))
+            if (val != inst)
+                if (liveness.getLiveIn(inst).insert(val).second)
+                    updated = true;
         break;
     case OP::HELPER:
     default:
