@@ -13,6 +13,14 @@
 
 
 namespace IR {
+
+unsigned LoopUnrollPass::name_idx = 0;
+
+LoopUnrollPass::LoopUnrollPass() {
+    // name_idx++;
+    // 日后可添加参数选项以快速调参
+}
+
 void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &FC, FAM& fam) {
     if (!(loop->isSimplifyForm() && loop->isLCSSAForm())) {
         Logger::logInfo("[LoopUnroll] Unroll disabled because the loop is not SimplifyForm or LCSSAForm.");
@@ -243,6 +251,8 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
 
     // !hasAddressTaken()
 
+    name_idx++;
+
     const auto count = option.unroll_count;
     const auto pre_header = loop->getPreHeader();
     const auto header = loop->getHeader();
@@ -315,9 +325,9 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         BMap[bb] = BV(count + 1, nullptr);
         BMap[bb][0] = bb;
         for (int i = 1; i < count; i++) {
-            BMap[bb][i] = std::make_shared<BasicBlock>(bb->getName() + ".unroll" + std::to_string(i));
+            BMap[bb][i] = std::make_shared<BasicBlock>(bb->getName() + "." + std::to_string(name_idx) + "unroll" + std::to_string(i));
         }
-        BMap[bb][count] = std::make_shared<BasicBlock>(bb->getName() + ".remainder");
+        BMap[bb][count] = std::make_shared<BasicBlock>(bb->getName() + "." + std::to_string(name_idx) + "remainder");
         for (const auto &inst : bb->all_insts()) {
             IMap[inst] = IV(count + 1, nullptr);
             IMap[inst][0] = inst;
@@ -351,9 +361,9 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         for (const auto &inst : *raw) {
             const auto new_inst = makeClone(inst);
             if (i == count) {
-                new_inst->setName(inst->getName() + ".remainder");
+                new_inst->setName(inst->getName() + "." + std::to_string(name_idx) + "remainder");
             } else {
-                new_inst->setName(inst->getName() + ".unroll" + std::to_string(i));
+                new_inst->setName(inst->getName() + "." + std::to_string(name_idx) + "unroll" + std::to_string(i));
             }
             IMap[inst][i] = new_inst;
             if (inst->getOpcode() == OP::BR) {
@@ -412,7 +422,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             // 如果原始header的phi里的value是常量的话，就无法存到IMap里面了，同时由于其user尚未创建，无法直接把常量传播
             // 故使用 phi [v, b] 形式
             const auto new_phi =
-                std::make_shared<PHIInst>(phi->getName() + ".unroll" + std::to_string(i), phi->getType());
+                std::make_shared<PHIInst>(phi->getName() + "." + std::to_string(name_idx) + "unroll" + std::to_string(i), phi->getType());
             IMap[phi][i] = new_phi;
             if (phi_value_from_loop->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
                 // Instruction情况
@@ -443,7 +453,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             // clone phi
             for (const auto &phi : rb->phis()) {
                 auto new_phi = makeClone(phi);
-                new_phi->setName(phi->getName() + ".unroll" + std::to_string(i));
+                new_phi->setName(phi->getName() + "." + std::to_string(name_idx) + "unroll" + std::to_string(i));
                 IMap[phi][i] = new_phi;
                 cb->addPhiInst(new_phi);
             }
@@ -496,7 +506,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
 
             // clone inst and create phi
             for (auto &phi : rh->phis()) {
-                const auto new_phi = std::make_shared<PHIInst>(phi->getName() + ".remainder", phi->getType());
+                const auto new_phi = std::make_shared<PHIInst>(phi->getName() + "." + std::to_string(name_idx) + "remainder", phi->getType());
                 IMap[phi][count] = new_phi;
                 ch->addPhiInst(new_phi);
             }
@@ -513,7 +523,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             // clone phi
             for (const auto &phi : rb->phis()) {
                 auto new_phi = makeClone(phi);
-                new_phi->setName(phi->getName() + ".remainder");
+                new_phi->setName(phi->getName() + "." + std::to_string(name_idx) + "remainder");
                 IMap[phi][count] = new_phi;
                 cb->addPhiInst(new_phi);
             }
@@ -584,6 +594,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                 if (option.raw_boundary_value != option.new_boundary_value)
                     icmp->replaceAllOperands(option.raw_boundary_value, option.new_boundary_value);
                 // 此处给展开循环的判断条件改为非等，防止多执行
+                // TODO: 感觉不需要了？什么时候关掉测试一下
                 switch (icmp->getCond()) {
                     case ICMPOP::sgt:
                     case ICMPOP::sge:
