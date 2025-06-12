@@ -697,7 +697,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                 auto lvset =  LVAR.getLiveIn(raw_target->getAllInsts().front().get());
                 // ADD NEW PHI
                 for (const auto &v : lvset) {
-                    if (!loop->contains(v->as<Instruction>()->getParent())) {
+                    if (v->getVTrait() != ValueTrait::ORDINARY_VARIABLE || !loop->contains(v->as<Instruction>()->getParent())) {
                         continue;
                     }
                     auto new_phi = std::make_shared<PHIInst>(v->getName() + "." + std::to_string(name_idx) + "remphi", v->getType());

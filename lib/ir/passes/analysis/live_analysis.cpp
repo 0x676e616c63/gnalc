@@ -68,18 +68,25 @@ bool LiveAnalysis::processInst(const Instruction *inst) {
     case OP::DIV:
     case OP::FDIV:
     case OP::SREM:
+    case OP::UREM:
     case OP::FREM:
+    case OP::SHL:
+    case OP::LSHR:
+    case OP::ASHR:
     case OP::AND:
     case OP::OR:
+    case OP::XOR:
     case OP::ICMP:
     case OP::FCMP:
     case OP::FNEG:
     case OP::FPTOSI:
     case OP::SITOFP:
     case OP::ZEXT:
+    case OP::SEXT:
     case OP::BITCAST:
     case OP::LOAD:
     case OP::GEP:
+    case OP::SELECT:
 
         for (auto &use : inst->getOperands())
             if (use->getValue()->getVTrait() != ValueTrait::CONSTANT_LITERAL)
