@@ -858,8 +858,6 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                 auto &antic_in = antic_in_map[curr->raw_block()];
 
                 for (const auto &[kind_to_hoist, expr_to_hoist] : antic_in) {
-                    static int debug = 0;
-                    ++debug;
                     // Note that new_set inherits from dominators, not predecessors. It is safe to use them
                     // in this block. In fact, if an expression is in new_set, it is guaranteed
                     // to exist in avail_out. Every recomputing in this block will be eliminated

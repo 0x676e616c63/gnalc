@@ -147,12 +147,6 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
             return fpm;
         };
 
-        auto make_ipo_clean = [&options] {
-            FPM fpm;
-            FUNCTION_TRANSFORM(dae, LoopSimplifyPass(), DAEPass());
-            return fpm;
-        };
-
         auto make_cfg_clean = [&options] {
             PM::FixedPointPM<Function> fpm;
             FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
@@ -179,8 +173,17 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
         fixed.addPass(make_mem_clean());
 
         fpm.addPass(std::move(fixed));
-        fpm.addPass(make_ipo_clean());
         fpm.addPass(make_cfg_clean());
+        return fpm;
+    };
+
+    auto make_memo = [&options] {
+        FPM fpm;
+        FUNCTION_TRANSFORM(dae, LoopSimplifyPass(), DAEPass());
+        FUNCTION_TRANSFORM(unify_exits, UnifyExitsPass());
+        FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass());
+        FUNCTION_TRANSFORM(memo, MemoizePass());
+        FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass());
         return fpm;
     };
 
@@ -191,8 +194,6 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
         FUNCTION_TRANSFORM(inliner, InlinePass());
         FUNCTION_TRANSFORM(internalize, InternalizePass());
         FUNCTION_TRANSFORM(mem2reg, PromotePass());
-        FUNCTION_TRANSFORM(unify_exits, UnifyExitsPass());
-        // FUNCTION_TRANSFORM(memo, MemoizePass());
         return fpm;
     };
 
@@ -217,6 +218,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
     FPM fpm;
     fpm.addPass(make_enabling());
     fpm.addPass(make_clean());
+    fpm.addPass(make_memo());
     fpm.addPass(make_arithmetic());
     fpm.addPass(make_loop());
     fpm.addPass(make_clean());
@@ -318,8 +320,10 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     fpm.addPass(IR::InternalizePass());
     fpm.addPass(IR::PromotePass());
     fpm.addPass(IR::UnifyExitsPass());
+    fpm.addPass(IR::LoopSimplifyPass());
     fpm.addPass(IR::NameNormalizePass(true));
     fpm.addPass(IR::PrintFunctionPass(std::cerr));
+    fpm.addPass(IR::PrintRangePass(std::cerr));
     fpm.addPass(IR::MemoizePass(true));
     fpm.addPass(IR::PrintFunctionPass(std::cerr));
     fpm.addPass(IR::VerifyPass());
@@ -422,7 +426,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
             [&fpm, &options]() {                                                                                       \
                 fpm.addPass(pass());                                                                                   \
                 if (options.verify)                                                                                    \
-                    fpm.addPass(VerifyPass(options.strict));                                         \
+                    fpm.addPass(VerifyPass(options.strict));                                                           \
             },                                                                                                         \
             weight);
 
@@ -434,7 +438,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
                 fpm.addPass(pass1());                                                                                  \
                 fpm.addPass(pass2());                                                                                  \
                 if (options.verify)                                                                                    \
-                    fpm.addPass(VerifyPass(options.strict));                                         \
+                    fpm.addPass(VerifyPass(options.strict));                                                           \
             },                                                                                                         \
             weight);
 
@@ -447,7 +451,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
                 fpm.addPass(pass2());                                                                                  \
                 fpm.addPass(pass3());                                                                                  \
                 if (options.verify)                                                                                    \
-                    fpm.addPass(VerifyPass(options.strict));                                         \
+                    fpm.addPass(VerifyPass(options.strict));                                                           \
             },                                                                                                         \
             weight);
 
@@ -461,7 +465,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
                 fpm.addPass(pass3());                                                                                  \
                 fpm.addPass(pass4());                                                                                  \
                 if (options.verify)                                                                                    \
-                    fpm.addPass(VerifyPass(options.strict));                                         \
+                    fpm.addPass(VerifyPass(options.strict));                                                           \
             },                                                                                                         \
             weight);
 

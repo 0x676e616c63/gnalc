@@ -1,6 +1,7 @@
 #include "ir/passes/transforms/memoization.hpp"
 
 #include "config/config.hpp"
+#include "ir/block_utils.hpp"
 #include "ir/instructions/binary.hpp"
 #include "ir/instructions/compare.hpp"
 #include "ir/instructions/control.hpp"
@@ -8,6 +9,7 @@
 #include "ir/instructions/memory.hpp"
 #include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/basic_alias_analysis.hpp"
+#include "ir/passes/analysis/domtree_analysis.hpp"
 #include "utils/int128.hpp"
 #include "utils/logger.hpp"
 
@@ -31,7 +33,7 @@ namespace IR {
 class MemoPlan {
 public:
     virtual ~MemoPlan() = default;
-    virtual std::vector<pVal> buildKey(const pBlock &entry_front, const std::vector<pFormalParam> &args) = 0;
+    virtual std::vector<pVal> buildKey(const pBlock &bb, const std::vector<pFormalParam> &args) = 0;
     virtual size_t getKeyBytes(const std::vector<pFormalParam> &args) = 0;
 };
 
@@ -75,16 +77,16 @@ pVal cast_if_float(const pBlock &bb, BBInstIter insert_point, const pVal &source
 // func(int, int, int ...) -> i64 hash + args...
 class ArbitraryIntsFloatsMemo : public MemoPlan {
 public:
-    std::vector<pVal> buildKey(const pBlock &entry, const std::vector<pFormalParam> &args) final {
-        auto insert_point = entry->begin();
-        while (insert_point != entry->end() && (*insert_point)->getOpcode() == OP::ALLOCA)
+    std::vector<pVal> buildKey(const pBlock &bb, const std::vector<pFormalParam> &args) final {
+        auto insert_point = bb->begin();
+        while (insert_point != bb->end() && (*insert_point)->getOpcode() == OP::ALLOCA)
             ++insert_point;
 
         std::vector<pInst> zexts;
         zexts.reserve(args.size());
         for (const auto &arg : args) {
-            auto i32_arg = cast_if_float(entry, insert_point, arg);
-            auto zext = make_zext(entry, insert_point, i32_arg, IRBTYPE::I128);
+            auto i32_arg = cast_if_float(bb, insert_point, arg);
+            auto zext = make_zext(bb, insert_point, i32_arg, IRBTYPE::I128);
             zexts.emplace_back(zext);
         }
 
@@ -93,14 +95,14 @@ public:
         shls.reserve(num_shls);
         shls.emplace_back(zexts[0]);
         for (int i = 1; i < num_shls; ++i)
-            shls.emplace_back(make_shl(entry, insert_point, zexts[i], i * 32));
+            shls.emplace_back(make_shl(bb, insert_point, zexts[i], i * 32));
 
         auto composed_i128_cnt = num_shls / 4;
         std::vector<pInst> i128_args;
         for (int i = 0; i < composed_i128_cnt; ++i) {
             auto base_val = shls[i * 4];
             for (int j = 1; j < 4; ++j)
-                base_val = make_or(entry, insert_point, base_val, shls[i * 4 + j]);
+                base_val = make_or(bb, insert_point, base_val, shls[i * 4 + j]);
             i128_args.emplace_back(base_val);
         }
 
@@ -113,12 +115,11 @@ public:
         //     hash ^= args[i] << ((31 * i) % 128)
         pInst hash_val = i128_args[0];
         for (size_t i = 1; i < zexts.size(); ++i) {
-            auto shifted =
-                std::make_shared<BinaryInst>("%memo.shift" + std::to_string(i), OP::SHL, zexts[i],
-                                             entry->getParent()->getConst(static_cast<int64_t>(31 * i % 128)));
+            auto shifted = std::make_shared<BinaryInst>("%memo.shift" + std::to_string(i), OP::SHL, zexts[i],
+                                                        bb->getParent()->getConst(static_cast<int64_t>(31 * i % 128)));
             hash_val = std::make_shared<BinaryInst>("%memo.xor" + std::to_string(i), OP::XOR, hash_val, shifted);
-            entry->addInst(insert_point, shifted);
-            entry->addInst(insert_point, hash_val);
+            bb->addInst(insert_point, shifted);
+            bb->addInst(insert_point, hash_val);
         }
 
         hash_val->setName("%memo.curr_key");
@@ -129,7 +130,7 @@ public:
 
         return keys;
     }
-    size_t getKeyBytes(const std::vector<pFormalParam> &args) final { return 8 + args.size() * 4; }
+    size_t getKeyBytes(const std::vector<pFormalParam> &args) final { return 16 + args.size() * 4; }
 };
 
 // func(int) -> i32
@@ -138,16 +139,16 @@ public:
 // func(int, int, int, int) -> i128
 class SmallIntsFloatsMemo : public MemoPlan {
 public:
-    std::vector<pVal> buildKey(const pBlock &entry, const std::vector<pFormalParam> &args) final {
+    std::vector<pVal> buildKey(const pBlock &bb, const std::vector<pFormalParam> &args) final {
         Err::gassert(args.size() < 5);
 
-        auto insert_point = entry->begin();
-        while (insert_point != entry->end() && (*insert_point)->getOpcode() == OP::ALLOCA)
+        auto insert_point = bb->begin();
+        while (insert_point != bb->end() && (*insert_point)->getOpcode() == OP::ALLOCA)
             ++insert_point;
 
         std::vector<pVal> i32_args;
         std::transform(args.begin(), args.end(), std::back_inserter(i32_args),
-                       [&](const pVal &arg) { return cast_if_float(entry, insert_point, arg); });
+                       [&](const pVal &arg) { return cast_if_float(bb, insert_point, arg); });
 
         if (i32_args.size() == 1)
             return i32_args;
@@ -155,18 +156,18 @@ public:
         std::vector<pVal> zexts;
         zexts.reserve(i32_args.size());
         std::transform(i32_args.begin(), i32_args.end(), std::back_inserter(zexts), [&](const pVal &arg) {
-            return make_zext(entry, insert_point, arg, i32_args.size() == 2 ? IRBTYPE::I64 : IRBTYPE::I128);
+            return make_zext(bb, insert_point, arg, i32_args.size() == 2 ? IRBTYPE::I64 : IRBTYPE::I128);
         });
 
         std::vector<pVal> shls;
         shls.reserve(zexts.size());
         shls.emplace_back(zexts[0]);
         for (int i = 1; i < zexts.size(); ++i)
-            shls.emplace_back(make_shl(entry, insert_point, zexts[i], i * 32));
+            shls.emplace_back(make_shl(bb, insert_point, zexts[i], i * 32));
 
         pVal base_val = shls[0];
         for (int i = 1; i < shls.size(); ++i)
-            base_val = make_or(entry, insert_point, base_val, shls[i]);
+            base_val = make_or(bb, insert_point, base_val, shls[i]);
 
         base_val->setName("%memo.curr_key");
         return {base_val};
@@ -175,6 +176,57 @@ public:
         return args.size() == 3 ? 16 : (4 * args.size());
     }
 };
+
+// Memoization can be an optimization if a pure function is called with identical arguments
+// many times. Determine a function's execution frequency is already too hard, if not impossible,
+// for us, not to mention questioning its arguments. Therefore, we only memoize functions
+// that are most possible to fit into such cases.
+// A function worth memoization usually have overlapping subproblems. In other words,
+// different paths depend on the solution to the same subproblem.
+// Here we try to figure out if a function has overlapping subproblems.
+// FIXME: More precise cost model
+bool isProfitableToMemoize(Function &func) {
+    std::vector<pCall> self_calls;
+    for (const auto &bb : func) {
+        for (const auto &inst : *bb) {
+            if (auto call = inst->as<CALLInst>()) {
+                if (call->getFunc().get() == &func)
+                    self_calls.emplace_back(call);
+            }
+        }
+    }
+
+    // Overlapping subproblems at least have too paths
+    if (self_calls.size() < 2)
+        return false;
+
+    // See if there are shared arguments
+    // Independent calls cannot have overlapping subproblems
+    const auto &params = func.getParams();
+    size_t num_shared_calls = self_calls.size();
+    for (const auto &call : self_calls) {
+        auto call_args = call->getArgs();
+        auto has_use = [&]() -> bool {
+            for (const auto &arg : call_args) {
+                if (auto arg_inst = arg->as<Instruction>()) {
+                    for (const auto &fp : params) {
+                        if (AhasUseToB(arg_inst, fp))
+                            return true;
+                    }
+                }
+            }
+            return false;
+        }();
+
+        if (!has_use)
+            --num_shared_calls;
+    }
+
+    if (num_shared_calls < 2)
+        return false;
+
+    return true;
+}
 
 std::shared_ptr<MemoPlan> selectMemoPlan(Function &func) {
     const auto &params = func.getParams();
@@ -194,13 +246,11 @@ std::shared_ptr<MemoPlan> selectMemoPlan(Function &func) {
 
 PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
     // Memoize pure recursive functions
-    if (!function.isRecursive())
+    if (!function.isRecursive() || !isPure(fam, &function))
         return PreserveAll();
 
-    if (!isPure(fam, &function)) {
-        Logger::logDebug("[Memo]: Skip non-pure recursive function '", function.getName(), "'.");
+    if (!isProfitableToMemoize(function))
         return PreserveAll();
-    }
 
     // Skip functions with pointer arguments
     auto params = function.getParams();
@@ -239,6 +289,9 @@ PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
         std::string{Config::IR::MEMOIZATION_LUT_NAME_PREFIX} + "." + function.getName().substr(1), GVIniter(lut_type));
     auto module = function.getParent();
     module->addGlobalVar(lut);
+
+    // FIXME: Find the best position to start memo.
+    //        currently we always split the entry block.
 
     // Split entry block to entry_front and entry_behind:
     auto entry_behind = *function.begin();
@@ -346,8 +399,8 @@ PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
 
         // entry_front:
         // X -> to Has Val BB, M -> Miss
-        auto front_select = std::make_shared<SELECTInst>("%memo.debug0", entry_br->getCond(),
-            function.getConst('X'), function.getConst('M'));
+        auto front_select = std::make_shared<SELECTInst>("%memo.debug0", entry_br->getCond(), function.getConst('X'),
+                                                         function.getConst('M'));
         auto putch_select0 = std::make_shared<CALLInst>(putch_fn, std::vector<pVal>{front_select});
         entry_front->addInstBeforeTerminator(front_select);
         entry_front->addInstBeforeTerminator(putch_select0);
@@ -355,7 +408,7 @@ PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
         // has_val_bb:
         // H -> Hit, R -> Rewrite
         auto has_val_select = std::make_shared<SELECTInst>("%memo.debug1", found_br->getCond(), function.getConst('H'),
-            function.getConst('R'));
+                                                           function.getConst('R'));
         auto putch_select1 = std::make_shared<CALLInst>(putch_fn, std::vector<pVal>{has_val_select});
         has_val_bb->addInstBeforeTerminator(has_val_select);
         has_val_bb->addInstBeforeTerminator(putch_select1);

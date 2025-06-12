@@ -31,30 +31,6 @@ std::ostream &operator<<(std::ostream &os, const VectorizerPass &vec) {
 // Check if instructions are isomorphic.
 bool isIsomorphic(const pInst &stmt1, const pInst &stmt2) { return stmt1->getOpcode() == stmt2->getOpcode(); }
 
-bool AhasUseToB(const pInst &a, const pInst &b) {
-    std::vector<pVal> worklist;
-    for (const auto &oper : a->operands())
-        worklist.emplace_back(oper);
-
-    std::unordered_set<pVal> visited;
-    while (!worklist.empty()) {
-        auto curr = worklist.back();
-        worklist.pop_back();
-        visited.emplace(curr);
-
-        if (curr == b)
-            return true;
-
-        if (auto curr_user = curr->as<User>()) {
-            for (const auto &oper : curr_user->operands()) {
-                if (!visited.count(oper))
-                    worklist.emplace_back(oper);
-            }
-        }
-    }
-    return false;
-}
-
 // Check if there is use-def dependency between two instructions.
 bool isIndependent(const pInst &stmt1, const pInst &stmt2) {
     return !AhasUseToB(stmt2, stmt1) && !AhasUseToB(stmt1, stmt2);
