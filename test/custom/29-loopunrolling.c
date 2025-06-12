@@ -1,51 +1,140 @@
-//large loop and large array caculate
-int COUNT = 6000;
+// 94_nested_loops
+// FPM fpm;
+// fpm.addPass(IR::PromotePass());
+// fpm.addPass(IR::TailRecursionEliminationPass());
+// fpm.addPass(IR::InlinePass());
+// fpm.addPass(IR::InternalizePass());
+// fpm.addPass(IR::PromotePass());
+// fpm.addPass(IR::NameNormalizePass());
+// fpm.addPass(IR::CFGSimplifyPass());
+// fpm.addPass(IR::LoopSimplifyPass());
+// fpm.addPass(IR::LCSSAPass());
+// // fpm.addPass(IR::PngCFGPass("/home/panda/data3/dev/gnalc/cfgnu/"));
+// fpm.addPass(IR::VerifyPass());
+// fpm.addPass(IR::LoopUnrollPass());
+// // fpm.addPass(IR::PngCFGPass("/home/panda/data3/dev/gnalc/cfg/"));
+// fpm.addPass(IR::VerifyPass());
+int arr1[10][2][3][4][5][6][2];
+int arr2[10][2][3][2][4][8][7];
 
-float loop(float x[], float y[], int length) {
-    int i = 0;
-    float accum = 0.0;
-    while (i < length) {
-        accum = accum + x[i] * y[i];
-        i = i + 1;
+void loop1(int x, int y) {
+  int a, b, c, d, e, f, g;
+  a = 0;
+  while (a < x && a < y) {
+    b = 0;
+    while (b < 2) {
+      c = 0;
+      while (c < 3) {
+        d = 0;
+        while (d < 4) {
+          e = 0;
+          while (e < 5) {
+            f = 0;
+            while (f < 6) {
+              g = 0;
+              while (g < 2) {
+                arr1[a][b][c][d][e][f][g] = a + b + c + d + e + f + g + x + y;
+                g = g + 1;
+              }
+              f = f + 1;
+            }
+            e = e + 1;
+          }
+          d = d + 1;
+        }
+        c = c + 1;
+      }
+      b = b + 1;
     }
-    return accum;
+    a = a + 1;
+  }
+}
+
+void loop2() {
+  int a, b, c, d, e, f, g;
+  a = 0;
+  while (a < 10) {
+    b = 0;
+    while (b < 2) {
+      c = 0;
+      while (c < 3) {
+        d = 0;
+        while (d < 2) {
+          e = 0;
+          while (e < 4) {
+            f = 0;
+            while (f < 8) {
+              g = 0;
+              while (g < 7) {
+                arr2[a][b][c][d][e][f][g] = a + b + d + g;
+                g = g + 1;
+              }
+              f = f + 1;
+            }
+            e = e + 1;
+          }
+          d = d + 1;
+        }
+        c = c + 1;
+      }
+      b = b + 1;
+    }
+    a = a + 1;
+  }
+}
+
+int loop3(int h, int i, int j, int k, int l, int m, int n) {
+  int a, b, c, d, e, f, g;
+  int ans = 0;
+  a = 0;
+  while (a < 10) {
+    b = 0;
+    while (b < 100) {
+      c = 0;
+      while (c < 1000) {
+        d = 0;
+        while (d < 10000) {
+          e = 0;
+          while (e < 100000) {
+            f = 0;
+            while (f < 1000000) {
+              g = 0;
+              while (g < 10000000) {
+                ans = ans % 817 + arr1[a][b][c][d][e][f][g] + arr2[a][b][c][d][e][f][g];
+                g = g + 1;
+                if (g >= n) break;
+              }
+              f = f + 1;
+              if (f >= m) break;
+            }
+            e = e + 1;
+            if (e >= l) break;
+          }
+          d = d + 1;
+          if (d >= k) break;
+        }
+        c = c + 1;
+        if (c >= j) break;
+      }
+      b = b + 1;
+      if (b >= i) break;
+    }
+    a = a + 1;
+    if (a >= h) break;
+  }
+  return ans;
 }
 
 int main() {
-    int i = 0, j = 0;
-    float x[6000];
-    float y[6000];
-    int len=6000;
-    float total = 0.0;
-    float a = 0.0;
-    float b = 1.0;
-    starttime();
-    while ( i < COUNT) {
-        j = 0;
-        if (i % 10) {
-            a = 0.0;
-            b = 1.0;
-        } else {
-            a = a + 0.1;
-            b = b + 0.2;
-        }
-        while ( j < len) {
-            x[j] = a + j;
-            y[j] = b + j;
-            j = j + 1;
-        }
-        total = total + loop(x, y, len);
-        i = i + 1;
-    }
-    stoptime();
-    int final=total - 432031867600896.000000;
-    if (final <=0.000001 && final>= -0.000001) {
-        putint(10);
-        return 0;
-    }
-    else {
-        putint(1);
-        return 1;
-    }
-
+  int x = getint();
+  int y = getint();
+  int h = getint();
+  int i = getint(), j = getint();
+  int k = getint();
+  int l = getint();
+  int m = getint();
+  int n = getint();
+  loop1(x, y);
+  loop2();
+  return loop3(h, i, j, k, l, m, n);
 }

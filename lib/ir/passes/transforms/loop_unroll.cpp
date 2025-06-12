@@ -715,6 +715,12 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                     new_phi->addPhiOper(remv, rem_header);
                     new_phi->addPhiOper(v->as<Value>(), header);
                     rem_target->addPhiInst(new_phi);
+
+                    // UPDATE TARGET BLOCK'S PHI
+                    for (auto &phi : raw_target->phis()) {
+                        auto rem_phi = IMap[phi][count]->as<PHIInst>();
+                        rem_phi->addPhiOper(phi->getValueForBlock(header), header);
+                    }
                 }
             }
 
