@@ -37,6 +37,10 @@ MAKE_BINARY(And, OP::AND, "and")
 MAKE_BINARY(Or, OP::OR, "or")
 MAKE_BINARY(Xor, OP::XOR, "xor")
 
+pBinary IRBuilder::makeBinary(OP op, const pVal &lhs, const pVal &rhs, const std::string &name) const {
+    return makeInst<BinaryInst>(name, "binary", op, lhs, rhs);
+}
+
 pFneg IRBuilder::makeFNeg(const pVal &val, const std::string &name) const {
     return makeInst<FNEGInst>(name, "fneg", val);
 }

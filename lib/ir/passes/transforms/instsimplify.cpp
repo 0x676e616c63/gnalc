@@ -3,6 +3,7 @@
 #include "ir/block_utils.hpp"
 #include "ir/instructions/compare.hpp"
 #include "ir/instructions/converse.hpp"
+#include "ir/irbuilder.hpp"
 #include "ir/passes/analysis/basic_alias_analysis.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/helpers/constant_fold.hpp"
@@ -14,17 +15,6 @@
 #include <vector>
 
 namespace IR {
-template <typename NewInst> void replaceInstHelper(const pInst &inst, const NewInst &i) {
-    inst->replaceSelf(i);
-    inst->getParent()->addInst(inst->getIndex(), i);
-}
-
-template <typename NewInst, typename... NewInsts>
-void replaceInstHelper(const pInst &inst, const NewInst &new_inst, const NewInsts &...new_insts) {
-    inst->getParent()->addInst(inst->getIndex(), new_inst);
-    replaceInstHelper(inst, new_insts...);
-}
-
 PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
     bool instsimplify_inst_modified = false;
     this->fam = &fam;
@@ -122,6 +112,9 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             // (y - x) + x = y
             REPLACE(M::Add(M::Sub(M::Bind(y), M::Bind(x)), M::Is(x)), y)
 
+            // select x, y, y = y
+            REPLACE(M::Select(M::Bind(x), M::Bind(y), M::Is(y)), y)
+
             // icmp x, x
             REPLACE(M::Icmp(M::Bind(x), M::Is(x)), isTrueWhenEqual(x->as<ICMPInst>()->getCond()) ? i1_true : i1_false)
 
@@ -144,10 +137,11 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
 
 #define REWRITE_BEG(...)                                                                                               \
     if (match(inst, __VA_ARGS__)) {                                                                                    \
-        Logger::logDebug("[InstSimplify]: Rewrite ", GNALC_STRINGFY((__VA_ARGS__)));
+        Logger::logDebug("[InstSimplify]: Rewrite ", GNALC_STRINGFY((__VA_ARGS__)));                                   \
+        IRBuilder builder("%isim", inst->getParent(), inst->getIter());
 
-#define REWRITE_END(...)                                                                                               \
-    replaceInstHelper(inst, __VA_ARGS__);                                                                              \
+#define REWRITE_END(a)                                                                                                 \
+    inst->replaceSelf(a);                                                                                              \
     instsimplify_inst_modified = true;                                                                                 \
     continue;                                                                                                          \
     }
@@ -156,130 +150,138 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         auto inst = worklist.back();
         worklist.pop_back();
 
-        // (c1 - x) + c2 -> (c1 + c2) - x
-        REWRITE_BEG(M::Add(M::Sub(M::Bind(c1), M::Bind(x)), M::Bind(c2)))
-        auto sub = std::make_shared<BinaryInst>(getTmpName(), OP::SUB, function.getConst(c1 + c2), x);
-        REWRITE_END(sub)
+        // select i1 x, i32 1, i32 0 = zext x
+        REWRITE_BEG(M::Select(M::Bind(x), M::Is(1), M::Is(0)))
+        auto zext = builder.makeZext(x, IRBTYPE::I32);
+        REWRITE_END(zext)
 
-        // x % y + ((x / y) % z) * y -> x % (y * z)
-        REWRITE_BEG(M::Add(M::Rem(M::Bind(x), M::Bind(y)),                        // x % y +
-                           M::Mul(M::Rem(M::Div(M::Is(x), M::Is(y)), M::Bind(z)), // ((x / y) % z)
-                                  M::Is(y))))
-        auto mul = std::make_shared<BinaryInst>(getTmpName(), OP::MUL, y, z);
-        auto rem = std::make_shared<BinaryInst>(getTmpName(), OP::SREM, x, mul);
-        REWRITE_END(mul, rem)
+        // select x, y, false = x & y
+        REWRITE_BEG(M::Select(M::Bind(x), M::Bind(y), M::Is(false)))
+        auto andi = builder.makeAnd(x, y);
+        REWRITE_END(andi)
+
+        // select x, y, true = !x | y
+        REWRITE_BEG(M::Select(M::Bind(x), M::Bind(y), M::Is(true)))
+        auto xori = builder.makeOr(function.getConst(true), x);
+        auto ori = builder.makeOr(xori, y);
+        REWRITE_END(ori)
+
+        // select x, false, y = !x & y
+        REWRITE_BEG(M::Select(M::Bind(x), M::Is(false), M::Bind(y)))
+        auto xori = builder.makeOr(function.getConst(false), x);
+        auto andi = builder.makeAnd(xori, y);
+        REWRITE_END(andi)
+
+        // select x, true, y = x | y
+        REWRITE_BEG(M::Select(M::Bind(x), M::Is(true), M::Bind(y)))
+        auto ori = builder.makeOr(x, y);
+        REWRITE_END(ori)
 
         // x - -y -> x + y
         REWRITE_BEG(M::Sub(M::Bind(x), M::Sub(M::Is(0), M::Bind(y))))
-        auto add = std::make_shared<BinaryInst>(getTmpName(), OP::ADD, x, y);
+        auto add = builder.makeAdd(x, y);
         REWRITE_END(add)
-
-        // c1 - (x + c2) -> (c1 - c2) - x
-        REWRITE_BEG(M::Sub(M::Bind(c1), M::Add(M::Bind(x), M::Bind(c2))),
-                    M::Sub(M::Bind(c1), M::Add(M::Bind(c2), M::Bind(x))))
-        auto sub = std::make_shared<BinaryInst>(getTmpName(), OP::SUB, function.getConst(c1 - c2), x);
-        REWRITE_END(sub)
 
         // x * y - x * z -> x * (y - z)
         REWRITE_BEG(M::Sub(M::Mul(M::Bind(x), M::Bind(y)), M::Mul(M::Is(x), M::Bind(z))))
-        auto sub = std::make_shared<BinaryInst>(getTmpName(), OP::SUB, y, z);
-        auto mul = std::make_shared<BinaryInst>(getTmpName(), OP::MUL, x, sub);
-        REWRITE_END(sub, mul)
+        auto sub = builder.makeSub(y, z);
+        auto mul = builder.makeMul(x, sub);
+        REWRITE_END(mul)
 
         // (x * x) - (y * y) -> (x + y) * (x - y)
         REWRITE_BEG(M::Sub(M::Mul(M::Bind(x), M::Is(x)), M::Mul(M::Bind(y), M::Is(y))))
-        auto add = std::make_shared<BinaryInst>(getTmpName(), OP::ADD, x, y);
-        auto sub = std::make_shared<BinaryInst>(getTmpName(), OP::SUB, x, y);
-        auto mul = std::make_shared<BinaryInst>(getTmpName(), OP::MUL, add, sub);
-        REWRITE_END(add, sub, mul)
+        auto add = builder.makeAdd(x, y);
+        auto sub = builder.makeSub(x, y);
+        auto mul = builder.makeMul(add, sub);
+        REWRITE_END(mul)
 
         // float: -x + y -> y - x
         REWRITE_BEG(M::Fadd(M::Fneg(M::Bind(x)), M::Bind(y)))
-        auto fsub = std::make_shared<BinaryInst>(getTmpName(), OP::FSUB, y, x);
+        auto fsub = builder.makeFSub(y, x);
         REWRITE_END(fsub)
 
         // float: (-x * y) + z -> z - (x * y)
         REWRITE_BEG(M::Fadd(M::Fmul(M::Fneg(M::Bind(x)), M::Bind(y)), M::Bind(z)))
-        auto fmul = std::make_shared<BinaryInst>(getTmpName(), OP::FMUL, x, y);
-        auto fsub = std::make_shared<BinaryInst>(getTmpName(), OP::FSUB, z, fmul);
-        REWRITE_END(fmul, fsub)
+        auto fmul = builder.makeFMul(x, y);
+        auto fsub = builder.makeFSub(z, fmul);
+        REWRITE_END(fsub)
 
         // float: (-x / y) + z or (x / -y) + z -> z - (x / y)
         REWRITE_BEG(M::Fadd(M::Fdiv(M::Fneg(M::Bind(x)), M::Bind(y)), M::Bind(z)),
                     M::Fadd(M::Fdiv(M::Bind(x), M::Fneg(M::Bind(y))), M::Bind(z)))
-        auto fdiv = std::make_shared<BinaryInst>(getTmpName(), OP::FDIV, x, y);
-        auto fsub = std::make_shared<BinaryInst>(getTmpName(), OP::FSUB, z, fdiv);
-        REWRITE_END(fdiv, fsub)
+        auto fdiv = builder.makeFDiv(x, y);
+        auto fsub = builder.makeFSub(z, fdiv);
+        REWRITE_END(fsub)
 
         // float: (sitofp x) + (sitofp y) -> sitofp(x + y)
         REWRITE_BEG(M::Fadd(M::Sitofp(M::Bind(x)), M::Sitofp(M::Bind(y))))
-        auto fadd = std::make_shared<BinaryInst>(getTmpName(), OP::FADD, x, y);
-        auto sitofp = std::make_shared<SITOFPInst>(getTmpName(), fadd);
-        REWRITE_END(fadd, sitofp)
+        auto fadd = builder.makeFAdd(x, y);
+        auto sitofp = builder.makeSitofp(fadd);
+        REWRITE_END(sitofp)
 
         // float: -(x * c) -> x * -c
         REWRITE_BEG(M::Fneg(M::OneUse(M::Fmul(M::Bind(x), M::Bind(fc1)))))
-        auto fmul = std::make_shared<BinaryInst>(getTmpName(), OP::FMUL, x, function.getConst(-fc1));
+        auto fmul = builder.makeFMul(x, function.getConst(-fc1));
         REWRITE_END(fmul)
 
         // float: -(x / c) -> x / -c
         REWRITE_BEG(M::Fneg(M::OneUse(M::Fdiv(M::Bind(x), M::Bind(fc1)))))
-        auto fdiv = std::make_shared<BinaryInst>(getTmpName(), OP::FDIV, x, function.getConst(-fc1));
+        auto fdiv = builder.makeFDiv(x, function.getConst(-fc1));
         REWRITE_END(fdiv)
 
         // float: -(c / x) -> -c / x
         REWRITE_BEG(M::Fneg(M::OneUse(M::Fdiv(M::Bind(fc1), M::Bind(x)))))
-        auto fdiv = std::make_shared<BinaryInst>(getTmpName(), OP::FDIV, function.getConst(-fc1), x);
+        auto fdiv = builder.makeFDiv(function.getConst(-fc1), x);
         REWRITE_END(fdiv)
 
         // float: -(x * y) -> (-x * y)
         REWRITE_BEG(M::Fneg(M::Fmul(M::Bind(x), M::Bind(y))))
         auto fneg = std::make_shared<FNEGInst>(getTmpName(), x);
         auto fmul = std::make_shared<BinaryInst>(getTmpName(), OP::FMUL, fneg, y);
-        REWRITE_END(fneg, fmul)
+        REWRITE_END(fmul)
 
         // float: -(x / y)  -> (-x / y)
         REWRITE_BEG(M::Fneg(M::Fdiv(M::Bind(x), M::Bind(y))))
-        auto fneg = std::make_shared<FNEGInst>(getTmpName(), x);
-        auto fdiv = std::make_shared<BinaryInst>(getTmpName(), OP::FDIV, fneg, y);
-        REWRITE_END(fneg, fdiv)
+        auto fneg = builder.makeFNeg(x);
+        auto fdiv = builder.makeFDiv(fneg, y);
+        REWRITE_END(fdiv)
 
         // float: fsub -0.0, x -> fneg x
         REWRITE_BEG(M::Fsub(M::Is(-0.0f), M::Bind(x)))
-        auto fneg = std::make_shared<FNEGInst>(getTmpName(), x);
+        auto fneg = builder.makeFNeg(x);
         REWRITE_END(fneg)
 
         // float: x - (-y) -> x + y
         REWRITE_BEG(M::Fsub(M::Bind(x), M::Fneg(M::Bind(y))))
-        auto fadd = std::make_shared<BinaryInst>(getTmpName(), OP::FADD, x, y);
+        auto fadd = builder.makeFAdd(x, y);
         REWRITE_END(fadd)
 
         // float: x - (-y * z) -> x + (y * z)
         REWRITE_BEG(M::Fsub(M::Bind(x), M::Fmul(M::Fneg(M::Bind(y)), M::Bind(z))))
-        auto fmul = std::make_shared<BinaryInst>(getTmpName(), OP::FMUL, y, z);
-        auto fadd = std::make_shared<BinaryInst>(getTmpName(), OP::FADD, x, fmul);
-        REWRITE_END(fmul, fadd)
+        auto fmul = builder.makeFMul(y, z);
+        auto fadd = builder.makeFAdd(x, fmul);
+        REWRITE_END(fadd)
 
         // float: x - (-y / z) -> x + (y / z)
         REWRITE_BEG(M::Fsub(M::Bind(x), M::Fdiv(M::Fneg(M::Bind(y)), M::Bind(z))))
-        auto fdiv = std::make_shared<BinaryInst>(getTmpName(), OP::FDIV, y, z);
-        auto fadd = std::make_shared<BinaryInst>(getTmpName(), OP::FADD, x, fdiv);
-        REWRITE_END(fdiv, fadd)
+        auto fdiv = builder.makeFDiv(y, z);
+        auto fadd = builder.makeFAdd(x, fdiv);
+        REWRITE_END(fadd)
 
         // float: (x - y) - z -> x - (y + z)
         REWRITE_BEG(M::Fsub(M::Fsub(M::Bind(x), M::Bind(y)), M::Bind(z)))
-        auto fadd = std::make_shared<BinaryInst>(getTmpName(), OP::FADD, y, z);
-        auto fsub = std::make_shared<BinaryInst>(getTmpName(), OP::FSUB, x, fadd);
-        REWRITE_END(fadd, fsub)
+        auto fadd = builder.makeFAdd(y, z);
+        auto fsub = builder.makeFSub(x, fadd);
+        REWRITE_END(fsub)
 
         // x * -1 -> sub 0 x
         REWRITE_BEG(M::Mul(M::Bind(x), M::Is(-1)), M::Mul(M::Is(-1), M::Bind(x)))
-        auto sub = std::make_shared<BinaryInst>(getTmpName(), OP::SUB, function.getConst(0), x);
+        auto sub = builder.makeSub(function.getConst(0), x);
         REWRITE_END(sub)
 
         // float: x * -1.0f or -1.0f * x -> fneg x
         REWRITE_BEG(M::Fmul(M::Bind(x), M::Is(-1.0f)), M::Fmul(M::Is(-1.0f), M::Bind(x)))
-        auto fneg = std::make_shared<FNEGInst>(getTmpName(), x);
+        auto fneg = builder.makeFNeg(x);
         REWRITE_END(fneg)
 
         // -x * -y -> x * y
@@ -290,28 +292,23 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
                     M::Div(M::Sub(M::Is(0), M::Bind(x)), M::Sub(M::Is(0), M::Bind(y))),
                     M::Fmul(M::Fneg(M::Bind(x)), M::Fneg(M::Bind(y))),
                     M::Fdiv(M::Fneg(M::Bind(x)), M::Fneg(M::Bind(y))))
-        auto binary = std::make_shared<BinaryInst>(getTmpName(), inst->getOpcode(), x, y);
+        auto binary = builder.makeBinary(inst->getOpcode(), x, y);
         REWRITE_END(binary)
 
         // x / (x * y) -> 1 / y
         REWRITE_BEG(M::Div(M::Bind(x), M::Mul(M::Is(x), M::Bind(y))))
-        auto div = std::make_shared<BinaryInst>(getTmpName(), OP::DIV, i32_one, y);
-        REWRITE_END(div)
-
-        // (x / c1) / c2  -> x / (c1 * c2)
-        REWRITE_BEG(M::Div(M::Div(M::Bind(x), M::Bind(c1)), M::Bind(c2)))
-        auto div = std::make_shared<BinaryInst>(getTmpName(), OP::DIV, x, function.getConst(c1 * c2));
+        auto div = builder.makeDiv(i32_one, y);
         REWRITE_END(div)
 
         // ((x * c2) + c1) / c2 -> x + c1 / c2
         REWRITE_BEG(M::Div(M::Add(M::Mul(M::Bind(x), M::Bind(c2)), M::Bind(c1)), M::Is(c2)))
-        auto add = std::make_shared<BinaryInst>(getTmpName(), OP::ADD, x, function.getConst(c1 / c2));
+        auto add = builder.makeAdd(x, function.getConst(c1 / c2));
         REWRITE_END(add)
 
         // Since integer division truncates towards zero, this transformation is valid.
         // (x - (x % y)) / y -> x / y
         REWRITE_BEG(M::Div(M::Sub(M::Bind(x), M::Rem(M::Is(x), M::Bind(y))), M::Is(y)))
-        auto div = std::make_shared<BinaryInst>(getTmpName(), OP::DIV, x, y);
+        auto div = builder.makeDiv(x, y);
         REWRITE_END(div)
 
         if (inst->getOpcode() == OP::PHI) {

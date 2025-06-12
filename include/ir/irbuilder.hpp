@@ -39,6 +39,7 @@ public:
     void setNamePrefix(const std::string &name_prefix_);
     void setInsertPoint(const pBlock &bb, BBInstIter insert_point_);
 
+    pBinary makeBinary(OP op, const pVal &lhs, const pVal &rhs, const std::string &name = "") const;
     pBinary makeAdd(const pVal &lhs, const pVal &rhs, const std::string &name = "") const;
     pBinary makeSub(const pVal &lhs, const pVal &rhs, const std::string &name = "") const;
     pBinary makeMul(const pVal &lhs, const pVal &rhs, const std::string &name = "") const;
