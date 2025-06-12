@@ -195,7 +195,11 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getUse(const MIRInst_p &minst)
     Nodes uses;
 
     if (!minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::BL) {
-        for (int i = 0; i < 16; ++i) {
+        for (int i = 0; i < 8; ++i) { // v0 ~ v7
+            uses.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i + 32U), OpT::Float));
+        }
+
+        for (int i = 16; i < 32; ++i) { // v16 ~ v31
             uses.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i + 32U), OpT::Float));
         }
 
@@ -220,7 +224,11 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getDef(const MIRInst_p &minst)
     Nodes defs;
 
     if (!minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::BL) {
-        for (int i = 0; i < 16; ++i) {
+        for (int i = 0; i < 8; ++i) { // v0 ~ v7
+            defs.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i + 32U), OpT::Float));
+        }
+
+        for (int i = 16; i < 32; ++i) { // v16 ~ v31
             defs.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i + 32U), OpT::Float));
         }
 

@@ -67,7 +67,7 @@ bool LiveAnalysis::processInst(const Instruction *inst) {
     case OP::FMUL:
     case OP::DIV:
     case OP::FDIV:
-    case OP::REM:
+    case OP::SREM:
     case OP::FREM:
     case OP::AND:
     case OP::OR:

@@ -1540,7 +1540,7 @@ namespace yyy {
 
   case 75: // BinaryOp: I_REM
 #line 179 "irparser.y"
-                        { yylhs.value.as < OP > () = OP::REM; }
+                        { yylhs.value.as < OP > () = OP::SREM; }
 #line 1544 "irparser.cpp"
     break;
 

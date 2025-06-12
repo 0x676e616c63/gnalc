@@ -40,11 +40,13 @@ class CastInst;
 class FPTOSIInst;
 class SITOFPInst;
 class ZEXTInst;
+class SEXTInst;
 class BITCASTInst;
 using pCast = std::shared_ptr<CastInst>;
 using pFptosi = std::shared_ptr<FPTOSIInst>;
 using pSitofp = std::shared_ptr<SITOFPInst>;
 using pZext = std::shared_ptr<ZEXTInst>;
+using pSext = std::shared_ptr<SEXTInst>;
 using pBitcast = std::shared_ptr<BITCASTInst>;
 
 // vector

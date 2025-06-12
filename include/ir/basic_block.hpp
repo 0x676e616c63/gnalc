@@ -87,8 +87,17 @@ public:
     void addInst(size_t index, const pInst &inst);
     void addInst(const pInst &inst);
     void addInstAfterPhi(const pInst &inst);
-    void addInstBeforeTerminator(const pInst &inst);
+    void addInstAfterAlloca(const pInst &inst);
     void addPhiInst(const pPhi &node); // 插入到phi_insts
+
+    void addInsts(iterator it, const std::vector<pInst> &insts);
+    void addInsts(const std::vector<pInst> &insts);
+
+    // Returns a proper insert point at the end of this block.
+    // This preserves the consecutive CMP-BRInst pattern.
+    BBInstIter getEndInsertPoint() const;
+    // Add instructions right before the terminator. (do not preserve consecutive CMP-BRInst)
+    void addInstBeforeTerminator(const pInst &inst);
 
     // Usually we use `preds()` and `succs()` instead of them
     std::list<pBlock> getPreBB() const;
@@ -270,10 +279,6 @@ public:
     pInst getTerminator() const;
     pBr getBRInst() const;
     pRet getRETInst() const;
-
-    // Returns a proper insert point at the end of this block.
-    // This preserves the consecutive CMP-BRInst pattern.
-    BBInstIter getEndInsertPoint() const;
 
     void accept(IRVisitor &visitor) override;
     ~BasicBlock() override;

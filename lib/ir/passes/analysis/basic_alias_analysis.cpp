@@ -1,4 +1,6 @@
 #include "ir/passes/analysis/basic_alias_analysis.hpp"
+
+#include "config/config.hpp"
 #include "ir/instructions/control.hpp"
 #include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
@@ -111,7 +113,7 @@ std::optional<std::tuple<const Value *, size_t>> getGepTotalOffset(const GEPInst
 }
 
 AliasInfo BasicAAResult::getAliasInfo(Value *v1, Value *v2) const {
-    Err::gassert(v1->getType()->getTrait() == IRCTYPE::PTR && v2->getType()->getTrait() == IRCTYPE::PTR);
+    // Err::gassert(v1->getType()->getTrait() == IRCTYPE::PTR && v2->getType()->getTrait() == IRCTYPE::PTR);
 
     if (v1 == v2)
         return AliasInfo::MustAlias;
@@ -145,11 +147,11 @@ AliasInfo BasicAAResult::getAliasInfo(Value *v1, Value *v2) const {
         }
     }
 
-    const auto& set1 = info1.potential_alias;
-    const auto& set2 = info2.potential_alias;
+    const auto &set1 = info1.potential_alias;
+    const auto &set2 = info2.potential_alias;
 
-    const auto& smaller = set1.size() <= set2.size() ? set1 : set2;
-    const auto& larger = set1.size() > set2.size() ? set1 : set2;
+    const auto &smaller = set1.size() <= set2.size() ? set1 : set2;
+    const auto &larger = set1.size() > set2.size() ? set1 : set2;
 
     for (auto val : smaller) {
         if (larger.find(val) != larger.end())
@@ -164,21 +166,28 @@ bool BasicAAResult::isLocal(Value *v) const {
 }
 
 ModRefInfo BasicAAResult::getInstModRefInfo(Instruction *inst, Value *location, FAM &fam) const {
-    Err::gassert(location->getType()->getTrait() == IRCTYPE::PTR);
+    // It's a hot path, even `gassert` can produce cost.
+    // Err::gassert(location->getType()->getTrait() == IRCTYPE::PTR);
 
-    if (auto load = inst->as_raw<LOADInst>()) {
+    switch (inst->getOpcode()) {
+    case OP::LOAD: {
+        auto load = inst->as_raw<LOADInst>();
         auto aa = getAliasInfo(load->getPtr().get(), location);
         if (aa == AliasInfo::NoAlias)
             return ModRefInfo::NoModRef;
         else
             return ModRefInfo::Ref;
-    } else if (auto store = inst->as_raw<STOREInst>()) {
+    } break;
+    case OP::STORE: {
+        auto store = inst->as_raw<STOREInst>();
         auto aa = getAliasInfo(store->getPtr().get(), location);
         if (aa == AliasInfo::NoAlias)
             return ModRefInfo::NoModRef;
         else
             return ModRefInfo::Mod;
-    } else if (auto call = inst->as_raw<CALLInst>()) {
+    } break;
+    case OP::CALL: {
+        auto call = inst->as_raw<CALLInst>();
         auto rwinfo = getCallRWInfo(fam, call);
         if (rwinfo.untracked)
             return ModRefInfo::ModRef;
@@ -213,8 +222,10 @@ ModRefInfo BasicAAResult::getInstModRefInfo(Instruction *inst, Value *location, 
             return ModRefInfo::Mod;
         if (ref)
             return ModRefInfo::Ref;
+    } break;
+    default:
+        return ModRefInfo::NoModRef;
     }
-
     return ModRefInfo::NoModRef;
 }
 
@@ -222,13 +233,27 @@ ModRefInfo BasicAAResult::getFunctionModRefInfo() const {
     if (has_untracked_call)
         return ModRefInfo::ModRef;
 
-    if (read.empty() && write.empty())
+    size_t real_read = std::count_if(read.begin(), read.end(), [](auto &p) {
+        if (p->template is<GlobalVariable>() &&
+            Util::begins_with(p->getName(), Config::IR::MEMOIZATION_LUT_NAME_PREFIX))
+            return false;
+        return true;
+    });
+
+    size_t real_write = std::count_if(write.begin(), write.end(), [](auto &p) {
+        if (p->template is<GlobalVariable>() &&
+            Util::begins_with(p->getName(), Config::IR::MEMOIZATION_LUT_NAME_PREFIX))
+            return false;
+        return true;
+    });
+
+    if (real_read == 0 && real_write == 0)
         return ModRefInfo::NoModRef;
 
-    if (read.empty() && !write.empty())
+    if (real_read == 0 && real_write > 0)
         return ModRefInfo::Mod;
 
-    if (write.empty() && !read.empty())
+    if (real_read > 0 && real_write == 0)
         return ModRefInfo::Ref;
 
     return ModRefInfo::ModRef;
@@ -336,7 +361,7 @@ BasicAAResult BasicAliasAnalysis::run(Function &func, FAM &fam) {
                     // Given that, we only check if the `call` refers to
                     // the current function to see if it is in a recursive chain.
                     if (callee_def != &func) {
-                        const auto& callee_aa = fam.getResult<BasicAliasAnalysis>(*callee_def);
+                        const auto &callee_aa = fam.getResult<BasicAliasAnalysis>(*callee_def);
 
                         for (auto write : callee_aa.write) {
                             if (callee_aa.getPtrInfo(write).global_var)

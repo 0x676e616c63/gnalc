@@ -78,6 +78,13 @@ void BasicBlock::addInstAfterPhi(const pInst &inst) {
     inst_index_valid = false;
 }
 
+void BasicBlock::addInstAfterAlloca(const pInst &inst) {
+    auto insert_point = insts.begin();
+    while (insert_point != insts.end() && (*insert_point)->getOpcode() == OP::ALLOCA)
+        ++insert_point;
+    addInst(insert_point, inst);
+}
+
 // FIXME: add it before BRInst's cond.
 void BasicBlock::addInstBeforeTerminator(const pInst &inst) {
     Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
@@ -218,6 +225,15 @@ void BasicBlock::addPhiInst(const pPhi &node) {
     phi_insts.emplace_back(node);
     node->setParent(as<BasicBlock>());
     inst_index_valid = false;
+}
+
+void BasicBlock::addInsts(iterator it, const std::vector<pInst> &insts) {
+    for (const auto &inst : insts)
+        addInst(it, inst);
+}
+void BasicBlock::addInsts(const std::vector<pInst> &insts) {
+    for (const auto &inst : insts)
+        addInst(inst);
 }
 
 unsigned BasicBlock::getPhiCount() const { return phi_insts.size(); }

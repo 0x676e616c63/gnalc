@@ -20,6 +20,18 @@ pConstI32 ConstantPool::getConst(int val) {
     return it->getConstantInt();
 }
 
+pConstI64 ConstantPool::getConst(int64_t val) {
+    ConstantProxy proxy(this, std::make_shared<ConstantI64>(val));
+    auto [it, inserted] = pool.insert(proxy);
+    return it->getConstantI64();
+}
+
+pConstI128 ConstantPool::getConst(int128_t val) {
+    ConstantProxy proxy(this, std::make_shared<ConstantI128>(val));
+    auto [it, inserted] = pool.insert(proxy);
+    return it->getConstantI128();
+}
+
 pConstF32 ConstantPool::getConst(float val) {
     ConstantProxy proxy(this, std::make_shared<ConstantFloat>(val));
     auto [it, inserted] = pool.insert(proxy);

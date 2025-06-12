@@ -333,7 +333,7 @@ public:
         index.clear();
     }
 
-    template <typename PassT> typename PassT::Result* getStoredResult(UnitT &unit) const {
+    template <typename PassT> typename PassT::Result *getStoredResult(UnitT &unit) const {
         const auto pass_id = PassT::ID();
         auto it = index.find(std::make_pair(pass_id, &unit));
 
@@ -346,7 +346,7 @@ public:
         return &static_cast<ResultModel &>(*it->second->second).result;
     }
 
-    template <typename PassT> void storeResult(UnitT &unit, const typename PassT::Result& result) {
+    template <typename PassT> void storeResult(UnitT &unit, const typename PassT::Result &result) {
         const auto pass_id = PassT::ID();
 
         auto [it, inserted] = index.insert(std::make_pair(std::make_pair(pass_id, &unit), unit_res_t::iterator()));
@@ -373,8 +373,8 @@ template <typename T> constexpr bool hasGetInstCountV = hasGetInstCount<T>::valu
 } // namespace detail
 
 template <typename UnitT> class PassManager : public PassInfo<PassManager<UnitT>> {
-    template <typename UnitT2>
-    friend class FixedPointPM;
+    template <typename UnitT2> friend class FixedPointPM;
+
 protected:
     using PassConceptT = PassConcept<UnitT, AnalysisManager<UnitT>>;
     std::vector<std::unique_ptr<PassConceptT>> passes;
@@ -414,7 +414,8 @@ public:
                 pa.retain(curr_pa);
                 auto new_inst_cnt = unit.getInstCount();
                 Logger::logInfo("[PM]: Finished '", pass->name(), "' on '", unit.getName(), "'.(inst: ", old_inst_cnt,
-                                " -> ", new_inst_cnt, ", elapsed time: ", duration.count(), "s)");
+                                " -> ", new_inst_cnt, ", elapsed time: ", duration.count(), "s",
+                                curr_pa.allPreserved() ? ", identical)" : ", modified)");
             } else {
                 auto start = std::chrono::high_resolution_clock::now();
                 PreservedAnalyses curr_pa = pass->run(unit, am);
@@ -425,7 +426,8 @@ public:
                 pa.retain(curr_pa);
 
                 Logger::logInfo("[PM]: Finished '", pass->name(), "' on '", unit.getName(),
-                                "'.(elapsed time: ", duration.count(), "s)");
+                                "'.(elapsed time: ", duration.count(), "s",
+                                curr_pa.allPreserved() ? ", identical)" : ", modified)");
             }
         }
 
@@ -510,7 +512,8 @@ public:
                     auto new_inst_cnt = unit.getInstCount();
                     Logger::logInfo("[FixedPointPM] at round ", round, ": Finished '", pass->name(), "' on '",
                                     unit.getName(), "'.(inst: ", old_inst_cnt, " -> ", new_inst_cnt,
-                                    ", elapsed time: ", duration.count(), "s)");
+                                    ", elapsed time: ", duration.count(), "s",
+                                    curr_pa.allPreserved() ? ", identical)" : ", modified)");
                 } else {
                     auto start = std::chrono::high_resolution_clock::now();
                     PreservedAnalyses curr_pa = pass->run(unit, am);
@@ -523,7 +526,8 @@ public:
                     pa.retain(curr_pa);
 
                     Logger::logInfo("[FixedPointPM] at round ", round, ": Finished '", pass->name(), "' on '",
-                                    unit.getName(), "'.(elapsed time: ", duration.count(), "s)");
+                                    unit.getName(), "'.(elapsed time: ", duration.count(), "s",
+                                    curr_pa.allPreserved() ? ", identical)" : ", modified)");
                 }
             }
             if (++round > threshold) {

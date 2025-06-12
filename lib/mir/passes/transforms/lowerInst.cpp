@@ -35,7 +35,7 @@ OpC MIR_new::IROpCodeConvert(IR::OP op) {
         return OpC::InstSDiv;
     case OP::FDIV:
         return OpC::InstFDiv;
-    case OP::REM:
+    case OP::SREM:
         return OpC::InstSRem;
     case OP::FREM:
         return OpC::InstFRem;

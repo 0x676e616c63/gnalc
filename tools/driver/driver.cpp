@@ -191,13 +191,31 @@ int main(int argc, char **argv) {
             fuzz_testing = true;
             fuzz_testing_repro = argv[i];
         }
+        else if (arg == "--test-in") {
+            ++i;
+            if (i >= argc) {
+                std::cerr << "Error: Expected testcase in file." << std::endl;
+                return -1;
+            }
+            cli_opt_options.run_test.enable();
+            cli_opt_options.testcase_in = argv[i];
+        }
+        else if (arg == "--test-out") {
+            ++i;
+            if (i >= argc) {
+                std::cerr << "Error: Expected testcase out file." << std::endl;
+                return -1;
+            }
+            cli_opt_options.run_test.enable();
+            cli_opt_options.testcase_out = argv[i];
+        }
         else if (arg == "-debug-pipeline") debug_pipeline = true;
         else if (arg == "-sir-debug-pipeline") sir_debug_pipeline = true;
         else if (arg == "--ann") cli_opt_options.advance_name_norm = true;
         else if (arg == "--verify") cli_opt_options.verify.enable();
         else if (arg == "--strict") {
             cli_opt_options.verify.enable();
-            cli_opt_options.abort_when_verify_failed = true;
+            cli_opt_options.strict = true;
         }
 
         // backend opt options
@@ -278,6 +296,8 @@ Debug options:
   --ann                      - Use the advance name normalization result (after IRGen) (This disables the one at the last)
   --verify                   - Enable IR verification after passes
   --strict                   - Strict mode (verify + abort on failure)
+  --test-in <file>           - Enable Test after each pass an set the testcase input file
+  --test-out <file>          - Enable Test after each pass an set the testcase output file
 
 Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
   --<opt> flags have no effect, but --no-<opt> can disable specific passes
@@ -366,11 +386,17 @@ Extensions:
         poutstream = &outfile;
     }
 
+    cli_opt_options.run_test.disableIfDefault();
+    if (cli_opt_options.run_test.isEnable() && cli_opt_options.testcase_out.empty()) {
+        std::cerr << "Warning: Ignored testcase in since no expected output is specified." << std::endl;
+        cli_opt_options.run_test.disable();
+    }
+
     IR::PMOptions pm_options{};
     if (o0_optnone)
         pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::DisableIfDefault);
     else if (fuzz_testing) {
-        cli_opt_options.abort_when_verify_failed = true;
+        cli_opt_options.strict = true;
         cli_opt_options.verify.enableIfDefault();
         pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::EnableIfDefault);
     } else if (std_pipeline || fixed_point_pipeline) {

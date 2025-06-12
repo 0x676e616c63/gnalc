@@ -42,6 +42,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
 
 #define REPLACE(pattern, replacement)                                                                                  \
     if (match(inst, (pattern))) {                                                                                      \
+        Logger::logDebug("[InstSimplify]: Replaced ", GNALC_STRINGFY(pattern), " with ", GNALC_STRINGFY(replacement)); \
         inst->replaceSelf((replacement));                                                                              \
         instsimplify_inst_modified = true;                                                                             \
         continue;                                                                                                      \
@@ -141,7 +142,9 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         }
     }
 
-#define REWRITE_BEG(...) if (match(inst, __VA_ARGS__)) {
+#define REWRITE_BEG(...)                                                                                               \
+    if (match(inst, __VA_ARGS__)) {                                                                                    \
+        Logger::logDebug("[InstSimplify]: Rewrite ", GNALC_STRINGFY((__VA_ARGS__)));
 
 #define REWRITE_END(...)                                                                                               \
     replaceInstHelper(inst, __VA_ARGS__);                                                                              \
@@ -163,7 +166,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
                            M::Mul(M::Rem(M::Div(M::Is(x), M::Is(y)), M::Bind(z)), // ((x / y) % z)
                                   M::Is(y))))
         auto mul = std::make_shared<BinaryInst>(getTmpName(), OP::MUL, y, z);
-        auto rem = std::make_shared<BinaryInst>(getTmpName(), OP::REM, x, mul);
+        auto rem = std::make_shared<BinaryInst>(getTmpName(), OP::SREM, x, mul);
         REWRITE_END(mul, rem)
 
         // x - -y -> x + y

@@ -37,7 +37,7 @@ void StackGenerateImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     mfunc->modifyBegCalleeSave(allocationBase);
 
     auto &bitmap = mfunc->calleeSaveRegs();
-    bitmap &= 0xffff00007ff80000;
+    bitmap &= 0x0000ff007ff80000;
 
     if (mfunc->isProgramEntry()) {
         bitmap &= 0x60000000;

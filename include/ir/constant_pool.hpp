@@ -7,7 +7,6 @@
 
 #include <unordered_set>
 
-
 namespace IR {
 class ConstantPool {
 private:
@@ -24,6 +23,8 @@ public:
     pConstI1 getConst(bool val);
     pConstI8 getConst(char val);
     pConstI32 getConst(int val);
+    pConstI64 getConst(int64_t val);
+    pConstI128 getConst(int128_t val);
     pConstF32 getConst(float val);
     pConstI32Vec getConst(const std::vector<int>& val);
     pConstF32Vec getConst(const std::vector<float>& val);

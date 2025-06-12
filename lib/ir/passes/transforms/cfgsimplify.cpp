@@ -44,8 +44,8 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                         phi->delPhiOperByBlock(curr);
 
                     modified = true;
-                    Logger::logDebug("[CFGSimplify] on '", function.getName(), "': drop BRInst of BasicBlock '",
-                                     curr->getName(), "' 's identical destination");
+                    // Logger::logDebug("[CFGSimplify] on '", function.getName(), "': drop BRInst of BasicBlock '",
+                    //                  curr->getName(), "' 's identical destination");
                 }
             } else {
                 auto dest = br->getDest();
@@ -128,8 +128,8 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                             phi->delPhiOperByBlock(curr);
 
 
-                        Logger::logDebug("[CFGSimplify] on '", function.getName(), "': Remove empty BasicBlock '",
-                                         curr->getName(), "'.");
+                        // Logger::logDebug("[CFGSimplify] on '", function.getName(), "': Remove empty BasicBlock '",
+                        //                  curr->getName(), "'.");
 
                         dead_blocks.emplace(curr);
                         modified = true;
@@ -164,8 +164,8 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                         linkBB(curr, dest_succ);
                     }
 
-                    Logger::logDebug("[CFGSimplify] on '", function.getName(), "': Combined BasicBlock '",
-                                     curr->getName(), "' and '", dest->getName(), "'.");
+                    // Logger::logDebug("[CFGSimplify] on '", function.getName(), "': Combined BasicBlock '",
+                    //                  curr->getName(), "' and '", dest->getName(), "'.");
 
                     // Since `dest` only has one incoming block, and all phi has been replaced,
                     // deleting `curr`'s br will make it have no users, so it's a safe delete.
@@ -207,8 +207,8 @@ PM::PreservedAnalyses CFGSimplifyPass::run(Function &function, FAM &fam) {
                         for (const auto &phi : dest_succ1->phis())
                             phi->addPhiOper(phi->getValueForBlock(dest), curr);
 
-                        Logger::logDebug("[CFGSimplify] on '", function.getName(), "': Hoisted Branch of '",
-                                         dest->getName(), "' to '", curr->getName(), "'.");
+                        // Logger::logDebug("[CFGSimplify] on '", function.getName(), "': Hoisted Branch of '",
+                        //                  dest->getName(), "' to '", curr->getName(), "'.");
                         modified = true;
                     }
                 }
