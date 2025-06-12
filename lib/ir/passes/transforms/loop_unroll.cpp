@@ -6,6 +6,7 @@
 #include "ir/instructions/compare.hpp"
 #include "ir/instructions/phi.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/live_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
 #include "utils/exception.hpp"
@@ -60,7 +61,6 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
     //         }
     //     }
     // }
-
 
     auto& SCEVH = fam.getResult<SCEVAnalysis>(FC);
     auto& RNG = fam.getResult<RangeAnalysis>(FC);
@@ -227,7 +227,7 @@ bool LoopUnrollPass::peel(const pLoop &loop, const UnrollOption &option, Functio
     return true;
 }
 
-bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Function &func) {
+bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Function &FC, FAM &fam) {
     if (!option.unroll) {
         return false;
     }
@@ -553,7 +553,8 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             ++raw_bb_iter;
         }
 
-        // add rem header's phi's phioper: from latch, from raw header or last latch(if is dowhile)
+        // add rem header's phi's phioper: from latch, from main loop's last latch(for dowhile)
+        // note: in while loop: main header--->remainder's next block(skip remainder header)
         for (auto &phi : header->phis()) {
             auto rem_phi = IMap[phi][count]->as<PHIInst>();
             auto phi_value_from_latch = phi->getValueForBlock(latch);
@@ -567,7 +568,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             }
 
             // 1. For dowhile: from last latch
-            // 2. For while: from first header
+            // 2. For while: skip
             if (is_dowhile) {
                 if (phi_value_from_latch->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
                     rem_phi->addPhiOper(IMapFind(phi_value_from_latch->as<Instruction>(), count-1), last_latch);
@@ -575,17 +576,17 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                     rem_phi->addPhiOper(phi_value_from_latch, last_latch);
                 }
             } else {
-                // 注意此处的phi_value_from_latch的parent不一定是latch, 只是latch路径上的phi_value
-                if (phi_value_from_latch->getVTrait() == ValueTrait::ORDINARY_VARIABLE && phi_value_from_latch->as<Instruction>()->getParent() == header) {
-                    // 如果此phi_oper的value在header中赋值，则remainder中的对应phi_oper的value应该是原header中的值
-                    rem_phi->addPhiOper(phi_value_from_latch, header);
-                } else {
-                    rem_phi->addPhiOper(phi, header);
-                }
+                // // 注意此处的phi_value_from_latch的parent不一定是latch, 只是latch路径上的phi_value
+                // if (phi_value_from_latch->getVTrait() == ValueTrait::ORDINARY_VARIABLE && phi_value_from_latch->as<Instruction>()->getParent() == header) {
+                //     // 如果此phi_oper的value在header中赋值，则remainder中的对应phi_oper的value应该是原header中的值
+                //     rem_phi->addPhiOper(phi_value_from_latch, header);
+                // } else {
+                //     rem_phi->addPhiOper(phi, header);
+                // }
             }
         }
 
-        // Change loop's iterative boundary
+        // Change main loop's iterative boundary
         auto br = unrolled_loop_exiting->getBRInst();
         if (br->isConditional()) {
             auto cond = br->getCond()->as<Instruction>();
@@ -677,8 +678,47 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             ProcessExitingBlock(latch, BMap[latch][count], count);
             DropExitbAndItsPhiOper(latch);
         } else if (option.has_remainder && !is_dowhile) {
-            header->getBRInst()->replaceAllOperands(exitb, BMap[header][count]);
-            ProcessExitingBlock(header, BMap[header][count], count);
+            pB rem_header = BMap[header][count];
+            pB rem_target;
+
+            // add phi for new remainder's header(rem header's next block in loop)
+            // main header---   rem header
+            //      |       |       |-------->Exit
+            //     ...      --->certain blk
+            {
+                pB raw_target;
+                {
+                    auto _true = header->getBRInst()->getTrueDest();
+                    raw_target = _true!=exitb ? _true : header->getBRInst()->getFalseDest();
+                }
+                rem_target = BMap[raw_target][count];
+                auto LVAR = fam.getResult<LiveAnalysis>(FC);
+                auto lvset =  LVAR.getLiveIn(raw_target->getAllInsts().front().get());
+                // ADD NEW PHI
+                for (const auto &v : lvset) {
+                    if (!loop->contains(v->as<Instruction>()->getParent())) {
+                        continue;
+                    }
+                    auto new_phi = std::make_shared<PHIInst>(v->getName() + "." + std::to_string(name_idx) + "remphi", v->getType());
+                    auto remv = IMap[v->as<Instruction>()][count];
+                    // Logger::logDebug("remv: " + remv->getName() + ", new_phi: " + new_phi->getName());
+                    {
+                        auto ulist = remv->getUseList();
+                        for (const auto &use : ulist) {
+                            if (auto user = use->getUser()->as<Instruction>();
+                                user->getParent() == rem_header && user->getOpcode() != OP::PHI)
+                                continue;
+                            use->setValue(new_phi);
+                        }
+                    }
+                    new_phi->addPhiOper(remv, rem_header);
+                    new_phi->addPhiOper(v->as<Value>(), header);
+                    rem_target->addPhiInst(new_phi);
+                }
+            }
+
+            header->getBRInst()->replaceAllOperands(exitb, rem_target);
+            ProcessExitingBlock(header, rem_header, count);
             DropExitbAndItsPhiOper(header);
         } else if (!option.has_remainder && is_dowhile) {
             ProcessExitingBlock(latch, last_latch, count-1);
@@ -704,24 +744,24 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
     }
 
     // add to function
-    auto it_after_loop = ++std::find(func.begin(), func.end(), blocks.back()->as<BasicBlock>());
+    auto it_after_loop = ++std::find(FC.begin(), FC.end(), blocks.back()->as<BasicBlock>());
     for (int i = 1; i < count; i++) {
         for (auto &b : blocks) {
-            func.addBlock(it_after_loop, BMap[b][i]);
+            FC.addBlock(it_after_loop, BMap[b][i]);
         }
     }
     if (option.fully() && !is_dowhile) {
-        func.addBlock(it_after_loop, BMap[header][count]);
+        FC.addBlock(it_after_loop, BMap[header][count]);
     } else if (option.partially() && option.has_remainder) {
         for (auto &b : blocks) {
-            func.addBlock(it_after_loop, BMap[b][count]);
+            FC.addBlock(it_after_loop, BMap[b][count]);
         }
     }
 
     // process runtime unroll
 
     // optimize new cfg...
-    func.updateAndCheckCFG();
+    FC.updateAndCheckCFG();
 
     return true;
 }
@@ -757,7 +797,7 @@ PM::PreservedAnalyses LoopUnrollPass::run(Function &function, FAM &fam) {
             UnrollOption option;
             analyze(loop, option, function, fam);
             auto peeled = peel(loop, option, function);
-            auto unrolled = unroll(loop, option, function);
+            auto unrolled = unroll(loop, option, function, fam);
             last_round_modified = peeled || unrolled;
             modified = modified || last_round_modified;
 

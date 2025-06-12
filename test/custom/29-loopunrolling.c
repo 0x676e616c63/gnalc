@@ -1,65 +1,51 @@
-const int len = 20;
+//large loop and large array caculate
+int COUNT = 6000;
 
-int main()
-{
-    int i, j, t, n, temp;
-    int mult1[len] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
-    int mult2[len] = {2, 3, 4, 2, 5, 7 ,9 ,9, 0, 1, 9, 8, 7, 6, 4, 3, 2, 1, 2, 2};
-    int len1 = len;
-    int len2 = len;
-    int c1[len + 5];
-    int c2[len + 5];
-    int result[len * 2] = {};
-
-    i = 0;
-    while (i < len1) {
-        c1[i] = mult1[i];
+float loop(float x[], float y[], int length) {
+    int i = 0;
+    float accum = 0.0;
+    while (i < length) {
+        accum = accum + x[i] * y[i];
         i = i + 1;
     }
+    return accum;
+}
 
-    i = 0;
-    while (i < len2) {
-        c2[i] = mult2[i];
-        i = i + 1;
-    }
-
-    n = len1 + len2 - 1;
-
-    i = 0;
-    while (i <= n) {
-        result[i]=0;
-        i = i + 1;
-    }
-
-    temp=0;
-
-    i = len2 - 1;
-    while (i > -1) {
-        t = c2[i];
-        j = len1 - 1;
-        while (j > -1) {
-            temp = result[n] + t * c1[j];
-            if(temp >= 10) {
-                result[n] = (temp);
-                result[n-1] = result[n-1] + temp / 10;
-            }
-            else
-                result[n] = temp;
-            j = j - 1;
-            n = n - 1;
+int main() {
+    int i = 0, j = 0;
+    float x[6000];
+    float y[6000];
+    int len=6000;
+    float total = 0.0;
+    float a = 0.0;
+    float b = 1.0;
+    starttime();
+    while ( i < COUNT) {
+        j = 0;
+        if (i % 10) {
+            a = 0.0;
+            b = 1.0;
+        } else {
+            a = a + 0.1;
+            b = b + 0.2;
         }
-        n = n + len1 - 1;
-        i = i - 1;
-    }
-
-    if(result[0] != 0)
-        putint(result[0]);
-
-    i = 1;
-    while (i <= len1 + len2 - 1) {
-        putint(result[i]);
+        while ( j < len) {
+            x[j] = a + j;
+            y[j] = b + j;
+            j = j + 1;
+        }
+        total = total + loop(x, y, len);
         i = i + 1;
     }
+    stoptime();
+    int final=total - 432031867600896.000000;
+    if (final <=0.000001 && final>= -0.000001) {
+        putint(10);
+        return 0;
+    }
+    else {
+        putint(1);
+        return 1;
+    }
 
-    return 0;
 }
