@@ -19,7 +19,7 @@ constexpr auto MEMSET_INTRINSIC_NAME = "@llvm.memset.p0i8.i32";
 constexpr auto MEMCPY_INTRINSIC_NAME = "@llvm.memcpy.p0.p0.i32";
 
 // Memoization
-constexpr auto MEMOIZATION_LUT_SIZE = 2048;
+constexpr auto MEMOIZATION_LUT_SIZE = 65536;
 constexpr auto MEMOIZATION_LUT_NAME_PREFIX = "@memo.lut";
 // GVN-PRE
 // Some operations in GVN-PRE are time-consuming,

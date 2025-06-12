@@ -19,6 +19,10 @@ private:
 
 public:
     ConstantPool() = default;
+    ConstantPool(const ConstantPool&) = delete;
+    ConstantPool(ConstantPool&&) = default;
+    ConstantPool& operator=(const ConstantPool&) = delete;
+    ConstantPool& operator=(ConstantPool&&) = default;
 
     pConstI1 getConst(bool val);
     pConstI8 getConst(char val);

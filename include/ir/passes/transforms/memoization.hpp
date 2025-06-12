@@ -10,8 +10,7 @@
 namespace IR {
 class MemoizePass : public PM::PassInfo<MemoizePass> {
 public:
-    explicit MemoizePass(bool emit_debug_inst_ = false)
-        : emit_debug_inst(emit_debug_inst_) {}
+    explicit MemoizePass(bool emit_debug_inst_ = false) : emit_debug_inst(emit_debug_inst_) {}
 
     PM::PreservedAnalyses run(Function &function, FAM &manager);
 

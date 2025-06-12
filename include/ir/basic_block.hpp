@@ -7,11 +7,11 @@
 #define GNALC_IR_BASIC_BLOCK_HPP
 
 #include "base.hpp"
-#include "type_alias.hpp"
 #include "instruction.hpp"
 #include "instructions/phi.hpp"
-#include "utils/iterator.hpp"
+#include "type_alias.hpp"
 #include "utils/generic_visitor.hpp"
+#include "utils/iterator.hpp"
 
 #include <memory>
 #include <variant>
@@ -63,6 +63,7 @@ class BasicBlock : public Value {
     struct BBSuccGetter {
         auto operator()(const pBlock &bb) { return bb->getNextBB(); }
     };
+
 public:
     using iterator = decltype(insts)::iterator;
     using const_iterator = decltype(insts)::const_iterator;

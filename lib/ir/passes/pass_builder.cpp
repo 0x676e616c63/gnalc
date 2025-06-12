@@ -323,10 +323,11 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     fpm.addPass(IR::LoopSimplifyPass());
     fpm.addPass(IR::NameNormalizePass(true));
     fpm.addPass(IR::PrintFunctionPass(std::cerr));
-    fpm.addPass(IR::PrintRangePass(std::cerr));
+    // fpm.addPass(IR::MemoizePass(false));
     fpm.addPass(IR::MemoizePass(true));
     fpm.addPass(IR::PrintFunctionPass(std::cerr));
     fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::NameNormalizePass(true));
     return fpm;
 
     // If-conversion
