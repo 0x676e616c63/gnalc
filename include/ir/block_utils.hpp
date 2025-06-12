@@ -109,6 +109,8 @@ bool eliminateDeadInsts(const std::set<pPhi>& dead_phis, FAM *fam = nullptr);
 // In this case, the function returns std::nullopt.
 std::optional<std::tuple<pVal, pVal>> analyzeHeaderPhi(const pLoop &loop, const pPhi &header_phi);
 std::optional<std::tuple<Value *, Value *>> analyzeHeaderPhi(const Loop *loop, const PHIInst *header_phi);
+
+bool AhasUseToB(const pInst &a, const pVal &b);
 } // namespace IR
 
 #endif

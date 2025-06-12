@@ -399,4 +399,28 @@ std::optional<std::tuple<pVal, pVal>> analyzeHeaderPhi(const pLoop &loop, const 
     auto [invariant, variant] = *opt;
     return std::make_tuple(invariant->as<Value>(), variant->as<Value>());
 }
+
+bool AhasUseToB(const pInst &a, const pVal &b) {
+    std::vector<pVal> worklist;
+    for (const auto &oper : a->operands())
+        worklist.emplace_back(oper);
+
+    std::unordered_set<pVal> visited;
+    while (!worklist.empty()) {
+        auto curr = worklist.back();
+        worklist.pop_back();
+        visited.emplace(curr);
+
+        if (curr == b)
+            return true;
+
+        if (auto curr_user = curr->as<User>()) {
+            for (const auto &oper : curr_user->operands()) {
+                if (!visited.count(oper))
+                    worklist.emplace_back(oper);
+            }
+        }
+    }
+    return false;
+}
 } // namespace IR
