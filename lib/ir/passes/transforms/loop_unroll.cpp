@@ -228,7 +228,7 @@ bool LoopUnrollPass::peel(const pLoop &loop, const UnrollOption &option, Functio
     return true;
 }
 
-bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Function &FC, FAM &fam) {
+bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Function &func) {
     if (!option.unroll) {
         return false;
     }
@@ -693,15 +693,23 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                     raw_target = _true!=exitb ? _true : header->getBRInst()->getFalseDest();
                 }
                 rem_target = BMap[raw_target][count];
-                auto LVAR = fam.getResult<LiveAnalysis>(FC);
-                auto lvset =  LVAR.getLiveIn(raw_target->getAllInsts().front().get());
-                // ADD NEW PHI
-                for (const auto &v : lvset) {
-                    if (v->getVTrait() != ValueTrait::ORDINARY_VARIABLE || !loop->contains(v->as<Instruction>()->getParent())) {
-                        continue;
+                std::unordered_set<pI> worklist;
+                {
+                    for (const auto &hinst : header->all_insts()) {
+                        for (const auto &user : hinst->users()) {
+                            if (user->getVTrait() != ValueTrait::ORDINARY_VARIABLE)
+                                continue;
+                            if (auto uparent = user->as<Instruction>()->getParent();
+                                uparent !=header && loop->contains(uparent)) {
+                                worklist.insert(hinst);
+                            }
+                        }
                     }
-                    auto new_phi = std::make_shared<PHIInst>(v->getName() + "." + std::to_string(name_idx) + "remphi", v->getType());
-                    auto remv = IMap[v->as<Instruction>()][count];
+                }
+                // ADD NEW PHI
+                for (const auto &inst : worklist) {
+                    auto new_phi = std::make_shared<PHIInst>(inst->getName() + "." + std::to_string(name_idx) + "remphi", inst->getType());
+                    auto remv = IMap[inst][count];
                     // Logger::logDebug("remv: " + remv->getName() + ", new_phi: " + new_phi->getName());
                     {
                         auto ulist = remv->getUseList();
@@ -713,7 +721,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                         }
                     }
                     new_phi->addPhiOper(remv, rem_header);
-                    new_phi->addPhiOper(v->as<Value>(), header);
+                    new_phi->addPhiOper(inst, header);
                     rem_target->addPhiInst(new_phi);
 
                     // UPDATE TARGET BLOCK'S PHI
@@ -751,24 +759,24 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
     }
 
     // add to function
-    auto it_after_loop = ++std::find(FC.begin(), FC.end(), blocks.back()->as<BasicBlock>());
+    auto it_after_loop = ++std::find(func.begin(), func.end(), blocks.back()->as<BasicBlock>());
     for (int i = 1; i < count; i++) {
         for (auto &b : blocks) {
-            FC.addBlock(it_after_loop, BMap[b][i]);
+            func.addBlock(it_after_loop, BMap[b][i]);
         }
     }
     if (option.fully() && !is_dowhile) {
-        FC.addBlock(it_after_loop, BMap[header][count]);
+        func.addBlock(it_after_loop, BMap[header][count]);
     } else if (option.partially() && option.has_remainder) {
         for (auto &b : blocks) {
-            FC.addBlock(it_after_loop, BMap[b][count]);
+            func.addBlock(it_after_loop, BMap[b][count]);
         }
     }
 
     // process runtime unroll
 
     // optimize new cfg...
-    FC.updateAndCheckCFG();
+    func.updateAndCheckCFG();
 
     return true;
 }
@@ -804,7 +812,7 @@ PM::PreservedAnalyses LoopUnrollPass::run(Function &function, FAM &fam) {
             UnrollOption option;
             analyze(loop, option, function, fam);
             auto peeled = peel(loop, option, function);
-            auto unrolled = unroll(loop, option, function, fam);
+            auto unrolled = unroll(loop, option, function);
             last_round_modified = peeled || unrolled;
             modified = modified || last_round_modified;
 

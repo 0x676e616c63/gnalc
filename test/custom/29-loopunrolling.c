@@ -14,6 +14,7 @@
 // fpm.addPass(IR::LoopUnrollPass());
 // // fpm.addPass(IR::PngCFGPass("/home/panda/data3/dev/gnalc/cfg/"));
 // fpm.addPass(IR::VerifyPass());
+// fpm.addPass(IR::RunTestPass("/home/panda/data3/dev/gnalc/test/contest/functional/94_nested_loops.out", "/home/panda/data3/dev/gnalc/test/contest/functional/94_nested_loops.in"));
 int arr1[10][2][3][4][5][6][2];
 int arr2[10][2][3][2][4][8][7];
 

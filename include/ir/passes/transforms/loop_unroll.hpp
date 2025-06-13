@@ -104,7 +104,7 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
 
     void analyze(const pLoop &loop, UnrollOption &option, Function &FC, FAM &fam);
     bool peel(const pLoop &loop, const UnrollOption &option, Function &func);
-    bool unroll(const pLoop &loop, const UnrollOption &option, Function &FC, FAM &fam);
+    bool unroll(const pLoop &loop, const UnrollOption &option, Function &func);
 
 public:
     LoopUnrollPass();
