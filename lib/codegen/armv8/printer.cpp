@@ -356,10 +356,16 @@ string ARMA64Printer::fmovPrinter(const MIRInst &minst) {
     const auto defType = def->type();
     const auto &use = minst.getOp(1);
     const auto useType = use->type();
-    const auto &shift = minst.getOp(2);
     auto bitWide = getBitWideChoosen(defType, useType);
 
     string str;
+
+    if (use->isImme()) { // alias of fdup
+        auto imm_us = use->imme();
+        auto imm = *reinterpret_cast<float *>(&imm_us);
+        str += "fmov\t" + reg2s(def, bitWide) + ",\t#" + std::to_string(imm);
+        return str;
+    }
 
     if (inRange(defType, OpT::Int, OpT::Int64) && inRange(useType, OpT::Float, OpT::Floatvec) ||
         inRange(useType, OpT::Int, OpT::Int64) && inRange(defType, OpT::Float, OpT::Floatvec)) {
@@ -372,6 +378,21 @@ string ARMA64Printer::fmovPrinter(const MIRInst &minst) {
     } else {
         Err::unreachable("fmovPrinter: failed to handle this");
     }
+
+    return str;
+}
+
+string ARMA64Printer::moviPrinter(const MIRInst &minst) {
+    const auto &def = minst.ensureDef();
+    const auto defType = def->type();
+    const auto &use = minst.getOp(1); // imme
+
+    string str;
+
+    ///@note defType not really need to be check
+    ///@todo need a imme range check in info.hpp
+    auto imme_us = use->imme();
+    str += "movi\t" + reg2s(def, 16, true) + ".4s,\t#" + std::to_string(use->imme());
 
     return str;
 }

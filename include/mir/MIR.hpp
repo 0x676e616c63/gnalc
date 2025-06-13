@@ -140,6 +140,8 @@ enum MIRGenericInst : uint32_t {
     InstLoadImm,
     InstLoadStackObjectAddr,
     InstLoadImmToReg,
+    InstLoadFPImm,
+    InstLoadFPImmToReg,
     InstLoadRegFromStack,
     InstStoreRegToStack,
 };

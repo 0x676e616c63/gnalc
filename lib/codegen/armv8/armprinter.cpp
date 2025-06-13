@@ -245,6 +245,9 @@ void ARMA64Printer::printout(const MIRInst &minst) {
         case ARMOpC::MOVF: // fmov
             outStream << fmovPrinter(minst);
             break;
+        case ARMOpC::MOVI:
+            outStream << moviPrinter(minst);
+            break;
         case ARMOpC::BL:
             outStream << blPrinter(minst);
             break;

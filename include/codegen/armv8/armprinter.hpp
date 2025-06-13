@@ -48,6 +48,7 @@ public:
     [[nodiscard]] string movPrinter(const MIRInst &);
     [[nodiscard]] string movVPrinter(const MIRInst &);
     [[nodiscard]] string fmovPrinter(const MIRInst &);
+    [[nodiscard]] string moviPrinter(const MIRInst &);
     [[nodiscard]] string blPrinter(const MIRInst &);
     [[nodiscard]] string calleePrinter(const MIRInst &);
     [[nodiscard]] string calleePrinter_legacy(const MIRInst &);
