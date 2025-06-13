@@ -128,11 +128,24 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
 #define FUNCTION_TRANSFORM(name, ...) registerPassForOptInfo(fpm, options.name, options, __VA_ARGS__);
 
     auto make_arithmetic = [&options] {
-        PM::FixedPointPM<Function> fpm(10);
-        FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
-        FUNCTION_TRANSFORM(sccp, SCCPPass());
-        FUNCTION_TRANSFORM(dce, DCEPass());
-        FUNCTION_TRANSFORM(adce, ADCEPass());
+        auto make_simple_clean = [&options] {
+            PM::FixedPointPM<Function> fpm;
+            FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
+            FUNCTION_TRANSFORM(sccp, SCCPPass());
+            FUNCTION_TRANSFORM(dce, DCEPass());
+            FUNCTION_TRANSFORM(adce, ADCEPass());
+            return fpm;
+        };
+
+        auto make_reassociate = [&options] {
+            FPM fpm;
+            FUNCTION_TRANSFORM(reassociate, ReassociatePass());
+            return fpm;
+        };
+
+        FPM fpm;
+        fpm.addPass(make_simple_clean());
+        fpm.addPass(make_reassociate());
         return fpm;
     };
 
@@ -253,7 +266,7 @@ FPM PassBuilder::buildFunctionPipeline(PMOptions opt_info) {
     FUNCTION_TRANSFORM(internalize, InternalizePass(), PromotePass())
     FUNCTION_TRANSFORM(sccp, SCCPPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
-    // FUNCTION_TRANSFORM(reassociate, ReassociatePass())
+    FUNCTION_TRANSFORM(reassociate, ReassociatePass())
     FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass())
     FUNCTION_TRANSFORM(sccp, SCCPPass())
     FUNCTION_TRANSFORM(rngsimplify, LoopSimplifyPass(), RangeAwareSimplifyPass())
@@ -473,7 +486,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
             },                                                                                                         \
             weight);
 
-    // REGISTER_FUNCTION_TRANSFORM(ReassociatePass)
+    REGISTER_FUNCTION_TRANSFORM(reassociate, ReassociatePass, 10)
     REGISTER_FUNCTION_TRANSFORM(sccp, SCCPPass, 10)
     REGISTER_FUNCTION_TRANSFORM(adce, ADCEPass, 10)
     REGISTER_FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass, 10)
