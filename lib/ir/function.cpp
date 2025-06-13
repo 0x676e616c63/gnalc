@@ -25,7 +25,10 @@ bool FunctionDecl::isRecursive() const {
     for (const auto &inst_user : inst_users()) {
         auto call = inst_user->as<CALLInst>();
         Err::gassert(call != nullptr);
-        auto caller_func = call->getParent()->getParent();
+        auto caller_bb = call->getParent();
+        if (caller_bb == nullptr)
+            continue;
+        auto caller_func = caller_bb->getParent();
         if (caller_func.get() == this)
             return true;
     }

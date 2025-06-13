@@ -18,5 +18,6 @@ private:
     bool emit_debug_inst;
 };
 
+bool isProfitableToMemoize(const Function &func);
 } // namespace IR
 #endif

@@ -182,7 +182,7 @@ public:
 // different paths depend on the solution to the same subproblem.
 // Here we try to figure out if a function has overlapping subproblems.
 // FIXME: More precise cost model
-bool isProfitableToMemoize(Function &func) {
+bool isProfitableToMemoize(const Function &func) {
     // First find all recursive calls
     std::vector<pCall> self_calls;
     for (const auto &bb : func) {
