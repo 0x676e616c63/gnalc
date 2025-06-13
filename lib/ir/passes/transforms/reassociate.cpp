@@ -274,7 +274,9 @@ pVal ReassociatePass::removeFactor(const pVal &v, const pVal &factor) {
 pVal ReassociatePass::optAdd(const pBinary &root, std::vector<ValueEntry> &ops) {
     IRBuilder builder("%re.oa", root->getParent(), root->getIter());
     for (size_t i = 0, e = ops.size(); i != e; ++i) {
-        auto [curr, curr_rank] = ops[i];
+        // lambda captured structured bindings are a C++20 extension [-Wc++20-extensions]
+        auto curr = ops[i].operand;
+        auto curr_rank = ops[i].rank;
 
         // Fold add to mul
         // Y + Y + Y + Z -> 3 * Y + Z
