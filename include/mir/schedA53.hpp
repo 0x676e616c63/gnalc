@@ -37,7 +37,7 @@ inline InstExecInfo schedInfoImpl(OpC opcode) {
     case OpC::InstMul:
         return {4, 1, A53UnitMAC};
     case OpC::InstSDiv:
-        return {4, 1, A53UnitDiv}; // 快速除的优化空间没有想象中的那么大
+        return {4, 1, A53UnitDiv};
     case OpC::InstAnd:
     case OpC::InstOr:
     case OpC::InstXor:
@@ -137,6 +137,7 @@ inline InstExecInfo schedInfoImpl(ARMOpC opcode) {
         return {2, 1, A53UnitALU};
     case ARMOpC::MOV_V:
     case ARMOpC::MOVF:
+    case ARMOpC::MOVI:
         return {2, 1, A53UnitFPALU};
     case ARMOpC::SMULL:
         return {4, 1, A53UnitMAC};
