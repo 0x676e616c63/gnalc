@@ -128,7 +128,7 @@ void BF3t32bGen::visit(IR::BinaryInst &node) {
     case IR::OP::FMUL:
     case IR::OP::DIV:
     case IR::OP::FDIV:
-    case IR::OP::REM:
+    case IR::OP::SREM:
     case IR::OP::FREM:
         Err::todo("More op");
         break;

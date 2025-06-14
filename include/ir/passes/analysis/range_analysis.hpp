@@ -278,6 +278,29 @@ Range operator/(const Range &item) const {
         return Range(ret_min, ret_max);
     }
 
+    // TODO
+    Range operator&(const Range &item) const {
+        return Range();
+    }
+    Range operator|(const Range &item) const {
+        return Range();
+    }
+    Range operator^(const Range &item) const {
+        return Range();
+    }
+    Range urem(const Range &item) const {
+        return Range();
+    }
+    Range lshr(const Range &item) const {
+        return Range();
+    }
+    Range ashr(const Range &item) const {
+        return Range();
+    }
+    Range shl(const Range &item) const {
+        return Range();
+    }
+
     bool containsZero() const { return min <= T(0) && max >= T(0); }
 
     bool merge(const Range &item) {

@@ -36,6 +36,7 @@ namespace IR {
     GNALC_IR_PASS_ENTRY(tree_shaking)                                                                                  \
     GNALC_IR_PASS_ENTRY(store_range)                                                                                   \
     GNALC_IR_PASS_ENTRY(codegen_prepare)                                                                                   \
+    GNALC_IR_PASS_ENTRY(run_test)                                                                                   \
     GNALC_IR_PASS_ENTRY(verify)
 
 struct PMOptions {
@@ -43,10 +44,12 @@ struct PMOptions {
     GNALC_IR_PASS_TABLE
 #undef GNALC_IR_PASS_ENTRY
 
-    bool abort_when_verify_failed;
-
-    // Only for plain mode
+    bool strict;
     bool advance_name_norm;
+
+    // Only for run_test is true
+    std::string testcase_in;
+    std::string testcase_out;
 
     PMOptions() = default;
 };
@@ -80,7 +83,10 @@ struct CliOptions {
 #undef GNALC_IR_PASS_ENTRY
 
     bool advance_name_norm;
-    bool abort_when_verify_failed;
+    bool strict;
+
+    std::string testcase_in;
+    std::string testcase_out;
 
     enum class Mode {
         EnableIfDefault,

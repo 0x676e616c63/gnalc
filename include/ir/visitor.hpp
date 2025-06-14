@@ -37,6 +37,8 @@ public:
     virtual void visit(ConstantI1 &node) { Err::not_implemented("IRVisitor::visit(ConstantI1&)"); }
     virtual void visit(ConstantI8 &node) { Err::not_implemented("IRVisitor::visit(ConstantI8&)"); }
     virtual void visit(ConstantInt &node) { Err::not_implemented("IRVisitor::visit(ConstantInt&)"); }
+    virtual void visit(ConstantI64 &node) { Err::not_implemented("IRVisitor::visit(ConstantI64&)"); }
+    virtual void visit(ConstantI128 &node) { Err::not_implemented("IRVisitor::visit(ConstantI128&)"); }
     virtual void visit(ConstantFloat &node) { Err::not_implemented("IRVisitor::visit(ConstantFloat&)"); }
     virtual void visit(ConstantIntVector &node) { Err::not_implemented("IRVisitor::visit(ConstantIntVector&)"); }
     virtual void visit(ConstantFloatVector &node) { Err::not_implemented("IRVisitor::visit(ConstantFloatVector&)"); }
@@ -50,6 +52,7 @@ public:
     virtual void visit(FPTOSIInst &node) { Err::not_implemented("IRVisitor::visit(FPTOSIInst&)"); }
     virtual void visit(SITOFPInst &node) { Err::not_implemented("IRVisitor::visit(SITOFPInst&)"); }
     virtual void visit(ZEXTInst &node) { Err::not_implemented("IRVisitor::visit(ZEXTInst&)"); }
+    virtual void visit(SEXTInst &node) { Err::not_implemented("IRVisitor::visit(SEXTInst&)"); }
     virtual void visit(BITCASTInst &node) { Err::not_implemented("IRVisitor::visit(BITCASTInst&)"); }
     virtual void visit(ALLOCAInst &node) { Err::not_implemented("IRVisitor::visit(ALLOCAInst&)"); }
     virtual void visit(LOADInst &node) { Err::not_implemented("IRVisitor::visit(LOADInst&)"); }

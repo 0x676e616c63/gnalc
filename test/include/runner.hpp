@@ -93,9 +93,14 @@ static TestResult run_test(const TestData &data, bool only_run_frontend, size_t 
         if (std::system(exec_command.c_str()) != 0)
             return {out_source, "exec error", "", time_elapsed};
 
-        syout = read_file(output);
-        fix_newline(syout);
         time_elapsed += parse_time(read_file(outtime));
+
+        auto curr_out = read_file(output);
+        fix_newline(curr_out);
+        if (syout.empty())
+            syout = curr_out;
+        else if (curr_out != syout)
+            return {out_source, "output mismatch", "", time_elapsed / (i + 1)};
     }
     time_elapsed /= times;
     return {out_source, syout, output, time_elapsed};

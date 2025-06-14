@@ -49,7 +49,7 @@
 // in `bb0`, which makes the `bb0` can not be eliminated by CFGSimplify.
 //
 // This means GVN-PRE performed on a rotated loop can (maybe always) let a loop become a
-// middle exiting loop. This can prevent many loop pass to be performed, such as LoopUnroll.
+// middle exiting loop. This can let an unrolled loop's CFG can not be merged perfectly.
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_LOOP_ROTATE_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_LOOP_ROTATE_HPP

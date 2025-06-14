@@ -45,12 +45,12 @@ enum class FuncAttr {
 };
 class FunctionDecl : public Value {
 private:
-    std::set<FuncAttr> func_attrs;
+    std::unordered_set<FuncAttr> func_attrs;
     Module *parent{};
 
 public:
     FunctionDecl(std::string name_, std::vector<pType> params, pType ret_type, bool is_va_arg_,
-                 std::set<FuncAttr> attrs = {});
+                 std::unordered_set<FuncAttr> attrs = {});
 
     void accept(IRVisitor &visitor) override;
 
@@ -59,7 +59,7 @@ public:
 
     bool hasAttr(FuncAttr attr) const;
     void addAttr(FuncAttr attr);
-    const std::set<FuncAttr> &getAttrs() const;
+    const std::unordered_set<FuncAttr> &getAttrs() const;
 
     void setParent(Module *module);
     Module *getParent() const;
@@ -105,7 +105,7 @@ public:
     using const_reverse_iterator = decltype(blks)::const_reverse_iterator;
 
     Function(std::string name_, const std::vector<pFormalParam> &params, pType ret_type, ConstantPool *pool,
-             std::set<FuncAttr> attrs = {});
+             std::unordered_set<FuncAttr> attrs = {});
 
     void addBlock(iterator it, pBlock blk);
     void addBlock(size_t index, pBlock blk);

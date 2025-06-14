@@ -9,7 +9,7 @@
 
 namespace IR {
 FunctionDecl::FunctionDecl(std::string name_, std::vector<pType> params, pType ret_type, bool is_va_arg_,
-                           std::set<FuncAttr> attrs)
+                           std::unordered_set<FuncAttr> attrs)
     : Value(std::move(name_), makeFunctionType(std::move(params), std::move(ret_type), is_va_arg_),
             ValueTrait::FUNCTION),
       func_attrs(std::move(attrs)) {
@@ -25,7 +25,10 @@ bool FunctionDecl::isRecursive() const {
     for (const auto &inst_user : inst_users()) {
         auto call = inst_user->as<CALLInst>();
         Err::gassert(call != nullptr);
-        auto caller_func = call->getParent()->getParent();
+        auto caller_bb = call->getParent();
+        if (caller_bb == nullptr)
+            continue;
+        auto caller_func = caller_bb->getParent();
         if (caller_func.get() == this)
             return true;
     }
@@ -34,7 +37,7 @@ bool FunctionDecl::isRecursive() const {
 
 bool FunctionDecl::hasAttr(FuncAttr attr) const { return func_attrs.count(attr); }
 void FunctionDecl::addAttr(FuncAttr attr) { func_attrs.emplace(attr); }
-const std::set<FuncAttr> &FunctionDecl::getAttrs() const { return func_attrs; }
+const std::unordered_set<FuncAttr> &FunctionDecl::getAttrs() const { return func_attrs; }
 
 void FunctionDecl::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
@@ -56,7 +59,7 @@ std::vector<pType> get_params_type(const std::vector<pFormalParam> &p) {
 }
 
 Function::Function(std::string name_, const std::vector<pFormalParam> &params_, pType ret_type, ConstantPool *pool_,
-                   std::set<FuncAttr> attrs)
+                   std::unordered_set<FuncAttr> attrs)
     : FunctionDecl(std::move(name_), get_params_type(params_), std::move(ret_type), false, attrs), params(params_),
       constant_pool(pool_) {}
 
@@ -253,6 +256,8 @@ void Function::updateAllIndex() {
 
 // FIXME: BB PARAM not available
 pVal Function::cloneImpl() const {
+    static size_t name_cnt = 0;
+
     // left is old, right is new
     std::map<pBlock, pBlock> old2new_bb;
     std::map<pInst, pInst> old2new_inst;
@@ -269,7 +274,7 @@ pVal Function::cloneImpl() const {
         std::make_shared<Function>(getName(), cloned_params, getType()->as<FunctionType>()->getRet(), constant_pool);
 
     for (const auto &blk : blks) {
-        auto cloned_bb = std::make_shared<BasicBlock>(blk->getName() + ".cloned");
+        auto cloned_bb = std::make_shared<BasicBlock>(blk->getName() + ".dup" + std::to_string(name_cnt++));
         for (auto &phi : blk->phis()) {
             auto cloned_phi = makeClone(phi);
             cloned_bb->addPhiInst(cloned_phi);
@@ -317,7 +322,7 @@ pVal Function::cloneImpl() const {
                     use->setValue(old2new_inst[usee_inst]);
                 }
             }
-            inst->setName(inst->getName() + ".cloned");
+            inst->setName(inst->getName() + ".dup" + std::to_string(name_cnt++));
         }
     }
     cloned_fn->updateAllIndex();

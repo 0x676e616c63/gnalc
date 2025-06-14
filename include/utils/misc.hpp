@@ -153,5 +153,10 @@ struct PairHash {
         return seed;
     }
 };
+
+bool begins_with(const std::string &a, const std::string &b);
+
+#define GNALC_STRINGFY(x) _GNALC_STRINGFY(x)
+#define _GNALC_STRINGFY(x) #x
 } // namespace Util
 #endif

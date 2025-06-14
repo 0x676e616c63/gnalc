@@ -24,8 +24,6 @@
 //
 // TODO: Restrictions should be applied on hoisting to avoid excessive register pressure
 // TODO: Load elimination? https://blog.llvm.org/2009/12/introduction-to-load-elimination-in-gvn.html
-// TODO: Add option to disable the insertion phase (or PRE phase), since it can let a rotated
-//       loop exits in the body. (See comments in `loop_rotate.hpp`)
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_GVN_PRE_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_GVN_PRE_HPP
@@ -56,6 +54,12 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
             Mul,
             Div,
             Rem,
+            And,
+            Or,
+            Xor,
+            Shl,
+            LShr,
+            AShr,
 
             // Cmp,
             // I was not sure whether we do this pass to cmp is effective or not.
@@ -66,6 +70,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
             Fptosi,
             Sitofp,
             Zext,
+            Sext,
             Bitcast,
 
             // Call
@@ -87,12 +92,12 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         };
 
     private:
-        Value* ir_value;
+        Value *ir_value;
         std::vector<ValueKind> operands;
         ExprOp op;
 
     public:
-        Expr(Value* irv, ExprOp op, std::vector<ValueKind> operands_ = {})
+        Expr(Value *irv, ExprOp op, std::vector<ValueKind> operands_ = {})
             : ir_value(std::move(irv)), op(op), operands(std::move(operands_)) {}
 
         void canon();
@@ -104,7 +109,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         bool isLocalTemp() const;
         bool isPhi() const;
 
-        Value* getIRVal() const;
+        Value *getIRVal() const;
 
         static ExprOp makeOP(OP op);
 
@@ -121,19 +126,19 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     class KindIRValSet {
         friend std::ostream &operator<<(std::ostream &os, const KindIRValSet &set);
 
-        std::unordered_map<ValueKind, Value*> values;
+        std::unordered_map<ValueKind, Value *> values;
 
     public:
         using const_iterator = decltype(values)::const_iterator;
         using iterator = decltype(values)::iterator;
 
-        bool insert(ValueKind kind, Value* value) {
+        bool insert(ValueKind kind, Value *value) {
             Err::gassert(kind != NotValueKind);
             auto [it, inserted] = values.insert(std::make_pair(kind, value));
             return inserted;
         }
 
-        bool update(ValueKind kind, Value* value) {
+        bool update(ValueKind kind, Value *value) {
             bool modified = (values.find(kind) == values.end() || values[kind] != value);
             values[kind] = value;
             return modified;
@@ -153,7 +158,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
             return true;
         }
 
-        Value* getValue(ValueKind kind) const {
+        Value *getValue(ValueKind kind) const {
             Err::gassert(kind != NotValueKind);
             auto it = values.find(kind);
             if (it == values.end())
@@ -188,6 +193,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
         friend std::ostream &operator<<(std::ostream &os, const KindExprSet &set);
         std::vector<std::pair<ValueKind, Expr *>> values; // vector to keep topological sort
         std::unordered_set<ValueKind> kindset;
+
     public:
         using const_iterator = decltype(values)::const_iterator;
         using iterator = decltype(values)::iterator;
@@ -239,21 +245,17 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     class NumberTable {
         friend std::ostream &operator<<(std::ostream &os, const NumberTable &table);
         struct ExprHasher {
-            size_t operator()(const std::shared_ptr<Expr> &expr) const {
-                return Util::vectorHash(expr->operands);
-            }
+            size_t operator()(const std::shared_ptr<Expr> &expr) const { return Util::vectorHash(expr->operands); }
         };
         struct ExprCmp {
-            bool operator()(const std::shared_ptr<Expr> &a, const std::shared_ptr<Expr> &b) const {
-                return *a == *b;
-            }
+            bool operator()(const std::shared_ptr<Expr> &a, const std::shared_ptr<Expr> &b) const { return *a == *b; }
         };
         std::unordered_set<std::shared_ptr<Expr>, ExprHasher, ExprCmp> expr_pool;
-        std::unordered_map<Value *, Expr*> get_expr_cache;
+        std::unordered_map<Value *, Expr *> get_expr_cache;
         std::unordered_map<Expr *, ValueKind> expr_table;
         ValueKind kind_cnt = 0;
         bool too_deeply_nested_expr_detected = false;
-        FAM* fam;
+        FAM *fam;
 
     public:
         NumberTable() = default;
@@ -268,22 +270,20 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
             fam = nullptr;
         }
 
-        void setFAM(FAM* fam_) {
-            fam = fam_;
-        }
+        void setFAM(FAM *fam_) { fam = fam_; }
 
         ValueKind getKindOrInsert(Expr *expr);
 
-        ValueKind getKindOrInsert(Value* value, KindExprSet &exp_gen, size_t nested_expr_cnt = 0);
-        ValueKind getKindOrInsert(Value* value, size_t nested_expr_cnt = 0);
-        Expr *getExprOrInsert(Value* inst, KindExprSet &exp_gen, size_t nested_expr_cnt = 0);
-        Expr *getExprOrInsert(Value* inst, size_t nested_expr_cnt = 0);
+        ValueKind getKindOrInsert(Value *value, KindExprSet &exp_gen, size_t nested_expr_cnt = 0);
+        ValueKind getKindOrInsert(Value *value, size_t nested_expr_cnt = 0);
+        Expr *getExprOrInsert(Value *inst, KindExprSet &exp_gen, size_t nested_expr_cnt = 0);
+        Expr *getExprOrInsert(Value *inst, size_t nested_expr_cnt = 0);
 
-        void setPhiKind(PHIInst* phi, ValueKind kind);
+        void setPhiKind(PHIInst *phi, ValueKind kind);
 
         bool empty() const { return expr_table.empty(); }
 
-        void invalidateExprCache(Value* v);
+        void invalidateExprCache(Value *v);
 
     private:
         Expr *getExprFromPool(const std::shared_ptr<Expr> &item);
@@ -313,23 +313,23 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
 
     size_t name_cnt = 0;
 
-    FAM* fam;
-    DomTree* domtree;
-    PostDomTree* postdomtree;
+    FAM *fam;
+    DomTree *domtree;
+    PostDomTree *postdomtree;
 
     std::unordered_map<BasicBlock *, KindIRValSet> phi_translate_map;
-    using PhiTranslateKey = std::tuple<Expr*, BasicBlock*, BasicBlock*>;
+    using PhiTranslateKey = std::tuple<Expr *, BasicBlock *, BasicBlock *>;
     struct PhiTranslateKeyHasher {
         size_t operator()(const PhiTranslateKey &key) const {
-            return std::hash<Expr*>()(std::get<0>(key)) ^ std::hash<BasicBlock*>()(std::get<1>(key)) ^
-                   std::hash<BasicBlock*>()(std::get<2>(key));
+            return std::hash<Expr *>()(std::get<0>(key)) ^ std::hash<BasicBlock *>()(std::get<1>(key)) ^
+                   std::hash<BasicBlock *>()(std::get<2>(key));
         }
     };
-    std::unordered_map<PhiTranslateKey, Value*, PhiTranslateKeyHasher> phi_translate_cache;
+    std::unordered_map<PhiTranslateKey, Value *, PhiTranslateKeyHasher> phi_translate_cache;
     void invalidatePhiTranslateCache();
     // Extend the lifetime of the temporaries generated by phiTranslate
     std::vector<pVal> phi_translate_gen;
-    Value* phiTranslate(Expr *expr, BasicBlock *pred, BasicBlock *succ);
+    Value *phiTranslate(Expr *expr, BasicBlock *pred, BasicBlock *succ);
 
     void reset() {
         table.clear();
@@ -354,11 +354,15 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     friend std::ostream &operator<<(std::ostream &os, const KindExprSet &set);
     friend std::ostream &operator<<(std::ostream &os, const GVNPREPass &gvnpre);
 
-    bool enable_debug_output = false;
+    bool disable_PRE_on_loop_backedge;
+    // Disable PRE on loop backedge:
+    // PRE on a backegde can let a rotated loop exits in the body. (See comments in `loop_rotate.hpp`)
+
+    bool enable_debug_output;
 public:
-    explicit GVNPREPass(bool enable_debug_output_ = false)
-        : fam(nullptr), domtree(nullptr), postdomtree(nullptr),
-            enable_debug_output(enable_debug_output_) {}
+    explicit GVNPREPass(bool disable_PRE_on_loop_backedge_ = true, bool enable_debug_output_ = false)
+        : table(), fam(nullptr), domtree(nullptr), postdomtree(nullptr),
+          disable_PRE_on_loop_backedge(disable_PRE_on_loop_backedge_), enable_debug_output(enable_debug_output_) {}
     PM::PreservedAnalyses run(Function &function, FAM &manager);
 };
 } // namespace IR

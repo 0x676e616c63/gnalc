@@ -1,65 +1,141 @@
-const int len = 20;
+// 94_nested_loops
+// FPM fpm;
+// fpm.addPass(IR::PromotePass());
+// fpm.addPass(IR::TailRecursionEliminationPass());
+// fpm.addPass(IR::InlinePass());
+// fpm.addPass(IR::InternalizePass());
+// fpm.addPass(IR::PromotePass());
+// fpm.addPass(IR::NameNormalizePass());
+// fpm.addPass(IR::CFGSimplifyPass());
+// fpm.addPass(IR::LoopSimplifyPass());
+// fpm.addPass(IR::LCSSAPass());
+// // fpm.addPass(IR::PngCFGPass("/home/panda/data3/dev/gnalc/cfgnu/"));
+// fpm.addPass(IR::VerifyPass());
+// fpm.addPass(IR::LoopUnrollPass());
+// // fpm.addPass(IR::PngCFGPass("/home/panda/data3/dev/gnalc/cfg/"));
+// fpm.addPass(IR::VerifyPass());
+// fpm.addPass(IR::RunTestPass("/home/panda/data3/dev/gnalc/test/contest/functional/94_nested_loops.out", "/home/panda/data3/dev/gnalc/test/contest/functional/94_nested_loops.in"));
+int arr1[10][2][3][4][5][6][2];
+int arr2[10][2][3][2][4][8][7];
 
-int main()
-{
-    int i, j, t, n, temp;
-    int mult1[len] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
-    int mult2[len] = {2, 3, 4, 2, 5, 7 ,9 ,9, 0, 1, 9, 8, 7, 6, 4, 3, 2, 1, 2, 2};
-    int len1 = len;
-    int len2 = len;
-    int c1[len + 5];
-    int c2[len + 5];
-    int result[len * 2] = {};
-
-    i = 0;
-    while (i < len1) {
-        c1[i] = mult1[i];
-        i = i + 1;
-    }
-
-    i = 0;
-    while (i < len2) {
-        c2[i] = mult2[i];
-        i = i + 1;
-    }
-
-    n = len1 + len2 - 1;
-
-    i = 0;
-    while (i <= n) {
-        result[i]=0;
-        i = i + 1;
-    }
-
-    temp=0;
-
-    i = len2 - 1;
-    while (i > -1) {
-        t = c2[i];
-        j = len1 - 1;
-        while (j > -1) {
-            temp = result[n] + t * c1[j];
-            if(temp >= 10) {
-                result[n] = (temp);
-                result[n-1] = result[n-1] + temp / 10;
+void loop1(int x, int y) {
+  int a, b, c, d, e, f, g;
+  a = 0;
+  while (a < x && a < y) {
+    b = 0;
+    while (b < 2) {
+      c = 0;
+      while (c < 3) {
+        d = 0;
+        while (d < 4) {
+          e = 0;
+          while (e < 5) {
+            f = 0;
+            while (f < 6) {
+              g = 0;
+              while (g < 2) {
+                arr1[a][b][c][d][e][f][g] = a + b + c + d + e + f + g + x + y;
+                g = g + 1;
+              }
+              f = f + 1;
             }
-            else
-                result[n] = temp;
-            j = j - 1;
-            n = n - 1;
+            e = e + 1;
+          }
+          d = d + 1;
         }
-        n = n + len1 - 1;
-        i = i - 1;
+        c = c + 1;
+      }
+      b = b + 1;
     }
+    a = a + 1;
+  }
+}
 
-    if(result[0] != 0)
-        putint(result[0]);
-
-    i = 1;
-    while (i <= len1 + len2 - 1) {
-        putint(result[i]);
-        i = i + 1;
+void loop2() {
+  int a, b, c, d, e, f, g;
+  a = 0;
+  while (a < 10) {
+    b = 0;
+    while (b < 2) {
+      c = 0;
+      while (c < 3) {
+        d = 0;
+        while (d < 2) {
+          e = 0;
+          while (e < 4) {
+            f = 0;
+            while (f < 8) {
+              g = 0;
+              while (g < 7) {
+                arr2[a][b][c][d][e][f][g] = a + b + d + g;
+                g = g + 1;
+              }
+              f = f + 1;
+            }
+            e = e + 1;
+          }
+          d = d + 1;
+        }
+        c = c + 1;
+      }
+      b = b + 1;
     }
+    a = a + 1;
+  }
+}
 
-    return 0;
+int loop3(int h, int i, int j, int k, int l, int m, int n) {
+  int a, b, c, d, e, f, g;
+  int ans = 0;
+  a = 0;
+  while (a < 10) {
+    b = 0;
+    while (b < 100) {
+      c = 0;
+      while (c < 1000) {
+        d = 0;
+        while (d < 10000) {
+          e = 0;
+          while (e < 100000) {
+            f = 0;
+            while (f < 1000000) {
+              g = 0;
+              while (g < 10000000) {
+                ans = ans % 817 + arr1[a][b][c][d][e][f][g] + arr2[a][b][c][d][e][f][g];
+                g = g + 1;
+                if (g >= n) break;
+              }
+              f = f + 1;
+              if (f >= m) break;
+            }
+            e = e + 1;
+            if (e >= l) break;
+          }
+          d = d + 1;
+          if (d >= k) break;
+        }
+        c = c + 1;
+        if (c >= j) break;
+      }
+      b = b + 1;
+      if (b >= i) break;
+    }
+    a = a + 1;
+    if (a >= h) break;
+  }
+  return ans;
+}
+
+int main() {
+  int x = getint();
+  int y = getint();
+  int h = getint();
+  int i = getint(), j = getint();
+  int k = getint();
+  int l = getint();
+  int m = getint();
+  int n = getint();
+  loop1(x, y);
+  loop2();
+  return loop3(h, i, j, k, l, m, n);
 }

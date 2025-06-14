@@ -501,7 +501,7 @@ void MIR_new::lowerInst(const IRInst_p &inst, LoweringContext &ctx) {
         MIR_new::lowerInst(inst->as<IR::BinaryInst>(), ctx);
         break;
     case OP::DIV:
-    case OP::REM:
+    case OP::SREM:
     case OP::FDIV:
     case OP::FREM:
         ///@todo predict range of numbers

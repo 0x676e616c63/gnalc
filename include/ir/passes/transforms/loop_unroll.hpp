@@ -29,6 +29,8 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
     static constexpr bool ENABLE_PARTIALLY_UNROLL = true;
     static constexpr bool ENABLE_RUNTIME_UNROLL = false;
 
+    static unsigned name_idx; // 用于防止跑多次unroll之后value重名
+
     enum class UnrollType { UNDEF, FULLY, PARTIALLY, RUNTIME };
     struct UnrollOption {
         // For peel
@@ -105,6 +107,7 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
     bool unroll(const pLoop &loop, const UnrollOption &option, Function &func);
 
 public:
+    LoopUnrollPass();
     PM::PreservedAnalyses run(Function &function, FAM &manager);
 };
 
