@@ -29,8 +29,8 @@ string ARMA64Printer::binaryPrinter(const MIRInst &minst) {
 
     if (rhs->isISA()) {
         str += reg2s(rhs, bitWide);
-    } else { // constant
-        str += '#' + std::to_string(rhs->imme());
+    } else {                                      // constant
+        str += '#' + std::to_string(rhs->imme()); // uint64_t
     }
 
     // for extra shift op
@@ -255,7 +255,8 @@ string ARMA64Printer::ternaryPrinter(const MIRInst &minst) {
     const auto &op2 = minst.getOp(2);
     const auto &op3 = minst.getOp(3);
 
-    auto bitWide = getBitWideChoosen_L(def->type(), op1->type(), op2->type(), op3->type());
+    ///@todo fix me
+    auto bitWide = getBitWideChoosen(def->type(), op1->type(), op2->type(), op3->type());
 
     str += ARMOpC2S(minst.opcode<ARMOpC>()) + '\t';
     str += reg2s(def, bitWide) + ",\t";
@@ -333,7 +334,7 @@ string ARMA64Printer::movPrinter(const MIRInst &minst) {
     }
 
     // shift
-    if (shift) {
+    if (shift && shift->imme() % 64) { // shift < 64
         str += ",\t";
 
         unsigned imme = shift->imme();
@@ -345,7 +346,7 @@ string ARMA64Printer::movPrinter(const MIRInst &minst) {
             Err::unreachable("movPrinter: only 'LSL' shift is permitted at operand 2");
         }
 
-        str += '#' + std::to_string(imme % 0b100000);
+        str += '#' + std::to_string(imme % 64);
     }
 
     return str;

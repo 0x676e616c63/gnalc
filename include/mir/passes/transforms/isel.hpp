@@ -25,8 +25,6 @@ private:
     std::map<MIROperand_p, MIROperand_p> mReplaceMap;
     std::set<MIRInst_p> mDelWorkList;
     // std::set<MIRInst_p> mReplaceBlkWorkList; // 如果没有expandcmp, 可以不用这个
-    std::map<MIROperand_p, unsigned> mUseCnt;
-
 public:
     explicit ISelContext(CodeGenContext &codeGenCtx) : mCodeGenCtx(codeGenCtx) {}
 

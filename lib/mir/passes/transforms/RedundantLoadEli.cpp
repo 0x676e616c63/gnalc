@@ -21,12 +21,13 @@ void RedundantLoadEliImpl::MkInfo() {
     // LAMBDA BEGIN
 
     auto isLoad = [](const MIRInst_p &minst) {
+        ///@todo InstLoadImmEx, though maybe not very useful
         if (minst->isGeneric() &&
             (minst->opcode<OpC>() == OpC::InstLoadImm || minst->opcode<OpC>() == OpC::InstLoadFPImm)) {
             std::optional loaded = minst->getOp(1)->imme();
             return loaded;
         } else {
-            return std::optional<unsigned int>();
+            return std::optional<uint64_t>();
         }
     };
 
@@ -98,10 +99,6 @@ void RedundantLoadEliImpl::CulculateLCA() {
     // LAMBDA END
 
     for (auto &[constVal, info] : infos) {
-
-        if (constVal == 67) {
-            int debug;
-        }
 
         getLCA(info); // fill in lca blk
     }

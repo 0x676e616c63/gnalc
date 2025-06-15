@@ -497,6 +497,8 @@ bool GenericPeepholeImpl::matchMA(MatchInfo &info) {
 
     auto multiple_1 = (*mul_iter)->getOp(1);
     auto multiple_2 = (*mul_iter)->getOp(2);
+    multiple_1->resetType((*mul_iter)->ensureDef()->type());
+    multiple_2->resetType((*mul_iter)->ensureDef()->type());
 
     minst->resetOpcode(newOpC);
 

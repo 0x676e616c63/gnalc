@@ -139,6 +139,7 @@ void ARMA64Printer::printout(const MIRInst &minst) {
         case OpC::InstLShr:
         case OpC::InstAShr:
         case OpC::InstSDiv:
+        case OpC::InstUDiv:
         case OpC::InstFAdd:
         case OpC::InstFSub:
         case OpC::InstFMul:
@@ -183,6 +184,10 @@ void ARMA64Printer::printout(const MIRInst &minst) {
             break;
         case OpC::InstLoadGlobalAddress:
         case OpC::InstLoadImm:
+        case OpC::InstLoadImmToReg:
+        case OpC::InstLoadImmEx:
+        case OpC::InstLoadFPImm:
+        case OpC::InstLoadFPImmToReg:
             Err::unreachable("ARMA64Printer::printout(const MIRInst &): should be legalized in preRAlegalize");
             break;
         case OpC::InstLoadStackObjectAddr:

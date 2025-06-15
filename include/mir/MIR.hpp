@@ -103,6 +103,9 @@ enum MIRGenericInst : uint32_t {
     // Signed Div/Rem
     InstSDiv,
     InstSRem,
+    // UnSigned Div/Rem
+    InstUDiv,
+    InstURem,
     // Int Unary
     InstNeg,
     // FP
@@ -137,10 +140,12 @@ enum MIRGenericInst : uint32_t {
     InstCopyToReg,   ///copy: vreg to precolored
     InstSelect,
     InstLoadGlobalAddress,
-    InstLoadImm,
     InstLoadStackObjectAddr,
-    InstLoadImmToReg,
+    InstLoadImm,
+    InstLoadImmEx,
     InstLoadFPImm,
+    InstLoadImmToReg,
+    // InstLoadImmExToReg,
     InstLoadFPImmToReg,
     InstLoadRegFromStack,
     InstStoreRegToStack,
@@ -229,7 +234,10 @@ public:
         Err::gassert(mOperand.index() != 0, "MIROperand: mOperand is nerver initialized");
         return std::get<T>(mOperand);
     };
-    unsigned imme() const { return std::get<unsigned>(mOperand); }
+
+    uint64_t imme() const {
+        return std::holds_alternative<unsigned>(mOperand) ? std::get<unsigned>(mOperand) : std::get<uint64_t>(mOperand);
+    }
     uint64_t immeEx() const { return std::get<uint64_t>(mOperand); }
     unsigned reg() const { return std::get<MIRReg_p>(mOperand)->reg; }
     unsigned idVReg() const {
@@ -250,7 +258,9 @@ public:
     double prob() const { return std::get<double>(mOperand); }
 
     ///@note int, float, condflag
-    bool isImme() const { return std::holds_alternative<unsigned>(mOperand); }
+    bool isImme() const {
+        return std::holds_alternative<unsigned>(mOperand) || std::holds_alternative<uint64_t>(mOperand);
+    }
     bool isExImme() const { return std::holds_alternative<uint64_t>(mOperand); }
     bool isUnused() const { return std::holds_alternative<std::monostate>(mOperand); }
     bool isReg() const { return std::holds_alternative<MIRReg_p>(mOperand); }
@@ -263,23 +273,28 @@ public:
     bool isProb() const { return std::holds_alternative<double>(mOperand); }
 
     constexpr OpT type() const { return mType; }
+    void resetType(OpT _new) { mType = _new; }
 
     bool operator==(const MIROperand &other) const { return mOperand == other.mOperand; }
     bool operator!=(const MIROperand &other) const { return mOperand != other.mOperand; }
 
     template <typename T> static MIROperand_p asImme(T val, OpT type) {
         if constexpr (std::is_same_v<T, int> || std::is_same_v<T, unsigned> || std::is_same_v<T, Cond>) {
-            unsigned encoding = *reinterpret_cast<unsigned *>(&val);
-            return make<MIROperand>(encoding, OpT::Int64); // instadd and instaddsp
+            auto encoding = *reinterpret_cast<unsigned *>(&val);
+            return make<MIROperand>(encoding,
+                                    OpT::Int64); // use Int64 to not narrow down the predicted bitwide when codegen
+        } else if constexpr (std::is_same_v<T, int64_t>) {
+            auto encoding = *reinterpret_cast<uint64_t *>(&val);
+            return make<MIROperand>(encoding, OpT::Int64);
         } else if constexpr (std::is_same_v<T, float>) {
-            unsigned encoding = *reinterpret_cast<unsigned *>(&val);
+            auto encoding = *reinterpret_cast<unsigned *>(&val);
             return make<MIROperand>(encoding, OpT::Float32);
         } else if constexpr (std::is_same_v<T, uint64_t>) {
-            return make<MIROperand>(val, type); //
+            return make<MIROperand>(val, type); // misc
         } else {
             Err::unreachable("MIROperand::asImme: template match failed");
         }
-        return nullptr; // just to make gnalc happy
+        return nullptr; // just to make clang happy
     }
 
     // builder begin

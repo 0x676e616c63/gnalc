@@ -51,10 +51,10 @@ template <typename T> inline bool is12ImmeWithProbShift(T imm) {
     ///@warning use in ADD/SUB/CMP/CMN
 
     Err::gassert(!std::is_same_v<T, float>, "is12ImmeWithShift: fadd/fsub dont support a imme");
-    Err::gassert(std::is_same_v<T, int> || std::is_same_v<T, unsigned> || std::is_same_v<T, long>,
+    Err::gassert(std::is_same_v<T, unsigned> || std::is_same_v<T, uint64_t>,
                  "is12ImmeWithShift: cant convert to encode");
 
-    unsigned imme = static_cast<unsigned>(imm);
+    auto imme = static_cast<uint64_t>(imm);
 
     if (imme < 4096 || (imme % 0x1000 == 0 && (imme >> 12) < 4096)) {
         return true;

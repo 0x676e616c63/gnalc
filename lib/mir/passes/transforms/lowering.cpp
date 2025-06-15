@@ -24,8 +24,12 @@ OpT MIR_new::btypeConvert(const IR::BType &type) {
     case IR::IRBTYPE::I8:
     case IR::IRBTYPE::I32:
         return OpT::Int32;
+    case IR::IRBTYPE::I64:
+        return OpT::Int64;
     case IR::IRBTYPE::FLOAT:
         return OpT::Float32;
+    case IR::IRBTYPE::I128:
+        Err::todo("int128 todo...");
     default:
         Err::unreachable("btypeConvert: try convert invalid btype");
     }
@@ -34,7 +38,22 @@ OpT MIR_new::btypeConvert(const IR::BType &type) {
 
 unsigned MIR_new::typeBitwide(const IR::pType &type) {
     if (auto btype = type->as<IR::BType>()) {
-        return 4;
+
+        if (btype->getInner() == IR::IRBTYPE::I1)
+            return 4;
+        else if (btype->getInner() == IR::IRBTYPE::I8)
+            return 4;
+        else if (btype->getInner() == IR::IRBTYPE::I32)
+            return 4;
+        else if (btype->getInner() == IR::IRBTYPE::I64)
+            return 8;
+        else if (btype->getInner() == IR::IRBTYPE::I128)
+            Err::todo("typeBitwide: i128 todo...");
+        else if (btype->getInner() == IR::IRBTYPE::FLOAT)
+            return 4;
+        else
+            Err::unreachable("typeBitwide: unknown btype");
+
     } else if (auto ptrtype = type->as<IR::PtrType>()) {
         return 8;
     } else if (auto vectype = type->as<IR::VectorType>()) {
@@ -63,6 +82,11 @@ MIROperand_p LoweringContext::mapOperand(const IRVal_p &value) {
 
             auto imme = ci32->getVal();
             return mapOperand(imme);
+        } else if (auto ci64 = value->as<IR::ConstantI64>()) {
+            auto imme = ci64->getVal();
+            return mapOperand(imme);
+        } else if (auto ci128 = value->as<IR::ConstantI128>()) {
+            Err::todo("ci128 lower todo...");
         }
         ///@note extent i1, i8 const to i32
         else if (auto ci1 = value->as<IR::ConstantI1>()) {
@@ -494,7 +518,10 @@ void MIR_new::lowerInst(const IRInst_p &inst, LoweringContext &ctx) {
     case OP::MUL:
     case OP::AND:
     case OP::OR:
-        // no xor no shift...
+    case OP::XOR:
+    case OP::ASHR:
+    case OP::LSHR:
+    case OP::SHL:
     case OP::FADD:
     case OP::FSUB:
     case OP::FMUL:
@@ -502,6 +529,7 @@ void MIR_new::lowerInst(const IRInst_p &inst, LoweringContext &ctx) {
         break;
     case OP::DIV:
     case OP::SREM:
+    case OP::UREM:
     case OP::FDIV:
     case OP::FREM:
         ///@todo predict range of numbers

@@ -37,12 +37,22 @@ OpC MIR_new::IROpCodeConvert(IR::OP op) {
         return OpC::InstFDiv;
     case OP::SREM:
         return OpC::InstSRem;
+    case OP::UREM:
+        return OpC::InstURem;
     case OP::FREM:
         return OpC::InstFRem;
     case OP::AND:
         return OpC::InstAnd;
+    case OP::XOR:
+        return OpC::InstXor;
     case OP::OR:
         return OpC::InstOr;
+    case OP::ASHR:
+        return OpC::InstAShr;
+    case OP::LSHR:
+        return OpC::InstLShr;
+    case OP::SHL:
+        return OpC::InstShl;
     case OP::LOAD:
         Err::unreachable("IROpCodeConvert: LOAD should not be convert");
     case OP::STORE:

@@ -13,7 +13,9 @@ OpC MIR_new::chooseCopyOpC(const MIROperand_p &dst, const MIROperand_p &src) {
     } else if (dst->isISA() && src->isVReg()) {
         return OpC::InstCopyToReg;
     } else if (dst->isVReg() && src->isImme()) {
-        if (inRange(dst->type(), OpT::Int, OpT::Int64))
+        if (src->isExImme())
+            return OpC::InstLoadImmEx;
+        else if (inRange(dst->type(), OpT::Int, OpT::Int64))
             return OpC::InstLoadImm;
         else if (inRange(dst->type(), OpT::Float, OpT::Float32))
             return OpC::InstLoadFPImm;
@@ -54,7 +56,6 @@ void ISelContext::impl(MIRFunction *mfunc) {
         // mReplaceBlkWorkList.clear();
         mReplaceMap.clear();
         mConstantMap.clear(); // const val load inst map
-        mUseCnt.clear();
 
         for (auto &mblk : mfunc->blks()) {
 
@@ -63,19 +64,6 @@ void ISelContext::impl(MIRFunction *mfunc) {
                 if (minst->isGeneric() && minst->opcode<OpC>() == OpC::InstLoadImm) {
                     auto &def = minst->ensureDef();
                     mConstantMap.emplace(def, minst);
-                }
-
-                ///@brief mUseCount添加引用计数
-                for (int i = 1; i - 1 < minst->getUseNr(); ++i) {
-                    auto mop = minst->getOp(i);
-
-                    if (mop && mop->isVReg()) {
-                        if (!mUseCnt.count(mop)) {
-                            mUseCnt[mop] = 1;
-                        } else {
-                            ++mUseCnt[mop];
-                        }
-                    }
                 }
             }
         }
@@ -194,40 +182,6 @@ MIRInst_p ISelContext::newInst(OpC mopcode) {
     mCurrentBlk->Insts().insert(mInstInsertPos, minst);
 
     return minst;
-}
-
-bool ISelContext::notUsed(const MIROperand_p &mop) const {
-    return mUseCnt.count(mop) == 0; //
-}
-
-bool ISelContext::singleUsed(const MIROperand_p &mop) const {
-    return mUseCnt.find(mop) != mUseCnt.end() && mUseCnt.at(mop) == 1; //
-}
-
-bool ISelContext::notMultiUsed(const MIROperand_p &mop) const {
-    return notUsed(mop) || singleUsed(mop); //
-}
-
-///@brief
-MIRInst_p_l ISelContext::lookforDef(const MIROperand_p &mop) const {
-
-    if (mop->isImme()) {
-        auto it = mConstantMap.find(mop);
-
-        if (it == mConstantMap.end()) {
-            return {};
-        } else {
-            return {it->second};
-        }
-    } else {
-        auto it = mInstMap.find(mop);
-
-        if (it == mInstMap.end()) {
-            return {};
-        } else {
-            return it->second;
-        }
-    }
 }
 
 MIRInst_p_l ISelContext::getInsts() const { return mCurrentBlk->Insts(); }

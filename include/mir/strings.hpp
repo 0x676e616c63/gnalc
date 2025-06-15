@@ -133,7 +133,7 @@ inline string OpC2S(OpC op) {
     case OpC::InstAnd:
         return "and";
     case OpC::InstOr:
-        return "oor";
+        return "orr";
     case OpC::InstXor:
         return "eor";
     case OpC::InstShl:
@@ -142,6 +142,8 @@ inline string OpC2S(OpC op) {
         return "lsr";
     case OpC::InstAShr:
         return "asr";
+    case OpC::InstUDiv:
+        return "udiv";
     case OpC::InstSDiv:
         return "sdiv";
     case OpC::InstNeg:

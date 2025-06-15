@@ -46,6 +46,7 @@ private:
     std::map<string, MIRGlobal_p> &mGlobalMap;
     // mFPLoadedConstantCache
     std::map<unsigned, MIROperand_p> mConstMap;
+    std::map<uint64_t, MIROperand_p> mLConstMap;
     std::map<unsigned, MIROperand_p> mSpConstMap;
     std::map<IRVal_p, MIROperand_p> &mValMap; // isa, vreg
 
@@ -76,7 +77,8 @@ public:
     [[nodiscard]] const auto &ValMap() const { return mValMap; }
     MIROperand_p mapOperand(const IRVal_p &); // not const to fit as a constpool
     template <typename T> MIROperand_p mapOperand(T imme) {
-        Err::gassert(std::is_same_v<T, int> || std::is_same_v<T, float> || std::is_same_v<T, Cond>,
+        Err::gassert(std::is_same_v<T, int> || std::is_same_v<T, float> || std::is_same_v<T, int64_t> ||
+                         std::is_same_v<T, Cond>,
                      "mapOperand: try mapping an unknown type const");
 
         ///@warning dont add cond to constMap, not necessary
@@ -87,6 +89,7 @@ public:
 
         auto imme_tmp = imme;
         auto imme_idx = *reinterpret_cast<unsigned *>(&imme_tmp);
+        auto imme_idx_l = *reinterpret_cast<uint64_t *>(&imme_tmp);
 
         MIROperand_p mconst = nullptr;
 
@@ -95,6 +98,9 @@ public:
             if constexpr (std::is_same_v<T, int>) {
                 mconst = MIROperand::asImme<T>(imme, OpT::Int32);
                 mConstMap.emplace(imme_idx, mconst);
+            } else if constexpr (std::is_same_v<T, int64_t>) {
+                mconst = MIROperand::asImme<T>(imme, OpT::Int64);
+                mLConstMap.emplace(imme_idx_l, mconst);
             } else if constexpr (std::is_same_v<T, float>) {
                 mconst = MIROperand::asImme<T>(imme, OpT::Float32);
                 mSpConstMap.emplace(imme_idx, mconst);
@@ -111,9 +117,14 @@ public:
         } else if constexpr (std::is_same_v<T, float>) {
 
             return mSpConstMap.count(imme_idx) ? mSpConstMap.at(imme_idx) : make_new();
+        } else if constexpr (std::is_same_v<T, int64_t>) {
+
+            return mLConstMap.count(imme_idx_l) ? mLConstMap.at(imme_idx_l) : make_new();
         }
 
-        //
+        Err::unreachable("mapOperand failed");
+
+        return nullptr; // just make clang happy
     }
 
     void setCurrentBlk(MIRBlk_p blk) { mCurrentBlk = std::move(blk); }
