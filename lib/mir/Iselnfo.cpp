@@ -424,15 +424,15 @@ void ISelInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
             minsts.insert(iter, movk);
         }
 
-        if (def->type() == OpT::Float32) {
-            auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Float32);
+        // if (def->type() == OpT::Float32) {
+        //     auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Float32);
 
-            auto movf = MIRInst::make(ARMOpC::MOVF)->setOperand<0>(fdst, ctx)->setOperand<1>(dst, ctx);
+        //     auto movf = MIRInst::make(ARMOpC::MOVF)->setOperand<0>(fdst, ctx)->setOperand<1>(dst, ctx);
 
-            minsts.insert(iter, movf);
+        //     minsts.insert(iter, movf);
 
-            dst = fdst;
-        }
+        //     dst = fdst;
+        // }
         ///@todo vectorize
 
         ///@brief rewrite

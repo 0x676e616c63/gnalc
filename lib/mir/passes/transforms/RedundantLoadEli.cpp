@@ -22,6 +22,7 @@ void RedundantLoadEliImpl::MkInfo() {
 
     auto isLoad = [](const MIRInst_p &minst) {
         ///@todo InstLoadImmEx, though maybe not very useful
+        ///@todo fix me
         if (minst->isGeneric() &&
             (minst->opcode<OpC>() == OpC::InstLoadImm || minst->opcode<OpC>() == OpC::InstLoadFPImm)) {
             std::optional loaded = minst->getOp(1)->imme();
@@ -29,6 +30,22 @@ void RedundantLoadEliImpl::MkInfo() {
         } else {
             return std::optional<uint64_t>();
         }
+    };
+
+    auto isFP = [&isLoad](const MIRInst_p &minst) {
+        if (!isLoad(minst)) {
+            return false;
+        }
+
+        if (minst->isGeneric()) {
+            if (minst->opcode<OpC>() == OpC::InstLoadImm) {
+                return false;
+            }
+
+            return true;
+        }
+
+        return false;
     };
 
     // LAMBDA END
@@ -46,8 +63,8 @@ void RedundantLoadEliImpl::MkInfo() {
 
                 if (!infos.count(loadVal)) {
 
-                    infos[loadVal] =
-                        loadInfo{loadVal, {mblk}, {{mblk.get(), {{minst->ensureDef(), it}}}}}; // 括号对齐带师
+                    infos[loadVal] = loadInfo{
+                        loadVal, isFP(minst), {mblk}, {{mblk.get(), {{minst->ensureDef(), it}}}}}; // 括号对齐带师
 
                 } else {
 
@@ -110,7 +127,13 @@ void RedundantLoadEliImpl::ApplyCopys() {
 
     for (auto &[constVal /* a number */, info] : infos) {
 
-        if (constVal >= 0 && constVal < 65536) {
+        if (info.isFP) {
+            int debug;
+        }
+
+        if (!info.isFP && constVal >= 0 && constVal < 65536) {
+            continue; // giveup
+        } else if (info.isFP && isFloat8(constVal)) {
             continue; // giveup
         }
 

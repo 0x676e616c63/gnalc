@@ -59,6 +59,9 @@ bool GenericPeepholeImpl::runOnBlk(MIRBlk_p &mblk) {
             if (matchSelect(info)) {
                 goto __mark_modified;
             }
+            if (matchRTZ(info)) {
+                goto __mark_modified;
+            }
             if (matchFusedAdr(info)) {
                 goto __mark_modified;
             }
@@ -557,6 +560,46 @@ bool GenericPeepholeImpl::matchFusedAdr(MatchInfo &info) {
     }
     ///@todo
     return false;
+}
+
+bool GenericPeepholeImpl::matchRTZ(MatchInfo &info) {
+    if (stage != Stage::AfterIsel) {
+        return false;
+    }
+
+    auto &[minst, minsts, iter] = info; // s2f
+    auto &ctx = mfunc->Context();
+
+    if (!minst->isGeneric() || !inSet(minst->opcode<OpC>(), OpC::InstS2F)) {
+        return false;
+    }
+
+    auto diter = std::prev(iter);
+    while (diter != minsts.end()) {
+
+        auto &inst = *diter;
+
+        if (inst->isGeneric() && inSet(inst->opcode<OpC>(), OpC::InstF2S)) {
+            break;
+        }
+
+        ++diter;
+    }
+
+    if (diter == minsts.end()) {
+        return false;
+    }
+
+    auto &f2s = *diter;
+
+    auto ori = f2s->getOp(1);
+
+    f2s->putAllOp(ctx);
+
+    minst->resetOpcode(OpC::InstFRINTZ);
+    minst->setOperand<1>(ori, ctx);
+
+    return true;
 }
 
 bool GenericPeepholeImpl::removeByReference(MatchInfo &info) {

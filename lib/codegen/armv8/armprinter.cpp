@@ -172,6 +172,7 @@ void ARMA64Printer::printout(const MIRInst &minst) {
             break;
         case OpC::InstF2S:
         case OpC::InstS2F:
+        case OpC::InstFRINTZ:
             outStream << convertPrinter(minst);
             break;
         case OpC::InstSelect:

@@ -14,7 +14,8 @@ public:
 class RedundantLoadEliImpl {
 private:
     struct loadInfo {
-        unsigned loadedValue; // int & float
+        unsigned loadedValue; // uint32 & float
+        bool isFP;
         std::set<MIRBlk_p> mblks;
 
         std::map<MIRBlk *, std::vector<std::pair<MIROperand_p, MIRInst_p_l::iterator>>>

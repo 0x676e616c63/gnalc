@@ -63,13 +63,18 @@ template <typename T> inline bool is12ImmeWithProbShift(T imm) {
     }
 }
 
-inline bool isFloat8(float imm) {
-    if (imm == 0.0f) {
+template <typename T> inline bool isFloat8(T imm) {
+
+    Err::gassert(sizeof(T) == 4, "isFloat8: type not fit");
+
+    float imme = *reinterpret_cast<float *>(&imm);
+
+    if (imme == 0.0f) {
         return false;
     }
 
     uint32_t bits;
-    std::memcpy(&bits, &imm, sizeof(float));
+    std::memcpy(&bits, &imme, sizeof(float));
 
     uint32_t exponent = (bits >> 23) & 0xFF;
 
@@ -94,7 +99,7 @@ inline bool isFloat8(float imm) {
     return true;
 }
 
-template <typename T> bool isBitMaskImme(T imm) {
+template <typename T> inline bool isBitMaskImme(T imm) {
     ///@warning use in AND/ORR...
     ///@warning MOV instruction is an alias of ORR (immediate).
 

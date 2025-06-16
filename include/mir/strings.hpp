@@ -166,6 +166,8 @@ inline string OpC2S(OpC op) {
         return "fcvtzs";
     case OpC::InstS2F:
         return "scvtf";
+    case OpC::InstFRINTZ:
+        return "frintz";
     default:
         ///@todo vectorize
         Err::unreachable("OpC2S: op not support");

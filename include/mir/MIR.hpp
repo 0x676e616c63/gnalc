@@ -133,6 +133,7 @@ enum MIRGenericInst : uint32_t {
     // Conversion
     InstF2S,
     InstS2F,
+    InstFRINTZ, // float-point round to zero: 3.5 -> 3, -2.3 -> -2
     // Misc
     InstCopyStkPtr,  // use in stk ptr type cast, not a real copy
     InstCopy,        ///copy: vreg to vreg
