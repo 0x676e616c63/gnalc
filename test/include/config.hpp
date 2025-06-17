@@ -49,8 +49,8 @@ static const std::string global_temp_dir = "./gnalc_test_temp/" + generate_uniqu
 
 static const std::string global_benchmark_temp_dir = "./gnalc_benchmark_temp/" + generate_unique_temp_dir();
 
-static const std::string sylibc = "../../test/sylib/sylib.c";
-// static const std::string sylibc = "sylib.c";
+// static const std::string sylibc = "../../test/sylib/sylib.c";
+static const std::string sylibc = "../../test/sylib/sylib_with_gnalc_rt.cpp";
 
 static const std::string github_action_test_data = "/home/panda/gnalc/test/contest";
 static const std::string test_data = "../../test/contest";

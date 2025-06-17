@@ -120,10 +120,10 @@ void register_clang_o3() {
                 auto ret = format(
                     "sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int getfarray(float a[]);void "
                     "putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, "
-                    "float "
-                    "a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define "
-                    "starttime() "
-                    "_sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
+                    "float a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);typedef "
+                    "void (*Task)(int beg, int end); void gnalc_parallel_for(int beg, int end, "
+                    "Task task);\\n#define starttime() _sysy_starttime(__LINE__)\\n#define stoptime()  "
+                    "_sysy_stoptime(__LINE__)' {}"
                     " && clang -O3 -Xclang -disable-O0-optnone -xc {} -emit-llvm -S -o {} 2>/dev/null",
                     newsy, newsy, outll);
 

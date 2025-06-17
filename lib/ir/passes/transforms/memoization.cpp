@@ -21,7 +21,7 @@
 namespace IR {
 // Memoization Plan
 // For function with small arguments, we usually have a more optimized way to
-// compute the LUT key. (`Intx2Memo`, ...)
+// compute the LUT key. (`SmallIntsFloatsMemo`, ...)
 // However, For large arguments, we still have a fallback way to compute the LUT key. (See `ArbitraryMemo`)
 //
 // For example:
@@ -51,7 +51,7 @@ pVal cast_if_float(const pBlock &bb, BBInstIter insert_point, const pVal &source
 }
 
 // Not bijective
-// func(int, int, int ...) -> i64 hash + args...
+// func(int, int, int ...) -> i64 hash
 // The hash function comes from:
 // https://stackoverflow.com/questions/20511347/a-good-hash-function-for-a-vector
 class ArbitraryIntsFloatsMemo : public MemoPlan {
@@ -194,7 +194,7 @@ bool isProfitableToMemoize(const Function &func) {
         }
     }
 
-    // Overlapping subproblems at least have too paths
+    // Overlapping subproblems at least have two paths
     if (self_calls.size() < 2)
         return false;
 
