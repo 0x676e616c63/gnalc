@@ -7,12 +7,14 @@ on:
       - 'lib/**'
       - 'include/**'
       - '.github/workflows/base.yml'
+      - 'test/**'
   pull_request:
     branches: [ "main", "ci" ]
     paths:
       - 'lib/**'
       - 'include/**'
       - '.github/workflows/base.yml'
+      - 'test/**'
 
 env:
   BUILD_TYPE: Release

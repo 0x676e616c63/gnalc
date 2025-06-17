@@ -7,12 +7,14 @@ on:
       - 'lib/**'
       - 'include/**'
       - 'std.yml'
+      - 'tests/**'
   pull_request:
     branches: [ "main", "ci" ]
     paths:
       - 'lib/**'
       - 'include/**'
       - 'std.yml'
+      - 'tests/**'
 
 env:
   BUILD_TYPE: Release

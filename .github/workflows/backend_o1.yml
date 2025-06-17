@@ -7,12 +7,14 @@ on:
       - 'lib/**'
       - 'include/**'
       - '.github/workflows/backend_o1.yml'
+      - 'test/**'
   pull_request:
     branches: [ "main", "backendv3.0" ]
     paths:
       - 'lib/**'
       - 'include/**'
       - '.github/workflows/backend_o1.yml'
+      - 'test/**'
 
 env:
   BUILD_TYPE: Release
