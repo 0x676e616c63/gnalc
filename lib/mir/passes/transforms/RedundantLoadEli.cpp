@@ -61,14 +61,14 @@ void RedundantLoadEliImpl::MkInfo() {
             if (auto ptr = isLoad(minst)) {
                 unsigned loadVal = *ptr;
 
-                if (!infos.count(loadVal)) {
+                if (!infos.count({loadVal, isFP(minst)})) {
 
-                    infos[loadVal] = loadInfo{
-                        loadVal, isFP(minst), {mblk}, {{mblk.get(), {{minst->ensureDef(), it}}}}}; // 括号对齐带师
+                    infos[{loadVal, isFP(minst)}] =
+                        loadInfo{loadVal, {mblk}, {{mblk.get(), {{minst->ensureDef(), it}}}}}; // 括号对齐带师
 
                 } else {
 
-                    auto &info = infos.at(loadVal); //
+                    auto &info = infos.at({loadVal, isFP(minst)}); //
                     info.mblks.emplace(mblk);
 
                     ///@note 由于minsts顺序遍历, 所以这个vector内的pair顺序应该也是正确的
@@ -125,15 +125,13 @@ void RedundantLoadEliImpl::ApplyCopys() {
     ///@note 减少load就会增加寄存器压力, 尤其是对一些0,1,2等常用的数, 不过寄存器大概是够用的
     ///@todo 对于某些数, 可以考虑仅在blk内做消除而不是全局地消除
 
-    for (auto &[constVal /* a number */, info] : infos) {
+    for (auto &[pair, /* a number */ info] : infos) {
 
-        if (info.isFP) {
-            int debug;
-        }
+        const auto &[constVal, isFP] = pair;
 
-        if (!info.isFP && constVal >= 0 && constVal < 65536) {
+        if (!isFP && constVal >= 0 && constVal < 65536) {
             continue; // giveup
-        } else if (info.isFP && isFloat8(constVal)) {
+        } else if (isFP && (isFloat8(constVal) || constVal == 0)) {
             continue; // giveup
         }
 

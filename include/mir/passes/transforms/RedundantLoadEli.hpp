@@ -15,7 +15,6 @@ class RedundantLoadEliImpl {
 private:
     struct loadInfo {
         unsigned loadedValue; // uint32 & float
-        bool isFP;
         std::set<MIRBlk_p> mblks;
 
         std::map<MIRBlk *, std::vector<std::pair<MIROperand_p, MIRInst_p_l::iterator>>>
@@ -27,13 +26,17 @@ private:
     };
 
     struct infoHash {
-        std::size_t operator()(const unsigned &constVal) const { return std::hash<unsigned>{}(constVal); }
+        std::size_t operator()(const std::pair<unsigned, bool> &constVal) const {
+            std::size_t h1 = std::hash<unsigned>{}(constVal.first);
+            std::size_t h2 = std::hash<bool>{}(constVal.second);
+            return h1 ^ (h2 << 1);
+        }
     };
 
 private:
     MIRFunction &mfunc;
     FAM &fam;
-    std::unordered_map<unsigned, loadInfo, infoHash> infos;
+    std::unordered_map<std::pair<unsigned, bool>, loadInfo, infoHash> infos;
 
 public:
     RedundantLoadEliImpl(MIRFunction &_mfunc, FAM &_fam) : mfunc(_mfunc), fam(_fam) {}

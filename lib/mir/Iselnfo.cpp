@@ -658,7 +658,6 @@ void ISelInfo::legalizeWithStkGep(InstLegalizeContext &_ctx, MIROperand_p mop, c
             minst->resetOpcode(OpC::InstAdd);
             minst->setOperand<1>(mop, ctx)->setOperand<2>(MIROperand::asImme(offset, OpT::Int64), ctx);
 
-            ///@note 这里的模板可以做模式匹配
             return;
         }
 

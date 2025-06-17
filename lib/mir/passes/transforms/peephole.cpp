@@ -594,6 +594,10 @@ bool GenericPeepholeImpl::matchRTZ(MatchInfo &info) {
 
     auto ori = f2s->getOp(1);
 
+    if (f2s->ensureDef() != minst->getOp(1)) {
+        return false;
+    }
+
     f2s->putAllOp(ctx);
 
     minst->resetOpcode(OpC::InstFRINTZ);
