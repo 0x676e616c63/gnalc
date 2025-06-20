@@ -1,10 +1,10 @@
 #pragma once
-#ifndef GNALC_ARMV8_MIR_PASSES_TRANSFORMS_STACKGENERATE_HPP
-#define GNALC_ARMV8_MIR_PASSES_TRANSFORMS_STACKGENERATE_HPP
+#ifndef GNALC_MIR_PASSES_TRANSFORMS_STACKGENERATE_HPP
+#define GNALC_MIR_PASSES_TRANSFORMS_STACKGENERATE_HPP
 
 #include "mir/passes/pass_manager.hpp"
 
-namespace MIR_new {
+namespace MIR {
 
 class StackGenerate : public PM::PassInfo<StackGenerate> {
 public:

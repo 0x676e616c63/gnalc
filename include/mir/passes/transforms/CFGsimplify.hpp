@@ -1,6 +1,6 @@
 #pragma once
-#ifndef GNALC_ARMV8_MIR_TRANSFORMS_CFGSIMPLIFY_HPP
-#define GNALC_ARMV8_MIR_TRANSFORMS_CFGSIMPLIFY_HPP
+#ifndef GNALC_MIR_TRANSFORMS_CFGSIMPLIFY_HPP
+#define GNALC_MIR_TRANSFORMS_CFGSIMPLIFY_HPP
 
 #include "mir/passes/pass_manager.hpp"
 
@@ -8,7 +8,7 @@
 
 ///@note 分配后的简化: 计算跳转闭包, 再次将条件位反转消除一次跳转(有条件时)
 
-namespace MIR_new {
+namespace MIR {
 
 class CFGsimplifyBeforeRA : public PM::PassInfo<CFGsimplifyBeforeRA> {
 

@@ -1,12 +1,12 @@
 #pragma once
-#ifndef GNALC_ARMV8_MIR_PASSES_TRANSFROMS_RA
-#define GNALC_ARMV8_MIR_PASSES_TRANSFROMS_RA
+#ifndef GNALC_MIR_PASSES_TRANSFROMS_RA
+#define GNALC_MIR_PASSES_TRANSFROMS_RA
 
 #include "config/config.hpp"
 #include "mir/passes/analysis/liveanalysis.hpp"
 #include "utils/fast_set.hpp"
 
-namespace MIR_new {
+namespace MIR {
 
 class RegisterAlloc : public PM::PassInfo<RegisterAlloc> {
 
@@ -35,8 +35,8 @@ public:
 
 public:
     virtual void impl(MIRFunction &, FAM &);
-    RegisterAllocImpl() : K(Config::MIR_new::CORE_REGISTER_MAX_NUM) {}
-    explicit RegisterAllocImpl(int fpuRegCnt) : K(fpuRegCnt) {}
+    RegisterAllocImpl() : mfunc(nullptr), K(Config::MIR_new::AARCH64_CORE_REGISTER_MAX_NUM), isInitialized(false) {}
+    explicit RegisterAllocImpl(int fpuRegCnt) : mfunc(nullptr), K(fpuRegCnt), isInitialized(false) {}
     virtual ~RegisterAllocImpl() = default;
 
 protected:
@@ -65,7 +65,7 @@ protected:
     // others
     std::unordered_set<Edge, EdgeHash> adjSet;
     std::map<MIROperand_p, OperSet> adjList;
-    std::unordered_map<MIROperand_p, unsigned int> degree; // precolored will be initialize with -1
+    std::unordered_map<MIROperand_p, unsigned int> degree; // precolored will be initialized with -1
     std::unordered_map<MIROperand_p, Moves> moveList;
     std::unordered_map<MIROperand_p, MIROperand_p> alias;
     // color
@@ -106,7 +106,7 @@ protected:
 
     std::set<int> colors;
 
-    bool isInitialed;
+    bool isInitialized;
 
     ///@note 活跃分析以及信息
     Liveness liveinfo;
@@ -224,7 +224,7 @@ class VectorRegisterAllocImpl : public RegisterAllocImpl {
 
 public:
     void impl(MIRFunction &, FAM &) override;
-    VectorRegisterAllocImpl() : RegisterAllocImpl(Config::MIR_new::FPU_REGISTER_MAX_NUM) {}
+    VectorRegisterAllocImpl() : RegisterAllocImpl(Config::MIR_new::AARCH64_FPU_REGISTER_MAX_NUM) {}
     ~VectorRegisterAllocImpl() override = default;
 
 protected:

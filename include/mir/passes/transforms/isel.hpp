@@ -1,11 +1,11 @@
 #pragma once
-#ifndef GNALC_ARMV8_MIR_TRANSFORMS_ISEL_HPP
-#define GNALC_ARMV8_MIR_TRANSFORMS_ISEL_HPP
+#ifndef GNALC_MIR_TRANSFORMS_ISEL_HPP
+#define GNALC_MIR_TRANSFORMS_ISEL_HPP
 
 #include "mir/passes/pass_manager.hpp"
 #include <set>
 
-namespace MIR_new {
+namespace MIR {
 
 OpC chooseCopyOpC(const MIROperand_p &dst, const MIROperand_p &src);
 

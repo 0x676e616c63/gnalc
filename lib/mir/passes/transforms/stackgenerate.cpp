@@ -1,7 +1,7 @@
 #include "mir/passes/transforms/stackgenerate.hpp"
 #include <algorithm>
 
-using namespace MIR_new;
+using namespace MIR;
 
 PM::PreservedAnalyses StackGenerate::run(MIRFunction &mfunc, FAM &fam) {
     StackGenerateImpl stackgenerate;

@@ -1,10 +1,10 @@
 #pragma once
-#ifndef GNALC_ARMV8_MIR_PASSES_TRANSFORMS_REDUNDANTLOADELI
-#define GNALC_ARMV8_MIR_PASSES_TRANSFORMS_REDUNDANTLOADELI
+#ifndef GNALC_MIR_PASSES_TRANSFORMS_REDUNDANTLOADELI
+#define GNALC_MIR_PASSES_TRANSFORMS_REDUNDANTLOADELI
 
 #include "mir/passes/pass_manager.hpp"
 
-namespace MIR_new {
+namespace MIR {
 
 class RedundantLoadEli : public PM::PassInfo<RedundantLoadEli> {
 public:

@@ -1,7 +1,7 @@
 #include "mir/passes/transforms/scheduling.hpp"
 #include <queue>
 
-using namespace MIR_new;
+using namespace MIR;
 
 PM::PreservedAnalyses PreRaScheduling::run(MIRFunction &_mfunc, FAM &_fam) {
     class PreRaSchedulingImpl impl(_mfunc, _fam);

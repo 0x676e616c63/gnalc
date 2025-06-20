@@ -4,7 +4,7 @@
 #include "ir/passes/pass_manager.hpp"
 
 // Transforms
-#include "../../../include/ir/cfgbuilder.hpp"
+#include "ir/cfgbuilder.hpp"
 #include "sir/passes/transforms/loop_unswitch.hpp"
 #include "sir/passes/transforms/while2for.hpp"
 

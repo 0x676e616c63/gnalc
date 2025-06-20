@@ -48,22 +48,21 @@ aux_source_directory(lib/ir/passes/helpers GNALC_IR_SRC)
 aux_source_directory(lib/ir/passes/transforms GNALC_IR_SRC)
 aux_source_directory(lib/ir/passes/utilities GNALC_IR_SRC)
 
-# MIR A32
-aux_source_directory(lib/mirA32 GNALC_MIRA32_SRC)
-aux_source_directory(lib/mirA32/builder GNALC_MIRA32_SRC)
-aux_source_directory(lib/mirtoolsA32 GNALC_MIRA32_SRC)
-aux_source_directory(lib/mirA32/instructions GNALC_MIRA32_SRC)
-aux_source_directory(lib/mirA32/SIMDinstruction GNALC_MIRA32_SRC)
-aux_source_directory(lib/mirA32/passes GNALC_MIRA32_SRC)
-aux_source_directory(lib/mirA32/passes/analysis GNALC_MIRA32_SRC)
-aux_source_directory(lib/mirA32/passes/transforms GNALC_MIRA32_SRC)
-aux_source_directory(lib/mirA32/passes/utilities GNALC_MIRA32_SRC)
+# Legacy MIR
+aux_source_directory(lib/legacy_mir GNALC_LEGACY_MIR_SRC)
+aux_source_directory(lib/legacy_mir/builder GNALC_LEGACY_MIR_SRC)
+aux_source_directory(lib/legacy_mir/instructions GNALC_LEGACY_MIR_SRC)
+aux_source_directory(lib/legacy_mir/SIMDinstruction GNALC_LEGACY_MIR_SRC)
+aux_source_directory(lib/legacy_mir/passes GNALC_LEGACY_MIR_SRC)
+aux_source_directory(lib/legacy_mir/passes/analysis GNALC_LEGACY_MIR_SRC)
+aux_source_directory(lib/legacy_mir/passes/transforms GNALC_LEGACY_MIR_SRC)
+aux_source_directory(lib/legacy_mir/passes/utilities GNALC_LEGACY_MIR_SRC)
 
-# MIR A64
-aux_source_directory(lib/mir GNALC_MIRA64_SRC)
-aux_source_directory(lib/mir/passes GNALC_MIRA64_SRC)
-aux_source_directory(lib/mir/passes/analysis GNALC_MIRA64_SRC)
-aux_source_directory(lib/mir/passes/transforms GNALC_MIRA64_SRC)
+# MIR
+aux_source_directory(lib/mir GNALC_MIR_SRC)
+aux_source_directory(lib/mir/passes GNALC_MIR_SRC)
+aux_source_directory(lib/mir/passes/analysis GNALC_MIR_SRC)
+aux_source_directory(lib/mir/passes/transforms GNALC_MIR_SRC)
 
 # Pass Manager
 aux_source_directory(lib/pass_manager GNALC_PM_SRC)
@@ -77,10 +76,10 @@ aux_source_directory(lib/utils GNALC_UTILS_SRC)
 # BrainFk Extension
 aux_source_directory(lib/codegen/brainfk GNALC_EXT_BFBKD_SRC)
 
-# ArmV7 Codegen
+# ARMv7 Codegen
 aux_source_directory(lib/codegen/armv7 GNALC_ARMV7BKD_SRC) 
 
-# ArmV8 Codegen
+# ARMv8 Codegen
 aux_source_directory(lib/codegen/armv8 GNALC_ARMV8BKD_SRC) 
 
 # GGC Extension
@@ -92,11 +91,9 @@ set(GNALC_SRC
         ${GNALC_PARSER_SRC}
         ${GNALC_SIR_SRC}
         ${GNALC_IR_SRC}
-        ${GNALC_MIRA32_SRC}
-        ${GNALC_MIRA64_SRC}
+        ${GNALC_MIR_SRC}
         ${GNALC_PM_SRC}
         ${GNALC_PTM_SRC}
-        ${GNALC_ARMV7BKD_SRC}
         ${GNALC_ARMV8BKD_SRC}
         ${GNALC_UTILS_SRC})
 
@@ -105,11 +102,9 @@ set(GGC_SRC
         ${GNALC_EXT_GGC_SRC}
         ${GNALC_SIR_SRC}
         ${GNALC_IR_SRC}
-        ${GNALC_MIRA32_SRC}
-        ${GNALC_MIRA64_SRC}
+        ${GNALC_MIR_SRC}
         ${GNALC_PM_SRC}
         ${GNALC_PTM_SRC}
-        ${GNALC_ARMV7BKD_SRC}
         ${GNALC_ARMV8BKD_SRC}
         ${GNALC_UTILS_SRC})
 
@@ -128,6 +123,10 @@ target_compile_definitions(ggc PRIVATE GNALC_EXTENSION_GGC)
 # with BrainFk
 add_executable(gnalc_bf tools/driver/driver.cpp ${GNALC_SRC} ${GNALC_EXT_BFBKD_SRC})
 target_compile_definitions(gnalc_bf PRIVATE GNALC_EXTENSION_BRAINFK)
+
+# with ARMv7
+add_executable(gnalc_armv7 tools/driver/driver.cpp ${GNALC_SRC} ${GNALC_LEGACY_MIR_SRC} ${GNALC_ARMV7BKD_SRC})
+target_compile_definitions(gnalc_armv7 PRIVATE GNALC_EXTENSION_ARMv7)
 
 enable_testing()
 add_subdirectory(test)

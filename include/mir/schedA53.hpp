@@ -1,12 +1,12 @@
 #pragma once
-#ifndef GNALC_ARMV8_MIR_SCHEDA53_HPP
-#define GNALC_ARMV8_MIR_SCHEDA53_HPP
+#ifndef GNALC_MIR_SCHEDA53_HPP
+#define GNALC_MIR_SCHEDA53_HPP
 
 #include "mir/MIR.hpp"
 
 // source: https://github.com/llvm/llvm-project/blob/main/llvm/lib/Target/AArch64/AArch64SchedA53.td
 
-namespace MIR_new {
+namespace MIR {
 
 enum ResourcesA53 {
     None = 0, // for those not supposed to be
@@ -146,7 +146,7 @@ inline InstExecInfo schedInfoImpl(ARMOpC opcode) {
     }
 }
 
-inline InstExecInfo schedInfo(std::variant<MIR_new::OpC, MIR_new::ARMOpC> opcode) {
+inline InstExecInfo schedInfo(std::variant<MIR::OpC, MIR::ARMOpC> opcode) {
 
     if (opcode.index() == 0) {
         return schedInfoImpl(std::get<OpC>(opcode));

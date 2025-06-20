@@ -1,6 +1,6 @@
 #pragma once
-#ifndef GNALC_ARMV8_MIR_TARGET_HPP
-#define GNALC_ARMV8_MIR_TARGET_HPP
+#ifndef GNALC_MIR_INFO_HPP
+#define GNALC_MIR_INFO_HPP
 
 #include "ir/instructions/control.hpp"
 #include "mir/tools.hpp"
@@ -8,7 +8,7 @@
 #include <cstring>
 #include <string>
 
-namespace MIR_new {
+namespace MIR {
 using string = std::string;
 
 // IMME judge begin
@@ -299,7 +299,7 @@ struct ARMInstTemplate {
     static void registerAdjust(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, int, CodeGenContext &);
 };
 
-struct DataLayOut {
+struct DataLayout {
     enum class Endian { little, big } endian;
     const unsigned builtInAlignment;
     const unsigned pointerSize;
@@ -309,7 +309,7 @@ struct DataLayOut {
 
 class BkdInfos {
 public:
-    const DataLayOut dataLayOut;
+    const DataLayout dataLayout;
 };
 
 class LoweringContext; // defined in lowering.hpp
@@ -325,7 +325,7 @@ using MIRBlk_wp = std::weak_ptr<MIRBlk>;
 using MIRBlk_p_l = std::list<MIRBlk_p>;
 class MIRGlobal;
 using MIRGlobal_p = std::shared_ptr<MIRGlobal>;
-class StkObj;
+struct StkObj;
 class MIRJmpTable;
 
 class FrameInfo { // armv8(A64)
@@ -438,10 +438,10 @@ struct CodeGenContext {
 
 namespace std {
 
-template <> struct tuple_size<MIR_new::InstLegalizeContext> : integral_constant<std::size_t, 4> {};
+template <> struct tuple_size<MIR::InstLegalizeContext> : integral_constant<std::size_t, 4> {};
 
-template <size_t I> struct tuple_element<I, MIR_new::InstLegalizeContext> {
-    using type = decltype((declval<MIR_new::InstLegalizeContext>().get<I>())); // extra brasses
+template <size_t I> struct tuple_element<I, MIR::InstLegalizeContext> {
+    using type = decltype((declval<MIR::InstLegalizeContext>().get<I>())); // extra brasses
 };
 
 }; // namespace std

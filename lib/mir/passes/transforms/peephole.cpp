@@ -1,7 +1,7 @@
 #include "mir/passes/transforms/peephole.hpp"
 #include <optional>
 
-using namespace MIR_new;
+using namespace MIR;
 
 PM::PreservedAnalyses GenericPeephole::run(MIRFunction &mfunc, FAM &fam) {
 

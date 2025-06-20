@@ -1,6 +1,6 @@
 #include "mir/passes/analysis/liveanalysis.hpp"
 
-using namespace MIR_new;
+using namespace MIR;
 
 PM::UniqueKey LiveAnalysis::Key;
 

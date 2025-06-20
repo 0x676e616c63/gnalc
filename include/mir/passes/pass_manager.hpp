@@ -1,21 +1,21 @@
 #pragma once
-#ifndef GNALC_ARMV8_MIR_PASSES_PASS_MANAGER_HPP
-#define GNALC_ARMV8_MIR_PASSES_PASS_MANAGER_HPP
+#ifndef GNALC_MIR_PASSES_PASS_MANAGER_HPP
+#define GNALC_MIR_PASSES_PASS_MANAGER_HPP
 
 #include "../../pass_manager/pass_manager.hpp"
 #include "mir/MIR.hpp"
 
 namespace PM {
-extern template class AnalysisManager<MIR_new::MIRModule>;
-extern template class AnalysisManager<MIR_new::MIRFunction>;
+extern template class AnalysisManager<MIR::MIRModule>;
+extern template class AnalysisManager<MIR::MIRFunction>;
 
-extern template class PassManager<MIR_new::MIRModule>;
-extern template class PassManager<MIR_new::MIRFunction>;
+extern template class PassManager<MIR::MIRModule>;
+extern template class PassManager<MIR::MIRFunction>;
 
-extern template class InnerAnalysisManagerProxy<AnalysisManager<MIR_new::MIRFunction>, MIR_new::MIRModule>;
+extern template class InnerAnalysisManagerProxy<AnalysisManager<MIR::MIRFunction>, MIR::MIRModule>;
 } // namespace PM
 
-namespace MIR_new {
+namespace MIR {
 
 using FAM = PM::AnalysisManager<MIRFunction>;
 using MAM = PM::AnalysisManager<MIRModule>;

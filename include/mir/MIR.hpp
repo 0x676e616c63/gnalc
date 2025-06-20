@@ -1,6 +1,6 @@
 #pragma once
-#ifndef GNALC_ARMV8_MIR_HPP
-#define GNALC_ARMV8_MIR_HPP
+#ifndef GNALC_MIR_MIR_HPP
+#define GNALC_MIR_MIR_HPP
 
 #include "ir/base.hpp"
 #include "ir/instructions/compare.hpp"
@@ -11,7 +11,7 @@
 #include <utility>
 #include <variant>
 
-namespace MIR_new {
+namespace MIR {
 
 // using string = std::string;
 
@@ -171,12 +171,12 @@ struct MIRReg {
 using MIRReg_p = std::shared_ptr<MIRReg>;
 using MIRReg_wp = std::weak_ptr<MIRReg>;
 
-class MIRRelocable : public std::enable_shared_from_this<MIRRelocable> {
+class MIRReloc : public std::enable_shared_from_this<MIRReloc> {
 private:
     string mSym;
 
 public:
-    explicit MIRRelocable(string sym) noexcept : mSym(std::move(sym)){};
+    explicit MIRReloc(string sym) noexcept : mSym(std::move(sym)){};
 
     string getmSym() const { return mSym; }
 
@@ -186,20 +186,20 @@ public:
     virtual bool isBss() const { return false; }
 
     template <typename T> std::shared_ptr<T> as() {
-        Err::gassert(std::is_base_of_v<MIRRelocable, T>, "MIRRelocable::as(): Expected a derived type.");
+        Err::gassert(std::is_base_of_v<MIRReloc, T>, "MIRReloc::as(): Expected a derived type.");
         return std::dynamic_pointer_cast<T>(shared_from_this());
     }
 
     template <typename T> std::shared_ptr<const T> as() const {
-        Err::gassert(std::is_base_of_v<MIRRelocable, T>, "MIRRelocable::as(): Expected a derived type.");
+        Err::gassert(std::is_base_of_v<MIRReloc, T>, "MIRReloc::as(): Expected a derived type.");
         return std::dynamic_pointer_cast<const T>(shared_from_this());
     }
 
-    virtual ~MIRRelocable() = default;
+    virtual ~MIRReloc() = default;
 };
 
-using MIRRelocable_p = std::shared_ptr<MIRRelocable>;
-using MIRRelocable_wp = std::weak_ptr<MIRRelocable>;
+using MIRReloc_p = std::shared_ptr<MIRReloc>;
+using MIRReloc_wp = std::weak_ptr<MIRReloc>;
 
 class MIROperand;
 
@@ -216,7 +216,7 @@ public:
     static std::map<unsigned, MIROperand_p> ISApool; // isa 为了保证单例模式所以只能使用默认位宽
 
 private:
-    std::variant<std::monostate, MIRReg_p, MIRRelocable_p, unsigned, uint64_t, double> mOperand{std::monostate{}};
+    std::variant<std::monostate, MIRReg_p, MIRReloc_p, unsigned, uint64_t, double> mOperand{std::monostate{}};
     OpT mType = OpT::special;
 
     unsigned recover = -1;
@@ -250,12 +250,12 @@ public:
         return reg();
     }
     const auto &stkobj() const {
-        Err::gassert(isStkObj(reg()), "MIROperand::idVReg: *this is not a ISA");
+        Err::gassert(isStkObj(reg()), "MIROperand::idVReg: *this is not a stkObj");
         return std::get<MIRReg_p>(mOperand)->reg;
     }
     auto regFlag() const { return std::get<MIRReg_p>(mOperand)->flag; }
     auto &regFlag() { return std::get<MIRReg_p>(mOperand)->flag; }
-    MIRRelocable_p relocable() { return std::get<MIRRelocable_p>(mOperand); }
+    MIRReloc_p reloc() { return std::get<MIRReloc_p>(mOperand); }
     double prob() const { return std::get<double>(mOperand); }
 
     ///@note int, float, condflag
@@ -270,7 +270,7 @@ public:
     // for RA
     bool isPreColored() const { return isReg() && isISA() && isISAReg(recover); }
     bool isStack() const { return isReg() && isStkObj(reg()); }
-    bool isReloc() const { return std::holds_alternative<MIRRelocable_p>(mOperand); }
+    bool isReloc() const { return std::holds_alternative<MIRReloc_p>(mOperand); }
     bool isProb() const { return std::holds_alternative<double>(mOperand); }
 
     constexpr OpT type() const { return mType; }
@@ -334,7 +334,7 @@ public:
         return make<MIROperand>(make<MIRReg>(reg + StkObjBegin), type);
     }
 
-    static MIROperand_p asReloc(const MIRRelocable_p &value) { return make<MIROperand>(value, OpT::special); }
+    static MIROperand_p asReloc(const MIRReloc_p &value) { return make<MIROperand>(value, OpT::special); }
 
     static MIROperand_p asProb(double prob) { return make<MIROperand>(prob, OpT::special); }
 
@@ -351,7 +351,7 @@ public:
     void assignColor(unsigned color) {
         // Err::gassert(isVReg(), "assignColor: try assign color to a non-reg");
         Err::gassert(color >= ARMReg::X0 && color <= ARMReg::V31,
-                     "assignColor: unknonw reg color " + std::to_string(color));
+                     "assignColor: unknown reg color " + std::to_string(color));
         Err::gassert(color >= ARMReg::V0 && (mType == OpT::Float32 || mType == OpT::Floatvec || mType == OpT::Intvec) ||
                          color <= ARMReg::X29 &&
                              (mType == OpT::Int16 || mType == OpT::Int32 || mType == OpT::Int64 || mType == OpT::Int),
@@ -448,10 +448,10 @@ public:
 
         Err::gassert(it != mOperands.end(), "MIRInst::replace: cant find op");
 
-        *it = std::move(_new);
-
         _new && _new->isReg() ? (void)ctx.getOp(_new) : nop;
         _old && _old->isReg() ? (void)ctx.putOp(_old) : nop;
+
+        *it = std::move(_new);
     }
 
     // before abundant the whole inst
@@ -494,7 +494,7 @@ struct StkObj {
 
 struct constVal {};
 
-class MIRBlk : public MIRRelocable {
+class MIRBlk : public MIRReloc {
 private:
     MIRFunction_wp mFunction;
     MIRInst_p_l mInsts;
@@ -510,8 +510,8 @@ private:
 public:
     MIRBlk() = delete;
 
-    MIRBlk(const string &sym, MIRFunction_wp _mFunction, MIRBlk_p _prv = nullptr, MIRBlk_p _nxt = nullptr) noexcept
-        : MIRRelocable(sym), mFunction{std::move(_mFunction)}, mprv(_prv), mnxt(_nxt) {}
+    MIRBlk(const string &sym, MIRFunction_wp _mFunction, const MIRBlk_p& _prv = nullptr, const MIRBlk_p& _nxt = nullptr) noexcept
+        : MIRReloc(sym), mFunction{std::move(_mFunction)}, mprv(_prv), mnxt(_nxt) {}
 
     MIRFunction_p getFunction() const {
         Err::gassert(!mFunction.expired(), "MIRBlk: function reference corrupted");
@@ -548,12 +548,12 @@ public:
 
         auto it = std::find_if(mInsts.begin(), mInsts.end(), [&](const MIRInst_p &minst) {
             if (minst->isGeneric() && minst->opcode<OpC>() == OpC::InstBranch &&
-                minst->getOp(1)->relocable() == old_succ) {
+                minst->getOp(1)->reloc() == old_succ) {
 
                 minst->setOperand<1>(MIROperand::asReloc(new_succ), ctx);
                 return true;
             } else if (!minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::CBNZ &&
-                       minst->getOp(2)->relocable() == old_succ) {
+                       minst->getOp(2)->reloc() == old_succ) {
                 minst->setOperand<2>(MIROperand::asReloc(new_succ), ctx);
                 return true;
             }
@@ -599,7 +599,7 @@ public:
     }
 };
 
-class MIRFunction : public MIRRelocable {
+class MIRFunction : public MIRReloc {
 private:
     MIRBlk_p_l mBlks;
 
@@ -622,13 +622,13 @@ private:
 
 public:
     MIRFunction() = delete;
-    MIRFunction(const string &sym, CodeGenContext &_ctx) noexcept : MIRRelocable(sym), ctx(_ctx) {}
+    MIRFunction(const string &sym, CodeGenContext &_ctx) noexcept : MIRReloc(sym), ctx(_ctx) {}
 
     MIROperand_p addStkObj(CodeGenContext &ctx, unsigned size, unsigned alignmant, int offset, StkObjUsage);
     MIROperand_p addStkObj(CodeGenContext &ctx, unsigned size, unsigned alignmant, int offset, StkObjUsage,
                            unsigned seq); // for arg on stk
-    void setEntryBlk(MIRBlk_p blk) { mEntryBlk = blk; }
-    void addExitBlk(MIRBlk_p blk) { mExitBlks.emplace_back(blk); }
+    void setEntryBlk(MIRBlk_p blk) { mEntryBlk = std::move(blk); }
+    void addExitBlk(const MIRBlk_p& blk) { mExitBlks.emplace_back(blk); }
 
     auto &blks() { return mBlks; }
     auto &EntryBlk() { return mEntryBlk; }
@@ -679,7 +679,7 @@ public:
     }
 };
 
-class MIRBssStorage : public MIRRelocable {
+class MIRBssStorage : public MIRReloc {
 private:
     unsigned msize;
     unsigned alignment;
@@ -687,7 +687,7 @@ private:
 public:
     MIRBssStorage() = delete;
     MIRBssStorage(const string &sym, unsigned _size, unsigned _alignment) noexcept
-        : MIRRelocable(sym), msize(_size), alignment(_alignment) {}
+        : MIRReloc(sym), msize(_size), alignment(_alignment) {}
 
     bool isBss() const override { return true; }
     unsigned align() const { return alignment; }
@@ -711,7 +711,7 @@ struct MIRStorage {
     bool isSize() const { return mstore.index() == 3; }
 };
 
-class MIRDataStorage : public MIRRelocable {
+class MIRDataStorage : public MIRReloc {
 public:
 private:
     unsigned alignment;
@@ -720,10 +720,10 @@ private:
 
 public:
     MIRDataStorage(const string &sym, const std::vector<MIRStorage> &_datas, unsigned _alignment) noexcept
-        : MIRRelocable(sym), datas{_datas}, alignment(_alignment) {}
+        : MIRReloc(sym), datas{_datas}, alignment(_alignment) {}
     MIRDataStorage(const string &sym, const std::vector<MIRStorage> &_datas, unsigned _alignment,
                    bool _readOnly) noexcept
-        : MIRRelocable(sym), datas{_datas}, alignment(_alignment), readOnly(_readOnly) {}
+        : MIRReloc(sym), datas{_datas}, alignment(_alignment), readOnly(_readOnly) {}
 
     bool isData() const override { return true; }
 
@@ -734,13 +734,13 @@ public:
     ~MIRDataStorage() override = default;
 };
 
-/// @brief 跳转表, 如swtich语句, 向量函数表等
-class MIRJmpTable : public MIRRelocable {
+/// @brief 跳转表, 如 swtich 语句, 向量函数表等
+class MIRJmpTable : public MIRReloc {
 private:
-    std::vector<MIRRelocable_wp> msyms{};
+    std::vector<MIRReloc_wp> msyms{};
 
 public:
-    explicit MIRJmpTable(const string &sym) : MIRRelocable(sym) {}
+    explicit MIRJmpTable(const string &sym) : MIRReloc(sym) {}
 
     auto &syms() { return msyms; }
     const auto &syms() const { return msyms; }
@@ -751,10 +751,10 @@ public:
 class MIRGlobal { // reloc 之外包了层align
 private:
     std::size_t alignment;
-    MIRRelocable_p mreloc; // func, blk, data, bss
+    MIRReloc_p mreloc; // func, blk, data, bss
 
 public:
-    MIRGlobal(std::size_t _alignment, MIRRelocable_p _reloc) noexcept
+    MIRGlobal(std::size_t _alignment, MIRReloc_p _reloc) noexcept
         : alignment(_alignment), mreloc(std::move(_reloc)) {}
 
     auto &reloc() { return mreloc; }
@@ -776,8 +776,8 @@ private:
 public:
     MIRModule() = delete;
 
-    MIRModule(const BkdInfos &infos, CodeGenContext &_ctx, const string &_name)
-        : mtarget{infos}, mglobals{}, ctx(_ctx), name(_name) {}
+    MIRModule(const BkdInfos &infos, CodeGenContext &_ctx, string _name)
+        : mtarget{infos}, mglobals{}, ctx(_ctx), name(std::move(_name)) {}
 
     auto &globals() { return mglobals; }
     const auto &globals() const { return mglobals; }
@@ -787,7 +787,7 @@ public:
     auto &funcs() { return mFuncs; }
     const auto &funcs() const { return mFuncs; }
 
-    void addFunc(MIRFunction_p func) { mFuncs.emplace_back(func); }
+    void addFunc(const MIRFunction_p& func) { mFuncs.emplace_back(func); }
 
     string getName() const { return name; }
 

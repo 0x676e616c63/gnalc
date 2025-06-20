@@ -1,10 +1,10 @@
 #pragma once
-#ifndef GNALC_ARMV8_MIR_STRINGS_HPP
-#define GNALC_ARMV8_MIR_STRINGS_HPP
+#ifndef GNALC_MIR_STRINGS_HPP
+#define GNALC_MIR_STRINGS_HPP
 
 #include "mir/MIR.hpp"
 
-namespace MIR_new {
+namespace MIR {
 
 inline string Cond2S(Cond cond) {
     switch (cond) {

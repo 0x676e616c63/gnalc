@@ -6,9 +6,9 @@
 #include <forward_list>
 #include <queue>
 
-using namespace MIR_new;
+using namespace MIR;
 
-OpC MIR_new::IROpCodeConvert(IR::OP op) {
+OpC MIR::IROpCodeConvert(IR::OP op) {
     using OP = IR::OP;
     switch (op) {
     case OP::RET:
@@ -77,7 +77,7 @@ OpC MIR_new::IROpCodeConvert(IR::OP op) {
     return OpC::InstAdd; // just make clang happy
 }
 
-Cond MIR_new::IRCondConvert(IR::ICMPOP cond) {
+Cond MIR::IRCondConvert(IR::ICMPOP cond) {
     using ICMPOP = IR::ICMPOP;
     switch (cond) {
     case ICMPOP::eq:
@@ -94,7 +94,7 @@ Cond MIR_new::IRCondConvert(IR::ICMPOP cond) {
         return LT;
     }
 }
-Cond MIR_new::IRCondConvert(IR::FCMPOP cond) {
+Cond MIR::IRCondConvert(IR::FCMPOP cond) {
     using FCMPOP = IR::FCMPOP;
     switch (cond) {
     case FCMPOP::oeq:
@@ -115,8 +115,8 @@ Cond MIR_new::IRCondConvert(IR::FCMPOP cond) {
     return AL; // just make clang happy
 }
 
-void MIR_new::lowerInst(const IR::pBinary &binary, LoweringContext &ctx) {
-    auto mop = MIR_new::IROpCodeConvert(binary->getOpcode());
+void MIR::lowerInst(const IR::pBinary &binary, LoweringContext &ctx) {
+    auto mop = MIR::IROpCodeConvert(binary->getOpcode());
     auto def = ctx.newVReg(binary->getType());
 
     ctx.newInst(MIRInst::make(mop)
@@ -144,7 +144,7 @@ void MIR_new::lowerInst(const IR::pBinary &binary, LoweringContext &ctx) {
 //     ctx.addOperand(binary, def);
 // }
 
-void MIR_new::lowerInst(const IR::pFneg &fneg, LoweringContext &ctx) {
+void MIR::lowerInst(const IR::pFneg &fneg, LoweringContext &ctx) {
     auto def = ctx.newVReg(fneg->getType());
 
     ctx.newInst(MIRInst::make(OpC::InstFNeg)
@@ -154,7 +154,7 @@ void MIR_new::lowerInst(const IR::pFneg &fneg, LoweringContext &ctx) {
     ctx.addOperand(fneg, def);
 }
 
-void MIR_new::lowerInst(const IR::pIcmp &icmp, LoweringContext &ctx) {
+void MIR::lowerInst(const IR::pIcmp &icmp, LoweringContext &ctx) {
     auto def = ctx.newVReg(icmp->getType());
 
     ctx.newInst(MIRInst::make(OpC::InstICmp)
@@ -171,7 +171,7 @@ void MIR_new::lowerInst(const IR::pIcmp &icmp, LoweringContext &ctx) {
     ctx.addOperand(icmp, def);
 }
 
-void MIR_new::lowerInst(const IR::pFcmp &fcmp, LoweringContext &ctx) {
+void MIR::lowerInst(const IR::pFcmp &fcmp, LoweringContext &ctx) {
     auto def = ctx.newVReg(fcmp->getType());
 
     ctx.newInst(MIRInst::make(OpC::InstFCmp)
@@ -186,11 +186,11 @@ void MIR_new::lowerInst(const IR::pFcmp &fcmp, LoweringContext &ctx) {
     ctx.addOperand(fcmp, def);
 }
 
-void MIR_new::lowerInst(const IR::pRet &ret, LoweringContext &ctx) {
+void MIR::lowerInst(const IR::pRet &ret, LoweringContext &ctx) {
     ctx.CodeGenCtx().frameInfo.makeReturn(ret, ctx); //
 }
 
-void MIR_new::lowerInst(const IR::pBr &br, LoweringContext &ctx) {
+void MIR::lowerInst(const IR::pBr &br, LoweringContext &ctx) {
 
     // auto blk_src = ctx.CurrentBlk();
 
@@ -275,7 +275,7 @@ void MIR_new::lowerInst(const IR::pBr &br, LoweringContext &ctx) {
     }
 }
 
-void MIR_new::lowerInst(const IR::pLoad &load, LoweringContext &ctx, size_t align) {
+void MIR::lowerInst(const IR::pLoad &load, LoweringContext &ctx, size_t align) {
     auto def = ctx.newVReg(load->getType());
 
     ctx.newInst(MIRInst::make(OpC::InstLoad)
@@ -290,7 +290,7 @@ void MIR_new::lowerInst(const IR::pLoad &load, LoweringContext &ctx, size_t alig
     ctx.addOperand(load, def);
 }
 
-void MIR_new::lowerInst(const IR::pStore &store, LoweringContext &ctx, size_t align) {
+void MIR::lowerInst(const IR::pStore &store, LoweringContext &ctx, size_t align) {
     auto use = ctx.mapOperand(store->getValue());
 
     auto size = 0U;
@@ -305,7 +305,7 @@ void MIR_new::lowerInst(const IR::pStore &store, LoweringContext &ctx, size_t al
                                     ctx.CodeGenCtx()));
 }
 
-void MIR_new::lowerInst(const IR::pCast &cast, LoweringContext &ctx) {
+void MIR::lowerInst(const IR::pCast &cast, LoweringContext &ctx) {
     auto def = ctx.newVReg(cast->getType());
 
     using OP = IR::OP;
@@ -325,7 +325,7 @@ void MIR_new::lowerInst(const IR::pCast &cast, LoweringContext &ctx) {
     ctx.addOperand(cast, def);
 }
 
-void MIR_new::lowerInst(const IR::pGep &gep, LoweringContext &ctx) {
+void MIR::lowerInst(const IR::pGep &gep, LoweringContext &ctx) {
     auto def_ptr = ctx.newVReg(gep->getType());
 
     auto idx = gep->getIdxs().back();
@@ -388,11 +388,11 @@ void MIR_new::lowerInst(const IR::pGep &gep, LoweringContext &ctx) {
     ctx.addOperand(gep, def_ptr);
 }
 
-void MIR_new::lowerInst(const IR::pCall &call, LoweringContext &ctx) {
+void MIR::lowerInst(const IR::pCall &call, LoweringContext &ctx) {
     ctx.CodeGenCtx().frameInfo.handleCallEntry(call, ctx); //
 }
 
-void MIR_new::lowerInst(const IR::pSelect &select, LoweringContext &ctx) {
+void MIR::lowerInst(const IR::pSelect &select, LoweringContext &ctx) {
     auto def = ctx.newVReg(select->getType());
     ctx.newInst(MIRInst::make(OpC::InstSelect)
                     ->setOperand<0>(def, ctx.CodeGenCtx())

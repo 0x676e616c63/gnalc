@@ -2,7 +2,7 @@
 #include "mir/info.hpp"
 #include "mir/passes/transforms/lowering.hpp"
 
-using namespace MIR_new;
+using namespace MIR;
 
 void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const {
     ///@todo TCO, TCR
@@ -26,7 +26,7 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
 
     auto mcaller = ctx.CurrentBlk()->getFunction();
 
-    const auto &layOut = ctx.CodeGenCtx().infos.dataLayOut;
+    const auto &layOut = ctx.CodeGenCtx().infos.dataLayout;
 
     unsigned stkOffset = 0U; // stk offset
     std::vector<int> offsets;
@@ -171,7 +171,7 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
 }
 
 MIRGlobal_p FrameInfo::handleLib(IR::pCall callinst, LoweringContext &ctx) const {
-    const auto &layout = ctx.CodeGenCtx().infos.dataLayOut;
+    const auto &layout = ctx.CodeGenCtx().infos.dataLayout;
 
     auto callee = callinst->getFunc();
     auto mfunc_declare = make<MIRFunction>(callee->getName().substr(1), ctx.CodeGenCtx());
@@ -181,7 +181,7 @@ MIRGlobal_p FrameInfo::handleLib(IR::pCall callinst, LoweringContext &ctx) const
 }
 
 void FrameInfo::handleMemset(IR::pCall callinst, LoweringContext &ctx) const {
-    const auto &layout = ctx.CodeGenCtx().infos.dataLayOut;
+    const auto &layout = ctx.CodeGenCtx().infos.dataLayout;
 
     auto callee = callinst->getFunc();
     // turn LLVM builtin into Glibc stdlib
@@ -207,7 +207,7 @@ void FrameInfo::handleMemset(IR::pCall callinst, LoweringContext &ctx) const {
 }
 
 void FrameInfo::handleMemcpy(IR::pCall callinst, LoweringContext &ctx) const {
-    const auto &layout = ctx.CodeGenCtx().infos.dataLayOut;
+    const auto &layout = ctx.CodeGenCtx().infos.dataLayout;
 
     auto callee = callinst->getFunc();
     // turn LLVM builtin into Glibc stdlib

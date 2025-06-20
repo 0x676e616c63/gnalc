@@ -1,6 +1,6 @@
 #include "mir/passes/transforms/CFGsimplify.hpp"
 
-using namespace MIR_new;
+using namespace MIR;
 
 // LAMBDA THIS FILE ONLY BEGIN
 
@@ -257,8 +257,8 @@ void CFGsimplifyAfterRAImpl::uselessCmpEli() {
             auto recovery = it;
 
             if (cmp(*it) && b(next_ptr()) && b(next_ptr())) {
-                auto mblk_dst_1 = (*std::prev(it))->getOp(1)->relocable()->as<MIRBlk>();
-                auto mblk_dst_2 = (*it)->getOp(1)->relocable()->as<MIRBlk>();
+                auto mblk_dst_1 = (*std::prev(it))->getOp(1)->reloc()->as<MIRBlk>();
+                auto mblk_dst_2 = (*it)->getOp(1)->reloc()->as<MIRBlk>();
 
                 if (mblk_dst_1 == mblk_dst_2) {
 
@@ -312,7 +312,7 @@ void CFGsimplifyAfterRAImpl::brEli() {
             continue;
         }
 
-        auto mblk_br = br->getOp(1)->relocable()->as<MIRBlk>();
+        auto mblk_br = br->getOp(1)->reloc()->as<MIRBlk>();
 
         if (mblk_br != mblk->nxt()) {
             continue;
@@ -341,8 +341,8 @@ MIRInst_p_l::iterator CFGsimplifyAfterRAImpl::SeqRevPatternDetect(MIRBlk_p mblk)
         if (cmp(*it) && b(next_ptr()) && b(next_ptr())) {
             auto br_true = std::prev(it);
             auto br_false = it;
-            auto mblk_true = (*br_true)->getOp(1)->relocable()->as<MIRBlk>();
-            auto mblk_false = (*br_false)->getOp(1)->relocable()->as<MIRBlk>();
+            auto mblk_true = (*br_true)->getOp(1)->reloc()->as<MIRBlk>();
+            auto mblk_false = (*br_false)->getOp(1)->reloc()->as<MIRBlk>();
 
             if (mblk_true == mblk->nxt()) {
                 return recovery;
