@@ -6,21 +6,24 @@ on:
     paths:
       - 'lib/**'
       - 'include/**'
-      - '.github/workflows/base.yml'
+      - 'runtime/**'
       - 'test/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/base.yml'
   pull_request:
     branches: [ "main", "ci" ]
     paths:
       - 'lib/**'
       - 'include/**'
-      - '.github/workflows/base.yml'
       - 'test/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/base.yml'
 
 env:
   BUILD_TYPE: Release
 
 jobs:
-  build:
+  main:
     runs-on: ubuntu-latest
 
     steps:

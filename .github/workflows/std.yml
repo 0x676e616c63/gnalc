@@ -6,21 +6,23 @@ on:
     paths:
       - 'lib/**'
       - 'include/**'
-      - 'std.yml'
-      - 'tests/**'
+      - 'test/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/std.yml'
   pull_request:
     branches: [ "main", "ci" ]
     paths:
       - 'lib/**'
       - 'include/**'
-      - 'std.yml'
-      - 'tests/**'
+      - 'test/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/std.yml'
 
 env:
   BUILD_TYPE: Release
 
 jobs:
-  build:
+  main:
     runs-on: ubuntu-latest
 
     steps:
