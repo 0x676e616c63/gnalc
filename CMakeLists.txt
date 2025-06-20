@@ -68,8 +68,8 @@ aux_source_directory(lib/mir/passes/transforms GNALC_MIRA64_SRC)
 # Pass Manager
 aux_source_directory(lib/pass_manager GNALC_PM_SRC)
 
-# Pattern Match
-aux_source_directory(lib/pattern_match GNALC_PTM_SRC)
+# Match
+aux_source_directory(lib/match GNALC_MATCH_SRC)
 
 # Utilities
 aux_source_directory(lib/utils GNALC_UTILS_SRC)
@@ -95,7 +95,7 @@ set(GNALC_SRC
         ${GNALC_MIRA32_SRC}
         ${GNALC_MIRA64_SRC}
         ${GNALC_PM_SRC}
-        ${GNALC_PTM_SRC}
+        ${GNALC_MATCH_SRC}
         ${GNALC_ARMV7BKD_SRC}
         ${GNALC_ARMV8BKD_SRC}
         ${GNALC_UTILS_SRC})
@@ -108,7 +108,7 @@ set(GGC_SRC
         ${GNALC_MIRA32_SRC}
         ${GNALC_MIRA64_SRC}
         ${GNALC_PM_SRC}
-        ${GNALC_PTM_SRC}
+        ${GNALC_MATCH_SRC}
         ${GNALC_ARMV7BKD_SRC}
         ${GNALC_ARMV8BKD_SRC}
         ${GNALC_UTILS_SRC})

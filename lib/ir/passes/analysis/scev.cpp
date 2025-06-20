@@ -1,6 +1,6 @@
 #include "ir/passes/analysis/scev.hpp"
 #include "ir/instructions/compare.hpp"
-#include "ir/pattern_match.hpp"
+#include "ir/match.hpp"
 #include "ir/block_utils.hpp"
 
 #include <algorithm>

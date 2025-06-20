@@ -1,7 +1,7 @@
 // Generic Pattern Match Utility for Peephole
 #pragma once
-#ifndef GNALC_PATTERN_MATCH_PATTERN_MATCH_HPP
-#define GNALC_PATTERN_MATCH_PATTERN_MATCH_HPP
+#ifndef GNALC_PATTERN_MATCH_MATCH_HPP
+#define GNALC_PATTERN_MATCH_MATCH_HPP
 
 #include "utils/misc.hpp"
 
@@ -9,7 +9,7 @@
 #include <memory>
 #include <type_traits>
 
-namespace PatternMatch {
+namespace Match {
 namespace detail {
 // This checks if the type is a std::shared_ptr<xxx>
 template <typename T>

@@ -3,11 +3,9 @@
 #include "ir/block_utils.hpp"
 #include "ir/instructions/compare.hpp"
 #include "ir/passes/analysis/range_analysis.hpp"
-#include "ir/pattern_match.hpp"
-#include "pattern_match/pattern_match.hpp"
+#include "ir/match.hpp"
 
 #include <vector>
-using namespace PatternMatch;
 namespace IR {
 PM::PreservedAnalyses RangeAwareSimplifyPass::run(Function &function, FAM &fam) {
     bool rng_cfg_modified = false;
