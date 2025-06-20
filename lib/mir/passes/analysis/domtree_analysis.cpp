@@ -1,6 +1,6 @@
 #include "mir/passes/analysis/domtree_analysis.hpp"
 
-using namespace MIR_new;
+using namespace MIR;
 
 PM::UniqueKey DomTreeAnalysis::Key;
 

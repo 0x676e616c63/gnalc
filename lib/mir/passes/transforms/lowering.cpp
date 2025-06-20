@@ -9,7 +9,7 @@
 #include "mir/passes/transforms/isel.hpp"
 #include <algorithm>
 
-using namespace MIR_new;
+using namespace MIR;
 
 LoweringContext::LoweringContext(MIRModule &module, CodeGenContext &codeGenCtx, std::map<IRBlk_p, MIRBlk_p> &blkMap,
                                  std::map<string, MIRGlobal_p> &globalMap,
@@ -18,7 +18,7 @@ LoweringContext::LoweringContext(MIRModule &module, CodeGenContext &codeGenCtx, 
     mPtrType = OpT::Int64;
 }
 
-OpT MIR_new::btypeConvert(const IR::BType &type) {
+OpT MIR::btypeConvert(const IR::BType &type) {
     switch (type.getInner()) {
     case IR::IRBTYPE::I1:
     case IR::IRBTYPE::I8:
@@ -36,7 +36,7 @@ OpT MIR_new::btypeConvert(const IR::BType &type) {
     return OpT::Int; // just to make clang happy
 }
 
-unsigned MIR_new::typeBitwide(const IR::pType &type) {
+unsigned MIR::typeBitwide(const IR::pType &type) {
     if (auto btype = type->as<IR::BType>()) {
 
         if (btype->getInner() == IR::IRBTYPE::I1)
@@ -231,10 +231,10 @@ void LoweringContext::addOperand(const IRVal_p &val, const MIROperand_p &mval) {
 }
 
 ///@note entry
-MIRModule_p MIR_new::loweringModule(const IRModule &module, CodeGenContext &ctx) {
+MIRModule_p MIR::loweringModule(const IRModule &module, CodeGenContext &ctx) {
     std::map<string, MIRGlobal_p> globalMap;
 
-    const auto &layout = ctx.infos.dataLayOut;
+    const auto &layout = ctx.infos.dataLayout;
 
     auto mModule = make<MIRModule>(ctx.infos, ctx, module.getName());
 
@@ -254,7 +254,7 @@ MIRModule_p MIR_new::loweringModule(const IRModule &module, CodeGenContext &ctx)
     }
 
     for (auto &globalval : globalvals) {
-        auto mglo = MIR_new::loweringGlobal(*globalval);
+        auto mglo = MIR::loweringGlobal(*globalval);
         mModule->globals().emplace_back(mglo);
         globalMap.emplace(globalval->getName(), mglo); // map with prefix
     }
@@ -270,10 +270,10 @@ MIRModule_p MIR_new::loweringModule(const IRModule &module, CodeGenContext &ctx)
     return mModule;
 }
 
-MIRGlobal_p MIR_new::loweringGlobal(const IR::GlobalVariable &global) {
+MIRGlobal_p MIR::loweringGlobal(const IR::GlobalVariable &global) {
     MIRGlobal_p ret = nullptr;
-    MIRRelocable_p inner = nullptr;
-    auto initer = global.getIniter();
+    MIRReloc_p inner = nullptr;
+    const auto& initer = global.getIniter();
     auto sym = global.getName().substr(1); // not prefix
     auto align = global.getAlign();
 
@@ -293,7 +293,7 @@ MIRGlobal_p MIR_new::loweringGlobal(const IR::GlobalVariable &global) {
             if (_initer.isZero()) {
                 auto size = _initer.getIniterType()->getBytes();
                 MIRStorage zeroStore{
-                    static_cast<size_t>(size)}; // remaid that this is a size value by using explicit cast
+                    static_cast<size_t>(size)}; // note that this is a size value by using explicit cast
 
                 datas.emplace_back(zeroStore);
 
@@ -311,13 +311,10 @@ MIRGlobal_p MIR_new::loweringGlobal(const IR::GlobalVariable &global) {
                     Err::unreachable("loweringGlobal: unrecognized btype");
                 }
             } else {
-
                 for (const auto &_initer_nxt : _initer.getInnerIniter()) {
                     recursive(_initer_nxt);
                 }
             }
-
-            return;
         };
 
         auto isStoreZero = [](const std::vector<MIRStorage>::iterator &it) -> bool {
@@ -358,7 +355,7 @@ MIRGlobal_p MIR_new::loweringGlobal(const IR::GlobalVariable &global) {
     return ret;
 }
 
-void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContext &codeGenCtx, MIRModule &mModule,
+void MIR::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContext &codeGenCtx, MIRModule &mModule,
                                std::map<string, MIRGlobal_p> globalMap) {
 
     std::map<IRBlk_p, MIRBlk_p> blkMap;
@@ -403,11 +400,11 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
     }
 
     auto entry = func->getBlocks().front();
-    auto mblk = blkMap.at(entry);
-    mfunc->setEntryBlk(mblk); // entry blk
+    auto entry_blk = blkMap.at(entry);
+    mfunc->setEntryBlk(entry_blk); // entry blk
 
     for (auto &blk : func->getExitBBs()) {
-        auto mblk = blkMap.at(blk);
+        const auto& mblk = blkMap.at(blk);
         mfunc->addExitBlk(mblk);
     }
 
@@ -441,10 +438,10 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
 
     // lower regular insts
     for (auto &blk : func->getDFVisitor<Util::DFVOrder::ReversePostOrder>()) {
-        auto mblk = blkMap.at(blk);
+        const auto& mblk = blkMap.at(blk);
         ctx.setCurrentBlk(mblk);
         for (auto &inst : blk->getAllInsts()) {
-            MIR_new::lowerInst(inst, ctx);
+            MIR::lowerInst(inst, ctx);
         }
     }
 
@@ -462,7 +459,7 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
             for (auto &use_phi : inst->getPhiOpers()) {
                 auto &mblk_src = blkMap.at(use_phi.block);
 
-                MIR_new::MIROperand_p use;
+                MIR::MIROperand_p use;
                 if (valMap.count(use_phi.value)) {
                     use = valMap.at(use_phi.value);
                 } else {
@@ -501,7 +498,7 @@ void MIR_new::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContex
     ctx.elimPhi();
 }
 
-void MIR_new::lowerInst(const IRInst_p &inst, LoweringContext &ctx) {
+void MIR::lowerInst(const IRInst_p &inst, LoweringContext &ctx) {
 
     ///@todo maybe irgen can add select inst
 
@@ -525,7 +522,7 @@ void MIR_new::lowerInst(const IRInst_p &inst, LoweringContext &ctx) {
     case OP::FADD:
     case OP::FSUB:
     case OP::FMUL:
-        MIR_new::lowerInst(inst->as<IR::BinaryInst>(), ctx);
+        MIR::lowerInst(inst->as<IR::BinaryInst>(), ctx);
         break;
     case OP::DIV:
     case OP::SREM:
@@ -533,43 +530,43 @@ void MIR_new::lowerInst(const IRInst_p &inst, LoweringContext &ctx) {
     case OP::FDIV:
     case OP::FREM:
         ///@todo predict range of numbers
-        MIR_new::lowerInst(inst->as<IR::BinaryInst>(), ctx);
+        MIR::lowerInst(inst->as<IR::BinaryInst>(), ctx);
         break;
     case OP::FNEG:
-        MIR_new::lowerInst(inst->as<IR::FNEGInst>(), ctx);
+        MIR::lowerInst(inst->as<IR::FNEGInst>(), ctx);
         break;
     case OP::ICMP:
-        MIR_new::lowerInst(inst->as<IR::ICMPInst>(), ctx);
+        MIR::lowerInst(inst->as<IR::ICMPInst>(), ctx);
         break;
     case OP::FCMP:
-        MIR_new::lowerInst(inst->as<IR::FCMPInst>(), ctx);
+        MIR::lowerInst(inst->as<IR::FCMPInst>(), ctx);
         break;
     case OP::RET:
-        MIR_new::lowerInst(inst->as<IR::RETInst>(), ctx);
+        MIR::lowerInst(inst->as<IR::RETInst>(), ctx);
         break;
     case OP::BR:
-        MIR_new::lowerInst(inst->as<IR::BRInst>(), ctx);
+        MIR::lowerInst(inst->as<IR::BRInst>(), ctx);
         break;
     case OP::LOAD:
-        MIR_new::lowerInst(inst->as<IR::LOADInst>(), ctx, inst->as<IR::LOADInst>()->getAlign());
+        MIR::lowerInst(inst->as<IR::LOADInst>(), ctx, inst->as<IR::LOADInst>()->getAlign());
         break;
     case OP::STORE:
-        MIR_new::lowerInst(inst->as<IR::STOREInst>(), ctx, inst->as<IR::STOREInst>()->getAlign());
+        MIR::lowerInst(inst->as<IR::STOREInst>(), ctx, inst->as<IR::STOREInst>()->getAlign());
         break;
     case OP::ZEXT:
     case OP::BITCAST:
     case OP::SITOFP:
     case OP::FPTOSI:
-        MIR_new::lowerInst(inst->as<IR::CastInst>(), ctx);
+        MIR::lowerInst(inst->as<IR::CastInst>(), ctx);
         break;
     case OP::GEP:
-        MIR_new::lowerInst(inst->as<IR::GEPInst>(), ctx);
+        MIR::lowerInst(inst->as<IR::GEPInst>(), ctx);
         break;
     case OP::CALL:
-        MIR_new::lowerInst(inst->as<IR::CALLInst>(), ctx);
+        MIR::lowerInst(inst->as<IR::CALLInst>(), ctx);
         break;
     case OP::SELECT:
-        MIR_new::lowerInst(inst->as<IR::SELECTInst>(), ctx);
+        MIR::lowerInst(inst->as<IR::SELECTInst>(), ctx);
         break;
     default:
         Err::unreachable("lowerInst: unrecognized IR::OP");

@@ -1,6 +1,6 @@
 #include "codegen/armv8/armprinter.hpp"
 
-using namespace MIR_new;
+using namespace MIR;
 
 void ARMA64Printer::printout(const MIRModule &mModule) {
 

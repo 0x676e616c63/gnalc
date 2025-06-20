@@ -1,13 +1,14 @@
+#ifdef GNALC_EXTENSION_ARMv7
 #include "codegen/armv7/armprinter.hpp"
-#include "mirA32/SIMDinstruction/memory.hpp"
-#include "mirA32/instructions/branch.hpp"
-#include "mirA32/instructions/copy.hpp"
-#include "mirA32/misc.hpp"
+#include "legacy_mir/SIMDinstruction/memory.hpp"
+#include "legacy_mir/instructions/branch.hpp"
+#include "legacy_mir/instructions/copy.hpp"
+#include "legacy_mir/misc.hpp"
 
 #include <algorithm>
 #include <sstream>
 
-using namespace MIR;
+using namespace LegacyMIR;
 
 void ARMPrinter::printout(const Module &module) {
     ///@brief compile info
@@ -645,3 +646,4 @@ void ARMPrinter::retHelper() {
     // outStream << "    bx    lr\n\n";
     outStream << "    bx\tlr\n\n";
 }
+#endif

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef GNALC_ARMV8_MIR_TRANSFORMS_SCHEDULING_HPP
-#define GNALC_ARMV8_MIR_TRANSFORMS_SCHEDULING_HPP
+#ifndef GNALC_MIR_TRANSFORMS_SCHEDULING_HPP
+#define GNALC_MIR_TRANSFORMS_SCHEDULING_HPP
 
 #include "mir/passes/pass_manager.hpp"
 #include "mir/schedA53.hpp"
@@ -11,7 +11,7 @@
 ///@note 重排的范围为一个基本块内, 所以在此之前, 需要做CFG简化和基本块的内联, 以扩大重排的范围
 ///@warning 对于语句少的基本块, 重排的效果并不理想
 
-namespace MIR_new {
+namespace MIR {
 
 template <typename T> using US = std::unordered_set<T>;
 template <typename Tx, typename Ty> using UM = std::unordered_map<Tx, Ty>;

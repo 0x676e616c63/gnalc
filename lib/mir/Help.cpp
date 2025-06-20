@@ -1,6 +1,6 @@
 #include "mir/MIR.hpp"
 
-using namespace MIR_new;
+using namespace MIR;
 
 void ARMInstTemplate::registerInc(MIRInst_p_l minsts, MIRInst_p_l::iterator it, ARMReg isa, unsigned amount,
                                   CodeGenContext &ctx) {

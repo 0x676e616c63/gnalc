@@ -1,6 +1,6 @@
 #pragma once
-#ifndef GNALC_ARMV8_MIR_TOOLS_HPP
-#define GNALC_ARMV8_MIR_TOOLS_HPP
+#ifndef GNALC_MIR_TOOLS_HPP
+#define GNALC_MIR_TOOLS_HPP
 
 #include "utils/exception.hpp"
 #include <cstddef>

@@ -1,7 +1,6 @@
 #pragma once
 #ifndef GNALC_CONFIG_CONFIG_HPP
 #define GNALC_CONFIG_CONFIG_HPP
-#define GNALC_EXTENSION_A32 1
 
 namespace Config::IR {
 // IRGenerator
@@ -80,8 +79,8 @@ constexpr auto FPU_REGISTER_MAX_NUM = 32;
 
 namespace Config::MIR_new {
 // Register Allocation
-constexpr auto CORE_REGISTER_MAX_NUM = 30; // X0 ~ X29
-constexpr auto FPU_REGISTER_MAX_NUM = 32;  // V0 ~ V31
+constexpr auto AARCH64_CORE_REGISTER_MAX_NUM = 30; // X0 ~ X29
+constexpr auto AARCH64_FPU_REGISTER_MAX_NUM = 32;  // V0 ~ V31
 } // namespace Config::MIR_new
 
 #endif

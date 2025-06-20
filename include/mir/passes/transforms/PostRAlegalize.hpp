@@ -1,10 +1,10 @@
 #pragma once
-#ifndef GNALC_ARMV8_MIR_PASSES_TRANSFORMS_POSTRALEGALILZE_HPP
-#define GNALC_ARMV8_MIR_PASSES_TRANSFORMS_POSTRALEGALILZE_HPP
+#ifndef GNALC_MIR_PASSES_TRANSFORMS_POSTRALEGALILZE_HPP
+#define GNALC_MIR_PASSES_TRANSFORMS_POSTRALEGALILZE_HPP
 
 #include "mir/passes/pass_manager.hpp"
 
-namespace MIR_new {
+namespace MIR {
 
 class PostRAlegalize : public PM::PassInfo<PostRAlegalize> {
 public:

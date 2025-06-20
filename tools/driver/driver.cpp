@@ -24,12 +24,12 @@
 #include "codegen/brainfk/bftrans.hpp"
 #endif
 
-#if GNALC_EXTENSION_A32 // in config.hpp
+#ifdef GNALC_EXTENSION_ARMv7 // in CMakeLists.txt
 #include "codegen/armv7/armprinter.hpp"
-#include "mirA32/builder/lowering.hpp"
-#include "mirA32/passes/pass_builder.hpp"
-#include "mirA32/passes/pass_manager.hpp"
-#include "mirA32/passes/utilities/mirprinter.hpp"
+#include "legacy_mir/builder/lowering.hpp"
+#include "legacy_mir/passes/pass_builder.hpp"
+#include "legacy_mir/passes/pass_manager.hpp"
+#include "legacy_mir/passes/utilities/mirprinter.hpp"
 #endif
 
 // MIR
@@ -74,12 +74,12 @@ int main(int argc, char **argv) {
     bool sir_debug_pipeline = false;            // -sir-debug-pipeline
     IR::CliOptions cli_opt_options;             // --xxx, --no-xxx
 
-#if GNALC_EXTENSION_A32
-    MIR::OptInfo bkd_opt_info_A32;
-    bool A32_target = false; // -march=armv7
+#if GNALC_EXTENSION_ARMv7
+    LegacyMIR::OptInfo bkd_opt_info_A32;
+    bool armv7_target = false; // -march=armv7
 #endif
 
-    MIR_new::OptInfo bkd_opt_info = MIR_new::o1_opt_info;
+    MIR::OptInfo bkd_opt_info = MIR::o1_opt_info;
 
 #if GNALC_EXTENSION_BRAINFK
     bool bf_target = false;   // -mbrainfk
@@ -236,8 +236,8 @@ int main(int argc, char **argv) {
         else if (arg == "-mbrainfk-3tape") bf3t_target = true;
 #endif
 
-#if GNALC_EXTENSION_A32
-        else if (arg == "-march=armv7" || arg == "-march=armv7-a") A32_target = true;
+#if GNALC_EXTENSION_ARMv7
+        else if (arg == "-march=armv7" || arg == "-march=armv7-a") armv7_target = true;
 #endif
 
         else if (arg == "-h" || arg == "--help") {
@@ -481,23 +481,23 @@ Extensions:
     }
 #endif
 
-#if GNALC_EXTENSION_A32
-    if (A32_target) {
+#if GNALC_EXTENSION_ARMv7
+    if (armv7_target) {
         mpm.run(generator.get_module(), mam);
 
-        MIR::Lowering lower(generator.get_module());
+        LegacyMIR::Lowering lower(generator.get_module());
 
-        MIR::FAM bkd_fam;
-        MIR::MAM bkd_mam;
+        LegacyMIR::FAM bkd_fam;
+        LegacyMIR::MAM bkd_mam;
 
-        MIR::PassBuilder::registerFunctionAnalyses(bkd_fam);
-        MIR::PassBuilder::registerModuleAnalyses(bkd_mam);
-        MIR::PassBuilder::registerProxies(bkd_fam, bkd_mam);
+        LegacyMIR::PassBuilder::registerFunctionAnalyses(bkd_fam);
+        LegacyMIR::PassBuilder::registerModuleAnalyses(bkd_mam);
+        LegacyMIR::PassBuilder::registerProxies(bkd_fam, bkd_mam);
 
-        auto bkd_mpm = MIR::PassBuilder::buildModulePipeline(bkd_opt_info_A32);
+        auto bkd_mpm = LegacyMIR::PassBuilder::buildModulePipeline(bkd_opt_info_A32);
 
         if (emit_llc) {
-            bkd_mpm.addPass(MIR::PrintModulePass(*poutstream));
+            bkd_mpm.addPass(LegacyMIR::PrintModulePass(*poutstream));
             bkd_mpm.run(lower.getModule(), bkd_mam);
             return 0;
         }
@@ -506,7 +506,7 @@ Extensions:
 
         // Assembler
         if (only_compilation) {
-            MIR::ARMPrinter armv7gen(*poutstream);
+            LegacyMIR::ARMPrinter armv7gen(*poutstream);
             armv7gen.printout(lower.getModule());
         }
 
@@ -515,25 +515,25 @@ Extensions:
 #endif
 
     mpm.run(generator.get_module(), mam);
-    MIR_new::BkdInfos infos{};
-    MIR_new::ISelInfo isel{};
-    MIR_new::FrameInfo frame{};
-    MIR_new::CodeGenContext ctx{infos, isel, frame};
-    auto mModule = MIR_new::loweringModule(generator.get_module(), ctx);
+    MIR::BkdInfos infos{};
+    MIR::ISelInfo isel{};
+    MIR::FrameInfo frame{};
+    MIR::CodeGenContext ctx{infos, isel, frame};
+    auto mModule = MIR::loweringModule(generator.get_module(), ctx);
 
-    MIR_new::FAM bkd_fam;
-    MIR_new::MAM bkd_mam;
+    MIR::FAM bkd_fam;
+    MIR::MAM bkd_mam;
 
-    MIR_new::PassBuilder::registerFunctionAnalyses(bkd_fam);
-    MIR_new::PassBuilder::registerModuleAnalyses(bkd_mam);
-    MIR_new::PassBuilder::registerProxies(bkd_fam, bkd_mam);
+    MIR::PassBuilder::registerFunctionAnalyses(bkd_fam);
+    MIR::PassBuilder::registerModuleAnalyses(bkd_mam);
+    MIR::PassBuilder::registerProxies(bkd_fam, bkd_mam);
 
-    auto bkd_mpm = MIR_new::PassBuilder::buildModulePipeline(bkd_opt_info);
+    auto bkd_mpm = MIR::PassBuilder::buildModulePipeline(bkd_opt_info);
 
     bkd_mpm.run(*mModule, bkd_mam);
 
     if (only_compilation) {
-        MIR_new::ARMA64Printer armv8gen(*poutstream, emit_llc);
+        MIR::ARMA64Printer armv8gen(*poutstream, emit_llc);
         armv8gen.printout(*mModule);
         return 0;
     }

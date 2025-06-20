@@ -1,13 +1,14 @@
+#ifdef GNALC_EXTENSION_ARMv7
 #pragma once
 #ifndef GNALC_CODEGEN_ARMV7_ARMPRINTER_HPP
 #define GNALC_CODEGEN_ARMV7_ARMPRINTER_HPP
 
-#include "mirA32/instructions/memory.hpp"
-#include "mirA32/module.hpp"
-#include "mirtoolsA32/tool.hpp"
+#include "../../legacy_mir/tool.hpp"
+#include "legacy_mir/instructions/memory.hpp"
+#include "legacy_mir/module.hpp"
 #include <iostream>
 
-namespace MIR {
+namespace LegacyMIR {
 /// @warning 不同机器制表符 '\t' 的宽度可能不同
 /// @todo 目前只有mov用上了条件执行
 class ARMPrinter {
@@ -40,4 +41,5 @@ private:
 };
 } // namespace MIR
 
+#endif
 #endif

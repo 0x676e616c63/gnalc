@@ -2,9 +2,9 @@
 #include <algorithm>
 #include <optional>
 
-using namespace MIR_new;
+using namespace MIR;
 
-OpC MIR_new::chooseCopyOpC(const MIROperand_p &dst, const MIROperand_p &src) {
+OpC MIR::chooseCopyOpC(const MIROperand_p &dst, const MIROperand_p &src) {
     if (dst->isISA() && src->isImme()) {
         if (inRange(dst->type(), OpT::Int, OpT::Int64))
             return OpC::InstLoadImmToReg;

@@ -1,14 +1,14 @@
 #include "mir/passes/transforms/RA.hpp"
 #include <algorithm>
 
-using namespace MIR_new;
+using namespace MIR;
 
 PM::PreservedAnalyses RegisterAlloc::run(MIRFunction &mfunc, FAM &fam) {
 
-    class VectorRegisterAllocImpl vectorRA;
+    VectorRegisterAllocImpl vectorRA;
     vectorRA.impl(mfunc, fam);
 
-    class RegisterAllocImpl coreRA;
+    RegisterAllocImpl coreRA;
     coreRA.impl(mfunc, fam);
 
     return PM::PreservedAnalyses::all();
@@ -40,7 +40,7 @@ void RegisterAllocImpl::clearall() {
     alias.clear();
     colors.clear();
     spilltimes = 0;
-    isInitialed = false;
+    isInitialized = false;
 }
 
 void RegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
@@ -66,7 +66,7 @@ void RegisterAllocImpl::Main(FAM &fam) {
     ///@note this will be easier to read flame graph
     do {
 
-        if (isInitialed) {
+        if (isInitialized) {
             ReWriteProgram();
         }
 
@@ -113,7 +113,7 @@ void RegisterAllocImpl::AddEdge(const MIROperand_p &u, const MIROperand_p &v) {
 
 void RegisterAllocImpl::Build() {
     ///@note MkInitial
-    if (!isInitialed) {
+    if (!isInitialized) {
 
         for (const auto &blk : mfunc->blks()) {
             for (const auto &inst : blk->Insts()) {
@@ -138,7 +138,7 @@ void RegisterAllocImpl::Build() {
             }
         }
     }
-    isInitialed = true;
+    isInitialized = true;
 
     for (const auto &blk : mfunc->blks()) {
 
@@ -569,7 +569,7 @@ void VectorRegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
 
 void VectorRegisterAllocImpl::Build() {
     ///@note MkInitial
-    if (!isInitialed) {
+    if (!isInitialized) {
 
         for (const auto &blk : mfunc->blks()) {
             for (const auto &inst : blk->Insts()) {
@@ -594,7 +594,7 @@ void VectorRegisterAllocImpl::Build() {
             }
         }
     }
-    isInitialed = true;
+    isInitialized = true;
 
     for (const auto &blk : mfunc->blks()) {
 

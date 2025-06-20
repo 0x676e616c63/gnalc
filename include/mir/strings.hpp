@@ -1,10 +1,10 @@
 #pragma once
-#ifndef GNALC_ARMV8_MIR_STRINGS_HPP
-#define GNALC_ARMV8_MIR_STRINGS_HPP
+#ifndef GNALC_MIR_STRINGS_HPP
+#define GNALC_MIR_STRINGS_HPP
 
 #include "mir/MIR.hpp"
 
-namespace MIR_new {
+namespace MIR {
 
 inline string Cond2S(Cond cond) {
     switch (cond) {
@@ -177,61 +177,61 @@ inline string OpC2S(OpC op) {
 
 inline string ARMOpC2S(ARMOpC op) {
     switch (op) {
-    case LDR:
+    case ARMOpC::LDR:
         return "ldr";
-    case STR:
+    case ARMOpC::STR:
         return "str";
-    case LDUR:
+    case ARMOpC::LDUR:
         return "ldur";
-    case STUR:
+    case ARMOpC::STUR:
         return "stur";
-    case LD1:
+    case ARMOpC::LD1:
         return "ld1";
-    case LD2:
+    case ARMOpC::LD2:
         return "ld2";
-    case LD3:
+    case ARMOpC::LD3:
         return "ld3";
-    case LD4:
+    case ARMOpC::LD4:
         return "ld4";
-    case LD5:
+    case ARMOpC::LD5:
         return "ld5";
-    case ST1:
+    case ARMOpC::ST1:
         return "st1";
-    case ST2:
+    case ARMOpC::ST2:
         return "st2";
-    case ST3:
+    case ARMOpC::ST3:
         return "st3";
-    case ST4:
+    case ARMOpC::ST4:
         return "st4";
-    case ST5:
+    case ARMOpC::ST5:
         return "st5";
-    case MADD:
+    case ARMOpC::MADD:
         return "madd";
-    case MSUB:
+    case ARMOpC::MSUB:
         return "msub";
-    case FMADD:
+    case ARMOpC::FMADD:
         return "fmadd";
-    case FMSUB:
+    case ARMOpC::FMSUB:
         return "fmsub";
-    case CSEL:
+    case ARMOpC::CSEL:
         return "csel";
-    case FCSEL:
+    case ARMOpC::FCSEL:
         return "fcsel";
-    case CSET_SELECT:
-    case CSET:
+    case ARMOpC::CSET_SELECT:
+    case ARMOpC::CSET:
         return "cset";
-    case MOV:
-    case MOV_V:
+    case ARMOpC::MOV:
+    case ARMOpC::MOV_V:
         return "mov";
-    case MOVZ:
+    case ARMOpC::MOVZ:
         return "movz";
-    case MOVK:
+    case ARMOpC::MOVK:
         return "movk";
-    case MOVF:
+    case ARMOpC::MOVF:
         return "fmov";
-    case INC:
+    case ARMOpC::INC:
         return "add";
-    case DEC:
+    case ARMOpC::DEC:
         return "sub";
     default:
         Err::unreachable("ARMOpC2S: hanlder this op manully");
