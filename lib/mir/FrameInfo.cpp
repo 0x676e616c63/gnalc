@@ -136,8 +136,8 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
             continue; // arg on stk
         }
 
-        auto isa = isSpr(offset) ? ARMReg::V0 + static_cast<uint32_t>(offset - passByRegBase - passBySprRegBase)
-                                 : ARMReg::X0 + static_cast<uint32_t>(offset - passByRegBase);
+        auto isa = isSpr(offset) ? Util::to_underlying(ARMReg::V0) + static_cast<uint32_t>(offset - passByRegBase - passBySprRegBase)
+                                 : Util::to_underlying(ARMReg::X0) + static_cast<uint32_t>(offset - passByRegBase);
 
         auto mtype = getType(arg);
 
@@ -298,8 +298,8 @@ void FrameInfo::makePrologue(MIRFunction_p mfunc, LoweringContext &ctx) const {
         }
 
         auto isa = (offset >= passBySprRegBase + passByRegBase)
-                       ? ARMReg::V0 + static_cast<uint32_t>(offset - passByRegBase - passBySprRegBase)
-                       : ARMReg::X0 + static_cast<uint32_t>(offset - passByRegBase);
+                       ? Util::to_underlying(ARMReg::V0) + static_cast<uint32_t>(offset - passByRegBase - passBySprRegBase)
+                       : Util::to_underlying(ARMReg::X0) + static_cast<uint32_t>(offset - passByRegBase);
 
         auto mtype = arg->type();
 
@@ -343,10 +343,10 @@ void FrameInfo::makeReturn(IR::pRet retinst, LoweringContext &ctx) const {
 
         if (auto btype = type->as<IR::BType>()) {
             if (btype->getInner() == IR::IRBTYPE::FLOAT) {
-                isa = ARMReg::V0;
+                isa = Util::to_underlying(ARMReg::V0);
                 mtype = OpT::Float32;
             } else {
-                isa = ARMReg::X0;
+                isa = Util::to_underlying(ARMReg::X0);
                 mtype = OpT::Int32;
             }
         }

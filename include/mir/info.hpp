@@ -4,6 +4,7 @@
 
 #include "ir/instructions/control.hpp"
 #include "mir/tools.hpp"
+#include "utils/enum_operator.hpp"
 #include <cstring>
 #include <string>
 
@@ -170,7 +171,7 @@ template <typename T> inline bool isBitMaskImme(T imm) {
 
 ///@note 理论上在CodeGen之前区分寄存器位宽没有价值
 ///@note ARMv8的V<>寄存器不能够拆成若干独立的S<>寄存器
-enum ARMReg : uint32_t {
+enum class ARMReg : uint32_t {
     X0,
     X1,
     X2,
@@ -240,7 +241,9 @@ enum ARMReg : uint32_t {
     V31,
 };
 
-enum ARMOpC : uint32_t {
+GNALC_ENUM_OPERATOR(ARMReg)
+
+enum class ARMOpC : uint32_t {
     LDR,
     LDUR,
     LD1,

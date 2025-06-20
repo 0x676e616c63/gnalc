@@ -526,7 +526,7 @@ bool GenericPeepholeImpl::matchSelect(MatchInfo &info) {
         return false;
     }
 
-    if (minst->opcode<ARMOpC>() != CSEL && minst->opcode<ARMOpC>() != FCSEL && minst->opcode<ARMOpC>() != CSET_SELECT) {
+    if (minst->opcode<ARMOpC>() != ARMOpC::CSEL && minst->opcode<ARMOpC>() != ARMOpC::FCSEL && minst->opcode<ARMOpC>() != ARMOpC::CSET_SELECT) {
         return false;
     }
 

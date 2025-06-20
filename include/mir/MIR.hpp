@@ -82,7 +82,7 @@ enum MIRInstCond : unsigned { AL, EQ, NE, LT, GT, LE, GE };
 
 using Cond = MIRInstCond;
 
-enum MIRGenericInst : uint32_t {
+enum class MIRGenericInst : uint32_t {
     // control-flow
     InstBranch, // cond, reloc, prob
     // Memory, get by gep, no const offset
@@ -317,6 +317,10 @@ public:
             ISApool[reg] = newISA;
             return newISA;
         }
+    }
+
+    static MIROperand_p asISAReg(ARMReg reg, OpT type) {
+        return asISAReg(static_cast<unsigned>(reg), type);
     }
 
     static MIROperand_p asVReg(unsigned reg, OpT type) {
