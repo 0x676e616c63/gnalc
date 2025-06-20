@@ -9,6 +9,8 @@
 #ifndef GNALC_IR_PASSES_TRANSFORMS_LOOP_UNROLL_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_LOOP_UNROLL_HPP
 
+#include <utility>
+
 #include "ir/passes/pass_manager.hpp"
 #include "config/config.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
@@ -41,10 +43,15 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
         bool unroll = false;
         UnrollType unroll_type = UnrollType::UNDEF;
         unsigned unroll_count = 0;
+
+        // For remainder
         bool has_remainder = false;
         unsigned remainder = 0;
-        pVal raw_boundary_value = nullptr; // For partially unroll with remainder, raw boundary value in unroll loop
-        pVal new_boundary_value = nullptr; // For partially unroll with remainder, new boundary value in unroll loop
+        pVal raw_boundary_value = nullptr; // Raw boundary value in main loop
+        pVal new_boundary_value = nullptr; // New boundary value in main loop
+
+        // For runtime unroll
+        std::vector<pInst> cnb_insts; // Instructions for calculating new boundary
 
         // // For cost analysis
         // unsigned raw_size = 0;
@@ -81,12 +88,14 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
             // estimated_unroll_size = _count * raw_size;
         }
 
-        void set_remainder(const unsigned _remainder, const pVal& _rawbv, const pVal &_newbv) {
-            Err::gassert(unroll_type == UnrollType::PARTIALLY, "UnrollOption: set_remainder(): unroll_type is not PARTIALLY.");
+        void set_remainder(const unsigned _remainder, const pVal& _rawbv, const pVal &_newbv, std::vector<pInst> _cnbinsts = {}) {
+            Err::gassert(unroll_type == UnrollType::PARTIALLY || unroll_type == UnrollType::RUNTIME
+                , "UnrollOption: set_remainder(): unroll_type is not PARTIALLY or RUNTIME.");
             has_remainder = (_remainder!=0);
             remainder = _remainder;
             raw_boundary_value = _rawbv;
             new_boundary_value = _newbv;
+            cnb_insts = std::move(_cnbinsts);
             // estimated_unroll_size += raw_size;
         }
 
@@ -97,9 +106,9 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
             has_remainder = true;
         }
 
-        bool fully() const { return unroll_type == UnrollType::FULLY; }
-        bool partially() const { return unroll_type == UnrollType::PARTIALLY; }
-        bool runtime() const { return unroll_type == UnrollType::RUNTIME; }
+        [[nodiscard]] bool fully() const { return unroll_type == UnrollType::FULLY; }
+        [[nodiscard]] bool partially() const { return unroll_type == UnrollType::PARTIALLY; }
+        [[nodiscard]] bool runtime() const { return unroll_type == UnrollType::RUNTIME; }
     };
 
     void analyze(const pLoop &loop, UnrollOption &option, Function &FC, FAM &fam);

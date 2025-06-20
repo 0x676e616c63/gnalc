@@ -287,7 +287,6 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         }
     }
 
-
     // 新旧BB, Inst映射，用于快速查找
     // <raw, new_vector>
     // new_vector[0] == raw
