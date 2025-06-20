@@ -699,8 +699,9 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                         for (const auto &user : hinst->users()) {
                             if (user->getVTrait() != ValueTrait::ORDINARY_VARIABLE)
                                 continue;
-                            if (auto uparent = user->as<Instruction>()->getParent();
-                                uparent !=header && loop->contains(uparent)) {
+                            auto uinst = user->as<Instruction>();
+                            auto uparent = uinst->getParent();
+                            if ((uparent != header && loop->contains(uparent)) || (uparent == header && uinst->getOpcode() == OP::PHI)) {
                                 worklist.insert(hinst);
                             }
                         }

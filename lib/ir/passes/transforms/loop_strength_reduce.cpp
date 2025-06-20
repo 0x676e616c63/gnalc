@@ -2,7 +2,7 @@
 #include "ir/block_utils.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
-#include "ir/pattern_match.hpp"
+#include "ir/match.hpp"
 #include "config/config.hpp"
 
 namespace IR {

@@ -34,6 +34,7 @@
 
 // MIR
 #include "codegen/armv8/armprinter.hpp"
+#include "ir/cfgbuilder.hpp"
 #include "mir/passes/pass_builder.hpp"
 #include "mir/passes/pass_manager.hpp"
 #include "mir/passes/transforms/lowering.hpp"

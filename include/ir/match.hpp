@@ -9,9 +9,9 @@
 #include "instructions/converse.hpp"
 #include "instructions/memory.hpp"
 #include "instructions/vector.hpp"
-#include "pattern_match/pattern_match.hpp"
+#include "match/match.hpp"
 
-using namespace PatternMatch;
+using namespace Match;
 namespace IR::M {
 inline auto Val() { return ClassMatch<Value>{}; }
 
@@ -37,7 +37,7 @@ template <typename SubPattern> struct OneUseMatch {
     explicit OneUseMatch(const SubPattern &sub_pattern_) : sub_pattern(sub_pattern_) {}
 
     template <typename T> bool match(const T &v) const {
-        auto cast = PatternMatch::detail::ptrCast<Value>(v);
+        auto cast = Match::detail::ptrCast<Value>(v);
         return cast && cast->getUseCount() == 1 && sub_pattern.match(cast);
     }
 };

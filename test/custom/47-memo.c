@@ -1,38 +1,27 @@
-int seed = 0;
+int a = 7;
 
-int rand() {                  
-  seed = (seed * 19980130 + 23333) % 100000007;
-  if (seed < 0) seed = seed + 100000007;                    
-  return seed;                                                                                                           
-}                       
-
-int fib(int c,int n,int d){
-    if(n == 0 || n==1){
-        return ((c+1)/2 + (d*2)%3);
-    }
-    return fib(c+1    , n-1, (d+1)/2 ) +
-           fib((c-2)/2, n-2, (d-3)%2 ) ;
+int func() {
+	int b = a;
+	int a = 1;
+	if (a == b) {
+		a = a + 1;
+		return 1;
+	}
+	else
+		return 0;
 }
 
-
-
-int main(){
-    int sum = 0;
-    int i = 0;
-    int n = getint();
-    seed = getint();
-    starttime();
-    while(i < n){
-        if(i % 2 == 0){
-            sum = sum - fib(rand() / 10007  , i, sum) % 256;
-        }else{
-            sum = sum + fib(rand() % (-10007), i, i  ) % 256;
-        }
-        sum = sum % 256;
-        putint(sum);
-        putch(10);
-        i = i + 1;
-    }
-    stoptime();
-    return 0;
+int main() {
+	int result = 0;
+	int i = 0;
+	while (i < 100) {
+		if (func() == 1)
+			result = result + 1;
+		i = i + 1;
+	}
+	if (result < 100)
+		putint(1);
+	else
+		putint(0);
+	return 0;
 }

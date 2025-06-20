@@ -4,7 +4,7 @@
 #include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
-#include "ir/pattern_match.hpp"
+#include "ir/match.hpp"
 
 namespace IR {
 // If all values defined in the loop have no uses outside the loop, or uses outside the loop

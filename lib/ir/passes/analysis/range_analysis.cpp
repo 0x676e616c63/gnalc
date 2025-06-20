@@ -10,14 +10,13 @@
 #include "ir/instructions/vector.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
-#include "ir/pattern_match.hpp"
-#include "pattern_match/pattern_match.hpp"
+#include "ir/match.hpp"
+#include "match/match.hpp"
 #include "utils/logger.hpp"
 
 #include <deque>
 #include <string>
 
-using namespace PatternMatch;
 namespace IR {
 PM::UniqueKey RangeAnalysis::Key;
 
