@@ -6,7 +6,6 @@
 #include "ir/instructions/compare.hpp"
 #include "ir/instructions/phi.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
-#include "ir/passes/analysis/live_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
 #include "utils/exception.hpp"
@@ -188,11 +187,12 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
 
                     auto [base, step] = trecp->getConstantAffineAddRec().value();
                     int new_boundary_num;
+                    const int suf = static_cast<int>(unroll_factor);
                     // 或许可以按 raw_boundary_num - step * unroll_factor 来算？
                     if (loop->isExiting(loop->getLatch())) {
-                        new_boundary_num = base + step * unroll_factor * (trip_countn / unroll_factor - 1) + (step>0?-1:1);
+                        new_boundary_num = base + step * suf * (trip_countn / suf - 1) + (step>0?-1:1);
                     } else {
-                        new_boundary_num = base + step * unroll_factor * (trip_countn / unroll_factor) + (step>0?-1:1);
+                        new_boundary_num = base + step * suf * (trip_countn / suf) + (step>0?-1:1);
                     }
                     Logger::logDebug("[LoopUnroll] Get base: "+ std::to_string(base) + ", step: "+ std::to_string(step) + ", new_boundary_num: "+ std::to_string(new_boundary_num));
                     auto new_boundary_value = FC.getConst(new_boundary_num);
@@ -498,7 +498,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
     // clone remainder to BMap[b][count]
     // 此处只处理常量部分展开的余数循环
     if (option.partially() && option.has_remainder) {
-        auto rem = option.remainder;
+        // auto rem = option.remainder;
 
         // process header
         {
@@ -697,12 +697,14 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                 {
                     for (const auto &hinst : header->all_insts()) {
                         for (const auto &user : hinst->users()) {
-                            if (user->getVTrait() != ValueTrait::ORDINARY_VARIABLE)
-                                continue;
+                            // 此处默认 User 均为 Inst
+                            // if (user->getVTrait() != ValueTrait::ORDINARY_VARIABLE && user->getVTrait() != ValueTrait::VOID_INSTRUCTION)
+                            //     continue;
                             auto uinst = user->as<Instruction>();
                             auto uparent = uinst->getParent();
                             if ((uparent != header && loop->contains(uparent)) || (uparent == header && uinst->getOpcode() == OP::PHI)) {
                                 worklist.insert(hinst);
+                                break;
                             }
                         }
                     }
