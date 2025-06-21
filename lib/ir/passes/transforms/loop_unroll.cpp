@@ -149,12 +149,11 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
 
             if (remainder != 0) {
                 {
-                    // TODO: FIX
-                    // Check if loop's exit condition is eq or ne
+                    // Check if loop's exit condition is eq
                     if (auto eb = loop->getExitingBlocks(); eb.size() == 1) {
                         if (auto cd = eb.begin()->get()->getBRInst()->getCond()->as<Instruction>(); cd->getOpcode() == OP::ICMP) {
-                            if (auto icmpop = cd->as<ICMPInst>()->getCond(); icmpop == ICMPOP::eq || icmpop == ICMPOP::ne) {
-                                Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's exit condition is '==' or '!=' while it has remainder.");
+                            if (auto icmpop = cd->as<ICMPInst>()->getCond(); icmpop == ICMPOP::eq) {
+                                Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's exit condition is '==' while it has remainder.");
                                 option.disable();
                                 return;
                             }
@@ -168,7 +167,6 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
 
                 {
                     // Calculate new boundary
-                    /// TODO: Why need both boundray+-1 and >= to >(or <= to <)?
                     pVal iter_variable, raw_boundary_value;
                     if (!GetIterVarAndBoundary(loop, iter_variable, raw_boundary_value)) {
                         Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable and boundary.");
@@ -195,19 +193,56 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
                         option.disable();
                         return;
                     }
+                    auto [fake_base, step] = trecp->getConstantAffineAddRec().value();
 
-                    auto [base, step] = trecp->getConstantAffineAddRec().value();
-                    int new_boundary_num;
-                    const int suf = static_cast<int>(unroll_factor);
-                    // TODO: 按 raw_boundary_num - remainder 来算？
-                    if (is_dowhile) {
-                        new_boundary_num = base + step * suf * (trip_countn / suf - 1) + (step>0?-1:1);
-                    } else {
-                        new_boundary_num = base + step * suf * (trip_countn / suf) + (step>0?-1:1);
+                    // TODO: Maybe unused
+                    int real_base;
+                    {
+                        bool assigned = false;
+                        for (auto user : iter_variable->users()) {
+                            if (auto uinst = user->as<Instruction>(); uinst->getOpcode() == OP::PHI && uinst->getParent() == loop->getHeader()) {
+                                auto uphi = uinst->as<PHIInst>();
+                                auto upos = uphi->getPhiOpers();
+                                if (upos.size() != 2) {
+                                    Err::error("Loop's iter variable's PHI has more than 2 incoming values!");
+                                    option.disable();
+                                    return;
+                                }
+
+                                for (const auto& [v, b]: upos) {
+                                    if (v != iter_variable) {
+                                        if (!v->is<ConstantInt>()) {
+                                            Err::unreachable();
+                                        }
+                                        real_base = v->as<ConstantInt>()->getVal();
+                                        assigned = true;
+                                        break;
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                        
+                        if (!assigned) {
+                            Err::unreachable();
+                            Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable's base.");
+                            option.disable();
+                            return;
+                        }
                     }
-                    auto new_boundary_value = FC.getConst(new_boundary_num);
-                    Logger::logDebug("[LoopUnroll] Get base: "+ std::to_string(base) + ", step: "+ std::to_string(step) + ", new_boundary_num: "+ std::to_string(new_boundary_num));
 
+                    // const int suf = static_cast<int>(unroll_factor);
+                    // if (is_dowhile) {
+                    //     new_boundary_num = base + step * suf * (trip_countn / suf - 1) + (step>0?-1:1);
+                    // } else {
+                    //     new_boundary_num = base + step * suf * (trip_countn / suf) + (step>0?-1:1);
+                    // }
+
+                    int raw_boundary_num = raw_boundary_value->as<ConstantInt>()->getVal();
+                    int new_boundary_num = raw_boundary_num - step * static_cast<int>(remainder);
+                    Logger::logDebug("[LoopUnroll] Get base: "+ std::to_string(real_base) + ", step: "+ std::to_string(step) + ", new_boundary_num: "+ std::to_string(new_boundary_num));
+
+                    auto new_boundary_value = FC.getConst(new_boundary_num);
                     option.set_remainder(remainder, raw_boundary_value, new_boundary_value);
                 }
             }
@@ -254,7 +289,7 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
                     option.disable();
                     return;
                 }
-                auto [_unused_baseE, stepE] = trecp->getAffineAddRec().value();
+                auto [fake_baseE, stepE] = trecp->getAffineAddRec().value();
                 if (!stepE->isIRValue() || !stepE->getIRValue()->is<ConstantInt>()) {
                     Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's step is not constant.");
                     option.disable();
@@ -674,18 +709,19 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                 if (option.raw_boundary_value != option.new_boundary_value)
                     icmp->replaceAllOperands(option.raw_boundary_value, option.new_boundary_value);
                 // 此处给展开循环的判断条件改为非等，防止多执行
-                // TODO: 感觉不需要了？什么时候关掉测试一下
                 switch (icmp->getCond()) {
-                    case ICMPOP::sgt:
                     case ICMPOP::sge:
                         icmp->cond = ICMPOP::sgt;
                         break;
-                    case ICMPOP::slt:
                     case ICMPOP::sle:
                         icmp->cond = ICMPOP::slt;
                         break;
+                    case ICMPOP::sgt:
+                    case ICMPOP::slt:
+                    case ICMPOP::ne:
+                        break;
                     default:
-                        Err::unreachable();
+                        Err::unreachable("ICMPOP::eq!");
                 }
             } else {
                 Err::unreachable();
