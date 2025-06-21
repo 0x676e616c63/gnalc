@@ -1,14 +1,16 @@
 #include "ir/passes/transforms/loop_unroll.hpp"
 #include "ir/base.hpp"
 #include "ir/block_utils.hpp"
+#include "ir/constant.hpp"
 #include "ir/formatter.hpp"
 #include "ir/instruction.hpp"
 #include "ir/instructions/compare.hpp"
 #include "ir/instructions/phi.hpp"
-#include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
+#include "ir/type_alias.hpp"
 #include "utils/exception.hpp"
+#include "utils/logger.hpp"
 #include <algorithm>
 
 
@@ -43,8 +45,10 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
         return;
     }
 
+    auto is_dowhile = loop->isExiting(loop->getLatch());
+
     // 不处理中间退出的循环
-    if (!loop->isExiting(loop->getHeader()) && !loop->isExiting(loop->getLatch())) {
+    if (!loop->isExiting(loop->getHeader()) && !is_dowhile) {
         Logger::logInfo("[LoopUnroll] Unroll disabled because the loop exits from the middle.");
         option.disable();
         return;
@@ -72,6 +76,36 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
         return;
     }
 
+    auto GetIterVarAndBoundary = [](const pLoop &_loop, pVal &_iter_variable, pVal &_boundary) -> bool {
+        if (_loop->getExitingBlocks().size() == 1) {
+            auto exiting_br_cond = (*_loop->getExitingBlocks().begin())->getBRInst()->getCond();
+            if (exiting_br_cond->is<ICMPInst>()) {
+                auto icmp = exiting_br_cond->as<ICMPInst>();
+                bool lhs_is_var = !_loop->isTriviallyInvariant(icmp->getLHS());
+                bool rhs_is_var = !_loop->isTriviallyInvariant(icmp->getRHS());
+                if (lhs_is_var && rhs_is_var) {
+                    Err::not_implemented("Both handles are variable.");
+                } else if (lhs_is_var) {
+                    _iter_variable = icmp->getLHS();
+                    _boundary = icmp->getRHS();
+                    return true;
+                } else if (rhs_is_var) {
+                    _iter_variable = icmp->getRHS();
+                    _boundary = icmp->getLHS();
+                    return true;
+                } else {
+                    Err::unreachable();
+                }
+            } else {
+                Logger::logInfo("[LoopUnroll] GetIterVarAndBoundary: The loop's exit condition is not ICMPInst.");
+            }
+        } else {
+            Err::not_implemented();
+            Logger::logInfo("[LoopUnroll] GetIterVarAndBoundary: The loop has multiple exits.");
+        }
+        return false;
+    };
+
     if (TC->isIRValue() && TC->getIRValue()->is<ConstantInt>()) {
         // 常量展开策略
         const auto trip_countn = TC->getIRValue()->as<ConstantInt>()->getVal();
@@ -94,28 +128,28 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
 
         // For partially unroll
         if (ENABLE_PARTIALLY_UNROLL) {
+            // TODO: May need optimize: 4n?
             // Calculate unroll factor
-            /// TODO: May need optimize
-            auto unroll_factor = PUS / inst_size;
-            if (unroll_factor == 0) {
-                Logger::logInfo("[LoopUnroll] Unroll disabled because the unroll_factor is 0!");
+            auto unroll_factor = std::min(PUS / inst_size, PUC);
+            if (unroll_factor < 2) {
+                Logger::logInfo("[LoopUnroll] Partially unroll disabled because the unroll_factor is less than 2.");
                 option.disable();
                 return;
             }
-            unroll_factor = std::min(unroll_factor, PUC);
-            unsigned remainder = trip_countn % unroll_factor;
-
             if (trip_countn < unroll_factor) {
                 Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's trip count < unroll_factor, may need to fully unroll?");
                 option.disable();
                 return;
             }
+            
+            unsigned remainder = trip_countn % unroll_factor;
 
             Logger::logInfo("[LoopUnroll] Partially unrolling: factor: " + std::to_string(unroll_factor) + ", remainder: " + std::to_string(remainder) + ", trip_count: " + std::to_string(trip_countn));
             option.enable_partially(unroll_factor);
 
             if (remainder != 0) {
                 {
+                    // TODO: FIX
                     // Check if loop's exit condition is eq or ne
                     if (auto eb = loop->getExitingBlocks(); eb.size() == 1) {
                         if (auto cd = eb.begin()->get()->getBRInst()->getCond()->as<Instruction>(); cd->getOpcode() == OP::ICMP) {
@@ -136,31 +170,8 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
                     // Calculate new boundary
                     /// TODO: Why need both boundray+-1 and >= to >(or <= to <)?
                     pVal iter_variable, raw_boundary_value;
-                    if (loop->getExitingBlocks().size() == 1) {
-                        auto exiting_br_cond = (*loop->getExitingBlocks().begin())->getBRInst()->getCond();
-                        if (exiting_br_cond->is<ICMPInst>()) {
-                            auto icmp = exiting_br_cond->as<ICMPInst>();
-                            bool lhs_is_var = !loop->isTriviallyInvariant(icmp->getLHS());
-                            bool rhs_is_var = !loop->isTriviallyInvariant(icmp->getRHS());
-                            if (lhs_is_var && rhs_is_var) {
-                                Err::not_implemented("Both handles are variable.");
-                            } else if (lhs_is_var) {
-                                iter_variable = icmp->getLHS();
-                                raw_boundary_value = icmp->getRHS();
-                            } else if (rhs_is_var) {
-                                iter_variable = icmp->getRHS();
-                                raw_boundary_value = icmp->getLHS();
-                            } else {
-                                Err::unreachable();
-                            }
-                        } else {
-                            Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's exit condition is not ICMPInst.");
-                            option.disable();
-                            return;
-                        }
-                    } else {
-                        Err::not_implemented();
-                        Logger::logInfo("[LoopUnroll] Unroll disabled because the loop has multiple exits.");
+                    if (!GetIterVarAndBoundary(loop, iter_variable, raw_boundary_value)) {
+                        Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable and boundary.");
                         option.disable();
                         return;
                     }
@@ -188,14 +199,15 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
                     auto [base, step] = trecp->getConstantAffineAddRec().value();
                     int new_boundary_num;
                     const int suf = static_cast<int>(unroll_factor);
-                    // 或许可以按 raw_boundary_num - step * unroll_factor 来算？
-                    if (loop->isExiting(loop->getLatch())) {
+                    // TODO: 按 raw_boundary_num - remainder 来算？
+                    if (is_dowhile) {
                         new_boundary_num = base + step * suf * (trip_countn / suf - 1) + (step>0?-1:1);
                     } else {
                         new_boundary_num = base + step * suf * (trip_countn / suf) + (step>0?-1:1);
                     }
-                    Logger::logDebug("[LoopUnroll] Get base: "+ std::to_string(base) + ", step: "+ std::to_string(step) + ", new_boundary_num: "+ std::to_string(new_boundary_num));
                     auto new_boundary_value = FC.getConst(new_boundary_num);
+                    Logger::logDebug("[LoopUnroll] Get base: "+ std::to_string(base) + ", step: "+ std::to_string(step) + ", new_boundary_num: "+ std::to_string(new_boundary_num));
+
                     option.set_remainder(remainder, raw_boundary_value, new_boundary_value);
                 }
             }
@@ -208,7 +220,74 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
     } else {
         // 变量展开策略
         if (ENABLE_RUNTIME_UNROLL) {
+            // Calculate unroll factor
+            auto unroll_factor = std::min(RUS / inst_size, RUC);
+            if (unroll_factor < 2) {
+                Logger::logInfo("[LoopUnroll] Runtime unroll disabled because the unroll_factor is less than 2.");
+                option.disable();
+                return;
+            }
+            Logger::logDebug("[LoopUnroll] Runtime unrolling: factor: " + std::to_string(unroll_factor));
+
+            // Get boundary and iter variable
+            pVal iter_variable, raw_boundary_value;
+            if (!GetIterVarAndBoundary(loop, iter_variable, raw_boundary_value)) {
+                Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable and boundary.");
+                option.disable();
+                return;
+            }
+            Logger::logDebug("[LoopUnroll] Get iter variable: "+ IRFormatter::formatValue(*iter_variable));
+            Logger::logDebug("[LoopUnroll] Get raw boundary value: "+ IRFormatter::formatValue(*raw_boundary_value));
+
+            // Get Step and Base
+            int stepN;
+            pVal baseV;
+            {
+                auto trecp = SCEVH.getSCEVAtBlock(iter_variable, iter_variable->as<Instruction>()->getParent());
+                if (!trecp) {
+                    Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable's TREC.");
+                    option.disable();
+                    return;
+                }
+                if (!trecp->isAddRec()) {
+                    Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's iter_variable's TREC is not AddRec.");
+                    option.disable();
+                    return;
+                }
+                auto [_unused_baseE, stepE] = trecp->getAffineAddRec().value();
+                if (!stepE->isIRValue() || !stepE->getIRValue()->is<ConstantInt>()) {
+                    Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's step is not constant.");
+                    option.disable();
+                    return;
+                }
+                stepN = stepE->getIRValue()->as<ConstantInt>()->getVal();
+                for (auto user : iter_variable->users()) {
+                    if (auto uinst = user->as<Instruction>(); uinst->getOpcode() == OP::PHI && uinst->getParent() == loop->getHeader()) {
+                        auto uphi = uinst->as<PHIInst>();
+                        auto upos = uphi->getPhiOpers();
+                        if (upos.size() != 2) {
+                            Err::error("Loop's iter variable's PHI has more than 2 incoming values!");
+                            option.disable();
+                            return;
+                        }
+                        for (const auto& [v, b]: upos) {
+                            if (v != iter_variable) {
+                                baseV = v;
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            Logger::logDebug("[LoopUnroll] Get step: "+ std::to_string(stepN) + ", base: "+ IRFormatter::formatValue(*baseV));
+
+            int new_stepN = stepN * static_cast<int>(unroll_factor);
+            Logger::logDebug("[LoopUnroll] New step: "+ std::to_string(new_stepN));
+
+
             // TODO
+            
         }
 
         Logger::logInfo("[LoopUnroll] Needs to runtime unroll but disabled...");
@@ -776,6 +855,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
     }
 
     // process runtime unroll
+    // Add prologue and epilogue for runtime unroll
 
     // optimize new cfg...
     func.updateAndCheckCFG();

@@ -26,6 +26,7 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
     static constexpr unsigned RUS = Config::IR::LOOP_UNROLLING_RUNTIME_UNROLL_SIZE; // 运行时展开后最大大小
     static constexpr unsigned RUC = Config::IR::LOOP_UNROLLING_RUNTIME_UNROLL_COUNT; // 运行时展开最大次数
     static constexpr unsigned MPS = Config::IR::LOOP_UNROLLING_MAX_PROCESS_SIZE; // 执行展开的最大循环大小，至多为上述各个 size 的 1/2
+    // TODO: Runtime Unroll 成本控制（最小展开大小等）
     static constexpr bool ENABLE_PEELING = false;
     static constexpr bool ENABLE_FULLY_UNROLL = true;
     static constexpr bool ENABLE_PARTIALLY_UNROLL = true;
@@ -51,7 +52,8 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
         pVal new_boundary_value = nullptr; // New boundary value in main loop
 
         // For runtime unroll
-        std::vector<pInst> cnb_insts; // Instructions for calculating new boundary
+        std::vector<pInst> prologue_insts;
+        std::vector<pInst> epilogue_insts;
 
         // // For cost analysis
         // unsigned raw_size = 0;
@@ -88,22 +90,23 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
             // estimated_unroll_size = _count * raw_size;
         }
 
-        void set_remainder(const unsigned _remainder, const pVal& _rawbv, const pVal &_newbv, std::vector<pInst> _cnbinsts = {}) {
+        void set_remainder(const unsigned _remainder, const pVal& _rawbv, const pVal &_newbv) {
             Err::gassert(unroll_type == UnrollType::PARTIALLY || unroll_type == UnrollType::RUNTIME
                 , "UnrollOption: set_remainder(): unroll_type is not PARTIALLY or RUNTIME.");
             has_remainder = (_remainder!=0);
             remainder = _remainder;
             raw_boundary_value = _rawbv;
             new_boundary_value = _newbv;
-            cnb_insts = std::move(_cnbinsts);
             // estimated_unroll_size += raw_size;
         }
 
-        void enable_runtime(const unsigned _count) {
+        void enable_runtime(const unsigned _count, std::vector<pInst> &&_prologue_insts, std::vector<pInst> &&_epilogue_insts) {
             unroll = true;
             unroll_type = UnrollType::RUNTIME;
             unroll_count = _count;
             has_remainder = true;
+            prologue_insts = std::move(_prologue_insts);
+            epilogue_insts = std::move(_epilogue_insts);
         }
 
         [[nodiscard]] bool fully() const { return unroll_type == UnrollType::FULLY; }
