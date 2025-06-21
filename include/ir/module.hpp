@@ -10,17 +10,17 @@
 #include <memory>
 
 namespace Parser {
-class CFGBuilder;
 class IRGenerator;
 } // namespace Parser
 
 namespace IR {
+class BuildCFGPass;
 /**
  * @brief 此处默认无需考虑全局变量与函数之间的相对位置
  */
 class Module : public NameC {
-    friend class Parser::CFGBuilder;
     friend class Parser::IRGenerator;
+    friend class CFGBuilder;
 
 private:
     // Keep `constant_pool` the first member to make it destructs last
@@ -29,6 +29,7 @@ private:
 
     std::vector<pGlobalVar> global_vars;
     std::vector<pFunc> funcs;
+    std::vector<pLFunc> linear_funcs;
     std::vector<pFuncDecl> func_decls;
 
 public:
@@ -45,6 +46,11 @@ public:
     void addFunction(pFunc func);
     const std::vector<pFunc> &getFunctions() const;
     bool delFunction(const pFunc &target);
+
+    void addLinearFunction(pLFunc func);
+    const std::vector<pLFunc> &getLinearFunctions() const;
+    bool delLinearFunction(const pLFunc &target);
+
 
     void addFunctionDecl(pFuncDecl func);
     const std::vector<pFuncDecl> &getFunctionDecls() const;
@@ -65,6 +71,8 @@ public:
     iterator end();
     const_iterator cbegin() const;
     const_iterator cend() const;
+
+    size_t getInstCount() const;
 
     void accept(IRVisitor &visitor);
     ~Module() = default;

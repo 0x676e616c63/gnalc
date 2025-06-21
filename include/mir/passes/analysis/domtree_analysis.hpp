@@ -1,6 +1,6 @@
 #pragma once
-#ifndef GNALC_MIR_PASSES_ANALYSIS_DOMTREE_ANALYSIS_HPP
-#define GNALC_MIR_PASSES_ANALYSIS_DOMTREE_ANALYSIS_HPP
+#ifndef GNALC_ARMV8_MIR_PASSES_ANALYSIS_DOMTREE_ANALYSIS_HPP
+#define GNALC_ARMV8_MIR_PASSES_ANALYSIS_DOMTREE_ANALYSIS_HPP
 
 #include "graph/domtree.hpp"
 #include "mir/passes/pass_manager.hpp"
@@ -9,41 +9,42 @@
 #include <vector>
 
 namespace Graph {
-template<>
-struct GraphInfo<MIR::BasicBlock*> {
-    using NodeT = MIR::BasicBlock*;
-    static std::vector<MIR::BasicBlock *> getPreds(const MIR::BasicBlock *bb) {
-        std::vector<MIR::BasicBlock *> ret;
-        auto preds = bb->getPreds();
+template <> struct GraphInfo<MIR_new::MIRBlk *> {
+    using NodeT = MIR_new::MIRBlk *;
+    static std::vector<MIR_new::MIRBlk *> getPreds(const MIR_new::MIRBlk *bb) {
+        std::vector<MIR_new::MIRBlk *> ret;
+        auto preds = bb->preds();
         for (const auto &r : preds)
             ret.emplace_back(r.get());
         return ret;
     }
-    static std::vector<MIR::BasicBlock *> getSuccs(const MIR::BasicBlock *bb) {
-        std::vector<MIR::BasicBlock *> ret;
-        auto succs = bb->getSuccs();
+    static std::vector<MIR_new::MIRBlk *> getSuccs(const MIR_new::MIRBlk *bb) {
+        std::vector<MIR_new::MIRBlk *> ret;
+        auto succs = bb->succs();
         for (const auto &r : succs)
             ret.emplace_back(r.get());
         return ret;
     }
 };
-}
+} // namespace Graph
 
-namespace MIR {
+namespace MIR_new {
+
 namespace detail {
-using DomTreeBuilder = Graph::GenericDomTreeBuilder<BasicBlock*, false>;
+using DomTreeBuilder = Graph::GenericDomTreeBuilder<MIRBlk *, false>;
 } // namespace detail
-using DomTree = Graph::GenericDomTree<BasicBlock*, false>;
+
+using DomTree = Graph::GenericDomTree<MIRBlk *, false>;
 
 class DomTreeAnalysis : public PM::AnalysisInfo<DomTreeAnalysis> {
 public:
     using Result = DomTree;
-    DomTree run(Function &f, FAM &fam);
+    DomTree run(MIRFunction &f, FAM &fam);
 
 private:
     friend AnalysisInfo<DomTreeAnalysis>;
     static PM::UniqueKey Key;
 };
-} // namespace IR
+} // namespace MIR_new
 
 #endif

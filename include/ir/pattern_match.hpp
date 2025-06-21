@@ -4,9 +4,12 @@
 
 #include "base.hpp"
 #include "constant.hpp"
-#include "pattern_match/pattern_match.hpp"
 #include "instructions/binary.hpp"
 #include "instructions/control.hpp"
+#include "instructions/converse.hpp"
+#include "instructions/memory.hpp"
+#include "instructions/vector.hpp"
+#include "pattern_match/pattern_match.hpp"
 
 using namespace PatternMatch;
 namespace IR::M {
@@ -61,7 +64,7 @@ inline auto Bind(float &a) { return ClassMatchBind<ConstantFloat, float, Constan
 
 // Imagine something like
 //
-//   match(inst, M::Sub(M::VBind(x), M::Is(x))
+//   match(inst, M::Sub(M::Bind(x), M::Is(x))
 //
 // Though the evaluation order in C++ is undefined, and the `M::Is` can be invoked first,
 // that doesn't matter. Because the Binding (`M::VBind`) and predicate (`M::Is`) expressions
@@ -69,16 +72,24 @@ inline auto Bind(float &a) { return ClassMatchBind<ConstantFloat, float, Constan
 // not during expression construction.
 //
 // Also, in `InstMatch`, parameters are matched in the order they appear in the `match()` expression,
-// which guarantees `M::VBind` operations execute before dependent `M::Is` checks.
+// which guarantees `M::Bind` operations execute before dependent `M::Is` checks.
 // This, however, requires the `M::Is` to take a reference as its parameter
 // and transfer that reference to the predicate. Thus, when `M::Is`'s predicate is invoked
-// by `InstMatch::match`, the desired value has already been bound by `M::VBind`.
+// by `InstMatch::match`, the desired value has already been bound by reference in `M::Bind`.
 inline auto Is(const Value *&v) {
     return ClassMatchIf<Value>{[&v](const Value &b) { return v == &b; }};
 }
 
 inline auto Is(const pVal &v) {
     return ClassMatchIf<Value>{[&v](const Value &b) { return v.get() == &b; }};
+}
+
+inline auto Is(const Instruction *&v) {
+    return ClassMatchIf<Instruction>{[&v](const Value &b) { return v == &b; }};
+}
+
+inline auto Is(const pInst &v) {
+    return ClassMatchIf<Instruction>{[&v](const Value &b) { return v.get() == &b; }};
 }
 
 inline auto Is(const bool &a) {
@@ -111,7 +122,7 @@ struct IRInstInfo {
     };
 };
 
-// Match Inst and Operand
+// Match Inst and Operand, with compile-time checks for instruction operand patterns.
 #define MAKE_INST_MATCH2(pattern_name, opcode, num0, num1)                                                             \
     template <typename... OperandPatterns> auto pattern_name(OperandPatterns &&...ops) {                               \
         static_assert(sizeof...(OperandPatterns) == (num0) || sizeof...(OperandPatterns) == (num1),                    \
@@ -137,24 +148,35 @@ MAKE_INST_MATCH(Mul, MUL, 2)
 MAKE_INST_MATCH(Fmul, FMUL, 2)
 MAKE_INST_MATCH(Div, DIV, 2)
 MAKE_INST_MATCH(Fdiv, FDIV, 2)
-MAKE_INST_MATCH(Rem, REM, 2)
+MAKE_INST_MATCH(Rem, SREM, 2)
+MAKE_INST_MATCH(Urem, UREM, 2)
 MAKE_INST_MATCH(Frem, FREM, 2)
+MAKE_INST_MATCH(And, AND, 2)
+MAKE_INST_MATCH(Or, OR, 2)
+MAKE_INST_MATCH(Xor, XOR, 2)
+MAKE_INST_MATCH(Shl, SHL, 2)
+MAKE_INST_MATCH(Lshr, LSHR, 2)
+MAKE_INST_MATCH(Ashr, ASHR, 2)
 MAKE_INST_MATCH(Alloca, ALLOCA, 0)
-MAKE_INST_MATCH(Load, LOAD, 2)
+MAKE_INST_MATCH(Load, LOAD, 1)
 MAKE_INST_MATCH(Store, STORE, 2)
 MAKE_INST_MATCH_ANY(Gep, GEP)
 MAKE_INST_MATCH(Fptosi, FPTOSI, 1)
 MAKE_INST_MATCH(Sitofp, SITOFP, 1)
 MAKE_INST_MATCH(Zext, ZEXT, 1)
+MAKE_INST_MATCH(Sext, SEXT, 1)
 MAKE_INST_MATCH(Bitcast, BITCAST, 1)
 MAKE_INST_MATCH(Icmp, ICMP, 2)
 MAKE_INST_MATCH(Fcmp, FCMP, 2)
+MAKE_INST_MATCH(Extract, EXTRACT, 2)
+MAKE_INST_MATCH(Insert, INSERT, 3)
+MAKE_INST_MATCH(Shuffle, SHUFFLE, 3)
+MAKE_INST_MATCH(Select, SELECT, 3)
 MAKE_INST_MATCH_ANY(Phi, PHI)
 MAKE_INST_MATCH_ANY(Call, CALL)
 
 #undef MAKE_INST_MATCH
 #undef MAKE_INST_MATCH2
 #undef MAKE_INST_MATCH_ANY
-
 } // namespace IR::M
 #endif // GNALC_IR_PATTERN_PATTERN_MATCH_HPP

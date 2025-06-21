@@ -1,24 +1,49 @@
 #include "ir/function.hpp"
 #include "ir/visitor.hpp"
+#include "sir/visitor.hpp"
 
 #include <algorithm>
 #include <map>
 #include <numeric>
+#include <utility>
 
 namespace IR {
 FunctionDecl::FunctionDecl(std::string name_, std::vector<pType> params, pType ret_type, bool is_va_arg_,
-                           bool is_builtin_, bool is_sylib_)
+                           std::unordered_set<FuncAttr> attrs)
     : Value(std::move(name_), makeFunctionType(std::move(params), std::move(ret_type), is_va_arg_),
             ValueTrait::FUNCTION),
-      is_builtin(is_builtin_), is_sylib(is_sylib_) {
-    Err::gassert(!is_builtin_ || !is_sylib_);
+      func_attrs(std::move(attrs)) {
+    Err::gassert(!(hasAttr(FuncAttr::isSylib) && hasAttr(FuncAttr::isIntrinsic)));
+    Err::gassert(!(hasAttr(FuncAttr::builtinMemReadOnly) && hasAttr(FuncAttr::builtinMemWriteOnly)));
+
+    // user defined functions
+    if (func_attrs.empty())
+        func_attrs.emplace(FuncAttr::NotBuiltin);
 }
+
+bool FunctionDecl::isRecursive() const {
+    for (const auto &inst_user : inst_users()) {
+        auto call = inst_user->as<CALLInst>();
+        Err::gassert(call != nullptr);
+        auto caller_bb = call->getParent();
+        if (caller_bb == nullptr)
+            continue;
+        auto caller_func = caller_bb->getParent();
+        if (caller_func.get() == this)
+            return true;
+    }
+    return false;
+}
+
+bool FunctionDecl::hasAttr(FuncAttr attr) const { return func_attrs.count(attr); }
+void FunctionDecl::addAttr(FuncAttr attr) { func_attrs.emplace(attr); }
+const std::unordered_set<FuncAttr> &FunctionDecl::getAttrs() const { return func_attrs; }
 
 void FunctionDecl::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
-bool FunctionDecl::isSylib() const { return is_sylib; }
+bool FunctionDecl::isSylib() const { return hasAttr(FuncAttr::isSylib); }
 
-bool FunctionDecl::isBuiltin() const { return is_builtin; }
+bool FunctionDecl::isIntrinsic() const { return hasAttr(FuncAttr::isIntrinsic); }
 
 void FunctionDecl::setParent(Module *module) { parent = module; }
 
@@ -33,9 +58,10 @@ std::vector<pType> get_params_type(const std::vector<pFormalParam> &p) {
     return params_type;
 }
 
-Function::Function(std::string name_, const std::vector<pFormalParam> &params_, pType ret_type, ConstantPool *pool_)
-    : FunctionDecl(std::move(name_), get_params_type(params_), std::move(ret_type), false, false, false),
-      params(params_), constant_pool(pool_) {}
+Function::Function(std::string name_, const std::vector<pFormalParam> &params_, pType ret_type, ConstantPool *pool_,
+                   std::unordered_set<FuncAttr> attrs)
+    : FunctionDecl(std::move(name_), get_params_type(params_), std::move(ret_type), false, attrs), params(params_),
+      constant_pool(pool_) {}
 
 void Function::addBlock(iterator it, pBlock blk) {
     Err::gassert(blk->getParent() == nullptr, "BasicBlock already has parent.");
@@ -204,6 +230,15 @@ void Function::updateAndCheckCFG() {
     }
 }
 
+bool Function::removeParam(size_t index) {
+    Err::gassert(index < params.size() && params[index]->getUseCount() == 0);
+    params.erase(params.begin() + index);
+    size_t i = 0;
+    for (const auto &param : params)
+        param->setIndex(i++);
+    return true;
+}
+
 void Function::updateBBIndex() {
     size_t i = 0;
     for (const auto &blk : blks) {
@@ -221,6 +256,8 @@ void Function::updateAllIndex() {
 
 // FIXME: BB PARAM not available
 pVal Function::cloneImpl() const {
+    static size_t name_cnt = 0;
+
     // left is old, right is new
     std::map<pBlock, pBlock> old2new_bb;
     std::map<pInst, pInst> old2new_inst;
@@ -237,7 +274,7 @@ pVal Function::cloneImpl() const {
         std::make_shared<Function>(getName(), cloned_params, getType()->as<FunctionType>()->getRet(), constant_pool);
 
     for (const auto &blk : blks) {
-        auto cloned_bb = std::make_shared<BasicBlock>(blk->getName() + ".cloned");
+        auto cloned_bb = std::make_shared<BasicBlock>(blk->getName() + ".dup" + std::to_string(name_cnt++));
         for (auto &phi : blk->phis()) {
             auto cloned_phi = makeClone(phi);
             cloned_bb->addPhiInst(cloned_phi);
@@ -285,7 +322,7 @@ pVal Function::cloneImpl() const {
                     use->setValue(old2new_inst[usee_inst]);
                 }
             }
-            inst->setName(inst->getName() + ".cloned");
+            inst->setName(inst->getName() + ".dup" + std::to_string(name_cnt++));
         }
     }
     cloned_fn->updateAllIndex();
@@ -294,13 +331,70 @@ pVal Function::cloneImpl() const {
 
 void Function::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
-void LinearFunction::addInst(pInst inst) { insts.emplace_back(std::move(inst)); }
+LinearFunction::LinearFunction(std::string name_, const std::vector<pFormalParam> &params_, pType ret_type,
+                               ConstantPool *pool_)
+    : FunctionDecl(std::move(name_), get_params_type(params_), std::move(ret_type), false, {}), params(params_),
+      constant_pool(pool_) {}
 
-void LinearFunction::appendInsts(std::vector<pInst> insts_) {
+void LinearFunction::addInst(pInst inst) {
+    inst->index = insts.size();
+    insts.emplace_back(std::move(inst));
+}
+
+void LinearFunction::addInst(iterator it, const pInst &inst) {
+    Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
+    insts.insert(it, inst);
+    inst_index_valid = false;
+}
+void LinearFunction::addInst(size_t index, const pInst &inst) {
+    Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
+    auto it = std::next(insts.begin(), static_cast<decltype(insts)::iterator::difference_type>(index));
+    insts.insert(it, inst);
+    inst_index_valid = false;
+}
+
+void LinearFunction::appendInsts(std::list<pInst> insts_) {
+    size_t i = insts.size();
+    for (auto &inst : insts_) {
+        inst->index = i++;
+    }
     insts.insert(insts.end(), std::make_move_iterator(insts_.begin()), std::make_move_iterator(insts_.end()));
 }
 
-const std::vector<pInst> &LinearFunction::getInsts() const { return insts; }
+size_t LinearFunction::getInstCount() const {
+    size_t i = 0;
+    for (const auto &inst : insts) {
+        if (auto if_inst = inst->as<IFInst>())
+            i += if_inst->getInstCount();
+        else if (auto while_inst = inst->as<WHILEInst>())
+            i += while_inst->getInstCount();
+        else if (auto for_inst = inst->as<FORInst>())
+            i += for_inst->getInstCount();
+        else
+            i++;
+    }
+    return i;
+}
+
+const std::vector<pFormalParam> &LinearFunction::getParams() const { return params; }
+ConstantPool &LinearFunction::getConstantPool() { return *constant_pool; }
+
+bool LinearFunction::delFirstOfInst(const pInst &inst) {
+    for (auto it = insts.begin(); it != insts.end(); ++it) {
+        if (*it == inst) {
+            insts.erase(it);
+            inst_index_valid = false;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool LinearFunction::delInst(const pInst &target) {
+    return delInstIf([&target](const auto &inst) { return inst == target; });
+}
+
+const std::list<pInst> &LinearFunction::getInsts() const { return insts; }
 
 LinearFunction::const_iterator LinearFunction::begin() const { return insts.begin(); }
 
@@ -327,4 +421,20 @@ LinearFunction::const_reverse_iterator LinearFunction::crbegin() const { return 
 LinearFunction::const_reverse_iterator LinearFunction::crend() const { return insts.crend(); }
 
 void LinearFunction::accept(IRVisitor &visitor) { visitor.visit(*this); }
+void LinearFunction::accept(SIR::Visitor &visitor) {
+    visitor.visit(*this);
+}
+void LinearFunction::accept(SIR::LookBehindVisitor &visitor) {
+    visitor.visit(SIR::LookBehindVisitor::PrevInfo::makeInitial(), *this);
+}
+
+void LinearFunction::updateInstIndex() const {
+    if (inst_index_valid)
+        return;
+
+    size_t i = 0;
+    for (const auto &inst : insts) {
+        inst->index = i++;
+    }
+}
 } // namespace IR

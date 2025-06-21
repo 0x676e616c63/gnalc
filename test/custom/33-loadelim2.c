@@ -1,32 +1,9 @@
-int k;
-
-float params_fa40(float x0[], float x1[]) {
-  float arr[10] = {
-      x0[k] + x1[k]};
-  if (0) {
-    return k;
-  } else {
-    return params_fa40(x0, x0);
-  }
-}
-
-int params_mix(float x3[]) {
-  float arr[10] = {x3[k]};
-  if (0) {
-    return k;
-  } else {
-    return params_mix(arr);
-  }
-}
-
-int main() {
-  float arr[40][3];
-
-  k = getint();
-
-  float ret2 = params_fa40(
-      arr[0], arr[1]);
-  int ret3 = params_mix(arr[1]);
-
-  return 0;
+//test array define
+int main(){
+    int a[4][2] = {};
+    int b[4][2] = {1, 2, 3, 4, 5, 6, 7, 8};
+    int c[4][2] = {{1, 2}, {3, 4}, {5, 6}, {7, 8}};
+    int d[4][2] = {1, 2, {3}, {5}, 7 , 8};
+    int e[4][2] = {{d[2][1], c[2][1]}, {3, 4}, {5, 6}, {7, 8}};
+    return e[3][1] + e[0][0] + e[0][1] + a[2][0];
 }

@@ -38,6 +38,8 @@ public:
         }
         return nullptr;
     }
+
+    size_t getDepth() const { return table.size(); }
 };
 } // namespace Parser
 

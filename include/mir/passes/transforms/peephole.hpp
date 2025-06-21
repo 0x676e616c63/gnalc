@@ -1,14 +1,92 @@
 #pragma once
-#ifndef GNALC_MIR_PASSES_TRANSFORMS_PEEPHOLE_HPP
-#define GNALC_MIR_PASSES_TRANSFORMS_PEEPHOLE_HPP
+#ifndef GNALC_ARMV8_MIR_TRANSFORMS_PEEPHOLE_HPP
+#define GNALC_ARMV8_MIR_TRANSFORMS_PEEPHOLE_HPP
 
 #include "mir/passes/pass_manager.hpp"
 
-namespace MIR {
-class PeepHolePass : public PM::PassInfo<PeepHolePass> {
+namespace MIR_new {
+
+///@note 某些一眼丁真的优化
+
+class GenericPeephole : public PM::PassInfo<GenericPeephole> {
 public:
-    PM::PreservedAnalyses run(Function &function, FAM &manager);
+    enum Stage : uint32_t { AfterIsel, AfterRa, AfterPostLegalize } stage;
+
+public:
+    explicit GenericPeephole(Stage _stage) : stage(_stage) {}
+
+    PM::PreservedAnalyses run(MIRFunction &, FAM &);
 };
 
-} // namespace MIR
+class GenericPeepholeImpl {
+public:
+    struct MatchInfo {
+        MIRInst_p minst;
+        MIRInst_p_l &minsts;
+        MIRInst_p_l::iterator &iter; // handle del carefully
+
+        MatchInfo(MIRInst_p _minst, MIRInst_p_l &_minsts, MIRInst_p_l::iterator &_iter)
+            : minst(std::move(_minst)), minsts(_minsts), iter(_iter) {}
+
+        MatchInfo(MatchInfo &&) = delete;
+        MatchInfo(const MatchInfo &) = delete;
+
+        MatchInfo &operator=(MatchInfo &&) = delete;
+        MatchInfo &operator=(const MatchInfo &) = delete;
+
+        template <size_t I> auto &get() {
+            if constexpr (I == 0) {
+                return minst;
+            } else if constexpr (I == 1) {
+                return minsts;
+            } else if constexpr (I == 2) {
+                return iter;
+            }
+        }
+
+        template <size_t I> const auto &get() const {
+            if constexpr (I == 0) {
+                return minst;
+            } else if constexpr (I == 1) {
+                return minsts;
+            } else if constexpr (I == 2) {
+                return iter;
+            }
+        }
+    };
+
+private:
+    using Stage = GenericPeephole::Stage;
+
+    MIRFunction *mfunc;
+    FAM *fam;
+    Stage stage;
+
+public:
+    void impl(MIRFunction &, FAM &, Stage);
+    bool runOnBlk(MIRBlk_p &);
+
+private:
+    // inst matches
+    bool matchNop(MatchInfo &);        // after ra
+    bool matchArithmetic(MatchInfo &); // after isel
+    bool matchMA(MatchInfo &);         // after isel ( MA = Multiple and Accumulate)
+    bool matchSelect(MatchInfo &);     // after isel
+    bool matchRTZ(MatchInfo &);        // after isel
+    bool matchFusedAdr(MatchInfo &);   // after stack generate
+
+    bool removeByReference(MatchInfo &);
+};
+}; // namespace MIR_new
+
+namespace std {
+
+template <> struct tuple_size<MIR_new::GenericPeepholeImpl::MatchInfo> : integral_constant<std::size_t, 3> {};
+
+template <size_t I> struct tuple_element<I, MIR_new::GenericPeepholeImpl::MatchInfo> {
+    using type = decltype((declval<MIR_new::GenericPeepholeImpl::MatchInfo>().get<I>())); // extra brasses
+};
+
+}; // namespace std
+
 #endif

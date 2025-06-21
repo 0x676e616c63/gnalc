@@ -4,6 +4,44 @@
 
 namespace IR {
 
+bool Type::isI1() const {
+    auto a = as_raw<BType>();
+    return a && a->getInner() == IRBTYPE::I1;
+}
+bool Type::isI8() const {
+    auto a = as_raw<BType>();
+    return a && a->getInner() == IRBTYPE::I8;
+}
+bool Type::isI32() const {
+    auto a = as_raw<BType>();
+    return a && a->getInner() == IRBTYPE::I32;
+}
+bool Type::isI64() const {
+    auto a = as_raw<BType>();
+    return a && a->getInner() == IRBTYPE::I64;
+}
+bool Type::isI128() const {
+    auto a = as_raw<BType>();
+    return a && a->getInner() == IRBTYPE::I128;
+}
+bool Type::isF32() const {
+    auto a = as_raw<BType>();
+    return a && a->getInner() == IRBTYPE::FLOAT;
+}
+bool Type::isInteger() const {
+    return isI1() || isI8() || isI32() || isI64() || isI128();
+}
+bool Type::isFloatingPoint() const {
+    return isF32();
+}
+bool Type::isVoid() const {
+    auto a = as_raw<BType>();
+    return a && a->getInner() == IRBTYPE::VOID;
+}
+bool Type::isUndef() const {
+    auto a = as_raw<BType>();
+    return a && a->getInner() == IRBTYPE::UNDEFINED;
+}
 pBType makeBType(IRBTYPE bty) { return std::make_shared<BType>(bty); }
 
 pPtrType makePtrType(pType ele_ty) {
@@ -56,30 +94,30 @@ bool isSameType(const pType &a, const pType &b) {
         return false;
 
     if (a->getTrait() == IRCTYPE::BASIC) {
-        auto a_bty = a->as<BType>();
-        auto b_bty = b->as<BType>();
+        auto a_bty = a->as_raw<BType>();
+        auto b_bty = b->as_raw<BType>();
         return a_bty->getInner() == b_bty->getInner();
     }
     if (a->getTrait() == IRCTYPE::ARRAY) {
-        auto a_arrty = a->as<ArrayType>();
-        auto b_arrty = b->as<ArrayType>();
+        auto a_arrty = a->as_raw<ArrayType>();
+        auto b_arrty = b->as_raw<ArrayType>();
         return isSameType(a_arrty->getElmType(), b_arrty->getElmType()) &&
                a_arrty->getArraySize() == b_arrty->getArraySize();
     }
     if (a->getTrait() == IRCTYPE::VECTOR) {
-        auto a_arrty = a->as<VectorType>();
-        auto b_arrty = b->as<VectorType>();
+        auto a_arrty = a->as_raw<VectorType>();
+        auto b_arrty = b->as_raw<VectorType>();
         return isSameType(a_arrty->getElmType(), b_arrty->getElmType()) &&
                a_arrty->getVectorSize() == b_arrty->getVectorSize();
     }
     if (a->getTrait() == IRCTYPE::PTR) {
-        auto a_pty = a->as<PtrType>();
-        auto b_pty = b->as<PtrType>();
+        auto a_pty = a->as_raw<PtrType>();
+        auto b_pty = b->as_raw<PtrType>();
         return isSameType(a_pty->getElmType(), b_pty->getElmType());
     }
     if (a->getTrait() == IRCTYPE::FUNCTION) {
-        auto a_fnty = a->as<FunctionType>();
-        auto b_fnty = b->as<FunctionType>();
+        auto a_fnty = a->as_raw<FunctionType>();
+        auto b_fnty = b->as_raw<FunctionType>();
         if (a_fnty->getParams().size() != b_fnty->getParams().size())
             return false;
         for (size_t i = 0; i < a_fnty->getParams().size(); ++i) {

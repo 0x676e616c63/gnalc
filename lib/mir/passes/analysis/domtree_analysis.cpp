@@ -1,12 +1,12 @@
 #include "mir/passes/analysis/domtree_analysis.hpp"
 
-namespace MIR {
+using namespace MIR_new;
+
 PM::UniqueKey DomTreeAnalysis::Key;
 
-DomTree DomTreeAnalysis::run(Function &f, FAM &fam) {
+DomTree DomTreeAnalysis::run(MIRFunction &f, FAM &fam) {
     detail::DomTreeBuilder builder;
-    builder.entry = f.getBlocks().front().get();
+    builder.entry = f.EntryBlk().get();
     builder.analyze();
     return builder.domtree;
 }
-} // namespace MIR

@@ -2,18 +2,18 @@
 #define GNALC_PARSER_IRGEN_HPP
 #pragma once
 
+#include "../ir/cfgbuilder.hpp"
 #include "ast.hpp"
-#include "cfgbuilder.hpp"
-#include "symbol_table.hpp"
-#include "ir/module.hpp"
 #include "config/config.hpp"
+#include "ir/module.hpp"
+#include "symbol_table.hpp"
 
 namespace Parser {
 
 class IRGenerator : public AST::ASTVisitor {
     IR::Module module;
     IR::pVal curr_val;
-    std::vector<IR::pInst> curr_insts;
+    std::list<IR::pInst> curr_insts;
     std::shared_ptr<IR::LinearFunction> curr_func;
     SymbolTable symbol_table;
     bool is_making_lval{false}; // TODO: more sensible
@@ -63,6 +63,8 @@ class IRGenerator : public AST::ASTVisitor {
         bool isZeroIniter() const;
 
         val_t getZeroValue() const;
+
+        size_t countNonZeroBytes() const;
     };
 
     Initializer curr_initializer;
@@ -100,6 +102,9 @@ public:
     static constexpr auto irval_temp_name = Config::IR::REGISTER_TEMP_NAME;
 
 private:
+    size_t name_cnt = 0;
+    std::string name(const std::string& id);
+
     // Throw exception if failed
     IR::pVal type_cast(const IR::pVal &val, const std::shared_ptr<IR::Type> &dest);
     IR::pVal type_cast(const IR::pVal &val, IR::IRBTYPE dest);

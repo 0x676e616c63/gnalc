@@ -304,6 +304,65 @@ public:
     }
 };
 
+// Analysis Storage
+// This is a helper class that hold Analysis results persistently.
+// It is used to transfer Analysis results to lower representation, such as passing
+// IR RangeAnalysis to MIR.
+// It never invalidates any result, so client code should keep the result valid themselves.
+template <typename UnitT> class AnalysisStorage {
+public:
+    using PassConceptT = AnalysisPassConcept<UnitT>;
+
+private:
+    // Unit -> all of its Results
+    using unit_res_t = std::list<std::pair<UniqueKey *, std::unique_ptr<AnalysisResultConcept>>>;
+    using all_res_t = std::map<UnitT *, unit_res_t>;
+    // Certain Pass -> Result
+    using index_t = std::map<std::pair<UniqueKey *, UnitT *>, unit_res_t::iterator>;
+
+    all_res_t results;
+    index_t index;
+
+public:
+    AnalysisStorage() = default;
+    AnalysisStorage(AnalysisStorage &&) = default;
+    AnalysisStorage &operator=(AnalysisStorage &&) noexcept = default;
+
+    void clear() {
+        results.clear();
+        index.clear();
+    }
+
+    template <typename PassT> typename PassT::Result *getStoredResult(UnitT &unit) const {
+        const auto pass_id = PassT::ID();
+        auto it = index.find(std::make_pair(pass_id, &unit));
+
+        if (it == index.end())
+            return nullptr;
+
+        Logger::logInfo("[AnalysisStorage]: Get stored result of '", PassT::name(), "'.");
+
+        using ResultModel = AnalysisResultModel<typename PassT::Result>;
+        return &static_cast<ResultModel &>(*it->second->second).result;
+    }
+
+    template <typename PassT> void storeResult(UnitT &unit, const typename PassT::Result &result) {
+        const auto pass_id = PassT::ID();
+
+        auto [it, inserted] = index.insert(std::make_pair(std::make_pair(pass_id, &unit), unit_res_t::iterator()));
+
+        if (!inserted)
+            Logger::logWarning("[AnalysisStorage]: Overwriting result of '", PassT::name(), "'.");
+
+        auto &unit_res = results[&unit];
+        using ResultModelT = AnalysisResultModel<typename PassT::Result>;
+        unit_res.emplace_back(pass_id, std::make_unique<ResultModelT>(result));
+        it->second = std::prev(unit_res.end());
+
+        Logger::logInfo("[AnalysisStorage]: Stored result of '", PassT::name(), "'.");
+    }
+};
+
 namespace detail {
 template <typename T, typename U = void> struct hasGetInstCount : std::false_type {};
 
@@ -314,6 +373,8 @@ template <typename T> constexpr bool hasGetInstCountV = hasGetInstCount<T>::valu
 } // namespace detail
 
 template <typename UnitT> class PassManager : public PassInfo<PassManager<UnitT>> {
+    template <typename UnitT2> friend class FixedPointPM;
+
 protected:
     using PassConceptT = PassConcept<UnitT, AnalysisManager<UnitT>>;
     std::vector<std::unique_ptr<PassConceptT>> passes;
@@ -330,9 +391,6 @@ public:
 
     template <typename PassT> std::enable_if_t<!std::is_same_v<PassT, PassManager>> addPass(PassT &&pass) {
         using PassModelT = PassModel<UnitT, PassT, AnalysisManager<UnitT>>;
-        // comment from LLVM:
-        // Do not use make_unique or emplace_back, they cause too many template
-        // instantiations, causing terrible compile times.
         passes.push_back(std::unique_ptr<PassConceptT>(new PassModelT(std::forward<PassT>(pass))));
     }
 
@@ -356,7 +414,8 @@ public:
                 pa.retain(curr_pa);
                 auto new_inst_cnt = unit.getInstCount();
                 Logger::logInfo("[PM]: Finished '", pass->name(), "' on '", unit.getName(), "'.(inst: ", old_inst_cnt,
-                                " -> ", new_inst_cnt, ", elapsed time: ", duration.count(), "s)");
+                                " -> ", new_inst_cnt, ", elapsed time: ", duration.count(), "s",
+                                curr_pa.allPreserved() ? ", identical)" : ", modified)");
             } else {
                 auto start = std::chrono::high_resolution_clock::now();
                 PreservedAnalyses curr_pa = pass->run(unit, am);
@@ -367,11 +426,30 @@ public:
                 pa.retain(curr_pa);
 
                 Logger::logInfo("[PM]: Finished '", pass->name(), "' on '", unit.getName(),
-                                "'.(elapsed time: ", duration.count(), "s)");
+                                "'.(elapsed time: ", duration.count(), "s",
+                                curr_pa.allPreserved() ? ", identical)" : ", modified)");
             }
         }
 
         return pa;
+    }
+
+    std::vector<std::string> getPassNames() {
+        std::vector<std::string> names;
+        for (auto &pass : passes)
+            names.emplace_back(pass->name());
+        return names;
+    }
+
+    void printPipeline() {
+        std::string pipeline;
+        for (const auto &pass : passes)
+            pipeline += std::string{pass->name()} + ", ";
+        if (!pipeline.empty()) {
+            pipeline.pop_back();
+            pipeline.pop_back();
+        }
+        Logger::logInfo("[PM]: Running pipeline: ", pipeline);
     }
 };
 
@@ -434,7 +512,8 @@ public:
                     auto new_inst_cnt = unit.getInstCount();
                     Logger::logInfo("[FixedPointPM] at round ", round, ": Finished '", pass->name(), "' on '",
                                     unit.getName(), "'.(inst: ", old_inst_cnt, " -> ", new_inst_cnt,
-                                    ", elapsed time: ", duration.count(), "s)");
+                                    ", elapsed time: ", duration.count(), "s",
+                                    curr_pa.allPreserved() ? ", identical)" : ", modified)");
                 } else {
                     auto start = std::chrono::high_resolution_clock::now();
                     PreservedAnalyses curr_pa = pass->run(unit, am);
@@ -447,18 +526,30 @@ public:
                     pa.retain(curr_pa);
 
                     Logger::logInfo("[FixedPointPM] at round ", round, ": Finished '", pass->name(), "' on '",
-                                    unit.getName(), "'.(elapsed time: ", duration.count(), "s)");
+                                    unit.getName(), "'.(elapsed time: ", duration.count(), "s",
+                                    curr_pa.allPreserved() ? ", identical)" : ", modified)");
                 }
             }
             if (++round > threshold) {
                 Err::gassert(threshold_explicitly_set,
                              "Default Fixed point iteration threshold reached. Check the pipeline!"
-                             " To disable this message, set the threshold explicitly.");
+                             " If this is intentionally, set the threshold explicitly.");
                 break;
             }
         }
 
         return pa;
+    }
+
+    void printPipeline() {
+        std::string pipeline;
+        for (const auto &[pass, ignoring_change] : passes)
+            pipeline += std::string{pass->name()} + (ignoring_change ? " (ignoring change), " : ", ");
+        if (!pipeline.empty()) {
+            pipeline.pop_back();
+            pipeline.pop_back();
+        }
+        Logger::logInfo("[FixedPointPM]: Running pipeline: ", pipeline);
     }
 };
 

@@ -1,13 +1,11 @@
+#ifdef GNALC_EXTENSION_BRAINFK
 #pragma once
 #ifndef GNALC_CODEGEN_BRAINFK_BFTRANS_HPP
 #define GNALC_CODEGEN_BRAINFK_BFTRANS_HPP
 
-#include "config/config.hpp"
-#if GNALC_EXTENSION_BRAINFK
+#include "bfmodule.hpp"
 
 #include <vector>
-
-#include "bfmodule.hpp"
 
 // The following translation is based on RacistCat's work.
 // RacistCat's GitHub: https://github.com/RacistCat

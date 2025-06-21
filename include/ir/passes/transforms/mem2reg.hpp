@@ -30,7 +30,7 @@ class PromotePass : public PM::PassInfo<PromotePass> {
     DomTree *pDT{};
     ALLOCA_INFO cur_info;
     std::map<std::shared_ptr<PHIInst>, pAlloca> phi_to_alloca_map;
-    std::set<pInst> del_queue;
+    std::unordered_set<pInst> del_queue;
 
     // 用于判断INST的支配关系
     bool iADomB(const pInst &ia, const pInst &ib);
@@ -44,7 +44,7 @@ class PromotePass : public PM::PassInfo<PromotePass> {
 
     // 计算迭代支配前沿
     // https://dl.acm.org/doi/pdf/10.1145/199448.199464
-    void computeIDF(const std::set<pBlock> &def_blk, const std::set<pBlock> &live_in_blk, std::set<pBlock> &phi_blk);
+    void computeIDF(const std::unordered_set<pBlock> &def_blk, const std::unordered_set<pBlock> &live_in_blk, std::unordered_set<pBlock> &phi_blk);
 
     void promoteMemoryToRegister(Function &function);
 

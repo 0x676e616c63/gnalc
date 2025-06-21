@@ -29,6 +29,7 @@ public:
     pType getBaseType() const;
     bool isArray() const;
     int getAlign() const;
+    void setAlign(int a);
 
     void accept(IRVisitor &visitor) override;
 
@@ -50,6 +51,7 @@ public:
 
     pVal getPtr() const;
     int getAlign() const;
+    void setAlign(int a);
 
     bool isVectorLoad() const;
 
@@ -71,6 +73,7 @@ public:
     pVal getValue() const;
     pVal getPtr() const;
     int getAlign() const;
+    void setAlign(int a);
 
     bool isVectorStore() const;
 

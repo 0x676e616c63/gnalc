@@ -14,7 +14,6 @@
 #include <list>
 #include <vector>
 
-using namespace PatternMatch;
 namespace IR {
 // First try to simplify the loop: merging the latch into exit
 // Typically this is a post-increment and merging is much better than duplicating the header.
@@ -96,14 +95,10 @@ pBlock tryMergeLatchToExiting(const Loop &loop) {
     // Don't mess up the consecutive cmp and br for better codegen
     //   %cond = icmp ...
     //   br %cond ...
-    if (auto cond_inst = pred_br->getCond()->as<Instruction>()) {
-        if (cond_inst->getParent() == single_pred)
-            moveInsts(latch->begin(), latch->end(), single_pred, cond_inst->getIter());
-        else
-            Logger::logWarning("Cond '", cond_inst->getName(), "' and BRInst are in separate block.");
-    } else
-        moveInsts(latch->begin(), latch->end(), single_pred, pred_br->getIter());
+    moveInsts(latch->begin(), latch->end(), single_pred, single_pred->getEndInsertPoint());
 
+    Logger::logDebug("[Loop Rotate]: Merged latch '", latch->getName(), "' to exiting block '", single_pred->getName(),
+                     "'.");
     return latch;
 }
 
@@ -397,17 +392,17 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                 }
             }
             if (auto ci1 = ph_br_cond->as<ConstantI1>()) {
-                std::set<pPhi> dead_phis;
-                if ((ci1 && cloned_ph_br->getTrueDest() == new_header) ||
-                    (!ci1 && cloned_ph_br->getFalseDest() == new_header)) {
+                if ((ci1->getVal() && cloned_ph_br->getTrueDest() == new_header) ||
+                    (!ci1->getVal() && cloned_ph_br->getFalseDest() == new_header)) {
+                    std::set<pPhi> dead_phis;
                     safeUnlinkBB(old_preheader, header_exit, dead_phis);
                     preheader_br_is_conditional = false;
+                    header_exit->delInstIf(
+                        [&dead_phis](const auto &inst) {
+                            return dead_phis.find(inst->template as<PHIInst>()) != dead_phis.end();
+                        },
+                        BasicBlock::DEL_MODE::PHI);
                 }
-                header_exit->delInstIf(
-                    [&dead_phis](const auto &inst) {
-                        return dead_phis.find(inst->template as<PHIInst>()) != dead_phis.end();
-                    },
-                    BasicBlock::DEL_MODE::PHI);
             }
 
             // To keep the Loop Simplify Form, we MUST split some edges if the preheader is conditional, which means
@@ -432,7 +427,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
 
                 function.addBlock(new_header->getIter(), new_preheader);
 
-                auto& new_dom = fam.getFreshResult<DomTreeAnalysis>(function);
+                auto &new_dom = fam.getFreshResult<DomTreeAnalysis>(function);
                 loop_info.discoverNonHeaderBlock(new_preheader, new_dom);
 
                 // Dedicated Exits
@@ -459,7 +454,7 @@ PM::PreservedAnalyses LoopRotatePass::run(Function &function, FAM &fam) {
                         continue;
                     auto new_bb = breakCriticalEdge(exit_pred, header_exit);
                     new_bb->setName("%lr.exit" + std::to_string(name_cnt++));
-                    auto& new_dom2 = fam.getFreshResult<DomTreeAnalysis>(function);
+                    auto &new_dom2 = fam.getFreshResult<DomTreeAnalysis>(function);
                     loop_info.discoverNonHeaderBlock(new_bb, new_dom2);
                 }
             }

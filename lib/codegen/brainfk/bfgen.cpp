@@ -1,5 +1,5 @@
+#ifdef GNALC_EXTENSION_BRAINFK
 #include "config/config.hpp"
-#if GNALC_EXTENSION_BRAINFK
 #include "codegen/brainfk/bfgen.hpp"
 #include "codegen/brainfk/bfmodule.hpp"
 #include "utils/logger.hpp"
@@ -128,7 +128,7 @@ void BF3t32bGen::visit(IR::BinaryInst &node) {
     case IR::OP::FMUL:
     case IR::OP::DIV:
     case IR::OP::FDIV:
-    case IR::OP::REM:
+    case IR::OP::SREM:
     case IR::OP::FREM:
         Err::todo("More op");
         break;
@@ -255,7 +255,7 @@ void BF3t32bGen::visit(IR::CALLInst &node) {
         Logger::logDebug("Tape1 Forward, now at ", tape1_pos);
         Logger::logDebug("Get Ch");
         curr_insts.addInst(BF3tInst::INPUT1);
-    } else if (node.getFuncName() == Config::IR::BUILTIN_MEMSET) {
+    } else if (node.getFuncName() == Config::IR::MEMSET_INTRINSIC_NAME) {
         // just pass
     } else
         Err::todo("More func");

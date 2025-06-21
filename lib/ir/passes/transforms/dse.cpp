@@ -1,6 +1,8 @@
 #include "ir/passes/transforms/dse.hpp"
+
+#include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
-#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/passes/analysis/basic_alias_analysis.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 
@@ -10,16 +12,16 @@ namespace IR {
 PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
     bool dse_inst_modified = false;
 
-    auto &aa_res = fam.getResult<AliasAnalysis>(function);
+    auto &aa_res = fam.getResult<BasicAliasAnalysis>(function);
     auto &domtree = fam.getResult<DomTreeAnalysis>(function);
     auto &postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
-    std::set<pInst> unused_store;
+    std::unordered_set<pInst> unused_store;
 
     // For each store, collect all possible store on its post dominator block as candidates.
     // Then we consider all other blocks that the block can reach,
     // instructions in them serves as a killer if it may reference the store's memory.
     // If one candidate dominates the rest of candidates and all killers,
-    // it is the most recent modify on the store's memory. And we can delete the earlier store.
+    // it is the most recent modification on the store's memory. And we can delete the earlier store.
     auto dfv = function.getDFVisitor();
     for (const auto &store_block : dfv) {
         for (auto it = store_block->begin(); it != store_block->end(); ++it) {
@@ -107,7 +109,7 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
             }
             // local memory, check through CFG.
             else {
-                std::set<pBlock> visited;
+                std::unordered_set<pBlock> visited;
                 std::deque<pBlock> worklist{store_block->succ_begin(), store_block->succ_end()};
                 // STOREInst that may contribute to the elimination
                 std::vector<pStore> candidates;
@@ -158,12 +160,12 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
                 if (killers.empty()) // A store with no reference, erase it.
                     unused_store.emplace(store);
                 else {
-                    // Note that we have collect possible store in a pre-order.
-                    // In other word, candidates[0] is the earliest one in control flow.
+                    // Note that we have collected possible store in a pre-order.
+                    // In other words, candidates[0] is the earliest one in control flow.
                     // Then we do forward traversal of the candidates. If one candidate
-                    // dominates all other candidate and killers,
-                    // it is the most recent modify on the store's memory.
-                    // That is to say, it is that store who gives us opportunity to eliminate a store.
+                    // dominates all other candidates and killers,
+                    // it is the most recent modification on the store's memory.
+                    // That is to say, it is that store who gives us opportunities to eliminate a store.
                     bool found_one = false;
                     for (const auto &candidate : candidates) {
                         bool able_to_delete = true;
@@ -205,6 +207,35 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
             BasicBlock::DEL_MODE::NON_PHI);
         unused_store.clear();
     }
+
+    // Eliminate useless memset intrinsic
+    // Currently memset intrinsic only occurs at the entry block
+    auto entry_block = function.getBlocks().front();
+    std::unordered_set<pInst> unused_mem;
+    for (const auto &inst : *entry_block) {
+        if (auto call = inst->as<CALLInst>()) {
+            if (call->getFunc()->hasAttr(FuncAttr::isMemsetIntrinsic)) {
+                auto ptr = call->getArgs()[0];
+                Err::gassert(ptr->getType()->is<PtrType>());
+                if (ptr->getUseCount() != 1)
+                    continue;
+
+                if (auto bitcast = ptr->as<BITCASTInst>()) {
+                    if (!bitcast->getOVal()->is<ALLOCAInst>() || bitcast->getOVal()->getUseCount() != 1)
+                        continue;
+                    unused_mem.emplace(call);
+                    unused_mem.emplace(bitcast);
+                    unused_mem.emplace(bitcast->getOVal()->as<Instruction>());
+                } else if (auto alloc = ptr->as<ALLOCAInst>()) {
+                    unused_mem.emplace(call);
+                    unused_mem.emplace(alloc);
+                }
+            }
+        }
+    }
+    dse_inst_modified |=
+        entry_block->delInstIf([&unused_mem](const auto &inst) { return unused_mem.find(inst) != unused_mem.end(); },
+                               BasicBlock::DEL_MODE::NON_PHI);
 
     return dse_inst_modified ? PreserveCFGAnalyses() : PreserveAll();
 }

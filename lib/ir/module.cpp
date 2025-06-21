@@ -37,6 +37,24 @@ bool Module::delFunction(const pFunc &target) {
     return false;
 }
 
+void Module::addLinearFunction(pLFunc func) {
+    func->setParent(this);
+    linear_funcs.emplace_back(std::move(func));
+}
+const std::vector<pLFunc> &Module::getLinearFunctions() const {
+    return linear_funcs;
+}
+bool Module::delLinearFunction(const pLFunc &target) {
+    for (auto it = linear_funcs.begin(); it != linear_funcs.end(); ++it) {
+        if (*it == target) {
+            linear_funcs.erase(it);
+            target->setParent(nullptr);
+            return true;
+        }
+    }
+    return false;
+}
+
 void Module::addFunctionDecl(pFuncDecl func_decl) {
     func_decl->setParent(this);
     func_decls.emplace_back(std::move(func_decl));
@@ -87,6 +105,19 @@ Module::iterator Module::begin() { return funcs.begin(); }
 Module::iterator Module::end() { return funcs.end(); }
 Module::const_iterator Module::cbegin() const { return funcs.cbegin(); }
 Module::const_iterator Module::cend() const { return funcs.cend(); }
+
+size_t Module::getInstCount() const {
+    size_t count = 0;
+    if (!linear_funcs.empty()) {
+        for (const auto &func : linear_funcs)
+            count += func->getInstCount();
+    }
+    else {
+        for (const auto &func : funcs)
+            count += func->getInstCount();
+    }
+    return count;
+}
 
 void Module::accept(IRVisitor &visitor) { visitor.visit(*this); }
 }; // namespace IR

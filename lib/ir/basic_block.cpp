@@ -1,5 +1,6 @@
 #include "ir/basic_block.hpp"
 #include "ir/visitor.hpp"
+#include "utils/logger.hpp"
 #include "utils/misc.hpp"
 
 #include <list>
@@ -75,6 +76,13 @@ void BasicBlock::addInstAfterPhi(const pInst &inst) {
     insts.insert(insts.begin(), inst);
     inst->setParent(as<BasicBlock>());
     inst_index_valid = false;
+}
+
+void BasicBlock::addInstAfterAlloca(const pInst &inst) {
+    auto insert_point = insts.begin();
+    while (insert_point != insts.end() && (*insert_point)->getOpcode() == OP::ALLOCA)
+        ++insert_point;
+    addInst(insert_point, inst);
 }
 
 // FIXME: add it before BRInst's cond.
@@ -195,10 +203,37 @@ pInst BasicBlock::getTerminator() const { return insts.back(); }
 pBr BasicBlock::getBRInst() const { return getTerminator()->as<BRInst>(); }
 pRet BasicBlock::getRETInst() const { return getTerminator()->as<RETInst>(); }
 
+BBInstIter BasicBlock::getEndInsertPoint() const {
+    auto point = getTerminator()->getIter();
+    auto br = getBRInst();
+    if (!br || !br->isConditional())
+        return point;
+    if (auto cond_inst = br->getCond()->as<Instruction>()) {
+        if (cond_inst->getParent().get() != this)
+            Logger::logWarning("Cond '", cond_inst->getName(), "' and BRInst are in separate block.");
+        else if (cond_inst->getUseCount() != 1)
+            Logger::logWarning("Cond '", cond_inst->getName(), "' has multiple uses. (possibly more than one BRInst)");
+        else if (std::next(cond_inst->getIter()) != point)
+            Logger::logWarning("[VerifyPass]: Cond '", cond_inst->getName(), "' and BRInst are not consecutive.");
+        else
+            return cond_inst->getIter();
+    }
+    return point;
+}
+
 void BasicBlock::addPhiInst(const pPhi &node) {
     phi_insts.emplace_back(node);
     node->setParent(as<BasicBlock>());
     inst_index_valid = false;
+}
+
+void BasicBlock::addInsts(iterator it, const std::vector<pInst> &insts) {
+    for (const auto &inst : insts)
+        addInst(it, inst);
+}
+void BasicBlock::addInsts(const std::vector<pInst> &insts) {
+    for (const auto &inst : insts)
+        addInst(inst);
 }
 
 unsigned BasicBlock::getPhiCount() const { return phi_insts.size(); }

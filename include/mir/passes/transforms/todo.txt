@@ -1,0 +1,12 @@
+transform文件夹下的passes有比较严格的顺序
+2. isel.hpp: instruction selection                                      模式匹配还没有
+4. peephole.hpp: peephole opt                                           todo
+6. PreRAscheduling.hpp: Pre-RA scheduling, minimize register pressure   todo
+9. tro.hpp: 
+10. ICF_TailDup.hpp: TCF & Tail duplication
+11. PostRAscheduling.hpp: post-RA scheduling, minimize cycles
+12. codelayout.hpp: code layout opt
+13. dce.hpp: remove unreachable block/continuous goto/unused label/peephole 感觉没必要单独做一个
+14. CFGsimplify.hpp: CFG simplify
+
+其中 3, 4, 6, 9, 10, 11, 12, 13, 14 是性能优化, 不是必要的

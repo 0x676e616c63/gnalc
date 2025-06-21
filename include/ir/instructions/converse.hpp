@@ -65,6 +65,19 @@ private:
     }
 };
 
+// <result> = sext <ty> <value> to <ty2>
+class SEXTInst : public CastInst {
+public:
+    SEXTInst(NameRef name, const pVal &origin_val, IRBTYPE dest_type);
+
+    void accept(IRVisitor &visitor) override;
+
+private:
+    pVal cloneImpl() const override {
+        return std::make_shared<SEXTInst>(getName(), getOVal(), getTType()->as<BType>()->getInner());
+    }
+};
+
 // <result> = bitcast <ty> <value> to <ty2>
 class BITCASTInst : public CastInst {
 public:

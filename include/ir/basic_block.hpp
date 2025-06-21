@@ -7,11 +7,11 @@
 #define GNALC_IR_BASIC_BLOCK_HPP
 
 #include "base.hpp"
-#include "type_alias.hpp"
 #include "instruction.hpp"
 #include "instructions/phi.hpp"
-#include "utils/iterator.hpp"
+#include "type_alias.hpp"
 #include "utils/generic_visitor.hpp"
+#include "utils/iterator.hpp"
 
 #include <memory>
 #include <variant>
@@ -63,6 +63,7 @@ class BasicBlock : public Value {
     struct BBSuccGetter {
         auto operator()(const pBlock &bb) { return bb->getNextBB(); }
     };
+
 public:
     using iterator = decltype(insts)::iterator;
     using const_iterator = decltype(insts)::const_iterator;
@@ -87,8 +88,17 @@ public:
     void addInst(size_t index, const pInst &inst);
     void addInst(const pInst &inst);
     void addInstAfterPhi(const pInst &inst);
-    void addInstBeforeTerminator(const pInst &inst);
+    void addInstAfterAlloca(const pInst &inst);
     void addPhiInst(const pPhi &node); // 插入到phi_insts
+
+    void addInsts(iterator it, const std::vector<pInst> &insts);
+    void addInsts(const std::vector<pInst> &insts);
+
+    // Returns a proper insert point at the end of this block.
+    // This preserves the consecutive CMP-BRInst pattern.
+    BBInstIter getEndInsertPoint() const;
+    // Add instructions right before the terminator. (do not preserve consecutive CMP-BRInst)
+    void addInstBeforeTerminator(const pInst &inst);
 
     // Usually we use `preds()` and `succs()` instead of them
     std::list<pBlock> getPreBB() const;
@@ -148,7 +158,7 @@ public:
             for (auto it = insts.begin(); it != insts.end();) {
                 if (pred(*it)) {
                     for (const auto &user : (*it)->inst_users()) {
-                        Err::gassert(user->getParent()== nullptr || pred(user),
+                        Err::gassert(user->getParent() == nullptr || pred(user),
                                      "BasicBlock::delInstIf(): Cannot delete a Inst without deleting its User.");
                     }
                     (*it)->setParent(nullptr);

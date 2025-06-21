@@ -167,7 +167,7 @@ int main(int argc, char *argv[]) {
         sylib_to_link = prepare_sylib(cfg::global_benchmark_temp_dir, only_frontend); // .ll or .a
 
     for (auto &&curr_test_dir : cfg::benchmark_subdirs) {
-        auto test_files = gather_test_files(curr_test_dir, run, skip);
+        auto test_files = gather_test_files(cfg::test_data + "/" + curr_test_dir, run, skip);
         if (test_files.empty())
             continue;
 
@@ -208,11 +208,7 @@ int main(int argc, char *argv[]) {
             auto data2 = BenchmarkRegistry::get_test_data(test_info2);
 
             auto res1 = run_test(data1, only_frontend, times);
-            auto res2 = run_test(data2, only_frontend, times);
-
             bool success_1 = res1.output == expected_syout;
-            bool success_2 = res2.output == expected_syout;
-
             if (!success_1) {
                 println("\n|  [\033[0;32;31mFAILED\033[m] Expected '{}' but got "
                         "'{}'. | mode: {}",
@@ -222,17 +218,23 @@ int main(int argc, char *argv[]) {
                 println("| actual:   {}", res1.output_file);
                 failed_tests.emplace_back(data1);
             }
-            if (!success_2) {
-                println("\n|  [\033[0;32;31mFAILED\033[m] Expected '{}' but got "
-                        "'{}'. | mode: {}",
-                        expected_syout.size() > 1024 ? "<too long to display>" : expected_syout,
-                        res2.output.size() > 1024 ? "<too long to display>" : res2.output, data2.mode_id);
-                println("| expected: {}", testcase_out);
-                println("| actual:   {}", res2.output_file);
-                failed_tests.emplace_back(data2);
-            }
-
             benchmark_data.results1.emplace_back(BenchmarkData::Item{.data = data1, .res = res1, .success = success_1});
+
+            TestResult res2;
+            bool success_2 = true;
+            if (success_1) {
+                res2 = run_test(data2, only_frontend, times);
+                success_2 = res2.output == expected_syout;
+                if (!success_2) {
+                    println("\n|  [\033[0;32;31mFAILED\033[m] Expected '{}' but got "
+                            "'{}'. | mode: {}",
+                            expected_syout.size() > 1024 ? "<too long to display>" : expected_syout,
+                            res2.output.size() > 1024 ? "<too long to display>" : res2.output, data2.mode_id);
+                    println("| expected: {}", testcase_out);
+                    println("| actual:   {}", res2.output_file);
+                    failed_tests.emplace_back(data2);
+                }
+            }
             benchmark_data.results2.emplace_back(BenchmarkData::Item{.data = data2, .res = res2, .success = success_2});
 
             if (success_1 && success_2) {

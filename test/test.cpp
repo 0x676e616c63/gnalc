@@ -21,6 +21,7 @@ int main(int argc, char *argv[]) {
         println("  -p, --para [Param]         Run with gnalc parameter.");
         println("  -l, --list                 List all tests.");
         println("  -h, --help                 Print this help and exit.");
+        println("  --gh-action                Github Action mode.");
     };
     RunSet skip;
     SkipSet run;
@@ -30,6 +31,7 @@ int main(int argc, char *argv[]) {
     bool stop_on_error = true;
     bool only_frontend = true;
     bool only_list = false;
+    bool in_gh_action = false;
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
         if (arg == "--all" || arg == "-a")
@@ -77,6 +79,8 @@ int main(int argc, char *argv[]) {
             return 0;
         } else if (arg == "--para" || arg == "-p") {
             gnalc_params += " " + std::string(argv[++i]);
+        } else if (arg == "--gh-action") {
+            in_gh_action = true;
         } else {
             println("Error: Unrecognized option '{}'", arg);
             print_help();
@@ -106,8 +110,9 @@ int main(int argc, char *argv[]) {
             sylib_for_diff_testing = prepare_sylib(cfg::global_temp_dir, true);
     }
 
+    auto real_test_data = in_gh_action ? cfg::github_action_test_data : cfg::test_data;
     for (auto &&curr_test_dir : cfg::subdirs) {
-        auto test_files = gather_test_files(curr_test_dir, run, skip);
+        auto test_files = gather_test_files(real_test_data + "/" + curr_test_dir, run, skip);
         if (test_files.empty())
             continue;
 
@@ -154,22 +159,23 @@ int main(int argc, char *argv[]) {
 
             auto testcase_out = sy.path().parent_path().string() + "/" + sy.path().stem().string() + ".out";
             std::string expected_syout;
+            TestResult diff_res;
             if (diff_test) {
                 TestData clang_data{
                     .sy = sy, .sylib = sylib_for_diff_testing, .temp_dir = curr_temp_dir, .mode_id = "clang_diff_test"};
                 auto clang_irgen = [](const std::string &newsy, const std::string &outll) {
                     return format("sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int "
-                                  "getfarray(float a[]);void "
-                                  "putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void "
-                                  "putfarray(int n, float "
-                                  "a[]);void putf(char a[], ...);void _sysy_starttime(int);void "
-                                  "_sysy_stoptime(int);\\n#define starttime() "
+                                  "getfarray(float a[]);void putint(int a),putch(int a),putarray(int n,int a[]);void "
+                                  "putfloat(float a);void putfarray(int n, float a[]);void putf(char a[], ...);void "
+                                  "_sysy_starttime(int);void _sysy_stoptime(int);typedef void (*Task)(int beg, int "
+                                  "end); void gnalc_parallel_for(int beg, int end, Task task); "
+                                  "\\n#define starttime() "
                                   "_sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
                                   " && clang -xc {} -emit-llvm -S -o {} -I ../../test/sylib/ 2>/dev/null",
                                   newsy, newsy, outll);
                 };
                 clang_data.ir_asm_gen = clang_irgen;
-                auto diff_res = run_test(clang_data, true);
+                diff_res = run_test(clang_data, true);
                 expected_syout = diff_res.output;
             } else {
                 expected_syout = read_file(testcase_out);
@@ -184,7 +190,7 @@ int main(int argc, char *argv[]) {
                         "'{}'.",
                         expected_syout.size() > 1024 ? "<too long to display>" : expected_syout,
                         res.output.size() > 1024 ? "<too long to display>" : res.output);
-                println("| expected: {}", testcase_out);
+                println("| expected: {}", diff_test ? diff_res.output_file : testcase_out);
                 println("| actual:   {}", res.output_file);
                 failed_tests.emplace_back(sy.path().string());
                 if (stop_on_error) {

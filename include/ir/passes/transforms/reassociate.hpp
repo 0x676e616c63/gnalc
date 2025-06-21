@@ -10,6 +10,7 @@
 
 #include "ir/instructions/binary.hpp"
 #include "ir/passes/pass_manager.hpp"
+#include "utils/fast_set.hpp"
 
 #include <limits>
 
@@ -19,22 +20,22 @@ public:
     using Rank = unsigned int;
     static constexpr Rank NotRank = std::numeric_limits<Rank>::max();
     struct ValueEntry {
-        pVal op;
+        pVal operand;
         Rank rank;
     };
 
     struct ExprTreeNode {
-        using WeightT = size_t;
+        using FreqT = size_t;
         pVal value;
-        WeightT weight;
+        FreqT freq; // how many times this leaf occurs in the tree
     };
 
 private:
-    std::map<pVal, Rank> valueRankMap;
-    std::map<pBlock, Rank> bbRankMap;
-    std::set<pInst> redoSet;
+    std::unordered_map<pVal, Rank> value_rank_map;
+    std::unordered_map<pBlock, Rank> block_rank_map;
+    Util::FastSet<pInst> redo_list;
     Function *func{};
-    bool optModified{};
+    bool modified_in_opt{};
     size_t name_cnt = 0;
 
     Rank getRank(const pVal &v);
@@ -51,13 +52,13 @@ private:
 
     std::vector<ExprTreeNode> analyzeExprTree(const pBinary &root);
 
-    void reassociateExpression(const pBinary &inst);
+    void reassociate(const pBinary &inst);
 
     pBinary neg2mul(const pInst &neg);
 
     pInst canonInst(const pInst &inst);
 
-    void optInst(const pInst &inst);
+    void optInst(const pInst &raw_inst);
 
     void reset();
 

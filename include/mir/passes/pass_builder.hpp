@@ -1,15 +1,19 @@
 #pragma once
-#ifndef GNALC_MIR_PASSES_PASS_BUILDER_HPP
-#define GNALC_MIR_PASSES_PASS_BUILDER_HPP
+#ifndef GNALC_ARMV8_MIR_PASSES_PASS_BUILDER_HPP
+#define GNALC_ARMV8_MIR_PASSES_PASS_BUILDER_HPP
 
 #include "pass_manager.hpp"
 
-namespace MIR {
+namespace MIR_new {
 struct OptInfo {
-    bool peephole = false;      // func pass
-    bool phiEliminate = true;   // module pass
-    bool preRAleagalize = true; // func pass
-    bool RA = true;             // func pass
+    ///@todo to add...
+    bool peephole_afterIsel;
+    bool redundantLoadEli;
+    bool peephole_afterRa;
+    bool peephole_afterStackGenerate;
+    bool CFGsimplifyBeforeRa;
+    bool CFGsimplifyAfterRa;
+    bool PostRaScheduling;
 };
 
 extern const OptInfo o1_opt_info;
@@ -23,5 +27,5 @@ public:
     static void registerFunctionAnalyses(FAM &);
     static void registerProxies(FAM &, MAM &);
 };
-} // namespace MIR
+} // namespace MIR_new
 #endif

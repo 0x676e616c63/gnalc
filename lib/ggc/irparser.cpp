@@ -1,3 +1,4 @@
+#ifdef GNALC_EXTENSION_GGC
 // A Bison parser, made by GNU Bison 3.8.2.
 
 // Skeleton implementation for Bison LALR(1) parsers in C++
@@ -1539,7 +1540,7 @@ namespace yyy {
 
   case 75: // BinaryOp: I_REM
 #line 179 "irparser.y"
-                        { yylhs.value.as < OP > () = OP::REM; }
+                        { yylhs.value.as < OP > () = OP::SREM; }
 #line 1544 "irparser.cpp"
     break;
 
@@ -2387,3 +2388,4 @@ void
 yyy::parser::error (const std::string& msg) { 
       std::cerr << "Error: " << msg << std::endl; 
 }
+#endif

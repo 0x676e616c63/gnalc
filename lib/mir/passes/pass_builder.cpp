@@ -2,49 +2,62 @@
 #include "mir/passes/pass_manager.hpp"
 
 // Analysis
-#include "mir/passes/analysis/domtree_analysis.hpp"
-#include "mir/passes/analysis/live_analysis.hpp"
+#include "mir/passes/analysis/liveanalysis.hpp"
 
 // Transforms
-#include "mir/passes/transforms/const2reg.hpp"
+#include "mir/passes/analysis/domtree_analysis.hpp"
+#include "mir/passes/transforms/CFGsimplify.hpp"
+#include "mir/passes/transforms/ICF_TailDup.hpp"
+#include "mir/passes/transforms/PostRAlegalize.hpp"
+#include "mir/passes/transforms/PreRAlegalize.hpp"
+#include "mir/passes/transforms/RA.hpp"
+#include "mir/passes/transforms/RedundantLoadEli.hpp"
+#include "mir/passes/transforms/codelayout.hpp"
+#include "mir/passes/transforms/isel.hpp"
+#include "mir/passes/transforms/lowering.hpp"
 #include "mir/passes/transforms/peephole.hpp"
-#include "mir/passes/transforms/phiEliminate.hpp"
-#include "mir/passes/transforms/postRAstackformat.hpp"
-#include "mir/passes/transforms/preRAlegalize.hpp"
-#include "mir/passes/transforms/registeralloc.hpp"
-#include "mir/passes/transforms/uselessBlkEli.hpp"
-#include "mir/passes/transforms/uselessMovEli.hpp"
+#include "mir/passes/transforms/registercoalesce.hpp"
+#include "mir/passes/transforms/scheduling.hpp"
+#include "mir/passes/transforms/stackgenerate.hpp"
+#include "mir/passes/transforms/tro.hpp"
 
-namespace MIR {
+namespace MIR_new {
 
-const OptInfo o1_opt_info = {
-    .peephole = true,
-};
+const OptInfo o1_opt_info = {.peephole_afterIsel = true,
+                             .redundantLoadEli = true,
+                             .peephole_afterRa = true,
+                             .peephole_afterStackGenerate = true,
+                             .CFGsimplifyBeforeRa = true,
+                             .CFGsimplifyAfterRa = true,
+                             .PostRaScheduling = true};
 
 FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FPM fpm;
 
-    if (opt_info.peephole) {
-        fpm.addPass(PeepHolePass());
-    }
+    using Stage = GenericPeephole::Stage;
 
-    fpm.addPass(PreRALegalize()); // necessary
-    fpm.addPass(Const2Reg());     // necessary
+    // clang-format off
+    
+                                            fpm.addPass(ISel());
+    opt_info.peephole_afterIsel ?           fpm.addPass(GenericPeephole(Stage::AfterIsel)) : nop;
+    opt_info.CFGsimplifyBeforeRa ?          fpm.addPass(CFGsimplifyBeforeRA()) : nop;
+    opt_info.redundantLoadEli ?             fpm.addPass(RedundantLoadEli()) : nop;
+                                            fpm.addPass(PreRAlegalize());
+                                            fpm.addPass(RegisterAlloc());
+    opt_info.peephole_afterRa ?             fpm.addPass(GenericPeephole(Stage::AfterRa)) : nop;
+                                            fpm.addPass(StackGenerate());
+    opt_info.peephole_afterStackGenerate ?  fpm.addPass(GenericPeephole(Stage::AfterPostLegalize)) : nop;
+    opt_info.CFGsimplifyAfterRa ?           fpm.addPass(CFGsimplifyAfterRA()) : nop;
+                                            fpm.addPass(PostRAlegalize());
+    opt_info.PostRaScheduling ?             fpm.addPass(PostRaScheduling()) : nop;
 
-    fpm.addPass(NeonRAPass()); // necessary
-    fpm.addPass(RAPass());     // necessary
-
-    fpm.addPass(postRAstackformat());
-
-    // fpm.addPass(uselessMovEli());
-    fpm.addPass(uselessBlkEli());
-
+    // clang-format on
     return fpm;
 }
 
 MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
     MPM mpm;
-    mpm.addPass(PhiEliminatePass()); // immediately after isel
+
     mpm.addPass(makeModulePass(buildFunctionPipeline(opt_info)));
     return mpm;
 }
@@ -64,5 +77,4 @@ void PassBuilder::registerFunctionAnalyses(FAM &fam) {
 }
 
 void PassBuilder::registerModuleAnalyses(MAM &) {}
-
-} // namespace MIR
+}; // namespace MIR_new

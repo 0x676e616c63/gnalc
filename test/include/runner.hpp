@@ -3,6 +3,7 @@
 #define GNALC_TEST_RUNNER_HPP
 
 #include "utils.hpp"
+#include "config.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -50,8 +51,6 @@ static TestResult run_test(const TestData &data, bool only_run_frontend, size_t 
 
         link_command += format("llvm-link 2>&1 {} {} -o {}", data.sylib, out_source, outbc);
 
-        // /bin/echo is the one in GNU coreutils
-        // Not the one in sh or bash.
         exec_command = format("lli {} < {} > {} 2>{}", outbc,
                               std::filesystem::exists(testcase_in) ? testcase_in : "/dev/null", output, outtime);
     } else {
@@ -60,8 +59,7 @@ static TestResult run_test(const TestData &data, bool only_run_frontend, size_t 
 
         ir_asm_gen_command = data.ir_asm_gen(newsy, out_source);
 
-        link_command =
-            format("{} {} {} -fno-PIC -fno-PIE -static -o {}", cfg::gcc_arm_command, out_source, data.sylib, outexec);
+        link_command = format("{} {} {} -o {}", cfg::gcc_arm_command, out_source, data.sylib, outexec);
 
         exec_command = format("{} {} < {} > {} 2>{}", cfg::qemu_arm_command, outexec,
                               std::filesystem::exists(testcase_in) ? testcase_in : "/dev/null", output, outtime);
@@ -72,6 +70,9 @@ static TestResult run_test(const TestData &data, bool only_run_frontend, size_t 
         //     format("{} < {} > {} 2>{}",
         //            outexec, std::filesystem::exists(testcase_in) ? testcase_in : "/dev/null", output, outtime);
     }
+
+    // /bin/echo is the one in GNU coreutils
+    // Not the one in sh or bash.
     exec_command += R"(;/bin/echo -e "\n"$? >> )" + output;
 
     println("");
@@ -79,11 +80,11 @@ static TestResult run_test(const TestData &data, bool only_run_frontend, size_t 
             ir_asm_gen_command);
 
     if (std::system(ir_asm_gen_command.c_str()) != 0)
-        return { "", "compiler error", "", 0 };
+        return {"", "compiler error", "", 0};
 
     println("|  Running '{}' link command: '{}'", data.mode_id, link_command);
     if (std::system(link_command.c_str()) != 0)
-        return { out_source, "linker error", "", 0 };
+        return {out_source, "linker error", "", 0};
 
     println("|  Running '{}' execute command: '{}'", data.mode_id, exec_command);
 
@@ -91,14 +92,19 @@ static TestResult run_test(const TestData &data, bool only_run_frontend, size_t 
     size_t time_elapsed = 0;
     for (int i = 0; i < times; i++) {
         if (std::system(exec_command.c_str()) != 0)
-            return { out_source, "exec error", "", time_elapsed };
+            return {out_source, "exec error", "", time_elapsed};
 
-        syout = read_file(output);
-        fix_newline(syout);
         time_elapsed += parse_time(read_file(outtime));
+
+        auto curr_out = read_file(output);
+        fix_newline(curr_out);
+        if (syout.empty())
+            syout = curr_out;
+        else if (curr_out != syout)
+            return {out_source, "output mismatch", "", time_elapsed / (i + 1)};
     }
     time_elapsed /= times;
-    return {out_source, syout, output, time_elapsed };
+    return {out_source, syout, output, time_elapsed};
 }
 
 static std::string prepare_sylib(const std::string &global_tmp_dir, bool only_run_frontend) {
@@ -111,6 +117,8 @@ static std::string prepare_sylib(const std::string &global_tmp_dir, bool only_ru
         // data layouts Given that the LLVM IR we generate contains no target
         // data layout, we use `sed` to delete 'target datalayout' from the
         // sylib.ll
+        //
+        // std::string lib_command = format("clang++ -O3 -S -emit-llvm {} -o {} "
         std::string lib_command = format("clang -S -emit-llvm {} -o {} "
                                          "&& sed '/^target datalayout/d' {} -i",
                                          cfg::sylibc, sylib_to_link, sylib_to_link);
@@ -121,8 +129,8 @@ static std::string prepare_sylib(const std::string &global_tmp_dir, bool only_ru
         auto sylibo = global_tmp_dir + "/sylib.o";
         sylib_to_link = global_tmp_dir + "/sylib.a";
 
-        std::string lib_command = format("{} -c {} -o {} && ar rcs {} {}", cfg::gcc_arm_command,
-            cfg::sylibc, sylibo, sylib_to_link, sylibo);
+        std::string lib_command =
+            format("{} -c {} -o {} && ar rcs {} {}", cfg::gcc_arm_command, cfg::sylibc, sylibo, sylib_to_link, sylibo);
 
         println("Running '{}'.", lib_command);
         std::system(lib_command.c_str());
@@ -142,7 +150,7 @@ static std::vector<std::filesystem::directory_entry> gather_test_files(const std
                                                                        SkipSet &skip) {
     std::vector<std::filesystem::directory_entry> test_files;
 
-    for (const auto &p : std::filesystem::directory_iterator(cfg::test_data + "/" + curr_test_dir)) {
+    for (const auto &p : std::filesystem::directory_iterator(curr_test_dir)) {
         if (p.is_regular_file() && p.path().extension() == ".sy") {
             bool need_run = true;
 

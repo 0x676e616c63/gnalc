@@ -1,3 +1,4 @@
+#ifdef GNALC_EXTENSION_GGC
 #pragma once
 #ifndef GNALC_GGC_IRPARSERTOOL_H
 #define GNALC_GGC_IRPARSERTOOL_H
@@ -83,4 +84,5 @@ namespace IRParser {
     };
 }
 
+#endif
 #endif

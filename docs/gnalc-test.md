@@ -15,12 +15,22 @@ sudo apt install autoconf automake autotools-dev curl libmpc-dev libmpfr-dev lib
               zlib1g-dev libexpat-dev pkg-config  libglib2.0-dev libpixman-1-dev libsdl2-dev libslirp-dev \
               git tmux python3 python3-pip ninja-build
 ```
+##### ARMv7
 ```shell
 wget https://download.qemu.org/qemu-9.2.0.tar.xz
 tar xvJf qemu-9.2.0.tar.xz
 cd qemu-9.2.0
 ./configure --target-list=arm-linux-user
 make -j$(nproc)
+```
+##### ARMv8
+```shell
+wget https://download.qemu.org/qemu-9.2.3.tar.xz
+tar xvJf qemu-9.2.3.tar.xz
+cd qemu-9.2.3
+./configure --target-list=aarch64-linux-user
+make -j$(nproc)
+# 9.2.0 can't compile with `redefinition of 'struct sched_attr'`
 ```
 
 #### Environment
@@ -32,7 +42,7 @@ vim ~/.bashrc
 ```
 And add the next line.
 ```shell
-export PATH=$PATH:<your-path>/qemu-9.2.0/build
+export PATH=$PATH:<your-path>/qemu-<your-version>/build
 ```
 
 ##### fish
@@ -43,7 +53,7 @@ Edit the config like this.
 ```shell
 if status is-interactive
     # Commands to run in interactive sessions can go here
-    set PATH <your-path>/qemu-9.2.0/build $PATH
+    set PATH <your-path>/qemu-<your-version>/build $PATH
 end
 ```
 
@@ -56,11 +66,15 @@ Copyright (c) 2003-2024 Fabrice Bellard and the QEMU Project developers
 
 ### GCC
 #### Ubuntu
+##### ARMv7
 ```shell
 sudo apt install gcc-14-arm-linux-gnueabi
 # setup ld for qemu-arm
 sudo ln -s /usr/arm-linux-gnueabi/lib/ld-linux.so.3 /lib/ld-linux.so.3
 ```
+
+##### ARMv8
+todo
 
 Then edit `gcc_arm_command` and `qemu_arm_command` in [gnalc_test.cpp](../test/gnalc_test.cpp) according to your machine.
 ```c++
@@ -69,11 +83,20 @@ const std::string qemu_arm_command = "LD_LIBRARY_PATH=/usr/arm-linux-gnueabi/lib
 ```
 
 #### Arch/Manjaro
+##### ARMv7
 ```shell
 paru -S arm-linux-gnueabihf-gcc14-linaro-bin
 # setup ld for qemu-arm
 sudo ln -s /usr/arm-linux-gnueabihf/libc/lib/ld-linux-armhf.so.3 /lib/ld-linux-armhf.so.3
 ```
+
+##### ARMv8
+```shell
+sudo pacman -S aarch64-linux-gnu-gcc
+# setup ld for qemu-aarch64
+sudo ln -s /usr/aarch64-linux-gnu/lib/ld-linux-aarch64.so.1 /lib/ld-linux-aarch64.so.1
+```
+
 Then edit `gcc_arm_command` and `qemu_arm_command` in [gnalc_test.cpp](../test/gnalc_test.cpp) according to your machine.
 ```c++
 const std::string gcc_arm_command = "arm-linux-gnueabihf-gcc";

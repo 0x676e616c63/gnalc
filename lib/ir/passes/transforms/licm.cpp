@@ -4,7 +4,7 @@
 #include "ir/instructions/control.hpp"
 #include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
-#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/passes/analysis/basic_alias_analysis.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 
@@ -13,10 +13,15 @@
 #include <vector>
 
 namespace IR {
-bool isSafeToMove(const pLoop &loop, const pInst &inst, AliasAnalysisResult &aa_res, FAM &fam) {
+// is_doing_aggressive_licm: if this move violates control flow equivalent.
+// This could lead to a better performance, but causes partial redundancy.
+bool isSafeToMove(const pLoop &loop, const pInst &inst, BasicAAResult &aa_res, FAM &fam, bool is_doing_aggressive_licm) {
     // Only move what we know
     // Do not hoist cmp for codegen
     if (!inst->is<BinaryInst, FNEGInst, CALLInst, LOADInst, STOREInst, GEPInst, CastInst>())
+        return false;
+
+    if (is_doing_aggressive_licm && inst->is<STOREInst>())
         return false;
 
     // If the load's memory can be modified in the loop, give up.
@@ -79,7 +84,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
     auto &domtree = fam.getResult<DomTreeAnalysis>(function);
     auto &postdomtree = fam.getResult<PostDomTreeAnalysis>(function);
     auto &loop_info = fam.getResult<LoopAnalysis>(function);
-    auto &aa_res = fam.getResult<AliasAnalysis>(function);
+    auto &aa_res = fam.getResult<BasicAliasAnalysis>(function);
 
     bool licm_inst_modified = false;
 
@@ -107,8 +112,8 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                     std::set<pInst> dead_insts;
                     // Sink instructions that near the exit first
                     for (const auto &inst : Util::reverse(*bb)) {
-                        if (isSafeToMove(loop, inst, aa_res, fam) && noUseInLoop(loop, inst) &&
-                            loop->isAllOperandsLoopInvariant(inst)) {
+                        if (isSafeToMove(loop, inst, aa_res, fam, false) && noUseInLoop(loop, inst) &&
+                            loop->isAllOperandsTriviallyInvariant(inst)) {
                             // Sink instructions to the exit blocks that dominated by it.
                             // Keep track of the instructions we sunk.
                             // exit block -> new version
@@ -194,14 +199,21 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                 std::sort(loop_blocks.begin(), loop_blocks.end(),
                           [&rpo_index](const auto &a, const auto &b) { return rpo_index[a] < rpo_index[b]; });
                 for (const auto &bb : loop_blocks) {
+                    // Allow aggressive hoisting for better performance
+                    // FIXME: set a threshold to avoid too much duplication
                     // If this block does not post dominates the preheader,
-                    // hoisting them is not safe.
+                    // hoisting them causes duplication.
+                    bool is_doing_aggressive_licm = false;
                     if (!postdomtree.ADomB(bb, preheader))
+                        is_doing_aggressive_licm = true;
+
+                    if (!enable_aggressive && is_doing_aggressive_licm)
                         continue;
+
                     // Keep the topological order.
                     std::vector<pInst> to_hoist;
                     for (const auto &inst : *bb) {
-                        if (isSafeToMove(loop, inst, aa_res, fam)) {
+                        if (isSafeToMove(loop, inst, aa_res, fam, is_doing_aggressive_licm)) {
                             auto invariant = std::all_of(inst->operand_begin(), inst->operand_end(),
                                                          [&loop, to_hoist](const auto &val) {
                                                              if (auto inst = val->template as<Instruction>()) {
@@ -219,21 +231,10 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
 
                     for (const auto &inst : to_hoist) {
                         inst->setName(inst->getName() + ".licm.h" + std::to_string(name_cnt++));
-                        auto insert_before = preheader->getTerminator()->getIter();
-                        if (auto br = preheader->getBRInst()) {
-                            if (br->isConditional()) {
-                                if (auto cond_inst = br->getCond()->as<Instruction>()) {
-                                    if (cond_inst->getParent() == preheader)
-                                        insert_before = cond_inst->getIter();
-                                    else
-                                        Logger::logWarning("Cond '", cond_inst->getName(),
-                                                           "' and BRInst are in separate block.");
-                                }
-                            }
-                        }
-                        moveInst(inst, preheader, insert_before);
+                        moveInst(inst, preheader, preheader->getEndInsertPoint());
                         Logger::logDebug("[LICM] on '", function.getName(), "': Hoisted an instruction '",
-                                         inst->getName(), "' to basic block '", preheader->getName(), "'.");
+                                         inst->getName(), "' to basic block '", preheader->getName(), "'.",
+                                         is_doing_aggressive_licm ? "(aggressive)" : "");
                         licm_inst_modified = true;
                     }
                 }

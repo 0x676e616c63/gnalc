@@ -6,6 +6,27 @@
 #include "config/config.hpp"
 
 namespace IR {
+// void debug_print_scev(Function &function, FAM & fam) {
+//     auto& scev = fam.getResult<SCEVAnalysis>(function);
+//     const DomTree &domtree = fam.getResult<DomTreeAnalysis>(function);
+//     for (const auto &bb : function) {
+//         for (const auto &inst : bb->all_insts()) {
+//             if (!inst->getType()->isI32())
+//                 continue;
+//             for (const auto &scev_block : function) {
+//                 if (!domtree.ADomB(bb, scev_block))
+//                     continue;
+//                 auto s = scev.getSCEVAtBlock(inst, scev_block);
+//                 // Since we've ensured the value is available in this block,
+//                 // getSCEVAtBlock should not return nullptr.
+//                 Err::gassert(s != nullptr);
+//                 if (!s->isUntracked())
+//                     Logger::logDebug("LSR Debug: ", inst->getName(), " at block '", scev_block->getName(), "': ", *s);
+//             }
+//         }
+//     }
+// }
+
 PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) {
     bool lsr_inst_modified = false;
     auto& loop_info = fam.getResult<LoopAnalysis>(function);
@@ -43,6 +64,8 @@ PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) 
                                 Logger::logDebug("[LSR]: expanded AddRec for '", curr->getName(), "'.");
                                 eliminateDeadInsts(curr);
                                 lsr_inst_modified = true;
+
+                                // debug_print_scev(function, fam);
                             }
                         }
                     }

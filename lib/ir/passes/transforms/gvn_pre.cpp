@@ -29,6 +29,24 @@ std::ostream &operator<<(std::ostream &os, const GVNPREPass::Expr &expr) {
     case GVNPREPass::Expr::ExprOp::Rem:
         os << "v" << expr.operands[0] << " % v" << expr.operands[1];
         break;
+    case GVNPREPass::Expr::ExprOp::And:
+        os << "v" << expr.operands[0] << " & v" << expr.operands[1];
+        break;
+    case GVNPREPass::Expr::ExprOp::Or:
+        os << "v" << expr.operands[0] << " | v" << expr.operands[1];
+        break;
+    case GVNPREPass::Expr::ExprOp::Xor:
+        os << "v" << expr.operands[0] << " ^ v" << expr.operands[1];
+        break;
+    case GVNPREPass::Expr::ExprOp::Shl:
+        os << "v" << expr.operands[0] << " << v" << expr.operands[1];
+        break;
+    case GVNPREPass::Expr::ExprOp::LShr:
+        os << "v" << expr.operands[0] << " l>> v" << expr.operands[1];
+        break;
+    case GVNPREPass::Expr::ExprOp::AShr:
+        os << "v" << expr.operands[0] << " a>> v" << expr.operands[1];
+        break;
     case GVNPREPass::Expr::ExprOp::Fptosi:
         os << "fptosi " << "v" << expr.operands[0];
         break;
@@ -37,6 +55,9 @@ std::ostream &operator<<(std::ostream &os, const GVNPREPass::Expr &expr) {
         break;
     case GVNPREPass::Expr::ExprOp::Zext:
         os << "zext " << "v" << expr.operands[0] << " to " << expr.ir_value->getType()->toString();
+        break;
+    case GVNPREPass::Expr::ExprOp::Sext:
+        os << "sext " << "v" << expr.operands[0] << " to " << expr.ir_value->getType()->toString();
         break;
     case GVNPREPass::Expr::ExprOp::Bitcast:
         os << "bitcast " << "v" << expr.operands[0] << " to " << expr.ir_value->getType()->toString();
@@ -122,19 +143,19 @@ std::ostream &operator<<(std::ostream &os, const GVNPREPass &gvnpre) {
 
     os << "\n\nAVAIL_OUT: \n";
     for (const auto &[block, set] : gvnpre.avail_out_map)
-        os << "Block " << block->getName() << ": \n" << set << "\n";
+        os << "Block " << block->getName() << " AVAIL_OUT: \n" << set << "\n";
 
     os << "\n\nANTIC_IN: \n";
     for (const auto &[block, set] : gvnpre.antic_in_map)
-        os << "Block " << block->getName() << ": \n" << set << "\n";
+        os << "Block " << block->getName() << " ANTIC_IN: \n" << set << "\n";
 
     os << "\n\nANTIC_OUT: \n";
     for (const auto &[block, set] : gvnpre.antic_out_map)
-        os << "Block " << block->getName() << ": \n" << set << "\n";
+        os << "Block " << block->getName() << " ANTIC_OUT: \n" << set << "\n";
 
     os << "\n\nEXP_GEN: \n";
     for (const auto &[block, set] : gvnpre.exp_gen_map)
-        os << "Block " << block->getName() << ": \n" << set << "\n";
+        os << "Block " << block->getName() << " EXP_GEN: \n" << set << "\n";
     return os;
 }
 
@@ -153,7 +174,7 @@ const std::vector<GVNPREPass::ValueKind> &GVNPREPass::Expr::getExprOperands() co
 bool GVNPREPass::Expr::isGlobalTemp() const { return op == ExprOp::GlobalTemp; }
 bool GVNPREPass::Expr::isLocalTemp() const { return op == ExprOp::LocalTemp; }
 bool GVNPREPass::Expr::isPhi() const { return op == ExprOp::Phi; }
-Value* GVNPREPass::Expr::getIRVal() const {
+Value *GVNPREPass::Expr::getIRVal() const {
     Err::gassert(ir_value != nullptr);
     return ir_value;
 }
@@ -171,9 +192,22 @@ GVNPREPass::Expr::ExprOp GVNPREPass::Expr::makeOP(OP op) {
     case OP::DIV:
     case OP::FDIV:
         return ExprOp::Div;
-    case OP::REM:
+    case OP::UREM:
+    case OP::SREM:
     case OP::FREM:
         return ExprOp::Rem;
+    case OP::AND:
+        return ExprOp::And;
+    case OP::OR:
+        return ExprOp::Or;
+    case OP::XOR:
+        return ExprOp::Xor;
+    case OP::SHL:
+        return ExprOp::Shl;
+    case OP::LSHR:
+        return ExprOp::LShr;
+    case OP::ASHR:
+        return ExprOp::AShr;
     default:
         Err::unreachable("Unknown OP");
     }
@@ -224,7 +258,7 @@ bool GVNPREPass::Expr::operator==(const Expr &rhs) const {
     if (op != rhs.op)
         return false;
 
-    if (op == ExprOp::Zext || op == ExprOp::Bitcast) {
+    if (op == ExprOp::Sext || op == ExprOp::Zext || op == ExprOp::Bitcast) {
         if (!isSameType(ir_value->getType(), rhs.ir_value->getType()))
             return false;
     } else if (op == ExprOp::PureFuncCall) {
@@ -243,13 +277,13 @@ bool GVNPREPass::Expr::operator==(const Expr &rhs) const {
         //   %b = phi [ 0, %bb2 ] [ 1, %bb1 ]
         // We can not only compare their operands
         auto phi = ir_value->as<PHIInst>();
-        auto rhs_phi =  rhs.ir_value->as<PHIInst>();
+        auto rhs_phi = rhs.ir_value->as<PHIInst>();
         if (phi->getParent() != rhs_phi->getParent())
             return false;
         size_t i = 0;
-        for (const auto& [val, bb] : phi->incomings()) {
+        for (const auto &[val, bb] : phi->incomings()) {
             size_t j = 0;
-            for (const auto& [rhs_val, rhs_bb] : rhs_phi->incomings()) {
+            for (const auto &[rhs_val, rhs_bb] : rhs_phi->incomings()) {
                 if (bb == rhs_bb) {
                     if (operands[i] != rhs.operands[j])
                         return false;
@@ -265,14 +299,14 @@ bool GVNPREPass::Expr::operator==(const Expr &rhs) const {
     return operands == rhs.operands;
 }
 
-GVNPREPass::ValueKind GVNPREPass::NumberTable::getKindOrInsert(Value* value, KindExprSet &exp_gen,
+GVNPREPass::ValueKind GVNPREPass::NumberTable::getKindOrInsert(Value *value, KindExprSet &exp_gen,
                                                                size_t nested_expr_cnt) {
     auto e = getExprOrInsert(value, exp_gen, nested_expr_cnt);
     if (e == nullptr)
         return NotValueKind;
     return getKindOrInsert(e);
 }
-GVNPREPass::ValueKind GVNPREPass::NumberTable::getKindOrInsert(Value* value, size_t nested_expr_cnt) {
+GVNPREPass::ValueKind GVNPREPass::NumberTable::getKindOrInsert(Value *value, size_t nested_expr_cnt) {
     KindExprSet exp_gen_tmp;
     return getKindOrInsert(value, exp_gen_tmp, nested_expr_cnt);
 }
@@ -287,7 +321,7 @@ GVNPREPass::ValueKind GVNPREPass::NumberTable::getKindOrInsert(Expr *expr) {
     if (expr->isPhi() && !expr->getExprOperands().empty()) {
         ValueKind common = expr->getExprOperands()[0];
         bool is_common = true;
-        for (const auto& k : expr->getExprOperands()) {
+        for (const auto &k : expr->getExprOperands()) {
             if (k != common) {
                 is_common = false;
                 break;
@@ -301,7 +335,7 @@ GVNPREPass::ValueKind GVNPREPass::NumberTable::getKindOrInsert(Expr *expr) {
     return kind_cnt++;
 }
 
-GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(Value* ir_value, KindExprSet &exp_gen,
+GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(Value *ir_value, KindExprSet &exp_gen,
                                                            size_t nested_expr_cnt) {
     auto it = get_expr_cache.find(ir_value);
     if (it != get_expr_cache.end())
@@ -315,8 +349,7 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(Value* ir_value, Kind
     }
 
     std::shared_ptr<Expr> expr;
-    if (isSameType(ir_value->getType(), makeBType(IRBTYPE::UNDEFINED)) ||
-        isSameType(ir_value->getType(), makeBType(IRBTYPE::VOID))) {
+    if (ir_value->getType()->isUndef() || ir_value->getType()->isVoid()) {
         return get_expr_cache[ir_value] = nullptr;
     }
 
@@ -329,7 +362,7 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(Value* ir_value, Kind
         expr = std::make_shared<Expr>(ir_value, Expr::ExprOp::LocalTemp);
     else {
         if (auto phi = ir_value->as_raw<PHIInst>()) {
-            static std::vector<PHIInst*> visited_phis;
+            static std::vector<PHIInst *> visited_phis;
 
             if (std::any_of(visited_phis.begin(), visited_phis.end(),
                             [&phi](const auto &visited) { return visited == phi; })) {
@@ -349,17 +382,13 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(Value* ir_value, Kind
             }
         } else if (auto inst = ir_value->as_raw<Instruction>()) {
             std::vector<ValueKind> operands;
-            bool killed = false;
-            std::transform(inst->operand_begin(), inst->operand_end(), std::back_inserter(operands),
-                           [this, &exp_gen, &nested_expr_cnt, &killed](const auto &operand) {
-                               auto kind = getKindOrInsert(operand.get(), exp_gen, nested_expr_cnt + 1);
-                               if (kind == NotValueKind)
-                                   killed = true;
-                               return kind;
-                           });
-
-            if (killed)
-                return nullptr;
+            operands.reserve(inst->getNumOperands());
+            for (const auto &operand : inst->operands()) {
+                auto kind = getKindOrInsert(operand.get(), exp_gen, nested_expr_cnt + 1);
+                if (kind == NotValueKind)
+                    return nullptr;
+                operands.emplace_back(kind);
+            }
             if (auto binary = ir_value->as_raw<BinaryInst>()) {
                 Err::gassert(operands.size() == 2);
                 expr = std::make_shared<Expr>(binary, Expr::makeOP(binary->getOpcode()), std::move(operands));
@@ -375,6 +404,9 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(Value* ir_value, Kind
             } else if (auto zext = ir_value->as_raw<ZEXTInst>()) {
                 Err::gassert(operands.size() == 1);
                 expr = std::make_shared<Expr>(zext, Expr::ExprOp::Zext, std::move(operands));
+            } else if (auto sext = ir_value->as_raw<SEXTInst>()) {
+                Err::gassert(operands.size() == 1);
+                expr = std::make_shared<Expr>(sext, Expr::ExprOp::Sext, std::move(operands));
             } else if (auto bitcast = ir_value->as_raw<BITCASTInst>()) {
                 Err::gassert(operands.size() == 1);
                 expr = std::make_shared<Expr>(bitcast, Expr::ExprOp::Bitcast, std::move(operands));
@@ -405,20 +437,18 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(Value* ir_value, Kind
     return pool_expr;
 }
 
-GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(Value* inst, size_t nested_expr_cnt) {
+GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(Value *inst, size_t nested_expr_cnt) {
     KindExprSet exp_gen_tmp;
     return getExprOrInsert(inst, exp_gen_tmp, nested_expr_cnt);
 }
 
-void GVNPREPass::NumberTable::setPhiKind(PHIInst* phi, ValueKind kind) {
+void GVNPREPass::NumberTable::setPhiKind(PHIInst *phi, ValueKind kind) {
     invalidateExprCache(phi);
     auto expr = getExprOrInsert(phi);
     expr_table[expr] = kind;
 }
 
-void GVNPREPass::NumberTable::invalidateExprCache(Value* v) {
-    get_expr_cache.erase(v);
-}
+void GVNPREPass::NumberTable::invalidateExprCache(Value *v) { get_expr_cache.erase(v); }
 
 GVNPREPass::Expr *GVNPREPass::NumberTable::getExprFromPool(const std::shared_ptr<Expr> &item) {
     auto it = expr_pool.find(item);
@@ -446,7 +476,7 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprFromPool(const std::shared_ptr
 // Note that if the translated Expr doesn't exist, expr->getIRVal()->getParent() will be nullptr.
 // And we DO NOT update `exp_gen` in `phi_translate`.
 // When hoisted, this Inst will be added to `pred`, and the `exp_gen` will be updated.
-Value* GVNPREPass::phiTranslate(Expr *expr, BasicBlock *pred, BasicBlock *succ) {
+Value *GVNPREPass::phiTranslate(Expr *expr, BasicBlock *pred, BasicBlock *succ) {
     if (expr->isGlobalTemp())
         return expr->getIRVal();
 
@@ -516,19 +546,14 @@ Value* GVNPREPass::phiTranslate(Expr *expr, BasicBlock *pred, BasicBlock *succ) 
     // Make a temporarily IR::Value to get the ValueKind
     auto inst = expr->getIRVal()->as<Instruction>();
     std::vector<pVal> translated_operands;
-    bool killed = false;
-    std::transform(inst->operand_begin(), inst->operand_end(), std::back_inserter(translated_operands),
-                   [this, &pred, &succ, &killed](const auto &operand) -> pVal {
-                       auto v = phiTranslate(table.getExprOrInsert(operand.get()), pred, succ);
-                       if (v == nullptr) {
-                           killed = true;
-                           return nullptr;
-                       }
-                       return v->template as<Value>();
-                   });
+    translated_operands.reserve(inst->getNumOperands());
 
-    if (killed)
-        return phi_translate_cache[cache_key] = nullptr;
+    for (const auto &operand : inst->operands()) {
+        auto v = phiTranslate(table.getExprOrInsert(operand.get()), pred, succ);
+        if (v == nullptr)
+            return phi_translate_cache[cache_key] = nullptr;
+        translated_operands.emplace_back(v->as<Value>());
+    }
 
     pInst translated_inst;
     if (auto binary = inst->as<BinaryInst>()) {
@@ -542,18 +567,24 @@ Value* GVNPREPass::phiTranslate(Expr *expr, BasicBlock *pred, BasicBlock *succ) 
             std::make_shared<GEPInst>("%gvnpre.g" + std::to_string(name_cnt++), translated_ptr, translated_operands);
     } else if (auto fptosi = inst->as<FPTOSIInst>()) {
         Err::gassert(translated_operands.size() == 1);
-        translated_inst = std::make_shared<FPTOSIInst>("%gvnpre.f2i" + std::to_string(name_cnt++), translated_operands[0]);
+        translated_inst =
+            std::make_shared<FPTOSIInst>("%gvnpre.f2i" + std::to_string(name_cnt++), translated_operands[0]);
     } else if (auto sitofp = inst->as<SITOFPInst>()) {
         Err::gassert(translated_operands.size() == 1);
-        translated_inst = std::make_shared<SITOFPInst>("%gvnpre.i2f" + std::to_string(name_cnt++), translated_operands[0]);
+        translated_inst =
+            std::make_shared<SITOFPInst>("%gvnpre.i2f" + std::to_string(name_cnt++), translated_operands[0]);
     } else if (auto zext = inst->as<ZEXTInst>()) {
         Err::gassert(translated_operands.size() == 1);
-        translated_inst = std::make_shared<ZEXTInst>("%gvnpre.ze" + std::to_string(name_cnt++),
-            translated_operands[0], zext->getType()->as<BType>()->getInner());
+        translated_inst = std::make_shared<ZEXTInst>("%gvnpre.ze" + std::to_string(name_cnt++), translated_operands[0],
+                                                     zext->getType()->as<BType>()->getInner());
+    } else if (auto sext = inst->as<SEXTInst>()) {
+        Err::gassert(translated_operands.size() == 1);
+        translated_inst = std::make_shared<SEXTInst>("%gvnpre.se" + std::to_string(name_cnt++), translated_operands[0],
+                                                     sext->getType()->as<BType>()->getInner());
     } else if (auto bitcast = inst->as<BITCASTInst>()) {
         Err::gassert(translated_operands.size() == 1);
         translated_inst = std::make_shared<BITCASTInst>("%gvnpre.bc" + std::to_string(name_cnt++),
-            translated_operands[0], bitcast->getType());
+                                                        translated_operands[0], bitcast->getType());
     } else if (auto pure_func_call = inst->as<CALLInst>()) {
         Err::gassert(isPure(*fam, pure_func_call));
         auto func = translated_operands[0]->as<FunctionDecl>();
@@ -564,8 +595,7 @@ Value* GVNPREPass::phiTranslate(Expr *expr, BasicBlock *pred, BasicBlock *succ) 
 
         translated_inst =
             std::make_shared<CALLInst>("%gvnpre.c" + std::to_string(name_cnt++), func, translated_operands);
-    }
-    else
+    } else
         Err::unreachable("Unknown inst");
 
     phi_translate_gen.emplace_back(translated_inst);
@@ -612,9 +642,7 @@ Value* GVNPREPass::phiTranslate(Expr *expr, BasicBlock *pred, BasicBlock *succ) 
     return translated_inst.get();
 }
 
-void GVNPREPass::invalidatePhiTranslateCache() {
-    phi_translate_cache.clear();
-}
+void GVNPREPass::invalidatePhiTranslateCache() { phi_translate_cache.clear(); }
 
 PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     this->fam = &fam;
@@ -626,7 +654,13 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
         return PreserveAll();
     }
 
-    bool gvnpre_inst_modified = false;
+    bool gvnpre_folded_phi = false;
+    bool gvnpre_hoisted_inst = false;
+    bool gvnpre_replaced_value = false;
+
+    // Fold LCSSA Phi for phi_translate
+    for (const auto &bb : function)
+        gvnpre_folded_phi = foldPHI(bb, /* preserve_lcssa */ false);
 
     //
     // Step 1 - BuildSets
@@ -808,12 +842,17 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
 
     std::vector<pPhi> inserted_phis;
 
+    LoopInfo *loop_info = nullptr;
+    if (disable_PRE_on_loop_backedge)
+        loop_info = &fam.getResult<LoopAnalysis>(function);
+
     // a top-down traversal of the dominator tree
     size_t debug_logger_insert_round_cnt = 0;
     modified = true;
     while (modified) {
         modified = false;
         for (const auto &curr : dfvisitor) {
+            bool curr_is_loop_header = loop_info && loop_info->isLoopHeader(curr->raw_block());
             auto preds = curr->raw_block()->getPreBB();
             if (preds.size() > 1) {
                 auto &antic_in = antic_in_map[curr->raw_block()];
@@ -831,8 +870,9 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                         continue;
 
                     // Pred -> available, translated kind, translated val
-                    std::map<BasicBlock *, std::tuple<bool, ValueKind, Value*>> translated;
+                    std::map<BasicBlock *, std::tuple<bool, ValueKind, Value *>> translated;
                     bool avail_in_at_least_one_pred = false;
+                    bool unavail_in_at_least_one_pred = false;
                     bool killed = false;
                     for (const auto &pred : preds) {
                         auto tval = phiTranslate(expr_to_hoist, pred.get(), curr->raw_block());
@@ -847,11 +887,129 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                         // the original expr's kind. The difference is solved by phiTranslate.
                         bool is_avail_in_pred = avail_out_map[pred.get()].contains(tkind);
                         avail_in_at_least_one_pred |= is_avail_in_pred;
+                        unavail_in_at_least_one_pred |= !is_avail_in_pred;
                         translated[pred.get()] = std::make_tuple(is_avail_in_pred, tkind, tval);
                     }
 
                     if (killed)
                         continue;
+
+                    if (disable_PRE_on_loop_backedge && curr_is_loop_header) {
+                        // For a typical rotated loop:
+                        //
+                        //                     (critical)
+                        //                    |----------|
+                        //                    |          |
+                        //                    V          |
+                        //  PreHeader ---> Header ---> Latch
+                        //      |                        |
+                        //      v                        |
+                        //     Exit  <--------------------
+                        //
+                        // After the critical edge has been removed:
+                        //                        (New Latch)
+                        //                      |<-- bb0 <-|
+                        //                   (*)|          |
+                        //                      V          |
+                        //    PreHeader ---> Header ---> Old Latch
+                        //        |                        |
+                        //        v                        |
+                        //       Exit  <--------------------
+                        //
+                        //  Or for a simple self-loop:
+                        //
+                        //             (critical)
+                        //             |--------                                      (*) |- bb0 <-
+                        //             V       |   (after break critical edges)           V       |
+                        //    Ph --> Header ---|   >>>>>>>>>>>>>>>>>>>>>>>>>>>>> Ph --> Header ---|
+                        //             |                                                  |
+                        //             V                                                  V
+                        //            Exit                                              Exit
+                        //
+                        // If we perform PRE on bb0 -> Header (*) edge, instructions will be
+                        // hoisted to bb0, which will let bb0 can not be eliminated afterward.
+                        // This, however, let a loop becomes a middle-exiting loop, or produces
+                        // more BRInst, which can be a pessimization.
+                        // So we provide an option to disable such PRE.
+                        if (unavail_in_at_least_one_pred)
+                            continue;
+                    }
+
+                    // Hoisting an instruction shall hoist its operands first,
+                    // we try to achieve this by hoisting them in a topological order.
+                    // However, it is not guaranteed that one's operands is always available
+                    // at this block at this point.
+                    // For example:
+                    //
+                    //   A        E
+                    //   |        |
+                    //   V        V
+                    //   B <----- D <----- F
+                    //   |
+                    //   V
+                    //   C
+                    //
+                    // E:
+                    //   %gep.e = xxx
+                    //   %bc.e = bitcast %gep.e to i32*
+                    // F:
+                    //   %gep.f = xxx
+                    //   %bc.f = bitcast %gep.f to i32*
+                    // D:
+                    //   %bc.d.phi = phi [%bc.e, %E], [%bc.f, %F]
+                    // C:
+                    //   %gep.c = xxx
+                    //   %bc.c = bitcast %gep.c to i32*
+                    //
+                    // All the gep.x and bc.x are the same.
+                    //
+                    // In this case, there exits partial redundancy in D -> B -> C,
+                    // where the gep/bc are computed twice. To eliminate it, we might want to
+                    // hoist the gep/bc to A, and create a phi in B to merge them.
+                    //
+                    // However, because D only has one phi of bitcast, which means only bitcast is directly
+                    // available in D. (Or in AVAIL_OUT[D]).
+                    // And when we try to hoist the gep at this point, we find they are
+                    // not available both in A and D. So the gep can NOT be hoisted.
+                    // Thus, we can NOT hoist the bitcast to A , since its operands, the gep,
+                    // is not directly available in D.
+                    //
+                    // This doesn't mean we can not eliminate such redundancy.
+                    // The idea comes from: one instruction available means all operands available. The
+                    // only thing we need is to create some phi nodes.
+                    // Though the bitcast is not directly available (Not in AVAIL_OUT[D]) at this point.
+                    // It is in ANTIC_IN[D], and after a few rounds of insertion, a phi will be created
+                    // in D to merge the two bitcasts in E and F.
+                    //
+                    // Therefore, if we find one's operands is not in AVAIL_OUT[curr],
+                    // wait it and try again later.
+                    if (unavail_in_at_least_one_pred) {
+                        // unavail_in_at_least_one_pred means we need insertion, and have to check the
+                        // operands
+                        auto should_skip = [&] {
+                            for (const auto &pred : preds) {
+                                auto pred_avail = avail_out_map[pred.get()];
+                                auto [avail, hoisted_kind, hoisted_ir_val] = translated[pred.get()];
+                                if (!avail) {
+                                    auto inst = hoisted_ir_val->as<Instruction>();
+                                    auto &operand_uses = inst->getOperands();
+                                    for (const auto &oper_use : operand_uses) {
+                                        if (auto oper_inst = oper_use->getValue()->as<Instruction>()) {
+                                            if (oper_inst->getParent() == nullptr) {
+                                                auto oper_kind = table.getKindOrInsert(oper_inst.get());
+                                                if (!pred_avail.contains(oper_kind))
+                                                    return true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            return false;
+                        }();
+
+                        if (should_skip)
+                            continue;
+                    }
 
                     // If the expression is available in at least one predecessor,
                     // then we insert it in predecessors where it is not available.
@@ -868,6 +1026,61 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                                 auto hoisted_inst = hoisted_ir_val->as<Instruction>();
                                 Err::gassert(hoisted_inst != nullptr && hoisted_inst->getParent() == nullptr,
                                              "Hoisted instruction actually avail.");
+
+                                // Because we're hoisting instructions in the topological order,
+                                // one's operands must be hoisted before itself.
+                                // However, after several insertion round, many anticipated instructions
+                                // might be available due to insertion in one's dominators.
+                                // To avoid duplicate insertion, we won't hoist an instruction if
+                                // it is available (in new_set particularly). Because a newer version
+                                // is available in certain dominator.
+                                // Thus, some hoisted instructions that have uses to such unhoisted
+                                // instructions must be fixed here.
+                                //
+                                // IOW, phiTranslated instructions might contain out of date
+                                // operand dependency to instructions generated by phiTranslate,
+                                // which should be redirected to the one in avail_out[pred].
+                                //
+                                // For example,
+                                //   %a = gep %b, %c, %d
+                                //   %e = gep %a, %f, %g
+                                // Imagine we are hoisting %a and %e. And %a is already available
+                                // in certain dominator in previous insertion round.
+                                // We start from hoisting %a, and find it is in the new_set[curr], thus skipping %a.
+                                // Then, we hoist %e. We use phiTranslate to get the representation of %e
+                                // in the pred, and got the one that phiTranslated have cached in `phi_translate_map`
+                                // (Note that phiTranslate have two cache, one for correctness and one for
+                                // performance, in `phi_translate_map` and `phi_translate_cache` respectively.
+                                // See `phiTranslate` for details.)
+                                // The cached instruction, however, can have operands that are also
+                                // generated by phiTranslate. And if that operand is available now (in new_set[curr]),
+                                // replace it with the available one.
+                                //
+                                // Note that the value in new_set[curr] is bound to be in avail_out[pred],
+                                // since the values inserted in dominator of the current block must be
+                                // available in all its predecessors.
+                                //
+                                // FIXME: fix phiTranslate to get rid of such 'out of date'
+                                auto pred_avail = avail_out_map[pred.get()];
+                                std::function<void(pInst &)> fix_operands;
+                                fix_operands = [&](pInst &to_fix) {
+                                    auto &operand_uses = to_fix->getOperands();
+                                    for (const auto &oper_use : operand_uses) {
+                                        if (auto oper_inst = oper_use->getValue()->as<Instruction>()) {
+                                            if (oper_inst->getParent() == nullptr) {
+                                                auto oper_kind = table.getKindOrInsert(oper_inst.get());
+                                                Err::gassert(pred_avail.contains(oper_kind),
+                                                             "Hoisting an instruction before its operands.");
+                                                auto fixed_oper = pred_avail.getValue(oper_kind);
+                                                if (auto fixed_oper_inst = fixed_oper->as<Instruction>())
+                                                    fix_operands(fixed_oper_inst);
+                                                oper_use->setValue(fixed_oper->as<Value>());
+                                            }
+                                        }
+                                    }
+                                };
+                                fix_operands(hoisted_inst);
+
                                 pred->addInstBeforeTerminator(hoisted_inst);
                                 invalidatePhiTranslateCache();
                                 auto ok = avail_out_map[pred.get()].insert(hoisted_kind, hoisted_ir_val);
@@ -898,9 +1111,8 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                         if (auto common_value = getCommonValue(phi)) {
                             avail_out_map[curr->raw_block()].update(kind_to_hoist, common_value.get());
                             new_set_map[curr->raw_block()].update(kind_to_hoist, common_value.get());
-                        }
-                        else {
-                            gvnpre_inst_modified = true;
+                        } else {
+                            gvnpre_hoisted_inst = true;
                             curr->raw_block()->addPhiInst(phi);
                             invalidatePhiTranslateCache();
                             inserted_phis.emplace_back(phi);
@@ -938,7 +1150,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
         debug_logger_insert_round_cnt++;
         if (enable_debug_output) {
             Logger::logDebug("[GVN-PRE] on '", function.getName(), "' AFTER INSERT ROUND ",
-               debug_logger_insert_round_cnt, ":\n", *this);
+                             debug_logger_insert_round_cnt, ":\n", *this);
         }
     }
 
@@ -975,7 +1187,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                     eliminated.emplace_back(inst);
                     Logger::logDebug("[GVN-PRE] on '", function.getName(), "': '", inst->getName(), "' replaced with '",
                                      leader_value->getName(), "'.");
-                    gvnpre_inst_modified = true;
+                    gvnpre_replaced_value = true;
                 }
             }
         }
@@ -983,8 +1195,53 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
 
     // After replacing, the phi might end up having the same value for all predecessors.
     for (const auto &phi : inserted_phis) {
-        if (auto common = getCommonValue(phi))
+        if (auto common = getCommonValue(phi)) {
             phi->replaceSelf(common);
+            eliminated.emplace_back(phi);
+        }
+    }
+
+    // If we disabled PRE on loop backedge, some insertions will be redundant,
+    // since the original algorithm is broken.
+    // Any insertions are to satisfy the anticipation in the successors, but the
+    // successor might cannot do PRE due to backedge.
+    // For example (extended from the previous one):
+    //
+    //                                       (New Latch)
+    //                      A              |<-- bb0 <-|
+    //                      |           (*)|          |
+    //                      V              V          |
+    //         B  ----> PreHeader ---> Header ---> Old Latch
+    //                      |                        |
+    //                      v                        |
+    //                     Exit  <--------------------
+    //
+    // If Header needs something that is available in A and B,
+    // but not directly available in PreHeader and totally unavailable in bb0.
+    // Typically, GVN-PRE will:
+    //   1. Insert a Phi in the PreHeader to merge the available value from A and B.
+    //   2. Hoist the computation in the Header to bb0.
+    //   3. Insert a Phi in the Header to merge the phi inserted in step 1
+    //      and the computation hoisted in step 2.
+    // But if we disabled PRE on backedge, step 2 and 3 will not happen.
+    // Thus, the phi inserted in step 1 is fully redundant.
+    //
+    // So we eliminate the redundant phi.
+    if (disable_PRE_on_loop_backedge) {
+        std::vector<pInst> worklist;
+        worklist.reserve(inserted_phis.size());
+        for (const auto &phi : inserted_phis)
+            worklist.emplace_back(phi);
+        eliminateDeadInsts(worklist);
+        auto all_removed = [&] {
+            for (const auto &inst : inserted_phis) {
+                if (inst->getParent() != nullptr)
+                    return false;
+            }
+            return true;
+        }();
+        if (all_removed)
+            gvnpre_hoisted_inst = false;
     }
 
     eliminateDeadInsts(eliminated, &fam);
@@ -992,6 +1249,8 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     // cleanup to release temp objects
     reset();
 
-    return gvnpre_inst_modified ? PreserveCFGAnalyses() : PreserveAll();
+    if (gvnpre_folded_phi || gvnpre_replaced_value || gvnpre_hoisted_inst)
+        return PreserveCFGAnalyses();
+    return PreserveAll();
 }
 } // namespace IR

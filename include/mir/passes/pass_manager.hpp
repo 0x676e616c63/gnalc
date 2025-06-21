@@ -1,56 +1,42 @@
 #pragma once
-#ifndef GNALC_MIR_PASSES_PASS_MANAGER_HPP
-#define GNALC_MIR_PASSES_PASS_MANAGER_HPP
+#ifndef GNALC_ARMV8_MIR_PASSES_PASS_MANAGER_HPP
+#define GNALC_ARMV8_MIR_PASSES_PASS_MANAGER_HPP
 
-#include "../../mir/function.hpp"
-#include "../../mir/module.hpp"
 #include "../../pass_manager/pass_manager.hpp"
+#include "mir/MIR.hpp"
 
 namespace PM {
-extern template class AnalysisManager<MIR::Module>;
-extern template class AnalysisManager<MIR::Function>;
+extern template class AnalysisManager<MIR_new::MIRModule>;
+extern template class AnalysisManager<MIR_new::MIRFunction>;
 
-extern template class PassManager<MIR::Module>;
-extern template class PassManager<MIR::Function>;
+extern template class PassManager<MIR_new::MIRModule>;
+extern template class PassManager<MIR_new::MIRFunction>;
 
-extern template class InnerAnalysisManagerProxy<AnalysisManager<MIR::Function>,
-                                                MIR::Module>;
+extern template class InnerAnalysisManagerProxy<AnalysisManager<MIR_new::MIRFunction>, MIR_new::MIRModule>;
 } // namespace PM
 
-namespace MIR {
+namespace MIR_new {
 
-using OperP = std::shared_ptr<MIR::Operand>;
-using BlkP = std::shared_ptr<MIR::BasicBlock>;
-using FuncP = std::shared_ptr<MIR::Function>;
-using InstP = std::shared_ptr<MIR::Instruction>;
-using NInstP = std::shared_ptr<MIR::NeonInstruction>;
+using FAM = PM::AnalysisManager<MIRFunction>;
+using MAM = PM::AnalysisManager<MIRModule>;
 
-using PreColP = std::shared_ptr<MIR::PreColedOP>;
-using BindOnP = std::shared_ptr<MIR::BindOnVirOP>;
-using ConstP = std::shared_ptr<MIR::ConstantIDX>;
-using BaseP = std::shared_ptr<MIR::BaseADROP>;
+using MPM = PM::PassManager<MIRModule>;
+using FPM = PM::PassManager<MIRFunction>;
 
-using FAM = PM::AnalysisManager<Function>;
-using MAM = PM::AnalysisManager<Module>;
-
-using MPM = PM::PassManager<Module>;
-using FPM = PM::PassManager<Function>;
-
-using FAMProxy = PM::InnerAnalysisManagerProxy<FAM, Module>;
+using FAMProxy = PM::InnerAnalysisManagerProxy<FAM, MIRModule>;
 
 class ModulePassWrapper : public PM::PassInfo<ModulePassWrapper> {
 public:
-    using FunctionPassConceptT = PM::PassConcept<Function, FAM>;
+    using FunctionPassConceptT = PM::PassConcept<MIRFunction, FAM>;
     std::unique_ptr<FunctionPassConceptT> function_pass;
 
-    explicit ModulePassWrapper(std::unique_ptr<FunctionPassConceptT> pass_)
-        : function_pass(std::move(pass_)) {}
+    explicit ModulePassWrapper(std::unique_ptr<FunctionPassConceptT> pass_) : function_pass(std::move(pass_)) {}
 
-    PM::PreservedAnalyses run(Module &m, MAM &mam) const {
+    PM::PreservedAnalyses run(MIRModule &m, MAM &mam) const {
         FAM &fam = mam.getResult<FAMProxy>(m).getManager();
 
         PM::PreservedAnalyses pa = PM::PreservedAnalyses::all();
-        for (const auto &func : m.getFuncs()) {
+        for (const auto &func : m.funcs()) {
             PM::PreservedAnalyses curr_pa = function_pass->run(*func, fam);
             fam.invalidate(*func, curr_pa);
             pa.retain(curr_pa);
@@ -61,12 +47,10 @@ public:
     }
 };
 
-template <typename FunctionPassT>
-auto makeModulePass(FunctionPassT &&pass) {
-    using FunctionPassModelT = PM::PassModel<Function, FunctionPassT, FAM>;
-    return ModulePassWrapper(
-        std::unique_ptr<ModulePassWrapper::FunctionPassConceptT>(
-            new FunctionPassModelT(std::forward<FunctionPassT>(pass))));
+template <typename FunctionPassT> auto makeModulePass(FunctionPassT &&pass) {
+    using FunctionPassModelT = PM::PassModel<MIRFunction, FunctionPassT, FAM>;
+    return ModulePassWrapper(std::unique_ptr<ModulePassWrapper::FunctionPassConceptT>(
+        new FunctionPassModelT(std::forward<FunctionPassT>(pass))));
 }
-} // namespace MIR
+} // namespace MIR_new
 #endif

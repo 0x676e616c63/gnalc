@@ -18,6 +18,7 @@
 #include "instructions/helper.hpp"
 #include "instructions/memory.hpp"
 #include "instructions/phi.hpp"
+#include "instructions/vector.hpp"
 #include "module.hpp"
 
 namespace IR {
@@ -36,7 +37,11 @@ public:
     virtual void visit(ConstantI1 &node) { Err::not_implemented("IRVisitor::visit(ConstantI1&)"); }
     virtual void visit(ConstantI8 &node) { Err::not_implemented("IRVisitor::visit(ConstantI8&)"); }
     virtual void visit(ConstantInt &node) { Err::not_implemented("IRVisitor::visit(ConstantInt&)"); }
+    virtual void visit(ConstantI64 &node) { Err::not_implemented("IRVisitor::visit(ConstantI64&)"); }
+    virtual void visit(ConstantI128 &node) { Err::not_implemented("IRVisitor::visit(ConstantI128&)"); }
     virtual void visit(ConstantFloat &node) { Err::not_implemented("IRVisitor::visit(ConstantFloat&)"); }
+    virtual void visit(ConstantIntVector &node) { Err::not_implemented("IRVisitor::visit(ConstantIntVector&)"); }
+    virtual void visit(ConstantFloatVector &node) { Err::not_implemented("IRVisitor::visit(ConstantFloatVector&)"); }
     virtual void visit(BinaryInst &node) { Err::not_implemented("IRVisitor::visit(BinaryInst&)"); }
     virtual void visit(FNEGInst &node) { Err::not_implemented("IRVisitor::visit(FNEGInst&)"); }
     virtual void visit(ICMPInst &node) { Err::not_implemented("IRVisitor::visit(ICMPInst&)"); }
@@ -47,16 +52,23 @@ public:
     virtual void visit(FPTOSIInst &node) { Err::not_implemented("IRVisitor::visit(FPTOSIInst&)"); }
     virtual void visit(SITOFPInst &node) { Err::not_implemented("IRVisitor::visit(SITOFPInst&)"); }
     virtual void visit(ZEXTInst &node) { Err::not_implemented("IRVisitor::visit(ZEXTInst&)"); }
+    virtual void visit(SEXTInst &node) { Err::not_implemented("IRVisitor::visit(SEXTInst&)"); }
     virtual void visit(BITCASTInst &node) { Err::not_implemented("IRVisitor::visit(BITCASTInst&)"); }
-    virtual void visit(IFInst &node) { Err::not_implemented("IRVisitor::visit(IFInst&)"); }
-    virtual void visit(WHILEInst &node) { Err::not_implemented("IRVisitor::visit(WHILEInst&)"); }
-    virtual void visit(BREAKInst &node) { Err::not_implemented("IRVisitor::visit(BREAKInst&)"); }
-    virtual void visit(CONTINUEInst &node) { Err::not_implemented("IRVisitor::visit(CONTINUEInst&)"); }
     virtual void visit(ALLOCAInst &node) { Err::not_implemented("IRVisitor::visit(ALLOCAInst&)"); }
     virtual void visit(LOADInst &node) { Err::not_implemented("IRVisitor::visit(LOADInst&)"); }
     virtual void visit(STOREInst &node) { Err::not_implemented("IRVisitor::visit(STOREInst&)"); }
     virtual void visit(GEPInst &node) { Err::not_implemented("IRVisitor::visit(GEPInst&)"); }
     virtual void visit(PHIInst &node) { Err::not_implemented("IRVisitor::visit(PHIInst&)"); }
+    virtual void visit(EXTRACTInst &node) { Err::not_implemented("IRVisitor::visit(EXTRACTInst&)"); }
+    virtual void visit(INSERTInst &node) { Err::not_implemented("IRVisitor::visit(INSERTInst&)"); }
+    virtual void visit(SHUFFLEInst &node) { Err::not_implemented("IRVisitor::visit(SHUFFLEInst&)"); }
+    virtual void visit(SELECTInst &node) { Err::not_implemented("IRVisitor::visit(SELECTInst&)"); }
+
+    virtual void visit(IFInst &node) { Err::not_implemented("IRVisitor::visit(IFInst&)"); }
+    virtual void visit(WHILEInst &node) { Err::not_implemented("IRVisitor::visit(WHILEInst&)"); }
+    virtual void visit(BREAKInst &node) { Err::not_implemented("IRVisitor::visit(BREAKInst&)"); }
+    virtual void visit(CONTINUEInst &node) { Err::not_implemented("IRVisitor::visit(CONTINUEInst&)"); }
+    virtual void visit(FORInst &node) { Err::not_implemented("IRVisitor::visit(FORInst&)"); }
 
     virtual ~IRVisitor() = default;
 };

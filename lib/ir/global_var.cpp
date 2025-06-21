@@ -95,6 +95,7 @@ const std::vector<GVIniter> &GVIniter::getInnerIniter() const { return inner_ini
 const GVIniter &GlobalVariable::getIniter() const { return initer; }
 
 int GlobalVariable::getAlign() const { return align; }
+void GlobalVariable::setAlign(int a) { align = a; }
 
 // void GlobalVariable::accept(IRVisitor& visitor) override {
 // visitor.visit(*this); }

@@ -1,10 +1,15 @@
 #include "ir/passes/transforms/reassociate.hpp"
+
+#include "ir/irbuilder.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "ir/passes/helpers/constant_fold.hpp"
+#include "ir/pattern_match.hpp"
+#include "pattern_match/pattern_match.hpp"
 
 #include <algorithm>
 
+using namespace PatternMatch;
 namespace IR {
 using Rank = ReassociatePass::Rank;
 using ValueEntry = ReassociatePass::ValueEntry;
@@ -40,7 +45,7 @@ pBinary ReassociatePass::neg2mul(const pInst &neg) {
                                                func->getConst(-1));
     result->getParent()->addInst(neg->getIndex(), result);
     neg->replaceSelf(result);
-    optModified = true;
+    modified_in_opt = true;
     return result;
 }
 
@@ -58,7 +63,7 @@ pVal makeAddTree(std::vector<pVal> &ops, OP opcode, const pInst &before, size_t 
     auto lhs = ops.back();
     ops.pop_back();
     auto rhs = makeAddTree(ops, opcode, before, name_cnt);
-    auto binary = std::make_shared<BinaryInst>("%reass.mkat" + std::to_string(name_cnt++), opcode, lhs, rhs);
+    auto binary = std::make_shared<BinaryInst>("%re.mkat" + std::to_string(name_cnt++), opcode, lhs, rhs);
     before->getParent()->addInst(before->getIndex(), binary);
     return binary;
 }
@@ -67,53 +72,52 @@ Rank ReassociatePass::getRank(const pVal &v) {
     if (v->getVTrait() == ValueTrait::CONSTANT_LITERAL)
         return 0;
     if (v->getVTrait() == ValueTrait::FORMAL_PARAMETER)
-        return valueRankMap[v];
+        return value_rank_map[v];
 
-    auto it = valueRankMap.find(v);
-    if (it != valueRankMap.end())
+    auto it = value_rank_map.find(v);
+    if (it != value_rank_map.end())
         return it->second;
 
     auto inst = v->as<Instruction>();
     Err::gassert(inst != nullptr);
-    Rank maxRank = bbRankMap[inst->getParent()];
+    Rank maxRank = block_rank_map[inst->getParent()];
     Rank rank = 0;
     for (size_t i = 0; i != inst->getOperands().size() && rank != maxRank; ++i)
         rank = std::max(rank, getRank(inst->getOperand(i)->getValue()));
-    return valueRankMap[inst] = rank;
+    return value_rank_map[inst] = rank;
 }
 
 std::vector<ExprTreeNode> ReassociatePass::analyzeExprTree(const pBinary &root) {
-    using Weight = ExprTreeNode::WeightT;
+    using Freq = ExprTreeNode::FreqT;
     auto root_op = root->getOpcode();
-    std::vector<std::pair<pBinary, Weight>> work_list{std::make_pair(root, 1)};
+    std::vector<std::pair<pBinary, Freq>> work_list{std::make_pair(root, 1)};
 
-    std::map<pVal, Weight> weights;
+    std::unordered_map<pVal, Freq> freq_map;
     std::vector<pVal> nodes;
 
     while (!work_list.empty()) {
-        auto [inst, weight] = work_list.back();
+        auto [inst, freq] = work_list.back();
         work_list.pop_back();
 
-        for (const auto &use : inst->getOperands()) {
-            auto operand = use->getValue();
+        for (const auto &operand : inst->operands()) {
             if (auto binary = isOneUseBinary(operand, root_op)) {
-                work_list.emplace_back(binary, weight);
+                work_list.emplace_back(binary, freq);
                 continue;
             }
 
-            auto it = weights.find(operand);
-            if (it == weights.end()) {
+            auto it = freq_map.find(operand);
+            if (it == freq_map.end()) {
                 nodes.emplace_back(operand);
-                weights[operand] = weight;
+                freq_map[operand] = freq;
             } else
-                it->second += weight;
+                it->second += freq;
         }
     }
 
     std::vector<ExprTreeNode> tree;
     for (const auto &n : nodes) {
-        auto it = weights.find(n);
-        Err::gassert(it != weights.end());
+        auto it = freq_map.find(n);
+        Err::gassert(it != freq_map.end());
         tree.emplace_back(ExprTreeNode{n, it->second});
     }
     return tree;
@@ -121,72 +125,72 @@ std::vector<ExprTreeNode> ReassociatePass::analyzeExprTree(const pBinary &root) 
 
 void ReassociatePass::rewriteExpr(const pBinary &root, std::vector<ValueEntry> &ops) {
     auto opcode = root->getOpcode();
-    std::vector<pBinary> availNodes;
-    std::set<pVal> skipList; // Skip all leafs, rewriting them is not safe
+    std::vector<pBinary> avail_nodes;
+    std::unordered_set<pVal> skip_list; // Skip all leafs, rewriting them is not safe
     for (const auto &op : ops)
-        skipList.insert(op.op);
-    pInst rewriteBeg = nullptr;
+        skip_list.insert(op.operand);
+    pInst rewrite_beg = nullptr;
     pBinary curr = root;
 
     for (size_t i = 0;; ++i) {
         // The last operation (which is earliest BinaryInst in the IR)'s operands might all come from ops.
         if (i + 2 == ops.size()) {
-            auto newLHS = ops[i].op;
-            auto newRHS = ops[i + 1].op;
-            auto oldLHS = curr->getLHS();
-            auto oldRHS = curr->getRHS();
+            auto new_lhs = ops[i].operand;
+            auto new_rhs = ops[i + 1].operand;
+            auto old_lhs = curr->getLHS();
+            auto old_rhs = curr->getRHS();
             // Trivial case
-            if (newLHS == oldLHS && newRHS == oldRHS)
+            if (new_lhs == old_lhs && new_rhs == old_rhs)
                 break;
-            if (newLHS == oldRHS && newRHS == oldLHS) {
+            if (new_lhs == old_rhs && new_rhs == old_lhs) {
                 curr->swapLHSRHS();
-                optModified = true;
+                modified_in_opt = true;
                 break;
             }
             // Needs rewrite
-            if (oldLHS != newLHS) {
-                auto subBinary = isOneUseBinary(oldLHS, opcode);
-                if (subBinary && skipList.find(subBinary) == skipList.end())
-                    availNodes.emplace_back(subBinary);
-                curr->setLHS(newLHS);
+            if (old_lhs != new_lhs) {
+                auto sub_bin = isOneUseBinary(old_lhs, opcode);
+                if (sub_bin && skip_list.find(sub_bin) == skip_list.end())
+                    avail_nodes.emplace_back(sub_bin);
+                curr->setLHS(new_lhs);
             }
-            if (oldRHS != newRHS) {
-                auto subBinary = isOneUseBinary(oldRHS, opcode);
-                if (subBinary && skipList.find(subBinary) == skipList.end())
-                    availNodes.emplace_back(subBinary);
-                curr->setRHS(newRHS);
+            if (old_rhs != new_rhs) {
+                auto sub_bin = isOneUseBinary(old_rhs, opcode);
+                if (sub_bin && skip_list.find(sub_bin) == skip_list.end())
+                    avail_nodes.emplace_back(sub_bin);
+                curr->setRHS(new_rhs);
             }
-            optModified = true;
-            rewriteBeg = curr;
+            modified_in_opt = true;
+            rewrite_beg = curr;
             break;
         }
         // While others, the LHS is a subtree and the RHS is op[i]
         // 1. RHS
-        auto newRHS = ops[i].op;
-        if (newRHS != curr->getRHS()) {
-            if (newRHS == curr->getLHS())
+        auto new_rhs = ops[i].operand;
+        if (new_rhs != curr->getRHS()) {
+            if (new_rhs == curr->getLHS())
                 curr->swapLHSRHS();
             else {
                 auto subBinary = isOneUseBinary(curr->getRHS(), opcode);
-                if (subBinary && skipList.find(subBinary) == skipList.end())
-                    availNodes.emplace_back(subBinary);
-                curr->setRHS(newRHS);
-                optModified = true;
+                if (subBinary && skip_list.find(subBinary) == skip_list.end())
+                    avail_nodes.emplace_back(subBinary);
+                curr->setRHS(new_rhs);
+                modified_in_opt = true;
             }
         }
 
         // 2. LHS
-        if (auto subBinary = isOneUseBinary(curr->getLHS(), opcode)) {
-            if (skipList.find(subBinary) == skipList.end())
-                curr = subBinary;
+        if (auto sub_bin = isOneUseBinary(curr->getLHS(), opcode)) {
+            if (skip_list.find(sub_bin) == skip_list.end())
+                curr = sub_bin;
             continue;
         }
 
-        if (!availNodes.empty()) {
-            auto newInst = availNodes.back();
-            availNodes.pop_back();
-            curr->setLHS(newInst);
-            curr = newInst;
+        if (!avail_nodes.empty()) {
+            auto new_inst = avail_nodes.back();
+            avail_nodes.pop_back();
+            curr->setLHS(new_inst);
+            curr = new_inst;
         } else {
             // There is no node left available, and we've made an unwise choice.
             // Just get one from air.
@@ -195,160 +199,204 @@ void ReassociatePass::rewriteExpr(const pBinary &root, std::vector<ValueEntry> &
             root->getParent()->addInst(root->getIndex(), dummy);
             curr->setLHS(dummy);
             curr = dummy;
-            Logger::logWarning("[Reassociate]: No nodes left available. Generating one for rewriting.");
+            Logger::logWarning("[Reassoc]: No nodes left available. Generating one for rewriting.");
         }
 
-        rewriteBeg = curr;
-        optModified = true;
+        rewrite_beg = curr;
+        modified_in_opt = true;
     }
 
     // Move what we've rewritten to ensure any user dominate all its uses.
-    if (rewriteBeg != nullptr) {
+    if (rewrite_beg != nullptr) {
         auto bb = root->getParent();
         auto it = root->getIter();
         while (true) {
-            if (rewriteBeg == root)
+            if (rewrite_beg == root)
                 break;
-            rewriteBeg->getParent()->delFirstOfInst(rewriteBeg);
-            bb->addInst(it, rewriteBeg);
-            rewriteBeg = rewriteBeg->getUseList().front()->getUser()->as<Instruction>();
-            Err::gassert(rewriteBeg != nullptr);
+            rewrite_beg->getParent()->delFirstOfInst(rewrite_beg);
+            bb->addInst(it, rewrite_beg);
+            rewrite_beg = rewrite_beg->getUseList().front()->getUser()->as<Instruction>();
+            Err::gassert(rewrite_beg != nullptr);
         }
     }
 }
 
 pVal ReassociatePass::removeFactor(const pVal &v, const pVal &factor) {
-    auto binaryInst = isOneUseOp(v, OP::MUL);
-    if (!binaryInst)
+    auto mul = isOneUseOp(v, OP::MUL);
+    if (!mul)
         return nullptr;
 
-    auto tree = analyzeExprTree(binaryInst);
+    auto tree = analyzeExprTree(mul);
     std::vector<ValueEntry> factors;
     factors.reserve(tree.size());
 
     for (const auto &t : tree)
-        factors.insert(factors.end(), t.weight, ValueEntry{t.value, getRank(t.value)});
+        factors.insert(factors.end(), t.freq, ValueEntry{t.value, getRank(t.value)});
 
-    bool canRemove = false;
-    bool needsNegate = false;
+    bool found_factor = false;
+    bool needs_negate = false;
     for (size_t i = 0; i < factors.size(); ++i) {
-        if (factors[i].op == factor) {
-            canRemove = true;
+        if (factors[i].operand == factor) {
+            found_factor = true;
             factors.erase(factors.begin() + i);
+            break;
         }
-        auto ci1 = factor->as<ConstantI1>();
-        auto ci2 = factors[i].op->as<ConstantInt>();
+        auto ci1 = factor->as<ConstantInt>();
+        auto ci2 = factors[i].operand->as<ConstantInt>();
         if (ci1 && ci2 && ci1->getVal() == -ci2->getVal()) {
-            canRemove = needsNegate = true;
+            found_factor = needs_negate = true;
             factors.erase(factors.begin() + i);
             break;
         }
     }
 
-    if (!canRemove && !factors.empty()) {
-        rewriteExpr(binaryInst, factors);
+    if (!found_factor) {
+        rewriteExpr(mul, factors);
         return nullptr;
     }
 
+    IRBuilder builder("%re.rf", mul->getParent(), ++mul->getIter());
+
     auto ret = v;
     if (factors.size() == 1)
-        ret = factors[0].op;
-    else if (!factors.empty()) {
-        rewriteExpr(binaryInst, factors);
-        ret = binaryInst;
+        ret = factors[0].operand;
+    else {
+        rewriteExpr(mul, factors);
+        ret = mul;
     }
 
-    if (needsNegate) {
-        auto neg =
-            std::make_shared<BinaryInst>("%reass.neg" + std::to_string(name_cnt++), OP::SUB, func->getConst(0), ret);
-        binaryInst->getParent()->addInst(std::next(binaryInst->getIter()), neg);
-    }
+    if (needs_negate)
+        return builder.makeSub(func->getConst(0), ret);
 
     return ret;
 }
 
 pVal ReassociatePass::optAdd(const pBinary &root, std::vector<ValueEntry> &ops) {
-    // Fold add to mul
-    // Y + Y + Y + Z -> 3 * Y + Z
+    IRBuilder builder("%re.oa", root->getParent(), root->getIter());
     for (size_t i = 0, e = ops.size(); i != e; ++i) {
-        auto curr = ops[i].op;
-        if (i + 1 != ops.size() && ops[i + 1].op == curr) {
-            int repeatedTimes = 0;
+        // lambda captured structured bindings are a C++20 extension [-Wc++20-extensions]
+        auto curr = ops[i].operand;
+        auto curr_rank = ops[i].rank;
+
+        // Fold add to mul
+        // Y + Y + Y + Z -> 3 * Y + Z
+        if (i + 1 != ops.size() && ops[i + 1].operand == curr) {
+            int freq = 0;
             do {
                 ops.erase(ops.begin() + i);
-                ++repeatedTimes;
-            } while (i != ops.size() && ops[i].op == curr);
+                ++freq;
+            } while (i != ops.size() && ops[i].operand == curr);
 
-            auto mul = std::make_shared<BinaryInst>("%reass.a2m" + std::to_string(name_cnt++), OP::MUL, curr,
-                                                    func->getConst(repeatedTimes));
+            auto mul = builder.makeMul(curr, func->getConst(freq));
+            Logger::logDebug("[Reassoc]: Folded add to mul for '", mul->getName(), "'.");
 
-            root->getParent()->addInst(root->getIndex(), mul);
-            redoSet.insert(mul);
-            optModified = true;
+            // Redo it later since the factoring can happen multiple times.
+            // (a * 2) + (a * 2) -> (a * 6)
+            redo_list.insert(mul);
+            modified_in_opt = true;
+
+            // Fully folded
             if (ops.empty())
                 return mul;
 
             ops.insert(ops.begin(), ValueEntry{mul, getRank(mul)});
             --i;
             e = ops.size();
+            continue;
+        }
+
+        // Find A + -A
+        if (pVal neg_curr; match(curr, M::Sub(M::Is(0), M::Bind(neg_curr)))) {
+            // Note that A and -A get the same Rank
+            auto neg_pos = [&]() -> size_t {
+                for (size_t j = i + 1; j != e && ops[j].rank == curr_rank; ++j) {
+                    if (ops[j].operand == neg_curr)
+                        return j;
+                }
+                for (int j = i - 1; j >= 0 && ops[j].rank == curr_rank; --j) {
+                    if (ops[j].operand == neg_curr)
+                        return j;
+                }
+                return i;
+            }();
+            if (neg_pos != i) {
+                Logger::logDebug("[Reassoc]: Folded A + -A.");
+                // Remove A and -A
+                if (ops.size() == 2)
+                    return func->getConst(0);
+
+                ops.erase(ops.begin() + i);
+
+                // Fix up indices after erase
+                if (i < neg_pos)
+                    --neg_pos;
+                else
+                    --i;
+                ops.erase(ops.begin() + neg_pos);
+
+                --i;
+                e -= 2;
+            }
         }
     }
 
     // Factor out common term
     // A * A + A * B * C -> A * (A + B + C)
-    std::map<pVal, size_t> factorCnt;
-    size_t maxCnt = 0;
-    pVal maxCntFactor = nullptr;
+    std::unordered_map<pVal, size_t> freq_map;
+    size_t max_freq = 0;
+    pVal max_freq_factor = nullptr;
     for (const auto &op : ops) {
-        if (auto mul = isOneUseOp(op.op, OP::MUL)) {
+        if (auto mul = isOneUseOp(op.operand, OP::MUL)) {
             std::vector<pVal> factors;
             extractOneUseFactors(mul, factors);
-            std::set<pVal> dup;
-            for (auto &factor : factors) {
-                if (!dup.insert(factor).second)
+            std::unordered_set<pVal> visited;
+            for (const auto &factor : factors) {
+                if (!visited.insert(factor).second)
                     continue;
-                size_t cnt = ++factorCnt[factor];
-                if (cnt > maxCnt) {
-                    maxCnt = cnt;
-                    maxCntFactor = factor;
+                size_t cnt = ++freq_map[factor];
+                if (cnt > max_freq) {
+                    max_freq = cnt;
+                    max_freq_factor = factor;
                 }
             }
         }
     }
-    if (maxCnt > 1) {
-        std::vector<pVal> newMulOps;
-        {
-            // Explicitly use maxCntFactor twice to ensure it won't
-            // suddenly become oneUse due to removing
-            auto dummy = std::make_shared<BinaryInst>("%reass.fa" + std::to_string(name_cnt++), OP::ADD, maxCntFactor,
-                                                      maxCntFactor);
-            for (size_t i = 0; i < ops.size(); ++i) {
-                if (!isOneUseOp(ops[i].op, OP::MUL))
-                    continue;
-                if (auto value = removeFactor(ops[i].op, maxCntFactor)) {
-                    for (size_t j = ops.size(); j != i;) {
-                        --j;
-                        if (ops[j].op == ops[i].op) {
-                            newMulOps.emplace_back(value);
-                            ops.erase(ops.begin() + j);
-                        }
+    if (max_freq > 1) {
+        std::vector<pVal> new_mul_ops;
+        // Explicitly use max_freq_factor twice to ensure it won't
+        // suddenly become oneUse due to removing
+        auto dummy = std::make_shared<BinaryInst>("", OP::ADD, max_freq_factor, max_freq_factor);
+
+        for (size_t i = 0; i < ops.size(); ++i) {
+            if (!isOneUseOp(ops[i].operand, OP::MUL))
+                continue;
+            if (auto value = removeFactor(ops[i].operand, max_freq_factor)) {
+                for (size_t j = ops.size(); j != i;) {
+                    --j;
+                    if (ops[j].operand == ops[i].operand) {
+                        new_mul_ops.emplace_back(value);
+                        ops.erase(ops.begin() + j);
                     }
-                    --i;
                 }
+                --i;
             }
         }
 
-        auto v = makeAddTree(newMulOps, OP::ADD, root, name_cnt);
+        // Release the use
+        dummy.reset();
+
+        auto add_tree = makeAddTree(new_mul_ops, OP::ADD, root, name_cnt);
+
+        Logger::logDebug("[Reassoc]: Factor out common term for '", add_tree->getName(), "'.");
 
         // Redo it to find:
         // A * A * B + A * A * C -> A * (A * B + A * C) -> A * (A * (B + C)))
-        if (auto inst = v->as<Instruction>())
-            redoSet.insert(inst);
+        if (auto inst = add_tree->as<Instruction>())
+            redo_list.insert(inst);
 
-        auto mul = std::make_shared<BinaryInst>("%reass.m" + std::to_string(name_cnt++), OP::MUL, v, maxCntFactor);
-        root->getParent()->addInst(root->getIndex(), mul);
-        redoSet.insert(mul);
-        optModified = true;
+        auto mul = builder.makeMul(add_tree, max_freq_factor);
+        redo_list.insert(mul);
+        modified_in_opt = true;
         if (ops.empty())
             return mul;
         ops.insert(ops.begin(), ValueEntry{mul, getRank(mul)});
@@ -406,13 +454,13 @@ pInst ReassociatePass::canonInst(const pInst &inst) {
     return inst;
 }
 
-void ReassociatePass::reassociateExpression(const pBinary &inst) {
+void ReassociatePass::reassociate(const pBinary &inst) {
     auto tree = analyzeExprTree(inst);
 
     std::vector<ValueEntry> ops;
     ops.reserve(tree.size());
     for (const auto &t : tree)
-        ops.insert(ops.end(), t.weight, ValueEntry{t.value, getRank(t.value)});
+        ops.insert(ops.end(), t.freq, ValueEntry{t.value, getRank(t.value)});
 
     std::stable_sort(ops.begin(), ops.end(), [](auto &&a, auto &&b) { return a.rank > b.rank; }); // high rank first
 
@@ -421,17 +469,17 @@ void ReassociatePass::reassociateExpression(const pBinary &inst) {
         if (inst == v)
             return;
         inst->replaceSelf(v);
-        optModified = true;
+        modified_in_opt = true;
         return;
     }
 
     if (ops.size() == 1) {
         // Skip self reference
-        if (ops[0].op == inst)
+        if (ops[0].operand == inst)
             return;
 
-        inst->replaceSelf(ops[0].op);
-        optModified = true;
+        inst->replaceSelf(ops[0].operand);
+        modified_in_opt = true;
         return;
     }
 
@@ -442,33 +490,26 @@ void ReassociatePass::reassociateExpression(const pBinary &inst) {
 }
 
 void ReassociatePass::optInst(const pInst &raw_inst) {
-    // DO NOT reassociate ICMP/FCMP for better codegen
-    if (!raw_inst->is<BinaryInst>())
+    if (!raw_inst->is<BinaryInst>() || !raw_inst->getType()->isInteger())
         return;
 
-    if (toBType(raw_inst->getType())->getInner() == IRBTYPE::FLOAT)
-        return;
-
-    auto candidate = raw_inst;
-
-    candidate = canonInst(candidate);
+    auto candidate = canonInst(raw_inst);
 
     auto binary = candidate->as<BinaryInst>();
-
-    if (candidate->getOpcode() == OP::SUB) {
+    if (binary->getOpcode() == OP::SUB) {
         if (isIntBinaryNeg(binary)) {
             // 0 - x * x
             if (isOneUseBinary(binary->getRHS(), OP::MUL) // operand is a multiply tree
                 &&
                 // Not a multiply tree's child
-                (binary->getUseCount() != 1 || !isOneUseBinary(binary->getUseList().back()->getUser(), OP::MUL))) {
+                (binary->getUseCount() != 1 || !isOneUseBinary(binary->getSingleUser(), OP::MUL))) {
                 auto negInst = neg2mul(binary);
                 for (const auto &user : binary->users()) {
                     if (auto binary_user = user->as<BinaryInst>())
-                        redoSet.insert(binary_user);
+                        redo_list.insert(binary_user);
                 }
-                redoSet.insert(candidate);
-                optModified = true;
+                redo_list.insert(candidate);
+                modified_in_opt = true;
                 candidate = negInst;
             }
         }
@@ -482,30 +523,32 @@ void ReassociatePass::optInst(const pInst &raw_inst) {
     // Candidate may have changed, update binary
     binary = candidate->as<BinaryInst>();
 
-    // If this is a node of a tree, ignore it until we get the root.
-    auto opcode = binary->getOpcode();
+    // For non-root instructions, skip some cases to speed up.
     if (auto single_user = binary->getSingleUser()) {
         auto user_inst = single_user->as<Instruction>();
         Err::gassert(user_inst != nullptr);
-        if (user_inst->getOpcode() == opcode) {
+
+        // If this is a node of a tree, ignore it until we get the root.
+        if (user_inst->getOpcode() == binary->getOpcode()) {
             if (user_inst != binary && binary->getParent() == user_inst->getParent())
-                redoSet.insert(user_inst);
+                redo_list.insert(user_inst);
             return;
         }
 
+        // If this is an add tree in a sub tree, ignore it when we get the sub tree.
         if (binary->getOpcode() == OP::ADD && user_inst->getOpcode() == OP::SUB)
             return;
     }
 
-    reassociateExpression(binary);
+    reassociate(binary);
 }
 
 void ReassociatePass::reset() {
-    valueRankMap.clear();
-    bbRankMap.clear();
-    redoSet.clear();
+    value_rank_map.clear();
+    block_rank_map.clear();
+    redo_list.clear();
     func = nullptr;
-    optModified = false;
+    modified_in_opt = false;
     name_cnt = 0;
 }
 
@@ -517,37 +560,37 @@ PM::PreservedAnalyses ReassociatePass::run(Function &function, FAM &manager) {
     // assign different rank to params
     Rank rank = 2;
     for (const auto &param : function.getParams())
-        valueRankMap[param] = ++rank;
+        value_rank_map[param] = ++rank;
 
     auto rpov = function.getDFVisitor<Util::DFVOrder::ReversePostOrder>();
     for (const auto &node : rpov) {
         // << 16 to avoid collision with other block
-        Rank bbRank = bbRankMap[node] = ++rank << 16;
+        Rank bbRank = block_rank_map[node] = ++rank << 16;
         for (const auto &phi : node->phis())
-            valueRankMap[phi] = ++bbRank;
+            value_rank_map[phi] = ++bbRank;
         for (const auto &inst : *node) {
             if (!inst->is<BinaryInst>())
-                valueRankMap[inst] = ++bbRank;
+                value_rank_map[inst] = ++bbRank;
         }
     }
 
     // Optimize Instructions
     for (const auto &bb : function) {
         for (auto &inst : *bb) {
-            optModified = false;
+            modified_in_opt = false;
             optInst(inst);
-            reassociate_inst_modified |= optModified;
+            reassociate_inst_modified |= modified_in_opt;
             Err::gassert(inst->getParent() == bb);
         }
     }
 
-    while (!redoSet.empty()) {
-        auto curr = *redoSet.begin();
-        redoSet.erase(redoSet.begin());
+    while (!redo_list.empty()) {
+        auto curr = *redo_list.begin();
+        redo_list.erase(redo_list.begin());
         if (curr->getUseCount() != 0) {
-            optModified = false;
+            modified_in_opt = false;
             optInst(curr);
-            reassociate_inst_modified |= optModified;
+            reassociate_inst_modified |= modified_in_opt;
         }
     }
 

@@ -29,21 +29,33 @@ using pFcmp = std::shared_ptr<FCMPInst>;
 class RETInst;
 class BRInst;
 class CALLInst;
+class SELECTInst;
 using pRet = std::shared_ptr<RETInst>;
 using pBr = std::shared_ptr<BRInst>;
 using pCall = std::shared_ptr<CALLInst>;
+using pSelect = std::shared_ptr<SELECTInst>;
 
 // converse
 class CastInst;
 class FPTOSIInst;
 class SITOFPInst;
 class ZEXTInst;
+class SEXTInst;
 class BITCASTInst;
 using pCast = std::shared_ptr<CastInst>;
 using pFptosi = std::shared_ptr<FPTOSIInst>;
 using pSitofp = std::shared_ptr<SITOFPInst>;
 using pZext = std::shared_ptr<ZEXTInst>;
+using pSext = std::shared_ptr<SEXTInst>;
 using pBitcast = std::shared_ptr<BITCASTInst>;
+
+// vector
+class EXTRACTInst;
+class INSERTInst;
+class SHUFFLEInst;
+using pExtract = std::shared_ptr<EXTRACTInst>;
+using pInsert = std::shared_ptr<INSERTInst>;
+using pShuffle = std::shared_ptr<SHUFFLEInst>;
 
 // helper
 class HELPERInst;
@@ -54,6 +66,7 @@ class IFInst;
 class WHILEInst;
 class BREAKInst;
 class CONTINUEInst;
+class FORInst;
 using pHelper = std::shared_ptr<HELPERInst>;
 using pCondValue = std::shared_ptr<CONDValue>;
 using pAndValue = std::shared_ptr<ANDValue>;
@@ -62,6 +75,7 @@ using pIfInst = std::shared_ptr<IFInst>;
 using pWhileInst = std::shared_ptr<WHILEInst>;
 using pBreakInst = std::shared_ptr<BREAKInst>;
 using pContinueInst = std::shared_ptr<CONTINUEInst>;
+using pForInst = std::shared_ptr<FORInst>;
 
 // memory
 class ALLOCAInst;
@@ -89,10 +103,13 @@ using wpBlock = std::weak_ptr<BasicBlock>;
 class FunctionDecl;
 class FormalParam;
 class Function;
+class LinearFunction;
 using pFuncDecl = std::shared_ptr<FunctionDecl>;
 using pFormalParam = std::shared_ptr<FormalParam>;
 using pFunc = std::shared_ptr<Function>;
 using wpFunc = std::weak_ptr<Function>;
+using pLFunc = std::shared_ptr<LinearFunction>;
+using wpLFunc = std::weak_ptr<LinearFunction>;
 
 // global variable
 class GlobalVariable;

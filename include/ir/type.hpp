@@ -22,6 +22,8 @@ enum class IRBTYPE {
     I1, // For br's cond, icmp and fcmp return
     I8, // For sylib's putf(char a[], ...)
     I32,
+    I64,
+    I128,
     FLOAT,
     VOID,
     UNDEFINED
@@ -40,6 +42,10 @@ inline size_t getBytes(IRBTYPE type) {
     case IRBTYPE::I32:
     case IRBTYPE::FLOAT:
         return 4;
+    case IRBTYPE::I64:
+        return 8;
+    case IRBTYPE::I128:
+        return 16;
     default:
         Err::error("In IR::BType::getBytes(): illegal type.");
         return 0;
@@ -78,6 +84,18 @@ public:
         static_assert(std::is_base_of_v<Type, T>, "Expected a derived type.");
         return as_raw<T>() != nullptr;
     }
+
+    // Convenient wrapper
+    bool isI1() const;
+    bool isI8() const;
+    bool isI32() const;
+    bool isI64() const;
+    bool isI128() const;
+    bool isF32() const;
+    bool isInteger() const;
+    bool isFloatingPoint() const;
+    bool isVoid() const;
+    bool isUndef() const;
 };
 
 /**
@@ -103,6 +121,10 @@ public:
             return "i8";
         case IRBTYPE::I32:
             return "i32";
+        case IRBTYPE::I64:
+            return "i64";
+        case IRBTYPE::I128:
+            return "i128";
         case IRBTYPE::FLOAT:
             return "float";
         case IRBTYPE::VOID:
@@ -159,8 +181,7 @@ protected:
     size_t size;
 
 public:
-    VectorType(pType element_type_, size_t size)
-        : element_type(std::move(element_type_)), size(size) {
+    VectorType(pType element_type_, size_t size) : element_type(std::move(element_type_)), size(size) {
         Err::gassert(size != 0, "Vector size cannot be 0.");
     }
 

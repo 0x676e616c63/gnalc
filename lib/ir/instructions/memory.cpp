@@ -8,6 +8,7 @@ ALLOCAInst::ALLOCAInst(NameRef name, pType btype, int _align)
     : Instruction(OP::ALLOCA, name, makePtrType(btype)), basetype(std::move(btype)), align(_align) {}
 
 int ALLOCAInst::getAlign() const { return align; }
+void ALLOCAInst::setAlign(int a) { align = a; }
 
 bool ALLOCAInst::isArray() const { return basetype->getTrait() == IRCTYPE::ARRAY; }
 
@@ -25,6 +26,9 @@ LOADInst::LOADInst(NameRef name, size_t n, const pVal &_ptr, int _align)
 pVal LOADInst::getPtr() const { return getOperand(0)->getValue(); }
 
 int LOADInst::getAlign() const { return align; }
+void LOADInst::setAlign(int a) {
+    align = a;
+}
 
 bool LOADInst::isVectorLoad() const {
     return getType()->getTrait() == IRCTYPE::VECTOR;
@@ -43,6 +47,9 @@ pVal STOREInst::getValue() const { return getOperand(0)->getValue(); }
 pVal STOREInst::getPtr() const { return getOperand(1)->getValue(); }
 
 int STOREInst::getAlign() const { return align; }
+void STOREInst::setAlign(int a) {
+    align = a;
+}
 
 bool STOREInst::isVectorStore() const {
     return getValue()->getType()->getTrait() == IRCTYPE::VECTOR;

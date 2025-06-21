@@ -1,0 +1,23 @@
+#pragma once
+#ifndef GNALC_ARMV8_MIR_PASSES_TRANSFORMS_STACKGENERATE_HPP
+#define GNALC_ARMV8_MIR_PASSES_TRANSFORMS_STACKGENERATE_HPP
+
+#include "mir/passes/pass_manager.hpp"
+
+namespace MIR_new {
+
+class StackGenerate : public PM::PassInfo<StackGenerate> {
+public:
+    PM::PreservedAnalyses run(MIRFunction &, FAM &);
+};
+
+class StackGenerateImpl {
+private:
+    MIRFunction *mfunc;
+
+public:
+    void impl(MIRFunction &, FAM &);
+};
+}; // namespace MIR_new
+
+#endif

@@ -6,19 +6,23 @@ on:
     paths:
       - 'lib/**'
       - 'include/**'
+      - 'test/**'
+      - 'CMakeLists.txt'
       - '.github/workflows/fixedpoint.yml'
   pull_request:
     branches: [ "main", "ci", "iropt" ]
     paths:
       - 'lib/**'
       - 'include/**'
+      - 'test/**'
+      - 'CMakeLists.txt'
       - '.github/workflows/fixedpoint.yml'
 
 env:
   BUILD_TYPE: Release
 
 jobs:
-  build:
+  main:
     runs-on: ubuntu-latest
 
     steps:
@@ -33,7 +37,7 @@ jobs:
         run: git submodule update --init --recursive
 
       - name: Configure CMake
-        run: mkdir ${{github.workspace}}/build && cd ${{github.workspace}}/build && cmake ..
+        run: mkdir ${{github.workspace}}/build && cd ${{github.workspace}}/build && cmake -DCMAKE_BUILD_TYPE=Release ..
 
       - name: Build
         working-directory: ${{github.workspace}}/build

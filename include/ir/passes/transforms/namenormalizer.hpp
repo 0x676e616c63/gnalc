@@ -19,6 +19,7 @@ public:
     explicit NameNormalizePass(bool bb_rename_ = true) : bb_rename(bb_rename_), curr_idx(0) {}
     void visit(Function &node) override;
     void visit(BasicBlock &node) override;
+    void visit(Module &node) override;
 
     PM::PreservedAnalyses run(Function &function, FAM &manager);
 };
