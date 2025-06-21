@@ -196,40 +196,41 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
                     auto [fake_base, step] = trecp->getConstantAffineAddRec().value();
 
                     // TODO: Maybe unused
-                    int real_base;
-                    {
-                        bool assigned = false;
-                        for (auto user : iter_variable->users()) {
-                            if (auto uinst = user->as<Instruction>(); uinst->getOpcode() == OP::PHI && uinst->getParent() == loop->getHeader()) {
-                                auto uphi = uinst->as<PHIInst>();
-                                auto upos = uphi->getPhiOpers();
-                                if (upos.size() != 2) {
-                                    Err::error("Loop's iter variable's PHI has more than 2 incoming values!");
-                                    option.disable();
-                                    return;
-                                }
+                    int real_base = 0;
+                    // {
+                    //     bool assigned = false;
+                    //     // TODO: Just For dowhile, FIXME
+                    //     for (auto user : iter_variable->users()) {
+                    //         if (auto uinst = user->as<Instruction>(); uinst->getOpcode() == OP::PHI && uinst->getParent() == loop->getHeader()) {
+                    //             auto uphi = uinst->as<PHIInst>();
+                    //             auto upos = uphi->getPhiOpers();
+                    //             if (upos.size() != 2) {
+                    //                 Err::error("Loop's iter variable's PHI has more than 2 incoming values!");
+                    //                 option.disable();
+                    //                 return;
+                    //             }
 
-                                for (const auto& [v, b]: upos) {
-                                    if (v != iter_variable) {
-                                        if (!v->is<ConstantInt>()) {
-                                            Err::unreachable();
-                                        }
-                                        real_base = v->as<ConstantInt>()->getVal();
-                                        assigned = true;
-                                        break;
-                                    }
-                                }
-                                break;
-                            }
-                        }
+                    //             for (const auto& [v, b]: upos) {
+                    //                 if (v != iter_variable) {
+                    //                     if (!v->is<ConstantInt>()) {
+                    //                         Err::unreachable();
+                    //                     }
+                    //                     real_base = v->as<ConstantInt>()->getVal();
+                    //                     assigned = true;
+                    //                     break;
+                    //                 }
+                    //             }
+                    //             break;
+                    //         }
+                    //     }
                         
-                        if (!assigned) {
-                            Err::unreachable();
-                            Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable's base.");
-                            option.disable();
-                            return;
-                        }
-                    }
+                    //     if (!assigned) {
+                    //         Err::unreachable();
+                    //         Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable's base.");
+                    //         option.disable();
+                    //         return;
+                    //     }
+                    // }
 
                     // const int suf = static_cast<int>(unroll_factor);
                     // if (is_dowhile) {
