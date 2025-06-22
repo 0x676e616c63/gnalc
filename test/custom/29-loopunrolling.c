@@ -1,141 +1,94 @@
-// 94_nested_loops
-// FPM fpm;
-// fpm.addPass(IR::PromotePass());
-// fpm.addPass(IR::TailRecursionEliminationPass());
-// fpm.addPass(IR::InlinePass());
-// fpm.addPass(IR::InternalizePass());
-// fpm.addPass(IR::PromotePass());
-// fpm.addPass(IR::NameNormalizePass());
-// fpm.addPass(IR::CFGSimplifyPass());
-// fpm.addPass(IR::LoopSimplifyPass());
-// fpm.addPass(IR::LCSSAPass());
-// // fpm.addPass(IR::PngCFGPass("/home/panda/data3/dev/gnalc/cfgnu/"));
-// fpm.addPass(IR::VerifyPass());
-// fpm.addPass(IR::LoopUnrollPass());
-// // fpm.addPass(IR::PngCFGPass("/home/panda/data3/dev/gnalc/cfg/"));
-// fpm.addPass(IR::VerifyPass());
-// fpm.addPass(IR::RunTestPass("/home/panda/data3/dev/gnalc/test/contest/functional/94_nested_loops.out", "/home/panda/data3/dev/gnalc/test/contest/functional/94_nested_loops.in"));
-int arr1[10][2][3][4][5][6][2];
-int arr2[10][2][3][2][4][8][7];
-
-void loop1(int x, int y) {
-  int a, b, c, d, e, f, g;
-  a = 0;
-  while (a < x && a < y) {
-    b = 0;
-    while (b < 2) {
-      c = 0;
-      while (c < 3) {
-        d = 0;
-        while (d < 4) {
-          e = 0;
-          while (e < 5) {
-            f = 0;
-            while (f < 6) {
-              g = 0;
-              while (g < 2) {
-                arr1[a][b][c][d][e][f][g] = a + b + c + d + e + f + g + x + y;
-                g = g + 1;
-              }
-              f = f + 1;
-            }
-            e = e + 1;
-          }
-          d = d + 1;
-        }
-        c = c + 1;
-      }
-      b = b + 1;
-    }
-    a = a + 1;
-  }
+// For runtime unroll
+// h_functional/20_sort.sy
+int quick_read(){
+	int ch = getch(); int x = 0, f = 0;
+	while (ch < 48 || ch > 57){
+		if (ch == 45) f = 1;
+		ch = getch();
+	}
+	while (ch >= 48 && ch <=57){
+		x = x * 10 + ch - 48;
+		ch = getch();
+	}
+	if (f) return -x;
+	else return x;
 }
-
-void loop2() {
-  int a, b, c, d, e, f, g;
-  a = 0;
-  while (a < 10) {
-    b = 0;
-    while (b < 2) {
-      c = 0;
-      while (c < 3) {
-        d = 0;
-        while (d < 2) {
-          e = 0;
-          while (e < 4) {
-            f = 0;
-            while (f < 8) {
-              g = 0;
-              while (g < 7) {
-                arr2[a][b][c][d][e][f][g] = a + b + d + g;
-                g = g + 1;
-              }
-              f = f + 1;
-            }
-            e = e + 1;
-          }
-          d = d + 1;
-        }
-        c = c + 1;
-      }
-      b = b + 1;
-    }
-    a = a + 1;
-  }
+int n;
+const int maxn = 100005;
+void sortA(int a[]){
+	int i = 0, j;
+	while (i < n){
+		j = i + 1;
+		while (j < n){
+			if (a[i] > a[j]){
+				int t = a[i];
+				a[i] = a[j];
+				a[j] = t;
+			}
+			j = j + 1;
+		}
+		i = i + 1;
+	}
 }
-
-int loop3(int h, int i, int j, int k, int l, int m, int n) {
-  int a, b, c, d, e, f, g;
-  int ans = 0;
-  a = 0;
-  while (a < 10) {
-    b = 0;
-    while (b < 100) {
-      c = 0;
-      while (c < 1000) {
-        d = 0;
-        while (d < 10000) {
-          e = 0;
-          while (e < 100000) {
-            f = 0;
-            while (f < 1000000) {
-              g = 0;
-              while (g < 10000000) {
-                ans = ans % 817 + arr1[a][b][c][d][e][f][g] + arr2[a][b][c][d][e][f][g];
-                g = g + 1;
-                if (g >= n) break;
-              }
-              f = f + 1;
-              if (f >= m) break;
-            }
-            e = e + 1;
-            if (e >= l) break;
-          }
-          d = d + 1;
-          if (d >= k) break;
-        }
-        c = c + 1;
-        if (c >= j) break;
-      }
-      b = b + 1;
-      if (b >= i) break;
-    }
-    a = a + 1;
-    if (a >= h) break;
-  }
-  return ans;
+int cnt[maxn*4];
+void sortB(int a[]){
+	int i = 0, mx = -100;
+	while (i < n){
+		cnt[a[i]] = cnt[a[i]] + 1;
+		if (a[i] > mx) mx = a[i];
+		i = i + 1;
+	}
+	i = 0; int now = 0;
+	while (i <= mx){
+		int j = cnt[i];
+		while (j){
+			a[now] = i;
+			now = now + 1;
+			j = j - 1;
+		}
+		i = i + 1;
+	}
 }
-
-int main() {
-  int x = getint();
-  int y = getint();
-  int h = getint();
-  int i = getint(), j = getint();
-  int k = getint();
-  int l = getint();
-  int m = getint();
-  int n = getint();
-  loop1(x, y);
-  loop2();
-  return loop3(h, i, j, k, l, m, n);
+void sortC(int a[]){
+	int i = 0;
+	while (i < n){
+		int id = i, j = i + 1;
+		while (j < n){
+			if (a[j] < a[id])
+				id = j;
+			j = j + 1;
+		}
+		int t = a[i];
+		a[i] = a[id];
+		a[id] = t;
+		i = i + 1;
+	}
+}
+int x[maxn];
+int a[maxn], b[maxn], c[maxn];
+int main(){
+	n = quick_read();
+	int i = 0;
+	while (i != n){
+		a[i] = quick_read();
+		b[i] = a[i];
+		c[i] = b[i];
+		i = i + 1;
+	}
+	sortA(a);
+	sortB(b);
+	sortC(c);
+	i = 0;
+	while (n - i){
+		b[i] = b[i] - a[i];
+		c[i] = c[i] - b[i] - a[i];
+		i = i + 1;
+	}
+	i = 0;
+	while (i - n){
+		if (b[i]) return 1;
+		if (c[i]) return 2;
+		i = i + 1;
+	}
+	return -123;
 }
