@@ -3,13 +3,12 @@
 #include "ir/instructions/binary.hpp"
 #include "ir/instructions/compare.hpp"
 #include "ir/instructions/memory.hpp"
-#include "ir/pattern_match.hpp"
-#include "pattern_match/pattern_match.hpp"
+#include "ir/match.hpp"
+#include "match/match.hpp"
 #include "sir/base.hpp"
 #include "sir/visitor.hpp"
 
 #include <optional>
-using namespace PatternMatch;
 namespace SIR {
 enum class UpdateType { Affine, Unknown, Invariant };
 struct Result {

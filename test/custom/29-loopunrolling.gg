@@ -1,0 +1,385 @@
+; Module: /mnt/g/dev/gnalc/test/custom/29-loopunrolling.c
+
+@cnt = dso_local global [400020 x i32] zeroinitializer, align 4
+
+define dso_local i32 @main() {
+0:
+  %1 = alloca [100005 x i32], align 4
+  %2 = alloca [100005 x i32], align 4
+  %3 = alloca [100005 x i32], align 4
+  call void @llvm.memset.p0i8.i32([100005 x i32]* noundef %1, i8 noundef 0, i32 noundef 400020, i1 noundef 0)
+  call void @llvm.memset.p0i8.i32([100005 x i32]* noundef %2, i8 noundef 0, i32 noundef 400020, i1 noundef 0)
+  call void @llvm.memset.p0i8.i32([100005 x i32]* noundef %3, i8 noundef 0, i32 noundef 400020, i1 noundef 0)
+  %4 = call i32 @getch()
+  br label %5
+
+5:        ;preds = %13, %0
+  %6 = phi i32 [ %4, %0 ], [ %16, %13 ]
+  %7 = phi i32 [ 0, %0 ], [ %15, %13 ]
+  %8 = icmp slt i32 %6, 48
+  br i1 %8, label %11, label %9
+
+9:        ;preds = %5
+  %10 = icmp sgt i32 %6, 57
+  br i1 %10, label %12, label %17
+
+11:        ;preds = %5
+  br label %13
+
+12:        ;preds = %9
+  br label %13
+
+13:        ;preds = %11, %12
+  %14 = icmp eq i32 %6, 45
+  %15 = select i1 %14, i32 1, i32 %7
+  %16 = call i32 @getch()
+  br label %5
+
+17:        ;preds = %9
+  br label %18
+
+18:        ;preds = %24, %17
+  %19 = phi i32 [ %28, %24 ], [ %6, %17 ]
+  %20 = phi i32 [ %27, %24 ], [ 0, %17 ]
+  %21 = icmp sge i32 %19, 48
+  br i1 %21, label %22, label %29
+
+22:        ;preds = %18
+  %23 = icmp sle i32 %19, 57
+  br i1 %23, label %24, label %30
+
+24:        ;preds = %22
+  %25 = mul i32 %20, 10
+  %26 = add i32 %19, %25
+  %27 = sub i32 %26, 48
+  %28 = call i32 @getch()
+  br label %18
+
+29:        ;preds = %18
+  br label %31
+
+30:        ;preds = %22
+  br label %31
+
+31:        ;preds = %29, %30
+  %32 = sub i32 0, %20
+  %33 = icmp ne i32 %7, 0
+  %34 = select i1 %33, i32 %32, i32 %20
+  %35 = icmp ne i32 0, %34
+  br i1 %35, label %36, label %76
+
+36:        ;preds = %31
+  br label %38
+
+37:        ;preds = %68
+  br label %38
+
+38:        ;preds = %36, %37
+  %39 = phi i32 [ %74, %37 ], [ 0, %36 ]
+  %40 = getelementptr [100005 x i32], [100005 x i32]* %3, i32 0, i32 %39
+  %41 = call i32 @getch()
+  br label %42
+
+42:        ;preds = %50, %38
+  %43 = phi i32 [ %41, %38 ], [ %53, %50 ]
+  %44 = phi i32 [ 0, %38 ], [ %52, %50 ]
+  %45 = icmp slt i32 %43, 48
+  br i1 %45, label %48, label %46
+
+46:        ;preds = %42
+  %47 = icmp sgt i32 %43, 57
+  br i1 %47, label %49, label %54
+
+48:        ;preds = %42
+  br label %50
+
+49:        ;preds = %46
+  br label %50
+
+50:        ;preds = %48, %49
+  %51 = icmp eq i32 %43, 45
+  %52 = select i1 %51, i32 1, i32 %44
+  %53 = call i32 @getch()
+  br label %42
+
+54:        ;preds = %46
+  br label %55
+
+55:        ;preds = %61, %54
+  %56 = phi i32 [ %65, %61 ], [ %43, %54 ]
+  %57 = phi i32 [ %64, %61 ], [ 0, %54 ]
+  %58 = icmp sge i32 %56, 48
+  br i1 %58, label %59, label %66
+
+59:        ;preds = %55
+  %60 = icmp sle i32 %56, 57
+  br i1 %60, label %61, label %67
+
+61:        ;preds = %59
+  %62 = mul i32 %57, 10
+  %63 = add i32 %56, %62
+  %64 = sub i32 %63, 48
+  %65 = call i32 @getch()
+  br label %55
+
+66:        ;preds = %55
+  br label %68
+
+67:        ;preds = %59
+  br label %68
+
+68:        ;preds = %66, %67
+  %69 = sub i32 0, %57
+  %70 = icmp ne i32 %44, 0
+  %71 = select i1 %70, i32 %69, i32 %57
+  store i32 %71, i32* %40, align 4
+  %72 = getelementptr [100005 x i32], [100005 x i32]* %2, i32 0, i32 %39
+  store i32 %71, i32* %72, align 4
+  %73 = getelementptr [100005 x i32], [100005 x i32]* %1, i32 0, i32 %39
+  store i32 %71, i32* %73, align 4
+  %74 = add i32 %39, 1
+  %75 = icmp ne i32 %74, %34
+  br i1 %75, label %37, label %77
+
+76:        ;preds = %31
+  br label %78
+
+77:        ;preds = %68
+  br label %78
+
+78:        ;preds = %76, %77
+  %79 = bitcast [100005 x i32]* %3 to i32*
+  %80 = icmp slt i32 0, %34
+  br i1 %80, label %81, label %105
+
+81:        ;preds = %78
+  br label %83
+
+82:        ;preds = %103
+  br label %83
+
+83:        ;preds = %81, %82
+  %84 = phi i32 [ %85, %82 ], [ 0, %81 ]
+  %85 = add i32 %84, 1
+  %86 = icmp slt i32 %85, %34
+  br i1 %86, label %87, label %101
+
+87:        ;preds = %83
+  %88 = getelementptr i32, i32* %79, i32 %84
+  br label %90
+
+89:        ;preds = %98
+  br label %90
+
+90:        ;preds = %87, %89
+  %91 = phi i32 [ %85, %87 ], [ %99, %89 ]
+  %92 = load i32, i32* %88, align 4
+  %93 = getelementptr i32, i32* %79, i32 %91
+  %94 = load i32, i32* %93, align 4
+  %95 = icmp sgt i32 %92, %94
+  br i1 %95, label %96, label %97
+
+96:        ;preds = %90
+  store i32 %94, i32* %88, align 4
+  store i32 %92, i32* %93, align 4
+  br label %98
+
+97:        ;preds = %90
+  br label %98
+
+98:        ;preds = %96, %97
+  %99 = add i32 %91, 1
+  %100 = icmp slt i32 %99, %34
+  br i1 %100, label %89, label %102
+
+101:        ;preds = %83
+  br label %103
+
+102:        ;preds = %98
+  br label %103
+
+103:        ;preds = %101, %102
+  %104 = icmp slt i32 %85, %34
+  br i1 %104, label %82, label %106
+
+105:        ;preds = %78
+  br label %107
+
+106:        ;preds = %103
+  br label %107
+
+107:        ;preds = %105, %106
+  %108 = bitcast [100005 x i32]* %2 to i32*
+  br label %109
+
+109:        ;preds = %107, %113
+  %110 = phi i32 [ 0, %107 ], [ %121, %113 ]
+  %111 = phi i32 [ -100, %107 ], [ %120, %113 ]
+  %112 = icmp slt i32 %110, %34
+  br i1 %112, label %113, label %122
+
+113:        ;preds = %109
+  %114 = getelementptr i32, i32* %108, i32 %110
+  %115 = load i32, i32* %114, align 4
+  %116 = getelementptr [400020 x i32], [400020 x i32]* @cnt, i32 0, i32 %115
+  %117 = load i32, i32* %116, align 4
+  %118 = add i32 %117, 1
+  store i32 %118, i32* %116, align 4
+  %119 = icmp sgt i32 %115, %111
+  %120 = select i1 %119, i32 %115, i32 %111
+  %121 = add i32 %110, 1
+  br label %109
+
+122:        ;preds = %109
+  %123 = icmp sle i32 0, %111
+  br i1 %123, label %124, label %142
+
+124:        ;preds = %122
+  br label %126
+
+125:        ;preds = %139
+  br label %126
+
+126:        ;preds = %124, %125
+  %127 = phi i32 [ %140, %125 ], [ 0, %124 ]
+  %128 = phi i32 [ %132, %125 ], [ 0, %124 ]
+  %129 = getelementptr [400020 x i32], [400020 x i32]* @cnt, i32 0, i32 %127
+  %130 = load i32, i32* %129, align 4
+  br label %131
+
+131:        ;preds = %126, %135
+  %132 = phi i32 [ %128, %126 ], [ %137, %135 ]
+  %133 = phi i32 [ %130, %126 ], [ %138, %135 ]
+  %134 = icmp ne i32 %133, 0
+  br i1 %134, label %135, label %139
+
+135:        ;preds = %131
+  %136 = getelementptr i32, i32* %108, i32 %132
+  store i32 %127, i32* %136, align 4
+  %137 = add i32 %132, 1
+  %138 = sub i32 %133, 1
+  br label %131
+
+139:        ;preds = %131
+  %140 = add i32 %127, 1
+  %141 = icmp sle i32 %140, %111
+  br i1 %141, label %125, label %143
+
+142:        ;preds = %122
+  br label %144
+
+143:        ;preds = %139
+  br label %144
+
+144:        ;preds = %142, %143
+  %145 = bitcast [100005 x i32]* %1 to i32*
+  %146 = icmp slt i32 0, %34
+  br i1 %146, label %147, label %171
+
+147:        ;preds = %144
+  br label %149
+
+148:        ;preds = %164
+  br label %149
+
+149:        ;preds = %147, %148
+  %150 = phi i32 [ %169, %148 ], [ 0, %147 ]
+  %151 = add i32 %150, 1
+  br label %152
+
+152:        ;preds = %149, %156
+  %153 = phi i32 [ %150, %149 ], [ %162, %156 ]
+  %154 = phi i32 [ %151, %149 ], [ %163, %156 ]
+  %155 = icmp slt i32 %154, %34
+  br i1 %155, label %156, label %164
+
+156:        ;preds = %152
+  %157 = getelementptr i32, i32* %145, i32 %154
+  %158 = load i32, i32* %157, align 4
+  %159 = getelementptr i32, i32* %145, i32 %153
+  %160 = load i32, i32* %159, align 4
+  %161 = icmp slt i32 %158, %160
+  %162 = select i1 %161, i32 %154, i32 %153
+  %163 = add i32 %154, 1
+  br label %152
+
+164:        ;preds = %152
+  %165 = getelementptr i32, i32* %145, i32 %150
+  %166 = load i32, i32* %165, align 4
+  %167 = getelementptr i32, i32* %145, i32 %153
+  %168 = load i32, i32* %167, align 4
+  store i32 %168, i32* %165, align 4
+  store i32 %166, i32* %167, align 4
+  %169 = add i32 %150, 1
+  %170 = icmp slt i32 %169, %34
+  br i1 %170, label %148, label %172
+
+171:        ;preds = %144
+  br label %173
+
+172:        ;preds = %164
+  br label %173
+
+173:        ;preds = %177, %171, %172
+  %174 = phi i32 [ %187, %177 ], [ 0, %171 ], [ 0, %172 ]
+  %175 = sub i32 %34, %174
+  %176 = icmp ne i32 %175, 0
+  br i1 %176, label %177, label %188
+
+177:        ;preds = %173
+  %178 = getelementptr [100005 x i32], [100005 x i32]* %2, i32 0, i32 %174
+  %179 = load i32, i32* %178, align 4
+  %180 = getelementptr [100005 x i32], [100005 x i32]* %3, i32 0, i32 %174
+  %181 = load i32, i32* %180, align 4
+  %182 = sub i32 %179, %181
+  store i32 %182, i32* %178, align 4
+  %183 = getelementptr [100005 x i32], [100005 x i32]* %1, i32 0, i32 %174
+  %184 = load i32, i32* %183, align 4
+  %185 = sub i32 %184, %182
+  %186 = sub i32 %185, %181
+  store i32 %186, i32* %183, align 4
+  %187 = add i32 %174, 1
+  br label %173
+
+188:        ;preds = %173
+  br label %190
+
+189:        ;preds = %198
+  br label %190
+
+190:        ;preds = %188, %189
+  %191 = phi i32 [ %201, %189 ], [ 0, %188 ]
+  %192 = sub i32 %191, %34
+  %193 = icmp ne i32 %192, 0
+  br i1 %193, label %194, label %203
+
+194:        ;preds = %190
+  %195 = getelementptr [100005 x i32], [100005 x i32]* %2, i32 0, i32 %191
+  %196 = load i32, i32* %195, align 4
+  %197 = icmp ne i32 %196, 0
+  br i1 %197, label %204, label %198
+
+198:        ;preds = %194
+  %199 = getelementptr [100005 x i32], [100005 x i32]* %1, i32 0, i32 %191
+  %200 = load i32, i32* %199, align 4
+  %201 = add i32 %191, 1
+  %202 = icmp ne i32 %200, 0
+  br i1 %202, label %205, label %189
+
+203:        ;preds = %190
+  br label %206
+
+204:        ;preds = %194
+  br label %206
+
+205:        ;preds = %198
+  br label %206
+
+206:        ;preds = %203, %204, %205
+  %207 = phi i32 [ -123, %203 ], [ 1, %204 ], [ 2, %205 ]
+  ret i32 %207
+
+}
+
+declare i32 @getch()
+declare void @llvm.memset.p0i8.i32(i8* noundef, i8 noundef, i32 noundef, i1 noundef)

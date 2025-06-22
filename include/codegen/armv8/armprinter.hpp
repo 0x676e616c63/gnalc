@@ -7,7 +7,7 @@
 #include "mir/strings.hpp"
 #include <iostream>
 
-namespace MIR_new {
+namespace MIR {
 class ARMA64Printer {
 private:
     MIRFunction const *mfunc;

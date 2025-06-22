@@ -2,7 +2,7 @@
 #include "mir/info.hpp"
 #include "mir/passes/transforms/lowering.hpp"
 
-using namespace MIR_new;
+using namespace MIR;
 
 void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const {
     ///@todo TCO, TCR
@@ -26,7 +26,7 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
 
     auto mcaller = ctx.CurrentBlk()->getFunction();
 
-    const auto &layOut = ctx.CodeGenCtx().infos.dataLayOut;
+    const auto &layOut = ctx.CodeGenCtx().infos.dataLayout;
 
     unsigned stkOffset = 0U; // stk offset
     std::vector<int> offsets;
@@ -136,8 +136,8 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
             continue; // arg on stk
         }
 
-        auto isa = isSpr(offset) ? ARMReg::V0 + static_cast<uint32_t>(offset - passByRegBase - passBySprRegBase)
-                                 : ARMReg::X0 + static_cast<uint32_t>(offset - passByRegBase);
+        auto isa = isSpr(offset) ? Util::to_underlying(ARMReg::V0) + static_cast<uint32_t>(offset - passByRegBase - passBySprRegBase)
+                                 : Util::to_underlying(ARMReg::X0) + static_cast<uint32_t>(offset - passByRegBase);
 
         auto mtype = getType(arg);
 
@@ -171,7 +171,7 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
 }
 
 MIRGlobal_p FrameInfo::handleLib(IR::pCall callinst, LoweringContext &ctx) const {
-    const auto &layout = ctx.CodeGenCtx().infos.dataLayOut;
+    const auto &layout = ctx.CodeGenCtx().infos.dataLayout;
 
     auto callee = callinst->getFunc();
     auto mfunc_declare = make<MIRFunction>(callee->getName().substr(1), ctx.CodeGenCtx());
@@ -181,7 +181,7 @@ MIRGlobal_p FrameInfo::handleLib(IR::pCall callinst, LoweringContext &ctx) const
 }
 
 void FrameInfo::handleMemset(IR::pCall callinst, LoweringContext &ctx) const {
-    const auto &layout = ctx.CodeGenCtx().infos.dataLayOut;
+    const auto &layout = ctx.CodeGenCtx().infos.dataLayout;
 
     auto callee = callinst->getFunc();
     // turn LLVM builtin into Glibc stdlib
@@ -207,7 +207,7 @@ void FrameInfo::handleMemset(IR::pCall callinst, LoweringContext &ctx) const {
 }
 
 void FrameInfo::handleMemcpy(IR::pCall callinst, LoweringContext &ctx) const {
-    const auto &layout = ctx.CodeGenCtx().infos.dataLayOut;
+    const auto &layout = ctx.CodeGenCtx().infos.dataLayout;
 
     auto callee = callinst->getFunc();
     // turn LLVM builtin into Glibc stdlib
@@ -298,8 +298,8 @@ void FrameInfo::makePrologue(MIRFunction_p mfunc, LoweringContext &ctx) const {
         }
 
         auto isa = (offset >= passBySprRegBase + passByRegBase)
-                       ? ARMReg::V0 + static_cast<uint32_t>(offset - passByRegBase - passBySprRegBase)
-                       : ARMReg::X0 + static_cast<uint32_t>(offset - passByRegBase);
+                       ? Util::to_underlying(ARMReg::V0) + static_cast<uint32_t>(offset - passByRegBase - passBySprRegBase)
+                       : Util::to_underlying(ARMReg::X0) + static_cast<uint32_t>(offset - passByRegBase);
 
         auto mtype = arg->type();
 
@@ -343,10 +343,10 @@ void FrameInfo::makeReturn(IR::pRet retinst, LoweringContext &ctx) const {
 
         if (auto btype = type->as<IR::BType>()) {
             if (btype->getInner() == IR::IRBTYPE::FLOAT) {
-                isa = ARMReg::V0;
+                isa = Util::to_underlying(ARMReg::V0);
                 mtype = OpT::Float32;
             } else {
-                isa = ARMReg::X0;
+                isa = Util::to_underlying(ARMReg::X0);
                 mtype = OpT::Int32;
             }
         }

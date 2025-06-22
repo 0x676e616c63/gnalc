@@ -1,7 +1,7 @@
 #include "mir/MIR.hpp"
 #include "mir/passes/transforms/isel.hpp"
 
-using namespace MIR_new;
+using namespace MIR;
 
 bool ISelInfo::isLegalGenericInst(MIRInst_p minst) const {
     Err::gassert(minst->isGeneric(), "isLegalGenericInst: minst is not a generic mir");

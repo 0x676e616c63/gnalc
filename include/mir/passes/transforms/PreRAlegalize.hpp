@@ -1,9 +1,9 @@
-#ifndef GNALC_ARMV8_MIR_PASSES_PRERALEGALIZE_HPP
-#define GNALC_ARMV8_MIR_PASSES_PRERALEGALIZE_HPP
+#ifndef GNALC_MIR_PASSES_PRERALEGALIZE_HPP
+#define GNALC_MIR_PASSES_PRERALEGALIZE_HPP
 
 #include "mir/passes/pass_manager.hpp"
 
-namespace MIR_new {
+namespace MIR {
 
 class PreRAlegalize : public PM::PassInfo<PreRAlegalize> {
 

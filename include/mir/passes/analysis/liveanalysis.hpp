@@ -1,12 +1,12 @@
 #pragma once
-#ifndef GNALC_ARMV8_MIR_PASSES_ANALYSIS_LIVEANALYSIS_HPP
-#define GNALC_ARMV8_MIR_PASSES_ANALYSIS_LIVEANALYSIS_HPP
+#ifndef GNALC_MIR_PASSES_ANALYSIS_LIVEANALYSIS_HPP
+#define GNALC_MIR_PASSES_ANALYSIS_LIVEANALYSIS_HPP
 
 #include "mir/passes/pass_builder.hpp"
 #include "mir/passes/pass_manager.hpp"
 #include <optional>
 
-namespace MIR_new {
+namespace MIR {
 
 struct Liveness {
     std::unordered_map<MIRBlk_p, std::unordered_set<MIROperand_p>> liveIn;

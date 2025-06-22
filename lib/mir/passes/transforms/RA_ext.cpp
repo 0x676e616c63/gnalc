@@ -1,6 +1,6 @@
 #include "mir/passes/transforms/RA.hpp"
 
-using namespace MIR_new;
+using namespace MIR;
 
 bool RegisterAllocImpl::isMoveInstruction(const MIRInst_p &minst) {
 

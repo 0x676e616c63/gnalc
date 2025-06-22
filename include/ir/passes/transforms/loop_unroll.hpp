@@ -9,6 +9,8 @@
 #ifndef GNALC_IR_PASSES_TRANSFORMS_LOOP_UNROLL_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_LOOP_UNROLL_HPP
 
+#include <utility>
+
 #include "ir/passes/pass_manager.hpp"
 #include "config/config.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
@@ -24,6 +26,7 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
     static constexpr unsigned RUS = Config::IR::LOOP_UNROLLING_RUNTIME_UNROLL_SIZE; // 运行时展开后最大大小
     static constexpr unsigned RUC = Config::IR::LOOP_UNROLLING_RUNTIME_UNROLL_COUNT; // 运行时展开最大次数
     static constexpr unsigned MPS = Config::IR::LOOP_UNROLLING_MAX_PROCESS_SIZE; // 执行展开的最大循环大小，至多为上述各个 size 的 1/2
+    // TODO: Runtime Unroll 成本控制（最小展开大小等）
     static constexpr bool ENABLE_PEELING = false;
     static constexpr bool ENABLE_FULLY_UNROLL = true;
     static constexpr bool ENABLE_PARTIALLY_UNROLL = true;
@@ -41,10 +44,16 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
         bool unroll = false;
         UnrollType unroll_type = UnrollType::UNDEF;
         unsigned unroll_count = 0;
+
+        // For remainder
         bool has_remainder = false;
         unsigned remainder = 0;
-        pVal raw_boundary_value = nullptr; // For partially unroll with remainder, raw boundary value in unroll loop
-        pVal new_boundary_value = nullptr; // For partially unroll with remainder, new boundary value in unroll loop
+        pVal raw_boundary_value = nullptr; // Raw boundary value in main loop
+        pVal new_boundary_value = nullptr; // New boundary value in main loop
+
+        // For runtime unroll
+        std::vector<pInst> prologue_insts;
+        std::vector<pInst> epilogue_insts;
 
         // // For cost analysis
         // unsigned raw_size = 0;
@@ -82,7 +91,8 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
         }
 
         void set_remainder(const unsigned _remainder, const pVal& _rawbv, const pVal &_newbv) {
-            Err::gassert(unroll_type == UnrollType::PARTIALLY, "UnrollOption: set_remainder(): unroll_type is not PARTIALLY.");
+            Err::gassert(unroll_type == UnrollType::PARTIALLY || unroll_type == UnrollType::RUNTIME
+                , "UnrollOption: set_remainder(): unroll_type is not PARTIALLY or RUNTIME.");
             has_remainder = (_remainder!=0);
             remainder = _remainder;
             raw_boundary_value = _rawbv;
@@ -90,16 +100,18 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
             // estimated_unroll_size += raw_size;
         }
 
-        void enable_runtime(const unsigned _count) {
+        void enable_runtime(const unsigned _count, std::vector<pInst> &&_prologue_insts, std::vector<pInst> &&_epilogue_insts) {
             unroll = true;
             unroll_type = UnrollType::RUNTIME;
             unroll_count = _count;
             has_remainder = true;
+            prologue_insts = std::move(_prologue_insts);
+            epilogue_insts = std::move(_epilogue_insts);
         }
 
-        bool fully() const { return unroll_type == UnrollType::FULLY; }
-        bool partially() const { return unroll_type == UnrollType::PARTIALLY; }
-        bool runtime() const { return unroll_type == UnrollType::RUNTIME; }
+        [[nodiscard]] bool fully() const { return unroll_type == UnrollType::FULLY; }
+        [[nodiscard]] bool partially() const { return unroll_type == UnrollType::PARTIALLY; }
+        [[nodiscard]] bool runtime() const { return unroll_type == UnrollType::RUNTIME; }
     };
 
     void analyze(const pLoop &loop, UnrollOption &option, Function &FC, FAM &fam);

@@ -1,7 +1,7 @@
 #include "mir/passes/transforms/scheduling.hpp"
 #include <queue>
 
-using namespace MIR_new;
+using namespace MIR;
 
 PM::PreservedAnalyses PreRaScheduling::run(MIRFunction &_mfunc, FAM &_fam) {
     class PreRaSchedulingImpl impl(_mfunc, _fam);
@@ -76,7 +76,7 @@ void PostRaSchedulingImpl::MkDAG(SchedulingModule &Module) {
             auto &mop = inst->getOp(i);
 
             if (mop && mop->isReg()) {
-                mop->isStack() ? tmp.emplace_back(ARMReg::SP) : tmp.emplace_back(mop->isa());
+                mop->isStack() ? tmp.emplace_back(Util::to_underlying(ARMReg::SP)) : tmp.emplace_back(mop->isa());
             }
         }
 
@@ -350,7 +350,7 @@ bool SchedulingModule::instScheduling(const MIRInst_p &minst, unsigned cycle) {
             auto &mop = inst->getOp(i);
 
             if (mop && mop->isReg()) {
-                mop->isStack() ? tmp.emplace_back(ARMReg::SP) : tmp.emplace_back(mop->reg());
+                mop->isStack() ? tmp.emplace_back(Util::to_underlying(ARMReg::SP)) : tmp.emplace_back(mop->reg());
             }
         }
 
