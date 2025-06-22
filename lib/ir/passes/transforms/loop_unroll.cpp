@@ -106,6 +106,54 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
         return false;
     };
 
+    auto GetBaseValue = [](const pLoop &loop, bool is_dowhile, const pVal &iter_variable, pVal &base) -> bool {
+        auto iter_inst = iter_variable->as<Instruction>();
+
+        // For while
+        if (!is_dowhile && iter_inst->getOpcode() == OP::PHI && iter_inst->getParent() == loop->getHeader()) {
+            base = iter_inst->as<PHIInst>()->getValueForBlock(loop->getPreHeader());
+            return true;
+        }
+
+        // For dowhile or other cases
+        for (auto user : iter_variable->users()) {
+            if (auto uinst = user->as<Instruction>(); uinst->getOpcode() == OP::PHI && uinst->getParent() == loop->getHeader()) {
+                auto uphi = uinst->as<PHIInst>();
+
+                // Maybe unused
+                if (uphi->getPhiOpers().size() != 2) {
+                    Err::error("GetBaseValue: Loop's iter variable's PHI has more than 2 incoming values!");
+                    return false;
+                }
+
+                base = uphi->getValueForBlock(loop->getPreHeader());
+                return true;
+            }
+        }
+
+        Err::unreachable("GetBaseValue: Can't find the loop's iter variable's base.");
+        return false;
+    };
+
+    auto GetStep = [](SCEVHandle &SH, pVal &iter_variable, int& step) -> bool {
+        auto trecp = SH.getSCEVAtBlock(iter_variable, iter_variable->as<Instruction>()->getParent());
+        if (!trecp) {
+            Logger::logInfo("[LoopUnroll] GetStep: Can't get the loop's iter_variable's TREC.");
+            return false;
+        }
+        if (!trecp->isAddRec()) {
+            Logger::logInfo("[LoopUnroll] GetStep: The loop's iter_variable's TREC is not AddRec.");
+            return false;
+        }
+        auto [_fake_baseE, stepE] = trecp->getAffineAddRec().value();
+        if (!stepE->isIRValue() || !stepE->getIRValue()->is<ConstantInt>()) {
+            Logger::logInfo("[LoopUnroll] GetStep: The loop's step is not constant integer.");
+            return false;
+        }
+        step = stepE->getIRValue()->as<ConstantInt>()->getVal();
+        return true;
+    };
+
     if (TC->isIRValue() && TC->getIRValue()->is<ConstantInt>()) {
         // 常量展开策略
         const auto trip_countn = TC->getIRValue()->as<ConstantInt>()->getVal();
@@ -182,55 +230,26 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
                         return;
                     }
 
-                    auto trecp = SCEVH.getSCEVAtBlock(iter_variable, iter_variable->as<Instruction>()->getParent());
-                    if (!trecp) {
-                        Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable's TREC.");
+                    int step;
+                    if (!GetStep(SCEVH, iter_variable, step)) {
+                        Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable's step.");
                         option.disable();
                         return;
                     }
-                    if (!trecp->isAddRec()) {
-                        Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's iter_variable's TREC is not AddRec.");
+
+                    // Just for test, remove later
+                    pVal real_base_value;
+                    if (!GetBaseValue(loop, is_dowhile, iter_variable, real_base_value)) {
+                        Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable's base.");
                         option.disable();
                         return;
                     }
-                    auto [fake_base, step] = trecp->getConstantAffineAddRec().value();
-
-                    // TODO: Maybe unused
-                    int real_base = 0;
-                    // {
-                    //     bool assigned = false;
-                    //     // TODO: Just For dowhile, FIXME
-                    //     for (auto user : iter_variable->users()) {
-                    //         if (auto uinst = user->as<Instruction>(); uinst->getOpcode() == OP::PHI && uinst->getParent() == loop->getHeader()) {
-                    //             auto uphi = uinst->as<PHIInst>();
-                    //             auto upos = uphi->getPhiOpers();
-                    //             if (upos.size() != 2) {
-                    //                 Err::error("Loop's iter variable's PHI has more than 2 incoming values!");
-                    //                 option.disable();
-                    //                 return;
-                    //             }
-
-                    //             for (const auto& [v, b]: upos) {
-                    //                 if (v != iter_variable) {
-                    //                     if (!v->is<ConstantInt>()) {
-                    //                         Err::unreachable();
-                    //                     }
-                    //                     real_base = v->as<ConstantInt>()->getVal();
-                    //                     assigned = true;
-                    //                     break;
-                    //                 }
-                    //             }
-                    //             break;
-                    //         }
-                    //     }
-                        
-                    //     if (!assigned) {
-                    //         Err::unreachable();
-                    //         Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable's base.");
-                    //         option.disable();
-                    //         return;
-                    //     }
-                    // }
+                    if (!real_base_value->is<ConstantInt>()) {
+                        Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's iter_variable's base is not constant integer.");
+                        option.disable();
+                        return;
+                    }
+                    int real_base = real_base_value->as<ConstantInt>()->getVal();
 
                     // const int suf = static_cast<int>(unroll_factor);
                     // if (is_dowhile) {
@@ -275,47 +294,22 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
             Logger::logDebug("[LoopUnroll] Get iter variable: "+ IRFormatter::formatValue(*iter_variable));
             Logger::logDebug("[LoopUnroll] Get raw boundary value: "+ IRFormatter::formatValue(*raw_boundary_value));
 
-            // Get Step and Base
+            // Get step
             int stepN;
-            pVal baseV;
-            {
-                auto trecp = SCEVH.getSCEVAtBlock(iter_variable, iter_variable->as<Instruction>()->getParent());
-                if (!trecp) {
-                    Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable's TREC.");
-                    option.disable();
-                    return;
-                }
-                if (!trecp->isAddRec()) {
-                    Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's iter_variable's TREC is not AddRec.");
-                    option.disable();
-                    return;
-                }
-                auto [fake_baseE, stepE] = trecp->getAffineAddRec().value();
-                if (!stepE->isIRValue() || !stepE->getIRValue()->is<ConstantInt>()) {
-                    Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's step is not constant.");
-                    option.disable();
-                    return;
-                }
-                stepN = stepE->getIRValue()->as<ConstantInt>()->getVal();
-                for (auto user : iter_variable->users()) {
-                    if (auto uinst = user->as<Instruction>(); uinst->getOpcode() == OP::PHI && uinst->getParent() == loop->getHeader()) {
-                        auto uphi = uinst->as<PHIInst>();
-                        auto upos = uphi->getPhiOpers();
-                        if (upos.size() != 2) {
-                            Err::error("Loop's iter variable's PHI has more than 2 incoming values!");
-                            option.disable();
-                            return;
-                        }
-                        for (const auto& [v, b]: upos) {
-                            if (v != iter_variable) {
-                                baseV = v;
-                                break;
-                            }
-                        }
-                        break;
-                    }
-                }
+            if (!GetStep(SCEVH, iter_variable, stepN)) {
+                Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable's step.");
+                option.disable();
+                return;
             }
+
+            // Get base value
+            pVal baseV;
+            if (!GetBaseValue(loop, is_dowhile, iter_variable, baseV)) {
+                Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable's base.");
+                option.disable();
+                return;
+            }
+            
             Logger::logDebug("[LoopUnroll] Get step: "+ std::to_string(stepN) + ", base: "+ IRFormatter::formatValue(*baseV));
 
             int new_stepN = stepN * static_cast<int>(unroll_factor);
@@ -323,7 +317,10 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
 
 
             // TODO
-            
+
+            Logger::logInfo("[LoopUnroll] Needs to runtime unroll but not implemented...");
+            option.disable();
+            return;
         }
 
         Logger::logInfo("[LoopUnroll] Needs to runtime unroll but disabled...");

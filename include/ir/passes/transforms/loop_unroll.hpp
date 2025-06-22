@@ -30,7 +30,7 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
     static constexpr bool ENABLE_PEELING = false;
     static constexpr bool ENABLE_FULLY_UNROLL = true;
     static constexpr bool ENABLE_PARTIALLY_UNROLL = true;
-    static constexpr bool ENABLE_RUNTIME_UNROLL = false;
+    static constexpr bool ENABLE_RUNTIME_UNROLL = true;
 
     static unsigned name_idx; // 用于防止跑多次unroll之后value重名
 
