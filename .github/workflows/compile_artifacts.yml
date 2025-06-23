@@ -53,6 +53,12 @@ jobs:
           git rev-parse HEAD > ../.github/testcases_version.txt
           echo "Testdata updated to $(cat ../.github/testcases_version.txt)"
 
+      - name: Extract testcases
+        run: |
+          mkdir -p ${{ env.TESTDATA_DIR }}
+          unzip -q ${{ env.ZIP_CACHE_DIR }}/testdata.zip -d ${{ env.TESTDATA_DIR }}
+          echo "Testcases extracted to ${{ env.TESTDATA_DIR }}"
+
       - name: Extract branch name
         id: branch-name
         run: |
