@@ -15,13 +15,17 @@ env:
   BUILD_TYPE: Release
   TESTDATA_DIR: "/home/panda/gnalc/test/contest"
   ARTIFACTS_BRANCH: ${{ github.ref_name }}
-  TEST_RESULTS_BRANCH: "test-results-${{ github.ref_name.replace('artifacts-', '') }}"
 
 jobs:
   test_changes:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Set up branch variable
+        run: |
+          SUFFIX="${GITHUB_REF_NAME:10}"
+          echo "TEST_RESULTS_BRANCH=test-results-$SUFFIX" >> $GITHUB_ENV
+
       - name: Checkout artifacts branch
         uses: actions/checkout@v4
         with:

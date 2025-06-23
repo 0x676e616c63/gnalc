@@ -9,7 +9,7 @@ permissions:
 
 on:
   push:
-    branches: [ "artifacts-main",  "artifacts-iropt", "artifacts-ci"]
+    branches: [ "artifacts-main",  "artifacts-iropt", "artifacts-ci" ]
 
 env:
   BUILD_TYPE: Release
@@ -18,13 +18,17 @@ env:
   TESTDATA_DIR: "${{ github.workspace }}/testdata"
   ZIP_CACHE_DIR: "${{ github.workspace }}/testdata_cache"
   ARTIFACTS_BRANCH: ${{ github.ref_name }}
-  TEST_RESULTS_BRANCH: "test-results-${{ github.ref_name.replace('artifacts-', '') }}"
 
 jobs:
   test_changes:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Set up branch variable
+        run: |
+          SUFFIX="${GITHUB_REF_NAME:10}"
+          echo "TEST_RESULTS_BRANCH=test-results-$SUFFIX" >> $GITHUB_ENV
+
       - name: Checkout artifacts branch
         uses: actions/checkout@v4
         with:
@@ -60,6 +64,7 @@ jobs:
       - name: Download test data zip (if not cached)
         if: steps.cache-zip.outputs.cache-hit != 'true'
         run: |
+          mkdir -p ${{ env.ZIP_CACHE_DIR }}
           curl -L -o ${{ env.ZIP_CACHE_DIR }}/testdata.zip ${{ env.TESTDATA_ZIP_URL }}
 
       - name: Extract testcases
