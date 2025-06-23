@@ -50,29 +50,29 @@ jobs:
           echo "No relevant files found, skipping tests"
           exit 0
 
-      - name: Checkout CI branch
+      - name: Checkout Main branch
         uses: actions/checkout@v4
         with:
-          ref: ci
+          ref: main
           fetch-depth: 1
-          path: ci
+          path: main
 
       - name: Configure CMake
         run: |
-          mkdir ci/build
-          cd ci/build
+          mkdir main/build
+          cd main/build
           cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} ..
 
       - name: Build ghaction
-        run: make -C ci/build ghaction -j$(nproc)
+        run: make -C main/build ghaction -j$(nproc)
 
       - name: Run tests and save results
         id: run-tests
         run: |
-          cat filtered_files.txt | ci/build/test/ghaction -d ${{ env.TESTDATA_DIR }} \
+          cat filtered_files.txt | main/build/test/ghaction -d ${{ env.TESTDATA_DIR }} \
               --sha "${{ github.sha }}" \
               --report "test_report.md" \
-              --sylib ci/test/sylib/sylib.c
+              --sylib main/test/sylib/sylib.c
 
       - name: Checkout test-results branch
         uses: actions/checkout@v4

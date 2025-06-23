@@ -174,6 +174,7 @@ int main(int argc, char *argv[]) {
         report << "- **Status:** ";
 
         if (res.output != expected_syout) {
+            report << "- **Time Elapsed:** " << res.time_elapsed << "ms\n";
             report << "❌ FAILED\n";
                 report << "- **Expected:** " << (expected_syout.size() > 512 ?
                     "<output too long>" : escape_md(expected_syout)) << "\n";
@@ -181,6 +182,7 @@ int main(int argc, char *argv[]) {
                     "<output too long>" : escape_md(res.output)) << "\n";
         } else {
             ++passed;
+            report << "- **Time Elapsed:** " << res.time_elapsed << "ms\n";
             report << "✅ PASSED\n";
         }
         report << "\n";
