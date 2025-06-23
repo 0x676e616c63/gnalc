@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Artifacts Branch
+      - name: Checkout artifacts branch
         uses: actions/checkout@v4
         with:
           ref: ${{ env.ARTIFACTS_BRANCH }}
@@ -41,7 +41,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: true
 
-      - name: Compare Commit SHA
+      - name: Compare commit SHA
         id: check
         run: |
           LAST=$(cat artifacts-branch/last_run.txt 2>/dev/null || echo "")
@@ -55,15 +55,15 @@ jobs:
           echo "This commit (${GITHUB_SHA}) has already been processed."
           exit 0
 
-      - name: Checkout Source
+      - name: Checkout source
         uses: actions/checkout@v4
         with:
           persist-credentials: true
 
-      - name: Create Cache Directory
+      - name: Create cache directory
         run: mkdir -p ${{ env.ZIP_CACHE_DIR }}
 
-      - name: Cache Test Data
+      - name: Cache test data
         id: cache-zip
         uses: actions/cache@v3
         with:
@@ -71,7 +71,7 @@ jobs:
           key: testcases-zip-v1.0.0
           restore-keys: testcases-zip-
 
-      - name: Download Test Data Zip (if not cached)
+      - name: Download test data zip (if not cached)
         if: steps.cache-zip.outputs.cache-hit != 'true'
         run: |
           curl -L -o ${{ env.ZIP_CACHE_DIR }}/testdata.zip ${{ env.TESTDATA_ZIP_URL }}
@@ -87,20 +87,20 @@ jobs:
           cd build
           cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} ..
 
-      - name: Build Gnalc
+      - name: Build gnalc
         run: make -C build gnalc -j$(nproc)
 
-      - name: Prepare Artifacts Directory
+      - name: Prepare artifacts directory
         run: |
           mkdir -p artifacts
           echo "ARTIFACTS_DIR=$(pwd)/artifacts" >> $GITHUB_ENV
 
       # TODO: COMPILE_OPTIONS
-      - name: Set Compile Options
+      - name: Set compile options
         id: set-options
         run: echo "COMPILE_OPTIONS=-O1" >> $GITHUB_ENV
 
-      - name: Compile Testcases
+      - name: Compile testcases
         run: |
           base_path="${{ env.TESTDATA_DIR }}"
           find "$base_path" -type f -name "*.sy" | while read testcase; do
