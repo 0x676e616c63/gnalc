@@ -1,4 +1,4 @@
-name: Test Artifact Changes
+name: Test Artifact Changes - Backend
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
@@ -9,14 +9,11 @@ permissions:
 
 on:
   push:
-    branches: [ "artifacts-main",  "artifacts-iropt", "artifacts-ci"]
+    branches: [ "artifacts-backendv3.0" ]
 
 env:
   BUILD_TYPE: Release
-  TESTDATA_VERSION: "v1.0.0"
-  TESTDATA_ZIP_URL: "https://github.com/caozhanhao/gnalc-test-data/releases/download/v1.0.0/testdata.zip"
-  TESTDATA_DIR: "${{ github.workspace }}/testdata"
-  ZIP_CACHE_DIR: "${{ github.workspace }}/testdata_cache"
+  TESTDATA_DIR: "/home/panda/gnalc/test/contest"
   ARTIFACTS_BRANCH: ${{ github.ref_name }}
   TEST_RESULTS_BRANCH: "test-results-${{ github.ref_name.replace('artifacts-', '') }}"
 
@@ -49,24 +46,6 @@ jobs:
           echo "No relevant files found, skipping tests"
           exit 0
 
-      - name: Cache test data
-        id: cache-zip
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.ZIP_CACHE_DIR }}/testdata.zip
-          key: testcases-zip-${{ env.TESTDATA_VERSION }}
-          restore-keys: testcases-zip-
-
-      - name: Download test data zip (if not cached)
-        if: steps.cache-zip.outputs.cache-hit != 'true'
-        run: |
-          curl -L -o ${{ env.ZIP_CACHE_DIR }}/testdata.zip ${{ env.TESTDATA_ZIP_URL }}
-
-      - name: Extract testcases
-        run: |
-          mkdir -p ${{ env.TESTDATA_DIR }}
-          unzip -q ${{ env.ZIP_CACHE_DIR }}/testdata.zip -d ${{ env.TESTDATA_DIR }}
-
       - name: Checkout CI branch
         uses: actions/checkout@v4
         with:
@@ -82,11 +61,6 @@ jobs:
 
       - name: Build ghaction
         run: make -C ci/build ghaction -j$(nproc)
-
-      - name: Setup LLVM
-        uses: ZhongRuoyu/setup-llvm@v0
-        with:
-          llvm-version: 18
 
       - name: Run tests and save results
         id: run-tests
