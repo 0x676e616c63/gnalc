@@ -9,7 +9,8 @@ permissions:
 
 on:
   push:
-    branches: [ "main", "ci", "iropt", "backendv3.0" ]
+    #    branches: [ "main", "ci", "iropt", "backendv3.0" ]
+    branches: [ "backendv3.0" ]
     paths:
       - 'lib/**'
       - 'include/**'
@@ -17,7 +18,8 @@ on:
       - 'CMakeLists.txt'
       - '.github/workflows/compile_artifacts.yml'
   pull_request:
-    branches: [ "main", "ci", "iropt", "backendv3.0" ]
+    #    branches: [ "main", "ci", "iropt", "backendv3.0" ]
+    branches: [ "backendv3.0" ]
     paths:
       - 'lib/**'
       - 'include/**'
