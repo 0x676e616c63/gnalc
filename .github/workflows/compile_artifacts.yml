@@ -184,7 +184,9 @@ jobs:
 
           echo "${{ github.sha }}" > artifacts-branch/last_run.txt
 
-      - name: Commit
+      - name: Commit & Push updates
+        env:
+          SSHK: ${{ secrets.GH_PAT }}
         run: |
           cd artifacts-branch
           git config user.name "github-actions[bot]"
@@ -192,12 +194,11 @@ jobs:
           git add README.md last_run.txt artifacts/ .github/
           if git diff-index --quiet HEAD; then
             echo "No changes to commit"
-            exit 0
+          else
+            git commit -m "Update artifacts from ${{ github.sha }}"
+            mkdir -p $HOME/.ssh
+            echo "$SSHK" > $HOME/.ssh/ssh.key
+            chmod 600 $HOME/.ssh/ssh.key
+            export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/ssh.key"
+            git push origin ${{ env.ARTIFACTS_BRANCH }}
           fi
-          git commit -m "Update artifacts from ${{ github.sha }}"
-
-      - name: Push updates
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GH_PAT }}
-          branch: ${{ env.ARTIFACTS_BRANCH }}
