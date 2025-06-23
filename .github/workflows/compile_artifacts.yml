@@ -21,10 +21,9 @@ on:
 env:
   BUILD_TYPE: Release
   ARTIFACTS_BRANCH: "artifacts"
-  TESTDATA_URL: "https://caozhanhao.coding.net/p/gnalc-test-data/d/contest/git/archive/v1.0.0.zip"
-  TESTDATA_VERSION: "v1.0.0"
+  TESTDATA_ZIP_REPO: "https://e.coding.net/caozhanhao/gnalc-test-data/zip.git"
   TESTDATA_DIR: "${{ github.workspace }}/testdata"
-  TESTDATA_CACHE_DIR: "${{ github.workspace }}/testdata_cache"
+  ZIP_CACHE_DIR: "${{ github.workspace }}/testdata_cache"
 
 jobs:
   compile:
@@ -38,23 +37,21 @@ jobs:
         run: mkdir -p ${{ env.TESTDATA_CACHE_DIR }}
 
       - name: Cache Test Data
-        id: cache-testdata
+        id: cache-zip
         uses: actions/cache@v3
         with:
-          path: ${{ env.TESTDATA_CACHE_DIR }}
-          key: testdata-zip-${{ hashFiles('.github/testdata_version.txt') }}
-          restore-keys: testdata-zip-
+          path: ${{ env.ZIP_CACHE_DIR }}
+          key: testcases-zip-${{ hashFiles('.github/testcases_version.txt') }}
+          restore-keys: testcases-zip-
 
-      - name: Download Test Data (if not cached)
-        if: steps.cache-testdata.outputs.cache-hit != 'true'
+      - name: Clone testdata repository (if not cached)
+        if: steps.cache-zip.outputs.cache-hit != 'true'
         run: |
-          curl -L ${{ env.TESTDATA_URL }} -o ${{ env.TESTDATA_CACHE_DIR }}/testdata.zip
-          echo ${{ env.TESTDATA_VERSION }} > .github/testdata_version.txt
-
-      - name: Extract testcases
-        run: |
-          mkdir -p ${{ env.TESTDATA_DIR }}
-          unzip -q ${{ env.TESTDATA_CACHE_DIR }}/testdata.zip -d ${{ env.TESTDATA_DIR }}
+          git clone --depth 1 ${{ env.TESTCASE_REPO }} testdata-repo
+          cp testdata-repo/testdata.zip ${{ env.ZIP_CACHE_DIR }}/
+          cd testdata-repo
+          git rev-parse HEAD > ../.github/testcases_version.txt
+          echo "Testdata updated to $(cat ../.github/testcases_version.txt)"
 
       - name: Extract branch name
         id: branch-name
@@ -130,10 +127,6 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "Update artifacts from ${{ github.sha }}"
-          
-            mkdir -p $HOME/.ssh
-            echo "$SSHK" > $HOME/.ssh/ssh.keyAdd commentMore actions
-            chmod 600 $HOME/.ssh/ssh.key
-            export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/ssh.key"
+            git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
             git push origin ${{ env.ARTIFACTS_BRANCH }} 
           fi
