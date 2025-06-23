@@ -27,6 +27,7 @@ env:
   TESTDATA_ZIP_URL: "https://github.com/caozhanhao/gnalc-test-data/releases/download/v1.0.0/testdata.zip"
   TESTDATA_DIR: "${{ github.workspace }}/testdata"
   ZIP_CACHE_DIR: "${{ github.workspace }}/testdata_cache"
+  ARTIFACTS_COMMIT_THRESHOLD: 0
 
 jobs:
   compile:
@@ -38,27 +39,46 @@ jobs:
         with:
           ref: ${{ env.ARTIFACTS_BRANCH }}
           path: artifacts-branch
-          token: ${{ secrets.GITHUB_TOKEN }}
-          persist-credentials: true
+
+      - name: Reset artifacts branch if too many commits
+        run: |
+          cd artifacts-branch
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          echo "Artifacts branch has $COMMIT_COUNT commits"
+          
+          if [ $COMMIT_COUNT -gt ${{ env.ARTIFACTS_COMMIT_THRESHOLD }} ]; then
+            echo "Resetting artifacts branch (more than ${{ env.ARTIFACTS_COMMIT_THRESHOLD }} commits)"
+          
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git checkout --orphan new_branch_for_github_action
+            git add -A
+            git commit -m "History reset $(TZ=Asia/Shanghai date +'%Y-%m-%d %H:%M:%S')"
+          
+            git branch -D ${{ env.ARTIFACTS_BRANCH }}
+            git branch -m ${{ env.ARTIFACTS_BRANCH }}
+          
+            git push --force origin ${{ env.ARTIFACTS_BRANCH }}
+            echo "Artifacts branch has been reset"
+          else
+            echo "No reset needed (<=${{ env.ARTIFACTS_COMMIT_THRESHOLD }} commits)"
+          fi
 
       - name: Compare commit SHA
-        id: check
         run: |
           LAST=$(cat artifacts-branch/last_run.txt 2>/dev/null || echo "")
-          echo "Previous run was on: $LAST"
-          echo "::set-output name=previous::$LAST"
-          echo "::set-output name=current::${GITHUB_SHA}"
+          echo "Previous run SHA: $LAST"
+          echo "Current SHA:  ${{ github.sha }}"
+          
+          if [ "$LAST" = "${{ github.sha }}" ]; then
+            echo "This commit (${{ github.sha }}) has already been processed. Skipping build."
+            exit 0
+          fi
 
-      - name: Skip if already ran on this commit
-        if: steps.check.outputs.previous == steps.check.outputs.current
-        run: |
-          echo "This commit (${GITHUB_SHA}) has already been processed."
-          exit 0
+          echo "New commit detected. Proceeding with build."
 
       - name: Checkout source
         uses: actions/checkout@v4
-        with:
-          persist-credentials: true
 
       - name: Create cache directory
         run: mkdir -p ${{ env.ZIP_CACHE_DIR }}
@@ -125,8 +145,6 @@ jobs:
         with:
           ref: ${{ env.ARTIFACTS_BRANCH }}
           path: artifacts-branch
-          token: ${{ secrets.GITHUB_TOKEN }}
-          persist-credentials: true
 
       - name: Clean out old artifacts
         run: |
@@ -138,7 +156,7 @@ jobs:
 
       - name: Generate metadata files
         run: |
-          TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          TS=$(TZ=Asia/Shanghai date +"%Y-%m-%dT%H:%M:%S%:z")
           cat > artifacts-branch/README.md <<EOF
           # Gnalc Artifacts
 
@@ -161,6 +179,5 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "Update artifacts from ${{ github.sha }}"
-            git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
             git push origin ${{ env.ARTIFACTS_BRANCH }} 
           fi
