@@ -4,9 +4,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
-permissions:
-  contents: write
-
 on:
   push:
     branches: [ "main", "backendv3.0" ]
@@ -46,6 +43,7 @@ jobs:
         with:
           ref: ${{ env.ARTIFACTS_BRANCH }}
           path: artifacts-branch
+          persist-credentials: false
 
       - name: Reset artifacts branch if too many commits
         run: |
@@ -86,6 +84,8 @@ jobs:
 
       - name: Checkout source
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Create cache directory
         run: mkdir -p ${{ env.ZIP_CACHE_DIR }}
@@ -155,6 +155,7 @@ jobs:
         with:
           ref: ${{ env.ARTIFACTS_BRANCH }}
           path: artifacts-branch
+          persist-credentials: false
 
       - name: Clean out old artifacts
         run: |
@@ -183,7 +184,7 @@ jobs:
 
           echo "${{ github.sha }}" > artifacts-branch/last_run.txt
 
-      - name: Commit & Push updates
+      - name: Commit
         run: |
           cd artifacts-branch
           git config user.name "github-actions[bot]"
@@ -191,7 +192,12 @@ jobs:
           git add README.md last_run.txt artifacts/ .github/
           if git diff-index --quiet HEAD; then
             echo "No changes to commit"
-          else
-            git commit -m "Update artifacts from ${{ github.sha }}"
-            git push origin ${{ env.ARTIFACTS_BRANCH }} 
+            exit 0
           fi
+          git commit -m "Update artifacts from ${{ github.sha }}"
+
+      - name: Push updates
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          branch: ${{ env.ARTIFACTS_BRANCH }}
