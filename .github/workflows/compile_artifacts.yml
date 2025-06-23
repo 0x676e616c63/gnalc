@@ -119,7 +119,6 @@ jobs:
           mkdir -p artifacts
           echo "ARTIFACTS_DIR=$(pwd)/artifacts" >> $GITHUB_ENV
 
-      # TODO: COMPILE_OPTIONS
       - name: Set compile options
         id: set-options
         run: echo "COMPILE_OPTIONS=-O1" >> $GITHUB_ENV
