@@ -40,18 +40,18 @@ main_0:
     bl	getfarray
     movz	w0,	#106
     bl	_sysy_starttime
+    add	x4,	sp,	#16
     add	x1,	sp,	#916
-    adrp	x28, :got:conv_output
+    adrp	x11, :got:conv_output
     movz	w7,	#0
-    add	x15,	sp,	#16
     adrp	x25, :got:input
     ldr	x25, [x25, #:got_lo12:input]
-    ldr	x28, [x28, #:got_lo12:conv_output]
+    ldr	x11, [x11, #:got_lo12:conv_output]
 
 main_12:
-    movz	w23,	#4000
+    movz	w24,	#4000
     movz	w27,	#0
-    madd	x17,	x7,	x23,	x28
+    madd	x18,	x7,	x24,	x11
 
 
 main_16:
@@ -59,155 +59,155 @@ main_16:
     movi	v14.4s,	#0
 
 main_19:
-    add	w19,	w8,	w7
+    add	w20,	w8,	w7
     movz	w16,	#4000
-    lsl	w13,	w8,	#6
-    lsl	w14,	w27,	#2
-    add	w9,	w27,	#2
-    add	w4,	w27,	#4
-    madd	x20,	x19,	x16,	x25
+    lsl	w15,	w8,	#6
+    add	w10,	w27,	#2
+    add	w5,	w27,	#4
+    madd	x21,	x20,	x16,	x25
 
-    sub	w23,	w13,	w8,	lsl #2
-    add	w19,	w27,	#3
+    sub	w24,	w15,	w8,	lsl #2
+    lsl	w13,	w10,	#2
+    lsl	w16,	w27,	#2
+    lsl	w9,	w5,	#2
+    add	w20,	w27,	#3
     add	w8,	w8,	#1
-    lsl	w11,	w9,	#2
-    lsl	w6,	w4,	#2
-    add	x13,	x20,	x14
-    add	x2,	x15,	x23
-    lsl	w22,	w19,	#2
-    add	x10,	x20,	x11
-    add	x5,	x20,	x6
-    add	w14,	w27,	#5
-    ldr	s19,	[x13]
-
-    add	w23,	w27,	#1
+    add	x2,	x4,	x24
+    add	x12,	x21,	x13
+    add	x15,	x21,	x16
+    add	x6,	x21,	x9
+    lsl	w23,	w20,	#2
+    add	w24,	w27,	#1
     add	x3,	x2,	#4
-    add	x21,	x20,	x22
-    add	w11,	w27,	#7
-    add	w6,	w27,	#9
-    lsl	w18,	w14,	#2
-    add	x13,	x2,	#8
+    add	w13,	w27,	#7
+    add	w16,	w27,	#5
+    ldr	s19,	[x15]
+
+    add	w9,	w27,	#9
+    add	x22,	x21,	x23
+    lsl	w28,	w24,	#2
+    lsl	w19,	w16,	#2
+    add	x15,	x2,	#8
     ldr	s3,	[x2]
 
-    lsl	w26,	w23,	#2
-    add	w22,	w27,	#8
-    add	x16,	x20,	x18
+    add	w23,	w27,	#8
+    add	x26,	x21,	x28
+    add	x17,	x21,	x19
     fmul	s4,	s19,	s3
-    add	x24,	x20,	x26
-    add	w18,	w27,	#10
+    add	w28,	w27,	#6
+    add	w19,	w27,	#10
     fadd	s14,	s14,	s4
-    add	w26,	w27,	#6
-    ldr	s9,	[x24]
+    ldr	s9,	[x26]
 
-    add	x24,	x2,	#12
+    add	x26,	x2,	#12
     ldr	s29,	[x3]
 
-    ldr	s18,	[x10]
+    lsl	w3,	w28,	#2
+    ldr	s18,	[x12]
 
-    lsl	w3,	w26,	#2
     fmul	s30,	s9,	s29
-    add	x10,	x2,	#16
-    ldr	s6,	[x13]
+    add	x12,	x2,	#16
+    ldr	s6,	[x15]
 
-    add	x0,	x20,	x3
+    add	x0,	x21,	x3
     fadd	s24,	s14,	s30
-    ldr	s26,	[x21]
+    lsl	w15,	w13,	#2
+    ldr	s26,	[x22]
 
-    lsl	w13,	w11,	#2
     fmul	s7,	s18,	s6
     add	w3,	w27,	#11
-    add	x21,	x2,	#20
-    ldr	s14,	[x24]
+    add	x14,	x21,	x15
+    add	x22,	x2,	#20
+    ldr	s14,	[x26]
 
-    add	x12,	x20,	x13
     fadd	s1,	s24,	s7
-    lsl	w24,	w22,	#2
-    ldr	s3,	[x5]
+    add	w15,	w27,	#12
+    lsl	w26,	w23,	#2
+    ldr	s3,	[x6]
 
     fmul	s15,	s26,	s14
-    add	w13,	w27,	#12
-    add	x23,	x20,	x24
-    add	x5,	x2,	#24
-    ldr	s22,	[x10]
+    add	x6,	x2,	#24
+    ldr	s22,	[x12]
 
+    add	x24,	x21,	x26
     fadd	s10,	s1,	s15
-    add	w24,	w27,	#13
-    lsl	w10,	w6,	#2
-    ldr	s11,	[x16]
+    lsl	w12,	w9,	#2
+    ldr	s11,	[x17]
 
     fmul	s23,	s3,	s22
-    add	x16,	x2,	#28
-    ldr	s30,	[x21]
+    add	w26,	w27,	#13
+    add	x10,	x21,	x12
+    add	x17,	x2,	#28
+    ldr	s30,	[x22]
 
-    add	x9,	x20,	x10
     fadd	s18,	s10,	s23
-    lsl	w21,	w18,	#2
+    add	w12,	w27,	#14
+    lsl	w22,	w19,	#2
     ldr	s20,	[x0]
 
     fmul	s31,	s11,	s30
-    add	w10,	w27,	#14
-    add	x19,	x20,	x21
     add	x0,	x2,	#32
-    ldr	s7,	[x5]
+    ldr	s7,	[x6]
 
+    add	x20,	x21,	x22
     fadd	s28,	s18,	s31
-    lsl	w5,	w3,	#2
+    lsl	w6,	w3,	#2
     fmul	s8,	s20,	s7
     add	x3,	x2,	#56
-    add	x4,	x20,	x5
+    add	x5,	x21,	x6
     fadd	s5,	s28,	s8
-    ldr	s28,	[x12]
+    ldr	s28,	[x14]
 
-    add	x12,	x2,	#36
-    ldr	s15,	[x16]
+    add	x14,	x2,	#36
+    ldr	s15,	[x17]
 
-    lsl	w16,	w13,	#2
+    lsl	w17,	w15,	#2
     fmul	s16,	s28,	s15
     fadd	s14,	s5,	s16
-    add	x14,	x20,	x16
-    ldr	s5,	[x23]
+    add	x16,	x21,	x17
+    ldr	s5,	[x24]
 
-    add	x23,	x2,	#40
+    add	x24,	x2,	#40
     ldr	s23,	[x0]
 
-    lsl	w0,	w24,	#2
-    ldr	s13,	[x9]
+    lsl	w0,	w26,	#2
+    ldr	s13,	[x10]
 
     fmul	s24,	s5,	s23
-    add	x9,	x2,	#44
-    ldr	s31,	[x12]
+    add	x10,	x2,	#44
+    ldr	s31,	[x14]
 
-    add	x26,	x20,	x0
+    add	x28,	x21,	x0
     fadd	s23,	s14,	s24
-    lsl	w12,	w10,	#2
-    ldr	s22,	[x19]
+    lsl	w14,	w12,	#2
+    ldr	s22,	[x20]
 
     fmul	s1,	s13,	s31
-    add	x19,	x2,	#48
-    ldr	s8,	[x23]
+    add	x20,	x2,	#48
+    ldr	s8,	[x24]
 
     fadd	s1,	s23,	s1
-    ldr	s30,	[x4]
+    ldr	s30,	[x5]
 
     fmul	s9,	s22,	s8
-    add	x4,	x2,	#52
-    ldr	s16,	[x9]
+    add	x5,	x2,	#52
+    ldr	s16,	[x10]
 
     fadd	s9,	s1,	s9
-    ldr	s7,	[x14]
+    ldr	s7,	[x16]
 
     fmul	s17,	s30,	s16
-    add	x14,	x20,	x12
-    ldr	s24,	[x19]
+    add	x16,	x21,	x14
+    ldr	s24,	[x20]
 
     fadd	s18,	s9,	s17
-    ldr	s16,	[x26]
+    ldr	s16,	[x28]
 
     fmul	s25,	s7,	s24
-    ldr	s1,	[x4]
+    ldr	s1,	[x5]
 
     fadd	s28,	s18,	s25
-    ldr	s24,	[x14]
+    ldr	s24,	[x16]
 
     fmul	s2,	s16,	s1
     ldr	s9,	[x3]
@@ -219,10 +219,10 @@ main_19:
     blt	main_19
 
 main_131:
-    lsl	w12,	w27,	#2
+    lsl	w14,	w27,	#2
     add	w27,	w27,	#1
-    add	x11,	x17,	x12
-    str	s14,	[x11]
+    add	x13,	x18,	x14
+    str	s14,	[x13]
 
     cmp	w27,	#986
     blt	main_16
@@ -238,7 +238,7 @@ main_138:
 main_140:
     movz	w19,	#4000
     movz	w2,	#0
-    madd	x7,	x13,	x19,	x25
+    madd	x8,	x13,	x19,	x25
 
 
 main_144:
@@ -246,158 +246,158 @@ main_144:
     movi	v18.4s,	#0
 
 main_147:
-    add	w11,	w12,	w13
+    add	w15,	w12,	w13
     movz	w10,	#4000
-    lsl	w18,	w12,	#6
-    add	w26,	w2,	#1
-    add	w9,	w2,	#2
-    add	w22,	w2,	#3
-    add	w5,	w2,	#4
-    madd	x11,	x11,	x10,	x28
+    lsl	w19,	w12,	#6
+    lsl	w20,	w2,	#2
+    add	w27,	w2,	#1
+    add	w23,	w2,	#3
+    add	w6,	w2,	#4
+    madd	x15,	x15,	x10,	x11
 
-    sub	w18,	w18,	w12,	lsl #2
-    lsl	w0,	w26,	#2
-    lsl	w14,	w9,	#2
-    lsl	w24,	w22,	#2
-    lsl	w8,	w5,	#2
+    sub	w19,	w19,	w12,	lsl #2
+    add	x18,	x15,	x20
+    lsl	w0,	w27,	#2
+    lsl	w26,	w23,	#2
+    add	w10,	w2,	#2
+    lsl	w9,	w6,	#2
     add	w12,	w12,	#1
-    add	x19,	x15,	x18
-    add	x27,	x11,	x0
-    add	x10,	x11,	x14
-    add	x23,	x11,	x24
-    add	x6,	x11,	x8
-    lsl	w18,	w2,	#2
-    add	x4,	x19,	#4
-    add	w0,	w2,	#6
-    add	w14,	w2,	#7
-    add	w24,	w2,	#8
-    add	w8,	w2,	#9
-    add	x17,	x11,	x18
-    add	w18,	w2,	#5
-    ldr	s6,	[x17]
+    add	x19,	x4,	x19
+    add	w20,	w2,	#5
+    ldr	s6,	[x18]
 
-    lsl	w21,	w18,	#2
-    add	x17,	x19,	#8
+    add	x28,	x15,	x0
+    add	x24,	x15,	x26
+    lsl	w16,	w10,	#2
+    add	x7,	x15,	x9
+    add	x5,	x19,	#4
+    lsl	w22,	w20,	#2
+    add	x18,	x19,	#8
     ldr	s17,	[x19]
 
-    add	x20,	x11,	x21
-    ldr	s24,	[x27]
+    add	w0,	w2,	#6
+    add	w26,	w2,	#8
+    add	x14,	x15,	x16
+    add	w9,	w2,	#9
+    add	x21,	x15,	x22
+    ldr	s24,	[x28]
 
     fmul	s19,	s6,	s17
-    add	w21,	w2,	#10
-    add	x27,	x19,	#12
-    ldr	s8,	[x4]
+    add	w16,	w2,	#7
+    add	w22,	w2,	#10
+    add	x28,	x19,	#12
+    ldr	s8,	[x5]
 
     fadd	s7,	s18,	s19
-    lsl	w4,	w0,	#2
-    ldr	s1,	[x10]
+    lsl	w5,	w0,	#2
+    ldr	s1,	[x14]
 
     fmul	s9,	s24,	s8
-    add	x3,	x11,	x4
-    add	x10,	x19,	#16
-    ldr	s16,	[x17]
+    add	x14,	x19,	#16
+    ldr	s16,	[x18]
 
+    add	x3,	x15,	x5
     fadd	s18,	s7,	s9
-    add	w4,	w2,	#11
-    lsl	w17,	w14,	#2
+    lsl	w18,	w16,	#2
     fmul	s17,	s1,	s16
-    ldr	s9,	[x23]
+    add	w5,	w2,	#11
+    ldr	s9,	[x24]
 
-    add	x16,	x11,	x17
+    add	x17,	x15,	x18
     fadd	s26,	s18,	s17
-    add	x23,	x19,	#20
-    ldr	s24,	[x27]
+    add	x24,	x19,	#20
+    ldr	s24,	[x28]
 
-    add	w17,	w2,	#12
-    lsl	w27,	w24,	#2
-    ldr	s18,	[x6]
+    add	w18,	w2,	#12
+    lsl	w28,	w26,	#2
+    ldr	s18,	[x7]
 
     fmul	s25,	s9,	s24
-    add	x26,	x11,	x27
-    add	x6,	x19,	#24
-    ldr	s1,	[x10]
+    add	x7,	x19,	#24
+    ldr	s1,	[x14]
 
+    add	x27,	x15,	x28
     fadd	s5,	s26,	s25
-    add	w27,	w2,	#13
-    lsl	w10,	w8,	#2
+    lsl	w14,	w9,	#2
     fmul	s2,	s18,	s1
-    ldr	s26,	[x20]
+    add	w28,	w2,	#13
+    ldr	s26,	[x21]
 
-    add	x9,	x11,	x10
+    add	x10,	x15,	x14
     fadd	s13,	s5,	s2
-    add	x20,	x19,	#28
-    ldr	s9,	[x23]
+    add	x21,	x19,	#28
+    ldr	s9,	[x24]
 
-    add	w10,	w2,	#14
-    lsl	w23,	w21,	#2
+    add	w14,	w2,	#14
+    lsl	w24,	w22,	#2
     ldr	s3,	[x3]
 
     fmul	s10,	s26,	s9
-    add	x22,	x11,	x23
     add	x3,	x19,	#32
-    ldr	s17,	[x6]
+    ldr	s17,	[x7]
 
+    add	x23,	x15,	x24
     fadd	s22,	s13,	s10
-    lsl	w6,	w4,	#2
-    ldr	s11,	[x16]
+    lsl	w7,	w5,	#2
+    ldr	s11,	[x17]
 
     fmul	s18,	s3,	s17
-    add	x16,	x19,	#36
-    ldr	s25,	[x20]
+    add	x6,	x15,	x7
+    add	x17,	x19,	#36
+    ldr	s25,	[x21]
 
-    add	x5,	x11,	x6
     fadd	s30,	s22,	s18
-    lsl	w20,	w17,	#2
-    ldr	s20,	[x26]
+    lsl	w21,	w18,	#2
+    ldr	s20,	[x27]
 
     fmul	s26,	s11,	s25
-    add	x18,	x11,	x20
-    add	x26,	x19,	#40
+    add	x27,	x19,	#40
     ldr	s2,	[x3]
 
+    add	x20,	x15,	x21
     fadd	s9,	s30,	s26
-    lsl	w3,	w27,	#2
-    ldr	s28,	[x9]
+    lsl	w3,	w28,	#2
+    ldr	s28,	[x10]
 
     fmul	s3,	s20,	s2
-    add	x9,	x19,	#44
-    ldr	s10,	[x16]
+    add	x0,	x15,	x3
+    add	x10,	x19,	#44
+    ldr	s10,	[x17]
 
-    add	x0,	x11,	x3
     fadd	s17,	s9,	s3
-    lsl	w16,	w10,	#2
-    ldr	s5,	[x22]
+    lsl	w17,	w14,	#2
+    ldr	s5,	[x23]
 
     fmul	s11,	s28,	s10
-    add	x6,	x11,	x16
-    add	x22,	x19,	#48
-    ldr	s18,	[x26]
+    add	x23,	x19,	#48
+    ldr	s18,	[x27]
 
+    add	x7,	x15,	x17
     fadd	s26,	s17,	s11
-    add	x16,	x19,	#56
-    ldr	s13,	[x5]
+    ldr	s13,	[x6]
 
     fmul	s19,	s5,	s18
-    add	x5,	x19,	#52
+    add	x17,	x19,	#56
+    add	x6,	x19,	#52
     fadd	s3,	s26,	s19
-    ldr	s26,	[x9]
+    ldr	s26,	[x10]
 
-    ldr	s22,	[x18]
+    ldr	s22,	[x20]
 
     fmul	s27,	s13,	s26
     fadd	s13,	s3,	s27
-    ldr	s3,	[x22]
+    ldr	s3,	[x23]
 
     ldr	s30,	[x0]
 
     fmul	s4,	s22,	s3
-    ldr	s11,	[x5]
+    ldr	s11,	[x6]
 
     fadd	s21,	s13,	s4
-    ldr	s7,	[x6]
+    ldr	s7,	[x7]
 
     fmul	s12,	s30,	s11
-    ldr	s19,	[x16]
+    ldr	s19,	[x17]
 
     fadd	s30,	s21,	s12
     fmul	s20,	s7,	s19
@@ -406,10 +406,10 @@ main_147:
     blt	main_147
 
 main_259:
-    lsl	w17,	w2,	#2
+    lsl	w18,	w2,	#2
     add	w2,	w2,	#1
-    add	x16,	x7,	x17
-    str	s18,	[x16]
+    add	x17,	x8,	x18
+    str	s18,	[x17]
 
     cmp	w2,	#972
     blt	main_144

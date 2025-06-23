@@ -15,11 +15,11 @@ main_0:
     
     movz	w0,	#22
     bl	_sysy_starttime
-    fmov	s1,	#1.000000
     movi	v9.4s,	#0
     movi	v10.4s,	#0
-    add	x8,	sp,	#16
     movz	w26,	#0
+    fmov	s1,	#1.000000
+    add	x8,	sp,	#16
     movz	fp,	#19616
     add	x22,	sp,	fp
 

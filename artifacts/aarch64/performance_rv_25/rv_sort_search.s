@@ -112,12 +112,12 @@ main_6:
     add	x20,	sp,	x20
     msub	w19,	w6,	w18,	w24
 
+    add	w6,	w28,	#1
     msub	w24,	w3,	w16,	w26
 
-    add	w6,	w28,	#1
     add	x20,	x20,	#16
-    add	w3,	w6,	#1
     lsl	w23,	w6,	#2
+    add	w3,	w6,	#1
     str	w19,	[x20]
 
     mov	x1,	x23

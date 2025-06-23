@@ -177,11 +177,11 @@ main_0:
     
     movz	w1,	#0
     movz	w2,	#4
-    add	x0,	sp,	#24
+    add	x0,	sp,	#16
     bl	memset
-    movz	w21,	#65535
     movz	w18,	#0
-    add	x27,	sp,	#28
+    movz	w21,	#65535
+    add	x27,	sp,	#24
     movk	w21,	#65535,	lsl #16
     add	x26,	x27,	#4
     str	w21,	[x27]
@@ -189,7 +189,7 @@ main_0:
     str	w18,	[x26]
 
     bl	getint
-    add	x21,	sp,	#16
+    add	x21,	sp,	#32
     mov	w24,	w0
     bl	getint
     mov	w23,	w0
@@ -197,8 +197,8 @@ main_0:
     str	w23,	[x21]
 
     bl	getarray
-    add	x25,	sp,	#24
-    add	x20,	sp,	#24
+    add	x25,	sp,	#16
+    add	x20,	sp,	#16
     add	x22,	sp,	#20
 
 main_16:

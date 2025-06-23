@@ -225,9 +225,9 @@ fft_4:
     stp	x27, x28, [sp, #64]
     stp	fp, lr, [sp, #80]
     
-    mov	w23,	w3
-    mov	w25,	w1
-    mov	x21,	x0
+    mov	w25,	w3
+    mov	w23,	w1
+    mov	x20,	x0
     cmp	w2,	#1
     beq	fft_69
 
@@ -238,60 +238,60 @@ fft_6:
 
 fft_8:
     asr	w6,	w2,	#31
-    movz	w3,	#0
+    movz	w0,	#0
     lsr	w7,	w6,	#31
     add	w8,	w2,	w7
     asr	w17,	w8,	#1
 
 fft_11:
-    asr	w4,	w3,	#31
-    lsr	w5,	w4,	#31
-    add	w7,	w3,	w5
+    asr	w1,	w0,	#31
+    lsr	w3,	w1,	#31
+    add	w7,	w0,	w3
     asr	w22,	w7,	#1
-    lsl	w24,	w22,	#1
-    sub	w10,	w3,	w24
+    lsl	w26,	w22,	#1
+    sub	w10,	w0,	w26
     cmp	w10,	#0
     bne	fft_21
 
 fft_15:
-    asr	w0,	w3,	#31
+    asr	w1,	w0,	#31
     adrp	x15, :got:temp
-    add	w16,	w3,	w25
+    add	w16,	w0,	w23
     ldr	x15, [x15, #:got_lo12:temp]
-    lsr	w1,	w0,	#31
-    lsl	w20,	w16,	#2
-    add	w5,	w3,	w1
-    add	x19,	x21,	x20
+    lsr	w3,	w1,	#31
+    lsl	w21,	w16,	#2
+    add	w5,	w0,	w3
+    add	x19,	x20,	x21
     asr	w12,	w5,	#1
     ldr	w22,	[x19]
 
-    lsl	w5,	w12,	#2
-    add	x13,	x15,	x5
+    lsl	w3,	w12,	#2
+    add	x13,	x15,	x3
     str	w22,	[x13]
 
     b	fft_28
 
 fft_21:
-    asr	w6,	w3,	#31
-    adrp	x5, :got:temp
-    ldr	x5, [x5, #:got_lo12:temp]
+    asr	w6,	w0,	#31
+    adrp	x3, :got:temp
+    ldr	x3, [x3, #:got_lo12:temp]
     lsr	w7,	w6,	#31
-    add	w8,	w3,	w7
-    add	w7,	w3,	w25
-    asr	w24,	w8,	#1
-    lsl	w1,	w7,	#2
-    add	w0,	w24,	w17
-    lsl	w10,	w0,	#2
-    add	x0,	x21,	x1
-    add	x10,	x5,	x10
-    ldr	w5,	[x0]
+    add	w8,	w0,	w7
+    add	w7,	w0,	w23
+    asr	w26,	w8,	#1
+    add	w27,	w26,	w17
+    lsl	w10,	w27,	#2
+    add	x10,	x3,	x10
+    lsl	w3,	w7,	#2
+    add	x1,	x20,	x3
+    ldr	w5,	[x1]
 
     str	w5,	[x10]
 
 
 fft_28:
-    add	w3,	w3,	#1
-    cmp	w3,	w2
+    add	w0,	w0,	#1
+    cmp	w0,	w2
     blt	fft_11
 
 fft_33:
@@ -304,86 +304,86 @@ fft_35:
     bge	fft_44
 
 fft_38:
-    add	w11,	w5,	w25
+    add	w11,	w5,	w23
     lsl	w17,	w5,	#2
     add	w5,	w5,	#1
     add	x15,	x14,	x17
     lsl	w13,	w11,	#2
     ldr	w18,	[x15]
 
-    add	x0,	x21,	x13
+    add	x0,	x20,	x13
     str	w18,	[x0]
 
     b	fft_35
 
 fft_44:
     asr	w1,	w2,	#31
-    mov	w0,	w23
     lsr	w27,	w1,	#31
-    mov	w1,	w23
-    add	w28,	w2,	w27
-    asr	w20,	w28,	#1
-    bl	multiply
-    mov	w2,	w20
     mov	w1,	w25
-    mov	w27,	w0
-    mov	w3,	w27
-    mov	x0,	x21
+    add	w0,	w2,	w27
+    asr	w28,	w0,	#1
+    mov	w0,	w25
+    bl	multiply
+    mov	w2,	w28
+    mov	w1,	w23
+    mov	w26,	w0
+    mov	w3,	w26
+    mov	x0,	x20
     bl	fft
-    mov	w3,	w27
-    mov	w2,	w20
-    mov	x0,	x21
-    add	w1,	w20,	w25
+    mov	w3,	w26
+    mov	w2,	w28
+    mov	x0,	x20
+    add	w1,	w28,	w23
     bl	fft
     movz	w26,	#1
     movz	w27,	#0
 
 fft_50:
-    cmp	w27,	w20
+    cmp	w27,	w28
     bge	fft_70
 
 fft_54:
-    add	w0,	w27,	w25
+    add	w0,	w27,	w23
     movz	fp,	#100
-    add	w1,	w0,	w20
-    lsl	w28,	w0,	#2
-    mov	w0,	w26
-    add	x18,	x21,	x28
+    add	w1,	w0,	w28
+    lsl	w18,	w0,	#2
+    add	x21,	x20,	x18
     lsl	w24,	w1,	#2
-    str	x18,	[sp, fp]
+    ldr	w19,	[x21]
 
-    add	x22,	x21,	x24
+    add	x0,	x20,	x24
+    str	x0,	[sp, fp]
+
+    mov	w0,	w26
     movz	fp,	#100
-    ldr	x19,	[sp, fp]
+    ldr	x1,	[sp, fp]
 
-    ldr	w28,	[x19]
-
-    ldr	w1,	[x22]
+    ldr	w1,	[x1]
 
     bl	multiply
-    movz	w18,	#1
-    add	w1,	w0,	w28
     movz	fp,	#100
+    add	w1,	w0,	w19
+    movz	w18,	#1
     movk	w18,	#15232,	lsl #16
-    sub	w0,	w28,	w0
-    sdiv	w24,	w1,	w18
-    mul	w19,	w24,	w18
-    msub	w24,	w24,	w18,	w1
+    sdiv	w22,	w1,	w18
+    mul	w24,	w22,	w18
+    msub	w22,	w22,	w18,	w1
 
-    str	w19,	[sp, #96]
+    str	w24,	[sp, #96]
 
-    add	w1,	w0,	w18
-    ldr	x19,	[sp, fp]
+    mov	w1,	w25
+    str	w22,	[x21]
 
-    str	w24,	[x19]
+    ldr	x21,	[sp, fp]
 
-    sdiv	w0,	w1,	w18
-    mul	w28,	w0,	w18
-    msub	w28,	w0,	w18,	w1
+    sub	w22,	w19,	w0
+    add	w22,	w22,	w18
+    sdiv	w0,	w22,	w18
+    mul	w19,	w0,	w18
+    msub	w18,	w0,	w18,	w22
 
-    mov	w1,	w23
     mov	w0,	w26
-    str	w28,	[x22]
+    str	w18,	[x21]
 
     bl	multiply
     add	w27,	w27,	#1

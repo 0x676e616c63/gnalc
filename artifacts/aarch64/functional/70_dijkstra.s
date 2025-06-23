@@ -12,16 +12,16 @@ main_0:
     sub	sp, sp, #1168
     stp	fp, lr, [sp, #0]
     
-    movz	w1,	#0
     movz	w2,	#64
+    movz	w1,	#0
     add	x0,	sp,	#1040
     bl	memset
     movz	w2,	#64
     movz	w1,	#0
     add	x0,	sp,	#1104
     bl	memset
-    movz	w2,	#1024
     movz	w1,	#0
+    movz	w2,	#1024
     add	x0,	sp,	#16
     bl	memset
     bl	getint

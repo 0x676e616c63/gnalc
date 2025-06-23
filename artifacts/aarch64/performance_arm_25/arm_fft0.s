@@ -346,23 +346,27 @@ fft_50:
 
 fft_54:
     add	w0,	w25,	w27
+    movz	fp,	#100
+    add	w1,	w0,	w20
     lsl	w26,	w0,	#2
+    mov	w0,	w24
+    add	x18,	x28,	x26
+    lsl	w26,	w1,	#2
+    str	x18,	[sp, fp]
+
+    movz	fp,	#100
+    ldr	x19,	[sp, fp]
+
+    ldr	w21,	[x19]
+
     add	x19,	x28,	x26
     ldr	w1,	[x19]
 
-    str	w1,	[sp, #100]
-
-    add	w1,	w0,	w20
-    mov	w0,	w24
-    lsl	w26,	w1,	#2
-    add	x21,	x28,	x26
-    ldr	w1,	[x21]
-
     bl	multiply
-    ldr	w1,	[sp, #100]
-
+    add	w1,	w0,	w21
     movz	w18,	#1
-    add	w1,	w0,	w1
+    movz	fp,	#100
+    sub	w0,	w21,	w0
     movk	w18,	#15232,	lsl #16
     sdiv	w23,	w1,	w18
     mul	w26,	w23,	w18
@@ -370,18 +374,17 @@ fft_54:
 
     str	w26,	[sp, #96]
 
-    str	w23,	[x19]
-
-    ldr	w19,	[sp, #100]
-
-    sub	w0,	w19,	w0
     add	w1,	w0,	w18
+    ldr	x26,	[sp, fp]
+
+    str	w23,	[x26]
+
     sdiv	w0,	w1,	w18
     msub	w26,	w0,	w18,	w1
 
-    mul	w19,	w0,	w18
+    mul	w23,	w0,	w18
     mov	w1,	w22
-    str	w26,	[x21]
+    str	w26,	[x19]
 
     mov	w0,	w24
     bl	multiply

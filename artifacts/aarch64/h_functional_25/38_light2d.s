@@ -119,19 +119,19 @@ main_0:
     movz	w2,	#0
     add	x22,	sp,	#24
     add	x26,	sp,	#20
-    mov	x20,	x26
-    add	x25,	x26,	#4
-    str	x25,	[sp, #48]
-
     mov	w25,	w2
+    mov	x20,	x26
+    add	x23,	x26,	#4
+    str	x23,	[sp, #48]
+
 
 main_7:
     scvtf	s9,	w25
     fmov	s24,	#12.000000
     movz	w13,	#0
-    fdiv	s30,	s9,	s24
+    fdiv	s28,	s9,	s24
     mov	w23,	w13
-    str	s30,	[sp, #32]
+    str	s28,	[sp, #28]
 
 
 main_13:
@@ -139,10 +139,10 @@ main_13:
     fmov	s14,	#12.000000
     movi	v6.4s,	#0
     movz	w19,	#0
-    fdiv	s2,	s30,	s14
-    fmov	s9,	s6
+    fdiv	s31,	s30,	s14
+    fmov	s8,	s6
     mov	w21,	w19
-    str	s2,	[sp, #40]
+    str	s31,	[sp, #32]
 
 
 main_19:
@@ -166,89 +166,87 @@ main_19:
     movz	w2,	#4059
     cset	w13,	lt
     movz	w27,	#48161
+    csel	w11,	w7,	w5,	lt
     scvtf	s2,	w21
     movk	w2,	#16329,	lsl #16
-    csel	w13,	w7,	w5,	lt
     movk	w27,	#19646,	lsl #16
     movz	w7,	#4059
-    str	w13,	[sp, #44]
+    str	w11,	[sp, #44]
 
     fmov	s6,	w2
-    fmov	s12,	w27
+    fmov	s13,	w27
     movk	w7,	#16585,	lsl #16
-    ldr	w14,	[sp, #44]
+    ldr	w12,	[sp, #44]
 
-    fmov	s15,	w7
-    scvtf	s29,	w14
-    fdiv	s29,	s29,	s12
-    fmov	s12,	#24.000000
+    fmov	s22,	w7
+    scvtf	s29,	w12
+    fmov	s15,	s22
+    fdiv	s29,	s29,	s13
+    fmov	s13,	#24.000000
     fadd	s17,	s2,	s29
     fmul	s22,	s15,	s17
-    fdiv	s12,	s22,	s12
-    fadd	s6,	s12,	s6
-    fcmp	s6,	s15
+    fdiv	s11,	s22,	s13
+    fadd	s9,	s11,	s6
+    fcmp	s9,	s15
     bgt	main_41
 
 main_37:
-    fmov	s8,	w28
-    fcmp	s6,	s8
+    fmov	s7,	w28
+    fcmp	s9,	s7
     bge	main_48
 
 main_41:
-    fdiv	s4,	s6,	s15
-    frintz	s11,	s4
+    fdiv	s4,	s9,	s15
+    frintz	s12,	s4
     fcvtzs	w3,	s4
-    fmul	s10,	s11,	s15
-    fsub	s6,	s6,	s10
+    fmul	s10,	s12,	s15
+    fsub	s9,	s9,	s10
 
 main_48:
-    fsub	s13,	s6,	s15
+    fsub	s12,	s9,	s15
     movz	w18,	#4059
     movk	w18,	#16457,	lsl #16
-    fmov	s8,	w18
-    fcmp	s6,	s8
+    fmov	s10,	w18
+    fmov	s14,	s10
+    fcmp	s9,	s14
     movz	w27,	#4059
-    fcsel	s14,	s13,	s6,	gt
+    fcsel	s12,	s12,	s9,	gt
     cset	w18,	gt
     movk	w27,	#49225,	lsl #16
-    str	s14,	[sp, #16]
+    fadd	s13,	s12,	s15
+    fmov	s9,	w27
+    str	s13,	[sp, #16]
 
+    fcmp	s12,	s9
     ldr	s10,	[sp, #16]
 
-    ldr	s13,	[sp, #16]
-
-    fadd	s11,	s10,	s15
-    fmov	s10,	w27
-    fcmp	s13,	s10
-    ldr	s14,	[sp, #16]
-
     cset	w19,	lt
-    fcsel	s0,	s11,	s14,	lt
+    fcsel	s0,	s10,	s12,	lt
     bl	my_sin_impl
     fmov	s13,	s0
-    fcmp	s12,	s15
+    fcmp	s11,	s15
     bgt	main_62
 
 main_58:
-    fmov	s14,	w28
-    fcmp	s12,	s14
+    fmov	s12,	w28
+    fcmp	s11,	s12
     bge	main_69
 
 main_62:
-    fdiv	s30,	s12,	s15
+    fdiv	s30,	s11,	s15
     frintz	s1,	s30
     fcvtzs	w8,	s30
     fmul	s2,	s1,	s15
-    fsub	s12,	s12,	s2
+    fsub	s11,	s11,	s2
 
 main_69:
-    fsub	s14,	s12,	s15
-    fcmp	s12,	s8
-    fcsel	s11,	s14,	s12,	gt
+    fsub	s10,	s11,	s15
+    fcmp	s11,	s14
+    fcsel	s12,	s10,	s11,	gt
     cset	w18,	gt
-    fadd	s8,	s11,	s15
-    fcmp	s11,	s10
-    fcsel	s0,	s8,	s11,	lt
+    fadd	s11,	s12,	s15
+    fcmp	s12,	s9
+    fcsel	s0,	s11,	s12,	lt
     cset	w18,	lt
     bl	my_sin_impl
     movz	w13,	#0
@@ -259,112 +257,112 @@ main_78:
     bge	main_184
 
 main_82:
-    fmov	s8,	#2.000000
-    fcmp	s5,	s8
+    fmov	s9,	#2.000000
+    fcmp	s5,	s9
     bge	main_185
 
 main_84:
     fmul	s30,	s13,	s5
-    ldr	s11,	[sp, #40]
+    ldr	s9,	[sp, #32]
 
-    fmul	s12,	s0,	s5
+    fmul	s10,	s0,	s5
     movz	w11,	#52429
     fmov	s14,	#8.000000
-    fmov	s10,	#4.000000
-    fmov	s8,	#2.000000
-    fmov	s6,	#2.000000
+    fmov	s12,	#0.500000
+    fmov	s11,	#2.000000
     movz	w5,	#52429
     movz	w7,	#39322
+    fmov	s27,	#8.000000
+    fmov	s25,	#2.000000
     movz	w1,	#52429
-    ldr	s7,	[sp, #32]
-
-    fadd	s29,	s11,	s30
+    fadd	s6,	s9,	s30
     movk	w11,	#16076,	lsl #16
     movk	w5,	#15820,	lsl #16
     movk	w7,	#16153,	lsl #16
     movk	w1,	#15692,	lsl #16
-    fadd	s18,	s7,	s12
-    fmov	s11,	#2.000000
+    fmov	s9,	#2.000000
+    str	s6,	[sp, #36]
+
     fmov	s15,	w11
-    str	s18,	[sp, #36]
+    ldr	s4,	[sp, #28]
 
-    fsub	s3,	s29,	s15
-    ldr	s12,	[sp, #36]
+    ldr	s19,	[sp, #36]
 
-    fmul	s16,	s3,	s3
-    fsub	s15,	s12,	s15
-    fmov	s3,	#2.000000
-    fmov	s12,	#0.500000
-    fmul	s27,	s15,	s15
-    fadd	s15,	s16,	s27
-    fmul	s16,	s11,	s15
-    fadd	s28,	s10,	s15
-    fmov	s27,	#8.000000
-    fdiv	s14,	s15,	s14
+    fadd	s2,	s4,	s10
+    fsub	s7,	s19,	s15
+    fmov	s4,	#2.000000
+    fmov	s10,	#4.000000
+    fsub	s16,	s2,	s15
+    fmul	s17,	s7,	s7
+    fmul	s28,	s16,	s16
+    fmov	s7,	#2.000000
+    fadd	s16,	s17,	s28
+    fdiv	s15,	s16,	s14
+    fmul	s17,	s11,	s16
+    fadd	s28,	s10,	s16
+    fadd	s26,	s15,	s12
     fmov	s10,	#2.000000
-    fdiv	s30,	s16,	s28
-    fadd	s25,	s14,	s12
-    fadd	s14,	s25,	s30
-    fmov	s25,	#2.000000
-    fdiv	s2,	s15,	s14
-    fadd	s18,	s14,	s2
-    fdiv	s18,	s18,	s8
-    fmov	s8,	#2.000000
-    fdiv	s7,	s15,	s18
-    fadd	s20,	s18,	s7
-    fmov	s7,	#2.000000
-    fdiv	s21,	s20,	s10
-    fdiv	s11,	s15,	s21
-    fadd	s26,	s21,	s11
-    fdiv	s28,	s26,	s8
+    fdiv	s30,	s17,	s28
+    fadd	s15,	s26,	s30
+    fdiv	s3,	s16,	s15
+    fadd	s19,	s15,	s3
+    fmov	s3,	#2.000000
+    fdiv	s19,	s19,	s9
+    fdiv	s9,	s16,	s19
+    fadd	s21,	s19,	s9
+    fmov	s9,	#2.000000
+    fdiv	s23,	s21,	s10
+    fdiv	s12,	s16,	s23
+    fadd	s26,	s23,	s12
+    fdiv	s29,	s26,	s9
     fmov	s26,	#0.500000
-    fmov	s8,	#2.000000
-    fdiv	s16,	s15,	s28
-    fadd	s1,	s28,	s16
-    fdiv	s4,	s1,	s7
-    fmov	s1,	w7
-    fdiv	s14,	s15,	s4
-    fsub	s29,	s29,	s1
-    fadd	s7,	s4,	s14
-    fmov	s4,	#2.000000
-    fdiv	s10,	s7,	s6
-    fmov	s7,	#2.000000
-    fdiv	s18,	s15,	s10
-    fadd	s12,	s10,	s18
-    fdiv	s14,	s12,	s4
-    fmov	s4,	#2.000000
-    fdiv	s24,	s15,	s14
-    fadd	s18,	s14,	s24
-    fmov	s24,	#4.000000
-    fdiv	s18,	s18,	s3
-    fdiv	s30,	s15,	s18
-    fadd	s16,	s18,	s30
-    fdiv	s17,	s16,	s7
-    fmul	s16,	s29,	s29
-    fdiv	s3,	s15,	s17
+    fdiv	s17,	s16,	s29
+    fadd	s1,	s29,	s17
     fmov	s29,	#2.000000
-    fadd	s19,	s17,	s3
+    fdiv	s6,	s1,	s7
+    fmov	s1,	w7
+    fmov	s7,	#2.000000
+    fdiv	s15,	s16,	s6
+    fadd	s9,	s6,	s15
+    fmov	s6,	#2.000000
+    fdiv	s11,	s9,	s6
+    fmov	s9,	#2.000000
+    fdiv	s19,	s16,	s11
+    fadd	s14,	s11,	s19
+    fdiv	s15,	s14,	s4
+    fdiv	s24,	s16,	s15
+    fadd	s19,	s15,	s24
+    fmov	s24,	#4.000000
+    fdiv	s19,	s19,	s3
     fmov	s3,	w5
-    fdiv	s20,	s19,	s8
-    fmov	s19,	#2.000000
-    fdiv	s11,	s15,	s20
-    fadd	s10,	s20,	s11
-    fdiv	s12,	s10,	s4
-    fsub	s14,	s12,	s3
-    str	s14,	[sp, #28]
+    fdiv	s30,	s16,	s19
+    fadd	s17,	s19,	s30
+    fdiv	s18,	s17,	s7
+    fdiv	s4,	s16,	s18
+    fadd	s20,	s18,	s4
+    fmov	s18,	#2.000000
+    fmov	s4,	#2.000000
+    fdiv	s21,	s20,	s9
+    fdiv	s12,	s16,	s21
+    fadd	s11,	s21,	s12
+    fdiv	s14,	s11,	s4
+    fsub	s12,	s14,	s3
+    fsub	s14,	s2,	s1
+    str	s12,	[sp, #40]
 
-    ldr	s21,	[sp, #36]
-
-    fsub	s14,	s21,	s1
-    fmov	s21,	#2.000000
     fmul	s6,	s14,	s14
+    ldr	s20,	[sp, #36]
+
+    fsub	s31,	s20,	s1
+    fmov	s20,	#2.000000
+    fmul	s16,	s31,	s31
     fadd	s4,	s16,	s6
-    fdiv	s17,	s4,	s27
     fmul	s14,	s25,	s4
-    fmov	s16,	#2.000000
+    fdiv	s17,	s4,	s27
     fadd	s27,	s24,	s4
     fadd	s23,	s17,	s26
     fdiv	s28,	s14,	s27
+    fmov	s17,	#2.000000
     fadd	s26,	s23,	s28
     fmov	s23,	#2.000000
     fdiv	s30,	s4,	s26
@@ -373,61 +371,61 @@ main_84:
     fdiv	s3,	s4,	s30
     fadd	s2,	s30,	s3
     fmov	s30,	#2.000000
-    fdiv	s2,	s2,	s21
-    fdiv	s8,	s4,	s2
-    fadd	s8,	s2,	s8
-    fdiv	s8,	s8,	s19
-    fdiv	s12,	s4,	s8
-    fadd	s12,	s8,	s12
-    fdiv	s15,	s12,	s16
+    fdiv	s2,	s2,	s20
+    fdiv	s9,	s4,	s2
+    fadd	s9,	s2,	s9
+    fdiv	s9,	s9,	s18
+    fdiv	s12,	s4,	s9
+    fadd	s12,	s9,	s12
+    fdiv	s15,	s12,	s17
     fdiv	s14,	s4,	s15
     fadd	s17,	s15,	s14
     fmov	s14,	#2.000000
     fmov	s15,	#2.000000
     fdiv	s12,	s17,	s15
-    ldr	s15,	[sp, #28]
-
     fdiv	s17,	s4,	s12
     fadd	s17,	s12,	s17
+    ldr	s12,	[sp, #40]
+
     fdiv	s17,	s17,	s14
     fmov	s14,	#2.000000
-    fdiv	s23,	s4,	s17
-    fadd	s19,	s17,	s23
-    fdiv	s22,	s19,	s30
-    fdiv	s27,	s4,	s22
-    fadd	s26,	s22,	s27
+    fdiv	s22,	s4,	s17
+    fadd	s20,	s17,	s22
+    fdiv	s21,	s20,	s30
+    fdiv	s27,	s4,	s21
+    fadd	s26,	s21,	s27
     fdiv	s27,	s26,	s29
     fmov	s26,	w1
     fdiv	s30,	s4,	s27
     fadd	s31,	s27,	s30
     fmov	s27,	#2.000000
     fdiv	s1,	s31,	s14
-    fdiv	s16,	s4,	s1
-    fadd	s4,	s1,	s16
+    fdiv	s17,	s4,	s1
+    fadd	s4,	s1,	s17
     fdiv	s6,	s4,	s27
     fsub	s23,	s6,	s26
-    fcmp	s15,	s23
+    fcmp	s12,	s23
     bge	main_175
 
 main_174:
-    ldr	s6,	[sp, #28]
+    ldr	s3,	[sp, #40]
 
-    fmov	s19,	#3.000000
-    str	s6,	[x20]
+    fmov	s18,	#3.000000
+    str	s3,	[x20]
 
-    ldr	x28,	[sp, #48]
+    ldr	x24,	[sp, #48]
 
-    str	s19,	[x28]
+    str	s18,	[x24]
 
     b	main_176
 
 main_175:
     str	s23,	[x20]
 
-    movi	v21.4s,	#0
-    ldr	x0,	[sp, #48]
+    movi	v20.4s,	#0
+    ldr	x27,	[sp, #48]
 
-    str	s21,	[x0]
+    str	s20,	[x27]
 
 
 main_176:
@@ -445,19 +443,19 @@ main_181:
     b	main_78
 
 main_179:
-    ldr	s12,	[x22]
+    ldr	s13,	[x22]
 
     b	main_186
 
 main_185:
-    movi	v12.4s,	#0
+    movi	v13.4s,	#0
     b	main_186
 
 main_184:
-    movi	v12.4s,	#0
+    movi	v13.4s,	#0
 
 main_186:
-    fadd	s11,	s9,	s12
+    fadd	s10,	s8,	s13
     add	w3,	w21,	#1
     cmp	w3,	#24
     blt	main_18
@@ -465,7 +463,7 @@ main_186:
 main_191:
     fmov	s14,	#24.000000
     movz	w0,	#0
-    fdiv	s13,	s11,	s14
+    fdiv	s13,	s10,	s14
     movk	w0,	#17279,	lsl #16
     fmov	s14,	w0
     fmul	s13,	s13,	s14
@@ -509,7 +507,7 @@ main_12:
     b	main_13
 
 main_18:
-    fmov	s9,	s11
+    fmov	s8,	s10
     mov	w21,	w3
     ldr	w9,	[sp, #44]
 

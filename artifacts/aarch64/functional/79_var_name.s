@@ -16,10 +16,10 @@ main_0:
     movz	w1,	#0
     add	x0,	sp,	#16
     bl	memset
-    movz	w22,	#0
     movz	w23,	#2
     movz	w6,	#2
     add	x4,	sp,	#20
+    movz	w22,	#0
     movz	w7,	#1
     add	x3,	sp,	#16
     str	w7,	[x3]
@@ -61,19 +61,19 @@ main_9:
     movz	w0,	#10
     bl	putch
     add	w19,	w23,	#1
+    lsl	w25,	w19,	#2
     sub	w23,	w19,	#2
     sub	w0,	w19,	#1
-    lsl	w25,	w19,	#2
     mov	x26,	x25
+    add	x26,	sp,	x26
     lsl	w27,	w23,	#2
     lsl	w20,	w0,	#2
-    add	x26,	sp,	x26
+    add	x26,	x26,	#16
     mov	x18,	x20
     add	x18,	sp,	x18
-    add	x26,	x26,	#16
-    add	x18,	x18,	#16
     ldr	w25,	[x26]
 
+    add	x18,	x18,	#16
     ldr	w21,	[x18]
 
     add	w20,	w21,	w25
@@ -83,26 +83,26 @@ main_9:
     ldr	w28,	[x25]
 
     add	w0,	w20,	w28
-    add	w27,	w0,	w24
     str	w0,	[x26]
 
+    add	w27,	w0,	w24
     bl	putint
     movz	w0,	#10
     bl	putch
     add	w28,	w19,	#1
+    lsl	w18,	w28,	#2
     sub	w24,	w28,	#1
     sub	w19,	w28,	#2
-    lsl	w18,	w28,	#2
     mov	x21,	x18
+    add	x21,	sp,	x21
     lsl	w26,	w24,	#2
     lsl	w22,	w19,	#2
-    add	x21,	sp,	x21
     mov	x25,	x26
-    add	x25,	sp,	x25
     add	x21,	x21,	#16
-    add	x25,	x25,	#16
+    add	x25,	sp,	x25
     ldr	w20,	[x21]
 
+    add	x25,	x25,	#16
     ldr	w0,	[x25]
 
     add	w24,	w0,	w20
@@ -112,9 +112,9 @@ main_9:
     ldr	w23,	[x20]
 
     add	w0,	w24,	w23
-    add	w22,	w0,	w27
     str	w0,	[x21]
 
+    add	w22,	w0,	w27
     bl	putint
     movz	w0,	#10
     bl	putch
@@ -148,15 +148,15 @@ main_9:
     movz	w0,	#10
     bl	putch
     add	w25,	w26,	#1
+    sub	w22,	w25,	#2
     lsl	w18,	w25,	#2
     sub	w0,	w25,	#1
-    sub	w22,	w25,	#2
     mov	x24,	x18
     add	x24,	sp,	x24
-    lsl	w19,	w0,	#2
     lsl	w26,	w22,	#2
-    mov	x18,	x19
+    lsl	w19,	w0,	#2
     add	x24,	x24,	#16
+    mov	x18,	x19
     add	x18,	sp,	x18
     ldr	w23,	[x24]
 

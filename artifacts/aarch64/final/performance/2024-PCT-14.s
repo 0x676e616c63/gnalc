@@ -141,9 +141,9 @@ main_52:
     ldr	w26,	[x21]
 
     add	w17,	w16,	w10
+    add	w21,	w11,	#1
     ldr	w4,	[x1]
 
-    add	w21,	w11,	#1
     sub	w10,	w11,	#1
     add	w13,	w17,	w26
     add	w11,	w11,	#1
@@ -180,10 +180,10 @@ main_82:
     ldr	x1, [x1, #:got_lo12:x]
     bl	putarray
     asr	w21,	w28,	#31
-    movz	w0,	#2400
     adrp	x27, :got:x
-    lsr	w22,	w21,	#31
+    movz	w0,	#2400
     ldr	x27, [x27, #:got_lo12:x]
+    lsr	w22,	w21,	#31
     add	w25,	w28,	w22
     asr	w26,	w25,	#1
     madd	x1,	x26,	x19,	x27

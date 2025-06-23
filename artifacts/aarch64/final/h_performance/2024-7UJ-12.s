@@ -22,18 +22,18 @@ fib_3:
     stp	x27, x28, [sp, #64]
     stp	fp, lr, [sp, #80]
     
-    adrp	x5, :got:memo.lut.fib
     movz	x10,	#31161
     movz	x11,	#3
+    mov	w28,	w1
+    mov	w21,	w2
+    movz	x9,	#31161
+    adrp	x5, :got:memo.lut.fib
+    movz	x12,	#31353
     mov	w27,	w0
     movz	x23,	#65535
-    movz	x9,	#31161
-    mov	w21,	w2
-    movz	x12,	#31353
-    mov	w28,	w1
-    ldr	x5, [x5, #:got_lo12:memo.lut.fib]
     movk	x10,	#40503,	lsl #16
     movk	x9,	#40503,	lsl #16
+    ldr	x5, [x5, #:got_lo12:memo.lut.fib]
     movk	x12,	#40503,	lsl #16
     add	x17,	x27,	x12
     eor	x14,	x17,	x11
@@ -54,25 +54,25 @@ fib_3:
     add	w2,	w1,	w6,	lsl #4
     lsl	x9,	x2,	#0
     add	x22,	x5,	x9
-    add	x20,	x22,	#8
+    add	x23,	x22,	#8
     ldr	w15,	[x22]
 
     cmp	w15,	#0
     beq	fib_46
 
 fib_28:
-    ldr	w19,	[x20]
+    ldr	w19,	[x23]
 
     cmp	w19,	w27
-    add	x24,	x20,	#4
+    add	x25,	x23,	#4
     cset	w11,	eq
-    ldr	w14,	[x24]
+    ldr	w14,	[x25]
 
     cmp	w14,	w28
-    add	x26,	x24,	#4
+    add	x24,	x25,	#4
     cset	w15,	eq
     and	w1,	w15,	w11
-    ldr	w4,	[x26]
+    ldr	w4,	[x24]
 
     cmp	w4,	w21
     cset	w5,	eq
@@ -96,8 +96,8 @@ fib_42:
 
 
 fib_46:
-    add	x24,	x20,	#4
-    add	x26,	x24,	#4
+    add	x25,	x23,	#4
+    add	x24,	x25,	#4
 
 fib_53:
     cmp	w28,	#0
@@ -110,26 +110,26 @@ fib_58:
 fib_68:
     add	w0,	w27,	#1
     sub	w1,	w28,	#1
-    add	w23,	w21,	#1
-    asr	w2,	w23,	#31
+    add	w20,	w21,	#1
+    asr	w2,	w20,	#31
     lsr	w18,	w2,	#31
-    add	w19,	w23,	w18
+    add	w19,	w20,	w18
     asr	w2,	w19,	#1
     bl	fib
-    mov	w19,	w0
     sub	w1,	w28,	#2
     sub	w2,	w27,	#2
+    mov	w19,	w0
     asr	w18,	w2,	#31
-    lsr	w23,	w18,	#31
+    lsr	w20,	w18,	#31
     sub	w18,	w21,	#3
-    add	w25,	w2,	w23
+    add	w26,	w2,	w20
     asr	w2,	w18,	#31
-    asr	w0,	w25,	#1
-    lsr	w23,	w2,	#31
-    add	w25,	w18,	w23
-    asr	w2,	w25,	#1
-    lsl	w23,	w2,	#1
-    sub	w2,	w18,	w23
+    asr	w0,	w26,	#1
+    lsr	w20,	w2,	#31
+    add	w26,	w18,	w20
+    asr	w2,	w26,	#1
+    lsl	w20,	w2,	#1
+    sub	w2,	w18,	w20
     bl	fib
     add	w0,	w0,	w19
     b	fib_81
@@ -153,11 +153,11 @@ fib_81:
     add	x16,	x22,	#4
     str	w8,	[x22]
 
-    str	w27,	[x20]
+    str	w27,	[x23]
 
-    str	w28,	[x24]
+    str	w28,	[x25]
 
-    str	w21,	[x26]
+    str	w21,	[x24]
 
     str	w0,	[x16]
 

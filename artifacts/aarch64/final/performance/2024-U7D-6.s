@@ -311,8 +311,8 @@ main_76:
     cmp	w8,	#0
     csel	w23,	w27,	w19,	eq
     add	x6,	x20,	#1
-    adrp	x21, :got:b
     movz	w1,	#4000
+    adrp	x21, :got:b
     lsl	w11,	w10,	#2
     lsl	x4,	x6,	#2
     add	x3,	x18,	x4
@@ -361,11 +361,11 @@ main_76:
     lsl	w22,	w21,	#1
     sub	w16,	w24,	w22
     cmp	w16,	#0
-    csel	w1,	w4,	w11,	eq
-    lsl	w16,	w10,	#2
-    add	x17,	x13,	#1
     adrp	x28, :got:b
+    csel	w1,	w4,	w11,	eq
+    add	x17,	x13,	#1
     movz	w19,	#4000
+    lsl	w16,	w10,	#2
     lsl	x9,	x17,	#2
     add	x8,	x18,	x9
     ldr	w7,	[x8]
@@ -388,8 +388,8 @@ main_76:
     sub	w5,	w13,	w16
     cmp	w5,	#0
     csel	w13,	w21,	w1,	eq
-    lsl	w5,	w10,	#2
     movz	w14,	#4000
+    lsl	w5,	w10,	#2
     add	x1,	x17,	#1
     adrp	x17, :got:b
     lsl	x27,	x1,	#2
@@ -595,9 +595,9 @@ main_254:
     madd	x3,	x22,	x3,	x6
 
     add	x16,	x10,	x27
-    movz	w22,	#0
-    lsl	x8,	x11,	#2
     lsl	x6,	x17,	#2
+    lsl	x8,	x11,	#2
+    movz	w22,	#0
     add	x18,	x3,	x19
     adrp	x27, :got:c
     lsl	x3,	x17,	#2

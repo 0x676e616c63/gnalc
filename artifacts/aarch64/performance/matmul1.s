@@ -525,8 +525,8 @@ main_230:
     sub	w24,	w18,	w9
     str	w24,	[x2]
 
-    lsl	x2,	x17,	#2
     add	x24,	x14,	#1
+    lsl	x2,	x17,	#2
     ldr	x1, [x1, #:got_lo12:c]
     madd	x28,	x14,	x15,	x1
 

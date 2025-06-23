@@ -54,9 +54,9 @@ f_1:
     ldr	x12, [x12, #:got_lo12:n]
     ldr	w7,	[x12]
 
-    str	w7,	[sp, #120]
+    str	w7,	[sp, #128]
 
-    ldr	w5,	[sp, #120]
+    ldr	w5,	[sp, #128]
 
     cmp	w8,	w5
     bgt	f_98
@@ -70,7 +70,7 @@ f_4:
     ldr	x16, [x16, #:got_lo12:ans]
     add	x27,	x16,	x6
     movz	w6,	#1
-    str	x27,	[sp, #152]
+    str	x27,	[sp, #144]
 
     ldr	w8,	[sp, #104]
 
@@ -81,29 +81,27 @@ f_4:
 
     ldr	x11, [x11, #:got_lo12:ans]
     lsl	w4,	w14,	#2
-    add	x11,	x11,	x4
-    str	x11,	[sp, #160]
+    add	x1,	x11,	x4
+    str	x1,	[sp, #168]
 
     ldr	w15,	[sp, #108]
 
     str	w6,	[sp, #112]
 
-    add	w26,	w15,	#1
+    add	w19,	w15,	#1
 
 f_10:
     ldr	w17,	[sp, #112]
 
-    adrp	x24, :got:row
-    movz	fp,	#140
-    lsl	w0,	w17,	#2
-    ldr	x24, [x24, #:got_lo12:row]
-    add	x4,	x24,	x0
-    str	x4,	[sp, fp]
+    adrp	x26, :got:row
+    lsl	w2,	w17,	#2
+    ldr	x26, [x26, #:got_lo12:row]
+    add	x12,	x26,	x2
+    str	x12,	[sp, #160]
 
-    movz	fp,	#140
-    ldr	x5,	[sp, fp]
+    ldr	x13,	[sp, #160]
 
-    ldr	w0,	[x5]
+    ldr	w0,	[x13]
 
     cmp	w0,	#1
     beq	f_93
@@ -111,20 +109,18 @@ f_10:
 f_15:
     ldr	w5,	[sp, #104]
 
-    movz	fp,	#132
     ldr	w18,	[sp, #112]
 
     add	w2,	w18,	w5
     adrp	x5, :got:line1
     ldr	x5, [x5, #:got_lo12:line1]
     lsl	w10,	w2,	#2
-    add	x28,	x5,	x10
-    str	x28,	[sp, fp]
+    add	x18,	x5,	x10
+    str	x18,	[sp, #120]
 
-    movz	fp,	#132
-    ldr	x0,	[sp, fp]
+    ldr	x20,	[sp, #120]
 
-    ldr	w10,	[x0]
+    ldr	w10,	[x20]
 
     cmp	w10,	#0
     bne	f_93
@@ -133,36 +129,34 @@ f_20:
     ldr	w6,	[sp, #104]
 
     adrp	x16, :got:line2
-    movz	fp,	#124
-    ldr	w7,	[sp, #120]
+    ldr	w7,	[sp, #128]
 
-    ldr	w19,	[sp, #112]
+    ldr	w20,	[sp, #112]
 
     add	w12,	w6,	w7
     ldr	x16, [x16, #:got_lo12:line2]
-    sub	w13,	w12,	w19
+    sub	w13,	w12,	w20
     lsl	w6,	w13,	#2
-    add	x18,	x16,	x6
-    str	x18,	[sp, fp]
+    add	x7,	x16,	x6
+    str	x7,	[sp, #152]
 
-    movz	fp,	#124
-    ldr	x19,	[sp, fp]
+    ldr	x8,	[sp, #152]
 
-    ldr	w8,	[x19]
+    ldr	w8,	[x8]
 
     cmp	w8,	#0
     bne	f_93
 
 f_26:
-    ldr	w20,	[sp, #112]
+    ldr	w21,	[sp, #112]
 
-    ldr	x27,	[sp, #152]
+    ldr	x27,	[sp, #144]
 
-    str	w20,	[x27]
+    str	w21,	[x27]
 
     ldr	w7,	[sp, #104]
 
-    ldr	w8,	[sp, #120]
+    ldr	w8,	[sp, #128]
 
     cmp	w7,	w8
     bne	f_43
@@ -170,40 +164,40 @@ f_26:
 f_28:
     adrp	x12, :got:sum
     adrp	x14, :got:sum
-    movz	w25,	#1
+    movz	w27,	#1
     ldr	x12, [x12, #:got_lo12:sum]
     ldr	w11,	[x12]
 
     ldr	x14, [x14, #:got_lo12:sum]
-    add	w27,	w11,	#1
-    str	w27,	[x14]
+    add	w28,	w11,	#1
+    str	w28,	[x14]
 
-    mov	w27,	w25
+    mov	w28,	w27
 
 f_31:
-    ldr	w8,	[sp, #120]
+    ldr	w8,	[sp, #128]
 
-    cmp	w27,	w8
+    cmp	w28,	w8
     bgt	f_43
 
 f_34:
-    lsl	w25,	w27,	#2
-    adrp	x19, :got:ans
-    ldr	x19, [x19, #:got_lo12:ans]
-    add	x24,	x19,	x25
-    ldr	w0,	[x24]
+    lsl	w26,	w28,	#2
+    adrp	x25, :got:ans
+    ldr	x25, [x25, #:got_lo12:ans]
+    add	x25,	x25,	x26
+    ldr	w0,	[x25]
 
     bl	putint
-    ldr	w9,	[sp, #120]
+    ldr	w9,	[sp, #128]
 
-    cmp	w27,	w9
+    cmp	w28,	w9
     beq	f_38
 
 f_39:
     movz	w0,	#32
     bl	putch
-    add	w25,	w27,	#1
-    mov	w27,	w25
+    add	w27,	w28,	#1
+    mov	w28,	w27
     b	f_31
 
 f_38:
@@ -212,25 +206,22 @@ f_38:
 
 f_43:
     movz	w8,	#1
-    movz	fp,	#140
-    movz	w6,	#1
-    movz	w5,	#1
-    ldr	x7,	[sp, fp]
-
-    movz	fp,	#132
-    str	w8,	[x7]
+    ldr	x16,	[sp, #160]
 
     movz	w7,	#1
-    ldr	x2,	[sp, fp]
+    movz	w6,	#1
+    movz	w5,	#1
+    str	w8,	[x16]
 
-    movz	fp,	#124
-    str	w7,	[x2]
+    ldr	x22,	[sp, #120]
 
-    ldr	x21,	[sp, fp]
+    str	w7,	[x22]
 
-    str	w6,	[x21]
+    ldr	x11,	[sp, #152]
 
-    ldr	w11,	[sp, #120]
+    str	w6,	[x11]
+
+    ldr	w11,	[sp, #128]
 
     cmp	w5,	w11
     bgt	f_89
@@ -239,20 +230,20 @@ f_45:
     ldr	w12,	[sp, #108]
 
     movz	w27,	#1
-    ldr	w11,	[sp, #120]
+    ldr	w11,	[sp, #128]
 
     str	w27,	[sp, #116]
 
-    add	w19,	w12,	w11
+    add	w22,	w12,	w11
 
 f_48:
-    ldr	w25,	[sp, #116]
+    ldr	w26,	[sp, #116]
 
     adrp	x11, :got:row
-    lsl	w4,	w25,	#2
+    lsl	w4,	w26,	#2
     ldr	x11, [x11, #:got_lo12:row]
-    add	x25,	x11,	x4
-    str	x25,	[sp, #96]
+    add	x26,	x11,	x4
+    str	x26,	[sp, #96]
 
     ldr	x27,	[sp, #96]
 
@@ -270,12 +261,8 @@ f_53:
     ldr	x17, [x17, #:got_lo12:line1]
     add	w14,	w27,	w13
     lsl	w10,	w14,	#2
-    add	x13,	x17,	x10
-    str	x13,	[sp, #168]
-
-    ldr	x14,	[sp, #168]
-
-    ldr	w12,	[x14]
+    add	x20,	x17,	x10
+    ldr	w12,	[x20]
 
     cmp	w12,	#0
     bne	f_84
@@ -284,11 +271,17 @@ f_58:
     ldr	w28,	[sp, #116]
 
     adrp	x17, :got:line2
-    sub	w14,	w19,	w28
+    movz	fp,	#132
+    sub	w14,	w22,	w28
     ldr	x17, [x17, #:got_lo12:line2]
     lsl	w2,	w14,	#2
-    add	x27,	x17,	x2
-    ldr	w4,	[x27]
+    add	x25,	x17,	x2
+    str	x25,	[sp, fp]
+
+    movz	fp,	#132
+    ldr	x26,	[sp, fp]
+
+    ldr	w4,	[x26]
 
     cmp	w4,	#0
     bne	f_84
@@ -296,13 +289,13 @@ f_58:
 f_63:
     ldr	w0,	[sp, #116]
 
-    ldr	x16,	[sp, #160]
+    ldr	x6,	[sp, #168]
 
-    str	w0,	[x16]
+    str	w0,	[x6]
 
     ldr	w13,	[sp, #108]
 
-    ldr	w4,	[sp, #120]
+    ldr	w4,	[sp, #128]
 
     cmp	w13,	w4
     bne	f_80
@@ -316,34 +309,34 @@ f_65:
     ldr	x10, [x10, #:got_lo12:sum]
     movz	w8,	#1
     add	w2,	w7,	#1
-    mov	w24,	w8
+    mov	w27,	w8
     str	w2,	[x10]
 
 
 f_68:
-    ldr	w5,	[sp, #120]
+    ldr	w5,	[sp, #128]
 
-    cmp	w24,	w5
+    cmp	w27,	w5
     bgt	f_80
 
 f_71:
-    lsl	w21,	w24,	#2
-    adrp	x0, :got:ans
-    ldr	x0, [x0, #:got_lo12:ans]
-    add	x0,	x0,	x21
+    lsl	w0,	w27,	#2
+    adrp	x18, :got:ans
+    ldr	x18, [x18, #:got_lo12:ans]
+    add	x0,	x18,	x0
     ldr	w0,	[x0]
 
     bl	putint
-    ldr	w6,	[sp, #120]
+    ldr	w6,	[sp, #128]
 
-    cmp	w24,	w6
+    cmp	w27,	w6
     beq	f_75
 
 f_76:
     movz	w0,	#32
     bl	putch
-    add	w17,	w24,	#1
-    mov	w24,	w17
+    add	w17,	w27,	#1
+    mov	w27,	w17
     b	f_68
 
 f_75:
@@ -351,21 +344,23 @@ f_75:
     bl	putch
 
 f_80:
-    movz	w18,	#1
+    movz	w26,	#1
     ldr	x21,	[sp, #96]
 
-    movz	w24,	#1
+    movz	w25,	#1
     movz	w0,	#1
-    str	w18,	[x21]
+    movz	fp,	#132
+    str	w26,	[x21]
 
-    ldr	x21,	[sp, #168]
+    str	w25,	[x20]
 
-    str	w24,	[x21]
+    ldr	x23,	[sp, fp]
 
-    str	w0,	[x27]
+    str	w0,	[x23]
 
-    mov	w0,	w26
+    mov	w0,	w19
     bl	f
+    movz	fp,	#132
     movz	w0,	#0
     movz	w10,	#0
     ldr	x17,	[sp, #96]
@@ -373,17 +368,17 @@ f_80:
     movz	w11,	#0
     str	w11,	[x17]
 
-    ldr	x22,	[sp, #168]
+    str	w10,	[x20]
 
-    str	w10,	[x22]
+    ldr	x28,	[sp, fp]
 
-    str	w0,	[x27]
+    str	w0,	[x28]
 
 
 f_84:
     ldr	w1,	[sp, #116]
 
-    ldr	w16,	[sp, #120]
+    ldr	w16,	[sp, #128]
 
     add	w4,	w1,	#1
     cmp	w4,	w16
@@ -396,30 +391,27 @@ f_47:
 
 f_89:
     movz	w0,	#0
-    movz	fp,	#140
+    ldr	x17,	[sp, #160]
+
     movz	w4,	#0
-    movz	w21,	#0
-    ldr	x9,	[sp, fp]
+    movz	w26,	#0
+    str	w0,	[x17]
 
-    movz	fp,	#132
-    str	w0,	[x9]
+    ldr	x23,	[sp, #120]
 
-    ldr	x3,	[sp, fp]
+    str	w4,	[x23]
 
-    movz	fp,	#124
-    str	w4,	[x3]
+    ldr	x11,	[sp, #152]
 
-    ldr	x22,	[sp, fp]
-
-    str	w21,	[x22]
+    str	w26,	[x11]
 
 
 f_93:
-    ldr	w21,	[sp, #112]
+    ldr	w22,	[sp, #112]
 
-    ldr	w17,	[sp, #120]
+    ldr	w17,	[sp, #128]
 
-    add	w12,	w21,	#1
+    add	w12,	w22,	#1
     cmp	w12,	w17
     bgt	f_98
 

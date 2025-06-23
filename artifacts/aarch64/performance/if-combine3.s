@@ -9,14 +9,14 @@
 .globl main
 main:
 main_0:
-    sub	sp, sp, #2848
+    sub	sp, sp, #2832
     stp	fp, lr, [sp, #0]
     
     movz	w0,	#324
     bl	_sysy_starttime
     bl	getint
     movz	w17,	#0
-    str	w0,	[sp, #1416]
+    str	w0,	[sp, #1380]
 
     mov	w6,	w17
 
@@ -380,8 +380,8 @@ main_6:
     str	w26,	[x11]
 
     movz	w23,	#0
-    lsl	w26,	w15,	#2
     movz	w11,	#0
+    lsl	w26,	w15,	#2
     add	x17,	x17,	#16
     str	w24,	[x14]
 
@@ -428,15 +428,15 @@ main_6:
     str	w16,	[x28]
 
     movz	w2,	#0
-    add	w13,	w6,	#1
     add	x1,	x1,	#16
+    add	w13,	w6,	#1
     mov	w23,	w9
     add	x4,	x4,	#16
     movz	w28,	#0
-    add	w16,	w13,	#1
-    lsl	w15,	w13,	#2
     str	w14,	[x1]
 
+    add	w16,	w13,	#1
+    lsl	w15,	w13,	#2
     mov	w12,	w28
     movz	w1,	#0
     str	w12,	[x4]
@@ -626,1713 +626,1721 @@ main_142:
 
 main_147:
     movz	w25,	#0
-    ldr	w18,	[sp, #1416]
+    ldr	w18,	[sp, #1380]
 
     mov	w4,	w25
     cmp	w4,	w18
     bge	main_470
 
 main_149:
-    add	x25,	sp,	#20
-    movz	fp,	#1980
-    add	x20,	sp,	#24
-    add	x0,	sp,	#28
-    add	x14,	sp,	#32
-    add	x2,	sp,	#36
-    add	x17,	sp,	#40
-    add	x28,	sp,	#44
-    add	x5,	sp,	#48
-    add	x1,	sp,	#52
-    add	x13,	sp,	#56
-    add	x7,	sp,	#60
-    add	x19,	sp,	#64
-    add	x4,	sp,	#68
-    add	x22,	sp,	#72
-    add	x11,	sp,	#76
-    add	x8,	sp,	#80
-    add	x23,	sp,	#84
-    add	x24,	sp,	#88
-    add	x27,	sp,	#92
-    add	x3,	sp,	#96
-    add	x18,	sp,	#100
-    add	x16,	sp,	#104
-    add	x21,	sp,	#108
-    add	x15,	sp,	#112
-    add	x26,	sp,	#116
-    add	x10,	sp,	#120
+    add	x19,	sp,	#20
+    add	x26,	sp,	#24
+    add	x4,	sp,	#28
+    add	x3,	sp,	#32
+    add	x27,	sp,	#36
+    add	x14,	sp,	#40
+    add	x18,	sp,	#44
+    add	x8,	sp,	#48
+    add	x21,	sp,	#52
+    add	x0,	sp,	#56
+    add	x24,	sp,	#60
+    add	x1,	sp,	#64
+    add	x25,	sp,	#68
+    add	x23,	sp,	#72
+    add	x13,	sp,	#76
+    add	x22,	sp,	#80
+    add	x10,	sp,	#84
+    add	x11,	sp,	#88
+    add	x20,	sp,	#92
+    add	x17,	sp,	#96
+    add	x2,	sp,	#100
+    add	x7,	sp,	#104
+    add	x28,	sp,	#108
+    add	x5,	sp,	#112
+    add	x15,	sp,	#116
+    add	x16,	sp,	#120
+    movz	fp,	#724
     add	x6,	sp,	#180
     add	x9,	sp,	#184
     add	x12,	sp,	#188
-    str	x25,	[sp, fp]
-
-    add	x25,	sp,	#128
-    movz	fp,	#2076
-    str	x20,	[sp, fp]
-
-    add	x20,	sp,	#160
-    movz	fp,	#2108
-    str	x0,	[sp, fp]
-
-    add	x0,	sp,	#172
-    movz	fp,	#2060
-    str	x14,	[sp, fp]
-
-    add	x14,	sp,	#152
-    movz	fp,	#2012
-    str	x2,	[sp, fp]
-
-    add	x2,	sp,	#136
-    movz	fp,	#2068
-    str	x17,	[sp, fp]
-
-    add	x17,	sp,	#156
-    movz	fp,	#1996
-    str	x28,	[sp, fp]
-
-    add	x28,	sp,	#132
-    movz	fp,	#2020
-    str	x5,	[sp, fp]
-
-    add	x5,	sp,	#140
-    movz	fp,	#1852
-    str	x1,	[sp, fp]
-
-    add	x1,	sp,	#212
-    movz	fp,	#1908
-    str	x13,	[sp, fp]
-
-    add	x13,	sp,	#228
-    movz	fp,	#1876
-    str	x7,	[sp, fp]
-
-    add	x7,	sp,	#220
-    movz	fp,	#1948
-    str	x19,	[sp, fp]
+    str	x19,	[sp, #2008]
 
     add	x19,	sp,	#236
-    movz	fp,	#1860
-    str	x4,	[sp, fp]
-
-    add	x4,	sp,	#216
-    movz	fp,	#1964
-    str	x22,	[sp, fp]
-
-    add	x22,	sp,	#124
-    movz	fp,	#2044
-    str	x11,	[sp, fp]
-
-    add	x11,	sp,	#148
-    movz	fp,	#2036
-    str	x8,	[sp, fp]
-
-    add	x8,	sp,	#144
-    movz	fp,	#2084
-    str	x23,	[sp, fp]
-
-    add	x23,	sp,	#164
-    movz	fp,	#1828
-    str	x24,	[sp, fp]
-
-    add	x24,	sp,	#204
-    movz	fp,	#1836
-    str	x27,	[sp, fp]
-
-    add	x27,	sp,	#208
-    movz	fp,	#2116
-    str	x3,	[sp, fp]
-
-    add	x3,	sp,	#176
-    movz	fp,	#1796
-    str	x18,	[sp, fp]
-
-    add	x18,	sp,	#196
-    movz	fp,	#1924
-    str	x16,	[sp, fp]
-
-    add	x16,	sp,	#232
-    movz	fp,	#1812
-    str	x21,	[sp, fp]
-
-    add	x21,	sp,	#200
-    movz	fp,	#1788
-    str	x15,	[sp, fp]
-
-    add	x15,	sp,	#192
-    movz	fp,	#2100
-    str	x26,	[sp, fp]
+    str	x26,	[sp, #2136]
 
     add	x26,	sp,	#168
-    movz	fp,	#1884
-    str	x10,	[sp, fp]
+    str	x4,	[sp, #1952]
+
+    add	x4,	sp,	#216
+    str	x3,	[sp, #2152]
+
+    add	x3,	sp,	#176
+    str	x27,	[sp, #1928]
+
+    add	x27,	sp,	#208
+    str	x14,	[sp, #2096]
+
+    add	x14,	sp,	#152
+    str	x18,	[sp, #1896]
+
+    add	x18,	sp,	#196
+    str	x8,	[sp, #2080]
+
+    add	x8,	sp,	#144
+    str	x21,	[sp, #1904]
+
+    add	x21,	sp,	#200
+    str	x0,	[sp, #2144]
+
+    add	x0,	sp,	#172
+    str	x24,	[sp, #1912]
+
+    add	x24,	sp,	#204
+    str	x1,	[sp, #1936]
+
+    add	x1,	sp,	#212
+    str	x25,	[sp, #2024]
+
+    add	x25,	sp,	#128
+    str	x23,	[sp, #2120]
+
+    add	x23,	sp,	#164
+    str	x13,	[sp, #1984]
+
+    add	x13,	sp,	#228
+    str	x22,	[sp, #2016]
+
+    add	x22,	sp,	#124
+    str	x10,	[sp, #1968]
 
     add	x10,	sp,	#224
-    str	x22,	[sp, #880]
+    str	x11,	[sp, #2088]
+
+    add	x11,	sp,	#148
+    str	x20,	[sp, #2112]
+
+    add	x20,	sp,	#160
+    str	x17,	[sp, #2104]
+
+    add	x17,	sp,	#156
+    str	x2,	[sp, #2048]
+
+    add	x2,	sp,	#136
+    str	x7,	[sp, #1960]
+
+    add	x7,	sp,	#220
+    str	x28,	[sp, #2032]
+
+    add	x28,	sp,	#132
+    str	x5,	[sp, #2064]
+
+    add	x5,	sp,	#140
+    str	x15,	[sp, #1872]
+
+    add	x15,	sp,	#192
+    str	x16,	[sp, #2000]
+
+    add	x16,	sp,	#232
+    str	x22,	[sp, fp]
 
     add	x22,	sp,	#240
-    str	x25,	[sp, #888]
+    movz	fp,	#740
+    str	x25,	[sp, fp]
 
     add	x25,	sp,	#244
-    str	x28,	[sp, #896]
+    movz	fp,	#748
+    str	x28,	[sp, fp]
 
     add	x28,	sp,	#248
-    str	x2,	[sp, #904]
+    movz	fp,	#756
+    str	x2,	[sp, fp]
 
     add	x2,	sp,	#252
-    str	x5,	[sp, #912]
+    movz	fp,	#772
+    str	x5,	[sp, fp]
 
     add	x5,	sp,	#256
-    str	x8,	[sp, #920]
+    movz	fp,	#788
+    str	x8,	[sp, fp]
 
     add	x8,	sp,	#260
-    str	x11,	[sp, #928]
+    movz	fp,	#796
+    str	x11,	[sp, fp]
 
     add	x11,	sp,	#264
-    str	x14,	[sp, #936]
+    movz	fp,	#812
+    str	x14,	[sp, fp]
 
     add	x14,	sp,	#268
-    str	x17,	[sp, #944]
+    movz	fp,	#820
+    str	x17,	[sp, fp]
 
     add	x17,	sp,	#272
-    str	x20,	[sp, #952]
+    movz	fp,	#828
+    str	x20,	[sp, fp]
 
     add	x20,	sp,	#276
-    str	x23,	[sp, #960]
+    movz	fp,	#836
+    str	x23,	[sp, fp]
 
     add	x23,	sp,	#280
-    str	x26,	[sp, #968]
+    movz	fp,	#844
+    str	x26,	[sp, fp]
 
     add	x26,	sp,	#284
-    str	x0,	[sp, #976]
+    movz	fp,	#852
+    str	x0,	[sp, fp]
 
     add	x0,	sp,	#288
-    str	x3,	[sp, #984]
+    movz	fp,	#876
+    str	x3,	[sp, fp]
 
     add	x3,	sp,	#292
-    str	x6,	[sp, #992]
+    movz	fp,	#884
+    str	x6,	[sp, fp]
 
     add	x6,	sp,	#296
-    str	x9,	[sp, #1000]
+    movz	fp,	#892
+    str	x9,	[sp, fp]
 
     add	x9,	sp,	#300
-    str	x12,	[sp, #1008]
+    movz	fp,	#900
+    str	x12,	[sp, fp]
 
     add	x12,	sp,	#304
-    str	x15,	[sp, #1016]
+    movz	fp,	#572
+    str	x15,	[sp, #912]
 
     add	x15,	sp,	#308
-    str	x18,	[sp, #1024]
+    str	x18,	[sp, #920]
 
     add	x18,	sp,	#312
-    str	x21,	[sp, #1032]
+    str	x21,	[sp, #936]
 
     add	x21,	sp,	#316
-    str	x24,	[sp, #1040]
+    str	x24,	[sp, #944]
 
     add	x24,	sp,	#320
-    str	x27,	[sp, #1048]
+    str	x27,	[sp, #960]
 
     add	x27,	sp,	#324
-    str	x1,	[sp, #1056]
+    str	x1,	[sp, #968]
 
     add	x1,	sp,	#328
-    str	x4,	[sp, #1064]
+    str	x4,	[sp, #976]
 
     add	x4,	sp,	#332
-    str	x7,	[sp, #1072]
+    str	x7,	[sp, #984]
 
     add	x7,	sp,	#336
-    str	x10,	[sp, #1080]
+    str	x10,	[sp, #992]
 
     add	x10,	sp,	#340
-    str	x13,	[sp, #1088]
+    str	x13,	[sp, #1000]
 
     add	x13,	sp,	#344
-    str	x16,	[sp, #1096]
+    str	x16,	[sp, fp]
 
     add	x16,	sp,	#348
-    str	x19,	[sp, #416]
+    movz	fp,	#476
+    str	x19,	[sp, #424]
 
     add	x19,	sp,	#352
-    str	x22,	[sp, #424]
+    str	x22,	[sp, #432]
 
     add	x22,	sp,	#356
-    str	x25,	[sp, #432]
+    str	x25,	[sp, #440]
 
     add	x25,	sp,	#360
-    str	x28,	[sp, #440]
+    str	x28,	[sp, #448]
 
     add	x28,	sp,	#364
-    str	x2,	[sp, #448]
+    str	x2,	[sp, #456]
 
     add	x2,	sp,	#368
-    str	x5,	[sp, #456]
+    str	x5,	[sp, #464]
 
     add	x5,	sp,	#372
-    str	x8,	[sp, #464]
+    str	x8,	[sp, fp]
 
+    movz	fp,	#1268
     add	x8,	sp,	#376
-    str	x11,	[sp, #1104]
+    str	x11,	[sp, #1008]
 
     add	x11,	sp,	#380
-    str	x14,	[sp, #1112]
+    str	x14,	[sp, #1016]
 
     add	x14,	sp,	#384
-    str	x17,	[sp, #1120]
+    str	x17,	[sp, #1032]
 
     add	x17,	sp,	#388
-    str	x20,	[sp, #1128]
+    str	x20,	[sp, #1040]
 
     add	x20,	sp,	#392
-    str	x23,	[sp, #1136]
+    str	x23,	[sp, #1048]
 
     add	x23,	sp,	#396
-    str	x26,	[sp, #1152]
+    str	x26,	[sp, #1056]
 
     add	x26,	sp,	#400
-    str	x0,	[sp, #1160]
+    str	x0,	[sp, #1064]
 
     add	x0,	sp,	#404
-    str	x3,	[sp, #1168]
+    str	x3,	[sp, #1072]
 
     add	x3,	sp,	#408
-    str	x6,	[sp, #1176]
+    str	x6,	[sp, #1088]
 
     add	x6,	sp,	#412
-    str	x9,	[sp, #1184]
+    str	x9,	[sp, #1096]
 
-    str	x12,	[sp, #1192]
+    str	x12,	[sp, #1104]
 
-    movz	w12,	#0
-    str	x15,	[sp, #1200]
+    str	x15,	[sp, #1128]
 
-    str	x18,	[sp, #1208]
+    str	x18,	[sp, #1136]
 
-    str	x21,	[sp, #1216]
+    str	x21,	[sp, #1144]
 
-    str	x24,	[sp, #1224]
+    str	x24,	[sp, #1152]
 
-    str	x27,	[sp, #1232]
+    str	x27,	[sp, #1160]
 
-    str	x1,	[sp, #1240]
+    str	x1,	[sp, #1168]
 
-    str	x4,	[sp, #1248]
+    str	x4,	[sp, #1176]
 
-    str	x7,	[sp, #1256]
+    str	x7,	[sp, #1184]
 
-    mov	w7,	w12
-    str	x10,	[sp, #1264]
+    movz	w7,	#0
+    str	x10,	[sp, #1192]
 
-    str	x13,	[sp, #1280]
+    str	x13,	[sp, #1200]
 
-    str	x16,	[sp, #1288]
+    str	x16,	[sp, #1208]
 
-    str	x19,	[sp, #1296]
+    str	x19,	[sp, #1216]
 
-    str	x22,	[sp, #1304]
+    str	x22,	[sp, #1224]
 
-    str	x25,	[sp, #1312]
+    str	x25,	[sp, #1232]
 
-    str	x28,	[sp, #1272]
+    str	x28,	[sp, #1240]
 
-    str	x2,	[sp, #1320]
+    str	x2,	[sp, #1256]
 
-    str	x5,	[sp, #1328]
+    str	x5,	[sp, fp]
 
-    movz	w5,	#0
-    str	x8,	[sp, #1336]
+    movz	fp,	#1284
+    str	x8,	[sp, fp]
 
-    str	x11,	[sp, #1344]
+    movz	fp,	#1300
+    str	x11,	[sp, fp]
 
-    mov	w11,	w5
-    str	x14,	[sp, #1352]
+    mov	w11,	w7
+    movz	fp,	#1308
+    str	x14,	[sp, fp]
 
-    str	x17,	[sp, #1360]
+    movz	w14,	#0
+    movz	fp,	#1316
+    mov	w7,	w14
+    str	x17,	[sp, fp]
 
-    str	x20,	[sp, #1368]
+    movz	fp,	#1324
+    str	x20,	[sp, fp]
 
-    str	x23,	[sp, #1376]
+    movz	fp,	#1340
+    str	x23,	[sp, fp]
 
-    str	x26,	[sp, #1384]
+    movz	fp,	#1348
+    str	x26,	[sp, fp]
 
-    str	x0,	[sp, #1392]
+    movz	fp,	#1356
+    str	x0,	[sp, fp]
 
-    str	x3,	[sp, #1400]
+    movz	fp,	#1364
+    str	x3,	[sp, fp]
 
-    str	x6,	[sp, #1408]
+    movz	fp,	#1372
+    str	x6,	[sp, fp]
 
-    str	w11,	[sp, #1776]
+    str	w11,	[sp, #1860]
 
-    str	w7,	[sp, #1764]
+    str	w7,	[sp, #1796]
 
 
 main_250:
     movz	w0,	#1
-    movz	fp,	#1980
-    movz	w12,	#3
-    mov	w5,	w0
-    ldr	x26,	[sp, fp]
+    ldr	x20,	[sp, #2008]
 
-    mov	w13,	w12
-    movz	fp,	#2076
-    str	w5,	[x26]
+    movz	w14,	#3
+    movz	fp,	#724
+    mov	w7,	w0
+    str	w7,	[x20]
 
-    movz	w12,	#6
-    movz	w5,	#2
-    ldr	x21,	[sp, fp]
+    ldr	x27,	[sp, #2136]
 
-    mov	w0,	w5
-    movz	fp,	#2108
-    str	w0,	[x21]
+    movz	w7,	#2
+    mov	w0,	w7
+    movz	w7,	#5
+    str	w0,	[x27]
 
     movz	w0,	#4
-    ldr	x1,	[sp, fp]
+    ldr	x5,	[sp, #1952]
 
-    mov	w5,	w0
-    movz	fp,	#2060
-    str	w13,	[x1]
+    mov	w8,	w0
+    str	w14,	[x5]
 
-    ldr	x15,	[sp, fp]
+    mov	w0,	w7
+    movz	w14,	#6
+    ldr	x4,	[sp, #2152]
 
-    movz	fp,	#2012
-    str	w5,	[x15]
+    str	w8,	[x4]
 
-    movz	w5,	#5
-    ldr	x3,	[sp, fp]
+    ldr	x28,	[sp, #1928]
 
-    mov	w0,	w5
-    movz	fp,	#2068
-    movz	w5,	#8
-    str	w0,	[x3]
+    str	w0,	[x28]
 
     movz	w0,	#7
-    ldr	x18,	[sp, fp]
+    ldr	x15,	[sp, #2096]
 
-    mov	w6,	w0
-    movz	fp,	#1996
-    str	w12,	[x18]
+    mov	w7,	w0
+    str	w14,	[x15]
 
-    movz	w12,	#9
-    ldr	x0,	[sp, fp]
+    movz	w14,	#9
+    ldr	x19,	[sp, #1896]
 
-    mov	w13,	w12
-    movz	fp,	#2020
-    str	w6,	[x0]
+    str	w7,	[x19]
 
-    movz	w12,	#12
-    ldr	x6,	[sp, fp]
+    ldr	x9,	[sp, #2080]
 
-    mov	w0,	w5
-    movz	fp,	#1852
-    str	w0,	[x6]
+    movz	w7,	#8
+    mov	w0,	w7
+    movz	w7,	#11
+    str	w0,	[x9]
 
     movz	w0,	#10
-    ldr	x2,	[sp, fp]
+    ldr	x22,	[sp, #1904]
 
-    mov	w5,	w0
-    movz	fp,	#1908
-    str	w13,	[x2]
+    mov	w8,	w0
+    str	w14,	[x22]
 
-    ldr	x14,	[sp, fp]
+    mov	w0,	w7
+    movz	w14,	#12
+    ldr	x1,	[sp, #2144]
 
-    movz	fp,	#1876
-    str	w5,	[x14]
+    str	w8,	[x1]
 
-    movz	w5,	#11
-    ldr	x8,	[sp, fp]
+    ldr	x25,	[sp, #1912]
 
-    mov	w0,	w5
-    movz	fp,	#1948
-    str	w0,	[x8]
+    str	w0,	[x25]
 
     movz	w0,	#13
-    ldr	x20,	[sp, fp]
+    ldr	x2,	[sp, #1936]
 
-    mov	w6,	w0
-    movz	fp,	#1860
-    str	w12,	[x20]
+    mov	w7,	w0
+    str	w14,	[x2]
 
-    movz	w12,	#15
-    ldr	x5,	[sp, fp]
+    movz	w14,	#15
+    ldr	x26,	[sp, #2024]
 
-    mov	w13,	w12
-    movz	fp,	#1964
-    str	w6,	[x5]
+    mov	w15,	w14
+    str	w7,	[x26]
 
-    movz	w5,	#14
-    ldr	x23,	[sp, fp]
+    ldr	x24,	[sp, #2120]
 
-    mov	w0,	w5
-    movz	fp,	#2044
-    str	w0,	[x23]
-
-    movz	w0,	#16
-    ldr	x12,	[sp, fp]
-
-    mov	w5,	w0
-    movz	fp,	#2036
-    str	w13,	[x12]
-
-    movz	w12,	#18
-    ldr	x9,	[sp, fp]
-
-    movz	fp,	#2084
-    str	w5,	[x9]
-
-    movz	w5,	#17
-    ldr	x24,	[sp, fp]
-
-    mov	w0,	w5
-    movz	fp,	#1828
+    movz	w7,	#14
+    mov	w0,	w7
     str	w0,	[x24]
 
-    movz	w0,	#19
-    ldr	x25,	[sp, fp]
+    movz	w0,	#16
+    ldr	x14,	[sp, #1984]
 
-    mov	w5,	w0
-    movz	fp,	#1836
-    str	w12,	[x25]
+    mov	w7,	w0
+    str	w15,	[x14]
 
-    movz	w12,	#21
-    ldr	x28,	[sp, fp]
+    movz	w14,	#18
+    ldr	x23,	[sp, #2016]
 
-    movz	fp,	#2116
-    str	w5,	[x28]
+    mov	w15,	w14
+    str	w7,	[x23]
 
-    movz	w5,	#20
-    ldr	x4,	[sp, fp]
+    movz	w14,	#21
+    ldr	x11,	[sp, #1968]
 
-    mov	w0,	w5
-    movz	fp,	#1796
-    str	w0,	[x4]
-
-    movz	w0,	#22
-    ldr	x19,	[sp, fp]
-
-    mov	w5,	w0
-    movz	fp,	#1924
-    str	w12,	[x19]
-
-    movz	w12,	#24
-    ldr	x17,	[sp, fp]
-
-    movz	fp,	#1812
-    str	w5,	[x17]
-
-    movz	w5,	#23
-    ldr	x22,	[sp, fp]
-
-    mov	w0,	w5
-    movz	fp,	#1788
-    str	w0,	[x22]
-
-    movz	w0,	#25
-    ldr	x16,	[sp, fp]
-
-    mov	w5,	w0
-    movz	fp,	#2100
-    str	w12,	[x16]
-
-    movz	w12,	#27
-    ldr	x27,	[sp, fp]
-
-    movz	fp,	#1884
-    str	w5,	[x27]
-
-    movz	w5,	#26
-    ldr	x11,	[sp, fp]
-
-    mov	w0,	w5
+    movz	w7,	#17
+    mov	w0,	w7
     str	w0,	[x11]
 
+    movz	w0,	#19
+    ldr	x12,	[sp, #2088]
+
+    mov	w7,	w0
+    str	w15,	[x12]
+
+    mov	w15,	w14
+    ldr	x21,	[sp, #2112]
+
+    movz	w14,	#24
+    str	w7,	[x21]
+
+    ldr	x18,	[sp, #2104]
+
+    movz	w7,	#20
+    mov	w0,	w7
+    str	w0,	[x18]
+
+    movz	w0,	#22
+    ldr	x3,	[sp, #2048]
+
+    mov	w7,	w0
+    str	w15,	[x3]
+
+    mov	w15,	w14
+    ldr	x8,	[sp, #1960]
+
+    movz	w14,	#27
+    str	w7,	[x8]
+
+    ldr	x0,	[sp, #2032]
+
+    movz	w7,	#23
+    mov	w1,	w7
+    str	w1,	[x0]
+
+    movz	w0,	#25
+    ldr	x6,	[sp, #2064]
+
+    mov	w7,	w0
+    str	w15,	[x6]
+
+    ldr	x16,	[sp, #1872]
+
+    str	w7,	[x16]
+
+    ldr	x17,	[sp, #2000]
+
+    movz	w7,	#26
+    mov	w0,	w7
+    str	w0,	[x17]
+
     movz	w0,	#28
-    ldr	x22,	[sp, #880]
+    ldr	x22,	[sp, fp]
 
-    mov	w5,	w0
-    str	w12,	[x22]
+    mov	w7,	w0
+    movz	fp,	#740
+    str	w14,	[x22]
 
-    movz	w12,	#30
-    ldr	x25,	[sp, #888]
+    movz	w14,	#30
+    ldr	x25,	[sp, fp]
 
-    mov	w13,	w12
-    str	w5,	[x25]
+    movz	fp,	#748
+    str	w7,	[x25]
 
-    movz	w12,	#33
-    ldr	x28,	[sp, #896]
+    movz	w7,	#29
+    ldr	x28,	[sp, fp]
 
-    movz	w5,	#29
-    mov	w0,	w5
+    mov	w0,	w7
+    movz	fp,	#756
+    movz	w7,	#32
     str	w0,	[x28]
 
     movz	w0,	#31
-    ldr	x2,	[sp, #904]
+    ldr	x2,	[sp, fp]
 
-    mov	w5,	w0
-    str	w13,	[x2]
+    mov	w8,	w0
+    movz	fp,	#772
+    str	w14,	[x2]
 
-    mov	w13,	w12
-    ldr	x6,	[sp, #912]
+    mov	w0,	w7
+    movz	w14,	#33
+    ldr	x6,	[sp, fp]
 
-    movz	w12,	#36
-    str	w5,	[x6]
+    mov	w15,	w14
+    movz	fp,	#788
+    str	w8,	[x6]
 
-    ldr	x9,	[sp, #920]
+    movz	w14,	#36
+    ldr	x9,	[sp, fp]
 
-    movz	w5,	#32
-    mov	w0,	w5
+    movz	fp,	#796
     str	w0,	[x9]
 
     movz	w0,	#34
-    ldr	x11,	[sp, #928]
+    ldr	x11,	[sp, fp]
 
-    mov	w5,	w0
-    str	w13,	[x11]
+    mov	w7,	w0
+    movz	fp,	#812
+    str	w15,	[x11]
 
-    ldr	x15,	[sp, #936]
+    ldr	x15,	[sp, fp]
 
-    str	w5,	[x15]
+    movz	fp,	#820
+    str	w7,	[x15]
 
-    ldr	x18,	[sp, #944]
+    movz	w7,	#35
+    ldr	x18,	[sp, fp]
 
-    movz	w5,	#35
-    mov	w0,	w5
+    mov	w0,	w7
+    movz	fp,	#828
     str	w0,	[x18]
 
     movz	w0,	#37
-    ldr	x21,	[sp, #952]
+    ldr	x21,	[sp, fp]
 
-    mov	w5,	w0
-    str	w12,	[x21]
+    mov	w7,	w0
+    movz	fp,	#836
+    str	w14,	[x21]
 
-    movz	w12,	#39
-    ldr	x24,	[sp, #960]
+    movz	w14,	#39
+    ldr	x24,	[sp, fp]
 
-    mov	w13,	w12
-    str	w5,	[x24]
+    mov	w15,	w14
+    movz	fp,	#844
+    str	w7,	[x24]
 
-    movz	w12,	#42
-    ldr	x27,	[sp, #968]
+    movz	w14,	#42
+    movz	w7,	#38
+    ldr	x27,	[sp, fp]
 
-    movz	w5,	#38
-    mov	w0,	w5
-    movz	w5,	#41
+    mov	w0,	w7
+    movz	fp,	#852
+    movz	w7,	#41
     str	w0,	[x27]
 
     movz	w0,	#40
-    ldr	x1,	[sp, #976]
+    ldr	x1,	[sp, fp]
 
-    mov	w6,	w0
-    str	w13,	[x1]
+    mov	w8,	w0
+    movz	fp,	#876
+    str	w15,	[x1]
 
-    mov	w0,	w5
-    mov	w13,	w12
-    ldr	x4,	[sp, #984]
+    mov	w0,	w7
+    mov	w15,	w14
+    ldr	x4,	[sp, fp]
 
-    movz	w12,	#45
-    str	w6,	[x4]
+    movz	fp,	#884
+    str	w8,	[x4]
 
-    ldr	x8,	[sp, #992]
+    ldr	x8,	[sp, fp]
 
+    movz	fp,	#892
     str	w0,	[x8]
 
     movz	w0,	#43
-    ldr	x10,	[sp, #1000]
+    ldr	x10,	[sp, fp]
 
-    mov	w5,	w0
-    str	w13,	[x10]
+    mov	w7,	w0
+    movz	fp,	#900
+    str	w15,	[x10]
 
-    ldr	x14,	[sp, #1008]
+    ldr	x14,	[sp, fp]
 
-    str	w5,	[x14]
+    movz	fp,	#572
+    str	w7,	[x14]
 
-    ldr	x17,	[sp, #1016]
+    movz	w14,	#45
+    ldr	x17,	[sp, #912]
 
-    movz	w5,	#44
-    mov	w0,	w5
+    movz	w7,	#44
+    mov	w0,	w7
     str	w0,	[x17]
 
     movz	w0,	#46
-    ldr	x20,	[sp, #1024]
+    ldr	x20,	[sp, #920]
 
-    mov	w5,	w0
-    str	w12,	[x20]
+    mov	w7,	w0
+    str	w14,	[x20]
 
-    movz	w12,	#48
-    ldr	x23,	[sp, #1032]
+    movz	w14,	#48
+    ldr	x23,	[sp, #936]
 
-    mov	w13,	w12
-    str	w5,	[x23]
+    mov	w15,	w14
+    str	w7,	[x23]
 
-    movz	w12,	#51
-    ldr	x26,	[sp, #1040]
+    movz	w14,	#51
+    ldr	x26,	[sp, #944]
 
-    movz	w5,	#47
-    mov	w0,	w5
-    movz	w5,	#50
+    movz	w7,	#47
+    mov	w0,	w7
+    movz	w7,	#50
     str	w0,	[x26]
 
-    ldr	x0,	[sp, #1048]
+    ldr	x0,	[sp, #960]
 
-    str	w13,	[x0]
+    str	w15,	[x0]
 
-    mov	w13,	w12
-    ldr	x3,	[sp, #1056]
+    mov	w15,	w14
+    ldr	x3,	[sp, #968]
 
     movz	w0,	#49
-    movz	w12,	#54
-    mov	w6,	w0
-    mov	w0,	w5
-    str	w6,	[x3]
+    movz	w14,	#54
+    mov	w8,	w0
+    mov	w0,	w7
+    str	w8,	[x3]
 
-    ldr	x7,	[sp, #1064]
+    ldr	x7,	[sp, #976]
 
     str	w0,	[x7]
 
     movz	w0,	#52
-    ldr	x9,	[sp, #1072]
+    ldr	x9,	[sp, #984]
 
-    mov	w5,	w0
-    str	w13,	[x9]
+    mov	w7,	w0
+    str	w15,	[x9]
 
-    ldr	x13,	[sp, #1080]
+    ldr	x13,	[sp, #992]
 
-    str	w5,	[x13]
+    str	w7,	[x13]
 
-    ldr	x16,	[sp, #1088]
+    ldr	x16,	[sp, #1000]
 
-    movz	w5,	#53
-    mov	w0,	w5
+    movz	w7,	#53
+    mov	w0,	w7
     str	w0,	[x16]
 
     movz	w0,	#55
-    ldr	x19,	[sp, #1096]
+    ldr	x19,	[sp, fp]
 
-    mov	w5,	w0
-    str	w12,	[x19]
+    mov	w7,	w0
+    movz	fp,	#476
+    str	w14,	[x19]
 
-    movz	w12,	#57
-    ldr	x22,	[sp, #416]
+    movz	w14,	#57
+    ldr	x22,	[sp, #424]
 
-    str	w5,	[x22]
+    str	w7,	[x22]
 
-    ldr	x25,	[sp, #424]
+    ldr	x25,	[sp, #432]
 
-    movz	w5,	#56
-    mov	w0,	w5
-    movz	w5,	#59
+    movz	w7,	#56
+    mov	w0,	w7
     str	w0,	[x25]
 
     movz	w0,	#58
-    ldr	x28,	[sp, #432]
+    ldr	x28,	[sp, #440]
 
-    mov	w6,	w0
-    str	w12,	[x28]
+    mov	w7,	w0
+    str	w14,	[x28]
 
-    mov	w0,	w5
-    movz	w12,	#60
-    ldr	x2,	[sp, #440]
+    movz	w14,	#60
+    ldr	x2,	[sp, #448]
 
-    mov	w13,	w12
-    str	w6,	[x2]
+    mov	w15,	w14
+    str	w7,	[x2]
 
-    ldr	x6,	[sp, #448]
+    movz	w14,	#63
+    ldr	x6,	[sp, #456]
 
+    movz	w7,	#59
+    mov	w0,	w7
     str	w0,	[x6]
 
     movz	w0,	#61
-    ldr	x8,	[sp, #456]
+    ldr	x8,	[sp, #464]
 
-    mov	w5,	w0
-    str	w13,	[x8]
+    mov	w7,	w0
+    str	w15,	[x8]
 
     movz	w0,	#64
-    ldr	x9,	[sp, #464]
+    ldr	x9,	[sp, fp]
 
-    str	w5,	[x9]
+    movz	fp,	#1268
+    str	w7,	[x9]
 
-    ldr	x12,	[sp, #1104]
+    ldr	x12,	[sp, #1008]
 
-    movz	w5,	#62
-    str	w5,	[x12]
+    movz	w7,	#62
+    str	w7,	[x12]
 
-    mov	w5,	w0
-    ldr	x15,	[sp, #1112]
+    mov	w7,	w0
+    ldr	x15,	[sp, #1016]
 
-    movz	w12,	#63
-    str	w12,	[x15]
+    str	w14,	[x15]
 
-    movz	w12,	#66
-    ldr	x18,	[sp, #1120]
+    movz	w14,	#66
+    ldr	x18,	[sp, #1032]
 
-    str	w5,	[x18]
+    str	w7,	[x18]
 
-    ldr	x21,	[sp, #1128]
+    ldr	x21,	[sp, #1040]
 
-    movz	w5,	#65
-    mov	w0,	w5
+    movz	w7,	#65
+    mov	w0,	w7
     str	w0,	[x21]
 
     movz	w0,	#67
-    ldr	x24,	[sp, #1136]
+    ldr	x24,	[sp, #1048]
 
-    mov	w5,	w0
-    str	w12,	[x24]
+    mov	w7,	w0
+    str	w14,	[x24]
 
-    movz	w12,	#69
-    ldr	x27,	[sp, #1152]
+    movz	w14,	#69
+    ldr	x27,	[sp, #1056]
 
-    mov	w13,	w12
-    str	w5,	[x27]
+    mov	w15,	w14
+    str	w7,	[x27]
 
-    movz	w12,	#72
-    ldr	x1,	[sp, #1160]
+    movz	w14,	#72
+    ldr	x1,	[sp, #1064]
 
-    movz	w5,	#68
-    mov	w0,	w5
+    movz	w7,	#68
+    mov	w0,	w7
     str	w0,	[x1]
 
     movz	w0,	#70
-    ldr	x4,	[sp, #1168]
+    ldr	x4,	[sp, #1072]
 
-    mov	w5,	w0
-    str	w13,	[x4]
+    mov	w8,	w0
+    str	w15,	[x4]
 
-    ldr	x7,	[sp, #1176]
+    mov	w15,	w14
+    ldr	x7,	[sp, #1088]
 
-    str	w5,	[x7]
+    movz	w14,	#75
+    str	w8,	[x7]
 
-    ldr	x10,	[sp, #1184]
+    ldr	x10,	[sp, #1096]
 
-    movz	w5,	#71
-    mov	w0,	w5
+    movz	w7,	#71
+    mov	w0,	w7
     str	w0,	[x10]
 
     movz	w0,	#73
-    ldr	x13,	[sp, #1192]
+    ldr	x13,	[sp, #1104]
 
-    mov	w5,	w0
-    str	w12,	[x13]
+    mov	w7,	w0
+    str	w15,	[x13]
 
-    movz	w12,	#75
-    ldr	x16,	[sp, #1200]
+    ldr	x16,	[sp, #1128]
 
-    str	w5,	[x16]
+    str	w7,	[x16]
 
-    ldr	x19,	[sp, #1208]
+    ldr	x19,	[sp, #1136]
 
-    movz	w5,	#74
-    mov	w0,	w5
+    movz	w7,	#74
+    mov	w0,	w7
     str	w0,	[x19]
 
     movz	w0,	#76
-    ldr	x22,	[sp, #1216]
+    ldr	x22,	[sp, #1144]
 
-    mov	w5,	w0
-    str	w12,	[x22]
+    mov	w7,	w0
+    str	w14,	[x22]
 
-    movz	w12,	#78
-    ldr	x25,	[sp, #1224]
+    movz	w14,	#78
+    ldr	x25,	[sp, #1152]
 
-    mov	w13,	w12
-    str	w5,	[x25]
+    str	w7,	[x25]
 
-    movz	w12,	#81
-    ldr	x28,	[sp, #1232]
+    ldr	x28,	[sp, #1160]
 
-    movz	w5,	#77
-    mov	w0,	w5
+    movz	w7,	#77
+    mov	w0,	w7
+    movz	w7,	#80
     str	w0,	[x28]
 
     movz	w0,	#79
-    ldr	x2,	[sp, #1240]
+    ldr	x2,	[sp, #1168]
 
-    str	w13,	[x2]
+    str	w14,	[x2]
 
-    mov	w13,	w12
-    ldr	x5,	[sp, #1248]
+    movz	w14,	#81
+    ldr	x5,	[sp, #1176]
 
-    movz	w12,	#84
+    mov	w15,	w14
     str	w0,	[x5]
 
-    ldr	x8,	[sp, #1256]
+    ldr	x8,	[sp, #1184]
 
-    movz	w5,	#80
-    mov	w0,	w5
+    mov	w0,	w7
     str	w0,	[x8]
 
     movz	w0,	#82
-    ldr	x11,	[sp, #1264]
+    ldr	x11,	[sp, #1192]
 
-    mov	w5,	w0
-    str	w13,	[x11]
+    mov	w7,	w0
+    str	w15,	[x11]
 
-    ldr	x14,	[sp, #1280]
+    ldr	x14,	[sp, #1200]
 
-    str	w5,	[x14]
+    str	w7,	[x14]
 
-    ldr	x17,	[sp, #1288]
+    movz	w14,	#84
+    ldr	x17,	[sp, #1208]
 
-    movz	w5,	#83
-    mov	w0,	w5
+    movz	w7,	#83
+    mov	w0,	w7
     str	w0,	[x17]
 
     movz	w0,	#85
-    ldr	x20,	[sp, #1296]
+    ldr	x20,	[sp, #1216]
 
-    mov	w5,	w0
-    str	w12,	[x20]
+    mov	w7,	w0
+    str	w14,	[x20]
 
-    movz	w12,	#87
-    ldr	x23,	[sp, #1304]
+    movz	w14,	#87
+    ldr	x23,	[sp, #1224]
 
-    mov	w6,	w12
-    str	w5,	[x23]
+    mov	w8,	w14
+    str	w7,	[x23]
 
-    movz	w12,	#90
-    ldr	x26,	[sp, #1312]
+    movz	w14,	#90
+    ldr	x26,	[sp, #1232]
 
-    movz	w5,	#86
-    mov	w13,	w12
-    mov	w0,	w5
-    movz	w5,	#89
+    movz	w7,	#86
+    mov	w15,	w14
+    mov	w0,	w7
+    movz	w14,	#93
+    movz	w7,	#89
     str	w0,	[x26]
 
-    ldr	x0,	[sp, #1272]
+    ldr	x0,	[sp, #1240]
 
-    str	w6,	[x0]
+    str	w8,	[x0]
 
-    ldr	x3,	[sp, #1320]
+    ldr	x3,	[sp, #1256]
 
     movz	w0,	#88
-    mov	w6,	w0
-    mov	w0,	w5
-    str	w6,	[x3]
+    mov	w8,	w0
+    mov	w0,	w7
+    str	w8,	[x3]
 
-    movz	w5,	#92
-    ldr	x6,	[sp, #1328]
+    movz	w7,	#92
+    ldr	x6,	[sp, fp]
 
+    movz	fp,	#1284
     str	w0,	[x6]
 
     movz	w0,	#91
-    ldr	x9,	[sp, #1336]
+    ldr	x9,	[sp, fp]
 
-    str	w13,	[x9]
+    movz	fp,	#1300
+    str	w15,	[x9]
 
-    ldr	x12,	[sp, #1344]
+    ldr	x12,	[sp, fp]
 
+    movz	fp,	#1308
     str	w0,	[x12]
 
-    movz	w12,	#93
-    ldr	x15,	[sp, #1352]
+    mov	w0,	w7
+    ldr	x15,	[sp, fp]
 
-    mov	w0,	w5
+    movz	fp,	#1316
     str	w0,	[x15]
 
     movz	w0,	#94
-    ldr	x18,	[sp, #1360]
+    ldr	x18,	[sp, fp]
 
-    mov	w5,	w0
-    str	w12,	[x18]
+    mov	w7,	w0
+    movz	fp,	#1324
+    str	w14,	[x18]
 
-    movz	w12,	#96
-    ldr	x21,	[sp, #1368]
+    movz	w14,	#96
+    ldr	x21,	[sp, fp]
 
-    str	w5,	[x21]
+    movz	fp,	#1340
+    str	w7,	[x21]
 
-    ldr	x24,	[sp, #1376]
+    movz	w7,	#95
+    ldr	x24,	[sp, fp]
 
-    movz	w5,	#95
-    mov	w0,	w5
-    movz	w5,	#98
+    mov	w0,	w7
+    movz	fp,	#1348
+    movz	w7,	#98
     str	w0,	[x24]
 
     movz	w0,	#97
-    ldr	x27,	[sp, #1384]
+    ldr	x27,	[sp, fp]
 
-    mov	w6,	w0
-    str	w12,	[x27]
+    mov	w8,	w0
+    movz	fp,	#1356
+    str	w14,	[x27]
 
-    mov	w0,	w5
-    movz	w12,	#99
-    ldr	x1,	[sp, #1392]
+    mov	w0,	w7
+    movz	w14,	#99
+    ldr	x1,	[sp, fp]
 
-    mov	w13,	w12
-    str	w6,	[x1]
+    mov	w15,	w14
+    movz	fp,	#1364
+    str	w8,	[x1]
 
-    ldr	x4,	[sp, #1400]
+    ldr	x4,	[sp, fp]
 
+    movz	fp,	#1372
     str	w0,	[x4]
 
     movz	w0,	#0
-    ldr	x7,	[sp, #1408]
+    ldr	x7,	[sp, fp]
 
-    str	w13,	[x7]
+    str	w15,	[x7]
 
-    ldr	w8,	[sp, #1764]
+    ldr	w8,	[sp, #1796]
 
     add	w18,	w8,	#1
-    str	w18,	[sp, #472]
+    str	w18,	[sp, #516]
 
-    ldr	w12,	[sp, #1776]
+    ldr	w12,	[sp, #1860]
 
     mov	w8,	w12
-    str	w8,	[sp, #808]
+    str	w8,	[sp, #472]
 
-    str	w0,	[sp, #1760]
+    str	w0,	[sp, #1792]
 
 
 main_254:
-    ldr	w1,	[sp, #1760]
+    ldr	w1,	[sp, #1792]
 
     cmp	w1,	#80
     bge	main_419
 
 main_258:
-    ldr	w2,	[sp, #1760]
+    ldr	w2,	[sp, #1792]
 
     lsl	w0,	w2,	#2
-    mov	x13,	x0
-    add	x13,	sp,	x13
-    add	x13,	x13,	#16
-    ldr	w5,	[x13]
+    mov	x15,	x0
+    add	x15,	sp,	x15
+    add	x15,	x15,	#16
+    ldr	w7,	[x15]
 
-    ldr	w9,	[sp, #808]
+    ldr	w9,	[sp, #472]
 
-    ldr	w3,	[sp, #1760]
+    ldr	w3,	[sp, #1792]
 
-    add	w0,	w5,	w9
-    add	w4,	w3,	#1
-    str	w4,	[sp, #1440]
+    add	w0,	w7,	w9
+    add	w6,	w3,	#1
+    str	w6,	[sp, #1448]
 
-    ldr	w5,	[sp, #1440]
+    ldr	w7,	[sp, #1448]
 
-    lsl	w13,	w5,	#2
-    mov	x5,	x13
-    add	x5,	sp,	x5
-    add	x5,	x5,	#16
-    ldr	w7,	[x5]
-
-    ldr	w6,	[sp, #1440]
-
-    add	w17,	w0,	w7
-    add	w15,	w6,	#1
-    str	w15,	[sp, #876]
-
-    ldr	w16,	[sp, #876]
-
-    lsl	w5,	w16,	#2
-    mov	x0,	x5
-    add	x0,	sp,	x0
-    add	x0,	x0,	#16
-    ldr	w5,	[x0]
-
-    add	w7,	w17,	w5
-    ldr	w17,	[sp, #876]
-
-    add	w19,	w17,	#1
-    str	w19,	[sp, #1452]
-
-    ldr	w20,	[sp, #1452]
-
-    lsl	w0,	w20,	#2
-    mov	x12,	x0
-    add	x12,	sp,	x12
-    add	x12,	x12,	#16
-    ldr	w0,	[x12]
-
-    ldr	w21,	[sp, #1452]
-
-    add	w0,	w7,	w0
-    add	w9,	w21,	#1
-    str	w9,	[sp, #1604]
-
-    ldr	w10,	[sp, #1604]
-
-    lsl	w13,	w10,	#2
-    mov	x5,	x13
-    add	x5,	sp,	x5
-    add	x5,	x5,	#16
-    ldr	w14,	[x5]
-
-    ldr	w11,	[sp, #1604]
-
-    add	w17,	w0,	w14
-    add	w23,	w11,	#1
-    str	w23,	[sp, #1456]
-
-    ldr	w24,	[sp, #1456]
-
-    lsl	w5,	w24,	#2
-    mov	x0,	x5
-    add	x0,	sp,	x0
-    add	x0,	x0,	#16
-    ldr	w0,	[x0]
-
-    ldr	w25,	[sp, #1456]
-
-    add	w7,	w17,	w0
-    add	w27,	w25,	#1
-    str	w27,	[sp, #1460]
-
-    ldr	w28,	[sp, #1460]
-
-    lsl	w0,	w28,	#2
-    mov	x13,	x0
-    add	x13,	sp,	x13
-    add	x13,	x13,	#16
-    ldr	w14,	[x13]
-
-    ldr	w0,	[sp, #1460]
-
-    add	w1,	w7,	w14
-    add	w2,	w0,	#1
-    str	w2,	[sp, #1472]
-
-    ldr	w3,	[sp, #1472]
-
-    lsl	w12,	w3,	#2
-    mov	x6,	x12
-    add	x6,	sp,	x6
-    add	x6,	x6,	#16
-    ldr	w6,	[x6]
-
-    ldr	w4,	[sp, #1472]
-
-    add	w18,	w1,	w6
-    add	w13,	w4,	#1
-    str	w13,	[sp, #1608]
-
-    ldr	w14,	[sp, #1608]
-
-    lsl	w5,	w14,	#2
-    mov	x0,	x5
-    add	x0,	sp,	x0
-    add	x0,	x0,	#16
-    ldr	w5,	[x0]
-
-    ldr	w15,	[sp, #1608]
-
-    add	w5,	w5,	w18
-    add	w6,	w15,	#1
-    str	w6,	[sp, #1476]
-
-    ldr	w7,	[sp, #1476]
-
-    lsl	w0,	w7,	#2
-    mov	x13,	x0
-    add	x13,	sp,	x13
-    add	x13,	x13,	#16
-    ldr	w0,	[x13]
-
-    ldr	w8,	[sp, #1476]
-
-    add	w0,	w5,	w0
-    add	w17,	w8,	#1
-    str	w17,	[sp, #1612]
-
-    ldr	w18,	[sp, #1612]
-
-    lsl	w14,	w18,	#2
+    lsl	w14,	w7,	#2
     mov	x7,	x14
     add	x7,	sp,	x7
     add	x7,	x7,	#16
-    ldr	w14,	[x7]
+    ldr	w8,	[x7]
 
-    ldr	w19,	[sp, #1612]
+    add	w20,	w0,	w8
+    ldr	w8,	[sp, #1448]
 
-    add	w15,	w0,	w14
-    add	w10,	w19,	#1
-    str	w10,	[sp, #1480]
+    add	w10,	w8,	#1
+    str	w10,	[sp, #1452]
 
-    ldr	w11,	[sp, #1480]
+    ldr	w11,	[sp, #1452]
 
-    lsl	w5,	w11,	#2
-    mov	x0,	x5
+    lsl	w7,	w11,	#2
+    mov	x0,	x7
+    add	x0,	sp,	x0
+    add	x0,	x0,	#16
+    ldr	w7,	[x0]
+
+    ldr	w12,	[sp, #1452]
+
+    add	w9,	w20,	w7
+    add	w14,	w12,	#1
+    str	w14,	[sp, #1456]
+
+    ldr	w15,	[sp, #1456]
+
+    lsl	w0,	w15,	#2
+    mov	x14,	x0
+    add	x14,	sp,	x14
+    add	x14,	x14,	#16
+    ldr	w0,	[x14]
+
+    ldr	w16,	[sp, #1456]
+
+    add	w3,	w9,	w0
+    add	w0,	w16,	#1
+    str	w0,	[sp, #1404]
+
+    ldr	w1,	[sp, #1404]
+
+    lsl	w15,	w1,	#2
+    mov	x7,	x15
+    add	x7,	sp,	x7
+    add	x7,	x7,	#16
+    ldr	w16,	[x7]
+
+    ldr	w2,	[sp, #1404]
+
+    add	w17,	w3,	w16
+    add	w18,	w2,	#1
+    str	w18,	[sp, #1460]
+
+    ldr	w19,	[sp, #1460]
+
+    lsl	w7,	w19,	#2
+    mov	x0,	x7
     add	x0,	sp,	x0
     add	x0,	x0,	#16
     ldr	w0,	[x0]
 
-    ldr	w12,	[sp, #1480]
+    ldr	w20,	[sp, #1460]
 
-    add	w5,	w15,	w0
-    add	w21,	w12,	#1
-    str	w21,	[sp, #1616]
-
-    ldr	w22,	[sp, #1616]
-
-    lsl	w0,	w22,	#2
-    mov	x13,	x0
-    add	x13,	sp,	x13
-    add	x13,	x13,	#16
-    ldr	w13,	[x13]
-
-    ldr	w23,	[sp, #1616]
-
-    add	w0,	w5,	w13
-    add	w14,	w23,	#1
-    str	w14,	[sp, #1484]
-
-    ldr	w15,	[sp, #1484]
-
-    lsl	w13,	w15,	#2
-    mov	x6,	x13
-    add	x6,	sp,	x6
-    add	x6,	x6,	#16
-    ldr	w6,	[x6]
-
-    ldr	w16,	[sp, #1484]
-
-    add	w12,	w0,	w6
-    add	w25,	w16,	#1
-    str	w25,	[sp, #1620]
-
-    ldr	w26,	[sp, #1620]
-
-    lsl	w5,	w26,	#2
-    mov	x0,	x5
-    add	x0,	sp,	x0
-    add	x0,	x0,	#16
-    ldr	w5,	[x0]
-
-    ldr	w27,	[sp, #1620]
-
-    add	w5,	w12,	w5
-    add	w18,	w27,	#1
-    str	w18,	[sp, #1504]
-
-    ldr	w19,	[sp, #1504]
-
-    lsl	w0,	w19,	#2
-    mov	x13,	x0
-    add	x13,	sp,	x13
-    add	x13,	x13,	#16
-    ldr	w0,	[x13]
-
-    ldr	w20,	[sp, #1504]
-
-    add	w0,	w5,	w0
+    add	w9,	w17,	w0
     add	w22,	w20,	#1
-    str	w22,	[sp, #1508]
+    str	w22,	[sp, #1472]
 
-    ldr	w23,	[sp, #1508]
+    ldr	w23,	[sp, #1472]
 
-    lsl	w14,	w23,	#2
-    mov	x7,	x14
+    lsl	w0,	w23,	#2
+    mov	x15,	x0
+    add	x15,	sp,	x15
+    add	x15,	x15,	#16
+    ldr	w16,	[x15]
+
+    ldr	w24,	[sp, #1472]
+
+    add	w0,	w9,	w16
+    add	w4,	w24,	#1
+    str	w4,	[sp, #1408]
+
+    ldr	w5,	[sp, #1408]
+
+    lsl	w15,	w5,	#2
+    mov	x7,	x15
     add	x7,	sp,	x7
     add	x7,	x7,	#16
-    ldr	w14,	[x7]
+    ldr	w9,	[x7]
 
-    ldr	w24,	[sp, #1508]
+    ldr	w6,	[sp, #1408]
 
-    add	w13,	w14,	w0
-    add	w26,	w24,	#1
-    str	w26,	[sp, #1512]
+    add	w21,	w0,	w9
+    add	w9,	w6,	#1
+    str	w9,	[sp, #1420]
 
-    ldr	w27,	[sp, #1512]
+    ldr	w10,	[sp, #1420]
 
-    lsl	w5,	w27,	#2
-    mov	x0,	x5
+    lsl	w7,	w10,	#2
+    mov	x0,	x7
     add	x0,	sp,	x0
     add	x0,	x0,	#16
-    ldr	w0,	[x0]
+    ldr	w7,	[x0]
 
-    ldr	w28,	[sp, #1512]
+    ldr	w11,	[sp, #1420]
 
-    add	w7,	w13,	w0
-    add	w0,	w28,	#1
-    str	w0,	[sp, #1632]
+    add	w7,	w7,	w21
+    add	w26,	w11,	#1
+    str	w26,	[sp, #1476]
 
-    ldr	w1,	[sp, #1632]
+    ldr	w27,	[sp, #1476]
 
-    lsl	w0,	w1,	#2
-    mov	x13,	x0
-    add	x13,	sp,	x13
-    add	x13,	x13,	#16
-    ldr	w13,	[x13]
+    lsl	w0,	w27,	#2
+    mov	x15,	x0
+    add	x15,	sp,	x15
+    add	x15,	x15,	#16
+    ldr	w0,	[x15]
 
-    ldr	w2,	[sp, #1632]
-
-    add	w0,	w7,	w13
-    add	w4,	w2,	#1
-    str	w4,	[sp, #1644]
-
-    ldr	w5,	[sp, #1644]
-
-    lsl	w14,	w5,	#2
-    mov	x7,	x14
-    add	x7,	sp,	x7
-    add	x7,	x7,	#16
-    ldr	w7,	[x7]
-
-    ldr	w6,	[sp, #1644]
-
-    add	w15,	w0,	w7
-    add	w8,	w6,	#1
-    str	w8,	[sp, #836]
-
-    ldr	w9,	[sp, #836]
-
-    lsl	w5,	w9,	#2
-    mov	x0,	x5
-    add	x0,	sp,	x0
-    add	x0,	x0,	#16
-    ldr	w5,	[x0]
-
-    ldr	w10,	[sp, #836]
-
-    add	w7,	w15,	w5
-    add	w1,	w10,	#1
-    str	w1,	[sp, #1656]
-
-    ldr	w2,	[sp, #1656]
-
-    lsl	w0,	w2,	#2
-    mov	x13,	x0
-    add	x13,	sp,	x13
-    add	x13,	x13,	#16
-    ldr	w0,	[x13]
-
-    ldr	w3,	[sp, #1656]
+    ldr	w28,	[sp, #1476]
 
     add	w0,	w7,	w0
-    add	w5,	w3,	#1
-    str	w5,	[sp, #1660]
+    add	w13,	w28,	#1
+    str	w13,	[sp, #1808]
 
-    ldr	w6,	[sp, #1660]
+    ldr	w14,	[sp, #1808]
 
-    lsl	w14,	w6,	#2
-    mov	x7,	x14
-    add	x7,	sp,	x7
-    add	x7,	x7,	#16
-    ldr	w14,	[x7]
+    lsl	w16,	w14,	#2
+    mov	x9,	x16
+    add	x9,	sp,	x9
+    add	x9,	x9,	#16
+    ldr	w16,	[x9]
 
-    ldr	w7,	[sp, #1660]
+    ldr	w15,	[sp, #1808]
 
-    add	w17,	w0,	w14
-    add	w9,	w7,	#1
-    str	w9,	[sp, #1672]
+    add	w17,	w0,	w16
+    add	w1,	w15,	#1
+    str	w1,	[sp, #1480]
 
-    ldr	w10,	[sp, #1672]
+    ldr	w2,	[sp, #1480]
 
-    lsl	w5,	w10,	#2
-    mov	x0,	x5
+    lsl	w7,	w2,	#2
+    mov	x0,	x7
     add	x0,	sp,	x0
     add	x0,	x0,	#16
     ldr	w0,	[x0]
 
-    ldr	w11,	[sp, #1672]
+    ldr	w3,	[sp, #1480]
 
-    add	w5,	w17,	w0
-    add	w13,	w11,	#1
-    str	w13,	[sp, #1676]
+    add	w10,	w17,	w0
+    add	w5,	w3,	#1
+    str	w5,	[sp, #1692]
 
-    ldr	w14,	[sp, #1676]
+    ldr	w6,	[sp, #1692]
+
+    lsl	w0,	w6,	#2
+    mov	x16,	x0
+    add	x16,	sp,	x16
+    add	x16,	x16,	#16
+    ldr	w16,	[x16]
+
+    ldr	w7,	[sp, #1692]
+
+    add	w0,	w10,	w16
+    add	w9,	w7,	#1
+    str	w9,	[sp, #1696]
+
+    ldr	w10,	[sp, #1696]
+
+    lsl	w15,	w10,	#2
+    mov	x8,	x15
+    add	x8,	sp,	x8
+    add	x8,	x8,	#16
+    ldr	w8,	[x8]
+
+    ldr	w11,	[sp, #1696]
+
+    add	w15,	w0,	w8
+    add	w17,	w11,	#1
+    str	w17,	[sp, #1820]
+
+    ldr	w18,	[sp, #1820]
+
+    lsl	w7,	w18,	#2
+    mov	x0,	x7
+    add	x0,	sp,	x0
+    add	x0,	x0,	#16
+    ldr	w7,	[x0]
+
+    ldr	w19,	[sp, #1820]
+
+    add	w7,	w15,	w7
+    add	w13,	w19,	#1
+    str	w13,	[sp, #1700]
+
+    ldr	w14,	[sp, #1700]
 
     lsl	w0,	w14,	#2
-    mov	x14,	x0
-    add	x14,	sp,	x14
-    add	x14,	x14,	#16
-    ldr	w14,	[x14]
+    mov	x15,	x0
+    add	x15,	sp,	x15
+    add	x15,	x15,	#16
+    ldr	w0,	[x15]
 
-    ldr	w15,	[sp, #1676]
+    ldr	w15,	[sp, #1700]
 
-    add	w0,	w14,	w5
-    add	w17,	w15,	#1
-    str	w17,	[sp, #1696]
+    add	w0,	w7,	w0
+    add	w21,	w15,	#1
+    str	w21,	[sp, #1832]
 
-    ldr	w18,	[sp, #1696]
+    ldr	w22,	[sp, #1832]
 
-    lsl	w13,	w18,	#2
-    mov	x6,	x13
-    add	x6,	sp,	x6
-    add	x6,	x6,	#16
-    ldr	w6,	[x6]
+    lsl	w16,	w22,	#2
+    mov	x9,	x16
+    add	x9,	sp,	x9
+    add	x9,	x9,	#16
+    ldr	w16,	[x9]
 
-    ldr	w19,	[sp, #1696]
+    ldr	w23,	[sp, #1832]
 
-    add	w13,	w0,	w6
-    add	w21,	w19,	#1
-    str	w21,	[sp, #1700]
+    add	w15,	w16,	w0
+    add	w25,	w23,	#1
+    str	w25,	[sp, #1836]
 
-    ldr	w22,	[sp, #1700]
+    ldr	w26,	[sp, #1836]
 
-    lsl	w5,	w22,	#2
-    mov	x0,	x5
-    add	x0,	sp,	x0
-    add	x0,	x0,	#16
-    ldr	w5,	[x0]
-
-    ldr	w23,	[sp, #1700]
-
-    add	w5,	w13,	w5
-    add	w12,	w23,	#1
-    str	w12,	[sp, #840]
-
-    ldr	w13,	[sp, #840]
-
-    lsl	w0,	w13,	#2
-    mov	x13,	x0
-    add	x13,	sp,	x13
-    add	x13,	x13,	#16
-    ldr	w0,	[x13]
-
-    ldr	w14,	[sp, #840]
-
-    add	w0,	w5,	w0
-    add	w16,	w14,	#1
-    str	w16,	[sp, #848]
-
-    ldr	w17,	[sp, #848]
-
-    lsl	w14,	w17,	#2
-    mov	x7,	x14
-    add	x7,	sp,	x7
-    add	x7,	x7,	#16
-    ldr	w14,	[x7]
-
-    ldr	w18,	[sp, #848]
-
-    add	w13,	w0,	w14
-    add	w20,	w18,	#1
-    str	w20,	[sp, #852]
-
-    ldr	w21,	[sp, #852]
-
-    lsl	w5,	w21,	#2
-    mov	x0,	x5
+    lsl	w7,	w26,	#2
+    mov	x0,	x7
     add	x0,	sp,	x0
     add	x0,	x0,	#16
     ldr	w0,	[x0]
 
-    ldr	w22,	[sp, #852]
+    ldr	w27,	[sp, #1836]
 
-    add	w5,	w13,	w0
-    add	w25,	w22,	#1
-    str	w25,	[sp, #1712]
+    add	w7,	w15,	w0
+    add	w17,	w27,	#1
+    str	w17,	[sp, #1704]
 
-    ldr	w26,	[sp, #1712]
+    ldr	w18,	[sp, #1704]
 
-    lsl	w0,	w26,	#2
-    mov	x14,	x0
-    add	x14,	sp,	x14
-    add	x14,	x14,	#16
-    ldr	w14,	[x14]
+    lsl	w0,	w18,	#2
+    mov	x16,	x0
+    add	x16,	sp,	x16
+    add	x16,	x16,	#16
+    ldr	w16,	[x16]
 
-    ldr	w27,	[sp, #1712]
+    ldr	w19,	[sp, #1704]
 
-    add	w2,	w5,	w14
-    add	w0,	w27,	#1
-    str	w0,	[sp, #1716]
+    add	w0,	w7,	w16
+    add	w21,	w19,	#1
+    str	w21,	[sp, #1708]
 
-    ldr	w1,	[sp, #1716]
+    ldr	w22,	[sp, #1708]
 
-    lsl	w13,	w1,	#2
-    mov	x6,	x13
-    add	x6,	sp,	x6
-    add	x6,	x6,	#16
-    ldr	w6,	[x6]
+    lsl	w15,	w22,	#2
+    mov	x8,	x15
+    add	x8,	sp,	x8
+    add	x8,	x8,	#16
+    ldr	w8,	[x8]
 
-    add	w13,	w2,	w6
-    ldr	w2,	[sp, #1716]
+    ldr	w23,	[sp, #1708]
 
-    add	w24,	w2,	#1
-    str	w24,	[sp, #856]
+    add	w16,	w0,	w8
+    add	w0,	w23,	#1
+    str	w0,	[sp, #1840]
 
-    ldr	w25,	[sp, #856]
+    ldr	w1,	[sp, #1840]
 
-    lsl	w5,	w25,	#2
-    mov	x0,	x5
+    lsl	w7,	w1,	#2
+    mov	x0,	x7
     add	x0,	sp,	x0
     add	x0,	x0,	#16
-    ldr	w5,	[x0]
+    ldr	w7,	[x0]
 
-    ldr	w26,	[sp, #856]
+    ldr	w2,	[sp, #1840]
 
-    add	w7,	w5,	w13
-    add	w4,	w26,	#1
-    str	w4,	[sp, #1720]
+    add	w8,	w16,	w7
+    add	w4,	w2,	#1
+    str	w4,	[sp, #1844]
 
-    ldr	w5,	[sp, #1720]
+    ldr	w5,	[sp, #1844]
 
     lsl	w0,	w5,	#2
-    mov	x13,	x0
-    add	x13,	sp,	x13
-    add	x13,	x13,	#16
-    ldr	w0,	[x13]
+    mov	x16,	x0
+    add	x16,	sp,	x16
+    add	x16,	x16,	#16
+    ldr	w0,	[x16]
 
-    ldr	w6,	[sp, #1720]
+    ldr	w6,	[sp, #1844]
 
-    add	w1,	w7,	w0
-    add	w28,	w6,	#1
-    str	w28,	[sp, #860]
+    add	w0,	w8,	w0
+    add	w8,	w6,	#1
+    str	w8,	[sp, #1848]
 
-    ldr	w0,	[sp, #860]
+    ldr	w9,	[sp, #1848]
 
-    lsl	w14,	w0,	#2
-    mov	x7,	x14
-    add	x7,	sp,	x7
-    add	x7,	x7,	#16
-    ldr	w14,	[x7]
+    lsl	w16,	w9,	#2
+    mov	x9,	x16
+    add	x9,	sp,	x9
+    add	x9,	x9,	#16
+    ldr	w16,	[x9]
 
-    add	w17,	w1,	w14
-    ldr	w1,	[sp, #860]
+    ldr	w10,	[sp, #1848]
 
-    add	w3,	w1,	#1
-    str	w3,	[sp, #864]
+    add	w16,	w0,	w16
+    add	w25,	w10,	#1
+    str	w25,	[sp, #1728]
 
-    ldr	w4,	[sp, #864]
+    ldr	w26,	[sp, #1728]
 
-    lsl	w5,	w4,	#2
-    mov	x0,	x5
+    lsl	w7,	w26,	#2
+    mov	x0,	x7
     add	x0,	sp,	x0
     add	x0,	x0,	#16
     ldr	w0,	[x0]
 
-    ldr	w5,	[sp, #864]
+    ldr	w27,	[sp, #1728]
 
-    add	w7,	w17,	w0
-    add	w8,	w5,	#1
-    str	w8,	[sp, #1724]
+    add	w7,	w16,	w0
+    add	w12,	w27,	#1
+    str	w12,	[sp, #580]
 
-    ldr	w9,	[sp, #1724]
+    ldr	w13,	[sp, #580]
 
-    lsl	w0,	w9,	#2
-    mov	x14,	x0
-    add	x14,	sp,	x14
-    add	x14,	x14,	#16
-    ldr	w14,	[x14]
+    lsl	w0,	w13,	#2
+    mov	x16,	x0
+    add	x16,	sp,	x16
+    add	x16,	x16,	#16
+    ldr	w16,	[x16]
 
-    ldr	w10,	[sp, #1724]
+    ldr	w14,	[sp, #580]
 
-    add	w0,	w7,	w14
-    add	w12,	w10,	#1
-    str	w12,	[sp, #1736]
+    add	w3,	w16,	w7
+    add	w0,	w14,	#1
+    str	w0,	[sp, #1732]
 
-    ldr	w13,	[sp, #1736]
+    ldr	w1,	[sp, #1732]
 
-    lsl	w13,	w13,	#2
-    mov	x6,	x13
-    add	x6,	sp,	x6
-    add	x6,	x6,	#16
-    ldr	w6,	[x6]
+    lsl	w15,	w1,	#2
+    mov	x8,	x15
+    add	x8,	sp,	x8
+    add	x8,	x8,	#16
+    ldr	w8,	[x8]
 
-    ldr	w14,	[sp, #1736]
+    ldr	w2,	[sp, #1732]
 
-    add	w15,	w0,	w6
-    add	w7,	w14,	#1
-    str	w7,	[sp, #868]
+    add	w14,	w3,	w8
+    add	w16,	w2,	#1
+    str	w16,	[sp, #584]
 
-    ldr	w8,	[sp, #868]
+    ldr	w17,	[sp, #584]
 
-    lsl	w5,	w8,	#2
-    mov	x0,	x5
+    lsl	w7,	w17,	#2
+    mov	x0,	x7
     add	x0,	sp,	x0
     add	x0,	x0,	#16
-    ldr	w5,	[x0]
+    ldr	w7,	[x0]
 
-    ldr	w9,	[sp, #868]
+    ldr	w18,	[sp, #584]
 
-    add	w5,	w15,	w5
-    add	w16,	w9,	#1
-    str	w16,	[sp, #1748]
+    add	w7,	w14,	w7
+    add	w20,	w18,	#1
+    str	w20,	[sp, #588]
 
-    ldr	w17,	[sp, #1748]
+    ldr	w21,	[sp, #588]
 
-    lsl	w0,	w17,	#2
-    mov	x13,	x0
-    add	x13,	sp,	x13
-    add	x13,	x13,	#16
-    ldr	w0,	[x13]
+    lsl	w0,	w21,	#2
+    mov	x16,	x0
+    add	x16,	sp,	x16
+    add	x16,	x16,	#16
+    ldr	w0,	[x16]
 
-    ldr	w18,	[sp, #1748]
+    ldr	w22,	[sp, #588]
 
-    add	w13,	w5,	w0
-    mov	w10,	w13
-    add	w0,	w18,	#1
-    str	w10,	[sp, #808]
+    add	w0,	w7,	w0
+    add	w24,	w22,	#1
+    str	w24,	[sp, #592]
+
+    ldr	w25,	[sp, #592]
+
+    lsl	w16,	w25,	#2
+    mov	x9,	x16
+    add	x9,	sp,	x9
+    add	x9,	x9,	#16
+    ldr	w16,	[x9]
+
+    ldr	w26,	[sp, #592]
+
+    add	w16,	w0,	w16
+    add	w28,	w26,	#1
+    str	w28,	[sp, #596]
+
+    ldr	w0,	[sp, #596]
+
+    lsl	w7,	w0,	#2
+    mov	x0,	x7
+    add	x0,	sp,	x0
+    add	x0,	x0,	#16
+    ldr	w0,	[x0]
+
+    ldr	w1,	[sp, #596]
+
+    add	w10,	w16,	w0
+    add	w3,	w1,	#1
+    str	w3,	[sp, #600]
+
+    ldr	w4,	[sp, #600]
+
+    lsl	w0,	w4,	#2
+    mov	x16,	x0
+    add	x16,	sp,	x16
+    add	x16,	x16,	#16
+    ldr	w16,	[x16]
+
+    ldr	w5,	[sp, #600]
+
+    add	w0,	w10,	w16
+    add	w4,	w5,	#1
+    str	w4,	[sp, #1736]
+
+    ldr	w5,	[sp, #1736]
+
+    lsl	w15,	w5,	#2
+    mov	x8,	x15
+    add	x8,	sp,	x8
+    add	x8,	x8,	#16
+    ldr	w8,	[x8]
+
+    ldr	w6,	[sp, #1736]
+
+    add	w17,	w0,	w8
+    add	w7,	w6,	#1
+    str	w7,	[sp, #604]
+
+    ldr	w8,	[sp, #604]
+
+    lsl	w7,	w8,	#2
+    mov	x0,	x7
+    add	x0,	sp,	x0
+    add	x0,	x0,	#16
+    ldr	w7,	[x0]
+
+    ldr	w9,	[sp, #604]
+
+    add	w7,	w7,	w17
+    add	w8,	w9,	#1
+    str	w8,	[sp, #1740]
+
+    ldr	w9,	[sp, #1740]
+
+    lsl	w0,	w9,	#2
+    mov	x15,	x0
+    add	x15,	sp,	x15
+    add	x15,	x15,	#16
+    ldr	w0,	[x15]
+
+    ldr	w10,	[sp, #1740]
+
+    add	w0,	w7,	w0
+    add	w12,	w10,	#1
+    str	w12,	[sp, #1744]
+
+    ldr	w13,	[sp, #1744]
+
+    lsl	w16,	w13,	#2
+    mov	x9,	x16
+    add	x9,	sp,	x9
+    add	x9,	x9,	#16
+    ldr	w16,	[x9]
+
+    ldr	w14,	[sp, #1744]
+
+    add	w19,	w0,	w16
+    add	w16,	w14,	#1
+    str	w16,	[sp, #1756]
+
+    ldr	w17,	[sp, #1756]
+
+    lsl	w7,	w17,	#2
+    mov	x0,	x7
+    add	x0,	sp,	x0
+    add	x0,	x0,	#16
+    ldr	w0,	[x0]
+
+    ldr	w18,	[sp, #1756]
+
+    add	w7,	w19,	w0
+    add	w11,	w18,	#1
+    str	w11,	[sp, #608]
+
+    ldr	w12,	[sp, #608]
+
+    lsl	w0,	w12,	#2
+    mov	x16,	x0
+    add	x16,	sp,	x16
+    add	x16,	x16,	#16
+    ldr	w16,	[x16]
+
+    ldr	w13,	[sp, #608]
+
+    add	w0,	w7,	w16
+    add	w15,	w13,	#1
+    str	w15,	[sp, #612]
+
+    ldr	w16,	[sp, #612]
+
+    lsl	w16,	w16,	#2
+    mov	x9,	x16
+    add	x9,	sp,	x9
+    add	x9,	x9,	#16
+    ldr	w9,	[x9]
+
+    ldr	w17,	[sp, #612]
+
+    add	w15,	w0,	w9
+    add	w19,	w17,	#1
+    str	w19,	[sp, #616]
+
+    ldr	w20,	[sp, #616]
+
+    lsl	w7,	w20,	#2
+    mov	x0,	x7
+    add	x0,	sp,	x0
+    add	x0,	x0,	#16
+    ldr	w7,	[x0]
+
+    ldr	w21,	[sp, #616]
+
+    add	w7,	w15,	w7
+    add	w20,	w21,	#1
+    str	w20,	[sp, #1768]
+
+    ldr	w21,	[sp, #1768]
+
+    lsl	w0,	w21,	#2
+    mov	x16,	x0
+    add	x16,	sp,	x16
+    add	x16,	x16,	#16
+    ldr	w0,	[x16]
+
+    ldr	w22,	[sp, #1768]
+
+    add	w16,	w7,	w0
+    mov	w10,	w16
+    add	w0,	w22,	#1
+    str	w10,	[sp, #472]
 
     mov	w4,	w0
-    str	w4,	[sp, #1760]
+    str	w4,	[sp, #1792]
 
     b	main_254
 
 main_419:
-    ldr	w5,	[sp, #1760]
+    ldr	w5,	[sp, #1792]
 
-    mov	w20,	w5
-    str	w20,	[sp, #1752]
+    mov	w24,	w5
+    str	w24,	[sp, #1772]
 
-    ldr	w11,	[sp, #808]
+    ldr	w11,	[sp, #472]
 
     mov	w4,	w11
-    str	w4,	[sp, #796]
+    str	w4,	[sp, #1620]
 
 
 main_421:
-    ldr	w21,	[sp, #1752]
+    ldr	w25,	[sp, #1772]
 
-    lsl	w13,	w21,	#2
-    mov	x5,	x13
-    add	x5,	sp,	x5
-    add	x5,	x5,	#16
-    ldr	w0,	[x5]
+    lsl	w15,	w25,	#2
+    mov	x7,	x15
+    add	x7,	sp,	x7
+    add	x7,	x7,	#16
+    ldr	w0,	[x7]
 
-    ldr	w5,	[sp, #796]
+    ldr	w5,	[sp, #1620]
 
-    ldr	w22,	[sp, #1752]
+    ldr	w26,	[sp, #1772]
 
-    add	w18,	w0,	w5
-    add	w13,	w22,	#1
-    str	w13,	[sp, #1420]
+    add	w20,	w0,	w5
+    add	w13,	w26,	#1
+    str	w13,	[sp, #1656]
 
-    ldr	w14,	[sp, #1420]
+    ldr	w14,	[sp, #1656]
 
-    lsl	w5,	w14,	#2
-    mov	x0,	x5
+    lsl	w7,	w14,	#2
+    mov	x0,	x7
     add	x0,	sp,	x0
     add	x0,	x0,	#16
     ldr	w0,	[x0]
 
-    ldr	w15,	[sp, #1420]
+    ldr	w15,	[sp, #1656]
 
-    add	w6,	w18,	w0
+    add	w8,	w20,	w0
     add	w17,	w15,	#1
-    str	w17,	[sp, #1424]
+    str	w17,	[sp, #1432]
 
-    ldr	w18,	[sp, #1424]
+    ldr	w18,	[sp, #1432]
 
     lsl	w0,	w18,	#2
-    mov	x12,	x0
-    add	x12,	sp,	x12
-    add	x12,	x12,	#16
-    ldr	w13,	[x12]
+    mov	x15,	x0
+    add	x15,	sp,	x15
+    add	x15,	x15,	#16
+    ldr	w16,	[x15]
 
-    ldr	w19,	[sp, #1424]
+    ldr	w19,	[sp, #1432]
 
-    add	w0,	w6,	w13
-    add	w21,	w19,	#1
-    str	w21,	[sp, #1428]
+    add	w0,	w8,	w16
+    add	w23,	w19,	#1
+    str	w23,	[sp, #1436]
 
-    ldr	w22,	[sp, #1428]
+    ldr	w24,	[sp, #1436]
 
-    lsl	w13,	w22,	#2
-    mov	x5,	x13
-    add	x5,	sp,	x5
-    add	x5,	x5,	#16
-    ldr	w7,	[x5]
+    lsl	w14,	w24,	#2
+    mov	x7,	x14
+    add	x7,	sp,	x7
+    add	x7,	x7,	#16
+    ldr	w8,	[x7]
 
-    ldr	w23,	[sp, #1428]
+    ldr	w25,	[sp, #1436]
 
-    add	w15,	w0,	w7
-    add	w25,	w23,	#1
-    str	w25,	[sp, #1432]
+    add	w17,	w0,	w8
+    add	w27,	w25,	#1
+    str	w27,	[sp, #1440]
 
-    ldr	w26,	[sp, #1432]
+    ldr	w28,	[sp, #1440]
 
-    lsl	w5,	w26,	#2
-    mov	x0,	x5
+    lsl	w7,	w28,	#2
+    mov	x0,	x7
     add	x0,	sp,	x0
     add	x0,	x0,	#16
-    ldr	w5,	[x0]
+    ldr	w7,	[x0]
 
-    ldr	w27,	[sp, #1432]
+    ldr	w0,	[sp, #1440]
 
-    add	w6,	w15,	w5
-    add	w11,	w27,	#1
-    str	w11,	[sp, #872]
+    add	w9,	w17,	w7
+    add	w21,	w0,	#1
+    str	w21,	[sp, #520]
 
-    ldr	w12,	[sp, #872]
+    ldr	w22,	[sp, #520]
 
-    lsl	w0,	w12,	#2
-    mov	x12,	x0
-    add	x12,	sp,	x12
-    add	x12,	x12,	#16
-    ldr	w0,	[x12]
+    lsl	w0,	w22,	#2
+    mov	x15,	x0
+    add	x15,	sp,	x15
+    add	x15,	x15,	#16
+    ldr	w0,	[x15]
 
-    ldr	w13,	[sp, #872]
+    ldr	w23,	[sp, #520]
 
-    add	w2,	w6,	w0
-    add	w0,	w13,	#1
-    str	w0,	[sp, #1436]
+    add	w0,	w9,	w0
+    add	w25,	w23,	#1
+    str	w25,	[sp, #1392]
 
-    ldr	w1,	[sp, #1436]
+    ldr	w26,	[sp, #1392]
 
-    lsl	w13,	w1,	#2
-    mov	x5,	x13
-    add	x5,	sp,	x5
-    add	x5,	x5,	#16
-    ldr	w14,	[x5]
+    lsl	w15,	w26,	#2
+    mov	x7,	x15
+    add	x7,	sp,	x7
+    add	x7,	x7,	#16
+    ldr	w16,	[x7]
 
-    add	w16,	w2,	w14
-    ldr	w2,	[sp, #1436]
+    ldr	w27,	[sp, #1392]
 
-    add	w25,	w2,	#1
-    str	w25,	[sp, #1756]
+    add	w19,	w0,	w16
+    add	w2,	w27,	#1
+    str	w2,	[sp, #1444]
 
-    ldr	w26,	[sp, #1756]
+    ldr	w3,	[sp, #1444]
 
-    lsl	w5,	w26,	#2
-    mov	x0,	x5
+    lsl	w7,	w3,	#2
+    mov	x0,	x7
     add	x0,	sp,	x0
     add	x0,	x0,	#16
     ldr	w0,	[x0]
 
-    ldr	w27,	[sp, #1756]
+    ldr	w4,	[sp, #1444]
 
-    add	w14,	w16,	w0
-    add	w0,	w27,	#1
+    add	w18,	w19,	w0
+    add	w0,	w4,	#1
     cmp	w0,	#96
     bge	main_457
 
 main_420:
-    mov	w23,	w0
-    mov	w6,	w14
-    str	w23,	[sp, #1752]
+    mov	w27,	w0
+    mov	w6,	w18
+    str	w27,	[sp, #1772]
 
-    str	w6,	[sp, #796]
+    str	w6,	[sp, #1620]
 
     b	main_421
 
 main_457:
-    mov	w12,	w14
+    mov	w14,	w18
 
 main_459:
-    lsl	w6,	w0,	#2
+    lsl	w8,	w0,	#2
     add	w0,	w0,	#1
-    mov	x6,	x6
-    add	x6,	sp,	x6
-    add	x6,	x6,	#16
-    ldr	w6,	[x6]
+    mov	x8,	x8
+    add	x8,	sp,	x8
+    add	x8,	x8,	#16
+    ldr	w8,	[x8]
 
-    add	w13,	w6,	w12
+    add	w15,	w8,	w14
     cmp	w0,	#100
     blt	main_458
 
 main_467:
     movz	w0,	#65535
-    ldr	w20,	[sp, #472]
+    ldr	w20,	[sp, #516]
 
-    ldr	w18,	[sp, #1416]
+    ldr	w18,	[sp, #1380]
 
-    sdiv	w0,	w13,	w0
-    lsl	w5,	w0,	#16
-    sub	w5,	w5,	w0,	lsl #0
-    sub	w0,	w13,	w5
+    sdiv	w0,	w15,	w0
+    lsl	w7,	w0,	#16
+    sub	w7,	w7,	w0,	lsl #0
+    sub	w0,	w15,	w7
     cmp	w20,	w18
     bge	main_472
 
 main_249:
     mov	w13,	w0
-    str	w13,	[sp, #1776]
+    str	w13,	[sp, #1860]
 
-    ldr	w20,	[sp, #472]
+    ldr	w20,	[sp, #516]
 
     mov	w9,	w20
-    str	w9,	[sp, #1764]
+    str	w9,	[sp, #1796]
 
     b	main_250
 
 main_458:
-    mov	w12,	w13
+    mov	w14,	w15
     b	main_459
 
 main_470:
@@ -2347,7 +2355,7 @@ main_472:
     movz	w0,	#0
     ldp	fp, lr, [sp, #0]
     
-    add	sp, sp, #2848
+    add	sp, sp, #2832
     ret
 
 

@@ -23,18 +23,18 @@ fib_3:
     stp	fp, lr, [sp, #80]
     
     adrp	x5, :got:memo.lut.fib
-    movz	x11,	#3
-    movz	x12,	#31353
-    movz	x23,	#65535
-    movz	x10,	#31161
-    mov	w21,	w2
-    movz	x9,	#31161
     mov	w28,	w1
+    movz	x11,	#3
     mov	w27,	w0
+    movz	x9,	#31161
+    movz	x10,	#31161
+    movz	x12,	#31353
+    mov	w21,	w2
+    movz	x23,	#65535
     ldr	x5, [x5, #:got_lo12:memo.lut.fib]
-    movk	x12,	#40503,	lsl #16
-    movk	x10,	#40503,	lsl #16
     movk	x9,	#40503,	lsl #16
+    movk	x10,	#40503,	lsl #16
+    movk	x12,	#40503,	lsl #16
     add	x17,	x27,	x12
     eor	x14,	x17,	x11
     lsr	x20,	x14,	#2
@@ -53,23 +53,23 @@ fib_3:
     lsl	w1,	w6,	#2
     add	w2,	w1,	w6,	lsl #4
     lsl	x9,	x2,	#0
-    add	x23,	x5,	x9
-    add	x24,	x23,	#8
-    ldr	w15,	[x23]
+    add	x19,	x5,	x9
+    add	x22,	x19,	#8
+    ldr	w15,	[x19]
 
     cmp	w15,	#0
     beq	fib_46
 
 fib_28:
-    ldr	w19,	[x24]
+    ldr	w20,	[x22]
 
-    cmp	w19,	w27
-    add	x22,	x24,	#4
+    cmp	w20,	w27
+    add	x24,	x22,	#4
     cset	w11,	eq
-    ldr	w14,	[x22]
+    ldr	w14,	[x24]
 
     cmp	w14,	w28
-    add	x26,	x22,	#4
+    add	x26,	x24,	#4
     cset	w15,	eq
     and	w1,	w15,	w11
     ldr	w4,	[x26]
@@ -81,7 +81,7 @@ fib_28:
     b	fib_53
 
 fib_42:
-    add	x24,	x23,	#4
+    add	x24,	x19,	#4
     ldr	w0,	[x24]
 
     ldp	x19, x20, [sp, #0]
@@ -96,8 +96,8 @@ fib_42:
 
 
 fib_46:
-    add	x22,	x24,	#4
-    add	x26,	x22,	#4
+    add	x24,	x22,	#4
+    add	x26,	x24,	#4
 
 fib_53:
     cmp	w28,	#0
@@ -110,28 +110,28 @@ fib_58:
 fib_68:
     add	w0,	w27,	#1
     sub	w1,	w28,	#1
-    add	w20,	w21,	#1
-    asr	w2,	w20,	#31
+    add	w23,	w21,	#1
+    asr	w2,	w23,	#31
     lsr	w18,	w2,	#31
-    add	w19,	w20,	w18
-    asr	w2,	w19,	#1
+    add	w20,	w23,	w18
+    asr	w2,	w20,	#1
     bl	fib
-    mov	w19,	w0
     sub	w2,	w27,	#2
     sub	w1,	w28,	#2
+    mov	w20,	w0
     asr	w18,	w2,	#31
-    lsr	w20,	w18,	#31
+    lsr	w23,	w18,	#31
     sub	w18,	w21,	#3
-    add	w25,	w2,	w20
+    add	w25,	w2,	w23
     asr	w2,	w18,	#31
     asr	w0,	w25,	#1
-    lsr	w20,	w2,	#31
-    add	w25,	w18,	w20
+    lsr	w23,	w2,	#31
+    add	w25,	w18,	w23
     asr	w2,	w25,	#1
-    lsl	w20,	w2,	#1
-    sub	w2,	w18,	w20
+    lsl	w23,	w2,	#1
+    sub	w2,	w18,	w23
     bl	fib
-    add	w0,	w0,	w19
+    add	w0,	w0,	w20
     b	fib_81
 
 fib_62:
@@ -150,12 +150,12 @@ fib_62:
 
 fib_81:
     movz	w8,	#1
-    add	x16,	x23,	#4
-    str	w8,	[x23]
+    add	x16,	x19,	#4
+    str	w8,	[x19]
 
-    str	w27,	[x24]
+    str	w27,	[x22]
 
-    str	w28,	[x22]
+    str	w28,	[x24]
 
     str	w21,	[x26]
 

@@ -9,7 +9,7 @@
 .globl graphColoring
 graphColoring:
 graphColoring_4:
-    sub	sp, sp, #160
+    sub	sp, sp, #144
     stp	x19, x20, [sp, #0]
     stp	x21, x22, [sp, #16]
     stp	x23, x24, [sp, #32]
@@ -17,203 +17,183 @@ graphColoring_4:
     stp	x27, x28, [sp, #64]
     stp	fp, lr, [sp, #80]
     
-    movz	fp,	#124
+    mov	x21,	x3
     mov	w22,	w1
     mov	x23,	x0
-    str	x3,	[sp, fp]
-
     cmp	w2,	#4
     beq	graphColoring_6
 
 graphColoring_46:
-    lsl	w28,	w2,	#2
+    lsl	w4,	w2,	#2
+    add	w8,	w2,	#1
+    mov	x27,	x21
+    add	x12,	x21,	#4
     movz	fp,	#124
-    movz	w16,	#1
-    ldr	x24,	[sp, fp]
+    add	x15,	x21,	#8
+    add	x5,	x21,	#12
+    movz	w24,	#1
+    add	x9,	x21,	x4
+    str	x9,	[sp, #104]
 
-    movz	fp,	#124
-    add	x15,	x24,	x28
-    add	w28,	w2,	#1
-    str	x15,	[sp, #104]
+    str	w8,	[sp, #132]
 
-    lsl	w8,	w28,	#2
-    ldr	x20,	[sp, fp]
+    str	x12,	[sp, fp]
 
-    movz	fp,	#124
-    str	x20,	[sp, #96]
+    movz	fp,	#116
+    str	x15,	[sp, #136]
 
-    ldr	x25,	[sp, fp]
+    str	x5,	[sp, #96]
 
-    movz	fp,	#124
-    add	x24,	x25,	#4
-    str	x24,	[sp, #112]
+    ldr	w19,	[sp, #132]
 
-    ldr	x26,	[sp, fp]
+    lsl	w10,	w19,	#2
+    add	x4,	x21,	x10
+    str	x4,	[sp, fp]
 
-    movz	fp,	#124
-    add	x19,	x26,	#8
-    add	w26,	w28,	#1
-    ldr	x9,	[sp, fp]
+    ldr	w20,	[sp, #132]
 
-    movz	fp,	#140
-    add	x24,	x9,	#12
-    str	x24,	[sp, fp]
-
-    mov	w24,	w16
-    movz	fp,	#124
-    ldr	x10,	[sp, fp]
-
-    movz	fp,	#132
-    add	x3,	x10,	x8
-    str	x3,	[sp, fp]
-
+    add	w19,	w20,	#1
 
 graphColoring_55:
     cmp	w24,	w22
     bgt	graphColoring_118
 
 graphColoring_58:
-    ldr	x9,	[sp, #104]
+    ldr	x16,	[sp, #104]
 
-    str	w24,	[x9]
+    str	w24,	[x16]
 
-    cmp	w28,	#4
+    ldr	w5,	[sp, #132]
+
+    cmp	w5,	#4
     beq	graphColoring_60
 
 graphColoring_96:
     movz	w8,	#1
-    str	w8,	[sp, #120]
+    str	w8,	[sp, #112]
 
 
 graphColoring_97:
-    ldr	w6,	[sp, #120]
+    ldr	w26,	[sp, #112]
 
-    cmp	w6,	w22
+    cmp	w26,	w22
     bgt	graphColoring_109
 
 graphColoring_100:
-    ldr	w27,	[sp, #120]
+    ldr	w2,	[sp, #112]
 
-    movz	fp,	#132
+    movz	fp,	#116
     mov	x0,	x23
     mov	w1,	w22
-    mov	w2,	w26
-    ldr	x25,	[sp, fp]
-
-    movz	fp,	#124
-    str	w27,	[x25]
-
     ldr	x3,	[sp, fp]
 
+    str	w2,	[x3]
+
+    mov	x3,	x21
+    mov	w2,	w19
     bl	graphColoring
     cmp	w0,	#0
     bne	graphColoring_110
 
 graphColoring_103:
-    movz	w11,	#0
-    movz	fp,	#132
-    ldr	x6,	[sp, fp]
+    movz	w1,	#0
+    movz	fp,	#116
+    ldr	x5,	[sp, fp]
 
-    str	w11,	[x6]
+    str	w1,	[x5]
 
-    ldr	w8,	[sp, #120]
+    ldr	w4,	[sp, #112]
 
-    add	w12,	w8,	#1
-    str	w12,	[sp, #120]
+    add	w18,	w4,	#1
+    str	w18,	[sp, #112]
 
     b	graphColoring_97
 
 graphColoring_110:
-    movz	w16,	#1
+    movz	w9,	#1
     b	graphColoring_106
 
 graphColoring_109:
-    movz	w16,	#0
+    movz	w9,	#0
     b	graphColoring_106
 
 graphColoring_60:
-    movz	w13,	#0
+    movz	w0,	#0
 
 graphColoring_61:
-    cmp	w13,	#4
+    cmp	w0,	#4
     bge	graphColoring_86
 
 graphColoring_64:
-    add	w15,	w13,	#1
-    lsl	w20,	w13,	#4
-    lsl	w0,	w13,	#2
-    movz	fp,	#124
-    add	x18,	x23,	x20
-    ldr	x10,	[sp, fp]
-
-    add	x21,	x10,	x0
-    ldr	w0,	[x21]
+    add	w2,	w0,	#1
+    lsl	w25,	w0,	#4
+    lsl	w13,	w0,	#2
+    add	x20,	x23,	x25
+    add	x12,	x21,	x13
+    ldr	w14,	[x12]
 
 
 graphColoring_69:
-    cmp	w15,	#4
+    cmp	w2,	#4
     bge	graphColoring_84
 
 graphColoring_72:
-    lsl	w4,	w15,	#2
-    add	x3,	x18,	x4
-    ldr	w5,	[x3]
+    lsl	w28,	w2,	#2
+    add	x25,	x20,	x28
+    ldr	w4,	[x25]
 
-    cmp	w5,	#0
+    cmp	w4,	#0
     beq	graphColoring_82
 
 graphColoring_76:
-    lsl	w8,	w15,	#2
-    movz	fp,	#124
-    ldr	x11,	[sp, fp]
+    lsl	w4,	w2,	#2
+    add	x1,	x21,	x4
+    ldr	w5,	[x1]
 
-    add	x7,	x11,	x8
-    ldr	w9,	[x7]
-
-    cmp	w9,	w0
+    cmp	w5,	w14
     bne	graphColoring_82
 
 graphColoring_87:
-    movz	w15,	#0
+    movz	w8,	#0
     b	graphColoring_88
 
 graphColoring_82:
-    add	w15,	w15,	#1
+    add	w2,	w2,	#1
     b	graphColoring_69
 
 graphColoring_84:
-    add	w13,	w13,	#1
+    add	w0,	w0,	#1
     b	graphColoring_61
 
 graphColoring_86:
-    movz	w15,	#1
+    movz	w8,	#1
 
 graphColoring_88:
-    cmp	w15,	#0
+    cmp	w8,	#0
     beq	graphColoring_105
 
 graphColoring_91:
-    ldr	x0,	[sp, #96]
-
-    ldr	w0,	[x0]
+    ldr	w0,	[x27]
 
     bl	putint
     movz	w0,	#32
     bl	putch
-    ldr	x20,	[sp, #112]
+    movz	fp,	#124
+    ldr	x28,	[sp, fp]
+
+    ldr	w0,	[x28]
+
+    bl	putint
+    movz	w0,	#32
+    bl	putch
+    ldr	x20,	[sp, #136]
 
     ldr	w0,	[x20]
 
     bl	putint
     movz	w0,	#32
     bl	putch
-    ldr	w0,	[x19]
-
-    bl	putint
-    movz	w0,	#32
-    bl	putch
-    movz	fp,	#140
-    ldr	x0,	[sp, fp]
+    ldr	x0,	[sp, #96]
 
     ldr	w0,	[x0]
 
@@ -222,24 +202,23 @@ graphColoring_91:
     bl	putch
     movz	w0,	#10
     bl	putch
-    movz	w16,	#1
+    movz	w9,	#1
     b	graphColoring_106
 
 graphColoring_105:
-    movz	w16,	#0
+    movz	w9,	#0
 
 graphColoring_106:
-    cmp	w16,	#0
+    cmp	w9,	#0
     bne	graphColoring_119
 
 graphColoring_113:
-    movz	w2,	#0
-    ldr	x3,	[sp, #104]
+    movz	w4,	#0
+    ldr	x9,	[sp, #104]
 
-    add	w18,	w24,	#1
-    str	w2,	[x3]
+    add	w24,	w24,	#1
+    str	w4,	[x9]
 
-    mov	w24,	w18
     b	graphColoring_55
 
 graphColoring_119:
@@ -258,46 +237,40 @@ graphColoring_7:
     bge	graphColoring_32
 
 graphColoring_10:
-    add	w0,	w5,	#1
-    lsl	w16,	w5,	#4
-    lsl	w19,	w5,	#2
-    movz	fp,	#124
-    add	x14,	x23,	x16
-    ldr	x6,	[sp, fp]
-
-    add	x17,	x6,	x19
-    ldr	w11,	[x17]
+    add	w16,	w5,	#1
+    lsl	w22,	w5,	#4
+    lsl	w0,	w5,	#2
+    add	x20,	x23,	x22
+    add	x4,	x21,	x0
+    ldr	w1,	[x4]
 
 
 graphColoring_15:
-    cmp	w0,	#4
+    cmp	w16,	#4
     bge	graphColoring_30
 
 graphColoring_18:
-    lsl	w22,	w0,	#2
-    add	x21,	x14,	x22
-    ldr	w24,	[x21]
+    lsl	w4,	w16,	#2
+    add	x0,	x20,	x4
+    ldr	w6,	[x0]
 
-    cmp	w24,	#0
+    cmp	w6,	#0
     beq	graphColoring_28
 
 graphColoring_22:
-    lsl	w2,	w0,	#2
-    movz	fp,	#124
-    ldr	x7,	[sp, fp]
+    lsl	w3,	w16,	#2
+    add	x0,	x21,	x3
+    ldr	w4,	[x0]
 
-    add	x28,	x7,	x2
-    ldr	w2,	[x28]
-
-    cmp	w2,	w11
+    cmp	w4,	w1
     bne	graphColoring_28
 
 graphColoring_33:
-    movz	w16,	#0
+    movz	w7,	#0
     b	graphColoring_34
 
 graphColoring_28:
-    add	w0,	w0,	#1
+    add	w16,	w16,	#1
     b	graphColoring_15
 
 graphColoring_30:
@@ -305,43 +278,32 @@ graphColoring_30:
     b	graphColoring_7
 
 graphColoring_32:
-    movz	w16,	#1
+    movz	w7,	#1
 
 graphColoring_34:
-    cmp	w16,	#0
+    cmp	w7,	#0
     beq	graphColoring_115
 
 graphColoring_37:
-    movz	fp,	#124
-    ldr	x24,	[sp, fp]
-
-    ldr	w0,	[x24]
+    mov	x26,	x21
+    ldr	w0,	[x26]
 
     bl	putint
     movz	w0,	#32
     bl	putch
-    movz	fp,	#124
-    ldr	x20,	[sp, fp]
-
-    add	x28,	x20,	#4
-    ldr	w0,	[x28]
+    add	x19,	x21,	#4
+    ldr	w0,	[x19]
 
     bl	putint
     movz	w0,	#32
     bl	putch
-    movz	fp,	#124
-    ldr	x21,	[sp, fp]
-
-    add	x18,	x21,	#8
-    ldr	w0,	[x18]
+    add	x23,	x21,	#8
+    ldr	w0,	[x23]
 
     bl	putint
     movz	w0,	#32
     bl	putch
-    movz	fp,	#124
-    ldr	x22,	[sp, fp]
-
-    add	x18,	x22,	#12
+    add	x18,	x21,	#12
     ldr	w0,	[x18]
 
     bl	putint
@@ -363,7 +325,7 @@ graphColoring_116:
     ldp	x27, x28, [sp, #64]
     ldp	fp, lr, [sp, #80]
     
-    add	sp, sp, #160
+    add	sp, sp, #144
     ret
 
 
@@ -373,88 +335,88 @@ main_0:
     sub	sp, sp, #96
     stp	fp, lr, [sp, #0]
     
-    movz	w25,	#1
+    movz	w23,	#0
+    movz	w26,	#1
+    movz	w28,	#0
     movz	w27,	#1
-    add	x21,	sp,	#32
+    add	x0,	sp,	#32
+    movz	w22,	#1
+    movz	w25,	#1
+    add	x21,	sp,	#48
     movz	w19,	#0
-    movz	w26,	#0
-    movz	w1,	#1
-    movz	w24,	#1
-    movz	w23,	#1
-    add	x28,	sp,	#92
-    movz	w22,	#0
-    add	x0,	sp,	#16
     add	x18,	x0,	#12
     add	x3,	x0,	#8
     add	x2,	x0,	#4
-    str	w26,	[x0]
-
-    add	x26,	sp,	#48
-    str	w25,	[x2]
-
-    add	x25,	x21,	#8
-    movz	w2,	#0
-    str	w24,	[x3]
+    str	w28,	[x0]
 
     add	x24,	x21,	#4
-    movz	w3,	#1
-    str	w23,	[x18]
+    movz	w28,	#1
+    str	w27,	[x2]
+
+    movz	w27,	#1
+    movz	w2,	#1
+    str	w26,	[x3]
+
+    add	x26,	sp,	#64
+    movz	w3,	#0
+    str	w25,	[x18]
+
+    add	x25,	x21,	#8
+    movz	w18,	#1
+    add	x1,	x26,	#4
+    str	w18,	[x21]
 
     movz	w18,	#0
-    movz	w23,	#1
-    str	w3,	[x21]
+    str	w3,	[x24]
 
-    add	x3,	sp,	#64
-    str	w2,	[x24]
-
-    add	x2,	x26,	#8
+    movz	w3,	#1
     add	x24,	x21,	#12
-    str	w1,	[x25]
+    str	w2,	[x25]
 
-    add	x20,	x3,	#12
-    add	x21,	x3,	#4
-    movz	w25,	#1
-    add	x1,	x26,	#4
-    str	w19,	[x24]
-
-    movz	w19,	#0
-    movz	w24,	#0
-    str	w27,	[x26]
-
-    add	x27,	sp,	#88
-    str	w25,	[x1]
-
+    movz	w21,	#0
     movz	w25,	#0
-    movz	w1,	#1
-    str	w24,	[x2]
+    add	x2,	x26,	#8
+    str	w21,	[x24]
 
-    add	x2,	x26,	#12
-    add	x26,	sp,	#84
-    str	w1,	[x2]
+    movz	w24,	#1
+    str	w28,	[x26]
 
-    movz	w1,	#0
+    add	x28,	sp,	#28
+    str	w27,	[x1]
+
+    movz	w27,	#0
+    add	x1,	x26,	#12
+    str	w25,	[x2]
+
+    add	x26,	sp,	#20
     movz	w2,	#0
-    str	w23,	[x3]
-
-    add	x23,	x3,	#8
-    str	w22,	[x21]
-
-    add	x3,	sp,	#80
-    movz	w21,	#1
-    str	w21,	[x23]
-
-    str	w25,	[x20]
-
-    str	w19,	[x3]
-
-    str	w18,	[x26]
-
-    str	w2,	[x27]
-
-    movz	w2,	#0
-    str	w1,	[x28]
+    str	w3,	[x1]
 
     movz	w1,	#3
+    add	x3,	sp,	#80
+    add	x20,	x3,	#12
+    add	x21,	x3,	#4
+    str	w24,	[x3]
+
+    str	w23,	[x21]
+
+    add	x23,	x3,	#8
+    add	x3,	sp,	#16
+    str	w22,	[x23]
+
+    str	w27,	[x20]
+
+    add	x27,	sp,	#24
+    movz	w20,	#0
+    str	w20,	[x3]
+
+    str	w19,	[x26]
+
+    str	w18,	[x27]
+
+    str	w2,	[x28]
+
+    movz	w2,	#0
     bl	graphColoring
     cmp	w0,	#0
     bne	main_31

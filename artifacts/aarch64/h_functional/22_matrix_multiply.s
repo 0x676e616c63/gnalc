@@ -18,8 +18,8 @@ main_0:
     movz	w1,	#0
     add	x0,	sp,	#16
     bl	memset
-    movz	w1,	#0
     movz	w2,	#40000
+    movz	w1,	#0
     movz	fp,	#40016
     add	x0,	sp,	fp
     bl	memset
@@ -95,10 +95,10 @@ main_33:
 
 main_36:
     lsl	w18,	w19,	#2
-    add	x26,	x25,	x18
+    add	x21,	x25,	x18
     bl	getint
     add	w19,	w19,	#1
-    str	w0,	[x26]
+    str	w0,	[x21]
 
     b	main_33
 

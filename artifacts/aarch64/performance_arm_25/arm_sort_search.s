@@ -51,12 +51,12 @@ main_6:
     movz	w3,	#10000
     str	w9,	[x19]
 
-    lsl	w18,	w28,	#2
     add	w10,	w28,	#1
+    lsl	w18,	w28,	#2
     msub	w19,	w0,	w7,	w23
 
-    mov	x6,	x18
     movz	w28,	#10000
+    mov	x6,	x18
     add	w0,	w23,	w25
     add	x6,	sp,	x6
     lsl	w23,	w10,	#2
@@ -64,8 +64,8 @@ main_6:
     add	w9,	w0,	w25
     add	x8,	sp,	x8
     add	x6,	x6,	#16
-    sdiv	w20,	w9,	w4
     add	w14,	w9,	w25
+    sdiv	w20,	w9,	w4
     add	x8,	x8,	#16
     str	w19,	[x6]
 

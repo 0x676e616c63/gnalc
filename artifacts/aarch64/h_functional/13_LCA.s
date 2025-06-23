@@ -42,8 +42,8 @@ tree_2:
     stp	x27, x28, [sp, #64]
     stp	fp, lr, [sp, #80]
     
-    movz	w20,	#0
     adrp	x4, :got:f
+    movz	w20,	#0
     adrp	x28, :got:dep
     lsl	w12,	w0,	#2
     ldr	x28, [x28, #:got_lo12:dep]
@@ -274,10 +274,10 @@ main_59:
     movz	w13,	#0
     sub	w3,	w13,	w21
     cmp	w28,	#0
-    movz	w16,	#1
     movz	w7,	#16191
     adrp	x14, :got:dep
     csel	w21,	w3,	w21,	ne
+    movz	w16,	#1
     cset	w12,	ne
     movk	w7,	#16191,	lsl #16
     ldr	x14, [x14, #:got_lo12:dep]
@@ -384,16 +384,16 @@ main_135:
     movz	w6,	#0
     sub	w11,	w6,	w25
     cmp	w23,	#0
-    add	w20,	w20,	#1
-    adrp	x1, :got:f
     cset	w28,	ne
+    lsl	w3,	w27,	#2
+    adrp	x1, :got:f
     adrp	x13, :got:to
+    add	w20,	w20,	#1
+    adrp	x22, :got:head
     csel	w10,	w11,	w25,	ne
     lsl	w6,	w27,	#2
-    lsl	w3,	w27,	#2
     adrp	x16, :got:next
     lsl	w9,	w19,	#2
-    adrp	x22, :got:head
     ldr	x13, [x13, #:got_lo12:to]
     add	x11,	x13,	x3
     str	w10,	[x11]
@@ -593,11 +593,11 @@ main_264:
     ldr	w7,	[x16]
 
     cmp	w23,	w7
-    cset	w19,	ne
+    adrp	x18, :got:f
     csel	w27,	w23,	w0,	ne
     csel	w9,	w7,	w13,	ne
     sub	w5,	w24,	#1
-    adrp	x18, :got:f
+    cset	w19,	ne
     adrp	x12, :got:f
     lsl	w23,	w27,	#4
     lsl	w24,	w9,	#4
@@ -616,10 +616,10 @@ main_264:
     ldr	w20,	[x19]
 
     cmp	w11,	w20
-    cset	w23,	ne
     csel	w22,	w20,	w9,	ne
     csel	w19,	w11,	w27,	ne
     sub	w24,	w5,	#1
+    cset	w23,	ne
     adrp	x6, :got:f
     adrp	x0, :got:f
     lsl	w26,	w22,	#4
@@ -685,8 +685,8 @@ main_264:
     ldr	w17,	[x11]
 
     cmp	w0,	w17
-    cset	w14,	ne
     adrp	x27, :got:f
+    cset	w14,	ne
     csel	w6,	w17,	w2,	ne
     csel	w4,	w0,	w7,	ne
     sub	w9,	w13,	#1
