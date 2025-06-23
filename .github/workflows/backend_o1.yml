@@ -2,7 +2,7 @@ name: Gnalc Test - Backend O1
 
 on:
   push:
-    branches: [ "main", "backendv3.0" ]
+    branches: [ "main", "backendv3.0", "ci" ]
     paths:
       - 'lib/**'
       - 'include/**'
@@ -11,7 +11,7 @@ on:
       - 'CMakeLists.txt'
       - '.github/workflows/backend_o1.yml'
   pull_request:
-    branches: [ "main", "backendv3.0" ]
+    branches: [ "main", "backendv3.0", "ci" ]
     paths:
       - 'lib/**'
       - 'include/**'

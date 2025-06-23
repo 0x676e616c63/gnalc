@@ -1,0 +1,139 @@
+name: Gnalc Compile Artifacts
+
+on:
+  push:
+    branches: [ "main", "ci", "iropt", "backendv3.0" ]
+    paths:
+      - 'lib/**'
+      - 'include/**'
+      - 'test/**'
+      - 'CMakeLists.txt'
+      - 'compile_artifacts.yml'
+  pull_request:
+    branches: [ "main", "ci", "iropt", "backendv3.0" ]
+    paths:
+      - 'lib/**'
+      - 'include/**'
+      - 'test/**'
+      - 'CMakeLists.txt'
+      - 'compile_artifacts.yml'
+
+env:
+  BUILD_TYPE: Release
+  ARTIFACTS_BRANCH: "artifacts"
+  TESTDATA_URL: "https://caozhanhao.coding.net/p/gnalc-test-data/d/contest/git/archive/v1.0.0.zip"
+  TESTDATA_VERSION: "v1.0.0"
+  TESTDATA_DIR: "${{ github.workspace }}/testdata"
+  TESTDATA_CACHE_DIR: "${{ github.workspace }}/testdata_cache"
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Create Cache Directory
+        run: mkdir -p ${{ env.TESTDATA_CACHE_DIR }}
+
+      - name: Cache Test Data
+        id: cache-testdata
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.TESTDATA_CACHE_DIR }}
+          key: testdata-zip-${{ hashFiles('.github/testdata_version.txt') }}
+          restore-keys: testdata-zip-
+
+      - name: Download Test Data (if not cached)
+        if: steps.cache-testdata.outputs.cache-hit != 'true'
+        run: |
+          curl -L ${{ env.TESTDATA_URL }} -o ${{ env.TESTDATA_CACHE_DIR }}/testdata.zip
+          echo ${{ env.TESTDATA_VERSION }} > .github/testdata_version.txt
+
+      - name: Extract testcases
+        run: |
+          mkdir -p ${{ env.TESTCASE_DIR }}
+          unzip -q ${{ env.ZIP_CACHE_DIR }}/testdata.zip -d ${{ env.TESTCASE_DIR }}
+
+      - name: Extract branch name
+        id: branch-name
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "branch=${{ github.head_ref }}" >> $GITHUB_OUTPUT
+          else
+            echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure CMake
+        run: mkdir ${{github.workspace}}/build && cd ${{github.workspace}}/build && cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} ..
+
+      - name: Build Gnalc
+        working-directory: ${{github.workspace}}/build
+        run: make gnalc -j$(nproc)
+
+      - name: Prepare artifacts directory
+        run: |
+          mkdir -p artifacts
+          echo "ARTIFACTS_DIR=$(pwd)/artifacts" >> $GITHUB_ENV
+
+      - name: Compile test cases
+        env:
+          BRANCH_NAME: ${{ steps.branch-name.outputs.branch }}
+#          TODO: COMPILE_OPTIONS
+          COMPILE_OPTIONS: >
+            ${{ 
+              github.ref_name == 'iropt' && '-O1' || 
+              github.ref_name == 'backendv3.0' && '-O1' || 
+              '-O1'
+            }}
+        run: |
+          base_path="${{ env.TESTCASE_DIR }}"
+          find "$base_path" -type f -name "*.sy" | while read testcase; do
+            rel_path="${testcase#$base_path/}"
+            dir_path=$(dirname "$rel_path")
+            test_name=$(basename "$testcase" .sy)
+            test_id="${dir_path//\//_}_${test_name}"
+
+            mkdir -p "$ARTIFACTS_DIR/llvm/$BRANCH_NAME/$dir_path"
+            mkdir -p "$ARTIFACTS_DIR/aarch64/$BRANCH_NAME/$dir_path"
+
+            ./build/gnalc -S "$testcase" -emit-llvm \
+              -o "$ARTIFACTS_DIR/llvm/$BRANCH_NAME/$dir_path/$test_id.ll" \
+              $COMPILE_OPTIONS
+
+            ./build/gnalc -S "$testcase" \
+              -o "$ARTIFACTS_DIR/aarch64/$BRANCH_NAME/$dir_path/$test_id.s" \
+              $COMPILE_OPTIONS
+          done
+
+      - name: Checkout artifacts branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.ARTIFACTS_BRANCH }}
+          path: artifacts-branch
+
+      - name: Update artifacts branch
+        env:
+          SSHK: ${{ secrets.GH_PAT }}
+        run: |
+          find artifacts-branch -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+          
+          cp -R ${{ env.ARTIFACTS_DIR }}/* artifacts-branch/
+          
+          cd artifacts-branch
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          git add .
+          if git diff-index --quiet HEAD; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update artifacts from ${{ github.sha }}"
+          
+            mkdir -p $HOME/.ssh
+            echo "$SSHK" > $HOME/.ssh/ssh.keyAdd commentMore actions
+            chmod 600 $HOME/.ssh/ssh.key
+            export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/ssh.key"
+            git push origin ${{ env.ARTIFACTS_BRANCH }} 
+          fi
