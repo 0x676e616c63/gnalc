@@ -1,5 +1,9 @@
 name: Gnalc Compile Artifacts
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
@@ -27,7 +31,7 @@ env:
   TESTDATA_ZIP_URL: "https://github.com/caozhanhao/gnalc-test-data/releases/download/v1.0.0/testdata.zip"
   TESTDATA_DIR: "${{ github.workspace }}/testdata"
   ZIP_CACHE_DIR: "${{ github.workspace }}/testdata_cache"
-  ARTIFACTS_COMMIT_THRESHOLD: 0
+  ARTIFACTS_COMMIT_THRESHOLD: 10
 
 jobs:
   compile:
