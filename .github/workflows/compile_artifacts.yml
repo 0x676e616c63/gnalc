@@ -123,31 +123,31 @@ jobs:
           echo "ARTIFACTS_DIR=$(pwd)/artifacts" >> $GITHUB_ENV
 
       - name: Set compile options
-        id: set-options
-        run: echo "COMPILE_OPTIONS=-O1" >> $GITHUB_ENV
+        run: |
+          echo "COMPILE_OPTIONS=-O1" >> $GITHUB_ENV
 
       - name: Compile testcases
         run: |
           base_path="${{ env.TESTDATA_DIR }}"
           find "$base_path" -type f -name "*.sy" | while read testcase; do
-            rel_path="${testcase#$base_path/}"
-            dir_path=$(dirname "$rel_path")
-            test_name=$(basename "$testcase" .sy)
-               
-            if [[ "$dir_path" == *"bad_tests"* ]]; then
-               continue
-            fi
-
-            mkdir -p "$ARTIFACTS_DIR/artifacts/llvm/$dir_path"
-            mkdir -p "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path"
-
-#            ./build/gnalc --log none -S "$testcase" -emit-llvm \
-#              -o "$ARTIFACTS_DIR/artifacts/llvm/$dir_path/$test_name.ll" \
-#              ${{ env.COMPILE_OPTIONS }}
-
-            ./build/gnalc --log none -S "$testcase" \
-              -o "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.s" \
-              ${{ env.COMPILE_OPTIONS }}
+          rel_path="${testcase#$base_path/}"
+          dir_path=$(dirname "$rel_path")
+          test_name=$(basename "$testcase" .sy)
+          
+          if [[ "$dir_path" == *"bad_tests"* ]]; then
+            continue
+          fi
+          
+          mkdir -p "$ARTIFACTS_DIR/artifacts/llvm/$dir_path"
+          mkdir -p "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path"
+          
+           #./build/gnalc --log none -S "$testcase" -emit-llvm \
+           #  -o "$ARTIFACTS_DIR/artifacts/llvm/$dir_path/$test_name.ll" \
+           #  ${{ env.COMPILE_OPTIONS }}
+          
+          ./build/gnalc --log none -S "$testcase" \
+          -o "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.s" \
+          ${{ env.COMPILE_OPTIONS }}
           done
 
       - name: Checkout artifacts branch for update
