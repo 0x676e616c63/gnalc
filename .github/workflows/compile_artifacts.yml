@@ -1,5 +1,8 @@
 name: Gnalc Compile Artifacts
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [ "main", "ci", "iropt", "backendv3.0" ]
@@ -21,7 +24,7 @@ on:
 env:
   BUILD_TYPE: Release
   ARTIFACTS_BRANCH: "artifacts"
-  TESTDATA_ZIP_REPO: "https://e.coding.net/caozhanhao/gnalc-test-data/zip.git"
+  TESTDATA_ZIP_URL: "https://github.com/caozhanhao/gnalc-test-data/releases/download/v1.0.0/testdata.zip"
   TESTDATA_DIR: "${{ github.workspace }}/testdata"
   ZIP_CACHE_DIR: "${{ github.workspace }}/testdata_cache"
 
@@ -32,6 +35,8 @@ jobs:
     steps:
       - name: Checkout Source
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true    # ensure GITHUB_TOKEN is available for later pushes
 
       - name: Create Cache Directory
         run: mkdir -p ${{ env.ZIP_CACHE_DIR }}
@@ -40,18 +45,15 @@ jobs:
         id: cache-zip
         uses: actions/cache@v3
         with:
-          path: ${{ env.ZIP_CACHE_DIR }}
-          key: testcases-zip-${{ hashFiles('.github/testcases_version.txt') }}
+          path: ${{ env.ZIP_CACHE_DIR }}/testdata.zip
+          key: testcases-zip-v1.0.0
           restore-keys: testcases-zip-
 
-      - name: Clone testdata repository (if not cached)
+      - name: Download Test Data Zip (if not cached)
         if: steps.cache-zip.outputs.cache-hit != 'true'
         run: |
-          git clone --depth 1 ${{ env.TESTDATA_ZIP_REPO }} testdata-repo
-          cp testdata-repo/testdata.zip ${{ env.ZIP_CACHE_DIR }}/
-          cd testdata-repo
-          git rev-parse HEAD > ../.github/testcases_version.txt
-          echo "Testdata updated to $(cat ../.github/testcases_version.txt)"
+          curl -L -o ${{ env.ZIP_CACHE_DIR }}/testdata.zip ${{ env.TESTDATA_ZIP_URL }}
+          echo "Testdata zip downloaded from ${{ env.TESTDATA_ZIP_URL }}"
 
       - name: Extract testcases
         run: |
@@ -59,13 +61,13 @@ jobs:
           unzip -q ${{ env.ZIP_CACHE_DIR }}/testdata.zip -d ${{ env.TESTDATA_DIR }}
           echo "Testcases extracted to ${{ env.TESTDATA_DIR }}"
 
-      - name: Extract branch name
+      - name: Extract Branch Name
         id: branch-name
         run: |
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             echo "branch=${{ github.head_ref }}" >> $GITHUB_OUTPUT
           else
-            echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+            echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Configure CMake
@@ -75,21 +77,26 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: make gnalc -j$(nproc)
 
-      - name: Prepare artifacts directory
+      - name: Prepare Artifacts Directory
         run: |
           mkdir -p artifacts
           echo "ARTIFACTS_DIR=$(pwd)/artifacts" >> $GITHUB_ENV
 
-      - name: Compile test cases
+      # TODO: COMPILE_OPTIONS
+      - name: Set Compile Options
+        id: set-options
+        run: |
+          if [ "${{ github.ref_name }}" == "iropt" ]; then
+            echo "COMPILE_OPTIONS=-O1" >> $GITHUB_ENV
+          elif [ "${{ github.ref_name }}" == "backendv3.0" ]; then
+            echo "COMPILE_OPTIONS=-O1" >> $GITHUB_ENV
+          else
+            echo "COMPILE_OPTIONS=-O1" >> $GITHUB_ENV
+          fi
+
+      - name: Compile Testcases
         env:
           BRANCH_NAME: ${{ steps.branch-name.outputs.branch }}
-#          TODO: COMPILE_OPTIONS
-          COMPILE_OPTIONS: >
-            ${{ 
-              github.ref_name == 'iropt' && '-O1' || 
-              github.ref_name == 'backendv3.0' && '-O1' || 
-              '-O1'
-            }}
         run: |
           base_path="${{ env.TESTDATA_DIR }}"
           find "$base_path" -type f -name "*.sy" | while read testcase; do
@@ -98,27 +105,27 @@ jobs:
             test_name=$(basename "$testcase" .sy)
             test_id="${dir_path//\//_}_${test_name}"
 
-            mkdir -p "$ARTIFACTS_DIR/llvm/$BRANCH_NAME/$dir_path"
-            mkdir -p "$ARTIFACTS_DIR/aarch64/$BRANCH_NAME/$dir_path"
+            mkdir -p "$ARTIFACTS_DIR/$BRANCH_NAME/llvm/$dir_path"
+            mkdir -p "$ARTIFACTS_DIR/$BRANCH_NAME/aarch64/$dir_path"
 
-            ./build/gnalc -S "$testcase" -emit-llvm \
-              -o "$ARTIFACTS_DIR/llvm/$BRANCH_NAME/$dir_path/$test_id.ll" \
-              $COMPILE_OPTIONS
+            ./build/gnalc --log none -S "$testcase" -emit-llvm \
+              -o "$ARTIFACTS_DIR/$BRANCH_NAME/llvm/$dir_path/$test_id.ll" \
+              ${{ env.COMPILE_OPTIONS }}
 
-            ./build/gnalc -S "$testcase" \
-              -o "$ARTIFACTS_DIR/aarch64/$BRANCH_NAME/$dir_path/$test_id.s" \
-              $COMPILE_OPTIONS
+            ./build/gnalc --log none -S "$testcase" \
+              -o "$ARTIFACTS_DIR/$BRANCH_NAME/aarch64/$dir_path/$test_id.s" \
+              ${{ env.COMPILE_OPTIONS }}
           done
 
-      - name: Checkout artifacts branch
+      - name: Checkout Artifacts Branch
         uses: actions/checkout@v4
         with:
           ref: ${{ env.ARTIFACTS_BRANCH }}
           path: artifacts-branch
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
 
-      - name: Update artifacts branch
-        env:
-          SSHK: ${{ secrets.GH_PAT }}
+      - name: Update Artifacts Branch
         run: |
           find artifacts-branch -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
           
