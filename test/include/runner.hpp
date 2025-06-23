@@ -163,7 +163,7 @@ static CheckResult check_ir_asm(const CheckIRAsmData &data, bool only_run_fronte
     return {syout, output, time_elapsed};
 }
 
-static std::string prepare_sylib(const std::string &global_tmp_dir, bool only_run_frontend) {
+static std::string prepare_sylib(const std::string &global_tmp_dir, bool only_run_frontend, const std::string &sylibc = cfg::sylibc) {
     std::string sylib_to_link;
     if (only_run_frontend) {
         sylib_to_link = global_tmp_dir + "/sylib.ll";
@@ -177,7 +177,7 @@ static std::string prepare_sylib(const std::string &global_tmp_dir, bool only_ru
         // std::string lib_command = format("clang++ -O3 -S -emit-llvm {} -o {} "
         std::string lib_command = format("clang -S -emit-llvm {} -o {} "
                                          "&& sed '/^target datalayout/d' {} -i",
-                                         cfg::sylibc, sylib_to_link, sylib_to_link);
+                                         sylibc, sylib_to_link, sylib_to_link);
 
         println("Running '{}'.", lib_command);
         std::system(lib_command.c_str());
@@ -186,7 +186,7 @@ static std::string prepare_sylib(const std::string &global_tmp_dir, bool only_ru
         sylib_to_link = global_tmp_dir + "/sylib.a";
 
         std::string lib_command =
-            format("{} -c {} -o {} && ar rcs {} {}", cfg::gcc_arm_command, cfg::sylibc, sylibo, sylib_to_link, sylibo);
+            format("{} -c {} -o {} && ar rcs {} {}", cfg::gcc_arm_command, sylibc, sylibo, sylib_to_link, sylibo);
 
         println("Running '{}'.", lib_command);
         std::system(lib_command.c_str());

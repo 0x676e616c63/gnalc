@@ -1,7 +1,7 @@
 name: Gnalc Compile Artifacts
 
 concurrency:
-  group: ${{ github.workflow }}
+  group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
 permissions:
@@ -27,7 +27,8 @@ on:
 
 env:
   BUILD_TYPE: Release
-  ARTIFACTS_BRANCH: "artifacts"
+  ARTIFACTS_BRANCH: "artifacts-${{ github.ref_name }}"
+  TESTDATA_VERSION: "v1.0.0"
   TESTDATA_ZIP_URL: "https://github.com/caozhanhao/gnalc-test-data/releases/download/v1.0.0/testdata.zip"
   TESTDATA_DIR: "${{ github.workspace }}/testdata"
   ZIP_CACHE_DIR: "${{ github.workspace }}/testdata_cache"
@@ -92,7 +93,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ env.ZIP_CACHE_DIR }}/testdata.zip
-          key: testcases-zip-v1.0.0
+          key: testcases-zip-${{ env.TESTDATA_VERSION }}
           restore-keys: testcases-zip-
 
       - name: Download test data zip (if not cached)
