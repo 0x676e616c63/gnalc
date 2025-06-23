@@ -33,10 +33,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout Artifacts Branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.ARTIFACTS_BRANCH }}
+          path: artifacts-branch
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+
+      - name: Compare Commit SHA
+        id: check
+        run: |
+          LAST=$(cat artifacts-branch/last_run.txt 2>/dev/null || echo "")
+          echo "Previous run was on: $LAST"
+          echo "::set-output name=previous::$LAST"
+          echo "::set-output name=current::${GITHUB_SHA}"
+
+      - name: Skip if already ran on this commit
+        if: steps.check.outputs.previous == steps.check.outputs.current
+        run: |
+          echo "This commit (${GITHUB_SHA}) has already been processed."
+          exit 0
+
       - name: Checkout Source
         uses: actions/checkout@v4
         with:
-          persist-credentials: true    # ensure GITHUB_TOKEN is available for later pushes
+          persist-credentials: true
 
       - name: Create Cache Directory
         run: mkdir -p ${{ env.ZIP_CACHE_DIR }}
@@ -53,29 +75,20 @@ jobs:
         if: steps.cache-zip.outputs.cache-hit != 'true'
         run: |
           curl -L -o ${{ env.ZIP_CACHE_DIR }}/testdata.zip ${{ env.TESTDATA_ZIP_URL }}
-          echo "Testdata zip downloaded from ${{ env.TESTDATA_ZIP_URL }}"
 
       - name: Extract testcases
         run: |
           mkdir -p ${{ env.TESTDATA_DIR }}
           unzip -q ${{ env.ZIP_CACHE_DIR }}/testdata.zip -d ${{ env.TESTDATA_DIR }}
-          echo "Testcases extracted to ${{ env.TESTDATA_DIR }}"
-
-      - name: Extract Branch Name
-        id: branch-name
-        run: |
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            echo "branch=${{ github.head_ref }}" >> $GITHUB_OUTPUT
-          else
-            echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          fi
 
       - name: Configure CMake
-        run: mkdir ${{github.workspace}}/build && cd ${{github.workspace}}/build && cmake -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} ..
+        run: |
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} ..
 
       - name: Build Gnalc
-        working-directory: ${{github.workspace}}/build
-        run: make gnalc -j$(nproc)
+        run: make -C build gnalc -j$(nproc)
 
       - name: Prepare Artifacts Directory
         run: |
@@ -85,39 +98,29 @@ jobs:
       # TODO: COMPILE_OPTIONS
       - name: Set Compile Options
         id: set-options
-        run: |
-          if [ "${{ github.ref_name }}" == "iropt" ]; then
-            echo "COMPILE_OPTIONS=-O1" >> $GITHUB_ENV
-          elif [ "${{ github.ref_name }}" == "backendv3.0" ]; then
-            echo "COMPILE_OPTIONS=-O1" >> $GITHUB_ENV
-          else
-            echo "COMPILE_OPTIONS=-O1" >> $GITHUB_ENV
-          fi
+        run: echo "COMPILE_OPTIONS=-O1" >> $GITHUB_ENV
 
       - name: Compile Testcases
-        env:
-          BRANCH_NAME: ${{ steps.branch-name.outputs.branch }}
         run: |
           base_path="${{ env.TESTDATA_DIR }}"
           find "$base_path" -type f -name "*.sy" | while read testcase; do
             rel_path="${testcase#$base_path/}"
             dir_path=$(dirname "$rel_path")
             test_name=$(basename "$testcase" .sy)
-            test_id="${dir_path//\//_}_${test_name}"
 
-            mkdir -p "$ARTIFACTS_DIR/$BRANCH_NAME/llvm/$dir_path"
-            mkdir -p "$ARTIFACTS_DIR/$BRANCH_NAME/aarch64/$dir_path"
+            mkdir -p "$ARTIFACTS_DIR/artifacts/llvm/$dir_path"
+            mkdir -p "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path"
 
             ./build/gnalc --log none -S "$testcase" -emit-llvm \
-              -o "$ARTIFACTS_DIR/$BRANCH_NAME/llvm/$dir_path/$test_id.ll" \
+              -o "$ARTIFACTS_DIR/artifacts/llvm/$dir_path/$test_name.ll" \
               ${{ env.COMPILE_OPTIONS }}
 
             ./build/gnalc --log none -S "$testcase" \
-              -o "$ARTIFACTS_DIR/$BRANCH_NAME/aarch64/$dir_path/$test_id.s" \
+              -o "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.s" \
               ${{ env.COMPILE_OPTIONS }}
           done
 
-      - name: Checkout Artifacts Branch
+      - name: Checkout artifacts branch for update
         uses: actions/checkout@v4
         with:
           ref: ${{ env.ARTIFACTS_BRANCH }}
@@ -125,17 +128,35 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: true
 
-      - name: Update Artifacts Branch
+      - name: Clean out old artifacts
         run: |
-          find artifacts-branch -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
-          
-          cp -R ${{ env.ARTIFACTS_DIR }}/* artifacts-branch/
-          
+          rm -rf artifacts-branch/*
+
+      - name: Copy new artifacts
+        run: |
+          cp -R artifacts/* artifacts-branch/
+
+      - name: Generate metadata files
+        run: |
+          TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          cat > artifacts-branch/README.md <<EOF
+          # Gnalc Artifacts
+
+          - **Branch:** ${{ github.ref_name }}
+          - **Generated at:** $TS (UTC)
+          - **Commit SHA:** ${{ github.sha }}
+
+          Artifacts built by GitHub Actions.  
+          EOF
+
+          echo "${{ github.sha }}" > artifacts-branch/last_run.txt
+
+      - name: Commit & Push updates
+        run: |
           cd artifacts-branch
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
-          git add .
+          git add README.md last_run.txt artifacts/
           if git diff-index --quiet HEAD; then
             echo "No changes to commit"
           else
