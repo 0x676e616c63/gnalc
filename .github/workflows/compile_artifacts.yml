@@ -8,7 +8,7 @@ on:
       - 'include/**'
       - 'test/**'
       - 'CMakeLists.txt'
-      - 'compile_artifacts.yml'
+      - '.github/workflows/compile_artifacts.yml'
   pull_request:
     branches: [ "main", "ci", "iropt", "backendv3.0" ]
     paths:
@@ -16,7 +16,7 @@ on:
       - 'include/**'
       - 'test/**'
       - 'CMakeLists.txt'
-      - 'compile_artifacts.yml'
+      - '.github/workflows/compile_artifacts.yml'
 
 env:
   BUILD_TYPE: Release
@@ -53,8 +53,8 @@ jobs:
 
       - name: Extract testcases
         run: |
-          mkdir -p ${{ env.TESTCASE_DIR }}
-          unzip -q ${{ env.ZIP_CACHE_DIR }}/testdata.zip -d ${{ env.TESTCASE_DIR }}
+          mkdir -p ${{ env.TESTDATA_DIR }}
+          unzip -q ${{ env.TESTDATA_CACHE_DIR }}/testdata.zip -d ${{ env.TESTDATA_DIR }}
 
       - name: Extract branch name
         id: branch-name
@@ -88,7 +88,7 @@ jobs:
               '-O1'
             }}
         run: |
-          base_path="${{ env.TESTCASE_DIR }}"
+          base_path="${{ env.TESTDATA_DIR }}"
           find "$base_path" -type f -name "*.sy" | while read testcase; do
             rel_path="${testcase#$base_path/}"
             dir_path=$(dirname "$rel_path")
