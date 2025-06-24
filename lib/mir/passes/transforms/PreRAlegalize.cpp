@@ -1,6 +1,6 @@
 #include "mir/passes/transforms/PreRAlegalize.hpp"
 
-using namespace MIR_new;
+using namespace MIR;
 
 PM::PreservedAnalyses PreRAlegalize::run(MIRFunction &mfunc, FAM &fam) {
     preLegalizeFuncImpl(mfunc, mfunc.Context());
@@ -8,7 +8,7 @@ PM::PreservedAnalyses PreRAlegalize::run(MIRFunction &mfunc, FAM &fam) {
     return PM::PreservedAnalyses::all();
 }
 
-void MIR_new::preLegalizeFuncImpl(MIRFunction &mfunc, CodeGenContext &ctx) {
+void MIR::preLegalizeFuncImpl(MIRFunction &mfunc, CodeGenContext &ctx) {
 
     for (auto &mblk : mfunc.blks()) {
 

@@ -3,6 +3,7 @@
 #define GNALC_TEST_RUNNER_HPP
 
 #include "utils.hpp"
+#include "config.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -116,6 +117,8 @@ static std::string prepare_sylib(const std::string &global_tmp_dir, bool only_ru
         // data layouts Given that the LLVM IR we generate contains no target
         // data layout, we use `sed` to delete 'target datalayout' from the
         // sylib.ll
+        //
+        // std::string lib_command = format("clang++ -O3 -S -emit-llvm {} -o {} "
         std::string lib_command = format("clang -S -emit-llvm {} -o {} "
                                          "&& sed '/^target datalayout/d' {} -i",
                                          cfg::sylibc, sylib_to_link, sylib_to_link);

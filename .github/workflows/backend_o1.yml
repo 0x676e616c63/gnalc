@@ -6,19 +6,25 @@ on:
     paths:
       - 'lib/**'
       - 'include/**'
+      - 'runtime/**'
+      - 'test/**'
+      - 'CMakeLists.txt'
       - '.github/workflows/backend_o1.yml'
   pull_request:
     branches: [ "main", "backendv3.0" ]
     paths:
       - 'lib/**'
       - 'include/**'
+      - 'runtime/**'
+      - 'test/**'
+      - 'CMakeLists.txt'
       - '.github/workflows/backend_o1.yml'
 
 env:
   BUILD_TYPE: Release
 
 jobs:
-  build:
+  main:
     runs-on: self-hosted
 
     steps:

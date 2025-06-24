@@ -1,7 +1,7 @@
 #include "mir/passes/transforms/PostRAlegalize.hpp"
 #include "mir/passes/transforms/peephole.hpp"
 
-using namespace MIR_new;
+using namespace MIR;
 
 PM::PreservedAnalyses PostRAlegalize::run(MIRFunction &mfunc, FAM &fam) {
 

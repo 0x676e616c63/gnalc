@@ -1,17 +1,17 @@
 #include "mir/MIR.hpp"
 
-using namespace MIR_new;
+using namespace MIR;
 
 std::map<unsigned, MIROperand_p> MIROperand::ISApool; // to alloc mems
 
-MIROperand_p MIRFunction::addStkObj(struct CodeGenContext &ctx, unsigned size, unsigned alignmant, int offset,
+MIROperand_p MIRFunction::addStkObj(CodeGenContext &ctx, unsigned size, unsigned alignmant, int offset,
                                     StkObjUsage usage) {
     MIROperand_p new_stk = MIROperand::asStkObj(ctx.nextId(), OpT::Int64);
     mStkObjs.emplace(new_stk, StkObj{size, alignmant, offset, usage});
     return new_stk;
 }
 
-MIROperand_p MIRFunction::addStkObj(struct CodeGenContext &ctx, unsigned size, unsigned alignmant, int offset,
+MIROperand_p MIRFunction::addStkObj(CodeGenContext &ctx, unsigned size, unsigned alignmant, int offset,
                                     StkObjUsage usage, unsigned seq) {
     MIROperand_p new_stk = MIROperand::asStkObj(ctx.nextId(), OpT::Int64);
     mStkObjs.emplace(new_stk, StkObj{size, alignmant, offset, usage, seq});

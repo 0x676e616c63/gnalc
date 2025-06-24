@@ -6,8 +6,7 @@
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "ir/passes/helpers/constant_fold.hpp"
-#include "ir/pattern_match.hpp"
-#include "pattern_match/pattern_match.hpp"
+#include "ir/match.hpp"
 
 #include <algorithm>
 #include <deque>

@@ -963,7 +963,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                     //
                     // All the gep.x and bc.x are the same.
                     //
-                    // In this case, there exits partial redundancy in D -> B -> C,
+                    // In this case, there exists partial redundancy in D -> B -> C,
                     // where the gep/bc are computed twice. To eliminate it, we might want to
                     // hoist the gep/bc to A, and create a phi in B to merge them.
                     //

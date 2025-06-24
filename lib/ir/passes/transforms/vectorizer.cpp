@@ -7,7 +7,7 @@
 #include "ir/instructions/vector.hpp"
 #include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/loop_alias_analysis.hpp"
-#include "ir/pattern_match.hpp"
+#include "ir/match.hpp"
 
 #include <algorithm>
 

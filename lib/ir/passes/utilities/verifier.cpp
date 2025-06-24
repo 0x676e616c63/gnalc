@@ -1,4 +1,5 @@
 #include "ir/passes/utilities/verifier.hpp"
+#include "ir/block_utils.hpp"
 #include "ir/instructions/control.hpp"
 #include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
@@ -259,6 +260,20 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                     }
                     else
                         discovered_names.insert(inst->getName());
+                }
+            }
+        }
+    }
+
+    // Check if there are self reference phi
+    if (fatal_error_cnt == 0) {
+        for (const auto &bb : function) {
+            for (const auto& phi : bb->phis()) {
+                if (auto common_value = getCommonValue(phi)) {
+                    if (common_value == phi) {
+                        ++warning_cnt;
+                        Logger::logWarning("[VerifyPass]: PHIInst '", phi->getName(), "' only has self reference.");
+                    }
                 }
             }
         }

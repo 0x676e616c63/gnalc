@@ -1,6 +1,6 @@
 #pragma once
-#ifndef GNALC_ARMV8_MIR_BUILD_LOWERING_HPP
-#define GNALC_ARMV8_MIR_BUILD_LOWERING_HPP
+#ifndef GNALC_MIR_BUILD_LOWERING_HPP
+#define GNALC_MIR_BUILD_LOWERING_HPP
 
 #include "ir/instructions/compare.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
@@ -9,7 +9,7 @@
 #include "mir/passes/pass_manager.hpp"
 #include <memory>
 
-namespace MIR_new {
+namespace MIR {
 
 using IRVal = IR::Value;
 using IRVal_p = std::shared_ptr<IRVal>;

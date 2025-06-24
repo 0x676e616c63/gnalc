@@ -1,10 +1,10 @@
 #pragma once
-#ifndef GNALC_ARMV8_MIR_TRANSFORMS_PEEPHOLE_HPP
-#define GNALC_ARMV8_MIR_TRANSFORMS_PEEPHOLE_HPP
+#ifndef GNALC_MIR_TRANSFORMS_PEEPHOLE_HPP
+#define GNALC_MIR_TRANSFORMS_PEEPHOLE_HPP
 
 #include "mir/passes/pass_manager.hpp"
 
-namespace MIR_new {
+namespace MIR {
 
 ///@note 某些一眼丁真的优化
 
@@ -81,10 +81,10 @@ private:
 
 namespace std {
 
-template <> struct tuple_size<MIR_new::GenericPeepholeImpl::MatchInfo> : integral_constant<std::size_t, 3> {};
+template <> struct tuple_size<MIR::GenericPeepholeImpl::MatchInfo> : integral_constant<std::size_t, 3> {};
 
-template <size_t I> struct tuple_element<I, MIR_new::GenericPeepholeImpl::MatchInfo> {
-    using type = decltype((declval<MIR_new::GenericPeepholeImpl::MatchInfo>().get<I>())); // extra brasses
+template <size_t I> struct tuple_element<I, MIR::GenericPeepholeImpl::MatchInfo> {
+    using type = decltype((declval<MIR::GenericPeepholeImpl::MatchInfo>().get<I>())); // extra brasses
 };
 
 }; // namespace std

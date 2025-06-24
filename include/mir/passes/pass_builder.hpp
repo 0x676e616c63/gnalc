@@ -1,10 +1,10 @@
 #pragma once
-#ifndef GNALC_ARMV8_MIR_PASSES_PASS_BUILDER_HPP
-#define GNALC_ARMV8_MIR_PASSES_PASS_BUILDER_HPP
+#ifndef GNALC_MIR_PASSES_PASS_BUILDER_HPP
+#define GNALC_MIR_PASSES_PASS_BUILDER_HPP
 
 #include "pass_manager.hpp"
 
-namespace MIR_new {
+namespace MIR {
 struct OptInfo {
     ///@todo to add...
     bool peephole_afterIsel;

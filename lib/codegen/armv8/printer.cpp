@@ -1,10 +1,10 @@
 #include "codegen/armv8/armprinter.hpp"
 #include "mir/tools.hpp"
 
-using namespace MIR_new;
+using namespace MIR;
 
 string ARMA64Printer::branchPrinter(const MIRInst &minst) {
-    const auto &lable = minst.getOp(1)->relocable()->getmSym();
+    const auto &lable = minst.getOp(1)->reloc()->getmSym();
     const auto &cond = minst.getOp(2)->imme();
 
     string str;
@@ -171,7 +171,7 @@ string ARMA64Printer::memoryPrinter(const MIRInst &minst) {
 
         if (minst.getOp(1)->isReloc()) {
             auto reg = Reg2S(minst.ensureDef(), memSize); // adrp + ldr
-            auto label = minst.getOp(1)->relocable()->getmSym();
+            auto label = minst.getOp(1)->reloc()->getmSym();
             str += "ldr\t" + reg + ", [" + reg + ", #:got_lo12:" + label + "]";
 
             return str;
@@ -282,7 +282,7 @@ string ARMA64Printer::csetPrinter(const MIRInst &minst) {
 
 string ARMA64Printer::cbnzPrinter(const MIRInst &minst) {
     const auto &use = minst.getOp(1);
-    const auto &label = minst.getOp(2)->relocable()->getmSym();
+    const auto &label = minst.getOp(2)->reloc()->getmSym();
 
     string str;
     str += "cbnz\t";                                    // nz = not zero
@@ -294,7 +294,7 @@ string ARMA64Printer::cbnzPrinter(const MIRInst &minst) {
 
 string ARMA64Printer::AdrpPrinter(const MIRInst &minst) {
     const auto &def = minst.ensureDef();
-    const auto &label = minst.getOp(1)->relocable()->getmSym();
+    const auto &label = minst.getOp(1)->reloc()->getmSym();
 
     string str;
     string reg = reg2s(def, getBitWide(def->type())); // 8
@@ -399,7 +399,7 @@ string ARMA64Printer::moviPrinter(const MIRInst &minst) {
 }
 
 string ARMA64Printer::blPrinter(const MIRInst &minst) {
-    const auto &label = minst.getOp(1)->relocable()->getmSym();
+    const auto &label = minst.getOp(1)->reloc()->getmSym();
     auto tail_call_tag = minst.getOp(2)->imme();
 
     ///@todo TCO & TRO opt

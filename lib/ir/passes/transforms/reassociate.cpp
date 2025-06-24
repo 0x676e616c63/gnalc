@@ -4,12 +4,11 @@
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "ir/passes/helpers/constant_fold.hpp"
-#include "ir/pattern_match.hpp"
-#include "pattern_match/pattern_match.hpp"
+#include "ir/match.hpp"
 
 #include <algorithm>
 
-using namespace PatternMatch;
+
 namespace IR {
 using Rank = ReassociatePass::Rank;
 using ValueEntry = ReassociatePass::ValueEntry;
@@ -313,12 +312,10 @@ pVal ReassociatePass::optAdd(const pBinary &root, std::vector<ValueEntry> &ops) 
                     if (ops[j].operand == neg_curr)
                         return j;
                 }
-                for (size_t j = i - 1; j != 0 && ops[j].rank == curr_rank; --j) {
+                for (int j = i - 1; j >= 0 && ops[j].rank == curr_rank; --j) {
                     if (ops[j].operand == neg_curr)
                         return j;
                 }
-                if (ops[0].operand == neg_curr)
-                    return 0;
                 return i;
             }();
             if (neg_pos != i) {

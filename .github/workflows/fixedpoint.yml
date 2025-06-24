@@ -6,19 +6,23 @@ on:
     paths:
       - 'lib/**'
       - 'include/**'
+      - 'test/**'
+      - 'CMakeLists.txt'
       - '.github/workflows/fixedpoint.yml'
   pull_request:
     branches: [ "main", "ci", "iropt" ]
     paths:
       - 'lib/**'
       - 'include/**'
+      - 'test/**'
+      - 'CMakeLists.txt'
       - '.github/workflows/fixedpoint.yml'
 
 env:
   BUILD_TYPE: Release
 
 jobs:
-  build:
+  main:
     runs-on: ubuntu-latest
 
     steps:

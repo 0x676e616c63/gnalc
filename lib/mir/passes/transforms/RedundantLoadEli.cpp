@@ -2,7 +2,7 @@
 #include "mir/passes/analysis/domtree_analysis.hpp"
 #include <optional>
 
-using namespace MIR_new;
+using namespace MIR;
 
 PM::PreservedAnalyses RedundantLoadEli::run(MIRFunction &mfunc, FAM &fam) {
     class RedundantLoadEliImpl impl(mfunc, fam);

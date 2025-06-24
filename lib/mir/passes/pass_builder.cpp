@@ -21,7 +21,7 @@
 #include "mir/passes/transforms/stackgenerate.hpp"
 #include "mir/passes/transforms/tro.hpp"
 
-namespace MIR_new {
+namespace MIR {
 
 const OptInfo o1_opt_info = {.peephole_afterIsel = true,
                              .redundantLoadEli = true,
