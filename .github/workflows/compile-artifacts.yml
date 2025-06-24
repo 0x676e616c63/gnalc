@@ -1,35 +1,22 @@
 name: Gnalc Compile Artifacts
 
+on:
+  workflow_call:
+    inputs:
+      branch:
+        required: true
+        type: string
+
 concurrency:
-  group: artifacts-test-${{ github.ref_name }}
+  group: compile-artifacts-${{ inputs.branch }}
   cancel-in-progress: true
 
 permissions:
   contents: write
 
-on:
-  push:
-    branches: [ "main", "backendv3.0" ]
-    paths:
-      - 'lib/**'
-      - 'include/**'
-      - 'test/**'
-      - 'CMakeLists.txt'
-      - '.github/workflows/compile_artifacts.yml'
-      - '.github/workflows/backend-test.yml'
-  pull_request:
-    branches: [ "main", "backendv3.0" ]
-    paths:
-      - 'lib/**'
-      - 'include/**'
-      - 'test/**'
-      - 'CMakeLists.txt'
-      - '.github/workflows/compile_artifacts.yml'
-      - '.github/workflows/backend-test.yml'
-
 env:
   BUILD_TYPE: Release
-  ARTIFACTS_BRANCH: "artifacts-${{ github.ref_name }}"
+  ARTIFACTS_BRANCH: "artifacts-${{ inputs.branch }}"
   TESTDATA_VERSION: "v1.0.0"
   TESTDATA_ZIP_URL: "https://github.com/caozhanhao/gnalc-test-data/releases/download/v1.0.0/testdata.zip"
   TESTDATA_DIR: "${{ github.workspace }}/testdata"
@@ -170,7 +157,7 @@ jobs:
           cat > artifacts-branch/README.md <<EOF
           # Gnalc Artifacts
 
-          - **Branch:** ${{ github.ref_name }}
+          - **Branch:** ${{ inputs.branch }}
           - **Generated at:** $TS (UTC)
           - **Commit SHA:** ${{ github.sha }}
 
@@ -192,9 +179,3 @@ jobs:
             git commit -m "Update artifacts from ${{ github.sha }}"
             git push origin ${{ env.ARTIFACTS_BRANCH }}
           fi
-
-  call-artifacts-test-workflow:
-    needs: compile
-    uses: ./.github/workflows/backend-test.yml
-    with:
-      branch: ${{ github.ref_name }}
