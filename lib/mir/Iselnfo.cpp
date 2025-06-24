@@ -394,8 +394,8 @@ void ISelInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
     }
 
     switch (minst->opcode<OpC>()) {
-    case OpC::InstSelect:
-        Err::todo("preLegalizeInst: select inst not support yet");
+    // case OpC::InstSelect:
+    //     Err::todo("preLegalizeInst: select inst not support yet");
     case OpC::InstLoadGlobalAddress:
         /// nothing
         break;

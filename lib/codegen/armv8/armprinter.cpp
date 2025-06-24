@@ -33,7 +33,7 @@ void ARMA64Printer::printout(const std::vector<MIRGlobal_p> &mGlobals) {
 
     auto log2 = [](unsigned pow) { return ctz_wrapper(pow); };
 
-    outStream << ".data\n";
+    outStream << ".bss\n";
 
     // handle zeroes
     for (auto &mGlo : mGlobals) {
@@ -50,9 +50,11 @@ void ARMA64Printer::printout(const std::vector<MIRGlobal_p> &mGlobals) {
         outStream << ".global " + sym + '\n';
         outStream << ".align\t" + std::to_string(log2(align)) + '\n';
         outStream << sym + ":\n";
+        outStream << ".type " + sym + ", %object\n";
         outStream << "    .zero\t" + std::to_string(size) + "\n\n";
     }
 
+    outStream << ".data\n";
     for (auto &mGlo : mGlobals) {
 
         if (!mGlo->reloc()->isData()) {
@@ -67,6 +69,7 @@ void ARMA64Printer::printout(const std::vector<MIRGlobal_p> &mGlobals) {
         outStream << ".global " + sym + '\n';
         outStream << ".align\t" + std::to_string(log2(align)) + '\n';
         outStream << sym + ":\n";
+        outStream << ".type " + sym + ", %object\n";
 
         for (const auto &data : datas) {
 
@@ -94,6 +97,8 @@ void ARMA64Printer::printout(const MIRFunction &_mfunc) {
     mfunc = &_mfunc;
 
     outStream << ".globl " + sym + '\n';
+    outStream << ".align 2\n.p2align 4,,11\n";
+    outStream << ".type " + sym + ", %function\n";
     outStream << sym + ":\n";
 
     for (auto &mblk : _mfunc.blks()) {

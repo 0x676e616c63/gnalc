@@ -68,14 +68,14 @@ public:
 
 private:
     // inst matches
-    bool matchNop(MatchInfo &);        // after ra
-    bool matchArithmetic(MatchInfo &); // after isel
-    bool matchMA(MatchInfo &);         // after isel ( MA = Multiple and Accumulate)
-    bool matchSelect(MatchInfo &);     // after isel
-    bool matchRTZ(MatchInfo &);        // after isel
-    bool matchFusedAdr(MatchInfo &);   // after stack generate
+    bool Nop(MatchInfo &);        // after ra
+    bool Arithmetic(MatchInfo &); // after isel
+    bool MA(MatchInfo &);         // after isel (MA = Multiple and Accumulate)
+    bool Select(MatchInfo &);     // after isel
+    bool RTZ(MatchInfo &);        // after isel
+    bool FusedAdr(MatchInfo &);   // after stack generate
 
-    bool removeByReference(MatchInfo &);
+    bool rmByRC(MatchInfo &);
 };
 }; // namespace MIR_new
 

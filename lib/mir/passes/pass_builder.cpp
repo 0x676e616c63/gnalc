@@ -38,6 +38,21 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
 
     // clang-format off
     
+    // A
+
+    // ...B
+    // x0 = call
+    // (stk recover)
+    // ret x0
+
+    // ...
+    // (stk recover)
+    // x0 = b ...
+    // ret
+
+    // ...C
+    // 
+
                                             fpm.addPass(ISel());
     opt_info.peephole_afterIsel ?           fpm.addPass(GenericPeephole(Stage::AfterIsel)) : nop;
     opt_info.CFGsimplifyBeforeRa ?          fpm.addPass(CFGsimplifyBeforeRA()) : nop;

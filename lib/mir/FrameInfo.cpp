@@ -370,13 +370,6 @@ bool FrameInfo::isCalleeSaved(const MIROperand &op) const {
 }
 
 void FrameInfo::makePostSAPrologue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const {
-    ///@note 在callleesave保存前插入开栈指令
-    ///@note stksize需要把寄存器保存的空间也计算在内
-    ///@note 如果栈内没有局部变量, 可以考虑去掉sub, 给stp加pre-indexing
-    ///@note 类似于 stp x29, x30 [sp, -16]!
-    //  +++ sub sp, sp, #stksize
-    //      stp .., .., [sp, ...]
-    //      stp .., .., [sp, ...]
 
     auto &insts = entry->Insts();
 
@@ -394,8 +387,6 @@ void FrameInfo::makePostSAPrologue(MIRBlk_p entry, CodeGenContext &ctx, unsigned
 }
 
 void FrameInfo::makePostSAEpilogue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const {
-    ///@note 恢复寄存器后插入栈回收指令
-    ///@note 同上, 可以优化为 ldp x29, x30, [sp], 16
 
     auto &insts = entry->Insts();
     bool find = false;

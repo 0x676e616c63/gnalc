@@ -273,7 +273,7 @@ MIRModule_p MIR_new::loweringModule(const IRModule &module, CodeGenContext &ctx)
 MIRGlobal_p MIR_new::loweringGlobal(const IR::GlobalVariable &global) {
     MIRGlobal_p ret = nullptr;
     MIRRelocable_p inner = nullptr;
-    auto initer = global.getIniter();
+    const auto &initer = global.getIniter();
     auto sym = global.getName().substr(1); // not prefix
     auto align = global.getAlign();
 
