@@ -159,7 +159,7 @@ jobs:
 
       - name: Copy new artifacts
         run: |
-          cp -R artifacts/* artifacts-branch/
+          mv artifacts/* artifacts-branch/
 
       - name: Generate metadata files
         run: |
