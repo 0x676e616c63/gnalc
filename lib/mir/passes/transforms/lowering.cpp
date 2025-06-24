@@ -273,7 +273,7 @@ MIRModule_p MIR::loweringModule(const IRModule &module, CodeGenContext &ctx) {
 MIRGlobal_p MIR::loweringGlobal(const IR::GlobalVariable &global) {
     MIRGlobal_p ret = nullptr;
     MIRReloc_p inner = nullptr;
-    const auto& initer = global.getIniter();
+    const auto &initer = global.getIniter();
     auto sym = global.getName().substr(1); // not prefix
     auto align = global.getAlign();
 
@@ -356,7 +356,7 @@ MIRGlobal_p MIR::loweringGlobal(const IR::GlobalVariable &global) {
 }
 
 void MIR::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContext &codeGenCtx, MIRModule &mModule,
-                               std::map<string, MIRGlobal_p> globalMap) {
+                           std::map<string, MIRGlobal_p> globalMap) {
 
     std::map<IRBlk_p, MIRBlk_p> blkMap;
     std::map<IRVal_p, MIROperand_p> valMap;
@@ -404,7 +404,7 @@ void MIR::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContext &c
     mfunc->setEntryBlk(entry_blk); // entry blk
 
     for (auto &blk : func->getExitBBs()) {
-        const auto& mblk = blkMap.at(blk);
+        const auto &mblk = blkMap.at(blk);
         mfunc->addExitBlk(mblk);
     }
 
@@ -438,7 +438,7 @@ void MIR::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContext &c
 
     // lower regular insts
     for (auto &blk : func->getDFVisitor<Util::DFVOrder::ReversePostOrder>()) {
-        const auto& mblk = blkMap.at(blk);
+        const auto &mblk = blkMap.at(blk);
         ctx.setCurrentBlk(mblk);
         for (auto &inst : blk->getAllInsts()) {
             MIR::lowerInst(inst, ctx);

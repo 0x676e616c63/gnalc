@@ -44,25 +44,25 @@ bool GenericPeepholeImpl::runOnBlk(MIRBlk_p &mblk) {
             auto recovery = iter;
             MatchInfo info(*iter, minsts, iter); // reference
 
-            if (removeByReference(info)) {
+            if (rmByRC(info)) {
                 goto __mark_modified;
             }
-            if (matchNop(info)) {
+            if (Nop(info)) {
                 goto __mark_modified;
             }
-            if (matchArithmetic(info)) {
+            if (Arithmetic(info)) {
                 goto __mark_modified;
             }
-            if (matchMA(info)) {
+            if (MA(info)) {
                 goto __mark_modified;
             }
-            if (matchSelect(info)) {
+            if (Select(info)) {
                 goto __mark_modified;
             }
-            if (matchRTZ(info)) {
+            if (RTZ(info)) {
                 goto __mark_modified;
             }
-            if (matchFusedAdr(info)) {
+            if (FusedAdr(info)) {
                 goto __mark_modified;
             }
             goto __nxt_round;
@@ -82,7 +82,7 @@ bool GenericPeepholeImpl::runOnBlk(MIRBlk_p &mblk) {
 
 // matches impl
 
-bool GenericPeepholeImpl::matchNop(MatchInfo &info) {
+bool GenericPeepholeImpl::Nop(MatchInfo &info) {
 
     if (stage != Stage::AfterRa) {
         return false;
@@ -134,7 +134,7 @@ bool GenericPeepholeImpl::matchNop(MatchInfo &info) {
     }
 }
 
-bool GenericPeepholeImpl::matchArithmetic(MatchInfo &info) {
+bool GenericPeepholeImpl::Arithmetic(MatchInfo &info) {
     if (stage != Stage::AfterIsel) {
         return false;
     }
@@ -418,7 +418,7 @@ bool GenericPeepholeImpl::matchArithmetic(MatchInfo &info) {
     return false;
 }
 
-bool GenericPeepholeImpl::matchMA(MatchInfo &info) {
+bool GenericPeepholeImpl::MA(MatchInfo &info) {
     if (stage != Stage::AfterIsel) {
         return false;
     }
@@ -512,7 +512,7 @@ bool GenericPeepholeImpl::matchMA(MatchInfo &info) {
     return true;
 }
 
-bool GenericPeepholeImpl::matchSelect(MatchInfo &info) {
+bool GenericPeepholeImpl::Select(MatchInfo &info) {
     if (stage != Stage::AfterIsel) {
         return false;
     }
@@ -554,7 +554,7 @@ bool GenericPeepholeImpl::matchSelect(MatchInfo &info) {
     return false;
 }
 
-bool GenericPeepholeImpl::matchFusedAdr(MatchInfo &info) {
+bool GenericPeepholeImpl::FusedAdr(MatchInfo &info) {
     if (stage != Stage::AfterPostLegalize) {
         return false;
     }
@@ -562,7 +562,7 @@ bool GenericPeepholeImpl::matchFusedAdr(MatchInfo &info) {
     return false;
 }
 
-bool GenericPeepholeImpl::matchRTZ(MatchInfo &info) {
+bool GenericPeepholeImpl::RTZ(MatchInfo &info) {
     if (stage != Stage::AfterIsel) {
         return false;
     }
@@ -606,7 +606,7 @@ bool GenericPeepholeImpl::matchRTZ(MatchInfo &info) {
     return true;
 }
 
-bool GenericPeepholeImpl::removeByReference(MatchInfo &info) {
+bool GenericPeepholeImpl::rmByRC(MatchInfo &info) {
 
     auto &[minst, minsts, iter] = info;
     auto &ctx = mfunc->Context();
