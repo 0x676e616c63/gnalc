@@ -16,15 +16,15 @@ main_0:
     
     movz	w2,	#40000
     movz	w1,	#0
+    add	x0,	sp,	#16
+    bl	memset
+    movz	w1,	#0
+    movz	w2,	#40000
     movz	fp,	#40016
     add	x0,	sp,	fp
     bl	memset
     movz	w2,	#40000
     movz	w1,	#0
-    add	x0,	sp,	#16
-    bl	memset
-    movz	w1,	#0
-    movz	w2,	#40000
     movz	fp,	#14480
     movk	fp,	#1,	lsl #16
     add	x0,	sp,	fp
@@ -82,22 +82,23 @@ main_28:
 
 main_30:
     movz	w12,	#400
-    movz	w19,	#0
+    movz	fp,	#40016
+    movz	w22,	#0
     mul	w5,	w28,	w12
-    mov	x25,	x5
-    add	x25,	sp,	x25
-    add	x25,	x25,	#16
+    mov	x19,	x5
+    add	x19,	sp,	x19
+    add	x19,	x19,	fp
 
 main_33:
-    cmp	w19,	w20
+    cmp	w22,	w20
     bge	main_40
 
 main_36:
-    lsl	w18,	w19,	#2
-    add	x26,	x25,	x18
+    lsl	w18,	w22,	#2
+    add	x21,	x19,	x18
     bl	getint
-    add	w19,	w19,	#1
-    str	w0,	[x26]
+    add	w22,	w22,	#1
+    str	w0,	[x21]
 
     b	main_33
 
@@ -121,18 +122,17 @@ main_49:
 
 main_52:
     movz	w17,	#400
-    movz	fp,	#40016
     movz	w16,	#400
+    movz	fp,	#14480
     movz	w8,	#0
     mul	w21,	w23,	w17
     mul	w2,	w23,	w16
+    movk	fp,	#1,	lsl #16
     mov	x17,	x21
     mov	x2,	x2
     add	x17,	sp,	x17
     add	x2,	sp,	x2
-    add	x17,	x17,	fp
-    movz	fp,	#14480
-    movk	fp,	#1,	lsl #16
+    add	x17,	x17,	#16
     add	x2,	x2,	fp
 
 main_56:
@@ -149,6 +149,7 @@ main_62:
 
     lsl	w10,	w5,	#2
     movz	w22,	#400
+    movz	fp,	#40016
     lsl	w15,	w8,	#2
     add	x9,	x2,	x10
     mul	w13,	w5,	w22
@@ -157,7 +158,7 @@ main_62:
     ldr	w1,	[x9]
 
     add	x4,	sp,	x4
-    add	x4,	x4,	#16
+    add	x4,	x4,	fp
     add	x14,	x4,	x15
     ldr	w16,	[x14]
 
@@ -187,12 +188,11 @@ main_84:
 
 main_86:
     movz	w17,	#400
-    movz	fp,	#40016
     movz	w28,	#0
     mul	w14,	w27,	w17
     mov	x26,	x14
     add	x26,	sp,	x26
-    add	x26,	x26,	fp
+    add	x26,	x26,	#16
 
 main_89:
     cmp	w28,	w20

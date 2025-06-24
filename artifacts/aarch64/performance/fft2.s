@@ -24,73 +24,72 @@ b:
 .globl multiply
 multiply:
 multiply_2:
-    sub	sp, sp, #96
-    stp	x19, x21, [sp, #0]
-    stp	x22, x23, [sp, #16]
-    stp	x24, x25, [sp, #32]
-    stp	x26, x27, [sp, #48]
-    stp	x28, fp, [sp, #64]
-    str	lr, [sp, 80]
-
-    mov	w19,	w1
-    mov	w23,	w0
-    cmp	w19,	#0
+    sub	sp, sp, #80
+    stp	x21, x22, [sp, #0]
+    stp	x23, x24, [sp, #16]
+    stp	x25, x26, [sp, #32]
+    stp	x27, x28, [sp, #48]
+    stp	fp, lr, [sp, #64]
+    
+    mov	w24,	w1
+    mov	w28,	w0
+    cmp	w24,	#0
     beq	multiply_36
 
 multiply_4:
     movz	w21,	#1
     movk	w21,	#15232,	lsl #16
-    cmp	w19,	#1
+    cmp	w24,	#1
     bne	multiply_8
 
 multiply_6:
-    sdiv	w2,	w23,	w21
-    msub	w0,	w2,	w21,	w23
+    sdiv	w2,	w28,	w21
+    msub	w0,	w2,	w21,	w28
 
     b	multiply_38
 
 multiply_8:
-    asr	w3,	w19,	#31
+    asr	w3,	w24,	#31
     lsr	w4,	w3,	#31
-    add	w5,	w19,	w4
-    asr	w27,	w5,	#1
-    cmp	w27,	#0
+    add	w5,	w24,	w4
+    asr	w25,	w5,	#1
+    cmp	w25,	#0
     beq	multiply_25
 
 multiply_11:
-    cmp	w27,	#1
+    cmp	w25,	#1
     bne	multiply_15
 
 multiply_13:
-    sdiv	w25,	w23,	w21
-    msub	w26,	w25,	w21,	w23
+    sdiv	w23,	w28,	w21
+    msub	w26,	w23,	w21,	w28
 
     b	multiply_27
 
 multiply_15:
-    asr	w24,	w27,	#31
-    mov	w0,	w23
-    lsr	w25,	w24,	#31
-    add	w26,	w27,	w25
+    asr	w22,	w25,	#31
+    mov	w0,	w28
+    lsr	w23,	w22,	#31
+    add	w26,	w25,	w23
     asr	w1,	w26,	#1
     bl	multiply
-    asr	w5,	w27,	#31
+    asr	w5,	w25,	#31
     lsl	w26,	w0,	#1
     lsr	w6,	w5,	#31
     sdiv	w9,	w26,	w21
     msub	w26,	w9,	w21,	w26
 
-    add	w7,	w27,	w6
+    add	w7,	w25,	w6
     asr	w16,	w7,	#1
     lsl	w17,	w16,	#1
-    sub	w24,	w27,	w17
-    cmp	w24,	#1
+    sub	w22,	w25,	w17
+    cmp	w22,	#1
     bne	multiply_27
 
 multiply_22:
-    add	w27,	w26,	w23
-    sdiv	w4,	w27,	w21
-    msub	w26,	w4,	w21,	w27
+    add	w26,	w26,	w28
+    sdiv	w4,	w26,	w21
+    msub	w26,	w4,	w21,	w26
 
     b	multiply_27
 
@@ -99,20 +98,20 @@ multiply_25:
 
 multiply_27:
     lsl	w0,	w26,	#1
-    asr	w26,	w19,	#31
+    asr	w25,	w24,	#31
     sdiv	w8,	w0,	w21
-    lsr	w27,	w26,	#31
+    lsr	w26,	w25,	#31
     msub	w0,	w8,	w21,	w0
 
-    add	w28,	w19,	w27
-    asr	w16,	w28,	#1
+    add	w27,	w24,	w26
+    asr	w16,	w27,	#1
     lsl	w17,	w16,	#1
-    sub	w27,	w19,	w17
-    cmp	w27,	#1
+    sub	w26,	w24,	w17
+    cmp	w26,	#1
     bne	multiply_38
 
 multiply_33:
-    add	w14,	w0,	w23
+    add	w14,	w0,	w28
     sdiv	w22,	w14,	w21
     msub	w0,	w22,	w21,	w14
 
@@ -122,14 +121,13 @@ multiply_36:
     movz	w0,	#0
 
 multiply_38:
-    ldp	x19, x21, [sp, #0]
-    ldp	x22, x23, [sp, #16]
-    ldp	x24, x25, [sp, #32]
-    ldp	x26, x27, [sp, #48]
-    ldp	x28, fp, [sp, #64]
-    ldr	lr, [sp, 80]
-
-    add	sp, sp, #96
+    ldp	x21, x22, [sp, #0]
+    ldp	x23, x24, [sp, #16]
+    ldp	x25, x26, [sp, #32]
+    ldp	x27, x28, [sp, #48]
+    ldp	fp, lr, [sp, #64]
+    
+    add	sp, sp, #80
     ret
 
 
@@ -227,9 +225,9 @@ fft_4:
     stp	x27, x28, [sp, #64]
     stp	fp, lr, [sp, #80]
     
-    mov	w23,	w3
+    mov	w20,	w3
     mov	w25,	w1
-    mov	x21,	x0
+    mov	x24,	x0
     cmp	w2,	#1
     beq	fft_69
 
@@ -250,8 +248,8 @@ fft_11:
     lsr	w5,	w4,	#31
     add	w7,	w3,	w5
     asr	w22,	w7,	#1
-    lsl	w24,	w22,	#1
-    sub	w10,	w3,	w24
+    lsl	w23,	w22,	#1
+    sub	w10,	w3,	w23
     cmp	w10,	#0
     bne	fft_21
 
@@ -261,9 +259,9 @@ fft_15:
     add	w16,	w3,	w25
     ldr	x15, [x15, #:got_lo12:temp]
     lsr	w1,	w0,	#31
-    lsl	w20,	w16,	#2
+    lsl	w21,	w16,	#2
     add	w5,	w3,	w1
-    add	x19,	x21,	x20
+    add	x19,	x24,	x21
     asr	w12,	w5,	#1
     ldr	w22,	[x19]
 
@@ -280,11 +278,11 @@ fft_21:
     lsr	w7,	w6,	#31
     add	w8,	w3,	w7
     add	w7,	w3,	w25
-    asr	w24,	w8,	#1
+    asr	w23,	w8,	#1
     lsl	w1,	w7,	#2
-    add	w0,	w24,	w17
+    add	w0,	w23,	w17
     lsl	w10,	w0,	#2
-    add	x0,	x21,	x1
+    add	x0,	x24,	x1
     add	x10,	x5,	x10
     ldr	w5,	[x0]
 
@@ -313,77 +311,74 @@ fft_38:
     lsl	w13,	w11,	#2
     ldr	w18,	[x15]
 
-    add	x0,	x21,	x13
+    add	x0,	x24,	x13
     str	w18,	[x0]
 
     b	fft_35
 
 fft_44:
     asr	w1,	w2,	#31
-    mov	w0,	w23
+    mov	w0,	w20
     lsr	w27,	w1,	#31
-    mov	w1,	w23
+    mov	w1,	w20
     add	w28,	w2,	w27
-    asr	w20,	w28,	#1
+    asr	w21,	w28,	#1
     bl	multiply
-    mov	w2,	w20
+    mov	w2,	w21
     mov	w1,	w25
     mov	w27,	w0
     mov	w3,	w27
-    mov	x0,	x21
+    mov	x0,	x24
     bl	fft
     mov	w3,	w27
-    mov	w2,	w20
-    mov	x0,	x21
-    add	w1,	w20,	w25
+    mov	w2,	w21
+    mov	x0,	x24
+    add	w1,	w21,	w25
     bl	fft
     movz	w26,	#1
     movz	w27,	#0
 
 fft_50:
-    cmp	w27,	w20
+    cmp	w27,	w21
     bge	fft_70
 
 fft_54:
     add	w0,	w27,	w25
-    movz	fp,	#100
-    add	w1,	w0,	w20
     lsl	w28,	w0,	#2
+    add	x19,	x24,	x28
+    ldr	w1,	[x19]
+
+    str	w1,	[sp, #100]
+
+    add	w1,	w0,	w21
     mov	w0,	w26
-    add	x18,	x21,	x28
-    lsl	w24,	w1,	#2
-    str	x18,	[sp, fp]
-
-    add	x22,	x21,	x24
-    movz	fp,	#100
-    ldr	x19,	[sp, fp]
-
-    ldr	w28,	[x19]
-
+    lsl	w23,	w1,	#2
+    add	x22,	x24,	x23
     ldr	w1,	[x22]
 
     bl	multiply
+    ldr	w1,	[sp, #100]
+
     movz	w18,	#1
-    add	w1,	w0,	w28
-    movz	fp,	#100
+    add	w28,	w0,	w1
     movk	w18,	#15232,	lsl #16
-    sub	w0,	w28,	w0
-    sdiv	w24,	w1,	w18
-    mul	w19,	w24,	w18
-    msub	w24,	w24,	w18,	w1
+    sdiv	w23,	w28,	w18
+    mul	w1,	w23,	w18
+    msub	w23,	w23,	w18,	w28
 
-    str	w19,	[sp, #96]
+    str	w1,	[sp, #96]
 
+    str	w23,	[x19]
+
+    ldr	w19,	[sp, #100]
+
+    sub	w0,	w19,	w0
     add	w1,	w0,	w18
-    ldr	x19,	[sp, fp]
-
-    str	w24,	[x19]
-
     sdiv	w0,	w1,	w18
     mul	w28,	w0,	w18
     msub	w28,	w0,	w18,	w1
 
-    mov	w1,	w23
+    mov	w1,	w20
     mov	w0,	w26
     str	w28,	[x22]
 

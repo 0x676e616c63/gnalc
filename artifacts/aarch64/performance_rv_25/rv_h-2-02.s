@@ -15,11 +15,11 @@ main_0:
     
     movz	w0,	#22
     bl	_sysy_starttime
+    fmov	s1,	#1.000000
     movi	v9.4s,	#0
-    movi	v10.4s,	#0
     movz	w26,	#0
     add	x23,	sp,	#16
-    fmov	s1,	#1.000000
+    movi	v10.4s,	#0
     movz	fp,	#19616
     add	x7,	sp,	fp
 
@@ -38,8 +38,8 @@ main_6:
     fadd	s11,	s1,	s22
     sub	w0,	w26,	w12
     cmp	w0,	#0
-    fmov	s20,	#1.000000
     movz	w2,	#0
+    fmov	s20,	#1.000000
     movi	v29.4s,	#0
     fcsel	s1,	s20,	s11,	ne
     fcsel	s9,	s29,	s24,	ne
@@ -267,8 +267,8 @@ main_85:
     ldr	s17,	[x28]
 
     fadd	s4,	s24,	s7
-    add	w2,	w14,	#1
     lsl	w19,	w14,	#2
+    add	w2,	w14,	#1
     lsl	w16,	w14,	#2
     ldr	s21,	[x5]
 

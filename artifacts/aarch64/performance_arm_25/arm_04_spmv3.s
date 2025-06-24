@@ -61,8 +61,8 @@ main_0:
     movz	w0,	#39
     bl	_sysy_starttime
     movz	w6,	#0
-    adrp	x5, :got:y
     adrp	x22, :got:v
+    adrp	x5, :got:y
     movz	fp,	#13664
     add	x25,	sp,	#16
     ldr	x5, [x5, #:got_lo12:y]

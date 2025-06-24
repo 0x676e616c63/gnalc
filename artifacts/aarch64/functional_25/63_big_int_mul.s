@@ -12,20 +12,20 @@ main_0:
     sub	sp, sp, #544
     stp	fp, lr, [sp, #0]
     
-    movz	w25,	#0
     movz	w26,	#9
-    add	x21,	sp,	#48
-    movz	w2,	#4
-    add	x22,	sp,	#52
-    add	x28,	sp,	#20
-    movz	w19,	#2
-    movz	w20,	#1
     movz	w18,	#3
-    add	x27,	sp,	#16
+    add	x22,	sp,	#52
+    movz	w19,	#2
+    movz	w25,	#0
+    movz	w2,	#4
+    add	x0,	sp,	#24
     add	x1,	sp,	#28
     add	x23,	sp,	#56
     movz	w24,	#1
-    add	x0,	sp,	#24
+    movz	w20,	#1
+    add	x21,	sp,	#48
+    add	x28,	sp,	#20
+    add	x27,	sp,	#16
     str	w20,	[x27]
 
     movz	w27,	#8
@@ -76,8 +76,8 @@ main_0:
     add	x23,	sp,	#108
     str	w22,	[x26]
 
-    movz	w26,	#4
     add	x22,	sp,	#104
+    movz	w26,	#4
     str	w21,	[x27]
 
     movz	w27,	#3
@@ -367,19 +367,19 @@ main_96:
 
     mov	x3,	x18
     add	x13,	sp,	x13
-    mov	x9,	x24
     lsl	w20,	w25,	#2
+    mov	x9,	x24
     mov	x18,	x1
     add	x3,	sp,	x3
-    add	x9,	sp,	x9
-    add	x13,	x13,	#96
     mov	x19,	x20
+    add	x13,	x13,	#96
+    add	x9,	sp,	x9
     add	x18,	sp,	x18
     add	x19,	sp,	x19
     add	x3,	x3,	#276
-    add	x9,	x9,	#276
     ldr	w15,	[x13]
 
+    add	x9,	x9,	#276
     add	x18,	x18,	#276
     add	x19,	x19,	#96
     str	w15,	[x26]

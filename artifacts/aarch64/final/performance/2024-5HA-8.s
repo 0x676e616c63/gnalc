@@ -161,15 +161,15 @@ main_60:
     add	w8,	w21,	w3
     ldr	w7,	[x5]
 
-    lsl	w5,	w25,	#2
     ldr	w13,	[x9]
 
+    lsl	w5,	w25,	#2
     add	w14,	w8,	w7
+    lsl	w9,	w11,	#2
     lsl	w25,	w11,	#2
     add	x4,	x10,	x5
-    lsl	w9,	w11,	#2
-    add	w22,	w14,	w13
     add	x8,	x10,	x9
+    add	w22,	w14,	w13
     ldr	w6,	[x4]
 
     add	x14,	x10,	x18
@@ -300,14 +300,14 @@ main_125:
     add	w24,	w10,	w24
     lsl	w11,	w19,	#2
     add	x17,	x18,	x21
+    lsl	w27,	w19,	#2
     ldr	w8,	[x5]
 
-    lsl	w27,	w19,	#2
-    lsl	w5,	w2,	#2
     add	w4,	w24,	w3
+    add	x26,	x18,	x27
     ldr	w22,	[x17]
 
-    add	x26,	x18,	x27
+    lsl	w5,	w2,	#2
     add	w10,	w4,	w8
     ldr	w1,	[x26]
 

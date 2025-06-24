@@ -14,14 +14,14 @@ main_0:
     sub	sp, sp, fp
     stp	fp, lr, [sp, #0]
     
-    movz	w23,	#16960
     movz	w1,	#0
+    movz	w23,	#16960
     add	x0,	sp,	#16
     movk	w23,	#15,	lsl #16
     mov	x2,	x23
     bl	memset
-    movz	w1,	#0
     mov	x2,	x23
+    movz	w1,	#0
     movz	fp,	#16976
     movk	fp,	#15,	lsl #16
     add	x0,	sp,	fp

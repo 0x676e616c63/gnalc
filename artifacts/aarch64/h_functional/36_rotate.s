@@ -120,14 +120,14 @@ main_5:
 
 main_8:
     bl	getint
-    mov	w27,	w0
+    mov	w22,	w0
     bl	getint
-    mov	w19,	w0
-    cmp	w27,	#1024
+    mov	w28,	w0
+    cmp	w22,	#1024
     bgt	main_38
 
 main_12:
-    cmp	w19,	#1024
+    cmp	w28,	#1024
     bgt	main_39
 
 main_14:
@@ -137,108 +137,112 @@ main_14:
 
 main_17:
     movz	w8,	#0
-    cmp	w8,	w19
+    cmp	w8,	w28
     blt	main_19
 
 main_41:
     movz	w7,	#0
-    str	w19,	[sp, #64]
+    mov	w21,	w28
+    mov	w20,	w22
+    str	w21,	[sp, #68]
 
-    str	w27,	[sp, #68]
+    str	w20,	[sp, #72]
 
     b	main_43
 
 main_19:
     movz	w3,	#0
-    movz	w22,	#0
+    movz	w25,	#0
     mov	w26,	w3
-    mov	w24,	w22
 
 main_21:
-    movz	w21,	#0
-    mov	w28,	w21
+    movz	w24,	#0
+    mov	w19,	w24
 
 main_24:
-    cmp	w28,	w27
+    cmp	w19,	w22
     bge	main_32
 
 main_27:
-    add	w21,	w28,	w24
-    adrp	x22, :got:image
-    ldr	x22, [x22, #:got_lo12:image]
-    lsl	w20,	w21,	#2
-    add	x22,	x22,	x20
+    add	w24,	w19,	w25
+    lsl	w18,	w24,	#2
+    adrp	x24, :got:image
+    ldr	x24, [x24, #:got_lo12:image]
+    add	x27,	x24,	x18
     bl	getint
-    add	w21,	w28,	#1
-    str	w0,	[x22]
+    add	w24,	w19,	#1
+    str	w0,	[x27]
 
-    mov	w28,	w21
+    mov	w19,	w24
     b	main_24
 
 main_32:
-    add	w5,	w26,	#1
-    add	w22,	w24,	w27
-    cmp	w5,	w19
+    add	w4,	w26,	#1
+    add	w25,	w25,	w22
+    cmp	w4,	w28
     bge	main_42
 
 main_20:
-    mov	w26,	w5
-    mov	w24,	w22
+    mov	w26,	w4
     b	main_21
 
 main_42:
     movz	w7,	#0
-    mov	w22,	w19
-    str	w22,	[sp, #64]
-
+    mov	w27,	w28
+    mov	w20,	w22
     str	w27,	[sp, #68]
+
+    str	w20,	[sp, #72]
 
     b	main_43
 
 main_40:
     mov	w7,	w23
-    mov	w22,	w19
-    str	w22,	[sp, #64]
-
+    mov	w27,	w28
+    mov	w20,	w22
     str	w27,	[sp, #68]
+
+    str	w20,	[sp, #72]
 
     b	main_43
 
 main_39:
     mov	w7,	w23
-    mov	w22,	w19
-    str	w22,	[sp, #64]
-
+    mov	w27,	w28
+    mov	w20,	w22
     str	w27,	[sp, #68]
+
+    str	w20,	[sp, #72]
 
     b	main_43
 
 main_38:
     mov	w7,	w23
-    mov	w22,	w19
-    str	w22,	[sp, #64]
-
+    mov	w27,	w28
+    mov	w20,	w22
     str	w27,	[sp, #68]
+
+    str	w20,	[sp, #72]
 
     b	main_43
 
 main_37:
     mov	w7,	w23
-    movz	w16,	#0
-    movz	w0,	#0
-    str	w16,	[sp, #64]
+    movz	w19,	#0
+    movz	w1,	#0
+    str	w19,	[sp, #68]
 
-    str	w0,	[sp, #68]
+    str	w1,	[sp, #72]
 
     b	main_43
 
 main_36:
     mov	w7,	w23
-    movz	w17,	#0
-    movz	w1,	#0
-    str	w17,	[sp, #64]
+    movz	w20,	#0
+    movz	w2,	#0
+    str	w20,	[sp, #68]
 
-    str	w1,	[sp, #68]
+    str	w2,	[sp, #72]
 
 
 main_43:
@@ -252,12 +256,12 @@ main_48:
     bl	putch
     movz	w0,	#10
     bl	putch
-    ldr	w0,	[sp, #68]
+    ldr	w0,	[sp, #72]
 
     bl	putint
     movz	w0,	#32
     bl	putch
-    ldr	w0,	[sp, #64]
+    ldr	w0,	[sp, #68]
 
     bl	putint
     movz	w0,	#32
@@ -266,221 +270,225 @@ main_48:
     bl	putint
     movz	w0,	#10
     bl	putch
-    ldr	w15,	[sp, #64]
+    ldr	w18,	[sp, #68]
 
     movz	w8,	#0
-    cmp	w8,	w15
+    cmp	w8,	w18
     bge	main_136
 
 main_50:
     movz	w11,	#4059
     movz	w13,	#4059
-    movz	w23,	#0
     movk	w11,	#16585,	lsl #16
     movk	w13,	#16329,	lsl #16
-    mov	w27,	w23
-    fmov	s14,	w11
-    fmov	s10,	w13
-    str	s14,	[sp, #16]
+    fmov	s20,	w11
+    fmov	s3,	w13
+    str	s20,	[sp, #16]
 
-    ldr	s17,	[sp, #40]
+    ldr	s11,	[sp, #40]
 
-    ldr	s14,	[sp, #16]
+    ldr	s29,	[sp, #16]
 
-    ldr	s23,	[sp, #16]
+    ldr	s10,	[sp, #16]
 
-    fdiv	s17,	s17,	s14
-    ldr	s18,	[sp, #40]
+    fdiv	s18,	s11,	s29
+    ldr	s12,	[sp, #40]
 
-    frintz	s4,	s17
-    fcvtzs	w0,	s17
-    fmul	s22,	s4,	s23
-    fsub	s9,	s18,	s22
-    str	s9,	[sp, #44]
+    frintz	s13,	s18
+    fcvtzs	w0,	s18
+    fmul	s22,	s13,	s10
+    fsub	s8,	s12,	s22
+    str	s8,	[sp, #44]
 
-    ldr	s8,	[sp, #40]
+    ldr	s14,	[sp, #40]
 
-    fadd	s9,	s8,	s10
-    str	s9,	[sp, #36]
+    fadd	s13,	s14,	s3
+    str	s13,	[sp, #36]
+
+    ldr	s8,	[sp, #16]
+
+    ldr	s4,	[sp, #36]
 
     ldr	s7,	[sp, #16]
 
-    ldr	s30,	[sp, #36]
+    fdiv	s17,	s4,	s8
+    ldr	s5,	[sp, #36]
 
-    fdiv	s6,	s30,	s7
-    frintz	s29,	s6
-    fcvtzs	w6,	s6
-    ldr	s6,	[sp, #16]
+    fcvtzs	w6,	s17
+    frintz	s17,	s17
+    fmul	s22,	s17,	s7
+    fsub	s12,	s5,	s22
+    str	s12,	[sp, #52]
 
-    ldr	s11,	[sp, #36]
+    ldr	w0,	[sp, #72]
 
-    fmul	s7,	s29,	s6
-    fsub	s13,	s11,	s7
-    str	s13,	[sp, #56]
+    ldr	w3,	[sp, #72]
 
+    asr	w12,	w0,	#31
+    ldr	w17,	[sp, #68]
+
+    lsr	w13,	w12,	#31
     ldr	w26,	[sp, #68]
 
-    ldr	w0,	[sp, #68]
-
-    asr	w12,	w26,	#31
-    lsr	w13,	w12,	#31
-    add	w14,	w0,	w13
-    asr	w21,	w14,	#1
-    ldr	w14,	[sp, #64]
-
-    scvtf	s6,	w21
-    ldr	w22,	[sp, #64]
-
-    asr	w7,	w14,	#31
+    asr	w7,	w17,	#31
+    add	w14,	w3,	w13
     lsr	w8,	w7,	#31
-    add	w9,	w22,	w8
-    asr	w18,	w9,	#1
-    str	w18,	[sp, #160]
+    asr	w21,	w14,	#1
+    add	w9,	w26,	w8
+    scvtf	s16,	w21
+    asr	w22,	w9,	#1
+    str	w22,	[sp, #164]
 
-    str	s6,	[sp, #52]
+    str	s16,	[sp, #56]
 
-    ldr	w19,	[sp, #160]
+    ldr	w23,	[sp, #164]
 
-    scvtf	s17,	w19
-    str	s17,	[sp, #60]
+    scvtf	s19,	w23
+    movz	w23,	#0
+    str	s19,	[sp, #60]
 
+    mov	w27,	w23
 
 main_67:
     movz	w14,	#0
-    ldr	w20,	[sp, #68]
+    ldr	w26,	[sp, #72]
 
-    cmp	w14,	w20
+    cmp	w14,	w26
     bge	main_132
 
 main_70:
-    ldr	w26,	[sp, #160]
+    ldr	w1,	[sp, #164]
 
     movz	w24,	#0
-    sub	w15,	w27,	w26
+    sub	w15,	w27,	w1
     mov	w22,	w24
-    scvtf	s5,	w15
-    str	s5,	[sp, #32]
+    scvtf	s9,	w15
+    str	s9,	[sp, #32]
 
 
 main_74:
     movz	w19,	#4059
-    ldr	s10,	[sp, #40]
+    ldr	s12,	[sp, #40]
 
     movk	w19,	#49353,	lsl #16
-    fmov	s13,	w19
-    fmov	s14,	s13
-    fcmp	s10,	s14
+    fmov	s10,	w19
+    fmov	s11,	s10
+    fcmp	s12,	s11
     cset	w25,	lt
-    ldr	s11,	[sp, #40]
+    ldr	s14,	[sp, #40]
 
-    ldr	s15,	[sp, #44]
+    ldr	s9,	[sp, #44]
 
-    fcsel	s10,	s15,	s11,	lt
-    ldr	s9,	[sp, #16]
+    ldr	s15,	[sp, #16]
 
-    ldr	s8,	[sp, #40]
+    fcsel	s9,	s9,	s14,	lt
+    ldr	s12,	[sp, #40]
 
-    fcmp	s8,	s9
-    ldr	s8,	[sp, #44]
+    fcmp	s12,	s15
+    ldr	s10,	[sp, #44]
 
     cset	w25,	gt
     ldr	s13,	[sp, #16]
 
-    fcsel	s12,	s8,	s10,	gt
+    fcsel	s9,	s10,	s9,	gt
     movz	w25,	#4059
-    fsub	s9,	s12,	s13
+    fsub	s13,	s9,	s13
     movk	w25,	#16457,	lsl #16
-    fmov	s13,	w25
-    fmov	s10,	s13
-    fcmp	s12,	s10
+    fmov	s15,	w25
+    fmov	s10,	s15
+    fcmp	s9,	s10
+    fcsel	s14,	s13,	s9,	gt
     cset	w24,	gt
-    fcsel	s9,	s9,	s12,	gt
-    ldr	s13,	[sp, #16]
-
     movz	w25,	#4059
-    fadd	s8,	s9,	s13
+    str	s14,	[sp, #20]
+
     movk	w25,	#49225,	lsl #16
-    str	s8,	[sp, #20]
-
-    fmov	s13,	w25
-    fcmp	s9,	s13
-    ldr	s12,	[sp, #20]
-
-    cset	w25,	lt
-    fcsel	s0,	s12,	s9,	lt
-    bl	my_sin_impl
-    fmov	s12,	s14
-    fmov	s9,	s0
-    ldr	s14,	[sp, #36]
-
-    fcmp	s14,	s12
-    cset	w24,	lt
-    ldr	s11,	[sp, #36]
-
-    ldr	s15,	[sp, #56]
-
-    ldr	s8,	[sp, #16]
-
-    fcsel	s14,	s15,	s11,	lt
-    str	s8,	[sp, #28]
-
-    ldr	s11,	[sp, #28]
-
-    ldr	s12,	[sp, #36]
-
-    fcmp	s12,	s11
-    ldr	s8,	[sp, #56]
-
-    cset	w23,	gt
-    fcsel	s8,	s8,	s14,	gt
-    str	s8,	[sp, #24]
-
-    ldr	s15,	[sp, #16]
-
-    ldr	s8,	[sp, #24]
-
-    ldr	s12,	[sp, #24]
-
-    fsub	s14,	s8,	s15
-    fcmp	s12,	s10
-    ldr	s8,	[sp, #24]
-
-    cset	w19,	gt
     ldr	s12,	[sp, #16]
 
-    fcsel	s10,	s14,	s8,	gt
-    fadd	s14,	s10,	s12
-    fcmp	s10,	s13
-    fcsel	s0,	s14,	s10,	lt
+    ldr	s9,	[sp, #20]
+
+    ldr	s14,	[sp, #20]
+
+    fadd	s13,	s9,	s12
+    fmov	s9,	w25
+    fcmp	s14,	s9
+    ldr	s15,	[sp, #20]
+
+    cset	w25,	lt
+    fcsel	s0,	s13,	s15,	lt
+    bl	my_sin_impl
+    ldr	s14,	[sp, #36]
+
+    fmov	s13,	s0
+    fcmp	s14,	s11
+    cset	w24,	lt
+    ldr	s14,	[sp, #36]
+
+    ldr	s12,	[sp, #52]
+
+    ldr	s11,	[sp, #16]
+
+    fcsel	s15,	s12,	s14,	lt
+    str	s11,	[sp, #28]
+
+    ldr	s12,	[sp, #28]
+
+    ldr	s11,	[sp, #36]
+
+    fcmp	s11,	s12
+    ldr	s14,	[sp, #52]
+
+    cset	w23,	gt
+    fcsel	s8,	s14,	s15,	gt
+    str	s8,	[sp, #24]
+
+    ldr	s11,	[sp, #16]
+
+    ldr	s14,	[sp, #24]
+
+    ldr	s15,	[sp, #24]
+
+    fsub	s12,	s14,	s11
+    fcmp	s15,	s10
+    fmov	s15,	s9
+    ldr	s10,	[sp, #24]
+
+    cset	w19,	gt
+    fcsel	s12,	s12,	s10,	gt
+    ldr	s10,	[sp, #16]
+
+    fadd	s11,	s12,	s10
+    fcmp	s12,	s15
+    fcsel	s0,	s11,	s12,	lt
     cset	w23,	lt
     bl	my_sin_impl
     sub	w9,	w22,	w21
-    ldr	s26,	[sp, #32]
+    ldr	s30,	[sp, #32]
 
-    ldr	s24,	[sp, #52]
+    ldr	s7,	[sp, #56]
 
-    fmul	s12,	s26,	s9
-    ldr	s7,	[sp, #32]
+    fmul	s29,	s30,	s13
+    ldr	s3,	[sp, #32]
 
-    scvtf	s23,	w9
-    fmul	s31,	s7,	s0
-    fmul	s20,	s23,	s9
-    fmul	s29,	s23,	s0
-    ldr	s9,	[sp, #60]
+    scvtf	s28,	w9
+    ldr	s20,	[sp, #60]
 
-    fadd	s1,	s20,	s31
-    fsub	s13,	s29,	s12
-    fadd	s2,	s1,	s9
-    fadd	s14,	s13,	s24
-    fcvtzs	w8,	s2
-    fcvtzs	w15,	s14
+    fmul	s2,	s3,	s0
+    fmul	s1,	s28,	s13
+    fmul	s11,	s28,	s0
+    fadd	s5,	s1,	s2
+    fsub	s17,	s11,	s29
+    fadd	s4,	s5,	s20
+    fadd	s16,	s17,	s7
+    fcvtzs	w8,	s4
+    fcvtzs	w15,	s16
     cmp	w15,	#0
     blt	main_122
 
 main_111:
-    ldr	w16,	[sp, #68]
+    ldr	w20,	[sp, #72]
 
-    cmp	w15,	w16
+    cmp	w15,	w20
     bge	main_123
 
 main_113:
@@ -488,22 +496,22 @@ main_113:
     blt	main_124
 
 main_115:
-    ldr	w3,	[sp, #64]
+    ldr	w2,	[sp, #68]
 
-    cmp	w8,	w3
+    cmp	w8,	w2
     bge	main_125
 
 main_117:
-    ldr	w18,	[sp, #68]
-
-    ldr	w19,	[sp, #68]
-
-    mul	w12,	w8,	w18
-    madd	w3,	w8,	w19,	w15
+    ldr	w23,	[sp, #72]
 
     adrp	x19, :got:image
-    lsl	w5,	w3,	#2
+    ldr	w24,	[sp, #72]
+
+    mul	w12,	w8,	w23
     ldr	x19, [x19, #:got_lo12:image]
+    madd	w3,	w8,	w24,	w15
+
+    lsl	w5,	w3,	#2
     add	x4,	x19,	x5
     ldr	w0,	[x4]
 
@@ -528,10 +536,10 @@ main_126:
     bl	putint
     movz	w0,	#32
     bl	putch
-    ldr	w28,	[sp, #68]
+    ldr	w0,	[sp, #72]
 
     add	w24,	w22,	#1
-    cmp	w24,	w28
+    cmp	w24,	w0
     bge	main_132
 
 main_73:
@@ -541,10 +549,10 @@ main_73:
 main_132:
     movz	w0,	#10
     bl	putch
-    ldr	w17,	[sp, #64]
+    ldr	w20,	[sp, #68]
 
     add	w23,	w27,	#1
-    cmp	w23,	w17
+    cmp	w23,	w20
     bge	main_137
 
 main_66:

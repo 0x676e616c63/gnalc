@@ -46,9 +46,9 @@ main_0:
     bl	getarray
     movz	w0,	#68
     bl	_sysy_starttime
+    movz	w26,	#0
     add	x1,	sp,	#16
     adrp	x0, :got:A
-    movz	w26,	#0
     movz	fp,	#11216
     ldr	x0, [x0, #:got_lo12:A]
     add	x7,	sp,	fp

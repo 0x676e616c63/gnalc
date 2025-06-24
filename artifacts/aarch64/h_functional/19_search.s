@@ -54,11 +54,11 @@ search_3:
     stp	fp, lr, [sp, #80]
     
     movz	w18,	#0
-    mov	w21,	w0
-    str	w1,	[sp, #96]
+    mov	w25,	w0
+    str	w1,	[sp, #132]
 
     movk	w18,	#16384,	lsl #16
-    str	w18,	[sp, #116]
+    str	w18,	[sp, #112]
 
     cmp	w2,	#10
     bgt	search_155
@@ -69,55 +69,55 @@ search_5:
     adrp	x8, :got:h
     adrp	x15, :got:w
     add	w16,	w2,	#1
-    movz	w23,	#0
+    movz	w22,	#0
     ldr	x1, [x1, #:got_lo12:x_1]
     ldr	w5,	[x1]
 
-    str	w5,	[sp, #144]
+    str	w5,	[sp, #128]
 
     ldr	x6, [x6, #:got_lo12:y_1]
-    ldr	w24,	[x6]
+    ldr	w23,	[x6]
 
-    str	w24,	[sp, #108]
+    str	w23,	[sp, #96]
 
     ldr	x8, [x8, #:got_lo12:h]
     ldr	w7,	[x8]
 
     add	w0,	w7,	#1
-    str	w0,	[sp, #128]
+    str	w0,	[sp, #124]
 
     ldr	x15, [x15, #:got_lo12:w]
     ldr	w14,	[x15]
 
-    add	w25,	w14,	#1
-    str	w25,	[sp, #148]
+    add	w24,	w14,	#1
+    str	w24,	[sp, #148]
 
-    str	w16,	[sp, #132]
+    str	w16,	[sp, #152]
 
-    ldr	w17,	[sp, #132]
+    ldr	w17,	[sp, #152]
 
     add	w18,	w17,	#1
-    str	w18,	[sp, #100]
+    str	w18,	[sp, #104]
 
-    ldr	w24,	[sp, #116]
+    ldr	w23,	[sp, #112]
 
-    str	w24,	[sp, #120]
+    str	w23,	[sp, #120]
 
-    str	w23,	[sp, #104]
+    str	w22,	[sp, #100]
 
 
 search_14:
-    ldr	w0,	[sp, #104]
+    ldr	w0,	[sp, #100]
 
     cmp	w0,	#4
     bge	search_152
 
 search_18:
-    ldr	w1,	[sp, #104]
+    ldr	w1,	[sp, #100]
 
     adrp	x11, :got:step
     movz	w7,	#0
-    mov	w5,	w21
+    mov	w5,	w25
     lsl	w20,	w1,	#3
     ldr	x11, [x11, #:got_lo12:step]
     add	x12,	x11,	x20
@@ -126,7 +126,7 @@ search_18:
 
     ldr	w2,	[x2]
 
-    ldr	w17,	[sp, #96]
+    ldr	w17,	[sp, #132]
 
 
 search_24:
@@ -135,8 +135,8 @@ search_24:
     lsl	w6,	w17,	#2
     ldr	x26, [x26, #:got_lo12:a]
     sub	w28,	w4,	w5,	lsl #3
-    add	x25,	x26,	x28
-    add	x16,	x25,	x6
+    add	x23,	x26,	x28
+    add	x16,	x23,	x6
     str	x16,	[sp, #136]
 
     ldr	x18,	[sp, #136]
@@ -147,13 +147,13 @@ search_24:
     beq	search_44
 
 search_32:
-    ldr	w10,	[sp, #144]
+    ldr	w10,	[sp, #128]
 
     cmp	w5,	w10
     bne	search_38
 
 search_34:
-    ldr	w18,	[sp, #108]
+    ldr	w18,	[sp, #96]
 
     cmp	w17,	w18
     beq	search_44
@@ -165,13 +165,13 @@ search_38:
     b	search_24
 
 search_44:
-    ldr	w11,	[sp, #144]
+    ldr	w11,	[sp, #128]
 
     cmp	w5,	w11
     bne	search_50
 
 search_46:
-    ldr	w19,	[sp, #108]
+    ldr	w19,	[sp, #96]
 
     cmp	w17,	w19
     bne	search_50
@@ -185,7 +185,7 @@ search_50:
     bgt	search_54
 
 search_52:
-    ldr	w2,	[sp, #104]
+    ldr	w2,	[sp, #100]
 
     ldr	w27,	[sp, #120]
 
@@ -197,7 +197,7 @@ search_54:
     beq	search_66
 
 search_56:
-    ldr	w1,	[sp, #128]
+    ldr	w1,	[sp, #124]
 
     cmp	w5,	w1
     beq	search_66
@@ -216,48 +216,48 @@ search_68:
     movz	w0,	#0
     ldr	x19,	[sp, #136]
 
-    sub	w25,	w5,	w13
+    sub	w21,	w5,	w13
     sub	w28,	w17,	w2
     str	w0,	[x19]
 
-    ldr	w16,	[sp, #132]
+    ldr	w16,	[sp, #152]
 
     cmp	w16,	#10
     ble	search_72
 
 search_141:
-    ldr	w15,	[sp, #116]
+    ldr	w15,	[sp, #112]
 
     b	search_143
 
 search_72:
-    ldr	w2,	[sp, #116]
+    ldr	w2,	[sp, #112]
 
     movz	w20,	#0
-    str	w2,	[sp, #124]
+    str	w2,	[sp, #116]
 
-    str	w20,	[sp, #112]
+    str	w20,	[sp, #108]
 
 
 search_73:
-    ldr	w4,	[sp, #112]
+    ldr	w4,	[sp, #108]
 
     cmp	w4,	#4
     blt	search_77
 
 search_138:
-    ldr	w5,	[sp, #124]
+    ldr	w5,	[sp, #116]
 
     cmp	w5,	#10
-    ldr	w1,	[sp, #116]
+    ldr	w1,	[sp, #112]
 
-    ldr	w10,	[sp, #124]
+    ldr	w10,	[sp, #116]
 
     csel	w15,	w1,	w10,	gt
     b	search_143
 
 search_77:
-    ldr	w5,	[sp, #112]
+    ldr	w5,	[sp, #108]
 
     adrp	x9, :got:step
     movz	w17,	#0
@@ -270,7 +270,7 @@ search_77:
 
     ldr	w14,	[x5]
 
-    mov	w5,	w25
+    mov	w5,	w21
 
 search_83:
     lsl	w10,	w5,	#7
@@ -286,13 +286,13 @@ search_83:
     beq	search_103
 
 search_91:
-    ldr	w10,	[sp, #144]
+    ldr	w10,	[sp, #128]
 
     cmp	w5,	w10
     bne	search_97
 
 search_93:
-    ldr	w7,	[sp, #108]
+    ldr	w7,	[sp, #96]
 
     cmp	w4,	w7
     beq	search_103
@@ -304,13 +304,13 @@ search_97:
     b	search_83
 
 search_103:
-    ldr	w11,	[sp, #144]
+    ldr	w11,	[sp, #128]
 
     cmp	w5,	w11
     bne	search_109
 
 search_105:
-    ldr	w8,	[sp, #108]
+    ldr	w8,	[sp, #96]
 
     cmp	w4,	w8
     bne	search_109
@@ -331,7 +331,7 @@ search_143:
     csel	w27,	w4,	w27,	lt
     str	w6,	[x10]
 
-    ldr	w5,	[sp, #104]
+    ldr	w5,	[sp, #100]
 
     add	w13,	w5,	#1
     b	search_149
@@ -341,9 +341,9 @@ search_109:
     bgt	search_113
 
 search_111:
-    ldr	w6,	[sp, #112]
+    ldr	w6,	[sp, #108]
 
-    ldr	w7,	[sp, #124]
+    ldr	w7,	[sp, #116]
 
     add	w6,	w6,	#1
     b	search_135
@@ -353,7 +353,7 @@ search_113:
     beq	search_125
 
 search_115:
-    ldr	w8,	[sp, #128]
+    ldr	w8,	[sp, #124]
 
     cmp	w5,	w8
     beq	search_125
@@ -373,41 +373,41 @@ search_127:
     sub	w0,	w5,	w3
     str	w1,	[x20]
 
-    ldr	w2,	[sp, #100]
+    ldr	w2,	[sp, #104]
 
     sub	w1,	w4,	w14
     bl	search
-    ldr	w8,	[sp, #124]
+    ldr	w8,	[sp, #116]
 
     add	w15,	w0,	#1
     cmp	w15,	w8
     movz	w12,	#1
-    ldr	w9,	[sp, #124]
+    ldr	w9,	[sp, #116]
 
     csel	w7,	w15,	w9,	lt
     str	w12,	[x20]
 
-    ldr	w20,	[sp, #112]
+    ldr	w20,	[sp, #108]
 
     add	w6,	w20,	#1
     b	search_135
 
 search_125:
-    ldr	w8,	[sp, #112]
+    ldr	w8,	[sp, #108]
 
-    ldr	w7,	[sp, #124]
+    ldr	w7,	[sp, #116]
 
     add	w6,	w8,	#1
 
 search_135:
-    str	w7,	[sp, #124]
+    str	w7,	[sp, #116]
 
-    str	w6,	[sp, #112]
+    str	w6,	[sp, #108]
 
     b	search_73
 
 search_66:
-    ldr	w4,	[sp, #104]
+    ldr	w4,	[sp, #100]
 
     ldr	w27,	[sp, #120]
 
@@ -416,7 +416,7 @@ search_66:
 search_149:
     str	w27,	[sp, #120]
 
-    str	w13,	[sp, #104]
+    str	w13,	[sp, #100]
 
     b	search_14
 
@@ -424,7 +424,7 @@ search_152:
     ldr	w1,	[sp, #120]
 
     cmp	w1,	#10
-    ldr	w4,	[sp, #116]
+    ldr	w4,	[sp, #112]
 
     ldr	w2,	[sp, #120]
 
@@ -432,7 +432,7 @@ search_152:
     b	search_157
 
 search_155:
-    ldr	w0,	[sp, #116]
+    ldr	w0,	[sp, #112]
 
 
 search_157:

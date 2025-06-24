@@ -140,18 +140,18 @@ main_0:
     stp	fp, lr, [sp, #0]
     
     movz	w26,	#0
+    movz	w1,	#3
+    movz	w24,	#6
+    add	x21,	sp,	#32
     movz	w28,	#9
+    movz	w25,	#1
     movz	w27,	#2
     movz	w2,	#4
-    add	x0,	sp,	#16
-    add	x22,	sp,	#36
-    add	x23,	sp,	#40
-    movz	w25,	#1
-    movz	w24,	#6
-    movz	w1,	#3
-    add	x19,	sp,	#20
-    add	x21,	sp,	#32
     add	x20,	sp,	#28
+    add	x19,	sp,	#20
+    add	x22,	sp,	#36
+    add	x0,	sp,	#16
+    add	x23,	sp,	#40
     str	w2,	[x0]
 
     movz	w2,	#9

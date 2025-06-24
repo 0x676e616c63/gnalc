@@ -14,17 +14,17 @@ main_0:
     sub	sp, sp, fp
     stp	fp, lr, [sp, #0]
     
+    movz	fp,	#16976
     movz	w1,	#0
     movz	w23,	#16960
-    add	x0,	sp,	#16
+    movk	fp,	#15,	lsl #16
     movk	w23,	#15,	lsl #16
+    add	x0,	sp,	fp
     mov	x2,	x23
     bl	memset
     mov	x2,	x23
     movz	w1,	#0
-    movz	fp,	#16976
-    movk	fp,	#15,	lsl #16
-    add	x0,	sp,	fp
+    add	x0,	sp,	#16
     bl	memset
     bl	getint
     mov	w20,	w0
@@ -47,13 +47,11 @@ main_10:
 
 main_13:
     movz	w14,	#2000
-    movz	fp,	#16976
     movz	w26,	#1
-    movk	fp,	#15,	lsl #16
     mul	w11,	w25,	w14
     mov	x19,	x11
     add	x19,	sp,	x19
-    add	x19,	x19,	fp
+    add	x19,	x19,	#16
 
 main_16:
     bl	getch
@@ -93,11 +91,11 @@ main_35:
     ble	main_183
 
 main_37:
+    add	x15,	sp,	#16
     movz	fp,	#16976
-    add	x0,	sp,	#16
     movz	w25,	#1
     movk	fp,	#15,	lsl #16
-    add	x15,	sp,	fp
+    add	x0,	sp,	fp
 
 main_41:
     cmp	w25,	#1
@@ -401,18 +399,18 @@ main_190:
 
 main_192:
     movz	w17,	#2000
-    movz	fp,	#16976
     movz	w16,	#2000
-    movk	fp,	#15,	lsl #16
+    movz	fp,	#16976
     mul	w14,	w3,	w17
     mul	w16,	w3,	w16
+    movk	fp,	#15,	lsl #16
     movz	w17,	#1
     mov	x21,	x14
     mov	x13,	x16
     add	x21,	sp,	x21
     add	x13,	sp,	x13
-    add	x21,	x21,	fp
-    add	x13,	x13,	#16
+    add	x21,	x21,	#16
+    add	x13,	x13,	fp
 
 main_196:
     cmp	w17,	w20
@@ -450,13 +448,11 @@ main_214:
 
 main_217:
     movz	w22,	#2000
-    movz	fp,	#16976
     movz	w26,	#1
-    movk	fp,	#15,	lsl #16
     mul	w2,	w24,	w22
     mov	x25,	x2
     add	x25,	sp,	x25
-    add	x25,	x25,	fp
+    add	x25,	x25,	#16
 
 main_220:
     lsl	w0,	w26,	#2

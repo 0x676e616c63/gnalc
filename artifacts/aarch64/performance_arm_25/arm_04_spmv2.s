@@ -30,8 +30,8 @@ main_0:
     movk	w22,	#6,	lsl #16
     mov	x2,	x22
     bl	memset
-    movz	w1,	#0
     mov	x2,	x22
+    movz	w1,	#0
     movz	fp,	#6840
     movk	fp,	#6,	lsl #16
     add	x0,	sp,	fp

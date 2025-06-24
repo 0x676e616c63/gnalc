@@ -27,8 +27,8 @@ main_0:
     movz	fp,	#5616
     add	x0,	sp,	fp
     bl	memset
-    movz	w2,	#5600
     movz	w1,	#0
+    movz	w2,	#5600
     movz	fp,	#11216
     add	x0,	sp,	fp
     bl	memset
@@ -46,9 +46,9 @@ main_0:
     bl	getarray
     movz	w0,	#68
     bl	_sysy_starttime
-    adrp	x10, :got:A
     movz	w26,	#0
     add	x1,	sp,	#16
+    adrp	x10, :got:A
     movz	fp,	#11216
     ldr	x10, [x10, #:got_lo12:A]
     add	x18,	sp,	fp

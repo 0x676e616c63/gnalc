@@ -18,8 +18,8 @@ main_0:
     sub	sp, sp, fp
     stp	fp, lr, [sp, #0]
     
-    movz	w1,	#0
     movz	w2,	#5600
+    movz	w1,	#0
     add	x0,	sp,	#16
     bl	memset
     add	x0,	sp,	#16
@@ -108,9 +108,9 @@ main_45:
 
     add	w26,	w25,	w22
     cmp	w26,	#3
-    lsl	w6,	w21,	#2
     ldr	w25,	[x27]
 
+    lsl	w6,	w21,	#2
     cset	w8,	eq
     add	x5,	x24,	x6
     ldr	w19,	[x5]
@@ -197,8 +197,8 @@ main_98:
     add	w10,	w10,	#1
     ldr	w18,	[x17]
 
-    add	x8,	x17,	#8
     add	x1,	x17,	#28
+    add	x8,	x17,	#8
     sdiv	w7,	w18,	w21
     lsl	w5,	w7,	#1
     add	w25,	w5,	w7,	lsl #3

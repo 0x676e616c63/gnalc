@@ -48,10 +48,10 @@ main_14:
     cmp	w24,	w1
     add	w27,	w27,	w0
     movz	w12,	#1000
-    movz	w6,	#26809
     csel	w25,	w24,	w1,	lt
-    movk	w6,	#297,	lsl #16
+    movz	w6,	#26809
     lsl	w8,	w25,	#0
+    movk	w6,	#297,	lsl #16
     add	w19,	w8,	w25,	lsl #1
     sdiv	w22,	w19,	w12
     movz	w19,	#1001

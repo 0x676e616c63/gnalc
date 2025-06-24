@@ -45,33 +45,33 @@ main_6:
     msub	w9,	w28,	w7,	w10
 
     add	x19,	x19,	#16
-    add	w28,	w3,	#1
     movz	w7,	#10000
+    add	w28,	w3,	#1
     sdiv	w0,	w23,	w8
     movz	w3,	#10000
+    str	w9,	[x19]
+
     add	w10,	w28,	#1
     lsl	w18,	w28,	#2
-    str	w9,	[x19]
+    msub	w19,	w0,	w7,	w23
 
     movz	w28,	#10000
     mov	x6,	x18
-    msub	w19,	w0,	w7,	w23
-
-    add	x6,	sp,	x6
     add	w0,	w23,	w25
+    add	x6,	sp,	x6
     lsl	w23,	w10,	#2
     mov	x8,	x23
-    add	x6,	x6,	#16
     add	w9,	w0,	w25
     add	x8,	sp,	x8
-    str	w19,	[x6]
-
+    add	x6,	x6,	#16
     add	w14,	w9,	w25
     sdiv	w20,	w9,	w4
     add	x8,	x8,	#16
-    movz	w6,	#10000
+    str	w19,	[x6]
+
     msub	w1,	w20,	w3,	w9
 
+    movz	w6,	#10000
     sdiv	w16,	w14,	w2
     sdiv	w24,	w0,	w6
     msub	w24,	w24,	w5,	w0

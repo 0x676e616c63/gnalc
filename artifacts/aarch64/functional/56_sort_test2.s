@@ -12,44 +12,44 @@ main_0:
     sub	sp, sp, #64
     stp	fp, lr, [sp, #0]
     
-    movz	w26,	#2
     movz	w12,	#9
     movz	w18,	#3
-    add	x23,	sp,	#40
-    add	x24,	sp,	#20
-    add	x20,	sp,	#24
-    movz	w2,	#0
-    movz	w27,	#4
-    add	x13,	sp,	#16
-    add	x28,	sp,	#36
-    movz	w21,	#6
-    add	x19,	sp,	#44
-    movz	w3,	#7
-    movz	w6,	#1
-    movz	w22,	#5
     movz	w14,	#8
+    add	x21,	sp,	#24
+    movz	w22,	#6
+    add	x25,	sp,	#20
+    add	x24,	sp,	#36
+    add	x13,	sp,	#16
+    movz	w2,	#0
+    movz	w6,	#1
+    add	x28,	sp,	#44
+    add	x19,	sp,	#40
+    add	x20,	sp,	#48
+    movz	w3,	#7
+    movz	w27,	#4
+    add	x26,	sp,	#28
     str	w27,	[x13]
 
-    add	x27,	sp,	#28
-    str	w18,	[x24]
+    movz	w27,	#2
+    str	w18,	[x25]
 
-    str	w12,	[x20]
+    str	w12,	[x21]
 
-    str	w26,	[x27]
+    str	w27,	[x26]
 
-    add	x26,	sp,	#32
-    str	w2,	[x26]
+    add	x27,	sp,	#32
+    str	w2,	[x27]
 
-    str	w6,	[x28]
+    str	w6,	[x24]
 
     movz	w6,	#1
-    str	w21,	[x23]
-
-    add	x21,	sp,	#48
     str	w22,	[x19]
 
+    movz	w22,	#5
+    str	w22,	[x28]
+
     add	x22,	sp,	#52
-    str	w3,	[x21]
+    str	w3,	[x20]
 
     str	w14,	[x22]
 
@@ -85,9 +85,9 @@ main_25:
     b	main_18
 
 main_31:
-    add	w25,	w12,	#1
+    add	w23,	w12,	#1
     add	w6,	w6,	#1
-    lsl	w1,	w25,	#2
+    lsl	w1,	w23,	#2
     add	x0,	x13,	x1
     str	w4,	[x0]
 
@@ -100,17 +100,12 @@ main_36:
     bl	putint
     movz	w0,	#10
     bl	putch
-    ldr	w0,	[x24]
+    ldr	w0,	[x25]
 
     bl	putint
     movz	w0,	#10
     bl	putch
-    ldr	w0,	[x20]
-
-    bl	putint
-    movz	w0,	#10
-    bl	putch
-    ldr	w0,	[x27]
+    ldr	w0,	[x21]
 
     bl	putint
     movz	w0,	#10
@@ -120,12 +115,12 @@ main_36:
     bl	putint
     movz	w0,	#10
     bl	putch
-    ldr	w0,	[x28]
+    ldr	w0,	[x27]
 
     bl	putint
     movz	w0,	#10
     bl	putch
-    ldr	w0,	[x23]
+    ldr	w0,	[x24]
 
     bl	putint
     movz	w0,	#10
@@ -135,7 +130,12 @@ main_36:
     bl	putint
     movz	w0,	#10
     bl	putch
-    ldr	w0,	[x21]
+    ldr	w0,	[x28]
+
+    bl	putint
+    movz	w0,	#10
+    bl	putch
+    ldr	w0,	[x20]
 
     bl	putint
     movz	w0,	#10

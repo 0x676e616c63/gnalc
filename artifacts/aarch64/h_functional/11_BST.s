@@ -353,9 +353,9 @@ main_3:
     movz	w18,	#1
     adrp	x23, :got:value
     adrp	x25, :got:left_child
-    adrp	x15, :got:now
     movz	w10,	#65535
     adrp	x14, :got:right_child
+    adrp	x15, :got:now
     ldr	x23, [x23, #:got_lo12:value]
     movk	w10,	#65535,	lsl #16
     str	w0,	[x23]

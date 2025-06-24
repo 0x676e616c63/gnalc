@@ -26,8 +26,8 @@ main_0:
     movk	fp,	#2,	lsl #16
     add	x0,	sp,	fp
     bl	memset
-    movz	w1,	#0
     mov	x2,	x24
+    movz	w1,	#0
     movz	fp,	#57872
     movk	fp,	#4,	lsl #16
     add	x0,	sp,	fp
@@ -261,9 +261,9 @@ main_79:
     sub	w11,	w19,	w12
     cmp	w11,	#0
     lsl	w4,	w10,	#2
-    movz	w22,	#800
     movz	fp,	#28944
     csel	w16,	w25,	w15,	eq
+    movz	w22,	#800
     movk	fp,	#2,	lsl #16
     add	w25,	w9,	#1
     mul	w2,	w25,	w22
@@ -289,13 +289,13 @@ main_79:
     sub	w19,	w7,	w21
     cmp	w19,	#0
     lsl	w21,	w10,	#2
+    movz	w17,	#800
     movz	fp,	#28944
     add	w3,	w25,	#1
     csel	w2,	w11,	w16,	eq
-    movz	w17,	#800
     movk	fp,	#2,	lsl #16
-    lsl	w16,	w3,	#2
     mul	w19,	w3,	w17
+    lsl	w16,	w3,	#2
     mov	x27,	x19
     add	x15,	x5,	x16
     add	x27,	sp,	x27
@@ -318,8 +318,8 @@ main_79:
     cmp	w6,	#0
     csel	w26,	w25,	w2,	eq
     add	w20,	w3,	#1
-    movz	fp,	#28944
     movz	w12,	#800
+    movz	fp,	#28944
     lsl	w9,	w10,	#2
     movk	fp,	#2,	lsl #16
     lsl	w2,	w20,	#2
@@ -372,14 +372,14 @@ main_79:
     lsl	w3,	w2,	#1
     sub	w12,	w13,	w3
     cmp	w12,	#0
-    movz	w1,	#800
-    movz	fp,	#28944
     csel	w28,	w28,	w17,	eq
     add	w3,	w25,	#1
     lsl	w13,	w10,	#2
-    movk	fp,	#2,	lsl #16
-    mul	w11,	w3,	w1
+    movz	w1,	#800
+    movz	fp,	#28944
     lsl	w6,	w3,	#2
+    mul	w11,	w3,	w1
+    movk	fp,	#2,	lsl #16
     mov	x21,	x11
     add	x4,	x5,	x6
     add	x21,	sp,	x21
@@ -428,16 +428,16 @@ main_79:
     lsl	w21,	w20,	#1
     sub	w17,	w19,	w21
     cmp	w17,	#0
-    csel	w27,	w3,	w7,	eq
-    add	w22,	w4,	#1
+    movz	w19,	#800
     movz	fp,	#28944
     lsl	w16,	w10,	#2
-    movz	w19,	#800
+    csel	w27,	w3,	w7,	eq
+    add	w22,	w4,	#1
     movk	fp,	#2,	lsl #16
-    lsl	w11,	w22,	#2
     mul	w14,	w22,	w19
-    add	x9,	x5,	x11
+    lsl	w11,	w22,	#2
     mov	x25,	x14
+    add	x9,	x5,	x11
     add	x25,	sp,	x25
     ldr	w11,	[x9]
 
@@ -497,8 +497,8 @@ main_184:
     ldr	w8,	[x6]
 
     cmp	w8,	w15
-    csel	w24,	w8,	w15,	lt
     add	w26,	w5,	#1
+    csel	w24,	w8,	w15,	lt
     lsl	w6,	w26,	#2
     add	x5,	x1,	x6
     ldr	w7,	[x5]

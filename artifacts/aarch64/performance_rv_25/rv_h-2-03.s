@@ -15,10 +15,10 @@ main_0:
     
     movz	w0,	#22
     bl	_sysy_starttime
+    fmov	s11,	#1.000000
+    movi	v25.4s,	#0
     movi	v10.4s,	#0
     movz	w6,	#0
-    movi	v25.4s,	#0
-    fmov	s11,	#1.000000
     movz	fp,	#24016
     add	x12,	sp,	#16
     add	x23,	sp,	fp
@@ -60,17 +60,17 @@ main_20:
     fadd	s22,	s25,	s15
     mov	x5,	x7
     add	x0,	sp,	x0
-    add	w24,	w15,	#1
     lsl	w10,	w15,	#2
     scvtf	s23,	w15
+    add	w24,	w15,	#1
     add	x5,	sp,	x5
     add	x0,	x0,	#16
     mov	x9,	x10
+    fadd	s3,	s11,	s23
+    fadd	s31,	s25,	s23
     add	w3,	w24,	#1
     lsl	w19,	w24,	#2
     scvtf	s2,	w24
-    fadd	s3,	s11,	s23
-    fadd	s31,	s25,	s23
     add	x5,	x5,	fp
     str	s22,	[x0]
 
@@ -84,25 +84,25 @@ main_20:
     movz	fp,	#24016
     str	s26,	[x5]
 
+    add	w26,	w17,	#1
     lsl	w8,	w17,	#2
     scvtf	s20,	w17
-    add	w26,	w17,	#1
     mov	x27,	x28
     fadd	s21,	s11,	s12
     fadd	s18,	s25,	s12
     add	x18,	sp,	x18
     add	x9,	x9,	fp
     lsl	w5,	w15,	#2
+    lsl	w13,	w26,	#2
     mov	x7,	x8
     fadd	s30,	s11,	s20
     fadd	s27,	s25,	s20
-    lsl	w13,	w26,	#2
     add	x27,	sp,	x27
     movz	fp,	#24016
     lsl	w15,	w24,	#2
     mov	x4,	x5
-    add	x7,	sp,	x7
     mov	x11,	x13
+    add	x7,	sp,	x7
     add	x18,	x18,	fp
     lsl	w24,	w3,	#2
     mov	x14,	x15

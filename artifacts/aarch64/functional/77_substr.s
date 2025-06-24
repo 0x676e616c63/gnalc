@@ -12,42 +12,42 @@ main_0:
     sub	sp, sp, #1216
     stp	fp, lr, [sp, #0]
     
-    movz	w22,	#7
     movz	w2,	#0
-    add	x28,	sp,	#1180
-    add	x26,	sp,	#1176
-    add	x21,	sp,	#1160
-    movz	w19,	#2
-    movz	w18,	#7
-    add	x27,	sp,	#1156
-    add	x24,	sp,	#1168
-    movz	w23,	#8
     movz	w1,	#1
-    movz	w20,	#1
-    add	x25,	sp,	#1172
-    add	x0,	sp,	#1184
-    str	w23,	[x27]
-
-    add	x23,	sp,	#1164
-    str	w22,	[x21]
-
-    movz	w22,	#0
-    movz	w21,	#4
-    str	w21,	[x23]
-
+    movz	w19,	#2
+    add	x22,	sp,	#1160
+    movz	w24,	#8
     movz	w23,	#7
-    add	x21,	sp,	#1208
-    str	w20,	[x24]
+    add	x20,	sp,	#1156
+    movz	w18,	#7
+    movz	w21,	#1
+    add	x27,	sp,	#1176
+    add	x0,	sp,	#1184
+    add	x28,	sp,	#1180
+    add	x26,	sp,	#1172
+    add	x25,	sp,	#1168
+    str	w24,	[x20]
 
-    movz	w24,	#3
-    add	x20,	sp,	#1204
-    str	w19,	[x25]
+    add	x24,	sp,	#1164
+    str	w23,	[x22]
 
-    movz	w25,	#8
+    movz	w23,	#0
+    movz	w22,	#4
+    str	w22,	[x24]
+
+    movz	w24,	#7
+    add	x22,	sp,	#1208
+    str	w21,	[x25]
+
+    movz	w25,	#3
+    add	x21,	sp,	#1204
+    str	w19,	[x26]
+
+    movz	w26,	#8
     add	x19,	sp,	#1200
-    str	w18,	[x26]
+    str	w18,	[x27]
 
-    movz	w26,	#4
+    movz	w27,	#4
     add	x18,	sp,	#1196
     str	w2,	[x28]
 
@@ -63,77 +63,77 @@ main_0:
     add	x2,	sp,	#1192
     str	w28,	[x2]
 
-    add	x28,	sp,	#32
+    add	x28,	sp,	#1056
     movz	w2,	#7
-    str	w26,	[x18]
+    str	w27,	[x18]
 
-    add	x26,	sp,	#28
+    add	x27,	sp,	#1052
     movz	w18,	#9
-    str	w25,	[x19]
+    str	w26,	[x19]
 
-    add	x25,	sp,	#24
-    add	x19,	sp,	#16
-    str	w24,	[x20]
+    add	x26,	sp,	#1048
+    movz	w19,	#3
+    str	w25,	[x21]
 
-    add	x24,	sp,	#20
-    movz	w20,	#3
-    str	w23,	[x21]
-
-    add	x21,	sp,	#56
-    add	x23,	sp,	#1212
-    str	w22,	[x23]
+    add	x21,	sp,	#1080
+    add	x25,	sp,	#1044
+    str	w24,	[x22]
 
     movz	w22,	#0
+    add	x24,	sp,	#1212
+    str	w23,	[x24]
+
     movz	w23,	#8
-    str	w20,	[x19]
+    add	x24,	sp,	#1040
+    str	w19,	[x24]
 
-    add	x20,	sp,	#52
-    str	w18,	[x24]
+    add	x19,	sp,	#1076
+    str	w18,	[x25]
 
-    movz	w24,	#6
-    add	x18,	sp,	#48
-    str	w2,	[x25]
+    movz	w25,	#6
+    add	x18,	sp,	#1072
+    str	w2,	[x26]
 
-    movz	w25,	#3
-    add	x2,	sp,	#44
-    str	w1,	[x26]
+    movz	w26,	#3
+    add	x2,	sp,	#1068
+    str	w1,	[x27]
 
-    movz	w26,	#4
-    add	x1,	sp,	#40
+    movz	w27,	#4
+    add	x1,	sp,	#1064
     str	w0,	[x28]
 
     movz	w28,	#2
-    add	x0,	sp,	#36
+    add	x0,	sp,	#1060
     str	w28,	[x0]
 
     add	x0,	sp,	#1092
-    str	w26,	[x1]
+    str	w27,	[x1]
 
     movz	w1,	#0
-    str	w25,	[x2]
+    str	w26,	[x2]
 
     movz	w2,	#64
-    str	w24,	[x18]
+    str	w25,	[x18]
 
-    add	x24,	sp,	#64
-    str	w23,	[x20]
+    add	x25,	sp,	#1088
+    str	w23,	[x19]
 
-    movz	w20,	#5
-    add	x23,	sp,	#60
+    movz	w19,	#5
+    add	x23,	sp,	#1084
     str	w22,	[x21]
 
     movz	w21,	#1
     str	w21,	[x23]
 
-    str	w20,	[x24]
+    str	w19,	[x25]
 
     bl	memset
-    movz	w18,	#8
-    add	x15,	sp,	#1096
-    movz	w20,	#8
     movz	w7,	#2
+    add	x15,	sp,	#1096
+    movz	w18,	#8
+    movz	w19,	#8
     add	x14,	sp,	#1092
-    str	w20,	[x14]
+    str	w19,	[x14]
 
     str	w18,	[x15]
 
@@ -143,13 +143,13 @@ main_36:
     bge	main_162
 
 main_39:
-    lsl	w20,	w7,	#2
+    lsl	w19,	w7,	#2
     sub	w21,	w7,	#2
-    lsl	w26,	w7,	#2
+    lsl	w27,	w7,	#2
     sub	w1,	w7,	#1
-    mov	x16,	x20
+    mov	x16,	x19
     lsl	w23,	w21,	#2
-    add	x25,	x27,	x26
+    add	x26,	x20,	x27
     lsl	w3,	w1,	#2
     add	x16,	sp,	x16
     mov	x22,	x23
@@ -161,7 +161,7 @@ main_39:
     add	x2,	x2,	#1092
     ldr	w23,	[x22]
 
-    ldr	w28,	[x25]
+    ldr	w28,	[x26]
 
     add	w9,	w28,	w23
     ldr	w11,	[x2]
@@ -174,13 +174,13 @@ main_39:
     str	w9,	[x16]
 
     sub	w6,	w18,	#1
-    lsl	w25,	w18,	#2
-    sub	w26,	w18,	#2
+    lsl	w26,	w18,	#2
+    sub	w27,	w18,	#2
     lsl	w3,	w18,	#2
-    mov	x22,	x25
+    mov	x22,	x26
     lsl	w8,	w6,	#2
-    add	x2,	x27,	x3
-    lsl	w0,	w26,	#2
+    add	x2,	x20,	x3
+    lsl	w0,	w27,	#2
     add	x22,	sp,	x22
     mov	x7,	x8
     mov	x28,	x0
@@ -193,57 +193,57 @@ main_39:
 
     ldr	w4,	[x2]
 
-    add	w10,	w4,	w1
-    ldr	w25,	[x7]
+    ldr	w26,	[x7]
 
-    cmp	w10,	w25
-    csel	w11,	w10,	w25,	gt
-    cmp	w10,	w25
+    add	w10,	w4,	w1
+    cmp	w10,	w26
+    csel	w11,	w10,	w26,	gt
+    cmp	w10,	w26
     add	w4,	w18,	#1
     csel	w13,	w10,	w11,	eq
     str	w13,	[x22]
 
-    sub	w17,	w4,	#2
-    lsl	w23,	w4,	#2
-    sub	w26,	w4,	#1
     lsl	w16,	w4,	#2
-    add	x22,	x27,	x23
+    lsl	w23,	w4,	#2
+    sub	w27,	w4,	#1
+    sub	w17,	w4,	#2
     mov	x9,	x16
-    lsl	w20,	w17,	#2
+    add	x22,	x20,	x23
     add	x9,	sp,	x9
-    lsl	w0,	w26,	#2
-    mov	x18,	x20
+    lsl	w0,	w27,	#2
+    lsl	w19,	w17,	#2
     mov	x28,	x0
-    add	x18,	sp,	x18
+    mov	x18,	x19
     add	x9,	x9,	#1092
     add	x28,	sp,	x28
-    add	x18,	x18,	#1092
+    add	x18,	sp,	x18
     add	x28,	x28,	#1092
+    add	x18,	x18,	#1092
     ldr	w21,	[x18]
 
-    ldr	w24,	[x22]
+    ldr	w25,	[x22]
 
-    add	w6,	w24,	w21
+    add	w6,	w25,	w21
     ldr	w17,	[x28]
 
     cmp	w6,	w17
     csel	w3,	w6,	w17,	gt
     cmp	w6,	w17
-    add	w16,	w4,	#1
     csel	w5,	w6,	w3,	eq
+    add	w16,	w4,	#1
     str	w5,	[x9]
 
-    lsl	w8,	w16,	#2
     lsl	w14,	w16,	#2
     sub	w17,	w16,	#1
+    lsl	w8,	w16,	#2
     sub	w9,	w16,	#2
-    mov	x26,	x8
-    add	x13,	x27,	x14
-    add	x26,	sp,	x26
-    lsl	w20,	w17,	#2
+    add	x13,	x20,	x14
+    mov	x27,	x8
+    lsl	w19,	w17,	#2
+    add	x27,	sp,	x27
     lsl	w11,	w9,	#2
     mov	x10,	x11
-    add	x26,	x26,	#1092
+    add	x27,	x27,	#1092
     add	x10,	sp,	x10
     add	x10,	x10,	#1092
     ldr	w18,	[x10]
@@ -251,7 +251,7 @@ main_39:
     ldr	w15,	[x13]
 
     add	w1,	w15,	w18
-    mov	x18,	x20
+    mov	x18,	x19
     add	x18,	sp,	x18
     add	x18,	x18,	#1092
     ldr	w9,	[x18]
@@ -259,59 +259,59 @@ main_39:
     cmp	w1,	w9
     csel	w23,	w1,	w9,	gt
     cmp	w1,	w9
+    csel	w26,	w1,	w23,	eq
     add	w18,	w16,	#1
-    csel	w25,	w1,	w23,	eq
-    str	w25,	[x26]
+    str	w26,	[x27]
 
     lsl	w0,	w18,	#2
+    sub	w1,	w18,	#2
     lsl	w6,	w18,	#2
     sub	w9,	w18,	#1
-    sub	w1,	w18,	#2
     mov	x4,	x0
-    add	x5,	x27,	x6
-    add	x4,	sp,	x4
-    lsl	w11,	w9,	#2
     lsl	w3,	w1,	#2
-    mov	x10,	x11
+    add	x5,	x20,	x6
+    lsl	w11,	w9,	#2
+    add	x4,	sp,	x4
     mov	x2,	x3
-    add	x4,	x4,	#1092
-    add	x10,	sp,	x10
+    mov	x10,	x11
     add	x2,	sp,	x2
-    add	x10,	x10,	#1092
+    add	x10,	sp,	x10
+    add	x4,	x4,	#1092
     add	x2,	x2,	#1092
+    add	x10,	x10,	#1092
     ldr	w13,	[x2]
 
     ldr	w7,	[x5]
 
     ldr	w2,	[x10]
 
-    add	w26,	w7,	w13
-    cmp	w26,	w2
-    csel	w14,	w26,	w2,	gt
-    cmp	w26,	w2
-    csel	w16,	w26,	w14,	eq
+    add	w27,	w7,	w13
+    cmp	w27,	w2
+    csel	w14,	w27,	w2,	gt
+    cmp	w27,	w2
+    csel	w16,	w27,	w14,	eq
     add	w14,	w18,	#1
     str	w16,	[x4]
 
-    lsl	w20,	w14,	#2
-    lsl	w26,	w14,	#2
-    sub	w1,	w14,	#1
+    lsl	w19,	w14,	#2
     sub	w21,	w14,	#2
-    mov	x12,	x20
-    add	x25,	x27,	x26
-    add	x12,	sp,	x12
-    lsl	w3,	w1,	#2
+    sub	w1,	w14,	#1
+    lsl	w27,	w14,	#2
+    mov	x12,	x19
     lsl	w23,	w21,	#2
-    mov	x2,	x3
+    add	x26,	x20,	x27
+    lsl	w3,	w1,	#2
+    add	x12,	sp,	x12
     mov	x22,	x23
-    add	x12,	x12,	#1092
-    add	x2,	sp,	x2
+    mov	x2,	x3
     add	x22,	sp,	x22
-    add	x2,	x2,	#1092
+    add	x2,	sp,	x2
+    add	x12,	x12,	#1092
     add	x22,	x22,	#1092
+    add	x2,	x2,	#1092
     ldr	w5,	[x22]
 
-    ldr	w28,	[x25]
+    ldr	w28,	[x26]
 
     ldr	w23,	[x2]
 
@@ -319,15 +319,15 @@ main_39:
     cmp	w22,	w23
     csel	w6,	w22,	w23,	gt
     cmp	w22,	w23
-    add	w20,	w14,	#1
     csel	w8,	w22,	w6,	eq
+    add	w19,	w14,	#1
     str	w8,	[x12]
 
-    sub	w21,	w20,	#1
-    lsl	w17,	w20,	#2
-    lsl	w11,	w20,	#2
-    sub	w12,	w20,	#2
-    add	x16,	x27,	x17
+    sub	w21,	w19,	#1
+    lsl	w17,	w19,	#2
+    lsl	w11,	w19,	#2
+    sub	w12,	w19,	#2
+    add	x16,	x20,	x17
     mov	x11,	x11
     lsl	w23,	w21,	#2
     add	x11,	sp,	x11
@@ -347,17 +347,17 @@ main_39:
 
     add	w15,	w18,	w0
     cmp	w15,	w14
-    csel	w26,	w15,	w14,	gt
+    csel	w27,	w15,	w14,	gt
     cmp	w15,	w14
-    csel	w0,	w15,	w26,	eq
-    add	w1,	w20,	#1
+    csel	w0,	w15,	w27,	eq
+    add	w1,	w19,	#1
     str	w0,	[x11]
 
     sub	w12,	w1,	#1
     lsl	w9,	w1,	#2
     sub	w4,	w1,	#2
     lsl	w3,	w1,	#2
-    add	x8,	x27,	x9
+    add	x8,	x20,	x9
     mov	x21,	x3
     lsl	w14,	w12,	#2
     add	x21,	sp,	x21
@@ -380,8 +380,8 @@ main_39:
     csel	w17,	w15,	w7,	gt
     cmp	w15,	w7
     add	w7,	w1,	#1
-    csel	w20,	w15,	w17,	eq
-    str	w20,	[x21]
+    csel	w19,	w15,	w17,	eq
+    str	w19,	[x21]
 
     b	main_36
 
@@ -389,25 +389,25 @@ main_162:
     lsl	w15,	w7,	#2
     sub	w16,	w7,	#2
     lsl	w22,	w7,	#2
-    sub	w25,	w7,	#1
+    sub	w26,	w7,	#1
     mov	x0,	x15
     lsl	w18,	w16,	#2
-    add	x21,	x27,	x22
-    lsl	w28,	w25,	#2
+    add	x21,	x20,	x22
+    lsl	w28,	w26,	#2
     add	x0,	sp,	x0
     mov	x17,	x18
-    mov	x26,	x28
+    mov	x27,	x28
     add	x17,	sp,	x17
-    add	x26,	sp,	x26
+    add	x27,	sp,	x27
     add	x0,	x0,	#1092
     add	x17,	x17,	#1092
-    add	x26,	x26,	#1092
+    add	x27,	x27,	#1092
     ldr	w13,	[x17]
 
     ldr	w23,	[x21]
 
     add	w11,	w23,	w13
-    ldr	w13,	[x26]
+    ldr	w13,	[x27]
 
     cmp	w11,	w13
     csel	w2,	w11,	w13,	gt
@@ -428,7 +428,7 @@ main_180:
     bl	putch
     movz	w2,	#1024
     movz	w1,	#0
-    add	x0,	sp,	#68
+    add	x0,	sp,	#16
     bl	memset
     movz	w28,	#1
 
@@ -440,12 +440,12 @@ main_185:
     lsl	w17,	w0,	#6
     lsl	w12,	w0,	#2
     mov	x21,	x17
-    add	x13,	x13,	#68
-    add	x11,	x27,	x12
+    add	x13,	x13,	#16
+    add	x11,	x20,	x12
     add	x21,	sp,	x21
     ldr	w11,	[x11]
 
-    add	x21,	x21,	#68
+    add	x21,	x21,	#16
     cmp	w11,	#3
     bne	main_198
 
@@ -460,8 +460,8 @@ main_193:
 
 main_198:
     add	x4,	x13,	#4
-    add	x25,	x21,	#4
-    ldr	w23,	[x25]
+    add	x26,	x21,	#4
+    ldr	w23,	[x26]
 
     ldr	w22,	[x13]
 
@@ -477,12 +477,12 @@ main_208:
     bne	main_215
 
 main_210:
-    add	x26,	x13,	#8
+    add	x27,	x13,	#8
     add	x8,	x21,	#4
     ldr	w9,	[x8]
 
     add	w10,	w9,	#1
-    str	w10,	[x26]
+    str	w10,	[x27]
 
     b	main_225
 
@@ -495,9 +495,9 @@ main_215:
     ldr	w9,	[x16]
 
     cmp	w5,	w9
-    csel	w20,	w5,	w9,	gt
+    csel	w19,	w5,	w9,	gt
     cmp	w5,	w9
-    csel	w23,	w5,	w20,	eq
+    csel	w23,	w5,	w19,	eq
     str	w23,	[x0]
 
 
@@ -507,8 +507,8 @@ main_225:
 
 main_227:
     add	x17,	x13,	#12
-    add	x26,	x21,	#8
-    ldr	w0,	[x26]
+    add	x27,	x21,	#8
+    ldr	w0,	[x27]
 
     add	w1,	w0,	#1
     str	w1,	[x17]
@@ -519,14 +519,14 @@ main_232:
     add	x23,	x13,	#12
     add	x3,	x21,	#12
     add	x5,	x13,	#8
-    ldr	w26,	[x3]
+    ldr	w27,	[x3]
 
     ldr	w1,	[x5]
 
-    cmp	w26,	w1
-    csel	w8,	w26,	w1,	gt
-    cmp	w26,	w1
-    csel	w10,	w26,	w8,	eq
+    cmp	w27,	w1
+    csel	w8,	w27,	w1,	gt
+    cmp	w27,	w1
+    csel	w10,	w27,	w8,	eq
     str	w10,	[x23]
 
 
@@ -546,16 +546,16 @@ main_244:
 
 main_249:
     add	x14,	x13,	#16
-    add	x20,	x21,	#16
+    add	x19,	x21,	#16
     add	x23,	x13,	#12
-    ldr	w15,	[x20]
+    ldr	w15,	[x19]
 
     ldr	w17,	[x23]
 
     cmp	w15,	w17
-    csel	w26,	w15,	w17,	gt
+    csel	w27,	w15,	w17,	gt
     cmp	w15,	w17
-    csel	w1,	w15,	w26,	eq
+    csel	w1,	w15,	w27,	eq
     str	w1,	[x14]
 
 
@@ -597,22 +597,22 @@ main_278:
     add	x22,	x21,	#20
     ldr	w23,	[x22]
 
-    add	w24,	w23,	#1
-    str	w24,	[x17]
+    add	w25,	w23,	#1
+    str	w25,	[x17]
 
     b	main_293
 
 main_283:
     add	x3,	x13,	#24
-    add	x26,	x21,	#24
+    add	x27,	x21,	#24
     add	x1,	x13,	#20
-    ldr	w2,	[x26]
+    ldr	w2,	[x27]
 
-    ldr	w26,	[x1]
+    ldr	w27,	[x1]
 
-    cmp	w2,	w26
-    csel	w4,	w2,	w26,	gt
-    cmp	w2,	w26
+    cmp	w2,	w27
+    csel	w4,	w2,	w27,	gt
+    cmp	w2,	w27
     csel	w6,	w2,	w4,	eq
     str	w6,	[x3]
 
@@ -636,25 +636,25 @@ main_300:
     add	x23,	x13,	#28
     add	x15,	x21,	#28
     add	x17,	x13,	#24
-    ldr	w20,	[x15]
+    ldr	w19,	[x15]
 
     ldr	w15,	[x17]
 
-    cmp	w20,	w15
-    csel	w22,	w20,	w15,	gt
-    cmp	w20,	w15
+    cmp	w19,	w15
+    csel	w22,	w19,	w15,	gt
+    cmp	w19,	w15
     movz	w9,	#8
-    csel	w24,	w20,	w22,	eq
-    str	w24,	[x23]
+    csel	w25,	w19,	w22,	eq
+    str	w25,	[x23]
 
 
 main_311:
     sub	w15,	w9,	#1
-    lsl	w25,	w15,	#2
-    add	x24,	x19,	x25
-    ldr	w26,	[x24]
+    lsl	w26,	w15,	#2
+    add	x25,	x24,	x26
+    ldr	w27,	[x25]
 
-    cmp	w11,	w26
+    cmp	w11,	w27
     bne	main_325
 
 main_317:
@@ -681,9 +681,9 @@ main_325:
     ldr	w0,	[x15]
 
     cmp	w4,	w0
-    csel	w20,	w4,	w0,	gt
+    csel	w19,	w4,	w0,	gt
     cmp	w4,	w0
-    csel	w23,	w4,	w20,	eq
+    csel	w23,	w4,	w19,	eq
     str	w23,	[x14]
 
 
@@ -698,7 +698,7 @@ main_335:
     ble	main_185
 
 main_338:
-    add	x26,	sp,	#1028
+    add	x26,	sp,	#976
     add	x27,	x26,	#52
     ldr	w0,	[x27]
 

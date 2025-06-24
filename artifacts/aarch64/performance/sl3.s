@@ -179,11 +179,11 @@ main_82:
     adrp	x1, :got:x
     ldr	x1, [x1, #:got_lo12:x]
     bl	putarray
-    adrp	x27, :got:x
     asr	w21,	w28,	#31
     movz	w0,	#2400
-    ldr	x27, [x27, #:got_lo12:x]
+    adrp	x27, :got:x
     lsr	w22,	w21,	#31
+    ldr	x27, [x27, #:got_lo12:x]
     add	w25,	w28,	w22
     asr	w26,	w25,	#1
     madd	x1,	x26,	x19,	x27
