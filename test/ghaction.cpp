@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
         if (arg == "--backend" || arg == "-b")
             only_frontend = false;
         else if (arg == "--data" || arg == "-d") {
-            if (i + 1 >= argc || argv[i + 1][0] == '-') {
+            if (i + 1 >= argc) {
                 println("Error: Expected a directory.");
                 print_help();
                 return -1;
@@ -126,11 +126,16 @@ int main(int argc, char *argv[]) {
             if ((path.extension() == ".s" && only_frontend) || (path.extension() == ".ll" && !only_frontend))
                 continue;
 
+            auto parent_path = path.parent_path();
+            bool is_final = parent_path.parent_path().stem() == "final";
+            auto base_path = testdata_dir + "/" +
+                (is_final  ? "final/" : "")
+                + parent_path.stem().string() + "/" + path.stem().string();
             entries.emplace_back(TestEntry{
-                .id = path.parent_path().stem().string() + "-" + path.stem().string(),
+                .id = (is_final ? "final-" : "") + parent_path.stem().string() + "-" + path.stem().string(),
                 .ir_or_asm = path,
-                .testcase_out = testdata_dir + "/" + path.parent_path().stem().string() + "/" + path.stem().string() + ".out",
-                .testcase_in = testdata_dir + "/" + path.parent_path().stem().string() + "/" + path.stem().string() + ".in",
+                .testcase_out = base_path + ".out",
+                .testcase_in = base_path + ".in",
             });
         }
     }
@@ -171,10 +176,10 @@ int main(int argc, char *argv[]) {
 
         report << "#### Test: " << curr_test.id << "\n";
         report << "- **File:** " << curr_test.ir_or_asm << "\n";
+        report << "- **Time Elapsed:** " << res.time_elapsed << "ms\n";
         report << "- **Status:** ";
 
         if (res.output != expected_syout) {
-            report << "- **Time Elapsed:** " << res.time_elapsed << "ms\n";
             report << "❌ FAILED\n";
                 report << "- **Expected:** " << (expected_syout.size() > 512 ?
                     "<output too long>" : escape_md(expected_syout)) << "\n";
@@ -182,7 +187,6 @@ int main(int argc, char *argv[]) {
                     "<output too long>" : escape_md(res.output)) << "\n";
         } else {
             ++passed;
-            report << "- **Time Elapsed:** " << res.time_elapsed << "ms\n";
             report << "✅ PASSED\n";
         }
         report << "\n";
