@@ -20,8 +20,8 @@ main_0:
     movk	w2,	#2,	lsl #16
     add	x0,	sp,	fp
     bl	memset
-    movz	w1,	#0
     movz	w2,	#8040
+    movz	w1,	#0
     add	x0,	sp,	#16
     bl	memset
     bl	getint
@@ -37,9 +37,9 @@ main_5:
 main_8:
     bl	getint
     movz	w27,	#1
-    lsl	w21,	w20,	#3
-    asr	w4,	w0,	#31
     movz	fp,	#8056
+    asr	w4,	w0,	#31
+    lsl	w21,	w20,	#3
     mov	x12,	x21
     lsr	w5,	w4,	#31
     sub	w21,	w20,	#1

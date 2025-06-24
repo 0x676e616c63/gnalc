@@ -36,244 +36,244 @@ main_0:
     bl	getarray
     movz	w0,	#79
     bl	_sysy_starttime
-    movz	w7,	#0
-    add	x0,	sp,	#16
-    add	x12,	sp,	#3216
+    add	x12,	sp,	#16
     adrp	x11, :got:corr
+    add	x28,	sp,	#3216
+    movz	w6,	#0
     adrp	x21, :got:data
     ldr	x21, [x21, #:got_lo12:data]
     ldr	x11, [x11, #:got_lo12:corr]
 
 main_10:
-    lsl	w8,	w7,	#2
-    movz	w22,	#0
-    movz	w1,	#0
-    add	x9,	x12,	x8
-    str	w22,	[x9]
+    lsl	w7,	w6,	#2
+    movz	w20,	#0
+    movz	w0,	#0
+    add	x8,	x28,	x7
+    str	w20,	[x8]
 
 
 main_13:
-    cmp	x1,	#800
+    cmp	x0,	#800
     bge	main_58
 
 main_16:
-    ldr	w5,	[x9]
+    ldr	w4,	[x8]
 
-    movz	w14,	#3200
-    lsl	w16,	w7,	#2
-    add	x18,	x1,	#1
-    movz	w10,	#3200
-    movz	w8,	#3200
-    lsl	w23,	w7,	#2
-    lsl	w13,	w7,	#2
-    madd	x2,	x1,	x14,	x21
+    movz	w13,	#3200
+    lsl	w15,	w6,	#2
+    add	x17,	x0,	#1
+    movz	w9,	#3200
+    movz	w7,	#3200
+    lsl	w22,	w6,	#2
+    lsl	w10,	w6,	#2
+    madd	x1,	x0,	x13,	x21
 
-    madd	x20,	x18,	x10,	x21
+    madd	x19,	x17,	x9,	x21
 
-    add	x15,	x2,	x16
-    lsl	w2,	w7,	#2
-    ldr	w17,	[x15]
-
-    lsl	w15,	w7,	#2
-    add	w27,	w17,	w5
-    movz	w5,	#3200
-    add	x14,	x20,	x15
-    lsl	w20,	w7,	#2
+    add	x14,	x1,	x15
+    lsl	w1,	w6,	#2
     ldr	w16,	[x14]
 
-    add	w25,	w16,	w27
-    add	x27,	x18,	#1
-    add	x16,	x27,	#1
-    madd	x28,	x27,	x8,	x21
+    lsl	w14,	w6,	#2
+    add	w26,	w16,	w4
+    movz	w4,	#3200
+    add	x13,	x19,	x14
+    lsl	w19,	w6,	#2
+    ldr	w15,	[x13]
 
-    lsl	w8,	w7,	#2
-    add	x22,	x28,	x23
-    lsl	w28,	w7,	#2
-    madd	x10,	x16,	x5,	x21
+    add	w24,	w15,	w26
+    add	x26,	x17,	#1
+    add	x15,	x26,	#1
+    madd	x27,	x26,	x7,	x21
 
-    ldr	w24,	[x22]
+    lsl	w7,	w6,	#2
+    add	x20,	x27,	x22
+    lsl	w27,	w6,	#2
+    madd	x9,	x15,	x4,	x21
 
-    add	x1,	x10,	x2
-    add	w15,	w24,	w25
-    add	x25,	x16,	#1
-    ldr	w3,	[x1]
+    ldr	w23,	[x20]
 
-    movz	w1,	#3200
-    add	w23,	w3,	w15
-    add	x6,	x25,	#1
-    movz	w3,	#3200
-    madd	x19,	x25,	x3,	x21
+    add	x0,	x9,	x1
+    add	w14,	w23,	w24
+    add	x24,	x15,	#1
+    ldr	w2,	[x0]
 
-    add	x26,	x6,	#1
-    madd	x27,	x6,	x1,	x21
+    movz	w0,	#3200
+    add	w22,	w2,	w14
+    add	x5,	x24,	#1
+    movz	w2,	#3200
+    madd	x18,	x24,	x2,	x21
 
-    movz	w25,	#3200
-    add	x10,	x19,	x13
-    add	x19,	x27,	x20
-    movz	w27,	#3200
-    ldr	w14,	[x10]
+    add	x25,	x5,	#1
+    madd	x26,	x5,	x0,	x21
 
-    madd	x6,	x26,	x27,	x21
+    movz	w24,	#3200
+    add	x9,	x18,	x10
+    add	x18,	x26,	x19
+    movz	w26,	#3200
+    ldr	w13,	[x9]
 
-    ldr	w22,	[x19]
+    madd	x5,	x25,	x26,	x21
 
-    add	w4,	w14,	w23
-    add	x27,	x6,	x28
-    add	w3,	w22,	w4
-    ldr	w1,	[x27]
+    ldr	w20,	[x18]
 
-    add	w28,	w1,	w3
-    add	x1,	x26,	#1
-    madd	x18,	x1,	x25,	x21
+    add	w3,	w13,	w22
+    add	x26,	x5,	x27
+    add	w2,	w20,	w3
+    ldr	w0,	[x26]
 
-    add	w1,	w1,	#1
-    add	x6,	x18,	x8
-    ldr	w10,	[x6]
+    add	w27,	w0,	w2
+    add	x0,	x25,	#1
+    madd	x17,	x0,	x24,	x21
 
-    add	w13,	w10,	w28
-    str	w13,	[x9]
+    add	w0,	w0,	#1
+    add	x5,	x17,	x7
+    ldr	w9,	[x5]
+
+    add	w10,	w9,	w27
+    str	w10,	[x8]
 
     b	main_13
 
 main_58:
-    ldr	w26,	[x9]
+    ldr	w25,	[x8]
 
-    movz	w15,	#800
-    add	w7,	w7,	#1
-    sdiv	w16,	w26,	w15
-    str	w16,	[x9]
+    movz	w14,	#800
+    add	w6,	w6,	#1
+    sdiv	w15,	w25,	w14
+    str	w15,	[x8]
 
-    cmp	w7,	#800
+    cmp	w6,	#800
     blt	main_10
 
 main_63:
     movz	w22,	#0
 
 main_65:
-    lsl	w27,	w22,	#2
-    movz	w16,	#0
-    lsl	w20,	w22,	#2
-    movz	w3,	#0
-    add	x24,	x0,	x27
-    add	x19,	x12,	x20
-    str	w16,	[x24]
+    lsl	w26,	w22,	#2
+    movz	w15,	#0
+    lsl	w19,	w22,	#2
+    movz	w2,	#0
+    add	x23,	x12,	x26
+    add	x18,	x28,	x19
+    str	w15,	[x23]
 
-    ldr	w8,	[x19]
+    ldr	w7,	[x18]
 
 
 main_70:
-    cmp	x3,	#800
+    cmp	x2,	#800
     bge	main_131
 
 main_73:
-    ldr	w15,	[x24]
+    ldr	w20,	[x23]
 
     movz	w17,	#3200
-    lsl	w10,	w22,	#2
-    add	x2,	x3,	#1
-    movz	w5,	#3200
+    lsl	w9,	w22,	#2
+    add	x1,	x2,	#1
+    movz	w4,	#3200
+    lsl	w26,	w22,	#2
+    lsl	w15,	w22,	#2
+    madd	x17,	x2,	x17,	x21
+
+    madd	x16,	x1,	x4,	x21
+
+    movz	w2,	#3200
+    add	x8,	x17,	x9
+    add	x25,	x16,	x26
+    movz	w26,	#3200
+    ldr	w10,	[x8]
+
+    lsl	w8,	w22,	#2
+    ldr	w27,	[x25]
+
+    sub	w13,	w10,	w7
+    sub	w0,	w27,	w7
     lsl	w27,	w22,	#2
-    lsl	w16,	w22,	#2
-    madd	x18,	x3,	x17,	x21
+    madd	w19,	w13,	w13,	w20
 
-    movz	w3,	#3200
-    madd	x17,	x2,	x5,	x21
+    madd	w17,	w0,	w0,	w19
 
-    add	x9,	x18,	x10
-    add	x26,	x17,	x27
-    movz	w27,	#3200
-    ldr	w13,	[x9]
+    movz	w0,	#3200
+    add	x19,	x1,	#1
+    add	x4,	x19,	#1
+    madd	x1,	x19,	x2,	x21
+
+    lsl	w19,	w22,	#2
+    add	x6,	x1,	x8
+    madd	x13,	x4,	x0,	x21
+
+    add	x8,	x4,	#1
+    ldr	w9,	[x6]
+
+    add	x18,	x13,	x19
+    sub	w10,	w9,	w7
+    madd	x26,	x8,	x26,	x21
+
+    add	x6,	x8,	#1
+    ldr	w20,	[x18]
 
     lsl	w9,	w22,	#2
-    ldr	w28,	[x26]
+    madd	w3,	w10,	w10,	w17
 
-    sub	w14,	w13,	w8
-    sub	w1,	w28,	w8
-    lsl	w28,	w22,	#2
-    madd	w20,	w14,	w14,	w15
+    movz	w18,	#3200
+    sub	w24,	w20,	w7
+    movz	w20,	#3200
+    madd	w25,	w24,	w24,	w3
 
-    madd	w18,	w1,	w1,	w20
+    movz	w24,	#3200
+    lsl	w3,	w22,	#2
+    madd	x8,	x6,	x24,	x21
 
-    movz	w1,	#3200
-    add	x20,	x2,	#1
-    add	x5,	x20,	#1
-    madd	x2,	x20,	x3,	x21
+    add	x2,	x26,	x3
+    add	x14,	x8,	x15
+    ldr	w4,	[x2]
 
-    lsl	w20,	w22,	#2
-    add	x7,	x2,	x9
-    madd	x14,	x5,	x1,	x21
+    add	x2,	x6,	#1
+    ldr	w16,	[x14]
 
-    add	x9,	x5,	#1
-    ldr	w10,	[x7]
+    sub	w5,	w4,	w7
+    sub	w17,	w16,	w7
+    madd	x19,	x2,	x20,	x21
 
-    add	x19,	x14,	x20
-    sub	w13,	w10,	w8
-    madd	x27,	x9,	x27,	x21
+    madd	w5,	w5,	w5,	w25
 
-    add	x7,	x9,	#1
-    ldr	w23,	[x19]
+    add	x26,	x19,	x27
+    madd	w25,	w17,	w17,	w5
 
-    lsl	w10,	w22,	#2
-    madd	w4,	w13,	w13,	w18
+    add	x19,	x2,	#1
+    ldr	w0,	[x26]
 
-    movz	w19,	#3200
-    sub	w25,	w23,	w8
-    movz	w23,	#3200
-    madd	w26,	w25,	w25,	w4
+    add	w2,	w19,	#1
+    madd	x4,	x19,	x18,	x21
 
-    movz	w25,	#3200
-    lsl	w4,	w22,	#2
-    madd	x9,	x7,	x25,	x21
+    sub	w1,	w0,	w7
+    add	x8,	x4,	x9
+    madd	w16,	w1,	w1,	w25
 
-    add	x3,	x27,	x4
-    add	x15,	x9,	x16
-    ldr	w5,	[x3]
+    ldr	w10,	[x8]
 
-    add	x3,	x7,	#1
-    ldr	w17,	[x15]
+    sub	w13,	w10,	w7
+    madd	w15,	w13,	w13,	w16
 
-    sub	w6,	w5,	w8
-    sub	w18,	w17,	w8
-    madd	x20,	x3,	x23,	x21
-
-    madd	w6,	w6,	w6,	w26
-
-    add	x27,	x20,	x28
-    madd	w26,	w18,	w18,	w6
-
-    add	x20,	x3,	#1
-    ldr	w1,	[x27]
-
-    add	w3,	w20,	#1
-    madd	x5,	x20,	x19,	x21
-
-    sub	w2,	w1,	w8
-    add	x9,	x5,	x10
-    madd	w17,	w2,	w2,	w26
-
-    ldr	w13,	[x9]
-
-    sub	w14,	w13,	w8
-    madd	w16,	w14,	w14,	w17
-
-    str	w16,	[x24]
+    str	w15,	[x23]
 
     b	main_70
 
 main_131:
-    ldr	w17,	[x24]
+    ldr	w16,	[x23]
 
     movz	w18,	#800
-    sdiv	w3,	w17,	w18
-    mul	w4,	w3,	w3
-    str	w4,	[x24]
+    sdiv	w2,	w16,	w18
+    mul	w3,	w2,	w2
+    str	w3,	[x23]
 
-    cmp	w4,	#1
+    cmp	w3,	#1
     bgt	main_138
 
 main_136:
     movz	w19,	#1
-    str	w19,	[x24]
+    str	w19,	[x23]
 
 
 main_138:
@@ -287,7 +287,7 @@ main_141:
 main_143:
     movz	w22,	#3200
     movz	w13,	#0
-    madd	x27,	x7,	x22,	x21
+    madd	x26,	x7,	x22,	x21
 
 
 main_146:
@@ -297,149 +297,149 @@ main_146:
     bge	main_230
 
 main_149:
-    lsl	w3,	w13,	#2
-    lsl	w6,	w13,	#2
-    lsl	w14,	w13,	#2
-    add	x2,	x27,	x3
-    add	x5,	x12,	x6
-    add	x10,	x0,	x14
-    ldr	w4,	[x2]
-
-    ldr	w8,	[x5]
-
-    ldr	w15,	[x10]
-
-    sub	w5,	w4,	w8
-    mul	w16,	w15,	w23
-    sdiv	w17,	w5,	w16
-    add	w16,	w13,	#1
-    str	w17,	[x2]
-
-    add	w26,	w16,	#1
-    lsl	w1,	w16,	#2
-    lsl	w24,	w16,	#2
-    lsl	w19,	w16,	#2
-    add	x28,	x0,	x1
-    lsl	w17,	w26,	#2
-    lsl	w13,	w26,	#2
-    lsl	w8,	w26,	#2
-    add	x22,	x12,	x24
-    add	x10,	x27,	x19
-    add	x16,	x0,	x17
-    add	x5,	x27,	x8
-    ldr	w9,	[x10]
-
-    ldr	w25,	[x22]
-
-    ldr	w2,	[x28]
-
-    sub	w6,	w9,	w25
-    mul	w3,	w2,	w23
-    sdiv	w4,	w6,	w3
-    str	w4,	[x10]
-
-    add	x10,	x12,	x13
-    ldr	w2,	[x5]
-
-    ldr	w14,	[x10]
-
-    add	w10,	w26,	#1
-    ldr	w18,	[x16]
-
-    sub	w25,	w2,	w14
-    mul	w19,	w18,	w23
-    lsl	w1,	w10,	#2
-    sdiv	w20,	w25,	w19
-    add	x28,	x12,	x1
-    lsl	w25,	w10,	#2
-    str	w20,	[x5]
-
-    add	x15,	x27,	x25
-    lsl	w5,	w10,	#2
-    add	x4,	x0,	x5
-    ldr	w20,	[x15]
-
-    add	w5,	w10,	#1
-    ldr	w2,	[x28]
+    lsl	w2,	w13,	#2
+    lsl	w5,	w13,	#2
+    lsl	w10,	w13,	#2
+    add	x1,	x26,	x2
+    add	x4,	x28,	x5
+    add	x9,	x12,	x10
+    ldr	w3,	[x1]
 
     ldr	w6,	[x4]
 
-    sub	w18,	w20,	w2
-    lsl	w22,	w5,	#2
-    lsl	w17,	w5,	#2
-    lsl	w14,	w5,	#2
-    mul	w8,	w6,	w23
-    add	x20,	x0,	x22
-    add	x16,	x12,	x17
-    sdiv	w9,	w18,	w8
-    add	x8,	x27,	x14
-    str	w9,	[x15]
+    ldr	w14,	[x9]
+
+    sub	w4,	w3,	w6
+    mul	w15,	w14,	w23
+    sdiv	w16,	w4,	w15
+    add	w15,	w13,	#1
+    str	w16,	[x1]
+
+    add	w25,	w15,	#1
+    lsl	w0,	w15,	#2
+    lsl	w22,	w15,	#2
+    lsl	w18,	w15,	#2
+    add	x27,	x12,	x0
+    lsl	w16,	w25,	#2
+    lsl	w10,	w25,	#2
+    lsl	w6,	w25,	#2
+    add	x20,	x28,	x22
+    add	x9,	x26,	x18
+    add	x15,	x12,	x16
+    add	x4,	x26,	x6
+    ldr	w8,	[x9]
+
+    ldr	w24,	[x20]
+
+    ldr	w1,	[x27]
+
+    sub	w5,	w8,	w24
+    mul	w2,	w1,	w23
+    sdiv	w3,	w5,	w2
+    str	w3,	[x9]
+
+    add	x9,	x28,	x10
+    ldr	w1,	[x4]
+
+    ldr	w13,	[x9]
+
+    add	w9,	w25,	#1
+    ldr	w17,	[x15]
+
+    sub	w24,	w1,	w13
+    mul	w18,	w17,	w23
+    lsl	w0,	w9,	#2
+    sdiv	w19,	w24,	w18
+    add	x27,	x28,	x0
+    lsl	w24,	w9,	#2
+    str	w19,	[x4]
+
+    add	x14,	x26,	x24
+    lsl	w4,	w9,	#2
+    add	x3,	x12,	x4
+    ldr	w19,	[x14]
+
+    add	w4,	w9,	#1
+    ldr	w1,	[x27]
+
+    ldr	w5,	[x3]
+
+    sub	w17,	w19,	w1
+    lsl	w20,	w4,	#2
+    lsl	w16,	w4,	#2
+    lsl	w13,	w4,	#2
+    mul	w6,	w5,	w23
+    add	x19,	x12,	x20
+    add	x15,	x28,	x16
+    sdiv	w8,	w17,	w6
+    add	x6,	x26,	x13
+    str	w8,	[x14]
+
+    ldr	w9,	[x6]
+
+    ldr	w17,	[x15]
+
+    ldr	w22,	[x19]
+
+    sub	w5,	w9,	w17
+    mul	w24,	w22,	w23
+    sdiv	w25,	w5,	w24
+    add	w24,	w4,	#1
+    str	w25,	[x6]
+
+    lsl	w9,	w24,	#2
+    lsl	w4,	w24,	#2
+    lsl	w1,	w24,	#2
+    add	x8,	x12,	x9
+    add	x3,	x28,	x4
+    add	x19,	x26,	x1
+    add	w4,	w24,	#1
+    ldr	w2,	[x19]
+
+    lsl	w27,	w4,	#2
+    lsl	w20,	w4,	#2
+    lsl	w17,	w4,	#2
+    ldr	w5,	[x3]
+
+    add	x25,	x12,	x27
+    ldr	w10,	[x8]
+
+    sub	w0,	w2,	w5
+    mul	w13,	w10,	w23
+    add	x10,	x26,	x17
+    sdiv	w14,	w0,	w13
+    str	w14,	[x19]
+
+    add	x19,	x28,	x20
+    ldr	w18,	[x10]
+
+    ldr	w22,	[x19]
+
+    ldr	w0,	[x25]
+
+    sub	w18,	w18,	w22
+    mul	w1,	w0,	w23
+    sdiv	w2,	w18,	w1
+    add	w18,	w4,	#1
+    str	w2,	[x10]
+
+    add	w13,	w18,	#1
+    lsl	w9,	w18,	#2
+    lsl	w5,	w18,	#2
+    add	x8,	x28,	x9
+    add	x17,	x26,	x5
+    ldr	w15,	[x17]
 
     ldr	w10,	[x8]
 
-    ldr	w18,	[x16]
+    sub	w19,	w15,	w10
+    lsl	w15,	w18,	#2
+    add	x14,	x12,	x15
+    ldr	w16,	[x14]
 
-    ldr	w24,	[x20]
-
-    sub	w6,	w10,	w18
-    mul	w25,	w24,	w23
-    sdiv	w26,	w6,	w25
-    add	w25,	w5,	#1
-    str	w26,	[x8]
-
-    lsl	w10,	w25,	#2
-    lsl	w5,	w25,	#2
-    lsl	w2,	w25,	#2
-    add	x9,	x0,	x10
-    add	x4,	x12,	x5
-    add	x20,	x27,	x2
-    add	w5,	w25,	#1
-    ldr	w3,	[x20]
-
-    lsl	w28,	w5,	#2
-    lsl	w22,	w5,	#2
-    lsl	w18,	w5,	#2
-    ldr	w6,	[x4]
-
-    add	x26,	x0,	x28
-    ldr	w13,	[x9]
-
-    sub	w1,	w3,	w6
-    mul	w14,	w13,	w23
-    add	x13,	x27,	x18
-    sdiv	w15,	w1,	w14
-    str	w15,	[x20]
-
-    add	x20,	x12,	x22
-    ldr	w19,	[x13]
-
-    ldr	w24,	[x20]
-
-    ldr	w1,	[x26]
-
-    sub	w19,	w19,	w24
-    mul	w2,	w1,	w23
-    sdiv	w3,	w19,	w2
-    add	w19,	w5,	#1
-    str	w3,	[x13]
-
-    lsl	w10,	w19,	#2
-    lsl	w6,	w19,	#2
-    add	x9,	x12,	x10
-    add	x18,	x27,	x6
-    ldr	w16,	[x18]
-
-    ldr	w13,	[x9]
-
-    sub	w10,	w16,	w13
-    add	w13,	w19,	#1
-    lsl	w16,	w19,	#2
-    add	x15,	x0,	x16
-    ldr	w17,	[x15]
-
-    mul	w24,	w17,	w23
-    sdiv	w25,	w10,	w24
-    str	w25,	[x18]
+    mul	w23,	w16,	w23
+    sdiv	w24,	w19,	w23
+    str	w24,	[x17]
 
     b	main_146
 

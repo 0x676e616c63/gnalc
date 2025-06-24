@@ -13,8 +13,8 @@ main_0:
     stp	fp, lr, [sp, #0]
     
     movz	w0,	#1352
-    movz	w21,	#0
     movz	w7,	#49
+    movz	w21,	#0
     movz	w2,	#2
 
 main_2:

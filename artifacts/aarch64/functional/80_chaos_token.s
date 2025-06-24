@@ -145,12 +145,12 @@ main_0:
     
     movz	w2,	#20
     adrp	x1, :got:RET
-    add	x0,	sp,	#576
+    add	x0,	sp,	#16
     ldr	x1, [x1, #:got_lo12:RET]
     bl	memcpy
-    adrp	x1, :got:saY_HeI10_To
     movz	w2,	#160
-    add	x0,	sp,	#16
+    adrp	x1, :got:saY_HeI10_To
+    add	x0,	sp,	#36
     ldr	x1, [x1, #:got_lo12:saY_HeI10_To]
     bl	memcpy
     movz	w2,	#1200
@@ -160,11 +160,11 @@ main_0:
     bl	memcpy
     movz	w2,	#400
     adrp	x1, :got:__HELLO
-    add	x0,	sp,	#176
+    add	x0,	sp,	#196
     ldr	x1, [x1, #:got_lo12:__HELLO]
     bl	memcpy
     movz	w20,	#0
-    add	x25,	sp,	#176
+    add	x25,	sp,	#196
 
 main_6:
     lsl	w13,	w20,	#2
@@ -180,8 +180,8 @@ main_11:
     b	main_6
 
 main_13:
-    add	x28,	sp,	#16
-    add	x26,	sp,	#576
+    add	x28,	sp,	#36
+    add	x26,	sp,	#16
     movz	w21,	#0
 
 main_17:

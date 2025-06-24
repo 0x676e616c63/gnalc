@@ -353,14 +353,14 @@ main_147:
 
     add	x1,	x9,	x3
     fadd	s28,	s20,	s16
-    lsl	w17,	w14,	#2
     ldr	s17,	[x24]
 
+    lsl	w17,	w14,	#2
     fmul	s24,	s9,	s23
-    add	x15,	x9,	x17
     add	x24,	x16,	#40
     ldr	s31,	[x28]
 
+    add	x15,	x9,	x17
     fadd	s6,	s28,	s24
     lsl	w28,	w25,	#2
     ldr	s26,	[x7]
@@ -514,9 +514,9 @@ main_317:
     madd	x2,	x20,	x28,	x26
 
     add	w20,	w20,	#1
-    add	x13,	x2,	#8
     add	x18,	x2,	#16
     add	x3,	x2,	#12
+    add	x13,	x2,	#8
     add	x24,	x2,	#4
     ldr	s14,	[x2]
 

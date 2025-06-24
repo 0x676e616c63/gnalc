@@ -295,18 +295,18 @@ main_147:
     ldr	s7,	[x1]
 
     fadd	s6,	s18,	s17
-    lsl	w1,	w27,	#2
     ldr	s31,	[x9]
 
+    lsl	w1,	w27,	#2
     fmul	s8,	s23,	s7
-    add	x0,	x10,	x1
     add	x9,	x17,	#16
     ldr	s15,	[x15]
 
+    add	x0,	x10,	x1
     fadd	s14,	s6,	s8
-    add	w1,	w2,	#11
     lsl	w15,	w13,	#2
     fmul	s16,	s31,	s15
+    add	w1,	w2,	#11
     ldr	s8,	[x21]
 
     add	x14,	x10,	x15

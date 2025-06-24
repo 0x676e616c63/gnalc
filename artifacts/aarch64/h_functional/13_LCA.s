@@ -306,8 +306,8 @@ main_70:
     beq	main_150
 
 main_72:
-    movz	w25,	#1
-    movz	w23,	#0
+    movz	w20,	#1
+    movz	w27,	#0
 
 main_74:
     bl	getch
@@ -323,7 +323,7 @@ main_82:
     bgt	main_86
 
 main_90:
-    movz	w27,	#0
+    movz	w25,	#0
 
 main_91:
     cmp	w2,	#48
@@ -334,22 +334,22 @@ main_95:
     bgt	main_104
 
 main_97:
-    lsl	w22,	w27,	#1
-    add	w18,	w22,	w27,	lsl #3
-    add	w20,	w2,	w18
-    sub	w27,	w20,	#48
+    lsl	w23,	w25,	#1
+    add	w18,	w23,	w25,	lsl #3
+    add	w22,	w2,	w18
+    sub	w25,	w22,	#48
     bl	getch
     mov	w2,	w0
     b	main_91
 
 main_104:
     movz	w24,	#0
-    sub	w22,	w24,	w27
+    sub	w23,	w24,	w25
     cmp	w19,	#0
-    csel	w19,	w22,	w27,	ne
+    csel	w19,	w23,	w25,	ne
     cset	w28,	ne
     bl	getch
-    movz	w22,	#0
+    movz	w23,	#0
     mov	w6,	w0
 
 main_109:
@@ -361,7 +361,7 @@ main_113:
     bgt	main_117
 
 main_121:
-    movz	w27,	#0
+    movz	w25,	#0
 
 main_122:
     cmp	w6,	#48
@@ -372,50 +372,50 @@ main_126:
     bgt	main_135
 
 main_128:
-    lsl	w28,	w27,	#1
-    add	w20,	w28,	w27,	lsl #3
-    add	w24,	w6,	w20
-    sub	w27,	w24,	#48
+    lsl	w28,	w25,	#1
+    add	w22,	w28,	w25,	lsl #3
+    add	w24,	w6,	w22
+    sub	w25,	w24,	#48
     bl	getch
     mov	w6,	w0
     b	main_122
 
 main_135:
     movz	w6,	#0
-    sub	w11,	w6,	w27
-    cmp	w22,	#0
-    add	w25,	w25,	#1
-    lsl	w3,	w23,	#2
+    sub	w11,	w6,	w25
+    cmp	w23,	#0
     cset	w28,	ne
-    adrp	x20, :got:head
-    adrp	x1, :got:f
+    lsl	w3,	w27,	#2
     adrp	x13, :got:to
+    csel	w10,	w11,	w25,	ne
+    lsl	w6,	w27,	#2
+    adrp	x1, :got:f
     adrp	x16, :got:next
-    csel	w10,	w11,	w27,	ne
-    lsl	w6,	w23,	#2
     lsl	w9,	w19,	#2
+    adrp	x22, :got:head
+    add	w20,	w20,	#1
     ldr	x13, [x13, #:got_lo12:to]
     add	x11,	x13,	x3
     str	w10,	[x11]
 
     ldr	x16, [x16, #:got_lo12:next]
-    ldr	x20, [x20, #:got_lo12:head]
+    ldr	x22, [x22, #:got_lo12:head]
     add	x17,	x16,	x6
-    add	x8,	x20,	x9
-    ldr	w22,	[x8]
+    add	x8,	x22,	x9
+    ldr	w23,	[x8]
 
-    str	w22,	[x17]
+    str	w23,	[x17]
 
     lsl	w17,	w10,	#4
-    str	w23,	[x8]
+    str	w27,	[x8]
 
     ldr	x1, [x1, #:got_lo12:f]
-    add	w23,	w23,	#1
+    add	w27,	w27,	#1
     add	w15,	w17,	w10,	lsl #6
     add	x2,	x1,	x15
     str	w19,	[x2]
 
-    cmp	w25,	w26
+    cmp	w20,	w26
     bne	main_74
 
 main_150:
@@ -500,13 +500,13 @@ main_214:
     movz	w2,	#0
     sub	w4,	w2,	w20
     cmp	w26,	#0
-    cset	w7,	ne
-    csel	w8,	w4,	w20,	ne
-    adrp	x24, :got:dep
     adrp	x18, :got:dep
+    csel	w8,	w4,	w20,	ne
+    cset	w7,	ne
+    adrp	x24, :got:dep
     lsl	w10,	w22,	#2
-    lsl	w14,	w8,	#2
     ldr	x18, [x18, #:got_lo12:dep]
+    lsl	w14,	w8,	#2
     add	x9,	x18,	x10
     ldr	w10,	[x9]
 
@@ -593,17 +593,17 @@ main_264:
     ldr	w7,	[x16]
 
     cmp	w23,	w7
-    adrp	x18, :got:f
     cset	w19,	ne
     csel	w27,	w23,	w0,	ne
     csel	w9,	w7,	w13,	ne
     sub	w5,	w24,	#1
     adrp	x12, :got:f
+    adrp	x18, :got:f
     lsl	w23,	w27,	#4
     lsl	w24,	w9,	#4
-    ldr	x12, [x12, #:got_lo12:f]
-    lsl	w20,	w5,	#2
     lsl	w14,	w5,	#2
+    lsl	w20,	w5,	#2
+    ldr	x12, [x12, #:got_lo12:f]
     add	w15,	w23,	w27,	lsl #6
     add	w22,	w24,	w9,	lsl #6
     add	x13,	x12,	x15
@@ -616,17 +616,17 @@ main_264:
     ldr	w20,	[x19]
 
     cmp	w11,	w20
-    adrp	x6, :got:f
     cset	w23,	ne
     csel	w22,	w20,	w9,	ne
     csel	w19,	w11,	w27,	ne
     sub	w24,	w5,	#1
     adrp	x0, :got:f
+    adrp	x6, :got:f
     lsl	w26,	w22,	#4
     lsl	w25,	w19,	#4
-    ldr	x0, [x0, #:got_lo12:f]
     lsl	w8,	w24,	#2
     lsl	w2,	w24,	#2
+    ldr	x0, [x0, #:got_lo12:f]
     add	w10,	w26,	w22,	lsl #6
     add	w4,	w25,	w19,	lsl #6
     add	x3,	x0,	x4
@@ -639,8 +639,8 @@ main_264:
     ldr	w9,	[x7]
 
     cmp	w5,	w9
-    cset	w10,	ne
     adrp	x23, :got:f
+    cset	w10,	ne
     csel	w13,	w9,	w22,	ne
     csel	w11,	w5,	w19,	ne
     sub	w15,	w24,	#1
@@ -664,17 +664,17 @@ main_264:
     cmp	w22,	w28
     adrp	x10, :got:f
     cset	w27,	ne
+    adrp	x4, :got:f
     csel	w2,	w28,	w13,	ne
     csel	w7,	w22,	w11,	ne
-    adrp	x4, :got:f
+    ldr	x4, [x4, #:got_lo12:f]
     lsl	w1,	w2,	#4
     sub	w13,	w15,	#1
     lsl	w0,	w7,	#4
-    ldr	x4, [x4, #:got_lo12:f]
     add	w15,	w1,	w2,	lsl #6
-    add	w9,	w0,	w7,	lsl #6
-    lsl	w12,	w13,	#2
     lsl	w6,	w13,	#2
+    lsl	w12,	w13,	#2
+    add	w9,	w0,	w7,	lsl #6
     add	x8,	x4,	x9
     add	x5,	x8,	x6
     ldr	w0,	[x5]
@@ -708,11 +708,11 @@ main_264:
     ldr	w7,	[x28]
 
     cmp	w13,	w7
-    cset	w2,	ne
     csel	w6,	w7,	w6,	ne
     csel	w3,	w13,	w4,	ne
     sub	w25,	w9,	#1
     adrp	x8, :got:f
+    cset	w2,	ne
     lsl	w5,	w6,	#4
     lsl	w4,	w3,	#4
     ldr	x8, [x8, #:got_lo12:f]
@@ -833,8 +833,8 @@ main_165:
 main_117:
     cmp	w6,	#45
     movz	w24,	#1
-    cset	w27,	eq
-    csel	w22,	w24,	w22,	eq
+    cset	w25,	eq
+    csel	w23,	w24,	w23,	eq
     bl	getch
     mov	w6,	w0
     b	main_109

@@ -22,8 +22,8 @@ main_0:
     movz	w1,	#0
     add	x0,	sp,	#16
     bl	memset
-    movz	w1,	#0
     movz	w2,	#5600
+    movz	w1,	#0
     movz	fp,	#5616
     add	x0,	sp,	fp
     bl	memset

@@ -256,8 +256,8 @@ main_76:
     madd	x4,	x16,	x2,	x7
 
     add	x26,	x4,	x27
-    add	x4,	x19,	x5
     movz	w27,	#4000
+    add	x4,	x19,	x5
     ldr	w28,	[x26]
 
     lsl	w26,	w10,	#2

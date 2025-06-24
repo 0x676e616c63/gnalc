@@ -315,20 +315,20 @@ main_149:
     add	w15,	w13,	#1
     str	w16,	[x1]
 
-    add	w25,	w15,	#1
     lsl	w0,	w15,	#2
     lsl	w22,	w15,	#2
+    add	w25,	w15,	#1
     lsl	w18,	w15,	#2
     add	x27,	x12,	x0
+    add	x20,	x28,	x22
+    add	x9,	x26,	x18
     lsl	w16,	w25,	#2
     lsl	w10,	w25,	#2
     lsl	w6,	w25,	#2
-    add	x20,	x28,	x22
-    add	x9,	x26,	x18
-    add	x15,	x12,	x16
-    add	x4,	x26,	x6
     ldr	w8,	[x9]
 
+    add	x15,	x12,	x16
+    add	x4,	x26,	x6
     ldr	w24,	[x20]
 
     ldr	w1,	[x27]

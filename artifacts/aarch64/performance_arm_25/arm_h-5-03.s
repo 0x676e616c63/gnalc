@@ -47,8 +47,8 @@ main_0:
     movz	w0,	#68
     bl	_sysy_starttime
     movz	w26,	#0
-    add	x1,	sp,	#16
     adrp	x10, :got:A
+    add	x1,	sp,	#16
     movz	fp,	#11216
     ldr	x10, [x10, #:got_lo12:A]
     add	x18,	sp,	fp
