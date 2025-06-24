@@ -276,8 +276,8 @@ main_59:
     cmp	w28,	#0
     movz	w16,	#1
     adrp	x14, :got:dep
-    movz	w7,	#16191
     csel	w21,	w3,	w21,	ne
+    movz	w7,	#16191
     cset	w12,	ne
     ldr	x14, [x14, #:got_lo12:dep]
     movk	w7,	#16191,	lsl #16
@@ -384,15 +384,15 @@ main_135:
     movz	w6,	#0
     sub	w11,	w6,	w27
     cmp	w22,	#0
+    adrp	x1, :got:f
+    add	w25,	w25,	#1
     cset	w28,	ne
     lsl	w3,	w23,	#2
     adrp	x13, :got:to
     adrp	x20, :got:head
-    add	w25,	w25,	#1
-    adrp	x1, :got:f
+    adrp	x16, :got:next
     csel	w10,	w11,	w27,	ne
     lsl	w6,	w23,	#2
-    adrp	x16, :got:next
     lsl	w9,	w19,	#2
     ldr	x13, [x13, #:got_lo12:to]
     add	x11,	x13,	x3
@@ -593,17 +593,17 @@ main_264:
     ldr	w7,	[x16]
 
     cmp	w23,	w7
-    adrp	x18, :got:f
     cset	w19,	ne
+    adrp	x12, :got:f
     csel	w27,	w23,	w0,	ne
     csel	w9,	w7,	w13,	ne
     sub	w5,	w24,	#1
-    adrp	x12, :got:f
+    adrp	x18, :got:f
+    ldr	x12, [x12, #:got_lo12:f]
     lsl	w23,	w27,	#4
     lsl	w24,	w9,	#4
-    ldr	x12, [x12, #:got_lo12:f]
-    lsl	w20,	w5,	#2
     lsl	w14,	w5,	#2
+    lsl	w20,	w5,	#2
     add	w15,	w23,	w27,	lsl #6
     add	w22,	w24,	w9,	lsl #6
     add	x13,	x12,	x15
@@ -616,17 +616,17 @@ main_264:
     ldr	w20,	[x19]
 
     cmp	w11,	w20
-    adrp	x6, :got:f
     cset	w23,	ne
     csel	w22,	w20,	w9,	ne
     csel	w19,	w11,	w27,	ne
     sub	w24,	w5,	#1
+    adrp	x6, :got:f
     adrp	x0, :got:f
     lsl	w26,	w22,	#4
     lsl	w25,	w19,	#4
-    ldr	x0, [x0, #:got_lo12:f]
     lsl	w8,	w24,	#2
     lsl	w2,	w24,	#2
+    ldr	x0, [x0, #:got_lo12:f]
     add	w10,	w26,	w22,	lsl #6
     add	w4,	w25,	w19,	lsl #6
     add	x3,	x0,	x4
@@ -639,17 +639,17 @@ main_264:
     ldr	w9,	[x7]
 
     cmp	w5,	w9
+    adrp	x23, :got:f
     cset	w10,	ne
     csel	w13,	w9,	w22,	ne
     csel	w11,	w5,	w19,	ne
     sub	w15,	w24,	#1
-    adrp	x23, :got:f
     adrp	x16, :got:f
     lsl	w28,	w13,	#4
     lsl	w27,	w11,	#4
+    ldr	x16, [x16, #:got_lo12:f]
     lsl	w25,	w15,	#2
     lsl	w18,	w15,	#2
-    ldr	x16, [x16, #:got_lo12:f]
     add	w20,	w27,	w11,	lsl #6
     add	w27,	w28,	w13,	lsl #6
     add	x19,	x16,	x20
@@ -662,11 +662,11 @@ main_264:
     ldr	w28,	[x24]
 
     cmp	w22,	w28
-    adrp	x10, :got:f
     cset	w27,	ne
     csel	w2,	w28,	w13,	ne
     csel	w7,	w22,	w11,	ne
     adrp	x4, :got:f
+    adrp	x10, :got:f
     lsl	w1,	w2,	#4
     sub	w13,	w15,	#1
     lsl	w0,	w7,	#4
@@ -708,10 +708,10 @@ main_264:
     ldr	w7,	[x28]
 
     cmp	w13,	w7
+    cset	w2,	ne
     csel	w6,	w7,	w6,	ne
     csel	w3,	w13,	w4,	ne
     sub	w25,	w9,	#1
-    cset	w2,	ne
     adrp	x8, :got:f
     lsl	w5,	w6,	#4
     lsl	w4,	w3,	#4

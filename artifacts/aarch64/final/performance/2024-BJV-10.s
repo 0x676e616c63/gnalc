@@ -99,9 +99,9 @@ main_19:
     movz	w11,	#4000
     ldr	x3, [x3, #:got_lo12:a]
     add	x0,	x28,	#1
+    add	x15,	x0,	#1
     madd	x1,	x0,	x17,	x3
 
-    add	x15,	x0,	#1
     lsl	x14,	x0,	#2
     add	x18,	x1,	x19
     lsl	x0,	x7,	#2
@@ -595,9 +595,9 @@ main_254:
     madd	x3,	x22,	x3,	x6
 
     add	x16,	x10,	x27
-    movz	w22,	#0
-    lsl	x8,	x11,	#2
     lsl	x6,	x17,	#2
+    lsl	x8,	x11,	#2
+    movz	w22,	#0
     add	x18,	x3,	x19
     adrp	x27, :got:c
     lsl	x3,	x17,	#2

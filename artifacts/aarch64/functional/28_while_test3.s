@@ -12,12 +12,12 @@ main_0:
     sub	sp, sp, #16
     str	lr, [sp, 0]
 
-    movz	w1,	#1
     movz	w16,	#2
     movz	w3,	#6
     movz	w24,	#4
     movz	w5,	#10
     movz	w4,	#6
+    movz	w1,	#1
     movz	w6,	#5
 
 main_2:

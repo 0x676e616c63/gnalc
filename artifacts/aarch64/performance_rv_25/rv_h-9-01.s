@@ -22,17 +22,17 @@ fib_3:
     stp	x27, x28, [sp, #64]
     stp	fp, lr, [sp, #80]
     
-    mov	w27,	w0
-    movz	x11,	#3
-    movz	x10,	#31161
-    mov	w28,	w1
-    mov	w21,	w2
     adrp	x5, :got:memo.lut.fib
+    movz	x10,	#31161
+    movz	x11,	#3
     movz	x12,	#31353
-    movz	x9,	#31161
+    mov	w21,	w2
+    mov	w27,	w0
     movz	x23,	#65535
-    movk	x10,	#40503,	lsl #16
+    mov	w28,	w1
+    movz	x9,	#31161
     ldr	x5, [x5, #:got_lo12:memo.lut.fib]
+    movk	x10,	#40503,	lsl #16
     movk	x12,	#40503,	lsl #16
     movk	x9,	#40503,	lsl #16
     add	x17,	x27,	x12
@@ -117,8 +117,8 @@ fib_68:
     asr	w2,	w19,	#1
     bl	fib
     mov	w19,	w0
-    sub	w2,	w27,	#2
     sub	w1,	w28,	#2
+    sub	w2,	w27,	#2
     asr	w18,	w2,	#31
     lsr	w22,	w18,	#31
     sub	w18,	w21,	#3

@@ -60,24 +60,24 @@ main_0:
     bl	putch
     movz	w0,	#10
     bl	putch
-    add	x0,	sp,	#28
-    add	x28,	sp,	#24
-    movi	v9.4s,	#0
-    fmov	s13,	#2.000000
-    add	x22,	sp,	#16
-    add	x20,	sp,	#40
-    add	x27,	sp,	#20
     add	x18,	sp,	#32
     movi	v11.4s,	#0
-    movi	v10.4s,	#0
-    add	x19,	sp,	#36
-    movi	v12.4s,	#0
-    fmov	s14,	#1.000000
-    add	x23,	sp,	#48
-    movi	v8.4s,	#0
-    add	x21,	sp,	#44
     movi	v15.4s,	#0
+    add	x19,	sp,	#36
+    add	x0,	sp,	#28
+    add	x28,	sp,	#24
+    fmov	s13,	#2.000000
+    add	x27,	sp,	#20
+    fmov	s14,	#1.000000
+    movi	v9.4s,	#0
+    add	x23,	sp,	#48
     add	x24,	sp,	#52
+    movi	v12.4s,	#0
+    add	x22,	sp,	#16
+    movi	v10.4s,	#0
+    add	x21,	sp,	#44
+    add	x20,	sp,	#40
+    movi	v8.4s,	#0
     str	s14,	[x22]
 
     movi	v14.4s,	#0

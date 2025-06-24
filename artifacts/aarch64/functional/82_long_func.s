@@ -41,33 +41,33 @@ long_func_0:
     bl	putint
     movz	w0,	#10
     bl	putch
-    movz	w21,	#1
+    movz	w23,	#1
     movz	w12,	#1
     adrp	x6, :got:SHIFT_TABLE
     adrp	x0, :got:SHIFT_TABLE
     ldr	x0, [x0, #:got_lo12:SHIFT_TABLE]
     add	x28,	x0,	#4
-    ldr	w26,	[x28]
+    ldr	w19,	[x28]
 
     movz	w28,	#2
     ldr	x6, [x6, #:got_lo12:SHIFT_TABLE]
     add	x5,	x6,	#60
-    ldr	w23,	[x5]
+    ldr	w20,	[x5]
 
 
 long_func_6:
     movz	w13,	#0
     movz	w1,	#0
-    mov	w25,	w21
+    mov	w25,	w23
     movz	w17,	#1
 
 long_func_11:
     asr	w4,	w25,	#31
     lsr	w5,	w4,	#31
     add	w6,	w25,	w5
-    asr	w20,	w6,	#1
-    lsl	w22,	w20,	#1
-    sub	w9,	w25,	w22
+    asr	w22,	w6,	#1
+    lsl	w24,	w22,	#1
+    sub	w9,	w25,	w24
     cmp	w9,	#0
     beq	long_func_27
 
@@ -75,8 +75,8 @@ long_func_18:
     asr	w7,	w17,	#31
     lsr	w8,	w7,	#31
     add	w9,	w17,	w8
-    asr	w24,	w9,	#1
-    lsl	w27,	w24,	#1
+    asr	w26,	w9,	#1
+    lsl	w27,	w26,	#1
     sub	w11,	w17,	w27
     cmp	w11,	#0
     beq	long_func_27
@@ -86,9 +86,9 @@ long_func_21:
     adrp	x18, :got:SHIFT_TABLE
     ldr	x18, [x18, #:got_lo12:SHIFT_TABLE]
     add	x15,	x18,	x2
-    ldr	w19,	[x15]
+    ldr	w21,	[x15]
 
-    add	w13,	w19,	w13
+    add	w13,	w21,	w13
 
 long_func_27:
     asr	w10,	w25,	#31
@@ -121,50 +121,50 @@ long_func_37:
 
 long_func_39:
     movz	w16,	#0
-    movz	w20,	#0
+    movz	w22,	#0
     mov	w11,	w13
-    movz	w19,	#1
+    movz	w21,	#1
 
 long_func_44:
     asr	w18,	w11,	#31
-    lsr	w22,	w18,	#31
-    add	w24,	w11,	w22
-    asr	w27,	w24,	#1
+    lsr	w24,	w18,	#31
+    add	w25,	w11,	w24
+    asr	w27,	w25,	#1
     lsl	w1,	w27,	#1
     sub	w15,	w11,	w1
     cmp	w15,	#0
     beq	long_func_60
 
 long_func_51:
-    asr	w25,	w19,	#31
-    lsr	w27,	w25,	#31
-    add	w1,	w19,	w27
+    asr	w26,	w21,	#31
+    lsr	w27,	w26,	#31
+    add	w1,	w21,	w27
     asr	w2,	w1,	#1
     lsl	w3,	w2,	#1
-    sub	w18,	w19,	w3
+    sub	w18,	w21,	w3
     cmp	w18,	#0
     beq	long_func_60
 
 long_func_54:
-    lsl	w7,	w20,	#2
+    lsl	w7,	w22,	#2
     adrp	x27, :got:SHIFT_TABLE
     ldr	x27, [x27, #:got_lo12:SHIFT_TABLE]
-    add	x24,	x27,	x7
-    ldr	w1,	[x24]
+    add	x25,	x27,	x7
+    ldr	w1,	[x25]
 
     add	w16,	w1,	w16
 
 long_func_60:
     asr	w2,	w11,	#31
-    asr	w5,	w19,	#31
-    add	w20,	w20,	#1
+    asr	w5,	w21,	#31
+    add	w22,	w22,	#1
     lsr	w3,	w2,	#31
     lsr	w6,	w5,	#31
     add	w4,	w11,	w3
-    add	w7,	w19,	w6
+    add	w7,	w21,	w6
     asr	w11,	w4,	#1
-    asr	w19,	w7,	#1
-    cmp	w20,	#16
+    asr	w21,	w7,	#1
+    cmp	w22,	#16
     blt	long_func_44
 
 long_func_66:
@@ -182,7 +182,7 @@ long_func_74:
     movz	w14,	#0
     movz	w1,	#0
     mov	w17,	w0
-    mov	w19,	w11
+    mov	w21,	w11
 
 long_func_78:
     asr	w7,	w17,	#31
@@ -195,12 +195,12 @@ long_func_78:
     beq	long_func_95
 
 long_func_85:
-    asr	w10,	w19,	#31
+    asr	w10,	w21,	#31
     lsr	w15,	w10,	#31
-    add	w16,	w19,	w15
+    add	w16,	w21,	w15
     asr	w10,	w16,	#1
     lsl	w15,	w10,	#1
-    sub	w3,	w19,	w15
+    sub	w3,	w21,	w15
     cmp	w3,	#0
     bne	long_func_105
 
@@ -215,34 +215,34 @@ long_func_88:
     b	long_func_105
 
 long_func_95:
-    asr	w18,	w19,	#31
-    lsr	w20,	w18,	#31
-    add	w22,	w19,	w20
-    asr	w18,	w22,	#1
-    lsl	w20,	w18,	#1
-    sub	w10,	w19,	w20
+    asr	w18,	w21,	#31
+    lsr	w22,	w18,	#31
+    add	w24,	w21,	w22
+    asr	w18,	w24,	#1
+    lsl	w22,	w18,	#1
+    sub	w10,	w21,	w22
     cmp	w10,	#0
     beq	long_func_105
 
 long_func_98:
     lsl	w8,	w1,	#2
-    adrp	x20, :got:SHIFT_TABLE
-    ldr	x20, [x20, #:got_lo12:SHIFT_TABLE]
-    add	x16,	x20,	x8
-    ldr	w22,	[x16]
+    adrp	x22, :got:SHIFT_TABLE
+    ldr	x22, [x22, #:got_lo12:SHIFT_TABLE]
+    add	x16,	x22,	x8
+    ldr	w24,	[x16]
 
-    add	w14,	w22,	w14
+    add	w14,	w24,	w14
 
 long_func_105:
-    asr	w24,	w17,	#31
+    asr	w25,	w17,	#31
     add	w1,	w1,	#1
-    lsr	w25,	w24,	#31
-    add	w2,	w17,	w25
+    lsr	w26,	w25,	#31
+    add	w2,	w17,	w26
     asr	w17,	w2,	#1
-    asr	w2,	w19,	#31
+    asr	w2,	w21,	#31
     lsr	w3,	w2,	#31
-    add	w5,	w19,	w3
-    asr	w19,	w5,	#1
+    add	w5,	w21,	w3
+    asr	w21,	w5,	#1
     cmp	w1,	#16
     blt	long_func_78
 
@@ -254,8 +254,8 @@ long_func_113:
     asr	w6,	w0,	#31
     lsr	w7,	w6,	#31
     add	w8,	w0,	w7
-    asr	w25,	w8,	#1
-    lsl	w27,	w25,	#1
+    asr	w26,	w8,	#1
+    lsl	w27,	w26,	#1
     sub	w17,	w0,	w27
     cmp	w17,	#0
     beq	long_func_129
@@ -266,41 +266,41 @@ long_func_120:
     add	w16,	w11,	w10
     asr	w1,	w16,	#1
     lsl	w2,	w1,	#1
-    sub	w19,	w11,	w2
-    cmp	w19,	#0
+    sub	w21,	w11,	w2
+    cmp	w21,	#0
     beq	long_func_129
 
 long_func_123:
     lsl	w9,	w3,	#2
-    adrp	x25, :got:SHIFT_TABLE
-    ldr	x25, [x25, #:got_lo12:SHIFT_TABLE]
-    add	x22,	x25,	x9
-    ldr	w27,	[x22]
+    adrp	x26, :got:SHIFT_TABLE
+    ldr	x26, [x26, #:got_lo12:SHIFT_TABLE]
+    add	x24,	x26,	x9
+    ldr	w27,	[x24]
 
     add	w15,	w27,	w15
 
 long_func_129:
     asr	w17,	w0,	#31
-    asr	w20,	w11,	#31
+    asr	w22,	w11,	#31
     add	w3,	w3,	#1
     lsr	w18,	w17,	#31
-    lsr	w22,	w20,	#31
+    lsr	w24,	w22,	#31
     add	w17,	w0,	w18
-    add	w20,	w11,	w22
+    add	w22,	w11,	w24
     asr	w0,	w17,	#1
-    asr	w11,	w20,	#1
+    asr	w11,	w22,	#1
     cmp	w3,	#16
     blt	long_func_113
 
 long_func_135:
-    mul	w8,	w26,	w15
+    mul	w8,	w19,	w15
     movz	w11,	#0
     movz	w17,	#0
-    movz	w19,	#65535
+    movz	w21,	#65535
 
 long_func_138:
-    asr	w25,	w8,	#31
-    lsr	w27,	w25,	#31
+    asr	w26,	w8,	#31
+    lsr	w27,	w26,	#31
     add	w0,	w8,	w27
     asr	w5,	w0,	#1
     lsl	w6,	w5,	#1
@@ -309,12 +309,12 @@ long_func_138:
     beq	long_func_154
 
 long_func_145:
-    asr	w1,	w19,	#31
+    asr	w1,	w21,	#31
     lsr	w2,	w1,	#31
-    add	w3,	w19,	w2
+    add	w3,	w21,	w2
     asr	w7,	w3,	#1
     lsl	w9,	w7,	#1
-    sub	w9,	w19,	w9
+    sub	w9,	w21,	w9
     cmp	w9,	#0
     beq	long_func_154
 
@@ -323,20 +323,20 @@ long_func_148:
     adrp	x18, :got:SHIFT_TABLE
     ldr	x18, [x18, #:got_lo12:SHIFT_TABLE]
     add	x15,	x18,	x4
-    ldr	w20,	[x15]
+    ldr	w22,	[x15]
 
-    add	w11,	w20,	w11
+    add	w11,	w22,	w11
 
 long_func_154:
     asr	w4,	w8,	#31
-    asr	w7,	w19,	#31
+    asr	w7,	w21,	#31
     add	w17,	w17,	#1
     lsr	w5,	w4,	#31
     lsr	w9,	w7,	#31
     add	w4,	w8,	w5
-    add	w7,	w19,	w9
+    add	w7,	w21,	w9
     asr	w8,	w4,	#1
-    asr	w19,	w7,	#1
+    asr	w21,	w7,	#1
     cmp	w17,	#16
     blt	long_func_138
 
@@ -359,28 +359,28 @@ long_func_170:
     mov	w5,	w12
 
 long_func_172:
-    movz	w24,	#0
+    movz	w25,	#0
     movz	w2,	#0
     mov	w18,	w5
-    mov	w22,	w12
+    mov	w24,	w12
 
 long_func_176:
     asr	w15,	w18,	#31
     lsr	w16,	w15,	#31
     add	w17,	w18,	w16
-    asr	w19,	w17,	#1
-    lsl	w20,	w19,	#1
-    sub	w20,	w18,	w20
-    cmp	w20,	#0
+    asr	w21,	w17,	#1
+    lsl	w22,	w21,	#1
+    sub	w22,	w18,	w22
+    cmp	w22,	#0
     beq	long_func_193
 
 long_func_183:
-    asr	w19,	w22,	#31
-    lsr	w20,	w19,	#31
-    add	w25,	w22,	w20
-    asr	w25,	w25,	#1
-    lsl	w27,	w25,	#1
-    sub	w27,	w22,	w27
+    asr	w21,	w24,	#31
+    lsr	w22,	w21,	#31
+    add	w26,	w24,	w22
+    asr	w26,	w26,	#1
+    lsl	w27,	w26,	#1
+    sub	w27,	w24,	w27
     cmp	w27,	#0
     bne	long_func_203
 
@@ -391,16 +391,16 @@ long_func_186:
     add	x3,	x6,	x1
     ldr	w7,	[x3]
 
-    add	w24,	w7,	w24
+    add	w25,	w7,	w25
     b	long_func_203
 
 long_func_193:
-    asr	w27,	w22,	#31
+    asr	w27,	w24,	#31
     lsr	w1,	w27,	#31
-    add	w3,	w22,	w1
+    add	w3,	w24,	w1
     asr	w3,	w3,	#1
     lsl	w4,	w3,	#1
-    sub	w9,	w22,	w4
+    sub	w9,	w24,	w4
     cmp	w9,	#0
     beq	long_func_203
 
@@ -411,18 +411,18 @@ long_func_196:
     add	x11,	x15,	x10
     ldr	w16,	[x11]
 
-    add	w24,	w16,	w24
+    add	w25,	w16,	w25
 
 long_func_203:
     asr	w4,	w18,	#31
-    asr	w8,	w22,	#31
+    asr	w8,	w24,	#31
     add	w2,	w2,	#1
     lsr	w6,	w4,	#31
     lsr	w9,	w8,	#31
     add	w6,	w18,	w6
-    add	w9,	w22,	w9
+    add	w9,	w24,	w9
     asr	w18,	w6,	#1
-    asr	w22,	w9,	#1
+    asr	w24,	w9,	#1
     cmp	w2,	#16
     blt	long_func_176
 
@@ -460,20 +460,20 @@ long_func_221:
     add	w4,	w18,	w4
 
 long_func_227:
-    asr	w19,	w5,	#31
-    asr	w25,	w12,	#31
+    asr	w21,	w5,	#31
+    asr	w26,	w12,	#31
     add	w10,	w10,	#1
-    lsr	w20,	w19,	#31
-    lsr	w27,	w25,	#31
-    add	w17,	w5,	w20
-    add	w20,	w12,	w27
+    lsr	w22,	w21,	#31
+    lsr	w27,	w26,	#31
+    add	w17,	w5,	w22
+    add	w22,	w12,	w27
     asr	w5,	w17,	#1
-    asr	w12,	w20,	#1
+    asr	w12,	w22,	#1
     cmp	w10,	#16
     blt	long_func_211
 
 long_func_233:
-    mul	w17,	w26,	w4
+    mul	w17,	w19,	w4
     movz	w12,	#0
     movz	w6,	#0
     movz	w11,	#65535
@@ -492,9 +492,9 @@ long_func_243:
     asr	w5,	w11,	#31
     lsr	w7,	w5,	#31
     add	w8,	w11,	w7
-    asr	w19,	w8,	#1
-    lsl	w20,	w19,	#1
-    sub	w4,	w11,	w20
+    asr	w21,	w8,	#1
+    lsl	w22,	w21,	#1
+    sub	w4,	w11,	w22
     cmp	w4,	#0
     beq	long_func_252
 
@@ -525,11 +525,11 @@ long_func_168:
     beq	long_func_259
 
 long_func_171:
-    mov	w5,	w24
+    mov	w5,	w25
     b	long_func_172
 
 long_func_259:
-    mov	w12,	w24
+    mov	w12,	w25
 
 long_func_260:
     movz	w17,	#32767
@@ -537,13 +537,13 @@ long_func_260:
     ble	long_func_267
 
 long_func_263:
-    sdiv	w16,	w13,	w26
+    sdiv	w16,	w13,	w19
     add	w17,	w16,	#65536
-    sub	w13,	w17,	w23
+    sub	w13,	w17,	w20
     b	long_func_269
 
 long_func_267:
-    sdiv	w13,	w13,	w26
+    sdiv	w13,	w13,	w19
 
 long_func_269:
     cmp	w13,	#0
@@ -562,14 +562,14 @@ long_func_515:
     b	long_func_517
 
 long_func_280:
-    mov	w25,	w28
+    mov	w26,	w28
     movz	w14,	#0
 
 long_func_282:
-    movz	w19,	#0
-    movz	w22,	#0
+    movz	w21,	#0
+    movz	w24,	#0
     mov	w3,	w28
-    movz	w24,	#1
+    movz	w25,	#1
 
 long_func_287:
     asr	w16,	w3,	#31
@@ -582,47 +582,47 @@ long_func_287:
     beq	long_func_303
 
 long_func_294:
-    asr	w20,	w24,	#31
-    lsr	w27,	w20,	#31
-    add	w1,	w24,	w27
+    asr	w22,	w25,	#31
+    lsr	w27,	w22,	#31
+    add	w1,	w25,	w27
     asr	w5,	w1,	#1
     lsl	w6,	w5,	#1
-    sub	w8,	w24,	w6
+    sub	w8,	w25,	w6
     cmp	w8,	#0
     beq	long_func_303
 
 long_func_297:
-    lsl	w8,	w22,	#2
+    lsl	w8,	w24,	#2
     adrp	x12, :got:SHIFT_TABLE
     ldr	x12, [x12, #:got_lo12:SHIFT_TABLE]
     add	x10,	x12,	x8
     ldr	w13,	[x10]
 
-    add	w19,	w13,	w19
+    add	w21,	w13,	w21
 
 long_func_303:
     asr	w2,	w3,	#31
-    asr	w6,	w24,	#31
-    add	w22,	w22,	#1
+    asr	w6,	w25,	#31
+    add	w24,	w24,	#1
     lsr	w4,	w2,	#31
     lsr	w7,	w6,	#31
-    add	w20,	w3,	w4
-    add	w2,	w24,	w7
-    asr	w3,	w20,	#1
-    asr	w24,	w2,	#1
-    cmp	w22,	#16
+    add	w22,	w3,	w4
+    add	w2,	w25,	w7
+    asr	w3,	w22,	#1
+    asr	w25,	w2,	#1
+    cmp	w24,	#16
     blt	long_func_287
 
 long_func_309:
-    cmp	w19,	#0
+    cmp	w21,	#0
     beq	long_func_404
 
 long_func_311:
-    cmp	w25,	#0
+    cmp	w26,	#0
     beq	long_func_404
 
 long_func_315:
-    mov	w2,	w25
+    mov	w2,	w26
 
 long_func_317:
     movz	w18,	#0
@@ -633,20 +633,20 @@ long_func_317:
 long_func_321:
     asr	w16,	w8,	#31
     lsr	w17,	w16,	#31
-    add	w19,	w8,	w17
-    asr	w17,	w19,	#1
-    lsl	w19,	w17,	#1
-    sub	w27,	w8,	w19
+    add	w21,	w8,	w17
+    asr	w17,	w21,	#1
+    lsl	w21,	w17,	#1
+    sub	w27,	w8,	w21
     cmp	w27,	#0
     beq	long_func_338
 
 long_func_328:
-    asr	w20,	w13,	#31
-    lsr	w22,	w20,	#31
-    add	w24,	w13,	w22
-    asr	w20,	w24,	#1
-    lsl	w22,	w20,	#1
-    sub	w3,	w13,	w22
+    asr	w22,	w13,	#31
+    lsr	w24,	w22,	#31
+    add	w25,	w13,	w24
+    asr	w22,	w25,	#1
+    lsl	w24,	w22,	#1
+    sub	w3,	w13,	w24
     cmp	w3,	#0
     bne	long_func_348
 
@@ -671,13 +671,13 @@ long_func_338:
     beq	long_func_348
 
 long_func_341:
-    lsl	w22,	w15,	#2
-    adrp	x19, :got:SHIFT_TABLE
-    ldr	x19, [x19, #:got_lo12:SHIFT_TABLE]
-    add	x16,	x19,	x22
-    ldr	w20,	[x16]
+    lsl	w24,	w15,	#2
+    adrp	x21, :got:SHIFT_TABLE
+    ldr	x21, [x21, #:got_lo12:SHIFT_TABLE]
+    add	x16,	x21,	x24
+    ldr	w22,	[x16]
 
-    add	w18,	w20,	w18
+    add	w18,	w22,	w18
 
 long_func_348:
     asr	w4,	w8,	#31
@@ -693,7 +693,7 @@ long_func_348:
     blt	long_func_321
 
 long_func_354:
-    movz	w24,	#0
+    movz	w25,	#0
     movz	w13,	#0
 
 long_func_356:
@@ -723,34 +723,34 @@ long_func_366:
     add	x9,	x11,	x9
     ldr	w12,	[x9]
 
-    add	w24,	w12,	w24
+    add	w25,	w12,	w25
 
 long_func_372:
     asr	w12,	w14,	#31
     asr	w17,	w2,	#31
     add	w13,	w13,	#1
     lsr	w15,	w12,	#31
-    lsr	w19,	w17,	#31
+    lsr	w21,	w17,	#31
     add	w8,	w14,	w15
-    add	w10,	w2,	w19
+    add	w10,	w2,	w21
     asr	w14,	w8,	#1
     asr	w2,	w10,	#1
     cmp	w13,	#16
     blt	long_func_356
 
 long_func_378:
-    mul	w22,	w26,	w24
+    mul	w24,	w19,	w25
     movz	w2,	#0
     movz	w1,	#0
     movz	w9,	#65535
 
 long_func_381:
-    asr	w24,	w22,	#31
-    lsr	w27,	w24,	#31
-    add	w3,	w22,	w27
+    asr	w25,	w24,	#31
+    lsr	w27,	w25,	#31
+    add	w3,	w24,	w27
     asr	w11,	w3,	#1
     lsl	w12,	w11,	#1
-    sub	w27,	w22,	w12
+    sub	w27,	w24,	w12
     cmp	w27,	#0
     beq	long_func_397
 
@@ -774,14 +774,14 @@ long_func_391:
     add	w2,	w10,	w2
 
 long_func_397:
-    asr	w7,	w22,	#31
+    asr	w7,	w24,	#31
     asr	w11,	w9,	#31
     add	w1,	w1,	#1
     lsr	w8,	w7,	#31
     lsr	w12,	w11,	#31
-    add	w27,	w22,	w8
+    add	w27,	w24,	w8
     add	w5,	w9,	w12
-    asr	w22,	w27,	#1
+    asr	w24,	w27,	#1
     asr	w9,	w5,	#1
     cmp	w1,	#16
     blt	long_func_381
@@ -798,35 +798,35 @@ long_func_408:
     mov	w14,	w18
 
 long_func_404:
-    cmp	w25,	#0
+    cmp	w26,	#0
     beq	long_func_503
 
 long_func_413:
-    mov	w16,	w25
+    mov	w16,	w26
 
 long_func_415:
     movz	w3,	#0
     movz	w17,	#0
     mov	w10,	w16
-    mov	w19,	w25
+    mov	w21,	w26
 
 long_func_419:
-    asr	w24,	w10,	#31
-    lsr	w27,	w24,	#31
+    asr	w25,	w10,	#31
+    lsr	w27,	w25,	#31
     add	w1,	w10,	w27
     asr	w2,	w1,	#1
     lsl	w4,	w2,	#1
-    sub	w22,	w10,	w4
-    cmp	w22,	#0
+    sub	w24,	w10,	w4
+    cmp	w24,	#0
     beq	long_func_436
 
 long_func_426:
-    asr	w2,	w19,	#31
+    asr	w2,	w21,	#31
     lsr	w4,	w2,	#31
-    add	w5,	w19,	w4
+    add	w5,	w21,	w4
     asr	w5,	w5,	#1
     lsl	w6,	w5,	#1
-    sub	w27,	w19,	w6
+    sub	w27,	w21,	w6
     cmp	w27,	#0
     bne	long_func_446
 
@@ -841,34 +841,34 @@ long_func_429:
     b	long_func_446
 
 long_func_436:
-    asr	w6,	w19,	#31
+    asr	w6,	w21,	#31
     lsr	w7,	w6,	#31
-    add	w8,	w19,	w7
+    add	w8,	w21,	w7
     asr	w8,	w8,	#1
     lsl	w9,	w8,	#1
-    sub	w8,	w19,	w9
+    sub	w8,	w21,	w9
     cmp	w8,	#0
     beq	long_func_446
 
 long_func_439:
-    lsl	w24,	w17,	#2
+    lsl	w25,	w17,	#2
     adrp	x13, :got:SHIFT_TABLE
     ldr	x13, [x13, #:got_lo12:SHIFT_TABLE]
-    add	x11,	x13,	x24
+    add	x11,	x13,	x25
     ldr	w15,	[x11]
 
     add	w3,	w15,	w3
 
 long_func_446:
     asr	w9,	w10,	#31
-    asr	w13,	w19,	#31
+    asr	w13,	w21,	#31
     add	w17,	w17,	#1
     lsr	w11,	w9,	#31
     lsr	w15,	w13,	#31
     add	w5,	w10,	w11
-    add	w8,	w19,	w15
+    add	w8,	w21,	w15
     asr	w10,	w5,	#1
-    asr	w19,	w8,	#1
+    asr	w21,	w8,	#1
     cmp	w17,	#16
     blt	long_func_419
 
@@ -882,17 +882,17 @@ long_func_454:
     add	w13,	w16,	w12
     asr	w10,	w13,	#1
     lsl	w11,	w10,	#1
-    sub	w24,	w16,	w11
-    cmp	w24,	#0
+    sub	w25,	w16,	w11
+    cmp	w25,	#0
     beq	long_func_470
 
 long_func_461:
-    asr	w15,	w25,	#31
+    asr	w15,	w26,	#31
     lsr	w17,	w15,	#31
-    add	w18,	w25,	w17
+    add	w18,	w26,	w17
     asr	w12,	w18,	#1
     lsl	w13,	w12,	#1
-    sub	w1,	w25,	w13
+    sub	w1,	w26,	w13
     cmp	w1,	#0
     beq	long_func_470
 
@@ -906,41 +906,41 @@ long_func_464:
     add	w2,	w9,	w2
 
 long_func_470:
-    asr	w19,	w16,	#31
-    asr	w24,	w25,	#31
+    asr	w21,	w16,	#31
+    asr	w25,	w26,	#31
     add	w7,	w7,	#1
-    lsr	w20,	w19,	#31
-    lsr	w27,	w24,	#31
-    add	w11,	w16,	w20
-    add	w15,	w25,	w27
+    lsr	w22,	w21,	#31
+    lsr	w27,	w25,	#31
+    add	w11,	w16,	w22
+    add	w15,	w26,	w27
     asr	w16,	w11,	#1
-    asr	w25,	w15,	#1
+    asr	w26,	w15,	#1
     cmp	w7,	#16
     blt	long_func_454
 
 long_func_476:
-    mul	w20,	w26,	w2
-    movz	w25,	#0
+    mul	w22,	w19,	w2
+    movz	w26,	#0
     movz	w11,	#0
-    movz	w24,	#65535
+    movz	w25,	#65535
 
 long_func_479:
-    asr	w2,	w20,	#31
+    asr	w2,	w22,	#31
     lsr	w4,	w2,	#31
-    add	w5,	w20,	w4
+    add	w5,	w22,	w4
     asr	w17,	w5,	#1
     lsl	w18,	w17,	#1
-    sub	w16,	w20,	w18
+    sub	w16,	w22,	w18
     cmp	w16,	#0
     beq	long_func_495
 
 long_func_486:
-    asr	w6,	w24,	#31
+    asr	w6,	w25,	#31
     lsr	w7,	w6,	#31
-    add	w8,	w24,	w7
-    asr	w19,	w8,	#1
-    lsl	w22,	w19,	#1
-    sub	w18,	w24,	w22
+    add	w8,	w25,	w7
+    asr	w21,	w8,	#1
+    lsl	w24,	w21,	#1
+    sub	w18,	w25,	w24
     cmp	w18,	#0
     beq	long_func_495
 
@@ -948,26 +948,26 @@ long_func_489:
     lsl	w5,	w11,	#2
     adrp	x1, :got:SHIFT_TABLE
     ldr	x1, [x1, #:got_lo12:SHIFT_TABLE]
-    add	x22,	x1,	x5
-    ldr	w2,	[x22]
+    add	x24,	x1,	x5
+    ldr	w2,	[x24]
 
-    add	w25,	w2,	w25
+    add	w26,	w2,	w26
 
 long_func_495:
-    asr	w9,	w20,	#31
-    asr	w13,	w24,	#31
+    asr	w9,	w22,	#31
+    asr	w13,	w25,	#31
     add	w11,	w11,	#1
     lsr	w10,	w9,	#31
     lsr	w15,	w13,	#31
-    add	w1,	w20,	w10
-    add	w5,	w24,	w15
-    asr	w20,	w1,	#1
-    asr	w24,	w5,	#1
+    add	w1,	w22,	w10
+    add	w5,	w25,	w15
+    asr	w22,	w1,	#1
+    asr	w25,	w5,	#1
     cmp	w11,	#16
     blt	long_func_479
 
 long_func_411:
-    cmp	w25,	#0
+    cmp	w26,	#0
     beq	long_func_502
 
 long_func_414:
@@ -975,7 +975,7 @@ long_func_414:
     b	long_func_415
 
 long_func_502:
-    mov	w25,	w3
+    mov	w26,	w3
 
 long_func_503:
     movz	w5,	#32767
@@ -983,13 +983,13 @@ long_func_503:
     ble	long_func_510
 
 long_func_506:
-    sdiv	w20,	w28,	w26
-    add	w22,	w20,	#65536
-    sub	w28,	w22,	w23
+    sdiv	w22,	w28,	w19
+    add	w24,	w22,	#65536
+    sub	w28,	w24,	w20
     b	long_func_512
 
 long_func_510:
-    sdiv	w28,	w28,	w26
+    sdiv	w28,	w28,	w19
 
 long_func_512:
     cmp	w28,	#0
@@ -997,20 +997,20 @@ long_func_512:
 
 long_func_517:
     movz	w17,	#32767
-    cmp	w21,	w17
+    cmp	w23,	w17
     ble	long_func_524
 
 long_func_520:
-    sdiv	w7,	w21,	w26
+    sdiv	w7,	w23,	w19
     add	w8,	w7,	#65536
-    sub	w21,	w8,	w23
+    sub	w23,	w8,	w20
     b	long_func_526
 
 long_func_524:
-    sdiv	w21,	w21,	w26
+    sdiv	w23,	w23,	w19
 
 long_func_526:
-    cmp	w21,	#0
+    cmp	w23,	#0
     bgt	long_func_5
 
 long_func_529:
@@ -1033,7 +1033,7 @@ long_func_534:
     movz	w4,	#1
 
 long_func_536:
-    movz	w19,	#0
+    movz	w21,	#0
     movz	w27,	#0
     mov	w7,	w1
     movz	w3,	#1
@@ -1052,36 +1052,36 @@ long_func_548:
     asr	w12,	w3,	#31
     lsr	w13,	w12,	#31
     add	w14,	w3,	w13
-    asr	w20,	w14,	#1
-    lsl	w21,	w20,	#1
-    sub	w15,	w3,	w21
+    asr	w23,	w14,	#1
+    lsl	w24,	w23,	#1
+    sub	w15,	w3,	w24
     cmp	w15,	#0
     beq	long_func_557
 
 long_func_551:
     lsl	w13,	w27,	#2
-    adrp	x20, :got:SHIFT_TABLE
-    ldr	x20, [x20, #:got_lo12:SHIFT_TABLE]
-    add	x17,	x20,	x13
-    ldr	w21,	[x17]
+    adrp	x23, :got:SHIFT_TABLE
+    ldr	x23, [x23, #:got_lo12:SHIFT_TABLE]
+    add	x17,	x23,	x13
+    ldr	w24,	[x17]
 
-    add	w19,	w21,	w19
+    add	w21,	w24,	w21
 
 long_func_557:
     asr	w15,	w7,	#31
     asr	w18,	w3,	#31
     add	w27,	w27,	#1
     lsr	w16,	w15,	#31
-    lsr	w20,	w18,	#31
+    lsr	w23,	w18,	#31
     add	w6,	w7,	w16
-    add	w10,	w3,	w20
+    add	w10,	w3,	w23
     asr	w7,	w6,	#1
     asr	w3,	w10,	#1
     cmp	w27,	#16
     blt	long_func_541
 
 long_func_563:
-    cmp	w19,	#0
+    cmp	w21,	#0
     beq	long_func_802
 
 long_func_565:
@@ -1098,7 +1098,7 @@ long_func_567:
 
 long_func_569:
     movz	w3,	#0
-    movz	w24,	#0
+    movz	w25,	#0
     mov	w12,	w17
     movz	w9,	#1
 
@@ -1123,25 +1123,25 @@ long_func_581:
     beq	long_func_590
 
 long_func_584:
-    lsl	w7,	w24,	#2
-    adrp	x19, :got:SHIFT_TABLE
-    ldr	x19, [x19, #:got_lo12:SHIFT_TABLE]
-    add	x16,	x19,	x7
-    ldr	w20,	[x16]
+    lsl	w7,	w25,	#2
+    adrp	x21, :got:SHIFT_TABLE
+    ldr	x21, [x21, #:got_lo12:SHIFT_TABLE]
+    add	x16,	x21,	x7
+    ldr	w23,	[x16]
 
-    add	w3,	w20,	w3
+    add	w3,	w23,	w3
 
 long_func_590:
     asr	w10,	w12,	#31
     asr	w14,	w9,	#31
-    add	w24,	w24,	#1
+    add	w25,	w25,	#1
     lsr	w11,	w10,	#31
     lsr	w15,	w14,	#31
-    add	w25,	w12,	w11
+    add	w26,	w12,	w11
     add	w2,	w9,	w15
-    asr	w12,	w25,	#1
+    asr	w12,	w26,	#1
     asr	w9,	w2,	#1
-    cmp	w24,	#16
+    cmp	w25,	#16
     blt	long_func_574
 
 long_func_596:
@@ -1158,17 +1158,17 @@ long_func_602:
 long_func_604:
     movz	w14,	#0
     movz	w13,	#0
-    mov	w25,	w0
+    mov	w26,	w0
     mov	w18,	w28
 
 long_func_608:
-    asr	w27,	w25,	#31
+    asr	w27,	w26,	#31
     lsr	w2,	w27,	#31
-    add	w3,	w25,	w2
+    add	w3,	w26,	w2
     asr	w11,	w3,	#1
     lsl	w12,	w11,	#1
-    sub	w21,	w25,	w12
-    cmp	w21,	#0
+    sub	w24,	w26,	w12
+    cmp	w24,	#0
     beq	long_func_625
 
 long_func_615:
@@ -1195,9 +1195,9 @@ long_func_625:
     asr	w9,	w18,	#31
     lsr	w10,	w9,	#31
     add	w11,	w18,	w10
-    asr	w20,	w11,	#1
-    lsl	w21,	w20,	#1
-    sub	w10,	w18,	w21
+    asr	w23,	w11,	#1
+    lsl	w24,	w23,	#1
+    sub	w10,	w18,	w24
     cmp	w10,	#0
     beq	long_func_635
 
@@ -1206,19 +1206,19 @@ long_func_628:
     adrp	x16, :got:SHIFT_TABLE
     ldr	x16, [x16, #:got_lo12:SHIFT_TABLE]
     add	x12,	x16,	x15
-    ldr	w19,	[x12]
+    ldr	w21,	[x12]
 
-    add	w14,	w19,	w14
+    add	w14,	w21,	w14
 
 long_func_635:
-    asr	w12,	w25,	#31
-    asr	w19,	w18,	#31
+    asr	w12,	w26,	#31
+    asr	w21,	w18,	#31
     add	w13,	w13,	#1
     lsr	w15,	w12,	#31
-    lsr	w20,	w19,	#31
-    add	w7,	w25,	w15
-    add	w11,	w18,	w20
-    asr	w25,	w7,	#1
+    lsr	w23,	w21,	#31
+    add	w7,	w26,	w15
+    add	w11,	w18,	w23
+    asr	w26,	w7,	#1
     asr	w18,	w11,	#1
     cmp	w13,	#16
     blt	long_func_608
@@ -1238,10 +1238,10 @@ long_func_643:
     beq	long_func_659
 
 long_func_650:
-    asr	w19,	w28,	#31
-    lsr	w20,	w19,	#31
-    add	w21,	w28,	w20
-    asr	w7,	w21,	#1
+    asr	w21,	w28,	#31
+    lsr	w23,	w21,	#31
+    add	w24,	w28,	w23
+    asr	w7,	w24,	#1
     lsl	w9,	w7,	#1
     sub	w13,	w28,	w9
     cmp	w13,	#0
@@ -1249,20 +1249,20 @@ long_func_650:
 
 long_func_653:
     lsl	w11,	w2,	#2
-    adrp	x20, :got:SHIFT_TABLE
-    ldr	x20, [x20, #:got_lo12:SHIFT_TABLE]
-    add	x16,	x20,	x11
-    ldr	w21,	[x16]
+    adrp	x23, :got:SHIFT_TABLE
+    ldr	x23, [x23, #:got_lo12:SHIFT_TABLE]
+    add	x16,	x23,	x11
+    ldr	w24,	[x16]
 
-    add	w18,	w21,	w18
+    add	w18,	w24,	w18
 
 long_func_659:
-    asr	w24,	w0,	#31
+    asr	w25,	w0,	#31
     asr	w3,	w28,	#31
     add	w2,	w2,	#1
-    lsr	w25,	w24,	#31
+    lsr	w26,	w25,	#31
     lsr	w5,	w3,	#31
-    add	w10,	w0,	w25
+    add	w10,	w0,	w26
     add	w15,	w28,	w5
     asr	w0,	w10,	#1
     asr	w28,	w15,	#1
@@ -1270,9 +1270,9 @@ long_func_659:
     blt	long_func_643
 
 long_func_665:
-    mul	w9,	w26,	w18
+    mul	w9,	w19,	w18
     movz	w28,	#0
-    movz	w19,	#0
+    movz	w21,	#0
     movz	w6,	#65535
 
 long_func_668:
@@ -1296,7 +1296,7 @@ long_func_675:
     beq	long_func_684
 
 long_func_678:
-    lsl	w7,	w19,	#2
+    lsl	w7,	w21,	#2
     adrp	x15, :got:SHIFT_TABLE
     ldr	x15, [x15, #:got_lo12:SHIFT_TABLE]
     add	x12,	x15,	x7
@@ -1306,15 +1306,15 @@ long_func_678:
 
 long_func_684:
     asr	w15,	w9,	#31
-    asr	w20,	w6,	#31
-    add	w19,	w19,	#1
+    asr	w23,	w6,	#31
+    add	w21,	w21,	#1
     lsr	w16,	w15,	#31
-    lsr	w21,	w20,	#31
+    lsr	w24,	w23,	#31
     add	w0,	w9,	w16
-    add	w5,	w6,	w21
+    add	w5,	w6,	w24
     asr	w9,	w0,	#1
     asr	w6,	w5,	#1
-    cmp	w19,	#16
+    cmp	w21,	#16
     blt	long_func_668
 
 long_func_600:
@@ -1339,7 +1339,7 @@ long_func_702:
     movz	w27,	#0
     movz	w16,	#0
     mov	w3,	w5
-    mov	w25,	w4
+    mov	w26,	w4
 
 long_func_706:
     asr	w12,	w3,	#31
@@ -1347,17 +1347,17 @@ long_func_706:
     add	w14,	w3,	w13
     asr	w28,	w14,	#1
     lsl	w2,	w28,	#1
-    sub	w24,	w3,	w2
-    cmp	w24,	#0
+    sub	w25,	w3,	w2
+    cmp	w25,	#0
     beq	long_func_723
 
 long_func_713:
-    asr	w15,	w25,	#31
+    asr	w15,	w26,	#31
     lsr	w18,	w15,	#31
-    add	w19,	w25,	w18
-    asr	w6,	w19,	#1
+    add	w21,	w26,	w18
+    asr	w6,	w21,	#1
     lsl	w7,	w6,	#1
-    sub	w2,	w25,	w7
+    sub	w2,	w26,	w7
     cmp	w2,	#0
     bne	long_func_733
 
@@ -1372,34 +1372,34 @@ long_func_716:
     b	long_func_733
 
 long_func_723:
-    asr	w20,	w25,	#31
-    lsr	w21,	w20,	#31
-    add	w24,	w25,	w21
-    asr	w10,	w24,	#1
+    asr	w23,	w26,	#31
+    lsr	w24,	w23,	#31
+    add	w25,	w26,	w24
+    asr	w10,	w25,	#1
     lsl	w11,	w10,	#1
-    sub	w13,	w25,	w11
+    sub	w13,	w26,	w11
     cmp	w13,	#0
     beq	long_func_733
 
 long_func_726:
-    lsl	w24,	w16,	#2
-    adrp	x19, :got:SHIFT_TABLE
-    ldr	x19, [x19, #:got_lo12:SHIFT_TABLE]
-    add	x15,	x19,	x24
-    ldr	w20,	[x15]
+    lsl	w25,	w16,	#2
+    adrp	x21, :got:SHIFT_TABLE
+    ldr	x21, [x21, #:got_lo12:SHIFT_TABLE]
+    add	x15,	x21,	x25
+    ldr	w23,	[x15]
 
-    add	w27,	w20,	w27
+    add	w27,	w23,	w27
 
 long_func_733:
     asr	w28,	w3,	#31
-    asr	w7,	w25,	#31
+    asr	w7,	w26,	#31
     add	w16,	w16,	#1
     lsr	w2,	w28,	#31
     lsr	w9,	w7,	#31
     add	w14,	w3,	w2
-    add	w20,	w25,	w9
+    add	w23,	w26,	w9
     asr	w3,	w14,	#1
-    asr	w25,	w20,	#1
+    asr	w26,	w23,	#1
     cmp	w16,	#16
     blt	long_func_706
 
@@ -1408,10 +1408,10 @@ long_func_739:
     movz	w14,	#0
 
 long_func_741:
-    asr	w21,	w5,	#31
-    lsr	w24,	w21,	#31
-    add	w25,	w5,	w24
-    asr	w13,	w25,	#1
+    asr	w24,	w5,	#31
+    lsr	w25,	w24,	#31
+    add	w26,	w5,	w25
+    asr	w13,	w26,	#1
     lsl	w15,	w13,	#1
     sub	w9,	w5,	w15
     cmp	w9,	#0
@@ -1422,8 +1422,8 @@ long_func_748:
     lsr	w2,	w28,	#31
     add	w3,	w4,	w2
     asr	w16,	w3,	#1
-    lsl	w19,	w16,	#1
-    sub	w11,	w4,	w19
+    lsl	w21,	w16,	#1
+    sub	w11,	w4,	w21
     cmp	w11,	#0
     beq	long_func_757
 
@@ -1432,9 +1432,9 @@ long_func_751:
     adrp	x16, :got:SHIFT_TABLE
     ldr	x16, [x16, #:got_lo12:SHIFT_TABLE]
     add	x13,	x16,	x12
-    ldr	w19,	[x13]
+    ldr	w21,	[x13]
 
-    add	w18,	w19,	w18
+    add	w18,	w21,	w18
 
 long_func_757:
     asr	w6,	w5,	#31
@@ -1443,40 +1443,40 @@ long_func_757:
     lsr	w7,	w6,	#31
     lsr	w11,	w10,	#31
     add	w13,	w5,	w7
-    add	w19,	w4,	w11
+    add	w21,	w4,	w11
     asr	w5,	w13,	#1
-    asr	w4,	w19,	#1
+    asr	w4,	w21,	#1
     cmp	w14,	#16
     blt	long_func_741
 
 long_func_763:
-    mul	w21,	w26,	w18
+    mul	w24,	w19,	w18
     movz	w4,	#0
-    movz	w20,	#0
+    movz	w23,	#0
     movz	w12,	#65535
 
 long_func_766:
-    asr	w13,	w21,	#31
+    asr	w13,	w24,	#31
     lsr	w14,	w13,	#31
-    add	w15,	w21,	w14
-    asr	w25,	w15,	#1
-    lsl	w28,	w25,	#1
-    sub	w3,	w21,	w28
+    add	w15,	w24,	w14
+    asr	w26,	w15,	#1
+    lsl	w28,	w26,	#1
+    sub	w3,	w24,	w28
     cmp	w3,	#0
     beq	long_func_782
 
 long_func_773:
     asr	w16,	w12,	#31
     lsr	w18,	w16,	#31
-    add	w19,	w12,	w18
-    asr	w2,	w19,	#1
+    add	w21,	w12,	w18
+    asr	w2,	w21,	#1
     lsl	w3,	w2,	#1
     sub	w6,	w12,	w3
     cmp	w6,	#0
     beq	long_func_782
 
 long_func_776:
-    lsl	w9,	w20,	#2
+    lsl	w9,	w23,	#2
     adrp	x11, :got:SHIFT_TABLE
     ldr	x11, [x11, #:got_lo12:SHIFT_TABLE]
     add	x9,	x11,	x9
@@ -1485,16 +1485,16 @@ long_func_776:
     add	w4,	w13,	w4
 
 long_func_782:
-    asr	w24,	w21,	#31
+    asr	w25,	w24,	#31
     asr	w2,	w12,	#31
-    add	w20,	w20,	#1
-    lsr	w25,	w24,	#31
+    add	w23,	w23,	#1
+    lsr	w26,	w25,	#31
     lsr	w3,	w2,	#31
-    add	w6,	w21,	w25
+    add	w6,	w24,	w26
     add	w10,	w12,	w3
-    asr	w21,	w6,	#1
+    asr	w24,	w6,	#1
     asr	w12,	w10,	#1
-    cmp	w20,	#16
+    cmp	w23,	#16
     blt	long_func_766
 
 long_func_698:
@@ -1514,13 +1514,13 @@ long_func_790:
     ble	long_func_797
 
 long_func_793:
-    sdiv	w17,	w17,	w26
+    sdiv	w17,	w17,	w19
     add	w18,	w17,	#65536
-    sub	w17,	w18,	w23
+    sub	w17,	w18,	w20
     b	long_func_799
 
 long_func_797:
-    sdiv	w17,	w17,	w26
+    sdiv	w17,	w17,	w19
 
 long_func_799:
     cmp	w17,	#0
@@ -1544,7 +1544,7 @@ long_func_810:
 
 long_func_812:
     movz	w12,	#0
-    movz	w20,	#0
+    movz	w23,	#0
     mov	w18,	w8
     movz	w9,	#1
 
@@ -1569,25 +1569,25 @@ long_func_824:
     beq	long_func_833
 
 long_func_827:
-    lsl	w17,	w20,	#2
-    adrp	x19, :got:SHIFT_TABLE
-    ldr	x19, [x19, #:got_lo12:SHIFT_TABLE]
-    add	x16,	x19,	x17
-    ldr	w21,	[x16]
+    lsl	w17,	w23,	#2
+    adrp	x21, :got:SHIFT_TABLE
+    ldr	x21, [x21, #:got_lo12:SHIFT_TABLE]
+    add	x16,	x21,	x17
+    ldr	w24,	[x16]
 
-    add	w12,	w21,	w12
+    add	w12,	w24,	w12
 
 long_func_833:
     asr	w16,	w18,	#31
-    asr	w21,	w9,	#31
-    add	w20,	w20,	#1
+    asr	w24,	w9,	#31
+    add	w23,	w23,	#1
     lsr	w17,	w16,	#31
-    lsr	w24,	w21,	#31
-    add	w25,	w18,	w17
-    add	w2,	w9,	w24
-    asr	w18,	w25,	#1
+    lsr	w25,	w24,	#31
+    add	w26,	w18,	w17
+    add	w2,	w9,	w25
+    asr	w18,	w26,	#1
     asr	w9,	w2,	#1
-    cmp	w20,	#16
+    cmp	w23,	#16
     blt	long_func_817
 
 long_func_839:
@@ -1599,28 +1599,28 @@ long_func_841:
     beq	long_func_934
 
 long_func_845:
-    mov	w20,	w11
+    mov	w23,	w11
 
 long_func_847:
-    movz	w25,	#0
+    movz	w26,	#0
     movz	w6,	#0
-    mov	w21,	w15
-    mov	w18,	w20
+    mov	w24,	w15
+    mov	w18,	w23
 
 long_func_851:
-    asr	w14,	w21,	#31
+    asr	w14,	w24,	#31
     lsr	w16,	w14,	#31
-    add	w17,	w21,	w16
+    add	w17,	w24,	w16
     asr	w28,	w17,	#1
     lsl	w2,	w28,	#1
-    sub	w7,	w21,	w2
+    sub	w7,	w24,	w2
     cmp	w7,	#0
     beq	long_func_868
 
 long_func_858:
-    asr	w19,	w18,	#31
-    lsr	w24,	w19,	#31
-    add	w27,	w18,	w24
+    asr	w21,	w18,	#31
+    lsr	w25,	w21,	#31
+    add	w27,	w18,	w25
     asr	w3,	w27,	#1
     lsl	w4,	w3,	#1
     sub	w10,	w18,	w4
@@ -1634,7 +1634,7 @@ long_func_861:
     add	x13,	x16,	x3
     ldr	w17,	[x13]
 
-    add	w25,	w17,	w25
+    add	w26,	w17,	w26
     b	long_func_878
 
 long_func_868:
@@ -1643,8 +1643,8 @@ long_func_868:
     add	w3,	w18,	w2
     asr	w7,	w3,	#1
     lsl	w9,	w7,	#1
-    sub	w24,	w18,	w9
-    cmp	w24,	#0
+    sub	w25,	w18,	w9
+    cmp	w25,	#0
     beq	long_func_878
 
 long_func_871:
@@ -1654,17 +1654,17 @@ long_func_871:
     add	x28,	x3,	x14
     ldr	w4,	[x28]
 
-    add	w25,	w4,	w25
+    add	w26,	w4,	w26
 
 long_func_878:
-    asr	w4,	w21,	#31
+    asr	w4,	w24,	#31
     asr	w9,	w18,	#31
     add	w6,	w6,	#1
     lsr	w5,	w4,	#31
     lsr	w10,	w9,	#31
-    add	w14,	w21,	w5
+    add	w14,	w24,	w5
     add	w18,	w18,	w10
-    asr	w21,	w14,	#1
+    asr	w24,	w14,	#1
     asr	w18,	w18,	#1
     cmp	w6,	#16
     blt	long_func_851
@@ -1674,9 +1674,9 @@ long_func_884:
     movz	w18,	#0
 
 long_func_886:
-    asr	w21,	w15,	#31
-    lsr	w24,	w21,	#31
-    add	w27,	w15,	w24
+    asr	w24,	w15,	#31
+    lsr	w25,	w24,	#31
+    add	w27,	w15,	w25
     asr	w10,	w27,	#1
     lsl	w12,	w10,	#1
     sub	w10,	w15,	w12
@@ -1684,40 +1684,40 @@ long_func_886:
     beq	long_func_902
 
 long_func_893:
-    asr	w28,	w20,	#31
+    asr	w28,	w23,	#31
     lsr	w2,	w28,	#31
-    add	w3,	w20,	w2
+    add	w3,	w23,	w2
     asr	w13,	w3,	#1
     lsl	w14,	w13,	#1
-    sub	w13,	w20,	w14
+    sub	w13,	w23,	w14
     cmp	w13,	#0
     beq	long_func_902
 
 long_func_896:
-    lsl	w24,	w18,	#2
-    adrp	x19, :got:SHIFT_TABLE
-    ldr	x19, [x19, #:got_lo12:SHIFT_TABLE]
-    add	x16,	x19,	x24
-    ldr	w21,	[x16]
+    lsl	w25,	w18,	#2
+    adrp	x21, :got:SHIFT_TABLE
+    ldr	x21, [x21, #:got_lo12:SHIFT_TABLE]
+    add	x16,	x21,	x25
+    ldr	w24,	[x16]
 
-    add	w4,	w21,	w4
+    add	w4,	w24,	w4
 
 long_func_902:
     asr	w5,	w15,	#31
-    asr	w9,	w20,	#31
+    asr	w9,	w23,	#31
     add	w18,	w18,	#1
     lsr	w6,	w5,	#31
     add	w10,	w15,	w6
     asr	w15,	w10,	#1
     lsr	w10,	w9,	#31
-    add	w14,	w20,	w10
-    asr	w20,	w14,	#1
+    add	w14,	w23,	w10
+    asr	w23,	w14,	#1
     cmp	w18,	#16
     blt	long_func_886
 
 long_func_908:
-    mul	w27,	w26,	w4
-    movz	w20,	#0
+    mul	w27,	w19,	w4
+    movz	w23,	#0
     movz	w6,	#0
     movz	w28,	#65535
 
@@ -1726,8 +1726,8 @@ long_func_911:
     lsr	w14,	w13,	#31
     add	w15,	w27,	w14
     asr	w18,	w15,	#1
-    lsl	w19,	w18,	#1
-    sub	w5,	w27,	w19
+    lsl	w21,	w18,	#1
+    sub	w5,	w27,	w21
     cmp	w5,	#0
     beq	long_func_927
 
@@ -1735,9 +1735,9 @@ long_func_918:
     asr	w16,	w28,	#31
     lsr	w17,	w16,	#31
     add	w18,	w28,	w17
-    asr	w21,	w18,	#1
-    lsl	w24,	w21,	#1
-    sub	w9,	w28,	w24
+    asr	w24,	w18,	#1
+    lsl	w25,	w24,	#1
+    sub	w9,	w28,	w25
     cmp	w9,	#0
     beq	long_func_927
 
@@ -1748,13 +1748,13 @@ long_func_921:
     add	x12,	x14,	x17
     ldr	w15,	[x12]
 
-    add	w20,	w15,	w20
+    add	w23,	w15,	w23
 
 long_func_927:
-    asr	w19,	w27,	#31
+    asr	w21,	w27,	#31
     add	w6,	w6,	#1
-    lsr	w21,	w19,	#31
-    add	w2,	w27,	w21
+    lsr	w24,	w21,	#31
+    add	w2,	w27,	w24
     asr	w27,	w2,	#1
     asr	w2,	w28,	#31
     lsr	w3,	w2,	#31
@@ -1764,15 +1764,15 @@ long_func_927:
     blt	long_func_911
 
 long_func_843:
-    cmp	w20,	#0
+    cmp	w23,	#0
     beq	long_func_938
 
 long_func_846:
-    mov	w15,	w25
+    mov	w15,	w26
     b	long_func_847
 
 long_func_938:
-    mov	w15,	w25
+    mov	w15,	w26
 
 long_func_934:
     cmp	w11,	#0
@@ -1809,57 +1809,57 @@ long_func_956:
 
 long_func_959:
     lsl	w9,	w10,	#2
-    adrp	x19, :got:SHIFT_TABLE
-    ldr	x19, [x19, #:got_lo12:SHIFT_TABLE]
-    add	x17,	x19,	x9
-    ldr	w20,	[x17]
+    adrp	x21, :got:SHIFT_TABLE
+    ldr	x21, [x21, #:got_lo12:SHIFT_TABLE]
+    add	x17,	x21,	x9
+    ldr	w23,	[x17]
 
-    add	w14,	w20,	w14
+    add	w14,	w23,	w14
     b	long_func_976
 
 long_func_966:
     asr	w12,	w27,	#31
     lsr	w13,	w12,	#31
     add	w16,	w27,	w13
-    asr	w20,	w16,	#1
-    lsl	w21,	w20,	#1
-    sub	w24,	w27,	w21
-    cmp	w24,	#0
+    asr	w23,	w16,	#1
+    lsl	w24,	w23,	#1
+    sub	w25,	w27,	w24
+    cmp	w25,	#0
     beq	long_func_976
 
 long_func_969:
-    lsl	w21,	w10,	#2
+    lsl	w24,	w10,	#2
     adrp	x4, :got:SHIFT_TABLE
     ldr	x4, [x4, #:got_lo12:SHIFT_TABLE]
-    add	x2,	x4,	x21
+    add	x2,	x4,	x24
     ldr	w5,	[x2]
 
     add	w14,	w5,	w14
 
 long_func_976:
     asr	w17,	w28,	#31
-    asr	w20,	w27,	#31
+    asr	w23,	w27,	#31
     add	w10,	w10,	#1
     lsr	w18,	w17,	#31
-    lsr	w21,	w20,	#31
-    add	w24,	w28,	w18
-    add	w2,	w27,	w21
-    asr	w28,	w24,	#1
+    lsr	w24,	w23,	#31
+    add	w25,	w28,	w18
+    add	w2,	w27,	w24
+    asr	w28,	w25,	#1
     asr	w27,	w2,	#1
     cmp	w10,	#16
     blt	long_func_949
 
 long_func_982:
-    movz	w24,	#0
+    movz	w25,	#0
     movz	w6,	#0
 
 long_func_984:
     asr	w3,	w7,	#31
     lsr	w4,	w3,	#31
     add	w5,	w7,	w4
-    asr	w21,	w5,	#1
-    lsl	w25,	w21,	#1
-    sub	w9,	w7,	w25
+    asr	w24,	w5,	#1
+    lsl	w26,	w24,	#1
+    sub	w9,	w7,	w26
     cmp	w9,	#0
     beq	long_func_1000
 
@@ -1878,33 +1878,33 @@ long_func_994:
     adrp	x18, :got:SHIFT_TABLE
     ldr	x18, [x18, #:got_lo12:SHIFT_TABLE]
     add	x16,	x18,	x27
-    ldr	w19,	[x16]
+    ldr	w21,	[x16]
 
-    add	w24,	w19,	w24
+    add	w25,	w21,	w25
 
 long_func_1000:
     asr	w13,	w7,	#31
     asr	w18,	w11,	#31
     add	w6,	w6,	#1
     lsr	w16,	w13,	#31
-    lsr	w19,	w18,	#31
+    lsr	w21,	w18,	#31
     add	w16,	w7,	w16
-    add	w19,	w11,	w19
+    add	w21,	w11,	w21
     asr	w7,	w16,	#1
-    asr	w11,	w19,	#1
+    asr	w11,	w21,	#1
     cmp	w6,	#16
     blt	long_func_984
 
 long_func_1006:
-    mul	w13,	w26,	w24
+    mul	w13,	w19,	w25
     movz	w11,	#0
     movz	w12,	#0
     movz	w2,	#65535
 
 long_func_1009:
-    asr	w24,	w13,	#31
-    lsr	w25,	w24,	#31
-    add	w27,	w13,	w25
+    asr	w25,	w13,	#31
+    lsr	w26,	w25,	#31
+    add	w27,	w13,	w26
     asr	w6,	w27,	#1
     lsl	w7,	w6,	#1
     sub	w4,	w13,	w7
@@ -1922,10 +1922,10 @@ long_func_1016:
     beq	long_func_1025
 
 long_func_1019:
-    lsl	w24,	w12,	#2
+    lsl	w25,	w12,	#2
     adrp	x16, :got:SHIFT_TABLE
     ldr	x16, [x16, #:got_lo12:SHIFT_TABLE]
-    add	x9,	x16,	x24
+    add	x9,	x16,	x25
     ldr	w17,	[x9]
 
     add	w11,	w17,	w11
@@ -1960,31 +1960,31 @@ long_func_1033:
     ble	long_func_1040
 
 long_func_1036:
-    sdiv	w2,	w8,	w26
+    sdiv	w2,	w8,	w19
     add	w3,	w2,	#65536
-    sub	w8,	w3,	w23
+    sub	w8,	w3,	w20
     b	long_func_1042
 
 long_func_1040:
-    sdiv	w8,	w8,	w26
+    sdiv	w8,	w8,	w19
 
 long_func_1042:
     cmp	w8,	#0
     bne	long_func_812
 
 long_func_1047:
-    movz	w20,	#32767
-    cmp	w1,	w20
+    movz	w23,	#32767
+    cmp	w1,	w23
     ble	long_func_1054
 
 long_func_1050:
-    sdiv	w5,	w1,	w26
+    sdiv	w5,	w1,	w19
     add	w6,	w5,	#65536
-    sub	w1,	w6,	w23
+    sub	w1,	w6,	w20
     b	long_func_1056
 
 long_func_1054:
-    sdiv	w1,	w1,	w26
+    sdiv	w1,	w1,	w19
 
 long_func_1056:
     cmp	w1,	#0
@@ -2021,7 +2021,7 @@ long_func_1597:
 long_func_1072:
     movz	w10,	#2
     mov	w7,	w13
-    movz	w25,	#1
+    movz	w26,	#1
 
 long_func_1074:
     movz	w9,	#0
@@ -2059,14 +2059,14 @@ long_func_1089:
     add	w9,	w18,	w9
 
 long_func_1095:
-    asr	w19,	w15,	#31
-    asr	w22,	w3,	#31
+    asr	w21,	w15,	#31
+    asr	w24,	w3,	#31
     add	w0,	w0,	#1
-    lsr	w20,	w19,	#31
-    lsr	w24,	w22,	#31
-    add	w21,	w15,	w20
-    add	w27,	w3,	w24
-    asr	w15,	w21,	#1
+    lsr	w22,	w21,	#31
+    lsr	w25,	w24,	#31
+    add	w23,	w15,	w22
+    add	w27,	w3,	w25
+    asr	w15,	w23,	#1
     asr	w3,	w27,	#1
     cmp	w0,	#16
     blt	long_func_1079
@@ -2099,8 +2099,8 @@ long_func_1112:
     add	w12,	w2,	w11
     asr	w5,	w12,	#1
     lsl	w11,	w5,	#1
-    sub	w21,	w2,	w11
-    cmp	w21,	#0
+    sub	w23,	w2,	w11
+    cmp	w23,	#0
     beq	long_func_1128
 
 long_func_1119:
@@ -2109,29 +2109,29 @@ long_func_1119:
     add	w17,	w9,	w16
     asr	w12,	w17,	#1
     lsl	w14,	w12,	#1
-    sub	w24,	w9,	w14
-    cmp	w24,	#0
+    sub	w25,	w9,	w14
+    cmp	w25,	#0
     beq	long_func_1128
 
 long_func_1122:
-    lsl	w19,	w8,	#2
+    lsl	w21,	w8,	#2
     adrp	x3, :got:SHIFT_TABLE
     ldr	x3, [x3, #:got_lo12:SHIFT_TABLE]
-    add	x28,	x3,	x19
+    add	x28,	x3,	x21
     ldr	w4,	[x28]
 
     add	w6,	w4,	w6
 
 long_func_1128:
     asr	w18,	w2,	#31
-    asr	w21,	w9,	#31
+    asr	w23,	w9,	#31
     add	w8,	w8,	#1
-    lsr	w19,	w18,	#31
-    lsr	w22,	w21,	#31
-    add	w17,	w2,	w19
-    add	w20,	w9,	w22
+    lsr	w21,	w18,	#31
+    lsr	w24,	w23,	#31
+    add	w17,	w2,	w21
+    add	w22,	w9,	w24
     asr	w2,	w17,	#1
-    asr	w9,	w20,	#1
+    asr	w9,	w22,	#1
     cmp	w8,	#16
     blt	long_func_1112
 
@@ -2140,14 +2140,14 @@ long_func_1134:
     beq	long_func_1229
 
 long_func_1136:
-    cmp	w25,	#0
+    cmp	w26,	#0
     beq	long_func_1229
 
 long_func_1140:
-    mov	w28,	w25
+    mov	w28,	w26
 
 long_func_1142:
-    movz	w19,	#0
+    movz	w21,	#0
     movz	w12,	#0
     mov	w5,	w0
     mov	w9,	w28
@@ -2179,7 +2179,7 @@ long_func_1156:
     add	x14,	x17,	x18
     ldr	w18,	[x14]
 
-    add	w19,	w18,	w19
+    add	w21,	w18,	w21
     b	long_func_1173
 
 long_func_1163:
@@ -2188,44 +2188,44 @@ long_func_1163:
     add	w14,	w9,	w11
     asr	w8,	w14,	#1
     lsl	w11,	w8,	#1
-    sub	w21,	w9,	w11
-    cmp	w21,	#0
+    sub	w23,	w9,	w11
+    cmp	w23,	#0
     beq	long_func_1173
 
 long_func_1166:
     lsl	w3,	w12,	#2
     adrp	x1, :got:SHIFT_TABLE
     ldr	x1, [x1, #:got_lo12:SHIFT_TABLE]
-    add	x24,	x1,	x3
-    ldr	w2,	[x24]
+    add	x25,	x1,	x3
+    ldr	w2,	[x25]
 
-    add	w19,	w2,	w19
+    add	w21,	w2,	w21
 
 long_func_1173:
     asr	w16,	w5,	#31
-    asr	w20,	w9,	#31
+    asr	w22,	w9,	#31
     add	w12,	w12,	#1
     lsr	w17,	w16,	#31
-    lsr	w21,	w20,	#31
+    lsr	w23,	w22,	#31
     add	w16,	w5,	w17
-    add	w20,	w9,	w21
+    add	w22,	w9,	w23
     asr	w5,	w16,	#1
-    asr	w9,	w20,	#1
+    asr	w9,	w22,	#1
     cmp	w12,	#16
     blt	long_func_1146
 
 long_func_1179:
     movz	w2,	#0
-    movz	w20,	#0
+    movz	w22,	#0
 
 long_func_1181:
-    asr	w21,	w0,	#31
-    lsr	w22,	w21,	#31
-    add	w24,	w0,	w22
-    asr	w5,	w24,	#1
+    asr	w23,	w0,	#31
+    lsr	w24,	w23,	#31
+    add	w25,	w0,	w24
+    asr	w5,	w25,	#1
     lsl	w6,	w5,	#1
-    sub	w21,	w0,	w6
-    cmp	w21,	#0
+    sub	w23,	w0,	w6
+    cmp	w23,	#0
     beq	long_func_1197
 
 long_func_1188:
@@ -2234,15 +2234,15 @@ long_func_1188:
     add	w3,	w28,	w1
     asr	w8,	w3,	#1
     lsl	w9,	w8,	#1
-    sub	w24,	w28,	w9
-    cmp	w24,	#0
+    sub	w25,	w28,	w9
+    cmp	w25,	#0
     beq	long_func_1197
 
 long_func_1191:
-    lsl	w21,	w20,	#2
+    lsl	w23,	w22,	#2
     adrp	x4, :got:SHIFT_TABLE
     ldr	x4, [x4, #:got_lo12:SHIFT_TABLE]
-    add	x1,	x4,	x21
+    add	x1,	x4,	x23
     ldr	w5,	[x1]
 
     add	w2,	w5,	w2
@@ -2250,18 +2250,18 @@ long_func_1191:
 long_func_1197:
     asr	w4,	w0,	#31
     asr	w8,	w28,	#31
-    add	w20,	w20,	#1
+    add	w22,	w22,	#1
     lsr	w5,	w4,	#31
     lsr	w9,	w8,	#31
     add	w0,	w0,	w5
     add	w5,	w28,	w9
     asr	w0,	w0,	#1
     asr	w28,	w5,	#1
-    cmp	w20,	#16
+    cmp	w22,	#16
     blt	long_func_1181
 
 long_func_1203:
-    mul	w0,	w26,	w2
+    mul	w0,	w19,	w2
     movz	w28,	#0
     movz	w3,	#0
     movz	w6,	#65535
@@ -2278,33 +2278,33 @@ long_func_1206:
 
 long_func_1213:
     asr	w18,	w6,	#31
-    lsr	w20,	w18,	#31
-    add	w21,	w6,	w20
-    asr	w20,	w21,	#1
-    lsl	w21,	w20,	#1
-    sub	w20,	w6,	w21
-    cmp	w20,	#0
+    lsr	w22,	w18,	#31
+    add	w23,	w6,	w22
+    asr	w22,	w23,	#1
+    lsl	w23,	w22,	#1
+    sub	w22,	w6,	w23
+    cmp	w22,	#0
     beq	long_func_1222
 
 long_func_1216:
     lsl	w17,	w3,	#2
     adrp	x27, :got:SHIFT_TABLE
     ldr	x27, [x27, #:got_lo12:SHIFT_TABLE]
-    add	x22,	x27,	x17
-    ldr	w1,	[x22]
+    add	x24,	x27,	x17
+    ldr	w1,	[x24]
 
     add	w28,	w1,	w28
 
 long_func_1222:
-    asr	w22,	w0,	#31
+    asr	w24,	w0,	#31
     asr	w1,	w6,	#31
     add	w3,	w3,	#1
-    lsr	w24,	w22,	#31
+    lsr	w25,	w24,	#31
     lsr	w2,	w1,	#31
-    add	w18,	w0,	w24
-    add	w22,	w6,	w2
+    add	w18,	w0,	w25
+    add	w24,	w6,	w2
     asr	w0,	w18,	#1
-    asr	w6,	w22,	#1
+    asr	w6,	w24,	#1
     cmp	w3,	#16
     blt	long_func_1206
 
@@ -2313,24 +2313,24 @@ long_func_1138:
     beq	long_func_1233
 
 long_func_1141:
-    mov	w0,	w19
+    mov	w0,	w21
     b	long_func_1142
 
 long_func_1233:
-    mov	w0,	w19
+    mov	w0,	w21
 
 long_func_1229:
-    cmp	w25,	#0
+    cmp	w26,	#0
     beq	long_func_1328
 
 long_func_1238:
-    mov	w20,	w25
+    mov	w22,	w26
 
 long_func_1240:
     movz	w1,	#0
     movz	w17,	#0
-    mov	w11,	w20
-    mov	w18,	w25
+    mov	w11,	w22
+    mov	w18,	w26
 
 long_func_1244:
     asr	w9,	w11,	#31
@@ -2344,32 +2344,32 @@ long_func_1244:
 
 long_func_1251:
     asr	w16,	w18,	#31
-    lsr	w19,	w16,	#31
-    add	w21,	w18,	w19
-    asr	w19,	w21,	#1
-    lsl	w21,	w19,	#1
-    sub	w9,	w18,	w21
+    lsr	w21,	w16,	#31
+    add	w23,	w18,	w21
+    asr	w21,	w23,	#1
+    lsl	w23,	w21,	#1
+    sub	w9,	w18,	w23
     cmp	w9,	#0
     bne	long_func_1271
 
 long_func_1254:
     lsl	w27,	w17,	#2
-    adrp	x19, :got:SHIFT_TABLE
-    ldr	x19, [x19, #:got_lo12:SHIFT_TABLE]
-    add	x14,	x19,	x27
-    ldr	w21,	[x14]
+    adrp	x21, :got:SHIFT_TABLE
+    ldr	x21, [x21, #:got_lo12:SHIFT_TABLE]
+    add	x14,	x21,	x27
+    ldr	w23,	[x14]
 
-    add	w1,	w21,	w1
+    add	w1,	w23,	w1
     b	long_func_1271
 
 long_func_1261:
-    asr	w22,	w18,	#31
-    lsr	w24,	w22,	#31
-    add	w27,	w18,	w24
-    asr	w24,	w27,	#1
-    lsl	w27,	w24,	#1
-    sub	w24,	w18,	w27
-    cmp	w24,	#0
+    asr	w24,	w18,	#31
+    lsr	w25,	w24,	#31
+    add	w27,	w18,	w25
+    asr	w25,	w27,	#1
+    lsl	w27,	w25,	#1
+    sub	w25,	w18,	w27
+    cmp	w25,	#0
     beq	long_func_1271
 
 long_func_1264:
@@ -2387,70 +2387,70 @@ long_func_1271:
     add	w17,	w17,	#1
     lsr	w2,	w28,	#31
     lsr	w5,	w4,	#31
-    add	w24,	w11,	w2
+    add	w25,	w11,	w2
     add	w2,	w18,	w5
-    asr	w11,	w24,	#1
+    asr	w11,	w25,	#1
     asr	w18,	w2,	#1
     cmp	w17,	#16
     blt	long_func_1244
 
 long_func_1277:
-    movz	w22,	#0
+    movz	w24,	#0
     movz	w27,	#0
 
 long_func_1279:
-    asr	w3,	w20,	#31
+    asr	w3,	w22,	#31
     lsr	w4,	w3,	#31
-    add	w5,	w20,	w4
+    add	w5,	w22,	w4
     asr	w16,	w5,	#1
     lsl	w17,	w16,	#1
-    sub	w17,	w20,	w17
+    sub	w17,	w22,	w17
     cmp	w17,	#0
     beq	long_func_1295
 
 long_func_1286:
-    asr	w6,	w25,	#31
+    asr	w6,	w26,	#31
     lsr	w8,	w6,	#31
-    add	w9,	w25,	w8
+    add	w9,	w26,	w8
     asr	w18,	w9,	#1
-    lsl	w19,	w18,	#1
-    sub	w19,	w25,	w19
-    cmp	w19,	#0
+    lsl	w21,	w18,	#1
+    sub	w21,	w26,	w21
+    cmp	w21,	#0
     beq	long_func_1295
 
 long_func_1289:
-    lsl	w21,	w27,	#2
+    lsl	w23,	w27,	#2
     adrp	x2, :got:SHIFT_TABLE
     ldr	x2, [x2, #:got_lo12:SHIFT_TABLE]
-    add	x24,	x2,	x21
-    ldr	w3,	[x24]
+    add	x25,	x2,	x23
+    ldr	w3,	[x25]
 
-    add	w22,	w3,	w22
+    add	w24,	w3,	w24
 
 long_func_1295:
-    asr	w11,	w20,	#31
-    asr	w16,	w25,	#31
+    asr	w11,	w22,	#31
+    asr	w16,	w26,	#31
     add	w27,	w27,	#1
     lsr	w12,	w11,	#31
     lsr	w17,	w16,	#31
-    add	w5,	w20,	w12
-    add	w9,	w25,	w17
-    asr	w20,	w5,	#1
-    asr	w25,	w9,	#1
+    add	w5,	w22,	w12
+    add	w9,	w26,	w17
+    asr	w22,	w5,	#1
+    asr	w26,	w9,	#1
     cmp	w27,	#16
     blt	long_func_1279
 
 long_func_1301:
-    mul	w5,	w26,	w22
-    movz	w25,	#0
+    mul	w5,	w19,	w24
+    movz	w26,	#0
     movz	w27,	#0
     movz	w3,	#65535
 
 long_func_1304:
-    asr	w21,	w5,	#31
-    lsr	w22,	w21,	#31
-    add	w24,	w5,	w22
-    asr	w2,	w24,	#1
+    asr	w23,	w5,	#31
+    lsr	w24,	w23,	#31
+    add	w25,	w5,	w24
+    asr	w2,	w25,	#1
     lsl	w4,	w2,	#1
     sub	w16,	w5,	w4
     cmp	w16,	#0
@@ -2467,13 +2467,13 @@ long_func_1311:
     beq	long_func_1320
 
 long_func_1314:
-    lsl	w19,	w27,	#2
-    adrp	x22, :got:SHIFT_TABLE
-    ldr	x22, [x22, #:got_lo12:SHIFT_TABLE]
-    add	x20,	x22,	x19
-    ldr	w24,	[x20]
+    lsl	w21,	w27,	#2
+    adrp	x24, :got:SHIFT_TABLE
+    ldr	x24, [x24, #:got_lo12:SHIFT_TABLE]
+    add	x22,	x24,	x21
+    ldr	w25,	[x22]
 
-    add	w25,	w24,	w25
+    add	w26,	w25,	w26
 
 long_func_1320:
     asr	w6,	w5,	#31
@@ -2481,23 +2481,23 @@ long_func_1320:
     add	w27,	w27,	#1
     lsr	w8,	w6,	#31
     lsr	w12,	w11,	#31
-    add	w22,	w5,	w8
+    add	w24,	w5,	w8
     add	w2,	w3,	w12
-    asr	w5,	w22,	#1
+    asr	w5,	w24,	#1
     asr	w3,	w2,	#1
     cmp	w27,	#16
     blt	long_func_1304
 
 long_func_1236:
-    cmp	w25,	#0
+    cmp	w26,	#0
     beq	long_func_1327
 
 long_func_1239:
-    mov	w20,	w1
+    mov	w22,	w1
     b	long_func_1240
 
 long_func_1327:
-    mov	w25,	w1
+    mov	w26,	w1
 
 long_func_1328:
     movz	w11,	#32767
@@ -2505,13 +2505,13 @@ long_func_1328:
     ble	long_func_1335
 
 long_func_1331:
-    sdiv	w15,	w15,	w26
+    sdiv	w15,	w15,	w19
     add	w16,	w15,	#65536
-    sub	w15,	w16,	w23
+    sub	w15,	w16,	w20
     b	long_func_1337
 
 long_func_1335:
-    sdiv	w15,	w15,	w26
+    sdiv	w15,	w15,	w19
 
 long_func_1337:
     cmp	w15,	#0
@@ -2519,19 +2519,19 @@ long_func_1337:
     b	long_func_1341
 
 long_func_1340:
-    mov	w0,	w25
+    mov	w0,	w26
 
 long_func_1341:
     cmp	w10,	#0
     bne	long_func_1348
 
 long_func_1583:
-    movz	w25,	#0
+    movz	w26,	#0
     b	long_func_1585
 
 long_func_1348:
     mov	w11,	w10
-    movz	w25,	#0
+    movz	w26,	#0
 
 long_func_1350:
     movz	w15,	#0
@@ -2545,18 +2545,18 @@ long_func_1355:
     add	w18,	w27,	w17
     asr	w14,	w18,	#1
     lsl	w17,	w14,	#1
-    sub	w20,	w27,	w17
-    cmp	w20,	#0
+    sub	w22,	w27,	w17
+    cmp	w22,	#0
     beq	long_func_1371
 
 long_func_1362:
-    asr	w19,	w16,	#31
-    lsr	w20,	w19,	#31
-    add	w21,	w16,	w20
-    asr	w18,	w21,	#1
-    lsl	w19,	w18,	#1
-    sub	w22,	w16,	w19
-    cmp	w22,	#0
+    asr	w21,	w16,	#31
+    lsr	w22,	w21,	#31
+    add	w23,	w16,	w22
+    asr	w18,	w23,	#1
+    lsl	w21,	w18,	#1
+    sub	w24,	w16,	w21
+    cmp	w24,	#0
     beq	long_func_1371
 
 long_func_1365:
@@ -2569,15 +2569,15 @@ long_func_1365:
     add	w15,	w3,	w15
 
 long_func_1371:
-    asr	w22,	w27,	#31
+    asr	w24,	w27,	#31
     asr	w1,	w16,	#31
     add	w8,	w8,	#1
-    lsr	w24,	w22,	#31
+    lsr	w25,	w24,	#31
     lsr	w2,	w1,	#31
-    add	w17,	w27,	w24
-    add	w19,	w16,	w2
+    add	w17,	w27,	w25
+    add	w21,	w16,	w2
     asr	w27,	w17,	#1
-    asr	w16,	w19,	#1
+    asr	w16,	w21,	#1
     cmp	w8,	#16
     blt	long_func_1355
 
@@ -2590,32 +2590,32 @@ long_func_1379:
     beq	long_func_1472
 
 long_func_1383:
-    mov	w20,	w11
+    mov	w22,	w11
 
 long_func_1385:
     movz	w14,	#0
     movz	w5,	#0
-    mov	w3,	w25
-    mov	w15,	w20
+    mov	w3,	w26
+    mov	w15,	w22
 
 long_func_1389:
     asr	w18,	w3,	#31
-    lsr	w19,	w18,	#31
-    add	w21,	w3,	w19
-    asr	w17,	w21,	#1
+    lsr	w21,	w18,	#31
+    add	w23,	w3,	w21
+    asr	w17,	w23,	#1
     lsl	w18,	w17,	#1
-    sub	w19,	w3,	w18
-    cmp	w19,	#0
+    sub	w21,	w3,	w18
+    cmp	w21,	#0
     beq	long_func_1406
 
 long_func_1396:
-    asr	w22,	w15,	#31
-    lsr	w24,	w22,	#31
-    add	w27,	w15,	w24
-    asr	w19,	w27,	#1
-    lsl	w21,	w19,	#1
-    sub	w22,	w15,	w21
-    cmp	w22,	#0
+    asr	w24,	w15,	#31
+    lsr	w25,	w24,	#31
+    add	w27,	w15,	w25
+    asr	w21,	w27,	#1
+    lsl	w23,	w21,	#1
+    sub	w24,	w15,	w23
+    cmp	w24,	#0
     bne	long_func_1416
 
 long_func_1399:
@@ -2632,8 +2632,8 @@ long_func_1406:
     asr	w28,	w15,	#31
     lsr	w1,	w28,	#31
     add	w2,	w15,	w1
-    asr	w24,	w2,	#1
-    lsl	w27,	w24,	#1
+    asr	w25,	w2,	#1
+    lsl	w27,	w25,	#1
     sub	w6,	w15,	w27
     cmp	w6,	#0
     beq	long_func_1416
@@ -2653,9 +2653,9 @@ long_func_1416:
     add	w5,	w5,	#1
     lsr	w6,	w4,	#31
     lsr	w12,	w9,	#31
-    add	w24,	w3,	w6
+    add	w25,	w3,	w6
     add	w1,	w15,	w12
-    asr	w3,	w24,	#1
+    asr	w3,	w25,	#1
     asr	w15,	w1,	#1
     cmp	w5,	#16
     blt	long_func_1389
@@ -2665,22 +2665,22 @@ long_func_1422:
     movz	w8,	#0
 
 long_func_1424:
-    asr	w2,	w25,	#31
+    asr	w2,	w26,	#31
     lsr	w3,	w2,	#31
-    add	w4,	w25,	w3
+    add	w4,	w26,	w3
     asr	w15,	w4,	#1
     lsl	w17,	w15,	#1
-    sub	w22,	w25,	w17
-    cmp	w22,	#0
+    sub	w24,	w26,	w17
+    cmp	w24,	#0
     beq	long_func_1440
 
 long_func_1431:
-    asr	w5,	w20,	#31
+    asr	w5,	w22,	#31
     lsr	w6,	w5,	#31
-    add	w9,	w20,	w6
+    add	w9,	w22,	w6
     asr	w18,	w9,	#1
-    lsl	w19,	w18,	#1
-    sub	w27,	w20,	w19
+    lsl	w21,	w18,	#1
+    sub	w27,	w22,	w21
     cmp	w27,	#0
     beq	long_func_1440
 
@@ -2694,30 +2694,30 @@ long_func_1434:
     add	w16,	w4,	w16
 
 long_func_1440:
-    asr	w12,	w25,	#31
-    asr	w18,	w20,	#31
+    asr	w12,	w26,	#31
+    asr	w18,	w22,	#31
     add	w8,	w8,	#1
     lsr	w15,	w12,	#31
-    lsr	w19,	w18,	#31
-    add	w1,	w25,	w15
-    add	w4,	w20,	w19
-    asr	w25,	w1,	#1
-    asr	w20,	w4,	#1
+    lsr	w21,	w18,	#31
+    add	w1,	w26,	w15
+    add	w4,	w22,	w21
+    asr	w26,	w1,	#1
+    asr	w22,	w4,	#1
     cmp	w8,	#16
     blt	long_func_1424
 
 long_func_1446:
-    mul	w17,	w26,	w16
-    movz	w20,	#0
+    mul	w17,	w19,	w16
+    movz	w22,	#0
     movz	w18,	#0
     movz	w28,	#65535
 
 long_func_1449:
-    asr	w22,	w17,	#31
-    lsr	w24,	w22,	#31
-    add	w25,	w17,	w24
-    asr	w25,	w25,	#1
-    lsl	w27,	w25,	#1
+    asr	w24,	w17,	#31
+    lsr	w25,	w24,	#31
+    add	w26,	w17,	w25
+    asr	w26,	w26,	#1
+    lsl	w27,	w26,	#1
     sub	w16,	w17,	w27
     cmp	w16,	#0
     beq	long_func_1465
@@ -2728,18 +2728,18 @@ long_func_1456:
     add	w2,	w28,	w1
     asr	w1,	w2,	#1
     lsl	w2,	w1,	#1
-    sub	w21,	w28,	w2
-    cmp	w21,	#0
+    sub	w23,	w28,	w2
+    cmp	w23,	#0
     beq	long_func_1465
 
 long_func_1459:
     lsl	w2,	w18,	#2
     adrp	x27, :got:SHIFT_TABLE
     ldr	x27, [x27, #:got_lo12:SHIFT_TABLE]
-    add	x24,	x27,	x2
-    ldr	w1,	[x24]
+    add	x25,	x27,	x2
+    ldr	w1,	[x25]
 
-    add	w20,	w1,	w20
+    add	w22,	w1,	w22
 
 long_func_1465:
     asr	w3,	w17,	#31
@@ -2747,23 +2747,23 @@ long_func_1465:
     add	w18,	w18,	#1
     lsr	w4,	w3,	#31
     lsr	w8,	w6,	#31
-    add	w19,	w17,	w4
-    add	w25,	w28,	w8
-    asr	w17,	w19,	#1
-    asr	w28,	w25,	#1
+    add	w21,	w17,	w4
+    add	w26,	w28,	w8
+    asr	w17,	w21,	#1
+    asr	w28,	w26,	#1
     cmp	w18,	#16
     blt	long_func_1449
 
 long_func_1381:
-    cmp	w20,	#0
+    cmp	w22,	#0
     beq	long_func_1476
 
 long_func_1384:
-    mov	w25,	w14
+    mov	w26,	w14
     b	long_func_1385
 
 long_func_1476:
-    mov	w25,	w14
+    mov	w26,	w14
 
 long_func_1472:
     cmp	w11,	#0
@@ -2776,7 +2776,7 @@ long_func_1483:
     movz	w5,	#0
     movz	w12,	#0
     mov	w9,	w8
-    mov	w20,	w11
+    mov	w22,	w11
 
 long_func_1487:
     asr	w1,	w9,	#31
@@ -2784,37 +2784,37 @@ long_func_1487:
     add	w3,	w9,	w2
     asr	w1,	w3,	#1
     lsl	w2,	w1,	#1
-    sub	w21,	w9,	w2
-    cmp	w21,	#0
+    sub	w23,	w9,	w2
+    cmp	w23,	#0
     beq	long_func_1504
 
 long_func_1494:
-    asr	w4,	w20,	#31
+    asr	w4,	w22,	#31
     lsr	w6,	w4,	#31
-    add	w14,	w20,	w6
+    add	w14,	w22,	w6
     asr	w3,	w14,	#1
     lsl	w4,	w3,	#1
-    sub	w24,	w20,	w4
-    cmp	w24,	#0
+    sub	w25,	w22,	w4
+    cmp	w25,	#0
     bne	long_func_1514
 
 long_func_1497:
-    lsl	w24,	w12,	#2
+    lsl	w25,	w12,	#2
     adrp	x2, :got:SHIFT_TABLE
     ldr	x2, [x2, #:got_lo12:SHIFT_TABLE]
-    add	x28,	x2,	x24
+    add	x28,	x2,	x25
     ldr	w3,	[x28]
 
     add	w5,	w3,	w5
     b	long_func_1514
 
 long_func_1504:
-    asr	w15,	w20,	#31
+    asr	w15,	w22,	#31
     lsr	w16,	w15,	#31
-    add	w17,	w20,	w16
+    add	w17,	w22,	w16
     asr	w14,	w17,	#1
     lsl	w15,	w14,	#1
-    sub	w6,	w20,	w15
+    sub	w6,	w22,	w15
     cmp	w6,	#0
     beq	long_func_1514
 
@@ -2829,19 +2829,19 @@ long_func_1507:
 
 long_func_1514:
     asr	w18,	w9,	#31
-    asr	w22,	w20,	#31
+    asr	w24,	w22,	#31
     add	w12,	w12,	#1
-    lsr	w19,	w18,	#31
-    lsr	w24,	w22,	#31
-    add	w3,	w9,	w19
-    add	w14,	w20,	w24
+    lsr	w21,	w18,	#31
+    lsr	w25,	w24,	#31
+    add	w3,	w9,	w21
+    add	w14,	w22,	w25
     asr	w9,	w3,	#1
-    asr	w20,	w14,	#1
+    asr	w22,	w14,	#1
     cmp	w12,	#16
     blt	long_func_1487
 
 long_func_1520:
-    movz	w24,	#0
+    movz	w25,	#0
     movz	w17,	#0
 
 long_func_1522:
@@ -2850,18 +2850,18 @@ long_func_1522:
     add	w15,	w8,	w14
     asr	w27,	w15,	#1
     lsl	w28,	w27,	#1
-    sub	w19,	w8,	w28
-    cmp	w19,	#0
+    sub	w21,	w8,	w28
+    cmp	w21,	#0
     beq	long_func_1538
 
 long_func_1529:
     asr	w16,	w11,	#31
     lsr	w18,	w16,	#31
-    add	w19,	w11,	w18
-    asr	w1,	w19,	#1
+    add	w21,	w11,	w18
+    asr	w1,	w21,	#1
     lsl	w2,	w1,	#1
-    sub	w21,	w11,	w2
-    cmp	w21,	#0
+    sub	w23,	w11,	w2
+    cmp	w23,	#0
     beq	long_func_1538
 
 long_func_1532:
@@ -2871,15 +2871,15 @@ long_func_1532:
     add	x27,	x1,	x9
     ldr	w2,	[x27]
 
-    add	w24,	w2,	w24
+    add	w25,	w2,	w25
 
 long_func_1538:
-    asr	w20,	w8,	#31
+    asr	w22,	w8,	#31
     asr	w27,	w11,	#31
     add	w17,	w17,	#1
-    lsr	w21,	w20,	#31
+    lsr	w23,	w22,	#31
     lsr	w28,	w27,	#31
-    add	w4,	w8,	w21
+    add	w4,	w8,	w23
     add	w11,	w11,	w28
     asr	w8,	w4,	#1
     asr	w11,	w11,	#1
@@ -2887,10 +2887,10 @@ long_func_1538:
     blt	long_func_1522
 
 long_func_1544:
-    mul	w14,	w26,	w24
+    mul	w14,	w19,	w25
     movz	w11,	#0
-    movz	w20,	#65535
-    movz	w24,	#0
+    movz	w22,	#65535
+    movz	w25,	#0
 
 long_func_1547:
     asr	w2,	w14,	#31
@@ -2903,35 +2903,35 @@ long_func_1547:
     beq	long_func_1563
 
 long_func_1554:
-    asr	w6,	w20,	#31
+    asr	w6,	w22,	#31
     lsr	w8,	w6,	#31
-    add	w9,	w20,	w8
+    add	w9,	w22,	w8
     asr	w12,	w9,	#1
     lsl	w15,	w12,	#1
-    sub	w17,	w20,	w15
+    sub	w17,	w22,	w15
     cmp	w17,	#0
     beq	long_func_1563
 
 long_func_1557:
-    lsl	w3,	w24,	#2
-    adrp	x22, :got:SHIFT_TABLE
-    ldr	x22, [x22, #:got_lo12:SHIFT_TABLE]
-    add	x19,	x22,	x3
-    ldr	w27,	[x19]
+    lsl	w3,	w25,	#2
+    adrp	x24, :got:SHIFT_TABLE
+    ldr	x24, [x24, #:got_lo12:SHIFT_TABLE]
+    add	x21,	x24,	x3
+    ldr	w27,	[x21]
 
     add	w11,	w27,	w11
 
 long_func_1563:
     asr	w12,	w14,	#31
-    asr	w17,	w20,	#31
-    add	w24,	w24,	#1
+    asr	w17,	w22,	#31
+    add	w25,	w25,	#1
     lsr	w15,	w12,	#31
     lsr	w18,	w17,	#31
-    add	w22,	w14,	w15
-    add	w1,	w20,	w18
-    asr	w14,	w22,	#1
-    asr	w20,	w1,	#1
-    cmp	w24,	#16
+    add	w24,	w14,	w15
+    add	w1,	w22,	w18
+    asr	w14,	w24,	#1
+    asr	w22,	w1,	#1
+    cmp	w25,	#16
     blt	long_func_1547
 
 long_func_1479:
@@ -2951,13 +2951,13 @@ long_func_1571:
     ble	long_func_1578
 
 long_func_1574:
-    sdiv	w27,	w10,	w26
+    sdiv	w27,	w10,	w19
     add	w28,	w27,	#65536
-    sub	w10,	w28,	w23
+    sub	w10,	w28,	w20
     b	long_func_1580
 
 long_func_1578:
-    sdiv	w10,	w10,	w26
+    sdiv	w10,	w10,	w19
 
 long_func_1580:
     cmp	w10,	#0
@@ -2969,21 +2969,21 @@ long_func_1585:
     ble	long_func_1592
 
 long_func_1588:
-    sdiv	w3,	w7,	w26
+    sdiv	w3,	w7,	w19
     add	w4,	w3,	#65536
-    sub	w7,	w4,	w23
+    sub	w7,	w4,	w20
     b	long_func_1594
 
 long_func_1592:
-    sdiv	w7,	w7,	w26
+    sdiv	w7,	w7,	w19
 
 long_func_1594:
     cmp	w7,	#0
     ble	long_func_1599
 
 long_func_1073:
-    mov	w10,	w25
-    mov	w25,	w0
+    mov	w10,	w26
+    mov	w26,	w0
     b	long_func_1074
 
 long_func_1599:

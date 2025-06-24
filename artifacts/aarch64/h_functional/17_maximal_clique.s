@@ -32,41 +32,41 @@ maxCliques_1:
     stp	x27, x28, [sp, #64]
     stp	fp, lr, [sp, #80]
     
-    movz	w27,	#1
+    movz	w25,	#1
     adrp	x13, :got:n
-    mov	w25,	w0
+    mov	w28,	w0
     ldr	x13, [x13, #:got_lo12:n]
     ldr	w26,	[x13]
 
-    cmp	w27,	w26
+    cmp	w25,	w26
     bgt	maxCliques_96
 
 maxCliques_4:
-    lsl	w23,	w25,	#2
+    lsl	w23,	w28,	#2
     adrp	x11, :got:store
     adrp	x5, :got:store
     movz	w0,	#0
     movz	w21,	#1
     ldr	x11, [x11, #:got_lo12:store]
     ldr	x5, [x5, #:got_lo12:store]
-    add	x24,	x11,	x23
-    add	w23,	w25,	#1
+    add	x25,	x11,	x23
+    add	w23,	w28,	#1
     add	w22,	w23,	#1
     lsl	w9,	w23,	#2
-    add	x28,	x5,	x9
+    add	x27,	x5,	x9
 
 maxCliques_10:
-    str	w21,	[x24]
+    str	w21,	[x25]
 
-    movz	w27,	#1
+    movz	w24,	#1
 
 maxCliques_13:
-    cmp	w27,	w23
+    cmp	w24,	w23
     bge	maxCliques_34
 
 maxCliques_16:
-    add	w5,	w27,	#1
-    lsl	w4,	w27,	#2
+    add	w5,	w24,	#1
+    lsl	w4,	w24,	#2
     adrp	x3, :got:store
     adrp	x8, :got:graph
     ldr	x3, [x3, #:got_lo12:store]
@@ -102,7 +102,7 @@ maxCliques_35:
     b	maxCliques_36
 
 maxCliques_32:
-    add	w27,	w27,	#1
+    add	w24,	w24,	#1
     b	maxCliques_13
 
 maxCliques_34:
@@ -113,9 +113,9 @@ maxCliques_36:
     beq	maxCliques_92
 
 maxCliques_39:
-    cmp	w25,	w0
+    cmp	w28,	w0
     movz	w14,	#1
-    csel	w27,	w25,	w0,	gt
+    csel	w24,	w28,	w0,	gt
     cmp	w14,	w26
     ble	maxCliques_43
 
@@ -128,7 +128,7 @@ maxCliques_43:
     movz	w19,	#1
 
 maxCliques_45:
-    str	w19,	[x28]
+    str	w19,	[x27]
 
     movz	w18,	#1
 
@@ -198,8 +198,8 @@ maxCliques_81:
     ble	maxCliques_45
 
 maxCliques_87:
-    cmp	w16,	w27
-    csel	w0,	w16,	w27,	gt
+    cmp	w16,	w24
+    csel	w0,	w16,	w24,	gt
 
 maxCliques_92:
     add	w21,	w21,	#1

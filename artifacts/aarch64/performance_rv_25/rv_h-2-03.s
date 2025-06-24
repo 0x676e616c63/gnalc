@@ -38,8 +38,8 @@ main_6:
     fadd	s6,	s11,	s31
     sub	w26,	w6,	w19
     cmp	w26,	#0
-    movz	w1,	#0
     fmov	s29,	#1.000000
+    movz	w1,	#0
     movi	v8.4s,	#0
     fcsel	s11,	s29,	s6,	ne
     fcsel	s25,	s8,	s21,	ne
@@ -60,17 +60,17 @@ main_20:
     fadd	s22,	s25,	s15
     mov	x5,	x7
     add	x0,	sp,	x0
+    add	w24,	w15,	#1
     lsl	w10,	w15,	#2
     scvtf	s23,	w15
-    add	w24,	w15,	#1
     add	x5,	sp,	x5
     add	x0,	x0,	#16
     mov	x9,	x10
-    fadd	s3,	s11,	s23
-    fadd	s31,	s25,	s23
     add	w3,	w24,	#1
     lsl	w19,	w24,	#2
     scvtf	s2,	w24
+    fadd	s3,	s11,	s23
+    fadd	s31,	s25,	s23
     add	x5,	x5,	fp
     str	s22,	[x0]
 

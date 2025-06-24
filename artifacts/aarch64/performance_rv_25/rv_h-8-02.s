@@ -195,10 +195,10 @@ main_98:
     madd	x17,	x10,	x24,	x20
 
     add	w10,	w10,	#1
-    add	x1,	x17,	#28
-    add	x8,	x17,	#8
     ldr	w18,	[x17]
 
+    add	x8,	x17,	#8
+    add	x1,	x17,	#28
     sdiv	w7,	w18,	w21
     lsl	w5,	w7,	#1
     add	w25,	w5,	w7,	lsl #3

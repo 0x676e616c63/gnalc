@@ -17,9 +17,9 @@ main_0:
     add	x0,	sp,	#16
     bl	memset
     movz	w22,	#0
-    movz	w23,	#2
-    movz	w6,	#2
     add	x4,	sp,	#20
+    movz	w6,	#2
+    movz	w23,	#2
     movz	w7,	#1
     add	x3,	sp,	#16
     str	w7,	[x3]
@@ -61,19 +61,19 @@ main_9:
     movz	w0,	#10
     bl	putch
     add	w19,	w23,	#1
+    lsl	w25,	w19,	#2
     sub	w0,	w19,	#1
     sub	w23,	w19,	#2
-    lsl	w25,	w19,	#2
     mov	x26,	x25
+    add	x26,	sp,	x26
     lsl	w20,	w0,	#2
     lsl	w27,	w23,	#2
-    add	x26,	sp,	x26
     mov	x18,	x20
-    add	x18,	sp,	x18
     add	x26,	x26,	#16
-    add	x18,	x18,	#16
+    add	x18,	sp,	x18
     ldr	w25,	[x26]
 
+    add	x18,	x18,	#16
     ldr	w21,	[x18]
 
     add	w20,	w21,	w25
@@ -91,18 +91,18 @@ main_9:
     bl	putch
     add	w28,	w19,	#1
     sub	w24,	w28,	#1
-    sub	w19,	w28,	#2
     lsl	w18,	w28,	#2
+    sub	w19,	w28,	#2
     mov	x21,	x18
+    add	x21,	sp,	x21
     lsl	w26,	w24,	#2
     lsl	w22,	w19,	#2
-    add	x21,	sp,	x21
     mov	x25,	x26
-    add	x25,	sp,	x25
     add	x21,	x21,	#16
-    add	x25,	x25,	#16
+    add	x25,	sp,	x25
     ldr	w20,	[x21]
 
+    add	x25,	x25,	#16
     ldr	w0,	[x25]
 
     add	w24,	w0,	w20

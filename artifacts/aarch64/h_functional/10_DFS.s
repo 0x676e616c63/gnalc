@@ -954,15 +954,15 @@ main_356:
     cmp	w19,	#0
     adrp	x18, :got:head
     lsl	w7,	w23,	#2
-    adrp	x20, :got:next
-    lsl	w4,	w21,	#2
-    lsl	w1,	w21,	#2
-    cset	w24,	ne
     adrp	x17, :got:to
+    lsl	w1,	w21,	#2
+    lsl	w4,	w21,	#2
+    cset	w24,	ne
+    adrp	x20, :got:next
     csel	w10,	w12,	w26,	ne
     ldr	x17, [x17, #:got_lo12:to]
-    lsl	w12,	w10,	#2
     adrp	x26, :got:head
+    lsl	w12,	w10,	#2
     add	x15,	x17,	x1
     str	w10,	[x15]
 

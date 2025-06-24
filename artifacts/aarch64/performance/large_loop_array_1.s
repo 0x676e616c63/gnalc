@@ -19,9 +19,9 @@ main_0:
     bl	_sysy_starttime
     fmov	s12,	#1.000000
     movi	v26.4s,	#0
-    movi	v11.4s,	#0
     movz	w2,	#0
     movz	w6,	#0
+    movi	v11.4s,	#0
     add	x23,	sp,	#16
     movz	fp,	#8208
     add	x13,	sp,	fp

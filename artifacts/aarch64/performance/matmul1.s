@@ -514,8 +514,8 @@ main_230:
     add	x14,	x22,	#1
     madd	x4,	x22,	x20,	x6
 
-    movz	w22,	#0
     lsl	x6,	x17,	#2
+    movz	w22,	#0
     lsl	x1,	x14,	#2
     add	x20,	x4,	x21
     add	x21,	x19,	x1

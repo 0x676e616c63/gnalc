@@ -44,10 +44,10 @@ main_0:
     bl	getfarray
     movz	w0,	#106
     bl	_sysy_starttime
-    movz	w6,	#0
-    add	x28,	sp,	#16
     movz	fp,	#17424
     adrp	x18, :got:conv_output
+    movz	w6,	#0
+    add	x28,	sp,	#16
     adrp	x22, :got:input
     movk	fp,	#8,	lsl #16
     ldr	x22, [x22, #:got_lo12:input]
@@ -273,8 +273,8 @@ main_147:
     add	x23,	x10,	x24
     add	x4,	x10,	x6
     lsl	w16,	w2,	#2
-    add	x1,	x17,	#4
     add	w27,	w2,	#6
+    add	x1,	x17,	#4
     add	w13,	w2,	#7
     add	w24,	w2,	#8
     add	w6,	w2,	#9
@@ -353,14 +353,14 @@ main_147:
 
     add	x3,	x10,	x4
     fadd	s29,	s21,	s17
-    lsl	w19,	w15,	#2
     ldr	s19,	[x25]
 
+    lsl	w19,	w15,	#2
     fmul	s25,	s10,	s24
-    add	x16,	x10,	x19
     add	x25,	x17,	#40
     ldr	s1,	[x0]
 
+    add	x16,	x10,	x19
     fadd	s8,	s29,	s25
     lsl	w0,	w26,	#2
     ldr	s27,	[x8]
@@ -644,8 +644,8 @@ main_323:
     fmov	s20,	#6.000000
     str	s21,	[x10]
 
-    fmov	s21,	#2.000000
     add	x10,	x14,	x11
+    fmov	s21,	#2.000000
     ldr	s9,	[x1]
 
     fneg	s23,	s9

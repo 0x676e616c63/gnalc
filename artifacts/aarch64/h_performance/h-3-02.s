@@ -365,12 +365,12 @@ main_149:
     ldr	w5,	[x3]
 
     sub	w17,	w19,	w1
-    lsl	w16,	w4,	#2
     lsl	w20,	w4,	#2
+    lsl	w16,	w4,	#2
     lsl	w13,	w4,	#2
     mul	w6,	w5,	w23
-    add	x15,	x28,	x16
     add	x19,	x12,	x20
+    add	x15,	x28,	x16
     sdiv	w8,	w17,	w6
     add	x6,	x26,	x13
     str	w8,	[x14]

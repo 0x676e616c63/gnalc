@@ -14,8 +14,8 @@ main_0:
     sub	sp, sp, fp
     stp	fp, lr, [sp, #0]
     
-    movz	w1,	#0
     movz	w23,	#16960
+    movz	w1,	#0
     add	x0,	sp,	#16
     movk	w23,	#15,	lsl #16
     mov	x2,	x23
@@ -300,14 +300,14 @@ main_125:
     add	w24,	w10,	w24
     lsl	w11,	w19,	#2
     add	x17,	x18,	x21
-    lsl	w27,	w19,	#2
     ldr	w8,	[x5]
 
-    add	w4,	w24,	w3
-    add	x26,	x18,	x27
+    lsl	w27,	w19,	#2
     lsl	w5,	w2,	#2
+    add	w4,	w24,	w3
     ldr	w22,	[x17]
 
+    add	x26,	x18,	x27
     add	w10,	w4,	w8
     ldr	w1,	[x26]
 

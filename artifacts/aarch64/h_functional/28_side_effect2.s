@@ -20,23 +20,23 @@ main_0:
     add	x3,	sp,	#16
     add	x26,	sp,	#20
     add	x0,	sp,	#24
-    add	x18,	sp,	#28
-    add	x19,	sp,	#80
-    add	x21,	sp,	#36
-    add	x6,	sp,	#76
-    add	x22,	sp,	#72
     add	x14,	sp,	#32
-    add	x11,	sp,	#68
-    add	x2,	sp,	#64
-    movz	w1,	#0
-    add	x10,	sp,	#84
-    add	x24,	sp,	#60
-    add	x9,	sp,	#40
+    add	x18,	sp,	#28
     add	x4,	sp,	#88
-    add	x20,	sp,	#56
     add	x23,	sp,	#52
+    movz	w1,	#0
+    add	x16,	sp,	#84
+    add	x6,	sp,	#76
+    add	x21,	sp,	#36
     add	x7,	sp,	#48
+    add	x22,	sp,	#72
     add	x15,	sp,	#44
+    add	x11,	sp,	#68
+    add	x12,	sp,	#80
+    add	x2,	sp,	#64
+    add	x9,	sp,	#40
+    add	x24,	sp,	#60
+    add	x20,	sp,	#56
 
 main_22:
     add	w1,	w1,	#1
@@ -45,17 +45,17 @@ main_22:
     bge	main_28
 
 main_27:
-    movz	w12,	#1
-    movz	w16,	#1
-    str	w12,	[x3]
+    movz	w10,	#1
+    movz	w17,	#1
+    str	w10,	[x3]
 
     b	main_29
 
 main_28:
-    movz	w16,	#0
+    movz	w17,	#0
 
 main_29:
-    cmp	w16,	#0
+    cmp	w17,	#0
     beq	main_214
 
 main_32:
@@ -65,24 +65,24 @@ main_32:
     bge	main_37
 
 main_35:
-    movz	w16,	#1
-    str	w16,	[x26]
+    movz	w17,	#1
+    str	w17,	[x26]
 
-    ldr	w17,	[x3]
+    ldr	w19,	[x3]
 
     b	main_38
 
 main_37:
-    movz	w17,	#0
+    movz	w19,	#0
 
 main_38:
-    cmp	w17,	#0
+    cmp	w19,	#0
     beq	main_214
 
 main_41:
     add	w1,	w1,	#1
-    movz	w17,	#2
-    cmp	w17,	w5
+    movz	w19,	#2
+    cmp	w19,	w5
     bge	main_46
 
 main_44:
@@ -128,8 +128,8 @@ main_59:
     bge	main_64
 
 main_62:
-    movz	w12,	#1
-    str	w12,	[x14]
+    movz	w10,	#1
+    str	w10,	[x14]
 
     ldr	w28,	[x18]
 
@@ -149,8 +149,8 @@ main_68:
     bge	main_73
 
 main_71:
-    movz	w16,	#1
-    str	w16,	[x21]
+    movz	w17,	#1
+    str	w17,	[x21]
 
     ldr	w8,	[x14]
 
@@ -165,23 +165,23 @@ main_74:
 
 main_77:
     add	w1,	w1,	#1
-    movz	w17,	#6
-    cmp	w17,	w5
+    movz	w19,	#6
+    cmp	w19,	w5
     bge	main_82
 
 main_80:
     movz	w25,	#1
     str	w25,	[x9]
 
-    ldr	w12,	[x21]
+    ldr	w10,	[x21]
 
     b	main_83
 
 main_82:
-    movz	w12,	#0
+    movz	w10,	#0
 
 main_83:
-    cmp	w12,	#0
+    cmp	w10,	#0
     beq	main_214
 
 main_86:
@@ -212,18 +212,18 @@ main_95:
     bge	main_100
 
 main_98:
-    movz	w12,	#1
-    str	w12,	[x7]
+    movz	w10,	#1
+    str	w10,	[x7]
 
-    ldr	w16,	[x15]
+    ldr	w17,	[x15]
 
     b	main_101
 
 main_100:
-    movz	w16,	#0
+    movz	w17,	#0
 
 main_101:
-    cmp	w16,	#0
+    cmp	w17,	#0
     beq	main_214
 
 main_104:
@@ -233,24 +233,24 @@ main_104:
     bge	main_109
 
 main_107:
-    movz	w16,	#1
-    str	w16,	[x23]
+    movz	w17,	#1
+    str	w17,	[x23]
 
-    ldr	w17,	[x7]
+    ldr	w19,	[x7]
 
     b	main_110
 
 main_109:
-    movz	w17,	#0
+    movz	w19,	#0
 
 main_110:
-    cmp	w17,	#0
+    cmp	w19,	#0
     beq	main_214
 
 main_113:
     add	w1,	w1,	#1
-    movz	w17,	#10
-    cmp	w17,	w5
+    movz	w19,	#10
+    cmp	w19,	w5
     bge	main_118
 
 main_116:
@@ -296,8 +296,8 @@ main_131:
     bge	main_136
 
 main_134:
-    movz	w12,	#1
-    str	w12,	[x2]
+    movz	w10,	#1
+    str	w10,	[x2]
 
     ldr	w28,	[x24]
 
@@ -317,8 +317,8 @@ main_140:
     bge	main_145
 
 main_143:
-    movz	w16,	#1
-    str	w16,	[x11]
+    movz	w17,	#1
+    str	w17,	[x11]
 
     ldr	w8,	[x2]
 
@@ -333,23 +333,23 @@ main_146:
 
 main_149:
     add	w1,	w1,	#1
-    movz	w17,	#14
-    cmp	w17,	w5
+    movz	w19,	#14
+    cmp	w19,	w5
     bge	main_154
 
 main_152:
     movz	w25,	#1
     str	w25,	[x22]
 
-    ldr	w12,	[x11]
+    ldr	w10,	[x11]
 
     b	main_155
 
 main_154:
-    movz	w12,	#0
+    movz	w10,	#0
 
 main_155:
-    cmp	w12,	#0
+    cmp	w10,	#0
     beq	main_214
 
 main_158:
@@ -380,18 +380,18 @@ main_167:
     bge	main_172
 
 main_170:
-    movz	w12,	#1
-    str	w12,	[x19]
+    movz	w10,	#1
+    str	w10,	[x12]
 
-    ldr	w16,	[x6]
+    ldr	w17,	[x6]
 
     b	main_173
 
 main_172:
-    movz	w16,	#0
+    movz	w17,	#0
 
 main_173:
-    cmp	w16,	#0
+    cmp	w17,	#0
     beq	main_214
 
 main_176:
@@ -401,18 +401,18 @@ main_176:
     bge	main_181
 
 main_179:
-    movz	w16,	#1
-    str	w16,	[x10]
+    movz	w17,	#1
+    str	w17,	[x16]
 
-    ldr	w17,	[x19]
+    ldr	w19,	[x12]
 
     b	main_182
 
 main_181:
-    movz	w17,	#0
+    movz	w19,	#0
 
 main_182:
-    cmp	w17,	#0
+    cmp	w19,	#0
     beq	main_214
 
 main_185:
@@ -422,19 +422,19 @@ main_185:
     bge	main_190
 
 main_188:
-    movz	w16,	#1
-    str	w16,	[x4]
+    movz	w17,	#1
+    str	w17,	[x4]
 
-    ldr	w12,	[x10]
+    ldr	w10,	[x16]
 
     b	main_191
 
 main_190:
-    movz	w12,	#0
+    movz	w10,	#0
 
 main_191:
     add	w25,	w28,	#1
-    cmp	w12,	#0
+    cmp	w10,	#0
     csel	w1,	w25,	w28,	ne
 
 main_214:
@@ -475,21 +475,21 @@ main_233:
     movz	w8,	#0
     str	w8,	[x26]
 
-    ldr	w12,	[x3]
+    ldr	w10,	[x3]
 
     b	main_236
 
 main_235:
-    movz	w12,	#1
+    movz	w10,	#1
 
 main_236:
-    cmp	w12,	#0
+    cmp	w10,	#0
     bne	main_412
 
 main_239:
     add	w1,	w1,	#2
-    movz	w12,	#2
-    cmp	w12,	w17
+    movz	w10,	#2
+    cmp	w10,	w17
     bge	main_244
 
 main_242:
@@ -509,23 +509,23 @@ main_245:
 
 main_248:
     add	w1,	w1,	#2
-    movz	w16,	#3
-    cmp	w16,	w17
+    movz	w19,	#3
+    cmp	w19,	w17
     bge	main_253
 
 main_251:
     movz	w25,	#0
     str	w25,	[x18]
 
-    ldr	w16,	[x0]
+    ldr	w19,	[x0]
 
     b	main_254
 
 main_253:
-    movz	w16,	#1
+    movz	w19,	#1
 
 main_254:
-    cmp	w16,	#0
+    cmp	w19,	#0
     bne	main_412
 
 main_257:
@@ -572,8 +572,8 @@ main_272:
 
 main_275:
     add	w1,	w1,	#2
-    movz	w12,	#6
-    cmp	w12,	w17
+    movz	w10,	#6
+    cmp	w10,	w17
     bge	main_280
 
 main_278:
@@ -593,8 +593,8 @@ main_281:
 
 main_284:
     add	w1,	w1,	#2
-    movz	w16,	#7
-    cmp	w16,	w17
+    movz	w19,	#7
+    cmp	w19,	w17
     bge	main_289
 
 main_287:
@@ -643,21 +643,21 @@ main_305:
     movz	w8,	#0
     str	w8,	[x23]
 
-    ldr	w12,	[x7]
+    ldr	w10,	[x7]
 
     b	main_308
 
 main_307:
-    movz	w12,	#1
+    movz	w10,	#1
 
 main_308:
-    cmp	w12,	#0
+    cmp	w10,	#0
     bne	main_412
 
 main_311:
     add	w1,	w1,	#2
-    movz	w12,	#10
-    cmp	w12,	w17
+    movz	w10,	#10
+    cmp	w10,	w17
     bge	main_316
 
 main_314:
@@ -677,23 +677,23 @@ main_317:
 
 main_320:
     add	w1,	w1,	#2
-    movz	w16,	#11
-    cmp	w16,	w17
+    movz	w19,	#11
+    cmp	w19,	w17
     bge	main_325
 
 main_323:
     movz	w25,	#0
     str	w25,	[x24]
 
-    ldr	w16,	[x20]
+    ldr	w19,	[x20]
 
     b	main_326
 
 main_325:
-    movz	w16,	#1
+    movz	w19,	#1
 
 main_326:
-    cmp	w16,	#0
+    cmp	w19,	#0
     bne	main_412
 
 main_329:
@@ -740,8 +740,8 @@ main_344:
 
 main_347:
     add	w1,	w1,	#2
-    movz	w12,	#14
-    cmp	w12,	w17
+    movz	w10,	#14
+    cmp	w10,	w17
     bge	main_352
 
 main_350:
@@ -761,8 +761,8 @@ main_353:
 
 main_356:
     add	w1,	w1,	#2
-    movz	w16,	#15
-    cmp	w16,	w17
+    movz	w19,	#15
+    cmp	w19,	w17
     bge	main_361
 
 main_359:
@@ -788,7 +788,7 @@ main_365:
 
 main_368:
     movz	w28,	#0
-    str	w28,	[x19]
+    str	w28,	[x12]
 
     ldr	w8,	[x6]
 
@@ -809,30 +809,30 @@ main_374:
 
 main_377:
     movz	w8,	#0
-    str	w8,	[x10]
+    str	w8,	[x16]
 
-    ldr	w12,	[x19]
+    ldr	w10,	[x12]
 
     b	main_380
 
 main_379:
-    movz	w12,	#1
+    movz	w10,	#1
 
 main_380:
-    cmp	w12,	#0
+    cmp	w10,	#0
     bne	main_412
 
 main_383:
     add	w5,	w1,	#2
-    movz	w16,	#18
-    cmp	w16,	w17
+    movz	w19,	#18
+    cmp	w19,	w17
     bge	main_388
 
 main_386:
     movz	w25,	#0
     str	w25,	[x4]
 
-    ldr	w25,	[x10]
+    ldr	w25,	[x16]
 
     b	main_389
 

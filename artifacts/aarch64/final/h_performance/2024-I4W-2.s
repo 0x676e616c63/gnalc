@@ -22,19 +22,19 @@ fib_3:
     stp	x27, x28, [sp, #64]
     stp	fp, lr, [sp, #80]
     
-    movz	x10,	#31161
-    mov	w27,	w0
-    movz	x11,	#3
-    mov	w21,	w2
     adrp	x5, :got:memo.lut.fib
-    mov	w28,	w1
-    movz	x12,	#31353
     movz	x9,	#31161
+    movz	x11,	#3
+    movz	x10,	#31161
+    movz	x12,	#31353
+    mov	w21,	w2
+    mov	w28,	w1
     movz	x23,	#65535
-    movk	x10,	#40503,	lsl #16
+    mov	w27,	w0
     ldr	x5, [x5, #:got_lo12:memo.lut.fib]
-    movk	x12,	#40503,	lsl #16
     movk	x9,	#40503,	lsl #16
+    movk	x10,	#40503,	lsl #16
+    movk	x12,	#40503,	lsl #16
     add	x17,	x27,	x12
     eor	x14,	x17,	x11
     lsr	x20,	x14,	#2

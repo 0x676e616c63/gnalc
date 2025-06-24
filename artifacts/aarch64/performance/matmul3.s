@@ -246,8 +246,8 @@ main_76:
 
     add	x16,	x24,	#1
     movz	w24,	#4000
-    lsl	x20,	x16,	#2
     add	x3,	x16,	#1
+    lsl	x20,	x16,	#2
     add	x18,	x19,	x20
     lsl	x5,	x3,	#2
     ldr	w20,	[x18]
@@ -534,9 +534,9 @@ main_230:
     add	x14,	x24,	#1
     add	x5,	x28,	x6
     add	x27,	x19,	x11
-    adrp	x6, :got:c
-    lsl	x23,	x14,	#2
     lsl	x28,	x17,	#2
+    lsl	x23,	x14,	#2
+    adrp	x6, :got:c
     ldr	w4,	[x5]
 
     movz	w11,	#4000

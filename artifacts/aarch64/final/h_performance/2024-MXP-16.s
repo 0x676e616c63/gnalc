@@ -46,9 +46,9 @@ main_14:
     movk	w14,	#8192,	lsl #16
     sub	w1,	w14,	w24
     cmp	w24,	w1
+    csel	w25,	w24,	w1,	lt
     add	w27,	w27,	w0
     movz	w12,	#1000
-    csel	w25,	w24,	w1,	lt
     movz	w6,	#26809
     lsl	w8,	w25,	#0
     movk	w6,	#297,	lsl #16

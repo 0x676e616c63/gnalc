@@ -22,43 +22,43 @@ dfs_6:
     stp	x27, x28, [sp, #64]
     stp	fp, lr, [sp, #80]
     
-    movz	w24,	#9072
+    movz	w21,	#9072
     mov	x25,	x0
+    mov	x27,	x2
+    movz	w28,	#55744
     mov	w19,	w3
     mov	w23,	w4
-    movz	w27,	#32224
-    mov	w20,	w5
-    adrp	x21, :got:dp
+    mov	w22,	w5
+    adrp	x20, :got:dp
+    movz	w24,	#32224
     mov	x26,	x1
-    movz	w28,	#55744
-    mov	x22,	x2
+    movk	w28,	#44,	lsl #16
     lsl	w6,	w19,	#9
     movz	w4,	#65535
     lsl	w7,	w23,	#5
-    movk	w27,	#2,	lsl #16
-    lsl	w0,	w20,	#2
-    ldr	x21, [x21, #:got_lo12:dp]
-    movk	w28,	#44,	lsl #16
+    lsl	w0,	w22,	#2
+    ldr	x20, [x20, #:got_lo12:dp]
+    movk	w24,	#2,	lsl #16
     movk	w4,	#65535,	lsl #16
-    madd	x17,	x25,	x28,	x21
+    madd	x17,	x25,	x28,	x20
 
-    sub	w21,	w6,	w19,	lsl #3
-    madd	x27,	x26,	x27,	x17
+    sub	w20,	w6,	w19,	lsl #3
+    madd	x24,	x26,	x24,	x17
 
-    madd	x15,	x22,	x24,	x27
+    madd	x15,	x27,	x21,	x24
 
-    sub	w27,	w7,	w23,	lsl #2
-    add	x17,	x15,	x21
-    add	x5,	x17,	x27
-    add	x28,	x5,	x0
-    ldr	w0,	[x28]
+    sub	w24,	w7,	w23,	lsl #2
+    add	x17,	x15,	x20
+    add	x5,	x17,	x24
+    add	x20,	x5,	x0
+    ldr	w0,	[x20]
 
     cmp	w0,	w4
     bne	dfs_90
 
 dfs_15:
     add	w10,	w26,	w25
-    add	w11,	w10,	w22
+    add	w11,	w10,	w27
     add	w12,	w11,	w19
     add	w13,	w12,	w23
     cmp	w13,	#0
@@ -71,65 +71,65 @@ dfs_21:
     beq	dfs_31
 
 dfs_23:
-    cmp	w20,	#2
+    cmp	w22,	#2
     movz	w5,	#1
     mov	w4,	w23
     mov	w3,	w19
+    mov	x2,	x27
     mov	x1,	x26
     sub	w0,	w25,	#1
-    mov	x2,	x22
     cset	w24,	eq
     sub	w24,	w25,	w24
     bl	dfs
-    mul	w27,	w0,	w24
-    sdiv	w10,	w27,	w21
-    msub	w27,	w10,	w21,	w27
+    mul	w28,	w0,	w24
+    sdiv	w10,	w28,	w21
+    msub	w28,	w10,	w21,	w28
 
     b	dfs_32
 
 dfs_31:
-    movz	w27,	#0
+    movz	w28,	#0
 
 dfs_32:
     cmp	x26,	#0
     beq	dfs_46
 
 dfs_35:
-    cmp	w20,	#3
+    cmp	w22,	#3
     mov	w4,	w23
-    movz	w5,	#2
-    mov	x2,	x22
+    mov	x2,	x27
     sub	w1,	w26,	#1
     add	w0,	w25,	#1
+    movz	w5,	#2
     cset	w3,	eq
     sub	w24,	w26,	w3
     mov	w3,	w19
     bl	dfs
-    madd	w9,	w0,	w24,	w27
+    madd	w9,	w0,	w24,	w28
 
     sdiv	w13,	w9,	w21
-    msub	w27,	w13,	w21,	w9
+    msub	w28,	w13,	w21,	w9
 
 
 dfs_46:
-    cmp	x22,	#0
+    cmp	x27,	#0
     beq	dfs_60
 
 dfs_49:
-    cmp	w20,	#4
-    mov	w3,	w19
+    cmp	w22,	#4
     mov	w4,	w23
-    sub	w2,	w22,	#1
+    mov	w3,	w19
+    sub	w2,	w27,	#1
     add	w1,	w26,	#1
     mov	x0,	x25
     cset	w5,	eq
-    sub	w24,	w22,	w5
+    sub	w24,	w27,	w5
     movz	w5,	#3
     bl	dfs
-    madd	w27,	w0,	w24,	w27
+    madd	w28,	w0,	w24,	w28
 
-    sdiv	w16,	w27,	w21
-    msub	w27,	w16,	w21,	w27
+    sdiv	w16,	w28,	w21
+    msub	w28,	w16,	w21,	w28
 
 
 dfs_60:
@@ -137,20 +137,20 @@ dfs_60:
     beq	dfs_74
 
 dfs_63:
-    cmp	w20,	#5
+    cmp	w22,	#5
     mov	w4,	w23
     mov	x1,	x26
     mov	x0,	x25
     movz	w5,	#4
     sub	w3,	w19,	#1
-    add	w2,	w22,	#1
+    add	w2,	w27,	#1
     cset	w24,	eq
-    sub	w20,	w19,	w24
+    sub	w22,	w19,	w24
     bl	dfs
-    madd	w2,	w0,	w20,	w27
+    madd	w2,	w0,	w22,	w28
 
-    sdiv	w27,	w2,	w21
-    msub	w27,	w27,	w21,	w2
+    sdiv	w28,	w2,	w21
+    msub	w28,	w28,	w21,	w2
 
 
 dfs_74:
@@ -162,20 +162,20 @@ dfs_77:
     sub	w4,	w23,	#1
     mov	x0,	x25
     mov	x1,	x26
-    mov	x2,	x22
+    mov	x2,	x27
     movz	w5,	#5
     bl	dfs
-    madd	w0,	w0,	w23,	w27
+    madd	w0,	w0,	w23,	w28
 
     sdiv	w7,	w0,	w21
-    msub	w27,	w7,	w21,	w0
+    msub	w28,	w7,	w21,	w0
 
 
 dfs_85:
-    sdiv	w1,	w27,	w21
-    msub	w0,	w1,	w21,	w27
+    sdiv	w1,	w28,	w21
+    msub	w0,	w1,	w21,	w28
 
-    str	w0,	[x28]
+    str	w0,	[x20]
 
     b	dfs_90
 
@@ -246,12 +246,12 @@ main_20:
     sub	w25,	w20,	w24,	lsl #2
     add	w24,	w24,	#1
     add	x18,	x7,	x25
-    add	x14,	x18,	#20
-    add	x11,	x18,	#12
     add	x25,	x18,	#24
     add	x13,	x18,	#16
-    add	x5,	x18,	#4
+    add	x11,	x18,	#12
     add	x8,	x18,	#8
+    add	x5,	x18,	#4
+    add	x14,	x18,	#20
     str	w3,	[x18]
 
     str	w3,	[x5]

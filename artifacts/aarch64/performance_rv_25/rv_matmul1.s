@@ -260,10 +260,10 @@ main_79:
     lsl	w12,	w11,	#1
     sub	w11,	w19,	w12
     cmp	w11,	#0
+    movz	w22,	#800
     lsl	w4,	w10,	#2
     movz	fp,	#28944
     csel	w16,	w25,	w15,	eq
-    movz	w22,	#800
     movk	fp,	#2,	lsl #16
     add	w25,	w9,	#1
     mul	w2,	w25,	w22
@@ -288,8 +288,8 @@ main_79:
     lsl	w21,	w20,	#1
     sub	w19,	w7,	w21
     cmp	w19,	#0
-    lsl	w21,	w10,	#2
     movz	w17,	#800
+    lsl	w21,	w10,	#2
     movz	fp,	#28944
     add	w3,	w25,	#1
     csel	w2,	w11,	w16,	eq
@@ -344,14 +344,14 @@ main_79:
     lsl	w11,	w9,	#1
     sub	w23,	w22,	w11
     cmp	w23,	#0
-    movz	w6,	#800
     csel	w17,	w14,	w26,	eq
     add	w25,	w20,	#1
+    movz	w6,	#800
     movz	fp,	#28944
     lsl	w24,	w10,	#2
     movk	fp,	#2,	lsl #16
-    mul	w22,	w25,	w6
     lsl	w19,	w25,	#2
+    mul	w22,	w25,	w6
     mov	x3,	x22
     add	x18,	x5,	x19
     add	x3,	sp,	x3
@@ -402,12 +402,12 @@ main_79:
     cmp	w27,	#0
     csel	w7,	w17,	w28,	eq
     add	w4,	w3,	#1
+    lsl	w27,	w10,	#2
     movz	w24,	#800
     movz	fp,	#28944
-    lsl	w27,	w10,	#2
-    movk	fp,	#2,	lsl #16
     lsl	w22,	w4,	#2
     mul	w25,	w4,	w24
+    movk	fp,	#2,	lsl #16
     mov	x9,	x25
     add	x21,	x5,	x22
     add	x9,	sp,	x9
@@ -428,14 +428,14 @@ main_79:
     lsl	w21,	w20,	#1
     sub	w17,	w19,	w21
     cmp	w17,	#0
-    movz	w19,	#800
-    movz	fp,	#28944
-    lsl	w16,	w10,	#2
     csel	w27,	w3,	w7,	eq
     add	w22,	w4,	#1
-    movk	fp,	#2,	lsl #16
-    mul	w14,	w22,	w19
+    lsl	w16,	w10,	#2
+    movz	w19,	#800
+    movz	fp,	#28944
     lsl	w11,	w22,	#2
+    mul	w14,	w22,	w19
+    movk	fp,	#2,	lsl #16
     mov	x25,	x14
     add	x9,	x5,	x11
     add	x25,	sp,	x25
@@ -497,8 +497,8 @@ main_184:
     ldr	w8,	[x6]
 
     cmp	w8,	w15
-    add	w26,	w5,	#1
     csel	w24,	w8,	w15,	lt
+    add	w26,	w5,	#1
     lsl	w6,	w26,	#2
     add	x5,	x1,	x6
     ldr	w7,	[x5]

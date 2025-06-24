@@ -193,9 +193,9 @@ main_82:
     mov	w0,	w28
     bl	putarray
     mov	w0,	w28
-    movz	w1,	#2400
     adrp	x20, :got:x
     sub	w27,	w24,	#1
+    movz	w1,	#2400
     sub	w25,	w23,	#1
     ldr	x20, [x20, #:got_lo12:x]
     madd	x18,	x25,	x19,	x20

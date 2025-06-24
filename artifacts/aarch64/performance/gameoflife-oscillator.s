@@ -294,17 +294,17 @@ main_125:
     add	x21,	x7,	x22
     ldr	w24,	[x21]
 
+    lsl	w21,	w11,	#2
     ldr	w3,	[x27]
 
-    lsl	w21,	w11,	#2
     add	w24,	w10,	w24
+    lsl	w11,	w19,	#2
+    add	x17,	x18,	x21
     lsl	w27,	w19,	#2
     ldr	w8,	[x5]
 
-    lsl	w11,	w19,	#2
-    add	x17,	x18,	x21
-    add	x26,	x18,	x27
     add	w4,	w24,	w3
+    add	x26,	x18,	x27
     lsl	w5,	w2,	#2
     ldr	w22,	[x17]
 

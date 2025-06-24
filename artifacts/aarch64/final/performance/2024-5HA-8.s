@@ -14,27 +14,27 @@ main_0:
     sub	sp, sp, fp
     stp	fp, lr, [sp, #0]
     
+    movz	fp,	#16976
     movz	w23,	#16960
     movz	w1,	#0
-    add	x0,	sp,	#16
+    movk	fp,	#15,	lsl #16
     movk	w23,	#15,	lsl #16
+    add	x0,	sp,	fp
     mov	x2,	x23
     bl	memset
     mov	x2,	x23
     movz	w1,	#0
-    movz	fp,	#16976
-    movk	fp,	#15,	lsl #16
-    add	x0,	sp,	fp
+    add	x0,	sp,	#16
     bl	memset
     bl	getint
-    mov	w20,	w0
+    mov	w22,	w0
     bl	getint
-    mov	w23,	w0
+    mov	w21,	w0
     bl	getint
     mov	w28,	w0
     bl	getch
     movz	w24,	#1
-    cmp	w24,	w23
+    cmp	w24,	w21
     bgt	main_35
 
 main_8:
@@ -42,18 +42,16 @@ main_8:
 
 main_10:
     movz	w13,	#1
-    cmp	w13,	w20
+    cmp	w13,	w22
     bgt	main_29
 
 main_13:
     movz	w14,	#2000
-    movz	fp,	#16976
     movz	w26,	#1
-    movk	fp,	#15,	lsl #16
     mul	w11,	w25,	w14
     mov	x19,	x11
     add	x19,	sp,	x19
-    add	x19,	x19,	fp
+    add	x19,	x19,	#16
 
 main_16:
     bl	getch
@@ -77,13 +75,13 @@ main_22:
 
 main_24:
     add	w26,	w26,	#1
-    cmp	w26,	w20
+    cmp	w26,	w22
     ble	main_16
 
 main_29:
     bl	getch
     add	w25,	w25,	#1
-    cmp	w25,	w23
+    cmp	w25,	w21
     ble	main_10
 
 main_35:
@@ -93,19 +91,19 @@ main_35:
     ble	main_183
 
 main_37:
+    add	x15,	sp,	#16
     movz	fp,	#16976
-    add	x0,	sp,	#16
     movz	w25,	#1
     movk	fp,	#15,	lsl #16
-    add	x15,	sp,	fp
+    add	x0,	sp,	fp
 
 main_41:
     cmp	w25,	#1
     bne	main_110
 
 main_45:
-    movz	w22,	#1
-    cmp	w22,	w23
+    movz	w23,	#1
+    cmp	w23,	w21
     ble	main_47
 
 main_175:
@@ -116,8 +114,8 @@ main_47:
     movz	w4,	#1
 
 main_49:
-    movz	w22,	#1
-    cmp	w22,	w20
+    movz	w23,	#1
+    cmp	w23,	w22
     bgt	main_104
 
 main_52:
@@ -148,39 +146,39 @@ main_60:
     add	x26,	x27,	x1
     add	x9,	x2,	x12
     lsl	w1,	w16,	#2
-    ldr	w21,	[x26]
+    ldr	w20,	[x26]
 
     add	x26,	x27,	x1
     ldr	w6,	[x4]
 
-    add	w21,	w6,	w21
+    add	w20,	w6,	w20
     lsl	w6,	w25,	#2
     ldr	w3,	[x26]
 
     add	x5,	x2,	x6
-    add	w8,	w21,	w3
+    add	w8,	w20,	w3
     ldr	w7,	[x5]
 
+    lsl	w5,	w25,	#2
     ldr	w13,	[x9]
 
-    lsl	w5,	w25,	#2
     add	w14,	w8,	w7
-    lsl	w9,	w11,	#2
     lsl	w25,	w11,	#2
     add	x4,	x10,	x5
+    lsl	w9,	w11,	#2
+    add	w23,	w14,	w13
     add	x8,	x10,	x9
-    add	w22,	w14,	w13
     ldr	w6,	[x4]
 
     add	x14,	x10,	x18
     ldr	w12,	[x8]
 
-    add	w6,	w22,	w6
+    add	w6,	w23,	w6
     ldr	w19,	[x14]
 
-    add	x22,	x2,	x25
+    add	x23,	x2,	x25
     add	w12,	w6,	w12
-    ldr	w26,	[x22]
+    ldr	w26,	[x23]
 
     add	w19,	w12,	w19
     cmp	w26,	#1
@@ -203,9 +201,9 @@ main_96:
     bne	main_100
 
 main_98:
-    lsl	w21,	w11,	#2
+    lsl	w20,	w11,	#2
     movz	w5,	#1
-    add	x8,	x24,	x21
+    add	x8,	x24,	x20
     str	w5,	[x8]
 
     b	main_102
@@ -218,7 +216,7 @@ main_100:
 
 
 main_102:
-    cmp	w16,	w20
+    cmp	w16,	w22
     bgt	main_107
 
 main_59:
@@ -229,7 +227,7 @@ main_104:
     add	w17,	w4,	#1
 
 main_107:
-    cmp	w17,	w23
+    cmp	w17,	w21
     bgt	main_176
 
 main_48:
@@ -242,7 +240,7 @@ main_176:
 
 main_110:
     movz	w18,	#1
-    cmp	w18,	w23
+    cmp	w18,	w21
     ble	main_112
 
 main_177:
@@ -254,7 +252,7 @@ main_112:
 
 main_114:
     movz	w19,	#1
-    cmp	w19,	w20
+    cmp	w19,	w22
     bgt	main_169
 
 main_117:
@@ -262,57 +260,57 @@ main_117:
     movz	w9,	#2000
     movz	w8,	#2000
     add	x12,	x14,	#1
-    movz	w22,	#2000
-    movz	w21,	#2000
+    movz	w23,	#2000
+    movz	w20,	#2000
     movz	w19,	#1
     madd	x7,	x26,	x9,	x0
 
-    madd	x18,	x12,	x22,	x0
+    madd	x18,	x12,	x23,	x0
 
-    madd	x25,	x14,	x21,	x15
+    madd	x25,	x14,	x20,	x15
 
     madd	x9,	x14,	x8,	x0
 
 
 main_125:
     sub	w11,	w19,	#1
-    lsl	w21,	w19,	#2
-    add	x17,	x7,	x21
+    lsl	w20,	w19,	#2
+    add	x17,	x7,	x20
     lsl	w1,	w11,	#2
     lsl	w14,	w11,	#2
     add	x27,	x9,	x1
     add	x13,	x7,	x14
     ldr	w2,	[x13]
 
-    ldr	w22,	[x17]
+    ldr	w23,	[x17]
 
-    add	w10,	w22,	w2
+    add	w10,	w23,	w2
     add	w2,	w19,	#1
     lsl	w6,	w2,	#2
-    lsl	w22,	w2,	#2
+    lsl	w23,	w2,	#2
     add	x5,	x9,	x6
-    add	x21,	x7,	x22
-    ldr	w24,	[x21]
+    add	x20,	x7,	x23
+    ldr	w24,	[x20]
 
-    lsl	w21,	w11,	#2
+    lsl	w20,	w11,	#2
     ldr	w3,	[x27]
 
     add	w24,	w10,	w24
     lsl	w11,	w19,	#2
-    add	x17,	x18,	x21
+    add	x17,	x18,	x20
     lsl	w27,	w19,	#2
     ldr	w8,	[x5]
 
     add	w4,	w24,	w3
     add	x26,	x18,	x27
-    ldr	w22,	[x17]
-
     lsl	w5,	w2,	#2
+    ldr	w23,	[x17]
+
     add	w10,	w4,	w8
     ldr	w1,	[x26]
 
     add	x4,	x18,	x5
-    add	w14,	w10,	w22
+    add	w14,	w10,	w23
     ldr	w6,	[x4]
 
     add	x10,	x9,	x11
@@ -355,7 +353,7 @@ main_165:
 
 
 main_167:
-    cmp	w2,	w20
+    cmp	w2,	w22
     bgt	main_172
 
 main_124:
@@ -366,7 +364,7 @@ main_169:
     add	w12,	w14,	#1
 
 main_172:
-    cmp	w12,	w23
+    cmp	w12,	w21
     bgt	main_178
 
 main_113:
@@ -392,8 +390,8 @@ main_185:
     bne	main_210
 
 main_188:
-    movz	w21,	#1
-    cmp	w21,	w23
+    movz	w20,	#1
+    cmp	w20,	w21
     bgt	main_210
 
 main_190:
@@ -401,21 +399,21 @@ main_190:
 
 main_192:
     movz	w17,	#2000
-    movz	fp,	#16976
     movz	w16,	#2000
-    movk	fp,	#15,	lsl #16
+    movz	fp,	#16976
     mul	w14,	w3,	w17
     mul	w16,	w3,	w16
+    movk	fp,	#15,	lsl #16
     movz	w17,	#1
-    mov	x21,	x14
+    mov	x20,	x14
     mov	x13,	x16
-    add	x21,	sp,	x21
+    add	x20,	sp,	x20
     add	x13,	sp,	x13
-    add	x21,	x21,	fp
-    add	x13,	x13,	#16
+    add	x20,	x20,	#16
+    add	x13,	x13,	fp
 
 main_196:
-    cmp	w17,	w20
+    cmp	w17,	w22
     bgt	main_204
 
 main_199:
@@ -423,7 +421,7 @@ main_199:
     lsl	w5,	w17,	#2
     add	w17,	w17,	#1
     add	x4,	x13,	x5
-    add	x28,	x21,	x2
+    add	x28,	x20,	x2
     ldr	w6,	[x4]
 
     str	w6,	[x28]
@@ -432,31 +430,29 @@ main_199:
 
 main_204:
     add	w3,	w3,	#1
-    cmp	w3,	w23
+    cmp	w3,	w21
     ble	main_192
 
 main_210:
     movz	w27,	#1
-    cmp	w27,	w23
+    cmp	w27,	w21
     bgt	main_237
 
 main_212:
     movz	w24,	#1
 
 main_214:
-    movz	w21,	#1
-    cmp	w21,	w20
+    movz	w20,	#1
+    cmp	w20,	w22
     bgt	main_232
 
 main_217:
-    movz	w22,	#2000
-    movz	fp,	#16976
+    movz	w23,	#2000
     movz	w26,	#1
-    movk	fp,	#15,	lsl #16
-    mul	w2,	w24,	w22
+    mul	w2,	w24,	w23
     mov	x25,	x2
     add	x25,	sp,	x25
-    add	x25,	x25,	fp
+    add	x25,	x25,	#16
 
 main_220:
     lsl	w0,	w26,	#2
@@ -477,14 +473,14 @@ main_226:
 
 main_227:
     add	w26,	w26,	#1
-    cmp	w26,	w20
+    cmp	w26,	w22
     ble	main_220
 
 main_232:
     movz	w0,	#10
     bl	putch
     add	w24,	w24,	#1
-    cmp	w24,	w23
+    cmp	w24,	w21
     ble	main_214
 
 main_237:

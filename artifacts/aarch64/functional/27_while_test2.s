@@ -12,8 +12,8 @@ main_0:
     sub	sp, sp, #16
     str	lr, [sp, 0]
 
-    movz	w25,	#10
     movz	w0,	#6
+    movz	w25,	#10
     movz	w6,	#5
 
 main_2:
