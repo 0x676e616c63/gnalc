@@ -1,8 +1,11 @@
 name: Gnalc Compile Artifacts
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}
+  group: artifacts-test-${{ github.ref_name }}
   cancel-in-progress: true
+
+permissions:
+  contents: write
 
 on:
   push:
@@ -27,7 +30,6 @@ on:
 env:
   BUILD_TYPE: Release
   ARTIFACTS_BRANCH: "artifacts-${{ github.ref_name }}"
-  TEST_RESULT_BRANCH: "test-result-${{ github.ref_name }}"
   TESTDATA_VERSION: "v1.0.0"
   TESTDATA_ZIP_URL: "https://github.com/caozhanhao/gnalc-test-data/releases/download/v1.0.0/testdata.zip"
   TESTDATA_DIR: "${{ github.workspace }}/testdata"
