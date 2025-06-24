@@ -8,24 +8,26 @@ permissions:
   contents: write
 
 on:
-  push:
-    branches: [ "artifacts-backendv3.0", "artifacts-main" ]
+  workflow_call:
+    inputs:
+      artifacts-branch:
+        required: true
+        type: string
+      test-result-branch:
+        required: true
+        type: string
 
 env:
   BUILD_TYPE: Release
   TESTDATA_DIR: "/home/panda/gnalc/test/contest"
-  ARTIFACTS_BRANCH: ${{ github.ref_name }}
+  ARTIFACTS_BRANCH: ${{ inputs.artifacts-branch }}
+  TEST_RESULT_BRANCH: ${{ inputs.test-result-branch }}
 
 jobs:
   test_changes:
     runs-on: self-hosted
 
     steps:
-      - name: Set up branch variable
-        run: |
-          SUFFIX="${GITHUB_REF_NAME:10}"
-          echo "TEST_RESULTS_BRANCH=test-results-$SUFFIX" >> $GITHUB_ENV
-
       - name: Checkout artifacts branch
         uses: actions/checkout@v4
         with:
@@ -77,12 +79,12 @@ jobs:
       - name: Checkout test-results branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.TEST_RESULTS_BRANCH }}
-          path: test-results-branch
+          ref: ${{ env.TEST_RESULT_BRANCH }}
+          path: test-result-branch
 
       - name: Update README with test results
         run: |
-          cd test-results-branch
+          cd test-result-branch
 
           if [ ! -f README.md ]; then
             echo "Github Action Test Result Branch - ${{ github.ref_name }}" > README.md
@@ -101,11 +103,11 @@ jobs:
 
       - name: Commit and push to test-results branch
         run: |
-          cd test-results-branch
+          cd test-result-branch
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
           git add README.md
           git commit -m "Add test results for artifacts commit ${{ github.sha }}"
           
-          git push origin ${{ env.TEST_RESULTS_BRANCH }}
+          git push origin ${{ env.TEST_RESULT_BRANCH }}

@@ -27,6 +27,7 @@ on:
 env:
   BUILD_TYPE: Release
   ARTIFACTS_BRANCH: "artifacts-${{ github.ref_name }}"
+  TEST_RESULT_BRANCH: "test-result-${{ github.ref_name }}"
   TESTDATA_VERSION: "v1.0.0"
   TESTDATA_ZIP_URL: "https://github.com/caozhanhao/gnalc-test-data/releases/download/v1.0.0/testdata.zip"
   TESTDATA_DIR: "${{ github.workspace }}/testdata"
@@ -43,7 +44,6 @@ jobs:
         with:
           ref: ${{ env.ARTIFACTS_BRANCH }}
           path: artifacts-branch
-          persist-credentials: false
 
       - name: Reset artifacts branch if too many commits
         run: |
@@ -84,8 +84,6 @@ jobs:
 
       - name: Checkout source
         uses: actions/checkout@v4
-        with:
-          persist-credentials: false
 
       - name: Create cache directory
         run: mkdir -p ${{ env.ZIP_CACHE_DIR }}
@@ -155,15 +153,10 @@ jobs:
         with:
           ref: ${{ env.ARTIFACTS_BRANCH }}
           path: artifacts-branch
-          persist-credentials: false
 
       - name: Clean out old artifacts
         run: |
           rm -rf artifacts-branch/*
-
-      - name: Set up workflow
-        run: |
-          cp -R .github artifacts-branch/
 
       - name: Copy new artifacts
         run: |
@@ -185,20 +178,21 @@ jobs:
           echo "${{ github.sha }}" > artifacts-branch/last_run.txt
 
       - name: Commit & Push updates
-        env:
-          SSHK: ${{ secrets.GH_PAT }}
         run: |
           cd artifacts-branch
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add README.md last_run.txt artifacts/ .github/
+          git add README.md last_run.txt artifacts/
           if git diff-index --quiet HEAD; then
             echo "No changes to commit"
+            exit 0
           else
             git commit -m "Update artifacts from ${{ github.sha }}"
-            mkdir -p $HOME/.ssh
-            echo "$SSHK" > $HOME/.ssh/ssh.key
-            chmod 600 $HOME/.ssh/ssh.key
-            export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/ssh.key"
             git push origin ${{ env.ARTIFACTS_BRANCH }}
           fi
+
+  call-artifacts-test-workflow:
+    uses: ./.github/workflows/backend-test.yml
+    with:
+      artifacts-branch: "artifacts-${{ github.ref_name }}"
+      test-result-branch: "test-result-${{ github.ref_name }}"
