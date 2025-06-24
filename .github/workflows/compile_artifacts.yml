@@ -194,7 +194,7 @@ jobs:
           fi
 
   call-artifacts-test-workflow:
+    needs: compile
     uses: ./.github/workflows/backend-test.yml
     with:
-      artifacts-branch: "artifacts-${{ github.ref_name }}"
-      test-result-branch: "test-result-${{ github.ref_name }}"
+      branch: ${{ github.ref_name }}

@@ -10,18 +10,15 @@ permissions:
 on:
   workflow_call:
     inputs:
-      artifacts-branch:
-        required: true
-        type: string
-      test-result-branch:
+      branch:
         required: true
         type: string
 
 env:
   BUILD_TYPE: Release
   TESTDATA_DIR: "/home/panda/gnalc/test/contest"
-  ARTIFACTS_BRANCH: ${{ inputs.artifacts-branch }}
-  TEST_RESULT_BRANCH: ${{ inputs.test-result-branch }}
+  ARTIFACTS_BRANCH: "artifacts-${{ inputs.branch }}"
+  TEST_RESULT_BRANCH: "test-result-${{ inputs.branch }}"
 
 jobs:
   test_changes:
@@ -71,7 +68,7 @@ jobs:
       - name: Run tests and save results
         id: run-tests
         run: |
-          cat filtered_files.txt | main/build/test/ghaction -d ${{ env.TESTDATA_DIR }} \
+          cat filtered_files.txt | main/build/test/ghaction -b -d ${{ env.TESTDATA_DIR }} \
               --sha "${{ github.sha }}" \
               --report "test_report.md" \
               --sylib main/test/sylib/sylib.c
