@@ -195,8 +195,8 @@ main_82:
     madd	x1,	x25,	x23,	x22
 
     bl	putarray
-    mov	w0,	w28
     movz	w1,	#400
+    mov	w0,	w28
     adrp	x20, :got:x
     movz	w18,	#40000
     sub	w23,	w24,	#1

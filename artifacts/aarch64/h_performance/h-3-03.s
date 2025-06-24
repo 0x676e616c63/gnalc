@@ -38,8 +38,8 @@ main_0:
     bl	_sysy_starttime
     movz	w6,	#0
     add	x12,	sp,	#16
-    adrp	x11, :got:corr
     add	x28,	sp,	#3216
+    adrp	x11, :got:corr
     adrp	x21, :got:data
     ldr	x21, [x21, #:got_lo12:data]
     ldr	x11, [x11, #:got_lo12:corr]
@@ -518,8 +518,8 @@ main_247:
 
     ldr	w20,	[x18]
 
-    lsl	x5,	x25,	#2
     lsl	x9,	x13,	#2
+    lsl	x5,	x25,	#2
     ldr	w26,	[x22]
 
     lsl	x22,	x25,	#2

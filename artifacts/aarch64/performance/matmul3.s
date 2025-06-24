@@ -534,9 +534,9 @@ main_230:
     add	x14,	x24,	#1
     add	x5,	x28,	x6
     add	x27,	x19,	x11
-    lsl	x28,	x17,	#2
-    lsl	x23,	x14,	#2
     adrp	x6, :got:c
+    lsl	x23,	x14,	#2
+    lsl	x28,	x17,	#2
     ldr	w4,	[x5]
 
     movz	w11,	#4000
@@ -555,8 +555,8 @@ main_230:
     ldr	w15,	[x15]
 
     sub	w20,	w9,	w15
-    adrp	x15, :got:c
     lsl	x9,	x17,	#2
+    adrp	x15, :got:c
     str	w20,	[x27]
 
     ldr	x24, [x24, #:got_lo12:c]

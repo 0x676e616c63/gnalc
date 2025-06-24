@@ -14,8 +14,8 @@ main_0:
     sub	sp, sp, fp
     stp	fp, lr, [sp, #0]
     
-    movz	w24,	#53392
     movz	w1,	#0
+    movz	w24,	#53392
     add	x0,	sp,	#16
     movk	w24,	#3,	lsl #16
     mov	x2,	x24
@@ -274,17 +274,17 @@ main_89:
     lsr	w7,	w5,	#31
     madd	w9,	w4,	w19,	w7
 
+    asr	w1,	w9,	#1
     madd	w19,	w4,	w19,	w14
 
-    asr	w1,	w9,	#1
     lsl	w2,	w1,	#1
     sub	w3,	w21,	w2
     cmp	w3,	#0
-    lsl	w24,	w25,	#2
     movz	fp,	#53408
     movz	w2,	#1000
     add	w26,	w6,	#1
     csel	w16,	w19,	w14,	eq
+    lsl	w24,	w25,	#2
     movk	fp,	#3,	lsl #16
     mul	w22,	w26,	w2
     lsl	w19,	w26,	#2
@@ -309,9 +309,9 @@ main_89:
     sub	w11,	w4,	w6
     cmp	w11,	#0
     movz	fp,	#53408
+    csel	w9,	w1,	w16,	eq
     lsl	w12,	w25,	#2
     add	w19,	w26,	#1
-    csel	w9,	w1,	w16,	eq
     movk	fp,	#3,	lsl #16
     movz	w26,	#1000
     lsl	w6,	w19,	#2
@@ -336,9 +336,9 @@ main_89:
     lsl	w1,	w28,	#1
     sub	w27,	w24,	w1
     cmp	w27,	#0
+    movz	fp,	#53408
     csel	w2,	w16,	w9,	eq
     add	w3,	w19,	#1
-    movz	fp,	#53408
     movz	w20,	#1000
     lsl	w28,	w25,	#2
     movk	fp,	#3,	lsl #16
@@ -364,10 +364,10 @@ main_89:
     lsl	w23,	w22,	#1
     sub	w15,	w13,	w23
     cmp	w15,	#0
-    csel	w5,	w4,	w2,	eq
     add	w7,	w3,	#1
     movz	w15,	#1000
     movz	fp,	#53408
+    csel	w5,	w4,	w2,	eq
     movk	fp,	#3,	lsl #16
     lsl	w10,	w7,	#2
     mul	w13,	w7,	w15
@@ -392,8 +392,8 @@ main_89:
     lsl	w17,	w16,	#1
     sub	w3,	w6,	w17
     cmp	w3,	#0
-    movz	w10,	#1000
     csel	w27,	w20,	w5,	eq
+    movz	w10,	#1000
     movz	fp,	#53408
     lsl	w3,	w25,	#2
     add	w5,	w7,	#1
@@ -420,9 +420,9 @@ main_89:
     lsl	w12,	w11,	#1
     sub	w20,	w28,	w12
     cmp	w20,	#0
+    movz	fp,	#53408
     csel	w14,	w7,	w27,	eq
     add	w20,	w5,	#1
-    movz	fp,	#53408
     movz	w4,	#1000
     lsl	w19,	w25,	#2
     movk	fp,	#3,	lsl #16
@@ -714,8 +714,8 @@ main_302:
     add	w3,	w25,	#1
     ldr	w7,	[x15]
 
-    mul	w26,	w3,	w20
     add	w21,	w3,	#1
+    mul	w26,	w3,	w20
     lsl	w24,	w3,	#2
     movz	w15,	#1000
     sub	w19,	w9,	w7
@@ -794,8 +794,8 @@ main_302:
     add	w9,	w23,	#1
     str	w10,	[x1]
 
-    mul	w16,	w9,	w15
     add	w3,	w9,	#1
+    mul	w16,	w9,	w15
     lsl	w13,	w9,	#2
     movz	w10,	#1000
     mov	x15,	x16

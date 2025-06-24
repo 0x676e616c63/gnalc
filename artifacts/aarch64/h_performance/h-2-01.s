@@ -107,8 +107,8 @@ main_33:
     add	x15,	x19,	x16
     ldr	s5,	[x23]
 
-    lsl	w0,	w24,	#2
     add	w14,	w24,	#1
+    lsl	w0,	w24,	#2
     ldr	s15,	[x26]
 
     add	x28,	x12,	x0

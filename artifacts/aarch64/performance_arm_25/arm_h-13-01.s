@@ -29,8 +29,8 @@ main_0:
     add	x0,	sp,	#916
     movk	w2,	#3,	lsl #16
     bl	memset
-    movz	w1,	#0
     movz	w2,	#900
+    movz	w1,	#0
     add	x0,	sp,	#16
     bl	memset
     adrp	x0, :got:input
@@ -40,10 +40,10 @@ main_0:
     bl	getfarray
     movz	w0,	#106
     bl	_sysy_starttime
-    add	x15,	sp,	#16
-    adrp	x28, :got:conv_output
     movz	w7,	#0
     add	x1,	sp,	#916
+    add	x15,	sp,	#16
+    adrp	x28, :got:conv_output
     adrp	x25, :got:input
     ldr	x25, [x25, #:got_lo12:input]
     ldr	x28, [x28, #:got_lo12:conv_output]
@@ -69,26 +69,26 @@ main_19:
 
     sub	w23,	w13,	w8,	lsl #2
     add	w19,	w27,	#3
-    add	x13,	x20,	x14
+    add	w8,	w8,	#1
     lsl	w11,	w9,	#2
     lsl	w6,	w4,	#2
-    add	w8,	w8,	#1
+    add	x13,	x20,	x14
     add	x2,	x15,	x23
     lsl	w22,	w19,	#2
+    add	x10,	x20,	x11
+    add	x5,	x20,	x6
     add	w14,	w27,	#5
     ldr	s19,	[x13]
 
-    add	x10,	x20,	x11
-    add	x5,	x20,	x6
-    add	x3,	x2,	#4
     add	w23,	w27,	#1
+    add	x3,	x2,	#4
     add	x21,	x20,	x22
+    add	w11,	w27,	#7
+    add	w6,	w27,	#9
     lsl	w18,	w14,	#2
     add	x13,	x2,	#8
     ldr	s3,	[x2]
 
-    add	w11,	w27,	#7
-    add	w6,	w27,	#9
     lsl	w26,	w23,	#2
     add	w22,	w27,	#8
     add	x16,	x20,	x18
@@ -289,18 +289,18 @@ main_147:
     ldr	s8,	[x4]
 
     fadd	s7,	s18,	s19
+    lsl	w4,	w0,	#2
     ldr	s1,	[x10]
 
-    lsl	w4,	w0,	#2
     fmul	s9,	s24,	s8
+    add	x3,	x11,	x4
     add	x10,	x19,	#16
     ldr	s16,	[x17]
 
-    add	x3,	x11,	x4
     fadd	s18,	s7,	s9
+    add	w4,	w2,	#11
     lsl	w17,	w14,	#2
     fmul	s17,	s1,	s16
-    add	w4,	w2,	#11
     ldr	s9,	[x23]
 
     add	x16,	x11,	x17
@@ -347,14 +347,14 @@ main_147:
 
     add	x5,	x11,	x6
     fadd	s30,	s22,	s18
-    lsl	w20,	w17,	#2
     ldr	s20,	[x26]
 
+    lsl	w20,	w17,	#2
     fmul	s26,	s11,	s25
-    add	x18,	x11,	x20
     add	x26,	x19,	#40
     ldr	s2,	[x3]
 
+    add	x18,	x11,	x20
     fadd	s9,	s30,	s26
     lsl	w3,	w27,	#2
     ldr	s28,	[x9]

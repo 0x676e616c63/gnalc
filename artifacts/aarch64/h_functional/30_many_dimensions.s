@@ -9,7 +9,7 @@
 .globl main
 main:
 main_0:
-    movz	fp,	#864
+    movz	fp,	#768
     movk	fp,	#32,	lsl #16
     sub	sp, sp, fp
     stp	fp, lr, [sp, #0]
@@ -19,23 +19,23 @@ main_0:
     add	x0,	sp,	#16
     movk	w2,	#32,	lsl #16
     bl	memset
-    movz	fp,	#28
-    movz	w19,	#0
-    movz	w20,	#0
+    movz	fp,	#60
+    movz	w2,	#0
+    movz	w12,	#0
     movk	fp,	#32,	lsl #16
-    mov	w17,	w19
-    mov	w25,	w20
-    str	w17,	[sp, fp]
+    mov	w18,	w12
+    str	w2,	[sp, fp]
 
 
 main_4:
-    movz	fp,	#28
-    mov	w28,	w25
-    movz	w4,	#0
+    movz	fp,	#60
+    mov	w19,	w18
+    movz	w0,	#0
     movk	fp,	#32,	lsl #16
+    mov	w4,	w0
     ldr	w22,	[sp, fp]
 
-    movz	fp,	#32
+    movz	fp,	#64
     lsl	w8,	w22,	#20
     movk	fp,	#32,	lsl #16
     mov	x26,	x8
@@ -43,1120 +43,1020 @@ main_4:
     add	x26,	x26,	#16
     str	x26,	[sp, fp]
 
-    movz	fp,	#24
+    movz	fp,	#56
     movk	fp,	#32,	lsl #16
     str	w4,	[sp, fp]
 
 
 main_9:
-    movz	fp,	#24
-    movz	w6,	#0
+    movz	fp,	#56
+    movz	w3,	#0
     movk	fp,	#32,	lsl #16
-    mov	w4,	w6
-    ldr	w14,	[sp, fp]
+    ldr	w15,	[sp, fp]
 
-    movz	fp,	#32
-    lsl	w11,	w14,	#19
+    movz	fp,	#64
+    lsl	w12,	w15,	#19
     movk	fp,	#32,	lsl #16
     ldr	x5,	[sp, fp]
 
-    movz	fp,	#136
-    add	x12,	x5,	x11
+    movz	fp,	#164
+    add	x13,	x5,	x12
     movk	fp,	#32,	lsl #16
-    str	x12,	[sp, fp]
+    str	x13,	[sp, fp]
 
-    movz	fp,	#124
+    movz	fp,	#152
+    mov	w13,	w3
     movk	fp,	#32,	lsl #16
-    str	w4,	[sp, fp]
+    str	w13,	[sp, fp]
 
 
 main_14:
-    movz	fp,	#124
-    mov	w25,	w28
-    movz	w24,	#0
+    movz	fp,	#152
+    mov	w21,	w19
+    movz	w3,	#0
     movk	fp,	#32,	lsl #16
-    mov	w23,	w24
+    mov	w23,	w3
     ldr	w5,	[sp, fp]
 
-    movz	fp,	#136
-    lsl	w12,	w5,	#18
+    movz	fp,	#164
+    lsl	w13,	w5,	#18
     movk	fp,	#32,	lsl #16
-    ldr	x15,	[sp, fp]
+    ldr	x14,	[sp, fp]
 
-    movz	fp,	#128
-    add	x9,	x15,	x12
+    movz	fp,	#156
+    add	x9,	x14,	x13
     movk	fp,	#32,	lsl #16
     str	x9,	[sp, fp]
 
-    movz	fp,	#120
+    movz	fp,	#140
     movk	fp,	#32,	lsl #16
     str	w23,	[sp, fp]
 
 
 main_19:
-    movz	fp,	#120
-    mov	w28,	w25
-    movz	w21,	#0
+    movz	fp,	#140
+    mov	w26,	w21
+    movz	w3,	#0
     movk	fp,	#32,	lsl #16
-    mov	w19,	w21
-    ldr	w0,	[sp, fp]
+    mov	w16,	w3
+    ldr	w27,	[sp, fp]
 
-    movz	fp,	#128
-    lsl	w16,	w0,	#17
+    movz	fp,	#156
+    lsl	w18,	w27,	#17
     movk	fp,	#32,	lsl #16
     ldr	x10,	[sp, fp]
 
-    movz	fp,	#112
-    add	x26,	x10,	x16
+    movz	fp,	#144
+    add	x1,	x10,	x18
     movk	fp,	#32,	lsl #16
-    str	x26,	[sp, fp]
+    str	x1,	[sp, fp]
 
-    movz	fp,	#100
+    movz	fp,	#128
     movk	fp,	#32,	lsl #16
-    str	w19,	[sp, fp]
+    str	w16,	[sp, fp]
 
 
 main_24:
-    movz	fp,	#100
-    mov	w3,	w28
-    movz	w20,	#0
+    movz	fp,	#128
+    mov	w8,	w26
+    movz	w3,	#0
     movk	fp,	#32,	lsl #16
-    mov	w11,	w20
-    ldr	w17,	[sp, fp]
+    ldr	w18,	[sp, fp]
 
-    movz	fp,	#112
-    lsl	w16,	w17,	#16
+    movz	fp,	#144
+    lsl	w20,	w18,	#16
     movk	fp,	#32,	lsl #16
-    ldr	x0,	[sp, fp]
+    ldr	x2,	[sp, fp]
 
-    movz	fp,	#92
-    add	x13,	x0,	x16
+    movz	fp,	#120
+    add	x13,	x2,	x20
     movk	fp,	#32,	lsl #16
     str	x13,	[sp, fp]
 
+    mov	w13,	w3
 
 main_29:
-    lsl	w20,	w11,	#15
-    movz	fp,	#92
-    mov	w1,	w3
+    lsl	w17,	w13,	#15
+    movz	fp,	#120
+    mov	w6,	w8
+    movz	w10,	#0
     movk	fp,	#32,	lsl #16
-    ldr	x0,	[sp, fp]
+    mov	w0,	w10
+    ldr	x1,	[sp, fp]
 
-    movz	fp,	#320
-    add	x9,	x0,	x20
+    movz	fp,	#752
+    add	x7,	x1,	x17
     movk	fp,	#32,	lsl #16
-    movz	w20,	#0
-    mov	w24,	w20
-    str	x9,	[sp, fp]
+    str	x7,	[sp, fp]
 
 
 main_34:
-    lsl	w8,	w24,	#14
-    movz	fp,	#320
-    mov	w2,	w1
-    movz	w19,	#0
+    lsl	w14,	w0,	#14
+    movz	fp,	#752
+    mov	w12,	w6
+    movz	w4,	#0
     movk	fp,	#32,	lsl #16
-    ldr	x27,	[sp, fp]
+    mov	w3,	w4
+    ldr	x8,	[sp, fp]
 
-    movz	fp,	#336
-    add	x28,	x27,	x8
+    movz	fp,	#384
+    add	x23,	x8,	x14
     movk	fp,	#32,	lsl #16
-    mov	w8,	w19
-    str	x28,	[sp, fp]
+    str	x23,	[sp, fp]
 
 
 main_39:
-    lsl	w7,	w8,	#13
-    movz	fp,	#336
-    mov	w9,	w2
-    movz	w0,	#0
+    lsl	w10,	w3,	#13
+    movz	fp,	#384
+    mov	w7,	w12
+    movz	w1,	#0
     movk	fp,	#32,	lsl #16
-    mov	w25,	w0
-    ldr	x4,	[sp, fp]
+    ldr	x24,	[sp, fp]
 
-    movz	fp,	#352
-    add	x4,	x4,	x7
+    movz	fp,	#392
+    add	x24,	x24,	x10
     movk	fp,	#32,	lsl #16
-    str	x4,	[sp, fp]
+    str	x24,	[sp, fp]
 
+    mov	w24,	w1
 
 main_44:
-    lsl	w20,	w25,	#12
-    movz	fp,	#352
-    mov	w5,	w9
-    movz	w7,	#0
+    lsl	w20,	w24,	#12
+    movz	fp,	#392
+    mov	w18,	w7
+    movz	w9,	#0
     movk	fp,	#32,	lsl #16
-    mov	w19,	w7
+    mov	w12,	w9
     ldr	x1,	[sp, fp]
 
-    movz	fp,	#344
-    add	x2,	x1,	x20
+    movz	fp,	#376
+    add	x19,	x1,	x20
     movk	fp,	#32,	lsl #16
-    str	x2,	[sp, fp]
+    str	x19,	[sp, fp]
 
 
 main_49:
-    lsl	w22,	w19,	#11
-    movz	fp,	#344
-    mov	w14,	w5
+    lsl	w25,	w12,	#11
+    movz	fp,	#376
+    mov	w20,	w18
+    movz	w19,	#0
     movk	fp,	#32,	lsl #16
-    ldr	x21,	[sp, fp]
+    ldr	x6,	[sp, fp]
 
-    movz	fp,	#328
-    add	x4,	x21,	x22
+    movz	fp,	#368
+    add	x6,	x6,	x25
     movk	fp,	#32,	lsl #16
-    movz	w21,	#0
-    mov	w9,	w21
-    str	x4,	[sp, fp]
+    str	x6,	[sp, fp]
 
-    movz	fp,	#40
-    movk	fp,	#32,	lsl #16
-    str	w9,	[sp, fp]
-
-
-main_54:
-    movz	fp,	#40
-    mov	w2,	w14
-    movz	w28,	#0
-    movk	fp,	#32,	lsl #16
-    mov	w17,	w28
-    ldr	w5,	[sp, fp]
-
-    movz	fp,	#328
-    lsl	w10,	w5,	#10
-    movk	fp,	#32,	lsl #16
-    ldr	x5,	[sp, fp]
-
-    movz	fp,	#104
-    add	x15,	x5,	x10
-    movk	fp,	#32,	lsl #16
-    str	x15,	[sp, fp]
-
-    movz	fp,	#48
-    movk	fp,	#32,	lsl #16
-    str	w17,	[sp, fp]
-
-
-main_59:
-    movz	fp,	#48
-    mov	w3,	w2
-    movk	fp,	#32,	lsl #16
-    ldr	w15,	[sp, fp]
-
-    movz	fp,	#104
-    lsl	w14,	w15,	#9
-    movk	fp,	#32,	lsl #16
-    ldr	x4,	[sp, fp]
-
-    movz	fp,	#472
-    add	x26,	x4,	x14
-    movk	fp,	#32,	lsl #16
-    movz	w4,	#0
-    str	x26,	[sp, fp]
-
-    movz	fp,	#64
-    movk	fp,	#32,	lsl #16
-    str	w4,	[sp, fp]
-
-
-main_64:
-    movz	fp,	#64
-    mov	w12,	w3
-    movz	w16,	#0
-    movk	fp,	#32,	lsl #16
-    mov	w6,	w16
-    ldr	w5,	[sp, fp]
-
-    movz	fp,	#472
-    lsl	w0,	w5,	#8
-    movk	fp,	#32,	lsl #16
-    ldr	x28,	[sp, fp]
-
-    movz	fp,	#156
-    add	x2,	x28,	x0
-    movk	fp,	#32,	lsl #16
-    str	x2,	[sp, fp]
-
-    movz	fp,	#80
+    movz	fp,	#72
+    mov	w6,	w19
     movk	fp,	#32,	lsl #16
     str	w6,	[sp, fp]
 
 
-main_69:
-    movz	fp,	#80
-    movz	w6,	#0
+main_54:
+    movz	fp,	#72
+    mov	w15,	w20
+    movz	w10,	#0
     movk	fp,	#32,	lsl #16
-    mov	w18,	w6
-    ldr	w1,	[sp, fp]
+    ldr	w9,	[sp, fp]
 
-    movz	fp,	#156
-    lsl	w13,	w1,	#7
+    movz	fp,	#368
+    lsl	w6,	w9,	#10
     movk	fp,	#32,	lsl #16
     ldr	x1,	[sp, fp]
 
-    movz	fp,	#756
-    add	x13,	x1,	x13
+    movz	fp,	#132
+    add	x23,	x1,	x6
     movk	fp,	#32,	lsl #16
-    mov	w1,	w12
-    str	x13,	[sp, fp]
+    str	x23,	[sp, fp]
 
-    movz	fp,	#68
-    movk	fp,	#32,	lsl #16
-    str	w18,	[sp, fp]
-
-
-main_74:
-    movz	fp,	#68
-    mov	w16,	w1
-    movz	w21,	#0
-    movk	fp,	#32,	lsl #16
-    mov	w18,	w21
-    ldr	w17,	[sp, fp]
-
-    movz	fp,	#756
-    lsl	w3,	w17,	#6
-    movk	fp,	#32,	lsl #16
-    ldr	x14,	[sp, fp]
-
-    movz	fp,	#60
-    add	x26,	x14,	x3
-    movk	fp,	#32,	lsl #16
-    str	w18,	[sp, fp]
-
-
-main_79:
-    movz	fp,	#60
-    mov	w12,	w16
-    movz	w1,	#0
-    movk	fp,	#32,	lsl #16
-    ldr	w0,	[sp, fp]
-
-    movz	fp,	#172
-    lsl	w14,	w0,	#5
-    movk	fp,	#32,	lsl #16
-    add	x3,	x26,	x14
-    str	x3,	[sp, fp]
-
-    movz	fp,	#44
-    mov	w3,	w1
-    movk	fp,	#32,	lsl #16
-    str	w3,	[sp, fp]
-
-
-main_84:
-    movz	fp,	#44
-    movz	w20,	#0
-    movk	fp,	#32,	lsl #16
-    mov	w22,	w20
-    ldr	w4,	[sp, fp]
-
-    movz	fp,	#172
-    lsl	w6,	w4,	#4
-    movk	fp,	#32,	lsl #16
-    ldr	x7,	[sp, fp]
-
-    add	x10,	x7,	x6
-    mov	w6,	w12
-
-main_89:
-    lsl	w0,	w22,	#3
-    add	w14,	w6,	#1
-    add	w3,	w22,	#1
-    add	x0,	x10,	x0
-    add	w13,	w14,	#1
-    add	x27,	x0,	#4
-    str	w6,	[x0]
-
-    str	w14,	[x27]
-
-    cmp	w3,	#2
-    blt	main_88
-
-main_99:
-    movz	fp,	#44
-    movk	fp,	#32,	lsl #16
-    ldr	w6,	[sp, fp]
-
-    add	w1,	w6,	#1
-    cmp	w1,	#2
-    blt	main_83
-
-main_102:
-    movz	fp,	#60
-    movk	fp,	#32,	lsl #16
-    ldr	w1,	[sp, fp]
-
-    add	w14,	w1,	#1
-    cmp	w14,	#2
-    blt	main_78
-
-main_105:
-    movz	fp,	#68
-    movk	fp,	#32,	lsl #16
-    ldr	w26,	[sp, fp]
-
-    add	w17,	w26,	#1
-    cmp	w17,	#2
-    blt	main_73
-
-main_108:
     movz	fp,	#80
+    movk	fp,	#32,	lsl #16
+    str	w10,	[sp, fp]
+
+
+main_59:
+    movz	fp,	#80
+    movz	w2,	#0
+    movk	fp,	#32,	lsl #16
+    ldr	w20,	[sp, fp]
+
+    movz	fp,	#132
+    lsl	w7,	w20,	#9
+    movk	fp,	#32,	lsl #16
+    ldr	x11,	[sp, fp]
+
+    movz	fp,	#624
+    add	x26,	x11,	x7
+    movk	fp,	#32,	lsl #16
+    str	x26,	[sp, fp]
+
+    movz	fp,	#96
+    mov	w26,	w15
+    movk	fp,	#32,	lsl #16
+    str	w2,	[sp, fp]
+
+
+main_64:
+    movz	fp,	#96
+    mov	w8,	w26
+    movk	fp,	#32,	lsl #16
+    ldr	w9,	[sp, fp]
+
+    movz	fp,	#624
+    lsl	w1,	w9,	#8
+    movk	fp,	#32,	lsl #16
+    ldr	x4,	[sp, fp]
+
+    movz	fp,	#184
+    add	x5,	x4,	x1
+    movk	fp,	#32,	lsl #16
+    movz	w4,	#0
+    str	x5,	[sp, fp]
+
+    movz	fp,	#112
+    movk	fp,	#32,	lsl #16
+    str	w4,	[sp, fp]
+
+
+main_69:
+    movz	fp,	#112
+    mov	w25,	w8
+    movz	w10,	#0
     movk	fp,	#32,	lsl #16
     ldr	w2,	[sp, fp]
 
-    add	w1,	w2,	#1
-    cmp	w1,	#2
+    movz	fp,	#184
+    lsl	w7,	w2,	#7
+    movk	fp,	#32,	lsl #16
+    ldr	x23,	[sp, fp]
+
+    movz	fp,	#192
+    add	x2,	x23,	x7
+    movk	fp,	#32,	lsl #16
+    str	x2,	[sp, fp]
+
+    movz	fp,	#100
+    movk	fp,	#32,	lsl #16
+    str	w10,	[sp, fp]
+
+
+main_74:
+    movz	fp,	#100
+    movk	fp,	#32,	lsl #16
+    ldr	w21,	[sp, fp]
+
+    movz	fp,	#192
+    lsl	w20,	w21,	#6
+    movk	fp,	#32,	lsl #16
+    ldr	x27,	[sp, fp]
+
+    movz	fp,	#92
+    add	x6,	x27,	x20
+    movk	fp,	#32,	lsl #16
+    movz	w20,	#0
+    str	w20,	[sp, fp]
+
+
+main_79:
+    movz	fp,	#92
+    mov	w2,	w25
+    movz	w11,	#0
+    movk	fp,	#32,	lsl #16
+    mov	w9,	w11
+    ldr	w1,	[sp, fp]
+
+    movz	fp,	#76
+    lsl	w15,	w1,	#5
+    movk	fp,	#32,	lsl #16
+    add	x8,	x6,	x15
+    str	w9,	[sp, fp]
+
+
+main_84:
+    movz	fp,	#76
+    mov	w10,	w2
+    movz	w16,	#0
+    movk	fp,	#32,	lsl #16
+    mov	w26,	w16
+    ldr	w11,	[sp, fp]
+
+    lsl	w15,	w11,	#4
+    add	x20,	x8,	x15
+
+main_89:
+    lsl	w11,	w26,	#3
+    add	w19,	w10,	#1
+    add	w16,	w26,	#1
+    add	x18,	x20,	x11
+    add	w22,	w19,	#1
+    mov	x11,	x18
+    str	w10,	[x11]
+
+    add	x21,	x18,	#4
+    str	w19,	[x21]
+
+    cmp	w16,	#2
+    blt	main_88
+
+main_99:
+    movz	fp,	#76
+    movk	fp,	#32,	lsl #16
+    ldr	w14,	[sp, fp]
+
+    add	w15,	w14,	#1
+    cmp	w15,	#2
+    blt	main_83
+
+main_102:
+    movz	fp,	#92
+    movk	fp,	#32,	lsl #16
+    ldr	w2,	[sp, fp]
+
+    add	w9,	w2,	#1
+    cmp	w9,	#2
+    blt	main_78
+
+main_105:
+    movz	fp,	#100
+    movk	fp,	#32,	lsl #16
+    ldr	w25,	[sp, fp]
+
+    add	w6,	w25,	#1
+    cmp	w6,	#2
+    blt	main_73
+
+main_108:
+    movz	fp,	#112
+    movk	fp,	#32,	lsl #16
+    ldr	w7,	[sp, fp]
+
+    add	w25,	w7,	#1
+    cmp	w25,	#2
     blt	main_68
 
 main_111:
-    movz	fp,	#64
+    movz	fp,	#96
     movk	fp,	#32,	lsl #16
-    ldr	w7,	[sp, fp]
+    ldr	w11,	[sp, fp]
 
-    add	w28,	w7,	#1
-    cmp	w28,	#2
+    add	w16,	w11,	#1
+    cmp	w16,	#2
     blt	main_63
 
 main_114:
-    movz	fp,	#48
+    movz	fp,	#80
     movk	fp,	#32,	lsl #16
-    ldr	w17,	[sp, fp]
+    ldr	w23,	[sp, fp]
 
-    add	w20,	w17,	#1
-    cmp	w20,	#2
+    add	w10,	w23,	#1
+    cmp	w10,	#2
     blt	main_58
 
 main_117:
-    movz	fp,	#40
-    movk	fp,	#32,	lsl #16
-    ldr	w0,	[sp, fp]
-
-    add	w27,	w0,	#1
-    cmp	w27,	#2
-    blt	main_53
-
-main_120:
-    add	w15,	w19,	#1
-    cmp	w15,	#2
-    blt	main_48
-
-main_123:
-    add	w7,	w25,	#1
-    cmp	w7,	#2
-    blt	main_43
-
-main_126:
-    add	w16,	w8,	#1
-    cmp	w16,	#2
-    blt	main_38
-
-main_129:
-    add	w22,	w24,	#1
-    cmp	w22,	#2
-    blt	main_33
-
-main_132:
-    add	w8,	w11,	#1
-    cmp	w8,	#2
-    blt	main_28
-
-main_135:
-    movz	fp,	#100
-    movk	fp,	#32,	lsl #16
-    ldr	w19,	[sp, fp]
-
-    add	w23,	w19,	#1
-    cmp	w23,	#2
-    blt	main_23
-
-main_138:
-    movz	fp,	#120
+    movz	fp,	#72
     movk	fp,	#32,	lsl #16
     ldr	w1,	[sp, fp]
 
-    add	w0,	w1,	#1
-    cmp	w0,	#2
+    add	w19,	w1,	#1
+    cmp	w19,	#2
+    blt	main_53
+
+main_120:
+    add	w11,	w12,	#1
+    cmp	w11,	#2
+    blt	main_48
+
+main_123:
+    add	w2,	w24,	#1
+    cmp	w2,	#2
+    blt	main_43
+
+main_126:
+    add	w5,	w3,	#1
+    cmp	w5,	#2
+    blt	main_38
+
+main_129:
+    add	w11,	w0,	#1
+    cmp	w11,	#2
+    blt	main_33
+
+main_132:
+    add	w2,	w13,	#1
+    cmp	w2,	#2
+    blt	main_28
+
+main_135:
+    movz	fp,	#128
+    movk	fp,	#32,	lsl #16
+    ldr	w19,	[sp, fp]
+
+    add	w4,	w19,	#1
+    cmp	w4,	#2
+    blt	main_23
+
+main_138:
+    movz	fp,	#140
+    movk	fp,	#32,	lsl #16
+    ldr	w28,	[sp, fp]
+
+    add	w4,	w28,	#1
+    cmp	w4,	#2
     blt	main_18
 
 main_141:
-    movz	fp,	#124
+    movz	fp,	#152
     movk	fp,	#32,	lsl #16
     ldr	w7,	[sp, fp]
 
-    add	w0,	w7,	#1
-    cmp	w0,	#2
+    add	w13,	w7,	#1
+    cmp	w13,	#2
     blt	main_13
 
 main_144:
-    movz	fp,	#24
+    movz	fp,	#56
     movk	fp,	#32,	lsl #16
     ldr	w16,	[sp, fp]
 
-    add	w0,	w16,	#1
-    cmp	w0,	#2
+    add	w13,	w16,	#1
+    cmp	w13,	#2
     blt	main_8
 
 main_147:
-    movz	fp,	#28
+    movz	fp,	#60
     movk	fp,	#32,	lsl #16
-    ldr	w22,	[sp, fp]
+    ldr	w23,	[sp, fp]
 
-    add	w20,	w22,	#1
-    cmp	w20,	#2
+    add	w4,	w23,	#1
+    cmp	w4,	#2
     blt	main_3
 
 main_150:
-    add	x0,	sp,	#16
-    movz	fp,	#148
-    mov	x18,	x0
+    add	x24,	sp,	#16
+    movz	fp,	#176
+    mov	x22,	x24
     movk	fp,	#32,	lsl #16
-    mov	x24,	x18
-    mov	x21,	x24
-    mov	x19,	x21
-    mov	x22,	x19
-    str	x22,	[sp, fp]
+    mov	x21,	x22
+    mov	x27,	x21
+    mov	x0,	x27
+    mov	x26,	x0
+    str	x26,	[sp, fp]
 
-    movz	fp,	#148
+    movz	fp,	#176
     movk	fp,	#32,	lsl #16
     ldr	x20,	[sp, fp]
 
-    movz	fp,	#72
-    mov	x26,	x20
+    movz	fp,	#104
+    mov	x18,	x20
     movk	fp,	#32,	lsl #16
-    mov	x27,	x26
-    str	x27,	[sp, fp]
+    str	x18,	[sp, fp]
 
-    movz	fp,	#72
+    movz	fp,	#104
     movk	fp,	#32,	lsl #16
     ldr	x25,	[sp, fp]
-
-    movz	fp,	#52
-    movk	fp,	#32,	lsl #16
-    str	x25,	[sp, fp]
-
-    movz	fp,	#52
-    movk	fp,	#32,	lsl #16
-    ldr	x25,	[sp, fp]
-
-    movz	fp,	#16
-    movk	fp,	#32,	lsl #16
-    str	x25,	[sp, fp]
-
-    movz	fp,	#16
-    movk	fp,	#32,	lsl #16
-    ldr	x25,	[sp, fp]
-
-    movz	fp,	#660
-    mov	x23,	x25
-    movk	fp,	#32,	lsl #16
-    str	x23,	[sp, fp]
-
-    movz	fp,	#660
-    movk	fp,	#32,	lsl #16
-    ldr	x23,	[sp, fp]
-
-    movz	fp,	#480
-    movk	fp,	#32,	lsl #16
-    str	x23,	[sp, fp]
-
-    movz	fp,	#480
-    movk	fp,	#32,	lsl #16
-    ldr	x25,	[sp, fp]
-
-    movz	fp,	#488
-    movk	fp,	#32,	lsl #16
-    str	x25,	[sp, fp]
-
-    movz	fp,	#488
-    movk	fp,	#32,	lsl #16
-    ldr	x23,	[sp, fp]
-
-    movz	fp,	#792
-    movk	fp,	#32,	lsl #16
-    str	x23,	[sp, fp]
-
-    movz	fp,	#792
-    movk	fp,	#32,	lsl #16
-    ldr	x23,	[sp, fp]
-
-    movz	fp,	#716
-    movk	fp,	#32,	lsl #16
-    str	x23,	[sp, fp]
-
-    movz	fp,	#716
-    movk	fp,	#32,	lsl #16
-    ldr	x23,	[sp, fp]
 
     movz	fp,	#84
     movk	fp,	#32,	lsl #16
-    str	x23,	[sp, fp]
+    str	x25,	[sp, fp]
 
     movz	fp,	#84
     movk	fp,	#32,	lsl #16
     ldr	x23,	[sp, fp]
 
-    movz	fp,	#144
-    ldr	w25,	[x23]
-
-    movk	fp,	#32,	lsl #16
-    str	w25,	[sp, fp]
-
-    movz	fp,	#792
-    movk	fp,	#32,	lsl #16
-    ldr	x23,	[sp, fp]
-
-    movz	fp,	#764
-    add	x25,	x23,	#8
-    movk	fp,	#32,	lsl #16
-    str	x25,	[sp, fp]
-
-    movz	fp,	#764
-    movk	fp,	#32,	lsl #16
-    ldr	x23,	[sp, fp]
-
-    movz	fp,	#644
+    movz	fp,	#16
     movk	fp,	#32,	lsl #16
     str	x23,	[sp, fp]
 
-    movz	fp,	#644
+    movz	fp,	#16
     movk	fp,	#32,	lsl #16
     ldr	x23,	[sp, fp]
 
-    movz	fp,	#392
+    movz	fp,	#592
+    mov	x25,	x23
+    movk	fp,	#32,	lsl #16
+    str	x25,	[sp, fp]
+
+    movz	fp,	#592
+    movk	fp,	#32,	lsl #16
+    ldr	x26,	[sp, fp]
+
+    movz	fp,	#528
+    movk	fp,	#32,	lsl #16
+    str	x26,	[sp, fp]
+
+    movz	fp,	#528
+    movk	fp,	#32,	lsl #16
+    ldr	x19,	[sp, fp]
+
+    movz	fp,	#600
+    movk	fp,	#32,	lsl #16
+    str	x19,	[sp, fp]
+
+    movz	fp,	#600
+    movk	fp,	#32,	lsl #16
+    ldr	x23,	[sp, fp]
+
+    movz	fp,	#664
+    movk	fp,	#32,	lsl #16
+    str	x23,	[sp, fp]
+
+    movz	fp,	#664
+    movk	fp,	#32,	lsl #16
+    ldr	x25,	[sp, fp]
+
+    movz	fp,	#48
+    movk	fp,	#32,	lsl #16
+    str	x25,	[sp, fp]
+
+    movz	fp,	#48
+    movk	fp,	#32,	lsl #16
+    ldr	x19,	[sp, fp]
+
+    movz	fp,	#544
+    movk	fp,	#32,	lsl #16
+    str	x19,	[sp, fp]
+
+    movz	fp,	#544
+    movk	fp,	#32,	lsl #16
+    ldr	x23,	[sp, fp]
+
+    movz	fp,	#116
     ldr	w23,	[x23]
 
     movk	fp,	#32,	lsl #16
     str	w23,	[sp, fp]
 
-    movz	fp,	#144
+    movz	fp,	#664
     movk	fp,	#32,	lsl #16
-    ldr	w25,	[sp, fp]
+    ldr	x19,	[sp, fp]
 
-    movz	fp,	#392
+    movz	fp,	#236
+    add	x19,	x19,	#8
     movk	fp,	#32,	lsl #16
-    ldr	w28,	[sp, fp]
+    str	x19,	[sp, fp]
 
-    movz	fp,	#772
-    add	w25,	w28,	w25
+    movz	fp,	#236
     movk	fp,	#32,	lsl #16
-    str	w25,	[sp, fp]
+    ldr	x19,	[sp, fp]
 
     movz	fp,	#488
     movk	fp,	#32,	lsl #16
+    str	x19,	[sp, fp]
+
+    movz	fp,	#488
+    movk	fp,	#32,	lsl #16
+    ldr	x19,	[sp, fp]
+
+    movz	fp,	#116
+    ldr	w26,	[x19]
+
+    movk	fp,	#32,	lsl #16
+    ldr	w28,	[sp, fp]
+
+    movz	fp,	#364
+    add	w25,	w26,	w28
+    movk	fp,	#32,	lsl #16
+    str	w25,	[sp, fp]
+
+    movz	fp,	#600
+    movk	fp,	#32,	lsl #16
     ldr	x25,	[sp, fp]
 
-    movz	fp,	#376
+    movz	fp,	#640
     movk	fp,	#32,	lsl #16
     str	x25,	[sp, fp]
 
-    movz	fp,	#376
+    movz	fp,	#640
     movk	fp,	#32,	lsl #16
     ldr	x23,	[sp, fp]
 
-    movz	fp,	#708
+    movz	fp,	#656
     movk	fp,	#32,	lsl #16
     str	x23,	[sp, fp]
 
-    movz	fp,	#708
+    movz	fp,	#656
     movk	fp,	#32,	lsl #16
     ldr	x25,	[sp, fp]
 
-    movz	fp,	#772
-    add	x28,	x25,	#4
+    movz	fp,	#364
+    add	x23,	x25,	#4
     movk	fp,	#32,	lsl #16
-    ldr	w28,	[x28]
+    ldr	w28,	[x23]
 
-    ldr	w23,	[sp, fp]
+    ldr	w26,	[sp, fp]
 
-    movz	fp,	#468
-    add	w23,	w23,	w28
+    movz	fp,	#528
+    add	w23,	w26,	w28
     movk	fp,	#32,	lsl #16
-    str	w23,	[sp, fp]
+    ldr	x25,	[sp, fp]
+
+    movz	fp,	#648
+    add	x26,	x25,	#32
+    movk	fp,	#32,	lsl #16
+    str	x26,	[sp, fp]
+
+    movz	fp,	#648
+    movk	fp,	#32,	lsl #16
+    ldr	x26,	[sp, fp]
+
+    movz	fp,	#552
+    movk	fp,	#32,	lsl #16
+    str	x26,	[sp, fp]
+
+    movz	fp,	#552
+    movk	fp,	#32,	lsl #16
+    ldr	x26,	[sp, fp]
+
+    movz	fp,	#456
+    add	x25,	x26,	#8
+    movk	fp,	#32,	lsl #16
+    str	x25,	[sp, fp]
+
+    movz	fp,	#456
+    movk	fp,	#32,	lsl #16
+    ldr	x19,	[sp, fp]
+
+    movz	fp,	#520
+    movk	fp,	#32,	lsl #16
+    str	x19,	[sp, fp]
+
+    movz	fp,	#520
+    movk	fp,	#32,	lsl #16
+    ldr	x25,	[sp, fp]
+
+    movz	fp,	#216
+    ldr	w19,	[x25]
+
+    movk	fp,	#32,	lsl #16
+    add	w26,	w23,	w19
+    str	w26,	[sp, fp]
+
+    movz	fp,	#592
+    movk	fp,	#32,	lsl #16
+    ldr	x25,	[sp, fp]
+
+    movz	fp,	#560
+    movk	fp,	#32,	lsl #16
+    str	x25,	[sp, fp]
+
+    movz	fp,	#560
+    movk	fp,	#32,	lsl #16
+    ldr	x19,	[sp, fp]
+
+    movz	fp,	#244
+    movk	fp,	#32,	lsl #16
+    str	x19,	[sp, fp]
+
+    movz	fp,	#244
+    movk	fp,	#32,	lsl #16
+    ldr	x26,	[sp, fp]
 
     movz	fp,	#480
+    add	x23,	x26,	#16
     movk	fp,	#32,	lsl #16
-    ldr	x23,	[sp, fp]
-
-    movz	fp,	#724
-    add	x25,	x23,	#32
-    movk	fp,	#32,	lsl #16
-    str	x25,	[sp, fp]
-
-    movz	fp,	#724
-    movk	fp,	#32,	lsl #16
-    ldr	x25,	[sp, fp]
-
-    movz	fp,	#384
-    movk	fp,	#32,	lsl #16
-    str	x25,	[sp, fp]
-
-    movz	fp,	#384
-    movk	fp,	#32,	lsl #16
-    ldr	x23,	[sp, fp]
-
-    movz	fp,	#740
-    add	x25,	x23,	#8
-    movk	fp,	#32,	lsl #16
-    str	x25,	[sp, fp]
-
-    movz	fp,	#740
-    movk	fp,	#32,	lsl #16
-    ldr	x25,	[sp, fp]
-
-    movz	fp,	#732
-    movk	fp,	#32,	lsl #16
-    str	x25,	[sp, fp]
-
-    movz	fp,	#732
-    movk	fp,	#32,	lsl #16
-    ldr	x23,	[sp, fp]
-
-    movz	fp,	#468
-    ldr	w28,	[x23]
-
-    movk	fp,	#32,	lsl #16
-    ldr	w23,	[sp, fp]
-
-    movz	fp,	#180
-    add	w23,	w23,	w28
-    movk	fp,	#32,	lsl #16
-    str	w23,	[sp, fp]
-
-    movz	fp,	#660
-    movk	fp,	#32,	lsl #16
-    ldr	x25,	[sp, fp]
-
-    movz	fp,	#368
-    movk	fp,	#32,	lsl #16
-    str	x25,	[sp, fp]
-
-    movz	fp,	#368
-    movk	fp,	#32,	lsl #16
-    ldr	x25,	[sp, fp]
-
-    movz	fp,	#360
-    movk	fp,	#32,	lsl #16
-    str	x25,	[sp, fp]
-
-    movz	fp,	#360
-    movk	fp,	#32,	lsl #16
-    ldr	x23,	[sp, fp]
-
-    movz	fp,	#676
-    add	x28,	x23,	#16
-    movk	fp,	#32,	lsl #16
-    add	x25,	x28,	#8
-    str	x25,	[sp, fp]
-
-    movz	fp,	#676
-    movk	fp,	#32,	lsl #16
-    ldr	x25,	[sp, fp]
-
-    movz	fp,	#668
-    movk	fp,	#32,	lsl #16
-    str	x25,	[sp, fp]
-
-    movz	fp,	#668
-    movk	fp,	#32,	lsl #16
-    ldr	x23,	[sp, fp]
-
-    movz	fp,	#180
-    ldr	w28,	[x23]
-
-    movk	fp,	#32,	lsl #16
-    ldr	w23,	[sp, fp]
-
-    movz	fp,	#820
-    add	w28,	w23,	w28
-    movk	fp,	#32,	lsl #16
-    str	w28,	[sp, fp]
-
-    movz	fp,	#16
-    movk	fp,	#32,	lsl #16
-    ldr	x25,	[sp, fp]
-
-    movz	fp,	#684
-    add	x28,	x25,	#128
-    movk	fp,	#32,	lsl #16
-    add	x28,	x28,	#64
-    add	x25,	x28,	#32
-    str	x25,	[sp, fp]
-
-    movz	fp,	#684
-    movk	fp,	#32,	lsl #16
-    ldr	x23,	[sp, fp]
-
-    movz	fp,	#784
-    movk	fp,	#32,	lsl #16
-    str	x23,	[sp, fp]
-
-    movz	fp,	#784
-    movk	fp,	#32,	lsl #16
-    ldr	x23,	[sp, fp]
-
-    movz	fp,	#776
-    movk	fp,	#32,	lsl #16
-    str	x23,	[sp, fp]
-
-    movz	fp,	#776
-    movk	fp,	#32,	lsl #16
-    ldr	x25,	[sp, fp]
-
-    movz	fp,	#820
-    add	x28,	x25,	#4
-    movk	fp,	#32,	lsl #16
-    ldr	w28,	[x28]
-
-    ldr	w25,	[sp, fp]
-
-    movz	fp,	#496
-    add	w23,	w25,	w28
-    movk	fp,	#32,	lsl #16
-    str	w23,	[sp, fp]
-
-    movz	fp,	#52
-    movk	fp,	#32,	lsl #16
-    ldr	x25,	[sp, fp]
-
-    movz	fp,	#748
-    mov	x23,	x25
-    movk	fp,	#32,	lsl #16
-    str	x23,	[sp, fp]
-
-    movz	fp,	#748
-    movk	fp,	#32,	lsl #16
-    ldr	x23,	[sp, fp]
-
-    movz	fp,	#700
-    movk	fp,	#32,	lsl #16
-    str	x23,	[sp, fp]
-
-    movz	fp,	#700
-    movk	fp,	#32,	lsl #16
-    ldr	x23,	[sp, fp]
-
-    movz	fp,	#800
-    movk	fp,	#32,	lsl #16
-    str	x23,	[sp, fp]
-
-    movz	fp,	#800
-    movk	fp,	#32,	lsl #16
-    ldr	x23,	[sp, fp]
-
-    movz	fp,	#184
-    add	x23,	x23,	#32
-    movk	fp,	#32,	lsl #16
-    add	x23,	x23,	#16
     add	x23,	x23,	#8
     str	x23,	[sp, fp]
 
-    movz	fp,	#184
+    movz	fp,	#480
+    movk	fp,	#32,	lsl #16
+    ldr	x26,	[sp, fp]
+
+    movz	fp,	#608
+    movk	fp,	#32,	lsl #16
+    str	x26,	[sp, fp]
+
+    movz	fp,	#608
     movk	fp,	#32,	lsl #16
     ldr	x23,	[sp, fp]
 
-    movz	fp,	#692
+    movz	fp,	#216
+    ldr	w26,	[x23]
+
     movk	fp,	#32,	lsl #16
+    ldr	w19,	[sp, fp]
+
+    movz	fp,	#16
+    add	w26,	w19,	w26
+    movk	fp,	#32,	lsl #16
+    ldr	x23,	[sp, fp]
+
+    movz	fp,	#512
+    add	x19,	x23,	#128
+    movk	fp,	#32,	lsl #16
+    add	x19,	x19,	#64
+    add	x23,	x19,	#32
     str	x23,	[sp, fp]
 
-    movz	fp,	#692
+    movz	fp,	#512
+    movk	fp,	#32,	lsl #16
+    ldr	x19,	[sp, fp]
+
+    movz	fp,	#568
+    movk	fp,	#32,	lsl #16
+    str	x19,	[sp, fp]
+
+    movz	fp,	#568
+    movk	fp,	#32,	lsl #16
+    ldr	x19,	[sp, fp]
+
+    movz	fp,	#536
+    movk	fp,	#32,	lsl #16
+    str	x19,	[sp, fp]
+
+    movz	fp,	#536
     movk	fp,	#32,	lsl #16
     ldr	x23,	[sp, fp]
 
-    movz	fp,	#496
-    ldr	w28,	[x23]
-
+    movz	fp,	#84
+    add	x19,	x23,	#4
     movk	fp,	#32,	lsl #16
-    ldr	w23,	[sp, fp]
+    ldr	w28,	[x19]
 
-    movz	fp,	#808
-    add	w23,	w23,	w28
-    movk	fp,	#32,	lsl #16
-    str	w23,	[sp, fp]
+    ldr	x23,	[sp, fp]
 
-    movz	fp,	#72
+    add	w26,	w26,	w28
+    movz	fp,	#104
+    mov	x25,	x23
+    mov	x28,	x20
     movk	fp,	#32,	lsl #16
+    add	x25,	x25,	#32
+    add	x19,	x25,	#16
+    add	x23,	x19,	#8
+    ldr	w25,	[x23]
+
+    add	w19,	w26,	w25
     ldr	x25,	[sp, fp]
 
-    movz	fp,	#808
-    add	x23,	x25,	#512
+    movz	fp,	#176
+    add	x25,	x25,	#512
     movk	fp,	#32,	lsl #16
-    add	x23,	x23,	#256
-    add	x23,	x23,	#128
-    add	x25,	x23,	#64
+    add	x26,	x25,	#256
+    add	x25,	x26,	#128
+    mov	x26,	x18
+    mov	x18,	x26
+    add	x23,	x25,	#64
+    add	x26,	x18,	#128
+    mov	x25,	x23
     add	x25,	x25,	#4
+    add	x18,	x26,	#64
+    ldr	w25,	[x25]
+
+    add	x26,	x18,	#32
+    add	w19,	w19,	w25
+    ldr	w23,	[x26]
+
+    mov	x26,	x20
+    add	w23,	w19,	w23
+    add	x26,	x26,	#512
+    add	x26,	x26,	#256
+    add	x26,	x26,	#32
+    add	x26,	x26,	#4
+    ldr	w18,	[x26]
+
+    add	w26,	w23,	w18
+    add	x18,	x28,	#1024
+    add	x19,	x18,	#512
+    add	x25,	x19,	#256
+    add	x25,	x25,	#128
+    add	x25,	x25,	#64
+    add	x28,	x25,	#8
+    add	x18,	x28,	#4
+    ldr	w19,	[x18]
+
+    ldr	x23,	[sp, fp]
+
+    add	w26,	w26,	w19
+    movz	fp,	#208
+    add	x19,	x23,	#2048
+    movk	fp,	#32,	lsl #16
+    add	x25,	x19,	#1024
+    add	x19,	x0,	#16384
+    add	x20,	x25,	#128
+    add	x23,	x19,	#8192
+    add	x28,	x20,	#16
+    add	x19,	x23,	#1024
+    add	x25,	x28,	#8
+    add	x20,	x19,	#512
+    ldr	w28,	[x25]
+
+    add	x25,	x20,	#256
+    add	w28,	w26,	w28
+    add	x25,	x25,	#32
+    ldr	w20,	[x25]
+
+    str	x0,	[sp, fp]
+
+    add	w28,	w28,	w20
+    movz	fp,	#208
+    movk	fp,	#32,	lsl #16
+    ldr	x26,	[sp, fp]
+
+    add	x0,	x26,	#256
+    add	x25,	x0,	#128
+    add	x26,	x25,	#64
+    add	x0,	x26,	#32
+    mov	x26,	x27
+    add	x23,	x0,	#16
+    add	x0,	x23,	#8
+    add	x0,	x0,	#4
+    ldr	w23,	[x0]
+
+    add	x0,	x26,	#64
+    add	w23,	w28,	w23
+    add	x0,	x0,	#32
+    add	x0,	x0,	#16
+    add	x0,	x0,	#8
+    add	x0,	x0,	#4
+    ldr	w0,	[x0]
+
+    add	w18,	w23,	w0
+    add	x0,	x21,	#131072
+    add	x27,	x0,	#65536
+    add	x0,	x27,	#32768
+    add	x0,	x0,	#16384
+    add	x23,	x0,	#512
+    mov	x0,	x22
+    mov	x22,	x0
+    add	x25,	x23,	#256
+    add	x28,	x22,	#8192
+    add	x20,	x25,	#128
+    add	x25,	x20,	#16
     ldr	w23,	[x25]
 
-    add	x25,	x27,	#128
-    ldr	w28,	[sp, fp]
+    add	w26,	w18,	w23
+    add	x18,	x28,	#4096
+    add	x0,	x18,	#2048
+    add	x20,	x0,	#1024
+    add	x25,	x20,	#512
+    add	x20,	x24,	#524288
+    add	x0,	x25,	#64
+    add	x25,	x20,	#262144
+    add	x18,	x0,	#16
+    add	x0,	x25,	#32768
+    add	x28,	x18,	#4
+    add	x21,	x0,	#8192
+    ldr	w18,	[x28]
 
-    movz	fp,	#200
-    add	w23,	w28,	w23
-    movk	fp,	#32,	lsl #16
-    add	x28,	x25,	#64
-    add	x27,	x28,	#32
-    ldr	w25,	[x27]
+    add	x0,	x21,	#512
+    add	w26,	w26,	w18
+    add	x20,	x0,	#256
+    add	x21,	x20,	#128
+    add	x28,	x21,	#64
+    add	x25,	x28,	#8
+    add	x0,	x25,	#4
+    add	x25,	x24,	#262144
+    ldr	w27,	[x0]
 
-    mov	x27,	x26
-    add	w25,	w23,	w25
-    str	x27,	[sp, fp]
-
-    movz	fp,	#200
-    movk	fp,	#32,	lsl #16
-    ldr	x26,	[sp, fp]
-
-    movz	fp,	#148
-    add	x28,	x26,	#512
-    movk	fp,	#32,	lsl #16
-    add	x27,	x28,	#256
-    add	x27,	x27,	#32
-    add	x28,	x27,	#4
-    ldr	w27,	[x28]
-
-    add	w23,	w25,	w27
-    mov	x27,	x20
-    mov	x26,	x27
-    add	x28,	x26,	#1024
-    add	x26,	x28,	#512
-    add	x25,	x26,	#256
-    add	x26,	x25,	#128
-    add	x27,	x26,	#64
-    add	x26,	x27,	#8
-    add	x28,	x26,	#4
-    ldr	w26,	[x28]
-
-    ldr	x27,	[sp, fp]
-
-    add	w25,	w23,	w26
-    movz	fp,	#192
-    add	x23,	x27,	#2048
-    movk	fp,	#32,	lsl #16
-    add	x27,	x23,	#1024
-    add	x27,	x27,	#128
-    add	x28,	x27,	#16
-    add	x27,	x28,	#8
-    add	x28,	x22,	#16384
-    ldr	w26,	[x27]
-
-    add	x27,	x28,	#8192
-    add	w25,	w25,	w26
-    add	x20,	x27,	#1024
-    add	x20,	x20,	#512
-    add	x26,	x20,	#256
-    add	x20,	x26,	#32
-    ldr	w20,	[x20]
-
-    add	w28,	w25,	w20
-    mov	x25,	x19
-    mov	x23,	x25
-    add	x27,	x23,	#256
-    add	x27,	x27,	#128
-    add	x26,	x27,	#64
-    add	x26,	x26,	#32
-    add	x27,	x26,	#16
-    add	x26,	x27,	#8
-    mov	x27,	x21
-    add	x26,	x26,	#4
-    ldr	w19,	[x26]
-
-    add	x26,	x24,	#131072
-    add	w22,	w28,	w19
-    add	x19,	x27,	#64
-    add	x27,	x26,	#65536
-    add	x21,	x19,	#32
-    add	x28,	x27,	#32768
-    add	x19,	x21,	#16
-    add	x21,	x19,	#8
-    add	x19,	x21,	#4
-    ldr	w23,	[x19]
-
-    add	x19,	x28,	#16384
-    add	w21,	w22,	w23
-    add	x25,	x19,	#512
-    add	x25,	x25,	#256
-    add	x24,	x25,	#128
-    add	x20,	x24,	#16
-    ldr	w24,	[x20]
-
-    add	w20,	w21,	w24
-    mov	x21,	x18
-    str	x21,	[sp, fp]
-
-    movz	fp,	#192
-    movk	fp,	#32,	lsl #16
-    ldr	x26,	[sp, fp]
-
-    add	x24,	x26,	#8192
-    add	x25,	x24,	#4096
-    add	x18,	x25,	#2048
-    add	x27,	x18,	#1024
-    add	x24,	x27,	#512
-    add	x26,	x24,	#64
-    add	x27,	x26,	#16
-    add	x24,	x27,	#4
-    add	x27,	x0,	#524288
-    ldr	w25,	[x24]
-
-    add	x24,	x27,	#262144
-    add	w25,	w20,	w25
-    add	x26,	x24,	#32768
-    add	x20,	x26,	#8192
-    add	x18,	x20,	#512
-    add	x27,	x18,	#256
-    add	x28,	x27,	#128
-    add	x18,	x28,	#64
-    mov	x28,	x0
-    add	x21,	x18,	#8
-    add	x18,	x21,	#4
-    ldr	w23,	[x18]
-
-    add	x18,	x28,	#262144
-    add	w22,	w25,	w23
-    add	x21,	x18,	#16384
-    add	x0,	x21,	#2048
-    add	x19,	x0,	#1024
-    ldr	w0,	[x19]
+    add	x28,	x25,	#16384
+    add	w22,	w26,	w27
+    add	x0,	x28,	#2048
+    add	x26,	x0,	#1024
+    ldr	w0,	[x26]
 
     add	w0,	w22,	w0
     bl	putint
     movz	w0,	#0
     ldp	fp, lr, [sp, #0]
     
-    movz	fp,	#864
+    movz	fp,	#768
     movk	fp,	#32,	lsl #16
     add	sp, sp, fp
     ret
 
 
 main_3:
-    mov	w25,	w13
-    movz	fp,	#28
+    mov	w18,	w22
+    mov	w16,	w4
+    movz	fp,	#60
     movk	fp,	#32,	lsl #16
-    str	w20,	[sp, fp]
+    str	w16,	[sp, fp]
 
     b	main_4
 
 main_8:
-    mov	w28,	w13
-    movz	fp,	#24
+    mov	w19,	w22
+    movz	fp,	#56
     movk	fp,	#32,	lsl #16
-    str	w0,	[sp, fp]
+    str	w13,	[sp, fp]
 
     b	main_9
 
 main_13:
-    mov	w28,	w13
-    movz	fp,	#124
+    mov	w19,	w22
+    movz	fp,	#152
     movk	fp,	#32,	lsl #16
-    str	w0,	[sp, fp]
+    str	w13,	[sp, fp]
 
     b	main_14
 
 main_18:
-    mov	w25,	w13
-    movz	fp,	#120
+    mov	w21,	w22
+    mov	w24,	w4
+    movz	fp,	#140
     movk	fp,	#32,	lsl #16
-    str	w0,	[sp, fp]
+    str	w24,	[sp, fp]
 
     b	main_19
 
 main_23:
-    mov	w28,	w13
-    movz	fp,	#100
+    mov	w26,	w22
+    mov	w1,	w4
+    movz	fp,	#128
     movk	fp,	#32,	lsl #16
-    str	w23,	[sp, fp]
+    str	w1,	[sp, fp]
 
     b	main_24
 
 main_28:
-    mov	w3,	w13
-    mov	w11,	w8
+    mov	w8,	w22
+    mov	w13,	w2
     b	main_29
 
 main_33:
-    mov	w1,	w13
-    mov	w24,	w22
+    mov	w6,	w22
+    mov	w0,	w11
     b	main_34
 
 main_38:
-    mov	w2,	w13
-    mov	w8,	w16
+    mov	w12,	w22
+    mov	w3,	w5
     b	main_39
 
 main_43:
-    mov	w9,	w13
-    mov	w25,	w7
+    mov	w7,	w22
+    mov	w24,	w2
     b	main_44
 
 main_48:
-    mov	w5,	w13
-    mov	w19,	w15
+    mov	w18,	w22
+    mov	w12,	w11
     b	main_49
 
 main_53:
-    mov	w14,	w13
-    mov	w1,	w27
-    movz	fp,	#40
+    mov	w20,	w22
+    mov	w2,	w19
+    movz	fp,	#72
     movk	fp,	#32,	lsl #16
-    str	w1,	[sp, fp]
+    str	w2,	[sp, fp]
 
     b	main_54
 
 main_58:
-    mov	w2,	w13
-    mov	w7,	w20
-    movz	fp,	#48
+    mov	w15,	w22
+    movz	fp,	#80
     movk	fp,	#32,	lsl #16
-    str	w7,	[sp, fp]
+    str	w10,	[sp, fp]
 
     b	main_59
 
 main_63:
-    mov	w3,	w13
-    mov	w20,	w28
-    movz	fp,	#64
+    mov	w26,	w22
+    movz	fp,	#96
     movk	fp,	#32,	lsl #16
-    str	w20,	[sp, fp]
+    str	w16,	[sp, fp]
 
     b	main_64
 
 main_68:
-    mov	w12,	w13
-    mov	w3,	w1
-    movz	fp,	#80
+    mov	w8,	w22
+    mov	w2,	w25
+    movz	fp,	#112
     movk	fp,	#32,	lsl #16
-    str	w3,	[sp, fp]
+    str	w2,	[sp, fp]
 
     b	main_69
 
 main_73:
-    mov	w1,	w13
-    mov	w14,	w17
-    movz	fp,	#68
+    mov	w25,	w22
+    mov	w7,	w6
+    movz	fp,	#100
     movk	fp,	#32,	lsl #16
-    str	w14,	[sp, fp]
+    str	w7,	[sp, fp]
 
     b	main_74
 
 main_78:
-    mov	w16,	w13
-    mov	w12,	w14
-    movz	fp,	#60
+    mov	w25,	w22
+    mov	w8,	w9
+    movz	fp,	#92
     movk	fp,	#32,	lsl #16
-    str	w12,	[sp, fp]
+    str	w8,	[sp, fp]
 
     b	main_79
 
 main_83:
-    mov	w12,	w13
-    mov	w6,	w1
-    movz	fp,	#44
+    mov	w2,	w22
+    mov	w14,	w15
+    movz	fp,	#76
     movk	fp,	#32,	lsl #16
-    str	w6,	[sp, fp]
+    str	w14,	[sp, fp]
 
     b	main_84
 
 main_88:
-    mov	w6,	w13
-    mov	w22,	w3
+    mov	w10,	w22
+    mov	w26,	w16
     b	main_89
 

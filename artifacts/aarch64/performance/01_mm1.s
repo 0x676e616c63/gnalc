@@ -97,13 +97,13 @@ main_34:
 main_39:
     movz	w0,	#65
     bl	_sysy_starttime
+    adrp	x19, :got:A
     movz	w24,	#0
-    adrp	x17, :got:C
-    adrp	x4, :got:A
-    adrp	x0, :got:B
-    ldr	x0, [x0, #:got_lo12:B]
-    ldr	x17, [x17, #:got_lo12:C]
-    ldr	x4, [x4, #:got_lo12:A]
+    adrp	x0, :got:C
+    adrp	x1, :got:B
+    ldr	x1, [x1, #:got_lo12:B]
+    ldr	x0, [x0, #:got_lo12:C]
+    ldr	x19, [x19, #:got_lo12:A]
 
 main_44:
     movz	w9,	#0
@@ -116,7 +116,7 @@ main_47:
 main_49:
     lsl	w8,	w16,	#12
     movz	w14,	#0
-    add	x8,	x17,	x8
+    add	x8,	x0,	x8
 
 main_52:
     cmp	w14,	w27
@@ -145,14 +145,14 @@ main_65:
     movz	w8,	#0
 
 main_67:
-    lsl	w19,	w8,	#12
+    lsl	w18,	w8,	#12
     movz	w14,	#0
-    add	x3,	x0,	x19
+    add	x4,	x1,	x18
 
 main_71:
     lsl	w5,	w14,	#12
     lsl	w7,	w8,	#2
-    add	x25,	x4,	x5
+    add	x25,	x19,	x5
     add	x6,	x25,	x7
     ldr	w7,	[x6]
 
@@ -165,26 +165,26 @@ main_77:
 
 main_79:
     lsl	w13,	w14,	#12
-    movz	w19,	#0
-    add	x25,	x17,	x13
+    movz	w18,	#0
+    add	x25,	x0,	x13
 
 main_81:
-    cmp	w19,	w27
+    cmp	w18,	w27
     bge	main_92
 
 main_84:
-    lsl	w11,	w19,	#2
-    lsl	w15,	w19,	#2
-    add	w19,	w19,	#1
-    add	x13,	x3,	x15
-    add	x18,	x25,	x11
-    ldr	w21,	[x18]
+    lsl	w11,	w18,	#2
+    lsl	w15,	w18,	#2
+    add	w18,	w18,	#1
+    add	x13,	x4,	x15
+    add	x17,	x25,	x11
+    ldr	w21,	[x17]
 
     ldr	w16,	[x13]
 
     madd	w20,	w16,	w7,	w21
 
-    str	w20,	[x18]
+    str	w20,	[x17]
 
     b	main_81
 
@@ -211,7 +211,7 @@ main_104:
 main_106:
     lsl	w22,	w2,	#12
     movz	w20,	#0
-    add	x6,	x0,	x22
+    add	x6,	x1,	x22
 
 main_109:
     cmp	w20,	w27
@@ -242,16 +242,16 @@ main_122:
 main_124:
     lsl	w6,	w16,	#12
     movz	w20,	#0
-    add	x19,	x17,	x6
+    add	x18,	x0,	x6
 
 main_128:
     lsl	w21,	w20,	#12
     lsl	w23,	w16,	#2
-    add	x13,	x4,	x21
+    add	x13,	x19,	x21
     add	x22,	x13,	x23
-    ldr	w3,	[x22]
+    ldr	w4,	[x22]
 
-    cmp	w3,	#0
+    cmp	w4,	#0
     bne	main_136
 
 main_134:
@@ -259,25 +259,25 @@ main_134:
     b	main_151
 
 main_136:
-    lsl	w2,	w20,	#12
+    lsl	w3,	w20,	#12
     movz	w23,	#0
-    add	x11,	x0,	x2
+    add	x11,	x1,	x3
 
 main_138:
     cmp	w23,	w27
     bge	main_149
 
 main_141:
-    lsl	w2,	w23,	#2
+    lsl	w3,	w23,	#2
     lsl	w6,	w23,	#2
     add	w23,	w23,	#1
-    add	x5,	x19,	x6
-    add	x25,	x11,	x2
-    ldr	w18,	[x25]
+    add	x5,	x18,	x6
+    add	x25,	x11,	x3
+    ldr	w17,	[x25]
 
     ldr	w7,	[x5]
 
-    madd	w9,	w7,	w3,	w18
+    madd	w9,	w7,	w4,	w17
 
     str	w9,	[x25]
 

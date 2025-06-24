@@ -22,19 +22,19 @@ fib_3:
     stp	x27, x28, [sp, #64]
     stp	fp, lr, [sp, #80]
     
-    movz	x11,	#3
-    movz	x9,	#31161
-    movz	x10,	#31161
+    movz	x23,	#65535
     adrp	x5, :got:memo.lut.fib
+    movz	x11,	#3
     mov	w21,	w2
+    movz	x10,	#31161
+    movz	x12,	#31353
     mov	w28,	w1
     mov	w27,	w0
-    movz	x23,	#65535
-    movz	x12,	#31353
-    movk	x9,	#40503,	lsl #16
-    movk	x10,	#40503,	lsl #16
+    movz	x9,	#31161
     ldr	x5, [x5, #:got_lo12:memo.lut.fib]
+    movk	x10,	#40503,	lsl #16
     movk	x12,	#40503,	lsl #16
+    movk	x9,	#40503,	lsl #16
     add	x17,	x27,	x12
     eor	x14,	x17,	x11
     lsr	x20,	x14,	#2
@@ -53,9 +53,9 @@ fib_3:
     lsl	w1,	w6,	#2
     add	w2,	w1,	w6,	lsl #4
     lsl	x9,	x2,	#0
-    add	x24,	x5,	x9
-    add	x23,	x24,	#8
-    ldr	w15,	[x24]
+    add	x25,	x5,	x9
+    add	x23,	x25,	#8
+    ldr	w15,	[x25]
 
     cmp	w15,	#0
     beq	fib_46
@@ -69,10 +69,10 @@ fib_28:
     ldr	w14,	[x22]
 
     cmp	w14,	w28
-    add	x26,	x22,	#4
+    add	x24,	x22,	#4
     cset	w15,	eq
     and	w1,	w15,	w11
-    ldr	w4,	[x26]
+    ldr	w4,	[x24]
 
     cmp	w4,	w21
     cset	w5,	eq
@@ -81,7 +81,7 @@ fib_28:
     b	fib_53
 
 fib_42:
-    add	x24,	x24,	#4
+    add	x24,	x25,	#4
     ldr	w0,	[x24]
 
     ldp	x19, x20, [sp, #0]
@@ -97,7 +97,7 @@ fib_42:
 
 fib_46:
     add	x22,	x23,	#4
-    add	x26,	x22,	#4
+    add	x24,	x22,	#4
 
 fib_53:
     cmp	w28,	#0
@@ -117,17 +117,17 @@ fib_68:
     asr	w2,	w19,	#1
     bl	fib
     mov	w19,	w0
-    sub	w1,	w28,	#2
     sub	w2,	w27,	#2
+    sub	w1,	w28,	#2
     asr	w18,	w2,	#31
     lsr	w20,	w18,	#31
     sub	w18,	w21,	#3
-    add	w25,	w2,	w20
+    add	w26,	w2,	w20
     asr	w2,	w18,	#31
-    asr	w0,	w25,	#1
+    asr	w0,	w26,	#1
     lsr	w20,	w2,	#31
-    add	w25,	w18,	w20
-    asr	w2,	w25,	#1
+    add	w26,	w18,	w20
+    asr	w2,	w26,	#1
     lsl	w20,	w2,	#1
     sub	w2,	w18,	w20
     bl	fib
@@ -150,14 +150,14 @@ fib_62:
 
 fib_81:
     movz	w8,	#1
-    add	x16,	x24,	#4
-    str	w8,	[x24]
+    add	x16,	x25,	#4
+    str	w8,	[x25]
 
     str	w27,	[x23]
 
     str	w28,	[x22]
 
-    str	w21,	[x26]
+    str	w21,	[x24]
 
     str	w0,	[x16]
 

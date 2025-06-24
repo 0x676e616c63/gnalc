@@ -19,8 +19,8 @@ main_0:
     add	x0,	sp,	#16
     movk	w2,	#2,	lsl #16
     bl	memset
-    movz	w2,	#0
     movz	w1,	#0
+    movz	w2,	#0
     movz	fp,	#16
     movk	w2,	#4,	lsl #16
     movk	fp,	#2,	lsl #16

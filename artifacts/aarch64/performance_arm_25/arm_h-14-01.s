@@ -29,8 +29,8 @@ main_0:
     add	x0,	sp,	#916
     movk	w2,	#14,	lsl #16
     bl	memset
-    movz	w2,	#900
     movz	w1,	#0
+    movz	w2,	#900
     add	x0,	sp,	#16
     bl	memset
     adrp	x0, :got:input
@@ -40,10 +40,10 @@ main_0:
     bl	getfarray
     movz	w0,	#106
     bl	_sysy_starttime
-    add	x1,	sp,	#916
-    adrp	x28, :got:conv_output
     add	x15,	sp,	#16
     movz	w7,	#0
+    add	x1,	sp,	#916
+    adrp	x28, :got:conv_output
     adrp	x25, :got:input
     ldr	x25, [x25, #:got_lo12:input]
     ldr	x28, [x28, #:got_lo12:conv_output]
@@ -80,8 +80,8 @@ main_19:
     add	w14,	w27,	#5
     ldr	s19,	[x13]
 
-    add	w23,	w27,	#1
     add	x3,	x2,	#4
+    add	w23,	w27,	#1
     add	x21,	x20,	x22
     add	w11,	w27,	#7
     add	w6,	w27,	#9
@@ -102,54 +102,54 @@ main_19:
     add	x24,	x2,	#12
     ldr	s29,	[x3]
 
+    lsl	w3,	w26,	#2
     ldr	s18,	[x10]
 
-    lsl	w3,	w26,	#2
     fmul	s30,	s9,	s29
     add	x10,	x2,	#16
     ldr	s6,	[x13]
 
     add	x0,	x20,	x3
     fadd	s24,	s14,	s30
-    lsl	w13,	w11,	#2
     ldr	s26,	[x21]
 
+    lsl	w13,	w11,	#2
     fmul	s7,	s18,	s6
     add	w3,	w27,	#11
-    add	x12,	x20,	x13
     add	x21,	x2,	#20
     ldr	s14,	[x24]
 
+    add	x12,	x20,	x13
     fadd	s1,	s24,	s7
-    add	w13,	w27,	#12
     lsl	w24,	w22,	#2
     ldr	s3,	[x5]
 
     fmul	s15,	s26,	s14
+    add	w13,	w27,	#12
+    add	x23,	x20,	x24
     add	x5,	x2,	#24
     ldr	s22,	[x10]
 
-    add	x23,	x20,	x24
     fadd	s10,	s1,	s15
+    add	w24,	w27,	#13
     lsl	w10,	w6,	#2
     ldr	s11,	[x16]
 
     fmul	s23,	s3,	s22
-    add	w24,	w27,	#13
-    add	x9,	x20,	x10
     add	x16,	x2,	#28
     ldr	s30,	[x21]
 
+    add	x9,	x20,	x10
     fadd	s18,	s10,	s23
-    add	w10,	w27,	#14
     lsl	w21,	w18,	#2
     ldr	s20,	[x0]
 
     fmul	s31,	s11,	s30
+    add	w10,	w27,	#14
+    add	x19,	x20,	x21
     add	x0,	x2,	#32
     ldr	s7,	[x5]
 
-    add	x19,	x20,	x21
     fadd	s28,	s18,	s31
     lsl	w5,	w3,	#2
     fmul	s8,	s20,	s7
@@ -267,8 +267,8 @@ main_147:
     add	x23,	x11,	x24
     add	x6,	x11,	x8
     lsl	w18,	w2,	#2
-    add	w0,	w2,	#6
     add	x4,	x19,	#4
+    add	w0,	w2,	#6
     add	w14,	w2,	#7
     add	w24,	w2,	#8
     add	w8,	w2,	#9
@@ -289,18 +289,18 @@ main_147:
     ldr	s8,	[x4]
 
     fadd	s7,	s18,	s19
-    lsl	w4,	w0,	#2
     ldr	s1,	[x10]
 
+    lsl	w4,	w0,	#2
     fmul	s9,	s24,	s8
-    add	x3,	x11,	x4
     add	x10,	x19,	#16
     ldr	s16,	[x17]
 
+    add	x3,	x11,	x4
     fadd	s18,	s7,	s9
-    add	w4,	w2,	#11
     lsl	w17,	w14,	#2
     fmul	s17,	s1,	s16
+    add	w4,	w2,	#11
     ldr	s9,	[x23]
 
     add	x16,	x11,	x17
@@ -338,9 +338,9 @@ main_147:
     ldr	s17,	[x6]
 
     fadd	s22,	s13,	s10
+    lsl	w6,	w4,	#2
     ldr	s11,	[x16]
 
-    lsl	w6,	w4,	#2
     fmul	s18,	s3,	s17
     add	x16,	x19,	#36
     ldr	s25,	[x20]
@@ -356,9 +356,9 @@ main_147:
     ldr	s2,	[x3]
 
     fadd	s9,	s30,	s26
+    lsl	w3,	w27,	#2
     ldr	s28,	[x9]
 
-    lsl	w3,	w27,	#2
     fmul	s3,	s20,	s2
     add	x9,	x19,	#44
     ldr	s10,	[x16]
@@ -580,8 +580,8 @@ main_323:
     fdiv	s16,	s27,	s8
     fmov	s8,	#24.000000
     fmul	s17,	s24,	s16
-    fmov	s16,	#6.000000
     fmov	s24,	#2.000000
+    fmov	s16,	#6.000000
     str	s17,	[x2]
 
     fmov	s17,	#2.000000

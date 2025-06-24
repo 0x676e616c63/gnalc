@@ -192,8 +192,8 @@ main_45:
     adrp	x6, :got:next
     movz	w22,	#0
     ldr	x6, [x6, #:got_lo12:next]
-    lsl	w10,	w4,	#2
     lsl	w19,	w4,	#2
+    lsl	w10,	w4,	#2
     lsl	w8,	w4,	#2
     lsl	w15,	w4,	#2
     add	x3,	x6,	x15

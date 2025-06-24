@@ -15,23 +15,23 @@ main_0:
     
     movz	w0,	#22
     bl	_sysy_starttime
-    movi	v26.4s,	#0
     fmov	s12,	#1.000000
-    movi	v11.4s,	#0
+    movi	v26.4s,	#0
     movz	w2,	#0
     movz	w6,	#0
-    add	x12,	sp,	#16
+    add	x22,	sp,	#16
+    movi	v11.4s,	#0
     movz	fp,	#24016
-    add	x19,	sp,	fp
+    add	x11,	sp,	fp
 
 main_6:
     movz	w0,	#10
-    movz	w11,	#52429
+    movz	w12,	#52429
     movz	w14,	#52429
-    movk	w11,	#15820,	lsl #16
+    movk	w12,	#15820,	lsl #16
     sdiv	w5,	w6,	w0
     movk	w14,	#15948,	lsl #16
-    fmov	s30,	w11
+    fmov	s30,	w12
     lsl	w1,	w5,	#1
     fmov	s3,	w14
     fadd	s23,	s26,	s30
@@ -80,56 +80,56 @@ main_29:
 
 main_33:
     lsl	w18,	w26,	#2
-    lsl	w22,	w26,	#2
+    lsl	w21,	w26,	#2
     add	w16,	w26,	#1
-    add	x17,	x19,	x18
-    add	x21,	x12,	x22
+    add	x17,	x11,	x18
+    add	x20,	x22,	x21
     add	w1,	w16,	#1
     lsl	w27,	w16,	#2
     lsl	w24,	w16,	#2
     ldr	s10,	[x17]
 
-    add	x26,	x12,	x27
-    ldr	s30,	[x21]
+    add	x26,	x22,	x27
+    ldr	s30,	[x20]
 
     add	w13,	w1,	#1
     lsl	w9,	w1,	#2
     lsl	w5,	w1,	#2
-    add	x23,	x19,	x24
+    add	x23,	x11,	x24
     fmul	s31,	s10,	s30
-    add	x8,	x12,	x9
-    lsl	w20,	w13,	#2
+    add	x8,	x22,	x9
+    lsl	w19,	w13,	#2
     lsl	w16,	w13,	#2
-    add	x4,	x19,	x5
+    add	x4,	x11,	x5
     add	w24,	w13,	#1
     fadd	s23,	s5,	s31
-    add	x18,	x12,	x20
-    add	x15,	x19,	x16
+    add	x18,	x22,	x19
+    add	x15,	x11,	x16
     ldr	s5,	[x23]
 
     add	w14,	w24,	#1
     lsl	w0,	w24,	#2
     ldr	s15,	[x26]
 
-    add	x28,	x12,	x0
+    add	x28,	x22,	x0
     lsl	w26,	w24,	#2
-    lsl	w11,	w14,	#2
+    lsl	w12,	w14,	#2
     fmul	s16,	s5,	s15
     add	w24,	w14,	#1
-    add	x25,	x19,	x26
-    add	x10,	x12,	x11
+    add	x25,	x11,	x26
+    add	x10,	x22,	x12
     fadd	s2,	s23,	s16
     ldr	s16,	[x4]
 
-    lsl	w22,	w24,	#2
+    lsl	w21,	w24,	#2
     ldr	s24,	[x8]
 
     lsl	w8,	w14,	#2
     ldr	s27,	[x15]
 
     fmul	s25,	s16,	s24
-    add	x21,	x12,	x22
-    add	x7,	x19,	x8
+    add	x20,	x22,	x21
+    add	x7,	x11,	x8
     ldr	s3,	[x18]
 
     fadd	s15,	s2,	s25
@@ -140,23 +140,23 @@ main_33:
     fmul	s4,	s27,	s3
     ldr	s14,	[x28]
 
-    lsl	w3,	w8,	#2
     add	w26,	w8,	#1
-    add	x17,	x19,	x18
+    lsl	w3,	w8,	#2
+    add	x17,	x11,	x18
     fadd	s25,	s15,	s4
     lsl	w28,	w8,	#2
     ldr	s16,	[x7]
 
-    add	x1,	x12,	x3
+    add	x1,	x22,	x3
     fmul	s15,	s5,	s14
-    add	x27,	x19,	x28
+    add	x27,	x11,	x28
     ldr	s23,	[x10]
 
     fadd	s4,	s25,	s15
     ldr	s27,	[x17]
 
     fmul	s24,	s16,	s23
-    ldr	s2,	[x21]
+    ldr	s2,	[x20]
 
     fadd	s17,	s4,	s24
     ldr	s5,	[x27]

@@ -30,8 +30,8 @@ main_0:
     movk	w22,	#6,	lsl #16
     mov	x2,	x22
     bl	memset
-    movz	w1,	#0
     mov	x2,	x22
+    movz	w1,	#0
     movz	fp,	#6840
     movk	fp,	#6,	lsl #16
     add	x0,	sp,	fp
@@ -60,9 +60,9 @@ main_0:
     bl	getarray
     movz	w0,	#39
     bl	_sysy_starttime
-    movz	w6,	#0
     movz	fp,	#13664
     adrp	x21, :got:v
+    movz	w6,	#0
     adrp	x4, :got:y
     add	x25,	sp,	#16
     movk	fp,	#12,	lsl #16

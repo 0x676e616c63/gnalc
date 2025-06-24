@@ -41,8 +41,8 @@ merge_sort_5:
     mov	w0,	w26
     bl	merge_sort
     mov	w28,	w19
-    mov	w4,	w26
     mov	w9,	w19
+    mov	w4,	w26
     adrp	x0, :got:buf
     adrp	x17, :got:buf
     ldr	x17, [x17, #:got_lo12:buf]

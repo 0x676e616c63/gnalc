@@ -20,8 +20,8 @@ main_0:
     movk	w24,	#5,	lsl #16
     mov	x2,	x24
     bl	memset
-    movz	w1,	#0
     mov	x2,	x24
+    movz	w1,	#0
     movz	fp,	#32336
     movk	fp,	#5,	lsl #16
     add	x0,	sp,	fp
@@ -309,15 +309,15 @@ main_89:
     sub	w11,	w4,	w6
     cmp	w11,	#0
     lsl	w12,	w25,	#2
-    movz	fp,	#32336
     add	w19,	w26,	#1
     csel	w9,	w1,	w16,	eq
-    movk	fp,	#5,	lsl #16
+    movz	fp,	#32336
     movz	w26,	#1200
+    movk	fp,	#5,	lsl #16
     lsl	w6,	w19,	#2
     mul	w10,	w19,	w26
-    mov	x20,	x10
     add	x5,	x18,	x6
+    mov	x20,	x10
     add	x20,	sp,	x20
     ldr	w6,	[x5]
 
@@ -336,10 +336,10 @@ main_89:
     lsl	w1,	w28,	#1
     sub	w27,	w24,	w1
     cmp	w27,	#0
+    movz	fp,	#32336
     csel	w2,	w16,	w9,	eq
     add	w3,	w19,	#1
     movz	w20,	#1200
-    movz	fp,	#32336
     lsl	w28,	w25,	#2
     movk	fp,	#5,	lsl #16
     lsl	w22,	w3,	#2
@@ -365,12 +365,12 @@ main_89:
     sub	w15,	w13,	w23
     cmp	w15,	#0
     csel	w5,	w4,	w2,	eq
-    add	w7,	w3,	#1
     movz	w15,	#1200
     movz	fp,	#32336
+    add	w7,	w3,	#1
     movk	fp,	#5,	lsl #16
-    lsl	w10,	w7,	#2
     mul	w13,	w7,	w15
+    lsl	w10,	w7,	#2
     lsl	w15,	w25,	#2
     mov	x24,	x13
     add	x9,	x18,	x10
@@ -422,8 +422,8 @@ main_89:
     cmp	w20,	#0
     csel	w14,	w7,	w27,	eq
     add	w20,	w5,	#1
-    movz	w4,	#1200
     movz	fp,	#32336
+    movz	w4,	#1200
     lsl	w19,	w25,	#2
     movk	fp,	#5,	lsl #16
     lsl	w13,	w20,	#2
@@ -448,8 +448,8 @@ main_89:
     lsl	w6,	w5,	#1
     sub	w7,	w19,	w6
     cmp	w7,	#0
-    add	w26,	w20,	#1
     csel	w22,	w23,	w14,	eq
+    add	w26,	w20,	#1
     movz	w3,	#1200
     movz	fp,	#32336
     lsl	w6,	w25,	#2

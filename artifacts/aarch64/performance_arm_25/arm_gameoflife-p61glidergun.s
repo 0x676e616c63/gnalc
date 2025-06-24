@@ -20,8 +20,8 @@ main_0:
     movk	w23,	#15,	lsl #16
     mov	x2,	x23
     bl	memset
-    movz	w1,	#0
     mov	x2,	x23
+    movz	w1,	#0
     movz	fp,	#16976
     movk	fp,	#15,	lsl #16
     add	x0,	sp,	fp
@@ -294,17 +294,17 @@ main_125:
     add	x18,	x6,	x21
     ldr	w22,	[x18]
 
-    lsl	w18,	w10,	#2
     ldr	w1,	[x26]
 
+    lsl	w18,	w10,	#2
     add	w22,	w9,	w22
-    lsl	w10,	w19,	#2
-    add	x16,	x17,	x18
     lsl	w26,	w19,	#2
     ldr	w8,	[x4]
 
-    add	w3,	w22,	w1
+    lsl	w10,	w19,	#2
+    add	x16,	x17,	x18
     add	x25,	x17,	x26
+    add	w3,	w22,	w1
     lsl	w4,	w2,	#2
     ldr	w21,	[x16]
 

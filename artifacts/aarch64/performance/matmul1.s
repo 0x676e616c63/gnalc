@@ -97,8 +97,8 @@ main_19:
 
     str	w12,	[x20]
 
-    lsl	x20,	x7,	#2
     ldr	x3, [x3, #:got_lo12:a]
+    lsl	x20,	x7,	#2
     add	x12,	x16,	#1
     adrp	x16, :got:a
     madd	x1,	x12,	x21,	x3
@@ -514,8 +514,8 @@ main_230:
     add	x14,	x22,	#1
     madd	x4,	x22,	x20,	x6
 
-    lsl	x6,	x17,	#2
     movz	w22,	#0
+    lsl	x6,	x17,	#2
     lsl	x1,	x14,	#2
     add	x20,	x4,	x21
     add	x21,	x19,	x1

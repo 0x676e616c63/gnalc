@@ -24,8 +24,8 @@ main_0:
     sub	sp, sp, fp
     stp	fp, lr, [sp, #0]
     
-    movz	w1,	#0
     movz	w22,	#6824
+    movz	w1,	#0
     add	x0,	sp,	#16
     movk	w22,	#6,	lsl #16
     mov	x2,	x22
@@ -61,8 +61,8 @@ main_0:
     movz	w0,	#39
     bl	_sysy_starttime
     movz	w6,	#0
-    adrp	x21, :got:v
     movz	fp,	#13664
+    adrp	x21, :got:v
     adrp	x4, :got:y
     add	x25,	sp,	#16
     movk	fp,	#12,	lsl #16

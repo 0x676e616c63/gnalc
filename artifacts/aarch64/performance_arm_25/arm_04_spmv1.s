@@ -60,8 +60,8 @@ main_0:
     bl	getarray
     movz	w0,	#39
     bl	_sysy_starttime
-    movz	w6,	#0
     adrp	x4, :got:v
+    movz	w6,	#0
     adrp	x5, :got:y
     movz	fp,	#13664
     add	x25,	sp,	#16

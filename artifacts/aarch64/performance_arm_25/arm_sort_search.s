@@ -13,8 +13,8 @@ main_0:
     sub	sp, sp, fp
     stp	fp, lr, [sp, #0]
     
-    movz	w1,	#0
     movz	w2,	#40000
+    movz	w1,	#0
     add	x0,	sp,	#16
     bl	memset
     movz	w0,	#88
@@ -112,19 +112,19 @@ main_6:
     add	w23,	w27,	#1
     add	w11,	w28,	w25
     movz	w27,	#10000
-    lsl	w15,	w23,	#2
     add	w4,	w23,	#1
+    lsl	w15,	w23,	#2
     add	w10,	w11,	w25
     sdiv	w3,	w11,	w24
     sdiv	w7,	w28,	w27
-    mov	x6,	x15
     movz	w23,	#10000
+    mov	x6,	x15
     lsl	w20,	w4,	#2
     msub	w16,	w7,	w26,	w28
 
-    add	x6,	sp,	x6
     msub	w21,	w3,	w23,	w11
 
+    add	x6,	sp,	x6
     mov	x12,	x20
     add	w3,	w4,	#1
     add	x12,	sp,	x12

@@ -217,7 +217,7 @@ power_26:
 .globl fft
 fft:
 fft_4:
-    sub	sp, sp, #128
+    sub	sp, sp, #112
     stp	x19, x20, [sp, #0]
     stp	x21, x22, [sp, #16]
     stp	x23, x24, [sp, #32]
@@ -225,9 +225,9 @@ fft_4:
     stp	x27, x28, [sp, #64]
     stp	fp, lr, [sp, #80]
     
-    mov	w25,	w3
-    mov	w23,	w1
-    mov	x26,	x0
+    mov	w21,	w3
+    mov	w27,	w1
+    mov	x28,	x0
     cmp	w2,	#1
     beq	fft_69
 
@@ -244,46 +244,46 @@ fft_8:
     asr	w8,	w8,	#1
 
 fft_11:
-    asr	w0,	w14,	#31
-    lsr	w3,	w0,	#31
-    add	w4,	w14,	w3
-    asr	w22,	w4,	#1
-    lsl	w27,	w22,	#1
-    sub	w20,	w14,	w27
+    asr	w3,	w14,	#31
+    lsr	w4,	w3,	#31
+    add	w5,	w14,	w4
+    asr	w25,	w5,	#1
+    lsl	w26,	w25,	#1
+    sub	w20,	w14,	w26
     cmp	w20,	#0
     bne	fft_21
 
 fft_15:
     asr	w6,	w14,	#31
-    adrp	x17, :got:temp
-    add	w18,	w14,	w23
-    ldr	x17, [x17, #:got_lo12:temp]
+    adrp	x18, :got:temp
+    ldr	x18, [x18, #:got_lo12:temp]
     lsr	w0,	w6,	#31
-    lsl	w20,	w18,	#2
     add	w1,	w14,	w0
-    add	x19,	x26,	x20
-    asr	w22,	w1,	#1
-    ldr	w21,	[x19]
+    asr	w25,	w1,	#1
+    lsl	w1,	w25,	#2
+    add	x26,	x18,	x1
+    add	w18,	w14,	w27
+    lsl	w20,	w18,	#2
+    add	x19,	x28,	x20
+    ldr	w22,	[x19]
 
-    lsl	w28,	w22,	#2
-    add	x27,	x17,	x28
-    str	w21,	[x27]
+    str	w22,	[x26]
 
     b	fft_28
 
 fft_21:
     asr	w4,	w14,	#31
-    add	w9,	w14,	w23
+    adrp	x7, :got:temp
+    add	w9,	w14,	w27
+    ldr	x7, [x7, #:got_lo12:temp]
     lsr	w5,	w4,	#31
     add	w6,	w14,	w5
-    adrp	x5, :got:temp
-    ldr	x5, [x5, #:got_lo12:temp]
     asr	w1,	w6,	#1
     add	w4,	w1,	w8
     lsl	w1,	w9,	#2
     lsl	w6,	w4,	#2
-    add	x0,	x26,	x1
-    add	x5,	x5,	x6
+    add	x0,	x28,	x1
+    add	x5,	x7,	x6
     ldr	w4,	[x0]
 
     str	w4,	[x5]
@@ -304,99 +304,96 @@ fft_35:
     bge	fft_44
 
 fft_38:
-    add	w12,	w9,	w23
+    add	w12,	w9,	w27
     lsl	w7,	w9,	#2
     add	w9,	w9,	#1
-    add	x5,	x18,	x7
+    add	x6,	x18,	x7
     lsl	w14,	w12,	#2
-    ldr	w0,	[x5]
+    ldr	w0,	[x6]
 
-    add	x13,	x26,	x14
+    add	x13,	x28,	x14
     str	w0,	[x13]
 
     b	fft_35
 
 fft_44:
     asr	w1,	w2,	#31
-    mov	w0,	w25
-    lsr	w27,	w1,	#31
-    mov	w1,	w25
-    add	w28,	w2,	w27
-    asr	w19,	w28,	#1
+    mov	w0,	w21
+    lsr	w25,	w1,	#31
+    add	w1,	w2,	w25
+    asr	w22,	w1,	#1
+    mov	w1,	w21
     bl	multiply
-    mov	w2,	w19
-    mov	w1,	w23
-    mov	w27,	w0
-    mov	w3,	w27
-    mov	x0,	x26
+    mov	w2,	w22
+    mov	w1,	w27
+    mov	w25,	w0
+    mov	w3,	w25
+    mov	x0,	x28
     bl	fft
-    mov	w3,	w27
-    mov	w2,	w19
-    mov	x0,	x26
-    add	w1,	w19,	w23
+    mov	w3,	w25
+    mov	w2,	w22
+    mov	x0,	x28
+    add	w1,	w22,	w27
     bl	fft
-    movz	w27,	#1
-    movz	w22,	#0
+    movz	w19,	#1
+    movz	w25,	#0
 
 fft_50:
-    cmp	w22,	w19
+    cmp	w25,	w22
     bge	fft_70
 
 fft_54:
-    add	w1,	w22,	w23
+    add	w1,	w25,	w27
     movz	fp,	#100
+    add	w23,	w1,	w22
     lsl	w0,	w1,	#2
-    add	x24,	x26,	x0
-    add	w0,	w1,	w19
-    str	x24,	[sp, fp]
+    add	x26,	x28,	x0
+    lsl	w23,	w23,	#2
+    str	x26,	[sp, fp]
 
-    lsl	w18,	w0,	#2
+    add	x23,	x28,	x23
     movz	fp,	#100
-    add	x24,	x26,	x18
-    ldr	x28,	[sp, fp]
-
-    movz	fp,	#108
-    ldr	w28,	[x28]
-
-    str	x24,	[sp, fp]
-
-    movz	fp,	#108
     ldr	x0,	[sp, fp]
 
-    ldr	w1,	[x0]
+    ldr	w24,	[x0]
 
-    mov	w0,	w27
+    mov	w0,	w19
+    str	w24,	[sp, #108]
+
+    ldr	w1,	[x23]
+
     bl	multiply
-    add	w1,	w0,	w28
+    ldr	w20,	[sp, #108]
+
     movz	w24,	#1
     movz	fp,	#100
+    add	w18,	w0,	w20
     movk	w24,	#15232,	lsl #16
-    sdiv	w20,	w1,	w24
-    mul	w21,	w20,	w24
-    str	w21,	[sp, #96]
+    sdiv	w26,	w18,	w24
+    msub	w18,	w26,	w24,	w18
 
-    msub	w21,	w20,	w24,	w1
+    mul	w1,	w26,	w24
+    str	w1,	[sp, #96]
 
-    mov	w1,	w25
+    mov	w1,	w21
     ldr	x20,	[sp, fp]
 
-    movz	fp,	#108
-    str	w21,	[x20]
+    str	w18,	[x20]
 
-    sub	w21,	w28,	w0
-    ldr	x18,	[sp, fp]
+    ldr	w20,	[sp, #108]
 
-    add	w28,	w21,	w24
-    sdiv	w0,	w28,	w24
+    sub	w0,	w20,	w0
+    add	w18,	w0,	w24
+    sdiv	w0,	w18,	w24
     mul	w20,	w0,	w24
-    msub	w0,	w0,	w24,	w28
+    msub	w24,	w0,	w24,	w18
 
-    str	w0,	[x18]
+    mov	w0,	w19
+    str	w24,	[x23]
 
-    mov	w0,	w27
     bl	multiply
-    add	w22,	w22,	#1
-    mov	w27,	w0
+    add	w25,	w25,	#1
+    mov	w19,	w0
     b	fft_50
 
 fft_70:
@@ -414,7 +411,7 @@ fft_71:
     ldp	x27, x28, [sp, #64]
     ldp	fp, lr, [sp, #80]
     
-    add	sp, sp, #128
+    add	sp, sp, #112
     ret
 
 

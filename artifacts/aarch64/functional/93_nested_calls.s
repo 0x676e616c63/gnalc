@@ -16,10 +16,12 @@ main_0:
     str	w0,	[sp, #24]
 
     bl	getint
-    mov	w21,	w0
+    mov	w22,	w0
     bl	getint
     str	w0,	[sp, #28]
 
+    bl	getint
+    mov	w21,	w0
     bl	getint
     mov	w26,	w0
     bl	getint
@@ -27,16 +29,14 @@ main_0:
     bl	getint
     mov	w28,	w0
     bl	getint
-    mov	w20,	w0
-    bl	getint
     mov	w19,	w0
     bl	getint
-    mov	w23,	w0
+    mov	w20,	w0
     bl	getint
     str	w0,	[sp, #32]
 
     bl	getint
-    mov	w22,	w0
+    mov	w23,	w0
     bl	getint
     str	w0,	[sp, #16]
 
@@ -49,7 +49,7 @@ main_0:
     cmp	w15,	#0
     movz	w17,	#0
     cset	w12,	eq
-    sub	w3,	w17,	w21
+    sub	w3,	w17,	w22
     cmp	w3,	#0
     cset	w5,	ne
     cmp	w12,	#0
@@ -70,7 +70,7 @@ main_26:
     b	main_22
 
 main_28:
-    mov	w1,	w26
+    mov	w1,	w21
 
 main_29:
     cmp	w1,	#0
@@ -81,18 +81,18 @@ main_33:
     movz	w8,	#0
     movz	w2,	#0
     sub	w7,	w8,	w13
-    sub	w9,	w2,	w28
+    sub	w9,	w2,	w27
     cmp	w19,	#0
     cset	w16,	eq
     cmp	w16,	#0
     cset	w18,	ne
-    cmp	w20,	#0
+    cmp	w28,	#0
     movz	w15,	#0
     csel	w8,	w18,	w15,	ne
     ldr	w15,	[sp, #32]
 
     cmp	w15,	#0
-    mov	w2,	w23
+    mov	w2,	w20
     cset	w11,	eq
 
 main_47:
@@ -108,7 +108,7 @@ main_51:
 
 main_53:
     cmp	w9,	#0
-    mov	w5,	w22
+    mov	w5,	w23
     csel	w17,	w8,	w2,	ne
 
 main_56:
@@ -153,19 +153,19 @@ main_81:
 main_86:
     mul	w1,	w6,	w25
     cmp	w7,	#0
-    csel	w6,	w27,	w1,	ne
+    csel	w6,	w26,	w1,	ne
     ldr	w1,	[sp, #28]
 
     cmp	w1,	#0
-    mov	w25,	w26
     cset	w8,	eq
 
 main_94:
-    cmp	w25,	#0
+    cmp	w21,	#0
     bne	main_100
 
 main_98:
     add	w13,	w8,	#1
+    mov	w21,	w22
 
 main_102:
     cmp	w13,	#0
@@ -183,35 +183,35 @@ main_109:
     bne	main_115
 
 main_113:
-    add	w4,	w6,	#1
+    add	w5,	w6,	#1
+    mov	w22,	w26
     mov	w25,	w27
-    mov	w26,	w28
 
 main_117:
-    cmp	w26,	#0
+    cmp	w25,	#0
     bne	main_124
 
 main_122:
-    mul	w17,	w25,	w4
-    mov	w12,	w20
+    mul	w18,	w22,	w5
+    mov	w12,	w28
 
 main_126:
     cmp	w12,	#0
     beq	main_132
 
 main_130:
-    sdiv	w7,	w17,	w12
-    msub	w17,	w7,	w12,	w17
+    sdiv	w7,	w18,	w12
+    msub	w18,	w7,	w12,	w18
 
     movz	w12,	#0
     b	main_126
 
 main_132:
-    movz	w13,	#0
+    movz	w14,	#0
     ldr	w24,	[sp, #32]
 
-    mov	w5,	w23
-    sub	w16,	w13,	w24
+    mov	w5,	w20
+    sub	w16,	w14,	w24
 
 main_134:
     cmp	w16,	#0
@@ -219,16 +219,16 @@ main_134:
 
 main_138:
     add	w20,	w5,	#1
-    movz	w23,	#0
-    sub	w12,	w23,	w22
+    movz	w25,	#0
+    sub	w12,	w25,	w23
 
 main_143:
     cmp	w12,	#0
     beq	main_149
 
 main_147:
-    sdiv	w27,	w20,	w12
-    msub	w20,	w27,	w12,	w20
+    sdiv	w28,	w20,	w12
+    msub	w20,	w28,	w12,	w20
 
     movz	w12,	#0
     b	main_143
@@ -255,8 +255,8 @@ main_162:
     beq	main_168
 
 main_166:
-    sdiv	w13,	w16,	w11
-    msub	w16,	w13,	w11,	w16
+    sdiv	w14,	w16,	w11
+    msub	w16,	w14,	w11,	w16
 
     movz	w11,	#0
     b	main_162
@@ -271,14 +271,13 @@ main_169:
 
 main_173:
     add	w3,	w16,	#1
-    mov	w26,	w19
 
 main_177:
     cmp	w3,	#0
     bne	main_184
 
 main_182:
-    mul	w0,	w26,	w17
+    mul	w0,	w19,	w18
     ldp	fp, lr, [sp, #0]
     
     add	sp, sp, #48
@@ -286,7 +285,7 @@ main_182:
 
 
 main_184:
-    sub	w26,	w26,	w3
+    sub	w19,	w19,	w3
     movz	w3,	#0
     b	main_177
 
@@ -306,10 +305,10 @@ main_141:
     b	main_134
 
 main_124:
-    sub	w28,	w25,	w26
+    sub	w2,	w22,	w25
     movz	w7,	#0
-    mov	w25,	w28
-    mov	w26,	w7
+    mov	w22,	w2
+    mov	w25,	w7
     b	main_117
 
 main_115:
@@ -318,8 +317,8 @@ main_115:
     b	main_109
 
 main_100:
-    add	w8,	w25,	w8
-    movz	w25,	#0
+    add	w8,	w21,	w8
+    movz	w21,	#0
     b	main_94
 
 main_92:

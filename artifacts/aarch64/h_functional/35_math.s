@@ -267,23 +267,23 @@ asr5_5:
     stp	q14, q15, [sp, #192]
 
     adrp	x21, :got:memo.lut.asr5
-    movz	x14,	#5
-    mov	w27,	w0
     movz	x15,	#31482
-    fmov	s9,	s0
-    movz	x8,	#31161
-    fmov	s15,	s3
-    fmov	s10,	s2
-    fmov	s13,	s1
+    fmov	s8,	s3
+    fmov	s10,	s0
     movz	x13,	#31161
+    movz	x8,	#31161
+    mov	w27,	w0
+    fmov	s13,	s2
+    movz	x14,	#5
+    fmov	s9,	s1
     ldr	x21, [x21, #:got_lo12:memo.lut.asr5]
     movk	x15,	#40503,	lsl #16
-    fmov	w11,	s9
-    movk	x8,	#40503,	lsl #16
-    fmov	w16,	s15
-    fmov	w3,	s10
-    fmov	w12,	s13
+    fmov	w16,	s8
+    fmov	w11,	s10
     movk	x13,	#40503,	lsl #16
+    movk	x8,	#40503,	lsl #16
+    fmov	w3,	s13
+    fmov	w12,	s9
     add	x28,	x11,	x15
     eor	x19,	x28,	x14
     lsr	x2,	x19,	#2
@@ -327,35 +327,35 @@ asr5_5:
     beq	asr5_76
 
 asr5_48:
-    ldr	s1,	[x22]
+    ldr	s6,	[x22]
 
-    fcmp	s1,	s9
-    add	x23,	x22,	#4
-    cset	w13,	eq
-    ldr	s30,	[x23]
+    fcmp	s6,	s10
+    add	x4,	x22,	#4
+    cset	w14,	eq
+    ldr	s16,	[x4]
 
-    fcmp	s30,	s13
-    add	x20,	x23,	#4
-    cset	w6,	eq
-    and	w14,	w6,	w13
-    ldr	s4,	[x20]
+    fcmp	s16,	s9
+    add	x17,	x4,	#4
+    cset	w7,	eq
+    and	w15,	w7,	w14
+    ldr	s14,	[x17]
 
-    fcmp	s4,	s10
-    add	x0,	x20,	#4
+    fcmp	s14,	s13
+    add	x25,	x17,	#4
     cset	w24,	eq
-    and	w12,	w14,	w24
-    ldr	s8,	[x0]
+    and	w12,	w15,	w24
+    ldr	s20,	[x25]
 
-    fcmp	s8,	s15
-    add	x18,	x0,	#4
-    cset	w1,	eq
-    and	w8,	w12,	w1
-    ldr	w21,	[x18]
+    fcmp	s20,	s8
+    add	x10,	x25,	#4
+    cset	w0,	eq
+    and	w8,	w12,	w0
+    ldr	w21,	[x10]
 
     cmp	w21,	w27
-    cset	w24,	eq
-    and	w25,	w8,	w24
-    cbnz	w25,	asr5_72
+    cset	w23,	eq
+    and	w24,	w8,	w23
+    cbnz	w24,	asr5_72
     b	asr5_86
 
 asr5_72:
@@ -378,66 +378,66 @@ asr5_72:
 
 
 asr5_86:
-    mov	x24,	x22
-    mov	x21,	x18
-    mov	x22,	x20
-    mov	x20,	x0
+    mov	x23,	x22
+    mov	x21,	x4
+    mov	x19,	x17
+    mov	x22,	x10
     b	asr5_87
 
 asr5_76:
     add	x12,	x22,	#4
-    mov	x24,	x22
-    mov	x23,	x12
+    mov	x23,	x22
+    mov	x21,	x12
     add	x14,	x12,	#4
-    mov	x22,	x14
+    mov	x19,	x14
     add	x16,	x14,	#4
-    mov	x20,	x16
+    mov	x25,	x16
     add	x18,	x16,	#4
-    mov	x21,	x18
+    mov	x22,	x18
 
 asr5_87:
-    fsub	s6,	s13,	s9
-    fmov	s11,	#2.000000
-    fmov	s18,	#2.000000
-    fdiv	s3,	s6,	s11
-    fadd	s19,	s9,	s3
-    str	s19,	[sp, #240]
+    fsub	s1,	s9,	s10
+    fmov	s5,	#2.000000
+    fmov	s4,	#2.000000
+    fdiv	s14,	s1,	s5
+    fadd	s20,	s10,	s14
+    str	s20,	[sp, #240]
 
-    ldr	s23,	[sp, #240]
+    ldr	s21,	[sp, #240]
 
-    fsub	s23,	s23,	s9
-    str	s23,	[sp, #248]
+    fsub	s12,	s21,	s10
+    str	s12,	[sp, #264]
 
-    ldr	s3,	[sp, #248]
+    ldr	s20,	[sp, #264]
 
-    fdiv	s30,	s3,	s18
-    fadd	s22,	s9,	s30
-    str	s22,	[sp, #272]
+    fdiv	s18,	s20,	s4
+    fadd	s27,	s10,	s18
+    str	s27,	[sp, #248]
 
     cmp	w27,	#1
     bne	asr5_109
 
 asr5_100:
-    fmov	s28,	#1.000000
-    fmov	s25,	#1.000000
-    ldr	s26,	[sp, #272]
+    fmov	s14,	#1.000000
+    fmov	s12,	#1.000000
+    ldr	s2,	[sp, #248]
 
-    fmov	s14,	#6.000000
-    fdiv	s23,	s28,	s9
+    fmov	s11,	#4.000000
+    fmov	s7,	#1.000000
+    fmov	s6,	#6.000000
+    fdiv	s21,	s14,	s10
+    fdiv	s23,	s12,	s2
     ldr	s2,	[sp, #240]
 
-    fdiv	s26,	s25,	s26
-    fmov	s28,	#4.000000
-    ldr	s3,	[sp, #248]
+    fmul	s12,	s11,	s23
+    fdiv	s17,	s7,	s2
+    ldr	s11,	[sp, #264]
 
-    fmov	s25,	#1.000000
-    fmul	s6,	s28,	s26
-    fdiv	s16,	s25,	s2
-    fadd	s22,	s23,	s6
-    fadd	s17,	s22,	s16
-    fmul	s16,	s17,	s3
-    fdiv	s23,	s16,	s14
-    fmov	s11,	s23
+    fadd	s16,	s21,	s12
+    fadd	s31,	s16,	s17
+    fmul	s19,	s31,	s11
+    fdiv	s24,	s19,	s6
+    fmov	s14,	s24
     b	asr5_130
 
 asr5_109:
@@ -445,93 +445,91 @@ asr5_109:
     bne	asr5_129
 
 asr5_111:
-    fmul	s14,	s9,	s9
-    fmov	s11,	#1.000000
-    fsub	s0,	s11,	s14
+    fmul	s12,	s10,	s10
+    fmov	s14,	#1.000000
+    fsub	s0,	s14,	s12
     bl	my_sqrt
-    fmov	s8,	#1.000000
-    fdiv	s11,	s8,	s0
-    str	s11,	[sp, #252]
+    fmov	s14,	#1.000000
+    fdiv	s12,	s14,	s0
+    str	s12,	[sp, #268]
 
-    ldr	s8,	[sp, #272]
+    ldr	s12,	[sp, #248]
 
-    ldr	s11,	[sp, #284]
-
-    fmul	s14,	s8,	s11
-    fmov	s11,	#1.000000
-    fsub	s0,	s11,	s14
+    fmul	s11,	s12,	s11
+    fmov	s12,	#1.000000
+    fsub	s0,	s12,	s11
     bl	my_sqrt
-    fmov	s11,	#4.000000
-    fmov	s8,	#1.000000
-    fdiv	s14,	s8,	s0
-    fmov	s8,	#1.000000
-    fmul	s11,	s11,	s14
-    ldr	s14,	[sp, #252]
+    ldr	s11,	[sp, #268]
 
-    fadd	s14,	s14,	s11
-    str	s14,	[sp, #256]
+    fmov	s14,	#1.000000
+    fdiv	s12,	s14,	s0
+    fmov	s14,	#4.000000
+    fmul	s14,	s14,	s12
+    fadd	s12,	s11,	s14
+    str	s12,	[sp, #244]
 
-    ldr	s11,	[sp, #240]
+    ldr	s12,	[sp, #240]
 
-    fmul	s14,	s11,	s12
-    fsub	s0,	s8,	s14
+    fmul	s11,	s12,	s15
+    fmov	s12,	#1.000000
+    fsub	s0,	s12,	s11
     bl	my_sqrt
-    fmov	s23,	#6.000000
-    ldr	s27,	[sp, #256]
+    fmov	s16,	#6.000000
+    ldr	s1,	[sp, #244]
 
-    fmov	s30,	#1.000000
-    ldr	s5,	[sp, #248]
+    fmov	s17,	#1.000000
+    ldr	s12,	[sp, #264]
 
-    fdiv	s17,	s30,	s0
-    fadd	s30,	s27,	s17
-    fmul	s4,	s30,	s5
-    fdiv	s23,	s4,	s23
-    fmov	s11,	s23
+    fdiv	s14,	s17,	s0
+    fadd	s18,	s1,	s14
+    fmul	s5,	s18,	s12
+    fdiv	s24,	s5,	s16
+    fmov	s14,	s24
     b	asr5_130
 
 asr5_129:
-    movi	v23.4s,	#0
-    fmov	s11,	s23
+    movi	v24.4s,	#0
+    fmov	s14,	s24
 
 asr5_130:
-    ldr	s4,	[sp, #240]
+    ldr	s31,	[sp, #240]
 
-    fmov	s2,	#2.000000
-    fsub	s18,	s13,	s4
-    str	s18,	[sp, #260]
+    fmov	s19,	#2.000000
+    fsub	s31,	s9,	s31
+    str	s31,	[sp, #252]
 
-    ldr	s21,	[sp, #260]
+    ldr	s5,	[sp, #252]
 
-    ldr	s5,	[sp, #240]
+    ldr	s6,	[sp, #240]
 
-    fdiv	s6,	s21,	s2
-    fadd	s17,	s5,	s6
-    str	s17,	[sp, #264]
+    fdiv	s12,	s5,	s19
+    fadd	s24,	s6,	s12
+    str	s24,	[sp, #256]
 
     cmp	w27,	#1
     bne	asr5_145
 
 asr5_136:
-    fmov	s20,	#1.000000
-    ldr	s5,	[sp, #240]
+    fmov	s30,	#1.000000
+    ldr	s2,	[sp, #240]
 
-    fmov	s19,	#1.000000
-    fmov	s4,	#1.000000
-    ldr	s18,	[sp, #264]
+    fmov	s25,	#1.000000
+    fmov	s23,	#4.000000
+    fmov	s21,	#1.000000
+    fmov	s20,	#6.000000
+    ldr	s24,	[sp, #256]
 
-    fdiv	s24,	s20,	s5
-    fdiv	s30,	s4,	s13
-    ldr	s14,	[sp, #260]
+    fdiv	s11,	s30,	s2
+    ldr	s31,	[sp, #252]
 
-    fmov	s5,	#4.000000
-    fdiv	s20,	s19,	s18
-    fmul	s3,	s5,	s20
-    fmov	s5,	#6.000000
-    fadd	s31,	s24,	s3
-    fadd	s31,	s31,	s30
-    fmul	s4,	s31,	s14
-    fdiv	s19,	s4,	s5
-    str	s19,	[sp, #280]
+    fdiv	s7,	s25,	s24
+    fmul	s5,	s23,	s7
+    fadd	s6,	s11,	s5
+    fdiv	s11,	s21,	s9
+    fadd	s18,	s6,	s11
+    fmul	s12,	s18,	s31
+    fdiv	s19,	s12,	s20
+    str	s19,	[sp, #272]
 
     b	asr5_166
 
@@ -540,128 +538,124 @@ asr5_145:
     bne	asr5_165
 
 asr5_147:
-    ldr	s14,	[sp, #240]
+    ldr	s12,	[sp, #240]
 
-    fmul	s12,	s14,	s12
-    fmov	s14,	#1.000000
-    str	s12,	[sp, #224]
+    fmul	s15,	s12,	s15
+    fmov	s12,	#1.000000
+    str	s15,	[sp, #228]
 
-    ldr	s8,	[sp, #224]
+    ldr	s15,	[sp, #228]
 
-    fsub	s0,	s14,	s8
+    fsub	s0,	s12,	s15
     bl	my_sqrt
-    fmov	s14,	#1.000000
-    fdiv	s8,	s14,	s0
-    str	s8,	[sp, #268]
+    fmov	s12,	#1.000000
+    fdiv	s11,	s12,	s0
+    str	s11,	[sp, #260]
 
-    ldr	s8,	[sp, #264]
+    ldr	s12,	[sp, #256]
 
-    ldr	s12,	[sp, #276]
+    ldr	s11,	[sp, #276]
 
-    fmul	s8,	s8,	s12
-    str	s8,	[sp, #228]
+    fmul	s15,	s12,	s11
+    fmov	s12,	#1.000000
+    str	s15,	[sp, #224]
 
-    ldr	s12,	[sp, #228]
+    ldr	s15,	[sp, #224]
 
-    fmov	s8,	#1.000000
-    fsub	s0,	s8,	s12
+    fsub	s0,	s12,	s15
     bl	my_sqrt
-    fmov	s8,	#1.000000
-    fdiv	s8,	s8,	s0
-    str	s8,	[sp, #232]
+    fmov	s12,	#1.000000
+    fdiv	s15,	s12,	s0
+    fmov	s12,	#4.000000
+    str	s15,	[sp, #232]
 
-    ldr	s14,	[sp, #232]
+    ldr	s15,	[sp, #232]
 
-    fmov	s8,	#4.000000
-    ldr	s12,	[sp, #268]
+    fmul	s11,	s12,	s15
+    fmul	s15,	s9,	s9
+    ldr	s12,	[sp, #260]
 
-    fmul	s8,	s8,	s14
-    fadd	s14,	s12,	s8
-    fmul	s8,	s13,	s13
-    str	s14,	[sp, #244]
+    str	s15,	[sp, #236]
 
-    fmov	s14,	#1.000000
-    str	s8,	[sp, #236]
+    fadd	s11,	s12,	s11
+    ldr	s15,	[sp, #236]
 
-    ldr	s8,	[sp, #236]
-
-    fsub	s0,	s14,	s8
+    fmov	s12,	#1.000000
+    fsub	s0,	s12,	s15
     bl	my_sqrt
-    fmov	s14,	#6.000000
-    ldr	s30,	[sp, #244]
+    fmov	s31,	#6.000000
+    fmov	s1,	#1.000000
+    fdiv	s1,	s1,	s0
+    fadd	s19,	s11,	s1
+    ldr	s1,	[sp, #252]
 
-    fmov	s16,	#1.000000
-    fdiv	s21,	s16,	s0
-    ldr	s16,	[sp, #260]
-
-    fadd	s30,	s30,	s21
-    fmul	s5,	s30,	s16
-    fdiv	s20,	s5,	s14
-    str	s20,	[sp, #280]
+    fmul	s3,	s19,	s1
+    fdiv	s20,	s3,	s31
+    str	s20,	[sp, #272]
 
     b	asr5_166
 
 asr5_165:
     movi	v21.4s,	#0
-    str	s21,	[sp, #280]
+    str	s21,	[sp, #272]
 
 
 asr5_166:
-    ldr	s19,	[sp, #280]
+    ldr	s19,	[sp, #272]
 
-    movi	v27.4s,	#0
-    fadd	s8,	s11,	s19
-    fsub	s31,	s8,	s15
-    fneg	s21,	s31
-    fcmp	s31,	s27
-    fcsel	s14,	s31,	s21,	gt
-    fmov	s24,	#15.000000
+    movi	v16.4s,	#0
+    fadd	s18,	s14,	s19
+    fsub	s17,	s18,	s8
+    fneg	s22,	s17
+    fcmp	s17,	s16
+    fmov	s12,	#15.000000
+    fcsel	s25,	s17,	s22,	gt
     cset	w11,	gt
-    fmul	s1,	s24,	s10
-    fcmp	s14,	s1
+    fmul	s26,	s12,	s13
+    fcmp	s25,	s26
     bgt	asr5_178
 
 asr5_175:
-    fmov	s7,	#15.000000
-    fdiv	s16,	s31,	s7
-    fadd	s0,	s8,	s16
+    fmov	s1,	#15.000000
+    fdiv	s4,	s17,	s1
+    fadd	s0,	s18,	s4
     b	asr5_183
 
 asr5_178:
-    fmov	s1,	#2.000000
-    fmov	s0,	s9
-    fmov	s3,	s11
-    mov	w0,	w27
-    fdiv	s8,	s10,	s1
-    fmov	s2,	s8
+    fmov	s12,	#2.000000
+    fmov	s0,	s10
     ldr	s1,	[sp, #240]
 
+    fmov	s3,	s14
+    mov	w0,	w27
+    fdiv	s12,	s13,	s12
+    fmov	s2,	s12
     bl	asr5
     mov	w0,	w27
-    fmov	s2,	s8
-    fmov	s1,	s13
-    fmov	s14,	s0
+    fmov	s2,	s12
+    fmov	s1,	s9
+    fmov	s11,	s0
     ldr	s0,	[sp, #240]
 
-    ldr	s3,	[sp, #280]
+    ldr	s3,	[sp, #272]
 
     bl	asr5
-    fadd	s0,	s14,	s0
+    fadd	s0,	s11,	s0
 
 asr5_183:
     movz	w18,	#1
     str	w18,	[x26]
 
     add	x26,	x26,	#4
-    str	s9,	[x24]
+    str	s10,	[x23]
 
-    str	s13,	[x23]
+    str	s9,	[x21]
 
-    str	s10,	[x22]
+    str	s13,	[x19]
 
-    str	s15,	[x20]
+    str	s8,	[x25]
 
-    str	w27,	[x21]
+    str	w27,	[x22]
 
     str	s0,	[x26]
 
@@ -684,93 +678,93 @@ asr5_183:
 eee:
 eee_1:
     sub	sp, sp, #160
-    stp	x20, fp, [sp, #0]
+    stp	x25, fp, [sp, #0]
     str	lr, [sp, 16]
     stp	q8, q9, [sp, #32]
     stp	q10, q11, [sp, #64]
     stp	q12, q13, [sp, #96]
     stp	q14, q15, [sp, #128]
 
-    movz	w20,	#0
-    movz	w10,	#4719
+    movz	w25,	#0
+    movz	w5,	#4719
     fmov	s15,	s0
-    movk	w20,	#17136,	lsl #16
-    movk	w10,	#14979,	lsl #16
-    fmov	s5,	w10
-    fcmp	s15,	s5
+    movk	w25,	#17136,	lsl #16
+    movk	w5,	#14979,	lsl #16
+    fmov	s31,	w5
+    fcmp	s15,	s31
     ble	eee_27
 
 eee_3:
-    fmov	s14,	#2.000000
-    fdiv	s9,	s15,	s14
-    fcmp	s9,	s5
+    fmov	s9,	#2.000000
+    fdiv	s11,	s15,	s9
+    fcmp	s11,	s31
     ble	eee_10
 
 eee_6:
-    fmov	s15,	#2.000000
-    fdiv	s0,	s9,	s15
+    fmov	s9,	#2.000000
+    fdiv	s0,	s11,	s9
     bl	eee
     fmul	s14,	s0,	s0
     b	eee_24
 
 eee_10:
-    fmov	s14,	#1.000000
-    fmul	s10,	s9,	s9
-    fmov	s13,	#2.000000
-    fmov	s0,	s9
+    fmov	s9,	#1.000000
+    fmul	s10,	s11,	s11
+    fmov	s8,	#2.000000
+    fmov	s0,	s11
     movz	w0,	#3
-    fadd	s8,	s14,	s9
-    fdiv	s12,	s10,	s13
-    fadd	s8,	s8,	s12
+    fadd	s9,	s9,	s11
+    fdiv	s12,	s10,	s8
+    fadd	s12,	s9,	s12
     bl	my_pow
     movz	w0,	#4
-    fmov	s13,	#6.000000
-    fdiv	s15,	s0,	s13
-    fmov	s0,	s9
-    fadd	s8,	s8,	s15
+    fmov	s15,	#6.000000
+    fdiv	s15,	s0,	s15
+    fmov	s0,	s11
+    fadd	s14,	s12,	s15
     bl	my_pow
     movz	w0,	#5
-    fmov	s11,	#24.000000
-    fdiv	s11,	s0,	s11
-    fmov	s0,	s9
-    fadd	s12,	s8,	s11
+    fmov	s13,	#24.000000
+    fdiv	s10,	s0,	s13
+    fmov	s0,	s11
+    fadd	s13,	s14,	s10
     bl	my_pow
-    fmov	s14,	w20
-    fdiv	s3,	s0,	s14
-    fadd	s14,	s12,	s3
+    fmov	s9,	w25
+    fdiv	s3,	s0,	s9
+    fadd	s14,	s13,	s3
 
 eee_24:
     fmul	s0,	s14,	s14
     b	eee_41
 
 eee_27:
-    fmov	s14,	#1.000000
-    fmul	s11,	s15,	s15
-    fmov	s13,	#2.000000
+    fmov	s9,	#1.000000
+    fmul	s12,	s15,	s15
+    fmov	s8,	#2.000000
     fmov	s0,	s15
     movz	w0,	#3
-    fadd	s9,	s14,	s15
-    fdiv	s11,	s11,	s13
-    fadd	s12,	s9,	s11
+    fadd	s13,	s9,	s15
+    fdiv	s11,	s12,	s8
+    fadd	s13,	s13,	s11
     bl	my_pow
     movz	w0,	#4
-    fmov	s13,	#6.000000
-    fdiv	s14,	s0,	s13
+    fmov	s8,	#6.000000
+    fdiv	s14,	s0,	s8
     fmov	s0,	s15
-    fadd	s12,	s12,	s14
+    fadd	s11,	s13,	s14
     bl	my_pow
     movz	w0,	#5
-    fmov	s11,	#24.000000
-    fdiv	s10,	s0,	s11
+    fmov	s13,	#24.000000
+    fdiv	s10,	s0,	s13
     fmov	s0,	s15
-    fadd	s11,	s12,	s10
+    fadd	s11,	s11,	s10
     bl	my_pow
-    fmov	s22,	w20
-    fdiv	s17,	s0,	s22
+    fmov	s17,	w25
+    fdiv	s17,	s0,	s17
     fadd	s0,	s11,	s17
 
 eee_41:
-    ldp	x20, fp, [sp, #0]
+    ldp	x25, fp, [sp, #0]
     ldr	lr, [sp, 16]
     ldp	q8, q9, [sp, #32]
     ldp	q10, q11, [sp, #64]
@@ -784,36 +778,36 @@ eee_41:
 .globl my_exp
 my_exp:
 my_exp_1:
-    sub	sp, sp, #112
-    stp	x22, fp, [sp, #0]
-    str	lr, [sp, 16]
-    stp	q8, q9, [sp, #32]
-    stp	q10, q11, [sp, #64]
-    str	q13, [sp, 96]
+    sub	sp, sp, #128
+    stp	fp, lr, [sp, #0]
+        stp	q8, q9, [sp, #16]
+    stp	q10, q11, [sp, #48]
+    stp	q13, q14, [sp, #80]
+    str	q15, [sp, 112]
 
-    movz	w22,	#63572
-    movi	v19.4s,	#0
-    movk	w22,	#16429,	lsl #16
-    fcmp	s0,	s19
+    movz	w17,	#63572
+    movi	v14.4s,	#0
+    movk	w17,	#16429,	lsl #16
+    fcmp	s0,	s14
     bge	my_exp_20
 
 my_exp_3:
     fneg	s11,	s0
-    movi	v20.4s,	#0
-    fcmp	s11,	s20
+    movi	v15.4s,	#0
+    fcmp	s11,	s15
     bge	my_exp_10
 
 my_exp_6:
     fneg	s0,	s11
     bl	my_exp
-    fmov	s21,	#1.000000
-    fdiv	s10,	s21,	s0
+    fmov	s16,	#1.000000
+    fdiv	s10,	s16,	s0
     b	my_exp_17
 
 my_exp_10:
     fcvtzs	w0,	s11
     frintz	s9,	s11
-    fmov	s0,	w22
+    fmov	s0,	w17
     fsub	s13,	s11,	s9
     bl	my_pow
     fmov	s11,	s0
@@ -822,15 +816,15 @@ my_exp_10:
     fmul	s10,	s11,	s0
 
 my_exp_17:
-    fmov	s23,	#1.000000
-    fdiv	s0,	s23,	s10
+    fmov	s18,	#1.000000
+    fdiv	s0,	s18,	s10
     b	my_exp_27
 
 my_exp_20:
     fcvtzs	w0,	s0
     frintz	s8,	s0
     fsub	s13,	s0,	s8
-    fmov	s0,	w22
+    fmov	s0,	w17
     bl	my_pow
     fmov	s10,	s0
     fmov	s0,	s13
@@ -838,13 +832,13 @@ my_exp_20:
     fmul	s0,	s10,	s0
 
 my_exp_27:
-    ldp	x22, fp, [sp, #0]
-    ldr	lr, [sp, 16]
-    ldp	q8, q9, [sp, #32]
-    ldp	q10, q11, [sp, #64]
-    ldr	q13, [sp, 96]
+    ldp	fp, lr, [sp, #0]
+        ldp	q8, q9, [sp, #16]
+    ldp	q10, q11, [sp, #48]
+    ldp	q13, q14, [sp, #80]
+    ldr	q15, [sp, 112]
 
-    add	sp, sp, #112
+    add	sp, sp, #128
     ret
 
 
@@ -865,14 +859,14 @@ main_5:
     bl	getfloat
     fmov	s12,	s0
     bl	getfloat
-    fmov	s8,	s0
-    fneg	s10,	s12
-    movi	v13.4s,	#0
-    movz	w27,	#52343
-    movk	w27,	#12843,	lsl #16
-    fcmp	s12,	s13
-    cset	w23,	gt
-    fcsel	s0,	s12,	s10,	gt
+    movi	v14.4s,	#0
+    fmov	s13,	s0
+    movz	w22,	#52343
+    fneg	s9,	s12
+    movk	w22,	#12843,	lsl #16
+    fcmp	s12,	s14
+    cset	w24,	gt
+    fcsel	s0,	s12,	s9,	gt
     bl	putfloat
     movz	w0,	#32
     bl	putch
@@ -892,8 +886,8 @@ main_5:
     bl	putfloat
     movz	w0,	#32
     bl	putch
-    movi	v15.4s,	#0
-    fcmp	s12,	s15
+    movi	v8.4s,	#0
+    fcmp	s12,	s8
     bgt	main_16
 
 main_28:
@@ -902,92 +896,92 @@ main_28:
     b	main_29
 
 main_16:
-    fmov	s1,	#1.000000
-    fmov	s15,	#2.000000
+    fmov	s9,	#1.000000
+    fmov	s8,	#2.000000
+    fmov	s3,	#1.000000
+    fmov	s2,	#1.000000
+    fmov	s15,	#1.000000
     fmov	s14,	#1.000000
-    fmov	s13,	#1.000000
-    fmov	s11,	#4.000000
-    fmov	s10,	#1.000000
+    fmov	s11,	#6.000000
     fmov	s0,	#1.000000
     movz	w0,	#1
-    fsub	s2,	s12,	s1
-    fdiv	s1,	s2,	s15
-    fadd	s3,	s14,	s1
-    fdiv	s9,	s13,	s3
-    fmov	s3,	#6.000000
-    fmul	s11,	s11,	s9
-    fadd	s1,	s10,	s11
-    fmov	s10,	#1.000000
-    fdiv	s15,	s10,	s12
+    fsub	s10,	s12,	s9
+    fdiv	s1,	s10,	s8
+    fadd	s3,	s3,	s1
+    fmov	s1,	#4.000000
+    fdiv	s8,	s2,	s3
+    fmul	s8,	s1,	s8
+    fadd	s1,	s15,	s8
+    fdiv	s15,	s14,	s12
     fadd	s1,	s1,	s15
-    fmul	s2,	s1,	s2
+    fmul	s2,	s1,	s10
     fmov	s1,	s12
-    fdiv	s3,	s2,	s3
-    fmov	s2,	w27
+    fdiv	s3,	s2,	s11
+    fmov	s2,	w22
     bl	asr5
     bl	putfloat
 
 main_29:
     movz	w0,	#32
     bl	putch
-    movi	v3.4s,	#0
-    fcmp	s12,	s3
+    movi	v29.4s,	#0
+    fcmp	s12,	s29
     ble	main_59
 
 main_31:
-    movi	v5.4s,	#0
-    fcmp	s8,	s5
+    movi	v31.4s,	#0
+    fcmp	s13,	s31
     ble	main_59
 
 main_33:
-    fmov	s14,	#1.000000
-    fmov	s13,	#2.000000
-    fmov	s11,	#1.000000
-    fmov	s10,	#1.000000
-    fmov	s9,	#4.000000
     fmov	s3,	#1.000000
-    fmov	s0,	#1.000000
-    movz	w0,	#1
-    fsub	s14,	s8,	s14
-    fdiv	s15,	s14,	s13
-    fadd	s1,	s11,	s15
-    fdiv	s2,	s10,	s1
-    fmov	s10,	#1.000000
-    fmov	s1,	#6.000000
-    fmul	s9,	s9,	s2
-    fdiv	s10,	s10,	s8
-    fmov	s2,	w27
-    fadd	s9,	s3,	s9
-    fadd	s11,	s9,	s10
-    fmul	s14,	s11,	s14
-    fdiv	s3,	s14,	s1
-    fmov	s1,	s8
-    bl	asr5
-    fmov	s1,	#6.000000
-    fmov	s15,	#1.000000
-    movz	w0,	#1
-    fmov	s14,	#2.000000
+    fmov	s2,	#2.000000
+    fmov	s1,	#1.000000
+    fmov	s14,	#4.000000
     fmov	s11,	#1.000000
-    fmov	s13,	#1.000000
-    fmov	s9,	s0
-    fsub	s2,	s12,	s15
     fmov	s0,	#1.000000
-    fdiv	s10,	s2,	s14
-    fadd	s13,	s13,	s10
-    fmov	s10,	#4.000000
-    fdiv	s14,	s11,	s13
-    fmov	s13,	#1.000000
-    fmul	s15,	s10,	s14
-    fdiv	s3,	s13,	s12
-    fmov	s14,	#1.000000
-    fadd	s11,	s14,	s15
-    fadd	s10,	s11,	s3
-    fmul	s11,	s10,	s2
-    fmov	s2,	w27
-    fdiv	s3,	s11,	s1
-    fmov	s1,	s12
+    movz	w0,	#1
+    fsub	s9,	s13,	s3
+    fdiv	s15,	s9,	s2
+    fadd	s1,	s1,	s15
+    fmov	s15,	#1.000000
+    fdiv	s2,	s15,	s1
+    fmov	s1,	s13
+    fmov	s15,	#1.000000
+    fmul	s3,	s14,	s2
+    fdiv	s10,	s15,	s13
+    fadd	s2,	s11,	s3
+    fadd	s11,	s2,	s10
+    fmov	s2,	w22
+    fmul	s14,	s11,	s9
+    fmov	s9,	#6.000000
+    fdiv	s3,	s14,	s9
     bl	asr5
-    fdiv	s0,	s9,	s0
+    movz	w0,	#1
+    fmov	s8,	s0
+    fmov	s3,	#1.000000
+    fmov	s2,	#2.000000
+    fmov	s1,	#1.000000
+    fmov	s15,	#1.000000
+    fmov	s14,	#4.000000
+    fmov	s0,	#1.000000
+    fsub	s9,	s12,	s3
+    fdiv	s10,	s9,	s2
+    fadd	s10,	s1,	s10
+    fmov	s1,	#1.000000
+    fdiv	s11,	s15,	s10
+    fmul	s15,	s14,	s11
+    fadd	s10,	s1,	s15
+    fmov	s1,	s12
+    fmov	s15,	#1.000000
+    fdiv	s2,	s15,	s12
+    fadd	s3,	s10,	s2
+    fmov	s2,	w22
+    fmul	s10,	s3,	s9
+    fmov	s9,	#6.000000
+    fdiv	s3,	s10,	s9
+    bl	asr5
+    fdiv	s0,	s8,	s0
     bl	putfloat
     b	main_60
 
@@ -998,8 +992,8 @@ main_59:
 main_60:
     movz	w0,	#32
     bl	putch
-    movi	v31.4s,	#0
-    fcmp	s12,	s31
+    movi	v26.4s,	#0
+    fcmp	s12,	s26
     bgt	main_62
 
 main_76:
@@ -1008,30 +1002,30 @@ main_76:
     b	main_77
 
 main_62:
-    fmov	s11,	#1.000000
-    fmov	s10,	#2.000000
-    fmov	s9,	#1.000000
     fmov	s2,	#1.000000
-    fmov	s1,	#4.000000
+    fmov	s1,	#2.000000
     fmov	s15,	#1.000000
+    fmov	s10,	#1.000000
+    fmov	s9,	#4.000000
     fmov	s0,	#1.000000
     movz	w0,	#1
-    fsub	s13,	s12,	s11
-    fdiv	s3,	s13,	s10
-    fadd	s10,	s9,	s3
-    fmov	s9,	#1.000000
-    fdiv	s11,	s2,	s10
-    fdiv	s10,	s9,	s12
-    fmul	s11,	s1,	s11
+    fsub	s11,	s12,	s2
+    fdiv	s3,	s11,	s1
     fmov	s1,	s12
-    fadd	s2,	s15,	s11
-    fadd	s11,	s2,	s10
-    fmov	s2,	w27
-    fmul	s14,	s11,	s13
-    fmov	s13,	#6.000000
-    fdiv	s3,	s14,	s13
+    fadd	s8,	s15,	s3
+    fdiv	s10,	s10,	s8
+    fmov	s8,	#1.000000
+    fmul	s14,	s9,	s10
+    fadd	s2,	s8,	s14
+    fmov	s14,	#1.000000
+    fdiv	s9,	s14,	s12
+    fadd	s10,	s2,	s9
+    fmov	s2,	#6.000000
+    fmul	s14,	s10,	s11
+    fdiv	s3,	s14,	s2
+    fmov	s2,	w22
     bl	asr5
-    fmul	s0,	s8,	s0
+    fmul	s0,	s13,	s0
     bl	my_exp
     bl	putfloat
 

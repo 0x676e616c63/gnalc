@@ -41,9 +41,9 @@ main_0:
     movz	w0,	#106
     bl	_sysy_starttime
     movz	w7,	#0
+    add	x1,	sp,	#916
     add	x4,	sp,	#16
     adrp	x11, :got:conv_output
-    add	x1,	sp,	#916
     adrp	x25, :got:input
     ldr	x25, [x25, #:got_lo12:input]
     ldr	x11, [x11, #:got_lo12:conv_output]
@@ -170,18 +170,18 @@ main_19:
     add	x24,	x2,	#40
     ldr	s23,	[x0]
 
+    lsl	w0,	w26,	#2
     ldr	s13,	[x10]
 
-    lsl	w0,	w26,	#2
     fmul	s24,	s5,	s23
     add	x10,	x2,	#44
     ldr	s31,	[x14]
 
     add	x28,	x21,	x0
     fadd	s23,	s14,	s24
+    lsl	w14,	w12,	#2
     ldr	s22,	[x20]
 
-    lsl	w14,	w12,	#2
     fmul	s1,	s13,	s31
     add	x20,	x2,	#48
     ldr	s8,	[x24]
@@ -329,9 +329,9 @@ main_147:
     ldr	s9,	[x24]
 
     add	w14,	w2,	#14
+    lsl	w24,	w22,	#2
     ldr	s3,	[x3]
 
-    lsl	w24,	w22,	#2
     fmul	s10,	s26,	s9
     add	x3,	x19,	#32
     ldr	s17,	[x7]
@@ -356,14 +356,14 @@ main_147:
 
     add	x20,	x15,	x21
     fadd	s9,	s30,	s26
-    lsl	w3,	w28,	#2
     ldr	s28,	[x10]
 
+    lsl	w3,	w28,	#2
     fmul	s3,	s20,	s2
-    add	x0,	x15,	x3
     add	x10,	x19,	#44
     ldr	s10,	[x17]
 
+    add	x0,	x15,	x3
     fadd	s17,	s9,	s3
     lsl	w17,	w14,	#2
     ldr	s5,	[x23]

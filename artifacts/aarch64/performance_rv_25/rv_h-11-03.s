@@ -40,9 +40,9 @@ main_0:
     bl	getfarray
     movz	w0,	#106
     bl	_sysy_starttime
-    movz	w7,	#0
     add	x15,	sp,	#16
     add	x1,	sp,	#916
+    movz	w7,	#0
     adrp	x28, :got:conv_output
     adrp	x25, :got:input
     ldr	x25, [x25, #:got_lo12:input]
@@ -69,26 +69,26 @@ main_19:
 
     sub	w23,	w13,	w8,	lsl #2
     add	w19,	w27,	#3
-    add	x13,	x20,	x14
+    add	w8,	w8,	#1
     lsl	w11,	w9,	#2
     lsl	w6,	w4,	#2
-    add	w8,	w8,	#1
+    add	x13,	x20,	x14
     add	x2,	x15,	x23
     lsl	w22,	w19,	#2
+    add	x10,	x20,	x11
+    add	x5,	x20,	x6
     add	w14,	w27,	#5
     ldr	s19,	[x13]
 
-    add	x10,	x20,	x11
-    add	x5,	x20,	x6
     add	w23,	w27,	#1
     add	x3,	x2,	#4
     add	x21,	x20,	x22
+    add	w11,	w27,	#7
+    add	w6,	w27,	#9
     lsl	w18,	w14,	#2
     add	x13,	x2,	#8
     ldr	s3,	[x2]
 
-    add	w11,	w27,	#7
-    add	w6,	w27,	#9
     lsl	w26,	w23,	#2
     add	w22,	w27,	#8
     add	x16,	x20,	x18
@@ -170,9 +170,9 @@ main_19:
     add	x23,	x2,	#40
     ldr	s23,	[x0]
 
-    lsl	w0,	w24,	#2
     ldr	s13,	[x9]
 
+    lsl	w0,	w24,	#2
     fmul	s24,	s5,	s23
     add	x9,	x2,	#44
     ldr	s31,	[x12]
@@ -289,18 +289,18 @@ main_147:
     ldr	s8,	[x4]
 
     fadd	s7,	s18,	s19
+    lsl	w4,	w0,	#2
     ldr	s1,	[x10]
 
-    lsl	w4,	w0,	#2
     fmul	s9,	s24,	s8
+    add	x3,	x11,	x4
     add	x10,	x19,	#16
     ldr	s16,	[x17]
 
-    add	x3,	x11,	x4
     fadd	s18,	s7,	s9
+    add	w4,	w2,	#11
     lsl	w17,	w14,	#2
     fmul	s17,	s1,	s16
-    add	w4,	w2,	#11
     ldr	s9,	[x23]
 
     add	x16,	x11,	x17
@@ -580,8 +580,8 @@ main_323:
     fdiv	s16,	s27,	s8
     fmov	s8,	#24.000000
     fmul	s17,	s24,	s16
-    fmov	s24,	#2.000000
     fmov	s16,	#6.000000
+    fmov	s24,	#2.000000
     str	s17,	[x2]
 
     fmov	s17,	#2.000000

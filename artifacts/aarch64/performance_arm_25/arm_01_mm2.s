@@ -97,8 +97,8 @@ main_34:
 main_39:
     movz	w0,	#65
     bl	_sysy_starttime
-    adrp	x19, :got:A
     movz	w24,	#0
+    adrp	x19, :got:A
     adrp	x0, :got:C
     adrp	x1, :got:B
     ldr	x1, [x1, #:got_lo12:B]

@@ -12,19 +12,19 @@ main_0:
     sub	sp, sp, #64
     stp	fp, lr, [sp, #0]
     
-    movz	w2,	#0
-    movz	w18,	#3
-    movz	w27,	#4
-    movz	w26,	#2
     movz	w12,	#9
+    movz	w26,	#2
+    movz	w18,	#3
     add	x13,	sp,	#16
-    movz	w3,	#7
-    movz	w6,	#1
-    add	x28,	sp,	#36
     add	x19,	sp,	#44
+    movz	w27,	#4
+    movz	w2,	#0
     add	x23,	sp,	#40
     movz	w21,	#6
+    add	x28,	sp,	#36
     movz	w22,	#5
+    movz	w6,	#1
+    movz	w3,	#7
     movz	w14,	#8
     add	x20,	sp,	#24
     add	x24,	sp,	#20

@@ -18,8 +18,8 @@ main_0:
     sub	sp, sp, fp
     stp	fp, lr, [sp, #0]
     
-    movz	w1,	#0
     movz	w2,	#5600
+    movz	w1,	#0
     add	x0,	sp,	#16
     bl	memset
     movz	w2,	#5600

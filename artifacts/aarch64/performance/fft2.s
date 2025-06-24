@@ -227,9 +227,9 @@ fft_4:
     stp	x27, x28, [sp, #64]
     stp	fp, lr, [sp, #80]
     
-    mov	w25,	w3
-    mov	w23,	w1
-    mov	x20,	x0
+    mov	w26,	w3
+    mov	w19,	w1
+    mov	x22,	x0
     cmp	w2,	#1
     beq	fft_69
 
@@ -240,60 +240,60 @@ fft_6:
 
 fft_8:
     asr	w6,	w2,	#31
-    movz	w0,	#0
+    movz	w1,	#0
     lsr	w7,	w6,	#31
     add	w8,	w2,	w7
     asr	w17,	w8,	#1
 
 fft_11:
-    asr	w1,	w0,	#31
-    lsr	w3,	w1,	#31
-    add	w7,	w0,	w3
-    asr	w22,	w7,	#1
-    lsl	w26,	w22,	#1
-    sub	w10,	w0,	w26
+    asr	w0,	w1,	#31
+    lsr	w4,	w0,	#31
+    add	w7,	w1,	w4
+    asr	w23,	w7,	#1
+    lsl	w24,	w23,	#1
+    sub	w10,	w1,	w24
     cmp	w10,	#0
     bne	fft_21
 
 fft_15:
-    asr	w1,	w0,	#31
+    asr	w0,	w1,	#31
     adrp	x15, :got:temp
-    add	w16,	w0,	w23
+    add	w16,	w1,	w19
     ldr	x15, [x15, #:got_lo12:temp]
-    lsr	w3,	w1,	#31
+    lsr	w3,	w0,	#31
     lsl	w21,	w16,	#2
-    add	w5,	w0,	w3
-    add	x19,	x20,	x21
+    add	w5,	w1,	w3
+    add	x20,	x22,	x21
     asr	w12,	w5,	#1
-    ldr	w22,	[x19]
+    ldr	w23,	[x20]
 
     lsl	w3,	w12,	#2
     add	x13,	x15,	x3
-    str	w22,	[x13]
+    str	w23,	[x13]
 
     b	fft_28
 
 fft_21:
-    asr	w6,	w0,	#31
-    adrp	x3, :got:temp
-    ldr	x3, [x3, #:got_lo12:temp]
+    asr	w6,	w1,	#31
+    adrp	x4, :got:temp
+    ldr	x4, [x4, #:got_lo12:temp]
     lsr	w7,	w6,	#31
-    add	w8,	w0,	w7
-    add	w7,	w0,	w23
-    asr	w26,	w8,	#1
-    add	w27,	w26,	w17
-    lsl	w10,	w27,	#2
-    add	x10,	x3,	x10
+    add	w8,	w1,	w7
+    add	w7,	w1,	w19
+    asr	w24,	w8,	#1
     lsl	w3,	w7,	#2
-    add	x1,	x20,	x3
-    ldr	w5,	[x1]
+    add	w25,	w24,	w17
+    add	x0,	x22,	x3
+    lsl	w10,	w25,	#2
+    ldr	w5,	[x0]
 
+    add	x10,	x4,	x10
     str	w5,	[x10]
 
 
 fft_28:
-    add	w0,	w0,	#1
-    cmp	w0,	w2
+    add	w1,	w1,	#1
+    cmp	w1,	w2
     blt	fft_11
 
 fft_33:
@@ -306,87 +306,90 @@ fft_35:
     bge	fft_44
 
 fft_38:
-    add	w11,	w5,	w23
+    add	w11,	w5,	w19
     lsl	w17,	w5,	#2
     add	w5,	w5,	#1
     add	x15,	x14,	x17
     lsl	w13,	w11,	#2
     ldr	w18,	[x15]
 
-    add	x0,	x20,	x13
+    add	x0,	x22,	x13
     str	w18,	[x0]
 
     b	fft_35
 
 fft_44:
     asr	w1,	w2,	#31
+    mov	w0,	w26
     lsr	w27,	w1,	#31
-    mov	w1,	w25
-    add	w0,	w2,	w27
-    asr	w28,	w0,	#1
-    mov	w0,	w25
+    mov	w1,	w26
+    add	w28,	w2,	w27
+    asr	w21,	w28,	#1
     bl	multiply
-    mov	w2,	w28
-    mov	w1,	w23
-    mov	w26,	w0
-    mov	w3,	w26
-    mov	x0,	x20
+    mov	w2,	w21
+    mov	w1,	w19
+    mov	w27,	w0
+    mov	w3,	w27
+    mov	x0,	x22
     bl	fft
-    mov	w3,	w26
-    mov	w2,	w28
-    mov	x0,	x20
-    add	w1,	w28,	w23
+    mov	w3,	w27
+    mov	w2,	w21
+    mov	x0,	x22
+    add	w1,	w21,	w19
     bl	fft
-    movz	w26,	#1
+    movz	w25,	#1
     movz	w27,	#0
 
 fft_50:
-    cmp	w27,	w28
+    cmp	w27,	w21
     bge	fft_70
 
 fft_54:
-    add	w0,	w27,	w23
+    add	w0,	w27,	w19
+    movz	fp,	#100
+    add	w1,	w0,	w21
     lsl	w18,	w0,	#2
-    add	x21,	x20,	x18
-    ldr	w1,	[x21]
-
-    str	w1,	[sp, #100]
-
-    add	w1,	w0,	w28
-    mov	w0,	w26
+    mov	w0,	w25
+    add	x18,	x22,	x18
     lsl	w24,	w1,	#2
-    add	x24,	x20,	x24
-    ldr	w1,	[x24]
+    str	x18,	[sp, fp]
+
+    add	x28,	x22,	x24
+    movz	fp,	#100
+    ldr	x20,	[sp, fp]
+
+    ldr	w20,	[x20]
+
+    ldr	w1,	[x28]
 
     bl	multiply
-    ldr	w1,	[sp, #100]
-
     movz	w18,	#1
-    add	w19,	w0,	w1
+    add	w23,	w0,	w20
+    movz	fp,	#100
     movk	w18,	#15232,	lsl #16
-    sdiv	w22,	w19,	w18
-    mul	w1,	w22,	w18
-    msub	w22,	w22,	w18,	w19
+    sdiv	w24,	w23,	w18
+    mul	w1,	w24,	w18
+    msub	w24,	w24,	w18,	w23
 
     str	w1,	[sp, #96]
 
-    mov	w1,	w25
-    str	w22,	[x21]
+    mov	w1,	w26
+    ldr	x23,	[sp, fp]
 
-    ldr	w19,	[sp, #100]
+    str	w24,	[x23]
 
-    sub	w22,	w19,	w0
-    add	w22,	w22,	w18
-    sdiv	w0,	w22,	w18
-    mul	w21,	w0,	w18
-    msub	w18,	w0,	w18,	w22
+    sub	w24,	w20,	w0
+    add	w24,	w24,	w18
+    sdiv	w0,	w24,	w18
+    mul	w20,	w0,	w18
+    msub	w18,	w0,	w18,	w24
 
-    mov	w0,	w26
-    str	w18,	[x24]
+    mov	w0,	w25
+    str	w18,	[x28]
 
     bl	multiply
     add	w27,	w27,	#1
-    mov	w26,	w0
+    mov	w25,	w0
     b	fft_50
 
 fft_70:

@@ -36,10 +36,10 @@ main_5:
 
 main_8:
     bl	getint
-    movz	w27,	#1
     lsl	w21,	w20,	#3
     asr	w4,	w0,	#31
     movz	fp,	#8056
+    movz	w27,	#1
     mov	x12,	x21
     lsr	w5,	w4,	#31
     sub	w21,	w20,	#1

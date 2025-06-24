@@ -15,26 +15,26 @@ main_0:
     
     movz	w2,	#4020
     movz	w1,	#0
-    movz	fp,	#28076
-    add	x0,	sp,	fp
-    bl	memset
-    movz	w2,	#4020
-    movz	w1,	#0
-    movz	fp,	#24056
-    add	x0,	sp,	fp
-    bl	memset
-    movz	w2,	#4020
-    movz	w1,	#0
     movz	fp,	#20036
     add	x0,	sp,	fp
     bl	memset
-    movz	w2,	#20020
+    movz	w2,	#4020
     movz	w1,	#0
+    movz	fp,	#48096
+    add	x0,	sp,	fp
+    bl	memset
+    movz	w2,	#4020
+    movz	w1,	#0
+    movz	fp,	#44076
+    add	x0,	sp,	fp
+    bl	memset
+    movz	w1,	#0
+    movz	w2,	#20020
     add	x0,	sp,	#16
     bl	memset
     movz	w2,	#20020
     movz	w1,	#0
-    movz	fp,	#32096
+    movz	fp,	#24056
     add	x0,	sp,	fp
     bl	memset
     bl	getch
@@ -110,7 +110,7 @@ main_58:
 
 main_61:
     lsl	w21,	w17,	#2
-    movz	fp,	#20036
+    movz	fp,	#44076
     mov	w9,	w22
     add	w20,	w17,	#1
     mov	w7,	w22
@@ -125,11 +125,11 @@ main_61:
     mov	x24,	x18
     add	x24,	sp,	x24
     add	x27,	x27,	fp
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w9,	[x27]
 
     add	x24,	x24,	fp
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w7,	[x24]
 
     add	w24,	w20,	#1
@@ -146,7 +146,7 @@ main_61:
     add	w7,	w4,	#1
     lsl	w28,	w4,	#2
     add	x2,	sp,	x2
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w5,	[x27]
 
     mov	x6,	x28
@@ -155,7 +155,7 @@ main_61:
     add	x2,	x2,	fp
     mov	w28,	w22
     add	x6,	sp,	x6
-    movz	fp,	#20036
+    movz	fp,	#44076
     add	w13,	w10,	#1
     str	w3,	[x2]
 
@@ -163,7 +163,7 @@ main_61:
     lsl	w3,	w7,	#2
     add	w17,	w13,	#1
     lsl	w9,	w13,	#2
-    movz	fp,	#20036
+    movz	fp,	#44076
     mov	x8,	x3
     str	w1,	[x6]
 
@@ -178,23 +178,23 @@ main_61:
     mov	x11,	x6
     mov	w12,	w22
     add	x18,	sp,	x18
-    movz	fp,	#20036
+    movz	fp,	#44076
     mov	w6,	w22
     add	x11,	sp,	x11
     str	w27,	[x8]
 
     mov	w8,	w22
     add	x11,	x11,	fp
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w25,	[x11]
 
     add	x14,	x14,	fp
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w23,	[x14]
 
     add	x18,	x18,	fp
     mov	w14,	w22
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w21,	[x18]
 
     add	w21,	w17,	#1
@@ -207,7 +207,7 @@ main_61:
     add	w2,	w25,	#1
     add	x23,	x23,	fp
     add	w5,	w2,	#1
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w19,	[x23]
 
     add	w9,	w5,	#1
@@ -221,13 +221,13 @@ main_61:
     add	x1,	sp,	x1
     add	x26,	sp,	x26
     add	x26,	x26,	fp
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w17,	[x26]
 
     add	x1,	x1,	fp
     add	w17,	w13,	#1
     lsl	w26,	w5,	#2
-    movz	fp,	#20036
+    movz	fp,	#44076
     mov	x4,	x26
     str	w14,	[x1]
 
@@ -239,13 +239,13 @@ main_61:
     mov	w1,	w22
     add	w24,	w20,	#1
     add	x7,	sp,	x7
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w12,	[x4]
 
     add	w26,	w24,	#1
     add	x7,	x7,	fp
     lsl	w4,	w13,	#2
-    movz	fp,	#20036
+    movz	fp,	#44076
     lsl	w13,	w24,	#2
     mov	x11,	x4
     str	w10,	[x7]
@@ -261,7 +261,7 @@ main_61:
     lsl	w17,	w26,	#2
     mov	x14,	x7
     add	x18,	sp,	x18
-    movz	fp,	#20036
+    movz	fp,	#44076
     mov	x24,	x17
     str	w8,	[x11]
 
@@ -269,21 +269,21 @@ main_61:
     add	x14,	sp,	x14
     add	x24,	sp,	x24
     add	x14,	x14,	fp
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w6,	[x14]
 
     add	x18,	x18,	fp
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w4,	[x18]
 
     add	x21,	x21,	fp
     mov	w18,	w22
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w2,	[x21]
 
     add	x24,	x24,	fp
     add	w2,	w26,	#1
-    movz	fp,	#20036
+    movz	fp,	#44076
     mov	w26,	w22
     str	w28,	[x24]
 
@@ -299,7 +299,7 @@ main_61:
     mov	w24,	w22
     lsl	w27,	w13,	#2
     add	x3,	sp,	x3
-    movz	fp,	#20036
+    movz	fp,	#44076
     add	w13,	w13,	#1
     str	w26,	[x28]
 
@@ -307,7 +307,7 @@ main_61:
     mov	x26,	x27
     add	w17,	w13,	#1
     lsl	w2,	w13,	#2
-    movz	fp,	#20036
+    movz	fp,	#44076
     add	x26,	sp,	x26
     str	w24,	[x3]
 
@@ -320,7 +320,7 @@ main_61:
     mov	x12,	x5
     add	w25,	w21,	#1
     lsl	w8,	w21,	#2
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w22,	[x26]
 
     mov	w5,	w22
@@ -330,7 +330,7 @@ main_61:
     mov	x17,	x8
     add	x9,	x9,	fp
     add	x17,	sp,	x17
-    movz	fp,	#20036
+    movz	fp,	#44076
     add	w3,	w28,	#1
     lsl	w14,	w28,	#2
     str	w20,	[x9]
@@ -340,7 +340,7 @@ main_61:
     mov	w9,	w22
     add	w8,	w3,	#1
     mov	x20,	x11
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w18,	[x12]
 
     add	x24,	sp,	x24
@@ -350,7 +350,7 @@ main_61:
     add	x17,	x17,	fp
     lsl	w18,	w3,	#2
     mov	x2,	x21
-    movz	fp,	#20036
+    movz	fp,	#44076
     mov	w3,	w22
     mov	x27,	x18
     str	w15,	[x17]
@@ -359,16 +359,16 @@ main_61:
     add	x20,	x20,	fp
     add	x27,	sp,	x27
     mov	w17,	w22
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w13,	[x20]
 
     add	x24,	x24,	fp
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w11,	[x24]
 
     add	x27,	x27,	fp
     add	w11,	w8,	#1
-    movz	fp,	#20036
+    movz	fp,	#44076
     mov	w8,	w22
     str	w9,	[x27]
 
@@ -376,7 +376,7 @@ main_61:
     add	w14,	w11,	#1
     lsl	w25,	w11,	#2
     mov	w27,	w22
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w7,	[x2]
 
     mov	x6,	x25
@@ -388,13 +388,13 @@ main_61:
     add	w21,	w19,	#1
     add	x9,	sp,	x9
     add	x6,	x6,	fp
-    movz	fp,	#20036
+    movz	fp,	#44076
     add	w26,	w21,	#1
     str	w5,	[x6]
 
     add	x9,	x9,	fp
     lsl	w6,	w21,	#2
-    movz	fp,	#20036
+    movz	fp,	#44076
     mov	x14,	x6
     str	w3,	[x9]
 
@@ -407,19 +407,19 @@ main_61:
     add	x18,	sp,	x18
     add	x12,	sp,	x12
     add	x12,	x12,	fp
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w1,	[x12]
 
     add	x14,	x14,	fp
     add	w1,	w26,	#1
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w27,	[x14]
 
     add	x18,	x18,	fp
     add	w4,	w1,	#1
     lsl	w12,	w1,	#2
     mov	w14,	w22
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w25,	[x18]
 
     mov	x21,	x12
@@ -433,7 +433,7 @@ main_61:
     add	x21,	x21,	fp
     add	w11,	w11,	#1
     mov	x1,	x19
-    movz	fp,	#20036
+    movz	fp,	#44076
     mov	w19,	w22
     add	x1,	sp,	x1
     str	w23,	[x21]
@@ -442,7 +442,7 @@ main_61:
     add	x26,	x26,	fp
     lsl	w23,	w11,	#2
     mov	w21,	w22
-    movz	fp,	#20036
+    movz	fp,	#44076
     add	w20,	w15,	#1
     mov	x4,	x23
     str	w21,	[x26]
@@ -451,7 +451,7 @@ main_61:
     add	x4,	sp,	x4
     lsl	w26,	w15,	#2
     add	w24,	w20,	#1
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w19,	[x1]
 
     mov	x7,	x26
@@ -460,7 +460,7 @@ main_61:
     add	w27,	w24,	#1
     mov	w26,	w22
     add	x7,	sp,	x7
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w17,	[x4]
 
     mov	x10,	x1
@@ -468,13 +468,13 @@ main_61:
     lsl	w4,	w24,	#2
     add	x7,	x7,	fp
     add	x10,	sp,	x10
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w14,	[x7]
 
     add	x10,	x10,	fp
     lsl	w7,	w27,	#2
     mov	x14,	x4
-    movz	fp,	#20036
+    movz	fp,	#44076
     mov	x18,	x7
     str	w12,	[x10]
 
@@ -484,19 +484,19 @@ main_61:
     add	x18,	sp,	x18
     mov	w10,	w22
     add	x14,	x14,	fp
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w10,	[x14]
 
     add	x18,	x18,	fp
     lsl	w10,	w2,	#2
-    movz	fp,	#20036
+    movz	fp,	#44076
     mov	x21,	x10
     str	w8,	[x18]
 
     add	x21,	sp,	x21
     mov	w18,	w22
     add	x21,	x21,	fp
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w6,	[x21]
 
     add	w6,	w2,	#1
@@ -513,7 +513,7 @@ main_61:
     add	x28,	sp,	x28
     add	w15,	w12,	#1
     lsl	w20,	w12,	#2
-    movz	fp,	#20036
+    movz	fp,	#44076
     mov	x3,	x20
     str	w4,	[x25]
 
@@ -523,7 +523,7 @@ main_61:
     add	x3,	sp,	x3
     add	x28,	x28,	fp
     mov	x6,	x24
-    movz	fp,	#20036
+    movz	fp,	#44076
     lsl	w27,	w19,	#2
     mov	w24,	w22
     str	w2,	[x28]
@@ -532,17 +532,17 @@ main_61:
     add	x3,	x3,	fp
     mov	x9,	x27
     mov	w28,	w22
-    movz	fp,	#20036
+    movz	fp,	#44076
     add	x9,	sp,	x9
     str	w28,	[x3]
 
     add	x6,	x6,	fp
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w26,	[x6]
 
     add	x9,	x9,	fp
     add	w26,	w19,	#1
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w24,	[x9]
 
     add	w28,	w26,	#1
@@ -556,14 +556,14 @@ main_61:
     add	x15,	sp,	x15
     add	w6,	w3,	#1
     lsl	w8,	w3,	#2
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w22,	[x1]
 
     add	w9,	w6,	#1
     lsl	w11,	w6,	#2
     add	x15,	x15,	fp
     mov	x24,	x11
-    movz	fp,	#20036
+    movz	fp,	#44076
     mov	w11,	w22
     lsl	w14,	w9,	#2
     add	x24,	sp,	x24
@@ -577,25 +577,25 @@ main_61:
     add	x20,	sp,	x20
     mov	w9,	w22
     add	x20,	x20,	fp
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w18,	[x20]
 
     add	x24,	x24,	fp
     lsl	w18,	w14,	#2
-    movz	fp,	#20036
+    movz	fp,	#44076
     mov	x2,	x18
     str	w15,	[x24]
 
     add	x27,	x27,	fp
     add	w18,	w14,	#1
     add	x2,	sp,	x2
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w13,	[x27]
 
     lsl	w21,	w18,	#2
     add	x2,	x2,	fp
     mov	x5,	x21
-    movz	fp,	#20036
+    movz	fp,	#44076
     add	w21,	w18,	#1
     add	x5,	sp,	x5
     str	w11,	[x2]
@@ -603,7 +603,7 @@ main_61:
     add	w17,	w21,	#1
     lsl	w25,	w21,	#2
     add	x5,	x5,	fp
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w9,	[x5]
 
     mov	x9,	x25
@@ -615,7 +615,7 @@ main_61:
 
 main_176:
     lsl	w12,	w17,	#2
-    movz	fp,	#20036
+    movz	fp,	#44076
     mov	w26,	w22
     add	w1,	w17,	#1
     mov	w24,	w22
@@ -633,7 +633,7 @@ main_176:
     lsl	w6,	w4,	#2
     add	x27,	x27,	fp
     mov	x5,	x6
-    movz	fp,	#20036
+    movz	fp,	#44076
     add	x5,	sp,	x5
     add	w10,	w7,	#1
     lsl	w9,	w7,	#2
@@ -641,7 +641,7 @@ main_176:
 
     add	x14,	x14,	fp
     mov	x23,	x9
-    movz	fp,	#20036
+    movz	fp,	#44076
     lsl	w12,	w10,	#2
     add	x23,	sp,	x23
     str	w24,	[x14]
@@ -649,27 +649,27 @@ main_176:
     add	x5,	x5,	fp
     mov	x26,	x12
     add	w14,	w10,	#1
-    movz	fp,	#20036
+    movz	fp,	#44076
     add	x26,	sp,	x26
     str	w22,	[x5]
 
     lsl	w15,	w14,	#2
     add	x23,	x23,	fp
     mov	x1,	x15
-    movz	fp,	#20036
+    movz	fp,	#44076
     mov	w15,	w22
     add	x1,	sp,	x1
     str	w20,	[x23]
 
     add	x26,	x26,	fp
     add	w20,	w14,	#1
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w18,	[x26]
 
     add	x1,	x1,	fp
     add	w24,	w20,	#1
     lsl	w19,	w20,	#2
-    movz	fp,	#20036
+    movz	fp,	#44076
     mov	x4,	x19
     str	w15,	[x1]
 
@@ -679,7 +679,7 @@ main_176:
     mov	x7,	x23
     add	x4,	x4,	fp
     add	x7,	sp,	x7
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w13,	[x4]
 
     add	x7,	x7,	fp
@@ -690,7 +690,7 @@ main_176:
 
 main_197:
     lsl	w12,	w17,	#2
-    movz	fp,	#20036
+    movz	fp,	#44076
     mov	w28,	w22
     add	w17,	w17,	#1
     mov	x27,	x12
@@ -706,7 +706,7 @@ main_202:
     beq	main_412
 
 main_204:
-    movz	fp,	#24060
+    movz	fp,	#48100
     movz	w12,	#0
     mov	w24,	w16
     mov	w20,	w12
@@ -812,7 +812,7 @@ main_281:
     movz	w26,	#1
     movz	w0,	#0
     movz	w7,	#1
-    movz	fp,	#28076
+    movz	fp,	#20036
     lsl	w14,	w25,	#2
     csel	w2,	w5,	w17,	ne
     mov	x10,	x14
@@ -826,7 +826,7 @@ main_281:
 
 main_292:
     add	w5,	w5,	#1
-    movz	fp,	#24056
+    movz	fp,	#48096
     lsl	w23,	w5,	#2
     mov	x21,	x23
     add	x21,	sp,	x21
@@ -834,9 +834,9 @@ main_292:
     ldr	w21,	[x21]
 
     cmp	w21,	w2
-    mov	w11,	w22
-    movz	fp,	#20036
     lsl	w3,	w21,	#2
+    movz	fp,	#44076
+    mov	w11,	w22
     movz	w10,	#1
     mov	x1,	x3
     csel	w0,	w10,	w0,	eq
@@ -849,11 +849,11 @@ main_292:
 
 main_306:
     lsl	w7,	w6,	#2
-    movz	fp,	#32096
+    movz	fp,	#24056
     mov	x4,	x7
     add	x4,	sp,	x4
     add	x4,	x4,	fp
-    movz	fp,	#28076
+    movz	fp,	#20036
     ldr	w1,	[x4]
 
     lsl	w10,	w1,	#2
@@ -868,7 +868,7 @@ main_306:
 main_314:
     movz	w11,	#1
     add	w26,	w26,	#1
-    movz	fp,	#24056
+    movz	fp,	#48096
     str	w11,	[x15]
 
     lsl	w15,	w26,	#2
@@ -902,13 +902,13 @@ main_324:
 
 main_327:
     lsl	w17,	w4,	#2
-    movz	fp,	#24056
+    movz	fp,	#48096
     movz	w25,	#0
     add	w4,	w4,	#1
     mov	x16,	x17
     add	x16,	sp,	x16
     add	x16,	x16,	fp
-    movz	fp,	#28076
+    movz	fp,	#20036
     ldr	w18,	[x16]
 
     lsl	w23,	w18,	#2
@@ -1019,30 +1019,30 @@ main_392:
     movz	w6,	#0
     sub	w13,	w6,	w12
     cmp	w27,	#0
-    lsl	w11,	w20,	#2
-    movz	fp,	#32096
+    movz	fp,	#24056
     lsl	w9,	w20,	#2
     csel	w28,	w13,	w12,	ne
     add	w10,	w20,	#1
-    mov	x25,	x11
+    lsl	w11,	w20,	#2
     mov	x8,	x9
     lsl	w26,	w28,	#2
     lsl	w13,	w23,	#2
-    add	x25,	sp,	x25
     lsl	w12,	w10,	#2
+    mov	x25,	x11
     add	x8,	sp,	x8
     mov	x15,	x26
     mov	x11,	x13
-    add	x25,	x25,	#16
+    add	x25,	sp,	x25
     add	w26,	w10,	#1
-    add	x8,	x8,	fp
     add	x15,	sp,	x15
+    add	x8,	x8,	fp
     add	x11,	sp,	x11
-    movz	fp,	#20036
+    add	x25,	x25,	#16
+    movz	fp,	#44076
     str	w28,	[x8]
 
     add	x11,	x11,	fp
-    movz	fp,	#32096
+    movz	fp,	#24056
     ldr	w14,	[x11]
 
     str	w14,	[x25]
@@ -1052,7 +1052,7 @@ main_392:
     mov	x11,	x12
     add	x11,	sp,	x11
     add	x11,	x11,	fp
-    movz	fp,	#20036
+    movz	fp,	#44076
     str	w23,	[x11]
 
     add	x15,	x15,	fp

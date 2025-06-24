@@ -213,8 +213,8 @@ main_7:
     sdiv	w0,	w23,	w27
     mov	x21,	x7
     lsl	w11,	w0,	#1
-    mul	w1,	w10,	w10
     add	w15,	w10,	#1
+    mul	w1,	w10,	w10
     lsl	w12,	w10,	#2
     add	x21,	sp,	x21
     add	w3,	w11,	w0,	lsl #3
@@ -376,10 +376,10 @@ main_7:
 
     movz	w28,	#10
     mov	x10,	x9
-    movz	w26,	#10
+    movz	w1,	#10
     add	w7,	w2,	#1
     lsl	w14,	w2,	#2
-    movz	w1,	#10
+    movz	w26,	#10
     str	w6,	[x4]
 
     add	x10,	sp,	x10
@@ -607,8 +607,8 @@ main_177:
     mov	x28,	x0
     add	x8,	sp,	x8
     add	x28,	sp,	x28
-    lsl	w9,	w20,	#2
     add	w24,	w20,	#1
+    lsl	w9,	w20,	#2
     lsl	w7,	w20,	#2
     add	x8,	x8,	#16
     add	x28,	x28,	fp
@@ -1403,25 +1403,25 @@ main_379:
     str	w24,	[x28]
 
     add	w24,	w3,	#1
-    lsl	w5,	w24,	#2
     add	w23,	w24,	#1
+    lsl	w5,	w24,	#2
     lsl	w0,	w24,	#2
     lsl	w27,	w24,	#2
     mov	x28,	x0
     mov	x20,	x27
-    add	w3,	w23,	#1
     lsl	w17,	w23,	#2
     lsl	w12,	w23,	#2
+    add	w3,	w23,	#1
     add	x28,	sp,	x28
     add	x20,	sp,	x20
     mov	x16,	x17
+    mov	x11,	x12
+    add	x16,	sp,	x16
     lsl	w0,	w3,	#2
     lsl	w24,	w3,	#2
     lsl	w22,	w3,	#2
-    mov	x11,	x12
     add	x28,	x28,	#16
     add	x20,	x20,	fp
-    add	x16,	sp,	x16
     add	x11,	sp,	x11
     movz	fp,	#40016
     ldr	w1,	[x28]
@@ -1492,24 +1492,24 @@ main_379:
 
     add	w2,	w3,	#1
     movz	w3,	#100
+    lsl	w7,	w2,	#2
     lsl	w5,	w2,	#2
     add	w27,	w2,	#1
     lsl	w12,	w2,	#2
-    lsl	w7,	w2,	#2
+    mov	x6,	x7
     mov	x22,	x5
     movz	w2,	#100
+    add	x6,	sp,	x6
     lsl	w24,	w27,	#2
     lsl	w19,	w27,	#2
-    mov	x6,	x7
     add	x22,	sp,	x22
     mov	x23,	x24
-    add	x6,	sp,	x6
+    add	x6,	x6,	#16
     add	x23,	sp,	x23
     add	x22,	x22,	fp
-    add	x6,	x6,	#16
-    movz	fp,	#40016
     ldr	w8,	[x6]
 
+    movz	fp,	#40016
     mul	w17,	w8,	w8
     sdiv	w11,	w17,	w4
     msub	w18,	w11,	w3,	w17
@@ -1529,8 +1529,8 @@ main_379:
     add	w14,	w13,	w18
     movz	fp,	#40016
     mov	x18,	x19
-    add	w4,	w11,	#1
     lsl	w7,	w11,	#2
+    add	w4,	w11,	#1
     str	w14,	[x22]
 
     add	x23,	x23,	fp

@@ -832,8 +832,8 @@ main_285:
     movz	w17,	#0
     sub	w8,	w17,	w26
     cmp	w23,	#0
-    movz	w5,	#1
     csel	w1,	w8,	w26,	ne
+    movz	w5,	#1
     cset	w0,	ne
 
 main_289:
@@ -954,15 +954,15 @@ main_356:
     cmp	w19,	#0
     adrp	x18, :got:head
     lsl	w7,	w23,	#2
+    lsl	w4,	w21,	#2
+    adrp	x20, :got:next
     adrp	x17, :got:to
     lsl	w1,	w21,	#2
-    lsl	w4,	w21,	#2
-    cset	w24,	ne
-    adrp	x20, :got:next
     csel	w10,	w12,	w26,	ne
+    cset	w24,	ne
     ldr	x17, [x17, #:got_lo12:to]
-    adrp	x26, :got:head
     lsl	w12,	w10,	#2
+    adrp	x26, :got:head
     add	x15,	x17,	x1
     str	w10,	[x15]
 
