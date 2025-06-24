@@ -246,8 +246,8 @@ main_76:
 
     add	x16,	x24,	#1
     movz	w24,	#4000
-    add	x3,	x16,	#1
     lsl	x20,	x16,	#2
+    add	x3,	x16,	#1
     add	x18,	x19,	x20
     lsl	x5,	x3,	#2
     ldr	w20,	[x18]
@@ -565,8 +565,8 @@ main_230:
     movz	w24,	#4000
     add	x7,	x14,	#1
     add	x27,	x21,	x28
-    movz	w28,	#4000
     lsl	x21,	x17,	#2
+    movz	w28,	#4000
     add	x16,	x7,	#1
     lsl	x4,	x7,	#2
     ldr	w27,	[x27]

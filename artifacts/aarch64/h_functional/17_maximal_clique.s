@@ -32,9 +32,9 @@ maxCliques_1:
     stp	x27, x28, [sp, #64]
     stp	fp, lr, [sp, #80]
     
-    adrp	x13, :got:n
     movz	w27,	#1
-    mov	w19,	w0
+    adrp	x13, :got:n
+    mov	w25,	w0
     ldr	x13, [x13, #:got_lo12:n]
     ldr	w26,	[x13]
 
@@ -42,26 +42,26 @@ maxCliques_1:
     bgt	maxCliques_96
 
 maxCliques_4:
-    lsl	w24,	w19,	#2
+    lsl	w23,	w25,	#2
     adrp	x11, :got:store
-    add	w25,	w19,	#1
     adrp	x5, :got:store
     movz	w0,	#0
     movz	w21,	#1
     ldr	x11, [x11, #:got_lo12:store]
-    add	w22,	w25,	#1
-    lsl	w9,	w25,	#2
     ldr	x5, [x5, #:got_lo12:store]
-    add	x28,	x11,	x24
-    add	x20,	x5,	x9
+    add	x24,	x11,	x23
+    add	w23,	w25,	#1
+    add	w22,	w23,	#1
+    lsl	w9,	w23,	#2
+    add	x28,	x5,	x9
 
 maxCliques_10:
-    str	w21,	[x28]
+    str	w21,	[x24]
 
     movz	w27,	#1
 
 maxCliques_13:
-    cmp	w27,	w25
+    cmp	w27,	w23
     bge	maxCliques_34
 
 maxCliques_16:
@@ -79,7 +79,7 @@ maxCliques_16:
     add	x17,	x8,	x9
 
 maxCliques_22:
-    cmp	w5,	w25
+    cmp	w5,	w23
     bge	maxCliques_32
 
 maxCliques_25:
@@ -113,9 +113,9 @@ maxCliques_36:
     beq	maxCliques_92
 
 maxCliques_39:
-    cmp	w19,	w0
+    cmp	w25,	w0
     movz	w14,	#1
-    csel	w27,	w19,	w0,	gt
+    csel	w27,	w25,	w0,	gt
     cmp	w14,	w26
     ble	maxCliques_43
 
@@ -125,10 +125,10 @@ maxCliques_85:
 
 maxCliques_43:
     movz	w16,	#0
-    movz	w23,	#1
+    movz	w19,	#1
 
 maxCliques_45:
-    str	w23,	[x20]
+    str	w19,	[x28]
 
     movz	w18,	#1
 
@@ -137,7 +137,7 @@ maxCliques_48:
     bge	maxCliques_69
 
 maxCliques_51:
-    add	w24,	w18,	#1
+    add	w20,	w18,	#1
     lsl	w6,	w18,	#2
     adrp	x17, :got:store
     adrp	x3, :got:graph
@@ -151,13 +151,13 @@ maxCliques_51:
     add	x13,	x3,	x11
 
 maxCliques_57:
-    cmp	w24,	w22
+    cmp	w20,	w22
     bge	maxCliques_67
 
 maxCliques_60:
-    lsl	w15,	w24,	#2
+    lsl	w15,	w20,	#2
     adrp	x7, :got:store
-    add	w24,	w24,	#1
+    add	w20,	w20,	#1
     ldr	x7, [x7, #:got_lo12:store]
     add	x5,	x7,	x15
     ldr	w8,	[x5]
@@ -185,16 +185,16 @@ maxCliques_71:
     beq	maxCliques_81
 
 maxCliques_74:
-    cmp	w25,	w16
+    cmp	w23,	w16
     mov	w0,	w22
-    csel	w24,	w25,	w16,	gt
+    csel	w20,	w23,	w16,	gt
     bl	maxCliques
-    cmp	w0,	w24
-    csel	w16,	w0,	w24,	gt
+    cmp	w0,	w20
+    csel	w16,	w0,	w20,	gt
 
 maxCliques_81:
-    add	w23,	w23,	#1
-    cmp	w23,	w26
+    add	w19,	w19,	#1
+    cmp	w19,	w26
     ble	maxCliques_45
 
 maxCliques_87:

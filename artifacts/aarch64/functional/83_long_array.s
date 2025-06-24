@@ -116,8 +116,8 @@ main_7:
     sdiv	w22,	w11,	w12
     movz	w10,	#10
     mov	x7,	x1
-    add	w23,	w16,	#1
     mul	w17,	w16,	w16
+    add	w23,	w16,	#1
     lsl	w6,	w16,	#2
     lsl	w4,	w22,	#1
     add	x7,	sp,	x7
@@ -483,8 +483,8 @@ main_138:
     sdiv	w14,	w1,	w24
     movz	w7,	#10
     add	x16,	sp,	x16
-    add	w26,	w21,	#1
     lsl	w20,	w21,	#2
+    add	w26,	w21,	#1
     lsl	w19,	w14,	#1
     mul	w13,	w21,	w21
     add	x16,	x16,	fp
@@ -1303,21 +1303,21 @@ main_379:
     add	x9,	sp,	x9
     movz	fp,	#14480
     movz	w13,	#100
-    add	w8,	w10,	#1
     lsl	w27,	w10,	#2
+    add	w8,	w10,	#1
     lsl	w22,	w10,	#2
     lsl	w20,	w10,	#2
     add	x9,	x9,	#16
     movk	fp,	#1,	lsl #16
+    mov	x26,	x27
     lsl	w5,	w8,	#2
     lsl	w3,	w8,	#2
-    mov	x26,	x27
     mov	x21,	x22
     lsl	w10,	w8,	#2
     ldr	w11,	[x9]
 
-    mov	x25,	x3
     add	x26,	sp,	x26
+    mov	x25,	x3
     add	x21,	sp,	x21
     ldr	w16,	[x14]
 
@@ -1403,8 +1403,8 @@ main_379:
     str	w24,	[x28]
 
     add	w24,	w3,	#1
-    lsl	w5,	w24,	#2
     add	w23,	w24,	#1
+    lsl	w5,	w24,	#2
     lsl	w0,	w24,	#2
     lsl	w27,	w24,	#2
     mov	x28,	x0
@@ -1450,8 +1450,8 @@ main_379:
     movz	w4,	#100
     add	w7,	w6,	w8
     movz	fp,	#40016
-    movz	w8,	#100
     movz	w6,	#100
+    movz	w8,	#100
     add	x16,	x16,	fp
     str	w7,	[x20]
 

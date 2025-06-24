@@ -20,8 +20,8 @@ main_0:
     movz	w1,	#0
     add	x0,	sp,	#1104
     bl	memset
-    movz	w1,	#0
     movz	w2,	#1024
+    movz	w1,	#0
     add	x0,	sp,	#16
     bl	memset
     bl	getint

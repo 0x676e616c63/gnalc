@@ -12,45 +12,45 @@ main_0:
     sub	sp, sp, #64
     stp	fp, lr, [sp, #0]
     
-    movz	w6,	#0
-    movz	w2,	#1
-    add	x25,	sp,	#28
-    movz	w14,	#3
-    movz	w21,	#2
-    add	x20,	sp,	#20
-    movz	w16,	#5
-    movz	w10,	#8
-    movz	w23,	#4
-    add	x3,	sp,	#16
-    add	x28,	sp,	#36
-    add	x22,	sp,	#52
+    movz	w20,	#2
     movz	w8,	#9
-    movz	w1,	#6
-    movz	w27,	#0
-    add	x24,	sp,	#44
-    add	x26,	sp,	#24
+    add	x25,	sp,	#24
+    add	x26,	sp,	#32
+    add	x28,	sp,	#28
+    movz	w6,	#0
+    movz	w14,	#3
+    add	x3,	sp,	#16
+    movz	w24,	#0
+    movz	w23,	#4
+    add	x27,	sp,	#36
+    movz	w2,	#1
     add	x19,	sp,	#40
+    movz	w1,	#6
+    movz	w16,	#5
+    movz	w22,	#7
+    add	x21,	sp,	#48
+    movz	w10,	#8
     str	w23,	[x3]
 
-    add	x23,	sp,	#32
-    str	w14,	[x20]
+    add	x23,	sp,	#20
+    str	w14,	[x23]
 
-    str	w8,	[x26]
+    str	w8,	[x25]
 
-    str	w21,	[x25]
+    str	w20,	[x28]
 
-    add	x21,	sp,	#48
-    str	w27,	[x23]
+    str	w24,	[x26]
 
-    movz	w27,	#7
-    str	w2,	[x28]
+    add	x24,	sp,	#44
+    str	w2,	[x27]
 
     str	w1,	[x19]
 
     str	w16,	[x24]
 
-    str	w27,	[x21]
+    str	w22,	[x21]
 
+    add	x22,	sp,	#52
     str	w10,	[x22]
 
 
@@ -99,12 +99,7 @@ main_37:
     bl	putint
     movz	w0,	#10
     bl	putch
-    ldr	w0,	[x20]
-
-    bl	putint
-    movz	w0,	#10
-    bl	putch
-    ldr	w0,	[x26]
+    ldr	w0,	[x23]
 
     bl	putint
     movz	w0,	#10
@@ -114,12 +109,17 @@ main_37:
     bl	putint
     movz	w0,	#10
     bl	putch
-    ldr	w0,	[x23]
+    ldr	w0,	[x28]
 
     bl	putint
     movz	w0,	#10
     bl	putch
-    ldr	w0,	[x28]
+    ldr	w0,	[x26]
+
+    bl	putint
+    movz	w0,	#10
+    bl	putch
+    ldr	w0,	[x27]
 
     bl	putint
     movz	w0,	#10

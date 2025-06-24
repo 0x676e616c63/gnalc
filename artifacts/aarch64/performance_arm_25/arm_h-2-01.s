@@ -16,10 +16,10 @@ main_0:
     movz	w0,	#22
     bl	_sysy_starttime
     fmov	s12,	#1.000000
-    movz	w2,	#0
     movi	v26.4s,	#0
     movz	w6,	#0
     add	x12,	sp,	#16
+    movz	w2,	#0
     movi	v11.4s,	#0
     movz	fp,	#20016
     add	x19,	sp,	fp
@@ -92,8 +92,8 @@ main_33:
     add	x26,	x12,	x27
     ldr	s30,	[x21]
 
-    lsl	w9,	w1,	#2
     add	w13,	w1,	#1
+    lsl	w9,	w1,	#2
     lsl	w5,	w1,	#2
     add	x23,	x19,	x24
     fmul	s31,	s10,	s30

@@ -17,8 +17,8 @@ main_0:
     bl	_sysy_starttime
     fmov	s11,	#1.000000
     movi	v10.4s,	#0
-    movi	v25.4s,	#0
     movz	w6,	#0
+    movi	v25.4s,	#0
     movz	fp,	#20016
     add	x21,	sp,	#16
     add	x12,	sp,	fp
@@ -85,8 +85,8 @@ main_20:
     str	s26,	[x5]
 
     lsl	w8,	w17,	#2
-    add	w26,	w17,	#1
     scvtf	s20,	w17
+    add	w26,	w17,	#1
     mov	x27,	x28
     fadd	s21,	s11,	s12
     fadd	s18,	s25,	s12
@@ -94,9 +94,9 @@ main_20:
     add	x9,	x9,	fp
     lsl	w5,	w15,	#2
     mov	x7,	x8
-    lsl	w13,	w26,	#2
     fadd	s30,	s11,	s20
     fadd	s27,	s25,	s20
+    lsl	w13,	w26,	#2
     add	x27,	sp,	x27
     movz	fp,	#20016
     lsl	w15,	w24,	#2
@@ -157,8 +157,8 @@ main_20:
     str	s30,	[x7]
 
     scvtf	s30,	w26
-    fadd	s7,	s11,	s30
     lsl	w26,	w5,	#2
+    fadd	s7,	s11,	s30
     fadd	s4,	s25,	s30
     mov	x25,	x26
     str	s4,	[x11]

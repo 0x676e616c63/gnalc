@@ -16,7 +16,7 @@ main_0:
     str	w0,	[sp, #24]
 
     bl	getint
-    mov	w21,	w0
+    mov	w25,	w0
     bl	getint
     str	w0,	[sp, #28]
 
@@ -27,16 +27,16 @@ main_0:
     bl	getint
     mov	w28,	w0
     bl	getint
-    mov	w20,	w0
+    mov	w21,	w0
     bl	getint
     mov	w19,	w0
     bl	getint
-    mov	w23,	w0
+    mov	w20,	w0
     bl	getint
     str	w0,	[sp, #32]
 
     bl	getint
-    mov	w22,	w0
+    mov	w23,	w0
     bl	getint
     str	w0,	[sp, #20]
 
@@ -49,7 +49,7 @@ main_0:
     cmp	w15,	#0
     movz	w17,	#0
     cset	w12,	eq
-    sub	w3,	w17,	w21
+    sub	w3,	w17,	w25
     cmp	w3,	#0
     cset	w5,	ne
     cmp	w12,	#0
@@ -80,19 +80,19 @@ main_33:
     add	w13,	w13,	#1
     movz	w8,	#0
     movz	w2,	#0
-    sub	w7,	w8,	w13
-    sub	w9,	w2,	w28
+    sub	w4,	w8,	w13
+    sub	w10,	w2,	w28
     cmp	w19,	#0
     cset	w16,	eq
     cmp	w16,	#0
     cset	w18,	ne
-    cmp	w20,	#0
+    cmp	w21,	#0
     movz	w15,	#0
     csel	w8,	w18,	w15,	ne
     ldr	w15,	[sp, #32]
 
     cmp	w15,	#0
-    mov	w2,	w23
+    mov	w2,	w20
     cset	w11,	eq
 
 main_47:
@@ -100,15 +100,15 @@ main_47:
     beq	main_53
 
 main_51:
-    sdiv	w4,	w2,	w11
-    msub	w2,	w4,	w11,	w2
+    sdiv	w5,	w2,	w11
+    msub	w2,	w5,	w11,	w2
 
     movz	w11,	#0
     b	main_47
 
 main_53:
-    cmp	w9,	#0
-    mov	w5,	w22
+    cmp	w10,	#0
+    mov	w5,	w23
     csel	w17,	w8,	w2,	ne
 
 main_56:
@@ -116,7 +116,7 @@ main_56:
     bne	main_62
 
 main_60:
-    add	w25,	w17,	#1
+    add	w22,	w17,	#1
     ldr	w13,	[sp, #20]
 
 
@@ -125,8 +125,8 @@ main_64:
     beq	main_70
 
 main_68:
-    sdiv	w2,	w25,	w13
-    msub	w25,	w2,	w13,	w25
+    sdiv	w2,	w22,	w13
+    msub	w22,	w2,	w13,	w22
 
     movz	w13,	#0
     b	main_64
@@ -151,76 +151,76 @@ main_81:
     bne	main_92
 
 main_86:
-    mul	w1,	w6,	w25
-    cmp	w7,	#0
+    mul	w1,	w6,	w22
+    cmp	w4,	#0
     csel	w6,	w27,	w1,	ne
     ldr	w1,	[sp, #28]
 
     cmp	w1,	#0
-    mov	w25,	w26
+    mov	w22,	w26
     cset	w8,	eq
 
 main_94:
-    cmp	w25,	#0
+    cmp	w22,	#0
     bne	main_100
 
 main_98:
     add	w13,	w8,	#1
+    mov	w22,	w25
 
 main_102:
     cmp	w13,	#0
     beq	main_109
 
 main_106:
-    sdiv	w17,	w21,	w13
-    msub	w21,	w17,	w13,	w21
+    sdiv	w17,	w22,	w13
+    msub	w22,	w17,	w13,	w22
 
     movz	w13,	#0
     b	main_102
 
 main_109:
-    cmp	w21,	#0
+    cmp	w22,	#0
     bne	main_115
 
 main_113:
-    add	w4,	w6,	#1
-    mov	w25,	w27
-    mov	w26,	w28
+    add	w5,	w6,	#1
 
 main_117:
-    cmp	w26,	#0
+    cmp	w28,	#0
     bne	main_124
 
 main_122:
-    mul	w17,	w25,	w4
-    mov	w12,	w20
+    mul	w18,	w27,	w5
+    mov	w26,	w21
 
 main_126:
-    cmp	w12,	#0
+    cmp	w26,	#0
     beq	main_132
 
 main_130:
-    sdiv	w7,	w17,	w12
-    msub	w17,	w7,	w12,	w17
-
+    sdiv	w7,	w18,	w26
     movz	w12,	#0
+    msub	w18,	w7,	w26,	w18
+
+    mov	w26,	w12
     b	main_126
 
 main_132:
     movz	w13,	#0
     ldr	w24,	[sp, #32]
 
-    mov	w5,	w23
-    sub	w16,	w13,	w24
+    mov	w25,	w20
+    sub	w15,	w13,	w24
 
 main_134:
-    cmp	w16,	#0
+    cmp	w15,	#0
     bne	main_141
 
 main_138:
-    add	w20,	w5,	#1
-    movz	w23,	#0
-    sub	w12,	w23,	w22
+    add	w20,	w25,	#1
+    movz	w22,	#0
+    sub	w12,	w22,	w23
 
 main_143:
     cmp	w12,	#0
@@ -271,14 +271,14 @@ main_169:
 
 main_173:
     add	w3,	w16,	#1
-    mov	w26,	w19
+    mov	w20,	w19
 
 main_177:
     cmp	w3,	#0
     bne	main_184
 
 main_182:
-    mul	w0,	w26,	w17
+    mul	w0,	w20,	w18
     ldp	fp, lr, [sp, #0]
     
     add	sp, sp, #48
@@ -286,8 +286,9 @@ main_182:
 
 
 main_184:
-    sub	w26,	w26,	w3
+    sub	w15,	w20,	w3
     movz	w3,	#0
+    mov	w20,	w15
     b	main_177
 
 main_175:
@@ -301,25 +302,25 @@ main_160:
     b	main_152
 
 main_141:
-    add	w5,	w16,	w5
-    movz	w16,	#0
+    add	w25,	w15,	w25
+    movz	w15,	#0
     b	main_134
 
 main_124:
-    sub	w28,	w25,	w26
+    sub	w1,	w27,	w28
     movz	w7,	#0
-    mov	w25,	w28
-    mov	w26,	w7
+    mov	w27,	w1
+    mov	w28,	w7
     b	main_117
 
 main_115:
-    add	w6,	w21,	w6
-    movz	w21,	#0
+    add	w6,	w22,	w6
+    movz	w22,	#0
     b	main_109
 
 main_100:
-    add	w8,	w25,	w8
-    movz	w25,	#0
+    add	w8,	w22,	w8
+    movz	w22,	#0
     b	main_94
 
 main_92:

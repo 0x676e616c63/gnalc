@@ -14,9 +14,9 @@ main_0:
 
     movz	w1,	#1
     movz	w16,	#2
+    movz	w3,	#6
     movz	w24,	#4
     movz	w5,	#10
-    movz	w3,	#6
     movz	w4,	#6
     movz	w6,	#5
 

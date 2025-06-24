@@ -20,8 +20,8 @@ main_0:
     sub	sp, sp, #32
     stp	fp, lr, [sp, #0]
     
-    adrp	x1, :got:c
     movz	w2,	#16
+    adrp	x1, :got:c
     add	x0,	sp,	#16
     ldr	x1, [x1, #:got_lo12:c]
     bl	memcpy

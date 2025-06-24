@@ -175,8 +175,8 @@ main_0:
     sub	sp, sp, #48
     stp	fp, lr, [sp, #0]
     
-    movz	w1,	#0
     movz	w2,	#4
+    movz	w1,	#0
     add	x0,	sp,	#16
     bl	memset
     movz	w18,	#0

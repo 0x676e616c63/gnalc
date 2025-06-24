@@ -293,7 +293,7 @@ main_50:
     ldr	s10,	[sp, #40]
 
     fsub	s6,	s10,	s22
-    str	s6,	[sp, #48]
+    str	s6,	[sp, #44]
 
     ldr	s12,	[sp, #40]
 
@@ -312,8 +312,8 @@ main_50:
     fcvtzs	w6,	s17
     frintz	s17,	s17
     fmul	s22,	s17,	s7
-    fsub	s13,	s4,	s22
-    str	s13,	[sp, #56]
+    fsub	s10,	s4,	s22
+    str	s10,	[sp, #56]
 
     ldr	w27,	[sp, #72]
 
@@ -331,16 +331,16 @@ main_50:
     lsr	w8,	w7,	#31
     asr	w21,	w14,	#1
     add	w9,	w24,	w8
-    scvtf	s10,	w21
+    scvtf	s17,	w21
     asr	w19,	w9,	#1
     str	w19,	[sp, #164]
 
-    str	s10,	[sp, #52]
+    str	s17,	[sp, #60]
 
     ldr	w20,	[sp, #164]
 
-    scvtf	s17,	w20
-    str	s17,	[sp, #60]
+    scvtf	s14,	w20
+    str	s14,	[sp, #52]
 
 
 main_67:
@@ -366,112 +366,112 @@ main_74:
 
     movk	w19,	#49353,	lsl #16
     fmov	s10,	w19
-    fmov	s12,	s10
-    fcmp	s8,	s12
-    cset	w25,	lt
+    fmov	s11,	s10
+    fcmp	s8,	s11
     ldr	s10,	[sp, #40]
 
-    ldr	s15,	[sp, #48]
+    cset	w25,	lt
+    ldr	s15,	[sp, #44]
 
-    fcsel	s10,	s15,	s10,	lt
-    ldr	s9,	[sp, #16]
+    fcsel	s9,	s15,	s10,	lt
+    ldr	s15,	[sp, #16]
 
     ldr	s8,	[sp, #40]
 
-    fcmp	s8,	s9
+    fcmp	s8,	s15
+    ldr	s8,	[sp, #44]
+
     cset	w25,	gt
-    ldr	s8,	[sp, #48]
+    ldr	s13,	[sp, #16]
 
+    fcsel	s9,	s8,	s9,	gt
     movz	w25,	#4059
-    fcsel	s9,	s8,	s10,	gt
+    fsub	s13,	s9,	s13
     movk	w25,	#16457,	lsl #16
-    ldr	s8,	[sp, #16]
-
-    fsub	s15,	s9,	s8
-    fmov	s10,	w25
+    fmov	s15,	w25
+    fmov	s10,	s15
     fcmp	s9,	s10
-    cset	w24,	gt
-    fcsel	s15,	s15,	s9,	gt
-    ldr	s8,	[sp, #16]
+    fcsel	s15,	s13,	s9,	gt
+    ldr	s12,	[sp, #16]
 
+    cset	w24,	gt
     movz	w25,	#4059
-    fadd	s14,	s15,	s8
+    fadd	s14,	s15,	s12
     movk	w25,	#49225,	lsl #16
     str	s14,	[sp, #20]
 
     fmov	s9,	w25
-    fcmp	s15,	s9
+    fmov	s12,	s9
+    fcmp	s15,	s12
     ldr	s13,	[sp, #20]
 
     cset	w25,	lt
     fcsel	s0,	s13,	s15,	lt
     bl	my_sin_impl
-    fmov	s15,	s12
-    fmov	s13,	s0
-    ldr	s12,	[sp, #36]
+    ldr	s14,	[sp, #36]
 
-    fcmp	s12,	s15
+    fmov	s13,	s0
+    fcmp	s14,	s11
     cset	w24,	lt
     ldr	s15,	[sp, #36]
 
-    ldr	s14,	[sp, #56]
+    ldr	s8,	[sp, #56]
 
-    fcsel	s12,	s14,	s15,	lt
-    ldr	s14,	[sp, #16]
+    ldr	s11,	[sp, #16]
 
-    str	s14,	[sp, #28]
+    fcsel	s15,	s8,	s15,	lt
+    str	s11,	[sp, #28]
 
-    ldr	s15,	[sp, #28]
+    ldr	s14,	[sp, #28]
 
-    ldr	s11,	[sp, #36]
+    ldr	s9,	[sp, #36]
 
-    fcmp	s11,	s15
+    fcmp	s9,	s14
+    ldr	s9,	[sp, #56]
+
     cset	w23,	gt
-    ldr	s15,	[sp, #56]
+    fcsel	s11,	s9,	s15,	gt
+    str	s11,	[sp, #24]
 
-    fmov	s11,	s10
-    fcsel	s12,	s15,	s12,	gt
-    str	s12,	[sp, #24]
-
-    ldr	s14,	[sp, #16]
+    ldr	s11,	[sp, #16]
 
     ldr	s15,	[sp, #24]
 
-    fmov	s8,	s14
-    ldr	s10,	[sp, #24]
+    ldr	s9,	[sp, #24]
 
-    fsub	s15,	s15,	s8
-    fcmp	s10,	s11
-    ldr	s10,	[sp, #24]
+    fsub	s11,	s15,	s11
+    fcmp	s9,	s10
+    fmov	s15,	s12
+    ldr	s9,	[sp, #24]
 
     cset	w19,	gt
-    fcsel	s12,	s15,	s10,	gt
-    ldr	s10,	[sp, #16]
+    fcsel	s10,	s11,	s9,	gt
+    ldr	s9,	[sp, #16]
 
-    fadd	s15,	s12,	s10
-    fcmp	s12,	s9
-    fcsel	s0,	s15,	s12,	lt
+    fadd	s11,	s10,	s9
+    fcmp	s10,	s15
+    fcsel	s0,	s11,	s10,	lt
     cset	w23,	lt
     bl	my_sin_impl
+    ldr	s28,	[sp, #32]
+
     sub	w9,	w22,	w21
-    ldr	s27,	[sp, #32]
+    ldr	s8,	[sp, #60]
 
-    ldr	s1,	[sp, #52]
-
-    fmul	s29,	s27,	s13
+    fmul	s29,	s28,	s13
     ldr	s31,	[sp, #32]
 
-    scvtf	s28,	w9
-    ldr	s18,	[sp, #60]
-
+    scvtf	s26,	w9
     fmul	s2,	s31,	s0
-    fmul	s11,	s28,	s0
-    fsub	s17,	s11,	s29
-    fadd	s16,	s17,	s1
-    fmul	s1,	s28,	s13
-    fcvtzs	w15,	s16
+    fmul	s1,	s26,	s13
+    fmul	s11,	s26,	s0
     fadd	s5,	s1,	s2
-    fadd	s4,	s5,	s18
+    fsub	s15,	s11,	s29
+    fadd	s16,	s15,	s8
+    ldr	s15,	[sp, #52]
+
+    fcvtzs	w15,	s16
+    fadd	s4,	s5,	s15
     fcvtzs	w8,	s4
     cmp	w15,	#0
     blt	main_122

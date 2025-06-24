@@ -142,9 +142,9 @@ main_52:
     add	x18,	x16,	x20
     ldr	w22,	[x18]
 
+    lsl	w18,	w15,	#2
     ldr	w5,	[x1]
 
-    lsl	w18,	w15,	#2
     add	w20,	w22,	w9
     add	x17,	x10,	x18
     add	x9,	x0,	x11
@@ -182,9 +182,9 @@ main_82:
     ldr	x1, [x1, #:got_lo12:x]
     bl	putarray
     asr	w1,	w28,	#31
-    movz	w23,	#400
     movz	w0,	#40000
     adrp	x26, :got:x
+    movz	w23,	#400
     lsr	w18,	w1,	#31
     ldr	x26, [x26, #:got_lo12:x]
     add	w19,	w28,	w18
@@ -196,10 +196,10 @@ main_82:
 
     bl	putarray
     mov	w0,	w28
-    movz	w1,	#400
     adrp	x20, :got:x
     movz	w18,	#40000
     sub	w23,	w24,	#1
+    movz	w1,	#400
     sub	w26,	w27,	#1
     ldr	x20, [x20, #:got_lo12:x]
     madd	x18,	x26,	x18,	x20

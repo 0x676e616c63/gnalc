@@ -13,22 +13,22 @@ main_0:
     stp	fp, lr, [sp, #0]
     
     movz	w12,	#9
-    movz	w27,	#4
-    add	x26,	sp,	#28
-    movz	w14,	#8
-    movz	w18,	#3
-    add	x21,	sp,	#20
-    add	x24,	sp,	#32
-    add	x28,	sp,	#40
-    movz	w6,	#1
     movz	w3,	#7
-    add	x13,	sp,	#16
-    movz	w22,	#6
-    movz	w23,	#5
-    add	x25,	sp,	#48
-    movz	w2,	#0
-    add	x20,	sp,	#44
+    movz	w18,	#3
     add	x19,	sp,	#24
+    add	x21,	sp,	#20
+    movz	w27,	#4
+    movz	w22,	#6
+    movz	w6,	#1
+    movz	w2,	#0
+    add	x13,	sp,	#16
+    movz	w23,	#5
+    add	x26,	sp,	#28
+    add	x28,	sp,	#40
+    add	x25,	sp,	#48
+    movz	w14,	#8
+    add	x24,	sp,	#32
+    add	x20,	sp,	#44
     str	w27,	[x13]
 
     movz	w27,	#2

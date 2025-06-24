@@ -74,40 +74,40 @@ main_19:
     madd	x16,	x15,	x28,	x22
 
     lsl	w23,	w19,	#2
-    add	x11,	x16,	x12
+    lsl	w15,	w8,	#6
     lsl	w9,	w3,	#2
     lsl	w2,	w0,	#2
-    lsl	w15,	w8,	#6
-    add	w12,	w27,	#5
-    ldr	s17,	[x11]
-
+    add	x11,	x16,	x12
+    sub	w21,	w15,	w8,	lsl #2
     add	x7,	x16,	x9
     add	x1,	x16,	x2
-    sub	w21,	w15,	w8,	lsl #2
-    lsl	w14,	w12,	#2
-    add	w9,	w27,	#7
-    add	w2,	w27,	#9
+    add	w12,	w27,	#5
     add	w8,	w8,	#1
     add	w15,	w27,	#3
     add	x28,	x20,	x21
-    add	x13,	x16,	x14
+    ldr	s17,	[x11]
+
+    add	w9,	w27,	#7
+    add	w2,	w27,	#9
+    lsl	w14,	w12,	#2
+    lsl	w18,	w15,	#2
     add	x21,	x16,	x23
-    add	w14,	w27,	#10
-    add	w23,	w27,	#6
     add	x25,	x28,	#4
     add	x11,	x28,	#8
-    lsl	w18,	w15,	#2
     ldr	s1,	[x28]
 
+    add	x13,	x16,	x14
+    add	x17,	x16,	x18
+    add	w23,	w27,	#6
     ldr	s7,	[x21]
 
     fmul	s2,	s17,	s1
-    add	x17,	x16,	x18
+    add	w14,	w27,	#10
+    add	w18,	w27,	#8
     add	x21,	x28,	#12
     ldr	s27,	[x25]
 
     fadd	s12,	s14,	s2
-    add	w18,	w27,	#8
     lsl	w25,	w23,	#2
     ldr	s16,	[x7]
 
@@ -514,10 +514,10 @@ main_317:
     madd	x2,	x20,	x28,	x26
 
     add	w20,	w20,	#1
-    add	x18,	x2,	#16
     add	x13,	x2,	#8
-    add	x24,	x2,	#4
+    add	x18,	x2,	#16
     add	x3,	x2,	#12
+    add	x24,	x2,	#4
     ldr	s14,	[x2]
 
     fneg	s28,	s14

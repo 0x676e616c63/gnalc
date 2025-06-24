@@ -18,25 +18,25 @@ main_0:
     bl	memset
     add	x3,	sp,	#16
     add	x26,	sp,	#20
-    add	x21,	sp,	#36
     add	x0,	sp,	#24
-    add	x4,	sp,	#88
-    add	x2,	sp,	#64
-    add	x16,	sp,	#84
-    add	x7,	sp,	#48
-    add	x14,	sp,	#32
-    add	x12,	sp,	#80
-    add	x23,	sp,	#52
+    add	x18,	sp,	#28
     movz	w1,	#0
     movz	w5,	#0
-    add	x6,	sp,	#76
-    add	x24,	sp,	#60
+    add	x14,	sp,	#32
+    add	x21,	sp,	#36
     add	x9,	sp,	#40
-    add	x18,	sp,	#28
+    add	x16,	sp,	#84
+    add	x12,	sp,	#80
+    add	x2,	sp,	#64
     add	x22,	sp,	#72
-    add	x11,	sp,	#68
-    add	x20,	sp,	#56
+    add	x4,	sp,	#88
+    add	x6,	sp,	#76
     add	x15,	sp,	#44
+    add	x11,	sp,	#68
+    add	x24,	sp,	#60
+    add	x23,	sp,	#52
+    add	x20,	sp,	#56
+    add	x7,	sp,	#48
 
 main_22:
     add	w1,	w1,	#1

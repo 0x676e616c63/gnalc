@@ -24,8 +24,8 @@ main_0:
     sub	sp, sp, fp
     stp	fp, lr, [sp, #0]
     
-    movz	w1,	#0
     movz	w2,	#39588
+    movz	w1,	#0
     add	x0,	sp,	#916
     movk	w2,	#3,	lsl #16
     bl	memset
@@ -40,10 +40,10 @@ main_0:
     bl	getfarray
     movz	w0,	#106
     bl	_sysy_starttime
-    movz	w7,	#0
-    add	x15,	sp,	#16
     add	x1,	sp,	#916
+    add	x15,	sp,	#16
     adrp	x28, :got:conv_output
+    movz	w7,	#0
     adrp	x25, :got:input
     ldr	x25, [x25, #:got_lo12:input]
     ldr	x28, [x28, #:got_lo12:conv_output]
@@ -170,9 +170,9 @@ main_19:
     add	x23,	x2,	#40
     ldr	s23,	[x0]
 
-    lsl	w0,	w24,	#2
     ldr	s13,	[x9]
 
+    lsl	w0,	w24,	#2
     fmul	s24,	s5,	s23
     add	x9,	x2,	#44
     ldr	s31,	[x12]
@@ -267,8 +267,8 @@ main_147:
     add	x23,	x11,	x24
     add	x6,	x11,	x8
     lsl	w18,	w2,	#2
-    add	w0,	w2,	#6
     add	x4,	x19,	#4
+    add	w0,	w2,	#6
     add	w14,	w2,	#7
     add	w24,	w2,	#8
     add	w8,	w2,	#9
@@ -329,14 +329,14 @@ main_147:
     ldr	s9,	[x23]
 
     add	w10,	w2,	#14
+    lsl	w23,	w21,	#2
     ldr	s3,	[x3]
 
-    lsl	w23,	w21,	#2
     fmul	s10,	s26,	s9
+    add	x22,	x11,	x23
     add	x3,	x19,	#32
     ldr	s17,	[x6]
 
-    add	x22,	x11,	x23
     fadd	s22,	s13,	s10
     lsl	w6,	w4,	#2
     ldr	s11,	[x16]

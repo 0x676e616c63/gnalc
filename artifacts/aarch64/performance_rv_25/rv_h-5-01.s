@@ -46,67 +46,67 @@ main_0:
     bl	getarray
     movz	w0,	#68
     bl	_sysy_starttime
+    adrp	x0, :got:A
     movz	w26,	#0
-    adrp	x10, :got:A
-    add	x5,	sp,	#16
+    add	x1,	sp,	#16
     movz	fp,	#11216
-    ldr	x10, [x10, #:got_lo12:A]
-    add	x8,	sp,	fp
+    ldr	x0, [x0, #:got_lo12:A]
+    add	x7,	sp,	fp
     movz	fp,	#5616
-    add	x25,	sp,	fp
+    add	x10,	sp,	fp
 
 main_17:
-    movz	w15,	#0
-    cmp	x15,	x26
+    movz	w16,	#0
+    cmp	x16,	x26
     bge	main_49
 
 main_20:
-    movz	w16,	#5600
-    movz	w0,	#0
-    madd	x6,	x26,	x16,	x10
+    movz	w17,	#5600
+    movz	w2,	#0
+    madd	x8,	x26,	x17,	x0
 
 
 main_23:
-    lsl	x15,	x0,	#2
+    lsl	x16,	x2,	#2
     movz	w28,	#0
-    add	x20,	x6,	x15
-    ldr	w19,	[x20]
+    add	x22,	x8,	x16
+    ldr	w20,	[x22]
 
 
 main_27:
-    cmp	x28,	x0
+    cmp	x28,	x2
     bge	main_40
 
 main_31:
-    lsl	x16,	x28,	#2
-    movz	w7,	#5600
-    lsl	x24,	x0,	#2
-    add	x15,	x6,	x16
-    madd	x3,	x28,	x7,	x10
+    lsl	x17,	x28,	#2
+    movz	w9,	#5600
+    lsl	x25,	x2,	#2
+    add	x16,	x8,	x17
+    madd	x5,	x28,	x9,	x0
 
     add	w28,	w28,	#1
-    add	x23,	x3,	x24
-    ldr	w9,	[x15]
+    add	x24,	x5,	x25
+    ldr	w11,	[x16]
 
-    ldr	w27,	[x23]
+    ldr	w27,	[x24]
 
-    msub	w19,	w27,	w9,	w19
+    msub	w20,	w27,	w11,	w20
 
     b	main_27
 
 main_40:
-    movz	w12,	#5600
-    lsl	x7,	x0,	#2
-    madd	x4,	x0,	x12,	x10
+    movz	w13,	#5600
+    lsl	x9,	x2,	#2
+    madd	x6,	x2,	x13,	x0
 
-    add	w0,	w0,	#1
-    add	x4,	x4,	x7
-    ldr	w9,	[x4]
+    add	w2,	w2,	#1
+    add	x6,	x6,	x9
+    ldr	w11,	[x6]
 
-    sdiv	w19,	w19,	w9
-    str	w19,	[x20]
+    sdiv	w20,	w20,	w11
+    str	w20,	[x22]
 
-    cmp	w0,	w26
+    cmp	w2,	w26
     blt	main_23
 
 main_49:
@@ -114,41 +114,41 @@ main_49:
     bge	main_76
 
 main_51:
-    movz	w1,	#5600
+    movz	w3,	#5600
     mov	w23,	w26
-    madd	x19,	x26,	x1,	x10
+    madd	x20,	x26,	x3,	x0
 
 
 main_54:
     lsl	w28,	w23,	#2
-    movz	w13,	#0
-    add	x24,	x19,	x28
-    ldr	w4,	[x24]
+    movz	w14,	#0
+    add	x25,	x20,	x28
+    ldr	w6,	[x25]
 
 
 main_58:
-    cmp	x13,	x26
+    cmp	x14,	x26
     bge	main_71
 
 main_62:
-    lsl	x7,	x13,	#2
-    movz	w0,	#5600
-    lsl	w15,	w23,	#2
-    add	x6,	x19,	x7
-    madd	x0,	x13,	x0,	x10
+    lsl	x9,	x14,	#2
+    movz	w2,	#5600
+    lsl	w16,	w23,	#2
+    add	x8,	x20,	x9
+    madd	x2,	x14,	x2,	x0
 
-    add	w13,	w13,	#1
-    add	x14,	x0,	x15
-    ldr	w3,	[x6]
+    add	w14,	w14,	#1
+    add	x15,	x2,	x16
+    ldr	w5,	[x8]
 
-    ldr	w16,	[x14]
+    ldr	w17,	[x15]
 
-    msub	w4,	w16,	w3,	w4
+    msub	w6,	w17,	w5,	w6
 
     b	main_58
 
 main_71:
-    str	w4,	[x24]
+    str	w6,	[x25]
 
     add	w23,	w23,	#1
     cmp	w23,	#20
@@ -163,13 +163,13 @@ main_79:
     movz	w4,	#0
 
 main_81:
-    lsl	x13,	x4,	#2
+    lsl	x14,	x4,	#2
     movz	w16,	#5600
     movz	w28,	#0
-    add	x12,	x8,	x13
-    madd	x22,	x4,	x16,	x10
+    add	x13,	x7,	x14
+    madd	x23,	x4,	x16,	x0
 
-    ldr	w13,	[x12]
+    ldr	w13,	[x13]
 
 
 main_86:
@@ -178,23 +178,23 @@ main_86:
 
 main_90:
     lsl	w26,	w28,	#2
-    lsl	w1,	w28,	#2
+    lsl	w3,	w28,	#2
     add	w28,	w28,	#1
-    add	x0,	x5,	x1
-    add	x24,	x22,	x26
-    ldr	w12,	[x24]
+    add	x2,	x1,	x3
+    add	x25,	x23,	x26
+    ldr	w14,	[x25]
 
-    ldr	w2,	[x0]
+    ldr	w5,	[x2]
 
-    msub	w13,	w2,	w12,	w13
+    msub	w13,	w5,	w14,	w13
 
     b	main_86
 
 main_98:
-    lsl	x16,	x4,	#2
+    lsl	x17,	x4,	#2
     add	w4,	w4,	#1
-    add	x15,	x5,	x16
-    str	w13,	[x15]
+    add	x16,	x1,	x17
+    str	w13,	[x16]
 
     cmp	w4,	#20
     blt	main_81
@@ -203,13 +203,13 @@ main_102:
     movz	w16,	#19
 
 main_104:
-    lsl	x13,	x16,	#2
+    lsl	x14,	x16,	#2
     add	w2,	w16,	#1
     movz	w3,	#5600
-    add	x12,	x5,	x13
-    madd	x1,	x16,	x3,	x10
+    add	x13,	x1,	x14
+    madd	x4,	x16,	x3,	x0
 
-    ldr	w17,	[x12]
+    ldr	w17,	[x13]
 
 
 main_110:
@@ -217,29 +217,29 @@ main_110:
     bge	main_122
 
 main_114:
-    lsl	w0,	w2,	#2
-    lsl	w4,	w2,	#2
+    lsl	w3,	w2,	#2
+    lsl	w6,	w2,	#2
     add	w2,	w2,	#1
-    add	x3,	x25,	x4
-    add	x28,	x1,	x0
-    ldr	w7,	[x28]
+    add	x5,	x10,	x6
+    add	x28,	x4,	x3
+    ldr	w8,	[x28]
 
-    ldr	w6,	[x3]
+    ldr	w7,	[x5]
 
-    msub	w17,	w6,	w7,	w17
+    msub	w17,	w7,	w8,	w17
 
     b	main_110
 
 main_122:
     lsl	x27,	x16,	#2
-    lsl	x0,	x16,	#2
+    lsl	x2,	x16,	#2
     sub	w16,	w16,	#1
-    add	x28,	x1,	x0
-    add	x14,	x25,	x27
-    ldr	w1,	[x28]
+    add	x28,	x4,	x2
+    add	x15,	x10,	x27
+    ldr	w3,	[x28]
 
-    sdiv	w8,	w17,	w1
-    str	w8,	[x14]
+    sdiv	w9,	w17,	w3
+    str	w9,	[x15]
 
     cmp	w16,	#0
     bge	main_104

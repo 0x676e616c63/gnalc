@@ -112,9 +112,9 @@ main_22:
     movz	w20,	#0
     adrp	x8, :got:nextvalue
     movz	w17,	#0
+    lsl	w0,	w4,	#2
     lsl	w26,	w4,	#2
     lsl	w14,	w4,	#2
-    lsl	w0,	w4,	#2
     str	w4,	[x5]
 
     adrp	x5, :got:next

@@ -36,9 +36,9 @@ same_2:
     stp	x26, x28, [sp, #48]
     stp	fp, lr, [sp, #64]
     
+    movz	w6,	#1
     adrp	x2, :got:vis
     lsl	w14,	w0,	#2
-    movz	w6,	#1
     mov	w19,	w1
     ldr	x2, [x2, #:got_lo12:vis]
     add	x13,	x2,	x14
@@ -504,8 +504,8 @@ main_66:
     ldr	x23, [x23, #:got_lo12:head]
     adrp	x4, :got:head
     add	x20,	x23,	x8
-    lsl	w18,	w11,	#2
     add	w15,	w11,	#1
+    lsl	w18,	w11,	#2
     adrp	x8, :got:head
     str	w10,	[x20]
 
@@ -832,8 +832,8 @@ main_285:
     movz	w17,	#0
     sub	w8,	w17,	w26
     cmp	w23,	#0
-    movz	w5,	#1
     csel	w1,	w8,	w26,	ne
+    movz	w5,	#1
     cset	w0,	ne
 
 main_289:
@@ -952,14 +952,14 @@ main_356:
     movz	w9,	#0
     sub	w12,	w9,	w26
     cmp	w19,	#0
-    adrp	x18, :got:head
-    lsl	w4,	w21,	#2
     lsl	w7,	w23,	#2
+    adrp	x18, :got:head
     adrp	x20, :got:next
     adrp	x17, :got:to
+    cset	w24,	ne
     lsl	w1,	w21,	#2
     csel	w10,	w12,	w26,	ne
-    cset	w24,	ne
+    lsl	w4,	w21,	#2
     ldr	x17, [x17, #:got_lo12:to]
     lsl	w12,	w10,	#2
     adrp	x26, :got:head

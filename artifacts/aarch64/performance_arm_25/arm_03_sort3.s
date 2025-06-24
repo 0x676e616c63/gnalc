@@ -128,15 +128,15 @@ radixSort_43:
 
 radixSort_52:
     add	x13,	sp,	#288
-    add	x6,	sp,	#352
-    add	x17,	sp,	#416
+    add	x19,	sp,	#352
+    add	x6,	sp,	#416
     movz	w12,	#1
     str	w23,	[x13]
 
-    ldr	w0,	[x17]
+    ldr	w0,	[x6]
 
     add	w1,	w0,	w23
-    str	w1,	[x6]
+    str	w1,	[x19]
 
 
 radixSort_58:
@@ -146,30 +146,30 @@ radixSort_58:
 radixSort_61:
     lsl	w0,	w12,	#2
     sub	w14,	w12,	#1
-    lsl	w26,	w12,	#2
+    lsl	w25,	w12,	#2
     lsl	w15,	w12,	#2
     mov	x5,	x0
-    mov	x25,	x26
-    lsl	w19,	w14,	#2
+    mov	x22,	x25
+    lsl	w18,	w14,	#2
     add	w12,	w12,	#1
     mov	x11,	x15
     add	x5,	sp,	x5
-    add	x25,	sp,	x25
-    mov	x16,	x19
+    add	x22,	sp,	x22
+    mov	x16,	x18
     add	x11,	sp,	x11
     add	x16,	sp,	x16
     add	x5,	x5,	#288
-    add	x25,	x25,	#352
+    add	x22,	x22,	#352
     add	x11,	x11,	#416
     add	x16,	x16,	#352
-    ldr	w21,	[x16]
+    ldr	w20,	[x16]
 
-    str	w21,	[x5]
+    str	w20,	[x5]
 
-    ldr	w18,	[x11]
+    ldr	w17,	[x11]
 
-    add	w5,	w18,	w21
-    str	w5,	[x25]
+    add	w5,	w17,	w20
+    str	w5,	[x22]
 
     b	radixSort_58
 
@@ -177,15 +177,15 @@ radixSort_71:
     movz	w14,	#0
 
 radixSort_73:
-    lsl	w21,	w14,	#2
+    lsl	w20,	w14,	#2
     lsl	w9,	w14,	#2
-    mov	x1,	x21
+    mov	x3,	x20
     mov	x8,	x9
-    add	x1,	sp,	x1
+    add	x3,	sp,	x3
     add	x8,	sp,	x8
-    add	x1,	x1,	#288
+    add	x3,	x3,	#288
     add	x8,	x8,	#352
-    ldr	w25,	[x1]
+    ldr	w25,	[x3]
 
     ldr	w5,	[x8]
 
@@ -193,52 +193,52 @@ radixSort_73:
     bge	radixSort_153
 
 radixSort_82:
-    lsl	w8,	w25,	#2
+    lsl	w4,	w25,	#2
     movz	fp,	#532
-    ldr	x16,	[sp, fp]
+    ldr	x15,	[sp, fp]
 
-    add	x4,	x16,	x8
-    ldr	w4,	[x4]
+    add	x2,	x15,	x4
+    ldr	w4,	[x2]
 
 
 radixSort_86:
     mov	w0,	w4
-    movz	w2,	#0
+    movz	w1,	#0
 
 radixSort_88:
-    cmp	w2,	w28
+    cmp	w1,	w28
     bge	radixSort_95
 
 radixSort_92:
-    asr	w16,	w0,	#31
-    add	w2,	w2,	#1
-    lsr	w18,	w16,	#28
-    add	w16,	w0,	w18
+    asr	w11,	w0,	#31
+    add	w1,	w1,	#1
+    lsr	w17,	w11,	#28
+    add	w16,	w0,	w17
     asr	w0,	w16,	#4
     b	radixSort_88
 
 radixSort_95:
-    asr	w7,	w0,	#31
-    lsr	w8,	w7,	#28
-    add	w10,	w0,	w8
-    asr	w15,	w10,	#4
+    asr	w2,	w0,	#31
+    lsr	w7,	w2,	#28
+    add	w8,	w0,	w7
+    asr	w15,	w8,	#4
     lsl	w16,	w15,	#4
-    sub	w2,	w0,	w16
-    cmp	w2,	w14
+    sub	w26,	w0,	w16
+    cmp	w26,	w14
     bne	radixSort_98
 
 radixSort_146:
-    ldr	w10,	[x1]
+    ldr	w7,	[x3]
 
     movz	fp,	#532
-    add	w25,	w10,	#1
-    lsl	w26,	w10,	#2
-    ldr	x12,	[sp, fp]
+    add	w25,	w7,	#1
+    lsl	w22,	w7,	#2
+    ldr	x10,	[sp, fp]
 
-    add	x22,	x12,	x26
-    str	w4,	[x22]
+    add	x18,	x10,	x22
+    str	w4,	[x18]
 
-    str	w25,	[x1]
+    str	w25,	[x3]
 
     cmp	w25,	w5
     blt	radixSort_82
@@ -254,43 +254,40 @@ radixSort_156:
     sub	w5,	w28,	#1
     add	x25,	sp,	#224
     add	x22,	sp,	#96
-    add	x10,	sp,	#224
-    movz	fp,	#612
     add	x0,	sp,	#160
     add	x24,	sp,	#96
     movz	w20,	#0
-    ldr	w12,	[x17]
+    ldr	w10,	[x6]
 
-    add	w3,	w12,	w23
+    add	w3,	w10,	w23
+    add	x10,	sp,	#224
     add	x23,	sp,	#160
-    str	w3,	[x6]
+    str	w3,	[x19]
 
     str	w5,	[sp, #540]
 
-    str	x10,	[sp, fp]
+    str	x10,	[sp, #616]
 
-    movz	fp,	#556
-    str	x0,	[sp, fp]
+    str	x0,	[sp, #560]
 
-    movz	fp,	#548
-    str	x24,	[sp, fp]
+    str	x24,	[sp, #552]
 
     ldr	w3,	[sp, #540]
 
-    str	w20,	[sp, #496]
+    str	w20,	[sp, #488]
 
     sub	w21,	w3,	#1
 
 radixSort_168:
-    ldr	w6,	[sp, #496]
+    ldr	w6,	[sp, #488]
 
     cmp	w6,	#0
     ble	radixSort_180
 
 radixSort_171:
-    ldr	w7,	[sp, #496]
+    ldr	w7,	[sp, #488]
 
-    ldr	w3,	[sp, #496]
+    ldr	w3,	[sp, #488]
 
     lsl	w6,	w7,	#2
     sub	w5,	w3,	#1
@@ -305,9 +302,9 @@ radixSort_171:
 
     str	w5,	[x17]
 
-    ldr	w10,	[sp, #496]
+    ldr	w10,	[sp, #488]
 
-    ldr	w8,	[sp, #496]
+    ldr	w8,	[sp, #488]
 
     lsl	w0,	w10,	#2
     lsl	w8,	w8,	#2
@@ -325,9 +322,9 @@ radixSort_171:
     b	radixSort_183
 
 radixSort_180:
-    ldr	w11,	[sp, #496]
+    ldr	w11,	[sp, #488]
 
-    ldr	w3,	[sp, #496]
+    ldr	w3,	[sp, #488]
 
     lsl	w18,	w11,	#2
     lsl	w28,	w3,	#2
@@ -455,24 +452,21 @@ radixSort_217:
 radixSort_226:
     ldr	w20,	[sp, #544]
 
-    movz	fp,	#612
     movz	w4,	#1
-    ldr	x8,	[sp, fp]
+    ldr	x8,	[sp, #616]
 
-    movz	fp,	#548
     str	w20,	[x8]
 
-    ldr	x2,	[sp, fp]
+    ldr	x2,	[sp, #552]
 
-    movz	fp,	#556
     ldr	w2,	[x2]
 
     ldr	w24,	[sp, #544]
 
-    add	w26,	w2,	w24
-    ldr	x24,	[sp, fp]
+    ldr	x26,	[sp, #560]
 
-    str	w26,	[x24]
+    add	w12,	w2,	w24
+    str	w12,	[x26]
 
 
 radixSort_229:
@@ -480,31 +474,31 @@ radixSort_229:
     bge	radixSort_242
 
 radixSort_232:
-    lsl	w19,	w4,	#2
-    sub	w28,	w4,	#1
+    lsl	w0,	w4,	#2
+    sub	w1,	w4,	#1
     lsl	w6,	w4,	#2
-    mov	x18,	x19
+    lsl	w28,	w4,	#2
+    mov	x26,	x0
     mov	x5,	x6
-    lsl	w19,	w4,	#2
-    lsl	w0,	w28,	#2
-    add	x18,	sp,	x18
-    add	x5,	sp,	x5
     add	w4,	w4,	#1
+    lsl	w0,	w1,	#2
+    add	x26,	sp,	x26
+    add	x5,	sp,	x5
     mov	x8,	x0
-    add	x18,	x18,	#224
     add	x8,	sp,	x8
+    add	x26,	x26,	#224
     add	x5,	x5,	#160
     add	x8,	x8,	#160
     ldr	w1,	[x8]
 
-    str	w1,	[x18]
+    str	w1,	[x26]
 
-    mov	x18,	x19
-    add	x18,	sp,	x18
-    add	x18,	x18,	#96
-    ldr	w28,	[x18]
+    mov	x26,	x28
+    add	x26,	sp,	x26
+    add	x26,	x26,	#96
+    ldr	w0,	[x26]
 
-    add	w10,	w28,	w1
+    add	w10,	w0,	w1
     str	w10,	[x5]
 
     b	radixSort_229
@@ -513,72 +507,72 @@ radixSort_242:
     movz	w5,	#0
 
 radixSort_244:
-    lsl	w12,	w5,	#2
-    lsl	w6,	w5,	#2
-    mov	x15,	x12
-    mov	x4,	x6
-    add	x15,	sp,	x15
-    add	x4,	sp,	x4
-    add	x15,	x15,	#224
-    add	x4,	x4,	#160
-    ldr	w0,	[x15]
+    lsl	w13,	w5,	#2
+    lsl	w8,	w5,	#2
+    mov	x0,	x13
+    mov	x7,	x8
+    add	x0,	sp,	x0
+    add	x7,	sp,	x7
+    add	x0,	x0,	#224
+    add	x7,	x7,	#160
+    ldr	w1,	[x0]
 
-    ldr	w13,	[x4]
+    ldr	w17,	[x7]
 
-    cmp	w0,	w13
+    cmp	w1,	w17
     bge	radixSort_324
 
 radixSort_253:
-    lsl	w9,	w0,	#2
+    lsl	w11,	w1,	#2
     movz	fp,	#532
-    ldr	x12,	[sp, fp]
+    ldr	x15,	[sp, fp]
 
-    add	x8,	x12,	x9
-    ldr	w3,	[x8]
+    add	x10,	x15,	x11
+    ldr	w4,	[x10]
 
 
 radixSort_257:
-    mov	w7,	w3
-    movz	w1,	#0
+    mov	w8,	w4
+    movz	w2,	#0
 
 radixSort_259:
-    ldr	w4,	[sp, #540]
+    ldr	w9,	[sp, #540]
 
-    cmp	w1,	w4
+    cmp	w2,	w9
     bge	radixSort_266
 
 radixSort_263:
-    asr	w10,	w7,	#31
-    add	w1,	w1,	#1
-    lsr	w11,	w10,	#28
-    add	w2,	w7,	w11
-    asr	w7,	w2,	#4
+    asr	w13,	w8,	#31
+    add	w2,	w2,	#1
+    lsr	w14,	w13,	#28
+    add	w6,	w8,	w14
+    asr	w8,	w6,	#4
     b	radixSort_259
 
 radixSort_266:
-    asr	w2,	w7,	#31
-    lsr	w6,	w2,	#28
-    add	w9,	w7,	w6
-    asr	w14,	w9,	#4
-    lsl	w16,	w14,	#4
-    sub	w17,	w7,	w16
-    cmp	w17,	w5
+    asr	w7,	w8,	#31
+    lsr	w10,	w7,	#28
+    add	w11,	w8,	w10
+    asr	w16,	w11,	#4
+    lsl	w19,	w16,	#4
+    sub	w26,	w8,	w19
+    cmp	w26,	w5
     bne	radixSort_269
 
 radixSort_317:
-    ldr	w0,	[x15]
+    ldr	w2,	[x0]
 
     movz	fp,	#532
-    lsl	w16,	w0,	#2
-    ldr	x10,	[sp, fp]
+    add	w1,	w2,	#1
+    lsl	w16,	w2,	#2
+    ldr	x13,	[sp, fp]
 
-    add	w0,	w0,	#1
-    add	x4,	x10,	x16
-    str	w3,	[x4]
+    add	x8,	x13,	x16
+    str	w4,	[x8]
 
-    str	w0,	[x15]
+    str	w1,	[x0]
 
-    cmp	w0,	w13
+    cmp	w1,	w17
     blt	radixSort_253
 
 radixSort_324:
@@ -587,20 +581,18 @@ radixSort_324:
     blt	radixSort_244
 
 radixSort_327:
-    ldr	w14,	[sp, #544]
+    ldr	w15,	[sp, #544]
 
-    movz	fp,	#612
     movz	w3,	#0
-    ldr	x24,	[sp, fp]
+    ldr	x26,	[sp, #616]
 
-    movz	fp,	#556
-    str	w14,	[x24]
-
-    ldr	x28,	[sp, fp]
-
-    str	w26,	[x28]
+    str	w15,	[x26]
 
     mov	w26,	w3
+    ldr	x28,	[sp, #560]
+
+    str	w12,	[x28]
+
 
 radixSort_329:
     cmp	w26,	#0
@@ -664,153 +656,153 @@ radixSort_328:
     b	radixSort_329
 
 radixSort_269:
-    mov	w12,	w3
-    movz	w1,	#0
+    mov	w14,	w4
+    movz	w2,	#0
 
 radixSort_270:
-    ldr	w8,	[sp, #540]
+    ldr	w10,	[sp, #540]
 
-    cmp	w1,	w8
+    cmp	w2,	w10
     bge	radixSort_277
 
 radixSort_274:
-    asr	w0,	w12,	#31
-    add	w1,	w1,	#1
-    lsr	w2,	w0,	#28
-    add	w12,	w12,	w2
-    asr	w12,	w12,	#4
+    asr	w3,	w14,	#31
+    add	w2,	w2,	#1
+    lsr	w6,	w3,	#28
+    add	w15,	w14,	w6
+    asr	w14,	w15,	#4
     b	radixSort_270
 
 radixSort_277:
-    asr	w11,	w12,	#31
+    asr	w16,	w14,	#31
     movz	fp,	#532
-    lsr	w16,	w11,	#28
-    movz	w11,	#0
-    add	w18,	w12,	w16
-    asr	w7,	w18,	#4
-    lsl	w8,	w7,	#4
-    mov	w7,	w3
-    sub	w14,	w12,	w8
-    lsl	w19,	w14,	#2
-    mov	x17,	x19
-    add	x17,	sp,	x17
-    add	x17,	x17,	#224
-    ldr	w28,	[x17]
+    mov	w8,	w4
+    movz	w13,	#0
+    lsr	w19,	w16,	#28
+    add	w28,	w14,	w19
+    asr	w9,	w28,	#4
+    lsl	w10,	w9,	#4
+    sub	w18,	w14,	w10
+    lsl	w28,	w18,	#2
+    mov	x26,	x28
+    add	x26,	sp,	x26
+    add	x26,	x26,	#224
+    ldr	w1,	[x26]
 
-    ldr	x9,	[sp, fp]
+    ldr	x11,	[sp, fp]
 
-    lsl	w2,	w28,	#2
-    add	x0,	x9,	x2
-    ldr	w2,	[x0]
+    lsl	w7,	w1,	#2
+    add	x2,	x11,	x7
+    ldr	w3,	[x2]
 
 
 radixSort_283:
-    ldr	w4,	[sp, #540]
+    ldr	w9,	[sp, #540]
 
-    cmp	w11,	w4
+    cmp	w13,	w9
     bge	radixSort_290
 
 radixSort_287:
-    asr	w6,	w7,	#31
-    add	w11,	w11,	#1
-    lsr	w8,	w6,	#28
-    add	w8,	w7,	w8
-    asr	w7,	w8,	#4
+    asr	w9,	w8,	#31
+    add	w13,	w13,	#1
+    lsr	w11,	w9,	#28
+    add	w10,	w8,	w11
+    asr	w8,	w10,	#4
     b	radixSort_283
 
 radixSort_290:
-    asr	w11,	w7,	#31
+    asr	w14,	w8,	#31
     movz	fp,	#532
-    mov	w9,	w3
-    lsr	w12,	w11,	#28
-    add	w14,	w7,	w12
-    asr	w17,	w14,	#4
-    lsl	w19,	w17,	#4
-    sub	w11,	w7,	w19
-    lsl	w14,	w11,	#2
-    mov	x12,	x14
-    movz	w14,	#0
-    add	x12,	sp,	x12
-    add	x12,	x12,	#224
-    ldr	w16,	[x12]
+    mov	w10,	w4
+    lsr	w15,	w14,	#28
+    add	w16,	w8,	w15
+    asr	w26,	w16,	#4
+    lsl	w1,	w26,	#4
+    sub	w14,	w8,	w1
+    lsl	w16,	w14,	#2
+    mov	x15,	x16
+    add	x15,	sp,	x15
+    add	x15,	x15,	#224
+    ldr	w19,	[x15]
 
-    ldr	x18,	[sp, fp]
+    movz	w15,	#0
+    ldr	x24,	[sp, fp]
 
-    lsl	w0,	w16,	#2
-    add	x18,	x18,	x0
-    str	w3,	[x18]
+    lsl	w1,	w19,	#2
+    add	x28,	x24,	x1
+    str	w4,	[x28]
 
 
 radixSort_295:
-    ldr	w8,	[sp, #540]
+    ldr	w9,	[sp, #540]
 
-    cmp	w14,	w8
+    cmp	w15,	w9
     bge	radixSort_302
 
 radixSort_299:
-    asr	w8,	w9,	#31
-    add	w14,	w14,	#1
-    lsr	w11,	w8,	#28
-    add	w19,	w9,	w11
-    asr	w9,	w19,	#4
+    asr	w13,	w10,	#31
+    add	w15,	w15,	#1
+    lsr	w14,	w13,	#28
+    add	w1,	w10,	w14
+    asr	w10,	w1,	#4
     b	radixSort_295
 
 radixSort_302:
-    asr	w0,	w9,	#31
-    lsr	w1,	w0,	#28
-    add	w4,	w9,	w1
-    asr	w4,	w4,	#4
-    lsl	w6,	w4,	#4
-    mov	w4,	w3
-    sub	w12,	w9,	w6
-    lsl	w1,	w12,	#2
-    movz	w12,	#0
-    mov	x1,	x1
-    add	x1,	sp,	x1
-    add	x1,	x1,	#224
+    asr	w2,	w10,	#31
+    lsr	w6,	w2,	#28
+    add	w7,	w10,	w6
+    mov	w6,	w4
+    asr	w7,	w7,	#4
+    lsl	w9,	w7,	#4
+    sub	w14,	w10,	w9
+    lsl	w8,	w14,	#2
+    movz	w14,	#0
+    mov	x8,	x8
+    add	x8,	sp,	x8
+    add	x8,	x8,	#224
 
 radixSort_305:
-    ldr	w11,	[sp, #540]
+    ldr	w13,	[sp, #540]
 
-    cmp	w12,	w11
+    cmp	w14,	w13
     bge	radixSort_312
 
 radixSort_309:
-    asr	w28,	w4,	#31
-    add	w12,	w12,	#1
-    lsr	w6,	w28,	#28
-    add	w0,	w4,	w6
-    asr	w4,	w0,	#4
+    asr	w2,	w6,	#31
+    add	w14,	w14,	#1
+    lsr	w4,	w2,	#28
+    add	w2,	w6,	w4
+    asr	w6,	w2,	#4
     b	radixSort_305
 
 radixSort_312:
-    asr	w3,	w4,	#31
-    lsr	w8,	w3,	#28
-    add	w9,	w4,	w8
-    asr	w3,	w9,	#4
-    lsl	w8,	w3,	#4
-    mov	w3,	w2
-    sub	w9,	w4,	w8
-    lsl	w11,	w9,	#2
-    mov	x10,	x11
-    add	x10,	sp,	x10
-    add	x10,	x10,	#224
-    ldr	w12,	[x10]
+    asr	w9,	w6,	#31
+    mov	w4,	w3
+    lsr	w10,	w9,	#28
+    add	w11,	w6,	w10
+    asr	w9,	w11,	#4
+    lsl	w10,	w9,	#4
+    sub	w11,	w6,	w10
+    lsl	w14,	w11,	#2
+    mov	x13,	x14
+    add	x13,	sp,	x13
+    add	x13,	x13,	#224
+    ldr	w15,	[x13]
 
-    add	w14,	w12,	#1
-    str	w14,	[x1]
+    add	w16,	w15,	#1
+    str	w16,	[x8]
 
     b	radixSort_257
 
 radixSort_354:
-    ldr	w13,	[sp, #496]
+    ldr	w13,	[sp, #488]
 
     add	w5,	w13,	#1
     cmp	w5,	#16
     bge	radixSort_360
 
 radixSort_167:
-    str	w5,	[sp, #496]
+    str	w5,	[sp, #488]
 
     b	radixSort_168
 
@@ -823,34 +815,34 @@ radixSort_99:
     bge	radixSort_106
 
 radixSort_103:
-    asr	w10,	w0,	#31
+    asr	w7,	w0,	#31
     add	w15,	w15,	#1
-    lsr	w16,	w10,	#28
-    add	w3,	w0,	w16
-    asr	w0,	w3,	#4
+    lsr	w10,	w7,	#28
+    add	w0,	w0,	w10
+    asr	w0,	w0,	#4
     b	radixSort_99
 
 radixSort_106:
-    asr	w12,	w0,	#31
+    asr	w9,	w0,	#31
     movz	fp,	#532
-    lsr	w15,	w12,	#28
+    movz	w7,	#0
+    lsr	w15,	w9,	#28
     add	w16,	w0,	w15
     mov	w15,	w4
-    asr	w2,	w16,	#4
-    lsl	w3,	w2,	#4
-    sub	w21,	w0,	w3
-    lsl	w26,	w21,	#2
-    mov	x25,	x26
-    add	x25,	sp,	x25
-    add	x25,	x25,	#288
-    ldr	w0,	[x25]
+    asr	w25,	w16,	#4
+    lsl	w26,	w25,	#4
+    sub	w17,	w0,	w26
+    lsl	w22,	w17,	#2
+    mov	x21,	x22
+    add	x21,	sp,	x21
+    add	x21,	x21,	#288
+    ldr	w25,	[x21]
 
-    ldr	x19,	[sp, fp]
+    ldr	x17,	[sp, fp]
 
-    lsl	w7,	w0,	#2
-    add	x2,	x19,	x7
-    movz	w7,	#0
-    ldr	w0,	[x2]
+    lsl	w0,	w25,	#2
+    add	x26,	x17,	x0
+    ldr	w0,	[x26]
 
 
 radixSort_112:
@@ -858,34 +850,34 @@ radixSort_112:
     bge	radixSort_119
 
 radixSort_116:
-    asr	w10,	w15,	#31
+    asr	w2,	w15,	#31
     add	w7,	w7,	#1
-    lsr	w12,	w10,	#28
-    add	w18,	w15,	w12
-    asr	w15,	w18,	#4
+    lsr	w8,	w2,	#28
+    add	w16,	w15,	w8
+    asr	w15,	w16,	#4
     b	radixSort_112
 
 radixSort_119:
-    asr	w20,	w15,	#31
+    asr	w18,	w15,	#31
     movz	fp,	#532
-    lsr	w25,	w20,	#28
-    add	w2,	w15,	w25
-    asr	w8,	w2,	#4
-    lsl	w10,	w8,	#4
-    sub	w15,	w15,	w10
     movz	w10,	#0
-    lsl	w18,	w15,	#2
-    mov	x16,	x18
-    mov	w18,	w4
-    add	x16,	sp,	x16
-    add	x16,	x16,	#288
-    ldr	w19,	[x16]
+    lsr	w20,	w18,	#28
+    add	w25,	w15,	w20
+    asr	w2,	w25,	#4
+    lsl	w7,	w2,	#4
+    sub	w12,	w15,	w7
+    lsl	w16,	w12,	#2
+    mov	x15,	x16
+    add	x15,	sp,	x15
+    add	x15,	x15,	#288
+    ldr	w17,	[x15]
 
-    ldr	x9,	[sp, fp]
+    ldr	x2,	[sp, fp]
 
-    lsl	w26,	w19,	#2
-    add	x22,	x9,	x26
-    str	w4,	[x22]
+    lsl	w22,	w17,	#2
+    mov	w17,	w4
+    add	x18,	x2,	x22
+    str	w4,	[x18]
 
 
 radixSort_124:
@@ -893,55 +885,55 @@ radixSort_124:
     bge	radixSort_131
 
 radixSort_128:
-    asr	w8,	w18,	#31
+    asr	w7,	w17,	#31
     add	w10,	w10,	#1
-    lsr	w11,	w8,	#28
-    add	w7,	w18,	w11
-    asr	w18,	w7,	#4
+    lsr	w8,	w7,	#28
+    add	w1,	w17,	w8
+    asr	w17,	w1,	#4
     b	radixSort_124
 
 radixSort_131:
-    asr	w10,	w18,	#31
+    asr	w7,	w17,	#31
     mov	w8,	w4
-    lsr	w15,	w10,	#28
+    lsr	w10,	w7,	#28
+    add	w16,	w17,	w10
     movz	w10,	#0
-    add	w16,	w18,	w15
-    asr	w19,	w16,	#4
-    lsl	w7,	w19,	#4
-    sub	w9,	w18,	w7
-    lsl	w15,	w9,	#2
-    mov	x20,	x15
-    add	x20,	sp,	x20
-    add	x20,	x20,	#288
+    asr	w18,	w16,	#4
+    lsl	w2,	w18,	#4
+    sub	w2,	w17,	w2
+    lsl	w15,	w2,	#2
+    mov	x26,	x15
+    add	x26,	sp,	x26
+    add	x26,	x26,	#288
 
 radixSort_134:
     cmp	w10,	w28
     bge	radixSort_141
 
 radixSort_138:
-    asr	w19,	w8,	#31
+    asr	w18,	w8,	#31
     add	w10,	w10,	#1
-    lsr	w4,	w19,	#28
-    add	w12,	w8,	w4
-    asr	w8,	w12,	#4
+    lsr	w2,	w18,	#28
+    add	w9,	w8,	w2
+    asr	w8,	w9,	#4
     b	radixSort_134
 
 radixSort_141:
     asr	w15,	w8,	#31
     lsr	w16,	w15,	#28
-    add	w4,	w8,	w16
-    asr	w18,	w4,	#4
-    lsl	w19,	w18,	#4
-    sub	w11,	w8,	w19
-    lsl	w4,	w11,	#2
-    mov	x12,	x4
-    mov	w4,	w0
+    add	w2,	w8,	w16
+    asr	w16,	w2,	#4
+    lsl	w17,	w16,	#4
+    sub	w11,	w8,	w17
+    lsl	w2,	w11,	#2
+    mov	x12,	x2
     add	x12,	sp,	x12
     add	x12,	x12,	#288
-    ldr	w7,	[x12]
+    ldr	w4,	[x12]
 
-    add	w9,	w7,	#1
-    str	w9,	[x20]
+    add	w7,	w4,	#1
+    mov	w4,	w0
+    str	w7,	[x26]
 
     b	radixSort_86
 
