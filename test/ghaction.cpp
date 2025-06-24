@@ -20,7 +20,7 @@ using namespace std::filesystem;
 
 struct Entry {
     std::string id;
-    std::string ir_or_elf;
+    std::string ir_or_bin;
     std::string testcase_out;
     std::string testcase_in;
 };
@@ -190,7 +190,7 @@ int main(int argc, char *argv[]) {
     while (std::getline(std::cin, line)) {
         if (!line.empty()) {
             path path(line);
-            if ((path.extension() == ".elf" && only_frontend) || (path.extension() == ".bc" && !only_frontend))
+            if ((path.extension() == ".bin" && only_frontend) || (path.extension() == ".bc" && !only_frontend))
                 continue;
 
             auto parent_path = path.parent_path();
@@ -200,7 +200,7 @@ int main(int argc, char *argv[]) {
                 + parent_path.stem().string() + "/" + path.stem().string();
             entries.emplace_back(Entry{
                 .id = (is_final ? "final-" : "") + parent_path.stem().string() + "-" + path.stem().string(),
-                .ir_or_elf = path,
+                .ir_or_bin = path,
                 .testcase_out = base_path + ".out",
                 .testcase_in = base_path + ".in",
             });
@@ -224,20 +224,20 @@ int main(int argc, char *argv[]) {
                     auto curr_temp_dir = cfg::global_temp_dir + "/" + curr_test.id;
                     create_directories(curr_temp_dir);
 
-                    CheckIRELFData data = {
+                    CheckIRBinData data = {
                         .id = curr_test.id,
-                        .ir_or_elf = curr_test.ir_or_elf,
+                        .ir_or_bin = curr_test.ir_or_bin,
                         .temp_dir = curr_temp_dir,
                         .input = curr_test.testcase_in,
                     };
 
-                    auto res = check_ir_or_elf(data, only_frontend);
+                    auto res = check_ir_or_bin(data, only_frontend);
                     auto expected_syout = read_file(curr_test.testcase_out);
                     fix_newline(expected_syout);
 
                     results[i] = Result{
                         .id = curr_test.id,
-                        .file_path = curr_test.ir_or_elf,
+                        .file_path = curr_test.ir_or_bin,
                         .time_elapsed = res.time_elapsed,
                         .expected_output = expected_syout,
                         .actual_output = res.output,
@@ -246,7 +246,7 @@ int main(int argc, char *argv[]) {
                 } catch (const std::exception& e) {
                     results[i] = Result{
                         .id = curr_test.id,
-                        .file_path = curr_test.ir_or_elf,
+                        .file_path = curr_test.ir_or_bin,
                         .time_elapsed = 0,
                         .expected_output = "",
                         .actual_output = "Exception: " + std::string(e.what()),
@@ -255,7 +255,7 @@ int main(int argc, char *argv[]) {
                 } catch (...) {
                     results[i] = Result{
                         .id = curr_test.id,
-                        .file_path = curr_test.ir_or_elf,
+                        .file_path = curr_test.ir_or_bin,
                         .time_elapsed = 0,
                         .expected_output = "",
                         .actual_output = "Unknown exception",

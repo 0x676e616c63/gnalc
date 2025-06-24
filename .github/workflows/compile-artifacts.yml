@@ -143,7 +143,7 @@ jobs:
           aarch64-linux-gnu-gcc -c test/sylib/sylib.c -o sylib.o
           aarch64-linux-gnu-ar rcs sylib.a sylib.o
           aarch64-linux-gnu-gcc "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.s" \
-          sylib.a -o "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.elf"
+          sylib.a -o "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.bin"
           rm "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.s"
           done
 

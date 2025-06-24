@@ -107,9 +107,9 @@ static TestResult run_test(const TestData &data, bool only_run_frontend, size_t 
     return {out_source, syout, output, time_elapsed};
 }
 
-struct CheckIRELFData {
+struct CheckIRBinData {
     std::string id;
-    std::string ir_or_elf; // .bc or .elf
+    std::string ir_or_bin; // .bc or .bin
     std::string temp_dir;
     std::string input;
 };
@@ -120,16 +120,16 @@ struct CheckResult {
     size_t time_elapsed;
 };
 
-static CheckResult check_ir_or_elf(const CheckIRELFData &data, bool only_run_frontend) {
+static CheckResult check_ir_or_bin(const CheckIRBinData &data, bool only_run_frontend) {
     auto outtime = format("{}/{}.time", data.temp_dir, data.id);
     auto output = format("{}/{}.out", data.temp_dir, data.id);
 
     std::string exec_command;
     if (only_run_frontend) {
-        exec_command = format("lli {} < {} > {} 2>{}", data.ir_or_elf,
+        exec_command = format("lli {} < {} > {} 2>{}", data.ir_or_bin,
                               std::filesystem::exists(data.input) ? data.input : "/dev/null", output, outtime);
     } else {
-        exec_command = format("{} {} < {} > {} 2>{}", cfg::qemu_arm_command, data.ir_or_elf,
+        exec_command = format("{} {} < {} > {} 2>{}", cfg::qemu_arm_command, data.ir_or_bin,
                               std::filesystem::exists(data.input) ? data.input : "/dev/null", output, outtime);
     }
 
