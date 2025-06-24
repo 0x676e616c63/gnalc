@@ -95,6 +95,11 @@ jobs:
           mkdir -p ${{ env.TESTDATA_DIR }}
           unzip -q ${{ env.ZIP_CACHE_DIR }}/testdata.zip -d ${{ env.TESTDATA_DIR }}
 
+      - name: Install Cross-Compile Support (ARM64)
+        uses: cyberjunk/gha-ubuntu-cross@v5
+        with:
+          arch: arm64
+
       - name: Configure CMake
         run: |
           mkdir build
@@ -125,16 +130,21 @@ jobs:
             continue
           fi
           
-          mkdir -p "$ARTIFACTS_DIR/artifacts/llvm/$dir_path"
-          mkdir -p "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path"
-          
+           #mkdir -p "$ARTIFACTS_DIR/artifacts/llvm/$dir_path"
            #./build/gnalc --log none -S "$testcase" -emit-llvm \
            #  -o "$ARTIFACTS_DIR/artifacts/llvm/$dir_path/$test_name.ll" \
            #  ${{ env.COMPILE_OPTIONS }}
           
+          mkdir -p "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path"
           ./build/gnalc --log none -S "$testcase" \
           -o "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.s" \
           ${{ env.COMPILE_OPTIONS }}
+          
+          aarch64-linux-gnu-gcc -c test/sylib/sylib.c -o sylib.o
+          aarch64-linux-gnu-ar rcs sylib.a sylib.o
+          aarch64-linux-gnu-gcc "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.s" \
+          sylib.a -o "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.elf"
+          rm "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.s"
           done
 
       - name: Checkout artifacts branch for update

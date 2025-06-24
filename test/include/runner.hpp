@@ -107,10 +107,9 @@ static TestResult run_test(const TestData &data, bool only_run_frontend, size_t 
     return {out_source, syout, output, time_elapsed};
 }
 
-struct CheckIRAsmData {
+struct CheckIRELFData {
     std::string id;
-    std::string ir_or_asm;
-    std::string sylib;
+    std::string ir_or_elf; // .bc or .elf
     std::string temp_dir;
     std::string input;
 };
@@ -121,35 +120,22 @@ struct CheckResult {
     size_t time_elapsed;
 };
 
-static CheckResult check_ir_asm(const CheckIRAsmData &data, bool only_run_frontend) {
+static CheckResult check_ir_or_elf(const CheckIRELFData &data, bool only_run_frontend) {
     auto outtime = format("{}/{}.time", data.temp_dir, data.id);
     auto output = format("{}/{}.out", data.temp_dir, data.id);
 
-    std::string link_command, exec_command;
+    std::string exec_command;
     if (only_run_frontend) {
-        auto outbc = format("{}/{}.bc", data.temp_dir, data.id);
-
-        link_command += format("llvm-link 2>&1 {} {} -o {}", data.sylib, data.ir_or_asm, outbc);
-
-        exec_command = format("lli {} < {} > {} 2>{}", outbc,
+        exec_command = format("lli {} < {} > {} 2>{}", data.ir_or_elf,
                               std::filesystem::exists(data.input) ? data.input : "/dev/null", output, outtime);
     } else {
-        auto outexec = format("{}/{}", data.temp_dir, data.id);
-
-        link_command = format("{} {} {} -o {}", cfg::gcc_arm_command, data.ir_or_asm, data.sylib, outexec);
-
-        exec_command = format("{} {} < {} > {} 2>{}", cfg::qemu_arm_command, outexec,
+        exec_command = format("{} {} < {} > {} 2>{}", cfg::qemu_arm_command, data.ir_or_elf,
                               std::filesystem::exists(data.input) ? data.input : "/dev/null", output, outtime);
     }
 
     // /bin/echo is the one in GNU coreutils
     // Not the one in sh or bash.
     exec_command += R"(;/bin/echo -e "\n"$? >> )" + output;
-
-    println("");
-    println("|  Running link command: '{}'", link_command);
-    if (std::system(link_command.c_str()) != 0)
-        return {"linker error", "", 0};
 
     println("|  Running execute command: '{}'",  exec_command);
 

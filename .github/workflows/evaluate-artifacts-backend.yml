@@ -35,7 +35,7 @@ jobs:
         id: test-files
         run: |
           find artifacts/ -type f > test_files.txt
-          grep -E 'artifacts/(llvm|aarch64)/.*\.s$' test_files.txt > filtered_files.txt
+          grep -E 'artifacts/(llvm|aarch64)/.*\.elf' test_files.txt > filtered_files.txt
           
           FILE_COUNT=$(wc -l < filtered_files.txt)
           echo "Detected $FILE_COUNT artifact files"
@@ -70,8 +70,7 @@ jobs:
         run: |
           cat filtered_files.txt | main/build/test/ghaction -b -d ${{ env.TESTDATA_DIR }} \
               --sha "${{ github.sha }}" \
-              --report "test_report.md" \
-              --sylib main/test/sylib/sylib.c
+              --report "test_report.md"
 
       - name: Checkout test-result branch
         uses: actions/checkout@v4

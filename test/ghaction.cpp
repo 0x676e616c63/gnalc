@@ -20,7 +20,7 @@ using namespace std::filesystem;
 
 struct Entry {
     std::string id;
-    std::string ir_or_asm;
+    std::string ir_or_elf;
     std::string testcase_out;
     std::string testcase_in;
 };
@@ -129,7 +129,6 @@ int main(int argc, char *argv[]) {
         println("  -d, --data          Test data directory.");
         println("  -p, --para [Param]  Run with gnalc parameter.");
         println("  -s, --sha [SHA]     Commit SHA for test metadata.");
-        println("  -l, --sylib         Specify sylib.c.");
         println("  -r, --report [Path] Path to save test report.");
         println("  -h, --help          Print this help message.");
     };
@@ -138,7 +137,6 @@ int main(int argc, char *argv[]) {
     std::string testdata_dir;
     std::string gnalc_params;
     std::string commit_sha;
-    std::string sylibc = cfg::sylibc;
     std::string report_path = "test_report.md";
 
     for (int i = 1; i < argc; i++) {
@@ -170,13 +168,6 @@ int main(int argc, char *argv[]) {
                 return -1;
             }
             commit_sha = argv[++i];
-        } else if (arg == "--sylib" || arg == "-l") {
-            if (i + 1 >= argc) {
-                println("Error: Expected a sylib.c");
-                print_help();
-                return -1;
-            }
-            sylibc = argv[++i];
         } else if (arg == "--report" || arg == "-r") {
             if (i + 1 >= argc) {
                 println("Error: Expected a report path.");
@@ -194,14 +185,12 @@ int main(int argc, char *argv[]) {
     println("GNALC test started. (GitHub Action)");
     create_directories(cfg::global_temp_dir);
 
-    auto sylib_to_link = prepare_sylib(cfg::global_temp_dir, only_frontend, sylibc);
-
     std::vector<Entry> entries;
     std::string line;
     while (std::getline(std::cin, line)) {
         if (!line.empty()) {
             path path(line);
-            if ((path.extension() == ".s" && only_frontend) || (path.extension() == ".ll" && !only_frontend))
+            if ((path.extension() == ".elf" && only_frontend) || (path.extension() == ".bc" && !only_frontend))
                 continue;
 
             auto parent_path = path.parent_path();
@@ -211,7 +200,7 @@ int main(int argc, char *argv[]) {
                 + parent_path.stem().string() + "/" + path.stem().string();
             entries.emplace_back(Entry{
                 .id = (is_final ? "final-" : "") + parent_path.stem().string() + "-" + path.stem().string(),
-                .ir_or_asm = path,
+                .ir_or_elf = path,
                 .testcase_out = base_path + ".out",
                 .testcase_in = base_path + ".in",
             });
@@ -226,7 +215,7 @@ int main(int argc, char *argv[]) {
     {
         ThreadPool pool(num_threads);
         for (size_t i = 0; i < entries.size(); ++i) {
-            pool.enqueue([i, &entries, &results, only_frontend, &sylib_to_link, &test_counter] {
+            pool.enqueue([i, &entries, &results, only_frontend, &test_counter] {
                 const auto& curr_test = entries[i];
                 size_t curr = test_counter.fetch_add(1) + 1;
                 safe_println("<{}> Test {}", curr, curr_test.id);
@@ -235,21 +224,20 @@ int main(int argc, char *argv[]) {
                     auto curr_temp_dir = cfg::global_temp_dir + "/" + curr_test.id;
                     create_directories(curr_temp_dir);
 
-                    CheckIRAsmData data = {
+                    CheckIRELFData data = {
                         .id = curr_test.id,
-                        .ir_or_asm = curr_test.ir_or_asm,
-                        .sylib = sylib_to_link,
+                        .ir_or_elf = curr_test.ir_or_elf,
                         .temp_dir = curr_temp_dir,
                         .input = curr_test.testcase_in,
                     };
 
-                    auto res = check_ir_asm(data, only_frontend);
+                    auto res = check_ir_or_elf(data, only_frontend);
                     auto expected_syout = read_file(curr_test.testcase_out);
                     fix_newline(expected_syout);
 
                     results[i] = Result{
                         .id = curr_test.id,
-                        .file_path = curr_test.ir_or_asm,
+                        .file_path = curr_test.ir_or_elf,
                         .time_elapsed = res.time_elapsed,
                         .expected_output = expected_syout,
                         .actual_output = res.output,
@@ -258,7 +246,7 @@ int main(int argc, char *argv[]) {
                 } catch (const std::exception& e) {
                     results[i] = Result{
                         .id = curr_test.id,
-                        .file_path = curr_test.ir_or_asm,
+                        .file_path = curr_test.ir_or_elf,
                         .time_elapsed = 0,
                         .expected_output = "",
                         .actual_output = "Exception: " + std::string(e.what()),
@@ -267,7 +255,7 @@ int main(int argc, char *argv[]) {
                 } catch (...) {
                     results[i] = Result{
                         .id = curr_test.id,
-                        .file_path = curr_test.ir_or_asm,
+                        .file_path = curr_test.ir_or_elf,
                         .time_elapsed = 0,
                         .expected_output = "",
                         .actual_output = "Unknown exception",
