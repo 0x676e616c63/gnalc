@@ -107,7 +107,49 @@ static TestResult run_test(const TestData &data, bool only_run_frontend, size_t 
     return {out_source, syout, output, time_elapsed};
 }
 
-static std::string prepare_sylib(const std::string &global_tmp_dir, bool only_run_frontend) {
+struct CheckIRBinData {
+    std::string id;
+    std::string ir_or_bin; // .bc or .bin
+    std::string temp_dir;
+    std::string input;
+};
+
+struct CheckResult {
+    std::string output;
+    std::string output_file;
+    size_t time_elapsed;
+};
+
+static CheckResult check_ir_or_bin(const CheckIRBinData &data, bool only_run_frontend) {
+    auto outtime = format("{}/{}.time", data.temp_dir, data.id);
+    auto output = format("{}/{}.out", data.temp_dir, data.id);
+
+    std::string exec_command;
+    if (only_run_frontend) {
+        exec_command = format("lli {} < {} > {} 2>{}", data.ir_or_bin,
+                              std::filesystem::exists(data.input) ? data.input : "/dev/null", output, outtime);
+    } else {
+        exec_command = format("{} {} < {} > {} 2>{}", cfg::qemu_arm_command, data.ir_or_bin,
+                              std::filesystem::exists(data.input) ? data.input : "/dev/null", output, outtime);
+    }
+
+    // /bin/echo is the one in GNU coreutils
+    // Not the one in sh or bash.
+    exec_command += R"(;/bin/echo -e "\n"$? >> )" + output;
+
+    println("|  Running execute command: '{}'",  exec_command);
+
+    if (std::system(exec_command.c_str()) != 0)
+        return {"exec error", "", 0};
+
+    size_t time_elapsed = parse_time(read_file(outtime));
+
+    auto syout = read_file(output);
+    fix_newline(syout);
+    return {syout, output, time_elapsed};
+}
+
+static std::string prepare_sylib(const std::string &global_tmp_dir, bool only_run_frontend, const std::string &sylibc = cfg::sylibc) {
     std::string sylib_to_link;
     if (only_run_frontend) {
         sylib_to_link = global_tmp_dir + "/sylib.ll";
@@ -121,7 +163,7 @@ static std::string prepare_sylib(const std::string &global_tmp_dir, bool only_ru
         // std::string lib_command = format("clang++ -O3 -S -emit-llvm {} -o {} "
         std::string lib_command = format("clang -S -emit-llvm {} -o {} "
                                          "&& sed '/^target datalayout/d' {} -i",
-                                         cfg::sylibc, sylib_to_link, sylib_to_link);
+                                         sylibc, sylib_to_link, sylib_to_link);
 
         println("Running '{}'.", lib_command);
         std::system(lib_command.c_str());
@@ -130,7 +172,7 @@ static std::string prepare_sylib(const std::string &global_tmp_dir, bool only_ru
         sylib_to_link = global_tmp_dir + "/sylib.a";
 
         std::string lib_command =
-            format("{} -c {} -o {} && ar rcs {} {}", cfg::gcc_arm_command, cfg::sylibc, sylibo, sylib_to_link, sylibo);
+            format("{} -c {} -o {} && ar rcs {} {}", cfg::gcc_arm_command, sylibc, sylibo, sylib_to_link, sylibo);
 
         println("Running '{}'.", lib_command);
         std::system(lib_command.c_str());

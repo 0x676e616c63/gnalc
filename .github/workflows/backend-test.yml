@@ -1,0 +1,50 @@
+name: Gnalc Backend Test
+
+concurrency:
+  group: backend-test-${{ github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: [ "main", "backendv3.0" ]
+    paths:
+      - 'lib/**'
+      - 'include/**'
+      - 'test/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/compile-artifacts.yml'
+      - '.github/workflows/evaluate-artifacts-backend.yml'
+      - '.github/workflows/backend-test.yml'
+  pull_request:
+    branches: [ "main", "backendv3.0" ]
+    paths:
+      - 'lib/**'
+      - 'include/**'
+      - 'test/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/compile-artifacts.yml'
+      - '.github/workflows/evaluate-artifacts-backend.yml'
+      - '.github/workflows/backend-test.yml'
+
+env:
+  BUILD_TYPE: Release
+  ARTIFACTS_BRANCH: "artifacts-${{ github.ref_name }}"
+  TESTDATA_VERSION: "v1.0.0"
+  TESTDATA_ZIP_URL: "https://github.com/caozhanhao/gnalc-test-data/releases/download/v1.0.0/testdata.zip"
+  TESTDATA_DIR: "${{ github.workspace }}/testdata"
+  ZIP_CACHE_DIR: "${{ github.workspace }}/testdata_cache"
+  ARTIFACTS_COMMIT_THRESHOLD: 10
+
+jobs:
+  compile:
+    uses: ./.github/workflows/compile-artifacts.yml
+    with:
+      branch: ${{ github.ref_name }}
+  evaluate:
+    needs: compile
+    uses: ./.github/workflows/evaluate-artifacts-backend.yml
+    with:
+      branch: ${{ github.ref_name }}

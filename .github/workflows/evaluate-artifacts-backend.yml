@@ -1,0 +1,109 @@
+name: Gnalc Evaluate Artifacts - Backend
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        required: true
+        type: string
+
+concurrency:
+  group: evaluate-artifacts-${{ inputs.branch }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  BUILD_TYPE: Release
+  TESTDATA_DIR: "/home/panda/gnalc/test/contest"
+  ARTIFACTS_BRANCH: "artifacts-${{ inputs.branch }}"
+  TEST_RESULT_BRANCH: "test-result-${{ inputs.branch }}"
+
+jobs:
+  test_changes:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout artifacts branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.ARTIFACTS_BRANCH }}
+          fetch-depth: 1
+
+      - name: Get test files
+        id: test-files
+        run: |
+          find artifacts/ -type f > test_files.txt
+          grep -E 'artifacts/(llvm|aarch64)/.*\.bin' test_files.txt > filtered_files.txt
+          
+          FILE_COUNT=$(wc -l < filtered_files.txt)
+          echo "Detected $FILE_COUNT artifact files"
+          echo "file_count=$FILE_COUNT" >> $GITHUB_OUTPUT
+          
+          echo "files=$(cat filtered_files.txt | jq -R -s -c 'split("\n") | map(select(. != ""))')" >> $GITHUB_OUTPUT
+
+      - name: Skip if no relevant files found
+        if: steps.test-files.outputs.file_count == '0'
+        run: |
+          echo "No relevant files found, skipping tests"
+          exit 0
+
+      - name: Checkout Main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          path: main
+
+      - name: Configure CMake
+        run: |
+          mkdir main/build
+          cd main/build
+          cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} ..
+
+      - name: Build ghaction
+        run: make -C main/build ghaction -j$(nproc)
+
+      - name: Run tests and save results
+        id: run-tests
+        run: |
+          cat filtered_files.txt | main/build/test/ghaction -b -d ${{ env.TESTDATA_DIR }} \
+              --sha "${{ github.sha }}" \
+              --report "test_report.md"
+
+      - name: Checkout test-result branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TEST_RESULT_BRANCH }}
+          path: test-result-branch
+
+      - name: Update README with test results
+        run: |
+          cd test-result-branch
+
+          if [ ! -f README.md ]; then
+            echo "Github Action Test Result Branch - ${{ inputs.branch }}" > README.md
+            echo "" >> README.md
+          fi
+
+          {
+            cat ../test_report.md
+            echo ""
+            echo "---"
+            echo ""
+            cat README.md
+          } > README_new.md
+
+          mv README_new.md README.md
+
+      - name: Commit and push to test-result branch
+        run: |
+          cd test-result-branch
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          git add README.md
+          git commit -m "Add test results for artifacts commit ${{ github.sha }}"
+          
+          git push origin ${{ env.TEST_RESULT_BRANCH }}
