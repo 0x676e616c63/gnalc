@@ -1,106 +1,58 @@
-const int base = 16;
 
-int getMaxNum(int n, int arr[]){
-    int ret = 0;
-    int i = 0;
-    while (i < n){
-        if (arr[i] > ret) ret = arr[i];
-        i = i + 1;
-    }
-    return ret;
+int MAX(int a, int b)
+{
+    if (a == b)
+        return a;
+    else if (a > b)
+        return a;
+    else
+        return b;
 }
 
-int getNumPos(int num, int pos){
-    int tmp = 1;
-    int i = 0;
-    while (i < pos){
-        num = num / base;
+int max_sum_nonadjacent(int arr[], int n)
+{
+    int temp[16] = {};
+    temp[0] = arr[0];
+    temp[1] = MAX(arr[0], arr[1]);
+    int i = 2;
+    while (i < n) {
+        temp[i] = MAX(temp[i - 2] + arr[i], temp[i - 1]);
         i = i + 1;
     }
-    return num % base;
+    return temp[n - 1];
 }
 
-void radixSort(int bitround, int a[], int l, int r){
-    int head[base] = {};
-    int tail[base] = {};
-    int cnt[base] = {};
-
-    if (bitround == -1 || l + 1 >= r) return;
-
-    {    
-        int i = l;
-        
-        while (i < r){
-            cnt[getNumPos(a[i], bitround)]
-                = cnt[getNumPos(a[i], bitround)] + 1;
-            i = i + 1;
-        }        
-        head[0] = l;
-        tail[0] = l + cnt[0];
-
-        i = 1;
-        while (i < base){
-            head[i] = tail[i - 1];
-            tail[i] = head[i] + cnt[i];
-            i = i + 1;
-        }
-        i = 0;
-        while (i < base){
-            while (head[i] < tail[i]){
-                int v = a[head[i]];
-                while (getNumPos(v, bitround) != i){
-                    int t = v;
-                    v = a[head[getNumPos(t, bitround)]];
-                    a[head[getNumPos(t, bitround)]] = t;
-                    head[getNumPos(t, bitround)] = head[getNumPos(t, bitround)] + 1;
-                }
-                a[head[i]] = v;
-                head[i] = head[i] + 1;
+int longest_common_subseq(int arr1[], int len1,
+                          int arr2[], int len2)
+{
+    int p[16][16] = {};
+    int i, j;
+    i = 1;
+    while (i <= len1) {
+        j = 1;
+        while (j <= len2) {
+            if (arr1[i - 1] == arr2[j - 1]) {
+                p[i][j] = p[i - 1][j - 1] + 1;
+            } else {
+                p[i][j] = MAX(p[i - 1][j], p[i][j - 1]);
             }
-            i = i + 1;
+            j = j + 1;
         }
-    }
-
-    {
-        int i = l;
-        
-        head[0] = l;
-        tail[0] = l + cnt[0];
-
-        i = 0;
-        while (i < base){
-            if (i > 0){
-                head[i] = tail[i - 1];
-                tail[i] = head[i] + cnt[i];
-            }
-            radixSort(bitround - 1, a, head[i], tail[i]);
-            i = i + 1;
-        }
-    }
-
-    return;
-}
-
-int a[30000010];
-int ans;
-
-int main(){
-    int n = getarray(a);
-
-    starttime();
-
-    radixSort(8, a, 0, n);
-
-    int i = 0;
-    while (i < n){
-        ans = ans + i * (a[i] % (2 + i));
         i = i + 1;
     }
+    return p[len1][len2];
+}
 
-    if (ans < 0)
-        ans = -ans;
-    stoptime();
-    putint(ans);
+int main()
+{
+    int A[15] = {8, 7, 4, 1, 2, 7, 0, 1, 9, 3, 4, 8, 3, 7, 0};
+    int B[13] = {3, 9, 7, 1, 4, 2, 4, 3, 6, 8, 0, 1, 5};
+    int An, Bn;
+
+    putint(max_sum_nonadjacent(A, 15));
+    putch(10);
+
+    putint(longest_common_subseq(A, 15, B, 13));
     putch(10);
     return 0;
 }

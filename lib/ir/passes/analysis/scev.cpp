@@ -115,16 +115,23 @@ TREC *SCEVHandle::getSCEVAtBlock(Value *val, const BasicBlock *block) {
             return nullptr;
     }
     auto scope = loop_info->getLoopFor(block).get();
-    auto it = scoped_evolution[scope].find(val);
-    if (it != scoped_evolution[scope].end() && !it->second->isUntracked())
-        return it->second;
-    auto res = getSCEVAtScope(val, scope);
-    scoped_evolution[scope][val] = res;
-    return res;
+    return getSCEVAtScope(val, scope);
 }
 
 TREC *SCEVHandle::getSCEVAtBlock(const pVal &val, const pBlock &block) {
     return getSCEVAtBlock(val.get(), block.get());
+}
+
+TREC *SCEVHandle::getSCEVAtScope(Value *val, const Loop *loop) {
+    auto it = scoped_evolution[loop].find(val);
+    if (it != scoped_evolution[loop].end() && !it->second->isUntracked())
+        return it->second;
+    auto res = getSCEVAtScopeImpl(val, loop);
+    scoped_evolution[loop][val] = res;
+    return res;
+}
+TREC *SCEVHandle::getSCEVAtScope(const pVal& val, const pLoop &loop) {
+    return getSCEVAtScope(val.get(), loop.get());
 }
 SCEVExpr *SCEVHandle::getBackEdgeTakenCount(const pLoop &loop, RangeResult *ranges) {
     return getBackEdgeTakenCount(loop.get(), ranges);
@@ -326,7 +333,7 @@ void SCEVHandle::forgetAll() {
     scoped_evolution.clear();
 }
 
-TREC *SCEVHandle::getSCEVAtScope(Value *val, const Loop *loop) {
+TREC *SCEVHandle::getSCEVAtScopeImpl(Value *val, const Loop *loop) {
     if (loop != nullptr)
         return instantiateEvolution(analyzeEvolution(loop, val), loop);
 

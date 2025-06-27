@@ -423,4 +423,50 @@ bool AhasUseToB(const pInst &a, const pVal &b) {
     }
     return false;
 }
+std::vector<pInst> collectUsers(const pVal &val) {
+    std::vector<pInst> worklist;
+    std::vector<pInst> result;
+    for (const auto &user : val->inst_users())
+        worklist.emplace_back(user);
+
+    std::unordered_set<pVal> visited;
+    while (!worklist.empty()) {
+        auto curr = worklist.back();
+        worklist.pop_back();
+        visited.emplace(curr);
+
+        result.emplace_back(curr);
+
+        for (const auto &user : curr->inst_users()) {
+            if (!visited.count(user))
+                worklist.emplace_back(user);
+        }
+    }
+
+    return result;
+}
+
+std::vector<pVal> collectOperands(const pInst &inst) {
+    std::vector<pVal> worklist;
+    std::vector<pVal> result;
+    for (const auto &oper : inst->operands())
+        worklist.emplace_back(oper);
+
+    std::unordered_set<pVal> visited;
+    while (!worklist.empty()) {
+        auto curr = worklist.back();
+        worklist.pop_back();
+        visited.emplace(curr);
+
+        result.emplace_back(curr);
+
+        if (auto curr_user = curr->as<User>()) {
+            for (const auto &oper : curr_user->operands()) {
+                if (!visited.count(oper))
+                    worklist.emplace_back(oper);
+            }
+        }
+    }
+    return result;
+}
 } // namespace IR

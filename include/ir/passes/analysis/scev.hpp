@@ -151,6 +151,13 @@ public:
     TREC *getSCEVAtBlock(Value *val, const BasicBlock *block);
     TREC *getSCEVAtBlock(const pVal &val, const pBlock &block);
 
+    // Get SCEV of val at within the given scope.
+    // the outermost scope ---> 'loop == nullptr'
+    // Note that this is less safe than `getSCEVAtBlock` since it
+    // has no check for whether the value is available.
+    TREC *getSCEVAtScope(Value *val, const Loop *loop);
+    TREC *getSCEVAtScope(const pVal& val, const pLoop& loop);
+
     // Get the exact value of the single backegde taken count
     // Nullptr is returned if there are multiple backegdes.
     SCEVExpr *getBackEdgeTakenCount(const Loop *loop, RangeResult *ranges = nullptr);
@@ -188,12 +195,7 @@ private:
     std::optional<size_t> estimateExpansionCostImpl(SCEVExpr* expr, const pBlock& block,
         std::set<SCEVExpr*>& visited) const;
 
-    // Get SCEV of val at within the given scope.
-    // the outermost scope ---> 'loop == nullptr'
-    // Note that this is less safe than `getSCEVAtBlock` since it
-    // has no check for whether the value is available.
-    // TODO: Not safe so set it private. Should this be public?
-    TREC *getSCEVAtScope(Value *val, const Loop *loop);
+    TREC *getSCEVAtScopeImpl(Value *val, const Loop *loop);
 
     // Input: l the current loop, n the definition of an SSA name
     // Output: TREC for the variable defined by n within l

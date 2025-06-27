@@ -88,6 +88,13 @@ public:
 
     PM::PreservedAnalyses run(Function &unit, FAM &manager);
 };
+
+class PrintLoopAAPass: public PM::PassInfo<PrintLoopAAPass>, public IRPrinter {
+public:
+    explicit PrintLoopAAPass(std::ostream &outStream_) : IRPrinter(outStream_, true) {}
+
+    PM::PreservedAnalyses run(Function &unit, FAM &manager);
+};
 } // namespace IR
 
 #endif
