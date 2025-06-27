@@ -298,6 +298,10 @@ Yet to be implemented.
 
 #### Instruction Simplify
 
+包含两方面:
+
+- 简单的模式匹配：直接替换为更简单的形式
+- 复杂表达式重组:通过创建新指令来简化复杂表达式
 #### Internalize
 
 全局变量转局部变量
@@ -314,8 +318,31 @@ Yet to be implemented.
 
 #### Loop Invariant Code Motion
 
-循环不变量外提
+将每次循环迭代时计算结果都相同的表达式移到循环外。减少重复计算，提高程序性能。
+主要为hoist和sink
 
+### hoist
+
+1. 按拓扑顺序遍历循环基本块
+2. 检查指令是否满足：
+
+- 操作数都是循环不变的
+- 指令可以安全移动
+- 基本块后支配preheader
+
+3. 将符合条件的指令移到preheader
+
+### sink
+
+1. 按逆拓扑顺序遍历循环基本块
+2. 检查指令是否满足：
+
+- 指令可以安全移动
+- 循环内没有使用该指令的结果
+- 操作数都是循环不变的
+
+3. 将指令克隆到支配的退出块
+4. 维护LCSSA
 #### Loop Unroll
 
 - [Deep diving into LLVM loop unroll](https://yashwantsingh.in/posts/loop-unroll/)
@@ -338,8 +365,12 @@ Yet to be implemented.
 
 #### Reassociate
 
+通过调整表达式中操作数的顺序或者是指令的顺序，使程序更有利于其他pass优化，如 `gvn_pre` 或 `instsimplify`。
+
 #### Tail Recursion Elimination
 
+识别函数中的尾递归调用并将其转换为循环结构，从而减少函数调用开销和栈空间使用。
+对于非递归的尾调用，仅设置标记而不改变结构。
 #### Tree Shaking
 
 #### Unify Exits
