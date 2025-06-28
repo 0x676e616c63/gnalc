@@ -98,7 +98,7 @@ Gnalc IR is subset of [LLVM IR](https://llvm.org/docs/LangRef.html).
 
 - ~~atomicrmw~~
 
-- getelementptr
+- getelementptr (positive indices only)
 
 ## Conversion Operations
 
