@@ -18,7 +18,7 @@
 //           blogpost: https://medium.com/@mikn/optimizing-ssa-code-gvn-pre-69de83e3be29
 //           source: https://github.com/I-mikan-I/ssa-compiler
 //     - LLVM:
-//           GVN.cpp: https://github.com/llvm/llvm-project/blob/main/llvm/lib/Transforms/Scalar/GVN.cpp#L2911
+//           GVN.cpp: https://github.com/llvm/llvm-project/blob/main/llvm/lib/Transforms/Scalar/GVN.cpp
 //     - GCC:
 //           GCC Wiki: https://gcc.gnu.org/wiki/GVN-PRE
 //

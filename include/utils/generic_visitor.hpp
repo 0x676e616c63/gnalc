@@ -9,7 +9,7 @@
 #define GNALC_UTILS_GENERIC_VISITOR_HPP
 
 #include <deque>
-#include <set>
+#include <list>
 #include <unordered_set>
 #include <vector>
 
@@ -92,42 +92,38 @@ public:
                 }
             }
         } else if constexpr (order == DFVOrder::PostOrder) {
-            // Node, processed
-            std::deque<std::pair<NodeT, bool>> s{{root, false}};
-            std::unordered_set<NodeT> visited{root};
-            while (!s.empty()) {
-                auto [curr, processed] = s.back();
-                s.pop_back();
+            using ChildContainer = decltype(ChildrenGetter()(root));
+            using ChildIt = typename ChildContainer::const_iterator;
+            struct POCtx {
+                NodeT node;
+                ChildIt it;
+                ChildIt end;
 
-                if (processed)
-                    worklist.push_back(curr);
-                else {
-                    s.emplace_back(curr, true);
-                    const auto &children = ChildrenGetter()(curr);
-                    //
-                    //  a:
-                    //    br a c
-                    //  b:
-                    //    br c
-                    //  c:
-                    //    ret
-                    //
-                    //  a ----> c
-                    //  |      ^
-                    //  v     |
-                    //  b ----
-                    //
-                    //  a
-                    //  ├─ b
-                    //  │  └─ c
-                    //  └─ c
-                    //
-                    // To get the desired order, (c, b, a)
-                    // we DO NOT reverse the order of the children
-                    for (const auto &child : children) {
-                        if (visited.insert(child).second)
-                            s.emplace_back(child, false);
+                POCtx(NodeT node_, const ChildContainer &children_)
+                    : node{node_}, it{children_.begin()}, end{children_.end()} {}
+            };
+            std::vector<POCtx> stack;
+            std::unordered_set<NodeT> visited;
+
+            // explicitly hold a child container to keep the iterator valid
+            std::list<ChildContainer> child_containers;
+
+            visited.insert(root);
+            child_containers.emplace_back(ChildrenGetter()(root));
+            stack.emplace_back(root, child_containers.back());
+
+            while (!stack.empty()) {
+                auto &ctx_node = stack.back();
+                if (ctx_node.it != ctx_node.end) {
+                    auto child = *ctx_node.it++;
+                    if (visited.insert(child).second) {
+                        child_containers.emplace_back(ChildrenGetter()(child));
+                        stack.emplace_back(child, child_containers.back());
                     }
+                } else {
+                    // All children processed
+                    worklist.emplace_back(ctx_node.node);
+                    stack.pop_back();
                 }
             }
         } else if constexpr (order == DFVOrder::ReversePreOrder) {
