@@ -136,7 +136,8 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
             continue; // arg on stk
         }
 
-        auto isa = isSpr(offset) ? Util::to_underlying(ARMReg::V0) + static_cast<uint32_t>(offset - passByRegBase - passBySprRegBase)
+        auto isa = isSpr(offset) ? Util::to_underlying(ARMReg::V0) +
+                                       static_cast<uint32_t>(offset - passByRegBase - passBySprRegBase)
                                  : Util::to_underlying(ARMReg::X0) + static_cast<uint32_t>(offset - passByRegBase);
 
         auto mtype = getType(arg);
@@ -259,7 +260,7 @@ void FrameInfo::makePrologue(MIRFunction_p mfunc, LoweringContext &ctx) const {
         default:
             Err::unreachable("makePrologue: unknown type");
         }
-        return 4; // just to make gnalc happy
+        return 4; // just to make clang happy
     };
 
     // LAMBDA END
@@ -297,9 +298,10 @@ void FrameInfo::makePrologue(MIRFunction_p mfunc, LoweringContext &ctx) const {
             continue;
         }
 
-        auto isa = (offset >= passBySprRegBase + passByRegBase)
-                       ? Util::to_underlying(ARMReg::V0) + static_cast<uint32_t>(offset - passByRegBase - passBySprRegBase)
-                       : Util::to_underlying(ARMReg::X0) + static_cast<uint32_t>(offset - passByRegBase);
+        auto isa =
+            (offset >= passBySprRegBase + passByRegBase)
+                ? Util::to_underlying(ARMReg::V0) + static_cast<uint32_t>(offset - passByRegBase - passBySprRegBase)
+                : Util::to_underlying(ARMReg::X0) + static_cast<uint32_t>(offset - passByRegBase);
 
         auto mtype = arg->type();
 

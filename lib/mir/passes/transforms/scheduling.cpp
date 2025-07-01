@@ -62,15 +62,15 @@ void PostRaSchedulingImpl::MkDAG(SchedulingModule &Module) {
 
     ///@brief v antidepand on u (u depand on v), v have to exec before u,
     ///@brief and, in this prosedure, v means prev, u means succ
-    auto newDependency = [&antideps, &degrees](MIRInst_p u, MIRInst_p v) {
+    auto newDependency = [&antideps, &degrees](const MIRInst_p &u, const MIRInst_p &v) {
         if (u != v && antideps[v].insert(u).second) {
             ++degrees[u];
         }
     };
 
-    auto getDef = [](MIRInst_p inst) { return inst->getDef() ? inst->getDef()->isa() : -1; };
+    auto getDef = [](const MIRInst_p &inst) { return inst->getDef() ? inst->getDef()->isa() : -1; };
 
-    auto getUses = [](MIRInst_p inst) {
+    auto getUses = [](const MIRInst_p &inst) {
         std::list<unsigned> tmp = {}; // register list
         for (int i = 1; i <= inst->getUseNr(); ++i) {
             auto &mop = inst->getOp(i);
@@ -83,7 +83,7 @@ void PostRaSchedulingImpl::MkDAG(SchedulingModule &Module) {
         return tmp;
     };
 
-    auto hasSideEffect = [](MIRInst_p inst) -> bool {
+    auto hasSideEffect = [](const MIRInst_p &inst) -> bool {
         // 访存, 跳转, 标志位设置
 
         if (!inst->isGeneric()) {
@@ -127,7 +127,7 @@ void PostRaSchedulingImpl::MkDAG(SchedulingModule &Module) {
         }
     };
 
-    auto mustInOrder = [&hasSideEffect](MIRInst_p inst) -> bool {
+    auto mustInOrder = [&hasSideEffect](const MIRInst_p &inst) -> bool {
         // pop push call ret b cbnz
         if (!inst->isGeneric()) {
             switch (inst->opcode<ARMOpC>()) {
@@ -176,7 +176,7 @@ void PostRaSchedulingImpl::MkDAG(SchedulingModule &Module) {
         }
 
         ///@brief 对最近使用过def的useInst, minst依赖于useInst, 即useInst需要在minst之前执行
-        for (auto useInst : LatestUse[def]) {
+        for (const auto &useInst : LatestUse[def]) {
             newDependency(minst, useInst);
         }
 
@@ -214,7 +214,7 @@ void PostRaSchedulingImpl::MkDAG(SchedulingModule &Module) {
 
     // antideps -> deps, fill in degree
     for (auto &minst : minsts) {
-        for (auto prev : antideps[minst]) {
+        for (const auto &prev : antideps[minst]) {
             deps[prev].emplace(minst);
             ++outDegree[prev];
         }
@@ -266,7 +266,7 @@ MIRInst_p_l SchedulingModule::scheduling() {
 
     // LAMBDA BEGIN
 
-    auto dynamicRank = [&](MIRInst_p inst, unsigned cur_cycle) {
+    auto dynamicRank = [&](const MIRInst_p &inst, unsigned cur_cycle) {
         unsigned waitPenalty = 1; // need a fuzz
         return rank[inst] + (cur_cycle - readyTimes[inst]) * waitPenalty;
     };
@@ -342,9 +342,9 @@ MIRInst_p_l SchedulingModule::scheduling() {
 bool SchedulingModule::instScheduling(const MIRInst_p &minst, unsigned cycle) {
     // LAMBDA BEGIN
 
-    auto getDef = [](MIRInst_p inst) { return inst->getDef() ? inst->getDef()->reg() : -1; };
+    auto getDef = [](const MIRInst_p &inst) { return inst->getDef() ? inst->getDef()->reg() : -1; };
 
-    auto getUses = [](MIRInst_p inst) {
+    auto getUses = [](const MIRInst_p &inst) {
         std::list<unsigned> tmp = {}; // register list
         for (int i = 1; i <= inst->getUseNr(); ++i) {
             auto &mop = inst->getOp(i);

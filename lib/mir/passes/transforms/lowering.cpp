@@ -4,7 +4,6 @@
 #include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
 #include "ir/instructions/phi.hpp"
-#include "ir/module.hpp"
 #include "ir/type.hpp"
 #include "mir/passes/transforms/isel.hpp"
 #include <algorithm>
