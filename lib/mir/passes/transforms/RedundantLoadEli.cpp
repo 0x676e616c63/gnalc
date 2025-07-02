@@ -131,7 +131,7 @@ void RedundantLoadEliImpl::ApplyCopys() {
 
         if (!isFP && constVal >= 0 && constVal < 65536) {
             continue; // giveup
-        } else if (isFP && (isFloat8(constVal) || constVal == 0)) {
+        } else if (isFP && (ARMv8::isFloat8(constVal) || constVal == 0)) {
             continue; // giveup
         }
 

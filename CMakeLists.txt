@@ -60,9 +60,12 @@ aux_source_directory(lib/legacy_mir/passes/utilities GNALC_LEGACY_MIR_SRC)
 
 # MIR
 aux_source_directory(lib/mir GNALC_MIR_SRC)
+aux_source_directory(lib/mir/armv8 GNALC_MIR_SRC)
+aux_source_directory(lib/mir/riscv64 GNALC_MIR_SRC)
 aux_source_directory(lib/mir/passes GNALC_MIR_SRC)
 aux_source_directory(lib/mir/passes/analysis GNALC_MIR_SRC)
 aux_source_directory(lib/mir/passes/transforms GNALC_MIR_SRC)
+
 
 # Pass Manager
 aux_source_directory(lib/pass_manager GNALC_PM_SRC)
@@ -80,7 +83,10 @@ aux_source_directory(lib/codegen/brainfk GNALC_EXT_BFBKD_SRC)
 aux_source_directory(lib/codegen/armv7 GNALC_ARMV7BKD_SRC) 
 
 # ARMv8 Codegen
-aux_source_directory(lib/codegen/armv8 GNALC_ARMV8BKD_SRC) 
+aux_source_directory(lib/codegen/armv8 GNALC_ARMV8BKD_SRC)
+
+# RISCV64 Codegen
+aux_source_directory(lib/codegen/riscv64 GNALC_RISCV64BKD_SRC)
 
 # GGC Extension
 aux_source_directory(lib/ggc GNALC_EXT_GGC_SRC)
@@ -95,6 +101,7 @@ set(GNALC_SRC
         ${GNALC_PM_SRC}
         ${GNALC_PTM_SRC}
         ${GNALC_ARMV8BKD_SRC}
+        ${GNALC_RISCV64BKD_SRC}
         ${GNALC_UTILS_SRC})
 
 # GGC
@@ -106,6 +113,7 @@ set(GGC_SRC
         ${GNALC_PM_SRC}
         ${GNALC_PTM_SRC}
         ${GNALC_ARMV8BKD_SRC}
+        ${GNALC_RISCV64BKD_SRC}
         ${GNALC_UTILS_SRC})
 
 # debug driver
@@ -127,6 +135,10 @@ target_compile_definitions(gnalc_bf PRIVATE GNALC_EXTENSION_BRAINFK)
 # with ARMv7
 add_executable(gnalc_armv7 tools/driver/driver.cpp ${GNALC_SRC} ${GNALC_LEGACY_MIR_SRC} ${GNALC_ARMV7BKD_SRC})
 target_compile_definitions(gnalc_armv7 PRIVATE GNALC_EXTENSION_ARMv7)
+
+# default RISCV64
+add_executable(gnalc_rv64 tools/driver/driver.cpp ${GNALC_SRC})
+target_compile_definitions(gnalc_rv64 PRIVATE GNALC_DEFAULT_RISCV64)
 
 enable_testing()
 add_subdirectory(test)

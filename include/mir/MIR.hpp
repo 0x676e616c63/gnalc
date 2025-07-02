@@ -2,11 +2,13 @@
 #ifndef GNALC_MIR_MIR_HPP
 #define GNALC_MIR_MIR_HPP
 
-#include "ir/base.hpp"
-#include "ir/instructions/compare.hpp"
 #include "mir/info.hpp"
+#include "armv8/base.hpp"
+#include "riscv64/base.hpp"
+#include "utils/generic_visitor.hpp"
 #include <algorithm>
 #include <array>
+#include <list>
 #include <map>
 #include <utility>
 #include <variant>
@@ -323,6 +325,10 @@ public:
         return asISAReg(static_cast<unsigned>(reg), type);
     }
 
+    static MIROperand_p asISAReg(RVReg reg, OpT type) {
+        return asISAReg(static_cast<unsigned>(reg), type);
+    }
+
     static MIROperand_p asVReg(unsigned reg, OpT type) {
         auto vreg = make<MIROperand>(make<MIRReg>(reg + VRegBegin), type); // auto add VRegBegin here
 
@@ -371,11 +377,12 @@ public:
     static constexpr unsigned maxOpCnt = 7;
 
 private:
-    std::variant<OpC, ARMOpC> mOpcode;
+    std::variant<OpC, ARMOpC, RVOpC> mOpcode;
     ///@note <0>代表def, 如果为nullptr, 代表指令没有def, 或者是需要用WZR/XZR占位
     std::array<MIROperand_p, maxOpCnt> mOperands;
     explicit MIRInst(OpC opcode) noexcept : mOpcode(opcode){};
     explicit MIRInst(ARMOpC opcode) noexcept : mOpcode(opcode){};
+    explicit MIRInst(RVOpC opcode) noexcept : mOpcode(opcode){};
 
 public:
     template <typename... Args> static std::shared_ptr<MIRInst> make(Args &&...args) {
@@ -383,7 +390,8 @@ public:
     }
 
     template <typename T> T opcode() const {
-        Err::gassert(std::is_same_v<T, OpC> || std::is_same_v<T, ARMOpC>, " MIRInst::opcode: warning typename");
+        Err::gassert(std::is_same_v<T, OpC> || std::is_same_v<T, ARMOpC> || std::is_same_v<T, RVOpC>,
+            " MIRInst::opcode: unknown opcode type");
         return std::get<T>(mOpcode); // wrong variant idx maybe ?
     }
 
@@ -397,6 +405,11 @@ public:
     }
 
     MIRInst &resetOpcode(ARMOpC opcode) {
+        mOpcode = opcode;
+        return *this;
+    }
+
+    MIRInst &resetOpcode(RVOpC opcode) {
         mOpcode = opcode;
         return *this;
     }
@@ -545,7 +558,6 @@ public:
     void resetNxt(const MIRBlk_p &_nxt) { mnxt = _nxt; }
 
     void brReplace(const MIRBlk_p &old_succ, const MIRBlk_p &new_succ, CodeGenContext &ctx) {
-
         auto it = std::find_if(mInsts.begin(), mInsts.end(), [&](const MIRInst_p &minst) {
             if (minst->isGeneric() && minst->opcode<OpC>() == OpC::InstBranch &&
                 minst->getOp(1)->reloc() == old_succ) {

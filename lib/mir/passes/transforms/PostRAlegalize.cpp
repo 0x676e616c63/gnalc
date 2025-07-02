@@ -42,7 +42,7 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l &minsts, MIRInst
 
             if (mfunc->StkObjs().count(mstkop)) {
                 auto &obj = mfunc->StkObjs().at(mstkop);
-                _ctx.iselInfo.legalizeWithStkPtrCast(ctx, mop, obj);
+                _ctx.iselInfo->legalizeWithStkPtrCast(ctx, mop, obj);
             } else {
                 Err::unreachable("PostRAlegalizeImpl::runOnInst: instAddSP without a stk ptr");
             }
@@ -56,7 +56,7 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l &minsts, MIRInst
 
             if (mfunc->StkObjs().count(mstkop)) {
                 auto &obj = mfunc->StkObjs().at(mstkop);
-                _ctx.iselInfo.legalizeWithStkGep(ctx, mop, obj);
+                _ctx.iselInfo->legalizeWithStkGep(ctx, mop, obj);
             } else {
                 Err::unreachable("PostRAlegalizeImpl::runOnInst: instAddSP without a stk ptr");
             }
@@ -70,7 +70,7 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l &minsts, MIRInst
 
             if (mfunc->StkObjs().count(mstkop)) {
                 auto &obj = mfunc->StkObjs().at(mstkop);
-                _ctx.iselInfo.legalizeWithStkOp(ctx, mop, obj);
+                _ctx.iselInfo->legalizeWithStkOp(ctx, mop, obj);
             } else {
                 // no offset
                 minst->resetOpcode(ARMOpC::LDR);
@@ -85,7 +85,7 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l &minsts, MIRInst
             auto mstkop = minst->getOp(1);
             auto &obj = mfunc->StkObjs().at(mstkop);
 
-            _ctx.iselInfo.legalizeWithStkOp(ctx, mop, obj);
+            _ctx.iselInfo->legalizeWithStkOp(ctx, mop, obj);
         } break;
 
         case OpC::InstStore: {
@@ -96,7 +96,7 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l &minsts, MIRInst
 
             if (mfunc->StkObjs().count(mstkop)) {
                 auto &obj = mfunc->StkObjs().at(mstkop);
-                _ctx.iselInfo.legalizeWithStkOp(ctx, mop, obj);
+                _ctx.iselInfo->legalizeWithStkOp(ctx, mop, obj);
             } else {
                 minst->resetOpcode(ARMOpC::STR);
                 Err::gassert(minst->getOp(5) != nullptr, "PostRAlegalizeImpl::runOnInst: InstLoad info lack");
@@ -110,7 +110,7 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l &minsts, MIRInst
             auto mstkop = minst->getOp(2);
             auto &obj = mfunc->StkObjs().at(mstkop);
 
-            _ctx.iselInfo.legalizeWithStkOp(ctx, mop, obj);
+            _ctx.iselInfo->legalizeWithStkOp(ctx, mop, obj);
         } break;
 
         default:
@@ -120,7 +120,7 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l &minsts, MIRInst
         switch (minst->opcode<ARMOpC>()) {
         case ARMOpC::ADRP_LDR: {
             InstLegalizeContext ctx{minst, minsts, iter, _ctx};
-            _ctx.iselInfo.legalizeAdrp(ctx);
+            _ctx.iselInfo->legalizeAdrp(ctx);
         } break;
         default:
             return;

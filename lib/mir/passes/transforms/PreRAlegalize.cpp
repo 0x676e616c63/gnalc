@@ -15,7 +15,7 @@ void MIR::preLegalizeFuncImpl(MIRFunction &mfunc, CodeGenContext &ctx) {
         auto &minsts = mblk->Insts();
         for (auto iter = minsts.begin(); iter != minsts.end(); ++iter) {
             InstLegalizeContext _ctx{*iter, minsts, iter, ctx};
-            ctx.iselInfo.preLegalizeInst(_ctx);
+            ctx.iselInfo->preLegalizeInst(_ctx);
         }
     }
 }

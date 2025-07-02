@@ -146,8 +146,8 @@ inline InstExecInfo schedInfoImpl(ARMOpC opcode) {
     }
 }
 
-inline InstExecInfo schedInfo(std::variant<MIR::OpC, MIR::ARMOpC> opcode) {
-
+inline InstExecInfo schedInfo(std::variant<OpC, ARMOpC, RVOpC> opcode) {
+    Err::gassert(!std::holds_alternative<RVOpC>(opcode));
     if (opcode.index() == 0) {
         return schedInfoImpl(std::get<OpC>(opcode));
     } else {
