@@ -177,6 +177,6 @@ void lowerInst(const IR::pGep &, LoweringContext &);
 void lowerInst(const IR::pCall &, LoweringContext &);
 void lowerInst(const IR::pSelect &, LoweringContext &);
 
-}; // namespace MIR_new
+}; // namespace MIR
 
 #endif
