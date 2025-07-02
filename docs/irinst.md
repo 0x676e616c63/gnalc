@@ -1,149 +1,151 @@
-- Instruction Reference
+# Gnalc IR Reference
 
-  - Terminator Instructions
+Gnalc IR is subset of [LLVM IR](https://llvm.org/docs/LangRef.html).
 
-    - ‘ret’ Instruction
+## Terminator Instructions
 
-    - ‘br’ Instruction
+- ret
 
-    - ~~‘switch’ Instruction~~
+- br
 
-    - ~~‘indirectbr’ Instruction~~
+- ~~switch~~
 
-    - ~~‘invoke’ Instruction~~
+- ~~indirectbr~~
 
-    - ~~‘callbr’ Instruction~~
+- ~~invoke~~
 
-    - ~~‘resume’ Instruction~~
+- ~~callbr~~
 
-    - ~~‘catchswitch’ Instruction~~
+- ~~resume~~
 
-    - ~~‘catchret’ Instruction~~
+- ~~catchswitch~~
 
-    - ?~~‘cleanupret’ Instruction~~
+- ~~catchret~~
 
-    - ?~~‘unreachable’ Instruction~~
+- ~~cleanupret~~
 
-  - Unary Operations
+- ~~unreachable~~
 
-    - ‘fneg’ Instruction
+## Unary Operations
 
-  - Binary Operations
+- fneg
 
-    - ‘add’ Instruction
+## Binary Operations
 
-    - ‘fadd’ Instruction
+- add
 
-    - ‘sub’ Instruction
+- fadd
 
-    - ‘fsub’ Instruction
+- sub
 
-    - ‘mul’ Instruction
+- fsub
 
-    - ‘fmul’ Instruction
+- mul
 
-    - ?~~‘udiv’ Instruction~~
+- fmul
 
-    - ‘sdiv’ Instruction
+- ~~udiv~~
 
-    - ‘fdiv’ Instruction
+- sdiv
 
-    - ?~~‘urem’ Instruction~~
+- fdiv
 
-    - ‘srem’ Instruction
+- urem
 
-    - ‘frem’ Instruction
+- srem
 
-  - Bitwise Binary Operations
+- frem
 
-    - ~~‘shl’ Instruction~~
+## Bitwise Binary Operations
 
-    - ~~‘lshr’ Instruction~~
+- shl
 
-    - ~~‘ashr’ Instruction~~
+- lshr
 
-    - ?‘and’ Instruction
+- ashr
 
-    - ?‘or’ Instruction
+- and
 
-    - ?~~‘xor’ Instruction~~
+- or
 
-  - ~~Vector Operations~~
+- xor
 
-    - ‘extractelement’ Instruction
+## Vector Operations
 
-    - ‘insertelement’ Instruction
+- extractelement
 
-    - ‘shufflevector’ Instruction
+- insertelement
 
-  - ?~~Aggregate Operations~~
+- shufflevector
 
-    - ‘extractvalue’ Instruction
+## Aggregate Operations
 
-    - ‘insertvalue’ Instruction
+- ~~extractvalue~~
 
-  - Memory Access and Addressing Operations
+- ~~insertvalue~~
 
-    - ‘alloca’ Instruction
+## Memory Access and Addressing Operations
 
-    - ‘load’ Instruction
+- alloca
 
-    - ‘store’ Instruction
+- load
 
-    - ?~~‘fence’ Instruction~~
+- store
 
-    - ?~~‘cmpxchg’ Instruction~~
+- ~~fence~~
 
-    - ?~~‘atomicrmw’ Instruction~~
+- ~~cmpxchg~~
 
-    - ‘getelementptr’ Instruction // gep
+- ~~atomicrmw~~
 
-  - Conversion Operations
+- getelementptr (positive indices only)
 
-    - ~~‘trunc .. to’ Instruction~~
+## Conversion Operations
 
-    - ~~‘zext .. to’ Instruction~~
+- ~~trunc ... to~~
 
-    - ~~‘sext .. to’ Instruction~~
+- zext ... to
 
-    - ~~‘fptrunc .. to’ Instruction~~
+- sext ... to
 
-    - ~~‘fpext .. to’ Instruction~~
+- ~~fptrunc ... to~~
 
-    - ~~‘fptoui .. to’ Instruction~~
+- ~~fpext ... to~~
 
-    - ‘fptosi .. to’ Instruction
+- ~~fptoui ... to~~
 
-    - ~~‘uitofp .. to’ Instruction~~
+- fptosi ... to
 
-    - ‘sitofp .. to’ Instruction
+- ~~uitofp ... to~~
 
-    - ~~‘ptrtoint .. to’ Instruction~~
+- sitofp ... to
 
-    - ~~‘inttoptr .. to’ Instruction~~
+- ~~ptrtoint ... to~~
 
-    - ~~‘bitcast .. to’ Instruction~~
+- ~~inttoptr ... to~~
 
-    - ~~‘addrspacecast .. to’ Instruction~~
+- bitcast ... to
 
-  - Other Operations
+- ~~addrspacecast ... to~~
 
-    - ‘icmp’ Instruction
+## Other Operations
 
-    - ‘fcmp’ Instruction
+- icmp
 
-    - ‘phi’ Instruction
+- fcmp
 
-    - ?‘select’ Instruction
+- phi
 
-    - ?~~‘freeze’ Instruction~~
+- select
 
-    - ‘call’ Instruction
+- ~~freeze~~
 
-    - ~~‘va_arg’ Instruction~~
+- call
 
-    - ~~‘landingpad’ Instruction~~
+- ~~va_arg~~
 
-    - ~~‘catchpad’ Instruction~~
+- ~~landingpad~~
 
-    - ~~‘cleanuppad’ Instruction~~
+- ~~catchpad~~
+
+- ~~cleanuppad~~
