@@ -6,6 +6,7 @@
 #include "ir/instructions/memory.hpp"
 #include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/target_analysis.hpp"
 
 namespace IR {
 bool isSafeAndProfitableToConvert(const pBlock &bb) {
@@ -38,6 +39,10 @@ bool isSafeAndProfitableToConvert(const pBlock &bb) {
 //   |                 |       --->
 //   |-----------------
 PM::PreservedAnalyses IfConversionPass::run(Function &function, FAM &fam) {
+    auto& target = fam.getResult<TargetAnalysis>(function);
+    if (!target->isSelectSupported())
+        return PreserveAll();
+
     bool if_conv_cfg_modified = false;
 
     for (const auto &curr : function) {

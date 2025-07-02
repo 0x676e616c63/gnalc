@@ -121,6 +121,11 @@ public:
     static void registerModuleAnalyses(MAM &);
     static void registerFunctionAnalyses(FAM &);
     static void registerProxies(FAM &, MAM &);
+
+    static void registerARMv8TargetAnalyses(FAM &);
+    static void registerARMv7TargetAnalyses(FAM &);
+    static void registerRISCV64TargetAnalyses(FAM &);
+    static void registerBrainFkTargetAnalyses(FAM &);
 };
 } // namespace IR
 #endif

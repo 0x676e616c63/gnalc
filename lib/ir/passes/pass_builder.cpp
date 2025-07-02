@@ -9,6 +9,7 @@
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "ir/passes/analysis/range_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
+#include "ir/passes/analysis/target_analysis.hpp"
 
 // Transforms
 #include "ir/passes/transforms/adce.hpp"
@@ -48,6 +49,12 @@
 #include "ir/passes/utilities/irprinter.hpp"
 #include "ir/passes/utilities/run_test.hpp"
 #include "ir/passes/utilities/verifier.hpp"
+
+// Target
+#include "ir/target/armv7.hpp"
+#include "ir/target/armv8.hpp"
+#include "ir/target/brainfk.hpp"
+#include "ir/target/riscv64.hpp"
 
 #include <algorithm>
 #include <functional>
@@ -684,6 +691,15 @@ MPM PassBuilder::buildModuleFuzzTestingPipeline(PMOptions options, double duplic
 void PassBuilder::registerProxies(FAM &fam, MAM &mam) {
     mam.registerPass([&] { return FAMProxy(fam); });
 }
+
+template <typename T> void registerTargetAnalysesHelper(FAM &fam) {
+    fam.registerPass([] { return TargetAnalysis(std::make_shared<T>()); });
+}
+
+void PassBuilder::registerARMv8TargetAnalyses(FAM &fam) { registerTargetAnalysesHelper<ARMv8TargetInfo>(fam); }
+void PassBuilder::registerARMv7TargetAnalyses(FAM &fam) { registerTargetAnalysesHelper<ARMv7TargetInfo>(fam); }
+void PassBuilder::registerRISCV64TargetAnalyses(FAM &fam) { registerTargetAnalysesHelper<RV64TargetInfo>(fam); }
+void PassBuilder::registerBrainFkTargetAnalyses(FAM &fam) { registerTargetAnalysesHelper<BFTargetInfo>(fam); }
 
 void PassBuilder::registerFunctionAnalyses(FAM &fam) {
 #define FUNCTION_ANALYSIS(CREATE_PASS) fam.registerPass([&] { return CREATE_PASS; });

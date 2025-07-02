@@ -5,9 +5,10 @@
 #include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
 #include "ir/instructions/vector.hpp"
+#include "ir/match.hpp"
 #include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/loop_alias_analysis.hpp"
-#include "ir/match.hpp"
+#include "ir/passes/analysis/target_analysis.hpp"
 
 #include <algorithm>
 
@@ -997,6 +998,10 @@ void VectorizerPass::reset() {
 }
 
 PM::PreservedAnalyses VectorizerPass::run(Function &function, FAM &manager) {
+    auto& target = manager.getResult<TargetAnalysis>(function);
+    if (!target->isVectorSupported())
+        return PreserveAll();
+
     bool vectorizer_inst_modified = false;
 
     curr_func = &function;

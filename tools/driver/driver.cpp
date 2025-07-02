@@ -36,6 +36,8 @@
 #include "codegen/armv8/armprinter.hpp"
 #include "codegen/riscv64/rv64printer.hpp"
 #include "ir/cfgbuilder.hpp"
+#include "ir/passes/analysis/target_analysis.hpp"
+#include "ir/target/armv8.hpp"
 #include "mir/armv8/isel.hpp"
 #include "mir/passes/pass_builder.hpp"
 #include "mir/passes/pass_manager.hpp"
@@ -53,13 +55,7 @@ std::shared_ptr<AST::CompUnit> node = nullptr;
 #endif
 extern FILE *yyin;
 
-enum class Target {
-    ARMv8,
-    ARMv7,
-    RISCV64,
-    BrainFk,
-    BrainFk3Tape
-};
+enum class Target { ARMv8, ARMv7, RISCV64, BrainFk, BrainFk3Tape };
 
 int main(int argc, char **argv) {
     // gnalc is still in development, so make it defaults to be `LogLevel::DEBUG`.
@@ -240,17 +236,11 @@ int main(int argc, char **argv) {
             bkd_opt_info.PostRaScheduling = false;
         }
 
-        else if (arg == "-march=armv8" || arg == "-march=armv8-a")
-            target = Target::ARMv8;
-        else if (arg == "-march=armv7" || arg == "-march=armv7-a")
-            target = Target::ARMv7;
-        else if (arg == "-march=riscv64")
-            target = Target::RISCV64;
-        else if (arg == "-march=brainfk")
-            target = Target::BrainFk;
-        else if (arg == "-march=brainfk-3tape")
-            target = Target::BrainFk3Tape;
-
+        else if (arg == "-march=armv8" || arg == "-march=armv8-a") target = Target::ARMv8;
+        else if (arg == "-march=armv7" || arg == "-march=armv7-a") target = Target::ARMv7;
+        else if (arg == "-march=riscv64") target = Target::RISCV64;
+        else if (arg == "-march=brainfk") target = Target::BrainFk;
+        else if (arg == "-march=brainfk-3tape") target = Target::BrainFk3Tape;
         else if (arg == "-h" || arg == "--help") {
 #ifndef GNALC_EXTENSION_GGC
             std::cout << "OVERVIEW: gnalc compiler\n\nUSAGE: gnalc [options] file\n\n";
@@ -270,6 +260,7 @@ General Options:
   --log <log-level>    - Set logging level (debug|info|none)
   -h, --help           - Display this help message
   -march=<value>       - Set target architecture. (armv8|armv7|riscv64|brainfk|brainfk-3tape)
+  -v, --version        - Display version information
 
 Optimizations Flags:
   --mem2reg            - Promote memory to register
@@ -320,6 +311,23 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
             std::cout << "\nThis " << magic << " has Super Loong Powers." << std::endl;
             return 0;
         }
+        else if (arg == "-v" || arg == "--version") {
+            std::cout << "gnalc version 0.0.1" << std::endl;
+
+            // Targets
+            std::cout << "Supported targets: armv8, riscv64";
+#ifdef GNALC_EXTENSION_ARMv7
+            std::cout << ", armv7";
+#endif
+#ifdef GNALC_EXTENSION_BRAINFK
+            std::cout << ", brainfk, brainfk-3tape";
+#endif
+            std::cout << std::endl;
+
+            // Build time
+            std::cout << "Built at " << __DATE__ << " " << __TIME__ << std::endl;
+            return 0;
+        }
         else if (arg == "loong") {
             std::cout <<
 #include "loong.txt"
@@ -329,7 +337,6 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
         }
         else input_file = argv[i];
     }
-
 
     // Check arguments consistency
 
@@ -466,6 +473,26 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
     // IR
     IR::FAM fam;
     IR::MAM mam;
+
+    switch (target) {
+    case Target::ARMv8:
+        IR::PassBuilder::registerARMv8TargetAnalyses(fam);
+        break;
+    case Target::ARMv7:
+        IR::PassBuilder::registerARMv7TargetAnalyses(fam);
+        break;
+    case Target::RISCV64:
+        IR::PassBuilder::registerRISCV64TargetAnalyses(fam);
+        break;
+
+    case Target::BrainFk:
+        IR::PassBuilder::registerBrainFkTargetAnalyses(fam);
+        break;
+    default:
+        std::cerr << "Error: Unsupported target." << std::endl;
+        return -1;
+    }
+
     IR::PassBuilder::registerFunctionAnalyses(fam);
     IR::PassBuilder::registerModuleAnalyses(mam);
     IR::PassBuilder::registerProxies(fam, mam);
@@ -552,14 +579,13 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
         return -1;
     }
 
-    MIR::BkdInfos infos{
-        .arch = mir_arch
-    };
+    MIR::BkdInfos infos{.arch = mir_arch};
     std::shared_ptr<MIR::ISelInfo> isel;
     if (target == Target::ARMv8)
         isel = std::make_shared<MIR::ARMIselInfo>();
     else
         isel = std::make_shared<MIR::RVIselInfo>();
+
     MIR::FrameInfo frame{};
     MIR::CodeGenContext ctx{infos, isel, frame};
     auto mModule = MIR::loweringModule(generator.get_module(), ctx);
@@ -579,8 +605,7 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
         if (target == Target::ARMv8) {
             MIR::ARMA64Printer armv8gen(*poutstream, emit_llc);
             armv8gen.printout(*mModule);
-        }
-        else {
+        } else {
             MIR::RV64Printer riscv64gen(*poutstream);
             riscv64gen.printout(*mModule);
         }

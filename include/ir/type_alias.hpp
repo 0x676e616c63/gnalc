@@ -141,5 +141,9 @@ using pFuncType = std::shared_ptr<FunctionType>;
 class Loop;
 using pLoop = std::shared_ptr<Loop>;
 using wpLoop = std::weak_ptr<Loop>;
+
+// target
+class TargetInfo;
+using pTarget = std::shared_ptr<TargetInfo>;
 } // namespace IR
 #endif //DEF_HPP

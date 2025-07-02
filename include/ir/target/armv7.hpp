@@ -1,0 +1,43 @@
+#pragma once
+#ifndef GNALC_IR_TARGET_ARMv7_HPP
+#define GNALC_IR_TARGET_ARMv7_HPP
+
+#include "ir/base.hpp"
+#include "ir/instruction.hpp"
+#include "target.hpp"
+
+namespace IR {
+class ARMv7TargetInfo : public TargetInfo {
+public:
+    bool isInstSupported(OP op) override {
+        switch (op) {
+        case OP::AND:
+        case OP::OR:
+        case OP::XOR:
+        case OP::SHL:
+        case OP::ASHR:
+        case OP::LSHR:
+        case OP::FREM:
+        case OP::UREM:
+        case OP::SEXT:
+        case OP::SHUFFLE:
+        case OP::INSERT:
+        case OP::EXTRACT:
+        case OP::SELECT:
+            return false;
+        default:
+            return true;
+        }
+        return true;
+    }
+    bool isTypeSupported(const pType& type) override {
+        if (type->isI64() || type->isI128())
+            return false;
+        return true;
+    }
+    bool isLibCallSupported(const std::string &lib_fn_name) override {
+        return true;
+    }
+};
+}
+#endif //TARGET_HPP
