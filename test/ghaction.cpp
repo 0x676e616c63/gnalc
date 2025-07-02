@@ -279,9 +279,14 @@ int main(int argc, char *argv[]) {
     };
     report << "- **Artifacts Commit:** " << (commit_sha.empty() ? "N/A" : build_md_url(commit_sha)) << "\n";
     report << "- **Total Tests:** " << entries.size() << "\n";
-    report << "- **Mode:** " << (only_frontend ? "Frontend only" : "With backend") << "\n\n";
+    report << "- **Mode:** " << (only_frontend ? "Frontend only" : "With backend") << "\n";
 
-    size_t passed = 0;
+    size_t passed = std::count_if(results.begin(), results.end(), [](const auto& tres) {
+        return tres.passed;
+    });
+
+    report << "- **Result: ** " << (passed == entries.size() ? "✅ PASSED" : "❌ FAILED") << "\n\n";
+
     std::vector<std::string> failed_tests;
     for (const auto& tres : results) {
         report << "#### Test: " << tres.id << "\n";
@@ -290,7 +295,6 @@ int main(int argc, char *argv[]) {
         report << "- **Status:** ";
 
         if (tres.passed) {
-            ++passed;
             report << "✅ PASSED\n";
         } else {
             failed_tests.push_back(tres.id);
@@ -318,5 +322,9 @@ int main(int argc, char *argv[]) {
     report << "| **Total** | **" << entries.size() << "** |\n";
 
     report.close();
+
+    if (!failed_tests.empty())
+        return -1;
+
     return 0;
 }

@@ -137,8 +137,6 @@ static CheckResult check_ir_or_bin(const CheckIRBinData &data, bool only_run_fro
     // Not the one in sh or bash.
     exec_command += R"(;/bin/echo -e "\n"$? >> )" + output;
 
-    println("|  Running execute command: '{}'",  exec_command);
-
     if (std::system(exec_command.c_str()) != 0)
         return {"exec error", "", 0};
 
