@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "mir/passes/transforms/stackgenerate.hpp"
 #include <algorithm>
 
@@ -88,11 +91,11 @@ void StackGenerateImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     // insert prologue/epilogue
     auto &ctx = mfunc->Context();
 
-    ctx.frameInfo.insertPrologueEpilogue(mfunc, ctx);
+    ctx.frameInfo->insertPrologueEpilogue(mfunc, ctx);
 
-    ctx.frameInfo.makePostSAPrologue(mfunc->blks().front(), ctx, allocationBase);
+    ctx.frameInfo->makePostSAPrologue(mfunc->blks().front(), ctx, allocationBase);
 
     for (auto &mblk : mfunc->ExitBlks()) {
-        ctx.frameInfo.makePostSAEpilogue(mblk, ctx, allocationBase);
+        ctx.frameInfo->makePostSAEpilogue(mblk, ctx, allocationBase);
     }
 }

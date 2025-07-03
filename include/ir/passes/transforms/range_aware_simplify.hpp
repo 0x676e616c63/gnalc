@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Simplification based on RangeAnalysis
 #pragma once
 #ifndef GNALC_IR_PASSES_TRANSFORMS_RANGE_AWARE_SIMPLIFY_HPP

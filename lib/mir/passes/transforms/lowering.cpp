@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "mir/passes/transforms/lowering.hpp"
 #include "ir/instructions/binary.hpp"
 #include "ir/instructions/control.hpp"
@@ -417,7 +420,7 @@ void MIR::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContext &c
 
     // emit prologue
     ctx.setCurrentBlk(mfunc->blks().front()); // entry blk
-    codeGenCtx.frameInfo.makePrologue(mfunc, ctx);
+    codeGenCtx.frameInfo->makePrologue(mfunc, ctx);
 
     // deal with alloca
     for (auto &inst : func->getBlocks().front()->getInsts()) {

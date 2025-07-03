@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Loop Invariant Code Motion
 // Move loop invariant code to the loop's preheader or exits.
 #pragma once

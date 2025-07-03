@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #ifndef GNALC_GRAPH_GRAPH_HPP
 #define GNALC_GRAPH_GRAPH_HPP
 namespace Graph {

@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "ir/passes/transforms/memoization.hpp"
 
 #include "config/config.hpp"
@@ -11,6 +14,7 @@
 #include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/basic_alias_analysis.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/target_analysis.hpp"
 #include "utils/int128.hpp"
 #include "utils/logger.hpp"
 
@@ -243,6 +247,10 @@ std::shared_ptr<MemoPlan> selectMemoPlan(Function &func) {
 }
 
 PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
+    auto& target = fam.getResult<TargetAnalysis>(function);
+    if (!target->isBitwiseOpSupported() || !target->isTypeSupported(IRBTYPE::I64))
+        return PreserveAll();
+
     // Memoize pure recursive functions
     if (!function.isRecursive() || !isPure(fam, &function))
         return PreserveAll();

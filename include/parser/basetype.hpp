@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 /**
  * @brief dtype, num
  * @todo dtype 设计为类？考虑到诸如 PrintType 等可能封装起来更好些

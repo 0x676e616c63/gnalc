@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 /**
  * @brief live variable analysis
  * @brief 对 instruction 分析，记录 livein, liveout

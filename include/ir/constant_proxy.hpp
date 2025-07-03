@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Proxy for IR Constants, providing easy interface through type erasure.
 // Warning:
 //   1. This is not a part of the IR, due to its "dynamic" type. (NOT a derived

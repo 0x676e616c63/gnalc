@@ -1,4 +1,8 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #ifdef GNALC_EXTENSION_ARMv7
+#pragma once
 #ifndef GNALC_LEGACY_MIR_BUILDER_LOWERING_HPP
 #define GNALC_LEGACY_MIR_BUILDER_LOWERING_HPP
 #include "ir/basic_block.hpp"

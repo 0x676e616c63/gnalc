@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "mir/passes/transforms/isel.hpp"
 #include <algorithm>
 #include <optional>
@@ -33,14 +36,6 @@ OpC MIR::chooseCopyOpC(const MIROperand_p &dst, const MIROperand_p &src) {
     return OpC::InstCopy; // just make clang happy
 }
 
-PM::PreservedAnalyses ISel::run(MIRFunction &mfunc, FAM &fam) {
-    ISelContext isel(mfunc.Context());
-
-    isel.impl(&mfunc);
-
-    return PM::PreservedAnalyses::all();
-}
-
 void ISelContext::impl(MIRFunction *mfunc) {
     auto &iselInfo = mCodeGenCtx.iselInfo;
     bool allowComplexPattern = false;
@@ -58,9 +53,8 @@ void ISelContext::impl(MIRFunction *mfunc) {
         mConstantMap.clear(); // const val load inst map
 
         for (auto &mblk : mfunc->blks()) {
-
             for (auto &minst : mblk->Insts()) {
-                ///@brief mCounstantMap 添加常数load映射
+                ///@brief mConstantMap 添加常数 load 映射
                 if (minst->isGeneric() && minst->opcode<OpC>() == OpC::InstLoadImm) {
                     auto &def = minst->ensureDef();
                     mConstantMap.emplace(def, minst);
@@ -75,7 +69,6 @@ void ISelContext::impl(MIRFunction *mfunc) {
             ///@note 填充mInstMap
             auto &minsts = mblk->Insts();
             for (auto &minst : minsts) {
-
                 auto def = minst->getDef();
 
                 if (def && def->isVReg()) {
@@ -100,7 +93,7 @@ void ISelContext::impl(MIRFunction *mfunc) {
                 }
 
                 if (!mDelWorkList.count(minst)) {
-                    auto isIllegal = minst->isGeneric() && iselInfo.isLegalGenericInst(minst);
+                    auto isIllegal = minst->isGeneric() && iselInfo->isLegalGenericInst(minst);
 
                     if (isIllegal && !minst_illegal_first) {
                         ///@note 第一个不合法的Generic MIR
@@ -109,7 +102,7 @@ void ISelContext::impl(MIRFunction *mfunc) {
 
                     hasIllegal |= isIllegal;
 
-                    if ((tryOptLegal || isIllegal) && iselInfo.match(minst, *this, allowComplexPattern)) {
+                    if ((tryOptLegal || isIllegal) && iselInfo->match(minst, *this, allowComplexPattern)) {
                         modified = true;
                         if (allowComplexPattern) {
                             break;
@@ -196,4 +189,13 @@ void ISelContext::replaceOperand(const MIROperand_p &_old, const MIROperand_p &_
     if (_old != _new) {
         mReplaceMap.emplace(_old, _new);
     }
+}
+
+
+PM::PreservedAnalyses ISel::run(MIRFunction &mfunc, FAM &fam) {
+    ISelContext isel(mfunc.Context());
+
+    isel.impl(&mfunc);
+
+    return PM::PreservedAnalyses::all();
 }

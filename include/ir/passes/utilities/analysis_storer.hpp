@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Analysis Storer Pass
 // This pass stores analysis result to Lower::gFunctionAnalysisStorage.
 // It is used to transfer analysis result to MIR.

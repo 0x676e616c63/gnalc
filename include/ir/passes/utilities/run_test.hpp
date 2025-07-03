@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Run Test Pass
 // Run test to verify the correctness of passes.
 #pragma once

@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "config/config.hpp"
 #if GNALC_EXTENSION_BRAINFK
 #include <iostream>

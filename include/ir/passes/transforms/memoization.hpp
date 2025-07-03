@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Automatic function memoization
 // Note that this it's not a typo. The term is indeed "memoization", not "memorization".
 // https://en.wikipedia.org/wiki/Memoization
