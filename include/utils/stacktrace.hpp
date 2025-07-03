@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Stack Trace
 // Adapted from: https://panthema.net/2008/0901-stacktrace-demangled/
 //

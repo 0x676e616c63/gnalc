@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "codegen/armv8/armprinter.hpp"
 #include "mir/tools.hpp"
 
@@ -414,7 +417,7 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
 
     string str;
 
-    if (!isFitPairMemInst(mfunc->begCalleeSave())) {
+    if (!ARMv8::isFitPairMemInst(mfunc->begCalleeSave())) {
         return calleePrinter_legacy(minst);
     }
 
@@ -549,7 +552,7 @@ string ARMA64Printer::calleePrinter_legacy(const MIRInst &minst) {
     string str;
 
     // 再多就只能苦一苦fp了
-    Err::gassert(isFitMemInstX(mfunc->begCalleeSave()), "calleePrinter: too large stk todo..."); // NOLINT
+    Err::gassert(ARMv8::isFitMemInstX(mfunc->begCalleeSave()), "calleePrinter: too large stk todo..."); // NOLINT
 
     if (minst.opcode<ARMOpC>() == ARMOpC::PUSH) {
         for (int i = 0; i < 32; bitMap >>= 1, ++i) {

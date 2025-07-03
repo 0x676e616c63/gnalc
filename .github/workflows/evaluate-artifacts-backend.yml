@@ -67,10 +67,16 @@ jobs:
 
       - name: Run tests and save results
         id: run-tests
+        # continue-on-error ensures the job doesn’t stop here even if tests fail
+        continue-on-error: true
         run: |
-          cat filtered_files.txt | main/build/test/ghaction -b -d ${{ env.TESTDATA_DIR }} \
-              --sha "${{ github.sha }}" \
-              --report "test_report.md"
+          set -o pipefail
+          cat filtered_files.txt \
+            | main/build/test/ghaction -b -d ${{ env.TESTDATA_DIR }} \
+                --sha "${{ github.sha }}" \
+                --report "test_report.md"
+          EXIT_CODE=$?
+          echo "exit_code=${EXIT_CODE}" >> $GITHUB_OUTPUT
 
       - name: Checkout test-result branch
         uses: actions/checkout@v4
@@ -104,6 +110,11 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
           git add README.md
-          git commit -m "Add test results for artifacts commit ${{ github.sha }}"
-          
+          git commit -m "Add test results for artifacts commit ${{ github.sha }}" || echo "Nothing to commit"
           git push origin ${{ env.TEST_RESULT_BRANCH }}
+
+      - name: Fail if tests failed
+        if: steps.run-tests.outputs.exit_code != '0'
+        run: |
+          echo "🛑 ghaction exited with code ${{ steps.run-tests.outputs.exit_code }}. Failing job."
+          exit ${{ steps.run-tests.outputs.exit_code }}

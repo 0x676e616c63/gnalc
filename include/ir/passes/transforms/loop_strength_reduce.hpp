@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Loop Strength Reduce
 // This pass expand AddRec in SCEV to eliminate in loop multiplication.
 #pragma once

@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Export CFG to dot files or png
 #pragma once
 #ifndef GNALC_IR_PASSES_UTILITIES_CFG_EXPORT_HPP

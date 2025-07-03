@@ -1,6 +1,10 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "ir/passes/utilities/irprinter.hpp"
 #include "ir/formatter.hpp"
 #include "ir/passes/analysis/live_analysis.hpp"
+#include "ir/passes/analysis/loop_alias_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "ir/passes/analysis/range_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
@@ -213,4 +217,30 @@ PM::PreservedAnalyses PrintRangePass::run(Function &function, FAM &manager) {
     }
     return PreserveAll();
 }
+
+PM::PreservedAnalyses PrintLoopAAPass::run(Function &function, FAM &fam) {
+    auto &loop_aa = fam.getResult<LoopAliasAnalysis>(function);
+    writeln("Loop Oriented Alias Analysis Result: ");
+    for (const auto &bb : function) {
+        for (const auto &inst : bb->all_insts()) {
+            if (inst->getType()->getTrait() != IRCTYPE::PTR)
+                continue;
+            auto loc = loop_aa.getAccessSet(inst);
+            if (loc.untracked)
+                continue;
+
+            writeln(inst->getName(), ":");
+            writeln("  base: ", loc.base->getName());
+            writeln("  offset: ", loc.offset);
+            for (const auto &access : loc.accesses) {
+                writeln("  access: ");
+                writeln("    trip count: ", access.trip_count);
+                writeln("    stride: ", access.stride);
+            }
+            writeln("-----------------");
+        }
+    }
+    return PreserveAll();
+}
+
 } // namespace IR

@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #pragma once
 #ifndef GNALC_IR_BLOCK_UTILS_HPP
 #define GNALC_IR_BLOCK_UTILS_HPP
@@ -111,6 +114,8 @@ std::optional<std::tuple<pVal, pVal>> analyzeHeaderPhi(const pLoop &loop, const 
 std::optional<std::tuple<Value *, Value *>> analyzeHeaderPhi(const Loop *loop, const PHIInst *header_phi);
 
 bool AhasUseToB(const pInst &a, const pVal &b);
+std::vector<pInst> collectUsers(const pVal &val);
+std::vector<pVal> collectOperands(const pInst &inst);
 } // namespace IR
 
 #endif

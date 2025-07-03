@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Basic Alias Analysis
 // An partial inter-procedural field-insensitive alias analysis.
 // The ModRef result is inter-procedural, while the Alias result is intra-procedural.

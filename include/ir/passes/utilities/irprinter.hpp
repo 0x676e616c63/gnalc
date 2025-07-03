@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 /**
  * @brief IR/DebugMessage/SCEV/Range Printer
  */
@@ -85,6 +88,13 @@ public:
 class PrintRangePass : public PM::PassInfo<PrintRangePass>, public IRPrinter {
 public:
     explicit PrintRangePass(std::ostream &outStream_) : IRPrinter(outStream_, true) {}
+
+    PM::PreservedAnalyses run(Function &unit, FAM &manager);
+};
+
+class PrintLoopAAPass: public PM::PassInfo<PrintLoopAAPass>, public IRPrinter {
+public:
+    explicit PrintLoopAAPass(std::ostream &outStream_) : IRPrinter(outStream_, true) {}
 
     PM::PreservedAnalyses run(Function &unit, FAM &manager);
 };

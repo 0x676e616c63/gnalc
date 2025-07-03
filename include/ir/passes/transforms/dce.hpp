@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Simple Implementation of DCE, only deleting useless instructions.
 // This is a wrapper for `eliminateDeadInsts` in block_utils.hpp.
 // Note that it is much faster than ADCE, though not as effective.

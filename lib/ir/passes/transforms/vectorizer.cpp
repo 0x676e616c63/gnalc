@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "ir/passes/transforms/vectorizer.hpp"
 
 #include "ir/block_utils.hpp"
@@ -5,9 +8,10 @@
 #include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
 #include "ir/instructions/vector.hpp"
+#include "ir/match.hpp"
 #include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/loop_alias_analysis.hpp"
-#include "ir/match.hpp"
+#include "ir/passes/analysis/target_analysis.hpp"
 
 #include <algorithm>
 
@@ -15,7 +19,11 @@ namespace IR {
 std::ostream &operator<<(std::ostream &os, const VectorizerPass::Pack &expr) {
     for (auto it = expr.stmts.begin(); it != expr.stmts.end(); ++it) {
         const auto &stmt = *it;
-        os << IRFormatter::formatOp(stmt->getOpcode()) << " " << stmt->getName() << " addr-" << stmt.get();
+        if (auto str = stmt->as<STOREInst>()) {
+            os << "store val " << str->getValue()->getName() << " addr-" << stmt.get();
+        }
+        else
+            os << IRFormatter::formatOp(stmt->getOpcode()) << " " << stmt->getName() << " addr-" << stmt.get();
         if (it != expr.stmts.end() - 1)
             os << ", ";
     }
@@ -263,7 +271,7 @@ bool VectorizerPass::stmtCanPack(const pInst &stmt1, const pInst &stmt2) {
     // %b = load i + 1
     // ----  or  ----
     // store xxx, i
-    // %a = load i + 1
+    // %a = load/store i + 1
     // store xxx, i + 1
     if (hasMemoryRef(stmt1)) {
         Err::gassert(hasMemoryRef(stmt2), "Not isomorphic.");
@@ -284,7 +292,7 @@ bool VectorizerPass::stmtCanPack(const pInst &stmt1, const pInst &stmt2) {
             auto ptr = (*end)->as<STOREInst>()->getPtr();
             for (; it != end; ++it) {
                 auto modref = basic_aa->getInstModRefInfo(*it, ptr, *fam);
-                if (modref == ModRefInfo::Ref || modref == ModRefInfo::ModRef)
+                if (modref != ModRefInfo::NoModRef)
                     return false;
             }
         }
@@ -997,6 +1005,10 @@ void VectorizerPass::reset() {
 }
 
 PM::PreservedAnalyses VectorizerPass::run(Function &function, FAM &manager) {
+    auto& target = manager.getResult<TargetAnalysis>(function);
+    if (!target->isVectorSupported())
+        return PreserveAll();
+
     bool vectorizer_inst_modified = false;
 
     curr_func = &function;

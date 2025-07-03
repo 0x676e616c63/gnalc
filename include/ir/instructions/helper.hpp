@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 /**
  * @brief 由于采取的 IR 生成策略是先生成指令流，再划分基本块，故定义一些辅助指令用于基本块划分
  *        这些指令在 IRGenerator 内的 CFGBuilder 执行完之后将被移除，后续优化与此无关

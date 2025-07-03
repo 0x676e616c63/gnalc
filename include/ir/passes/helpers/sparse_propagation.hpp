@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Generic Sparse Conditional Property Propagation, used by ConstantPropagationPass
 // See:
 //    - Static Single Assignment Book, P104, 8.2.2, Algorithm 8.1

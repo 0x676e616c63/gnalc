@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "ir/passes/analysis/loop_alias_analysis.hpp"
 
 #include "ir/block_utils.hpp"
@@ -11,28 +14,38 @@
 namespace IR {
 PM::UniqueKey LoopAliasAnalysis::Key;
 
-bool LoopAAResult::LocationSet::AccessPair::operator==(const AccessPair &other) const {
+bool AccessSet::AccessPair::operator==(const AccessPair &other) const {
     return trip_count == other.trip_count && stride == other.stride;
 }
-void LoopAAResult::LocationSet::reset() {
-    base = nullptr;
-    offset = 0;
-    accesses.clear();
-    untracked = false;
-}
 
-bool LoopAAResult::LocationSet::operator==(const LocationSet &set) const {
+bool AccessSet::operator==(const AccessSet &set) const {
     if (untracked && set.untracked)
         return true;
 
     return (base == set.base && offset == set.offset && accesses == set.accesses);
 }
 
-bool LoopAAResult::LocationSet::operator!=(const LocationSet &set) const {
-    return !(*this == set);
+bool AccessSet::operator!=(const AccessSet &set) const { return !(*this == set); }
+
+std::optional<size_t> AccessSet::getFullAccessRange() const {
+    if (untracked)
+        return std::nullopt;
+
+    const AccessPair* last_access = nullptr;
+    for (const auto &access : accesses) {
+        if (access.trip_count == Inf)
+            return std::nullopt;
+
+        if (last_access && access.stride * access.trip_count != last_access->stride)
+            return std::nullopt;
+
+        last_access = &access;
+    }
+
+    return accesses[0].trip_count * accesses[0].stride;
 }
 
-bool LoopAAResult::overlap(const LocationSet &lhs, const LocationSet &rhs) const {
+bool LoopAAResult::overlap(const AccessSet &lhs, const AccessSet &rhs) const {
     Err::todo("LoopAA: overlap");
     return true;
 }
@@ -115,15 +128,22 @@ std::optional<std::tuple<Value *, size_t>> LoopAAResult::getBaseAndOffset(const 
     return getBaseAndOffset(value.get());
 }
 
-const LoopAAResult::LocationSet &LoopAAResult::queryPointer(Value *v) const {
-    auto it = location_cache.find(v);
-    if (it != location_cache.end())
-        return it->second;
-    return location_cache[v] = analyzePointer(v);
+const AccessSet &LoopAAResult::getAccessSet(Value *value) const {
+    return queryPointer(value);
+}
+const AccessSet &LoopAAResult::getAccessSet(const pVal &value) const {
+    return queryPointer(value.get());
 }
 
-LoopAAResult::LocationSet LoopAAResult::analyzePointer(Value *ptr) const {
-    LocationSet set {
+const AccessSet &LoopAAResult::queryPointer(Value *v) const {
+    auto it = access_cache.find(v);
+    if (it != access_cache.end())
+        return it->second;
+    return access_cache[v] = analyzePointer(v);
+}
+
+AccessSet LoopAAResult::analyzePointer(Value *ptr) const {
+    AccessSet set {
         .base = nullptr,
         .offset = 0,
         .untracked = false,
@@ -133,40 +153,49 @@ LoopAAResult::LocationSet LoopAAResult::analyzePointer(Value *ptr) const {
             ptr = bitcast->getOVal().get();
         else if (auto gep = ptr->as_raw<GEPInst>()) {
             ptr = gep->getPtr().get();
+            // Note that we are iterating backwards through the use-def chain.
+            // Pay attention to the insert point.
+            auto access_insert_point = set.accesses.begin();
+
             if (gep->isConstantOffset())
                 set.offset += gep->getConstantOffset();
             else {
-                size_t trip_count;
-                const auto &loop = loop_info->getLoopFor(gep->getParent());
-                if (loop == nullptr)
-                    trip_count = 1;
-                else {
-                    auto trip_count_scev = scev->getTripCount(loop);
-                    int ci32;
-                    if (trip_count_scev && trip_count_scev->isIRValue() &&
-                        match(trip_count_scev->getIRValue(), M::Bind(ci32)))
-                        trip_count = ci32;
-                    else
-                        trip_count = LoopAAResult::LocationSet::Inf;
-                }
-
                 auto indices = gep->getIdxs();
                 pType curr_type = gep->getBaseType();
                 for (const auto &i : indices) {
                     Err::gassert(curr_type != nullptr, "Invalid GEPInst.");
                     if (auto ci32 = i->as<ConstantInt>())
                         set.offset += ci32->getVal() * curr_type->getBytes();
-                    else {
-                        auto idx_scev = scev->getSCEVAtBlock(i, gep->getParent());
+                    else if (auto index_inst = i->as_raw<Instruction>()) {
+                        size_t idx_trip_count;
+                        const auto &idx_loop = loop_info->getLoopFor(index_inst->getParent());
+                        if (idx_loop == nullptr)
+                            idx_trip_count = 1;
+                        else {
+                            auto trip_count_scev = scev->getTripCount(idx_loop);
+                            int trip_ci32;
+                            if (trip_count_scev && trip_count_scev->isIRValue() &&
+                                match(trip_count_scev->getIRValue(), M::Bind(trip_ci32)))
+                                idx_trip_count = trip_ci32;
+                            else
+                                idx_trip_count = AccessSet::Inf;
+                        }
+
+                        // Get the evolution at the index def block, since we want to
+                        // figure out how the pointer evolves in the whole loop.
+                        // Otherwise, (evolution at gep block), we'll get a IRValue SCEVExpr since it is an
+                        // invariant at that scope.
+                        auto idx_scev = scev->getSCEVAtBlock(i, index_inst->getParent());
                         if (idx_scev) {
                             auto opt = idx_scev->getConstantAffineAddRec();
                             if (opt) {
                                 auto [base, step] = opt.value();
                                 set.offset += base * curr_type->getBytes();
-                                set.accesses.emplace_back(LoopAAResult::LocationSet::AccessPair{
-                                    .trip_count = trip_count,
-                                    .stride = step * curr_type->getBytes(),
+                                access_insert_point = set.accesses.insert(access_insert_point, AccessSet::AccessPair{
+                                    .trip_count = idx_trip_count,
+                                    .stride = step * curr_type->getBytes()
                                 });
+                                ++access_insert_point; // restore the insert point
                             }
                             else {
                                 set.untracked = true;
@@ -201,7 +230,7 @@ LoopAAResult::LocationSet LoopAAResult::analyzePointer(Value *ptr) const {
 }
 
 void LoopAAResult::invalidateCache() {
-    location_cache.clear();
+    access_cache.clear();
 }
 
 LoopAAResult LoopAliasAnalysis::run(Function &function, FAM &fam) {

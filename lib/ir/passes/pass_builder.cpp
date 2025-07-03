@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "ir/passes/pass_builder.hpp"
 #include "ir/passes/pass_manager.hpp"
 
@@ -9,6 +12,7 @@
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "ir/passes/analysis/range_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
+#include "ir/passes/analysis/target_analysis.hpp"
 
 // Transforms
 #include "ir/passes/transforms/adce.hpp"
@@ -48,6 +52,12 @@
 #include "ir/passes/utilities/irprinter.hpp"
 #include "ir/passes/utilities/run_test.hpp"
 #include "ir/passes/utilities/verifier.hpp"
+
+// Target
+#include "ir/target/armv7.hpp"
+#include "ir/target/armv8.hpp"
+#include "ir/target/brainfk.hpp"
+#include "ir/target/riscv64.hpp"
 
 #include <algorithm>
 #include <functional>
@@ -328,107 +338,20 @@ MPM PassBuilder::buildModulePipeline(PMOptions opt_info) {
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
-    fpm.addPass(IR::PromotePass());
-    fpm.addPass(IR::TailRecursionEliminationPass());
-    fpm.addPass(IR::InlinePass());
-    fpm.addPass(IR::InternalizePass());
-    fpm.addPass(IR::PromotePass());
-    fpm.addPass(IR::NameNormalizePass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::RangeAwareSimplifyPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::ReassociatePass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::RangeAwareSimplifyPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::CFGSimplifyPass());
-    fpm.addPass(IR::DSEPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::DCEPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::CFGSimplifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::LCSSAPass());
-    fpm.addPass(IR::LoopUnrollPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::CFGSimplifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::LCSSAPass());
-    fpm.addPass(IR::LoopUnrollPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::BreakCriticalEdgesPass());
-    fpm.addPass(IR::GVNPREPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::SCCPPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::DAEPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::LoopRotatePass());
-    fpm.addPass(IR::LCSSAPass());
-    fpm.addPass(IR::LICMPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::InstSimplifyPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::CFGSimplifyPass());
-    fpm.addPass(IR::DSEPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::RangeAwareSimplifyPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::CFGSimplifyPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::LoopStrengthReducePass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::CFGSimplifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::LCSSAPass());
-    fpm.addPass(IR::LoopUnrollPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::InstSimplifyPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::DCEPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::CFGSimplifyPass());
-    fpm.addPass(IR::LoadEliminationPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::LoopEliminationPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::ADCEPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::LoopEliminationPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::SCCPPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::DAEPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::DAEPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::CFGSimplifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::LCSSAPass());
-    fpm.addPass(IR::LoopUnrollPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::BreakCriticalEdgesPass());
-    fpm.addPass(IR::GVNPREPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::LoopRotatePass());
-    fpm.addPass(IR::LCSSAPass());
-    fpm.addPass(IR::LICMPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::DCEPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::UnifyExitsPass());
-    fpm.addPass(IR::CodeGenPreparePass());
-    fpm.addPass(IR::NameNormalizePass());
+    // Vectorizer
+    fpm.addPass(PromotePass());
+    fpm.addPass(SCCPPass());
+    fpm.addPass(BreakCriticalEdgesPass());
+    fpm.addPass(GVNPREPass());
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(LoopSimplifyPass());
+    fpm.addPass(NameNormalizePass(true));
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(VectorizerPass());
+    fpm.addPass(VerifyPass());
+    fpm.addPass(DCEPass());
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(NameNormalizePass());
     return fpm;
     // If-conversion
     // fpm.addPass(PromotePass());
@@ -684,6 +607,15 @@ MPM PassBuilder::buildModuleFuzzTestingPipeline(PMOptions options, double duplic
 void PassBuilder::registerProxies(FAM &fam, MAM &mam) {
     mam.registerPass([&] { return FAMProxy(fam); });
 }
+
+template <typename T> void registerTargetAnalysesHelper(FAM &fam) {
+    fam.registerPass([] { return TargetAnalysis(std::make_shared<T>()); });
+}
+
+void PassBuilder::registerARMv8TargetAnalyses(FAM &fam) { registerTargetAnalysesHelper<ARMv8TargetInfo>(fam); }
+void PassBuilder::registerARMv7TargetAnalyses(FAM &fam) { registerTargetAnalysesHelper<ARMv7TargetInfo>(fam); }
+void PassBuilder::registerRISCV64TargetAnalyses(FAM &fam) { registerTargetAnalysesHelper<RV64TargetInfo>(fam); }
+void PassBuilder::registerBrainFkTargetAnalyses(FAM &fam) { registerTargetAnalysesHelper<BFTargetInfo>(fam); }
 
 void PassBuilder::registerFunctionAnalyses(FAM &fam) {
 #define FUNCTION_ANALYSIS(CREATE_PASS) fam.registerPass([&] { return CREATE_PASS; });

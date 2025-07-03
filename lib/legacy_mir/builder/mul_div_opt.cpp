@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #ifdef GNALC_EXTENSION_ARMv7
 #include "legacy_mir/tool.hpp"
 #include "legacy_mir/builder/lowering.hpp"

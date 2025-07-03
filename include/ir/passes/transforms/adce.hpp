@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Aggressive Dead Code Elimination
 //
 // This implementation is adapted from

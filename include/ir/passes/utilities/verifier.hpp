@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Function Verify Pass
 // This pass verifies:
 //   - If mutual use-def is valid

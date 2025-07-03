@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // TreeShakingPass
 // This is a Module Pass that removes useless global variables, functions and function declarations.
 #pragma once

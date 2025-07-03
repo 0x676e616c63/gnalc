@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #pragma once
 #ifndef GNALC_TEST_RUNNER_HPP
 #define GNALC_TEST_RUNNER_HPP
@@ -136,8 +139,6 @@ static CheckResult check_ir_or_bin(const CheckIRBinData &data, bool only_run_fro
     // /bin/echo is the one in GNU coreutils
     // Not the one in sh or bash.
     exec_command += R"(;/bin/echo -e "\n"$? >> )" + output;
-
-    println("|  Running execute command: '{}'",  exec_command);
 
     if (std::system(exec_command.c_str()) != 0)
         return {"exec error", "", 0};

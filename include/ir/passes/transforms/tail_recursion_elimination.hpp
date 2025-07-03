@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Tail Recursion Elimination Pass
 // This pass eliminate tail recursion and mark tail call.
 //

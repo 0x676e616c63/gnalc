@@ -1,9 +1,15 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
+#include "mir/riscv64/isel.hpp"
 #include "mir/MIR.hpp"
 #include "mir/passes/transforms/isel.hpp"
+#include <algorithm>
+#include <optional>
 
 using namespace MIR;
 
-bool ISelInfo::isLegalGenericInst(MIRInst_p minst) const {
+bool RVIselInfo::isLegalGenericInst(MIRInst_p minst) const {
     Err::gassert(minst->isGeneric(), "isLegalGenericInst: minst is not a generic mir");
 
     switch (minst->opcode<OpC>()) {
@@ -19,13 +25,13 @@ bool ISelInfo::isLegalGenericInst(MIRInst_p minst) const {
     }
 }
 
-bool ISelInfo::match(MIRInst_p minst, ISelContext &ctx, bool allow) const {
+bool RVIselInfo::match(MIRInst_p minst, ISelContext &ctx, bool allow) const {
     bool ret = legalizeInst(minst, ctx); // not impl yet
     return ret;
 }
 
 // for pass isel
-bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
+bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     bool modified = false;
 
     // LAMBDA BEGIN
@@ -81,7 +87,7 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     case OpC::InstICmp: {
         // trySwapOps(minst); // 这里交换之后尾随的cset也要变条件, 总之就是这个位置很难办(难办? 难办就别办了)
         auto rhs = minst->getOp(2);
-        if (rhs->isImme() && !is12ImmeWithProbShift(rhs->imme())) {
+        if (rhs->isImme() && !ARMv8::is12ImmeWithProbShift(rhs->imme())) {
             minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
         }
 
@@ -93,7 +99,7 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     case OpC::InstAdd: {
         trySwapOps(minst);
         auto rhs = minst->getOp(2);
-        if (rhs->isImme() && !is12ImmeWithProbShift(rhs->imme())) {
+        if (rhs->isImme() && !ARMv8::is12ImmeWithProbShift(rhs->imme())) {
             minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
         }
 
@@ -110,7 +116,7 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         }
 
         auto rhs = minst->getOp(2);
-        if (rhs->isImme() && !is12ImmeWithProbShift(rhs->imme())) {
+        if (rhs->isImme() && !ARMv8::is12ImmeWithProbShift(rhs->imme())) {
             minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
         }
     } break;
@@ -313,29 +319,7 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         modified |= true;
     } break;
     case OpC::InstSelect: {
-        auto def = minst->ensureDef();
-        auto lhs = minst->getOp(1);
-        auto rhs = minst->getOp(2);
-
-        if (inRange(def->type(), OpT::Int, OpT::Int64) && lhs->isImme() && lhs->imme() == 1 && rhs->isImme() &&
-            rhs->imme() == 0) {
-            minst->resetOpcode(ARMOpC::CSET_SELECT);
-            break;
-        }
-
-        if (inRange(def->type(), OpT::Int, OpT::Int64)) {
-            minst->resetOpcode(ARMOpC::CSEL);
-        } else {
-            minst->resetOpcode(ARMOpC::FCSEL);
-        }
-
-        if (lhs->isImme()) {
-            minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
-        }
-        if (rhs->isImme()) {
-            minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
-        }
-
+        Err::not_implemented("Select on RISCV64");
     } break;
     case OpC::InstF2S: {
         auto converted = minst->ensureDef();
@@ -384,7 +368,7 @@ bool ISelInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
 }
 
 // for pass preRaLeagalize
-void ISelInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
+void RVIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
     ///@todo handle select inst if we really have one
 
     auto &[minst, minsts, iter, ctx] = _ctx;
@@ -475,7 +459,7 @@ void ISelInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
         auto imm_us = imme->imme();
         auto imm = *reinterpret_cast<float *>(&imm_us);
 
-        if (!isFloat8(imm) && imm != 0.0f) {
+        if (!ARMv8::isFloat8(imm) && imm != 0.0f) {
             ///@brief movz + movk + fmov + copy
 
             auto dst = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
@@ -536,7 +520,7 @@ void ISelInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
 
     return;
 }
-void ISelInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop, const StkObj &obj) const {
+void RVIselInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop, const StkObj &obj) const {
 
     ///@warning armv8的交叉装载ld1, ld2, ld3不支持变址寻址, 甚至不支持常量偏移
     ///@warning ld1 {V<>.4s} 又和 ldr q<> 作用一致, 而后者支持变址寻址, 只是不显式指示加载类型
@@ -548,7 +532,7 @@ void ISelInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop, co
 
     Err::gassert(minst->getOp(5) != nullptr, "PostRAlegalizeImpl::runOnInst: InstLoad/InstStore info lack");
 
-    if (isFitMemInst(offset, minst->getOp(5)->imme())) {
+    if (ARMv8::isFitMemInst(offset, minst->getOp(5)->imme())) {
         if (minst->opcode<OpC>() == OpC::InstLoadRegFromStack || minst->opcode<OpC>() == OpC::InstLoad) {
             minst->setOperand<2>(MIROperand::asImme(offset, OpT::Int64), ctx);
             minst->resetOpcode(ARMOpC::LDR);
@@ -595,7 +579,7 @@ void ISelInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop, co
     return;
 }
 
-void ISelInfo::legalizeWithStkGep(InstLegalizeContext &_ctx, MIROperand_p mop, const StkObj &obj) const {
+void RVIselInfo::legalizeWithStkGep(InstLegalizeContext &_ctx, MIROperand_p mop, const StkObj &obj) const {
     /// mop = def
 
     auto &[minst, minsts, iter, ctx] = _ctx;
@@ -604,7 +588,7 @@ void ISelInfo::legalizeWithStkGep(InstLegalizeContext &_ctx, MIROperand_p mop, c
     if (minst->getOp(2)->isImme()) {
         offset += static_cast<unsigned>(minst->getOp(2)->imme());
 
-        if (is12ImmeWithProbShift(offset)) {
+        if (ARMv8::is12ImmeWithProbShift(offset)) {
             minst->resetOpcode(OpC::InstAdd);
             minst->setOperand<1>(MIROperand::asISAReg(ARMReg::SP, OpT::Int64), ctx);
             minst->setOperand<2>(MIROperand::asImme(offset, OpT::Int64), ctx);
@@ -637,7 +621,7 @@ void ISelInfo::legalizeWithStkGep(InstLegalizeContext &_ctx, MIROperand_p mop, c
         minst->setOperand<2>(scratch, ctx);
     } else {
 
-        if (is12ImmeWithProbShift(offset)) {
+        if (ARMv8::is12ImmeWithProbShift(offset)) {
             //ori: add %mop, %stk, %valoffset
 
             // mov %mop, %valoffset
@@ -703,13 +687,13 @@ void ISelInfo::legalizeWithStkGep(InstLegalizeContext &_ctx, MIROperand_p mop, c
     return;
 }
 
-void ISelInfo::legalizeWithStkPtrCast(InstLegalizeContext &_ctx, MIROperand_p mop, const StkObj &obj) const {
+void RVIselInfo::legalizeWithStkPtrCast(InstLegalizeContext &_ctx, MIROperand_p mop, const StkObj &obj) const {
     auto &[minst, minsts, iter, ctx] = _ctx;
     unsigned offset = static_cast<unsigned>(obj.offset);
 
     if (offset) {
 
-        if (is12ImmeWithProbShift(offset)) {
+        if (ARMv8::is12ImmeWithProbShift(offset)) {
 
             minst->setOperand<2>(MIROperand::asImme(offset, OpT::Int64), ctx);
             minst->setOperand<1>(MIROperand::asISAReg(ARMReg::SP, OpT::Int64), ctx);
@@ -749,7 +733,7 @@ void ISelInfo::legalizeWithStkPtrCast(InstLegalizeContext &_ctx, MIROperand_p mo
     }
 }
 
-void ISelInfo::legalizeCopy(InstLegalizeContext &_ctx) const {
+void RVIselInfo::legalizeCopy(InstLegalizeContext &_ctx) const {
     auto &[minst, minsts, iter, ctx] = _ctx;
 
     auto &def = minst->ensureDef();
@@ -773,7 +757,7 @@ void ISelInfo::legalizeCopy(InstLegalizeContext &_ctx) const {
     minst->resetOpcode(movType);
 }
 
-void ISelInfo::legalizeAdrp(InstLegalizeContext &_ctx) const {
+void RVIselInfo::legalizeAdrp(InstLegalizeContext &_ctx) const {
     auto &[minst, minsts, iter, ctx] = _ctx;
 
     auto def = minst->ensureDef();
@@ -782,3 +766,5 @@ void ISelInfo::legalizeAdrp(InstLegalizeContext &_ctx) const {
     minst->resetOpcode(ARMOpC::LDR);
     minst->setOperand<5>(MIROperand::asImme(5, OpT::special), ctx);
 }
+
+RVIselInfo::~RVIselInfo() = default;
