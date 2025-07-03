@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Convert WHILEInst to FORInst
 #pragma once
 #ifndef GNALC_SIR_PASSES_TRANSFORMS_WHILE2FOR_HPP

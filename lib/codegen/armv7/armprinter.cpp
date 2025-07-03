@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #ifdef GNALC_EXTENSION_ARMv7
 #include "codegen/armv7/armprinter.hpp"
 #include "legacy_mir/SIMDinstruction/memory.hpp"

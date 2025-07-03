@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #ifdef GNALC_EXTENSION_BRAINFK
 #include "utils/exception.hpp"
 #include "codegen/brainfk/bfmodule.hpp"

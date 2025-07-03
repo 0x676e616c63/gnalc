@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 /**
 * @brief 将 IR 输出为格式化文本，Printer 的辅助类，亦可作调试用
 */

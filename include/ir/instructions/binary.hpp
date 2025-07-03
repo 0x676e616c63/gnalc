@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 /**
  * @brief binary operation and fneg
  * @brief add, fadd, sub, fsub, mul, fmul, sdiv, fdiv, srem, frem, fneg

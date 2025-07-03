@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "mir/armv8/isel.hpp"
 #include "mir/MIR.hpp"
 #include "mir/passes/transforms/isel.hpp"

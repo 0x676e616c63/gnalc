@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Loop-Closed SSA Form
 // This pass ensures the value defined in the loop only used in the loop.
 // This is done by inserting a fully redundant phi node in the exits.

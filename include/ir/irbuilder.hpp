@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #pragma once
 #ifndef GNALC_IR_BUILDER_HPP
 #define GNALC_IR_BUILDER_HPP

@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Sparse Conditional Constant Propagation, making use of the generic one in
 // `sparse_propagation.hpp`
 #pragma once

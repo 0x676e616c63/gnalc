@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Fold constant
 #pragma once
 #ifndef GNALC_IR_PASSES_HELPER_CONSTANT_FOLD_HPP

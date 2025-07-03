@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Load Elimination
 //
 // This pass performs a post-order traversal of the CFG to eliminate load instructions through:

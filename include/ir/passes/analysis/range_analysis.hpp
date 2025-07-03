@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Contextual Value Range Analysis
 #pragma once
 #ifndef GNALC_IR_PASSES_ANALYSIS_RANGE_ANALYSIS_HPP

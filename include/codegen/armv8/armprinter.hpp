@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #pragma once
 #ifndef GNALC_CODEGEN_ARMV8_ARMPRINTER_HPP
 #define GNALC_CODEGEN_ARMV8_ARMPRINTER_HPP

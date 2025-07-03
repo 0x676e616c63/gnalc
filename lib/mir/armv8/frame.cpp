@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "mir/MIR.hpp"
 #include "mir/info.hpp"
 #include "mir/armv8/frame.hpp"

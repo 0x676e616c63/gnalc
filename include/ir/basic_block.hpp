@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 /**
  * @attention BasicBlock 的 use_list 内是调用它的 BRInst，而不是它的父函数
  */

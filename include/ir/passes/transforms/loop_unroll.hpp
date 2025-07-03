@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 /**
  * @brief loop unroll pass, include Fully Unroll, Runtime Unroll(Partial Unroll)
  * @note Other relative passes: Loop Peeling, Loop Unroll and Jam

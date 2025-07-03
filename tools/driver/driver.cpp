@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // SIR
 #include "sir/passes/pass_builder.hpp"
 #include "sir/passes/pass_manager.hpp"

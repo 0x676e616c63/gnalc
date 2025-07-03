@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "ir/passes/utilities/irprinter.hpp"
 #include "ir/formatter.hpp"
 #include "ir/passes/analysis/live_analysis.hpp"
