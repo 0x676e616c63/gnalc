@@ -11,7 +11,7 @@
 namespace IR {
 class TargetAnalysis : public PM::AnalysisInfo<TargetAnalysis> {
 public:
-    TargetAnalysis(pTarget target_)
+    explicit TargetAnalysis(pTarget target_)
         : target(std::move(target_)) {}
 
     pTarget run(Function &f, FAM &fpm);

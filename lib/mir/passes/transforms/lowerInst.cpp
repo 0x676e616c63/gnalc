@@ -338,7 +338,7 @@ void MIR::lowerInst(const IR::pFcmp &fcmp, LoweringContext &ctx) {
 }
 
 void MIR::lowerInst(const IR::pRet &ret, LoweringContext &ctx) {
-    ctx.CodeGenCtx().frameInfo.makeReturn(ret, ctx); //
+    ctx.CodeGenCtx().frameInfo->makeReturn(ret, ctx); //
 }
 
 void MIR::lowerInst(const IR::pBr &br, LoweringContext &ctx) {
@@ -550,7 +550,7 @@ void MIR::lowerInst(const IR::pGep &gep, LoweringContext &ctx) {
 }
 
 void MIR::lowerInst(const IR::pCall &call, LoweringContext &ctx) {
-    ctx.CodeGenCtx().frameInfo.handleCallEntry(call, ctx); //
+    ctx.CodeGenCtx().frameInfo->handleCallEntry(call, ctx); //
 }
 
 void MIR::lowerInst(const IR::pSelect &select, LoweringContext &ctx) {

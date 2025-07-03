@@ -53,29 +53,28 @@ using MIRGlobal_p = std::shared_ptr<MIRGlobal>;
 struct StkObj;
 class MIRJmpTable;
 
-class FrameInfo { // armv8(A64)
+class FrameInfo {
 public:
-    FrameInfo() = default;
-    ~FrameInfo() = default;
+    virtual ~FrameInfo() = default;
 
-    void handleCallEntry(IR::pCall, LoweringContext &) const;
-    MIRGlobal_p handleLib(IR::pCall, LoweringContext &) const;
-    void handleMemset(IR::pCall, LoweringContext &) const;
-    void handleMemcpy(IR::pCall, LoweringContext &) const;
-    // void handleSIMD(IR::pCall, LoweringContext&) const;
+    virtual void handleCallEntry(IR::pCall, LoweringContext &) const = 0;
+    virtual MIRGlobal_p handleLib(IR::pCall, LoweringContext &) const = 0;
+    virtual void handleMemset(IR::pCall, LoweringContext &) const = 0;
+    virtual void handleMemcpy(IR::pCall, LoweringContext &) const = 0;
+    // virtual void handleSIMD(IR::pCall, LoweringContext&) const = 0;
 
-    void makePrologue(MIRFunction_p, LoweringContext &) const;
-    void makeReturn(IR::pRet, LoweringContext &) const;
+    virtual void makePrologue(MIRFunction_p, LoweringContext &) const = 0;
+    virtual void makeReturn(IR::pRet, LoweringContext &) const = 0;
 
-    void makePostSAPrologue(MIRBlk_p, CodeGenContext &, unsigned) const;
-    void makePostSAEpilogue(MIRBlk_p, CodeGenContext &, unsigned) const;
-    void insertPrologueEpilogue(MIRFunction *, CodeGenContext &) const;
+    virtual void makePostSAPrologue(MIRBlk_p, CodeGenContext &, unsigned) const = 0;
+    virtual void makePostSAEpilogue(MIRBlk_p, CodeGenContext &, unsigned) const = 0;
+    virtual void insertPrologueEpilogue(MIRFunction *, CodeGenContext &) const = 0;
 
     ///@note not used
-    bool isCallerSaved(const MIROperand &op) const;
-    bool isCalleeSaved(const MIROperand &op) const;
+    virtual bool isCallerSaved(const MIROperand &op) const = 0;
+    virtual bool isCalleeSaved(const MIROperand &op) const = 0;
 
-    constexpr size_t getStackPointerAlignment() const { return 16; };
+    constexpr size_t getStackPointerAlignment() const { return 16; }
 };
 
 struct InstLegalizeContext {
@@ -137,7 +136,7 @@ struct CodeGenContext {
     const BkdInfos &infos;
 
     std::shared_ptr<ISelInfo> iselInfo;
-    FrameInfo &frameInfo;
+    std::shared_ptr<FrameInfo> frameInfo;
     // const TargetInstInfo &instInfo;
 
     unsigned idx = 0;

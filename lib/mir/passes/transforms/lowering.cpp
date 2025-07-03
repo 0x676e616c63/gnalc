@@ -417,7 +417,7 @@ void MIR::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContext &c
 
     // emit prologue
     ctx.setCurrentBlk(mfunc->blks().front()); // entry blk
-    codeGenCtx.frameInfo.makePrologue(mfunc, ctx);
+    codeGenCtx.frameInfo->makePrologue(mfunc, ctx);
 
     // deal with alloca
     for (auto &inst : func->getBlocks().front()->getInsts()) {

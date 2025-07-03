@@ -38,10 +38,12 @@
 #include "ir/cfgbuilder.hpp"
 #include "ir/passes/analysis/target_analysis.hpp"
 #include "ir/target/armv8.hpp"
+#include "mir/armv8/frame.hpp"
 #include "mir/armv8/isel.hpp"
 #include "mir/passes/pass_builder.hpp"
 #include "mir/passes/pass_manager.hpp"
 #include "mir/passes/transforms/lowering.hpp"
+#include "mir/riscv64/frame.hpp"
 #include "mir/riscv64/isel.hpp"
 #include "sir/passes/utilities/sirprinter.hpp"
 
@@ -484,8 +486,8 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
     case Target::RISCV64:
         IR::PassBuilder::registerRISCV64TargetAnalyses(fam);
         break;
-
     case Target::BrainFk:
+    case Target::BrainFk3Tape:
         IR::PassBuilder::registerBrainFkTargetAnalyses(fam);
         break;
     default:
@@ -581,12 +583,16 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
 
     MIR::BkdInfos infos{.arch = mir_arch};
     std::shared_ptr<MIR::ISelInfo> isel;
-    if (target == Target::ARMv8)
+    std::shared_ptr<MIR::FrameInfo> frame;
+    if (target == Target::ARMv8) {
         isel = std::make_shared<MIR::ARMIselInfo>();
-    else
+        frame = std::make_shared<MIR::ARMFrameInfo>();
+    }
+    else {
         isel = std::make_shared<MIR::RVIselInfo>();
+        frame = std::make_shared<MIR::RVFrameInfo>();
+    }
 
-    MIR::FrameInfo frame{};
     MIR::CodeGenContext ctx{infos, isel, frame};
     auto mModule = MIR::loweringModule(generator.get_module(), ctx);
 

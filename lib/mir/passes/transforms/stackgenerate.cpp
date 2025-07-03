@@ -88,11 +88,11 @@ void StackGenerateImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     // insert prologue/epilogue
     auto &ctx = mfunc->Context();
 
-    ctx.frameInfo.insertPrologueEpilogue(mfunc, ctx);
+    ctx.frameInfo->insertPrologueEpilogue(mfunc, ctx);
 
-    ctx.frameInfo.makePostSAPrologue(mfunc->blks().front(), ctx, allocationBase);
+    ctx.frameInfo->makePostSAPrologue(mfunc->blks().front(), ctx, allocationBase);
 
     for (auto &mblk : mfunc->ExitBlks()) {
-        ctx.frameInfo.makePostSAEpilogue(mblk, ctx, allocationBase);
+        ctx.frameInfo->makePostSAEpilogue(mblk, ctx, allocationBase);
     }
 }
