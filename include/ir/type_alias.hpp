@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #ifndef GNALC_IR_DEF_HPP
 #define GNALC_IR_DEF_HPP
 
@@ -141,5 +144,9 @@ using pFuncType = std::shared_ptr<FunctionType>;
 class Loop;
 using pLoop = std::shared_ptr<Loop>;
 using wpLoop = std::weak_ptr<Loop>;
+
+// target
+class TargetInfo;
+using pTarget = std::shared_ptr<TargetInfo>;
 } // namespace IR
 #endif //DEF_HPP

@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // DomTree
 // This is a wrapper pass for Graph::GenericDomTreeBuilder
 #pragma once

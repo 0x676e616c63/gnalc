@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "ir/passes/pass_manager.hpp"
 #include "ir/passes/transforms/namenormalizer.hpp"
 #include "ir/passes/utilities/irprinter.hpp"

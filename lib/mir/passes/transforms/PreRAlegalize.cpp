@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "mir/passes/transforms/PreRAlegalize.hpp"
 
 using namespace MIR;
@@ -15,7 +18,7 @@ void MIR::preLegalizeFuncImpl(MIRFunction &mfunc, CodeGenContext &ctx) {
         auto &minsts = mblk->Insts();
         for (auto iter = minsts.begin(); iter != minsts.end(); ++iter) {
             InstLegalizeContext _ctx{*iter, minsts, iter, ctx};
-            ctx.iselInfo.preLegalizeInst(_ctx);
+            ctx.iselInfo->preLegalizeInst(_ctx);
         }
     }
 }

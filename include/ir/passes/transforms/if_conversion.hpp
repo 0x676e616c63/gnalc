@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // If-conversion in IR
 // Performs if-conversion by eliminating conditional branches by replacing them with `select`.
 //

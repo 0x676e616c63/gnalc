@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "ir/basic_block.hpp"
 #include "ir/instructions/phi.hpp"
 #include "ir/visitor.hpp"

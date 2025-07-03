@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Generic Pattern Match Utility for Peephole
 #pragma once
 #ifndef GNALC_PATTERN_MATCH_MATCH_HPP

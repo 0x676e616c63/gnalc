@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "ir/passes/helpers/constant_fold.hpp"
 #include "ir/base.hpp"
 #include "ir/basic_block.hpp"

@@ -1,4 +1,8 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "mir/MIR.hpp"
+#include "mir/armv8/base.hpp"
 
 using namespace MIR;
 
@@ -8,7 +12,7 @@ void ARMInstTemplate::registerInc(MIRInst_p_l minsts, MIRInst_p_l::iterator it, 
 
     MIROperand_p mimme = MIROperand::asImme(amount, OpT::Int);
 
-    if (!is12ImmeWithProbShift(amount)) {
+    if (!ARMv8::is12ImmeWithProbShift(amount)) {
         ///@note armv7有专门的过程间寄存器ip(r12)
         ///@note ip是caller-save寄存器
         ///@note 用于存储临时数据, 辅助长跳转...
@@ -51,7 +55,7 @@ void ARMInstTemplate::registerDec(MIRInst_p_l minsts, MIRInst_p_l::iterator it, 
                                   CodeGenContext &ctx) {
     MIROperand_p mimme = MIROperand::asImme(amount, OpT::Int);
 
-    if (!is12ImmeWithProbShift(amount)) {
+    if (!ARMv8::is12ImmeWithProbShift(amount)) {
         auto scratch = MIROperand::asISAReg(ARMReg::FP, OpT::Int64);
         auto imme = amount;
         auto movz = MIRInst::make(ARMOpC::MOVZ)

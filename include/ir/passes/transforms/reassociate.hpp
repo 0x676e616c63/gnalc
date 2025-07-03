@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Reassociate commutative expressions
 // Warning: this pass won't reassociate float operations
 // Reference:

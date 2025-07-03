@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "ir/passes/transforms/load_elimination.hpp"
 #include "ir/instructions/memory.hpp"
 #include "ir/passes/analysis/basic_alias_analysis.hpp"

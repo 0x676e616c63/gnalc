@@ -1,58 +1,26 @@
-
-int MAX(int a, int b)
-{
-    if (a == b)
-        return a;
-    else if (a > b)
-        return a;
-    else
-        return b;
+void foo(int A[], int B[], int C[], int D[]) {
+    A[0] = B[0] * C[0] + D[7];
+    A[1] = B[1] * C[1] + D[6];
+    A[2] = B[2] * C[2] + D[5];
+    A[3] = B[3] * C[3] + D[4];
+    A[4] = B[4] * C[4] + D[3];
+    A[5] = B[5] * C[5] + D[2];
+    A[6] = B[6] * C[6] + D[1];
+    A[7] = B[7] * C[7] + D[0];
 }
-
-int max_sum_nonadjacent(int arr[], int n)
-{
-    int temp[16] = {};
-    temp[0] = arr[0];
-    temp[1] = MAX(arr[0], arr[1]);
-    int i = 2;
-    while (i < n) {
-        temp[i] = MAX(temp[i - 2] + arr[i], temp[i - 1]);
-        i = i + 1;
-    }
-    return temp[n - 1];
-}
-
-int longest_common_subseq(int arr1[], int len1,
-                          int arr2[], int len2)
-{
-    int p[16][16] = {};
-    int i, j;
-    i = 1;
-    while (i <= len1) {
-        j = 1;
-        while (j <= len2) {
-            if (arr1[i - 1] == arr2[j - 1]) {
-                p[i][j] = p[i - 1][j - 1] + 1;
-            } else {
-                p[i][j] = MAX(p[i - 1][j], p[i][j - 1]);
-            }
-            j = j + 1;
-        }
-        i = i + 1;
-    }
-    return p[len1][len2];
-}
-
-int main()
-{
-    int A[15] = {8, 7, 4, 1, 2, 7, 0, 1, 9, 3, 4, 8, 3, 7, 0};
-    int B[13] = {3, 9, 7, 1, 4, 2, 4, 3, 6, 8, 0, 1, 5};
-    int An, Bn;
-
-    putint(max_sum_nonadjacent(A, 15));
-    putch(10);
-
-    putint(longest_common_subseq(A, 15, B, 13));
-    putch(10);
-    return 0;
+int main() {
+    int a[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    int b, c, d, e, f, g, h, j, k;
+    int i = getch();
+    b = a[i+0];
+    c = 5;
+    d = b + c;
+    e = a[i+1];
+    f = 6;
+    g = e + f;
+    h = a[i+2];
+    j = 7;
+    k = h + j;
+    i = i + 1;
+    putarray(10, a);
 }

@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 /**
  * @brief 使用访问者模式重构的代码，将AST结构和操作解耦
  * @attention AST在构造后应该是不会被修改的

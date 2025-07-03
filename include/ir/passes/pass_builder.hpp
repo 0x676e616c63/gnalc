@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #pragma once
 #ifndef GNALC_IR_PASSES_PASS_BUILDER_HPP
 #define GNALC_IR_PASSES_PASS_BUILDER_HPP
@@ -121,6 +124,11 @@ public:
     static void registerModuleAnalyses(MAM &);
     static void registerFunctionAnalyses(FAM &);
     static void registerProxies(FAM &, MAM &);
+
+    static void registerARMv8TargetAnalyses(FAM &);
+    static void registerARMv7TargetAnalyses(FAM &);
+    static void registerRISCV64TargetAnalyses(FAM &);
+    static void registerBrainFkTargetAnalyses(FAM &);
 };
 } // namespace IR
 #endif

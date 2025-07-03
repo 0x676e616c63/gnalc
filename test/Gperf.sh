@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright (c) 2025 0x676e616c63
+# SPDX-License-Identifier: MIT
 
 mode=$1
 source_file_path=$2

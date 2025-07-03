@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "mir/passes/transforms/RedundantLoadEli.hpp"
 #include "mir/passes/analysis/domtree_analysis.hpp"
 #include <optional>
@@ -131,7 +134,7 @@ void RedundantLoadEliImpl::ApplyCopys() {
 
         if (!isFP && constVal >= 0 && constVal < 65536) {
             continue; // giveup
-        } else if (isFP && (isFloat8(constVal) || constVal == 0)) {
+        } else if (isFP && (ARMv8::isFloat8(constVal) || constVal == 0)) {
             continue; // giveup
         }
 

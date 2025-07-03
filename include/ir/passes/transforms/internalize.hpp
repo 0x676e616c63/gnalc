@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Internalize Pass
 // Internalize global variable into function if possible.
 #pragma once

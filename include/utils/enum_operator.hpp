@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #ifndef GNALC_UTILS_ENUM_OPERATOR_HPP
 #define GNALC_UTILS_ENUM_OPERATOR_HPP
 

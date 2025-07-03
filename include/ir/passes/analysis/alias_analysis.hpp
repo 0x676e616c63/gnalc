@@ -1,3 +1,6 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 // Generic Alias Analysis Interface
 #pragma once
 #ifndef GNALC_IR_PASSES_ANALYSIS_ALIAS_ANALYSIS_HPP

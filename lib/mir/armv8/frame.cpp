@@ -1,10 +1,14 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
 #include "mir/MIR.hpp"
 #include "mir/info.hpp"
+#include "mir/armv8/frame.hpp"
 #include "mir/passes/transforms/lowering.hpp"
 
 using namespace MIR;
 
-void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const {
+void ARMFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const {
     ///@todo TCO, TCR
     ctx.CurrentBlk()->getFunction()->affirmNotLeafFunc();
 
@@ -171,7 +175,7 @@ void FrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) const 
     }
 }
 
-MIRGlobal_p FrameInfo::handleLib(IR::pCall callinst, LoweringContext &ctx) const {
+MIRGlobal_p ARMFrameInfo::handleLib(IR::pCall callinst, LoweringContext &ctx) const {
     const auto &layout = ctx.CodeGenCtx().infos.dataLayout;
 
     auto callee = callinst->getFunc();
@@ -181,7 +185,7 @@ MIRGlobal_p FrameInfo::handleLib(IR::pCall callinst, LoweringContext &ctx) const
     return mcallee;
 }
 
-void FrameInfo::handleMemset(IR::pCall callinst, LoweringContext &ctx) const {
+void ARMFrameInfo::handleMemset(IR::pCall callinst, LoweringContext &ctx) const {
     const auto &layout = ctx.CodeGenCtx().infos.dataLayout;
 
     auto callee = callinst->getFunc();
@@ -207,7 +211,7 @@ void FrameInfo::handleMemset(IR::pCall callinst, LoweringContext &ctx) const {
     // non-return;
 }
 
-void FrameInfo::handleMemcpy(IR::pCall callinst, LoweringContext &ctx) const {
+void ARMFrameInfo::handleMemcpy(IR::pCall callinst, LoweringContext &ctx) const {
     const auto &layout = ctx.CodeGenCtx().infos.dataLayout;
 
     auto callee = callinst->getFunc();
@@ -234,7 +238,7 @@ void FrameInfo::handleMemcpy(IR::pCall callinst, LoweringContext &ctx) const {
 }
 
 /// @note load args from reg or stk
-void FrameInfo::makePrologue(MIRFunction_p mfunc, LoweringContext &ctx) const {
+void ARMFrameInfo::makePrologue(MIRFunction_p mfunc, LoweringContext &ctx) const {
     const auto &args = mfunc->Args();
     unsigned stkoffset = 0L;
 
@@ -330,7 +334,7 @@ void FrameInfo::makePrologue(MIRFunction_p mfunc, LoweringContext &ctx) const {
     }
 }
 
-void FrameInfo::makeReturn(IR::pRet retinst, LoweringContext &ctx) const {
+void ARMFrameInfo::makeReturn(IR::pRet retinst, LoweringContext &ctx) const {
 
     // if (retinst->getType()->as<IR::BType>()->getInner() == IR::IRBTYPE::VOID) {
     //     ctx.newInst(MIRInst::make(ARMOpC::RET));
@@ -361,17 +365,17 @@ void FrameInfo::makeReturn(IR::pRet retinst, LoweringContext &ctx) const {
     }
 }
 
-bool FrameInfo::isCallerSaved(const MIROperand &op) const {
+bool ARMFrameInfo::isCallerSaved(const MIROperand &op) const {
     const auto reg = op.reg();
     return inRange(static_cast<ARMReg>(reg), ARMReg::X0, ARMReg::X18) ||
            inRange(static_cast<ARMReg>(reg), ARMReg::V0, ARMReg::V15);
 }
 
-bool FrameInfo::isCalleeSaved(const MIROperand &op) const {
+bool ARMFrameInfo::isCalleeSaved(const MIROperand &op) const {
     return !isCallerSaved(op); //
 }
 
-void FrameInfo::makePostSAPrologue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const {
+void ARMFrameInfo::makePostSAPrologue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const {
 
     auto &insts = entry->Insts();
 
@@ -388,7 +392,7 @@ void FrameInfo::makePostSAPrologue(MIRBlk_p entry, CodeGenContext &ctx, unsigned
     ARMInstTemplate::registerDec(insts, iter, ARMReg::SP, stkSize, ctx);
 }
 
-void FrameInfo::makePostSAEpilogue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const {
+void ARMFrameInfo::makePostSAEpilogue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const {
 
     auto &insts = entry->Insts();
     bool find = false;
@@ -408,7 +412,7 @@ void FrameInfo::makePostSAEpilogue(MIRBlk_p entry, CodeGenContext &ctx, unsigned
     ARMInstTemplate::registerInc(insts, iter, ARMReg::SP, stkSize, ctx);
 }
 
-void FrameInfo::insertPrologueEpilogue(MIRFunction *mfunc, CodeGenContext &ctx) const {
+void ARMFrameInfo::insertPrologueEpilogue(MIRFunction *mfunc, CodeGenContext &ctx) const {
 
     // 30 + 1 + 1 + 32 = 64
     // X<>: 0 ~ 30, SP: 31, PC: 32, V<>: 33~64
