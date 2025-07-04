@@ -123,10 +123,30 @@ sudo pacman -S aarch64-linux-gnu-gcc
 sudo ln -s /usr/aarch64-linux-gnu/lib/ld-linux-aarch64.so.1 /lib/ld-linux-aarch64.so.1
 ```
 
+#### Fedora 42
+##### AArch64
+```shell
+sudo dnf install binutils-aarch64-linux-gnu.x86_64 
+sudo dnf install gcc-aarch64-linux-gnu.x86_64 
+sudo dnf install sysroot-aarch64-fc42-glibc.noarch
+# check path of sysroot
+rpm -ql sysroot-aarch64-fc42-glibc
+# it suppose to be: /usr/aarch64-redhat-linux/sys-root/fc42 ...
+```
+
 Then edit `gcc_arm_command` and `qemu_arm_command` in [config.hpp](../test/include/config.hpp) according to your
 machine.
+
+#### Ubuntu & Fedora
 
 ```c++
 const std::string gcc_arm_command = "arm-linux-gnueabihf-gcc";
 const std::string qemu_arm_command = "LD_LIBRARY_PATH=/usr/arm-linux-gnueabihf/libc/lib qemu-arm";
 ```
+
+#### Fedora 42
+```c++
+const std::string gcc_arm_command = "aarch64-linux-gnu-gcc --sysroot=/usr/aarch64-redhat-linux/sys-root/fc42";
+const std::string qemu_arm_command = "qemu-aarch64 -L /usr/aarch64-redhat-linux/sys-root/fc42/usr/";
+```
+

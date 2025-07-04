@@ -169,7 +169,7 @@ template <typename T> inline bool isBitMaskImme(T imm) {
 }
 
 // IMME judge end
-}
+} // namespace ARMv8
 
 ///@note 理论上在CodeGen之前区分寄存器位宽没有价值
 ///@note ARMv8的V<>寄存器不能够拆成若干独立的S<>寄存器
@@ -292,6 +292,6 @@ struct ARMInstTemplate {
     static void registerDec(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, unsigned, CodeGenContext &);
     static void registerAdjust(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, int, CodeGenContext &);
 };
-}
+} // namespace MIR
 
 #endif
