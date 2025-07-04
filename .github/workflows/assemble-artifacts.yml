@@ -85,6 +85,9 @@ jobs:
       - name: Build gnalc
         run: make -C build gnalc -j$(nproc)
 
+      - name: Debugging with ssh
+        uses: lhotari/action-upterm@v1
+
       - name: Prepare artifacts directory
         run: |
           mkdir -p artifacts
