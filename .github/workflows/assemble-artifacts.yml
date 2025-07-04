@@ -1,0 +1,158 @@
+name: Gnalc Assemble Artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        required: true
+        type: string
+        description: branch
+
+concurrency:
+  group: assemble-artifacts-${{ inputs.branch }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  BUILD_TYPE: Release
+  DEBUG_BRANCH: "ci-debug"
+  TESTDATA_VERSION: "v1.0.0"
+  TESTDATA_ZIP_URL: "https://github.com/caozhanhao/gnalc-test-data/releases/download/v1.0.0/testdata.zip"
+  TESTDATA_DIR: "${{ github.workspace }}/testdata"
+  ZIP_CACHE_DIR: "${{ github.workspace }}/testdata_cache"
+  ARTIFACTS_COMMIT_THRESHOLD: 10
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout artifacts branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEBUG_BRANCH }}
+          path: ci-debug-branch
+
+      - name: Reset debug branch
+        run: |
+          cd ci-debug-branch
+          echo "Resetting artifacts branch (more than ${{ env.ARTIFACTS_COMMIT_THRESHOLD }} commits)"
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan new_branch_for_github_action
+          git add -A
+          git commit -m "History reset $(TZ=Asia/Shanghai date +'%Y-%m-%d %H:%M:%S')"
+          
+          git branch -D ${{ env.DEBUG_BRANCH }}
+          git branch -m ${{ env.DEBUG_BRANCH }}
+          
+          git push --force origin ${{ env.DEBUG_BRANCH }}
+          echo "Artifacts branch has been reset"
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Create cache directory
+        run: mkdir -p ${{ env.ZIP_CACHE_DIR }}
+
+      - name: Cache test data
+        id: cache-zip
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.ZIP_CACHE_DIR }}/testdata.zip
+          key: testcases-zip-${{ env.TESTDATA_VERSION }}
+          restore-keys: testcases-zip-
+
+      - name: Download test data zip (if not cached)
+        if: steps.cache-zip.outputs.cache-hit != 'true'
+        run: |
+          curl -L -o ${{ env.ZIP_CACHE_DIR }}/testdata.zip ${{ env.TESTDATA_ZIP_URL }}
+
+      - name: Extract testcases
+        run: |
+          mkdir -p ${{ env.TESTDATA_DIR }}
+          unzip -q ${{ env.ZIP_CACHE_DIR }}/testdata.zip -d ${{ env.TESTDATA_DIR }}
+
+      - name: Configure CMake
+        run: |
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} ..
+
+      - name: Build gnalc
+        run: make -C build gnalc -j$(nproc)
+
+      - name: Prepare artifacts directory
+        run: |
+          mkdir -p artifacts
+          echo "ARTIFACTS_DIR=$(pwd)/artifacts" >> $GITHUB_ENV
+
+      - name: Set compile options
+        run: |
+          echo "COMPILE_OPTIONS=-O1" >> $GITHUB_ENV
+
+      - name: Compile testcases
+        run: |
+          base_path="${{ env.TESTDATA_DIR }}"
+          find "$base_path" -type f -name "*.sy" | while read testcase; do
+          rel_path="${testcase#$base_path/}"
+          dir_path=$(dirname "$rel_path")
+          test_name=$(basename "$testcase" .sy)
+          
+          if [[ "$dir_path" == *"bad_tests"* ]]; then
+            continue
+          fi
+          
+          echo "Compiling: $rel_path"
+
+          mkdir -p "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path"
+          ./build/gnalc -S "$testcase" \
+          -o "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.s" \
+          ${{ env.COMPILE_OPTIONS }}
+          done
+
+      - name: Checkout debug branch for update
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEBUG_BRANCH }}
+          path: ci-debug-branch
+
+      - name: Clean out old debug files
+        run: |
+          rm -rf ci-debug-branch/*
+
+      - name: Copy new artifacts
+        run: |
+          mv artifacts/* ci-debug-branch/
+
+      - name: Generate metadata files
+        run: |
+          TS=$(TZ=Asia/Shanghai date +"%Y-%m-%dT%H:%M:%S%:z")
+          cat > ci-debug-branch/README.md <<EOF
+          # Gnalc Artifacts
+
+          - **Branch:** ${{ inputs.branch }}
+          - **Generated at:** $TS (UTC)
+          - **Commit SHA:** ${{ github.sha }}
+
+          Debug Artifacts built by GitHub Actions.  
+          EOF
+
+          echo "${{ github.sha }}" > ci-debug-branch/last_run.txt
+
+      - name: Commit & Push updates
+        run: |
+          cd ci-debug-branch
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md last_run.txt artifacts/
+          if git diff-index --quiet HEAD; then
+            echo "No changes to commit"
+            exit 0
+          else
+            git commit -m "Update artifacts from ${{ github.sha }}"
+            git push origin ${{ env.DEBUG_BRANCH }}
+          fi
