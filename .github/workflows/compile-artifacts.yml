@@ -133,12 +133,12 @@ jobs:
           echo "Compiling: $rel_path"
           
            #mkdir -p "$ARTIFACTS_DIR/artifacts/llvm/$dir_path"
-           #./build/gnalc --log none -S "$testcase" -emit-llvm \
+           #./build/gnalc -S "$testcase" -emit-llvm \
            #  -o "$ARTIFACTS_DIR/artifacts/llvm/$dir_path/$test_name.ll" \
            #  ${{ env.COMPILE_OPTIONS }}
           
           mkdir -p "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path"
-          ./build/gnalc --log none -S "$testcase" \
+          ./build/gnalc -S "$testcase" \
           -o "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.s" \
           ${{ env.COMPILE_OPTIONS }}
           
