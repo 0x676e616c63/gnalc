@@ -159,6 +159,11 @@ struct PairHash {
 
 bool begins_with(const std::string &a, const std::string &b);
 
+template <typename T>
+std::enable_if_t<std::is_integral_v<T>, bool> isPowerOfTwo(T x) {
+    return x && !(x & (x - static_cast<T>(1)));
+}
+
 #define GNALC_STRINGFY(x) _GNALC_STRINGFY(x)
 #define _GNALC_STRINGFY(x) #x
 } // namespace Util

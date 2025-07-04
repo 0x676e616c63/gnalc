@@ -117,6 +117,8 @@ public:
     // Warning: PHIInst MUST NOT invoke this.
     BBInstIter getIter() const;
 
+    bool isCommutative() const;
+
     void accept(IRVisitor &visitor) override;
 
     ~Instruction() override;

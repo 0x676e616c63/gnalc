@@ -97,6 +97,10 @@ public:
     bool isF32() const;
     bool isInteger() const;
     bool isFloatingPoint() const;
+    bool isVec() const;
+    bool isIntVec() const;
+    bool isFPVec() const;
+    bool is128BitVec() const;
     bool isVoid() const;
     bool isUndef() const;
 };

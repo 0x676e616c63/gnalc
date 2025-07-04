@@ -13,85 +13,129 @@
 #ifndef GNALC_IR_PASSES_TRANSFORMS_VECTORIZER_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_VECTORIZER_HPP
 
+#include <utility>
+
+#include "config/config.hpp"
 #include "ir/passes/analysis/basic_alias_analysis.hpp"
 #include "ir/passes/analysis/loop_alias_analysis.hpp"
 #include "ir/passes/pass_manager.hpp"
+#include "ir/target/target.hpp"
 
 namespace IR {
+int getAlign(const pVal &inst);
+
 class VectorizerPass : public PM::PassInfo<VectorizerPass> {
 private:
-    // Currently we only vectorize int and float, so the element size is a constant 4.
-    static constexpr int ElementSize = 4;
-    static constexpr bool log_step_by_step = true;
+    pBlock curr_block;
+    BasicAAResult *basic_aa{};
+    LoopAAResult *loop_aa{};
+    pTarget target;
 
-    struct Pack {
-        // Cache front instruction for speed.
-        pInst front_inst;
-        std::vector<pInst> stmts;
-        std::unordered_set<pInst> stmt_set;
-        int align = 4;
-        size_t id;
+    struct SchedData {};
 
-        Pack() = default;
-        Pack(size_t id, const pInst& a, const pInst& b);
-        Pack(size_t id, const Pack& a, const Pack& b);
+    class Scheduler {
+    private:
+        pBlock block;
 
-        bool contains(const pInst& stmt) const;
+        pInst sched_begin;
+        pInst sched_end;
 
-        bool isPair() const;
-        pInst getLeft() const;
-        pInst getRight() const;
-        size_t size() const;
+        SchedData *first_load_store{};
+        SchedData *last_load_store{};
 
-        // Truncate the pack to the given size.
-        // Return the pack got truncated.
-        Pack truncate(size_t size, size_t id);
+        size_t region_size{};
+        size_t max_region_size{};
 
-        const pInst& front() const;
-        const pInst& back() const;
+        std::list<SchedData> data;
+        std::unordered_map<pVal, SchedData *> data_map;
 
-        const pInst& pos_index_back() const;
-        const pInst& pos_index_front() const;
+    public:
+        bool tryScheduleBundle(const std::vector<pVal> &scalars, const pVal &op, VectorizerPass *vectorizer) {
+            if (op->is<PHIInst>())
+                return true;
+
+            auto old_sched_end = sched_end;
+            SchedData *prev_in_bundle = nullptr;
+            SchedData *bundle = nullptr;
+            bool re_sched = false;
+
+            Err::todo();
+        }
+
+        bool cancelScheduling(const std::vector<pVal> &scalars, const pVal &op) {
+            Err::todo();
+        }
+    };
+    std::unordered_map<pBlock, Scheduler> schedulers;
+
+    std::vector<pStore> seed_stores;
+    std::unordered_map<pStore, std::vector<pStore>> store_map;
+
+    struct Tree {
+        std::vector<pVal> scalars;
+        pVal vec;
+        bool need_to_gather;
+        std::vector<int> user_tree_indices;
     };
 
-    Function* curr_func;
-    pBlock curr_block;
-    FAM* fam;
-    BasicAAResult* basic_aa;
-    LoopAAResult* loop_aa;
-    std::list<Pack> pack_set;
-    size_t name_cnt;
-    size_t pack_id;
+    std::vector<Tree> vec_trees;
+    std::unordered_map<pVal, int> scalar_to_tree;
+    std::unordered_set<pVal> must_gather;
 
-    // Use for Packs
-    std::unordered_map<const Pack*, std::vector<Pack*>> user_pack_map;
-    std::unordered_map<const Pack*, std::vector<Pack*>> operand_pack_map;
-    std::unordered_map<const Pack*, pInst> scheduled_packs;
-    void computePackUseDef();
+    Tree *newTree(const std::vector<pVal> &scalars, bool vectorized, int &user_tree_idx);
 
-    bool stmtCanPack(const pInst& a, const pInst& b);
+    void deleteTree();
+    Tree *getTree(const pVal &val);
 
-    Pack* stmtInPack(const pInst& stmt);
+    void collectSeeds();
 
-    bool followUseDefs(const Pack& pack);
-    bool followDefUses(const Pack& pack);
-    void findAdjacentReferences();
-    void extendPackList();
-    void combinePacks();
-    void rearrangePack();
-    void removeUnschedulable();
-    void removeUnprofitable();
-    void extendAlign();
-    void splitDependencyCycle();
-    pVal gatherVector(Pack* user_pack, const std::function<pVal(const pInst&)>& proj);
-    std::vector<Pack*> computeTopologicalOrder();
-    bool schedule();
-    void cleanup();
-    void reset();
+    std::tuple<std::unordered_set<pStore>, std::unordered_set<pStore>, std::map<pStore, pStore>>
+    findConsecutiveStoreChain();
 
-    friend bool isDisjoint(const Pack &, const Pack &);
-    friend std::ostream &operator<<(std::ostream &os, const Pack &expr);
-    friend std::ostream &operator<<(std::ostream &os, const VectorizerPass &expr);
+    bool vectorizeStoreChains();
+
+    bool vectorizeStoreChain(const std::vector<pStore> &chain, size_t scalars_size);
+
+    void buildTree(const std::vector<pVal> &scalars);
+
+    std::optional<OP> getAltOpcode(OP Op);
+
+    // fadd, fsub, fadd, fsub...
+    std::optional<OP> tryAnalyzeAlternativeOp(const std::vector<pVal> &scalars);
+
+    std::optional<OP> analyzeOpcode(const std::vector<pVal> &scalars);
+
+    bool isAllConstant(const std::vector<pVal> &scalars);
+
+    bool isAllSame(const std::vector<pVal> &scalars);
+
+    bool isInSameBlock(const std::vector<pVal> &scalars);
+
+    void buildTreeImpl(const std::vector<pVal> &scalars, int depth, int user_tree_idx);
+
+    struct ExternalUser {
+        pVal scalar;
+        pUser user;
+        int lane;
+        ExternalUser(pVal scalar, pUser user, int lane)
+            : scalar(std::move(scalar)), user(std::move(user)), lane(lane) {}
+    };
+
+    std::vector<ExternalUser> external_users;
+
+    bool inTreeUserNeedToExtract(const pVal &val, const pInst &user);
+    void collectExternalUsers();
+
+    int getGatherCost(const pVecType &ty);
+
+    int getBaseCost(const Tree &tree);
+
+    // Calculate the vectorization cost of the SLP tree.
+    // Negative for profitable.
+    int getTreeCost();
+
+    void vectorizeTree();
+
 public:
     PM::PreservedAnalyses run(Function &function, FAM &manager);
 };

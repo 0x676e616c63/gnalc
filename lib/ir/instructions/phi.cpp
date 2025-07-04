@@ -57,14 +57,19 @@ pVal PHIInst::getValueForBlock(const pBlock &block) const {
     return nullptr;
 }
 
-pBlock PHIInst::getBlockForValue(Use* use) const {
+pBlock PHIInst::getBlockForValue(Use *use) const {
     Err::gassert(use->getValue()->getVTrait() != ValueTrait::BASIC_BLOCK);
-    const auto& operands = getOperands();
+    const auto &operands = getOperands();
     for (auto it = operands.begin(); it != operands.end(); ++it) {
         if (it->get() == use)
             return (*(it + 1))->getValue()->as<BasicBlock>();
     }
     return nullptr;
+}
+
+pBlock PHIInst::getIncomingBlock(size_t i) const {
+    Err::gassert(i < getNumIncomings());
+    return getOperand(i * 2 + 1)->getValue()->as<BasicBlock>();
 }
 
 void PHIInst::addPhiOper(const pVal &val, const pBlock &blk) {
@@ -106,6 +111,10 @@ bool PHIInst::hasBlock(const pBlock &target) {
             return true;
     }
     return false;
+}
+
+size_t PHIInst::getNumIncomings() const {
+    return getNumOperands() / 2;
 }
 
 void PHIInst::accept(IRVisitor &visitor) { visitor.visit(*this); }

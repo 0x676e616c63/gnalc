@@ -38,7 +38,7 @@ public:
 
 public:
     virtual void impl(MIRFunction &, FAM &);
-    RegisterAllocImpl() : mfunc(nullptr), K(Config::MIR_new::AARCH64_CORE_REGISTER_MAX_NUM), isInitialized(false) {}
+    RegisterAllocImpl() : mfunc(nullptr), K(Config::MIR::AARCH64_CORE_REGISTER_MAX_NUM), isInitialized(false) {}
     explicit RegisterAllocImpl(int fpuRegCnt) : mfunc(nullptr), K(fpuRegCnt), isInitialized(false) {}
     virtual ~RegisterAllocImpl() = default;
 
@@ -227,7 +227,7 @@ class VectorRegisterAllocImpl : public RegisterAllocImpl {
 
 public:
     void impl(MIRFunction &, FAM &) override;
-    VectorRegisterAllocImpl() : RegisterAllocImpl(Config::MIR_new::AARCH64_FPU_REGISTER_MAX_NUM) {}
+    VectorRegisterAllocImpl() : RegisterAllocImpl(Config::MIR::AARCH64_FPU_REGISTER_MAX_NUM) {}
     ~VectorRegisterAllocImpl() override = default;
 
 protected:

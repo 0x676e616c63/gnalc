@@ -13,15 +13,9 @@ namespace IR {
 // TODO
 class BFTargetInfo : public TargetInfo {
 public:
-    bool isInstSupported(OP op) override {
-        return true;
-    }
-    bool isTypeSupported(const pType& type) override {
-        return true;
-    }
-    bool isLibCallSupported(const std::string &lib_fn_name) override {
-        return true;
-    }
+    bool isInstSupported(OP op) const override { return true; }
+    bool isTypeSupported(const pType &type) const override { return true; }
+    bool isLibCallSupported(const std::string &lib_fn_name) const override { return true; }
 };
-}
+} // namespace IR
 #endif //TARGET_HPP

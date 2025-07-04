@@ -64,6 +64,9 @@ public:
     bool isV2NextToV1(Value *v1, Value *v2) const;
     bool isV2NextToV1(const pVal &v1, const pVal &v2) const;
 
+    bool isConsecutiveAccess(Value* inst1, Value* inst2) const;
+    bool isConsecutiveAccess(const pVal& inst1, const pVal& inst2) const;
+
     int getAlignOnBase(Value *value) const;
     int getAlignOnBase(const pVal &value) const;
 

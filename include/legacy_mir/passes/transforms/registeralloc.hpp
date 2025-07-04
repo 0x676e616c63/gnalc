@@ -63,7 +63,7 @@ protected:
     std::unordered_map<OperP, Moves> moveList;
     std::map<OperP, OperP> alias;
     // color
-    unsigned int K = Config::MIR::CORE_REGISTER_MAX_NUM;
+    unsigned int K = Config::LegacyMIR::CORE_REGISTER_MAX_NUM;
 
 protected:
     /// procedures
@@ -173,7 +173,7 @@ public:
 
 protected:
     // datas
-    unsigned int K = Config::MIR::FPU_REGISTER_MAX_NUM;
+    unsigned int K = Config::LegacyMIR::FPU_REGISTER_MAX_NUM;
 
 protected:
     // procedures

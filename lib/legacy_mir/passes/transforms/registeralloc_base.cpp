@@ -49,7 +49,7 @@ PM::PreservedAnalyses RAPass::run(Function &bkd_function, FAM &fam) {
     Func = &bkd_function;
     availableSRegisters = &(Func->editInfo().availableSRegisters);
     varpool = &(Func->editInfo().varpool);
-    K = Config::MIR::CORE_REGISTER_MAX_NUM; // reset
+    K = Config::LegacyMIR::CORE_REGISTER_MAX_NUM; // reset
 
     clearall();
 
@@ -575,7 +575,7 @@ PM::PreservedAnalyses NeonRAPass::run(Function &bkd_function, FAM &fam) {
     Func = &bkd_function;
     varpool = &(Func->editInfo().varpool);
     liveinfo = fam.getResult<LiveAnalysis>(bkd_function);
-    K = Config::MIR::FPU_REGISTER_MAX_NUM; // reset
+    K = Config::LegacyMIR::FPU_REGISTER_MAX_NUM; // reset
 
     clearall();
 

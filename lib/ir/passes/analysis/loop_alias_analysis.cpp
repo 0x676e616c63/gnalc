@@ -86,6 +86,23 @@ bool LoopAAResult::isV2NextToV1(Value *v1, Value *v2) const {
 
 bool LoopAAResult::isV2NextToV1(const pVal &v1, const pVal &v2) const { return isV2NextToV1(v1.get(), v2.get()); }
 
+pVal getPtrOperand(Value* i) {
+    if (auto load = i->as_raw<LOADInst>())
+        return load->getPtr();
+    if (auto store = i->as_raw<STOREInst>())
+        return store->getPtr();
+    return nullptr;
+}
+
+bool LoopAAResult::isConsecutiveAccess(Value *inst1, Value *inst2) const {
+    auto ptr0 = getPtrOperand(inst1);
+    auto ptr1 = getPtrOperand(inst2);
+    return isV2NextToV1(ptr1, ptr0);
+}
+bool LoopAAResult::isConsecutiveAccess(const pVal &inst1, const pVal &inst2) const {
+    return isConsecutiveAccess(inst1.get(), inst2.get());
+}
+
 int LoopAAResult::getAlignOnBase(Value *value) const {
     const auto& loc = queryPointer(value);
     int align = -1;

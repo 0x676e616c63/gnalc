@@ -35,6 +35,22 @@ BBInstIter Instruction::getIter() const {
     return ret;
 }
 
+bool Instruction::isCommutative() const {
+    switch (opcode) {
+        case OP::ADD:
+        case OP::FADD:
+        case OP::MUL:
+        case OP::FMUL:
+        case OP::AND:
+        case OP::OR:
+        case OP::XOR:
+            return true;
+        default:
+            return false;
+    }
+    return false;
+}
+
 void Instruction::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
 Instruction::~Instruction() = default;
