@@ -5,8 +5,8 @@
 #ifndef GNALC_MIR_MIR_HPP
 #define GNALC_MIR_MIR_HPP
 
-#include "mir/info.hpp"
 #include "armv8/base.hpp"
+#include "mir/info.hpp"
 #include "riscv64/base.hpp"
 #include "utils/generic_visitor.hpp"
 #include <algorithm>
@@ -181,7 +181,7 @@ private:
     string mSym;
 
 public:
-    explicit MIRReloc(string sym) noexcept : mSym(std::move(sym)){};
+    explicit MIRReloc(string sym) noexcept : mSym(std::move(sym)) {};
 
     string getmSym() const { return mSym; }
 
@@ -324,13 +324,9 @@ public:
         }
     }
 
-    static MIROperand_p asISAReg(ARMReg reg, OpT type) {
-        return asISAReg(static_cast<unsigned>(reg), type);
-    }
+    static MIROperand_p asISAReg(ARMReg reg, OpT type) { return asISAReg(static_cast<unsigned>(reg), type); }
 
-    static MIROperand_p asISAReg(RVReg reg, OpT type) {
-        return asISAReg(static_cast<unsigned>(reg), type);
-    }
+    static MIROperand_p asISAReg(RVReg reg, OpT type) { return asISAReg(static_cast<unsigned>(reg), type); }
 
     static MIROperand_p asVReg(unsigned reg, OpT type) {
         auto vreg = make<MIROperand>(make<MIRReg>(reg + VRegBegin), type); // auto add VRegBegin here
@@ -368,7 +364,7 @@ public:
 
         auto &VReg = std::get<MIRReg_p>(mOperand);
 
-        recover = VReg->reg;
+        // recover = VReg->reg;
         VReg->reg = color; // assigned here
     }
 
@@ -383,9 +379,9 @@ private:
     std::variant<OpC, ARMOpC, RVOpC> mOpcode;
     ///@note <0>代表def, 如果为nullptr, 代表指令没有def, 或者是需要用WZR/XZR占位
     std::array<MIROperand_p, maxOpCnt> mOperands;
-    explicit MIRInst(OpC opcode) noexcept : mOpcode(opcode){};
-    explicit MIRInst(ARMOpC opcode) noexcept : mOpcode(opcode){};
-    explicit MIRInst(RVOpC opcode) noexcept : mOpcode(opcode){};
+    explicit MIRInst(OpC opcode) noexcept : mOpcode(opcode) {};
+    explicit MIRInst(ARMOpC opcode) noexcept : mOpcode(opcode) {};
+    explicit MIRInst(RVOpC opcode) noexcept : mOpcode(opcode) {};
 
 public:
     template <typename... Args> static std::shared_ptr<MIRInst> make(Args &&...args) {
@@ -394,7 +390,7 @@ public:
 
     template <typename T> T opcode() const {
         Err::gassert(std::is_same_v<T, OpC> || std::is_same_v<T, ARMOpC> || std::is_same_v<T, RVOpC>,
-            " MIRInst::opcode: unknown opcode type");
+                     " MIRInst::opcode: unknown opcode type");
         return std::get<T>(mOpcode); // wrong variant idx maybe ?
     }
 
@@ -526,7 +522,8 @@ private:
 public:
     MIRBlk() = delete;
 
-    MIRBlk(const string &sym, MIRFunction_wp _mFunction, const MIRBlk_p& _prv = nullptr, const MIRBlk_p& _nxt = nullptr) noexcept
+    MIRBlk(const string &sym, MIRFunction_wp _mFunction, const MIRBlk_p &_prv = nullptr,
+           const MIRBlk_p &_nxt = nullptr) noexcept
         : MIRReloc(sym), mFunction{std::move(_mFunction)}, mprv(_prv), mnxt(_nxt) {}
 
     MIRFunction_p getFunction() const {
@@ -562,8 +559,7 @@ public:
 
     void brReplace(const MIRBlk_p &old_succ, const MIRBlk_p &new_succ, CodeGenContext &ctx) {
         auto it = std::find_if(mInsts.begin(), mInsts.end(), [&](const MIRInst_p &minst) {
-            if (minst->isGeneric() && minst->opcode<OpC>() == OpC::InstBranch &&
-                minst->getOp(1)->reloc() == old_succ) {
+            if (minst->isGeneric() && minst->opcode<OpC>() == OpC::InstBranch && minst->getOp(1)->reloc() == old_succ) {
 
                 minst->setOperand<1>(MIROperand::asReloc(new_succ), ctx);
                 return true;
@@ -643,7 +639,7 @@ public:
     MIROperand_p addStkObj(CodeGenContext &ctx, unsigned size, unsigned alignmant, int offset, StkObjUsage,
                            unsigned seq); // for arg on stk
     void setEntryBlk(MIRBlk_p blk) { mEntryBlk = std::move(blk); }
-    void addExitBlk(const MIRBlk_p& blk) { mExitBlks.emplace_back(blk); }
+    void addExitBlk(const MIRBlk_p &blk) { mExitBlks.emplace_back(blk); }
 
     auto &blks() { return mBlks; }
     auto &EntryBlk() { return mEntryBlk; }
@@ -769,8 +765,7 @@ private:
     MIRReloc_p mreloc; // func, blk, data, bss
 
 public:
-    MIRGlobal(std::size_t _alignment, MIRReloc_p _reloc) noexcept
-        : alignment(_alignment), mreloc(std::move(_reloc)) {}
+    MIRGlobal(std::size_t _alignment, MIRReloc_p _reloc) noexcept : alignment(_alignment), mreloc(std::move(_reloc)) {}
 
     auto &reloc() { return mreloc; }
     const auto &reloc() const { return mreloc; }
@@ -802,7 +797,7 @@ public:
     auto &funcs() { return mFuncs; }
     const auto &funcs() const { return mFuncs; }
 
-    void addFunc(const MIRFunction_p& func) { mFuncs.emplace_back(func); }
+    void addFunc(const MIRFunction_p &func) { mFuncs.emplace_back(func); }
 
     string getName() const { return name; }
 
@@ -811,6 +806,19 @@ public:
 
 using MIRModule_p = std::shared_ptr<MIRModule>;
 
-}; // namespace MIR_new
+///@note use these when LoweringContent is not clear, or not in a IR lowering stage
+struct ARMInstTemplate {
+    static void registerInc(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, unsigned, CodeGenContext &);
+    static void registerDec(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, unsigned, CodeGenContext &);
+    static void registerAdjust(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, int, CodeGenContext &);
+};
+
+struct RVInstTemplate {
+    static void registerInc(MIRInst_p_l, MIRInst_p_l::iterator, RVReg, unsigned, CodeGenContext &);
+    static void registerDec(MIRInst_p_l, MIRInst_p_l::iterator, RVReg, unsigned, CodeGenContext &);
+    static void registerAdjust(MIRInst_p_l, MIRInst_p_l::iterator, RVReg, int, CodeGenContext &);
+};
+
+}; // namespace MIR
 
 #endif

@@ -7,6 +7,7 @@
 
 #include "mir/passes/pass_manager.hpp"
 #include "mir/schedA53.hpp"
+#include "utils/fast_set.hpp"
 
 ///@note 指令重排分为两部分
 ///@note 寄存器分配前的重排需要减少寄存器压力
@@ -18,6 +19,7 @@ namespace MIR {
 
 template <typename T> using US = std::unordered_set<T>;
 template <typename Tx, typename Ty> using UM = std::unordered_map<Tx, Ty>;
+template <typename T> using FS = Util::FastSet<T>;
 
 class PreRaScheduling : public PM::PassInfo<PreRaScheduling> {
 public:
@@ -27,7 +29,7 @@ public:
 struct SchedulingModule {
     MIRBlk_p mblk;
     UM<MIRInst_p, unsigned> degrees;
-    UM<MIRInst_p, US<MIRInst_p>> antideps;
+    UM<MIRInst_p, FS<MIRInst_p>> antideps;
     UM<MIRInst_p, int> rank;
 
     /// @brief available resources
@@ -75,6 +77,6 @@ private:
     void Scheduling(SchedulingModule &);
 };
 
-}; // namespace MIR_new
+}; // namespace MIR
 
 #endif

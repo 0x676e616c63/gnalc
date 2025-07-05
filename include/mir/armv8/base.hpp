@@ -5,6 +5,7 @@
 #ifndef GNALC_MIR_ARMV8_BASE_HPP
 #define GNALC_MIR_ARMV8_BASE_HPP
 
+#include "mir/tools.hpp"
 #include "utils/enum_operator.hpp"
 
 #include <cstring>
@@ -286,12 +287,6 @@ enum class ARMOpC : uint32_t {
     DEC,         // implement with sub #imme (with imme legalize)
 };
 
-///@note use these when LoweringContent is not clear, or not in a IR lowering stage
-struct ARMInstTemplate {
-    static void registerInc(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, unsigned, CodeGenContext &);
-    static void registerDec(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, unsigned, CodeGenContext &);
-    static void registerAdjust(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, int, CodeGenContext &);
-};
 } // namespace MIR
 
 #endif
