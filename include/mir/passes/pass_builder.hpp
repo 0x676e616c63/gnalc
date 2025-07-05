@@ -23,6 +23,8 @@ extern const OptInfo o1_opt_info;
 
 class PassBuilder {
 public:
+    static FPM buildFunctionDebugPipeline();
+    static MPM buildModuleDebugPipeline();
     static FPM buildFunctionPipeline(OptInfo opt_info);
     static MPM buildModulePipeline(OptInfo opt_info);
 
