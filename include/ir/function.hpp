@@ -177,6 +177,7 @@ public:
     ConstantPool &getConstantPool();
 
     template <typename T> auto getConst(T &&val) { return constant_pool->getConst(std::forward<T>(val)); }
+    pVal getZero(const pType &type) { return constant_pool->getZero(type); }
 
     void accept(IRVisitor &visitor) override;
 

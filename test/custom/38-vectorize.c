@@ -8,6 +8,23 @@ void foo(int A[], int B[], int C[], int D[]) {
     A[6] = B[6] * C[6] + D[1];
     A[7] = B[7] * C[7] + D[0];
 }
+
+void bar(int A[], int B[], int C[], int D[]) {
+    int i = 0;
+    while (i < 10)
+    {
+        A[i + 0] = B[i + 0] * C[i + 0] + D[i + 7];
+        A[i + 1] = B[i + 1] * C[i + 1] + D[i + 6];
+        A[i + 2] = B[i + 2] * C[i + 2] + D[i + 5];
+        A[i + 3] = B[i + 3] * C[i + 3] + D[i + 4];
+        A[i + 4] = B[i + 4] * C[i + 4] + D[i + 3];
+        A[i + 5] = B[i + 5] * C[i + 5] + D[i + 2];
+        A[i + 6] = B[i + 6] * C[i + 6] + D[i + 1];
+        A[i + 7] = B[i + 7] * C[i + 7] + D[i + 0];
+        i = i + 4;
+    }
+}
+
 int main() {
     int a[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     int b, c, d, e, f, g, h, j, k;

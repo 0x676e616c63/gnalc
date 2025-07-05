@@ -55,6 +55,14 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                     ++fatal_error_cnt;
                 }
             }
+
+            for (const auto& inst_user : inst->inst_users()) {
+                if (inst_user->getParent() == nullptr) {
+                    Logger::logCritical("[VerifyPass]: Dangling use in '", inst->getName(), "''s user '",
+                    inst_user->getName(), "'. The user is in no block. Did you forget to clear a pass's temporaries?");
+                    ++fatal_error_cnt;
+                }
+            }
         }
     }
 

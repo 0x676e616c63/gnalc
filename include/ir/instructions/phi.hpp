@@ -74,7 +74,7 @@ public:
 
     pVal getValueForBlock(const pBlock &block) const;
     pBlock getBlockForValue(Use* use) const;
-    pBlock getIncomingBlock(size_t i) const;
+    void setValueForBlock(const pBlock& block, const pVal &val) const;
 
     void addPhiOper(const pVal &val, const pBlock &blk);
 
