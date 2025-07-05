@@ -120,6 +120,7 @@ jobs:
 
       - name: Compile testcases
         run: |
+          ulimit -c unlimited # save core dump if any
           base_path="${{ env.TESTDATA_DIR }}"
           find "$base_path" -type f -name "*.sy" | while read testcase; do
           rel_path="${testcase#$base_path/}"
@@ -138,9 +139,11 @@ jobs:
            #  ${{ env.COMPILE_OPTIONS }}
           
           mkdir -p "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path"
-          ./build/gnalc -S "$testcase" \
+          sudo ./build/gnalc -S "$testcase" \
           -o "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.s" \
           ${{ env.COMPILE_OPTIONS }}
+          
+          sudo chmod -R +rwx /cores/* # save core dump if any
           
           aarch64-linux-gnu-gcc -c test/sylib/sylib.c -o sylib.o
           aarch64-linux-gnu-ar rcs sylib.a sylib.o
@@ -148,6 +151,11 @@ jobs:
           sylib.a -o "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.bin"
           rm "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.s"
           done
+
+      - uses: actions/upload-artifact@master # capture all crashes as build artifacts
+        with:
+          name: crashes
+          path: /cores
 
       - name: Checkout artifacts branch for update
         uses: actions/checkout@v4
