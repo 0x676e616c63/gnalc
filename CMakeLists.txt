@@ -18,8 +18,8 @@ if(${CMAKE_BUILD_TYPE} MATCHES Debug)
         #      - https://github.com/vadimcn/codelldb/issues/415
         #      - https://bugzilla.redhat.com/show_bug.cgi?id=1740927
         # Well, there are still some bugs, but fewer than before.
-        add_compile_options("-g" "-fstandalone-debug")
-        add_link_options("-rdynamic")
+        add_compile_options("-g" "-fstandalone-debug" "-fsanitize=address" "-fno-omit-frame-pointer")
+        add_link_options("-rdynamic" "-fsanitize=address")
 endif()
 
 
