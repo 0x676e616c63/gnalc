@@ -209,7 +209,7 @@ void RegisterAllocImpl::Simplify() {
 
     auto it = simplifyWorkList.begin();
 
-    const auto &n = *it;
+    auto n = *it;
 
     Err::gassert(n != nullptr, "n is nullptr");
 
