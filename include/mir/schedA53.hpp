@@ -158,5 +158,5 @@ inline InstExecInfo schedInfo(std::variant<OpC, ARMOpC, RVOpC> opcode) {
     }
 }
 
-}; // namespace MIR_new
+}; // namespace MIR
 #endif

@@ -5,4 +5,4 @@
 
 using namespace MIR;
 
- ISelInfo::~ISelInfo() = default;
+ISelInfo::~ISelInfo() = default;

@@ -84,6 +84,7 @@ int main(int argc, char **argv) {
     std::string fuzz_testing_repro;             // -fuzz-repro
     bool debug_pipeline = false;                // -debug-pipeline
     bool sir_debug_pipeline = false;            // -sir-debug-pipeline
+    bool mir_debug_pipeline = false;            // -mir-debug-pipeline
     IR::CliOptions cli_opt_options;             // --xxx, --no-xxx
 
 #ifdef GNALC_EXTENSION_ARMv7
@@ -223,6 +224,7 @@ int main(int argc, char **argv) {
         }
         else if (arg == "-debug-pipeline") debug_pipeline = true;
         else if (arg == "-sir-debug-pipeline") sir_debug_pipeline = true;
+        else if (arg == "-mir-debug-pipeline") mir_debug_pipeline = true;
         else if (arg == "--ann") cli_opt_options.advance_name_norm = true;
         else if (arg == "--verify") cli_opt_options.verify.enable();
         else if (arg == "--strict") {
@@ -301,6 +303,7 @@ Debug options:
   -fuzz-repro <pipeline>     - Reproduce specific fuzz pipeline. Find <pipeline> in the fuzz testing log
   -debug-pipeline            - Use built-in debugging IR pipeline
   -sir-debug-pipeline        - Use built-in debugging SIR pipeline
+  -mir-debug-pipeline        - Use built-in debugging MIR pipeline
   --no-<pass>                - Disable specific optimization pass
   --ann                      - Use the advance name normalization result (after IRGen) (This disables the one at the last)
   --verify                   - Enable IR verification after passes
@@ -349,7 +352,7 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
     {
         std::vector check = {o0_optnone, std_pipeline, fuzz_testing, fixed_point_pipeline, debug_pipeline};
         if (std::count(check.begin(), check.end(), true) > 1) {
-            std::cerr << "Error: Multiple pipelines specified." << std::endl;
+            std::cerr << "Error: Multiple IR pipelines specified." << std::endl;
             return -1;
         }
     }
@@ -606,7 +609,11 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
     MIR::PassBuilder::registerModuleAnalyses(bkd_mam);
     MIR::PassBuilder::registerProxies(bkd_fam, bkd_mam);
 
-    auto bkd_mpm = MIR::PassBuilder::buildModulePipeline(bkd_opt_info);
+    MIR::MPM bkd_mpm;
+    if (mir_debug_pipeline)
+        bkd_mpm = MIR::PassBuilder::buildModuleDebugPipeline();
+    else
+        bkd_mpm = MIR::PassBuilder::buildModulePipeline(bkd_opt_info);
 
     bkd_mpm.run(*mModule, bkd_mam);
 

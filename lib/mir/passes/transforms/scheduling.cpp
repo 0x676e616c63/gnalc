@@ -212,7 +212,7 @@ void PostRaSchedulingImpl::MkDAG(SchedulingModule &Module) {
         }
     }
 
-    UM<MIRInst_p, US<MIRInst_p>> deps;
+    UM<MIRInst_p, FS<MIRInst_p>> deps;
     UM<MIRInst_p, unsigned> outDegree; // 出度
 
     // antideps -> deps, fill in degree

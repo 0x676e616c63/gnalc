@@ -15,6 +15,8 @@ template <typename BegIterT, typename EndIterT> struct make_iterator_range {
 
     auto begin() const { return begin_it; }
     auto end() const { return end_it; }
+    bool empty() const { return begin_it == end_it; }
+    auto back() const { return *std::prev(end_it); }
 
 private:
     BegIterT begin_it;

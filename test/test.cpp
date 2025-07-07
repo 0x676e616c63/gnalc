@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
         println("  -p, --para [Param]         Run with gnalc parameter.");
         println("  -l, --list                 List all tests.");
         println("  -h, --help                 Print this help and exit.");
-        println("  --gh-action                Github Action mode.");
+        println("  --only-compile-no-exec     Only compile, no execute.");
     };
     RunSet skip;
     SkipSet run;
@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
     bool stop_on_error = true;
     bool only_frontend = true;
     bool only_list = false;
-    bool in_gh_action = false;
+    bool only_compile_no_exec = false;
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
         if (arg == "--all" || arg == "-a")
@@ -82,8 +82,8 @@ int main(int argc, char *argv[]) {
             return 0;
         } else if (arg == "--para" || arg == "-p") {
             gnalc_params += " " + std::string(argv[++i]);
-        } else if (arg == "--gh-action") {
-            in_gh_action = true;
+        } else if (arg == "--only-compile-no-exec") {
+            only_compile_no_exec = true;
         } else {
             println("Error: Unrecognized option '{}'", arg);
             print_help();
@@ -97,6 +97,8 @@ int main(int argc, char *argv[]) {
     size_t curr_test_cnt = 0;
     bool have_resumed = resume_pattern.empty();
     std::vector<std::string> failed_tests;
+
+    cfg::init();
 
     create_directories(cfg::global_temp_dir);
 
@@ -113,7 +115,7 @@ int main(int argc, char *argv[]) {
             sylib_for_diff_testing = prepare_sylib(cfg::global_temp_dir, true);
     }
 
-    auto real_test_data = in_gh_action ? cfg::github_action_test_data : cfg::test_data;
+    auto real_test_data = cfg::test_data;
     for (auto &&curr_test_dir : cfg::subdirs) {
         auto test_files = gather_test_files(real_test_data + "/" + curr_test_dir, run, skip);
         if (test_files.empty())
@@ -186,23 +188,39 @@ int main(int argc, char *argv[]) {
             }
 
             // Check
-            auto res = run_test(data, only_frontend);
+            auto res = run_test(data, only_frontend, 1, only_compile_no_exec);
 
-            if (res.output != expected_syout) {
-                println("|  [\033[0;32;31mFAILED\033[m] Expected '{}' but got "
-                        "'{}'.",
-                        expected_syout.size() > 1024 ? "<too long to display>" : expected_syout,
-                        res.output.size() > 1024 ? "<too long to display>" : res.output);
-                println("| expected: {}", diff_test ? diff_res.output_file : testcase_out);
-                println("| actual:   {}", res.output_file);
-                failed_tests.emplace_back(sy.path().string());
-                if (stop_on_error) {
-                    println("----------");
-                    goto finish;
+            if (only_compile_no_exec) {
+                if (res.output != "success") {
+                    println("|  [\033[0;32;31mFAILED\033[m] Compilation failed.");
+                    failed_tests.emplace_back(sy.path().string());
+                    if (stop_on_error) {
+                        println("----------");
+                        goto finish;
+                    }
                 }
-            } else {
-                println("|  [\033[0;32;32mPASSED\033[m]");
-                ++passed;
+                else {
+                    ++passed;
+                    println("|  [\033[0;32;32mPASSED\033[m]");
+                }
+            }
+            else {
+                if (res.output != expected_syout) {
+                    println("|  [\033[0;32;31mFAILED\033[m] Expected '{}' but got "
+                            "'{}'.",
+                            expected_syout.size() > 1024 ? "<too long to display>" : expected_syout,
+                            res.output.size() > 1024 ? "<too long to display>" : res.output);
+                    println("| expected: {}", diff_test ? diff_res.output_file : testcase_out);
+                    println("| actual:   {}", res.output_file);
+                    failed_tests.emplace_back(sy.path().string());
+                    if (stop_on_error) {
+                        println("----------");
+                        goto finish;
+                    }
+                } else {
+                    println("|  [\033[0;32;32mPASSED\033[m]");
+                    ++passed;
+                }
             }
             println("----------");
         }

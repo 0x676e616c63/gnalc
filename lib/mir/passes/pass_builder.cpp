@@ -34,6 +34,33 @@ const OptInfo o1_opt_info = {.peephole_afterIsel = true,
                              .CFGsimplifyAfterRa = true,
                              .PostRaScheduling = true};
 
+FPM PassBuilder::buildFunctionDebugPipeline() {
+    FPM fpm;
+
+    using Stage = GenericPeephole::Stage;
+
+    fpm.addPass(ISel());
+    fpm.addPass(GenericPeephole(Stage::AfterIsel));
+    fpm.addPass(CFGsimplifyBeforeRA());
+    fpm.addPass(RedundantLoadEli());
+    fpm.addPass(PreRAlegalize());
+    fpm.addPass(RegisterAlloc());
+    fpm.addPass(GenericPeephole(Stage::AfterRa));
+    fpm.addPass(StackGenerate());
+    fpm.addPass(GenericPeephole(Stage::AfterPostLegalize));
+    fpm.addPass(CFGsimplifyAfterRA());
+    fpm.addPass(PostRAlegalize());
+    fpm.addPass(PostRaScheduling());
+
+    return fpm;
+}
+MPM PassBuilder::buildModuleDebugPipeline() {
+    MPM mpm;
+    mpm.addPass(makeModulePass(buildFunctionDebugPipeline()));
+    return mpm;
+}
+
+
 FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     FPM fpm;
 

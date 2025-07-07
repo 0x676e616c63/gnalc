@@ -6,22 +6,15 @@
 #define GNALC_MIR_RISCV64_BASE_HPP
 
 #include "utils/enum_operator.hpp"
-
-#include <cstring>
+#include <cstdint>
 
 namespace MIR {
 
 namespace RV64 {
-template <typename T>
-bool isFitMemOffset(T offset) {
-    return offset >= -2048 && offset < 2048;
-}
+template <typename T> bool isFitMemOffset(T offset) { return offset >= -2048 && offset < 2048; }
 
-template <typename T>
-bool is12BitImm(T imm) {
-    return imm >= -2048 && imm < 2048;
-}
-}
+template <typename T> bool is12BitImm(T imm) { return imm >= -2048 && imm < 2048; }
+} // namespace RV64
 
 enum class RVReg : uint32_t {
     X0,
@@ -125,12 +118,6 @@ enum class RVOpC : uint32_t {
     JR,
 };
 
-struct RVInstTemplate {
-    static void registerInc(MIRInst_p_l, MIRInst_p_l::iterator, RVReg, unsigned, CodeGenContext &);
-    static void registerDec(MIRInst_p_l, MIRInst_p_l::iterator, RVReg, unsigned, CodeGenContext &);
-    static void registerAdjust(MIRInst_p_l, MIRInst_p_l::iterator, RVReg, int, CodeGenContext &);
-};
-
-}
+} // namespace MIR
 
 #endif

@@ -6,6 +6,7 @@
 #define GNALC_MIR_PASSES_TRANSFORMS_REDUNDANTLOADELI
 
 #include "mir/passes/pass_manager.hpp"
+#include "utils/fast_set.hpp"
 
 namespace MIR {
 
@@ -18,7 +19,7 @@ class RedundantLoadEliImpl {
 private:
     struct loadInfo {
         unsigned loadedValue; // uint32 & float
-        std::set<MIRBlk_p> mblks;
+        Util::FastSet<MIRBlk_p> mblks;
 
         std::map<MIRBlk *, std::vector<std::pair<MIROperand_p, MIRInst_p_l::iterator>>>
             const_uses; // 不知道起什么名字好
@@ -49,6 +50,6 @@ public:
     void ApplyCopys();
 };
 
-}; // namespace MIR_new
+}; // namespace MIR
 
 #endif

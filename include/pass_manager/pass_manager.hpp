@@ -130,7 +130,10 @@ public:
     PassT pass;
 };
 
-class AnalysisResultConcept {};
+class AnalysisResultConcept {
+public:
+    virtual ~AnalysisResultConcept() = default;
+};
 
 template <typename ResultT> class AnalysisResultModel : public AnalysisResultConcept {
 public:
