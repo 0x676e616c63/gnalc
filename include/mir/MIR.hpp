@@ -372,6 +372,7 @@ public:
 };
 
 class MIRInst : public std::enable_shared_from_this<MIRInst> {
+    friend class MIRModule;
 public:
     static constexpr unsigned maxOpCnt = 7;
 
@@ -507,6 +508,7 @@ struct StkObj {
 struct constVal {};
 
 class MIRBlk : public MIRReloc {
+    friend class MIRModule;
 private:
     MIRFunction_wp mFunction;
     MIRInst_p_l mInsts;
@@ -611,6 +613,7 @@ public:
 };
 
 class MIRFunction : public MIRReloc {
+    friend class MIRModule;
 private:
     MIRBlk_p_l mBlks;
 
@@ -801,7 +804,7 @@ public:
 
     string getName() const { return name; }
 
-    ~MIRModule() = default;
+    ~MIRModule();
 };
 
 using MIRModule_p = std::shared_ptr<MIRModule>;

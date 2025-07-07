@@ -89,7 +89,7 @@ Copyright (c) 2003-2024 Fabrice Bellard and the QEMU Project developers
 
 #### Ubuntu
 
-##### ARMv7
+###### ARMv7
 
 ```shell
 sudo apt install gcc-14-arm-linux-gnueabi
@@ -97,7 +97,7 @@ sudo apt install gcc-14-arm-linux-gnueabi
 sudo ln -s /usr/arm-linux-gnueabi/lib/ld-linux.so.3 /lib/ld-linux.so.3
 ```
 
-##### AArch64
+###### AArch64
 
 ```shell
 sudo apt install gcc-aarch64-linux-gnu
@@ -107,7 +107,7 @@ sudo ln -s /usr/aarch64-linux-gnu/lib/ld-linux-aarch64.so.1 /lib/ld-linux-aarch6
 
 #### Arch/Manjaro
 
-##### ARMv7
+###### ARMv7
 
 ```shell
 paru -S arm-linux-gnueabihf-gcc14-linaro-bin
@@ -115,7 +115,7 @@ paru -S arm-linux-gnueabihf-gcc14-linaro-bin
 sudo ln -s /usr/arm-linux-gnueabihf/libc/lib/ld-linux-armhf.so.3 /lib/ld-linux-armhf.so.3
 ```
 
-##### AArch64
+###### AArch64
 
 ```shell
 sudo pacman -S aarch64-linux-gnu-gcc
@@ -124,7 +124,9 @@ sudo ln -s /usr/aarch64-linux-gnu/lib/ld-linux-aarch64.so.1 /lib/ld-linux-aarch6
 ```
 
 #### Fedora 42
-##### AArch64
+
+###### AArch64
+
 ```shell
 sudo dnf install binutils-aarch64-linux-gnu.x86_64 
 sudo dnf install gcc-aarch64-linux-gnu.x86_64 
@@ -134,19 +136,30 @@ rpm -ql sysroot-aarch64-fc42-glibc
 # it suppose to be: /usr/aarch64-redhat-linux/sys-root/fc42 ...
 ```
 
-Then edit `gcc_arm_command` and `qemu_arm_command` in [config.hpp](../test/include/config.hpp) according to your
+### Setup Environment Variables
+
+To let `gnalc_test` and `pass_benchmark` know your installation, set the environment variables.
+
+| Variable                      | Description                               | Fallback Value                                                                                         |
+|-------------------------------|-------------------------------------------|--------------------------------------------------------------------------------------------------------|
+| GNALC_TEST_GCC_AARCH64        | gcc for aarch64                           | `aarch64-linux-gnu-gcc --sysroot=/usr/aarch64-redhat-linux/sys-root/fc42` or `gcc` on aarch64          |
+| GNALC_TEST_QEMU_AARCH64       | qemu-arm for aarch64                      | `qemu-aarch64 -cpu cortex-a53 -L /usr/aarch64-redhat-linux/sys-root/fc42/usr/` or `<empty>` on aarch64 |
+| GNALC_TEST_GNALC              | path to gnalc                             | `../gnalc`                                                                                             |
+| GNALC_TEST_TEST_DATA          | path to test data                         | `../../test/contest`                                                                                   |
+| GNALC_TEST_SYLIBC             | path to sylibc                            | `../../test/sylib/sylib.c`                                                                             |
+| GNALC_TEST_TEST_TEMP_DIR      | path to temporary directory               | `./gnalc_test_temp`                                                                                    |
+| GNALC_TEST_BENCHMARK_TEMP_DIR | path to temporary directory for benchmark | `./gnalc_benchmark_temp`                                                                               |
+
+Alternatively, though not recommended, you can edit the fallback value of `gcc_arm_command` and `qemu_arm_command`
+manually in [config.cpp](../test/config.cpp) according to your
 machine.
 
-#### Ubuntu & Fedora
+#### Common config
 
-```c++
-const std::string gcc_arm_command = "arm-linux-gnueabihf-gcc";
-const std::string qemu_arm_command = "LD_LIBRARY_PATH=/usr/arm-linux-gnueabihf/libc/lib qemu-arm";
-```
+If you are following the installation steps above, maybe you can use our config directly.
 
-#### Fedora 42
-```c++
-const std::string gcc_arm_command = "aarch64-linux-gnu-gcc --sysroot=/usr/aarch64-redhat-linux/sys-root/fc42";
-const std::string qemu_arm_command = "qemu-aarch64 -L /usr/aarch64-redhat-linux/sys-root/fc42/usr/";
-```
-
+##### Fedora
+the Fallback value.
+##### Ubuntu & Manjaro
+- `GNALC_TEST_GCC_AARCH64`: `aarch64-linux-gnu-gcc-13`
+- `GNALC_TEST_QEMU_AARCH64`: `LD_LIBRARY_PATH=/usr/aarch64-linux-gnu/lib qemu-aarch64`

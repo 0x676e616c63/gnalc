@@ -19,12 +19,12 @@ if(${CMAKE_BUILD_TYPE} MATCHES Debug)
     add_link_options("-rdynamic")
 endif()
 
-add_executable(pass_benchmark benchmark.cpp benchmark_registry.cpp)
-add_executable(gnalc_test test.cpp)
-add_executable(ghaction ghaction.cpp)
-add_executable(timer timer.cpp)
+add_executable(pass_benchmark benchmark.cpp benchmark_registry.cpp config.cpp runner.cpp)
+add_executable(gnalc_test test.cpp config.cpp runner.cpp)
+add_executable(ghaction ghaction.cpp config.cpp runner.cpp)
+add_executable(timer timer.cpp config.cpp runner.cpp)
 
-add_executable(ggc_test test.cpp)
+add_executable(ggc_test test.cpp config.cpp runner.cpp)
 target_compile_definitions(ggc_test PRIVATE GNALC_TEST_GGC)
 
 add_test(NAME base COMMAND gnalc_test)
