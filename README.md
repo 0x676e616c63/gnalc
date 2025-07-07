@@ -1,3 +1,2082 @@
+## Test Results - 2025-07-07 12:46:43
+
+- **Artifacts Commit:** [bc90dd4a46f355cc6fca86589a0a98e049ec0e57](https://github.com/Althra/gnalc/commit/bc90dd4a46f355cc6fca86589a0a98e049ec0e57)
+- **Total Tests:** 382
+- **Mode:** With backend
+- **Result: ** ❌ FAILED
+
+#### Test: final-h_performance-2024-DCV-7
+- **File:** artifacts/aarch64/final/h_performance/2024-DCV-7.bin
+- **Time Elapsed:** 7895058us
+- **Status:** ✅ PASSED
+
+#### Test: final-h_performance-2024-H17-1
+- **File:** artifacts/aarch64/final/h_performance/2024-H17-1.bin
+- **Time Elapsed:** 6111200us
+- **Status:** ❌ FAILED
+- **Expected:** 10
+0
+- **Actual:** 1
+1
+
+#### Test: final-h_performance-2024-FVJ-15
+- **File:** artifacts/aarch64/final/h_performance/2024-FVJ-15.bin
+- **Time Elapsed:** 8083416us
+- **Status:** ✅ PASSED
+
+#### Test: final-h_performance-2024-7UJ-12
+- **File:** artifacts/aarch64/final/h_performance/2024-7UJ-12.bin
+- **Time Elapsed:** 7225us
+- **Status:** ✅ PASSED
+
+#### Test: final-h_performance-2024-C64-14
+- **File:** artifacts/aarch64/final/h_performance/2024-C64-14.bin
+- **Time Elapsed:** 7392506us
+- **Status:** ❌ FAILED
+- **Expected:** 10
+0
+- **Actual:** 1
+1
+
+#### Test: final-h_performance-2024-KVV-20
+- **File:** artifacts/aarch64/final/h_performance/2024-KVV-20.bin
+- **Time Elapsed:** 2274067us
+- **Status:** ✅ PASSED
+
+#### Test: final-h_performance-2024-FAF-19
+- **File:** artifacts/aarch64/final/h_performance/2024-FAF-19.bin
+- **Time Elapsed:** 26299599us
+- **Status:** ✅ PASSED
+
+#### Test: final-h_performance-2024-NT1-4
+- **File:** artifacts/aarch64/final/h_performance/2024-NT1-4.bin
+- **Time Elapsed:** 9790us
+- **Status:** ✅ PASSED
+
+#### Test: final-h_performance-2024-CH6-24
+- **File:** artifacts/aarch64/final/h_performance/2024-CH6-24.bin
+- **Time Elapsed:** 12409us
+- **Status:** ❌ FAILED
+- **Expected:** <output too long>
+- **Actual:** <output too long>
+
+#### Test: final-h_performance-2024-NKK-22
+- **File:** artifacts/aarch64/final/h_performance/2024-NKK-22.bin
+- **Time Elapsed:** 956011us
+- **Status:** ✅ PASSED
+
+#### Test: final-h_performance-2024-LN4-9
+- **File:** artifacts/aarch64/final/h_performance/2024-LN4-9.bin
+- **Time Elapsed:** 7477049us
+- **Status:** ✅ PASSED
+
+#### Test: final-h_performance-2024-VTF-5
+- **File:** artifacts/aarch64/final/h_performance/2024-VTF-5.bin
+- **Time Elapsed:** 3831752us
+- **Status:** ✅ PASSED
+
+#### Test: final-h_performance-2024-I4W-2
+- **File:** artifacts/aarch64/final/h_performance/2024-I4W-2.bin
+- **Time Elapsed:** 9232us
+- **Status:** ✅ PASSED
+
+#### Test: final-h_performance-2024-2KM-21
+- **File:** artifacts/aarch64/final/h_performance/2024-2KM-21.bin
+- **Time Elapsed:** 4946975us
+- **Status:** ✅ PASSED
+
+#### Test: final-h_performance-2024-MXP-16
+- **File:** artifacts/aarch64/final/h_performance/2024-MXP-16.bin
+- **Time Elapsed:** 7113520us
+- **Status:** ✅ PASSED
+
+#### Test: final-h_performance-2024-U03-25
+- **File:** artifacts/aarch64/final/h_performance/2024-U03-25.bin
+- **Time Elapsed:** 120222379us
+- **Status:** ✅ PASSED
+
+#### Test: final-h_performance-2024-0ZE-13
+- **File:** artifacts/aarch64/final/h_performance/2024-0ZE-13.bin
+- **Time Elapsed:** 4681835us
+- **Status:** ✅ PASSED
+
+#### Test: final-h_performance-2024-BAV-3
+- **File:** artifacts/aarch64/final/h_performance/2024-BAV-3.bin
+- **Time Elapsed:** 233727233us
+- **Status:** ✅ PASSED
+
+#### Test: final-h_performance-2024-931-6
+- **File:** artifacts/aarch64/final/h_performance/2024-931-6.bin
+- **Time Elapsed:** 2105129us
+- **Status:** ✅ PASSED
+
+#### Test: final-h_performance-2024-PKP-8
+- **File:** artifacts/aarch64/final/h_performance/2024-PKP-8.bin
+- **Time Elapsed:** 4002501us
+- **Status:** ✅ PASSED
+
+#### Test: final-h_performance-2024-NCY-23
+- **File:** artifacts/aarch64/final/h_performance/2024-NCY-23.bin
+- **Time Elapsed:** 38530620us
+- **Status:** ✅ PASSED
+
+#### Test: final-h_performance-2024-JVU-10
+- **File:** artifacts/aarch64/final/h_performance/2024-JVU-10.bin
+- **Time Elapsed:** 54647753us
+- **Status:** ✅ PASSED
+
+#### Test: final-h_performance-2024-1WO-11
+- **File:** artifacts/aarch64/final/h_performance/2024-1WO-11.bin
+- **Time Elapsed:** 6022246us
+- **Status:** ❌ FAILED
+- **Expected:** 10
+0
+- **Actual:** 1
+1
+
+#### Test: final-h_performance-2024-K0I-17
+- **File:** artifacts/aarch64/final/h_performance/2024-K0I-17.bin
+- **Time Elapsed:** 12980948us
+- **Status:** ✅ PASSED
+
+#### Test: final-h_performance-2024-8NL-18
+- **File:** artifacts/aarch64/final/h_performance/2024-8NL-18.bin
+- **Time Elapsed:** 7107213us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-VGH-20
+- **File:** artifacts/aarch64/final/performance/2024-VGH-20.bin
+- **Time Elapsed:** 42381895us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-FQX-25
+- **File:** artifacts/aarch64/final/performance/2024-FQX-25.bin
+- **Time Elapsed:** 8483636us
+- **Status:** ❌ FAILED
+- **Expected:** 10
+0
+- **Actual:** 1
+1
+
+#### Test: final-performance-2024-5NG-2
+- **File:** artifacts/aarch64/final/performance/2024-5NG-2.bin
+- **Time Elapsed:** 31597768us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-BE3-31
+- **File:** artifacts/aarch64/final/performance/2024-BE3-31.bin
+- **Time Elapsed:** 5750480us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-FI8-9
+- **File:** artifacts/aarch64/final/performance/2024-FI8-9.bin
+- **Time Elapsed:** 3659916us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-PCT-14
+- **File:** artifacts/aarch64/final/performance/2024-PCT-14.bin
+- **Time Elapsed:** 2688102us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-IG5-12
+- **File:** artifacts/aarch64/final/performance/2024-IG5-12.bin
+- **Time Elapsed:** 14928249us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-JR2-21
+- **File:** artifacts/aarch64/final/performance/2024-JR2-21.bin
+- **Time Elapsed:** 4231693us
+- **Status:** ❌ FAILED
+- **Expected:** 10
+0
+- **Actual:** 1
+1
+
+#### Test: final-performance-2024-LW8-7
+- **File:** artifacts/aarch64/final/performance/2024-LW8-7.bin
+- **Time Elapsed:** 19060286us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-CH1-5
+- **File:** artifacts/aarch64/final/performance/2024-CH1-5.bin
+- **Time Elapsed:** 1269618us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-84M-11
+- **File:** artifacts/aarch64/final/performance/2024-84M-11.bin
+- **Time Elapsed:** 6763602us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-VRT-1
+- **File:** artifacts/aarch64/final/performance/2024-VRT-1.bin
+- **Time Elapsed:** 23255528us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-2D0-22
+- **File:** artifacts/aarch64/final/performance/2024-2D0-22.bin
+- **Time Elapsed:** 1967910us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-1RK-26
+- **File:** artifacts/aarch64/final/performance/2024-1RK-26.bin
+- **Time Elapsed:** 6432351us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-Y60-18
+- **File:** artifacts/aarch64/final/performance/2024-Y60-18.bin
+- **Time Elapsed:** 3833478us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-AZ7-32
+- **File:** artifacts/aarch64/final/performance/2024-AZ7-32.bin
+- **Time Elapsed:** 40315752us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-TBR-19
+- **File:** artifacts/aarch64/final/performance/2024-TBR-19.bin
+- **Time Elapsed:** 27302702us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-U7D-6
+- **File:** artifacts/aarch64/final/performance/2024-U7D-6.bin
+- **Time Elapsed:** 23541337us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-QV9-34
+- **File:** artifacts/aarch64/final/performance/2024-QV9-34.bin
+- **Time Elapsed:** 14285763us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-51P-30
+- **File:** artifacts/aarch64/final/performance/2024-51P-30.bin
+- **Time Elapsed:** 69495442us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-K22-4
+- **File:** artifacts/aarch64/final/performance/2024-K22-4.bin
+- **Time Elapsed:** 7533019us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-OBF-29
+- **File:** artifacts/aarch64/final/performance/2024-OBF-29.bin
+- **Time Elapsed:** 4775226us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-XRB-24
+- **File:** artifacts/aarch64/final/performance/2024-XRB-24.bin
+- **Time Elapsed:** 1574610us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-T6G-27
+- **File:** artifacts/aarch64/final/performance/2024-T6G-27.bin
+- **Time Elapsed:** 7006274us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-BJV-10
+- **File:** artifacts/aarch64/final/performance/2024-BJV-10.bin
+- **Time Elapsed:** 25667323us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-X7M-3
+- **File:** artifacts/aarch64/final/performance/2024-X7M-3.bin
+- **Time Elapsed:** 13791653us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-ETJ-33
+- **File:** artifacts/aarch64/final/performance/2024-ETJ-33.bin
+- **Time Elapsed:** 3057529us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-XU5-13
+- **File:** artifacts/aarch64/final/performance/2024-XU5-13.bin
+- **Time Elapsed:** 3122084us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-V6O-23
+- **File:** artifacts/aarch64/final/performance/2024-V6O-23.bin
+- **Time Elapsed:** 27083658us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-Z3A-28
+- **File:** artifacts/aarch64/final/performance/2024-Z3A-28.bin
+- **Time Elapsed:** 5509294us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-I9Y-15
+- **File:** artifacts/aarch64/final/performance/2024-I9Y-15.bin
+- **Time Elapsed:** 2831311us
+- **Status:** ❌ FAILED
+- **Expected:** 10
+0
+- **Actual:** 1
+1
+
+#### Test: final-performance-2024-5HA-8
+- **File:** artifacts/aarch64/final/performance/2024-5HA-8.bin
+- **Time Elapsed:** 11705725us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-U7W-16
+- **File:** artifacts/aarch64/final/performance/2024-U7W-16.bin
+- **Time Elapsed:** 6708260us
+- **Status:** ✅ PASSED
+
+#### Test: final-performance-2024-PAF-17
+- **File:** artifacts/aarch64/final/performance/2024-PAF-17.bin
+- **Time Elapsed:** 5772421us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_sort_search
+- **File:** artifacts/aarch64/performance_rv_25/rv_sort_search.bin
+- **Time Elapsed:** 308913us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_transpose1
+- **File:** artifacts/aarch64/performance_rv_25/rv_transpose1.bin
+- **Time Elapsed:** 30848us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_h-4-02
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-4-02.bin
+- **Time Elapsed:** 86us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_matmul1
+- **File:** artifacts/aarch64/performance_rv_25/rv_matmul1.bin
+- **Time Elapsed:** 133409us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_h-9-01
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-9-01.bin
+- **Time Elapsed:** 8206us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_crypto-3
+- **File:** artifacts/aarch64/performance_rv_25/rv_crypto-3.bin
+- **Time Elapsed:** 107104us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_sl2
+- **File:** artifacts/aarch64/performance_rv_25/rv_sl2.bin
+- **Time Elapsed:** 447920us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_h-8-03
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-8-03.bin
+- **Time Elapsed:** 12us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_h-9-02
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-9-02.bin
+- **Time Elapsed:** 6718us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_h-8-01
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-8-01.bin
+- **Time Elapsed:** 11us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_h-4-03
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-4-03.bin
+- **Time Elapsed:** 176504us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_matmul3
+- **File:** artifacts/aarch64/performance_rv_25/rv_matmul3.bin
+- **Time Elapsed:** 210341us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_h-9-03
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-9-03.bin
+- **Time Elapsed:** 4582us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_h-10-01
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-10-01.bin
+- **Time Elapsed:** 28398us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_shuffle2
+- **File:** artifacts/aarch64/performance_rv_25/rv_shuffle2.bin
+- **Time Elapsed:** 165365us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_h-5-03
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-5-03.bin
+- **Time Elapsed:** 9us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_fft1
+- **File:** artifacts/aarch64/performance_rv_25/rv_fft1.bin
+- **Time Elapsed:** 6730775us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_03_sort3
+- **File:** artifacts/aarch64/performance_rv_25/rv_03_sort3.bin
+- **Time Elapsed:** 174758us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_h-5-01
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-5-01.bin
+- **Time Elapsed:** 19us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_transpose0
+- **File:** artifacts/aarch64/performance_rv_25/rv_transpose0.bin
+- **Time Elapsed:** 14481us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_gameoflife-oscillator
+- **File:** artifacts/aarch64/performance_rv_25/rv_gameoflife-oscillator.bin
+- **Time Elapsed:** 100678us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_01_mm3
+- **File:** artifacts/aarch64/performance_rv_25/rv_01_mm3.bin
+- **Time Elapsed:** 110356us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_h-11-02
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-11-02.bin
+- **Time Elapsed:** 1149us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_if-combine1
+- **File:** artifacts/aarch64/performance_rv_25/rv_if-combine1.bin
+- **Time Elapsed:** 3658us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_if-combine2
+- **File:** artifacts/aarch64/performance_rv_25/rv_if-combine2.bin
+- **Time Elapsed:** 437437us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_sl3
+- **File:** artifacts/aarch64/performance_rv_25/rv_sl3.bin
+- **Time Elapsed:** 22084us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_shuffle1
+- **File:** artifacts/aarch64/performance_rv_25/rv_shuffle1.bin
+- **Time Elapsed:** 433231us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_h-2-01
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-2-01.bin
+- **Time Elapsed:** 160105us
+- **Status:** ❌ FAILED
+- **Expected:** 10
+0
+- **Actual:** 1
+1
+
+#### Test: performance_rv_25-rv_04_spmv2
+- **File:** artifacts/aarch64/performance_rv_25/rv_04_spmv2.bin
+- **Time Elapsed:** 4989us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_gameoflife-gosper
+- **File:** artifacts/aarch64/performance_rv_25/rv_gameoflife-gosper.bin
+- **Time Elapsed:** 110us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_if-combine3
+- **File:** artifacts/aarch64/performance_rv_25/rv_if-combine3.bin
+- **Time Elapsed:** 680059us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_matmul2
+- **File:** artifacts/aarch64/performance_rv_25/rv_matmul2.bin
+- **Time Elapsed:** 270673us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_04_spmv3
+- **File:** artifacts/aarch64/performance_rv_25/rv_04_spmv3.bin
+- **Time Elapsed:** 175135us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_h-2-02
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-2-02.bin
+- **Time Elapsed:** 166088us
+- **Status:** ❌ FAILED
+- **Expected:** 10
+0
+- **Actual:** 1
+1
+
+#### Test: performance_rv_25-rv_h-11-01
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-11-01.bin
+- **Time Elapsed:** 1246us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_shuffle0
+- **File:** artifacts/aarch64/performance_rv_25/rv_shuffle0.bin
+- **Time Elapsed:** 40304us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_gameoflife-p61glidergun
+- **File:** artifacts/aarch64/performance_rv_25/rv_gameoflife-p61glidergun.bin
+- **Time Elapsed:** 122278us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_h-7-01
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-7-01.bin
+- **Time Elapsed:** 146us
+- **Status:** ❌ FAILED
+- **Expected:** <output too long>
+- **Actual:** <output too long>
+
+#### Test: performance_rv_25-rv_04_spmv1
+- **File:** artifacts/aarch64/performance_rv_25/rv_04_spmv1.bin
+- **Time Elapsed:** 175508us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_03_sort2
+- **File:** artifacts/aarch64/performance_rv_25/rv_03_sort2.bin
+- **Time Elapsed:** 18502394us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_h-10-03
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-10-03.bin
+- **Time Elapsed:** 178012us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_01_mm2
+- **File:** artifacts/aarch64/performance_rv_25/rv_01_mm2.bin
+- **Time Elapsed:** 160762us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_crypto-1
+- **File:** artifacts/aarch64/performance_rv_25/rv_crypto-1.bin
+- **Time Elapsed:** 253609us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_fft2
+- **File:** artifacts/aarch64/performance_rv_25/rv_fft2.bin
+- **Time Elapsed:** 14023us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_transpose2
+- **File:** artifacts/aarch64/performance_rv_25/rv_transpose2.bin
+- **Time Elapsed:** 378460us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_crypto-2
+- **File:** artifacts/aarch64/performance_rv_25/rv_crypto-2.bin
+- **Time Elapsed:** 186131us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_01_mm1
+- **File:** artifacts/aarch64/performance_rv_25/rv_01_mm1.bin
+- **Time Elapsed:** 57986us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_h-4-01
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-4-01.bin
+- **Time Elapsed:** 11759us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_h-5-02
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-5-02.bin
+- **Time Elapsed:** 9us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_h-2-03
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-2-03.bin
+- **Time Elapsed:** 228253us
+- **Status:** ❌ FAILED
+- **Expected:** 10
+0
+- **Actual:** 1
+1
+
+#### Test: performance_rv_25-rv_h-10-02
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-10-02.bin
+- **Time Elapsed:** 65090us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_h-11-03
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-11-03.bin
+- **Time Elapsed:** 6848us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_h-8-02
+- **File:** artifacts/aarch64/performance_rv_25/rv_h-8-02.bin
+- **Time Elapsed:** 11us
+- **Status:** ✅ PASSED
+
+#### Test: performance_rv_25-rv_sl1
+- **File:** artifacts/aarch64/performance_rv_25/rv_sl1.bin
+- **Time Elapsed:** 188115us
+- **Status:** ✅ PASSED
+
+#### Test: functional-17_div
+- **File:** artifacts/aarch64/functional/17_div.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-73_int_io
+- **File:** artifacts/aarch64/functional/73_int_io.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-67_reverse_output
+- **File:** artifacts/aarch64/functional/67_reverse_output.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-81_skip_spaces
+- **File:** artifacts/aarch64/functional/81_skip_spaces.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-88_many_params2
+- **File:** artifacts/aarch64/functional/88_many_params2.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-97_matrix_sub
+- **File:** artifacts/aarch64/functional/97_matrix_sub.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-65_color
+- **File:** artifacts/aarch64/functional/65_color.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-50_short_circuit
+- **File:** artifacts/aarch64/functional/50_short_circuit.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-37_op_priority3
+- **File:** artifacts/aarch64/functional/37_op_priority3.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-04_arr_defn3
+- **File:** artifacts/aarch64/functional/04_arr_defn3.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-70_dijkstra
+- **File:** artifacts/aarch64/functional/70_dijkstra.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-45_comment1
+- **File:** artifacts/aarch64/functional/45_comment1.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-78_side_effect
+- **File:** artifacts/aarch64/functional/78_side_effect.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-47_hex_oct_add
+- **File:** artifacts/aarch64/functional/47_hex_oct_add.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-93_nested_calls
+- **File:** artifacts/aarch64/functional/93_nested_calls.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-33_while_if_test3
+- **File:** artifacts/aarch64/functional/33_while_if_test3.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-56_sort_test2
+- **File:** artifacts/aarch64/functional/56_sort_test2.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-66_exgcd
+- **File:** artifacts/aarch64/functional/66_exgcd.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-54_hidden_var
+- **File:** artifacts/aarch64/functional/54_hidden_var.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-28_while_test3
+- **File:** artifacts/aarch64/functional/28_while_test3.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-91_many_locals2
+- **File:** artifacts/aarch64/functional/91_many_locals2.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-46_hex_defn
+- **File:** artifacts/aarch64/functional/46_hex_defn.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-75_max_flow
+- **File:** artifacts/aarch64/functional/75_max_flow.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-84_long_array2
+- **File:** artifacts/aarch64/functional/84_long_array2.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-41_unary_op2
+- **File:** artifacts/aarch64/functional/41_unary_op2.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-98_matrix_mul
+- **File:** artifacts/aarch64/functional/98_matrix_mul.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-31_while_if_test1
+- **File:** artifacts/aarch64/functional/31_while_if_test1.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-72_hanoi
+- **File:** artifacts/aarch64/functional/72_hanoi.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-20_rem
+- **File:** artifacts/aarch64/functional/20_rem.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-62_percolation
+- **File:** artifacts/aarch64/functional/62_percolation.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-89_many_globals
+- **File:** artifacts/aarch64/functional/89_many_globals.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-71_full_conn
+- **File:** artifacts/aarch64/functional/71_full_conn.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-12_addc
+- **File:** artifacts/aarch64/functional/12_addc.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-68_brainfk
+- **File:** artifacts/aarch64/functional/68_brainfk.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-60_sort_test6
+- **File:** artifacts/aarch64/functional/60_sort_test6.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-96_matrix_add
+- **File:** artifacts/aarch64/functional/96_matrix_add.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-30_continue
+- **File:** artifacts/aarch64/functional/30_continue.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-83_long_array
+- **File:** artifacts/aarch64/functional/83_long_array.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-11_add2
+- **File:** artifacts/aarch64/functional/11_add2.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-34_arr_expr_len
+- **File:** artifacts/aarch64/functional/34_arr_expr_len.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-64_calculator
+- **File:** artifacts/aarch64/functional/64_calculator.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-61_sort_test7
+- **File:** artifacts/aarch64/functional/61_sort_test7.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-80_chaos_token
+- **File:** artifacts/aarch64/functional/80_chaos_token.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-86_long_code2
+- **File:** artifacts/aarch64/functional/86_long_code2.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-92_register_alloc
+- **File:** artifacts/aarch64/functional/92_register_alloc.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-87_many_params
+- **File:** artifacts/aarch64/functional/87_many_params.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-90_many_locals
+- **File:** artifacts/aarch64/functional/90_many_locals.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-77_substr
+- **File:** artifacts/aarch64/functional/77_substr.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-36_op_priority2
+- **File:** artifacts/aarch64/functional/36_op_priority2.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-95_float
+- **File:** artifacts/aarch64/functional/95_float.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-59_sort_test5
+- **File:** artifacts/aarch64/functional/59_sort_test5.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-35_op_priority1
+- **File:** artifacts/aarch64/functional/35_op_priority1.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-57_sort_test3
+- **File:** artifacts/aarch64/functional/57_sort_test3.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-00_main
+- **File:** artifacts/aarch64/functional/00_main.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-58_sort_test4
+- **File:** artifacts/aarch64/functional/58_sort_test4.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-27_while_test2
+- **File:** artifacts/aarch64/functional/27_while_test2.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-49_if_complex_expr
+- **File:** artifacts/aarch64/functional/49_if_complex_expr.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-15_mul
+- **File:** artifacts/aarch64/functional/15_mul.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-05_arr_defn4
+- **File:** artifacts/aarch64/functional/05_arr_defn4.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-24_if_test5
+- **File:** artifacts/aarch64/functional/24_if_test5.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-43_logi_assign
+- **File:** artifacts/aarch64/functional/43_logi_assign.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-94_nested_loops
+- **File:** artifacts/aarch64/functional/94_nested_loops.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-23_if_test4
+- **File:** artifacts/aarch64/functional/23_if_test4.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-44_stmt_expr
+- **File:** artifacts/aarch64/functional/44_stmt_expr.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-03_arr_defn2
+- **File:** artifacts/aarch64/functional/03_arr_defn2.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-82_long_func
+- **File:** artifacts/aarch64/functional/82_long_func.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-21_if_test2
+- **File:** artifacts/aarch64/functional/21_if_test2.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-18_divc
+- **File:** artifacts/aarch64/functional/18_divc.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-79_var_name
+- **File:** artifacts/aarch64/functional/79_var_name.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-55_sort_test1
+- **File:** artifacts/aarch64/functional/55_sort_test1.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-40_unary_op
+- **File:** artifacts/aarch64/functional/40_unary_op.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-42_empty_stmt
+- **File:** artifacts/aarch64/functional/42_empty_stmt.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-08_const_array_defn
+- **File:** artifacts/aarch64/functional/08_const_array_defn.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-52_scope
+- **File:** artifacts/aarch64/functional/52_scope.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-51_short_circuit3
+- **File:** artifacts/aarch64/functional/51_short_circuit3.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-85_long_code
+- **File:** artifacts/aarch64/functional/85_long_code.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-06_const_var_defn2
+- **File:** artifacts/aarch64/functional/06_const_var_defn2.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-09_func_defn
+- **File:** artifacts/aarch64/functional/09_func_defn.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-25_while_if
+- **File:** artifacts/aarch64/functional/25_while_if.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-38_op_priority4
+- **File:** artifacts/aarch64/functional/38_op_priority4.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-53_scope2
+- **File:** artifacts/aarch64/functional/53_scope2.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-26_while_test1
+- **File:** artifacts/aarch64/functional/26_while_test1.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-74_kmp
+- **File:** artifacts/aarch64/functional/74_kmp.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-16_mulc
+- **File:** artifacts/aarch64/functional/16_mulc.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-76_n_queens
+- **File:** artifacts/aarch64/functional/76_n_queens.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-10_var_defn_func
+- **File:** artifacts/aarch64/functional/10_var_defn_func.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-32_while_if_test2
+- **File:** artifacts/aarch64/functional/32_while_if_test2.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-48_assign_complex_expr
+- **File:** artifacts/aarch64/functional/48_assign_complex_expr.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-22_if_test3
+- **File:** artifacts/aarch64/functional/22_if_test3.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-07_const_var_defn3
+- **File:** artifacts/aarch64/functional/07_const_var_defn3.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-99_matrix_tran
+- **File:** artifacts/aarch64/functional/99_matrix_tran.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-19_mod
+- **File:** artifacts/aarch64/functional/19_mod.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-13_sub2
+- **File:** artifacts/aarch64/functional/13_sub2.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-01_var_defn2
+- **File:** artifacts/aarch64/functional/01_var_defn2.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-14_subc
+- **File:** artifacts/aarch64/functional/14_subc.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-39_op_priority5
+- **File:** artifacts/aarch64/functional/39_op_priority5.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-29_break
+- **File:** artifacts/aarch64/functional/29_break.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-02_var_defn3
+- **File:** artifacts/aarch64/functional/02_var_defn3.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional-63_big_int_mul
+- **File:** artifacts/aarch64/functional/63_big_int_mul.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional-69_expr_eval
+- **File:** artifacts/aarch64/functional/69_expr_eval.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_performance-h-2-03
+- **File:** artifacts/aarch64/h_performance/h-2-03.bin
+- **Time Elapsed:** 7114414us
+- **Status:** ❌ FAILED
+- **Expected:** 10
+0
+- **Actual:** 1
+1
+
+#### Test: h_performance-h-8-01
+- **File:** artifacts/aarch64/h_performance/h-8-01.bin
+- **Time Elapsed:** 3974993us
+- **Status:** ✅ PASSED
+
+#### Test: h_performance-h-8-02
+- **File:** artifacts/aarch64/h_performance/h-8-02.bin
+- **Time Elapsed:** 4056137us
+- **Status:** ✅ PASSED
+
+#### Test: h_performance-h-8-03
+- **File:** artifacts/aarch64/h_performance/h-8-03.bin
+- **Time Elapsed:** 3512205us
+- **Status:** ✅ PASSED
+
+#### Test: h_performance-h-4-02
+- **File:** artifacts/aarch64/h_performance/h-4-02.bin
+- **Time Elapsed:** 6996604us
+- **Status:** ✅ PASSED
+
+#### Test: h_performance-h-7-01
+- **File:** artifacts/aarch64/h_performance/h-7-01.bin
+- **Time Elapsed:** 18411us
+- **Status:** ❌ FAILED
+- **Expected:** <output too long>
+- **Actual:** <output too long>
+
+#### Test: h_performance-h-2-01
+- **File:** artifacts/aarch64/h_performance/h-2-01.bin
+- **Time Elapsed:** 5945430us
+- **Status:** ❌ FAILED
+- **Expected:** 10
+0
+- **Actual:** 1
+1
+
+#### Test: h_performance-h-4-03
+- **File:** artifacts/aarch64/h_performance/h-4-03.bin
+- **Time Elapsed:** 13034002us
+- **Status:** ✅ PASSED
+
+#### Test: h_performance-h-3-02
+- **File:** artifacts/aarch64/h_performance/h-3-02.bin
+- **Time Elapsed:** 3242036us
+- **Status:** ✅ PASSED
+
+#### Test: h_performance-h-6-01
+- **File:** artifacts/aarch64/h_performance/h-6-01.bin
+- **Time Elapsed:** 2930911us
+- **Status:** ❌ FAILED
+- **Expected:** 0x1p\+19
+0
+- **Actual:** 0x1p\+18
+0
+
+#### Test: h_performance-h-5-02
+- **File:** artifacts/aarch64/h_performance/h-5-02.bin
+- **Time Elapsed:** 7319587us
+- **Status:** ✅ PASSED
+
+#### Test: h_performance-h-5-03
+- **File:** artifacts/aarch64/h_performance/h-5-03.bin
+- **Time Elapsed:** 7325812us
+- **Status:** ✅ PASSED
+
+#### Test: h_performance-h-6-02
+- **File:** artifacts/aarch64/h_performance/h-6-02.bin
+- **Time Elapsed:** 4327981us
+- **Status:** ❌ FAILED
+- **Expected:** 0x1p\+19
+0
+- **Actual:** 0x1p\+18
+0
+
+#### Test: h_performance-h-6-03
+- **File:** artifacts/aarch64/h_performance/h-6-03.bin
+- **Time Elapsed:** 5779433us
+- **Status:** ❌ FAILED
+- **Expected:** 0x1p\+19
+0
+- **Actual:** 0x1p\+18
+0
+
+#### Test: h_performance-h-5-01
+- **File:** artifacts/aarch64/h_performance/h-5-01.bin
+- **Time Elapsed:** 6543855us
+- **Status:** ✅ PASSED
+
+#### Test: h_performance-h-1-02
+- **File:** artifacts/aarch64/h_performance/h-1-02.bin
+- **Time Elapsed:** 4735268us
+- **Status:** ✅ PASSED
+
+#### Test: h_performance-h-2-02
+- **File:** artifacts/aarch64/h_performance/h-2-02.bin
+- **Time Elapsed:** 5725781us
+- **Status:** ❌ FAILED
+- **Expected:** 10
+0
+- **Actual:** 1
+1
+
+#### Test: h_performance-h-4-01
+- **File:** artifacts/aarch64/h_performance/h-4-01.bin
+- **Time Elapsed:** 2086420us
+- **Status:** ✅ PASSED
+
+#### Test: h_performance-h-1-01
+- **File:** artifacts/aarch64/h_performance/h-1-01.bin
+- **Time Elapsed:** 54918722us
+- **Status:** ✅ PASSED
+
+#### Test: h_performance-h-1-03
+- **File:** artifacts/aarch64/h_performance/h-1-03.bin
+- **Time Elapsed:** 26237054us
+- **Status:** ✅ PASSED
+
+#### Test: h_performance-h-3-03
+- **File:** artifacts/aarch64/h_performance/h-3-03.bin
+- **Time Elapsed:** 3879561us
+- **Status:** ✅ PASSED
+
+#### Test: h_performance-h-3-01
+- **File:** artifacts/aarch64/h_performance/h-3-01.bin
+- **Time Elapsed:** 3947875us
+- **Status:** ✅ PASSED
+
+#### Test: functional_25-65_color
+- **File:** artifacts/aarch64/functional_25/65_color.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional_25-68_brainfk
+- **File:** artifacts/aarch64/functional_25/68_brainfk.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional_25-34_arr_expr_len
+- **File:** artifacts/aarch64/functional_25/34_arr_expr_len.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional_25-05_arr_defn4
+- **File:** artifacts/aarch64/functional_25/05_arr_defn4.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: functional_25-79_var_name
+- **File:** artifacts/aarch64/functional_25/79_var_name.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: functional_25-63_big_int_mul
+- **File:** artifacts/aarch64/functional_25/63_big_int_mul.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-7-01
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-7-01.bin
+- **Time Elapsed:** 13104us
+- **Status:** ❌ FAILED
+- **Expected:** <output too long>
+- **Actual:** <output too long>
+
+#### Test: performance_arm_25-arm_h-1-03
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-1-03.bin
+- **Time Elapsed:** 26215150us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_fft2
+- **File:** artifacts/aarch64/performance_arm_25/arm_fft2.bin
+- **Time Elapsed:** 15105us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_matmul1
+- **File:** artifacts/aarch64/performance_arm_25/arm_matmul1.bin
+- **Time Elapsed:** 17852629us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_shuffle2
+- **File:** artifacts/aarch64/performance_arm_25/arm_shuffle2.bin
+- **Time Elapsed:** 164042us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-8-02
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-8-02.bin
+- **Time Elapsed:** 3523401us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_03_sort1
+- **File:** artifacts/aarch64/performance_arm_25/arm_03_sort1.bin
+- **Time Elapsed:** 1239532us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_shuffle0
+- **File:** artifacts/aarch64/performance_arm_25/arm_shuffle0.bin
+- **Time Elapsed:** 9749417us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_crypto-3
+- **File:** artifacts/aarch64/performance_arm_25/arm_crypto-3.bin
+- **Time Elapsed:** 2697711us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-4-03
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-4-03.bin
+- **Time Elapsed:** 13160045us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_crypto-2
+- **File:** artifacts/aarch64/performance_arm_25/arm_crypto-2.bin
+- **Time Elapsed:** 2052288us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_transpose0
+- **File:** artifacts/aarch64/performance_arm_25/arm_transpose0.bin
+- **Time Elapsed:** 3670230us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-1-02
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-1-02.bin
+- **Time Elapsed:** 4731166us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_transpose1
+- **File:** artifacts/aarch64/performance_arm_25/arm_transpose1.bin
+- **Time Elapsed:** 2583689us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-2-03
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-2-03.bin
+- **Time Elapsed:** 7172132us
+- **Status:** ❌ FAILED
+- **Expected:** 10
+0
+- **Actual:** 1
+1
+
+#### Test: performance_arm_25-arm_04_spmv3
+- **File:** artifacts/aarch64/performance_arm_25/arm_04_spmv3.bin
+- **Time Elapsed:** 1707198us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_matmul2
+- **File:** artifacts/aarch64/performance_arm_25/arm_matmul2.bin
+- **Time Elapsed:** 27188605us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_transpose2
+- **File:** artifacts/aarch64/performance_arm_25/arm_transpose2.bin
+- **Time Elapsed:** 13265670us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_03_sort3
+- **File:** artifacts/aarch64/performance_arm_25/arm_03_sort3.bin
+- **Time Elapsed:** 166390us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-8-03
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-8-03.bin
+- **Time Elapsed:** 4921891us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-2-02
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-2-02.bin
+- **Time Elapsed:** 5934488us
+- **Status:** ❌ FAILED
+- **Expected:** 10
+0
+- **Actual:** 1
+1
+
+#### Test: performance_arm_25-arm_sl3
+- **File:** artifacts/aarch64/performance_arm_25/arm_sl3.bin
+- **Time Elapsed:** 980925us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-11-01
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-11-01.bin
+- **Time Elapsed:** 200736759us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_01_mm1
+- **File:** artifacts/aarch64/performance_arm_25/arm_01_mm1.bin
+- **Time Elapsed:** 8891384us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_crypto-1
+- **File:** artifacts/aarch64/performance_arm_25/arm_crypto-1.bin
+- **Time Elapsed:** 2770065us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-4-02
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-4-02.bin
+- **Time Elapsed:** 7033079us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-4-01
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-4-01.bin
+- **Time Elapsed:** 2212350us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-5-03
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-5-03.bin
+- **Time Elapsed:** 11953054us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_shuffle1
+- **File:** artifacts/aarch64/performance_arm_25/arm_shuffle1.bin
+- **Time Elapsed:** 20742303us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_matmul3
+- **File:** artifacts/aarch64/performance_arm_25/arm_matmul3.bin
+- **Time Elapsed:** 25987669us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_03_sort2
+- **File:** artifacts/aarch64/performance_arm_25/arm_03_sort2.bin
+- **Time Elapsed:** 18792623us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-8-01
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-8-01.bin
+- **Time Elapsed:** 5564220us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_04_spmv1
+- **File:** artifacts/aarch64/performance_arm_25/arm_04_spmv1.bin
+- **Time Elapsed:** 8747664us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_01_mm2
+- **File:** artifacts/aarch64/performance_arm_25/arm_01_mm2.bin
+- **Time Elapsed:** 9331379us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-10-02
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-10-02.bin
+- **Time Elapsed:** 27312031us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-1-01
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-1-01.bin
+- **Time Elapsed:** 55143997us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_if-combine2
+- **File:** artifacts/aarch64/performance_arm_25/arm_if-combine2.bin
+- **Time Elapsed:** 40614630us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-12-01
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-12-01.bin
+- **Time Elapsed:** 2229802us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-10-01
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-10-01.bin
+- **Time Elapsed:** 35658us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-9-03
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-9-03.bin
+- **Time Elapsed:** 7474us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_sl1
+- **File:** artifacts/aarch64/performance_arm_25/arm_sl1.bin
+- **Time Elapsed:** 5667295us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_gameoflife-oscillator
+- **File:** artifacts/aarch64/performance_arm_25/arm_gameoflife-oscillator.bin
+- **Time Elapsed:** 11902318us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-5-02
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-5-02.bin
+- **Time Elapsed:** 9222444us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_fft1
+- **File:** artifacts/aarch64/performance_arm_25/arm_fft1.bin
+- **Time Elapsed:** 6826096us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_04_spmv2
+- **File:** artifacts/aarch64/performance_arm_25/arm_04_spmv2.bin
+- **Time Elapsed:** 5005687us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_sl2
+- **File:** artifacts/aarch64/performance_arm_25/arm_sl2.bin
+- **Time Elapsed:** 2865983us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_gameoflife-p61glidergun
+- **File:** artifacts/aarch64/performance_arm_25/arm_gameoflife-p61glidergun.bin
+- **Time Elapsed:** 13361951us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-13-01
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-13-01.bin
+- **Time Elapsed:** 1020662us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-5-01
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-5-01.bin
+- **Time Elapsed:** 10682538us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_if-combine3
+- **File:** artifacts/aarch64/performance_arm_25/arm_if-combine3.bin
+- **Time Elapsed:** 68334362us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_if-combine1
+- **File:** artifacts/aarch64/performance_arm_25/arm_if-combine1.bin
+- **Time Elapsed:** 57358us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_01_mm3
+- **File:** artifacts/aarch64/performance_arm_25/arm_01_mm3.bin
+- **Time Elapsed:** 5249067us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_gameoflife-gosper
+- **File:** artifacts/aarch64/performance_arm_25/arm_gameoflife-gosper.bin
+- **Time Elapsed:** 13723133us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_fft0
+- **File:** artifacts/aarch64/performance_arm_25/arm_fft0.bin
+- **Time Elapsed:** 3105795us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_sort_search
+- **File:** artifacts/aarch64/performance_arm_25/arm_sort_search.bin
+- **Time Elapsed:** 293522us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-14-01
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-14-01.bin
+- **Time Elapsed:** 3952934us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-2-01
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-2-01.bin
+- **Time Elapsed:** 5869337us
+- **Status:** ❌ FAILED
+- **Expected:** 10
+0
+- **Actual:** 1
+1
+
+#### Test: performance_arm_25-arm_h-9-02
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-9-02.bin
+- **Time Elapsed:** 9930us
+- **Status:** ✅ PASSED
+
+#### Test: performance_arm_25-arm_h-9-01
+- **File:** artifacts/aarch64/performance_arm_25/arm_h-9-01.bin
+- **Time Elapsed:** 7979us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-27_scope5
+- **File:** artifacts/aarch64/h_functional/27_scope5.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-25_scope3
+- **File:** artifacts/aarch64/h_functional/25_scope3.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-30_many_dimensions
+- **File:** artifacts/aarch64/h_functional/30_many_dimensions.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-26_scope4
+- **File:** artifacts/aarch64/h_functional/26_scope4.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-16_k_smallest
+- **File:** artifacts/aarch64/h_functional/16_k_smallest.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-04_break_continue
+- **File:** artifacts/aarch64/h_functional/04_break_continue.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-34_multi_loop
+- **File:** artifacts/aarch64/h_functional/34_multi_loop.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-24_array_only
+- **File:** artifacts/aarch64/h_functional/24_array_only.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-01_multiple_returns
+- **File:** artifacts/aarch64/h_functional/01_multiple_returns.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-07_arr_init_nd
+- **File:** artifacts/aarch64/h_functional/07_arr_init_nd.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-06_func_name
+- **File:** artifacts/aarch64/h_functional/06_func_name.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-02_ret_in_block
+- **File:** artifacts/aarch64/h_functional/02_ret_in_block.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-03_branch
+- **File:** artifacts/aarch64/h_functional/03_branch.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-36_rotate
+- **File:** artifacts/aarch64/h_functional/36_rotate.bin
+- **Time Elapsed:** 0us
+- **Status:** ❌ FAILED
+- **Expected:** <output too long>
+- **Actual:** <output too long>
+
+#### Test: h_functional-18_prim
+- **File:** artifacts/aarch64/h_functional/18_prim.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-00_comment2
+- **File:** artifacts/aarch64/h_functional/00_comment2.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-35_math
+- **File:** artifacts/aarch64/h_functional/35_math.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-05_param_name
+- **File:** artifacts/aarch64/h_functional/05_param_name.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-23_json
+- **File:** artifacts/aarch64/h_functional/23_json.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-11_BST
+- **File:** artifacts/aarch64/h_functional/11_BST.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-38_light2d
+- **File:** artifacts/aarch64/h_functional/38_light2d.bin
+- **Time Elapsed:** 0us
+- **Status:** ❌ FAILED
+- **Expected:** <output too long>
+- **Actual:** <output too long>
+
+#### Test: h_functional-14_dp
+- **File:** artifacts/aarch64/h_functional/14_dp.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-39_fp_params
+- **File:** artifacts/aarch64/h_functional/39_fp_params.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-31_many_indirections
+- **File:** artifacts/aarch64/h_functional/31_many_indirections.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-13_LCA
+- **File:** artifacts/aarch64/h_functional/13_LCA.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-09_BFS
+- **File:** artifacts/aarch64/h_functional/09_BFS.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-32_many_params3
+- **File:** artifacts/aarch64/h_functional/32_many_params3.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-37_dct
+- **File:** artifacts/aarch64/h_functional/37_dct.bin
+- **Time Elapsed:** 0us
+- **Status:** ❌ FAILED
+- **Expected:** <output too long>
+- **Actual:** <output too long>
+
+#### Test: h_functional-10_DFS
+- **File:** artifacts/aarch64/h_functional/10_DFS.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-29_long_line
+- **File:** artifacts/aarch64/h_functional/29_long_line.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-28_side_effect2
+- **File:** artifacts/aarch64/h_functional/28_side_effect2.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-21_union_find
+- **File:** artifacts/aarch64/h_functional/21_union_find.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-17_maximal_clique
+- **File:** artifacts/aarch64/h_functional/17_maximal_clique.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-12_DSU
+- **File:** artifacts/aarch64/h_functional/12_DSU.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-08_global_arr_init
+- **File:** artifacts/aarch64/h_functional/08_global_arr_init.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-33_multi_branch
+- **File:** artifacts/aarch64/h_functional/33_multi_branch.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-22_matrix_multiply
+- **File:** artifacts/aarch64/h_functional/22_matrix_multiply.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-15_graph_coloring
+- **File:** artifacts/aarch64/h_functional/15_graph_coloring.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-20_sort
+- **File:** artifacts/aarch64/h_functional/20_sort.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional-19_search
+- **File:** artifacts/aarch64/h_functional/19_search.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional_25-25_scope3
+- **File:** artifacts/aarch64/h_functional_25/25_scope3.bin
+- **Time Elapsed:** 0us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional_25-34_multi_loop
+- **File:** artifacts/aarch64/h_functional_25/34_multi_loop.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional_25-36_rotate
+- **File:** artifacts/aarch64/h_functional_25/36_rotate.bin
+- **Time Elapsed:** 0us
+- **Status:** ❌ FAILED
+- **Expected:** <output too long>
+- **Actual:** <output too long>
+
+#### Test: h_functional_25-00_comment2
+- **File:** artifacts/aarch64/h_functional_25/00_comment2.bin
+- **Time Elapsed:** 18445645996789617151us
+- **Status:** ✅ PASSED
+
+#### Test: h_functional_25-38_light2d
+- **File:** artifacts/aarch64/h_functional_25/38_light2d.bin
+- **Time Elapsed:** 0us
+- **Status:** ❌ FAILED
+- **Expected:** P2
+12 12 255
+0 31 63 31 31 63 63 31 31 63 31 31 
+31 31 31 63 31 31 63 31 31 63 31 31 
+31 31 63 63 63 95 63 95 31 31 63 31 
+31 31 63 63 95 95 95 95 63 31 31 63 
+63 63 63 95 255 255 159 63 63 31 63 31 
+31 63 63 95 255 255 223 63 63 0 0 0 
+31 31 63 95 191 223 127 95 31 63 31 63 
+63 63 31 63 95 95 63 0 0 63 31 31 
+63 63 31 31 63 95 63 0 0 0 31 0 
+63 0 0 31 31 31 63 31 0 0 0 0 
+31 31 31 63 63 31 31 31 0 0 0 0 
+31 0 31 31 31 31 31 31 0 0 0 0 
+0
+- **Actual:** <output too long>
+
+#### Test: h_functional_25-37_dct
+- **File:** artifacts/aarch64/h_functional_25/37_dct.bin
+- **Time Elapsed:** 0us
+- **Status:** ❌ FAILED
+- **Expected:** <output too long>
+- **Actual:** <output too long>
+
+#### Test: performance-04_spmv3
+- **File:** artifacts/aarch64/performance/04_spmv3.bin
+- **Time Elapsed:** 1920458us
+- **Status:** ✅ PASSED
+
+#### Test: performance-03_sort3
+- **File:** artifacts/aarch64/performance/03_sort3.bin
+- **Time Elapsed:** 3605054us
+- **Status:** ✅ PASSED
+
+#### Test: performance-04_spmv1
+- **File:** artifacts/aarch64/performance/04_spmv1.bin
+- **Time Elapsed:** 4218910us
+- **Status:** ✅ PASSED
+
+#### Test: performance-matmul2
+- **File:** artifacts/aarch64/performance/matmul2.bin
+- **Time Elapsed:** 11709575us
+- **Status:** ✅ PASSED
+
+#### Test: performance-gameoflife-oscillator
+- **File:** artifacts/aarch64/performance/gameoflife-oscillator.bin
+- **Time Elapsed:** 11806073us
+- **Status:** ✅ PASSED
+
+#### Test: performance-large_loop_array_3
+- **File:** artifacts/aarch64/performance/large_loop_array_3.bin
+- **Time Elapsed:** 2999155us
+- **Status:** ❌ FAILED
+- **Expected:** 10
+0
+- **Actual:** 1
+1
+
+#### Test: performance-01_mm3
+- **File:** artifacts/aarch64/performance/01_mm3.bin
+- **Time Elapsed:** 6686462us
+- **Status:** ✅ PASSED
+
+#### Test: performance-sl3
+- **File:** artifacts/aarch64/performance/sl3.bin
+- **Time Elapsed:** 1833740us
+- **Status:** ✅ PASSED
+
+#### Test: performance-transpose0
+- **File:** artifacts/aarch64/performance/transpose0.bin
+- **Time Elapsed:** 4757458us
+- **Status:** ✅ PASSED
+
+#### Test: performance-03_sort1
+- **File:** artifacts/aarch64/performance/03_sort1.bin
+- **Time Elapsed:** 1297366us
+- **Status:** ✅ PASSED
+
+#### Test: performance-03_sort2
+- **File:** artifacts/aarch64/performance/03_sort2.bin
+- **Time Elapsed:** 18448398us
+- **Status:** ✅ PASSED
+
+#### Test: performance-shuffle2
+- **File:** artifacts/aarch64/performance/shuffle2.bin
+- **Time Elapsed:** 5668557us
+- **Status:** ✅ PASSED
+
+#### Test: performance-if-combine3
+- **File:** artifacts/aarch64/performance/if-combine3.bin
+- **Time Elapsed:** 27476383us
+- **Status:** ✅ PASSED
+
+#### Test: performance-transpose2
+- **File:** artifacts/aarch64/performance/transpose2.bin
+- **Time Elapsed:** 13370247us
+- **Status:** ✅ PASSED
+
+#### Test: performance-shuffle1
+- **File:** artifacts/aarch64/performance/shuffle1.bin
+- **Time Elapsed:** 21133819us
+- **Status:** ✅ PASSED
+
+#### Test: performance-fft1
+- **File:** artifacts/aarch64/performance/fft1.bin
+- **Time Elapsed:** 6773234us
+- **Status:** ✅ PASSED
+
+#### Test: performance-large_loop_array_1
+- **File:** artifacts/aarch64/performance/large_loop_array_1.bin
+- **Time Elapsed:** 4250834us
+- **Status:** ❌ FAILED
+- **Expected:** 10
+0
+- **Actual:** 1
+1
+
+#### Test: performance-transpose1
+- **File:** artifacts/aarch64/performance/transpose1.bin
+- **Time Elapsed:** 3078539us
+- **Status:** ✅ PASSED
+
+#### Test: performance-shuffle0
+- **File:** artifacts/aarch64/performance/shuffle0.bin
+- **Time Elapsed:** 27657714us
+- **Status:** ✅ PASSED
+
+#### Test: performance-01_mm1
+- **File:** artifacts/aarch64/performance/01_mm1.bin
+- **Time Elapsed:** 7595293us
+- **Status:** ✅ PASSED
+
+#### Test: performance-large_loop_array_2
+- **File:** artifacts/aarch64/performance/large_loop_array_2.bin
+- **Time Elapsed:** 8490744us
+- **Status:** ❌ FAILED
+- **Expected:** 10
+0
+- **Actual:** 1
+1
+
+#### Test: performance-01_mm2
+- **File:** artifacts/aarch64/performance/01_mm2.bin
+- **Time Elapsed:** 8308906us
+- **Status:** ✅ PASSED
+
+#### Test: performance-04_spmv2
+- **File:** artifacts/aarch64/performance/04_spmv2.bin
+- **Time Elapsed:** 10872523us
+- **Status:** ✅ PASSED
+
+#### Test: performance-recursive_call_3
+- **File:** artifacts/aarch64/performance/recursive_call_3.bin
+- **Time Elapsed:** 7828us
+- **Status:** ✅ PASSED
+
+#### Test: performance-gameoflife-p61glidergun
+- **File:** artifacts/aarch64/performance/gameoflife-p61glidergun.bin
+- **Time Elapsed:** 13534915us
+- **Status:** ✅ PASSED
+
+#### Test: performance-if-combine1
+- **File:** artifacts/aarch64/performance/if-combine1.bin
+- **Time Elapsed:** 11660916us
+- **Status:** ✅ PASSED
+
+#### Test: performance-matmul3
+- **File:** artifacts/aarch64/performance/matmul3.bin
+- **Time Elapsed:** 10567618us
+- **Status:** ✅ PASSED
+
+#### Test: performance-fft0
+- **File:** artifacts/aarch64/performance/fft0.bin
+- **Time Elapsed:** 3087063us
+- **Status:** ✅ PASSED
+
+#### Test: performance-fft2
+- **File:** artifacts/aarch64/performance/fft2.bin
+- **Time Elapsed:** 6475111us
+- **Status:** ✅ PASSED
+
+#### Test: performance-recursive_call_2
+- **File:** artifacts/aarch64/performance/recursive_call_2.bin
+- **Time Elapsed:** 2345us
+- **Status:** ✅ PASSED
+
+#### Test: performance-gameoflife-gosper
+- **File:** artifacts/aarch64/performance/gameoflife-gosper.bin
+- **Time Elapsed:** 13435973us
+- **Status:** ✅ PASSED
+
+#### Test: performance-sl1
+- **File:** artifacts/aarch64/performance/sl1.bin
+- **Time Elapsed:** 4954177us
+- **Status:** ✅ PASSED
+
+#### Test: performance-matmul1
+- **File:** artifacts/aarch64/performance/matmul1.bin
+- **Time Elapsed:** 9476121us
+- **Status:** ✅ PASSED
+
+#### Test: performance-recursive_call_1
+- **File:** artifacts/aarch64/performance/recursive_call_1.bin
+- **Time Elapsed:** 2665us
+- **Status:** ✅ PASSED
+
+#### Test: performance-if-combine2
+- **File:** artifacts/aarch64/performance/if-combine2.bin
+- **Time Elapsed:** 16262659us
+- **Status:** ✅ PASSED
+
+#### Test: performance-sl2
+- **File:** artifacts/aarch64/performance/sl2.bin
+- **Time Elapsed:** 1928823us
+- **Status:** ✅ PASSED
+
+
+### Failed Tests
+
+- final-h_performance-2024-H17-1
+- final-h_performance-2024-C64-14
+- final-h_performance-2024-CH6-24
+- final-h_performance-2024-1WO-11
+- final-performance-2024-FQX-25
+- final-performance-2024-JR2-21
+- final-performance-2024-I9Y-15
+- performance_rv_25-rv_h-2-01
+- performance_rv_25-rv_h-2-02
+- performance_rv_25-rv_h-7-01
+- performance_rv_25-rv_h-2-03
+- h_performance-h-2-03
+- h_performance-h-7-01
+- h_performance-h-2-01
+- h_performance-h-6-01
+- h_performance-h-6-02
+- h_performance-h-6-03
+- h_performance-h-2-02
+- performance_arm_25-arm_h-7-01
+- performance_arm_25-arm_h-2-03
+- performance_arm_25-arm_h-2-02
+- performance_arm_25-arm_h-2-01
+- h_functional-36_rotate
+- h_functional-38_light2d
+- h_functional-37_dct
+- h_functional_25-36_rotate
+- h_functional_25-38_light2d
+- h_functional_25-37_dct
+- performance-large_loop_array_3
+- performance-large_loop_array_1
+- performance-large_loop_array_2
+### Summary
+
+| Status | Count |
+|--------|-------|
+| ✅ Passed | 351 |
+| ❌ Failed | 31 |
+| **Total** | **382** |
+
+---
+
 ## Test Results - 2025-07-04 09:20:42
 
 - **Artifacts Commit:** [a19bc7a4ddcfeb1bc4131f7798c8499e8c29a625](https://github.com/Althra/gnalc/commit/a19bc7a4ddcfeb1bc4131f7798c8499e8c29a625)
