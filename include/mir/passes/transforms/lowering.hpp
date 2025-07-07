@@ -90,23 +90,22 @@ public:
             return mconst;
         }
 
-        uint64_t imme_tmp = imme;
-        auto imme_idx = *reinterpret_cast<unsigned *>(&imme_tmp);
-        auto imme_idx_l = *reinterpret_cast<uint64_t *>(&imme_tmp);
-
         MIROperand_p mconst = nullptr;
 
         /// LAMBDA BEGIN
         auto make_new = [&]() {
             if constexpr (std::is_same_v<T, int>) {
                 mconst = MIROperand::asImme<T>(imme, OpT::Int32);
-                mConstMap.emplace(imme_idx, mconst);
+                auto bit32_imme_idx = *reinterpret_cast<unsigned *>(&imme);
+                mConstMap.emplace(bit32_imme_idx, mconst);
             } else if constexpr (std::is_same_v<T, int64_t>) {
                 mconst = MIROperand::asImme<T>(imme, OpT::Int64);
-                mLConstMap.emplace(imme_idx_l, mconst);
+                auto bit64_imme_idx = *reinterpret_cast<uint64_t *>(&imme);
+                mLConstMap.emplace(bit64_imme_idx, mconst);
             } else if constexpr (std::is_same_v<T, float>) {
                 mconst = MIROperand::asImme<T>(imme, OpT::Float32);
-                mSpConstMap.emplace(imme_idx, mconst);
+                auto bit32_imme_idx = *reinterpret_cast<unsigned *>(&imme);
+                mSpConstMap.emplace(bit32_imme_idx, mconst);
             }
 
             return mconst;
@@ -114,15 +113,14 @@ public:
         /// LAMBDA END
 
         if constexpr (std::is_same_v<T, int>) {
-
-            return mConstMap.count(imme_idx) ? mConstMap.at(imme_idx) : make_new();
-
+            auto bit32_imme_idx = *reinterpret_cast<unsigned *>(&imme);
+            return mConstMap.count(bit32_imme_idx) ? mConstMap.at(bit32_imme_idx) : make_new();
         } else if constexpr (std::is_same_v<T, float>) {
-
-            return mSpConstMap.count(imme_idx) ? mSpConstMap.at(imme_idx) : make_new();
+            auto bit32_imme_idx = *reinterpret_cast<unsigned *>(&imme);
+            return mSpConstMap.count(bit32_imme_idx) ? mSpConstMap.at(bit32_imme_idx) : make_new();
         } else if constexpr (std::is_same_v<T, int64_t>) {
-
-            return mLConstMap.count(imme_idx_l) ? mLConstMap.at(imme_idx_l) : make_new();
+            auto bit64_imme_idx = *reinterpret_cast<uint64_t *>(&imme);
+            return mLConstMap.count(bit64_imme_idx) ? mLConstMap.at(bit64_imme_idx) : make_new();
         }
 
         Err::unreachable("mapOperand failed");
