@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "mir/passes/transforms/RA.hpp"
+#include "mir/tools.hpp"
 
 using namespace MIR;
 
@@ -79,7 +80,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getDef(const MIRInst_p &minst) {
 MIROperand_p RegisterAllocImpl::heuristicSpill() {
     const double Weight_IntervalLength = 5;
     const double Weight_Degree = 3;
-    const double extra_Weight_ForNotPtr = +60; // origin: 60
+    const double extra_Weight_ForNotPtr = +60;
 
     ///@note 计算溢出权重
     double weight_max = 0;
@@ -102,6 +103,7 @@ MIROperand_p RegisterAllocImpl::heuristicSpill() {
         }
     }
     Err::gassert(spilled != nullptr, "heuristicSpill: spilled is nullptr");
+    // Logger::logInfo("spilled: " + std::to_string(spilled->getRecover()));
     return spilled;
 }
 

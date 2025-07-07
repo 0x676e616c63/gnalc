@@ -186,6 +186,9 @@ int main(int argc, char *argv[]) {
     }
 
     println("GNALC test started. (GitHub Action)");
+
+    cfg::init();
+
     create_directories(cfg::global_temp_dir);
 
     std::vector<Entry> entries;

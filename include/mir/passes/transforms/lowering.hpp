@@ -90,7 +90,7 @@ public:
             return mconst;
         }
 
-        auto imme_tmp = imme;
+        uint64_t imme_tmp = imme;
         auto imme_idx = *reinterpret_cast<unsigned *>(&imme_tmp);
         auto imme_idx_l = *reinterpret_cast<uint64_t *>(&imme_tmp);
 

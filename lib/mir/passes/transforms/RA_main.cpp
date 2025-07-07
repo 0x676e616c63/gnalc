@@ -3,6 +3,7 @@
 
 #include "mir/passes/transforms/RA.hpp"
 #include <algorithm>
+#include <string>
 
 using namespace MIR;
 
@@ -125,7 +126,7 @@ void RegisterAllocImpl::Build() {
                 const auto &def = getDef(inst);
 
                 for (const auto &n : getUnion<MIROperand_p, false>(def, use)) {
-                    if (n->isISA()) { ///@note 也可以使用isPreColored()
+                    if (n->isISA()) {
                         if (n->isa() <= ARMReg::FP) {
                             precolored.insert(n);
                             degree[n] = -1;
@@ -208,7 +209,7 @@ void RegisterAllocImpl::Simplify() {
 
     auto it = simplifyWorkList.begin();
 
-    const auto &n = *it;
+    auto n = *it;
 
     Err::gassert(n != nullptr, "n is nullptr");
 
@@ -433,11 +434,6 @@ void RegisterAllocImpl::AssignColors() {
 
             addBySet(coloredNodes, Nodes{n});
 
-            ///@note 通过控制着色使得在一定空间范围内寄存器均匀负载
-            ///@note 由于该算法几乎没有局部性
-            ///@note 所以通过VReg的id实现简易的均衡负载
-            ///@note 由于lowering是线性的方式, 所以大多数的id具有局部性
-
             auto c = okColors[n->getRecover() % okColors.size()];
 
             auto &calleesave = mfunc->calleeSaveRegs();
@@ -473,6 +469,8 @@ void RegisterAllocImpl::ReWriteProgram() {
         auto ops_new = spill(n);
 
         addBySet(initial, ops_new);
+        // Logger::logInfo("ReWriteProgram: old operand: " + std::to_string(n->getRecover()) +
+        //                 ", new operand size: " + std::to_string(ops_new.size()));
     }
 
     spilledNodes.clear();
@@ -484,7 +482,8 @@ void RegisterAllocImpl::ReWriteProgram() {
 }
 
 RegisterAllocImpl::Nodes RegisterAllocImpl::Adjacent(const MIROperand_p &n) {
-    return getExclude<MIROperand_p>(adjList[n], std::unordered_set(selectStack.begin(), selectStack.end()), coalescedNodes);
+    return getExclude<MIROperand_p>(adjList[n], std::unordered_set(selectStack.begin(), selectStack.end()),
+                                    coalescedNodes);
 }
 
 RegisterAllocImpl::Moves RegisterAllocImpl::NodeMoves(const MIROperand_p &n) {
@@ -492,14 +491,14 @@ RegisterAllocImpl::Moves RegisterAllocImpl::NodeMoves(const MIROperand_p &n) {
 
     Moves movs{};
 
-    const auto& moveListOfn = moveList[n];
+    const auto &moveListOfn = moveList[n];
     for (const auto &p : activeMoves) {
-        if (moveListOfn.count(p)) //
+        if (moveListOfn.count(p))
             movs.insert(p);
     }
 
     for (const auto &p : worklistMoves) {
-        if (moveListOfn.count(p)) //
+        if (moveListOfn.count(p))
             movs.insert(p);
     }
 
@@ -544,7 +543,7 @@ bool RegisterAllocImpl::Conservative(const Nodes &nodes) {
     return k < K;
 }
 
-MIROperand_p RegisterAllocImpl::GetAlias(MIROperand_p n) {
+MIROperand_p RegisterAllocImpl::GetAlias(MIROperand_p n) { // NOLINT
     if (coalescedNodes.count(n))
         return GetAlias(alias[n]);
 
@@ -581,7 +580,7 @@ void VectorRegisterAllocImpl::Build() {
                 const auto &def = getDef(inst);
 
                 for (const auto &n : getUnion<MIROperand_p, false>(def, use)) {
-                    if (n->isISA()) { ///@note 也可以使用isPreColored()
+                    if (n->isISA()) {
                         if (n->isa() >= ARMReg::V0) {
                             precolored.insert(n);
                             degree[n] = -1;

@@ -1,14 +1,15 @@
-name: Gnalc Compile Artifacts
+name: Gnalc Assemble Artifacts
 
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
       branch:
         required: true
         type: string
+        description: branch
 
 concurrency:
-  group: compile-artifacts-${{ inputs.branch }}
+  group: assemble-artifacts-${{ inputs.branch }}
   cancel-in-progress: true
 
 permissions:
@@ -16,7 +17,7 @@ permissions:
 
 env:
   BUILD_TYPE: Release
-  ARTIFACTS_BRANCH: "artifacts-${{ inputs.branch }}"
+  DEBUG_BRANCH: "ci-debug"
   TESTDATA_VERSION: "v1.0.0"
   TESTDATA_ZIP_URL: "https://github.com/caozhanhao/gnalc-test-data/releases/download/v1.0.0/testdata.zip"
   TESTDATA_DIR: "${{ github.workspace }}/testdata"
@@ -31,45 +32,25 @@ jobs:
       - name: Checkout artifacts branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.ARTIFACTS_BRANCH }}
-          path: artifacts-branch
+          ref: ${{ env.DEBUG_BRANCH }}
+          path: ci-debug-branch
 
-      - name: Reset artifacts branch if too many commits
+      - name: Reset debug branch
         run: |
-          cd artifacts-branch
-          COMMIT_COUNT=$(git rev-list --count HEAD)
-          echo "Artifacts branch has $COMMIT_COUNT commits"
+          cd ci-debug-branch
+          echo "Resetting artifacts branch (more than ${{ env.ARTIFACTS_COMMIT_THRESHOLD }} commits)"
           
-          if [ $COMMIT_COUNT -gt ${{ env.ARTIFACTS_COMMIT_THRESHOLD }} ]; then
-            echo "Resetting artifacts branch (more than ${{ env.ARTIFACTS_COMMIT_THRESHOLD }} commits)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan new_branch_for_github_action
+          git add -A
+          git commit -m "History reset $(TZ=Asia/Shanghai date +'%Y-%m-%d %H:%M:%S')"
           
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git checkout --orphan new_branch_for_github_action
-            git add -A
-            git commit -m "History reset $(TZ=Asia/Shanghai date +'%Y-%m-%d %H:%M:%S')"
+          git branch -D ${{ env.DEBUG_BRANCH }}
+          git branch -m ${{ env.DEBUG_BRANCH }}
           
-            git branch -D ${{ env.ARTIFACTS_BRANCH }}
-            git branch -m ${{ env.ARTIFACTS_BRANCH }}
-          
-            git push --force origin ${{ env.ARTIFACTS_BRANCH }}
-            echo "Artifacts branch has been reset"
-          else
-            echo "No reset needed (<=${{ env.ARTIFACTS_COMMIT_THRESHOLD }} commits)"
-          fi
-
-      - name: Compare commit SHA
-        run: |
-          LAST=$(cat artifacts-branch/last_run.txt 2>/dev/null || echo "")
-          echo "Previous run SHA: $LAST"
-          echo "Current SHA:  ${{ github.sha }}"
-          
-          if [ "$LAST" = "${{ github.sha }}" ]; then
-            echo "This commit (${{ github.sha }}) has already been processed. Skipping build."
-            exit 0
-          fi
-
-          echo "New commit detected. Proceeding with build."
+          git push --force origin ${{ env.DEBUG_BRANCH }}
+          echo "Artifacts branch has been reset"
 
       - name: Checkout source
         uses: actions/checkout@v4
@@ -95,11 +76,6 @@ jobs:
           mkdir -p ${{ env.TESTDATA_DIR }}
           unzip -q ${{ env.ZIP_CACHE_DIR }}/testdata.zip -d ${{ env.TESTDATA_DIR }}
 
-      - name: Install Cross-Compile Support (ARM64)
-        uses: cyberjunk/gha-ubuntu-cross@v5
-        with:
-          arch: arm64
-
       - name: Configure CMake
         run: |
           mkdir build
@@ -108,6 +84,9 @@ jobs:
 
       - name: Build gnalc
         run: make -C build gnalc -j$(nproc)
+
+#      - name: Debugging with ssh
+#        uses: lhotari/action-upterm@v1
 
       - name: Prepare artifacts directory
         run: |
@@ -131,56 +110,45 @@ jobs:
           fi
           
           echo "Compiling: $rel_path"
-          
-           #mkdir -p "$ARTIFACTS_DIR/artifacts/llvm/$dir_path"
-           #./build/gnalc -S "$testcase" -emit-llvm \
-           #  -o "$ARTIFACTS_DIR/artifacts/llvm/$dir_path/$test_name.ll" \
-           #  ${{ env.COMPILE_OPTIONS }}
-          
+
           mkdir -p "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path"
           ./build/gnalc -S "$testcase" \
           -o "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.s" \
           ${{ env.COMPILE_OPTIONS }}
-          
-          aarch64-linux-gnu-gcc -c test/sylib/sylib.c -o sylib.o
-          aarch64-linux-gnu-ar rcs sylib.a sylib.o
-          aarch64-linux-gnu-gcc "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.s" \
-          sylib.a -o "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.bin"
-          rm "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.s"
           done
 
-      - name: Checkout artifacts branch for update
+      - name: Checkout debug branch for update
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.ARTIFACTS_BRANCH }}
-          path: artifacts-branch
+          ref: ${{ env.DEBUG_BRANCH }}
+          path: ci-debug-branch
 
-      - name: Clean out old artifacts
+      - name: Clean out old debug files
         run: |
-          rm -rf artifacts-branch/*
+          rm -rf ci-debug-branch/*
 
       - name: Copy new artifacts
         run: |
-          mv artifacts/* artifacts-branch/
+          mv artifacts/* ci-debug-branch/
 
       - name: Generate metadata files
         run: |
           TS=$(TZ=Asia/Shanghai date +"%Y-%m-%dT%H:%M:%S%:z")
-          cat > artifacts-branch/README.md <<EOF
+          cat > ci-debug-branch/README.md <<EOF
           # Gnalc Artifacts
 
           - **Branch:** ${{ inputs.branch }}
           - **Generated at:** $TS (UTC)
           - **Commit SHA:** ${{ github.sha }}
 
-          Artifacts built by GitHub Actions.  
+          Debug Artifacts built by GitHub Actions.  
           EOF
 
-          echo "${{ github.sha }}" > artifacts-branch/last_run.txt
+          echo "${{ github.sha }}" > ci-debug-branch/last_run.txt
 
       - name: Commit & Push updates
         run: |
-          cd artifacts-branch
+          cd ci-debug-branch
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add README.md last_run.txt artifacts/
@@ -189,5 +157,5 @@ jobs:
             exit 0
           else
             git commit -m "Update artifacts from ${{ github.sha }}"
-            git push origin ${{ env.ARTIFACTS_BRANCH }}
+            git push origin ${{ env.DEBUG_BRANCH }}
           fi

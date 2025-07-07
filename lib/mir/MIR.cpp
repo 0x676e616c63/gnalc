@@ -43,3 +43,21 @@ unsigned MIRInst::getDefNr() const {
 }
 
 unsigned MIRInst::getOpNr() const { return getUseNr() + getDefNr(); }
+
+MIRModule::~MIRModule() {
+    // FIXME:
+    // This is a quick and dirty trick to avoid memory leak.
+    // Currently we've found two circular references:
+    // 1. MIRFunction is MIRReloc, which can be operands of instructions
+    // contained in MIRFunction(ARMOpc::BL).
+    // 2. MIRBlk's `mpreds` and `msuccs` contains shared_ptr of other blocks
+    for (auto& fn : mFuncs) {
+        for (auto& blk : fn->mBlks) {
+            for (auto& inst : blk->mInsts)
+                inst->mOperands.fill(nullptr);
+
+            blk->mpreds.clear();
+            blk->msuccs.clear();
+        }
+    }
+}
