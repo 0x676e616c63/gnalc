@@ -74,6 +74,7 @@ constexpr auto RANGE_ANALYSIS_MAX_PROCESS_CNT = 32;
 // We vectorize trees if we gain more than this threshold.
 constexpr auto SLP_COST_THRESHOLD = 0;
 constexpr auto SLP_BUILD_TREE_RECURSION_THRESHOLD = 12;
+constexpr auto SLP_SCHEDULER_MAX_REGION_SIZE = 100000;
 
 // Run Test Pass
 constexpr auto RUN_TEST_TEMP_DIR = "gnalc_run_test_pass";

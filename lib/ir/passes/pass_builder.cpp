@@ -232,9 +232,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
 
     auto make_vectorizer = [&options] {
         FPM fpm;
-        fpm.addPass(PrintFunctionPass(std::cerr));
         FUNCTION_TRANSFORM(vectorizer, LoopSimplifyPass(), VectorizerPass())
-        fpm.addPass(PrintFunctionPass(std::cerr));
         return fpm;
     };
 
@@ -344,10 +342,25 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     fpm.addPass(BreakCriticalEdgesPass());
     fpm.addPass(GVNPREPass());
     fpm.addPass(CFGSimplifyPass());
+
+    // fpm.addPass(LoopSimplifyPass());
+    // fpm.addPass(LCSSAPass());
+    // fpm.addPass(LoopUnrollPass());
+    // fpm.addPass(CFGSimplifyPass());
+    // fpm.addPass(BreakCriticalEdgesPass());
+    // fpm.addPass(GVNPREPass());
+
+    fpm.addPass(ADCEPass());
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(SCCPPass());
+    fpm.addPass(ADCEPass());
+    fpm.addPass(CFGSimplifyPass());
+
     fpm.addPass(LoopSimplifyPass());
     fpm.addPass(NameNormalizePass(true));
     fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(VectorizerPass());
+    fpm.addPass(PrintLoopAAPass(std::cerr));
+    fpm.addPass(VectorizerPass(true));
     fpm.addPass(VerifyPass());
     fpm.addPass(DCEPass());
     fpm.addPass(PrintFunctionPass(std::cerr));

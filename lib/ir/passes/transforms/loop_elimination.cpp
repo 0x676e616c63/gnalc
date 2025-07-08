@@ -78,7 +78,7 @@ bool propagateExitValues(Loop &loop, SCEVHandle &scev, bool onlyConstant) {
                 if (onlyConstant &&
                     (!expr->isIRValue() || expr->getIRValue()->getVTrait() != ValueTrait::CONSTANT_LITERAL))
                     continue;
-                auto exit_value = scev.expandSCEVExpr(expr, user_block, user_inst->getIter());
+                auto exit_value = scev.expandSCEVExpr(expr, user_block, user_inst->iter());
                 if (exit_value != nullptr) {
                     use->setValue(exit_value);
                     modified = true;

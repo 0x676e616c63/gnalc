@@ -127,7 +127,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                                 if (domtree.ADomB(bb, exit)) {
                                     auto sunk = makeClone(inst);
                                     if (inst->getType()->getTrait() == IRCTYPE::PTR)
-                                        aa_res.addClonedInst(inst, sunk);
+                                        aa_res.addClonedPointer(inst, sunk);
                                     sunk->setName(inst->getName() + ".licm.s" + std::to_string(name_cnt++));
                                     exit->addInstAfterPhi(sunk);
                                     sunk_insts[exit] = sunk;
@@ -146,7 +146,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                                                         avail_phi->addPhiOper(oper, pred);
                                                     exit->addPhiInst(avail_phi);
                                                     if (oper->getType()->getTrait() == IRCTYPE::PTR)
-                                                        aa_res.addClonedInst(oper, avail_phi);
+                                                        aa_res.addClonedPointer(oper, avail_phi);
                                                 }
                                                 use->setValue(avail_phi);
                                             }

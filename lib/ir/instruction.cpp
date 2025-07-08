@@ -25,10 +25,11 @@ pBlock Instruction::getParent() const { return parent.lock(); }
 
 size_t Instruction::getIndex() const {
     getParent()->updateInstIndex();
-    return index;
+    return inst_index;
 }
 
-BBInstIter Instruction::getIter() const {
+// FIXME: iterator of std::list don't expired. Optimize it.
+BBInstIter Instruction::iter() const {
     Err::gassert(getOpcode() != OP::PHI);
     auto ret = std::next(parent.lock()->begin(), getIndex() - parent.lock()->getPhiCount());
     Err::gassert(ret->get() == this);

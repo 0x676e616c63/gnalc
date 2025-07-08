@@ -211,7 +211,7 @@ void ReassociatePass::rewriteExpr(const pBinary &root, std::vector<ValueEntry> &
     // Move what we've rewritten to ensure any user dominate all its uses.
     if (rewrite_beg != nullptr) {
         auto bb = root->getParent();
-        auto it = root->getIter();
+        auto it = root->iter();
         while (true) {
             if (rewrite_beg == root)
                 break;
@@ -257,7 +257,7 @@ pVal ReassociatePass::removeFactor(const pVal &v, const pVal &factor) {
         return nullptr;
     }
 
-    IRBuilder builder("%re.rf", mul->getParent(), ++mul->getIter());
+    IRBuilder builder("%re.rf", mul->getParent(), ++mul->iter());
 
     auto ret = v;
     if (factors.size() == 1)
@@ -274,7 +274,7 @@ pVal ReassociatePass::removeFactor(const pVal &v, const pVal &factor) {
 }
 
 pVal ReassociatePass::optAdd(const pBinary &root, std::vector<ValueEntry> &ops) {
-    IRBuilder builder("%re.oa", root->getParent(), root->getIter());
+    IRBuilder builder("%re.oa", root->getParent(), root->iter());
     for (size_t i = 0, e = ops.size(); i != e; ++i) {
         // lambda captured structured bindings are a C++20 extension [-Wc++20-extensions]
         auto curr = ops[i].operand;

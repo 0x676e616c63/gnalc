@@ -62,7 +62,7 @@ void doInline(Function &caller, const pCall &call) {
 
     // Split Block
     auto after_call = std::make_shared<BasicBlock>("%il.aftercall" + std::to_string(name_cnt++));
-    moveInsts(std::next(call->getIter()), call_block->end(), after_call);
+    moveInsts(std::next(call->iter()), call_block->end(), after_call);
     Err::gassert(call_block->getInsts().back() == call);
 
     // Replace RETInst with BRInst

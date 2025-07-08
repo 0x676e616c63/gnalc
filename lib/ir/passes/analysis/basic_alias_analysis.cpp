@@ -264,9 +264,9 @@ ModRefInfo BasicAAResult::getFunctionModRefInfo() const {
 bool BasicAAResult::hasUntrackedCall() const { return has_untracked_call; }
 bool BasicAAResult::hasSylibCall() const { return has_sylib_call; }
 
-void BasicAAResult::addClonedInst(Instruction *inst, Instruction *cloned) {
-    Err::gassert(ptr_info.count(inst), "No such instruction registered.");
-    ptr_info[cloned] = ptr_info[inst];
+void BasicAAResult::addClonedPointer(Value *raw, Value *cloned) {
+    Err::gassert(ptr_info.count(raw), "No such instruction registered.");
+    ptr_info[cloned] = ptr_info[raw];
 }
 
 AliasInfo BasicAAResult::getAliasInfo(const pVal &v1, const pVal &v2) const { return getAliasInfo(v1.get(), v2.get()); }
@@ -274,7 +274,7 @@ bool BasicAAResult::isLocal(const pVal &v) const { return isLocal(v.get()); }
 ModRefInfo BasicAAResult::getInstModRefInfo(const pInst &inst, const pVal &location, FAM &fam) const {
     return getInstModRefInfo(inst.get(), location.get(), fam);
 }
-void BasicAAResult::addClonedInst(const pInst &inst, const pInst &cloned) { addClonedInst(inst.get(), cloned.get()); }
+void BasicAAResult::addClonedPointer(const pVal &raw, const pVal &cloned) { addClonedPointer(raw.get(), cloned.get()); }
 
 BasicAAResult BasicAliasAnalysis::run(Function &func, FAM &fam) {
     BasicAAResult res;

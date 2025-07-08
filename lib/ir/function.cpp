@@ -340,7 +340,7 @@ LinearFunction::LinearFunction(std::string name_, const std::vector<pFormalParam
       constant_pool(pool_) {}
 
 void LinearFunction::addInst(pInst inst) {
-    inst->index = insts.size();
+    inst->inst_index = insts.size();
     insts.emplace_back(std::move(inst));
 }
 
@@ -359,7 +359,7 @@ void LinearFunction::addInst(size_t index, const pInst &inst) {
 void LinearFunction::appendInsts(std::list<pInst> insts_) {
     size_t i = insts.size();
     for (auto &inst : insts_) {
-        inst->index = i++;
+        inst->inst_index = i++;
     }
     insts.insert(insts.end(), std::make_move_iterator(insts_.begin()), std::make_move_iterator(insts_.end()));
 }
@@ -437,7 +437,7 @@ void LinearFunction::updateInstIndex() const {
 
     size_t i = 0;
     for (const auto &inst : insts) {
-        inst->index = i++;
+        inst->inst_index = i++;
     }
 }
 } // namespace IR

@@ -241,7 +241,7 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                     ++warning_cnt;
                     Logger::logWarning("[VerifyPass]: Cond '", cond_inst->getName(), "' and BRInst are in separate block.");
                 }
-                else if (std::next(cond_inst->getIter()) != br->getIter()) {
+                else if (std::next(cond_inst->iter()) != br->iter()) {
                     ++warning_cnt;
                     Logger::logWarning("[VerifyPass]: Cond '", cond_inst->getName(), "' and BRInst are not consecutive.");
                 }

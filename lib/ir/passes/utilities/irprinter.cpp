@@ -232,6 +232,7 @@ PM::PreservedAnalyses PrintLoopAAPass::run(Function &function, FAM &fam) {
             writeln(inst->getName(), ":");
             writeln("  base: ", loc.base->getName());
             writeln("  offset: ", loc.offset);
+            writeln("  element size: ", loc.element_size);
             for (const auto &access : loc.accesses) {
                 writeln("  access: ");
                 writeln("    trip count: ", access.trip_count);

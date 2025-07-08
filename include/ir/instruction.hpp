@@ -104,7 +104,7 @@ class Instruction : public User {
 private:
     OP opcode;
     wpBlock parent = {}; // 隶属的basic block
-    size_t index = 0;
+    size_t inst_index = 0;
 
 public:
     // 此构造方法用于初始生成时，最开始没有划分Block，故parent为空
@@ -115,7 +115,7 @@ public:
     pBlock getParent() const;
     size_t getIndex() const;
     // Warning: PHIInst MUST NOT invoke this.
-    BBInstIter getIter() const;
+    BBInstIter iter() const;
 
     bool isCommutative() const;
 

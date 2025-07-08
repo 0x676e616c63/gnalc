@@ -90,9 +90,9 @@ public:
     // Check if it contains call to Sylib function: getxxx(), putxxx()
     bool hasSylibCall() const;
 
-    // Add a cloned instruction
-    void addClonedInst(Instruction *inst, Instruction *cloned);
-    void addClonedInst(const pInst &inst, const pInst &cloned);
+    // Add a cloned pointer
+    void addClonedPointer(Value *raw, Value *cloned);
+    void addClonedPointer(const pVal &raw, const pVal &cloned);
 
     const auto &getRead() const { return read; }
     const auto &getWrite() const { return write; }

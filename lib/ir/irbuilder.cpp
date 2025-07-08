@@ -18,7 +18,7 @@ void IRBuilder::setInsertPoint(const pBlock &bb, BBInstIter insert_point_) {
 }
 void IRBuilder::setInsertPoint(const pInst &inst) {
     block = inst->getParent();
-    insert_point = inst->getIter();
+    insert_point = inst->iter();
 }
 
 #define MAKE_BINARY(Name, Op, IRName)                                                                                  \
