@@ -21,7 +21,14 @@ void IRPrinter::visit(Instruction &node) {
         write("  ");
     }
 
-    writeln(IRFormatter::formatInst(node));
+    auto inst_str = IRFormatter::formatInst(node);
+    const auto& dbg = node.getDbgData();
+    if (!dbg.empty()) {
+        inst_str += "        ;" + dbg[0];
+        for (size_t i = 1; i < dbg.size(); ++i)
+            inst_str += ", " + dbg[i];
+    }
+    writeln(inst_str);
 }
 
 void IRPrinter::visit(Function &node) {
@@ -169,7 +176,7 @@ PM::PreservedAnalyses PrintRangePass::run(Function &function, FAM &manager) {
     auto &ranges = manager.getResult<RangeAnalysis>(function);
     writeln("Range Analysis Result: ");
     writeln("Global Ranges: ");
-    for (const auto& param : function.getParams()) {
+    for (const auto &param : function.getParams()) {
         if (isSameType(param->getType(), makeBType(IRBTYPE::I32))) {
             auto r = ranges.getIntRange(param);
             writeln(param->getName(), ": ", r);
@@ -210,7 +217,7 @@ PM::PreservedAnalyses PrintRangePass::run(Function &function, FAM &manager) {
                     auto context_r = ranges.getFloatRange(inst, range_block);
                     auto r = ranges.getFloatRange(inst);
                     if (r != context_r)
-                    writeln(inst->getName(), " at block '", range_block->getName(), "': ", context_r);
+                        writeln(inst->getName(), " at block '", range_block->getName(), "': ", context_r);
                 }
             }
         }
@@ -221,13 +228,16 @@ PM::PreservedAnalyses PrintRangePass::run(Function &function, FAM &manager) {
 PM::PreservedAnalyses PrintLoopAAPass::run(Function &function, FAM &fam) {
     auto &loop_aa = fam.getResult<LoopAliasAnalysis>(function);
     writeln("Loop Oriented Alias Analysis Result: ");
+    std::vector<pVal> pointers;
     for (const auto &bb : function) {
         for (const auto &inst : bb->all_insts()) {
             if (inst->getType()->getTrait() != IRCTYPE::PTR)
                 continue;
-            auto loc = loop_aa.getAccessSet(inst);
+            const auto& loc = loop_aa.getAccessSet(inst);
             if (loc.untracked)
                 continue;
+
+            pointers.emplace_back(inst);
 
             writeln(inst->getName(), ":");
             writeln("  base: ", loc.base->getName());
@@ -235,11 +245,34 @@ PM::PreservedAnalyses PrintLoopAAPass::run(Function &function, FAM &fam) {
             writeln("  element size: ", loc.element_size);
             for (const auto &access : loc.accesses) {
                 writeln("  access: ");
-                writeln("    trip count: ", access.trip_count);
+                writeln("    trip count: ",
+                        (access.trip_count == AccessSet::Inf ? "Inf" : std::to_string(access.trip_count)));
                 writeln("    stride: ", access.stride);
             }
             writeln("-----------------");
         }
+    }
+
+    std::vector<std::vector<pVal>> must_alias;
+    for (const auto& ptr : pointers) {
+        bool found = false;
+        for (auto& group : must_alias) {
+            auto alias_info = loop_aa.getAliasInfo(group[0], ptr);
+            if (alias_info == AliasInfo::MustAlias) {
+                group.emplace_back(ptr);
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+            must_alias.emplace_back(std::vector{ptr});
+    }
+    writeln("Must Alias Group: ");
+    for (const auto& group : must_alias) {
+        write("  - ");
+        for (const auto& ptr : group)
+            write(ptr->getName(), "  ");
+        writeln("");
     }
     return PreserveAll();
 }

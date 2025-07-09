@@ -36,7 +36,6 @@
 
 namespace IR {
 class VectorizerPass : public PM::PassInfo<VectorizerPass> {
-private:
     struct AlignRewriter {
         friend class VectorizerPass;
         using Changes = std::vector<std::pair<pVal, int>>;
@@ -181,7 +180,6 @@ private:
         SchedData *getData(const pVal &val);
 
         bool hasMemAccess(const pInst &inst);
-        bool hasMemWrite(const pInst &inst);
 
         void initSchedData(BBInstIter from, BBInstIter to, SchedData *prev_mem_access, SchedData *next_mem_access);
 
@@ -191,12 +189,13 @@ private:
 
         bool inRegion(SchedData *sched) const;
 
+        bool isMemDependent(const pInst& inst1, const pInst& inst2) const;
         void updateDeps(SchedData *sched, bool insert_in_ready_list);
 
         template <typename ReadyListT> void schedule(SchedData *sched_data, ReadyListT &ready_list) {
             Err::gassert(sched_data->isReady(), "SchedData::schedule: not ready");
-            // if (slp_print_debug_message)
-            //     std::cerr << "Scheduling '" << sched_data->inst->getName() << "'" << std::endl;
+            if (slp_print_debug_message)
+                std::cerr << "Scheduling '" << sched_data->inst->getName() << "'" << std::endl;
 
             sched_data->is_sched = true;
 
@@ -235,6 +234,9 @@ private:
         bool tryScheduleBundle(const std::vector<pVal> &scalars);
 
         void cancelScheduling(const std::vector<pVal> &scalars);
+
+        std::string dumpSchedData(SchedData* bundle);
+        std::string dumpAllData();
     };
 
     Scheduler &getScheduler(const pBlock &block);
@@ -259,6 +261,7 @@ private:
 
     ConstantPool *cpool{};
     FAM *fam{};
+    Function* func;
     LoopAAResult *loop_aa{};
     pTarget target;
 
@@ -278,6 +281,7 @@ private:
 
     void reset() {
         fam = nullptr;
+        func = nullptr;
         cpool = nullptr;
         loop_aa = nullptr;
         target = nullptr;
@@ -288,6 +292,7 @@ private:
         must_gather.clear();
         external_users.clear();
         align_rewriter.reset();
+        rewritten_aligns.clear();
         next_region_id = 1;
     }
 
@@ -319,6 +324,8 @@ private:
     bool isAllSame(const std::vector<pVal> &scalars);
 
     bool isInSameBlock(const std::vector<pVal> &scalars);
+
+    bool canReuseExtract(const std::vector<pVal>& scalars);
 
     void buildTreeImpl(const std::vector<pVal> &scalars, int depth, int user_tree_idx);
 

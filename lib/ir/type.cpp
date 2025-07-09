@@ -3,6 +3,8 @@
 
 #include "ir/type.hpp"
 
+#include "ir/base.hpp"
+
 #include <algorithm>
 
 namespace IR {
@@ -139,5 +141,8 @@ bool isSameType(const pType &a, const pType &b) {
         return isSameType(a_fnty->getRet(), b_fnty->getRet());
     }
     return false;
+}
+bool isSameType(const pVal &v1, const pVal &v2) {
+    return isSameType(v1->getType(), v2->getType());
 }
 } // namespace IR

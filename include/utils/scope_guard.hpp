@@ -15,7 +15,7 @@ public:
         if (active)
             func();
     }
-    void dismiss() noexcept { active = false; }
+    void release() noexcept { active = false; }
 
 private:
     F func;

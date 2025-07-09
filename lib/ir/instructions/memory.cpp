@@ -47,6 +47,7 @@ STOREInst::STOREInst(const pVal &_value, const pVal &_ptr, int _align)
     : Instruction(OP::STORE, getStoreName(), makeBType(IRBTYPE::UNDEFINED)), align(_align) {
     addOperand(_value);
     addOperand(_ptr);
+    appendDbgData("name='" + getName() + "',");
 }
 
 pType STOREInst::getBaseType() const { return getValue()->getType(); }

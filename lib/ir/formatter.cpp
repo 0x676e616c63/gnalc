@@ -473,7 +473,6 @@ std::string IRFormatter::fSTOREInst(STOREInst &inst) {
     ret += formatValue(*(inst.getPtr()));
     ret += ", align ";
     ret += std::to_string(inst.getAlign());
-    ret += "        ;name = '" + inst.getName() + "'";
     return ret;
 }
 

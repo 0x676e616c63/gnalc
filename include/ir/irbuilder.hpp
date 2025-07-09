@@ -111,7 +111,12 @@ private:
             real_name += name;
 
         auto inst = std::make_shared<Type>(real_name, std::forward<Args>(args)...);
-        block->addInst(insert_point, std::dynamic_pointer_cast<Instruction>(inst));
+        if constexpr (std::is_same_v<Type, PHIInst>) {
+            block->addPhiInst(std::dynamic_pointer_cast<PHIInst>(inst));
+        }
+        else {
+            block->addInst(insert_point, std::dynamic_pointer_cast<Instruction>(inst));
+        }
         return inst;
     }
     template <typename Type, typename... Args> std::shared_ptr<Type> makeNamelessInst(Args &&...args) const {

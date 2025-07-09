@@ -379,10 +379,10 @@ public:
                 Err::gassert(btype != nullptr, "Unknown vector");
                 if (btype->getInner() == IRBTYPE::I32) {
                     auto vec_ci = vec.cproxy().get_i32_vector();
-                    changes[insert] = LatticeVal(ConstantProxy(cpool, vec_ci[index]));
+                    changes[inst] = LatticeVal(ConstantProxy(cpool, vec_ci[index]));
                 } else if (btype->getInner() == IRBTYPE::FLOAT) {
                     auto vec_cf = vec.cproxy().get_f32_vector();
-                    changes[insert] = LatticeVal(ConstantProxy(cpool, vec_cf[index]));
+                    changes[inst] = LatticeVal(ConstantProxy(cpool, vec_cf[index]));
                 } else
                     Err::unreachable("Unknown vector");
             } else if (vec.isNAC())

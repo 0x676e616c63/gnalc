@@ -38,18 +38,26 @@ BBInstIter Instruction::iter() const {
 
 bool Instruction::isCommutative() const {
     switch (opcode) {
-        case OP::ADD:
-        case OP::FADD:
-        case OP::MUL:
-        case OP::FMUL:
-        case OP::AND:
-        case OP::OR:
-        case OP::XOR:
-            return true;
-        default:
-            return false;
+    case OP::ADD:
+    case OP::FADD:
+    case OP::MUL:
+    case OP::FMUL:
+    case OP::AND:
+    case OP::OR:
+    case OP::XOR:
+        return true;
+    default:
+        return false;
     }
     return false;
+}
+
+const std::vector<std::string>& Instruction::getDbgData() const { return dbg_data; }
+void Instruction::appendDbgData(const std::string &data) {
+    dbg_data.emplace_back(data);
+}
+void Instruction::clearDbgData() {
+    dbg_data.clear();
 }
 
 void Instruction::accept(IRVisitor &visitor) { visitor.visit(*this); }

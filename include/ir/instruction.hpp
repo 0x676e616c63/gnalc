@@ -105,6 +105,7 @@ private:
     OP opcode;
     wpBlock parent = {}; // 隶属的basic block
     size_t inst_index = 0;
+    std::vector<std::string> dbg_data;
 
 public:
     // 此构造方法用于初始生成时，最开始没有划分Block，故parent为空
@@ -118,6 +119,10 @@ public:
     BBInstIter iter() const;
 
     bool isCommutative() const;
+
+    const std::vector<std::string>& getDbgData() const;
+    void appendDbgData(const std::string& data);
+    void clearDbgData();
 
     void accept(IRVisitor &visitor) override;
 

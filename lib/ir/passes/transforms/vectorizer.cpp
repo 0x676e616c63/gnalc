@@ -12,8 +12,11 @@
 #include "ir/instructions/memory.hpp"
 #include "ir/instructions/vector.hpp"
 #include "ir/irbuilder.hpp"
+#include "ir/match.hpp"
 #include "ir/passes/analysis/loop_alias_analysis.hpp"
 #include "ir/passes/analysis/target_analysis.hpp"
+#include "ir/passes/utilities/irprinter.hpp"
+#include "match/match.hpp"
 #include "utils/scope_guard.hpp"
 
 #include <set>
@@ -21,6 +24,8 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+
+using namespace Match;
 
 namespace IR {
 std::string dumpScalars(const std::vector<pVal> &scalars) {
@@ -52,6 +57,8 @@ std::string dumpScalars(const std::vector<pVal> &scalars) {
         else if (auto gep = s->as<GEPInst>())
             ss << "gep[" << gep->getName() << "](ptr: " << gep->getPtr()->getName()
                << ", index: " << gep->getIdxs()[0]->getName() << ") ";
+        else if (s->getVTrait() == ValueTrait::CONSTANT_LITERAL)
+            ss << s->getName() << " ";
         else
             ss << "unknown[" << s->getName() << "] ";
     }
@@ -225,17 +232,6 @@ bool VectorizerPass::Scheduler::hasMemAccess(const pInst &inst) {
     return false;
 }
 
-bool VectorizerPass::Scheduler::hasMemWrite(const pInst &inst) {
-    if (inst->is<STOREInst>())
-        return true;
-    if (auto call = inst->as<CALLInst>()) {
-        auto rw = getCallRWInfo(*fam, call);
-        if (!rw.write.empty())
-            return true;
-    }
-    return false;
-}
-
 void VectorizerPass::Scheduler::initSchedData(BBInstIter from, BBInstIter to, SchedData *prev_mem_access,
                                               SchedData *next_mem_access) {
     SchedData *curr_mem_access = prev_mem_access;
@@ -307,6 +303,77 @@ void VectorizerPass::Scheduler::resetSchedule() {
 
 bool VectorizerPass::Scheduler::inRegion(SchedData *sched) const { return sched->region_id == region_id; }
 
+struct InstRWInfo {
+    std::vector<pVal> read;
+    std::vector<pVal> write;
+    bool untracked = false;
+};
+
+InstRWInfo collectRWInfo(FAM *fam, const pInst &inst) {
+    if (auto load = inst->as<LOADInst>()) {
+        return {
+            .read = {load->getPtr()},
+            .write = {},
+            .untracked = false,
+        };
+    }
+    if (auto store = inst->as<STOREInst>()) {
+        return {
+            .read = {},
+            .write = {store->getPtr()},
+            .untracked = false,
+        };
+    }
+    if (auto call = inst->as<CALLInst>()) {
+        auto callrw = getCallRWInfo(*fam, call);
+        return {
+            .read = callrw.read,
+            .write = callrw.write,
+            .untracked = callrw.untracked,
+        };
+    }
+    Err::unreachable();
+    return {};
+}
+
+bool setMayAlias(LoopAAResult *loop_aa, const std::vector<pVal> &ptrs1, const std::vector<pVal> &ptrs2) {
+    for (const auto &ptr1 : ptrs1) {
+        for (const auto &ptr2 : ptrs2) {
+            if (loop_aa->getAliasInfo(ptr1, ptr2) != AliasInfo::NoAlias)
+                return true;
+        }
+    }
+    return false;
+}
+
+bool VectorizerPass::Scheduler::isMemDependent(const pInst &inst1, const pInst &inst2) const {
+    Err::gassert(inst1 != inst2);
+
+    // Quick path for two load/stores
+    if (!inst1->is<CALLInst>() && !inst2->is<CALLInst>()) {
+        if (inst1->is<LOADInst>() && inst2->is<LOADInst>())
+            return false;
+        auto loc1 = getMemLocation(inst1);
+        auto loc2 = getMemLocation(inst2);
+        return loop_aa->getAliasInfo(loc1, loc2) != AliasInfo::NoAlias;
+    }
+
+    auto rw1 = collectRWInfo(fam, inst1);
+    auto rw2 = collectRWInfo(fam, inst2);
+
+    if (rw1.untracked || rw2.untracked)
+        return true;
+
+    if (rw1.write.empty() && rw2.write.empty())
+        return false;
+
+    if (setMayAlias(loop_aa, rw1.read, rw2.write) || setMayAlias(loop_aa, rw1.write, rw2.write) ||
+        setMayAlias(loop_aa, rw1.write, rw2.read))
+        return true;
+
+    return false;
+}
+
 void VectorizerPass::Scheduler::updateDeps(SchedData *sched, bool insert_in_ready_list) {
     std::vector worklist{sched};
 
@@ -321,6 +388,8 @@ void VectorizerPass::Scheduler::updateDeps(SchedData *sched, bool insert_in_read
                 member->resetUnschedDeps();
 
                 // Use-def dependencies
+                // One instruction must be scheduled before its user, thus must be
+                // scheduling after its user is scheduled. So user is all its operands' dependency
                 for (auto user : member->inst->inst_users()) {
                     auto user_sched = getData(user);
                     if (user_sched && inRegion(user_sched->first_in_bundle)) {
@@ -334,18 +403,17 @@ void VectorizerPass::Scheduler::updateDeps(SchedData *sched, bool insert_in_read
                 }
 
                 // Memory dependencies
-                auto src_loc = getMemLocation(member->inst);
-                bool src_mod = hasMemWrite(member->inst);
+                // For memory operations, we can't
+                //   R W --> W R            (Read got wrong value)
+                //   W R --> R W            (Read got wrong value)
+                //   W_1 W_2 --> W_2 W_1    (Final memory state may be different)
+                // To preserve correctness, any write must remain after all preceding reads and writes.
+                // Therefore, each write introduces a dependency on all prior memory accesses --
+                // both reads and writes. In scheduling, a memory write is treated as a user of
+                // all preceding memory operations, which act as its operands.
                 auto dep_dest = member->next_mem_access;
                 while (dep_dest) {
-                    bool is_dep = src_mod || hasMemWrite(dep_dest->inst);
-
-                    if (is_dep) {
-                        auto modref = loop_aa->getInstModRefInfo(dep_dest->inst, src_loc, *fam);
-                        is_dep &= (modref == ModRefInfo::Mod || modref == ModRefInfo::ModRef);
-                    }
-
-                    if (is_dep) {
+                    if (isMemDependent(member->inst, dep_dest->inst)) {
                         dep_dest->mem_deps.emplace_back(member);
                         ++member->num_deps;
                         auto dest_bundle = dep_dest->first_in_bundle;
@@ -426,35 +494,7 @@ bool VectorizerPass::Scheduler::tryScheduleBundle(const std::vector<pVal> &scala
                          bundle->inst->getName(), "'.");
         if (slp_print_debug_message) {
             std::cerr << "Unscheduled Bundle:\n";
-            std::cerr << "Scalars: " << dumpScalars(scalars) << "\n";
-            auto member = bundle;
-            while (member) {
-                std::cerr << "Member: " << member->inst->getName() << "\n";
-                std::cerr << "  num_deps: " << member->num_deps << "\n";
-                std::cerr << "  num_unsched_deps: " << member->num_unsched_deps << "\n";
-                std::cerr << "  Users: \n";
-                for (auto user : member->inst->inst_users()) {
-                    auto user_bundle = getData(user);
-                    std::cerr << "    " << user->getName() << ": ";
-                    if (inRegion(user_bundle->first_in_bundle))
-                        std::cerr << (user_bundle->is_sched ? "Scheduled" : "Unscheduled") << "\n";
-                    else
-                        std::cerr << "Outside Region\n";
-                }
-                std::cerr << "  MemUsers (NOT MemDeps): \n";
-                std::vector<SchedData *> mem_users;
-                for (auto &sched_data : sched_data_list) {
-                    for (auto &mem : sched_data.mem_deps) {
-                        if (mem == member)
-                            mem_users.push_back(&sched_data);
-                    }
-                }
-                for (const auto &mem_user : mem_users) {
-                    std::cerr << "    " << mem_user->inst->getName() << ": "
-                              << (mem_user->is_sched ? "Scheduled" : "Unscheduled") << "\n";
-                }
-                member = member->next_in_bundle;
-            }
+            std::cerr << dumpSchedData(bundle);
         }
 
         cancelScheduling(scalars);
@@ -482,6 +522,62 @@ void VectorizerPass::Scheduler::cancelScheduling(const std::vector<pVal> &scalar
             dry_run_ready_list.insert(member);
         member = next;
     }
+}
+
+std::string VectorizerPass::Scheduler::dumpSchedData(SchedData *bundle) {
+    std::stringstream ss;
+    auto member = bundle;
+    std::vector<pVal> scalars;
+    while (member) {
+        scalars.emplace_back(member->inst);
+        member = member->next_in_bundle;
+    }
+    ss << "Bundle: " << bundle->inst->getName() << "\n";
+    ss << "Scalars: " << dumpScalars(scalars) << "\n";
+    member = bundle;
+    while (member) {
+        ss << "Member: " << member->inst->getName() << "\n";
+        ss << "  Operands: ";
+        for (auto op : member->inst->operands())
+            ss << op->getName() << " ";
+        ss << "\n";
+        ss << "  MemDeps: ";
+        for (auto &mem_dep : member->mem_deps)
+            ss << mem_dep->inst->getName() << " ";
+        ss << "\n";
+        ss << "  num_deps: " << member->num_deps << "\n";
+        ss << "  num_unsched_deps: " << member->num_unsched_deps << "\n";
+        ss << "  Users: \n";
+        for (auto user : member->inst->inst_users()) {
+            ss << "    " << user->getName() << ": ";
+            auto user_bundle = getData(user);
+            if (user_bundle && inRegion(user_bundle->first_in_bundle))
+                ss << (user_bundle->is_sched ? "Scheduled" : "Unscheduled") << "\n";
+            else
+                ss << "Outside Region\n";
+        }
+        ss << "  MemUsers (NOT MemDeps): \n";
+        std::vector<SchedData *> mem_users;
+        for (auto &sched_data : sched_data_list) {
+            for (auto &mem : sched_data.mem_deps) {
+                if (mem == member)
+                    mem_users.push_back(&sched_data);
+            }
+        }
+        for (const auto &mem_user : mem_users) {
+            ss << "    " << mem_user->inst->getName() << ": " << (mem_user->is_sched ? "Scheduled" : "Unscheduled")
+               << "\n";
+        }
+        member = member->next_in_bundle;
+    }
+    return ss.str();
+}
+
+std::string VectorizerPass::Scheduler::dumpAllData() {
+    std::string ret;
+    for (auto &sched_data : sched_data_list)
+        ret += dumpSchedData(&sched_data) + "\n";
+    return ret;
 }
 
 VectorizerPass::Scheduler &VectorizerPass::getScheduler(const pBlock &block) {
@@ -550,7 +646,7 @@ void VectorizerPass::collectSeeds(const pBlock &block) {
 
     for (const auto &inst : *block) {
         if (auto store = inst->as<STOREInst>()) {
-            if (store->getType()->is<VectorType>())
+            if (store->getValue()->getType()->is<VectorType>())
                 continue;
             seed_stores.emplace_back(store);
         }
@@ -603,6 +699,13 @@ bool VectorizerPass::vectorizeStoreChains() {
             chain_elem = links[chain_elem];
         }
 
+        if (slp_print_debug_message) {
+            std::cerr << "Vectorizing chain: " << chain[0]->getName();
+            for (size_t i = 1; i < chain.size(); i++)
+                std::cerr << " -> " << chain[i]->getName();
+            std::cerr << "\n";
+        }
+
         // Try to vectorize the chain with multiple VFs
         const auto max_size = target->getMaxVectorRegisterSize();
         const auto min_size = target->getMinVectorRegisterSize();
@@ -632,15 +735,18 @@ bool VectorizerPass::vectorizeStoreChain(const std::vector<pStore> &chain, size_
         deleteTree();
         buildTree(scalars);
         collectExternalUsers();
-        if (getTreeCost() < -Config::IR::SLP_COST_THRESHOLD) {
+        auto cost = getTreeCost();
+        if (cost < -Config::IR::SLP_COST_THRESHOLD) {
             vectorizeTrees();
             rewritten_aligns.clear();
             offset += vf;
             changed = true;
         } else {
+            Logger::logDebug("[SLP]: Vectorization canceled because the cost (", cost, ") is too high.");
             ++offset;
             for (const auto &re : rewritten_aligns)
                 align_rewriter.restoreInstAlign(re);
+            rewritten_aligns.clear();
         }
     }
     return changed;
@@ -711,6 +817,21 @@ bool VectorizerPass::isInSameBlock(const std::vector<pVal> &scalars) {
     auto same_block = scalars[0]->as<Instruction>()->getParent();
     return std::all_of(scalars.begin(), scalars.end(),
                        [&same_block](const pVal &v) { return v->as<Instruction>()->getParent() == same_block; });
+}
+
+bool VectorizerPass::canReuseExtract(const std::vector<pVal> &scalars) {
+    auto vec = scalars[0]->as<EXTRACTInst>()->getVector();
+    if (scalars.size() != vec->getType()->as<VectorType>()->getVectorSize())
+        return false;
+
+    for (size_t i = 0; i < scalars.size(); i++) {
+        auto extract = scalars[i]->as<EXTRACTInst>();
+        if (!match(extract->getIdx(), M::Is(static_cast<int>(i))))
+            return false;
+        if (extract->getVector() != vec)
+            return false;
+    }
+    return true;
 }
 
 void VectorizerPass::buildTreeImpl(const std::vector<pVal> &scalars, int depth, int user_tree_idx) {
@@ -815,11 +936,13 @@ void VectorizerPass::buildTreeImpl(const std::vector<pVal> &scalars, int depth, 
         return;
     }
     case OP::EXTRACT: {
-        // TODO: Reuse Extract
-        Logger::logDebug("[SLP]: TODO: Reuse Extract");
+        auto reuse = canReuseExtract(scalars);
+        if (reuse)
+            Logger::logDebug("[SLP]: Reusing extract: ", dumpScalars(scalars));
+        else
+            cancel_sched_and_gather();
 
-        cancel_sched_and_gather();
-        return;
+        newTree(scalars, reuse, user_tree_idx);
         return;
     }
     case OP::LOAD: {
@@ -1086,7 +1209,22 @@ int VectorizerPass::getBaseCost(const Tree &tree) {
     case OP::PHI:
         return 0;
     case OP::EXTRACT:
-        // TODO: Reuse
+        if (canReuseExtract(tree.scalars)) {
+            int dead_cost = 0;
+            for (int i = 0; i < tree.scalars.size(); ++i) {
+                auto extract = tree.scalars[i]->as<EXTRACTInst>();
+                // If all users are going to be vectorized, the extract will be vectorized eventually,
+                // thus can be considered as dead.
+                // In particular, if the extract has only one user, that user must be us and
+                // the extract will be vectorized for sure.
+                if (extract->getUseCount() == 1 || std::all_of(extract->user_begin(), extract->user_end(), [this](auto user) {
+                    return scalar_to_tree.count(user);
+                })) {
+                    dead_cost += target->getVecInstCost(OP::EXTRACT, vec_ty, i);
+                }
+            }
+            return -dead_cost;
+        }
         return getGatherCost(vec_ty);
     case OP::ZEXT:
     case OP::SEXT:
@@ -1251,6 +1389,23 @@ void VectorizerPass::printTree(std::ostream &os) {
 
         os << "Scalars: " << dumpScalars(vec_trees[i].scalars) << "\n";
 
+        std::vector<pVal> need_to_extract;
+        for (const auto &scalar : vec_trees[i].scalars) {
+            auto need = [&]() -> bool {
+                for (const auto &eu : external_users) {
+                    if (eu.scalar == scalar)
+                        return true;
+                }
+                return false;
+            }();
+            if (need)
+                need_to_extract.emplace_back(scalar);
+        }
+        os << "Need to Extract: ";
+        for (const auto &scalar : need_to_extract)
+            os << scalar->getName() << " ";
+        os << "\n";
+
         os << "User Tree Indices: ";
         for (auto &u : vec_trees[i].user_tree_indices)
             os << u << " ";
@@ -1373,6 +1528,7 @@ pVal VectorizerPass::vectorizeTree(Tree *tree) {
 
     if (tree->vec) {
         Logger::logDebug("[SLP]: Diamond merged for '", tree->vec->getName(), "'.");
+        dbg_guard.release();
         return tree->vec;
     }
 
@@ -1413,7 +1569,11 @@ pVal VectorizerPass::vectorizeTree(Tree *tree) {
         return vec_phi;
     }
     case OP::EXTRACT: {
-        // TODO: Reuse
+        if (canReuseExtract(tree->scalars)) {
+            auto vec = tree->scalars[0]->as<EXTRACTInst>()->getVector();
+            tree->vec = vec;
+            return vec;
+        }
         setInsertPointAfterBundle(tree->scalars);
         auto vec = gatherTree(tree->scalars, vec_ty);
         tree->vec = vec;
@@ -1599,8 +1759,23 @@ pVal VectorizerPass::vectorizeTree(Tree *tree) {
 }
 
 pVal VectorizerPass::vectorizeTrees() {
-    for (auto &sched : schedulers)
-        scheduleBlock(&sched.second);
+    if (slp_print_debug_message) {
+        // Sometimes this is too noisy even when debugging
+        auto &os = Util::null_stream();
+        // auto& os = std::cerr;
+        IRPrinter printer(os);
+        for (auto &sched : schedulers) {
+            os << "All Schedule Data: \n" << sched.second.dumpAllData() << "\n";
+            os << "Before Scheduling: \n";
+            sched.second.block->accept(printer);
+            scheduleBlock(&sched.second);
+            os << "After Scheduling: \n";
+            sched.second.block->accept(printer);
+        }
+    } else {
+        for (auto &sched : schedulers)
+            scheduleBlock(&sched.second);
+    }
 
     auto vec_root = vectorizeTree(&vec_trees[0]);
 
@@ -1610,7 +1785,7 @@ pVal VectorizerPass::vectorizeTrees() {
 
         // If we've replaced it before, skip it.
         // This can happen when a value is used multiple times by one user.
-        if (user && Util::contains(scalar->users(), user))
+        if (user && !Util::contains(scalar->users(), user))
             continue;
 
         auto tree = getTree(scalar);
@@ -1632,22 +1807,29 @@ pVal VectorizerPass::vectorizeTrees() {
                 inst->replaceAllOperands(scalar, extract);
             } else
                 Err::unreachable();
+
+            Logger::logDebug("[SLP]: Extracted '", tree->vec->getName(), "' for external users of '", scalar->getName(),
+                             "'.");
         }
     }
 
+    std::unordered_set<pInst> dead;
     for (const auto &tree : vec_trees) {
         if (tree.need_to_gather)
             continue;
 
         Err::gassert(tree.vec != nullptr);
-        std::unordered_set<pInst> dead;
         for (const auto &scalar : tree.scalars)
             dead.emplace(scalar->as<Instruction>());
-        (*dead.begin())
-            ->getParent()
-            ->delInstIf([&](const pInst &inst) { return dead.count(inst); }, BasicBlock::DEL_MODE::ALL);
+    }
+    for (const auto &block : *func) {
+        block->delInstIf([&](const pInst &inst) { return dead.count(inst); }, BasicBlock::DEL_MODE::ALL);
     }
 
+    // static int i = 0;
+    // for (const auto &d : dead) {
+    //     d->appendDbgData("SLPDead" + std::to_string(i++));
+    // }
     return vec_trees[0].vec;
 }
 
@@ -1659,6 +1841,7 @@ PM::PreservedAnalyses VectorizerPass::run(Function &function, FAM &fam) {
     bool vectorizer_inst_modified = false;
 
     this->fam = &fam;
+    func = &function;
     loop_aa = &fam.getResult<LoopAliasAnalysis>(function);
     align_rewriter.loop_aa = loop_aa;
     cpool = &function.getConstantPool();

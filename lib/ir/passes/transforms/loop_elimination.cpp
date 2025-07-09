@@ -218,6 +218,7 @@ PM::PreservedAnalyses LoopEliminationPass::run(Function &function, FAM &fam) {
             Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplified Form.");
             if (breakSingleTripRotatedLoop(loop, scev, loop_info)) {
                 loop_elim_cfg_modified = true;
+                scev.forgetAll();
                 continue;
             }
 

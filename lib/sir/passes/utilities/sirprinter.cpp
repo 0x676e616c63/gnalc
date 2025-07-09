@@ -126,7 +126,15 @@ void LinearPrinterBase::visit(Instruction &node) {
         writeln("continue");
     } else {
         indent();
-        writeln(IRFormatter::formatInst(node));
+
+        auto inst_str = IRFormatter::formatInst(node);
+        const auto& dbg = node.getDbgData();
+        if (!dbg.empty()) {
+            inst_str += "        ;" + dbg[0];
+            for (size_t i = 1; i < dbg.size(); ++i)
+                inst_str += ", " + dbg[i];
+        }
+        writeln(inst_str);
     }
 }
 

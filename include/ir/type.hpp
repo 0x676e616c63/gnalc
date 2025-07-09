@@ -251,6 +251,7 @@ pFuncType toFunctionType(const pType &ty);
 pType getElm(const pType &ty);
 
 bool isSameType(const pType &a, const pType &b);
+bool isSameType(const pVal &v1, const pVal &v2);
 
 /***********下列内容为NameClass相关**********/
 
