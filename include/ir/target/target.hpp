@@ -9,13 +9,33 @@
 #include "ir/instruction.hpp"
 
 namespace IR {
+enum class ShuffleKind {
+    Broadcast, // splat of a value
+    Reverse,   // Revere the order
+    Other      // Other
+};
+
+enum class OperandKind {
+    Any,               // Any
+    Uniform,           // uniform (splat of a value)
+    UniformConstant,   // uniform constant (splat of a constant)
+    NonUniformConstant // non-uniform constant
+};
+enum class OperandProp { None, PowerOfTwo };
+struct OperandTrait {
+    OperandKind kind = OperandKind::Any;
+    OperandProp prop = OperandProp::None;
+
+    static OperandTrait none() { return OperandTrait{OperandKind::Any, OperandProp::None}; }
+};
 class TargetInfo {
 public:
     virtual ~TargetInfo() = default;
-    virtual bool isInstSupported(OP op) = 0;
-    virtual bool isTypeSupported(const pType &type) = 0;
-    virtual bool isLibCallSupported(const std::string &lib_fn_name) = 0;
+    virtual bool isInstSupported(OP op) const = 0;
+    virtual bool isTypeSupported(const pType &type) const = 0;
+    virtual bool isLibCallSupported(const std::string &lib_fn_name) const = 0;
 
+    // Convenient wrappers
     bool isVectorSupported() {
         return isInstSupported(OP::INSERT) && isInstSupported(OP::EXTRACT) && isInstSupported(OP::SHUFFLE);
     }
@@ -23,12 +43,21 @@ public:
         return isInstSupported(OP::AND) && isInstSupported(OP::OR) && isInstSupported(OP::XOR) &&
                isInstSupported(OP::SHL) && isInstSupported(OP::LSHR) && isInstSupported(OP::ASHR);
     }
-    bool isSelectSupported() {
-        return isInstSupported(OP::SELECT);
-    }
-    bool isTypeSupported(IRBTYPE btype) {
-        return isTypeSupported(makeBType(btype));
-    }
+    bool isSelectSupported() { return isInstSupported(OP::SELECT); }
+    bool isTypeSupported(IRBTYPE btype) { return isTypeSupported(makeBType(btype)); }
+
+    // Vector is not required
+    virtual size_t getMaxVectorRegisterSize() const { Err::not_implemented(); }
+    virtual size_t getMinVectorRegisterSize() const { Err::not_implemented(); }
+
+    // Cost Model is not required
+    virtual int getVecInstCost(OP op, const pVecType &ty, size_t index) const { Err::not_implemented(); }
+    virtual int getShuffleCost(const pVecType &ty, ShuffleKind kind) const { Err::not_implemented(); }
+    virtual int getCastCost(OP op, const pType &src, const pType &dest) const { Err::not_implemented(); }
+    virtual int getCmpCost(OP op, const pType &val_ty) { Err::not_implemented(); }
+    virtual int getSelectCost(const pType &val_ty) { Err::not_implemented(); }
+    virtual int getBinaryCost(OP op, const pType &ty, OperandTrait lhs, OperandTrait rhs) { Err::not_implemented(); }
+    virtual int getMemCost(OP op, const pType &ty, int align) { Err::not_implemented(); }
 };
 } // namespace IR
 #endif //TARGET_HPP

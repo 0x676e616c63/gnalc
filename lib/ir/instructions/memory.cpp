@@ -37,10 +37,17 @@ bool LOADInst::isVectorLoad() const {
     return getType()->getTrait() == IRCTYPE::VECTOR;
 }
 
+// Unique Store Names For Quick Debug
+std::string getStoreName() {
+    static size_t i = 0;
+    return "__store" + std::to_string(i++);
+}
+
 STOREInst::STOREInst(const pVal &_value, const pVal &_ptr, int _align)
-    : Instruction(OP::STORE, "__store", makeBType(IRBTYPE::UNDEFINED)), align(_align) {
+    : Instruction(OP::STORE, getStoreName(), makeBType(IRBTYPE::UNDEFINED)), align(_align) {
     addOperand(_value);
     addOperand(_ptr);
+    appendDbgData("name='" + getName() + "',");
 }
 
 pType STOREInst::getBaseType() const { return getValue()->getType(); }

@@ -64,18 +64,18 @@ inline void gassert(bool b, const std::string &detail_ = "Assertion failed.",
     }
 }
 
-inline void todo(const std::string &detail_ = "", SourceLocation loc_ = SourceLocation::current()) {
+[[noreturn]] inline void todo(const std::string &detail_ = "", SourceLocation loc_ = SourceLocation::current()) {
     throw GnalcException("TODO: " + detail_, loc_);
 }
 
-inline void not_implemented(const std::string &detail_ = "", SourceLocation loc_ = SourceLocation::current()) {
+[[noreturn]] inline void not_implemented(const std::string &detail_ = "", SourceLocation loc_ = SourceLocation::current()) {
     throw GnalcException("Not implemented: " + detail_, loc_);
 }
 
-inline void unreachable(const std::string &detail_ = "", SourceLocation loc_ = SourceLocation::current()) {
+[[noreturn]] inline void unreachable(const std::string &detail_ = "", SourceLocation loc_ = SourceLocation::current()) {
     throw GnalcException("Unreachable: " + detail_, loc_);
 }
-inline void error(const std::string &detail_, SourceLocation loc_ = SourceLocation::current()) {
+[[noreturn]] inline void error(const std::string &detail_, SourceLocation loc_ = SourceLocation::current()) {
     throw GnalcException(detail_, loc_);
 }
 #else
@@ -85,12 +85,12 @@ inline void gassert(bool b, const std::string &detail_ = "Assertion failed.") {
     }
 }
 
-inline void todo(const std::string &detail_ = "") { throw GnalcException("TODO: " + detail_); }
+[[noreturn]] inline void todo(const std::string &detail_ = "") { throw GnalcException("TODO: " + detail_); }
 
-inline void not_implemented(const std::string &detail_ = "") { throw GnalcException("Not implemented: " + detail_); }
+[[noreturn]] inline void not_implemented(const std::string &detail_ = "") { throw GnalcException("Not implemented: " + detail_); }
 
-inline void unreachable(const std::string &detail_ = "") { throw GnalcException("Unreachable: " + detail_); }
-inline void error(const std::string &detail_) { throw GnalcException(detail_); }
+[[noreturn]] inline void unreachable(const std::string &detail_ = "") { throw GnalcException("Unreachable: " + detail_); }
+[[noreturn]] inline void error(const std::string &detail_) { throw GnalcException(detail_); }
 #endif
 } // namespace Err
 #endif

@@ -46,8 +46,7 @@ PHIInst::PhiOper PHIInst::PhiOperIterator::operator*() const {
 }
 
 pVal PHIInst::getValueForBlock(const pBlock &block) const {
-    if (block == nullptr)
-        Err::error("PHIInst::getValueForBlock(): block is null.");
+    Err::gassert(block != nullptr, "PHIInst::getValueForBlock(): block is null.");
     for (auto it = operand_begin(); it != operand_end(); ++it) {
         ++it;
         if (*it == block)
@@ -57,14 +56,26 @@ pVal PHIInst::getValueForBlock(const pBlock &block) const {
     return nullptr;
 }
 
-pBlock PHIInst::getBlockForValue(Use* use) const {
+pBlock PHIInst::getBlockForValue(Use *use) const {
     Err::gassert(use->getValue()->getVTrait() != ValueTrait::BASIC_BLOCK);
-    const auto& operands = getOperands();
+    const auto &operands = getOperands();
     for (auto it = operands.begin(); it != operands.end(); ++it) {
         if (it->get() == use)
             return (*(it + 1))->getValue()->as<BasicBlock>();
     }
     return nullptr;
+}
+
+void PHIInst::setValueForBlock(const pBlock & block, const pVal &val) const {
+    Err::gassert(block != nullptr, "PHIInst::setValueForBlock(): block is null.");
+    for (auto it = operand_begin(); it != operand_end(); ++it) {
+        ++it;
+        if (*it == block) {
+            (*--it) = val;
+            return;
+        }
+    }
+    Err::unreachable("Not a pred block.");
 }
 
 void PHIInst::addPhiOper(const pVal &val, const pBlock &blk) {
@@ -106,6 +117,10 @@ bool PHIInst::hasBlock(const pBlock &target) {
             return true;
     }
     return false;
+}
+
+size_t PHIInst::getNumIncomings() const {
+    return getNumOperands() / 2;
 }
 
 void PHIInst::accept(IRVisitor &visitor) { visitor.visit(*this); }

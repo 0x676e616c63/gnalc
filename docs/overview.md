@@ -866,6 +866,7 @@ graph TD
 - Advanced Compiler Design & Implementation
 - Compilers: Principles, Techniques, and Tools Second Edition
 - 深入理解 LLVM：代码生成
+- 多面体编译理论与深度学习实践
 - [Compiler Optimizations for a Time-constrained Environment](http://digitalcommons.macalester.edu/mathcs_honors/8/)
 - [The LLVM Project Blog](https://blog.llvm.org/)
 - [Enna1’s study notes about LLVM](https://llvm-study-notes.readthedocs.io/en/latest/index.html)

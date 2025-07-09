@@ -53,6 +53,50 @@ pConstF32Vec ConstantPool::getConst(const std::vector<float> &val) {
     return it->getConstantFloatVector();
 }
 
+pVal ConstantPool::getZero(const pType &type) {
+    if (auto btype = type->as<BType>()) {
+        switch (btype->getInner()) {
+        case IRBTYPE::I1:
+            return getConst(false);
+        case IRBTYPE::I8:
+            return getConst(static_cast<char>(0));
+        case IRBTYPE::I32:
+            return getConst(0);
+        case IRBTYPE::I64:
+            return getConst(static_cast<int64_t>(0));
+        case IRBTYPE::I128:
+            return getConst(static_cast<int128_t>(0));
+        case IRBTYPE::FLOAT:
+            return getConst(0.0f);
+        default:
+            Err::unreachable("Not a Constant Type.");
+        }
+    }
+
+    if (auto vec_ty = type->as<VectorType>()) {
+        auto elm_ty = vec_ty->getElmType();
+        if (auto btype = elm_ty->as<BType>()) {
+            switch (btype->getInner()) {
+            case IRBTYPE::I32:
+                return getConst(std::vector<int>(vec_ty->getVectorSize(), 0));
+            case IRBTYPE::FLOAT:
+                return getConst(std::vector<float>(vec_ty->getVectorSize(), 0.0f));
+            case IRBTYPE::I1:
+            case IRBTYPE::I8:
+            case IRBTYPE::I64:
+            case IRBTYPE::I128:
+                Err::not_implemented("Vector of such integer types not supported yet");
+            default:
+                Err::unreachable("Not a Constant Type.");
+            }
+        }
+        Err::not_implemented("Vector of complex types not supported yet.");
+    }
+
+    Err::unreachable("Not a Constant Type");
+    return nullptr;
+}
+
 int ConstantPool::cleanPool() {
     int count = 0;
     for (auto it = pool.begin(); it != pool.end();) {

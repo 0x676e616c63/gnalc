@@ -67,6 +67,9 @@ bool hasSideEffect(FAM &fam, const pBlock& block);
 // Check if the loop has side effect
 bool hasSideEffect(FAM &fam, const Loop* loop);
 bool hasSideEffect(FAM &fam, const pLoop& loop);
+
+pVal getMemLocation(Value* i);
+pVal getMemLocation(const pVal &i);
 } // namespace IR
 
 #endif

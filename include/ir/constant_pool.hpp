@@ -36,6 +36,7 @@ public:
     pConstI32Vec getConst(const std::vector<int>& val);
     pConstF32Vec getConst(const std::vector<float>& val);
 
+    pVal getZero(const pType &type);
 
     int cleanPool();
 

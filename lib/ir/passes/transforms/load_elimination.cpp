@@ -38,7 +38,7 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                 if (auto store = (*inst_rit)->as<STOREInst>()) {
                     auto store_ptr = store->getPtr();
                     auto aa = aa_res.getAliasInfo(load_ptr, store_ptr);
-                    if (aa == AliasInfo::MustAlias) {
+                    if (aa == AliasInfo::MustAlias && isSameType(load_ptr, store_ptr)) {
                         load->replaceSelf(store->getValue());
                         unused_load.insert(load);
                         replaced = true;
@@ -54,7 +54,7 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                 } else if (auto load2 = (*inst_rit)->as<LOADInst>()) {
                     auto load2_ptr = load2->getPtr();
                     auto aa = aa_res.getAliasInfo(load_ptr, load2_ptr);
-                    if (aa == AliasInfo::MustAlias) {
+                    if (aa == AliasInfo::MustAlias && isSameType(load_ptr, load2_ptr)) {
                         load->replaceSelf(load2);
                         unused_load.insert(load);
                         replaced = true;
@@ -157,7 +157,7 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                         if (auto store = inst->as<STOREInst>()) {
                             auto store_ptr = store->getPtr();
                             auto aa = aa_res.getAliasInfo(load_ptr, store_ptr);
-                            if (aa == AliasInfo::MustAlias) {
+                            if (aa == AliasInfo::MustAlias && isSameType(load_ptr, store_ptr)) {
                                 candidates.emplace_back(store);
                                 break;
                             }
@@ -168,7 +168,7 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                         } else if (auto load2 = inst->as<LOADInst>()) {
                             auto load2_ptr = load2->getPtr();
                             auto aa = aa_res.getAliasInfo(load_ptr, load2_ptr);
-                            if (aa == AliasInfo::MustAlias) {
+                            if (aa == AliasInfo::MustAlias && isSameType(load_ptr, load2_ptr)) {
                                 candidates.emplace_back(load2);
                                 break;
                             }

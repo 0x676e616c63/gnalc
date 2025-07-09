@@ -49,5 +49,10 @@ private:
     BegIterT begin_it;
     EndIterT end_it;
 };
+
+template <typename R, typename E>
+bool contains(R &&range, const E &elem) {
+    return std::find(std::begin(range), std::end(range), elem) != std::end(range);
+}
 } // namespace Util
 #endif

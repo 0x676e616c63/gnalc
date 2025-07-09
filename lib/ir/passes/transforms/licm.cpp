@@ -18,7 +18,8 @@
 namespace IR {
 // is_doing_aggressive_licm: if this move violates control flow equivalent.
 // This could lead to a better performance, but causes partial redundancy.
-bool isSafeToMove(const pLoop &loop, const pInst &inst, BasicAAResult &aa_res, FAM &fam, bool is_doing_aggressive_licm) {
+bool isSafeToMove(const pLoop &loop, const pInst &inst, BasicAAResult &aa_res, FAM &fam,
+                  bool is_doing_aggressive_licm) {
     // Only move what we know
     // Do not hoist cmp for codegen
     if (!inst->is<BinaryInst, FNEGInst, CALLInst, LOADInst, STOREInst, GEPInst, CastInst>())
@@ -111,6 +112,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                 // Visit blocks that near the exit first
                 std::sort(loop_blocks.begin(), loop_blocks.end(),
                           [&rpo_index](const auto &a, const auto &b) { return rpo_index[a] > rpo_index[b]; });
+                auto exits = loop->getExitBlocks();
                 for (const auto &bb : loop_blocks) {
                     std::set<pInst> dead_insts;
                     // Sink instructions that near the exit first
@@ -121,12 +123,11 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                             // Keep track of the instructions we sunk.
                             // exit block -> new version
                             std::map<pBlock, pInst> sunk_insts;
-                            auto exits = loop->getExitBlocks();
                             for (const auto &exit : exits) {
                                 if (domtree.ADomB(bb, exit)) {
                                     auto sunk = makeClone(inst);
                                     if (inst->getType()->getTrait() == IRCTYPE::PTR)
-                                        aa_res.addClonedInst(inst, sunk);
+                                        aa_res.addClonedPointer(inst, sunk);
                                     sunk->setName(inst->getName() + ".licm.s" + std::to_string(name_cnt++));
                                     exit->addInstAfterPhi(sunk);
                                     sunk_insts[exit] = sunk;
@@ -145,7 +146,7 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                                                         avail_phi->addPhiOper(oper, pred);
                                                     exit->addPhiInst(avail_phi);
                                                     if (oper->getType()->getTrait() == IRCTYPE::PTR)
-                                                        aa_res.addClonedInst(oper, avail_phi);
+                                                        aa_res.addClonedPointer(oper, avail_phi);
                                                 }
                                                 use->setValue(avail_phi);
                                             }
@@ -156,7 +157,6 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                                 }
                             }
 
-                            // If the instruction dominates no exit, sink them is not safe.
                             if (sunk_insts.empty())
                                 continue;
 
@@ -190,8 +190,14 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                             licm_inst_modified = true;
                         }
                     }
-                    bb->delInstIf(
-                        [&dead_insts](const auto &inst) { return dead_insts.find(inst) != dead_insts.end(); });
+                    bb->delInstIf([&dead_insts](const auto &inst) { return dead_insts.find(inst) != dead_insts.end(); },
+                                  BasicBlock::DEL_MODE::ALL);
+                    // Don't forget to delete the unused sunk insts or LCSSA phi.
+                    for (const auto &exit : exits) {
+                        exit->delInstIf(
+                            [&dead_insts](const auto &inst) { return dead_insts.find(inst) != dead_insts.end(); },
+                            BasicBlock::DEL_MODE::ALL);
+                    }
                 }
             }
             //
@@ -217,16 +223,16 @@ PM::PreservedAnalyses LICMPass::run(Function &function, FAM &fam) {
                     std::vector<pInst> to_hoist;
                     for (const auto &inst : *bb) {
                         if (isSafeToMove(loop, inst, aa_res, fam, is_doing_aggressive_licm)) {
-                            auto invariant = std::all_of(inst->operand_begin(), inst->operand_end(),
-                                                         [&loop, to_hoist](const auto &val) {
-                                                             if (auto inst = val->template as<Instruction>()) {
-                                                                 auto it = std::find(to_hoist.begin(), to_hoist.end(), inst);
-                                                                 if (it != to_hoist.end())
-                                                                     return true;
-                                                                 return !loop->contains(inst->getParent());
-                                                             }
-                                                             return true;
-                                                         });
+                            auto invariant = std::all_of(
+                                inst->operand_begin(), inst->operand_end(), [&loop, to_hoist](const auto &val) {
+                                    if (auto inst = val->template as<Instruction>()) {
+                                        auto it = std::find(to_hoist.begin(), to_hoist.end(), inst);
+                                        if (it != to_hoist.end())
+                                            return true;
+                                        return !loop->contains(inst->getParent());
+                                    }
+                                    return true;
+                                });
                             if (invariant)
                                 to_hoist.emplace_back(inst);
                         }

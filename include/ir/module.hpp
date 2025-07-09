@@ -67,6 +67,7 @@ public:
     void removeUnusedFuncs();
 
     template <typename T> auto getConst(T &&val) { return constant_pool.getConst(std::forward<T>(val)); }
+    pVal getZero(const pType &type) { return constant_pool.getZero(type); }
 
     const_iterator begin() const;
     const_iterator end() const;

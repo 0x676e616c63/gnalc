@@ -16,6 +16,10 @@ void IRBuilder::setInsertPoint(const pBlock &bb, BBInstIter insert_point_) {
     block = bb;
     insert_point = insert_point_;
 }
+void IRBuilder::setInsertPoint(const pInst &inst) {
+    block = inst->getParent();
+    insert_point = inst->iter();
+}
 
 #define MAKE_BINARY(Name, Op, IRName)                                                                                  \
     pBinary IRBuilder::make##Name(const pVal &lhs, const pVal &rhs, const std::string &name) const {                   \
@@ -46,6 +50,28 @@ pBinary IRBuilder::makeBinary(OP op, const pVal &lhs, const pVal &rhs, const std
 
 pFneg IRBuilder::makeFNeg(const pVal &val, const std::string &name) const {
     return makeInst<FNEGInst>(name, "fneg", val);
+}
+
+pCast IRBuilder::makeCast(OP op, const pVal &val, const pType &type, const std::string &name) const {
+    switch (op) {
+    case OP::ZEXT:
+        return makeZext(val, type->as<BType>()->getInner(), name);
+    case OP::SEXT:
+        return makeSext(val, type->as<BType>()->getInner(), name);
+    case OP::BITCAST:
+        return makeBitcast(val, type, name);
+    case OP::FPTOSI:
+        Err::gassert(val->getType()->isFloatingPoint() && type->isInteger(),
+            "Invalid cast type.");
+        return makeFptosi(val, name);
+    case OP::SITOFP:
+        Err::gassert(val->getType()->isInteger() && type->isFloatingPoint(),
+            "Invalid cast type.");
+        return makeSitofp(val, name);
+    default:
+        Err::unreachable("Not a cast op.");
+    }
+    return nullptr;
 }
 pZext IRBuilder::makeZext(const pVal &val, IRBTYPE type, const std::string &name) const {
     return makeInst<ZEXTInst>(name, "zext", val, type);

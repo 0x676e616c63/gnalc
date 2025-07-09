@@ -68,7 +68,7 @@ bool BasicBlock::delNextBB(const pBlock &bb) {
 void BasicBlock::addInst(const pInst &inst) {
     Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
     Err::gassert(inst->getOpcode() != OP::PHI, "Do not add a phi via addInst. Use addPhiInst instead.");
-    inst->index = phi_insts.size() + insts.size();
+    inst->inst_index = phi_insts.size() + insts.size();
     insts.emplace_back(inst);
     inst->setParent(as<BasicBlock>());
 }
@@ -94,8 +94,8 @@ void BasicBlock::addInstBeforeTerminator(const pInst &inst) {
     Err::gassert(inst->getOpcode() != OP::PHI, "Do not add a phi via addInstBeforeTerminator. Use addPhiInst instead.");
     auto term = getTerminator();
     Err::gassert(term->getOpcode() == OP::BR || term->getOpcode() == OP::RET);
-    term->index = phi_insts.size() + insts.size();
-    inst->index = term->index - 1;
+    term->inst_index = phi_insts.size() + insts.size();
+    inst->inst_index = term->inst_index - 1;
     insts.insert(std::prev(insts.end()), inst);
     inst->setParent(as<BasicBlock>());
 }
@@ -122,9 +122,9 @@ void BasicBlock::updateInstIndex() {
     if (!inst_index_valid) {
         size_t i = 0;
         for (const auto &inst : phi_insts)
-            inst->index = i++;
+            inst->inst_index = i++;
         for (const auto &inst : insts)
-            inst->index = i++;
+            inst->inst_index = i++;
         inst_index_valid = true;
     }
 }
@@ -207,7 +207,7 @@ pBr BasicBlock::getBRInst() const { return getTerminator()->as<BRInst>(); }
 pRet BasicBlock::getRETInst() const { return getTerminator()->as<RETInst>(); }
 
 BBInstIter BasicBlock::getEndInsertPoint() const {
-    auto point = getTerminator()->getIter();
+    auto point = getTerminator()->iter();
     auto br = getBRInst();
     if (!br || !br->isConditional())
         return point;
@@ -216,10 +216,10 @@ BBInstIter BasicBlock::getEndInsertPoint() const {
             Logger::logWarning("Cond '", cond_inst->getName(), "' and BRInst are in separate block.");
         else if (cond_inst->getUseCount() != 1)
             Logger::logWarning("Cond '", cond_inst->getName(), "' has multiple uses. (possibly more than one BRInst)");
-        else if (std::next(cond_inst->getIter()) != point)
+        else if (std::next(cond_inst->iter()) != point)
             Logger::logWarning("[VerifyPass]: Cond '", cond_inst->getName(), "' and BRInst are not consecutive.");
         else
-            return cond_inst->getIter();
+            return cond_inst->iter();
     }
     return point;
 }

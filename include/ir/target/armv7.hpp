@@ -12,7 +12,7 @@
 namespace IR {
 class ARMv7TargetInfo : public TargetInfo {
 public:
-    bool isInstSupported(OP op) override {
+    bool isInstSupported(OP op) const override {
         switch (op) {
         case OP::AND:
         case OP::OR:
@@ -33,14 +33,12 @@ public:
         }
         return true;
     }
-    bool isTypeSupported(const pType& type) override {
+    bool isTypeSupported(const pType &type) const override {
         if (type->isI64() || type->isI128())
             return false;
         return true;
     }
-    bool isLibCallSupported(const std::string &lib_fn_name) override {
-        return true;
-    }
+    bool isLibCallSupported(const std::string &lib_fn_name) const override { return true; }
 };
-}
+} // namespace IR
 #endif //TARGET_HPP

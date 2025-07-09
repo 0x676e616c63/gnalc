@@ -157,7 +157,7 @@ pVal SCEVHandle::expandSCEVExpr(SCEVExpr *expr, const pBlock &block, BasicBlock:
 }
 
 pVal SCEVHandle::expandSCEVExpr(SCEVExpr *expr, const pBlock &block) const {
-    return expandSCEVExpr(expr, block, block->getTerminator()->getIter());
+    return expandSCEVExpr(expr, block, block->getTerminator()->iter());
 }
 
 pVal SCEVHandle::expandSCEVExprImpl(SCEVExpr *expr, const pBlock &block, BasicBlock::iterator insert_before,

@@ -78,7 +78,7 @@ bool propagateExitValues(Loop &loop, SCEVHandle &scev, bool onlyConstant) {
                 if (onlyConstant &&
                     (!expr->isIRValue() || expr->getIRValue()->getVTrait() != ValueTrait::CONSTANT_LITERAL))
                     continue;
-                auto exit_value = scev.expandSCEVExpr(expr, user_block, user_inst->getIter());
+                auto exit_value = scev.expandSCEVExpr(expr, user_block, user_inst->iter());
                 if (exit_value != nullptr) {
                     use->setValue(exit_value);
                     modified = true;
@@ -218,6 +218,7 @@ PM::PreservedAnalyses LoopEliminationPass::run(Function &function, FAM &fam) {
             Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplified Form.");
             if (breakSingleTripRotatedLoop(loop, scev, loop_info)) {
                 loop_elim_cfg_modified = true;
+                scev.forgetAll();
                 continue;
             }
 

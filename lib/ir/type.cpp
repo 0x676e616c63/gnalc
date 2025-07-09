@@ -3,6 +3,8 @@
 
 #include "ir/type.hpp"
 
+#include "ir/base.hpp"
+
 #include <algorithm>
 
 namespace IR {
@@ -31,11 +33,20 @@ bool Type::isF32() const {
     auto a = as_raw<BType>();
     return a && a->getInner() == IRBTYPE::FLOAT;
 }
-bool Type::isInteger() const {
-    return isI1() || isI8() || isI32() || isI64() || isI128();
+bool Type::isInteger() const { return isI1() || isI8() || isI32() || isI64() || isI128(); }
+bool Type::isFloatingPoint() const { return isF32(); }
+bool Type::isVec() const { return as_raw<VectorType>(); }
+bool Type::isIntVec() const {
+    auto vec = as_raw<VectorType>();
+    return vec && vec->getElmType()->isInteger();
 }
-bool Type::isFloatingPoint() const {
-    return isF32();
+bool Type::isFPVec() const {
+    auto vec = as_raw<VectorType>();
+    return vec && vec->getElmType()->isFloatingPoint();
+}
+bool Type::is128BitVec() const {
+    auto vec = as_raw<VectorType>();
+    return vec && vec->getBytes() == 16;
 }
 bool Type::isVoid() const {
     auto a = as_raw<BType>();
@@ -130,5 +141,8 @@ bool isSameType(const pType &a, const pType &b) {
         return isSameType(a_fnty->getRet(), b_fnty->getRet());
     }
     return false;
+}
+bool isSameType(const pVal &v1, const pVal &v2) {
+    return isSameType(v1->getType(), v2->getType());
 }
 } // namespace IR

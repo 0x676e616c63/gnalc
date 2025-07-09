@@ -12,21 +12,27 @@
 namespace IR {
 class RV64TargetInfo : public TargetInfo {
 public:
-    bool isInstSupported(OP op) override {
-        if (op == OP::SELECT)
+    bool isInstSupported(OP op) const override {
+        // vector todo
+        switch (op) {
+        case OP::SHUFFLE:
+        case OP::INSERT:
+        case OP::EXTRACT:
+        case OP::SELECT:
             return false;
+        default:
+            return true;
+        }
         return true;
     }
-    bool isTypeSupported(const pType& type) override {
+    bool isTypeSupported(const pType &type) const override {
         if (type->isI128())
             return false;
         return true;
     }
 
     // bare metal
-    bool isLibCallSupported(const std::string &lib_fn_name) override {
-        return false;
-    }
+    bool isLibCallSupported(const std::string &lib_fn_name) const override { return false; }
 };
-}
+} // namespace IR
 #endif //TARGET_HPP

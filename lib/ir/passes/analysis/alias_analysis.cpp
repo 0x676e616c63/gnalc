@@ -187,4 +187,15 @@ bool hasSideEffect(FAM &fam, const Loop *loop) {
     return false;
 }
 bool hasSideEffect(FAM &fam, const pLoop &loop) { return hasSideEffect(fam, loop.get()); }
+
+pVal getMemLocation(Value *i) {
+    if (auto load = i->as_raw<LOADInst>())
+        return load->getPtr();
+    if (auto store = i->as_raw<STOREInst>())
+        return store->getPtr();
+    return nullptr;
+}
+pVal getMemLocation(const pVal &i) {
+    return getMemLocation(i.get());
+}
 } // namespace IR

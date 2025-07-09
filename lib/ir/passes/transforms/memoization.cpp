@@ -408,7 +408,7 @@ PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
     auto ret = f_builder.makeRet(cached_ret);
 
     if (emit_debug_inst) {
-        IRBuilder dbg_builder(has_val_bb, found_br->getIter());
+        IRBuilder dbg_builder(has_val_bb, found_br->iter());
         auto putch_fn = function.getParent()->lookupFunction("@putch");
 
         // entry_front:
@@ -434,7 +434,7 @@ PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
 
         auto exit_ret = exit_bb->getRETInst();
 
-        IRBuilder r_builder(exit_bb, exit_ret->getIter());
+        IRBuilder r_builder(exit_bb, exit_ret->iter());
         // Store has_val
         auto store_has_val = r_builder.makeStore(function.getConst(1), base_bc);
 

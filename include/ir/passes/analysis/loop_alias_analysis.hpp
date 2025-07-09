@@ -10,13 +10,15 @@
 // Warning: This pass must be run after PromotePass, since it do NOT handle pointers over scalar values.
 //
 // Reference:
-// - "Loop-Oriented Array- and Field-Sensitive Pointer Analysis for Automatic SIMD Vectorization"
+//  - "Loop-Oriented Array- and Field-Sensitive Pointer Analysis for Automatic SIMD Vectorization"
 //      https://yuleisui.github.io/publications/lctes16.pdf
+//  - 多面体编译理论与深度学习实践 第三章 依赖关系分析
 #pragma once
 #ifndef GNALC_IR_PASSES_ANALYSIS_LOOP_ALIAS_ANALYSIS_HPP
 #define GNALC_IR_PASSES_ANALYSIS_LOOP_ALIAS_ANALYSIS_HPP
 
 #include "ir/instructions/control.hpp"
+#include "ir/instructions/memory.hpp"
 #include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
 #include "ir/passes/pass_manager.hpp"
@@ -33,6 +35,7 @@ struct AccessSet {
     Value *base;
     size_t offset;
     std::vector<AccessPair> accesses;
+    size_t element_size;
     bool untracked;
 
     bool operator==(const AccessSet &set) const;
@@ -48,13 +51,12 @@ struct AccessSet {
     std::optional<size_t> getFullAccessRange() const;
 };
 
+bool overlap(const AccessSet &set1, const AccessSet &set2);
 
 class LoopAAResult : public AAResult {
     friend class LoopAliasAnalysis;
 
 public:
-    bool overlap(const AccessSet &lhs, const AccessSet &rhs) const;
-
     AliasInfo getAliasInfo(Value *v1, Value *v2) const override;
     AliasInfo getAliasInfo(const pVal &v1, const pVal &v2) const override;
 
@@ -63,6 +65,9 @@ public:
 
     bool isV2NextToV1(Value *v1, Value *v2) const;
     bool isV2NextToV1(const pVal &v1, const pVal &v2) const;
+
+    bool isConsecutiveAccess(Value* inst1, Value* inst2) const;
+    bool isConsecutiveAccess(const pVal& inst1, const pVal& inst2) const;
 
     int getAlignOnBase(Value *value) const;
     int getAlignOnBase(const pVal &value) const;

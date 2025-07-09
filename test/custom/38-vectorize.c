@@ -1,26 +1,66 @@
-void foo(int A[], int B[], int C[], int D[]) {
-    A[0] = B[0] * C[0] + D[7];
-    A[1] = B[1] * C[1] + D[6];
-    A[2] = B[2] * C[2] + D[5];
-    A[3] = B[3] * C[3] + D[4];
-    A[4] = B[4] * C[4] + D[3];
-    A[5] = B[5] * C[5] + D[2];
-    A[6] = B[6] * C[6] + D[1];
-    A[7] = B[7] * C[7] + D[0];
-}
 int main() {
-    int a[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    int b, c, d, e, f, g, h, j, k;
-    int i = getch();
-    b = a[i+0];
-    c = 5;
-    d = b + c;
-    e = a[i+1];
-    f = 6;
-    g = e + f;
-    h = a[i+2];
-    j = 7;
-    k = h + j;
-    i = i + 1;
-    putarray(10, a);
+	int a=0;
+	int i = 0;
+	while (i < 1) {
+		int j = 0;
+		while (j < 1) {
+			int k = 0;
+			while (k < 2) {
+				int ii = 0;
+				while (ii < 3) {
+					int jj = 0;
+					while (jj < 5) {
+						int kk = 0;
+						while (kk < 4) {
+							int iii = 0;
+							while (iii < 6) {
+								int jjj = 0;
+								while (jjj < 5) {
+									int kkk = 0;
+									while (kkk < 5) {
+										int iiii = 0;
+										while (iiii < 3) {
+											int jjjj = 0;
+											while (jjjj < 2) {
+												int kkkk = 0;
+												while (kkkk < 5) {
+													int iiiii = 0;
+													while (iiiii < 5) {
+														int jjjjj = 0;
+														while (jjjjj < 3) {
+															int kkkkk = 0;
+															while (kkkkk < 6) {																
+																a = (a + 3) % 999;																		
+																kkkkk = kkkkk + 3;
+															}
+															jjjjj = jjjjj + 1;
+														}
+														iiiii = iiiii + 2;
+													}
+													kkkk = kkkk + 2;
+												}
+												jjjj = jjjj + 2;
+											}
+											iiii = iiii + 1;
+										}
+										kkk = kkk + 1;
+									}
+									jjj = jjj + 1;
+								}
+								iii = iii + 1;
+							}
+							kk = kk + 1;
+						}
+						jj = jj + 1;
+					}
+					ii = ii + 1;
+				}
+				k  = k  + 1;
+			}
+			j = j + 1;
+		}
+		i = i + 1;
+	}
+
+	return a;
 }

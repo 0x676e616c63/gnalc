@@ -24,6 +24,7 @@
 
 namespace IR {
 class IRBuilder {
+    friend class InsertPointGuard;
 private:
     BBInstIter insert_point;
     pBlock block;
@@ -41,6 +42,7 @@ public:
 
     void setNamePrefix(const std::string &name_prefix_);
     void setInsertPoint(const pBlock &bb, BBInstIter insert_point_);
+    void setInsertPoint(const pInst &inst);
 
     pBinary makeBinary(OP op, const pVal &lhs, const pVal &rhs, const std::string &name = "") const;
     pBinary makeAdd(const pVal &lhs, const pVal &rhs, const std::string &name = "") const;
@@ -61,6 +63,7 @@ public:
     pBinary makeFDiv(const pVal &lhs, const pVal &rhs, const std::string &name = "") const;
     pBinary makeFRem(const pVal &lhs, const pVal &rhs, const std::string &name = "") const;
 
+    pCast makeCast(OP op, const pVal &val, const pType &type, const std::string &name = "") const;
     pZext makeZext(const pVal &val, IRBTYPE type, const std::string &name = "") const;
     pSext makeSext(const pVal &val, IRBTYPE type, const std::string &name = "") const;
     pBitcast makeBitcast(const pVal &val, const pType &type, const std::string &name = "") const;
@@ -108,13 +111,33 @@ private:
             real_name += name;
 
         auto inst = std::make_shared<Type>(real_name, std::forward<Args>(args)...);
-        block->addInst(insert_point, std::dynamic_pointer_cast<Instruction>(inst));
+        if constexpr (std::is_same_v<Type, PHIInst>) {
+            block->addPhiInst(std::dynamic_pointer_cast<PHIInst>(inst));
+        }
+        else {
+            block->addInst(insert_point, std::dynamic_pointer_cast<Instruction>(inst));
+        }
         return inst;
     }
     template <typename Type, typename... Args> std::shared_ptr<Type> makeNamelessInst(Args &&...args) const {
         auto inst = std::make_shared<Type>(std::forward<Args>(args)...);
         block->addInst(insert_point, std::dynamic_pointer_cast<Instruction>(inst));
         return inst;
+    }
+};
+
+// RAII Object to restore insert point when it is destroyed
+class InsertPointGuard {
+private:
+    IRBuilder* builder;
+    BBInstIter insert_point;
+    pBlock block;
+public:
+    InsertPointGuard(IRBuilder& builder_)
+        : builder(&builder_), insert_point(builder_.insert_point), block(builder_.block) {}
+
+    ~InsertPointGuard() {
+        builder->setInsertPoint(block, insert_point);
     }
 };
 } // namespace IR

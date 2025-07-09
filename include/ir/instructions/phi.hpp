@@ -74,6 +74,7 @@ public:
 
     pVal getValueForBlock(const pBlock &block) const;
     pBlock getBlockForValue(Use* use) const;
+    void setValueForBlock(const pBlock& block, const pVal &val) const;
 
     void addPhiOper(const pVal &val, const pBlock &blk);
 
@@ -82,6 +83,8 @@ public:
     bool delPhiOperByBlock(const pBlock &);
 
     bool hasBlock(const pBlock &);
+
+    size_t getNumIncomings() const;
 
     void accept(IRVisitor &visitor) override;
 

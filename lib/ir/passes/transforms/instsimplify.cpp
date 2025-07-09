@@ -141,7 +141,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
 #define REWRITE_BEG(...)                                                                                               \
     if (match(inst, __VA_ARGS__)) {                                                                                    \
         Logger::logDebug("[InstSimplify]: Rewrite ", GNALC_STRINGFY((__VA_ARGS__)));                                   \
-        IRBuilder builder("%isim", inst->getParent(), inst->getIter());
+        IRBuilder builder("%isim", inst->getParent(), inst->iter());
 
 #define REWRITE_END(a)                                                                                                 \
     inst->replaceSelf(a);                                                                                              \
@@ -479,7 +479,7 @@ bool InstSimplifyPass::isLoadSuitableForSinking(const pLoad &load) const {
     auto &aa_res = fam->getResult<BasicAliasAnalysis>(*func);
 
     // If there is some modifying after the load in the block, we cannot sink it.
-    for (auto it = load->getIter(); it != load->getParent()->end(); ++it) {
+    for (auto it = load->iter(); it != load->getParent()->end(); ++it) {
         auto modref = aa_res.getInstModRefInfo(*it, load->getPtr(), *fam);
         if (modref == ModRefInfo::Mod || modref == ModRefInfo::ModRef)
             return false;

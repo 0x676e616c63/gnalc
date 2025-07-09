@@ -42,7 +42,7 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
                 if (auto store2 = (*inst_it)->as<STOREInst>()) {
                     auto store2_ptr = store2->getPtr();
                     auto aa = aa_res.getAliasInfo(store_ptr, store2_ptr);
-                    if (aa == AliasInfo::MustAlias) {
+                    if (aa == AliasInfo::MustAlias && isSameType(store_ptr, store2_ptr)) {
                         erased = true;
                         unused_store.insert(store);
                         break;
@@ -67,7 +67,7 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
                 auto modref = aa_res.getInstModRefInfo(*inst_rit, store_ptr, fam);
                 if (auto load = (*inst_rit)->as<LOADInst>()) {
                     if (store->getValue() == load) {
-                        if (aa_res.getAliasInfo(load->getPtr(), store_ptr) == AliasInfo::MustAlias) {
+                        if (aa_res.getAliasInfo(load->getPtr(), store_ptr) == AliasInfo::MustAlias && isSameType(load->getPtr(), store_ptr)) {
                             erased = true;
                             unused_store.insert(store);
                             break;
@@ -132,7 +132,7 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
                             if (auto store2 = inst->as<STOREInst>()) {
                                 auto store2_ptr = store2->getPtr();
                                 auto aa = aa_res.getAliasInfo(store2_ptr, store_ptr);
-                                if (aa == AliasInfo::MustAlias) {
+                                if (aa == AliasInfo::MustAlias  && isSameType(store_ptr, store2_ptr)) {
                                     candidates.emplace_back(store);
                                     break;
                                 }

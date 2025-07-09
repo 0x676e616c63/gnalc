@@ -97,6 +97,10 @@ public:
     bool isF32() const;
     bool isInteger() const;
     bool isFloatingPoint() const;
+    bool isVec() const;
+    bool isIntVec() const;
+    bool isFPVec() const;
+    bool is128BitVec() const;
     bool isVoid() const;
     bool isUndef() const;
 };
@@ -247,6 +251,7 @@ pFuncType toFunctionType(const pType &ty);
 pType getElm(const pType &ty);
 
 bool isSameType(const pType &a, const pType &b);
+bool isSameType(const pVal &v1, const pVal &v2);
 
 /***********下列内容为NameClass相关**********/
 
