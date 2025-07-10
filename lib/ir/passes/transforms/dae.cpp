@@ -20,6 +20,8 @@ PM::PreservedAnalyses DAEPass::run(Function &func, FAM &fam) {
     for (const auto &inst_user : func.inst_users()) {
         auto call = inst_user->as<CALLInst>();
         Err::gassert(call != nullptr);
+        if (call->getFunc())
+            continue;
         auto caller_func = call->getParent()->getParent();
         auto actual_args = call->getArgs();
         auto aa_res = fam.getResult<LoopAliasAnalysis>(*call->getParent()->getParent());
@@ -127,6 +129,8 @@ PM::PreservedAnalyses DAEPass::run(Function &func, FAM &fam) {
             for (const auto &inst_user : func.inst_users()) {
                 auto call = inst_user->as<CALLInst>();
                 Err::gassert(call != nullptr);
+                if (call->getFunc())
+                    continue;
                 call->removeArg(fp->getIndex());
             }
             Logger::logDebug("[DAE] on '", func.getName(), "': Deleting param '", fp->getName(), "'.");

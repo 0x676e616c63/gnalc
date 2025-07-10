@@ -32,6 +32,7 @@
 #include "ir/passes/transforms/licm.hpp"
 #include "ir/passes/transforms/load_elimination.hpp"
 #include "ir/passes/transforms/loop_elimination.hpp"
+#include "ir/passes/transforms/loop_parallel.hpp"
 #include "ir/passes/transforms/loop_rotate.hpp"
 #include "ir/passes/transforms/loop_simplify.hpp"
 #include "ir/passes/transforms/loop_strength_reduce.hpp"
@@ -46,6 +47,7 @@
 #include "ir/passes/transforms/tree_shaking.hpp"
 #include "ir/passes/transforms/unify_exits.hpp"
 #include "ir/passes/transforms/vectorizer.hpp"
+
 // Utilities
 #include "ir/passes/utilities/analysis_storer.hpp"
 #include "ir/passes/utilities/cfg_export.hpp"
@@ -222,6 +224,10 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
 
     auto make_loop = [&options] {
         FPM fpm;
+        // FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LCSSAPass(), LICMPass())
+        // fpm.addPass(PrintFunctionPass(std::cerr));
+        // FUNCTION_TRANSFORM(loop_parallel, LoopSimplifyPass(), LoopParallelPass())
+        // fpm.addPass(PrintFunctionPass(std::cerr));
         FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
         FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
         FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
@@ -335,36 +341,43 @@ MPM PassBuilder::buildModulePipeline(PMOptions opt_info) {
 }
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
+    // Parallel
     FPM fpm;
-    fpm.addPass(IR::PromotePass());
-    fpm.addPass(IR::TailRecursionEliminationPass());
-    fpm.addPass(IR::InlinePass());
-    fpm.addPass(IR::InternalizePass());
-    fpm.addPass(IR::PromotePass());
-    fpm.addPass(IR::NameNormalizePass());
-    fpm.addPass(IR::CFGSimplifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::LCSSAPass());
-    fpm.addPass(IR::LoopUnrollPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::PrintFunctionPass(std::cerr));
-    fpm.addPass(IR::VectorizerPass(true));
-    fpm.addPass(IR::PrintFunctionPass(std::cerr));
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::LoopRotatePass());
-    fpm.addPass(IR::LCSSAPass());
-    fpm.addPass(IR::LICMPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::UnifyExitsPass());
-    fpm.addPass(IR::CodeGenPreparePass());
-    fpm.addPass(IR::NameNormalizePass());
+    fpm.addPass(VerifyPass());
+    fpm.addPass(PromotePass());
+    fpm.addPass(SCCPPass());
+    fpm.addPass(BreakCriticalEdgesPass());
+    fpm.addPass(GVNPREPass());
+    fpm.addPass(CFGSimplifyPass());
+    //
+    // fpm.addPass(LoopSimplifyPass());
+    // fpm.addPass(LCSSAPass());
+    // fpm.addPass(LoopUnrollPass());
+    // fpm.addPass(CFGSimplifyPass());
+    // fpm.addPass(BreakCriticalEdgesPass());
+    // fpm.addPass(GVNPREPass());
+
+    fpm.addPass(ADCEPass());
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(SCCPPass());
+    fpm.addPass(ADCEPass());
+    fpm.addPass(CFGSimplifyPass());
+
+    fpm.addPass(LoopSimplifyPass());
+    fpm.addPass(LCSSAPass());
+    fpm.addPass(LICMPass());
+    fpm.addPass(NameNormalizePass(true));
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(LoopParallelPass());
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(VerifyPass());
+    fpm.addPass(DCEPass());
+    fpm.addPass(NameNormalizePass());
+
     return fpm;
 
-
-    // FPM fpm;
     // // Vectorizer
+    // FPM fpm;
     // fpm.addPass(PromotePass());
     // fpm.addPass(SCCPPass());
     // fpm.addPass(BreakCriticalEdgesPass());

@@ -85,9 +85,30 @@ void PrintModulePass::visit(Module &module) {
         writeln("");
     }
 
+    bool must_emit_runtime = false;
     for (auto &func_decl : module.getFunctionDecls()) {
+        if (with_runtime) {
+            if (func_decl->hasAttr(FuncAttr::ParallelEntry) ||
+                func_decl->hasAttr(FuncAttr::isAtomicAddI32) ||
+                func_decl->hasAttr(FuncAttr::isAtomicAddF32)) {
+                if (func_decl->getUseCount() != 0)
+                    must_emit_runtime = true;
+
+                if (must_emit_runtime)
+                    continue;
+            }
+        }
+
         func_decl->accept(*this);
         writeln("");
+    }
+
+    if (with_runtime && must_emit_runtime) {
+        constexpr auto lib =
+    #include "../runtime/artifacts/thread.ll.hpp"
+            ;
+        writeln("\n\n\n; Gnalc Thread Runtime");
+        writeln(lib);
     }
 }
 

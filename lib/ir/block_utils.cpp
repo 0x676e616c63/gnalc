@@ -472,4 +472,9 @@ std::vector<pVal> collectOperands(const pInst &inst) {
     }
     return result;
 }
+
+bool isReachableFrom(const pBlock &from, const pBlock &to) {
+    auto dfv = from->getDFVisitor();
+    return std::find(dfv.begin(), dfv.end(), to) != dfv.end();
+}
 } // namespace IR

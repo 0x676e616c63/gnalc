@@ -55,6 +55,8 @@ private:
     // Returns true for success.
     bool insertPotentialAlias(Value *target, Value *alias);
 
+    bool setUntracked(Value *ptr);
+
     // For cases involved with global variable,
     // this function generates one for global variable.
     PtrInfo getPtrInfo(Value *ptr) const;

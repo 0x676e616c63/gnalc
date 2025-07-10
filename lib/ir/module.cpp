@@ -10,7 +10,7 @@ namespace IR {
 
 void Module::addGlobalVar(pGlobalVar global_var) { global_vars.emplace_back(std::move(global_var)); }
 
-const std::vector<pGlobalVar> &Module::getGlobalVars() const { return global_vars; }
+const std::list<pGlobalVar> &Module::getGlobalVars() const { return global_vars; }
 
 bool Module::delGlobalVar(const pGlobalVar &target) {
     for (auto it = global_vars.begin(); it != global_vars.end(); ++it) {
@@ -27,7 +27,7 @@ void Module::addFunction(pFunc func) {
     funcs.emplace_back(std::move(func));
 }
 
-const std::vector<pFunc> &Module::getFunctions() const { return funcs; }
+const std::list<pFunc> &Module::getFunctions() const { return funcs; }
 
 bool Module::delFunction(const pFunc &target) {
     for (auto it = funcs.begin(); it != funcs.end(); ++it) {
@@ -44,7 +44,7 @@ void Module::addLinearFunction(pLFunc func) {
     func->setParent(this);
     linear_funcs.emplace_back(std::move(func));
 }
-const std::vector<pLFunc> &Module::getLinearFunctions() const {
+const std::list<pLFunc> &Module::getLinearFunctions() const {
     return linear_funcs;
 }
 bool Module::delLinearFunction(const pLFunc &target) {
@@ -63,7 +63,7 @@ void Module::addFunctionDecl(pFuncDecl func_decl) {
     func_decls.emplace_back(std::move(func_decl));
 }
 
-const std::vector<pFuncDecl> &Module::getFunctionDecls() const { return func_decls; }
+const std::list<pFuncDecl> &Module::getFunctionDecls() const { return func_decls; }
 
 bool Module::delFunctionDecl(const pFuncDecl &target) {
     for (auto it = func_decls.begin(); it != func_decls.end(); ++it) {
@@ -76,7 +76,7 @@ bool Module::delFunctionDecl(const pFuncDecl &target) {
     return false;
 }
 
-pFuncDecl Module::lookupFunction(const std::string &name) {
+pFuncDecl Module::lookupFunction(const std::string &name) const {
     for (const auto &func_decl : func_decls) {
         if (func_decl->isName(name))
             return func_decl;
@@ -84,6 +84,14 @@ pFuncDecl Module::lookupFunction(const std::string &name) {
     for (const auto &func : funcs) {
         if (func->isName(name))
             return func;
+    }
+    return nullptr;
+}
+
+pGlobalVar Module::lookupGlobalVar(const std::string &name) const {
+    for (const auto &gv : global_vars) {
+        if (gv->isName(name))
+            return gv;
     }
     return nullptr;
 }

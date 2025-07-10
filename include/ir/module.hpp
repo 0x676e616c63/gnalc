@@ -30,10 +30,10 @@ private:
     // See: https://en.cppreference.com/w/cpp/language/destructor
     IR::ConstantPool constant_pool;
 
-    std::vector<pGlobalVar> global_vars;
-    std::vector<pFunc> funcs;
-    std::vector<pLFunc> linear_funcs;
-    std::vector<pFuncDecl> func_decls;
+    std::list<pGlobalVar> global_vars;
+    std::list<pFunc> funcs;
+    std::list<pLFunc> linear_funcs;
+    std::list<pFuncDecl> func_decls;
 
 public:
     using const_iterator = decltype(funcs)::const_iterator;
@@ -43,23 +43,25 @@ public:
     explicit Module(std::string _name) : NameC(std::move(_name)) {}
 
     void addGlobalVar(pGlobalVar global_var);
-    const std::vector<pGlobalVar> &getGlobalVars() const;
+    const std::list<pGlobalVar> &getGlobalVars() const;
     bool delGlobalVar(const pGlobalVar &target);
 
     void addFunction(pFunc func);
-    const std::vector<pFunc> &getFunctions() const;
+    const std::list<pFunc> &getFunctions() const;
     bool delFunction(const pFunc &target);
 
     void addLinearFunction(pLFunc func);
-    const std::vector<pLFunc> &getLinearFunctions() const;
+    const std::list<pLFunc> &getLinearFunctions() const;
     bool delLinearFunction(const pLFunc &target);
 
 
     void addFunctionDecl(pFuncDecl func);
-    const std::vector<pFuncDecl> &getFunctionDecls() const;
+    const std::list<pFuncDecl> &getFunctionDecls() const;
     bool delFunctionDecl(const pFuncDecl &target);
 
-    pFuncDecl lookupFunction(const std::string &name);
+    pFuncDecl lookupFunction(const std::string &name) const;
+
+    pGlobalVar lookupGlobalVar(const std::string &name) const;
 
     ConstantPool &getConstantPool();
 

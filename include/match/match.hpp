@@ -49,7 +49,7 @@ template <typename Cand, typename Pattern> bool match(const Cand &candidate, con
 
 template <typename Cand, typename ...Patterns>
 bool match(const Cand &candidate, const Patterns &...patterns) {
-    return (match(candidate, patterns) && ...);
+    return (match(candidate, patterns) || ...);
 }
 
 // The following is generic matches, which is designed to be wrapped for IR/MIR conveniently.
@@ -155,8 +155,10 @@ template <typename Class, typename ResultT, typename Proj = detail::Identity> st
         auto cast = detail::ptrCast<Class>(v);
         if (!cast)
             return false;
+        if (!pred(*cast))
+            return false;
         result = Proj()(cast);
-        return pred(*cast);
+        return true;
     }
 };
 
