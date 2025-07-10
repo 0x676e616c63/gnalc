@@ -126,7 +126,7 @@ void registerPassForOptInfo(PM &fpm, bool enable, PMOptions options, Pass &&pass
         if (options.verify)
             fpm.addPass(VerifyPass(options.strict));
         if (options.run_test)
-            fpm.addPass(RunTestPass(options.testcase_out, options.testcase_in, "", options.strict));
+            fpm.addPass(RunTestPass(options.testcase_out, options.testcase_in, "../../test/sylib/sylib.c", options.strict));
     }
 }
 

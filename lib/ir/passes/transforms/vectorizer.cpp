@@ -112,7 +112,7 @@ bool VectorizerPass::AlignRewriter::trySetBaseAlign(pVal ptr, int align, Functio
             for (auto user : curr_func->inst_users()) {
                 auto call = user->as<CALLInst>();
                 Err::gassert(call != nullptr, "Expected a call user");
-                if (call->getFunc())
+                if (call->getFunc().get() != curr_func)
                     continue;
                 Function *caller_func = call->getParent()->getParent().get();
                 if (!trySetBaseAlign(call->getArgs()[fp->getIndex()], align, caller_func, changes)) {

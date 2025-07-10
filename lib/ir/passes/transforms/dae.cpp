@@ -20,7 +20,7 @@ PM::PreservedAnalyses DAEPass::run(Function &func, FAM &fam) {
     for (const auto &inst_user : func.inst_users()) {
         auto call = inst_user->as<CALLInst>();
         Err::gassert(call != nullptr);
-        if (call->getFunc())
+        if (call->getFunc().get() != &func)
             continue;
         auto caller_func = call->getParent()->getParent();
         auto actual_args = call->getArgs();
@@ -129,7 +129,7 @@ PM::PreservedAnalyses DAEPass::run(Function &func, FAM &fam) {
             for (const auto &inst_user : func.inst_users()) {
                 auto call = inst_user->as<CALLInst>();
                 Err::gassert(call != nullptr);
-                if (call->getFunc())
+                if (call->getFunc().get() != &func)
                     continue;
                 call->removeArg(fp->getIndex());
             }
