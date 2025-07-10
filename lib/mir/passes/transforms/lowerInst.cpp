@@ -4,6 +4,7 @@
 #include "ir/instructions/binary.hpp"
 #include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
+#include "ir/type.hpp"
 #include "mir/passes/transforms/isel.hpp"
 #include "mir/passes/transforms/lowering.hpp"
 #include <forward_list>
@@ -130,23 +131,6 @@ void MIR::lowerInst(const IR::pBinary &binary, LoweringContext &ctx) {
     ctx.addOperand(binary, def);
 }
 
-// void MIR_new::lowerInst(IR::pBinary binary, LoweringContext &ctx, IR::DomTreeAnalysis::Result &domTree,
-//                         IR::LiveAnalysis::Result &liveRange) {
-//     auto lhs = binary->getLHS();
-//     auto rhs = binary->getRHS();
-
-//     auto mop = MIR_new::IROpCodeConvert(binary->getOpcode());
-
-//     auto def = ctx.newVReg(binary->getType());
-
-//     ///@todo 通过Dom和liveRange, 分析被除数和除数的可能取值上限, 并加入到op3, op4
-
-//     ctx.newInst(
-//         MIRInst::make(mop)->setOperand<0>(def)->setOperand<1>(ctx.mapOperand(lhs))->setOperand<2>(ctx.mapOperand(rhs)));
-
-//     ctx.addOperand(binary, def);
-// }
-
 void MIR::lowerInst(const IR::pFneg &fneg, LoweringContext &ctx) {
     auto def = ctx.newVReg(fneg->getType());
 
@@ -169,8 +153,7 @@ void MIR::lowerInst(const IR::pIcmp &icmp, LoweringContext &ctx) {
         ctx.newInst(MIRInst::make(ARMOpC::CSET)
                         ->setOperand<0>(def, ctx.CodeGenCtx())
                         ->setOperand<1>(ctx.mapOperand(IRCondConvert(icmp->getCond())), ctx.CodeGenCtx())); // cond flag
-    }
-    else if (ctx.CodeGenCtx().isRISCV64()) {
+    } else if (ctx.CodeGenCtx().isRISCV64()) {
         auto lhs = ctx.mapOperand(icmp->getLHS());
         auto rhs = ctx.mapOperand(icmp->getRHS());
 
@@ -183,9 +166,8 @@ void MIR::lowerInst(const IR::pIcmp &icmp, LoweringContext &ctx) {
                             ->setOperand<1>(lhs, ctx.CodeGenCtx())
                             ->setOperand<2>(rhs, ctx.CodeGenCtx()));
             // def = SEQZ tmp
-            ctx.newInst(MIRInst::make(RVOpC::SEQZ)
-                            ->setOperand<0>(def, ctx.CodeGenCtx())
-                            ->setOperand<1>(tmp, ctx.CodeGenCtx()));
+            ctx.newInst(
+                MIRInst::make(RVOpC::SEQZ)->setOperand<0>(def, ctx.CodeGenCtx())->setOperand<1>(tmp, ctx.CodeGenCtx()));
             break;
         }
         case IR::ICMPOP::ne: {
@@ -196,9 +178,8 @@ void MIR::lowerInst(const IR::pIcmp &icmp, LoweringContext &ctx) {
                             ->setOperand<1>(lhs, ctx.CodeGenCtx())
                             ->setOperand<2>(rhs, ctx.CodeGenCtx()));
             // def = SNEZ tmp
-            ctx.newInst(MIRInst::make(RVOpC::SNEZ)
-                            ->setOperand<0>(def, ctx.CodeGenCtx())
-                            ->setOperand<1>(tmp, ctx.CodeGenCtx()));
+            ctx.newInst(
+                MIRInst::make(RVOpC::SNEZ)->setOperand<0>(def, ctx.CodeGenCtx())->setOperand<1>(tmp, ctx.CodeGenCtx()));
             break;
         }
         case IR::ICMPOP::slt: {
@@ -216,9 +197,8 @@ void MIR::lowerInst(const IR::pIcmp &icmp, LoweringContext &ctx) {
                             ->setOperand<0>(tmp, ctx.CodeGenCtx())
                             ->setOperand<1>(rhs, ctx.CodeGenCtx())
                             ->setOperand<2>(lhs, ctx.CodeGenCtx()));
-            ctx.newInst(MIRInst::make(RVOpC::SEQZ)
-                            ->setOperand<0>(def, ctx.CodeGenCtx())
-                            ->setOperand<1>(tmp, ctx.CodeGenCtx()));
+            ctx.newInst(
+                MIRInst::make(RVOpC::SEQZ)->setOperand<0>(def, ctx.CodeGenCtx())->setOperand<1>(tmp, ctx.CodeGenCtx()));
             break;
         }
         case IR::ICMPOP::sgt: {
@@ -236,16 +216,15 @@ void MIR::lowerInst(const IR::pIcmp &icmp, LoweringContext &ctx) {
                             ->setOperand<0>(tmp, ctx.CodeGenCtx())
                             ->setOperand<1>(lhs, ctx.CodeGenCtx())
                             ->setOperand<2>(rhs, ctx.CodeGenCtx()));
-            ctx.newInst(MIRInst::make(RVOpC::SEQZ)
-                            ->setOperand<0>(def, ctx.CodeGenCtx())
-                            ->setOperand<1>(tmp, ctx.CodeGenCtx()));
+            ctx.newInst(
+                MIRInst::make(RVOpC::SEQZ)->setOperand<0>(def, ctx.CodeGenCtx())->setOperand<1>(tmp, ctx.CodeGenCtx()));
             break;
         }
         default:
             Err::unreachable("unsupported ICMP predicate for RISCV64");
         }
-    }
-    else Err::unreachable("Unsupported arch");
+    } else
+        Err::unreachable("Unsupported arch");
 
     ///@note condflag 加入到常量池
 
@@ -264,8 +243,7 @@ void MIR::lowerInst(const IR::pFcmp &fcmp, LoweringContext &ctx) {
         ctx.newInst(MIRInst::make(ARMOpC::CSET)
                         ->setOperand<0>(def, ctx.CodeGenCtx())
                         ->setOperand<1>(ctx.mapOperand(IRCondConvert(fcmp->getCond())), ctx.CodeGenCtx()));
-    }
-    else if (ctx.CodeGenCtx().isRISCV64()) {
+    } else if (ctx.CodeGenCtx().isRISCV64()) {
         auto lhs = ctx.mapOperand(fcmp->getLHS());
         auto rhs = ctx.mapOperand(fcmp->getRHS());
 
@@ -285,9 +263,8 @@ void MIR::lowerInst(const IR::pFcmp &fcmp, LoweringContext &ctx) {
                             ->setOperand<1>(lhs, ctx.CodeGenCtx())
                             ->setOperand<2>(rhs, ctx.CodeGenCtx()));
             // def = SEQ tmp
-            ctx.newInst(MIRInst::make(RVOpC::SEQZ)
-                            ->setOperand<0>(def, ctx.CodeGenCtx())
-                            ->setOperand<1>(tmp, ctx.CodeGenCtx()));
+            ctx.newInst(
+                MIRInst::make(RVOpC::SEQZ)->setOperand<0>(def, ctx.CodeGenCtx())->setOperand<1>(tmp, ctx.CodeGenCtx()));
             break;
         }
         case IR::FCMPOP::olt: {
@@ -305,9 +282,8 @@ void MIR::lowerInst(const IR::pFcmp &fcmp, LoweringContext &ctx) {
                             ->setOperand<0>(tmp, ctx.CodeGenCtx())
                             ->setOperand<1>(rhs, ctx.CodeGenCtx())
                             ->setOperand<2>(lhs, ctx.CodeGenCtx()));
-            ctx.newInst(MIRInst::make(RVOpC::SEQZ)
-                            ->setOperand<0>(def, ctx.CodeGenCtx())
-                            ->setOperand<1>(tmp, ctx.CodeGenCtx()));
+            ctx.newInst(
+                MIRInst::make(RVOpC::SEQZ)->setOperand<0>(def, ctx.CodeGenCtx())->setOperand<1>(tmp, ctx.CodeGenCtx()));
             break;
         }
         case IR::FCMPOP::ogt: {
@@ -325,17 +301,15 @@ void MIR::lowerInst(const IR::pFcmp &fcmp, LoweringContext &ctx) {
                             ->setOperand<0>(tmp, ctx.CodeGenCtx())
                             ->setOperand<1>(lhs, ctx.CodeGenCtx())
                             ->setOperand<2>(rhs, ctx.CodeGenCtx()));
-            ctx.newInst(MIRInst::make(RVOpC::SEQZ)
-                            ->setOperand<0>(def, ctx.CodeGenCtx())
-                            ->setOperand<1>(tmp, ctx.CodeGenCtx()));
+            ctx.newInst(
+                MIRInst::make(RVOpC::SEQZ)->setOperand<0>(def, ctx.CodeGenCtx())->setOperand<1>(tmp, ctx.CodeGenCtx()));
             break;
         }
         default:
             Err::unreachable("unsupported FCMP predicate for RISCV64");
         }
-    }
-    else Err::unreachable("Unsupported arch");
-
+    } else
+        Err::unreachable("Unsupported arch");
 
     ctx.addOperand(fcmp, def);
 }
@@ -401,24 +375,22 @@ void MIR::lowerInst(const IR::pBr &br, LoweringContext &ctx) {
             Err::gassert(rm_it != mpreds.end(), "mpreds corrupted");
             mpreds.erase(rm_it);
 
-        }
-        else if (use && !use->isImme()) {
+        } else if (use && !use->isImme()) {
             if (ctx.CodeGenCtx().isARMv8()) {
                 ctx.newInst(MIRInst::make(ARMOpC::CBNZ)
-                            ->setOperand<0>(nullptr, ctx.CodeGenCtx())
-                            ->setOperand<1>(use, ctx.CodeGenCtx())
-                            ->setOperand<2>(MIROperand::asReloc(blk_true), ctx.CodeGenCtx())
-                            ->setOperand<3>(MIROperand::asProb(0.5), ctx.CodeGenCtx()));
-            }
-            else if (ctx.CodeGenCtx().isRISCV64()) {
+                                ->setOperand<0>(nullptr, ctx.CodeGenCtx())
+                                ->setOperand<1>(use, ctx.CodeGenCtx())
+                                ->setOperand<2>(MIROperand::asReloc(blk_true), ctx.CodeGenCtx())
+                                ->setOperand<3>(MIROperand::asProb(0.5), ctx.CodeGenCtx()));
+            } else if (ctx.CodeGenCtx().isRISCV64()) {
                 // FIXME
                 ctx.newInst(MIRInst::make(RVOpC::BNEZ)
-                            ->setOperand<0>(nullptr, ctx.CodeGenCtx())
-                            ->setOperand<1>(use, ctx.CodeGenCtx())
-                            ->setOperand<2>(MIROperand::asReloc(blk_true), ctx.CodeGenCtx())
-                            ->setOperand<3>(MIROperand::asProb(0.5), ctx.CodeGenCtx()));
-            }
-            else Err::unreachable("Unsupported arch");
+                                ->setOperand<0>(nullptr, ctx.CodeGenCtx())
+                                ->setOperand<1>(use, ctx.CodeGenCtx())
+                                ->setOperand<2>(MIROperand::asReloc(blk_true), ctx.CodeGenCtx())
+                                ->setOperand<3>(MIROperand::asProb(0.5), ctx.CodeGenCtx()));
+            } else
+                Err::unreachable("Unsupported arch");
 
             ctx.newInst(MIRInst::make(OpC::InstBranch)
                             ->setOperand<0>(nullptr, ctx.CodeGenCtx())
@@ -503,6 +475,8 @@ void MIR::lowerInst(const IR::pGep &gep, LoweringContext &ctx) {
         persize = ptrType->getElmType()->getBytes();
     } else if (auto bType = gep->getBaseType()->as<IR::BType>()) {
         persize = bType->getBytes();
+    } else if (auto vecType = gep->getBaseType()->as<IR::VectorType>()) {
+        persize = vecType->getBytes();
     } else {
         Err::unreachable("lowerInst(IR::pGep, LoweringContext &): unknown base type");
     }

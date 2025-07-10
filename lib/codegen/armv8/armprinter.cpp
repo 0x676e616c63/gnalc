@@ -162,18 +162,6 @@ void ARMA64Printer::printout(const MIRInst &minst) {
         case OpC::InstFRem:
             Err::unreachable("ARMA64Printer::printout(const MIRInst &minst): rem not supported");
             break;
-        case OpC::InstVAdd:
-        case OpC::InstVSub:
-        case OpC::InstVMul:
-        case OpC::InstVDiv:
-        case OpC::InstVHorizontalAdd:
-        case OpC::InstFPVAdd:
-        case OpC::InstFPVSub:
-        case OpC::InstFPVMul:
-        case OpC::InstFPVDiv:
-        case OpC::InstFPVHorizontalAdd:
-            Err::todo("ARMA64Printer::printout(const MIRInst &): vectorize todo");
-            break;
         case OpC::InstICmp:
         case OpC::InstFCmp:
             outStream << cmpPrinter(minst);
@@ -203,6 +191,44 @@ void ARMA64Printer::printout(const MIRInst &minst) {
         case OpC::InstLoadRegFromStack:
         case OpC::InstStoreRegToStack:
             Err::unreachable("ARMA64Printer::printout(const MIRInst &): should be legalized in postRAlegalize");
+            break;
+        case OpC::InstVAdd:
+        case OpC::InstVSub:
+        case OpC::InstVMul:
+        case OpC::InstVFAdd:
+        case OpC::InstVFSub:
+        case OpC::InstVFMul:
+        case OpC::InstVFDiv:
+        case OpC::InstVAnd:
+        case OpC::InstVOr:
+        case OpC::InstVXor:
+        case OpC::InstVShl:
+            outStream << binaryPrinter_v(minst);
+            break;
+        case OpC::InstVFNeg:
+        case OpC::InstVNeg:
+            outStream << unaryPrinter_v(minst);
+            break;
+        case OpC::InstVExtract:
+            outStream << extractPrinter_v(minst);
+            break;
+        case OpC::InstVInsert:
+            outStream << insertPrinter_v(minst);
+            break;
+        case OpC::InstVFP2SI:
+        case OpC::InstVSI2FP:
+        case OpC::InstVFRINTZ:
+            outStream << convertPrinter_v(minst);
+            break;
+        case OpC::InstVIcmp:
+        case OpC::InstVFcmp:
+            outStream << cmpPrinter_v(minst);
+            break;
+        case OpC::InstVSelect:
+            outStream << selectPrinter_v(minst);
+            break;
+        case OpC::InstVCopy:
+            outStream << copyPrinter_v(minst);
             break;
         default:
             Err::unreachable("ARMA64Printer::printout(const MIRInst &):  unknown opc");

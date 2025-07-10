@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include "mir/tools.hpp"
 #ifndef GNALC_MIR_PASSES_TRANSFROMS_RA
 #define GNALC_MIR_PASSES_TRANSFROMS_RA
 
@@ -133,8 +134,7 @@ protected:
     }
 
     bool isExt(const MIROperand_p &n) {
-        if (n->type() == OpT::Float || n->type() == OpT::Float32 || n->type() == OpT::Floatvec ||
-            n->type() == OpT::Intvec) {
+        if (inSet(n->type(), OpT::Float, OpT::Float32, OpT::Floatvec, OpT::Intvec, OpT::Int64vec)) {
             return true;
         } else {
             return false;
@@ -192,7 +192,7 @@ protected:
         if constexpr (inOrder) {
             Util::FastSet<T> result;
             result.reserve(victim.size());
-            for (const auto& elem : victim) {
+            for (const auto &elem : victim) {
                 if ((!sets.count(elem) && ...))
                     result.insert(elem);
             }
@@ -240,6 +240,6 @@ protected:
     Nodes getDef(const MIRInst_p &) override;
     // Nodes spill(const MIROperand_p &) override; //
 };
-}; // namespace MIR_new
+}; // namespace MIR
 
 #endif

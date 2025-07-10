@@ -56,7 +56,17 @@ public:
     [[nodiscard]] string calleePrinter(const MIRInst &);
     [[nodiscard]] string calleePrinter_legacy(const MIRInst &);
     [[nodiscard]] string adjustPrinter(const MIRInst &);
+
+    // vectors
+    [[nodiscard]] string binaryPrinter_v(const MIRInst &);
+    [[nodiscard]] string selectPrinter_v(const MIRInst &);
+    [[nodiscard]] string unaryPrinter_v(const MIRInst &);
+    [[nodiscard]] string cmpPrinter_v(const MIRInst &);
+    [[nodiscard]] string convertPrinter_v(const MIRInst &);
+    [[nodiscard]] string extractPrinter_v(const MIRInst &);
+    [[nodiscard]] string insertPrinter_v(const MIRInst &);
+    [[nodiscard]] string copyPrinter_v(const MIRInst &);
 };
-}; // namespace MIR_new
+}; // namespace MIR
 
 #endif

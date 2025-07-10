@@ -115,7 +115,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
         case OpT::Int64:
             return 8;
         case OpT::Floatvec:
-            return 16;
+        case OpT::Int64vec:
         case OpT::Intvec:
             return 16;
         case OpT::Int:
@@ -185,8 +185,10 @@ bool VectorRegisterAllocImpl::isMoveInstruction(const MIRInst_p &minst) {
 
         auto mtype = minst->ensureDef()->type();
         auto mtype2 = minst->getOp(1)->type();
-        if ((mtype == OpT::Float32 || mtype == OpT::Floatvec || mtype == OpT::Intvec || mtype == OpT::Float) &&
-            (mtype2 == OpT::Float32 || mtype2 == OpT::Floatvec || mtype2 == OpT::Intvec || mtype2 == OpT::Float)) {
+
+        ///@warning RISCV  may be not fit this
+        if (inSet(mtype, OpT::Float32, OpT::Floatvec, OpT::Intvec, OpT::Int64vec, OpT::Float) &&
+            inSet(mtype2, OpT::Float32, OpT::Floatvec, OpT::Intvec, OpT::Int64vec, OpT::Float)) {
             if (!minst->getOp(1)->isImme()) { // chk use
                 return true;
             }
@@ -216,8 +218,7 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getUse(const MIRInst_p &minst)
         auto use = minst->getOp(idx);
 
         if (use && use->isVRegOrISAReg() &&
-            (use->type() == OpT::Float || use->type() == OpT::Float32 || use->type() == OpT::Floatvec ||
-             use->type() == OpT::Intvec)) {
+            inSet(use->type(), OpT::Float, OpT::Float32, OpT::Floatvec, OpT::Intvec, OpT::Int64vec)) {
             uses.emplace(use);
         }
     }
@@ -242,8 +243,7 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getDef(const MIRInst_p &minst)
 
     if (auto def = minst->getDef()) {
 
-        if ((def->type() == OpT::Float || def->type() == OpT::Float32 || def->type() == OpT::Intvec ||
-             def->type() == OpT::Floatvec)) {
+        if (inSet(def->type(), OpT::Float, OpT::Float32, OpT::Intvec, OpT::Int64vec, OpT::Floatvec)) {
             defs.emplace(def);
         }
     }

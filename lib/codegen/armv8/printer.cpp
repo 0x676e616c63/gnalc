@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 #include "codegen/armv8/armprinter.hpp"
+#include "mir/MIR.hpp"
+#include "mir/info.hpp"
+#include "mir/strings.hpp"
 #include "mir/tools.hpp"
+#include <string>
 
 using namespace MIR;
 
@@ -149,8 +153,7 @@ string ARMA64Printer::copyPrinter(const MIRInst &minst) {
                inRange(useType, OpT::Float, OpT::Floatvec) && inRange(defType, OpT::Float, OpT::Floatvec)) {
 
         str += "fmov\t" + reg2s(def, bitWide) + ",\t" + reg2s(use, bitWide);
-    } else if (defType == OpT::Intvec || defType == OpT::Floatvec || useType == OpT::Intvec ||
-               useType == OpT::Floatvec) {
+    } else if (inSet(defType, OpT::Intvec, OpT::Floatvec, OpT::Intvec, OpT::Int64vec, OpT::Floatvec)) {
         ///@todo vector regs 需要提供v<>寄存器的视图方式
         Err::todo("copyPrinter: vectorize todo");
     } else {
@@ -598,6 +601,129 @@ string ARMA64Printer::adjustPrinter(const MIRInst &minst) {
     } else {
         str += reg2s(offset, bitWide); // int
     }
+
+    return str;
+}
+
+string ARMA64Printer::binaryPrinter_v(const MIRInst &minst) {
+    const auto &def = minst.ensureDef();
+    const auto &lhs = minst.getOp(1);
+    const auto &rhs = minst.getOp(2);
+    auto op = minst.opcode<OpC>();
+    string mode = def->type() == OpT::Int64vec ? ".2d" : ".4s";
+
+    string str;
+    str += OpC2S(op) + '\t';
+    str += reg2s(def, 16, true) + mode + ",\t";
+    str += reg2s(lhs, 16, true) + mode + ",\t";
+    str += reg2s(rhs, 16, true) + mode;
+
+    return str;
+}
+
+string ARMA64Printer::selectPrinter_v(const MIRInst &minst) {
+    const auto &def = minst.ensureDef();
+    const auto &true_val = minst.getOp(1);
+    const auto &false_val = minst.getOp(2);
+    auto op = minst.opcode<OpC>(); // bsl
+    string mode = ".16b";
+
+    string str;
+
+    str += OpC2S(op) + '\t';
+    str += reg2s(def, 16, true) + mode + ",\t";
+    str += reg2s(true_val, 16, true) + mode + ",\t";
+    str += reg2s(false_val, 16, true) + mode;
+
+    return str;
+}
+
+string ARMA64Printer::unaryPrinter_v(const MIRInst &minst) {
+    const auto &def = minst.ensureDef();
+    const auto &use = minst.getOp(1);
+    auto op = minst.opcode<OpC>();
+    string mode = def->type() == OpT::Int64vec ? ".2d" : ".4s";
+
+    string str;
+    str += OpC2S(op) + '\t';
+    str += reg2s(def, 16, true) + mode + ",\t";
+    str += reg2s(use, 16, true) + mode;
+
+    return str;
+}
+
+string ARMA64Printer::cmpPrinter_v(const MIRInst &minst) {
+    const auto &def = minst.ensureDef();
+    const auto &cond = minst.getOp(1)->imme();
+    const auto &lhs = minst.getOp(2);
+    const auto &rhs = minst.getOp(3);
+    auto op = minst.opcode<OpC>();
+    string mode = def->type() == OpT::Int64vec ? ".2d" : ".4s";
+
+    string str;
+    str += OpC2S(op) + Cond2S(static_cast<Cond>(cond)) + '\t';
+    str += Reg2S(def, 16, true) + mode + ",\t";
+    str += reg2s(lhs, 16, true) + mode + ",\t";
+    str += reg2s(rhs, 16, true) + mode;
+
+    return str;
+}
+
+string ARMA64Printer::convertPrinter_v(const MIRInst &minst) {
+    const auto &def = minst.ensureDef();
+    const auto &use = minst.getOp(1);
+    auto op = minst.opcode<OpC>();
+    string mode = def->type() == OpT::Int64vec ? ".2d" : ".4s";
+
+    string str;
+    str += OpC2S(op) + '\t';
+    str += reg2s(def, 16, true) + mode + ",\t";
+    str += reg2s(use, 16, true) + mode;
+
+    return str;
+}
+
+string ARMA64Printer::extractPrinter_v(const MIRInst &minst) {
+    const auto &def = minst.ensureDef();
+    const auto &use = minst.getOp(2);
+    const auto &idx = minst.getOp(1)->imme();
+    auto op = minst.opcode<OpC>(); // mov
+    string mode = def->type() == OpT::Int64 ? ".d" : ".s";
+
+    string str;
+    str += OpC2S(op) + '\t';
+    str += reg2s(def, getBitWide(def->type())) + ",\t";
+    str += reg2s(use, 16, true) + mode + '[' + std::to_string(idx) + ']';
+
+    return str;
+}
+
+string ARMA64Printer::insertPrinter_v(const MIRInst &minst) {
+    const auto &def = minst.ensureDef();
+    const auto &use = minst.getOp(2);
+    const auto &idx = minst.getOp(1)->imme();
+    auto op = minst.opcode<OpC>(); // mov
+    string mode = def->type() == OpT::Int64vec ? ".d" : ".s";
+
+    string str;
+    str += OpC2S(op) + '\t';
+    str += reg2s(def, 16, true) + mode + '[' + std::to_string(idx) + "],\t";
+
+    if (use->type() == OpT::Float) {
+        str += reg2s(use, 16, true) + mode + ".s[0]";
+    } else {
+        str += reg2s(use, getBitWide(use->type()));
+    }
+
+    return str;
+}
+
+string ARMA64Printer::copyPrinter_v(const MIRInst &minst) {
+    const auto &def = minst.ensureDef();
+    const auto &use = minst.getOp(1);
+
+    string str;
+    str += "mov\t" + reg2s(def, 16) + "\t," + reg2s(use, 16);
 
     return str;
 }

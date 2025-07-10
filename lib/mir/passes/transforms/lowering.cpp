@@ -7,8 +7,11 @@
 #include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
 #include "ir/instructions/phi.hpp"
+#include "ir/instructions/vector.hpp"
 #include "ir/type.hpp"
+#include "mir/info.hpp"
 #include "mir/passes/transforms/isel.hpp"
+#include "utils/exception.hpp"
 #include <algorithm>
 
 using namespace MIR;
@@ -59,8 +62,7 @@ unsigned MIR::typeBitwide(const IR::pType &type) {
     } else if (auto ptrtype = type->as<IR::PtrType>()) {
         return 8;
     } else if (auto vectype = type->as<IR::VectorType>()) {
-        Err::todo("typeBitwide: vec todo");
-        // return 16;
+        return 16;
     } else if (auto arraytype = type->as<IR::ArrayType>()) {
         Err::unreachable("typeBitwide: array type not supported");
     }
@@ -135,9 +137,10 @@ MIROperand_p LoweringContext::newVReg(const std::shared_ptr<IR::Type> &type) {
         return newVReg(*(type->as<IR::BType>()));
     case IR::IRCTYPE::PTR:
         return newVReg(*(type->as<IR::PtrType>()));
+    case IR::IRCTYPE::VECTOR:
+        return newVReg(*(type->as<IR::VectorType>()));
     default:
         Err::todo("LoweringContext::newVReg: vec and func");
-        return nullptr;
     }
 }
 
@@ -155,8 +158,30 @@ MIROperand_p LoweringContext::newVReg(const IR::ArrayType &type) {
 }
 
 MIROperand_p LoweringContext::newVReg(const IR::VectorType &type) {
-    Err::todo("newReg: vector type undo now");
-    return nullptr;
+
+    switch (type.getElmType()->getTrait()) {
+    case IR::IRCTYPE::BASIC:
+        switch (type.getElmType()->as<IR::BType>()->getInner()) {
+        case IR::IRBTYPE::I1:
+        case IR::IRBTYPE::I8:
+        case IR::IRBTYPE::I32:
+            return MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Intvec);
+            break;
+        case IR::IRBTYPE::I64:
+            return MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Int64vec);
+            break;
+        case IR::IRBTYPE::FLOAT:
+            return MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Floatvec);
+            break;
+        // case IR::IRBTYPE::I128:
+        default:
+            Err::unreachable("newVReg: unknown vector inner btype");
+        }
+    case IR::IRCTYPE::PTR:
+        return MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Int64vec);
+    default:
+        Err::unreachable("newVReg: unknown vector inner type");
+    }
 }
 
 MIROperand_p LoweringContext::newVReg(const OpT &type) {
@@ -427,8 +452,8 @@ void MIR::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContext &c
         if (auto alloca = inst->as<IR::ALLOCAInst>()) {
             // stk obj
             auto ptype = alloca->getBaseType(); // basetype not getType
-            auto stkobjStore =
-                mfunc->addStkObj(codeGenCtx, ptype->getBytes(), alloca->getAlign(), 0, StkObjUsage::Local); // get vreg
+            auto stkobjStore = mfunc->addStkObj(codeGenCtx, ptype->getBytes(), alloca->getAlign(), 0,
+                                                StkObjUsage::Local); // get vreg
 
             storeMap.emplace(alloca, stkobjStore);
 
@@ -502,7 +527,10 @@ void MIR::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContext &c
 
 void MIR::lowerInst(const IRInst_p &inst, LoweringContext &ctx) {
 
-    ///@todo maybe irgen can add select inst
+    if (auto store = inst->as<IR::STOREInst>();
+        inst->getType()->is<IR::VectorType>() || store->getValue()->getType()->is<IR::VectorType>()) {
+        lowerInst_v(inst, ctx);
+    }
 
     using OP = IR::OP;
     switch (inst->getOpcode()) {
@@ -566,6 +594,73 @@ void MIR::lowerInst(const IRInst_p &inst, LoweringContext &ctx) {
         break;
     case OP::CALL:
         MIR::lowerInst(inst->as<IR::CALLInst>(), ctx);
+        break;
+    case OP::SELECT:
+        MIR::lowerInst(inst->as<IR::SELECTInst>(), ctx);
+        break;
+    default:
+        Err::unreachable("lowerInst: unrecognized IR::OP");
+    }
+}
+
+void MIR::lowerInst_v(const IRInst_p &inst, LoweringContext &ctx) {
+    using OP = IR::OP;
+    switch (inst->getOpcode()) {
+    case OP::ALLOCA:
+    case OP::PHI:
+        // dont touch this
+        break;
+    case OP::INSERT:
+        MIR::lowerInst_v(inst->as<IR::INSERTInst>(), ctx);
+        break;
+    case OP::EXTRACT:
+        MIR::lowerInst_v(inst->as<IR::EXTRACTInst>(), ctx);
+        break;
+    case OP::ADD:
+    case OP::SUB:
+    case OP::MUL:
+    case OP::AND:
+    case OP::OR:
+    case OP::XOR:
+    case OP::ASHR:
+    case OP::LSHR:
+    case OP::SHL:
+    case OP::FADD:
+    case OP::FSUB:
+    case OP::FMUL:
+        MIR::lowerInst_v(inst->as<IR::BinaryInst>(), ctx);
+        break;
+    case OP::DIV:
+    case OP::SREM:
+    case OP::UREM:
+    case OP::FDIV:
+    case OP::FREM:
+        ///@todo predict range of numbers
+        MIR::lowerInst_v(inst->as<IR::BinaryInst>(), ctx);
+        break;
+    case OP::FNEG:
+        MIR::lowerInst_v(inst->as<IR::FNEGInst>(), ctx);
+        break;
+    case OP::ICMP:
+        MIR::lowerInst_v(inst->as<IR::ICMPInst>(), ctx);
+        break;
+    case OP::FCMP:
+        MIR::lowerInst_v(inst->as<IR::FCMPInst>(), ctx);
+        break;
+    case OP::LOAD:
+        MIR::lowerInst_v(inst->as<IR::LOADInst>(), ctx);
+        break;
+    case OP::STORE:
+        MIR::lowerInst_v(inst->as<IR::STOREInst>(), ctx);
+        break;
+    case OP::ZEXT:
+    case OP::BITCAST:
+    case OP::SITOFP:
+    case OP::FPTOSI:
+        MIR::lowerInst_v(inst->as<IR::CastInst>(), ctx);
+        break;
+    case OP::GEP:
+        MIR::lowerInst_v(inst->as<IR::GEPInst>(), ctx);
         break;
     case OP::SELECT:
         MIR::lowerInst(inst->as<IR::SELECTInst>(), ctx);

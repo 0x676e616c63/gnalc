@@ -748,7 +748,8 @@ void RVIselInfo::legalizeCopy(InstLegalizeContext &_ctx) const {
         movType = ARMOpC::MOV; // orr
     } else if (defType == OpT::Float && useType == OpT::Float) {
         movType = ARMOpC::MOV_V; // .16b
-    } else if (inRange(defType, OpT::Intvec, OpT::Floatvec) && inRange(useType, OpT::Intvec, OpT::Floatvec)) {
+    } else if (inSet(defType, OpT::Intvec, OpT::Int64vec, OpT::Floatvec) &&
+               inSet(useType, OpT::Intvec, OpT::Int64vec, OpT::Floatvec)) {
         movType = ARMOpC::MOV_V;
     } else {
         movType = ARMOpC::MOVF;

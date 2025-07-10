@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include "ir/type_alias.hpp"
 #ifndef GNALC_MIR_BUILD_LOWERING_HPP
 #define GNALC_MIR_BUILD_LOWERING_HPP
 
@@ -30,6 +31,8 @@ using IRModule_p = std::shared_ptr<IRModule>;
 OpT btypeConvert(const IR::BType &);
 unsigned typeBitwide(const IR::pType &);
 OpC IROpCodeConvert(IR::OP);
+OpC IROpCodeConvert_v(IR::OP);
+
 Cond IRCondConvert(IR::ICMPOP);
 Cond IRCondConvert(IR::FCMPOP);
 
@@ -161,11 +164,9 @@ MIRGlobal_p loweringGlobal(const IR::GlobalVariable &);
 void loweringFunction(MIRFunction_p, IRFunc_p, CodeGenContext &, MIRModule &, std::map<string, MIRGlobal_p>);
 
 void lowerInst(const IR::pInst &, LoweringContext &);
-
+void lowerInst_v(const IR::pInst &, LoweringContext &);
 // more detially
 void lowerInst(const IR::pBinary &, LoweringContext &);
-// void lowerInst(IR::pBinary, LoweringContext &, IR::DomTreeAnalysis::Result &,
-//                IR::LiveAnalysis::Result &); // sdiv / srem
 void lowerInst(const IR::pFneg &, LoweringContext &);
 void lowerInst(const IR::pIcmp &, LoweringContext &);
 void lowerInst(const IR::pFcmp &, LoweringContext &);
@@ -178,6 +179,18 @@ void lowerInst(const IR::pGep &, LoweringContext &);
 void lowerInst(const IR::pCall &, LoweringContext &);
 void lowerInst(const IR::pSelect &, LoweringContext &);
 
+// vector lowering
+void lowerInst_v(const IR::pInsert &, LoweringContext &);
+void lowerInst_v(const IR::pExtract &, LoweringContext &);
+void lowerInst_v(const IR::pBinary &, LoweringContext &);
+void lowerInst_v(const IR::pFneg &, LoweringContext &);
+void lowerInst_v(const IR::pIcmp &, LoweringContext &);
+void lowerInst_v(const IR::pFcmp &, LoweringContext &);
+void lowerInst_v(const IR::pLoad &, LoweringContext &);
+void lowerInst_v(const IR::pStore &, LoweringContext &);
+void lowerInst_v(const IR::pCast &, LoweringContext &); // copy
+void lowerInst_v(const IR::pGep &, LoweringContext &);
+void lowerInst_v(const IR::pSelect &, LoweringContext &);
 }; // namespace MIR
 
 #endif

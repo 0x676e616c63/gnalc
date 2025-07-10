@@ -128,18 +128,25 @@ inline string Reg2SDebug(const MIROperand_p &mop, unsigned bitWide, const CodeGe
 inline string OpC2S(OpC op) {
     switch (op) {
     case OpC::InstAdd:
+    case OpC::InstVAdd:
         return "add";
     case OpC::InstSub:
+    case OpC::InstVSub:
         return "sub";
     case OpC::InstMul:
+    case OpC::InstVMul:
         return "mul";
     case OpC::InstAnd:
+    case OpC::InstVAnd:
         return "and";
     case OpC::InstOr:
+    case OpC::InstVOr:
         return "orr";
     case OpC::InstXor:
+    case OpC::InstVXor:
         return "eor";
     case OpC::InstShl:
+    case OpC::InstVShl:
         return "lsl";
     case OpC::InstLShr:
         return "lsr";
@@ -150,27 +157,45 @@ inline string OpC2S(OpC op) {
     case OpC::InstSDiv:
         return "sdiv";
     case OpC::InstNeg:
+    case OpC::InstVNeg:
         return "neg";
     case OpC::InstFAdd:
+    case OpC::InstVFAdd:
         return "fadd";
     case OpC::InstFSub:
+    case OpC::InstVFSub:
         return "fsub";
     case OpC::InstFMul:
+    case OpC::InstVFMul:
         return "fmul";
     case OpC::InstFDiv:
+    case OpC::InstVFDiv:
         return "fdiv";
     case OpC::InstFNeg:
+    case OpC::InstVFNeg:
         return "fneg";
     case OpC::InstICmp:
         return "cmp";
+    case OpC::InstVIcmp:
+        return "cm";
     case OpC::InstFCmp:
         return "fcmp";
+    case OpC::InstVFcmp:
+        return "fcm";
     case OpC::InstF2S:
+    case OpC::InstVFP2SI:
         return "fcvtzs";
     case OpC::InstS2F:
+    case OpC::InstVSI2FP:
         return "scvtf";
     case OpC::InstFRINTZ:
+    case OpC::InstVFRINTZ:
         return "frintz";
+    case OpC::InstVExtract:
+    case OpC::InstVInsert:
+        return "mov";
+    case OpC::InstVSelect:
+        return "bsl";
     default:
         ///@todo vectorize
         Err::unreachable("OpC2S: op not support");
@@ -242,6 +267,6 @@ inline string ARMOpC2S(ARMOpC op) {
     return ""; // just to make clang happy
 }
 
-}; // namespace MIR_new
+}; // namespace MIR
 
 #endif

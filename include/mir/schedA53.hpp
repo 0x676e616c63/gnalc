@@ -59,34 +59,53 @@ inline InstExecInfo schedInfoImpl(OpC opcode) {
     case OpC::InstFMul:
         return {6, 1, A53UnitFPMDS};
     case OpC::InstFDiv:
-        return {33, 29, A53UnitFPMDS};
+        return {18, 14, A53UnitFPMDS};
     case OpC::InstFNeg:
         return {2, 1, A53UnitFPALU};
-    case OpC::InstVAdd:
-    case OpC::InstVSub:
-        return {6, 1, A53UnitFPALU};
-    case OpC::InstVMul:
-        return {10, 1, A53UnitFPMDS};
-    case OpC::InstVDiv:
-        ///@warning 猜的, 实在没找到
-        return {33, 29, A53UnitFPMDS};
-    case OpC::InstVHorizontalAdd:
-        return {6, 1, A53UnitFPALU};
-    case OpC::InstFPVAdd:
-    case OpC::InstFPVSub:
-        return {6, 1, A53UnitFPALU};
-    case OpC::InstFPVMul:
-        return {10, 1, A53UnitFPMDS};
-    case OpC::InstFPVDiv:
-        return {33, 29, A53UnitFPMDS};
-    case OpC::InstFPVHorizontalAdd:
-        return {6, 1, A53UnitFPALU};
     case OpC::InstSelect:
-        ///@warning 猜测的结果, 但实际上select几乎没有调度的空间
+        ///@warning 实际上有若干种select，数据可能有不同
         return {2, 1, A53UnitALU};
     case OpC::InstBranch:
         ///@warning 同上, 也几乎没有调度空间
         return {1, 1, A53UnitB};
+    // vector insts
+    case OpC::InstVFDiv:
+        return {18, 14, A53UnitFPMDS};
+    case OpC::InstVAdd:
+    case OpC::InstVSub:
+    case OpC::InstVMul:
+    case OpC::InstVFAdd:
+    case OpC::InstVFSub:
+    case OpC::InstVFMul:
+    case OpC::InstVSRem:
+    case OpC::InstVURem:
+    case OpC::InstVFRem:
+    // vector bitwise
+    case OpC::InstVAnd:
+    case OpC::InstVOr:
+    case OpC::InstVXor:
+    case OpC::InstVShl:
+    case OpC::InstVFNeg:
+    case OpC::InstVNeg:
+    case OpC::InstVExtract:
+    case OpC::InstVInsert:
+    case OpC::InstVFP2SI:
+    case OpC::InstVSI2FP:
+    case OpC::InstVFRINTZ:
+    case OpC::InstVIcmp:
+    case OpC::InstVFcmp:
+        return {6, 1, A53UnitFPALU};
+    // case OpC::InstVSDiv:
+    // case OpC::InstVUDiv:
+    // case OpC::InstShuffle:
+    // case OpC::InstVLoad:
+    // case OpC::InstVStore:
+    // case OpC::InstVZext:
+    // case OpC::InstVSext:
+    // case OpC::InstVBitcast:
+    // case OpC::InstVSelect:
+    // case OpC::InstVLShr:
+    // case OpC::InstVAShr:
     default:
         // include InstLdr, InstStr
         return {0, 0, 0};
@@ -117,17 +136,21 @@ inline InstExecInfo schedInfoImpl(ARMOpC opcode) {
     case ARMOpC::STUR:
         return {4, 1, A53UnitLdSt};
     case ARMOpC::LD1:
+        return {5, 2, A53UnitLdSt};
     case ARMOpC::ST1:
         return {4, 1, A53UnitLdSt};
     case ARMOpC::LD2:
+        return {7, 4, A53UnitLdSt};
     case ARMOpC::ST2:
         return {5, 2, A53UnitLdSt};
     case ARMOpC::LD3:
+        return {7, 4, A53UnitLdSt};
     case ARMOpC::ST3:
         return {6, 3, A53UnitLdSt};
     case ARMOpC::LD4:
+        return {8, 5, A53UnitLdSt};
     case ARMOpC::ST4:
-        return {7, 4, A53UnitLdSt};
+        return {6, 3, A53UnitLdSt};
     case ARMOpC::LD5:
     case ARMOpC::ST5:
         return {8, 5, A53UnitLdSt};

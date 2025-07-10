@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "mir/passes/transforms/isel.hpp"
+#include "mir/tools.hpp"
 #include <algorithm>
 #include <optional>
 
@@ -25,7 +26,11 @@ OpC MIR::chooseCopyOpC(const MIROperand_p &dst, const MIROperand_p &src) {
     } else if (dst->isVReg() && src->isISA()) {
         return OpC::InstCopyFromReg;
     } else if (dst->isVReg() && src->isVReg()) {
-        return OpC::InstCopy;
+        if (inSet(dst->type(), OpT::Intvec, OpT::Int64vec, OpT::Floatvec)) {
+            return OpC::InstVCopy;
+        } else {
+            return OpC::InstCopy;
+        }
     } else if (dst->isVReg() && src->isStack()) {
         return OpC::InstCopyStkPtr;
     } else if (dst->isISA() && src->isStack()) {
@@ -190,7 +195,6 @@ void ISelContext::replaceOperand(const MIROperand_p &_old, const MIROperand_p &_
         mReplaceMap.emplace(_old, _new);
     }
 }
-
 
 PM::PreservedAnalyses ISel::run(MIRFunction &mfunc, FAM &fam) {
     ISelContext isel(mfunc.Context());

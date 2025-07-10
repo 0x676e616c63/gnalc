@@ -37,6 +37,7 @@ enum class OperandType : uint32_t {
     Float, // V<> 默认位宽
     Float32,
     Intvec,
+    Int64vec,
     Floatvec,
     special, // prob, alignment, load/store size...
     High32,
@@ -65,6 +66,7 @@ inline unsigned getBitWide(OpT type) {
     case OpT::Int64:
         return 8;
     case OpT::Intvec:
+    case OpT::Int64vec:
     case OpT::Floatvec:
         return 16;
     default:
@@ -120,18 +122,44 @@ enum class MIRGenericInst : uint32_t {
     InstFDiv,
     InstFRem,
     InstFNeg,
-    // vector, at most 4
+    // vector binary, at most 4
     InstVAdd,
     InstVSub,
     InstVMul,
-    InstVDiv,
-    InstVHorizontalAdd,
-    // fp vector, at most 4
-    InstFPVAdd,
-    InstFPVSub,
-    InstFPVMul,
-    InstFPVDiv,
-    InstFPVHorizontalAdd,
+    InstVSDiv,
+    InstVUDiv,
+    InstVFAdd,
+    InstVFSub,
+    InstVFMul,
+    InstVFDiv,
+    InstVSRem,
+    InstVURem,
+    InstVFRem,
+    // vector bitwise
+    InstVAnd,
+    InstVOr,
+    InstVXor,
+    InstVShl,
+    InstVLShr,
+    InstVAShr,
+    // vector miscs
+    InstVFNeg,
+    InstVNeg,
+    InstVExtract,
+    InstVInsert,
+    InstShuffle,
+    InstVLoad,
+    InstVStore,
+    InstVZext,
+    InstVSext,
+    InstVFP2SI,
+    InstVSI2FP,
+    InstVBitcast,
+    InstVIcmp,
+    InstVFcmp,
+    InstVFRINTZ,
+    InstVSelect,
+    InstVCopy,
     // Comparison
     InstICmp, // dst, lhs, rhs, op
     InstFCmp, // dst, lhs, rhs, op
@@ -357,7 +385,8 @@ public:
         // Err::gassert(isVReg(), "assignColor: try assign color to a non-reg");
         Err::gassert(color >= ARMReg::X0 && color <= ARMReg::V31,
                      "assignColor: unknown reg color " + std::to_string(color));
-        Err::gassert(color >= ARMReg::V0 && (mType == OpT::Float32 || mType == OpT::Floatvec || mType == OpT::Intvec) ||
+        Err::gassert(color >= ARMReg::V0 && (mType == OpT::Float32 || mType == OpT::Floatvec || mType == OpT::Intvec ||
+                                             mType == OpT::Int64vec) ||
                          color <= ARMReg::X29 &&
                              (mType == OpT::Int16 || mType == OpT::Int32 || mType == OpT::Int64 || mType == OpT::Int),
                      "assignColor: register bank dont match mtype");
@@ -373,6 +402,7 @@ public:
 
 class MIRInst : public std::enable_shared_from_this<MIRInst> {
     friend class MIRModule;
+
 public:
     static constexpr unsigned maxOpCnt = 7;
 
@@ -509,6 +539,7 @@ struct constVal {};
 
 class MIRBlk : public MIRReloc {
     friend class MIRModule;
+
 private:
     MIRFunction_wp mFunction;
     MIRInst_p_l mInsts;
@@ -614,6 +645,7 @@ public:
 
 class MIRFunction : public MIRReloc {
     friend class MIRModule;
+
 private:
     MIRBlk_p_l mBlks;
 

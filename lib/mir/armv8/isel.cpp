@@ -4,6 +4,7 @@
 #include "mir/armv8/isel.hpp"
 #include "mir/MIR.hpp"
 #include "mir/passes/transforms/isel.hpp"
+#include "mir/tools.hpp"
 #include <algorithm>
 #include <optional>
 
@@ -229,17 +230,6 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         auto lhs = minst->getOp(1);
         auto rhs = minst->getOp(2);
 
-        ///@todo 需要范围分析
-        // if (rhs->isImme() && popcounter_wrapper(rhs->imme()) == 1) {
-
-        //     auto minst_and = ctx.newInst(OpC::InstAnd);
-
-        //     minst_and->setOperand<0>(def, ctx.codeGenCtx())
-        //         ->setOperand<1>(lhs, ctx.codeGenCtx())
-        //         ->setOperand<2>(MIROperand::asImme(rhs->imme() - 1, OpT::Int64), ctx.codeGenCtx());
-        //     break;
-        // }
-
         auto minst_div = ctx.newInst(OpC::InstSDiv);
         auto minst_mul = ctx.newInst(OpC::InstMul);
         auto minst_sub = ctx.newInst(OpC::InstSub);
@@ -294,14 +284,17 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
             ->setOperand<1>(lhs, ctx.codeGenCtx())
             ->setOperand<2>(result2, ctx.codeGenCtx());
     } break;
-    case OpC::InstFRem: {
+    case OpC::InstFRem:
+    case OpC::InstVFRem: {
         auto def = minst->ensureDef();
         auto lhs = minst->getOp(1);
         auto rhs = minst->getOp(2);
 
-        auto minst_fdiv = ctx.newInst(OpC::InstFDiv);
-        auto minst_fmul = ctx.newInst(OpC::InstFMul);
-        auto minst_fsub = ctx.newInst(OpC::InstFSub);
+        auto isVec = def->type() == OpT::Floatvec;
+
+        auto minst_fdiv = ctx.newInst(isVec ? OpC::InstFDiv : OpC::InstVFDiv);
+        auto minst_fmul = ctx.newInst(isVec ? OpC::InstFMul : OpC::InstVFMul);
+        auto minst_fsub = ctx.newInst(isVec ? OpC::InstFSub : OpC::InstVFSub);
 
         auto result1 = MIROperand::asVReg(ctx.codeGenCtx().nextId(), OpT::Float32);
         auto result2 = MIROperand::asVReg(ctx.codeGenCtx().nextId(), OpT::Float32);
@@ -770,7 +763,8 @@ void ARMIselInfo::legalizeCopy(InstLegalizeContext &_ctx) const {
         movType = ARMOpC::MOV; // orr
     } else if (defType == OpT::Float && useType == OpT::Float) {
         movType = ARMOpC::MOV_V; // .16b
-    } else if (inRange(defType, OpT::Intvec, OpT::Floatvec) && inRange(useType, OpT::Intvec, OpT::Floatvec)) {
+    } else if (inSet(defType, OpT::Intvec, OpT::Int64vec, OpT::Floatvec) &&
+               inSet(useType, OpT::Intvec, OpT::Int64vec, OpT::Floatvec)) {
         movType = ARMOpC::MOV_V;
     } else {
         movType = ARMOpC::MOVF;
