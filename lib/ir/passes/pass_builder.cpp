@@ -224,10 +224,10 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
 
     auto make_loop = [&options] {
         FPM fpm;
-        // FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LCSSAPass(), LICMPass())
-        // fpm.addPass(PrintFunctionPass(std::cerr));
-        // FUNCTION_TRANSFORM(loop_parallel, LoopSimplifyPass(), LoopParallelPass())
-        // fpm.addPass(PrintFunctionPass(std::cerr));
+        FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LCSSAPass(), LICMPass())
+        fpm.addPass(PrintFunctionPass(std::cerr));
+        FUNCTION_TRANSFORM(loop_parallel, LoopSimplifyPass(), LoopParallelPass())
+        fpm.addPass(PrintFunctionPass(std::cerr));
         FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
         FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
         FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
@@ -368,7 +368,7 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     fpm.addPass(LICMPass());
     fpm.addPass(NameNormalizePass(true));
     fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(LoopParallelPass());
+    fpm.addPass(LoopParallelPass(true));
     fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(VerifyPass());
     fpm.addPass(DCEPass());
@@ -540,6 +540,8 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(PMOptions options, double dupl
     REGISTER_FUNCTION_TRANSFORM4(loop_unroll, CFGSimplifyPass, LoopSimplifyPass, LCSSAPass, LoopUnrollPass, 10)
 
     REGISTER_FUNCTION_TRANSFORM2(vectorizer, LoopSimplifyPass, VectorizerPass, 10)
+
+    REGISTER_FUNCTION_TRANSFORM2(loop_parallel, LoopSimplifyPass, LoopParallelPass, 10)
 
     if (repro.empty()) {
         std::random_device rd;

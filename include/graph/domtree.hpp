@@ -105,7 +105,7 @@ public:
         return node_a->dfs_in() <= node_b->dfs_in() && node_a->dfs_out() >= node_b->dfs_out();
     }
 
-    bool isReachable(GraphNodeT a) const { return nodes.count(a); }
+    bool isReachableFromEntry(GraphNodeT a) const { return nodes.count(a); }
 
     GraphNodeSet getDomSet(GraphNodeT b) const {
         GraphNodeSet domset = {b};

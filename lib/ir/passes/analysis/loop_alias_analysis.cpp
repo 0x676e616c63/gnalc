@@ -16,7 +16,7 @@ namespace IR {
 PM::UniqueKey LoopAliasAnalysis::Key;
 
 bool AccessSet::AccessPair::operator==(const AccessPair &other) const {
-    return trip_count == other.trip_count && stride == other.stride;
+    return trip_count == other.trip_count && stride == other.stride && loop_header == other.loop_header;
 }
 
 bool AccessSet::operator==(const AccessSet &set) const {
@@ -102,9 +102,13 @@ AliasInfo LoopAAResult::getAliasInfo(Value *v1, Value *v2) const {
     if (loc1.untracked || loc2.untracked)
         return AliasInfo::MayAlias;
 
+    if (loc1.base != loc2.base)
+        return AliasInfo::NoAlias;
+
     if (loc1 == loc2)
         return AliasInfo::MustAlias;
 
+    // For pointers with same base, see if they can overlap.
     if (overlap(loc1, loc2))
         return AliasInfo::MayAlias;
 
@@ -199,6 +203,17 @@ int LoopAAResult::getAlignOnBase(Value *value) const {
 
 int LoopAAResult::getAlignOnBase(const pVal &value) const { return getAlignOnBase(value.get()); }
 
+std::optional<Value *> LoopAAResult::getBase(Value *value) const {
+    const auto &loc = queryPointer(value);
+    if (loc.untracked)
+        return std::nullopt;
+
+    return loc.base;
+}
+std::optional<Value *> LoopAAResult::getBase(const pVal &value) const {
+    return getBase(value.get());
+}
+
 std::optional<std::tuple<Value *, size_t>> LoopAAResult::getBaseAndOffset(Value *value) const {
     const auto &loc = queryPointer(value);
     if (loc.untracked)
@@ -274,8 +289,11 @@ AccessSet LoopAAResult::analyzePointer(Value *ptr) const {
                                 auto [base, step] = opt.value();
                                 set.offset += base * curr_type->getBytes();
                                 access_insert_point = set.accesses.insert(
-                                    access_insert_point, AccessSet::AccessPair{.trip_count = idx_trip_count,
-                                                                               .stride = step * curr_type->getBytes()});
+                                    access_insert_point, AccessSet::AccessPair{
+                                                             .trip_count = idx_trip_count,
+                                                             .stride = step * curr_type->getBytes(),
+                                                             .loop_header = idx_scev->getLoop()->getRawHeader(),
+                                                         });
                                 ++access_insert_point; // restore the insert point
                             } else if (int idx_ci32; idx_scev->isExpr() && idx_scev->getExpr()->isIRValue() &&
                                                      match(idx_scev->getExpr()->getIRValue(), M::Bind(idx_ci32))) {

@@ -72,6 +72,8 @@ public:
 
     auto blocks() const { return Util::make_iterator_range(block_begin(), block_end()); }
 
+    auto reverse_blocks() const { return Util::make_iterator_range(block_rbegin(), block_rend()); }
+
     auto getBFVisitor() { return LoopBFVisitor{shared_from_this()}; }
 
     template <Util::DFVOrder order = Util::DFVOrder::PreOrder> auto getDFVisitor() {

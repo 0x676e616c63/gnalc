@@ -8,8 +8,6 @@
 #include <sched.h>
 #include <sys/mman.h>
 
-// #define GNALC_DEBUG
-
 #ifdef GNALC_DEBUG
 #include <cstdio>
 #include <unistd.h>
@@ -20,8 +18,13 @@
 static constexpr auto main_cpu = 2;
 static constexpr auto worker_cpu = 3;
 
+#ifndef GNALC_DEBUG
+static constexpr int32_t small_task_threshold = 128;
+#else
+static constexpr int32_t small_task_threshold = 0;
+#endif
+
 static constexpr auto stack_size = 64 * 1024;
-static constexpr int32_t small_task_threshold = 64;
 static constexpr int32_t cache_line_size = 64;
 
 using Task = void (*)(int32_t beg, int32_t end);
@@ -139,13 +142,16 @@ void gnalc_parallel_for(int32_t beg, int32_t end, Task func) {
         ;
 }
 
-void gnalc_atomic_add_i32(std::atomic_int32_t& x, int32_t val) {
-    x += val;
-}
+void gnalc_atomic_add_i32(std::atomic_int32_t &x, int32_t val) { x += val; }
 
-    void gnalc_atomic_add_f32(std::atomic<float>& x, float val) {
+// WARNING:
+// Note that the function itself performs exact float32 additions (no loss of precision)
+// However, when used across threads, the out‑of‑order of these atomic additions can
+// introduce loss of precision.
+// (a + b) + c != a + (b + c)
+void gnalc_atomic_add_f32(std::atomic<float> &x, float val) {
     float base = x.load();
-    while(!x.compare_exchange_weak(base, base + val))
+    while (!x.compare_exchange_weak(base, base + val))
         ;
 }
 }

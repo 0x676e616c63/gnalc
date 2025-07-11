@@ -1,7 +1,7 @@
 // Copyright (c) 2025 0x676e616c63
 // SPDX-License-Identifier: MIT
 
-// Generic Pass Manager used by both the IR and MIR PassManagers.
+// Generic Pass Manager used by both the SIR, IR and MIR PassManagers.
 //
 // Adopting design concepts from LLVM's New PassManager framework,
 // this implementation maintains a lightweight structure

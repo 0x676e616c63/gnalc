@@ -274,7 +274,7 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                             auto succs = load_block->getNextBB();
                             bool dom_all_succ = true;
                             for (const auto &succ : succs) {
-                                if (!real_pdom->isReachable(succ))
+                                if (!real_pdom->isReachableFromEntry(succ))
                                     continue;
 
                                 if (!real_pdom->ADomB(candidate->getParent(), succ)) {

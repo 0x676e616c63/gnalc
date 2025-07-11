@@ -31,7 +31,7 @@ Loop::block_iterator Loop::block_begin() { return loop_blocks.begin(); }
 Loop::block_iterator Loop::block_end() { return loop_blocks.end(); }
 Loop::block_const_iterator Loop::block_cbegin() const { return loop_blocks.cbegin(); }
 Loop::block_const_iterator Loop::block_cend() const { return loop_blocks.cend(); }
-Loop::block_const_reverse_iterator Loop::block_rbegin() const { return loop_blocks.crbegin(); }
+Loop::block_const_reverse_iterator Loop::block_rbegin() const { return loop_blocks.rbegin(); }
 Loop::block_const_reverse_iterator Loop::block_rend() const { return loop_blocks.rend(); }
 Loop::block_reverse_iterator Loop::block_rbegin() { return loop_blocks.rbegin(); }
 Loop::block_reverse_iterator Loop::block_rend() { return loop_blocks.rend(); }

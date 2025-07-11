@@ -1,4 +1,6 @@
-R"(; ModuleID = 'thread.cpp'
+R"(
+; ModuleID = './thread.cpp'
+
 %struct.cpu_set_t = type { [16 x i64] }
 
 @_ZL5state.0 = internal unnamed_addr global ptr null, align 64
@@ -109,7 +111,7 @@ declare i32 @munmap(ptr noundef, i64 noundef) local_unnamed_addr #3
 ; Function Attrs: mustprogress sspstrong uwtable
 define dso_local void @gnalc_parallel_for(i32 noundef %0, i32 noundef %1, ptr noundef %2) local_unnamed_addr #4 {
   %4 = sub nsw i32 %1, %0
-  %5 = icmp slt i32 %4, 65
+  %5 = icmp slt i32 %4, 129
   br i1 %5, label %6, label %7
 
 6:                                                ; preds = %3
