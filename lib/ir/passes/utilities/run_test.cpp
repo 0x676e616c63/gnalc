@@ -46,7 +46,7 @@ void RunTestPass::runImpl(const std::string& outfile_id, Module& module) {
 
     std::ofstream outsouce_stream(outsource);
     Err::gassert(outsouce_stream.good(), "Cannot open '" + outsource + "'.");
-    PrintModulePass printer(outsouce_stream);
+    PrintModulePass printer(outsouce_stream, true);
     NameNormalizePass name_normalizer(true);
     module.accept(name_normalizer);
     module.accept(printer);

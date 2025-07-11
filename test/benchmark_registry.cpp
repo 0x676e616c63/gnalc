@@ -171,7 +171,7 @@ Entry gnalc_register_helper(const std::string &param) {
     Entry entry{
         .ir_gen =
             [param](const std::string &newsy, const std::string &outll) {
-                return format("../gnalc -emit-llvm -S {} -o {} {}", newsy, outll, param);
+                return format("../gnalc -with-runtime -emit-llvm -S {} -o {} {}", newsy, outll, param);
             },
         .asm_gen = [param](const std::string &newsy,
                            const std::string &outs) { return format("../gnalc -S {} -o {} {}", newsy, outs, param); }};
@@ -196,6 +196,11 @@ void register_gnalc_fixed() {
 void register_gnalc_fixed_no_memo() {
     auto entry = gnalc_register_helper("-fixed-point --no-memo");
     BenchmarkRegistry::register_benchmark("gnalc_fixed_no_memo", entry);
+}
+
+void register_gnalc_fixed_no_parallel() {
+    auto entry = gnalc_register_helper("-fixed-point --no-parallel");
+    BenchmarkRegistry::register_benchmark("gnalc_fixed_no_parallel", entry);
 }
 
 void register_gnalc_debug() {
@@ -236,6 +241,7 @@ void Test::register_all_benchmarks() {
     register_gnalc_std();
     register_gnalc_fixed();
     register_gnalc_fixed_no_memo();
+    register_gnalc_fixed_no_parallel();
     register_gnalc_debug();
     register_gnalc_fuzz3();
     register_gnalc_fuzz5();

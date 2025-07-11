@@ -38,6 +38,15 @@ bool BasicAAResult::insertPotentialAlias(Value *target, Value *alias) {
     }
     return false;
 }
+
+bool BasicAAResult::setUntracked(Value *ptr) {
+    if (!ptr_info[ptr].untracked_array) {
+        ptr_info[ptr].untracked_array = true;
+        return true;
+    }
+    return false;
+}
+
 BasicAAResult::PtrInfo BasicAAResult::getPtrInfo(Value *ptr) const {
     Err::gassert(ptr->getType()->getTrait() == IRCTYPE::PTR);
     if (ptr->getVTrait() == ValueTrait::GLOBAL_VARIABLE) {
@@ -327,8 +336,9 @@ BasicAAResult BasicAliasAnalysis::run(Function &func, FAM &fam) {
                     } else if (auto select = inst->as<SELECTInst>()) {
                         changed |= res.insertPotentialAlias(select.get(), select->getTrueVal().get());
                         changed |= res.insertPotentialAlias(select.get(), select->getFalseVal().get());
-                    } else
-                        Err::unreachable("Unknown ptr type");
+                    } else {
+                        changed |= res.setUntracked(inst.get());
+                    }
                 }
             }
         }

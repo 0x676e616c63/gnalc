@@ -205,6 +205,7 @@ public:
     size_t getBytes() const override { return size * element_type->getBytes(); }
 };
 
+// Function pointer type
 class FunctionType : public Type {
 protected:
     pType ret;
@@ -224,8 +225,11 @@ public:
     const pType &getRet() const { return ret; }
 
     std::string toString() const override {
-        Err::not_implemented("Function type to string.");
-        return {};
+        std::string ret_str = ret->toString() + " (" + params.front()->toString();
+        for (size_t i = 1; i < params.size(); i++)
+            ret_str += ", " + params[i]->toString();
+        ret_str += ")*";
+        return ret_str;
     }
 
     size_t getBytes() const override {

@@ -169,6 +169,8 @@ void RangeAnalysis::analyzeArgument(RangeResult &res, Function *func, FAM *fam) 
     for (const auto &inst_user : func->inst_users()) {
         auto call = inst_user->as<CALLInst>();
         Err::gassert(call != nullptr);
+        if (call->getFunc().get() != func)
+            continue;
         auto caller_func = call->getParent()->getParent();
         if (caller_func.get() != func) {
             const auto caller_res = fam->getResult<RangeAnalysis>(*caller_func);

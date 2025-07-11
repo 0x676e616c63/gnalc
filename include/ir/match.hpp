@@ -87,14 +87,6 @@ inline auto Is(const pVal &v) {
     return ClassMatchIf<Value>{[&v](const Value &b) { return v.get() == &b; }};
 }
 
-inline auto Is(const Instruction *&v) {
-    return ClassMatchIf<Instruction>{[&v](const Value &b) { return v == &b; }};
-}
-
-inline auto Is(const pInst &v) {
-    return ClassMatchIf<Instruction>{[&v](const Value &b) { return v.get() == &b; }};
-}
-
 inline auto Is(const bool &a) {
     return ClassMatchIf<ConstantI1>{[&a](const ConstantI1 &b) { return a == b.getVal(); }};
 }
