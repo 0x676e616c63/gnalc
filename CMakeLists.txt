@@ -29,6 +29,21 @@ if (ENABLE_ASAN)
         add_link_options(-fsanitize=address)
 endif()
 
+set(RUNTIME_ARTIFACTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/runtime/artifacts)
+
+add_custom_command(
+        OUTPUT ${RUNTIME_ARTIFACTS_DIR}/thread.ll.hpp
+        COMMAND chmod +x ${CMAKE_CURRENT_SOURCE_DIR}/runtime/compile.sh
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/runtime/compile.sh
+        ${RUNTIME_ARTIFACTS_DIR}
+        "--release"
+        ${CMAKE_CURRENT_SOURCE_DIR}/runtime/thread.cpp
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Generating Gnalc Thread Runtime Header"
+        VERBATIM
+)
+add_custom_target(generate_thread_rt DEPENDS ${RUNTIME_ARTIFACTS_DIR}/thread.ll.hpp)
+
 include_directories(include)
 
 # Frontend
@@ -123,8 +138,12 @@ add_executable(pmtest tools/driver/debug/pmtest.cpp ${GNALC_SRC})
 add_executable(bfhelper tools/driver/debug/bfhelper.cpp)
 target_compile_definitions(bfhelper PRIVATE GNALC_EXTENSION_BRAINFK)
 
-# main driver
+# main driver, with ARMv8 and RISCV64, default ARMv8
 add_executable(gnalc tools/driver/driver.cpp ${GNALC_SRC})
+
+# RISCV64 driver, with ARMv8 and RISCV64, but default RISCV64
+add_executable(gnalc_rv64 tools/driver/driver.cpp ${GNALC_SRC})
+target_compile_definitions(gnalc_rv64 PRIVATE GNALC_DEFAULT_RISCV64)
 
 # with GGC Extension
 add_executable(ggc tools/driver/driver.cpp ${GGC_SRC})
@@ -138,9 +157,11 @@ target_compile_definitions(gnalc_bf PRIVATE GNALC_EXTENSION_BRAINFK)
 add_executable(gnalc_armv7 tools/driver/driver.cpp ${GNALC_SRC} ${GNALC_LEGACY_MIR_SRC} ${GNALC_ARMV7BKD_SRC})
 target_compile_definitions(gnalc_armv7 PRIVATE GNALC_EXTENSION_ARMv7)
 
-# default RISCV64
-add_executable(gnalc_rv64 tools/driver/driver.cpp ${GNALC_SRC})
-target_compile_definitions(gnalc_rv64 PRIVATE GNALC_DEFAULT_RISCV64)
+add_dependencies(gnalc generate_thread_rt)
+add_dependencies(gnalc_rv64 generate_thread_rt)
+add_dependencies(ggc generate_thread_rt)
+add_dependencies(gnalc_bf generate_thread_rt)
+add_dependencies(gnalc_armv7 generate_thread_rt)
 
 enable_testing()
 add_subdirectory(test)
