@@ -525,12 +525,15 @@ void MIR::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContext &c
     ctx.elimPhi();
 }
 
-void MIR::lowerInst(const IRInst_p &inst, LoweringContext &ctx) {
+bool isVecInst(const IRInst_p &inst) {
+    if (auto store = inst->as<IR::STOREInst>())
+        return store->getValue()->getType()->is<IR::VectorType>();
+    return inst->getType()->is<IR::VectorType>();
+}
 
-    if (auto store = inst->as<IR::STOREInst>();
-        inst->getType()->is<IR::VectorType>() || store->getValue()->getType()->is<IR::VectorType>()) {
+void MIR::lowerInst(const IRInst_p &inst, LoweringContext &ctx) {
+    if (isVecInst(inst))
         lowerInst_v(inst, ctx);
-    }
 
     using OP = IR::OP;
     switch (inst->getOpcode()) {

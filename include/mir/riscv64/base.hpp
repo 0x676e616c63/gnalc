@@ -116,6 +116,8 @@ enum class RVOpC : uint32_t {
     JAL,
     JALR,
     JR,
+
+    RET
 };
 
 } // namespace MIR

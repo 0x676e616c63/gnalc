@@ -286,7 +286,6 @@ enum class ARMOpC : uint32_t {
     INC,         // implement with add #imme (with imme legalize)
     DEC,         // implement with sub #imme (with imme legalize)
 };
-
 } // namespace MIR
 
 #endif

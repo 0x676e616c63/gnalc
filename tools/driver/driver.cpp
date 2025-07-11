@@ -40,14 +40,9 @@
 #include "codegen/riscv64/rv64printer.hpp"
 #include "ir/cfgbuilder.hpp"
 #include "ir/passes/analysis/target_analysis.hpp"
-#include "ir/target/armv8.hpp"
-#include "mir/armv8/frame.hpp"
-#include "mir/armv8/isel.hpp"
 #include "mir/passes/pass_builder.hpp"
 #include "mir/passes/pass_manager.hpp"
 #include "mir/passes/transforms/lowering.hpp"
-#include "mir/riscv64/frame.hpp"
-#include "mir/riscv64/isel.hpp"
 #include "sir/passes/utilities/sirprinter.hpp"
 
 #include <fstream>
@@ -588,18 +583,7 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
     }
 
     MIR::BkdInfos infos{.arch = mir_arch};
-    std::shared_ptr<MIR::ISelInfo> isel;
-    std::shared_ptr<MIR::FrameInfo> frame;
-    if (target == Target::ARMv8) {
-        isel = std::make_shared<MIR::ARMIselInfo>();
-        frame = std::make_shared<MIR::ARMFrameInfo>();
-    }
-    else {
-        isel = std::make_shared<MIR::RVIselInfo>();
-        frame = std::make_shared<MIR::RVFrameInfo>();
-    }
-
-    MIR::CodeGenContext ctx{infos, isel, frame};
+    auto ctx = MIR::CodeGenContext::create(infos);
     auto mModule = MIR::loweringModule(generator.get_module(), ctx);
 
     MIR::FAM bkd_fam;

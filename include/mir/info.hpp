@@ -56,6 +56,16 @@ using MIRGlobal_p = std::shared_ptr<MIRGlobal>;
 struct StkObj;
 class MIRJmpTable;
 
+class RegisterInfo {
+public:
+    virtual ~RegisterInfo() = default;
+
+    virtual unsigned int getCoreRegisterNum() const = 0;
+    virtual unsigned int getFpOrVecRegisterNum() const = 0;
+    virtual std::set<int> getCoreRegisterAllocationList() const = 0;
+    virtual std::set<int> getFpOrVecRegisterAllocationList() const = 0;
+};
+
 class FrameInfo {
 public:
     virtual ~FrameInfo() = default;
@@ -138,6 +148,7 @@ public:
 struct CodeGenContext {
     const BkdInfos &infos;
 
+    std::shared_ptr<RegisterInfo> registerInfo;
     std::shared_ptr<ISelInfo> iselInfo;
     std::shared_ptr<FrameInfo> frameInfo;
     // const TargetInstInfo &instInfo;
@@ -160,6 +171,9 @@ struct CodeGenContext {
 
     bool isARMv8() const { return infos.arch == Arch::ARMv8; }
     bool isRISCV64() const { return infos.arch == Arch::RISCV64; }
+
+
+    static CodeGenContext create(const BkdInfos& infos);
 };
 
 }; // namespace MIR_new

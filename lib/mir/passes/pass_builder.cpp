@@ -37,20 +37,12 @@ const OptInfo o1_opt_info = {.peephole_afterIsel = true,
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
 
-    using Stage = GenericPeephole::Stage;
-
+    // For RV64 Development
     fpm.addPass(ISel());
-    fpm.addPass(GenericPeephole(Stage::AfterIsel));
-    fpm.addPass(CFGsimplifyBeforeRA());
-    fpm.addPass(RedundantLoadEli());
     fpm.addPass(PreRAlegalize());
     fpm.addPass(RegisterAlloc());
-    fpm.addPass(GenericPeephole(Stage::AfterRa));
     fpm.addPass(StackGenerate());
-    fpm.addPass(GenericPeephole(Stage::AfterPostLegalize));
-    fpm.addPass(CFGsimplifyAfterRA());
     fpm.addPass(PostRAlegalize());
-    fpm.addPass(PostRaScheduling());
 
     return fpm;
 }

@@ -333,11 +333,11 @@ public:
 
     // builder begin
 
-    /// @note asISAReg 和 asVReg 使用构型相同的MIRReg, 区别在于范围不同
+    /// @note asISAReg 和 asVReg 使用构型相同的 MIRReg, 区别在于范围不同
     /// @note VReg 的起始位置会大于 ISAReg
-    /// @note asISAReg 一般直接传入ARMReg的值, 构造出的Operand不存常量/变量池
-    /// @note asVReg 一般由ctx传递id
-    /// @note ISA序号, 或者VReg id, 都由reg()获得, 可以考虑在此基础上进一步具象化和检查
+    /// @note asISAReg 一般直接传入 ARMReg/RVReg 的值, 构造出的 Operand 不存常量/变量池
+    /// @note asVReg 一般由 ctx 传递 id
+    /// @note ISA 序号, 或者 VReg id, 都由 reg() 获得, 可以考虑在此基础上进一步具象化和检查
     static MIROperand_p asISAReg(unsigned reg, OpT type) {
         Err::gassert(isISAReg(reg), "MIROperand::asISAReg: input reg doesnt match: " + std::to_string(reg));
 
