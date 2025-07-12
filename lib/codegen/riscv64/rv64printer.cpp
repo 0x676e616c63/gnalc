@@ -5,3 +5,66 @@
 #include "mir/tools.hpp"
 
 using namespace MIR;
+void RV64Printer::rv64_printout(const MIRInst &minst) {
+    auto rvopc = minst.opcode<RVOpC>();
+    write(RV64::RVOpC2S(rvopc), " ");
+    std::vector<std::string> ops;
+    for (auto &op : minst.operands()) {
+        if (op == nullptr)
+            ops.emplace_back("<null operand>");
+        else
+            ops.emplace_back(formatOperand(op));
+    }
+    switch (minst.opcode<RVOpC>()) {
+    case RVOpC::SLT:
+    case RVOpC::SLTU:
+    case RVOpC::SEQZ:
+    case RVOpC::SNEZ:
+    case RVOpC::SLTZ:
+    case RVOpC::SGTZ:
+    case RVOpC::FEQ:
+    case RVOpC::FLT:
+    case RVOpC::FLE:
+    case RVOpC::BEQ:
+    case RVOpC::BNE:
+    case RVOpC::BGE:
+    case RVOpC::BLT:
+    case RVOpC::AUIPC:
+        write(ops[0], ", ", ops[1], ", ", ops[2]);
+        break;
+    case RVOpC::MV:
+    case RVOpC::FMVSX:
+    case RVOpC::LUI:
+    case RVOpC::LI:
+        write(ops[0], ", ", ops[1]);
+        break;
+    case RVOpC::LB:
+    case RVOpC::LH:
+    case RVOpC::LW:
+    case RVOpC::LD:
+        if (!minst.getOp(2))
+            ops[2] = "0";
+        if (!minst.getOp(1)->isISA())
+            ops[1] = "sp";
+        write(ops[0], ", ", ops[2], "(", ops[1], ")");
+        break;
+    case RVOpC::SB:
+    case RVOpC::SH:
+    case RVOpC::SW:
+    case RVOpC::SD:
+        if (!minst.getOp(3))
+            ops[3] = "0";
+        if (!minst.getOp(2)->isISA())
+            ops[2] = "sp";
+        write(ops[1], ", ", ops[3], "(", ops[2], ")");
+        break;
+    case RVOpC::LA:
+        write(ops[0], ", ", ops[1]);
+        break;
+    case RVOpC::RET:
+        // pass
+        break;
+    default:
+        Err::unreachable("Unsupported RV opcode in RV64Printer");
+    }
+}

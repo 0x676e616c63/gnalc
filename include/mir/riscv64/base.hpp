@@ -11,21 +11,30 @@
 namespace MIR {
 
 namespace RV64 {
-template <typename T> bool isFitMemOffset(T offset) { return offset >= -2048 && offset < 2048; }
-
-template <typename T> bool is12BitImm(T imm) { return imm >= -2048 && imm < 2048; }
+template <typename T> bool is12BitImm(T imm) {
+    if constexpr (std::is_signed_v<T>) {
+        return imm >= -2048 && imm < 2048;
+    }
+    return imm < 2048;
+}
 } // namespace RV64
 
 enum class RVReg : uint32_t {
     X0,
+    ZERO = X0,
     X1,
+    RA = X1,
     X2,
+    SP = X2,
     X3,
+    GP = X3,
     X4,
+    TP = X4,
     X5,
     X6,
     X7,
     X8,
+    FP = X8,
     X9,
     X10,
     X11,
@@ -112,10 +121,27 @@ enum class RVOpC : uint32_t {
     BLTZ,
     BGTZ,
 
+    MV,
+    FMVSX,
+
+    LUI,
+    LI,
+    LB,
+    LH,
+    LW,
+    LD,
+    SB,
+    SH,
+    SW,
+    SD,
+
     J,
     JAL,
     JALR,
     JR,
+
+    LA,
+    AUIPC,
 
     RET
 };

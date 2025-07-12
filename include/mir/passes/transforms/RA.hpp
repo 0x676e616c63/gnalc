@@ -45,6 +45,7 @@ public:
 
 protected:
     MIRFunction *mfunc;
+    std::shared_ptr<RegisterInfo> registerInfo;
 
     OperSet precolored;
     OperSet initial;

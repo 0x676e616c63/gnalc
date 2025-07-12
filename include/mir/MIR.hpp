@@ -383,13 +383,13 @@ public:
     ///@note we directly chang reg of MIRReg
     void assignColor(unsigned color) {
         // Err::gassert(isVReg(), "assignColor: try assign color to a non-reg");
-        Err::gassert(color >= ARMReg::X0 && color <= ARMReg::V31,
-                     "assignColor: unknown reg color " + std::to_string(color));
-        Err::gassert(color >= ARMReg::V0 && (mType == OpT::Float32 || mType == OpT::Floatvec || mType == OpT::Intvec ||
-                                             mType == OpT::Int64vec) ||
-                         color <= ARMReg::X29 &&
-                             (mType == OpT::Int16 || mType == OpT::Int32 || mType == OpT::Int64 || mType == OpT::Int),
-                     "assignColor: register bank dont match mtype");
+        // Err::gassert(color >= ARMReg::X0 && color <= ARMReg::V31,
+        //              "assignColor: unknown reg color " + std::to_string(color));
+        // Err::gassert(color >= ARMReg::V0 && (mType == OpT::Float32 || mType == OpT::Floatvec || mType == OpT::Intvec ||
+        //                                      mType == OpT::Int64vec) ||
+        //                  color <= ARMReg::X29 &&
+        //                      (mType == OpT::Int16 || mType == OpT::Int32 || mType == OpT::Int64 || mType == OpT::Int),
+        //              "assignColor: register bank dont match mtype");
 
         auto &VReg = std::get<MIRReg_p>(mOperand);
 
@@ -428,6 +428,8 @@ public:
     auto opcode() const { return mOpcode; }
 
     bool isGeneric() const { return mOpcode.index() == 0; }
+    bool isARM() const { return mOpcode.index() == 1; }
+    bool isRV() const { return mOpcode.index() == 2; }
 
     MIRInst &resetOpcode(OpC opcode) {
         mOpcode = opcode;
@@ -657,7 +659,7 @@ private:
 
     // infos
     bool leafFunc = true;
-    uint64_t calleesaveRegisters = 0x60000000ULL; // fp & lr (default)
+    uint64_t calleesaveRegisters = 0LL; // initialized by RegisterAlloc
     size_t spilled = 0LL;
     bool largeStk = false; // may use fp(X29)
     unsigned stkSize = 0LL;
@@ -846,12 +848,6 @@ struct ARMInstTemplate {
     static void registerInc(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, unsigned, CodeGenContext &);
     static void registerDec(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, unsigned, CodeGenContext &);
     static void registerAdjust(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, int, CodeGenContext &);
-};
-
-struct RVInstTemplate {
-    static void registerInc(MIRInst_p_l, MIRInst_p_l::iterator, RVReg, unsigned, CodeGenContext &);
-    static void registerDec(MIRInst_p_l, MIRInst_p_l::iterator, RVReg, unsigned, CodeGenContext &);
-    static void registerAdjust(MIRInst_p_l, MIRInst_p_l::iterator, RVReg, int, CodeGenContext &);
 };
 
 }; // namespace MIR

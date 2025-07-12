@@ -30,7 +30,7 @@ bool RegisterAllocImpl::isMoveInstruction(const MIRInst_p &minst) {
 RegisterAllocImpl::Nodes RegisterAllocImpl::getUse(const MIRInst_p &minst) {
     Nodes uses;
 
-    if (!minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::BL) {
+    if (minst->isARM() && minst->opcode<ARMOpC>() == ARMOpC::BL) {
         for (int i = 0; i < 18; ++i) {
             uses.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i), OpT::Int));
         }
@@ -56,7 +56,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getUse(const MIRInst_p &minst) {
 RegisterAllocImpl::Nodes RegisterAllocImpl::getDef(const MIRInst_p &minst) {
     Nodes defs;
 
-    if (!minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::BL) {
+    if (minst->isARM() && minst->opcode<ARMOpC>() == ARMOpC::BL) {
 
         for (int i = 0; i < 19; ++i) {
             defs.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i), OpT::Int));
@@ -201,7 +201,7 @@ bool VectorRegisterAllocImpl::isMoveInstruction(const MIRInst_p &minst) {
 RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getUse(const MIRInst_p &minst) {
     Nodes uses;
 
-    if (!minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::BL) {
+    if (minst->isARM() && minst->opcode<ARMOpC>() == ARMOpC::BL) {
         for (int i = 0; i < 8; ++i) { // v0 ~ v7
             uses.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i + 32U), OpT::Float));
         }
@@ -229,7 +229,7 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getUse(const MIRInst_p &minst)
 RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getDef(const MIRInst_p &minst) {
     Nodes defs;
 
-    if (!minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::BL) {
+    if (minst->isARM() && minst->opcode<ARMOpC>() == ARMOpC::BL) {
         for (int i = 0; i < 8; ++i) { // v0 ~ v7
             defs.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i + 32U), OpT::Float));
         }

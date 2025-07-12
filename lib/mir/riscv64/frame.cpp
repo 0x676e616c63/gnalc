@@ -264,12 +264,12 @@ void RVFrameInfo::makeReturn(IR::pRet retinst, LoweringContext &ctx) const {
     OpT mtype;
 
     if (auto btype = type->as<IR::BType>()) {
-        if (btype->getInner() == IR::IRBTYPE::FLOAT) {
+        if (btype->getInner() == IR::IRBTYPE::I32) {
             isa = Util::to_underlying(RVReg::X10);
-            mtype = OpT::Float32;
-        } else if (btype->getInner() == IR::IRBTYPE::I32) {
-            isa = Util::to_underlying(RVReg::F10);
             mtype = OpT::Int32;
+        } else if (btype->getInner() == IR::IRBTYPE::FLOAT) {
+            isa = Util::to_underlying(RVReg::F10);
+            mtype = OpT::Float32;
         } else
             Err::not_implemented();
     } else
@@ -278,6 +278,15 @@ void RVFrameInfo::makeReturn(IR::pRet retinst, LoweringContext &ctx) const {
     auto mret = MIROperand::asISAReg(isa, mtype);
     ctx.addCopy(mret, mval);
     ctx.newInst(MIRInst::make(RVOpC::RET));
+}
+
+void RVFrameInfo::appendCalleeSaveStackSize(uint64_t &allocationBase, uint64_t calleesaves) const {
+    for (int i = 0; i < 64; ++i, calleesaves >>= 1) {
+        if (!(calleesaves & 1))
+            continue;
+
+        allocationBase += 8;
+    }
 }
 
 bool RVFrameInfo::isCallerSaved(const MIROperand &op) const {
@@ -297,8 +306,60 @@ bool RVFrameInfo::isCalleeSaved(const MIROperand &op) const {
     return !isCallerSaved(op);
 }
 
-void RVFrameInfo::makePostSAPrologue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const { Err::todo(); }
+void RVFrameInfo::makePostSAPrologue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const {
+    entry->Insts().emplace_front(
+        MIRInst::make(OpC::InstSub)
+            ->setOperand<0>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
+            ->setOperand<1>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
+            ->setOperand<2>(MIROperand::asImme(static_cast<int>(stkSize), OpT::Int64), ctx));
+}
 
-void RVFrameInfo::makePostSAEpilogue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const { Err::todo(); }
+void RVFrameInfo::makePostSAEpilogue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const {
+    auto iter = std::prev(entry->Insts().end());
+    Err::gassert((*iter)->opcode<RVOpC>() == RVOpC::RET, "ret not found");
+    entry->Insts().emplace(iter, MIRInst::make(OpC::InstAdd)
+                     ->setOperand<0>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
+                     ->setOperand<1>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
+                     ->setOperand<2>(MIROperand::asImme(static_cast<int>(stkSize), OpT::Int64), ctx));
+}
 
-void RVFrameInfo::insertPrologueEpilogue(MIRFunction *mfunc, CodeGenContext &ctx) const { Err::todo(); }
+void RVFrameInfo::insertPrologueEpilogue(MIRFunction *mfunc, CodeGenContext &ctx) const {
+    // insert prologue
+    auto &mblk_entry = mfunc->EntryBlk();
+    auto &entry_insts = mblk_entry->Insts();
+
+    uint64_t bitmap = mfunc->calleeSaveRegs();
+    auto offset = mfunc->begCalleeSave();
+    for (int i = 0; i < 64; ++i, bitmap >>= 1) {
+        if (bitmap & 1) {
+            auto obj = mfunc->addStkObj(mfunc->Context(), 8, 8, offset, StkObjUsage::CalleeSave);
+            entry_insts.emplace_front(
+                MIRInst::make(OpC::InstStoreRegToStack)
+                    ->setOperand<1>(MIROperand::asISAReg(static_cast<RVReg>(i), OpT::Int64), ctx)
+                    ->setOperand<2>(obj, ctx)
+                    ->setOperand<5>(MIROperand::asImme(8, OpT::Int64), ctx));
+            offset += 8;
+        }
+    }
+
+    // insert epilogue
+    for (auto &mblk_exit : mfunc->ExitBlks()) {
+        offset = mfunc->begCalleeSave();
+        bitmap = mfunc->calleeSaveRegs();
+
+        auto &insts = mblk_exit->Insts();
+        auto it = std::prev(insts.end());
+        Err::gassert((*it)->opcode<RVOpC>() == RVOpC::RET, "ret not found");
+        for (int i = 0; i < 64; ++i, bitmap >>= 1) {
+            if (bitmap & 1) {
+                const auto obj = mfunc->addStkObj(mfunc->Context(), 8, 8, offset, StkObjUsage::CalleeSave);
+                insts.emplace(it,
+                    MIRInst::make(OpC::InstLoadRegFromStack)
+                        ->setOperand<0>(MIROperand::asISAReg(static_cast<RVReg>(i), OpT::Int64), ctx)
+                        ->setOperand<1>(obj, ctx)
+                        ->setOperand<5>(MIROperand::asImme(8, OpT::Int64), ctx));
+                offset += 8;
+            }
+        }
+    }
+}

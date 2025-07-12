@@ -37,7 +37,6 @@ const OptInfo o1_opt_info = {.peephole_afterIsel = true,
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
 
-    // For RV64 Development
     fpm.addPass(ISel());
     fpm.addPass(PreRAlegalize());
     fpm.addPass(RegisterAlloc());
@@ -52,8 +51,18 @@ MPM PassBuilder::buildModuleDebugPipeline() {
     return mpm;
 }
 
+FPM buildRV64FunctionPipeline(OptInfo opt_info) {
+    FPM fpm;
+    // For RV64 Development
+    fpm.addPass(ISel());
+    fpm.addPass(PreRAlegalize());
+    fpm.addPass(RegisterAlloc());
+    fpm.addPass(StackGenerate());
+    fpm.addPass(PostRAlegalize());
+    return fpm;
+}
 
-FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
+FPM buildARMv8FunctionPipeline(OptInfo opt_info) {
     FPM fpm;
 
     using Stage = GenericPeephole::Stage;
@@ -76,10 +85,16 @@ FPM PassBuilder::buildFunctionPipeline(OptInfo opt_info) {
     return fpm;
 }
 
-MPM PassBuilder::buildModulePipeline(OptInfo opt_info) {
+FPM PassBuilder::buildFunctionPipeline(Arch arch, OptInfo opt_info) {
+    if (arch == Arch::RISCV64)
+        return buildRV64FunctionPipeline(opt_info);
+    return buildARMv8FunctionPipeline(opt_info);
+}
+
+MPM PassBuilder::buildModulePipeline(Arch arch, OptInfo opt_info) {
     MPM mpm;
 
-    mpm.addPass(makeModulePass(buildFunctionPipeline(opt_info)));
+    mpm.addPass(makeModulePass(buildFunctionPipeline(arch, opt_info)));
     return mpm;
 }
 

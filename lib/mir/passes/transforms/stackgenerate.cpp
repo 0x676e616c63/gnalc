@@ -16,6 +16,10 @@ PM::PreservedAnalyses StackGenerate::run(MIRFunction &mfunc, FAM &fam) {
 
 void StackGenerateImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     mfunc = &_mfunc;
+    // insert prologue/epilogue
+    auto &ctx = mfunc->Context();
+    auto& registerInfo = ctx.registerInfo;
+    auto& frameInfo = ctx.frameInfo;
 
     auto allocationBase = 0UL;
     auto mkQWordAlign = [&allocationBase]() {
@@ -25,10 +29,8 @@ void StackGenerateImpl::impl(MIRFunction &_mfunc, FAM &fam) {
 
     // callee args
     for (auto &[mop, obj] : mfunc->StkObjs()) {
-
-        if (obj.usage != StkObjUsage::CalleeArg) {
+        if (obj.usage != StkObjUsage::CalleeArg)
             continue;
-        }
 
         /// handling multiple call args
         allocationBase = std::max(allocationBase, static_cast<size_t>(obj.offset) + static_cast<size_t>(obj.size));
@@ -40,38 +42,22 @@ void StackGenerateImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     mfunc->modifyBegCalleeSave(allocationBase);
 
     auto &bitmap = mfunc->calleeSaveRegs();
-    bitmap &= 0x0000ff007ff80000;
-
-    if (mfunc->isProgramEntry()) {
-        bitmap &= 0x60000000;
-    }
-
-    if (mfunc->isLeafFunc()) {
-        bitmap &= ~0x20000000; // no lr
-    }
-
-    auto calleesaves = bitmap;
-
-    for (auto i = 0; i < 64; ++i, calleesaves >>= 1) {
-        if (static_cast<ARMReg>(i) == ARMReg::V0) {
-            ///@note start to stage V<>, make it ailgn
-            allocationBase += allocationBase % 16 ? 8 : 0;
-        }
-
-        if (static_cast<ARMReg>(i) < ARMReg::V0 && calleesaves % 2) {
-            allocationBase += 8; // X<>
-        } else if (static_cast<ARMReg>(i) >= ARMReg::V0 && calleesaves % 2) {
-            allocationBase += 16;
-        }
-    }
+    registerInfo->updateCalleeSaveBitmapForStackAlloc(bitmap, mfunc);
+    frameInfo->appendCalleeSaveStackSize(allocationBase, bitmap);
 
     mkQWordAlign();
 
+    // We update Stack Offset of Local/Spill/Arg here.
+    // For callee saved registers, ARMv8 use PUSH/POP, and
+    // calculate the offset in ARMA64Printer::memoryPrinter.
+    // While RISCV64 update the offset in insertPrologueEpilogue.
+    // FIXME: Refactor this to make it more clear.
+
     // spilled / local
     for (auto &[mop, obj] : mfunc->StkObjs()) {
-        if (obj.usage != StkObjUsage::Local && obj.usage != StkObjUsage::Spill) {
+        if (obj.usage != StkObjUsage::Local && obj.usage != StkObjUsage::Spill)
             continue;
-        }
+
         obj.offset = static_cast<int>(allocationBase);
         allocationBase += ((obj.size + obj.maxAlignment - 1) / obj.maxAlignment) * obj.maxAlignment;
     }
@@ -81,21 +67,17 @@ void StackGenerateImpl::impl(MIRFunction &_mfunc, FAM &fam) {
 
     // args
     for (auto &[mop, obj] : mfunc->StkObjs()) {
-        if (obj.usage != StkObjUsage::Arg) {
+        if (obj.usage != StkObjUsage::Arg)
             continue;
-        }
 
         obj.offset += static_cast<int>(allocationBase);
     }
 
-    // insert prologue/epilogue
-    auto &ctx = mfunc->Context();
+    frameInfo->insertPrologueEpilogue(mfunc, ctx);
 
-    ctx.frameInfo->insertPrologueEpilogue(mfunc, ctx);
-
-    ctx.frameInfo->makePostSAPrologue(mfunc->blks().front(), ctx, allocationBase);
+    frameInfo->makePostSAPrologue(mfunc->blks().front(), ctx, allocationBase);
 
     for (auto &mblk : mfunc->ExitBlks()) {
-        ctx.frameInfo->makePostSAEpilogue(mblk, ctx, allocationBase);
+        frameInfo->makePostSAEpilogue(mblk, ctx, allocationBase);
     }
 }

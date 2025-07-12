@@ -26,12 +26,33 @@ public:
         };
     }
     std::set<int> getFpOrVecRegisterAllocationList() const override {
-        // FIXME: Is there a bug??
-        static_assert(static_cast<uint32_t>(ARMReg::V0) == 32);
         return {
-            33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48,
+            32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48,
             49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
-        }; // ARMReg::V0 = 33U
+        }; // ARMReg::V0 = 32U
+    }
+    bool isCoreReg(unsigned int reg) const override {
+        return reg < ARMReg::FP;
+    }
+    bool isFpOrVecReg(unsigned int reg) const override {
+        return reg >= ARMReg::V0;
+    }
+    unsigned int FpOrVecStart() const override {
+        return static_cast<unsigned int>(ARMReg::V0);
+    }
+    uint64_t initCalleeSaveBitmap() const override {
+        return 0x60000000ULL; // fp & lr (default);
+    }
+    void updateCalleeSaveBitmapForStackAlloc(uint64_t& bitmap, MIRFunction* mfunc) const override {
+        bitmap &= 0x0000ff007ff80000;
+
+        if (mfunc->isProgramEntry()) {
+            bitmap &= 0x60000000;
+        }
+
+        if (mfunc->isLeafFunc()) {
+            bitmap &= ~0x20000000; // no lr
+        }
     }
 };
 

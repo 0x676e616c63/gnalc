@@ -14,6 +14,10 @@
 #include <string>
 
 namespace Test {
+enum class Target {
+    LLVM, ARMv8, RISCV64
+};
+
 struct TestResult {
     std::string source_output; // .ll or .s
     std::string output;
@@ -32,7 +36,7 @@ struct TestData {
     std::function<std::string(const std::string &, const std::string &)> ir_asm_gen;
 };
 
-extern TestResult run_test(const TestData &data, bool only_run_frontend, size_t times = 1, bool only_compile_no_exec = false);
+extern TestResult run_test(const TestData &data, Target target, size_t times = 1, bool only_compile_no_exec = false);
 struct CheckIRBinData {
     std::string id;
     std::string ir_or_bin; // .bc or .bin
@@ -46,9 +50,9 @@ struct CheckResult {
     size_t time_elapsed;
 };
 
-extern CheckResult check_ir_or_bin(const CheckIRBinData &data, bool only_run_frontend);
+extern CheckResult check_ir_or_bin(const CheckIRBinData &data, Target target);
 
-extern std::string prepare_sylib(const std::string &global_tmp_dir, bool only_run_frontend, const std::string &sylibc = cfg::sylibc);
+extern std::string prepare_sylib(const std::string &global_tmp_dir, Target target, const std::string &sylibc = cfg::sylibc);
 struct Rule {
     std::string pattern;
     std::vector<std::string> matched_results;

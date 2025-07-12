@@ -365,6 +365,21 @@ void ARMFrameInfo::makeReturn(IR::pRet retinst, LoweringContext &ctx) const {
     }
 }
 
+void ARMFrameInfo::appendCalleeSaveStackSize(uint64_t& allocationBase, uint64_t calleesaves) const {
+    for (auto i = 0; i < 64; ++i, calleesaves >>= 1) {
+        if (static_cast<ARMReg>(i) == ARMReg::V0) {
+            ///@note start to stage V<>, make it ailgn
+            allocationBase += allocationBase % 16 ? 8 : 0;
+        }
+
+        if (static_cast<ARMReg>(i) < ARMReg::V0 && calleesaves % 2) {
+            allocationBase += 8; // X<>
+        } else if (static_cast<ARMReg>(i) >= ARMReg::V0 && calleesaves % 2) {
+            allocationBase += 16;
+        }
+    }
+}
+
 bool ARMFrameInfo::isCallerSaved(const MIROperand &op) const {
     const auto reg = op.reg();
     return inRange(static_cast<ARMReg>(reg), ARMReg::X0, ARMReg::X18) ||

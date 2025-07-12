@@ -19,9 +19,9 @@ private:
 
     std::string reg2s(const MIROperand_p &reg, unsigned int bitWide, bool vector = false) {
         if (debug) {
-            return Reg2SDebug(reg, bitWide, mfunc->Context(), vector);
+            return ARMv8::Reg2SDebug(reg, bitWide, mfunc->Context(), vector);
         } else {
-            return Reg2S(reg, bitWide, vector);
+            return ARMv8::Reg2S(reg, bitWide, vector);
         }
     }
 

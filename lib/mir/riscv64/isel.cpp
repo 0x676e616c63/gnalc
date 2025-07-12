@@ -80,108 +80,46 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     switch (minst->opcode<OpC>()) {
     case OpC::InstStore: {
         auto lhs = minst->getOp(1);
-        if (lhs->isImme()) {
+        if (lhs->isImme())
             minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
-        }
     } break;
-    case OpC::InstICmp: {
-        // trySwapOps(minst); // 这里交换之后尾随的cset也要变条件, 总之就是这个位置很难办(难办? 难办就别办了)
-        auto rhs = minst->getOp(2);
-        if (rhs->isImme() && !ARMv8::is12ImmeWithProbShift(rhs->imme())) {
-            minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
-        }
-
-        auto lhs = minst->getOp(1);
-        if (lhs->isImme()) {
-            minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
-        }
-    } break;
-    case OpC::InstAdd: {
-        trySwapOps(minst);
-        auto rhs = minst->getOp(2);
-        if (rhs->isImme() && !ARMv8::is12ImmeWithProbShift(rhs->imme())) {
-            minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
-        }
-
-        auto lhs = minst->getOp(1);
-        if (lhs->isImme()) {
-            minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
-        }
-
-    } break;
+    case OpC::InstAdd:
     case OpC::InstSub: {
-        auto lhs = minst->getOp(1);
-        if (lhs->isImme()) {
-            minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
-        }
-
-        auto rhs = minst->getOp(2);
-        if (rhs->isImme() && !ARMv8::is12ImmeWithProbShift(rhs->imme())) {
-            minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
-        }
-    } break;
-    case OpC::InstFCmp: {
-        ///@todo rhs can be a constant
-
-        auto lhs = minst->getOp(1);
-        if (lhs->isImme()) {
-            minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
-        }
-
-        auto rhs = minst->getOp(2);
-        if (rhs->isImme()) {
-            minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
-        }
-    } break;
-    case OpC::InstMul: {
         trySwapOps(minst);
-        auto rhs = minst->getOp(2);
-        if (rhs->isImme()) {
-            minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
-        }
 
         auto lhs = minst->getOp(1);
-        if (lhs->isImme()) {
+        if (lhs->isImme())
             minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
-        }
-    } break;
+
+        auto rhs = minst->getOp(2);
+        if (rhs->isImme() && !RV64::is12BitImm(rhs->imme()))
+            minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
+    }
+        break;
+    case OpC::InstMul:
     case OpC::InstAnd:
     case OpC::InstOr:
     case OpC::InstXor: {
         trySwapOps(minst);
 
         auto lhs = minst->getOp(1);
-        auto rhs = minst->getOp(2);
-
-        if (lhs->isImme()) {
+        if (lhs->isImme())
             minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
-        }
 
-        if (rhs->isImme()) {
-            ///@todo maybe need a check according to the type
-
+        auto rhs = minst->getOp(2);
+        if (rhs->isImme())
             minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
-        }
     } break;
     case OpC::InstShl:
     case OpC::InstLShr:
     case OpC::InstAShr: {
-        auto def = minst->ensureDef();
-        auto lhs = minst->getOp(1);
-        auto rhs = minst->getOp(2);
-
-        if (lhs->isImme()) {
-            minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
+        auto shift = minst->getOp(2);
+        if (shift->isImme()) {
+            unsigned s = static_cast<unsigned>(shift->imme());
+            Err::gassert(s < 64, "shift immediate out of range");
         }
-
-        if (rhs->isImme()) {
-            Err::gassert(
-                (inSet(def->type(), OpT::Int16, OpT::Int32) && rhs->imme() < 32 && rhs->imme() >= 0) ||
-                    (inSet(def->type(), OpT::Int, OpT::Int64) && rhs->imme() < 64 && rhs->imme() >= 0),
-                "legalizeInst: shift imme out of range"); // though rhs == 0 is useless, we assume it wont really appear here
-        }
-
-    } break;
+        break;
+    }
     case OpC::InstSDiv: {
         auto lhs = minst->getOp(1);
         auto rhs = minst->getOp(2);
@@ -228,17 +166,6 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         auto def = minst->getDef();
         auto lhs = minst->getOp(1);
         auto rhs = minst->getOp(2);
-
-        ///@todo 需要范围分析
-        // if (rhs->isImme() && popcounter_wrapper(rhs->imme()) == 1) {
-
-        //     auto minst_and = ctx.newInst(OpC::InstAnd);
-
-        //     minst_and->setOperand<0>(def, ctx.codeGenCtx())
-        //         ->setOperand<1>(lhs, ctx.codeGenCtx())
-        //         ->setOperand<2>(MIROperand::asImme(rhs->imme() - 1, OpT::Int64), ctx.codeGenCtx());
-        //     break;
-        // }
 
         auto minst_div = ctx.newInst(OpC::InstSDiv);
         auto minst_mul = ctx.newInst(OpC::InstMul);
@@ -318,9 +245,6 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         ctx.delInst(minst); // add to list, handle later
         modified |= true;
     } break;
-    case OpC::InstSelect: {
-        Err::not_implemented("Select on RISCV64");
-    } break;
     case OpC::InstF2S: {
         auto converted = minst->ensureDef();
         auto original = minst->getOp(1);
@@ -328,7 +252,6 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         if (original->isImme()) {
             minst->setOperand<1>(loadImm(original), ctx.codeGenCtx());
         }
-
     } break;
     case OpC::InstS2F: {
         auto converted = minst->ensureDef();
@@ -360,6 +283,8 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         auto loaded = loadImm(imme);
         ctx.newInst(OpC::InstCopyToReg)->setOperand<0>(def, ctx.codeGenCtx())->setOperand<1>(loaded, ctx.codeGenCtx());
     } break;
+    case OpC::InstSelect:
+        Err::not_implemented("Select on RISCV64");
     default:
         ///@note 各种copy, 内存访问没有合法化
         break;
@@ -369,314 +294,208 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
 
 // for pass preRaLeagalize
 void RVIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
-    ///@todo handle select inst if we really have one
-
     auto &[minst, minsts, iter, ctx] = _ctx;
 
-    if (!minst->isGeneric()) {
+    if (!minst->isGeneric())
         return;
-    }
 
     switch (minst->opcode<OpC>()) {
-    // case OpC::InstSelect:
-    //     Err::todo("preLegalizeInst: select inst not support yet");
     case OpC::InstLoadGlobalAddress:
-        /// nothing
+        minst->resetOpcode(RVOpC::LD);
         break;
     case OpC::InstLoadImm: {
-        auto &def = minst->ensureDef();
-        auto &imme = minst->getOp(1);
-
-        auto imm = static_cast<unsigned>(imme->imme()); ///@bug
-
-        ///@note movz(lo) + movk(hi) + (fmov) + copy
-
-        auto dst = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
-
-        auto movz = MIRInst::make(ARMOpC::MOVZ)
-                        ->setOperand<0>(dst, ctx)
-                        ->setOperand<1>(MIROperand::asImme(imm & 0XFFFF, OpT::Int32), ctx);
-
-        minsts.insert(iter, movz);
-
-        if (imm > 0XFFFF) {
-            auto movk = MIRInst::make(ARMOpC::MOVK)
-                            ->setOperand<0>(dst, ctx)
-                            ->setOperand<1>(MIROperand::asImme(imm >> 16, OpT::Int32), ctx)
-                            ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special), ctx); // lsl only
-
-            minsts.insert(iter, movk);
-        }
-
-        // if (def->type() == OpT::Float32) {
-        //     auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Float32);
-
-        //     auto movf = MIRInst::make(ARMOpC::MOVF)->setOperand<0>(fdst, ctx)->setOperand<1>(dst, ctx);
-
-        //     minsts.insert(iter, movf);
-
-        //     dst = fdst;
-        // }
-        ///@todo vectorize
-
-        ///@brief rewrite
-        minst->resetOpcode(OpC::InstCopy);
-
-        minst->setOperand<1>(dst, ctx);
-
-    } break;
-    case OpC::InstLoadImmEx: {
-        auto def = minst->ensureDef();
-        auto imme = minst->getOp(1);
-
-        auto imme_ex = imme->immeEx();
-
-        MIROperand_p loaded = MIROperand::asVReg(ctx.nextId(), def->type());
-        int cnt = 0;
-
-        while (imme_ex) {
-
-            auto mov = MIRInst::make(cnt ? ARMOpC::MOVK : ARMOpC::MOVZ)
-                           ->setOperand<0>(loaded, ctx)
-                           ->setOperand<1>(MIROperand::asImme(imme_ex & 0XFFFF, OpT::Int64), ctx)
-                           ->setOperand<2>(MIROperand::asImme(16 * cnt | 0x00000000, OpT::special), ctx);
-
-            minsts.insert(iter, mov);
-
-            ++cnt;
-            imme_ex >>= 16;
-        }
-
-        minst->resetOpcode(OpC::InstCopy);
-
-        minst->setOperand<1>(loaded, ctx);
-
+    case OpC::InstLoadImmEx:
+        minst->resetOpcode(RVOpC::LI);
     } break;
     case OpC::InstLoadFPImm: {
         auto def = minst->ensureDef();
+
         auto imme = minst->getOp(1);
-
-        auto imm_us = imme->imme();
-        auto imm = *reinterpret_cast<float *>(&imm_us);
-
-        if (!ARMv8::isFloat8(imm) && imm != 0.0f) {
-            ///@brief movz + movk + fmov + copy
-
-            auto dst = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
-
-            auto movz = MIRInst::make(ARMOpC::MOVZ)
-                            ->setOperand<0>(dst, ctx)
-                            ->setOperand<1>(MIROperand::asImme(imm_us & 0XFFFF, OpT::Int32), ctx);
-
-            minsts.insert(iter, movz);
-
-            if (imm_us > 0XFFFF) {
-                auto movk = MIRInst::make(ARMOpC::MOVK)
-                                ->setOperand<0>(dst, ctx)
-                                ->setOperand<1>(MIROperand::asImme(imm_us >> 16, OpT::Int32), ctx)
-                                ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special), ctx); // lsl only
-
-                minsts.insert(iter, movk);
-            }
-
-            auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Float32);
-
-            auto movf = MIRInst::make(ARMOpC::MOVF)->setOperand<0>(fdst, ctx)->setOperand<1>(dst, ctx);
-
-            minsts.insert(iter, movf);
-
-            ///@brief rewrite
-            minst->resetOpcode(OpC::InstCopy);
-
-            minst->setOperand<1>(fdst, ctx);
-
-        } else if (imm == 0.0f) {
-            ///@brief movi + copy
-            auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Floatvec);
-            auto movi = MIRInst::make(ARMOpC::MOVI)->setOperand<0>(fdst, ctx)->setOperand<1>(imme, ctx);
-
-            minsts.insert(iter, movi);
-
-            minst->resetOpcode(OpC::InstCopy);
-
-            minst->setOperand<1>(fdst, ctx);
-
-        } else {
-            ///@brief fmov + copy
-
-            auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Float32);
-            auto fmov = MIRInst::make(ARMOpC::MOVF)->setOperand<0>(fdst, ctx)->setOperand<1>(imme, ctx);
-
-            minsts.insert(iter, fmov);
-
-            minst->resetOpcode(OpC::InstCopy);
-
-            minst->setOperand<1>(fdst, ctx);
-        }
+        auto idst = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
+        auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
+        auto lui = MIRInst::make(RVOpC::LUI)->setOperand<0>(idst, ctx)->setOperand<1>(imme, ctx);
+        minsts.insert(iter, lui);
+        minst->resetOpcode(OpC::InstCopy);
+        minst->setOperand<1>(fdst, ctx);
     } break;
+    case OpC::InstSelect:
+        Err::not_implemented("Select on RISCV64");
     default:
         break;
     }
 
     return;
 }
+
+void RVIselInfo::legalizeWithPtrLoad(InstLegalizeContext &ctx, MIRInst_p minst) const {
+    auto memSize = minst->getOp(5)->imme();
+    switch (memSize) {
+    case 1:
+        minst->resetOpcode(RVOpC::LB);
+        break;
+    case 2:
+        minst->resetOpcode(RVOpC::LH);
+        break;
+    case 4:
+        minst->resetOpcode(RVOpC::LW);
+        break;
+    case 8:
+        minst->resetOpcode(RVOpC::LD);
+        break;
+    default:
+        Err::not_implemented("Unsupported size.");
+    }
+}
+
+void RVIselInfo::legalizeWithPtrStore(InstLegalizeContext &ctx, MIRInst_p minst) const {
+    auto memSize = minst->getOp(5)->imme();
+    switch (memSize) {
+    case 1:
+        minst->resetOpcode(RVOpC::SB);
+        break;
+    case 2:
+        minst->resetOpcode(RVOpC::SH);
+        break;
+    case 4:
+        minst->resetOpcode(RVOpC::SW);
+        break;
+    case 8:
+        minst->resetOpcode(RVOpC::SD);
+        break;
+    default:
+        Err::not_implemented("Unsupported size.");
+    }
+}
+
 void RVIselInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop, const StkObj &obj) const {
-
-    ///@warning armv8的交叉装载ld1, ld2, ld3不支持变址寻址, 甚至不支持常量偏移
-    ///@warning ld1 {V<>.4s} 又和 ldr q<> 作用一致, 而后者支持变址寻址, 只是不显式指示加载类型
-    ///@warning ld2 ld3 除非专门的处理数字信号的样例, 不然根本用不上
-
     auto &[minst, minsts, iter, ctx] = _ctx;
-
     auto offset = obj.offset;
 
-    Err::gassert(minst->getOp(5) != nullptr, "PostRAlegalizeImpl::runOnInst: InstLoad/InstStore info lack");
-
-    if (ARMv8::isFitMemInst(offset, minst->getOp(5)->imme())) {
+    if (RV64::is12BitImm(offset)) {
         if (minst->opcode<OpC>() == OpC::InstLoadRegFromStack || minst->opcode<OpC>() == OpC::InstLoad) {
             minst->setOperand<2>(MIROperand::asImme(offset, OpT::Int64), ctx);
-            minst->resetOpcode(ARMOpC::LDR);
+            legalizeWithPtrLoad(_ctx, minst);
         } else {
             minst->setOperand<3>(MIROperand::asImme(offset, OpT::Int64), ctx);
-            minst->resetOpcode(ARMOpC::STR);
+            legalizeWithPtrStore(_ctx, minst);
         }
         return;
     }
 
-    ///@note scratch 用于变址寻址
-    auto scratch = MIROperand::asISAReg(ARMReg::FP, OpT::Int64);
+    // fp <- lui + addi
+    // ld <- fp + sp
+    auto scratch = MIROperand::asISAReg(RVReg::FP, OpT::Int64);
+    uint64_t uoffset = static_cast<uint64_t>(offset);
+    uint32_t high = (uoffset + 0x800) >> 12;
+    uint32_t low = uoffset & 0xFFF;
 
-    ///@note 将偏移加到scratch, 由于偏移可以是64位, 所以这里最多有4次movz/movk
-    auto imme = offset;
-    auto movz = MIRInst::make(ARMOpC::MOVZ)
-                    ->setOperand<0>(scratch, ctx)
-                    ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16), ctx);
+    if (high != 0) {
+        auto lui = MIRInst::make(RVOpC::LUI)
+                       ->setOperand<0>(scratch, ctx)
+                       ->setOperand<1>(MIROperand::asImme(high, OpT::Int32), ctx);
+        minsts.insert(iter, lui);
+    }
 
-    minsts.insert(iter, movz);
-
-    imme >>= 16;
-    unsigned times = 1;
-    while (imme != 0) {
-        auto movk = MIRInst::make(ARMOpC::MOVK)
+    if (low != 0 || high == 0) {
+        auto addi = MIRInst::make(OpC::InstAdd)
                         ->setOperand<0>(scratch, ctx)
-                        ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16), ctx)
-                        ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special), ctx); // lsl only
-        minsts.insert(iter, movk);
-
-        ++times;
-        imme >>= 16;
+                        ->setOperand<1>(scratch, ctx)
+                        ->setOperand<2>(MIROperand::asImme(static_cast<int32_t>(low), OpT::Int32), ctx);
+        minsts.insert(iter, addi);
     }
 
-    ///@todo ldur/stur
+    auto add = MIRInst::make(OpC::InstAdd)
+                   ->setOperand<0>(scratch, ctx)
+                   ->setOperand<1>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
+                   ->setOperand<2>(scratch, ctx);
+    minsts.insert(iter, add);
+
     if (minst->opcode<OpC>() == OpC::InstLoadRegFromStack || minst->opcode<OpC>() == OpC::InstLoad) {
-        minst->setOperand<2>(scratch, ctx); // just a mark for codegen
-        minst->resetOpcode(ARMOpC::LDR);
-    } else if (minst->opcode<OpC>() == OpC::InstStoreRegToStack || minst->opcode<OpC>() == OpC::InstStore) {
-        minst->setOperand<3>(scratch, ctx);
-        minst->resetOpcode(ARMOpC::STR);
+        minst->setOperand<1>(scratch, ctx);
+        minst->setOperand<2>(MIROperand::asImme(0, OpT::Int64), ctx);
+        legalizeWithPtrLoad(_ctx, minst);
+    } else {
+        minst->setOperand<2>(scratch, ctx);
+        minst->setOperand<3>(MIROperand::asImme(0, OpT::Int64), ctx);
+        legalizeWithPtrStore(_ctx, minst);
     }
-
-    return;
 }
 
 void RVIselInfo::legalizeWithStkGep(InstLegalizeContext &_ctx, MIROperand_p mop, const StkObj &obj) const {
-    /// mop = def
-
     auto &[minst, minsts, iter, ctx] = _ctx;
     unsigned offset = static_cast<unsigned>(obj.offset);
 
     if (minst->getOp(2)->isImme()) {
         offset += static_cast<unsigned>(minst->getOp(2)->imme());
 
-        if (ARMv8::is12ImmeWithProbShift(offset)) {
+        if (RV64::is12BitImm(offset)) {
             minst->resetOpcode(OpC::InstAdd);
-            minst->setOperand<1>(MIROperand::asISAReg(ARMReg::SP, OpT::Int64), ctx);
+            minst->setOperand<1>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx);
             minst->setOperand<2>(MIROperand::asImme(offset, OpT::Int64), ctx);
             return;
         }
 
-        auto imme = offset;
-        auto scratch = MIROperand::asISAReg(ARMReg::FP, OpT::Int64);
+        auto scratch = MIROperand::asISAReg(RVReg::FP, OpT::Int64);
+        uint32_t high = (offset + 0x800) >> 12;
+        uint32_t low = offset & 0xFFF;
 
-        auto movz = MIRInst::make(ARMOpC::MOVZ)
-                        ->setOperand<0>(scratch, ctx)
-                        ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16), ctx);
-        minsts.insert(iter, movz);
+        if (high != 0) {
+            auto lui = MIRInst::make(RVOpC::LUI)
+                           ->setOperand<0>(scratch, ctx)
+                           ->setOperand<1>(MIROperand::asImme(static_cast<int64_t>(high), OpT::Int64), ctx);
+            minsts.insert(iter, lui);
+        }
 
-        imme >>= 16;
-        unsigned times = 1;
-        while (imme != 0) {
-            auto movk = MIRInst::make(ARMOpC::MOVK)
+        if (low != 0 || high == 0) {
+            auto addi = MIRInst::make(OpC::InstAdd)
                             ->setOperand<0>(scratch, ctx)
-                            ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16), ctx)
-                            ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special), ctx);
-            minsts.insert(iter, movk);
-
-            ++times;
-            imme >>= 16;
+                            ->setOperand<1>(scratch, ctx)
+                            ->setOperand<2>(MIROperand::asImme(static_cast<int64_t>(low), OpT::Int64), ctx);
+            minsts.insert(iter, addi);
         }
 
         minst->resetOpcode(OpC::InstAdd);
-        minst->setOperand<1>(MIROperand::asISAReg(ARMReg::SP, OpT::Int64), ctx);
+        minst->setOperand<1>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx);
         minst->setOperand<2>(scratch, ctx);
     } else {
-
-        if (ARMv8::is12ImmeWithProbShift(offset)) {
-            //ori: add %mop, %stk, %valoffset
-
-            // mov %mop, %valoffset
-            // add %mop, %mop, sp
-            // add %mop, %mop, #stkobj_offset
-            // somewhere : str/ldr ... [%mop]
-            auto var_offset = minst->getOp(2);
-
-            minsts.insert(iter, MIRInst::make(OpC::InstCopy)
-                                    ->setOperand<0>(mop, ctx)
-                                    ->setOperand<1>(var_offset, ctx)); // 两边都是地址Int64
+        auto var_offset = minst->getOp(2);
+        if (RV64::is12BitImm(offset)) {
+            minsts.insert(iter, MIRInst::make(OpC::InstCopy)->setOperand<0>(mop, ctx)->setOperand<1>(var_offset, ctx));
 
             minsts.insert(iter, MIRInst::make(OpC::InstAdd)
                                     ->setOperand<0>(mop, ctx)
-                                    ->setOperand<1>(MIROperand::asISAReg(ARMReg::SP, OpT::Int64), ctx)
+                                    ->setOperand<1>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
                                     ->setOperand<2>(mop, ctx));
 
             minst->resetOpcode(OpC::InstAdd);
             minst->setOperand<1>(mop, ctx)->setOperand<2>(MIROperand::asImme(offset, OpT::Int64), ctx);
-
             return;
         }
 
-        auto imme = offset;
-        auto scratch = MIROperand::asISAReg(ARMReg::FP, OpT::Int64);
+        auto scratch = MIROperand::asISAReg(RVReg::FP, OpT::Int64);
+        uint32_t high = (offset + 0x800) >> 12;
+        uint32_t low = offset & 0xFFF;
 
-        auto movz = MIRInst::make(ARMOpC::MOVZ)
-                        ->setOperand<0>(scratch, ctx)
-                        ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16), ctx);
-        minsts.insert(iter, movz);
-
-        imme >>= 16;
-        unsigned times = 1;
-        while (imme != 0) {
-            auto movk = MIRInst::make(ARMOpC::MOVK)
-                            ->setOperand<0>(scratch, ctx)
-                            ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16), ctx)
-                            ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special), ctx);
-            minsts.insert(iter, movk);
-
-            ++times;
-            imme >>= 16;
+        if (high != 0) {
+            auto lui = MIRInst::make(RVOpC::LUI)
+                           ->setOperand<0>(scratch, ctx)
+                           ->setOperand<1>(MIROperand::asImme(high, OpT::Int32), ctx);
+            minsts.insert(iter, lui);
         }
 
-        /// mov... fp, #large_const
-        // mov %mop, %valoffset
-        // add %mop, %mop, sp
-        // add %mop, %mop, fp
-        auto var_offset = minst->getOp(2);
+        if (low != 0 || high == 0) {
+            auto addi = MIRInst::make(OpC::InstAdd)
+                            ->setOperand<0>(scratch, ctx)
+                            ->setOperand<1>(scratch, ctx)
+                            ->setOperand<2>(MIROperand::asImme(static_cast<int32_t>(low), OpT::Int32), ctx);
+            minsts.insert(iter, addi);
+        }
 
         minsts.insert(iter, MIRInst::make(OpC::InstCopy)->setOperand<0>(mop, ctx)->setOperand<1>(var_offset, ctx));
 
         minsts.insert(iter, MIRInst::make(OpC::InstAdd)
                                 ->setOperand<0>(mop, ctx)
-                                ->setOperand<1>(MIROperand::asISAReg(ARMReg::SP, OpT::Int64), ctx)
+                                ->setOperand<1>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
                                 ->setOperand<2>(mop, ctx));
 
         minst->resetOpcode(OpC::InstAdd);
@@ -684,7 +503,6 @@ void RVIselInfo::legalizeWithStkGep(InstLegalizeContext &_ctx, MIROperand_p mop,
         minst->setOperand<1>(mop, ctx);
         minst->setOperand<2>(scratch, ctx);
     }
-    return;
 }
 
 void RVIselInfo::legalizeWithStkPtrCast(InstLegalizeContext &_ctx, MIROperand_p mop, const StkObj &obj) const {
@@ -692,44 +510,38 @@ void RVIselInfo::legalizeWithStkPtrCast(InstLegalizeContext &_ctx, MIROperand_p 
     unsigned offset = static_cast<unsigned>(obj.offset);
 
     if (offset) {
-
-        if (ARMv8::is12ImmeWithProbShift(offset)) {
-
+        if (RV64::is12BitImm(offset)) {
+            minst->setOperand<1>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx);
             minst->setOperand<2>(MIROperand::asImme(offset, OpT::Int64), ctx);
-            minst->setOperand<1>(MIROperand::asISAReg(ARMReg::SP, OpT::Int64), ctx);
             minst->resetOpcode(OpC::InstAdd);
             return;
         }
 
-        auto imme = offset;
-        auto scratch = MIROperand::asISAReg(ARMReg::FP, OpT::Int64);
+        auto scratch = MIROperand::asISAReg(RVReg::FP, OpT::Int64);
+        uint32_t high = (offset + 0x800) >> 12;
+        uint32_t low = offset & 0xFFF;
 
-        auto movz = MIRInst::make(ARMOpC::MOVZ)
-                        ->setOperand<0>(scratch, ctx)
-                        ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16), ctx);
-        minsts.insert(iter, movz);
+        if (high != 0) {
+            auto lui = MIRInst::make(RVOpC::LUI)
+                           ->setOperand<0>(scratch, ctx)
+                           ->setOperand<1>(MIROperand::asImme(high, OpT::Int32), ctx);
+            minsts.insert(iter, lui);
+        }
 
-        imme >>= 16;
-        unsigned times = 1;
-        while (imme != 0) {
-            auto movk = MIRInst::make(ARMOpC::MOVK)
+        if (low != 0 || high == 0) {
+            auto addi = MIRInst::make(OpC::InstAdd)
                             ->setOperand<0>(scratch, ctx)
-                            ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16), ctx)
-                            ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special), ctx);
-            minsts.insert(iter, movk);
-
-            ++times;
-            imme >>= 16;
+                            ->setOperand<1>(scratch, ctx)
+                            ->setOperand<2>(MIROperand::asImme(static_cast<int32_t>(low), OpT::Int32), ctx);
+            minsts.insert(iter, addi);
         }
 
         minst->resetOpcode(OpC::InstAdd);
-        minst->setOperand<1>(MIROperand::asISAReg(ARMReg::SP, OpT::Int64), ctx);
+        minst->setOperand<1>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx);
         minst->setOperand<2>(scratch, ctx);
     } else {
-
-        minst->setOperand<1>(MIROperand::asISAReg(ARMReg::SP, OpT::Int64), ctx);
-
-        minst->resetOpcode(ARMOpC::MOV);
+        minst->setOperand<1>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx);
+        minst->resetOpcode(RVOpC::MV);
     }
 }
 
@@ -742,30 +554,21 @@ void RVIselInfo::legalizeCopy(InstLegalizeContext &_ctx) const {
     auto defType = def->type();
     auto useType = use->type();
 
-    ARMOpC movType;
+    RVOpC movType;
 
     if (inRange(defType, OpT::Int, OpT::Int64) && inRange(useType, OpT::Int, OpT::Int64)) {
-        movType = ARMOpC::MOV; // orr
-    } else if (defType == OpT::Float && useType == OpT::Float) {
-        movType = ARMOpC::MOV_V; // .16b
-    } else if (inSet(defType, OpT::Intvec, OpT::Int64vec, OpT::Floatvec) &&
-               inSet(useType, OpT::Intvec, OpT::Int64vec, OpT::Floatvec)) {
-        movType = ARMOpC::MOV_V;
+        movType = RVOpC::MV;
+    } else if (defType == OpT::Float) {
+        movType = RVOpC::FMVSX;
     } else {
-        movType = ARMOpC::MOVF;
+        movType = RVOpC::MV;
     }
 
     minst->resetOpcode(movType);
 }
 
 void RVIselInfo::legalizeAdrp(InstLegalizeContext &_ctx) const {
-    auto &[minst, minsts, iter, ctx] = _ctx;
-
-    auto def = minst->ensureDef();
-
-    minsts.insert(iter, MIRInst::make(ARMOpC::ADRP)->setOperand<0>(def, ctx)->setOperand<1>(minst->getOp(1), ctx));
-    minst->resetOpcode(ARMOpC::LDR);
-    minst->setOperand<5>(MIROperand::asImme(5, OpT::special), ctx);
+    Err::unreachable("No adrp on RISCV64");
 }
 
 RVIselInfo::~RVIselInfo() = default;

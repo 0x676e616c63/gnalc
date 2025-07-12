@@ -514,7 +514,9 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
     if (emit_llvm) {
         mpm.addPass(IR::PrintModulePass(*poutstream));
         mpm.run(generator.get_module(), mam);
-        return 0;
+
+        // RISCV64 DEBUG
+        //return 0;
     }
 
 #ifdef GNALC_EXTENSION_BRAINFK
@@ -597,7 +599,7 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
     if (mir_debug_pipeline)
         bkd_mpm = MIR::PassBuilder::buildModuleDebugPipeline();
     else
-        bkd_mpm = MIR::PassBuilder::buildModulePipeline(bkd_opt_info);
+        bkd_mpm = MIR::PassBuilder::buildModulePipeline(mir_arch, bkd_opt_info);
 
     bkd_mpm.run(*mModule, bkd_mam);
 

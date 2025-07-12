@@ -8,7 +8,7 @@
 #include "mir/MIR.hpp"
 
 namespace MIR {
-
+namespace ARMv8 {
 inline string Cond2S(Cond cond) {
     switch (cond) {
     case Cond::AL:
@@ -266,7 +266,100 @@ inline string ARMOpC2S(ARMOpC op) {
     }
     return ""; // just to make clang happy
 }
-
+} // namespace ARMv8
+namespace RV64 {
+inline string RVOpC2S(RVOpC op) {
+    switch (op) {
+    case RVOpC::SLT:
+        return "slt";
+    case RVOpC::SLTU:
+        return "sltu";
+    case RVOpC::SEQZ:
+        return "seqz";
+    case RVOpC::SNEZ:
+        return "snez";
+    case RVOpC::SLTZ:
+        return "sltz";
+    case RVOpC::SGTZ:
+        return "sgtz";
+    case RVOpC::FEQ:
+        return "feq.s";
+    case RVOpC::FLT:
+        return "flt.s";
+    case RVOpC::FLE:
+        return "fle.s";
+    case RVOpC::BEQ:
+        return "beq";
+    case RVOpC::BNE:
+        return "bne";
+    case RVOpC::BGE:
+        return "bge";
+    case RVOpC::BLT:
+        return "blt";
+    case RVOpC::BGT:
+        return "bgt";
+    case RVOpC::BLE:
+        return "ble";
+    case RVOpC::BGTU:
+        return "bgtu";
+    case RVOpC::BLEU:
+        return "bleu";
+    case RVOpC::BEQZ:
+        return "beqz";
+    case RVOpC::BNEZ:
+        return "bnez";
+    case RVOpC::BLEZ:
+        return "blez";
+    case RVOpC::BGEZ:
+        return "bgez";
+    case RVOpC::BLTZ:
+        return "bltz";
+    case RVOpC::BGTZ:
+        return "bgtz";
+    case RVOpC::MV:
+        return "mv";
+    case RVOpC::FMVSX:
+        return "fmv.s.x";
+    case RVOpC::LUI:
+        return "lui";
+    case RVOpC::LI:
+        return "li";
+    case RVOpC::LB:
+        return "lb";
+    case RVOpC::LH:
+        return "lh";
+    case RVOpC::LW:
+        return "lw";
+    case RVOpC::LD:
+        return "ld";
+    case RVOpC::SB:
+        return "sb";
+    case RVOpC::SH:
+        return "sh";
+    case RVOpC::SW:
+        return "sw";
+    case RVOpC::SD:
+        return "sd";
+    case RVOpC::J:
+        return "j";
+    case RVOpC::JAL:
+        return "jal";
+    case RVOpC::JALR:
+        return "jalr";
+    case RVOpC::JR:
+        return "jr";
+    case RVOpC::LA:
+        return "la";
+    case RVOpC::AUIPC:
+        return "auipc";
+    case RVOpC::RET:
+        return "ret";
+    default:
+        Err::unreachable("RVOpC2S: unrecognized op");
+    }
+    return ""; // just to make clang happy
+}
+}
 }; // namespace MIR
 
 #endif

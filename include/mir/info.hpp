@@ -64,6 +64,11 @@ public:
     virtual unsigned int getFpOrVecRegisterNum() const = 0;
     virtual std::set<int> getCoreRegisterAllocationList() const = 0;
     virtual std::set<int> getFpOrVecRegisterAllocationList() const = 0;
+    virtual bool isCoreReg(unsigned int reg) const = 0;
+    virtual bool isFpOrVecReg(unsigned int reg) const = 0;
+    virtual unsigned int FpOrVecStart() const = 0;
+    virtual uint64_t initCalleeSaveBitmap() const = 0;
+    virtual void updateCalleeSaveBitmapForStackAlloc(uint64_t& bitmap, MIRFunction* mfunc) const = 0;
 };
 
 class FrameInfo {
@@ -82,6 +87,8 @@ public:
     virtual void makePostSAPrologue(MIRBlk_p, CodeGenContext &, unsigned) const = 0;
     virtual void makePostSAEpilogue(MIRBlk_p, CodeGenContext &, unsigned) const = 0;
     virtual void insertPrologueEpilogue(MIRFunction *, CodeGenContext &) const = 0;
+
+    virtual void appendCalleeSaveStackSize(uint64_t& allocation_base, uint64_t bitmap) const = 0;
 
     ///@note not used
     virtual bool isCallerSaved(const MIROperand &op) const = 0;
@@ -136,6 +143,8 @@ public:
     virtual bool match(MIRInst_p, ISelContext &, bool allow) const = 0;
     virtual bool legalizeInst(MIRInst_p minst, ISelContext &ctx) const = 0;
     virtual void preLegalizeInst(InstLegalizeContext &) = 0;
+    virtual void legalizeWithPtrLoad(InstLegalizeContext &ctx, MIRInst_p minst) const = 0;
+    virtual void legalizeWithPtrStore(InstLegalizeContext &ctx, MIRInst_p minst) const = 0;
     virtual void legalizeWithStkOp(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const = 0;
     virtual void legalizeWithStkGep(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const = 0;
     virtual void legalizeWithStkPtrCast(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const = 0;

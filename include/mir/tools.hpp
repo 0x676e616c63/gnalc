@@ -57,7 +57,7 @@ template <typename T> T rotate_shift_right(T value, int n) {
     return (value >> n) | (value << (total_bits - n));
 }
 
-template <typename T> inline bool inRange(T value, T low, T high) { return value >= low && value <= high; }
+template <typename T, typename U> inline bool inRange(T value, U low, U high) { return value >= low && value <= high; }
 
 template <typename T, typename... Args> inline bool inSet(T value, const Args &...Enum) {
     static_assert(sizeof...(Args) != 0, "At least provide one Enum value");

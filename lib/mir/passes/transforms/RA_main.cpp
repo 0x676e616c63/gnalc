@@ -49,11 +49,12 @@ void RegisterAllocImpl::clearall() {
 
 void RegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     mfunc = &_mfunc;
+    registerInfo = mfunc->Context().registerInfo;
     clearall();
 
-    auto& registerInfo = mfunc->Context().registerInfo;
     K = registerInfo->getCoreRegisterNum();
     colors = registerInfo->getCoreRegisterAllocationList();
+    mfunc->calleeSaveRegs() = registerInfo->initCalleeSaveBitmap();
 
     ///@note remember to modify bitmap of mfunc when assign colors
     Main(fam);
@@ -126,7 +127,7 @@ void RegisterAllocImpl::Build() {
 
                 for (const auto &n : getUnion<MIROperand_p, false>(def, use)) {
                     if (n->isISA()) {
-                        if (n->isa() <= ARMReg::FP) {
+                        if (registerInfo->isCoreReg(n->isa())) {
                             precolored.insert(n);
                             degree[n] = -1;
                         }
@@ -553,11 +554,13 @@ MIROperand_p RegisterAllocImpl::GetAlias(MIROperand_p n) { // NOLINT
 
 void VectorRegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     mfunc = &_mfunc;
+    registerInfo = mfunc->Context().registerInfo;
+
     clearall();
 
-    auto& registerInfo = mfunc->Context().registerInfo;
     K = registerInfo->getFpOrVecRegisterNum();
     colors = registerInfo->getFpOrVecRegisterAllocationList();
+    // Don't initialize CalleeSaveRegBitmap, they've been initialized in Core Register Alloc.
 
     Main(fam);
 
@@ -579,7 +582,7 @@ void VectorRegisterAllocImpl::Build() {
 
                 for (const auto &n : getUnion<MIROperand_p, false>(def, use)) {
                     if (n->isISA()) {
-                        if (n->isa() >= ARMReg::V0) {
+                        if (registerInfo->isFpOrVecReg(n->isa())) {
                             precolored.insert(n);
                             degree[n] = -1;
                         }
