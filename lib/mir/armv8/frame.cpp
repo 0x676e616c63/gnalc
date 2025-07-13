@@ -30,8 +30,6 @@ void ARMFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) con
 
     auto mcaller = ctx.CurrentBlk()->getFunction();
 
-    const auto &layOut = ctx.CodeGenCtx().infos.dataLayout;
-
     unsigned stkOffset = 0U; // stk offset
     std::vector<int> offsets;
 
@@ -380,14 +378,8 @@ void ARMFrameInfo::appendCalleeSaveStackSize(uint64_t& allocationBase, uint64_t 
     }
 }
 
-bool ARMFrameInfo::isCallerSaved(const MIROperand &op) const {
-    const auto reg = op.reg();
-    return inRange(static_cast<ARMReg>(reg), ARMReg::X0, ARMReg::X18) ||
-           inRange(static_cast<ARMReg>(reg), ARMReg::V0, ARMReg::V15);
-}
-
-bool ARMFrameInfo::isCalleeSaved(const MIROperand &op) const {
-    return !isCallerSaved(op); //
+bool ARMFrameInfo::isFuncCall(const MIRInst_p &inst) const {
+    return inst->isARM() && inst->opcode<ARMOpC>() == ARMOpC::BL;
 }
 
 void ARMFrameInfo::makePostSAPrologue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const {

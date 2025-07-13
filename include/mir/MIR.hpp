@@ -273,6 +273,7 @@ public:
         return std::holds_alternative<unsigned>(mOperand) ? std::get<unsigned>(mOperand) : std::get<uint64_t>(mOperand);
     }
     uint64_t immeEx() const { return std::get<uint64_t>(mOperand); }
+    unsigned immeWidth() const { return std::holds_alternative<unsigned>(mOperand) ? 32 : 64; }
     unsigned reg() const { return std::get<MIRReg_p>(mOperand)->reg; }
     unsigned idVReg() const {
         Err::gassert(isVirtualReg(reg()), "MIROperand::idVReg: *this is not a VReg");
@@ -817,6 +818,10 @@ private:
     std::vector<MIRGlobal_p> mglobals{};
 
     std::vector<MIRFunction_p> mFuncs{}; // for function pass
+
+    // For memset/memcpy on RISCV64
+    std::vector<MIRFunction_p> mBuiltinFuncs{};
+    std::vector<MIRGlobal_p> mBuiltinGlobals{};
 
     string name; // for MAM
 

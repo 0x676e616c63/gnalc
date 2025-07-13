@@ -37,6 +37,7 @@
 #include "ir/passes/transforms/loop_simplify.hpp"
 #include "ir/passes/transforms/loop_strength_reduce.hpp"
 #include "ir/passes/transforms/loop_unroll.hpp"
+#include "ir/passes/transforms/lower_intrinsics.hpp"
 #include "ir/passes/transforms/mem2reg.hpp"
 #include "ir/passes/transforms/memoization.hpp"
 #include "ir/passes/transforms/namenormalizer.hpp"
@@ -126,7 +127,8 @@ void registerPassForOptInfo(PM &fpm, bool enable, PMOptions options, Pass &&pass
         if (options.verify)
             fpm.addPass(VerifyPass(options.strict));
         if (options.run_test)
-            fpm.addPass(RunTestPass(options.testcase_out, options.testcase_in, "../../test/sylib/sylib.c", options.strict));
+            fpm.addPass(
+                RunTestPass(options.testcase_out, options.testcase_in, "../../test/sylib/sylib.c", options.strict));
     }
 }
 
@@ -265,6 +267,7 @@ MPM PassBuilder::buildModuleFixedPointPipeline(PMOptions options) {
     mpm.addPass(makeModulePass(buildFunctionFixedPointPipeline(options)));
     if (options.tree_shaking)
         mpm.addPass(TreeShakingPass());
+    mpm.addPass(LowerIntrinsicsPass());
     return mpm;
 }
 
@@ -337,6 +340,7 @@ MPM PassBuilder::buildModulePipeline(PMOptions opt_info) {
     mpm.addPass(makeModulePass(buildFunctionPipeline(opt_info)));
     if (opt_info.tree_shaking)
         mpm.addPass(TreeShakingPass());
+    mpm.addPass(LowerIntrinsicsPass());
     return mpm;
 }
 
@@ -634,6 +638,7 @@ MPM PassBuilder::buildModuleFuzzTestingPipeline(PMOptions options, double duplic
     // Disable Treeshaking in Repro mode for debugging
     if (repro.empty() && options.tree_shaking)
         mpm.addPass(TreeShakingPass());
+    mpm.addPass(LowerIntrinsicsPass());
     return mpm;
 }
 
@@ -641,14 +646,23 @@ void PassBuilder::registerProxies(FAM &fam, MAM &mam) {
     mam.registerPass([&] { return FAMProxy(fam); });
 }
 
-template <typename T> void registerTargetAnalysesHelper(FAM &fam) {
+template <typename T> void registerTargetAnalysesHelper(FAM &fam, MAM &mam) {
     fam.registerPass([] { return TargetAnalysis(std::make_shared<T>()); });
+    mam.registerPass([] { return TargetAnalysis(std::make_shared<T>()); });
 }
 
-void PassBuilder::registerARMv8TargetAnalyses(FAM &fam) { registerTargetAnalysesHelper<ARMv8TargetInfo>(fam); }
-void PassBuilder::registerARMv7TargetAnalyses(FAM &fam) { registerTargetAnalysesHelper<ARMv7TargetInfo>(fam); }
-void PassBuilder::registerRISCV64TargetAnalyses(FAM &fam) { registerTargetAnalysesHelper<RV64TargetInfo>(fam); }
-void PassBuilder::registerBrainFkTargetAnalyses(FAM &fam) { registerTargetAnalysesHelper<BFTargetInfo>(fam); }
+void PassBuilder::registerARMv8TargetAnalyses(FAM &fam, MAM &mam) {
+    registerTargetAnalysesHelper<ARMv8TargetInfo>(fam, mam);
+}
+void PassBuilder::registerARMv7TargetAnalyses(FAM &fam, MAM &mam) {
+    registerTargetAnalysesHelper<ARMv7TargetInfo>(fam, mam);
+}
+void PassBuilder::registerRISCV64TargetAnalyses(FAM &fam, MAM &mam) {
+    registerTargetAnalysesHelper<RV64TargetInfo>(fam, mam);
+}
+void PassBuilder::registerBrainFkTargetAnalyses(FAM &fam, MAM &mam) {
+    registerTargetAnalysesHelper<BFTargetInfo>(fam, mam);
+}
 
 void PassBuilder::registerFunctionAnalyses(FAM &fam) {
 #define FUNCTION_ANALYSIS(CREATE_PASS) fam.registerPass([&] { return CREATE_PASS; });

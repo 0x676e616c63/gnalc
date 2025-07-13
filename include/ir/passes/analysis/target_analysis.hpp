@@ -18,6 +18,7 @@ public:
         : target(std::move(target_)) {}
 
     pTarget run(Function &f, FAM &fpm);
+    pTarget run(Module &f, MAM &fpm);
 
     using Result = pTarget;
 private:

@@ -117,6 +117,9 @@ void RV64Printer::printout(const MIRInst &minst) {
         case OpC::InstCopyToReg:
             outStream << formatCopy(minst);
             break;
+        case OpC::InstBranch:
+            outStream << formatBranch(minst);
+            break;
 
         case OpC::InstLoad:
         case OpC::InstStore:
@@ -170,8 +173,13 @@ string RV64Printer::formatOperand(const MIROperand_p &op) {
         Err::unreachable();
     }
 
-    if (op->isImme())
-        return std::to_string(op->imme());
+    if (op->isImme()) {
+        if (op->immeWidth() == 32)
+            return std::to_string(static_cast<int>(op->imme()));
+        if (op->immeWidth() == 64)
+            return std::to_string(static_cast<int64_t>(op->imme()));
+        Err::unreachable("unsupported imme width");
+    }
 
     if (op->isReloc())
         return op->reloc()->getmSym();
@@ -318,4 +326,8 @@ string RV64Printer::formatCopy(const MIRInst &minst) {
         Err::unreachable("Unsupported copy opcode");
     }
     return "";
+}
+
+string RV64Printer::formatBranch(const MIRInst &minst) {
+    return "j " + formatOperand(minst.getOp(1));
 }

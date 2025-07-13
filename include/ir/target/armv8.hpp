@@ -18,7 +18,7 @@ public:
             return false;
         return true;
     }
-    bool isLibCallSupported(const std::string &lib_fn_name) const override { return true; }
+    bool isIntrinsicSupported(const std::string &lib_fn_name) const override { return true; }
     size_t getMaxVectorRegisterSize() const override { return 128; }
     size_t getMinVectorRegisterSize() const override { return 64; }
 

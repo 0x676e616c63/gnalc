@@ -30,11 +30,12 @@ bool RegisterAllocImpl::isMoveInstruction(const MIRInst_p &minst) {
 RegisterAllocImpl::Nodes RegisterAllocImpl::getUse(const MIRInst_p &minst) {
     Nodes uses;
 
-    if (minst->isARM() && minst->opcode<ARMOpC>() == ARMOpC::BL) {
-        for (int i = 0; i < 18; ++i) {
-            uses.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i), OpT::Int));
+    if (frameInfo->isFuncCall(minst)) {
+        auto list = registerInfo->getCoreRegisterAllocationList();
+        for (auto reg : list) {
+            if (registerInfo->isCallerSaved(reg))
+                uses.emplace(MIROperand::asISAReg(reg, OpT::Int));
         }
-
         return uses;
     }
 
@@ -56,12 +57,12 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getUse(const MIRInst_p &minst) {
 RegisterAllocImpl::Nodes RegisterAllocImpl::getDef(const MIRInst_p &minst) {
     Nodes defs;
 
-    if (minst->isARM() && minst->opcode<ARMOpC>() == ARMOpC::BL) {
-
-        for (int i = 0; i < 19; ++i) {
-            defs.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i), OpT::Int));
+    if (frameInfo->isFuncCall(minst)) {
+        auto list = registerInfo->getCoreRegisterAllocationList();
+        for (auto reg : list) {
+            if (registerInfo->isCallerSaved(reg))
+                defs.emplace(MIROperand::asISAReg(static_cast<ARMReg>(reg), OpT::Int));
         }
-
         return defs;
     }
 
@@ -201,15 +202,12 @@ bool VectorRegisterAllocImpl::isMoveInstruction(const MIRInst_p &minst) {
 RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getUse(const MIRInst_p &minst) {
     Nodes uses;
 
-    if (minst->isARM() && minst->opcode<ARMOpC>() == ARMOpC::BL) {
-        for (int i = 0; i < 8; ++i) { // v0 ~ v7
-            uses.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i + 32U), OpT::Float));
+    if (frameInfo->isFuncCall(minst)) {
+        auto list = registerInfo->getFpOrVecRegisterAllocationList();
+        for (auto reg : list) {
+            if (registerInfo->isCallerSaved(reg))
+                uses.emplace(MIROperand::asISAReg(static_cast<ARMReg>(reg), OpT::Float));
         }
-
-        for (int i = 16; i < 32; ++i) { // v16 ~ v31
-            uses.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i + 32U), OpT::Float));
-        }
-
         return uses;
     }
 
@@ -229,15 +227,12 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getUse(const MIRInst_p &minst)
 RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getDef(const MIRInst_p &minst) {
     Nodes defs;
 
-    if (minst->isARM() && minst->opcode<ARMOpC>() == ARMOpC::BL) {
-        for (int i = 0; i < 8; ++i) { // v0 ~ v7
-            defs.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i + 32U), OpT::Float));
+    if (frameInfo->isFuncCall(minst)) {
+        auto list = registerInfo->getFpOrVecRegisterAllocationList();
+        for (auto reg : list) {
+            if (registerInfo->isCallerSaved(reg))
+                defs.emplace(MIROperand::asISAReg(static_cast<ARMReg>(reg), OpT::Float));
         }
-
-        for (int i = 16; i < 32; ++i) { // v16 ~ v31
-            defs.emplace(MIROperand::asISAReg(static_cast<ARMReg>(i + 32U), OpT::Float));
-        }
-
         return defs;
     }
 

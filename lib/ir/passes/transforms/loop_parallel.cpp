@@ -404,7 +404,7 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
     static constexpr auto body_fn_prefix = Config::IR::LOOP_PARALLEL_BODY_FUNCTION_NAME_PREFIX;
 
     auto &target = fam.getResult<TargetAnalysis>(function);
-    if (!target->isLibCallSupported(parallel_for_name))
+    if (!target->isIntrinsicSupported(parallel_for_name))
         return PreserveAll();
 
     auto module = function.getParent();

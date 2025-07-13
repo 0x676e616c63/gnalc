@@ -11,11 +11,24 @@
 namespace MIR {
 
 namespace RV64 {
-template <typename T> bool is12BitImm(T imm) {
-    if constexpr (std::is_signed_v<T>) {
-        return imm >= -2048 && imm < 2048;
+// Immediate that can be encoded directly in an instruction is 12 bits wide.
+// But in RISCV64, the value is sign-extended to 64 bits.
+// Thus, `li x6, -1` and `li x6, 4294967295 (which is 0xffffffff)` is not the same.
+// However, 32-bit -1 is encoded to an unsigned int in MIROperand. But when getting it from `imme()`,
+// we got one uint64_t with that value.
+// Therefore, a width must be specified to distinguish values like `-1` and `4294967295`.
+// FIXME: Refactor immediate encoding in MIROperand.
+inline bool is12BitImm(uint64_t imm, unsigned width) {
+    if (width == 32) {
+        auto signed_val = static_cast<int32_t>(imm);
+        return signed_val >= -2048 && signed_val < 2048;
     }
-    return imm < 2048;
+    if (width == 64) {
+        auto signed_val = static_cast<int64_t>(imm);
+        return signed_val >= -2048 && signed_val < 2048;
+    }
+    Err::unreachable();
+    return false;
 }
 } // namespace RV64
 

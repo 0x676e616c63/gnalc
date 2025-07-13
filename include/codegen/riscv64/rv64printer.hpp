@@ -40,6 +40,7 @@ public:
     [[nodiscard]] string formatUnary(const MIRInst &);
     [[nodiscard]] string formatConverse(const MIRInst &);
     [[nodiscard]] string formatCopy(const MIRInst &);
+    [[nodiscard]] string formatBranch(const MIRInst &);
 };
 }; // namespace MIR
 

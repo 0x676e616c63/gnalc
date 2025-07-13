@@ -43,6 +43,8 @@ enum class FuncAttr {
     isMemcpyIntrinsic,
     isSIMDIntrinsic,
 
+    isLoweredIntrinsic,
+
     // Only Builtin Functions
     // For user-defined functions, use AliasAnalysis instead.
     builtinMemReadOnly,

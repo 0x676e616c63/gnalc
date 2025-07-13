@@ -50,6 +50,8 @@ void RegisterAllocImpl::clearall() {
 void RegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     mfunc = &_mfunc;
     registerInfo = mfunc->Context().registerInfo;
+    frameInfo = mfunc->Context().frameInfo;
+
     clearall();
 
     K = registerInfo->getCoreRegisterNum();
@@ -555,6 +557,7 @@ MIROperand_p RegisterAllocImpl::GetAlias(MIROperand_p n) { // NOLINT
 void VectorRegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     mfunc = &_mfunc;
     registerInfo = mfunc->Context().registerInfo;
+    frameInfo = mfunc->Context().frameInfo;
 
     clearall();
 

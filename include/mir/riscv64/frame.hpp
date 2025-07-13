@@ -24,11 +24,9 @@ public:
     void makePostSAEpilogue(MIRBlk_p, CodeGenContext &, unsigned) const override;
     void insertPrologueEpilogue(MIRFunction *, CodeGenContext &) const override;
 
+    bool isFuncCall(const MIRInst_p &) const override;
     void appendCalleeSaveStackSize(uint64_t &allocationBase, uint64_t calleesaves) const override;
     void updateCalleeSaveStackOffset(MIRFunction*, uint64_t calleesaves) const;
-
-    bool isCallerSaved(const MIROperand &op) const override;
-    bool isCalleeSaved(const MIROperand &op) const override;
 };
 }
 

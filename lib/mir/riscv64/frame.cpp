@@ -12,17 +12,11 @@ void RVFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) cons
     auto callee = callinst->getFunc();
 
     using Attr = IR::FuncAttr;
-    if (callee->hasAttr(Attr::isMemsetIntrinsic)) {
-        handleMemset(callinst, ctx);
-        return;
-    }
-    if (callee->hasAttr(Attr::isMemcpyIntrinsic)) {
-        handleMemcpy(callinst, ctx);
-        return;
-    }
-    if (callee->hasAttr(Attr::isSIMDIntrinsic)) {
+    if (callee->hasAttr(Attr::isMemsetIntrinsic) || callee->hasAttr(Attr::isMemcpyIntrinsic))
+        Err::not_implemented("This should be handled by LowerIntrinsicsPass in IR");
+    if (callee->hasAttr(Attr::isSIMDIntrinsic))
         Err::todo("handleCallEntry: simd todo");
-    }
+
     // parallel/atomic here ...
 
     auto mcallee = callee->hasAttr(Attr::isSylib) ? handleLib(callinst, ctx) : ctx.mapGlobal(callee->getName());
@@ -30,8 +24,6 @@ void RVFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) cons
 
     // Since we've found a call here, the caller can't be a leaf function.
     mcaller->affirmNotLeafFunc();
-
-    const auto &data_layout = ctx.CodeGenCtx().infos.dataLayout;
 
     unsigned stkOffset = 0U;
     std::vector<int> offsets;
@@ -159,9 +151,13 @@ MIRGlobal_p RVFrameInfo::handleLib(IR::pCall callinst, LoweringContext &ctx) con
     return mcallee;
 }
 
-void RVFrameInfo::handleMemset(IR::pCall callinst, LoweringContext &ctx) const { Err::todo(); }
+void RVFrameInfo::handleMemset(IR::pCall callinst, LoweringContext &ctx) const {
+    Err::not_implemented("This should be handled by LowerIntrinsicsPass in IR");
+}
 
-void RVFrameInfo::handleMemcpy(IR::pCall callinst, LoweringContext &ctx) const { Err::todo(); }
+void RVFrameInfo::handleMemcpy(IR::pCall callinst, LoweringContext &ctx) const {
+    Err::not_implemented("This should be handled by LowerIntrinsicsPass in IR");
+}
 
 void RVFrameInfo::makePrologue(MIRFunction_p mfunc, LoweringContext &ctx) const {
     const auto &args = mfunc->Args();
@@ -289,38 +285,50 @@ void RVFrameInfo::appendCalleeSaveStackSize(uint64_t &allocationBase, uint64_t c
     }
 }
 
-bool RVFrameInfo::isCallerSaved(const MIROperand &op) const {
-    const auto reg = op.reg();
-    return reg == RVReg::X1 || inRange(static_cast<RVReg>(reg), RVReg::X5, RVReg::X7) ||
-           inRange(static_cast<RVReg>(reg), RVReg::X10, RVReg::X17) ||
-           inRange(static_cast<RVReg>(reg), RVReg::X28, RVReg::X31) ||
-           inRange(static_cast<RVReg>(reg), RVReg::F0, RVReg::F7) ||
-           inRange(static_cast<RVReg>(reg), RVReg::F10, RVReg::F17) ||
-           inRange(static_cast<RVReg>(reg), RVReg::F28, RVReg::F31);
-}
-
-bool RVFrameInfo::isCalleeSaved(const MIROperand &op) const {
-    const auto reg = op.reg();
-    if (reg == RVReg::X0 || reg == RVReg::X3 || reg == RVReg::X4)
-        return false;
-    return !isCallerSaved(op);
+bool RVFrameInfo::isFuncCall(const MIRInst_p & inst) const {
+    return inst->isRV() && inst->opcode<RVOpC>() == RVOpC::JAL;
 }
 
 void RVFrameInfo::makePostSAPrologue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const {
-    entry->Insts().emplace_front(
-        MIRInst::make(OpC::InstSub)
-            ->setOperand<0>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
-            ->setOperand<1>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
-            ->setOperand<2>(MIROperand::asImme(static_cast<int>(stkSize), OpT::Int64), ctx));
+    if (RV64::is12BitImm(stkSize, 64)) {
+        entry->Insts().emplace_front(
+            MIRInst::make(OpC::InstSub)
+                ->setOperand<0>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
+                ->setOperand<1>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
+                ->setOperand<2>(MIROperand::asImme(static_cast<int>(stkSize), OpT::Int64), ctx));
+    } else {
+        // 注意 emplace_front 顺序
+        auto scratch = MIROperand::asISAReg(RVReg::FP, OpT::Int64);
+        entry->Insts().emplace_front(MIRInst::make(OpC::InstSub)
+                                 ->setOperand<0>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
+                                 ->setOperand<1>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
+                                 ->setOperand<2>(scratch, ctx));
+        entry->Insts().emplace_front(MIRInst::make(RVOpC::LI)
+                                         ->setOperand<0>(scratch, ctx)
+                                         ->setOperand<1>(MIROperand::asImme(stkSize, OpT::Int64), ctx));
+    }
 }
 
 void RVFrameInfo::makePostSAEpilogue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const {
     auto iter = std::prev(entry->Insts().end());
     Err::gassert((*iter)->opcode<RVOpC>() == RVOpC::RET, "ret not found");
-    entry->Insts().emplace(iter, MIRInst::make(OpC::InstAdd)
-                     ->setOperand<0>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
-                     ->setOperand<1>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
-                     ->setOperand<2>(MIROperand::asImme(static_cast<int>(stkSize), OpT::Int64), ctx));
+    if (RV64::is12BitImm(stkSize, 64)) {
+        entry->Insts().emplace(iter,
+                               MIRInst::make(OpC::InstAdd)
+                                   ->setOperand<0>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
+                                   ->setOperand<1>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
+                                   ->setOperand<2>(MIROperand::asImme(static_cast<int>(stkSize), OpT::Int64), ctx));
+    } else {
+        auto scratch = MIROperand::asISAReg(RVReg::FP, OpT::Int64);
+        // 注意 emplace 顺序
+        entry->Insts().emplace(iter, MIRInst::make(RVOpC::LI)
+                                 ->setOperand<0>(scratch, ctx)
+                                 ->setOperand<1>(MIROperand::asImme(stkSize, OpT::Int64), ctx));
+        entry->Insts().emplace(iter, MIRInst::make(OpC::InstAdd)
+                                 ->setOperand<0>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
+                                 ->setOperand<1>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
+                                 ->setOperand<2>(scratch, ctx));
+    }
 }
 
 void RVFrameInfo::insertPrologueEpilogue(MIRFunction *mfunc, CodeGenContext &ctx) const {
@@ -333,11 +341,10 @@ void RVFrameInfo::insertPrologueEpilogue(MIRFunction *mfunc, CodeGenContext &ctx
     for (int i = 0; i < 64; ++i, bitmap >>= 1) {
         if (bitmap & 1) {
             auto obj = mfunc->addStkObj(mfunc->Context(), 8, 8, offset, StkObjUsage::CalleeSave);
-            entry_insts.emplace_front(
-                MIRInst::make(OpC::InstStoreRegToStack)
-                    ->setOperand<1>(MIROperand::asISAReg(static_cast<RVReg>(i), OpT::Int64), ctx)
-                    ->setOperand<2>(obj, ctx)
-                    ->setOperand<5>(MIROperand::asImme(8, OpT::Int64), ctx));
+            entry_insts.emplace_front(MIRInst::make(OpC::InstStoreRegToStack)
+                                          ->setOperand<1>(MIROperand::asISAReg(static_cast<RVReg>(i), OpT::Int64), ctx)
+                                          ->setOperand<2>(obj, ctx)
+                                          ->setOperand<5>(MIROperand::asImme(8, OpT::Int64), ctx));
             offset += 8;
         }
     }
@@ -353,11 +360,10 @@ void RVFrameInfo::insertPrologueEpilogue(MIRFunction *mfunc, CodeGenContext &ctx
         for (int i = 0; i < 64; ++i, bitmap >>= 1) {
             if (bitmap & 1) {
                 const auto obj = mfunc->addStkObj(mfunc->Context(), 8, 8, offset, StkObjUsage::CalleeSave);
-                insts.emplace(it,
-                    MIRInst::make(OpC::InstLoadRegFromStack)
-                        ->setOperand<0>(MIROperand::asISAReg(static_cast<RVReg>(i), OpT::Int64), ctx)
-                        ->setOperand<1>(obj, ctx)
-                        ->setOperand<5>(MIROperand::asImme(8, OpT::Int64), ctx));
+                insts.emplace(it, MIRInst::make(OpC::InstLoadRegFromStack)
+                                      ->setOperand<0>(MIROperand::asISAReg(static_cast<RVReg>(i), OpT::Int64), ctx)
+                                      ->setOperand<1>(obj, ctx)
+                                      ->setOperand<5>(MIROperand::asImme(8, OpT::Int64), ctx));
                 offset += 8;
             }
         }

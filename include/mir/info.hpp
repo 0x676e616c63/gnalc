@@ -69,6 +69,9 @@ public:
     virtual unsigned int FpOrVecStart() const = 0;
     virtual uint64_t initCalleeSaveBitmap() const = 0;
     virtual void updateCalleeSaveBitmapForStackAlloc(uint64_t& bitmap, MIRFunction* mfunc) const = 0;
+
+    virtual bool isCallerSaved(unsigned int reg) const = 0;
+    virtual bool isCalleeSaved(unsigned int reg) const = 0;
 };
 
 class FrameInfo {
@@ -90,9 +93,7 @@ public:
 
     virtual void appendCalleeSaveStackSize(uint64_t& allocation_base, uint64_t bitmap) const = 0;
 
-    ///@note not used
-    virtual bool isCallerSaved(const MIROperand &op) const = 0;
-    virtual bool isCalleeSaved(const MIROperand &op) const = 0;
+    virtual bool isFuncCall(const MIRInst_p&) const = 0;
 
     constexpr size_t getStackPointerAlignment() const { return 16; }
 };

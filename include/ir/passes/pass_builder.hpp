@@ -126,10 +126,10 @@ public:
     static void registerFunctionAnalyses(FAM &);
     static void registerProxies(FAM &, MAM &);
 
-    static void registerARMv8TargetAnalyses(FAM &);
-    static void registerARMv7TargetAnalyses(FAM &);
-    static void registerRISCV64TargetAnalyses(FAM &);
-    static void registerBrainFkTargetAnalyses(FAM &);
+    static void registerARMv8TargetAnalyses(FAM &, MAM&);
+    static void registerARMv7TargetAnalyses(FAM &, MAM&);
+    static void registerRISCV64TargetAnalyses(FAM &, MAM&);
+    static void registerBrainFkTargetAnalyses(FAM &, MAM&);
 };
 } // namespace IR
 #endif

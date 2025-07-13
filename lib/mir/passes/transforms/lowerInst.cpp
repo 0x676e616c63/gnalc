@@ -154,9 +154,6 @@ void MIR::lowerInst(const IR::pIcmp &icmp, LoweringContext &ctx) {
                         ->setOperand<0>(def, ctx.CodeGenCtx())
                         ->setOperand<1>(ctx.mapOperand(IRCondConvert(icmp->getCond())), ctx.CodeGenCtx())); // cond flag
     } else if (ctx.CodeGenCtx().isRISCV64()) {
-        auto lhs = ctx.mapOperand(icmp->getLHS());
-        auto rhs = ctx.mapOperand(icmp->getRHS());
-
         ctx.newInst(MIRInst::make(OpC::InstICmp)
                 ->setOperand<0>(def, ctx.CodeGenCtx())
                 ->setOperand<1>(ctx.mapOperand(icmp->getLHS()), ctx.CodeGenCtx())
@@ -184,8 +181,6 @@ void MIR::lowerInst(const IR::pFcmp &fcmp, LoweringContext &ctx) {
                         ->setOperand<0>(def, ctx.CodeGenCtx())
                         ->setOperand<1>(ctx.mapOperand(IRCondConvert(fcmp->getCond())), ctx.CodeGenCtx()));
     } else if (ctx.CodeGenCtx().isRISCV64()) {
-        auto lhs = ctx.mapOperand(fcmp->getLHS());
-        auto rhs = ctx.mapOperand(fcmp->getRHS());
         ctx.newInst(MIRInst::make(OpC::InstFCmp)
                         ->setOperand<0>(def, ctx.CodeGenCtx())
                         ->setOperand<1>(ctx.mapOperand(fcmp->getLHS()), ctx.CodeGenCtx())
@@ -266,7 +261,7 @@ void emitBranchCondARM(const IR::pBr &br, LoweringContext &ctx) {
 }
 void emitBranchRISCV(const IR::pBr &br, LoweringContext &ctx) {
     auto blk_true = ctx.mapBlk(br->getDest());
-    ctx.newInst(MIRInst::make(RVOpC::J)
+    ctx.newInst(MIRInst::make(OpC::InstBranch)
                     ->setOperand<0>(nullptr, ctx.CodeGenCtx())
                     ->setOperand<1>(MIROperand::asReloc(blk_true), ctx.CodeGenCtx()));
 }
@@ -280,7 +275,7 @@ void emitBranchCondRISCV(const IR::pBr &br, LoweringContext &ctx) {
         auto &true_blk_true = const_cond->getVal() ? blk_true : blk_false;
         auto &true_blk_false = const_cond->getVal() ? blk_false : blk_true;
 
-        ctx.newInst(MIRInst::make(RVOpC::J)
+        ctx.newInst(MIRInst::make(OpC::InstBranch)
                         ->setOperand<0>(nullptr, ctx.CodeGenCtx())
                         ->setOperand<1>(MIROperand::asReloc(true_blk_true), ctx.CodeGenCtx()));
 
@@ -300,7 +295,7 @@ void emitBranchCondRISCV(const IR::pBr &br, LoweringContext &ctx) {
                         ->setOperand<1>(use, ctx.CodeGenCtx())
                         ->setOperand<2>(MIROperand::asReloc(blk_true), ctx.CodeGenCtx()));
 
-        ctx.newInst(MIRInst::make(RVOpC::J)
+        ctx.newInst(MIRInst::make(OpC::InstBranch)
                         ->setOperand<0>(nullptr, ctx.CodeGenCtx())
                         ->setOperand<1>(MIROperand::asReloc(blk_false), ctx.CodeGenCtx()));
     }

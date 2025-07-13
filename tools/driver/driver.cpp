@@ -69,6 +69,7 @@ int main(int argc, char **argv) {
     bool only_compilation = false;              // -S
     bool emit_sir = false;                      // -emit-sir
     bool emit_llvm = false;                     // -emit-llvm
+    bool emit_llvm_with_asm = false;            // -emit-llvm-with-asm
     bool emit_llc = false;                      // -emit-llc
     bool ast_dump = false;                      // -ast-dump
     bool std_pipeline = false;                  // -std-pipeline
@@ -126,6 +127,8 @@ int main(int argc, char **argv) {
             emit_sir = true;
         else if (arg == "-emit-llvm")
             emit_llvm = true;
+        else if (arg == "-emit-llvm-with-asm")
+            emit_llvm_with_asm = true;
         else if (arg == "-with-runtime")
             with_runtime = true;
         else if (arg == "-emit-llc")
@@ -262,6 +265,7 @@ General Options:
   -O0                  - Optimization level 0 (disable all optimization)
   -O,-O1, -fixed-point - Optimization level 1 (fixed-point pipeline)
   -emit-llvm           - Use LLVM intermediate representation for output
+  -emit-llvm-with-asm  - Enable both LLVM IR and Asm output
   -ast-dump            - Build and dump AST (Unavailable in GGC mode)
   --log <log-level>    - Set logging level (debug|info|none)
   -h, --help           - Display this help message
@@ -485,17 +489,17 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
 
     switch (target) {
     case Target::ARMv8:
-        IR::PassBuilder::registerARMv8TargetAnalyses(fam);
+        IR::PassBuilder::registerARMv8TargetAnalyses(fam, mam);
         break;
     case Target::ARMv7:
-        IR::PassBuilder::registerARMv7TargetAnalyses(fam);
+        IR::PassBuilder::registerARMv7TargetAnalyses(fam, mam);
         break;
     case Target::RISCV64:
-        IR::PassBuilder::registerRISCV64TargetAnalyses(fam);
+        IR::PassBuilder::registerRISCV64TargetAnalyses(fam, mam);
         break;
     case Target::BrainFk:
     case Target::BrainFk3Tape:
-        IR::PassBuilder::registerBrainFkTargetAnalyses(fam);
+        IR::PassBuilder::registerBrainFkTargetAnalyses(fam, mam);
         break;
     default:
         std::cerr << "Error: Unsupported target." << std::endl;
@@ -517,12 +521,12 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
     else
         mpm = IR::PassBuilder::buildModulePipeline(pm_options);
 
-    if (emit_llvm) {
+    if (emit_llvm || emit_llvm_with_asm) {
         mpm.addPass(IR::PrintModulePass(*poutstream, with_runtime));
-        mpm.run(generator.get_module(), mam);
-
-        // RISCV64 DEBUG
-        //return 0;
+        if (!emit_llvm_with_asm) {
+            mpm.run(generator.get_module(), mam);
+            return 0;
+        }
     }
 
 #ifdef GNALC_EXTENSION_BRAINFK

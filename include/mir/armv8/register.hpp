@@ -37,6 +37,17 @@ public:
     bool isFpOrVecReg(unsigned int reg) const override {
         return reg >= ARMReg::V0;
     }
+
+    bool isCallerSaved(unsigned int reg) const override {
+        return inRange(static_cast<ARMReg>(reg), ARMReg::X0, ARMReg::X18) ||
+               inRange(static_cast<ARMReg>(reg), ARMReg::V0, ARMReg::V7)  ||
+               inRange(static_cast<ARMReg>(reg), ARMReg::V16, ARMReg::V31);
+    }
+
+    bool isCalleeSaved(unsigned int reg) const override {
+        return !isCallerSaved(reg); //
+    }
+
     unsigned int FpOrVecStart() const override {
         return static_cast<unsigned int>(ARMReg::V0);
     }

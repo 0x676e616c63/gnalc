@@ -32,7 +32,7 @@ public:
     }
 
     // bare metal
-    bool isLibCallSupported(const std::string &lib_fn_name) const override { return false; }
+    bool isIntrinsicSupported(const std::string &lib_fn_name) const override { return false; }
 };
 } // namespace IR
 #endif //TARGET_HPP
