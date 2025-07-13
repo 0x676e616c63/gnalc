@@ -40,3 +40,5 @@ test_bug.ll
 test_no_bug.ll
 perf.out
 submit
+runtime/artifacts/thread.ll
+runtime/artifacts/thread.ll.hpp

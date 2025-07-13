@@ -62,7 +62,7 @@ public:
 
     bool ADomB(const pBlock &a, const pBlock &b) const { return Base::ADomB(a.get(), b.get()); }
 
-    bool isReachable(const pBlock &a) const { return Base::isReachable(a.get()); }
+    bool isReachableFromEntry(const pBlock &a) const { return Base::isReachableFromEntry(a.get()); }
 
     std::set<pBlock> getDomSet(const pBlock &b) const {
         auto res = Base::getDomSet(b.get());

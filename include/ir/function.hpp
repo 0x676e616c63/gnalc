@@ -24,6 +24,9 @@ enum class FuncAttr {
     // User defined functions
     NotBuiltin,
 
+    // Main function
+    isProgramEntry,
+
     // Typically this is a main function
     ExecuteExactlyOnce,
 
@@ -45,6 +48,12 @@ enum class FuncAttr {
     builtinMemReadOnly,
     builtinMemWriteOnly,
     builtinMemReadWrite,
+
+    // Loop Parallel
+    ParallelEntry,
+    ParallelBody,
+    isAtomicAddI32,
+    isAtomicAddF32,
 };
 class FunctionDecl : public Value {
 private:

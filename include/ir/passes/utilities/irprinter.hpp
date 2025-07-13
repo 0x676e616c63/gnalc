@@ -52,8 +52,11 @@ public:
 };
 
 class PrintModulePass : public PM::PassInfo<PrintModulePass>, public IRPrinter {
+private:
+    bool with_runtime;
 public:
-    explicit PrintModulePass(std::ostream &outStream_) : IRPrinter(outStream_, true) {}
+    explicit PrintModulePass(std::ostream &outStream_, bool with_runtime_ = false)
+        : IRPrinter(outStream_, true), with_runtime(with_runtime_) {}
 
     PM::PreservedAnalyses run(Module &unit, MAM &manager);
 

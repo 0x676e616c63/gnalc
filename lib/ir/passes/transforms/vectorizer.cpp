@@ -112,6 +112,8 @@ bool VectorizerPass::AlignRewriter::trySetBaseAlign(pVal ptr, int align, Functio
             for (auto user : curr_func->inst_users()) {
                 auto call = user->as<CALLInst>();
                 Err::gassert(call != nullptr, "Expected a call user");
+                if (call->getFunc().get() != curr_func)
+                    continue;
                 Function *caller_func = call->getParent()->getParent().get();
                 if (!trySetBaseAlign(call->getArgs()[fp->getIndex()], align, caller_func, changes)) {
                     Logger::logDebug("[SLP]: Failed to rewrite the align of FormalParam '", fp->getName(), "'");
@@ -1139,7 +1141,6 @@ void VectorizerPass::buildTreeImpl(const std::vector<pVal> &scalars, int depth, 
         // https://compilers.cs.uni-saarland.de/papers/karrenberg_wfv.pdf
 
         cancel_sched_and_gather();
-        return;
         return;
     }
     case OP::SHUFFLE: {

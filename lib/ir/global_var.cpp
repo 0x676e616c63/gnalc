@@ -123,7 +123,10 @@ std::string GVIniter::toString() const {
     } else {
         if (isZero()) {
             ret += initer_type->toString() + " ";
-            ret += "0";
+            if (initer_type->is<PtrType>())
+                ret += "null";
+            else
+                ret += "0";
         } else {
             ret += IRFormatter::formatValue(*getConstVal());
         }

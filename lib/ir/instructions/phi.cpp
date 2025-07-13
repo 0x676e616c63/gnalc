@@ -68,10 +68,9 @@ pBlock PHIInst::getBlockForValue(Use *use) const {
 
 void PHIInst::setValueForBlock(const pBlock & block, const pVal &val) const {
     Err::gassert(block != nullptr, "PHIInst::setValueForBlock(): block is null.");
-    for (auto it = operand_begin(); it != operand_end(); ++it) {
-        ++it;
-        if (*it == block) {
-            (*--it) = val;
+    for (size_t i = 1; i < getNumOperands(); i += 2) {
+        if (getOperand(i)->getValue() == block) {
+            getOperand(i - 1)->setValue(val);
             return;
         }
     }

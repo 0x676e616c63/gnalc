@@ -7,6 +7,7 @@
 #include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
+#include "ir/passes/utilities/irprinter.hpp"
 #include "utils/logger.hpp"
 
 #include <algorithm>
@@ -53,14 +54,33 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                     Logger::logCritical("[VerifyPass]: Missing use in '", inst->getName(), "''s operand '",
                                         operand->getValue()->getName(), "'.");
                     ++fatal_error_cnt;
+                    continue;
+                }
+
+                if (auto operand_inst = operand->getValue()->as<Instruction>()) {
+                    if (operand_inst->getParent()->getParent().get() != &function) {
+                        Logger::logCritical("[VerifyPass]: Operand '", operand->getValue()->getName(),
+                                            "' is not in the same function as its user '", inst->getName(), "'.");
+                        ++fatal_error_cnt;
+                        continue;
+                    }
                 }
             }
 
-            for (const auto& inst_user : inst->inst_users()) {
+            for (const auto &inst_user : inst->inst_users()) {
                 if (inst_user->getParent() == nullptr) {
                     Logger::logCritical("[VerifyPass]: Dangling use in '", inst->getName(), "''s user '",
-                    inst_user->getName(), "'. The user is in no block. Did you forget to clear a pass's temporaries?");
+                                        inst_user->getName(),
+                                        "'. The user is in no block. Did you forget to clear a pass's temporaries?");
                     ++fatal_error_cnt;
+                    continue;
+                }
+
+                if (inst_user->getParent()->getParent().get() != &function) {
+                    Logger::logCritical("[VerifyPass]: User '", inst_user->getName(),
+                                        "' is not in the same function as its operand '", inst->getName(), "'.");
+                    ++fatal_error_cnt;
+                    continue;
                 }
             }
         }
@@ -165,8 +185,8 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
 
                 for (const auto &[v, b] : phi_opers) {
                     if (!isSameType(v->getType(), phi_inst->getType())) {
-                        Logger::logCritical("[VerifyPass]: PHIInst '", phi_inst->getName(), "' has wrong operand type for '",
-                                            v->getName(), "'.");
+                        Logger::logCritical("[VerifyPass]: PHIInst '", phi_inst->getName(),
+                                            "' has wrong operand type for '", v->getName(), "'.");
                         ++fatal_error_cnt;
                     }
                 }
@@ -175,11 +195,25 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
     }
 
     if (fatal_error_cnt == 0) {
-        auto domtree = fam.getResult<DomTreeAnalysis>(function);
+        auto& domtree = fam.getResult<DomTreeAnalysis>(function);
         for (const auto &bb : function) {
+            if (!domtree.isReachableFromEntry(bb)) {
+                Logger::logCritical("[VerifyPass]: DomTree said BasicBlock '", bb->getName(),
+                    "' is unreachable, but can't detected by CFG?");
+                ++fatal_error_cnt;
+                break;
+            }
             for (const auto &inst : bb->all_insts()) {
-                for (const auto &user : inst->inst_users()) {
-                    if (user->getOpcode() != OP::PHI) {
+                for (const auto &use : inst->self_uses()) {
+                    auto user = use->getUser()->as<Instruction>();
+                    if (auto phi = user->as<PHIInst>()) {
+                        auto incoming_block = phi->getBlockForValue(use);
+                        if (!domtree.ADomB(bb, incoming_block)) {
+                            Logger::logCritical("[VerifyPass]: Instruction '", inst->getName(),
+                                                "' does not dominate its use in phi '", user->getName(), "'.");
+                            ++fatal_error_cnt;
+                        }
+                    } else {
                         if ((bb == user->getParent() && inst->getIndex() > user->getIndex()) ||
                             !domtree.ADomB(bb, user->getParent())) {
                             Logger::logCritical("[VerifyPass]: Instruction '", inst->getName(),
@@ -239,15 +273,16 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
             if (auto cond_inst = br->getCond()->as<Instruction>()) {
                 if (cond_inst->getParent() != bb) {
                     ++warning_cnt;
-                    Logger::logWarning("[VerifyPass]: Cond '", cond_inst->getName(), "' and BRInst are in separate block.");
-                }
-                else if (std::next(cond_inst->iter()) != br->iter()) {
+                    Logger::logWarning("[VerifyPass]: Cond '", cond_inst->getName(),
+                                       "' and BRInst are in separate block.");
+                } else if (std::next(cond_inst->iter()) != br->iter()) {
                     ++warning_cnt;
-                    Logger::logWarning("[VerifyPass]: Cond '", cond_inst->getName(), "' and BRInst are not consecutive.");
-                }
-                else if (cond_inst->getUseCount() != 1) {
+                    Logger::logWarning("[VerifyPass]: Cond '", cond_inst->getName(),
+                                       "' and BRInst are not consecutive.");
+                } else if (cond_inst->getUseCount() != 1) {
                     ++warning_cnt;
-                    Logger::logWarning("Cond '", cond_inst->getName(), "' has multiple uses. (possibly more than one BRInst)");
+                    Logger::logWarning("Cond '", cond_inst->getName(),
+                                       "' has multiple uses. (possibly more than one BRInst)");
                 }
             }
         }
@@ -263,13 +298,11 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                 if (inst->getName() == "") {
                     ++warning_cnt;
                     Logger::logWarning("[VerifyPass]: Instruction '", inst->getName(), "' has no name.");
-                }
-                else {
+                } else {
                     if (discovered_names.find(inst->getName()) != discovered_names.end()) {
                         ++warning_cnt;
                         Logger::logWarning("[VerifyPass]: Duplicated name '", inst->getName(), "' detected.");
-                    }
-                    else
+                    } else
                         discovered_names.insert(inst->getName());
                 }
             }
@@ -279,7 +312,7 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
     // Check if there are self reference phi
     if (fatal_error_cnt == 0) {
         for (const auto &bb : function) {
-            for (const auto& phi : bb->phis()) {
+            for (const auto &phi : bb->phis()) {
                 if (auto common_value = getCommonValue(phi)) {
                     if (common_value == phi) {
                         ++warning_cnt;
@@ -290,16 +323,27 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
         }
     }
 
+    auto print_func = [&] {
+        std::cerr << "[VerifyPass] on '" << function.getName() << "': Printing IR:\n";
+        IRPrinter printer(std::cerr, /* with indent */ true);
+        function.accept(printer);
+        std::cerr << std::flush;
+    };
+
     if (warning_cnt != 0) {
         Logger::logWarning("[VerifyPass] on '", function.getName(), "': Found ", warning_cnt, " warning(s).");
-        if (abort_when_warning_raised && (!abort_when_verify_failed || fatal_error_cnt == 0))
+        if (abort_when_warning_raised && (!abort_when_verify_failed || fatal_error_cnt == 0)) {
+            print_func();
             std::abort();
+        }
     }
 
     if (fatal_error_cnt != 0) {
         Logger::logCritical("[VerifyPass] on '", function.getName(), "': Found ", fatal_error_cnt, " fatal error(s).");
-        if (abort_when_verify_failed)
+        if (abort_when_verify_failed) {
+            print_func();
             std::abort();
+        }
     }
 
     if (warning_cnt == 0 && fatal_error_cnt == 0) {

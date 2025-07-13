@@ -80,6 +80,7 @@ int main(int argc, char **argv) {
     bool debug_pipeline = false;                // -debug-pipeline
     bool sir_debug_pipeline = false;            // -sir-debug-pipeline
     bool mir_debug_pipeline = false;            // -mir-debug-pipeline
+    bool with_runtime = false;                  // -with-runtime
     IR::CliOptions cli_opt_options;             // --xxx, --no-xxx
 
 #ifdef GNALC_EXTENSION_ARMv7
@@ -125,6 +126,8 @@ int main(int argc, char **argv) {
             emit_sir = true;
         else if (arg == "-emit-llvm")
             emit_llvm = true;
+        else if (arg == "-with-runtime")
+            with_runtime = true;
         else if (arg == "-emit-llc")
             emit_llc = true;
         else if (arg == "-ast-dump") {
@@ -162,6 +165,7 @@ int main(int argc, char **argv) {
         OPT_ARG("--loopunroll", "--no-loopunroll", loop_unroll)
         OPT_ARG("--indvars", "--no-indvars", indvars)
         OPT_ARG("--lsr", "--no-lsr", loop_strength_reduce)
+        OPT_ARG("--parallel", "--no-parallel", loop_parallel)
         OPT_ARG("--loopelim", "--no-loopelim", loopelim)
         OPT_ARG("--vectorizer", "--no-vectorizer", vectorizer)
         OPT_ARG("--rngsimplify", "--no-rngsimplify", rngsimplify)
@@ -279,6 +283,7 @@ Optimizations Flags:
   --instsimplify       - Instruction simplification
   --inline             - Function inlining
   --loopunroll         - Loop unrolling
+  --parallel           - Loop parallelization
   --indvars            - Induction variable simplification
   --lsr                - Loop strength reduction
   --loopelim           - Loop elimination
@@ -293,6 +298,7 @@ Optimizations Flags:
   --treeshaking        - Shake off unused functions, function declarations and global variables
 
 Debug options:
+  -with-runtime              - Emit gnalc runtime when emitting LLVM IR
   -fuzz                      - Enable fuzz testing pipeline
   -fuzz-rate <rate: double>  - Set the duplication rate for fuzz testing pipeline
   -fuzz-repro <pipeline>     - Reproduce specific fuzz pipeline. Find <pipeline> in the fuzz testing log
@@ -512,7 +518,7 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
         mpm = IR::PassBuilder::buildModulePipeline(pm_options);
 
     if (emit_llvm) {
-        mpm.addPass(IR::PrintModulePass(*poutstream));
+        mpm.addPass(IR::PrintModulePass(*poutstream, with_runtime));
         mpm.run(generator.get_module(), mam);
 
         // RISCV64 DEBUG
