@@ -272,6 +272,8 @@ inline string RVOpC2S(RVOpC op) {
     switch (op) {
     case RVOpC::SLT:
         return "slt";
+    case RVOpC::SLTI:
+        return "slti";
     case RVOpC::SLTU:
         return "sltu";
     case RVOpC::SEQZ:

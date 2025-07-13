@@ -96,6 +96,7 @@ GNALC_ENUM_OPERATOR(RVReg)
 
 enum class RVOpC : uint32_t {
     SLT,
+    SLTI,
     SLTU,
     SEQZ,
     SNEZ,

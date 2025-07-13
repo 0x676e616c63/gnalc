@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
         if (target == Target::LLVM)
             sylib_for_diff_testing = sylib_to_link;
         else
-            sylib_for_diff_testing = prepare_sylib(cfg::global_temp_dir, target);
+            sylib_for_diff_testing = prepare_sylib(cfg::global_temp_dir, Target::LLVM);
     }
 
     auto real_test_data = cfg::test_data;
@@ -188,7 +188,7 @@ int main(int argc, char *argv[]) {
                                   newsy, newsy, outll);
                 };
                 clang_data.ir_asm_gen = clang_irgen;
-                diff_res = run_test(clang_data, target);
+                diff_res = run_test(clang_data, Target::LLVM);
                 expected_syout = diff_res.output;
             } else {
                 expected_syout = read_file(testcase_out);

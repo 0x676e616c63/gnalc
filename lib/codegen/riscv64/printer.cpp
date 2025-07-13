@@ -70,6 +70,8 @@ void RV64Printer::printout(const MIRFunction &func) {
 
     for (auto &mblk : func.blks())
         printout(*mblk);
+
+    writeln("");
 }
 
 void RV64Printer::printout(const MIRBlk &mblk) {
@@ -78,8 +80,6 @@ void RV64Printer::printout(const MIRBlk &mblk) {
 
     for (auto &minst : mblk.Insts())
         printout(*minst);
-
-    writeln("");
 }
 
 void RV64Printer::printout(const MIRInst &minst) {
@@ -242,17 +242,30 @@ string RV64Printer::formatBinary(const MIRInst &minst) {
     }
 
     if (minst.getOp(2)->isImme()) {
-        if (opcode == OpC::InstAdd)
+        switch (opcode) {
+        case OpC::InstAdd:
+        case OpC::InstAnd:
+        case OpC::InstOr:
+        case OpC::InstXor:
+        case OpC::InstShl:
+        case OpC::InstAShr:
+        case OpC::InstLShr:
             opstr += "i";
-        else if (opcode == OpC::InstSub) {
+            break;
+        case OpC::InstSub:
             opstr = "addi";
             src2 = "-" + src2;
-        } else Err::unreachable("bad legalization");
+            break;
+        default:
+            Err::unreachable("bad legalization");
+        }
     }
 
-    auto bitWide = getBitWideChoosen(def->type(), lhs->type(), rhs->type());
-    if (bitWide < 8)
-        opstr += "w";
+    if (opcode == OpC::InstAdd || opcode == OpC::InstSub) {
+        auto bitWide = getBitWideChoosen(def->type(), lhs->type(), rhs->type());
+        if (bitWide < 8)
+            opstr += "w";
+    }
 
     return opstr + " " + dst + ", " + src1 + ", " + src2;
 }
@@ -288,6 +301,7 @@ string RV64Printer::formatConverse(const MIRInst &minst) {
     }
     return "";
 }
+
 string RV64Printer::formatCopy(const MIRInst &minst) {
     auto opcode = minst.opcode<OpC>();
     auto dst = formatOperand(minst.getOp(0));

@@ -16,22 +16,39 @@ void RV64Printer::rv64_printout(const MIRInst &minst) {
             ops.emplace_back(formatOperand(op));
     }
     switch (minst.opcode<RVOpC>()) {
-    case RVOpC::SLT:
-    case RVOpC::SLTU:
-    case RVOpC::SEQZ:
-    case RVOpC::SNEZ:
-    case RVOpC::SLTZ:
-    case RVOpC::SGTZ:
-    case RVOpC::FEQ:
-    case RVOpC::FLT:
-    case RVOpC::FLE:
     case RVOpC::BEQ:
     case RVOpC::BNE:
     case RVOpC::BGE:
     case RVOpC::BLT:
+    case RVOpC::BGT:
+    case RVOpC::BLE:
+    case RVOpC::BGTU:
+    case RVOpC::BLEU:
+        write(ops[1], ", ", ops[2], ", ", ops[3]);
+        break;
+    case RVOpC::BEQZ:
+    case RVOpC::BNEZ:
+    case RVOpC::BLEZ:
+    case RVOpC::BGEZ:
+    case RVOpC::BLTZ:
+    case RVOpC::BGTZ:
+        write(ops[1], ", ", ops[2]);
+        break;
+    case RVOpC::SLT:
+    case RVOpC::SLTI:
+    case RVOpC::SLTU:
+    case RVOpC::FEQ:
+    case RVOpC::FLT:
+    case RVOpC::FLE:
     case RVOpC::AUIPC:
         write(ops[0], ", ", ops[1], ", ", ops[2]);
         break;
+    case RVOpC::SEQZ:
+    case RVOpC::SNEZ:
+    case RVOpC::SLTZ:
+    case RVOpC::SGTZ:
+    case RVOpC::LA:
+    case RVOpC::JAL:
     case RVOpC::MV:
     case RVOpC::FMVSX:
     case RVOpC::LUI:
@@ -58,8 +75,12 @@ void RV64Printer::rv64_printout(const MIRInst &minst) {
             ops[2] = "sp";
         write(ops[1], ", ", ops[3], "(", ops[2], ")");
         break;
-    case RVOpC::LA:
-        write(ops[0], ", ", ops[1]);
+    case RVOpC::J:
+    case RVOpC::JR:
+        write(ops[1]);
+        break;
+    case RVOpC::JALR:
+        write(ops[0], ops[2], "(", ops[1], ")");
         break;
     case RVOpC::RET:
         // pass

@@ -78,6 +78,182 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     }
 
     switch (minst->opcode<OpC>()) {
+    case OpC::InstICmp: {
+        auto def = minst->getOp(0);
+
+        auto lhs = minst->getOp(1);
+        auto rhs = minst->getOp(2);
+
+        auto cond = minst->getOp(3)->imme();
+        // AL, EQ, NE, LT, GT, LE, GE
+        switch (cond) {
+        case Cond::EQ: {
+            // tmp = lhs XOR rhs
+            auto tmp = MIROperand::asVReg(ctx.codeGenCtx().nextId(), def->type());
+            ctx.newInst(OpC::InstXor)
+                ->setOperand<0>(tmp, ctx.codeGenCtx())
+                ->setOperand<1>(lhs, ctx.codeGenCtx())
+                ->setOperand<2>(rhs, ctx.codeGenCtx());
+            // def = SEQZ tmp
+            ctx.newInst(RVOpC::SEQZ)->setOperand<0>(def, ctx.codeGenCtx())->setOperand<1>(tmp, ctx.codeGenCtx());
+
+            ctx.delInst(minst);
+            break;
+        }
+        case Cond::NE: {
+            // tmp = lhs XOR rhs
+            auto tmp = MIROperand::asVReg(ctx.codeGenCtx().nextId(), def->type());
+            ctx.newInst(OpC::InstXor)
+                ->setOperand<0>(tmp, ctx.codeGenCtx())
+                ->setOperand<1>(lhs, ctx.codeGenCtx())
+                ->setOperand<2>(rhs, ctx.codeGenCtx());
+            // def = SNEZ tmp
+            ctx.newInst(RVOpC::SNEZ)->setOperand<0>(def, ctx.codeGenCtx())->setOperand<1>(tmp, ctx.codeGenCtx());
+
+            ctx.delInst(minst);
+            break;
+        }
+        case Cond::LT: {
+            minst->resetOpcode(RVOpC::SLT);
+            if (rhs->isImme()) {
+                if (RV64::is12BitImm(rhs->imme()))
+                    minst->resetOpcode(RVOpC::SLTI);
+                else
+                    minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
+            }
+            if (lhs->isImme())
+                minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
+            break;
+        }
+        case Cond::LE: {
+            // !(rhs < lhs)
+            auto tmp = MIROperand::asVReg(ctx.codeGenCtx().nextId(), def->type());
+            auto new_slt = ctx.newInst(RVOpC::SLT)
+                ->setOperand<0>(tmp, ctx.codeGenCtx())
+                ->setOperand<1>(rhs, ctx.codeGenCtx())
+                ->setOperand<2>(lhs, ctx.codeGenCtx());
+
+            if (rhs->isImme())
+                new_slt->setOperand<1>(loadImm(rhs), ctx.codeGenCtx());
+            if (lhs->isImme()) {
+                if (RV64::is12BitImm(lhs->imme()))
+                    new_slt->resetOpcode(RVOpC::SLTI);
+                else
+                    new_slt->setOperand<2>(loadImm(lhs), ctx.codeGenCtx());
+            }
+
+            ctx.newInst(RVOpC::SEQZ)->setOperand<0>(def, ctx.codeGenCtx())->setOperand<1>(tmp, ctx.codeGenCtx());
+            ctx.delInst(minst);
+            break;
+        }
+        case Cond::GT: {
+            // rhs < lhs
+            minst->resetOpcode(RVOpC::SLT);
+            minst->setOperand<1>(rhs, ctx.codeGenCtx())->setOperand<2>(lhs, ctx.codeGenCtx());
+
+            if (rhs->isImme())
+                minst->setOperand<1>(loadImm(rhs), ctx.codeGenCtx());
+            if (lhs->isImme()) {
+                if (RV64::is12BitImm(lhs->imme()))
+                    minst->resetOpcode(RVOpC::SLTI);
+                else
+                    minst->setOperand<2>(loadImm(lhs), ctx.codeGenCtx());
+            }
+            break;
+        }
+        case Cond::GE: {
+            // !(lhs < rhs)
+            auto tmp = MIROperand::asVReg(ctx.codeGenCtx().nextId(), def->type());
+            auto new_slt = ctx.newInst(RVOpC::SLT)
+                            ->setOperand<0>(tmp, ctx.codeGenCtx())
+                            ->setOperand<1>(lhs, ctx.codeGenCtx())
+                            ->setOperand<2>(rhs, ctx.codeGenCtx());
+
+            if (rhs->isImme()) {
+                if (RV64::is12BitImm(rhs->imme()))
+                    new_slt->resetOpcode(RVOpC::SLTI);
+                else
+                    new_slt->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
+            }
+            if (lhs->isImme())
+                new_slt->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
+
+            ctx.newInst(RVOpC::SEQZ)->setOperand<0>(def, ctx.codeGenCtx())->setOperand<1>(tmp, ctx.codeGenCtx());
+            ctx.delInst(minst);
+            break;
+        }
+        case Cond::AL:
+            Err::unreachable("icmp can't be AL");
+        default:
+            Err::unreachable("unsupported ICMP predicate for RISCV64");
+        }
+    } break;
+    case OpC::InstFCmp: {
+        auto def = minst->getOp(0);
+        auto lhs = minst->getOp(1);
+        auto rhs = minst->getOp(2);
+
+        if (lhs->isImme())
+            minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
+        if (rhs->isImme())
+            minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
+
+        auto cond = minst->getOp(3)->imme();
+        switch (cond) {
+        case Cond::EQ: {
+            minst->resetOpcode(RVOpC::FEQ);
+            break;
+        }
+        case Cond::NE: {
+            // tmp = lhs XOR rhs
+            auto tmp = MIROperand::asVReg(ctx.codeGenCtx().nextId(), def->type());
+            ctx.newInst(RVOpC::FEQ)
+                ->setOperand<0>(tmp, ctx.codeGenCtx())
+                ->setOperand<1>(lhs, ctx.codeGenCtx())
+                ->setOperand<2>(rhs, ctx.codeGenCtx());
+            // def = SEQ tmp
+            ctx.newInst(RVOpC::SEQZ)->setOperand<0>(def, ctx.codeGenCtx())->setOperand<1>(tmp, ctx.codeGenCtx());
+            ctx.delInst(minst);
+            break;
+        }
+        case Cond::LT: {
+            minst->resetOpcode(RVOpC::FLT);
+            break;
+        }
+        case Cond::LE: {
+            // !(rhs < lhs)
+            auto tmp = MIROperand::asVReg(ctx.codeGenCtx().nextId(), def->type());
+            ctx.newInst(RVOpC::FLT)
+                ->setOperand<0>(tmp, ctx.codeGenCtx())
+                ->setOperand<1>(rhs, ctx.codeGenCtx())
+                ->setOperand<2>(lhs, ctx.codeGenCtx());
+            ctx.newInst(RVOpC::SEQZ)->setOperand<0>(def, ctx.codeGenCtx())->setOperand<1>(tmp, ctx.codeGenCtx());
+            ctx.delInst(minst);
+            break;
+        }
+        case Cond::GT: {
+            // rhs < lhs
+            minst->resetOpcode(RVOpC::FLT);
+            minst->setOperand<1>(rhs, ctx.codeGenCtx())->setOperand<2>(lhs, ctx.codeGenCtx());
+            break;
+        }
+        case Cond::GE: {
+            // !(lhs < rhs)
+            auto tmp = MIROperand::asVReg(ctx.codeGenCtx().nextId(), def->type());
+            ctx.newInst(RVOpC::FLT)
+                ->setOperand<0>(tmp, ctx.codeGenCtx())
+                ->setOperand<1>(lhs, ctx.codeGenCtx())
+                ->setOperand<2>(rhs, ctx.codeGenCtx());
+            ctx.newInst(RVOpC::SEQZ)->setOperand<0>(def, ctx.codeGenCtx())->setOperand<1>(tmp, ctx.codeGenCtx());
+            ctx.delInst(minst);
+            break;
+        }
+        case Cond::AL:
+            Err::unreachable("fcmp can't be AL");
+        default:
+            Err::unreachable("unsupported FCMP predicate for RISCV64");
+        }
+    } break;
     case OpC::InstStore: {
         auto lhs = minst->getOp(1);
         if (lhs->isImme())
@@ -85,7 +261,8 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     } break;
     case OpC::InstAdd:
     case OpC::InstSub: {
-        trySwapOps(minst);
+        if (minst->opcode<OpC>() == OpC::InstAdd)
+            trySwapOps(minst);
 
         auto lhs = minst->getOp(1);
         if (lhs->isImme())
@@ -94,8 +271,7 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         auto rhs = minst->getOp(2);
         if (rhs->isImme() && !RV64::is12BitImm(rhs->imme()))
             minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
-    }
-        break;
+    } break;
     case OpC::InstMul:
     case OpC::InstAnd:
     case OpC::InstOr:
@@ -567,8 +743,6 @@ void RVIselInfo::legalizeCopy(InstLegalizeContext &_ctx) const {
     minst->resetOpcode(movType);
 }
 
-void RVIselInfo::legalizeAdrp(InstLegalizeContext &_ctx) const {
-    Err::unreachable("No adrp on RISCV64");
-}
+void RVIselInfo::legalizeAdrp(InstLegalizeContext &_ctx) const { Err::unreachable("No adrp on RISCV64"); }
 
 RVIselInfo::~RVIselInfo() = default;

@@ -123,7 +123,7 @@ void RVFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) cons
 
         auto isa = isFpr(offset) ? Util::to_underlying(RVReg::F10) +
                                        static_cast<uint32_t>(offset - passByRegBase - passByFprRegBase)
-                                 : Util::to_underlying(ARMReg::X10) + static_cast<uint32_t>(offset - passByRegBase);
+                                 : Util::to_underlying(RVReg::X10) + static_cast<uint32_t>(offset - passByRegBase);
 
         auto mtype = getType(arg);
         MIROperand_p marg = MIROperand::asISAReg(isa, mtype);
@@ -134,7 +134,7 @@ void RVFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) cons
 
     ctx.newInst(
         MIRInst::make(RVOpC::JAL)
-            ->setOperand<0>(nullptr, ctx.CodeGenCtx())
+            ->setOperand<0>(MIROperand::asISAReg(RVReg::RA, OpT::Int64), ctx.CodeGenCtx())
             ->setOperand<1>(MIROperand::asReloc(mcallee->reloc()), ctx.CodeGenCtx())
             ->setOperand<2>(MIROperand::asImme(callinst->isTailCall() ? 1 : 0, OpT::special), ctx.CodeGenCtx()));
 
