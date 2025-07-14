@@ -57,6 +57,8 @@ public:
     [[nodiscard]] string calleePrinter_legacy(const MIRInst &);
     [[nodiscard]] string adjustPrinter(const MIRInst &);
 
+    [[nodiscard]] string literalPrinter(const MIRInst &);
+
     // vectors
     [[nodiscard]] string binaryPrinter_v(const MIRInst &);
     [[nodiscard]] string selectPrinter_v(const MIRInst &);

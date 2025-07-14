@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include "mir/tools.hpp"
+#include "utils/exception.hpp"
+#include <cstddef>
 #ifndef GNALC_MIR_MIR_HPP
 #define GNALC_MIR_MIR_HPP
 
@@ -36,9 +39,13 @@ enum class OperandType : uint32_t {
     Ptr = Int64,
     Float, // V<> 默认位宽
     Float32,
-    Intvec,
-    Int64vec,
-    Floatvec,
+    Intvec2,
+    Intvec3, // not impl
+    Intvec4,
+    Int64vec2,
+    Floatvec2,
+    Floatvec3, // not impl
+    Floatvec4,
     special, // prob, alignment, load/store size...
     High32,
     Low32,
@@ -64,10 +71,15 @@ inline unsigned getBitWide(OpT type) {
     case OpT::Float32:
         return 4;
     case OpT::Int64:
+    case OpT::Intvec2:
+    case OpT::Floatvec2:
         return 8;
-    case OpT::Intvec:
-    case OpT::Int64vec:
-    case OpT::Floatvec:
+    case OpT::Intvec3:
+    case OpT::Floatvec3:
+        return 12;
+    case OpT::Intvec4:
+    case OpT::Int64vec2:
+    case OpT::Floatvec4:
         return 16;
     default:
         Err::unreachable("getBitWide: type not support a bitwide");
@@ -175,6 +187,7 @@ enum class MIRGenericInst : uint32_t {
     InstSelect,
     InstLoadGlobalAddress,
     InstLoadStackObjectAddr,
+    InstLoadLiteral,
     InstLoadImm,
     InstLoadImmEx,
     InstLoadFPImm,
@@ -249,7 +262,7 @@ public:
     static std::map<unsigned, MIROperand_p> ISApool; // isa 为了保证单例模式所以只能使用默认位宽
 
 private:
-    std::variant<std::monostate, MIRReg_p, MIRReloc_p, unsigned, uint64_t, double> mOperand{std::monostate{}};
+    std::variant<std::monostate, MIRReg_p, MIRReloc_p, unsigned, uint64_t, double, string> mOperand{std::monostate{}};
     OpT mType = OpT::special;
 
     unsigned recover = -1;
@@ -290,6 +303,7 @@ public:
     auto &regFlag() { return std::get<MIRReg_p>(mOperand)->flag; }
     MIRReloc_p reloc() { return std::get<MIRReloc_p>(mOperand); }
     double prob() const { return std::get<double>(mOperand); }
+    const string &literal() const { return std::get<string>(mOperand); }
 
     ///@note int, float, condflag
     bool isImme() const {
@@ -305,6 +319,7 @@ public:
     bool isStack() const { return isReg() && isStkObj(reg()); }
     bool isReloc() const { return std::holds_alternative<MIRReloc_p>(mOperand); }
     bool isProb() const { return std::holds_alternative<double>(mOperand); }
+    bool isLiteral() const { return std::holds_alternative<string>(mOperand); }
 
     constexpr OpT type() const { return mType; }
     void resetType(OpT _new) { mType = _new; }
@@ -371,6 +386,8 @@ public:
 
     static MIROperand_p asProb(double prob) { return make<MIROperand>(prob, OpT::special); }
 
+    static MIROperand_p asLiteral(string liter) { return make<MIROperand>(liter, OpT::special); }
+
     // builder end
 
     // simple type verify
@@ -385,10 +402,8 @@ public:
         // Err::gassert(isVReg(), "assignColor: try assign color to a non-reg");
         Err::gassert(color >= ARMReg::X0 && color <= ARMReg::V31,
                      "assignColor: unknown reg color " + std::to_string(color));
-        Err::gassert(color >= ARMReg::V0 && (mType == OpT::Float32 || mType == OpT::Floatvec || mType == OpT::Intvec ||
-                                             mType == OpT::Int64vec) ||
-                         color <= ARMReg::X29 &&
-                             (mType == OpT::Int16 || mType == OpT::Int32 || mType == OpT::Int64 || mType == OpT::Int),
+        Err::gassert(color >= ARMReg::V0 && inRange(mType, OpT::Float, OpT::Floatvec4) ||
+                         color <= ARMReg::X29 && inRange(mType, OpT::Int, OpT::Int64),
                      "assignColor: register bank dont match mtype");
 
         auto &VReg = std::get<MIRReg_p>(mOperand);
@@ -485,7 +500,7 @@ public:
     const auto &operands() const { return mOperands; }
 
     // to modify
-    void replace(MIROperand_p _old, MIROperand_p _new, CodeGenContext &ctx) {
+    void replace(const MIROperand_p &_old, const MIROperand_p &_new, CodeGenContext &ctx) {
         auto it =
             std::find_if(mOperands.begin(), mOperands.end(), [&](const MIROperand_p &ath) { return ath == _old; });
 
@@ -494,7 +509,7 @@ public:
         _new && _new->isReg() ? (void)ctx.getOp(_new) : nop;
         _old && _old->isReg() ? (void)ctx.putOp(_old) : nop;
 
-        *it = std::move(_new);
+        *it = _new;
     }
 
     // before abundant the whole inst
@@ -548,9 +563,12 @@ private:
     std::list<MIRBlk_p> mpreds;
     std::list<MIRBlk_p> msuccs;
 
-    // mprv, mnxt 表示虚拟地址的临近
     MIRBlk_wp mprv;
     MIRBlk_wp mnxt;
+
+    size_t literal_size = 0LL;
+
+    size_t first_literal_align = -1;
 
 public:
     MIRBlk() = delete;
@@ -589,6 +607,26 @@ public:
 
     void resetPrv(const MIRBlk_p &_prv) { mprv = _prv; }
     void resetNxt(const MIRBlk_p &_nxt) { mnxt = _nxt; }
+
+    void add_tail_literal(size_t _literal_size, size_t _align) {
+        if (first_literal_align == -1) {
+            first_literal_align = _align;
+        }
+
+        literal_size = ((literal_size + _align - 1) / _align) * _align;
+        literal_size += _literal_size;
+    }
+
+    size_t getCodeSize() {
+        return first_literal_align =
+                   -1 ? mInsts.size() * 4
+                      : literal_size +
+                            ((mInsts.size() * 4 + first_literal_align - 1) / first_literal_align) * first_literal_align;
+    }
+
+    bool useLiteral() const { return literal_size != 0; }
+
+    size_t getFirstAlign() const { return first_literal_align; }
 
     void brReplace(const MIRBlk_p &old_succ, const MIRBlk_p &new_succ, CodeGenContext &ctx) {
         auto it = std::find_if(mInsts.begin(), mInsts.end(), [&](const MIRInst_p &minst) {
@@ -662,7 +700,6 @@ private:
     bool largeStk = false; // may use fp(X29)
     unsigned stkSize = 0LL;
     unsigned calleeSave = 0LL;
-
     // context
     CodeGenContext &ctx;
 
@@ -711,6 +748,14 @@ public:
 
     void modifyBegCalleeSave(unsigned _size) { calleeSave = _size; }
     unsigned begCalleeSave() const { return calleeSave; }
+
+    size_t getCodeSize() {
+        size_t codesize = 0;
+        for (const auto &mblk : mBlks) {
+            codesize += mblk->getCodeSize();
+        }
+        return codesize;
+    }
 
     bool isFunc() const override { return true; }
 

@@ -1,9 +1,9 @@
 // Copyright (c) 2025 0x676e616c63
 // SPDX-License-Identifier: MIT
 
+#include "mir/armv8/frame.hpp"
 #include "mir/MIR.hpp"
 #include "mir/info.hpp"
-#include "mir/armv8/frame.hpp"
 #include "mir/passes/transforms/lowering.hpp"
 
 using namespace MIR;
@@ -259,7 +259,7 @@ void ARMFrameInfo::makePrologue(MIRFunction_p mfunc, LoweringContext &ctx) const
             return 8;
         case OpT::Float32:
             return 4;
-        case OpT::Floatvec:
+        case OpT::Floatvec4:
             return 16;
         default:
             Err::unreachable("makePrologue: unknown type");

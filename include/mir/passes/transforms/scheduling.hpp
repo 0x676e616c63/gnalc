@@ -33,7 +33,7 @@ struct SchedulingModule {
     UM<MIRInst_p, int> rank;
 
     /// @brief available resources
-    unsigned multipleIssue = 2; // 实际上只有ALU是多发射的
+    unsigned multipleIssue = 2;
     UM<ResourcesA53, unsigned> MachineResources;
     UM<ARMReg, unsigned> RegisterResources;
 

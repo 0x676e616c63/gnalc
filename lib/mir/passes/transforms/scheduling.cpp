@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "mir/passes/transforms/scheduling.hpp"
+#include "mir/schedA53.hpp"
 #include <queue>
 
 using namespace MIR;
@@ -123,6 +124,8 @@ void PostRaSchedulingImpl::MkDAG(SchedulingModule &Module) {
             case OpC::InstLoadStackObjectAddr:
             case OpC::InstStore:
             case OpC::InstStoreRegToStack:
+            case OpC::InstVLoad:
+            case OpC::InstVStore:
                 return true;
             default:
                 return false;
@@ -276,7 +279,7 @@ MIRInst_p_l SchedulingModule::scheduling() {
 
     // LAMBDA END
 
-    auto minsts = mblk->Insts(); // ??
+    auto minsts = mblk->Insts();
     int expect_size = minsts.size();
     for (const auto &minst : minsts) {
 
@@ -290,7 +293,6 @@ MIRInst_p_l SchedulingModule::scheduling() {
     while (newInsts.size() < expect_size) {
         MIRInst_p_l newInReady;
 
-        ///@note 由于ALU可以双发射, 所以这里尝试两次
         for (int issue = 0; issue < multipleIssue; ++issue) {
             unsigned trySchCount = 0;
             bool success = false;
@@ -298,7 +300,7 @@ MIRInst_p_l SchedulingModule::scheduling() {
             readyInsts.sort(
                 [&](const auto &l, const auto &r) { return dynamicRank(l, cycle) > dynamicRank(r, cycle); });
 
-            while (trySchCount < readyInsts.size()) { // 最大尝试数量
+            while (trySchCount < readyInsts.size()) {
                 auto minst = readyInsts.front();
                 readyInsts.pop_front();
 
@@ -365,11 +367,9 @@ bool SchedulingModule::instScheduling(const MIRInst_p &minst, unsigned cycle) {
     auto [latency, issueCycles, resource] = schedInfo(minst->opcode());
 
     if (!resource) {
-        ///@note 难以调度或者不应调度的inst
         return true;
     }
 
-    /// step1 : 检查指令发射条件
     bool regReady = true;
     for (auto &use : getUses(minst)) {
         if (cycle >= RegisterResources[ARMReg(use)]) {
@@ -382,24 +382,23 @@ bool SchedulingModule::instScheduling(const MIRInst_p &minst, unsigned cycle) {
         return false;
     }
 
-    /// step2 : 检查指令所需硬件
-    bool machineReady = false;
+    ResourcesA53 cpu_res = None;
 
     if (resource == A53UnitALU) {
-        if (MachineResources[A53UnitALU_1] <= cycle || MachineResources[A53UnitALU_2] <= cycle) {
-            machineReady = true;
+        if (MachineResources[A53UnitALU_1] <= cycle) {
+            cpu_res = A53UnitALU_1;
+        } else if (MachineResources[A53UnitALU_2] <= cycle) {
+            cpu_res = A53UnitALU_2;
         }
     } else {
         if (MachineResources[ResourcesA53(resource)] <= cycle) {
-            return true;
+            cpu_res = ResourcesA53(resource);
         }
     }
 
-    if (!machineReady) {
+    if (!cpu_res) {
         return false;
     }
-
-    /// step3 : 确认发射, 修改资源预期
 
     auto def = getDef(minst);
 

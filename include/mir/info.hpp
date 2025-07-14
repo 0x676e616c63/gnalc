@@ -30,9 +30,7 @@ struct DataLayout {
     const unsigned storeAlignment;
 };
 
-enum class Arch {
-    RISCV64, ARMv8
-};
+enum class Arch { RISCV64, ARMv8 };
 
 class BkdInfos {
 public:
@@ -162,7 +160,7 @@ struct CodeGenContext {
     bool isRISCV64() const { return infos.arch == Arch::RISCV64; }
 };
 
-}; // namespace MIR_new
+}; // namespace MIR
 
 namespace std {
 

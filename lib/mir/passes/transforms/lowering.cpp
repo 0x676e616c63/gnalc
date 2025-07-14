@@ -13,6 +13,7 @@
 #include "mir/passes/transforms/isel.hpp"
 #include "utils/exception.hpp"
 #include <algorithm>
+#include <utility>
 
 using namespace MIR;
 
@@ -62,7 +63,14 @@ unsigned MIR::typeBitwide(const IR::pType &type) {
     } else if (auto ptrtype = type->as<IR::PtrType>()) {
         return 8;
     } else if (auto vectype = type->as<IR::VectorType>()) {
-        return 16;
+        switch (vectype->getVectorSize()) {
+        case 2:
+            return 8;
+        case 3:
+            return 12;
+        case 4:
+            return 16;
+        }
     } else if (auto arraytype = type->as<IR::ArrayType>()) {
         Err::unreachable("typeBitwide: array type not supported");
     }
@@ -79,6 +87,7 @@ MIROperand_p LoweringContext::mapOperand(const IRVal_p &value) {
 
         // get from mValMap
         return mValMap.at(value);
+
     } else if (value->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL) {
 
         // get from mConstantMap
@@ -108,7 +117,6 @@ MIROperand_p LoweringContext::mapOperand(const IRVal_p &value) {
             return mapOperand(imme);
         }
 
-        ///@todo vectorize
     } else if (auto value_glo = value->as<IR::GlobalVariable>()) {
 
         // get from mValMap, but would insert loadInst
@@ -165,20 +173,34 @@ MIROperand_p LoweringContext::newVReg(const IR::VectorType &type) {
         case IR::IRBTYPE::I1:
         case IR::IRBTYPE::I8:
         case IR::IRBTYPE::I32:
-            return MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Intvec);
+            switch (type.getVectorSize()) {
+            case 4:
+                return MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Intvec4);
+            case 3:
+                return MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Intvec3);
+            case 2:
+                return MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Intvec2);
+            }
             break;
         case IR::IRBTYPE::I64:
-            return MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Int64vec);
+            return MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Int64vec2);
             break;
         case IR::IRBTYPE::FLOAT:
-            return MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Floatvec);
+            switch (type.getVectorSize()) {
+            case 4:
+                return MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Floatvec4);
+            case 3:
+                return MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Floatvec3);
+            case 2:
+                return MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Floatvec2);
+            }
             break;
         // case IR::IRBTYPE::I128:
         default:
             Err::unreachable("newVReg: unknown vector inner btype");
         }
     case IR::IRCTYPE::PTR:
-        return MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Int64vec);
+        return MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Int64vec2);
     default:
         Err::unreachable("newVReg: unknown vector inner type");
     }
@@ -186,6 +208,11 @@ MIROperand_p LoweringContext::newVReg(const IR::VectorType &type) {
 
 MIROperand_p LoweringContext::newVReg(const OpT &type) {
     return MIROperand::asVReg(mCodeGenCtx.nextId(), type); //
+}
+
+MIROperand_p LoweringContext::newLiteral(string liter, size_t size, size_t align) {
+    mCurrentBlk->add_tail_literal(size, align);
+    return MIROperand::asLiteral(std::move(liter));
 }
 
 void LoweringContext::newInst(const MIRInst_p &inst) {
@@ -506,6 +533,7 @@ void MIR::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContext &c
                         Err::unreachable("unexpected phiop type");
                     }
                 }
+                Err::gassert(use != nullptr, "dont actually get a use");
 
                 if (tmpBlkMap.count(use_phi.block)) {
                     tmpBlkMap.at(use_phi.block).pairs.emplace_back(def, use);
@@ -527,9 +555,15 @@ void MIR::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContext &c
 
 void MIR::lowerInst(const IRInst_p &inst, LoweringContext &ctx) {
 
-    if (auto store = inst->as<IR::STOREInst>();
-        inst->getType()->is<IR::VectorType>() || store->getValue()->getType()->is<IR::VectorType>()) {
+    if (auto store = inst->as<IR::STOREInst>(); (store && store->getValue()->getType()->is<IR::VectorType>())) {
         lowerInst_v(inst, ctx);
+        return;
+    } else if (inst->getType()->is<IR::VectorType>()) {
+        lowerInst_v(inst, ctx);
+        return;
+    } else if (auto extract = inst->as<IR::EXTRACTInst>()) {
+        lowerInst_v(inst, ctx);
+        return;
     }
 
     using OP = IR::OP;

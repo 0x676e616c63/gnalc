@@ -26,7 +26,7 @@ OpC MIR::chooseCopyOpC(const MIROperand_p &dst, const MIROperand_p &src) {
     } else if (dst->isVReg() && src->isISA()) {
         return OpC::InstCopyFromReg;
     } else if (dst->isVReg() && src->isVReg()) {
-        if (inSet(dst->type(), OpT::Intvec, OpT::Int64vec, OpT::Floatvec)) {
+        if (inRange(dst->type(), OpT::Intvec2, OpT::Floatvec4)) {
             return OpC::InstVCopy;
         } else {
             return OpC::InstCopy;

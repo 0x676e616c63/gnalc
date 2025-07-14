@@ -134,7 +134,7 @@ protected:
     }
 
     bool isExt(const MIROperand_p &n) {
-        if (inSet(n->type(), OpT::Float, OpT::Float32, OpT::Floatvec, OpT::Intvec, OpT::Int64vec)) {
+        if (inRange(n->type(), OpT::Float, OpT::Floatvec4)) {
             return true;
         } else {
             return false;

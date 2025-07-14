@@ -492,7 +492,7 @@ void RVIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
 
         } else if (imm == 0.0f) {
             ///@brief movi + copy
-            auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Floatvec);
+            auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Floatvec4);
             auto movi = MIRInst::make(ARMOpC::MOVI)->setOperand<0>(fdst, ctx)->setOperand<1>(imme, ctx);
 
             minsts.insert(iter, movi);
@@ -748,8 +748,8 @@ void RVIselInfo::legalizeCopy(InstLegalizeContext &_ctx) const {
         movType = ARMOpC::MOV; // orr
     } else if (defType == OpT::Float && useType == OpT::Float) {
         movType = ARMOpC::MOV_V; // .16b
-    } else if (inSet(defType, OpT::Intvec, OpT::Int64vec, OpT::Floatvec) &&
-               inSet(useType, OpT::Intvec, OpT::Int64vec, OpT::Floatvec)) {
+    } else if (inSet(defType, OpT::Intvec4, OpT::Int64vec2, OpT::Floatvec4) &&
+               inSet(useType, OpT::Intvec4, OpT::Int64vec2, OpT::Floatvec4)) {
         movType = ARMOpC::MOV_V;
     } else {
         movType = ARMOpC::MOVF;

@@ -38,5 +38,4 @@ perf script -i perf.data > perf.out
 echo "perf script result is in 'perf.out'"
 stackcollapse-perf.pl perf.out &> perf.folded
 flamegraph.pl perf.folded > perf.svg
-cp perf.svg /mnt/c/Users/30336/Desktop/perf.svg
 cd ../..

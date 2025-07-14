@@ -148,12 +148,12 @@ string ARMA64Printer::copyPrinter(const MIRInst &minst) {
         ///@note mov from an isa to another isa, maybe caused by reduntant load eliminate
         str += "mov\t" + reg2s(def, 16, true) + ".16b,\t" + reg2s(use, 16, true) + ".16b";
 
-    } else if (inRange(defType, OpT::Int, OpT::Int64) && inRange(useType, OpT::Float, OpT::Floatvec) ||
-               inRange(useType, OpT::Int, OpT::Int64) && inRange(defType, OpT::Float, OpT::Floatvec) ||
-               inRange(useType, OpT::Float, OpT::Floatvec) && inRange(defType, OpT::Float, OpT::Floatvec)) {
+    } else if (inRange(defType, OpT::Int, OpT::Int64) && inRange(useType, OpT::Float, OpT::Floatvec4) ||
+               inRange(useType, OpT::Int, OpT::Int64) && inRange(defType, OpT::Float, OpT::Floatvec4) ||
+               inRange(useType, OpT::Float, OpT::Floatvec4) && inRange(defType, OpT::Float, OpT::Floatvec4)) {
 
         str += "fmov\t" + reg2s(def, bitWide) + ",\t" + reg2s(use, bitWide);
-    } else if (inSet(defType, OpT::Intvec, OpT::Floatvec, OpT::Intvec, OpT::Int64vec, OpT::Floatvec)) {
+    } else if (inSet(defType, OpT::Intvec4, OpT::Floatvec4, OpT::Intvec4, OpT::Int64vec2, OpT::Floatvec4)) {
         ///@todo vector regs 需要提供v<>寄存器的视图方式
         Err::todo("copyPrinter: vectorize todo");
     } else {
@@ -233,7 +233,7 @@ string ARMA64Printer::memoryPrinter(const MIRInst &minst) {
         }
     }
 
-    str += "]\n";
+    str += "]";
 
     return str;
 }
@@ -374,8 +374,8 @@ string ARMA64Printer::fmovPrinter(const MIRInst &minst) {
         return str;
     }
 
-    if (inRange(defType, OpT::Int, OpT::Int64) && inRange(useType, OpT::Float, OpT::Floatvec) ||
-        inRange(useType, OpT::Int, OpT::Int64) && inRange(defType, OpT::Float, OpT::Floatvec)) {
+    if (inRange(defType, OpT::Int, OpT::Int64) && inRange(useType, OpT::Float, OpT::Floatvec4) ||
+        inRange(useType, OpT::Int, OpT::Int64) && inRange(defType, OpT::Float, OpT::Floatvec4)) {
 
         str += "fmov\t" + reg2s(def, bitWide) + ",\t" + reg2s(use, bitWide);
 
@@ -462,8 +462,8 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
                 if (lastReg == -1) {
                     lastReg = i;
                 } else {
-                    str += "    stp\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec), 16) + ", " +
-                           reg2s(MIROperand::asISAReg(i, OpT::Floatvec), 16) + ", " + "[sp, #" +
+                    str += "    stp\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec4), 16) + ", " +
+                           reg2s(MIROperand::asISAReg(i, OpT::Floatvec4), 16) + ", " + "[sp, #" +
                            std::to_string(offset) + "]\n";
 
                     lastReg = -1;
@@ -477,7 +477,7 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
                 str += "    "; // indent
             }
 
-            str += "str\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec), 16) + ", " + "[sp, " +
+            str += "str\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec4), 16) + ", " + "[sp, " +
                    std::to_string(offset) + "]\n";
 
             lastReg = -1;
@@ -522,8 +522,8 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
                 if (lastReg == -1) {
                     lastReg = i;
                 } else {
-                    str += "    ldp\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec), 16) + ", " +
-                           reg2s(MIROperand::asISAReg(i, OpT::Floatvec), 16) + ", " + "[sp, #" +
+                    str += "    ldp\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec4), 16) + ", " +
+                           reg2s(MIROperand::asISAReg(i, OpT::Floatvec4), 16) + ", " + "[sp, #" +
                            std::to_string(offset) + "]\n";
 
                     lastReg = -1;
@@ -537,7 +537,7 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
                 str += "    "; // indent
             }
 
-            str += "ldr\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec), 16) + ", " + "[sp, " +
+            str += "ldr\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec4), 16) + ", " + "[sp, " +
                    std::to_string(offset) + "]\n";
 
             // lastReg = -1;
@@ -570,7 +570,7 @@ string ARMA64Printer::calleePrinter_legacy(const MIRInst &minst) {
 
         for (int i = 32; i < 65; ++i, bitMap <<= 1) {
             if (bitMap & 1) {
-                str += "str\t" + reg2s(MIROperand::asISAReg(i, OpT::Floatvec), 16) + ", [sp, " +
+                str += "str\t" + reg2s(MIROperand::asISAReg(i, OpT::Floatvec4), 16) + ", [sp, " +
                        std::to_string(offset) + ']' + "\n    ";
                 offset += 16;
             }
@@ -605,12 +605,23 @@ string ARMA64Printer::adjustPrinter(const MIRInst &minst) {
     return str;
 }
 
+string ARMA64Printer::literalPrinter(const MIRInst &minst) {
+    const auto &def = minst.ensureDef();
+    const auto &literal = minst.getOp(1)->literal();
+
+    string str = "ldr\t";
+    str += reg2s(def, getBitWide(def->type())) + ",\t";
+    str += '=' + literal;
+
+    return str;
+}
+
 string ARMA64Printer::binaryPrinter_v(const MIRInst &minst) {
     const auto &def = minst.ensureDef();
     const auto &lhs = minst.getOp(1);
     const auto &rhs = minst.getOp(2);
     auto op = minst.opcode<OpC>();
-    string mode = def->type() == OpT::Int64vec ? ".2d" : ".4s";
+    string mode = def->type() == OpT::Int64vec2 ? ".2d" : ".4s";
 
     string str;
     str += OpC2S(op) + '\t';
@@ -642,7 +653,7 @@ string ARMA64Printer::unaryPrinter_v(const MIRInst &minst) {
     const auto &def = minst.ensureDef();
     const auto &use = minst.getOp(1);
     auto op = minst.opcode<OpC>();
-    string mode = def->type() == OpT::Int64vec ? ".2d" : ".4s";
+    string mode = def->type() == OpT::Int64vec2 ? ".2d" : ".4s";
 
     string str;
     str += OpC2S(op) + '\t';
@@ -658,7 +669,7 @@ string ARMA64Printer::cmpPrinter_v(const MIRInst &minst) {
     const auto &lhs = minst.getOp(2);
     const auto &rhs = minst.getOp(3);
     auto op = minst.opcode<OpC>();
-    string mode = def->type() == OpT::Int64vec ? ".2d" : ".4s";
+    string mode = def->type() == OpT::Int64vec2 ? ".2d" : ".4s";
 
     string str;
     str += OpC2S(op) + Cond2S(static_cast<Cond>(cond)) + '\t';
@@ -673,7 +684,7 @@ string ARMA64Printer::convertPrinter_v(const MIRInst &minst) {
     const auto &def = minst.ensureDef();
     const auto &use = minst.getOp(1);
     auto op = minst.opcode<OpC>();
-    string mode = def->type() == OpT::Int64vec ? ".2d" : ".4s";
+    string mode = def->type() == OpT::Int64vec2 ? ".2d" : ".4s";
 
     string str;
     str += OpC2S(op) + '\t';
@@ -703,14 +714,14 @@ string ARMA64Printer::insertPrinter_v(const MIRInst &minst) {
     const auto &use = minst.getOp(2);
     const auto &idx = minst.getOp(1)->imme();
     auto op = minst.opcode<OpC>(); // mov
-    string mode = def->type() == OpT::Int64vec ? ".d" : ".s";
+    string mode = def->type() == OpT::Int64vec2 ? ".d" : ".s";
 
     string str;
     str += OpC2S(op) + '\t';
     str += reg2s(def, 16, true) + mode + '[' + std::to_string(idx) + "],\t";
 
-    if (use->type() == OpT::Float) {
-        str += reg2s(use, 16, true) + mode + ".s[0]";
+    if (inSet(use->type(), OpT::Float32, OpT::Float)) {
+        str += reg2s(use, 16, true) + mode + "[0]";
     } else {
         str += reg2s(use, getBitWide(use->type()));
     }
@@ -723,7 +734,7 @@ string ARMA64Printer::copyPrinter_v(const MIRInst &minst) {
     const auto &use = minst.getOp(1);
 
     string str;
-    str += "mov\t" + reg2s(def, 16) + "\t," + reg2s(use, 16);
+    str += "mov\t" + reg2s(def, 16, true) + ".16b\t," + reg2s(use, 16, true) + ".16b";
 
     return str;
 }

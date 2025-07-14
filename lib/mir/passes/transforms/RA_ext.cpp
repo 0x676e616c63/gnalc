@@ -1,6 +1,7 @@
 // Copyright (c) 2025 0x676e616c63
 // SPDX-License-Identifier: MIT
 
+#include "mir/MIR.hpp"
 #include "mir/passes/transforms/RA.hpp"
 #include "mir/tools.hpp"
 
@@ -42,10 +43,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getUse(const MIRInst_p &minst) {
 
         auto use = minst->getOp(idx);
 
-        if (use && use->isVRegOrISAReg() &&
-            (use->type() == OpT::Int16 || use->type() == OpT::Int32 || use->type() == OpT::Int64 ||
-             use->type() == OpT::Int)) {
-
+        if (use && use->isVRegOrISAReg() && isCore(use)) {
             uses.emplace(use);
         }
     }
@@ -112,11 +110,16 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
 
     auto getSize = [](OpT type) {
         switch (type) {
+        case OpT::Intvec2:
+        case OpT::Floatvec2:
         case OpT::Int64:
             return 8;
-        case OpT::Floatvec:
-        case OpT::Int64vec:
-        case OpT::Intvec:
+        case OpT::Floatvec3:
+        case OpT::Intvec3:
+            return 12;
+        case OpT::Floatvec4:
+        case OpT::Int64vec2:
+        case OpT::Intvec4:
             return 16;
         case OpT::Int:
             return 8;
@@ -132,15 +135,37 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
     auto mtype = mop->type();
     auto stkobj = mfunc->addStkObj(mfunc->Context(), getSize(mtype), getSize(mtype), 0, StkObjUsage::Spill);
 
+    MIROperand_p yet_another_insert_op = nullptr;
+
     for (auto &mblk : mfunc->blks()) {
         auto &minsts = mblk->Insts();
         for (auto it = minsts.begin(); it != minsts.end(); ++it) {
-            auto minst = *it;
+            const auto &minst = *it;
             auto uses = getUse(minst);
             auto defs = getDef(minst);
 
+            // LAMBDA BEGIN
+
+            auto add_yaio = [&](const auto &stage) {
+                if (ctx.isARMv8() && minst->isGeneric() && minst->opcode<OpC>() == OpC::InstVInsert &&
+                    !yet_another_insert_op) {
+                    yet_another_insert_op = stage;
+                }
+            };
+
+            // LAMBDA END
+
+            if (defs.size() && minst->isGeneric() && minst->opcode<OpC>() == OpC::InstVInsert) {
+                int debug;
+            }
+
             if (auto it_op = uses.find(mop); it_op != uses.end()) {
-                auto readStage = MIROperand::asVReg(ctx.nextId(), mtype);
+
+                auto readStage =
+                    !yet_another_insert_op ? MIROperand::asVReg(ctx.nextId(), mtype) : yet_another_insert_op;
+
+                add_yaio(readStage);
+
                 auto minst_load =
                     MIRInst::make(OpC::InstLoad)
                         ->setOperand<0>(readStage, mfunc->Context())
@@ -155,7 +180,12 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
             }
 
             if (auto it_op = defs.find(mop); it_op != defs.end()) {
-                auto writeStage = MIROperand::asVReg(ctx.nextId(), mtype);
+
+                auto writeStage =
+                    !yet_another_insert_op ? MIROperand::asVReg(ctx.nextId(), mtype) : yet_another_insert_op;
+
+                add_yaio(writeStage);
+
                 auto minst_store =
                     MIRInst::make(OpC::InstStore)
                         ->setOperand<1>(writeStage, mfunc->Context())
@@ -187,8 +217,7 @@ bool VectorRegisterAllocImpl::isMoveInstruction(const MIRInst_p &minst) {
         auto mtype2 = minst->getOp(1)->type();
 
         ///@warning RISCV  may be not fit this
-        if (inSet(mtype, OpT::Float32, OpT::Floatvec, OpT::Intvec, OpT::Int64vec, OpT::Float) &&
-            inSet(mtype2, OpT::Float32, OpT::Floatvec, OpT::Intvec, OpT::Int64vec, OpT::Float)) {
+        if (inRange(mtype, OpT::Float, OpT::Floatvec4) && inRange(mtype2, OpT::Float, OpT::Floatvec4)) {
             if (!minst->getOp(1)->isImme()) { // chk use
                 return true;
             }
@@ -217,8 +246,7 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getUse(const MIRInst_p &minst)
 
         auto use = minst->getOp(idx);
 
-        if (use && use->isVRegOrISAReg() &&
-            inSet(use->type(), OpT::Float, OpT::Float32, OpT::Floatvec, OpT::Intvec, OpT::Int64vec)) {
+        if (use && use->isVRegOrISAReg() && inRange(use->type(), OpT::Float, OpT::Floatvec4)) {
             uses.emplace(use);
         }
     }
@@ -243,7 +271,11 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getDef(const MIRInst_p &minst)
 
     if (auto def = minst->getDef()) {
 
-        if (inSet(def->type(), OpT::Float, OpT::Float32, OpT::Intvec, OpT::Int64vec, OpT::Floatvec)) {
+        if (def->getRecover() == 1342177341) {
+            int debug;
+        }
+
+        if (inRange(def->type(), OpT::Float, OpT::Floatvec4)) {
             defs.emplace(def);
         }
     }
