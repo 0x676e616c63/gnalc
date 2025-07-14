@@ -536,11 +536,11 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
     return;
 }
 
-void ARMIselInfo::legalizeWithPtrLoad(InstLegalizeContext &ctx, MIRInst_p minst) const {
+void ARMIselInfo::legalizeWithPtrLoad(MIRInst_p minst) const {
     minst->resetOpcode(ARMOpC::LDR);
     Err::gassert(minst->getOp(5) != nullptr, "Miss size info");
 }
-void ARMIselInfo::legalizeWithPtrStore(InstLegalizeContext &ctx, MIRInst_p minst) const {
+void ARMIselInfo::legalizeWithPtrStore(MIRInst_p minst) const {
     minst->resetOpcode(ARMOpC::STR);
     Err::gassert(minst->getOp(5) != nullptr, "Miss size info");
 }

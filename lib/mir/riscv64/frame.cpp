@@ -43,7 +43,7 @@ void RVFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) cons
             }
         } else if (type->getTrait() == IR::IRCTYPE::BASIC) {
             if (type->as<IR::BType>()->getInner() == IR::IRBTYPE::FLOAT) {
-                if (fprCnt < 16) {
+                if (fprCnt < 8) {
                     offsets.push_back(passByRegBase + passByFprRegBase + (fprCnt++));
                     continue;
                 }
@@ -64,6 +64,20 @@ void RVFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) cons
         offsets.emplace_back(stkOffset);
         stkOffset += size;
     }
+
+    // FIXME: Immediate issue. Currently all immediate are treated as 64-bit. But the function arguments
+    //        must be handled with care, since caller may use stack to pass arguments.
+    auto getType = [](const IR::pVal &arg) -> OpT {
+        if (arg->getType()->getTrait() == IR::IRCTYPE::PTR)
+            return OpT::Int64;
+
+        auto btype = arg->getType()->as<IR::BType>();
+        if (btype->getInner() == IR::IRBTYPE::FLOAT)
+            return OpT::Float32;
+
+        // TODO: add consistency check
+        return OpT::Int32;
+    };
 
     auto args = callinst->getArgs();
 
@@ -89,20 +103,8 @@ void RVFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) cons
         ctx.newInst(MIRInst::make(OpC::InstStoreRegToStack)
                         ->setOperand<1>(mval, ctx.CodeGenCtx())
                         ->setOperand<2>(obj, ctx.CodeGenCtx())
-                        ->setOperand<5>(MIROperand::asImme(getBitWide(mval->type()), OpT::special), ctx.CodeGenCtx()));
+                        ->setOperand<5>(MIROperand::asImme(getBitWide(getType(arg)), OpT::special), ctx.CodeGenCtx()));
     }
-
-    auto getType = [](const IR::pVal &arg) -> OpT {
-        if (arg->getType()->getTrait() == IR::IRCTYPE::PTR)
-            return OpT::Int64;
-
-        auto btype = arg->getType()->as<IR::BType>();
-        if (btype->getInner() == IR::IRBTYPE::FLOAT)
-            return OpT::Float32;
-
-        // TODO: add consistency check
-        return OpT::Int32;
-    };
 
     // For arguments passed by register
     for (int i = 0; i < args.size(); ++i) {
@@ -231,7 +233,7 @@ void RVFrameInfo::makePrologue(MIRFunction_p mfunc, LoweringContext &ctx) const 
 
     // For arguments passed by stack
     for (int i = 0; i < args.size(); ++i) {
-        auto offset = static_cast<int>(offsets[i]);
+        auto offset = offsets[i];
         const auto &arg = args[i];
         auto size = getBytes(arg->type());
         auto align = size;
@@ -342,7 +344,7 @@ void RVFrameInfo::insertPrologueEpilogue(MIRFunction *mfunc, CodeGenContext &ctx
         if (bitmap & 1) {
             auto obj = mfunc->addStkObj(mfunc->Context(), 8, 8, offset, StkObjUsage::CalleeSave);
             entry_insts.emplace_front(MIRInst::make(OpC::InstStoreRegToStack)
-                                          ->setOperand<1>(MIROperand::asISAReg(static_cast<RVReg>(i), OpT::Int64), ctx)
+                                          ->setOperand<1>(MIROperand::asISAReg(static_cast<RVReg>(i),  i < 32 ? OpT::Int64 : OpT::Float64), ctx)
                                           ->setOperand<2>(obj, ctx)
                                           ->setOperand<5>(MIROperand::asImme(8, OpT::Int64), ctx));
             offset += 8;
@@ -361,7 +363,7 @@ void RVFrameInfo::insertPrologueEpilogue(MIRFunction *mfunc, CodeGenContext &ctx
             if (bitmap & 1) {
                 const auto obj = mfunc->addStkObj(mfunc->Context(), 8, 8, offset, StkObjUsage::CalleeSave);
                 insts.emplace(it, MIRInst::make(OpC::InstLoadRegFromStack)
-                                      ->setOperand<0>(MIROperand::asISAReg(static_cast<RVReg>(i), OpT::Int64), ctx)
+                                      ->setOperand<0>(MIROperand::asISAReg(static_cast<RVReg>(i), i < 32 ? OpT::Int64 : OpT::Float64), ctx)
                                       ->setOperand<1>(obj, ctx)
                                       ->setOperand<5>(MIROperand::asImme(8, OpT::Int64), ctx));
                 offset += 8;

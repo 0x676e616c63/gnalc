@@ -44,12 +44,12 @@ void init() {
 
     test_data = "../../test/contest";
 
-    subdirs = {"functional",    "performance",       "h_functional",        "functional_25",      "h_functional_25",
+    // Functional first
+    subdirs = {"functional",    "h_functional",      "functional_25",       "h_functional_25",    "performance",
                "h_performance", "final/performance", "final/h_performance", "performance_arm_25", "performance_rv_25"};
 
     benchmark_subdirs = {"performance",         "h_performance",      "final/performance",
                          "final/h_performance", "performance_arm_25", "performance_rv_25"};
-
 
     // Updating from env
     auto env_arm_gcc = getenv("GNALC_TEST_GCC_AARCH64");
@@ -81,4 +81,4 @@ void init() {
     if (env_benchmark_temp_dir)
         global_benchmark_temp_dir = std::string{env_benchmark_temp_dir} + "/" + generate_unique_temp_dir();
 }
-}
+} // namespace Test::cfg

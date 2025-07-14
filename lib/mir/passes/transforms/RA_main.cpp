@@ -8,6 +8,7 @@
 using namespace MIR;
 
 PM::PreservedAnalyses RegisterAlloc::run(MIRFunction &mfunc, FAM &fam) {
+    mfunc.calleeSaveRegs() = mfunc.Context().registerInfo->initCalleeSaveBitmap();
 
     VectorRegisterAllocImpl vectorRA;
     vectorRA.impl(mfunc, fam);
@@ -56,7 +57,6 @@ void RegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
 
     K = registerInfo->getCoreRegisterNum();
     colors = registerInfo->getCoreRegisterAllocationList();
-    mfunc->calleeSaveRegs() = registerInfo->initCalleeSaveBitmap();
 
     ///@note remember to modify bitmap of mfunc when assign colors
     Main(fam);
@@ -563,7 +563,6 @@ void VectorRegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
 
     K = registerInfo->getFpOrVecRegisterNum();
     colors = registerInfo->getFpOrVecRegisterAllocationList();
-    // Don't initialize CalleeSaveRegBitmap, they've been initialized in Core Register Alloc.
 
     Main(fam);
 

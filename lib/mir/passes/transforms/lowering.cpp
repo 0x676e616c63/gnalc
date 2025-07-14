@@ -45,9 +45,9 @@ unsigned MIR::typeBitwide(const IR::pType &type) {
     if (auto btype = type->as<IR::BType>()) {
 
         if (btype->getInner() == IR::IRBTYPE::I1)
-            return 4;
+            return 1;
         else if (btype->getInner() == IR::IRBTYPE::I8)
-            return 4;
+            return 1;
         else if (btype->getInner() == IR::IRBTYPE::I32)
             return 4;
         else if (btype->getInner() == IR::IRBTYPE::I64)

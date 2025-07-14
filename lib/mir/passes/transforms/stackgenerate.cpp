@@ -65,7 +65,7 @@ void StackGenerateImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     mkQWordAlign();
     mfunc->modifyStkSize(allocationBase);
 
-    // args
+    // Update argument offsets of current function since we've updated sp when entering prologue
     for (auto &[mop, obj] : mfunc->StkObjs()) {
         if (obj.usage != StkObjUsage::Arg)
             continue;

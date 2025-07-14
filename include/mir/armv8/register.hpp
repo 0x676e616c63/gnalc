@@ -39,9 +39,9 @@ public:
     }
 
     bool isCallerSaved(unsigned int reg) const override {
-        return inRange(static_cast<ARMReg>(reg), ARMReg::X0, ARMReg::X18) ||
-               inRange(static_cast<ARMReg>(reg), ARMReg::V0, ARMReg::V7)  ||
-               inRange(static_cast<ARMReg>(reg), ARMReg::V16, ARMReg::V31);
+        return inRange(reg, ARMReg::X0, ARMReg::X18) ||
+               inRange(reg, ARMReg::V0, ARMReg::V7)  ||
+               inRange(reg, ARMReg::V16, ARMReg::V31);
     }
 
     bool isCalleeSaved(unsigned int reg) const override {

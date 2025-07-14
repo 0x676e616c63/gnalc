@@ -320,8 +320,12 @@ inline string RVOpC2S(RVOpC op) {
         return "bgtz";
     case RVOpC::MV:
         return "mv";
-    case RVOpC::FMVSX:
-        return "fmv.s.x";
+    case RVOpC::FMV_S:
+        return "fmv.s";
+    case RVOpC::FMV_W_X:
+        return "fmv.w.x";
+    case RVOpC::FMV_X_W:
+        return "fmv.x.w";
     case RVOpC::LUI:
         return "lui";
     case RVOpC::LI:
@@ -342,6 +346,14 @@ inline string RVOpC2S(RVOpC op) {
         return "sw";
     case RVOpC::SD:
         return "sd";
+    case RVOpC::FLW:
+        return "flw";
+    case RVOpC::FSW:
+        return "fsw";
+    case RVOpC::FLD:
+        return "fld";
+    case RVOpC::FSD:
+        return "fsd";
     case RVOpC::J:
         return "j";
     case RVOpC::JAL:
@@ -361,7 +373,7 @@ inline string RVOpC2S(RVOpC op) {
     }
     return ""; // just to make clang happy
 }
-}
+} // namespace RV64
 }; // namespace MIR
 
 #endif

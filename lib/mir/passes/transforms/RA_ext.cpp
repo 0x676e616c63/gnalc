@@ -61,7 +61,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getDef(const MIRInst_p &minst) {
         auto list = registerInfo->getCoreRegisterAllocationList();
         for (auto reg : list) {
             if (registerInfo->isCallerSaved(reg))
-                defs.emplace(MIROperand::asISAReg(static_cast<ARMReg>(reg), OpT::Int));
+                defs.emplace(MIROperand::asISAReg(reg, OpT::Int));
         }
         return defs;
     }
@@ -206,7 +206,7 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getUse(const MIRInst_p &minst)
         auto list = registerInfo->getFpOrVecRegisterAllocationList();
         for (auto reg : list) {
             if (registerInfo->isCallerSaved(reg))
-                uses.emplace(MIROperand::asISAReg(static_cast<ARMReg>(reg), OpT::Float));
+                uses.emplace(MIROperand::asISAReg(reg, OpT::Float));
         }
         return uses;
     }
@@ -231,7 +231,7 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getDef(const MIRInst_p &minst)
         auto list = registerInfo->getFpOrVecRegisterAllocationList();
         for (auto reg : list) {
             if (registerInfo->isCallerSaved(reg))
-                defs.emplace(MIROperand::asISAReg(static_cast<ARMReg>(reg), OpT::Float));
+                defs.emplace(MIROperand::asISAReg(reg, OpT::Float));
         }
         return defs;
     }

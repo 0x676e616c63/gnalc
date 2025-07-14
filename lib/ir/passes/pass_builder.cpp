@@ -227,9 +227,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(PMOptions options) {
     auto make_loop = [&options] {
         FPM fpm;
         FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LCSSAPass(), LICMPass())
-        fpm.addPass(PrintFunctionPass(std::cerr));
         FUNCTION_TRANSFORM(loop_parallel, LoopSimplifyPass(), LoopParallelPass())
-        fpm.addPass(PrintFunctionPass(std::cerr));
         FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
         FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
         FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())

@@ -50,7 +50,9 @@ void RV64Printer::rv64_printout(const MIRInst &minst) {
     case RVOpC::LA:
     case RVOpC::JAL:
     case RVOpC::MV:
-    case RVOpC::FMVSX:
+    case RVOpC::FMV_S:
+    case RVOpC::FMV_W_X:
+    case RVOpC::FMV_X_W:
     case RVOpC::LUI:
     case RVOpC::LI:
         write(ops[0], ", ", ops[1]);
@@ -59,6 +61,8 @@ void RV64Printer::rv64_printout(const MIRInst &minst) {
     case RVOpC::LH:
     case RVOpC::LW:
     case RVOpC::LD:
+    case RVOpC::FLW:
+    case RVOpC::FLD:
         if (!minst.getOp(2))
             ops[2] = "0";
         if (!minst.getOp(1)->isISA())
@@ -69,10 +73,11 @@ void RV64Printer::rv64_printout(const MIRInst &minst) {
     case RVOpC::SH:
     case RVOpC::SW:
     case RVOpC::SD:
+    case RVOpC::FSW:
+    case RVOpC::FSD:
+        // offset can be nullptr
         if (!minst.getOp(3))
             ops[3] = "0";
-        if (!minst.getOp(2)->isISA())
-            ops[2] = "sp";
         write(ops[1], ", ", ops[3], "(", ops[2], ")");
         break;
     case RVOpC::J:

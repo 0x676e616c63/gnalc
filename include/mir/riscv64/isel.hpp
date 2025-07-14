@@ -15,8 +15,8 @@ public:
     bool match(MIRInst_p, ISelContext &, bool allow) const override;
     bool legalizeInst(MIRInst_p minst, ISelContext &ctx) const override;
     void preLegalizeInst(InstLegalizeContext &) override;
-    void legalizeWithPtrLoad(InstLegalizeContext &ctx, MIRInst_p minst) const override;
-    void legalizeWithPtrStore(InstLegalizeContext &ctx, MIRInst_p minst) const override;
+    void legalizeWithPtrLoad(MIRInst_p minst) const override;
+    void legalizeWithPtrStore(MIRInst_p minst) const override;
     void legalizeWithStkOp(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const override;
     void legalizeWithStkGep(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const override;
     void legalizeWithStkPtrCast(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const override;

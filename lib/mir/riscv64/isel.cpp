@@ -116,7 +116,7 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         case Cond::LT: {
             minst->resetOpcode(RVOpC::SLT);
             if (rhs->isImme()) {
-                if (RV64::is12BitImm(rhs->imme(), rhs->immeWidth()))
+                if (RV64::is12BitImm(rhs->imme(), rhs->isExImme()))
                     minst->resetOpcode(RVOpC::SLTI);
                 else
                     minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
@@ -133,7 +133,7 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
             if (rhs->isImme())
                 rhs = loadImm(rhs);
             if (lhs->isImme()) {
-                if (RV64::is12BitImm(lhs->imme(), lhs->immeWidth()))
+                if (RV64::is12BitImm(lhs->imme(), lhs->isExImme()))
                     slt_opcode = RVOpC::SLTI;
                 else
                     lhs = loadImm(lhs);
@@ -156,7 +156,7 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
             if (rhs->isImme())
                 minst->setOperand<1>(loadImm(rhs), ctx.codeGenCtx());
             if (lhs->isImme()) {
-                if (RV64::is12BitImm(lhs->imme(), lhs->immeWidth()))
+                if (RV64::is12BitImm(lhs->imme(), lhs->isExImme()))
                     minst->resetOpcode(RVOpC::SLTI);
                 else
                     minst->setOperand<2>(loadImm(lhs), ctx.codeGenCtx());
@@ -169,7 +169,7 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
 
             auto slt_opcode = RVOpC::SLT;
             if (rhs->isImme()) {
-                if (RV64::is12BitImm(rhs->imme(), rhs->immeWidth()))
+                if (RV64::is12BitImm(rhs->imme(), rhs->isExImme()))
                     slt_opcode = RVOpC::SLTI;
                 else
                     rhs = loadImm(rhs);
@@ -198,9 +198,12 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         auto rhs = minst->getOp(2);
 
         if (lhs->isImme())
-            minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
+            lhs = loadImm(lhs);
         if (rhs->isImme())
-            minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
+            rhs = loadImm(rhs);
+
+        minst->setOperand<1>(lhs, ctx.codeGenCtx());
+        minst->setOperand<2>(rhs, ctx.codeGenCtx());
 
         auto cond = minst->getOp(3)->imme();
         switch (cond) {
@@ -259,9 +262,9 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         }
     } break;
     case OpC::InstStore: {
-        auto lhs = minst->getOp(1);
-        if (lhs->isImme())
-            minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
+        auto val = minst->getOp(1);
+        if (val->isImme())
+            minst->setOperand<1>(loadImm(val), ctx.codeGenCtx());
     } break;
     case OpC::InstAdd:
     case OpC::InstSub: {
@@ -273,7 +276,7 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
             minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
 
         auto rhs = minst->getOp(2);
-        if (rhs->isImme() && !RV64::is12BitImm(rhs->imme(), rhs->immeWidth()))
+        if (rhs->isImme() && !RV64::is12BitImm(rhs->imme(), rhs->isExImme()))
             minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
     } break;
     case OpC::InstMul:
@@ -289,7 +292,21 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         auto rhs = minst->getOp(2);
         if (rhs->isImme())
             minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
-    } break;
+        break;
+    }
+    case OpC::InstSDiv:
+    case OpC::InstSRem:
+    case OpC::InstUDiv:
+    case OpC::InstURem: {
+        auto lhs = minst->getOp(1);
+        if (lhs->isImme())
+            minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
+
+        auto rhs = minst->getOp(2);
+        if (rhs->isImme())
+            minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
+        break;
+    }
     case OpC::InstShl:
     case OpC::InstLShr:
     case OpC::InstAShr: {
@@ -300,26 +317,6 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         }
         break;
     }
-    case OpC::InstSDiv: {
-        auto lhs = minst->getOp(1);
-        auto rhs = minst->getOp(2);
-        if (lhs->isImme()) {
-            minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
-        }
-        if (rhs->isImme()) {
-            minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
-        }
-    }
-    case OpC::InstUDiv: {
-        auto lhs = minst->getOp(1);
-        auto rhs = minst->getOp(2);
-        if (lhs->isImme()) {
-            minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
-        }
-        if (rhs->isImme()) {
-            minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
-        }
-    } break;
     case OpC::InstNeg: {
         auto lhs = minst->getOp(1);
         Err::gassert(!lhs->isImme(), "legalizeInst: can not neg a imme");
@@ -336,70 +333,6 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         if (rhs->isImme()) {
             minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
         }
-    } break;
-    case OpC::InstSRem: {
-
-        ctx.delInst(minst); // add to list, handle later
-
-        modified |= true;
-
-        auto def = minst->getDef();
-        auto lhs = minst->getOp(1);
-        auto rhs = minst->getOp(2);
-
-        auto minst_div = ctx.newInst(OpC::InstSDiv);
-        auto minst_mul = ctx.newInst(OpC::InstMul);
-        auto minst_sub = ctx.newInst(OpC::InstSub);
-
-        auto result1 = MIROperand::asVReg(ctx.codeGenCtx().nextId(), def->type());
-        auto result2 = MIROperand::asVReg(ctx.codeGenCtx().nextId(), def->type());
-        minst_div->setOperand<0>(result1, ctx.codeGenCtx())
-            ->setOperand<1>(lhs, ctx.codeGenCtx())
-            ->setOperand<2>(rhs, ctx.codeGenCtx());
-        minst_mul->setOperand<0>(result2, ctx.codeGenCtx())
-            ->setOperand<1>(result1, ctx.codeGenCtx())
-            ->setOperand<2>(rhs, ctx.codeGenCtx());
-        minst_sub->setOperand<0>(def, ctx.codeGenCtx())
-            ->setOperand<1>(lhs, ctx.codeGenCtx())
-            ->setOperand<2>(result2, ctx.codeGenCtx());
-
-    } break;
-    case OpC::InstURem: {
-        ctx.delInst(minst); // add to list, handle later
-
-        modified |= true;
-
-        auto def = minst->getDef();
-        auto lhs = minst->getOp(1);
-        auto rhs = minst->getOp(2);
-
-        Err::gassert(!rhs->isExImme(), "urem a uint64 todo...");
-        if (rhs->isImme() && popcounter_wrapper(static_cast<unsigned long long>(rhs->imme())) == 1) {
-
-            auto minst_and = ctx.newInst(OpC::InstAnd);
-
-            minst_and->setOperand<0>(def, ctx.codeGenCtx())
-                ->setOperand<1>(lhs, ctx.codeGenCtx())
-                ->setOperand<2>(MIROperand::asImme(rhs->imme() - 1, OpT::Int64),
-                                ctx.codeGenCtx()); // not to narrow down
-            break;
-        }
-
-        auto minst_div = ctx.newInst(OpC::InstUDiv);
-        auto minst_mul = ctx.newInst(OpC::InstMul);
-        auto minst_sub = ctx.newInst(OpC::InstSub);
-
-        auto result1 = MIROperand::asVReg(ctx.codeGenCtx().nextId(), def->type());
-        auto result2 = MIROperand::asVReg(ctx.codeGenCtx().nextId(), def->type());
-        minst_div->setOperand<0>(result1, ctx.codeGenCtx())
-            ->setOperand<1>(lhs, ctx.codeGenCtx())
-            ->setOperand<2>(rhs, ctx.codeGenCtx());
-        minst_mul->setOperand<0>(result2, ctx.codeGenCtx())
-            ->setOperand<1>(result1, ctx.codeGenCtx())
-            ->setOperand<2>(rhs, ctx.codeGenCtx());
-        minst_sub->setOperand<0>(def, ctx.codeGenCtx())
-            ->setOperand<1>(lhs, ctx.codeGenCtx())
-            ->setOperand<2>(result2, ctx.codeGenCtx());
     } break;
     case OpC::InstFRem: {
         auto def = minst->ensureDef();
@@ -429,18 +362,15 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         auto converted = minst->ensureDef();
         auto original = minst->getOp(1);
 
-        if (original->isImme()) {
+        if (original->isImme())
             minst->setOperand<1>(loadImm(original), ctx.codeGenCtx());
-        }
     } break;
     case OpC::InstS2F: {
         auto converted = minst->ensureDef();
         auto original = minst->getOp(1);
 
-        if (original->isImme()) {
+        if (original->isImme())
             minst->setOperand<1>(loadImm(original), ctx.codeGenCtx());
-        }
-
     } break;
     case OpC::InstLoadImmToReg: {
         // instloadImm
@@ -489,14 +419,12 @@ void RVIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
     } break;
     case OpC::InstLoadFPImm: {
         auto def = minst->ensureDef();
-
         auto imme = minst->getOp(1);
-        auto idst = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
-        auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
-        auto li = MIRInst::make(RVOpC::LI)->setOperand<0>(idst, ctx)->setOperand<1>(imme, ctx);
+        auto tmp = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
+        auto li = MIRInst::make(RVOpC::LI)->setOperand<0>(tmp, ctx)->setOperand<1>(imme, ctx);
         minsts.insert(iter, li);
-        minst->resetOpcode(OpC::InstCopy);
-        minst->setOperand<1>(fdst, ctx);
+        minst->resetOpcode(RVOpC::FMV_W_X);
+        minst->setOperand<1>(tmp, ctx);
     } break;
     case OpC::InstSelect:
         Err::not_implemented("Select on RISCV64");
@@ -507,43 +435,71 @@ void RVIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
     return;
 }
 
-void RVIselInfo::legalizeWithPtrLoad(InstLegalizeContext &ctx, MIRInst_p minst) const {
+void RVIselInfo::legalizeWithPtrLoad(MIRInst_p minst) const {
     auto memSize = minst->getOp(5)->imme();
-    switch (memSize) {
-    case 1:
-        minst->resetOpcode(RVOpC::LB);
-        break;
-    case 2:
-        minst->resetOpcode(RVOpC::LH);
-        break;
-    case 4:
-        minst->resetOpcode(RVOpC::LW);
-        break;
-    case 8:
-        minst->resetOpcode(RVOpC::LD);
-        break;
-    default:
-        Err::not_implemented("Unsupported size.");
+    if (inRange(minst->getDef()->type(),OpT::Float, OpT::Float32)) {
+        switch (memSize) {
+        case 4:
+            minst->resetOpcode(RVOpC::FLW);
+            break;
+        case 8:
+            minst->resetOpcode(RVOpC::FLD);
+            break;
+        default:
+            Err::not_implemented("Unsupported size.");
+        }
+    }
+    else {
+        switch (memSize) {
+        case 1:
+            minst->resetOpcode(RVOpC::LB);
+            break;
+        case 2:
+            minst->resetOpcode(RVOpC::LH);
+            break;
+        case 4:
+            minst->resetOpcode(RVOpC::LW);
+            break;
+        case 8:
+            minst->resetOpcode(RVOpC::LD);
+            break;
+        default:
+            Err::not_implemented("Unsupported size.");
+        }
     }
 }
 
-void RVIselInfo::legalizeWithPtrStore(InstLegalizeContext &ctx, MIRInst_p minst) const {
+void RVIselInfo::legalizeWithPtrStore(MIRInst_p minst) const {
     auto memSize = minst->getOp(5)->imme();
-    switch (memSize) {
-    case 1:
-        minst->resetOpcode(RVOpC::SB);
-        break;
-    case 2:
-        minst->resetOpcode(RVOpC::SH);
-        break;
-    case 4:
-        minst->resetOpcode(RVOpC::SW);
-        break;
-    case 8:
-        minst->resetOpcode(RVOpC::SD);
-        break;
-    default:
-        Err::not_implemented("Unsupported size.");
+    if (inRange(minst->getOp(1)->type(),OpT::Float, OpT::Float32)) {
+        switch (memSize) {
+        case 4:
+            minst->resetOpcode(RVOpC::FSW);
+            break;
+        case 8:
+            minst->resetOpcode(RVOpC::FSD);
+            break;
+        default:
+            Err::not_implemented("Unsupported size.");
+        }
+    }
+    else {
+        switch (memSize) {
+        case 1:
+            minst->resetOpcode(RVOpC::SB);
+            break;
+        case 2:
+            minst->resetOpcode(RVOpC::SH);
+            break;
+        case 4:
+            minst->resetOpcode(RVOpC::SW);
+            break;
+        case 8:
+            minst->resetOpcode(RVOpC::SD);
+            break;
+        default:
+            Err::not_implemented("Unsupported size.");
+        }
     }
 }
 
@@ -553,11 +509,13 @@ void RVIselInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop, 
 
     if (RV64::is12BitImm(offset, 64)) {
         if (minst->opcode<OpC>() == OpC::InstLoadRegFromStack || minst->opcode<OpC>() == OpC::InstLoad) {
-            minst->setOperand<2>(MIROperand::asImme(offset, OpT::Int64), ctx);
-            legalizeWithPtrLoad(_ctx, minst);
+            minst->setOperand<1>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
+                ->setOperand<2>(MIROperand::asImme(offset, OpT::Int64), ctx);
+            legalizeWithPtrLoad(minst);
         } else {
-            minst->setOperand<3>(MIROperand::asImme(offset, OpT::Int64), ctx);
-            legalizeWithPtrStore(_ctx, minst);
+            minst->setOperand<2>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
+                ->setOperand<3>(MIROperand::asImme(offset, OpT::Int64), ctx);
+            legalizeWithPtrStore(minst);
         }
         return;
     }
@@ -566,8 +524,8 @@ void RVIselInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop, 
     // ld <- fp + sp
     auto scratch = MIROperand::asISAReg(RVReg::FP, OpT::Int64);
     auto li = MIRInst::make(RVOpC::LI)
-                   ->setOperand<0>(scratch, ctx)
-                   ->setOperand<1>(MIROperand::asImme(offset, OpT::Int64), ctx);
+                  ->setOperand<0>(scratch, ctx)
+                  ->setOperand<1>(MIROperand::asImme(offset, OpT::Int64), ctx);
     minsts.insert(iter, li);
 
     auto add = MIRInst::make(OpC::InstAdd)
@@ -579,11 +537,11 @@ void RVIselInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop, 
     if (minst->opcode<OpC>() == OpC::InstLoadRegFromStack || minst->opcode<OpC>() == OpC::InstLoad) {
         minst->setOperand<1>(scratch, ctx);
         minst->setOperand<2>(MIROperand::asImme(0, OpT::Int64), ctx);
-        legalizeWithPtrLoad(_ctx, minst);
+        legalizeWithPtrLoad(minst);
     } else {
         minst->setOperand<2>(scratch, ctx);
         minst->setOperand<3>(MIROperand::asImme(0, OpT::Int64), ctx);
-        legalizeWithPtrStore(_ctx, minst);
+        legalizeWithPtrStore(minst);
     }
 }
 
@@ -603,8 +561,8 @@ void RVIselInfo::legalizeWithStkGep(InstLegalizeContext &_ctx, MIROperand_p mop,
 
         auto scratch = MIROperand::asISAReg(RVReg::FP, OpT::Int64);
         auto li = MIRInst::make(RVOpC::LI)
-                       ->setOperand<0>(scratch, ctx)
-                       ->setOperand<1>(MIROperand::asImme(offset, OpT::Int64), ctx);
+                      ->setOperand<0>(scratch, ctx)
+                      ->setOperand<1>(MIROperand::asImme(offset, OpT::Int64), ctx);
         minsts.insert(iter, li);
 
         minst->resetOpcode(OpC::InstAdd);
@@ -627,8 +585,8 @@ void RVIselInfo::legalizeWithStkGep(InstLegalizeContext &_ctx, MIROperand_p mop,
 
         auto scratch = MIROperand::asISAReg(RVReg::FP, OpT::Int64);
         auto li = MIRInst::make(RVOpC::LI)
-                       ->setOperand<0>(scratch, ctx)
-                       ->setOperand<1>(MIROperand::asImme(offset, OpT::Int64), ctx);
+                      ->setOperand<0>(scratch, ctx)
+                      ->setOperand<1>(MIROperand::asImme(offset, OpT::Int64), ctx);
         minsts.insert(iter, li);
 
         minsts.insert(iter, MIRInst::make(OpC::InstCopy)->setOperand<0>(mop, ctx)->setOperand<1>(var_offset, ctx));
@@ -659,8 +617,8 @@ void RVIselInfo::legalizeWithStkPtrCast(InstLegalizeContext &_ctx, MIROperand_p 
 
         auto scratch = MIROperand::asISAReg(RVReg::FP, OpT::Int64);
         auto li = MIRInst::make(RVOpC::LI)
-                       ->setOperand<0>(scratch, ctx)
-                       ->setOperand<1>(MIROperand::asImme(offset, OpT::Int64), ctx);
+                      ->setOperand<0>(scratch, ctx)
+                      ->setOperand<1>(MIROperand::asImme(offset, OpT::Int64), ctx);
         minsts.insert(iter, li);
 
         minst->resetOpcode(OpC::InstAdd);
@@ -683,13 +641,21 @@ void RVIselInfo::legalizeCopy(InstLegalizeContext &_ctx) const {
 
     RVOpC movType;
 
-    if (inRange(defType, OpT::Int, OpT::Int64) && inRange(useType, OpT::Int, OpT::Int64)) {
+    bool to_int = inRange(defType, OpT::Int, OpT::Int64);
+    bool from_int = inRange(useType, OpT::Int, OpT::Int64);
+    bool to_float = inRange(defType, OpT::Float, OpT::Float32);
+    bool from_float = inRange(useType, OpT::Float, OpT::Float32);
+
+    if (from_int && to_int)
         movType = RVOpC::MV;
-    } else if (defType == OpT::Float) {
-        movType = RVOpC::FMVSX;
-    } else {
-        movType = RVOpC::MV;
-    }
+    else if (from_float && to_float)
+        movType = RVOpC::FMV_S;
+    else if (from_int && to_float)
+        movType = RVOpC::FMV_W_X;
+    else if (from_float && to_int)
+        movType = RVOpC::FMV_X_W;
+    else
+        Err::unreachable("Unsupported type conversion");
 
     minst->resetOpcode(movType);
 }

@@ -36,6 +36,7 @@ enum class OperandType : uint32_t {
     Ptr = Int64,
     Float, // V<> 默认位宽
     Float32,
+    Float64,
     Intvec,
     Int64vec,
     Floatvec,
@@ -273,7 +274,6 @@ public:
         return std::holds_alternative<unsigned>(mOperand) ? std::get<unsigned>(mOperand) : std::get<uint64_t>(mOperand);
     }
     uint64_t immeEx() const { return std::get<uint64_t>(mOperand); }
-    unsigned immeWidth() const { return std::holds_alternative<unsigned>(mOperand) ? 32 : 64; }
     unsigned reg() const { return std::get<MIRReg_p>(mOperand)->reg; }
     unsigned idVReg() const {
         Err::gassert(isVirtualReg(reg()), "MIROperand::idVReg: *this is not a VReg");

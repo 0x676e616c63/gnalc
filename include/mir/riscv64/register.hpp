@@ -32,12 +32,12 @@ public:
     bool isFpOrVecReg(unsigned int reg) const override { return inRange(reg, RVReg::F0, RVReg::F31); }
 
     bool isCallerSaved(unsigned int reg) const override {
-        return reg == RVReg::X1 || inRange(static_cast<RVReg>(reg), RVReg::X5, RVReg::X7) ||
-               inRange(static_cast<RVReg>(reg), RVReg::X10, RVReg::X17) ||
-               inRange(static_cast<RVReg>(reg), RVReg::X28, RVReg::X31) ||
-               inRange(static_cast<RVReg>(reg), RVReg::F0, RVReg::F7) ||
-               inRange(static_cast<RVReg>(reg), RVReg::F10, RVReg::F17) ||
-               inRange(static_cast<RVReg>(reg), RVReg::F28, RVReg::F31);
+        return reg == RVReg::X1 || inRange(reg, RVReg::X5, RVReg::X7) ||
+               inRange(reg, RVReg::X10, RVReg::X17) ||
+               inRange(reg, RVReg::X28, RVReg::X31) ||
+               inRange(reg, RVReg::F0, RVReg::F7) ||
+               inRange(reg, RVReg::F10, RVReg::F17) ||
+               inRange(reg, RVReg::F28, RVReg::F31);
     }
 
     bool isCalleeSaved(unsigned int reg) const override {

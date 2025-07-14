@@ -26,7 +26,7 @@ void RV64Printer::printout(const std::vector<MIRGlobal_p> &globals) {
         auto align = bss->align();
         auto size = bss->size();
 
-        writeln(".global ", sym);
+        writeln(".globl ", sym);
         writeln(".align ", align);
         writeln(sym, ":");
         writeln("    .zero ", size);
@@ -42,7 +42,7 @@ void RV64Printer::printout(const std::vector<MIRGlobal_p> &globals) {
         auto align = data->align();
         const auto &datas = data->getDatas();
 
-        writeln(".global ", sym);
+        writeln(".globl ", sym);
         writeln(".align ", align);
         writeln(sym, ":");
 
@@ -97,6 +97,8 @@ void RV64Printer::printout(const MIRInst &minst) {
         case OpC::InstAShr:
         case OpC::InstSDiv:
         case OpC::InstUDiv:
+        case OpC::InstSRem:
+        case OpC::InstURem:
         case OpC::InstFAdd:
         case OpC::InstFSub:
         case OpC::InstFMul:
@@ -174,11 +176,9 @@ string RV64Printer::formatOperand(const MIROperand_p &op) {
     }
 
     if (op->isImme()) {
-        if (op->immeWidth() == 32)
-            return std::to_string(static_cast<int>(op->imme()));
-        if (op->immeWidth() == 64)
+        if (op->isExImme())
             return std::to_string(static_cast<int64_t>(op->imme()));
-        Err::unreachable("unsupported imme width");
+        return std::to_string(static_cast<int>(op->imme()));
     }
 
     if (op->isReloc())
@@ -232,6 +232,12 @@ string RV64Printer::formatBinary(const MIRInst &minst) {
         break;
     case OpC::InstUDiv:
         opstr = "divu";
+        break;
+    case OpC::InstSRem:
+        opstr = "rem";
+        break;
+    case OpC::InstURem:
+        opstr = "remu";
         break;
     case OpC::InstFAdd:
         opstr = "fadd.s";
@@ -299,9 +305,9 @@ string RV64Printer::formatConverse(const MIRInst &minst) {
 
     switch (opcode) {
     case OpC::InstF2S:
-        return "fcvt.w.s " + dst + ", " + src;
+        return "fcvt.w.s " + dst + ", " + src + ", rtz";
     case OpC::InstS2F:
-        return "fcvt.s.w " + dst + ", " + src;
+        return "fcvt.s.w " + dst + ", " + src + ", rtz";
     case OpC::InstFRINTZ:
         return "fcvt.w.s " + dst + ", " + src + ", rtz";
     default:
@@ -312,22 +318,35 @@ string RV64Printer::formatConverse(const MIRInst &minst) {
 
 string RV64Printer::formatCopy(const MIRInst &minst) {
     auto opcode = minst.opcode<OpC>();
-    auto dst = formatOperand(minst.getOp(0));
-    auto src = formatOperand(minst.getOp(1));
-
     switch (opcode) {
     case OpC::InstCopy:
     case OpC::InstCopyFromReg:
-    case OpC::InstCopyToReg:
-        if (minst.getOp(0)->type() == OpT::Float32)
-            return "fmv.s " + dst + ", " + src;
-        return "mv " + dst + ", " + src;
+    case OpC::InstCopyToReg: {
+        bool to_int = inRange(minst.getOp(0)->type(), OpT::Int, OpT::Int64);
+        bool from_int = inRange(minst.getOp(1)->type(), OpT::Int, OpT::Int64);
+        bool to_float = inRange(minst.getOp(0)->type(), OpT::Float, OpT::Float32);
+        bool from_float = inRange(minst.getOp(1)->type(), OpT::Float, OpT::Float32);
+
+        std::string movopcode;
+        if (from_int && to_int)
+            movopcode = "mv";
+        else if (from_float && to_float)
+            movopcode = "fmv.s";
+        else if (from_int && to_float)
+            movopcode = "fmv.w.x";
+        else if (from_float && to_int)
+            movopcode = "fmv.x.w";
+        else
+            Err::unreachable("bad legalization");
+
+        auto dst = formatOperand(minst.getOp(0));
+        auto src = formatOperand(minst.getOp(1));
+        return movopcode + " " + dst + ", " + src;
+    }
     default:
         Err::unreachable("Unsupported copy opcode");
     }
     return "";
 }
 
-string RV64Printer::formatBranch(const MIRInst &minst) {
-    return "j " + formatOperand(minst.getOp(1));
-}
+string RV64Printer::formatBranch(const MIRInst &minst) { return "j " + formatOperand(minst.getOp(1)); }

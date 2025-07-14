@@ -38,7 +38,7 @@ void lowerMemset(Module &module, const pFuncDecl &memset_decl) {
     auto val = std::make_shared<FormalParam>("%val", makeBType(IRBTYPE::I8), 1);
     auto len = std::make_shared<FormalParam>("%len", makeBType(IRBTYPE::I32), 2);
     auto memset_impl =
-        std::make_shared<Function>("__gnalc_intrinsic_memset", std::vector{ptr, val, len}, makeBType(IRBTYPE::VOID),
+        std::make_shared<Function>("@__gnalc_intrinsic_memset", std::vector{ptr, val, len}, makeBType(IRBTYPE::VOID),
                                    &module.getConstantPool(), std::unordered_set{FuncAttr::isLoweredIntrinsic});
     for (const auto& inst : memset_decl->inst_users()) {
         auto call = inst->as<CALLInst>();
@@ -67,7 +67,7 @@ void lowerMemset(Module &module, const pFuncDecl &memset_decl) {
 
     auto add = body_builder.makeAdd(phi1, module.getConst(-1));
     auto gep = body_builder.makeGep(phi2, module.getConst(1));
-    (void)body_builder.makeStore(val, gep, 1);
+    (void)body_builder.makeStore(val, phi2, 1);
     auto icmp = body_builder.makeIcmp(ICMPOP::eq, add, module.getConst(0));
     (void)body_builder.makeBr(icmp, exit, body);
 
@@ -106,11 +106,11 @@ void lowerMemcpy(Module &module, const pFuncDecl &memcpy_decl) {
     auto src = std::make_shared<FormalParam>("%src", makePtrType(makeBType(IRBTYPE::I8)), 1);
     auto len = std::make_shared<FormalParam>("%len", makeBType(IRBTYPE::I32), 2);
     auto memcpy_impl =
-        std::make_shared<Function>("__gnalc_intrinsic_memcpy", std::vector{dest, src, len}, makeBType(IRBTYPE::VOID),
+        std::make_shared<Function>("@__gnalc_intrinsic_memcpy", std::vector{dest, src, len}, makeBType(IRBTYPE::VOID),
                                    &module.getConstantPool(), std::unordered_set{FuncAttr::isLoweredIntrinsic});
-    for (const auto& inst : memcpy_impl->inst_users()) {
+    for (const auto& inst : memcpy_decl->inst_users()) {
         auto call = inst->as<CALLInst>();
-        Err::gassert(call && call->getFunc() == memcpy_impl && call->getArgs()[3]->getType()->isI1()
+        Err::gassert(call && call->getFunc() == memcpy_decl && call->getArgs()[3]->getType()->isI1()
             , "memcpy not used by array init?");
         // Remove is_volatile flag
         call->removeArg(3);
@@ -136,9 +136,9 @@ void lowerMemcpy(Module &module, const pFuncDecl &memcpy_decl) {
 
     auto add = body_builder.makeAdd(phi1, module.getConst(-1));
     auto gep1 = body_builder.makeGep(phi2, module.getConst(1));
-    auto ld = body_builder.makeLoad(gep1, 1);
+    auto ld = body_builder.makeLoad(phi2, 1);
     auto gep2 = body_builder.makeGep(phi3, module.getConst(1));
-    (void)body_builder.makeStore(ld, gep2, 1);
+    (void)body_builder.makeStore(ld, phi3, 1);
     auto icmp = body_builder.makeIcmp(ICMPOP::eq, add, module.getConst(0));
     (void)body_builder.makeBr(icmp, exit, body);
 
@@ -146,7 +146,7 @@ void lowerMemcpy(Module &module, const pFuncDecl &memcpy_decl) {
     phi1->addPhiOper(add, body);
     phi2->addPhiOper(src, entry);
     phi2->addPhiOper(gep1, body);
-    phi3->addPhiOper(dest, body);
+    phi3->addPhiOper(dest, entry);
     phi3->addPhiOper(gep2, body);
 
     IRBuilder exit_builder(exit);

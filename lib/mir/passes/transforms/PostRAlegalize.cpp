@@ -74,7 +74,7 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l &minsts, MIRInst
                 auto &obj = mfunc->StkObjs().at(mstkop);
                 _ctx.iselInfo->legalizeWithStkOp(ctx, mop, obj);
             } else
-                _ctx.iselInfo->legalizeWithPtrLoad(ctx, minst);
+                _ctx.iselInfo->legalizeWithPtrLoad(minst);
         } break;
         case OpC::InstLoadRegFromStack: {
             InstLegalizeContext ctx{minst, minsts, iter, _ctx};
@@ -95,7 +95,7 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l &minsts, MIRInst
             if (mfunc->StkObjs().count(mstkop)) {
                 auto &obj = mfunc->StkObjs().at(mstkop);
                 _ctx.iselInfo->legalizeWithStkOp(ctx, mop, obj);
-            } else _ctx.iselInfo->legalizeWithPtrStore(ctx, minst);
+            } else _ctx.iselInfo->legalizeWithPtrStore(minst);
         } break;
         case OpC::InstStoreRegToStack: {
             InstLegalizeContext ctx{minst, minsts, iter, _ctx};

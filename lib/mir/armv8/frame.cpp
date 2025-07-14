@@ -77,6 +77,20 @@ void ARMFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) con
 
     auto args = callinst->getArgs();
 
+    // FIXME: Immediate issue. Currently all immediate are treated as 64-bit. But the function arguments
+    //        must be handled with care, since caller may use stack to pass arguments.
+    auto getType = [](const IR::pVal &arg) -> OpT {
+        if (arg->getType()->getTrait() == IR::IRCTYPE::PTR)
+            return OpT::Int64;
+
+        auto btype = arg->getType()->as<IR::BType>();
+        if (btype->getInner() == IR::IRBTYPE::FLOAT)
+            return OpT::Float32;
+
+        // TODO: add consistency check
+        return OpT::Int32;
+    };
+
     ///@note arg on stk
     for (int i = 0; i < args.size(); ++i) {
         const auto offset = offsets[i];
@@ -102,7 +116,7 @@ void ARMFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) con
         ctx.newInst(MIRInst::make(OpC::InstStoreRegToStack)
                         ->setOperand<1>(mval, ctx.CodeGenCtx())
                         ->setOperand<2>(obj, ctx.CodeGenCtx())
-                        ->setOperand<5>(MIROperand::asImme(getBitWide(mval->type()), OpT::special), ctx.CodeGenCtx()));
+                        ->setOperand<5>(MIROperand::asImme(getBitWide(getType(arg)), OpT::special), ctx.CodeGenCtx()));
     }
 
     // LAMBDA BEGIN
@@ -110,21 +124,6 @@ void ARMFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) con
     auto isSpr = [&passByRegBase, &passBySprRegBase](int offset) -> bool {
         return offset >= passBySprRegBase + passByRegBase;
     };
-    auto getType = [](const IR::pVal &arg) -> OpT {
-        if (arg->getType()->getTrait() == IR::IRCTYPE::PTR) {
-            return OpT::Int64;
-        } else {
-            auto btype = arg->getType()->as<IR::BType>();
-            if (btype->getInner() == IR::IRBTYPE::FLOAT) {
-                return OpT::Float32;
-            } else {
-                return OpT::Int32;
-            }
-        }
-
-        ///@todo vectorize
-    };
-
     // LAMBDA END
 
     ///@note arg in ISAreg

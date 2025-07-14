@@ -18,17 +18,14 @@ namespace RV64 {
 // we got one uint64_t with that value.
 // Therefore, a width must be specified to distinguish values like `-1` and `4294967295`.
 // FIXME: Refactor immediate encoding in MIROperand.
-inline bool is12BitImm(uint64_t imm, unsigned width) {
-    if (width == 32) {
-        auto signed_val = static_cast<int32_t>(imm);
-        return signed_val >= -2048 && signed_val < 2048;
-    }
-    if (width == 64) {
+inline bool is12BitImm(uint64_t imm, bool is_mir_ext) {
+    if (is_mir_ext) {
         auto signed_val = static_cast<int64_t>(imm);
         return signed_val >= -2048 && signed_val < 2048;
     }
-    Err::unreachable();
-    return false;
+
+    auto signed_val = static_cast<int32_t>(imm);
+    return signed_val >= -2048 && signed_val < 2048;
 }
 } // namespace RV64
 
@@ -136,7 +133,14 @@ enum class RVOpC : uint32_t {
     BGTZ,
 
     MV,
-    FMVSX,
+    FMV_S,
+    FMV_W_X,
+    FMV_X_W,
+
+    FSW,
+    FLW,
+    FSD,
+    FLD,
 
     LUI,
     LI,
