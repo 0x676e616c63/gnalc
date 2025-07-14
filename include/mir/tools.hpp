@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include <type_traits>
 #ifndef GNALC_MIR_TOOLS_HPP
 #define GNALC_MIR_TOOLS_HPP
 
@@ -101,6 +102,25 @@ template <typename T> std::shared_ptr<T> wp2p(std::weak_ptr<T> wp) {
         return nullptr;
     } else {
         return wp.lock();
+    }
+}
+
+template <typename T> std::string hex_str(T number) {
+
+    if (std::is_same_v<T, unsigned> || std::is_same_v<T, int>) {
+        char str[9] = {};
+
+        std::sprintf(str, "%08X", static_cast<unsigned>(number));
+
+        return {str};
+    } else if (std::is_same_v<T, size_t> || std::is_same_v<T, long long>) {
+        char str[17]{};
+
+        std::sprintf(str, "%016zX", static_cast<size_t>(number));
+
+        return {str};
+    } else {
+        Err::gassert("expect uint32 or uint64");
     }
 }
 

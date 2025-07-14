@@ -31,11 +31,11 @@ string ARMA64Printer::binaryPrinter(const MIRInst &minst) {
 
     string str;
     str += ARMv8::OpC2S(op) + '\t';
-    str += ARMv8::Reg2S(def, bitWide) + ",\t";
-    str += ARMv8::Reg2S(lhs, bitWide) + ",\t";
+    str += reg2s(def, bitWide) + ",\t";
+    str += reg2s(lhs, bitWide) + ",\t";
 
     if (rhs->isISA()) {
-        str += ARMv8::Reg2S(rhs, bitWide);
+        str += reg2s(rhs, bitWide);
     } else {                                      // constant
         str += '#' + std::to_string(rhs->imme()); // uint64_t
     }
@@ -74,12 +74,12 @@ string ARMA64Printer::selectPrinter(const MIRInst &minst) {
 
     str += ARMv8::ARMOpC2S(op) + '\t';
     if (op != ARMOpC::CSET_SELECT) {
-        str += ARMv8::Reg2S(def, bitWide) + ",\t";
-        str += ARMv8::Reg2S(lhs, bitWide) + ",\t";
-        str += ARMv8::Reg2S(rhs, bitWide) + ",\t";
+        str += reg2s(def, bitWide) + ",\t";
+        str += reg2s(lhs, bitWide) + ",\t";
+        str += reg2s(rhs, bitWide) + ",\t";
         str += ARMv8::Cond2S(static_cast<Cond>(cond));
     } else {
-        str += ARMv8::Reg2S(def, bitWide) + ",\t";
+        str += reg2s(def, bitWide) + ",\t";
         str += ARMv8::Cond2S(static_cast<Cond>(cond));
     }
 
@@ -94,8 +94,8 @@ string ARMA64Printer::unaryPrinter(const MIRInst &minst) {
 
     string str;
     str += ARMv8::OpC2S(op) + '\t';
-    str += ARMv8::Reg2S(def, bitWide) + ",\t";
-    str += ARMv8::Reg2S(lhs, bitWide);
+    str += reg2s(def, bitWide) + ",\t";
+    str += reg2s(lhs, bitWide);
 
     return str;
 }
@@ -109,10 +109,10 @@ string ARMA64Printer::cmpPrinter(const MIRInst &minst) {
 
     string str;
 
-    str += ARMv8::OpC2S(op) + '\t' + ARMv8::Reg2S(lhs, bitWide) + ",\t";
+    str += ARMv8::OpC2S(op) + '\t' + reg2s(lhs, bitWide) + ",\t";
 
     if (rhs->isISA()) {
-        str += ARMv8::Reg2S(rhs, bitWide);
+        str += reg2s(rhs, bitWide);
     } else { // constant
         str += '#' + std::to_string(rhs->imme());
     }
@@ -127,8 +127,8 @@ string ARMA64Printer::convertPrinter(const MIRInst &minst) {
 
     string str;
     str += ARMv8::OpC2S(minst.opcode<OpC>()) + '\t';
-    str += ARMv8::Reg2S(def, bitWide) + ",\t";
-    str += ARMv8::Reg2S(use, bitWide);
+    str += reg2s(def, bitWide) + ",\t";
+    str += reg2s(use, bitWide);
 
     return str;
 }
@@ -146,18 +146,18 @@ string ARMA64Printer::copyPrinter(const MIRInst &minst) {
 
     if (defType == OpT::Float && useType == OpT::Float) {
         ///@note mov from an isa to another isa, maybe caused by reduntant load eliminate
-        str += "mov\t" + ARMv8::Reg2S(def, 16, true) + ".16b,\t" + ARMv8::Reg2S(use, 16, true) + ".16b";
+        str += "mov\t" + reg2s(def, 16, true) + ".16b,\t" + reg2s(use, 16, true) + ".16b";
 
-    } else if (inRange(defType, OpT::Int, OpT::Int64) && inRange(useType, OpT::Float, OpT::Floatvec) ||
-               inRange(useType, OpT::Int, OpT::Int64) && inRange(defType, OpT::Float, OpT::Floatvec) ||
-               inRange(useType, OpT::Float, OpT::Floatvec) && inRange(defType, OpT::Float, OpT::Floatvec)) {
+    } else if (inRange(defType, OpT::Int, OpT::Int64) && inRange(useType, OpT::Float, OpT::Floatvec4) ||
+               inRange(useType, OpT::Int, OpT::Int64) && inRange(defType, OpT::Float, OpT::Floatvec4) ||
+               inRange(useType, OpT::Float, OpT::Floatvec4) && inRange(defType, OpT::Float, OpT::Floatvec4)) {
 
-        str += "fmov\t" + ARMv8::Reg2S(def, bitWide) + ",\t" + ARMv8::Reg2S(use, bitWide);
-    } else if (inSet(defType, OpT::Intvec, OpT::Floatvec, OpT::Intvec, OpT::Int64vec, OpT::Floatvec)) {
+        str += "fmov\t" + reg2s(def, bitWide) + ",\t" + reg2s(use, bitWide);
+    } else if (inSet(defType, OpT::Intvec4, OpT::Floatvec4, OpT::Intvec4, OpT::Int64vec2, OpT::Floatvec4)) {
         ///@todo vector regs 需要提供v<>寄存器的视图方式
         Err::todo("copyPrinter: vectorize todo");
     } else {
-        str += "mov\t" + ARMv8::Reg2S(def, bitWide) + ",\t" + ARMv8::Reg2S(use, bitWide);
+        str += "mov\t" + reg2s(def, bitWide) + ",\t" + reg2s(use, bitWide);
     }
 
     return str;
@@ -176,7 +176,7 @@ string ARMA64Printer::memoryPrinter(const MIRInst &minst) {
     if (minst.opcode<ARMOpC>() == ARMOpC::LDR) {
 
         if (minst.getOp(1)->isReloc()) {
-            auto reg = ARMv8::Reg2S(minst.ensureDef(), memSize); // adrp + ldr
+            auto reg = reg2s(minst.ensureDef(), memSize); // adrp + ldr
             auto label = minst.getOp(1)->reloc()->getmSym();
             str += "ldr\t" + reg + ", [" + reg + ", #:got_lo12:" + label + "]";
 
@@ -196,11 +196,11 @@ string ARMA64Printer::memoryPrinter(const MIRInst &minst) {
 
     str += ARMv8::ARMOpC2S(minst.opcode<ARMOpC>()) + '\t';
 
-    str += ARMv8::Reg2S(op1, memSize) + ",\t";
+    str += reg2s(op1, memSize) + ",\t";
 
     str += '[';
     // base
-    str += ARMv8::Reg2S(base, 8);
+    str += reg2s(base, 8);
 
     // const idx or var offset with shift
     if (idx) {
@@ -209,7 +209,7 @@ string ARMA64Printer::memoryPrinter(const MIRInst &minst) {
         if (idx->isImme()) {
             str += '#' + std::to_string(idx->imme());
         } else if (idx->isISA()) {
-            str += ARMv8::Reg2S(idx, 8);
+            str += reg2s(idx, 8);
 
             if (shift) {
                 str += ", ";
@@ -233,7 +233,7 @@ string ARMA64Printer::memoryPrinter(const MIRInst &minst) {
         }
     }
 
-    str += "]\n";
+    str += "]";
 
     return str;
 }
@@ -246,9 +246,9 @@ string ARMA64Printer::smullPrinter(const MIRInst &minst) {
     const auto &op2 = minst.getOp(2);
 
     str += "smull\t";
-    str += ARMv8::Reg2S(def, 8) + ",\t";
-    str += ARMv8::Reg2S(op1, 4) + ",\t";
-    str += ARMv8::Reg2S(op2, 4) + '\n';
+    str += reg2s(def, 8) + ",\t";
+    str += reg2s(op1, 4) + ",\t";
+    str += reg2s(op2, 4) + '\n';
 
     return str;
 }
@@ -265,10 +265,10 @@ string ARMA64Printer::ternaryPrinter(const MIRInst &minst) {
     auto bitWide = getBitWideChoosen(def->type(), op1->type(), op2->type(), op3->type());
 
     str += ARMv8::ARMOpC2S(minst.opcode<ARMOpC>()) + '\t';
-    str += ARMv8::Reg2S(def, bitWide) + ",\t";
-    str += ARMv8::Reg2S(op1, bitWide) + ",\t";
-    str += ARMv8::Reg2S(op2, bitWide) + ",\t";
-    str += ARMv8::Reg2S(op3, bitWide) + '\n';
+    str += reg2s(def, bitWide) + ",\t";
+    str += reg2s(op1, bitWide) + ",\t";
+    str += reg2s(op2, bitWide) + ",\t";
+    str += reg2s(op3, bitWide) + '\n';
 
     return str;
 }
@@ -280,7 +280,7 @@ string ARMA64Printer::csetPrinter(const MIRInst &minst) {
     string str;
 
     str += "cset\t";
-    str += ARMv8::Reg2S(def, 4) + ",\t";
+    str += reg2s(def, 4) + ",\t";
     str += ARMv8::Cond2S(static_cast<Cond>(cond));
 
     return str;
@@ -292,7 +292,7 @@ string ARMA64Printer::cbnzPrinter(const MIRInst &minst) {
 
     string str;
     str += "cbnz\t";                                    // nz = not zero
-    str += ARMv8::Reg2S(use, getBitWide(use->type())) + ",\t"; // 4
+    str += reg2s(use, getBitWide(use->type())) + ",\t"; // 4
     str += label;
 
     return str;
@@ -303,7 +303,7 @@ string ARMA64Printer::AdrpPrinter(const MIRInst &minst) {
     const auto &label = minst.getOp(1)->reloc()->getmSym();
 
     string str;
-    string reg = ARMv8::Reg2S(def, getBitWide(def->type())); // 8
+    string reg = reg2s(def, getBitWide(def->type())); // 8
 
     str += "adrp\t" + reg + ", :got:" + label;
 
@@ -317,8 +317,8 @@ string ARMA64Printer::movVPrinter(const MIRInst &minst) {
     auto bitWide = 16;
 
     string str = "mov\t";
-    str += ARMv8::Reg2S(def, bitWide, true) + ".16b,\t";
-    str += ARMv8::Reg2S(use, bitWide, true) + ".16b";
+    str += reg2s(def, bitWide, true) + ".16b,\t";
+    str += reg2s(use, bitWide, true) + ".16b";
 
     return str;
 }
@@ -331,12 +331,12 @@ string ARMA64Printer::movPrinter(const MIRInst &minst) {
 
     string str;
     str += ARMv8::ARMOpC2S(minst.opcode<ARMOpC>()) + '\t';
-    str += ARMv8::Reg2S(def, bitWide) + ",\t";
+    str += reg2s(def, bitWide) + ",\t";
 
     if (use->isImme()) {
         str += '#' + std::to_string(use->imme());
     } else {
-        str += ARMv8::Reg2S(use, bitWide);
+        str += reg2s(use, bitWide);
     }
 
     // shift
@@ -370,18 +370,18 @@ string ARMA64Printer::fmovPrinter(const MIRInst &minst) {
     if (use->isImme()) { // alias of fdup
         auto imm_us = use->imme();
         auto imm = *reinterpret_cast<float *>(&imm_us);
-        str += "fmov\t" + ARMv8::Reg2S(def, bitWide) + ",\t#" + std::to_string(imm);
+        str += "fmov\t" + reg2s(def, bitWide) + ",\t#" + std::to_string(imm);
         return str;
     }
 
-    if (inRange(defType, OpT::Int, OpT::Int64) && inRange(useType, OpT::Float, OpT::Floatvec) ||
-        inRange(useType, OpT::Int, OpT::Int64) && inRange(defType, OpT::Float, OpT::Floatvec)) {
+    if (inRange(defType, OpT::Int, OpT::Int64) && inRange(useType, OpT::Float, OpT::Floatvec4) ||
+        inRange(useType, OpT::Int, OpT::Int64) && inRange(defType, OpT::Float, OpT::Floatvec4)) {
 
-        str += "fmov\t" + ARMv8::Reg2S(def, bitWide) + ",\t" + ARMv8::Reg2S(use, bitWide);
+        str += "fmov\t" + reg2s(def, bitWide) + ",\t" + reg2s(use, bitWide);
 
     } else if (defType == OpT::Float && useType == OpT::Float) {
         ///@note mov from an isa to another isa, maybe caused by reduntant load eliminate
-        str += "mov\t" + ARMv8::Reg2S(def, 16, true) + ".16b,\t" + ARMv8::Reg2S(use, 16, true) + ".16b";
+        str += "mov\t" + reg2s(def, 16, true) + ".16b,\t" + reg2s(use, 16, true) + ".16b";
     } else {
         Err::unreachable("fmovPrinter: failed to handle this");
     }
@@ -399,7 +399,7 @@ string ARMA64Printer::moviPrinter(const MIRInst &minst) {
     ///@note defType not really need to be check
     ///@todo need a imme range check in info.hpp
     auto imme_us = use->imme();
-    str += "movi\t" + ARMv8::Reg2S(def, 16, true) + ".4s,\t#" + std::to_string(use->imme());
+    str += "movi\t" + reg2s(def, 16, true) + ".4s,\t#" + std::to_string(use->imme());
 
     return str;
 }
@@ -437,8 +437,8 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
                 if (lastReg == -1) {
                     lastReg = i;
                 } else {
-                    str += "stp\t" + ARMv8::Reg2S(MIROperand::asISAReg(lastReg, OpT::Int64), 8) + ", " +
-                           ARMv8::Reg2S(MIROperand::asISAReg(i, OpT::Int64), 8) + ", " + "[sp, #" + std::to_string(offset) +
+                    str += "stp\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Int64), 8) + ", " +
+                           reg2s(MIROperand::asISAReg(i, OpT::Int64), 8) + ", " + "[sp, #" + std::to_string(offset) +
                            "]\n    ";
 
                     lastReg = -1;
@@ -448,7 +448,7 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
         }
 
         if (lastReg != -1) {
-            str += "str\t" + ARMv8::Reg2S(MIROperand::asISAReg(lastReg, OpT::Int64), 8) + ", " + "[sp, " +
+            str += "str\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Int64), 8) + ", " + "[sp, " +
                    std::to_string(offset) + "]\n";
 
             lastReg = -1;
@@ -462,8 +462,8 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
                 if (lastReg == -1) {
                     lastReg = i;
                 } else {
-                    str += "    stp\t" + ARMv8::Reg2S(MIROperand::asISAReg(lastReg, OpT::Floatvec), 16) + ", " +
-                           ARMv8::Reg2S(MIROperand::asISAReg(i, OpT::Floatvec), 16) + ", " + "[sp, #" +
+                    str += "    stp\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec4), 16) + ", " +
+                           reg2s(MIROperand::asISAReg(i, OpT::Floatvec4), 16) + ", " + "[sp, #" +
                            std::to_string(offset) + "]\n";
 
                     lastReg = -1;
@@ -477,7 +477,7 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
                 str += "    "; // indent
             }
 
-            str += "str\t" + ARMv8::Reg2S(MIROperand::asISAReg(lastReg, OpT::Floatvec), 16) + ", " + "[sp, " +
+            str += "str\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec4), 16) + ", " + "[sp, " +
                    std::to_string(offset) + "]\n";
 
             lastReg = -1;
@@ -497,8 +497,8 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
                 if (lastReg == -1) {
                     lastReg = i;
                 } else {
-                    str += "ldp\t" + ARMv8::Reg2S(MIROperand::asISAReg(lastReg, OpT::Int64), 8) + ", " +
-                           ARMv8::Reg2S(MIROperand::asISAReg(i, OpT::Int64), 8) + ", " + "[sp, #" + std::to_string(offset) +
+                    str += "ldp\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Int64), 8) + ", " +
+                           reg2s(MIROperand::asISAReg(i, OpT::Int64), 8) + ", " + "[sp, #" + std::to_string(offset) +
                            "]\n    ";
 
                     lastReg = -1;
@@ -508,7 +508,7 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
         }
 
         if (lastReg != -1) {
-            str += "ldr\t" + ARMv8::Reg2S(MIROperand::asISAReg(lastReg, OpT::Int64), 8) + ", " + "[sp, " +
+            str += "ldr\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Int64), 8) + ", " + "[sp, " +
                    std::to_string(offset) + "]\n";
 
             lastReg = -1;
@@ -522,8 +522,8 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
                 if (lastReg == -1) {
                     lastReg = i;
                 } else {
-                    str += "    ldp\t" + ARMv8::Reg2S(MIROperand::asISAReg(lastReg, OpT::Floatvec), 16) + ", " +
-                           ARMv8::Reg2S(MIROperand::asISAReg(i, OpT::Floatvec), 16) + ", " + "[sp, #" +
+                    str += "    ldp\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec4), 16) + ", " +
+                           reg2s(MIROperand::asISAReg(i, OpT::Floatvec4), 16) + ", " + "[sp, #" +
                            std::to_string(offset) + "]\n";
 
                     lastReg = -1;
@@ -537,7 +537,7 @@ string ARMA64Printer::calleePrinter(const MIRInst &minst) {
                 str += "    "; // indent
             }
 
-            str += "ldr\t" + ARMv8::Reg2S(MIROperand::asISAReg(lastReg, OpT::Floatvec), 16) + ", " + "[sp, " +
+            str += "ldr\t" + reg2s(MIROperand::asISAReg(lastReg, OpT::Floatvec4), 16) + ", " + "[sp, " +
                    std::to_string(offset) + "]\n";
 
             // lastReg = -1;
@@ -560,7 +560,7 @@ string ARMA64Printer::calleePrinter_legacy(const MIRInst &minst) {
     if (minst.opcode<ARMOpC>() == ARMOpC::PUSH) {
         for (int i = 0; i < 32; bitMap >>= 1, ++i) {
             if (bitMap & 1) {
-                str += "str\t" + ARMv8::Reg2S(MIROperand::asISAReg(i, OpT::Int64), 8) + ", [sp, " + std::to_string(offset) +
+                str += "str\t" + reg2s(MIROperand::asISAReg(i, OpT::Int64), 8) + ", [sp, " + std::to_string(offset) +
                        ']' + "\n    ";
                 offset += 8;
             }
@@ -570,7 +570,7 @@ string ARMA64Printer::calleePrinter_legacy(const MIRInst &minst) {
 
         for (int i = 32; i < 65; ++i, bitMap <<= 1) {
             if (bitMap & 1) {
-                str += "str\t" + ARMv8::Reg2S(MIROperand::asISAReg(i, OpT::Floatvec), 16) + ", [sp, " +
+                str += "str\t" + reg2s(MIROperand::asISAReg(i, OpT::Floatvec4), 16) + ", [sp, " +
                        std::to_string(offset) + ']' + "\n    ";
                 offset += 16;
             }
@@ -593,14 +593,25 @@ string ARMA64Printer::adjustPrinter(const MIRInst &minst) {
         str += "sub\t";
     }
 
-    str += ARMv8::Reg2S(def, bitWide) + ", "; // int
-    str += ARMv8::Reg2S(use, bitWide) + ", ";
+    str += reg2s(def, bitWide) + ", "; // int
+    str += reg2s(use, bitWide) + ", ";
 
     if (offset->isImme()) {
         str += '#' + std::to_string(offset->imme());
     } else {
-        str += ARMv8::Reg2S(offset, bitWide); // int
+        str += reg2s(offset, bitWide); // int
     }
+
+    return str;
+}
+
+string ARMA64Printer::literalPrinter(const MIRInst &minst) {
+    const auto &def = minst.ensureDef();
+    const auto &literal = minst.getOp(1)->literal();
+
+    string str = "ldr\t";
+    str += reg2s(def, getBitWide(def->type())) + ",\t";
+    str += '=' + literal;
 
     return str;
 }
@@ -610,13 +621,13 @@ string ARMA64Printer::binaryPrinter_v(const MIRInst &minst) {
     const auto &lhs = minst.getOp(1);
     const auto &rhs = minst.getOp(2);
     auto op = minst.opcode<OpC>();
-    string mode = def->type() == OpT::Int64vec ? ".2d" : ".4s";
+    string mode = def->type() == OpT::Int64vec2 ? ".2d" : ".4s";
 
     string str;
     str += ARMv8::OpC2S(op) + '\t';
-    str += ARMv8::Reg2S(def, 16, true) + mode + ",\t";
-    str += ARMv8::Reg2S(lhs, 16, true) + mode + ",\t";
-    str += ARMv8::Reg2S(rhs, 16, true) + mode;
+    str += reg2s(def, 16, true) + mode + ",\t";
+    str += reg2s(lhs, 16, true) + mode + ",\t";
+    str += reg2s(rhs, 16, true) + mode;
 
     return str;
 }
@@ -631,9 +642,9 @@ string ARMA64Printer::selectPrinter_v(const MIRInst &minst) {
     string str;
 
     str += ARMv8::OpC2S(op) + '\t';
-    str += ARMv8::Reg2S(def, 16, true) + mode + ",\t";
-    str += ARMv8::Reg2S(true_val, 16, true) + mode + ",\t";
-    str += ARMv8::Reg2S(false_val, 16, true) + mode;
+    str += reg2s(def, 16, true) + mode + ",\t";
+    str += reg2s(true_val, 16, true) + mode + ",\t";
+    str += reg2s(false_val, 16, true) + mode;
 
     return str;
 }
@@ -642,12 +653,12 @@ string ARMA64Printer::unaryPrinter_v(const MIRInst &minst) {
     const auto &def = minst.ensureDef();
     const auto &use = minst.getOp(1);
     auto op = minst.opcode<OpC>();
-    string mode = def->type() == OpT::Int64vec ? ".2d" : ".4s";
+    string mode = def->type() == OpT::Int64vec2 ? ".2d" : ".4s";
 
     string str;
     str += ARMv8::OpC2S(op) + '\t';
-    str += ARMv8::Reg2S(def, 16, true) + mode + ",\t";
-    str += ARMv8::Reg2S(use, 16, true) + mode;
+    str += reg2s(def, 16, true) + mode + ",\t";
+    str += reg2s(use, 16, true) + mode;
 
     return str;
 }
@@ -658,13 +669,13 @@ string ARMA64Printer::cmpPrinter_v(const MIRInst &minst) {
     const auto &lhs = minst.getOp(2);
     const auto &rhs = minst.getOp(3);
     auto op = minst.opcode<OpC>();
-    string mode = def->type() == OpT::Int64vec ? ".2d" : ".4s";
+    string mode = def->type() == OpT::Int64vec2 ? ".2d" : ".4s";
 
     string str;
     str += ARMv8::OpC2S(op) + ARMv8::Cond2S(static_cast<Cond>(cond)) + '\t';
-    str += ARMv8::Reg2S(def, 16, true) + mode + ",\t";
-    str += ARMv8::Reg2S(lhs, 16, true) + mode + ",\t";
-    str += ARMv8::Reg2S(rhs, 16, true) + mode;
+    str += reg2s(def, 16, true) + mode + ",\t";
+    str += reg2s(lhs, 16, true) + mode + ",\t";
+    str += reg2s(rhs, 16, true) + mode;
 
     return str;
 }
@@ -673,12 +684,12 @@ string ARMA64Printer::convertPrinter_v(const MIRInst &minst) {
     const auto &def = minst.ensureDef();
     const auto &use = minst.getOp(1);
     auto op = minst.opcode<OpC>();
-    string mode = def->type() == OpT::Int64vec ? ".2d" : ".4s";
+    string mode = def->type() == OpT::Int64vec2 ? ".2d" : ".4s";
 
     string str;
     str += ARMv8::OpC2S(op) + '\t';
-    str += ARMv8::Reg2S(def, 16, true) + mode + ",\t";
-    str += ARMv8::Reg2S(use, 16, true) + mode;
+    str += reg2s(def, 16, true) + mode + ",\t";
+    str += reg2s(use, 16, true) + mode;
 
     return str;
 }
@@ -692,8 +703,8 @@ string ARMA64Printer::extractPrinter_v(const MIRInst &minst) {
 
     string str;
     str += ARMv8::OpC2S(op) + '\t';
-    str += ARMv8::Reg2S(def, getBitWide(def->type())) + ",\t";
-    str += ARMv8::Reg2S(use, 16, true) + mode + '[' + std::to_string(idx) + ']';
+    str += reg2s(def, getBitWide(def->type())) + ",\t";
+    str += reg2s(use, 16, true) + mode + '[' + std::to_string(idx) + ']';
 
     return str;
 }
@@ -703,16 +714,16 @@ string ARMA64Printer::insertPrinter_v(const MIRInst &minst) {
     const auto &use = minst.getOp(2);
     const auto &idx = minst.getOp(1)->imme();
     auto op = minst.opcode<OpC>(); // mov
-    string mode = def->type() == OpT::Int64vec ? ".d" : ".s";
+    string mode = def->type() == OpT::Int64vec2 ? ".d" : ".s";
 
     string str;
     str += ARMv8::OpC2S(op) + '\t';
-    str += ARMv8::Reg2S(def, 16, true) + mode + '[' + std::to_string(idx) + "],\t";
+    str += reg2s(def, 16, true) + mode + '[' + std::to_string(idx) + "],\t";
 
-    if (use->type() == OpT::Float) {
-        str += ARMv8::Reg2S(use, 16, true) + mode + ".s[0]";
+    if (inSet(use->type(), OpT::Float32, OpT::Float)) {
+        str += reg2s(use, 16, true) + mode + "[0]";
     } else {
-        str += ARMv8::Reg2S(use, getBitWide(use->type()));
+        str += reg2s(use, getBitWide(use->type()));
     }
 
     return str;
@@ -723,7 +734,7 @@ string ARMA64Printer::copyPrinter_v(const MIRInst &minst) {
     const auto &use = minst.getOp(1);
 
     string str;
-    str += "mov\t" + ARMv8::Reg2S(def, 16) + "\t," + ARMv8::Reg2S(use, 16);
+    str += "mov\t" + reg2s(def, 16, true) + ".16b\t," + reg2s(use, 16, true) + ".16b";
 
     return str;
 }

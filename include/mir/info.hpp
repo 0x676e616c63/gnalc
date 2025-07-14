@@ -30,9 +30,7 @@ struct DataLayout {
     const unsigned storeAlignment;
 };
 
-enum class Arch {
-    RISCV64, ARMv8
-};
+enum class Arch { RISCV64, ARMv8 };
 
 class BkdInfos {
 public:
@@ -186,7 +184,7 @@ struct CodeGenContext {
     static CodeGenContext create(const BkdInfos& infos);
 };
 
-}; // namespace MIR_new
+}; // namespace MIR
 
 namespace std {
 

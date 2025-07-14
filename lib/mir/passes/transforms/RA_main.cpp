@@ -4,6 +4,7 @@
 #include "mir/passes/transforms/RA.hpp"
 #include <algorithm>
 #include <string>
+#include <variant>
 
 using namespace MIR;
 
@@ -436,7 +437,29 @@ void RegisterAllocImpl::AssignColors() {
 
             addBySet(coloredNodes, Nodes{n});
 
-            auto c = okColors[n->getRecover() % okColors.size()];
+            unsigned int c;
+            if (okColors.size()) {
+
+                if (mfunc->Context().isARMv8()) {
+                    int calleesave_cnt = 0;
+                    auto _ = std::find_if(okColors.begin(), okColors.end(), [&](auto &&elem) {
+                        ++calleesave_cnt;
+                        return elem > 18;
+                    });
+
+                    if (calleesave_cnt < 6) {
+                        goto __use_fallback;
+                    } else {
+                        c = okColors[n->getRecover() % calleesave_cnt]; // prefer caller-saves
+                    }
+
+                } else if (mfunc->Context().isRISCV64()) {
+                    goto __use_fallback;
+                }
+            } else {
+            __use_fallback:
+                c = okColors[n->getRecover() % okColors.size()]; // fallback
+            }
 
             auto &calleesave = mfunc->calleeSaveRegs();
             calleesave |= 1LL << c; // marked
@@ -453,7 +476,6 @@ void RegisterAllocImpl::AssignColors() {
         Err::gassert(n->isVRegOrISAReg(), "AssignColors: try assign color for a none virReg op");
         Err::gassert(n_a->isVRegOrISAReg(), "AssignColors: try assign color for a none virReg op");
 
-        ///@note 我不知道为什么行, 但它就是行
         if (n_a->isVReg()) {
             continue;
         }

@@ -1,18 +1,77 @@
 // Copyright (c) 2025 0x676e616c63
 // SPDX-License-Identifier: MIT
 
+#include "ir/base.hpp"
 #include "ir/constant.hpp"
 #include "ir/instructions/binary.hpp"
 #include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
 #include "ir/instructions/vector.hpp"
+#include "ir/type.hpp"
 #include "ir/type_alias.hpp"
 #include "mir/MIR.hpp"
+#include "mir/info.hpp"
 #include "mir/passes/transforms/isel.hpp"
 #include "mir/passes/transforms/lowering.hpp"
+#include "mir/tools.hpp"
 #include "utils/exception.hpp"
+#include <charconv>
+#include <cstddef>
+#include <optional>
 
 using namespace MIR;
+
+MIROperand_p MIR::vector_flatting(const IR::pVal &ir_vector, LoweringContext &ctx) {
+    string literal = "";
+    MIROperand_p load_op = nullptr;
+    size_t size = 0;
+    OpT type;
+
+    if (ir_vector->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL) {
+        if (auto const_vec_i32 = ir_vector->as<IR::ConstantIntVector>()) {
+            for (auto elem : const_vec_i32->getVector()) {
+                literal = hex_str(elem).append(literal);
+                size += 4;
+            }
+
+            size == 8 ? type = OpT::Intvec2 : type = OpT::Intvec4;
+
+        } else if (auto const_vec_f32 = ir_vector->as<IR::ConstantFloatVector>()) {
+            for (auto elem : const_vec_f32->getVector()) {
+                auto elem_i3e = *reinterpret_cast<unsigned *>(&elem);
+
+                literal = hex_str(elem_i3e).append(literal);
+                size += 4;
+            }
+
+            size == 8 ? type = OpT::Floatvec2 : type = OpT::Floatvec4;
+        }
+
+        literal = "0X" + literal;
+
+        auto liter_op = ctx.newLiteral(literal, size, 16);
+        load_op = ctx.newVReg(type);
+
+        ctx.newInst(MIRInst::make(OpC::InstLoadLiteral)
+                        ->setOperand<0>(load_op, ctx.CodeGenCtx())
+                        ->setOperand<1>(liter_op, ctx.CodeGenCtx()));
+    }
+
+    return load_op;
+}
+
+MIROperand_p MIR::try_vector_flatting(const IR::pVal &ir_vector, LoweringContext &ctx) {
+    string literal = "";
+    MIROperand_p load_op = nullptr;
+
+    if (ir_vector->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL) {
+        load_op = vector_flatting(ir_vector, ctx);
+    } else {
+        load_op = ctx.mapOperand(ir_vector);
+    }
+
+    return load_op;
+}
 
 OpC MIR::IROpCodeConvert_v(IR::OP op) {
     using OP = IR::OP;
@@ -102,9 +161,11 @@ void MIR::lowerInst_v(const IR::pExtract &extract, LoweringContext &ctx) {
 void MIR::lowerInst_v(const IR::pInsert &insert, LoweringContext &ctx) {
     if (ctx.CodeGenCtx().isARMv8()) {
 
-        auto def = insert->getVector()->as<IR::ConstantIntVector>()
-                       ? ctx.newVReg(insert->getType())
-                       : ctx.mapOperand(insert->getVector()); // if poison or not
+        MIROperand_p def, use;
+
+        insert->getVector()->as<IR::ConstantIntVector>() || insert->getVector()->as<IR::ConstantFloatVector>()
+            ? (def = ctx.newVReg(insert->getType()), use = nullptr)
+            : (def = ctx.mapOperand(insert->getVector()), use = def); // if poison or not
 
         auto idx = ctx.mapOperand(insert->getIdx());
 
@@ -113,7 +174,8 @@ void MIR::lowerInst_v(const IR::pInsert &insert, LoweringContext &ctx) {
         ctx.newInst(MIRInst::make(OpC::InstVInsert)
                         ->setOperand<0>(def, ctx.CodeGenCtx())
                         ->setOperand<1>(idx, ctx.CodeGenCtx())
-                        ->setOperand<2>(ctx.mapOperand(insert->getElm()), ctx.CodeGenCtx()));
+                        ->setOperand<2>(ctx.mapOperand(insert->getElm()), ctx.CodeGenCtx())
+                        ->setOperand<3>(use, ctx.CodeGenCtx())); // this use is only to provide infos
 
         ctx.addOperand(insert, def); // n map to 1
 
@@ -138,15 +200,21 @@ void MIR::lowerInst_v(const IR::pBinary &binary, LoweringContext &ctx) {
 
     ctx.newInst(MIRInst::make(mop)
                     ->setOperand<0>(def, ctx.CodeGenCtx())
-                    ->setOperand<1>(ctx.mapOperand(binary->getLHS()), ctx.CodeGenCtx())
-                    ->setOperand<2>(ctx.mapOperand(binary->getRHS()), ctx.CodeGenCtx())); // 可能带常数
+                    ->setOperand<1>(try_vector_flatting(binary->getLHS(), ctx), ctx.CodeGenCtx())
+                    ->setOperand<2>(try_vector_flatting(binary->getRHS(), ctx), ctx.CodeGenCtx())); // 可能带常数
 
     ctx.addOperand(binary, def);
 }
 
 void MIR::lowerInst_v(const IR::pFneg &fneg, LoweringContext &ctx) {
     if (ctx.CodeGenCtx().isARMv8()) {
-        lowerInst(fneg, ctx);
+        auto def = ctx.newVReg(fneg->getType());
+
+        ctx.newInst(MIRInst::make(OpC::InstFNeg)
+                        ->setOperand<0>(def, ctx.CodeGenCtx())
+                        ->setOperand<1>(try_vector_flatting(fneg->getVal(), ctx), ctx.CodeGenCtx()));
+
+        ctx.addOperand(fneg, def);
     } else if (ctx.CodeGenCtx().isRISCV64()) {
         Err::todo("");
     }
@@ -161,8 +229,8 @@ void MIR::lowerInst_v(const IR::pIcmp &icmp, LoweringContext &ctx) {
         ctx.newInst(MIRInst::make(OpC::InstVIcmp)
                         ->setOperand<0>(def, ctx.CodeGenCtx())
                         ->setOperand<1>(ctx.mapOperand(IRCondConvert(icmp->getCond())), ctx.CodeGenCtx())
-                        ->setOperand<2>(ctx.mapOperand(icmp->getLHS()), ctx.CodeGenCtx())
-                        ->setOperand<3>(ctx.mapOperand(icmp->getRHS()), ctx.CodeGenCtx()));
+                        ->setOperand<2>(try_vector_flatting(icmp->getLHS(), ctx), ctx.CodeGenCtx())
+                        ->setOperand<3>(try_vector_flatting(icmp->getRHS(), ctx), ctx.CodeGenCtx()));
 
     } else if (ctx.CodeGenCtx().isRISCV64()) {
         Err::todo("");
@@ -177,11 +245,11 @@ void MIR::lowerInst_v(const IR::pFcmp &fcmp, LoweringContext &ctx) {
     auto def = ctx.newVReg(fcmp->getType());
 
     if (ctx.CodeGenCtx().isARMv8()) {
-        ctx.newInst(MIRInst::make(OpC::InstVIcmp)
+        ctx.newInst(MIRInst::make(OpC::InstVFcmp)
                         ->setOperand<0>(def, ctx.CodeGenCtx())
                         ->setOperand<1>(ctx.mapOperand(IRCondConvert(fcmp->getCond())), ctx.CodeGenCtx())
-                        ->setOperand<2>(ctx.mapOperand(fcmp->getLHS()), ctx.CodeGenCtx())
-                        ->setOperand<3>(ctx.mapOperand(fcmp->getRHS()), ctx.CodeGenCtx()));
+                        ->setOperand<2>(try_vector_flatting(fcmp->getLHS(), ctx), ctx.CodeGenCtx())
+                        ->setOperand<3>(try_vector_flatting(fcmp->getRHS(), ctx), ctx.CodeGenCtx()));
 
     } else if (ctx.CodeGenCtx().isRISCV64()) {
         Err::todo("");
@@ -192,7 +260,7 @@ void MIR::lowerInst_v(const IR::pFcmp &fcmp, LoweringContext &ctx) {
 
 void MIR::lowerInst_v(const IR::pLoad &load, LoweringContext &ctx) {
     if (ctx.CodeGenCtx().isARMv8()) {
-        lowerInst(load, ctx);
+        lowerInst(load, ctx, load->getAlign());
     } else if (ctx.CodeGenCtx().isRISCV64()) {
         Err::todo("");
     }
@@ -200,7 +268,18 @@ void MIR::lowerInst_v(const IR::pLoad &load, LoweringContext &ctx) {
 
 void MIR::lowerInst_v(const IR::pStore &store, LoweringContext &ctx) {
     if (ctx.CodeGenCtx().isARMv8()) {
-        lowerInst(store, ctx);
+        if (auto load_op = vector_flatting(store->getValue(), ctx)) {
+
+            ctx.newInst(
+                MIRInst::make(OpC::InstStore)
+                    ->setOperand<0>(nullptr, ctx.CodeGenCtx())
+                    ->setOperand<1>(load_op, ctx.CodeGenCtx())
+                    ->setOperand<2>(ctx.mapOperand(store->getPtr()), ctx.CodeGenCtx())
+                    // ->setOperand<5>(MIROperand::asImme(store->getAlign(), OpT::special), ctx.CodeGenCtx()));
+                    ->setOperand<5>(MIROperand::asImme(getBitWide(load_op->type()), OpT::special), ctx.CodeGenCtx()));
+        } else {
+            lowerInst(store, ctx, store->getAlign());
+        }
     } else if (ctx.CodeGenCtx().isRISCV64()) {
         Err::todo("");
     }
@@ -243,8 +322,8 @@ void MIR::lowerInst_v(const IR::pSelect &select, LoweringContext &ctx) {
         ctx.addCopy(def, ctx.mapOperand(select->getCond()));
         ctx.newInst(MIRInst::make(OpC::InstVSelect)
                         ->setOperand<0>(def, ctx.CodeGenCtx())
-                        ->setOperand<1>(ctx.mapOperand(select->getTrueVal()), ctx.CodeGenCtx())
-                        ->setOperand<2>(ctx.mapOperand(select->getFalseVal()), ctx.CodeGenCtx()));
+                        ->setOperand<1>(try_vector_flatting(select->getTrueVal(), ctx), ctx.CodeGenCtx())
+                        ->setOperand<2>(try_vector_flatting(select->getFalseVal(), ctx), ctx.CodeGenCtx()));
     } else if (ctx.CodeGenCtx().isRISCV64()) {
         Err::todo("");
     }

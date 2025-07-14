@@ -63,10 +63,9 @@ void RV64Printer::rv64_printout(const MIRInst &minst) {
     case RVOpC::LD:
     case RVOpC::FLW:
     case RVOpC::FLD:
+        // offset can be nullptr
         if (!minst.getOp(2))
             ops[2] = "0";
-        if (!minst.getOp(1)->isISA())
-            ops[1] = "sp";
         write(ops[0], ", ", ops[2], "(", ops[1], ")");
         break;
     case RVOpC::SB:

@@ -3,9 +3,13 @@
 
 #include "mir/armv8/isel.hpp"
 #include "mir/MIR.hpp"
+#include "mir/armv8/base.hpp"
+#include "mir/info.hpp"
 #include "mir/passes/transforms/isel.hpp"
 #include "mir/tools.hpp"
+#include "utils/exception.hpp"
 #include <algorithm>
+#include <cstdint>
 #include <optional>
 
 using namespace MIR;
@@ -37,7 +41,7 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
 
     // LAMBDA BEGIN
 
-    auto trySwapOps = [&](MIRInst_p minst) -> void {
+    auto trySwapOps = [&](const MIRInst_p &minst) -> void {
         auto lhs = minst->getOp(1);
         auto rhs = minst->getOp(2);
 
@@ -159,9 +163,10 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         }
 
         if (rhs->isImme()) {
-            ///@todo maybe need a check according to the type
-
-            minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
+            if (rhs->isExImme() && !ARMv8::isBitMaskImme<uint64_t>(rhs->imme()) ||
+                ARMv8::isBitMaskImme<uint32_t>(static_cast<uint32_t>(rhs->imme()))) {
+                minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
+            }
         }
     } break;
     case OpC::InstShl:
@@ -290,7 +295,7 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         auto lhs = minst->getOp(1);
         auto rhs = minst->getOp(2);
 
-        auto isVec = def->type() == OpT::Floatvec;
+        auto isVec = def->type() == OpT::Floatvec4;
 
         auto minst_fdiv = ctx.newInst(isVec ? OpC::InstFDiv : OpC::InstVFDiv);
         auto minst_fmul = ctx.newInst(isVec ? OpC::InstFMul : OpC::InstVFMul);
@@ -375,8 +380,51 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         auto loaded = loadImm(imme);
         ctx.newInst(OpC::InstCopyToReg)->setOperand<0>(def, ctx.codeGenCtx())->setOperand<1>(loaded, ctx.codeGenCtx());
     } break;
+    case OpC::InstVInsert: {
+        auto def = minst->ensureDef();
+        auto idx = minst->getOp(1)->imme();
+        auto elem = minst->getOp(2);
+
+        if (!elem->isImme()) {
+            break;
+        }
+
+        if (idx == 0) {
+            def->type() == OpT::Floatvec4 ? minst->resetOpcode(OpC::InstLoadFPImm)
+                                          : minst->resetOpcode(OpC::InstLoadImm);
+            minst->setOperand<1>(elem, ctx.codeGenCtx());
+        } else {
+            MIRInst_p load = nullptr;
+
+            OpT type;
+
+            switch (def->type()) {
+            case OpT::Intvec4:
+                type = OpT::Int32;
+                break;
+            case OpT::Int64vec2:
+                type = OpT::Int64;
+                break;
+            case OpT::Floatvec4:
+                type = OpT::Float32;
+            default:
+                Err::unreachable();
+            }
+
+            auto op = MIROperand::asVReg(ctx.codeGenCtx().nextId(), type);
+
+            def->type() == OpT::Floatvec4 ? load = ctx.newInst(OpC::InstLoadFPImm)
+                                          : load = ctx.newInst(OpC::InstLoadImm);
+
+            load->setOperand<0>(op, ctx.codeGenCtx());
+            load->setOperand<1>(elem, ctx.codeGenCtx());
+
+            minst->setOperand<2>(op, ctx.codeGenCtx());
+        }
+
+        modified = true;
+    } break;
     default:
-        ///@note 各种copy, 内存访问没有合法化
         break;
     }
     return modified;
@@ -404,35 +452,34 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
 
         auto imm = static_cast<unsigned>(imme->imme()); ///@bug
 
-        ///@note movz(lo) + movk(hi) + (fmov) + copy
-
         auto dst = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
 
-        auto movz = MIRInst::make(ARMOpC::MOVZ)
-                        ->setOperand<0>(dst, ctx)
-                        ->setOperand<1>(MIROperand::asImme(imm & 0XFFFF, OpT::Int32), ctx);
+        if (ARMv8::isBitMaskImme(imm)) {
+            ///@note mov + copy
 
-        minsts.insert(iter, movz);
+            auto mov = MIRInst::make(ARMOpC::MOV)
+                           ->setOperand<0>(dst, ctx)
+                           ->setOperand<1>(MIROperand::asImme(imm, OpT::Int32), ctx);
 
-        if (imm > 0XFFFF) {
-            auto movk = MIRInst::make(ARMOpC::MOVK)
+            minsts.insert(iter, mov);
+        } else {
+            ///@note movz(lo) + movk(hi) + (fmov) + copy
+
+            auto movz = MIRInst::make(ARMOpC::MOVZ)
                             ->setOperand<0>(dst, ctx)
-                            ->setOperand<1>(MIROperand::asImme(imm >> 16, OpT::Int32), ctx)
-                            ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special), ctx); // lsl only
+                            ->setOperand<1>(MIROperand::asImme(imm & 0XFFFF, OpT::Int32), ctx);
 
-            minsts.insert(iter, movk);
+            minsts.insert(iter, movz);
+
+            if (imm > 0XFFFF) {
+                auto movk = MIRInst::make(ARMOpC::MOVK)
+                                ->setOperand<0>(dst, ctx)
+                                ->setOperand<1>(MIROperand::asImme(imm >> 16, OpT::Int32), ctx)
+                                ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special), ctx); // lsl only
+
+                minsts.insert(iter, movk);
+            }
         }
-
-        // if (def->type() == OpT::Float32) {
-        //     auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Float32);
-
-        //     auto movf = MIRInst::make(ARMOpC::MOVF)->setOperand<0>(fdst, ctx)->setOperand<1>(dst, ctx);
-
-        //     minsts.insert(iter, movf);
-
-        //     dst = fdst;
-        // }
-        ///@todo vectorize
 
         ///@brief rewrite
         minst->resetOpcode(OpC::InstCopy);
@@ -507,7 +554,7 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
 
         } else if (imm == 0.0f) {
             ///@brief movi + copy
-            auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Floatvec);
+            auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Floatvec4);
             auto movi = MIRInst::make(ARMOpC::MOVI)->setOperand<0>(fdst, ctx)->setOperand<1>(imme, ctx);
 
             minsts.insert(iter, movi);
@@ -773,8 +820,7 @@ void ARMIselInfo::legalizeCopy(InstLegalizeContext &_ctx) const {
         movType = ARMOpC::MOV; // orr
     } else if (defType == OpT::Float && useType == OpT::Float) {
         movType = ARMOpC::MOV_V; // .16b
-    } else if (inSet(defType, OpT::Intvec, OpT::Int64vec, OpT::Floatvec) &&
-               inSet(useType, OpT::Intvec, OpT::Int64vec, OpT::Floatvec)) {
+    } else if (inRange(defType, OpT::Intvec2, OpT::Floatvec4) && inRange(useType, OpT::Intvec2, OpT::Floatvec4)) {
         movType = ARMOpC::MOV_V;
     } else {
         movType = ARMOpC::MOVF;

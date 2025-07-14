@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include <cstdint>
+#include <cstdlib>
 #ifndef GNALC_MIR_ARMV8_BASE_HPP
 #define GNALC_MIR_ARMV8_BASE_HPP
 
@@ -57,7 +59,7 @@ template <typename T> inline bool is12ImmeWithProbShift(T imm) {
     Err::gassert(std::is_same_v<T, unsigned> || std::is_same_v<T, uint64_t>,
                  "is12ImmeWithShift: cant convert to encode");
 
-    auto imme = static_cast<uint64_t>(imm);
+    auto imme = std::abs(static_cast<int64_t>(imm)); // add <-> sub cmp <-> cmn
 
     if (imme < 4096 || (imme % 0x1000 == 0 && (imme >> 12) < 4096)) {
         return true;
@@ -162,7 +164,7 @@ template <typename T> inline bool isBitMaskImme(T imm) {
         }
     }
 
-    if (pattern_len <= pattern_len_max) {
+    if (pattern_len < pattern_len_max) {
         return true;
     } else {
         return false;

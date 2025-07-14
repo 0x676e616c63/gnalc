@@ -95,7 +95,9 @@ inline InstExecInfo schedInfoImpl(OpC opcode) {
     case OpC::InstVIcmp:
     case OpC::InstVFcmp:
         return {6, 1, A53UnitFPALU};
-    // case OpC::InstVSDiv:
+    case OpC::InstLoadLiteral:
+        return {4, 1, A53UnitLdSt};
+        // case OpC::InstVSDiv:
     // case OpC::InstVUDiv:
     // case OpC::InstShuffle:
     // case OpC::InstVLoad:

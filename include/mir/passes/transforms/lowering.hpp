@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include "ir/type.hpp"
 #include "ir/type_alias.hpp"
+#include "mir/info.hpp"
+#include <optional>
 #ifndef GNALC_MIR_BUILD_LOWERING_HPP
 #define GNALC_MIR_BUILD_LOWERING_HPP
 
@@ -141,6 +144,8 @@ public:
     MIROperand_p newVReg(const IR::VectorType &);
     MIROperand_p newVReg(const OpT &);
 
+    MIROperand_p newLiteral(string liter, size_t size, size_t align);
+
     void newInst(const MIRInst_p &);
     void addCopy(const MIROperand_p &dst, const MIROperand_p &src);
     void addInstBeforeBr(const MIRInst_p_l &);
@@ -178,6 +183,10 @@ void lowerInst(const IR::pCast &, LoweringContext &); // copy
 void lowerInst(const IR::pGep &, LoweringContext &);
 void lowerInst(const IR::pCall &, LoweringContext &);
 void lowerInst(const IR::pSelect &, LoweringContext &);
+
+// helpr vectorflating to literal
+MIROperand_p vector_flatting(const IR::pVal &, LoweringContext &);
+MIROperand_p try_vector_flatting(const IR::pVal &, LoweringContext &);
 
 // vector lowering
 void lowerInst_v(const IR::pInsert &, LoweringContext &);

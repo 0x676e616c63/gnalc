@@ -315,6 +315,10 @@ void CFGsimplifyAfterRAImpl::brEli() {
             continue;
         }
 
+        if (mblk->useLiteral()) {
+            continue; // .ltorg 会破坏执行流
+        }
+
         auto mblk_br = br->getOp(1)->reloc()->as<MIRBlk>();
 
         if (mblk_br != mblk->nxt()) {

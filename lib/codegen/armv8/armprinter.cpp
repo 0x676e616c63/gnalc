@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 #include "codegen/armv8/armprinter.hpp"
+#include <cmath>
+#include <string>
 
 using namespace MIR;
 
@@ -110,12 +112,18 @@ void ARMA64Printer::printout(const MIRFunction &_mfunc) {
 }
 
 void ARMA64Printer::printout(const MIRBlk &mblk) {
+    auto log2 = [](unsigned pow) { return ctz_wrapper(pow); };
+
     const auto &sym = mblk.getmSym();
 
     outStream << sym + ":\n"; // lable
 
     for (auto &minst : mblk.Insts()) {
         printout(*minst);
+    }
+
+    if (mblk.useLiteral()) {
+        outStream << "    .align " + std::to_string(log2(mblk.getFirstAlign())) + "\n    .ltorg\n";
     }
 
     ///@todo make code layout align to enhance cache performance
@@ -229,6 +237,9 @@ void ARMA64Printer::printout(const MIRInst &minst) {
             break;
         case OpC::InstVCopy:
             outStream << copyPrinter_v(minst);
+            break;
+        case OpC::InstLoadLiteral:
+            outStream << literalPrinter(minst);
             break;
         default:
             Err::unreachable("ARMA64Printer::printout(const MIRInst &):  unknown opc");
