@@ -33,6 +33,8 @@ namespace Test::cfg {
 extern std::string gnalc_path;
 extern std::string gcc_arm_command;
 extern std::string qemu_arm_command;
+extern std::string gcc_rv_command;
+extern std::string qemu_rv_command;
 
 extern std::string global_temp_dir;
        

@@ -39,12 +39,14 @@ public:
 
 public:
     virtual void impl(MIRFunction &, FAM &);
-    RegisterAllocImpl() : mfunc(nullptr), K(Config::MIR::AARCH64_CORE_REGISTER_MAX_NUM), isInitialized(false) {}
+    RegisterAllocImpl() : mfunc(nullptr), K(-1), isInitialized(false) {}
     explicit RegisterAllocImpl(int fpuRegCnt) : mfunc(nullptr), K(fpuRegCnt), isInitialized(false) {}
     virtual ~RegisterAllocImpl() = default;
 
 protected:
     MIRFunction *mfunc;
+    std::shared_ptr<RegisterInfo> registerInfo;
+    std::shared_ptr<FrameInfo> frameInfo;
 
     OperSet precolored;
     OperSet initial;
@@ -227,7 +229,7 @@ class VectorRegisterAllocImpl : public RegisterAllocImpl {
 
 public:
     void impl(MIRFunction &, FAM &) override;
-    VectorRegisterAllocImpl() : RegisterAllocImpl(Config::MIR::AARCH64_FPU_REGISTER_MAX_NUM) {}
+    VectorRegisterAllocImpl() = default;
     ~VectorRegisterAllocImpl() override = default;
 
 protected:

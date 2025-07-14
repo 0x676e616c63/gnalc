@@ -30,8 +30,6 @@ void ARMFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) con
 
     auto mcaller = ctx.CurrentBlk()->getFunction();
 
-    const auto &layOut = ctx.CodeGenCtx().infos.dataLayout;
-
     unsigned stkOffset = 0U; // stk offset
     std::vector<int> offsets;
 
@@ -79,6 +77,20 @@ void ARMFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) con
 
     auto args = callinst->getArgs();
 
+    // FIXME: Immediate issue. Currently all immediate are treated as 64-bit. But the function arguments
+    //        must be handled with care, since caller may use stack to pass arguments.
+    auto getType = [](const IR::pVal &arg) -> OpT {
+        if (arg->getType()->getTrait() == IR::IRCTYPE::PTR)
+            return OpT::Int64;
+
+        auto btype = arg->getType()->as<IR::BType>();
+        if (btype->getInner() == IR::IRBTYPE::FLOAT)
+            return OpT::Float32;
+
+        // TODO: add consistency check
+        return OpT::Int32;
+    };
+
     ///@note arg on stk
     for (int i = 0; i < args.size(); ++i) {
         const auto offset = offsets[i];
@@ -104,7 +116,7 @@ void ARMFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) con
         ctx.newInst(MIRInst::make(OpC::InstStoreRegToStack)
                         ->setOperand<1>(mval, ctx.CodeGenCtx())
                         ->setOperand<2>(obj, ctx.CodeGenCtx())
-                        ->setOperand<5>(MIROperand::asImme(getBitWide(mval->type()), OpT::special), ctx.CodeGenCtx()));
+                        ->setOperand<5>(MIROperand::asImme(getBitWide(getType(arg)), OpT::special), ctx.CodeGenCtx()));
     }
 
     // LAMBDA BEGIN
@@ -112,21 +124,6 @@ void ARMFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) con
     auto isSpr = [&passByRegBase, &passBySprRegBase](int offset) -> bool {
         return offset >= passBySprRegBase + passByRegBase;
     };
-    auto getType = [](const IR::pVal &arg) -> OpT {
-        if (arg->getType()->getTrait() == IR::IRCTYPE::PTR) {
-            return OpT::Int64;
-        } else {
-            auto btype = arg->getType()->as<IR::BType>();
-            if (btype->getInner() == IR::IRBTYPE::FLOAT) {
-                return OpT::Float32;
-            } else {
-                return OpT::Int32;
-            }
-        }
-
-        ///@todo vectorize
-    };
-
     // LAMBDA END
 
     ///@note arg in ISAreg
@@ -365,14 +362,23 @@ void ARMFrameInfo::makeReturn(IR::pRet retinst, LoweringContext &ctx) const {
     }
 }
 
-bool ARMFrameInfo::isCallerSaved(const MIROperand &op) const {
-    const auto reg = op.reg();
-    return inRange(static_cast<ARMReg>(reg), ARMReg::X0, ARMReg::X18) ||
-           inRange(static_cast<ARMReg>(reg), ARMReg::V0, ARMReg::V15);
+void ARMFrameInfo::appendCalleeSaveStackSize(uint64_t& allocationBase, uint64_t calleesaves) const {
+    for (auto i = 0; i < 64; ++i, calleesaves >>= 1) {
+        if (static_cast<ARMReg>(i) == ARMReg::V0) {
+            ///@note start to stage V<>, make it ailgn
+            allocationBase += allocationBase % 16 ? 8 : 0;
+        }
+
+        if (static_cast<ARMReg>(i) < ARMReg::V0 && calleesaves % 2) {
+            allocationBase += 8; // X<>
+        } else if (static_cast<ARMReg>(i) >= ARMReg::V0 && calleesaves % 2) {
+            allocationBase += 16;
+        }
+    }
 }
 
-bool ARMFrameInfo::isCalleeSaved(const MIROperand &op) const {
-    return !isCallerSaved(op); //
+bool ARMFrameInfo::isFuncCall(const MIRInst_p &inst) const {
+    return inst->isARM() && inst->opcode<ARMOpC>() == ARMOpC::BL;
 }
 
 void ARMFrameInfo::makePostSAPrologue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const {

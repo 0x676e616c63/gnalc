@@ -4,7 +4,24 @@
 #include "runner.hpp"
 
 namespace Test {
-TestResult run_test(const TestData &data, bool only_run_frontend, size_t times, bool only_compile_no_exec) {
+std::string queryQEMU(Target target) {
+    if (target == Target::ARMv8)
+        return cfg::qemu_arm_command;
+    if (target == Target::RISCV64)
+        return cfg::qemu_rv_command;
+    Err::unreachable();
+    return "";
+}
+std::string queryGCC(Target target) {
+    if (target == Target::ARMv8)
+        return cfg::gcc_arm_command;
+    if (target == Target::RISCV64)
+        return cfg::gcc_rv_command;
+    Err::unreachable();
+    return "";
+}
+
+TestResult run_test(const TestData &data, Target target, size_t times, bool only_compile_no_exec) {
     Err::gassert(times != 0);
     auto testcase_in = data.sy.path().parent_path().string() + "/" + data.sy.path().stem().string() + ".in";
     auto out_file_id = format("{}_{}", data.sy.path().stem().string(), make_pathname(data.mode_id));
@@ -17,7 +34,7 @@ TestResult run_test(const TestData &data, bool only_run_frontend, size_t times, 
 
     std::string ir_asm_gen_command, link_command, exec_command;
     std::string out_source;
-    if (only_run_frontend) {
+    if (target == Target::LLVM) {
         out_source = format("{}/{}.ll", data.temp_dir, out_file_id);
         auto outbc = format("{}/{}.bc", data.temp_dir, out_file_id);
 
@@ -33,16 +50,10 @@ TestResult run_test(const TestData &data, bool only_run_frontend, size_t times, 
 
         ir_asm_gen_command = data.ir_asm_gen(newsy, out_source);
 
-        link_command = format("{} {} {} -o {}", cfg::gcc_arm_command, out_source, data.sylib, outexec);
+        link_command = format("{} {} {} -o {}", queryGCC(target), out_source, data.sylib, outexec);
 
-        exec_command = format("{} {} < {} > {} 2>{}", cfg::qemu_arm_command, outexec,
+        exec_command = format("{} {} < {} > {} 2>{}", queryQEMU(target), outexec,
                               std::filesystem::exists(testcase_in) ? testcase_in : "/dev/null", output, outtime);
-        // link_command = format("{} {} {} -o {}",
-        //     "clang", out_source, data.sylib, outexec);
-        //
-        // exec_command =
-        //     format("{} < {} > {} 2>{}",
-        //            outexec, std::filesystem::exists(testcase_in) ? testcase_in : "/dev/null", output, outtime);
     }
 
     // /bin/echo is the one in GNU coreutils
@@ -50,7 +61,7 @@ TestResult run_test(const TestData &data, bool only_run_frontend, size_t times, 
     exec_command += R"(;/bin/echo -e "\n"$? >> )" + output;
 
     println("");
-    println("|  Running '{}' {} command: '{}'", data.mode_id, only_run_frontend ? "irgen" : "asmgen",
+    println("|  Running '{}' {} command: '{}'", data.mode_id, target == Target::LLVM ? "irgen" : "asmgen",
             ir_asm_gen_command);
 
     if (std::system(ir_asm_gen_command.c_str()) != 0)
@@ -84,16 +95,16 @@ TestResult run_test(const TestData &data, bool only_run_frontend, size_t times, 
     return {out_source, syout, output, time_elapsed};
 }
 
-CheckResult check_ir_or_bin(const CheckIRBinData &data, bool only_run_frontend) {
+CheckResult check_ir_or_bin(const CheckIRBinData &data, Target target) {
     auto outtime = format("{}/{}.time", data.temp_dir, data.id);
     auto output = format("{}/{}.out", data.temp_dir, data.id);
 
     std::string exec_command;
-    if (only_run_frontend) {
+    if (target == Target::LLVM) {
         exec_command = format("lli {} < {} > {} 2>{}", data.ir_or_bin,
                               std::filesystem::exists(data.input) ? data.input : "/dev/null", output, outtime);
     } else {
-        exec_command = format("{} {} < {} > {} 2>{}", cfg::qemu_arm_command, data.ir_or_bin,
+        exec_command = format("{} {} < {} > {} 2>{}", queryQEMU(target), data.ir_or_bin,
                               std::filesystem::exists(data.input) ? data.input : "/dev/null", output, outtime);
     }
 
@@ -111,9 +122,9 @@ CheckResult check_ir_or_bin(const CheckIRBinData &data, bool only_run_frontend) 
     return {syout, output, time_elapsed};
 }
 
-std::string prepare_sylib(const std::string &global_tmp_dir, bool only_run_frontend, const std::string &sylibc) {
+std::string prepare_sylib(const std::string &global_tmp_dir, Target target, const std::string &sylibc) {
     std::string sylib_to_link;
-    if (only_run_frontend) {
+    if (target == Target::LLVM) {
         sylib_to_link = global_tmp_dir + "/sylib.ll";
 
         // Just a quick and dirty trick to silence llvm-link.
@@ -134,7 +145,7 @@ std::string prepare_sylib(const std::string &global_tmp_dir, bool only_run_front
         sylib_to_link = global_tmp_dir + "/sylib.a";
 
         std::string lib_command =
-            format("{} -c {} -o {} && ar rcs {} {}", cfg::gcc_arm_command, sylibc, sylibo, sylib_to_link, sylibo);
+            format("{} -c {} -o {} && ar rcs {} {}", queryGCC(target), sylibc, sylibo, sylib_to_link, sylibo);
 
         println("Running '{}'.", lib_command);
         std::system(lib_command.c_str());
@@ -143,7 +154,7 @@ std::string prepare_sylib(const std::string &global_tmp_dir, bool only_run_front
 }
 
 std::vector<std::filesystem::directory_entry> gather_test_files(const std::string &curr_test_dir, RunSet &run,
-                                                                       SkipSet &skip) {
+                                                                SkipSet &skip) {
     std::vector<std::filesystem::directory_entry> test_files;
 
     for (const auto &p : std::filesystem::directory_iterator(curr_test_dir)) {
@@ -202,4 +213,4 @@ void print_run_skip_status(const RunSet &run, const SkipSet &skip) {
         }
     }
 }
-}
+} // namespace Test

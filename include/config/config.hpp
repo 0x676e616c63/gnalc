@@ -82,7 +82,7 @@ constexpr auto LOOP_PARALLEL_ATOMIC_ADD_I32 = "@gnalc_atomic_add_i32";
 constexpr auto LOOP_PARALLEL_ATOMIC_ADD_F32 = "@gnalc_atomic_add_f32";
 constexpr auto LOOP_PARALLEL_GLOBALVAR_NAME_PREFIX = "@parallel.global";
 constexpr auto LOOP_PARALLEL_BODY_FUNCTION_NAME_PREFIX = "@parallel.fn";
-constexpr auto LOOP_PARALLEL_SMALL_TASK_THRESHOLD = 0; // FIXME: zero for debugging
+constexpr auto LOOP_PARALLEL_SMALL_TASK_THRESHOLD = 128;
 
 // Run Test Pass
 constexpr auto RUN_TEST_TEMP_DIR = "gnalc_run_test_pass";
@@ -93,11 +93,5 @@ namespace Config::LegacyMIR {
 constexpr auto CORE_REGISTER_MAX_NUM = 12; // r0 ~ r10 , with ip. most probably fp(r11), sometimes lr(r14)
 constexpr auto FPU_REGISTER_MAX_NUM = 32;
 } // namespace Config::MIR
-
-namespace Config::MIR {
-// Register Allocation
-constexpr auto AARCH64_CORE_REGISTER_MAX_NUM = 30; // X0 ~ X29
-constexpr auto AARCH64_FPU_REGISTER_MAX_NUM = 32;  // V0 ~ V31
-} // namespace Config::MIR_new
 
 #endif

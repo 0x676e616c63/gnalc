@@ -582,6 +582,16 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
 
     return;
 }
+
+void ARMIselInfo::legalizeWithPtrLoad(MIRInst_p minst) const {
+    minst->resetOpcode(ARMOpC::LDR);
+    Err::gassert(minst->getOp(5) != nullptr, "Miss size info");
+}
+void ARMIselInfo::legalizeWithPtrStore(MIRInst_p minst) const {
+    minst->resetOpcode(ARMOpC::STR);
+    Err::gassert(minst->getOp(5) != nullptr, "Miss size info");
+}
+
 void ARMIselInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop, const StkObj &obj) const {
 
     ///@warning armv8的交叉装载ld1, ld2, ld3不支持变址寻址, 甚至不支持常量偏移

@@ -46,9 +46,9 @@ unsigned MIR::typeBitwide(const IR::pType &type) {
     if (auto btype = type->as<IR::BType>()) {
 
         if (btype->getInner() == IR::IRBTYPE::I1)
-            return 4;
+            return 1;
         else if (btype->getInner() == IR::IRBTYPE::I8)
-            return 4;
+            return 1;
         else if (btype->getInner() == IR::IRBTYPE::I32)
             return 4;
         else if (btype->getInner() == IR::IRBTYPE::I64)
@@ -118,22 +118,33 @@ MIROperand_p LoweringContext::mapOperand(const IRVal_p &value) {
         }
 
     } else if (auto value_glo = value->as<IR::GlobalVariable>()) {
+        if (mCodeGenCtx.isARMv8()) {
+            // get from mValMap, but would insert loadInst
+            ///@brief   adrp    x0, :got:arr
+            ///@brief   ldr     x0, [x0, :got_lo12:arr]
 
-        // get from mValMap, but would insert loadInst
-        ///@brief   adrp    x0, :got:arr
-        ///@brief   ldr     x0, [x0, :got_lo12:arr]
+            auto mReloc = mGlobalMap.at(value_glo->getName());
 
-        auto mReloc = mGlobalMap.at(value_glo->getName());
+            auto mglo = MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Int64);
 
-        auto mglo = MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Int64);
+            newInst(MIRInst::make(ARMOpC::ADRP_LDR)
+                        ->setOperand<0>(mglo, mCodeGenCtx)
+                        ->setOperand<1>(MIROperand::asReloc(mReloc->reloc()), mCodeGenCtx));
 
-        newInst(MIRInst::make(ARMOpC::ADRP_LDR)
-                    ->setOperand<0>(mglo, mCodeGenCtx)
-                    ->setOperand<1>(MIROperand::asReloc(mReloc->reloc()), mCodeGenCtx));
+            return mglo;
+        }
+        else if (mCodeGenCtx.isRISCV64()) {
+            auto mReloc = mGlobalMap.at(value_glo->getName());
+            auto mglo = MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Int64);
+            newInst(MIRInst::make(RVOpC::LA)
+                        ->setOperand<0>(mglo, mCodeGenCtx)
+                        ->setOperand<1>(MIROperand::asReloc(mReloc->reloc()), mCodeGenCtx));
 
-        return mglo;
+            return mglo;
+        }
+        else Err::unreachable("Unsupported arch");
     }
-
+    Err::unreachable();
     return nullptr; // just to make clang happy
 }
 

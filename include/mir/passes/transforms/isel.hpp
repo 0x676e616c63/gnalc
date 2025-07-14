@@ -34,7 +34,15 @@ public:
     void impl(MIRFunction *mfunc);
 
     ///@note just a new inst insert somewhere, set ops yourself
-    MIRInst_p newInst(OpC);
+    template <typename T>
+    MIRInst_p newInst(T mopcode) {
+        static_assert(std::is_same_v<T, OpC> || std::is_same_v<T, ARMOpC> || std::is_same_v<T, RVOpC>);
+        auto minst = MIRInst::make(mopcode);
+
+        mCurrentBlk->Insts().insert(mInstInsertPos, minst);
+
+        return minst;
+    }
 
     ///@note used in matchAndSelectimpl
     bool notUsed(const MIROperand_p &) const;

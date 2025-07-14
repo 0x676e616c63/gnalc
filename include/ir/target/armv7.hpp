@@ -38,7 +38,7 @@ public:
             return false;
         return true;
     }
-    bool isLibCallSupported(const std::string &lib_fn_name) const override { return true; }
+    bool isIntrinsicSupported(const std::string &lib_fn_name) const override { return true; }
 };
 } // namespace IR
 #endif //TARGET_HPP

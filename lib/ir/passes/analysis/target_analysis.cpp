@@ -10,4 +10,8 @@ PM::UniqueKey TargetAnalysis::Key;
 pTarget TargetAnalysis::run(Function &f, FAM &fpm) {
     return target;
 }
+
+pTarget TargetAnalysis::run(Module &f, MAM &fpm) {
+    return target;
+}
 } // namespace IR

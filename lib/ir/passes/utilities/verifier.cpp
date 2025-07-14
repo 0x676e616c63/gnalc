@@ -73,6 +73,14 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
                                         inst_user->getName(),
                                         "'. The user is in no block. Did you forget to clear a pass's temporaries?");
                     ++fatal_error_cnt;
+                    continue;
+                }
+
+                if (inst_user->getParent()->getParent().get() != &function) {
+                    Logger::logCritical("[VerifyPass]: User '", inst_user->getName(),
+                                        "' is not in the same function as its operand '", inst->getName(), "'.");
+                    ++fatal_error_cnt;
+                    continue;
                 }
             }
         }
@@ -187,8 +195,14 @@ PM::PreservedAnalyses VerifyPass::run(Function &function, FAM &fam) {
     }
 
     if (fatal_error_cnt == 0) {
-        auto domtree = fam.getResult<DomTreeAnalysis>(function);
+        auto& domtree = fam.getResult<DomTreeAnalysis>(function);
         for (const auto &bb : function) {
+            if (!domtree.isReachableFromEntry(bb)) {
+                Logger::logCritical("[VerifyPass]: DomTree said BasicBlock '", bb->getName(),
+                    "' is unreachable, but can't detected by CFG?");
+                ++fatal_error_cnt;
+                break;
+            }
             for (const auto &inst : bb->all_insts()) {
                 for (const auto &use : inst->self_uses()) {
                     auto user = use->getUser()->as<Instruction>();

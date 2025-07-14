@@ -40,14 +40,9 @@
 #include "codegen/riscv64/rv64printer.hpp"
 #include "ir/cfgbuilder.hpp"
 #include "ir/passes/analysis/target_analysis.hpp"
-#include "ir/target/armv8.hpp"
-#include "mir/armv8/frame.hpp"
-#include "mir/armv8/isel.hpp"
 #include "mir/passes/pass_builder.hpp"
 #include "mir/passes/pass_manager.hpp"
 #include "mir/passes/transforms/lowering.hpp"
-#include "mir/riscv64/frame.hpp"
-#include "mir/riscv64/isel.hpp"
 #include "sir/passes/utilities/sirprinter.hpp"
 
 #include <fstream>
@@ -74,6 +69,7 @@ int main(int argc, char **argv) {
     bool only_compilation = false;              // -S
     bool emit_sir = false;                      // -emit-sir
     bool emit_llvm = false;                     // -emit-llvm
+    bool emit_llvm_with_asm = false;            // -emit-llvm-with-asm
     bool emit_llc = false;                      // -emit-llc
     bool ast_dump = false;                      // -ast-dump
     bool std_pipeline = false;                  // -std-pipeline
@@ -131,6 +127,8 @@ int main(int argc, char **argv) {
             emit_sir = true;
         else if (arg == "-emit-llvm")
             emit_llvm = true;
+        else if (arg == "-emit-llvm-with-asm")
+            emit_llvm_with_asm = true;
         else if (arg == "-with-runtime")
             with_runtime = true;
         else if (arg == "-emit-llc")
@@ -267,6 +265,7 @@ General Options:
   -O0                  - Optimization level 0 (disable all optimization)
   -O,-O1, -fixed-point - Optimization level 1 (fixed-point pipeline)
   -emit-llvm           - Use LLVM intermediate representation for output
+  -emit-llvm-with-asm  - Enable both LLVM IR and Asm output
   -ast-dump            - Build and dump AST (Unavailable in GGC mode)
   --log <log-level>    - Set logging level (debug|info|none)
   -h, --help           - Display this help message
@@ -490,17 +489,17 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
 
     switch (target) {
     case Target::ARMv8:
-        IR::PassBuilder::registerARMv8TargetAnalyses(fam);
+        IR::PassBuilder::registerARMv8TargetAnalyses(fam, mam);
         break;
     case Target::ARMv7:
-        IR::PassBuilder::registerARMv7TargetAnalyses(fam);
+        IR::PassBuilder::registerARMv7TargetAnalyses(fam, mam);
         break;
     case Target::RISCV64:
-        IR::PassBuilder::registerRISCV64TargetAnalyses(fam);
+        IR::PassBuilder::registerRISCV64TargetAnalyses(fam, mam);
         break;
     case Target::BrainFk:
     case Target::BrainFk3Tape:
-        IR::PassBuilder::registerBrainFkTargetAnalyses(fam);
+        IR::PassBuilder::registerBrainFkTargetAnalyses(fam, mam);
         break;
     default:
         std::cerr << "Error: Unsupported target." << std::endl;
@@ -522,10 +521,12 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
     else
         mpm = IR::PassBuilder::buildModulePipeline(pm_options);
 
-    if (emit_llvm) {
+    if (emit_llvm || emit_llvm_with_asm) {
         mpm.addPass(IR::PrintModulePass(*poutstream, with_runtime));
-        mpm.run(generator.get_module(), mam);
-        return 0;
+        if (!emit_llvm_with_asm) {
+            mpm.run(generator.get_module(), mam);
+            return 0;
+        }
     }
 
 #ifdef GNALC_EXTENSION_BRAINFK
@@ -594,18 +595,7 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
     }
 
     MIR::BkdInfos infos{.arch = mir_arch};
-    std::shared_ptr<MIR::ISelInfo> isel;
-    std::shared_ptr<MIR::FrameInfo> frame;
-    if (target == Target::ARMv8) {
-        isel = std::make_shared<MIR::ARMIselInfo>();
-        frame = std::make_shared<MIR::ARMFrameInfo>();
-    }
-    else {
-        isel = std::make_shared<MIR::RVIselInfo>();
-        frame = std::make_shared<MIR::RVFrameInfo>();
-    }
-
-    MIR::CodeGenContext ctx{infos, isel, frame};
+    auto ctx = MIR::CodeGenContext::create(infos);
     auto mModule = MIR::loweringModule(generator.get_module(), ctx);
 
     MIR::FAM bkd_fam;
@@ -619,7 +609,7 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
     if (mir_debug_pipeline)
         bkd_mpm = MIR::PassBuilder::buildModuleDebugPipeline();
     else
-        bkd_mpm = MIR::PassBuilder::buildModulePipeline(bkd_opt_info);
+        bkd_mpm = MIR::PassBuilder::buildModulePipeline(mir_arch, bkd_opt_info);
 
     bkd_mpm.run(*mModule, bkd_mam);
 

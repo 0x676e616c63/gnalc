@@ -2,16 +2,17 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#include "mir/tools.hpp"
-#include "utils/exception.hpp"
-#include <cstddef>
 #ifndef GNALC_MIR_MIR_HPP
 #define GNALC_MIR_MIR_HPP
 
+#include "mir/tools.hpp"
+#include "utils/exception.hpp"
 #include "armv8/base.hpp"
 #include "mir/info.hpp"
 #include "riscv64/base.hpp"
 #include "utils/generic_visitor.hpp"
+
+#include <cstddef>
 #include <algorithm>
 #include <array>
 #include <list>
@@ -39,6 +40,7 @@ enum class OperandType : uint32_t {
     Ptr = Int64,
     Float, // V<> 默认位宽
     Float32,
+    Float64,
     Intvec2,
     Intvec3, // not impl
     Intvec4,
@@ -70,6 +72,7 @@ inline unsigned getBitWide(OpT type) {
     case OpT::Int32:
     case OpT::Float32:
         return 4;
+    case OpT::Float64:
     case OpT::Int64:
     case OpT::Intvec2:
     case OpT::Floatvec2:
@@ -348,11 +351,11 @@ public:
 
     // builder begin
 
-    /// @note asISAReg 和 asVReg 使用构型相同的MIRReg, 区别在于范围不同
+    /// @note asISAReg 和 asVReg 使用构型相同的 MIRReg, 区别在于范围不同
     /// @note VReg 的起始位置会大于 ISAReg
-    /// @note asISAReg 一般直接传入ARMReg的值, 构造出的Operand不存常量/变量池
-    /// @note asVReg 一般由ctx传递id
-    /// @note ISA序号, 或者VReg id, 都由reg()获得, 可以考虑在此基础上进一步具象化和检查
+    /// @note asISAReg 一般直接传入 ARMReg/RVReg 的值, 构造出的 Operand 不存常量/变量池
+    /// @note asVReg 一般由 ctx 传递 id
+    /// @note ISA 序号, 或者 VReg id, 都由 reg() 获得, 可以考虑在此基础上进一步具象化和检查
     static MIROperand_p asISAReg(unsigned reg, OpT type) {
         Err::gassert(isISAReg(reg), "MIROperand::asISAReg: input reg doesnt match: " + std::to_string(reg));
 
@@ -400,11 +403,13 @@ public:
     ///@note we directly chang reg of MIRReg
     void assignColor(unsigned color) {
         // Err::gassert(isVReg(), "assignColor: try assign color to a non-reg");
-        Err::gassert(color >= ARMReg::X0 && color <= ARMReg::V31,
-                     "assignColor: unknown reg color " + std::to_string(color));
-        Err::gassert(color >= ARMReg::V0 && inRange(mType, OpT::Float, OpT::Floatvec4) ||
-                         color <= ARMReg::X29 && inRange(mType, OpT::Int, OpT::Int64),
-                     "assignColor: register bank dont match mtype");
+
+        // FIXME: Fix this check for RV.
+        // Err::gassert(color >= ARMReg::X0 && color <= ARMReg::V31,
+        //              "assignColor: unknown reg color " + std::to_string(color));
+        // Err::gassert(color >= ARMReg::V0 && inRange(mType, OpT::Float, OpT::Floatvec4) ||
+        //                  color <= ARMReg::X29 && inRange(mType, OpT::Int, OpT::Int64),
+        //              "assignColor: register bank dont match mtype");
 
         auto &VReg = std::get<MIRReg_p>(mOperand);
 
@@ -443,6 +448,8 @@ public:
     auto opcode() const { return mOpcode; }
 
     bool isGeneric() const { return mOpcode.index() == 0; }
+    bool isARM() const { return mOpcode.index() == 1; }
+    bool isRV() const { return mOpcode.index() == 2; }
 
     MIRInst &resetOpcode(OpC opcode) {
         mOpcode = opcode;
@@ -695,7 +702,7 @@ private:
 
     // infos
     bool leafFunc = true;
-    uint64_t calleesaveRegisters = 0x60000000ULL; // fp & lr (default)
+    uint64_t calleesaveRegisters = 0LL; // initialized by RegisterAlloc
     size_t spilled = 0LL;
     bool largeStk = false; // may use fp(X29)
     unsigned stkSize = 0LL;
@@ -891,12 +898,6 @@ struct ARMInstTemplate {
     static void registerInc(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, unsigned, CodeGenContext &);
     static void registerDec(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, unsigned, CodeGenContext &);
     static void registerAdjust(MIRInst_p_l, MIRInst_p_l::iterator, ARMReg, int, CodeGenContext &);
-};
-
-struct RVInstTemplate {
-    static void registerInc(MIRInst_p_l, MIRInst_p_l::iterator, RVReg, unsigned, CodeGenContext &);
-    static void registerDec(MIRInst_p_l, MIRInst_p_l::iterator, RVReg, unsigned, CodeGenContext &);
-    static void registerAdjust(MIRInst_p_l, MIRInst_p_l::iterator, RVReg, int, CodeGenContext &);
 };
 
 }; // namespace MIR

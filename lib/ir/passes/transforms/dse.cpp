@@ -91,12 +91,22 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
                         auto curr = worklist.front();
                         worklist.pop_front();
                         for (const auto &user : curr->inst_users()) {
-                            if (user->getOpcode() != OP::STORE && user->getOpcode() != OP::GEP) {
-                                killed = true;
-                                break;
-                            }
-                            if (user->getOpcode() == OP::GEP)
+                            if (user->getOpcode() == OP::GEP) {
                                 worklist.emplace_back(user);
+                                continue;
+                            }
+
+                            if (auto store_user = user->as<STOREInst>()) {
+                                // Currently this can only happen when a loop is parallelized.
+                                if (store_user->getValue() == curr) {
+                                    killed = true;
+                                    break;
+                                }
+                                continue;
+                            }
+
+                            killed = true;
+                            break;
                         }
                         if (killed)
                             break;

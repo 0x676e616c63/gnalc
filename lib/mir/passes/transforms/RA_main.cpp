@@ -9,6 +9,7 @@
 using namespace MIR;
 
 PM::PreservedAnalyses RegisterAlloc::run(MIRFunction &mfunc, FAM &fam) {
+    mfunc.calleeSaveRegs() = mfunc.Context().registerInfo->initCalleeSaveBitmap();
 
     VectorRegisterAllocImpl vectorRA;
     vectorRA.impl(mfunc, fam);
@@ -50,12 +51,13 @@ void RegisterAllocImpl::clearall() {
 
 void RegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     mfunc = &_mfunc;
+    registerInfo = mfunc->Context().registerInfo;
+    frameInfo = mfunc->Context().frameInfo;
+
     clearall();
 
-    colors.insert({
-        0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14,
-        15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, // no fp
-    });
+    K = registerInfo->getCoreRegisterNum();
+    colors = registerInfo->getCoreRegisterAllocationList();
 
     ///@note remember to modify bitmap of mfunc when assign colors
     Main(fam);
@@ -128,7 +130,7 @@ void RegisterAllocImpl::Build() {
 
                 for (const auto &n : getUnion<MIROperand_p, false>(def, use)) {
                     if (n->isISA()) {
-                        if (n->isa() <= ARMReg::FP) {
+                        if (registerInfo->isCoreReg(n->isa())) {
                             precolored.insert(n);
                             degree[n] = -1;
                         }
@@ -576,12 +578,13 @@ MIROperand_p RegisterAllocImpl::GetAlias(MIROperand_p n) { // NOLINT
 
 void VectorRegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     mfunc = &_mfunc;
+    registerInfo = mfunc->Context().registerInfo;
+    frameInfo = mfunc->Context().frameInfo;
+
     clearall();
 
-    colors.insert({
-        32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
-        48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
-    }); // ARMReg::V0 = 33U
+    K = registerInfo->getFpOrVecRegisterNum();
+    colors = registerInfo->getFpOrVecRegisterAllocationList();
 
     Main(fam);
 
@@ -603,7 +606,7 @@ void VectorRegisterAllocImpl::Build() {
 
                 for (const auto &n : getUnion<MIROperand_p, false>(def, use)) {
                     if (n->isISA()) {
-                        if (n->isa() >= ARMReg::V0) {
+                        if (registerInfo->isFpOrVecReg(n->isa())) {
                             precolored.insert(n);
                             degree[n] = -1;
                         }

@@ -25,8 +25,8 @@ class PassBuilder {
 public:
     static FPM buildFunctionDebugPipeline();
     static MPM buildModuleDebugPipeline();
-    static FPM buildFunctionPipeline(OptInfo opt_info);
-    static MPM buildModulePipeline(OptInfo opt_info);
+    static FPM buildFunctionPipeline(Arch arch, OptInfo opt_info);
+    static MPM buildModulePipeline(Arch arch, OptInfo opt_info);
 
     static void registerModuleAnalyses(MAM &);
     static void registerFunctionAnalyses(FAM &);

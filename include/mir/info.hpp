@@ -54,6 +54,24 @@ using MIRGlobal_p = std::shared_ptr<MIRGlobal>;
 struct StkObj;
 class MIRJmpTable;
 
+class RegisterInfo {
+public:
+    virtual ~RegisterInfo() = default;
+
+    virtual unsigned int getCoreRegisterNum() const = 0;
+    virtual unsigned int getFpOrVecRegisterNum() const = 0;
+    virtual std::set<int> getCoreRegisterAllocationList() const = 0;
+    virtual std::set<int> getFpOrVecRegisterAllocationList() const = 0;
+    virtual bool isCoreReg(unsigned int reg) const = 0;
+    virtual bool isFpOrVecReg(unsigned int reg) const = 0;
+    virtual unsigned int FpOrVecStart() const = 0;
+    virtual uint64_t initCalleeSaveBitmap() const = 0;
+    virtual void updateCalleeSaveBitmapForStackAlloc(uint64_t& bitmap, MIRFunction* mfunc) const = 0;
+
+    virtual bool isCallerSaved(unsigned int reg) const = 0;
+    virtual bool isCalleeSaved(unsigned int reg) const = 0;
+};
+
 class FrameInfo {
 public:
     virtual ~FrameInfo() = default;
@@ -71,9 +89,9 @@ public:
     virtual void makePostSAEpilogue(MIRBlk_p, CodeGenContext &, unsigned) const = 0;
     virtual void insertPrologueEpilogue(MIRFunction *, CodeGenContext &) const = 0;
 
-    ///@note not used
-    virtual bool isCallerSaved(const MIROperand &op) const = 0;
-    virtual bool isCalleeSaved(const MIROperand &op) const = 0;
+    virtual void appendCalleeSaveStackSize(uint64_t& allocation_base, uint64_t bitmap) const = 0;
+
+    virtual bool isFuncCall(const MIRInst_p&) const = 0;
 
     constexpr size_t getStackPointerAlignment() const { return 16; }
 };
@@ -124,6 +142,8 @@ public:
     virtual bool match(MIRInst_p, ISelContext &, bool allow) const = 0;
     virtual bool legalizeInst(MIRInst_p minst, ISelContext &ctx) const = 0;
     virtual void preLegalizeInst(InstLegalizeContext &) = 0;
+    virtual void legalizeWithPtrLoad(MIRInst_p minst) const = 0;
+    virtual void legalizeWithPtrStore(MIRInst_p minst) const = 0;
     virtual void legalizeWithStkOp(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const = 0;
     virtual void legalizeWithStkGep(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const = 0;
     virtual void legalizeWithStkPtrCast(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const = 0;
@@ -136,6 +156,7 @@ public:
 struct CodeGenContext {
     const BkdInfos &infos;
 
+    std::shared_ptr<RegisterInfo> registerInfo;
     std::shared_ptr<ISelInfo> iselInfo;
     std::shared_ptr<FrameInfo> frameInfo;
     // const TargetInstInfo &instInfo;
@@ -158,6 +179,9 @@ struct CodeGenContext {
 
     bool isARMv8() const { return infos.arch == Arch::ARMv8; }
     bool isRISCV64() const { return infos.arch == Arch::RISCV64; }
+
+
+    static CodeGenContext create(const BkdInfos& infos);
 };
 
 }; // namespace MIR

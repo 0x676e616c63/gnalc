@@ -11,21 +11,40 @@
 namespace MIR {
 
 namespace RV64 {
-template <typename T> bool isFitMemOffset(T offset) { return offset >= -2048 && offset < 2048; }
+// Immediate that can be encoded directly in an instruction is 12 bits wide.
+// But in RISCV64, the value is sign-extended to 64 bits.
+// Thus, `li x6, -1` and `li x6, 4294967295 (which is 0xffffffff)` is not the same.
+// However, 32-bit -1 is encoded to an unsigned int in MIROperand. But when getting it from `imme()`,
+// we got one uint64_t with that value.
+// Therefore, a width must be specified to distinguish values like `-1` and `4294967295`.
+// FIXME: Refactor immediate encoding in MIROperand.
+inline bool is12BitImm(uint64_t imm, bool is_mir_ext) {
+    if (is_mir_ext) {
+        auto signed_val = static_cast<int64_t>(imm);
+        return signed_val >= -2048 && signed_val < 2048;
+    }
 
-template <typename T> bool is12BitImm(T imm) { return imm >= -2048 && imm < 2048; }
+    auto signed_val = static_cast<int32_t>(imm);
+    return signed_val >= -2048 && signed_val < 2048;
+}
 } // namespace RV64
 
 enum class RVReg : uint32_t {
     X0,
+    ZERO = X0,
     X1,
+    RA = X1,
     X2,
+    SP = X2,
     X3,
+    GP = X3,
     X4,
+    TP = X4,
     X5,
     X6,
     X7,
     X8,
+    FP = X8,
     X9,
     X10,
     X11,
@@ -87,6 +106,7 @@ GNALC_ENUM_OPERATOR(RVReg)
 
 enum class RVOpC : uint32_t {
     SLT,
+    SLTI,
     SLTU,
     SEQZ,
     SNEZ,
@@ -112,10 +132,36 @@ enum class RVOpC : uint32_t {
     BLTZ,
     BGTZ,
 
+    MV,
+    FMV_S,
+    FMV_W_X,
+    FMV_X_W,
+
+    FSW,
+    FLW,
+    FSD,
+    FLD,
+
+    LUI,
+    LI,
+    LB,
+    LH,
+    LW,
+    LD,
+    SB,
+    SH,
+    SW,
+    SD,
+
     J,
     JAL,
     JALR,
     JR,
+
+    LA,
+    AUIPC,
+
+    RET
 };
 
 } // namespace MIR

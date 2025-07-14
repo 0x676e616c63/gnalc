@@ -14,7 +14,7 @@ to `test/contest`.
 
 ### QEMU Installation
 
-#### Compile
+#### Preparation
 
 ```shell
 # if ubuntu
@@ -24,25 +24,15 @@ sudo apt install autoconf automake autotools-dev curl libmpc-dev libmpfr-dev lib
               git tmux python3 python3-pip ninja-build
 ```
 
-##### ARMv7
-
-```shell
-wget https://download.qemu.org/qemu-9.2.0.tar.xz
-tar xvJf qemu-9.2.0.tar.xz
-cd qemu-9.2.0
-./configure --target-list=arm-linux-user
-make -j$(nproc)
-```
-
-##### AArch64
+#### Build
 
 ```shell
 wget https://download.qemu.org/qemu-9.2.3.tar.xz
 tar xvJf qemu-9.2.3.tar.xz
 cd qemu-9.2.3
-./configure --target-list=aarch64-linux-user
+./configure --target-list=aarch64-linux-user,riscv64-linux-user
 make -j$(nproc)
-# 9.2.0 can't compile with `redefinition of 'struct sched_attr'`
+# QEMU 9.2.0 can't compile with `redefinition of 'struct sched_attr'`
 ```
 
 #### Environment
@@ -78,10 +68,10 @@ end
 
 #### After Installation
 
-Restart the shell and use `qemu-arm --version` to confirm the version.
+Restart the shell and use `qemu-aarch64/riscv64 --version`  to confirm the version.
 
 ```
-qemu-arm version 9.2.0
+qemu-aarch64 version 9.2.3
 Copyright (c) 2003-2024 Fabrice Bellard and the QEMU Project developers
 ```
 
@@ -123,6 +113,14 @@ sudo pacman -S aarch64-linux-gnu-gcc
 sudo ln -s /usr/aarch64-linux-gnu/lib/ld-linux-aarch64.so.1 /lib/ld-linux-aarch64.so.1
 ```
 
+###### RISCV64
+
+```shell
+sudo pacman -S riscv64-linux-gnu-gcc
+# setup ld for qemu-riscv64
+sudo ln -s /usr/riscv64-linux-gnu/lib/ld-linux-riscv64-lp64d.so.1 /lib/ld-linux-riscv64-lp64d.so.1
+```
+
 #### Fedora 42
 
 ###### AArch64
@@ -143,7 +141,9 @@ To let `gnalc_test` and `pass_benchmark` know your installation, set the environ
 | Variable                      | Description                               | Fallback Value                                                                                         |
 |-------------------------------|-------------------------------------------|--------------------------------------------------------------------------------------------------------|
 | GNALC_TEST_GCC_AARCH64        | gcc for aarch64                           | `aarch64-linux-gnu-gcc --sysroot=/usr/aarch64-redhat-linux/sys-root/fc42` or `gcc` on aarch64          |
-| GNALC_TEST_QEMU_AARCH64       | qemu-arm for aarch64                      | `qemu-aarch64 -cpu cortex-a53 -L /usr/aarch64-redhat-linux/sys-root/fc42/usr/` or `<empty>` on aarch64 |
+| GNALC_TEST_QEMU_AARCH64       | qemu for aarch64                          | `qemu-aarch64 -cpu cortex-a53 -L /usr/aarch64-redhat-linux/sys-root/fc42/usr/` or `<empty>` on aarch64 |
+| GNALC_TEST_GCC_RISCV64        | gcc for riscv64                           | `riscv64-linux-gnu-gcc`                                                                                |
+| GNALC_TEST_QEMU_RISCV64       | qemu for riscv64                          | `LD_LIBRARY_PATH=/usr/riscv64-linux-gnu/lib qemu-risc64`                                               |
 | GNALC_TEST_GNALC              | path to gnalc                             | `../gnalc`                                                                                             |
 | GNALC_TEST_TEST_DATA          | path to test data                         | `../../test/contest`                                                                                   |
 | GNALC_TEST_SYLIBC             | path to sylibc                            | `../../test/sylib/sylib.c`                                                                             |
@@ -159,7 +159,10 @@ machine.
 If you are following the installation steps above, maybe you can use our config directly.
 
 ##### Fedora
+
 the Fallback value.
+
 ##### Ubuntu & Manjaro
+
 - `GNALC_TEST_GCC_AARCH64`: `aarch64-linux-gnu-gcc-13`
 - `GNALC_TEST_QEMU_AARCH64`: `LD_LIBRARY_PATH=/usr/aarch64-linux-gnu/lib qemu-aarch64`

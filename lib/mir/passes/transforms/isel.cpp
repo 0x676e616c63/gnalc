@@ -174,14 +174,6 @@ void ISelContext::impl(MIRFunction *mfunc) {
     return;
 }
 
-MIRInst_p ISelContext::newInst(OpC mopcode) {
-    auto minst = MIRInst::make(mopcode);
-
-    mCurrentBlk->Insts().insert(mInstInsertPos, minst);
-
-    return minst;
-}
-
 MIRInst_p_l ISelContext::getInsts() const { return mCurrentBlk->Insts(); }
 
 MIRInst_p_l::iterator ISelContext::getCurrentPos() const { return mInstInsertPos; }

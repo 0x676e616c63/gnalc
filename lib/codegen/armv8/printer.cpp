@@ -15,7 +15,7 @@ string ARMA64Printer::branchPrinter(const MIRInst &minst) {
     const auto &cond = minst.getOp(2)->imme();
 
     string str;
-    str = "b" + Cond2S(static_cast<Cond>(cond));
+    str = "b" + ARMv8::Cond2S(static_cast<Cond>(cond));
     str += '\t' + lable;
 
     return str;
@@ -30,7 +30,7 @@ string ARMA64Printer::binaryPrinter(const MIRInst &minst) {
     auto bitWide = getBitWideChoosen(def->type(), lhs->type(), rhs->type());
 
     string str;
-    str += OpC2S(op) + '\t';
+    str += ARMv8::OpC2S(op) + '\t';
     str += reg2s(def, bitWide) + ",\t";
     str += reg2s(lhs, bitWide) + ",\t";
 
@@ -72,15 +72,15 @@ string ARMA64Printer::selectPrinter(const MIRInst &minst) {
 
     string str;
 
-    str += ARMOpC2S(op) + '\t';
+    str += ARMv8::ARMOpC2S(op) + '\t';
     if (op != ARMOpC::CSET_SELECT) {
         str += reg2s(def, bitWide) + ",\t";
         str += reg2s(lhs, bitWide) + ",\t";
         str += reg2s(rhs, bitWide) + ",\t";
-        str += Cond2S(static_cast<Cond>(cond));
+        str += ARMv8::Cond2S(static_cast<Cond>(cond));
     } else {
         str += reg2s(def, bitWide) + ",\t";
-        str += Cond2S(static_cast<Cond>(cond));
+        str += ARMv8::Cond2S(static_cast<Cond>(cond));
     }
 
     return str;
@@ -93,7 +93,7 @@ string ARMA64Printer::unaryPrinter(const MIRInst &minst) {
     auto bitWide = getBitWideChoosen(def->type(), lhs->type());
 
     string str;
-    str += OpC2S(op) + '\t';
+    str += ARMv8::OpC2S(op) + '\t';
     str += reg2s(def, bitWide) + ",\t";
     str += reg2s(lhs, bitWide);
 
@@ -109,7 +109,7 @@ string ARMA64Printer::cmpPrinter(const MIRInst &minst) {
 
     string str;
 
-    str += OpC2S(op) + '\t' + reg2s(lhs, bitWide) + ",\t";
+    str += ARMv8::OpC2S(op) + '\t' + reg2s(lhs, bitWide) + ",\t";
 
     if (rhs->isISA()) {
         str += reg2s(rhs, bitWide);
@@ -126,7 +126,7 @@ string ARMA64Printer::convertPrinter(const MIRInst &minst) {
     auto bitWide = getBitWideChoosen(def->type(), use->type());
 
     string str;
-    str += OpC2S(minst.opcode<OpC>()) + '\t';
+    str += ARMv8::OpC2S(minst.opcode<OpC>()) + '\t';
     str += reg2s(def, bitWide) + ",\t";
     str += reg2s(use, bitWide);
 
@@ -176,7 +176,7 @@ string ARMA64Printer::memoryPrinter(const MIRInst &minst) {
     if (minst.opcode<ARMOpC>() == ARMOpC::LDR) {
 
         if (minst.getOp(1)->isReloc()) {
-            auto reg = Reg2S(minst.ensureDef(), memSize); // adrp + ldr
+            auto reg = reg2s(minst.ensureDef(), memSize); // adrp + ldr
             auto label = minst.getOp(1)->reloc()->getmSym();
             str += "ldr\t" + reg + ", [" + reg + ", #:got_lo12:" + label + "]";
 
@@ -194,7 +194,7 @@ string ARMA64Printer::memoryPrinter(const MIRInst &minst) {
         shift = minst.getOp(4);
     }
 
-    str += ARMOpC2S(minst.opcode<ARMOpC>()) + '\t';
+    str += ARMv8::ARMOpC2S(minst.opcode<ARMOpC>()) + '\t';
 
     str += reg2s(op1, memSize) + ",\t";
 
@@ -264,7 +264,7 @@ string ARMA64Printer::ternaryPrinter(const MIRInst &minst) {
     ///@todo fix me
     auto bitWide = getBitWideChoosen(def->type(), op1->type(), op2->type(), op3->type());
 
-    str += ARMOpC2S(minst.opcode<ARMOpC>()) + '\t';
+    str += ARMv8::ARMOpC2S(minst.opcode<ARMOpC>()) + '\t';
     str += reg2s(def, bitWide) + ",\t";
     str += reg2s(op1, bitWide) + ",\t";
     str += reg2s(op2, bitWide) + ",\t";
@@ -281,7 +281,7 @@ string ARMA64Printer::csetPrinter(const MIRInst &minst) {
 
     str += "cset\t";
     str += reg2s(def, 4) + ",\t";
-    str += Cond2S(static_cast<Cond>(cond));
+    str += ARMv8::Cond2S(static_cast<Cond>(cond));
 
     return str;
 }
@@ -330,7 +330,7 @@ string ARMA64Printer::movPrinter(const MIRInst &minst) {
     auto bitWide = getBitWideChoosen(def->type(), use->type());
 
     string str;
-    str += ARMOpC2S(minst.opcode<ARMOpC>()) + '\t';
+    str += ARMv8::ARMOpC2S(minst.opcode<ARMOpC>()) + '\t';
     str += reg2s(def, bitWide) + ",\t";
 
     if (use->isImme()) {
@@ -624,7 +624,7 @@ string ARMA64Printer::binaryPrinter_v(const MIRInst &minst) {
     string mode = def->type() == OpT::Int64vec2 ? ".2d" : ".4s";
 
     string str;
-    str += OpC2S(op) + '\t';
+    str += ARMv8::OpC2S(op) + '\t';
     str += reg2s(def, 16, true) + mode + ",\t";
     str += reg2s(lhs, 16, true) + mode + ",\t";
     str += reg2s(rhs, 16, true) + mode;
@@ -641,7 +641,7 @@ string ARMA64Printer::selectPrinter_v(const MIRInst &minst) {
 
     string str;
 
-    str += OpC2S(op) + '\t';
+    str += ARMv8::OpC2S(op) + '\t';
     str += reg2s(def, 16, true) + mode + ",\t";
     str += reg2s(true_val, 16, true) + mode + ",\t";
     str += reg2s(false_val, 16, true) + mode;
@@ -656,7 +656,7 @@ string ARMA64Printer::unaryPrinter_v(const MIRInst &minst) {
     string mode = def->type() == OpT::Int64vec2 ? ".2d" : ".4s";
 
     string str;
-    str += OpC2S(op) + '\t';
+    str += ARMv8::OpC2S(op) + '\t';
     str += reg2s(def, 16, true) + mode + ",\t";
     str += reg2s(use, 16, true) + mode;
 
@@ -672,8 +672,8 @@ string ARMA64Printer::cmpPrinter_v(const MIRInst &minst) {
     string mode = def->type() == OpT::Int64vec2 ? ".2d" : ".4s";
 
     string str;
-    str += OpC2S(op) + Cond2S(static_cast<Cond>(cond)) + '\t';
-    str += Reg2S(def, 16, true) + mode + ",\t";
+    str += ARMv8::OpC2S(op) + ARMv8::Cond2S(static_cast<Cond>(cond)) + '\t';
+    str += reg2s(def, 16, true) + mode + ",\t";
     str += reg2s(lhs, 16, true) + mode + ",\t";
     str += reg2s(rhs, 16, true) + mode;
 
@@ -687,7 +687,7 @@ string ARMA64Printer::convertPrinter_v(const MIRInst &minst) {
     string mode = def->type() == OpT::Int64vec2 ? ".2d" : ".4s";
 
     string str;
-    str += OpC2S(op) + '\t';
+    str += ARMv8::OpC2S(op) + '\t';
     str += reg2s(def, 16, true) + mode + ",\t";
     str += reg2s(use, 16, true) + mode;
 
@@ -702,7 +702,7 @@ string ARMA64Printer::extractPrinter_v(const MIRInst &minst) {
     string mode = def->type() == OpT::Int64 ? ".d" : ".s";
 
     string str;
-    str += OpC2S(op) + '\t';
+    str += ARMv8::OpC2S(op) + '\t';
     str += reg2s(def, getBitWide(def->type())) + ",\t";
     str += reg2s(use, 16, true) + mode + '[' + std::to_string(idx) + ']';
 
@@ -717,7 +717,7 @@ string ARMA64Printer::insertPrinter_v(const MIRInst &minst) {
     string mode = def->type() == OpT::Int64vec2 ? ".d" : ".s";
 
     string str;
-    str += OpC2S(op) + '\t';
+    str += ARMv8::OpC2S(op) + '\t';
     str += reg2s(def, 16, true) + mode + '[' + std::to_string(idx) + "],\t";
 
     if (inSet(use->type(), OpT::Float32, OpT::Float)) {

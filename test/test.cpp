@@ -16,7 +16,8 @@ int main(int argc, char *argv[]) {
         println("Usage: {} [options]", argv[0]);
         println("Options:");
         println("  -a, --all                  Run all tests, regardless of failure.");
-        println("  -b, --backend              Test backend.");
+        println("  -b, --backend              Test ARMv8 backend.");
+        println("  -rvb, --rv-backend         Test RISCV64 backend.");
         println("  -d, --diff                 Differential Test with clang.");
         println("  -s, --skip   [Name Prefix] Skip test whose name has such prefix.");
         println("  -r, --run    [Name Prefix] Only run test whose name has such prefix.");
@@ -32,16 +33,18 @@ int main(int argc, char *argv[]) {
     std::string gnalc_params;
     bool diff_test = false;
     bool stop_on_error = true;
-    bool only_frontend = true;
+    Target target = Target::LLVM;
     bool only_list = false;
     bool only_compile_no_exec = false;
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
         if (arg == "--all" || arg == "-a")
             stop_on_error = false;
-        else if (arg == "--backend" || arg == "-b")
-            only_frontend = false;
-        else if (arg == "--diff" || arg == "-d")
+        else if (arg == "--backend" || arg == "-b") {
+            target = Target::ARMv8;
+        } else if (arg == "--rv-backend" || arg == "-rvb") {
+            target = Target::RISCV64;
+        } else if (arg == "--diff" || arg == "-d")
             diff_test = true;
         else if (arg == "--list" || arg == "-l")
             only_list = true;
@@ -104,15 +107,15 @@ int main(int argc, char *argv[]) {
 
     std::string sylib_to_link;
     if (!only_list)
-        sylib_to_link = prepare_sylib(cfg::global_temp_dir, only_frontend); // .ll or .a
+        sylib_to_link = prepare_sylib(cfg::global_temp_dir, target, cfg::sylibc); // .ll or .a
 
     // Differential use frontend mode since it only requires llvm toolset.
     std::string sylib_for_diff_testing;
     if (!only_list && diff_test) {
-        if (only_frontend)
+        if (target == Target::LLVM)
             sylib_for_diff_testing = sylib_to_link;
         else
-            sylib_for_diff_testing = prepare_sylib(cfg::global_temp_dir, true);
+            sylib_for_diff_testing = prepare_sylib(cfg::global_temp_dir, Target::LLVM);
     }
 
     auto real_test_data = cfg::test_data;
@@ -141,7 +144,7 @@ int main(int argc, char *argv[]) {
             // Run
             TestData data{.sy = sy, .sylib = sylib_to_link, .temp_dir = curr_temp_dir, .mode_id = "gnalc_test"};
 
-            if (only_frontend) {
+            if (target == Target::LLVM) {
                 auto gnalc_irgen = [&gnalc_params](const std::string &newsy, const std::string &outll) {
 #ifndef GNALC_TEST_GGC
                     return format("{} -S {} -o {} -with-runtime -emit-llvm{}", cfg::gnalc_path, newsy, outll, gnalc_params);
@@ -154,10 +157,15 @@ int main(int argc, char *argv[]) {
                 data.ir_asm_gen = gnalc_irgen;
 
             } else {
-                auto gnalc_asmgen = [&gnalc_params](const std::string &newsy, const std::string &outs) {
-                    return format("{} -S{} -o {} {}", cfg::gnalc_path, gnalc_params, outs, newsy);
-                    // Test
-                    // return format("arm-linux-gnueabihf-gcc -S -o {} -xc {}", outs, newsy);
+                auto gnalc_asmgen = [&](const std::string &newsy, const std::string &outs) {
+                    std::string target_str;
+                    if (target == Target::ARMv8)
+                        target_str = "armv8";
+                    else if (target == Target::RISCV64)
+                        target_str = "riscv64";
+                    else
+                        Err::unreachable();
+                    return format("{} -S{} -o {} {} -march={}", cfg::gnalc_path, gnalc_params, outs, newsy, target_str);
                 };
                 data.ir_asm_gen = gnalc_asmgen;
             }
@@ -180,7 +188,7 @@ int main(int argc, char *argv[]) {
                                   newsy, newsy, outll);
                 };
                 clang_data.ir_asm_gen = clang_irgen;
-                diff_res = run_test(clang_data, true);
+                diff_res = run_test(clang_data, Target::LLVM);
                 expected_syout = diff_res.output;
             } else {
                 expected_syout = read_file(testcase_out);
@@ -188,7 +196,7 @@ int main(int argc, char *argv[]) {
             }
 
             // Check
-            auto res = run_test(data, only_frontend, 1, only_compile_no_exec);
+            auto res = run_test(data, target, 1, only_compile_no_exec);
 
             if (only_compile_no_exec) {
                 if (res.output != "success") {
@@ -198,13 +206,11 @@ int main(int argc, char *argv[]) {
                         println("----------");
                         goto finish;
                     }
-                }
-                else {
+                } else {
                     ++passed;
                     println("|  [\033[0;32;32mPASSED\033[m]");
                 }
-            }
-            else {
+            } else {
                 if (res.output != expected_syout) {
                     println("|  [\033[0;32;31mFAILED\033[m] Expected '{}' but got "
                             "'{}'.",

@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
     RunSet run;
     SkipSet skip;
     bool stop_on_error = true;
-    bool only_frontend = true;
+    Target target = Target::LLVM;
     bool only_list = false;
     size_t times = 3;
     for (int i = 1; i < argc; i++) {
@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
         } else if (arg == "--all" || arg == "-a")
             stop_on_error = false;
         else if (arg == "--backend" || arg == "-b")
-            only_frontend = false;
+            target = Target::ARMv8;
         else if (arg == "--list" || arg == "-l")
             only_list = true;
         else if (arg == "--skip" || arg == "-s") {
@@ -234,7 +234,7 @@ int main(int argc, char *argv[]) {
 
     std::string sylib_to_link;
     if (!only_list)
-        sylib_to_link = prepare_sylib(cfg::global_benchmark_temp_dir, only_frontend); // .ll or .a
+        sylib_to_link = prepare_sylib(cfg::global_benchmark_temp_dir, target); // .ll or .a
 
     for (auto &&curr_test_dir : cfg::benchmark_subdirs) {
         auto test_files = gather_test_files(cfg::test_data + "/" + curr_test_dir, run, skip);
@@ -268,16 +268,16 @@ int main(int argc, char *argv[]) {
                                                    .sy = sy,
                                                    .sylib = sylib_to_link,
                                                    .temp_dir = curr_temp_dir,
-                                                   .only_frontend = only_frontend};
+                                                   .only_frontend = target == Target::LLVM};
             BenchmarkRegistry::TestInfo test_info2{.mode_id = mode2,
                                                    .sy = sy,
                                                    .sylib = sylib_to_link,
                                                    .temp_dir = curr_temp_dir,
-                                                   .only_frontend = only_frontend};
+                                                   .only_frontend = target == Target::LLVM};
             auto data1 = BenchmarkRegistry::get_test_data(test_info1);
             auto data2 = BenchmarkRegistry::get_test_data(test_info2);
 
-            auto res1 = run_test(data1, only_frontend, times);
+            auto res1 = run_test(data1, target, times);
             bool success_1 = res1.output == expected_syout;
             if (!success_1) {
                 println("\n|  [\033[0;32;31mFAILED\033[m] Expected '{}' but got "
@@ -293,7 +293,7 @@ int main(int argc, char *argv[]) {
             TestResult res2;
             bool success_2 = true;
             if (success_1) {
-                res2 = run_test(data2, only_frontend, times);
+                res2 = run_test(data2, target, times);
                 success_2 = res2.output == expected_syout;
                 if (!success_2) {
                     println("\n|  [\033[0;32;31mFAILED\033[m] Expected '{}' but got "

@@ -12,12 +12,24 @@
 #include <optional>
 
 namespace IR {
-// This should not have cache since call's argument is mutable.
 RWInfo getCallRWInfo(FAM &fam, CALLInst *call) {
     auto guard = Logger::scopeDisable();
 
     auto callee = call->getFunc().get();
     auto callee_def = callee->as_raw<Function>();
+
+    // For parallel entry function, analyze the parallel body.
+    if (callee->hasAttr(FuncAttr::ParallelEntry)) {
+        Err::gassert(callee_def == nullptr);
+        auto args = call->getArgs();
+        for (const auto& arg : args) {
+            if (auto parallel_body = arg->as_raw<Function>()) {
+                Err::gassert(parallel_body->hasAttr(FuncAttr::ParallelBody));
+                callee_def = parallel_body;
+            }
+        }
+        Err::gassert(callee_def != nullptr);
+    }
 
     if (callee_def == nullptr) {
         Err::gassert(!callee->hasAttr(FuncAttr::NotBuiltin), "Not builtin but has no definition");
@@ -42,6 +54,9 @@ RWInfo getCallRWInfo(FAM &fam, CALLInst *call) {
 
         if (callee->hasAttr(FuncAttr::builtinMemReadOnly))
             return {.read = arg_ptrs, .write = {}, .untracked = false};
+
+        if (callee->hasAttr(FuncAttr::builtinMemReadWrite))
+            return {.read = arg_ptrs, .write = arg_ptrs, .untracked = false};
 
         if (!callee->hasAttr(FuncAttr::builtinMemReadOnly) && !callee->hasAttr(FuncAttr::builtinMemWriteOnly))
             return {};
