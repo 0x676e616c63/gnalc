@@ -66,7 +66,7 @@ public:
     virtual bool isFpOrVecReg(unsigned int reg) const = 0;
     virtual unsigned int FpOrVecStart() const = 0;
     virtual uint64_t initCalleeSaveBitmap() const = 0;
-    virtual void updateCalleeSaveBitmapForStackAlloc(uint64_t& bitmap, MIRFunction* mfunc) const = 0;
+    virtual void updateCalleeSaveBitmapForStackAlloc(uint64_t &bitmap, MIRFunction *mfunc) const = 0;
 
     virtual bool isCallerSaved(unsigned int reg) const = 0;
     virtual bool isCalleeSaved(unsigned int reg) const = 0;
@@ -89,9 +89,9 @@ public:
     virtual void makePostSAEpilogue(MIRBlk_p, CodeGenContext &, unsigned) const = 0;
     virtual void insertPrologueEpilogue(MIRFunction *, CodeGenContext &) const = 0;
 
-    virtual void appendCalleeSaveStackSize(uint64_t& allocation_base, uint64_t bitmap) const = 0;
+    virtual void appendCalleeSaveStackSize(uint64_t &allocation_base, uint64_t bitmap) const = 0;
 
-    virtual bool isFuncCall(const MIRInst_p&) const = 0;
+    virtual bool isFuncCall(const MIRInst_p &) const = 0;
 
     constexpr size_t getStackPointerAlignment() const { return 16; }
 };
@@ -180,8 +180,7 @@ struct CodeGenContext {
     bool isARMv8() const { return infos.arch == Arch::ARMv8; }
     bool isRISCV64() const { return infos.arch == Arch::RISCV64; }
 
-
-    static CodeGenContext create(const BkdInfos& infos);
+    static CodeGenContext create(const BkdInfos &infos);
 };
 
 }; // namespace MIR

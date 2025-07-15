@@ -9,8 +9,11 @@
 #include "mir/tools.hpp"
 #include "utils/exception.hpp"
 #include <algorithm>
+#include <cassert>
 #include <cstdint>
+#include <iostream>
 #include <optional>
+#include <ostream>
 
 using namespace MIR;
 
@@ -432,7 +435,6 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
 
 // for pass preRaLeagalize
 void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
-    ///@todo handle select inst if we really have one
 
     auto &[minst, minsts, iter, ctx] = _ctx;
 
@@ -441,14 +443,10 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
     }
 
     switch (minst->opcode<OpC>()) {
-    // case OpC::InstSelect:
-    //     Err::todo("preLegalizeInst: select inst not support yet");
-    case OpC::InstLoadGlobalAddress:
-        /// nothing
-        break;
+
     case OpC::InstLoadImm: {
-        auto &def = minst->ensureDef();
-        auto &imme = minst->getOp(1);
+        auto def = minst->ensureDef();
+        auto imme = minst->getOp(1);
 
         auto imm = static_cast<unsigned>(imme->imme()); ///@bug
 
@@ -482,10 +480,9 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
         }
 
         ///@brief rewrite
-        minst->resetOpcode(OpC::InstCopy);
-
         minst->setOperand<1>(dst, ctx);
 
+        minst->resetOpcode(OpC::InstCopy);
     } break;
     case OpC::InstLoadImmEx: {
         auto def = minst->ensureDef();
@@ -518,7 +515,7 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
         auto def = minst->ensureDef();
         auto imme = minst->getOp(1);
 
-        auto imm_us = imme->imme();
+        auto imm_us = static_cast<unsigned>(imme->imme());
         auto imm = *reinterpret_cast<float *>(&imm_us);
 
         if (!ARMv8::isFloat8(imm) && imm != 0.0f) {
@@ -576,6 +573,8 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
             minst->setOperand<1>(fdst, ctx);
         }
     } break;
+    case OpC::InstLoadGlobalAddress: // NOLINT
+        break;
     default:
         break;
     }

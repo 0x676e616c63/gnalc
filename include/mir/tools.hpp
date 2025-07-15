@@ -23,6 +23,8 @@ inline int popcounter_wrapper(int vic) { return __builtin_popcount(vic); }
 
 inline int popcounter_wrapper(unsigned long long vic) { return __builtin_popcountll(vic); }
 
+inline int popcounter_wrapper(uint64_t vic) { return __builtin_popcountll(vic); }
+
 inline int clz_wrapper(unsigned short vic) {
 #if defined(__clang__)
     return vic ? __builtin_clzs(vic) : 16;
@@ -50,6 +52,10 @@ inline int ctz_wrapper(int vic) { return vic ? __builtin_ctz(vic) : 0; }
 inline int clz_wrapper(unsigned long long vic) { return vic ? __builtin_clzll(vic) : 64; }
 
 inline int ctz_wrapper(unsigned long long vic) { return vic ? __builtin_ctzll(vic) : 0; }
+
+inline int clz_wrapper(uint64_t vic) { return vic ? __builtin_ctzll(vic) : 64; }
+
+inline int ctz_wrapper(uint64_t vic) { return vic ? __builtin_ctzll(vic) : 0; }
 
 template <typename T> T rotate_shift_right(T value, int n) {
     const int total_bits = sizeof(T) * 8;
@@ -98,7 +104,6 @@ template <typename... Args> bool all_equal_pairs(Args &&...args) {
 
 template <typename T> std::shared_ptr<T> wp2p(std::weak_ptr<T> wp) {
     if (wp.expired()) {
-        // 可能是本身就没有而不是expired
         return nullptr;
     } else {
         return wp.lock();

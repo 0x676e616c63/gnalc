@@ -26,5 +26,5 @@ public:
     ~ARMIselInfo() override;
 };
 
-}
+} // namespace MIR
 #endif

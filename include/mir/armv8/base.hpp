@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <iostream>
 #ifndef GNALC_MIR_ARMV8_BASE_HPP
 #define GNALC_MIR_ARMV8_BASE_HPP
 
@@ -104,21 +106,23 @@ template <typename T> inline bool isFloat8(T imm) {
     return true;
 }
 
-template <typename T> inline bool isBitMaskImme(T imm) {
+#if defined(__clang__)
+template <typename T>
+__attribute__((optnone)) bool isBitMaskImme(T imm)
+#else
+#pragma GCC push_options
+#pragma GCC optimize("O0")
+template <typename T>
+bool isBitMaskImme(T imm)
+#endif
+
+{
     ///@warning use in AND/ORR...
     ///@warning MOV instruction is an alias of ORR (immediate).
 
     ///@brief reference: https://developer.arm.com/documentation/dui0802/b/A64-General-Instructions/ANDS--immediate-?lang=en
-    ///@note imm is the bitmask immediate. Such an immediate is a 32-bit or 64-bit
-    ///@note pattern viewed as a vector of identical elements of size e = 2, 4, 8,
-    ///@note 16, 32, or 64 bits. Each element contains the same sub-pattern: a
-    ///@note single run of 1 to e-1 non-zero bits, rotated by 0 to e-1 bits. This
-    ///@note mechanism can generate 5,334 unique 64-bit patterns (as 2,667 pairs of
-    ///@note pattern and their bitwise inverse). Because the all-zeros and all-ones
-    ///@note values cannot be described in this way, the assembler generates an error message.
 
-    ///@note pattern一共有5334个(包括64位的), 可能存在不同位宽的pattern表述出的imme却是一致的
-    unsigned pattern_len_max = 0;
+    uint64_t pattern_len_max = 0;
     if constexpr (std::is_same_v<T, int> || std::is_same_v<T, unsigned>) {
         pattern_len_max = 32;
     } else if constexpr (std::is_same_v<T, long long> || std::is_same_v<T, size_t>) {
@@ -127,16 +131,16 @@ template <typename T> inline bool isBitMaskImme(T imm) {
         Err::unreachable("iBitMaskImme: cant convert to encode");
     }
 
-    auto imme = static_cast<size_t>(imm);
+    auto imme = static_cast<uint64_t>(imm);
 
-    unsigned pattern_len = 1;
+    uint64_t pattern_len = 1;
 
     while (pattern_len < pattern_len_max) {
-        pattern_len *= 2;
+        pattern_len <<= 2;
 
-        unsigned pattern_probably = imme % (1 << pattern_len);
+        uint64_t pattern_probably = imme % (1ULL << pattern_len);
 
-        if (!pattern_probably || pattern_probably == (1 << pattern_len) - 1) {
+        if (!pattern_probably || pattern_probably == (1ULL << pattern_len) - 1) {
             // no 0 or no 1
             continue;
         }
@@ -151,7 +155,7 @@ template <typename T> inline bool isBitMaskImme(T imm) {
 
         bool pattern_match = true;
         for (int i = 1; i < pattern_len_max / pattern_len; ++i) {
-            unsigned pattern_apply_probably = (imme >> (i * pattern_len)) % (1 << pattern_len);
+            uint64_t pattern_apply_probably = (imme >> (i * pattern_len)) % (1 << pattern_len);
 
             if (pattern_apply_probably != pattern_probably) {
                 pattern_match = false;
@@ -170,6 +174,10 @@ template <typename T> inline bool isBitMaskImme(T imm) {
         return false;
     }
 }
+
+#if defined(__GCC__)
+#pragma GCC pop_options
+#endif
 
 // IMME judge end
 } // namespace ARMv8
