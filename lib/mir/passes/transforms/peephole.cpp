@@ -99,10 +99,13 @@ bool GenericPeepholeImpl::Nop(MatchInfo &info) {
             if (inRange(inst->opcode<OpC>(), OpC::InstCopy, OpC::InstCopyToReg)) {
                 return true;
             }
-        } else {
+        } else if (inst->isARM()) {
             if (inst->opcode<ARMOpC>() == ARMOpC::MOV) {
                 return true;
             }
+        } else if (inst->isRV()) {
+            if (inst->opcode<RVOpC>() == RVOpC::MV || inst->opcode<RVOpC>() == RVOpC::FMV_S)
+                return true;
         }
 
         return false;

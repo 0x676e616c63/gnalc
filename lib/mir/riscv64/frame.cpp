@@ -347,8 +347,7 @@ void RVFrameInfo::insertPrologueEpilogue(MIRFunction *mfunc, CodeGenContext &ctx
             auto obj = mfunc->addStkObj(mfunc->Context(), 8, 8, offset, StkObjUsage::CalleeSave);
             entry_insts.emplace_front(
                 MIRInst::make(OpC::InstStoreRegToStack)
-                    ->setOperand<1>(MIROperand::asISAReg(static_cast<RVReg>(i), i < 32 ? OpT::Int64 : OpT::Float64),
-                                    ctx)
+                    ->setOperand<1>(MIROperand::asISAReg(static_cast<RVReg>(i), i < 32 ? OpT::Int : OpT::Float), ctx)
                     ->setOperand<2>(obj, ctx)
                     ->setOperand<5>(MIROperand::asImme(8, OpT::Int64), ctx));
             offset += 8;
@@ -368,8 +367,8 @@ void RVFrameInfo::insertPrologueEpilogue(MIRFunction *mfunc, CodeGenContext &ctx
                 const auto obj = mfunc->addStkObj(mfunc->Context(), 8, 8, offset, StkObjUsage::CalleeSave);
                 insts.emplace(
                     it, MIRInst::make(OpC::InstLoadRegFromStack)
-                            ->setOperand<0>(
-                                MIROperand::asISAReg(static_cast<RVReg>(i), i < 32 ? OpT::Int64 : OpT::Float64), ctx)
+                            ->setOperand<0>(MIROperand::asISAReg(static_cast<RVReg>(i), i < 32 ? OpT::Int : OpT::Float),
+                                            ctx)
                             ->setOperand<1>(obj, ctx)
                             ->setOperand<5>(MIROperand::asImme(8, OpT::Int64), ctx));
                 offset += 8;

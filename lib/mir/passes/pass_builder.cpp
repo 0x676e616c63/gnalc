@@ -6,6 +6,7 @@
 
 // Analysis
 #include "mir/passes/analysis/liveanalysis.hpp"
+#include "mir/passes/analysis/loop_analysis.hpp"
 
 // Transforms
 #include "mir/passes/analysis/domtree_analysis.hpp"
@@ -17,12 +18,16 @@
 #include "mir/passes/transforms/RedundantLoadEli.hpp"
 #include "mir/passes/transforms/codelayout.hpp"
 #include "mir/passes/transforms/isel.hpp"
+#include "mir/passes/transforms/licm.hpp"
 #include "mir/passes/transforms/lowering.hpp"
 #include "mir/passes/transforms/peephole.hpp"
 #include "mir/passes/transforms/registercoalesce.hpp"
 #include "mir/passes/transforms/scheduling.hpp"
 #include "mir/passes/transforms/stackgenerate.hpp"
 #include "mir/passes/transforms/tro.hpp"
+
+// Utilities
+#include "mir/passes/utilities/mirprinter.hpp"
 
 namespace MIR {
 
@@ -32,12 +37,16 @@ const OptInfo o1_opt_info = {.peephole_afterIsel = true,
                              .peephole_afterStackGenerate = true,
                              .CFGsimplifyBeforeRa = true,
                              .CFGsimplifyAfterRa = true,
-                             .PostRaScheduling = true};
+                             .PostRaScheduling = true,
+                             .machineLICM = false};
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
 
     fpm.addPass(ISel());
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(MachineLICMPass());
+    fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(PreRAlegalize());
     fpm.addPass(RegisterAlloc());
     fpm.addPass(StackGenerate());
@@ -55,6 +64,7 @@ FPM buildRV64FunctionPipeline(OptInfo opt_info) {
     FPM fpm;
     // For RV64 Development
     fpm.addPass(ISel());
+    fpm.addPass(MachineLICMPass());
     fpm.addPass(PreRAlegalize());
     fpm.addPass(RegisterAlloc());
     fpm.addPass(StackGenerate());
@@ -107,6 +117,8 @@ void PassBuilder::registerFunctionAnalyses(FAM &fam) {
 
     FUNCTION_ANALYSIS(LiveAnalysis())
     FUNCTION_ANALYSIS(DomTreeAnalysis())
+    FUNCTION_ANALYSIS(PostDomTreeAnalysis())
+    FUNCTION_ANALYSIS(MachineLoopAnalysis())
     // ...
 
 #undef FUNCTION_ANALYSIS
