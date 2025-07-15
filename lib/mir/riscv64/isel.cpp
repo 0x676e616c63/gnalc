@@ -410,7 +410,7 @@ void RVIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
         return;
 
     switch (minst->opcode<OpC>()) {
-    case OpC::InstLoadGlobalAddress:
+    case OpC::InstLoadAddress:
         minst->resetOpcode(RVOpC::LD);
         break;
     case OpC::InstLoadImm: {
@@ -437,7 +437,7 @@ void RVIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
 
 void RVIselInfo::legalizeWithPtrLoad(MIRInst_p minst) const {
     auto memSize = minst->getOp(5)->imme();
-    if (inRange(minst->getDef()->type(),OpT::Float, OpT::Float32)) {
+    if (inRange(minst->getDef()->type(), OpT::Float, OpT::Float32)) {
         switch (memSize) {
         case 4:
             minst->resetOpcode(RVOpC::FLW);
@@ -448,8 +448,7 @@ void RVIselInfo::legalizeWithPtrLoad(MIRInst_p minst) const {
         default:
             Err::not_implemented("Unsupported size.");
         }
-    }
-    else {
+    } else {
         switch (memSize) {
         case 1:
             minst->resetOpcode(RVOpC::LB);
@@ -471,7 +470,7 @@ void RVIselInfo::legalizeWithPtrLoad(MIRInst_p minst) const {
 
 void RVIselInfo::legalizeWithPtrStore(MIRInst_p minst) const {
     auto memSize = minst->getOp(5)->imme();
-    if (inRange(minst->getOp(1)->type(),OpT::Float, OpT::Float32)) {
+    if (inRange(minst->getOp(1)->type(), OpT::Float, OpT::Float32)) {
         switch (memSize) {
         case 4:
             minst->resetOpcode(RVOpC::FSW);
@@ -482,8 +481,7 @@ void RVIselInfo::legalizeWithPtrStore(MIRInst_p minst) const {
         default:
             Err::not_implemented("Unsupported size.");
         }
-    }
-    else {
+    } else {
         switch (memSize) {
         case 1:
             minst->resetOpcode(RVOpC::SB);

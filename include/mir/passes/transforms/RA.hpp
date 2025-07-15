@@ -128,7 +128,7 @@ protected:
     virtual Nodes getDef(const MIRInst_p &);
 
     bool isCore(const MIROperand_p &n) {
-        if ((n->type() == OpT::Int16 || n->type() == OpT::Int32 || n->type() == OpT::Int64 || n->type() == OpT::Int)) {
+        if (inRange(n->type(), OpT::Int, OpT::Int64)) {
             return true;
         } else {
             return false;

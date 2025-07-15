@@ -120,6 +120,7 @@ public:
 
         if constexpr (std::is_same_v<T, int>) {
             auto bit32_imme_idx = *reinterpret_cast<unsigned *>(&imme);
+
             return mConstMap.count(bit32_imme_idx) ? mConstMap.at(bit32_imme_idx) : make_new();
         } else if constexpr (std::is_same_v<T, float>) {
             auto bit32_imme_idx = *reinterpret_cast<unsigned *>(&imme);

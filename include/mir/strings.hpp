@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include "mir/info.hpp"
+#include "utils/exception.hpp"
 #ifndef GNALC_MIR_STRINGS_HPP
 #define GNALC_MIR_STRINGS_HPP
 
@@ -29,9 +31,8 @@ inline string Cond2S(Cond cond) {
 }
 
 inline string Reg2S(const MIROperand_p &mop, unsigned bitWide, bool vector = false) {
-    auto isa = mop->isa();
+    auto isa = mop->isISA() ? mop->isa() : MIROperand::ZeroReg + VRegBegin;
 
-    Err::gassert(isISAReg(isa), "Reg2S: not a isa reg");
     string str;
 
     auto reg = static_cast<ARMReg>(isa);
@@ -60,15 +61,23 @@ inline string Reg2S(const MIROperand_p &mop, unsigned bitWide, bool vector = fal
         }
 
         str += std::to_string(isa - 32);
+
+    } else if (isa == MIROperand::ZeroReg + VRegBegin) {
+        if (bitWide <= 4) {
+            str += "wzr";
+        } else if (bitWide == 8) {
+            str += "xzr";
+        } else {
+            Err::unreachable("");
+        }
     }
 
     return str;
 }
 
 inline string Reg2SDebug(const MIROperand_p &mop, unsigned bitWide, const CodeGenContext &ctx, bool vector = false) {
-    auto isa = mop->isa();
+    auto isa = mop->isISA() ? mop->isa() : MIROperand::ZeroReg + VRegBegin;
 
-    Err::gassert(isISAReg(isa), "Reg2S: not a isa reg");
     string str;
 
     auto reg = static_cast<ARMReg>(isa);
@@ -97,6 +106,15 @@ inline string Reg2SDebug(const MIROperand_p &mop, unsigned bitWide, const CodeGe
         }
 
         str += std::to_string(isa - 32);
+
+    } else if (isa == MIROperand::ZeroReg + VRegBegin) {
+        if (bitWide <= 4) {
+            str += "wzr";
+        } else if (bitWide == 8) {
+            str += "xzr";
+        } else {
+            Err::unreachable("");
+        }
     }
 
     str += '(';

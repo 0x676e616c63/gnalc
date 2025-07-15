@@ -17,6 +17,7 @@
 #include "utils/exception.hpp"
 #include <charconv>
 #include <cstddef>
+#include <iostream>
 #include <optional>
 
 using namespace MIR;
@@ -167,9 +168,12 @@ void MIR::lowerInst_v(const IR::pInsert &insert, LoweringContext &ctx) {
             ? (def = ctx.newVReg(insert->getType()), use = nullptr)
             : (def = ctx.mapOperand(insert->getVector()), use = def); // if poison or not
 
-        auto idx = ctx.mapOperand(insert->getIdx());
+        Err::gassert(insert->getIdx()->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL,
+                     "lowerInst_v: try insert/extract with a variable idx");
 
-        Err::gassert(idx->isImme(), "lowerInst_v: try insert/extract with a variable idx");
+        // avoid use xzr/wzr
+        auto idx =
+            MIROperand::asImme(static_cast<unsigned>(insert->getIdx()->as<IR::ConstantInt>()->getVal()), OpT::special);
 
         ctx.newInst(MIRInst::make(OpC::InstVInsert)
                         ->setOperand<0>(def, ctx.CodeGenCtx())

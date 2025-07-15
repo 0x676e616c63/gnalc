@@ -187,7 +187,9 @@ void ARMA64Printer::printout(const MIRInst &minst) {
         case OpC::InstCopyToReg:
             outStream << copyPrinter(minst);
             break;
-        case OpC::InstLoadGlobalAddress:
+        case OpC::InstLoadAddress:
+            outStream << loadAddrPrinter(minst);
+            break;
         case OpC::InstLoadImm:
         case OpC::InstLoadImmToReg:
         case OpC::InstLoadImmEx:

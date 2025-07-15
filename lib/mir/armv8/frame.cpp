@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: MIT
 
 #include "mir/armv8/frame.hpp"
+#include "ir/base.hpp"
+#include "ir/type.hpp"
 #include "mir/MIR.hpp"
 #include "mir/info.hpp"
 #include "mir/passes/transforms/lowering.hpp"
@@ -26,7 +28,9 @@ void ARMFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) con
     }
 
     ///@brief callee->hasAttr(Attr::NotBuiltin)
-    auto mcallee = callee->hasAttr(Attr::isSylib) ? handleLib(callinst, ctx) : ctx.mapGlobal(callee->getName());
+    auto mcallee = callee->hasAttr(Attr::isSylib) || callee->hasAttr(Attr::ParallelEntry)
+                       ? handleLib(callinst, ctx)
+                       : ctx.mapGlobal(callee->getName());
 
     auto mcaller = ctx.CurrentBlk()->getFunction();
 
@@ -37,12 +41,11 @@ void ARMFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) con
     int passByRegBase = 0x10000000;
     int passBySprRegBase = 0x21; // 0 ~ 32
 
-    ///@note ptr和int类共享gpr, 但是ptr需要x<>, 但int只需要w<>
     for (auto &arg : callinst->getArgs()) {
         auto type = arg->getType();
 
-        ///@todo 由于Armv8的s<>和v<>是同一个寄存器组的不同视图, 所以这里理论上可以实现用寄存器传递向量参数
-        if (type->getTrait() == IR::IRCTYPE::PTR) {
+        // ptr & func ptr
+        if (type->getTrait() == IR::IRCTYPE::PTR || type->getTrait() == IR::IRCTYPE::FUNCTION) {
             if (gprCnt < 8) {
                 offsets.push_back(passByRegBase + (gprCnt++));
                 continue;
@@ -62,15 +65,12 @@ void ARMFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) con
         } else {
             Err::unreachable("handleCallEntry: unknown arg type");
         }
-        ///@todo vectorize
 
-        ///@note 可能的size为4, 8, 16(vector)
         const auto align = static_cast<unsigned>(arg->getType()->getBytes());
         auto minisize = 4U; // avoid clang-tidy warning
-        // unsigned size = std::max(size, align); // ? 这竟然没检查出来 ?
         unsigned size = std::max(minisize, align);
 
-        stkOffset = ((stkOffset + align - 1) / align) * align; // 强制对齐
+        stkOffset = ((stkOffset + align - 1) / align) * align;
         offsets.emplace_back(stkOffset);
         stkOffset += size;
     }
@@ -80,7 +80,7 @@ void ARMFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) con
     // FIXME: Immediate issue. Currently all immediate are treated as 64-bit. But the function arguments
     //        must be handled with care, since caller may use stack to pass arguments.
     auto getType = [](const IR::pVal &arg) -> OpT {
-        if (arg->getType()->getTrait() == IR::IRCTYPE::PTR)
+        if (inSet(arg->getType()->getTrait(), IR::IRCTYPE::PTR, IR::IRCTYPE::FUNCTION))
             return OpT::Int64;
 
         auto btype = arg->getType()->as<IR::BType>();
@@ -94,11 +94,11 @@ void ARMFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) con
     ///@note arg on stk
     for (int i = 0; i < args.size(); ++i) {
         const auto offset = offsets[i];
-        const auto arg = args[i];
-        auto mval = ctx.mapOperand(arg); // vreg or imme
-        const auto size = static_cast<unsigned>(arg->getType()->getBytes());
+        const auto &arg = args[i];
+        MIROperand_p mval = ctx.mapOperand(arg);
+        const auto size =
+            arg->getType()->getTrait() == IR::IRCTYPE::FUNCTION ? 8 : static_cast<unsigned>(arg->getType()->getBytes());
 
-        ///@todo 细化align, 避免栈空间浪费
         const auto align = 8U;
 
         if (offset >= passByRegBase) {
@@ -362,7 +362,7 @@ void ARMFrameInfo::makeReturn(IR::pRet retinst, LoweringContext &ctx) const {
     }
 }
 
-void ARMFrameInfo::appendCalleeSaveStackSize(uint64_t& allocationBase, uint64_t calleesaves) const {
+void ARMFrameInfo::appendCalleeSaveStackSize(uint64_t &allocationBase, uint64_t calleesaves) const {
     for (auto i = 0; i < 64; ++i, calleesaves >>= 1) {
         if (static_cast<ARMReg>(i) == ARMReg::V0) {
             ///@note start to stage V<>, make it ailgn

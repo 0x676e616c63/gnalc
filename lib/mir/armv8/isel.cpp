@@ -452,7 +452,7 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
 
         auto dst = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
 
-        if (ARMv8::isBitMaskImme(imm)) {
+        if (ARMv8::isBitMaskImme(imm) || imm == 0) {
             ///@note mov + copy
 
             auto mov = MIRInst::make(ARMOpC::MOV)
@@ -463,11 +463,13 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
         } else {
             ///@note movz(lo) + movk(hi) + (fmov) + copy
 
-            auto movz = MIRInst::make(ARMOpC::MOVZ)
+            // if (imm & 0XFFFF) {
+            auto movz = MIRInst::make(imm & 0XFFFF ? ARMOpC::MOVZ : ARMOpC::MOV)
                             ->setOperand<0>(dst, ctx)
                             ->setOperand<1>(MIROperand::asImme(imm & 0XFFFF, OpT::Int32), ctx);
 
             minsts.insert(iter, movz);
+            // }
 
             if (imm > 0XFFFF) {
                 auto movk = MIRInst::make(ARMOpC::MOVK)
@@ -573,7 +575,7 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
             minst->setOperand<1>(fdst, ctx);
         }
     } break;
-    case OpC::InstLoadGlobalAddress: // NOLINT
+    case OpC::InstLoadAddress: // NOLINT
         break;
     default:
         break;

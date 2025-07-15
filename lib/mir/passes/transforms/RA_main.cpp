@@ -431,7 +431,7 @@ void RegisterAllocImpl::AssignColors() {
         } else if (precolored.count(n)) {
             auto &calleesave = mfunc->calleeSaveRegs();
             calleesave |= 1LL << n->reg(); // marked
-        } else if (n->isStack()) {
+        } else if (n->isStack() || n->isZero()) {
             ;
         } else {
 

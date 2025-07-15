@@ -130,7 +130,7 @@ void RV64Printer::printout(const MIRInst &minst) {
         case OpC::InstAddSP:
             Err::unreachable("Should be legalized in postRAlegalize");
             break;
-        case OpC::InstLoadGlobalAddress:
+        case OpC::InstLoadAddress:
         case OpC::InstLoadImm:
         case OpC::InstLoadImmToReg:
         case OpC::InstLoadImmEx:
@@ -276,18 +276,19 @@ string RV64Printer::formatBinary(const MIRInst &minst) {
     }
 
     switch (opcode) {
-        case OpC::InstAdd:
-        case OpC::InstSub:
-        case OpC::InstMul:
-        case OpC::InstSDiv:
-        case OpC::InstUDiv:
-        case OpC::InstSRem:
-        case OpC::InstURem: {
-            auto bitWide = getBitWideChoosen(def->type(), lhs->type(), rhs->type());
-            if (bitWide < 8)
-                opstr += "w";
-        }
-        default: break;
+    case OpC::InstAdd:
+    case OpC::InstSub:
+    case OpC::InstMul:
+    case OpC::InstSDiv:
+    case OpC::InstUDiv:
+    case OpC::InstSRem:
+    case OpC::InstURem: {
+        auto bitWide = getBitWideChoosen(def->type(), lhs->type(), rhs->type());
+        if (bitWide < 8)
+            opstr += "w";
+    }
+    default:
+        break;
     }
 
     return opstr + " " + dst + ", " + src1 + ", " + src2;

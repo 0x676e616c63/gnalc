@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "mir/passes/transforms/lowering.hpp"
+#include "ir/function.hpp"
 #include "ir/instructions/binary.hpp"
 #include "ir/instructions/control.hpp"
 #include "ir/instructions/converse.hpp"
@@ -9,6 +10,7 @@
 #include "ir/instructions/phi.hpp"
 #include "ir/instructions/vector.hpp"
 #include "ir/type.hpp"
+#include "mir/MIR.hpp"
 #include "mir/info.hpp"
 #include "mir/passes/transforms/isel.hpp"
 #include "utils/exception.hpp"
@@ -119,9 +121,6 @@ MIROperand_p LoweringContext::mapOperand(const IRVal_p &value) {
 
     } else if (auto value_glo = value->as<IR::GlobalVariable>()) {
         if (mCodeGenCtx.isARMv8()) {
-            // get from mValMap, but would insert loadInst
-            ///@brief   adrp    x0, :got:arr
-            ///@brief   ldr     x0, [x0, :got_lo12:arr]
 
             auto mReloc = mGlobalMap.at(value_glo->getName());
 
@@ -132,8 +131,7 @@ MIROperand_p LoweringContext::mapOperand(const IRVal_p &value) {
                         ->setOperand<1>(MIROperand::asReloc(mReloc->reloc()), mCodeGenCtx));
 
             return mglo;
-        }
-        else if (mCodeGenCtx.isRISCV64()) {
+        } else if (mCodeGenCtx.isRISCV64()) {
             auto mReloc = mGlobalMap.at(value_glo->getName());
             auto mglo = MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Int64);
             newInst(MIRInst::make(RVOpC::LA)
@@ -141,11 +139,26 @@ MIROperand_p LoweringContext::mapOperand(const IRVal_p &value) {
                         ->setOperand<1>(MIROperand::asReloc(mReloc->reloc()), mCodeGenCtx));
 
             return mglo;
+        } else
+            Err::unreachable("Unsupported arch");
+    } else if (auto func_ptr = value->as<IR::Function>()) {
+        MIRGlobal_p mReloc;
+        if (!mGlobalMap.count(func_ptr->getName())) {
+            mReloc = make<MIRGlobal>(4, make<MIRReloc>(func_ptr->getName()));
+            mGlobalMap.emplace(func_ptr->getName(), mReloc);
+        } else {
+            mReloc = mGlobalMap.at(func_ptr->getName());
         }
-        else Err::unreachable("Unsupported arch");
+
+        auto mglo = MIROperand::asVReg(mCodeGenCtx.nextId(), OpT::Int64);
+        newInst(MIRInst::make(OpC::InstLoadAddress)
+                    ->setOperand<0>(mglo, mCodeGenCtx)
+                    ->setOperand<1>(MIROperand::asReloc(mReloc->reloc()), mCodeGenCtx));
+
+        return mglo;
     }
+
     Err::unreachable();
-    return nullptr; // just to make clang happy
 }
 
 MIROperand_p LoweringContext::newVReg(const std::shared_ptr<IR::Type> &type) {

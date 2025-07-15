@@ -2,19 +2,21 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include <cstdint>
+#include <type_traits>
 #ifndef GNALC_MIR_MIR_HPP
 #define GNALC_MIR_MIR_HPP
 
-#include "mir/tools.hpp"
-#include "utils/exception.hpp"
 #include "armv8/base.hpp"
 #include "mir/info.hpp"
+#include "mir/tools.hpp"
 #include "riscv64/base.hpp"
+#include "utils/exception.hpp"
 #include "utils/generic_visitor.hpp"
 
-#include <cstddef>
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <list>
 #include <map>
 #include <utility>
@@ -53,8 +55,7 @@ enum class OperandType : uint32_t {
     Low32,
     // Arm only now
     CondFlag, // to be very aware that many inst no long have cond exec compare to armv7
-    Shift5,   // lsl, lsr, asr
-    LoadStoreShamt
+    Zero,
 };
 
 using OpT = OperandType;
@@ -76,6 +77,7 @@ inline unsigned getBitWide(OpT type) {
     case OpT::Int64:
     case OpT::Intvec2:
     case OpT::Floatvec2:
+    case OpT::Zero:
         return 8;
     case OpT::Intvec3:
     case OpT::Floatvec3:
@@ -188,7 +190,7 @@ enum class MIRGenericInst : uint32_t {
     InstCopyFromReg, ///copy: precolored to vreg
     InstCopyToReg,   ///copy: vreg to precolored
     InstSelect,
-    InstLoadGlobalAddress,
+    InstLoadAddress,
     InstLoadStackObjectAddr,
     InstLoadLiteral,
     InstLoadImm,
@@ -252,9 +254,9 @@ using MIRReloc_wp = std::weak_ptr<MIRReloc>;
 
 class MIROperand;
 
-constexpr uint32_t VRegBegin = 0b0101U << 28;
-constexpr uint32_t StkObjBegin = 0b1010U << 28;
-constexpr uint32_t invalidReg = 0b1100U << 28;
+constexpr uint32_t VRegBegin = 0x50000000;
+constexpr uint32_t StkObjBegin = 0xa0000000;
+constexpr uint32_t invalidReg = 0xc0000000;
 
 constexpr inline bool isISAReg(uint32_t x) { return x < VRegBegin; }
 constexpr inline bool isVirtualReg(uint32_t x) { return (x & VRegBegin) == VRegBegin; }
@@ -262,7 +264,7 @@ constexpr inline bool isStkObj(uint32_t x) { return (x & StkObjBegin) == StkObjB
 
 class MIROperand {
 public:
-    static std::map<unsigned, MIROperand_p> ISApool; // isa 为了保证单例模式所以只能使用默认位宽
+    static std::map<unsigned, MIROperand_p> ISApool;
 
 private:
     std::variant<std::monostate, MIRReg_p, MIRReloc_p, unsigned, uint64_t, double, string> mOperand{std::monostate{}};
@@ -316,13 +318,14 @@ public:
     bool isUnused() const { return std::holds_alternative<std::monostate>(mOperand); }
     bool isReg() const { return std::holds_alternative<MIRReg_p>(mOperand); }
     bool isVReg() const { return isReg() && isVirtualReg(reg()); }
-    bool isISA() const { return isReg() && isISAReg(reg()); }
+    bool isISA() const { return isReg() && (isISAReg(reg())); }
     // for RA
     bool isPreColored() const { return isReg() && isISA() && isISAReg(recover); }
     bool isStack() const { return isReg() && isStkObj(reg()); }
     bool isReloc() const { return std::holds_alternative<MIRReloc_p>(mOperand); }
     bool isProb() const { return std::holds_alternative<double>(mOperand); }
     bool isLiteral() const { return std::holds_alternative<string>(mOperand); }
+    bool isZero() const { return mType == OpT::Zero; }
 
     constexpr OpT type() const { return mType; }
     void resetType(OpT _new) { mType = _new; }
@@ -331,13 +334,17 @@ public:
     bool operator!=(const MIROperand &other) const { return mOperand != other.mOperand; }
 
     template <typename T> static MIROperand_p asImme(T val, OpT type) {
-        if constexpr (std::is_same_v<T, int> || std::is_same_v<T, unsigned> || std::is_same_v<T, Cond>) {
+
+        if (type == OpT::special || type == OpT::CondFlag) {
+            auto encoding = static_cast<uint64_t>(val);
+            return make<MIROperand>(encoding, OpT::Int64);
+        } else if constexpr (std::is_same_v<T, int> || std::is_same_v<T, unsigned>) {
             auto encoding = *reinterpret_cast<unsigned *>(&val);
-            return make<MIROperand>(encoding,
-                                    OpT::Int64); // use Int64 to not narrow down the predicted bitwide when codegen
+            return encoding == 0 ? asZero() : make<MIROperand>(encoding, OpT::Int64);
+            // use Int64 to not narrow down the predicted bitwide when codegen
         } else if constexpr (std::is_same_v<T, int64_t>) {
             auto encoding = *reinterpret_cast<uint64_t *>(&val);
-            return make<MIROperand>(encoding, OpT::Int64);
+            return encoding == 0 ? asZero() : make<MIROperand>(encoding, OpT::Int64);
         } else if constexpr (std::is_same_v<T, float>) {
             auto encoding = *reinterpret_cast<unsigned *>(&val);
             return make<MIROperand>(encoding, OpT::Float32);
@@ -390,6 +397,10 @@ public:
     static MIROperand_p asProb(double prob) { return make<MIROperand>(prob, OpT::special); }
 
     static MIROperand_p asLiteral(string liter) { return make<MIROperand>(liter, OpT::special); }
+
+    const static uint32_t ZeroReg = 0x0fffffff;
+
+    static MIROperand_p asZero() { return asVReg(ZeroReg, OpT::Zero); }
 
     // builder end
 
@@ -656,14 +667,13 @@ public:
         auto it = std::find_if(mInsts.begin(), mInsts.end(), [](const MIRInst_p &minst) {
             if (minst->isGeneric() &&
                 (minst->opcode<OpC>() == OpC::InstICmp || minst->opcode<OpC>() == OpC::InstFCmp)) {
-                ///@todo 之后可能补充其他比较语句
                 return true;
             } else {
                 return false;
             }
         });
 
-        mInsts.insert(it, minst); // it 可能为 .end()
+        mInsts.insert(it, minst);
     }
 
     void putAllInstOp(CodeGenContext &ctx) {
@@ -832,7 +842,6 @@ public:
     ~MIRDataStorage() override = default;
 };
 
-/// @brief 跳转表, 如 swtich 语句, 向量函数表等
 class MIRJmpTable : public MIRReloc {
 private:
     std::vector<MIRReloc_wp> msyms{};
@@ -846,7 +855,7 @@ public:
     ~MIRJmpTable() override = default;
 };
 
-class MIRGlobal { // reloc 之外包了层align
+class MIRGlobal {
 private:
     std::size_t alignment;
     MIRReloc_p mreloc; // func, blk, data, bss

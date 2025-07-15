@@ -79,7 +79,7 @@ void PostRaSchedulingImpl::MkDAG(SchedulingModule &Module) {
         for (int i = 1; i <= inst->getUseNr(); ++i) {
             auto &mop = inst->getOp(i);
 
-            if (mop && mop->isReg()) {
+            if (mop && mop->isReg() && !mop->isZero()) {
                 mop->isStack() ? tmp.emplace_back(Util::to_underlying(ARMReg::SP)) : tmp.emplace_back(mop->isa());
             }
         }
@@ -119,7 +119,7 @@ void PostRaSchedulingImpl::MkDAG(SchedulingModule &Module) {
             case OpC::InstFCmp:
             case OpC::InstICmp:
             case OpC::InstLoad:
-            case OpC::InstLoadGlobalAddress:
+            case OpC::InstLoadAddress:
             case OpC::InstLoadRegFromStack:
             case OpC::InstLoadStackObjectAddr:
             case OpC::InstStore:

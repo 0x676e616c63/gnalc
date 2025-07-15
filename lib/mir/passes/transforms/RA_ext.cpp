@@ -266,10 +266,6 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getDef(const MIRInst_p &minst)
 
     if (auto def = minst->getDef()) {
 
-        if (def->getRecover() == 1342177341) {
-            int debug;
-        }
-
         if (inRange(def->type(), OpT::Float, OpT::Floatvec4)) {
             defs.emplace(def);
         }

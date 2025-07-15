@@ -58,6 +58,7 @@ public:
     [[nodiscard]] string adjustPrinter(const MIRInst &);
 
     [[nodiscard]] string literalPrinter(const MIRInst &);
+    [[nodiscard]] string loadAddrPrinter(const MIRInst &);
 
     // vectors
     [[nodiscard]] string binaryPrinter_v(const MIRInst &);
