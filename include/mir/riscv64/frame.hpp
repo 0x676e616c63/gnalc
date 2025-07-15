@@ -26,7 +26,6 @@ public:
 
     bool isFuncCall(const MIRInst_p &) const override;
     void appendCalleeSaveStackSize(uint64_t &allocationBase, uint64_t calleesaves) const override;
-    void updateCalleeSaveStackOffset(MIRFunction*, uint64_t calleesaves) const;
 };
 }
 

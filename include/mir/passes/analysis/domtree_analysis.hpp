@@ -35,9 +35,11 @@ namespace MIR {
 
 namespace detail {
 using DomTreeBuilder = Graph::GenericDomTreeBuilder<MIRBlk *, false>;
+using PostDomTreeBuilder = Graph::GenericDomTreeBuilder<MIRBlk *, true>;
 } // namespace detail
 
 using DomTree = Graph::GenericDomTree<MIRBlk *, false>;
+using PostDomTree = Graph::GenericDomTree<MIRBlk *, true>;
 
 class DomTreeAnalysis : public PM::AnalysisInfo<DomTreeAnalysis> {
 public:
@@ -45,6 +47,25 @@ public:
     DomTree run(MIRFunction &f, FAM &fam);
 
 private:
+    friend AnalysisInfo<DomTreeAnalysis>;
+    static PM::UniqueKey Key;
+};
+
+struct PDTBuildContext {
+    MIRBlk_p exit = nullptr;
+    bool is_exit_virtual = false;
+};
+
+class PostDomTreeAnalysis : public PM::AnalysisInfo<PostDomTreeAnalysis> {
+public:
+    using Result = PostDomTree;
+    PostDomTree run(MIRFunction &f, FAM &fam);
+
+private:
+    void setExit(MIRFunction &f, PDTBuildContext& ctx);
+    void restoreCFG(PDTBuildContext& ctx) const;
+
+public:
     friend AnalysisInfo<DomTreeAnalysis>;
     static PM::UniqueKey Key;
 };

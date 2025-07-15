@@ -17,6 +17,7 @@ struct OptInfo {
     bool CFGsimplifyBeforeRa;
     bool CFGsimplifyAfterRa;
     bool PostRaScheduling;
+    bool machineLICM;
 };
 
 extern const OptInfo o1_opt_info;

@@ -9,8 +9,8 @@
 
 #include <list>
 #include <memory>
-#include <string_view>
 #include <ostream>
+#include <string_view>
 #include <type_traits>
 
 namespace Util {
@@ -48,6 +48,45 @@ template <typename getTypeNameArgument> std::string_view getTypeName() {
 #else
     return std::string_view{"UNKNOWN_NAME"};
 #endif
+}
+
+namespace detail {
+template <auto value> constexpr auto getEnumNameHelper() {
+    std::string_view name;
+#if __GNUC__ || __clang__
+    name = __PRETTY_FUNCTION__;
+    std::size_t start = name.find('=') + 2;
+    std::size_t end = name.size() - 1;
+    name = std::string_view{name.data() + start, end - start};
+    start = name.rfind("::");
+#elif _MSC_VER
+    name = __FUNCSIG__;
+    std::size_t start = name.find('<') + 1;
+    std::size_t end = name.rfind(">(");
+    name = std::string_view{name.data() + start, end - start};
+    start = name.rfind("::");
+#endif
+    return start == std::string_view::npos ? name : std::string_view{name.data() + start + 2, name.size() - start - 2};
+}
+
+template <typename T, std::size_t N = 0> constexpr auto getEnumMax() {
+    constexpr auto value = static_cast<T>(N);
+    if constexpr (getEnumNameHelper<value>().find(")") == std::string_view::npos)
+        return getEnumMax<T, N + 1>();
+    else
+        return N;
+}
+
+template <typename T, size_t Num, size_t... Is> constexpr auto getEnumNames(std::index_sequence<Is...>) {
+    return std::array<std::string_view, Num>{getEnumNameHelper<static_cast<T>(Is)>()...};
+}
+} // namespace detail
+
+// Adapted from: https://zhuanlan.zhihu.com/p/680412313
+template <typename T> constexpr auto getEnumName(T value) {
+    constexpr auto num = detail::getEnumMax<T>();
+    constexpr auto names = detail::getEnumNames<T, num>(std::make_index_sequence<num>{});
+    return names[static_cast<std::size_t>(value)];
 }
 
 template <typename T>
@@ -142,15 +181,13 @@ public:
     NullStream() : std::ostream(&m_nb) {}
 };
 
-static NullStream & null_stream() {
+static NullStream &null_stream() {
     static NullStream null_stream;
     return null_stream;
 }
 
 struct PairHash {
-    template <class T1, class T2>
-    size_t operator()(const std::pair<T1, T2> &p) const
-    {
+    template <class T1, class T2> size_t operator()(const std::pair<T1, T2> &p) const {
         size_t seed = std::hash<T1>()(p.first);
         Util::hashSeedCombine(seed, std::hash<T2>()(p.second));
         return seed;
@@ -159,8 +196,7 @@ struct PairHash {
 
 bool begins_with(const std::string &a, const std::string &b);
 
-template <typename T>
-std::enable_if_t<std::is_integral_v<T>, bool> isPowerOfTwo(T x) {
+template <typename T> std::enable_if_t<std::is_integral_v<T>, bool> isPowerOfTwo(T x) {
     return x && !(x & (x - static_cast<T>(1)));
 }
 

@@ -82,6 +82,7 @@ aux_source_directory(lib/mir/riscv64 GNALC_MIR_SRC)
 aux_source_directory(lib/mir/passes GNALC_MIR_SRC)
 aux_source_directory(lib/mir/passes/analysis GNALC_MIR_SRC)
 aux_source_directory(lib/mir/passes/transforms GNALC_MIR_SRC)
+aux_source_directory(lib/mir/passes/utilities GNALC_MIR_SRC)
 
 
 # Pass Manager

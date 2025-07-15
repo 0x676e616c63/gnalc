@@ -5,16 +5,16 @@
 #ifndef GNALC_MIR_MIR_HPP
 #define GNALC_MIR_MIR_HPP
 
-#include "mir/tools.hpp"
-#include "utils/exception.hpp"
 #include "armv8/base.hpp"
 #include "mir/info.hpp"
+#include "mir/tools.hpp"
 #include "riscv64/base.hpp"
+#include "utils/exception.hpp"
 #include "utils/generic_visitor.hpp"
 
-#include <cstddef>
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <list>
 #include <map>
 #include <utility>
@@ -40,7 +40,6 @@ enum class OperandType : uint32_t {
     Ptr = Int64,
     Float, // V<> 默认位宽
     Float32,
-    Float64,
     Intvec2,
     Intvec3, // not impl
     Intvec4,
@@ -72,7 +71,6 @@ inline unsigned getBitWide(OpT type) {
     case OpT::Int32:
     case OpT::Float32:
         return 4;
-    case OpT::Float64:
     case OpT::Int64:
     case OpT::Intvec2:
     case OpT::Floatvec2:
@@ -418,6 +416,39 @@ public:
     }
 
     virtual ~MIROperand() = default;
+
+    std::string dbgDump() const {
+        // std::monostate, MIRReg_p, MIRReloc_p, unsigned, uint64_t, double, string
+        if (std::holds_alternative<std::monostate>(mOperand))
+            return "<monostate>";
+        if (std::holds_alternative<MIRReg_p>(mOperand)) {
+            auto reg = std::get<MIRReg_p>(mOperand)->reg;
+            std::string type;
+            if (isVirtualReg(reg)) {
+                type = "VReg(";
+                reg -= VRegBegin;
+            }
+            else if (isISAReg(reg)) {
+                type = "ISA(";
+            }
+            else if (isStkObj(reg)) {
+                reg -= StkObjBegin;
+                type = "StkObj(";
+            }
+            return type + std::to_string(reg) + ")";
+        }
+        if (std::holds_alternative<MIRReloc_p>(mOperand))
+            return "reloc(" + std::get<MIRReloc_p>(mOperand)->getmSym() + ")";
+        if (std::holds_alternative<unsigned>(mOperand))
+            return "imm(" + std::to_string(std::get<unsigned>(mOperand)) + ")";
+        if (std::holds_alternative<uint64_t>(mOperand))
+            return "immEx(" + std::to_string(std::get<uint64_t>(mOperand)) + ")";
+        if (std::holds_alternative<double>(mOperand))
+            return "imm(" + std::to_string(std::get<double>(mOperand)) + ")";
+        if (std::holds_alternative<string>(mOperand))
+            return "literal(" + std::get<string>(mOperand) + ")";
+        return "<unexpected>";
+    }
 };
 
 class MIRInst : public std::enable_shared_from_this<MIRInst> {
@@ -430,6 +461,7 @@ private:
     std::variant<OpC, ARMOpC, RVOpC> mOpcode;
     ///@note <0>代表def, 如果为nullptr, 代表指令没有def, 或者是需要用WZR/XZR占位
     std::array<MIROperand_p, maxOpCnt> mOperands;
+    std::vector<std::string> dbg_data;
     explicit MIRInst(OpC opcode) noexcept : mOpcode(opcode) {};
     explicit MIRInst(ARMOpC opcode) noexcept : mOpcode(opcode) {};
     explicit MIRInst(RVOpC opcode) noexcept : mOpcode(opcode) {};
@@ -530,6 +562,38 @@ public:
     }
 
     virtual ~MIRInst() = default;
+
+    std::string dbgDump() const {
+        std::string ret;
+        if (isGeneric())
+            ret = "G::" + std::string{Util::getEnumName(opcode<OpC>())};
+        else if (isARM())
+            ret = "A::" + std::string{Util::getEnumName(opcode<ARMOpC>())};
+        else if (isRV())
+            ret = "R::" + std::string{Util::getEnumName(opcode<RVOpC>())};
+
+        for (size_t i = 0; i < maxOpCnt; i++) {
+            auto allNullptrFromThisOne = [&]() -> bool {
+                for (size_t j = i; j < maxOpCnt; j++) {
+                    if (mOperands[j])
+                        return false;
+                }
+                return true;
+            }();
+            if (allNullptrFromThisOne)
+                break;
+
+            if (mOperands[i])
+                ret += " " + mOperands[i]->dbgDump();
+            else
+                ret += " <null>";
+        }
+        return ret;
+    }
+
+    const std::vector<std::string>& getDbgData() const { return dbg_data; }
+    void appendDbgData(const std::string& data) { dbg_data.emplace_back(data); }
+    void clearDbgData() { dbg_data.clear();}
 };
 
 enum class StkObjUsage {
@@ -652,18 +716,25 @@ public:
         Err::gassert(it != mInsts.end(), "MIRBlk: cant find old succ");
     }
 
-    void addInstBeforeBr(const MIRInst_p &minst) {
-        auto it = std::find_if(mInsts.begin(), mInsts.end(), [](const MIRInst_p &minst) {
-            if (minst->isGeneric() &&
-                (minst->opcode<OpC>() == OpC::InstICmp || minst->opcode<OpC>() == OpC::InstFCmp)) {
-                ///@todo 之后可能补充其他比较语句
-                return true;
-            } else {
-                return false;
+    void addInstBeforeBr(const MIRInst_p &to_insert) {
+        auto it = mInsts.begin();
+        for (; it != mInsts.end(); it++) {
+            auto &minst = *it;
+            if (minst->isGeneric()) {
+                auto opcode = minst->opcode<OpC>();
+                if (opcode == OpC::InstBranch || opcode == OpC::InstFCmp || opcode == OpC::InstICmp)
+                    break;
             }
-        });
+            if (minst->isRV()) {
+                auto opcode = minst->opcode<RVOpC>();
+                if (opcode == RVOpC::J || inRange(opcode, RVOpC::BEQ, RVOpC::BGTZ))
+                    break;
+            }
+            if (minst->isARM() && minst->opcode<ARMOpC>() == ARMOpC::CBNZ)
+                break;
+        }
 
-        mInsts.insert(it, minst); // it 可能为 .end()
+        mInsts.insert(it, to_insert);
     }
 
     void putAllInstOp(CodeGenContext &ctx) {

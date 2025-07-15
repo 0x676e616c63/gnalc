@@ -12,7 +12,7 @@ namespace MIR {
 
 namespace RV64 {
 // Immediate that can be encoded directly in an instruction is 12 bits wide.
-// But in RISCV64, the value is sign-extended to 64 bits.
+// But in RISCV64, immediate loaded by `li` is sign-extended to 64 bits.
 // Thus, `li x6, -1` and `li x6, 4294967295 (which is 0xffffffff)` is not the same.
 // However, 32-bit -1 is encoded to an unsigned int in MIROperand. But when getting it from `imme()`,
 // we got one uint64_t with that value.
