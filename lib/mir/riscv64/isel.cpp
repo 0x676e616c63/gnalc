@@ -410,7 +410,7 @@ void RVIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
         return;
 
     switch (minst->opcode<OpC>()) {
-    case OpC::InstLoadGlobalAddress:
+    case OpC::InstLoadAddress:
         minst->resetOpcode(RVOpC::LA);
         break;
     case OpC::InstLoadImm: {

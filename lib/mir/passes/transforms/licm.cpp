@@ -24,7 +24,7 @@ bool hasDefInBlock(const MIRBlk_p &block, const MIRInst_p &inst) {
 bool isSafeToMove(const MLoop_p &loop, const MIRInst_p &inst) {
     if (inst->isGeneric()) {
         switch (inst->opcode<OpC>()) {
-        case OpC::InstLoadGlobalAddress:
+        case OpC::InstLoadAddress:
         case OpC::InstLoadStackObjectAddr:
         case OpC::InstLoadImm:
         case OpC::InstLoadImmEx:
@@ -92,7 +92,6 @@ PM::PreservedAnalyses MachineLICMPass::run(MIRFunction &function, FAM &fam) {
                         if (isSafeToMove(loop, *it))
                             to_hoist.emplace_back(it);
                     }
-
 
                     for (const auto &iter : to_hoist) {
                         auto inst = *iter;

@@ -156,7 +156,7 @@ string ARMA64Printer::copyPrinter(const MIRInst &minst) {
                inRange(useType, OpT::Float, OpT::Floatvec4) && inRange(defType, OpT::Float, OpT::Floatvec4)) {
 
         str += "fmov\t" + reg2s(def, bitWide) + ",\t" + reg2s(use, bitWide);
-    } else if (inRange(defType, OpT::Float, OpT::Float64) && useType == OpT::Zero) {
+    } else if (inRange(defType, OpT::Float, OpT::Float32) && useType == OpT::Zero) {
         str += "fmov\t" + reg2s(def, bitWide) + ",\t" + reg2s(use, bitWide);
     } else {
         str += "mov\t" + reg2s(def, bitWide) + ",\t" + reg2s(use, bitWide);
