@@ -161,11 +161,6 @@ void RV64Printer::printout(const MIRInst &minst) {
     }
 }
 
-void RV64Printer::printoutThreadRuntime() {
-
-}
-
-
 string RV64Printer::formatOperand(const MIROperand_p &op) {
     if (op == nullptr) {
         Logger::logCritical("RV64Printer::formatOperand: Unexpected null operand.");

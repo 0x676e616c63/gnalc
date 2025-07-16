@@ -49,6 +49,7 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(PreRAlegalize());
     fpm.addPass(RegisterAlloc());
+    fpm.addPass(GenericPeephole(GenericPeephole::AfterRa));
     fpm.addPass(StackGenerate());
     fpm.addPass(PostRAlegalize());
 

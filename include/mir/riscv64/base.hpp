@@ -6,6 +6,7 @@
 #define GNALC_MIR_RISCV64_BASE_HPP
 
 #include "utils/enum_operator.hpp"
+#include "ir/instructions/compare.hpp"
 #include <cstdint>
 
 namespace MIR {
@@ -164,6 +165,7 @@ enum class RVOpC : uint32_t {
     RET
 };
 
+RVOpC RVIRCondConvert(IR::ICMPOP cond);
 } // namespace MIR
 
 #endif

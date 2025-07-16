@@ -36,7 +36,6 @@ public:
     void printout(const MIRBlk &);
     void printout(const MIRInst &);
     void printoutRV64(const MIRInst &);
-    void printoutThreadRuntime();
 
     string formatOperand(const MIROperand_p &op);
     [[nodiscard]] string formatBinary(const MIRInst &);
