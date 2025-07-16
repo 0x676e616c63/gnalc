@@ -14,6 +14,7 @@ namespace MIR {
 class RV64Printer {
     MIRFunction const *mfunc;
     std::ostream &outStream;
+    bool with_runtime;
 private:
     template <typename T> void write(T &&obj) { outStream << obj; }
 
@@ -26,14 +27,15 @@ private:
         outStream << std::endl;
     }
 public:
-    explicit RV64Printer(std::ostream &outStream_) : outStream(outStream_) {}
+    RV64Printer(std::ostream &outStream_, bool with_runtime_)
+        : outStream(outStream_), with_runtime(with_runtime_) {}
 
     void printout(const MIRModule &);
     void printout(const std::vector<MIRGlobal_p> &);
     void printout(const MIRFunction &);
     void printout(const MIRBlk &);
     void printout(const MIRInst &);
-    void rv64_printout(const MIRInst &);
+    void printoutRV64(const MIRInst &);
 
     string formatOperand(const MIROperand_p &op);
     [[nodiscard]] string formatBinary(const MIRInst &);

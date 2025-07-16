@@ -13,6 +13,14 @@ void RV64Printer::printout(const MIRModule &module) {
     writeln(".text");
     for (auto &mfunc : module.funcs())
         printout(*mfunc);
+
+    if (with_runtime) {
+        auto runtime_types = module.getRuntimeTypes();
+        for (auto rt : runtime_types) {
+            writeln("\n\n");
+            write(Runtime::getRuntime(rt, Runtime::RtTarget::RISCV64));
+        }
+    }
 }
 
 void RV64Printer::printout(const std::vector<MIRGlobal_p> &globals) {
@@ -148,7 +156,7 @@ void RV64Printer::printout(const MIRInst &minst) {
         }
         writeln("");
     } else {
-        rv64_printout(minst);
+        printoutRV64(minst);
         writeln("");
     }
 }

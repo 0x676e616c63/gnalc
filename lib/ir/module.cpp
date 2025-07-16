@@ -44,9 +44,7 @@ void Module::addLinearFunction(pLFunc func) {
     func->setParent(this);
     linear_funcs.emplace_back(std::move(func));
 }
-const std::list<pLFunc> &Module::getLinearFunctions() const {
-    return linear_funcs;
-}
+const std::list<pLFunc> &Module::getLinearFunctions() const { return linear_funcs; }
 bool Module::delLinearFunction(const pLFunc &target) {
     for (auto it = linear_funcs.begin(); it != linear_funcs.end(); ++it) {
         if (*it == target) {
@@ -122,12 +120,23 @@ size_t Module::getInstCount() const {
     if (!linear_funcs.empty()) {
         for (const auto &func : linear_funcs)
             count += func->getInstCount();
-    }
-    else {
+    } else {
         for (const auto &func : funcs)
             count += func->getInstCount();
     }
     return count;
+}
+
+std::set<Runtime::RtType> Module::getRuntimeTypes() const {
+    std::set<Runtime::RtType> ret;
+    for (const auto &func_decl : func_decls) {
+        if (func_decl->hasAttr(FuncAttr::ParallelEntry) || func_decl->hasAttr(FuncAttr::isAtomicAddI32) ||
+            func_decl->hasAttr(FuncAttr::isAtomicAddF32)) {
+            if (func_decl->getUseCount() != 0)
+                ret.emplace(Runtime::RtType::Thread);
+        }
+    }
+    return ret;
 }
 
 void Module::accept(IRVisitor &visitor) { visitor.visit(*this); }

@@ -29,6 +29,13 @@ void ARMA64Printer::printout(const MIRModule &mModule) {
         printout(*mfunc);
     }
 
+    if (with_runtime) {
+        auto runtime_types = mModule.getRuntimeTypes();
+        for (auto rt : runtime_types) {
+            outStream << "\n\n\n";
+            outStream << Runtime::getRuntime(rt, Runtime::RtTarget::ARMv8);
+        }
+    }
     return;
 }
 

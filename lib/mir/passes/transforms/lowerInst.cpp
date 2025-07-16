@@ -98,6 +98,7 @@ Cond MIR::IRCondConvert(IR::ICMPOP cond) {
         return LT;
     }
 }
+
 Cond MIR::IRCondConvert(IR::FCMPOP cond) {
     using FCMPOP = IR::FCMPOP;
     switch (cond) {
@@ -141,10 +142,11 @@ void MIR::lowerInst(const IR::pFneg &fneg, LoweringContext &ctx) {
     ctx.addOperand(fneg, def);
 }
 
+///@note condflag 加入到常量池
 void MIR::lowerInst(const IR::pIcmp &icmp, LoweringContext &ctx) {
-    auto def = ctx.newVReg(icmp->getType());
-
     if (ctx.CodeGenCtx().isARMv8()) {
+        auto def = ctx.newVReg(icmp->getType());
+
         ctx.newInst(MIRInst::make(OpC::InstICmp)
                         ->setOperand<0>(nullptr, ctx.CodeGenCtx())
                         ->setOperand<1>(ctx.mapOperand(icmp->getLHS()), ctx.CodeGenCtx())
@@ -153,19 +155,24 @@ void MIR::lowerInst(const IR::pIcmp &icmp, LoweringContext &ctx) {
         ctx.newInst(MIRInst::make(ARMOpC::CSET)
                         ->setOperand<0>(def, ctx.CodeGenCtx())
                         ->setOperand<1>(ctx.mapOperand(IRCondConvert(icmp->getCond())), ctx.CodeGenCtx())); // cond flag
-    } else if (ctx.CodeGenCtx().isRISCV64()) {
-        ctx.newInst(MIRInst::make(OpC::InstICmp)
-                ->setOperand<0>(def, ctx.CodeGenCtx())
-                ->setOperand<1>(ctx.mapOperand(icmp->getLHS()), ctx.CodeGenCtx())
-                ->setOperand<2>(ctx.mapOperand(icmp->getRHS()), ctx.CodeGenCtx())
-                ->setOperand<3>(ctx.mapOperand(IRCondConvert(icmp->getCond())), ctx.CodeGenCtx()));
+        ctx.addOperand(icmp, def);
 
+    } else if (ctx.CodeGenCtx().isRISCV64()) {
+        // For single user icmp, we have a more optimized way to lower it.
+        if (auto single_user = icmp->getSingleUser()) {
+            if (single_user->is<IR::BRInst>())
+                return;
+        }
+        auto def = ctx.newVReg(icmp->getType());
+
+        ctx.newInst(MIRInst::make(OpC::InstICmp)
+                        ->setOperand<0>(def, ctx.CodeGenCtx())
+                        ->setOperand<1>(ctx.mapOperand(icmp->getLHS()), ctx.CodeGenCtx())
+                        ->setOperand<2>(ctx.mapOperand(icmp->getRHS()), ctx.CodeGenCtx())
+                        ->setOperand<3>(ctx.mapOperand(IRCondConvert(icmp->getCond())), ctx.CodeGenCtx()));
+        ctx.addOperand(icmp, def);
     } else
         Err::unreachable("Unsupported arch");
-
-    ///@note condflag 加入到常量池
-
-    ctx.addOperand(icmp, def);
 }
 
 void MIR::lowerInst(const IR::pFcmp &fcmp, LoweringContext &ctx) {
@@ -251,7 +258,6 @@ void emitBranchCondARM(const IR::pBr &br, LoweringContext &ctx) {
                         ->setOperand<2>(MIROperand::asReloc(blk_true), ctx.CodeGenCtx())
                         ->setOperand<3>(MIROperand::asProb(0.5), ctx.CodeGenCtx()));
 
-
         ctx.newInst(MIRInst::make(OpC::InstBranch)
                         ->setOperand<0>(nullptr, ctx.CodeGenCtx())
                         ->setOperand<1>(MIROperand::asReloc(blk_false), ctx.CodeGenCtx())
@@ -269,7 +275,6 @@ void emitBranchRISCV(const IR::pBr &br, LoweringContext &ctx) {
 void emitBranchCondRISCV(const IR::pBr &br, LoweringContext &ctx) {
     auto blk_true = ctx.mapBlk(br->getTrueDest());
     auto blk_false = ctx.mapBlk(br->getFalseDest());
-    auto use = ctx.mapOperand(br->getCond()); // val or const
 
     if (auto const_cond = br->getCond()->as<IR::ConstantI1>()) {
         auto &true_blk_true = const_cond->getVal() ? blk_true : blk_false;
@@ -289,11 +294,27 @@ void emitBranchCondRISCV(const IR::pBr &br, LoweringContext &ctx) {
             std::find_if(mpreds.begin(), mpreds.end(), [&ctx](const auto &mpred) { return ctx.CurrentBlk() == mpred; });
         Err::gassert(rm_it != mpreds.end(), "mpreds corrupted");
         mpreds.erase(rm_it);
-    } else if (use && !use->isImme()) {
-        ctx.newInst(MIRInst::make(RVOpC::BNEZ)
-                        ->setOperand<0>(nullptr, ctx.CodeGenCtx())
-                        ->setOperand<1>(use, ctx.CodeGenCtx())
-                        ->setOperand<2>(MIROperand::asReloc(blk_true), ctx.CodeGenCtx()));
+    } else {
+        if (br->getCond()->is<IR::ICMPInst>() && br->getCond()->getUseCount() == 1) {
+            // For single user icmp, we directly emit blt/bge/...
+            // This is not done in ISel because at that time we've lost the use info.
+            auto icmp = br->getCond()->as<IR::ICMPInst>();
+            auto lhs = ctx.mapOperand(icmp->getLHS());
+            auto rhs = ctx.mapOperand(icmp->getRHS());
+            RVOpC bropcode = RVIRCondConvert(icmp->getCond());
+            ctx.newInst(MIRInst::make(bropcode)
+                            ->setOperand<0>(nullptr, ctx.CodeGenCtx())
+                            ->setOperand<1>(lhs, ctx.CodeGenCtx())
+                            ->setOperand<2>(rhs, ctx.CodeGenCtx())
+                            ->setOperand<3>(MIROperand::asReloc(blk_true), ctx.CodeGenCtx()));
+        } else {
+            auto mcond = ctx.mapOperand(br->getCond());
+            Err::gassert(mcond && !mcond->isImme());
+            ctx.newInst(MIRInst::make(RVOpC::BNEZ)
+                            ->setOperand<0>(nullptr, ctx.CodeGenCtx())
+                            ->setOperand<1>(mcond, ctx.CodeGenCtx())
+                            ->setOperand<2>(MIROperand::asReloc(blk_true), ctx.CodeGenCtx()));
+        }
 
         ctx.newInst(MIRInst::make(OpC::InstBranch)
                         ->setOperand<0>(nullptr, ctx.CodeGenCtx())
@@ -313,8 +334,7 @@ void MIR::lowerInst(const IR::pBr &br, LoweringContext &ctx) {
             emitBranchCondRISCV(br, ctx);
         else
             emitBranchRISCV(br, ctx);
-    }
-    else
+    } else
         Err::unreachable("Unsupported Arch");
 }
 

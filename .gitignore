@@ -41,6 +41,10 @@ test_no_bug.ll
 perf.out
 submit
 runtime/artifacts/thread.ll
-runtime/artifacts/thread.ll.hpp
+runtime/artifacts/thread.ll.cpp
+runtime/artifacts/thread.armv8.s
+runtime/artifacts/thread.riscv64.s
+runtime/artifacts/thread.armv8.s.cpp
+runtime/artifacts/thread.riscv64.s.cpp
 build_release/
 trash/
