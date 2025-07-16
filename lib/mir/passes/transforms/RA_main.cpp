@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "mir/passes/transforms/RA.hpp"
+#include "mir/tools.hpp"
 #include <algorithm>
 #include <string>
 #include <variant>
@@ -218,7 +219,7 @@ void RegisterAllocImpl::Simplify() {
 
     simplifyWorkList.erase(it);
 
-    selectStack.emplace_back(n);
+    !n->isStack() ? void(selectStack.emplace_back(n)) : nop;
 
     for (const auto &m : Adjacent(n)) {
         DecrementDegree(m);
@@ -431,7 +432,7 @@ void RegisterAllocImpl::AssignColors() {
         } else if (precolored.count(n)) {
             auto &calleesave = mfunc->calleeSaveRegs();
             calleesave |= 1LL << n->reg(); // marked
-        } else if (n->isStack() || n->isZero()) {
+        } else if (n->isStack()) {
             ;
         } else {
 

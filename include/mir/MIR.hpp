@@ -54,7 +54,6 @@ enum class OperandType : uint32_t {
     Low32,
     // Arm only now
     CondFlag, // to be very aware that many inst no long have cond exec compare to armv7
-    Zero,
 };
 
 using OpT = OperandType;
@@ -75,7 +74,6 @@ inline unsigned getBitWide(OpT type) {
     case OpT::Int64:
     case OpT::Intvec2:
     case OpT::Floatvec2:
-    case OpT::Zero:
         return 8;
     case OpT::Intvec3:
     case OpT::Floatvec3:
@@ -323,7 +321,6 @@ public:
     bool isReloc() const { return std::holds_alternative<MIRReloc_p>(mOperand); }
     bool isProb() const { return std::holds_alternative<double>(mOperand); }
     bool isLiteral() const { return std::holds_alternative<string>(mOperand); }
-    bool isZero() const { return mType == OpT::Zero; }
 
     constexpr OpT type() const { return mType; }
     void resetType(OpT _new) { mType = _new; }
@@ -333,16 +330,13 @@ public:
 
     template <typename T> static MIROperand_p asImme(T val, OpT type) {
 
-        if (type == OpT::special || type == OpT::CondFlag) {
-            auto encoding = static_cast<uint64_t>(val);
-            return make<MIROperand>(encoding, OpT::Int64);
-        } else if constexpr (std::is_same_v<T, int> || std::is_same_v<T, unsigned>) {
+        if constexpr (std::is_same_v<T, int> || std::is_same_v<T, unsigned> || std::is_same_v<T, Cond>) {
             auto encoding = *reinterpret_cast<unsigned *>(&val);
-            return encoding == 0 ? asZero() : make<MIROperand>(encoding, OpT::Int64);
-            // use Int64 to not narrow down the predicted bitwide when codegen
+            return make<MIROperand>(encoding,
+                                    OpT::Int64); // use Int64 to not narrow down the predicted bitwide when codegen
         } else if constexpr (std::is_same_v<T, int64_t>) {
             auto encoding = *reinterpret_cast<uint64_t *>(&val);
-            return encoding == 0 ? asZero() : make<MIROperand>(encoding, OpT::Int64);
+            return make<MIROperand>(encoding, OpT::Int64);
         } else if constexpr (std::is_same_v<T, float>) {
             auto encoding = *reinterpret_cast<unsigned *>(&val);
             return make<MIROperand>(encoding, OpT::Float32);
@@ -395,10 +389,6 @@ public:
     static MIROperand_p asProb(double prob) { return make<MIROperand>(prob, OpT::special); }
 
     static MIROperand_p asLiteral(string liter) { return make<MIROperand>(liter, OpT::special); }
-
-    const static uint32_t ZeroReg = 0x0fffffff;
-
-    static MIROperand_p asZero() { return asVReg(ZeroReg, OpT::Zero); }
 
     // builder end
 

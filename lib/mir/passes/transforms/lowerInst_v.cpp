@@ -172,8 +172,7 @@ void MIR::lowerInst_v(const IR::pInsert &insert, LoweringContext &ctx) {
                      "lowerInst_v: try insert/extract with a variable idx");
 
         // avoid use xzr/wzr
-        auto idx =
-            MIROperand::asImme(static_cast<unsigned>(insert->getIdx()->as<IR::ConstantInt>()->getVal()), OpT::special);
+        auto idx = ctx.mapOperand(insert->getIdx());
 
         ctx.newInst(MIRInst::make(OpC::InstVInsert)
                         ->setOperand<0>(def, ctx.CodeGenCtx())

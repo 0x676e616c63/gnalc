@@ -79,7 +79,7 @@ void PostRaSchedulingImpl::MkDAG(SchedulingModule &Module) {
         for (int i = 1; i <= inst->getUseNr(); ++i) {
             auto &mop = inst->getOp(i);
 
-            if (mop && mop->isReg() && !mop->isZero()) {
+            if (mop && mop->isReg()) {
                 mop->isStack() ? tmp.emplace_back(Util::to_underlying(ARMReg::SP)) : tmp.emplace_back(mop->isa());
             }
         }

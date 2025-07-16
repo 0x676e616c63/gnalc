@@ -24,9 +24,7 @@ string ARMA64Printer::branchPrinter(const MIRInst &minst) {
 string ARMA64Printer::binaryPrinter(const MIRInst &minst) {
     const auto &def = minst.ensureDef();
     ///@note deal gep add
-    const auto &lhs = minst.getOp(1)->isISA() || minst.getOp(1)->isZero()
-                          ? minst.getOp(1)
-                          : MIROperand::asISAReg(ARMReg::SP, OpT::Int64);
+    const auto &lhs = minst.getOp(1)->isISA() ? minst.getOp(1) : MIROperand::asISAReg(ARMReg::SP, OpT::Int64);
 
     const auto &rhs = minst.getOp(2);
     auto op = minst.opcode<OpC>();
@@ -37,7 +35,7 @@ string ARMA64Printer::binaryPrinter(const MIRInst &minst) {
     str += reg2s(def, bitWide) + ",\t";
     str += reg2s(lhs, bitWide) + ",\t";
 
-    if (rhs->isISA() || rhs->isZero()) {
+    if (rhs->isISA()) {
         str += reg2s(rhs, bitWide);
     } else {                                      // constant
         str += '#' + std::to_string(rhs->imme()); // uint64_t
@@ -114,7 +112,7 @@ string ARMA64Printer::cmpPrinter(const MIRInst &minst) {
 
     str += ARMv8::OpC2S(op) + '\t' + reg2s(lhs, bitWide) + ",\t";
 
-    if (rhs->isISA() || rhs->isZero()) {
+    if (rhs->isISA()) {
         str += reg2s(rhs, bitWide);
     } else { // constant
         str += '#' + std::to_string(rhs->imme());
@@ -156,8 +154,6 @@ string ARMA64Printer::copyPrinter(const MIRInst &minst) {
                inRange(useType, OpT::Float, OpT::Floatvec4) && inRange(defType, OpT::Float, OpT::Floatvec4)) {
 
         str += "fmov\t" + reg2s(def, bitWide) + ",\t" + reg2s(use, bitWide);
-    } else if (inRange(defType, OpT::Float, OpT::Float32) && useType == OpT::Zero) {
-        str += "fmov\t" + reg2s(def, bitWide) + ",\t" + reg2s(use, bitWide);
     } else {
         str += "mov\t" + reg2s(def, bitWide) + ",\t" + reg2s(use, bitWide);
     }
@@ -186,14 +182,12 @@ string ARMA64Printer::memoryPrinter(const MIRInst &minst) {
         }
 
         op1 = minst.ensureDef();
-        base = minst.getOp(1)->isISA() || minst.getOp(1)->isZero() ? minst.getOp(1)
-                                                                   : MIROperand::asISAReg(ARMReg::SP, OpT::Int64);
+        base = minst.getOp(1)->isISA() ? minst.getOp(1) : MIROperand::asISAReg(ARMReg::SP, OpT::Int64);
         idx = minst.getOp(2);
         shift = minst.getOp(3);
     } else if (minst.opcode<ARMOpC>() == ARMOpC::STR) {
         op1 = minst.getOp(1);
-        base = minst.getOp(2)->isISA() || minst.getOp(1)->isZero() ? minst.getOp(2)
-                                                                   : MIROperand::asISAReg(ARMReg::SP, OpT::Int64);
+        base = minst.getOp(2)->isISA() ? minst.getOp(2) : MIROperand::asISAReg(ARMReg::SP, OpT::Int64);
         idx = minst.getOp(3);
         shift = minst.getOp(4);
     }
@@ -212,7 +206,7 @@ string ARMA64Printer::memoryPrinter(const MIRInst &minst) {
 
         if (idx->isImme()) {
             str += '#' + std::to_string(idx->imme());
-        } else if (idx->isISA() || idx->isZero()) {
+        } else if (idx->isISA()) {
             str += reg2s(idx, 8);
 
             if (shift) {

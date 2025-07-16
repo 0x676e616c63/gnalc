@@ -77,33 +77,33 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getDef(const MIRInst_p &minst) {
 }
 
 MIROperand_p RegisterAllocImpl::heuristicSpill() {
-    const double Weight_IntervalLength = 5;
-    const double Weight_Degree = 3;
-    const double extra_Weight_ForNotPtr = +60;
+    // const double Weight_IntervalLength = 5;
+    // const double Weight_Degree = 3;
+    // const double extra_Weight_ForNotPtr = +60;
 
-    ///@note 计算溢出权重
-    double weight_max = 0;
-    MIROperand_p spilled = nullptr;
-    for (const auto &op : spillWorkList) {
+    // ///@note 计算溢出权重
+    // double weight_max = 0;
+    // MIROperand_p spilled = nullptr;
+    // for (const auto &op : spillWorkList) {
 
-        double weight = 0;
+    //     double weight = 0;
 
-        weight += liveinfo.intervalLengths[op] * Weight_IntervalLength; // narrowing convert here
+    //     weight += liveinfo.intervalLengths[op] * Weight_IntervalLength; // narrowing convert here
 
-        weight += degree[op] * Weight_Degree;
+    //     weight += degree[op] * Weight_Degree;
 
-        if (op->type() != OpT::Int64) { // eh...
-            weight += extra_Weight_ForNotPtr;
-        }
+    //     if (op->type() != OpT::Int64) { // eh...
+    //         weight += extra_Weight_ForNotPtr;
+    //     }
 
-        if (weight >= weight_max) {
-            spilled = op;
-            weight_max = weight;
-        }
-    }
-    Err::gassert(spilled != nullptr, "heuristicSpill: spilled is nullptr");
-    // Logger::logInfo("spilled: " + std::to_string(spilled->getRecover()));
-    return spilled;
+    //     if (weight >= weight_max) {
+    //         spilled = op;
+    //         weight_max = weight;
+    //     }
+    // }
+    // Err::gassert(spilled != nullptr, "heuristicSpill: spilled is nullptr");
+    // // Logger::logInfo("spilled: " + std::to_string(spilled->getRecover()));
+    return spillWorkList.front();
 }
 
 RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
