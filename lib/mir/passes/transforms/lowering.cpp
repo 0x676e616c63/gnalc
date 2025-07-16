@@ -314,7 +314,7 @@ MIRModule_p MIR::loweringModule(const IRModule &module, CodeGenContext &ctx) {
 
     const auto &layout = ctx.infos.dataLayout;
 
-    auto mModule = make<MIRModule>(ctx.infos, ctx, module.getName());
+    auto mModule = make<MIRModule>(ctx.infos, ctx, module.getName(), module.getRuntimeTypes());
 
     ///@brief 翻译全局的各种符号, 函数 + 全局变量
     ///@note

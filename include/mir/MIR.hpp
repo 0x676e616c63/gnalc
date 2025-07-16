@@ -11,6 +11,7 @@
 #include "mir/info.hpp"
 #include "mir/tools.hpp"
 #include "riscv64/base.hpp"
+#include "runtime/runtime.hpp"
 #include "utils/exception.hpp"
 #include "utils/generic_visitor.hpp"
 
@@ -949,11 +950,12 @@ private:
 
     string name; // for MAM
 
+    std::set<Runtime::RtType> runtime_types;
 public:
     MIRModule() = delete;
 
-    MIRModule(const BkdInfos &infos, CodeGenContext &_ctx, string _name)
-        : mtarget{infos}, mglobals{}, ctx(_ctx), name(std::move(_name)) {}
+    MIRModule(const BkdInfos &infos, CodeGenContext &_ctx, string _name, std::set<Runtime::RtType> _runtimes)
+        : mtarget{infos}, mglobals{}, ctx(_ctx), name(std::move(_name)), runtime_types(std::move(_runtimes)) {}
 
     auto &globals() { return mglobals; }
     const auto &globals() const { return mglobals; }
@@ -966,6 +968,8 @@ public:
     void addFunc(const MIRFunction_p &func) { mFuncs.emplace_back(func); }
 
     string getName() const { return name; }
+
+    std::set<Runtime::RtType> getRuntimeTypes() const { return runtime_types; }
 
     ~MIRModule();
 };

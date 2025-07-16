@@ -5,7 +5,7 @@
 #include "mir/tools.hpp"
 
 using namespace MIR;
-void RV64Printer::rv64_printout(const MIRInst &minst) {
+void RV64Printer::printoutRV64(const MIRInst &minst) {
     auto rvopc = minst.opcode<RVOpC>();
     write(RV64::RVOpC2S(rvopc), " ");
     std::vector<std::string> ops;

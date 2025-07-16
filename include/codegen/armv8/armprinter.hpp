@@ -15,6 +15,7 @@ class ARMA64Printer {
 private:
     MIRFunction const *mfunc;
     std::ostream &outStream;
+    bool with_runtime;
     bool debug;
 
     std::string reg2s(const MIROperand_p &reg, unsigned int bitWide, bool vector = false) {
@@ -26,7 +27,8 @@ private:
     }
 
 public:
-    ARMA64Printer(std::ostream &outStream_, bool ifDebug = false) : outStream(outStream_), debug(ifDebug) {}
+    ARMA64Printer(std::ostream &outStream_, bool with_runtime_, bool ifDebug = false)
+        : outStream(outStream_), with_runtime(with_runtime_), debug(ifDebug) {}
 
     void printout(const MIRModule &);
     void printout(const std::vector<MIRGlobal_p> &);

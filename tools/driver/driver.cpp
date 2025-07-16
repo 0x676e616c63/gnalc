@@ -615,10 +615,10 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
 
     if (only_compilation) {
         if (target == Target::ARMv8) {
-            MIR::ARMA64Printer armv8gen(*poutstream, emit_llc);
+            MIR::ARMA64Printer armv8gen(*poutstream, with_runtime, emit_llc);
             armv8gen.printout(*mModule);
         } else {
-            MIR::RV64Printer riscv64gen(*poutstream);
+            MIR::RV64Printer riscv64gen(*poutstream, with_runtime);
             riscv64gen.printout(*mModule);
         }
         return 0;

@@ -9,6 +9,7 @@
 #include "constant_pool.hpp"
 #include "function.hpp"
 #include "global_var.hpp"
+#include "runtime/runtime.hpp"
 
 #include <memory>
 
@@ -82,6 +83,8 @@ public:
 
     void accept(IRVisitor &visitor);
     ~Module() = default;
+
+    std::set<Runtime::RtType> getRuntimeTypes() const;
 };
 } // namespace IR
 

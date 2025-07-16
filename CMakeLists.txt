@@ -31,18 +31,17 @@ endif()
 
 set(RUNTIME_ARTIFACTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/runtime/artifacts)
 
+set(RUNTIME_OUTPUTS ${RUNTIME_ARTIFACTS_DIR}/thread.ll.cpp ${RUNTIME_ARTIFACTS_DIR}/thread.armv8.s.cpp)
 add_custom_command(
-        OUTPUT ${RUNTIME_ARTIFACTS_DIR}/thread.ll.hpp
-        COMMAND chmod +x ${CMAKE_CURRENT_SOURCE_DIR}/runtime/compile.sh
-        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/runtime/compile.sh
+        OUTPUT ${RUNTIME_OUTPUTS}
+        COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/runtime/compile.py
         ${RUNTIME_ARTIFACTS_DIR}
-        "--release"
         ${CMAKE_CURRENT_SOURCE_DIR}/runtime/thread.cpp
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMENT "Generating Gnalc Thread Runtime Header"
         VERBATIM
 )
-add_custom_target(generate_thread_rt DEPENDS ${RUNTIME_ARTIFACTS_DIR}/thread.ll.hpp)
+add_custom_target(generate_thread_rt DEPENDS ${RUNTIME_OUTPUTS})
 
 include_directories(include)
 
@@ -84,6 +83,8 @@ aux_source_directory(lib/mir/passes/analysis GNALC_MIR_SRC)
 aux_source_directory(lib/mir/passes/transforms GNALC_MIR_SRC)
 aux_source_directory(lib/mir/passes/utilities GNALC_MIR_SRC)
 
+# Runtime
+aux_source_directory(lib/runtime GNALC_RUNTIME_SRC)
 
 # Pass Manager
 aux_source_directory(lib/pass_manager GNALC_PM_SRC)
@@ -120,6 +121,7 @@ set(GNALC_SRC
         ${GNALC_PTM_SRC}
         ${GNALC_ARMV8BKD_SRC}
         ${GNALC_RISCV64BKD_SRC}
+        ${GNALC_RUNTIME_SRC}
         ${GNALC_UTILS_SRC})
 
 # GGC
@@ -132,6 +134,7 @@ set(GGC_SRC
         ${GNALC_PTM_SRC}
         ${GNALC_ARMV8BKD_SRC}
         ${GNALC_RISCV64BKD_SRC}
+        ${GNALC_RUNTIME_SRC}
         ${GNALC_UTILS_SRC})
 
 # debug driver

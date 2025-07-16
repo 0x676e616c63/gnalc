@@ -9,9 +9,7 @@
 #include "ir/passes/analysis/range_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
 #include "utils/logger.hpp"
-
-#include "../runtime/artifacts/thread.ll.hpp"
-std::string_view gnalc_thread_runtime_sv(reinterpret_cast<char *>(gnalc_thread_runtime), gnalc_thread_runtime_len);
+#include "runtime/runtime.hpp"
 
 namespace IR {
 void IRPrinter::visit(GlobalVariable &node) { writeln(IRFormatter::formatGV(node)); }
@@ -88,27 +86,17 @@ void PrintModulePass::visit(Module &module) {
         writeln("");
     }
 
-    bool must_emit_runtime = false;
     for (auto &func_decl : module.getFunctionDecls()) {
-        if (with_runtime) {
-            if (func_decl->hasAttr(FuncAttr::ParallelEntry) ||
-                func_decl->hasAttr(FuncAttr::isAtomicAddI32) ||
-                func_decl->hasAttr(FuncAttr::isAtomicAddF32)) {
-                if (func_decl->getUseCount() != 0)
-                    must_emit_runtime = true;
-
-                if (must_emit_runtime)
-                    continue;
-            }
-        }
-
         func_decl->accept(*this);
         writeln("");
     }
 
-    if (with_runtime && must_emit_runtime) {
-        writeln("\n\n\n; Gnalc Thread Runtime");
-        writeln(gnalc_thread_runtime_sv);
+    if (with_runtime) {
+        auto runtimes = module.getRuntimeTypes();
+        for (auto rt : runtimes) {
+            writeln("\n\n\n; Gnalc ", Util::getEnumName(rt), " Runtime");
+            writeln(Runtime::getRuntime(rt, Runtime::RtTarget::LLVM));
+        }
     }
 }
 
