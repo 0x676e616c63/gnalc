@@ -64,7 +64,6 @@ FPM buildRV64FunctionPipeline(OptInfo opt_info) {
     FPM fpm;
     // For RV64 Development
     fpm.addPass(ISel());
-    fpm.addPass(MachineLICMPass());
     fpm.addPass(PreRAlegalize());
     fpm.addPass(RegisterAlloc());
     fpm.addPass(StackGenerate());

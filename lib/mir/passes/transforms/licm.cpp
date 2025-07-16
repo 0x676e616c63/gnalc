@@ -11,26 +11,20 @@
 #include <vector>
 
 namespace MIR {
-bool hasDefInBlock(const MIRBlk_p &block, const MIRInst_p &inst) {
-    for (const auto &candidate : block->Insts()) {
-        if (candidate == inst)
-            continue;
-
-        if (candidate->getDef() && candidate->getDef() == inst->getDef())
-            return true;
-    }
-    return false;
-}
-bool isSafeToMove(const MLoop_p &loop, const MIRInst_p &inst) {
+bool isSafeAndProfitableToHoist(const MIRInst_p &inst) {
     if (inst->isGeneric()) {
         switch (inst->opcode<OpC>()) {
         case OpC::InstLoadAddress:
         case OpC::InstLoadStackObjectAddr:
+        case OpC::InstLoadImmToReg:
+        case OpC::InstLoadFPImmToReg:
+            break;
         case OpC::InstLoadImm:
         case OpC::InstLoadImmEx:
         case OpC::InstLoadFPImm:
-        case OpC::InstLoadImmToReg:
-        case OpC::InstLoadFPImmToReg:
+            // They can be optimized by zero register. Hoisting them is not profitable.
+            if (inst->getOp(1)->imme() == 0)
+                return false;
             break;
         default:
             return false;
@@ -47,12 +41,6 @@ bool isSafeToMove(const MLoop_p &loop, const MIRInst_p &inst) {
         return false;
     } else
         return false;
-
-    // Now check if this register is defined in the loop.
-    for (const auto &block : loop->getBlocks()) {
-        if (hasDefInBlock(block, inst))
-            return false;
-    }
 
     return true;
 }
@@ -87,34 +75,28 @@ PM::PreservedAnalyses MachineLICMPass::run(MIRFunction &function, FAM &fam) {
                         continue;
 
                     // Keep the topological order.
-                    std::vector<MIRInst_p_l::iterator> to_hoist;
-                    for (auto it = bb->Insts().begin(); it != bb->Insts().end(); ++it) {
-                        if (isSafeToMove(loop, *it))
-                            to_hoist.emplace_back(it);
+                    std::vector<MIRInst_p> to_hoist;
+                    for (const auto &inst : bb->Insts()) {
+                        if (isSafeAndProfitableToHoist(inst))
+                            to_hoist.emplace_back(inst);
                     }
 
-                    for (const auto &iter : to_hoist) {
-                        auto inst = *iter;
-
-                        preheader->addInstBeforeBr(inst);
-                        bb->Insts().erase(iter);
-
-                        inst->appendDbgData("licm_hoisted");
+                    for (const auto &inst : to_hoist) {
+                        // Log before we change the instruction.
                         Logger::logDebug("[MachineLICM]: Hoisted '", inst->dbgDump(), "' from '", bb->getmSym(),
                                          "' to '", preheader->getmSym(), "'.");
 
-                        // int j = 0, k = 0;
-                        // for (const auto &blk : function.blks()) {
-                        //     for (auto &i : blk->Insts()) {
-                        //         if (i->getDef() == inst->getDef())
-                        //             j++;
-                        //         for (const auto &o : i->operands())
-                        //             if (o == inst->getDef())
-                        //                 k++;
-                        //     }
-                        // }
-                        // Logger::logDebug("def Count: ", j, ".");
-                        // Logger::logDebug("use Count: ", k, ".");
+                        auto hoisted_li = inst->clone();
+                        auto &ctx = function.Context();
+                        auto hoisted_def = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
+                        hoisted_li->setOperand<0>(hoisted_def, ctx);
+                        preheader->addInstBeforeBr(hoisted_li);
+
+                        inst->resetOpcode(inst->ensureDef()->isISA() ? OpC::InstCopyToReg : OpC::InstCopy);
+                        inst->setOperand<1>(hoisted_def, ctx);
+
+                        hoisted_li->appendDbgData("licm_hoisted");
+                        inst->appendDbgData("licm_copy");
                         licm_inst_modified = true;
                     }
                 }

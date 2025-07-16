@@ -461,6 +461,8 @@ private:
     ///@note <0>代表def, 如果为nullptr, 代表指令没有def, 或者是需要用WZR/XZR占位
     std::array<MIROperand_p, maxOpCnt> mOperands;
     std::vector<std::string> dbg_data;
+
+    explicit MIRInst(std::variant<OpC, ARMOpC, RVOpC> opcode) noexcept : mOpcode(opcode) {};
     explicit MIRInst(OpC opcode) noexcept : mOpcode(opcode) {};
     explicit MIRInst(ARMOpC opcode) noexcept : mOpcode(opcode) {};
     explicit MIRInst(RVOpC opcode) noexcept : mOpcode(opcode) {};
@@ -593,6 +595,14 @@ public:
     const std::vector<std::string> &getDbgData() const { return dbg_data; }
     void appendDbgData(const std::string &data) { dbg_data.emplace_back(data); }
     void clearDbgData() { dbg_data.clear(); }
+
+    MIRInst_p clone() const {
+        auto ret = make(mOpcode);
+        ret->mOperands = mOperands;
+        ret->dbg_data = dbg_data;
+        ret->appendDbgData("dup");
+        return ret;
+    }
 };
 
 enum class StkObjUsage {

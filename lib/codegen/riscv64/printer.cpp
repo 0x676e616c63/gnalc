@@ -332,6 +332,9 @@ string RV64Printer::formatCopy(const MIRInst &minst) {
     case OpC::InstCopy:
     case OpC::InstCopyFromReg:
     case OpC::InstCopyToReg: {
+        auto dst = formatOperand(minst.getOp(0));
+        auto src = formatOperand(minst.getOp(1));
+
         bool to_int = inRange(minst.getOp(0)->type(), OpT::Int, OpT::Int64);
         bool from_int = inRange(minst.getOp(1)->type(), OpT::Int, OpT::Int64);
         bool to_float = inRange(minst.getOp(0)->type(), OpT::Float, OpT::Float32);
@@ -349,8 +352,6 @@ string RV64Printer::formatCopy(const MIRInst &minst) {
         else
             Err::unreachable("bad legalization");
 
-        auto dst = formatOperand(minst.getOp(0));
-        auto src = formatOperand(minst.getOp(1));
         return movopcode + " " + dst + ", " + src;
     }
     default:

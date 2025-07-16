@@ -26,7 +26,7 @@ bool RVIselInfo::isLegalGenericInst(MIRInst_p minst) const {
 }
 
 bool RVIselInfo::match(MIRInst_p minst, ISelContext &ctx, bool allow) const {
-    bool ret = legalizeInst(minst, ctx); // not impl yet
+    bool ret = legalizeInst(minst, ctx);
     return ret;
 }
 
@@ -44,12 +44,11 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
             minst->setOperand<1>(rhs, ctx.codeGenCtx());
             minst->setOperand<2>(lhs, ctx.codeGenCtx());
             modified |= true;
-        } else {
-            modified |= false;
         }
     };
 
     auto loadImm = [&](const MIROperand_p &mop) -> MIROperand_p {
+        modified |= true;
         auto mop_new = MIROperand::asVReg(ctx.codeGenCtx().nextId(), mop->type());
 
         if (mop->isExImme()) {
@@ -60,7 +59,6 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
             ctx.newInst(OpC::InstLoadImm)
                 ->setOperand<0>(mop_new, ctx.codeGenCtx())
                 ->setOperand<1>(mop, ctx.codeGenCtx());
-            modified |= true;
         } else if (inRange(mop->type(), OpT::Float, OpT::Float32)) {
             ctx.newInst(OpC::InstLoadFPImm)
                 ->setOperand<0>(mop_new, ctx.codeGenCtx())
@@ -79,6 +77,7 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
 
     switch (minst->opcode<OpC>()) {
     case OpC::InstICmp: {
+        modified |= true;
         auto def = minst->getOp(0);
 
         auto lhs = minst->getOp(1);
@@ -177,7 +176,7 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
             if (lhs->isImme())
                 lhs = loadImm(lhs);
 
-            auto new_slt = ctx.newInst(RVOpC::SLT)
+            auto new_slt = ctx.newInst(slt_opcode)
                                ->setOperand<0>(tmp, ctx.codeGenCtx())
                                ->setOperand<1>(lhs, ctx.codeGenCtx())
                                ->setOperand<2>(rhs, ctx.codeGenCtx());
@@ -193,6 +192,7 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         }
     } break;
     case OpC::InstFCmp: {
+        modified |= true;
         auto def = minst->getOp(0);
         auto lhs = minst->getOp(1);
         auto rhs = minst->getOp(2);
@@ -335,6 +335,7 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         }
     } break;
     case OpC::InstFRem: {
+        modified |= true;
         auto def = minst->ensureDef();
         auto lhs = minst->getOp(1);
         auto rhs = minst->getOp(2);
@@ -356,7 +357,6 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
             ->setOperand<2>(result2, ctx.codeGenCtx());
 
         ctx.delInst(minst); // add to list, handle later
-        modified |= true;
     } break;
     case OpC::InstF2S: {
         auto converted = minst->ensureDef();

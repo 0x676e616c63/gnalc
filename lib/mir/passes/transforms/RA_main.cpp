@@ -22,7 +22,8 @@ PM::PreservedAnalyses RegisterAlloc::run(MIRFunction &mfunc, FAM &fam) {
 }
 
 bool RegisterAllocImpl::Edge::operator==(const Edge &another) const {
-    return (another.u == u && another.v == v) || (another.v == u && another.u == v);
+    return (another.u->reg() == u->reg() && another.v->reg() == v->reg()) ||
+        (another.v->reg() == u->reg() && another.u->reg() == v->reg());
 }
 
 void RegisterAllocImpl::clearall() {
@@ -73,7 +74,6 @@ void RegisterAllocImpl::Main(FAM &fam) {
 
     ///@note this will be easier to read flame graph
     do {
-
         if (isInitialized) {
             ReWriteProgram();
         }
@@ -149,11 +149,10 @@ void RegisterAllocImpl::Build() {
     isInitialized = true;
 
     for (const auto &blk : mfunc->blks()) {
-
         auto live = liveinfo.liveOut[blk];
 
         for (auto it = live.begin(); it != live.end();) {
-            if (isExt(*it)) {
+            if (isExt(*it) || (*it)->isStack()) {
                 it = live.erase(it);
             } else {
                 ++it;
@@ -281,7 +280,7 @@ void RegisterAllocImpl::Coalesce() {
 
     auto &u = edge.u;
     auto &v = edge.v;
-    if (u == v) {
+    if (u->reg() == v->reg()) {
         // 两边相同, 标记为合并的move
         addBySet(coalescedMoves, Moves{m});
         AddWorkList(u);
@@ -375,7 +374,7 @@ void RegisterAllocImpl::FreezeMoves(const MIROperand_p &u) {
         Err::gassert(isMoveInstruction(m), "try Coalesce a not move inst");
         Err::gassert(getDef(m).size() == 1 && getUse(m).size() == 1, "Coalesce a invalid 'move' inst");
 
-        auto v = *(getDef(m).begin()) == u ? *(getUse(m).begin()) : *(getDef(m).begin());
+        auto v = (*getDef(m).begin())->reg() == u->reg() ? *(getUse(m).begin()) : *(getDef(m).begin());
 
         if (activeMoves.count(m)) {
             delBySet(activeMoves, Moves{m});
@@ -403,7 +402,7 @@ void RegisterAllocImpl::SelectSpill() {
 
 void RegisterAllocImpl::AssignColors() {
     while (!selectStack.empty()) {
-        auto n = selectStack.back();
+        auto& n = selectStack.back();
         selectStack.pop_back();
 
         std::vector<unsigned int> okColors(colors.begin(), colors.end());
@@ -470,7 +469,7 @@ void RegisterAllocImpl::AssignColors() {
         }
     }
 
-    for (const auto &n : coalescedNodes) {
+    for (auto &n : coalescedNodes) {
 
         auto n_a = GetAlias(n);
 
@@ -612,7 +611,7 @@ void VectorRegisterAllocImpl::Build() {
                             degree[n] = -1;
                         }
                     } else if (n->isVReg()) {
-                        if (isExt(n)) {
+                        if (isExt(n) || n->isStack()) {
                             initial.insert(n);
                         }
                     } else {

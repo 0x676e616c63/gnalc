@@ -87,11 +87,11 @@ MIROperand_p RegisterAllocImpl::heuristicSpill() {
     // for (const auto &op : spillWorkList) {
 
     //     double weight = 0;
-
+    //
     //     weight += liveinfo.intervalLengths[op] * Weight_IntervalLength; // narrowing convert here
-
+    //
     //     weight += degree[op] * Weight_Degree;
-
+    //
     //     if (op->type() != OpT::Int64) { // eh...
     //         weight += extra_Weight_ForNotPtr;
     //     }

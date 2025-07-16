@@ -32,8 +32,9 @@ public:
 
     struct EdgeHash {
         std::size_t operator()(const Edge &_edge) const {
-            return std::hash<std::size_t>()(static_cast<std::size_t>(reinterpret_cast<uintptr_t>(_edge.v.get())) ^
-                                            static_cast<std::size_t>(reinterpret_cast<uintptr_t>(_edge.u.get())));
+            size_t seed = _edge.u->reg();
+            Util::hashSeedCombine(seed, _edge.v->reg());
+            return seed;
         }
     };
 
