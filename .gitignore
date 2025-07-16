@@ -43,3 +43,4 @@ submit
 runtime/artifacts/thread.ll
 runtime/artifacts/thread.ll.hpp
 build_release/
+trash/
