@@ -830,6 +830,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             ProcessExitingBlock(latch, last_latch, count-1);
             DropExitbAndItsPhiOper(latch);
         } else {
+            header->getBRInst()->dropOneDest(exitb);
             last_latch->getBRInst()->replaceAllOperands(BMap[header][count-1], BMap[header][count]);
             // BMap[header][count]仅保留br exitb
             auto lhbr = BMap[header][count]->getBRInst();
@@ -961,20 +962,20 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         Err::gassert(prolog != nullptr && epilog != nullptr, "LoopUnroll: Runtime unroll prolog or epilog is nullptr.");
         
         // Add branch inst to prolog
-        pIcmp prolog_icmp = prolog->getInsts().back()->as<ICMPInst>();
+        pIcmp prolog_icmp = prolog->getTerminator()->as<ICMPInst>();
         pB rem_header = BMap[header][count];
         pBr prolog_br = std::make_shared<BRInst>(prolog_icmp, rem_header, header);
         prolog->addInst(prolog_br);
 
         // Link prolog
-        pre_header->getTerminator()->replaceAllOperands(header, prolog);
+        pre_header->getBRInst()->replaceAllOperands(header, prolog);
         for (auto &phi : header->phis()) {
             IMap[phi][count]->as<PHIInst>()->addPhiOper(phi->getValueForBlock(pre_header), prolog);
             phi->replaceAllOperands(pre_header, prolog);
         }
 
         // Add branch inst to epilog
-        pIcmp epilog_icmp = epilog->getInsts().back()->as<ICMPInst>();
+        pIcmp epilog_icmp = epilog->getTerminator()->as<ICMPInst>();
         pB replace_target;
         if (!is_dowhile) {
             auto _true = header->getBRInst()->getTrueDest();
@@ -987,7 +988,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         epilog->addInst(epilog_br);
 
         // Link epilog
-        unrolled_loop_exiting->getTerminator()->replaceAllOperands(replace_target, epilog);
+        unrolled_loop_exiting->getBRInst()->replaceAllOperands(replace_target, epilog);
         for (auto &phi : replace_target->phis()) {
             phi->replaceAllOperands(unrolled_loop_exiting, epilog);
         }
