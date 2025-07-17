@@ -53,8 +53,9 @@ bool Instruction::isCommutative() const {
 }
 
 const std::vector<std::string>& Instruction::getDbgData() const { return dbg_data; }
-void Instruction::appendDbgData(const std::string &data) {
-    dbg_data.emplace_back(data);
+void Instruction::appendDbgData(const std::string &data) { dbg_data.emplace_back(data); }
+void Instruction::appendDbgData(const std::vector<std::string> &data) {
+    dbg_data.insert(dbg_data.end(), data.begin(), data.end());
 }
 void Instruction::clearDbgData() {
     dbg_data.clear();

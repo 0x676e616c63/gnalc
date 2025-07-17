@@ -52,6 +52,7 @@ enum class ValueTrait {
     BASIC_BLOCK,       // 基本块
     VOID_INSTRUCTION,  // 无值的指令
     CONDHELPER,        // cond中的and, or
+    INDUCTION_VARIABLE,// SIR 中 FORInst 的归纳变量
     BB_FPARAM,         // 基本块形参
     BB_ARG_LIST        // 基本块实参列表
     // ...

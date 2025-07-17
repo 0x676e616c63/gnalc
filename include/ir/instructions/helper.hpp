@@ -10,6 +10,7 @@
 #ifndef GNALC_IR_INSTRUCTIONS_HELPER_HPP
 #define GNALC_IR_INSTRUCTIONS_HELPER_HPP
 
+#include "ir/function.hpp"
 #include "ir/instruction.hpp"
 #include "ir/type_alias.hpp"
 
@@ -19,7 +20,8 @@
 #include <vector>
 
 namespace SIR {
-struct LookBehindVisitor;
+struct Visitor;
+struct ContextVisitor;
 class While2ForPass;
 } // namespace SIR
 namespace IR {
@@ -46,7 +48,7 @@ public:
 enum class CONDTY { AND, OR };
 
 class CONDValue : public Value {
-    friend struct SIR::LookBehindVisitor;
+    friend struct SIR::ContextVisitor;
 
 protected:
     CONDTY cond_type;
@@ -66,10 +68,16 @@ public:
         Err::gassert(is_cond_type(lhs) && is_cond_type(rhs));
     }
 
+    LInstIter rhs_insts_begin() { return rhs_insts.begin(); }
+    LInstIter rhs_insts_end() { return rhs_insts.end(); }
+
     const pVal &getLHS() const { return lhs; }
     const pVal &getRHS() const { return rhs; }
     const std::list<pInst> &getRHSInsts() const { return rhs_insts; }
     CONDTY getCondType() const { return cond_type; }
+
+    void accept(SIR::Visitor &visitor);
+    void accept(SIR::ContextVisitor &visitor);
 };
 
 class ANDValue : public CONDValue {
@@ -84,26 +92,6 @@ public:
         : CONDValue(CONDTY::OR, std::move(lhs_), std::move(rhs_), std::move(rhs_insts_)) {}
 };
 
-class NestedInstIterator {
-private:
-    std::deque<pInst> stack;
-    void pushNestedInstructions(const std::vector<const std::list<pInst> *> &lists);
-
-public:
-    using iterator_category = std::input_iterator_tag;
-    using value_type = pInst;
-    using difference_type = std::ptrdiff_t;
-    using pointer = pInst *;
-    using reference = pInst &;
-    explicit NestedInstIterator(const pInst &helper);
-    NestedInstIterator() = default;
-    pInst operator*() const;
-    NestedInstIterator &operator++();
-    NestedInstIterator operator++(int);
-    bool operator==(const NestedInstIterator &other) const;
-    bool operator!=(const NestedInstIterator &other) const;
-};
-
 inline size_t getCondInstCount(const pVal &cond) {
     if (auto cond_v = cond->as<CONDValue>()) {
         return cond_v->getRHSInsts().size() + getCondInstCount(cond_v->getRHS());
@@ -112,7 +100,7 @@ inline size_t getCondInstCount(const pVal &cond) {
 }
 // IF Block Entry
 class IFInst : public HELPERInst {
-    friend struct SIR::LookBehindVisitor;
+    friend struct SIR::ContextVisitor;
     pVal cond;
     std::list<pInst> body_insts;
     std::list<pInst> else_insts;
@@ -125,21 +113,33 @@ public:
     }
 
     const pVal &getCond() { return cond; }
-    const std::list<pInst> &getBodyInsts() { return body_insts; }
-    const std::list<pInst> &getElseInsts() { return else_insts; }
+    const std::list<pInst> &getBodyInsts() const { return body_insts; }
+    const std::list<pInst> &getElseInsts() const { return else_insts; }
+
+    std::list<pInst> &getBodyInsts() { return body_insts; }
+    std::list<pInst> &getElseInsts() { return else_insts; }
 
     bool hasElse() const { return !else_insts.empty(); }
 
-    NestedInstIterator all_insts_begin() { return NestedInstIterator(as<HELPERInst>()); }
-    NestedInstIterator all_insts_end() { return NestedInstIterator(); }
-    auto all_insts() { return Util::make_iterator_range(all_insts_begin(), all_insts_end()); }
+    LInstIter body_begin() { return LInstIter(body_insts.begin()); }
+    LInstIter body_end() { return LInstIter(body_insts.end()); }
+
+    LInstIter else_begin() { return LInstIter(else_insts.begin()); }
+    LInstIter else_end() { return LInstIter(else_insts.end()); }
+
+    NestedInstIterator nested_insts_begin() { return NestedInstIterator(as<HELPERInst>()); }
+    NestedInstIterator nested_insts_end() { return NestedInstIterator(); }
+
+    auto nested_insts() { return Util::make_iterator_range(nested_insts_begin(), nested_insts_end()); }
 
     size_t getInstCount() const { return body_insts.size() + else_insts.size() + getCondInstCount(cond); }
     void accept(IRVisitor &visitor) override;
+    void accept(SIR::Visitor &visitor);
+    void accept(SIR::ContextVisitor &visitor);
 };
 
 class WHILEInst : public HELPERInst {
-    friend struct SIR::LookBehindVisitor;
+    friend struct SIR::ContextVisitor;
 
     pVal cond;
     std::list<pInst> cond_insts;
@@ -153,16 +153,27 @@ public:
     }
 
     const pVal &getCond() { return cond; }
-    const std::list<pInst> &getCondInsts() { return cond_insts; }
-    const std::list<pInst> &getBodyInsts() { return body_insts; }
+    const std::list<pInst> &getCondInsts() const { return cond_insts; }
+    const std::list<pInst> &getBodyInsts() const { return body_insts; }
 
-    NestedInstIterator all_insts_begin() { return NestedInstIterator(as<HELPERInst>()); }
-    NestedInstIterator all_insts_end() { return NestedInstIterator(); }
-    auto all_insts() { return Util::make_iterator_range(all_insts_begin(), all_insts_end()); }
+    std::list<pInst> &getCondInsts() { return cond_insts; }
+    std::list<pInst> &getBodyInsts() { return body_insts; }
+
+    LInstIter cond_begin() { return LInstIter(cond_insts.begin()); }
+    LInstIter cond_end() { return LInstIter(cond_insts.end()); }
+
+    LInstIter body_begin() { return LInstIter(body_insts.begin()); }
+    LInstIter body_end() { return LInstIter(body_insts.end()); }
+
+    NestedInstIterator nested_insts_begin() { return NestedInstIterator(as<HELPERInst>()); }
+    NestedInstIterator nested_insts_end() { return NestedInstIterator(); }
+    auto nested_insts() { return Util::make_iterator_range(nested_insts_begin(), nested_insts_end()); }
 
     size_t getInstCount() const { return body_insts.size() + getCondInstCount(cond); }
 
     void accept(IRVisitor &visitor) override;
+    void accept(SIR::Visitor &visitor);
+    void accept(SIR::ContextVisitor &visitor);
 };
 
 class BREAKInst : public HELPERInst {
@@ -177,33 +188,57 @@ public:
     void accept(IRVisitor &visitor) override;
 };
 
-class FORInst : public HELPERInst {
-    friend struct SIR::LookBehindVisitor;
-
+class InductionVariable : public Value {
+private:
+    pVal orig_alloc;
     pVal base;
     pVal bound;
     pVal step;
-    pAlloca indvar;
-    std::list<pInst> body_insts;
 
 public:
-    explicit FORInst(pAlloca indvar_, pVal base_, pVal bound_, pVal step_, std::list<pInst> body_insts_)
-        : HELPERInst(HELPERTY::FOR), indvar(std::move(indvar_)), base(std::move(base_)), bound(std::move(bound_)),
-          step(std::move(step_)), body_insts(std::move(body_insts_)) {}
+    explicit InductionVariable(std::string name_, pVal orig_alloca_, pVal base_, pVal bound_, pVal step_)
+        : Value(std::move(name_), base_->getType(), ValueTrait::INDUCTION_VARIABLE),
+          orig_alloc(std::move(orig_alloca_)), base(std::move(base_)), bound(std::move(bound_)),
+          step(std::move(step_)) {
+        Err::gassert(isSameType(base, bound));
+        Err::gassert(isSameType(base, step));
+    }
 
-    const pAlloca &getIndvar() { return indvar; }
+    const pVal &getOrigAlloc() const { return orig_alloc; }
     const pVal &getBase() const { return base; }
     const pVal &getBound() const { return bound; }
     const pVal &getStep() const { return step; }
-    const std::list<pInst> &getBodyInsts() const { return body_insts; }
+};
 
-    NestedInstIterator all_insts_begin() { return NestedInstIterator(as<HELPERInst>()); }
-    NestedInstIterator all_insts_end() { return NestedInstIterator(); }
-    auto all_insts() { return Util::make_iterator_range(all_insts_begin(), all_insts_end()); }
+class FORInst : public HELPERInst {
+    friend struct SIR::ContextVisitor;
+
+    pIndVar indvar;
+    std::list<pInst> body_insts;
+
+public:
+    FORInst(pIndVar indvar_, std::list<pInst> body_insts_)
+        : HELPERInst(HELPERTY::FOR), indvar(std::move(indvar_)), body_insts(std::move(body_insts_)) {}
+
+    const pIndVar &getIndvar() { return indvar; }
+    const pVal &getBase() const { return indvar->getBase(); }
+    const pVal &getBound() const { return indvar->getBound(); }
+    const pVal &getStep() const { return indvar->getStep(); }
+    const std::list<pInst> &getBodyInsts() const { return body_insts; }
+    std::list<pInst> &getBodyInsts() { return body_insts; }
+
+    LInstIter body_begin() { return LInstIter(body_insts.begin()); }
+    LInstIter body_end() { return LInstIter(body_insts.end()); }
+
+    NestedInstIterator nested_insts_begin() { return NestedInstIterator(as<HELPERInst>()); }
+    NestedInstIterator nested_insts_end() { return NestedInstIterator(); }
+    auto nested_insts() { return Util::make_iterator_range(nested_insts_begin(), nested_insts_end()); }
 
     size_t getInstCount() const { return body_insts.size(); }
 
     void accept(IRVisitor &visitor) override;
+    void accept(SIR::Visitor &visitor);
+    void accept(SIR::ContextVisitor &visitor);
 };
 } // namespace IR
 

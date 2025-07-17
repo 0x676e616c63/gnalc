@@ -41,14 +41,22 @@ private:
         unsigned int whcondidx = 1;
         unsigned int whbodyidx = 1;
         unsigned int whendidx = 1;
+        unsigned int forcondidx = 1;
+        unsigned int forbodyidx = 1;
+        unsigned int forendidx = 1;
+        unsigned int forindvaridx = 1;
         unsigned int landltidx = 1;
         unsigned int lorlfidx = 1;
-        std::string getIfthen() { return "%if.then" + idxtos(ifthenidx++); }
-        std::string getIfelse() { return "%if.else" + idxtos(ifelseidx++); }
-        std::string getIfend() { return "%if.end" + idxtos(ifendidx++); }
-        std::string getWhcond() { return "%while.cond" + idxtos(whcondidx++); }
-        std::string getWhbody() { return "%while.body" + idxtos(whbodyidx++); }
-        std::string getWhend() { return "%while.end" + idxtos(whendidx++); }
+        std::string getIfThen() { return "%if.then" + idxtos(ifthenidx++); }
+        std::string getIfElse() { return "%if.else" + idxtos(ifelseidx++); }
+        std::string getIfEnd() { return "%if.end" + idxtos(ifendidx++); }
+        std::string getWhCond() { return "%while.cond" + idxtos(whcondidx++); }
+        std::string getWhBody() { return "%while.body" + idxtos(whbodyidx++); }
+        std::string getWhEnd() { return "%while.end" + idxtos(whendidx++); }
+        std::string getForCond() { return "%for.cond" + idxtos(forcondidx++); }
+        std::string getForBody() { return "%for.body" + idxtos(forbodyidx++); }
+        std::string getForEnd() { return "%for.end" + idxtos(forendidx++); }
+        std::string getForIndVar() { return "%for.indvar" + idxtos(forindvaridx++); }
         std::string getLandlt() { return "%land.lhs.true" + idxtos(landltidx++); }
         std::string getLorlf() { return "%lor.lhs.false" + idxtos(lorlfidx++); }
         void reset() {
@@ -58,11 +66,15 @@ private:
             whcondidx = 1;
             whbodyidx = 1;
             whendidx = 1;
+            forcondidx = 1;
+            forbodyidx = 1;
+            forendidx = 1;
+            forindvaridx = 1;
             landltidx = 1;
             lorlfidx = 1;
         }
     } nam; // new BB index or name
-    std::shared_ptr<LinearFunction> cur_linear_func;
+    pLFunc cur_linear_func;
     pFunc cur_making_func;
     pBlock cur_blk;
     std::stack<pBlock> _while_cond_for_continue;
@@ -72,13 +84,14 @@ private:
                const std::list<pInst>::const_iterator &end,
                bool allow_break); // 将inst加进cur_blk，返回值为是否已插入终结语句ret,
                                   // br
-    void newIf(const std::shared_ptr<IFInst> &ifinst);
-    void newWh(const std::shared_ptr<WHILEInst> &whinst);
+    void newIf(const pIfInst &);
+    void newWh(const pWhileInst &);
+    void newFor(const pForInst &);
 
-    void short_circuit_process(const std::shared_ptr<CONDValue> &cond, const pBlock &true_blk,
+    void short_circuit_process(const pCondValue &cond, const pBlock &true_blk,
                                const pBlock &false_blk);
     // 包含了短路cond和普通cond两种处理
-    void addCondBr(const std::shared_ptr<Value> &cond, const pBlock &true_blk, const pBlock &false_blk);
+    void addCondBr(const pVal &cond, const pBlock &true_blk, const pBlock &false_blk);
     void divider();
 
 public:

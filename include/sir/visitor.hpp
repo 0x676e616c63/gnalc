@@ -26,7 +26,11 @@ struct Visitor {
             visit(*inst);
     }
     virtual void visit(WHILEInst &while_inst) {
+        for (const auto &inst : while_inst.getCondInsts())
+            visit(*inst);
+
         visit(*while_inst.getCond());
+
         for (const auto &inst : while_inst.getBodyInsts())
             visit(*inst);
     }
@@ -51,14 +55,13 @@ private:
             visit(*cond_value);
     }
 
-    template <typename T, typename ...Args>
-    static std::unique_ptr<Visitor> make(Args&& ...args) {
+    template <typename T, typename... Args> static std::unique_ptr<Visitor> make(Args &&...args) {
         return std::make_unique<T>(std::forward<Args>(args)...);
     }
 };
 
-struct LookBehindVisitor {
-    virtual ~LookBehindVisitor() = default;
+struct ContextVisitor {
+    virtual ~ContextVisitor() = default;
     enum class PrevType {
         Initial,
         CondLhs,
@@ -67,14 +70,16 @@ struct LookBehindVisitor {
         IfCond,
         IfBody,
         IfElse,
-        WhCond,
+        WhCondInsts,
         WhBody,
         ForBody,
         Func,
     };
-    struct PrevInfo {
+    struct Context {
         Value *val;
         PrevType type;
+        size_t depth;
+        LInstIter iter;
 
         IList *ifBody() const {
             if (type == PrevType::IfBody)
@@ -94,6 +99,12 @@ struct LookBehindVisitor {
             return nullptr;
         }
 
+        IList *whCondInsts() const {
+            if (type == PrevType::WhCondInsts)
+                return &val->as_raw<WHILEInst>()->cond_insts;
+            return nullptr;
+        }
+
         IList *whBody() const {
             if (type == PrevType::WhBody)
                 return &val->as_raw<WHILEInst>()->body_insts;
@@ -106,17 +117,19 @@ struct LookBehindVisitor {
             return nullptr;
         }
 
-        IList* func() const {
+        IList *func() const {
             if (type == PrevType::Func)
                 return &val->as_raw<LinearFunction>()->insts;
             return nullptr;
         }
 
-        IList* iList() const {
+        IList *iList() const {
             if (auto if_body = ifBody())
                 return if_body;
             if (auto if_else = ifElse())
                 return if_else;
+            if (auto while_cond_insts = whCondInsts())
+                return while_cond_insts;
             if (auto while_body = whBody())
                 return while_body;
             if (auto for_body = forBody())
@@ -126,62 +139,87 @@ struct LookBehindVisitor {
             return nullptr;
         }
 
-        static PrevInfo makeInitial() { return PrevInfo{nullptr, PrevType::Initial}; }
-        static PrevInfo makeCondLhs(CONDValue *cond_inst) { return PrevInfo{cond_inst, PrevType::CondLhs}; }
-        static PrevInfo makeCondRhs(CONDValue *cond_inst) { return PrevInfo{cond_inst, PrevType::CondRhs}; }
-        static PrevInfo makeCondRhsInsts(CONDValue *cond_inst) { return PrevInfo{cond_inst, PrevType::CondRhsInsts}; }
-        static PrevInfo makeIfCond(IFInst *if_inst) { return PrevInfo{if_inst, PrevType::IfCond}; }
-        static PrevInfo makeIfBody(IFInst *if_inst) { return PrevInfo{if_inst, PrevType::IfBody}; }
-        static PrevInfo makeIfElse(IFInst *if_inst) { return PrevInfo{if_inst, PrevType::IfElse}; }
-        static PrevInfo makeWhCond(WHILEInst *while_inst) { return PrevInfo{while_inst, PrevType::WhCond}; }
-        static PrevInfo makeWhBody(WHILEInst *while_inst) { return PrevInfo{while_inst, PrevType::WhBody}; }
-        static PrevInfo makeForBody(FORInst *for_inst) { return PrevInfo{for_inst, PrevType::ForBody}; }
-        static PrevInfo makeFunc(LinearFunction *lfunc) { return PrevInfo{lfunc, PrevType::Func}; }
+        static Context makeInitial() { return Context{nullptr, PrevType::Initial, 0}; }
+        static Context makeCondLhs(CONDValue *cond_inst, size_t depth) {
+            return Context{cond_inst, PrevType::CondLhs, depth};
+        }
+        static Context makeCondRhs(CONDValue *cond_inst, size_t depth) {
+            return Context{cond_inst, PrevType::CondRhs, depth};
+        }
+        static Context makeCondRhsInsts(CONDValue *cond_inst, LInstIter iter_, size_t depth) {
+            return Context{cond_inst, PrevType::CondRhsInsts, depth, iter_};
+        }
+        static Context makeIfCond(IFInst *if_inst, size_t depth) { return Context{if_inst, PrevType::IfCond, depth}; }
+        static Context makeIfBody(IFInst *if_inst, LInstIter iter_, size_t depth) {
+            return Context{if_inst, PrevType::IfBody, depth, iter_};
+        }
+        static Context makeIfElse(IFInst *if_inst, LInstIter iter_, size_t depth) {
+            return Context{if_inst, PrevType::IfElse, depth, iter_};
+        }
+        static Context makeWhCond(WHILEInst *while_inst, size_t depth) {
+            return Context{while_inst, PrevType::WhCondInsts, depth};
+        }
+        static Context makeWhCondInsts(WHILEInst *while_inst, LInstIter iter_, size_t depth) {
+            return Context{while_inst, PrevType::WhCondInsts, depth, iter_};
+        }
+        static Context makeWhBody(WHILEInst *while_inst, LInstIter iter_, size_t depth) {
+            return Context{while_inst, PrevType::WhBody, depth, iter_};
+        }
+        static Context makeForBody(FORInst *for_inst, LInstIter iter_, size_t depth) {
+            return Context{for_inst, PrevType::ForBody, depth, iter_};
+        }
+        static Context makeFunc(LinearFunction *lfunc, LInstIter iter_, size_t depth) {
+            return Context{lfunc, PrevType::Func, depth, iter_};
+        }
     };
 
-    virtual void visit(PrevInfo prev, LinearFunction &lfunc) {
-        for (const auto &inst : lfunc)
-            visit(PrevInfo::makeFunc(&lfunc), *inst);
+    virtual void visit(Context ctx, LinearFunction &lfunc) {
+        for (auto it = lfunc.begin(); it != lfunc.end(); ++it)
+            visit(Context::makeFunc(&lfunc, it, ctx.depth + 1), **it);
     }
-    virtual void visit(PrevInfo prev, IFInst &if_inst) {
-        visit(PrevInfo::makeIfCond(&if_inst), *if_inst.getCond());
-        for (const auto &inst : if_inst.getBodyInsts())
-            visit(PrevInfo::makeIfBody(&if_inst), *inst);
-        for (const auto &inst : if_inst.getElseInsts())
-            visit(PrevInfo::makeIfElse(&if_inst), *inst);
+    virtual void visit(Context ctx, IFInst &if_inst) {
+        visit(Context::makeIfCond(&if_inst, ctx.depth + 1), *if_inst.getCond());
+        for (auto it = if_inst.body_begin(); it != if_inst.body_end(); ++it)
+            visit(Context::makeIfBody(&if_inst, it, ctx.depth + 1), **it);
+        for (auto it = if_inst.else_begin(); it != if_inst.else_end(); ++it)
+            visit(Context::makeIfElse(&if_inst, it, ctx.depth + 1), **it);
     }
-    virtual void visit(PrevInfo prev, FORInst &for_inst) {
-        for (const auto &inst : for_inst.getBodyInsts())
-            visit(PrevInfo::makeForBody(&for_inst), *inst);
+    virtual void visit(Context ctx, FORInst &for_inst) {
+        for (auto it = for_inst.body_begin(); it != for_inst.body_end(); ++it)
+            visit(Context::makeForBody(&for_inst, it, ctx.depth + 1), **it);
     }
-    virtual void visit(PrevInfo prev, WHILEInst &while_inst) {
-        visit(PrevInfo::makeWhCond(&while_inst), *while_inst.getCond());
-        for (const auto &inst : while_inst.getBodyInsts())
-            visit(PrevInfo::makeWhBody(&while_inst), *inst);
+    virtual void visit(Context ctx, WHILEInst &while_inst) {
+        for (auto it = while_inst.cond_begin(); it != while_inst.cond_end(); ++it)
+            visit(Context::makeWhCondInsts(&while_inst, it, ctx.depth + 1), **it);
+
+        visit(Context::makeWhCond(&while_inst, ctx.depth + 1), *while_inst.getCond());
+
+        for (auto it = while_inst.body_begin(); it != while_inst.body_end(); ++it)
+            visit(Context::makeWhBody(&while_inst, it, ctx.depth + 1), **it);
     }
-    virtual void visit(PrevInfo prev, CONDValue &cond) {
-        visit(PrevInfo::makeCondLhs(&cond), *cond.getLHS());
-        for (const auto &inst : cond.getRHSInsts())
-            visit(PrevInfo::makeCondRhsInsts(&cond), *inst);
-        visit(PrevInfo::makeCondRhsInsts(&cond), *cond.getRHS());
+    virtual void visit(Context ctx, CONDValue &cond) {
+        visit(Context::makeCondLhs(&cond, ctx.depth + 1), *cond.getLHS());
+        for (auto it = cond.rhs_insts_begin(); it != cond.rhs_insts_end(); ++it)
+            visit(Context::makeCondRhsInsts(&cond, it, ctx.depth + 1), **it);
+        visit(Context::makeCondRhs(&cond, ctx.depth + 1), *cond.getRHS());
     }
 
-    template <typename T, typename ...Args>
-    static std::unique_ptr<LookBehindVisitor> make(Args&& ...args) {
+    template <typename T, typename... Args> static std::unique_ptr<ContextVisitor> make(Args &&...args) {
         return std::make_unique<T>(std::forward<Args>(args)...);
     }
+
 private:
-    void visit(PrevInfo prev, Instruction &inst) {
+    void visit(Context ctx, Instruction &inst) {
         if (auto if_inst = inst.as_raw<IFInst>())
-            visit(prev, *if_inst);
+            visit(ctx, *if_inst);
         else if (auto while_inst = inst.as_raw<WHILEInst>())
-            visit(prev, *while_inst);
+            visit(ctx, *while_inst);
         else if (auto for_inst = inst.as_raw<FORInst>())
-            visit(prev, *for_inst);
+            visit(ctx, *for_inst);
     }
-    void visit(PrevInfo prev, Value &value) {
+    void visit(Context ctx, Value &value) {
         if (auto cond_value = value.as_raw<CONDValue>())
-            visit(prev, *cond_value);
+            visit(ctx, *cond_value);
     }
 };
 } // namespace SIR

@@ -52,6 +52,7 @@ aux_source_directory(lib/parser GNALC_PARSER_SRC)
 # SIR
 aux_source_directory(lib/sir GNALC_SIR_SRC)
 aux_source_directory(lib/sir/passes GNALC_SIR_SRC)
+aux_source_directory(lib/sir/passes/analysis GNALC_SIR_SRC)
 aux_source_directory(lib/sir/passes/transforms GNALC_SIR_SRC)
 aux_source_directory(lib/sir/passes/utilities GNALC_SIR_SRC)
 

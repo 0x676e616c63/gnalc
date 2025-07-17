@@ -81,7 +81,7 @@ enum class OP {
 using BBInstIter = std::list<pInst>::iterator;
 using BBPhiInstIter = std::list<pPhi>::iterator;
 
-using LFnInstIter = std::list<pInst>::iterator;
+using LInstIter = std::list<pInst>::iterator;
 
 // Warning: PHIInst MUST NOT invoke the following four `moveInst(s)`
 // Move `inst` to `new_bb`'s `location`
@@ -122,6 +122,7 @@ public:
 
     const std::vector<std::string>& getDbgData() const;
     void appendDbgData(const std::string& data);
+    void appendDbgData(const std::vector<std::string>& data);
     void clearDbgData();
 
     void accept(IRVisitor &visitor) override;

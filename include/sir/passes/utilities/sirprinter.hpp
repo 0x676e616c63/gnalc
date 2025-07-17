@@ -5,9 +5,9 @@
 #ifndef GNALC_SIR_PASSES_UTILITIES_IRPRINTER_HPP
 #define GNALC_SIR_PASSES_UTILITIES_IRPRINTER_HPP
 
-#include "ir/passes/pass_manager.hpp"
 #include "ir/passes/utilities/irprinter.hpp"
 #include "sir/base.hpp"
+#include "sir/passes/pass_manager.hpp"
 
 namespace SIR {
 class LinearPrinterBase : public IRVisitor {
@@ -44,7 +44,7 @@ public:
     explicit PrintLinearFunctionPass(std::ostream &outStream_)
         : LinearPrinterBase(outStream_) {}
 
-    PM::PreservedAnalyses run(LinearFunction &unit, FAM &manager);
+    PM::PreservedAnalyses run(LinearFunction &unit, LFAM &manager);
 };
 
 class PrintLinearModulePass : public PM::PassInfo<PrintLinearModulePass>, public LinearPrinterBase {

@@ -61,12 +61,25 @@ void LinearPrinterBase::visitCondValue(Value &value, bool is_first) {
 }
 
 void LinearPrinterBase::visit(Instruction &node) {
+    auto write_dbg_msg = [&] {
+        const auto& dbg = node.getDbgData();
+        if (!dbg.empty()) {
+            write("        ;", dbg[0]);
+            for (size_t i = 1; i < dbg.size(); ++i)
+                write(", ", dbg[i]);
+        }
+    };
+    auto write_dbg_msg_ln = [&] {
+        write_dbg_msg();
+        writeln("");
+    };
     if (auto if_inst = node.as_raw<IFInst>()) {
         visitCondInst(*if_inst->getCond());
         indent();
         write("if (");
         visitCondValue(*if_inst->getCond());
-        writeln(") {");
+        write(") {");
+        write_dbg_msg_ln();
         ++indentLevel;
         for (auto &i : if_inst->getBodyInsts())
             visit(*i);
@@ -86,7 +99,7 @@ void LinearPrinterBase::visit(Instruction &node) {
     } else if (auto while_inst = node.as_raw<WHILEInst>()) {
         indent();
         write("cond ");
-        write(IRFormatter::formatValue(*while_inst->getCondInsts().back()));
+        write(IRFormatter::formatValue(*while_inst->getCond()));
         writeln(" {");
         ++indentLevel;
         for (auto &i : while_inst->getCondInsts())
@@ -100,7 +113,8 @@ void LinearPrinterBase::visit(Instruction &node) {
         indent();
         write("while (");
         visitCondValue(*while_inst->getCond());
-        writeln(") {");
+        write(") {");
+        write_dbg_msg_ln();
         ++indentLevel;
         for (auto &i : while_inst->getBodyInsts())
             visit(*i);
@@ -111,7 +125,8 @@ void LinearPrinterBase::visit(Instruction &node) {
         indent();
         write("for (", for_inst->getIndvar()->getName(), " in [", for_inst->getBase()->getName(), ", ",
               for_inst->getBound()->getName(), ") step ", for_inst->getStep()->getName());
-        writeln(") {");
+        write(") {");
+        write_dbg_msg_ln();
         ++indentLevel;
         for (auto &i : for_inst->getBodyInsts())
             visit(*i);
@@ -120,21 +135,16 @@ void LinearPrinterBase::visit(Instruction &node) {
         writeln("}");
     } else if (node.is<BREAKInst>()) {
         indent();
-        writeln("break");
+        write("break");
+        write_dbg_msg_ln();
     } else if (node.is<CONTINUEInst>()) {
         indent();
-        writeln("continue");
+        write("continue");
+        write_dbg_msg_ln();
     } else {
         indent();
-
-        auto inst_str = IRFormatter::formatInst(node);
-        const auto& dbg = node.getDbgData();
-        if (!dbg.empty()) {
-            inst_str += "        ;" + dbg[0];
-            for (size_t i = 1; i < dbg.size(); ++i)
-                inst_str += ", " + dbg[i];
-        }
-        writeln(inst_str);
+        write(IRFormatter::formatInst(node));
+        write_dbg_msg_ln();
     }
 }
 
@@ -150,7 +160,7 @@ void LinearPrinterBase::visit(LinearFunction &node) {
     --indentLevel;
 }
 
-PM::PreservedAnalyses PrintLinearFunctionPass::run(LinearFunction &func, FAM &fam) {
+PM::PreservedAnalyses PrintLinearFunctionPass::run(LinearFunction &func, LFAM &fam) {
     func.accept(*this);
     return PreserveAll();
 }

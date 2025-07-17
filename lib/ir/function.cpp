@@ -347,13 +347,11 @@ void LinearFunction::addInst(pInst inst) {
 void LinearFunction::addInst(iterator it, const pInst &inst) {
     Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
     insts.insert(it, inst);
-    inst_index_valid = false;
 }
 void LinearFunction::addInst(size_t index, const pInst &inst) {
     Err::gassert(inst->getParent() == nullptr, "Instruction already has parent.");
     auto it = std::next(insts.begin(), static_cast<decltype(insts)::iterator::difference_type>(index));
     insts.insert(it, inst);
-    inst_index_valid = false;
 }
 
 void LinearFunction::appendInsts(std::list<pInst> insts_) {
@@ -386,7 +384,6 @@ bool LinearFunction::delFirstOfInst(const pInst &inst) {
     for (auto it = insts.begin(); it != insts.end(); ++it) {
         if (*it == inst) {
             insts.erase(it);
-            inst_index_valid = false;
             return true;
         }
     }
@@ -427,17 +424,66 @@ void LinearFunction::accept(IRVisitor &visitor) { visitor.visit(*this); }
 void LinearFunction::accept(SIR::Visitor &visitor) {
     visitor.visit(*this);
 }
-void LinearFunction::accept(SIR::LookBehindVisitor &visitor) {
-    visitor.visit(SIR::LookBehindVisitor::PrevInfo::makeInitial(), *this);
+void LinearFunction::accept(SIR::ContextVisitor &visitor) {
+    visitor.visit(SIR::ContextVisitor::Context::makeInitial(), *this);
 }
 
-void LinearFunction::updateInstIndex() const {
-    if (inst_index_valid)
-        return;
-
-    size_t i = 0;
-    for (const auto &inst : insts) {
-        inst->inst_index = i++;
+std::vector<const std::list<pInst> *> getNestedInsts(const pInst &inst) {
+    if (auto if_inst = inst->as<IFInst>()) {
+        return {&if_inst->getBodyInsts(), &if_inst->getElseInsts()};
+    } else if (auto while_inst = inst->as<WHILEInst>()) {
+        return {&while_inst->getCondInsts(), &while_inst->getBodyInsts()};
+    } else if (auto for_inst = inst->as<FORInst>()) {
+        return {&for_inst->getBodyInsts()};
     }
+    return {};
+}
+
+void NestedInstIterator::pushNestedInstructions(const std::vector<const std::list<pInst> *> &lists) {
+    for (auto li : lists) {
+        for (auto it = li->rbegin(); it != li->rend(); ++it)
+            stack.push_front(*it);
+    }
+}
+NestedInstIterator::NestedInstIterator(const pInst& helper) {
+    if (helper) {
+        auto nested_vectors = getNestedInsts(helper);
+        pushNestedInstructions(nested_vectors);
+    }
+}
+
+NestedInstIterator::NestedInstIterator(const std::list<pInst> &insts) {
+    pushNestedInstructions({&insts});
+}
+
+
+pInst NestedInstIterator::operator*() const {
+    return stack.front();
+}
+
+NestedInstIterator& NestedInstIterator::operator++() {
+    if (!stack.empty()) {
+        pInst current = stack.front();
+        stack.pop_front();
+        if (current->is<HELPERInst>()) {
+            auto nested_vectors = getNestedInsts(current);
+            pushNestedInstructions(nested_vectors);
+        }
+    }
+    return *this;
+}
+
+NestedInstIterator NestedInstIterator::operator++(int) {
+    NestedInstIterator tmp = *this;
+    ++(*this);
+    return tmp;
+}
+
+bool NestedInstIterator::operator==(const NestedInstIterator& other) const {
+    return stack == other.stack;
+}
+
+bool NestedInstIterator::operator!=(const NestedInstIterator& other) const {
+    return !(*this == other);
 }
 } // namespace IR

@@ -11,7 +11,7 @@
 namespace SIR {
 class While2ForPass : public PM::PassInfo<While2ForPass> {
 public:
-    PM::PreservedAnalyses run(LinearFunction &function, LFAM &manager);
+    PM::PreservedAnalyses run(LinearFunction &function, LFAM &lfam);
 };
 
 } // namespace IR

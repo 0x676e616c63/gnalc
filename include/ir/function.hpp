@@ -17,7 +17,7 @@
 
 namespace SIR {
 struct Visitor;
-struct LookBehindVisitor;
+struct ContextVisitor;
 }
 namespace IR {
 enum class FuncAttr {
@@ -211,17 +211,35 @@ private:
 
     pVal cloneImpl() const override;
 };
+class NestedInstIterator {
+private:
+    std::deque<pInst> stack;
+    void pushNestedInstructions(const std::vector<const std::list<pInst> *> &lists);
 
+public:
+    using iterator_category = std::input_iterator_tag;
+    using value_type = pInst;
+    using difference_type = std::ptrdiff_t;
+    using pointer = pInst *;
+    using reference = pInst &;
+    explicit NestedInstIterator(const pInst &helper);
+    explicit NestedInstIterator(const std::list<pInst> &insts);
+    NestedInstIterator() = default;
+    pInst operator*() const;
+    NestedInstIterator &operator++();
+    NestedInstIterator operator++(int);
+    bool operator==(const NestedInstIterator &other) const;
+    bool operator!=(const NestedInstIterator &other) const;
+};
 // 基本块划分前的过渡
 // IRGenerator 生成之后， CFGBuilder 之前
 class LinearFunction : public FunctionDecl {
     friend class Instruction;
-    friend class SIR::LookBehindVisitor;
+    friend class SIR::ContextVisitor;
 private:
     std::list<pInst> insts;
     std::vector<pFormalParam> params;
     ConstantPool *constant_pool;
-    bool inst_index_valid = false;
 
 public:
     using iterator = decltype(insts)::iterator;
@@ -231,7 +249,6 @@ public:
 
     LinearFunction(std::string name_, const std::vector<pFormalParam> &params, pType ret_type, ConstantPool *pool);
 
-    // usually we can use range-based for instead of these
     const std::list<pInst> &getInsts() const;
 
     const_iterator begin() const;
@@ -285,16 +302,18 @@ public:
             } else
                 ++it;
         }
-        if (found)
-            inst_index_valid = false;
         return found;
+    }
+
+    NestedInstIterator nested_begin() const { return NestedInstIterator(insts); }
+    NestedInstIterator nested_end() const { return NestedInstIterator(); }
+    auto nested_insts() const {
+        return Util::make_iterator_range(nested_begin(), nested_end());
     }
 
     void accept(IRVisitor &visitor) override;
     void accept(SIR::Visitor &visitor);
-    void accept(SIR::LookBehindVisitor &visitor);
-private:
-    void updateInstIndex() const;
+    void accept(SIR::ContextVisitor &visitor);
 };
 } // namespace IR
 
