@@ -7,6 +7,7 @@
 #include "ir/constant.hpp"
 #include "ir/formatter.hpp"
 #include "ir/instruction.hpp"
+#include "ir/instructions/binary.hpp"
 #include "ir/instructions/compare.hpp"
 #include "ir/instructions/phi.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
@@ -15,6 +16,8 @@
 #include "utils/exception.hpp"
 #include "utils/logger.hpp"
 #include <algorithm>
+#include <memory>
+#include <vector>
 
 
 namespace IR {
@@ -72,8 +75,8 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
     // It seems the range analysis rarely enhances SCEV, but computing it is expensive.
     // auto& RNG = fam.getResult<RangeAnalysis>(FC);
 
-    const auto TC = SCEVH.getTripCount(loop);
-    if (TC == nullptr) {
+    const auto trip_countE = SCEVH.getTripCount(loop);
+    if (trip_countE == nullptr) {
         Logger::logInfo("[LoopUnroll] Unroll disabled because the loop can't get trip count.");
         option.disable();
         return;
@@ -138,7 +141,22 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
         return false;
     };
 
-    auto GetStep = [](SCEVHandle &SH, pVal &iter_variable, int& step) -> bool {
+    auto GetExprStep = [](SCEVHandle &SH, const pVal &iter_variable, SCEVExpr* &stepE) -> bool {
+        auto trecp = SH.getSCEVAtBlock(iter_variable, iter_variable->as<Instruction>()->getParent());
+        if (!trecp) {
+            Logger::logInfo("[LoopUnroll] GetStep: Can't get the loop's iter_variable's TREC.");
+            return false;
+        }
+        if (!trecp->isAddRec()) {
+            Logger::logInfo("[LoopUnroll] GetStep: The loop's iter_variable's TREC is not AddRec.");
+            return false;
+        }
+        auto [_fake_baseE, _stepE] = trecp->getAffineAddRec().value();
+        stepE = _stepE;
+        return true;
+    };
+
+    auto GetIntegerStep = [](SCEVHandle &SH, const pVal &iter_variable, int& stepN) -> bool {
         auto trecp = SH.getSCEVAtBlock(iter_variable, iter_variable->as<Instruction>()->getParent());
         if (!trecp) {
             Logger::logInfo("[LoopUnroll] GetStep: Can't get the loop's iter_variable's TREC.");
@@ -153,16 +171,16 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
             Logger::logInfo("[LoopUnroll] GetStep: The loop's step is not constant integer.");
             return false;
         }
-        step = stepE->getIRValue()->as<ConstantInt>()->getVal();
+        stepN = stepE->getIRValue()->as<ConstantInt>()->getVal();
         return true;
     };
 
-    if (TC->isIRValue() && TC->getIRValue()->is<ConstantInt>()) {
+    if (trip_countE->isIRValue() && trip_countE->getIRValue()->is<ConstantInt>()) {
         // 常量展开策略
-        const auto trip_countn = TC->getIRValue()->as<ConstantInt>()->getVal();
-        Logger::logDebug("[LoopUnroll] Trip count: "+ std::to_string(trip_countn));
+        const auto trip_countN = trip_countE->getIRValue()->as<ConstantInt>()->getVal();
+        Logger::logDebug("[LoopUnroll] Trip count: "+ std::to_string(trip_countN));
 
-        if (trip_countn < 2) {
+        if (trip_countN < 2) {
             Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's trip count < 2");
             option.disable();
             return;
@@ -170,9 +188,9 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
 
         // For fully unroll
         if (ENABLE_FULLY_UNROLL) {
-            if (trip_countn <= FUC && trip_countn*inst_size <= FUS) {
-                Logger::logInfo("[LoopUnroll] Fully unrolling: factor: " + std::to_string(trip_countn));
-                option.enable_fully(trip_countn);
+            if (trip_countN <= FUC && trip_countN*inst_size <= FUS) {
+                Logger::logInfo("[LoopUnroll] Fully unrolling: factor: " + std::to_string(trip_countN));
+                option.enable_fully(trip_countN);
                 return;
             }
         }
@@ -187,15 +205,15 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
                 option.disable();
                 return;
             }
-            if (trip_countn < unroll_factor) {
+            if (trip_countN < unroll_factor) {
                 Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's trip count < unroll_factor, may need to fully unroll?");
                 option.disable();
                 return;
             }
             
-            unsigned remainder = trip_countn % unroll_factor;
+            unsigned remainder = trip_countN % unroll_factor;
 
-            Logger::logInfo("[LoopUnroll] Partially unrolling: factor: " + std::to_string(unroll_factor) + ", remainder: " + std::to_string(remainder) + ", trip_count: " + std::to_string(trip_countn));
+            Logger::logInfo("[LoopUnroll] Partially unrolling: factor: " + std::to_string(unroll_factor) + ", remainder: " + std::to_string(remainder) + ", trip_count: " + std::to_string(trip_countN));
             option.enable_partially(unroll_factor);
 
             if (remainder != 0) {
@@ -234,25 +252,25 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
                     }
 
                     int step;
-                    if (!GetStep(SCEVH, iter_variable, step)) {
+                    if (!GetIntegerStep(SCEVH, iter_variable, step)) {
                         Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable's step.");
                         option.disable();
                         return;
                     }
 
-                    // Just for test, remove later
-                    pVal real_base_value;
-                    if (!GetBaseValue(loop, is_dowhile, iter_variable, real_base_value)) {
-                        Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable's base.");
-                        option.disable();
-                        return;
-                    }
-                    if (!real_base_value->is<ConstantInt>()) {
-                        Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's iter_variable's base is not constant integer.");
-                        option.disable();
-                        return;
-                    }
-                    int real_base = real_base_value->as<ConstantInt>()->getVal();
+                    // // Just for test, remove later
+                    // pVal real_base_value;
+                    // if (!GetBaseValue(loop, is_dowhile, iter_variable, real_base_value)) {
+                    //     Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable's base.");
+                    //     option.disable();
+                    //     return;
+                    // }
+                    // if (!real_base_value->is<ConstantInt>()) {
+                    //     Logger::logInfo("[LoopUnroll] Unroll disabled because the loop's iter_variable's base is not constant integer.");
+                    //     option.disable();
+                    //     return;
+                    // }
+                    // int real_base = real_base_value->as<ConstantInt>()->getVal();
 
                     // const int suf = static_cast<int>(unroll_factor);
                     // if (is_dowhile) {
@@ -263,7 +281,8 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
 
                     int raw_boundary_num = raw_boundary_value->as<ConstantInt>()->getVal();
                     int new_boundary_num = raw_boundary_num - step * static_cast<int>(remainder);
-                    Logger::logDebug("[LoopUnroll] Get base: "+ std::to_string(real_base) + ", step: "+ std::to_string(step) + ", new_boundary_num: "+ std::to_string(new_boundary_num));
+                    Logger::logDebug("[LoopUnroll] Get integer step: "
+                        + std::to_string(step) + ", new_boundary_num: "+ std::to_string(new_boundary_num));
 
                     auto new_boundary_value = FC.getConst(new_boundary_num);
                     option.set_remainder(remainder, raw_boundary_value, new_boundary_value);
@@ -279,13 +298,14 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
         // 变量展开策略
         if (ENABLE_RUNTIME_UNROLL) {
             // Calculate unroll factor
-            auto unroll_factor = std::min(RUS / inst_size, RUC);
+            int unroll_factor = static_cast<int>(std::min(RUS / inst_size, RUC));
             if (unroll_factor < 2) {
                 Logger::logInfo("[LoopUnroll] Runtime unroll disabled because the unroll_factor is less than 2.");
                 option.disable();
                 return;
             }
             Logger::logDebug("[LoopUnroll] Runtime unrolling: factor: " + std::to_string(unroll_factor));
+            auto unroll_factorV = FC.getConst(unroll_factor);
 
             // Get boundary and iter variable
             pVal iter_variable, raw_boundary_value;
@@ -298,31 +318,60 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
             Logger::logDebug("[LoopUnroll] Get raw boundary value: "+ IRFormatter::formatValue(*raw_boundary_value));
 
             // Get step
-            int stepN;
-            if (!GetStep(SCEVH, iter_variable, stepN)) {
+            SCEVExpr* stepE;
+            if (!GetExprStep(SCEVH, iter_variable, stepE)) {
                 Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable's step.");
                 option.disable();
                 return;
             }
-
-            // Get base value
-            pVal baseV;
-            if (!GetBaseValue(loop, is_dowhile, iter_variable, baseV)) {
-                Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable's base.");
-                option.disable();
-                return;
+            pVal stepV = nullptr;
+            if (stepE->isIRValue()) {
+                stepV = stepE->getIRValue();
+                Logger::logDebug("[LoopUnroll] Get value step: "+ IRFormatter::formatValue(*stepV));
             }
-            
-            Logger::logDebug("[LoopUnroll] Get step: "+ std::to_string(stepN) + ", base: "+ IRFormatter::formatValue(*baseV));
 
-            int new_stepN = stepN * static_cast<int>(unroll_factor);
-            Logger::logDebug("[LoopUnroll] New step: "+ std::to_string(new_stepN));
+            // // Get base value
+            // pVal baseV;
+            // if (!GetBaseValue(loop, is_dowhile, iter_variable, baseV)) {
+            //     Logger::logInfo("[LoopUnroll] Unroll disabled because can't get the loop's iter_variable's base.");
+            //     option.disable();
+            //     return;
+            // }
+            // Logger::logDebug("[LoopUnroll] Get base: "+ IRFormatter::formatValue(*baseV))
 
+            //  pre_header
+            //     |
+            //   prolog---(if trip_count < unroll_factor)-->rem_loop's header
+            //     |                                                |
+            // cloned_loop---------->epilog---------->rem_loop's header's next non-exit block
+            //              exitingb    |(if rem==0)
+            //                         exit
 
-            // TODO
+            pBlock prolog = std::make_shared<BasicBlock>("rtunroll.prolog." + std::to_string(name_idx));
+            pBlock epilog = std::make_shared<BasicBlock>("rtunroll.epilog." + std::to_string(name_idx));
 
-            Logger::logInfo("[LoopUnroll] Needs to runtime unroll but not implemented...");
-            option.disable();
+            // prolog
+            auto trip_countV = SCEVH.expandSCEVExpr(trip_countE, prolog);
+            auto remainderV = std::make_shared<BinaryInst>("rtunroll.remainder." + std::to_string(name_idx), OP::SREM, trip_countV, unroll_factorV);
+            prolog->addInst(remainderV);
+            if (stepV == nullptr) {
+                stepV = SCEVH.expandSCEVExpr(stepE, prolog);
+            }
+            auto stepMremV = std::make_shared<BinaryInst>("rtunroll.stepMrem." + std::to_string(name_idx), OP::MUL, stepV, remainderV);
+            prolog->addInst(stepMremV);
+            auto new_boundaryV = std::make_shared<BinaryInst>("rtunroll.new_boundary." + std::to_string(name_idx), OP::SUB, raw_boundary_value, stepMremV);
+            prolog->addInst(new_boundaryV);
+            auto trip_count_less_than_unroll_factorV = std::make_shared<ICMPInst>("rtunroll.tcLTuf." + std::to_string(name_idx),
+                ICMPOP::slt, trip_countV, unroll_factorV);
+            prolog->addInst(trip_count_less_than_unroll_factorV);
+
+            // epilog
+            auto rem_eq_zeroV = std::make_shared<ICMPInst>("rtunroll.remEQzero." + std::to_string(name_idx),
+                ICMPOP::eq, remainderV, FC.getConst(0));
+            epilog->addInst(rem_eq_zeroV);
+
+            option.enable_runtime(unroll_factor, prolog, epilog);
+            option.set_remainder(-1, raw_boundary_value, new_boundaryV);
             return;
         }
 
@@ -353,6 +402,11 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
     }
 
     if (option.fully() && option.has_remainder) {
+        Err::error("unexpected arguments");
+        return false;
+    }
+    
+    if (option.runtime() && !option.has_remainder) {
         Err::error("unexpected arguments");
         return false;
     }
@@ -502,7 +556,10 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         }
     };
 
-    // process exiting block, update exit block's phi
+    /// Add new phi oper(copied from raw exiting block) to the exit block's phi
+    /// @p raw raw exiting block(template phi oper from raw block)
+    /// @p cur new exiting block(new phi oper's "block")
+    /// @p i new phi oper's "value" from the i-th time iteration
     auto ProcessExitingBlock = [&](const pB &raw, const pB &cur, const unsigned i) {
         if (loop->isExiting(raw)) {
             for (auto succ : raw->succs()) {
@@ -610,8 +667,7 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
     const auto exitb = *(loop->getExitBlocks().begin());
 
     // clone remainder to BMap[b][count]
-    // 此处只处理常量部分展开的余数循环
-    if (option.partially() && option.has_remainder) {
+    if ((option.partially() && option.has_remainder) || option.runtime()) {
         // auto rem = option.remainder;
 
         // process header
@@ -739,14 +795,14 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
 
     auto DropExitbAndItsPhiOper = [&](const pB &target) {
         auto br = target->getBRInst();
-        // Delete undeleted BR Exitb, maybe useless.
-        if (br->isConditional()) {
-            if (br->getTrueDest() == exitb) {
-                br->dropTrueDest();
-            } else if (br->getFalseDest() == exitb) {
-                br->dropFalseDest();
-            }
-        }
+        // // Delete undeleted BR Exitb, maybe useless.
+        // if (br->isConditional()) {
+        //     if (br->getTrueDest() == exitb) {
+        //         br->dropTrueDest();
+        //     } else if (br->getFalseDest() == exitb) {
+        //         br->dropFalseDest();
+        //     }
+        // }
         for (auto &phi : exitb->phis()) {
             phi->delPhiOperByBlock(target);
         }
@@ -787,11 +843,15 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             ProcessExitingBlock(header, BMap[header][count], count);
             DropExitbAndItsPhiOper(header);
         }
-    } else if (option.partially()) {
+    } else if (option.partially() || option.runtime()) {
         last_latch->getBRInst()->replaceAllOperands(BMap[header][count-1], header);
         if (option.has_remainder && is_dowhile) {
             last_latch->getBRInst()->replaceAllOperands(exitb, BMap[header][count]);
             ProcessExitingBlock(latch, BMap[latch][count], count);
+            if (option.runtime()) {
+                // After that, need to replace "last_latch" with "epilog"
+                ProcessExitingBlock(latch, last_latch, count-1);
+            }
             DropExitbAndItsPhiOper(latch);
         } else if (option.has_remainder && !is_dowhile) {
             pB rem_header = BMap[header][count];
@@ -852,32 +912,35 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
 
             header->getBRInst()->replaceAllOperands(exitb, rem_target);
             ProcessExitingBlock(header, rem_header, count);
-            DropExitbAndItsPhiOper(header);
+            // After that, need to replace "header" with "epilog"(if runtime unroll)
+            if (!option.runtime()) {
+                DropExitbAndItsPhiOper(header);
+            }
         } else if (!option.has_remainder && is_dowhile) {
             ProcessExitingBlock(latch, last_latch, count-1);
             DropExitbAndItsPhiOper(latch);
         }
     } else {
-        Err::not_implemented();
+        Err::unreachable();
     }
 
     // process raw header's phi node:
-    // For partially: [%x, latch] --> [%xx, last_latch]
+    // For partially or runtime: [%x, latch] --> [%xx, last_latch]
     // For fully: delete [%x, latch]
     for (const auto &phi : header->phis()) {
-        if (option.partially()) {
+        if (option.partially() || option.runtime()) {
             auto phi_value_from_loop = phi->getValueForBlock(latch);
             IMapFindAndReplaceOperand(phi, phi_value_from_loop, count - 1);
             phi->replaceAllOperands(latch, last_latch);
         } else if (option.fully()) {
             phi->delPhiOperByBlock(latch);
         } else {
-            Err::not_implemented();
+            Err::unreachable();
         }
     }
 
     // add to function
-    auto it_after_loop = ++std::find(func.begin(), func.end(), blocks.back()->as<BasicBlock>());
+    auto it_after_loop = ++std::find(func.begin(), func.end(), loop_blocks.back()->as<BasicBlock>());
     for (int i = 1; i < count; i++) {
         for (auto &b : blocks) {
             func.addBlock(it_after_loop, BMap[b][i]);
@@ -885,14 +948,57 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
     }
     if (option.fully() && !is_dowhile) {
         func.addBlock(it_after_loop, BMap[header][count]);
-    } else if (option.partially() && option.has_remainder) {
+    } else if ((option.partially() && option.has_remainder) || option.runtime()) {
         for (auto &b : blocks) {
             func.addBlock(it_after_loop, BMap[b][count]);
         }
     }
 
     // process runtime unroll
-    // Add prologue and epilogue for runtime unroll
+    if (option.runtime()) {
+        auto prolog = option.prologue;
+        auto epilog = option.epilogue;
+        Err::gassert(prolog != nullptr && epilog != nullptr, "LoopUnroll: Runtime unroll prolog or epilog is nullptr.");
+        
+        // Add branch inst to prolog
+        pIcmp prolog_icmp = prolog->getInsts().back()->as<ICMPInst>();
+        pB rem_header = BMap[header][count];
+        pBr prolog_br = std::make_shared<BRInst>(prolog_icmp, rem_header, header);
+        prolog->addInst(prolog_br);
+
+        // Link prolog
+        pre_header->getTerminator()->replaceAllOperands(header, prolog);
+        for (auto &phi : header->phis()) {
+            IMap[phi][count]->as<PHIInst>()->addPhiOper(phi->getValueForBlock(pre_header), prolog);
+            phi->replaceAllOperands(pre_header, prolog);
+        }
+
+        // Add branch inst to epilog
+        pIcmp epilog_icmp = epilog->getInsts().back()->as<ICMPInst>();
+        pB replace_target;
+        if (!is_dowhile) {
+            auto _true = header->getBRInst()->getTrueDest();
+            pB raw_target = _true!=exitb ? _true : header->getBRInst()->getFalseDest();
+            replace_target = BMap[raw_target][count];
+        } else {
+            replace_target = rem_header;
+        }
+        pBr epilog_br = std::make_shared<BRInst>(epilog_icmp, exitb, replace_target);
+        epilog->addInst(epilog_br);
+
+        // Link epilog
+        unrolled_loop_exiting->getTerminator()->replaceAllOperands(replace_target, epilog);
+        for (auto &phi : replace_target->phis()) {
+            phi->replaceAllOperands(unrolled_loop_exiting, epilog);
+        }
+        for (auto &phi : exitb->phis()) {
+            phi->replaceAllOperands(unrolled_loop_exiting, epilog);
+        }
+
+        // add to function
+        func.addBlock(std::find(func.begin(), func.end(), header), prolog);
+        func.addBlock(std::find(func.begin(), func.end(), rem_header), epilog);
+    }
 
     // optimize new cfg...
     func.updateAndCheckCFG();

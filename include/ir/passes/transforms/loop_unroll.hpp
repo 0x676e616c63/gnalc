@@ -9,6 +9,7 @@
  */
 
 #pragma once
+#include "ir/type_alias.hpp"
 #ifndef GNALC_IR_PASSES_TRANSFORMS_LOOP_UNROLL_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_LOOP_UNROLL_HPP
 
@@ -55,8 +56,8 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
         pVal new_boundary_value = nullptr; // New boundary value in main loop
 
         // For runtime unroll
-        std::vector<pInst> prologue_insts;
-        std::vector<pInst> epilogue_insts;
+        pBlock prologue;
+        pBlock epilogue;
 
         // // For cost analysis
         // unsigned raw_size = 0;
@@ -103,13 +104,13 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
             // estimated_unroll_size += raw_size;
         }
 
-        void enable_runtime(const unsigned _count, std::vector<pInst> &&_prologue_insts, std::vector<pInst> &&_epilogue_insts) {
+        void enable_runtime(const unsigned _count, const pBlock& _prologue, const pBlock& _epilogue) {
             unroll = true;
             unroll_type = UnrollType::RUNTIME;
             unroll_count = _count;
             has_remainder = true;
-            prologue_insts = std::move(_prologue_insts);
-            epilogue_insts = std::move(_epilogue_insts);
+            prologue = _prologue;
+            epilogue = _epilogue;
         }
 
         [[nodiscard]] bool fully() const { return unroll_type == UnrollType::FULLY; }
