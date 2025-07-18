@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "mir/MIR.hpp"
+#include "mir/info.hpp"
 #include "mir/passes/transforms/RA.hpp"
 #include "mir/tools.hpp"
 
@@ -32,7 +33,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getUse(const MIRInst_p &minst) {
     Nodes uses;
 
     if (frameInfo->isFuncCall(minst)) {
-        auto list = registerInfo->getCoreRegisterAllocationList();
+        auto list = registerInfo->getCallerSaveCRs();
         for (auto reg : list) {
             if (registerInfo->isCallerSaved(reg))
                 uses.emplace(MIROperand::asISAReg(reg, OpT::Int));
@@ -56,7 +57,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getDef(const MIRInst_p &minst) {
     Nodes defs;
 
     if (frameInfo->isFuncCall(minst)) {
-        auto list = registerInfo->getCoreRegisterAllocationList();
+        auto list = registerInfo->getCallerSaveCRs();
         for (auto reg : list) {
             if (registerInfo->isCallerSaved(reg))
                 defs.emplace(MIROperand::asISAReg(reg, OpT::Int));
@@ -77,33 +78,39 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getDef(const MIRInst_p &minst) {
 }
 
 MIROperand_p RegisterAllocImpl::heuristicSpill() {
-    // const double Weight_IntervalLength = 5;
-    // const double Weight_Degree = 3;
-    // const double extra_Weight_ForNotPtr = +60;
+    const double Weight_IntervalLength = 5;
+    const double Weight_Degree = 3;
+    const double extra_Weight_ForNotPtr = +60;
 
-    // ///@note 计算溢出权重
-    // double weight_max = 0;
-    // MIROperand_p spilled = nullptr;
-    // for (const auto &op : spillWorkList) {
+    ///@note 计算溢出权重
+    double weight_max = 0;
+    MIROperand_p spilled = nullptr;
+    for (const auto &op : spillWorkList) {
 
-    //     double weight = 0;
-    //
-    //     weight += liveinfo.intervalLengths[op] * Weight_IntervalLength; // narrowing convert here
-    //
-    //     weight += degree[op] * Weight_Degree;
-    //
-    //     if (op->type() != OpT::Int64) { // eh...
-    //         weight += extra_Weight_ForNotPtr;
-    //     }
+        if (GeneratedBySpill.find(op) != GeneratedBySpill.end()) {
+            continue;
+        }
 
-    //     if (weight >= weight_max) {
-    //         spilled = op;
-    //         weight_max = weight;
-    //     }
-    // }
-    // Err::gassert(spilled != nullptr, "heuristicSpill: spilled is nullptr");
-    // // Logger::logInfo("spilled: " + std::to_string(spilled->getRecover()));
-    return spillWorkList.front();
+        double weight = 0;
+
+        weight += liveinfo.intervalLengths[op] * Weight_IntervalLength; // narrowing convert here
+
+        weight += degree[op] * Weight_Degree;
+
+        if (op->type() == OpT::Int64) {
+            weight += extra_Weight_ForNotPtr;
+        }
+
+        if (weight >= weight_max) {
+            spilled = op;
+            weight_max = weight;
+        }
+    }
+    Err::gassert(spilled != nullptr, "heuristicSpill: spilled is nullptr");
+    // Logger::logInfo("spilled: " + std::to_string(spilled->getRecover()));
+    return spilled;
+
+    // return spillWorkList.front();
 }
 
 RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
@@ -136,69 +143,47 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
     auto mtype = mop->type();
     auto stkobj = mfunc->addStkObj(mfunc->Context(), getSize(mtype), getSize(mtype), 0, StkObjUsage::Spill);
 
-    MIROperand_p yet_another_insert_op = nullptr;
-
     for (auto &mblk : mfunc->blks()) {
         auto &minsts = mblk->Insts();
-        for (auto it = minsts.begin(); it != minsts.end(); ++it) {
-            const auto &minst = *it;
-            auto uses = getUse(minst);
-            auto defs = getDef(minst);
+        for (auto it = minsts.begin(); it != minsts.end();) {
+            auto &minst = *it;
+            auto recover = it;
 
-            // LAMBDA BEGIN
-
-            auto add_yaio = [&](const auto &stage) {
-                if (ctx.isARMv8() && minst->isGeneric() && minst->opcode<OpC>() == OpC::InstVInsert &&
-                    !yet_another_insert_op) {
-                    yet_another_insert_op = stage;
+            MIROperand_p replace = nullptr;
+            bool loaded = false;
+            auto &ops = minst->operands();
+            for (auto it_op = ops.begin(); it_op != ops.end(); ++it_op) {
+                if (*it_op != mop) {
+                    continue;
                 }
-            };
 
-            // LAMBDA END
+                replace ? nop : void(replace = MIROperand::asVReg(ctx.nextId(), mtype));
 
-            if (defs.size() && minst->isGeneric() && minst->opcode<OpC>() == OpC::InstVInsert) {
-                int debug;
+                if (it_op == ops.begin()) { // def
+                    auto minst_store =
+                        MIRInst::make(OpC::InstStore)
+                            ->setOperand<1>(replace, mfunc->Context())
+                            ->setOperand<2>(stkobj, mfunc->Context())
+                            ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special), mfunc->Context());
+
+                    minsts.insert(std::next(it), minst_store);
+                    ++recover;
+                } else if (!loaded) { // use
+                    auto minst_load =
+                        MIRInst::make(OpC::InstLoad)
+                            ->setOperand<0>(replace, mfunc->Context())
+                            ->setOperand<1>(stkobj, mfunc->Context())
+                            ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special), mfunc->Context());
+
+                    minsts.insert(it, minst_load);
+                    loaded = true;
+                }
+
+                *it_op = replace;
             }
 
-            if (auto it_op = uses.find(mop); it_op != uses.end()) {
-
-                auto readStage =
-                    !yet_another_insert_op ? MIROperand::asVReg(ctx.nextId(), mtype) : yet_another_insert_op;
-
-                add_yaio(readStage);
-
-                auto minst_load =
-                    MIRInst::make(OpC::InstLoad)
-                        ->setOperand<0>(readStage, mfunc->Context())
-                        ->setOperand<1>(stkobj, mfunc->Context())
-                        ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special), mfunc->Context());
-
-                minsts.insert(it, minst_load);
-
-                minst->replace(mop, readStage, ctx);
-
-                stageValues.emplace(readStage);
-            }
-
-            if (auto it_op = defs.find(mop); it_op != defs.end()) {
-
-                auto writeStage =
-                    !yet_another_insert_op ? MIROperand::asVReg(ctx.nextId(), mtype) : yet_another_insert_op;
-
-                add_yaio(writeStage);
-
-                auto minst_store =
-                    MIRInst::make(OpC::InstStore)
-                        ->setOperand<1>(writeStage, mfunc->Context())
-                        ->setOperand<2>(stkobj, mfunc->Context())
-                        ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special), mfunc->Context());
-
-                minsts.insert(std::next(it), minst_store);
-
-                minst->replace(mop, writeStage, ctx);
-
-                stageValues.emplace(writeStage);
-            }
+            replace ? void(stageValues.emplace(replace)) : nop;
+            it = ++recover;
         }
     }
 
@@ -232,7 +217,7 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getUse(const MIRInst_p &minst)
     Nodes uses;
 
     if (frameInfo->isFuncCall(minst)) {
-        auto list = registerInfo->getFpOrVecRegisterAllocationList();
+        auto list = registerInfo->getCallerSaveFpVRs();
         for (auto reg : list) {
             if (registerInfo->isCallerSaved(reg))
                 uses.emplace(MIROperand::asISAReg(reg, OpT::Float));
@@ -256,7 +241,7 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getDef(const MIRInst_p &minst)
     Nodes defs;
 
     if (frameInfo->isFuncCall(minst)) {
-        auto list = registerInfo->getFpOrVecRegisterAllocationList();
+        auto list = registerInfo->getCallerSaveFpVRs();
         for (auto reg : list) {
             if (registerInfo->isCallerSaved(reg))
                 defs.emplace(MIROperand::asISAReg(reg, OpT::Float));

@@ -452,7 +452,7 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
 
         auto dst = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
 
-        if (ARMv8::isBitMaskImme(imm) || imm == 0) {
+        if (ARMv8::isBitMaskImme(imm) || ARMv8::is12ImmeWithProbShift(imm)) {
             ///@note mov + copy
 
             auto mov = MIRInst::make(ARMOpC::MOV)

@@ -32,9 +32,8 @@ public:
 
     struct EdgeHash {
         std::size_t operator()(const Edge &_edge) const {
-            size_t seed = _edge.u->reg();
-            Util::hashSeedCombine(seed, _edge.v->reg());
-            return seed;
+            return std::hash<std::size_t>()(static_cast<std::size_t>(reinterpret_cast<uintptr_t>(_edge.v.get())) ^
+                                            static_cast<std::size_t>(reinterpret_cast<uintptr_t>(_edge.u.get())));
         }
     };
 
@@ -60,7 +59,6 @@ protected:
     Nodes spilledNodes;
     Nodes coloredNodes;
 
-    // Operands wait to be colored
     std::vector<MIROperand_p> selectStack;
 
     Moves coalescedMoves;
@@ -115,10 +113,10 @@ protected:
 
     bool isInitialized;
 
-    ///@note 活跃分析以及信息
     Liveness liveinfo;
 
-    ///@note 判断是否是 "move"指令
+    Nodes GeneratedBySpill;
+
     virtual bool isMoveInstruction(const MIRInst_p &);
 
     /// speed up

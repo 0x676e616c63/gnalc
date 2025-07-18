@@ -1,6 +1,7 @@
 // Copyright (c) 2025 0x676e616c63
 // SPDX-License-Identifier: MIT
 
+#include "mir/MIR.hpp"
 #include "mir/passes/transforms/RA.hpp"
 #include "mir/tools.hpp"
 #include <algorithm>
@@ -22,8 +23,7 @@ PM::PreservedAnalyses RegisterAlloc::run(MIRFunction &mfunc, FAM &fam) {
 }
 
 bool RegisterAllocImpl::Edge::operator==(const Edge &another) const {
-    return (another.u->reg() == u->reg() && another.v->reg() == v->reg()) ||
-        (another.v->reg() == u->reg() && another.u->reg() == v->reg());
+    return (another.u == u && another.v == v) || (another.v == u && another.u == v);
 }
 
 void RegisterAllocImpl::clearall() {
@@ -49,6 +49,7 @@ void RegisterAllocImpl::clearall() {
     colors.clear();
     spilltimes = 0;
     isInitialized = false;
+    GeneratedBySpill.clear();
 }
 
 void RegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
@@ -135,10 +136,8 @@ void RegisterAllocImpl::Build() {
                             precolored.insert(n);
                             degree[n] = -1;
                         }
-                    } else if (n->isVReg()) {
-                        if (isCore(n)) {
-                            initial.insert(n);
-                        }
+                    } else if (n->isVReg() && isCore(n)) {
+                        initial.insert(n);
                     } else {
                         Err::unreachable("trying to alloc register for a constant");
                     }
@@ -195,6 +194,13 @@ void RegisterAllocImpl::MkWorkList() {
     for (auto it = initial.begin(); it != initial.end();) {
         const auto n = *it;
 
+        it = std::next(it);
+        delBySet(initial, WorkList{n});
+
+        if (!isVirtualReg(n->getRecover()) || n->isStack()) {
+            continue;
+        }
+
         if (degree[n] >= K) {
             addBySet(spillWorkList, WorkList{n});
         } else if (MoveRelated(n)) {
@@ -202,9 +208,6 @@ void RegisterAllocImpl::MkWorkList() {
         } else if (isCore(n)) {
             addBySet(simplifyWorkList, WorkList{n});
         }
-
-        it = std::next(it);
-        delBySet(initial, WorkList{n});
     }
 }
 
@@ -280,7 +283,7 @@ void RegisterAllocImpl::Coalesce() {
 
     auto &u = edge.u;
     auto &v = edge.v;
-    if (u->reg() == v->reg()) {
+    if (u == v) {
         // 两边相同, 标记为合并的move
         addBySet(coalescedMoves, Moves{m});
         AddWorkList(u);
@@ -357,9 +360,9 @@ void RegisterAllocImpl::Combine(const MIROperand_p &u, const MIROperand_p &v) {
 
 void RegisterAllocImpl::Freeze() {
 
-    auto it = freezeWorkList.begin();
+    auto u = *freezeWorkList.begin();
 
-    auto u = *it;
+    // auto u = *it;
 
     delBySet(freezeWorkList, WorkList{u});
 
@@ -374,7 +377,7 @@ void RegisterAllocImpl::FreezeMoves(const MIROperand_p &u) {
         Err::gassert(isMoveInstruction(m), "try Coalesce a not move inst");
         Err::gassert(getDef(m).size() == 1 && getUse(m).size() == 1, "Coalesce a invalid 'move' inst");
 
-        auto v = (*getDef(m).begin())->reg() == u->reg() ? *(getUse(m).begin()) : *(getDef(m).begin());
+        auto v = (*getDef(m).begin()) == u ? *(getUse(m).begin()) : *(getDef(m).begin());
 
         if (activeMoves.count(m)) {
             delBySet(activeMoves, Moves{m});
@@ -402,8 +405,16 @@ void RegisterAllocImpl::SelectSpill() {
 
 void RegisterAllocImpl::AssignColors() {
     while (!selectStack.empty()) {
-        auto& n = selectStack.back();
+        auto &n = selectStack.back();
         selectStack.pop_back();
+
+        if (precolored.count(n)) {
+            auto &calleesave = mfunc->calleeSaveRegs();
+            calleesave |= 1LL << n->reg();
+            continue;
+        } else if (n->isStack()) {
+            continue;
+        }
 
         std::vector<unsigned int> okColors(colors.begin(), colors.end());
 
@@ -428,12 +439,14 @@ void RegisterAllocImpl::AssignColors() {
 
         if (okColors.empty()) {
             addBySet(spilledNodes, Nodes{n});
-        } else if (precolored.count(n)) {
-            auto &calleesave = mfunc->calleeSaveRegs();
-            calleesave |= 1LL << n->reg(); // marked
-        } else if (n->isStack()) {
-            ;
-        } else {
+        }
+        // else if (precolored.count(n)) {
+        //     auto &calleesave = mfunc->calleeSaveRegs();
+        //     calleesave |= 1LL << n->reg(); // marked
+        // } else if (n->isStack()) {
+        //     ;
+        // }
+        else {
 
             addBySet(coloredNodes, Nodes{n});
 
@@ -495,6 +508,8 @@ void RegisterAllocImpl::ReWriteProgram() {
         addBySet(initial, ops_new);
         // Logger::logInfo("ReWriteProgram: old operand: " + std::to_string(n->getRecover()) +
         //                 ", new operand size: " + std::to_string(ops_new.size()));
+
+        addBySet(GeneratedBySpill, ops_new);
     }
 
     spilledNodes.clear();
@@ -610,10 +625,8 @@ void VectorRegisterAllocImpl::Build() {
                             precolored.insert(n);
                             degree[n] = -1;
                         }
-                    } else if (n->isVReg()) {
-                        if (isExt(n) || n->isStack()) {
-                            initial.insert(n);
-                        }
+                    } else if (n->isVReg() && isExt(n)) {
+                        initial.insert(n);
                     } else {
                         Err::unreachable("trying to alloc register for a constant");
                     }

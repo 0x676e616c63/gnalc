@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include "utils/exception.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <type_traits>
 #ifndef GNALC_MIR_ARMV8_BASE_HPP
 #define GNALC_MIR_ARMV8_BASE_HPP
 
@@ -58,10 +60,20 @@ template <typename T> inline bool is12ImmeWithProbShift(T imm) {
     ///@warning use in ADD/SUB/CMP/CMN
 
     Err::gassert(!std::is_same_v<T, float>, "is12ImmeWithShift: fadd/fsub dont support a imme");
-    Err::gassert(std::is_same_v<T, unsigned> || std::is_same_v<T, uint64_t>,
-                 "is12ImmeWithShift: cant convert to encode");
 
-    auto imme = std::abs(static_cast<int64_t>(imm)); // add <-> sub cmp <-> cmn
+    long long imme = 0;
+
+    if (std::is_same_v<T, unsigned>) {
+        imme = static_cast<int>(imm);
+    } else if (std::is_same_v<T, uint64_t>) {
+        imme = static_cast<int64_t>(imm);
+    } else {
+        Err::unreachable("is12ImmeWithShift: cant convert to encode");
+    }
+
+    if (imme < 0) {
+        int debug;
+    }
 
     if (imme < 4096 || (imme % 0x1000 == 0 && (imme >> 12) < 4096)) {
         return true;

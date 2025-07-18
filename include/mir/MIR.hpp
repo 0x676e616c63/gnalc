@@ -951,6 +951,7 @@ private:
     string name; // for MAM
 
     std::set<Runtime::RtType> runtime_types;
+
 public:
     MIRModule() = delete;
 

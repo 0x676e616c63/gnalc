@@ -62,6 +62,8 @@ public:
     virtual unsigned int getFpOrVecRegisterNum() const = 0;
     virtual std::set<int> getCoreRegisterAllocationList() const = 0;
     virtual std::set<int> getFpOrVecRegisterAllocationList() const = 0;
+    virtual std::set<int> getCallerSaveCRs() const = 0;
+    virtual std::set<int> getCallerSaveFpVRs() const = 0;
     virtual bool isCoreReg(unsigned int reg) const = 0;
     virtual bool isFpOrVecReg(unsigned int reg) const = 0;
     virtual unsigned int FpOrVecStart() const = 0;
