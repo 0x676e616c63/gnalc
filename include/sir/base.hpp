@@ -46,6 +46,8 @@ IList::reverse_iterator IListRFind(IList& ilist, const Instruction* p);
 IList::const_reverse_iterator IListRFind(const IList& ilist, const pInst& p);
 IList::const_reverse_iterator IListRFind(const IList& ilist, const Instruction* p);
 
+void collectIlist(const pVal& val, std::vector<IList*>& ilists);
+
 template <typename F>
 bool IListDelIfRecursive(IList& ilist, F pred) {
     bool found = false;
@@ -54,17 +56,10 @@ bool IListDelIfRecursive(IList& ilist, F pred) {
             it = ilist.erase(it);
             found = true;
         } else {
-            if (auto if_inst = (*it)->as<IFInst>()) {
-                found |= IListDelIfRecursive(if_inst->getBodyInsts(), pred);
-                found |= IListDelIfRecursive(if_inst->getElseInsts(), pred);
-            }
-            if (auto while_inst = (*it)->as<WHILEInst>()) {
-                found |= IListDelIfRecursive(while_inst->getCondInsts(), pred);
-                found |= IListDelIfRecursive(while_inst->getBodyInsts(), pred);
-            }
-            if (auto for_inst =  (*it)->as<FORInst>())
-                found |= IListDelIfRecursive(for_inst->getBodyInsts(), pred);
-
+            std::vector<IList*> ilists;
+            collectIlist(*it, ilists);
+            for (auto curr : ilists)
+                found |= IListDelIfRecursive(*curr, pred);
             ++it;
         }
     }

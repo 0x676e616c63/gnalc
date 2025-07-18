@@ -69,6 +69,27 @@ bool IListDelRecursive(IList &ilist, const Instruction *val) {
     return IListDelIfRecursive(ilist, [&](const pInst &p) { return p.get() == val; });
 }
 
+void collectIlist(const pVal &val, std::vector<IList *> &ilists) {
+    if (auto if_inst = val->as<IFInst>()) {
+        collectIlist(if_inst->getCond(), ilists);
+        ilists.emplace_back(&if_inst->getBodyInsts());
+        ilists.emplace_back(&if_inst->getElseInsts());
+    }
+    if (auto while_inst = val->as<WHILEInst>()) {
+        collectIlist(while_inst->getCond(), ilists);
+        ilists.emplace_back(&while_inst->getCondInsts());
+        ilists.emplace_back(&while_inst->getBodyInsts());
+    }
+    if (auto for_inst = val->as<FORInst>())
+        ilists.emplace_back(&for_inst->getBodyInsts());
+    if (auto lfn = val->as<LinearFunction>())
+        ilists.emplace_back(&lfn->getInsts());
+    if (auto cond_value = val->as<CONDValue>()) {
+        collectIlist(cond_value->getLHS(), ilists);
+        ilists.emplace_back(&cond_value->getRHSInsts());
+    }
+}
+
 bool IListReplaceRecursive(IList &ilist, const Instruction *old_p, const pInst &new_p) {
     bool found = false;
     for (auto it = ilist.begin(); it != ilist.end(); ++it) {
@@ -76,16 +97,10 @@ bool IListReplaceRecursive(IList &ilist, const Instruction *old_p, const pInst &
             *it = new_p;
             found = true;
         } else {
-            if (auto if_inst = (*it)->as<IFInst>()) {
-                found |= IListReplaceRecursive(if_inst->getBodyInsts(), old_p, new_p);
-                found |= IListReplaceRecursive(if_inst->getElseInsts(), old_p, new_p);
-            }
-            if (auto while_inst = (*it)->as<WHILEInst>()) {
-                found |= IListReplaceRecursive(while_inst->getCondInsts(), old_p, new_p);
-                found |= IListReplaceRecursive(while_inst->getBodyInsts(), old_p, new_p);
-            }
-            if (auto for_inst = (*it)->as<FORInst>())
-                found |= IListReplaceRecursive(for_inst->getBodyInsts(), old_p, new_p);
+            std::vector<IList*> ilists;
+            collectIlist(*it, ilists);
+            for (auto curr : ilists)
+                found |= IListReplaceRecursive(*curr, old_p, new_p);
         }
     }
     return found;

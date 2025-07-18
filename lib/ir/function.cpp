@@ -380,21 +380,8 @@ size_t LinearFunction::getInstCount() const {
 const std::vector<pFormalParam> &LinearFunction::getParams() const { return params; }
 ConstantPool &LinearFunction::getConstantPool() { return *constant_pool; }
 
-bool LinearFunction::delFirstOfInst(const pInst &inst) {
-    for (auto it = insts.begin(); it != insts.end(); ++it) {
-        if (*it == inst) {
-            insts.erase(it);
-            return true;
-        }
-    }
-    return false;
-}
-
-bool LinearFunction::delInst(const pInst &target) {
-    return delInstIf([&target](const auto &inst) { return inst == target; });
-}
-
 const std::list<pInst> &LinearFunction::getInsts() const { return insts; }
+std::list<pInst> &LinearFunction::getInsts() { return insts; }
 
 LinearFunction::const_iterator LinearFunction::begin() const { return insts.begin(); }
 

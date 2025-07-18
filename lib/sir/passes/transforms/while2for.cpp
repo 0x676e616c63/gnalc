@@ -22,7 +22,7 @@ struct Result {
     std::set<pInst> update_insts;
 };
 Result analyzeUpdateExpr(IList &ilist, WHILEInst &wh, const pVal &ptr) {
-    if (ptr->getVTrait() == ValueTrait::CONSTANT_LITERAL)
+    if (ptr->getVTrait() == ValueTrait::CONSTANT_LITERAL || ptr->getVTrait() == ValueTrait::FORMAL_PARAMETER)
         return {UpdateType::Invariant, ptr, nullptr};
 
     // Find the base
@@ -37,8 +37,12 @@ Result analyzeUpdateExpr(IList &ilist, WHILEInst &wh, const pVal &ptr) {
                 return true;
             }
 
-            if ((*it)->is<HELPERInst, CALLInst>())
-                return false;
+            if (auto helper = (*it)->as<HELPERInst>()) {
+                for (const auto& nested : helper->nested_insts()) {
+                    if (match(nested, M::Store(M::Val(), M::Is(ptr))) || match(*it, M::Load(M::Is(ptr))))
+                        return false;
+                }
+            }
 
             if (match(*it, M::Load(M::Is(ptr))))
                 return false;
@@ -175,7 +179,7 @@ PM::PreservedAnalyses While2ForPass::run(LinearFunction &function, LFAM &lfam) {
         if (auto for_info_opt = transformWhile(*ilist, *while_inst, function)) {
             auto info = *for_info_opt;
             auto iv =
-                std::make_shared<InductionVariable>(info.indvar_alloc->getName() + ".ind." + std::to_string(name_cnt++),
+                std::make_shared<IndVar>(info.indvar_alloc->getName() + ".ind." + std::to_string(name_cnt++),
                                                     info.indvar_alloc, info.base, info.bound, info.step);
             auto for_inst = std::make_shared<FORInst>(iv, while_inst->getBodyInsts());
             IListReplace(*ilist, while_inst, for_inst);

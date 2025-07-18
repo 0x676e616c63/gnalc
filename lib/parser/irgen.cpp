@@ -71,13 +71,16 @@ void IRGenerator::visit(CompUnit &node) {
     // gnalc_parallel_for(beg, end, task)
     auto parallel_fn_type = IR::makeFunctionType(std::vector<IR::pType>{i32_type, i32_type}, void_type, false);
     make_decl(Config::IR::LOOP_PARALLEL_FOR_FUNCTION_NAME + 1, {i32_type, i32_type, parallel_fn_type}, void_type,
-              {IR::FuncAttr::isIntrinsic, IR::FuncAttr::ParallelEntry, IR::FuncAttr::builtinMemReadWrite});
+              {IR::FuncAttr::isIntrinsic, IR::FuncAttr::isRuntime, IR::FuncAttr::ParallelEntry,
+               IR::FuncAttr::builtinMemReadWrite});
     // gnalc_atomic_add_i32(ptr, inc)
     make_decl(Config::IR::LOOP_PARALLEL_ATOMIC_ADD_I32 + 1, {i32ptr_type, i32_type}, void_type,
-              {IR::FuncAttr::isIntrinsic, IR::FuncAttr::isAtomicAddI32, IR::FuncAttr::builtinMemReadWrite});
+              {IR::FuncAttr::isIntrinsic, IR::FuncAttr::isRuntime, IR::FuncAttr::isAtomicAddI32,
+               IR::FuncAttr::builtinMemReadWrite});
     // gnalc_atomic_add_f32(ptr, inc)
     make_decl(Config::IR::LOOP_PARALLEL_ATOMIC_ADD_F32 + 1, {f32ptr_type, f32_type}, void_type,
-              {IR::FuncAttr::isIntrinsic, IR::FuncAttr::isAtomicAddF32, IR::FuncAttr::builtinMemReadWrite});
+              {IR::FuncAttr::isIntrinsic, IR::FuncAttr::isRuntime, IR::FuncAttr::isAtomicAddF32,
+               IR::FuncAttr::builtinMemReadWrite});
 
     for (auto &n : node.getNodes()) {
         n->accept(*this);

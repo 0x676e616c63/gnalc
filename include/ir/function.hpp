@@ -52,6 +52,7 @@ enum class FuncAttr {
     builtinMemReadWrite,
 
     // Loop Parallel
+    isRuntime,
     ParallelEntry,
     ParallelBody,
     isAtomicAddI32,
@@ -250,6 +251,7 @@ public:
     LinearFunction(std::string name_, const std::vector<pFormalParam> &params, pType ret_type, ConstantPool *pool);
 
     const std::list<pInst> &getInsts() const;
+    std::list<pInst> &getInsts();
 
     const_iterator begin() const;
     const_iterator end() const;
@@ -276,34 +278,6 @@ public:
     ConstantPool &getConstantPool();
 
     template <typename T> auto getConst(T &&val) { return constant_pool->getConst(std::forward<T>(val)); }
-
-    bool delFirstOfInst(const pInst &inst);
-    // With use-def check, remove all matched.
-    // The instruction must have no users.
-    // Note that it can have users that have no parent.
-    bool delInst(const pInst &inst);
-
-    // Delete instructions that satisfied: `pred(inst) == true`
-    // Requires the target instruction have no users than expiring users.
-    // "expiring users": users that are being deleted or have no parent.
-    // (inst.getLinearParent() == nullptr || pred(inst->getUsers()) == true)
-    // In other word, If pred(a) == true, pred(a->users) must be true
-    template <typename Pred> bool delInstIf(Pred pred) {
-        bool found = false;
-        for (auto it = insts.begin(); it != insts.end();) {
-            if (pred(*it)) {
-                for (const auto &user : (*it)->inst_users()) {
-                    Err::gassert(pred(user),
-                                 "LinearFunction::delInstIf(): Cannot delete a Inst without deleting its User.");
-                }
-                (*it)->setParent(nullptr);
-                it = insts.erase(it);
-                found = true;
-            } else
-                ++it;
-        }
-        return found;
-    }
 
     NestedInstIterator nested_begin() const { return NestedInstIterator(insts); }
     NestedInstIterator nested_end() const { return NestedInstIterator(); }

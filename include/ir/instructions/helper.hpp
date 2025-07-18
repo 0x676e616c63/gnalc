@@ -42,7 +42,14 @@ public:
     HELPERInst(HELPERTY _hlp_ty)
         : Instruction(OP::HELPER, "__HELPER", makeBType(IRBTYPE::UNDEFINED)), hlp_type(_hlp_ty) {}
     HELPERTY getHlpType() { return hlp_type; }
-    virtual void accept(IRVisitor &visitor) override = 0;
+    void accept(IRVisitor &visitor) override = 0;
+
+    virtual NestedInstIterator nested_insts_begin() { Err::not_implemented(); }
+    virtual NestedInstIterator nested_insts_end() { Err::not_implemented(); }
+    using NIterT = Util::make_iterator_range<NestedInstIterator, NestedInstIterator>;
+    virtual NIterT nested_insts() { Err::not_implemented(); }
+    virtual void accept(SIR::Visitor &visitor) { Err::not_implemented(); }
+    virtual void accept(SIR::ContextVisitor &visitor) { Err::not_implemented(); }
 };
 
 enum class CONDTY { AND, OR };
@@ -74,6 +81,7 @@ public:
     const pVal &getLHS() const { return lhs; }
     const pVal &getRHS() const { return rhs; }
     const std::list<pInst> &getRHSInsts() const { return rhs_insts; }
+    std::list<pInst> &getRHSInsts() { return rhs_insts; }
     CONDTY getCondType() const { return cond_type; }
 
     void accept(SIR::Visitor &visitor);
@@ -127,15 +135,15 @@ public:
     LInstIter else_begin() { return LInstIter(else_insts.begin()); }
     LInstIter else_end() { return LInstIter(else_insts.end()); }
 
-    NestedInstIterator nested_insts_begin() { return NestedInstIterator(as<HELPERInst>()); }
-    NestedInstIterator nested_insts_end() { return NestedInstIterator(); }
+    NestedInstIterator nested_insts_begin() override { return NestedInstIterator(as<HELPERInst>()); }
+    NestedInstIterator nested_insts_end() override { return NestedInstIterator(); }
 
-    auto nested_insts() { return Util::make_iterator_range(nested_insts_begin(), nested_insts_end()); }
+    NIterT nested_insts() override { return Util::make_iterator_range(nested_insts_begin(), nested_insts_end()); }
 
     size_t getInstCount() const { return body_insts.size() + else_insts.size() + getCondInstCount(cond); }
     void accept(IRVisitor &visitor) override;
-    void accept(SIR::Visitor &visitor);
-    void accept(SIR::ContextVisitor &visitor);
+    void accept(SIR::Visitor &visitor) override;
+    void accept(SIR::ContextVisitor &visitor) override;
 };
 
 class WHILEInst : public HELPERInst {
@@ -165,15 +173,15 @@ public:
     LInstIter body_begin() { return LInstIter(body_insts.begin()); }
     LInstIter body_end() { return LInstIter(body_insts.end()); }
 
-    NestedInstIterator nested_insts_begin() { return NestedInstIterator(as<HELPERInst>()); }
-    NestedInstIterator nested_insts_end() { return NestedInstIterator(); }
-    auto nested_insts() { return Util::make_iterator_range(nested_insts_begin(), nested_insts_end()); }
+    NestedInstIterator nested_insts_begin() override { return NestedInstIterator(as<HELPERInst>()); }
+    NestedInstIterator nested_insts_end() override { return NestedInstIterator(); }
+    NIterT nested_insts() override { return Util::make_iterator_range(nested_insts_begin(), nested_insts_end()); }
 
     size_t getInstCount() const { return body_insts.size() + getCondInstCount(cond); }
 
     void accept(IRVisitor &visitor) override;
-    void accept(SIR::Visitor &visitor);
-    void accept(SIR::ContextVisitor &visitor);
+    void accept(SIR::Visitor &visitor) override;
+    void accept(SIR::ContextVisitor &visitor) override;
 };
 
 class BREAKInst : public HELPERInst {
@@ -188,7 +196,7 @@ public:
     void accept(IRVisitor &visitor) override;
 };
 
-class InductionVariable : public Value {
+class IndVar : public Value {
 private:
     pVal orig_alloc;
     pVal base;
@@ -196,7 +204,7 @@ private:
     pVal step;
 
 public:
-    explicit InductionVariable(std::string name_, pVal orig_alloca_, pVal base_, pVal bound_, pVal step_)
+    explicit IndVar(std::string name_, pVal orig_alloca_, pVal base_, pVal bound_, pVal step_)
         : Value(std::move(name_), base_->getType(), ValueTrait::INDUCTION_VARIABLE),
           orig_alloc(std::move(orig_alloca_)), base(std::move(base_)), bound(std::move(bound_)),
           step(std::move(step_)) {
@@ -230,15 +238,15 @@ public:
     LInstIter body_begin() { return LInstIter(body_insts.begin()); }
     LInstIter body_end() { return LInstIter(body_insts.end()); }
 
-    NestedInstIterator nested_insts_begin() { return NestedInstIterator(as<HELPERInst>()); }
-    NestedInstIterator nested_insts_end() { return NestedInstIterator(); }
-    auto nested_insts() { return Util::make_iterator_range(nested_insts_begin(), nested_insts_end()); }
+    NestedInstIterator nested_insts_begin() override { return NestedInstIterator(as<HELPERInst>()); }
+    NestedInstIterator nested_insts_end() override { return NestedInstIterator(); }
+    NIterT nested_insts() override { return Util::make_iterator_range(nested_insts_begin(), nested_insts_end()); }
 
     size_t getInstCount() const { return body_insts.size(); }
 
     void accept(IRVisitor &visitor) override;
-    void accept(SIR::Visitor &visitor);
-    void accept(SIR::ContextVisitor &visitor);
+    void accept(SIR::Visitor &visitor) override;
+    void accept(SIR::ContextVisitor &visitor) override;
 };
 } // namespace IR
 

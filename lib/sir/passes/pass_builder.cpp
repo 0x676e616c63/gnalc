@@ -10,6 +10,7 @@
 #include "sir/passes/analysis/alias_analysis.hpp"
 
 // Transforms
+#include "sir/passes/transforms/early_mem2reg.hpp"
 #include "sir/passes/transforms/loop_fuse.hpp"
 #include "sir/passes/transforms/loop_unswitch.hpp"
 #include "sir/passes/transforms/while2for.hpp"
@@ -69,6 +70,9 @@ MPM LinearPassBuilder::buildModulePipeline(PMOptions opt_info) {
 
 LFPM LinearPassBuilder::buildFunctionDebugPipeline() {
     LFPM lfpm;
+    lfpm.addPass(PrintLinearFunctionPass(std::cerr));
+    lfpm.addPass(EarlyPromotePass());
+    lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     lfpm.addPass(While2ForPass());
     lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     lfpm.addPass(LoopFusePass());
