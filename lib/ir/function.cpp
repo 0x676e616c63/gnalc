@@ -416,14 +416,9 @@ void LinearFunction::accept(SIR::ContextVisitor &visitor) {
 }
 
 std::vector<const std::list<pInst> *> getNestedInsts(const pInst &inst) {
-    if (auto if_inst = inst->as<IFInst>()) {
-        return {&if_inst->getBodyInsts(), &if_inst->getElseInsts()};
-    } else if (auto while_inst = inst->as<WHILEInst>()) {
-        return {&while_inst->getCondInsts(), &while_inst->getBodyInsts()};
-    } else if (auto for_inst = inst->as<FORInst>()) {
-        return {&for_inst->getBodyInsts()};
-    }
-    return {};
+    std::vector<const SIR::IList*> ret;
+    SIR::collectIlist(inst, ret);
+    return ret;
 }
 
 void NestedInstIterator::pushNestedInstructions(const std::vector<const std::list<pInst> *> &lists) {

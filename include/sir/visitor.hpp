@@ -41,8 +41,7 @@ struct Visitor {
         visit(*cond.getRHS());
     }
 
-private:
-    void visit(Instruction &inst) {
+    virtual void visit(Instruction &inst) {
         if (auto if_inst = inst.as_raw<IFInst>())
             visit(*if_inst);
         else if (auto while_inst = inst.as_raw<WHILEInst>())
@@ -50,7 +49,7 @@ private:
         else if (auto for_inst = inst.as_raw<FORInst>())
             visit(*for_inst);
     }
-    void visit(Value &value) {
+    virtual void visit(Value &value) {
         if (auto cond_value = value.as_raw<CONDValue>())
             visit(*cond_value);
     }
@@ -208,8 +207,7 @@ struct ContextVisitor {
         return std::make_unique<T>(std::forward<Args>(args)...);
     }
 
-private:
-    void visit(Context ctx, Instruction &inst) {
+    virtual void visit(Context ctx, Instruction &inst) {
         if (auto if_inst = inst.as_raw<IFInst>())
             visit(ctx, *if_inst);
         else if (auto while_inst = inst.as_raw<WHILEInst>())
@@ -217,7 +215,7 @@ private:
         else if (auto for_inst = inst.as_raw<FORInst>())
             visit(ctx, *for_inst);
     }
-    void visit(Context ctx, Value &value) {
+    virtual void visit(Context ctx, Value &value) {
         if (auto cond_value = value.as_raw<CONDValue>())
             visit(ctx, *cond_value);
     }

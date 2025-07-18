@@ -85,8 +85,32 @@ void collectIlist(const pVal &val, std::vector<IList *> &ilists) {
     if (auto lfn = val->as<LinearFunction>())
         ilists.emplace_back(&lfn->getInsts());
     if (auto cond_value = val->as<CONDValue>()) {
-        collectIlist(cond_value->getLHS(), ilists);
         ilists.emplace_back(&cond_value->getRHSInsts());
+        collectIlist(cond_value->getRHS(), ilists);
+        collectIlist(cond_value->getLHS(), ilists);
+    }
+}
+
+// Const version
+void collectIlist(const pVal &val, std::vector<const IList *> &ilists) {
+    if (auto if_inst = val->as<IFInst>()) {
+        ilists.emplace_back(&if_inst->getElseInsts());
+        ilists.emplace_back(&if_inst->getBodyInsts());
+        collectIlist(if_inst->getCond(), ilists);
+    }
+    if (auto while_inst = val->as<WHILEInst>()) {
+        ilists.emplace_back(&while_inst->getBodyInsts());
+        ilists.emplace_back(&while_inst->getCondInsts());
+        collectIlist(while_inst->getCond(), ilists);
+    }
+    if (auto for_inst = val->as<FORInst>())
+        ilists.emplace_back(&for_inst->getBodyInsts());
+    if (auto lfn = val->as<LinearFunction>())
+        ilists.emplace_back(&lfn->getInsts());
+    if (auto cond_value = val->as<CONDValue>()) {
+        collectIlist(cond_value->getRHS(), ilists);
+        ilists.emplace_back(&cond_value->getRHSInsts());
+        collectIlist(cond_value->getLHS(), ilists);
     }
 }
 
@@ -107,5 +131,24 @@ bool IListReplaceRecursive(IList &ilist, const Instruction *old_p, const pInst &
 }
 bool IListReplaceRecursive(IList &ilist, const pInst &old_p, const pInst &new_p) {
     return IListReplaceRecursive(ilist, old_p.get(), new_p);
+}
+
+bool IListContainsRecursive(const IList &ilist, const Instruction* val) {
+    bool found = false;
+    for (auto it = ilist.begin(); it != ilist.end(); ++it) {
+        if (it->get() == val)
+            return true;
+
+        std::vector<IList*> ilists;
+        collectIlist(*it, ilists);
+        for (auto curr : ilists) {
+            if (IListContainsRecursive(*curr, val))
+                return true;
+        }
+    }
+    return found;
+}
+bool IListContainsRecursive(const IList &ilist, const pInst &val) {
+    return IListContainsRecursive(ilist, val.get());
 }
 } // namespace SIR

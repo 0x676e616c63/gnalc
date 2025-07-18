@@ -14,5 +14,5 @@ public:
     PM::PreservedAnalyses run(LinearFunction &function, LFAM &lfam);
 };
 
-} // namespace IR
+} // namespace SIR
 #endif

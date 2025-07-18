@@ -15,5 +15,5 @@ public:
     size_t name_cnt = 0;
 };
 
-} // namespace IR
+} // namespace SIR
 #endif

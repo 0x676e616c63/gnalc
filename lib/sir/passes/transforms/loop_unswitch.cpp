@@ -22,4 +22,4 @@ PM::PreservedAnalyses LoopUnswitchPass::run(LinearFunction &function, LFAM &lfam
 
     return loop_unswitch_modified ? PreserveNone() : PreserveAll();
 }
-} // namespace IR
+} // namespace SIR

@@ -44,6 +44,9 @@ Result analyzeUpdateExpr(IList &ilist, WHILEInst &wh, const pVal &ptr) {
                 }
             }
 
+            if (ptr->is<GlobalVariable>() && (*it)->is<CALLInst>())
+                return false;
+
             if (match(*it, M::Load(M::Is(ptr))))
                 return false;
         }
@@ -114,12 +117,6 @@ std::optional<ForInfo> transformWhile(IList &ilist, WHILEInst &wh, LinearFunctio
             rhs = rld->getPtr();
         auto l_evo = analyzeUpdateExpr(ilist, wh, lhs);
         auto r_evo = analyzeUpdateExpr(ilist, wh, rhs);
-
-        if (l_evo.type == UpdateType::Invariant && r_evo.type == UpdateType::Affine) {
-            std::swap(lhs, rhs);
-            std::swap(l_evo, r_evo);
-            cond = reverseCond(icmp->getCond());
-        }
 
         if (l_evo.type == UpdateType::Affine && r_evo.type == UpdateType::Invariant) {
             auto ind = lhs->as<ALLOCAInst>();

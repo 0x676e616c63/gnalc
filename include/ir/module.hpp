@@ -62,6 +62,8 @@ public:
 
     pFuncDecl lookupFunction(const std::string &name) const;
 
+    std::vector<pFuncDecl> lookupFunction(FuncAttr attr) const;
+
     pGlobalVar lookupGlobalVar(const std::string &name) const;
 
     ConstantPool &getConstantPool();

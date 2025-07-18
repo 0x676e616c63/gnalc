@@ -5,11 +5,25 @@
 
 #include "ir/instructions/memory.hpp"
 #include "sir/base.hpp"
+#include "sir/passes/analysis/instdom_analysis.hpp"
 #include "sir/visitor.hpp"
 
 namespace SIR {
+// FIXME: Time-consuming
+bool isInstExecuteExactlyOnce(Module* module, const pInst &inst) {
+    auto once = module->lookupFunction(FuncAttr::ExecuteExactlyOnce);
+    for (const auto &f : once) {
+        auto lf = f->as<LinearFunction>();
+        if (lf && IListContainsRecursive(lf->getInsts(), inst))
+            return true;
+    }
+    return false;
+}
+
 PM::PreservedAnalyses EarlyPromotePass::run(LinearFunction &function, LFAM &lfam) {
     bool early_mem2reg_modified = false;
+
+    auto& instdom = lfam.getResult<InstDomAnalysis>(function);
 
     std::vector<pVal> scalar_mem;
     for (const auto &inst : function.getInsts()) {
@@ -46,10 +60,18 @@ PM::PreservedAnalyses EarlyPromotePass::run(LinearFunction &function, LFAM &lfam
             else
                 Err::unreachable("Bad scalar user");
         }
+
+        // TODO: Extend to more stores
         if (store_cnt == 0) {
             if (auto gv = mem->as<GlobalVariable>()) {
+                pVal init_value;
+                if (gv->getIniter().isZero())
+                    init_value = function.getZero(gv->getVarType());
+                else
+                    init_value = gv->getIniter().getConstVal();
+
                 for (const auto &load : loads)
-                    load->replaceSelf(gv->getIniter().getConstVal());
+                    load->replaceSelf(init_value);
                 for (auto &func : function.getParent()->getLinearFunctions()) {
                     IListDelIfRecursive(func->getInsts(), [&](const auto &curr) {
                         return curr == mem || curr == mem_store || loads.count(curr);
@@ -60,16 +82,34 @@ PM::PreservedAnalyses EarlyPromotePass::run(LinearFunction &function, LFAM &lfam
             else Logger::logWarning("[EarlyMem2Reg]: No store found for local memory");
         }
         if (store_cnt == 1) {
-            for (const auto &load : loads)
-                load->replaceSelf(mem_store->getValue());
-
             if (mem->is<GlobalVariable>()) {
+                // If the store can execute multiple times, give up
+                if (!isInstExecuteExactlyOnce(function.getParent(), mem_store))
+                    continue;
+
+                for (const auto &load : loads)
+                    load->replaceSelf(mem_store->getValue());
+
                 for (auto &func : function.getParent()->getLinearFunctions()) {
                     IListDelIfRecursive(func->getInsts(), [&](const auto &curr) {
                         return curr == mem || curr == mem_store || loads.count(curr);
                     });
                 }
             } else {
+                auto dominates_all_loads = [&]() -> bool {
+                    for (const auto& load : loads) {
+                        if (!instdom.ADomB(mem_store, load))
+                            return false;
+                    }
+                    return true;
+                }();
+
+                if (!dominates_all_loads)
+                    continue;
+
+                for (const auto &load : loads)
+                    load->replaceSelf(mem_store->getValue());
+
                 IListDelIfRecursive(function.getInsts(), [&](const auto &curr) {
                     return curr == mem || curr == mem_store || loads.count(curr);
                 });

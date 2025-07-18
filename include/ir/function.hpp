@@ -278,6 +278,7 @@ public:
     ConstantPool &getConstantPool();
 
     template <typename T> auto getConst(T &&val) { return constant_pool->getConst(std::forward<T>(val)); }
+    pVal getZero(const pType &type) { return constant_pool->getZero(type); }
 
     NestedInstIterator nested_begin() const { return NestedInstIterator(insts); }
     NestedInstIterator nested_end() const { return NestedInstIterator(); }

@@ -30,6 +30,7 @@ void LinearPrinterBase::visitCondInst(Value &value) {
             indent();
             writeln("}");
         }
+        visitCondInst(*cond_value->getRHS());
         visitCondInst(*cond_value->getLHS());
     }
 }

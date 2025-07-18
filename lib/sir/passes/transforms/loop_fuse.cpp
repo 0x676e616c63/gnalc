@@ -28,13 +28,17 @@ bool canFuse(LAAResult* laa_res, FORInst* for1, FORInst* for2) {
         return false;
 
     // Scalars can't be fused
-    if (!laa_res->isScalarIndependent(for1, for2))
+    if (!laa_res->isScalarIndependent(for1, for2)) {
+        Logger::logDebug("[LoopFuse]: Skipped two loops because unresolved scalar dependency.");
         return false;
+    }
 
     const auto& rw1 = laa_res->queryInstRW(for1);
     const auto& rw2 = laa_res->queryInstRW(for2);
-    if (!rw1 || !rw2)
+    if (!rw1 || !rw2) {
+        Logger::logDebug("[LoopFuse]: Skipped two loops because failed to analyze RWInfo.");
         return false;
+    }
 
     auto has_dep = [&](const std::set<Value*>& set1, const std::set<Value*>& set2) {
         for (const auto& w1 : set1) {
@@ -73,7 +77,7 @@ bool canFuse(LAAResult* laa_res, FORInst* for1, FORInst* for2) {
     };
 
     if (has_dep(rw1->write, rw2->read) || has_dep(rw2->write, rw1->read) || has_dep(rw1->write, rw2->write)) {
-        Logger::logDebug("[LoopFuse]: Skipped two loops because unresolved dependency.");
+        Logger::logDebug("[LoopFuse]: Skipped two loops because unresolved array dependency.");
         return false;
     }
 

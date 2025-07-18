@@ -47,6 +47,7 @@ IList::const_reverse_iterator IListRFind(const IList& ilist, const pInst& p);
 IList::const_reverse_iterator IListRFind(const IList& ilist, const Instruction* p);
 
 void collectIlist(const pVal& val, std::vector<IList*>& ilists);
+void collectIlist(const pVal& val, std::vector<const IList*>& ilists);
 
 template <typename F>
 bool IListDelIfRecursive(IList& ilist, F pred) {
@@ -69,5 +70,8 @@ bool IListDelRecursive(IList& ilist, const pInst& val);
 bool IListDelRecursive(IList& ilist, const Instruction* val);
 bool IListReplaceRecursive(IList &ilist, const pInst &old_p, const pInst &new_p);
 bool IListReplaceRecursive(IList &ilist, const Instruction* old_p, const pInst & new_p);
+
+bool IListContainsRecursive(const IList &ilist, const pInst &val);
+bool IListContainsRecursive(const IList &ilist, const Instruction* val);
 } // namespace SIR
 #endif
