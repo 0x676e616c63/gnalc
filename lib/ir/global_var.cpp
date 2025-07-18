@@ -99,6 +99,9 @@ const GVIniter &GlobalVariable::getIniter() const { return initer; }
 
 int GlobalVariable::getAlign() const { return align; }
 void GlobalVariable::setAlign(int a) { align = a; }
+void GlobalVariable::setAsConst() {
+    storage_class = STOCLASS::CONSTANT;
+}
 
 // void GlobalVariable::accept(IRVisitor& visitor) override {
 // visitor.visit(*this); }

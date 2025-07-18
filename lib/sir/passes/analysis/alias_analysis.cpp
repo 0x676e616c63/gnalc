@@ -18,6 +18,64 @@
 namespace SIR {
 PM::UniqueKey LAliasAnalysis::Key;
 
+void removeZeroCoeffs(std::map<IndVar *, int> &expr) {
+    for (auto it = expr.begin(); it != expr.end();) {
+        if (it->second == 0)
+            it = expr.erase(it);
+        else
+            ++it;
+    }
+}
+
+int AffineExpr::coe(IndVar *i) const {
+    auto it = coeffs.find(i);
+    return it == coeffs.end() ? 0 : it->second;
+}
+
+AffineExpr AffineExpr::operator+(const AffineExpr &rhs) const {
+    auto new_coeffs = coeffs;
+    for (const auto &[rhs_ind, rhs_coe] : rhs.coeffs) {
+        bool added = false;
+        for (auto &[lhs_ind, lhs_coe] : new_coeffs) {
+            if (lhs_ind == rhs_ind) {
+                lhs_coe += rhs_coe;
+                added = true;
+            }
+        }
+        if (!added)
+            new_coeffs[rhs_ind] = rhs_coe;
+    }
+    removeZeroCoeffs(new_coeffs);
+    return AffineExpr{.coeffs = std::move(new_coeffs), .constant = constant + rhs.constant};
+}
+AffineExpr AffineExpr::operator-(const AffineExpr &rhs) const {
+    auto new_coeffs = coeffs;
+    for (const auto &[rhs_ind, rhs_coe] : rhs.coeffs) {
+        bool added = false;
+        for (auto &[lhs_ind, lhs_coe] : new_coeffs) {
+            if (lhs_ind == rhs_ind) {
+                lhs_coe -= rhs_coe;
+                added = true;
+            }
+        }
+        if (!added)
+            new_coeffs[rhs_ind] = -rhs_coe;
+    }
+    removeZeroCoeffs(new_coeffs);
+    return AffineExpr{.coeffs = std::move(new_coeffs), .constant = constant - rhs.constant};
+}
+AffineExpr AffineExpr::operator*(int rhs) const {
+    auto new_coeffs = coeffs;
+    for (auto &[ind, coe] : new_coeffs)
+        coe *= rhs;
+    removeZeroCoeffs(new_coeffs);
+    return AffineExpr{.coeffs = std::move(new_coeffs), .constant = constant * rhs};
+}
+
+bool AffineExpr::operator==(const AffineExpr &rhs) const {
+    return coeffs == rhs.coeffs && constant == rhs.constant;
+}
+
 bool isIsomorphic(const AffineExpr &lhs, const AffineExpr &rhs) {
     if (lhs.constant != rhs.constant || lhs.coeffs.size() != rhs.coeffs.size())
         return false;
@@ -37,15 +95,6 @@ bool isIsomorphic(const AffineExpr &lhs, const AffineExpr &rhs) {
     return lhs_decay == rhs_decay;
 }
 
-void removeZeroCoeffs(std::map<IndVar *, int> &expr) {
-    for (auto it = expr.begin(); it != expr.end();) {
-        if (it->second == 0)
-            it = expr.erase(it);
-        else
-            ++it;
-    }
-}
-
 std::optional<AffineExpr> analyzeAffineExpr(Value *expr) {
     if (auto ci32 = expr->as_raw<ConstantInt>())
         return AffineExpr{.coeffs = {}, .constant = ci32->getVal()};
@@ -61,38 +110,10 @@ std::optional<AffineExpr> analyzeAffineExpr(Value *expr) {
         if (!lhs_affine || !rhs_affine)
             return std::nullopt;
 
-        if (binary->getOpcode() == OP::ADD) {
-            auto coeffs = std::move(lhs_affine->coeffs);
-            for (const auto &[rhs_ind, rhs_coe] : rhs_affine->coeffs) {
-                bool added = false;
-                for (auto &[lhs_ind, lhs_coe] : coeffs) {
-                    if (lhs_ind == rhs_ind) {
-                        lhs_coe += rhs_coe;
-                        added = true;
-                    }
-                }
-                if (!added)
-                    coeffs[rhs_ind] = rhs_coe;
-            }
-            removeZeroCoeffs(coeffs);
-            return AffineExpr{.coeffs = std::move(coeffs), .constant = rhs_affine->constant + lhs_affine->constant};
-        }
-        if (binary->getOpcode() == OP::SUB) {
-            auto coeffs = std::move(lhs_affine->coeffs);
-            for (const auto &[rhs_ind, rhs_coe] : rhs_affine->coeffs) {
-                bool added = false;
-                for (auto &[lhs_ind, lhs_coe] : coeffs) {
-                    if (lhs_ind == rhs_ind) {
-                        lhs_coe -= rhs_coe;
-                        added = true;
-                    }
-                }
-                if (!added)
-                    coeffs[rhs_ind] = -rhs_coe;
-            }
-            removeZeroCoeffs(coeffs);
-            return AffineExpr{.coeffs = std::move(coeffs), .constant = lhs_affine->constant - rhs_affine->constant};
-        }
+        if (binary->getOpcode() == OP::ADD)
+            return *lhs_affine + *rhs_affine;
+        if (binary->getOpcode() == OP::SUB)
+            return *lhs_affine - *rhs_affine;
         if (binary->getOpcode() == OP::MUL) {
             if (!lhs_affine->coeffs.empty() && !rhs_affine->coeffs.empty())
                 return std::nullopt;
@@ -101,11 +122,7 @@ std::optional<AffineExpr> analyzeAffineExpr(Value *expr) {
             if (!rhs_affine->coeffs.empty())
                 std::swap(lhs_affine, rhs_affine);
 
-            auto coeffs = std::move(lhs_affine->coeffs);
-            for (auto &[ind, coe] : rhs_affine->coeffs)
-                coe *= rhs_affine->constant;
-            removeZeroCoeffs(coeffs);
-            return AffineExpr{.coeffs = std::move(coeffs), .constant = lhs_affine->constant * rhs_affine->constant};
+            return *lhs_affine * rhs_affine->constant;
         }
         return std::nullopt;
     }
@@ -120,7 +137,8 @@ std::optional<MemoryAccess> LAAResult::analyzePointer(Value *ptr) const {
             base_ptr = gep->getPtr().get();
             // gep ptr, 0, i --> a[i]
             pVal index;
-            if (!match(gep, M::Gep(M::Val(), M::Is(0), M::Bind(index))))
+            if (!match(gep, M::Gep(M::Val(), M::Is(0), M::Bind(index))) &&
+                !match(gep, M::Gep(M::Val(), M::Bind(index))))
                 return std::nullopt;
 
             auto affine = analyzeAffineExpr(index.get());
@@ -136,16 +154,10 @@ std::optional<MemoryAccess> LAAResult::analyzePointer(Value *ptr) const {
     }
 
     Err::gassert(base_ptr->getType()->is<PtrType>());
-    auto elmty = getElm(base_ptr->getType());
-    if (elmty->is<ArrayType>())
+    if (!indices.empty())
         return MemoryAccess(ArrayAccess{.base = base_ptr, .indices = std::move(indices)});
 
-    if (elmty->is<BType>()) {
-        Err::gassert(indices.empty(), "bad type");
-        return MemoryAccess(ScalarAccess{.base = base_ptr});
-    }
-
-    return std::nullopt;
+    return MemoryAccess(ScalarAccess{.base = base_ptr});
 }
 
 const std::optional<MemoryAccess> &LAAResult::queryPointer(Value *ptr) const {

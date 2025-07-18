@@ -17,8 +17,8 @@ struct FuseCandidate {
 };
 
 bool canFuse(LAAResult* laa_res, FORInst* for1, FORInst* for2) {
-    auto indvar1 = for1->getIndvar();
-    auto indvar2 = for2->getIndvar();
+    auto indvar1 = for1->getIndVar();
+    auto indvar2 = for2->getIndVar();
 
     // Give up if two FORInst have different iteration domain.
     // TODO: Loop Alignment
@@ -144,13 +144,13 @@ PM::PreservedAnalyses LoopFusePass::run(LinearFunction &function, LFAM &lfam) {
             //   for1 -> for2 -> for3
             // Through FuseVisitor, we got { (for1, for2), (for2, for3) }
             // Fuse the first one into the second can avoid the pointer being invalidated
-            for1->getIndvar()->replaceSelf(for2->getIndvar());
+            for1->getIndVar()->replaceSelf(for2->getIndVar());
             for2->getBodyInsts().insert(for2->getBodyInsts().begin(), for1->getBodyInsts().begin(),
                                         for1->getBodyInsts().end());
 
             // Append debug data before we delete it.
             for2->appendDbgData(for1->getDbgData());
-            for2->appendDbgData("fused=" + for1->getIndvar()->getName());
+            for2->appendDbgData("fused=" + for1->getIndVar()->getName());
 
             IListDel(*ilist, for1);
             Logger::logDebug("[LoopFuse]: Fused two loops");

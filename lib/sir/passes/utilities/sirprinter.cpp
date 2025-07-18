@@ -4,6 +4,7 @@
 #include "sir/passes/utilities/sirprinter.hpp"
 #include "ir/formatter.hpp"
 #include "sir/base.hpp"
+#include "sir/passes/analysis/alias_analysis.hpp"
 
 namespace SIR {
 void LinearPrinterBase::indent() {
@@ -124,7 +125,7 @@ void LinearPrinterBase::visit(Instruction &node) {
         writeln("}");
     } else if (auto for_inst = node.as_raw<FORInst>()) {
         indent();
-        write("for (", for_inst->getIndvar()->getName(), " in [", for_inst->getBase()->getName(), ", ",
+        write("for (", for_inst->getIndVar()->getName(), " in [", for_inst->getBase()->getName(), ", ",
               for_inst->getBound()->getName(), ") step ", for_inst->getStep()->getName());
         write(") {");
         write_dbg_msg_ln();
@@ -187,4 +188,52 @@ PM::PreservedAnalyses PrintLinearModulePass::run(Module &module, MAM &mam) {
 
     return PreserveAll();
 }
+
+PM::PreservedAnalyses PrintLAAPass::run(LinearFunction &lfunc, LFAM &lfam) {
+    auto& laa_res = lfam.getResult<LAliasAnalysis>(lfunc);
+    writeln("LAAResult for ", lfunc.getName(), ":");
+    for (const auto& inst : lfunc.nested_insts()) {
+        if (auto for_inst = inst->as<FORInst>()) {
+            const auto& rw = laa_res.queryInstRW(for_inst);
+            if (!rw)
+                continue;
+            writeln("FORInst: ", for_inst->getIndVar()->getName(), ":");
+            auto print_set = [&](const auto& set) {
+                for (const auto& read : set) {
+                    write("    ", read->getName(), " = ");
+                    const auto& ptr = laa_res.queryPointer(read);
+                    if (!ptr)
+                        write("Unknown");
+                    else if (ptr->isArray()) {
+                        auto arr = ptr->array();
+                        write(arr.base->getName());
+                        Err::gassert(!arr.indices.empty());
+                        for (const auto& idx : arr.indices) {
+                            write("[");
+                            for (const auto& coeff : idx.coeffs) {
+                                if (coeff.second != 1)
+                                    write(coeff.second, " * ");
+                                write(coeff.first->getName());
+                            }
+                            if (idx.constant != 0)
+                                write(" + ", idx.constant);
+                            write("]");
+                        }
+                    }
+                    else if (ptr->isScalar()) {
+                        write(ptr->scalar().base->getName());
+                    }
+                    else Err::unreachable();
+                    writeln("");
+                }
+            };
+            writeln("  Read:");
+            print_set(rw->read);
+            writeln("  Write:");
+            print_set(rw->write);
+        }
+    }
+    return PreserveAll();
+}
+
 } // namespace SIR

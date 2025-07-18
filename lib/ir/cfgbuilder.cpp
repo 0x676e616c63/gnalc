@@ -123,7 +123,7 @@ void CFGBuilder::newFor(const pForInst & for_inst) {
 
     cur_blk = for_cond;
     cur_making_func->addBlock(for_cond);
-    auto indvar = for_inst->getIndvar();
+    auto indvar = for_inst->getIndVar();
     auto phi = std::make_shared<PHIInst>(nam.getForIndVar(), indvar->getType());
     // Store to original alloca to fix outside loop uses of the induction variable.
     // mem2reg will finally eliminate such store.

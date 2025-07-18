@@ -53,6 +53,13 @@ public:
 
     PM::PreservedAnalyses run(Module &unit, MAM &manager);
 };
+
+class PrintLAAPass : public PM::PassInfo<PrintLAAPass>, public LinearPrinterBase {
+public:
+    explicit PrintLAAPass(std::ostream &outStream_) : LinearPrinterBase(outStream_) {}
+
+    PM::PreservedAnalyses run(LinearFunction &unit, LFAM &manager);
+};
 } // namespace IR
 
 #endif

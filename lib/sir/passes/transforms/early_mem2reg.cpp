@@ -33,15 +33,15 @@ PM::PreservedAnalyses EarlyPromotePass::run(LinearFunction &function, LFAM &lfam
         if (!alloc)
             break;
 
-        // Only promote scalar types
-        if (!alloc->getBaseType()->is<BType>())
+        // Only promote scalar and pointer types
+        if (!alloc->getBaseType()->is<BType, PtrType>())
             continue;
 
         scalar_mem.emplace_back(alloc);
     }
 
     for (const auto &gv : function.getParent()->getGlobalVars()) {
-        if (!gv->getVarType()->is<BType>())
+        if (!gv->getVarType()->is<BType, PtrType>())
             continue;
         scalar_mem.emplace_back(gv);
     }
@@ -96,8 +96,15 @@ PM::PreservedAnalyses EarlyPromotePass::run(LinearFunction &function, LFAM &lfam
                     });
                 }
             } else {
+                // Instructions can become unreachable after CFGBuilder.
+                // For example, function with multiple returns can let some instructions unreachable.
+                if (!instdom.isReachableFromEntry(mem_store))
+                    continue;
+
                 auto dominates_all_loads = [&]() -> bool {
                     for (const auto& load : loads) {
+                        if (!instdom.isReachableFromEntry(load))
+                            continue;
                         if (!instdom.ADomB(mem_store, load))
                             return false;
                     }

@@ -107,6 +107,8 @@ private:
         cur_blk = for_body;
         if (auto it = for_inst->getBodyInsts().cbegin(); !adder(it, for_inst->getBodyInsts().cend(), false))
             linkBlock(cur_blk, for_cond);
+
+        cur_blk = for_end;
     }
 
     bool adder(std::list<pInst>::const_iterator &it, const std::list<pInst>::const_iterator &end,

@@ -23,6 +23,7 @@ namespace SIR {
 struct Visitor;
 struct ContextVisitor;
 class While2ForPass;
+class LoopInterchangePass;
 } // namespace SIR
 namespace IR {
 enum class HELPERTY { IF, WHILE, BREAK, CONTINUE, FOR };
@@ -220,6 +221,7 @@ public:
 
 class FORInst : public HELPERInst {
     friend struct SIR::ContextVisitor;
+    friend class SIR::LoopInterchangePass;
 
     pIndVar indvar;
     std::list<pInst> body_insts;
@@ -228,7 +230,7 @@ public:
     FORInst(pIndVar indvar_, std::list<pInst> body_insts_)
         : HELPERInst(HELPERTY::FOR), indvar(std::move(indvar_)), body_insts(std::move(body_insts_)) {}
 
-    const pIndVar &getIndvar() { return indvar; }
+    const pIndVar &getIndVar() { return indvar; }
     const pVal &getBase() const { return indvar->getBase(); }
     const pVal &getBound() const { return indvar->getBound(); }
     const pVal &getStep() const { return indvar->getStep(); }

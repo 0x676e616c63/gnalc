@@ -83,9 +83,9 @@ public:
         return dynamic_cast<T *>(this);
     }
 
-    template <typename T> bool is() const {
-        static_assert(std::is_base_of_v<Type, T>, "Expected a derived type.");
-        return as_raw<T>() != nullptr;
+    template <typename... Args> bool is() const {
+        static_assert((std::is_base_of_v<Type, Args> || ...), "Expected a derived type.");
+        return ((as_raw<Args>() != nullptr) || ...);
     }
 
     // Convenient wrapper

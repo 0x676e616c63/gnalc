@@ -23,15 +23,19 @@ struct ScalarAccess {
 // Affine Expr
 // e(i,j,k...) = c0 + c1 * i + c2 * j + c3 * k + ...
 struct AffineExpr {
+    // Theses coeffs must be non-zero.
+    // That is, if `coeffs.count(i)`, then `i` is in this affine expr.
     std::map<IndVar *, int> coeffs;
     int constant;
+
+    int coe(IndVar *i) const;
+    AffineExpr operator+(const AffineExpr &rhs) const;
+    AffineExpr operator-(const AffineExpr &rhs) const;
+    AffineExpr operator*(int rhs) const;
+    bool operator==(const AffineExpr &rhs) const;
 };
 
 bool isIsomorphic(const AffineExpr &lhs, const AffineExpr &rhs);
-
-inline bool operator==(const AffineExpr &lhs, const AffineExpr &rhs) {
-    return lhs.coeffs == rhs.coeffs && lhs.constant == rhs.constant;
-}
 
 struct ArrayAccess {
     Value *base;
