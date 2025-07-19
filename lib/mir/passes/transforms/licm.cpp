@@ -11,44 +11,62 @@
 #include <vector>
 
 namespace MIR {
-bool isSafeAndProfitableToHoist(const MIRInst_p &inst) {
+// Hoisting immload can cause too much register pressure if not restricted.
+// Therefore, we only hoist immloads that costs more than one instruction.
+bool isSafeAndProfitableToHoist(const MIRInst_p &inst, Arch arch) {
     if (inst->isGeneric()) {
         switch (inst->opcode<OpC>()) {
-        case OpC::InstLoadAddress:
-        case OpC::InstLoadStackObjectAddr:
-        case OpC::InstLoadImmToReg:
         case OpC::InstLoadFPImmToReg:
-            break;
-        case OpC::InstLoadImm:
-        case OpC::InstLoadImmEx:
         case OpC::InstLoadFPImm:
             // They can be optimized by zero register. Hoisting them is not profitable.
             if (inst->getOp(1)->imme() == 0)
                 return false;
-            break;
+            // Float/Vector register pressure usually is low
+            return true;
+        case OpC::InstLoadImmEx: {
+            auto encoding = inst->getOp(1)->imme();
+            if (encoding == 0)
+                return false;
+            if (arch == Arch::ARMv8) // FIXME
+                return true;
+            if (arch == Arch::RISCV64) {
+                if (RV64::is12BitImm(encoding, true))
+                    return true;
+            }
+            return false;
+        }
+        case OpC::InstLoadImm: {
+            auto encoding = inst->getOp(1)->imme();
+            if (encoding == 0)
+                return false;
+            if (arch == Arch::ARMv8) {
+                if (!ARMv8::isBitMaskImme(encoding) && !ARMv8::is12ImmeWithProbShift(encoding) && encoding > 0XFFFF)
+                    return true;
+            }
+            if (arch == Arch::RISCV64) {
+                if (!RV64::is12BitImm(encoding, false))
+                    return true;
+            }
+            return false;
+        }
+        case OpC::InstLoadAddress:
+        case OpC::InstLoadStackObjectAddr:
+        case OpC::InstLoadImmToReg:
+            // Hoisting them causes too much register pressure
+            // TODO: try to figure out register pressure
+            return false;
         default:
             return false;
         }
-    } else if (inst->isRV()) {
-        switch (inst->opcode<RVOpC>()) {
-        case RVOpC::LA:
-            break;
-        default:
-            return false;
-        }
-    } else if (inst->isARM()) {
-        // FIXME
-        return false;
-    } else
-        return false;
-
-    return true;
+    }
+    return false;
 }
 
 PM::PreservedAnalyses MachineLICMPass::run(MIRFunction &function, FAM &fam) {
     auto &loop_info = fam.getResult<MachineLoopAnalysis>(function);
     auto &postdom = fam.getResult<PostDomTreeAnalysis>(function);
 
+    auto arch = function.Context().infos.arch;
     bool licm_inst_modified = false;
     // Record the index in a Reverse Post Order Traversal.
     // This can make it easier to traverse basic blocks in a loop in a certain order.
@@ -70,14 +88,14 @@ PM::PreservedAnalyses MachineLICMPass::run(MIRFunction &function, FAM &fam) {
                 std::sort(loop_blocks.begin(), loop_blocks.end(),
                           [&rpo_index](const auto &a, const auto &b) { return rpo_index[a] < rpo_index[b]; });
                 for (const auto &bb : loop_blocks) {
-                    // Don't Aggressive
+                    // Don't be aggressive.
                     if (!postdom.ADomB(bb.get(), preheader.get()))
                         continue;
 
                     // Keep the topological order.
                     std::vector<MIRInst_p> to_hoist;
                     for (const auto &inst : bb->Insts()) {
-                        if (isSafeAndProfitableToHoist(inst))
+                        if (isSafeAndProfitableToHoist(inst, arch))
                             to_hoist.emplace_back(inst);
                     }
 
@@ -88,7 +106,7 @@ PM::PreservedAnalyses MachineLICMPass::run(MIRFunction &function, FAM &fam) {
 
                         auto hoisted_li = inst->clone();
                         auto &ctx = function.Context();
-                        auto hoisted_def = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
+                        auto hoisted_def = MIROperand::asVReg(ctx.nextId(), inst->ensureDef()->type());
                         hoisted_li->setOperand<0>(hoisted_def, ctx);
                         preheader->addInstBeforeBr(hoisted_li);
 

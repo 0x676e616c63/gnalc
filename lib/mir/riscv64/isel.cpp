@@ -393,6 +393,14 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         auto loaded = loadImm(imme);
         ctx.newInst(OpC::InstCopyToReg)->setOperand<0>(def, ctx.codeGenCtx())->setOperand<1>(loaded, ctx.codeGenCtx());
     } break;
+    case OpC::InstICmpBranch: {
+        auto lhs = minst->getOp(1);
+        auto rhs = minst->getOp(2);
+        if (lhs->isImme())
+            minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
+        if (rhs->isImme())
+            minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
+    } break;
     case OpC::InstSelect:
         Err::not_implemented("Select on RISCV64");
     default:

@@ -296,17 +296,15 @@ void emitBranchCondRISCV(const IR::pBr &br, LoweringContext &ctx) {
         mpreds.erase(rm_it);
     } else {
         if (br->getCond()->is<IR::ICMPInst>() && br->getCond()->getUseCount() == 1) {
-            // For single user icmp, we directly emit blt/bge/...
-            // This is not done in ISel because at that time we've lost the use info.
             auto icmp = br->getCond()->as<IR::ICMPInst>();
             auto lhs = ctx.mapOperand(icmp->getLHS());
             auto rhs = ctx.mapOperand(icmp->getRHS());
-            RVOpC bropcode = RVIRCondConvert(icmp->getCond());
-            ctx.newInst(MIRInst::make(bropcode)
+            ctx.newInst(MIRInst::make(OpC::InstICmpBranch)
                             ->setOperand<0>(nullptr, ctx.CodeGenCtx())
                             ->setOperand<1>(lhs, ctx.CodeGenCtx())
                             ->setOperand<2>(rhs, ctx.CodeGenCtx())
-                            ->setOperand<3>(MIROperand::asReloc(blk_true), ctx.CodeGenCtx()));
+                            ->setOperand<3>(MIROperand::asReloc(blk_true), ctx.CodeGenCtx())
+                            ->setOperand<4>(ctx.mapOperand(IRCondConvert(icmp->getCond())), ctx.CodeGenCtx()));
         } else {
             auto mcond = ctx.mapOperand(br->getCond());
             Err::gassert(mcond && !mcond->isImme());

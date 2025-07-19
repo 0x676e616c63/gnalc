@@ -128,6 +128,7 @@ void RV64Printer::printout(const MIRInst &minst) {
             outStream << formatCopy(minst);
             break;
         case OpC::InstBranch:
+        case OpC::InstICmpBranch:
             outStream << formatBranch(minst);
             break;
 
@@ -368,4 +369,36 @@ string RV64Printer::formatCopy(const MIRInst &minst) {
     return "";
 }
 
-string RV64Printer::formatBranch(const MIRInst &minst) { return "j " + formatOperand(minst.getOp(1)); }
+string RV64Printer::formatBranch(const MIRInst &minst) {
+    if (minst.opcode<OpC>() == OpC::InstBranch)
+        return "j " + formatOperand(minst.getOp(1));
+
+    if (minst.opcode<OpC>() == OpC::InstICmpBranch) {
+        auto cond = minst.getOp(4)->imme();
+        auto bropcode = [&] {
+            switch (cond) {
+            case Cond::EQ:
+                return RVOpC::BEQ;
+            case Cond::NE:
+                return RVOpC::BNE;
+            case Cond::GT:
+                return RVOpC::BGT;
+            case Cond::GE:
+                return RVOpC::BGE;
+            case Cond::LT:
+                return RVOpC::BLT;
+            case Cond::LE:
+                return RVOpC::BLE;
+            default:
+                Err::unreachable();
+            }
+            return RVOpC::BLT;
+        }();
+
+        return RV64::RVOpC2S(bropcode) + " " + formatOperand(minst.getOp(1)) + ", " +
+               formatOperand(minst.getOp(2)) + ", " + formatOperand(minst.getOp(3));
+    }
+
+    Err::unreachable();
+    return "";
+}
