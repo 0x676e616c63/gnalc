@@ -75,7 +75,7 @@ template <typename T> inline bool is12ImmeWithProbShift(T imm) {
         int debug;
     }
 
-    if (imme < 4096 || (imme % 0x1000 == 0 && (imme >> 12) < 4096)) {
+    if (imme < 4096 && imme > -4095 || (imme % 0x1000 == 0 && (imme >> 12) < 4096)) {
         return true;
     } else {
         return false;

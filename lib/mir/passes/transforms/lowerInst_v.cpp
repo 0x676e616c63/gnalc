@@ -10,6 +10,7 @@
 #include "ir/type.hpp"
 #include "ir/type_alias.hpp"
 #include "mir/MIR.hpp"
+#include "mir/armv8/base.hpp"
 #include "mir/info.hpp"
 #include "mir/passes/transforms/isel.hpp"
 #include "mir/passes/transforms/lowering.hpp"
@@ -163,16 +164,26 @@ void MIR::lowerInst_v(const IR::pInsert &insert, LoweringContext &ctx) {
     if (ctx.CodeGenCtx().isARMv8()) {
 
         MIROperand_p def, use;
+        auto idx = ctx.mapOperand(insert->getIdx());
 
-        insert->getVector()->as<IR::ConstantIntVector>() || insert->getVector()->as<IR::ConstantFloatVector>()
-            ? (def = ctx.newVReg(insert->getType()), use = nullptr)
-            : (def = ctx.mapOperand(insert->getVector()), use = def); // if poison or not
+        if (insert->getVector()->as<IR::ConstantIntVector>() || insert->getVector()->as<IR::ConstantFloatVector>()) {
+            // poison & clear
+            def = ctx.newVReg(insert->getType()), use = nullptr;
+
+            if (idx->imme() != 0) {
+                ctx.newInst(MIRInst::make(ARMOpC::MOVI)
+                                ->setOperand<0>(def, ctx.CodeGenCtx())
+                                ->setOperand<1>(ctx.mapOperand(0L), ctx.CodeGenCtx()));
+            }
+
+        } else {
+            def = ctx.mapOperand(insert->getVector()), use = def;
+        }
 
         Err::gassert(insert->getIdx()->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL,
                      "lowerInst_v: try insert/extract with a variable idx");
 
         // avoid use xzr/wzr
-        auto idx = ctx.mapOperand(insert->getIdx());
 
         ctx.newInst(MIRInst::make(OpC::InstVInsert)
                         ->setOperand<0>(def, ctx.CodeGenCtx())

@@ -101,7 +101,9 @@ MIROperand_p RegisterAllocImpl::heuristicSpill() {
             weight_max = weight;
         }
     }
-    Err::gassert(spilled != nullptr, "heuristicSpill: spilled is nullptr");
+
+    spilled == nullptr ? void(spilled = spillWorkList.back()) : nop; // use last as fallback
+
     // Logger::logInfo("spilled: " + std::to_string(spilled->getRecover()));
     return spilled;
 
