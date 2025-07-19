@@ -74,7 +74,8 @@ enum class OP {
     SHUFFLE,
 
     // Helper for easy IRGen, pruned after CFGBuilder
-    HELPER
+    HELPER,
+    INDVAR,
 };
 
 // We can't see BasicBlock's definition here, use `BBInstIter` to get around it.
@@ -110,6 +111,7 @@ private:
 public:
     // 此构造方法用于初始生成时，最开始没有划分Block，故parent为空
     Instruction(OP opcode, std::string _name, const pType &_type);
+    Instruction(OP opcode, std::string _name, const pType &_type, ValueTrait value_trait_);
 
     OP getOpcode() const;
     void setParent(const pBlock &p);

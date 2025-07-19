@@ -190,12 +190,43 @@ public:
     std::optional<size_t> estimateExpansionCost(SCEVExpr* expr, const pBlock& block) const;
     std::optional<size_t> estimateExpansionCost(TREC* addrec);
 
+    // Unchecked version
+    pVal expandSCEVExprUnchecked(SCEVExpr* expr, const pBlock& block, BasicBlock::iterator insert_before) const;
+    size_t estimateExpansionCostUnchecked(SCEVExpr* expr, const pBlock& block) const;
+
     void forgetAll();
+
+    TREC *getTRECUndef() const;
+    TREC *getTRECUntracked() const;
+    TREC *getExprTREC(SCEVExpr *expr);
+    // Convenient wrapper for getSCEVExprTREC(getSCEVExpr(x))
+    TREC *getIRValTREC(Value *x);
+    TREC *getAddRecTREC(const Loop *loop, TREC *base, TREC *step);
+    TREC *getPeeledTREC(const Loop *loop, SCEVExpr *first, TREC *rest);
+    TREC *getTRECAdd(TREC *x, TREC *y);
+    TREC *getTRECSub(TREC *x, TREC *y);
+    TREC *getTRECMul(TREC *x, TREC *y);
+    TREC *getTRECNeg(TREC *x);
+    TREC *unifyPeeledTREC(TREC *peeled);
+    void foldTREC(TREC *trec);
+
+    SCEVExpr *getSCEVExprAdd(SCEVExpr *x, SCEVExpr *y);
+    SCEVExpr *getSCEVExprSub(SCEVExpr *x, SCEVExpr *y);
+    SCEVExpr *getSCEVExprMul(SCEVExpr *x, SCEVExpr *y);
+    SCEVExpr *getSCEVExprDiv(SCEVExpr *x, SCEVExpr *y);
+    SCEVExpr *getSCEVExprNeg(SCEVExpr *x);
+    SCEVExpr *getSCEVExpr(int x);
+    SCEVExpr *getSCEVExpr(Value *x);
+    void foldSCEVExpr(SCEVExpr *expr);
 private:
     pVal expandSCEVExprImpl(SCEVExpr* expr, const pBlock& block,
         BasicBlock::iterator insert_before, std::map<SCEVExpr*, pVal>& inserted) const;
-
     std::optional<size_t> estimateExpansionCostImpl(SCEVExpr* expr, const pBlock& block,
+        std::set<SCEVExpr*>& visited) const;
+
+    pVal expandSCEVExprUncheckedImpl(SCEVExpr* expr, const pBlock& block,
+    BasicBlock::iterator insert_before, std::map<SCEVExpr*, pVal>& inserted) const;
+    size_t estimateExpansionCostUncheckedImpl(SCEVExpr* expr, const pBlock& block,
         std::set<SCEVExpr*>& visited) const;
 
     TREC *getSCEVAtScopeImpl(Value *val, const Loop *loop);
@@ -219,30 +250,8 @@ private:
     TREC *instantiateEvolution(TREC *trec, const Loop *loop);
     TREC *instantiateEvolutionImpl(TREC *trec, const Loop *loop, std::vector<std::unordered_set<TREC *>> &instantiated);
 
-    TREC *getTRECUndef() const;
-    TREC *getTRECUntracked() const;
     TREC *getPoolTREC(const std::shared_ptr<TREC> &trec);
-    TREC *getExprTREC(SCEVExpr *expr);
-    // Convenient wrapper for getSCEVExprTREC(getSCEVExpr(x))
-    TREC *getIRValTREC(Value *x);
-    TREC *getAddRecTREC(const Loop *loop, TREC *base, TREC *step);
-    TREC *getPeeledTREC(const Loop *loop, SCEVExpr *first, TREC *rest);
-    TREC *getTRECAdd(TREC *x, TREC *y);
-    TREC *getTRECSub(TREC *x, TREC *y);
-    TREC *getTRECMul(TREC *x, TREC *y);
-    TREC *getTRECNeg(TREC *x);
-    TREC *unifyPeeledTREC(TREC *peeled);
-    void foldTREC(TREC *trec);
-
     SCEVExpr *getPoolSCEV(const std::shared_ptr<SCEVExpr> &expr);
-    SCEVExpr *getSCEVExprAdd(SCEVExpr *x, SCEVExpr *y);
-    SCEVExpr *getSCEVExprSub(SCEVExpr *x, SCEVExpr *y);
-    SCEVExpr *getSCEVExprMul(SCEVExpr *x, SCEVExpr *y);
-    SCEVExpr *getSCEVExprDiv(SCEVExpr *x, SCEVExpr *y);
-    SCEVExpr *getSCEVExprNeg(SCEVExpr *x);
-    SCEVExpr *getSCEVExpr(int x);
-    SCEVExpr *getSCEVExpr(Value *x);
-    void foldSCEVExpr(SCEVExpr *expr);
 
     Function *function;
     LoopInfo *loop_info;

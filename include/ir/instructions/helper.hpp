@@ -197,26 +197,28 @@ public:
     void accept(IRVisitor &visitor) override;
 };
 
-class IndVar : public Value {
+class IndVar : public Instruction {
 private:
+    // Base, Bound and Step are in operands list.
+    // This can let IndVar can be replaced by `replaceSelf`.
+    // Original Alloca is not, because it is only used to ensure correctness in CFGBuilder.
     pVal orig_alloc;
-    pVal base;
-    pVal bound;
-    pVal step;
 
 public:
-    explicit IndVar(std::string name_, pVal orig_alloca_, pVal base_, pVal bound_, pVal step_)
-        : Value(std::move(name_), base_->getType(), ValueTrait::INDUCTION_VARIABLE),
-          orig_alloc(std::move(orig_alloca_)), base(std::move(base_)), bound(std::move(bound_)),
-          step(std::move(step_)) {
+    explicit IndVar(std::string name_, pVal orig_alloca_, const pVal &base, const pVal &bound, const pVal &step)
+        : Instruction(OP::INDVAR, std::move(name_), base->getType(), ValueTrait::INDUCTION_VARIABLE),
+          orig_alloc(std::move(orig_alloca_)) {
         Err::gassert(isSameType(base, bound));
         Err::gassert(isSameType(base, step));
+        addOperand(base);
+        addOperand(bound);
+        addOperand(step);
     }
 
     const pVal &getOrigAlloc() const { return orig_alloc; }
-    const pVal &getBase() const { return base; }
-    const pVal &getBound() const { return bound; }
-    const pVal &getStep() const { return step; }
+    pVal getBase() const { return getOperand(0)->getValue(); }
+    pVal getBound() const { return getOperand(1)->getValue(); }
+    pVal getStep() const { return getOperand(2)->getValue(); }
 };
 
 class FORInst : public HELPERInst {
@@ -231,9 +233,9 @@ public:
         : HELPERInst(HELPERTY::FOR), indvar(std::move(indvar_)), body_insts(std::move(body_insts_)) {}
 
     const pIndVar &getIndVar() { return indvar; }
-    const pVal &getBase() const { return indvar->getBase(); }
-    const pVal &getBound() const { return indvar->getBound(); }
-    const pVal &getStep() const { return indvar->getStep(); }
+    pVal getBase() const { return indvar->getBase(); }
+    pVal getBound() const { return indvar->getBound(); }
+    pVal getStep() const { return indvar->getStep(); }
     const std::list<pInst> &getBodyInsts() const { return body_insts; }
     std::list<pInst> &getBodyInsts() { return body_insts; }
 

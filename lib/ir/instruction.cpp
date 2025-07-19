@@ -7,7 +7,6 @@
 #include <utility>
 
 namespace IR {
-
 Instruction::Instruction(OP opcode, std::string _name, const pType &_type)
     : opcode(opcode),
       User(std::move(_name), _type,
@@ -16,6 +15,9 @@ Instruction::Instruction(OP opcode, std::string _name, const pType &_type)
                     _type->as<BType>()->getInner() != IRBTYPE::VOID)
                ? ValueTrait::ORDINARY_VARIABLE
                : ValueTrait::VOID_INSTRUCTION) {}
+
+Instruction::Instruction(OP opcode, std::string _name, const pType &_type, ValueTrait value_trait_)
+    : opcode(opcode), User(std::move(_name), _type, value_trait_) {}
 
 void Instruction::setParent(const pBlock &p) { parent = p; }
 
@@ -52,14 +54,12 @@ bool Instruction::isCommutative() const {
     return false;
 }
 
-const std::vector<std::string>& Instruction::getDbgData() const { return dbg_data; }
+const std::vector<std::string> &Instruction::getDbgData() const { return dbg_data; }
 void Instruction::appendDbgData(const std::string &data) { dbg_data.emplace_back(data); }
 void Instruction::appendDbgData(const std::vector<std::string> &data) {
     dbg_data.insert(dbg_data.end(), data.begin(), data.end());
 }
-void Instruction::clearDbgData() {
-    dbg_data.clear();
-}
+void Instruction::clearDbgData() { dbg_data.clear(); }
 
 void Instruction::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
