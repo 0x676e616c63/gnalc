@@ -863,6 +863,11 @@ void VectorizerPass::buildTreeImpl(const std::vector<pVal> &scalars, int depth, 
         return;
     }
 
+    if (!target->canVectorize(*opcode)) {
+        gather();
+        return;
+    }
+
     bool is_alt_shuffle = false;
     if (*opcode == OP::SHUFFLE && scalars[0]->as<Instruction>()->getOpcode() != OP::SHUFFLE) {
         is_alt_shuffle = true;

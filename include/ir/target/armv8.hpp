@@ -94,6 +94,19 @@ public:
 
         return 2;
     }
+    bool canVectorize(OP op) const override {
+        switch (op) {
+        case OP::DIV:
+        case OP::LSHR:
+        case OP::ASHR:
+        case OP::SREM:
+        case OP::UREM:
+            return false;
+        default: return true;
+        }
+        Err::unreachable();
+        return true;
+    }
 };
 } // namespace IR
 #endif //TARGET_HPP

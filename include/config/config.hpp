@@ -72,7 +72,8 @@ constexpr auto RANGE_ANALYSIS_MAX_PROCESS_CNT = 32;
 
 // Vectorizer
 // We vectorize trees if we gain more than this threshold.
-constexpr auto SLP_COST_THRESHOLD = 0;
+// FIXME: I don't know if this threshold is reasonable.
+constexpr auto SLP_COST_THRESHOLD = -2;
 constexpr auto SLP_BUILD_TREE_RECURSION_THRESHOLD = 12;
 constexpr auto SLP_SCHEDULER_MAX_REGION_SIZE = 100000;
 
