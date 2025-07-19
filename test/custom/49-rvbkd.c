@@ -1,145 +1,113 @@
-const int TOKEN_NUM = 0, TOKEN_OTHER = 1;
-int last_char = 32, num, other;
-int cur_token;
+int n = 50;
+int ks = 15;
+int ps = 4;
+float input[1000][1000];
+float kernel[15][15];
+float conv_output[1000][1000];
+float pooling_output[243][243];
 
-int next_char() {
-  last_char = getch();
-  return last_char;
-}
-
-int is_space(int c) {
-  if (c == 32 || c == 10) {
-    return 1;
-  }
-  else {
-    return 0;
-  }
-}
-
-int is_num(int c) {
-  if (c >= 48 && c <= 57) {
-    return 1;
-  }
-  else {
-    return 0;
-  }
-}
-
-int next_token() {
-  while (is_space(last_char)) next_char();
-  if (is_num(last_char)) {
-    num = last_char - 48;
-    while (is_num(next_char())) {
-      num = num * 10 + last_char - 48;
+float max(float a, float b) {
+    if (a > b) {
+        return a;
+    } else {
+        return b;
     }
-    cur_token = TOKEN_NUM;
-  }
-  else {
-    other = last_char;
-    next_char();
-    cur_token = TOKEN_OTHER;
-  }
-  return cur_token;
 }
 
-int panic() {
-  putch(112);
-  putch(97);
-  putch(110);
-  putch(105);
-  putch(99);
-  putch(33);
-  putch(10);
-  return -1;
+float exp(float x) {
+    return 1 + x + (x*x)/2 + (x*x*x)/6 + (x*x*x*x)/24;
 }
 
-int get_op_prec(int op) {
-  // +, -
-  if (op == 43 || op == 45) return 10;
-  // *, /, %
-  if (op == 42 || op == 47 || op == 37) return 20;
-  // other
-  return 0;
+float sigmoid(float x) {
+    return 1 / (1 + exp(-x));
 }
 
-void stack_push(int s[], int v) {
-  s[0] = s[0] + 1;
-  s[s[0]] = v;
-}
-
-int stack_pop(int s[]) {
-  int last = s[s[0]];
-  s[0] = s[0] - 1;
-  return last;
-}
-
-int stack_peek(int s[]) {
-  return s[s[0]];
-}
-
-int stack_size(int s[]) {
-  return s[0];
-}
-
-int eval_op(int op, int lhs, int rhs) {
-  // +
-  if (op == 43) return lhs + rhs;
-  // -
-  if (op == 45) return lhs - rhs;
-  // *
-  if (op == 42) return lhs * rhs;
-  // /
-  if (op == 47) return lhs / rhs;
-  // %
-  if (op == 37) return lhs % rhs;
-  // other
-  return 0;
-}
-
-int eval() {
-  int oprs[256] = {}, ops[256] = {};
-  // get the first value
-  if (cur_token != TOKEN_NUM) return panic();
-  stack_push(oprs, num);
-  next_token();
-  // evaluate
-  while (cur_token == TOKEN_OTHER) {
-    // get operator
-    int op = other;
-    if (!get_op_prec(op)) break;
-    next_token();
-    // handle operator
-    while (stack_size(ops) && get_op_prec(stack_peek(ops)) >= get_op_prec(op)) {
-      // evaluate the current operation
-      int cur_op = stack_pop(ops);
-      int rhs = stack_pop(oprs), lhs = stack_pop(oprs);
-      stack_push(oprs, eval_op(cur_op, lhs, rhs));
+void kernel_conv_pooling(float A[][1000], float B[][1000], float C[][243], float kernel[][15], int n, int ks, int ps) {
+    int i, j, k, l;
+    float v;
+    i = 0;
+    while (i < n - ks + 1) {
+        j = 0;
+        while (j < n - ks + 1) {
+            v = 0;
+            k = 0;
+            while (k < ks) {
+                l = 0;
+                while (l < ks) {
+                    v=v+ A[i + k][j + l] * kernel[k][l];
+                    l =l+ 1;
+                }
+                k =k+ 1;
+            }
+            B[i][j] = v;
+            j =j+ 1;
+        }
+        i =i+ 1;
     }
-    stack_push(ops, op);
-    // get next expression
-    if (cur_token != TOKEN_NUM) return panic();
-    stack_push(oprs, num);
-    next_token();
-  }
-  // eat ';'
-  next_token();
-  // clear the operator stack
-  while (stack_size(ops)) {
-    int cur_op = stack_pop(ops);
-    int rhs = stack_pop(oprs), lhs = stack_pop(oprs);
-    stack_push(oprs, eval_op(cur_op, lhs, rhs));
-  }
-  return stack_peek(oprs);
+    n = n - ks + 1;
+    i = 0;
+    while (i < n - ks + 1) {
+        j = 0;
+        while (j < n - ks + 1) {
+            v = 0;
+            k = 0;
+            while (k < ks) {
+                l = 0;
+                while (l < ks) {
+                    v =v+ B[i + k][j + l] * kernel[k][l];
+                    l =l+ 1;
+                }
+                k =k+ 1;
+            }
+            A[i][j] = v;
+            j =j+ 1;
+        }
+        i =i+ 1;
+    }
+
+    n = (n - ks + 1) / ps;
+    i = 0;
+    while (i < n) {
+        j = 0;
+        while (j < n) {
+            v = A[i * ps][j * ps];
+            k = 0;
+            while (k < ps) {
+                l = 0;
+                while (l < ps) {
+                    v = max(v, A[i * ps + k][j * ps + l]);
+                    l =l+ 1;
+                }
+                k =k+ 1;
+            }
+            C[i][j] = v;
+            j =j+ 1;
+        }
+        i =i+ 1;
+    }
+
+    i = 0;
+    while (i < n) {
+        v = 0;
+        j = 0;
+        while (j < n) {
+            C[i][j] = C[i][j] * sigmoid(C[i][j]);
+            j =j+ 1;
+        }
+        i =i+ 1;
+    }
 }
 
 int main() {
-  int count = getint();
-  getch();
-  next_token();
-  while (count) {
-    putint(eval());
-    putch(10);
-    count = count - 1;
-  }
-  return 0;
+    int os = (n - 2 * ks + 2) / ps;
+    getfarray(input);
+    getfarray(kernel);
+
+    starttime();
+    kernel_conv_pooling(input, conv_output, pooling_output, kernel, n, ks, ps);
+    stoptime();
+
+    putfarray(os*os, pooling_output);
+
+    return 0;
 }

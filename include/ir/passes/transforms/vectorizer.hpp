@@ -227,8 +227,13 @@ class VectorizerPass : public PM::PassInfo<VectorizerPass> {
         template <typename ReadyListT> void initialFillReadyList(ReadyListT &ready_list) {
             for (auto it = sched_begin->iter(); it != sched_end->iter(); ++it) {
                 auto sched = getData(*it);
-                if (sched->isSchedEntity() && sched->isReady())
+                if (sched->isSchedEntity() && sched->isReady()) {
+                    if constexpr (std::is_same_v<ReadyListT, decltype(dry_run_ready_list)>)
+                        Logger::logDebug("[SLP]: (Dry-run) '", sched->inst->getName() , "' becomes ready.");
+                    else
+                        Logger::logDebug("[SLP]: '", sched->inst->getName() , "' becomes ready.");
                     ready_list.insert(sched);
+                }
             }
         }
         bool tryScheduleBundle(const std::vector<pVal> &scalars);

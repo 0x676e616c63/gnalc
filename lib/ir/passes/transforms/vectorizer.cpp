@@ -301,6 +301,7 @@ void VectorizerPass::Scheduler::resetSchedule() {
         sched->resetUnschedDeps();
     }
     dry_run_ready_list.clear();
+    Logger::logDebug("[SLP]: schedule reset.");
 }
 
 bool VectorizerPass::Scheduler::inRegion(SchedData *sched) const { return sched->region_id == region_id; }
@@ -429,8 +430,10 @@ void VectorizerPass::Scheduler::updateDeps(SchedData *sched, bool insert_in_read
             }
             member = member->next_in_bundle;
         }
-        if (insert_in_ready_list && sched->isReady() && sched->isSchedEntity())
+        if (insert_in_ready_list && sched->isReady() && sched->isSchedEntity()) {
             dry_run_ready_list.insert(sched);
+            Logger::logDebug("[SLP]: (Dry-run) '", sched->inst->getName() , "' becomes ready.");
+        }
     }
 }
 
@@ -520,8 +523,10 @@ void VectorizerPass::Scheduler::cancelScheduling(const std::vector<pVal> &scalar
         // Restore unscheduled deps
         member->num_unsched_deps_in_bundle = member->num_unsched_deps;
 
-        if (member->num_unsched_deps_in_bundle == 0)
+        if (member->num_unsched_deps_in_bundle == 0) {
             dry_run_ready_list.insert(member);
+            Logger::logDebug("[SLP]: (Dry-run) '", member->inst->getName() , "' becomes ready. (due to cancel)");
+        }
         member = next;
     }
 }
@@ -865,6 +870,8 @@ void VectorizerPass::buildTreeImpl(const std::vector<pVal> &scalars, int depth, 
 
     if (!target->canVectorize(*opcode)) {
         gather();
+        Logger::logDebug("[SLP]: Gathering because target does not support vectorized '", Util::getEnumName(*opcode),
+                         "'.");
         return;
     }
 
@@ -1223,9 +1230,9 @@ int VectorizerPass::getBaseCost(const Tree &tree) {
                 // thus can be considered as dead.
                 // In particular, if the extract has only one user, that user must be us and
                 // the extract will be vectorized for sure.
-                if (extract->getUseCount() == 1 || std::all_of(extract->user_begin(), extract->user_end(), [this](auto user) {
-                    return scalar_to_tree.count(user);
-                })) {
+                if (extract->getUseCount() == 1 ||
+                    std::all_of(extract->user_begin(), extract->user_end(),
+                                [this](auto user) { return scalar_to_tree.count(user); })) {
                     dead_cost += target->getVecInstCost(OP::EXTRACT, vec_ty, i);
                 }
             }
