@@ -306,10 +306,15 @@ void VectorizerPass::Scheduler::resetSchedule() {
 
 bool VectorizerPass::Scheduler::inRegion(SchedData *sched) const { return sched->region_id == region_id; }
 
+
+// For call insts, though arguments passed to the function is only a pointer,
+// callee function can through that pointer to access the full arrays.
+// So dependency involved with call must be treated conservatively.
 struct InstRWInfo {
     std::vector<pVal> read;
     std::vector<pVal> write;
     bool untracked = false;
+    bool is_call = false;
 };
 
 InstRWInfo collectRWInfo(FAM *fam, const pInst &inst) {
@@ -318,6 +323,7 @@ InstRWInfo collectRWInfo(FAM *fam, const pInst &inst) {
             .read = {load->getPtr()},
             .write = {},
             .untracked = false,
+            .is_call = false,
         };
     }
     if (auto store = inst->as<STOREInst>()) {
@@ -325,6 +331,7 @@ InstRWInfo collectRWInfo(FAM *fam, const pInst &inst) {
             .read = {},
             .write = {store->getPtr()},
             .untracked = false,
+            .is_call = false,
         };
     }
     if (auto call = inst->as<CALLInst>()) {
@@ -333,13 +340,32 @@ InstRWInfo collectRWInfo(FAM *fam, const pInst &inst) {
             .read = callrw.read,
             .write = callrw.write,
             .untracked = callrw.untracked,
+            .is_call = true,
         };
     }
     Err::unreachable();
     return {};
 }
 
-bool setMayAlias(LoopAAResult *loop_aa, const std::vector<pVal> &ptrs1, const std::vector<pVal> &ptrs2) {
+bool setMayAlias(LoopAAResult *loop_aa, const std::vector<pVal> &ptrs1, const std::vector<pVal> &ptrs2, bool has_call) {
+    // CALLInst's read/write indicates its underlying array, rather than only that one pointer.
+    if (has_call) {
+        for (const auto &ptr1 : ptrs1) {
+            auto base1 = loop_aa->getBase(ptr1);
+            if (!base1)
+                return true;
+            for (const auto &ptr2 : ptrs2) {
+                auto base2 = loop_aa->getBase(ptr2);
+                if (!base2)
+                    return true;
+
+                if (base1 == base2)
+                    return true;
+            }
+        }
+        return false;
+    }
+
     for (const auto &ptr1 : ptrs1) {
         for (const auto &ptr2 : ptrs2) {
             if (loop_aa->getAliasInfo(ptr1, ptr2) != AliasInfo::NoAlias)
@@ -370,8 +396,10 @@ bool VectorizerPass::Scheduler::isMemDependent(const pInst &inst1, const pInst &
     if (rw1.write.empty() && rw2.write.empty())
         return false;
 
-    if (setMayAlias(loop_aa, rw1.read, rw2.write) || setMayAlias(loop_aa, rw1.write, rw2.write) ||
-        setMayAlias(loop_aa, rw1.write, rw2.read))
+    bool has_call = rw1.is_call || rw2.is_call;
+
+    if (setMayAlias(loop_aa, rw1.read, rw2.write, has_call) || setMayAlias(loop_aa, rw1.write, rw2.write, has_call) ||
+        setMayAlias(loop_aa, rw1.write, rw2.read, has_call))
         return true;
 
     return false;
@@ -432,7 +460,7 @@ void VectorizerPass::Scheduler::updateDeps(SchedData *sched, bool insert_in_read
         }
         if (insert_in_ready_list && sched->isReady() && sched->isSchedEntity()) {
             dry_run_ready_list.insert(sched);
-            Logger::logDebug("[SLP]: (Dry-run) '", sched->inst->getName() , "' becomes ready.");
+            // Logger::logDebug("[SLP]: (Dry-run) '", sched->inst->getName() , "' becomes ready.");
         }
     }
 }
@@ -525,7 +553,7 @@ void VectorizerPass::Scheduler::cancelScheduling(const std::vector<pVal> &scalar
 
         if (member->num_unsched_deps_in_bundle == 0) {
             dry_run_ready_list.insert(member);
-            Logger::logDebug("[SLP]: (Dry-run) '", member->inst->getName() , "' becomes ready. (due to cancel)");
+            // Logger::logDebug("[SLP]: (Dry-run) '", member->inst->getName() , "' becomes ready. (due to cancel)");
         }
         member = next;
     }
