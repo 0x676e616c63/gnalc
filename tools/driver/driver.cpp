@@ -233,7 +233,6 @@ int main(int argc, char **argv) {
             cli_opt_options.verify.enable();
             cli_opt_options.strict = true;
         }
-
         // backend opt options
         else if (arg == "-fno-PreRaCFGsimp") {
             bkd_opt_info.CFGsimplifyBeforeRa = false;

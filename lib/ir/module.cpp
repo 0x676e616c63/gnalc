@@ -85,6 +85,18 @@ pFuncDecl Module::lookupFunction(const std::string &name) const {
     }
     return nullptr;
 }
+std::vector<pFuncDecl> Module::lookupFunction(FuncAttr attr) const {
+    std::vector<pFuncDecl> ret;
+    for (const auto &func_decl : func_decls) {
+        if (func_decl->hasAttr(attr))
+            ret.emplace_back(func_decl);
+    }
+    for (const auto &func : funcs) {
+        if (func->hasAttr(attr))
+            ret.emplace_back(func);
+    }
+    return ret;
+}
 
 pGlobalVar Module::lookupGlobalVar(const std::string &name) const {
     for (const auto &gv : global_vars) {

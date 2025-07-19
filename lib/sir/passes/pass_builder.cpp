@@ -6,10 +6,19 @@
 // IR
 #include "ir/passes/pass_manager.hpp"
 
+// Analysis
+#include "sir/passes/analysis/instdom_analysis.hpp"
+#include "sir/passes/analysis/alias_analysis.hpp"
+
 // Transforms
-#include "ir/cfgbuilder.hpp"
+#include "sir/passes/transforms/early_mem2reg.hpp"
+#include "sir/passes/transforms/loop_fuse.hpp"
 #include "sir/passes/transforms/loop_unswitch.hpp"
 #include "sir/passes/transforms/while2for.hpp"
+
+// Utilities
+#include "sir/passes/transforms/loop_interchange.hpp"
+#include "sir/passes/utilities/sirprinter.hpp"
 
 #include <algorithm>
 
@@ -63,8 +72,13 @@ MPM LinearPassBuilder::buildModulePipeline(PMOptions opt_info) {
 
 LFPM LinearPassBuilder::buildFunctionDebugPipeline() {
     LFPM lfpm;
+    lfpm.addPass(EarlyPromotePass());
     lfpm.addPass(While2ForPass());
-    lfpm.addPass(LoopUnswitchPass());
+    lfpm.addPass(PrintLinearFunctionPass(std::cerr));
+    lfpm.addPass(PrintLAAPass(std::cerr));
+    lfpm.addPass(LoopInterchangePass());
+    lfpm.addPass(PrintLinearFunctionPass(std::cerr));
+    // lfpm.addPass(LoopUnswitchPass());
     return lfpm;
 }
 
@@ -80,6 +94,9 @@ void LinearPassBuilder::registerProxies(LFAM &lfam, MAM &mam) {
 
 void LinearPassBuilder::registerFunctionAnalyses(LFAM &lfam) {
 #define FUNCTION_ANALYSIS(CREATE_PASS) lfam.registerPass([&] { return CREATE_PASS; });
+
+    FUNCTION_ANALYSIS(LAliasAnalysis())
+    FUNCTION_ANALYSIS(InstDomAnalysis())
 
 #undef FUNCTION_ANALYSIS
 }

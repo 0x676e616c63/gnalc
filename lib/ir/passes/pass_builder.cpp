@@ -343,6 +343,12 @@ MPM PassBuilder::buildModulePipeline(PMOptions opt_info) {
 }
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
+    // For SIR pass debug
+    FPM fpm;
+    fpm.addPass(VerifyPass());
+    // fpm.addPass(PromotePass());
+    fpm.addPass(NameNormalizePass());
+    return fpm;
     // // Parallel
     // FPM fpm;
     // fpm.addPass(VerifyPass());
@@ -377,38 +383,6 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     // fpm.addPass(NameNormalizePass());
 
     // return fpm;
-
-   FPM fpm;
-    // Vectorizer
-    fpm.addPass(PromotePass());
-    fpm.addPass(SCCPPass());
-    fpm.addPass(BreakCriticalEdgesPass());
-    fpm.addPass(GVNPREPass());
-    fpm.addPass(CFGSimplifyPass());
-
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(LCSSAPass());
-    fpm.addPass(LoopUnrollPass());
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(BreakCriticalEdgesPass());
-    fpm.addPass(GVNPREPass());
-
-    fpm.addPass(ADCEPass());
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(SCCPPass());
-    fpm.addPass(ADCEPass());
-    fpm.addPass(CFGSimplifyPass());
-
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(NameNormalizePass(true));
-    fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(PrintLoopAAPass(std::cerr));
-    fpm.addPass(VectorizerPass(true));
-    fpm.addPass(VerifyPass());
-    fpm.addPass(DCEPass());
-    fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(NameNormalizePass());
-    return fpm;
 
     // For LoopUnroll Test
     // fpm.addPass(PromotePass());

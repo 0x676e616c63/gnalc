@@ -74,14 +74,15 @@ enum class OP {
     SHUFFLE,
 
     // Helper for easy IRGen, pruned after CFGBuilder
-    HELPER
+    HELPER,
+    INDVAR,
 };
 
 // We can't see BasicBlock's definition here, use `BBInstIter` to get around it.
 using BBInstIter = std::list<pInst>::iterator;
 using BBPhiInstIter = std::list<pPhi>::iterator;
 
-using LFnInstIter = std::list<pInst>::iterator;
+using LInstIter = std::list<pInst>::iterator;
 
 // Warning: PHIInst MUST NOT invoke the following four `moveInst(s)`
 // Move `inst` to `new_bb`'s `location`
@@ -110,6 +111,7 @@ private:
 public:
     // 此构造方法用于初始生成时，最开始没有划分Block，故parent为空
     Instruction(OP opcode, std::string _name, const pType &_type);
+    Instruction(OP opcode, std::string _name, const pType &_type, ValueTrait value_trait_);
 
     OP getOpcode() const;
     void setParent(const pBlock &p);
@@ -122,6 +124,7 @@ public:
 
     const std::vector<std::string>& getDbgData() const;
     void appendDbgData(const std::string& data);
+    void appendDbgData(const std::vector<std::string>& data);
     void clearDbgData();
 
     void accept(IRVisitor &visitor) override;

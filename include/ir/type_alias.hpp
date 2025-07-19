@@ -69,6 +69,7 @@ class IFInst;
 class WHILEInst;
 class BREAKInst;
 class CONTINUEInst;
+class IndVar;
 class FORInst;
 using pHelper = std::shared_ptr<HELPERInst>;
 using pCondValue = std::shared_ptr<CONDValue>;
@@ -79,6 +80,7 @@ using pWhileInst = std::shared_ptr<WHILEInst>;
 using pBreakInst = std::shared_ptr<BREAKInst>;
 using pContinueInst = std::shared_ptr<CONTINUEInst>;
 using pForInst = std::shared_ptr<FORInst>;
+using pIndVar = std::shared_ptr<IndVar>;
 
 // memory
 class ALLOCAInst;

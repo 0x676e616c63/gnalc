@@ -6,8 +6,11 @@
  **/
 
 #include "ir/cfgbuilder.hpp"
+#include "ir/instructions/binary.hpp"
+#include "ir/instructions/compare.hpp"
 #include "ir/instructions/control.hpp"
 #include "ir/instructions/helper.hpp"
+#include "ir/instructions/memory.hpp"
 #include "ir/module.hpp"
 #include "ir/type_alias.hpp"
 #include "utils/misc.hpp"
@@ -52,9 +55,9 @@ void CFGBuilder::divider() {
 void CFGBuilder::newIf(const pIfInst &ifinst) {
     const bool el = ifinst->hasElse();
 
-    auto ifthen = std::make_shared<BasicBlock>(nam.getIfthen());
-    auto ifelse = std::make_shared<BasicBlock>(nam.getIfelse());
-    auto ifend = std::make_shared<BasicBlock>(nam.getIfend());
+    auto ifthen = std::make_shared<BasicBlock>(nam.getIfThen());
+    auto ifelse = std::make_shared<BasicBlock>(nam.getIfElse());
+    auto ifend = std::make_shared<BasicBlock>(nam.getIfEnd());
 
     // if (!el) nam.ifelseidx--; // 为避免出错，直接不回溯了
 
@@ -65,15 +68,15 @@ void CFGBuilder::newIf(const pIfInst &ifinst) {
 
     cur_blk = ifthen;
     cur_making_func->addBlock(cur_blk);
-    auto it = ifinst->getBodyInsts().begin();
-    if (!adder(it, ifinst->getBodyInsts().end(), true))
+    auto it = ifinst->getBodyInsts().cbegin();
+    if (!adder(it, ifinst->getBodyInsts().cend(), true))
         cur_blk->addInst(std::make_shared<BRInst>(ifend));
 
     if (el) {
         cur_blk = ifelse;
         cur_making_func->addBlock(cur_blk);
         it = ifinst->getElseInsts().begin();
-        if (!adder(it, ifinst->getElseInsts().end(), true))
+        if (!adder(it, ifinst->getElseInsts().cend(), true))
             cur_blk->addInst(std::make_shared<BRInst>(ifend));
     }
 
@@ -81,10 +84,10 @@ void CFGBuilder::newIf(const pIfInst &ifinst) {
     cur_making_func->addBlock(cur_blk);
 }
 
-void CFGBuilder::newWh(const std::shared_ptr<WHILEInst> &whinst) {
-    auto whcond = std::make_shared<BasicBlock>(nam.getWhcond());
-    auto whbody = std::make_shared<BasicBlock>(nam.getWhbody());
-    auto whend = std::make_shared<BasicBlock>(nam.getWhend());
+void CFGBuilder::newWh(const pWhileInst &whinst) {
+    auto whcond = std::make_shared<BasicBlock>(nam.getWhCond());
+    auto whbody = std::make_shared<BasicBlock>(nam.getWhBody());
+    auto whend = std::make_shared<BasicBlock>(nam.getWhEnd());
     _while_cond_for_continue.push(whcond);
     _while_end_for_break.push(whend);
 
@@ -100,7 +103,7 @@ void CFGBuilder::newWh(const std::shared_ptr<WHILEInst> &whinst) {
 
     cur_blk = whbody;
     cur_making_func->addBlock(cur_blk);
-    if (auto it = whinst->getBodyInsts().begin(); !adder(it, whinst->getBodyInsts().end(), true))
+    if (auto it = whinst->getBodyInsts().cbegin(); !adder(it, whinst->getBodyInsts().cend(), true))
         cur_blk->addInst(std::make_shared<BRInst>(whcond));
 
     cur_blk = whend;
@@ -109,6 +112,47 @@ void CFGBuilder::newWh(const std::shared_ptr<WHILEInst> &whinst) {
     _while_cond_for_continue.pop();
     _while_end_for_break.pop();
 }
+
+void CFGBuilder::newFor(const pForInst & for_inst) {
+    auto for_cond = std::make_shared<BasicBlock>(nam.getForCond());
+    auto for_body = std::make_shared<BasicBlock>(nam.getForBody());
+    auto for_end = std::make_shared<BasicBlock>(nam.getForEnd());
+
+    auto for_preheader = cur_blk;
+    for_preheader->addInst(std::make_shared<BRInst>(for_cond));
+
+    cur_blk = for_cond;
+    cur_making_func->addBlock(for_cond);
+    auto indvar = for_inst->getIndVar();
+    auto phi = std::make_shared<PHIInst>(nam.getForIndVar(), indvar->getType());
+    // Store to original alloca to fix outside loop uses of the induction variable.
+    // mem2reg will finally eliminate such store.
+    auto store = std::make_shared<STOREInst>(phi, indvar->getOrigAlloc());
+    auto icmp = std::make_shared<ICMPInst>(phi->getName() + ".cmp", ICMPOP::slt, phi, indvar->getBound());
+    auto for_br = std::make_shared<BRInst>(icmp, for_body, for_end);
+
+    for_cond->addPhiInst(phi);
+    for_cond->addInst(store);
+    for_cond->addInst(icmp);
+    for_cond->addInst(for_br);
+
+    cur_blk = for_body;
+    cur_making_func->addBlock(for_body);
+    if (auto it = for_inst->getBodyInsts().cbegin(); !adder(it, for_inst->getBodyInsts().cend(), false))
+        cur_blk->addInst(std::make_shared<BRInst>(for_cond));
+
+    // Insert update insts
+    auto update = std::make_shared<BinaryInst>(phi->getName() + ".update", OP::ADD, phi, indvar->getStep());
+    cur_blk->addInstBeforeTerminator(update);
+
+    phi->addPhiOper(indvar->getBase(), for_preheader);
+    phi->addPhiOper(update, cur_blk);
+    indvar->replaceSelf(phi);
+
+    cur_blk = for_end;
+    cur_making_func->addBlock(for_end);
+}
+
 
 bool CFGBuilder::adder(std::list<pInst>::const_iterator &it, const std::list<pInst>::const_iterator &end,
                        const bool allow_break) {
@@ -121,6 +165,9 @@ bool CFGBuilder::adder(std::list<pInst>::const_iterator &it, const std::list<pIn
                 break;
             case HELPERTY::WHILE:
                 newWh(helper->as<WHILEInst>());
+                break;
+            case HELPERTY::FOR:
+                newFor(helper->as<FORInst>());
                 break;
             case HELPERTY::BREAK:
                 Err::gassert(allow_break, "CFGBuilder: break in invalid block.");

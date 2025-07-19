@@ -14,7 +14,7 @@ struct UnswitchVisitor : Visitor {
     }
 };
 
-PM::PreservedAnalyses LoopUnswitchPass::run(LinearFunction &function, LFAM &manager) {
+PM::PreservedAnalyses LoopUnswitchPass::run(LinearFunction &function, LFAM &lfam) {
     bool loop_unswitch_modified = false;
 
     UnswitchVisitor visitor;
@@ -22,4 +22,4 @@ PM::PreservedAnalyses LoopUnswitchPass::run(LinearFunction &function, LFAM &mana
 
     return loop_unswitch_modified ? PreserveNone() : PreserveAll();
 }
-} // namespace IR
+} // namespace SIR

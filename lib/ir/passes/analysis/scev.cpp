@@ -267,7 +267,7 @@ std::optional<size_t> SCEVHandle::estimateExpansionCost(SCEVExpr *expr, const pB
 }
 
 std::optional<size_t> SCEVHandle::estimateExpansionCostImpl(SCEVExpr *expr, const pBlock &block,
-                                        std::set<SCEVExpr *> &visited) const {
+                                                            std::set<SCEVExpr *> &visited) const {
     auto it = visited.find(expr);
     if (it != visited.end())
         return 0;
@@ -291,6 +291,79 @@ std::optional<size_t> SCEVHandle::estimateExpansionCostImpl(SCEVExpr *expr, cons
         return *lhs + *rhs + 1;
     }
     return std::nullopt;
+}
+
+
+pVal SCEVHandle::expandSCEVExprUnchecked(SCEVExpr *expr, const pBlock &block,
+                                         BasicBlock::iterator insert_before) const {
+    std::map<SCEVExpr *, pVal> inserted;
+    return expandSCEVExprUncheckedImpl(expr, block, insert_before, inserted);
+}
+
+pVal SCEVHandle::expandSCEVExprUncheckedImpl(SCEVExpr *expr, const pBlock &block, BasicBlock::iterator insert_before,
+                                             std::map<SCEVExpr *, pVal> &inserted) const {
+    static size_t name_cnt = 0;
+
+    // We only reuse IR Value that is inserted by expandSCEVExprUncheckedImpl, they are always safe to
+    // reuse at this point. Redundancy will be eliminated by GVN-PRE later.
+    // Besides, reusing IR Value in loops can leave a no side effect Loop can not be eliminated.
+    auto it = inserted.find(expr);
+    if (it != inserted.end())
+        return it->second;
+
+    if (expr->isIRValue())
+        return expr->getIRValue();
+    if (expr->isBinary()) {
+        auto lhs = expandSCEVExprUncheckedImpl(expr->getLHS(), block, insert_before, inserted);
+        auto rhs = expandSCEVExprUncheckedImpl(expr->getRHS(), block, insert_before, inserted);
+        OP ir_op = OP::ADD;
+        switch (expr->getOp()) {
+        case SCEVExpr::Binary::Op::Add:
+            ir_op = OP::ADD;
+            break;
+        case SCEVExpr::Binary::Op::Sub:
+            ir_op = OP::SUB;
+            break;
+        case SCEVExpr::Binary::Op::Mul:
+            ir_op = OP::MUL;
+            break;
+        case SCEVExpr::Binary::Op::Div:
+            ir_op = OP::DIV;
+            break;
+        default:
+            Err::unreachable();
+        }
+        auto inst = std::make_shared<BinaryInst>("%scev.e" + std::to_string(name_cnt++), ir_op, lhs, rhs);
+        inserted[expr] = inst;
+        block->addInst(insert_before, inst);
+        return inst;
+    }
+    Err::unreachable();
+    return nullptr;
+}
+
+size_t SCEVHandle::estimateExpansionCostUnchecked(SCEVExpr *expr, const pBlock &block) const {
+    std::set<SCEVExpr *> visited;
+    return estimateExpansionCostUncheckedImpl(expr, block, visited);
+}
+
+size_t SCEVHandle::estimateExpansionCostUncheckedImpl(SCEVExpr *expr, const pBlock &block,
+                                                                     std::set<SCEVExpr *> &visited) const {
+    auto it = visited.find(expr);
+    if (it != visited.end())
+        return 0;
+
+    if (expr->isIRValue())
+        return 0;
+    if (expr->isBinary()) {
+        auto lhs = estimateExpansionCostUncheckedImpl(expr->getLHS(), block, visited);
+        auto rhs = estimateExpansionCostUncheckedImpl(expr->getRHS(), block, visited);
+        visited.emplace(expr);
+        return lhs + rhs + 1;
+    }
+
+    Err::unreachable();
+    return 0;
 }
 
 std::optional<size_t> SCEVHandle::estimateExpansionCost(TREC *addrec) {

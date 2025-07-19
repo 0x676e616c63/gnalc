@@ -8,6 +8,7 @@
 #include "exception.hpp"
 
 #include <list>
+#include <map>
 #include <memory>
 #include <ostream>
 #include <string_view>
@@ -194,10 +195,17 @@ struct PairHash {
     }
 };
 
-bool begins_with(const std::string &a, const std::string &b);
+bool beginsWith(const std::string &a, const std::string &b);
 
 template <typename T> std::enable_if_t<std::is_integral_v<T>, bool> isPowerOfTwo(T x) {
     return x && !(x & (x - static_cast<T>(1)));
+}
+
+template <typename K, typename V1, typename V2> bool hasSameKeys(const std::map<K, V1> &a, const std::map<K, V2> &b) {
+    if (a.size() != b.size())
+        return false;
+    return std::equal(a.begin(), a.end(), b.begin(),
+                      [](auto const &pa, auto const &pb) { return pa.first == pb.first; });
 }
 
 #define GNALC_STRINGFY(x) _GNALC_STRINGFY(x)

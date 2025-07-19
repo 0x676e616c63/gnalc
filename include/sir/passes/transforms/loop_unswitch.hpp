@@ -11,9 +11,9 @@
 namespace SIR {
 class LoopUnswitchPass : public PM::PassInfo<LoopUnswitchPass> {
 public:
-    PM::PreservedAnalyses run(LinearFunction &function, LFAM &manager);
+    PM::PreservedAnalyses run(LinearFunction &function, LFAM &lfam);
     size_t name_cnt = 0;
 };
 
-} // namespace IR
+} // namespace SIR
 #endif

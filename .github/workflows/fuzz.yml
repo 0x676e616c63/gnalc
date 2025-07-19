@@ -35,6 +35,11 @@ jobs:
       - name: Get test data
         run: git submodule update --init --recursive
 
+      - name: Install Cross-Compile Support (ARM64)
+        uses: cyberjunk/gha-ubuntu-cross@v5
+        with:
+          arch: arm64
+
       - name: Configure CMake
         run: mkdir ${{github.workspace}}/build && cd ${{github.workspace}}/build && cmake -DCMAKE_BUILD_TYPE=Release ..
 

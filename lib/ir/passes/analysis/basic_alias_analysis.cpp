@@ -247,14 +247,14 @@ ModRefInfo BasicAAResult::getFunctionModRefInfo() const {
 
     size_t real_read = std::count_if(read.begin(), read.end(), [](auto &p) {
         if (p->template is<GlobalVariable>() &&
-            Util::begins_with(p->getName(), Config::IR::MEMOIZATION_LUT_NAME_PREFIX))
+            Util::beginsWith(p->getName(), Config::IR::MEMOIZATION_LUT_NAME_PREFIX))
             return false;
         return true;
     });
 
     size_t real_write = std::count_if(write.begin(), write.end(), [](auto &p) {
         if (p->template is<GlobalVariable>() &&
-            Util::begins_with(p->getName(), Config::IR::MEMOIZATION_LUT_NAME_PREFIX))
+            Util::beginsWith(p->getName(), Config::IR::MEMOIZATION_LUT_NAME_PREFIX))
             return false;
         return true;
     });

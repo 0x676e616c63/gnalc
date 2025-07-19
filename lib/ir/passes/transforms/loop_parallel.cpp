@@ -415,10 +415,6 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
     bool loop_parallel_inst_modified = false;
     bool loop_parallel_cfg_modified = false;
 
-    auto &loop_info = fam.getResult<LoopAnalysis>(function);
-    auto &scev = fam.getResult<SCEVAnalysis>(function);
-    auto &loop_aa = fam.getResult<LoopAliasAnalysis>(function);
-
     // Compute the reverse post order, this can let the
     // block layout in body function be more reasonable.
     auto bbrpodfv = function.getDFVisitor<Util::DFVOrder::ReversePostOrder>();
@@ -427,8 +423,16 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
         rpo_index[bbrpodfv[i]] = i;
 
     // Fold PHI first
-    for (const auto &block : function.getBlocks())
-        loop_parallel_inst_modified |= foldPHI(block->as<BasicBlock>());
+    for (const auto &block : function.getBlocks()) {
+        if (foldPHI(block->as<BasicBlock>())) {
+            fam.invalidate(function, PreserveCFGAnalyses());
+            loop_parallel_inst_modified = true;
+        }
+    }
+
+    auto &loop_info = fam.getResult<LoopAnalysis>(function);
+    auto &scev = fam.getResult<SCEVAnalysis>(function);
+    auto &loop_aa = fam.getResult<LoopAliasAnalysis>(function);
 
     // Only parallel top-level loops
     // Top-level loops are disjoint, so iterating it directly is fine.
