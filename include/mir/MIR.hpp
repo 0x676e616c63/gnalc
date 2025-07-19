@@ -814,7 +814,7 @@ public:
     const auto &StkObjs() const { return mStkObjs; }
 
     bool isLeafFunc() const { return leafFunc; }
-    uint64_t calleeSaveRegs() const { return calleesaveRegisters; }
+    const uint64_t &calleeSaveRegs() const { return calleesaveRegisters; }
     bool isLargeStk() const { return largeStk; }
 
     void affirmNotLeafFunc() { leafFunc = false; }

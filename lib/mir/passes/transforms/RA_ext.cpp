@@ -35,8 +35,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getUse(const MIRInst_p &minst) {
     if (frameInfo->isFuncCall(minst)) {
         auto list = registerInfo->getCallerSaveCRs();
         for (auto reg : list) {
-            if (registerInfo->isCallerSaved(reg))
-                uses.emplace(MIROperand::asISAReg(reg, OpT::Int));
+            uses.emplace(MIROperand::asISAReg(reg, OpT::Int));
         }
         return uses;
     }
@@ -59,8 +58,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getDef(const MIRInst_p &minst) {
     if (frameInfo->isFuncCall(minst)) {
         auto list = registerInfo->getCallerSaveCRs();
         for (auto reg : list) {
-            if (registerInfo->isCallerSaved(reg))
-                defs.emplace(MIROperand::asISAReg(reg, OpT::Int));
+            defs.emplace(MIROperand::asISAReg(reg, OpT::Int));
         }
         return defs;
     }
@@ -106,7 +104,9 @@ MIROperand_p RegisterAllocImpl::heuristicSpill() {
             weight_max = weight;
         }
     }
-    Err::gassert(spilled != nullptr, "heuristicSpill: spilled is nullptr");
+
+    spilled == nullptr ? void(spilled = spillWorkList.back()) : nop; // use last as fallback
+
     // Logger::logInfo("spilled: " + std::to_string(spilled->getRecover()));
     return spilled;
 
@@ -219,8 +219,7 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getUse(const MIRInst_p &minst)
     if (frameInfo->isFuncCall(minst)) {
         auto list = registerInfo->getCallerSaveFpVRs();
         for (auto reg : list) {
-            if (registerInfo->isCallerSaved(reg))
-                uses.emplace(MIROperand::asISAReg(reg, OpT::Float));
+            uses.emplace(MIROperand::asISAReg(reg, OpT::Float));
         }
         return uses;
     }
@@ -243,8 +242,7 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getDef(const MIRInst_p &minst)
     if (frameInfo->isFuncCall(minst)) {
         auto list = registerInfo->getCallerSaveFpVRs();
         for (auto reg : list) {
-            if (registerInfo->isCallerSaved(reg))
-                defs.emplace(MIROperand::asISAReg(reg, OpT::Float));
+            defs.emplace(MIROperand::asISAReg(reg, OpT::Float));
         }
         return defs;
     }
