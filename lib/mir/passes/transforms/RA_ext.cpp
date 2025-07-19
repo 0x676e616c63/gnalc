@@ -34,10 +34,8 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getUse(const MIRInst_p &minst) {
 
     if (frameInfo->isFuncCall(minst)) {
         auto list = registerInfo->getCallerSaveCRs();
-        for (auto reg : list) {
-            if (registerInfo->isCallerSaved(reg))
-                uses.emplace(MIROperand::asISAReg(reg, OpT::Int));
-        }
+        for (auto reg : list)
+            uses.emplace(MIROperand::asISAReg(reg, OpT::Int));
         return uses;
     }
 
@@ -58,10 +56,8 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getDef(const MIRInst_p &minst) {
 
     if (frameInfo->isFuncCall(minst)) {
         auto list = registerInfo->getCallerSaveCRs();
-        for (auto reg : list) {
-            if (registerInfo->isCallerSaved(reg))
-                defs.emplace(MIROperand::asISAReg(reg, OpT::Int));
-        }
+        for (auto reg : list)
+            defs.emplace(MIROperand::asISAReg(reg, OpT::Int));
         return defs;
     }
 
@@ -84,7 +80,7 @@ MIROperand_p RegisterAllocImpl::heuristicSpill() {
     const double extra_Weight_ForSpilled = -10000;
 
     ///@note 计算溢出权重
-    double weight_max = 0;
+    double weight_max = -std::numeric_limits<double>::infinity();
     MIROperand_p spilled = nullptr;
     for (const auto &op : spillWorkList) {
         double weight = 0;
@@ -217,10 +213,8 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getUse(const MIRInst_p &minst)
 
     if (frameInfo->isFuncCall(minst)) {
         auto list = registerInfo->getCallerSaveFpVRs();
-        for (auto reg : list) {
-            if (registerInfo->isCallerSaved(reg))
-                uses.emplace(MIROperand::asISAReg(reg, OpT::Float));
-        }
+        for (auto reg : list)
+            uses.emplace(MIROperand::asISAReg(reg, OpT::Float));
         return uses;
     }
 
@@ -241,10 +235,8 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getDef(const MIRInst_p &minst)
 
     if (frameInfo->isFuncCall(minst)) {
         auto list = registerInfo->getCallerSaveFpVRs();
-        for (auto reg : list) {
-            if (registerInfo->isCallerSaved(reg))
-                defs.emplace(MIROperand::asISAReg(reg, OpT::Float));
-        }
+        for (auto reg : list)
+            defs.emplace(MIROperand::asISAReg(reg, OpT::Float));
         return defs;
     }
 
