@@ -174,7 +174,7 @@ Entry gnalc_register_helper(const std::string &param) {
                 return format("../gnalc -with-runtime -emit-llvm -S {} -o {} {}", newsy, outll, param);
             },
         .asm_gen = [param](const std::string &newsy,
-                           const std::string &outs) { return format("../gnalc -S {} -o {} {}", newsy, outs, param); }};
+                           const std::string &outs) { return format("../gnalc -with-runtime -S {} -o {} {}", newsy, outs, param); }};
     return entry;
 }
 

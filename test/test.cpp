@@ -165,7 +165,7 @@ int main(int argc, char *argv[]) {
                         target_str = "riscv64";
                     else
                         Err::unreachable();
-                    return format("{} -S{} -o {} {} -march={}", cfg::gnalc_path, gnalc_params, outs, newsy, target_str);
+                    return format("{} -S{} -o {} {} -with-runtime -march={}", cfg::gnalc_path, gnalc_params, outs, newsy, target_str);
                 };
                 data.ir_asm_gen = gnalc_asmgen;
             }
