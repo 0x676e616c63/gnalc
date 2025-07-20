@@ -203,6 +203,16 @@ void register_gnalc_fixed_no_parallel() {
     BenchmarkRegistry::register_benchmark("gnalc_fixed_no_parallel", entry);
 }
 
+void register_gnalc_fixed_no_vectorizer() {
+    auto entry = gnalc_register_helper("-fixed-point --no-vectorizer");
+    BenchmarkRegistry::register_benchmark("gnalc_fixed_no_vectorizer", entry);
+}
+
+void register_gnalc_fixed_no_gepflatten() {
+    auto entry = gnalc_register_helper("-fixed-point --no-gepflatten");
+    BenchmarkRegistry::register_benchmark("gnalc_fixed_no_gepflatten", entry);
+}
+
 void register_gnalc_debug() {
     auto entry = gnalc_register_helper("-debug-pipeline");
     BenchmarkRegistry::register_benchmark("gnalc_debug", entry);
@@ -242,6 +252,8 @@ void Test::register_all_benchmarks() {
     register_gnalc_fixed();
     register_gnalc_fixed_no_memo();
     register_gnalc_fixed_no_parallel();
+    register_gnalc_fixed_no_vectorizer();
+    register_gnalc_fixed_no_gepflatten();
     register_gnalc_debug();
     register_gnalc_fuzz3();
     register_gnalc_fuzz5();

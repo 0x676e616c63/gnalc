@@ -65,6 +65,12 @@ std::ostream &operator<<(std::ostream &os, const GVNPREPass::Expr &expr) {
     case GVNPREPass::Expr::ExprOp::Bitcast:
         os << "bitcast " << "v" << expr.operands[0] << " to " << expr.ir_value->getType()->toString();
         break;
+    case GVNPREPass::Expr::ExprOp::IntToPtr:
+        os << "inttoptr " << "v" << expr.operands[0] << " to " << expr.ir_value->getType()->toString();
+        break;
+    case GVNPREPass::Expr::ExprOp::PtrToInt:
+        os << "ptrtoint " << "v" << expr.operands[0] << " to " << expr.ir_value->getType()->toString();
+        break;
     case GVNPREPass::Expr::ExprOp::PureFuncCall:
         os << "pure-func-call " << expr.ir_value->as<CALLInst>()->getFuncName() << "(";
         for (auto it = expr.operands.begin(); it != expr.operands.end(); ++it) {
@@ -261,7 +267,8 @@ bool GVNPREPass::Expr::operator==(const Expr &rhs) const {
     if (op != rhs.op)
         return false;
 
-    if (op == ExprOp::Sext || op == ExprOp::Zext || op == ExprOp::Bitcast) {
+    if (op == ExprOp::Sext || op == ExprOp::Zext || op == ExprOp::Bitcast || op == ExprOp::IntToPtr ||
+        op == ExprOp::PtrToInt) {
         if (!isSameType(ir_value->getType(), rhs.ir_value->getType()))
             return false;
     } else if (op == ExprOp::PureFuncCall) {
@@ -413,6 +420,12 @@ GVNPREPass::Expr *GVNPREPass::NumberTable::getExprOrInsert(Value *ir_value, Kind
             } else if (auto bitcast = ir_value->as_raw<BITCASTInst>()) {
                 Err::gassert(operands.size() == 1);
                 expr = std::make_shared<Expr>(bitcast, Expr::ExprOp::Bitcast, std::move(operands));
+            } else if (auto inttoptr = ir_value->as_raw<INTTOPTRInst>()) {
+                Err::gassert(operands.size() == 1);
+                expr = std::make_shared<Expr>(inttoptr, Expr::ExprOp::IntToPtr, std::move(operands));
+            } else if (auto ptrtoint = ir_value->as_raw<PTRTOINTInst>()) {
+                Err::gassert(operands.size() == 1);
+                expr = std::make_shared<Expr>(ptrtoint, Expr::ExprOp::PtrToInt, std::move(operands));
             } else if (auto call = ir_value->as_raw<CALLInst>()) {
                 // We've ensured this before
                 Err::gassert(isPure(*fam, call));
@@ -588,6 +601,15 @@ Value *GVNPREPass::phiTranslate(Expr *expr, BasicBlock *pred, BasicBlock *succ) 
         Err::gassert(translated_operands.size() == 1);
         translated_inst = std::make_shared<BITCASTInst>("%gvnpre.bc" + std::to_string(name_cnt++),
                                                         translated_operands[0], bitcast->getType());
+    } else if (auto inttoptr = inst->as<INTTOPTRInst>()) {
+        Err::gassert(translated_operands.size() == 1);
+        translated_inst = std::make_shared<INTTOPTRInst>("%gvnpre.i2p" + std::to_string(name_cnt++),
+                                                         translated_operands[0], inttoptr->getType());
+    } else if (auto ptrtoint = inst->as<PTRTOINTInst>()) {
+        Err::gassert(translated_operands.size() == 1);
+        translated_inst =
+            std::make_shared<PTRTOINTInst>("%gvnpre.p2i" + std::to_string(name_cnt++), translated_operands[0],
+                                           ptrtoint->getType()->as<BType>()->getInner());
     } else if (auto pure_func_call = inst->as<CALLInst>()) {
         Err::gassert(isPure(*fam, pure_func_call));
         auto func = translated_operands[0]->as<FunctionDecl>();
@@ -844,9 +866,10 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     //   %a = phi [ %a4, %bb3 ] [ %a1, %bb1 ]
 
     std::vector<pPhi> inserted_phis;
+    std::vector<pInst> hoisted_insts;
 
     LoopInfo *loop_info = nullptr;
-    if (disable_PRE_on_loop_backedge)
+    if (disable_PRE_on_non_empty_loop_backedge)
         loop_info = &fam.getResult<LoopAnalysis>(function);
 
     // a top-down traversal of the dominator tree
@@ -875,8 +898,8 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                     // Pred -> available, translated kind, translated val
                     std::map<BasicBlock *, std::tuple<bool, ValueKind, Value *>> translated;
                     bool avail_in_at_least_one_pred = false;
-                    bool unavail_in_at_least_one_pred = false;
                     bool killed = false;
+                    std::vector<BasicBlock *> unavail_preds;
                     for (const auto &pred : preds) {
                         auto tval = phiTranslate(expr_to_hoist, pred.get(), curr->raw_block());
                         if (tval == nullptr) {
@@ -890,14 +913,15 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                         // the original expr's kind. The difference is solved by phiTranslate.
                         bool is_avail_in_pred = avail_out_map[pred.get()].contains(tkind);
                         avail_in_at_least_one_pred |= is_avail_in_pred;
-                        unavail_in_at_least_one_pred |= !is_avail_in_pred;
+                        if (!is_avail_in_pred)
+                            unavail_preds.emplace_back(pred.get());
                         translated[pred.get()] = std::make_tuple(is_avail_in_pred, tkind, tval);
                     }
 
                     if (killed)
                         continue;
 
-                    if (disable_PRE_on_loop_backedge && curr_is_loop_header) {
+                    if (disable_PRE_on_non_empty_loop_backedge && curr_is_loop_header) {
                         // For a typical rotated loop:
                         //
                         //                     (critical)
@@ -934,7 +958,14 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                         // This, however, let a loop becomes a middle-exiting loop, or produces
                         // more BRInst, which can be a pessimization.
                         // So we provide an option to disable such PRE.
-                        if (unavail_in_at_least_one_pred)
+                        auto should_skip = [&] () -> bool {
+                            for (const auto& unavail : unavail_preds) {
+                                if (unavail->getAllInstCount() == 1) // one BRInst
+                                    return true;
+                            }
+                            return false;
+                        }();
+                        if (should_skip)
                             continue;
                     }
 
@@ -986,7 +1017,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                     //
                     // Therefore, if we find one's operands is not in AVAIL_OUT[curr],
                     // wait it and try again later.
-                    if (unavail_in_at_least_one_pred) {
+                    if (!unavail_preds.empty()) {
                         // unavail_in_at_least_one_pred means we need insertion, and have to check the
                         // operands
                         auto should_skip = [&] {
@@ -1085,6 +1116,7 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
                                 fix_operands(hoisted_inst);
 
                                 pred->addInstBeforeTerminator(hoisted_inst);
+                                hoisted_insts.emplace_back(hoisted_inst);
                                 invalidatePhiTranslateCache();
                                 auto ok = avail_out_map[pred.get()].insert(hoisted_kind, hoisted_ir_val);
                                 Err::gassert(ok);
@@ -1196,6 +1228,10 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
         }
     }
 
+    // cleanup to release temp objects
+    // Otherwise dangling use will prevent DCE below.
+    reset();
+
     // After replacing, the phi might end up having the same value for all predecessors.
     for (const auto &phi : inserted_phis) {
         if (auto common = getCommonValue(phi)) {
@@ -1230,11 +1266,13 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     // Thus, the phi inserted in step 1 is fully redundant.
     //
     // So we eliminate the redundant phi.
-    if (disable_PRE_on_loop_backedge) {
+    if (disable_PRE_on_non_empty_loop_backedge) {
         std::vector<pInst> worklist;
-        worklist.reserve(inserted_phis.size());
+        worklist.reserve(inserted_phis.size() + hoisted_insts.size());
         for (const auto &phi : inserted_phis)
             worklist.emplace_back(phi);
+        for (const auto &inst : hoisted_insts)
+            worklist.emplace_back(inst);
         eliminateDeadInsts(worklist);
         auto all_removed = [&] {
             for (const auto &inst : inserted_phis) {
@@ -1248,9 +1286,6 @@ PM::PreservedAnalyses GVNPREPass::run(Function &function, FAM &fam) {
     }
 
     eliminateDeadInsts(eliminated, &fam);
-
-    // cleanup to release temp objects
-    reset();
 
     if (gvnpre_folded_phi || gvnpre_replaced_value || gvnpre_hoisted_inst)
         return PreserveCFGAnalyses();

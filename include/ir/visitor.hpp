@@ -57,6 +57,8 @@ public:
     virtual void visit(ZEXTInst &node) { Err::not_implemented("IRVisitor::visit(ZEXTInst&)"); }
     virtual void visit(SEXTInst &node) { Err::not_implemented("IRVisitor::visit(SEXTInst&)"); }
     virtual void visit(BITCASTInst &node) { Err::not_implemented("IRVisitor::visit(BITCASTInst&)"); }
+    virtual void visit(PTRTOINTInst &node) { Err::not_implemented("IRVisitor::visit(PTRTOINT&)"); }
+    virtual void visit(INTTOPTRInst &node) { Err::not_implemented("IRVisitor::visit(INTTOPTR&)"); }
     virtual void visit(ALLOCAInst &node) { Err::not_implemented("IRVisitor::visit(ALLOCAInst&)"); }
     virtual void visit(LOADInst &node) { Err::not_implemented("IRVisitor::visit(LOADInst&)"); }
     virtual void visit(STOREInst &node) { Err::not_implemented("IRVisitor::visit(STOREInst&)"); }

@@ -101,6 +101,7 @@ public:
     pConstF32Vec getConstantFloatVector() const;
 
     pVal getConstant() const;
+    pType getType() const;
 
     bool get_i1() const;
     char get_i8() const;

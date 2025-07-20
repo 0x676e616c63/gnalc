@@ -120,9 +120,9 @@ Gnalc IR is subset of [LLVM IR](https://llvm.org/docs/LangRef.html).
 
 - sitofp ... to
 
-- ~~ptrtoint ... to~~
+- ptrtoint ... to
 
-- ~~inttoptr ... to~~
+- inttoptr ... to
 
 - bitcast ... to
 

@@ -36,6 +36,7 @@ namespace IR {
     GNALC_IR_PASS_ENTRY(rngsimplify)                                                                                   \
     GNALC_IR_PASS_ENTRY(dae)                                                                                           \
     GNALC_IR_PASS_ENTRY(memo)                                                                                          \
+    GNALC_IR_PASS_ENTRY(gep_flatten)                                                                                   \
     GNALC_IR_PASS_ENTRY(unify_exits)                                                                                   \
     GNALC_IR_PASS_ENTRY(tree_shaking)                                                                                  \
     GNALC_IR_PASS_ENTRY(store_range)                                                                                   \
@@ -106,20 +107,20 @@ struct CliOptions {
 class PassBuilder {
 public:
     // -O1, -fixed-point
-    static FPM buildFunctionFixedPointPipeline(PMOptions options);
-    static MPM buildModuleFixedPointPipeline(PMOptions options);
+    static FPM buildFunctionFixedPointPipeline(const PMOptions& options);
+    static MPM buildModuleFixedPointPipeline(const PMOptions& options);
 
-    static FPM buildFunctionPipeline(PMOptions options);
-    static MPM buildModulePipeline(PMOptions options);
+    static FPM buildFunctionPipeline(const PMOptions& options);
+    static MPM buildModulePipeline(const PMOptions& options);
 
     // -debug-pipeline
     static FPM buildFunctionDebugPipeline();
     static MPM buildModuleDebugPipeline();
 
     // Reproduce or Produce a Fuzz Testing Pipeline.
-    static FPM buildFunctionFuzzTestingPipeline(PMOptions options, double duplication_rate = 1.0,
+    static FPM buildFunctionFuzzTestingPipeline(const PMOptions& options, double duplication_rate = 1.0,
                                                 const std::string &repro = "");
-    static MPM buildModuleFuzzTestingPipeline(PMOptions options, double duplication_rate = 1.0,
+    static MPM buildModuleFuzzTestingPipeline(const PMOptions& options, double duplication_rate = 1.0,
                                               const std::string &repro = "");
 
     static void registerModuleAnalyses(MAM &);

@@ -43,6 +43,7 @@ const std::list<Use*>& Value::getUseList() const {
 
 void Value::replaceSelf(const pVal &new_value) const {
     Err::gassert(this != new_value.get(), "Replace with an identical value doesn't make sense.");
+    Err::gassert(isSameType(getType(), new_value->getType()), "Replace with a value with different type?");
     auto ulist = getUseList();
     for (const auto &use : ulist)
         use->setValue(new_value);
@@ -121,6 +122,7 @@ User::~User() {
 
 size_t User::replaceAllOperands(const pVal &before, const pVal &after) {
     Err::gassert(before != after, "Replace with an identical value doesn't make sense.");
+    Err::gassert(isSameType(before, after), "Replace with a value with different type?");
     size_t cnt = 0;
     for (const auto &use : operand_uses_list) {
         if (use->getValue() == before) {

@@ -21,9 +21,11 @@ public:
     friend class BasicAliasAnalysis;
     struct PtrInfo {
         // Array arguments
-        bool untracked_array = false;
+        bool foreign_array = false;
         // Global Variable
         bool global_var = false;
+        // Untracked
+        bool untracked = false;
         // Maybe alias
         // Only GlobalVariables or FormalArguments or ALLOCA
         // NO GEP or BITCAST here.

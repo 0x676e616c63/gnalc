@@ -301,7 +301,7 @@ void VectorizerPass::Scheduler::resetSchedule() {
         sched->resetUnschedDeps();
     }
     dry_run_ready_list.clear();
-    Logger::logDebug("[SLP]: schedule reset.");
+    // Logger::logDebug("[SLP]: schedule reset.");
 }
 
 bool VectorizerPass::Scheduler::inRegion(SchedData *sched) const { return sched->region_id == region_id; }

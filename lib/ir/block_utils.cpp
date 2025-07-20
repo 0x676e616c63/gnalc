@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 #include "ir/block_utils.hpp"
-#include "ir/passes/analysis/loop_analysis.hpp"
-#include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/instructions/memory.hpp"
+#include "ir/passes/analysis/alias_analysis.hpp"
+#include "ir/passes/analysis/loop_analysis.hpp"
 #include "utils/logger.hpp"
 
 #include <algorithm>
@@ -247,8 +247,8 @@ bool removeIdenticalPhi(const pBlock &bb) {
             }
         }
     }
-    return bb->delInstIf([&dead_phis](const auto &inst)
-        { return dead_phis.find(inst) != dead_phis.end(); }, BasicBlock::DEL_MODE::PHI);
+    return bb->delInstIf([&dead_phis](const auto &inst) { return dead_phis.find(inst) != dead_phis.end(); },
+                         BasicBlock::DEL_MODE::PHI);
 }
 
 pBlock breakCriticalEdge(const pBlock &pred, const pBlock &succ) {
@@ -324,18 +324,16 @@ pPhi findLCSSAPhi(const pBlock &block, const pVal &value) {
     return nullptr;
 }
 
-bool eliminateDeadInsts(std::vector<pInst>& worklist, FAM *fam) {
-    std::unordered_set<pInst> visited;
+bool eliminateDeadInsts(std::vector<pInst> &worklist, FAM *fam) {
     std::unordered_set<pInst> eliminated;
-    std::unordered_set<BasicBlock*> todo_blocks;
+    std::unordered_set<BasicBlock *> todo_blocks;
     bool modified = false;
     while (!worklist.empty()) {
         auto inst = worklist.back();
         worklist.pop_back();
-        visited.emplace(inst);
 
         bool is_dead = true;
-        for (const auto& user : inst->inst_users()) {
+        for (const auto &user : inst->inst_users()) {
             if (!eliminated.count(user)) {
                 is_dead = false;
                 break;
@@ -352,35 +350,33 @@ bool eliminateDeadInsts(std::vector<pInst>& worklist, FAM *fam) {
                 if (hasSideEffect(*fam, call))
                     continue;
             }
-        }
+        } else if (inst->is<CALLInst>())
+            continue;
 
         eliminated.emplace(inst);
         todo_blocks.emplace(inst->getParent().get());
 
         for (const auto &operand : inst->operands()) {
-            if (auto i = operand->as<Instruction>()) {
-                if (!visited.count(i))
-                    worklist.emplace_back(i);
-            }
+            if (auto i = operand->as<Instruction>())
+                worklist.emplace_back(i);
         }
     }
 
     for (const auto &block : todo_blocks) {
         if (block) {
-            modified |= block->delInstIf([&eliminated](const auto &inst)
-               { return eliminated.count(inst); });
+            modified |= block->delInstIf([&eliminated](const auto &inst) { return eliminated.count(inst); });
         }
     }
     return modified;
 }
 
 bool eliminateDeadInsts(pInst inst, FAM *fam) {
-    std::vector worklist{ std::move(inst) };
+    std::vector worklist{std::move(inst)};
     return eliminateDeadInsts(worklist, fam);
 }
 
-bool eliminateDeadInsts(const std::set<pPhi>& dead_phis, FAM *fam) {
-    std::vector<pInst> worklist{ dead_phis.begin(), dead_phis.end() };
+bool eliminateDeadInsts(const std::set<pPhi> &dead_phis, FAM *fam) {
+    std::vector<pInst> worklist{dead_phis.begin(), dead_phis.end()};
     return eliminateDeadInsts(worklist, fam);
 }
 
@@ -398,7 +394,8 @@ std::optional<std::tuple<Value *, Value *>> analyzeHeaderPhi(const Loop *loop, c
 
 std::optional<std::tuple<pVal, pVal>> analyzeHeaderPhi(const pLoop &loop, const pPhi &header_phi) {
     auto opt = analyzeHeaderPhi(loop.get(), header_phi.get());
-    if (!opt) return std::nullopt;
+    if (!opt)
+        return std::nullopt;
     auto [invariant, variant] = *opt;
     return std::make_tuple(invariant->as<Value>(), variant->as<Value>());
 }

@@ -176,6 +176,7 @@ int main(int argc, char **argv) {
         OPT_ARG("--memo", "--no-memo", memo)
         OPT_ARG("--unifyexits", "--no-unifyexits", unify_exits)
         OPT_ARG("--internalize", "--no-internalize", internalize)
+        OPT_ARG("--gepflatten", "--no-gepflatten", gep_flatten)
         OPT_ARG("--storerng", "--no-storerng", store_range)
         OPT_ARG("--cgprepare", "--no-cgprepare", codegen_prepare)
         // Module Transforms
@@ -296,6 +297,7 @@ Optimizations Flags:
   --memo               - Automatic function memoization
   --unifyexits         - Unify function return nodes
   --internalize        - Internalize global variables
+  --gepflatten         - Flatten getelementptr to binarys
   --storerng           - Store Range Analysis result. (For backend)
   --cgprepare          - Codegen preparation
   --treeshaking        - Shake off unused functions, function declarations and global variables

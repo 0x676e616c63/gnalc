@@ -320,8 +320,8 @@ AccessSet LoopAAResult::analyzePointer(Value *ptr) const {
             set.base = ptr;
             return set;
         }
-        // Don't bother with function before mem2reg
-        else if (ptr->is<LOADInst>()) {
+        // Don't bother with function before mem2reg, or gep flattened program.
+        else if (ptr->is<LOADInst, INTTOPTRInst, PTRTOINTInst>()) {
             set.untracked = true;
             return set;
         } else

@@ -34,6 +34,12 @@ SEXTInst::SEXTInst(NameRef name, const pVal &origin_val, IRBTYPE dest_type_)
 BITCASTInst::BITCASTInst(NameRef name, const pVal &origin_val, const pType &dest_type_)
     : CastInst(OP::BITCAST, name, origin_val, dest_type_) {}
 
+PTRTOINTInst::PTRTOINTInst(NameRef name, const pVal &origin_val, IRBTYPE dest_type_)
+    : CastInst(OP::PTRTOINT, name, origin_val, makeBType(dest_type_)) {}
+
+INTTOPTRInst::INTTOPTRInst(NameRef name, const pVal &origin_val, const pType &dest_type_)
+    : CastInst(OP::INTTOPTR, name, origin_val, dest_type_) {}
+
 void FPTOSIInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
 void SITOFPInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
@@ -43,4 +49,8 @@ void ZEXTInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
 void SEXTInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
 void BITCASTInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
+
+void PTRTOINTInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
+
+void INTTOPTRInst::accept(IRVisitor &visitor) { visitor.visit(*this); }
 } // namespace IR

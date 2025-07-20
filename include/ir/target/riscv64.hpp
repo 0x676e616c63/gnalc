@@ -19,6 +19,7 @@ public:
         case OP::INSERT:
         case OP::EXTRACT:
         case OP::SELECT:
+        case OP::ASHR:
             return false;
         default:
             return true;
