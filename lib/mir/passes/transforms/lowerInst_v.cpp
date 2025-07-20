@@ -161,27 +161,62 @@ void MIR::lowerInst_v(const IR::pExtract &extract, LoweringContext &ctx) {
 }
 
 void MIR::lowerInst_v(const IR::pInsert &insert, LoweringContext &ctx) {
+
+    auto is_const_vector = [&](const IR::pVal &vec) {
+        if (vec->as<IR::ConstantIntVector>() || vec->as<IR::ConstantFloatVector>()) {
+            return true;
+        }
+        return false;
+    };
+
+    auto is_all_zero_vector = [&](const IR::pVal &vec) {
+        if (!vec->as<IR::ConstantIntVector>() && !vec->as<IR::ConstantFloatVector>()) {
+            return false;
+        }
+
+        if (auto int_vec = vec->as<IR::ConstantIntVector>()) {
+            for (const auto &elem : int_vec->getVector()) {
+                if (elem) {
+                    return false;
+                }
+            }
+        } else if (auto float_vec = vec->as<IR::ConstantFloatVector>()) {
+            for (const auto &elem : float_vec->getVector()) {
+                if (elem != 0.0) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    };
+
     if (ctx.CodeGenCtx().isARMv8()) {
 
         MIROperand_p def, use;
         auto idx = ctx.mapOperand(insert->getIdx());
 
-        if (insert->getVector()->as<IR::ConstantIntVector>() || insert->getVector()->as<IR::ConstantFloatVector>()) {
-            // poison & clear
-            def = ctx.newVReg(insert->getType()), use = nullptr;
+        Err::gassert(insert->getIdx()->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL,
+                     "lowerInst_v: try insert/extract with a variable idx");
 
-            if (idx->imme() != 0) {
+        if (is_const_vector(insert->getVector())) {
+            // poison & clear
+
+            if (idx->imme() == 0 && is_all_zero_vector(insert->getVector())) {
+                def = ctx.newVReg(insert->getType()), use = nullptr;
+            } else if (is_all_zero_vector(insert->getVector())) {
+                def = ctx.newVReg(insert->getType()), use = nullptr;
                 ctx.newInst(MIRInst::make(ARMOpC::MOVI)
                                 ->setOperand<0>(def, ctx.CodeGenCtx())
                                 ->setOperand<1>(ctx.mapOperand(0L), ctx.CodeGenCtx()));
+            } else {
+                def = vector_flatting(insert->getVector(), ctx);
+                use = nullptr;
             }
 
         } else {
             def = ctx.mapOperand(insert->getVector()), use = def;
         }
-
-        Err::gassert(insert->getIdx()->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL,
-                     "lowerInst_v: try insert/extract with a variable idx");
 
         // avoid use xzr/wzr
 
