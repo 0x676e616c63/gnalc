@@ -351,11 +351,11 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
             pBlock epilog = std::make_shared<BasicBlock>("rtunroll.epilog." + std::to_string(name_idx));
 
             // prolog
-            auto trip_countV = SCEVH.expandSCEVExpr(trip_countE, prolog);
+            auto trip_countV = SCEVH.expandSCEVExprUnchecked(trip_countE, prolog, prolog->end());
             auto remainderV = std::make_shared<BinaryInst>("rtunroll.remainder." + std::to_string(name_idx), OP::SREM, trip_countV, unroll_factorV);
             prolog->addInst(remainderV);
             if (stepV == nullptr) {
-                stepV = SCEVH.expandSCEVExpr(stepE, prolog);
+                stepV = SCEVH.expandSCEVExprUnchecked(stepE, prolog, prolog->end());
             }
             auto stepMremV = std::make_shared<BinaryInst>("rtunroll.stepMrem." + std::to_string(name_idx), OP::MUL, stepV, remainderV);
             prolog->addInst(stepMremV);
@@ -1020,7 +1020,7 @@ PM::PreservedAnalyses LoopUnrollPass::run(Function &function, FAM &fam) {
     for (auto &toploop : RLI) {
         all_loop_size += toploop->getInstCount();
     }
-    Logger::logInfo("[LoopUnroll] All loop size: "+std::to_string(all_loop_size));
+    Logger::logInfo("[LoopUnroll] All loop size: " + std::to_string(all_loop_size));
     if (all_loop_size > 300) {
         Logger::logInfo("[LoopUnroll] Unroll disabled because the func's loops are too big!");
         return PreserveAll();
@@ -1033,7 +1033,7 @@ PM::PreservedAnalyses LoopUnrollPass::run(Function &function, FAM &fam) {
                 // TODO: 暂时只处理最内层循环
                 continue;
             }
-            auto& NLI = fam.getResult<LoopAnalysis>(function);
+            auto &NLI = fam.getResult<LoopAnalysis>(function);
             auto loop = NLI.getLoopFor(rawloop->getHeader());
             UnrollOption option;
             analyze(loop, option, function, fam);

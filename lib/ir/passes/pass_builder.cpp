@@ -364,12 +364,12 @@ MPM PassBuilder::buildModulePipeline(const PMOptions& options) {
 }
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
-    // For SIR pass debug
+    // // For SIR pass debug
     FPM fpm;
-    fpm.addPass(VerifyPass());
-    // fpm.addPass(PromotePass());
-    fpm.addPass(NameNormalizePass());
-    return fpm;
+    // fpm.addPass(VerifyPass());
+    // // fpm.addPass(PromotePass());
+    // fpm.addPass(NameNormalizePass());
+    // return fpm;
     // // Parallel
     // FPM fpm;
     // fpm.addPass(VerifyPass());
@@ -406,23 +406,26 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     // return fpm;
 
     // For LoopUnroll Test
-    // fpm.addPass(PromotePass());
-    // // fpm.addPass(InlinePass());
-    // fpm.addPass(LoopSimplifyPass());
-    // fpm.addPass(NameNormalizePass(true));
-    // fpm.addPass(PrintFunctionPass(std::cerr));
-    // fpm.addPass(LoopRotatePass());
-    // // fpm.addPass(LCSSAPass());
+    fpm.addPass(PromotePass());
+    fpm.addPass(InlinePass());
+    fpm.addPass(LoopSimplifyPass());
+    fpm.addPass(NameNormalizePass(true));
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(LoopRotatePass());
+    fpm.addPass(LCSSAPass());
     // fpm.addPass(PrintSCEVPass(std::cerr));
-    // // fpm.addPass(LoopUnrollPass());
-    // // fpm.addPass(InstSimplifyPass());
-    // // fpm.addPass(BreakCriticalEdgesPass());
-    // // fpm.addPass(GVNPREPass());
-    // // fpm.addPass(SCCPPass());
-    // // fpm.addPass(CFGSimplifyPass());
-    // // fpm.addPass(DCEPass());
-    // // fpm.addPass(NameNormalizePass(true));
-    // fpm.addPass(VerifyPass(true));
+    fpm.addPass(LoopUnrollPass());
+    fpm.addPass(InstSimplifyPass());
+    fpm.addPass(BreakCriticalEdgesPass());
+    fpm.addPass(GVNPREPass());
+    fpm.addPass(SCCPPass());
+    fpm.addPass(CFGSimplifyPass());
+    fpm.addPass(DCEPass());
+    // fpm.addPass(NameNormalizePass(true));
+    // fpm.addPass(PngCFGPass("../cfg"));
+    fpm.addPass(LoopEliminationPass());
+    // fpm.addPass(RunTestPass("../test/contest/functional/26_while_test1.out"));
+    fpm.addPass(VerifyPass(true));
 
     // // For LoopUnroll Debug
     // fpm.addPass(PromotePass());
