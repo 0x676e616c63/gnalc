@@ -17,6 +17,7 @@
 
 #include "config.hpp"
 #include "runner.hpp"
+#include "utils/misc.hpp"
 
 using namespace Test;
 using namespace std::filesystem;
@@ -136,7 +137,7 @@ int main(int argc, char *argv[]) {
         println("  -h, --help          Print this help message.");
     };
 
-    bool only_frontend = true;
+    Target target = Target::LLVM;
     std::string testdata_dir;
     std::string gnalc_params;
     std::string commit_sha;
@@ -145,7 +146,7 @@ int main(int argc, char *argv[]) {
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
         if (arg == "--backend" || arg == "-b")
-            only_frontend = false;
+            target = Target::ARMv8;
         else if (arg == "--data" || arg == "-d") {
             if (i + 1 >= argc) {
                 println("Error: Expected a directory.");
@@ -196,7 +197,7 @@ int main(int argc, char *argv[]) {
     while (std::getline(std::cin, line)) {
         if (!line.empty()) {
             path path(line);
-            if ((path.extension() == ".bin" && only_frontend) || (path.extension() == ".bc" && !only_frontend))
+            if ((path.extension() == ".bin" && target == Target::LLVM) || (path.extension() == ".bc" && target != Target::LLVM))
                 continue;
 
             auto parent_path = path.parent_path();
@@ -221,7 +222,7 @@ int main(int argc, char *argv[]) {
     {
         ThreadPool pool(num_threads);
         for (size_t i = 0; i < entries.size(); ++i) {
-            pool.enqueue([i, &entries, &results, only_frontend, &test_counter] {
+            pool.enqueue([i, &entries, &results, &target, &test_counter] {
                 const auto& curr_test = entries[i];
                 size_t curr = test_counter.fetch_add(1) + 1;
                 safe_println("<{}> Test {}", curr, curr_test.id);
@@ -237,7 +238,7 @@ int main(int argc, char *argv[]) {
                         .input = curr_test.testcase_in,
                     };
 
-                    auto res = check_ir_or_bin(data, only_frontend);
+                    auto res = check_ir_or_bin(data, target);
                     auto expected_syout = read_file(curr_test.testcase_out);
                     fix_newline(expected_syout);
 
@@ -285,13 +286,13 @@ int main(int argc, char *argv[]) {
     };
     report << "- **Artifacts Commit:** " << (commit_sha.empty() ? "N/A" : build_md_url(commit_sha)) << "\n";
     report << "- **Total Tests:** " << entries.size() << "\n";
-    report << "- **Mode:** " << (only_frontend ? "Frontend only" : "With backend") << "\n";
+    report << "- **Target:** " << Util::getEnumName(target) << "\n";
 
     size_t passed = std::count_if(results.begin(), results.end(), [](const auto& tres) {
         return tres.passed;
     });
 
-    report << "- **Result: ** " << (passed == entries.size() ? "✅ PASSED" : "❌ FAILED") << "\n\n";
+    report << "- **Result:** " << (passed == entries.size() ? "✅ PASSED" : "❌ FAILED") << "\n\n";
 
     std::vector<std::string> failed_tests;
     for (const auto& tres : results) {
