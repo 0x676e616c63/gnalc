@@ -10,6 +10,7 @@
 #include "ir/type.hpp"
 #include "ir/type_alias.hpp"
 #include "mir/MIR.hpp"
+#include "mir/armv8/base.hpp"
 #include "mir/info.hpp"
 #include "mir/passes/transforms/isel.hpp"
 #include "mir/passes/transforms/lowering.hpp"
@@ -160,19 +161,64 @@ void MIR::lowerInst_v(const IR::pExtract &extract, LoweringContext &ctx) {
 }
 
 void MIR::lowerInst_v(const IR::pInsert &insert, LoweringContext &ctx) {
+
+    auto is_const_vector = [&](const IR::pVal &vec) {
+        if (vec->as<IR::ConstantIntVector>() || vec->as<IR::ConstantFloatVector>()) {
+            return true;
+        }
+        return false;
+    };
+
+    auto is_all_zero_vector = [&](const IR::pVal &vec) {
+        if (!vec->as<IR::ConstantIntVector>() && !vec->as<IR::ConstantFloatVector>()) {
+            return false;
+        }
+
+        if (auto int_vec = vec->as<IR::ConstantIntVector>()) {
+            for (const auto &elem : int_vec->getVector()) {
+                if (elem) {
+                    return false;
+                }
+            }
+        } else if (auto float_vec = vec->as<IR::ConstantFloatVector>()) {
+            for (const auto &elem : float_vec->getVector()) {
+                if (elem != 0.0) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    };
+
     if (ctx.CodeGenCtx().isARMv8()) {
 
         MIROperand_p def, use;
-
-        insert->getVector()->as<IR::ConstantIntVector>() || insert->getVector()->as<IR::ConstantFloatVector>()
-            ? (def = ctx.newVReg(insert->getType()), use = nullptr)
-            : (def = ctx.mapOperand(insert->getVector()), use = def); // if poison or not
+        auto idx = ctx.mapOperand(insert->getIdx());
 
         Err::gassert(insert->getIdx()->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL,
                      "lowerInst_v: try insert/extract with a variable idx");
 
+        if (is_const_vector(insert->getVector())) {
+            // poison & clear
+
+            if (idx->imme() == 0 && is_all_zero_vector(insert->getVector())) {
+                def = ctx.newVReg(insert->getType()), use = nullptr;
+            } else if (is_all_zero_vector(insert->getVector())) {
+                def = ctx.newVReg(insert->getType()), use = nullptr;
+                ctx.newInst(MIRInst::make(ARMOpC::MOVI)
+                                ->setOperand<0>(def, ctx.CodeGenCtx())
+                                ->setOperand<1>(ctx.mapOperand(0L), ctx.CodeGenCtx()));
+            } else {
+                def = vector_flatting(insert->getVector(), ctx);
+                use = nullptr;
+            }
+
+        } else {
+            def = ctx.mapOperand(insert->getVector()), use = def;
+        }
+
         // avoid use xzr/wzr
-        auto idx = ctx.mapOperand(insert->getIdx());
 
         ctx.newInst(MIRInst::make(OpC::InstVInsert)
                         ->setOperand<0>(def, ctx.CodeGenCtx())

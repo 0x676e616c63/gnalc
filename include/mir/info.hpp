@@ -103,39 +103,17 @@ struct InstLegalizeContext {
     MIRInst_p_l &minsts;
     MIRInst_p_l::iterator &iter;
     CodeGenContext &ctx;
+    MIRBlk_p &mblk;
 
-    InstLegalizeContext(MIRInst_p &minst, MIRInst_p_l &insts, MIRInst_p_l::iterator &iter, CodeGenContext &ctx)
-        : minst(minst), minsts(insts), iter(iter), ctx(ctx) {}
+    InstLegalizeContext(MIRInst_p &minst, MIRInst_p_l &insts, MIRInst_p_l::iterator &iter, CodeGenContext &ctx,
+                        MIRBlk_p &mblk)
+        : minst(minst), minsts(insts), iter(iter), ctx(ctx), mblk(mblk) {}
 
     InstLegalizeContext(const InstLegalizeContext &) = delete;
     InstLegalizeContext &operator=(const InstLegalizeContext &) = delete;
 
     InstLegalizeContext(InstLegalizeContext &&) = delete;
     InstLegalizeContext &operator=(InstLegalizeContext &&) = delete;
-
-    template <size_t I> auto &get() {
-        if constexpr (I == 0) {
-            return minst;
-        } else if constexpr (I == 1) {
-            return minsts;
-        } else if constexpr (I == 2) {
-            return iter;
-        } else if constexpr (I == 3) {
-            return ctx;
-        }
-    }
-
-    template <size_t I> const auto &get() const {
-        if constexpr (I == 0) {
-            return minst;
-        } else if constexpr (I == 1) {
-            return minsts;
-        } else if constexpr (I == 2) {
-            return iter;
-        } else if constexpr (I == 3) {
-            return ctx;
-        }
-    }
 };
 
 class ISelInfo {
@@ -186,15 +164,5 @@ struct CodeGenContext {
 };
 
 }; // namespace MIR
-
-namespace std {
-
-template <> struct tuple_size<MIR::InstLegalizeContext> : integral_constant<std::size_t, 4> {};
-
-template <size_t I> struct tuple_element<I, MIR::InstLegalizeContext> {
-    using type = decltype((declval<MIR::InstLegalizeContext>().get<I>())); // extra brasses
-};
-
-}; // namespace std
 
 #endif

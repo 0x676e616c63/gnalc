@@ -110,6 +110,7 @@ template <typename T> std::shared_ptr<T> wp2p(std::weak_ptr<T> wp) {
     }
 }
 
+///@note remeber to add "0X" by yourself
 template <typename T> std::string hex_str(T number) {
 
     if (std::is_same_v<T, unsigned> || std::is_same_v<T, int>) {

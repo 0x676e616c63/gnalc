@@ -402,14 +402,17 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
             OpT type;
 
             switch (def->type()) {
+            case OpT::Intvec2:
             case OpT::Intvec4:
                 type = OpT::Int32;
                 break;
             case OpT::Int64vec2:
                 type = OpT::Int64;
                 break;
+            case OpT::Floatvec2:
             case OpT::Floatvec4:
                 type = OpT::Float32;
+                break;
             default:
                 Err::unreachable();
             }
@@ -436,7 +439,7 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
 // for pass preRaLeagalize
 void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
 
-    auto &[minst, minsts, iter, ctx] = _ctx;
+    auto &[minst, minsts, iter, ctx, mblk] = _ctx;
 
     if (!minst->isGeneric()) {
         return;
@@ -495,17 +498,21 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
         MIROperand_p loaded = MIROperand::asVReg(ctx.nextId(), def->type());
         int cnt = 0;
 
-        while (imme_ex) {
+        if (imme_ex < 0xffff) {
+            auto movz = MIRInst::make(imme_ex & 0XFFFF ? ARMOpC::MOVZ : ARMOpC::MOV)
+                            ->setOperand<0>(loaded, ctx)
+                            ->setOperand<1>(MIROperand::asImme(imme_ex & 0XFFFF, OpT::Int32), ctx);
 
-            auto mov = MIRInst::make(cnt ? ARMOpC::MOVK : ARMOpC::MOVZ)
-                           ->setOperand<0>(loaded, ctx)
-                           ->setOperand<1>(MIROperand::asImme(imme_ex & 0XFFFF, OpT::Int64), ctx)
-                           ->setOperand<2>(MIROperand::asImme(16 * cnt | 0x00000000, OpT::special), ctx);
+            minsts.insert(iter, movz);
+        } else {
+            string literal = "0X" + hex_str<uint64_t>(imme_ex);
+            auto literal_load = MIRInst::make(OpC::InstLoadLiteral)
+                                    ->setOperand<0>(loaded, ctx)
+                                    ->setOperand<1>(MIROperand::asLiteral(literal), ctx);
 
-            minsts.insert(iter, mov);
+            mblk->add_tail_literal(8, 8);
 
-            ++cnt;
-            imme_ex >>= 16;
+            minsts.insert(iter, literal_load);
         }
 
         minst->resetOpcode(OpC::InstCopy);
@@ -599,7 +606,7 @@ void ARMIselInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop,
     ///@warning ld1 {V<>.4s} 又和 ldr q<> 作用一致, 而后者支持变址寻址, 只是不显式指示加载类型
     ///@warning ld2 ld3 除非专门的处理数字信号的样例, 不然根本用不上
 
-    auto &[minst, minsts, iter, ctx] = _ctx;
+    auto &[minst, minsts, iter, ctx, _] = _ctx;
 
     auto offset = obj.offset;
 
@@ -655,7 +662,7 @@ void ARMIselInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop,
 void ARMIselInfo::legalizeWithStkGep(InstLegalizeContext &_ctx, MIROperand_p mop, const StkObj &obj) const {
     /// mop = def
 
-    auto &[minst, minsts, iter, ctx] = _ctx;
+    auto &[minst, minsts, iter, ctx, _] = _ctx;
     unsigned offset = static_cast<unsigned>(obj.offset);
 
     if (minst->getOp(2)->isImme()) {
@@ -761,7 +768,7 @@ void ARMIselInfo::legalizeWithStkGep(InstLegalizeContext &_ctx, MIROperand_p mop
 }
 
 void ARMIselInfo::legalizeWithStkPtrCast(InstLegalizeContext &_ctx, MIROperand_p mop, const StkObj &obj) const {
-    auto &[minst, minsts, iter, ctx] = _ctx;
+    auto &[minst, minsts, iter, ctx, _] = _ctx;
     unsigned offset = static_cast<unsigned>(obj.offset);
 
     if (offset) {
@@ -807,7 +814,7 @@ void ARMIselInfo::legalizeWithStkPtrCast(InstLegalizeContext &_ctx, MIROperand_p
 }
 
 void ARMIselInfo::legalizeCopy(InstLegalizeContext &_ctx) const {
-    auto &[minst, minsts, iter, ctx] = _ctx;
+    auto &[minst, minsts, iter, ctx, _] = _ctx;
 
     auto &def = minst->ensureDef();
     auto &use = minst->getOp(1);
@@ -831,7 +838,7 @@ void ARMIselInfo::legalizeCopy(InstLegalizeContext &_ctx) const {
 }
 
 void ARMIselInfo::legalizeAdrp(InstLegalizeContext &_ctx) const {
-    auto &[minst, minsts, iter, ctx] = _ctx;
+    auto &[minst, minsts, iter, ctx, _] = _ctx;
 
     auto def = minst->ensureDef();
 

@@ -412,7 +412,7 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
 
 // for pass preRaLeagalize
 void RVIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
-    auto &[minst, minsts, iter, ctx] = _ctx;
+    auto &[minst, minsts, iter, ctx, _] = _ctx;
 
     if (!minst->isGeneric())
         return;
@@ -510,7 +510,7 @@ void RVIselInfo::legalizeWithPtrStore(MIRInst_p minst) const {
 }
 
 void RVIselInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop, const StkObj &obj) const {
-    auto &[minst, minsts, iter, ctx] = _ctx;
+    auto &[minst, minsts, iter, ctx, _] = _ctx;
     auto offset = obj.offset;
 
     if (RV64::is12BitImm(offset, 64)) {
@@ -552,7 +552,7 @@ void RVIselInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop, 
 }
 
 void RVIselInfo::legalizeWithStkGep(InstLegalizeContext &_ctx, MIROperand_p mop, const StkObj &obj) const {
-    auto &[minst, minsts, iter, ctx] = _ctx;
+    auto &[minst, minsts, iter, ctx, _] = _ctx;
     unsigned offset = static_cast<unsigned>(obj.offset);
 
     if (minst->getOp(2)->isImme()) {
@@ -610,7 +610,7 @@ void RVIselInfo::legalizeWithStkGep(InstLegalizeContext &_ctx, MIROperand_p mop,
 }
 
 void RVIselInfo::legalizeWithStkPtrCast(InstLegalizeContext &_ctx, MIROperand_p mop, const StkObj &obj) const {
-    auto &[minst, minsts, iter, ctx] = _ctx;
+    auto &[minst, minsts, iter, ctx, _] = _ctx;
     unsigned offset = static_cast<unsigned>(obj.offset);
 
     if (offset) {
@@ -637,7 +637,7 @@ void RVIselInfo::legalizeWithStkPtrCast(InstLegalizeContext &_ctx, MIROperand_p 
 }
 
 void RVIselInfo::legalizeCopy(InstLegalizeContext &_ctx) const {
-    auto &[minst, minsts, iter, ctx] = _ctx;
+    auto &[minst, minsts, iter, ctx, _] = _ctx;
 
     auto &def = minst->ensureDef();
     auto &use = minst->getOp(1);
