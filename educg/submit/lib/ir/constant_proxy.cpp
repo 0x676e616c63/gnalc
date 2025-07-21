@@ -415,45 +415,55 @@ void ConstantProxy::setPool(ConstantPool *pool_) { pool = pool_; }
 
 std::size_t ConstantProxyHash::operator()(const ConstantProxy &constant) const {
     std::string type_name;
+    size_t value_hash;
     switch (constant.value.index()) {
     case 0:
         type_name = "i1";
+        value_hash = std::hash<bool>()(constant.get_i1());
         break;
     case 1:
         type_name = "i8";
+        value_hash = std::hash<char>()(constant.get_i8());
         break;
     case 2:
         type_name = "i32";
+        value_hash = std::hash<int>()(constant.get_int());
         break;
     case 3:
         type_name = "i64";
+        value_hash = std::hash<int64_t>()(constant.get_i64());
         break;
     case 4:
         type_name = "i128";
+        value_hash = std::hash<int128_t>()(constant.get_i128());
         break;
     case 5:
         type_name = "f32";
+        value_hash = std::hash<float>()(constant.get_float());
         break;
     case 6:
         type_name = "i32vec";
+        value_hash = Util::vectorHash(constant.get_i32_vector());
         break;
     case 7:
         type_name = "f32vec";
+        value_hash = Util::vectorHash(constant.get_f32_vector());
         break;
     default:
         Err::unreachable();
     }
     size_t seed = std::hash<std::string>()(type_name);
-    Util::hashSeedCombine(
-        seed,
-        std::visit(Util::overloaded{
-                       [](auto &&c) {
-                           return std::hash<typename Util::remove_cvref_t<decltype(c)>::element_type::inner_type>()(
-                               c->getVal());
-                       },
-                       [](const pConstI32Vec &c) { return Util::vectorHash(c->getVector()); },
-                       [](const pConstF32Vec &c) { return Util::vectorHash(c->getVector()); }},
-                   constant.value));
+    Util::hashSeedCombine(seed, value_hash);
+    // Util::hashSeedCombine(
+    //     seed,
+    //     std::visit(Util::overloaded{
+    //                    [](auto &&c) {
+    //                        return std::hash<typename Util::remove_cvref_t<decltype(c)>::element_type::inner_type>()(
+    //                            c->getVal());
+    //                    },
+    //                    [](const pConstI32Vec &c) { return Util::vectorHash(c->getVector()); },
+    //                    [](const pConstF32Vec &c) { return Util::vectorHash(c->getVector()); }},
+    //                constant.value))
     return seed;
 }
 } // namespace IR
