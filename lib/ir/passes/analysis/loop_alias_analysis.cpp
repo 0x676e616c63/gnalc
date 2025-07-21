@@ -203,17 +203,6 @@ int LoopAAResult::getAlignOnBase(Value *value) const {
 
 int LoopAAResult::getAlignOnBase(const pVal &value) const { return getAlignOnBase(value.get()); }
 
-std::optional<Value *> LoopAAResult::getBase(Value *value) const {
-    const auto &loc = queryPointer(value);
-    if (loc.untracked)
-        return std::nullopt;
-
-    return loc.base;
-}
-std::optional<Value *> LoopAAResult::getBase(const pVal &value) const {
-    return getBase(value.get());
-}
-
 std::optional<std::tuple<Value *, size_t>> LoopAAResult::getBaseAndOffset(Value *value) const {
     const auto &loc = queryPointer(value);
     if (loc.untracked)

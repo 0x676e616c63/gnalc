@@ -46,9 +46,9 @@ LFPM LinearPassBuilder::buildFunctionFixedPointPipeline(const PMOptions& options
 #define FUNCTION_TRANSFORM(name, ...)                                                                                  \
     registerPassForOptInfo(lfpm, options.name, __VA_ARGS__);
 
-    FUNCTION_TRANSFORM(early_mem2reg, EarlyPromotePass())
-    FUNCTION_TRANSFORM(while2for, While2ForPass())
-    FUNCTION_TRANSFORM(loop_interchange, LoopInterchangePass())
+    // FUNCTION_TRANSFORM(early_mem2reg, EarlyPromotePass())
+    // FUNCTION_TRANSFORM(while2for, While2ForPass())
+    // FUNCTION_TRANSFORM(loop_interchange, LoopInterchangePass())
 
 #undef FUNCTION_TRANSFORM
     return lfpm;
@@ -84,13 +84,14 @@ MPM LinearPassBuilder::buildModulePipeline(const PMOptions& opt_info) {
 LFPM LinearPassBuilder::buildFunctionDebugPipeline() {
     LFPM lfpm;
     lfpm.addPass(EarlyPromotePass());
+    lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     lfpm.addPass(While2ForPass());
-    lfpm.addPass(ConstantFoldPass());
+    // lfpm.addPass(ConstantFoldPass());
     lfpm.addPass(PrintLinearFunctionPass(std::cerr));
-    lfpm.addPass(PrintLAAPass(std::cerr));
-    lfpm.addPass(CopyElisionPass());
-    lfpm.addPass(EarlyDCEPass());
-    lfpm.addPass(PrintLinearFunctionPass(std::cerr));
+    // lfpm.addPass(PrintLAAPass(std::cerr));
+    // lfpm.addPass(CopyElisionPass());
+    // lfpm.addPass(EarlyDCEPass());
+    // lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     // lfpm.addPass(LoopInterchangePass());
     // lfpm.addPass(LoopUnswitchPass());
     return lfpm;

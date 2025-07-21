@@ -155,7 +155,7 @@ PM::PreservedAnalyses CopyElisionPass::run(LinearFunction &function, LFAM &lfam)
         if (untracked)
             continue;
 
-        if (store_cnt == 0) {
+        if (dest_mem->is<ALLOCAInst>() && store_cnt == 0) {
             Logger::logWarning("[CopyElision]: Uninitialized local array '", dest_mem->getName(), "'");
             continue;
         }

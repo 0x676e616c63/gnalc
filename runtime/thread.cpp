@@ -19,7 +19,7 @@ static constexpr auto main_cpu = 2;
 static constexpr auto worker_cpu = 3;
 
 #ifndef GNALC_DEBUG
-static constexpr int32_t small_task_threshold = 128;
+static constexpr int32_t small_task_threshold = 0;
 #else
 static constexpr int32_t small_task_threshold = 0;
 #endif

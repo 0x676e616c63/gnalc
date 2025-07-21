@@ -213,4 +213,35 @@ pVal getMemLocation(Value *i) {
 pVal getMemLocation(const pVal &i) {
     return getMemLocation(i.get());
 }
+
+pVal getPtrBase(const pVal &ptr) {
+    Err::gassert(ptr->getType()->is<PtrType>());
+    auto base = ptr;
+    while (true) {
+        if (auto bitcast = base->as_raw<BITCASTInst>())
+            base = bitcast->getOVal();
+        else if (auto gep = base->as_raw<GEPInst>())
+            base = gep->getPtr();
+        else if (auto phi = base->as<PHIInst>()) {
+            pVal common_base = nullptr;
+            for (const auto &[val, bb] : phi->incomings()) {
+                auto curr = getPtrBase(val);
+                if (curr == nullptr)
+                    return nullptr;
+                if (common_base == nullptr)
+                    common_base = curr;
+                else if (common_base != curr)
+                    return nullptr;
+            }
+            base = common_base;
+        } else if (base->is<ALLOCAInst, GlobalVariable, FormalParam>())
+            return base;
+        else if (base->is<LOADInst, INTTOPTRInst, PTRTOINTInst>()) {
+            return nullptr;
+        } else
+            Err::unreachable();
+    }
+    return nullptr;
+}
+
 } // namespace IR

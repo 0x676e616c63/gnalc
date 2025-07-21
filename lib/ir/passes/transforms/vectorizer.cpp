@@ -351,11 +351,11 @@ bool setMayAlias(LoopAAResult *loop_aa, const std::vector<pVal> &ptrs1, const st
     // CALLInst's read/write indicates its underlying array, rather than only that one pointer.
     if (has_call) {
         for (const auto &ptr1 : ptrs1) {
-            auto base1 = loop_aa->getBase(ptr1);
+            auto base1 = getPtrBase(ptr1);
             if (!base1)
                 return true;
             for (const auto &ptr2 : ptrs2) {
-                auto base2 = loop_aa->getBase(ptr2);
+                auto base2 = getPtrBase(ptr2);
                 if (!base2)
                     return true;
 
