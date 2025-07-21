@@ -33,17 +33,25 @@ def get_git_info(git_root):
         text=True,
         check=True
     ).stdout.strip()
-    return branch, sha
+    commit_msg = subprocess.run(
+        ["git", "log", "-1", "--format=%s", sha],
+        cwd=git_root,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=True
+    ).stdout.strip()
+    return branch, sha, commit_msg
 
 
 def copy_to_submit(git_root, arch):
-    submit_dir = os.path.join(git_root, "educg", "submit")
+    submit_temp = os.path.join(git_root, "educg", "submit_temp")
 
-    if os.path.exists(submit_dir):
-        print(f"Removed: {submit_dir}")
-        shutil.rmtree(submit_dir)
+    if os.path.exists(submit_temp):
+        print(f"Removed: {submit_temp}")
+        shutil.rmtree(submit_temp)
 
-    os.makedirs(submit_dir)
+    os.makedirs(submit_temp)
 
     license_path = os.path.join(git_root, "LICENSE")
     include_dir = os.path.join(git_root, "include")
@@ -66,20 +74,20 @@ def copy_to_submit(git_root, arch):
     if not os.path.exists(driver_header_src):
         raise FileNotFoundError(f"{driver_header_name} not found: {driver_header_src}")
 
-    print(f"Copying {license_path} -> {os.path.join(submit_dir, 'LICENSE')}")
-    shutil.copy(license_path, os.path.join(submit_dir, "LICENSE"))
-    print(f"Copying {include_dir} -> {os.path.join(submit_dir, "include")}")
-    shutil.copytree(include_dir, os.path.join(submit_dir, "include"))
-    print(f"Copying {lib_dir} -> {os.path.join(submit_dir, "lib")}")
-    shutil.copytree(lib_dir, os.path.join(submit_dir, "lib"))
-    print(f"Copying {runtime_artifacts_dir} -> {os.path.join(submit_dir, "runtime", "artifacts")}")
-    shutil.copytree(runtime_artifacts_dir, os.path.join(submit_dir, "runtime", "artifacts"))
-    print(f"Copying {driver_cpp} -> {os.path.join(submit_dir, 'driver.cpp')}")
-    shutil.copy(driver_cpp, os.path.join(submit_dir, "driver.cpp"))
-    print(f"Copying {driver_header_src} -> {os.path.join(submit_dir, "driver.hpp")}")
-    shutil.copy(driver_header_src, os.path.join(submit_dir, "driver.hpp"))
+    print(f"Copying {license_path} -> {os.path.join(submit_temp, 'LICENSE')}")
+    shutil.copy(license_path, os.path.join(submit_temp, "LICENSE"))
+    print(f"Copying {include_dir} -> {os.path.join(submit_temp, "include")}")
+    shutil.copytree(include_dir, os.path.join(submit_temp, "include"))
+    print(f"Copying {lib_dir} -> {os.path.join(submit_temp, "lib")}")
+    shutil.copytree(lib_dir, os.path.join(submit_temp, "lib"))
+    print(f"Copying {runtime_artifacts_dir} -> {os.path.join(submit_temp, "runtime", "artifacts")}")
+    shutil.copytree(runtime_artifacts_dir, os.path.join(submit_temp, "runtime", "artifacts"))
+    print(f"Copying {driver_cpp} -> {os.path.join(submit_temp, 'driver.cpp')}")
+    shutil.copy(driver_cpp, os.path.join(submit_temp, "driver.cpp"))
+    print(f"Copying {driver_header_src} -> {os.path.join(submit_temp, "driver.hpp")}")
+    shutil.copy(driver_header_src, os.path.join(submit_temp, "driver.hpp"))
 
-    return submit_dir
+    return submit_temp
 
 
 def rewrite_includes(submit_dir):
@@ -123,7 +131,7 @@ def rewrite_includes(submit_dir):
                 process_file(file_path)
 
 
-def generate_readme(submit_dir, branch, sha, arch):
+def generate_readme(submit_dir, branch, sha, original_msg, arch):
     readme_path = os.path.join(submit_dir, "README.md")
     now = datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y-%m-%d %H:%M:%S')
     contents = [
@@ -132,6 +140,7 @@ def generate_readme(submit_dir, branch, sha, arch):
         f"- Sync on: {now}",
         f"- Source Branch: {branch}",
         f"- Source Commit SHA: {sha}",
+        f"- Source Commit Message: {original_msg}",
     ]
 
     with open(readme_path, 'w', encoding='utf-8') as f:
@@ -139,25 +148,31 @@ def generate_readme(submit_dir, branch, sha, arch):
     print(f"Generated README at: {readme_path}")
 
 
-def checkout_and_commit(submit_dir, arch):
+def checkout_and_commit(temp_dir, original_msg, arch):
+    parent_dir = os.path.dirname(temp_dir)
+    final_dir = os.path.join(parent_dir, 'submit')
     branch = f"{arch}-submit"
 
-    subprocess.run(["git", "checkout", branch], cwd=submit_dir, check=True)
-    print(f"Checked out existing branch: {branch}")
+    subprocess.run(["git", "checkout", branch], cwd=parent_dir, check=True)
+    print(f"Checked out branch: {branch}")
 
-    subprocess.run(["git", "add", "."], cwd=submit_dir, check=True)
-    status = subprocess.run(
-        ["git", "diff", "--cached", "--quiet"],
-        cwd=submit_dir
-    )
+    if os.path.exists(final_dir):
+        shutil.rmtree(final_dir)
+    os.rename(temp_dir, final_dir)
+    print(f"Renamed {temp_dir} to {final_dir}")
+
+    subprocess.run(["git", "add", "submit"], cwd=parent_dir, check=True)
+    status = subprocess.run([
+        "git", "diff", "--cached", "--quiet", "--", ".", ":(exclude)submit/README.md"
+    ], cwd=parent_dir)
     if status.returncode == 0:
         print("No changes to commit.")
     else:
         now = datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y-%m-%d %H:%M:%S')
-        commit_msg = f"Sync for {arch} at {now}"
+        commit_msg = f"Sync for {arch} at {now}. ({original_msg})"
         subprocess.run(
             ["git", "commit", "-m", commit_msg],
-            cwd=submit_dir,
+            cwd=parent_dir,
             check=True
         )
         print("Committed submission updates.")
@@ -172,19 +187,19 @@ def main():
     git_root = get_git_root()
     print(f"Git Root: {git_root}")
 
-    original_branch, sha = get_git_info(git_root)
+    original_branch, sha, original_msg = get_git_info(git_root)
     print(f"Original Branch: {original_branch}, SHA: {sha}")
 
-    submit_dir = copy_to_submit(git_root, args.arch)
-    print(f"Submit Dir: {submit_dir}")
+    temp_dir = copy_to_submit(git_root, args.arch)
+    print(f"Submit Temo Dir: {temp_dir}")
 
-    rewrite_includes(submit_dir)
+    rewrite_includes(temp_dir)
     print("Includes rewritten")
 
-    generate_readme(submit_dir, original_branch, sha, args.arch)
+    generate_readme(temp_dir, original_branch, sha, original_msg, args.arch)
     print("README generated")
 
-    checkout_and_commit(submit_dir, args.arch)
+    checkout_and_commit(temp_dir, original_msg, args.arch)
 
     subprocess.run(["git", "checkout", original_branch], cwd=git_root, check=True)
     print(f"Checked out original branch: {original_branch}")
