@@ -1,0 +1,44 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
+#pragma once
+#ifndef GNALC_IR_TARGET_ARMv7_HPP
+#define GNALC_IR_TARGET_ARMv7_HPP
+
+#include "../base.hpp"
+#include "../instruction.hpp"
+#include "target.hpp"
+
+namespace IR {
+class ARMv7TargetInfo : public TargetInfo {
+public:
+    bool isInstSupported(OP op) const override {
+        switch (op) {
+        case OP::AND:
+        case OP::OR:
+        case OP::XOR:
+        case OP::SHL:
+        case OP::ASHR:
+        case OP::LSHR:
+        case OP::FREM:
+        case OP::UREM:
+        case OP::SEXT:
+        case OP::SHUFFLE:
+        case OP::INSERT:
+        case OP::EXTRACT:
+        case OP::SELECT:
+            return false;
+        default:
+            return true;
+        }
+        return true;
+    }
+    bool isTypeSupported(const pType &type) const override {
+        if (type->isI64() || type->isI128())
+            return false;
+        return true;
+    }
+    bool isIntrinsicSupported(const std::string &lib_fn_name) const override { return true; }
+};
+} // namespace IR
+#endif //TARGET_HPP
