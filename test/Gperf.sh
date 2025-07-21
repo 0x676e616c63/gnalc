@@ -6,7 +6,6 @@ mode=$1
 source_file_path=$2
 opt_level=${@:3}
 current_time=$(date +"%Y-%m-%d %H:%M:%S")
-target_dir="perf.out_${current_time}"
 
 if [ $# -lt 1 ] || [[ "$mode" == "-h" || "$mode" == "--help" ]]; then
     echo "Usage: ./Gperf.sh <mode> <source_file_path> <opt_level>"
@@ -19,7 +18,7 @@ fi
 
 if [[ "$mode" == "clean" ]]; then
     echo "Cleaning up perf data..."
-    cd perf_result
+    cd Gperf_result
     rm -rf *
     cd ..
     exit 0
@@ -29,8 +28,8 @@ if [[ "${source_file_path:0:2}" == "./" ]]; then
     source_file_path="${source_file_path:2}"
 fi
 
-echo "profiling result is in perf_result dir"
-cd perf_result
+echo "profiling result is in Gperf_result dir"
+cd Gperf_result
 mkdir "${current_time}"
 cd "${current_time}"
 perf ${mode} -g -F 99 -- ../../gnalc -S "../../${source_file_path}" ${opt_level} -o "test.out"

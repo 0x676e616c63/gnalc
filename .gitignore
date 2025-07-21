@@ -48,3 +48,6 @@ runtime/artifacts/thread.armv8.s.cpp
 runtime/artifacts/thread.riscv64.s.cpp
 build_release/
 trash/
+perf/
+test/ASMperf_result/
+test/ASMperf/target/
