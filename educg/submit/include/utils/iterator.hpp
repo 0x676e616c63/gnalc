@@ -8,6 +8,7 @@
 #include <list>
 #include <memory>
 #include <type_traits>
+#include <algorithm>
 
 namespace Util {
 template <typename BegIterT, typename EndIterT> struct make_iterator_range {
