@@ -250,6 +250,8 @@ int main(int argc, char **argv) {
         }
         else if (arg == "-fno-PostRaScheduling") {
             bkd_opt_info.PostRaScheduling = false;
+        } else if (arg == "-fno-machineLICM") {
+            bkd_opt_info.machineLICM = false;
         }
 
         else if (arg == "-march=armv8" || arg == "-march=armv8-a") target = Target::ARMv8;
@@ -314,6 +316,12 @@ Optimizations Flags:
   --storerng           - Store Range Analysis result. (For backend)
   --cgprepare          - Codegen preparation
   --treeshaking        - Shake off unused functions, function declarations and global variables
+
+Backend options:
+  -fno-PreRaCFGsimp     - Disable PreRa CFG simplification
+  -fno-redundantLoadEli - Disable redundant load elimination
+  -fno-PostRaScheduling - Disable PostRa Scheduling
+  -fno-machineLICM      - Disable machine LICM
 
 Debug options:
   -with-runtime              - Emit gnalc runtime when emitting LLVM IR

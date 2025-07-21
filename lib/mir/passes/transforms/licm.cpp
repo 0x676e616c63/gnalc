@@ -23,32 +23,33 @@ bool isSafeAndProfitableToHoist(const MIRInst_p &inst, Arch arch) {
                 return false;
             // Float/Vector register pressure usually is low
             return true;
-        case OpC::InstLoadImmEx: {
-            auto encoding = inst->getOp(1)->imme();
-            if (encoding == 0)
-                return false;
-            if (arch == Arch::ARMv8) // FIXME
-                return true;
-            if (arch == Arch::RISCV64) {
-                if (RV64::is12BitImm(encoding, true))
-                    return true;
-            }
-            return false;
-        }
-        case OpC::InstLoadImm: {
-            auto encoding = inst->getOp(1)->imme();
-            if (encoding == 0)
-                return false;
-            if (arch == Arch::ARMv8) {
-                if (!ARMv8::isBitMaskImme(encoding) && !ARMv8::is12ImmeWithProbShift(encoding) && encoding > 0XFFFF)
-                    return true;
-            }
-            if (arch == Arch::RISCV64) {
-                if (!RV64::is12BitImm(encoding, false))
-                    return true;
-            }
-            return false;
-        }
+        // FIXME:
+        // case OpC::InstLoadImmEx: {
+        //     auto encoding = inst->getOp(1)->imme();
+        //     if (encoding == 0)
+        //         return false;
+        //     if (arch == Arch::ARMv8) // FIXME
+        //         return true;
+        //     if (arch == Arch::RISCV64) {
+        //         if (RV64::is12BitImm(encoding, true))
+        //             return true;
+        //     }
+        //     return false;
+        // }
+        // case OpC::InstLoadImm: {
+        //     auto encoding = inst->getOp(1)->imme();
+        //     if (encoding == 0)
+        //         return false;
+        //     if (arch == Arch::ARMv8) {
+        //         if (!ARMv8::isBitMaskImme(encoding) && !ARMv8::is12ImmeWithProbShift(encoding) && encoding > 0XFFFF)
+        //             return true;
+        //     }
+        //     if (arch == Arch::RISCV64) {
+        //         if (!RV64::is12BitImm(encoding, false))
+        //             return true;
+        //     }
+        //     return false;
+        // }
         case OpC::InstLoadAddress:
         case OpC::InstLoadStackObjectAddr:
         case OpC::InstLoadImmToReg:
