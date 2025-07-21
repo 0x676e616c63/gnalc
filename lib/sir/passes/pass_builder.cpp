@@ -17,10 +17,11 @@
 #include "sir/passes/transforms/loop_fuse.hpp"
 #include "sir/passes/transforms/loop_unswitch.hpp"
 #include "sir/passes/transforms/while2for.hpp"
+#include "sir/passes/transforms/copy_elision.hpp"
+#include "sir/passes/transforms/early_inline.hpp"
+#include "sir/passes/transforms/loop_interchange.hpp"
 
 // Utilities
-#include "sir/passes/transforms/copy_elision.hpp"
-#include "sir/passes/transforms/loop_interchange.hpp"
 #include "sir/passes/utilities/sirprinter.hpp"
 
 #include <algorithm>
@@ -83,14 +84,16 @@ MPM LinearPassBuilder::buildModulePipeline(const PMOptions& opt_info) {
 
 LFPM LinearPassBuilder::buildFunctionDebugPipeline() {
     LFPM lfpm;
-    lfpm.addPass(EarlyPromotePass());
-    lfpm.addPass(PrintLinearFunctionPass(std::cerr));
-    lfpm.addPass(While2ForPass());
+    // lfpm.addPass(EarlyPromotePass());
     // lfpm.addPass(ConstantFoldPass());
-    lfpm.addPass(PrintLinearFunctionPass(std::cerr));
+    // lfpm.addPass(EarlyDCEPass());
+    // lfpm.addPass(While2ForPass());
+    // lfpm.addPass(PrintLinearFunctionPass(std::cerr));
+    // // lfpm.addPass(LoopUnswitchPass());
+    lfpm.addPass(EarlyInlinePass());
+    // lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     // lfpm.addPass(PrintLAAPass(std::cerr));
     // lfpm.addPass(CopyElisionPass());
-    // lfpm.addPass(EarlyDCEPass());
     // lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     // lfpm.addPass(LoopInterchangePass());
     // lfpm.addPass(LoopUnswitchPass());

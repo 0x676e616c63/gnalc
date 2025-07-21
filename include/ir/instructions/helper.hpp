@@ -13,6 +13,7 @@
 #include "ir/function.hpp"
 #include "ir/instruction.hpp"
 #include "ir/type_alias.hpp"
+#include "sir/base.hpp"
 
 #include <stack>
 #include <string>
@@ -82,6 +83,9 @@ public:
         addOperand(rhs_);
     }
 
+    void setLHSMemHolder(const pVal &lhs_) { lhs_mem_holder = lhs_; }
+    void setRHSMemHolder(const pVal &rhs_) { rhs_mem_holder = rhs_; }
+
     LInstIter rhs_insts_begin() { return rhs_insts.begin(); }
     LInstIter rhs_insts_end() { return rhs_insts.end(); }
 
@@ -93,6 +97,11 @@ public:
 
     void accept(SIR::Visitor &visitor);
     void accept(SIR::ContextVisitor &visitor);
+
+private:
+    pVal cloneImpl() const override {
+        return std::make_shared<CONDValue>(getCondType(), getLHS(), getRHS(), getRHSInsts());
+    }
 };
 
 class ANDValue : public CONDValue {
@@ -126,11 +135,13 @@ class IFInst : public HELPERInst {
 
 public:
     explicit IFInst(const pVal &cond_, std::list<pInst> body_insts_, std::list<pInst> else_insts_)
-        : HELPERInst(HELPERTY::IF), body_insts(std::move(body_insts_)), else_insts(std::move(else_insts_)) {
+        : HELPERInst(HELPERTY::IF), body_insts(std::move(body_insts_)), else_insts(std::move(else_insts_)),
+          cond_mem_holder(cond_) {
         Err::gassert(is_cond_type(cond_));
-        cond_mem_holder = cond_;
         addOperand(cond_);
     }
+
+    void setMemHolder(const pVal &mem_holder) { cond_mem_holder = mem_holder; }
 
     pVal getCond() const { return getOperand(0)->getValue(); }
     const std::list<pInst> &getBodyInsts() const { return body_insts; }
@@ -171,11 +182,13 @@ class WHILEInst : public HELPERInst {
 
 public:
     explicit WHILEInst(const pVal &cond_, std::list<pInst> cond_insts_, std::list<pInst> body_insts_)
-        : HELPERInst(HELPERTY::WHILE), cond_insts(std::move(cond_insts_)), body_insts(std::move(body_insts_)) {
+        : HELPERInst(HELPERTY::WHILE), cond_insts(std::move(cond_insts_)), body_insts(std::move(body_insts_)),
+          cond_mem_holder(cond_) {
         Err::gassert(is_cond_type(cond_));
-        cond_mem_holder = cond_;
         addOperand(cond_);
     }
+
+    void setMemHolder(const pVal &mem_holder) { cond_mem_holder = mem_holder; }
 
     pVal getCond() const { return getOperand(0)->getValue(); }
     const std::list<pInst> &getCondInsts() const { return cond_insts; }
@@ -202,15 +215,23 @@ public:
 };
 
 class BREAKInst : public HELPERInst {
+    wpVal loop;
+
 public:
     BREAKInst() : HELPERInst(HELPERTY::BREAK) {}
     void accept(IRVisitor &visitor) override;
+    pVal getLoop() const { return loop.lock(); }
+    void setLoop(const pVal &loop_) { loop = loop_; }
 };
 
 class CONTINUEInst : public HELPERInst {
+    wpVal loop;
+
 public:
     CONTINUEInst() : HELPERInst(HELPERTY::CONTINUE) {}
     void accept(IRVisitor &visitor) override;
+    pVal getLoop() const { return loop.lock(); }
+    void setLoop(const pVal &loop_) { loop = loop_; }
 };
 
 class IndVar : public Instruction {
@@ -218,11 +239,12 @@ private:
     // Base, Bound and Step are in operands list.
     // This can let IndVar can be replaced by `replaceSelf`.
     // Original Alloca is not, because it is only used to ensure correctness in CFGBuilder.
-    pVal orig_alloc;
+    pAlloca orig_alloc;
     size_t depth;
 
 public:
-    explicit IndVar(std::string name_, pVal orig_alloca_, const pVal &base, const pVal &bound, const pVal &step, size_t depth_)
+    explicit IndVar(std::string name_, pAlloca orig_alloca_, const pVal &base, const pVal &bound, const pVal &step,
+                    size_t depth_)
         : Instruction(OP::INDVAR, std::move(name_), base->getType(), ValueTrait::INDUCTION_VARIABLE),
           orig_alloc(std::move(orig_alloca_)), depth(depth_) {
         Err::gassert(isSameType(base, bound));
@@ -233,7 +255,7 @@ public:
     }
 
     size_t getDepth() const { return depth; }
-    const pVal &getOrigAlloc() const { return orig_alloc; }
+    const pAlloca &getOrigAlloc() const { return orig_alloc; }
     pVal getBase() const { return getOperand(0)->getValue(); }
     pVal getBound() const { return getOperand(1)->getValue(); }
     pVal getStep() const { return getOperand(2)->getValue(); }

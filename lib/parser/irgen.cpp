@@ -994,6 +994,8 @@ void IRGenerator::visit(WhileStmt &node) {
     std::list<IR::pInst> cond_insts;
     std::list<IR::pInst> body_insts;
 
+    while_stack.emplace();
+
     std::swap(before_while_insts, curr_insts);
 
     node.getCond()->accept(*this);
@@ -1007,6 +1009,16 @@ void IRGenerator::visit(WhileStmt &node) {
     auto while_inst = std::make_shared<IR::WHILEInst>(
         std::move(cond), std::move(cond_insts), std::move(body_insts));
 
+    const auto& insts = while_stack.top();
+    for (const auto& cb : insts) {
+        if (auto break_inst = cb->as<IR::BREAKInst>())
+            break_inst->setLoop(while_inst);
+        else if (auto cont_inst = cb->as<IR::CONTINUEInst>())
+            cont_inst->setLoop(while_inst);
+    }
+
+    while_stack.pop();
+
     std::swap(before_while_insts, curr_insts);
     curr_insts.emplace_back(while_inst);
 }
@@ -1014,11 +1026,15 @@ void IRGenerator::visit(WhileStmt &node) {
 void IRGenerator::visit(NullStmt &node) {}
 
 void IRGenerator::visit(BreakStmt &node) {
-    curr_insts.emplace_back(std::make_shared<IR::BREAKInst>());
+    auto break_inst = std::make_shared<IR::BREAKInst>();
+    while_stack.top().emplace_back(break_inst);
+    curr_insts.emplace_back(break_inst);
 }
 
 void IRGenerator::visit(ContinueStmt &node) {
-    curr_insts.emplace_back(std::make_shared<IR::CONTINUEInst>());
+    auto cont_inst = std::make_shared<IR::CONTINUEInst>();
+    while_stack.top().emplace_back(cont_inst);
+    curr_insts.emplace_back(cont_inst);
 }
 
 void IRGenerator::visit(ReturnStmt &node) {

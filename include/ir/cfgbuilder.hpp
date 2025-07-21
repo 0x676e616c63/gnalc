@@ -79,6 +79,8 @@ private:
     pBlock cur_blk;
     std::stack<pBlock> _while_cond_for_continue;
     std::stack<pBlock> _while_end_for_break;
+    std::stack<pPhi> _iv_for_contine;
+    std::stack<pVal> _iv_update_for_contine;
 
     bool adder(std::list<pInst>::const_iterator &it,
                const std::list<pInst>::const_iterator &end,
