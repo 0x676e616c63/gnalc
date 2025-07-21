@@ -45,7 +45,7 @@ pBinary ReassociatePass::neg2mul(const pInst &neg) {
     Err::gassert(binary && isIntBinaryNeg(binary));
     auto result = std::make_shared<BinaryInst>("%reass.n2m" + std::to_string(name_cnt++), OP::MUL, binary->getRHS(),
                                                func->getConst(-1));
-    result->getParent()->addInst(neg->getIndex(), result);
+    neg->getParent()->addInst(neg->getIndex(), result);
     neg->replaceSelf(result);
     modified_in_opt = true;
     return result;
