@@ -1,5 +1,5 @@
 transform文件夹下的passes有比较严格的顺序
-2. isel.hpp: instruction selection                                      模式匹配还没有
+2. isel.hpp: instruction selection
 4. peephole.hpp: peephole opt                                           todo
 6. PreRAscheduling.hpp: Pre-RA scheduling, minimize register pressure   todo
 9. tro.hpp: 

@@ -1,16 +1,19 @@
 // Copyright (c) 2025 0x676e616c63
 // SPDX-License-Identifier: MIT
 
+// Logger
+#include "utils/logger.hpp"
+
 // SIR
 #include "sir/passes/pass_builder.hpp"
 #include "sir/passes/pass_manager.hpp"
+#include "sir/passes/utilities/sirprinter.hpp"
 
 // IR
+#include "ir/cfgbuilder.hpp"
 #include "ir/passes/pass_builder.hpp"
 #include "ir/passes/pass_manager.hpp"
 #include "ir/passes/utilities/irprinter.hpp"
-
-#include "utils/logger.hpp"
 
 #ifndef GNALC_EXTENSION_GGC // in CMakeLists.txt
 #include "parser/ast.hpp"
@@ -38,12 +41,9 @@
 // MIR
 #include "codegen/armv8/armprinter.hpp"
 #include "codegen/riscv64/rv64printer.hpp"
-#include "ir/cfgbuilder.hpp"
-#include "ir/passes/analysis/target_analysis.hpp"
 #include "mir/passes/pass_builder.hpp"
 #include "mir/passes/pass_manager.hpp"
 #include "mir/passes/transforms/lowering.hpp"
-#include "sir/passes/utilities/sirprinter.hpp"
 
 #include <fstream>
 #include <iostream>
