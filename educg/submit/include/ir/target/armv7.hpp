@@ -34,7 +34,7 @@ public:
         return true;
     }
     bool isTypeSupported(const pType &type) const override {
-        if (type->isI64() || type->isI128())
+        if (type->isI64())
             return false;
         return true;
     }
