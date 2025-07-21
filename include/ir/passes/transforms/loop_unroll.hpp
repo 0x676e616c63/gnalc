@@ -9,12 +9,12 @@
  */
 
 #pragma once
-#include "ir/type_alias.hpp"
 #ifndef GNALC_IR_PASSES_TRANSFORMS_LOOP_UNROLL_HPP
 #define GNALC_IR_PASSES_TRANSFORMS_LOOP_UNROLL_HPP
 
 #include <utility>
 
+#include "ir/type_alias.hpp"
 #include "ir/passes/pass_manager.hpp"
 #include "config/config.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
@@ -120,7 +120,7 @@ class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
 
     void analyze(const pLoop &loop, UnrollOption &option, Function &FC, FAM &fam);
     bool peel(const pLoop &loop, const UnrollOption &option, Function &func);
-    bool unroll(const pLoop &loop, const UnrollOption &option, Function &func);
+    bool unroll(const pLoop &loop, const UnrollOption &option, Function &func, FAM &fam);
 
 public:
     LoopUnrollPass();

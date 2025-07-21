@@ -405,45 +405,65 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
 
     // return fpm;
 
-    // For LoopUnroll Test
-    fpm.addPass(PromotePass());
-    fpm.addPass(InlinePass());
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(NameNormalizePass(true));
-    fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(LoopRotatePass());
-    fpm.addPass(LCSSAPass());
-    // fpm.addPass(PrintSCEVPass(std::cerr));
-    fpm.addPass(LoopUnrollPass());
-    fpm.addPass(InstSimplifyPass());
-    fpm.addPass(BreakCriticalEdgesPass());
-    fpm.addPass(GVNPREPass());
-    fpm.addPass(SCCPPass());
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(DCEPass());
-    // fpm.addPass(NameNormalizePass(true));
-    // fpm.addPass(PngCFGPass("../cfg"));
-    fpm.addPass(LoopEliminationPass());
-    // fpm.addPass(RunTestPass("../test/contest/functional/26_while_test1.out"));
-    fpm.addPass(VerifyPass(true));
-
-    // // For LoopUnroll Debug
+    // // For LoopUnroll Test
     // fpm.addPass(PromotePass());
+    // // fpm.addPass(CFGSimplifyPass());
+    // // fpm.addPass(PrintFunctionPass(std::cerr));
+    // // fpm.addPass(InlinePass());
     // fpm.addPass(LoopSimplifyPass());
+    // // fpm.addPass(NameNormalizePass(true));
+    // // fpm.addPass(PrintFunctionPass(std::cerr));
     // fpm.addPass(LoopRotatePass());
     // fpm.addPass(LCSSAPass());
-    // fpm.addPass(NameNormalizePass(true));
-    // fpm.addPass(PrintFunctionPass(std::cerr));
     // // fpm.addPass(PrintSCEVPass(std::cerr));
     // fpm.addPass(LoopUnrollPass());
+    // fpm.addPass(InstSimplifyPass());
+    // fpm.addPass(BreakCriticalEdgesPass());
+    // fpm.addPass(GVNPREPass());
+    // fpm.addPass(CFGSimplifyPass());
+    // fpm.addPass(DCEPass());
+    // fpm.addPass(SCCPPass());
+    // // fpm.addPass(LoopSimplifyPass());
+    //
+    // // fpm.addPass(LoopRotatePass());
+    // // fpm.addPass(LCSSAPass());
+    // // fpm.addPass(PrintFunctionPass(std::cerr));
+    // // fpm.addPass(LoopUnrollPass());
     // // fpm.addPass(InstSimplifyPass());
     // // fpm.addPass(BreakCriticalEdgesPass());
     // // fpm.addPass(GVNPREPass());
-    // // fpm.addPass(ConstantPropagationPass());
     // // fpm.addPass(CFGSimplifyPass());
-    // // fpm.addPass(PrintLoopPass(std::cout));
-    // // fpm.addPass(NameNormalizePass(true));
+    // // fpm.addPass(DCEPass());
+    // // fpm.addPass(SCCPPass());
+    // // fpm.addPass(LoopSimplifyPass());
+    //
+    // fpm.addPass(PngCFGPass("../cfg"));
+    // fpm.addPass(NameNormalizePass(true));
+    // fpm.addPass(RunTestPass("../test/contest/functional/87_many_params.out"));
     // fpm.addPass(VerifyPass(true));
+
+    fpm.addPass(IR::PromotePass());
+    fpm.addPass(IR::InlinePass());
+    fpm.addPass(IR::NameNormalizePass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::DCEPass());
+    fpm.addPass(IR::CFGSimplifyPass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::LCSSAPass());
+    fpm.addPass(IR::LoopUnrollPass());
+    fpm.addPass(IR::DCEPass());
+    fpm.addPass(IR::CFGSimplifyPass());
+    fpm.addPass(IR::InstSimplifyPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::InstSimplifyPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::UnifyExitsPass());
+    fpm.addPass(IR::CodeGenPreparePass());
+    fpm.addPass(IR::NameNormalizePass());
+    fpm.addPass(IR::RunTestPass("../test/contest/h_performance/h-6-02.out"
+        , "../test/contest/h_performance/h-6-02.in"));
+    return fpm;
+
     return fpm;
 }
 
