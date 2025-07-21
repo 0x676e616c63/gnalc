@@ -201,7 +201,7 @@ def main():
 
     checkout_and_commit(temp_dir, original_msg, args.arch)
 
-    subprocess.run(["git", "checkout", original_branch], cwd=git_root, check=True)
+    subprocess.run(["git", "checkout", "-f", original_branch], cwd=git_root, check=True)
     print(f"Checked out original branch: {original_branch}")
 
 
