@@ -55,13 +55,17 @@ public:
 
 enum class CONDTY { AND, OR };
 
-class CONDValue : public Value {
+class CONDValue : public Instruction {
     friend struct SIR::ContextVisitor;
 
 protected:
     CONDTY cond_type;
-    pVal lhs;
-    pVal rhs;
+
+    // This is not always the LHS/RHS, but hold the initial LHS/RHS's shared_ptr to extend its lifetime
+    // The real LHS/RHS is in the operands, and can be replaced by `replaceSelf`
+    // FIXME: Refactor this
+    pVal lhs_mem_holder;
+    pVal rhs_mem_holder;
 
     // Note that only rhs_insts are store in the current CONDValue,
     // and the lhs_insts are in the outer scope
@@ -70,17 +74,19 @@ protected:
     std::list<pInst> rhs_insts;
 
 public:
-    explicit CONDValue(CONDTY ty, pVal lhs_, pVal rhs_, std::list<pInst> rhs_insts_)
-        : Value("__COND", makeBType(IRBTYPE::I1), ValueTrait::CONDHELPER), cond_type(ty), lhs(std::move(lhs_)),
-          rhs(std::move(rhs_)), rhs_insts(std::move(rhs_insts_)) {
-        Err::gassert(is_cond_type(lhs) && is_cond_type(rhs));
+    explicit CONDValue(CONDTY ty, const pVal &lhs_, const pVal &rhs_, std::list<pInst> rhs_insts_)
+        : Instruction(OP::HELPER, "__COND", makeBType(IRBTYPE::I1), ValueTrait::CONDHELPER), cond_type(ty),
+          lhs_mem_holder(lhs_), rhs_mem_holder(rhs_), rhs_insts(std::move(rhs_insts_)) {
+        Err::gassert(is_cond_type(lhs_) && is_cond_type(rhs_));
+        addOperand(lhs_);
+        addOperand(rhs_);
     }
 
     LInstIter rhs_insts_begin() { return rhs_insts.begin(); }
     LInstIter rhs_insts_end() { return rhs_insts.end(); }
 
-    const pVal &getLHS() const { return lhs; }
-    const pVal &getRHS() const { return rhs; }
+    pVal getLHS() const { return getOperand(0)->getValue(); }
+    pVal getRHS() const { return getOperand(1)->getValue(); }
     const std::list<pInst> &getRHSInsts() const { return rhs_insts; }
     std::list<pInst> &getRHSInsts() { return rhs_insts; }
     CONDTY getCondType() const { return cond_type; }
@@ -110,18 +116,23 @@ inline size_t getCondInstCount(const pVal &cond) {
 // IF Block Entry
 class IFInst : public HELPERInst {
     friend struct SIR::ContextVisitor;
-    pVal cond;
     std::list<pInst> body_insts;
     std::list<pInst> else_insts;
 
+    // This is not always the cond, but hold the initial cond's shared_ptr to extend its lifetime
+    // The real cond is in the operands, and can be replaced by `replaceSelf`
+    // FIXME: Refactor this
+    pVal cond_mem_holder;
+
 public:
-    explicit IFInst(pVal cond_, std::list<pInst> body_insts_, std::list<pInst> else_insts_)
-        : HELPERInst(HELPERTY::IF), cond(std::move(cond_)), body_insts(std::move(body_insts_)),
-          else_insts(std::move(else_insts_)) {
-        Err::gassert(is_cond_type(cond));
+    explicit IFInst(const pVal &cond_, std::list<pInst> body_insts_, std::list<pInst> else_insts_)
+        : HELPERInst(HELPERTY::IF), body_insts(std::move(body_insts_)), else_insts(std::move(else_insts_)) {
+        Err::gassert(is_cond_type(cond_));
+        cond_mem_holder = cond_;
+        addOperand(cond_);
     }
 
-    const pVal &getCond() { return cond; }
+    pVal getCond() const { return getOperand(0)->getValue(); }
     const std::list<pInst> &getBodyInsts() const { return body_insts; }
     const std::list<pInst> &getElseInsts() const { return else_insts; }
 
@@ -141,7 +152,7 @@ public:
 
     NIterT nested_insts() override { return Util::make_iterator_range(nested_insts_begin(), nested_insts_end()); }
 
-    size_t getInstCount() const { return body_insts.size() + else_insts.size() + getCondInstCount(cond); }
+    size_t getInstCount() const { return body_insts.size() + else_insts.size() + getCondInstCount(getCond()); }
     void accept(IRVisitor &visitor) override;
     void accept(SIR::Visitor &visitor) override;
     void accept(SIR::ContextVisitor &visitor) override;
@@ -150,18 +161,23 @@ public:
 class WHILEInst : public HELPERInst {
     friend struct SIR::ContextVisitor;
 
-    pVal cond;
     std::list<pInst> cond_insts;
     std::list<pInst> body_insts;
 
+    // This is not always the cond, but hold the initial cond's shared_ptr to extend its lifetime
+    // The real cond is in the operands, and can be replaced by `replaceSelf`
+    // FIXME: Refactor this
+    pVal cond_mem_holder;
+
 public:
-    explicit WHILEInst(pVal cond_, std::list<pInst> cond_insts_, std::list<pInst> body_insts_)
-        : HELPERInst(HELPERTY::WHILE), cond(std::move(cond_)), cond_insts(std::move(cond_insts_)),
-          body_insts(std::move(body_insts_)) {
-        Err::gassert(is_cond_type(cond));
+    explicit WHILEInst(const pVal &cond_, std::list<pInst> cond_insts_, std::list<pInst> body_insts_)
+        : HELPERInst(HELPERTY::WHILE), cond_insts(std::move(cond_insts_)), body_insts(std::move(body_insts_)) {
+        Err::gassert(is_cond_type(cond_));
+        cond_mem_holder = cond_;
+        addOperand(cond_);
     }
 
-    const pVal &getCond() { return cond; }
+    pVal getCond() const { return getOperand(0)->getValue(); }
     const std::list<pInst> &getCondInsts() const { return cond_insts; }
     const std::list<pInst> &getBodyInsts() const { return body_insts; }
 
@@ -178,7 +194,7 @@ public:
     NestedInstIterator nested_insts_end() override { return NestedInstIterator(); }
     NIterT nested_insts() override { return Util::make_iterator_range(nested_insts_begin(), nested_insts_end()); }
 
-    size_t getInstCount() const { return body_insts.size() + getCondInstCount(cond); }
+    size_t getInstCount() const { return body_insts.size() + getCondInstCount(getCond()); }
 
     void accept(IRVisitor &visitor) override;
     void accept(SIR::Visitor &visitor) override;
@@ -203,11 +219,12 @@ private:
     // This can let IndVar can be replaced by `replaceSelf`.
     // Original Alloca is not, because it is only used to ensure correctness in CFGBuilder.
     pVal orig_alloc;
+    size_t depth;
 
 public:
-    explicit IndVar(std::string name_, pVal orig_alloca_, const pVal &base, const pVal &bound, const pVal &step)
+    explicit IndVar(std::string name_, pVal orig_alloca_, const pVal &base, const pVal &bound, const pVal &step, size_t depth_)
         : Instruction(OP::INDVAR, std::move(name_), base->getType(), ValueTrait::INDUCTION_VARIABLE),
-          orig_alloc(std::move(orig_alloca_)) {
+          orig_alloc(std::move(orig_alloca_)), depth(depth_) {
         Err::gassert(isSameType(base, bound));
         Err::gassert(isSameType(base, step));
         addOperand(base);
@@ -215,6 +232,7 @@ public:
         addOperand(step);
     }
 
+    size_t getDepth() const { return depth; }
     const pVal &getOrigAlloc() const { return orig_alloc; }
     pVal getBase() const { return getOperand(0)->getValue(); }
     pVal getBound() const { return getOperand(1)->getValue(); }

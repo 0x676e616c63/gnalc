@@ -72,51 +72,51 @@
 
 namespace IR {
 
-#define GNALC_IR_PASS_ENTRY(name) name(StatusType::Default),
-CliOptions::CliOptions() : GNALC_IR_PASS_TABLE advance_name_norm(false), strict(false) {}
-#undef GNALC_IR_PASS_ENTRY
+#define GNALC_SIR_IR_PASS_ENTRY(name) name(StatusType::Default),
+CliOptions::CliOptions() : GNALC_SIR_IR_PASS_TABLE advance_name_norm(false), strict(false) {}
+#undef GNALC_SIR_IR_PASS_ENTRY
 
 PMOptions CliOptions::toPMOptions(Mode mode) const {
     switch (mode) {
     case Mode::DisableAnyway:
-#define GNALC_IR_PASS_ENTRY(name) .name = false,
+#define GNALC_SIR_IR_PASS_ENTRY(name) .name = false,
         return PMOptions{
-            GNALC_IR_PASS_TABLE.strict = strict,
+            GNALC_SIR_IR_PASS_TABLE.strict = strict,
             .advance_name_norm = advance_name_norm,
             .testcase_in = testcase_in,
             .testcase_out = testcase_out,
         };
-#undef GNALC_IR_PASS_ENTRY
+#undef GNALC_SIR_IR_PASS_ENTRY
 
     case Mode::EnableAnyway:
-#define GNALC_IR_PASS_ENTRY(name) .name = true,
+#define GNALC_SIR_IR_PASS_ENTRY(name) .name = true,
         return PMOptions{
-            GNALC_IR_PASS_TABLE.strict = strict,
+            GNALC_SIR_IR_PASS_TABLE.strict = strict,
             .advance_name_norm = advance_name_norm,
             .testcase_in = testcase_in,
             .testcase_out = testcase_out,
         };
-#undef GNALC_IR_PASS_ENTRY
+#undef GNALC_SIR_IR_PASS_ENTRY
 
     case Mode::EnableIfDefault:
         return {
-#define GNALC_IR_PASS_ENTRY(name) .name = !(name).isDisable(),
-            GNALC_IR_PASS_TABLE.strict = strict,
+#define GNALC_SIR_IR_PASS_ENTRY(name) .name = !(name).isDisable(),
+            GNALC_SIR_IR_PASS_TABLE.strict = strict,
             .advance_name_norm = advance_name_norm,
             .testcase_in = testcase_in,
             .testcase_out = testcase_out,
         };
-#undef GNALC_IR_PASS_ENTRY
+#undef GNALC_SIR_IR_PASS_ENTRY
 
     case Mode::DisableIfDefault:
         return {
-#define GNALC_IR_PASS_ENTRY(name) .name = (name).isEnable(),
-            GNALC_IR_PASS_TABLE.strict = strict,
+#define GNALC_SIR_IR_PASS_ENTRY(name) .name = (name).isEnable(),
+            GNALC_SIR_IR_PASS_TABLE.strict = strict,
             .advance_name_norm = advance_name_norm,
             .testcase_in = testcase_in,
             .testcase_out = testcase_out,
         };
-#undef GNALC_IR_PASS_ENTRY
+#undef GNALC_SIR_IR_PASS_ENTRY
     }
     return {};
 }
@@ -231,8 +231,8 @@ auto make_enabling(const PMOptions& options) {
 auto make_loop(const PMOptions& options) {
     FPM fpm;
     FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LCSSAPass(), LICMPass())
-    FUNCTION_TRANSFORM(loop_parallel, LoopSimplifyPass(), LoopParallelPass())
     FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
+    FUNCTION_TRANSFORM(loop_parallel, LoopSimplifyPass(), LoopParallelPass())
     FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LoopRotatePass(), LCSSAPass(), LICMPass())
     FUNCTION_TRANSFORM(loop_strength_reduce, LoopSimplifyPass(), LoopStrengthReducePass())
     FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
@@ -366,10 +366,10 @@ MPM PassBuilder::buildModulePipeline(const PMOptions& options) {
 FPM PassBuilder::buildFunctionDebugPipeline() {
     // // For SIR pass debug
     FPM fpm;
-    // fpm.addPass(VerifyPass());
-    // // fpm.addPass(PromotePass());
-    // fpm.addPass(NameNormalizePass());
-    // return fpm;
+    fpm.addPass(VerifyPass());
+    fpm.addPass(PromotePass());
+    fpm.addPass(NameNormalizePass());
+    return fpm;
     // // Parallel
     // FPM fpm;
     // fpm.addPass(VerifyPass());
@@ -405,27 +405,27 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
 
     // return fpm;
 
-    // For LoopUnroll Test
-    fpm.addPass(PromotePass());
-    fpm.addPass(InlinePass());
-    fpm.addPass(LoopSimplifyPass());
-    fpm.addPass(NameNormalizePass(true));
-    fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(LoopRotatePass());
-    fpm.addPass(LCSSAPass());
-    // fpm.addPass(PrintSCEVPass(std::cerr));
-    fpm.addPass(LoopUnrollPass());
-    fpm.addPass(InstSimplifyPass());
-    fpm.addPass(BreakCriticalEdgesPass());
-    fpm.addPass(GVNPREPass());
-    fpm.addPass(SCCPPass());
-    fpm.addPass(CFGSimplifyPass());
-    fpm.addPass(DCEPass());
+    // // For LoopUnroll Test
+    // fpm.addPass(PromotePass());
+    // fpm.addPass(InlinePass());
+    // fpm.addPass(LoopSimplifyPass());
     // fpm.addPass(NameNormalizePass(true));
-    // fpm.addPass(PngCFGPass("../cfg"));
-    fpm.addPass(LoopEliminationPass());
-    // fpm.addPass(RunTestPass("../test/contest/functional/26_while_test1.out"));
-    fpm.addPass(VerifyPass(true));
+    // fpm.addPass(PrintFunctionPass(std::cerr));
+    // fpm.addPass(LoopRotatePass());
+    // fpm.addPass(LCSSAPass());
+    // // fpm.addPass(PrintSCEVPass(std::cerr));
+    // fpm.addPass(LoopUnrollPass());
+    // fpm.addPass(InstSimplifyPass());
+    // fpm.addPass(BreakCriticalEdgesPass());
+    // fpm.addPass(GVNPREPass());
+    // fpm.addPass(SCCPPass());
+    // fpm.addPass(CFGSimplifyPass());
+    // fpm.addPass(DCEPass());
+    // // fpm.addPass(NameNormalizePass(true));
+    // // fpm.addPass(PngCFGPass("../cfg"));
+    // fpm.addPass(LoopEliminationPass());
+    // // fpm.addPass(RunTestPass("../test/contest/functional/26_while_test1.out"));
+    // fpm.addPass(VerifyPass(true));
 
     // // For LoopUnroll Debug
     // fpm.addPass(PromotePass());

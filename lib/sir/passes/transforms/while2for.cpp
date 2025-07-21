@@ -67,8 +67,8 @@ Result analyzeUpdateExpr(IList &ilist, WHILEInst &wh, const pVal &ptr) {
                 return {UpdateType::Unknown, nullptr, nullptr};
         } else if (match(inst, M::Load(M::Is(ptr))))
             iv_loads.emplace(inst);
-        // Give up loop with early exit
-        else if (inst->is<BREAKInst, CONTINUEInst, RETInst>())
+        // Give up loop with iv update before early exit
+        else if (inst->is<BREAKInst, CONTINUEInst, RETInst>() && store != nullptr)
             return {UpdateType::Unknown, nullptr, nullptr};
     }
 
@@ -149,7 +149,7 @@ std::optional<ForInfo> transformWhile(IList &ilist, WHILEInst &wh, LinearFunctio
 }
 
 struct While2ForVisitor : ContextVisitor {
-    using MapT = std::vector<std::tuple<IList *, pWhileInst>>;
+    using MapT = std::vector<std::tuple<IList *, pWhileInst, size_t>>;
     MapT *replace_map{};
 
     explicit While2ForVisitor(MapT *replace_map_) : replace_map(replace_map_) {}
@@ -158,7 +158,7 @@ struct While2ForVisitor : ContextVisitor {
         ContextVisitor::visit(ctx, while_inst);
 
         IList *ilist = ctx.iList();
-        replace_map->emplace_back(ilist, while_inst.as<WHILEInst>());
+        replace_map->emplace_back(ilist, while_inst.as<WHILEInst>(), ctx.depth);
     }
 };
 
@@ -172,12 +172,12 @@ PM::PreservedAnalyses While2ForPass::run(LinearFunction &function, LFAM &lfam) {
 
     size_t num_transformed = 0;
     static size_t name_cnt = 0;
-    for (auto &[ilist, while_inst] : replace_map) {
+    for (auto &[ilist, while_inst, depth] : replace_map) {
         if (auto for_info_opt = transformWhile(*ilist, *while_inst, function)) {
             auto info = *for_info_opt;
             auto iv =
                 std::make_shared<IndVar>(info.indvar_alloc->getName() + ".ind." + std::to_string(name_cnt++),
-                                                    info.indvar_alloc, info.base, info.bound, info.step);
+                                                    info.indvar_alloc, info.base, info.bound, info.step, depth);
             auto for_inst = std::make_shared<FORInst>(iv, while_inst->getBodyInsts());
             IListReplace(*ilist, while_inst, for_inst);
             // Replace all uses of info.ind with iv

@@ -117,6 +117,8 @@ void CFGBuilder::newFor(const pForInst & for_inst) {
     auto for_cond = std::make_shared<BasicBlock>(nam.getForCond());
     auto for_body = std::make_shared<BasicBlock>(nam.getForBody());
     auto for_end = std::make_shared<BasicBlock>(nam.getForEnd());
+    _while_cond_for_continue.push(for_cond);
+    _while_end_for_break.push(for_end);
 
     auto for_preheader = cur_blk;
     for_preheader->addInst(std::make_shared<BRInst>(for_cond));
@@ -125,20 +127,22 @@ void CFGBuilder::newFor(const pForInst & for_inst) {
     cur_making_func->addBlock(for_cond);
     auto indvar = for_inst->getIndVar();
     auto phi = std::make_shared<PHIInst>(nam.getForIndVar(), indvar->getType());
-    // Store to original alloca to fix outside loop uses of the induction variable.
-    // mem2reg will finally eliminate such store.
-    auto store = std::make_shared<STOREInst>(phi, indvar->getOrigAlloc());
     auto icmp = std::make_shared<ICMPInst>(phi->getName() + ".cmp", ICMPOP::slt, phi, indvar->getBound());
     auto for_br = std::make_shared<BRInst>(icmp, for_body, for_end);
+    // Store to original alloca to fix outside loop uses of the induction variable.
+    // mem2reg will finally eliminate such store.
+    if (indvar->getOrigAlloc()->getUseCount() != 0) {
+        auto store = std::make_shared<STOREInst>(phi, indvar->getOrigAlloc());
+        for_cond->addInst(store);
+    }
 
     for_cond->addPhiInst(phi);
-    for_cond->addInst(store);
     for_cond->addInst(icmp);
     for_cond->addInst(for_br);
 
     cur_blk = for_body;
     cur_making_func->addBlock(for_body);
-    if (auto it = for_inst->getBodyInsts().cbegin(); !adder(it, for_inst->getBodyInsts().cend(), false))
+    if (auto it = for_inst->getBodyInsts().cbegin(); !adder(it, for_inst->getBodyInsts().cend(), true))
         cur_blk->addInst(std::make_shared<BRInst>(for_cond));
 
     // Insert update insts
@@ -151,6 +155,9 @@ void CFGBuilder::newFor(const pForInst & for_inst) {
 
     cur_blk = for_end;
     cur_making_func->addBlock(for_end);
+
+    _while_cond_for_continue.pop();
+    _while_end_for_break.pop();
 }
 
 

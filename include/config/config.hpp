@@ -5,6 +5,12 @@
 #ifndef GNALC_CONFIG_CONFIG_HPP
 #define GNALC_CONFIG_CONFIG_HPP
 
+namespace Config::SIR {
+// Loop Interchange
+// We interchange loops if we gain more than this threshold.
+constexpr auto LOOP_INTERCHANGE_BENEFIT_THRESHOLD = 0;
+}
+
 namespace Config::IR {
 // IRGenerator
 constexpr auto REGISTER_TEMP_NAME = "%%__GNALC_IR_TEMP_NAME"; // deprecated

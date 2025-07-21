@@ -150,7 +150,7 @@ int main(int argc, char **argv) {
     else if (arg == (cli_arg)) cli_opt_options.opt_name.enable();                                                      \
     else if (arg == (cli_no_arg)) cli_opt_options.opt_name.disable();
         // Optimizations available:
-        // Function Transforms
+        // IR Function Transforms
         OPT_ARG("--mem2reg", "--no-mem2reg", mem2reg)
         OPT_ARG("--sccp", "--no-sccp", sccp)
         OPT_ARG("--dce", "--no-dce", dce)
@@ -179,7 +179,14 @@ int main(int argc, char **argv) {
         OPT_ARG("--gepflatten", "--no-gepflatten", gep_flatten)
         OPT_ARG("--storerng", "--no-storerng", store_range)
         OPT_ARG("--cgprepare", "--no-cgprepare", codegen_prepare)
-        // Module Transforms
+        // SIR Function Transforms
+        OPT_ARG("--earlymem2reg", "--no-earlymem2reg", early_mem2reg)
+        OPT_ARG("--while2for", "--no-while2for", while2for)
+        OPT_ARG("--copyelision", "--no-copyelision", copy_elision)
+        OPT_ARG("--interchange", "--no-interchange", loop_interchange)
+        OPT_ARG("--unswitch", "--no-unswitch", loop_unswitch)
+        OPT_ARG("--fuse", "--no-fuse", loop_fuse)
+        // IR Module Transforms
         OPT_ARG("--treeshaking", "--no-treeshaking", tree_shaking)
 #undef OPT_ARG
         // Debug options:
@@ -273,6 +280,12 @@ General Options:
   -v, --version        - Display version information
 
 Optimizations Flags:
+  --earlymem2reg       - Promote memory to register in SIR
+  --while2for          - Canonicalize while loops to for loops
+  --copyelision        - Eliminate redundant memory copies
+  --interchange        - Loop interchange
+  --unswitch           - Loop unswitch
+  --fuse               - Loop fusion
   --mem2reg            - Promote memory to register
   --sccp               - Sparse conditional constant propagation
   --dce                - Dead code elimination
@@ -291,7 +304,7 @@ Optimizations Flags:
   --indvars            - Induction variable simplification
   --lsr                - Loop strength reduction
   --loopelim           - Loop elimination
-  --vectorizer         - Vectorizer
+  --vectorizer         - BoUpSLP Vectorizer
   --rngsimplify        - Value range aware redundancy elimination
   --dae                - Dead argument elimination
   --memo               - Automatic function memoization
