@@ -29,12 +29,6 @@ pConstI64 ConstantPool::getConst(int64_t val) {
     return it->getConstantI64();
 }
 
-pConstI128 ConstantPool::getConst(int128_t val) {
-    ConstantProxy proxy(this, std::make_shared<ConstantI128>(val));
-    auto [it, inserted] = pool.insert(proxy);
-    return it->getConstantI128();
-}
-
 pConstF32 ConstantPool::getConst(float val) {
     ConstantProxy proxy(this, std::make_shared<ConstantFloat>(val));
     auto [it, inserted] = pool.insert(proxy);
@@ -64,8 +58,6 @@ pVal ConstantPool::getZero(const pType &type) {
             return getConst(0);
         case IRBTYPE::I64:
             return getConst(static_cast<int64_t>(0));
-        case IRBTYPE::I128:
-            return getConst(static_cast<int128_t>(0));
         case IRBTYPE::FLOAT:
             return getConst(0.0f);
         default:
@@ -84,7 +76,6 @@ pVal ConstantPool::getZero(const pType &type) {
             case IRBTYPE::I1:
             case IRBTYPE::I8:
             case IRBTYPE::I64:
-            case IRBTYPE::I128:
                 Err::not_implemented("Vector of such integer types not supported yet");
             default:
                 Err::unreachable("Not a Constant Type.");

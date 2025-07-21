@@ -27,8 +27,6 @@ public:
         return true;
     }
     bool isTypeSupported(const pType &type) const override {
-        if (type->isI128())
-            return false;
         return true;
     }
 

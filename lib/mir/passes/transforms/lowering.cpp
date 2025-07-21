@@ -36,8 +36,6 @@ OpT MIR::btypeConvert(const IR::BType &type) {
         return OpT::Int64;
     case IR::IRBTYPE::FLOAT:
         return OpT::Float32;
-    case IR::IRBTYPE::I128:
-        Err::todo("int128 todo...");
     default:
         Err::unreachable("btypeConvert: try convert invalid btype");
     }
@@ -55,8 +53,6 @@ unsigned MIR::typeBitwide(const IR::pType &type) {
             return 4;
         else if (btype->getInner() == IR::IRBTYPE::I64)
             return 8;
-        else if (btype->getInner() == IR::IRBTYPE::I128)
-            Err::todo("typeBitwide: i128 todo...");
         else if (btype->getInner() == IR::IRBTYPE::FLOAT)
             return 4;
         else
@@ -100,8 +96,6 @@ MIROperand_p LoweringContext::mapOperand(const IRVal_p &value) {
         } else if (auto ci64 = value->as<IR::ConstantI64>()) {
             auto imme = ci64->getVal();
             return mapOperand(imme);
-        } else if (auto ci128 = value->as<IR::ConstantI128>()) {
-            Err::todo("ci128 lower todo...");
         }
         ///@note extent i1, i8 const to i32
         else if (auto ci1 = value->as<IR::ConstantI1>()) {

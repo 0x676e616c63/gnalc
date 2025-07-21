@@ -26,7 +26,6 @@ enum class IRBTYPE {
     I8, // For sylib's putf(char a[], ...)
     I32,
     I64,
-    I128,
     FLOAT,
     VOID,
     UNDEFINED
@@ -47,8 +46,6 @@ inline size_t getBytes(IRBTYPE type) {
         return 4;
     case IRBTYPE::I64:
         return 8;
-    case IRBTYPE::I128:
-        return 16;
     default:
         Err::error("In IR::BType::getBytes(): illegal type.");
         return 0;
@@ -93,7 +90,6 @@ public:
     bool isI8() const;
     bool isI32() const;
     bool isI64() const;
-    bool isI128() const;
     bool isF32() const;
     bool isInteger() const;
     bool isFloatingPoint() const;
@@ -130,8 +126,6 @@ public:
             return "i32";
         case IRBTYPE::I64:
             return "i64";
-        case IRBTYPE::I128:
-            return "i128";
         case IRBTYPE::FLOAT:
             return "float";
         case IRBTYPE::VOID:

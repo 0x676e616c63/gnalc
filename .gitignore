@@ -42,9 +42,13 @@ perf.out
 submit
 runtime/artifacts/thread.ll
 runtime/artifacts/thread.ll.cpp
+runtime/artifacts/thread.ll.hpp
 runtime/artifacts/thread.armv8.s
 runtime/artifacts/thread.riscv64.s
 runtime/artifacts/thread.armv8.s.cpp
+runtime/artifacts/thread.armv8.s.hpp
 runtime/artifacts/thread.riscv64.s.cpp
+runtime/artifacts/thread.riscv64.s.hpp
 build_release/
 trash/
+educg/submit

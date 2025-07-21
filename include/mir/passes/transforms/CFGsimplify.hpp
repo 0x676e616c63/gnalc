@@ -7,7 +7,10 @@
 
 #include "mir/passes/pass_manager.hpp"
 
-///@note 寄存器分配前的简化: 模式匹配简化条件判断
+///@note 寄存器分配前的简化: 化简跳转模式，简化条件判断
+/// ARM lower 时， icmp + br 会转化为 cmp + cset + cbnz + b， 其中 cmp + cset + cbnz 可以化简
+/// RISCV lower 时， one-use icmp + br 直接转为 ble/blt... + j，而非 one-use 的 icmp 转为 slt/... + bnez + j
+/// （上面提到的指令在 lower 时有些以 GenericInst 形式存在）
 
 ///@note 分配后的简化: 计算跳转闭包, 再次将条件位反转消除一次跳转(有条件时)
 
