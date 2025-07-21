@@ -1,0 +1,26 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
+#include "../../include/ir/constant.hpp"
+#include "../../include/ir/visitor.hpp"
+
+namespace IR {
+namespace detail {
+template <typename T, IRBTYPE IRType> void BasicConstant<T, IRType>::accept(IRVisitor &visitor) {
+    visitor.visit(*this);
+}
+
+template <typename ValueT, IRBTYPE IRType> void BasicConstantVector<ValueT, IRType>::accept(IRVisitor &visitor) {
+    visitor.visit(*this);
+}
+} // namespace detail
+
+template void ConstantI1::accept(IRVisitor &visitor);
+template void ConstantI8::accept(IRVisitor &visitor);
+template void ConstantInt::accept(IRVisitor &visitor);
+template void ConstantI64::accept(IRVisitor &visitor);
+template void ConstantI128::accept(IRVisitor &visitor);
+template void ConstantFloat::accept(IRVisitor &visitor);
+template void ConstantIntVector::accept(IRVisitor &visitor);
+template void ConstantFloatVector::accept(IRVisitor &visitor);
+} // namespace IR

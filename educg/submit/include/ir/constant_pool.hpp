@@ -1,0 +1,48 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
+#pragma once
+#ifndef GNALC_IR_CONSTANTPOOL_HPP
+#define GNALC_IR_CONSTANTPOOL_HPP
+
+#include "constant.hpp"
+#include "constant_proxy.hpp"
+
+#include <unordered_set>
+
+namespace IR {
+class ConstantPool {
+private:
+    // Note:
+    //   - ConstantProxy is a ValuePtr's wrapper.
+    //   - `ConstantProxyHash` and `operator==` only deals with its inner value.
+    // Therefore:
+    // Set<Proxy> == Set<Pair<Literal, ValuePtr>> == Map<Literal, ValuePtr>
+    std::unordered_set<ConstantProxy, ConstantProxyHash> pool;
+
+public:
+    ConstantPool() = default;
+    ConstantPool(const ConstantPool&) = delete;
+    ConstantPool(ConstantPool&&) = default;
+    ConstantPool& operator=(const ConstantPool&) = delete;
+    ConstantPool& operator=(ConstantPool&&) = default;
+
+    pConstI1 getConst(bool val);
+    pConstI8 getConst(char val);
+    pConstI32 getConst(int val);
+    pConstI64 getConst(int64_t val);
+    pConstI128 getConst(int128_t val);
+    pConstF32 getConst(float val);
+    pConstI32Vec getConst(const std::vector<int>& val);
+    pConstF32Vec getConst(const std::vector<float>& val);
+
+    pVal getZero(const pType &type);
+
+    int cleanPool();
+
+    ~ConstantPool();
+};
+
+} // namespace IR
+
+#endif
