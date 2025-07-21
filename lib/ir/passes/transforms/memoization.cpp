@@ -15,7 +15,6 @@
 #include "ir/passes/analysis/basic_alias_analysis.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/analysis/target_analysis.hpp"
-#include "utils/int128.hpp"
 #include "utils/logger.hpp"
 
 #include <algorithm>

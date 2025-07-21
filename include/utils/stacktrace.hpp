@@ -14,8 +14,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-#if __has_include(<execinfo.h>) && __has_include(<cxxabi.h>)
-#define GNALC_STACKTRACE_ENABLE
+#ifdef GNALC_STACKTRACE_ENABLE
 #include <cxxabi.h>
 #include <execinfo.h>
 

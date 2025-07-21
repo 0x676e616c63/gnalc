@@ -19,7 +19,6 @@ template void ConstantI1::accept(IRVisitor &visitor);
 template void ConstantI8::accept(IRVisitor &visitor);
 template void ConstantInt::accept(IRVisitor &visitor);
 template void ConstantI64::accept(IRVisitor &visitor);
-template void ConstantI128::accept(IRVisitor &visitor);
 template void ConstantFloat::accept(IRVisitor &visitor);
 template void ConstantIntVector::accept(IRVisitor &visitor);
 template void ConstantFloatVector::accept(IRVisitor &visitor);

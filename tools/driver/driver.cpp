@@ -1,16 +1,21 @@
 // Copyright (c) 2025 0x676e616c63
 // SPDX-License-Identifier: MIT
 
+#define GNALC_STACKTRACE_ENABLE
+
+// Logger
+#include "utils/logger.hpp"
+
 // SIR
 #include "sir/passes/pass_builder.hpp"
 #include "sir/passes/pass_manager.hpp"
+#include "sir/passes/utilities/sirprinter.hpp"
 
 // IR
+#include "ir/cfgbuilder.hpp"
 #include "ir/passes/pass_builder.hpp"
 #include "ir/passes/pass_manager.hpp"
 #include "ir/passes/utilities/irprinter.hpp"
-
-#include "utils/logger.hpp"
 
 #ifndef GNALC_EXTENSION_GGC // in CMakeLists.txt
 #include "parser/ast.hpp"
@@ -38,12 +43,9 @@
 // MIR
 #include "codegen/armv8/armprinter.hpp"
 #include "codegen/riscv64/rv64printer.hpp"
-#include "ir/cfgbuilder.hpp"
-#include "ir/passes/analysis/target_analysis.hpp"
 #include "mir/passes/pass_builder.hpp"
 #include "mir/passes/pass_manager.hpp"
 #include "mir/passes/transforms/lowering.hpp"
-#include "sir/passes/utilities/sirprinter.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -242,6 +244,8 @@ int main(int argc, char **argv) {
         }
         else if (arg == "-fno-PostRaScheduling") {
             bkd_opt_info.PostRaScheduling = false;
+        } else if (arg == "-fno-machineLICM") {
+            bkd_opt_info.machineLICM = false;
         }
 
         else if (arg == "-march=armv8" || arg == "-march=armv8-a") target = Target::ARMv8;
@@ -299,6 +303,12 @@ Optimizations Flags:
   --storerng           - Store Range Analysis result. (For backend)
   --cgprepare          - Codegen preparation
   --treeshaking        - Shake off unused functions, function declarations and global variables
+
+Backend options:
+  -fno-PreRaCFGsimp     - Disable PreRa CFG simplification
+  -fno-redundantLoadEli - Disable redundant load elimination
+  -fno-PostRaScheduling - Disable PostRa Scheduling
+  -fno-machineLICM      - Disable machine LICM
 
 Debug options:
   -with-runtime              - Emit gnalc runtime when emitting LLVM IR

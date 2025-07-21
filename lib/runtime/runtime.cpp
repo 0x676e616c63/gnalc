@@ -1,7 +1,7 @@
 #include "runtime/runtime.hpp"
 
-#include "../../runtime/artifacts/thread.armv8.s.cpp"
-#include "../../runtime/artifacts/thread.ll.cpp"
+#include "../../runtime/artifacts/thread.armv8.s.hpp"
+#include "../../runtime/artifacts/thread.ll.hpp"
 
 #define MAKE_RUNTIME_INIT(name, xxd_name) std::string_view name(reinterpret_cast<char *>(xxd_name), xxd_name##_len);
 

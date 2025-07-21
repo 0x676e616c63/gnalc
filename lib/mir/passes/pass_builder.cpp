@@ -38,7 +38,7 @@ const OptInfo o1_opt_info = {.peephole_afterIsel = true,
                              .CFGsimplifyBeforeRa = true,
                              .CFGsimplifyAfterRa = true,
                              .PostRaScheduling = true,
-                             .machineLICM = false};
+                             .machineLICM = true};
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
@@ -65,8 +65,11 @@ FPM buildRV64FunctionPipeline(OptInfo opt_info) {
     FPM fpm;
     // For RV64 Development
     fpm.addPass(ISel());
+    fpm.addPass(MachineLICMPass());
+    fpm.addPass(RedundantLoadEli());
     fpm.addPass(PreRAlegalize());
     fpm.addPass(RegisterAlloc());
+    fpm.addPass(GenericPeephole(GenericPeephole::AfterRa));
     fpm.addPass(StackGenerate());
     fpm.addPass(PostRAlegalize());
     return fpm;
@@ -79,6 +82,7 @@ FPM buildARMv8FunctionPipeline(OptInfo opt_info) {
 
     // clang-format off
                                             fpm.addPass(ISel());
+    // opt_info.machineLICM ?                  fpm.addPass(MachineLICMPass()) : nop;
     opt_info.peephole_afterIsel ?           fpm.addPass(GenericPeephole(Stage::AfterIsel)) : nop;
     opt_info.CFGsimplifyBeforeRa ?          fpm.addPass(CFGsimplifyBeforeRA()) : nop;
     opt_info.redundantLoadEli ?             fpm.addPass(RedundantLoadEli()) : nop;
