@@ -74,23 +74,25 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getDef(const MIRInst_p &minst) {
 }
 
 MIROperand_p RegisterAllocImpl::heuristicSpill() {
-    const double Weight_IntervalLength = 5;
-    const double Weight_Degree = 3;
-    const double extra_Weight_ForNotPtr = +60;
-    const double extra_Weight_ForSpilled = -10000;
+    const int64_t Weight_IntervalLength = 5;
+    const int64_t Weight_Degree = 3;
+    const int64_t Weight_ref_cnt = -15;
+    const int64_t extra_Weight_ForNotPtr = 60;
+    const int64_t extra_Weight_ForSpilled = -1000000;
 
-    ///@note 计算溢出权重
-    double weight_max = -std::numeric_limits<double>::infinity();
+    int64_t weight_max = -std::numeric_limits<int64_t>::infinity();
     MIROperand_p spilled = nullptr;
     for (const auto &op : spillWorkList) {
-        double weight = 0;
+        int64_t weight = 0;
 
-        if (GeneratedBySpill.find(op) != GeneratedBySpill.end())
+        if (GeneratedBySpill.count(op))
             weight += extra_Weight_ForSpilled;
 
         weight += liveinfo.intervalLengths[op] * Weight_IntervalLength; // narrowing convert here
 
-        weight += degree[op] * Weight_Degree;
+        weight += mfunc->Context().queryOp(op) * Weight_ref_cnt;
+
+        // weight += degree[op] * Weight_Degree;
 
         if (op->type() == OpT::Int64) {
             weight += extra_Weight_ForNotPtr;
@@ -101,7 +103,9 @@ MIROperand_p RegisterAllocImpl::heuristicSpill() {
             weight_max = weight;
         }
     }
-    Err::gassert(spilled != nullptr, "heuristicSpill: spilled is nullptr");
+
+    spilled == nullptr ? void(spilled = spillWorkList.front()) : nop;
+
     // Logger::logInfo("spilled: " + std::to_string(spilled->getRecover()));
     return spilled;
 

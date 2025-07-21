@@ -45,9 +45,9 @@ def main():
     ll = os.path.join(out, 'thread.ll')
     asm_armv8_s = os.path.join(out, 'thread.armv8.s')
     # asm_riscv64_s = os.path.join(out, 'thread.riscv64.s')
-    ll_cpp = ll + '.cpp'
-    asm_armv8_cpp = asm_armv8_s + '.cpp'
-    # asm_riscv64_cpp = asm_riscv64_s + '.cpp'
+    ll_hpp = ll + '.hpp'
+    asm_armv8_hpp = asm_armv8_s + '.hpp'
+    # asm_riscv64_hpp = asm_riscv64_s + '.hpp'
 
     run(['clang++', '-O3', '-DNDEBUG', '-S', *dbg_flags, '-emit-llvm', args.cpp_file, '-o', ll])
     run(['aarch64-linux-gnu-g++', '-O3', '-DNDEBUG', '-march=armv8-a', '-fno-stack-protector', '-fomit-frame-pointer',
@@ -56,9 +56,9 @@ def main():
 
     filter_ll_file(ll)
 
-    embed_with_xxd(ll, ll_cpp, 'gnalc_thread_runtime_ll')
-    embed_with_xxd(asm_armv8_s, asm_armv8_cpp, 'gnalc_thread_runtime_armv8_s')
-    # embed_with_xxd(asm_riscv64_s, asm_riscv64_cpp, 'gnalc_thread_runtime_riscv64_s')
+    embed_with_xxd(ll, ll_hpp, 'gnalc_thread_runtime_ll')
+    embed_with_xxd(asm_armv8_s, asm_armv8_hpp, 'gnalc_thread_runtime_armv8_s')
+    # embed_with_xxd(asm_riscv64_s, asm_riscv64_hpp, 'gnalc_thread_runtime_riscv64_s')
 
     print('Done.')
 

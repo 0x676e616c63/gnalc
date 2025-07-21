@@ -36,7 +36,9 @@ public:
         return {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18};
     }
 
-    std::set<int> getCallerSaveFpVRs() const override { return {32, 33, 34, 35, 36, 37, 38, 39}; }
+    std::set<int> getCallerSaveFpVRs() const override {
+        return {32, 33, 34, 35, 36, 37, 38, 39, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63};
+    }
 
     bool isCoreReg(unsigned int reg) const override { return reg < ARMReg::FP; }
     bool isFpOrVecReg(unsigned int reg) const override { return reg >= ARMReg::V0; }

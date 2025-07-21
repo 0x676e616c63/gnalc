@@ -289,6 +289,9 @@ public:
     void accept(IRVisitor &visitor) override;
     void accept(SIR::Visitor &visitor);
     void accept(SIR::ContextVisitor &visitor);
+
+private:
+    pVal cloneImpl() const override;
 };
 } // namespace IR
 

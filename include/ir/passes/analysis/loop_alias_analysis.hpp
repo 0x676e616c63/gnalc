@@ -73,9 +73,6 @@ public:
     int getAlignOnBase(Value *value) const;
     int getAlignOnBase(const pVal &value) const;
 
-    std::optional<Value*> getBase(Value *value) const;
-    std::optional<Value*> getBase(const pVal &value) const;
-
     std::optional<std::tuple<Value *, size_t>> getBaseAndOffset(Value *value) const;
     std::optional<std::tuple<Value *, size_t>> getBaseAndOffset(const pVal &value) const;
 

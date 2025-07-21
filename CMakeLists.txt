@@ -31,7 +31,7 @@ endif()
 
 set(RUNTIME_ARTIFACTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/runtime/artifacts)
 
-set(RUNTIME_OUTPUTS ${RUNTIME_ARTIFACTS_DIR}/thread.ll.cpp ${RUNTIME_ARTIFACTS_DIR}/thread.armv8.s.cpp)
+set(RUNTIME_OUTPUTS ${RUNTIME_ARTIFACTS_DIR}/thread.ll.hpp ${RUNTIME_ARTIFACTS_DIR}/thread.armv8.s.hpp)
 add_custom_command(
         OUTPUT ${RUNTIME_OUTPUTS}
         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/runtime/compile.py
@@ -90,8 +90,8 @@ aux_source_directory(lib/runtime GNALC_RUNTIME_SRC)
 # Pass Manager
 aux_source_directory(lib/pass_manager GNALC_PM_SRC)
 
-# Pattern Match
-aux_source_directory(lib/pattern_match GNALC_PTM_SRC)
+# Match
+aux_source_directory(lib/match GNALC_MATCH_SRC)
 
 # Utilities
 aux_source_directory(lib/utils GNALC_UTILS_SRC)
@@ -119,7 +119,7 @@ set(GNALC_SRC
         ${GNALC_IR_SRC}
         ${GNALC_MIR_SRC}
         ${GNALC_PM_SRC}
-        ${GNALC_PTM_SRC}
+        ${GNALC_MATCH_SRC}
         ${GNALC_ARMV8BKD_SRC}
         ${GNALC_RISCV64BKD_SRC}
         ${GNALC_RUNTIME_SRC}
@@ -132,7 +132,7 @@ set(GGC_SRC
         ${GNALC_IR_SRC}
         ${GNALC_MIR_SRC}
         ${GNALC_PM_SRC}
-        ${GNALC_PTM_SRC}
+        ${GNALC_MATCH_SRC}
         ${GNALC_ARMV8BKD_SRC}
         ${GNALC_RISCV64BKD_SRC}
         ${GNALC_RUNTIME_SRC}
