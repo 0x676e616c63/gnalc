@@ -14,8 +14,6 @@ class ARMv8TargetInfo : public TargetInfo {
 public:
     bool isInstSupported(OP op) const override { return true; }
     bool isTypeSupported(const pType &type) const override {
-        if (type->isI128())
-            return false;
         return true;
     }
     bool isIntrinsicSupported(const std::string &lib_fn_name) const override { return true; }
