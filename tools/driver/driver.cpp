@@ -1,6 +1,8 @@
 // Copyright (c) 2025 0x676e616c63
 // SPDX-License-Identifier: MIT
 
+#define GNALC_STACKTRACE_ENABLE
+
 // Logger
 #include "utils/logger.hpp"
 
