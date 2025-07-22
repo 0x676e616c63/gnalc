@@ -9,6 +9,7 @@
 #include "mir/passes/transforms/lowering.hpp"
 #include <forward_list>
 #include <queue>
+#include <utility>
 
 using namespace MIR;
 
@@ -471,9 +472,9 @@ void LoweringContext::elimPhi() {
 
     // LAMBDA_BEGIN
 
-    auto emitPhiCopy = [&ctx](MIROperand_p dst, MIROperand_p src, MIRBlk_p pred) {
+    auto emitPhiCopy = [&ctx](const MIROperand_p &dst, const MIROperand_p &src, MIRBlk_p pred) {
         auto succ = ctx.CurrentBlk();
-        ctx.setCurrentBlk(pred);
+        ctx.setCurrentBlk(std::move(pred));
 
         // src maybe a constant
         ctx.addInstBeforeBr(MIRInst::make(chooseCopyOpC(dst, src))
@@ -485,10 +486,10 @@ void LoweringContext::elimPhi() {
         return;
     };
 
-    auto addCopy = [&ctx, &emitPhiCopy](MIROperand_p dst, MIRBlk_p pred) -> MIROperand_p {
+    auto addCopy = [&ctx, &emitPhiCopy](const MIROperand_p &dst, MIRBlk_p pred) -> MIROperand_p {
         auto stageVal = ctx.newVReg(dst->type());
 
-        emitPhiCopy(stageVal, dst, pred); // very carefully
+        emitPhiCopy(stageVal, dst, std::move(pred)); // very carefully
 
         return stageVal;
     };

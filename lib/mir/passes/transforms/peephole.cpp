@@ -2,13 +2,19 @@
 // SPDX-License-Identifier: MIT
 
 #include "mir/passes/transforms/peephole.hpp"
+#include "mir/MIR.hpp"
+#include "mir/armv8/base.hpp"
+#include "mir/info.hpp"
+#include "mir/tools.hpp"
+#include <cstdint>
+#include <iterator>
 #include <optional>
 
 using namespace MIR;
 
 PM::PreservedAnalyses GenericPeephole::run(MIRFunction &mfunc, FAM &fam) {
 
-    class GenericPeepholeImpl peephole {};
+    class GenericPeepholeImpl peephole{};
 
     peephole.impl(mfunc, fam, stage);
 
@@ -63,6 +69,9 @@ bool GenericPeepholeImpl::runOnBlk(MIRBlk_p &mblk) {
                 goto __mark_modified;
             }
             if (RTZ(info)) {
+                goto __mark_modified;
+            }
+            if (ScratchRegSimp(info)) {
                 goto __mark_modified;
             }
             if (FusedAdr(info)) {
@@ -444,11 +453,13 @@ bool GenericPeepholeImpl::MA(MatchInfo &info) {
 
         ///@warning https://ilinuxkernel.com/?p=1546
         ///@warning fmadd and fmsub will lose accurency
-        if (!inSet(minst->opcode<OpC>(), OpC::InstAdd, OpC::InstSub /* OpC::InstFAdd, OpC::InstFSub */)) {
+        if (!inSet(minst->opcode<OpC>(), OpC::InstAdd, OpC::InstSub, OpC::InstVAdd,
+                   OpC::InstVSub /* OpC::InstFAdd, OpC::InstFSub */)) {
             return false;
         }
 
-        newOpC = inSetAndMap<OpC, ARMOpC>(minst->opcode<OpC>(), OpC::InstAdd, ARMOpC::MADD, OpC::InstSub, ARMOpC::MSUB
+        newOpC = inSetAndMap<OpC, ARMOpC>(minst->opcode<OpC>(), OpC::InstAdd, ARMOpC::MADD, OpC::InstSub, ARMOpC::MSUB,
+                                          OpC::InstVAdd, ARMOpC::MLA_V, OpC::InstVSub, ARMOpC::MLS_V
                                           /* OpC::InstFAdd, ARMOpC::FMADD, OpC::InstFSub, ARMOpC::FMSUB */);
 
         if (minst->getOp(2)->isImme()) {
@@ -465,9 +476,9 @@ bool GenericPeepholeImpl::MA(MatchInfo &info) {
 
         while (mul_iter != minsts.end()) {
 
-            if ((*mul_iter)->getDef() == multiplication &&                        // NOLINT
-                (*mul_iter)->isGeneric() &&                                       // NOLINT
-                inSet((*mul_iter)->opcode<OpC>(), OpC::InstMul, OpC::InstFMul)) { // NOLINT
+            if ((*mul_iter)->getDef() == multiplication &&                                       // NOLINT
+                (*mul_iter)->isGeneric() &&                                                      // NOLINT
+                inSet((*mul_iter)->opcode<OpC>(), OpC::InstMul, OpC::InstFMul, OpC::InstVMul)) { // NOLINT
                 break;
             }
 
@@ -486,7 +497,7 @@ bool GenericPeepholeImpl::MA(MatchInfo &info) {
     MIRInst_p_l::iterator mul_iter;
     MIROperand_p reserved = nullptr;
 
-    if (inSet(newOpC, ARMOpC::MADD, ARMOpC::FMADD)) {
+    if (inSet(newOpC, ARMOpC::MADD, ARMOpC::MLA_V /* , ARMOpC::FMADD */)) {
         mul_iter = isMultipled(1);
         reserved = minst->getOp(2);
 
@@ -495,7 +506,7 @@ bool GenericPeepholeImpl::MA(MatchInfo &info) {
             reserved = minst->getOp(1);
         }
 
-    } else {
+    } else if (inSet(newOpC, ARMOpC::MSUB, ARMOpC::MLS_V)) {
         mul_iter = isMultipled(2); // subtracts the product from a third register value
         reserved = minst->getOp(1);
     }
@@ -509,11 +520,22 @@ bool GenericPeepholeImpl::MA(MatchInfo &info) {
     multiple_1->resetType((*mul_iter)->ensureDef()->type());
     multiple_2->resetType((*mul_iter)->ensureDef()->type());
 
-    minst->resetOpcode(newOpC);
+    auto def = minst->ensureDef();
 
-    minst->setOperand<3>(reserved, ctx);
-    minst->setOperand<2>(multiple_2, ctx);
-    minst->setOperand<1>(multiple_1, ctx);
+    if (inSet(newOpC, ARMOpC::MADD, ARMOpC::MSUB)) {
+        minst->resetOpcode(newOpC);
+
+        minst->setOperand<3>(reserved, ctx);
+        minst->setOperand<2>(multiple_2, ctx);
+        minst->setOperand<1>(multiple_1, ctx);
+    }
+
+    if (inSet(newOpC, ARMOpC::MLA_V, ARMOpC::MLS_V)) {
+        // reserved def while in use
+        minst->setOperand<0>(reserved, ctx);
+        auto copy = MIRInst::make(OpC::InstVCopy)->setOperand<0>(def, ctx)->setOperand<1>(reserved, ctx);
+        minsts.insert(std::next(iter), copy);
+    }
 
     return true;
 }
@@ -532,7 +554,8 @@ bool GenericPeepholeImpl::Select(MatchInfo &info) {
         return false;
     }
 
-    if (minst->opcode<ARMOpC>() != ARMOpC::CSEL && minst->opcode<ARMOpC>() != ARMOpC::FCSEL && minst->opcode<ARMOpC>() != ARMOpC::CSET_SELECT) {
+    if (minst->opcode<ARMOpC>() != ARMOpC::CSEL && minst->opcode<ARMOpC>() != ARMOpC::FCSEL &&
+        minst->opcode<ARMOpC>() != ARMOpC::CSET_SELECT) {
         return false;
     }
 
@@ -610,6 +633,84 @@ bool GenericPeepholeImpl::RTZ(MatchInfo &info) {
     minst->setOperand<1>(ori, ctx);
 
     return true;
+}
+
+bool GenericPeepholeImpl::ScratchRegSimp(MatchInfo &info) {
+    auto &[_0, minsts, _1] = info;
+
+    if (stage != Stage::AfterPostLegalize) {
+        return false;
+    }
+
+    // LAMBDA BEGIN
+
+    auto scratch_movz = [](const MIRInst_p &minst) -> std::optional<uint32_t> {
+        if (minst->isGeneric()) {
+            return std::nullopt;
+        }
+
+        if (minst->opcode<ARMOpC>() != ARMOpC::MOVZ) {
+            return std::nullopt;
+        }
+
+        if (!minst->ensureDef()->isISA()) {
+            return std::nullopt;
+        }
+
+        if (minst->ensureDef()->isa() != ARMReg::FP) {
+            return std::nullopt;
+        }
+
+        return {minst->getOp(1)->imme()};
+    };
+
+    auto scratch_movk = [](const MIRInst_p &minst) -> std::optional<uint32_t> {
+        if (minst->isGeneric()) {
+            return std::nullopt;
+        }
+
+        if (minst->opcode<ARMOpC>() != ARMOpC::MOVK) {
+            return std::nullopt;
+        }
+
+        if (!minst->ensureDef()->isISA()) {
+            return std::nullopt;
+        }
+
+        if (minst->ensureDef()->isa() != ARMReg::FP) {
+            return std::nullopt;
+        }
+
+        return {minst->getOp(1)->imme() << minst->getOp(2)->imme()};
+    };
+
+    // LAMBDA END
+
+    std::optional<uint32_t> last_deviation = std::nullopt;
+    bool isModified = false;
+
+    for (auto iter = minsts.begin(); iter != minsts.end();) {
+        uint32_t deviation = 0;
+        auto recovery = iter;
+        if (auto low16 = scratch_movk(*iter)) {
+            deviation += *low16;
+        } else {
+            ++iter;
+            continue;
+        }
+
+        while (auto high = scratch_movz(*(++iter))) {
+            deviation += *high;
+        }
+
+        if (!last_deviation || *last_deviation != deviation) {
+            last_deviation = {deviation};
+        } else if (*last_deviation == deviation) {
+            minsts.erase(recovery, iter);
+        }
+    }
+
+    return isModified;
 }
 
 bool GenericPeepholeImpl::rmByRC(MatchInfo &info) {

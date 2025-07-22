@@ -58,6 +58,11 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     };
 
     auto loadImm = [&](const MIROperand_p &mop) -> MIROperand_p {
+        if (mop->imme() == 0 && !inRange(mop->type(), OpT::Float, OpT::Float32)) {
+            // wzr / xzr
+            return mop;
+        }
+
         auto mop_new = MIROperand::asVReg(ctx.codeGenCtx().nextId(), mop->type());
 
         if (mop->isExImme()) {

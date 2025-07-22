@@ -7,7 +7,7 @@ use std::{
     fs::{self, File},
     io::Write,
     path::PathBuf,
-    process::{Command, Stdio, exit},
+    process::{exit, Command, Stdio},
     sync::RwLock,
 };
 use walkdir::WalkDir;
@@ -116,22 +116,28 @@ fn perf(pack: &Sysy) {
     qemu_perf
         .arg("stat")
         .args([
+            // cache < 5%
             "-e",
-            "L1-dcache-loads",
+            "cache-references",
             "-e",
-            "L1-dcache-load-misses",
-            "-e",
-            "L1-icache-loads",
-            "-e",
-            "L1-icache-misses",
-            "-e",
-            "branch-loads",
-            "-e",
-            "branch-load-misses",
+            "cache-misses",
+            // branches < 2%
             "-e",
             "branch-instructions",
             "-e",
             "branch-misses",
+            // mem
+            "-e",
+            "mem-loads",
+            "-e",
+            "mem-stores",
+            // inst schedule: IPC > 0.5, frontend bound...
+            "-e",
+            "cycles,instructions",
+            "-e",
+            "stalled-cycles-frontend",
+            "-e",
+            " stalled-cycles-backend",
         ])
         .arg(QEMU.read().unwrap().clone());
 

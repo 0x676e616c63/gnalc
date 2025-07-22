@@ -3,9 +3,11 @@
 
 #include "codegen/armv8/armprinter.hpp"
 #include "mir/MIR.hpp"
+#include "mir/armv8/base.hpp"
 #include "mir/info.hpp"
 #include "mir/strings.hpp"
 #include "mir/tools.hpp"
+#include "utils/enum_operator.hpp"
 #include <string>
 
 using namespace MIR;
@@ -24,7 +26,9 @@ string ARMA64Printer::branchPrinter(const MIRInst &minst) {
 string ARMA64Printer::binaryPrinter(const MIRInst &minst) {
     const auto &def = minst.ensureDef();
     ///@note deal gep add
-    const auto &lhs = minst.getOp(1)->isISA() ? minst.getOp(1) : MIROperand::asISAReg(ARMReg::SP, OpT::Int64);
+    const auto &lhs = minst.getOp(1)->isISA()
+                          ? minst.getOp(1)
+                          : (minst.getOp(1)->isImme() ? minst.getOp(1) : MIROperand::asISAReg(ARMReg::SP, OpT::Int64));
 
     const auto &rhs = minst.getOp(2);
     auto op = minst.opcode<OpC>();
@@ -326,12 +330,13 @@ string ARMA64Printer::movPrinter(const MIRInst &minst) {
     const auto &use = minst.getOp(1);
     const auto &shift = minst.getOp(2);
     auto bitWide = getBitWideChoosen(def->type(), use->type());
+    auto op = minst.opcode<ARMOpC>();
 
     string str;
-    str += ARMv8::ARMOpC2S(minst.opcode<ARMOpC>()) + '\t';
+    str += ARMv8::ARMOpC2S(op) + '\t';
     str += reg2s(def, bitWide) + ",\t";
 
-    if (use->isImme()) {
+    if (use->isImme() && (use->imme() != 0 || op != ARMOpC::MOV)) {
         str += '#' + std::to_string(use->imme());
     } else {
         str += reg2s(use, bitWide);
@@ -744,6 +749,23 @@ string ARMA64Printer::copyPrinter_v(const MIRInst &minst) {
 
     string str;
     str += "mov\t" + reg2s(def, 16, true) + ".16b\t," + reg2s(use, 16, true) + ".16b";
+
+    return str;
+}
+
+string ARMA64Printer::mlPrinter_v(const MIRInst &minst) {
+    const auto &def_use = minst.ensureDef();
+    const auto &use_1 = minst.getOp(1);
+    const auto &use_2 = minst.getOp(2);
+    auto op = minst.opcode<ARMOpC>();
+
+    string mode = def_use->type() == OpT::Int64vec2 ? ".2d" : ".4s";
+
+    string str;
+    str += ARMv8::ARMOpC2S(op) + '\t';
+    str += reg2s(def_use, 16, true) + mode + ",\t";
+    str += reg2s(use_1, 16, true) + mode + ",\t";
+    str += reg2s(use_2, 16, true) + mode;
 
     return str;
 }

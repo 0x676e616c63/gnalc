@@ -31,6 +31,10 @@ inline string Cond2S(Cond cond) {
 }
 
 inline string Reg2S(const MIROperand_p &mop, unsigned bitWide, bool vector = false) {
+    if (mop->isImme() && mop->imme() == 0) {
+        return bitWide < 8 ? "wzr" : "xzr";
+    }
+
     auto isa = mop->isa();
 
     string str;
@@ -67,6 +71,10 @@ inline string Reg2S(const MIROperand_p &mop, unsigned bitWide, bool vector = fal
 }
 
 inline string Reg2SDebug(const MIROperand_p &mop, unsigned bitWide, const CodeGenContext &ctx, bool vector = false) {
+    if (mop->isImme() && mop->imme() == 0) {
+        return bitWide < 8 ? "wzr" : "xzr";
+    }
+
     auto isa = mop->isa();
 
     string str;
@@ -240,6 +248,10 @@ inline string ARMOpC2S(ARMOpC op) {
         return "fmadd";
     case ARMOpC::FMSUB:
         return "fmsub";
+    case ARMOpC::MLA_V:
+        return "mla";
+    case ARMOpC::MLS_V:
+        return "mls";
     case ARMOpC::CSEL:
         return "csel";
     case ARMOpC::FCSEL:
