@@ -1,94 +1,94 @@
-// For runtime unroll
-// h_functional/20_sort.sy
-int quick_read(){
-	int ch = getch(); int x = 0, f = 0;
-	while (ch < 48 || ch > 57){
-		if (ch == 45) f = 1;
-		ch = getch();
-	}
-	while (ch >= 48 && ch <=57){
-		x = x * 10 + ch - 48;
-		ch = getch();
-	}
-	if (f) return -x;
-	else return x;
-}
+// int main() {
+//     int a;
+//     a = getint();
+//     int b = 3;
+//     while (b < a) {
+//     b = b + 2;
+//     putint(b);
+//     }
+//     return 0;
+// }
+// int doubleWhile() {
+//     int i;
+//     i = 5;
+//     int j;
+//     j = 7;
+//     while (i < 100) {
+//         i = i + 30;
+//         while(j < 100){
+//             j = j + 6;
+//         }
+//         j = j - 100;
+//     }
+//     return (j);
+// }
+
+// int main() {
+//     return doubleWhile();
+// }
 int n;
-const int maxn = 100005;
-void sortA(int a[]){
-	int i = 0, j;
-	while (i < n){
-		j = i + 1;
-		while (j < n){
-			if (a[i] > a[j]){
-				int t = a[i];
-				a[i] = a[j];
-				a[j] = t;
-			}
-			j = j + 1;
-		}
-		i = i + 1;
-	}
+int QuickSort(int arr[], int low, int high)
+{
+    if (low < high)
+    {
+        int i;
+        i = low;
+        int j;
+        j = high;
+        int k;
+        k = arr[low];
+        while (i < j)
+        {
+            while(i < j && arr[j] > k - 1)
+            {
+                j = j - 1;
+            }
+ 
+            if(i < j)
+            {
+                arr[i] = arr[j];
+                i = i + 1;
+            }
+ 
+            while(i < j && arr[i] < k)
+            {
+                i = i + 1;
+            }
+ 
+            if(i < j)
+            {
+                arr[j] = arr[i];
+                j = j - 1;
+            }
+        }
+ 
+        arr[i] = k;
+        int tmp;
+        tmp = i - 1;
+        tmp = QuickSort(arr, low, tmp);
+        tmp = i + 1;
+        tmp = QuickSort(arr, tmp, high);
+    }
+    return 0;
 }
-int cnt[maxn*4];
-void sortB(int a[]){
-	int i = 0, mx = -100;
-	while (i < n){
-		cnt[a[i]] = cnt[a[i]] + 1;
-		if (a[i] > mx) mx = a[i];
-		i = i + 1;
-	}
-	i = 0; int now = 0;
-	while (i <= mx){
-		int j = cnt[i];
-		while (j){
-			a[now] = i;
-			now = now + 1;
-			j = j - 1;
-		}
-		i = i + 1;
-	}
-}
-void sortC(int a[]){
-	int i = 0;
-	while (i < n){
-		int id = i, j = i + 1;
-		while (j < n){
-			if (a[j] < a[id])
-				id = j;
-			j = j + 1;
-		}
-		int t = a[i];
-		a[i] = a[id];
-		a[id] = t;
-		i = i + 1;
-	}
-}
-int x[maxn];
-int a[maxn], b[maxn], c[maxn];
+
 int main(){
-	n = quick_read();
-	int i = 0;
-	while (i != n){
-		a[i] = quick_read();
-		b[i] = a[i];
-		c[i] = b[i];
-		i = i + 1;
-	}
-	sortA(a);
-	sortB(b);
-	sortC(c);
-	i = 0;
-	while (n - i){
-		b[i] = b[i] - a[i];
-		c[i] = c[i] - b[i] - a[i];
-		i = i + 1;
-	}
-	i = 0;
-	while (i - n){
-		if (b[i]) return 1;
-		if (c[i]) return 2;
-		i = i + 1;
-	}
-	return -123;
+    n = 10;
+    int a[10];
+    a[0]=4;a[1]=3;a[2]=9;a[3]=2;a[4]=0;
+    a[5]=1;a[6]=6;a[7]=5;a[8]=7;a[9]=8;
+    int i;
+    i = 0;
+    int tmp;
+    tmp = 9;
+    i = QuickSort(a, i, tmp);
+    while (i < n) {
+        int tmp;
+        tmp = a[i];
+        putint(tmp);
+        tmp = 10;
+        putch(tmp);
+        i = i + 1;
+    }
+    return 0;
 }

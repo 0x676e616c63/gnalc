@@ -92,6 +92,28 @@ private:
     pVal cloneImpl() const override { return std::make_shared<BITCASTInst>(getName(), getOVal(), getTType()); }
 };
 
+// <result> = ptrtoint <ty> <value> to <ty2>
+class PTRTOINTInst : public CastInst {
+public:
+    PTRTOINTInst(NameRef name, const pVal &origin_val, IRBTYPE dest_type);
+
+    void accept(IRVisitor &visitor) override;
+
+private:
+    pVal cloneImpl() const override { return std::make_shared<PTRTOINTInst>(getName(), getOVal(), getTType()->as<BType>()->getInner()); }
+};
+
+// <result> = inttoptr <ty> <value> to <ty2>
+class INTTOPTRInst : public CastInst {
+public:
+    INTTOPTRInst(NameRef name, const pVal &origin_val, const pType &dest_type);
+
+    void accept(IRVisitor &visitor) override;
+
+private:
+    pVal cloneImpl() const override { return std::make_shared<INTTOPTRInst>(getName(), getOVal(), getTType()); }
+};
+
 } // namespace IR
 
 #endif

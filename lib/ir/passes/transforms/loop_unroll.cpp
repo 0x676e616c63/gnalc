@@ -10,15 +10,16 @@
 #include "ir/instructions/binary.hpp"
 #include "ir/instructions/compare.hpp"
 #include "ir/instructions/phi.hpp"
+#include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
+#include "ir/passes/utilities/irprinter.hpp"
 #include "ir/type_alias.hpp"
 #include "utils/exception.hpp"
 #include "utils/logger.hpp"
 #include <algorithm>
 #include <memory>
 #include <vector>
-
 
 namespace IR {
 
@@ -339,6 +340,7 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
             // }
             // Logger::logDebug("[LoopUnroll] Get base: "+ IRFormatter::formatValue(*baseV))
 
+            // For dowhile:
             //  pre_header
             //     |
             //   prolog---(if trip_count < unroll_factor)-->rem_loop's header
@@ -346,16 +348,17 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
             // cloned_loop---------->epilog---------->rem_loop's header's next non-exit block
             //              exitingb    |(if rem==0)
             //                         exit
+            // while loop has no epilog, cloned_loop jump to rem_loop's header
 
             pBlock prolog = std::make_shared<BasicBlock>("rtunroll.prolog." + std::to_string(name_idx));
             pBlock epilog = std::make_shared<BasicBlock>("rtunroll.epilog." + std::to_string(name_idx));
 
             // prolog
-            auto trip_countV = SCEVH.expandSCEVExpr(trip_countE, prolog);
+            auto trip_countV = SCEVH.expandSCEVExprUnchecked(trip_countE, prolog, prolog->end());
             auto remainderV = std::make_shared<BinaryInst>("rtunroll.remainder." + std::to_string(name_idx), OP::SREM, trip_countV, unroll_factorV);
             prolog->addInst(remainderV);
             if (stepV == nullptr) {
-                stepV = SCEVH.expandSCEVExpr(stepE, prolog);
+                stepV = SCEVH.expandSCEVExprUnchecked(stepE, prolog, prolog->end());
             }
             auto stepMremV = std::make_shared<BinaryInst>("rtunroll.stepMrem." + std::to_string(name_idx), OP::MUL, stepV, remainderV);
             prolog->addInst(stepMremV);
@@ -363,12 +366,16 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
             prolog->addInst(new_boundaryV);
             auto trip_count_less_than_unroll_factorV = std::make_shared<ICMPInst>("rtunroll.tcLTuf." + std::to_string(name_idx),
                 ICMPOP::slt, trip_countV, unroll_factorV);
+            trip_count_less_than_unroll_factorV->appendDbgData("trip_count_less_than_unroll_factor");
             prolog->addInst(trip_count_less_than_unroll_factorV);
 
-            // epilog
-            auto rem_eq_zeroV = std::make_shared<ICMPInst>("rtunroll.remEQzero." + std::to_string(name_idx),
-                ICMPOP::eq, remainderV, FC.getConst(0));
-            epilog->addInst(rem_eq_zeroV);
+            // epilog (for dowhile)
+            if (is_dowhile) {
+                auto rem_eq_zeroV = std::make_shared<ICMPInst>("rtunroll.remEQzero." + std::to_string(name_idx),
+                    ICMPOP::eq, remainderV, FC.getConst(0));
+                rem_eq_zeroV->appendDbgData("rem_eq_zero");
+                epilog->addInst(rem_eq_zeroV);
+            }
 
             option.enable_runtime(unroll_factor, prolog, epilog);
             option.set_remainder(-1, raw_boundary_value, new_boundaryV);
@@ -392,7 +399,7 @@ bool LoopUnrollPass::peel(const pLoop &loop, const UnrollOption &option, Functio
     return true;
 }
 
-bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Function &func) {
+bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Function &func, FAM &fam) {
     if (!option.unroll) {
         return false;
     }
@@ -420,6 +427,15 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
     }
 
     // !hasAddressTaken()
+
+    bool is_dowhile = loop->isExiting(loop->getLatch());
+
+    if (option.runtime() && !is_dowhile && hasSideEffect(fam, loop->getHeader())) {
+        // PrintFunctionPass pfp(std::cerr);
+        // pfp.run(func, fam);
+        Err::error("Runtime unroll but the header " + loop->getHeader()->getName() + " has side effect.");
+        return false;
+    }
 
     name_idx++;
 
@@ -657,7 +673,6 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         }
     }
 
-    bool is_dowhile = loop->isExiting(loop->getLatch());
     const auto last_latch = BMap[latch][count - 1];
 
     // just for one exit:
@@ -740,20 +755,21 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
 
             // 1. For dowhile: from last latch
             // 2. For while: skip
+            // 3. For while in runtime unroll: from header
             if (is_dowhile) {
                 if (phi_value_from_latch->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
                     rem_phi->addPhiOper(IMapFind(phi_value_from_latch->as<Instruction>(), count-1), last_latch);
                 } else {
                     rem_phi->addPhiOper(phi_value_from_latch, last_latch);
                 }
-            } else {
-                // // 注意此处的phi_value_from_latch的parent不一定是latch, 只是latch路径上的phi_value
-                // if (phi_value_from_latch->getVTrait() == ValueTrait::ORDINARY_VARIABLE && phi_value_from_latch->as<Instruction>()->getParent() == header) {
-                //     // 如果此phi_oper的value在header中赋值，则remainder中的对应phi_oper的value应该是原header中的值
-                //     rem_phi->addPhiOper(phi_value_from_latch, header);
-                // } else {
-                //     rem_phi->addPhiOper(phi, header);
-                // }
+            } else if (!is_dowhile && option.runtime()) {
+                // 注意此处的phi_value_from_latch的parent不一定是latch, 只是latch路径上的phi_value
+                if (phi_value_from_latch->getVTrait() == ValueTrait::ORDINARY_VARIABLE && phi_value_from_latch->as<Instruction>()->getParent() == header) {
+                    // 如果此phi_oper的value在header中赋值，则remainder中的对应phi_oper的value应该是原header中的值
+                    rem_phi->addPhiOper(phi_value_from_latch, header);
+                } else {
+                    rem_phi->addPhiOper(phi, header);
+                }
             }
         }
 
@@ -777,8 +793,11 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
                     case ICMPOP::slt:
                     case ICMPOP::ne:
                         break;
-                    default:
-                        Err::unreachable("ICMPOP::eq!");
+                    default: // eq
+                        // PrintFunctionPass pfp(std::cerr);
+                        // pfp.run(func, fam);
+                        // Err::unreachable("ICMPOP::eq!");
+                        break;
                 }
             } else {
                 Err::unreachable();
@@ -856,67 +875,72 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             DropExitbAndItsPhiOper(latch);
         } else if (option.has_remainder && !is_dowhile) {
             pB rem_header = BMap[header][count];
-            pB rem_target;
 
-            // add phi for new remainder's header(rem header's next block in loop)
-            // main header---   rem header
-            //      |       |       |-------->Exit
-            //     ...      --->certain blk
-            {
-                pB raw_target;
+            if (option.partially()) {
+                // Just for partially unroll
+                // add phi for new remainder's header(rem header's next block in loop)
+                // main header---   rem header
+                //      |       |       |-------->Exit
+                //     ...      --->certain blk
+                pB rem_target;
+
                 {
-                    auto _true = header->getBRInst()->getTrueDest();
-                    raw_target = _true!=exitb ? _true : header->getBRInst()->getFalseDest();
-                }
-                rem_target = BMap[raw_target][count];
-                std::unordered_set<pI> worklist;
-                {
-                    for (const auto &hinst : header->all_insts()) {
-                        for (const auto &user : hinst->users()) {
-                            // 此处默认 User 均为 Inst
-                            // if (user->getVTrait() != ValueTrait::ORDINARY_VARIABLE && user->getVTrait() != ValueTrait::VOID_INSTRUCTION)
-                            //     continue;
-                            auto uinst = user->as<Instruction>();
-                            auto uparent = uinst->getParent();
-                            if ((uparent != header && loop->contains(uparent)) || (uparent == header && uinst->getOpcode() == OP::PHI)) {
-                                worklist.insert(hinst);
-                                break;
+                    pB raw_target;
+                    {
+                        auto _true = header->getBRInst()->getTrueDest();
+                        raw_target = _true!=exitb ? _true : header->getBRInst()->getFalseDest();
+                    }
+                    rem_target = BMap[raw_target][count];
+                    std::unordered_set<pI> worklist;
+                    {
+                        for (const auto &hinst : header->all_insts()) {
+                            for (const auto &user : hinst->users()) {
+                                // 此处默认 User 均为 Inst
+                                // if (user->getVTrait() != ValueTrait::ORDINARY_VARIABLE && user->getVTrait() != ValueTrait::VOID_INSTRUCTION)
+                                //     continue;
+                                auto uinst = user->as<Instruction>();
+                                auto uparent = uinst->getParent();
+                                if ((uparent != header && loop->contains(uparent)) || (uparent == header && uinst->getOpcode() == OP::PHI)) {
+                                    worklist.insert(hinst);
+                                    break;
+                                }
                             }
                         }
                     }
-                }
-                // ADD NEW PHI
-                for (const auto &inst : worklist) {
-                    auto new_phi = std::make_shared<PHIInst>(inst->getName() + "." + std::to_string(name_idx) + "remphi", inst->getType());
-                    auto remv = IMap[inst][count];
-                    // Logger::logDebug("remv: " + remv->getName() + ", new_phi: " + new_phi->getName());
-                    {
-                        auto ulist = remv->getUseList();
-                        for (const auto &use : ulist) {
-                            if (auto user = use->getUser()->as<Instruction>();
-                                user->getParent() == rem_header && user->getOpcode() != OP::PHI)
-                                continue;
-                            use->setValue(new_phi);
+                    // ADD NEW PHI
+                    for (const auto &inst : worklist) {
+                        auto new_phi = std::make_shared<PHIInst>(inst->getName() + "." + std::to_string(name_idx) + "remphi", inst->getType());
+                        auto remv = IMap[inst][count];
+                        // Logger::logDebug("remv: " + remv->getName() + ", new_phi: " + new_phi->getName());
+                        {
+                            auto ulist = remv->getUseList();
+                            for (const auto &use : ulist) {
+                                if (auto user = use->getUser()->as<Instruction>();
+                                    user->getParent() == rem_header && user->getOpcode() != OP::PHI)
+                                    continue;
+                                use->setValue(new_phi);
+                            }
+                        }
+                        new_phi->addPhiOper(remv, rem_header);
+                        new_phi->addPhiOper(inst, header);
+                        rem_target->addPhiInst(new_phi);
+
+                        // UPDATE TARGET BLOCK'S PHI
+                        for (auto &phi : raw_target->phis()) {
+                            auto rem_phi = IMap[phi][count]->as<PHIInst>();
+                            rem_phi->addPhiOper(phi->getValueForBlock(header), header);
                         }
                     }
-                    new_phi->addPhiOper(remv, rem_header);
-                    new_phi->addPhiOper(inst, header);
-                    rem_target->addPhiInst(new_phi);
-
-                    // UPDATE TARGET BLOCK'S PHI
-                    for (auto &phi : raw_target->phis()) {
-                        auto rem_phi = IMap[phi][count]->as<PHIInst>();
-                        rem_phi->addPhiOper(phi->getValueForBlock(header), header);
-                    }
                 }
+
+                header->getBRInst()->replaceAllOperands(exitb, rem_target);
+            } else {
+                // For runtime unroll
+                header->getBRInst()->replaceAllOperands(exitb, rem_header);
             }
 
-            header->getBRInst()->replaceAllOperands(exitb, rem_target);
             ProcessExitingBlock(header, rem_header, count);
-            // After that, need to replace "header" with "epilog"(if runtime unroll)
-            if (!option.runtime()) {
-                DropExitbAndItsPhiOper(header);
-            }
+            DropExitbAndItsPhiOper(header);
         } else if (!option.has_remainder && is_dowhile) {
             ProcessExitingBlock(latch, last_latch, count-1);
             DropExitbAndItsPhiOper(latch);
@@ -931,7 +955,9 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
     for (const auto &phi : header->phis()) {
         if (option.partially() || option.runtime()) {
             auto phi_value_from_loop = phi->getValueForBlock(latch);
-            IMapFindAndReplaceOperand(phi, phi_value_from_loop, count - 1);
+            if (phi_value_from_loop->getVTrait() == ValueTrait::ORDINARY_VARIABLE) {
+                IMapFindAndReplaceOperand(phi, phi_value_from_loop, count - 1);
+            }
             phi->replaceAllOperands(latch, last_latch);
         } else if (option.fully()) {
             phi->delPhiOperByBlock(latch);
@@ -974,31 +1000,35 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             phi->replaceAllOperands(pre_header, prolog);
         }
 
-        // Add branch inst to epilog
-        pIcmp epilog_icmp = epilog->getTerminator()->as<ICMPInst>();
-        pB replace_target;
-        if (!is_dowhile) {
-            auto _true = header->getBRInst()->getTrueDest();
-            pB raw_target = _true!=exitb ? _true : header->getBRInst()->getFalseDest();
-            replace_target = BMap[raw_target][count];
-        } else {
-            replace_target = rem_header;
-        }
-        pBr epilog_br = std::make_shared<BRInst>(epilog_icmp, exitb, replace_target);
-        epilog->addInst(epilog_br);
-
-        // Link epilog
-        unrolled_loop_exiting->getBRInst()->replaceAllOperands(replace_target, epilog);
-        for (auto &phi : replace_target->phis()) {
-            phi->replaceAllOperands(unrolled_loop_exiting, epilog);
-        }
-        for (auto &phi : exitb->phis()) {
-            phi->replaceAllOperands(unrolled_loop_exiting, epilog);
-        }
-
         // add to function
         func.addBlock(std::find(func.begin(), func.end(), header), prolog);
-        func.addBlock(std::find(func.begin(), func.end(), rem_header), epilog);
+
+        if (is_dowhile) {
+            // Add branch inst to epilog
+            pIcmp epilog_icmp = epilog->getTerminator()->as<ICMPInst>();
+            pB replace_target;
+            if (!is_dowhile) {
+                auto _true = header->getBRInst()->getTrueDest();
+                pB raw_target = _true!=exitb ? _true : header->getBRInst()->getFalseDest();
+                replace_target = BMap[raw_target][count];
+            } else {
+                replace_target = rem_header;
+            }
+            pBr epilog_br = std::make_shared<BRInst>(epilog_icmp, exitb, replace_target);
+            epilog->addInst(epilog_br);
+
+            // Link epilog
+            unrolled_loop_exiting->getBRInst()->replaceAllOperands(replace_target, epilog);
+            for (auto &phi : replace_target->phis()) {
+                phi->replaceAllOperands(unrolled_loop_exiting, epilog);
+            }
+            for (auto &phi : exitb->phis()) {
+                phi->replaceAllOperands(unrolled_loop_exiting, epilog);
+            }
+
+            // add to function
+            func.addBlock(std::find(func.begin(), func.end(), rem_header), epilog);
+        }
     }
 
     // optimize new cfg...
@@ -1020,7 +1050,7 @@ PM::PreservedAnalyses LoopUnrollPass::run(Function &function, FAM &fam) {
     for (auto &toploop : RLI) {
         all_loop_size += toploop->getInstCount();
     }
-    Logger::logInfo("[LoopUnroll] All loop size: "+std::to_string(all_loop_size));
+    Logger::logInfo("[LoopUnroll] All loop size: " + std::to_string(all_loop_size));
     if (all_loop_size > 300) {
         Logger::logInfo("[LoopUnroll] Unroll disabled because the func's loops are too big!");
         return PreserveAll();
@@ -1033,12 +1063,12 @@ PM::PreservedAnalyses LoopUnrollPass::run(Function &function, FAM &fam) {
                 // TODO: 暂时只处理最内层循环
                 continue;
             }
-            auto& NLI = fam.getResult<LoopAnalysis>(function);
+            auto &NLI = fam.getResult<LoopAnalysis>(function);
             auto loop = NLI.getLoopFor(rawloop->getHeader());
             UnrollOption option;
             analyze(loop, option, function, fam);
             auto peeled = peel(loop, option, function);
-            auto unrolled = unroll(loop, option, function);
+            auto unrolled = unroll(loop, option, function, fam);
             last_round_modified = peeled || unrolled;
             modified = modified || last_round_modified;
 

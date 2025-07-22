@@ -75,6 +75,8 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
             Zext,
             Sext,
             Bitcast,
+            IntToPtr,
+            PtrToInt,
 
             // Call
             PureFuncCall,
@@ -357,7 +359,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
     friend std::ostream &operator<<(std::ostream &os, const KindExprSet &set);
     friend std::ostream &operator<<(std::ostream &os, const GVNPREPass &gvnpre);
 
-    bool disable_PRE_on_loop_backedge;
+    bool disable_PRE_on_non_empty_loop_backedge;
     // Disable PRE on loop backedge:
     // PRE on a backegde can let a rotated loop exits in the body. (See comments in `loop_rotate.hpp`)
 
@@ -365,7 +367,7 @@ class GVNPREPass : public PM::PassInfo<GVNPREPass> {
 public:
     explicit GVNPREPass(bool disable_PRE_on_loop_backedge_ = true, bool enable_debug_output_ = false)
         : table(), fam(nullptr), domtree(nullptr), postdomtree(nullptr),
-          disable_PRE_on_loop_backedge(disable_PRE_on_loop_backedge_), enable_debug_output(enable_debug_output_) {}
+          disable_PRE_on_non_empty_loop_backedge(disable_PRE_on_loop_backedge_), enable_debug_output(enable_debug_output_) {}
     PM::PreservedAnalyses run(Function &function, FAM &manager);
 };
 } // namespace IR

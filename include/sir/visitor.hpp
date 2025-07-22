@@ -131,6 +131,8 @@ struct ContextVisitor {
                 return while_cond_insts;
             if (auto while_body = whBody())
                 return while_body;
+            if (auto cond_rhs_insts = condRhsInsts())
+                return cond_rhs_insts;
             if (auto for_body = forBody())
                 return for_body;
             if (auto fn = func())
