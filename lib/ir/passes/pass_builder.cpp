@@ -142,7 +142,7 @@ void registerPassForOptInfo(PM &fpm, bool enable, const PMOptions& options, Firs
 #define FUNCTION_TRANSFORM(name, ...) registerPassForOptInfo(fpm, options.name, options, __VA_ARGS__);
 
 auto make_basic_clean(const PMOptions& options) {
-    PM::FixedPointPM<Function> fpm;
+    FPM fpm;
     FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
     FUNCTION_TRANSFORM(dce, DCEPass());
     FUNCTION_TRANSFORM(sccp, SCCPPass());
@@ -153,11 +153,10 @@ auto make_basic_clean(const PMOptions& options) {
 }
 
 auto make_cfg_clean(const PMOptions& options) {
-    PM::FixedPointPM<Function> fpm;
+    FPM fpm;
     FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
     FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
     FUNCTION_TRANSFORM(dce, DCEPass());
-    FUNCTION_TRANSFORM(sccp, SCCPPass())
     FUNCTION_TRANSFORM(if_conversion, IfConversionPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
     return fpm;
@@ -172,11 +171,10 @@ auto make_mem_clean(const PMOptions& options) {
 
 auto make_arithmetic(const PMOptions& options) {
     auto make_simple_clean = [&options] {
-        PM::FixedPointPM<Function> fpm;
+        FPM fpm;
         FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
         FUNCTION_TRANSFORM(dce, DCEPass());
         FUNCTION_TRANSFORM(sccp, SCCPPass());
-        FUNCTION_TRANSFORM(dce, DCEPass());
         FUNCTION_TRANSFORM(adce, ADCEPass());
         return fpm;
     };
@@ -195,16 +193,11 @@ auto make_arithmetic(const PMOptions& options) {
 }
 
 auto make_deep_clean(const PMOptions& options) {
-    // CFG ---> Basic --> (CFG ---> Mem) ---> IPO ---> CFG
     FPM fpm;
-    fpm.addPass(make_cfg_clean(options));
     fpm.addPass(make_basic_clean(options));
-
-    PM::FixedPointPM<Function> fixed;
-    fixed.addPass(make_cfg_clean(options));
-    fixed.addPass(make_mem_clean(options));
-
-    fpm.addPass(std::move(fixed));
+    fpm.addPass(make_cfg_clean(options));
+    fpm.addPass(make_mem_clean(options));
+    fpm.addPass(make_basic_clean(options));
     fpm.addPass(make_cfg_clean(options));
     return fpm;
 }
