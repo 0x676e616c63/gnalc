@@ -191,13 +191,13 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
 
         // select x, y, true = !x | y
         REWRITE_BEG(M::Select(M::Bind(x), M::Bind(y), M::Is(true)))
-        auto xori = builder.makeOr(function.getConst(true), x);
+        auto xori = builder.makeXor(function.getConst(true), x);
         auto ori = builder.makeOr(xori, y);
         REWRITE_END(ori)
 
         // select x, false, y = !x & y
         REWRITE_BEG(M::Select(M::Bind(x), M::Is(false), M::Bind(y)))
-        auto xori = builder.makeOr(function.getConst(false), x);
+        auto xori = builder.makeXor(function.getConst(false), x);
         auto andi = builder.makeAnd(xori, y);
         REWRITE_END(andi)
 
@@ -297,12 +297,6 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         auto fadd = builder.makeFAdd(x, fdiv);
         REWRITE_END(fadd)
 
-        // float: (x - y) - z -> x - (y + z)
-        REWRITE_BEG(M::Fsub(M::Fsub(M::Bind(x), M::Bind(y)), M::Bind(z)))
-        auto fadd = builder.makeFAdd(y, z);
-        auto fsub = builder.makeFSub(x, fadd);
-        REWRITE_END(fsub)
-
         // x * -1 -> sub 0 x
         REWRITE_BEG(M::Mul(M::Bind(x), M::IsIntegerVal(-1)), M::Mul(M::IsIntegerVal(-1), M::Bind(x)))
         auto sub = builder.makeSub(function.getConst(0), x);
@@ -333,12 +327,6 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         REWRITE_BEG(M::Div(M::Add(M::Mul(M::Bind(x), M::Bind(c2)), M::Bind(c1)), M::Is(c2)))
         auto add = builder.makeAdd(x, function.getConst(c1 / c2));
         REWRITE_END(add)
-
-        // Since integer division truncates towards zero, this transformation is valid.
-        // (x - (x % y)) / y -> x / y
-        REWRITE_BEG(M::Div(M::Sub(M::Bind(x), M::Rem(M::Is(x), M::Bind(y))), M::Is(y)))
-        auto div = builder.makeDiv(x, y);
-        REWRITE_END(div)
 
         if (inst->getOpcode() == OP::PHI) {
             auto phi = inst->as<PHIInst>();
