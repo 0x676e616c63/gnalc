@@ -71,16 +71,17 @@ public:
 
 private:
     // inst matches
-    bool Nop(MatchInfo &);        // after ra
-    bool Arithmetic(MatchInfo &); // after isel
-    bool MA(MatchInfo &);         // after isel (MA = Multiple and Accumulate)
-    bool Select(MatchInfo &);     // after isel
-    bool RTZ(MatchInfo &);        // after isel
-    bool FusedAdr(MatchInfo &);   // after stack generate
+    bool Nop(MatchInfo &);            // after ra
+    bool Arithmetic(MatchInfo &);     // after isel
+    bool MA(MatchInfo &);             // after isel (MA = Multiple and Accumulate)
+    bool Select(MatchInfo &);         // after isel
+    bool RTZ(MatchInfo &);            // after isel
+    bool FusedAdr(MatchInfo &);       // after stack generate
+    bool ScratchRegSimp(MatchInfo &); // after post legalize
 
     bool rmByRC(MatchInfo &);
 };
-}; // namespace MIR_new
+}; // namespace MIR
 
 namespace std {
 

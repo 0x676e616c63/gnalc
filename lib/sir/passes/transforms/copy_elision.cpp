@@ -150,6 +150,9 @@ PM::PreservedAnalyses CopyElisionPass::run(LinearFunction &function, LFAM &lfam)
         if (!exec_once && dest_mem->is<GlobalVariable>())
             continue;
 
+        if (dest_mem->is<FormalParam>())
+            continue;
+
         const auto &[untracked, store_cnt, single_store, loads] = mem_info;
         const auto& store = single_store.store;
         if (untracked)
@@ -205,7 +208,7 @@ PM::PreservedAnalyses CopyElisionPass::run(LinearFunction &function, LFAM &lfam)
             std::string mask_str = std::to_string((*mask)[0]);
             for (size_t i = 1; i < mask->size(); i++)
                 mask_str += ", " + std::to_string((*mask)[i]);
-            Logger::logDebug("[Copy Elision]: Applied mask {", mask_str, "} to '", dest_mem->getName(), "'.");
+            Logger::logDebug("[CopyElision]: Applied mask {", mask_str, "} to '", dest_mem->getName(), "'.");
         }
 
         // At this point, we've ensured the dest is a shuffle/copy of the source array,

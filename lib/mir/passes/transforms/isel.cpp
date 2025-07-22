@@ -35,6 +35,8 @@ OpC MIR::chooseCopyOpC(const MIROperand_p &dst, const MIROperand_p &src) {
         return OpC::InstCopyStkPtr;
     } else if (dst->isISA() && src->isStack()) {
         return OpC::InstCopyStkPtr;
+    } else if (src->isLiteral()) {
+        return OpC::InstLoadLiteral;
     } else {
         Err::unreachable("chooseCopyOpC: dont match any copy op");
     }

@@ -52,3 +52,6 @@ runtime/artifacts/thread.riscv64.s.hpp
 build_release/
 trash/
 educg/submit
+perf/
+test/ASMperf_result/
+test/ASMperf/target/
