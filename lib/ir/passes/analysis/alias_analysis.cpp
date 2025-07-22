@@ -254,12 +254,13 @@ pVal getPtrBase(const pVal &ptr) {
             base = gep->getPtr();
         else if (auto phi = base->as<PHIInst>()) {
             pVal common_base = nullptr;
-            static std::unordered_set<pVal> visited;
+            // bugs?
+            static std::unordered_set<Value*> visited;
             for (const auto &[val, bb] : phi->incomings()) {
-                if (!visited.emplace(val).second)
+                if (!visited.emplace(val.get()).second)
                     continue;
                 auto curr = getPtrBase(val);
-                visited.erase(curr);
+                visited.erase(curr.get());
 
                 if (curr == nullptr)
                     return nullptr;

@@ -588,7 +588,7 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(const PMOptions& options, doub
 
     REGISTER_FUNCTION_TRANSFORM2(vectorizer, LoopSimplifyPass, VectorizerPass, 10)
 
-    REGISTER_FUNCTION_TRANSFORM2(loop_parallel, LoopSimplifyPass, LoopParallelPass, 10)
+    // REGISTER_FUNCTION_TRANSFORM2(loop_parallel, LoopSimplifyPass, LoopParallelPass, 10)
 
     if (repro.empty()) {
         std::random_device rd;
