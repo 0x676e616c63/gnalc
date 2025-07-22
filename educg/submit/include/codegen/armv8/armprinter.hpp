@@ -71,6 +71,7 @@ public:
     [[nodiscard]] string extractPrinter_v(const MIRInst &);
     [[nodiscard]] string insertPrinter_v(const MIRInst &);
     [[nodiscard]] string copyPrinter_v(const MIRInst &);
+    [[nodiscard]] string mlPrinter_v(const MIRInst &);
 };
 }; // namespace MIR
 

@@ -14,11 +14,11 @@ namespace SIR {
 class LinearPassBuilder {
 public:
     // -O1, -fixed-point
-    static LFPM buildFunctionFixedPointPipeline(PMOptions options);
-    static MPM buildModuleFixedPointPipeline(PMOptions options);
+    static LFPM buildFunctionFixedPointPipeline(const PMOptions& options);
+    static MPM buildModuleFixedPointPipeline(const PMOptions& options);
 
-    static LFPM buildFunctionPipeline(PMOptions options);
-    static MPM buildModulePipeline(PMOptions options);
+    static LFPM buildFunctionPipeline(const PMOptions& options);
+    static MPM buildModulePipeline(const PMOptions& options);
 
     // -debug-pipeline
     static LFPM buildFunctionDebugPipeline();

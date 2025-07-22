@@ -159,6 +159,10 @@ inline InstExecInfo schedInfoImpl(ARMOpC opcode) {
     case ARMOpC::MADD:
     case ARMOpC::MSUB:
         return {4, 1, A53UnitMAC};
+    case ARMOpC::MLA_V:
+        return {6, 1, A53UnitFPMDS};
+    case ARMOpC::MLS_V:
+        return {6, 1, A53UnitFPMDS};
     case ARMOpC::MOV:
     case ARMOpC::MOVZ:
     case ARMOpC::MOVK:

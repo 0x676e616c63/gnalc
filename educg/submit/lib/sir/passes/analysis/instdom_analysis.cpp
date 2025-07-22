@@ -100,15 +100,20 @@ private:
         auto for_cond = cfg.newBlock();
         auto for_body = cfg.newBlock();
         auto for_end = cfg.newBlock();
+        _while_cond_for_continue.push(for_cond);
+        _while_end_for_break.push(for_end);
 
         auto for_preheader = cur_blk;
         linkBlock(for_preheader, for_cond);
 
         cur_blk = for_body;
-        if (auto it = for_inst->getBodyInsts().cbegin(); !adder(it, for_inst->getBodyInsts().cend(), false))
+        if (auto it = for_inst->getBodyInsts().cbegin(); !adder(it, for_inst->getBodyInsts().cend(), true))
             linkBlock(cur_blk, for_cond);
 
         cur_blk = for_end;
+
+        _while_cond_for_continue.pop();
+        _while_end_for_break.pop();
     }
 
     bool adder(std::list<pInst>::const_iterator &it, const std::list<pInst>::const_iterator &end,

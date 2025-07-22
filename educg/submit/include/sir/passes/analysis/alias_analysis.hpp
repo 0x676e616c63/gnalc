@@ -29,12 +29,18 @@ struct AffineExpr {
     int constant;
 
     int coe(IndVar *i) const;
+    // One induction variable and no constant
+    bool isLinear() const;
+    std::pair<int, IndVar*> getLinear() const;
     AffineExpr operator+(const AffineExpr &rhs) const;
     AffineExpr operator-(const AffineExpr &rhs) const;
     AffineExpr operator*(int rhs) const;
     bool operator==(const AffineExpr &rhs) const;
 };
 
+// Two Affine Exprs are isomorphic iff their `coeffs` are isomorphic and constants are equal.
+// Two `coeffs` are isomorphic iff they have the same `coeff` on isomorphic induction variables.
+// Two induction variables are isomorphic iff they have the base, step, bound and nested depth.
 bool isIsomorphic(const AffineExpr &lhs, const AffineExpr &rhs);
 
 struct ArrayAccess {

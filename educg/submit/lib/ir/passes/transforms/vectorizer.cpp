@@ -301,7 +301,7 @@ void VectorizerPass::Scheduler::resetSchedule() {
         sched->resetUnschedDeps();
     }
     dry_run_ready_list.clear();
-    Logger::logDebug("[SLP]: schedule reset.");
+    // Logger::logDebug("[SLP]: schedule reset.");
 }
 
 bool VectorizerPass::Scheduler::inRegion(SchedData *sched) const { return sched->region_id == region_id; }
@@ -769,6 +769,13 @@ bool VectorizerPass::vectorizeStoreChain(const std::vector<pStore> &chain, size_
             scalars.emplace_back(chain[i]);
         deleteTree();
         buildTree(scalars);
+        if (vec_trees[0].need_to_gather) {
+            ++offset;
+            for (const auto &re : rewritten_aligns)
+                align_rewriter.restoreInstAlign(re);
+            rewritten_aligns.clear();
+            continue;
+        }
         collectExternalUsers();
         auto cost = getTreeCost();
         if (cost < -Config::IR::SLP_COST_THRESHOLD) {
@@ -1576,6 +1583,8 @@ pVal VectorizerPass::vectorizeTree(Tree *tree) {
     auto [scalar_ty, vec_ty] = analyzeType(tree->scalars);
 
     if (tree->need_to_gather) {
+        Err::gassert(!tree->scalars[0]->is<STOREInst>(), "Can not gather a bundle of stores.");
+
         setInsertPointAfterBundle(tree->scalars);
         auto vec = gatherTree(tree->scalars, vec_ty);
         tree->vec = vec;

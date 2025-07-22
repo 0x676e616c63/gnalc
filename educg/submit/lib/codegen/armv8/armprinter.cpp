@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 #include "../../../include/codegen/armv8/armprinter.hpp"
-#include <cmath>
 #include <string>
 
 using namespace MIR;
@@ -279,6 +278,10 @@ void ARMA64Printer::printout(const MIRInst &minst) {
         case ARMOpC::FMADD:
         case ARMOpC::FMSUB:
             outStream << ternaryPrinter(minst);
+            break;
+        case ARMOpC::MLS_V:
+        case ARMOpC::MLA_V:
+            outStream << mlPrinter_v(minst);
             break;
         case ARMOpC::CSEL:
         case ARMOpC::CSET_SELECT:

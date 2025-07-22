@@ -45,12 +45,16 @@ class SITOFPInst;
 class ZEXTInst;
 class SEXTInst;
 class BITCASTInst;
+class PTRTOINTInst;
+class INTTOPTRInst;
 using pCast = std::shared_ptr<CastInst>;
 using pFptosi = std::shared_ptr<FPTOSIInst>;
 using pSitofp = std::shared_ptr<SITOFPInst>;
 using pZext = std::shared_ptr<ZEXTInst>;
 using pSext = std::shared_ptr<SEXTInst>;
 using pBitcast = std::shared_ptr<BITCASTInst>;
+using pPtrToInt = std::shared_ptr<PTRTOINTInst>;
+using pIntToPtr = std::shared_ptr<INTTOPTRInst>;
 
 // vector
 class EXTRACTInst;

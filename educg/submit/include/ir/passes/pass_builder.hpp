@@ -11,42 +11,49 @@
 
 namespace IR {
 // name
-#define GNALC_IR_PASS_TABLE                                                                                            \
-    GNALC_IR_PASS_ENTRY(mem2reg)                                                                                       \
-    GNALC_IR_PASS_ENTRY(sccp)                                                                                          \
-    GNALC_IR_PASS_ENTRY(dce)                                                                                           \
-    GNALC_IR_PASS_ENTRY(adce)                                                                                          \
-    GNALC_IR_PASS_ENTRY(cfgsimplify)                                                                                   \
-    GNALC_IR_PASS_ENTRY(if_conversion)                                                                                 \
-    GNALC_IR_PASS_ENTRY(dse)                                                                                           \
-    GNALC_IR_PASS_ENTRY(loadelim)                                                                                      \
-    GNALC_IR_PASS_ENTRY(gvnpre)                                                                                        \
-    GNALC_IR_PASS_ENTRY(tailcall)                                                                                      \
-    GNALC_IR_PASS_ENTRY(reassociate)                                                                                   \
-    GNALC_IR_PASS_ENTRY(instsimplify)                                                                                  \
-    GNALC_IR_PASS_ENTRY(inliner)                                                                                       \
-    GNALC_IR_PASS_ENTRY(licm)                                                                                          \
-    GNALC_IR_PASS_ENTRY(loop_strength_reduce)                                                                          \
-    GNALC_IR_PASS_ENTRY(loopelim)                                                                                      \
-    GNALC_IR_PASS_ENTRY(internalize)                                                                                   \
-    GNALC_IR_PASS_ENTRY(loop_parallel)                                                                                   \
-    GNALC_IR_PASS_ENTRY(loop_unroll)                                                                                   \
-    GNALC_IR_PASS_ENTRY(indvars)                                                                                       \
-    GNALC_IR_PASS_ENTRY(vectorizer)                                                                                    \
-    GNALC_IR_PASS_ENTRY(rngsimplify)                                                                                   \
-    GNALC_IR_PASS_ENTRY(dae)                                                                                           \
-    GNALC_IR_PASS_ENTRY(memo)                                                                                          \
-    GNALC_IR_PASS_ENTRY(unify_exits)                                                                                   \
-    GNALC_IR_PASS_ENTRY(tree_shaking)                                                                                  \
-    GNALC_IR_PASS_ENTRY(store_range)                                                                                   \
-    GNALC_IR_PASS_ENTRY(codegen_prepare)                                                                                   \
-    GNALC_IR_PASS_ENTRY(run_test)                                                                                   \
-    GNALC_IR_PASS_ENTRY(verify)
+#define GNALC_SIR_IR_PASS_TABLE                                                                                        \
+    GNALC_SIR_IR_PASS_ENTRY(mem2reg)                                                                                   \
+    GNALC_SIR_IR_PASS_ENTRY(sccp)                                                                                      \
+    GNALC_SIR_IR_PASS_ENTRY(dce)                                                                                       \
+    GNALC_SIR_IR_PASS_ENTRY(adce)                                                                                      \
+    GNALC_SIR_IR_PASS_ENTRY(cfgsimplify)                                                                               \
+    GNALC_SIR_IR_PASS_ENTRY(if_conversion)                                                                             \
+    GNALC_SIR_IR_PASS_ENTRY(dse)                                                                                       \
+    GNALC_SIR_IR_PASS_ENTRY(loadelim)                                                                                  \
+    GNALC_SIR_IR_PASS_ENTRY(gvnpre)                                                                                    \
+    GNALC_SIR_IR_PASS_ENTRY(tailcall)                                                                                  \
+    GNALC_SIR_IR_PASS_ENTRY(reassociate)                                                                               \
+    GNALC_SIR_IR_PASS_ENTRY(instsimplify)                                                                              \
+    GNALC_SIR_IR_PASS_ENTRY(inliner)                                                                                   \
+    GNALC_SIR_IR_PASS_ENTRY(licm)                                                                                      \
+    GNALC_SIR_IR_PASS_ENTRY(loop_strength_reduce)                                                                      \
+    GNALC_SIR_IR_PASS_ENTRY(loopelim)                                                                                  \
+    GNALC_SIR_IR_PASS_ENTRY(internalize)                                                                               \
+    GNALC_SIR_IR_PASS_ENTRY(loop_parallel)                                                                             \
+    GNALC_SIR_IR_PASS_ENTRY(loop_unroll)                                                                               \
+    GNALC_SIR_IR_PASS_ENTRY(indvars)                                                                                   \
+    GNALC_SIR_IR_PASS_ENTRY(vectorizer)                                                                                \
+    GNALC_SIR_IR_PASS_ENTRY(rngsimplify)                                                                               \
+    GNALC_SIR_IR_PASS_ENTRY(dae)                                                                                       \
+    GNALC_SIR_IR_PASS_ENTRY(memo)                                                                                      \
+    GNALC_SIR_IR_PASS_ENTRY(gep_flatten)                                                                               \
+    GNALC_SIR_IR_PASS_ENTRY(unify_exits)                                                                               \
+    GNALC_SIR_IR_PASS_ENTRY(tree_shaking)                                                                              \
+    GNALC_SIR_IR_PASS_ENTRY(store_range)                                                                               \
+    GNALC_SIR_IR_PASS_ENTRY(codegen_prepare)                                                                           \
+    GNALC_SIR_IR_PASS_ENTRY(run_test)                                                                                  \
+    GNALC_SIR_IR_PASS_ENTRY(verify)                                                                                    \
+    GNALC_SIR_IR_PASS_ENTRY(early_mem2reg)                                                                             \
+    GNALC_SIR_IR_PASS_ENTRY(while2for)                                                                                 \
+    GNALC_SIR_IR_PASS_ENTRY(copy_elision)                                                                              \
+    GNALC_SIR_IR_PASS_ENTRY(loop_unswitch)                                                                             \
+    GNALC_SIR_IR_PASS_ENTRY(loop_fuse)                                                                                 \
+    GNALC_SIR_IR_PASS_ENTRY(loop_interchange)
 
 struct PMOptions {
-#define GNALC_IR_PASS_ENTRY(name) bool name;
-    GNALC_IR_PASS_TABLE
-#undef GNALC_IR_PASS_ENTRY
+#define GNALC_SIR_IR_PASS_ENTRY(name) bool name;
+    GNALC_SIR_IR_PASS_TABLE
+#undef GNALC_SIR_IR_PASS_ENTRY
 
     bool strict;
     bool advance_name_norm;
@@ -82,9 +89,9 @@ struct CliOptions {
                 type = StatusType::Disable;
         }
     };
-#define GNALC_IR_PASS_ENTRY(name) Status name;
-    GNALC_IR_PASS_TABLE
-#undef GNALC_IR_PASS_ENTRY
+#define GNALC_SIR_IR_PASS_ENTRY(name) Status name;
+    GNALC_SIR_IR_PASS_TABLE
+#undef GNALC_SIR_IR_PASS_ENTRY
 
     bool advance_name_norm;
     bool strict;
@@ -106,30 +113,30 @@ struct CliOptions {
 class PassBuilder {
 public:
     // -O1, -fixed-point
-    static FPM buildFunctionFixedPointPipeline(PMOptions options);
-    static MPM buildModuleFixedPointPipeline(PMOptions options);
+    static FPM buildFunctionFixedPointPipeline(const PMOptions &options);
+    static MPM buildModuleFixedPointPipeline(const PMOptions &options);
 
-    static FPM buildFunctionPipeline(PMOptions options);
-    static MPM buildModulePipeline(PMOptions options);
+    static FPM buildFunctionPipeline(const PMOptions &options);
+    static MPM buildModulePipeline(const PMOptions &options);
 
     // -debug-pipeline
     static FPM buildFunctionDebugPipeline();
     static MPM buildModuleDebugPipeline();
 
     // Reproduce or Produce a Fuzz Testing Pipeline.
-    static FPM buildFunctionFuzzTestingPipeline(PMOptions options, double duplication_rate = 1.0,
+    static FPM buildFunctionFuzzTestingPipeline(const PMOptions &options, double duplication_rate = 1.0,
                                                 const std::string &repro = "");
-    static MPM buildModuleFuzzTestingPipeline(PMOptions options, double duplication_rate = 1.0,
+    static MPM buildModuleFuzzTestingPipeline(const PMOptions &options, double duplication_rate = 1.0,
                                               const std::string &repro = "");
 
     static void registerModuleAnalyses(MAM &);
     static void registerFunctionAnalyses(FAM &);
     static void registerProxies(FAM &, MAM &);
 
-    static void registerARMv8TargetAnalyses(FAM &, MAM&);
-    static void registerARMv7TargetAnalyses(FAM &, MAM&);
-    static void registerRISCV64TargetAnalyses(FAM &, MAM&);
-    static void registerBrainFkTargetAnalyses(FAM &, MAM&);
+    static void registerARMv8TargetAnalyses(FAM &, MAM &);
+    static void registerARMv7TargetAnalyses(FAM &, MAM &);
+    static void registerRISCV64TargetAnalyses(FAM &, MAM &);
+    static void registerBrainFkTargetAnalyses(FAM &, MAM &);
 };
 } // namespace IR
 #endif

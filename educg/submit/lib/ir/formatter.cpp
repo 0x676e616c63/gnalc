@@ -85,6 +85,10 @@ std::string IRFormatter::formatOp(OP op) {
         return "sext";
     case OP::BITCAST:
         return "bitcast";
+    case OP::PTRTOINT:
+        return "ptrtoint";
+    case OP::INTTOPTR:
+        return "inttoptr";
     case OP::ALLOCA:
         return "alloca";
     case OP::LOAD:
@@ -283,6 +287,8 @@ std::string IRFormatter::formatInst(Instruction &inst) {
     case OP::ZEXT:
     case OP::SEXT:
     case OP::BITCAST:
+    case OP::INTTOPTR:
+    case OP::PTRTOINT:
         return fCastInst(inst.as_ref<CastInst>());
     case OP::FNEG:
         return fFNEGInst(inst.as_ref<FNEGInst>());

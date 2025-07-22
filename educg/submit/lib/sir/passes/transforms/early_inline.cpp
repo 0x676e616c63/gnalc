@@ -1,0 +1,17 @@
+// Copyright (c) 2025 0x676e616c63
+// SPDX-License-Identifier: MIT
+
+#include "../../../../include/sir/passes/transforms/early_inline.hpp"
+
+#include "../../../../include/sir/passes/analysis/alias_analysis.hpp"
+#include "../../../../include/sir/passes/utilities/sirprinter.hpp"
+#include "../../../../include/sir/visitor.hpp"
+
+namespace SIR {
+PM::PreservedAnalyses EarlyInlinePass::run(LinearFunction &function, LFAM &lfam) {
+    auto test = makeClone(function.as<LinearFunction>());
+    PrintLinearFunctionPass printer(std::cerr);
+    test->accept(printer);
+    return PreserveNone();
+}
+} // namespace SIR

@@ -357,13 +357,13 @@ ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loo
     for (const auto &block : top_level->blocks()) {
         for (const auto &inst : *block) {
             if (inst->is<LOADInst, STOREInst>()) {
-                auto base = loop_aa->getBase(getMemLocation(inst));
+                auto base = getPtrBase(getMemLocation(inst));
                 if (!base) {
                     Logger::logDebug("[Para]: Skipped loop '", header->getName(), "' due to untracked memory access");
                     return ParallelLoopInfo::fail();
                 }
-                if ((*base)->is<ALLOCAInst>())
-                    local_arrays.emplace_back((*base)->as<ALLOCAInst>());
+                if (base->is<ALLOCAInst>())
+                    local_arrays.emplace_back(base->as<ALLOCAInst>());
             }
         }
     }

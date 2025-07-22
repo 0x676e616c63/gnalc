@@ -6,7 +6,6 @@
 // The lowering process involves two primary stages:
 // 1. Lowering Gnalc IR to 32-bit 3-tape BF code
 // 2. Converting 32-bit 3-tape BF code to standard 8-bit 1-tape BF using the `bftrans.hpp` utility
-// The second phase leverages RacistCat's foundational work via `bftrans.hpp`.
 //
 // The 3-tape BF code provides isolated execution environments (tape1, tape2, tape3) with:
 // - Three variants for each operation (e.g., +1, +2, +3; ]1, ]2, ]3)

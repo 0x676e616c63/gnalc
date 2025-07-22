@@ -3,6 +3,7 @@
 
 #include "../../../../include/sir/passes/transforms/loop_interchange.hpp"
 
+#include "../../../../include/config/config.hpp"
 #include "../../../../include/ir/block_utils.hpp"
 #include "../../../../include/sir/base.hpp"
 #include "../../../../include/sir/passes/analysis/alias_analysis.hpp"
@@ -13,6 +14,22 @@ bool isLexLegal(int outer, int inner) {
     bool orig = (outer > 0) || (outer == 0 && inner >= 0);
     bool perm = (inner > 0) || (inner == 0 && outer >= 0);
     return orig && perm;
+}
+
+// a[inner][outer] to a[outer][inner] is beneficial
+// Negative for profitable.
+int getInterchangeCost(const ArrayAccess& arr, IndVar *outer_iv, IndVar *inner_iv) {
+    int outer_idx = -1;
+    int inner_idx = -1;
+    for (int d = 0; d < arr.indices.size(); ++d) {
+        if (arr.indices[d].coeffs.count(outer_iv))
+            outer_idx = d;
+        if (arr.indices[d].coeffs.count(inner_iv))
+            inner_idx = d;
+    }
+    if (outer_idx == -1 || inner_idx == -1)
+        return 0;
+    return (inner_idx < outer_idx) ? -1 : 1;
 }
 
 // FIXME: This check is too strict.
@@ -55,6 +72,7 @@ bool isSafeAndProfitableToInterchange(LAAResult *laa_res, FORInst *outer_for, FO
     if (!rw)
         return false;
 
+    int cost = 0;
     // Now check memory dependencies
     for (const auto &s1 : rw->write) {
         const auto &a1 = laa_res->queryPointer(s1);
@@ -63,12 +81,17 @@ bool isSafeAndProfitableToInterchange(LAAResult *laa_res, FORInst *outer_for, FO
         if (!a1->isArray())
             continue;
 
+        cost += getInterchangeCost(a1->array(), outer_iv.get(), inner_iv.get());
+
         for (const auto &s2 : rw->read) {
             const auto &a2 = laa_res->queryPointer(s2);
             if (!a2)
                 return false;
             if (!a2->isArray())
                 continue;
+
+            cost += getInterchangeCost(a2->array(), outer_iv.get(), inner_iv.get());
+
             if (!isArrayAccessOkToInterchange(a1->array(), a2->array(), outer_iv.get(), inner_iv.get()))
                 return false;
         }
@@ -84,7 +107,11 @@ bool isSafeAndProfitableToInterchange(LAAResult *laa_res, FORInst *outer_for, FO
         }
     }
 
-    return true;
+    if (cost < -Config::SIR::LOOP_INTERCHANGE_BENEFIT_THRESHOLD)
+        return true;
+
+    Logger::logDebug("[Interchange]: Interchange cancelled due to high cost (", cost, ").");
+    return false;
 }
 
 struct InterchangeVisitor : ContextVisitor {
@@ -102,6 +129,8 @@ struct InterchangeVisitor : ContextVisitor {
                     // If we've interchanged these loops, return to avoid visiting the inner for.
                     return;
                 }
+                else
+                    Logger::logDebug("[Interchange]: Interchange cancelled.");
             }
         }
         ContextVisitor::visit(ctx, for_inst);
