@@ -74,10 +74,13 @@ void writeDot(std::ostream &out_stream, const Function &function) {
     out_stream << "}" << std::endl;
 }
 
-void writePng(const std::string& output_path, const Function &function) {
+void writePng(const std::string &output_path, const Function &function) {
     std::stringstream dot;
     writeDot(dot, function);
-    auto dot_command = "echo '" + dot.str() + "' | ""dot -Tpng -o " + output_path;
+    auto dot_command = "echo '" + dot.str() +
+                       "' | "
+                       "dot -Tpng -o " +
+                       output_path;
     // Logger::logInfo("[PngCFG]: Running '", dot_command, "'.");
     std::system(dot_command.c_str());
 }
@@ -98,6 +101,7 @@ PM::PreservedAnalyses PngCFGPass::run(Function &function, FAM &fam) {
         fs::create_directory(output_dir);
     auto path = output_dir + "/" + function.getName().substr(1) + "_" + std::to_string(name_cnt++) + ".png";
     writePng(path, function);
+    Logger::logDebug("[PngCFG]: Generated PNG file at '", path, "'.");
     return PreserveAll();
 }
 
@@ -107,6 +111,7 @@ PM::PreservedAnalyses PngCFGPass::run(Module &module, MAM &manager) {
     for (const auto &function : module) {
         auto path = output_dir + "/" + function->getName().substr(1) + ".png";
         writePng(path, *function);
+        Logger::logDebug("[PngCFG]: Generated PNG file at '", path, "'.");
     }
     return PreserveAll();
 }

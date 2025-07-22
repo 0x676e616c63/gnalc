@@ -25,23 +25,24 @@ bool BasicAAResult::insertPotentialAlias(Value *target, Value *alias) {
         info.global_var = true;
         return info.potential_alias.insert(alias).second;
     } else if (alias->getVTrait() == ValueTrait::FORMAL_PARAMETER) {
-        info.untracked_array = true;
+        info.foreign_array = true;
         return info.potential_alias.insert(alias).second;
     } else {
         const auto &alias_info = ptr_info[alias];
         bool changed = false;
         for (const auto &r : alias_info.potential_alias)
             changed |= info.potential_alias.insert(r).second;
-        info.untracked_array |= alias_info.untracked_array;
+        info.foreign_array |= alias_info.foreign_array;
         info.global_var |= alias_info.global_var;
+        info.untracked |= alias_info.untracked;
         return changed;
     }
     return false;
 }
 
 bool BasicAAResult::setUntracked(Value *ptr) {
-    if (!ptr_info[ptr].untracked_array) {
-        ptr_info[ptr].untracked_array = true;
+    if (!ptr_info[ptr].untracked) {
+        ptr_info[ptr].untracked = true;
         return true;
     }
     return false;
@@ -50,7 +51,7 @@ bool BasicAAResult::setUntracked(Value *ptr) {
 BasicAAResult::PtrInfo BasicAAResult::getPtrInfo(Value *ptr) const {
     Err::gassert(ptr->getType()->getTrait() == IRCTYPE::PTR);
     if (ptr->getVTrait() == ValueTrait::GLOBAL_VARIABLE) {
-        return PtrInfo{.untracked_array = false, .global_var = true, .potential_alias = {ptr}};
+        return PtrInfo{.foreign_array = false, .global_var = true, .untracked = false, .potential_alias = {ptr}};
     }
 
     auto it = ptr_info.find(ptr);
@@ -139,7 +140,10 @@ AliasInfo BasicAAResult::getAliasInfo(Value *v1, Value *v2) const {
     auto info1 = getPtrInfo(v1);
     auto info2 = getPtrInfo(v2);
 
-    if (info1.untracked_array && info2.untracked_array)
+    if (info1.untracked || info2.untracked)
+        return alias_cache[cache_key] = AliasInfo::MayAlias;
+
+    if (info1.foreign_array && info2.foreign_array)
         return alias_cache[cache_key] = AliasInfo::MayAlias;
 
     auto gep1 = v1->as_raw<GEPInst>();
@@ -174,7 +178,7 @@ AliasInfo BasicAAResult::getAliasInfo(Value *v1, Value *v2) const {
 }
 bool BasicAAResult::isLocal(Value *v) const {
     auto info = getPtrInfo(v);
-    return !info.global_var && !info.untracked_array;
+    return !info.global_var && !info.foreign_array && !info.untracked;
 }
 
 ModRefInfo BasicAAResult::getInstModRefInfo(Instruction *inst, Value *location, FAM &fam) const {
@@ -294,7 +298,7 @@ BasicAAResult BasicAliasAnalysis::run(Function &func, FAM &fam) {
         auto curr_trait = curr->getType()->getTrait();
         if (curr_trait == IRCTYPE::PTR) {
             res.ptr_info[curr.get()] =
-                BasicAAResult::PtrInfo{.untracked_array = true, .global_var = false, .potential_alias = {curr.get()}};
+                BasicAAResult::PtrInfo{.foreign_array = true, .global_var = false, .untracked = false, .potential_alias = {curr.get()}};
         }
     }
 
@@ -305,7 +309,7 @@ BasicAAResult BasicAliasAnalysis::run(Function &func, FAM &fam) {
         if (auto alloca = inst->as<ALLOCAInst>()) {
             if (alloca->getBaseType()->getTrait() == IRCTYPE::ARRAY) {
                 res.ptr_info[alloca.get()] = BasicAAResult::PtrInfo{
-                    .untracked_array = false, .global_var = false, .potential_alias = {alloca.get()}};
+                    .foreign_array = false, .global_var = false, .untracked = false, .potential_alias = {alloca.get()}};
             }
         }
     }
@@ -379,7 +383,7 @@ BasicAAResult BasicAliasAnalysis::run(Function &func, FAM &fam) {
                         for (auto write : callee_aa.write) {
                             if (callee_aa.getPtrInfo(write).global_var)
                                 res.write.insert(write);
-                            else if (callee_aa.getPtrInfo(write).untracked_array) {
+                            else if (callee_aa.getPtrInfo(write).foreign_array) {
                                 auto fp = write->as_raw<FormalParam>();
                                 auto actual = call->getArgs()[fp->getIndex()].get();
                                 auto actual_alias = res.getPtrInfo(actual).potential_alias;
@@ -394,7 +398,7 @@ BasicAAResult BasicAliasAnalysis::run(Function &func, FAM &fam) {
                         for (auto read : callee_aa.read) {
                             if (callee_aa.getPtrInfo(read).global_var)
                                 res.read.insert(read);
-                            else if (callee_aa.getPtrInfo(read).untracked_array) {
+                            else if (callee_aa.getPtrInfo(read).foreign_array) {
                                 auto fp = read->as_raw<FormalParam>();
                                 auto actual = call->getArgs()[fp->getIndex()].get();
                                 auto actual_alias = res.getPtrInfo(actual).potential_alias;

@@ -554,7 +554,9 @@ TREC *SCEVHandle::analyzeEvolution(const Loop *loop, Value *val) {
         res = getTRECUntracked();
 
     Err::gassert(res != nullptr);
-    if (!res->isUntracked() && !res->isUndef())
+    // FIXME: Will `val->is<PHIInst>()` degrade accuracy?
+    //        Though it can speed up the analysis significantly
+    if (val->is<PHIInst>() || (!res->isUntracked() && !res->isUndef()))
         evolution[val] = res;
 
     auto eval_res = eval(res, loop);

@@ -168,12 +168,8 @@ gnalc_parallel_for:
 .LFB1299:
 	.cfi_startproc
 	sub	w4, w1, w0
-	cmp	w4, 128
-	bgt	.L20
-	mov	x16, x2
-	br	x16
-	.p2align 2,,3
-.L20:
+	cmp	w4, 0
+	ble	.L26
 	adrp	x7, .LANCHOR0
 	add	x6, x7, :lo12:.LANCHOR0
 	stp	x30, x19, [sp, -16]!
@@ -201,6 +197,10 @@ gnalc_parallel_for:
 	.cfi_restore 30
 	.cfi_def_cfa_offset 0
 	ret
+	.p2align 2,,3
+.L26:
+	mov	x16, x2
+	br	x16
 	.cfi_endproc
 .LFE1299:
 	.size	gnalc_parallel_for, .-gnalc_parallel_for
@@ -248,7 +248,7 @@ gnalc_atomic_add_f32:
 	add	x21, sp, 60
 	fmov	s14, w0
 	str	w0, [sp, 60]
-.L31:
+.L32:
 	fadd	s31, s15, s14
 	ldr	w20, [x21]
 	mov	x2, x19
@@ -257,10 +257,10 @@ gnalc_atomic_add_f32:
 	bl	__aarch64_cas4_acq_rel
 	cmp	w0, w20
 	cset	w1, eq
-	beq	.L29
+	beq	.L30
 	str	w0, [x21]
-.L29:
-	cbz	w1, .L33
+.L30:
+	cbz	w1, .L34
 	ldp	x20, x21, [sp, 16]
 	ldp	d14, d15, [sp, 32]
 	ldp	x30, x19, [sp], 64
@@ -273,10 +273,10 @@ gnalc_atomic_add_f32:
 	.cfi_restore 79
 	.cfi_def_cfa_offset 0
 	ret
-.L33:
+.L34:
 	.cfi_restore_state
 	ldr	s14, [sp, 60]
-	b	.L31
+	b	.L32
 	.cfi_endproc
 .LFE1301:
 	.size	gnalc_atomic_add_f32, .-gnalc_atomic_add_f32

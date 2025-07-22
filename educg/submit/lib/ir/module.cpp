@@ -83,6 +83,10 @@ pFuncDecl Module::lookupFunction(const std::string &name) const {
         if (func->isName(name))
             return func;
     }
+    for (const auto &func : linear_funcs) {
+        if (func->isName(name))
+            return func;
+    }
     return nullptr;
 }
 std::vector<pFuncDecl> Module::lookupFunction(FuncAttr attr) const {
@@ -92,6 +96,10 @@ std::vector<pFuncDecl> Module::lookupFunction(FuncAttr attr) const {
             ret.emplace_back(func_decl);
     }
     for (const auto &func : funcs) {
+        if (func->hasAttr(attr))
+            ret.emplace_back(func);
+    }
+    for (const auto &func : linear_funcs) {
         if (func->hasAttr(attr))
             ret.emplace_back(func);
     }

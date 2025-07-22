@@ -286,6 +286,8 @@ enum class ARMOpC : uint32_t {
     SMULL, // smull x<>, w<>, w<>
     MADD,
     MSUB,
+    MLA_V,
+    MLS_V,
     FMADD,
     FMSUB,
     CSEL,        // cond select, dont support simd

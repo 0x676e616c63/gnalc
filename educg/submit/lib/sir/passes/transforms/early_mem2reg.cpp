@@ -83,6 +83,8 @@ PM::PreservedAnalyses EarlyPromotePass::run(LinearFunction &function, LFAM &lfam
         }
         if (store_cnt == 1) {
             if (mem->is<GlobalVariable>()) {
+                if (mem_store->getValue()->getVTrait() != ValueTrait::CONSTANT_LITERAL)
+                    continue;
                 // If the store can execute multiple times, give up
                 if (!isInstExecuteExactlyOnce(function.getParent(), mem_store))
                     continue;

@@ -7,10 +7,10 @@
 #include "../../../../include/ir/instructions/compare.hpp"
 #include "../../../../include/ir/instructions/converse.hpp"
 #include "../../../../include/ir/irbuilder.hpp"
+#include "../../../../include/ir/match.hpp"
 #include "../../../../include/ir/passes/analysis/basic_alias_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/domtree_analysis.hpp"
 #include "../../../../include/ir/passes/helpers/constant_fold.hpp"
-#include "../../../../include/ir/match.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -53,22 +53,22 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             }
 
             // x + 0 = x
-            REPLACE(M::Add(M::Bind(x), M::Is(0)), x)
+            REPLACE(M::Add(M::Bind(x), M::IsIntegerVal(0)), x)
 
             // 0 + x -> x
-            REPLACE(M::Add(M::Is(0), M::Bind(x)), x)
+            REPLACE(M::Add(M::IsIntegerVal(0), M::Bind(x)), x)
 
             // x - 0 = x
-            REPLACE(M::Sub(M::Bind(x), M::Is(0)), x)
+            REPLACE(M::Sub(M::Bind(x), M::IsIntegerVal(0)), x)
 
             // x / 1 = x
-            REPLACE(M::Div(M::Bind(x), M::Is(1)), x)
+            REPLACE(M::Div(M::Bind(x), M::IsIntegerVal(1)), x)
 
             // x * 1 = x
-            REPLACE(M::Mul(M::Bind(x), M::Is(1)), x)
+            REPLACE(M::Mul(M::Bind(x), M::IsIntegerVal(1)), x)
 
             // 1 * x = x
-            REPLACE(M::Mul(M::Is(1), M::Bind(x)), x)
+            REPLACE(M::Mul(M::IsIntegerVal(1), M::Bind(x)), x)
 
             // x * 1.0f = x
             REPLACE(M::Fmul(M::Bind(x), M::Is(1.0f)), x)
@@ -83,19 +83,19 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             REPLACE(M::Fsub(M::Bind(x), M::Is(x)), f32_zero)
 
             // x * 0 = 0
-            REPLACE(M::Mul(M::Val(), M::Is(0)), i32_zero)
+            REPLACE(M::Mul(M::Val(), M::IsIntegerVal(0)), i32_zero)
 
             // 0 * x = 0
-            REPLACE(M::Mul(M::Is(0), M::Val()), i32_zero)
+            REPLACE(M::Mul(M::IsIntegerVal(0), M::Val()), i32_zero)
 
             // 0 / x = 0
-            REPLACE(M::Div(M::Is(0), M::Val()), i32_zero)
+            REPLACE(M::Div(M::IsIntegerVal(0), M::Val()), i32_zero)
 
             // 0 % x = 0
-            REPLACE(M::Rem(M::Is(0), M::Val()), i32_zero)
+            REPLACE(M::Rem(M::IsIntegerVal(0), M::Val()), i32_zero)
 
             // x % 1 = 0
-            REPLACE(M::Rem(M::Val(), M::Is(1)), i32_zero)
+            REPLACE(M::Rem(M::Val(), M::IsIntegerVal(1)), i32_zero)
 
             // x / x = 1
             REPLACE(M::Div(M::Bind(x), M::Is(x)), i32_one)
@@ -104,7 +104,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             REPLACE(M::Fdiv(M::Bind(x), M::Is(x)), f32_one)
 
             // x + -x = 0
-            REPLACE(M::Add(M::Bind(x), M::Sub(M::Is(0), M::Is(x))), i32_zero)
+            REPLACE(M::Add(M::Bind(x), M::Sub(M::IsIntegerVal(0), M::Is(x))), i32_zero)
 
             // x + -x = 0.0f
             REPLACE(M::Fadd(M::Bind(x), M::Fneg(M::Is(x))), f32_zero)
@@ -123,6 +123,10 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
 
             // fcmp x, x
             REPLACE(M::Fcmp(M::Bind(x), M::Is(x)), isTrueWhenEqual(x->as<FCMPInst>()->getCond()) ? i1_true : i1_false)
+
+            // ptrtoint inttoptr x = x
+            // int -> ptr -> int
+            REPLACE(M::PtrToInt(M::IntToPtr(M::Bind(x))), x)
         }
     }
 
@@ -153,9 +157,31 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         auto inst = worklist.back();
         worklist.pop_back();
 
+        // inttoptr ptrtoint x = x or bitcast x
+        // ptr -> int -> ptr
+        if (match(inst, M::IntToPtr(M::PtrToInt(M::Bind(x))))) {
+            auto i2p = inst->as<INTTOPTRInst>();
+            auto p2i = i2p->getOVal()->as<PTRTOINTInst>();
+            if (isSameType(p2i->getOType(), i2p->getTType()))
+                inst->replaceSelf(x);
+            else {
+                IRBuilder builder("%isim", inst->getParent(), inst->iter());
+                auto bc = builder.makeBitcast(x, i2p->getTType());
+                inst->replaceSelf(bc);
+            }
+            Logger::logDebug("[InstSimplify]: Rewrite M::IntToPtr(M::PtrToInt(M::Bind(x)))) with type check.");
+            instsimplify_inst_modified = true;
+            continue;
+        }
+
         // select i1 x, i32 1, i32 0 = zext x
         REWRITE_BEG(M::Select(M::Bind(x), M::Is(1), M::Is(0)))
         auto zext = builder.makeZext(x, IRBTYPE::I32);
+        REWRITE_END(zext)
+
+        // select i1 x, i64 1, i64 0 = zext x
+        REWRITE_BEG(M::Select(M::Bind(x), M::Is(static_cast<int64_t>(1)), M::Is(static_cast<int64_t>(0))))
+        auto zext = builder.makeZext(x, IRBTYPE::I64);
         REWRITE_END(zext)
 
         // select x, y, false = x & y
@@ -165,13 +191,13 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
 
         // select x, y, true = !x | y
         REWRITE_BEG(M::Select(M::Bind(x), M::Bind(y), M::Is(true)))
-        auto xori = builder.makeOr(function.getConst(true), x);
+        auto xori = builder.makeXor(function.getConst(true), x);
         auto ori = builder.makeOr(xori, y);
         REWRITE_END(ori)
 
         // select x, false, y = !x & y
         REWRITE_BEG(M::Select(M::Bind(x), M::Is(false), M::Bind(y)))
-        auto xori = builder.makeOr(function.getConst(false), x);
+        auto xori = builder.makeXor(function.getConst(false), x);
         auto andi = builder.makeAnd(xori, y);
         REWRITE_END(andi)
 
@@ -181,7 +207,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         REWRITE_END(ori)
 
         // x - -y -> x + y
-        REWRITE_BEG(M::Sub(M::Bind(x), M::Sub(M::Is(0), M::Bind(y))))
+        REWRITE_BEG(M::Sub(M::Bind(x), M::Sub(M::IsIntegerVal(0), M::Bind(y))))
         auto add = builder.makeAdd(x, y);
         REWRITE_END(add)
 
@@ -271,14 +297,8 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         auto fadd = builder.makeFAdd(x, fdiv);
         REWRITE_END(fadd)
 
-        // float: (x - y) - z -> x - (y + z)
-        REWRITE_BEG(M::Fsub(M::Fsub(M::Bind(x), M::Bind(y)), M::Bind(z)))
-        auto fadd = builder.makeFAdd(y, z);
-        auto fsub = builder.makeFSub(x, fadd);
-        REWRITE_END(fsub)
-
         // x * -1 -> sub 0 x
-        REWRITE_BEG(M::Mul(M::Bind(x), M::Is(-1)), M::Mul(M::Is(-1), M::Bind(x)))
+        REWRITE_BEG(M::Mul(M::Bind(x), M::IsIntegerVal(-1)), M::Mul(M::IsIntegerVal(-1), M::Bind(x)))
         auto sub = builder.makeSub(function.getConst(0), x);
         REWRITE_END(sub)
 
@@ -291,8 +311,8 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         // -x / -y -> x / y
         // float: -x * -y -> x * y
         //        -x / -y -> x / y
-        REWRITE_BEG(M::Mul(M::Sub(M::Is(0), M::Bind(x)), M::Sub(M::Is(0), M::Bind(y))),
-                    M::Div(M::Sub(M::Is(0), M::Bind(x)), M::Sub(M::Is(0), M::Bind(y))),
+        REWRITE_BEG(M::Mul(M::Sub(M::IsIntegerVal(0), M::Bind(x)), M::Sub(M::IsIntegerVal(0), M::Bind(y))),
+                    M::Div(M::Sub(M::IsIntegerVal(0), M::Bind(x)), M::Sub(M::IsIntegerVal(0), M::Bind(y))),
                     M::Fmul(M::Fneg(M::Bind(x)), M::Fneg(M::Bind(y))),
                     M::Fdiv(M::Fneg(M::Bind(x)), M::Fneg(M::Bind(y))))
         auto binary = builder.makeBinary(inst->getOpcode(), x, y);
@@ -307,12 +327,6 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
         REWRITE_BEG(M::Div(M::Add(M::Mul(M::Bind(x), M::Bind(c2)), M::Bind(c1)), M::Is(c2)))
         auto add = builder.makeAdd(x, function.getConst(c1 / c2));
         REWRITE_END(add)
-
-        // Since integer division truncates towards zero, this transformation is valid.
-        // (x - (x % y)) / y -> x / y
-        REWRITE_BEG(M::Div(M::Sub(M::Bind(x), M::Rem(M::Is(x), M::Bind(y))), M::Is(y)))
-        auto div = builder.makeDiv(x, y);
-        REWRITE_END(div)
 
         if (inst->getOpcode() == OP::PHI) {
             auto phi = inst->as<PHIInst>();

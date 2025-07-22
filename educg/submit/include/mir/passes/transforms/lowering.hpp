@@ -5,6 +5,7 @@
 #include "../../../ir/type.hpp"
 #include "../../../ir/type_alias.hpp"
 #include "../../info.hpp"
+#include "../../../utils/exception.hpp"
 #include <optional>
 #ifndef GNALC_MIR_BUILD_LOWERING_HPP
 #define GNALC_MIR_BUILD_LOWERING_HPP
@@ -145,7 +146,7 @@ public:
     MIROperand_p newVReg(const IR::VectorType &);
     MIROperand_p newVReg(const OpT &);
 
-    MIROperand_p newLiteral(string liter, size_t size, size_t align);
+    MIROperand_p newLiteral(string liter, size_t size, size_t align, OpT type);
 
     void newInst(const MIRInst_p &);
     void addCopy(const MIROperand_p &dst, const MIROperand_p &src);
@@ -186,6 +187,36 @@ void lowerInst(const IR::pCall &, LoweringContext &);
 void lowerInst(const IR::pSelect &, LoweringContext &);
 
 // helpr vectorflating to literal
+inline auto vector2literal(const IR::pVal &ir_vector) {
+    string literal = "";
+    size_t size = 0;
+    OpT type;
+
+    if (auto const_vec_i32 = ir_vector->as<IR::ConstantIntVector>()) {
+        for (auto elem : const_vec_i32->getVector()) {
+            literal = hex_str(elem).append(literal);
+            size += 4;
+        }
+
+        size == 8 ? type = OpT::Intvec2 : type = OpT::Intvec4;
+
+    } else if (auto const_vec_f32 = ir_vector->as<IR::ConstantFloatVector>()) {
+        for (auto elem : const_vec_f32->getVector()) {
+            auto elem_i3e = *reinterpret_cast<unsigned *>(&elem);
+
+            literal = hex_str(elem_i3e).append(literal);
+            size += 4;
+        }
+
+        size == 8 ? type = OpT::Floatvec2 : type = OpT::Floatvec4;
+    } else {
+        Err::unreachable("vector2literal: unknown const vector");
+    }
+
+    literal = "0X" + literal;
+
+    return std::make_tuple(literal, size, type);
+}
 MIROperand_p vector_flatting(const IR::pVal &, LoweringContext &);
 MIROperand_p try_vector_flatting(const IR::pVal &, LoweringContext &);
 

@@ -54,6 +54,8 @@ enum class OP {
     ZEXT,
     SEXT,
     BITCAST,
+    PTRTOINT,
+    INTTOPTR,
 
     // Compare
     ICMP,
