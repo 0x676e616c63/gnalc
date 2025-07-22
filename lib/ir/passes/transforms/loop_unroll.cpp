@@ -21,6 +21,8 @@
 #include <memory>
 #include <vector>
 
+#define ENABLE_NEW_RT_PATH 0
+
 namespace IR {
 
 unsigned LoopUnrollPass::name_idx = 0;
@@ -362,12 +364,21 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
             }
             auto stepMremV = std::make_shared<BinaryInst>("rtunroll.stepMrem." + std::to_string(name_idx), OP::MUL, stepV, remainderV);
             prolog->addInst(stepMremV);
+            // new_boundary = raw_boundary - step * remainder
             auto new_boundaryV = std::make_shared<BinaryInst>("rtunroll.new_boundary." + std::to_string(name_idx), OP::SUB, raw_boundary_value, stepMremV);
             prolog->addInst(new_boundaryV);
-            auto trip_count_less_than_unroll_factorV = std::make_shared<ICMPInst>("rtunroll.tcLTuf." + std::to_string(name_idx),
-                ICMPOP::slt, trip_countV, unroll_factorV);
-            trip_count_less_than_unroll_factorV->appendDbgData("trip_count_less_than_unroll_factor");
-            prolog->addInst(trip_count_less_than_unroll_factorV);
+
+            // tcLTuf and epilog (for dowhile)
+#if ENABLE_NEW_RT_PATH
+            if (is_dowhile) {
+#endif
+                auto trip_count_less_than_unroll_factorV = std::make_shared<ICMPInst>("rtunroll.tcLTuf." + std::to_string(name_idx),
+                    ICMPOP::slt, trip_countV, unroll_factorV);
+                trip_count_less_than_unroll_factorV->appendDbgData("trip_count_less_than_unroll_factor");
+                prolog->addInst(trip_count_less_than_unroll_factorV);
+#if ENABLE_NEW_RT_PATH
+            }
+#endif
 
             // epilog (for dowhile)
             if (is_dowhile) {
@@ -986,17 +997,33 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
         auto prolog = option.prologue;
         auto epilog = option.epilogue;
         Err::gassert(prolog != nullptr && epilog != nullptr, "LoopUnroll: Runtime unroll prolog or epilog is nullptr.");
-        
-        // Add branch inst to prolog
-        pIcmp prolog_icmp = prolog->getTerminator()->as<ICMPInst>();
+
         pB rem_header = BMap[header][count];
-        pBr prolog_br = std::make_shared<BRInst>(prolog_icmp, rem_header, header);
-        prolog->addInst(prolog_br);
+
+        // Add branch inst to prolog
+#if ENABLE_NEW_RT_PATH
+        if (!is_dowhile) {
+            pBr prolog_br = std::make_shared<BRInst>(header);
+            prolog->addInst(prolog_br);
+        } else {
+#endif
+            pIcmp prolog_icmp = prolog->getTerminator()->as<ICMPInst>();
+            pBr prolog_br = std::make_shared<BRInst>(prolog_icmp, rem_header, header);
+            prolog->addInst(prolog_br);
+#if ENABLE_NEW_RT_PATH
+        }
+#endif
 
         // Link prolog
         pre_header->getBRInst()->replaceAllOperands(header, prolog);
         for (auto &phi : header->phis()) {
-            IMap[phi][count]->as<PHIInst>()->addPhiOper(phi->getValueForBlock(pre_header), prolog);
+#if ENABLE_NEW_RT_PATH
+            if (is_dowhile) {
+#endif
+                IMap[phi][count]->as<PHIInst>()->addPhiOper(phi->getValueForBlock(pre_header), prolog);
+#if ENABLE_NEW_RT_PATH
+            }
+#endif
             phi->replaceAllOperands(pre_header, prolog);
         }
 
