@@ -20,44 +20,20 @@
 #include <cstddef>
 #include <iostream>
 #include <optional>
+#include <tuple>
 
 using namespace MIR;
 
 MIROperand_p MIR::vector_flatting(const IR::pVal &ir_vector, LoweringContext &ctx) {
-    string literal = "";
-    MIROperand_p load_op = nullptr;
-    size_t size = 0;
-    OpT type;
 
-    if (ir_vector->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL) {
-        if (auto const_vec_i32 = ir_vector->as<IR::ConstantIntVector>()) {
-            for (auto elem : const_vec_i32->getVector()) {
-                literal = hex_str(elem).append(literal);
-                size += 4;
-            }
+    auto [literal, size, type] = vector2literal(ir_vector);
 
-            size == 8 ? type = OpT::Intvec2 : type = OpT::Intvec4;
+    auto liter_op = ctx.newLiteral(literal, size, 16, type);
+    MIROperand_p load_op = ctx.newVReg(type);
 
-        } else if (auto const_vec_f32 = ir_vector->as<IR::ConstantFloatVector>()) {
-            for (auto elem : const_vec_f32->getVector()) {
-                auto elem_i3e = *reinterpret_cast<unsigned *>(&elem);
-
-                literal = hex_str(elem_i3e).append(literal);
-                size += 4;
-            }
-
-            size == 8 ? type = OpT::Floatvec2 : type = OpT::Floatvec4;
-        }
-
-        literal = "0X" + literal;
-
-        auto liter_op = ctx.newLiteral(literal, size, 16);
-        load_op = ctx.newVReg(type);
-
-        ctx.newInst(MIRInst::make(OpC::InstLoadLiteral)
-                        ->setOperand<0>(load_op, ctx.CodeGenCtx())
-                        ->setOperand<1>(liter_op, ctx.CodeGenCtx()));
-    }
+    ctx.newInst(MIRInst::make(OpC::InstLoadLiteral)
+                    ->setOperand<0>(load_op, ctx.CodeGenCtx())
+                    ->setOperand<1>(liter_op, ctx.CodeGenCtx()));
 
     return load_op;
 }
@@ -317,7 +293,7 @@ void MIR::lowerInst_v(const IR::pLoad &load, LoweringContext &ctx) {
 
 void MIR::lowerInst_v(const IR::pStore &store, LoweringContext &ctx) {
     if (ctx.CodeGenCtx().isARMv8()) {
-        if (auto load_op = vector_flatting(store->getValue(), ctx)) {
+        if (auto load_op = try_vector_flatting(store->getValue(), ctx)) {
 
             ctx.newInst(
                 MIRInst::make(OpC::InstStore)

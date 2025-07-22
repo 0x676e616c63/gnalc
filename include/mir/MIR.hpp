@@ -105,7 +105,7 @@ using Cond = MIRInstCond;
 
 enum class MIRGenericInst : uint32_t {
     // control-flow
-    InstBranch, // <nullptr>, reloc, cond, prob
+    InstBranch,     // <nullptr>, reloc, cond, prob
     InstICmpBranch, // <nullptr>, lhs, rhs, reloc, cond (lowered from `one-use icmp + br`, RISCV only currently)
     // Memory, get by gep, no const offset
     InstLoad,  // <def> <base> <idx> <shift> <size_attr>
@@ -390,7 +390,7 @@ public:
 
     static MIROperand_p asProb(double prob) { return make<MIROperand>(prob, OpT::special); }
 
-    static MIROperand_p asLiteral(string liter) { return make<MIROperand>(liter, OpT::special); }
+    static MIROperand_p asLiteral(string liter, OpT type) { return make<MIROperand>(liter, type); }
 
     // builder end
 
@@ -733,7 +733,8 @@ public:
             auto &minst = *it;
             if (minst->isGeneric()) {
                 auto opcode = minst->opcode<OpC>();
-                if (opcode == OpC::InstBranch || opcode == OpC::InstICmpBranch || opcode == OpC::InstFCmp || opcode == OpC::InstICmp)
+                if (opcode == OpC::InstBranch || opcode == OpC::InstICmpBranch || opcode == OpC::InstFCmp ||
+                    opcode == OpC::InstICmp)
                     break;
             }
             if (minst->isRV()) {

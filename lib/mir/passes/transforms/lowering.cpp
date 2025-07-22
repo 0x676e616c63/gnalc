@@ -228,9 +228,9 @@ MIROperand_p LoweringContext::newVReg(const OpT &type) {
     return MIROperand::asVReg(mCodeGenCtx.nextId(), type); //
 }
 
-MIROperand_p LoweringContext::newLiteral(string liter, size_t size, size_t align) {
+MIROperand_p LoweringContext::newLiteral(string liter, size_t size, size_t align, OpT type) {
     mCurrentBlk->add_tail_literal(size, align);
-    return MIROperand::asLiteral(std::move(liter));
+    return MIROperand::asLiteral(std::move(liter), type);
 }
 
 void LoweringContext::newInst(const MIRInst_p &inst) {
@@ -538,7 +538,7 @@ void MIR::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContext &c
                     auto &phiop = use_phi.value;
                     Err::gassert(phiop->getVTrait() == IR::ValueTrait::CONSTANT_LITERAL,
                                  "lowerFunc: cant map a phi op");
-                    ///@todo vectorize
+
                     if (auto ci1 = phiop->as<IR::ConstantI1>()) {
                         use = MIROperand::asImme(ci1->getVal(), OpT::Int32);
                     } else if (auto ci8 = phiop->as<IR::ConstantI8>()) {
@@ -548,7 +548,9 @@ void MIR::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContext &c
                     } else if (auto f32 = phiop->as<IR::ConstantFloat>()) {
                         use = MIROperand::asImme(f32->getVal(), OpT::Float32);
                     } else {
-                        Err::unreachable("unexpected phiop type");
+                        auto [literal, size, type] = vector2literal(phiop);
+
+                        use = ctx.newLiteral(literal, size, 16, type);
                     }
                 }
                 Err::gassert(use != nullptr, "dont actually get a use");

@@ -513,7 +513,7 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
             string literal = "0X" + hex_str<uint64_t>(imme_ex);
             auto literal_load = MIRInst::make(OpC::InstLoadLiteral)
                                     ->setOperand<0>(loaded, ctx)
-                                    ->setOperand<1>(MIROperand::asLiteral(literal), ctx);
+                                    ->setOperand<1>(MIROperand::asLiteral(literal, OpT::Int64), ctx);
 
             mblk->add_tail_literal(8, 8);
 

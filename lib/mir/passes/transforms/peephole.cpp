@@ -522,13 +522,14 @@ bool GenericPeepholeImpl::MA(MatchInfo &info) {
 
     auto def = minst->ensureDef();
 
-    if (inSet(newOpC, ARMOpC::MADD, ARMOpC::MSUB)) {
-        minst->resetOpcode(newOpC);
+    minst->resetOpcode(newOpC);
 
-        minst->setOperand<3>(reserved, ctx);
-        minst->setOperand<2>(multiple_2, ctx);
-        minst->setOperand<1>(multiple_1, ctx);
-    }
+    // if (inSet(newOpC, ARMOpC::MADD, ARMOpC::MSUB)) {
+
+    minst->setOperand<3>(reserved, ctx);
+    minst->setOperand<2>(multiple_2, ctx);
+    minst->setOperand<1>(multiple_1, ctx);
+    // }
 
     if (inSet(newOpC, ARMOpC::MLA_V, ARMOpC::MLS_V)) {
         // reserved def while in use
@@ -537,6 +538,8 @@ bool GenericPeepholeImpl::MA(MatchInfo &info) {
         minsts.insert(std::next(iter), copy);
     }
 
+    (*mul_iter)->putAllOp(ctx);
+    minsts.erase(mul_iter);
     return true;
 }
 
@@ -636,11 +639,11 @@ bool GenericPeepholeImpl::RTZ(MatchInfo &info) {
 }
 
 bool GenericPeepholeImpl::ScratchRegSimp(MatchInfo &info) {
-    auto &[_0, minsts, _1] = info;
-
     if (stage != Stage::AfterPostLegalize) {
         return false;
     }
+
+    auto &[_0, minsts, _1] = info;
 
     // LAMBDA BEGIN
 
