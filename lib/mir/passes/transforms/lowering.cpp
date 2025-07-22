@@ -639,6 +639,8 @@ void MIR::lowerInst(const IRInst_p &inst, LoweringContext &ctx) {
     case OP::BITCAST:
     case OP::SITOFP:
     case OP::FPTOSI:
+    case OP::PTRTOINT:
+    case OP::INTTOPTR:
         MIR::lowerInst(inst->as<IR::CastInst>(), ctx);
         break;
     case OP::GEP:

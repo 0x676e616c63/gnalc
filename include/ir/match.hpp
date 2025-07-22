@@ -50,6 +50,7 @@ template <typename T> auto OneUse(const T &sub_pattern) { return OneUseMatch(sub
 inline auto I1() { return ClassMatch<ConstantI1>{}; }
 inline auto I8() { return ClassMatch<ConstantI8>{}; }
 inline auto I32() { return ClassMatch<ConstantInt>{}; }
+inline auto I64() { return ClassMatch<ConstantI64>{}; }
 inline auto F32() { return ClassMatch<ConstantFloat>{}; }
 inline auto Const() { return ClassesMatch<ConstantI1, ConstantI8, ConstantInt, ConstantFloat>{}; }
 
@@ -99,8 +100,33 @@ inline auto Is(const int &a) {
     return ClassMatchIf<ConstantInt>{[&a](const ConstantInt &b) { return a == b.getVal(); }};
 }
 
+inline auto Is(const int64_t& a) {
+    return ClassMatchIf<ConstantI64>{[&a](const ConstantI64 &b) { return a == b.getVal(); }};
+}
+
 inline auto Is(const float &a) {
     return ClassMatchIf<ConstantFloat>{[&a](const ConstantFloat &b) { return a == b.getVal(); }};
+}
+
+struct IntegerMatch {
+    int64_t int_val;
+    explicit IntegerMatch(int64_t int_val_) : int_val(int_val_) {}
+
+    template <typename T> bool match(const T &v) const {
+        if (auto i1 = Match::detail::ptrCast<ConstantI1>(v))
+            return int_val == i1->getVal();
+        if (auto i8 = Match::detail::ptrCast<ConstantI8>(v))
+            return int_val == i8->getVal();
+        if (auto i32 = Match::detail::ptrCast<ConstantInt>(v))
+            return int_val == i32->getVal();
+        if (auto i64 = Match::detail::ptrCast<ConstantI64>(v))
+            return int_val == i64->getVal();
+        return false;
+    }
+};
+
+inline auto IsIntegerVal(int64_t val) {
+    return IntegerMatch(val);
 }
 
 struct IRInstInfo {
@@ -161,6 +187,8 @@ MAKE_INST_MATCH(Sitofp, SITOFP, 1)
 MAKE_INST_MATCH(Zext, ZEXT, 1)
 MAKE_INST_MATCH(Sext, SEXT, 1)
 MAKE_INST_MATCH(Bitcast, BITCAST, 1)
+MAKE_INST_MATCH(PtrToInt, PTRTOINT, 1)
+MAKE_INST_MATCH(IntToPtr, INTTOPTR, 1)
 MAKE_INST_MATCH(Icmp, ICMP, 2)
 MAKE_INST_MATCH(Fcmp, FCMP, 2)
 MAKE_INST_MATCH(Extract, EXTRACT, 2)

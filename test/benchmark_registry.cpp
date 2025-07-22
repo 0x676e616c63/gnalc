@@ -1,6 +1,7 @@
 // Copyright (c) 2025 0x676e616c63
 // SPDX-License-Identifier: MIT
 
+#include "utils/misc.hpp"
 #include "benchmark_support.hpp"
 
 using namespace Test;
@@ -193,19 +194,29 @@ void register_gnalc_fixed() {
     BenchmarkRegistry::register_benchmark("gnalc_fixed", entry);
 }
 
-void register_gnalc_fixed_no_memo() {
-    auto entry = gnalc_register_helper("-fixed-point --no-memo");
-    BenchmarkRegistry::register_benchmark("gnalc_fixed_no_memo", entry);
+#define REGISTER_GNALC_FIXED_EXCEPT_PASS(pass) \
+void register_gnalc_fixed_no_##pass() {\
+    auto entry = gnalc_register_helper("-fixed-point --no-" GNALC_STRINGFY(pass));\
+    BenchmarkRegistry::register_benchmark("gnalc_fixed_no_" GNALC_STRINGFY(pass), entry);\
 }
 
-void register_gnalc_fixed_no_parallel() {
-    auto entry = gnalc_register_helper("-fixed-point --no-parallel");
-    BenchmarkRegistry::register_benchmark("gnalc_fixed_no_parallel", entry);
-}
+REGISTER_GNALC_FIXED_EXCEPT_PASS(memo)
+REGISTER_GNALC_FIXED_EXCEPT_PASS(parallel)
+REGISTER_GNALC_FIXED_EXCEPT_PASS(vectorizer)
+REGISTER_GNALC_FIXED_EXCEPT_PASS(gepflatten)
+REGISTER_GNALC_FIXED_EXCEPT_PASS(interchange)
+REGISTER_GNALC_FIXED_EXCEPT_PASS(unswitch)
+REGISTER_GNALC_FIXED_EXCEPT_PASS(fuse)
+REGISTER_GNALC_FIXED_EXCEPT_PASS(copyelision)
 
 void register_gnalc_debug() {
     auto entry = gnalc_register_helper("-debug-pipeline");
     BenchmarkRegistry::register_benchmark("gnalc_debug", entry);
+}
+
+void register_gnalc_sir_debug() {
+    auto entry = gnalc_register_helper("-sir-debug-pipeline -O1");
+    BenchmarkRegistry::register_benchmark("gnalc_sir_debug", entry);
 }
 
 void register_gnalc_fuzz3() {
@@ -240,8 +251,17 @@ void Test::register_all_benchmarks() {
     register_gnalc_mem2reg();
     register_gnalc_std();
     register_gnalc_fixed();
+
     register_gnalc_fixed_no_memo();
     register_gnalc_fixed_no_parallel();
+    register_gnalc_fixed_no_vectorizer();
+    register_gnalc_fixed_no_gepflatten();
+    register_gnalc_fixed_no_interchange();
+    register_gnalc_fixed_no_unswitch();
+    register_gnalc_fixed_no_fuse();
+    register_gnalc_fixed_no_copyelision();
+
+    register_gnalc_sir_debug();
     register_gnalc_debug();
     register_gnalc_fuzz3();
     register_gnalc_fuzz5();

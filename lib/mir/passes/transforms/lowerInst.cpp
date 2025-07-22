@@ -70,6 +70,8 @@ OpC MIR::IROpCodeConvert(IR::OP op) {
         return OpC::InstS2F;
     case OP::ZEXT:
     case OP::BITCAST:
+    case OP::PTRTOINT:
+    case OP::INTTOPTR:
         return OpC::InstCopy;
     case OP::PHI:
         Err::unreachable("IROpCodeConvert: PHI should not be convert");

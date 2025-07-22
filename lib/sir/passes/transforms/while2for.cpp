@@ -9,6 +9,7 @@
 #include "ir/match.hpp"
 #include "match/match.hpp"
 #include "sir/base.hpp"
+#include "sir/utils.hpp"
 #include "sir/visitor.hpp"
 
 #include <optional>
@@ -21,55 +22,115 @@ struct Result {
     std::set<pInst> iv_loads;
     std::set<pInst> update_insts;
 };
+
+// SIR has no phi, so a simple recursive search is enough.
+bool isTriviallyIdentical(const pVal &lhs, const pVal &rhs) {
+    if (lhs == rhs)
+        return true;
+    auto lhs_i = lhs->as<Instruction>();
+    auto rhs_i = rhs->as<Instruction>();
+    if (!lhs_i || !rhs_i)
+        return false;
+    if (lhs_i->getOpcode() != rhs_i->getOpcode())
+        return false;
+
+    if (lhs_i->getNumOperands() != rhs_i->getNumOperands())
+        return false;
+
+    auto isSameOperands = [&]() -> bool {
+        for (size_t i = 0; i < lhs_i->getNumOperands(); ++i) {
+            if (!isTriviallyIdentical(lhs_i->getOperand(i)->getValue(), rhs_i->getOperand(i)->getValue()))
+                return false;
+        }
+        return true;
+    }();
+
+    if (isSameOperands)
+        return true;
+
+    if (!lhs_i->isCommutative())
+        return false;
+
+    Err::gassert(lhs_i->getNumOperands() == 2);
+    return (isTriviallyIdentical(lhs_i->getOperand(0)->getValue(), rhs_i->getOperand(1)->getValue()) &&
+            isTriviallyIdentical(lhs_i->getOperand(1)->getValue(), rhs_i->getOperand(0)->getValue()));
+}
+
 Result analyzeUpdateExpr(IList &ilist, WHILEInst &wh, const pVal &ptr) {
-    if (ptr->getVTrait() == ValueTrait::CONSTANT_LITERAL || ptr->getVTrait() == ValueTrait::FORMAL_PARAMETER)
+    if (isLoopInvariant(ptr.get(), &wh))
         return {UpdateType::Invariant, ptr, nullptr};
 
     // Find the base
-    auto it = std::next(IListRFind(ilist, wh.as<WHILEInst>()));
+    auto base_it = std::next(IListRFind(ilist, wh.as<WHILEInst>()));
     pVal base;
     std::set<pInst> update_insts;
     auto analyzeBase = [&] {
-        for (; it != ilist.rend(); ++it) {
-            if (match(*it, M::Store(M::Bind(base), M::Is(ptr)))) {
+        for (; base_it != ilist.rend(); ++base_it) {
+            if (match(*base_it, M::Store(M::Bind(base), M::Is(ptr)))) {
                 // IV init store
-                update_insts.emplace(*it);
+                update_insts.emplace(*base_it);
                 return true;
             }
 
-            if (auto helper = (*it)->as<HELPERInst>()) {
-                for (const auto& nested : helper->nested_insts()) {
-                    if (match(nested, M::Store(M::Val(), M::Is(ptr))) || match(*it, M::Load(M::Is(ptr))))
+            if (auto helper = (*base_it)->as<HELPERInst>()) {
+                for (const auto &nested : helper->nested_insts()) {
+                    if (match(nested, M::Store(M::Val(), M::Is(ptr))) || match(*base_it, M::Load(M::Is(ptr))))
                         return false;
                 }
             }
 
-            if (ptr->is<GlobalVariable>() && (*it)->is<CALLInst>())
+            if (ptr->is<GlobalVariable>() && (*base_it)->is<CALLInst>())
                 return false;
 
-            if (match(*it, M::Load(M::Is(ptr))))
+            if (match(*base_it, M::Load(M::Is(ptr))))
                 return false;
         }
         return false;
     }();
 
-    if (!analyzeBase)
+    if (!analyzeBase) {
+        Logger::logDebug("[While2For]: Failed to analyze base.");
         return {UpdateType::Unknown, nullptr, nullptr};
+    }
 
-    // Find the unique `write` in the loop
+    // Find the iv update in the loop
     pStore store;
     std::set<pInst> iv_loads;
-    for (const auto &inst : wh.nested_insts()) {
+    std::vector<pInst> nested_insts{wh.nested_insts_begin(), wh.nested_insts_end()};
+    for (auto it = nested_insts.rbegin(); it != nested_insts.rend(); ++it) {
+        auto inst = *it;
         if (match(inst, M::Store(M::Val(), M::Is(ptr)))) {
             if (!store)
                 store = inst->as<STOREInst>();
-            else
-                return {UpdateType::Unknown, nullptr, nullptr};
+            else {
+                if (!isTriviallyIdentical(inst->as<STOREInst>()->getValue(), store->getValue())) {
+                    Logger::logDebug("[While2For]: Skip non-consistent iv update.");
+                    return {UpdateType::Unknown, nullptr, nullptr};
+                }
+                update_insts.emplace(inst);
+            }
         } else if (match(inst, M::Load(M::Is(ptr))))
             iv_loads.emplace(inst);
-        // Give up loop with early exit
-        else if (inst->is<BREAKInst, CONTINUEInst, RETInst>())
-            return {UpdateType::Unknown, nullptr, nullptr};
+        else if (auto cont = inst->as<CONTINUEInst>()) {
+            if (store == nullptr)
+                continue;
+
+            if (cont->getLoop().get() == &wh) {
+                if (it == std::prev(nested_insts.rend())) {
+                    // while (...)
+                    //   continue
+                    // It's dead loop actually
+                    Logger::logDebug("[While2For]: Skip weird continue.");
+                    return {UpdateType::Unknown, nullptr, nullptr};
+                }
+
+                auto str = (*std::next(it))->as<STOREInst>();
+                if (!str || str->getPtr() != ptr || !isTriviallyIdentical(str->getValue(), store->getValue())) {
+                    Logger::logDebug("[While2For]: Skip non-consistent iv update. (cont)");
+                    return {UpdateType::Unknown, nullptr, nullptr};
+                }
+            }
+        }
     }
 
     if (!store)
@@ -78,8 +139,10 @@ Result analyzeUpdateExpr(IList &ilist, WHILEInst &wh, const pVal &ptr) {
     // IV update store
     update_insts.emplace(store);
 
-    if (wh.getBodyInsts().back() != store)
+    if (!match(wh.getBodyInsts().back(), M::Store(M::Val(), M::Is(ptr)))) {
+        Logger::logDebug("[While2For]: Skip non-iv-updates-last loop.(not store)");
         return {UpdateType::Unknown, nullptr, nullptr};
+    }
 
     if (pVal step; match(store->getValue(), M::Add(M::Load(M::Is(ptr)), M::Bind(step))) ||
                    match(store->getValue(), M::Add(M::Bind(step), M::Load(M::Is(ptr))))) {
@@ -94,6 +157,7 @@ Result analyzeUpdateExpr(IList &ilist, WHILEInst &wh, const pVal &ptr) {
         return {UpdateType::Affine, base, step, iv_loads, update_insts};
     }
 
+    Logger::logDebug("[While2For]: Skip non-iv-updates-last loop.(not iv update store)");
     return {UpdateType::Unknown, nullptr, nullptr};
 }
 
@@ -149,7 +213,7 @@ std::optional<ForInfo> transformWhile(IList &ilist, WHILEInst &wh, LinearFunctio
 }
 
 struct While2ForVisitor : ContextVisitor {
-    using MapT = std::vector<std::tuple<IList *, pWhileInst>>;
+    using MapT = std::vector<std::tuple<IList *, LInstIter, pWhileInst, size_t>>;
     MapT *replace_map{};
 
     explicit While2ForVisitor(MapT *replace_map_) : replace_map(replace_map_) {}
@@ -157,8 +221,7 @@ struct While2ForVisitor : ContextVisitor {
         // Doing this in a post order can let the IList* in valid state when replacing while to for.
         ContextVisitor::visit(ctx, while_inst);
 
-        IList *ilist = ctx.iList();
-        replace_map->emplace_back(ilist, while_inst.as<WHILEInst>());
+        replace_map->emplace_back(ctx.iList(), ctx.iter, while_inst.as<WHILEInst>(), ctx.depth);
     }
 };
 
@@ -172,14 +235,16 @@ PM::PreservedAnalyses While2ForPass::run(LinearFunction &function, LFAM &lfam) {
 
     size_t num_transformed = 0;
     static size_t name_cnt = 0;
-    for (auto &[ilist, while_inst] : replace_map) {
+    for (auto &[ilist, iter, while_inst, depth] : replace_map) {
         if (auto for_info_opt = transformWhile(*ilist, *while_inst, function)) {
             auto info = *for_info_opt;
-            auto iv =
-                std::make_shared<IndVar>(info.indvar_alloc->getName() + ".ind." + std::to_string(name_cnt++),
-                                                    info.indvar_alloc, info.base, info.bound, info.step);
+            auto iv = std::make_shared<IndVar>(info.indvar_alloc->getName() + ".ind." + std::to_string(name_cnt++),
+                                               info.indvar_alloc, info.base, info.bound, info.step, depth);
             auto for_inst = std::make_shared<FORInst>(iv, while_inst->getBodyInsts());
-            IListReplace(*ilist, while_inst, for_inst);
+            Err::gassert(while_inst->getCondInsts().back()->is<ICMPInst>());
+            ilist->insert(iter, while_inst->getCondInsts().begin(), std::prev(while_inst->getCondInsts().end()));
+            ilist->insert(iter, for_inst);
+            ilist->erase(iter);
             // Replace all uses of info.ind with iv
             for (const auto &load : info.iv_loads)
                 load->replaceSelf(iv);

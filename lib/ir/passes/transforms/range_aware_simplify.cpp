@@ -3,14 +3,21 @@
 
 #include "ir/passes/transforms/range_aware_simplify.hpp"
 
+#include "config/config.hpp"
 #include "ir/block_utils.hpp"
 #include "ir/instructions/compare.hpp"
-#include "ir/passes/analysis/range_analysis.hpp"
 #include "ir/match.hpp"
+#include "ir/passes/analysis/range_analysis.hpp"
 
 #include <vector>
 namespace IR {
 PM::PreservedAnalyses RangeAwareSimplifyPass::run(Function &function, FAM &fam) {
+    if (function.getBlocks().size() > Config::IR::RANGE_AWARE_SIMPLIFY_SKIP_BLOCK_THRESHOLD) {
+        Logger::logDebug("[RngSimplify]: Skipping function '", function.getName(), "' with too many basic blocks.(",
+                         function.getBlocks().size(), "'.");
+        return PreserveAll();
+    }
+
     bool rng_cfg_modified = false;
     bool rng_inst_modified = false;
     auto ranges = fam.getResult<RangeAnalysis>(function);
@@ -174,7 +181,7 @@ PM::PreservedAnalyses RangeAwareSimplifyPass::run(Function &function, FAM &fam) 
                     eliminated.emplace_back(fcmp);
                     fcmp->replaceSelf(function.getConst(*fcmp_res));
                     rng_inst_modified = true;
-                    Logger::logDebug("[ RngSimplify]: Replaced FCMPInst '", fcmp->getName(), "' with '",
+                    Logger::logDebug("[RngSimplify]: Replaced FCMPInst '", fcmp->getName(), "' with '",
                                      *fcmp_res ? "true" : "false", "'.");
                 }
             }
