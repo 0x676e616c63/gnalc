@@ -71,6 +71,7 @@ bool hasSideEffect(FAM &fam, const pLoop& loop);
 pVal getMemLocation(Value* i);
 pVal getMemLocation(const pVal &i);
 
+Value* getPtrBase(Value* ptr);
 pVal getPtrBase(const pVal& ptr);
 } // namespace IR
 

@@ -76,10 +76,13 @@ constexpr auto IF_CONVERSION_DUPLICATION_THRESHOLD = 4;
 // Range Analysis
 constexpr auto RANGE_ANALYSIS_MAX_PROCESS_CNT = 32;
 
+// Range Aware Simplify
+constexpr auto RANGE_AWARE_SIMPLIFY_SKIP_BLOCK_THRESHOLD = 1000;
+
 // Vectorizer
 // We vectorize trees if we gain more than this threshold.
 // FIXME: I don't know if this threshold is reasonable.
-constexpr auto SLP_COST_THRESHOLD = -1000000; // test
+constexpr auto SLP_COST_THRESHOLD = -15; // test
 constexpr auto SLP_BUILD_TREE_RECURSION_THRESHOLD = 12;
 constexpr auto SLP_SCHEDULER_MAX_REGION_SIZE = 100000;
 

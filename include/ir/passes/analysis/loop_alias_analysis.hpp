@@ -38,6 +38,7 @@ struct AccessSet {
     std::vector<AccessPair> accesses;
     size_t element_size;
     bool untracked;
+    Value* last_trackable_base;
 
     bool operator==(const AccessSet &set) const;
     bool operator!=(const AccessSet &set) const;
@@ -64,8 +65,8 @@ public:
     ModRefInfo getInstModRefInfo(Instruction *inst, Value *location, FAM &fam) const override;
     ModRefInfo getInstModRefInfo(const pInst &inst, const pVal &location, FAM &fam) const override;
 
-    bool isV2NextToV1(Value *v1, Value *v2) const;
-    bool isV2NextToV1(const pVal &v1, const pVal &v2) const;
+    bool isConsecutivePtr(Value *v1, Value *v2) const;
+    bool isConsecutivePtr(const pVal &v1, const pVal &v2) const;
 
     bool isConsecutiveAccess(Value* inst1, Value* inst2) const;
     bool isConsecutiveAccess(const pVal& inst1, const pVal& inst2) const;
@@ -75,6 +76,9 @@ public:
 
     std::optional<std::tuple<Value *, size_t>> getBaseAndOffset(Value *value) const;
     std::optional<std::tuple<Value *, size_t>> getBaseAndOffset(const pVal &value) const;
+
+    Value* getBase(Value* ptr) const;
+    pVal getBase(const pVal& ptr) const;
 
     const AccessSet &getAccessSet(Value *value) const;
     const AccessSet &getAccessSet(const pVal &value) const;

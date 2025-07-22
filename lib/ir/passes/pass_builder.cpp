@@ -154,10 +154,10 @@ auto make_basic_clean(const PMOptions& options) {
 
 auto make_cfg_clean(const PMOptions& options) {
     PM::FixedPointPM<Function> fpm;
+    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
     FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
     FUNCTION_TRANSFORM(dce, DCEPass());
     FUNCTION_TRANSFORM(sccp, SCCPPass())
-    FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
     FUNCTION_TRANSFORM(if_conversion, IfConversionPass())
     FUNCTION_TRANSFORM(adce, ADCEPass())
     return fpm;
@@ -195,8 +195,9 @@ auto make_arithmetic(const PMOptions& options) {
 }
 
 auto make_deep_clean(const PMOptions& options) {
-    // Basic --> (CFG ---> Mem) ---> IPO ---> CFG
+    // CFG ---> Basic --> (CFG ---> Mem) ---> IPO ---> CFG
     FPM fpm;
+    fpm.addPass(make_cfg_clean(options));
     fpm.addPass(make_basic_clean(options));
 
     PM::FixedPointPM<Function> fixed;
@@ -240,6 +241,16 @@ auto make_loop(const PMOptions& options) {
     return fpm;
 }
 
+auto make_debug_version_vectorizer(const PMOptions& options) {
+    FPM fpm;
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(PrintSCEVPass(std::cerr));
+    fpm.addPass(PrintLoopAAPass(std::cerr));
+    FUNCTION_TRANSFORM(vectorizer, LoopSimplifyPass(), VectorizerPass(true))
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    return fpm;
+}
+
 auto make_vectorizer(const PMOptions& options) {
     FPM fpm;
     FUNCTION_TRANSFORM(vectorizer, LoopSimplifyPass(), VectorizerPass())
@@ -269,6 +280,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions& options) {
     fpm.addPass(make_loop(options));
     fpm.addPass(make_deep_clean(options));
     fpm.addPass(make_vectorizer(options));
+    // fpm.addPass(make_debug_version_vectorizer(options));
     fpm.addPass(make_deep_clean(options));
 
     // FUNCTION_TRANSFORM(store_range, LoopSimplifyPass(), StoreAnalysisPass<RangeAnalysis>())
@@ -366,6 +378,20 @@ MPM PassBuilder::buildModulePipeline(const PMOptions& options) {
 FPM PassBuilder::buildFunctionDebugPipeline() {
     // // For SIR pass debug
     FPM fpm;
+    fpm.addPass(IR::PromotePass());
+    fpm.addPass(IR::TailRecursionEliminationPass());
+    fpm.addPass(IR::InlinePass());
+    fpm.addPass(IR::InternalizePass());
+    fpm.addPass(IR::PromotePass());
+    fpm.addPass(IR::NameNormalizePass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::VectorizerPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::UnifyExitsPass());
+    fpm.addPass(IR::CodeGenPreparePass());
+    fpm.addPass(IR::NameNormalizePass());
+    return fpm;
+
     // fpm.addPass(PrintFunctionPass(std::cerr));
     // fpm.addPass(VerifyPass());
     // fpm.addPass(PromotePass());
@@ -442,30 +468,30 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     // fpm.addPass(NameNormalizePass(true));
     // fpm.addPass(RunTestPass("../test/contest/functional/87_many_params.out"));
     // fpm.addPass(VerifyPass(true));
-
-    fpm.addPass(IR::PromotePass());
-    fpm.addPass(IR::InlinePass());
-    fpm.addPass(IR::NameNormalizePass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::DCEPass());
-    fpm.addPass(IR::CFGSimplifyPass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::LCSSAPass());
-    fpm.addPass(IR::LoopUnrollPass());
-    fpm.addPass(IR::DCEPass());
-    fpm.addPass(IR::CFGSimplifyPass());
-    fpm.addPass(IR::InstSimplifyPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::InstSimplifyPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::UnifyExitsPass());
-    fpm.addPass(IR::CodeGenPreparePass());
-    fpm.addPass(IR::NameNormalizePass());
-    fpm.addPass(IR::RunTestPass("../test/contest/h_performance/h-6-02.out"
-        , "../test/contest/h_performance/h-6-02.in"));
-    return fpm;
-
-    return fpm;
+    //
+    // fpm.addPass(IR::PromotePass());
+    // fpm.addPass(IR::InlinePass());
+    // fpm.addPass(IR::NameNormalizePass());
+    // fpm.addPass(IR::VerifyPass());
+    // fpm.addPass(IR::DCEPass());
+    // fpm.addPass(IR::CFGSimplifyPass());
+    // fpm.addPass(IR::LoopSimplifyPass());
+    // fpm.addPass(IR::LCSSAPass());
+    // fpm.addPass(IR::LoopUnrollPass());
+    // fpm.addPass(IR::DCEPass());
+    // fpm.addPass(IR::CFGSimplifyPass());
+    // fpm.addPass(IR::InstSimplifyPass());
+    // fpm.addPass(IR::VerifyPass());
+    // fpm.addPass(IR::InstSimplifyPass());
+    // fpm.addPass(IR::VerifyPass());
+    // fpm.addPass(IR::UnifyExitsPass());
+    // fpm.addPass(IR::CodeGenPreparePass());
+    // fpm.addPass(IR::NameNormalizePass());
+    // fpm.addPass(IR::RunTestPass("../test/contest/h_performance/h-6-02.out"
+    //     , "../test/contest/h_performance/h-6-02.in"));
+    // return fpm;
+    //
+    // return fpm;
 }
 
 MPM PassBuilder::buildModuleDebugPipeline() {

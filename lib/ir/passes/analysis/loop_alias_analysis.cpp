@@ -20,10 +20,8 @@ bool AccessSet::AccessPair::operator==(const AccessPair &other) const {
 }
 
 bool AccessSet::operator==(const AccessSet &set) const {
-    if (untracked && set.untracked)
-        return true;
-
-    return (base == set.base && offset == set.offset && accesses == set.accesses);
+    return (base == set.base && offset == set.offset && accesses == set.accesses &&
+        untracked == set.untracked && last_trackable_base == set.last_trackable_base);
 }
 
 bool AccessSet::operator!=(const AccessSet &set) const { return !(*this == set); }
@@ -92,18 +90,77 @@ bool overlap(const AccessSet &set1, const AccessSet &set2) {
 
     return false;
 }
+
+bool isTriviallyNonEq(const pVal& v1, const pVal& v2) {
+    auto v2add = v2->as<BinaryInst>();
+    if (!v2add)
+        return false;
+    if (v2add->getOpcode() == OP::ADD) {
+        auto base = v2add->getLHS();
+        auto update =  v2add->getRHS();
+        if (base->getVTrait() == ValueTrait::CONSTANT_LITERAL)
+            std::swap(base, update);
+
+        if (base->getVTrait() == ValueTrait::CONSTANT_LITERAL || update->getVTrait() != ValueTrait::CONSTANT_LITERAL)
+            return false;
+
+        auto ci32 = update->as<ConstantInt>()->getVal();
+        if (ci32 <= 0)
+            return false;
+
+        if (base == v1)
+            return true;
+
+        return isTriviallyNonEq(v1, base);
+    }
+    return false;
+}
+
+// Quick path for two disjoint geps
+// Usually they come from loop unroll, handling them specially can speed up the analysis.
+bool isTriviallyDisjointGep(GEPInst *gep1, GEPInst *gep2) {
+    if (gep1->getPtr() != gep2->getPtr())
+        return false;
+
+    auto idx1 = gep1->getIdxs();
+    auto idx2 = gep2->getIdxs();
+    if (idx1.size() != idx2.size())
+        return false;
+
+    for (size_t i = 0; i < idx1.size() - 1; i++) {
+        if (idx1[i] != idx2[i])
+            return false;
+    }
+
+    if (isTriviallyNonEq(idx2.back(), idx1.back()) || isTriviallyNonEq(idx1.back(), idx2.back()))
+        return true;
+
+    return false;
+}
+
 AliasInfo LoopAAResult::getAliasInfo(Value *v1, Value *v2) const {
     if (v1 == v2)
         return AliasInfo::MustAlias;
 
+    auto gep1 = v1->as_raw<GEPInst>();
+    auto gep2 = v2->as_raw<GEPInst>();
+    if (gep1 && gep2 && isTriviallyDisjointGep(gep1, gep2))
+        return AliasInfo::NoAlias;
+
     const auto &loc1 = queryPointer(v1);
     const auto &loc2 = queryPointer(v2);
 
-    if (loc1.untracked || loc2.untracked)
-        return AliasInfo::MayAlias;
-
     if (loc1.base != loc2.base)
         return AliasInfo::NoAlias;
+
+    if (loc1.untracked || loc2.untracked) {
+        if (loc1.last_trackable_base == loc2.last_trackable_base) {
+            if (overlap(loc1, loc2))
+                return AliasInfo::MayAlias;
+            return AliasInfo::NoAlias;
+        }
+        return AliasInfo::MayAlias;
+    }
 
     if (loc1 == loc2)
         return AliasInfo::MustAlias;
@@ -151,26 +208,50 @@ ModRefInfo LoopAAResult::getInstModRefInfo(const pInst &inst, const pVal &locati
     return getInstModRefInfo(inst.get(), location.get(), fam);
 }
 
-bool LoopAAResult::isV2NextToV1(Value *v1, Value *v2) const {
+// Quick path for two consecutive geps
+// Usually they come from loop unroll, handling them specially can speed up the analysis.
+bool isTriviallyConsecutiveGep(GEPInst *gep1, GEPInst *gep2) {
+    if (gep1->getPtr() != gep2->getPtr())
+        return false;
+
+    auto idx1 = gep1->getIdxs();
+    auto idx2 = gep2->getIdxs();
+    if (idx1.size() != idx2.size())
+        return false;
+
+    for (size_t i = 0; i < idx1.size() - 1; i++) {
+        if (idx1[i] != idx2[i])
+            return false;
+    }
+
+    return match(idx2.back(), M::Add(M::Is(idx1.back()), M::Is(1)),
+        M::Add(M::Is(1), M::Is(idx1.back())));
+}
+
+bool LoopAAResult::isConsecutivePtr(Value *v1, Value *v2) const {
     if (v1 == v2)
         return false;
+
+    auto gep1 = v1->as_raw<GEPInst>();
+    auto gep2 = v2->as_raw<GEPInst>();
+    if (gep1 && gep2 && isTriviallyConsecutiveGep(gep1, gep2))
+        return true;
 
     const auto &loc1 = queryPointer(v1);
     const auto &loc2 = queryPointer(v2);
 
-    if (loc1.untracked || loc2.untracked)
-        return false;
-
-    return loc1.base == loc2.base && loc2.offset > loc1.offset &&
+    return loc1.last_trackable_base == loc2.last_trackable_base && loc2.offset > loc1.offset &&
            loc2.offset - loc1.offset == getElm(v1->getType())->getBytes() && loc1.accesses == loc2.accesses;
 }
 
-bool LoopAAResult::isV2NextToV1(const pVal &v1, const pVal &v2) const { return isV2NextToV1(v1.get(), v2.get()); }
+bool LoopAAResult::isConsecutivePtr(const pVal &v1, const pVal &v2) const {
+    return isConsecutivePtr(v1.get(), v2.get());
+}
 
 bool LoopAAResult::isConsecutiveAccess(Value *inst1, Value *inst2) const {
     auto ptr1 = getMemLocation(inst1);
     auto ptr2 = getMemLocation(inst2);
-    return isV2NextToV1(ptr1, ptr2);
+    return isConsecutivePtr(ptr1, ptr2);
 }
 bool LoopAAResult::isConsecutiveAccess(const pVal &inst1, const pVal &inst2) const {
     return isConsecutiveAccess(inst1.get(), inst2.get());
@@ -178,6 +259,9 @@ bool LoopAAResult::isConsecutiveAccess(const pVal &inst1, const pVal &inst2) con
 
 int LoopAAResult::getAlignOnBase(Value *value) const {
     const auto &loc = queryPointer(value);
+    if (loc.untracked)
+        return 1;
+
     int align = -1;
     int pow = 1;
     if (loc.offset != 0) {
@@ -217,6 +301,15 @@ std::optional<std::tuple<Value *, size_t>> LoopAAResult::getBaseAndOffset(const 
     return getBaseAndOffset(value.get());
 }
 
+Value *LoopAAResult::getBase(Value *ptr) const {
+    const auto &loc = queryPointer(ptr);
+    return loc.base;
+}
+pVal LoopAAResult::getBase(const pVal &ptr) const {
+    const auto &loc = queryPointer(ptr.get());
+    return loc.base->as<Value>();
+}
+
 const AccessSet &LoopAAResult::getAccessSet(Value *value) const { return queryPointer(value); }
 const AccessSet &LoopAAResult::getAccessSet(const pVal &value) const { return queryPointer(value.get()); }
 
@@ -233,11 +326,14 @@ AccessSet LoopAAResult::analyzePointer(Value *ptr) const {
         .offset = 0,
         .element_size = getElm(ptr->getType())->getBytes(),
         .untracked = false,
+        .last_trackable_base = nullptr,
     };
     while (true) {
-        if (auto bitcast = ptr->as_raw<BITCASTInst>())
+        if (auto bitcast = ptr->as_raw<BITCASTInst>()) {
             ptr = bitcast->getOVal().get();
+        }
         else if (auto gep = ptr->as_raw<GEPInst>()) {
+            set.last_trackable_base = ptr;
             ptr = gep->getPtr().get();
             // Note that we are iterating backwards through the use-def chain.
             // Pay attention to the insert point.
@@ -289,10 +385,12 @@ AccessSet LoopAAResult::analyzePointer(Value *ptr) const {
                                 set.offset += idx_ci32 * curr_type->getBytes();
                             } else {
                                 set.untracked = true;
+                                set.base = getPtrBase(ptr); // fallback
                                 return set;
                             }
                         } else {
                             set.untracked = true;
+                            set.base = getPtrBase(ptr); // fallback
                             return set;
                         }
                     }
@@ -302,16 +400,20 @@ AccessSet LoopAAResult::analyzePointer(Value *ptr) const {
         } else if (auto phi = ptr->as<PHIInst>()) {
             if (!isLCSSAPhi(phi)) {
                 set.untracked = true;
+                set.base = getPtrBase(ptr); // fallback
                 return set;
             }
             ptr = (*phi->incoming_begin()).value.get();
         } else if (ptr->is<ALLOCAInst, GlobalVariable, FormalParam>()) {
             set.base = ptr;
+            set.last_trackable_base = ptr;
+            set.base = getPtrBase(ptr); // fallback
             return set;
         }
         // Don't bother with function before mem2reg, or gep flattened program.
         else if (ptr->is<LOADInst, INTTOPTRInst, PTRTOINTInst>()) {
             set.untracked = true;
+            set.base = getPtrBase(ptr); // fallback
             return set;
         } else
             Err::unreachable();

@@ -84,16 +84,16 @@ MPM LinearPassBuilder::buildModulePipeline(const PMOptions& opt_info) {
 
 LFPM LinearPassBuilder::buildFunctionDebugPipeline() {
     LFPM lfpm;
-    // lfpm.addPass(EarlyPromotePass());
-    // lfpm.addPass(ConstantFoldPass());
-    // lfpm.addPass(EarlyDCEPass());
-    // lfpm.addPass(While2ForPass());
+    lfpm.addPass(EarlyPromotePass());
+    lfpm.addPass(ConstantFoldPass());
+    lfpm.addPass(EarlyDCEPass());
+    lfpm.addPass(While2ForPass());
     // lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     // // lfpm.addPass(LoopUnswitchPass());
-    lfpm.addPass(EarlyInlinePass());
+    // lfpm.addPass(EarlyInlinePass());
     // lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     // lfpm.addPass(PrintLAAPass(std::cerr));
-    // lfpm.addPass(CopyElisionPass());
+    lfpm.addPass(CopyElisionPass());
     // lfpm.addPass(PrintLinearFunctionPass(std::cerr));
     // lfpm.addPass(LoopInterchangePass());
     // lfpm.addPass(LoopUnswitchPass());
