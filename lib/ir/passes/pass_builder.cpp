@@ -378,25 +378,11 @@ MPM PassBuilder::buildModulePipeline(const PMOptions& options) {
 FPM PassBuilder::buildFunctionDebugPipeline() {
     // // For SIR pass debug
     FPM fpm;
-    fpm.addPass(IR::PromotePass());
-    fpm.addPass(IR::TailRecursionEliminationPass());
-    fpm.addPass(IR::InlinePass());
-    fpm.addPass(IR::InternalizePass());
-    fpm.addPass(IR::PromotePass());
-    fpm.addPass(IR::NameNormalizePass());
-    fpm.addPass(IR::LoopSimplifyPass());
-    fpm.addPass(IR::VectorizerPass());
-    fpm.addPass(IR::VerifyPass());
-    fpm.addPass(IR::UnifyExitsPass());
-    fpm.addPass(IR::CodeGenPreparePass());
-    fpm.addPass(IR::NameNormalizePass());
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(VerifyPass());
+    fpm.addPass(PromotePass());
+    fpm.addPass(NameNormalizePass());
     return fpm;
-
-    // fpm.addPass(PrintFunctionPass(std::cerr));
-    // fpm.addPass(VerifyPass());
-    // fpm.addPass(PromotePass());
-    // fpm.addPass(NameNormalizePass());
-    // return fpm;
     // // Parallel
     // FPM fpm;
     // fpm.addPass(VerifyPass());

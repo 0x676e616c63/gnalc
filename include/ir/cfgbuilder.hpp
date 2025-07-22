@@ -77,10 +77,10 @@ private:
     pLFunc cur_linear_func;
     pFunc cur_making_func;
     pBlock cur_blk;
-    std::stack<pBlock> _while_cond_for_continue;
-    std::stack<pBlock> _while_end_for_break;
-    std::stack<pPhi> _iv_for_contine;
-    std::stack<pVal> _iv_update_for_contine;
+    std::stack<pBlock> loop_cond_for_continue;
+    std::stack<pBlock> loop_end_for_break;
+    std::stack<pPhi> iv_for_contine;
+    std::stack<pVal> iv_update_for_contine;
 
     bool adder(std::list<pInst>::const_iterator &it,
                const std::list<pInst>::const_iterator &end,

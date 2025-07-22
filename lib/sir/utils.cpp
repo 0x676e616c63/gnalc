@@ -16,7 +16,7 @@ bool IListHasWriteToScalarMemory(Value* ptr, IList* ilist) {
 }
 
 bool isMemoryLoopInvariant(Value* val, HELPERInst* loop) {
-    if (getElm(val->getType())->is<ArrayType>())
+    if (getElm(val->getType())->is<ArrayType>() || val->is<GlobalVariable>())
         return false;
 
     if (auto while_inst = loop->as<WHILEInst>()) {
@@ -32,12 +32,12 @@ bool isMemoryLoopInvariant(Value* val, HELPERInst* loop) {
     return true;
 }
 bool isLoopInvariant(Value* val, HELPERInst* loop) {
+    if (val->getType()->is<PtrType>())
+        return false;
+
     auto inst = val->as<Instruction>();
     if (!inst)
         return true;
-
-    if (val->getType()->is<PtrType>())
-        return isMemoryLoopInvariant(val, loop);
 
     if (auto indvar = inst->as<IndVar>()) {
         auto for_inst = loop->as<FORInst>();

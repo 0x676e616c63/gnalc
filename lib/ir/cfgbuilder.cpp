@@ -38,8 +38,10 @@ void CFGBuilder::build(Module &module) {
     cur_linear_func = nullptr;
     cur_making_func = nullptr;
     cur_blk = nullptr;
-    _while_cond_for_continue = {};
-    _while_end_for_break = {};
+    loop_cond_for_continue = {};
+    loop_end_for_break = {};
+    iv_for_contine = {};
+    iv_update_for_contine = {};
 }
 
 // !!!需要尽量确保第一个BB是entry, 最后一个是return
@@ -88,10 +90,10 @@ void CFGBuilder::newWh(const pWhileInst &whinst) {
     auto whcond = std::make_shared<BasicBlock>(nam.getWhCond());
     auto whbody = std::make_shared<BasicBlock>(nam.getWhBody());
     auto whend = std::make_shared<BasicBlock>(nam.getWhEnd());
-    _while_cond_for_continue.push(whcond);
-    _while_end_for_break.push(whend);
-    _iv_for_contine.emplace(nullptr);
-    _iv_update_for_contine.emplace(nullptr);
+    loop_cond_for_continue.push(whcond);
+    loop_end_for_break.push(whend);
+    iv_for_contine.emplace(nullptr);
+    iv_update_for_contine.emplace(nullptr);
 
     cur_blk->addInst(std::make_shared<BRInst>(whcond));
 
@@ -111,18 +113,18 @@ void CFGBuilder::newWh(const pWhileInst &whinst) {
     cur_blk = whend;
     cur_making_func->addBlock(cur_blk);
 
-    _while_cond_for_continue.pop();
-    _while_end_for_break.pop();
-    _iv_for_contine.pop();
-    _iv_update_for_contine.pop();
+    loop_cond_for_continue.pop();
+    loop_end_for_break.pop();
+    iv_for_contine.pop();
+    iv_update_for_contine.pop();
 }
 
 void CFGBuilder::newFor(const pForInst & for_inst) {
     auto for_cond = std::make_shared<BasicBlock>(nam.getForCond());
     auto for_body = std::make_shared<BasicBlock>(nam.getForBody());
     auto for_end = std::make_shared<BasicBlock>(nam.getForEnd());
-    _while_cond_for_continue.push(for_cond);
-    _while_end_for_break.push(for_end);
+    loop_cond_for_continue.push(for_cond);
+    loop_end_for_break.push(for_end);
 
     auto for_preheader = cur_blk;
     for_preheader->addInst(std::make_shared<BRInst>(for_cond));
@@ -131,8 +133,8 @@ void CFGBuilder::newFor(const pForInst & for_inst) {
     cur_making_func->addBlock(for_cond);
     auto indvar = for_inst->getIndVar();
     auto phi = std::make_shared<PHIInst>(nam.getForIndVar(), indvar->getType());
-    _iv_for_contine.push(phi);
-    _iv_update_for_contine.push(indvar->getStep());
+    iv_for_contine.push(phi);
+    iv_update_for_contine.push(indvar->getStep());
     auto icmp = std::make_shared<ICMPInst>(phi->getName() + ".cmp", ICMPOP::slt, phi, indvar->getBound());
     auto for_br = std::make_shared<BRInst>(icmp, for_body, for_end);
     // Store to original alloca to fix outside loop uses of the induction variable.
@@ -148,25 +150,25 @@ void CFGBuilder::newFor(const pForInst & for_inst) {
 
     cur_blk = for_body;
     cur_making_func->addBlock(for_body);
-    if (auto it = for_inst->getBodyInsts().cbegin(); !adder(it, for_inst->getBodyInsts().cend(), true))
+    if (auto it = for_inst->getBodyInsts().cbegin(); !adder(it, for_inst->getBodyInsts().cend(), true)) {
+        // Insert update insts
+        auto upd_name = cur_blk->getName() + phi->getName().substr(1) + ".upd";
+        auto update = std::make_shared<BinaryInst>(upd_name, OP::ADD, phi, indvar->getStep());
+        cur_blk->addInst(update);
+        phi->addPhiOper(update, cur_blk);
         cur_blk->addInst(std::make_shared<BRInst>(for_cond));
-
-    // Insert update insts
-    auto upd_name = cur_blk->getName() + phi->getName().substr(1) + ".upd";
-    auto update = std::make_shared<BinaryInst>(upd_name, OP::ADD, phi, indvar->getStep());
-    cur_blk->addInstBeforeTerminator(update);
+    }
 
     phi->addPhiOper(indvar->getBase(), for_preheader);
-    phi->addPhiOper(update, cur_blk);
     indvar->replaceSelf(phi);
 
     cur_blk = for_end;
     cur_making_func->addBlock(for_end);
 
-    _while_cond_for_continue.pop();
-    _while_end_for_break.pop();
-    _iv_for_contine.pop();
-    _iv_update_for_contine.pop();
+    loop_cond_for_continue.pop();
+    loop_end_for_break.pop();
+    iv_for_contine.pop();
+    iv_update_for_contine.pop();
 }
 
 
@@ -187,23 +189,23 @@ bool CFGBuilder::adder(std::list<pInst>::const_iterator &it, const std::list<pIn
                 break;
             case HELPERTY::BREAK:
                 Err::gassert(allow_break, "CFGBuilder: break in invalid block.");
-                Err::gassert(!_while_end_for_break.empty(), "CFGBuilder: stack while_end_for_break is empty!");
-                cur_blk->addInst(std::make_shared<BRInst>(_while_end_for_break.top()));
+                Err::gassert(!loop_end_for_break.empty(), "CFGBuilder: stack while_end_for_break is empty!");
+                cur_blk->addInst(std::make_shared<BRInst>(loop_end_for_break.top()));
                 inserted_terminator = true;
                 break;
             case HELPERTY::CONTINUE:
                 Err::gassert(allow_break, "CFGBuilder: continue in invalid block.");
-                Err::gassert(!_iv_for_contine.empty() && !_iv_update_for_contine.empty() &&
-                    !_while_cond_for_continue.empty(),
+                Err::gassert(!iv_for_contine.empty() && !iv_update_for_contine.empty() &&
+                    !loop_cond_for_continue.empty(),
                     "CFGBuilder: stack for continue is empty!");
-                if (auto cur_iv = _iv_for_contine.top()) {
-                    auto cur_iv_update = _iv_update_for_contine.top();
+                if (auto cur_iv = iv_for_contine.top()) {
+                    auto cur_iv_update = iv_update_for_contine.top();
                     auto upd_name = cur_blk->getName() + cur_iv->getName().substr(1) + ".upd";
                     auto update = std::make_shared<BinaryInst>(upd_name, OP::ADD, cur_iv, cur_iv_update);
                     cur_blk->addInst(update);
                     cur_iv->addPhiOper(update, cur_blk);
                 }
-                cur_blk->addInst(std::make_shared<BRInst>(_while_cond_for_continue.top()));
+                cur_blk->addInst(std::make_shared<BRInst>(loop_cond_for_continue.top()));
                 inserted_terminator = true;
                 break;
             default:
