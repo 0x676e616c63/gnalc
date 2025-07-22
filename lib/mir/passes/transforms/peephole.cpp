@@ -497,7 +497,7 @@ bool GenericPeepholeImpl::MA(MatchInfo &info) {
     MIRInst_p_l::iterator mul_iter;
     MIROperand_p reserved = nullptr;
 
-    if (inSet(newOpC, ARMOpC::MADD, ARMOpC::MLA_V /* , ARMOpC::FMADD */)) {
+    if (inSet(newOpC, ARMOpC::MADD, ARMOpC::MLA_V /*, ARMOpC::FMADD) */)) {
         mul_iter = isMultipled(1);
         reserved = minst->getOp(2);
 
@@ -506,7 +506,7 @@ bool GenericPeepholeImpl::MA(MatchInfo &info) {
             reserved = minst->getOp(1);
         }
 
-    } else if (inSet(newOpC, ARMOpC::MSUB, ARMOpC::MLS_V)) {
+    } else {
         mul_iter = isMultipled(2); // subtracts the product from a third register value
         reserved = minst->getOp(1);
     }
@@ -538,8 +538,6 @@ bool GenericPeepholeImpl::MA(MatchInfo &info) {
         minsts.insert(std::next(iter), copy);
     }
 
-    (*mul_iter)->putAllOp(ctx);
-    minsts.erase(mul_iter);
     return true;
 }
 
