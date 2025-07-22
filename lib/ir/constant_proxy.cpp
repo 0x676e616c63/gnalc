@@ -389,6 +389,9 @@ pConstF32Vec ConstantProxy::getConstantFloatVector() const { return std::get<6>(
 pVal ConstantProxy::getConstant() const {
     return std::visit([](auto &&v) -> pVal { return v; }, value);
 }
+pType ConstantProxy::getType() const {
+    return std::visit([](auto &&v) -> pType { return v->getType(); }, value);
+}
 
 bool ConstantProxy::get_i1() const { return std::get<0>(value)->getVal(); }
 char ConstantProxy::get_i8() const { return std::get<1>(value)->getVal(); }

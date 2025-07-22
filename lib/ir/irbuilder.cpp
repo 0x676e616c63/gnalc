@@ -60,13 +60,15 @@ pCast IRBuilder::makeCast(OP op, const pVal &val, const pType &type, const std::
         return makeSext(val, type->as<BType>()->getInner(), name);
     case OP::BITCAST:
         return makeBitcast(val, type, name);
+    case OP::PTRTOINT:
+        return makePtrToInt(val, type->as<BType>()->getInner(), name);
+    case OP::INTTOPTR:
+        return makeIntToPtr(val, type, name);
     case OP::FPTOSI:
-        Err::gassert(val->getType()->isFloatingPoint() && type->isInteger(),
-            "Invalid cast type.");
+        Err::gassert(val->getType()->isFloatingPoint() && type->isInteger(), "Invalid cast type.");
         return makeFptosi(val, name);
     case OP::SITOFP:
-        Err::gassert(val->getType()->isInteger() && type->isFloatingPoint(),
-            "Invalid cast type.");
+        Err::gassert(val->getType()->isInteger() && type->isFloatingPoint(), "Invalid cast type.");
         return makeSitofp(val, name);
     default:
         Err::unreachable("Not a cast op.");
@@ -81,6 +83,12 @@ pSext IRBuilder::makeSext(const pVal &val, IRBTYPE type, const std::string &name
 }
 pBitcast IRBuilder::makeBitcast(const pVal &val, const pType &type, const std::string &name) const {
     return makeInst<BITCASTInst>(name, "bitcast", val, type);
+}
+pPtrToInt IRBuilder::makePtrToInt(const pVal &val, IRBTYPE type, const std::string &name) const {
+    return makeInst<PTRTOINTInst>(name, "ptrtoint", val, type);
+}
+pIntToPtr IRBuilder::makeIntToPtr(const pVal &val, const pType &type, const std::string &name) const {
+    return makeInst<INTTOPTRInst>(name, "inttoptr", val, type);
 }
 pFptosi IRBuilder::makeFptosi(const pVal &val, const std::string &name) const {
     return makeInst<FPTOSIInst>(name, "fptosi", val);

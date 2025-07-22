@@ -32,6 +32,13 @@ int AffineExpr::coe(IndVar *i) const {
     return it == coeffs.end() ? 0 : it->second;
 }
 
+bool AffineExpr::isLinear() const { return coeffs.size() == 1 && constant == 0; }
+
+std::pair<int, IndVar *> AffineExpr::getLinear() const {
+    Err::gassert(isLinear(), "AffineExpr is not linear");
+    return std::make_pair(coeffs.begin()->second, coeffs.begin()->first);
+}
+
 AffineExpr AffineExpr::operator+(const AffineExpr &rhs) const {
     auto new_coeffs = coeffs;
     for (const auto &[rhs_ind, rhs_coe] : rhs.coeffs) {
@@ -80,14 +87,14 @@ bool isIsomorphic(const AffineExpr &lhs, const AffineExpr &rhs) {
     if (lhs.constant != rhs.constant || lhs.coeffs.size() != rhs.coeffs.size())
         return false;
 
-    using Key = std::tuple<pVal, pVal, pVal, int>;
+    using Key = std::tuple<pVal, pVal, pVal, size_t, int>;
     std::vector<Key> lhs_decay, rhs_decay;
 
     for (const auto& [indvar, coe] : lhs.coeffs)
-        lhs_decay.emplace_back(indvar->getBase(), indvar->getStep(), indvar->getBound(), coe);
+        lhs_decay.emplace_back(indvar->getBase(), indvar->getStep(), indvar->getBound(), indvar->getDepth(), coe);
 
     for (const auto& [indvar, coe] : rhs.coeffs)
-        rhs_decay.emplace_back(indvar->getBase(), indvar->getStep(), indvar->getBound(), coe);
+        rhs_decay.emplace_back(indvar->getBase(), indvar->getStep(), indvar->getBound(), indvar->getDepth(), coe);
 
     std::sort(lhs_decay.begin(), lhs_decay.end());
     std::sort(rhs_decay.begin(), rhs_decay.end());

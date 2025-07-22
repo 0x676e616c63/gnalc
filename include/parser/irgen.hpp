@@ -19,6 +19,7 @@ class IRGenerator : public AST::ASTVisitor {
     std::list<IR::pInst> curr_insts;
     std::shared_ptr<IR::LinearFunction> curr_func;
     SymbolTable symbol_table;
+    std::stack<std::vector<IR::pHelper>> while_stack;
     bool is_making_lval{false}; // TODO: more sensible
 
     struct Initializer {

@@ -67,6 +67,8 @@ public:
     pZext makeZext(const pVal &val, IRBTYPE type, const std::string &name = "") const;
     pSext makeSext(const pVal &val, IRBTYPE type, const std::string &name = "") const;
     pBitcast makeBitcast(const pVal &val, const pType &type, const std::string &name = "") const;
+    pPtrToInt makePtrToInt(const pVal &val, IRBTYPE type, const std::string &name = "") const;
+    pIntToPtr makeIntToPtr(const pVal &val, const pType &type, const std::string &name = "") const;
     pFptosi makeFptosi(const pVal &val, const std::string &name = "") const;
     pSitofp makeSitofp(const pVal &val, const std::string &name = "") const;
 

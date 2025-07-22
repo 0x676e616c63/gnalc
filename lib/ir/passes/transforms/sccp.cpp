@@ -128,12 +128,9 @@ public:
                 break;
             case OP::MUL:
             case OP::FMUL:
-                if (lhs.isZero() || rhs.isZero()) {
-                    if (bin->getOpcode() == OP::MUL)
-                        changes[inst].setCProxy(ConstantProxy(cpool, 0));
-                    else
-                        changes[inst].setCProxy(ConstantProxy(cpool, 0.0f));
-                } else if (lhs.isConstant() && rhs.isConstant())
+                if (lhs.isZero() || rhs.isZero())
+                    changes[inst].setCProxy(ConstantProxy(cpool, cpool->getZero(inst->getType())));
+                else if (lhs.isConstant() && rhs.isConstant())
                     changes[inst].setCProxy(lhs.cproxy() * rhs.cproxy());
                 break;
             case OP::DIV:
@@ -420,7 +417,7 @@ public:
                     Err::unreachable("Unknown vector");
             } else if (vec1.isNAC() || vec2.isNAC())
                 changes[inst] = LatticeInfo::NAC;
-        } else if (inst->is<ALLOCAInst, GEPInst, LOADInst, CALLInst, BITCASTInst>())
+        } else if (inst->is<ALLOCAInst, GEPInst, LOADInst, CALLInst, BITCASTInst, PTRTOINTInst, INTTOPTRInst>())
             changes[inst] = LatticeInfo::NAC;
         else if (inst->is<BRInst, PHIInst, SELECTInst>())
             Err::unreachable("Transfer on br, phi or select.");
