@@ -1,0 +1,130 @@
+name: Process Test Report and Update Performance Data
+
+on:
+  push:
+    branches: ["test-result-main", "test-result-backendv3.0"]
+    paths:
+      - 'README.md'
+
+  # Allow manual triggering for backfilling data
+  workflow_dispatch:
+    inputs:
+      branch_to_process:
+          description: 'Which code branch report to process?'
+          required: true
+          type: choice
+          options:
+            - main
+            - backendv3.0
+          default: 'main'
+      process_all_reports:
+        description: 'Process all reports?'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build_and_deploy_data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine Branches to Use
+        id: get_branches
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # Manual Run
+            echo "Manual trigger selected. Using input: ${{ inputs.branch_to_process }}"
+            if [[ "${{ inputs.branch_to_process }}" == "main" ]]; then
+              CODE_BRANCH="main"
+              REPORT_BRANCH="test-result-main"
+            else
+              CODE_BRANCH="backendv3.0"
+              REPORT_BRANCH="test-result-backendv3.0"
+            fi
+          else
+            # Automatic (Push) Run
+            echo "Push trigger detected on branch: ${{ github.ref_name }}"
+            if [[ "${{ github.ref_name }}" == "test-result-main" ]]; then
+              CODE_BRANCH="main"
+              REPORT_BRANCH="test-result-main"
+            else
+              CODE_BRANCH="backendv3.0"
+              REPORT_BRANCH="test-result-backendv3.0"
+            fi
+          fi
+
+          echo "Code Branch: $CODE_BRANCH"
+          echo "Report Branch: $REPORT_BRANCH"
+
+          echo "code_branch=$CODE_BRANCH" >> $GITHUB_OUTPUT
+          echo "report_branch=$REPORT_BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Checkout Target Branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.get_branches.outputs.code_branch }}
+          path: target_code
+          fetch-depth: 0
+
+      - name: Checkout Test Report Branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.get_branches.outputs.report_branch }}
+          path: test-report
+
+      - name: Clone gh-pages Branch
+        run: |
+          git clone --branch gh-pages --single-branch "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages-temp
+
+      - name: Prepare Data Directory for the Script
+        run: |
+          if [ -d "gh-pages-temp/data" ]; then
+            echo "Found existing data directory, moving it to workspace."
+            mv gh-pages-temp/data .
+          else
+            echo "No existing data directory found. Creating a new one."
+            mkdir data
+          fi
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Run Python Parser Script
+        run: |
+          PROCESS_MODE=""
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.process_all_reports }}" == "true" ]]; then
+            PROCESS_MODE="--all"
+            echo "Manual trigger: Processing all reports."
+          else
+            echo "Push trigger: Processing latest report."
+          fi
+
+          python gh-pages-temp/tools/parse_report.py test-report/README.md target_code $PROCESS_MODE
+
+      - name: Commit and Push Updated Data to gh-pages
+        run: |
+          rm -rf gh-pages-temp/data
+          
+          mv data gh-pages-temp/
+          
+          cd gh-pages-temp
+          
+          echo "Configuring git..."
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes to commit."
+          else
+            echo "Committing updated data..."
+            git add .
+            COMMIT_MESSAGE="Chore: Update performance data from report on ${{ steps.get_branches.outputs.report_branch }}"
+            git commit -m "$COMMIT_MESSAGE"
+            
+            echo "Pushing to gh-pages branch..."
+            git push
+          fi
