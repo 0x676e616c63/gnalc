@@ -1,0 +1,7 @@
+[
+  { "id": "local-llvm", "name": "LLVM Middle-end" },
+  { "id": "local-arm", "name": "ARM Backend" },
+  { "id": "local-riscv", "name": "RISC-V Backend" },
+  { "id": "eduxg-arm", "name": "ARM on eduxg" },
+  { "id": "eduxg-riscv", "name": "RISC-V on eduxg" }
+]

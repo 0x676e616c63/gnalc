@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gnalc Performance Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header>
+        <h1>📊 Gnalc Performance Dashboard</h1>
+        <div class="header-controls">
+            <nav id="env-tabs"></nav>
+            <div class="global-settings">
+                 <div class="control-group">
+                    <label for="commit-limit-selector">历史记录:</label>
+                    <select id="commit-limit-selector">
+                        <option value="7">最近7条</option>
+                        <option value="15" selected>最近15条</option>
+                        <option value="all">显示全部</option>
+                    </select>
+                </div>
+                <button id="theme-toggle" title="Toggle theme">🌙</button>
+            </div>
+        </div>
+    </header>
+
+    <main id="app-container">
+        <section class="card" id="overview-section">
+            <h2>📈 最新性能概览 ( <span id="latest-commit-id"></span> vs <span id="previous-commit-id"></span> )</h2>
+            <div class="overview-grid">
+                <div class="summary-card">
+                    <h3>总体性能变化</h3>
+                    <p id="overall-change" class="metric"></p>
+                </div>
+                <div class="summary-card">
+                    <h3>✅ 性能提升</h3>
+                    <p id="improvements-count" class="metric positive"></p>
+                </div>
+                <div class="summary-card">
+                    <h3>❌ 性能退步</h3>
+                    <p id="regressions-count" class="metric negative"></p>
+                </div>
+                <div class="summary-card">
+                    <h3>🚀 最大改进</h3>
+                    <p id="max-improvement-ratio" class="metric positive"></p>
+                    <span id="max-improvement-case" class="case-name"></span>
+                </div>
+                <div class="summary-card">
+                    <h3>🐌 最大退化</h3>
+                    <p id="max-regression-ratio" class="metric negative"></p>
+                    <span id="max-regression-case" class="case-name"></span>
+                </div>
+            </div>
+        </section>
+
+        <section class="card" id="new-charts-section">
+             <h2>📈 趋势分析</h2>
+             <div class="charts-grid">
+                <div class="chart-wrapper">
+                    <h3>所有提交总性能趋势</h3>
+                    <div class="chart-container">
+                        <canvas id="overall-history-chart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <h3>最新提交性能变化分布</h3>
+                     <div class="chart-container">
+                        <canvas id="change-distribution-chart"></canvas>
+                    </div>
+                </div>
+             </div>
+        </section>
+
+        <section class="card" id="comparison-section">
+            <h2>🔍 Commit 对比</h2>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="commitA">基准 Commit (A):</label>
+                    <select id="commitA"></select>
+                </div>
+                <div class="control-group">
+                    <label for="commitB">对比 Commit (B):</label>
+                    <select id="commitB"></select>
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Test Case</th>
+                            <th>Commit A (s)</th>
+                            <th>Commit B (s)</th>
+                            <th>Diff (B - A)</th>
+                            <th id="sort-by-change" class="sortable">Change ↕</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="card" id="history-section">
+            <h2>📉 测例历史性能</h2>
+            <div class="controls">
+                <div class="control-group">
+                    <label for="test-case-selector">选择测试用例:</label>
+                    <select id="test-case-selector"></select>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="history-chart"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <div id="loader" class="hidden">
+        <div class="spinner"></div>
+        <p>Loading data...</p>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

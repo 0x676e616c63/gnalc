@@ -1,0 +1,292 @@
+:root {
+    --bg-color: #121212;
+    --card-bg-color: #1e1e1e;
+    --primary-text-color: #e0e0e0;
+    --secondary-text-color: #b0b0b0;
+    --border-color: #333;
+    --accent-color: #4a90e2;
+    --positive-color: #4caf50;
+    --negative-color: #f44336;
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body.light-theme {
+    --bg-color: #f5f5f5;
+    --card-bg-color: #ffffff;
+    --primary-text-color: #212121;
+    --secondary-text-color: #616161;
+    --border-color: #e0e0e0;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--bg-color);
+    color: var(--primary-text-color);
+    margin: 0;
+    padding: 2rem;
+    line-height: 1.6;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+header h1 {
+    color: var(--accent-color);
+    font-weight: 600;
+}
+
+.header-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem 2rem;
+    margin-top: 1rem;
+}
+
+.global-settings {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+#env-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.env-tab {
+    padding: 0.75rem 1.5rem;
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    color: var(--secondary-text-color);
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.env-tab:hover {
+    background-color: #2a2a2a;
+}
+body.light-theme .env-tab:hover {
+    background-color: #f0f0f0;
+}
+
+.env-tab.active {
+    background-color: var(--accent-color);
+    color: white;
+    font-weight: 500;
+    border-color: var(--accent-color);
+}
+
+#theme-toggle {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--primary-text-color);
+    font-size: 1.2rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.2s, background-color 0.2s;
+}
+#theme-toggle:hover {
+    transform: scale(1.1);
+    background-color: var(--card-bg-color);
+}
+
+#app-container {
+    display: grid;
+    gap: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.card {
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s, border-color 0.3s;
+}
+body.light-theme .card {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+
+.card h2 {
+    margin-top: 0;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.75rem;
+    color: var(--primary-text-color);
+    font-weight: 500;
+}
+
+.overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.5rem;
+    text-align: center;
+}
+
+.summary-card h3 {
+    margin-bottom: 0.5rem;
+    color: var(--secondary-text-color);
+    font-weight: 400;
+    font-size: 1rem;
+}
+
+p.metric {
+    font-size: 2rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.case-name {
+    font-size: 0.8rem;
+    color: var(--secondary-text-color);
+    word-break: break-all;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+label {
+    color: var(--secondary-text-color);
+}
+
+select {
+    background-color: #2c2c2c;
+    color: var(--primary-text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.5rem;
+    font-family: inherit;
+    min-width: 100px;
+}
+body.light-theme select {
+    background-color: #f0f0f0;
+}
+
+
+.table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+thead th {
+    background-color: #252525;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+body.light-theme thead th {
+    background-color: #f5f5f5;
+}
+
+th.sortable {
+    cursor: pointer;
+}
+th.sortable:hover {
+    background-color: #353535;
+}
+body.light-theme th.sortable:hover {
+    background-color: #e8e8e8;
+}
+
+tbody tr:nth-child(even) {
+    background-color: #222;
+}
+body.light-theme tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.positive { color: var(--positive-color); }
+.negative { color: var(--negative-color); }
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+.chart-wrapper h3 {
+    text-align: center;
+    font-weight: 400;
+    font-size: 1rem;
+    color: var(--secondary-text-color);
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+}
+
+#loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+#loader.hidden {
+    display: none;
+}
+
+.spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--accent-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+    body { padding: 1rem; }
+    .charts-grid { grid-template-columns: 1fr; }
+}
