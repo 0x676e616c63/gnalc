@@ -3,6 +3,7 @@ import os
 import sys
 import re
 import subprocess
+import datetime
 
 # The script will create subdirectories like 'local-arm' within this.
 DATA_ROOT = "data"
