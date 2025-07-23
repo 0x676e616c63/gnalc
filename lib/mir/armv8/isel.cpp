@@ -98,13 +98,16 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         }
     } break;
     case OpC::InstICmp: {
-        // trySwapOps(minst); // 这里交换之后尾随的cset也要变条件, 总之就是这个位置很难办(难办? 难办就别办了)
+        auto lhs = minst->getOp(1);
         auto rhs = minst->getOp(2);
-        if (rhs->isImme() && !ARMv8::is12ImmeWithProbShift(rhs->imme())) {
-            minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
+
+        if (rhs->isImme()) {
+            if (!(lhs->type() == OpT::Int32 && ARMv8::is12ImmeWithProbShift(static_cast<unsigned>(rhs->imme()))) &&
+                !ARMv8::is12ImmeWithProbShift(rhs->imme())) {
+                minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
+            }
         }
 
-        auto lhs = minst->getOp(1);
         if (lhs->isImme()) {
             minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
         }
@@ -112,11 +115,14 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     case OpC::InstAdd: {
         trySwapOps(minst);
         auto rhs = minst->getOp(2);
-        if (rhs->isImme() && !ARMv8::is12ImmeWithProbShift(rhs->imme())) {
-            minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
+        auto lhs = minst->getOp(1);
+
+        if (rhs->isImme()) {
+            if (!(lhs->type() == OpT::Int32 && ARMv8::is12ImmeWithProbShift(static_cast<unsigned>(rhs->imme()))) &&
+                !ARMv8::is12ImmeWithProbShift(rhs->imme()))
+                minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
         }
 
-        auto lhs = minst->getOp(1);
         if (lhs->isImme()) {
             minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
         }
@@ -124,11 +130,14 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     } break;
     case OpC::InstSub: {
         auto lhs = minst->getOp(1);
-        if (lhs->isImme()) {
-            minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
+        auto rhs = minst->getOp(2);
+
+        if (rhs->isImme()) {
+            if (!(lhs->type() == OpT::Int32 && ARMv8::is12ImmeWithProbShift(static_cast<unsigned>(rhs->imme()))) &&
+                !ARMv8::is12ImmeWithProbShift(rhs->imme()))
+                minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
         }
 
-        auto rhs = minst->getOp(2);
         if (rhs->isImme() && !ARMv8::is12ImmeWithProbShift(rhs->imme())) {
             minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
         }
@@ -515,7 +524,7 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
                                     ->setOperand<0>(loaded, ctx)
                                     ->setOperand<1>(MIROperand::asLiteral(literal, OpT::Int64), ctx);
 
-            mblk->add_tail_literal(8, 8);
+            mblk->add_tail_literal(literal, 8, 8);
 
             minsts.insert(iter, literal_load);
         }

@@ -3,6 +3,7 @@
 
 #pragma once
 #include <cstdint>
+#include <optional>
 #include <type_traits>
 #ifndef GNALC_MIR_MIR_HPP
 #define GNALC_MIR_MIR_HPP
@@ -332,7 +333,8 @@ public:
 
     template <typename T> static MIROperand_p asImme(T val, OpT type) {
 
-        if constexpr (std::is_same_v<T, int> || std::is_same_v<T, unsigned> || std::is_same_v<T, Cond>) {
+        if constexpr (std::is_same_v<T, int> || std::is_same_v<T, unsigned> || std::is_same_v<T, uint32_t> ||
+                      std::is_same_v<T, Cond>) {
             auto encoding = *reinterpret_cast<unsigned *>(&val);
             return make<MIROperand>(encoding,
                                     OpT::Int64); // use Int64 to not narrow down the predicted bitwide when codegen
@@ -648,9 +650,7 @@ private:
     MIRBlk_wp mprv;
     MIRBlk_wp mnxt;
 
-    size_t literal_size = 0LL;
-
-    size_t first_literal_align = -1;
+    std::vector<std::tuple<string, size_t, size_t, uint32_t>> literal_pool; // literal + size + align + use_cnt
 
 public:
     MIRBlk() = delete;
@@ -690,25 +690,60 @@ public:
     void resetPrv(const MIRBlk_p &_prv) { mprv = _prv; }
     void resetNxt(const MIRBlk_p &_nxt) { mnxt = _nxt; }
 
-    void add_tail_literal(size_t _literal_size, size_t _align) {
-        if (first_literal_align == -1) {
-            first_literal_align = _align;
+    void add_tail_literal(string literal, size_t _literal_size, size_t _align) {
+        auto it = std::find_if(literal_pool.begin(), literal_pool.end(),
+                               [&](const auto &item) { return std::get<0>(item) == literal; });
+
+        if (it != literal_pool.end()) {
+            auto &[_0, _1, _2, use_cnt] = *it;
+
+            ++use_cnt;
+        } else {
+            literal_pool.emplace_back(std::move(literal), _literal_size, _align, 1);
+        }
+    }
+
+    size_t getCodeSize() const {
+        auto first_literal_align = getFirstAlign();
+
+        return first_literal_align
+                   ? mInsts.size() * 4
+                   : getLiteralSize() + ((mInsts.size() * 4 + *first_literal_align - 1) / *first_literal_align) *
+                                            (*first_literal_align);
+    }
+
+    bool useLiteral() const { return !literal_pool.empty(); }
+
+    std::optional<size_t> getFirstAlign() const {
+        if (!useLiteral()) {
+            return std::nullopt;
+        } else {
+            return {std::get<2>(literal_pool[0])};
+        }
+    }
+
+    size_t getLiteralSize() const {
+
+        size_t cnt = 0;
+        for (const auto &[_0, size, _2, _3] : literal_pool) {
+            cnt += size;
         }
 
-        literal_size = ((literal_size + _align - 1) / _align) * _align;
-        literal_size += _literal_size;
+        return cnt;
     }
 
-    size_t getCodeSize() {
-        return first_literal_align =
-                   -1 ? mInsts.size() * 4
-                      : literal_size +
-                            ((mInsts.size() * 4 + first_literal_align - 1) / first_literal_align) * first_literal_align;
+    void removeLitetal(const string &literal) {
+        auto it = std::find_if(literal_pool.begin(), literal_pool.end(),
+                               [&](const auto &item) { return std::get<0>(item) == literal; });
+
+        Err::gassert(it != literal_pool.end(), "literal not found");
+
+        auto &[_0, _1, _2, use_cnt] = *it;
+
+        if (--use_cnt == 0) {
+            literal_pool.erase(it);
+        }
     }
-
-    bool useLiteral() const { return literal_size != 0; }
-
-    size_t getFirstAlign() const { return first_literal_align; }
 
     void brReplace(const MIRBlk_p &old_succ, const MIRBlk_p &new_succ, CodeGenContext &ctx) {
         auto it = std::find_if(mInsts.begin(), mInsts.end(), [&](const MIRInst_p &minst) {

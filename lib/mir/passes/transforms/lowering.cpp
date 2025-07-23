@@ -229,7 +229,7 @@ MIROperand_p LoweringContext::newVReg(const OpT &type) {
 }
 
 MIROperand_p LoweringContext::newLiteral(string liter, size_t size, size_t align, OpT type) {
-    mCurrentBlk->add_tail_literal(size, align);
+    mCurrentBlk->add_tail_literal(liter, size, align);
     return MIROperand::asLiteral(std::move(liter), type);
 }
 

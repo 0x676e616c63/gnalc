@@ -88,9 +88,9 @@ FPM buildARMv8FunctionPipeline(OptInfo opt_info) {
                                             fpm.addPass(PreRAlegalize());
 
 
-    fpm.addPass(PrintFunctionPass(std::cerr));
+                                            fpm.addPass(PrintFunctionPass(std::cerr));
     opt_info.machineLICM ?                  fpm.addPass(MachineLICMPass()) : nop;
-    fpm.addPass(PrintFunctionPass(std::cerr));
+                                            fpm.addPass(PrintFunctionPass(std::cerr));  
 
 
                                             fpm.addPass(RegisterAlloc());
