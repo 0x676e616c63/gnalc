@@ -524,7 +524,7 @@ bool VectorizerPass::Scheduler::tryScheduleBundle(const std::vector<pVal> &scala
     updateDeps(bundle, true);
 
     while (!bundle->isReady() && !dry_run_ready_list.empty()) {
-        auto picked = *dry_run_ready_list.begin();
+        SchedData* picked = *dry_run_ready_list.begin();
         dry_run_ready_list.erase(dry_run_ready_list.begin());
         Err::gassert(picked->isSchedEntity() && picked->isReady());
         schedule(picked, dry_run_ready_list);
@@ -790,6 +790,7 @@ bool VectorizerPass::vectorizeStoreChain(const std::vector<pStore> &chain, size_
         collectExternalUsers();
         auto cost = getTreeCost();
         if (cost < -Config::IR::SLP_COST_THRESHOLD) {
+            Logger::logDebug("[SLP]: Vectorizing tree '",dumpScalars(vec_trees[0].scalars) , "' with cost (", cost, ").");
             vectorizeTrees();
             rewritten_aligns.clear();
             offset += vf;

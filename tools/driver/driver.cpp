@@ -473,19 +473,23 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
     else if (fuzz_testing) {
         cli_opt_options.strict = true;
         cli_opt_options.verify.enableIfDefault();
+        cli_opt_options.run_test.disableIfDefault();
         pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::EnableIfDefault);
     } else if (std_pipeline || fixed_point_pipeline) {
         cli_opt_options.verify.disableIfDefault();
+        cli_opt_options.run_test.disableIfDefault();
         pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::EnableIfDefault);
     } else {
         cli_opt_options.verify.disableIfDefault();
-        cli_opt_options.mem2reg.enableIfDefault();
-        cli_opt_options.sccp.enableIfDefault();
-        cli_opt_options.adce.enableIfDefault();
-        cli_opt_options.cfgsimplify.enableIfDefault();
-        cli_opt_options.store_range.enableIfDefault();
-        cli_opt_options.codegen_prepare.enableIfDefault();
-        pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::DisableIfDefault);
+        cli_opt_options.run_test.disableIfDefault();
+        cli_opt_options.inliner.disable();
+        cli_opt_options.loop_unroll.disable();
+        cli_opt_options.reassociate.disable();
+        cli_opt_options.gvnpre.disable();
+        cli_opt_options.loop_parallel.disable();
+        cli_opt_options.vectorizer.disable();
+        cli_opt_options.rngsimplify.disable();
+        pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::EnableIfDefault);
     }
 
     // SIR
