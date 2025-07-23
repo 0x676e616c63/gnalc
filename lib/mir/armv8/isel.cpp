@@ -119,8 +119,9 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
 
         if (rhs->isImme()) {
             if (!(lhs->type() == OpT::Int32 && ARMv8::is12ImmeWithProbShift(static_cast<unsigned>(rhs->imme()))) &&
-                !ARMv8::is12ImmeWithProbShift(rhs->imme()))
+                !ARMv8::is12ImmeWithProbShift(rhs->imme())) {
                 minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
+            }
         }
 
         if (lhs->isImme()) {
@@ -134,12 +135,13 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
 
         if (rhs->isImme()) {
             if (!(lhs->type() == OpT::Int32 && ARMv8::is12ImmeWithProbShift(static_cast<unsigned>(rhs->imme()))) &&
-                !ARMv8::is12ImmeWithProbShift(rhs->imme()))
+                !ARMv8::is12ImmeWithProbShift(rhs->imme())) {
                 minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
+            }
         }
 
-        if (rhs->isImme() && !ARMv8::is12ImmeWithProbShift(rhs->imme())) {
-            minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
+        if (lhs->isImme()) {
+            minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
         }
     } break;
     case OpC::InstFCmp: {
