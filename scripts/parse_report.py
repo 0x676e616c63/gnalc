@@ -5,7 +5,8 @@ import re
 import subprocess
 
 # The script will create subdirectories like 'local-arm' within this.
-DATA_ROOT = "data" 
+DATA_ROOT = "data"
+COMMIT_MSG_MAX_LENGTH = 40
 
 def get_commit_details_from_git(repo_path, commit_hash):
     """Fetches the commit message and ISO 8601 timestamp for a given hash."""
@@ -21,10 +22,13 @@ def get_commit_details_from_git(repo_path, commit_hash):
         if len(parts) != 2:
             print(f"Warning: Could not parse details for commit {commit_hash}. Git output was unexpected.")
             return "Message not found", "Timestamp not found"
-            
-        message = parts[0].strip()
+
+        message = parts[0].strip().split('\n')[0].strip()
         timestamp = parts[1].strip()
-        
+
+        if len(message) > COMMIT_MSG_MAX_LENGTH:
+            message = message[:COMMIT_MSG_MAX_LENGTH] + "..."
+
         # Convert ISO 8601 with timezone to the 'Z' format for consistency
         # Example: 2025-07-23T22:21:48+08:00 -> 2025-07-23T14:21:48Z
         dt_object = datetime.datetime.fromisoformat(timestamp)

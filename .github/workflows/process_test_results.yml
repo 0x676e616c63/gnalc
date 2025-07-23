@@ -28,6 +28,7 @@ jobs:
         with:
           ref: main
           path: main_code
+          fetch-depth: 0
 
       - name: Checkout Test Report Branch
         uses: actions/checkout@v4
