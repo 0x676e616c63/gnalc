@@ -55,14 +55,15 @@ def parse_single_report(report_text, main_branch_path):
     commit_hash = commit_match.group(1)
 
     # Find target platform
-    target_match = re.search(r'- \*\*Target:\*\* (.*)', report_text)
-    backend = "unknown"
-    if target_match:
-        target_str = target_match.group(1).lower()
-        if "arm" in target_str:
-            backend = "local-arm"
-        elif "riscv" in target_str:
-            backend = "local-riscv"
+    backend = "local-arm" # Default to ARM
+    # target_match = re.search(r'- \*\*Target:\*\* (.*)', report_text)
+    # backend = "unknown"
+    # if target_match:
+    #     target_str = target_match.group(1).lower()
+    #     if "arm" in target_str:
+    #         backend = "local-arm"
+    #     elif "riscv" in target_str:
+    #         backend = "local-riscv"
     
     if backend == "unknown":
         print(f"Warning: Could not determine backend for commit {commit_hash[:7]}. Skipping this report.")
