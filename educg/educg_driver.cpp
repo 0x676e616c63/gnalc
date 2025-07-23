@@ -114,7 +114,12 @@ int main(int argc, char **argv) {
     SIR::LinearPassBuilder::registerModuleAnalyses(sir_mam);
     SIR::LinearPassBuilder::registerProxies(sir_lfam, sir_mam);
 
-    auto sir_mpm = SIR::LinearPassBuilder::buildModuleFixedPointPipeline(pm_options);
+    SIR::MPM sir_mpm;
+    if (with_o1)
+        sir_mpm = SIR::LinearPassBuilder::buildModuleFixedPointPipeline(pm_options);
+    else
+        sir_mpm = SIR::LinearPassBuilder::buildModulePipeline(pm_options);
+
     sir_mpm.run(generator.get_module(), sir_mam);
 
     IR::CFGBuilder cfg_builder;
