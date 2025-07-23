@@ -110,6 +110,10 @@ bool VectorizerPass::AlignRewriter::trySetBaseAlign(pVal ptr, int align, Functio
             return true;
         } else if (auto fp = ptr->as<FormalParam>()) {
             for (auto user : curr_func->inst_users()) {
+                // When vectorizing multiple trees in one function, there can be users that already be
+                // removed from the function, but still holding the uses.
+                if (user->getParent() == nullptr)
+                    continue;
                 auto call = user->as<CALLInst>();
                 Err::gassert(call != nullptr, "Expected a call user");
                 if (call->getFunc().get() != curr_func)
@@ -306,7 +310,6 @@ void VectorizerPass::Scheduler::resetSchedule() {
 
 bool VectorizerPass::Scheduler::inRegion(SchedData *sched) const { return sched->region_id == region_id; }
 
-
 // For call insts, though arguments passed to the function is only a pointer,
 // callee function can through that pointer to access the full arrays.
 // So dependency involved with call must be treated conservatively.
@@ -422,6 +425,11 @@ void VectorizerPass::Scheduler::updateDeps(SchedData *sched, bool insert_in_read
                 // One instruction must be scheduled before its user, thus must be
                 // scheduling after its user is scheduled. So user is all its operands' dependency
                 for (auto user : member->inst->inst_users()) {
+                    // When vectorizing multiple trees in one function, there can be users that already be
+                    // removed from the function, but still holding the uses.
+                    if (user->getParent() == nullptr)
+                        continue;
+
                     auto user_sched = getData(user);
                     if (user_sched && inRegion(user_sched->first_in_bundle)) {
                         ++member->num_deps;
@@ -584,6 +592,9 @@ std::string VectorizerPass::Scheduler::dumpSchedData(SchedData *bundle) {
         ss << "  num_unsched_deps: " << member->num_unsched_deps << "\n";
         ss << "  Users: \n";
         for (auto user : member->inst->inst_users()) {
+            if (user->getParent() == nullptr)
+                continue;
+
             ss << "    " << user->getName() << ": ";
             auto user_bundle = getData(user);
             if (user_bundle && inRegion(user_bundle->first_in_bundle))
@@ -1233,6 +1244,11 @@ void VectorizerPass::collectExternalUsers() {
         for (int lane = 0; lane < tree.scalars.size(); ++lane) {
             const auto &scalar = tree.scalars[lane];
             for (auto user : scalar->inst_users()) {
+                // When vectorizing multiple trees in one function, there can be users that already be
+                // removed from the function, but still holding the uses.
+                if (user->getParent() == nullptr)
+                    continue;
+
                 if (auto user_tree = getTree(user)) {
                     // In-tree users like the first vectorized load/store's pointer operand,
                     // still need to be a scalar.
