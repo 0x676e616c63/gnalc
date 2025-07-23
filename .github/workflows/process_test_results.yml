@@ -1,0 +1,91 @@
+name: Process Test Report and Update Performance Data
+
+on:
+  push:
+    branches:
+      - test-result-main
+    paths:
+      - 'README.md'
+
+  # Allow manual triggering for backfilling data
+  workflow_dispatch:
+    inputs:
+      process_all_reports:
+        description: 'Process all reports'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  build_and_deploy_data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Main Branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main_code
+
+      - name: Checkout Test Report Branch
+        uses: actions/checkout@v4
+        with:
+          ref: test-result-main
+          path: test-report
+
+      - name: Clone gh-pages Branch
+        run: |
+          git clone --branch gh-pages --single-branch "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages-temp
+
+      - name: Prepare Data Directory for the Script
+        run: |
+          if [ -d "gh-pages-temp/data" ]; then
+            echo "Found existing data directory, moving it to workspace."
+            mv gh-pages-temp/data .
+          else
+            echo "No existing data directory found. Creating a new one."
+            mkdir data
+          fi
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Run Python Parser Script
+        run: |
+          PROCESS_MODE=""
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.process_all_reports }}" == "true" ]]; then
+            PROCESS_MODE="--all"
+            echo "Manual trigger: Processing all reports."
+          else
+            echo "Push trigger: Processing latest report."
+          fi
+
+          python main_code/scripts/parse_report.py test-report/README.md main_code $PROCESS_MODE
+
+      - name: Commit and Push Updated Data to gh-pages
+        run: |
+          rm -rf gh-pages-temp/data
+          
+          mv data gh-pages-temp/
+          
+          cd gh-pages-temp
+          
+          echo "Configuring git..."
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes to commit."
+          else
+            echo "Committing updated data..."
+            git add .
+            COMMIT_MESSAGE="Chore: Update performance data from report"
+            git commit -m "$COMMIT_MESSAGE"
+            
+            echo "Pushing to gh-pages branch..."
+            git push
+          fi
