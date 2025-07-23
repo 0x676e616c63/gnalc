@@ -235,7 +235,7 @@ void MIR::lowerInst_v(const IR::pFneg &fneg, LoweringContext &ctx) {
     if (ctx.CodeGenCtx().isARMv8()) {
         auto def = ctx.newVReg(fneg->getType());
 
-        ctx.newInst(MIRInst::make(OpC::InstFNeg)
+        ctx.newInst(MIRInst::make(OpC::InstVFNeg)
                         ->setOperand<0>(def, ctx.CodeGenCtx())
                         ->setOperand<1>(try_vector_flatting(fneg->getVal(), ctx), ctx.CodeGenCtx()));
 
