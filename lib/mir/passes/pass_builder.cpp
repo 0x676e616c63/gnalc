@@ -82,11 +82,14 @@ FPM buildARMv8FunctionPipeline(OptInfo opt_info) {
 
     // clang-format off
                                             fpm.addPass(ISel());
-    // opt_info.machineLICM ?                  fpm.addPass(MachineLICMPass()) : nop;
     opt_info.peephole_afterIsel ?           fpm.addPass(GenericPeephole(Stage::AfterIsel)) : nop;
     opt_info.CFGsimplifyBeforeRa ?          fpm.addPass(CFGsimplifyBeforeRA()) : nop;
     opt_info.redundantLoadEli ?             fpm.addPass(RedundantLoadEli()) : nop;
                                             fpm.addPass(PreRAlegalize());
+    //
+    // fpm.addPass(PrintFunctionPass(std::cerr));
+    // opt_info.machineLICM ?                  fpm.addPass(MachineLICMPass()) : nop;
+    // fpm.addPass(PrintFunctionPass(std::cerr));
                                             fpm.addPass(RegisterAlloc());
     opt_info.peephole_afterRa ?             fpm.addPass(GenericPeephole(Stage::AfterRa)) : nop;
                                             fpm.addPass(StackGenerate());

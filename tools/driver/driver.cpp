@@ -183,8 +183,11 @@ int main(int argc, char **argv) {
         OPT_ARG("--cgprepare", "--no-cgprepare", codegen_prepare)
         // SIR Function Transforms
         OPT_ARG("--earlymem2reg", "--no-earlymem2reg", early_mem2reg)
+        OPT_ARG("--earlyinline", "--no-earlyinline", early_inline)
         OPT_ARG("--while2for", "--no-while2for", while2for)
-        OPT_ARG("--copyelision", "--no-copyelision", copy_elision)
+        OPT_ARG("--reshapefold", "--no-reshapefold", reshape_fold)
+        OPT_ARG("--earlydce", "--no-earlydce", early_dce)
+        OPT_ARG("--constantfold", "--no-constantfold", constant_fold)
         OPT_ARG("--interchange", "--no-interchange", loop_interchange)
         OPT_ARG("--unswitch", "--no-unswitch", loop_unswitch)
         OPT_ARG("--fuse", "--no-fuse", loop_fuse)
@@ -286,7 +289,10 @@ General Options:
 Optimizations Flags:
   --earlymem2reg       - Promote memory to register in SIR
   --while2for          - Canonicalize while loops to for loops
-  --copyelision        - Eliminate redundant memory copies
+  --reshapefold        - Eliminate redundant reshape
+  --earlyinline        - Early function inline.
+  --earlydce           - Early dead code elimination
+  --constantfold       - Early constant folding
   --interchange        - Loop interchange
   --unswitch           - Loop unswitch
   --fuse               - Loop fusion
@@ -467,19 +473,23 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
     else if (fuzz_testing) {
         cli_opt_options.strict = true;
         cli_opt_options.verify.enableIfDefault();
+        cli_opt_options.run_test.disableIfDefault();
         pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::EnableIfDefault);
     } else if (std_pipeline || fixed_point_pipeline) {
         cli_opt_options.verify.disableIfDefault();
+        cli_opt_options.run_test.disableIfDefault();
         pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::EnableIfDefault);
     } else {
         cli_opt_options.verify.disableIfDefault();
-        cli_opt_options.mem2reg.enableIfDefault();
-        cli_opt_options.sccp.enableIfDefault();
-        cli_opt_options.adce.enableIfDefault();
-        cli_opt_options.cfgsimplify.enableIfDefault();
-        cli_opt_options.store_range.enableIfDefault();
-        cli_opt_options.codegen_prepare.enableIfDefault();
-        pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::DisableIfDefault);
+        cli_opt_options.run_test.disableIfDefault();
+        cli_opt_options.inliner.disable();
+        cli_opt_options.loop_unroll.disable();
+        cli_opt_options.reassociate.disable();
+        cli_opt_options.gvnpre.disable();
+        cli_opt_options.loop_parallel.disable();
+        cli_opt_options.vectorizer.disable();
+        cli_opt_options.rngsimplify.disable();
+        pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::EnableIfDefault);
     }
 
     // SIR

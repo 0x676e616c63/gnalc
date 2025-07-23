@@ -38,7 +38,8 @@ constexpr auto GVNPRE_SKIP_BLOCK_THRESHOLD = 1000;
 constexpr auto GVNPRE_SKIP_NESTED_EXPR_THRESHOLD = 128;
 
 // Function Inline
-constexpr auto FUNCTION_INLINE_INST_THRESHOLD = 1000;
+constexpr auto FUNCTION_INLINE_RECURSIVE_EXPAND_THRESHOLD = 100;
+constexpr auto FUNCTION_INLINE_INST_THRESHOLD = 200;
 
 // Loop Elimination
 // LoopElim attempts to expand SCEVExpr to make loops trivially eliminable.

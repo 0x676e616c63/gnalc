@@ -137,10 +137,10 @@ void CFGBuilder::newFor(const pForInst & for_inst) {
     iv_update_for_contine.push(indvar->getStep());
     auto icmp = std::make_shared<ICMPInst>(phi->getName() + ".cmp", ICMPOP::slt, phi, indvar->getBound());
     auto for_br = std::make_shared<BRInst>(icmp, for_body, for_end);
-    // Store to original alloca to fix outside loop uses of the induction variable.
+    // Store to original memory to fix outside loop uses of the induction variable.
     // mem2reg will finally eliminate such store.
-    if (indvar->getOrigAlloc()->getUseCount() != 0) {
-        auto store = std::make_shared<STOREInst>(phi, indvar->getOrigAlloc());
+    if (indvar->getOrigMem() && indvar->getOrigMem()->getUseCount() != 0) {
+        auto store = std::make_shared<STOREInst>(phi, indvar->getOrigMem());
         for_cond->addInst(store);
     }
 

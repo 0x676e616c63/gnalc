@@ -45,7 +45,10 @@ namespace IR {
     GNALC_SIR_IR_PASS_ENTRY(verify)                                                                                    \
     GNALC_SIR_IR_PASS_ENTRY(early_mem2reg)                                                                             \
     GNALC_SIR_IR_PASS_ENTRY(while2for)                                                                                 \
-    GNALC_SIR_IR_PASS_ENTRY(copy_elision)                                                                              \
+    GNALC_SIR_IR_PASS_ENTRY(early_dce)                                                                             \
+    GNALC_SIR_IR_PASS_ENTRY(reshape_fold)                                                                              \
+    GNALC_SIR_IR_PASS_ENTRY(early_inline)                                                                             \
+    GNALC_SIR_IR_PASS_ENTRY(constant_fold)                                                                             \
     GNALC_SIR_IR_PASS_ENTRY(loop_unswitch)                                                                             \
     GNALC_SIR_IR_PASS_ENTRY(loop_fuse)                                                                                 \
     GNALC_SIR_IR_PASS_ENTRY(loop_interchange)

@@ -23,42 +23,19 @@ struct Result {
     std::set<pInst> update_insts;
 };
 
-// SIR has no phi, so a simple recursive search is enough.
-bool isTriviallyIdentical(const pVal &lhs, const pVal &rhs) {
-    if (lhs == rhs)
-        return true;
-    auto lhs_i = lhs->as<Instruction>();
-    auto rhs_i = rhs->as<Instruction>();
-    if (!lhs_i || !rhs_i)
-        return false;
-    if (lhs_i->getOpcode() != rhs_i->getOpcode())
-        return false;
+Result analyzeUpdateExpr(IList &ilist, WHILEInst &wh, const pVal &val) {
+    auto ptr = val;
+    if (auto ld = val->as<LOADInst>())
+        ptr = ld->getPtr();
 
-    if (lhs_i->getNumOperands() != rhs_i->getNumOperands())
-        return false;
-
-    auto isSameOperands = [&]() -> bool {
-        for (size_t i = 0; i < lhs_i->getNumOperands(); ++i) {
-            if (!isTriviallyIdentical(lhs_i->getOperand(i)->getValue(), rhs_i->getOperand(i)->getValue()))
-                return false;
-        }
-        return true;
-    }();
-
-    if (isSameOperands)
-        return true;
-
-    if (!lhs_i->isCommutative())
-        return false;
-
-    Err::gassert(lhs_i->getNumOperands() == 2);
-    return (isTriviallyIdentical(lhs_i->getOperand(0)->getValue(), rhs_i->getOperand(1)->getValue()) &&
-            isTriviallyIdentical(lhs_i->getOperand(1)->getValue(), rhs_i->getOperand(0)->getValue()));
-}
-
-Result analyzeUpdateExpr(IList &ilist, WHILEInst &wh, const pVal &ptr) {
-    if (isLoopInvariant(ptr.get(), &wh))
-        return {UpdateType::Invariant, ptr, nullptr};
+    if (ptr->getType()->is<PtrType>()) {
+        if (isMemoryInvariantTo(ptr.get(), &wh))
+            return {UpdateType::Invariant, val, nullptr};
+    }
+    else if (isLoopInvariant(ptr.get(), &wh))
+        return {UpdateType::Invariant, val, nullptr};
+    else
+        return {UpdateType::Unknown, nullptr, nullptr};
 
     // Find the base
     auto base_it = std::next(IListRFind(ilist, wh.as<WHILEInst>()));
@@ -162,7 +139,7 @@ Result analyzeUpdateExpr(IList &ilist, WHILEInst &wh, const pVal &ptr) {
 }
 
 struct ForInfo {
-    pAlloca indvar_alloc;
+    pVal indvar_mem;
     pVal base;
     pVal bound;
     pVal step;
@@ -175,19 +152,13 @@ std::optional<ForInfo> transformWhile(IList &ilist, WHILEInst &wh, LinearFunctio
     if (match(wh.getCond(), M::Icmp(M::Bind(lhs), M::Bind(rhs)))) {
         auto icmp = wh.getCond()->as<ICMPInst>();
         auto cond = icmp->getCond();
-        if (auto lld = lhs->as<LOADInst>())
-            lhs = lld->getPtr();
-        if (auto rld = rhs->as<LOADInst>())
-            rhs = rld->getPtr();
         auto l_evo = analyzeUpdateExpr(ilist, wh, lhs);
         auto r_evo = analyzeUpdateExpr(ilist, wh, rhs);
 
         if (l_evo.type == UpdateType::Affine && r_evo.type == UpdateType::Invariant) {
-            auto ind = lhs->as<ALLOCAInst>();
-            if (!ind) {
-                Logger::logDebug("[While2For]: Skipped non-alloca induction variable.");
-                return std::nullopt;
-            }
+            auto ind = lhs;
+            if (auto ld = ind->as<LOADInst>())
+                ind = ld->getPtr();
             if (cond == ICMPOP::slt || cond == ICMPOP::sgt)
                 return ForInfo{ind, l_evo.base, r_evo.base, l_evo.step, l_evo.iv_loads, l_evo.update_insts};
             if (cond == ICMPOP::sle) {
@@ -238,8 +209,8 @@ PM::PreservedAnalyses While2ForPass::run(LinearFunction &function, LFAM &lfam) {
     for (auto &[ilist, iter, while_inst, depth] : replace_map) {
         if (auto for_info_opt = transformWhile(*ilist, *while_inst, function)) {
             auto info = *for_info_opt;
-            auto iv = std::make_shared<IndVar>(info.indvar_alloc->getName() + ".ind." + std::to_string(name_cnt++),
-                                               info.indvar_alloc, info.base, info.bound, info.step, depth);
+            auto iv = std::make_shared<IndVar>(info.indvar_mem->getName() + ".ind." + std::to_string(name_cnt++),
+                                               info.indvar_mem, info.base, info.bound, info.step, depth);
             auto for_inst = std::make_shared<FORInst>(iv, while_inst->getBodyInsts());
             Err::gassert(while_inst->getCondInsts().back()->is<ICMPInst>());
             ilist->insert(iter, while_inst->getCondInsts().begin(), std::prev(while_inst->getCondInsts().end()));

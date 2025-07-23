@@ -11,6 +11,7 @@
 
 #include "match/match.hpp"
 #include "sir/base.hpp"
+#include "sir/utils.hpp"
 #include "sir/visitor.hpp"
 
 #include <numeric>
@@ -32,7 +33,7 @@ int AffineExpr::coe(IndVar *i) const {
     return it == coeffs.end() ? 0 : it->second;
 }
 
-bool AffineExpr::isLinear() const { return coeffs.size() == 1 && constant == 0; }
+bool AffineExpr::isLinear() const { return coeffs.size() == 1 && constant == 0 && invariant == nullptr; }
 
 std::pair<int, IndVar *> AffineExpr::getLinear() const {
     Err::gassert(isLinear(), "AffineExpr is not linear");
@@ -40,6 +41,7 @@ std::pair<int, IndVar *> AffineExpr::getLinear() const {
 }
 
 AffineExpr AffineExpr::operator+(const AffineExpr &rhs) const {
+    Err::gassert(!invariant && !rhs.invariant);
     auto new_coeffs = coeffs;
     for (const auto &[rhs_ind, rhs_coe] : rhs.coeffs) {
         bool added = false;
@@ -56,6 +58,7 @@ AffineExpr AffineExpr::operator+(const AffineExpr &rhs) const {
     return AffineExpr{.coeffs = std::move(new_coeffs), .constant = constant + rhs.constant};
 }
 AffineExpr AffineExpr::operator-(const AffineExpr &rhs) const {
+    Err::gassert(!invariant && !rhs.invariant);
     auto new_coeffs = coeffs;
     for (const auto &[rhs_ind, rhs_coe] : rhs.coeffs) {
         bool added = false;
@@ -72,6 +75,7 @@ AffineExpr AffineExpr::operator-(const AffineExpr &rhs) const {
     return AffineExpr{.coeffs = std::move(new_coeffs), .constant = constant - rhs.constant};
 }
 AffineExpr AffineExpr::operator*(int rhs) const {
+    Err::gassert(!invariant);
     auto new_coeffs = coeffs;
     for (auto &[ind, coe] : new_coeffs)
         coe *= rhs;
@@ -80,11 +84,12 @@ AffineExpr AffineExpr::operator*(int rhs) const {
 }
 
 bool AffineExpr::operator==(const AffineExpr &rhs) const {
-    return coeffs == rhs.coeffs && constant == rhs.constant;
+    return coeffs == rhs.coeffs && constant == rhs.constant && rhs.invariant == invariant;
 }
 
 bool isIsomorphic(const AffineExpr &lhs, const AffineExpr &rhs) {
-    if (lhs.constant != rhs.constant || lhs.coeffs.size() != rhs.coeffs.size())
+    if (lhs.constant != rhs.constant || lhs.coeffs.size() != rhs.coeffs.size() ||
+        !isTriviallyIdentical(lhs.invariant, rhs.invariant))
         return false;
 
     using Key = std::tuple<pVal, pVal, pVal, size_t, int>;
@@ -102,7 +107,7 @@ bool isIsomorphic(const AffineExpr &lhs, const AffineExpr &rhs) {
     return lhs_decay == rhs_decay;
 }
 
-std::optional<AffineExpr> analyzeAffineExpr(Value *expr) {
+std::optional<AffineExpr> analyzeAffineExpr(Value *expr, LinearFunction* func) {
     if (auto ci32 = expr->as_raw<ConstantInt>())
         return AffineExpr{.coeffs = {}, .constant = ci32->getVal()};
 
@@ -112,16 +117,31 @@ std::optional<AffineExpr> analyzeAffineExpr(Value *expr) {
     if (auto binary = expr->as_raw<BinaryInst>()) {
         auto lhs = binary->getLHS();
         auto rhs = binary->getRHS();
-        auto lhs_affine = analyzeAffineExpr(lhs.get());
-        auto rhs_affine = analyzeAffineExpr(rhs.get());
+        auto lhs_affine = analyzeAffineExpr(lhs.get(), func);
+        auto rhs_affine = analyzeAffineExpr(rhs.get(), func);
         if (!lhs_affine || !rhs_affine)
             return std::nullopt;
 
-        if (binary->getOpcode() == OP::ADD)
+        if (binary->getOpcode() == OP::ADD) {
+            if (lhs_affine->invariant || rhs_affine->invariant)
+                return std::nullopt;
             return *lhs_affine + *rhs_affine;
-        if (binary->getOpcode() == OP::SUB)
+        }
+        if (binary->getOpcode() == OP::SUB) {
+            if (lhs_affine->invariant || rhs_affine->invariant) {
+                if (lhs_affine->invariant == rhs_affine->invariant) {
+                    lhs_affine->invariant = nullptr;
+                    rhs_affine->invariant = nullptr;
+                }
+                else
+                    return std::nullopt;
+            }
             return *lhs_affine - *rhs_affine;
+        }
         if (binary->getOpcode() == OP::MUL) {
+            if (lhs_affine->invariant || rhs_affine->invariant)
+                return std::nullopt;
+
             if (!lhs_affine->coeffs.empty() && !rhs_affine->coeffs.empty())
                 return std::nullopt;
 
@@ -133,6 +153,12 @@ std::optional<AffineExpr> analyzeAffineExpr(Value *expr) {
         }
         return std::nullopt;
     }
+
+    if (auto load = expr->as<LOADInst>()) {
+        if (isMemoryInvariantTo(load->getPtr().get(), func))
+            return AffineExpr{.coeffs = {}, .constant = 0, .invariant = load};
+    }
+
     return std::nullopt;
 }
 
@@ -148,7 +174,7 @@ std::optional<MemoryAccess> LAAResult::analyzePointer(Value *ptr) const {
                 !match(gep, M::Gep(M::Val(), M::Bind(index))))
                 return std::nullopt;
 
-            auto affine = analyzeAffineExpr(index.get());
+            auto affine = analyzeAffineExpr(index.get(), func);
             if (!affine)
                 return std::nullopt;
             indices.insert(indices.begin(), std::move(*affine));
@@ -174,18 +200,18 @@ const std::optional<MemoryAccess> &LAAResult::queryPointer(Value *ptr) const {
     return access_cache[ptr] = analyzePointer(ptr);
 }
 
-AliasInfo LAAResult::getAliasInfo(Value *lhs, Value *rhs) const {
-    auto ptr1 = getMemLocation(lhs);
-    auto ptr2 = getMemLocation(rhs);
-
+AliasInfo LAAResult::getAliasInfo(Value *ptr1, Value *ptr2) const {
     if (ptr1 == ptr2)
         return AliasInfo::MustAlias;
 
-    auto &info1 = queryPointer(ptr1.get());
-    auto &info2 = queryPointer(ptr2.get());
+    auto &info1 = queryPointer(ptr1);
+    auto &info2 = queryPointer(ptr2);
 
     if (!info1 || !info2)
         return AliasInfo::MayAlias;
+
+    if (info1->type() != info2->type())
+        return AliasInfo::NoAlias;
 
     Err::gassert((info1->isArray() && info2->isArray()) || (info1->isScalar() && info2->isScalar()), "Bad analysis");
 
@@ -275,6 +301,12 @@ bool LAAResult::isIndependent(Instruction *lhs, Instruction *rhs) const {
     auto &rw1 = queryInstRW(lhs);
     auto &rw2 = queryInstRW(rhs);
 
+    if (rw1 && rw1->read.empty() && rw1->write.empty())
+        return true;
+
+    if (rw2 && rw2->read.empty() && rw2->write.empty())
+        return true;
+
     if (!rw1 || !rw2)
         return false;
 
@@ -289,7 +321,7 @@ bool LAAResult::isIndependent(Instruction *lhs, Instruction *rhs) const {
     };
 
     // WR, RW, WW
-    if (has_dep(rw1->write, rw1->read) || has_dep(rw2->read, rw1->write) || has_dep(rw1->write, rw2->write))
+    if (has_dep(rw1->write, rw2->read) || has_dep(rw2->write, rw1->read) || has_dep(rw1->write, rw2->write))
         return false;
 
     return true;
@@ -309,7 +341,7 @@ bool LAAResult::isScalarIndependent(Instruction *lhs, Instruction *rhs) const {
             if (!a1 || !a1->isScalar())
                 continue;
             for (const auto &s2 : set2) {
-                const auto& a2 = queryPointer(s1);
+                const auto& a2 = queryPointer(s2);
                 if (!a2 || !a2->isScalar())
                     continue;
                 if (getAliasInfo(s1, s2) != AliasInfo::NoAlias)
@@ -332,6 +364,5 @@ bool LAAResult::isScalarIndependent(const pInst &lhs, const pInst &rhs) const {
 
 bool LAAResult::isIndependent(const pInst &lhs, const pInst &rhs) const { return isIndependent(lhs.get(), rhs.get()); }
 
-LAAResult LAliasAnalysis::run(LinearFunction &f, LFAM &fam) { return LAAResult{}; }
-
+LAAResult LAliasAnalysis::run(LinearFunction &f, LFAM &fam) { return LAAResult(&f); }
 } // namespace SIR

@@ -21,7 +21,7 @@ void BinaryInst::setRHS(const pVal &rhs) { setOperand(1, rhs); }
 
 void BinaryInst::swapLHSRHS() { swapOperand(0, 1); }
 
-FNEGInst::FNEGInst(NameRef name, pVal val) : Instruction(OP::FNEG, name, makeBType(IRBTYPE::FLOAT)) { addOperand(val); }
+FNEGInst::FNEGInst(NameRef name, pVal val) : Instruction(OP::FNEG, name, val->getType()) { addOperand(val); }
 
 pVal FNEGInst::getVal() const { return getOperand(0)->getValue(); }
 
