@@ -105,7 +105,7 @@ jobs:
             echo "Push trigger: Processing latest report."
           fi
 
-          python gh-pages-temp/scripts/parse_report.py test-report/README.md target_code $PROCESS_MODE
+          python gh-pages-temp/tools/parse_report.py test-report/README.md target_code $PROCESS_MODE
 
       - name: Commit and Push Updated Data to gh-pages
         run: |
