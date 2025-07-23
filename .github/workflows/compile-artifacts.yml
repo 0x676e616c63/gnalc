@@ -130,7 +130,13 @@ jobs:
             continue
           fi
           
-          echo "Compiling: $rel_path"
+          if [[ "$rel_path" == *"functional"* ]]; then
+            opts=""
+          else
+            opts="${COMPILE_OPTIONS}"
+          fi
+
+          echo "Compiling: $rel_path with opts '$opts'"
           
            #mkdir -p "$ARTIFACTS_DIR/artifacts/llvm/$dir_path"
            #./build/gnalc -S "$testcase" -emit-llvm \
