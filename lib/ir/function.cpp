@@ -592,16 +592,18 @@ struct LinearFnCloneVisitor : SIR::Visitor {
             visit(*inst);
         ilist_stack.pop();
 
-        auto orig_alloc = for_inst.getIndVar()->getOrigAlloc();
-        pAlloca new_orig_alloc;
-        if (old2new_inst.count(orig_alloc))
-            new_orig_alloc = old2new_inst[orig_alloc]->as<ALLOCAInst>();
+        auto orig_mem = for_inst.getIndVar()->getOrigMem();
+        pVal new_orig_mem = orig_mem;
+        if (auto mem_inst = orig_mem->as<Instruction>()) {
+            if (old2new_inst.count(mem_inst))
+                new_orig_mem = old2new_inst[mem_inst]->as<Instruction>();
+        }
 
         auto new_base = remapValue(for_inst.getBase());
         auto new_bound = remapValue(for_inst.getBound());
         auto new_step = remapValue(for_inst.getStep());
         auto iv_name = for_inst.getIndVar()->getName() + ".dup" + std::to_string(name_cnt++);
-        auto new_iv = std::make_shared<IndVar>(iv_name, new_orig_alloc, new_base, new_bound, new_step,
+        auto new_iv = std::make_shared<IndVar>(iv_name, new_orig_mem, new_base, new_bound, new_step,
             for_inst.getIndVar()->getDepth());
 
         auto new_for = std::make_shared<FORInst>(new_iv, std::move(new_body));

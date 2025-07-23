@@ -5,6 +5,7 @@
 #include "ir/instructions/control.hpp"
 #include "sir/base.hpp"
 #include "sir/passes/analysis/alias_analysis.hpp"
+#include "sir/utils.hpp"
 #include "sir/visitor.hpp"
 
 #include <vector>
@@ -22,9 +23,9 @@ bool canFuse(LAAResult* laa_res, FORInst* for1, FORInst* for2) {
 
     // Give up if two FORInst have different iteration domain.
     // TODO: Loop Alignment
-    if (indvar1->getBase() != indvar2->getBase() ||
-        indvar1->getStep() != indvar2->getStep() ||
-        indvar1->getBound() != indvar2->getBound())
+    if (!isTriviallyIdentical(indvar1->getBase(), indvar2->getBase()) ||
+        !isTriviallyIdentical(indvar1->getStep(),  indvar2->getStep()) ||
+        !isTriviallyIdentical(indvar1->getBound(), indvar2->getBound()))
         return false;
 
     // Scalars can't be fused
@@ -41,15 +42,15 @@ bool canFuse(LAAResult* laa_res, FORInst* for1, FORInst* for2) {
     }
 
     auto has_dep = [&](const std::set<Value*>& set1, const std::set<Value*>& set2) {
-        for (const auto& w1 : set1) {
-            const auto& a1 = laa_res->queryPointer(w1);
+        for (const auto& s1 : set1) {
+            const auto& a1 = laa_res->queryPointer(s1);
             if (!a1)
                 return true;
 
             if (!a1->isArray())
                 continue;
-            for (const auto& r2 : set2) {
-                const auto& a2 = laa_res->queryPointer(r2);
+            for (const auto& s2 : set2) {
+                const auto& a2 = laa_res->queryPointer(s2);
                 if (!a2)
                     return true;
 
@@ -77,7 +78,9 @@ bool canFuse(LAAResult* laa_res, FORInst* for1, FORInst* for2) {
     };
 
     if (has_dep(rw1->write, rw2->read) || has_dep(rw2->write, rw1->read) || has_dep(rw1->write, rw2->write)) {
-        Logger::logDebug("[LoopFuse]: Skipped two loops because unresolved array dependency.");
+        Logger::logDebug("[LoopFuse]: Skipped two adjacent loops ('",
+            for1->getIndVar()->getName(), "' and '", for2->getIndVar()->getName(),
+            "') because unresolved array dependency.");
         return false;
     }
 
@@ -110,8 +113,8 @@ struct FuseVisitor : ContextVisitor {
                             .for1 = &for_inst,
                             .for2 = for_inst2,
                         });
-                        break;
                     }
+                    break;
                 }
                 if (!laa_res->isIndependent(&for_inst, it->get()))
                     break;
@@ -154,6 +157,8 @@ PM::PreservedAnalyses LoopFusePass::run(LinearFunction &function, LFAM &lfam) {
 
             IListDel(*ilist, for1);
             Logger::logDebug("[LoopFuse]: Fused two loops");
+
+            laa_res = lfam.getFreshResult<LAliasAnalysis>(function);
             loop_fuse_modified = true;
         }
     }
