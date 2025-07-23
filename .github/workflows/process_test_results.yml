@@ -2,9 +2,7 @@ name: Process Test Report and Update Performance Data
 
 on:
   push:
-    branches:
-      - test-result-main
-      - test-result-backendv3.0
+    branches: ["test-result-main", "test-result-backendv3.0"]
     paths:
       - 'README.md'
 
