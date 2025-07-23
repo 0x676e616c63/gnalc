@@ -38,7 +38,7 @@ bool isProfitableToInline(const Function &caller, const InlineCandidate &candida
         return true;
     }
 
-    if (call_points.size() == 1)
+    if (call_points.size() < 3)
         return true;
 
     if (callee.getInstCount() * call_points.size() > Config::IR::FUNCTION_INLINE_INST_THRESHOLD) {

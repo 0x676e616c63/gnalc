@@ -369,13 +369,68 @@ MPM PassBuilder::buildModulePipeline(const PMOptions& options) {
 }
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
-    // // For SIR pass debug
     FPM fpm;
-    fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(VerifyPass());
-    fpm.addPass(PromotePass());
-    fpm.addPass(NameNormalizePass());
+    fpm.addPass(IR::PromotePass());
+    fpm.addPass(IR::TailRecursionEliminationPass());
+    fpm.addPass(IR::InlinePass());
+    fpm.addPass(IR::InternalizePass());
+    fpm.addPass(IR::PromotePass());
+    fpm.addPass(IR::NameNormalizePass());
+    fpm.addPass(IR::CFGSimplifyPass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::LCSSAPass());
+    fpm.addPass(IR::LoopUnrollPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::ReassociatePass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::VectorizerPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::DCEPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::RangeAwareSimplifyPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::DAEPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::LoopRotatePass());
+    fpm.addPass(IR::LCSSAPass());
+    fpm.addPass(IR::LICMPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::SCCPPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::BreakCriticalEdgesPass());
+    fpm.addPass(IR::GVNPREPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::InstSimplifyPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::SCCPPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::CFGSimplifyPass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::LCSSAPass());
+    fpm.addPass(IR::LoopUnrollPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::LoopSimplifyPass());
+    fpm.addPass(IR::LoopEliminationPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::CFGSimplifyPass());
+    fpm.addPass(IR::VerifyPass());
+    fpm.addPass(IR::UnifyExitsPass());
+    fpm.addPass(IR::CodeGenPreparePass());
+    fpm.addPass(IR::NameNormalizePass());
     return fpm;
+
+
+    // For SIR pass debug
+    // FPM fpm;
+    // fpm.addPass(PrintFunctionPass(std::cerr));
+    // fpm.addPass(VerifyPass());
+    // fpm.addPass(PromotePass());
+    // fpm.addPass(NameNormalizePass());
+    // return fpm;
     // // Parallel
     // FPM fpm;
     // fpm.addPass(VerifyPass());
@@ -555,8 +610,8 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(const PMOptions& options, doub
     REGISTER_FUNCTION_TRANSFORM(dce, DCEPass, 10)
     REGISTER_FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass, 10)
     REGISTER_FUNCTION_TRANSFORM2(gvnpre, BreakCriticalEdgesPass, GVNPREPass, 10)
-    REGISTER_FUNCTION_TRANSFORM2(loadelim, CFGSimplifyPass, LoadEliminationPass, 10)
-    REGISTER_FUNCTION_TRANSFORM2(dse, CFGSimplifyPass, DSEPass, 10)
+    // REGISTER_FUNCTION_TRANSFORM2(loadelim, CFGSimplifyPass, LoadEliminationPass, 10)
+    // REGISTER_FUNCTION_TRANSFORM2(dse, CFGSimplifyPass, DSEPass, 10)
     REGISTER_FUNCTION_TRANSFORM2(dae, LoopSimplifyPass, DAEPass, 10)
     REGISTER_FUNCTION_TRANSFORM2(rngsimplify, LoopSimplifyPass, RangeAwareSimplifyPass, 10)
 
