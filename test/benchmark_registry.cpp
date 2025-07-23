@@ -208,6 +208,7 @@ REGISTER_GNALC_FIXED_EXCEPT_PASS(interchange)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(unswitch)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(fuse)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(copyelision)
+REGISTER_GNALC_FIXED_EXCEPT_PASS(inline)
 
 void register_gnalc_debug() {
     auto entry = gnalc_register_helper("-debug-pipeline");
@@ -278,6 +279,7 @@ void Test::register_all_benchmarks() {
     register_gnalc_fixed_no_unswitch();
     register_gnalc_fixed_no_fuse();
     register_gnalc_fixed_no_copyelision();
+    register_gnalc_fixed_no_inline();
 
     register_gnalc_sir_debug();
     register_gnalc_debug();
