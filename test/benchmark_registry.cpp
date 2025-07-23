@@ -153,7 +153,7 @@ void register_gcc_o3() {
         .asm_gen =
             [](const std::string &newsy, const std::string &outs) {
                 return format(
-                    "sed -i '1i\\extern \"C\"{ int getint(),getch(),getarray(int a[]);float getfloat();int "
+                    "sed -i '1i\\int getint(),getch(),getarray(int a[]);float getfloat();int "
                     "getfarray(float "
                     "a[]);void "
                     "putint(int a),putch(int a),putarray(int n,int a[]);void putfloat(float a);void putfarray(int n, "
@@ -161,8 +161,8 @@ void register_gcc_o3() {
                     "a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define "
                     "starttime() "
                     "_sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
-                    " && echo '}' >> {} && {} -O3 -S -o {} -xc++ {}",
-                    newsy, newsy, cfg::gcc_arm_command, outs, newsy);
+                    " && {} -O3 -fpermissive -fno-builtin-exp -Wno-builtin-declaration-mismatch -Wno-incompatible-pointer-types -Wno-error=incompatible-pointer-types -S -o {} -xc {}",
+                    newsy, cfg::gcc_arm_command, outs, newsy);
             }};
     BenchmarkRegistry::register_benchmark("gcc_o3", entry);
 }
