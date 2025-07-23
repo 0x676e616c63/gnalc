@@ -2,7 +2,7 @@
     "commit": "43d3b512b0c7672f1ee5a924f32bb39dbdede294",
     "author": "GitHub Action",
     "timestamp": "2025-07-23T16:45:03Z",
-    "message": "MIR: literal pool more reasonable manage...",
+    "message": "MIR: literal pool more reasonable manager",
     "results": {
         "2024-DCV-7": 8.385986,
         "2024-H17-1": 6.314213,
