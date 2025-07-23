@@ -63,11 +63,11 @@ jobs:
           echo "code_branch=$CODE_BRANCH" >> $GITHUB_OUTPUT
           echo "report_branch=$REPORT_BRANCH" >> $GITHUB_OUTPUT
 
-      - name: Checkout Main Branch
+      - name: Checkout Target Branch
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.get_branches.outputs.code_branch }}
-          path: main_code
+          path: target_code
           fetch-depth: 0
 
       - name: Checkout Test Report Branch
@@ -105,7 +105,7 @@ jobs:
             echo "Push trigger: Processing latest report."
           fi
 
-          python main_code/scripts/parse_report.py test-report/README.md main_code $PROCESS_MODE
+          python gh-pages-temp/scripts/parse_report.py test-report/README.md target_code $PROCESS_MODE
 
       - name: Commit and Push Updated Data to gh-pages
         run: |
