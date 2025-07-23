@@ -1139,6 +1139,17 @@ void VectorizerPass::buildTreeImpl(const std::vector<pVal> &scalars, int depth, 
         buildTreeImpl(rhs_operands, depth + 1, user_tree_idx);
         return;
     }
+    case OP::FNEG: {
+        newTree(scalars, true, user_tree_idx);
+
+        std::vector<pVal> operands;
+        for (const auto &scalar : scalars) {
+            auto fneg = scalar->as<FNEGInst>();
+            operands.emplace_back(fneg->getVal());
+        }
+        buildTreeImpl(operands, depth + 1, user_tree_idx);
+        return;
+    }
     case OP::SELECT: {
         newTree(scalars, true, user_tree_idx);
 
@@ -1252,6 +1263,19 @@ int VectorizerPass::getBaseCost(const Tree &tree) {
         return getGatherCost(vec_ty);
     }
 
+    auto analyze_op_trait = [](const pVal &val, OperandKind &op_kind, OperandProp &op_prop) {
+        if (val) {
+            if (val->getVTrait() == ValueTrait::CONSTANT_LITERAL) {
+                op_kind = OperandKind::UniformConstant;
+                if (auto ci32 = val->as<ConstantInt>()) {
+                    if (Util::isPowerOfTwo(ci32->getVal()))
+                        op_prop = OperandProp::PowerOfTwo;
+                }
+            } else
+                op_kind = OperandKind::Uniform;
+        }
+    };
+
     auto opcode = *analyzeOpcode(tree.scalars);
     switch (opcode) {
     case OP::PHI:
@@ -1330,24 +1354,26 @@ int VectorizerPass::getBaseCost(const Tree &tree) {
                 uniform_rhs = nullptr;
         }
 
-        auto analyze_op = [](const pVal &val, OperandKind &op_kind, OperandProp &op_prop) {
-            if (val) {
-                if (val->getVTrait() == ValueTrait::CONSTANT_LITERAL) {
-                    op_kind = OperandKind::UniformConstant;
-                    if (auto ci32 = val->as<ConstantInt>()) {
-                        if (Util::isPowerOfTwo(ci32->getVal()))
-                            op_prop = OperandProp::PowerOfTwo;
-                    }
-                } else
-                    op_kind = OperandKind::Uniform;
-            }
-        };
-
-        analyze_op(uniform_lhs, lhs_trait.kind, lhs_trait.prop);
-        analyze_op(uniform_rhs, rhs_trait.kind, rhs_trait.prop);
+        analyze_op_trait(uniform_lhs, lhs_trait.kind, lhs_trait.prop);
+        analyze_op_trait(uniform_rhs, rhs_trait.kind, rhs_trait.prop);
 
         int scalar_cost = tree.scalars.size() * target->getBinaryCost(opcode, scalar_ty, lhs_trait, rhs_trait);
         int vector_cost = target->getBinaryCost(opcode, vec_ty, lhs_trait, rhs_trait);
+        return vector_cost - scalar_cost;
+    }
+    case OP::FNEG: {
+        OperandTrait op_trait;
+        auto uniform_oper = tree.scalars[0]->as<FNEGInst>()->getVal();
+        for (size_t i = 1; i < tree.scalars.size(); ++i) {
+            auto bin = tree.scalars[i]->as<FNEGInst>();
+            if (bin->getVal() != uniform_oper)
+                uniform_oper = nullptr;
+        }
+
+        analyze_op_trait(uniform_oper, op_trait.kind, op_trait.prop);
+
+        int scalar_cost = tree.scalars.size() * target->getUnaryCost(opcode, scalar_ty, op_trait);
+        int vector_cost = target->getUnaryCost(opcode, vec_ty, op_trait);
         return vector_cost - scalar_cost;
     }
     case OP::GEP: {
@@ -1737,6 +1763,22 @@ pVal VectorizerPass::vectorizeTree(Tree *tree) {
 
         tree->vec = vec_bin;
         return vec_bin;
+    }
+    case OP::FNEG: {
+        std::vector<pVal> oper;
+
+        for (const auto &scalar : tree->scalars) {
+            auto fneg = scalar->as<FNEGInst>();
+            oper.emplace_back(fneg->getVal());
+        }
+
+        setInsertPointAfterBundle(tree->scalars);
+
+        auto oper_vec = vectorizeFromScalars(oper);
+        auto vec_fneg = builder.makeFNeg(oper_vec);
+
+        tree->vec = vec_fneg;
+        return vec_fneg;
     }
     case OP::LOAD: {
         setInsertPointAfterBundle(tree->scalars);
