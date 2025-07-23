@@ -146,10 +146,6 @@ void RedundantLoadEliImpl::ApplyCopys() {
             continue; // giveup
         }
 
-        if (constVal.isLiteral()) {
-            int debug;
-        }
-
         MIROperand_p loaded_op = nullptr;
 
         if (info.const_uses.count(info.lca)) {

@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include "utils/logger.hpp"
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <type_traits>
 #ifndef GNALC_MIR_MIR_HPP
 #define GNALC_MIR_MIR_HPP
@@ -650,7 +652,7 @@ private:
     MIRBlk_wp mprv;
     MIRBlk_wp mnxt;
 
-    std::vector<std::tuple<string, size_t, size_t, uint32_t>> literal_pool; // literal + size + align + use_cnt
+    std::list<std::tuple<string, size_t, size_t, uint32_t>> literal_pool; // literal + size + align + use_cnt
 
 public:
     MIRBlk() = delete;
@@ -690,16 +692,21 @@ public:
     void resetPrv(const MIRBlk_p &_prv) { mprv = _prv; }
     void resetNxt(const MIRBlk_p &_nxt) { mnxt = _nxt; }
 
-    void add_tail_literal(string literal, size_t _literal_size, size_t _align) {
+    void add_tail_literal(const string &literal, size_t _literal_size, size_t _align) {
         auto it = std::find_if(literal_pool.begin(), literal_pool.end(),
                                [&](const auto &item) { return std::get<0>(item) == literal; });
 
         if (it != literal_pool.end()) {
-            auto &[_0, _1, _2, use_cnt] = *it;
-
+            auto &use_cnt = std::get<3>(*it);
             ++use_cnt;
+
+            Logger::logInfo(getmSym() + " literal pool add: " + literal +
+                            ", use count: " + std::to_string(std::get<3>(*it)));
+
         } else {
-            literal_pool.emplace_back(std::move(literal), _literal_size, _align, 1);
+            literal_pool.emplace_back(literal, _literal_size, _align, 1);
+
+            Logger::logInfo(getmSym() + " literal pool add: " + literal + ", new literal");
         }
     }
 
@@ -718,7 +725,7 @@ public:
         if (!useLiteral()) {
             return std::nullopt;
         } else {
-            return {std::get<2>(literal_pool[0])};
+            return {std::get<2>(literal_pool.front())};
         }
     }
 
@@ -733,14 +740,18 @@ public:
     }
 
     void removeLitetal(const string &literal) {
+
         auto it = std::find_if(literal_pool.begin(), literal_pool.end(),
                                [&](const auto &item) { return std::get<0>(item) == literal; });
 
-        Err::gassert(it != literal_pool.end(), "literal not found");
+        Err::gassert(it != literal_pool.end(), "literal not found: " + literal);
 
-        auto &[_0, _1, _2, use_cnt] = *it;
+        Logger::logInfo(getmSym() + " literal pool remove: " + literal);
+
+        auto &use_cnt = std::get<3>(*it);
 
         if (--use_cnt == 0) {
+
             literal_pool.erase(it);
         }
     }

@@ -233,6 +233,11 @@ MIROperand_p LoweringContext::newLiteral(string liter, size_t size, size_t align
     return MIROperand::asLiteral(std::move(liter), type);
 }
 
+MIROperand_p LoweringContext::newLiteral_no_add(string liter, size_t size, size_t align, OpT type) {
+
+    return MIROperand::asLiteral(std::move(liter), type);
+}
+
 void LoweringContext::newInst(const MIRInst_p &inst) {
     auto &insts = mCurrentBlk->Insts();
     insts.emplace_back(inst);
@@ -550,7 +555,9 @@ void MIR::loweringFunction(MIRFunction_p mfunc, IRFunc_p func, CodeGenContext &c
                     } else {
                         auto [literal, size, type] = vector2literal(phiop);
 
-                        use = ctx.newLiteral(literal, size, 16, type);
+                        use = ctx.newLiteral_no_add(literal, size, size, type);
+
+                        mblk_src->add_tail_literal(literal, size, size); // literal pre-add
                     }
                 }
                 Err::gassert(use != nullptr, "dont actually get a use");

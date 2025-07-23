@@ -148,6 +148,9 @@ public:
 
     MIROperand_p newLiteral(string liter, size_t size, size_t align, OpT type);
 
+    // add to literal pool later and manually
+    MIROperand_p newLiteral_no_add(string liter, size_t size, size_t align, OpT type);
+
     void newInst(const MIRInst_p &);
     void addCopy(const MIROperand_p &dst, const MIROperand_p &src);
     void addInstBeforeBr(const MIRInst_p_l &);
