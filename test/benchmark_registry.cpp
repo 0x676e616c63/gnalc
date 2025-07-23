@@ -208,6 +208,7 @@ REGISTER_GNALC_FIXED_EXCEPT_PASS(interchange)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(unswitch)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(fuse)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(copyelision)
+REGISTER_GNALC_FIXED_EXCEPT_PASS(loopunroll)
 
 void register_gnalc_debug() {
     auto entry = gnalc_register_helper("-debug-pipeline");
@@ -239,6 +240,19 @@ void register_gnalc_fuzz100() {
     BenchmarkRegistry::register_benchmark("gnalc_fuzz100", entry);
 }
 
+Entry register_gnalc_old() {
+    Entry entry{
+        .ir_gen =
+            [](const std::string &newsy, const std::string &outll) {
+                return format("../gnalc_old -with-runtime -emit-llvm -S {} -o {} -O1", newsy, outll);
+        },
+    .asm_gen = [](const std::string &newsy,
+                       const std::string &outs) { return format("../gnalc_old -with-runtime -S {} -o {} -O1", newsy, outs); }};
+    BenchmarkRegistry::register_benchmark("gnalc_old", entry);
+    return entry;
+}
+
+
 void Test::register_all_benchmarks() {
     register_example_0();
     register_example_1();
@@ -260,6 +274,7 @@ void Test::register_all_benchmarks() {
     register_gnalc_fixed_no_unswitch();
     register_gnalc_fixed_no_fuse();
     register_gnalc_fixed_no_copyelision();
+    register_gnalc_fixed_no_loopunroll();
 
     register_gnalc_sir_debug();
     register_gnalc_debug();
@@ -267,4 +282,6 @@ void Test::register_all_benchmarks() {
     register_gnalc_fuzz5();
     register_gnalc_fuzz10();
     register_gnalc_fuzz100();
+
+    register_gnalc_old();
 }
