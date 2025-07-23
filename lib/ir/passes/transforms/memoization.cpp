@@ -177,14 +177,9 @@ public:
     size_t getKeyBytes(const std::vector<pFormalParam> &args) const final { return args.size() * 4; }
 };
 
-// Memoization can be an optimization if a pure function is called with identical arguments
-// many times. Determine a function's execution frequency is already too hard, if not impossible,
-// for us, not to mention questioning its arguments. Therefore, we only memoize functions
-// that are most possible to fit into such cases.
 // A function worth memoization usually have overlapping subproblems. In other words,
 // different paths depend on the solution to the same subproblem.
 // Here we try to figure out if a function has overlapping subproblems.
-// FIXME: More precise cost model
 bool isProfitableToMemoize(const Function &func) {
     // First find all recursive calls
     std::vector<pCall> self_calls;

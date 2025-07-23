@@ -10,16 +10,28 @@
 #include "ir/passes/transforms/memoization.hpp"
 
 namespace IR {
-// FIXME: Inline Cost Calculation
-bool shouldBeInlined(const Function& caller, const Function &callee) {
+struct InlineCandidate {
+    std::vector<pCall> call_points;
+    pFunc callee;
+};
+
+bool isProfitableToInline(const Function& caller, const InlineCandidate &candidate) {
+    auto& callee = *candidate.callee;
+    auto& call_points = candidate.call_points;
+
     // Do not inline function that can be memoized
     if (isProfitableToMemoize(callee))
         return false;
+
     // Expand recursive call once can have better performance
     if (callee.isRecursive() && &caller != &callee)
         return false;
-    if (callee.getInstCount() > Config::IR::FUNCTION_INLINE_INST_THRESHOLD)
+
+    if (callee.getInstCount() * call_points.size() > Config::IR::FUNCTION_INLINE_INST_THRESHOLD) {
+        Logger::logDebug("[Inline]: Canceled inlining '", callee.getName(), "' into '", caller.getName(),
+            "', due to too many instructions");
         return false;
+    }
     return true;
 }
 
@@ -130,28 +142,38 @@ void doInline(Function &caller, const pCall &call) {
     caller.addBlock(std::next(call_block->getIter()), after_call);
     moveBlocks(cloned->begin(), cloned->end(), caller.as<Function>(), std::next(call_block->getIter()));
 }
-PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
-    bool inline_cfg_modified = false;
 
-    std::vector<pCall> to_inline;
+PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
+    std::unordered_map<pFunc, InlineCandidate> candidates;
     for (const auto &bb : function) {
         for (const auto &inst : *bb) {
             if (auto call = inst->as<CALLInst>()) {
                 auto callee_def = call->getFunc()->as<Function>();
-                if (callee_def != nullptr && shouldBeInlined(function, *callee_def))
-                    to_inline.emplace_back(call);
+                if (callee_def != nullptr) {
+                    auto& candidate = candidates[callee_def];
+                    candidate.call_points.emplace_back(call);
+                    candidate.callee = callee_def;
+                }
             }
         }
     }
 
-    for (const auto &call : to_inline) {
-        doInline(function, call);
-        inline_cfg_modified = true;
+    for (auto it = candidates.begin(); it != candidates.end();) {
+        if (!isProfitableToInline(function, it->second))
+            it = candidates.erase(it);
+        else
+            ++it;
     }
 
-    name_cnt = 0;
+    if (candidates.empty())
+        return PreserveAll();
 
-    return inline_cfg_modified ? PreserveNone() : PreserveAll();
+    for (const auto &[callee, candidate] : candidates) {
+        for (const auto &call : candidate.call_points)
+            doInline(function, call);
+    }
+
+    return PreserveNone();
 }
 
 } // namespace IR
