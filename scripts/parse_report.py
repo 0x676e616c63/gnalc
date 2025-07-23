@@ -149,26 +149,34 @@ def write_files(data_root, report_data):
         return
 
     index_file_path = os.path.join(target_dir_path, "index.json")
-    try:
-        index_data = []
-        if os.path.exists(index_file_path):
-            with open(index_file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-                if content:
-                    index_data = json.loads(content)
-        
-        if json_filename not in index_data:
-            index_data.append(json_filename)
-            with open(index_file_path, 'w', encoding='utf-8') as f:
-                json.dump(index_data, f, indent=4)
-            print(f"Successfully added {json_filename} to {index_file_path}")
-        else:
-            print(f"Info: {json_filename} already exists in index.json. No update needed.")
 
-    except json.JSONDecodeError:
-        print(f"Error: {index_file_path} is not valid JSON. Please fix or delete it.")
+    commit_timestamps = {}
+    
+    if os.path.exists(index_file_path):
+        try:
+            with open(index_file_path, 'r', encoding='utf-8') as f:
+                existing_files = json.load(f)
+                # For each file in the index, read its JSON to get the timestamp
+                for filename in existing_files:
+                    try:
+                        with open(os.path.join(target_dir_path, filename), 'r', encoding='utf-8') as commit_f:
+                            data = json.load(commit_f)
+                            commit_timestamps[filename] = data.get("timestamp", "")
+                    except (FileNotFoundError, json.JSONDecodeError):
+                        print(f"Warning: Could not read or parse {filename}, it will be excluded from the new index.")
+        except (IOError, json.JSONDecodeError):
+            print(f"Warning: Could not read or parse existing {index_file_path}. A new one will be created.")
+
+    commit_timestamps[json_filename] = report_data["timestamp"]
+    sorted_commits = sorted(commit_timestamps.items(), key=lambda item: item[1])
+    sorted_filenames = [filename for filename, timestamp in sorted_commits]
+
+    try:
+        with open(index_file_path, 'w', encoding='utf-8') as f:
+            json.dump(sorted_filenames, f, indent=4)
+        print(f"Successfully updated and sorted {index_file_path}")
     except Exception as e:
-        print(f"Error: Failed to update index.json: {e}")
+        print(f"Error: Failed to write index.json: {e}")
 
 def main():
     if len(sys.argv) < 3:
