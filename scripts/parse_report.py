@@ -89,7 +89,7 @@ def parse_single_report(report_text, main_branch_path):
             continue
         
         # 3. Extract file name and time
-        file_match = re.search(r'- \*\*File:\*\* .*?/(.*?)\.(?:bin|s)', block_content)
+        file_match = re.search(r'- \*\*File:\*\* .*/(.*?)\.(?:bin|s)', block_content)
         time_match = re.search(r'- \*\*Time Elapsed:\*\* (\d+)(us|ms)', block_content)
 
         if file_match and time_match:
