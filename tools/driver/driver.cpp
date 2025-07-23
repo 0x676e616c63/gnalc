@@ -183,8 +183,11 @@ int main(int argc, char **argv) {
         OPT_ARG("--cgprepare", "--no-cgprepare", codegen_prepare)
         // SIR Function Transforms
         OPT_ARG("--earlymem2reg", "--no-earlymem2reg", early_mem2reg)
+        OPT_ARG("--earlyinline", "--no-earlyinline", early_inline)
         OPT_ARG("--while2for", "--no-while2for", while2for)
-        OPT_ARG("--copyelision", "--no-copyelision", copy_elision)
+        OPT_ARG("--reshapefold", "--no-reshapefold", reshape_fold)
+        OPT_ARG("--earlydce", "--no-earlydce", early_dce)
+        OPT_ARG("--constantfold", "--no-constantfold", constant_fold)
         OPT_ARG("--interchange", "--no-interchange", loop_interchange)
         OPT_ARG("--unswitch", "--no-unswitch", loop_unswitch)
         OPT_ARG("--fuse", "--no-fuse", loop_fuse)
@@ -286,7 +289,10 @@ General Options:
 Optimizations Flags:
   --earlymem2reg       - Promote memory to register in SIR
   --while2for          - Canonicalize while loops to for loops
-  --copyelision        - Eliminate redundant memory copies
+  --reshapefold        - Eliminate redundant reshape
+  --earlyinline        - Early function inline.
+  --earlydce           - Early dead code elimination
+  --constantfold       - Early constant folding
   --interchange        - Loop interchange
   --unswitch           - Loop unswitch
   --fuse               - Loop fusion
