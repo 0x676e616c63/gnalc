@@ -239,6 +239,24 @@ void register_gnalc_fuzz100() {
     BenchmarkRegistry::register_benchmark("gnalc_fuzz100", entry);
 }
 
+// Requires ./gnalc2
+Entry gnalc2_register_helper(const std::string &param) {
+    Entry entry{
+        .ir_gen = [param](const std::string &newsy, const std::string &outll) {
+                return format("../gnalc2 -with-runtime -emit-llvm -S {} -o {} {}", newsy, outll, param);
+        },
+        .asm_gen = [param](const std::string &newsy, const std::string &outs) {
+                return format("../gnalc2 -with-runtime -S {} -o {} {}", newsy, outs, param);
+        }
+    };
+    return entry;
+}
+
+void register_gnalc2_fixed() {
+    auto entry = gnalc2_register_helper("-fixed-point");
+    BenchmarkRegistry::register_benchmark("gnalc2_fixed", entry);
+}
+
 void Test::register_all_benchmarks() {
     register_example_0();
     register_example_1();
@@ -267,4 +285,5 @@ void Test::register_all_benchmarks() {
     register_gnalc_fuzz5();
     register_gnalc_fuzz10();
     register_gnalc_fuzz100();
+    register_gnalc2_fixed();
 }
