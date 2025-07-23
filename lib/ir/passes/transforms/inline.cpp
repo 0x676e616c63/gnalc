@@ -15,21 +15,36 @@ struct InlineCandidate {
     pFunc callee;
 };
 
-bool isProfitableToInline(const Function& caller, const InlineCandidate &candidate) {
-    auto& callee = *candidate.callee;
-    auto& call_points = candidate.call_points;
+bool isProfitableToInline(const Function &caller, const InlineCandidate &candidate) {
+    auto &callee = *candidate.callee;
+    auto &call_points = candidate.call_points;
 
     // Do not inline function that can be memoized
     if (isProfitableToMemoize(callee))
         return false;
 
     // Expand recursive call once can have better performance
-    if (callee.isRecursive() && &caller != &callee)
-        return false;
+    if (callee.isRecursive()) {
+        if (&caller != &callee)
+            return false;
+
+        if (callee.getInstCount() * call_points.size() > Config::IR::FUNCTION_INLINE_RECURSIVE_EXPAND_THRESHOLD) {
+            Logger::logDebug("[Inline]: Canceled expanding recursive function '", callee.getName(),
+                             "', due to too many instructions.(", call_points.size(), " calls, with each ",
+                             callee.getInstCount(), " instructions)");
+            return false;
+        }
+
+        return true;
+    }
+
+    if (call_points.size() == 1)
+        return true;
 
     if (callee.getInstCount() * call_points.size() > Config::IR::FUNCTION_INLINE_INST_THRESHOLD) {
         Logger::logDebug("[Inline]: Canceled inlining '", callee.getName(), "' into '", caller.getName(),
-            "', due to too many instructions");
+                         "', due to too many instructions. (", call_points.size(), " calls, with each ",
+                         callee.getInstCount(), " instructions)");
         return false;
     }
     return true;
@@ -43,6 +58,8 @@ void doInline(Function &caller, const pCall &call) {
 
     if (candidate->isRecursive())
         Logger::logDebug("[Inline]: Expanding recursive function '", candidate->getName(), "'.");
+    else
+        Logger::logDebug("[Inline]: Inlining function '", candidate->getName(), "' into '", caller.getName(), "'.");
 
     auto cloned = makeClone(candidate);
 
@@ -150,7 +167,7 @@ PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
             if (auto call = inst->as<CALLInst>()) {
                 auto callee_def = call->getFunc()->as<Function>();
                 if (callee_def != nullptr) {
-                    auto& candidate = candidates[callee_def];
+                    auto &candidate = candidates[callee_def];
                     candidate.call_points.emplace_back(call);
                     candidate.callee = callee_def;
                 }
