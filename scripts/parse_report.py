@@ -7,7 +7,7 @@ import datetime
 
 # The script will create subdirectories like 'local-arm' within this.
 DATA_ROOT = "data"
-COMMIT_MSG_MAX_LENGTH = 40
+COMMIT_MSG_MAX_LENGTH = 100
 
 def get_commit_details_from_git(repo_path, commit_hash):
     """Fetches the commit message and ISO 8601 timestamp for a given hash."""
