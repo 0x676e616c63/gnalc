@@ -23,6 +23,9 @@ bool isSafeAndProfitableToHoist(const MIRInst_p &inst, Arch arch) {
                 return false;
             // Float/Vector register pressure usually is low
             return true;
+        case OpC::InstLoadLiteral:
+            return true;
+            break;
         // FIXME:
         // case OpC::InstLoadImmEx: {
         //     auto encoding = inst->getOp(1)->imme();
@@ -89,9 +92,9 @@ PM::PreservedAnalyses MachineLICMPass::run(MIRFunction &function, FAM &fam) {
                 std::sort(loop_blocks.begin(), loop_blocks.end(),
                           [&rpo_index](const auto &a, const auto &b) { return rpo_index[a] < rpo_index[b]; });
                 for (const auto &bb : loop_blocks) {
-                    // Don't be aggressive.
-                    if (!postdom.ADomB(bb.get(), preheader.get()))
-                        continue;
+                    // // Don't be aggressive.
+                    // if (!postdom.ADomB(bb.get(), preheader.get()))
+                    //     continue;
 
                     // Keep the topological order.
                     std::vector<MIRInst_p> to_hoist;

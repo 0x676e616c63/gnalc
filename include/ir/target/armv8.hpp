@@ -86,6 +86,17 @@ public:
         return cost;
     }
 
+    int getUnaryCost(OP op, const pType &ty, OperandTrait oper) override {
+        switch (op) {
+        case OP::FNEG:
+            // FIXME: I'm not sure about this.
+            return 2;
+        default: return 2;
+        }
+        Err::unreachable();
+        return 2;
+    }
+
     int getMemCost(OP op, const pType &ty, int align) override {
         if (op == OP::STORE && ty->is128BitVec() && align < 16)
             return 12;
