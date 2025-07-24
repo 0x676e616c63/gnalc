@@ -38,7 +38,9 @@ constexpr auto GVNPRE_SKIP_BLOCK_THRESHOLD = 1000;
 constexpr auto GVNPRE_SKIP_NESTED_EXPR_THRESHOLD = 128;
 
 // Function Inline
+// Inline should not be too aggressive.
 constexpr auto FUNCTION_INLINE_RECURSIVE_EXPAND_THRESHOLD = 100;
+constexpr auto FUNCTION_INLINE_CALL_POINTS_THRESHOLD = 3;
 constexpr auto FUNCTION_INLINE_INST_THRESHOLD = 200;
 
 // Loop Elimination
@@ -82,8 +84,7 @@ constexpr auto RANGE_AWARE_SIMPLIFY_SKIP_BLOCK_THRESHOLD = 1000;
 
 // Vectorizer
 // We vectorize trees if we gain more than this threshold.
-// FIXME: I don't know if this threshold is reasonable.
-constexpr auto SLP_COST_THRESHOLD = -15; // test
+constexpr auto SLP_COST_THRESHOLD = -15;
 constexpr auto SLP_BUILD_TREE_RECURSION_THRESHOLD = 12;
 constexpr auto SLP_SCHEDULER_MAX_REGION_SIZE = 100000;
 
@@ -99,6 +100,7 @@ constexpr auto LOOP_PARALLEL_SMALL_TASK_THRESHOLD = 0;
 constexpr auto RUN_TEST_TEMP_DIR = "gnalc_run_test_pass";
 } // namespace Config::IR
 
+// This is only for LegacyMIR. For MIR, see mir/<arch>/register.hpp
 namespace Config::LegacyMIR {
 // Register Allocation
 constexpr auto CORE_REGISTER_MAX_NUM = 12; // r0 ~ r10 , with ip. most probably fp(r11), sometimes lr(r14)

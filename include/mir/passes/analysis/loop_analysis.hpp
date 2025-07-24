@@ -32,7 +32,7 @@ public:
     using LoopBFVisitor = Util::GenericBFVisitor<MLoop_p, SubLoopsGetter>;
     template <Util::DFVOrder order> using LoopDFVisitor = Util::GenericDFVisitor<MLoop_p, SubLoopsGetter, order>;
 
-    const auto& blocks() const { return loop_blocks; }
+    const auto &blocks() const { return loop_blocks; }
 
     auto getBFVisitor() { return LoopBFVisitor{shared_from_this()}; }
 
@@ -103,7 +103,7 @@ public:
     using iterator = decltype(top_level_loops)::iterator;
     iterator begin();
     iterator end();
-    
+
     MLoop_p getLoopFor(const MIRBlk *bb) const;
     MLoop_p getLoopFor(const MIRBlk_p &bb) const;
     bool isLoopHeader(const MIRBlk *bb) const;

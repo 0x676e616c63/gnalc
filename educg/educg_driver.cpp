@@ -94,16 +94,16 @@ int main(int argc, char **argv) {
     cli_opt_options.run_test.disable();
     cli_opt_options.verify.disable();
 
-    // Disable some passes to speed up the compilation
-    if (!with_o1) {
-        cli_opt_options.inliner.disable();
-        cli_opt_options.loop_unroll.disable();
-        cli_opt_options.reassociate.disable();
-        cli_opt_options.gvnpre.disable();
-        cli_opt_options.loop_parallel.disable();
-        cli_opt_options.vectorizer.disable();
-        cli_opt_options.rngsimplify.disable();
-    }
+    // // Disable some passes to speed up the compilation
+    // if (!with_o1) {
+    //     cli_opt_options.inliner.disable();
+    //     cli_opt_options.loop_unroll.disable();
+    //     cli_opt_options.reassociate.disable();
+    //     cli_opt_options.gvnpre.disable();
+    //     cli_opt_options.loop_parallel.disable();
+    //     cli_opt_options.vectorizer.disable();
+    //     cli_opt_options.rngsimplify.disable();
+    // }
 
     auto pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::EnableIfDefault);
 
@@ -138,11 +138,7 @@ int main(int argc, char **argv) {
     IR::PassBuilder::registerModuleAnalyses(mam);
     IR::PassBuilder::registerProxies(fam, mam);
 
-    IR::MPM mpm;
-    if (with_o1)
-        mpm = IR::PassBuilder::buildModuleFixedPointPipeline(pm_options);
-    else
-        mpm = IR::PassBuilder::buildModulePipeline(pm_options);
+    auto mpm = IR::PassBuilder::buildModuleFixedPointPipeline(pm_options);
 
     mpm.run(generator.get_module(), mam);
 

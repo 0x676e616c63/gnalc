@@ -3,7 +3,6 @@
 
 #include "mir/passes/transforms/isel.hpp"
 #include "mir/tools.hpp"
-#include <algorithm>
 #include <optional>
 
 using namespace MIR;
