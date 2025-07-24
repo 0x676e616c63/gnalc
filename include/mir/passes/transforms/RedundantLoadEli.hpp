@@ -143,7 +143,7 @@ private:
     void ApplyCopys_inFunc(loadInfo &, const ldValue &);
     void ApplyCopys_inBlks(MIRBlk *mblk, loadInfo::useInfo_blk &, const ldValue &);
 
-    void weights_cnt(loadInfo &, std::map<MIRBlk *, bool> &);
+    void weights_cal(loadInfo &, std::map<MIRBlk *, bool> &);
 };
 
 }; // namespace MIR

@@ -6,6 +6,7 @@
 #include "mir/passes/analysis/domtree_analysis.hpp"
 #include "mir/passes/transforms/isel.hpp"
 #include "mir/tools.hpp"
+#include "utils/exception.hpp"
 #include "utils/logger.hpp"
 #include <cstddef>
 #include <cstdint>
@@ -71,7 +72,7 @@ void RedundantLoadEliImpl::MkInfo() {
             if (auto ptr = isLoad(minst)) {
                 auto loadVal = *ptr;
 
-                if (loadVal.isI32() && std::get<0>(loadVal.inner) == 1) {
+                if (mblk->getmSym() == "my_sin_impl_1") {
                     int debug;
                 }
 
@@ -164,15 +165,19 @@ void RedundantLoadEliImpl::ApplyCopys_inFunc(loadInfo &info, const ldValue &cons
     MIROperand_p loaded_op = nullptr;
     std::map<MIRBlk *, bool> weights;
 
-    weights_cnt(info, weights);
+    weights_cal(info, weights);
 
     if (info.const_uses.count(info.lca)) {
-        auto iter_lca = info.const_uses.at(info.lca).begin(); // the first load in lca
-        Logger::logInfo("remain: " + (*iter_lca->second)->dbgDump() + " in " + info.lca->getmSym());
+        // Logger::logInfo("remain: " + (*iter_lca->second)->dbgDump() + " in " + info.lca->getmSym());
 
+        auto iter_lca = info.const_uses.at(info.lca).begin(); // the first load in lca
         loaded_op = iter_lca->first;
 
-        info.const_uses.at(info.lca).erase(iter_lca); // remain the first one
+        // info.const_uses.at(info.lca).erase(iter_lca); // remain the first one
+
+        ApplyCopys_inBlks(info.lca, info.const_uses.at(info.lca), constVal);
+
+        info.const_uses.erase(info.lca);
     } else {
         // add a load in lca blk
 
@@ -218,14 +223,15 @@ void RedundantLoadEliImpl::ApplyCopys_inFunc(loadInfo &info, const ldValue &cons
 
 void RedundantLoadEliImpl::ApplyCopys_inBlks(MIRBlk *mblk, loadInfo::useInfo_blk &blk_info, const ldValue &constVal) {
 
-    MIROperand_p loaded_op = nullptr;
-    for (auto it = blk_info.begin(); it != blk_info.end(); ++it) {
-        auto &[mop, miter] = *it;
+    Err::gassert(!blk_info.empty(), "no ref in this blk");
 
-        if (it == blk_info.begin()) {
-            loaded_op = mop;
-            continue;
-        }
+    MIROperand_p loaded_op = blk_info.front().first;
+
+    Logger::logInfo("remain: " + (*blk_info.front().second)->dbgDump() + " in " + mblk->getmSym());
+
+    blk_info.erase(blk_info.begin());
+
+    for (auto &[mop, miter] : blk_info) {
 
         auto &minst_loadImm = *miter;
 
@@ -243,7 +249,7 @@ void RedundantLoadEliImpl::ApplyCopys_inBlks(MIRBlk *mblk, loadInfo::useInfo_blk
     }
 }
 
-void RedundantLoadEliImpl::weights_cnt(loadInfo &info, std::map<MIRBlk *, bool> &weights) {
+void RedundantLoadEliImpl::weights_cal(loadInfo &info, std::map<MIRBlk *, bool> &weights) {
     const size_t weight_distance = average_inst_cnt;
     const size_t weight_prv = 1;
     const size_t weight_live_len = 1;
