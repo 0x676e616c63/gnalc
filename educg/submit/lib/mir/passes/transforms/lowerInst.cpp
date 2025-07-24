@@ -5,8 +5,10 @@
 #include "../../../../include/ir/instructions/converse.hpp"
 #include "../../../../include/ir/instructions/memory.hpp"
 #include "../../../../include/ir/type.hpp"
+#include "../../../../include/mir/MIR.hpp"
 #include "../../../../include/mir/passes/transforms/isel.hpp"
 #include "../../../../include/mir/passes/transforms/lowering.hpp"
+#include "../../../../include/mir/tools.hpp"
 #include <forward_list>
 #include <queue>
 #include <utility>
@@ -479,9 +481,22 @@ void LoweringContext::elimPhi() {
         ctx.setCurrentBlk(std::move(pred));
 
         // src maybe a constant
-        ctx.addInstBeforeBr(MIRInst::make(chooseCopyOpC(dst, src))
-                                ->setOperand<0>(dst, ctx.CodeGenCtx())
-                                ->setOperand<1>(src, ctx.CodeGenCtx()));
+        auto copy_op = chooseCopyOpC(dst, src);
+
+        if (inRange(copy_op, OpC::InstLoadAddress, OpC::InstLoadFPImm)) {
+            auto const_stage = MIROperand::asVReg(ctx.CodeGenCtx().nextId(), dst->type());
+
+            ctx.addInstBeforeBr(MIRInst::make(copy_op)
+                                    ->setOperand<0>(const_stage, ctx.CodeGenCtx())
+                                    ->setOperand<1>(src, ctx.CodeGenCtx())); // imm load
+            ctx.addInstBeforeBr(MIRInst::make(chooseCopyOpC(dst, const_stage))
+                                    ->setOperand<0>(dst, ctx.CodeGenCtx())
+                                    ->setOperand<1>(const_stage, ctx.CodeGenCtx()));
+
+        } else {
+            ctx.addInstBeforeBr(
+                MIRInst::make(copy_op)->setOperand<0>(dst, ctx.CodeGenCtx())->setOperand<1>(src, ctx.CodeGenCtx()));
+        }
 
         ctx.setCurrentBlk(succ);
 

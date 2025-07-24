@@ -177,58 +177,6 @@ public:
     size_t getKeyBytes(const std::vector<pFormalParam> &args) const final { return args.size() * 4; }
 };
 
-// Memoization can be an optimization if a pure function is called with identical arguments
-// many times. Determine a function's execution frequency is already too hard, if not impossible,
-// for us, not to mention questioning its arguments. Therefore, we only memoize functions
-// that are most possible to fit into such cases.
-// A function worth memoization usually have overlapping subproblems. In other words,
-// different paths depend on the solution to the same subproblem.
-// Here we try to figure out if a function has overlapping subproblems.
-// FIXME: More precise cost model
-bool isProfitableToMemoize(const Function &func) {
-    // First find all recursive calls
-    std::vector<pCall> self_calls;
-    for (const auto &bb : func) {
-        for (const auto &inst : *bb) {
-            if (auto call = inst->as<CALLInst>()) {
-                if (call->getFunc().get() == &func)
-                    self_calls.emplace_back(call);
-            }
-        }
-    }
-
-    // Overlapping subproblems at least have two paths
-    if (self_calls.size() < 2)
-        return false;
-
-    // See if there are shared arguments
-    // Independent calls cannot have overlapping subproblems
-    const auto &params = func.getParams();
-    size_t num_shared_calls = self_calls.size();
-    for (const auto &call : self_calls) {
-        auto call_args = call->getArgs();
-        auto has_use = [&]() -> bool {
-            for (const auto &arg : call_args) {
-                if (auto arg_inst = arg->as<Instruction>()) {
-                    for (const auto &fp : params) {
-                        if (AhasUseToB(arg_inst, fp))
-                            return true;
-                    }
-                }
-            }
-            return false;
-        }();
-
-        if (!has_use)
-            --num_shared_calls;
-    }
-
-    if (num_shared_calls < 2)
-        return false;
-
-    return true;
-}
-
 std::shared_ptr<MemoPlan> selectMemoPlan(Function &func) {
     const auto &params = func.getParams();
 
@@ -245,16 +193,37 @@ std::shared_ptr<MemoPlan> selectMemoPlan(Function &func) {
     return std::make_shared<ArbitraryIntsFloatsMemo>();
 }
 
+bool isSafeToMemoize(Function &func, FAM& fam) {
+    size_t call_cnt = 0;
+    auto& aa_res = fam.getResult<BasicAliasAnalysis>(func);
+    for (const auto &bb : func) {
+        for (const auto &inst : *bb) {
+            if (auto call = inst->as<CALLInst>()) {
+                if (call->getFunc().get() != &func)
+                    return false;
+                ++call_cnt;
+            } else if (inst->is<STOREInst, LOADInst>()) {
+                if (!aa_res.isLocal(getMemLocation(inst)))
+                    return false;
+            }
+        }
+    }
+
+    // If there is only one (or none) recursive calls, there is definitely no overlapping subproblems.
+    // In that case, memoization would only add lookup overhead without improving performance.
+    if (call_cnt < 2)
+        return false;
+
+    return true;
+}
+
 PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
     auto& target = fam.getResult<TargetAnalysis>(function);
     if (!target->isBitwiseOpSupported() || !target->isTypeSupported(IRBTYPE::I64))
         return PreserveAll();
 
     // Memoize pure recursive functions
-    if (!function.isRecursive() || !isPure(fam, &function))
-        return PreserveAll();
-
-    if (!isProfitableToMemoize(function))
+    if (!isSafeToMemoize(function, fam))
         return PreserveAll();
 
     // Skip functions with pointer arguments
@@ -291,7 +260,8 @@ PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
     if (!is_bijection) {
         for (const auto &fp : params)
             lut_entry_size += fp->getType()->getBytes();
-    }
+    } else
+        lut_entry_size += plan->getKeyBytes(params);
     auto lut_type = makeArrayType(makeBType(IRBTYPE::I8), lut_entry_size * Config::IR::MEMOIZATION_LUT_SIZE);
     auto lut = std::make_shared<GlobalVariable>(
         STOCLASS::GLOBAL, lut_type,

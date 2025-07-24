@@ -238,15 +238,15 @@ class IndVar : public Instruction {
 private:
     // Base, Bound and Step are in operands list.
     // This can let IndVar can be replaced by `replaceSelf`.
-    // Original Alloca is not, because it is only used to ensure correctness in CFGBuilder.
-    pAlloca orig_alloc;
+    // Original Memory is not, because it is only used to ensure correctness in CFGBuilder.
+    pVal orig_mem;
     size_t depth;
 
 public:
-    explicit IndVar(std::string name_, pAlloca orig_alloca_, const pVal &base, const pVal &bound, const pVal &step,
+    explicit IndVar(std::string name_, pVal orig_alloca_, const pVal &base, const pVal &bound, const pVal &step,
                     size_t depth_)
         : Instruction(OP::INDVAR, std::move(name_), base->getType(), ValueTrait::INDUCTION_VARIABLE),
-          orig_alloc(std::move(orig_alloca_)), depth(depth_) {
+          orig_mem(std::move(orig_alloca_)), depth(depth_) {
         Err::gassert(isSameType(base, bound));
         Err::gassert(isSameType(base, step));
         addOperand(base);
@@ -255,7 +255,7 @@ public:
     }
 
     size_t getDepth() const { return depth; }
-    const pAlloca &getOrigAlloc() const { return orig_alloc; }
+    const pVal &getOrigMem() const { return orig_mem; }
     pVal getBase() const { return getOperand(0)->getValue(); }
     pVal getBound() const { return getOperand(1)->getValue(); }
     pVal getStep() const { return getOperand(2)->getValue(); }

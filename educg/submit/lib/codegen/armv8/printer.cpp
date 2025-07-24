@@ -41,8 +41,10 @@ string ARMA64Printer::binaryPrinter(const MIRInst &minst) {
 
     if (rhs->isISA()) {
         str += reg2s(rhs, bitWide);
-    } else {                                      // constant
-        str += '#' + std::to_string(rhs->imme()); // uint64_t
+    } else if (lhs->type() == OpT::Int32) { // constant int
+        str += '#' + std::to_string(static_cast<int>(rhs->imme()));
+    } else {
+        str += '#' + std::to_string(rhs->imme());
     }
 
     // for extra shift op
@@ -118,7 +120,9 @@ string ARMA64Printer::cmpPrinter(const MIRInst &minst) {
 
     if (rhs->isISA()) {
         str += reg2s(rhs, bitWide);
-    } else { // constant
+    } else if (lhs->type() == OpT::Int32) { // constant int
+        str += '#' + std::to_string(static_cast<int>(rhs->imme()));
+    } else {
         str += '#' + std::to_string(rhs->imme());
     }
 
@@ -152,11 +156,9 @@ string ARMA64Printer::copyPrinter(const MIRInst &minst) {
     if (defType == OpT::Float && useType == OpT::Float) {
         ///@note mov from an isa to another isa, maybe caused by reduntant load eliminate
         str += "mov\t" + reg2s(def, 16, true) + ".16b,\t" + reg2s(use, 16, true) + ".16b";
-
     } else if (inRange(defType, OpT::Int, OpT::Int64) && inRange(useType, OpT::Float, OpT::Floatvec4) ||
                inRange(useType, OpT::Int, OpT::Int64) && inRange(defType, OpT::Float, OpT::Floatvec4) ||
                inRange(useType, OpT::Float, OpT::Floatvec4) && inRange(defType, OpT::Float, OpT::Floatvec4)) {
-
         str += "fmov\t" + reg2s(def, bitWide) + ",\t" + reg2s(use, bitWide);
     } else {
         str += "mov\t" + reg2s(def, bitWide) + ",\t" + reg2s(use, bitWide);

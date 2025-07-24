@@ -58,6 +58,7 @@ public:
     virtual int getCmpCost(OP op, const pType &val_ty) { Err::not_implemented(); }
     virtual int getSelectCost(const pType &val_ty) { Err::not_implemented(); }
     virtual int getBinaryCost(OP op, const pType &ty, OperandTrait lhs, OperandTrait rhs) { Err::not_implemented(); }
+    virtual int getUnaryCost(OP op, const pType &ty, OperandTrait oper) { Err::not_implemented(); }
     virtual int getMemCost(OP op, const pType &ty, int align) { Err::not_implemented(); }
 };
 } // namespace IR

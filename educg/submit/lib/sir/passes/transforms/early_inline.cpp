@@ -9,9 +9,10 @@
 
 namespace SIR {
 PM::PreservedAnalyses EarlyInlinePass::run(LinearFunction &function, LFAM &lfam) {
-    auto test = makeClone(function.as<LinearFunction>());
-    PrintLinearFunctionPass printer(std::cerr);
-    test->accept(printer);
+    // TODO
+    // auto test = makeClone(function.as<LinearFunction>());
+    // PrintLinearFunctionPass printer(std::cerr);
+    // test->accept(printer);
     return PreserveNone();
 }
 } // namespace SIR

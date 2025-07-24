@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 #include "../../../../include/mir/passes/transforms/PostRAlegalize.hpp"
-#include "../../../../include/mir/passes/transforms/peephole.hpp"
 
 using namespace MIR;
 

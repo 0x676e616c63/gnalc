@@ -6,7 +6,6 @@
 #include "../../../../include/mir/tools.hpp"
 #include <algorithm>
 #include <string>
-#include <variant>
 
 using namespace MIR;
 

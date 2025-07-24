@@ -17,7 +17,7 @@
 #include "../../../include/sir/passes/transforms/loop_fuse.hpp"
 #include "../../../include/sir/passes/transforms/loop_unswitch.hpp"
 #include "../../../include/sir/passes/transforms/while2for.hpp"
-#include "../../../include/sir/passes/transforms/copy_elision.hpp"
+#include "../../../include/sir/passes/transforms/reshape_fold.hpp"
 #include "../../../include/sir/passes/transforms/early_inline.hpp"
 #include "../../../include/sir/passes/transforms/loop_interchange.hpp"
 
@@ -47,9 +47,12 @@ LFPM LinearPassBuilder::buildFunctionFixedPointPipeline(const PMOptions& options
 #define FUNCTION_TRANSFORM(name, ...)                                                                                  \
     registerPassForOptInfo(lfpm, options.name, __VA_ARGS__);
 
-    // FUNCTION_TRANSFORM(early_mem2reg, EarlyPromotePass())
-    // FUNCTION_TRANSFORM(while2for, While2ForPass())
-    // FUNCTION_TRANSFORM(loop_interchange, LoopInterchangePass())
+    FUNCTION_TRANSFORM(early_mem2reg, EarlyPromotePass())
+    FUNCTION_TRANSFORM(constant_fold, ConstantFoldPass())
+    FUNCTION_TRANSFORM(early_dce, EarlyDCEPass())
+    FUNCTION_TRANSFORM(while2for, While2ForPass())
+    FUNCTION_TRANSFORM(reshape_fold, ReshapeFoldPass())
+    FUNCTION_TRANSFORM(loop_fuse, LoopFusePass())
 
 #undef FUNCTION_TRANSFORM
     return lfpm;
@@ -66,10 +69,6 @@ LFPM LinearPassBuilder::buildFunctionPipeline(const PMOptions& opt_info) {
 
 #define FUNCTION_TRANSFORM(name, ...)                                                                                  \
     registerPassForOptInfo(lfpm, opt_info.name, __VA_ARGS__);
-
-    // FUNCTION_TRANSFORM(early_mem2reg, EarlyPromotePass())
-    // FUNCTION_TRANSFORM(while2for, While2ForPass())
-    // FUNCTION_TRANSFORM(loop_interchange, LoopInterchangePass())
 
 #undef FUNCTION_TRANSFORM
 
@@ -88,15 +87,8 @@ LFPM LinearPassBuilder::buildFunctionDebugPipeline() {
     lfpm.addPass(ConstantFoldPass());
     lfpm.addPass(EarlyDCEPass());
     lfpm.addPass(While2ForPass());
-    lfpm.addPass(PrintLinearFunctionPass(std::cerr));
-    // // lfpm.addPass(LoopUnswitchPass());
-    // lfpm.addPass(EarlyInlinePass());
-    // lfpm.addPass(PrintLinearFunctionPass(std::cerr));
-    // lfpm.addPass(PrintLAAPass(std::cerr));
-    lfpm.addPass(CopyElisionPass());
-    // lfpm.addPass(PrintLinearFunctionPass(std::cerr));
-    // lfpm.addPass(LoopInterchangePass());
-    // lfpm.addPass(LoopUnswitchPass());
+    lfpm.addPass(ReshapeFoldPass());
+    lfpm.addPass(LoopFusePass());
     return lfpm;
 }
 

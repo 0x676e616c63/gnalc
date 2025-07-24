@@ -79,7 +79,6 @@ PM::PreservedAnalyses EarlyPromotePass::run(LinearFunction &function, LFAM &lfam
                 }
                 Logger::logDebug("[EarlyMem2Reg]: Promoted '", mem->getName(), "'.");
             }
-            else Logger::logWarning("[EarlyMem2Reg]: No store found for local memory");
         }
         if (store_cnt == 1) {
             if (mem->is<GlobalVariable>()) {

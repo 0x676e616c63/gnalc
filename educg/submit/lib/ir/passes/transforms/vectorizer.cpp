@@ -110,6 +110,10 @@ bool VectorizerPass::AlignRewriter::trySetBaseAlign(pVal ptr, int align, Functio
             return true;
         } else if (auto fp = ptr->as<FormalParam>()) {
             for (auto user : curr_func->inst_users()) {
+                // When vectorizing multiple trees in one function, there can be users that already be
+                // removed from the function, but still holding the uses.
+                if (user->getParent() == nullptr)
+                    continue;
                 auto call = user->as<CALLInst>();
                 Err::gassert(call != nullptr, "Expected a call user");
                 if (call->getFunc().get() != curr_func)
@@ -306,7 +310,6 @@ void VectorizerPass::Scheduler::resetSchedule() {
 
 bool VectorizerPass::Scheduler::inRegion(SchedData *sched) const { return sched->region_id == region_id; }
 
-
 // For call insts, though arguments passed to the function is only a pointer,
 // callee function can through that pointer to access the full arrays.
 // So dependency involved with call must be treated conservatively.
@@ -422,6 +425,11 @@ void VectorizerPass::Scheduler::updateDeps(SchedData *sched, bool insert_in_read
                 // One instruction must be scheduled before its user, thus must be
                 // scheduling after its user is scheduled. So user is all its operands' dependency
                 for (auto user : member->inst->inst_users()) {
+                    // When vectorizing multiple trees in one function, there can be users that already be
+                    // removed from the function, but still holding the uses.
+                    if (user->getParent() == nullptr)
+                        continue;
+
                     auto user_sched = getData(user);
                     if (user_sched && inRegion(user_sched->first_in_bundle)) {
                         ++member->num_deps;
@@ -516,7 +524,7 @@ bool VectorizerPass::Scheduler::tryScheduleBundle(const std::vector<pVal> &scala
     updateDeps(bundle, true);
 
     while (!bundle->isReady() && !dry_run_ready_list.empty()) {
-        auto picked = *dry_run_ready_list.begin();
+        SchedData* picked = *dry_run_ready_list.begin();
         dry_run_ready_list.erase(dry_run_ready_list.begin());
         Err::gassert(picked->isSchedEntity() && picked->isReady());
         schedule(picked, dry_run_ready_list);
@@ -584,6 +592,9 @@ std::string VectorizerPass::Scheduler::dumpSchedData(SchedData *bundle) {
         ss << "  num_unsched_deps: " << member->num_unsched_deps << "\n";
         ss << "  Users: \n";
         for (auto user : member->inst->inst_users()) {
+            if (user->getParent() == nullptr)
+                continue;
+
             ss << "    " << user->getName() << ": ";
             auto user_bundle = getData(user);
             if (user_bundle && inRegion(user_bundle->first_in_bundle))
@@ -779,6 +790,7 @@ bool VectorizerPass::vectorizeStoreChain(const std::vector<pStore> &chain, size_
         collectExternalUsers();
         auto cost = getTreeCost();
         if (cost < -Config::IR::SLP_COST_THRESHOLD) {
+            Logger::logDebug("[SLP]: Vectorizing tree '",dumpScalars(vec_trees[0].scalars) , "' with cost (", cost, ").");
             vectorizeTrees();
             rewritten_aligns.clear();
             offset += vf;
@@ -1139,6 +1151,17 @@ void VectorizerPass::buildTreeImpl(const std::vector<pVal> &scalars, int depth, 
         buildTreeImpl(rhs_operands, depth + 1, user_tree_idx);
         return;
     }
+    case OP::FNEG: {
+        newTree(scalars, true, user_tree_idx);
+
+        std::vector<pVal> operands;
+        for (const auto &scalar : scalars) {
+            auto fneg = scalar->as<FNEGInst>();
+            operands.emplace_back(fneg->getVal());
+        }
+        buildTreeImpl(operands, depth + 1, user_tree_idx);
+        return;
+    }
     case OP::SELECT: {
         newTree(scalars, true, user_tree_idx);
 
@@ -1222,6 +1245,11 @@ void VectorizerPass::collectExternalUsers() {
         for (int lane = 0; lane < tree.scalars.size(); ++lane) {
             const auto &scalar = tree.scalars[lane];
             for (auto user : scalar->inst_users()) {
+                // When vectorizing multiple trees in one function, there can be users that already be
+                // removed from the function, but still holding the uses.
+                if (user->getParent() == nullptr)
+                    continue;
+
                 if (auto user_tree = getTree(user)) {
                     // In-tree users like the first vectorized load/store's pointer operand,
                     // still need to be a scalar.
@@ -1251,6 +1279,19 @@ int VectorizerPass::getBaseCost(const Tree &tree) {
             return target->getShuffleCost(vec_ty, ShuffleKind::Broadcast);
         return getGatherCost(vec_ty);
     }
+
+    auto analyze_op_trait = [](const pVal &val, OperandKind &op_kind, OperandProp &op_prop) {
+        if (val) {
+            if (val->getVTrait() == ValueTrait::CONSTANT_LITERAL) {
+                op_kind = OperandKind::UniformConstant;
+                if (auto ci32 = val->as<ConstantInt>()) {
+                    if (Util::isPowerOfTwo(ci32->getVal()))
+                        op_prop = OperandProp::PowerOfTwo;
+                }
+            } else
+                op_kind = OperandKind::Uniform;
+        }
+    };
 
     auto opcode = *analyzeOpcode(tree.scalars);
     switch (opcode) {
@@ -1330,24 +1371,26 @@ int VectorizerPass::getBaseCost(const Tree &tree) {
                 uniform_rhs = nullptr;
         }
 
-        auto analyze_op = [](const pVal &val, OperandKind &op_kind, OperandProp &op_prop) {
-            if (val) {
-                if (val->getVTrait() == ValueTrait::CONSTANT_LITERAL) {
-                    op_kind = OperandKind::UniformConstant;
-                    if (auto ci32 = val->as<ConstantInt>()) {
-                        if (Util::isPowerOfTwo(ci32->getVal()))
-                            op_prop = OperandProp::PowerOfTwo;
-                    }
-                } else
-                    op_kind = OperandKind::Uniform;
-            }
-        };
-
-        analyze_op(uniform_lhs, lhs_trait.kind, lhs_trait.prop);
-        analyze_op(uniform_rhs, rhs_trait.kind, rhs_trait.prop);
+        analyze_op_trait(uniform_lhs, lhs_trait.kind, lhs_trait.prop);
+        analyze_op_trait(uniform_rhs, rhs_trait.kind, rhs_trait.prop);
 
         int scalar_cost = tree.scalars.size() * target->getBinaryCost(opcode, scalar_ty, lhs_trait, rhs_trait);
         int vector_cost = target->getBinaryCost(opcode, vec_ty, lhs_trait, rhs_trait);
+        return vector_cost - scalar_cost;
+    }
+    case OP::FNEG: {
+        OperandTrait op_trait;
+        auto uniform_oper = tree.scalars[0]->as<FNEGInst>()->getVal();
+        for (size_t i = 1; i < tree.scalars.size(); ++i) {
+            auto bin = tree.scalars[i]->as<FNEGInst>();
+            if (bin->getVal() != uniform_oper)
+                uniform_oper = nullptr;
+        }
+
+        analyze_op_trait(uniform_oper, op_trait.kind, op_trait.prop);
+
+        int scalar_cost = tree.scalars.size() * target->getUnaryCost(opcode, scalar_ty, op_trait);
+        int vector_cost = target->getUnaryCost(opcode, vec_ty, op_trait);
         return vector_cost - scalar_cost;
     }
     case OP::GEP: {
@@ -1737,6 +1780,22 @@ pVal VectorizerPass::vectorizeTree(Tree *tree) {
 
         tree->vec = vec_bin;
         return vec_bin;
+    }
+    case OP::FNEG: {
+        std::vector<pVal> oper;
+
+        for (const auto &scalar : tree->scalars) {
+            auto fneg = scalar->as<FNEGInst>();
+            oper.emplace_back(fneg->getVal());
+        }
+
+        setInsertPointAfterBundle(tree->scalars);
+
+        auto oper_vec = vectorizeFromScalars(oper);
+        auto vec_fneg = builder.makeFNeg(oper_vec);
+
+        tree->vec = vec_fneg;
+        return vec_fneg;
     }
     case OP::LOAD: {
         setInsertPointAfterBundle(tree->scalars);

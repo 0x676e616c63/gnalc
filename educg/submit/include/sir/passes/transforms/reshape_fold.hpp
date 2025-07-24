@@ -3,13 +3,13 @@
 
 // Copy Elision
 #pragma once
-#ifndef GNALC_SIR_PASSES_TRANSFORMS_COPY_ELISION_HPP
-#define GNALC_SIR_PASSES_TRANSFORMS_COPY_ELISION_HPP
+#ifndef GNALC_SIR_PASSES_TRANSFORMS_RESHAPE_FOLD_HPP
+#define GNALC_SIR_PASSES_TRANSFORMS_RESHAPE_FOLD_HPP
 
 #include "../pass_manager.hpp"
 
 namespace SIR {
-class CopyElisionPass : public PM::PassInfo<CopyElisionPass> {
+class ReshapeFoldPass : public PM::PassInfo<ReshapeFoldPass> {
 public:
     PM::PreservedAnalyses run(LinearFunction &function, LFAM &lfam);
     size_t name_cnt = 0;
