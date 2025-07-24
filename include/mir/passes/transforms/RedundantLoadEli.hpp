@@ -3,7 +3,6 @@
 
 #pragma once
 #include "mir/info.hpp"
-#include "mir/passes/transforms/scheduling.hpp"
 #include <cstdint>
 #include <functional>
 #include <type_traits>

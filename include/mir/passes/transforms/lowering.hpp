@@ -6,7 +6,6 @@
 #include "ir/type_alias.hpp"
 #include "mir/info.hpp"
 #include "utils/exception.hpp"
-#include <optional>
 #ifndef GNALC_MIR_BUILD_LOWERING_HPP
 #define GNALC_MIR_BUILD_LOWERING_HPP
 

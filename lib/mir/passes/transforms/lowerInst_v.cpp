@@ -7,20 +7,13 @@
 #include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
 #include "ir/instructions/vector.hpp"
-#include "ir/type.hpp"
 #include "ir/type_alias.hpp"
 #include "mir/MIR.hpp"
 #include "mir/armv8/base.hpp"
 #include "mir/info.hpp"
-#include "mir/passes/transforms/isel.hpp"
 #include "mir/passes/transforms/lowering.hpp"
 #include "mir/tools.hpp"
 #include "utils/exception.hpp"
-#include <charconv>
-#include <cstddef>
-#include <iostream>
-#include <optional>
-#include <tuple>
 
 using namespace MIR;
 

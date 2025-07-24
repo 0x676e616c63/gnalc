@@ -8,12 +8,8 @@
 #include "mir/passes/transforms/isel.hpp"
 #include "mir/tools.hpp"
 #include "utils/exception.hpp"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <iostream>
-#include <optional>
-#include <ostream>
 
 using namespace MIR;
 

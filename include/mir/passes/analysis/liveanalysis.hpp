@@ -5,7 +5,6 @@
 #ifndef GNALC_MIR_PASSES_ANALYSIS_LIVEANALYSIS_HPP
 #define GNALC_MIR_PASSES_ANALYSIS_LIVEANALYSIS_HPP
 
-#include "mir/passes/pass_builder.hpp"
 #include "mir/passes/pass_manager.hpp"
 #include <optional>
 
@@ -17,7 +16,8 @@ struct Liveness {
 
     enum relatedType { Use, Def };
 
-    std::unordered_map<MIROperand_p, std::unordered_set<std::pair<MIRInst_p, relatedType>, Util::PairHash>> use_def_insts;
+    std::unordered_map<MIROperand_p, std::unordered_set<std::pair<MIRInst_p, relatedType>, Util::PairHash>>
+        use_def_insts;
 
     std::unordered_map<MIROperand_p, size_t> intervalLengths;
 
@@ -61,7 +61,8 @@ public:
 
     void runOnFunc(MIRFunction &);
     bool runOnBlk(const MIRBlk_p &);
-    void runOnInst(const MIRInst_p &inst, std::unordered_set<MIROperand_p> &liveIn, std::unordered_set<MIROperand_p> &liveOut);
+    void runOnInst(const MIRInst_p &inst, std::unordered_set<MIROperand_p> &liveIn,
+                   std::unordered_set<MIROperand_p> &liveOut);
 
     Liveness getInfo() const {
         Err::gassert(liveinfo.has_value(), "LiveAnalysisImpl: never got a info");
@@ -73,6 +74,6 @@ public:
     MIROperand_p extractDef(const MIRInst_p &minst);
 };
 
-}; // namespace MIR_new
+}; // namespace MIR
 
 #endif

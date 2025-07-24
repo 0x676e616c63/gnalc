@@ -4,8 +4,6 @@
 #include "mir/riscv64/isel.hpp"
 #include "mir/MIR.hpp"
 #include "mir/passes/transforms/isel.hpp"
-#include <algorithm>
-#include <optional>
 
 using namespace MIR;
 

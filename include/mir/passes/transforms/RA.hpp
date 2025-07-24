@@ -6,7 +6,6 @@
 #ifndef GNALC_MIR_PASSES_TRANSFROMS_RA
 #define GNALC_MIR_PASSES_TRANSFROMS_RA
 
-#include "config/config.hpp"
 #include "mir/passes/analysis/liveanalysis.hpp"
 #include "utils/fast_set.hpp"
 
