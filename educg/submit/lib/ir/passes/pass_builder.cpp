@@ -170,25 +170,11 @@ auto make_mem_clean(const PMOptions& options) {
 }
 
 auto make_arithmetic(const PMOptions& options) {
-    auto make_simple_clean = [&options] {
-        FPM fpm;
-        FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
-        FUNCTION_TRANSFORM(dce, DCEPass());
-        FUNCTION_TRANSFORM(sccp, SCCPPass());
-        FUNCTION_TRANSFORM(adce, ADCEPass());
-        return fpm;
-    };
-
-    auto make_reassociate = [&options] {
-        FPM fpm;
-        FUNCTION_TRANSFORM(reassociate, ReassociatePass());
-        FUNCTION_TRANSFORM(dce, DCEPass());
-        return fpm;
-    };
-
     FPM fpm;
-    fpm.addPass(make_simple_clean());
-    fpm.addPass(make_reassociate());
+
+    FUNCTION_TRANSFORM(reassociate, ReassociatePass());
+    FUNCTION_TRANSFORM(dce, DCEPass());
+
     return fpm;
 }
 
@@ -197,6 +183,13 @@ auto make_deep_clean(const PMOptions& options) {
     fpm.addPass(make_basic_clean(options));
     fpm.addPass(make_cfg_clean(options));
     fpm.addPass(make_mem_clean(options));
+    fpm.addPass(make_basic_clean(options));
+    fpm.addPass(make_cfg_clean(options));
+    return fpm;
+}
+
+auto make_fast_clean(const PMOptions& options) {
+    FPM fpm;
     fpm.addPass(make_basic_clean(options));
     fpm.addPass(make_cfg_clean(options));
     return fpm;
@@ -271,10 +264,10 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions& options) {
     fpm.addPass(make_memo(options));
     fpm.addPass(make_arithmetic(options));
     fpm.addPass(make_loop(options));
-    fpm.addPass(make_deep_clean(options));
+    fpm.addPass(make_fast_clean(options));
     fpm.addPass(make_vectorizer(options));
     // fpm.addPass(make_debug_version_vectorizer(options));
-    fpm.addPass(make_deep_clean(options));
+    fpm.addPass(make_fast_clean(options));
 
     // FUNCTION_TRANSFORM(store_range, LoopSimplifyPass(), StoreAnalysisPass<RangeAnalysis>())
     FUNCTION_TRANSFORM(codegen_prepare, CFGSimplifyPass(), CodeGenPreparePass())

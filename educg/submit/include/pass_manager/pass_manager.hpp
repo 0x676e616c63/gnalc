@@ -497,10 +497,12 @@ public:
     PreservedAnalyses run(UnitT &unit, AnalysisManager<UnitT> &am) {
         PreservedAnalyses pa = PreservedAnalyses::all();
         bool modified = true;
+        std::string last_modified_pass;
+        auto first_pass = passes.front().first->name();
+
         size_t round = 1;
         while (modified) {
             modified = false;
-
             for (auto &[pass, ignoring_change] : passes) {
                 if constexpr (detail::hasGetInstCountV<UnitT>) {
                     auto old_inst_cnt = unit.getInstCount();
@@ -510,8 +512,11 @@ public:
                     auto end = std::chrono::high_resolution_clock::now();
                     std::chrono::duration<double> duration = end - start;
 
-                    if (!ignoring_change)
-                        modified |= !curr_pa.allPreserved();
+                    if (!ignoring_change && !curr_pa.allPreserved()) {
+                        modified = true;
+                        last_modified_pass = pass->name();
+                    }
+
                     am.invalidate(unit, curr_pa);
                     pa.retain(curr_pa);
 
@@ -526,8 +531,11 @@ public:
                     auto end = std::chrono::high_resolution_clock::now();
                     std::chrono::duration<double> duration = end - start;
 
-                    if (!ignoring_change)
-                        modified |= !curr_pa.allPreserved();
+                    if (!ignoring_change && !curr_pa.allPreserved()) {
+                        modified = true;
+                        last_modified_pass = pass->name();
+                    }
+
                     am.invalidate(unit, curr_pa);
                     pa.retain(curr_pa);
 
@@ -542,6 +550,9 @@ public:
                              " If this is intentionally, set the threshold explicitly.");
                 break;
             }
+
+            if (last_modified_pass == first_pass)
+                break;
         }
 
         return pa;
