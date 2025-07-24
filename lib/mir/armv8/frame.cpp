@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 #include "mir/armv8/frame.hpp"
-#include "ir/base.hpp"
 #include "ir/type.hpp"
 #include "mir/MIR.hpp"
 #include "mir/info.hpp"

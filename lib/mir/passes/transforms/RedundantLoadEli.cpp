@@ -3,6 +3,10 @@
 
 #include "mir/passes/transforms/RedundantLoadEli.hpp"
 #include "mir/passes/analysis/domtree_analysis.hpp"
+#include "mir/passes/transforms/isel.hpp"
+#include "mir/tools.hpp"
+#include "utils/logger.hpp"
+#include <cstdint>
 #include <optional>
 
 using namespace MIR;
@@ -23,32 +27,31 @@ void RedundantLoadEliImpl::Impl() {
 void RedundantLoadEliImpl::MkInfo() {
     // LAMBDA BEGIN
 
-    auto isLoad = [](const MIRInst_p &minst) {
-        ///@todo InstLoadImmEx, though maybe not very useful
-        ///@todo fix me
-        if (minst->isGeneric() &&
-            (minst->opcode<OpC>() == OpC::InstLoadImm || minst->opcode<OpC>() == OpC::InstLoadFPImm)) {
-            std::optional loaded = minst->getOp(1)->imme();
-            return loaded;
+    auto isLoad = [](const MIRInst_p &minst) -> std::optional<ldValue> {
+        if (!minst->isGeneric()) {
+            return std::nullopt;
+        }
+
+        if (minst->opcode<OpC>() == OpC::InstLoadImm) {
+            return {ldValue(static_cast<uint32_t>(minst->getOp(1)->imme()))};
+            // return std::nullopt;
+        } else if (minst->opcode<OpC>() == OpC::InstLoadFPImm) {
+
+            auto val = static_cast<uint32_t>(minst->getOp(1)->imme());
+            return {ldValue(*reinterpret_cast<float *>(&val))};
+        } else if (minst->opcode<OpC>() == OpC::InstLoadImmEx) {
+
+            return {ldValue((minst->getOp(1)->immeEx()))};
+        } else if (minst->opcode<OpC>() == OpC::InstLoadLiteral) {
+            const auto &val = minst->getOp(1);
+
+            size_t size_align = inSet(val->type(), OpT::Floatvec2, OpT::Intvec2) ? 8 : 16; // FIXME: match more
+
+            return {ldValue(val->literal(), val->type(), size_align, size_align)};
         } else {
-            return std::optional<uint64_t>();
+
+            return std::nullopt;
         }
-    };
-
-    auto isFP = [&isLoad](const MIRInst_p &minst) {
-        if (!isLoad(minst)) {
-            return false;
-        }
-
-        if (minst->isGeneric()) {
-            if (minst->opcode<OpC>() == OpC::InstLoadImm) {
-                return false;
-            }
-
-            return true;
-        }
-
-        return false;
     };
 
     // LAMBDA END
@@ -62,16 +65,19 @@ void RedundantLoadEliImpl::MkInfo() {
             auto &minst = *it;
 
             if (auto ptr = isLoad(minst)) {
-                unsigned loadVal = *ptr;
+                auto loadVal = *ptr;
 
-                if (!infos.count({loadVal, isFP(minst)})) {
+                if (loadVal.isI32() && std::get<0>(loadVal.inner) == 1) {
+                    int debug;
+                }
 
-                    infos[{loadVal, isFP(minst)}] =
-                        loadInfo{loadVal, {mblk}, {{mblk.get(), {{minst->ensureDef(), it}}}}}; // 括号对齐带师
+                if (!infos.count(loadVal)) {
 
+                    infos.emplace(loadVal, loadInfo{loadVal, {mblk}, {{mblk.get(), {{minst->ensureDef(), it}}}}});
+                    // 括号对齐带师
                 } else {
 
-                    auto &info = infos.at({loadVal, isFP(minst)}); //
+                    auto &info = infos.at(loadVal); //
                     info.mblks.emplace(mblk);
 
                     ///@note 由于minsts顺序遍历, 所以这个vector内的pair顺序应该也是正确的
@@ -128,30 +134,43 @@ void RedundantLoadEliImpl::ApplyCopys() {
     ///@note 减少load就会增加寄存器压力, 尤其是对一些0,1,2等常用的数, 不过寄存器大概是够用的
     ///@todo 对于某些数, 可以考虑仅在blk内做消除而不是全局地消除
 
-    for (auto &[pair, /* a number */ info] : infos) {
+    for (auto &[constVal, /* a number */ info] : infos) {
 
-        const auto &[constVal, isFP] = pair;
+        // if (!isFP && constVal >= 0 && constVal < 65536) {
+        //     continue; // giveup
+        // } else if (isFP && (ARMv8::isFloat8(constVal) || constVal == 0)) {
+        //     continue; // giveup
+        // }
 
-        if (!isFP && constVal >= 0 && constVal < 65536) {
-            continue; // giveup
-        } else if (isFP && (ARMv8::isFloat8(constVal) || constVal == 0)) {
+        if (constVal.isZero()) {
             continue; // giveup
         }
 
-        MIROperand_p loaded_constVal = nullptr;
+        MIROperand_p loaded_op = nullptr;
 
         if (info.const_uses.count(info.lca)) {
-            auto iter_lca = info.const_uses.at(info.lca).begin();
-            loaded_constVal = iter_lca->first;
+            auto iter_lca = info.const_uses.at(info.lca).begin(); // the first load in lca
+            Logger::logInfo("remain: " + (*iter_lca->second)->dbgDump() + " in " + info.lca->getmSym());
 
-            // 防止误改
-            info.const_uses.at(info.lca).erase(iter_lca);
+            loaded_op = iter_lca->first;
+
+            info.const_uses.at(info.lca).erase(iter_lca); // remain the first one
         } else {
-            loaded_constVal = MIROperand::asVReg(mfunc.Context().nextId(), OpT::Int32);
+            // add a load in lca blk
 
-            info.lca->addInstBeforeBr(MIRInst::make(OpC::InstLoadImm)
-                                          ->setOperand<0>(loaded_constVal, mfunc.Context())
-                                          ->setOperand<1>(MIROperand::asImme(constVal, OpT::Int32), mfunc.Context()));
+            loaded_op = MIROperand::asVReg(ctx.nextId(), constVal.type);
+
+            auto new_load = MIRInst::make(constVal.getLoadOpC())
+                                ->setOperand<0>(loaded_op, ctx)
+                                ->setOperand<1>(constVal.getConstOp(), ctx);
+            info.lca->addInstBeforeBr(new_load);
+
+            Logger::logInfo("add in lca: " + new_load->dbgDump() + " in " + info.lca->getmSym());
+
+            // add into literal pool
+            if (constVal.isLiteral()) {
+                info.lca->add_tail_literal(std::get<string>(constVal.inner), constVal.size, constVal.align);
+            }
         }
 
         for (auto &[mblk, uses] : info.const_uses) {
@@ -159,16 +178,25 @@ void RedundantLoadEliImpl::ApplyCopys() {
             for (auto &[mop, miter] : uses) {
                 auto &minst_loadImm = *miter;
 
-                if (inSet(minst_loadImm->opcode<OpC>(), OpC::InstLoadImm, OpC::InstLoadFPImm)) {
-                    minst_loadImm->resetOpcode(OpC::InstCopy);
-                }
+                // if (inSet(minst_loadImm->opcode<OpC>(), OpC::InstLoadImm, OpC::InstLoadFPImm)) {
+                //     minst_loadImm->resetOpcode(OpC::InstCopy);
+                // }
 
                 ///@note 寄存器压力大时, 这里可能有两种表现
                 ///@note 1. 这里的copy没法消掉
                 ///@note 2. constVal被溢出
 
-                minst_loadImm->setOperand<0>(mop, mfunc.Context());
-                minst_loadImm->setOperand<1>(loaded_constVal, mfunc.Context());
+                Logger::logInfo("before change to copy: " + minst_loadImm->dbgDump() + " in " + mblk->getmSym());
+
+                minst_loadImm->resetOpcode(chooseCopyOpC(mop, loaded_op));
+                minst_loadImm->setOperand<0>(mop, ctx);
+                minst_loadImm->setOperand<1>(loaded_op, ctx);
+
+                Logger::logInfo("after change to copy: " + minst_loadImm->dbgDump() + " in " + mblk->getmSym());
+
+                if (constVal.isLiteral()) {
+                    mblk->removeLitetal(std::get<string>(constVal.inner));
+                }
             }
         }
     }

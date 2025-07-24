@@ -129,7 +129,7 @@ void ARMA64Printer::printout(const MIRBlk &mblk) {
     }
 
     if (mblk.useLiteral()) {
-        outStream << "    .align " + std::to_string(log2(mblk.getFirstAlign())) + "\n    .ltorg\n";
+        outStream << "    .align " + std::to_string(log2(*mblk.getFirstAlign())) + "\n    .ltorg\n";
     }
 
     ///@todo make code layout align to enhance cache performance

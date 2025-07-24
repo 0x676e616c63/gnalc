@@ -7,20 +7,13 @@
 #include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
 #include "ir/instructions/vector.hpp"
-#include "ir/type.hpp"
 #include "ir/type_alias.hpp"
 #include "mir/MIR.hpp"
 #include "mir/armv8/base.hpp"
 #include "mir/info.hpp"
-#include "mir/passes/transforms/isel.hpp"
 #include "mir/passes/transforms/lowering.hpp"
 #include "mir/tools.hpp"
 #include "utils/exception.hpp"
-#include <charconv>
-#include <cstddef>
-#include <iostream>
-#include <optional>
-#include <tuple>
 
 using namespace MIR;
 
@@ -235,7 +228,7 @@ void MIR::lowerInst_v(const IR::pFneg &fneg, LoweringContext &ctx) {
     if (ctx.CodeGenCtx().isARMv8()) {
         auto def = ctx.newVReg(fneg->getType());
 
-        ctx.newInst(MIRInst::make(OpC::InstFNeg)
+        ctx.newInst(MIRInst::make(OpC::InstVFNeg)
                         ->setOperand<0>(def, ctx.CodeGenCtx())
                         ->setOperand<1>(try_vector_flatting(fneg->getVal(), ctx), ctx.CodeGenCtx()));
 

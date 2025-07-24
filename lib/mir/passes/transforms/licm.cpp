@@ -5,6 +5,7 @@
 
 #include "mir/passes/analysis/domtree_analysis.hpp"
 #include "mir/passes/analysis/loop_analysis.hpp"
+#include "mir/passes/transforms/isel.hpp"
 
 #include <algorithm>
 #include <string>
@@ -114,8 +115,19 @@ PM::PreservedAnalyses MachineLICMPass::run(MIRFunction &function, FAM &fam) {
                         hoisted_li->setOperand<0>(hoisted_def, ctx);
                         preheader->addInstBeforeBr(hoisted_li);
 
-                        inst->resetOpcode(inst->ensureDef()->isISA() ? OpC::InstCopyToReg : OpC::InstCopy);
+                        // reset inst in loop
+                        inst->resetOpcode(chooseCopyOpC(inst->ensureDef(), hoisted_def));
                         inst->setOperand<1>(hoisted_def, ctx);
+
+                        // deal with literal pool element
+                        if (hoisted_li->opcode<OpC>() == OpC::InstLoadLiteral) {
+                            const auto &literal = hoisted_li->getOp(1);
+                            bb->removeLitetal(literal->literal());
+
+                            size_t size_align =
+                                inSet(literal->type(), OpT::Floatvec2, OpT::Intvec2) ? 8 : 16; // FIXME: match more
+                            preheader->add_tail_literal(literal->literal(), size_align, size_align);
+                        }
 
                         hoisted_li->appendDbgData("licm_hoisted");
                         inst->appendDbgData("licm_copy");

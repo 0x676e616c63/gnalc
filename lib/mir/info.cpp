@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 #include "mir/info.hpp"
-#include "mir/armv8/base.hpp"
 #include "mir/armv8/frame.hpp"
 #include "mir/armv8/isel.hpp"
 #include "mir/armv8/register.hpp"
-#include "mir/riscv64/base.hpp"
 #include "mir/riscv64/frame.hpp"
 #include "mir/riscv64/isel.hpp"
 #include "mir/riscv64/register.hpp"
@@ -23,13 +21,12 @@ CodeGenContext CodeGenContext::create(const BkdInfos &infos) {
         register_info = std::make_shared<ARMRegisterInfo>();
         isel = std::make_shared<ARMIselInfo>();
         frame = std::make_shared<ARMFrameInfo>();
-    }
-    else {
+    } else {
         register_info = std::make_shared<RVRegisterInfo>();
         isel = std::make_shared<RVIselInfo>();
         frame = std::make_shared<RVFrameInfo>();
     }
-    return CodeGenContext {
+    return CodeGenContext{
         .infos = infos,
         .registerInfo = register_info,
         .iselInfo = isel,
