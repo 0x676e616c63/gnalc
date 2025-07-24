@@ -6,6 +6,7 @@
 #include "ir/block_utils.hpp"
 #include "ir/instructions/control.hpp"
 #include "ir/instructions/memory.hpp"
+#include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/transforms/memoization.hpp"
 
@@ -15,12 +16,11 @@ struct InlineCandidate {
     pFunc callee;
 };
 
-bool isProfitableToInline(const Function &caller, const InlineCandidate &candidate) {
+bool isProfitableToInline(const Function &caller, const InlineCandidate &candidate, FAM& fam) {
     auto &callee = *candidate.callee;
     auto &call_points = candidate.call_points;
 
-    // Do not inline function that can be memoized
-    if (isProfitableToMemoize(callee))
+    if (isSafeToMemoize(callee, fam))
         return false;
 
     // Expand recursive call once can have better performance
@@ -38,7 +38,7 @@ bool isProfitableToInline(const Function &caller, const InlineCandidate &candida
         return true;
     }
 
-    if (call_points.size() < 3)
+    if (call_points.size() < Config::IR::FUNCTION_INLINE_CALL_POINTS_THRESHOLD)
         return true;
 
     if (callee.getInstCount() * call_points.size() > Config::IR::FUNCTION_INLINE_INST_THRESHOLD) {
@@ -176,7 +176,7 @@ PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
     }
 
     for (auto it = candidates.begin(); it != candidates.end();) {
-        if (!isProfitableToInline(function, it->second))
+        if (!isProfitableToInline(function, it->second, fam))
             it = candidates.erase(it);
         else
             ++it;

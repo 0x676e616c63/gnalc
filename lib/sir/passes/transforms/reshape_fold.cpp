@@ -204,7 +204,7 @@ PM::PreservedAnalyses ReshapeFoldPass::run(LinearFunction &function, LFAM &lfam)
             Logger::logDebug("[CopyElision]: Applied mask {", mask_str, "} to '", dest_mem->getName(), "'.");
         }
 
-        // At this point, we've ensured the dest is a shuffle/copy of the source array,
+        // At this point, we've ensured the dest is a reshape of the source array,
         // Now apply the mask.
         static size_t name_cnt = 0;
         auto i32_zero = function.getConst(0);
