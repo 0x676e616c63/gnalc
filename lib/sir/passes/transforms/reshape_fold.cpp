@@ -154,7 +154,7 @@ PM::PreservedAnalyses ReshapeFoldPass::run(LinearFunction &function, LFAM &lfam)
             continue;
 
         if (dest_mem->is<ALLOCAInst>() && store_cnt == 0) {
-            Logger::logWarning("[CopyElision]: Uninitialized local array '", dest_mem->getName(), "'");
+            Logger::logWarning("[ReshapeFold]: Uninitialized local array '", dest_mem->getName(), "'");
             continue;
         }
         // There can only be one store in Copy/Shuffle.
@@ -201,10 +201,10 @@ PM::PreservedAnalyses ReshapeFoldPass::run(LinearFunction &function, LFAM &lfam)
             std::string mask_str = std::to_string((*mask)[0]);
             for (size_t i = 1; i < mask->size(); i++)
                 mask_str += ", " + std::to_string((*mask)[i]);
-            Logger::logDebug("[CopyElision]: Applied mask {", mask_str, "} to '", dest_mem->getName(), "'.");
+            Logger::logDebug("[ReshapeFold]: Applied mask {", mask_str, "} to '", dest_mem->getName(), "'.");
         }
 
-        // At this point, we've ensured the dest is a shuffle/copy of the source array,
+        // At this point, we've ensured the dest is a reshape of the source array,
         // Now apply the mask.
         static size_t name_cnt = 0;
         auto i32_zero = function.getConst(0);
@@ -225,7 +225,7 @@ PM::PreservedAnalyses ReshapeFoldPass::run(LinearFunction &function, LFAM &lfam)
                 base = gep;
             }
             info.load->replaceAllOperands(info.load->getPtr(), base);
-            Logger::logDebug("[CopyElision]: Masked load '", info.load->getName(), "'.");
+            Logger::logDebug("[ReshapeFold]: Masked load '", info.load->getName(), "'.");
         }
 
         single_store.ilist->erase(single_store.iter);
