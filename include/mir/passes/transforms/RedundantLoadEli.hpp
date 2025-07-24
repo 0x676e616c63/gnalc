@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include "mir/MIR.hpp"
 #include "mir/info.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <type_traits>
@@ -84,8 +86,11 @@ private:
     struct loadInfo {
         ldValue loadedValue; // uint32 & float & uint64 & literal
         Util::FastSet<MIRBlk_p> mblks;
+        std::map<MIRBlk *, unsigned> distance; // how many layers from LCA to this blk
 
-        std::map<MIRBlk *, std::vector<std::pair<MIROperand_p, MIRInst_p_l::iterator>>> const_uses;
+        using useInfo_blk = std::vector<std::pair<MIROperand_p, MIRInst_p_l::iterator>>;
+
+        std::map<MIRBlk *, useInfo_blk> const_uses;
 
         MIRBlk *lca = nullptr;
 
@@ -94,19 +99,10 @@ private:
 
     struct infoHash {
         std::size_t operator()(const ldValue &constVal) const {
-            // std::size_t h1 = std::hash<unsigned>{}(constVal.first);
-            // std::size_t h2 = std::hash<bool>{}(constVal.second);
-            // return h1 ^ (h2 << 1);
 
             return std::visit(
                 [](const auto &v) -> size_t {
                     using T = std::decay_t<decltype(v)>;
-
-                    // if constexpr (std::is_same_v<T, float>) {
-                    //     return std::hash<float>{}(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-                    // } else {
-                    //     return std::hash<T>{}(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-                    // }
                     if constexpr (std::is_same_v<uint32_t, T>) {
                         return std::hash<T>{}(v) ^ (0 << 1);
                     } else if constexpr (std::is_same_v<float, T>) {
@@ -128,12 +124,26 @@ private:
     CodeGenContext &ctx;
     std::unordered_map<ldValue, loadInfo, infoHash> infos;
 
+    size_t average_inst_cnt = 0;
+    size_t overall_inst_cnt = 0;
+
 public:
-    RedundantLoadEliImpl(MIRFunction &_mfunc, FAM &_fam) : mfunc(_mfunc), fam(_fam), ctx(mfunc.Context()) {}
+    RedundantLoadEliImpl(MIRFunction &_mfunc, FAM &_fam) : mfunc(_mfunc), fam(_fam), ctx(mfunc.Context()) {
+        for (const auto &mblk : mfunc.blks()) {
+            overall_inst_cnt += mblk->Insts().size();
+        }
+        average_inst_cnt = overall_inst_cnt / mfunc.blks().size();
+    }
     void Impl();
+
+private:
     void MkInfo();
     void CulculateLCA();
     void ApplyCopys();
+    void ApplyCopys_inFunc(loadInfo &, const ldValue &);
+    void ApplyCopys_inBlks(MIRBlk *mblk, loadInfo::useInfo_blk &, const ldValue &);
+
+    void weights_cnt(loadInfo &, std::map<MIRBlk *, bool> &);
 };
 
 }; // namespace MIR
