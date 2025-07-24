@@ -81,6 +81,7 @@ void RV64Printer::printoutRV64(const MIRInst &minst) {
         break;
     case RVOpC::J:
     case RVOpC::JR:
+    case RVOpC::CALL:
         write(ops[1]);
         break;
     case RVOpC::JALR:
