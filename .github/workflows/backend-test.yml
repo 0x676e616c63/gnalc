@@ -48,3 +48,8 @@ jobs:
     uses: ./.github/workflows/evaluate-artifacts-backend.yml
     with:
       branch: ${{ github.ref_name }}
+  publish:
+    needs: evaluate
+    uses: ./.github/workflows/process-test-results.yml
+    with:
+      branch: ${{ github.ref_name }}

@@ -1,10 +1,11 @@
 name: Process Test Report and Update Performance Data
 
 on:
-  push:
-    branches: ["test-result-main", "test-result-backendv3.0"]
-    paths:
-      - 'README.md'
+  workflow_call:
+    inputs:
+      branch:
+        required: true
+        type: string
 
   # Allow manual triggering for backfilling data
   workflow_dispatch:
@@ -44,9 +45,9 @@ jobs:
               REPORT_BRANCH="test-result-backendv3.0"
             fi
           else
-            # Automatic (Push) Run
-            echo "Push trigger detected on branch: ${{ github.ref_name }}"
-            if [[ "${{ github.ref_name }}" == "test-result-main" ]]; then
+            # Automatic Run
+            echo "Call trigger detected on branch: ${{ inputs.branch }}"
+            if [[ "${{ inputs.branch }}" == "main" ]]; then
               CODE_BRANCH="main"
               REPORT_BRANCH="test-result-main"
             else
@@ -100,7 +101,7 @@ jobs:
             PROCESS_MODE="--all"
             echo "Manual trigger: Processing all reports."
           else
-            echo "Push trigger: Processing latest report."
+            echo "Processing latest report."
           fi
 
           python gh-pages-temp/tools/parse_report.py test-report/README.md target_code $PROCESS_MODE
