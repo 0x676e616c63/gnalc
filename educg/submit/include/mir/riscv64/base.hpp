@@ -159,6 +159,8 @@ enum class RVOpC : uint32_t {
     JALR,
     JR,
 
+    CALL,
+
     LA,
     AUIPC,
 
