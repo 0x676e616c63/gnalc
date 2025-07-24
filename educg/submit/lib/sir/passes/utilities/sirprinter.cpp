@@ -216,7 +216,9 @@ PM::PreservedAnalyses PrintLAAPass::run(LinearFunction &lfunc, LFAM &lfam) {
                                 write(coeff.first->getName());
                             }
                             if (idx.constant != 0)
-                                write(" + ", idx.constant);
+                                write(idx.coeffs.empty() ? "" : " + ", idx.constant);
+                            if (idx.invariant != nullptr)
+                                write(idx.coeffs.empty() ? "" : " + ", idx.invariant->getName());
                             write("]");
                         }
                     }

@@ -6,7 +6,6 @@
 #define GNALC_MIR_INFO_HPP
 
 #include "../ir/instructions/control.hpp"
-#include "tools.hpp"
 #include <cstring>
 #include <list>
 #include <string>

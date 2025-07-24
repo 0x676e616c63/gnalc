@@ -7,20 +7,13 @@
 #include "../../../../include/ir/instructions/converse.hpp"
 #include "../../../../include/ir/instructions/memory.hpp"
 #include "../../../../include/ir/instructions/vector.hpp"
-#include "../../../../include/ir/type.hpp"
 #include "../../../../include/ir/type_alias.hpp"
 #include "../../../../include/mir/MIR.hpp"
 #include "../../../../include/mir/armv8/base.hpp"
 #include "../../../../include/mir/info.hpp"
-#include "../../../../include/mir/passes/transforms/isel.hpp"
 #include "../../../../include/mir/passes/transforms/lowering.hpp"
 #include "../../../../include/mir/tools.hpp"
 #include "../../../../include/utils/exception.hpp"
-#include <charconv>
-#include <cstddef>
-#include <iostream>
-#include <optional>
-#include <tuple>
 
 using namespace MIR;
 
@@ -235,7 +228,7 @@ void MIR::lowerInst_v(const IR::pFneg &fneg, LoweringContext &ctx) {
     if (ctx.CodeGenCtx().isARMv8()) {
         auto def = ctx.newVReg(fneg->getType());
 
-        ctx.newInst(MIRInst::make(OpC::InstFNeg)
+        ctx.newInst(MIRInst::make(OpC::InstVFNeg)
                         ->setOperand<0>(def, ctx.CodeGenCtx())
                         ->setOperand<1>(try_vector_flatting(fneg->getVal(), ctx), ctx.CodeGenCtx()));
 

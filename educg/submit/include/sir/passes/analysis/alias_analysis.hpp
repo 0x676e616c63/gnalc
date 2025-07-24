@@ -28,8 +28,12 @@ struct AffineExpr {
     std::map<IndVar *, int> coeffs;
     int constant;
 
+    // Loop Invariant, but not an SIR constant. It can be a nullptr.
+    // TODO: Something like SCEVExpr in IR may be better.
+    pVal invariant = nullptr;
+
     int coe(IndVar *i) const;
-    // One induction variable and no constant
+    // One induction variable and no constant or invariant
     bool isLinear() const;
     std::pair<int, IndVar*> getLinear() const;
     AffineExpr operator+(const AffineExpr &rhs) const;
@@ -65,6 +69,7 @@ public:
     bool isScalar() const { return std::holds_alternative<ScalarAccess>(access); }
     auto &array() const { return std::get<ArrayAccess>(access); }
     auto &scalar() const { return std::get<ScalarAccess>(access); }
+    auto type() const { return access.index(); }
 
     MemoryAccess() = default;
     explicit MemoryAccess(const ArrayAccess &array_access) : access(array_access) {}
@@ -84,7 +89,11 @@ private:
     std::optional<MemoryAccess> analyzePointer(Value *) const;
     std::optional<InstRW> analyzeInstRW(Instruction *) const;
 
+    LinearFunction* func{};
+
 public:
+    explicit LAAResult(LinearFunction *func_) : func(func_) {}
+
     const std::optional<MemoryAccess> &queryPointer(Value *) const;
     const std::optional<InstRW> &queryInstRW(Instruction *) const;
     const std::optional<MemoryAccess> &queryPointer(const pVal&) const;
@@ -117,6 +126,13 @@ private:
     friend AnalysisInfo<LAliasAnalysis>;
     static PM::UniqueKey Key;
 };
+
+struct FuncRW {
+    std::set<Value *> read;
+    std::set<Value *> write;
+};
+std::optional<FuncRW> queryFuncRW(LFAM* lfam, LinearFunction* func);
 } // namespace SIR
+
 
 #endif
