@@ -1,82 +1,112 @@
-const int mod = 998244353;
-int d;
+int sheet1[500][500] = {};
+int sheet2[500][500] = {};
+int active = 1;
+int width;
+int height;
+int steps;
 
-int multiply(int a, int b){
-    if (b == 0) return 0;
-    if (b == 1) return a % mod;
-    int cur = multiply(a, b/2);
-    cur = (cur + cur) % mod;
-    if (b % 2 == 1) return (cur + a) % mod;
-    else return cur;
+void read_map() {
+  width = getint();
+  height = getint();
+  // width <= 498, height <= 498
+  steps = getint();
+  getch();
+
+  int i = 1;
+  int j = 1;
+
+  while (j <= height) {
+    i = 1;
+    while (i <= width) {
+      int get = getch();
+      if (get == 35) {
+        sheet1[j][i] = 1;
+      } else {
+        sheet1[j][i] = 0;
+      }
+      i = i + 1;
+    }
+    // line feed
+    getch();
+    j = j + 1;
+  }
 }
 
-int power(int a, int b){
-    if (b == 0) return 1;
-    int cur = power(a, b/2);
-    cur = multiply(cur, cur);
-    if (b % 2 == 1) return multiply(cur, a);
-    else return cur;
-}
-const int maxlen = 2097152;
-int temp[maxlen], a[maxlen], b[maxlen], c[maxlen];
+void put_map() {
+  int i = 1;
+  int j = 1;
 
-int memmove(int dst[], int dst_pos, int src[], int len){
-    int i = 0;
-    while (i < len){
-        dst[dst_pos + i] = src[i];
-        i = i + 1;
+  while (j <= height) {
+    i = 1;
+    while (i <= width) {
+      if (sheet1[j][i] == 1) {
+        putch(35);
+      } else {
+        putch(46);
+      }
+      i = i + 1;
     }
-    return i;
-}
-
-int fft(int arr[], int begin_pos, int n, int w){
-    if (n == 1) return 1;
-    int i = 0;
-    while (i < n){
-        if (i % 2 == 0) temp[i / 2] = arr[i + begin_pos];
-        else temp[n / 2 + i / 2] = arr[i + begin_pos];
-        i = i + 1;
-    }
-
-    memmove(arr, begin_pos, temp, n);
-    fft(arr, begin_pos, n / 2, multiply(w, w));
-    fft(arr, begin_pos + n / 2, n / 2, multiply(w, w));
-    i = 0;
-    int wn = 1;
-    while (i < n / 2){
-        int x = arr[begin_pos + i];
-        int y = arr[begin_pos + i + n / 2];
-        arr[begin_pos + i] = (x + multiply(wn, y)) % mod;
-        arr[begin_pos + i + n / 2] = (x - multiply(wn, y) + mod) % mod;
-        wn = multiply(wn, w);
-        i = i + 1;
-    }
-    return 0;
+    // line feed
+    putch(10);
+    j = j + 1;
+  }
 }
 
-int main(){
-    int n = getarray(a);
-    int m = getarray(b);
-    starttime();
-    d = 1;
-    while (d < n + m - 1){
-        d = d * 2;
-    }
-    fft(a, 0, d, power(3, (mod - 1) / d));
-    fft(b, 0, d, power(3, (mod - 1) / d));
+void swap12() {
+  int i = 1;
+  int j = 1;
 
-    int i = 0;
-    while (i < d){
-        a[i] = multiply(a[i], b[i]);
-        i = i + 1;
+  while (j <= height) {
+    i = 1;
+    while (i <= width) {
+      sheet1[j][i] = sheet2[j][i];
+      i = i + 1;
     }
-    fft(a, 0, d, power(3, mod-1 - (mod-1)/d));
-    i = 0;
-    while (i < d){
-        a[i] = multiply(a[i], power(d, mod-2));
-        i = i + 1;
+    j = j + 1;
+  }
+}
+
+void step(int source[][500], int target[][500]) {
+  int i = 1;
+  int j = 1;
+
+  while (j <= height) {
+    i = 1;
+    while (i <= width) {
+      int alive_count = source[j - 1][i - 1] + source[j - 1][i] +
+                        source[j - 1][i + 1] + source[j][i - 1] +
+                        source[j][i + 1] + source[j + 1][i - 1] +
+                        source[j + 1][i] + source[j + 1][i + 1];
+      if (source[j][i] == 1 && alive_count == 2 ) {
+        target[j][i] = 1;
+      } else if (alive_count == 3) {
+        target[j][i] = 1;
+      } else {
+        target[j][i] = 0;
+      }
+      i = i + 1;
     }
-    stoptime();
-    putarray(n + m - 1, a);
-    return 0;
+    j = j + 1;
+  }
+}
+
+int main() {
+  read_map();
+  starttime();
+  while (steps > 0) {
+    if (active == 1) {
+      step(sheet1, sheet2);
+      active = 2;
+    } else {
+      step(sheet2, sheet1);
+      active = 1;
+    }
+    steps = steps - 1;
+  }
+  stoptime();
+  if (active == 2) {
+    swap12();
+  }
+  put_map();
+  return 0;
 }

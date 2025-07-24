@@ -130,11 +130,12 @@ jobs:
             continue
           fi
           
-          if [[ "$rel_path" == *"functional"* ]]; then
-            opts=""
-          else
-            opts="${COMPILE_OPTIONS}"
-          fi
+#          if [[ "$rel_path" == *"functional"* ]]; then
+#            opts=""
+#          else
+#            opts="${COMPILE_OPTIONS}"
+#          fi
+          opts="${COMPILE_OPTIONS}"
 
           echo "Compiling: $rel_path with opts '$opts'"
           
