@@ -58,6 +58,7 @@
 #include "ir/passes/utilities/verifier.hpp"
 
 // Target
+#include "ir/passes/transforms/code_sink.hpp"
 #include "ir/target/armv7.hpp"
 #include "ir/target/armv8.hpp"
 #include "ir/target/brainfk.hpp"
@@ -272,6 +273,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions& options) {
     // fpm.addPass(make_debug_version_vectorizer(options));
     fpm.addPass(make_fast_clean(options));
 
+    FUNCTION_TRANSFORM(code_sink, CodeSinkPass())
     // FUNCTION_TRANSFORM(store_range, LoopSimplifyPass(), StoreAnalysisPass<RangeAnalysis>())
     FUNCTION_TRANSFORM(codegen_prepare, CFGSimplifyPass(), CodeGenPreparePass())
     if (!options.advance_name_norm)

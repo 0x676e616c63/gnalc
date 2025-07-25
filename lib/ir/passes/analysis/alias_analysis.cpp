@@ -203,6 +203,54 @@ bool hasSideEffect(FAM &fam, const Loop *loop) {
 }
 bool hasSideEffect(FAM &fam, const pLoop &loop) { return hasSideEffect(fam, loop.get()); }
 
+
+bool hasSideEffect(FAM &fam, Instruction *inst) {
+    switch (inst->getOpcode()) {
+        case OP::FNEG:
+        case OP::ADD:
+        case OP::FADD:
+        case OP::SUB:
+        case OP::FSUB:
+        case OP::MUL:
+        case OP::FMUL:
+        case OP::DIV:
+        case OP::FDIV:
+        case OP::SREM:
+        case OP::UREM:
+        case OP::FREM:
+        case OP::SHL:
+        case OP::LSHR:
+        case OP::ASHR:
+        case OP::AND:
+        case OP::OR:
+        case OP::XOR:
+        case OP::GEP:
+        case OP::FPTOSI:
+        case OP::SITOFP:
+        case OP::ZEXT:
+        case OP::SEXT:
+        case OP::BITCAST:
+        case OP::PTRTOINT:
+        case OP::INTTOPTR:
+        case OP::ICMP:
+        case OP::FCMP:
+        case OP::SELECT:
+        case OP::EXTRACT:
+        case OP::INSERT:
+        case OP::SHUFFLE:
+            return false;
+        case OP::CALL:
+            return hasSideEffect(fam, inst->as<CALLInst>());
+        default:
+            return true;
+    }
+    return true;
+}
+
+bool hasSideEffect(FAM &fam, const pInst &inst) {
+    return hasSideEffect(fam, inst.get());
+}
+
 pVal getMemLocation(Value *i) {
     if (auto load = i->as_raw<LOADInst>())
         return load->getPtr();

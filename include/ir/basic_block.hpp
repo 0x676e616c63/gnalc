@@ -129,6 +129,7 @@ public:
     bool delFirstOfInst(const pInst &inst);
     // No use-def check, just remove the first matched item
     bool delFirstOfPhiInst(const pPhi &inst);
+    bool delInst(BBInstIter iter);
 
     enum class DEL_MODE { ALL, PHI, NON_PHI };
     // With use-def check, remove all matched.

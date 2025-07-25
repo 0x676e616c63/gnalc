@@ -155,6 +155,13 @@ bool BasicBlock::delFirstOfPhiInst(const pPhi &inst) {
     return false;
 }
 
+bool BasicBlock::delInst(BBInstIter iter) {
+    (*iter)->setParent(nullptr);
+    insts.erase(iter);
+    inst_index_valid = false;
+    return true;
+}
+
 bool BasicBlock::delInst(const pInst &target, const DEL_MODE mode) {
     return delInstIf([&target](const auto &inst) { return inst == target; }, mode);
 }
