@@ -27,6 +27,7 @@
 #include "../../../include/mir/passes/transforms/tro.hpp"
 
 // Utilities
+#include "../../../include/mir/passes/transforms/RVLoadZeroEli.hpp"
 #include "../../../include/mir/passes/utilities/mirprinter.hpp"
 
 namespace MIR {
@@ -63,14 +64,15 @@ MPM PassBuilder::buildModuleDebugPipeline() {
 
 FPM buildRV64FunctionPipeline(OptInfo opt_info) {
     FPM fpm;
-    // For RV64 Development
     fpm.addPass(ISel());
-    fpm.addPass(MachineLICMPass());
+    // fpm.addPass(RVLoadZeroEli());
     fpm.addPass(RedundantLoadEli());
     fpm.addPass(PreRAlegalize());
+    fpm.addPass(MachineLICMPass());
     fpm.addPass(RegisterAlloc());
     fpm.addPass(GenericPeephole(GenericPeephole::AfterRa));
     fpm.addPass(StackGenerate());
+    fpm.addPass(RVCFGsimplifyAfterRA());
     fpm.addPass(PostRAlegalize());
     return fpm;
 }
@@ -84,7 +86,7 @@ FPM buildARMv8FunctionPipeline(OptInfo opt_info) {
                                             fpm.addPass(ISel());
     opt_info.peephole_afterIsel ?           fpm.addPass(GenericPeephole(Stage::AfterIsel)) : nop;
     opt_info.CFGsimplifyBeforeRa ?          fpm.addPass(CFGsimplifyBeforeRA()) : nop;
-    opt_info.redundantLoadEli ?             fpm.addPass(RedundantLoadEli()) : nop;
+    opt_info.redundantLoadEli ?             fpm.addPass(RedundantLoadEli(opt_info.redundantLoadEli_weight)) : nop;
                                             fpm.addPass(PreRAlegalize());
     //
                                             // fpm.addPass(PrintFunctionPass(std::cerr));

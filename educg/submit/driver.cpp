@@ -94,18 +94,9 @@ int main(int argc, char **argv) {
     cli_opt_options.run_test.disable();
     cli_opt_options.verify.disable();
 
-    // // Disable some passes to speed up the compilation
-    // if (!with_o1) {
-    //     cli_opt_options.inliner.disable();
-    //     cli_opt_options.loop_unroll.disable();
-    //     cli_opt_options.reassociate.disable();
-    //     cli_opt_options.gvnpre.disable();
-    //     cli_opt_options.loop_parallel.disable();
-    //     cli_opt_options.vectorizer.disable();
-    //     cli_opt_options.rngsimplify.disable();
-    // }
-
-    if (target == Target::RISCV64) {
+    if (!with_o1) {
+        cli_opt_options.licm.disable();
+        cli_opt_options.tailcall.disable();
         cli_opt_options.inliner.disable();
         cli_opt_options.loop_unroll.disable();
     }
