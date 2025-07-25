@@ -139,10 +139,10 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
 
     ++spilltimes;
 
-    std::map<MIROperand_p, MIROperand_p> stageValuesMap; // original -> replaced
-                                                         // deal with not SSA
     auto mtype = mop->type();
     auto stkobj = mfunc->addStkObj(mfunc->Context(), getSize(mtype), getSize(mtype), 0, StkObjUsage::Spill);
+
+    auto replace = MIROperand::asVReg(ctx.nextId(), mtype);
 
     for (auto &mblk : mfunc->blks()) {
         auto &minsts = mblk->Insts();
@@ -156,12 +156,6 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
                 if (*it_op != mop) {
                     continue;
                 }
-
-                stageValuesMap.count(*it_op)
-                    ? nop
-                    : void(stageValuesMap.emplace(*it_op, MIROperand::asVReg(ctx.nextId(), mtype)));
-
-                MIROperand_p replace = stageValuesMap.at(*it_op);
 
                 if (it_op == ops.begin()) { // def
                     auto minst_store =
@@ -186,18 +180,11 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
                 *it_op = replace;
             }
 
-            // replace ? void(stageValues.emplace(replace)) : nop;
             it = ++recover;
         }
     }
 
-    Nodes newOp;
-
-    for (auto &[k, v] : stageValuesMap) {
-        newOp.insert(v);
-    }
-
-    return newOp;
+    return {replace};
 }
 
 bool VectorRegisterAllocImpl::isMoveInstruction(const MIRInst_p &minst) {
