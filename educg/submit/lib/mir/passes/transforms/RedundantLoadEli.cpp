@@ -2,11 +2,16 @@
 // SPDX-License-Identifier: MIT
 
 #include "../../../../include/mir/passes/transforms/RedundantLoadEli.hpp"
+#include "../../../../include/mir/info.hpp"
 #include "../../../../include/mir/passes/analysis/domtree_analysis.hpp"
 #include "../../../../include/mir/passes/transforms/isel.hpp"
 #include "../../../../include/mir/tools.hpp"
+#include "../../../../include/utils/exception.hpp"
 #include "../../../../include/utils/logger.hpp"
+#include <cstddef>
 #include <cstdint>
+#include <cstdlib>
+#include <iterator>
 #include <optional>
 
 using namespace MIR;
@@ -67,17 +72,21 @@ void RedundantLoadEliImpl::MkInfo() {
             if (auto ptr = isLoad(minst)) {
                 auto loadVal = *ptr;
 
-                if (loadVal.isI32() && std::get<0>(loadVal.inner) == 1) {
+                if (mblk->getmSym() == "my_sin_impl_1") {
                     int debug;
                 }
 
                 if (!infos.count(loadVal)) {
 
-                    infos.emplace(loadVal, loadInfo{loadVal, {mblk}, {{mblk.get(), {{minst->ensureDef(), it}}}}});
+                    infos.emplace(
+                        loadVal,
+                        loadInfo{loadVal, {mblk}, {{mblk.get(), 0}}, {{mblk.get(), {{minst->ensureDef(), it}}}}});
                     // 括号对齐带师
                 } else {
 
                     auto &info = infos.at(loadVal); //
+
+                    info.distance.emplace(mblk.get(), 0);
                     info.mblks.emplace(mblk);
 
                     ///@note 由于minsts顺序遍历, 所以这个vector内的pair顺序应该也是正确的
@@ -95,6 +104,7 @@ void RedundantLoadEliImpl::CulculateLCA() {
 
     auto getLCA = [&domTree](loadInfo &info) {
         auto &in_use_mblks = info.mblks;
+
         std::vector<MIRBlk_p> stack(in_use_mblks.begin(), in_use_mblks.end());
 
         auto LCA = domTree[stack.back().get()].get(); // use raw ptr
@@ -120,6 +130,12 @@ void RedundantLoadEliImpl::CulculateLCA() {
         }
 
         info.lca = LCA->block();
+
+        auto &distance = info.distance;
+
+        for (auto &[mblk, distance] : distance) {
+            distance = domTree[mblk]->level() - domTree[info.lca]->level();
+        }
     };
 
     // LAMBDA END
@@ -136,68 +152,118 @@ void RedundantLoadEliImpl::ApplyCopys() {
 
     for (auto &[constVal, /* a number */ info] : infos) {
 
-        // if (!isFP && constVal >= 0 && constVal < 65536) {
-        //     continue; // giveup
-        // } else if (isFP && (ARMv8::isFloat8(constVal) || constVal == 0)) {
-        //     continue; // giveup
-        // }
-
         if (constVal.isZero()) {
             continue; // giveup
         }
 
-        MIROperand_p loaded_op = nullptr;
+        ApplyCopys_inFunc(info, constVal);
+    }
+}
 
-        if (info.const_uses.count(info.lca)) {
-            auto iter_lca = info.const_uses.at(info.lca).begin(); // the first load in lca
-            Logger::logInfo("remain: " + (*iter_lca->second)->dbgDump() + " in " + info.lca->getmSym());
+void RedundantLoadEliImpl::ApplyCopys_inFunc(loadInfo &info, const ldValue &constVal) {
 
-            loaded_op = iter_lca->first;
+    MIROperand_p loaded_op = nullptr;
+    std::map<MIRBlk *, bool> weights;
 
-            info.const_uses.at(info.lca).erase(iter_lca); // remain the first one
-        } else {
-            // add a load in lca blk
+    weights_cal(info, weights);
 
-            loaded_op = MIROperand::asVReg(ctx.nextId(), constVal.type);
+    if (info.const_uses.count(info.lca)) {
+        // Logger::logInfo("remain: " + (*iter_lca->second)->dbgDump() + " in " + info.lca->getmSym());
 
-            auto new_load = MIRInst::make(constVal.getLoadOpC())
-                                ->setOperand<0>(loaded_op, ctx)
-                                ->setOperand<1>(constVal.getConstOp(), ctx);
-            info.lca->addInstBeforeBr(new_load);
+        auto iter_lca = info.const_uses.at(info.lca).begin(); // the first load in lca
+        loaded_op = iter_lca->first;
 
-            Logger::logInfo("add in lca: " + new_load->dbgDump() + " in " + info.lca->getmSym());
+        // info.const_uses.at(info.lca).erase(iter_lca); // remain the first one
 
-            // add into literal pool
+        ApplyCopys_inBlks(info.lca, info.const_uses.at(info.lca), constVal);
+
+        info.const_uses.erase(info.lca);
+    } else {
+        // add a load in lca blk
+
+        loaded_op = MIROperand::asVReg(ctx.nextId(), constVal.type);
+
+        auto new_load = MIRInst::make(constVal.getLoadOpC())
+                            ->setOperand<0>(loaded_op, ctx)
+                            ->setOperand<1>(constVal.getConstOp(), ctx);
+        info.lca->addInstBeforeBr(new_load);
+
+        Logger::logInfo("add in lca: " + new_load->dbgDump() + " in " + info.lca->getmSym());
+
+        // add into literal pool
+        if (constVal.isLiteral()) {
+            info.lca->add_tail_literal(std::get<string>(constVal.inner), constVal.size, constVal.align);
+        }
+    }
+
+    for (auto &[mblk, uses] : info.const_uses) {
+
+        if (!weights.at(mblk)) {
+            ApplyCopys_inBlks(mblk, uses, constVal);
+            continue;
+        }
+
+        for (auto &[mop, miter] : uses) {
+            auto &minst_loadImm = *miter;
+
+            Logger::logInfo("before change to copy(global): " + minst_loadImm->dbgDump() + " in " + mblk->getmSym());
+
+            minst_loadImm->resetOpcode(chooseCopyOpC(mop, loaded_op));
+            minst_loadImm->setOperand<0>(mop, ctx);
+            minst_loadImm->setOperand<1>(loaded_op, ctx);
+
+            Logger::logInfo("after change to copy(global): " + minst_loadImm->dbgDump() + " in " + mblk->getmSym());
+
             if (constVal.isLiteral()) {
-                info.lca->add_tail_literal(std::get<string>(constVal.inner), constVal.size, constVal.align);
+                mblk->removeLitetal(std::get<string>(constVal.inner));
             }
         }
+    }
+}
 
-        for (auto &[mblk, uses] : info.const_uses) {
+void RedundantLoadEliImpl::ApplyCopys_inBlks(MIRBlk *mblk, loadInfo::useInfo_blk &blk_info, const ldValue &constVal) {
 
-            for (auto &[mop, miter] : uses) {
-                auto &minst_loadImm = *miter;
+    Err::gassert(!blk_info.empty(), "no ref in this blk");
 
-                // if (inSet(minst_loadImm->opcode<OpC>(), OpC::InstLoadImm, OpC::InstLoadFPImm)) {
-                //     minst_loadImm->resetOpcode(OpC::InstCopy);
-                // }
+    MIROperand_p loaded_op = blk_info.front().first;
 
-                ///@note 寄存器压力大时, 这里可能有两种表现
-                ///@note 1. 这里的copy没法消掉
-                ///@note 2. constVal被溢出
+    Logger::logInfo("remain: " + (*blk_info.front().second)->dbgDump() + " in " + mblk->getmSym());
 
-                Logger::logInfo("before change to copy: " + minst_loadImm->dbgDump() + " in " + mblk->getmSym());
+    blk_info.erase(blk_info.begin());
 
-                minst_loadImm->resetOpcode(chooseCopyOpC(mop, loaded_op));
-                minst_loadImm->setOperand<0>(mop, ctx);
-                minst_loadImm->setOperand<1>(loaded_op, ctx);
+    for (auto &[mop, miter] : blk_info) {
 
-                Logger::logInfo("after change to copy: " + minst_loadImm->dbgDump() + " in " + mblk->getmSym());
+        auto &minst_loadImm = *miter;
 
-                if (constVal.isLiteral()) {
-                    mblk->removeLitetal(std::get<string>(constVal.inner));
-                }
-            }
+        Logger::logInfo("before change to copy(local): " + minst_loadImm->dbgDump() + " in " + mblk->getmSym());
+
+        minst_loadImm->resetOpcode(chooseCopyOpC(mop, loaded_op));
+        minst_loadImm->setOperand<0>(mop, ctx);
+        minst_loadImm->setOperand<1>(loaded_op, ctx);
+
+        Logger::logInfo("after change to copy(local): " + minst_loadImm->dbgDump() + " in " + mblk->getmSym());
+
+        if (constVal.isLiteral()) {
+            mblk->removeLitetal(std::get<string>(constVal.inner));
         }
+    }
+}
+
+void RedundantLoadEliImpl::weights_cal(loadInfo &info, std::map<MIRBlk *, bool> &weights) {
+    const size_t weight_distance = average_inst_cnt;
+    const size_t weight_prv = 1;
+    const size_t weight_live_len = 1;
+
+    const size_t n = 60; // Try more and fix me
+
+    for (const auto &[mblk, uses] : info.const_uses) {
+
+        auto live_len_in_blk = std::distance(mblk->Insts().begin(), uses.back().second);
+        auto distance = info.distance.at(mblk);
+        auto prv_cnt = mblk->preds().size();
+
+        auto output = live_len_in_blk * weight_live_len + distance * weight_distance * prv_cnt * weight_prv;
+
+        weights.emplace(mblk, n * output < overall_inst_cnt);
     }
 }

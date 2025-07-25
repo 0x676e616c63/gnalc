@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 #include "../../../../include/ir/passes/transforms/internalize.hpp"
+#include "../../../../include/config/config.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
 #include "../../../../include/ir/instructions/memory.hpp"
-#include "../../../../include/config/config.hpp"
+#include "../../../../include/ir/passes/analysis/target_analysis.hpp"
 
 #include <algorithm>
 
@@ -29,6 +30,9 @@ PM::PreservedAnalyses InternalizePass::run(Function &function, FAM &fam) {
     if (!function.hasAttr(FuncAttr::ExecuteExactlyOnce))
         return PreserveAll();
 
+    auto& target = fam.getResult<TargetAnalysis>(function);
+    const auto size_threshold = target->getInternalizeSizeThreshold();
+
     bool internalize_inst_modified = false;
     const auto &module = function.getParent();
     const auto &global_vars = module->getGlobalVars();
@@ -38,7 +42,7 @@ PM::PreservedAnalyses InternalizePass::run(Function &function, FAM &fam) {
             continue;
 
         auto type = getElm(global_var->getType());
-        if (type->getBytes() > Config::IR::INTERNALIZE_GLOBAL_SIZE_THRESHOLD)
+        if (type->getBytes() > size_threshold)
             continue;
 
         bool safe_to_internalize = true;
