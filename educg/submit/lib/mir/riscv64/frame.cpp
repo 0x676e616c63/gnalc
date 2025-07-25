@@ -129,8 +129,7 @@ void RVFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) cons
     auto mval = callinst->isVoid() ? nullptr : ctx.newVReg(getType(callinst));
 
     ctx.newInst(
-        MIRInst::make(RVOpC::JAL)
-            ->setOperand<0>(MIROperand::asISAReg(RVReg::RA, OpT::Int64), ctx.CodeGenCtx())
+        MIRInst::make(RVOpC::CALL)
             ->setOperand<1>(MIROperand::asReloc(mcallee->reloc()), ctx.CodeGenCtx())
             ->setOperand<2>(MIROperand::asImme(callinst->isTailCall() ? 1 : 0, OpT::special), ctx.CodeGenCtx()));
 
@@ -290,7 +289,7 @@ void RVFrameInfo::appendCalleeSaveStackSize(uint64_t &allocationBase, uint64_t c
 }
 
 bool RVFrameInfo::isFuncCall(const MIRInst_p &inst) const {
-    return inst->isRV() && inst->opcode<RVOpC>() == RVOpC::JAL;
+    return inst->isRV() &&(inst->opcode<RVOpC>() == RVOpC::CALL || inst->opcode<RVOpC>() == RVOpC::JAL);
 }
 
 void RVFrameInfo::makePostSAPrologue(MIRBlk_p entry, CodeGenContext &ctx, unsigned stkSize) const {

@@ -373,6 +373,8 @@ inline string RVOpC2S(RVOpC op) {
         return "jalr";
     case RVOpC::JR:
         return "jr";
+    case RVOpC::CALL:
+        return "call";
     case RVOpC::LA:
         return "la";
     case RVOpC::AUIPC:

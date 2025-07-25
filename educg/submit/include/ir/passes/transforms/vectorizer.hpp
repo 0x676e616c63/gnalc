@@ -154,7 +154,7 @@ class VectorizerPass : public PM::PassInfo<VectorizerPass> {
 
         // Ready Instructions, only used in dry run.
         // For real scheduling, we consider the original instruction order
-        std::set<SchedData *> dry_run_ready_list;
+        std::list<SchedData *> dry_run_ready_list;
 
         // The beginning of the region
         pInst sched_begin;
@@ -192,6 +192,15 @@ class VectorizerPass : public PM::PassInfo<VectorizerPass> {
         bool isMemDependent(const pInst& inst1, const pInst& inst2) const;
         void updateDeps(SchedData *sched, bool insert_in_ready_list);
 
+        template <typename ReadyListT> void insertInList(ReadyListT &ready_list, SchedData *sched_data) {
+            if constexpr (Util::is_specialization_of_v<ReadyListT, std::list>) {
+                ready_list.emplace_back(sched_data);
+            }
+            else {
+                ready_list.insert(sched_data);
+            }
+        }
+
         template <typename ReadyListT> void schedule(SchedData *sched_data, ReadyListT &ready_list) {
             Err::gassert(sched_data->isReady(), "SchedData::schedule: not ready");
             if (slp_print_debug_message)
@@ -208,7 +217,7 @@ class VectorizerPass : public PM::PassInfo<VectorizerPass> {
                         auto dep_bundle = oper_sched->first_in_bundle;
                         Err::gassert(!dep_bundle->is_sched,
                                      "SchedData::schedule: already scheduled use-def dependency.");
-                        ready_list.insert(dep_bundle);
+                        insertInList(ready_list, dep_bundle);
                     }
                 }
                 // Memory dependencies
@@ -217,7 +226,7 @@ class VectorizerPass : public PM::PassInfo<VectorizerPass> {
                         auto dep_bundle = mem_sched->first_in_bundle;
                         Err::gassert(!dep_bundle->is_sched,
                                      "SchedData::schedule: already scheduled memory dependency.");
-                        ready_list.insert(dep_bundle);
+                        insertInList(ready_list, dep_bundle);
                     }
                 }
                 member = member->next_in_bundle;
@@ -232,7 +241,7 @@ class VectorizerPass : public PM::PassInfo<VectorizerPass> {
                     //     Logger::logDebug("[SLP]: (Dry-run) '", sched->inst->getName() , "' becomes ready.");
                     // else
                     //     Logger::logDebug("[SLP]: '", sched->inst->getName() , "' becomes ready.");
-                    ready_list.insert(sched);
+                    insertInList(ready_list, sched);
                 }
             }
         }

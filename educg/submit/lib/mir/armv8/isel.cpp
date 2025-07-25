@@ -65,6 +65,7 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
             ctx.newInst(OpC::InstLoadImmEx)
                 ->setOperand<0>(mop_new, ctx.codeGenCtx())
                 ->setOperand<1>(mop, ctx.codeGenCtx());
+            modified |= true;
         } else if (inRange(mop->type(), OpT::Int, OpT::Int64)) {
             ctx.newInst(OpC::InstLoadImm)
                 ->setOperand<0>(mop_new, ctx.codeGenCtx())
@@ -74,8 +75,7 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
             ctx.newInst(OpC::InstLoadFPImm)
                 ->setOperand<0>(mop_new, ctx.codeGenCtx())
                 ->setOperand<1>(mop, ctx.codeGenCtx());
-        } else {
-            Err::todo("vector constant");
+            modified |= true;
         }
         return mop_new; //  replace by yourself
     };
@@ -149,7 +149,7 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         }
 
         auto rhs = minst->getOp(2);
-        if (rhs->isImme()) {
+        if (rhs->isImme() && rhs->imme()) { // not 0.0
             minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
         }
     } break;
@@ -559,16 +559,16 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
                 minsts.insert(iter, movk);
             }
 
-            auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Float32);
+            // auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Float32);
 
-            auto movf = MIRInst::make(ARMOpC::MOVF)->setOperand<0>(fdst, ctx)->setOperand<1>(dst, ctx);
+            // auto movf = MIRInst::make(ARMOpC::MOVF)->setOperand<0>(fdst, ctx)->setOperand<1>(dst, ctx);
 
-            minsts.insert(iter, movf);
+            // minsts.insert(iter, movf);
 
             ///@brief rewrite
-            minst->resetOpcode(OpC::InstCopy);
+            minst->resetOpcode(ARMOpC::MOVF).setOperand<1>(dst, ctx);
 
-            minst->setOperand<1>(fdst, ctx);
+            // minst->setOperand<1>(fdst, ctx);
 
         } else if (imm == 0.0f) {
             ///@brief movi + copy
@@ -582,16 +582,18 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
             minst->setOperand<1>(fdst, ctx);
 
         } else {
-            ///@brief fmov + copy
+            ///@brief fmov
 
-            auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Float32);
-            auto fmov = MIRInst::make(ARMOpC::MOVF)->setOperand<0>(fdst, ctx)->setOperand<1>(imme, ctx);
+            // auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Float32);
+            // auto fmov = MIRInst::make(ARMOpC::MOVF)->setOperand<0>(fdst, ctx)->setOperand<1>(imme, ctx);
 
-            minsts.insert(iter, fmov);
+            // minsts.insert(iter, fmov);
 
-            minst->resetOpcode(OpC::InstCopy);
+            // minst->resetOpcode(OpC::InstCopy);
 
-            minst->setOperand<1>(fdst, ctx);
+            // minst->setOperand<1>(fdst, ctx);
+
+            minst->resetOpcode(ARMOpC::MOVF);
         }
     } break;
     case OpC::InstLoadAddress: // NOLINT

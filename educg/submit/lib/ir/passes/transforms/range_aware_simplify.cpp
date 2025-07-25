@@ -6,8 +6,10 @@
 #include "../../../../include/config/config.hpp"
 #include "../../../../include/ir/block_utils.hpp"
 #include "../../../../include/ir/instructions/compare.hpp"
+#include "../../../../include/ir/irbuilder.hpp"
 #include "../../../../include/ir/match.hpp"
 #include "../../../../include/ir/passes/analysis/range_analysis.hpp"
+#include "../../../../include/mir/tools.hpp"
 
 #include <vector>
 namespace IR {
@@ -20,8 +22,46 @@ PM::PreservedAnalyses RangeAwareSimplifyPass::run(Function &function, FAM &fam) 
 
     bool rng_cfg_modified = false;
     bool rng_inst_modified = false;
-    auto ranges = fam.getResult<RangeAnalysis>(function);
+    auto& ranges = fam.getResult<RangeAnalysis>(function);
 
+    // Strength reduction
+    std::vector<pInst> candidate;
+    for (const auto &bb : function) {
+        for (const auto &inst : *bb) {
+            if (inst->getOpcode() == OP::DIV || inst->getOpcode() == OP::SREM || inst->getOpcode() == OP::UREM)
+                candidate.emplace_back(inst);
+        }
+    }
+    for (auto &inst : candidate) {
+        // x / 2^n = x >> n, where x >= 0
+        pVal x;
+        if (int divisor; match(inst, M::Div(M::Bind(x), M::PowerOfTwo(M::Bind(divisor))))) {
+            if (ranges.knownNonNegative(x)) {
+                IRBuilder builder("%rng", inst->getParent(), inst->iter());
+                auto n = function.getInteger(ctz_wrapper(divisor), inst->getType());
+                auto ashr = builder.makeAShr(x, n);
+                inst->replaceSelf(ashr);
+                rng_inst_modified = true;
+                Logger::logDebug("[RngSimplify]: Rewrite x / 2^n.");
+            }
+        }
+
+        // x % 2^n = x & ((1<<n)- 1), where x >= 0
+        if (int divisor; match(inst, M::Rem(M::Bind(x), M::PowerOfTwo(M::Bind(divisor))),
+            M::URem(M::Bind(x), M::PowerOfTwo(M::Bind(divisor))))) {
+            if (inst->getOpcode() == OP::UREM || ranges.knownNonNegative(x, inst->getParent())) {
+                IRBuilder builder("%rng", inst->getParent(), inst->iter());
+                auto maskVal = static_cast<int64_t>((static_cast<uint64_t>(1) << ctz_wrapper(divisor)) - 1);
+                auto mask = function.getInteger(maskVal, inst->getType());
+                auto and_inst = builder.makeAnd(x, mask);
+                inst->replaceSelf(and_inst);
+                rng_inst_modified = true;
+                Logger::logDebug("[RngSimplify]: Rewrite x % 2^n.");
+            }
+        }
+    }
+
+    // Fold ICMP/FCMP
     std::vector<pInst> eliminated;
     std::vector<pInst> users;
     for (auto &block : function) {

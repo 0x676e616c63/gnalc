@@ -1,7 +1,7 @@
 // Copyright (c) 2025 0x676e616c63
 // SPDX-License-Identifier: MIT
 
-// Copy Elision
+// Reshape Fold
 #pragma once
 #ifndef GNALC_SIR_PASSES_TRANSFORMS_RESHAPE_FOLD_HPP
 #define GNALC_SIR_PASSES_TRANSFORMS_RESHAPE_FOLD_HPP
