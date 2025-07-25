@@ -279,7 +279,7 @@ void Test::register_all_benchmarks() {
     register_gnalc_fixed_no_interchange();
     register_gnalc_fixed_no_unswitch();
     register_gnalc_fixed_no_fuse();
-    register_gnalc_fixed_no_copyelision();
+    register_gnalc_fixed_no_reshapefold();
     register_gnalc_fixed_no_inline();
     register_gnalc_fixed_no_loopunroll();
 
