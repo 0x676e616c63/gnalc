@@ -150,7 +150,7 @@ PM::PreservedAnalyses LoopInterchangePass::run(LinearFunction &function, LFAM &l
 
     for (const auto &[outer, inner] : candidates) {
         std::swap(outer->indvar, inner->indvar);
-        Logger::logDebug("[LoopInterchange]: interchanged '", outer->indvar->getName(), "' and '",
+        Logger::logDebug("[Interchange]: interchanged '", outer->indvar->getName(), "' and '",
                          inner->indvar->getName(), "'.");
     }
 

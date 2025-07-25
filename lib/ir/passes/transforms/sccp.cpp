@@ -162,16 +162,18 @@ public:
                     changes[inst].setCProxy(lhs.cproxy().urem(rhs.cproxy()));
                 break;
             case OP::AND:
-                if ((lhs.isConstant() && lhs.cproxy() == false) || (rhs.isConstant() && rhs.cproxy() == false))
-                    changes[inst].setCProxy(ConstantProxy(cpool, false));
+                if (lhs.isConstant() && lhs.isZero())
+                    changes[inst].setCProxy(lhs.cproxy());
+                else if (rhs.isConstant() && rhs.isZero())
+                    changes[inst].setCProxy(rhs.cproxy());
                 else if (lhs.isConstant() && rhs.isConstant())
-                    changes[inst].setCProxy(lhs.cproxy() && rhs.cproxy());
+                    changes[inst].setCProxy(lhs.cproxy() & rhs.cproxy());
                 break;
             case OP::OR:
-                if ((lhs.isConstant() && lhs.cproxy() == true) || (rhs.isConstant() && rhs.cproxy() == true))
-                    changes[inst].setCProxy(ConstantProxy(cpool, true));
+                if (lhs.isConstant() && lhs.isZero() && rhs.isConstant() && rhs.isZero())
+                    changes[inst].setCProxy(lhs.cproxy());
                 else if (lhs.isConstant() && rhs.isConstant())
-                    changes[inst].setCProxy(lhs.cproxy() || rhs.cproxy());
+                    changes[inst].setCProxy(lhs.cproxy() | rhs.cproxy());
                 break;
             case OP::XOR:
                 if (lhs.isConstant() && rhs.isConstant())

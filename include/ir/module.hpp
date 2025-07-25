@@ -73,6 +73,8 @@ public:
 
     template <typename T> auto getConst(T &&val) { return constant_pool.getConst(std::forward<T>(val)); }
     pVal getZero(const pType &type) { return constant_pool.getZero(type); }
+    pVal getInteger(int64_t i, IRBTYPE type) { return constant_pool.getInteger(i, type); }
+    pVal getInteger(int64_t i, const pType& type) { return constant_pool.getInteger(i, type); }
 
     const_iterator begin() const;
     const_iterator end() const;

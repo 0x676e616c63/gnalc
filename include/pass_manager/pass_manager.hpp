@@ -30,6 +30,7 @@
 #include "utils/misc.hpp"
 
 #include <chrono>
+#include <functional>
 #include <list>
 #include <map>
 #include <memory>
@@ -280,6 +281,32 @@ public:
 
         using ResultModel = AnalysisResultModel<typename PassT::Result>;
         return static_cast<ResultModel &>(*it->second->second).result;
+    }
+
+    template <typename PassT> class LazyResult {
+    public:
+        typename PassT::Result &operator*() {
+            if (!result)
+                result = &am.getResult<PassT>(unit);
+            return *result;
+        }
+
+        typename PassT::Result *operator->() {
+            if (!result)
+                result = &am.getResult<PassT>(unit);
+            return result;
+        }
+
+        LazyResult(AnalysisManager &am_, UnitT &unit_) : am(am_), unit(unit_), result(nullptr) {}
+
+    private:
+        typename PassT::Result *result;
+        AnalysisManager &am;
+        UnitT &unit;
+    };
+
+    template <typename PassT> auto lazyGetResult(UnitT &unit) {
+        return LazyResult<PassT>(*this, unit);
     }
 
     template <typename PassGetter> bool registerPass(PassGetter &&pass_getter) {
