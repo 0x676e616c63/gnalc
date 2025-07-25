@@ -17,7 +17,7 @@
 using namespace MIR;
 
 PM::PreservedAnalyses RedundantLoadEli::run(MIRFunction &mfunc, FAM &fam) {
-    class RedundantLoadEliImpl impl(mfunc, fam);
+    class RedundantLoadEliImpl impl(mfunc, fam, s_arg);
     impl.Impl();
 
     return PM::PreservedAnalyses::all();
@@ -254,7 +254,7 @@ void RedundantLoadEliImpl::weights_cal(loadInfo &info, std::map<MIRBlk *, bool> 
     const size_t weight_prv = 1;
     const size_t weight_live_len = 1;
 
-    const size_t n = 60; // Try more and fix me
+    const size_t n = s_arg; // Try more and fix me
 
     for (const auto &[mblk, uses] : info.const_uses) {
 

@@ -1,8 +1,8 @@
 // Copyright (c) 2025 0x676e616c63
 // SPDX-License-Identifier: MIT
 
-#include "utils/misc.hpp"
 #include "benchmark_support.hpp"
+#include "utils/misc.hpp"
 
 using namespace Test;
 using Entry = BenchmarkRegistry::Entry;
@@ -161,7 +161,8 @@ void register_gcc_o3() {
                     "a[]);void putf(char a[], ...);void _sysy_starttime(int);void _sysy_stoptime(int);\\n#define "
                     "starttime() "
                     "_sysy_starttime(__LINE__)\\n#define stoptime()  _sysy_stoptime(__LINE__)' {}"
-                    " && {} -O3 -fpermissive -fno-builtin-exp -Wno-builtin-declaration-mismatch -Wno-incompatible-pointer-types -Wno-error=incompatible-pointer-types -S -o {} -xc {}",
+                    " && {} -O3 -fpermissive -fno-builtin-exp -Wno-builtin-declaration-mismatch "
+                    "-Wno-incompatible-pointer-types -Wno-error=incompatible-pointer-types -S -o {} -xc {}",
                     newsy, cfg::gcc_arm_command, outs, newsy);
             }};
     BenchmarkRegistry::register_benchmark("gcc_o3", entry);
@@ -169,13 +170,14 @@ void register_gcc_o3() {
 
 // Requires ./gnalc
 Entry gnalc_register_helper(const std::string &param) {
-    Entry entry{
-        .ir_gen =
-            [param](const std::string &newsy, const std::string &outll) {
-                return format("../gnalc -with-runtime -emit-llvm -S {} -o {} {}", newsy, outll, param);
-            },
-        .asm_gen = [param](const std::string &newsy,
-                           const std::string &outs) { return format("../gnalc -with-runtime -S {} -o {} {}", newsy, outs, param); }};
+    Entry entry{.ir_gen =
+                    [param](const std::string &newsy, const std::string &outll) {
+                        return format("../gnalc -with-runtime -emit-llvm -S {} -o {} {}", newsy, outll, param);
+                    },
+                .asm_gen =
+                    [param](const std::string &newsy, const std::string &outs) {
+                        return format("../gnalc -with-runtime -S {} -o {} {}", newsy, outs, param);
+                    }};
     return entry;
 }
 
@@ -194,11 +196,11 @@ void register_gnalc_fixed() {
     BenchmarkRegistry::register_benchmark("gnalc_fixed", entry);
 }
 
-#define REGISTER_GNALC_FIXED_EXCEPT_PASS(pass) \
-void register_gnalc_fixed_no_##pass() {\
-    auto entry = gnalc_register_helper("-fixed-point --no-" GNALC_STRINGFY(pass));\
-    BenchmarkRegistry::register_benchmark("gnalc_fixed_no_" GNALC_STRINGFY(pass), entry);\
-}
+#define REGISTER_GNALC_FIXED_EXCEPT_PASS(pass)                                                                         \
+    void register_gnalc_fixed_no_##pass() {                                                                            \
+        auto entry = gnalc_register_helper("-fixed-point --no-" GNALC_STRINGFY(pass));                                 \
+        BenchmarkRegistry::register_benchmark("gnalc_fixed_no_" GNALC_STRINGFY(pass), entry);                          \
+    }
 
 REGISTER_GNALC_FIXED_EXCEPT_PASS(memo)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(parallel)
@@ -243,20 +245,40 @@ void register_gnalc_fuzz100() {
 
 // Requires ./gnalc2
 Entry gnalc2_register_helper(const std::string &param) {
-    Entry entry{
-        .ir_gen = [param](const std::string &newsy, const std::string &outll) {
-                return format("../gnalc2 -with-runtime -emit-llvm -S {} -o {} {}", newsy, outll, param);
-        },
-        .asm_gen = [param](const std::string &newsy, const std::string &outs) {
-                return format("../gnalc2 -with-runtime -S {} -o {} {}", newsy, outs, param);
-        }
-    };
+    Entry entry{.ir_gen =
+                    [param](const std::string &newsy, const std::string &outll) {
+                        return format("../gnalc2 -with-runtime -emit-llvm -S {} -o {} {}", newsy, outll, param);
+                    },
+                .asm_gen =
+                    [param](const std::string &newsy, const std::string &outs) {
+                        return format("../gnalc2 -with-runtime -S {} -o {} {}", newsy, outs, param);
+                    }};
     return entry;
 }
 
 void register_gnalc2_fixed() {
     auto entry = gnalc2_register_helper("-fixed-point");
     BenchmarkRegistry::register_benchmark("gnalc2_fixed", entry);
+}
+
+void register_gnalc2_loadEli_w0() {
+    auto entry = gnalc2_register_helper("-O1 -loadEli=60");
+    BenchmarkRegistry::register_benchmark("gnalc2_loadEli_w0", entry);
+}
+
+void register_gnalc2_loadEli_w1() {
+    auto entry = gnalc2_register_helper("-O1 -loadEli=100");
+    BenchmarkRegistry::register_benchmark("gnalc2_loadEli_w1", entry);
+}
+
+void register_gnalc2_loadEli_w2() {
+    auto entry = gnalc2_register_helper("-O1 -loadEli=200");
+    BenchmarkRegistry::register_benchmark("gnalc2_loadEli_w2", entry);
+}
+
+void register_gnalc2_loadEli_w3() {
+    auto entry = gnalc2_register_helper("-O1 -loadEli=500");
+    BenchmarkRegistry::register_benchmark("gnalc2_loadEli_w3", entry);
 }
 
 void Test::register_all_benchmarks() {
@@ -271,6 +293,10 @@ void Test::register_all_benchmarks() {
     register_gnalc_mem2reg();
     register_gnalc_std();
     register_gnalc_fixed();
+    register_gnalc2_loadEli_w0();
+    register_gnalc2_loadEli_w1();
+    register_gnalc2_loadEli_w2();
+    register_gnalc2_loadEli_w3();
 
     register_gnalc_fixed_no_memo();
     register_gnalc_fixed_no_parallel();
@@ -279,7 +305,7 @@ void Test::register_all_benchmarks() {
     register_gnalc_fixed_no_interchange();
     register_gnalc_fixed_no_unswitch();
     register_gnalc_fixed_no_fuse();
-    register_gnalc_fixed_no_copyelision();
+    // register_gnalc_fixed_no_copyelision();
     register_gnalc_fixed_no_inline();
     register_gnalc_fixed_no_loopunroll();
 

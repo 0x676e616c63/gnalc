@@ -1,6 +1,7 @@
 // Copyright (c) 2025 0x676e616c63
 // SPDX-License-Identifier: MIT
 
+#include <cstddef>
 #define GNALC_STACKTRACE_ENABLE
 
 // Logger
@@ -255,8 +256,12 @@ int main(int argc, char **argv) {
         }
         else if (arg == "-fno-PostRaScheduling") {
             bkd_opt_info.PostRaScheduling = false;
-        } else if (arg == "-fno-machineLICM") {
+        }
+        else if (arg == "-fno-machineLICM") {
             bkd_opt_info.machineLICM = false;
+        }
+        else if (arg.substr(0, 9) == "-loadEli=") {
+            bkd_opt_info.redundantLoadEli_weight = std::stoull(arg.substr(9));
         }
 
         else if (arg == "-march=armv8" || arg == "-march=armv8-a") target = Target::ARMv8;
