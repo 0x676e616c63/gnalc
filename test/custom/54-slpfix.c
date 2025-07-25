@@ -1,41 +1,89 @@
-int n;
-int bubblesort(int arr[])
-{
-    int i;
-    int j;
-    i =0; 
-    while(i < n-1){
-    // Last i elements are already in place
+const int N = 1024;
+
+void mm(int n, int A[][N], int B[][N], int C[][N]){
+    int i, j, k;
+
+    i = 0; j = 0;
+    while (i < n){
         j = 0;
-        while(j < n-i-1){
-            if (arr[j] > arr[j+1]) {
-                // swap(&arr[j], &arr[j+1]); 
-                int tmp;
-                tmp = arr[j+1];
-                arr[j+1] = arr[j];
-                arr[j] = tmp;
-            }
+        while (j < n){
+            C[i][j] = 0;
             j = j + 1;
         }
         i = i + 1;
     }
-    return 0;
+
+    i = 0; j = 0; k = 0;
+
+    while (k < n){
+        i = 0;
+        while (i < n){
+            if (A[i][k] == 0){
+                i = i + 1;
+                continue;
+            }
+            j = 0;
+            while (j < n){
+                C[i][j] = C[i][j] + A[i][k] * B[k][j];
+                j = j + 1;
+            }
+            i = i + 1;
+        }
+        k = k + 1;
+    }
 }
 
+int A[N][N];
+int B[N][N];
+int C[N][N];
+
 int main(){
-    n = 10;
-    int a[10];
-    a[0]=4;a[1]=3;a[2]=9;a[3]=2;a[4]=0;
-    a[5]=1;a[6]=6;a[7]=5;a[8]=7;a[9]=8;
-    int i;
-    i = bubblesort(a);
-    while (i < n) {
-        int tmp;
-        tmp = a[i];
-        putint(tmp);
-        tmp = 10;
-        putch(tmp);
+    int n = getint();
+    int i, j;
+
+    i = 0;
+    j = 0;
+    while (i < n){
+        j = 0;
+        while (j < n){
+            A[i][j] = getint();
+            j = j + 1;
+        }
         i = i + 1;
     }
+    i = 0;
+    j = 0;
+    while (i < n){
+        j = 0;
+        while (j < n){
+            B[i][j] = getint();
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+
+    starttime();
+
+    i = 0;
+    while (i < 5){    
+        mm(n, A, B, C);
+        mm(n, A, C, B);
+        i = i + 1;
+    }
+
+    int ans = 0;
+    i = 0;
+    while (i < n){
+        j = 0;
+        while (j < n){
+            ans = ans + B[i][j];
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+    stoptime();
+    putint(ans);
+    putch(10);
+
     return 0;
 }
