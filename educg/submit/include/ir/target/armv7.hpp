@@ -39,6 +39,20 @@ public:
         return true;
     }
     bool isIntrinsicSupported(const std::string &lib_fn_name) const override { return true; }
+
+    size_t getInternalizeSizeThreshold() const override {
+        // 1 MB
+        return 1024 * 1024;
+    }
+
+    const InlineThreshold& getInlineThreshold() const override {
+        static const InlineThreshold ret = {
+            .recursion_expand_max_inst = 100,
+            .call_points = 3,
+            .inst_threshold = 200,
+        };
+        return ret;
+    }
 };
 } // namespace IR
 #endif //TARGET_HPP

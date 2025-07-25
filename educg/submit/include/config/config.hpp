@@ -37,12 +37,6 @@ constexpr auto GVNPRE_SKIP_BLOCK_THRESHOLD = 1000;
 // Maximum allowed expression nesting depth
 constexpr auto GVNPRE_SKIP_NESTED_EXPR_THRESHOLD = 128;
 
-// Function Inline
-// Inline should not be too aggressive.
-constexpr auto FUNCTION_INLINE_RECURSIVE_EXPAND_THRESHOLD = 100;
-constexpr auto FUNCTION_INLINE_CALL_POINTS_THRESHOLD = 3;
-constexpr auto FUNCTION_INLINE_INST_THRESHOLD = 200;
-
 // Loop Elimination
 // LoopElim attempts to expand SCEVExpr to make loops trivially eliminable.
 // However, excessive expansion can be a pessimization.
@@ -58,11 +52,6 @@ constexpr auto LOOP_ELIMINATION_EXPANSION_COST_RATIO = 10;
 // a base + a step + an update + a phi
 // FIXME: I don't know if this threshold is reasonable.
 constexpr auto LSR_EXPANSION_THRESHOLD = 8;
-
-// Internalize
-// Avoid internalizing global variables whose size is larger than this threshold.
-// It's a default value, and can be rewritten in target analysis.
-constexpr auto INTERNALIZE_GLOBAL_SIZE_DEFAULT_THRESHOLD = 1024 * 1024; // 1 MB
 
 // Loop Unroll
 constexpr unsigned LOOP_UNROLLING_PEEL_COUNT = 10;
