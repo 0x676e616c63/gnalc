@@ -274,7 +274,8 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions& options) {
 
     // FUNCTION_TRANSFORM(store_range, LoopSimplifyPass(), StoreAnalysisPass<RangeAnalysis>())
     FUNCTION_TRANSFORM(codegen_prepare, CFGSimplifyPass(), CodeGenPreparePass())
-    fpm.addPass(NameNormalizePass(true));
+    if (!options.advance_name_norm)
+        fpm.addPass(NameNormalizePass());
 
     return fpm;
 }
