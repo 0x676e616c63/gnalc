@@ -129,6 +129,22 @@ inline auto IsIntegerVal(int64_t val) {
     return IntegerMatch(val);
 }
 
+template <typename SubPattern> struct isPowerOfTwoMatch {
+    SubPattern sub_pattern;
+
+    explicit isPowerOfTwoMatch(const SubPattern &sub_pattern_) : sub_pattern(sub_pattern_) {}
+
+    template <typename T> bool match(const T &v) const {
+        if (auto i32 = Match::detail::ptrCast<ConstantInt>(v))
+            return Util::isPowerOfTwo(i32->getVal()) && sub_pattern.match(v);
+        if (auto i64 = Match::detail::ptrCast<ConstantI64>(v))
+            return Util::isPowerOfTwo(i64->getVal()) && sub_pattern.match(v);
+        return false;
+    }
+};
+
+template <typename T> auto PowerOfTwo(const T &sub_pattern) { return isPowerOfTwoMatch<T>(sub_pattern); }
+
 struct IRInstInfo {
     using InstType = Instruction;
     using OpcodeType = OP;
@@ -170,8 +186,8 @@ MAKE_INST_MATCH(Fmul, FMUL, 2)
 MAKE_INST_MATCH(Div, DIV, 2)
 MAKE_INST_MATCH(Fdiv, FDIV, 2)
 MAKE_INST_MATCH(Rem, SREM, 2)
-MAKE_INST_MATCH(Urem, UREM, 2)
-MAKE_INST_MATCH(Frem, FREM, 2)
+MAKE_INST_MATCH(URem, UREM, 2)
+MAKE_INST_MATCH(FRem, FREM, 2)
 MAKE_INST_MATCH(And, AND, 2)
 MAKE_INST_MATCH(Or, OR, 2)
 MAKE_INST_MATCH(Xor, XOR, 2)

@@ -7,6 +7,7 @@
 namespace IR {
 BinaryInst::BinaryInst(NameRef name, OP opcode, const pVal &lhs, const pVal &rhs)
     : Instruction(opcode, name, lhs->getType()) {
+    // Err::gassert(isSameType(lhs, rhs));
     addOperand(lhs);
     addOperand(rhs);
 }

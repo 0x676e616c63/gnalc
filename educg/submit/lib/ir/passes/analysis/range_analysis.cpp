@@ -361,6 +361,11 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
                 in_worklist.emplace(inst.get(), bb.get());
             }
         }
+        // Induction variables
+        for (const auto& phi : bb->phis()) {
+            worklist.emplace_back(phi.get(), bb.get());
+            in_worklist.emplace(phi.get(), bb.get());
+        }
     }
 
     auto propagateToDomUsers = [&](Value *v, BasicBlock *bb) {
@@ -415,8 +420,8 @@ void RangeAnalysis::analyzeContextual(RangeResult &res, Function *func, FAM *fam
         auto bb = pair.second;
 
         bool is_btype = inst->getType()->is<BType>();
-        bool is_int = is_btype && inst->getType()->isI32();
-        bool is_float = is_btype && inst->getType()->isF32();
+        bool is_int = is_btype && inst->getType()->isInteger();
+        bool is_float = is_btype && inst->getType()->isFloatingPoint();
 
         // Check SCEV
         // FIXME: SCEV cannot figure out complex induction variables, since its goal

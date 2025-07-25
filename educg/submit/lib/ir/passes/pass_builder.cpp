@@ -259,6 +259,9 @@ auto make_gep_opt(const PMOptions& options) {
 
 FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions& options) {
     FPM fpm;
+    if (options.advance_name_norm)
+        fpm.addPass(NameNormalizePass());
+
     fpm.addPass(make_enabling(options));
     fpm.addPass(make_deep_clean(options));
     fpm.addPass(make_memo(options));

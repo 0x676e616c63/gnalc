@@ -214,13 +214,13 @@ PM::PreservedAnalyses ReshapeFoldPass::run(LinearFunction &function, LFAM &lfam)
                 auto [coe, iv] = expr.getLinear();
                 pVal subscript = iv->as<Value>();
                 if (coe != 1) {
-                    auto bin = std::make_shared<BinaryInst>("%cpelim." + std::to_string(name_cnt++), OP::MUL, subscript,
+                    auto bin = std::make_shared<BinaryInst>("%reshape." + std::to_string(name_cnt++), OP::MUL, subscript,
                                                             function.getConst(coe));
                     info.ilist->insert(info.iter, bin);
                     subscript = bin;
                 }
                 auto gep =
-                    std::make_shared<GEPInst>("%cpelim." + std::to_string(name_cnt++), base, i32_zero, subscript);
+                    std::make_shared<GEPInst>("%reshape." + std::to_string(name_cnt++), base, i32_zero, subscript);
                 info.ilist->insert(info.iter, gep);
                 base = gep;
             }
