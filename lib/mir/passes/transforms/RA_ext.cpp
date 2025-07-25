@@ -5,6 +5,8 @@
 #include "mir/info.hpp"
 #include "mir/passes/transforms/RA.hpp"
 #include "mir/tools.hpp"
+#include <algorithm>
+#include <iterator>
 
 using namespace MIR;
 
@@ -137,10 +139,10 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
 
     ++spilltimes;
 
-    Nodes stageValues;
-
     auto mtype = mop->type();
     auto stkobj = mfunc->addStkObj(mfunc->Context(), getSize(mtype), getSize(mtype), 0, StkObjUsage::Spill);
+
+    auto replace = MIROperand::asVReg(ctx.nextId(), mtype);
 
     for (auto &mblk : mfunc->blks()) {
         auto &minsts = mblk->Insts();
@@ -148,15 +150,12 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
             auto &minst = *it;
             auto recover = it;
 
-            MIROperand_p replace = nullptr;
-            bool loaded = false;
+            bool if_loaded = false; // only load once per inst
             auto &ops = minst->operands();
             for (auto it_op = ops.begin(); it_op != ops.end(); ++it_op) {
                 if (*it_op != mop) {
                     continue;
                 }
-
-                replace ? nop : void(replace = MIROperand::asVReg(ctx.nextId(), mtype));
 
                 if (it_op == ops.begin()) { // def
                     auto minst_store =
@@ -167,7 +166,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
 
                     minsts.insert(std::next(it), minst_store);
                     ++recover;
-                } else if (!loaded) { // use
+                } else if (!if_loaded) { // use
                     auto minst_load =
                         MIRInst::make(OpC::InstLoad)
                             ->setOperand<0>(replace, mfunc->Context())
@@ -175,18 +174,17 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
                             ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special), mfunc->Context());
 
                     minsts.insert(it, minst_load);
-                    loaded = true;
+                    if_loaded = true;
                 }
 
                 *it_op = replace;
             }
 
-            replace ? void(stageValues.emplace(replace)) : nop;
             it = ++recover;
         }
     }
 
-    return stageValues;
+    return {replace};
 }
 
 bool VectorRegisterAllocImpl::isMoveInstruction(const MIRInst_p &minst) {

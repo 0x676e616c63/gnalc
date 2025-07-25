@@ -156,8 +156,8 @@ string ARMA64Printer::copyPrinter(const MIRInst &minst) {
     if (defType == OpT::Float && useType == OpT::Float) {
         ///@note mov from an isa to another isa, maybe caused by reduntant load eliminate
         str += "mov\t" + reg2s(def, 16, true) + ".16b,\t" + reg2s(use, 16, true) + ".16b";
-    } else if (inRange(defType, OpT::Int, OpT::Int64) && inRange(useType, OpT::Float, OpT::Floatvec4) ||
-               inRange(useType, OpT::Int, OpT::Int64) && inRange(defType, OpT::Float, OpT::Floatvec4) ||
+    } else if (inRange(defType, OpT::Int, OpT::Int64) && inRange(useType, OpT::Float, OpT::Float32) ||
+               inRange(useType, OpT::Int, OpT::Int64) && inRange(defType, OpT::Float, OpT::Float32) ||
                inRange(useType, OpT::Float, OpT::Floatvec4) && inRange(defType, OpT::Float, OpT::Floatvec4)) {
         str += "fmov\t" + reg2s(def, bitWide) + ",\t" + reg2s(use, bitWide);
     } else {
