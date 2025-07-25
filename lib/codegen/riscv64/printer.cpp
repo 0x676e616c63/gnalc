@@ -37,7 +37,7 @@ void RV64Printer::printout(const std::vector<MIRGlobal_p> &globals) {
         writeln(".globl ", sym);
         writeln(".align ", align);
         writeln(sym, ":");
-        writeln("    .zero ", size);
+        writeln("    .space ", size);
     }
 
     writeln(".data");
