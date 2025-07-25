@@ -32,6 +32,11 @@ public:
 
     // bare metal
     bool isIntrinsicSupported(const std::string &lib_fn_name) const override { return false; }
+
+    // Aggressive internalization will cause stack overflow.
+    size_t getInternalizeSizeThreshold() const override {
+        return 32;
+    }
 };
 } // namespace IR
 #endif //TARGET_HPP

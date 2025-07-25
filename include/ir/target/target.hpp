@@ -5,6 +5,7 @@
 #ifndef GNALC_IR_TARGET_TARGET_HPP
 #define GNALC_IR_TARGET_TARGET_HPP
 
+#include "config/config.hpp"
 #include "ir/base.hpp"
 #include "ir/instruction.hpp"
 
@@ -60,6 +61,9 @@ public:
     virtual int getBinaryCost(OP op, const pType &ty, OperandTrait lhs, OperandTrait rhs) { Err::not_implemented(); }
     virtual int getUnaryCost(OP op, const pType &ty, OperandTrait oper) { Err::not_implemented(); }
     virtual int getMemCost(OP op, const pType &ty, int align) { Err::not_implemented(); }
+
+    // Threshold
+    virtual size_t getInternalizeSizeThreshold () const { return Config::IR::INTERNALIZE_GLOBAL_SIZE_DEFAULT_THRESHOLD; }
 };
 } // namespace IR
 #endif //TARGET_HPP
