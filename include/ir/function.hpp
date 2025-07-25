@@ -188,8 +188,10 @@ public:
 
     ConstantPool &getConstantPool();
 
-    template <typename T> auto getConst(T &&val) { return constant_pool->getConst(std::forward<T>(val)); }
-    pVal getZero(const pType &type) { return constant_pool->getZero(type); }
+    template <typename T> auto getConst(T &&val) const { return constant_pool->getConst(std::forward<T>(val)); }
+    pVal getZero(const pType &type) const { return constant_pool->getZero(type); }
+    pVal getInteger(int64_t i, IRBTYPE type) const { return constant_pool->getInteger(i, type); }
+    pVal getInteger(int64_t i, const pType& type) const { return constant_pool->getInteger(i, type); }
 
     void accept(IRVisitor &visitor) override;
 

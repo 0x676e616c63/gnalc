@@ -46,6 +46,24 @@ pConstF32Vec ConstantPool::getConst(const std::vector<float> &val) {
     auto [it, inserted] = pool.insert(proxy);
     return it->getConstantFloatVector();
 }
+pVal ConstantPool::getInteger(int64_t i, IRBTYPE type) {
+    switch (type) {
+    case IRBTYPE::I1:
+        return getConst(static_cast<bool>(i));
+    case IRBTYPE::I8:
+        return getConst(static_cast<char>(i));
+    case IRBTYPE::I32:
+        return getConst(static_cast<int>(i));
+    case IRBTYPE::I64:
+        return getConst(i);
+    default:
+        Err::unreachable("Not a Integer Type.");
+    }
+    return nullptr;
+}
+pVal ConstantPool::getInteger(int64_t i, const pType &type) {
+    return getInteger(i, type->as<BType>()->getInner());
+}
 
 pVal ConstantPool::getZero(const pType &type) {
     if (auto btype = type->as<BType>()) {

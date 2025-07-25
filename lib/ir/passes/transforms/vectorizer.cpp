@@ -467,7 +467,7 @@ void VectorizerPass::Scheduler::updateDeps(SchedData *sched, bool insert_in_read
             member = member->next_in_bundle;
         }
         if (insert_in_ready_list && sched->isReady() && sched->isSchedEntity()) {
-            dry_run_ready_list.insert(sched);
+            dry_run_ready_list.emplace_back(sched);
             // Logger::logDebug("[SLP]: (Dry-run) '", sched->inst->getName() , "' becomes ready.");
         }
     }
@@ -524,10 +524,11 @@ bool VectorizerPass::Scheduler::tryScheduleBundle(const std::vector<pVal> &scala
     updateDeps(bundle, true);
 
     while (!bundle->isReady() && !dry_run_ready_list.empty()) {
-        SchedData* picked = *dry_run_ready_list.begin();
-        dry_run_ready_list.erase(dry_run_ready_list.begin());
-        Err::gassert(picked->isSchedEntity() && picked->isReady());
-        schedule(picked, dry_run_ready_list);
+        SchedData* picked = dry_run_ready_list.back();
+        dry_run_ready_list.pop_back();
+        // FIXME: Can `picked->isSchedEntity() && picked->isReady()` be false?
+        if (picked->isSchedEntity() && picked->isReady())
+            schedule(picked, dry_run_ready_list);
     }
 
     if (!bundle->isReady()) {
@@ -560,7 +561,7 @@ void VectorizerPass::Scheduler::cancelScheduling(const std::vector<pVal> &scalar
         member->num_unsched_deps_in_bundle = member->num_unsched_deps;
 
         if (member->num_unsched_deps_in_bundle == 0) {
-            dry_run_ready_list.insert(member);
+            dry_run_ready_list.emplace_back(member);
             // Logger::logDebug("[SLP]: (Dry-run) '", member->inst->getName() , "' becomes ready. (due to cancel)");
         }
         member = next;

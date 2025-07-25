@@ -51,7 +51,8 @@ PM::PreservedAnalyses TailRecursionEliminationPass::run(Function &function, FAM 
         auto &params = function.getParams();
         std::vector<pPhi> param_phis;
         for (const auto &param : params) {
-            auto phiInst = std::make_shared<PHIInst>("%tre.fp" + std::to_string(name_cnt++), param->getType());
+            auto phiInst = std::make_shared<PHIInst>(
+                "%tre." + param->getName().substr(1) + "." + std::to_string(name_cnt++), param->getType());
             param->replaceSelf(phiInst);
             phiInst->addPhiOper(param, newEntryBlock);
             param_phis.emplace_back(phiInst);
