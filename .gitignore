@@ -55,3 +55,4 @@ educg/submit
 perf/
 test/ASMperf_result/
 test/ASMperf/target/
+test/gnalc2

@@ -28,6 +28,10 @@ inline bool is12BitImm(uint64_t imm, bool is_mir_ext) {
     auto signed_val = static_cast<int32_t>(imm);
     return signed_val >= -2048 && signed_val < 2048;
 }
+
+inline bool isNonZero12BitImm(uint64_t imm, bool is_mir_ext) {
+    return imm != 0 && is12BitImm(imm, is_mir_ext);
+}
 } // namespace RV64
 
 enum class RVReg : uint32_t {
