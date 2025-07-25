@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const COLOR_THRESHOLD_PERCENT = 2.0;
     // --- Global State ---
     const state = {
         environments: [],
@@ -6,7 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
         activeTestCases: [], // Test cases relevant to the current environment
         currentEnvId: null,
         commitData: [],
-        comparisonSortOrder: 'default', // 'default', 'asc', 'desc'
+        comparisonSort: {
+            key: 'default',
+            order: 'asc'  // 'asc', 'desc'
+        },
         historyLimit: '15', // Default limit updated
         charts: {
             history: null,
@@ -37,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
             commitA: document.getElementById('commitA'),
             commitB: document.getElementById('commitB'),
             tableBody: document.querySelector('#comparison-table tbody'),
-            sortHeader: document.getElementById('sort-by-change'),
+            tableHeader: document.querySelector('#comparison-table thead'),
         },
         history: {
             selector: document.getElementById('test-case-selector'),
@@ -271,16 +275,23 @@ document.addEventListener('DOMContentLoaded', () => {
             return { tc, timeA, timeB, diff, change };
         });
 
-        if (state.comparisonSortOrder === 'asc') {
-            testCaseComparisons.sort((a, b) => a.change - b.change);
-        } else if (state.comparisonSortOrder === 'desc') {
-            testCaseComparisons.sort((a, b) => b.change - a.change);
+        const { key, order } = state.comparisonSort;
+        if (key !== 'default') {
+            const sortOrder = (order === 'asc') ? 1 : -1;
+            testCaseComparisons.sort((a, b) => {
+                const valA = a[key] ?? -Infinity;
+                const valB = b[key] ?? -Infinity;
+                if (valA < valB) return -1 * sortOrder;
+                if (valA > valB) return 1 * sortOrder;
+                return 0;
+            });
         }
-
+        
         const tableRows = testCaseComparisons.map(({ tc, timeA, timeB, diff, change }) => {
             let changeClass = '';
-            if (change < -0.001) changeClass = 'positive';
-            if (change > 0.001) changeClass = 'negative';
+            const threshold = COLOR_THRESHOLD_PERCENT / 100.0;
+            if (change < -threshold) changeClass = 'positive';
+            if (change > threshold) changeClass = 'negative';
             return `<tr class="${changeClass}">
                         <td>${tc}</td>
                         <td>${timeA?.toFixed(3) ?? 'N/A'}</td>
@@ -291,21 +302,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
 
         dom.comparison.tableBody.innerHTML = tableRows;
+        updateComparisonHeaders(); // Update the visual indicators
     }
     
-    // ... (rest of the JS file is unchanged, including chart rendering, event listeners etc.)
-    // Only functions that iterate through test cases needed modification.
-    function cycleSortOrder() {
-        const orders = ['default', 'desc', 'asc'];
-        const current = orders.indexOf(state.comparisonSortOrder);
-        state.comparisonSortOrder = orders[(current + 1) % orders.length];
-        
-        let indicator = '↕';
-        if (state.comparisonSortOrder === 'desc') indicator = '↓';
-        if (state.comparisonSortOrder === 'asc') indicator = '↑';
-        dom.comparison.sortHeader.textContent = `Change ${indicator}`;
-        
+    function updateComparisonSort(newKey) {
+        const { key, order } = state.comparisonSort;
+
+        if (key === newKey) {
+            if (order === 'desc') {
+                state.comparisonSort.order = 'asc';
+            } else {
+                // If it's already ascending, reset to the default order
+                state.comparisonSort.key = 'default';
+                state.comparisonSort.order = 'asc';
+            }
+        } else {
+            state.comparisonSort.key = newKey;
+            state.comparisonSort.order = 'desc';
+        }
         renderComparison();
+    }
+    
+    function updateComparisonHeaders() {
+        dom.comparison.tableHeader.querySelectorAll('th.sortable').forEach(th => {
+            const key = th.dataset.sortKey;
+            // First, remove any existing indicator
+            let headerText = th.textContent.replace(/ [↑↓↕]/g, '');
+
+            if (key === state.comparisonSort.key) {
+                // Add the correct direction indicator to the active column
+                const indicator = state.comparisonSort.order === 'asc' ? ' ↑' : ' ↓';
+                th.textContent = headerText + indicator;
+            } else {
+                // Add the neutral indicator to all other sortable columns
+                th.textContent = headerText + ' ↕';
+            }
+        });
     }
 
     function createChartConfig(chartData, fontColor, gridColor) {
@@ -438,7 +470,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     dom.comparison.commitA.addEventListener('change', renderComparison);
     dom.comparison.commitB.addEventListener('change', renderComparison);
-    dom.comparison.sortHeader.addEventListener('click', cycleSortOrder);
+    dom.comparison.tableHeader.addEventListener('click', (e) => {
+        const header = e.target.closest('th');
+        if (header && header.classList.contains('sortable')) {
+            const sortKey = header.dataset.sortKey;
+            updateComparisonSort(sortKey);
+        }
+    });
     dom.history.selector.addEventListener('change', () => {
         const isLightTheme = dom.body.classList.contains('light-theme');
         const fontColor = isLightTheme ? '#212121' : '#e0e0e0';
