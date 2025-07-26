@@ -211,6 +211,7 @@ REGISTER_GNALC_FIXED_EXCEPT_PASS(unswitch)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(fuse)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(reshapefold)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(loopunroll)
+REGISTER_GNALC_FIXED_EXCEPT_PASS(codesink)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(inline)
 
 void register_gnalc_debug() {
@@ -305,9 +306,10 @@ void Test::register_all_benchmarks() {
     register_gnalc_fixed_no_interchange();
     register_gnalc_fixed_no_unswitch();
     register_gnalc_fixed_no_fuse();
-    // register_gnalc_fixed_no_copyelision();
+    register_gnalc_fixed_no_reshapefold();
     register_gnalc_fixed_no_inline();
     register_gnalc_fixed_no_loopunroll();
+    register_gnalc_fixed_no_codesink();
 
     register_gnalc_sir_debug();
     register_gnalc_debug();
