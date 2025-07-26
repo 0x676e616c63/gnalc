@@ -8,7 +8,9 @@
 #include "ir/instructions/memory.hpp"
 #include "ir/passes/analysis/alias_analysis.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
+#include "ir/passes/analysis/target_analysis.hpp"
 #include "ir/passes/transforms/memoization.hpp"
+#include "ir/target/target.hpp"
 
 namespace IR {
 struct InlineCandidate {
@@ -16,7 +18,7 @@ struct InlineCandidate {
     pFunc callee;
 };
 
-bool isProfitableToInline(const Function &caller, const InlineCandidate &candidate, FAM& fam) {
+bool isProfitableToInline(const Function &caller, const InlineCandidate &candidate, FAM& fam, const TargetInfo::InlineThreshold& threshold) {
     auto &callee = *candidate.callee;
     auto &call_points = candidate.call_points;
 
@@ -28,7 +30,7 @@ bool isProfitableToInline(const Function &caller, const InlineCandidate &candida
         if (&caller != &callee)
             return false;
 
-        if (callee.getInstCount() * call_points.size() > Config::IR::FUNCTION_INLINE_RECURSIVE_EXPAND_THRESHOLD) {
+        if (callee.getInstCount() * call_points.size() > threshold.recursion_expand_max_inst) {
             Logger::logDebug("[Inline]: Canceled expanding recursive function '", callee.getName(),
                              "', due to too many instructions.(", call_points.size(), " calls, with each ",
                              callee.getInstCount(), " instructions)");
@@ -38,10 +40,10 @@ bool isProfitableToInline(const Function &caller, const InlineCandidate &candida
         return true;
     }
 
-    if (call_points.size() < Config::IR::FUNCTION_INLINE_CALL_POINTS_THRESHOLD)
+    if (call_points.size() < threshold.call_points)
         return true;
 
-    if (callee.getInstCount() * call_points.size() > Config::IR::FUNCTION_INLINE_INST_THRESHOLD) {
+    if (callee.getInstCount() * call_points.size() > threshold.inst_threshold) {
         Logger::logDebug("[Inline]: Canceled inlining '", callee.getName(), "' into '", caller.getName(),
                          "', due to too many instructions. (", call_points.size(), " calls, with each ",
                          callee.getInstCount(), " instructions)");
@@ -175,8 +177,10 @@ PM::PreservedAnalyses InlinePass::run(Function &function, FAM &fam) {
         }
     }
 
+    auto& target = fam.getResult<TargetAnalysis>(function);
+    auto& threshold = target->getInlineThreshold();
     for (auto it = candidates.begin(); it != candidates.end();) {
-        if (!isProfitableToInline(function, it->second, fam))
+        if (!isProfitableToInline(function, it->second, fam, threshold))
             it = candidates.erase(it);
         else
             ++it;

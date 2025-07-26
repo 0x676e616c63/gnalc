@@ -68,6 +68,10 @@ bool hasSideEffect(FAM &fam, const pBlock& block);
 bool hasSideEffect(FAM &fam, const Loop* loop);
 bool hasSideEffect(FAM &fam, const pLoop& loop);
 
+// Check if the instruction has side effect
+bool hasSideEffect(FAM &fam, Instruction* inst);
+bool hasSideEffect(FAM &fam, const pInst& inst);
+
 pVal getMemLocation(Value* i);
 pVal getMemLocation(const pVal &i);
 

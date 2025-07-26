@@ -181,6 +181,7 @@ int main(int argc, char **argv) {
         OPT_ARG("--internalize", "--no-internalize", internalize)
         OPT_ARG("--gepflatten", "--no-gepflatten", gep_flatten)
         OPT_ARG("--storerng", "--no-storerng", store_range)
+        OPT_ARG("--codesink", "--no-codesink", code_sink)
         OPT_ARG("--cgprepare", "--no-cgprepare", codegen_prepare)
         // SIR Function Transforms
         OPT_ARG("--earlymem2reg", "--no-earlymem2reg", early_mem2reg)
@@ -327,6 +328,7 @@ Optimizations Flags:
   --internalize        - Internalize global variables
   --gepflatten         - Flatten getelementptr to binarys
   --storerng           - Store Range Analysis result. (For backend)
+  --codesink           - Code Sink
   --cgprepare          - Codegen preparation
   --treeshaking        - Shake off unused functions, function declarations and global variables
 

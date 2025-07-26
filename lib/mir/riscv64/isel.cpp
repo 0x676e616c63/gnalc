@@ -278,7 +278,25 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         if (rhs->isImme() && !RV64::isNonZero12BitImm(rhs->imme(), rhs->isExImme()))
             minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
     } break;
-    case OpC::InstMul:
+    case OpC::InstMul: {
+        trySwapOps(minst);
+
+        auto lhs = minst->getOp(1);
+        if (lhs->isImme())
+            minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
+
+        auto rhs = minst->getOp(2);
+        if (rhs->isImme()) {
+            if (Util::isPowerOfTwo(rhs->imme())) {
+                minst->resetOpcode(OpC::InstShl);
+                minst->setOperand<2>(MIROperand::asImme(ctz_wrapper(rhs->imme()), rhs->type()), ctx.codeGenCtx());
+            }
+            else
+                minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
+        }
+
+        break;
+    }
     case OpC::InstAnd:
     case OpC::InstOr:
     case OpC::InstXor: {

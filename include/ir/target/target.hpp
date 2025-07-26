@@ -35,6 +35,17 @@ public:
     virtual bool isTypeSupported(const pType &type) const = 0;
     virtual bool isIntrinsicSupported(const std::string &lib_fn_name) const = 0;
 
+    // Threshold
+    virtual size_t getInternalizeSizeThreshold () const = 0;
+
+    struct InlineThreshold {
+        size_t recursion_expand_max_inst;
+        size_t call_points;
+        size_t inst_threshold;
+    };
+    virtual const InlineThreshold& getInlineThreshold() const = 0;
+
+
     // Convenient wrappers
     bool isVectorSupported() {
         return isInstSupported(OP::INSERT) && isInstSupported(OP::EXTRACT) && isInstSupported(OP::SHUFFLE);
