@@ -244,6 +244,15 @@ auto make_vectorizer(const PMOptions& options) {
     return fpm;
 }
 
+auto make_cg_prepare(const PMOptions& options) {
+    FPM fpm;
+    FUNCTION_TRANSFORM(codegen_prepare, CodeGenPreparePass())
+
+    if (!options.advance_name_norm)
+        fpm.addPass(NameNormalizePass());
+    return fpm;
+}
+
 auto make_gep_opt(const PMOptions& options) {
     FPM fpm;
     FUNCTION_TRANSFORM(gep_flatten, GEPFlattenPass())
@@ -270,14 +279,13 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions& options) {
     fpm.addPass(make_loop(options));
     fpm.addPass(make_fast_clean(options));
     fpm.addPass(make_vectorizer(options));
-    // fpm.addPass(make_debug_version_vectorizer(options));
     fpm.addPass(make_fast_clean(options));
 
+    // Sink can cause more register spill. But I have no idea why.
     // FUNCTION_TRANSFORM(code_sink, CodeSinkPass())
-    // FUNCTION_TRANSFORM(store_range, LoopSimplifyPass(), StoreAnalysisPass<RangeAnalysis>())
-    FUNCTION_TRANSFORM(codegen_prepare, CFGSimplifyPass(), CodeGenPreparePass())
-    if (!options.advance_name_norm)
-        fpm.addPass(NameNormalizePass());
+
+    // Note:
+    // `--ann` moved to make_cg_prepare()
 
     return fpm;
 }
@@ -287,9 +295,11 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions& options) {
 MPM PassBuilder::buildModuleFixedPointPipeline(const PMOptions& options) {
     MPM mpm;
     mpm.addPass(makeModulePass(buildFunctionFixedPointPipeline(options)));
+    mpm.addPass(makeModulePass(make_cg_prepare(options)));
+    // mpm.addPass(makeModulePass(make_gep_opt(options)));
     if (options.tree_shaking)
         mpm.addPass(TreeShakingPass());
-    // mpm.addPass(makeModulePass(make_gep_opt(options)));
+
     mpm.addPass(LowerIntrinsicsPass());
     return mpm;
 }

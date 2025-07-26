@@ -64,6 +64,7 @@ MPM PassBuilder::buildModuleDebugPipeline() {
 
 FPM buildRV64FunctionPipeline(OptInfo opt_info) {
     FPM fpm;
+    // fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(ISel());
     // fpm.addPass(RVLoadZeroEli());
     // fpm.addPass(RedundantLoadEli());
