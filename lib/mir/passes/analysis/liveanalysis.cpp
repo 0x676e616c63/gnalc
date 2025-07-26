@@ -44,28 +44,20 @@ void LiveAnalysisImpl::runOnFunc(MIRFunction &_mfunc) {
     }
 }
 bool LiveAnalysisImpl::runOnBlk(const MIRBlk_p &mblk) {
-
-    std::unordered_map<MIRInst_p, std::unordered_set<MIROperand_p>> instLiveIn;
-    std::unordered_map<MIRInst_p, std::unordered_set<MIROperand_p>> instLiveOut;
-
     const auto &minsts = mblk->Insts();
-    instLiveIn.reserve(minsts.size());
-    instLiveOut.reserve(minsts.size());
-
-    instLiveOut[minsts.back()] = liveinfo->liveOut[mblk];
-
+    liveinfo->instLiveOut[minsts.back()] = liveinfo->liveOut[mblk];
     for (auto it = minsts.rbegin(); it != minsts.rend(); ++it) {
-        runOnInst(*it, instLiveIn[*it], instLiveOut[*it]);
+        runOnInst(*it, liveinfo->instLiveIn[*it], liveinfo->instLiveOut[*it]);
         if (it != std::prev(minsts.rend())) {
-            instLiveOut[*std::next(it)] = instLiveIn[*it];
+            liveinfo->instLiveOut[*std::next(it)] = liveinfo->instLiveIn[*it];
         }
     }
 
-    if (liveinfo->liveIn[mblk] == instLiveIn[mblk->Insts().front()]) {
+    if (liveinfo->liveIn[mblk] == liveinfo->instLiveIn[mblk->Insts().front()]) {
         return false;
     }
 
-    liveinfo->liveIn[mblk] = instLiveIn[mblk->Insts().front()];
+    liveinfo->liveIn[mblk] = liveinfo->instLiveIn[mblk->Insts().front()];
 
     return true;
 }
