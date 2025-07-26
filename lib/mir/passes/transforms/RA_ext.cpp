@@ -86,7 +86,7 @@ MIROperand_p RegisterAllocImpl::heuristicSpill() {
     const int64_t extra_Weight_ForSpilled = -1000000;
     const int64_t extra_Weight_ForConstValue = 100000;
 
-    int64_t weight_max = -std::numeric_limits<int64_t>::infinity();
+    int64_t weight_max = std::numeric_limits<int64_t>::min();
     MIROperand_p spilled = nullptr;
     for (const auto &op : spillWorkList) {
         int64_t weight = 0;
