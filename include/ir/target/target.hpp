@@ -57,12 +57,10 @@ public:
     bool isSelectSupported() { return isInstSupported(OP::SELECT); }
     bool isTypeSupported(IRBTYPE btype) { return isTypeSupported(makeBType(btype)); }
 
-    // Vector is not required
-    virtual size_t getMaxVectorRegisterSize() const { Err::not_implemented(); }
-    virtual size_t getMinVectorRegisterSize() const { Err::not_implemented(); }
-
     // Below is required iff `isVectorSupported() == true`
     virtual bool canVectorize(OP op) const { Err::not_implemented(); }
+    virtual size_t getMaxVectorRegisterSize() const { Err::not_implemented(); }
+    virtual size_t getMinVectorRegisterSize() const { Err::not_implemented(); }
     virtual int getVecInstCost(OP op, const pVecType &ty, size_t index) const { Err::not_implemented(); }
     virtual int getShuffleCost(const pVecType &ty, ShuffleKind kind) const { Err::not_implemented(); }
     virtual int getCastCost(OP op, const pType &src, const pType &dest) const { Err::not_implemented(); }

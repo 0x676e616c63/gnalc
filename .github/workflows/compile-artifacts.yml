@@ -130,12 +130,20 @@ jobs:
             continue
           fi
           
+          if [[ "$rel_path" == *"functional"* ]]; then
+            opts=""
+          else
+            opts="${COMPILE_OPTIONS}"
+          fi
+          
+          opts="${COMPILE_OPTIONS}"
+          
           echo "Compiling: $rel_path with opts '$opts'"
           
           mkdir -p "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path"
           ./build/gnalc -with-runtime -S "$testcase" \
           -o "$ARTIFACTS_DIR/artifacts/aarch64/$dir_path/$test_name.s" \
-          ${COMPILE_OPTIONS}
+          $opts
           
           aarch64-linux-gnu-gcc -c test/sylib/sylib.c -o sylib.o
           aarch64-linux-gnu-ar rcs sylib.a sylib.o

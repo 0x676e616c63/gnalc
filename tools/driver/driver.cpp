@@ -489,13 +489,8 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
     } else {
         cli_opt_options.verify.disableIfDefault();
         cli_opt_options.run_test.disableIfDefault();
-        cli_opt_options.inliner.disable();
-        cli_opt_options.loop_unroll.disable();
-        cli_opt_options.reassociate.disable();
-        cli_opt_options.gvnpre.disable();
-        cli_opt_options.loop_parallel.disable();
-        cli_opt_options.vectorizer.disable();
-        cli_opt_options.rngsimplify.disable();
+        cli_opt_options.licm.disableIfDefault();
+        cli_opt_options.loop_unroll.disableIfDefault();
         pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::EnableIfDefault);
     }
 
@@ -557,10 +552,12 @@ Note: For -O1/-fixed-point/-std-pipeline/-fuzz modes:
     else if (fuzz_testing)
         mpm = IR::PassBuilder::buildModuleFuzzTestingPipeline(pm_options, fuzz_testing_duplication_rate,
                                                               fuzz_testing_repro);
-    else if (fixed_point_pipeline)
-        mpm = IR::PassBuilder::buildModuleFixedPointPipeline(pm_options);
     else
-        mpm = IR::PassBuilder::buildModulePipeline(pm_options);
+        mpm = IR::PassBuilder::buildModuleFixedPointPipeline(pm_options);
+    // else if (fixed_point_pipeline)
+    //     mpm = IR::PassBuilder::buildModuleFixedPointPipeline(pm_options);
+    // else
+    //     mpm = IR::PassBuilder::buildModulePipeline(pm_options);
 
     if (emit_llvm || emit_llvm_with_asm) {
         mpm.addPass(IR::PrintModulePass(*poutstream, with_runtime));
