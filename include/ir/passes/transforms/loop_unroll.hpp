@@ -21,6 +21,14 @@
 #include "ir/passes/analysis/loop_analysis.hpp"
 
 namespace IR {
+enum class UnrollAttr {
+    xxxHeader = 1 << 0,
+    // ...
+};
+
+GNALC_ENUM_OPERATOR(UnrollAttr)
+using UnrollAttrs = Attr::BitFlagsAttr<UnrollAttr>;
+
 class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
     static constexpr unsigned PEC = Config::IR::LOOP_UNROLLING_PEEL_COUNT; // 循环剥皮最大次数
     static constexpr unsigned FUS = Config::IR::LOOP_UNROLLING_FULLY_UNROLL_SIZE; // // trip_count*size 小于此值次数的循环可能被完全展开

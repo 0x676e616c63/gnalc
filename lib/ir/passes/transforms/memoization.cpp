@@ -266,6 +266,7 @@ PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
     auto lut = std::make_shared<GlobalVariable>(
         STOCLASS::GLOBAL, lut_type,
         std::string{Config::IR::MEMOIZATION_LUT_NAME_PREFIX} + "." + function.getName().substr(1), GVIniter(lut_type));
+    lut->attr().add(MemoAttrs{MemoAttr::LUT});
     auto module = function.getParent();
     module->addGlobalVar(lut);
 

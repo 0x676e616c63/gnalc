@@ -83,7 +83,7 @@ bool hasSylibOrRecursiveCall(Function *func, FAM *fam, const pLoop &loop) {
                 if (call->getFunc().get() == func)
                     return true;
 
-                if (call->getFunc()->hasAttr(FuncAttr::isSylib))
+                if (call->getFunc()->hasFnAttr(FuncAttr::isSylib))
                     return true;
 
                 auto callee_def = call->getFunc()->as<Function>();
@@ -394,7 +394,7 @@ ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loo
 
 PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
     // Parallel functions can not be nested, so only parallelize loops in `main`.
-    if (!function.hasAttr(FuncAttr::isProgramEntry))
+    if (!function.hasFnAttr(FuncAttr::isProgramEntry))
         return PreserveAll();
 
     static constexpr auto parallel_for_name = Config::IR::LOOP_PARALLEL_FOR_FUNCTION_NAME;
@@ -521,7 +521,7 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
         auto end_param = std::make_shared<FormalParam>("%gnalc_parallel_body_fn_end", makeBType(IRBTYPE::I32), 1);
         auto body_fn = std::make_shared<Function>(body_fn_name, std::vector{beg_param, end_param},
                                                   makeBType(IRBTYPE::VOID), &function.getConstantPool(),
-                                                  std::unordered_set{FuncAttr::NotBuiltin, FuncAttr::ParallelBody});
+                                                  FuncAttr::NotBuiltin | FuncAttr::ParallelBody);
         module->addFunction(body_fn);
 
         // Collect all shared values and rewrite them as global variables.

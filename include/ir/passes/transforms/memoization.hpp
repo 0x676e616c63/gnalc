@@ -11,6 +11,11 @@
 #include "ir/passes/pass_manager.hpp"
 
 namespace IR {
+enum class MemoAttr {
+    LUT = 1 << 0,
+};
+GNALC_ENUM_OPERATOR(MemoAttr)
+using MemoAttrs = Attr::BitFlagsAttr<MemoAttr>;
 class MemoizePass : public PM::PassInfo<MemoizePass> {
 public:
     explicit MemoizePass(bool emit_debug_inst_ = false) : emit_debug_inst(emit_debug_inst_) {}

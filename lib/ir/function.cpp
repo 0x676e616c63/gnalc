@@ -11,17 +11,18 @@
 #include <utility>
 
 namespace IR {
-FunctionDecl::FunctionDecl(std::string name_, std::vector<pType> params, pType ret_type, bool is_va_arg_,
-                           std::unordered_set<FuncAttr> attrs)
+FunctionDecl::FunctionDecl(std::string name_, std::vector<pType> params, pType ret_type, bool is_va_arg_, FuncAttr attrs)
     : Value(std::move(name_), makeFunctionType(std::move(params), std::move(ret_type), is_va_arg_),
-            ValueTrait::FUNCTION),
-      func_attrs(std::move(attrs)) {
-    Err::gassert(!(hasAttr(FuncAttr::isSylib) && hasAttr(FuncAttr::isIntrinsic)));
-    Err::gassert(!(hasAttr(FuncAttr::builtinMemReadOnly) && hasAttr(FuncAttr::builtinMemWriteOnly)));
+            ValueTrait::FUNCTION) {
+
+    attr().add(FuncAttrs(attrs));
 
     // user defined functions
-    if (func_attrs.empty())
-        func_attrs.emplace(FuncAttr::NotBuiltin);
+    if (attr().get<FuncAttrs>()->empty())
+        addFnAttr(FuncAttr::NotBuiltin);
+
+    Err::gassert(!(hasFnAttr(FuncAttr::isSylib) && hasFnAttr(FuncAttr::isIntrinsic)));
+    Err::gassert(!(hasFnAttr(FuncAttr::builtinMemReadOnly) && hasFnAttr(FuncAttr::builtinMemWriteOnly)));
 }
 
 bool FunctionDecl::isRecursive() const {
@@ -38,15 +39,15 @@ bool FunctionDecl::isRecursive() const {
     return false;
 }
 
-bool FunctionDecl::hasAttr(FuncAttr attr) const { return func_attrs.count(attr); }
-void FunctionDecl::addAttr(FuncAttr attr) { func_attrs.emplace(attr); }
-const std::unordered_set<FuncAttr> &FunctionDecl::getAttrs() const { return func_attrs; }
+bool FunctionDecl::hasFnAttr(FuncAttr attr_) const { return attr().get<FuncAttrs>()->has(attr_); }
+void FunctionDecl::addFnAttr(FuncAttr attr_) { attr().get<FuncAttrs>()->set(attr_); }
+FuncAttr FunctionDecl::getFnAttrs() const { return attr().get<FuncAttrs>()->val(); }
 
 void FunctionDecl::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
-bool FunctionDecl::isSylib() const { return hasAttr(FuncAttr::isSylib); }
+bool FunctionDecl::isSylib() const { return hasFnAttr(FuncAttr::isSylib); }
 
-bool FunctionDecl::isIntrinsic() const { return hasAttr(FuncAttr::isIntrinsic); }
+bool FunctionDecl::isIntrinsic() const { return hasFnAttr(FuncAttr::isIntrinsic); }
 
 void FunctionDecl::setParent(Module *module) { parent = module; }
 
@@ -62,7 +63,7 @@ std::vector<pType> get_params_type(const std::vector<pFormalParam> &p) {
 }
 
 Function::Function(std::string name_, const std::vector<pFormalParam> &params_, pType ret_type, ConstantPool *pool_,
-                   std::unordered_set<FuncAttr> attrs)
+                   FuncAttr attrs)
     : FunctionDecl(std::move(name_), get_params_type(params_), std::move(ret_type), false, attrs), params(params_),
       constant_pool(pool_) {}
 
