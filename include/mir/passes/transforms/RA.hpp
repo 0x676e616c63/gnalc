@@ -211,9 +211,13 @@ protected:
 
     MIROperand_p heuristicSpill();
 
-    virtual Nodes spill(const MIROperand_p &);
+    Nodes spill(const MIROperand_p &);
+
+    Nodes spillToMem(const MIROperand_p &mop);
+    Nodes reloadConstVal(const MIROperand_p &mop);
 
     unsigned int spilltimes = 0;
+    unsigned int reloadtimes = 0;
 
 protected:
     /// debug

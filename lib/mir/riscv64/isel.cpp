@@ -48,6 +48,7 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     auto loadImm = [&](const MIROperand_p &mop) -> MIROperand_p {
         modified |= true;
         auto mop_new = MIROperand::asVReg(ctx.codeGenCtx().nextId(), mop->type());
+        mop_new->setUseTrait(MIROperand::usage::StoreConst);
 
         if (mop->isExImme()) {
             ctx.newInst(OpC::InstLoadImmEx)
@@ -408,7 +409,7 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     return modified;
 }
 
-// for pass preRaLeagalize
+// for pass preRaLeagalize and reloaded spill constval
 void RVIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
     auto &[minst, minsts, iter, ctx, _] = _ctx;
 

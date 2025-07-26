@@ -34,8 +34,7 @@ public:
     void impl(MIRFunction *mfunc);
 
     ///@note just a new inst insert somewhere, set ops yourself
-    template <typename T>
-    MIRInst_p newInst(T mopcode) {
+    template <typename T> MIRInst_p newInst(T mopcode) {
         static_assert(std::is_same_v<T, OpC> || std::is_same_v<T, ARMOpC> || std::is_same_v<T, RVOpC>);
         auto minst = MIRInst::make(mopcode);
 
@@ -68,6 +67,6 @@ public:
     ~ISelContext() = default;
 };
 
-}; // namespace MIR_new
+}; // namespace MIR
 
 #endif

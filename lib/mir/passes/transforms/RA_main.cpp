@@ -47,6 +47,7 @@ void RegisterAllocImpl::clearall() {
     alias.clear();
     colors.clear();
     spilltimes = 0;
+    reloadtimes = 0;
     isInitialized = false;
     GeneratedBySpill.clear();
 }
@@ -67,7 +68,8 @@ void RegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     auto &spilled = mfunc->spill();
     spilled += spilltimes;
 
-    Logger::logInfo("RegisterAllocImpl: " + mfunc->getName() + " spilled times: " + std::to_string(spilltimes));
+    Logger::logInfo("RegisterAllocImpl: " + mfunc->getName() + " spilled times: " + std::to_string(spilltimes) +
+                    " reload times: " + std::to_string(reloadtimes));
 }
 
 void RegisterAllocImpl::Main(FAM &fam) {
@@ -605,7 +607,8 @@ void VectorRegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     auto &spilled = mfunc->spill();
     spilled += spilltimes;
 
-    Logger::logInfo("VectorRegisterAllocImpl: " + mfunc->getName() + " spilled times: " + std::to_string(spilltimes));
+    Logger::logInfo("VectorRegisterAllocImpl: " + mfunc->getName() + " spilled times: " + std::to_string(spilltimes) +
+                    " reload times: " + std::to_string(reloadtimes));
 }
 
 void VectorRegisterAllocImpl::Build() {

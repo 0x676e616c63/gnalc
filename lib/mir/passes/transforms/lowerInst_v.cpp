@@ -23,6 +23,7 @@ MIROperand_p MIR::vector_flatting(const IR::pVal &ir_vector, LoweringContext &ct
 
     auto liter_op = ctx.newLiteral(literal, size, 16, type);
     MIROperand_p load_op = ctx.newVReg(type);
+    load_op->setUseTrait(MIROperand::usage::StoreConst);
 
     ctx.newInst(MIRInst::make(OpC::InstLoadLiteral)
                     ->setOperand<0>(load_op, ctx.CodeGenCtx())
