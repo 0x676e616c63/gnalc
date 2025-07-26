@@ -42,7 +42,7 @@ public:
         static const InlineThreshold ret = {
             .recursion_expand_max_inst = 100,
             .call_points = 0,
-            .inst_threshold = 200,
+            .inst_threshold = 100,
         };
         return ret;
     }
