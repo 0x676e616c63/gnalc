@@ -132,6 +132,7 @@ void MIR::lowerInst_v(const IR::pExtract &extract, LoweringContext &ctx) {
 
 void MIR::lowerInst_v(const IR::pInsert &insert, LoweringContext &ctx) {
 
+    // LAMBDA BEGIN
     auto is_const_vector = [&](const IR::pVal &vec) {
         if (vec->as<IR::ConstantIntVector>() || vec->as<IR::ConstantFloatVector>()) {
             return true;
@@ -160,6 +161,7 @@ void MIR::lowerInst_v(const IR::pInsert &insert, LoweringContext &ctx) {
 
         return true;
     };
+    // LAMBDA END
 
     if (ctx.CodeGenCtx().isARMv8()) {
 

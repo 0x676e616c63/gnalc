@@ -413,8 +413,9 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         }
 
         if (idx == 0) {
-            def->type() == OpT::Floatvec4 ? minst->resetOpcode(OpC::InstLoadFPImm)
-                                          : minst->resetOpcode(OpC::InstLoadImm);
+            // def->type() == OpT::Floatvec4 ? minst->resetOpcode(OpC::InstLoadFPImm)
+            //                               : minst->resetOpcode(OpC::InstLoadImm);
+            minst->resetOpcode(OpC::InstLoadFPImm);
             minst->setOperand<1>(elem, ctx.codeGenCtx());
         } else {
             MIRInst_p load = nullptr;
@@ -474,11 +475,12 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
 
         auto imm = static_cast<unsigned>(imme->imme()); ///@bug
 
+        auto dst = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
         if (ARMv8::isBitMaskImme(imm) || ARMv8::is12ImmeWithProbShift(imm)) {
             ///@note mov + copy
 
             auto mov = MIRInst::make(ARMOpC::MOV)
-                           ->setOperand<0>(def, ctx)
+                           ->setOperand<0>(dst, ctx)
                            ->setOperand<1>(MIROperand::asImme(imm, OpT::Int32), ctx);
 
             minsts.insert(iter, mov);
@@ -487,7 +489,7 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
 
             // if (imm & 0XFFFF) {
             auto movz = MIRInst::make(imm & 0XFFFF ? ARMOpC::MOVZ : ARMOpC::MOV)
-                            ->setOperand<0>(def, ctx)
+                            ->setOperand<0>(dst, ctx)
                             ->setOperand<1>(MIROperand::asImme(imm & 0XFFFF, OpT::Int32), ctx);
 
             minsts.insert(iter, movz);
@@ -495,7 +497,7 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
 
             if (imm > 0XFFFF) {
                 auto movk = MIRInst::make(ARMOpC::MOVK)
-                                ->setOperand<0>(def, ctx)
+                                ->setOperand<0>(dst, ctx)
                                 ->setOperand<1>(MIROperand::asImme(imm >> 16, OpT::Int32), ctx)
                                 ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special), ctx); // lsl only
 
@@ -503,12 +505,14 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
             }
         }
 
-        minst->putAllOp(ctx);
-        minsts.erase(iter++);
+        // vector-load may use loadimm, so add a copy
+        minst->resetOpcode(chooseCopyOpC(def, dst));
+        minst->setOperand<1>(dst, ctx);
 
     } break;
     case OpC::InstLoadImmEx: {
         auto def = minst->ensureDef();
+
         auto imme = minst->getOp(1);
 
         auto imme_ex = imme->immeEx();
@@ -536,6 +540,7 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
     } break;
     case OpC::InstLoadFPImm: {
         auto def = minst->ensureDef();
+
         auto imme = minst->getOp(1);
 
         auto imm_us = static_cast<unsigned>(imme->imme());
