@@ -7,9 +7,11 @@
 #include "mir/tools.hpp"
 #include "utils/exception.hpp"
 #include <algorithm>
+#include <iostream>
 #include <iterator>
 #include <list>
 #include <optional>
+#include <string>
 
 using namespace MIR;
 
@@ -334,4 +336,40 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getDef(const MIRInst_p &minst)
     }
 
     return defs;
+}
+
+void RegisterAllocImpl::dmpMap() {
+
+    if (dmpConflictMap == 0) {
+        return;
+    }
+    --dmpConflictMap;
+
+    auto node_info = [](const MIROperand_p &op) {
+        string str{};
+
+        if (op->isVReg()) {
+            str += "VReg(";
+            str += std::to_string(op->getRecover() - MIR::VRegBegin) + ')';
+        } else if (op->isImme()) {
+            str += "Imme(";
+            str += std::to_string(op->imme()) + ')';
+        } else if (op->isISA()) {
+            str += "ISAReg(";
+            str += std::to_string(op->isa()) + ')';
+        } else if (op->stkobj()) {
+            str += "Stk(";
+            str += std::to_string(op->getRecover() - MIR::StkObjBegin) + ')';
+        } else {
+            str += "Misc(?)";
+        }
+
+        return str;
+    };
+
+    for (const auto &[node, adjset] : adjList) {
+        writeln(node_info(node), " : ", degree[node]);
+        std::for_each(adjset.begin(), adjset.end(), [&](const auto &adj_node) { write(node_info(adj_node), ' '); });
+        writeln("");
+    }
 }

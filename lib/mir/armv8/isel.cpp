@@ -69,7 +69,7 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
                 ->setOperand<1>(mop, ctx.codeGenCtx());
             modified |= true;
         } else if (inRange(mop->type(), OpT::Int, OpT::Int64)) {
-            mop_new = MIROperand::asVReg(ctx.codeGenCtx().nextId(), OpT::Int32);
+            mop_new = MIROperand::asVReg(ctx.codeGenCtx().nextId(), OpT::Int64); // DONT FIX ME
             mop_new->setUseTrait(MIROperand::usage::StoreConst);
 
             ctx.newInst(OpC::InstLoadImm)

@@ -3,6 +3,7 @@
 
 #pragma once
 #include "mir/tools.hpp"
+#include <iostream>
 #ifndef GNALC_MIR_PASSES_TRANSFROMS_RA
 #define GNALC_MIR_PASSES_TRANSFROMS_RA
 
@@ -12,8 +13,12 @@
 namespace MIR {
 
 class RegisterAlloc : public PM::PassInfo<RegisterAlloc> {
+private:
+    unsigned dmpConflictMap;
 
 public:
+    explicit RegisterAlloc(unsigned _dmpConflictMap = 0) : dmpConflictMap(_dmpConflictMap) {}
+
     PM::PreservedAnalyses run(MIRFunction &, FAM &);
 };
 
@@ -37,7 +42,7 @@ public:
     };
 
 public:
-    virtual void impl(MIRFunction &, FAM &);
+    virtual void impl(MIRFunction &, FAM &, unsigned _dmpConflictMap);
     RegisterAllocImpl() : mfunc(nullptr), K(-1), isInitialized(false) {}
     explicit RegisterAllocImpl(int fpuRegCnt) : mfunc(nullptr), K(fpuRegCnt), isInitialized(false) {}
     virtual ~RegisterAllocImpl() = default;
@@ -115,6 +120,10 @@ protected:
     Liveness liveinfo;
 
     Nodes GeneratedBySpill;
+
+    unsigned dmpConflictMap{};
+
+    void dmpMap(); // for debug
 
     virtual bool isMoveInstruction(const MIRInst_p &);
 
@@ -209,6 +218,17 @@ protected:
         }
     }
 
+    template <typename T> void write(T &&obj) { std::cerr << obj; }
+
+    template <typename T> void writeln(T &&obj) { std::cerr << obj << std::endl; }
+
+    template <typename... Args> void write(Args &&...args) { (std::cerr << ... << args); }
+
+    template <typename... Args> void writeln(Args &&...args) {
+        (std::cerr << ... << args);
+        std::cerr << std::endl;
+    }
+
     MIROperand_p heuristicSpill();
 
     Nodes spill(const MIROperand_p &);
@@ -230,7 +250,7 @@ protected:
 class VectorRegisterAllocImpl : public RegisterAllocImpl {
 
 public:
-    void impl(MIRFunction &, FAM &) override;
+    void impl(MIRFunction &, FAM &, unsigned dmpConflictMap) override;
     VectorRegisterAllocImpl() = default;
     ~VectorRegisterAllocImpl() override = default;
 

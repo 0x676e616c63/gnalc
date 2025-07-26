@@ -264,6 +264,9 @@ int main(int argc, char **argv) {
         else if (arg.substr(0, 9) == "-loadEli=") {
             bkd_opt_info.redundantLoadEli_weight = std::stoull(arg.substr(9));
         }
+        else if (arg.substr(0, 9) == "-dumpMap=") {
+            bkd_opt_info.registeralloc_dmp_times = std::stoul(arg.substr(9));
+        }
 
         else if (arg == "-march=armv8" || arg == "-march=armv8-a") target = Target::ARMv8;
         else if (arg == "-march=armv7" || arg == "-march=armv7-a") target = Target::ARMv7;

@@ -20,6 +20,7 @@ struct OptInfo {
     bool machineLICM;
 
     size_t redundantLoadEli_weight = 60;
+    unsigned registeralloc_dmp_times = 0;
 };
 
 extern const OptInfo o1_opt_info;

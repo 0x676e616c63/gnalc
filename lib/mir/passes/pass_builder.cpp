@@ -92,7 +92,7 @@ FPM buildARMv8FunctionPipeline(OptInfo opt_info) {
                                             // fpm.addPass(PrintFunctionPass(std::cerr));
     opt_info.machineLICM ?                  fpm.addPass(MachineLICMPass()) : nop;
                                             // fpm.addPass(PrintFunctionPass(std::cerr));  
-                                            fpm.addPass(RegisterAlloc());
+                                            fpm.addPass(RegisterAlloc(opt_info.registeralloc_dmp_times));
     opt_info.peephole_afterRa ?             fpm.addPass(GenericPeephole(Stage::AfterRa)) : nop;
                                             fpm.addPass(StackGenerate());
     opt_info.peephole_afterStackGenerate ?  fpm.addPass(GenericPeephole(Stage::AfterPostLegalize)) : nop;
