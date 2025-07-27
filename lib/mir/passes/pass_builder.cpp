@@ -11,6 +11,7 @@
 // Transforms
 #include "mir/passes/analysis/domtree_analysis.hpp"
 #include "mir/passes/transforms/CFGsimplify.hpp"
+#include "mir/passes/transforms/FusedAddr.hpp"
 #include "mir/passes/transforms/ICF_TailDup.hpp"
 #include "mir/passes/transforms/PostRAlegalize.hpp"
 #include "mir/passes/transforms/PreRAlegalize.hpp"
@@ -84,6 +85,7 @@ FPM buildARMv8FunctionPipeline(OptInfo opt_info) {
     using Stage = GenericPeephole::Stage;
 
     // clang-format off
+                                            fpm.addPass(FusedAddr());
                                             fpm.addPass(ISel());
     opt_info.peephole_afterIsel ?           fpm.addPass(GenericPeephole(Stage::AfterIsel)) : nop;
     opt_info.CFGsimplifyBeforeRa ?          fpm.addPass(CFGsimplifyBeforeRA()) : nop;

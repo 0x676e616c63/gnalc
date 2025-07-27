@@ -617,9 +617,19 @@ void ARMIselInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop,
 
     auto &[minst, minsts, iter, ctx, _] = _ctx;
 
-    auto offset = obj.offset;
+    int const_offset = 0;
+
+    if (minst->opcode<OpC>() == OpC::InstLoad && minst->getOp(2)) {
+        const_offset = minst->getOp(2)->imme(); // NOLINT
+    } else if (minst->getOp(3)) {
+        const_offset = minst->getOp(3)->imme(); // NOLINT
+    }
+
+    auto obj_offset = obj.offset;
 
     Err::gassert(minst->getOp(5) != nullptr, "PostRAlegalizeImpl::runOnInst: InstLoad/InstStore info lack");
+
+    auto offset = obj_offset + const_offset;
 
     if (ARMv8::isFitMemInst(offset, minst->getOp(5)->imme())) {
         if (minst->opcode<OpC>() == OpC::InstLoadRegFromStack || minst->opcode<OpC>() == OpC::InstLoad) {
@@ -656,7 +666,6 @@ void ARMIselInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop,
         imme >>= 16;
     }
 
-    ///@todo ldur/stur
     if (minst->opcode<OpC>() == OpC::InstLoadRegFromStack || minst->opcode<OpC>() == OpC::InstLoad) {
         minst->setOperand<2>(scratch, ctx); // just a mark for codegen
         minst->resetOpcode(ARMOpC::LDR);

@@ -439,14 +439,7 @@ void RegisterAllocImpl::AssignColors() {
 
         if (okColors.empty()) {
             addBySet(spilledNodes, Nodes{n});
-        }
-        // else if (precolored.count(n)) {
-        //     auto &calleesave = mfunc->calleeSaveRegs();
-        //     calleesave |= 1LL << n->reg(); // marked
-        // } else if (n->isStack()) {
-        //     ;
-        // }
-        else {
+        } else {
 
             addBySet(coloredNodes, Nodes{n});
 
@@ -502,19 +495,20 @@ void RegisterAllocImpl::AssignColors() {
 
 void RegisterAllocImpl::ReWriteProgram() {
     initial.clear();
+    addBySet(initial, coloredNodes);
+    addBySet(initial, coalescedNodes);
+
     for (const auto &n : spilledNodes) {
         auto ops_new = spill(n);
 
         addBySet(initial, ops_new);
-        // Logger::logInfo("ReWriteProgram: old operand: " + std::to_string(n->getRecover()) +
-        //                 ", new operand size: " + std::to_string(ops_new.size()));
-
         addBySet(GeneratedBySpill, ops_new);
     }
 
     spilledNodes.clear();
-    addBySet(initial, coalescedNodes);
-    addBySet(initial, coloredNodes);
+
+    Logger::logInfo("ReWriteProgram: initial size: " + std::to_string(initial.size()) +
+                    ", spilled size: " + std::to_string(GeneratedBySpill.size()));
 
     coloredNodes.clear();
     coalescedNodes.clear();

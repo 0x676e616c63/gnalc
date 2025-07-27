@@ -7,6 +7,7 @@
 #include "mir/tools.hpp"
 #include "utils/exception.hpp"
 #include <algorithm>
+#include <cstddef>
 #include <iostream>
 #include <iterator>
 #include <list>
