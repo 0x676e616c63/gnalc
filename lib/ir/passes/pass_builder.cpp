@@ -248,7 +248,7 @@ auto make_vectorizer(const PMOptions &options) {
 
 auto make_post_legalize(const PMOptions &options) {
     FPM fpm;
-    FUNCTION_TRANSFORM(globalize, GlobalizePass())
+    // FUNCTION_TRANSFORM(globalize, GlobalizePass())
     FUNCTION_TRANSFORM(codegen_prepare, CodeGenPreparePass())
 
     if (!options.advance_name_norm)

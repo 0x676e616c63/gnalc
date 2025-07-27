@@ -21,7 +21,7 @@ public:
     size_t getMinVectorRegisterSize() const override { return 64; }
 
     size_t getInternalizeSizeThreshold() const override {
-        return 32;
+        return 1024 * 1024;
     }
     size_t getGlobalizeSizeThreshold() const override {
         return 64;
