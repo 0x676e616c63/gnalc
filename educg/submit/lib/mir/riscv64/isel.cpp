@@ -48,6 +48,7 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     auto loadImm = [&](const MIROperand_p &mop) -> MIROperand_p {
         modified |= true;
         auto mop_new = MIROperand::asVReg(ctx.codeGenCtx().nextId(), mop->type());
+        mop_new->setUseTrait(MIROperand::usage::StoreConst);
 
         if (mop->isExImme()) {
             ctx.newInst(OpC::InstLoadImmEx)
@@ -277,7 +278,25 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         if (rhs->isImme() && !RV64::isNonZero12BitImm(rhs->imme(), rhs->isExImme()))
             minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
     } break;
-    case OpC::InstMul:
+    case OpC::InstMul: {
+        trySwapOps(minst);
+
+        auto lhs = minst->getOp(1);
+        if (lhs->isImme())
+            minst->setOperand<1>(loadImm(lhs), ctx.codeGenCtx());
+
+        auto rhs = minst->getOp(2);
+        if (rhs->isImme()) {
+            if (Util::isPowerOfTwo(rhs->imme())) {
+                minst->resetOpcode(OpC::InstShl);
+                minst->setOperand<2>(MIROperand::asImme(ctz_wrapper(rhs->imme()), rhs->type()), ctx.codeGenCtx());
+            }
+            else
+                minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
+        }
+
+        break;
+    }
     case OpC::InstAnd:
     case OpC::InstOr:
     case OpC::InstXor: {
@@ -408,7 +427,7 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     return modified;
 }
 
-// for pass preRaLeagalize
+// for pass preRaLeagalize and reloaded spill constval
 void RVIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
     auto &[minst, minsts, iter, ctx, _] = _ctx;
 

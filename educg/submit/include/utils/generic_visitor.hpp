@@ -28,6 +28,8 @@ public:
     using reverse_iterator = typename decltype(worklist)::reverse_iterator;
     using const_reverse_iterator = typename decltype(worklist)::const_reverse_iterator;
 
+    GenericBFVisitor() = default;
+
     explicit GenericBFVisitor(NodeT root) {
         std::deque<NodeT> q{root};
         std::unordered_set<NodeT> visited;
@@ -62,6 +64,7 @@ public:
     [[nodiscard]] const_reverse_iterator rend() const { return worklist.rend(); }
     [[nodiscard]] const_reverse_iterator crbegin() const { return worklist.crbegin(); }
     [[nodiscard]] const_reverse_iterator crend() const { return worklist.crend(); }
+    [[nodiscard]] bool empty() const { return worklist.empty(); }
 };
 
 enum class DFVOrder { PreOrder, PostOrder, ReversePreOrder, ReversePostOrder };
@@ -76,6 +79,8 @@ public:
     using const_iterator = typename decltype(worklist)::const_iterator;
     using reverse_iterator = typename decltype(worklist)::reverse_iterator;
     using const_reverse_iterator = typename decltype(worklist)::const_reverse_iterator;
+
+    GenericDFVisitor() = default;
 
     explicit GenericDFVisitor(NodeT root) {
         if constexpr (order == DFVOrder::PreOrder) {
@@ -154,6 +159,7 @@ public:
     [[nodiscard]] const_reverse_iterator rend() const { return worklist.rend(); }
     [[nodiscard]] const_reverse_iterator crbegin() const { return worklist.crbegin(); }
     [[nodiscard]] const_reverse_iterator crend() const { return worklist.crend(); }
+    [[nodiscard]] bool empty() const { return worklist.empty(); }
 };
 } // namespace Util
 #endif

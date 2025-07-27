@@ -21,10 +21,19 @@
 #include "../analysis/loop_analysis.hpp"
 
 namespace IR {
+enum class UnrollAttr {
+    Unrolled = 1 << 0, // All unrolled loop block except fully unroll
+    NoRem = 1 << 1, // No remainder partially unroll, can be unrolled again
+    RemBlock = 1 << 2, // Remainder loop, don't need to unroll
+};
+
+GNALC_ENUM_OPERATOR(UnrollAttr)
+using UnrollAttrs = Attr::BitFlagsAttr<UnrollAttr>;
+
 class LoopUnrollPass : public PM::PassInfo<LoopUnrollPass> {
     static constexpr unsigned PEC = Config::IR::LOOP_UNROLLING_PEEL_COUNT; // 循环剥皮最大次数
-    static constexpr unsigned FUS = Config::IR::LOOP_UNROLLING_FULLY_UNROLL_SIZE; // // trip_count*size 小于此值次数的循环可能被完全展开
-    static constexpr unsigned FUC = Config::IR::LOOP_UNROLLING_FULLY_UNROLL_COUNT; // trip_count 小于此值次数且满足上个条件的循环将被完全展开
+    static constexpr unsigned FUS = Config::IR::LOOP_UNROLLING_FULLY_UNROLL_SIZE; // // trip_count*size 小于等于此值次数的循环可能被完全展开
+    static constexpr unsigned FUC = Config::IR::LOOP_UNROLLING_FULLY_UNROLL_COUNT; // trip_count 小于等于此值次数且满足上个条件的循环将被完全展开
     static constexpr unsigned PUS = Config::IR::LOOP_UNROLLING_PARTIALLY_UNROLL_SIZE; // 部分展开后最大大小
     static constexpr unsigned PUC = Config::IR::LOOP_UNROLLING_PARTIALLY_UNROLL_COUNT; // 部分展开最大次数
     static constexpr unsigned RUS = Config::IR::LOOP_UNROLLING_RUNTIME_UNROLL_SIZE; // 运行时展开后最大大小

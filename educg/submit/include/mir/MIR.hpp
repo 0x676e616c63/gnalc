@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
+#include "../ir/type_alias.hpp"
 #include "../utils/logger.hpp"
 #include <cstdint>
 #include <optional>
@@ -274,6 +275,19 @@ private:
     unsigned recover = -1;
 
 public:
+    enum usage {
+        Regular,
+        StoreConst,
+        // StorePtr, // not impl
+    };
+
+private:
+    usage use_trait = Regular; // extra trait for vregs
+                               // this trait should be share while use copy
+                               //  impl this in chooseCopyOp
+public:
+    friend void shareUseTrait(MIROperand_p &a, MIROperand_p &b);
+
     void setRecover(unsigned id) { recover = id; } // for constructors
     unsigned getRecover() const { return recover; }
 
@@ -310,6 +324,9 @@ public:
     MIRReloc_p reloc() { return std::get<MIRReloc_p>(mOperand); }
     double prob() const { return std::get<double>(mOperand); }
     const string &literal() const { return std::get<string>(mOperand); }
+
+    usage getUseTrait() const { return use_trait; }
+    void setUseTrait(usage _new_use_trait) { use_trait = _new_use_trait; }
 
     ///@note int, float, condflag
     bool isImme() const {
@@ -396,6 +413,15 @@ public:
 
     static MIROperand_p asLiteral(string liter, OpT type) { return make<MIROperand>(liter, type); }
 
+    static MIROperand_p asStkPtrReg(CodeGenContext &ctx) {
+        if (ctx.isARMv8()) {
+            return asISAReg(ARMReg::SP, OpT::Int64);
+        } else if (ctx.isRISCV64()) {
+            return asISAReg(RVReg::SP, OpT::Int64);
+        }
+        return nullptr; // just to make clang happy
+    }
+
     // builder end
 
     // simple type verify
@@ -455,6 +481,19 @@ public:
         return "<unexpected>";
     }
 };
+
+// this func often use while dealing with copy, and so we prefer b's trait more than a's
+inline void shareUseTrait(MIROperand_p &a, MIROperand_p &b) {
+    if (a->use_trait == b->use_trait) {
+        return;
+    } else if (b->use_trait != MIROperand::Regular) {
+        a->use_trait = b->use_trait;
+        return;
+    } else {
+        b->use_trait = a->use_trait;
+        return;
+    }
+}
 
 class MIRInst : public std::enable_shared_from_this<MIRInst> {
     friend class MIRModule;

@@ -2,16 +2,19 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#ifndef GNALC_MIR_TRANSFORMS_RVLOADZEROELI_HPP
-#define GNALC_MIR_TRANSFORMS_RVLOADZEROELI_HPP
+#ifndef GNALC_MIR_PASSES_TRANSFORMS_COPYPROPAGATION
+#define GNALC_MIR_PASSES_TRANSFORMS_COPYPROPAGATION
 
 #include "../pass_manager.hpp"
 
 namespace MIR {
-class RVLoadZeroEli : public PM::PassInfo<RVLoadZeroEli> {
+
+class CopyPropagation : public PM::PassInfo<CopyPropagation> {
+
 public:
     PM::PreservedAnalyses run(MIRFunction &, FAM &);
 };
-}; // namespace std
+
+}; // namespace MIR
 
 #endif

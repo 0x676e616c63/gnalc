@@ -39,7 +39,7 @@ void lowerMemset(Module &module, const pFuncDecl &memset_decl) {
     auto len = std::make_shared<FormalParam>("%len", makeBType(IRBTYPE::I32), 2);
     auto memset_impl =
         std::make_shared<Function>("@__gnalc_intrinsic_memset", std::vector{ptr, val, len}, makeBType(IRBTYPE::VOID),
-                                   &module.getConstantPool(), std::unordered_set{FuncAttr::isLoweredIntrinsic});
+                                   &module.getConstantPool(),  FuncAttr::NotBuiltin | FuncAttr::isLoweredIntrinsic);
     for (const auto& inst : memset_decl->inst_users()) {
         auto call = inst->as<CALLInst>();
         Err::gassert(call && call->getFunc() == memset_decl && call->getArgs()[3]->getType()->isI1()
@@ -107,7 +107,7 @@ void lowerMemcpy(Module &module, const pFuncDecl &memcpy_decl) {
     auto len = std::make_shared<FormalParam>("%len", makeBType(IRBTYPE::I32), 2);
     auto memcpy_impl =
         std::make_shared<Function>("@__gnalc_intrinsic_memcpy", std::vector{dest, src, len}, makeBType(IRBTYPE::VOID),
-                                   &module.getConstantPool(), std::unordered_set{FuncAttr::isLoweredIntrinsic});
+                                   &module.getConstantPool(), FuncAttr::NotBuiltin | FuncAttr::isLoweredIntrinsic);
     for (const auto& inst : memcpy_decl->inst_users()) {
         auto call = inst->as<CALLInst>();
         Err::gassert(call && call->getFunc() == memcpy_decl && call->getArgs()[3]->getType()->isI1()
@@ -161,16 +161,16 @@ PM::PreservedAnalyses LowerIntrinsicsPass::run(Module &module, MAM &manager) {
     auto decls = module.getFunctionDecls();
     for (const auto &func_decl : decls) {
         // Skip non-intrinsic or useless functions
-        if (!func_decl->hasAttr(FuncAttr::isIntrinsic) || func_decl->getUseCount() == 0)
+        if (!func_decl->hasFnAttr(FuncAttr::isIntrinsic) || func_decl->getUseCount() == 0)
             continue;
 
         // Skip intrinsics that are supported by the target
         if (target->isIntrinsicSupported(func_decl->getName()))
             continue;
 
-        if (func_decl->hasAttr(FuncAttr::isMemsetIntrinsic))
+        if (func_decl->hasFnAttr(FuncAttr::isMemsetIntrinsic))
             lowerMemset(module, func_decl);
-        else if (func_decl->hasAttr(FuncAttr::isMemcpyIntrinsic))
+        else if (func_decl->hasFnAttr(FuncAttr::isMemcpyIntrinsic))
             lowerMemcpy(module, func_decl);
         else
             Err::unreachable("Unhandled intrinsic");

@@ -63,7 +63,7 @@ struct ArrayMemoryVisitor : GenericMemoryInvariantVisitor {
             if (getPtrBase(store->getPtr().get()) == base)
                 is_invariant = false;
         } else if (auto call = inst.as<CALLInst>()) {
-            if (call->getFunc()->hasAttr(FuncAttr::builtinMemReadOnly))
+            if (call->getFunc()->hasFnAttr(FuncAttr::builtinMemReadOnly))
                 return;
 
             auto args = call->getArgs();

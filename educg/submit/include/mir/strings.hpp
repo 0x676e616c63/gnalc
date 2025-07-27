@@ -123,7 +123,7 @@ inline string Reg2SDebug(const MIROperand_p &mop, unsigned bitWide, const CodeGe
             str += 'v' + std::to_string(isa - 32);
         }
     } else {
-        str += '%' + std::to_string(recover) + '{' + std::to_string(bitWide) + '}' + '[' +
+        str += '%' + std::to_string(recover - VRegBegin) + '{' + std::to_string(bitWide) + '}' + '[' +
                std::to_string(ctx.queryOp(mop)) + ']';
     }
 

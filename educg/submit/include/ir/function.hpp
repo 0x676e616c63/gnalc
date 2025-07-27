@@ -8,6 +8,7 @@
 #include "base.hpp"
 #include "basic_block.hpp"
 #include "constant_pool.hpp"
+#include "../utils/enum_operator.hpp"
 #include "../utils/generic_visitor.hpp"
 
 #include <memory>
@@ -18,63 +19,66 @@
 namespace SIR {
 struct Visitor;
 struct ContextVisitor;
-}
+} // namespace SIR
 namespace IR {
+// TODO: Split this to multiple attrs
 enum class FuncAttr {
     // User defined functions
-    NotBuiltin,
+    NotBuiltin = 1 << 0,
 
     // Main function
-    isProgramEntry,
+    isProgramEntry = 1 << 1,
 
     // Typically this is a main function
-    ExecuteExactlyOnce,
+    ExecuteExactlyOnce = 1 << 2,
 
     // Sylib
-    isSylib,
+    isSylib = 1 << 3,
 
     // Width
-    PromoteFromChar,
-    TruncateToChar,
+    PromoteFromChar = 1 << 4,
+    TruncateToChar = 1 << 5,
 
     // Intrinsic
-    isIntrinsic,
-    isMemsetIntrinsic,
-    isMemcpyIntrinsic,
-    isSIMDIntrinsic,
+    isIntrinsic = 1 << 6,
+    isMemsetIntrinsic = 1 << 7,
+    isMemcpyIntrinsic = 1 << 8,
+    isSIMDIntrinsic = 1 << 9,
+    isAtomicAddI32 = 1 << 17,
+    isAtomicAddF32 = 1 << 18,
 
-    isLoweredIntrinsic,
+    isLoweredIntrinsic = 1 << 10,
 
     // Only Builtin Functions
     // For user-defined functions, use AliasAnalysis instead.
-    builtinMemReadOnly,
-    builtinMemWriteOnly,
-    builtinMemReadWrite,
+    builtinMemReadOnly = 1 << 11,
+    builtinMemWriteOnly = 1 << 12,
+    builtinMemReadWrite = 1 << 13,
 
     // Loop Parallel
-    isRuntime,
-    ParallelEntry,
-    ParallelBody,
-    isAtomicAddI32,
-    isAtomicAddF32,
+    isRuntime = 1 << 14,
+    ParallelEntry = 1 << 15,
+    ParallelBody = 1 << 16,
 };
+
+GNALC_ENUM_OPERATOR(FuncAttr)
+using FuncAttrs = Attr::BitFlagsAttr<FuncAttr>;
+
 class FunctionDecl : public Value {
 private:
-    std::unordered_set<FuncAttr> func_attrs;
     Module *parent{};
 
 public:
-    FunctionDecl(std::string name_, std::vector<pType> params, pType ret_type, bool is_va_arg_,
-                 std::unordered_set<FuncAttr> attrs = {});
+    FunctionDecl(std::string name_, std::vector<pType> params, pType ret_type, bool is_va_arg_, FuncAttr attrs);
 
     void accept(IRVisitor &visitor) override;
 
     bool isSylib() const;
     bool isIntrinsic() const;
 
-    bool hasAttr(FuncAttr attr) const;
-    void addAttr(FuncAttr attr);
-    const std::unordered_set<FuncAttr> &getAttrs() const;
+    bool hasFnAttr(FuncAttr attr) const;
+    void addFnAttr(FuncAttr attr);
+    FuncAttr getFnAttrs() const;
 
     void setParent(Module *module);
     Module *getParent() const;
@@ -120,7 +124,7 @@ public:
     using const_reverse_iterator = decltype(blks)::const_reverse_iterator;
 
     Function(std::string name_, const std::vector<pFormalParam> &params, pType ret_type, ConstantPool *pool,
-             std::unordered_set<FuncAttr> attrs = {});
+             FuncAttr attrs = {});
 
     void addBlock(iterator it, pBlock blk);
     void addBlock(size_t index, pBlock blk);
@@ -191,7 +195,7 @@ public:
     template <typename T> auto getConst(T &&val) const { return constant_pool->getConst(std::forward<T>(val)); }
     pVal getZero(const pType &type) const { return constant_pool->getZero(type); }
     pVal getInteger(int64_t i, IRBTYPE type) const { return constant_pool->getInteger(i, type); }
-    pVal getInteger(int64_t i, const pType& type) const { return constant_pool->getInteger(i, type); }
+    pVal getInteger(int64_t i, const pType &type) const { return constant_pool->getInteger(i, type); }
 
     void accept(IRVisitor &visitor) override;
 
@@ -208,6 +212,7 @@ public:
     void updateCFG();
     void updateAndCheckCFG();
     bool removeParam(size_t index);
+
 private:
     void updateBBIndex();
     void updateAllIndex();
@@ -239,6 +244,7 @@ public:
 class LinearFunction : public FunctionDecl {
     friend class Instruction;
     friend class SIR::ContextVisitor;
+
 private:
     std::list<pInst> insts;
     std::vector<pFormalParam> params;
@@ -284,9 +290,7 @@ public:
 
     NestedInstIterator nested_begin() const { return NestedInstIterator(insts); }
     NestedInstIterator nested_end() const { return NestedInstIterator(); }
-    auto nested_insts() const {
-        return Util::make_iterator_range(nested_begin(), nested_end());
-    }
+    auto nested_insts() const { return Util::make_iterator_range(nested_begin(), nested_end()); }
 
     void accept(IRVisitor &visitor) override;
     void accept(SIR::Visitor &visitor);

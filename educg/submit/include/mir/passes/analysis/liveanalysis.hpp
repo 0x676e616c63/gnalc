@@ -14,6 +14,9 @@ struct Liveness {
     std::unordered_map<MIRBlk_p, std::unordered_set<MIROperand_p>> liveIn;
     std::unordered_map<MIRBlk_p, std::unordered_set<MIROperand_p>> liveOut;
 
+    std::unordered_map<MIRInst_p, std::unordered_set<MIROperand_p>> instLiveOut;
+    std::unordered_map<MIRInst_p, std::unordered_set<MIROperand_p>> instLiveIn;
+
     enum relatedType { Use, Def };
 
     std::unordered_map<MIROperand_p, std::unordered_set<std::pair<MIRInst_p, relatedType>, Util::PairHash>>

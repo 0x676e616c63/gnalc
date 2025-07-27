@@ -392,6 +392,11 @@ void MIR::lowerInst(const IR::pCast &cast, LoweringContext &ctx) {
 }
 
 void MIR::lowerInst(const IR::pGep &gep, LoweringContext &ctx) {
+    if (gep->isConstantOffset() && gep->getConstantOffset() == 0) {
+        ctx.addOperand(gep, ctx.mapOperand(gep->getPtr()));
+        return;
+    }
+
     auto def_ptr = ctx.newVReg(gep->getType());
 
     auto idx = gep->getIdxs().back();

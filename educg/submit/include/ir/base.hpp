@@ -24,6 +24,7 @@
 
 #include "type.hpp"
 #include "type_alias.hpp"
+#include "../utils/attr_manager.hpp"
 #include "../utils/iterator.hpp"
 #include "../utils/misc.hpp"
 
@@ -110,6 +111,7 @@ private:
     std::list<Use *> use_list; // Use隶属于User
     pType vtype;               // value's type
     ValueTrait trait = ValueTrait::UNDEFINED;
+    Attr::AttrManager attr_manager;
 
 public:
     Value() = delete;
@@ -122,6 +124,9 @@ public:
     Value &operator=(Value &&other) = delete;
 
     Value(std::string _name, pType _vtype, ValueTrait _vtrait);
+
+    Attr::AttrManager& attr() { return attr_manager; }
+    const Attr::AttrManager& attr() const { return attr_manager; }
 
     template <typename T> std::shared_ptr<const T> as() const {
         static_assert(std::is_base_of_v<Value, T>, "Expected a derived type.");
@@ -184,6 +189,7 @@ public:
         auto cloned = cloneImpl();
         auto raw = cloned.get();
         Err::gassert(raw != nullptr && typeid(*raw) == typeid(*this), "Derived class should override this correctly.");
+        cloned->attr_manager = attr_manager;
         return cloned;
     }
 

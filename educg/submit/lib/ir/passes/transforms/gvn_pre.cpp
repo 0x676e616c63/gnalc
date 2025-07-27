@@ -172,6 +172,9 @@ void GVNPREPass::Expr::canon() {
     switch (op) {
     case ExprOp::Add:
     case ExprOp::Mul:
+    case ExprOp::And:
+    case ExprOp::Or:
+    case ExprOp::Xor:
         std::sort(operands.begin(), operands.end());
         break;
     default:

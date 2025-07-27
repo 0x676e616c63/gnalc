@@ -243,7 +243,7 @@ void LoweringContext::newInst(const MIRInst_p &inst) {
     insts.emplace_back(inst);
 }
 
-void LoweringContext::addCopy(const MIROperand_p &dst, const MIROperand_p &src) {
+void LoweringContext::addCopy(MIROperand_p dst, MIROperand_p src) {
     auto inst = MIRInst::make(chooseCopyOpC(dst, src));
     inst->setOperand<0>(dst, mCodeGenCtx);
     inst->setOperand<1>(src, mCodeGenCtx);
@@ -422,8 +422,6 @@ MIRGlobal_p MIR::loweringGlobal(const IR::GlobalVariable &global) {
                 ++it;
             }
         }
-
-        ///@todo vectorize
 
         inner = make<MIRDataStorage>(sym, datas, align);
     }

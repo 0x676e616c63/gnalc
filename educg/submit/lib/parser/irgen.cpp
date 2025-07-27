@@ -32,55 +32,53 @@ void IRGenerator::visit(CompUnit &node) {
     auto i32ptr_type = IR::makePtrType(i32_type);
     auto f32_type = IR::makeBType(IR::IRBTYPE::FLOAT);
     auto f32ptr_type = IR::makePtrType(f32_type);
-    auto make_decl = [this](const std::string &name, std::vector<IR::pType> params, IR::pType ret,
-                            std::unordered_set<IR::FuncAttr> attrs, bool is_va_arg = false) {
-        auto fn = std::make_shared<IR::FunctionDecl>("@" + name, std::move(params), std::move(ret), is_va_arg,
-                                                     std::move(attrs));
+    auto make_decl = [this](const std::string &name, std::vector<IR::pType> params, IR::pType ret, IR::FuncAttr attrs,
+                            bool is_va_arg = false) {
+        auto fn = std::make_shared<IR::FunctionDecl>("@" + name, std::move(params), std::move(ret), is_va_arg, attrs);
         symbol_table.insert(name, fn);
         module.addFunctionDecl(fn);
     };
 
     // sylib
-    make_decl("getint", {}, i32_type, {IR::FuncAttr::isSylib});
-    make_decl("getch", {}, i32_type, {IR::FuncAttr::isSylib, IR::FuncAttr::PromoteFromChar});
-    make_decl("getfloat", {}, f32_type, {IR::FuncAttr::isSylib});
-    make_decl("putint", {i32_type}, void_type, {IR::FuncAttr::isSylib});
-    make_decl("putch", {i32_type}, void_type, {IR::FuncAttr::isSylib, IR::FuncAttr::TruncateToChar});
-    make_decl("putfloat", {f32_type}, void_type, {IR::FuncAttr::isSylib});
-    make_decl("_sysy_starttime", {i32_type}, void_type, {IR::FuncAttr::isSylib});
-    make_decl("_sysy_stoptime", {i32_type}, void_type, {IR::FuncAttr::isSylib});
+    make_decl("getint", {}, i32_type, IR::FuncAttr::isSylib);
+    make_decl("getch", {}, i32_type, IR::FuncAttr::isSylib | IR::FuncAttr::PromoteFromChar);
+    make_decl("getfloat", {}, f32_type, IR::FuncAttr::isSylib);
+    make_decl("putint", {i32_type}, void_type, IR::FuncAttr::isSylib);
+    make_decl("putch", {i32_type}, void_type, IR::FuncAttr::isSylib | IR::FuncAttr::TruncateToChar);
+    make_decl("putfloat", {f32_type}, void_type, IR::FuncAttr::isSylib);
+    make_decl("_sysy_starttime", {i32_type}, void_type, IR::FuncAttr::isSylib);
+    make_decl("_sysy_stoptime", {i32_type}, void_type, IR::FuncAttr::isSylib);
 
-    make_decl("getarray", {i32ptr_type}, i32_type, {IR::FuncAttr::isSylib, IR::FuncAttr::builtinMemWriteOnly});
-    make_decl("getfarray", {f32ptr_type}, i32_type, {IR::FuncAttr::isSylib, IR::FuncAttr::builtinMemWriteOnly});
-    make_decl("putarray", {i32_type, i32ptr_type}, void_type,
-              {IR::FuncAttr::isSylib, IR::FuncAttr::builtinMemReadOnly});
+    make_decl("getarray", {i32ptr_type}, i32_type, IR::FuncAttr::isSylib | IR::FuncAttr::builtinMemWriteOnly);
+    make_decl("getfarray", {f32ptr_type}, i32_type, IR::FuncAttr::isSylib | IR::FuncAttr::builtinMemWriteOnly);
+    make_decl("putarray", {i32_type, i32ptr_type}, void_type, IR::FuncAttr::isSylib | IR::FuncAttr::builtinMemReadOnly);
     make_decl("putfarray", {i32_type, f32ptr_type}, void_type,
-              {IR::FuncAttr::isSylib, IR::FuncAttr::builtinMemReadOnly});
-    make_decl("putf", {i8ptr_type}, void_type, {IR::FuncAttr::isSylib, IR::FuncAttr::builtinMemReadOnly},
+              IR::FuncAttr::isSylib | IR::FuncAttr::builtinMemReadOnly);
+    make_decl("putf", {i8ptr_type}, void_type, IR::FuncAttr::isSylib | IR::FuncAttr::builtinMemReadOnly,
               true); // VAArg
 
     // builtin
     // memset (dest, val, len, isvolatile)
     make_decl(Config::IR::MEMSET_INTRINSIC_NAME + 1, {i8ptr_type, i8_type, i32_type, i1_type}, void_type,
-              {IR::FuncAttr::isIntrinsic, IR::FuncAttr::isMemsetIntrinsic, IR::FuncAttr::builtinMemWriteOnly});
+              IR::FuncAttr::isIntrinsic | IR::FuncAttr::isMemsetIntrinsic | IR::FuncAttr::builtinMemWriteOnly);
 
     // memcpy (dest, src, len, isvolatile)
     make_decl(Config::IR::MEMCPY_INTRINSIC_NAME + 1, {i8ptr_type, i8ptr_type, i32_type, i1_type}, void_type,
-              {IR::FuncAttr::isIntrinsic, IR::FuncAttr::isMemcpyIntrinsic, IR::FuncAttr::builtinMemReadWrite});
+              IR::FuncAttr::isIntrinsic | IR::FuncAttr::isMemcpyIntrinsic | IR::FuncAttr::builtinMemReadWrite);
 
     // gnalc_parallel_for(beg, end, task)
     auto parallel_fn_type = IR::makeFunctionType(std::vector<IR::pType>{i32_type, i32_type}, void_type, false);
     make_decl(Config::IR::LOOP_PARALLEL_FOR_FUNCTION_NAME + 1, {i32_type, i32_type, parallel_fn_type}, void_type,
-              {IR::FuncAttr::isIntrinsic, IR::FuncAttr::isRuntime, IR::FuncAttr::ParallelEntry,
-               IR::FuncAttr::builtinMemReadWrite});
+              IR::FuncAttr::isIntrinsic | IR::FuncAttr::isRuntime | IR::FuncAttr::ParallelEntry |
+                  IR::FuncAttr::builtinMemReadWrite);
     // gnalc_atomic_add_i32(ptr, inc)
     make_decl(Config::IR::LOOP_PARALLEL_ATOMIC_ADD_I32 + 1, {i32ptr_type, i32_type}, void_type,
-              {IR::FuncAttr::isIntrinsic, IR::FuncAttr::isRuntime, IR::FuncAttr::isAtomicAddI32,
-               IR::FuncAttr::builtinMemReadWrite});
+              IR::FuncAttr::isIntrinsic | IR::FuncAttr::isRuntime | IR::FuncAttr::isAtomicAddI32 |
+                  IR::FuncAttr::builtinMemReadWrite);
     // gnalc_atomic_add_f32(ptr, inc)
     make_decl(Config::IR::LOOP_PARALLEL_ATOMIC_ADD_F32 + 1, {f32ptr_type, f32_type}, void_type,
-              {IR::FuncAttr::isIntrinsic, IR::FuncAttr::isRuntime, IR::FuncAttr::isAtomicAddF32,
-               IR::FuncAttr::builtinMemReadWrite});
+              IR::FuncAttr::isIntrinsic | IR::FuncAttr::isRuntime | IR::FuncAttr::isAtomicAddF32 |
+                  IR::FuncAttr::builtinMemReadWrite);
 
     for (auto &n : node.getNodes()) {
         n->accept(*this);
@@ -415,8 +413,8 @@ void IRGenerator::visit(FuncDef &node) {
         Err::gassert(ret_type == IR::IRBTYPE::I32, "Invalid main.");
         if (curr_insts.empty() || curr_insts.back()->getOpcode() != IR::OP::RET)
             curr_insts.emplace_back(std::make_shared<IR::RETInst>(module.getConst(0)));
-        curr_func->addAttr(IR::FuncAttr::ExecuteExactlyOnce);
-        curr_func->addAttr(IR::FuncAttr::isProgramEntry);
+        curr_func->addFnAttr(IR::FuncAttr::ExecuteExactlyOnce);
+        curr_func->addFnAttr(IR::FuncAttr::isProgramEntry);
     } else if (curr_insts.empty() || curr_insts.back()->getOpcode() != IR::OP::RET) {
         if (ret_type == IR::IRBTYPE::VOID)
             curr_insts.emplace_back(std::make_shared<IR::RETInst>());

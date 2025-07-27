@@ -9,6 +9,7 @@
 #include "../../../../include/ir/instructions/memory.hpp"
 #include "../../../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
+#include "../../../../include/ir/passes/transforms/memoization.hpp"
 #include "../../../../include/utils/logger.hpp"
 
 #include <algorithm>
@@ -250,15 +251,13 @@ ModRefInfo BasicAAResult::getFunctionModRefInfo() const {
         return ModRefInfo::ModRef;
 
     size_t real_read = std::count_if(read.begin(), read.end(), [](auto &p) {
-        if (p->template is<GlobalVariable>() &&
-            Util::beginsWith(p->getName(), Config::IR::MEMOIZATION_LUT_NAME_PREFIX))
+        if (auto memo = p->attr().template get<MemoAttrs>(); memo && memo->has(MemoAttr::LUT))
             return false;
         return true;
     });
 
     size_t real_write = std::count_if(write.begin(), write.end(), [](auto &p) {
-        if (p->template is<GlobalVariable>() &&
-            Util::beginsWith(p->getName(), Config::IR::MEMOIZATION_LUT_NAME_PREFIX))
+        if (auto memo = p->attr().template get<MemoAttrs>(); memo && memo->has(MemoAttr::LUT))
             return false;
         return true;
     });
@@ -414,17 +413,17 @@ BasicAAResult BasicAliasAnalysis::run(Function &func, FAM &fam) {
                         res.has_sylib_call |= callee_aa.has_sylib_call;
                     }
                 } else {
-                    Err::gassert(!callee->hasAttr(FuncAttr::NotBuiltin), "Not builtin but has no definition");
+                    Err::gassert(!callee->hasFnAttr(FuncAttr::NotBuiltin), "Not builtin but has no definition");
 
-                    if (callee->hasAttr(FuncAttr::isSylib))
+                    if (callee->hasFnAttr(FuncAttr::isSylib))
                         res.has_sylib_call = true;
 
-                    if (!callee->hasAttr(FuncAttr::builtinMemReadOnly) &&
-                        !callee->hasAttr(FuncAttr::builtinMemWriteOnly))
+                    if (!callee->hasFnAttr(FuncAttr::builtinMemReadOnly) &&
+                        !callee->hasFnAttr(FuncAttr::builtinMemWriteOnly))
                         continue;
 
                     // For memcpy intrinsic, a more precise analysis is available.
-                    if (callee->hasAttr(FuncAttr::isMemcpyIntrinsic)) {
+                    if (callee->hasFnAttr(FuncAttr::isMemcpyIntrinsic)) {
                         auto actual_args = call->getArgs();
                         auto dest = actual_args[0].get();
                         auto src = actual_args[1].get();
@@ -438,7 +437,7 @@ BasicAAResult BasicAliasAnalysis::run(Function &func, FAM &fam) {
                                 mayalias->getVTrait() == ValueTrait::FORMAL_PARAMETER)
                                 res.write.insert(mayalias);
                         }
-                    } else if (callee->hasAttr(FuncAttr::builtinMemWriteOnly)) {
+                    } else if (callee->hasFnAttr(FuncAttr::builtinMemWriteOnly)) {
                         auto actual_args = call->getArgs();
                         for (const auto &actual : actual_args) {
                             if (actual->getType()->getTrait() == IRCTYPE::PTR) {
@@ -449,7 +448,7 @@ BasicAAResult BasicAliasAnalysis::run(Function &func, FAM &fam) {
                                 }
                             }
                         }
-                    } else if (callee->hasAttr(FuncAttr::builtinMemReadOnly)) {
+                    } else if (callee->hasFnAttr(FuncAttr::builtinMemReadOnly)) {
                         auto actual_args = call->getArgs();
                         for (const auto &actual : actual_args) {
                             if (actual->getType()->getTrait() == IRCTYPE::PTR) {
