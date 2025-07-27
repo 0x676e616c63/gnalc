@@ -68,7 +68,7 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                         if (load->getType()->is<BType>()) {
                             if (auto call = (*inst_rit)->as<CALLInst>()) {
                                 if (call->getFunc()->isIntrinsic() &&
-                                    call->getFunc()->hasAttr(FuncAttr::isMemsetIntrinsic)) {
+                                    call->getFunc()->hasFnAttr(FuncAttr::isMemsetIntrinsic)) {
                                     if (load->getType()->as<BType>()->getInner() == IRBTYPE::I32)
                                         load->replaceSelf(function.getConst(0));
                                     else
@@ -179,7 +179,7 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                                 if (load->getType()->is<BType>()) {
                                     if (auto call = inst->as<CALLInst>()) {
                                         if (call->getFunc()->isIntrinsic() &&
-                                            call->getFunc()->hasAttr(FuncAttr::isMemsetIntrinsic)) {
+                                            call->getFunc()->hasFnAttr(FuncAttr::isMemsetIntrinsic)) {
                                             candidates.emplace_back(inst);
                                             break;
                                         }
@@ -310,7 +310,7 @@ PM::PreservedAnalyses LoadEliminationPass::run(Function &function, FAM &fam) {
                                      "''s value.");
                 } else if (auto target_call = target->as<CALLInst>()) {
                     Err::gassert(load->getType()->is<BType>() && target_call->getFunc()->isIntrinsic() &&
-                                 target_call->getFunc()->hasAttr(FuncAttr::isMemsetIntrinsic));
+                                 target_call->getFunc()->hasFnAttr(FuncAttr::isMemsetIntrinsic));
                     if (load->getType()->as<BType>()->getInner() == IRBTYPE::I32)
                         load->replaceSelf(function.getConst(0));
                     else

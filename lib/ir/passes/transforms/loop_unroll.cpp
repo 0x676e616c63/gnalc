@@ -178,6 +178,48 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
         return true;
     };
 
+    auto MaybeVectorized = [](const pLoop& loop) -> bool {
+        for (auto b : loop->blocks()) {
+            for (const auto& i : b->getInsts()) {
+                if (i->getOpcode() == OP::STORE) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+
+    auto calcUnrollFactor = [MaybeVectorized](const pLoop &_loop, const unsigned size, const unsigned MaxSize,
+                                              const unsigned MaxCount) -> int {
+        unsigned unroll_factor;
+        if (MaybeVectorized(_loop)) {
+            if (const auto estimated = MaxSize / size; estimated <= MaxCount) {
+                if (estimated <= 2)
+                    unroll_factor = estimated;
+                else if (estimated <= 5)
+                    unroll_factor = 4;
+                else if (estimated <= 8)
+                    unroll_factor = 8;
+                // else if (esti <= 14)
+                //     unroll_factor = 12;
+                // else if (esti <= 16)
+                //     unroll_factor = 16;
+                else {
+                    unroll_factor = estimated / 4 * 4;
+                }
+                Logger::logDebug("[LoopUnroll] May be vectorized, change factor, estimated: " + std::to_string(estimated)
+                    , ", use: " + std::to_string(unroll_factor));
+            } else {
+                unroll_factor = MaxCount;
+                Logger::logDebug("[LoopUnroll] May be vectorized, estimated factor >= MaxCount, use MaxCount.");
+            }
+        } else {
+            unroll_factor = std::min(MaxSize / size, MaxCount);
+            Logger::logDebug("[LoopUnroll] Can't be vectorized, use plain factor.");
+        }
+        return static_cast<int>(unroll_factor);
+    };
+
     if (trip_countE->isIRValue() && trip_countE->getIRValue()->is<ConstantInt>()) {
         // 常量展开策略
         const auto trip_countN = trip_countE->getIRValue()->as<ConstantInt>()->getVal();
@@ -200,9 +242,9 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
 
         // For partially unroll
         if (ENABLE_PARTIALLY_UNROLL) {
-            // TODO: May need optimize: 4n?
             // Calculate unroll factor
-            auto unroll_factor = std::min(PUS / inst_size, PUC);
+            auto unroll_factor = calcUnrollFactor(loop, inst_size, PUS, PUC);
+
             if (unroll_factor < 2) {
                 Logger::logInfo("[LoopUnroll] Partially unroll disabled because the unroll_factor is less than 2.");
                 option.disable();
@@ -301,13 +343,14 @@ void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &
         // 变量展开策略
         if (ENABLE_RUNTIME_UNROLL) {
             // Calculate unroll factor
-            int unroll_factor = static_cast<int>(std::min(RUS / inst_size, RUC));
+            int unroll_factor = calcUnrollFactor(loop, inst_size, RUS, RUC);
+
             if (unroll_factor < 2) {
                 Logger::logInfo("[LoopUnroll] Runtime unroll disabled because the unroll_factor is less than 2.");
                 option.disable();
                 return;
             }
-            Logger::logDebug("[LoopUnroll] Runtime unrolling: factor: " + std::to_string(unroll_factor));
+            Logger::logInfo("[LoopUnroll] Runtime unrolling: factor: " + std::to_string(unroll_factor));
             auto unroll_factorV = FC.getConst(unroll_factor);
 
             // Get boundary and iter variable
@@ -435,6 +478,27 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
 
     if (!loop->getLatch()) {
         return false;
+    }
+
+    // Check Attr
+    if (auto unroll_attrs = loop->getHeader()->attr().get<UnrollAttrs>(); unroll_attrs != nullptr) {
+        if (option.fully()) {
+            // No check, fully unroll all.
+        } else if (option.partially() && !option.has_remainder) {
+            // No check, unroll all.
+        } else if (option.partially() && option.has_remainder) {
+            // Just unroll no-rem
+            if (!unroll_attrs->has(UnrollAttr::NoRem)) {
+                Logger::logInfo("[LoopUnroll] Unroll disabled because the loop has been unrolled while it has remainder.");
+                return false;
+            }
+        } else if (option.runtime()) {
+            // Just unroll no-rem
+            if (!unroll_attrs->has(UnrollAttr::NoRem)) {
+                Logger::logInfo("[LoopUnroll] Unroll disabled because the loop has been unrolled while it has remainder.");
+                return false;
+            }
+        }
     }
 
     // !hasAddressTaken()
@@ -974,6 +1038,42 @@ bool LoopUnrollPass::unroll(const pLoop &loop, const UnrollOption &option, Funct
             phi->delPhiOperByBlock(latch);
         } else {
             Err::unreachable();
+        }
+    }
+
+    // Set block attr
+    auto setUnrollAttr = [](const pB &block, const int setmode) {
+        UnrollAttrs unroll_attrs{UnrollAttr::Unrolled};
+        switch (setmode) {
+            case 0:
+                break;
+            case 1:
+                unroll_attrs.set(UnrollAttr::NoRem);
+                break;
+            case 2:
+                unroll_attrs.set(UnrollAttr::RemBlock);
+                break;
+            default:
+                Err::unreachable();
+            }
+        auto attrs = block->attr();
+        attrs.remove<UnrollAttrs>(); // clear old
+        attrs.add(unroll_attrs);
+    };
+    for (int i = 0; i < count; i++) { // Main loop
+        if (!option.fully()) {
+            for (auto &b : blocks) {
+                setUnrollAttr(BMap[b][count], option.has_remainder ? 0 : 1);
+            }
+        }
+    }
+    if (!option.fully() && option.has_remainder) { // Rem Loop
+        for (auto &b : blocks) {
+            setUnrollAttr(BMap[b][count], 2);
+        }
+        if (option.runtime()) {
+            setUnrollAttr(option.prologue, 0);
+            setUnrollAttr(option.epilogue, 0);
         }
     }
 

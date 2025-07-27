@@ -262,6 +262,11 @@ void register_gnalc2_fixed() {
     BenchmarkRegistry::register_benchmark("gnalc2_fixed", entry);
 }
 
+void register_gnalc2_fixed_no_vectorizer() {
+    auto entry = gnalc2_register_helper("-fixed-point --no-vectorizer");
+    BenchmarkRegistry::register_benchmark("gnalc2_fixed_no_vectorizer", entry);
+}
+
 void register_gnalc2_loadEli_w0() {
     auto entry = gnalc2_register_helper("-O1 -loadEli=60");
     BenchmarkRegistry::register_benchmark("gnalc2_loadEli_w0", entry);
@@ -317,5 +322,7 @@ void Test::register_all_benchmarks() {
     register_gnalc_fuzz5();
     register_gnalc_fuzz10();
     register_gnalc_fuzz100();
+
     register_gnalc2_fixed();
+    register_gnalc2_fixed_no_vectorizer();
 }

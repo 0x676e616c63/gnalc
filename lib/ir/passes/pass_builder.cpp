@@ -165,6 +165,7 @@ auto make_cfg_clean(const PMOptions& options) {
 
 auto make_mem_clean(const PMOptions& options) {
     PM::FixedPointPM<Function> fpm;
+    // fpm.addPass(PrintFunctionPass(std::cerr));
     FUNCTION_TRANSFORM(loadelim, LoadEliminationPass());
     FUNCTION_TRANSFORM(dse, DSEPass());
     return fpm;
@@ -277,11 +278,12 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions& options) {
     fpm.addPass(make_memo(options));
     fpm.addPass(make_arithmetic(options));
     fpm.addPass(make_loop(options));
-    fpm.addPass(make_fast_clean(options));
+    // Loop pass can expose many optimization opportunities, a deep clean after them is needed.
+    fpm.addPass(make_deep_clean(options));
     fpm.addPass(make_vectorizer(options));
     fpm.addPass(make_fast_clean(options));
 
-    // Sink can cause more register spill. But I have no idea why.
+    // Sink can cause more register spill. Though I have no idea why.
     // FUNCTION_TRANSFORM(code_sink, CodeSinkPass())
 
     // Note:

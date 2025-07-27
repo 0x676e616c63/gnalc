@@ -26,9 +26,9 @@
 #include "mir/passes/transforms/scheduling.hpp"
 #include "mir/passes/transforms/stackgenerate.hpp"
 #include "mir/passes/transforms/tro.hpp"
+#include "mir/passes/transforms/CopyPropagation.hpp"
 
 // Utilities
-#include "mir/passes/transforms/RVLoadZeroEli.hpp"
 #include "mir/passes/utilities/mirprinter.hpp"
 
 namespace MIR {
@@ -65,12 +65,11 @@ MPM PassBuilder::buildModuleDebugPipeline() {
 
 FPM buildRV64FunctionPipeline(OptInfo opt_info) {
     FPM fpm;
-    // fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(ISel());
-    // fpm.addPass(RVLoadZeroEli());
     // fpm.addPass(RedundantLoadEli());
     fpm.addPass(PreRAlegalize());
     fpm.addPass(MachineLICMPass());
+//     fpm.addPass(CopyPropagation());
     fpm.addPass(RegisterAlloc());
     fpm.addPass(GenericPeephole(GenericPeephole::AfterRa));
     fpm.addPass(StackGenerate());

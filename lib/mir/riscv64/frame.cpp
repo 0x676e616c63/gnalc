@@ -12,14 +12,14 @@ void RVFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) cons
     auto callee = callinst->getFunc();
 
     using Attr = IR::FuncAttr;
-    if (callee->hasAttr(Attr::isMemsetIntrinsic) || callee->hasAttr(Attr::isMemcpyIntrinsic))
+    if (callee->hasFnAttr(Attr::isMemsetIntrinsic) || callee->hasFnAttr(Attr::isMemcpyIntrinsic))
         Err::not_implemented("This should be handled by LowerIntrinsicsPass in IR");
-    if (callee->hasAttr(Attr::isSIMDIntrinsic))
+    if (callee->hasFnAttr(Attr::isSIMDIntrinsic))
         Err::todo("handleCallEntry: simd todo");
 
     // parallel/atomic here ...
 
-    auto mcallee = callee->hasAttr(Attr::isSylib) || callee->hasAttr(Attr::ParallelEntry)
+    auto mcallee = callee->hasFnAttr(Attr::isSylib) || callee->hasFnAttr(Attr::ParallelEntry)
                        ? handleLib(callinst, ctx)
                        : ctx.mapGlobal(callee->getName());
     auto mcaller = ctx.CurrentBlk()->getFunction();
