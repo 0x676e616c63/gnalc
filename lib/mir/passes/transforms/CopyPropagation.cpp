@@ -52,7 +52,7 @@ void dumpInfo(const BBInfo &info) {
 
 void removeFromSet(CopySet &S, unsigned dest) {
     for (auto it = S.begin(); it != S.end();) {
-        if (it->dest == dest)
+        if (it->dest == dest || it->src == dest)
             it = S.erase(it);
         else
             ++it;
@@ -180,10 +180,10 @@ void processFunction(MIRFunction &func, Liveness &liveness) {
         }
     } while (changed);
 
-    // for (auto &bb : func.blks()) {
-    //     std::cerr << "Block: " << bb->getmSym() << "\n";;
-    //     dumpInfo(bbinfo[bb]);
-    // }
+    for (auto &bb : func.blks()) {
+        std::cerr << "Block: " << bb->getmSym() << "\n";;
+        dumpInfo(bbinfo[bb]);
+    }
 
     for (const auto &bb : func.blks())
         applyPropagation(bb, bbinfo[bb].IN, liveness.instLiveOut);
