@@ -23,6 +23,7 @@ MIROperand_p MIR::vector_flatting(const IR::pVal &ir_vector, LoweringContext &ct
 
     auto liter_op = ctx.newLiteral(literal, size, 16, type);
     MIROperand_p load_op = ctx.newVReg(type);
+    load_op->setUseTrait(MIROperand::usage::StoreConst);
 
     ctx.newInst(MIRInst::make(OpC::InstLoadLiteral)
                     ->setOperand<0>(load_op, ctx.CodeGenCtx())
@@ -131,6 +132,7 @@ void MIR::lowerInst_v(const IR::pExtract &extract, LoweringContext &ctx) {
 
 void MIR::lowerInst_v(const IR::pInsert &insert, LoweringContext &ctx) {
 
+    // LAMBDA BEGIN
     auto is_const_vector = [&](const IR::pVal &vec) {
         if (vec->as<IR::ConstantIntVector>() || vec->as<IR::ConstantFloatVector>()) {
             return true;
@@ -159,6 +161,7 @@ void MIR::lowerInst_v(const IR::pInsert &insert, LoweringContext &ctx) {
 
         return true;
     };
+    // LAMBDA END
 
     if (ctx.CodeGenCtx().isARMv8()) {
 

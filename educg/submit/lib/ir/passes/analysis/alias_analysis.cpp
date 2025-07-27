@@ -19,12 +19,12 @@ RWInfo getCallRWInfo(FAM &fam, CALLInst *call) {
     auto callee_def = callee->as_raw<Function>();
 
     // For parallel entry function, analyze the parallel body.
-    if (callee->hasAttr(FuncAttr::ParallelEntry)) {
+    if (callee->hasFnAttr(FuncAttr::ParallelEntry)) {
         Err::gassert(callee_def == nullptr);
         auto args = call->getArgs();
         for (const auto& arg : args) {
             if (auto parallel_body = arg->as_raw<Function>()) {
-                Err::gassert(parallel_body->hasAttr(FuncAttr::ParallelBody));
+                Err::gassert(parallel_body->hasFnAttr(FuncAttr::ParallelBody));
                 callee_def = parallel_body;
             }
         }
@@ -32,10 +32,10 @@ RWInfo getCallRWInfo(FAM &fam, CALLInst *call) {
     }
 
     if (callee_def == nullptr) {
-        Err::gassert(!callee->hasAttr(FuncAttr::NotBuiltin), "Not builtin but has no definition");
+        Err::gassert(!callee->hasFnAttr(FuncAttr::NotBuiltin), "Not builtin but has no definition");
 
         // For memcpy intrinsic, a more precise analysis is available.
-        if (callee->hasAttr(FuncAttr::isMemcpyIntrinsic)) {
+        if (callee->hasFnAttr(FuncAttr::isMemcpyIntrinsic)) {
             auto actual_args = call->getArgs();
             auto dest = actual_args[0].get();
             auto src = actual_args[1].get();
@@ -49,16 +49,16 @@ RWInfo getCallRWInfo(FAM &fam, CALLInst *call) {
                 arg_ptrs.emplace_back(r.get());
         }
 
-        if (callee->hasAttr(FuncAttr::builtinMemWriteOnly))
+        if (callee->hasFnAttr(FuncAttr::builtinMemWriteOnly))
             return {.read = {}, .write = arg_ptrs, .untracked = false};
 
-        if (callee->hasAttr(FuncAttr::builtinMemReadOnly))
+        if (callee->hasFnAttr(FuncAttr::builtinMemReadOnly))
             return {.read = arg_ptrs, .write = {}, .untracked = false};
 
-        if (callee->hasAttr(FuncAttr::builtinMemReadWrite))
+        if (callee->hasFnAttr(FuncAttr::builtinMemReadWrite))
             return {.read = arg_ptrs, .write = arg_ptrs, .untracked = false};
 
-        if (!callee->hasAttr(FuncAttr::builtinMemReadOnly) && !callee->hasAttr(FuncAttr::builtinMemWriteOnly))
+        if (!callee->hasFnAttr(FuncAttr::builtinMemReadOnly) && !callee->hasFnAttr(FuncAttr::builtinMemWriteOnly))
             return {};
 
         return {.untracked = true};
@@ -104,7 +104,7 @@ bool isPure(FAM &fam, FunctionDecl *decl) {
     auto guard = Logger::scopeDisable();
 
     // Recognized pure functions
-    if (decl->hasAttr(FuncAttr::isSIMDIntrinsic))
+    if (decl->hasFnAttr(FuncAttr::isSIMDIntrinsic))
         return true;
 
     auto callee_def = decl->as_raw<Function>();
@@ -131,7 +131,7 @@ bool hasSideEffect(FAM &fam, FunctionDecl *decl) {
     auto guard = Logger::scopeDisable();
 
     // Recognized pure functions
-    if (decl->hasAttr(FuncAttr::isSIMDIntrinsic))
+    if (decl->hasFnAttr(FuncAttr::isSIMDIntrinsic))
         return false;
 
     auto callee_def = decl->as_raw<Function>();
@@ -202,6 +202,54 @@ bool hasSideEffect(FAM &fam, const Loop *loop) {
     return false;
 }
 bool hasSideEffect(FAM &fam, const pLoop &loop) { return hasSideEffect(fam, loop.get()); }
+
+
+bool hasSideEffect(FAM &fam, Instruction *inst) {
+    switch (inst->getOpcode()) {
+        case OP::FNEG:
+        case OP::ADD:
+        case OP::FADD:
+        case OP::SUB:
+        case OP::FSUB:
+        case OP::MUL:
+        case OP::FMUL:
+        case OP::DIV:
+        case OP::FDIV:
+        case OP::SREM:
+        case OP::UREM:
+        case OP::FREM:
+        case OP::SHL:
+        case OP::LSHR:
+        case OP::ASHR:
+        case OP::AND:
+        case OP::OR:
+        case OP::XOR:
+        case OP::GEP:
+        case OP::FPTOSI:
+        case OP::SITOFP:
+        case OP::ZEXT:
+        case OP::SEXT:
+        case OP::BITCAST:
+        case OP::PTRTOINT:
+        case OP::INTTOPTR:
+        case OP::ICMP:
+        case OP::FCMP:
+        case OP::SELECT:
+        case OP::EXTRACT:
+        case OP::INSERT:
+        case OP::SHUFFLE:
+            return false;
+        case OP::CALL:
+            return hasSideEffect(fam, inst->as<CALLInst>());
+        default:
+            return true;
+    }
+    return true;
+}
+
+bool hasSideEffect(FAM &fam, const pInst &inst) {
+    return hasSideEffect(fam, inst.get());
+}
 
 pVal getMemLocation(Value *i) {
     if (auto load = i->as_raw<LOADInst>())

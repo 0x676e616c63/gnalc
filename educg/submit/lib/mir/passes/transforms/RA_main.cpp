@@ -13,10 +13,10 @@ PM::PreservedAnalyses RegisterAlloc::run(MIRFunction &mfunc, FAM &fam) {
     mfunc.calleeSaveRegs() = mfunc.Context().registerInfo->initCalleeSaveBitmap();
 
     VectorRegisterAllocImpl vectorRA;
-    vectorRA.impl(mfunc, fam);
+    vectorRA.impl(mfunc, fam, dmpConflictMap);
 
     RegisterAllocImpl coreRA;
-    coreRA.impl(mfunc, fam);
+    coreRA.impl(mfunc, fam, dmpConflictMap);
 
     return PM::PreservedAnalyses::all();
 }
@@ -47,14 +47,16 @@ void RegisterAllocImpl::clearall() {
     alias.clear();
     colors.clear();
     spilltimes = 0;
+    reloadtimes = 0;
     isInitialized = false;
     GeneratedBySpill.clear();
 }
 
-void RegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
+void RegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam, unsigned _dmpConflictMap) {
     mfunc = &_mfunc;
     registerInfo = mfunc->Context().registerInfo;
     frameInfo = mfunc->Context().frameInfo;
+    dmpConflictMap = _dmpConflictMap;
 
     clearall();
 
@@ -67,7 +69,8 @@ void RegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     auto &spilled = mfunc->spill();
     spilled += spilltimes;
 
-    Logger::logInfo("RegisterAllocImpl: " + mfunc->getName() + " spilled times: " + std::to_string(spilltimes));
+    Logger::logInfo("RegisterAllocImpl: " + mfunc->getName() + " spilled times: " + std::to_string(spilltimes) +
+                    " reload times: " + std::to_string(reloadtimes));
 }
 
 void RegisterAllocImpl::Main(FAM &fam) {
@@ -190,15 +193,10 @@ void RegisterAllocImpl::Build() {
 }
 
 void RegisterAllocImpl::MkWorkList() {
+    dmpMap();
+
     for (auto it = initial.begin(); it != initial.end();) {
         const auto n = *it;
-
-        it = std::next(it);
-        delBySet(initial, WorkList{n});
-
-        if (!isVirtualReg(n->getRecover()) || n->isStack()) {
-            continue;
-        }
 
         if (degree[n] >= K) {
             addBySet(spillWorkList, WorkList{n});
@@ -207,6 +205,9 @@ void RegisterAllocImpl::MkWorkList() {
         } else if (isCore(n)) {
             addBySet(simplifyWorkList, WorkList{n});
         }
+
+        it = std::next(it);
+        delBySet(initial, WorkList{n});
     }
 }
 
@@ -590,10 +591,11 @@ MIROperand_p RegisterAllocImpl::GetAlias(MIROperand_p n) { // NOLINT
     return n;
 }
 
-void VectorRegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
+void VectorRegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam, unsigned _dmpConflictMap) {
     mfunc = &_mfunc;
     registerInfo = mfunc->Context().registerInfo;
     frameInfo = mfunc->Context().frameInfo;
+    dmpConflictMap = _dmpConflictMap;
 
     clearall();
 
@@ -605,7 +607,8 @@ void VectorRegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     auto &spilled = mfunc->spill();
     spilled += spilltimes;
 
-    Logger::logInfo("VectorRegisterAllocImpl: " + mfunc->getName() + " spilled times: " + std::to_string(spilltimes));
+    Logger::logInfo("VectorRegisterAllocImpl: " + mfunc->getName() + " spilled times: " + std::to_string(spilltimes) +
+                    " reload times: " + std::to_string(reloadtimes));
 }
 
 void VectorRegisterAllocImpl::Build() {
@@ -640,7 +643,7 @@ void VectorRegisterAllocImpl::Build() {
         auto live = liveinfo.liveOut[blk];
 
         for (auto it = live.begin(); it != live.end();) {
-            if (isCore(*it)) {
+            if (isCore(*it) || (*it)->isStack()) {
                 it = live.erase(it);
             } else {
                 ++it;
@@ -680,6 +683,8 @@ void VectorRegisterAllocImpl::Build() {
 }
 
 void VectorRegisterAllocImpl::MkWorkList() {
+    dmpMap();
+
     for (auto it = initial.begin(); it != initial.end();) {
         const auto n = *it;
 

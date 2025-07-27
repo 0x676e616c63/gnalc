@@ -227,7 +227,7 @@ PM::PreservedAnalyses DSEPass::run(Function &function, FAM &fam) {
     std::unordered_set<pInst> unused_mem;
     for (const auto &inst : *entry_block) {
         if (auto call = inst->as<CALLInst>()) {
-            if (call->getFunc()->hasAttr(FuncAttr::isMemsetIntrinsic)) {
+            if (call->getFunc()->hasFnAttr(FuncAttr::isMemsetIntrinsic)) {
                 auto ptr = call->getArgs()[0];
                 Err::gassert(ptr->getType()->is<PtrType>());
                 if (ptr->getUseCount() != 1)

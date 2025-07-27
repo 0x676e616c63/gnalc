@@ -5,8 +5,13 @@
 #include "../../../../include/mir/info.hpp"
 #include "../../../../include/mir/passes/transforms/RA.hpp"
 #include "../../../../include/mir/tools.hpp"
+#include "../../../../include/utils/exception.hpp"
 #include <algorithm>
+#include <iostream>
 #include <iterator>
+#include <list>
+#include <optional>
+#include <string>
 
 using namespace MIR;
 
@@ -81,14 +86,18 @@ MIROperand_p RegisterAllocImpl::heuristicSpill() {
     const int64_t Weight_ref_cnt = -15;
     const int64_t extra_Weight_ForNotPtr = 60;
     const int64_t extra_Weight_ForSpilled = -1000000;
+    const int64_t extra_Weight_ForConstValue = 100000;
 
-    int64_t weight_max = -std::numeric_limits<int64_t>::infinity();
+    int64_t weight_max = std::numeric_limits<int64_t>::min();
     MIROperand_p spilled = nullptr;
     for (const auto &op : spillWorkList) {
         int64_t weight = 0;
 
         if (GeneratedBySpill.count(op))
             weight += extra_Weight_ForSpilled;
+
+        if (op->getUseTrait() == MIROperand::usage::StoreConst)
+            weight += extra_Weight_ForConstValue;
 
         weight += liveinfo.intervalLengths[op] * Weight_IntervalLength; // narrowing convert here
 
@@ -115,6 +124,17 @@ MIROperand_p RegisterAllocImpl::heuristicSpill() {
 }
 
 RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
+
+    if (mop->getUseTrait() == MIROperand::usage::StoreConst) {
+        ++reloadtimes;
+        return reloadConstVal(mop);
+    } else {
+        ++spilltimes;
+        return spillToMem(mop);
+    }
+}
+
+RegisterAllocImpl::Nodes RegisterAllocImpl::spillToMem(const MIROperand_p &mop) {
     auto &ctx = mfunc->Context();
 
     auto getSize = [](OpT type) {
@@ -136,8 +156,6 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
             return 4;
         }
     };
-
-    ++spilltimes;
 
     auto mtype = mop->type();
     auto stkobj = mfunc->addStkObj(mfunc->Context(), getSize(mtype), getSize(mtype), 0, StkObjUsage::Spill);
@@ -185,6 +203,74 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
     }
 
     return {replace};
+}
+
+RegisterAllocImpl::Nodes RegisterAllocImpl::reloadConstVal(const MIROperand_p &mop) {
+    auto &ctx = mfunc->Context();
+    auto mtype = mop->type();
+    Nodes staged{};
+
+    std::list<MIRInst_p> load_template{};
+    for (auto &mblk : mfunc->blks()) {
+
+        auto &minsts = mblk->Insts();
+        for (auto it = minsts.begin(); it != minsts.end();) {
+
+            if (mop != (*it)->getDef()) {
+                ++it;
+                continue;
+            }
+
+            load_template.emplace_back(*it); // 按次序遍历应该能保证movz movk 的顺序
+            minsts.erase(it++);
+        }
+
+        if (!load_template.empty()) {
+            continue;
+        }
+    }
+
+    if (load_template.empty()) {
+        return staged; // thanks to not SSA, sometimes wont find def insts
+    }
+
+    for (auto &mblk : mfunc->blks()) {
+
+        auto &minsts = mblk->Insts();
+        for (auto it = minsts.begin(); it != minsts.end(); ++it) {
+            auto &minst = *it;
+            auto &ops = minst->operands();
+
+            std::optional<MIROperand_p> replace = std::nullopt;
+            for (auto it_op = std::next(ops.begin()); it_op != ops.end(); ++it_op) {
+                if (*it_op != mop) {
+                    continue;
+                }
+
+                if (replace) {
+                    *it_op = *replace;
+                    continue;
+                }
+
+                replace = std::optional(MIROperand::asVReg(ctx.nextId(), mtype));
+                (*replace)->setUseTrait(MIROperand::usage::StoreConst);
+                staged.emplace(*replace);
+
+                std::list<MIRInst_p> loads = {}; // need clone
+
+                std::for_each(load_template.begin(), load_template.end(), [&](const MIRInst_p &load) {
+                    auto load_instance = load->clone();
+                    load_instance->setOperand<0>(*replace, ctx);
+                    loads.emplace_back(load_instance);
+                });
+
+                minsts.splice(it, loads);
+                *it_op = *replace;
+            }
+        }
+    }
+
+    return staged;
 }
 
 bool VectorRegisterAllocImpl::isMoveInstruction(const MIRInst_p &minst) {
@@ -250,4 +336,40 @@ RegisterAllocImpl::Nodes VectorRegisterAllocImpl::getDef(const MIRInst_p &minst)
     }
 
     return defs;
+}
+
+void RegisterAllocImpl::dmpMap() {
+
+    if (dmpConflictMap == 0) {
+        return;
+    }
+    --dmpConflictMap;
+
+    auto node_info = [](const MIROperand_p &op) {
+        string str{};
+
+        if (op->isVReg()) {
+            str += "VReg(";
+            str += std::to_string(op->getRecover() - MIR::VRegBegin) + ')';
+        } else if (op->isImme()) {
+            str += "Imme(";
+            str += std::to_string(op->imme()) + ')';
+        } else if (op->isISA()) {
+            str += "ISAReg(";
+            str += std::to_string(op->isa()) + ')';
+        } else if (op->stkobj()) {
+            str += "Stk(";
+            str += std::to_string(op->getRecover() - MIR::StkObjBegin) + ')';
+        } else {
+            str += "Misc(?)";
+        }
+
+        return str;
+    };
+
+    for (const auto &[node, adjset] : adjList) {
+        writeln(node_info(node), " : ", degree[node]);
+        std::for_each(adjset.begin(), adjset.end(), [&](const auto &adj_node) { write(node_info(adj_node), ' '); });
+        writeln("");
+    }
 }

@@ -18,6 +18,9 @@ struct OptInfo {
     bool CFGsimplifyAfterRa;
     bool PostRaScheduling;
     bool machineLICM;
+
+    size_t redundantLoadEli_weight = 60;
+    unsigned registeralloc_dmp_times = 0;
 };
 
 extern const OptInfo o1_opt_info;
@@ -33,5 +36,5 @@ public:
     static void registerFunctionAnalyses(FAM &);
     static void registerProxies(FAM &, MAM &);
 };
-} // namespace MIR_new
+} // namespace MIR
 #endif

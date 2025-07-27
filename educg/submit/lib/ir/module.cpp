@@ -92,15 +92,15 @@ pFuncDecl Module::lookupFunction(const std::string &name) const {
 std::vector<pFuncDecl> Module::lookupFunction(FuncAttr attr) const {
     std::vector<pFuncDecl> ret;
     for (const auto &func_decl : func_decls) {
-        if (func_decl->hasAttr(attr))
+        if (func_decl->hasFnAttr(attr))
             ret.emplace_back(func_decl);
     }
     for (const auto &func : funcs) {
-        if (func->hasAttr(attr))
+        if (func->hasFnAttr(attr))
             ret.emplace_back(func);
     }
     for (const auto &func : linear_funcs) {
-        if (func->hasAttr(attr))
+        if (func->hasFnAttr(attr))
             ret.emplace_back(func);
     }
     return ret;
@@ -150,8 +150,8 @@ size_t Module::getInstCount() const {
 std::set<Runtime::RtType> Module::getRuntimeTypes() const {
     std::set<Runtime::RtType> ret;
     for (const auto &func_decl : func_decls) {
-        if (func_decl->hasAttr(FuncAttr::ParallelEntry) || func_decl->hasAttr(FuncAttr::isAtomicAddI32) ||
-            func_decl->hasAttr(FuncAttr::isAtomicAddF32)) {
+        if (func_decl->hasFnAttr(FuncAttr::ParallelEntry) || func_decl->hasFnAttr(FuncAttr::isAtomicAddI32) ||
+            func_decl->hasFnAttr(FuncAttr::isAtomicAddF32)) {
             if (func_decl->getUseCount() != 0)
                 ret.emplace(Runtime::RtType::Thread);
         }

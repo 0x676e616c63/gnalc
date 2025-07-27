@@ -209,7 +209,7 @@ bool isSafeToMemoize(Function &func, FAM& fam) {
         }
     }
 
-    // If there is only one (or none) recursive calls, there is definitely no overlapping subproblems.
+    // If there is only one (or none) recursive calls, there is no overlapping subproblems.
     // In that case, memoization would only add lookup overhead without improving performance.
     if (call_cnt < 2)
         return false;
@@ -266,6 +266,7 @@ PM::PreservedAnalyses MemoizePass::run(Function &function, FAM &fam) {
     auto lut = std::make_shared<GlobalVariable>(
         STOCLASS::GLOBAL, lut_type,
         std::string{Config::IR::MEMOIZATION_LUT_NAME_PREFIX} + "." + function.getName().substr(1), GVIniter(lut_type));
+    lut->attr().add(MemoAttrs{MemoAttr::LUT});
     auto module = function.getParent();
     module->addGlobalVar(lut);
 

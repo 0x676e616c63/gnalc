@@ -35,6 +35,17 @@ public:
     virtual bool isTypeSupported(const pType &type) const = 0;
     virtual bool isIntrinsicSupported(const std::string &lib_fn_name) const = 0;
 
+    // Threshold
+    virtual size_t getInternalizeSizeThreshold () const = 0;
+
+    struct InlineThreshold {
+        size_t recursion_expand_max_inst;
+        size_t call_points;
+        size_t inst_threshold;
+    };
+    virtual const InlineThreshold& getInlineThreshold() const = 0;
+
+
     // Convenient wrappers
     bool isVectorSupported() {
         return isInstSupported(OP::INSERT) && isInstSupported(OP::EXTRACT) && isInstSupported(OP::SHUFFLE);
@@ -46,12 +57,10 @@ public:
     bool isSelectSupported() { return isInstSupported(OP::SELECT); }
     bool isTypeSupported(IRBTYPE btype) { return isTypeSupported(makeBType(btype)); }
 
-    // Vector is not required
-    virtual size_t getMaxVectorRegisterSize() const { Err::not_implemented(); }
-    virtual size_t getMinVectorRegisterSize() const { Err::not_implemented(); }
-
     // Below is required iff `isVectorSupported() == true`
     virtual bool canVectorize(OP op) const { Err::not_implemented(); }
+    virtual size_t getMaxVectorRegisterSize() const { Err::not_implemented(); }
+    virtual size_t getMinVectorRegisterSize() const { Err::not_implemented(); }
     virtual int getVecInstCost(OP op, const pVecType &ty, size_t index) const { Err::not_implemented(); }
     virtual int getShuffleCost(const pVecType &ty, ShuffleKind kind) const { Err::not_implemented(); }
     virtual int getCastCost(OP op, const pType &src, const pType &dest) const { Err::not_implemented(); }

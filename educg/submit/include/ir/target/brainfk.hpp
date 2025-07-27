@@ -16,6 +16,19 @@ public:
     bool isInstSupported(OP op) const override { return true; }
     bool isTypeSupported(const pType &type) const override { return true; }
     bool isIntrinsicSupported(const std::string &lib_fn_name) const override { return true; }
+
+    size_t getInternalizeSizeThreshold() const override {
+        return 0;
+    }
+
+    const InlineThreshold& getInlineThreshold() const override {
+        static const InlineThreshold ret = {
+            .recursion_expand_max_inst = 0,
+            .call_points = 0,
+            .inst_threshold = 0,
+        };
+        return ret;
+    }
 };
 } // namespace IR
 #endif //TARGET_HPP

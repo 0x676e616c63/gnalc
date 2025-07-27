@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 #include "../../../../include/ir/passes/transforms/internalize.hpp"
+#include "../../../../include/config/config.hpp"
 #include "../../../../include/ir/instructions/control.hpp"
 #include "../../../../include/ir/instructions/memory.hpp"
-#include "../../../../include/config/config.hpp"
+#include "../../../../include/ir/passes/analysis/target_analysis.hpp"
 
 #include <algorithm>
 
@@ -26,8 +27,11 @@ bool isReachableFromAToB(Function *a, Function *b) {
 PM::PreservedAnalyses InternalizePass::run(Function &function, FAM &fam) {
     // Internalize is safe if the functions execute exactly once.
     // Typically, this is a main function.
-    if (!function.hasAttr(FuncAttr::ExecuteExactlyOnce))
+    if (!function.hasFnAttr(FuncAttr::ExecuteExactlyOnce))
         return PreserveAll();
+
+    auto& target = fam.getResult<TargetAnalysis>(function);
+    const auto size_threshold = target->getInternalizeSizeThreshold();
 
     bool internalize_inst_modified = false;
     const auto &module = function.getParent();
@@ -38,7 +42,7 @@ PM::PreservedAnalyses InternalizePass::run(Function &function, FAM &fam) {
             continue;
 
         auto type = getElm(global_var->getType());
-        if (type->getBytes() > Config::IR::INTERNALIZE_GLOBAL_SIZE_THRESHOLD)
+        if (type->getBytes() > size_threshold)
             continue;
 
         bool safe_to_internalize = true;
@@ -55,8 +59,8 @@ PM::PreservedAnalyses InternalizePass::run(Function &function, FAM &fam) {
 
             // Already internalized
             if (auto call = inst_user->as<CALLInst>()) {
-                if (call->getFunc()->hasAttr(FuncAttr::isMemcpyIntrinsic) ||
-                    call->getFunc()->hasAttr(FuncAttr::isMemsetIntrinsic)) {
+                if (call->getFunc()->hasFnAttr(FuncAttr::isMemcpyIntrinsic) ||
+                    call->getFunc()->hasFnAttr(FuncAttr::isMemsetIntrinsic)) {
                     safe_to_internalize = false;
                     break;
                 }

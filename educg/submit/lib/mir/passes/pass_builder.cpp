@@ -25,6 +25,7 @@
 #include "../../../include/mir/passes/transforms/scheduling.hpp"
 #include "../../../include/mir/passes/transforms/stackgenerate.hpp"
 #include "../../../include/mir/passes/transforms/tro.hpp"
+#include "../../../include/mir/passes/transforms/CopyPropagation.hpp"
 
 // Utilities
 #include "../../../include/mir/passes/utilities/mirprinter.hpp"
@@ -63,14 +64,15 @@ MPM PassBuilder::buildModuleDebugPipeline() {
 
 FPM buildRV64FunctionPipeline(OptInfo opt_info) {
     FPM fpm;
-    // For RV64 Development
     fpm.addPass(ISel());
-    fpm.addPass(MachineLICMPass());
-    fpm.addPass(RedundantLoadEli());
+    // fpm.addPass(RedundantLoadEli());
     fpm.addPass(PreRAlegalize());
+    fpm.addPass(MachineLICMPass());
+//     fpm.addPass(CopyPropagation());
     fpm.addPass(RegisterAlloc());
     fpm.addPass(GenericPeephole(GenericPeephole::AfterRa));
     fpm.addPass(StackGenerate());
+    fpm.addPass(RVCFGsimplifyAfterRA());
     fpm.addPass(PostRAlegalize());
     return fpm;
 }
@@ -84,13 +86,13 @@ FPM buildARMv8FunctionPipeline(OptInfo opt_info) {
                                             fpm.addPass(ISel());
     opt_info.peephole_afterIsel ?           fpm.addPass(GenericPeephole(Stage::AfterIsel)) : nop;
     opt_info.CFGsimplifyBeforeRa ?          fpm.addPass(CFGsimplifyBeforeRA()) : nop;
-    opt_info.redundantLoadEli ?             fpm.addPass(RedundantLoadEli()) : nop;
+    opt_info.redundantLoadEli ?             fpm.addPass(RedundantLoadEli(opt_info.redundantLoadEli_weight)) : nop;
                                             fpm.addPass(PreRAlegalize());
     //
                                             // fpm.addPass(PrintFunctionPass(std::cerr));
     opt_info.machineLICM ?                  fpm.addPass(MachineLICMPass()) : nop;
                                             // fpm.addPass(PrintFunctionPass(std::cerr));  
-                                            fpm.addPass(RegisterAlloc());
+                                            fpm.addPass(RegisterAlloc(opt_info.registeralloc_dmp_times));
     opt_info.peephole_afterRa ?             fpm.addPass(GenericPeephole(Stage::AfterRa)) : nop;
                                             fpm.addPass(StackGenerate());
     opt_info.peephole_afterStackGenerate ?  fpm.addPass(GenericPeephole(Stage::AfterPostLegalize)) : nop;

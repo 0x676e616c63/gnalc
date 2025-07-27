@@ -109,7 +109,7 @@ struct FoldVisitor : ContextVisitor {
             }
         } else if (auto call = inst.as<CALLInst>()) {
             auto call_args = call->getArgs();
-            if (!call->getFunc()->hasAttr(FuncAttr::builtinMemReadOnly)) {
+            if (!call->getFunc()->hasFnAttr(FuncAttr::builtinMemReadOnly)) {
                 for (auto &arg : call_args) {
                     if (arg->getType()->is<PtrType>()) {
                         auto aa = laa_res->queryPointer(arg);
@@ -140,7 +140,7 @@ PM::PreservedAnalyses ReshapeFoldPass::run(LinearFunction &function, LFAM &lfam)
     if (visitor.analyze_failed || candidates.empty())
         return PreserveAll();
 
-    bool exec_once = function.hasAttr(FuncAttr::ExecuteExactlyOnce);
+    bool exec_once = function.hasFnAttr(FuncAttr::ExecuteExactlyOnce);
     for (const auto &[dest_mem, mem_info] : candidates) {
         if (!exec_once && dest_mem->is<GlobalVariable>())
             continue;

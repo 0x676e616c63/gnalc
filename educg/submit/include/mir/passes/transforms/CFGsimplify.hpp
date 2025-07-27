@@ -28,6 +28,12 @@ public:
     PM::PreservedAnalyses run(MIRFunction &, FAM &);
 };
 
+class RVCFGsimplifyAfterRA : public PM::PassInfo<RVCFGsimplifyAfterRA> {
+
+public:
+    PM::PreservedAnalyses run(MIRFunction &, FAM &);
+};
+
 class CFGsimplifyBeforeRAImpl {
 
 private:
@@ -70,6 +76,16 @@ public:
 public:
     MIRInst_p_l::iterator SeqRevPatternDetect(MIRBlk_p); // ret the it of the cmp, if not , return .end()
     MIROperand_p mkReverse(MIROperand_p);
+};
+
+class RVCFGsimplifyAfterRAImpl : CFGsimplifyAfterRAImpl {
+public:
+    RVCFGsimplifyAfterRAImpl(MIRFunction &_mfunc, FAM &_fam) : CFGsimplifyAfterRAImpl(_mfunc, _fam) {}
+    void impl() {
+        brEli();
+        // TODO
+    }
+    ~RVCFGsimplifyAfterRAImpl() = default;
 };
 
 }; // namespace MIR_new

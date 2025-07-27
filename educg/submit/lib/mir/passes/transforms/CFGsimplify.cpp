@@ -41,7 +41,7 @@ auto b = [](MIRInst_p minst) -> bool {
 
 PM::PreservedAnalyses CFGsimplifyBeforeRA::run(MIRFunction &func, FAM &fam) {
 
-    class CFGsimplifyBeforeRAImpl impl(func, fam);
+    CFGsimplifyBeforeRAImpl impl(func, fam);
     impl.impl();
 
     return PM::PreservedAnalyses::all();
@@ -49,11 +49,19 @@ PM::PreservedAnalyses CFGsimplifyBeforeRA::run(MIRFunction &func, FAM &fam) {
 
 PM::PreservedAnalyses CFGsimplifyAfterRA::run(MIRFunction &func, FAM &fam) {
 
-    class CFGsimplifyAfterRAImpl impl(func, fam);
+    CFGsimplifyAfterRAImpl impl(func, fam);
     impl.impl();
 
     return PM::PreservedAnalyses::all();
 }
+
+
+PM::PreservedAnalyses RVCFGsimplifyAfterRA::run(MIRFunction & func, FAM & fam) {
+    RVCFGsimplifyAfterRAImpl impl(func, fam);
+    impl.impl();
+    return PM::PreservedAnalyses::all();
+}
+
 
 void CFGsimplifyBeforeRAImpl::impl() {
     i1Eli();

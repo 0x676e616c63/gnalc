@@ -18,7 +18,12 @@
 namespace MIR {
 
 class RedundantLoadEli : public PM::PassInfo<RedundantLoadEli> {
+private:
+    const size_t s_arg;
+
 public:
+    explicit RedundantLoadEli(size_t _s_arg = 100) : s_arg(_s_arg) {}
+
     PM::PreservedAnalyses run(MIRFunction &, FAM &);
 };
 
@@ -127,8 +132,11 @@ private:
     size_t average_inst_cnt = 0;
     size_t overall_inst_cnt = 0;
 
+    const size_t s_arg;
+
 public:
-    RedundantLoadEliImpl(MIRFunction &_mfunc, FAM &_fam) : mfunc(_mfunc), fam(_fam), ctx(mfunc.Context()) {
+    RedundantLoadEliImpl(MIRFunction &_mfunc, FAM &_fam, size_t _s_arg)
+        : mfunc(_mfunc), fam(_fam), ctx(mfunc.Context()), s_arg(_s_arg) {
         for (const auto &mblk : mfunc.blks()) {
             overall_inst_cnt += mblk->Insts().size();
         }

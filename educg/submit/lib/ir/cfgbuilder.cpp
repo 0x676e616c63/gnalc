@@ -22,7 +22,7 @@ void CFGBuilder::build(Module &module) {
         cur_linear_func = f;
         cur_making_func = std::make_shared<Function>(cur_linear_func->getName(), cur_linear_func->getParams(),
                                                      cur_linear_func->getType()->as<FunctionType>()->getRet(),
-                                                     &cur_linear_func->getConstantPool(), cur_linear_func->getAttrs());
+                                                     &cur_linear_func->getConstantPool(), cur_linear_func->getFnAttrs());
         cur_making_func->setParent(cur_linear_func->getParent());
         Err::gassert(cur_linear_func != nullptr, "Expected Linear IR.");
         divider();

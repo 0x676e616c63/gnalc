@@ -20,6 +20,20 @@ public:
     size_t getMaxVectorRegisterSize() const override { return 128; }
     size_t getMinVectorRegisterSize() const override { return 64; }
 
+    size_t getInternalizeSizeThreshold() const override {
+        // 1 MB
+        return 1024 * 1024;
+    }
+
+    const InlineThreshold& getInlineThreshold() const override {
+        static const InlineThreshold ret = {
+            .recursion_expand_max_inst = 100,
+            .call_points = 3,
+            .inst_threshold = 200,
+        };
+        return ret;
+    }
+
     // FIXME: More precise
     int getVecInstCost(OP op, const pVecType &ty, size_t index) const override {
         Err::gassert(op == OP::INSERT || op == OP::EXTRACT);

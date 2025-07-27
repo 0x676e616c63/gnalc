@@ -59,19 +59,27 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
             return mop;
         }
 
-        auto mop_new = MIROperand::asVReg(ctx.codeGenCtx().nextId(), mop->type());
-
+        MIROperand_p mop_new = nullptr;
         if (mop->isExImme()) {
+            mop_new = MIROperand::asVReg(ctx.codeGenCtx().nextId(), OpT::Int64);
+            mop_new->setUseTrait(MIROperand::usage::StoreConst);
+
             ctx.newInst(OpC::InstLoadImmEx)
                 ->setOperand<0>(mop_new, ctx.codeGenCtx())
                 ->setOperand<1>(mop, ctx.codeGenCtx());
             modified |= true;
         } else if (inRange(mop->type(), OpT::Int, OpT::Int64)) {
+            mop_new = MIROperand::asVReg(ctx.codeGenCtx().nextId(), OpT::Int64); // DONT FIX ME
+            mop_new->setUseTrait(MIROperand::usage::StoreConst);
+
             ctx.newInst(OpC::InstLoadImm)
                 ->setOperand<0>(mop_new, ctx.codeGenCtx())
                 ->setOperand<1>(mop, ctx.codeGenCtx());
             modified |= true;
         } else if (inRange(mop->type(), OpT::Float, OpT::Float32)) {
+            mop_new = MIROperand::asVReg(ctx.codeGenCtx().nextId(), OpT::Float32);
+            mop_new->setUseTrait(MIROperand::usage::StoreConst);
+
             ctx.newInst(OpC::InstLoadFPImm)
                 ->setOperand<0>(mop_new, ctx.codeGenCtx())
                 ->setOperand<1>(mop, ctx.codeGenCtx());
@@ -405,8 +413,9 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
         }
 
         if (idx == 0) {
-            def->type() == OpT::Floatvec4 ? minst->resetOpcode(OpC::InstLoadFPImm)
-                                          : minst->resetOpcode(OpC::InstLoadImm);
+            // def->type() == OpT::Floatvec4 ? minst->resetOpcode(OpC::InstLoadFPImm)
+            //                               : minst->resetOpcode(OpC::InstLoadImm);
+            minst->resetOpcode(OpC::InstLoadFPImm);
             minst->setOperand<1>(elem, ctx.codeGenCtx());
         } else {
             MIRInst_p load = nullptr;
@@ -448,7 +457,7 @@ bool ARMIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
     return modified;
 }
 
-// for pass preRaLeagalize
+// for pass preRaLeagalize and reload constval
 void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
 
     auto &[minst, minsts, iter, ctx, mblk] = _ctx;
@@ -461,12 +470,12 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
 
     case OpC::InstLoadImm: {
         auto def = minst->ensureDef();
+
         auto imme = minst->getOp(1);
 
         auto imm = static_cast<unsigned>(imme->imme()); ///@bug
 
         auto dst = MIROperand::asVReg(ctx.nextId(), OpT::Int32);
-
         if (ARMv8::isBitMaskImme(imm) || ARMv8::is12ImmeWithProbShift(imm)) {
             ///@note mov + copy
 
@@ -496,30 +505,28 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
             }
         }
 
-        ///@brief rewrite
+        // vector-load may use loadimm, so add a copy
+        minst->resetOpcode(chooseCopyOpC(def, dst));
         minst->setOperand<1>(dst, ctx);
 
-        minst->resetOpcode(OpC::InstCopy);
     } break;
     case OpC::InstLoadImmEx: {
         auto def = minst->ensureDef();
+
         auto imme = minst->getOp(1);
 
         auto imme_ex = imme->immeEx();
 
-        MIROperand_p loaded = MIROperand::asVReg(ctx.nextId(), def->type());
-        int cnt = 0;
-
         if (imme_ex < 0xffff) {
             auto movz = MIRInst::make(imme_ex & 0XFFFF ? ARMOpC::MOVZ : ARMOpC::MOV)
-                            ->setOperand<0>(loaded, ctx)
+                            ->setOperand<0>(def, ctx)
                             ->setOperand<1>(MIROperand::asImme(imme_ex & 0XFFFF, OpT::Int32), ctx);
 
             minsts.insert(iter, movz);
         } else {
             string literal = "0X" + hex_str<uint64_t>(imme_ex);
             auto literal_load = MIRInst::make(OpC::InstLoadLiteral)
-                                    ->setOperand<0>(loaded, ctx)
+                                    ->setOperand<0>(def, ctx)
                                     ->setOperand<1>(MIROperand::asLiteral(literal, OpT::Int64), ctx);
 
             mblk->add_tail_literal(literal, 8, 8);
@@ -527,13 +534,13 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
             minsts.insert(iter, literal_load);
         }
 
-        minst->resetOpcode(OpC::InstCopy);
+        minst->putAllOp(ctx);
 
-        minst->setOperand<1>(loaded, ctx);
-
+        minsts.erase(iter++);
     } break;
     case OpC::InstLoadFPImm: {
         auto def = minst->ensureDef();
+
         auto imme = minst->getOp(1);
 
         auto imm_us = static_cast<unsigned>(imme->imme());
@@ -559,16 +566,16 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
                 minsts.insert(iter, movk);
             }
 
-            // auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Float32);
+            auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Float32);
 
-            // auto movf = MIRInst::make(ARMOpC::MOVF)->setOperand<0>(fdst, ctx)->setOperand<1>(dst, ctx);
+            auto movf = MIRInst::make(ARMOpC::MOVF)->setOperand<0>(fdst, ctx)->setOperand<1>(dst, ctx);
 
-            // minsts.insert(iter, movf);
+            minsts.insert(iter, movf);
 
             ///@brief rewrite
-            minst->resetOpcode(ARMOpC::MOVF).setOperand<1>(dst, ctx);
+            minst->resetOpcode(chooseCopyOpC(def, fdst));
 
-            // minst->setOperand<1>(fdst, ctx);
+            minst->setOperand<1>(fdst, ctx);
 
         } else if (imm == 0.0f) {
             ///@brief movi + copy
@@ -577,23 +584,15 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
 
             minsts.insert(iter, movi);
 
-            minst->resetOpcode(OpC::InstCopy);
+            minst->resetOpcode(chooseCopyOpC(def, fdst));
 
             minst->setOperand<1>(fdst, ctx);
 
         } else {
             ///@brief fmov
 
-            // auto fdst = MIROperand::asVReg(ctx.nextId(), OpT::Float32);
-            // auto fmov = MIRInst::make(ARMOpC::MOVF)->setOperand<0>(fdst, ctx)->setOperand<1>(imme, ctx);
-
-            // minsts.insert(iter, fmov);
-
-            // minst->resetOpcode(OpC::InstCopy);
-
-            // minst->setOperand<1>(fdst, ctx);
-
             minst->resetOpcode(ARMOpC::MOVF);
+            def->setUseTrait(MIROperand::usage::StoreConst);
         }
     } break;
     case OpC::InstLoadAddress: // NOLINT
@@ -615,10 +614,6 @@ void ARMIselInfo::legalizeWithPtrStore(MIRInst_p minst) const {
 }
 
 void ARMIselInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop, const StkObj &obj) const {
-
-    ///@warning armv8的交叉装载ld1, ld2, ld3不支持变址寻址, 甚至不支持常量偏移
-    ///@warning ld1 {V<>.4s} 又和 ldr q<> 作用一致, 而后者支持变址寻址, 只是不显式指示加载类型
-    ///@warning ld2 ld3 除非专门的处理数字信号的样例, 不然根本用不上
 
     auto &[minst, minsts, iter, ctx, _] = _ctx;
 

@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 #include "../../../../include/mir/passes/transforms/isel.hpp"
+#include "../../../../include/mir/MIR.hpp"
 #include "../../../../include/mir/tools.hpp"
 #include <optional>
 
 using namespace MIR;
 
 OpC MIR::chooseCopyOpC(const MIROperand_p &dst, const MIROperand_p &src) {
+
     if (dst->isISA() && src->isImme()) {
         if (inRange(dst->type(), OpT::Int, OpT::Int64))
             return OpC::InstLoadImmToReg;
