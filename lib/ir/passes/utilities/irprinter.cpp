@@ -88,7 +88,7 @@ void PrintModulePass::visit(Module &module) {
 
     for (auto &func_decl : module.getFunctionDecls()) {
         // avoid redefinition
-        if (with_runtime && func_decl->hasAttr(FuncAttr::isRuntime))
+        if (with_runtime && func_decl->hasFnAttr(FuncAttr::isRuntime))
             continue;
         func_decl->accept(*this);
         writeln("");

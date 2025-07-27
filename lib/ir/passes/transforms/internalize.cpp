@@ -27,7 +27,7 @@ bool isReachableFromAToB(Function *a, Function *b) {
 PM::PreservedAnalyses InternalizePass::run(Function &function, FAM &fam) {
     // Internalize is safe if the functions execute exactly once.
     // Typically, this is a main function.
-    if (!function.hasAttr(FuncAttr::ExecuteExactlyOnce))
+    if (!function.hasFnAttr(FuncAttr::ExecuteExactlyOnce))
         return PreserveAll();
 
     auto& target = fam.getResult<TargetAnalysis>(function);
@@ -59,8 +59,8 @@ PM::PreservedAnalyses InternalizePass::run(Function &function, FAM &fam) {
 
             // Already internalized
             if (auto call = inst_user->as<CALLInst>()) {
-                if (call->getFunc()->hasAttr(FuncAttr::isMemcpyIntrinsic) ||
-                    call->getFunc()->hasAttr(FuncAttr::isMemsetIntrinsic)) {
+                if (call->getFunc()->hasFnAttr(FuncAttr::isMemcpyIntrinsic) ||
+                    call->getFunc()->hasFnAttr(FuncAttr::isMemsetIntrinsic)) {
                     safe_to_internalize = false;
                     break;
                 }

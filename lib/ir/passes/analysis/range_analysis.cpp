@@ -325,7 +325,7 @@ void RangeAnalysis::analyzeGlobal(RangeResult &res, Function *func, FAM *fam) {
                 updateFloat(select, merge(trng, frng));
             }
         } else if (auto call = inst->as_raw<CALLInst>()) {
-            if (is_int && call->getFunc()->hasAttr(FuncAttr::PromoteFromChar))
+            if (is_int && call->getFunc()->hasFnAttr(FuncAttr::PromoteFromChar))
                 updateInt(call, IRng(0, 256));
             else {
                 if (is_int)
