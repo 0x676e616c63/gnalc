@@ -179,6 +179,7 @@ int main(int argc, char **argv) {
         OPT_ARG("--memo", "--no-memo", memo)
         OPT_ARG("--unifyexits", "--no-unifyexits", unify_exits)
         OPT_ARG("--internalize", "--no-internalize", internalize)
+        OPT_ARG("--globalize", "--no-globalize", globalize)
         OPT_ARG("--gepflatten", "--no-gepflatten", gep_flatten)
         OPT_ARG("--storerng", "--no-storerng", store_range)
         OPT_ARG("--codesink", "--no-codesink", code_sink)
@@ -329,6 +330,7 @@ Optimizations Flags:
   --memo               - Automatic function memoization
   --unifyexits         - Unify function return nodes
   --internalize        - Internalize global variables
+  --globalize          - Globalize local variables
   --gepflatten         - Flatten getelementptr to binarys
   --storerng           - Store Range Analysis result. (For backend)
   --codesink           - Code Sink

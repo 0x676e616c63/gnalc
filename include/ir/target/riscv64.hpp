@@ -37,7 +37,9 @@ public:
         // Aggressive internalization will cause stack overflow.
         return 32;
     }
-
+    size_t getGlobalizeSizeThreshold() const override {
+        return 64;
+    }
     const InlineThreshold& getInlineThreshold() const override {
         static const InlineThreshold ret = {
             .recursion_expand_max_inst = 100,
