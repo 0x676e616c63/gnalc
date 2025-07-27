@@ -52,6 +52,24 @@ void RegisterAllocImpl::clearall() {
     GeneratedBySpill.clear();
 }
 
+void RegisterAllocImpl::clearGraph() {
+    coloredNodes.clear();
+    spilledNodes.clear();
+    coalescedNodes.clear();
+
+    // adjSet.clear(); // @note need reserve
+    // adjList.clear();
+    degree.clear();
+    moveList.clear();
+    alias.clear();
+
+    coalescedMoves.clear();
+    constrainedMoves.clear();
+    frozenMoves.clear();
+    worklistMoves.clear();
+    activeMoves.clear();
+}
+
 void RegisterAllocImpl::impl(MIRFunction &_mfunc, FAM &fam, unsigned _dmpConflictMap) {
     mfunc = &_mfunc;
     registerInfo = mfunc->Context().registerInfo;
@@ -186,8 +204,8 @@ void RegisterAllocImpl::Build() {
                 }
             }
 
-            delBySet(live, def);
             addBySet(live, use);
+            delBySet(live, def);
         }
     }
 }
@@ -505,13 +523,14 @@ void RegisterAllocImpl::ReWriteProgram() {
         addBySet(GeneratedBySpill, ops_new);
     }
 
-    spilledNodes.clear();
-
     Logger::logInfo("ReWriteProgram: initial size: " + std::to_string(initial.size()) +
                     ", spilled size: " + std::to_string(GeneratedBySpill.size()));
 
-    coloredNodes.clear();
-    coalescedNodes.clear();
+    // spilledNodes.clear();
+    // coloredNodes.clear();
+    // coalescedNodes.clear();
+
+    clearGraph();
 }
 
 RegisterAllocImpl::Nodes RegisterAllocImpl::Adjacent(const MIROperand_p &n) {

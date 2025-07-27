@@ -112,6 +112,7 @@ protected:
 
 protected:
     void clearall();
+    void clearGraph();
 
     std::set<int> colors;
 

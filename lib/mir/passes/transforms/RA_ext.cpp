@@ -83,8 +83,8 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getDef(const MIRInst_p &minst) {
 
 MIROperand_p RegisterAllocImpl::heuristicSpill() {
     const int64_t Weight_IntervalLength = 5;
-    const int64_t Weight_Degree = 3;
-    const int64_t Weight_ref_cnt = -15;
+    const int64_t Weight_Degree = -25;
+    const int64_t Weight_ref_cnt = 15;
     const int64_t extra_Weight_ForNotPtr = 60;
     const int64_t extra_Weight_ForSpilled = -1000000;
     const int64_t extra_Weight_ForConstValue = 100000;
@@ -104,7 +104,7 @@ MIROperand_p RegisterAllocImpl::heuristicSpill() {
 
         weight += mfunc->Context().queryOp(op) * Weight_ref_cnt;
 
-        // weight += degree[op] * Weight_Degree;
+        weight += degree[op] * Weight_Degree;
 
         if (op->type() == OpT::Int64) {
             weight += extra_Weight_ForNotPtr;
