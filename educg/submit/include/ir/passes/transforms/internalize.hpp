@@ -10,6 +10,13 @@
 #include "../pass_manager.hpp"
 
 namespace IR {
+enum class InternalizeAttr {
+    InternalizedGlobalArray = 1 << 0,
+};
+GNALC_ENUM_OPERATOR(InternalizeAttr)
+using InternalizeAttrs = Attr::BitFlagsAttr<InternalizeAttr>;
+
+
 class InternalizePass : public PM::PassInfo<InternalizePass> {
 public:
     PM::PreservedAnalyses run(Function &function, FAM &manager);

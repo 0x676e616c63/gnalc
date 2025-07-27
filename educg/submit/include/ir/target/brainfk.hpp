@@ -20,7 +20,9 @@ public:
     size_t getInternalizeSizeThreshold() const override {
         return 0;
     }
-
+    size_t getGlobalizeSizeThreshold() const override {
+        return 0;
+    }
     const InlineThreshold& getInlineThreshold() const override {
         static const InlineThreshold ret = {
             .recursion_expand_max_inst = 0,
