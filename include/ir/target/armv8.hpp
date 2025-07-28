@@ -24,7 +24,8 @@ public:
         return 1024 * 1024;
     }
     size_t getGlobalizeSizeThreshold() const override {
-        return 64;
+        // No globalize
+        return std::numeric_limits<size_t>::max();
     }
     const InlineThreshold& getInlineThreshold() const override {
         static const InlineThreshold ret = {
