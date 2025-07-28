@@ -160,8 +160,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spillToMem(const MIROperand_p &mop) 
 
     auto mtype = mop->type();
     auto stkobj = mfunc->addStkObj(mfunc->Context(), getSize(mtype), getSize(mtype), 0, StkObjUsage::Spill);
-
-    auto replace = MIROperand::asVReg(ctx.nextId(), mtype);
+    Nodes staged{};
 
     for (auto &mblk : mfunc->blks()) {
         auto &minsts = mblk->Insts();
@@ -171,15 +170,22 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spillToMem(const MIROperand_p &mop) 
 
             bool if_loaded = false; // only load once per inst
             auto &ops = minst->operands();
+            // auto replace = MIROperand::asVReg(ctx.nextId(), mtype);
+            std::optional<MIROperand_p> replace = std::nullopt;
             for (auto it_op = ops.begin(); it_op != ops.end(); ++it_op) {
                 if (*it_op != mop) {
                     continue;
                 }
 
+                if (!replace) {
+                    replace = {MIROperand::asVReg(ctx.nextId(), mtype)};
+                    staged.emplace(*replace);
+                }
+
                 if (it_op == ops.begin()) { // def
                     auto minst_store =
                         MIRInst::make(OpC::InstStore)
-                            ->setOperand<1>(replace, mfunc->Context())
+                            ->setOperand<1>(*replace, mfunc->Context())
                             ->setOperand<2>(stkobj, mfunc->Context())
                             ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special), mfunc->Context());
 
@@ -188,7 +194,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spillToMem(const MIROperand_p &mop) 
                 } else if (!if_loaded) { // use
                     auto minst_load =
                         MIRInst::make(OpC::InstLoad)
-                            ->setOperand<0>(replace, mfunc->Context())
+                            ->setOperand<0>(*replace, mfunc->Context())
                             ->setOperand<1>(stkobj, mfunc->Context())
                             ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special), mfunc->Context());
 
@@ -196,14 +202,14 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spillToMem(const MIROperand_p &mop) 
                     if_loaded = true;
                 }
 
-                *it_op = replace;
+                *it_op = *replace;
             }
 
             it = ++recover;
         }
     }
 
-    return {replace};
+    return staged;
 }
 
 RegisterAllocImpl::Nodes RegisterAllocImpl::reloadConstVal(const MIROperand_p &mop) {
