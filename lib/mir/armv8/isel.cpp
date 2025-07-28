@@ -604,22 +604,105 @@ void ARMIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
     return;
 }
 
-void ARMIselInfo::legalizeWithPtrLoad(MIRInst_p minst) const {
+void ARMIselInfo::legalizeWithPtrLoad(InstLegalizeContext &_ctx) const {
+    auto &[minst, minsts, iter, ctx, _] = _ctx;
+
     minst->resetOpcode(ARMOpC::LDR);
     Err::gassert(minst->getOp(5) != nullptr, "Miss size info");
+
+    auto offset_var = minst->getOp(2);
+
+    if (!offset_var || !offset_var->isImme()) {
+        return;
+    }
+
+    auto offset = static_cast<int>(offset_var->imme());
+    if (ARMv8::isFitMemInst(offset, minst->getOp(5)->imme())) {
+        return;
+    }
+
+    auto scratch = MIROperand::asISAReg(ARMReg::FP, OpT::Int64);
+    auto imme = offset;
+    auto movz = MIRInst::make(ARMOpC::MOVZ)
+                    ->setOperand<0>(scratch, ctx)
+                    ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16), ctx);
+
+    minsts.insert(iter, movz);
+
+    imme >>= 16;
+    unsigned times = 1;
+    while (imme != 0) {
+        auto movk = MIRInst::make(ARMOpC::MOVK)
+                        ->setOperand<0>(scratch, ctx)
+                        ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16), ctx)
+                        ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special), ctx); // lsl only
+        minsts.insert(iter, movk);
+
+        ++times;
+        imme >>= 16;
+    }
+
+    minst->setOperand<2>(scratch, ctx);
 }
-void ARMIselInfo::legalizeWithPtrStore(MIRInst_p minst) const {
+
+void ARMIselInfo::legalizeWithPtrStore(InstLegalizeContext &_ctx) const {
+    auto &[minst, minsts, iter, ctx, _] = _ctx;
+
     minst->resetOpcode(ARMOpC::STR);
     Err::gassert(minst->getOp(5) != nullptr, "Miss size info");
+
+    auto offset_var = minst->getOp(3);
+
+    if (!offset_var || !offset_var->isImme()) {
+        return;
+    }
+
+    auto offset = static_cast<int>(offset_var->imme());
+    if (ARMv8::isFitMemInst(offset, minst->getOp(5)->imme())) {
+        return;
+    }
+
+    auto scratch = MIROperand::asISAReg(ARMReg::FP, OpT::Int64);
+    auto imme = offset;
+    auto movz = MIRInst::make(ARMOpC::MOVZ)
+                    ->setOperand<0>(scratch, ctx)
+                    ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16), ctx);
+
+    minsts.insert(iter, movz);
+
+    imme >>= 16;
+    unsigned times = 1;
+    while (imme != 0) {
+        auto movk = MIRInst::make(ARMOpC::MOVK)
+                        ->setOperand<0>(scratch, ctx)
+                        ->setOperand<1>(MIROperand::asImme(imme & 0XFFFF, OpT::Int16), ctx)
+                        ->setOperand<2>(MIROperand::asImme(16 | 0x00000000, OpT::special), ctx); // lsl only
+        minsts.insert(iter, movk);
+
+        ++times;
+        imme >>= 16;
+    }
+
+    minst->setOperand<3>(scratch, ctx);
 }
 
 void ARMIselInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop, const StkObj &obj) const {
 
     auto &[minst, minsts, iter, ctx, _] = _ctx;
 
-    auto offset = obj.offset;
+    int const_offset = 0;
+
+    if (minst->opcode<OpC>() == OpC::InstLoad && minst->getOp(2)) {
+        const_offset = minst->getOp(2)->imme(); // NOLINT
+    } else if (minst->getOp(3)) {
+        const_offset = minst->getOp(3)->imme(); // NOLINT
+    }
+
+    auto obj_offset = obj.offset;
 
     Err::gassert(minst->getOp(5) != nullptr, "PostRAlegalizeImpl::runOnInst: InstLoad/InstStore info lack");
+
+    auto offset = obj_offset + const_offset;
 
     if (ARMv8::isFitMemInst(offset, minst->getOp(5)->imme())) {
         if (minst->opcode<OpC>() == OpC::InstLoadRegFromStack || minst->opcode<OpC>() == OpC::InstLoad) {
@@ -656,7 +739,6 @@ void ARMIselInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop,
         imme >>= 16;
     }
 
-    ///@todo ldur/stur
     if (minst->opcode<OpC>() == OpC::InstLoadRegFromStack || minst->opcode<OpC>() == OpC::InstLoad) {
         minst->setOperand<2>(scratch, ctx); // just a mark for codegen
         minst->resetOpcode(ARMOpC::LDR);
@@ -672,7 +754,7 @@ void ARMIselInfo::legalizeWithStkGep(InstLegalizeContext &_ctx, MIROperand_p mop
     /// mop = def
 
     auto &[minst, minsts, iter, ctx, _] = _ctx;
-    unsigned offset = static_cast<unsigned>(obj.offset);
+    auto offset = static_cast<unsigned>(obj.offset);
 
     if (minst->getOp(2)->isImme()) {
         offset += static_cast<unsigned>(minst->getOp(2)->imme());
