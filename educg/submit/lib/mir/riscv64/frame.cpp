@@ -59,7 +59,7 @@ void RVFrameInfo::handleCallEntry(IR::pCall callinst, LoweringContext &ctx) cons
             Err::unreachable("handleCallEntry: unknown arg type");
 
         const auto align = static_cast<unsigned>(arg->getType()->getBytes());
-        auto minisize = 4U;
+        auto minisize = 8u;
         unsigned size = (std::max)(minisize, align);
 
         stkOffset = ((stkOffset + align - 1) / align) * align;
@@ -208,7 +208,7 @@ void RVFrameInfo::makePrologue(MIRFunction_p mfunc, LoweringContext &ctx) const 
             Err::unreachable();
 
         unsigned size = getBytes(arg->type());
-        unsigned align = size;
+        unsigned align = (std::max)(size, 8u);
 
         stkoffset = (stkoffset + align - 1) / align * align;
         offsets.emplace_back(stkoffset);
@@ -237,7 +237,7 @@ void RVFrameInfo::makePrologue(MIRFunction_p mfunc, LoweringContext &ctx) const 
         auto offset = offsets[i];
         const auto &arg = args[i];
         auto size = getBytes(arg->type());
-        auto align = size;
+        auto align = (std::max)(size, 8u);
 
         if (offset >= passByRegBase)
             continue;

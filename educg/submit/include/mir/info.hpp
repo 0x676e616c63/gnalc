@@ -94,6 +94,8 @@ public:
 
     virtual bool isFuncCall(const MIRInst_p &) const = 0;
 
+    virtual unsigned getStackObjectMinAlignment() const = 0;
+
     constexpr size_t getStackPointerAlignment() const { return 16; }
 };
 

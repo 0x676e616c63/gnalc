@@ -54,12 +54,15 @@ void StackGenerateImpl::impl(MIRFunction &_mfunc, FAM &fam) {
     // FIXME: Refactor this to make it more clear.
 
     // spilled / local
+    unsigned min_align = frameInfo->getStackObjectMinAlignment();
     for (auto &[mop, obj] : mfunc->StkObjs()) {
         if (obj.usage != StkObjUsage::Local && obj.usage != StkObjUsage::Spill)
             continue;
 
+        auto align = (std::max)(min_align, obj.maxAlignment);
+
         obj.offset = static_cast<int>(allocationBase);
-        allocationBase += ((obj.size + obj.maxAlignment - 1) / obj.maxAlignment) * obj.maxAlignment;
+        allocationBase += ((obj.size + align - 1) / align) * align;
     }
 
     mkQWordAlign();
