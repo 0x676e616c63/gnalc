@@ -66,7 +66,7 @@ MPM PassBuilder::buildModuleDebugPipeline() {
 FPM buildRV64FunctionPipeline(OptInfo opt_info) {
     FPM fpm;
     fpm.addPass(ISel());
-    // fpm.addPass(RedundantLoadEli());
+    fpm.addPass(RedundantLoadEli());
     fpm.addPass(PreRAlegalize());
     fpm.addPass(MachineLICMPass());
     //     fpm.addPass(CopyPropagation());
