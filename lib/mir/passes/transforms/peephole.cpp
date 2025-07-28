@@ -418,7 +418,7 @@ bool GenericPeepholeImpl::Arithmetic(MatchInfo &info) {
         }
     }
 
-    if (isDIV()) { // 实际上这个优化能有多大的效果很存疑
+    if (isDIV() && arch == Arch::ARMv8) { // 实际上这个优化能有多大的效果很存疑
         auto loadIter = findLoadImmtoOp2();
 
         if (loadIter == minsts.end()) {
