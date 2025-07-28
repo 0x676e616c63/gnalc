@@ -11,6 +11,7 @@
 #include "ir/passes/analysis/basic_alias_analysis.hpp"
 #include "ir/passes/analysis/domtree_analysis.hpp"
 #include "ir/passes/helpers/constant_fold.hpp"
+#include "mir/tools.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -144,8 +145,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
 
 #define REWRITE_BEG(...)                                                                                               \
     if (match(inst, __VA_ARGS__)) {                                                                                    \
-        Logger::logDebug("[InstSimplify]: Rewrite ", GNALC_STRINGFY((__VA_ARGS__)));                                   \
-        IRBuilder builder("%isim", inst->getParent(), inst->iter());
+        Logger::logDebug("[InstSimplify]: Rewrite ", GNALC_STRINGFY((__VA_ARGS__)));
 
 #define REWRITE_END(a)                                                                                                 \
     inst->replaceSelf(a);                                                                                              \
@@ -155,6 +155,7 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
 
     while (!worklist.empty()) {
         auto inst = worklist.back();
+        IRBuilder builder("%isim", inst->getParent(), inst->iter());
         worklist.pop_back();
 
         // inttoptr ptrtoint x = x or bitcast x
@@ -165,13 +166,38 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             if (isSameType(p2i->getOType(), i2p->getTType()))
                 inst->replaceSelf(x);
             else {
-                IRBuilder builder("%isim", inst->getParent(), inst->iter());
                 auto bc = builder.makeBitcast(x, i2p->getTType());
                 inst->replaceSelf(bc);
             }
             Logger::logDebug("[InstSimplify]: Rewrite M::IntToPtr(M::PtrToInt(M::Bind(x)))) with type check.");
             instsimplify_inst_modified = true;
             continue;
+        }
+
+        // x % (2^n) == t
+        if (inst->getSingleUser() && match(inst->getSingleUser(),
+            M::Icmp(M::Rem(M::Bind(x), M::PowerOfTwo(M::Bind(c1))), M::Bind(c2)))) {
+            auto cond = inst->getSingleUser()->as<ICMPInst>()->getCond();
+            if (cond == ICMPOP::eq) {
+                // x % (2^n) == 0 -> x & (2^n - 1) == 0
+                if (c2 == 0) {
+                    auto mask_val = static_cast<int64_t>((static_cast<uint64_t>(1) << ctz_wrapper(c1)) - 1);
+                    auto mask = function.getInteger(mask_val, inst->getType());
+                    auto and_inst = builder.makeAnd(x, mask);
+                    inst->replaceSelf(and_inst);
+                    Logger::logDebug("[InstSimplify]: Rewrite x % (2^n) to x & (2^n - 1)");
+                    instsimplify_inst_modified = true;
+                }
+                // x % 2 == 1 -> x & min == 1
+                else if (c1 == 2 && c2 == 1) {
+                    auto mask_val = -((static_cast<intmax_t>(1) << (x->getType()->getBytes() * 8 - 1)) - 1);
+                    auto mask = function.getInteger(mask_val, inst->getType());
+                    auto and_inst = builder.makeAnd(x, mask);
+                    inst->replaceSelf(and_inst);
+                    Logger::logDebug("[InstSimplify]: Rewrite (x % 2) to (x & min)");
+                    instsimplify_inst_modified = true;
+                }
+            }
         }
 
         // select i1 x, i32 1, i32 0 = zext x
