@@ -99,10 +99,6 @@ int main(int argc, char **argv) {
         cli_opt_options.loop_unroll.disable();
     }
 
-    if (target == Target::RISCV64) {
-        cli_opt_options.loop_unroll.disable();
-    }
-
     auto pm_options = cli_opt_options.toPMOptions(IR::CliOptions::Mode::EnableIfDefault);
 
     // SIR
