@@ -7,6 +7,7 @@
 #include "../../../../include/mir/tools.hpp"
 #include "../../../../include/utils/exception.hpp"
 #include <algorithm>
+#include <cstddef>
 #include <iostream>
 #include <iterator>
 #include <list>
@@ -82,8 +83,8 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::getDef(const MIRInst_p &minst) {
 
 MIROperand_p RegisterAllocImpl::heuristicSpill() {
     const int64_t Weight_IntervalLength = 5;
-    const int64_t Weight_Degree = 3;
-    const int64_t Weight_ref_cnt = -15;
+    const int64_t Weight_Degree = -25;
+    const int64_t Weight_ref_cnt = 15;
     const int64_t extra_Weight_ForNotPtr = 60;
     const int64_t extra_Weight_ForSpilled = -1000000;
     const int64_t extra_Weight_ForConstValue = 100000;
@@ -103,7 +104,7 @@ MIROperand_p RegisterAllocImpl::heuristicSpill() {
 
         weight += mfunc->Context().queryOp(op) * Weight_ref_cnt;
 
-        // weight += degree[op] * Weight_Degree;
+        weight += degree[op] * Weight_Degree;
 
         if (op->type() == OpT::Int64) {
             weight += extra_Weight_ForNotPtr;
@@ -159,8 +160,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spillToMem(const MIROperand_p &mop) 
 
     auto mtype = mop->type();
     auto stkobj = mfunc->addStkObj(mfunc->Context(), getSize(mtype), getSize(mtype), 0, StkObjUsage::Spill);
-
-    auto replace = MIROperand::asVReg(ctx.nextId(), mtype);
+    Nodes staged{};
 
     for (auto &mblk : mfunc->blks()) {
         auto &minsts = mblk->Insts();
@@ -170,15 +170,22 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spillToMem(const MIROperand_p &mop) 
 
             bool if_loaded = false; // only load once per inst
             auto &ops = minst->operands();
+            // auto replace = MIROperand::asVReg(ctx.nextId(), mtype);
+            std::optional<MIROperand_p> replace = std::nullopt;
             for (auto it_op = ops.begin(); it_op != ops.end(); ++it_op) {
                 if (*it_op != mop) {
                     continue;
                 }
 
+                if (!replace) {
+                    replace = {MIROperand::asVReg(ctx.nextId(), mtype)};
+                    staged.emplace(*replace);
+                }
+
                 if (it_op == ops.begin()) { // def
                     auto minst_store =
                         MIRInst::make(OpC::InstStore)
-                            ->setOperand<1>(replace, mfunc->Context())
+                            ->setOperand<1>(*replace, mfunc->Context())
                             ->setOperand<2>(stkobj, mfunc->Context())
                             ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special), mfunc->Context());
 
@@ -187,7 +194,7 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spillToMem(const MIROperand_p &mop) 
                 } else if (!if_loaded) { // use
                     auto minst_load =
                         MIRInst::make(OpC::InstLoad)
-                            ->setOperand<0>(replace, mfunc->Context())
+                            ->setOperand<0>(*replace, mfunc->Context())
                             ->setOperand<1>(stkobj, mfunc->Context())
                             ->setOperand<5>(MIROperand::asImme(getBitWide(mtype), OpT::special), mfunc->Context());
 
@@ -195,14 +202,14 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::spillToMem(const MIROperand_p &mop) 
                     if_loaded = true;
                 }
 
-                *it_op = replace;
+                *it_op = *replace;
             }
 
             it = ++recover;
         }
     }
 
-    return {replace};
+    return staged;
 }
 
 RegisterAllocImpl::Nodes RegisterAllocImpl::reloadConstVal(const MIROperand_p &mop) {

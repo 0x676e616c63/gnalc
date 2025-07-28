@@ -27,6 +27,11 @@ void PostRAlegalizeImpl::runOnBlk(MIRBlk_p mblk, CodeGenContext &ctx) {
     auto &minsts = mblk->Insts();
 
     for (auto iter = minsts.begin(); iter != minsts.end(); ++iter) {
+
+        if (mblk->getmSym() == "main_39") {
+            int debug;
+        }
+
         runOnInst(*iter, minsts, iter, ctx, mblk);
     }
 }
@@ -73,7 +78,7 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l &minsts, MIRInst
                 auto &obj = mfunc->StkObjs().at(mstkop);
                 _ctx.iselInfo->legalizeWithStkOp(ctx, mop, obj);
             } else
-                _ctx.iselInfo->legalizeWithPtrLoad(minst);
+                _ctx.iselInfo->legalizeWithPtrLoad(ctx);
         } break;
         case OpC::InstLoadRegFromStack: {
             InstLegalizeContext ctx{minst, minsts, iter, _ctx, mblk};
@@ -95,7 +100,7 @@ void PostRAlegalizeImpl::runOnInst(MIRInst_p minst, MIRInst_p_l &minsts, MIRInst
                 auto &obj = mfunc->StkObjs().at(mstkop);
                 _ctx.iselInfo->legalizeWithStkOp(ctx, mop, obj);
             } else
-                _ctx.iselInfo->legalizeWithPtrStore(minst);
+                _ctx.iselInfo->legalizeWithPtrStore(ctx);
         } break;
         case OpC::InstStoreRegToStack: {
             InstLegalizeContext ctx{minst, minsts, iter, _ctx, mblk};

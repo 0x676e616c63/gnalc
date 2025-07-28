@@ -36,7 +36,8 @@ public:
     virtual bool isIntrinsicSupported(const std::string &lib_fn_name) const = 0;
 
     // Threshold
-    virtual size_t getInternalizeSizeThreshold () const = 0;
+    virtual size_t getInternalizeSizeThreshold() const = 0;
+    virtual size_t getGlobalizeSizeThreshold() const = 0;
 
     struct InlineThreshold {
         size_t recursion_expand_max_inst;

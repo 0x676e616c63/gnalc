@@ -29,6 +29,7 @@ namespace IR {
     GNALC_SIR_IR_PASS_ENTRY(loop_strength_reduce)                                                                      \
     GNALC_SIR_IR_PASS_ENTRY(loopelim)                                                                                  \
     GNALC_SIR_IR_PASS_ENTRY(internalize)                                                                               \
+    GNALC_SIR_IR_PASS_ENTRY(globalize)                                                                               \
     GNALC_SIR_IR_PASS_ENTRY(loop_parallel)                                                                             \
     GNALC_SIR_IR_PASS_ENTRY(loop_unroll)                                                                               \
     GNALC_SIR_IR_PASS_ENTRY(indvars)                                                                                   \

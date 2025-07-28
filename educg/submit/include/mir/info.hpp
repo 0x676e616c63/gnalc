@@ -121,8 +121,8 @@ public:
     virtual bool match(MIRInst_p, ISelContext &, bool allow) const = 0;
     virtual bool legalizeInst(MIRInst_p minst, ISelContext &ctx) const = 0;
     virtual void preLegalizeInst(InstLegalizeContext &) = 0;
-    virtual void legalizeWithPtrLoad(MIRInst_p minst) const = 0;
-    virtual void legalizeWithPtrStore(MIRInst_p minst) const = 0;
+    virtual void legalizeWithPtrLoad(InstLegalizeContext &) const = 0;
+    virtual void legalizeWithPtrStore(InstLegalizeContext &) const = 0;
     virtual void legalizeWithStkOp(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const = 0;
     virtual void legalizeWithStkGep(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const = 0;
     virtual void legalizeWithStkPtrCast(InstLegalizeContext &ctx, MIROperand_p, const StkObj &obj) const = 0;

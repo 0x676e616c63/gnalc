@@ -41,9 +41,12 @@ public:
     bool isIntrinsicSupported(const std::string &lib_fn_name) const override { return true; }
 
     size_t getInternalizeSizeThreshold() const override {
-        // 1 MB
-        return 1024 * 1024;
+        return 32;
     }
+    size_t getGlobalizeSizeThreshold() const override {
+        return 64;
+    }
+
 
     const InlineThreshold& getInlineThreshold() const override {
         static const InlineThreshold ret = {

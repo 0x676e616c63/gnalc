@@ -11,6 +11,8 @@
 // Transforms
 #include "../../../include/mir/passes/analysis/domtree_analysis.hpp"
 #include "../../../include/mir/passes/transforms/CFGsimplify.hpp"
+#include "../../../include/mir/passes/transforms/CopyPropagation.hpp"
+#include "../../../include/mir/passes/transforms/FusedAddr.hpp"
 #include "../../../include/mir/passes/transforms/ICF_TailDup.hpp"
 #include "../../../include/mir/passes/transforms/PostRAlegalize.hpp"
 #include "../../../include/mir/passes/transforms/PreRAlegalize.hpp"
@@ -25,7 +27,6 @@
 #include "../../../include/mir/passes/transforms/scheduling.hpp"
 #include "../../../include/mir/passes/transforms/stackgenerate.hpp"
 #include "../../../include/mir/passes/transforms/tro.hpp"
-#include "../../../include/mir/passes/transforms/CopyPropagation.hpp"
 
 // Utilities
 #include "../../../include/mir/passes/utilities/mirprinter.hpp"
@@ -68,7 +69,7 @@ FPM buildRV64FunctionPipeline(OptInfo opt_info) {
     // fpm.addPass(RedundantLoadEli());
     fpm.addPass(PreRAlegalize());
     fpm.addPass(MachineLICMPass());
-//     fpm.addPass(CopyPropagation());
+    //     fpm.addPass(CopyPropagation());
     fpm.addPass(RegisterAlloc());
     fpm.addPass(GenericPeephole(GenericPeephole::AfterRa));
     fpm.addPass(StackGenerate());
@@ -83,6 +84,7 @@ FPM buildARMv8FunctionPipeline(OptInfo opt_info) {
     using Stage = GenericPeephole::Stage;
 
     // clang-format off
+                                            fpm.addPass(FusedAddr());
                                             fpm.addPass(ISel());
     opt_info.peephole_afterIsel ?           fpm.addPass(GenericPeephole(Stage::AfterIsel)) : nop;
     opt_info.CFGsimplifyBeforeRa ?          fpm.addPass(CFGsimplifyBeforeRA()) : nop;

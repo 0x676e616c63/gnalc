@@ -21,10 +21,12 @@ public:
     size_t getMinVectorRegisterSize() const override { return 64; }
 
     size_t getInternalizeSizeThreshold() const override {
-        // 1 MB
         return 1024 * 1024;
     }
-
+    size_t getGlobalizeSizeThreshold() const override {
+        // No globalize
+        return std::numeric_limits<size_t>::max();
+    }
     const InlineThreshold& getInlineThreshold() const override {
         static const InlineThreshold ret = {
             .recursion_expand_max_inst = 100,

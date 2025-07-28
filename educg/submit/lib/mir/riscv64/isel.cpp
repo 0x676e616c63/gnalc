@@ -3,6 +3,7 @@
 
 #include "../../../include/mir/riscv64/isel.hpp"
 #include "../../../include/mir/MIR.hpp"
+#include "../../../include/mir/info.hpp"
 #include "../../../include/mir/passes/transforms/isel.hpp"
 
 using namespace MIR;
@@ -290,8 +291,7 @@ bool RVIselInfo::legalizeInst(MIRInst_p minst, ISelContext &ctx) const {
             if (Util::isPowerOfTwo(rhs->imme())) {
                 minst->resetOpcode(OpC::InstShl);
                 minst->setOperand<2>(MIROperand::asImme(ctz_wrapper(rhs->imme()), rhs->type()), ctx.codeGenCtx());
-            }
-            else
+            } else
                 minst->setOperand<2>(loadImm(rhs), ctx.codeGenCtx());
         }
 
@@ -460,7 +460,9 @@ void RVIselInfo::preLegalizeInst(InstLegalizeContext &_ctx) {
     return;
 }
 
-void RVIselInfo::legalizeWithPtrLoad(MIRInst_p minst) const {
+void RVIselInfo::legalizeWithPtrLoad(InstLegalizeContext &_ctx) const {
+    auto &[minst, mists, iter, ctx, _] = _ctx;
+
     auto memSize = minst->getOp(5)->imme();
     if (inRange(minst->getDef()->type(), OpT::Float, OpT::Float32)) {
         switch (memSize) {
@@ -493,7 +495,9 @@ void RVIselInfo::legalizeWithPtrLoad(MIRInst_p minst) const {
     }
 }
 
-void RVIselInfo::legalizeWithPtrStore(MIRInst_p minst) const {
+void RVIselInfo::legalizeWithPtrStore(InstLegalizeContext &_ctx) const {
+    auto &[minst, mists, iter, ctx, _] = _ctx;
+
     auto memSize = minst->getOp(5)->imme();
     if (inRange(minst->getOp(1)->type(), OpT::Float, OpT::Float32)) {
         switch (memSize) {
@@ -534,11 +538,11 @@ void RVIselInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop, 
         if (minst->opcode<OpC>() == OpC::InstLoadRegFromStack || minst->opcode<OpC>() == OpC::InstLoad) {
             minst->setOperand<1>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
                 ->setOperand<2>(MIROperand::asImme(offset, OpT::Int64), ctx);
-            legalizeWithPtrLoad(minst);
+            legalizeWithPtrLoad(_ctx);
         } else {
             minst->setOperand<2>(MIROperand::asISAReg(RVReg::SP, OpT::Int64), ctx)
                 ->setOperand<3>(MIROperand::asImme(offset, OpT::Int64), ctx);
-            legalizeWithPtrStore(minst);
+            legalizeWithPtrStore(_ctx);
         }
         return;
     }
@@ -560,11 +564,11 @@ void RVIselInfo::legalizeWithStkOp(InstLegalizeContext &_ctx, MIROperand_p mop, 
     if (minst->opcode<OpC>() == OpC::InstLoadRegFromStack || minst->opcode<OpC>() == OpC::InstLoad) {
         minst->setOperand<1>(scratch, ctx);
         minst->setOperand<2>(MIROperand::asImme(0, OpT::Int64), ctx);
-        legalizeWithPtrLoad(minst);
+        legalizeWithPtrLoad(_ctx);
     } else {
         minst->setOperand<2>(scratch, ctx);
         minst->setOperand<3>(MIROperand::asImme(0, OpT::Int64), ctx);
-        legalizeWithPtrStore(minst);
+        legalizeWithPtrStore(_ctx);
     }
 }
 

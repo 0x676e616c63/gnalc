@@ -433,7 +433,7 @@ void MIR::lowerInst(const IR::pGep &gep, LoweringContext &ctx) {
                             ->setOperand<1>(use_ptr, ctx.CodeGenCtx())
                             ->setOperand<2>(ctx.mapOperand<int>(offset), ctx.CodeGenCtx()));
         } else {
-            ctx.addCopy(def_ptr, use_ptr);
+            ctx.addCopy(def_ptr, use_ptr); // FIXME: maybe deletable
         }
 
     } else {
