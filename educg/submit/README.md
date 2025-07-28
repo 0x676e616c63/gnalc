@@ -1,6 +1,6 @@
 # 0x676e616c63 - gnalc riscv
 
-- Sync on: 2025-07-28 01:12:47
+- Sync on: 2025-07-28 11:47:36
 - Source Branch: main
-- Source Commit SHA: b13d255fc00a0160577b1388dbaef1f8abc050c1
-- Source Commit Message: IR: Add Globalize and Tighten Internalize Threshold. [skip ci]
+- Source Commit SHA: ce9d0edfb39344890b3c2235e75939afc594dc94
+- Source Commit Message: Merge branch 'backendv3.0' 0728 [skip ci]
