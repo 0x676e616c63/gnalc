@@ -393,3 +393,9 @@ MIROperand_p CFGsimplifyAfterRAImpl::mkReverse(MIROperand_p condOp) {
         return MIROperand::asImme(Cond::LT, OpT::special);
     }
 }
+
+void RVCFGsimplifyAfterRAImpl::impl() {
+    brColsure();
+    uselessCmpEli();
+    brEli();
+}
