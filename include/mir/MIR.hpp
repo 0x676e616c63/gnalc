@@ -810,6 +810,15 @@ public:
                        minst->getOp(2)->reloc() == old_succ) {
                 minst->setOperand<2>(MIROperand::asReloc(new_succ), ctx);
                 return true;
+            } else if (minst->isRV()) {
+                if (inRange(minst->opcode<RVOpC>(), RVOpC::BEQZ, RVOpC::BGTZ) && minst->getOp(2)->reloc() == old_succ) {
+                    minst->setOperand<2>(MIROperand::asReloc(new_succ), ctx);
+                    return true;
+                }
+                if (inRange(minst->opcode<RVOpC>(), RVOpC::BEQ, RVOpC::BLEU) && minst->getOp(3)->reloc() == old_succ) {
+                    minst->setOperand<3>(MIROperand::asReloc(new_succ), ctx);
+                    return true;
+                }
             }
             return false;
         });
