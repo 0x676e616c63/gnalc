@@ -232,10 +232,12 @@ auto make_loop(const PMOptions &options) {
 
 auto make_debug_version_vectorizer(const PMOptions &options) {
     FPM fpm;
+    fpm.addPass(LoopSimplifyPass());
+    fpm.addPass(NameNormalizePass(true));
     fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(PrintSCEVPass(std::cerr));
     fpm.addPass(PrintLoopAAPass(std::cerr));
-    FUNCTION_TRANSFORM(vectorizer, LoopSimplifyPass(), VectorizerPass(true))
+    fpm.addPass(VectorizerPass(true));
     fpm.addPass(PrintFunctionPass(std::cerr));
     return fpm;
 }
@@ -371,7 +373,7 @@ MPM PassBuilder::buildModulePipeline(const PMOptions &options) {
 FPM PassBuilder::buildFunctionDebugPipeline() {
     // For SIR pass debug
     FPM fpm;
-    fpm.addPass(PrintFunctionPass(std::cerr));
+    // fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(VerifyPass());
     fpm.addPass(PromotePass());
     fpm.addPass(NameNormalizePass());

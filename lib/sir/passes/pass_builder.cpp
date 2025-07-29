@@ -53,6 +53,9 @@ LFPM LinearPassBuilder::buildFunctionFixedPointPipeline(const PMOptions& options
     FUNCTION_TRANSFORM(while2for, While2ForPass())
     FUNCTION_TRANSFORM(reshape_fold, ReshapeFoldPass())
     FUNCTION_TRANSFORM(loop_fuse, LoopFusePass())
+    FUNCTION_TRANSFORM(loop_unswitch, LoopUnswitchPass())
+    FUNCTION_TRANSFORM(constant_fold, ConstantFoldPass())
+    FUNCTION_TRANSFORM(early_dce, EarlyDCEPass())
 
 #undef FUNCTION_TRANSFORM
     return lfpm;
@@ -89,6 +92,11 @@ LFPM LinearPassBuilder::buildFunctionDebugPipeline() {
     lfpm.addPass(While2ForPass());
     lfpm.addPass(ReshapeFoldPass());
     lfpm.addPass(LoopFusePass());
+    lfpm.addPass(PrintLinearFunctionPass(std::cerr));
+    lfpm.addPass(LoopUnswitchPass());
+    lfpm.addPass(PrintLinearFunctionPass(std::cerr));
+    lfpm.addPass(ConstantFoldPass());
+    lfpm.addPass(EarlyDCEPass());
     return lfpm;
 }
 

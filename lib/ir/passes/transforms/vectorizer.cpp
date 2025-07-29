@@ -1011,7 +1011,7 @@ void VectorizerPass::buildTreeImpl(const std::vector<pVal> &scalars, int depth, 
         for (size_t i = 0; i < scalars.size() - 1; ++i) {
             if (!loop_aa->isConsecutiveAccess(scalars[i], scalars[i + 1])) {
                 cancel_sched_and_gather();
-                Logger::logDebug("[SLP]: TODO: Load wants to shuffle.");
+                Logger::logDebug("[SLP]: TODO: Loads want to shuffle. (", dumpScalars(scalars), ").");
                 return;
             }
         }
@@ -1028,7 +1028,7 @@ void VectorizerPass::buildTreeImpl(const std::vector<pVal> &scalars, int depth, 
         for (size_t i = 0; i < scalars.size() - 1; ++i) {
             if (!loop_aa->isConsecutiveAccess(scalars[i], scalars[i + 1])) {
                 cancel_sched_and_gather();
-                Logger::logDebug("[SLP]: TODO: Store wants to mask.");
+                Logger::logDebug("[SLP]: TODO: Stores want to mask. (", dumpScalars(scalars), ").");
                 return;
             }
         }
