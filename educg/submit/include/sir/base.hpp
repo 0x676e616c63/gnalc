@@ -73,5 +73,8 @@ bool IListReplaceRecursive(IList &ilist, const Instruction* old_p, const pInst &
 
 bool IListContainsRecursive(const IList &ilist, const pInst &val);
 bool IListContainsRecursive(const IList &ilist, const Instruction* val);
+
+bool IListContainsRecursive(const IList &ilist, const std::unordered_set<pVal> &set);
+bool IListContainsRecursive(const IList &ilist, const std::unordered_set<Value*> &set);
 } // namespace SIR
 #endif

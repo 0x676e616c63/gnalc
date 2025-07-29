@@ -1,6 +1,7 @@
 // Copyright (c) 2025 0x676e616c63
 // SPDX-License-Identifier: MIT
 
+#include "../../../../include/sir/passes/transforms/loop_unswitch.hpp"
 #include "../../../../include/ir/passes/transforms/loop_unroll.hpp"
 #include "../../../../include/ir/base.hpp"
 #include "../../../../include/ir/block_utils.hpp"
@@ -33,6 +34,15 @@ LoopUnrollPass::LoopUnrollPass() {
 }
 
 void LoopUnrollPass::analyze(const pLoop &loop, UnrollOption &option, Function &FC, FAM& fam) {
+    if (auto unswitch_attr = loop->getHeader()->attr().get<SIR::UnswitchAttrs>()) {
+        // Don't unroll partitioned loops to reduce the code size.
+        if (unswitch_attr->has(SIR::UnswitchAttr::Partitioned)) {
+            Logger::logInfo("[LoopUnroll] Unroll disabled because the loop has been partitioned.");
+            option.disable();
+            return;
+        }
+    }
+
     if (!(loop->isSimplifyForm() && loop->isLCSSAForm())) {
         Logger::logInfo("[LoopUnroll] Unroll disabled because the loop is not SimplifyForm or LCSSAForm.");
         option.disable();
