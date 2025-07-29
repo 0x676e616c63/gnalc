@@ -82,12 +82,13 @@ public:
         return nullptr;
     }
 
-    template <typename AttrT> AttrT *getOrAdd(AttrT default_value) const {
+    template <typename AttrT> AttrT *getOrAdd(AttrT default_value) {
         for (const auto &[key, value] : storage) {
             if (key == AttrT::ID())
                 return &static_cast<AttrModel<AttrT> *>(value.get())->attr;
         }
-        return default_value;
+        storage.emplace_back(AttrT::ID(), std::make_unique<AttrModel<AttrT>>(std::move(default_value)));
+        return &static_cast<AttrModel<AttrT> *>(storage.back().second.get())->attr;
     }
 
     template <typename AttrT> bool has() const {

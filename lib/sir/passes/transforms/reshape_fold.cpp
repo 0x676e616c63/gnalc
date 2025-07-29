@@ -177,8 +177,7 @@ PM::PreservedAnalyses ReshapeFoldPass::run(LinearFunction &function, LFAM &lfam)
         const auto &dest_access = laa_res.queryPointer(store->getPtr())->array();
 
         // When a single store transfers data from one array access to another,
-        // the destination view is simply a reshaped version of
-        // the source.
+        // the destination view is simply a reshaped version of the source.
         // Here we compute a shuffle mask and try to replace subsequent destination accesses
         // with direct source accesses, thus eliminating the temporary reshaped.
         auto mask = calculateMask(src_access.indices, dest_access.indices);

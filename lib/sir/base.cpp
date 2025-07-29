@@ -134,7 +134,6 @@ bool IListReplaceRecursive(IList &ilist, const pInst &old_p, const pInst &new_p)
 }
 
 bool IListContainsRecursive(const IList &ilist, const Instruction* val) {
-    bool found = false;
     for (auto it = ilist.begin(); it != ilist.end(); ++it) {
         if (it->get() == val)
             return true;
@@ -146,9 +145,40 @@ bool IListContainsRecursive(const IList &ilist, const Instruction* val) {
                 return true;
         }
     }
-    return found;
+    return false;
 }
 bool IListContainsRecursive(const IList &ilist, const pInst &val) {
     return IListContainsRecursive(ilist, val.get());
 }
+
+bool IListContainsRecursive(const IList &ilist, const std::unordered_set<pVal> &set) {
+    for (auto it = ilist.begin(); it != ilist.end(); ++it) {
+        if (set.count(*it))
+            return true;
+
+        std::vector<IList*> ilists;
+        collectIlist(*it, ilists);
+        for (auto curr : ilists) {
+            if (IListContainsRecursive(*curr, set))
+                return true;
+        }
+    }
+    return false;
+}
+
+bool IListContainsRecursive(const IList &ilist, const std::unordered_set<Value *> &set) {
+    for (auto it = ilist.begin(); it != ilist.end(); ++it) {
+        if (set.count(it->get()))
+            return true;
+
+        std::vector<IList*> ilists;
+        collectIlist(*it, ilists);
+        for (auto curr : ilists) {
+            if (IListContainsRecursive(*curr, set))
+                return true;
+        }
+    }
+    return false;
+}
+
 } // namespace SIR
