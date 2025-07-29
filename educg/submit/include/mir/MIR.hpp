@@ -797,14 +797,28 @@ public:
 
     void brReplace(const MIRBlk_p &old_succ, const MIRBlk_p &new_succ, CodeGenContext &ctx) {
         auto it = std::find_if(mInsts.begin(), mInsts.end(), [&](const MIRInst_p &minst) {
-            if (minst->isGeneric() && minst->opcode<OpC>() == OpC::InstBranch && minst->getOp(1)->reloc() == old_succ) {
-
-                minst->setOperand<1>(MIROperand::asReloc(new_succ), ctx);
-                return true;
-            } else if (!minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::CBNZ &&
+            if (minst->isGeneric()) {
+                if (minst->opcode<OpC>() == OpC::InstBranch && minst->getOp(1)->reloc() == old_succ) {
+                    minst->setOperand<1>(MIROperand::asReloc(new_succ), ctx);
+                    return true;
+                }
+                if (minst->opcode<OpC>() == OpC::InstICmpBranch && minst->getOp(3)->reloc() == old_succ) {
+                    minst->setOperand<3>(MIROperand::asReloc(new_succ), ctx);
+                    return true;
+                }
+            } else if (minst->isARM() && minst->opcode<ARMOpC>() == ARMOpC::CBNZ &&
                        minst->getOp(2)->reloc() == old_succ) {
                 minst->setOperand<2>(MIROperand::asReloc(new_succ), ctx);
                 return true;
+            } else if (minst->isRV()) {
+                if (inRange(minst->opcode<RVOpC>(), RVOpC::BEQZ, RVOpC::BGTZ) && minst->getOp(2)->reloc() == old_succ) {
+                    minst->setOperand<2>(MIROperand::asReloc(new_succ), ctx);
+                    return true;
+                }
+                if (inRange(minst->opcode<RVOpC>(), RVOpC::BEQ, RVOpC::BLEU) && minst->getOp(3)->reloc() == old_succ) {
+                    minst->setOperand<3>(MIROperand::asReloc(new_succ), ctx);
+                    return true;
+                }
             }
             return false;
         });

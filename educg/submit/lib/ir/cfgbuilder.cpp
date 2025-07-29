@@ -117,6 +117,9 @@ void CFGBuilder::newWh(const pWhileInst &whinst) {
     loop_end_for_break.pop();
     iv_for_contine.pop();
     iv_update_for_contine.pop();
+
+    // Clone attrs
+    whcond->attr() = whinst->attr();
 }
 
 void CFGBuilder::newFor(const pForInst & for_inst) {
@@ -169,6 +172,9 @@ void CFGBuilder::newFor(const pForInst & for_inst) {
     loop_end_for_break.pop();
     iv_for_contine.pop();
     iv_update_for_contine.pop();
+
+    // Clone attrs
+    for_cond->attr() = for_inst->attr();
 }
 
 

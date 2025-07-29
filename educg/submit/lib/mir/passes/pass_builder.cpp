@@ -64,9 +64,12 @@ MPM PassBuilder::buildModuleDebugPipeline() {
 }
 
 FPM buildRV64FunctionPipeline(OptInfo opt_info) {
+    using Stage = GenericPeephole::Stage;
+
     FPM fpm;
     fpm.addPass(ISel());
-    // fpm.addPass(RedundantLoadEli());
+    fpm.addPass(GenericPeephole(Stage::AfterIsel));
+    fpm.addPass(RedundantLoadEli(opt_info.redundantLoadEli_weight));
     fpm.addPass(PreRAlegalize());
     fpm.addPass(MachineLICMPass());
     //     fpm.addPass(CopyPropagation());
@@ -75,6 +78,7 @@ FPM buildRV64FunctionPipeline(OptInfo opt_info) {
     fpm.addPass(StackGenerate());
     fpm.addPass(RVCFGsimplifyAfterRA());
     fpm.addPass(PostRAlegalize());
+    // fpm.addPass(PostRaScheduling());
     return fpm;
 }
 

@@ -26,6 +26,10 @@ public:
 
     bool isFuncCall(const MIRInst_p &) const override;
     void appendCalleeSaveStackSize(uint64_t &allocationBase, uint64_t calleesaves) const override;
+
+    unsigned getStackObjectMinAlignment() const override {
+        return 8;
+    }
 };
 }
 

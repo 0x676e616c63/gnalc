@@ -83,10 +83,17 @@ std::optional<std::tuple<const Value *, size_t>> getGepTotalOffset(const GEPInst
         else if (auto phi = base_ptr->as_raw<PHIInst>()) {
             const Value *common_base = nullptr;
             size_t common_offset = 0;
+            static std::unordered_set<Value*> visited;
+
             for (const auto &[phi_gep, bb] : phi->incomings()) {
                 if (!phi_gep->is<GEPInst>())
                     return std::nullopt;
+
+                if (!visited.emplace(phi_gep.get()).second)
+                    return std::nullopt;
                 auto opt = getGepTotalOffset(phi_gep->as_raw<GEPInst>());
+                visited.erase(phi_gep.get());
+
                 if (!opt.has_value())
                     return std::nullopt;
                 auto [phi_base, phi_offset] = *opt;

@@ -327,8 +327,6 @@ string RV64Printer::formatConverse(const MIRInst &minst) {
         return "fcvt.w.s " + dst + ", " + src + ", rtz";
     case OpC::InstS2F:
         return "fcvt.s.w " + dst + ", " + src + ", rtz";
-    case OpC::InstFRINTZ:
-        return "fcvt.w.s " + dst + ", " + src + ", rtz";
     default:
         Err::unreachable("Unsupported conversion opcode");
     }

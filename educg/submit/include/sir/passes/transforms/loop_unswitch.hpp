@@ -9,6 +9,14 @@
 #include "../pass_manager.hpp"
 
 namespace SIR {
+enum class UnswitchAttr {
+    InvariantUnswitched = 1 << 1,
+    Partitioned = 1 << 2,
+};
+
+GNALC_ENUM_OPERATOR(UnswitchAttr)
+using UnswitchAttrs = Attr::BitFlagsAttr<UnswitchAttr>;
+
 class LoopUnswitchPass : public PM::PassInfo<LoopUnswitchPass> {
 public:
     PM::PreservedAnalyses run(LinearFunction &function, LFAM &lfam);
