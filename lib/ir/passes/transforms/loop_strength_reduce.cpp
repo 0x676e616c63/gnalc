@@ -90,6 +90,10 @@ PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) 
                             auto header = evo_loop->getHeader();
                             auto latch = evo_loop->getLatch();
 
+                            // Don't generate gep with negative index
+                            if (evo_step <= 0)
+                                continue;
+
                             if (auto base_inst = base->as<Instruction>()) {
                                 // If the base is not available in the preheader, give up.
                                 // This won't miss too much opportunity since if we can hoist that
