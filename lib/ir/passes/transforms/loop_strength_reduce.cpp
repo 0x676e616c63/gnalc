@@ -11,32 +11,9 @@
 
 namespace IR {
 Attr::AttrKey LSRAttrs::Key;
-// void debug_print_scev(Function &function, FAM & fam) {
-//     auto& scev = fam.getResult<SCEVAnalysis>(function);
-//     const DomTree &domtree = fam.getResult<DomTreeAnalysis>(function);
-//     for (const auto &bb : function) {
-//         for (const auto &inst : bb->all_insts()) {
-//             if (!inst->getType()->isI32())
-//                 continue;
-//             for (const auto &scev_block : function) {
-//                 if (!domtree.ADomB(bb, scev_block))
-//                     continue;
-//                 auto s = scev.getSCEVAtBlock(inst, scev_block);
-//                 // Since we've ensured the value is available in this block,
-//                 // getSCEVAtBlock should not return nullptr.
-//                 Err::gassert(s != nullptr);
-//                 if (!s->isUntracked())
-//                     Logger::logDebug("LSR Debug: ", inst->getName(), " at block '", scev_block->getName(), "': ", *s);
-//             }
-//         }
-//     }
-// }
 
-PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) {
-    bool lsr_inst_modified = false;
-    auto &loop_info = fam.getResult<LoopAnalysis>(function);
-    auto &scev = fam.getResult<SCEVAnalysis>(function);
-    auto domtree = fam.lazyGetResult<DomTreeAnalysis>(function);
+bool reduceMultiply(SCEVHandle &scev, LoopInfo &loop_info) {
+    bool reduced = false;
     for (const auto &toplevel : loop_info) {
         auto looppdfv = toplevel->getDFVisitor<Util::DFVOrder::PostOrder>();
         for (const auto &loop : looppdfv) {
@@ -44,8 +21,6 @@ PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) 
             if (loop->getExitBlocks().size() != 1)
                 continue;
 
-            auto attr = loop->getHeader()->attr().getOrAdd<LSRAttrs>();
-            size_t &curr_reduced_gep_cnt = attr->reduced_gep_cnt;
             for (const auto &bb : loop->blocks()) {
                 auto insts = bb->getInsts();
                 for (const auto &inst : insts) {
@@ -65,7 +40,7 @@ PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) 
                         auto evo = scev.getSCEVAtBlock(curr.get(), bb);
                         if (evo && evo->isAddRec()) {
                             auto cost = scev.estimateExpansionCost(evo);
-                            if (!cost || *cost > Config::IR::LSR_EXPANSION_THRESHOLD)
+                            if (!cost || *cost > Config::IR::LSR_MULTIPLY_EXPANSION_THRESHOLD)
                                 continue;
                             if (auto phi = scev.expandAddRec(evo)) {
                                 auto use_list = curr->getUseList();
@@ -75,12 +50,54 @@ PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) 
 
                                 // FIXME: Do NOT forget all, it's time-consuming.
                                 scev.forgetAll();
-                                lsr_inst_modified = true;
-                                // debug_print_scev(function, fam);
+                                reduced = true;
                             }
                         }
-                    } else if (pVal base, index;
-                               match(inst, M::Gep(M::Bind(base), M::IsIntegerVal(0), M::Bind(index)))) {
+                    }
+                }
+            }
+        }
+    }
+    return reduced;
+}
+
+struct GepReductionKey {
+    pVal ptr_base;
+    int evo_base;
+    int evo_step;
+    const Loop *evo_loop;
+};
+
+bool operator==(const GepReductionKey &lhs, const GepReductionKey &rhs) {
+    return lhs.ptr_base == rhs.ptr_base && lhs.evo_base == rhs.evo_base && lhs.evo_step == rhs.evo_step &&
+           lhs.evo_loop == rhs.evo_loop;
+}
+
+struct GepReductionKeyHash {
+    size_t operator()(const GepReductionKey &gep) const {
+        size_t seed = std::hash<pVal>()(gep.ptr_base);
+        Util::hashSeedCombine(seed, std::hash<int>()(gep.evo_base));
+        Util::hashSeedCombine(seed, std::hash<int>()(gep.evo_step));
+        Util::hashSeedCombine(seed, std::hash<const Loop *>()(gep.evo_loop));
+        return seed;
+    }
+};
+
+bool reduceGep(Function &function, SCEVHandle &scev, LoopInfo &loop_info, FAM::LazyResult<DomTreeAnalysis> &domtree) {
+    std::unordered_map<GepReductionKey, std::vector<pVal>, GepReductionKeyHash> candidates;
+    size_t num_geps_to_reduce = 0;
+
+    for (const auto &toplevel : loop_info) {
+        auto looppdfv = toplevel->getDFVisitor<Util::DFVOrder::PostOrder>();
+        for (const auto &loop : looppdfv) {
+            Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplified Form");
+            if (loop->getExitBlocks().size() != 1)
+                continue;
+
+            for (const auto &bb : loop->blocks()) {
+                auto insts = bb->getInsts();
+                for (const auto &inst : insts) {
+                    if (pVal base, index; match(inst, M::Gep(M::Bind(base), M::IsIntegerVal(0), M::Bind(index)))) {
                         auto size = base->getType()->as<PtrType>()->getElmType()->getBytes();
                         // Multiply by power of two can be optimized to a shift.
                         // Don't reduce them to avoid too much phi nodes.
@@ -92,8 +109,6 @@ PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) 
                             auto [evo_base, evo_step] = *evo->getConstantAffineAddRec();
                             auto evo_loop = evo->getLoop();
                             auto preheader = evo_loop->getPreHeader();
-                            auto header = evo_loop->getHeader();
-                            auto latch = evo_loop->getLatch();
 
                             // Don't generate gep with negative index
                             if (evo_step <= 0)
@@ -110,35 +125,67 @@ PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) 
                                 }
                             }
 
-                            static size_t name_cnt = 0;
-                            auto phi_name = "%lsr.ptr.phi." + std::to_string(name_cnt);
-                            auto phi = std::make_shared<PHIInst>(phi_name, inst->getType());
-                            auto base_gep_name = "%lsr.ptr.base." + std::to_string(name_cnt);
-                            auto base_gep = std::make_shared<GEPInst>(base_gep_name, base, function.getConst(0),
-                                                                      function.getConst(evo_base));
-                            auto upd_gep_name = "%lsr.ptr.upd." + std::to_string(name_cnt);
-                            auto update_gep = std::make_shared<GEPInst>(upd_gep_name, phi, function.getConst(evo_step));
-                            ++name_cnt;
-
-                            phi->addPhiOper(base_gep, preheader);
-                            phi->addPhiOper(update_gep, latch);
-
-                            preheader->addInst(preheader->getEndInsertPoint(), base_gep);
-                            header->addPhiInst(phi);
-                            latch->addInst(latch->getEndInsertPoint(), update_gep);
-                            inst->replaceSelf(phi);
-
-                            Logger::logDebug("[LSR]: Reduced gep '", inst->getName(), "'.");
-                            // FIXME: Do NOT forget all, it's time-consuming.
-                            scev.forgetAll();
-                            lsr_inst_modified = true;
-                            ++curr_reduced_gep_cnt;
+                            auto key = GepReductionKey{
+                                .ptr_base = base, .evo_base = evo_base, .evo_step = evo_step, .evo_loop = evo_loop};
+                            candidates[key].emplace_back(inst);
+                            ++num_geps_to_reduce;
                         }
                     }
                 }
             }
         }
     }
+
+    if (candidates.empty())
+        return false;
+
+    // Don't reduce too many geps to keep register pressure low.
+    if (num_geps_to_reduce > Config::IR::LSR_GEP_REDUCTION_THRESHOLD) {
+        Logger::logDebug("[LSR]: Too many geps for reduction. (", num_geps_to_reduce, ")");
+        return false;
+    }
+
+    for (const auto &[key, geps] : candidates) {
+        const auto &[ptr_base, evo_base, evo_step, evo_loop] = key;
+        static size_t name_cnt = 0;
+        auto phi_name = "%lsr.ptr.phi." + std::to_string(name_cnt);
+        auto phi = std::make_shared<PHIInst>(phi_name, geps[0]->getType());
+        auto base_gep_name = "%lsr.ptr.base." + std::to_string(name_cnt);
+        auto base_gep =
+            std::make_shared<GEPInst>(base_gep_name, ptr_base, function.getConst(0), function.getConst(evo_base));
+        auto upd_gep_name = "%lsr.ptr.upd." + std::to_string(name_cnt);
+        auto update_gep = std::make_shared<GEPInst>(upd_gep_name, phi, function.getConst(evo_step));
+        ++name_cnt;
+
+        auto preheader = evo_loop->getPreHeader();
+        auto header = evo_loop->getHeader();
+        auto latch = evo_loop->getLatch();
+
+        phi->addPhiOper(base_gep, preheader);
+        phi->addPhiOper(update_gep, latch);
+
+        preheader->addInst(preheader->getEndInsertPoint(), base_gep);
+        header->addPhiInst(phi);
+        latch->addInst(latch->getEndInsertPoint(), update_gep);
+        Logger::logDebug("[LSR]: Generated phi '", phi->getName(), "'.");
+
+        for (const auto &gep : geps) {
+            gep->replaceSelf(phi);
+            Logger::logDebug("[LSR]: Reduced gep '", gep->getName(), "' with phi '", phi->getName(), "'.");
+        }
+    }
+    return true;
+}
+
+PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) {
+    bool lsr_inst_modified = false;
+    auto &loop_info = fam.getResult<LoopAnalysis>(function);
+    auto &scev = fam.getResult<SCEVAnalysis>(function);
+    auto domtree = fam.lazyGetResult<DomTreeAnalysis>(function);
+
+    lsr_inst_modified |= reduceMultiply(scev, loop_info);
+    lsr_inst_modified |= reduceGep(function, scev, loop_info, domtree);
+
     return lsr_inst_modified ? PreserveCFGAnalyses() : PreserveAll();
 }
 

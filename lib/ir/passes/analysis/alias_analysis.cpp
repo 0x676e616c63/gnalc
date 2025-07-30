@@ -261,69 +261,22 @@ pVal getMemLocation(Value *i) {
 pVal getMemLocation(const pVal &i) {
     return getMemLocation(i.get());
 }
-
-Value* getPtrBase(Value* ptr) {
-    Err::gassert(ptr->getType()->is<PtrType>());
+Value* getPtrBaseImpl(Value* ptr, std::unordered_set<Value*>& visited) {
     auto base = ptr;
     while (true) {
         if (auto bitcast = base->as_raw<BITCASTInst>())
             base = bitcast->getOVal().get();
         else if (auto gep = base->as_raw<GEPInst>())
             base = gep->getPtr().get();
-        else if (auto phi = base->as<PHIInst>()) {
+        else if (auto phi = base->as_raw<PHIInst>()) {
+            if (!visited.emplace(phi).second)
+                return phi;
+
             Value* common_base = nullptr;
-            // bugs?
-            static std::unordered_set<Value*> visited;
             for (const auto &[val, bb] : phi->incomings()) {
-                if (!visited.emplace(val.get()).second)
+                auto curr = getPtrBaseImpl(val.get(), visited);
+                if (curr == phi)
                     continue;
-                auto curr = getPtrBase(val);
-                visited.erase(curr.get());
-
-                if (curr == nullptr)
-                    return nullptr;
-                if (common_base == nullptr)
-                    common_base = curr.get();
-                else if (common_base != curr.get())
-                    return nullptr;
-            }
-            if (common_base == nullptr)
-                return nullptr;
-            base = common_base;
-        } else if (auto select = base->as_raw<SELECTInst>()) {
-            auto true_base = getPtrBase(select->getTrueVal().get());
-            auto false_base = getPtrBase(select->getFalseVal().get());
-            if (true_base == nullptr || false_base == nullptr || true_base != false_base)
-                return nullptr;
-            base = true_base;
-        } else if (base->is<ALLOCAInst, GlobalVariable, FormalParam>())
-            return base;
-        else if (base->is<LOADInst, INTTOPTRInst, PTRTOINTInst>()) {
-            return nullptr;
-        } else
-            Err::unreachable();
-    }
-    return nullptr;
-}
-
-pVal getPtrBase(const pVal &ptr) {
-    Err::gassert(ptr->getType()->is<PtrType>());
-    auto base = ptr;
-    while (true) {
-        if (auto bitcast = base->as_raw<BITCASTInst>())
-            base = bitcast->getOVal();
-        else if (auto gep = base->as_raw<GEPInst>())
-            base = gep->getPtr();
-        else if (auto phi = base->as<PHIInst>()) {
-            pVal common_base = nullptr;
-            // bugs?
-            static std::unordered_set<Value*> visited;
-            for (const auto &[val, bb] : phi->incomings()) {
-                if (!visited.emplace(val.get()).second)
-                    continue;
-                auto curr = getPtrBase(val);
-                visited.erase(curr.get());
-
                 if (curr == nullptr)
                     return nullptr;
                 if (common_base == nullptr)
@@ -335,8 +288,8 @@ pVal getPtrBase(const pVal &ptr) {
                 return nullptr;
             base = common_base;
         } else if (auto select = base->as_raw<SELECTInst>()) {
-            auto true_base = getPtrBase(select->getTrueVal());
-            auto false_base = getPtrBase(select->getFalseVal());
+            auto true_base = getPtrBaseImpl(select->getTrueVal().get(), visited);
+            auto false_base = getPtrBaseImpl(select->getFalseVal().get(), visited);
             if (true_base == nullptr || false_base == nullptr || true_base != false_base)
                 return nullptr;
             base = true_base;
@@ -350,4 +303,13 @@ pVal getPtrBase(const pVal &ptr) {
     return nullptr;
 }
 
+Value* getPtrBase(Value* ptr) {
+    Err::gassert(ptr->getType()->is<PtrType>());
+    std::unordered_set<Value*> visited;
+    return getPtrBaseImpl(ptr, visited);
+}
+
+pVal getPtrBase(const pVal &ptr) {
+    return getPtrBase(ptr.get())->as<Value>();
+}
 } // namespace IR

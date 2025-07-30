@@ -122,8 +122,10 @@ bool isTriviallyNonEq(const pVal &v1, const pVal &v2) {
 // Quick path for two disjoint geps
 // Usually they come from loop unroll, handling them specially can speed up the analysis.
 bool isTriviallyDisjointPtr(Value *ptr1, Value *ptr2) {
-    if (match(ptr2, M::Gep(M::Is(ptr1), M::IsIntegerVal(1))) || match(ptr1, M::Gep(M::Is(ptr2), M::IsIntegerVal(1))))
-        return true;
+    if (int ci; match(ptr2, M::Gep(M::Is(ptr1), M::Bind(ci))) || match(ptr1, M::Gep(M::Is(ptr2), M::IsIntegerVal(ci)))) {
+        if (ci != 0)
+            return true;
+    }
 
     auto gep1 = ptr1->as_raw<GEPInst>();
     auto gep2 = ptr2->as_raw<GEPInst>();

@@ -45,7 +45,7 @@ public:
 };
 
 class AttrManager {
-    using StorageT = std::list<std::pair<AttrKey *, std::unique_ptr<AttrConcept>>>;
+    using StorageT = std::vector<std::pair<AttrKey *, std::unique_ptr<AttrConcept>>>;
     StorageT storage;
 
 public:
