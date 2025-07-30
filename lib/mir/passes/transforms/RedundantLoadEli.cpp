@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "mir/passes/transforms/RedundantLoadEli.hpp"
+#include "mir/MIR.hpp"
 #include "mir/info.hpp"
 #include "mir/passes/analysis/domtree_analysis.hpp"
 #include "mir/passes/transforms/isel.hpp"
@@ -13,6 +14,7 @@
 #include <cstdlib>
 #include <iterator>
 #include <optional>
+#include <string>
 
 using namespace MIR;
 
@@ -27,6 +29,7 @@ void RedundantLoadEliImpl::Impl() {
     MkInfo();
     CulculateLCA();
     ApplyCopys();
+    replace_global();
 }
 
 void RedundantLoadEliImpl::MkInfo() {
@@ -71,10 +74,6 @@ void RedundantLoadEliImpl::MkInfo() {
 
             if (auto ptr = isLoad(minst)) {
                 auto loadVal = *ptr;
-
-                if (mblk->getmSym() == "my_sin_impl_1") {
-                    int debug;
-                }
 
                 if (!infos.count(loadVal)) {
 
@@ -182,6 +181,7 @@ void RedundantLoadEliImpl::ApplyCopys_inFunc(loadInfo &info, const ldValue &cons
         // add a load in lca blk
 
         loaded_op = MIROperand::asVReg(ctx.nextId(), constVal.type);
+        loaded_op->setUseTrait(MIROperand::usage::StoreConst);
 
         auto new_load = MIRInst::make(constVal.getLoadOpC())
                             ->setOperand<0>(loaded_op, ctx)
@@ -202,17 +202,23 @@ void RedundantLoadEliImpl::ApplyCopys_inFunc(loadInfo &info, const ldValue &cons
             ApplyCopys_inBlks(mblk, uses, constVal);
             continue;
         }
-
+        auto &minsts = mblk->Insts();
         for (auto &[mop, miter] : uses) {
             auto &minst_loadImm = *miter;
 
-            Logger::logInfo("before change to copy(global): " + minst_loadImm->dbgDump() + " in " + mblk->getmSym());
+            Logger::logInfo("before change to (global): %" + std::to_string(mop->getRecover() - VRegBegin) + " in " +
+                            mblk->getmSym());
 
-            minst_loadImm->resetOpcode(chooseCopyOpC(mop, loaded_op));
-            minst_loadImm->setOperand<0>(mop, ctx);
-            minst_loadImm->setOperand<1>(loaded_op, ctx);
+            // minst_loadImm->resetOpcode(chooseCopyOpC(mop, loaded_op));
+            // minst_loadImm->setOperand<0>(mop, ctx);
+            // minst_loadImm->setOperand<1>(loaded_op, ctx);
 
-            Logger::logInfo("after change to copy(global): " + minst_loadImm->dbgDump() + " in " + mblk->getmSym());
+            minst_loadImm->putAllOp(ctx);
+            minsts.erase(miter); // explicitly delete
+            replace_map.emplace(mop, loaded_op);
+
+            Logger::logInfo("after change to (global): %" + std::to_string(loaded_op->getRecover() - VRegBegin) +
+                            " in " + mblk->getmSym());
 
             if (constVal.isLiteral()) {
                 mblk->removeLitetal(std::get<string>(constVal.inner));
@@ -231,20 +237,43 @@ void RedundantLoadEliImpl::ApplyCopys_inBlks(MIRBlk *mblk, loadInfo::useInfo_blk
 
     blk_info.erase(blk_info.begin());
 
+    auto &minsts = mblk->Insts();
     for (auto &[mop, miter] : blk_info) {
 
         auto &minst_loadImm = *miter;
 
-        Logger::logInfo("before change to copy(local): " + minst_loadImm->dbgDump() + " in " + mblk->getmSym());
+        Logger::logInfo("before change to (local): %" + std::to_string(mop->getRecover() - VRegBegin) + " in " +
+                        mblk->getmSym());
 
-        minst_loadImm->resetOpcode(chooseCopyOpC(mop, loaded_op));
-        minst_loadImm->setOperand<0>(mop, ctx);
-        minst_loadImm->setOperand<1>(loaded_op, ctx);
+        // minst_loadImm->resetOpcode(chooseCopyOpC(mop, loaded_op));
+        // minst_loadImm->setOperand<0>(mop, ctx);
+        // minst_loadImm->setOperand<1>(loaded_op, ctx);
 
-        Logger::logInfo("after change to copy(local): " + minst_loadImm->dbgDump() + " in " + mblk->getmSym());
+        minst_loadImm->putAllOp(ctx);
+        minsts.erase(miter); // explicitly delete
+        replace_map.emplace(mop, loaded_op);
+
+        Logger::logInfo("after change to (local): %" + std::to_string(loaded_op->getRecover() - VRegBegin) + " in " +
+                        mblk->getmSym());
 
         if (constVal.isLiteral()) {
             mblk->removeLitetal(std::get<string>(constVal.inner));
+        }
+    }
+}
+
+void RedundantLoadEliImpl::replace_global() {
+
+    for (auto &mblk : mfunc.blks()) {
+
+        for (auto &minst : mblk->Insts()) {
+
+            for (auto &mop : minst->operands()) {
+
+                if (replace_map.count(mop)) {
+                    minst->replace(mop, replace_map.at(mop), ctx);
+                }
+            }
         }
     }
 }
@@ -254,7 +283,7 @@ void RedundantLoadEliImpl::weights_cal(loadInfo &info, std::map<MIRBlk *, bool> 
     const size_t weight_prv = 1;
     const size_t weight_live_len = 1;
 
-    const size_t n = s_arg; // Try more and fix me
+    const size_t n = s_arg;
 
     for (const auto &[mblk, uses] : info.const_uses) {
 
