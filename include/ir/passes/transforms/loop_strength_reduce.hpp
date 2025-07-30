@@ -10,6 +10,13 @@
 #include "ir/passes/pass_manager.hpp"
 
 namespace IR {
+struct LSRAttrs : Attr::AttrInfo<LSRAttrs> {
+    size_t reduced_gep_cnt = 0;
+private:
+    friend class AttrInfo<LSRAttrs>;
+    static Attr::AttrKey Key;
+};
+
 class LoopStrengthReducePass : public PM::PassInfo<LoopStrengthReducePass> {
 public:
     PM::PreservedAnalyses run(Function &function, FAM &manager);

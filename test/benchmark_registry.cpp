@@ -214,6 +214,7 @@ REGISTER_GNALC_FIXED_EXCEPT_PASS(loopunroll)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(codesink)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(inline)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(internalize)
+REGISTER_GNALC_FIXED_EXCEPT_PASS(lsr)
 
 void register_gnalc_debug() {
     auto entry = gnalc_register_helper("-debug-pipeline");
@@ -336,6 +337,7 @@ void Test::register_all_benchmarks() {
     register_gnalc_no_mlicm();
     register_gnalc_no_mloadeli();
     register_gnalc_fixed_no_internalize();
+    register_gnalc_fixed_no_lsr();
 
     register_gnalc2_fixed();
     register_gnalc2_fixed_no_vectorizer();

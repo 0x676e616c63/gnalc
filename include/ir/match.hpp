@@ -2,16 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 #pragma once
-#ifndef GNALC_IR_PATTERN_PATTERN_MATCH_HPP
-#define GNALC_IR_PATTERN_PATTERN_MATCH_HPP
+#ifndef GNALC_IR_MATCH_HPP
+#define GNALC_IR_MATCH_HPP
 
 #include "base.hpp"
 #include "constant.hpp"
 #include "instructions/binary.hpp"
-#include "instructions/control.hpp"
 #include "instructions/converse.hpp"
-#include "instructions/memory.hpp"
-#include "instructions/vector.hpp"
 #include "match/match.hpp"
 
 using namespace Match;
@@ -80,7 +77,7 @@ inline auto Bind(float &a) { return ClassMatchBind<ConstantFloat, float, Constan
 // This, however, requires the `M::Is` to take a reference as its parameter
 // and transfer that reference to the predicate. Thus, when `M::Is`'s predicate is invoked
 // by `InstMatch::match`, the desired value has already been bound by reference in `M::Bind`.
-inline auto Is(const Value *&v) {
+inline auto Is(Value * const&v) {
     return ClassMatchIf<Value>{[&v](const Value &b) { return v == &b; }};
 }
 
@@ -113,14 +110,14 @@ struct IntegerMatch {
     explicit IntegerMatch(int64_t int_val_) : int_val(int_val_) {}
 
     template <typename T> bool match(const T &v) const {
-        if (auto i1 = Match::detail::ptrCast<ConstantI1>(v))
-            return int_val == i1->getVal();
-        if (auto i8 = Match::detail::ptrCast<ConstantI8>(v))
-            return int_val == i8->getVal();
         if (auto i32 = Match::detail::ptrCast<ConstantInt>(v))
             return int_val == i32->getVal();
         if (auto i64 = Match::detail::ptrCast<ConstantI64>(v))
             return int_val == i64->getVal();
+        if (auto i8 = Match::detail::ptrCast<ConstantI8>(v))
+            return int_val == i8->getVal();
+        if (auto i1 = Match::detail::ptrCast<ConstantI1>(v))
+            return int_val == i1->getVal();
         return false;
     }
 };

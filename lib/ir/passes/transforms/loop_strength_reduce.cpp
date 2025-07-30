@@ -2,13 +2,15 @@
 // SPDX-License-Identifier: MIT
 
 #include "ir/passes/transforms/loop_strength_reduce.hpp"
+#include "config/config.hpp"
 #include "ir/block_utils.hpp"
+#include "ir/instructions/memory.hpp"
+#include "ir/match.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
-#include "ir/match.hpp"
-#include "config/config.hpp"
 
 namespace IR {
+Attr::AttrKey LSRAttrs::Key;
 // void debug_print_scev(Function &function, FAM & fam) {
 //     auto& scev = fam.getResult<SCEVAnalysis>(function);
 //     const DomTree &domtree = fam.getResult<DomTreeAnalysis>(function);
@@ -32,8 +34,8 @@ namespace IR {
 
 PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) {
     bool lsr_inst_modified = false;
-    auto& loop_info = fam.getResult<LoopAnalysis>(function);
-    auto& scev = fam.getResult<SCEVAnalysis>(function);
+    auto &loop_info = fam.getResult<LoopAnalysis>(function);
+    auto &scev = fam.getResult<SCEVAnalysis>(function);
     auto domtree = fam.lazyGetResult<DomTreeAnalysis>(function);
     for (const auto &toplevel : loop_info) {
         auto looppdfv = toplevel->getDFVisitor<Util::DFVOrder::PostOrder>();
@@ -41,9 +43,12 @@ PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) 
             Err::gassert(loop->isSimplifyForm(), "Expected LoopSimplified Form");
             if (loop->getExitBlocks().size() != 1)
                 continue;
-            for (const auto& bb : loop->blocks()) {
+
+            auto attr = loop->getHeader()->attr().getOrAdd<LSRAttrs>();
+            size_t &curr_reduced_gep_cnt = attr->reduced_gep_cnt;
+            for (const auto &bb : loop->blocks()) {
                 auto insts = bb->getInsts();
-                for (const auto& inst : insts) {
+                for (const auto &inst : insts) {
                     if (pVal x, y; match(inst, M::Mul(M::Bind(x), M::Bind(y)))) {
                         auto curr = inst;
                         // Get the root of the arithmetic tree
@@ -75,7 +80,7 @@ PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) 
                             }
                         }
                     } else if (pVal base, index;
-                        match(inst, M::Gep(M::Bind(base), M::IsIntegerVal(0), M::Bind(index)))) {
+                               match(inst, M::Gep(M::Bind(base), M::IsIntegerVal(0), M::Bind(index)))) {
                         auto size = base->getType()->as<PtrType>()->getElmType()->getBytes();
                         // Multiply by power of two can be optimized to a shift.
                         // Don't reduce them to avoid too much phi nodes.
@@ -109,11 +114,10 @@ PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) 
                             auto phi_name = "%lsr.ptr.phi." + std::to_string(name_cnt);
                             auto phi = std::make_shared<PHIInst>(phi_name, inst->getType());
                             auto base_gep_name = "%lsr.ptr.base." + std::to_string(name_cnt);
-                            auto base_gep = std::make_shared<GEPInst>(base_gep_name, base,
-                                function.getConst(0), function.getConst(evo_base));
+                            auto base_gep = std::make_shared<GEPInst>(base_gep_name, base, function.getConst(0),
+                                                                      function.getConst(evo_base));
                             auto upd_gep_name = "%lsr.ptr.upd." + std::to_string(name_cnt);
-                            auto update_gep = std::make_shared<GEPInst>(upd_gep_name, phi,
-                                function.getConst(evo_step));
+                            auto update_gep = std::make_shared<GEPInst>(upd_gep_name, phi, function.getConst(evo_step));
                             ++name_cnt;
 
                             phi->addPhiOper(base_gep, preheader);
@@ -128,6 +132,7 @@ PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) 
                             // FIXME: Do NOT forget all, it's time-consuming.
                             scev.forgetAll();
                             lsr_inst_modified = true;
+                            ++curr_reduced_gep_cnt;
                         }
                     }
                 }
