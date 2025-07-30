@@ -213,6 +213,7 @@ REGISTER_GNALC_FIXED_EXCEPT_PASS(reshapefold)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(loopunroll)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(codesink)
 REGISTER_GNALC_FIXED_EXCEPT_PASS(inline)
+REGISTER_GNALC_FIXED_EXCEPT_PASS(internalize)
 
 void register_gnalc_debug() {
     auto entry = gnalc_register_helper("-debug-pipeline");
@@ -287,6 +288,16 @@ void register_gnalc2_loadEli_w3() {
     BenchmarkRegistry::register_benchmark("gnalc2_loadEli_w3", entry);
 }
 
+void register_gnalc_no_mlicm() {
+    auto entry = gnalc_register_helper("-O1 -fno-machineLICM");
+    BenchmarkRegistry::register_benchmark("gnalc_fixed_no_mlicm", entry);
+}
+
+void register_gnalc_no_mloadeli() {
+    auto entry = gnalc_register_helper("-O1 -fno-redundantLoadEli");
+    BenchmarkRegistry::register_benchmark("gnalc_fixed_no_mloadeli", entry);
+}
+
 void Test::register_all_benchmarks() {
     register_example_0();
     register_example_1();
@@ -322,6 +333,9 @@ void Test::register_all_benchmarks() {
     register_gnalc_fuzz5();
     register_gnalc_fuzz10();
     register_gnalc_fuzz100();
+    register_gnalc_no_mlicm();
+    register_gnalc_no_mloadeli();
+    register_gnalc_fixed_no_internalize();
 
     register_gnalc2_fixed();
     register_gnalc2_fixed_no_vectorizer();

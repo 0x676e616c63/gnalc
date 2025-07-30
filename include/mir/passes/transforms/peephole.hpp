@@ -64,6 +64,7 @@ private:
     MIRFunction *mfunc;
     FAM *fam;
     Stage stage;
+    Arch arch;
 
 public:
     void impl(MIRFunction &, FAM &, Stage);

@@ -14,6 +14,7 @@
 #include "mir/passes/transforms/CopyPropagation.hpp"
 #include "mir/passes/transforms/FusedAddr.hpp"
 #include "mir/passes/transforms/ICF_TailDup.hpp"
+#include "mir/passes/transforms/MachineConstantFold.hpp"
 #include "mir/passes/transforms/PostRAlegalize.hpp"
 #include "mir/passes/transforms/PreRAlegalize.hpp"
 #include "mir/passes/transforms/RA.hpp"
@@ -64,9 +65,12 @@ MPM PassBuilder::buildModuleDebugPipeline() {
 }
 
 FPM buildRV64FunctionPipeline(OptInfo opt_info) {
+    using Stage = GenericPeephole::Stage;
+
     FPM fpm;
     fpm.addPass(ISel());
-    // fpm.addPass(RedundantLoadEli());
+    fpm.addPass(GenericPeephole(Stage::AfterIsel));
+    fpm.addPass(RedundantLoadEli(opt_info.redundantLoadEli_weight));
     fpm.addPass(PreRAlegalize());
     fpm.addPass(MachineLICMPass());
     //     fpm.addPass(CopyPropagation());
@@ -75,6 +79,7 @@ FPM buildRV64FunctionPipeline(OptInfo opt_info) {
     fpm.addPass(StackGenerate());
     fpm.addPass(RVCFGsimplifyAfterRA());
     fpm.addPass(PostRAlegalize());
+    // fpm.addPass(PostRaScheduling());
     return fpm;
 }
 
@@ -85,6 +90,7 @@ FPM buildARMv8FunctionPipeline(OptInfo opt_info) {
 
     // clang-format off
                                             fpm.addPass(FusedAddr());
+                                            fpm.addPass(MachineConstantFold());
                                             fpm.addPass(ISel());
     opt_info.peephole_afterIsel ?           fpm.addPass(GenericPeephole(Stage::AfterIsel)) : nop;
     opt_info.CFGsimplifyBeforeRa ?          fpm.addPass(CFGsimplifyBeforeRA()) : nop;

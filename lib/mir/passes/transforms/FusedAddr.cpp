@@ -19,17 +19,30 @@ PM::PreservedAnalyses FusedAddr::run(MIRFunction &mfunc, FAM &fam) {
 }
 
 void FusedAddrImpl::impl() {
+
+    while (true) {
+        clear();
+        ptr_use_record();
+        ptr_def_record();
+        if (!fused_apply()) {
+            break;
+        }
+    }
+}
+
+void FusedAddrImpl::clear() {
+    ptrUse.clear();
+    withConstOff.clear();
+    ptrDef.clear();
+    ptrDetail.clear();
     fusedtimes = 0;
-    ptr_use_record();
-    ptr_def_record();
-    fused_apply();
 }
 
 void FusedAddrImpl::ptr_use_record() {
 
     // LAMBDA BEGIN
 
-    auto match_load = [](const MIRInst_p &load) -> std::optional<MIROperand_p> {
+    auto match_load = [this](const MIRInst_p &load) -> std::optional<MIROperand_p> {
         if (!load->isGeneric() || load->opcode<OpC>() != OpC::InstLoad) {
             return std::nullopt;
         }
@@ -43,14 +56,18 @@ void FusedAddrImpl::ptr_use_record() {
             return std::nullopt;
         }
 
-        if (!offset) { // no offset and not direct base on stkobj
+        if (!offset) {
+            withConstOff.emplace(load, false);
+            return {base};
+        } else if (offset->isImme()) {
+            withConstOff.emplace(load, true);
             return {base};
         }
 
         return std::nullopt;
     };
 
-    auto match_store = [](const MIRInst_p &store) -> std::optional<MIROperand_p> {
+    auto match_store = [this](const MIRInst_p &store) -> std::optional<MIROperand_p> {
         if (!store->isGeneric() || store->opcode<OpC>() != OpC::InstStore) {
             return std::nullopt;
         }
@@ -64,7 +81,11 @@ void FusedAddrImpl::ptr_use_record() {
             return std::nullopt;
         }
 
-        if (!offset) { // no offset and not direct base on stkobj
+        if (!offset) {
+            withConstOff.emplace(store, false);
+            return {base};
+        } else if (offset->isImme()) {
+            withConstOff.emplace(store, true);
             return {base};
         }
 
@@ -230,11 +251,9 @@ void FusedAddrImpl::ptr_def_record() {
     }
 }
 
-void FusedAddrImpl::fused_apply() {
+bool FusedAddrImpl::fused_apply() {
 
     for (auto &[memory, ptr] : ptrUse) {
-
-        // Err::gassert(ptrDef.at(ptr) == nullptr, "can not find ptr def");
 
         if (!ptrDetail.count(ptr)) {
             continue;
@@ -242,17 +261,29 @@ void FusedAddrImpl::fused_apply() {
 
         auto &[baseptr, offset, shift, if_giveup] = ptrDetail.at(ptr);
 
-        if (if_giveup) {
+        if (if_giveup || withConstOff.at(memory) && offset && !offset->isImme()) {
             continue;
         }
 
         if (memory->opcode<OpC>() == OpC::InstLoad) {
+
+            auto newoffset =
+                withConstOff.at(memory)
+                    ? MIROperand::asImme((offset ? offset->imme() : 0) + memory->getOp(2)->imme(), OpT::Int32)
+                    : offset;
+
             memory->setOperand<1>(baseptr, ctx);
-            memory->setOperand<2>(offset, ctx);
+            memory->setOperand<2>(newoffset, ctx);
             memory->setOperand<3>(shift, ctx);
         } else { // OpC::InstStore
+
+            auto newoffset =
+                withConstOff.at(memory)
+                    ? MIROperand::asImme((offset ? offset->imme() : 0) + memory->getOp(3)->imme(), OpT::Int32)
+                    : offset;
+
             memory->setOperand<2>(baseptr, ctx);
-            memory->setOperand<3>(offset, ctx);
+            memory->setOperand<3>(newoffset, ctx);
             memory->setOperand<4>(shift, ctx);
         }
 
@@ -260,4 +291,6 @@ void FusedAddrImpl::fused_apply() {
     }
 
     Logger::logInfo("successfully fused: " + std::to_string(fusedtimes));
+
+    return fusedtimes;
 }

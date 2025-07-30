@@ -108,29 +108,58 @@ bool isMemoryInvariantTo(const pVal& val, const pVal& item) {
     return isMemoryInvariantTo(val.get(), item.get());
 }
 
-bool isLoopInvariant(Value* val, HELPERInst* loop) {
-    Err::gassert(!val->getType()->is<PtrType>());
-
-    if (val->is<LOADInst, CALLInst, STOREInst>())
-        return false;
+enum class InvariantType {
+    Must, MustNot, DontKnow
+};
+InvariantType analyzeValInvariant(Value* val, HELPERInst* loop) {
+    if (val->is<LOADInst, STOREInst>())
+        return InvariantType::MustNot;
 
     auto inst = val->as<Instruction>();
     if (!inst)
-        return true;
+        return InvariantType::Must;
 
     if (auto indvar = inst->as<IndVar>()) {
         auto for_inst = loop->as<FORInst>();
         if (!for_inst || for_inst->getIndVar() == indvar)
-            return false;
+            return InvariantType::MustNot;
         if (for_inst->getIndVar()->getDepth() < indvar->getDepth())
-            return true;
-        return false;
+            return InvariantType::Must;
+        return InvariantType::MustNot;
     }
 
-    auto operands = collectOperands(inst);
-    for (auto& operand : operands)
-        if (!isLoopInvariant(operand.get(), loop))
+    return InvariantType::DontKnow;
+}
+
+bool isLoopInvariant(Value* val, HELPERInst* loop) {
+    Err::gassert(!val->getType()->is<PtrType>());
+
+    auto inst_info = analyzeValInvariant(val, loop);
+    if (inst_info == InvariantType::Must)
+        return true;
+
+    if (inst_info == InvariantType::MustNot)
+        return false;
+
+    auto operands = collectOperands(val->as<Instruction>());
+
+    for (auto it = operands.begin(); it != operands.end();) {
+        auto oper_info = analyzeValInvariant(it->get(), loop);
+        if (oper_info == InvariantType::Must)
+            it = operands.erase(it);
+        else if (oper_info == InvariantType::MustNot)
             return false;
+        else
+            ++it;
+    }
+
+    auto set = std::unordered_set<pVal>{operands.begin(), operands.end()};
+
+    if (auto for_loop = loop->as<FORInst>())
+        return !IListContainsRecursive(for_loop->getBodyInsts(), set);
+    if (auto while_loop = loop->as<WHILEInst>())
+        return !IListContainsRecursive(while_loop->getBodyInsts(), set) &&
+            !IListContainsRecursive(while_loop->getCondInsts(), set);
 
     return true;
 }

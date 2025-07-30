@@ -81,10 +81,7 @@ public:
 class RVCFGsimplifyAfterRAImpl : CFGsimplifyAfterRAImpl {
 public:
     RVCFGsimplifyAfterRAImpl(MIRFunction &_mfunc, FAM &_fam) : CFGsimplifyAfterRAImpl(_mfunc, _fam) {}
-    void impl() {
-        brEli();
-        // TODO
-    }
+    void impl();
     ~RVCFGsimplifyAfterRAImpl() = default;
 };
 

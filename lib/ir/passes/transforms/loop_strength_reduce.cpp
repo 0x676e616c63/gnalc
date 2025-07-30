@@ -34,6 +34,7 @@ PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) 
     bool lsr_inst_modified = false;
     auto& loop_info = fam.getResult<LoopAnalysis>(function);
     auto& scev = fam.getResult<SCEVAnalysis>(function);
+    auto domtree = fam.lazyGetResult<DomTreeAnalysis>(function);
     for (const auto &toplevel : loop_info) {
         auto looppdfv = toplevel->getDFVisitor<Util::DFVOrder::PostOrder>();
         for (const auto &loop : looppdfv) {
@@ -72,6 +73,61 @@ PM::PreservedAnalyses LoopStrengthReducePass::run(Function &function, FAM &fam) 
                                 lsr_inst_modified = true;
                                 // debug_print_scev(function, fam);
                             }
+                        }
+                    } else if (pVal base, index;
+                        match(inst, M::Gep(M::Bind(base), M::IsIntegerVal(0), M::Bind(index)))) {
+                        auto size = base->getType()->as<PtrType>()->getElmType()->getBytes();
+                        // Multiply by power of two can be optimized to a shift.
+                        // Don't reduce them to avoid too much phi nodes.
+                        // It's a common case since size often is a power of two.
+                        if (Util::isPowerOfTwo(size))
+                            continue;
+                        auto evo = scev.getSCEVAtBlock(index.get(), bb);
+                        if (evo && evo->getConstantAffineAddRec()) {
+                            auto [evo_base, evo_step] = *evo->getConstantAffineAddRec();
+                            auto evo_loop = evo->getLoop();
+                            auto preheader = evo_loop->getPreHeader();
+                            auto header = evo_loop->getHeader();
+                            auto latch = evo_loop->getLatch();
+
+                            // Don't generate gep with negative index
+                            if (evo_step <= 0)
+                                continue;
+
+                            if (auto base_inst = base->as<Instruction>()) {
+                                // If the base is not available in the preheader, give up.
+                                // This won't miss too much opportunity since if we can hoist that
+                                // to the preheader, LICM would have hoisted it already.
+                                if (!domtree->ADomB(base_inst->getParent(), preheader)) {
+                                    Logger::logDebug("[LSR]: Canceled reducing a gep because the"
+                                                     " base is not available in the preheader.");
+                                    continue;
+                                }
+                            }
+
+                            static size_t name_cnt = 0;
+                            auto phi_name = "%lsr.ptr.phi." + std::to_string(name_cnt);
+                            auto phi = std::make_shared<PHIInst>(phi_name, inst->getType());
+                            auto base_gep_name = "%lsr.ptr.base." + std::to_string(name_cnt);
+                            auto base_gep = std::make_shared<GEPInst>(base_gep_name, base,
+                                function.getConst(0), function.getConst(evo_base));
+                            auto upd_gep_name = "%lsr.ptr.upd." + std::to_string(name_cnt);
+                            auto update_gep = std::make_shared<GEPInst>(upd_gep_name, phi,
+                                function.getConst(evo_step));
+                            ++name_cnt;
+
+                            phi->addPhiOper(base_gep, preheader);
+                            phi->addPhiOper(update_gep, latch);
+
+                            preheader->addInst(preheader->getEndInsertPoint(), base_gep);
+                            header->addPhiInst(phi);
+                            latch->addInst(latch->getEndInsertPoint(), update_gep);
+                            inst->replaceSelf(phi);
+
+                            Logger::logDebug("[LSR]: Reduced gep '", inst->getName(), "'.");
+                            // FIXME: Do NOT forget all, it's time-consuming.
+                            scev.forgetAll();
+                            lsr_inst_modified = true;
                         }
                     }
                 }

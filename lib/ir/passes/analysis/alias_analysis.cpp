@@ -262,7 +262,7 @@ pVal getMemLocation(const pVal &i) {
     return getMemLocation(i.get());
 }
 
-Value* getPtrBase(Value *ptr) {
+Value* getPtrBase(Value* ptr) {
     Err::gassert(ptr->getType()->is<PtrType>());
     auto base = ptr;
     while (true) {
@@ -272,8 +272,14 @@ Value* getPtrBase(Value *ptr) {
             base = gep->getPtr().get();
         else if (auto phi = base->as<PHIInst>()) {
             Value* common_base = nullptr;
+            // bugs?
+            static std::unordered_set<Value*> visited;
             for (const auto &[val, bb] : phi->incomings()) {
+                if (!visited.emplace(val.get()).second)
+                    continue;
                 auto curr = getPtrBase(val);
+                visited.erase(curr.get());
+
                 if (curr == nullptr)
                     return nullptr;
                 if (common_base == nullptr)
@@ -281,7 +287,15 @@ Value* getPtrBase(Value *ptr) {
                 else if (common_base != curr.get())
                     return nullptr;
             }
+            if (common_base == nullptr)
+                return nullptr;
             base = common_base;
+        } else if (auto select = base->as_raw<SELECTInst>()) {
+            auto true_base = getPtrBase(select->getTrueVal().get());
+            auto false_base = getPtrBase(select->getFalseVal().get());
+            if (true_base == nullptr || false_base == nullptr || true_base != false_base)
+                return nullptr;
+            base = true_base;
         } else if (base->is<ALLOCAInst, GlobalVariable, FormalParam>())
             return base;
         else if (base->is<LOADInst, INTTOPTRInst, PTRTOINTInst>()) {
@@ -289,8 +303,8 @@ Value* getPtrBase(Value *ptr) {
         } else
             Err::unreachable();
     }
+    return nullptr;
 }
-
 
 pVal getPtrBase(const pVal &ptr) {
     Err::gassert(ptr->getType()->is<PtrType>());

@@ -259,6 +259,16 @@ public:
     pVal getBase() const { return getOperand(0)->getValue(); }
     pVal getBound() const { return getOperand(1)->getValue(); }
     pVal getStep() const { return getOperand(2)->getValue(); }
+
+    void setBase(const pVal & new_base) { setOperand(0, new_base); }
+    void setBound(const pVal & new_bound) { setOperand(1, new_bound); }
+    void setStep(const pVal & new_step) { setOperand(2, new_step); }
+
+    bool isConstantDomain() const {
+        return getBase()->getVTrait() == ValueTrait::CONSTANT_LITERAL
+        && getBound()->getVTrait() == ValueTrait::CONSTANT_LITERAL
+        && getStep()->getVTrait() == ValueTrait::CONSTANT_LITERAL;
+    }
 };
 
 class FORInst : public HELPERInst {
@@ -276,6 +286,9 @@ public:
     pVal getBase() const { return indvar->getBase(); }
     pVal getBound() const { return indvar->getBound(); }
     pVal getStep() const { return indvar->getStep(); }
+    void setBase(const pVal & new_base) { indvar->setBase(new_base); }
+    void setBound(const pVal & new_bound) { indvar->setBound(new_bound); }
+    void setStep(const pVal & new_step) { indvar->setStep(new_step); }
     const std::list<pInst> &getBodyInsts() const { return body_insts; }
     std::list<pInst> &getBodyInsts() { return body_insts; }
 

@@ -18,11 +18,13 @@
 #include "ir/passes/transforms/adce.hpp"
 #include "ir/passes/transforms/break_critical_edges.hpp"
 #include "ir/passes/transforms/cfgsimplify.hpp"
+#include "ir/passes/transforms/code_sink.hpp"
 #include "ir/passes/transforms/codegen_prepare.hpp"
 #include "ir/passes/transforms/dae.hpp"
 #include "ir/passes/transforms/dce.hpp"
 #include "ir/passes/transforms/dse.hpp"
 #include "ir/passes/transforms/gep_flatten.hpp"
+#include "ir/passes/transforms/globalize.hpp"
 #include "ir/passes/transforms/gvn_pre.hpp"
 #include "ir/passes/transforms/if_conversion.hpp"
 #include "ir/passes/transforms/indvar_simplify.hpp"
@@ -58,7 +60,6 @@
 #include "ir/passes/utilities/verifier.hpp"
 
 // Target
-#include "ir/passes/transforms/code_sink.hpp"
 #include "ir/target/armv7.hpp"
 #include "ir/target/armv8.hpp"
 #include "ir/target/brainfk.hpp"
@@ -123,7 +124,7 @@ PMOptions CliOptions::toPMOptions(Mode mode) const {
 }
 
 template <typename PM, typename Pass>
-void registerPassForOptInfo(PM &fpm, bool enable, const PMOptions& options, Pass &&pass) {
+void registerPassForOptInfo(PM &fpm, bool enable, const PMOptions &options, Pass &&pass) {
     if (enable) {
         fpm.addPass(std::forward<Pass>(pass));
         if (options.verify)
@@ -135,14 +136,14 @@ void registerPassForOptInfo(PM &fpm, bool enable, const PMOptions& options, Pass
 }
 
 template <typename PM, typename First, typename... Rest>
-void registerPassForOptInfo(PM &fpm, bool enable, const PMOptions& options, First &&first, Rest &&...rest) {
+void registerPassForOptInfo(PM &fpm, bool enable, const PMOptions &options, First &&first, Rest &&...rest) {
     registerPassForOptInfo(fpm, enable, options, std::forward<First>(first));
     registerPassForOptInfo(fpm, enable, options, std::forward<Rest>(rest)...);
 }
 
 #define FUNCTION_TRANSFORM(name, ...) registerPassForOptInfo(fpm, options.name, options, __VA_ARGS__);
 
-auto make_basic_clean(const PMOptions& options) {
+auto make_basic_clean(const PMOptions &options) {
     FPM fpm;
     FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
     FUNCTION_TRANSFORM(dce, DCEPass());
@@ -153,7 +154,7 @@ auto make_basic_clean(const PMOptions& options) {
     return fpm;
 }
 
-auto make_cfg_clean(const PMOptions& options) {
+auto make_cfg_clean(const PMOptions &options) {
     FPM fpm;
     FUNCTION_TRANSFORM(cfgsimplify, CFGSimplifyPass())
     FUNCTION_TRANSFORM(instsimplify, InstSimplifyPass());
@@ -163,7 +164,7 @@ auto make_cfg_clean(const PMOptions& options) {
     return fpm;
 }
 
-auto make_mem_clean(const PMOptions& options) {
+auto make_mem_clean(const PMOptions &options) {
     PM::FixedPointPM<Function> fpm;
     // fpm.addPass(PrintFunctionPass(std::cerr));
     FUNCTION_TRANSFORM(loadelim, LoadEliminationPass());
@@ -171,7 +172,7 @@ auto make_mem_clean(const PMOptions& options) {
     return fpm;
 }
 
-auto make_arithmetic(const PMOptions& options) {
+auto make_arithmetic(const PMOptions &options) {
     FPM fpm;
 
     FUNCTION_TRANSFORM(reassociate, ReassociatePass());
@@ -180,7 +181,7 @@ auto make_arithmetic(const PMOptions& options) {
     return fpm;
 }
 
-auto make_deep_clean(const PMOptions& options) {
+auto make_deep_clean(const PMOptions &options) {
     FPM fpm;
     fpm.addPass(make_basic_clean(options));
     fpm.addPass(make_cfg_clean(options));
@@ -190,14 +191,14 @@ auto make_deep_clean(const PMOptions& options) {
     return fpm;
 }
 
-auto make_fast_clean(const PMOptions& options) {
+auto make_fast_clean(const PMOptions &options) {
     FPM fpm;
     fpm.addPass(make_basic_clean(options));
     fpm.addPass(make_cfg_clean(options));
     return fpm;
 }
 
-auto make_memo(const PMOptions& options) {
+auto make_memo(const PMOptions &options) {
     FPM fpm;
     FUNCTION_TRANSFORM(dae, LoopSimplifyPass(), DAEPass());
     FUNCTION_TRANSFORM(unify_exits, UnifyExitsPass());
@@ -207,7 +208,7 @@ auto make_memo(const PMOptions& options) {
     return fpm;
 }
 
-auto make_enabling(const PMOptions& options) {
+auto make_enabling(const PMOptions &options) {
     FPM fpm;
     FUNCTION_TRANSFORM(mem2reg, PromotePass());
     FUNCTION_TRANSFORM(tailcall, TailRecursionEliminationPass());
@@ -217,7 +218,7 @@ auto make_enabling(const PMOptions& options) {
     return fpm;
 }
 
-auto make_loop(const PMOptions& options) {
+auto make_loop(const PMOptions &options) {
     FPM fpm;
     FUNCTION_TRANSFORM(licm, LoopSimplifyPass(), LCSSAPass(), LICMPass())
     FUNCTION_TRANSFORM(loopelim, LoopSimplifyPass(), LoopEliminationPass())
@@ -229,24 +230,27 @@ auto make_loop(const PMOptions& options) {
     return fpm;
 }
 
-auto make_debug_version_vectorizer(const PMOptions& options) {
+auto make_debug_version_vectorizer(const PMOptions &options) {
     FPM fpm;
+    fpm.addPass(LoopSimplifyPass());
+    fpm.addPass(NameNormalizePass(true));
     fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(PrintSCEVPass(std::cerr));
     fpm.addPass(PrintLoopAAPass(std::cerr));
-    FUNCTION_TRANSFORM(vectorizer, LoopSimplifyPass(), VectorizerPass(true))
+    fpm.addPass(VectorizerPass(true));
     fpm.addPass(PrintFunctionPass(std::cerr));
     return fpm;
 }
 
-auto make_vectorizer(const PMOptions& options) {
+auto make_vectorizer(const PMOptions &options) {
     FPM fpm;
     FUNCTION_TRANSFORM(vectorizer, LoopSimplifyPass(), VectorizerPass())
     return fpm;
 }
 
-auto make_cg_prepare(const PMOptions& options) {
+auto make_post_legalize(const PMOptions &options) {
     FPM fpm;
+    FUNCTION_TRANSFORM(globalize, GlobalizePass())
     FUNCTION_TRANSFORM(codegen_prepare, CodeGenPreparePass())
 
     if (!options.advance_name_norm)
@@ -254,7 +258,7 @@ auto make_cg_prepare(const PMOptions& options) {
     return fpm;
 }
 
-auto make_gep_opt(const PMOptions& options) {
+auto make_gep_opt(const PMOptions &options) {
     FPM fpm;
     FUNCTION_TRANSFORM(gep_flatten, GEPFlattenPass())
     fpm.addPass(make_basic_clean(options));
@@ -268,7 +272,7 @@ auto make_gep_opt(const PMOptions& options) {
     return fpm;
 }
 
-FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions& options) {
+FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions &options) {
     FPM fpm;
     if (options.advance_name_norm)
         fpm.addPass(NameNormalizePass());
@@ -294,10 +298,10 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions& options) {
 
 #undef FUNCTION_TRANSFORM
 
-MPM PassBuilder::buildModuleFixedPointPipeline(const PMOptions& options) {
+MPM PassBuilder::buildModuleFixedPointPipeline(const PMOptions &options) {
     MPM mpm;
     mpm.addPass(makeModulePass(buildFunctionFixedPointPipeline(options)));
-    mpm.addPass(makeModulePass(make_cg_prepare(options)));
+    mpm.addPass(makeModulePass(make_post_legalize(options)));
     // mpm.addPass(makeModulePass(make_gep_opt(options)));
     if (options.tree_shaking)
         mpm.addPass(TreeShakingPass());
@@ -306,7 +310,7 @@ MPM PassBuilder::buildModuleFixedPointPipeline(const PMOptions& options) {
     return mpm;
 }
 
-FPM PassBuilder::buildFunctionPipeline(const PMOptions& options) {
+FPM PassBuilder::buildFunctionPipeline(const PMOptions &options) {
     FPM fpm;
 
     fpm.addPass(VerifyPass());
@@ -357,7 +361,7 @@ FPM PassBuilder::buildFunctionPipeline(const PMOptions& options) {
     return fpm;
 }
 
-MPM PassBuilder::buildModulePipeline(const PMOptions& options) {
+MPM PassBuilder::buildModulePipeline(const PMOptions &options) {
     MPM mpm;
     mpm.addPass(makeModulePass(buildFunctionPipeline(options)));
     if (options.tree_shaking)
@@ -369,7 +373,7 @@ MPM PassBuilder::buildModulePipeline(const PMOptions& options) {
 FPM PassBuilder::buildFunctionDebugPipeline() {
     // For SIR pass debug
     FPM fpm;
-    fpm.addPass(PrintFunctionPass(std::cerr));
+    // fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(VerifyPass());
     fpm.addPass(PromotePass());
     fpm.addPass(NameNormalizePass());
@@ -477,7 +481,7 @@ MPM PassBuilder::buildModuleDebugPipeline() {
     return mpm;
 }
 
-FPM PassBuilder::buildFunctionFuzzTestingPipeline(const PMOptions& options, double duplication_rate,
+FPM PassBuilder::buildFunctionFuzzTestingPipeline(const PMOptions &options, double duplication_rate,
                                                   const std::string &repro) {
     FPM fpm;
     if (options.mem2reg)
@@ -652,7 +656,8 @@ FPM PassBuilder::buildFunctionFuzzTestingPipeline(const PMOptions& options, doub
     return fpm;
 }
 
-MPM PassBuilder::buildModuleFuzzTestingPipeline(const PMOptions& options, double duplication_rate, const std::string &repro) {
+MPM PassBuilder::buildModuleFuzzTestingPipeline(const PMOptions &options, double duplication_rate,
+                                                const std::string &repro) {
     MPM mpm;
     mpm.addPass(makeModulePass(buildFunctionFuzzTestingPipeline(options, duplication_rate, repro)));
     // Disable Treeshaking in Repro mode for debugging

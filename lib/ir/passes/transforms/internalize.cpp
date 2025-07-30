@@ -72,6 +72,7 @@ PM::PreservedAnalyses InternalizePass::run(Function &function, FAM &fam) {
 
         auto name = "%" + global_var->getName().substr(1) + ".in";
         auto alloca_inst = std::make_shared<ALLOCAInst>(name, type, global_var->getAlign());
+        alloca_inst->attr().add(InternalizeAttrs{InternalizeAttr::InternalizedGlobalArray});
 
         auto use_list = global_var->getUseList();
         for (const auto &use : use_list) {
