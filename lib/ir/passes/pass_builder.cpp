@@ -291,7 +291,7 @@ FPM PassBuilder::buildFunctionFixedPointPipeline(const PMOptions &options) {
     // FUNCTION_TRANSFORM(code_sink, CodeSinkPass())
 
     // Note:
-    // `--ann` moved to make_cg_prepare()
+    // `--ann` moved to make_post_legalize()
 
     return fpm;
 }

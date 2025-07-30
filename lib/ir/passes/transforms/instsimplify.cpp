@@ -200,6 +200,16 @@ PM::PreservedAnalyses InstSimplifyPass::run(Function &function, FAM &fam) {
             }
         }
 
+        // x + c1 + c2 = x + (c1 + c2)
+        REWRITE_BEG(M::Add(M::Add(M::Bind(x), M::Bind(c1)), M::Bind(c2)))
+        auto add = builder.makeAdd(x, function.getInteger(c1 + c2, x->getType()));
+        REWRITE_END(add)
+
+        // gep (gep x, c1), c2 = gep x, (c1 + c2)
+        REWRITE_BEG(M::Gep(M::Gep(M::Bind(x), M::Bind(c1)), M::Bind(c2)))
+        auto gep = builder.makeGep(x, function.getConst(c1 + c2));
+        REWRITE_END(gep)
+
         // select i1 x, i32 1, i32 0 = zext x
         REWRITE_BEG(M::Select(M::Bind(x), M::Is(1), M::Is(0)))
         auto zext = builder.makeZext(x, IRBTYPE::I32);

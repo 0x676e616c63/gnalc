@@ -3,8 +3,8 @@
 
 // Generic Pattern Match Utility for Peephole
 #pragma once
-#ifndef GNALC_PATTERN_MATCH_MATCH_HPP
-#define GNALC_PATTERN_MATCH_MATCH_HPP
+#ifndef GNALC_MATCH_MATCH_HPP
+#define GNALC_MATCH_MATCH_HPP
 
 #include "utils/misc.hpp"
 

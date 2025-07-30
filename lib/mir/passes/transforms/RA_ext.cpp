@@ -118,13 +118,15 @@ MIROperand_p RegisterAllocImpl::heuristicSpill() {
 
     spilled == nullptr ? void(spilled = spillWorkList.front()) : nop;
 
-    // Logger::logInfo("spilled: " + std::to_string(spilled->getRecover()));
     return spilled;
 
     // return spillWorkList.front();
 }
 
 RegisterAllocImpl::Nodes RegisterAllocImpl::spill(const MIROperand_p &mop) {
+
+    if (GeneratedBySpill.count(mop))
+        ++badspill;
 
     if (mop->getUseTrait() == MIROperand::usage::StoreConst) {
         ++reloadtimes;
