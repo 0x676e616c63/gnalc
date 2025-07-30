@@ -8,6 +8,7 @@
 #include "ir/match.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "ir/passes/analysis/scev.hpp"
+#include "mir/tools.hpp"
 
 namespace IR {
 Attr::AttrKey LSRAttrs::Key;
@@ -85,7 +86,6 @@ struct GepReductionKeyHash {
 
 bool reduceGep(Function &function, SCEVHandle &scev, LoopInfo &loop_info, FAM::LazyResult<DomTreeAnalysis> &domtree) {
     std::unordered_map<GepReductionKey, std::vector<pVal>, GepReductionKeyHash> candidates;
-    size_t num_geps_to_reduce = 0;
 
     for (const auto &toplevel : loop_info) {
         auto looppdfv = toplevel->getDFVisitor<Util::DFVOrder::PostOrder>();
@@ -128,7 +128,6 @@ bool reduceGep(Function &function, SCEVHandle &scev, LoopInfo &loop_info, FAM::L
                             auto key = GepReductionKey{
                                 .ptr_base = base, .evo_base = evo_base, .evo_step = evo_step, .evo_loop = evo_loop};
                             candidates[key].emplace_back(inst);
-                            ++num_geps_to_reduce;
                         }
                     }
                 }
@@ -140,11 +139,20 @@ bool reduceGep(Function &function, SCEVHandle &scev, LoopInfo &loop_info, FAM::L
         return false;
 
     // Don't reduce too many geps to keep register pressure low.
-    if (num_geps_to_reduce > Config::IR::LSR_GEP_REDUCTION_THRESHOLD) {
-        Logger::logDebug("[LSR]: Too many geps for reduction. (", num_geps_to_reduce, ")");
+    int cost = 0;
+    constexpr int live_interval_weight = 1;
+    constexpr int geps_weight = 2;
+    constexpr int loop_depth_weight = 2;
+    for (const auto &[key, geps] : candidates) {
+        cost += (key.evo_loop->getInstCount() * live_interval_weight - geps.size() * geps_weight) *
+                key.evo_loop->getLoopDepth() * loop_depth_weight;
+    }
+    if (cost >= -Config::IR::LSR_GEP_REDUCTION_COST_THRESHOLD) {
+        Logger::logDebug("[LSR]: Canceled reducing geps because the cost is too high. (", cost, ")");
         return false;
     }
 
+    Logger::logDebug("[LSR]: Reducing a bundle of geps with cost ", cost, ".");
     for (const auto &[key, geps] : candidates) {
         const auto &[ptr_base, evo_base, evo_step, evo_loop] = key;
         static size_t name_cnt = 0;
