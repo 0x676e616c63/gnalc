@@ -20,8 +20,8 @@ bool AccessSet::AccessPair::operator==(const AccessPair &other) const {
 }
 
 bool AccessSet::operator==(const AccessSet &set) const {
-    return (base == set.base && offset == set.offset && accesses == set.accesses &&
-        untracked == set.untracked && last_trackable_base == set.last_trackable_base);
+    return (base == set.base && offset == set.offset && accesses == set.accesses && untracked == set.untracked &&
+            last_trackable_base == set.last_trackable_base);
 }
 
 bool AccessSet::operator!=(const AccessSet &set) const { return !(*this == set); }
@@ -91,13 +91,16 @@ bool overlap(const AccessSet &set1, const AccessSet &set2) {
     return false;
 }
 
-bool isTriviallyNonEq(const pVal& v1, const pVal& v2) {
+bool isTriviallyNonEq(const pVal &v1, const pVal &v2) {
+    if (v1->is<ConstantInt>() && v2->is<ConstantInt>())
+        return v1 != v2;
+
     auto v2add = v2->as<BinaryInst>();
     if (!v2add)
         return false;
     if (v2add->getOpcode() == OP::ADD) {
         auto base = v2add->getLHS();
-        auto update =  v2add->getRHS();
+        auto update = v2add->getRHS();
         if (base->getVTrait() == ValueTrait::CONSTANT_LITERAL)
             std::swap(base, update);
 
@@ -118,7 +121,18 @@ bool isTriviallyNonEq(const pVal& v1, const pVal& v2) {
 
 // Quick path for two disjoint geps
 // Usually they come from loop unroll, handling them specially can speed up the analysis.
-bool isTriviallyDisjointGep(GEPInst *gep1, GEPInst *gep2) {
+bool isTriviallyDisjointPtr(Value *ptr1, Value *ptr2) {
+    if (int ci; match(ptr2, M::Gep(M::Is(ptr1), M::Bind(ci))) || match(ptr1, M::Gep(M::Is(ptr2), M::IsIntegerVal(ci)))) {
+        if (ci != 0)
+            return true;
+    }
+
+    auto gep1 = ptr1->as_raw<GEPInst>();
+    auto gep2 = ptr2->as_raw<GEPInst>();
+
+    if (!gep1 || !gep2)
+        return false;
+
     if (gep1->getPtr() != gep2->getPtr())
         return false;
 
@@ -142,9 +156,7 @@ AliasInfo LoopAAResult::getAliasInfo(Value *v1, Value *v2) const {
     if (v1 == v2)
         return AliasInfo::MustAlias;
 
-    auto gep1 = v1->as_raw<GEPInst>();
-    auto gep2 = v2->as_raw<GEPInst>();
-    if (gep1 && gep2 && isTriviallyDisjointGep(gep1, gep2))
+    if (isTriviallyDisjointPtr(v1, v2))
         return AliasInfo::NoAlias;
 
     const auto &loc1 = queryPointer(v1);
@@ -210,7 +222,15 @@ ModRefInfo LoopAAResult::getInstModRefInfo(const pInst &inst, const pVal &locati
 
 // Quick path for two consecutive geps
 // Usually they come from loop unroll, handling them specially can speed up the analysis.
-bool isTriviallyConsecutiveGep(GEPInst *gep1, GEPInst *gep2) {
+bool isTriviallyConsecutivePtr(Value *ptr1, Value *ptr2) {
+    if (match(ptr2, M::Gep(M::Is(ptr1), M::IsIntegerVal(1))))
+        return true;
+
+    auto gep1 = ptr1->as_raw<GEPInst>();
+    auto gep2 = ptr2->as_raw<GEPInst>();
+    if (!gep1 || !gep2)
+        return false;
+
     if (gep1->getPtr() != gep2->getPtr())
         return false;
 
@@ -224,17 +244,17 @@ bool isTriviallyConsecutiveGep(GEPInst *gep1, GEPInst *gep2) {
             return false;
     }
 
-    return match(idx2.back(), M::Add(M::Is(idx1.back()), M::Is(1)),
-        M::Add(M::Is(1), M::Is(idx1.back())));
+    if (idx1.back()->is<ConstantInt>() && idx2.back()->is<ConstantInt>())
+        return idx1.back()->as<ConstantInt>()->getVal() + 1 == idx2.back()->as<ConstantInt>()->getVal();
+
+    return match(idx2.back(), M::Add(M::Is(idx1.back()), M::Is(1)), M::Add(M::Is(1), M::Is(idx1.back())));
 }
 
 bool LoopAAResult::isConsecutivePtr(Value *v1, Value *v2) const {
     if (v1 == v2)
         return false;
 
-    auto gep1 = v1->as_raw<GEPInst>();
-    auto gep2 = v2->as_raw<GEPInst>();
-    if (gep1 && gep2 && isTriviallyConsecutiveGep(gep1, gep2))
+    if (isTriviallyConsecutivePtr(v1, v2))
         return true;
 
     const auto &loc1 = queryPointer(v1);
@@ -331,8 +351,7 @@ AccessSet LoopAAResult::analyzePointer(Value *ptr) const {
     while (true) {
         if (auto bitcast = ptr->as_raw<BITCASTInst>()) {
             ptr = bitcast->getOVal().get();
-        }
-        else if (auto gep = ptr->as_raw<GEPInst>()) {
+        } else if (auto gep = ptr->as_raw<GEPInst>()) {
             set.last_trackable_base = ptr;
             ptr = gep->getPtr().get();
             // Note that we are iterating backwards through the use-def chain.

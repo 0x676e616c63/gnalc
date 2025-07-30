@@ -239,6 +239,7 @@ protected:
 
     unsigned int spilltimes = 0;
     unsigned int reloadtimes = 0;
+    unsigned int badspill = 0;
 
 protected:
     /// debug

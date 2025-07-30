@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 #include "../../../../include/mir/passes/transforms/CFGsimplify.hpp"
+#include <algorithm>
 
 using namespace MIR;
 
 // LAMBDA THIS FILE ONLY BEGIN
 
-auto cmp = [](MIRInst_p minst) -> bool {
+auto cmp = [](const MIRInst_p &minst) -> bool {
     if (minst && minst->isGeneric() && // NOLINT
         (minst->opcode<OpC>() == OpC::InstICmp || minst->opcode<OpC>() == OpC::InstFCmp)) {
         return true;
@@ -15,21 +16,21 @@ auto cmp = [](MIRInst_p minst) -> bool {
     return false;
 };
 
-auto cset = [](MIRInst_p minst) -> bool {
+auto cset = [](const MIRInst_p &minst) -> bool {
     if (minst && !minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::CSET) {
         return true;
     }
     return false;
 };
 
-auto cbnz = [](MIRInst_p minst) -> bool {
+auto cbnz = [](const MIRInst_p &minst) -> bool {
     if (minst && !minst->isGeneric() && minst->opcode<ARMOpC>() == ARMOpC::CBNZ) {
         return true;
     }
     return false;
 };
 
-auto b = [](MIRInst_p minst) -> bool {
+auto b = [](const MIRInst_p &minst) -> bool {
     if (minst && minst->isGeneric() && minst->opcode<OpC>() == OpC::InstBranch) {
         ///@note 此处没有检查跳转条件
         return true;
@@ -55,13 +56,11 @@ PM::PreservedAnalyses CFGsimplifyAfterRA::run(MIRFunction &func, FAM &fam) {
     return PM::PreservedAnalyses::all();
 }
 
-
-PM::PreservedAnalyses RVCFGsimplifyAfterRA::run(MIRFunction & func, FAM & fam) {
+PM::PreservedAnalyses RVCFGsimplifyAfterRA::run(MIRFunction &func, FAM &fam) {
     RVCFGsimplifyAfterRAImpl impl(func, fam);
     impl.impl();
     return PM::PreservedAnalyses::all();
 }
-
 
 void CFGsimplifyBeforeRAImpl::impl() {
     i1Eli();
@@ -324,7 +323,7 @@ void CFGsimplifyAfterRAImpl::brEli() {
         }
 
         if (mblk->useLiteral()) {
-            continue; // .ltorg 会破坏执行流
+            continue; // .ltorg 可能会破坏执行流
         }
 
         auto mblk_br = br->getOp(1)->reloc()->as<MIRBlk>();

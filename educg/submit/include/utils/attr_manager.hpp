@@ -45,7 +45,7 @@ public:
 };
 
 class AttrManager {
-    using StorageT = std::list<std::pair<AttrKey *, std::unique_ptr<AttrConcept>>>;
+    using StorageT = std::vector<std::pair<AttrKey *, std::unique_ptr<AttrConcept>>>;
     StorageT storage;
 
 public:
@@ -82,7 +82,7 @@ public:
         return nullptr;
     }
 
-    template <typename AttrT> AttrT *getOrAdd(AttrT default_value) {
+    template <typename AttrT> AttrT *getOrAdd(AttrT default_value = AttrT{}) {
         for (const auto &[key, value] : storage) {
             if (key == AttrT::ID())
                 return &static_cast<AttrModel<AttrT> *>(value.get())->attr;

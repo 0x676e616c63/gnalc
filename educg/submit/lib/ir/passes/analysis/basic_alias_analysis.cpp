@@ -61,7 +61,7 @@ BasicAAResult::PtrInfo BasicAAResult::getPtrInfo(Value *ptr) const {
 }
 
 // Returns the ALLOCA/GlobalVariable/FormalParameter and offset about it.
-std::optional<std::tuple<const Value *, size_t>> getGepTotalOffset(const GEPInst *gep) {
+std::optional<std::tuple<const Value *, size_t>> getGepTotalOffsetImpl(const GEPInst *gep, std::unordered_set<const Value*>& visited) {
     size_t offset = 0;
     while (gep) {
         if (!gep->isConstantOffset())
@@ -81,19 +81,17 @@ std::optional<std::tuple<const Value *, size_t>> getGepTotalOffset(const GEPInst
         else if (auto fp = base_ptr->as_raw<FormalParam>())
             return std::make_tuple(fp, offset);
         else if (auto phi = base_ptr->as_raw<PHIInst>()) {
+            if (!visited.emplace(phi).second)
+                return std::nullopt;
+
             const Value *common_base = nullptr;
             size_t common_offset = 0;
-            static std::unordered_set<Value*> visited;
 
             for (const auto &[phi_gep, bb] : phi->incomings()) {
                 if (!phi_gep->is<GEPInst>())
                     return std::nullopt;
 
-                if (!visited.emplace(phi_gep.get()).second)
-                    return std::nullopt;
-                auto opt = getGepTotalOffset(phi_gep->as_raw<GEPInst>());
-                visited.erase(phi_gep.get());
-
+                auto opt = getGepTotalOffsetImpl(phi_gep->as_raw<GEPInst>(), visited);
                 if (!opt.has_value())
                     return std::nullopt;
                 auto [phi_base, phi_offset] = *opt;
@@ -112,11 +110,11 @@ std::optional<std::tuple<const Value *, size_t>> getGepTotalOffset(const GEPInst
             if (!true_val->is<GEPInst>() || !false_val->is<GEPInst>())
                 return std::nullopt;
 
-            auto true_opt = getGepTotalOffset(true_val->as_raw<GEPInst>());
+            auto true_opt = getGepTotalOffsetImpl(true_val->as_raw<GEPInst>(), visited);
             if (!true_opt)
                 return std::nullopt;
 
-            auto false_opt = getGepTotalOffset(false_val->as_raw<GEPInst>());
+            auto false_opt = getGepTotalOffsetImpl(false_val->as_raw<GEPInst>(), visited);
             if (!false_opt)
                 return std::nullopt;
 
@@ -131,6 +129,11 @@ std::optional<std::tuple<const Value *, size_t>> getGepTotalOffset(const GEPInst
             Err::unreachable();
     }
     return std::nullopt;
+}
+
+std::optional<std::tuple<const Value *, size_t>> getGepTotalOffset(const GEPInst *gep) {
+    std::unordered_set<const Value*> visited;
+    return getGepTotalOffsetImpl(gep, visited);
 }
 
 AliasInfo BasicAAResult::getAliasInfo(Value *v1, Value *v2) const {
