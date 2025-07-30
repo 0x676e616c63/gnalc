@@ -59,7 +59,7 @@ constexpr auto LSR_EXPANSION_THRESHOLD = 8;
 
 // Loop Unroll
 constexpr unsigned LOOP_UNROLLING_PEEL_COUNT = 10;
-constexpr unsigned LOOP_UNROLLING_FULLY_UNROLL_SIZE = 200;
+constexpr unsigned LOOP_UNROLLING_FULLY_UNROLL_SIZE = 400;
 constexpr unsigned LOOP_UNROLLING_FULLY_UNROLL_COUNT = 16;
 constexpr unsigned LOOP_UNROLLING_PARTIALLY_UNROLL_SIZE = 200;
 constexpr unsigned LOOP_UNROLLING_PARTIALLY_UNROLL_COUNT = 8;
