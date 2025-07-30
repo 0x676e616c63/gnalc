@@ -5,7 +5,6 @@
 #include "mir/MIR.hpp"
 #include "mir/info.hpp"
 #include "pass_manager/pass_manager.hpp"
-#include "utils/fast_set.hpp"
 #include <map>
 #ifndef GNALC_MIR_TRANSFORMS_FUSEDADDR_HPP
 #define GNALC_MIR_TRANSFORMS_FUSEDADDR_HPP
@@ -13,6 +12,7 @@
 #include "mir/passes/pass_manager.hpp"
 
 namespace MIR {
+
 class FusedAddr : public PM::PassManager<FusedAddr> {
 
 public:

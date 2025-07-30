@@ -14,6 +14,7 @@
 #include "mir/passes/transforms/CopyPropagation.hpp"
 #include "mir/passes/transforms/FusedAddr.hpp"
 #include "mir/passes/transforms/ICF_TailDup.hpp"
+#include "mir/passes/transforms/MachineConstantFold.hpp"
 #include "mir/passes/transforms/PostRAlegalize.hpp"
 #include "mir/passes/transforms/PreRAlegalize.hpp"
 #include "mir/passes/transforms/RA.hpp"
@@ -89,6 +90,7 @@ FPM buildARMv8FunctionPipeline(OptInfo opt_info) {
 
     // clang-format off
                                             fpm.addPass(FusedAddr());
+                                            fpm.addPass(MachineConstantFold());
                                             fpm.addPass(ISel());
     opt_info.peephole_afterIsel ?           fpm.addPass(GenericPeephole(Stage::AfterIsel)) : nop;
     opt_info.CFGsimplifyBeforeRa ?          fpm.addPass(CFGsimplifyBeforeRA()) : nop;
