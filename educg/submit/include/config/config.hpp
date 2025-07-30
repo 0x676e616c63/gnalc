@@ -47,19 +47,18 @@ constexpr auto GVNPRE_SKIP_NESTED_EXPR_THRESHOLD = 128;
 // Therefore, we apply a cost threshold:
 // If the number of instructions expansion will generate > COST_RATIO * loop instruction count,
 // we will skip the expansion.
-// FIXME: I don't know if this threshold is reasonable.
 constexpr auto LOOP_ELIMINATION_EXPANSION_COST_RATIO = 10;
 
 // Loop Strength Reduce
 // LSR attempts to expand AddRec to reduce multiple to addition.
 // We don't expand if that will insert more than `THRESHOLD` instructions.
 // a base + a step + an update + a phi
-// FIXME: I don't know if this threshold is reasonable.
-constexpr auto LSR_EXPANSION_THRESHOLD = 8;
+constexpr auto LSR_MULTIPLY_EXPANSION_THRESHOLD = 8;
+constexpr auto LSR_GEP_REDUCTION_COST_THRESHOLD = -950;
 
 // Loop Unroll
 constexpr unsigned LOOP_UNROLLING_PEEL_COUNT = 10;
-constexpr unsigned LOOP_UNROLLING_FULLY_UNROLL_SIZE = 200;
+constexpr unsigned LOOP_UNROLLING_FULLY_UNROLL_SIZE = 400;
 constexpr unsigned LOOP_UNROLLING_FULLY_UNROLL_COUNT = 16;
 constexpr unsigned LOOP_UNROLLING_PARTIALLY_UNROLL_SIZE = 200;
 constexpr unsigned LOOP_UNROLLING_PARTIALLY_UNROLL_COUNT = 8;

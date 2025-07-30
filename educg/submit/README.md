@@ -1,6 +1,6 @@
 # 0x676e616c63 - gnalc riscv
 
-- Sync on: 2025-07-30 00:21:39
+- Sync on: 2025-07-30 20:55:00
 - Source Branch: main
-- Source Commit SHA: 25bbd33f27934ed3b88ab33bf0775aefcb653e59
-- Source Commit Message: IR: Don't generate negative index gep.[skip ci]
+- Source Commit SHA: f2e143e6ceb01f913ad6b98c60b64772bd03627f
+- Source Commit Message: SIR: Disable LoopUnswitch. [skip ci]

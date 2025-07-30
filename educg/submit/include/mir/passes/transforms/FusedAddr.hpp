@@ -5,7 +5,6 @@
 #include "../../MIR.hpp"
 #include "../../info.hpp"
 #include "../../../pass_manager/pass_manager.hpp"
-#include "../../../utils/fast_set.hpp"
 #include <map>
 #ifndef GNALC_MIR_TRANSFORMS_FUSEDADDR_HPP
 #define GNALC_MIR_TRANSFORMS_FUSEDADDR_HPP
@@ -13,6 +12,7 @@
 #include "../pass_manager.hpp"
 
 namespace MIR {
+
 class FusedAddr : public PM::PassManager<FusedAddr> {
 
 public:
@@ -26,6 +26,7 @@ private:
     CodeGenContext &ctx;
 
     std::map<MIRInst_p, MIROperand_p> ptrUse{};
+    std::map<MIRInst_p, bool> withConstOff{};
     std::map<MIROperand_p, MIRInst_p> ptrDef{};
 
     struct gep {
@@ -46,9 +47,10 @@ public:
     ~FusedAddrImpl() = default;
 
 private:
+    void clear();
     void ptr_use_record();
     void ptr_def_record();
-    void fused_apply();
+    bool fused_apply();
 };
 } // namespace MIR
 

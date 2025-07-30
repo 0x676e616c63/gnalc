@@ -746,11 +746,12 @@ bool VectorizerPass::vectorizeStoreChains() {
             chain_elem = links[chain_elem];
         }
 
-        if (slp_print_debug_message) {
-            std::cerr << "Vectorizing chain: " << chain[0]->getName();
+        {
+            std::string msg;
+            msg = + "[SLP]: Vectorizing chain: " + chain[0]->getName();
             for (size_t i = 1; i < chain.size(); i++)
-                std::cerr << " -> " << chain[i]->getName();
-            std::cerr << "\n";
+                msg += " -> " + chain[i]->getName();
+            Logger::logDebug(msg);
         }
 
         // Try to vectorize the chain with multiple VFs
