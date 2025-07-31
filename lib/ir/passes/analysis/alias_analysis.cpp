@@ -6,6 +6,8 @@
 #include "ir/instructions/control.hpp"
 #include "ir/instructions/converse.hpp"
 #include "ir/instructions/memory.hpp"
+#include "ir/block_utils.hpp"
+#include "ir/match.hpp"
 #include "ir/passes/analysis/loop_analysis.hpp"
 #include "utils/logger.hpp"
 
@@ -311,5 +313,70 @@ Value* getPtrBase(Value* ptr) {
 
 pVal getPtrBase(const pVal &ptr) {
     return getPtrBase(ptr.get())->as<Value>();
+}
+
+// Quick path for two disjoint geps
+// Usually they come from loop unroll, handling them specially can speed up the analysis.
+bool isTriviallyDisjointPtr(Value *ptr1, Value *ptr2) {
+    if (int ci; match(ptr2, M::Gep(M::Is(ptr1), M::Bind(ci))) || match(ptr1, M::Gep(M::Is(ptr2), M::IsIntegerVal(ci)))) {
+        if (ci != 0)
+            return true;
+    }
+
+    auto gep1 = ptr1->as_raw<GEPInst>();
+    auto gep2 = ptr2->as_raw<GEPInst>();
+
+    if (!gep1 || !gep2)
+        return false;
+
+    if (gep1->getPtr() != gep2->getPtr())
+        return false;
+
+    auto idx1 = gep1->getIdxs();
+    auto idx2 = gep2->getIdxs();
+    if (idx1.size() != idx2.size())
+        return false;
+
+    for (size_t i = 0; i < idx1.size() - 1; i++) {
+        if (idx1[i] != idx2[i])
+            return false;
+    }
+
+    auto opt = getScalarOffset(idx2.back(), idx1.back());
+    if (opt && *opt != 0)
+        return true;
+
+    return false;
+}
+
+// Quick path for two consecutive geps
+// Usually they come from loop unroll, handling them specially can speed up the analysis.
+bool isTriviallyConsecutivePtr(Value *ptr1, Value *ptr2) {
+    if (match(ptr2, M::Gep(M::Is(ptr1), M::IsIntegerVal(1))))
+        return true;
+
+    auto gep1 = ptr1->as_raw<GEPInst>();
+    auto gep2 = ptr2->as_raw<GEPInst>();
+    if (!gep1 || !gep2)
+        return false;
+
+    if (gep1->getPtr() != gep2->getPtr())
+        return false;
+
+    auto idx1 = gep1->getIdxs();
+    auto idx2 = gep2->getIdxs();
+    if (idx1.size() != idx2.size())
+        return false;
+
+    for (size_t i = 0; i < idx1.size() - 1; i++) {
+        if (idx1[i] != idx2[i])
+            return false;
+    }
+
+    auto opt = getScalarOffset(idx1.back(), idx2.back());
+    if (opt && *opt == 1)
+        return true;
+
+    return false;
 }
 } // namespace IR

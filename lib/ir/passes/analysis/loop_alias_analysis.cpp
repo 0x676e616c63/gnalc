@@ -91,67 +91,6 @@ bool overlap(const AccessSet &set1, const AccessSet &set2) {
     return false;
 }
 
-bool isTriviallyNonEq(const pVal &v1, const pVal &v2) {
-    if (v1->is<ConstantInt>() && v2->is<ConstantInt>())
-        return v1 != v2;
-
-    auto v2add = v2->as<BinaryInst>();
-    if (!v2add)
-        return false;
-    if (v2add->getOpcode() == OP::ADD) {
-        auto base = v2add->getLHS();
-        auto update = v2add->getRHS();
-        if (base->getVTrait() == ValueTrait::CONSTANT_LITERAL)
-            std::swap(base, update);
-
-        if (base->getVTrait() == ValueTrait::CONSTANT_LITERAL || update->getVTrait() != ValueTrait::CONSTANT_LITERAL)
-            return false;
-
-        auto ci32 = update->as<ConstantInt>()->getVal();
-        if (ci32 <= 0)
-            return false;
-
-        if (base == v1)
-            return true;
-
-        return isTriviallyNonEq(v1, base);
-    }
-    return false;
-}
-
-// Quick path for two disjoint geps
-// Usually they come from loop unroll, handling them specially can speed up the analysis.
-bool isTriviallyDisjointPtr(Value *ptr1, Value *ptr2) {
-    if (int ci; match(ptr2, M::Gep(M::Is(ptr1), M::Bind(ci))) || match(ptr1, M::Gep(M::Is(ptr2), M::IsIntegerVal(ci)))) {
-        if (ci != 0)
-            return true;
-    }
-
-    auto gep1 = ptr1->as_raw<GEPInst>();
-    auto gep2 = ptr2->as_raw<GEPInst>();
-
-    if (!gep1 || !gep2)
-        return false;
-
-    if (gep1->getPtr() != gep2->getPtr())
-        return false;
-
-    auto idx1 = gep1->getIdxs();
-    auto idx2 = gep2->getIdxs();
-    if (idx1.size() != idx2.size())
-        return false;
-
-    for (size_t i = 0; i < idx1.size() - 1; i++) {
-        if (idx1[i] != idx2[i])
-            return false;
-    }
-
-    if (isTriviallyNonEq(idx2.back(), idx1.back()) || isTriviallyNonEq(idx1.back(), idx2.back()))
-        return true;
-
-    return false;
-}
-
 AliasInfo LoopAAResult::getAliasInfo(Value *v1, Value *v2) const {
     if (v1 == v2)
         return AliasInfo::MustAlias;
@@ -218,36 +157,6 @@ ModRefInfo LoopAAResult::getInstModRefInfo(Instruction *inst, Value *location, F
 
 ModRefInfo LoopAAResult::getInstModRefInfo(const pInst &inst, const pVal &location, FAM &fam) const {
     return getInstModRefInfo(inst.get(), location.get(), fam);
-}
-
-// Quick path for two consecutive geps
-// Usually they come from loop unroll, handling them specially can speed up the analysis.
-bool isTriviallyConsecutivePtr(Value *ptr1, Value *ptr2) {
-    if (match(ptr2, M::Gep(M::Is(ptr1), M::IsIntegerVal(1))))
-        return true;
-
-    auto gep1 = ptr1->as_raw<GEPInst>();
-    auto gep2 = ptr2->as_raw<GEPInst>();
-    if (!gep1 || !gep2)
-        return false;
-
-    if (gep1->getPtr() != gep2->getPtr())
-        return false;
-
-    auto idx1 = gep1->getIdxs();
-    auto idx2 = gep2->getIdxs();
-    if (idx1.size() != idx2.size())
-        return false;
-
-    for (size_t i = 0; i < idx1.size() - 1; i++) {
-        if (idx1[i] != idx2[i])
-            return false;
-    }
-
-    if (idx1.back()->is<ConstantInt>() && idx2.back()->is<ConstantInt>())
-        return idx1.back()->as<ConstantInt>()->getVal() + 1 == idx2.back()->as<ConstantInt>()->getVal();
-
-    return match(idx2.back(), M::Add(M::Is(idx1.back()), M::Is(1)), M::Add(M::Is(1), M::Is(idx1.back())));
 }
 
 bool LoopAAResult::isConsecutivePtr(Value *v1, Value *v2) const {

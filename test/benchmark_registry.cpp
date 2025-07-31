@@ -309,6 +309,11 @@ void register_gnalc_no_mloadeli() {
     BenchmarkRegistry::register_benchmark("gnalc_fixed_no_mloadeli", entry);
 }
 
+void register_gnalc2_no_mloadeli() {
+    auto entry = gnalc2_register_helper("-O1 -fno-redundantLoadEli");
+    BenchmarkRegistry::register_benchmark("gnalc2_fixed_no_mloadeli", entry);
+}
+
 void Test::register_all_benchmarks() {
     register_example_0();
     register_example_1();
@@ -321,10 +326,6 @@ void Test::register_all_benchmarks() {
     register_gnalc_mem2reg();
     register_gnalc_std();
     register_gnalc_fixed();
-    register_gnalc2_loadEli_w0();
-    register_gnalc2_loadEli_w1();
-    register_gnalc2_loadEli_w2();
-    register_gnalc2_loadEli_w3();
 
     register_gnalc_fixed_no_memo();
     register_gnalc_fixed_no_parallel();
@@ -350,7 +351,13 @@ void Test::register_all_benchmarks() {
     register_gnalc_fixed_no_lsr();
     register_gnalc_fixed_no_inline_lsr();
 
+    register_gnalc2_loadEli_w0();
+    register_gnalc2_loadEli_w1();
+    register_gnalc2_loadEli_w2();
+    register_gnalc2_loadEli_w3();
+
     register_gnalc2_fixed();
     register_gnalc2_fixed_no_vectorizer();
     register_gnalc2_fixed_no_loopunroll();
+    register_gnalc2_no_mloadeli();
 }
