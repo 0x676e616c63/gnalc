@@ -309,6 +309,11 @@ void register_gnalc_no_mloadeli() {
     BenchmarkRegistry::register_benchmark("gnalc_fixed_no_mloadeli", entry);
 }
 
+void register_gnalc_no_codelayout() {
+    auto entry = gnalc_register_helper("-O1 -fno-codeLayout");
+    BenchmarkRegistry::register_benchmark("gnalc_fixed_no_codelayout", entry);
+}
+
 void Test::register_all_benchmarks() {
     register_example_0();
     register_example_1();
@@ -346,6 +351,7 @@ void Test::register_all_benchmarks() {
     register_gnalc_fuzz100();
     register_gnalc_no_mlicm();
     register_gnalc_no_mloadeli();
+    register_gnalc_no_codelayout();
     register_gnalc_fixed_no_internalize();
     register_gnalc_fixed_no_lsr();
     register_gnalc_fixed_no_inline_lsr();

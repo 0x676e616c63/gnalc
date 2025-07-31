@@ -202,7 +202,7 @@ void BranchFreqAnalysis::computeAllProbs(MIRFunction &func, BranchInfo::EdgeProb
             if (back_edge_succs.size() == bb->succs().size()) {
                 for (auto succ : back_edge_succs) {
                     auto edge = Edge{bb.get(), succ};
-                    probs[edge] = 1 / bb->succs().size();
+                    probs[edge] = 1.0 / static_cast<double>(bb->succs().size());
                 }
                 continue;
             }
@@ -211,12 +211,12 @@ void BranchFreqAnalysis::computeAllProbs(MIRFunction &func, BranchInfo::EdgeProb
             if (back_edge_succs.size() + exit_edge_succs.size() == bb->succs().size()) {
                 for (auto succ : back_edge_succs) {
                     auto edge = Edge{bb.get(), succ};
-                    probs[edge] = Heuristic::LoopBranch / back_edge_succs.size();
+                    probs[edge] = Heuristic::LoopBranch / static_cast<double>(back_edge_succs.size());
                 }
 
                 for (auto succ : exit_edge_succs) {
                     auto edge = Edge{bb.get(), succ};
-                    probs[edge] = (1 - Heuristic::LoopBranch) / (bb->succs().size() - exit_edge_succs.size());
+                    probs[edge] = (1.0 - Heuristic::LoopBranch) / static_cast<double>(bb->succs().size() - exit_edge_succs.size());
                 }
                 continue;
             }
@@ -305,8 +305,6 @@ void BranchFreqAnalysis::propagateFreqs(MIRBlk *bb, MIRBlk *head, BranchInfo::Ed
 }
 
 BranchInfo BranchFreqAnalysis::run(MIRFunction &func, FAM &fam) {
-    auto entry = func.blks().front();
-
     loop_info = &fam.getResult<MachineLoopAnalysis>(func);
 
     BranchInfo::EdgeProbs probs;
@@ -327,6 +325,10 @@ BranchInfo BranchFreqAnalysis::run(MIRFunction &func, FAM &fam) {
             propagateFreqs(head, head, freqs, probs, back_edge_props, bfreqs, visited);
         }
     }
+
+    std::unordered_set<MIRBlk*> visited_global;
+    auto entry = func.blks().front().get();
+    propagateFreqs(entry, entry, freqs, probs, back_edge_props, bfreqs, visited_global);
 
     loop_info = nullptr;
 

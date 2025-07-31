@@ -262,6 +262,9 @@ int main(int argc, char **argv) {
         else if (arg == "-fno-machineLICM") {
             bkd_opt_info.machineLICM = false;
         }
+        else if (arg == "-fno-codeLayout") {
+            bkd_opt_info.codeLayout = false;
+        }
         else if (arg.substr(0, 9) == "-loadEli=") {
             bkd_opt_info.redundantLoadEli_weight = std::stoull(arg.substr(9));
         }
@@ -342,6 +345,7 @@ Backend options:
   -fno-redundantLoadEli - Disable redundant load elimination
   -fno-PostRaScheduling - Disable PostRa Scheduling
   -fno-machineLICM      - Disable machine LICM
+  -fno-codeLayout        - Disable code layout optimization
 
 Debug options:
   -with-runtime              - Emit gnalc runtime when emitting LLVM IR

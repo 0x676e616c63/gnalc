@@ -12,6 +12,7 @@
 
 // Transforms
 #include "mir/passes/transforms/CFGsimplify.hpp"
+#include "mir/passes/transforms/codelayout.hpp"
 #include "mir/passes/transforms/CopyPropagation.hpp"
 #include "mir/passes/transforms/FusedAddr.hpp"
 #include "mir/passes/transforms/ICF_TailDup.hpp"
@@ -20,7 +21,6 @@
 #include "mir/passes/transforms/PreRAlegalize.hpp"
 #include "mir/passes/transforms/RA.hpp"
 #include "mir/passes/transforms/RedundantLoadEli.hpp"
-#include "mir/passes/transforms/codelayout.hpp"
 #include "mir/passes/transforms/isel.hpp"
 #include "mir/passes/transforms/licm.hpp"
 #include "mir/passes/transforms/lowering.hpp"
@@ -42,7 +42,8 @@ const OptInfo o1_opt_info = {.peephole_afterIsel = true,
                              .CFGsimplifyBeforeRa = true,
                              .CFGsimplifyAfterRa = true,
                              .PostRaScheduling = true,
-                             .machineLICM = true};
+                             .machineLICM = true,
+                             .codeLayout = true};
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
@@ -60,12 +61,15 @@ FPM PassBuilder::buildFunctionDebugPipeline() {
     fpm.addPass(GenericPeephole(Stage::AfterRa));
     fpm.addPass(StackGenerate());
     fpm.addPass(GenericPeephole(Stage::AfterPostLegalize));
-    fpm.addPass(CFGsimplifyAfterRA());
-    fpm.addPass(PostRAlegalize());
-    fpm.addPass(PostRaScheduling());
 
     fpm.addPass(PrintFunctionPass(std::cerr));
     fpm.addPass(PrintBranchFreqPass(std::cerr));
+    fpm.addPass(CodeLayoutPass());
+    fpm.addPass(PrintFunctionPass(std::cerr));
+
+    fpm.addPass(CFGsimplifyAfterRA());
+    fpm.addPass(PostRAlegalize());
+    fpm.addPass(PostRaScheduling());
 
     return fpm;
 }
@@ -107,14 +111,12 @@ FPM buildARMv8FunctionPipeline(OptInfo opt_info) {
     opt_info.CFGsimplifyBeforeRa ?          fpm.addPass(CFGsimplifyBeforeRA()) : nop;
     opt_info.redundantLoadEli ?             fpm.addPass(RedundantLoadEli(opt_info.redundantLoadEli_weight)) : nop;
                                             fpm.addPass(PreRAlegalize());
-    //
-                                            // fpm.addPass(PrintFunctionPass(std::cerr));
     opt_info.machineLICM ?                  fpm.addPass(MachineLICMPass()) : nop;
-                                            // fpm.addPass(PrintFunctionPass(std::cerr));  
                                             fpm.addPass(RegisterAlloc(opt_info.registeralloc_dmp_times));
     opt_info.peephole_afterRa ?             fpm.addPass(GenericPeephole(Stage::AfterRa)) : nop;
                                             fpm.addPass(StackGenerate());
     opt_info.peephole_afterStackGenerate ?  fpm.addPass(GenericPeephole(Stage::AfterPostLegalize)) : nop;
+    opt_info.codeLayout ?                   fpm.addPass(CodeLayoutPass()) : nop;
     opt_info.CFGsimplifyAfterRa ?           fpm.addPass(CFGsimplifyAfterRA()) : nop;
                                             fpm.addPass(PostRAlegalize());
     opt_info.PostRaScheduling ?             fpm.addPass(PostRaScheduling()) : nop;
