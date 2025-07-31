@@ -7,9 +7,10 @@
 // Analysis
 #include "mir/passes/analysis/liveanalysis.hpp"
 #include "mir/passes/analysis/loop_analysis.hpp"
+#include "mir/passes/analysis/branch_freq_analysis.hpp"
+#include "mir/passes/analysis/domtree_analysis.hpp"
 
 // Transforms
-#include "mir/passes/analysis/domtree_analysis.hpp"
 #include "mir/passes/transforms/CFGsimplify.hpp"
 #include "mir/passes/transforms/CopyPropagation.hpp"
 #include "mir/passes/transforms/FusedAddr.hpp"
@@ -45,16 +46,26 @@ const OptInfo o1_opt_info = {.peephole_afterIsel = true,
 
 FPM PassBuilder::buildFunctionDebugPipeline() {
     FPM fpm;
+    using Stage = GenericPeephole::Stage;
 
+    fpm.addPass(FusedAddr());
+    fpm.addPass(MachineConstantFold());
     fpm.addPass(ISel());
-    fpm.addPass(PrintFunctionPass(std::cerr));
-    fpm.addPass(MachineLICMPass());
-    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(GenericPeephole(Stage::AfterIsel));
+    fpm.addPass(CFGsimplifyBeforeRA());
+    fpm.addPass(RedundantLoadEli(60));
     fpm.addPass(PreRAlegalize());
+    fpm.addPass(MachineLICMPass());
     fpm.addPass(RegisterAlloc());
-    fpm.addPass(GenericPeephole(GenericPeephole::AfterRa));
+    fpm.addPass(GenericPeephole(Stage::AfterRa));
     fpm.addPass(StackGenerate());
+    fpm.addPass(GenericPeephole(Stage::AfterPostLegalize));
+    fpm.addPass(CFGsimplifyAfterRA());
     fpm.addPass(PostRAlegalize());
+    fpm.addPass(PostRaScheduling());
+
+    fpm.addPass(PrintFunctionPass(std::cerr));
+    fpm.addPass(PrintBranchFreqPass(std::cerr));
 
     return fpm;
 }
@@ -136,6 +147,7 @@ void PassBuilder::registerFunctionAnalyses(FAM &fam) {
     FUNCTION_ANALYSIS(DomTreeAnalysis())
     FUNCTION_ANALYSIS(PostDomTreeAnalysis())
     FUNCTION_ANALYSIS(MachineLoopAnalysis())
+    FUNCTION_ANALYSIS(BranchFreqAnalysis())
     // ...
 
 #undef FUNCTION_ANALYSIS

@@ -107,6 +107,23 @@ enum MIRInstCond : unsigned { AL, EQ, NE, LT, GT, LE, GE };
 
 using Cond = MIRInstCond;
 
+inline Cond reverseCond(Cond cond) {
+    switch (cond) {
+    case LT:
+        return GT;
+    case GT:
+        return LT;
+    case LE:
+        return GE;
+    case GE:
+        return LE;
+    default:
+        return cond;
+    }
+    return cond;
+}
+
+
 enum class MIRGenericInst : uint32_t {
     // control-flow
     InstBranch,     // <nullptr>, reloc, cond, prob
