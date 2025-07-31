@@ -95,7 +95,7 @@ Prob BranchFreqAnalysis::computeOH(const Edge &e) const {
                 auto cond = (*it)->getOp(2)->imme();
                 GIVEUP_IF(std::next(it) == insts.rend());
                 auto icmp_it = std::next(it);
-                GIVEUP_IF((*icmp_it)->opcode<OpC>() != OpC::InstICmp);
+                GIVEUP_IF(!(*icmp_it)->isGeneric() || (*icmp_it)->opcode<OpC>() != OpC::InstICmp);
                 auto lhs = (*icmp_it)->getOp(1);
                 auto rhs = (*icmp_it)->getOp(2);
                 GIVEUP_IF(!rhs->isImme());
