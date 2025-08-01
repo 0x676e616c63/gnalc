@@ -85,7 +85,7 @@ FPM buildRV64FunctionPipeline(OptInfo opt_info) {
     FPM fpm;
     fpm.addPass(ISel());
     fpm.addPass(GenericPeephole(Stage::AfterIsel));
-    fpm.addPass(RedundantLoadEli(opt_info.redundantLoadEli_weight));
+    // fpm.addPass(RedundantLoadEli(opt_info.redundantLoadEli_weight));
     fpm.addPass(PreRAlegalize());
     fpm.addPass(MachineLICMPass());
     //     fpm.addPass(CopyPropagation());
