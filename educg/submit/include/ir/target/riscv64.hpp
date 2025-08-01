@@ -31,7 +31,9 @@ public:
     }
 
     // bare metal
-    bool isIntrinsicSupported(const std::string &lib_fn_name) const override { return false; }
+    bool isIntrinsicSupported(IntrinsicID id) const override {
+        return false;
+    }
 
     size_t getInternalizeSizeThreshold() const override {
         // Aggressive internalization will cause stack overflow.

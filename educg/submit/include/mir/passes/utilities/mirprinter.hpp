@@ -38,6 +38,13 @@ public:
 
     PM::PreservedAnalyses run(MIRFunction &unit, FAM &manager);
 };
+
+class PrintBranchFreqPass : public PM::PassInfo<PrintBranchFreqPass>, public MIRPrinter {
+public:
+    explicit PrintBranchFreqPass(std::ostream &outStream_) : MIRPrinter(outStream_) {}
+
+    PM::PreservedAnalyses run(MIRFunction &unit, FAM &manager);
+};
 } // namespace IR
 
 #endif

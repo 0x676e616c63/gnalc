@@ -83,7 +83,7 @@ bool hasSylibOrRecursiveCall(Function *func, FAM *fam, const pLoop &loop) {
                 if (call->getFunc().get() == func)
                     return true;
 
-                if (call->getFunc()->hasFnAttr(FuncAttr::isSylib))
+                if (call->getFunc()->hasFnAttr(FuncAttr::Sylib))
                     return true;
 
                 auto callee_def = call->getFunc()->as<Function>();
@@ -126,12 +126,15 @@ struct ParallelLoopInfo {
     pBlock header, preheader, latch, exit;
     pPhi iv;
     pVal iv_base, iv_bound;
+    bool is_signed_less_equal_cond;
     struct Reduction {
         pPhi phi;
         pVal base;
         pVal inc;
+        pVal mod;
         IRBuilder update_point;
-        std::unordered_set<pInst> to_del;
+        IntrinsicID atomic_fn;
+        std::unordered_set<pInst> update_insts;
     };
     std::vector<Reduction> reductions;
     pIcmp exit_icmp;
@@ -141,6 +144,7 @@ struct ParallelLoopInfo {
         pLoad load;
         pStore store;
         pBinary update;
+        IntrinsicID atomic_fn;
     };
     std::vector<ScalarGV> scalar_global_vars;
 
@@ -149,38 +153,36 @@ struct ParallelLoopInfo {
     static ParallelLoopInfo fail() { return {.can_parallel = false}; }
 };
 
+const std::unordered_map<OP, IntrinsicID> AssociativeOps = {
+    {OP::ADD, IntrinsicID::AtomicAdd},   {OP::MUL, IntrinsicID::AtomicMul}, {OP::AND, IntrinsicID::AtomicAnd},
+    {OP::OR, IntrinsicID::AtomicOr},     {OP::XOR, IntrinsicID::AtomicXor}, {OP::FADD, IntrinsicID::AtomicFAdd},
+    {OP::FMUL, IntrinsicID::AtomicFMul},
+};
+
+#define FAIL_IF(cond)                                                                                                  \
+    if (cond)                                                                                                          \
+        return ParallelLoopInfo::fail();
+#define FAIL_IF_MSG(cond, ...)                                                                                         \
+    if (cond) {                                                                                                        \
+        Logger::logDebug("[Para]: ", __VA_ARGS__);                                                                     \
+        return ParallelLoopInfo::fail();                                                                               \
+    }
+
 // Analyze Loop's Parallel Info
 // This function doesn't modify IR, but only collects information.
 ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loop_aa, SCEVHandle *scev,
-                                     const pLoop &top_level, bool transform_float_reduction) {
-    if (top_level->isRotatedForm()) {
-        Logger::logDebug("[Para]: Skipped rotated loop '", top_level->getHeader()->getName(), "'.");
-        return ParallelLoopInfo::fail();
-    }
-
-    if (top_level->getExitingBlocks().size() != 1) {
-        Logger::logDebug("[Para]: Skipped loop '", top_level->getHeader()->getName(), "' with multiple exit blocks.");
-        return ParallelLoopInfo::fail();
-    }
-
+                                     const pTarget &target, const pLoop &top_level, bool transform_float_reduction) {
     auto header = top_level->getHeader();
-    if (header != *top_level->getExitingBlocks().begin()) {
-        Logger::logDebug("[Para]: Skipped loop '", header->getName(), "' with non-header exiting block.");
-        return ParallelLoopInfo::fail();
-    }
+
+    FAIL_IF(!top_level->hasSingleExit() || !top_level->isHeaderExiting());
 
     auto exit = *top_level->getExitBlocks().begin();
     Err::gassert(header->getBRInst()->hasDest(exit));
 
     auto exit_icmp = header->getBRInst()->getCond()->as<ICMPInst>();
-    if (!exit_icmp) {
-        Logger::logDebug("[Para]: Skipped loop '", header->getName(), "' with non-icmp exit condition.");
-        return ParallelLoopInfo::fail();
-    }
-    if (exit_icmp->getCond() != ICMPOP::slt) {
-        Logger::logDebug("[Para]: Skipped loop '", header->getName(), "' with non-slt exit condition.");
-        return ParallelLoopInfo::fail();
-    }
+    FAIL_IF(!exit_icmp || (exit_icmp->getCond() != ICMPOP::slt && exit_icmp->getCond() != ICMPOP::sle));
+
+    auto cond = exit_icmp->getCond();
 
     auto raw_iv = exit_icmp->getLHS();
     auto iv_bound = exit_icmp->getRHS();
@@ -188,47 +190,27 @@ ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loo
         std::swap(raw_iv, iv_bound);
 
     auto iv = raw_iv->as<PHIInst>();
-    if (!iv || iv->getParent() != header || iv_bound->is<PHIInst>()) {
-        Logger::logDebug("[Para]: Skipped loop '", header->getName(), "' with complex icmp exit cond.");
+    if (!iv || iv->getParent() != header || iv_bound->is<PHIInst>())
         return ParallelLoopInfo::fail();
-    }
 
     if (auto iv_bound_inst = iv_bound->as<Instruction>()) {
-        if (top_level->contains(iv_bound_inst->getParent())) {
-            Logger::logDebug("[Para]: Skipped loop '", header->getName(), "' with non-loop-invariant iv bound.");
-            return ParallelLoopInfo::fail();
-        }
+        FAIL_IF_MSG(top_level->contains(iv_bound_inst->getParent()), "Skipped loop '", header->getName(),
+                    "' with non-parallelizable iv bound.");
     }
 
     auto iv_scev = scev->getSCEVAtBlock(iv, header);
     auto iv_affine_addrec = iv_scev->getAffineAddRec();
-    if (!iv_affine_addrec) {
-        Logger::logDebug("[Para]: Skipped loop '", header->getName(), "' with non-affine iv.");
-        return ParallelLoopInfo::fail();
-    }
+    FAIL_IF(!iv_affine_addrec);
     auto [iv_scev_base, iv_scev_step] = *iv_affine_addrec;
-    if (!iv_scev_step->isIRValue() || !match(iv_scev_step->getIRValue(), M::Is(1))) {
-        Logger::logDebug("[Para]: Skipped loop '", header->getName(), "' with non-1 step iv.");
-        return ParallelLoopInfo::fail();
-    }
-    if (!iv_scev_base->isIRValue()) {
-        // FIXME: Perform SCEV Expansion here.
-        Logger::logDebug("[Para]: Skipped loop '", header->getName(), "' with non-IR base iv. (TODO)");
-        return ParallelLoopInfo::fail();
-    }
-    auto iv_base = iv_scev_base->getIRValue();
+    FAIL_IF(!iv_scev_step->isIRValue() || !match(iv_scev_step->getIRValue(), M::IsIntegerVal(1)));
+    // FIXME: Try perform SCEV Expansion here to get the base.
+    FAIL_IF_MSG(!iv_scev_base->isIRValue(), "Skipped loop '", header->getName(), "' with non-IR base iv. (TODO)");
 
+    auto iv_base = iv_scev_base->getIRValue();
     auto trip_count = scev->getTripCount(top_level);
     if (int ci32; trip_count && trip_count->isIRValue() && match(trip_count->getIRValue(), M::Bind(ci32))) {
-        if (ci32 < Config::IR::LOOP_PARALLEL_SMALL_TASK_THRESHOLD) {
-            Logger::logDebug("[Para]: Skipped loop '", header->getName(), "' with small trip count (", ci32, ").");
-            return ParallelLoopInfo::fail();
-        }
-    }
-
-    if (hasUsesOutsideLoop(top_level, iv)) {
-        Logger::logDebug("[Para]: Skipped loop '", header->getName(), "' with iv uses outside loop.");
-        return ParallelLoopInfo::fail();
+        FAIL_IF_MSG(ci32 < Config::IR::LOOP_PARALLEL_SMALL_TASK_THRESHOLD, "Skipped loop '", header->getName(),
+                    "' with small trip count (", ci32, ").");
     }
 
     // Ensure Rewritable Reduction
@@ -239,67 +221,75 @@ ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loo
         if (reduction == iv)
             continue;
 
-        if (hasUsesInsideLoop(top_level, reduction)) {
-            Logger::logDebug("[Para]: Skipped loop '", header->getName(), "' with multiple IVs.");
-            return ParallelLoopInfo::fail();
-        }
-
-        if (reduction->getType()->isFloatingPoint() && !transform_float_reduction) {
-            Logger::logDebug("[Para]: Skipped loop '", header->getName(), "' with float reduction.");
-            return ParallelLoopInfo::fail();
-        }
+        FAIL_IF(reduction->getType()->isFloatingPoint() && !transform_float_reduction);
 
         auto reduction_base = reduction->getValueForBlock(preheader);
-        if (reduction_base->getVTrait() != ValueTrait::CONSTANT_LITERAL) {
-            Logger::logDebug("[Para]: Skipped loop '", header->getName(), "' with non-constant reduction base.");
-            return ParallelLoopInfo::fail();
-        }
-
         auto reduction_update = reduction->getValueForBlock(latch)->as<Instruction>();
         if (!reduction_update) // Not a Reduction
             continue;
+
         // For nested loops, the update can be hidden behind multiple phis.
-        // FIXME: Enhance SCEV to handle this. Currently we manually analyze the inner loop phis.
-        std::unordered_set<pInst> reduction_del;
+        std::unordered_set<pInst> reduction_updates;
         pPhi reduction_sub_phi = reduction;
         while (auto phi = reduction_update->as<PHIInst>()) {
             reduction_sub_phi = phi;
-            reduction_del.emplace(reduction_update);
+            reduction_updates.emplace(reduction_update);
             auto preds = phi->getParent()->getPreBB();
-            if (preds.size() != 2) {
-                Logger::logDebug("[Para]: Skipped loop '", header->getName(),
-                                 "' with complex reduction update.(sub loop is not simplified)");
-                return ParallelLoopInfo::fail();
-            }
+            FAIL_IF_MSG(preds.size() != 2, "Not LoopSimplified Form?");
             auto v1 = phi->getValueForBlock(preds.front())->as<Instruction>();
             auto v2 = phi->getValueForBlock(preds.back())->as<Instruction>();
             if (reduction == v1)
                 reduction_update = v2;
             else if (reduction == v2)
                 reduction_update = v1;
-            else {
-                Logger::logDebug("[Para]: Skipped loop '", header->getName(),
-                                 "' with complex reduction update.(unexpected phi)");
-                return ParallelLoopInfo::fail();
+            else
+                FAIL_IF(true);
+        }
+        FAIL_IF(reduction_update->getUseCount() != 1);
+
+        // For common reduction variables, make them atomics to avoid race conditions.
+        pVal inc, mod;
+        OP op;
+        if (auto bin = reduction_update->as<BinaryInst>()) {
+            reduction_updates.emplace(bin);
+            if (bin->getOpcode() == OP::SREM) {
+                mod = bin->getRHS();
+                bin = bin->getLHS()->as<BinaryInst>();
+                FAIL_IF(!bin || bin->getOpcode() != OP::ADD);
+                reduction_updates.emplace(bin);
             }
+            op = bin->getOpcode();
+
+            FAIL_IF_MSG(!AssociativeOps.count(op), "Skipped loop '", header->getName(),
+                        "' with unparallelizable reduction variable. (non-associative op)");
+
+            FAIL_IF_MSG(!target->isIntrinsicSupported(AssociativeOps.at(op)), "Skipped loop '", header->getName(),
+                        "' with target-unsupported reduction intrinsic.");
+
+            if (bin->getLHS() == reduction_sub_phi)
+                inc = bin->getRHS();
+            else if (bin->getRHS() == reduction_sub_phi)
+                inc = bin->getLHS();
+            else
+                FAIL_IF(true);
+        } else
+            FAIL_IF_MSG(true, "Skipped loop '", header->getName(), "' with unparallelizable reduction variable. (non-binary)");
+
+        for (const auto &inst_user : reduction->inst_users()) {
+            FAIL_IF_MSG(top_level->contains(inst_user->getParent()) && !reduction_updates.count(inst_user),
+                        "Skipped loop '", header->getName(), "' with multiple IVs.");
         }
 
-        pVal inc;
-        if (reduction_update->getUseCount() != 1 ||
-            !match(reduction_update, M::Add(M::Is(reduction_sub_phi), M::Bind(inc)),
-                   M::Add(M::Bind(inc), M::Is(reduction_sub_phi)), M::Fadd(M::Is(reduction_sub_phi), M::Bind(inc)),
-                   M::Fadd(M::Bind(inc), M::Is(reduction_sub_phi)))) {
-            Logger::logDebug("[Para]: Skipped loop '", header->getName(), "' with complex reduction update.");
-            return ParallelLoopInfo::fail();
-        }
-        reduction_del.emplace(reduction);
-        reduction_del.emplace(reduction_update);
+        reduction_updates.emplace(reduction);
+        reduction_updates.emplace(reduction_update);
         reductions.emplace_back(ParallelLoopInfo::Reduction{
             .phi = reduction,
             .base = reduction_base,
             .inc = inc,
+            .mod = mod,
             .update_point = IRBuilder(reduction_update->getParent(), reduction_update->iter()),
-            .to_del = reduction_del});
+            .atomic_fn = AssociativeOps.at(op),
+            .update_insts = reduction_updates});
     }
 
     // Ensure resolvable data racing in scalar global variables
@@ -325,31 +315,34 @@ ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loo
     std::vector<ParallelLoopInfo::ScalarGV> scalar_gvs;
     for (const auto &store : scalar_gv_stores) {
         pVal inc;
-        if (match(store->getValue(), M::Add(M::Bind(inc), M::Load(M::Is(store->getPtr()))),
-                  M::Add(M::Load(M::Is(store->getPtr())), M::Bind(inc)),
-                  M::Fadd(M::Bind(inc), M::Load(M::Is(store->getPtr()))),
-                  M::Fadd(M::Load(M::Is(store->getPtr())), M::Bind(inc)))) {
-            auto binary = store->getValue()->as<BinaryInst>();
-            auto load = binary->getLHS()->as<LOADInst>();
-            if (!load)
-                load = binary->getRHS()->as<LOADInst>();
+        pLoad load;
+        OP op;
+        if (auto bin = store->getValue()->as<BinaryInst>()) {
+            op = bin->getOpcode();
 
-            Err::gassert(load != nullptr, "Bad update.");
-            if (binary->getUseCount() != 1 || load->getUseCount() != 1) {
-                Logger::logDebug("[Para]: Skipped loop '", header->getName(),
-                                 "' with non-trivial scalar global variable update. (not one use)");
-                return ParallelLoopInfo::fail();
-            }
-            scalar_gvs.emplace_back(ParallelLoopInfo::ScalarGV{.gv = store->getPtr()->as<GlobalVariable>(),
-                                                               .inc = inc,
-                                                               .load = load,
-                                                               .store = store,
-                                                               .update = binary});
-        } else {
-            Logger::logDebug("[Para]: Skipped loop '", header->getName(),
-                             "' with non-trivial scalar global variable update. (complex update)");
-            return ParallelLoopInfo::fail();
-        }
+            FAIL_IF_MSG(!AssociativeOps.count(op), "Skipped loop '", header->getName(),
+                        "' with unparallelizable scalar global variable.(non-associative op)");
+
+            FAIL_IF_MSG(!target->isIntrinsicSupported(AssociativeOps.at(op)), "Skipped loop '", header->getName(),
+                        "' with target-unsupported scalar global variable reduction intrinsic.");
+
+            if (match(bin->getLHS(), M::Load(M::Is(store->getPtr())))) {
+                inc = bin->getRHS();
+                load = bin->getLHS()->as<LOADInst>();
+            } else if (match(bin->getRHS(), M::Load(M::Is(store->getPtr())))) {
+                inc = bin->getLHS();
+                load = bin->getRHS()->as<LOADInst>();
+            } else
+                FAIL_IF(true);
+        } else
+            FAIL_IF_MSG(true, "Skipped loop '", header->getName(), "' with unparallelizable scalar global variable.(non-binary)");
+
+        scalar_gvs.emplace_back(ParallelLoopInfo::ScalarGV{.gv = store->getPtr()->as<GlobalVariable>(),
+                                                           .inc = inc,
+                                                           .load = load,
+                                                           .store = store,
+                                                           .update = store->getValue()->as<BinaryInst>(),
+                                                           .atomic_fn = AssociativeOps.at(op)});
     }
 
     // Ensure local arrays can be rewritten into global arrays
@@ -358,25 +351,17 @@ ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loo
         for (const auto &inst : *block) {
             if (inst->is<LOADInst, STOREInst>()) {
                 auto base = getPtrBase(getMemLocation(inst));
-                if (!base) {
-                    Logger::logDebug("[Para]: Skipped loop '", header->getName(), "' due to untracked memory access");
-                    return ParallelLoopInfo::fail();
-                }
+                FAIL_IF(!base);
                 if (base->is<ALLOCAInst>())
                     local_arrays.emplace_back(base->as<ALLOCAInst>());
             }
         }
     }
 
-    if (hasSylibOrRecursiveCall(func, fam, top_level)) {
-        Logger::logDebug("[Para]: Skipped loop '", header->getName(), "' with sylib or recursive call.");
-        return ParallelLoopInfo::fail();
-    }
+    FAIL_IF(hasSylibOrRecursiveCall(func, fam, top_level));
 
-    if (!isMemoryIndependentForEachIteration(fam, loop_aa, top_level)) {
-        Logger::logDebug("[Para]: Skipped loop '", header->getName(), "' with memory dependency.");
-        return ParallelLoopInfo::fail();
-    }
+    FAIL_IF_MSG(!isMemoryIndependentForEachIteration(fam, loop_aa, top_level), "Skipped loop '", header->getName(),
+                "' with memory dependency.");
 
     return {.can_parallel = true,
             .header = header,
@@ -386,6 +371,7 @@ ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loo
             .iv = iv,
             .iv_base = iv_base,
             .iv_bound = iv_bound,
+            .is_signed_less_equal_cond = cond == ICMPOP::sle,
             .reductions = std::move(reductions),
             .exit_icmp = exit_icmp,
             .scalar_global_vars = scalar_gvs,
@@ -394,23 +380,18 @@ ParallelLoopInfo analyzeParallelInfo(Function *func, FAM *fam, LoopAAResult *loo
 
 PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
     // Parallel functions can not be nested, so only parallelize loops in `main`.
-    if (!function.hasFnAttr(FuncAttr::isProgramEntry))
+    if (!function.hasFnAttr(FuncAttr::ProgramEntry))
         return PreserveAll();
 
-    static constexpr auto parallel_for_name = Config::IR::LOOP_PARALLEL_FOR_FUNCTION_NAME;
-    static constexpr auto atomic_add_i32_name = Config::IR::LOOP_PARALLEL_ATOMIC_ADD_I32;
-    static constexpr auto atomic_add_f32_name = Config::IR::LOOP_PARALLEL_ATOMIC_ADD_F32;
     static constexpr auto gv_prefix = Config::IR::LOOP_PARALLEL_GLOBALVAR_NAME_PREFIX;
     static constexpr auto body_fn_prefix = Config::IR::LOOP_PARALLEL_BODY_FUNCTION_NAME_PREFIX;
 
     auto &target = fam.getResult<TargetAnalysis>(function);
-    if (!target->isIntrinsicSupported(parallel_for_name))
+    if (!target->isIntrinsicSupported(IntrinsicID::ParallelForEntry))
         return PreserveAll();
 
     auto module = function.getParent();
-    auto parallel_for = module->lookupFunction(parallel_for_name);
-    auto atomic_add_i32 = module->lookupFunction(atomic_add_i32_name);
-    auto atomic_add_f32 = module->lookupFunction(atomic_add_f32_name);
+    auto parallel_for = module->lookupIntrinsic(IntrinsicID::ParallelForEntry);
 
     bool loop_parallel_inst_modified = false;
     bool loop_parallel_cfg_modified = false;
@@ -439,57 +420,76 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
     for (const auto &top_level : loop_info) {
         Err::gassert(top_level->isSimplifyForm(), "Expected LoopSimplifiedForm.");
 
-        auto info = analyzeParallelInfo(&function, &fam, &loop_aa, &scev, top_level, transform_float_reduction);
-        auto [can_parallel, header, preheader, latch, exit, iv, iv_base, iv_bound, reductions, exit_icmp,
-              scalar_global_vars, local_arrays] = info;
+        auto info = analyzeParallelInfo(&function, &fam, &loop_aa, &scev, target, top_level, transform_float_reduction);
+        auto [can_parallel, header, preheader, latch, exit, iv, iv_base, iv_bound, is_signed_less_equal_cond,
+              reductions, exit_icmp, scalar_global_vars, local_arrays] = info;
         if (!can_parallel)
             continue;
 
+        auto body_ret = std::make_shared<BasicBlock>("%parallel.exit");
+
         // Rewrite Reduction into global variables
-        for (auto &[reduction, reduction_base, reduction_inc, update_point, tmps] : reductions) {
+        for (auto &[reduction, reduction_base, reduction_inc, reduction_mod, update_point, atomic_fn, upd_insts] :
+             reductions) {
             static int global_var_id = 0;
             auto gv_name = gv_prefix + std::string{".reduction."} + reduction->getName().substr(1) + "." +
                            std::to_string(global_var_id++);
+
             auto global_var = std::make_shared<GlobalVariable>(STOCLASS::GLOBAL, reduction_base->getType(), gv_name,
-                                                               GVIniter(reduction_base->getType(), reduction_base));
+                                                               GVIniter(reduction_base->getType()));
+            if (reduction_base->getVTrait() == ValueTrait::CONSTANT_LITERAL)
+                global_var->setIniter(GVIniter(reduction_base->getType(), reduction_base));
+            else {
+                IRBuilder ph_builder(preheader, preheader->getEndInsertPoint());
+                (void)ph_builder.makeStore(reduction_base, global_var);
+            }
+
             module->addGlobalVar(global_var);
-            pLoad exit_value;
+            pVal exit_value;
             auto use_list = reduction->getUseList();
             for (const auto &use : use_list) {
-                if (tmps.count(use->getUser()->as<Instruction>()))
+                if (upd_insts.count(use->getUser()->as<Instruction>()))
                     continue;
 
                 auto user = use->getUser()->as<Instruction>();
                 auto user_block = user->getParent();
 
-                if (!top_level->contains(user_block)) {
-                    // We've folded all LCSSA phi, so just place the load in the exit block.
-                    if (!exit_value) {
-                        exit_value =
-                            std::make_shared<LOADInst>("%para.reduction.exit" + reduction->getName(), global_var);
-                        exit->addInstAfterPhi(exit_value);
-                    }
-                    use->setValue(exit_value);
-                } else {
-                    auto ld = std::make_shared<LOADInst>("%para.reduction.loop" + reduction->getName(), global_var);
-                    user_block->addInst(user->iter(), ld);
-                    use->setValue(ld);
+                Err::gassert(!top_level->contains(user_block), "Unexpected IV.");
+                // We've folded all LCSSA phi, so just place the load in the exit block.
+                if (!exit_value) {
+                    auto ld =
+                        std::make_shared<LOADInst>("%para.reduction.exit" + reduction->getName().substr(1), global_var);
+                    exit->addInstAfterPhi(ld);
+                    if (reduction_mod) {
+                        auto mod = std::make_shared<BinaryInst>(
+                            "%para.reduction.exit.mod" + reduction->getName().substr(1), OP::SREM, ld, reduction_mod);
+                        exit->addInst(std::next(ld->iter()), mod);
+                        exit_value = mod;
+                    } else
+                        exit_value = ld;
                 }
+                use->setValue(exit_value);
             }
-
-            auto atomic_fn = reduction_inc->getType()->isI32() ? atomic_add_i32 : atomic_add_f32;
-            update_point.makeCall(atomic_fn, {global_var, reduction_inc});
 
             Err::gassert(reduction->getParent() == header);
-            // Clear the temporary immediately since we're going to rewrite the uses
-            // of outside loop values.
-            for (const auto &utmp : tmps) {
-                if (auto phi = utmp->as<PHIInst>())
-                    utmp->getParent()->delFirstOfPhiInst(phi);
-                else
-                    utmp->getParent()->delFirstOfInst(utmp);
+
+            if (!reduction_mod) {
+                update_point.makeCall(module->lookupIntrinsic(atomic_fn), {global_var, reduction_inc});
+
+                for (const auto &utmp : upd_insts) {
+                    if (auto phi = utmp->as<PHIInst>())
+                        utmp->getParent()->delFirstOfPhiInst(phi);
+                    else
+                        utmp->getParent()->delFirstOfInst(utmp);
+                }
+                // Clear the temporary immediately since we're going to rewrite the uses
+                // of outside loop values.
+                upd_insts.clear();
+            } else {
+                // For modular addition, we have an optimized way
+                IRBuilder body_builder(body_ret);
+                body_builder.makeCall(module->lookupIntrinsic(atomic_fn), {global_var, reduction});
             }
-            tmps.clear();
 
             Logger::logDebug("[Para]: Rewritten reduction '", reduction->getName(), "' into Global Variable '",
                              global_var->getName(), "'.");
@@ -519,9 +519,9 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
         // using Task = void (*)(int32_t beg, int32_t end);
         auto beg_param = std::make_shared<FormalParam>("%gnalc_parallel_body_fn_beg", makeBType(IRBTYPE::I32), 0);
         auto end_param = std::make_shared<FormalParam>("%gnalc_parallel_body_fn_end", makeBType(IRBTYPE::I32), 1);
-        auto body_fn = std::make_shared<Function>(body_fn_name, std::vector{beg_param, end_param},
-                                                  makeBType(IRBTYPE::VOID), &function.getConstantPool(),
-                                                  FuncAttr::NotBuiltin | FuncAttr::ParallelBody);
+        auto body_fn =
+            std::make_shared<Function>(body_fn_name, std::vector{beg_param, end_param}, makeBType(IRBTYPE::VOID),
+                                       &function.getConstantPool(), FuncAttr::NotBuiltin | FuncAttr::ParallelBody);
         module->addFunction(body_fn);
 
         // Collect all shared values and rewrite them as global variables.
@@ -570,7 +570,7 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
                         if (auto opt = loop_aa.getBaseAndOffset(operand)) {
                             auto [base, offset] = *opt;
                             if (auto base_gv = base->as<GlobalVariable>()) {
-                                shared_arg_gv_ptr_map[operand] = { base_gv, offset };
+                                shared_arg_gv_ptr_map[operand] = {base_gv, offset};
                                 continue;
                             }
                         }
@@ -627,7 +627,10 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
         for (const auto &[arg_inst, gv] : shared_arg_gv_map)
             (void)ph_builder.makeStore(arg_inst, gv);
         // Call the parallel for with the body function
-        ph_builder.makeCall(parallel_for, std::vector<pVal>{iv_base, iv_bound, body_fn});
+        auto real_iv_bound = iv_bound;
+        if (is_signed_less_equal_cond)
+            real_iv_bound = ph_builder.makeAdd(iv_bound, function.getConst(1));
+        ph_builder.makeCall(parallel_for, std::vector<pVal>{iv_base, real_iv_bound, body_fn});
 
         // Setup CFG in the body function
         auto body_entry = std::make_shared<BasicBlock>("%parallel.entry");
@@ -642,7 +645,7 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
 
         // Rewrite uses of pointers to global variables
         for (const auto &[arg_inst, gvoffset] : shared_arg_gv_ptr_map) {
-            const auto& [gv, offset] = gvoffset;
+            const auto &[gv, offset] = gvoffset;
             auto dest_ty = arg_inst->getType();
             pVal ptr = gv;
             if (offset != 0) {
@@ -650,9 +653,9 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
                     auto i8ptr = para_builder.makeBitcast(gv, makePtrType(makeBType(IRBTYPE::I8)));
                     auto ptradd = para_builder.makeGep(i8ptr, function.getConst(static_cast<int>(offset)));
                     ptr = para_builder.makeBitcast(ptradd, dest_ty);
-                }
-                else {
-                    ptr = para_builder.makeGep(gv, function.getConst(static_cast<int>(offset / gv->getVarType()->getBytes())));
+                } else {
+                    ptr = para_builder.makeGep(
+                        gv, function.getConst(static_cast<int>(offset / gv->getVarType()->getBytes())));
                 }
             }
             if (!isSameType(ptr, arg_inst))
@@ -676,7 +679,6 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
         for (const auto &phi : header->phis())
             phi->replaceAllOperands(preheader, body_entry);
 
-        auto body_ret = std::make_shared<BasicBlock>("%parallel.exit");
         ok = header->getBRInst()->replaceAllOperands(exit, body_ret);
         Err::gassert(ok == 1, "Bad CFG");
         body_ret->addInst(std::make_shared<RETInst>());
@@ -691,13 +693,12 @@ PM::PreservedAnalyses LoopParallelPass::run(Function &function, FAM &fam) {
         // Now fix data racing. Data racing can happen when a global variable is written in the loop
         // Currently we don't add mutexes for global variables. But try to turn it into an
         // atomic operation.
-        for (const auto &[gv, inc, load, store, update] : scalar_global_vars) {
-            Err::gassert(transform_float_reduction || inc->getType()->isI32(), "Bad analyzeParallelInfo.");
-            auto atomic_fn = inc->getType()->isI32() ? atomic_add_i32 : atomic_add_f32;
-            auto atomic_add = std::make_shared<CALLInst>(atomic_fn, std::vector<pVal>{gv, inc});
+        for (const auto &[gv, inc, load, store, update, atomic_fn_id] : scalar_global_vars) {
+            auto atomic_fn = module->lookupIntrinsic(atomic_fn_id);
+            auto atomic_call = std::make_shared<CALLInst>(atomic_fn, std::vector<pVal>{gv, inc});
 
             auto block = store->getParent();
-            block->addInst(store->iter(), atomic_add);
+            block->addInst(store->iter(), atomic_call);
             block->delFirstOfInst(store);
             block->delFirstOfInst(load);
             block->delFirstOfInst(update);

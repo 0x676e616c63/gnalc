@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "../../include/ir/block_utils.hpp"
+#include "../../include/ir/instructions/binary.hpp"
 #include "../../include/ir/instructions/memory.hpp"
 #include "../../include/ir/passes/analysis/alias_analysis.hpp"
 #include "../../include/ir/passes/analysis/loop_analysis.hpp"
@@ -473,5 +474,42 @@ std::vector<pVal> collectOperands(const pInst &inst) {
 bool isReachableFrom(const pBlock &from, const pBlock &to) {
     auto dfv = from->getDFVisitor();
     return std::find(dfv.begin(), dfv.end(), to) != dfv.end();
+}
+
+std::tuple<pVal, int> getScalarBaseOffset(const pVal &scalar) {
+    pVal base = scalar;
+    int offset = 0;
+    while (true) {
+        if (auto bin = base->as<BinaryInst>(); bin && bin->getOpcode() == OP::ADD) {
+            auto lhs_ci = bin->getLHS()->as<ConstantInt>();
+            auto rhs_ci = bin->getRHS()->as<ConstantInt>();
+            if (lhs_ci) {
+                base = bin->getRHS();
+                offset += lhs_ci->getVal();
+            } else if (rhs_ci) {
+                base = bin->getLHS();
+                offset += rhs_ci->getVal();
+            } else
+                break;
+        }
+        else
+            break;
+    }
+    return {base, offset};
+}
+std::optional<int> getScalarOffset(const pVal &v1, const pVal &v2) {
+    if (v1 == v2)
+        return 0;
+
+    if (v1->is<ConstantInt>() && v2->is<ConstantInt>())
+        return v2->as<ConstantInt>()->getVal() - v1->as<ConstantInt>()->getVal();
+
+    auto [base1, offset1] = getScalarBaseOffset(v1);
+    auto [base2, offset2] = getScalarBaseOffset(v2);
+
+    if (base1 != base2)
+        return std::nullopt;
+
+    return offset2 - offset1;
 }
 } // namespace IR

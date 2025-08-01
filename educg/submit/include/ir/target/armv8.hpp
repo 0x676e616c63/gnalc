@@ -16,7 +16,20 @@ public:
     bool isTypeSupported(const pType &type) const override {
         return true;
     }
-    bool isIntrinsicSupported(const std::string &lib_fn_name) const override { return true; }
+    bool isIntrinsicSupported(IntrinsicID id) const override {
+        switch (id) {
+        case IntrinsicID::Memset:
+        case IntrinsicID::Memcpy:
+        case IntrinsicID::AtomicAdd:
+        case IntrinsicID::AtomicFAdd:
+        case IntrinsicID::ParallelForEntry:
+            return true;
+        default:
+                return false;
+        }
+        return false;
+    }
+
     size_t getMaxVectorRegisterSize() const override { return 128; }
     size_t getMinVectorRegisterSize() const override { return 64; }
 

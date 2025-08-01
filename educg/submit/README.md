@@ -1,6 +1,6 @@
 # 0x676e616c63 - gnalc riscv
 
-- Sync on: 2025-07-30 20:55:00
+- Sync on: 2025-08-01 16:01:50
 - Source Branch: main
-- Source Commit SHA: f2e143e6ceb01f913ad6b98c60b64772bd03627f
-- Source Commit Message: SIR: Disable LoopUnswitch. [skip ci]
+- Source Commit SHA: a2624d633bd70d7321f7b3c017fb8ce64c14962d
+- Source Commit Message: Merge backendv3.0

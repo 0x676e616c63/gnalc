@@ -106,6 +106,18 @@ std::vector<pFuncDecl> Module::lookupFunction(FuncAttr attr) const {
     return ret;
 }
 
+pFuncDecl Module::lookupIntrinsic(IntrinsicID attr) const {
+    for (const auto &func_decl : func_decls) {
+        if (func_decl->getIntrinsicID() == attr)
+            return func_decl;
+    }
+    for (const auto &func : funcs) {
+        if (func->hasFnAttr(FuncAttr::LoweredIntrinsic) && func->getIntrinsicID() == attr)
+            return func;
+    }
+    return nullptr;
+}
+
 pGlobalVar Module::lookupGlobalVar(const std::string &name) const {
     for (const auto &gv : global_vars) {
         if (gv->isName(name))
@@ -150,8 +162,9 @@ size_t Module::getInstCount() const {
 std::set<Runtime::RtType> Module::getRuntimeTypes() const {
     std::set<Runtime::RtType> ret;
     for (const auto &func_decl : func_decls) {
-        if (func_decl->hasFnAttr(FuncAttr::ParallelEntry) || func_decl->hasFnAttr(FuncAttr::isAtomicAddI32) ||
-            func_decl->hasFnAttr(FuncAttr::isAtomicAddF32)) {
+        if (func_decl->getIntrinsicID() == IntrinsicID::ParallelForEntry ||
+            func_decl->getIntrinsicID() == IntrinsicID::AtomicAdd ||
+            func_decl->getIntrinsicID() == IntrinsicID::AtomicFAdd) {
             if (func_decl->getUseCount() != 0)
                 ret.emplace(Runtime::RtType::Thread);
         }
