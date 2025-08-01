@@ -22,7 +22,7 @@ private:
     const size_t s_arg;
 
 public:
-    explicit RedundantLoadEli(size_t _s_arg = 100) : s_arg(_s_arg) {}
+    explicit RedundantLoadEli(size_t _s_arg) : s_arg(_s_arg) {}
 
     PM::PreservedAnalyses run(MIRFunction &, FAM &);
 };
@@ -129,6 +129,8 @@ private:
     CodeGenContext &ctx;
     std::unordered_map<ldValue, loadInfo, infoHash> infos;
 
+    std::map<MIROperand_p, MIROperand_p> replace_map; // old -> new
+
     size_t average_inst_cnt = 0;
     size_t overall_inst_cnt = 0;
 
@@ -152,6 +154,7 @@ private:
     void ApplyCopys_inBlks(MIRBlk *mblk, loadInfo::useInfo_blk &, const ldValue &);
 
     void weights_cal(loadInfo &, std::map<MIRBlk *, bool> &);
+    void replace_global();
 };
 
 }; // namespace MIR
