@@ -425,7 +425,7 @@ BasicAAResult BasicAliasAnalysis::run(Function &func, FAM &fam) {
                 } else {
                     Err::gassert(!callee->hasFnAttr(FuncAttr::NotBuiltin), "Not builtin but has no definition");
 
-                    if (callee->hasFnAttr(FuncAttr::isSylib))
+                    if (callee->hasFnAttr(FuncAttr::Sylib))
                         res.has_sylib_call = true;
 
                     if (!callee->hasFnAttr(FuncAttr::builtinMemReadOnly) &&
@@ -433,7 +433,7 @@ BasicAAResult BasicAliasAnalysis::run(Function &func, FAM &fam) {
                         continue;
 
                     // For memcpy intrinsic, a more precise analysis is available.
-                    if (callee->hasFnAttr(FuncAttr::isMemcpyIntrinsic)) {
+                    if (callee->getIntrinsicID() == IntrinsicID::Memcpy) {
                         auto actual_args = call->getArgs();
                         auto dest = actual_args[0].get();
                         auto src = actual_args[1].get();

@@ -21,7 +21,7 @@ RWInfo getCallRWInfo(FAM &fam, CALLInst *call) {
     auto callee_def = callee->as_raw<Function>();
 
     // For parallel entry function, analyze the parallel body.
-    if (callee->hasFnAttr(FuncAttr::ParallelEntry)) {
+    if (callee->getIntrinsicID() == IntrinsicID::ParallelForEntry) {
         Err::gassert(callee_def == nullptr);
         auto args = call->getArgs();
         for (const auto& arg : args) {
@@ -37,7 +37,7 @@ RWInfo getCallRWInfo(FAM &fam, CALLInst *call) {
         Err::gassert(!callee->hasFnAttr(FuncAttr::NotBuiltin), "Not builtin but has no definition");
 
         // For memcpy intrinsic, a more precise analysis is available.
-        if (callee->hasFnAttr(FuncAttr::isMemcpyIntrinsic)) {
+        if (callee->getIntrinsicID() == IntrinsicID::Memcpy) {
             auto actual_args = call->getArgs();
             auto dest = actual_args[0].get();
             auto src = actual_args[1].get();
@@ -105,10 +105,6 @@ bool isPure(FAM &fam, FunctionDecl *decl) {
     static std::unordered_map<const FunctionDecl *, bool> cache;
     auto guard = Logger::scopeDisable();
 
-    // Recognized pure functions
-    if (decl->hasFnAttr(FuncAttr::isSIMDIntrinsic))
-        return true;
-
     auto callee_def = decl->as_raw<Function>();
     // Unknown builtin/sylib
     if (callee_def == nullptr)
@@ -131,10 +127,6 @@ bool isPure(FAM &fam, const pCall &call) { return isPure(fam, call.get()); }
 bool hasSideEffect(FAM &fam, FunctionDecl *decl) {
     static std::unordered_map<const FunctionDecl *, bool> cache;
     auto guard = Logger::scopeDisable();
-
-    // Recognized pure functions
-    if (decl->hasFnAttr(FuncAttr::isSIMDIntrinsic))
-        return false;
 
     auto callee_def = decl->as_raw<Function>();
     // Unknown builtin/sylib

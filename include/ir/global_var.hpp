@@ -76,6 +76,7 @@ public:
     const pType &getVarType() const;
     bool isArray() const;
     const GVIniter &getIniter() const;
+    void setIniter(GVIniter _initer);
     int getAlign() const;
     void setAlign(int a);
     void setAsConst();

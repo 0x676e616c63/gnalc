@@ -33,7 +33,7 @@ public:
     virtual ~TargetInfo() = default;
     virtual bool isInstSupported(OP op) const = 0;
     virtual bool isTypeSupported(const pType &type) const = 0;
-    virtual bool isIntrinsicSupported(const std::string &lib_fn_name) const = 0;
+    virtual bool isIntrinsicSupported(IntrinsicID id) const = 0;
 
     // Threshold
     virtual size_t getInternalizeSizeThreshold() const = 0;

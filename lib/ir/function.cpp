@@ -11,9 +11,9 @@
 #include <utility>
 
 namespace IR {
-FunctionDecl::FunctionDecl(std::string name_, std::vector<pType> params, pType ret_type, bool is_va_arg_, FuncAttr attrs)
+FunctionDecl::FunctionDecl(std::string name_, std::vector<pType> params, pType ret_type, bool is_va_arg_, FuncAttr attrs, IntrinsicID id)
     : Value(std::move(name_), makeFunctionType(std::move(params), std::move(ret_type), is_va_arg_),
-            ValueTrait::FUNCTION) {
+            ValueTrait::FUNCTION), intrinsic_id(id) {
 
     attr().add(FuncAttrs(attrs));
 
@@ -21,7 +21,7 @@ FunctionDecl::FunctionDecl(std::string name_, std::vector<pType> params, pType r
     if (attr().get<FuncAttrs>()->empty())
         addFnAttr(FuncAttr::NotBuiltin);
 
-    Err::gassert(!(hasFnAttr(FuncAttr::isSylib) && hasFnAttr(FuncAttr::isIntrinsic)));
+    Err::gassert(!(hasFnAttr(FuncAttr::Sylib) && hasFnAttr(FuncAttr::Intrinsic)));
     Err::gassert(!(hasFnAttr(FuncAttr::builtinMemReadOnly) && hasFnAttr(FuncAttr::builtinMemWriteOnly)));
 }
 
@@ -45,9 +45,12 @@ FuncAttr FunctionDecl::getFnAttrs() const { return attr().get<FuncAttrs>()->val(
 
 void FunctionDecl::accept(IRVisitor &visitor) { visitor.visit(*this); }
 
-bool FunctionDecl::isSylib() const { return hasFnAttr(FuncAttr::isSylib); }
+bool FunctionDecl::isSylib() const { return hasFnAttr(FuncAttr::Sylib); }
 
-bool FunctionDecl::isIntrinsic() const { return hasFnAttr(FuncAttr::isIntrinsic); }
+bool FunctionDecl::isIntrinsic() const { return intrinsic_id != IntrinsicID::None; }
+IntrinsicID FunctionDecl::getIntrinsicID() const {
+    return intrinsic_id;
+}
 
 void FunctionDecl::setParent(Module *module) { parent = module; }
 
