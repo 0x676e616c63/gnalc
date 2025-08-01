@@ -118,6 +118,10 @@ std::vector<pInst> collectUsers(const pVal &val);
 std::vector<pVal> collectOperands(const pInst &inst);
 
 bool isReachableFrom(const pBlock &from, const pBlock &to);
+
+std::tuple<pVal, int> getScalarBaseOffset(const pVal &scalar);
+// v2 - v1
+std::optional<int> getScalarOffset(const pVal &v1, const pVal &v2);
 } // namespace IR
 
 #endif

@@ -54,7 +54,7 @@ constexpr auto LOOP_ELIMINATION_EXPANSION_COST_RATIO = 10;
 // We don't expand if that will insert more than `THRESHOLD` instructions.
 // a base + a step + an update + a phi
 constexpr auto LSR_MULTIPLY_EXPANSION_THRESHOLD = 8;
-constexpr auto LSR_GEP_REDUCTION_COST_THRESHOLD = -950;
+constexpr auto LSR_GEP_REDUCTION_COST_THRESHOLD = -1000000; // no threshold
 
 // Loop Unroll
 constexpr unsigned LOOP_UNROLLING_PEEL_COUNT = 10;

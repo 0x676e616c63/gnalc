@@ -64,6 +64,8 @@ public:
 
     std::vector<pFuncDecl> lookupFunction(FuncAttr attr) const;
 
+    pFuncDecl lookupIntrinsic(IntrinsicID attr) const;
+
     pGlobalVar lookupGlobalVar(const std::string &name) const;
 
     ConstantPool &getConstantPool();

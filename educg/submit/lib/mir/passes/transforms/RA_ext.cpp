@@ -257,7 +257,8 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::reloadConstVal(const MIROperand_p &m
                 }
 
                 if (replace) {
-                    *it_op = *replace;
+                    // *it_op = *replace;
+                    minst->replace(*it_op, *replace, ctx);
                     continue;
                 }
 
@@ -274,7 +275,8 @@ RegisterAllocImpl::Nodes RegisterAllocImpl::reloadConstVal(const MIROperand_p &m
                 });
 
                 minsts.splice(it, loads);
-                *it_op = *replace;
+                // *it_op = *replace;
+                minst->replace(*it_op, *replace, ctx);
             }
         }
     }

@@ -6,6 +6,8 @@
 #include "../../../../include/ir/instructions/control.hpp"
 #include "../../../../include/ir/instructions/converse.hpp"
 #include "../../../../include/ir/instructions/memory.hpp"
+#include "../../../../include/ir/block_utils.hpp"
+#include "../../../../include/ir/match.hpp"
 #include "../../../../include/ir/passes/analysis/loop_analysis.hpp"
 #include "../../../../include/utils/logger.hpp"
 
@@ -19,7 +21,7 @@ RWInfo getCallRWInfo(FAM &fam, CALLInst *call) {
     auto callee_def = callee->as_raw<Function>();
 
     // For parallel entry function, analyze the parallel body.
-    if (callee->hasFnAttr(FuncAttr::ParallelEntry)) {
+    if (callee->getIntrinsicID() == IntrinsicID::ParallelForEntry) {
         Err::gassert(callee_def == nullptr);
         auto args = call->getArgs();
         for (const auto& arg : args) {
@@ -35,7 +37,7 @@ RWInfo getCallRWInfo(FAM &fam, CALLInst *call) {
         Err::gassert(!callee->hasFnAttr(FuncAttr::NotBuiltin), "Not builtin but has no definition");
 
         // For memcpy intrinsic, a more precise analysis is available.
-        if (callee->hasFnAttr(FuncAttr::isMemcpyIntrinsic)) {
+        if (callee->getIntrinsicID() == IntrinsicID::Memcpy) {
             auto actual_args = call->getArgs();
             auto dest = actual_args[0].get();
             auto src = actual_args[1].get();
@@ -103,10 +105,6 @@ bool isPure(FAM &fam, FunctionDecl *decl) {
     static std::unordered_map<const FunctionDecl *, bool> cache;
     auto guard = Logger::scopeDisable();
 
-    // Recognized pure functions
-    if (decl->hasFnAttr(FuncAttr::isSIMDIntrinsic))
-        return true;
-
     auto callee_def = decl->as_raw<Function>();
     // Unknown builtin/sylib
     if (callee_def == nullptr)
@@ -129,10 +127,6 @@ bool isPure(FAM &fam, const pCall &call) { return isPure(fam, call.get()); }
 bool hasSideEffect(FAM &fam, FunctionDecl *decl) {
     static std::unordered_map<const FunctionDecl *, bool> cache;
     auto guard = Logger::scopeDisable();
-
-    // Recognized pure functions
-    if (decl->hasFnAttr(FuncAttr::isSIMDIntrinsic))
-        return false;
 
     auto callee_def = decl->as_raw<Function>();
     // Unknown builtin/sylib
@@ -311,5 +305,70 @@ Value* getPtrBase(Value* ptr) {
 
 pVal getPtrBase(const pVal &ptr) {
     return getPtrBase(ptr.get())->as<Value>();
+}
+
+// Quick path for two disjoint geps
+// Usually they come from loop unroll, handling them specially can speed up the analysis.
+bool isTriviallyDisjointPtr(Value *ptr1, Value *ptr2) {
+    if (int ci; match(ptr2, M::Gep(M::Is(ptr1), M::Bind(ci))) || match(ptr1, M::Gep(M::Is(ptr2), M::IsIntegerVal(ci)))) {
+        if (ci != 0)
+            return true;
+    }
+
+    auto gep1 = ptr1->as_raw<GEPInst>();
+    auto gep2 = ptr2->as_raw<GEPInst>();
+
+    if (!gep1 || !gep2)
+        return false;
+
+    if (gep1->getPtr() != gep2->getPtr())
+        return false;
+
+    auto idx1 = gep1->getIdxs();
+    auto idx2 = gep2->getIdxs();
+    if (idx1.size() != idx2.size())
+        return false;
+
+    for (size_t i = 0; i < idx1.size() - 1; i++) {
+        if (idx1[i] != idx2[i])
+            return false;
+    }
+
+    auto opt = getScalarOffset(idx2.back(), idx1.back());
+    if (opt && *opt != 0)
+        return true;
+
+    return false;
+}
+
+// Quick path for two consecutive geps
+// Usually they come from loop unroll, handling them specially can speed up the analysis.
+bool isTriviallyConsecutivePtr(Value *ptr1, Value *ptr2) {
+    if (match(ptr2, M::Gep(M::Is(ptr1), M::IsIntegerVal(1))))
+        return true;
+
+    auto gep1 = ptr1->as_raw<GEPInst>();
+    auto gep2 = ptr2->as_raw<GEPInst>();
+    if (!gep1 || !gep2)
+        return false;
+
+    if (gep1->getPtr() != gep2->getPtr())
+        return false;
+
+    auto idx1 = gep1->getIdxs();
+    auto idx2 = gep2->getIdxs();
+    if (idx1.size() != idx2.size())
+        return false;
+
+    for (size_t i = 0; i < idx1.size() - 1; i++) {
+        if (idx1[i] != idx2[i])
+            return false;
+    }
+
+    auto opt = getScalarOffset(idx1.back(), idx2.back());
+    if (opt && *opt == 1)
+        return true;
+
+    return false;
 }
 } // namespace IR

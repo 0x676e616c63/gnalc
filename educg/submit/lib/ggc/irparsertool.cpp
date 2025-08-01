@@ -135,10 +135,10 @@ pFuncDecl IRPT::newFuncDecl(std::string &name_, const std::vector<pType> &params
     pFuncDecl fd;
     if (name_ == Config::IR::MEMSET_INTRINSIC_NAME || name_ == Config::IR::MEMCPY_INTRINSIC_NAME) {
         // TODO: Need Fix Attribute
-        fd = make<FunctionDecl>(name_, params, ret_type, is_va_arg_, std::set<FuncAttr>{FuncAttr::isIntrinsic});
+        fd = make<FunctionDecl>(name_, params, ret_type, is_va_arg_, std::set<FuncAttr>{FuncAttr::Intrinsic});
     } else {
         // For other FuncDecls
-        fd = make<FunctionDecl>(name_, params, ret_type, is_va_arg_, std::set<FuncAttr>{FuncAttr::isSylib});
+        fd = make<FunctionDecl>(name_, params, ret_type, is_va_arg_, std::set<FuncAttr>{FuncAttr::Sylib});
     }
     replaceUF(name_, fd);
     return fd;
