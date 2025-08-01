@@ -252,7 +252,7 @@ Prob BranchFreqAnalysis::computeGH(const Edge &e) const {
         return used_before_def;
     };
 
-    std::map<MIRBlk*, bool> used_before_defs;
+    std::map<MIRBlk *, bool> used_before_defs;
     for (auto &bb : e.src->succs()) {
         if (check_block(bb.get()))
             used_before_defs[bb.get()] = true;
