@@ -14,7 +14,8 @@ PM::UniqueKey BranchFreqAnalysis::Key;
 using Edge = BranchInfo::Edge;
 using Prob = BranchInfo::Prob;
 
-// The Ball-Larus heuristics, taken from "Static Branch Frequency and Program Profile Analysis"
+// The Ball-Larus heuristics,
+// the numbers are taken from "Static Branch Frequency and Program Profile Analysis"
 namespace Heuristic {
 // Loop branch heuristic (LBH):
 //   Predict as taken an edge back to a loop's head.
@@ -87,7 +88,7 @@ Prob BranchFreqAnalysis::computeCH(const Edge &e) const {
 }
 
 Prob BranchFreqAnalysis::computeOH(const Edge &e) const {
-    const auto& insts = e.src->Insts();
+    const auto &insts = e.src->Insts();
     for (auto it = insts.rbegin(); it != insts.rend(); ++it) {
         if ((*it)->isGeneric()) {
             if ((*it)->opcode<OpC>() == OpC::InstBranch) {
@@ -98,10 +99,36 @@ Prob BranchFreqAnalysis::computeOH(const Edge &e) const {
                 GIVEUP_IF(!(*icmp_it)->isGeneric() || (*icmp_it)->opcode<OpC>() != OpC::InstICmp);
                 auto lhs = (*icmp_it)->getOp(1);
                 auto rhs = (*icmp_it)->getOp(2);
-                GIVEUP_IF(!rhs->isImme());
+                GIVEUP_IF(!rhs->isImme() && !lhs->isImme());
+
+                if (!rhs->isImme() && lhs->isImme()) {
+                    std::swap(lhs, rhs);
+                    cond = reverseCond(static_cast<Cond>(cond));
+                }
 
                 if (reloc != e.dest)
+                    cond = flipCond(static_cast<Cond>(cond));
+
+                if (cond == Cond::EQ || (rhs->imme() == 0 && (cond == Cond::LT || cond == Cond::LE)))
+                    return 1 - Heuristic::Opcode;
+
+                GIVEUP_IF(true);
+            }
+            if ((*it)->opcode<OpC>() == OpC::InstICmpBranch) {
+                const auto &icmp_br = *it;
+                auto reloc = (*it)->getOp(3)->reloc()->as<MIRBlk>().get();
+                auto cond = (*it)->getOp(4)->imme();
+                auto lhs = icmp_br->getOp(1);
+                auto rhs = icmp_br->getOp(2);
+                GIVEUP_IF(!rhs->isImme() && !lhs->isImme());
+
+                if (!rhs->isImme() && lhs->isImme()) {
+                    std::swap(lhs, rhs);
                     cond = reverseCond(static_cast<Cond>(cond));
+                }
+
+                if (reloc != e.dest)
+                    cond = flipCond(static_cast<Cond>(cond));
 
                 if (cond == Cond::EQ || (rhs->imme() == 0 && (cond == Cond::LT || cond == Cond::LE)))
                     return 1 - Heuristic::Opcode;
@@ -171,8 +198,70 @@ Prob BranchFreqAnalysis::computeLHH(const Edge &e) const {
     return is_ph_or_h(e.dest) ? Heuristic::LoopHeader : 1 - Heuristic::LoopHeader;
 }
 
-// TODO: GH
-Prob BranchFreqAnalysis::computeGH(const Edge &e) const { GIVEUP_IF(true); }
+Prob BranchFreqAnalysis::computeGH(const Edge &e) const {
+    MIROperand_p lhs, rhs;
+    auto find_cmp = [&]() -> bool {
+        const auto &insts = e.src->Insts();
+        for (auto it = insts.rbegin(); it != insts.rend(); ++it) {
+            if ((*it)->isGeneric()) {
+                if ((*it)->opcode<OpC>() == OpC::InstBranch) {
+                    if (std::next(it) == insts.rend())
+                        return false;
+                    auto icmp_it = std::next(it);
+                    if (!(*icmp_it)->isGeneric() || (*icmp_it)->opcode<OpC>() != OpC::InstICmp)
+                        return false;
+                    lhs = (*icmp_it)->getOp(1);
+                    rhs = (*icmp_it)->getOp(2);
+                    return true;
+                }
+                if ((*it)->opcode<OpC>() == OpC::InstICmpBranch) {
+                    const auto &icmp_br = *it;
+                    lhs = icmp_br->getOp(1);
+                    rhs = icmp_br->getOp(2);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }();
+    GIVEUP_IF(!find_cmp);
+
+    std::vector<unsigned> regs;
+    for (const auto &i : {lhs, rhs}) {
+        if (i->isReg())
+            regs.emplace_back(i->reg());
+    }
+
+    GIVEUP_IF(regs.empty());
+
+    auto check_block = [&](MIRBlk *bb) {
+        bool used_before_def = false;
+        for (unsigned target : regs) {
+            for (auto &inst : bb->Insts()) {
+                auto def = inst->getDef();
+                if (def && def->isReg() && def->reg() == target)
+                    break;
+                for (size_t i = 1; i < inst->getUseNr(); ++i) {
+                    if (inst->getOp(i)->isReg() && inst->getOp(i)->reg() == target) {
+                        used_before_def = true;
+                        break;
+                    }
+                }
+            }
+        }
+        return used_before_def;
+    };
+
+    std::map<MIRBlk*, bool> used_before_defs;
+    for (auto &bb : e.src->succs()) {
+        if (check_block(bb.get()))
+            used_before_defs[bb.get()] = true;
+    }
+
+    GIVEUP_IF(used_before_defs.empty() || used_before_defs.size() == e.src->succs().size());
+
+    return used_before_defs[e.dest] ? Heuristic::Guard : 1 - Heuristic::Guard;
+}
 
 void BranchFreqAnalysis::computeAllProbs(MIRFunction &func, BranchInfo::EdgeProbs &probs) const {
     for (auto &bb : func.blks()) {
@@ -216,7 +305,7 @@ void BranchFreqAnalysis::computeAllProbs(MIRFunction &func, BranchInfo::EdgeProb
 
                 for (auto succ : exit_edge_succs) {
                     auto edge = Edge{bb.get(), succ};
-                    probs[edge] = (1.0 - Heuristic::LoopBranch) / static_cast<double>(bb->succs().size() - exit_edge_succs.size());
+                    probs[edge] = (1.0 - Heuristic::LoopBranch) / static_cast<double>(exit_edge_succs.size());
                 }
                 continue;
             }
@@ -326,7 +415,7 @@ BranchInfo BranchFreqAnalysis::run(MIRFunction &func, FAM &fam) {
         }
     }
 
-    std::unordered_set<MIRBlk*> visited_global;
+    std::unordered_set<MIRBlk *> visited_global;
     auto entry = func.blks().front().get();
     propagateFreqs(entry, entry, freqs, probs, back_edge_props, bfreqs, visited_global);
 

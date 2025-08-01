@@ -123,6 +123,26 @@ inline Cond reverseCond(Cond cond) {
     return cond;
 }
 
+inline Cond flipCond(Cond cond) {
+    switch (cond) {
+        case EQ:
+            return NE;
+        case NE:
+            return EQ;
+        case LT:
+            return GE;
+        case GT:
+            return LE;
+        case LE:
+            return GT;
+        case GE:
+            return LT;
+        default:
+            return cond;
+    }
+    return cond;
+}
+
 
 enum class MIRGenericInst : uint32_t {
     // control-flow

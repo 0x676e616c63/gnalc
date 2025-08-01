@@ -26,14 +26,14 @@ PM::PreservedAnalyses CodeLayoutPass::run(MIRFunction &func, FAM &fam) {
     auto &freq = fam.getResult<BranchFreqAnalysis>(func);
 
     struct Chain {
-        unsigned priority{};
+        double priority{};
         std::list<MIRBlk_p> blocks;
     };
     std::unordered_map<MIRBlk_p, MIRBlk_p> head_map;
     std::unordered_map<MIRBlk_p, Chain> chains;
     for (const auto &blk : func.blks()) {
         head_map[blk] = blk;
-        chains[blk].priority = std::numeric_limits<unsigned>::max();
+        chains[blk].priority = 0.0;
         chains[blk].blocks = {blk};
     }
 
@@ -64,10 +64,10 @@ PM::PreservedAnalyses CodeLayoutPass::run(MIRFunction &func, FAM &fam) {
         if (src_chain.blocks.back() != src || dest_chain.blocks.front() != dest)
             continue;
 
-        for (auto blk : dest_chain.blocks)
+        for (const auto& blk : dest_chain.blocks)
             head_map[blk] = src_head;
         src_chain.blocks.splice(src_chain.blocks.end(), dest_chain.blocks);
-        src_chain.priority = std::min({src_chain.priority, dest_chain.priority, ++priority_cnt});
+        src_chain.priority += dest_chain.priority + freq;
     }
 
     std::unordered_map<MIRBlk_p, std::list<MIRBlk_p>> chain_graph;
@@ -91,11 +91,11 @@ PM::PreservedAnalyses CodeLayoutPass::run(MIRFunction &func, FAM &fam) {
     while (!queue.empty()) {
         auto c = queue.top();
         queue.pop();
-        for (auto blk : chains[c].blocks) {
+        for (const auto& blk : chains[c].blocks) {
             if (placed.insert(blk).second)
                 new_order.push_back(blk);
         }
-        for (auto succ_chain : chain_graph[c]) {
+        for (const auto& succ_chain : chain_graph[c]) {
             if (placed.count(succ_chain))
                 continue;
             if (in_queue.insert(succ_chain).second)
